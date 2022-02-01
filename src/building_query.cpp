@@ -978,20 +978,27 @@ bool building_t::check_line_coll_expand(point const &p1, point const &p2, float 
 	for (unsigned d = 0; d < 2; ++d) {
 		if (line_int_cubes_exp(p1, p2, interior->walls[d], expand_walls, line_bcube)) return 1;
 	}
-	for (auto const &door : interior->doors) {
-		if (door.z1() > obj_z2 || door.z2() < obj_z1) continue; // wrong floor
+	for (auto const &ds : interior->door_stacks) {
+		if (ds.z1() > obj_z2 || ds.z2() < obj_z1) continue; // wrong floor for this stack/part
+		// calculate door bounds for bcube test, assuming it's open
+		cube_t door_bounds(ds);
+		door_bounds.expand_by_xy(ds.get_width());
+		if (!line_bcube.intersects(door_bounds) || !line_int_cube_exp(p1, p2, door_bounds, expand)) continue; // optimization
+		assert(ds.first_door_ix < interior->doors.size());
 
-		if (door.open) {
-			cube_t door_bounds(door);
-			door_bounds.expand_by_xy(door.get_width());
-			if (!line_bcube.intersects(door_bounds)) continue; // optimization
-			if (!line_int_cube_exp(p1, p2, door_bounds, expand)) continue; // optimization
-			tquad_with_ix_t const door_tq(set_interior_door_from_cube(door));
-			door_bounds = door_tq.get_bcube(); // somewhat more accurate
-			door_bounds.expand_by_xy(door.get_thickness()); // conservative
-			if (line_int_cube_exp(p1, p2, door_bounds, expand)) return 1;
+		for (unsigned dix = ds.first_door_ix; dix < interior->doors.size(); ++dix) {
+			door_t const &door(interior->doors[dix]);
+			if (door.x1() != ds.x1() || door.x2() != ds.x2()) break; // moved to a different stack, done
+			if (door.z1() >  obj_z2  || door.z2() <  obj_z1 ) continue; // wrong floor
+
+			if (door.open) {
+				tquad_with_ix_t const door_tq(set_interior_door_from_cube(door));
+				cube_t tight_door_bounds(door_tq.get_bcube()); // somewhat more accurate
+				tight_door_bounds.expand_by_xy(door.get_thickness()); // conservative
+				if (line_int_cube_exp(p1, p2, tight_door_bounds, expand)) return 1;
+			}
+			else if (line_int_cube_exp(p1, p2, door, expand)) return 1;
 		}
-		else if (line_bcube.intersects(door) && line_int_cube_exp(p1, p2, door, expand)) return 1;
 	} // for door
 	for (auto const &s : interior->stairwells) {
 		if (!line_int_cube_exp(p1, p2, s, expand)) continue;

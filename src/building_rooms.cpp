@@ -1976,7 +1976,7 @@ void building_t::add_light_switch_to_room(rand_gen_t rgen, room_t const &room, f
 			if (!room_exp.contains_pt(bc.get_cube_center())) continue;
 			bool const dim(bc.dy() < bc.dx());
 			bc.expand_in_dim(dim, 0.4*wall_thickness); // expand slightly to make it nonzero area
-			ext_doors.emplace_back(bc, dim, 0); // dir=0
+			ext_doors.emplace_back(door_t(bc, dim, 0), 0); // dir=0, first_door_ix=0 because it's unused
 		}
 	}
 	for (unsigned ei = 0; ei < 2; ++ei) { // exterior, interior

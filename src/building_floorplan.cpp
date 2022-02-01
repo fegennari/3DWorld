@@ -11,7 +11,7 @@ extern building_params_t global_building_params;
 
 void building_t::add_interior_door(door_t &door, bool is_bathroom) {
 	assert(interior);
-	interior->door_stacks.push_back(door);
+	interior->door_stacks.emplace_back(door, interior->doors.size());
 	if (!SPLIT_DOOR_PER_FLOOR || door.on_stairs) {add_interior_door_for_floor(door, is_bathroom); return;} // add a single door across all floors
 	float const floor_spacing(get_window_vspace()), door_height(floor_spacing - get_floor_thickness());
 

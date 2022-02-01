@@ -1783,7 +1783,7 @@ void building_t::update_stats(building_stats_t &s) const { // calculate all of t
 	s.nverts += interior->room_geom->get_num_verts();
 }
 
-bool door_opens_inward(door_stack_t const &door, cube_t const &room) {
+bool door_opens_inward(door_base_t const &door, cube_t const &room) {
 	return (room.is_all_zeros() || (door.d[door.dim][0] < room.get_center_dim(door.dim)) == door.open_dir); // null room always returns 1 (conservative)
 }
 // check_dirs/open_dirs: 0=lo only, 1=hi only, 2+=both

@@ -824,24 +824,29 @@ struct stairwell_t : public cube_t, public stairs_landing_base_t {
 };
 typedef vector<stairwell_t> vect_stairwell_t;
 
-struct door_stack_t : public cube_t {
+struct door_base_t : public cube_t {
 	bool dim, open_dir, hinge_side, on_stairs;
 	// is it useful to store the two rooms in the door/door_stack? this will speed up connectivity searches for navigation and room assignment,
 	// but only for finding the second room connected to a door, because we still need to iterate over all doors;
 	// unfortunately, it's not easy/cheap to assign these values because the room may not even be added until after the door is placed, so we have to go back and set room1/room2 later
 	//uint8_t room1, room2;
-	door_stack_t() : dim(0), open_dir(0), hinge_side(0), on_stairs(0) {}
-	door_stack_t(cube_t const &c, bool dim_, bool dir, bool os=0, bool hs=0) :
+	door_base_t() : dim(0), open_dir(0), hinge_side(0), on_stairs(0) {}
+	door_base_t(cube_t const &c, bool dim_, bool dir, bool os=0, bool hs=0) :
 		cube_t(c), dim(dim_), open_dir(dir), hinge_side(hs), on_stairs(os) {assert(is_strictly_normalized());}
-	bool get_check_dirs() const {return (dim ^ open_dir ^ hinge_side ^ 1);}
-	float get_width    () const {return get_sz_dim(!dim);}
-	float get_thickness() const {return DOOR_THICK_TO_WIDTH*get_width();}
+	bool get_check_dirs  () const {return (dim ^ open_dir ^ hinge_side ^ 1);}
+	float get_width      () const {return get_sz_dim(!dim);}
+	float get_thickness  () const {return DOOR_THICK_TO_WIDTH*get_width();}
 	cube_t get_true_bcube() const {cube_t bc(*this); bc.expand_in_dim(dim, 0.5*get_thickness()); return bc;}
 };
-struct door_t : public door_stack_t {
+struct door_stack_t : public door_base_t {
+	unsigned first_door_ix; // on the lowest floor
+	door_stack_t() : first_door_ix(0) {}
+	door_stack_t(door_base_t const &db, unsigned fdix) : door_base_t(db), first_door_ix(fdix) {}
+};
+struct door_t : public door_base_t {
 	bool open, locked, blocked;
 	door_t() : open(0), locked(0), blocked(0) {}
-	door_t(cube_t const &c, bool dim_, bool dir, bool open_=1, bool os=0, bool hs=0) : door_stack_t(c, dim_, dir, os, hs), open(open_), locked(0), blocked(0) {}
+	door_t(cube_t const &c, bool dim_, bool dir, bool open_=1, bool os=0, bool hs=0) : door_base_t(c, dim_, dir, os, hs), open(open_), locked(0), blocked(0) {}
 	bool is_closed_and_locked() const {return (!open && locked);}
 	bool is_locked_or_blocked(bool have_key) const {return (blocked || (is_closed_and_locked() && !have_key));}
 };
@@ -1390,7 +1395,7 @@ room_object_t get_desk_drawers_part(room_object_t const &c);
 cube_t get_elevator_car_panel(room_object_t const &c, float fc_thick_scale);
 void set_rand_pos_for_sz(cube_t &c, bool dim, float length, float width, rand_gen_t &rgen);
 template<typename T> bool has_bcube_int_xy(cube_t const &bcube, vector<T> const &bcubes, float pad_dist=0.0);
-bool door_opens_inward(door_stack_t const &door, cube_t const &room);
+bool door_opens_inward(door_base_t const &door, cube_t const &room);
 bool is_cube_close_to_door(cube_t const &c, float dmin, bool inc_open, cube_t const &door, unsigned check_dirs=2, unsigned open_dirs=2, bool allow_block_door=0);
 void add_building_interior_lights(point const &xlate, cube_t &lights_bcube);
 unsigned calc_num_floors(cube_t const &c, float window_vspacing, float floor_thickness);
