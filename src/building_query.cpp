@@ -1123,7 +1123,7 @@ bool building_t::check_line_coll_expand(point const &p1, point const &p2, float 
 	return 0;
 }
 
-// visibility query used for rats: ignores exterior walls and room objects
+// visibility query used for rats: ignores room objects
 bool building_t::check_line_of_sight_large_objs(point const &p1, point const &p2) const {
 	assert(interior != nullptr);
 	cube_t line_bcube(p1, p2);
@@ -1136,6 +1136,20 @@ bool building_t::check_line_of_sight_large_objs(point const &p1, point const &p2
 		if (!door.open && line_bcube.intersects(door) && door.line_intersects(p1, p2)) return 0;
 	}
 	if (line_int_cubes(p1, p2, interior->elevators, line_bcube)) return 0; // check elevators only because stairs aren't solid visual blockers
+
+	if (real_num_parts > 1) { // check exterior walls; this is simpler than ray_cast_exterior_walls()
+		float tot_len(0.0);
+		auto parts_end(get_real_parts_end_inc_sec());
+		bool contained(0);
+
+		for (auto i = parts.begin(); i != parts_end; ++i) { // includes garage/shed
+			if (i->contains_pt(p1) && i->contains_pt(p2)) {contained = 1; break;} // fully contained optimization
+			point p1c(p1), p2c(p2);
+			if (do_line_clip(p1c, p2c, i->d)) {tot_len += p2p_dist(p1c, p2c);}
+		}
+		// length of line segments clipped to parts < total line length => line not contained in sum of parts
+		if (!contained && tot_len < 0.99*p2p_dist(p1, p2)) return 0;
+	}
 	return 1;
 }
 
