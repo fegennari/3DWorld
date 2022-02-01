@@ -701,7 +701,7 @@ bool building_room_geom_t::player_pickup_object(building_t &building, point cons
 		return picked_up;
 	}
 	if (obj.type == TYPE_BCASE) {
-		static vector<room_object_t> books;
+		static vect_room_object_t books;
 		books.clear();
 		get_bookcase_books(obj, books);
 		int closest_obj_id(-1);
@@ -743,7 +743,7 @@ bool is_obj_in_or_on_obj(room_object_t const &parent, room_object_t const &child
 	if (parent.type == TYPE_BOX && parent.is_open() && parent.contains_cube(child))       return 1; // open box with an object inside
 	return 0;
 }
-bool object_has_something_on_it(room_object_t const &obj, vector<room_object_t> const &objs, vector<room_object_t>::const_iterator objs_end) {
+bool object_has_something_on_it(room_object_t const &obj, vect_room_object_t const &objs, vect_room_object_t::const_iterator objs_end) {
 	// only these types can have objects placed on them (what about TYPE_SHELF?)
 	if (obj.type != TYPE_TABLE && obj.type != TYPE_DESK && obj.type != TYPE_COUNTER && obj.type != TYPE_DRESSER && obj.type != TYPE_NIGHTSTAND &&
 		obj.type != TYPE_BOX && obj.type != TYPE_CRATE && obj.type != TYPE_WINE_RACK && obj.type != TYPE_BOOK) return 0;
@@ -1045,7 +1045,7 @@ bool building_t::move_nearest_object(point const &at_pos, vector3d const &in_dir
 	int closest_obj_id(-1);
 	float dmin_sq(0.0);
 	point const p2(at_pos + in_dir*range);
-	vector<room_object_t> &objs(interior->room_geom->objs), &expanded_objs(interior->room_geom->expanded_objs);
+	vect_room_object_t &objs(interior->room_geom->objs), &expanded_objs(interior->room_geom->expanded_objs);
 	auto objs_end(interior->room_geom->get_stairs_start()); // skip stairs and elevators
 
 	// determine which object the player may be choosing to move

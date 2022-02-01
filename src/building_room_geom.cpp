@@ -13,9 +13,9 @@ colorRGBA const STAIRS_COLOR_TOP(0.7, 0.7, 0.7);
 colorRGBA const STAIRS_COLOR_BOT(0.9, 0.9, 0.9);
 
 vect_cube_t temp_cubes;
-vector<room_object_t> temp_objects;
+vect_room_object_t temp_objects;
 vect_cube_t &get_temp_cubes() {temp_cubes.clear(); return temp_cubes;}
-vector<room_object_t> &get_temp_objects() {temp_objects.clear(); return temp_objects;}
+vect_room_object_t &get_temp_objects() {temp_objects.clear(); return temp_objects;}
 
 extern int display_mode, player_in_closet;
 
@@ -205,7 +205,7 @@ void building_room_geom_t::add_dresser_drawers(room_object_t const &c, float tsc
 	colorRGBA const drawer_color(apply_light_color(c, WHITE)); // lighter color than dresser
 	colorRGBA const handle_color(apply_light_color(c, GRAY_BLACK));
 	unsigned const door_skip_faces(~get_face_mask(c.dim, !c.dir));
-	vector<room_object_t> &objects(get_temp_objects());
+	vect_room_object_t &objects(get_temp_objects());
 
 	for (auto i = drawers.begin(); i != drawers.end(); ++i) {
 		float const dwidth(i->get_sz_dim(!c.dim)), handle_shrink(0.5*dwidth - handle_width);
@@ -441,7 +441,7 @@ void building_room_geom_t::add_closet(room_object_t const &c, tid_nm_pair_t cons
 		} // for is_side
 		// Note: always drawn to avoid recreating all small objects when the player opens/closes a closet door, and so that objects can be seen through the cracks in the doors
 		if (!(c.flags & RO_FLAG_EXPANDED)) { // add boxes if not expanded
-			vector<room_object_t> &objects(get_temp_objects());
+			vect_room_object_t &objects(get_temp_objects());
 			add_closet_objects(c, objects);
 			add_small_static_objs_to_verts(objects);
 		}
@@ -715,7 +715,7 @@ void building_room_geom_t::add_shelves(room_object_t const &c, float tscale) {
 	}
 	// add objects to the shelves
 	if (c.flags & RO_FLAG_EXPANDED) return; // shelves have already been expanded, don't need to create contained objects below
-	vector<room_object_t> &objects(get_temp_objects());
+	vect_room_object_t &objects(get_temp_objects());
 	get_shelf_objects(c, shelves, num_shelves, objects);
 	add_small_static_objs_to_verts(objects);
 }
@@ -1465,7 +1465,7 @@ void get_bookcase_cubes(room_object_t const &c, cube_t &top, cube_t &middle, cub
 }
 
 void building_room_geom_t::add_bookcase(room_object_t const &c, bool inc_lg, bool inc_sm, float tscale, bool no_shelves, float sides_scale,
-	point const *const use_this_tex_origin, vector<room_object_t> *books)
+	point const *const use_this_tex_origin, vect_room_object_t *books)
 {
 	colorRGBA const color(apply_wood_light_color(c));
 	point const tex_origin(use_this_tex_origin ? *use_this_tex_origin : c.get_llc());
@@ -1589,7 +1589,7 @@ void building_room_geom_t::add_wine_rack(room_object_t const &c, bool inc_lg, bo
 		}
 	}
 	if (inc_sm && !(c.flags & RO_FLAG_EXPANDED)) { // add wine bottles if not expanded
-		vector<room_object_t> &objects(get_temp_objects());
+		vect_room_object_t &objects(get_temp_objects());
 		add_wine_rack_bottles(c, objects);
 		add_small_static_objs_to_verts(objects);
 	}

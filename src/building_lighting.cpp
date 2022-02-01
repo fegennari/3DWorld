@@ -159,7 +159,7 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc) const {
 	add_colored_cubes(interior->floors,   mat.floor_color.modulate_with(mat.floor_tex.get_avg_color()), cc);
 	add_colored_cubes(details,            detail_color.   modulate_with(mat.roof_tex. get_avg_color()), cc); // should this be included?
 	if (!has_room_geom()) return; // nothing else to add
-	vector<room_object_t> const &objs(interior->room_geom->objs);
+	vect_room_object_t const &objs(interior->room_geom->objs);
 	cc.reserve(cc.size() + objs.size());
 		
 	for (auto c = objs.begin(); c != objs.end(); ++c) {
@@ -231,7 +231,7 @@ class building_indir_light_mgr_t {
 	void cast_light_rays(building_t const &b) {
 		// Note: modifies lmgr, but otherwise thread safe
 		unsigned const num_rt_threads(NUM_THREADS - (USE_BKG_THREAD ? 1 : 0)); // reserve a thread for the main thread if running in the background
-		vector<room_object_t> const &objs(b.interior->room_geom->objs);
+		vect_room_object_t const &objs(b.interior->room_geom->objs);
 		assert((unsigned)cur_light < objs.size());
 		room_object_t const &ro(objs[cur_light]);
 		colorRGBA const lcolor((ro.type == TYPE_LAMP) ? LAMP_COLOR : ro.get_color());
@@ -381,7 +381,7 @@ void building_t::order_lights_by_priority(point const &target, vector<unsigned> 
 
 	light_ids.clear();
 	if (!has_room_geom()) return; // error?
-	vector<room_object_t> const &objs(interior->room_geom->objs);
+	vect_room_object_t const &objs(interior->room_geom->objs);
 	vector<pair<float, unsigned>> to_sort;
 	float const window_vspacing(get_window_vspace());
 	float const diag_dist_sq(bcube.dx()*bcube.dx() + bcube.dy()*bcube.dy()), other_floor_penalty(0.25*diag_dist_sq);
@@ -593,7 +593,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 	float const camera_z(camera_bs.z), room_xy_expand(0.75*wall_thickness);
 	bool const check_building_people(enable_building_people_ai());
 	vect_cube_t &light_bcubes(interior->room_geom->light_bcubes);
-	vector<room_object_t> &objs(interior->room_geom->objs); // non-const, light flags are updated
+	vect_room_object_t &objs(interior->room_geom->objs); // non-const, light flags are updated
 	auto objs_end(interior->room_geom->get_placed_objs_end()); // skip trim/buttons/stairs/elevators
 	point camera_rot(camera_bs);
 	maybe_inv_rotate_point(camera_rot); // rotate camera pos into building space

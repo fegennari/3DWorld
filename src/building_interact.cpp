@@ -51,7 +51,7 @@ bool building_t::toggle_room_light(point const &closest_to, bool sound_from_clos
 		if (room_id < 0) return 0; // closest_to is not contained in a room of this building
 	}
 	room_t const &room(get_room(room_id));
-	vector<room_object_t> &objs(interior->room_geom->objs);
+	vect_room_object_t &objs(interior->room_geom->objs);
 	auto objs_end(interior->room_geom->get_placed_objs_end()); // skip trim/buttons/stairs/elevators
 	float closest_dist_sq(0.0);
 	int closest_light(-1);
@@ -264,7 +264,7 @@ bool building_t::apply_player_action_key(point const &closest_to_in, vector3d co
 		} // for i
 	}
 	if (has_room_geom()) { // check for closet doors in houses, bathroom stalls in office buildings, and other objects that can be interacted with
-		vector<room_object_t> &objs(interior->room_geom->objs), &expanded_objs(interior->room_geom->expanded_objs);
+		vect_room_object_t &objs(interior->room_geom->objs), &expanded_objs(interior->room_geom->expanded_objs);
 		auto objs_end(interior->room_geom->get_stairs_start());
 		cube_t active_area;
 
@@ -756,7 +756,7 @@ bool building_interior_t::update_elevators(building_t const &building, point con
 	float const z_space(0.05*building.get_floor_thickness()); // to prevent z-fighting
 	float const delta_open_amt(min(1.0f, 2.0f*fticks/TICKS_PER_SECOND)); // 0.5s for full open
 	static int prev_move_dir(2); // starts at not-moving
-	vector<room_object_t> &objs(room_geom->objs);
+	vect_room_object_t &objs(room_geom->objs);
 	bool was_updated(0), update_ddd(0);
 
 	// Note: the player can only be in one elevator at a time, but they can push the call button for one elevator and get into another, so we have to check all elevators

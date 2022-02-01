@@ -25,7 +25,7 @@ bool is_shirt_model     (room_object_t const &obj) {return building_obj_model_lo
 bool is_pants_model     (room_object_t const &obj) {return building_obj_model_loader.model_filename_contains(obj.get_model_id(), "pants", "Pants");}
 bool is_bar_hanger_model(room_object_t const &obj) {return building_obj_model_loader.model_filename_contains(obj.get_model_id(), "bar hanger", "Bar Hanger");}
 
-bool add_if_not_intersecting(room_object_t const &obj, vector<room_object_t> &objects, vect_cube_t &cubes) {
+bool add_if_not_intersecting(room_object_t const &obj, vect_room_object_t &objects, vect_cube_t &cubes) {
 	if (has_bcube_int(obj, cubes)) return 0;
 	objects.push_back(obj);
 	cubes.push_back(obj);
@@ -50,7 +50,7 @@ void gen_xy_pos_for_round_obj(cube_t &C, cube_t const &S, float radius, float he
 	set_cube_zvals(C, place_z, place_z+height);
 }
 
-void add_boxes_to_space(room_object_t const &c, vector<room_object_t> &objects, cube_t const &bounds, vect_cube_t &cubes, rand_gen_t &rgen,
+void add_boxes_to_space(room_object_t const &c, vect_room_object_t &objects, cube_t const &bounds, vect_cube_t &cubes, rand_gen_t &rgen,
 	unsigned num_boxes, float xy_scale, float hmin, float hmax, bool allow_crates, unsigned flags)
 {
 	float const bounds_sz[2] = {bounds.dx(), bounds.dy()};
@@ -86,7 +86,7 @@ cube_t get_closet_interior_space(room_object_t const &c, cube_t const cubes[5]) 
 	return interior;
 }
 
-void add_obj_to_closet(room_object_t const &c, cube_t const &interior, vector<room_object_t> &objects, vect_cube_t &cubes,
+void add_obj_to_closet(room_object_t const &c, cube_t const &interior, vect_room_object_t &objects, vect_cube_t &cubes,
 	rand_gen_t &rgen, vector3d const &sz, unsigned obj_type, unsigned flags, room_obj_shape shape=SHAPE_CUBE)
 {
 	for (unsigned n = 0; n < 4; ++n) { // make up to 4 attempts
@@ -103,7 +103,7 @@ void add_obj_to_closet(room_object_t const &c, cube_t const &interior, vector<ro
 	} // for n
 }
 
-void building_room_geom_t::add_closet_objects(room_object_t const &c, vector<room_object_t> &objects) {
+void building_room_geom_t::add_closet_objects(room_object_t const &c, vect_room_object_t &objects) {
 	cube_t ccubes[5]; // only used to get interior space
 	get_closet_cubes(c, ccubes);
 	cube_t const interior(get_closet_interior_space(c, ccubes));
@@ -314,7 +314,7 @@ unsigned building_room_geom_t::get_shelves_for_object(room_object_t const &c, cu
 	return num_shelves;
 }
 
-void building_room_geom_t::get_shelf_objects(room_object_t const &c_in, cube_t const shelves[4], unsigned num_shelves, vector<room_object_t> &objects) {
+void building_room_geom_t::get_shelf_objects(room_object_t const &c_in, cube_t const shelves[4], unsigned num_shelves, vect_room_object_t &objects) {
 	room_object_t c(c_in);
 	c.flags |= RO_FLAG_WAS_EXP;
 	bool const is_house(c.is_house());
@@ -447,7 +447,7 @@ void building_room_geom_t::expand_shelves(room_object_t const &c) {
 	get_shelf_objects(c, shelves, num_shelves, expanded_objs);
 }
 
-void building_room_geom_t::add_wine_rack_bottles(room_object_t const &c, vector<room_object_t> &objects) {
+void building_room_geom_t::add_wine_rack_bottles(room_object_t const &c, vect_room_object_t &objects) {
 	float const height(c.dz()), width(c.get_sz_dim(!c.dim)), depth(c.get_sz_dim(c.dim)), shelf_thick(0.1*depth);
 	unsigned const num_rows(max(1, round_fp(2.0*height/depth))), num_cols(max(1, round_fp(2.0*width/depth)));
 	float const row_step((height - shelf_thick)/num_rows), col_step((width - shelf_thick)/num_cols);

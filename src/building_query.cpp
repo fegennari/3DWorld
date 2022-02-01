@@ -394,7 +394,7 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, vec
 	had_coll |= interior->check_sphere_coll_walls_elevators_doors(*this, pos, p_last, xy_radius, radius, 0, cnorm); // check_open_doors=0 (to avoid getting the player stuck)
 
 	if (interior->room_geom) { // collision with room geometry
-		vector<room_object_t> const &objs(interior->room_geom->objs);
+		vect_room_object_t const &objs(interior->room_geom->objs);
 
 		for (auto c = interior->room_geom->get_stairs_start(); c != objs.end(); ++c) { // check for and handle stairs first
 			if (c->no_coll() || c->type != TYPE_STAIR) continue;
@@ -480,7 +480,7 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, vec
 
 // Note: called on basketballs and soccer balls
 bool building_interior_t::check_sphere_coll(building_t const &building, point &pos, point const &p_last, float radius,
-	vector<room_object_t>::const_iterator self, vector3d &cnorm, float &hardness, int &obj_ix) const
+	vect_room_object_t::const_iterator self, vector3d &cnorm, float &hardness, int &obj_ix) const
 {
 	bool had_coll(check_sphere_coll_walls_elevators_doors(building, pos, p_last, radius, 0.0, 1, &cnorm)); // check_open_doors=1
 	if (had_coll) {hardness = 1.0;}
@@ -936,7 +936,7 @@ unsigned get_ksink_cubes(room_object_t const &sink, cube_t cubes[3]) {
 }
 
 struct cached_room_objs_t {
-	vector<room_object_t> objs;
+	vect_room_object_t objs;
 	building_t const *building;
 	int cur_frame;
 	cached_room_objs_t() : building(nullptr), cur_frame(0) {}
@@ -951,7 +951,7 @@ struct cached_room_objs_t {
 };
 cached_room_objs_t cached_room_objs;
 
-void building_t::get_objs_at_or_below_ground_floor(vector<room_object_t> &ret) const {
+void building_t::get_objs_at_or_below_ground_floor(vect_room_object_t &ret) const {
 	float const z_thresh(get_ground_floor_z_thresh());
 	assert(has_room_geom());
 	auto objs_end(interior->room_geom->get_placed_objs_end()); // skip trim/buttons/stairs/elevators

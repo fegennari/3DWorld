@@ -486,6 +486,7 @@ struct room_object_t : public cube_t {
 	vector3d get_dir() const {vector3d v(zero_vector); v[dim] = (dir ? 1.0 : -1.0); return v;}
 	void set_rand_gen_state(rand_gen_t &rgen) const {rgen.set_state(obj_id+1, room_id+1);}
 };
+typedef vector<room_object_t> vect_room_object_t;
 
 struct carried_item_t : public room_object_t {
 	unsigned use_count;
@@ -606,7 +607,7 @@ struct building_room_geom_t {
 	unsigned trim_start, buttons_start, stairs_start; // index of first object of {TYPE_TRIM, TYPE_BUTTON, TYPE_STAIR}
 	point tex_origin;
 	colorRGBA wood_color;
-	vector<room_object_t> objs, expanded_objs, model_objs; // objects in rooms; expanded_objs is for things that have been expanded for player interaction; model_objs is for models in drawers
+	vect_room_object_t objs, expanded_objs, model_objs; // objects in rooms; expanded_objs is for things that have been expanded for player interaction; model_objs is for models in drawers
 	vector<room_obj_dstate_t> obj_dstate;
 	vector<obj_model_inst_t> obj_model_insts;
 	vector<unsigned> moved_obj_ids;
@@ -635,9 +636,9 @@ struct building_room_geom_t {
 	colorRGBA apply_wood_light_color(room_object_t const &o) const;
 	void add_tquad(building_geom_t const &bg, tquad_with_ix_t const &tquad, cube_t const &bcube, tid_nm_pair_t const &tex,
 		colorRGBA const &color, bool invert_tc_x, bool exclude_frame, bool no_tc);
-	vector<room_object_t>::const_iterator get_placed_objs_end() const {return (objs.begin() + trim_start);}
-	vector<room_object_t>::const_iterator get_std_objs_end   () const {return (objs.begin() + buttons_start);}
-	vector<room_object_t>::const_iterator get_stairs_start   () const {return (objs.begin() + stairs_start );}
+	vect_room_object_t::const_iterator get_placed_objs_end() const {return (objs.begin() + trim_start);}
+	vect_room_object_t::const_iterator get_std_objs_end   () const {return (objs.begin() + buttons_start);}
+	vect_room_object_t::const_iterator get_stairs_start   () const {return (objs.begin() + stairs_start );}
 	// Note: these functions are all for drawing objects / adding them to the vertex list
 	void add_tc_legs(cube_t const &c, colorRGBA const &color, float width, float tscale);
 	void add_table(room_object_t const &c, float tscale, float top_dz, float leg_width);
@@ -655,7 +656,7 @@ struct building_room_geom_t {
 		unsigned hdim, unsigned tdim, unsigned wdim, bool cdir, bool ldir, bool wdir);
 	void add_book(room_object_t const &c, bool inc_lg, bool inc_sm, float tilt_angle=0.0, unsigned extra_skip_faces=0, bool no_title=0, float z_rot_angle=0.0);
 	void add_bookcase(room_object_t const &c, bool inc_lg, bool inc_sm, float tscale, bool no_shelves=0, float sides_scale=1.0,
-		point const *const use_this_tex_origin=nullptr, vector<room_object_t> *books=nullptr);
+		point const *const use_this_tex_origin=nullptr, vect_room_object_t *books=nullptr);
 	void add_wine_rack(room_object_t const &c, bool inc_lg, bool inc_sm, float tscale);
 	void add_desk(room_object_t const &c, float tscale, bool inc_lg, bool inc_sm);
 	void add_reception_desk(room_object_t const &c, float tscale);
@@ -712,7 +713,7 @@ struct building_room_geom_t {
 	static void draw_interactive_player_obj(carried_item_t const &c, shader_t &s, vector3d const &xlate);
 	// functions for expanding nested objects
 	void expand_shelves(room_object_t const &c);
-	void get_bookcase_books(room_object_t const &c, vector<room_object_t> &books) {add_bookcase(c, 0, 0, 1.0, 0, 1.0, nullptr, &books);} // Note: technically const
+	void get_bookcase_books(room_object_t const &c, vect_room_object_t &books) {add_bookcase(c, 0, 0, 1.0, 0, 1.0, nullptr, &books);} // Note: technically const
 	void expand_closet(room_object_t const &c) {add_closet_objects(c, expanded_objs);}
 	void expand_cabinet(room_object_t const &c);
 	void expand_wine_rack(room_object_t const &c) {add_wine_rack_bottles(c, expanded_objs);}
@@ -734,7 +735,7 @@ struct building_room_geom_t {
 	void update_dynamic_draw_data() {mats_dynamic.clear();}
 	void create_static_vbos(building_t const &building);
 	void create_small_static_vbos(building_t const &building);
-	void add_small_static_objs_to_verts(vector<room_object_t> const &objs_to_add);
+	void add_small_static_objs_to_verts(vect_room_object_t const &objs_to_add);
 	void create_obj_model_insts(building_t const &building);
 	void create_lights_vbos(building_t const &building);
 	void create_dynamic_vbos(building_t const &building);
@@ -744,10 +745,10 @@ struct building_room_geom_t {
 	unsigned allocate_dynamic_state();
 	room_obj_dstate_t &get_dstate(room_object_t const &obj);
 private:
-	static void add_closet_objects(room_object_t const &c, vector<room_object_t> &objects);
+	static void add_closet_objects(room_object_t const &c, vect_room_object_t &objects);
 	static unsigned get_shelves_for_object(room_object_t const &c, cube_t shelves[4]);
-	static void get_shelf_objects(room_object_t const &c_in, cube_t const shelves[4], unsigned num_shelves, vector<room_object_t> &objects);
-	static void add_wine_rack_bottles(room_object_t const &c, vector<room_object_t> &objects);
+	static void get_shelf_objects(room_object_t const &c_in, cube_t const shelves[4], unsigned num_shelves, vect_room_object_t &objects);
+	static void add_wine_rack_bottles(room_object_t const &c, vect_room_object_t &objects);
 	static void add_vert_roll_to_material(room_object_t const &c, rgeom_mat_t &mat, float sz_ratio=1.0, bool player_held=0);
 }; // building_room_geom_t
 
@@ -890,7 +891,7 @@ struct building_interior_t {
 	void finalize();
 	bool update_elevators(building_t const &building, point const &player_pos);
 	bool check_sphere_coll(building_t const &building, point &pos, point const &p_last, float radius,
-		vector<room_object_t>::const_iterator self, vector3d &cnorm, float &hardness, int &obj_ix) const;
+		vect_room_object_t::const_iterator self, vector3d &cnorm, float &hardness, int &obj_ix) const;
 	bool check_sphere_coll_walls_elevators_doors(building_t const &building, point &pos, point const &p_last, float radius,
 		float wall_test_extra_z, bool check_open_doors, vector3d *cnorm) const;
 	bool line_coll(building_t const &building, point const &p1, point const &p2, point &p_int) const;
@@ -1117,7 +1118,7 @@ private:
 	// animals
 public:
 	void update_animals(point const &camera_bs, unsigned building_ix, int ped_ix);
-	void get_objs_at_or_below_ground_floor(vector<room_object_t> &ret) const;
+	void get_objs_at_or_below_ground_floor(vect_room_object_t &ret) const;
 private:
 	point gen_rat_pos(float radius, rand_gen_t &rgen) const;
 	void add_rat(point const &pos, float length, vector3d const &dir, point const &placed_from);
