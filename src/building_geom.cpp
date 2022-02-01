@@ -1750,6 +1750,7 @@ void building_t::get_exclude_cube(point const &pos, cube_t const &skip, cube_t &
 		float cov_area(0);
 
 		for (auto p = parts.begin(); p != get_real_parts_end(); ++p) {
+			if (p->z1() != ground_floor_z1) continue; // only count ground floor parts
 			if (p->intersects_xy(cand)) {cov_area += (min(cand.x2(), p->x2()) - max(cand.x1(), p->x1()))*(min(cand.y2(), p->y2()) - max(cand.y1(), p->y1()));}
 		}
 		if (cov_area > 0.99*cand.get_area_xy()) {exclude = cand;} // expand if covered (with some tolerance to allow for FP error)
