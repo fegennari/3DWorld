@@ -985,6 +985,7 @@ struct building_t : public building_geom_t {
 	float get_trim_thickness () const {return 0.1*get_wall_thickness();}
 	float get_door_height    () const {return 0.95f*(get_window_vspace() - get_floor_thickness());} // set height based on window spacing, 95% of ceiling height (may be too large)
 	float get_doorway_width  () const;
+	float get_ground_floor_z_thresh() const {return (ground_floor_z1 + 0.25f*get_window_vspace());} // for rats
 	unsigned get_person_capacity_mult() const;
 	void gen_rotation(rand_gen_t &rgen);
 	void maybe_inv_rotate_point(point &p) const {if (is_rotated()) {do_xy_rotate_inv(bcube.get_cube_center(), p);}} // inverse rotate - negate the sine term
@@ -1110,6 +1111,7 @@ private:
 	// animals
 public:
 	void update_animals(point const &camera_bs, unsigned building_ix, int ped_ix);
+	void get_objs_at_or_below_ground_floor(vector<room_object_t> &ret) const;
 private:
 	point gen_rat_pos(float radius, rand_gen_t &rgen) const;
 	void add_rat(point const &pos, float length, vector3d const &dir, point const &placed_from);

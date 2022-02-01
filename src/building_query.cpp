@@ -8,7 +8,7 @@
 
 extern bool draw_building_interiors, player_near_toilet, player_is_hiding, player_in_elevator;
 extern float CAMERA_RADIUS;
-extern int player_in_closet, camera_surf_collide;
+extern int player_in_closet, camera_surf_collide, frame_counter;
 extern double camera_zh;
 extern building_params_t global_building_params;
 extern bldg_obj_type_t bldg_obj_types[];
@@ -935,6 +935,35 @@ unsigned get_ksink_cubes(room_object_t const &sink, cube_t cubes[3]) {
 	return 3;
 }
 
+struct cached_room_objs_t {
+	vector<room_object_t> objs;
+	building_t const *building;
+	int cur_frame;
+	cached_room_objs_t() : building(nullptr), cur_frame(0) {}
+
+	void ensure_cached(building_t const &b) {
+		if (building == &b && cur_frame == frame_counter) return; // already cached
+		building = &b;
+		cur_frame = frame_counter;
+		objs.clear();
+		b.get_objs_at_or_below_ground_floor(objs);
+	}
+};
+cached_room_objs_t cached_room_objs;
+
+void building_t::get_objs_at_or_below_ground_floor(vector<room_object_t> &ret) const {
+	float const z_thresh(get_ground_floor_z_thresh());
+	assert(has_room_geom());
+	auto objs_end(interior->room_geom->get_placed_objs_end()); // skip trim/buttons/stairs/elevators
+
+	for (auto c = interior->room_geom->objs.begin(); c != objs_end; ++c) {
+		if (c->z1() < z_thresh) {ret.push_back(*c);}
+	}
+	for (auto c = interior->room_geom->expanded_objs.begin(); c != interior->room_geom->expanded_objs.end(); ++c) {
+		if (c->z1() < z_thresh) {ret.push_back(*c);}
+	}
+}
+
 // collision query used for rats: p1 and p2 are line end points; radius applies in X and Y, hheight is half height and applies in +/- z
 bool building_t::check_line_coll_expand(point const &p1, point const &p2, float radius, float hheight) const {
 	assert(interior != nullptr);
@@ -1008,10 +1037,12 @@ bool building_t::check_line_coll_expand(point const &p1, point const &p2, float 
 	if (!has_room_geom()) return 0; // done (but really shouldn't get here)
 	// check room objects and expanded objects (from closets)
 	float t(0.0);
+	bool const use_cached_objs(obj_z2 < get_ground_floor_z_thresh()); // optimized for the case of rats where most are on the ground floor or basement
+	if (use_cached_objs) {cached_room_objs.ensure_cached(*this);}
 
-	for (unsigned vect_id = 0; vect_id < 2; ++vect_id) {
-		auto const &obj_vect((vect_id == 1) ? interior->room_geom->expanded_objs : interior->room_geom->objs);
-		auto objs_end((vect_id == 1) ? obj_vect.end() : interior->room_geom->get_placed_objs_end()); // skip trim/buttons/stairs/elevators
+	for (unsigned vect_id = 0; vect_id < (use_cached_objs ? 1U : 2U); ++vect_id) {
+		auto const &obj_vect(use_cached_objs ? cached_room_objs.objs : ((vect_id == 1) ? interior->room_geom->expanded_objs : interior->room_geom->objs));
+		auto objs_end(use_cached_objs ? cached_room_objs.objs.end()  : ((vect_id == 1) ? obj_vect.end() : interior->room_geom->get_placed_objs_end()));
 
 		for (auto c = obj_vect.begin(); c != objs_end; ++c) {
 			if (c->z1() > obj_z2 || c->z2() < obj_z1) continue; // wrong floor
