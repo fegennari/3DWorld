@@ -639,7 +639,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			if (i->is_visible() && i->is_moving()) {moving_objs.push_back(*i);}
 		}
 	}
-	if (camera_in_building) {
+	if (bcube.contains_pt(camera_bs)) { // camera in building bcube; matches rat update logic
 		for (rat_t const &rat : interior->room_geom->rats) {
 			if (rat.is_moving()) {moving_objs.push_back(rat.get_bcube());}
 		}
