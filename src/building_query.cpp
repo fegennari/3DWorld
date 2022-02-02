@@ -1053,8 +1053,9 @@ bool building_t::check_line_coll_expand(point const &p1, point const &p2, float 
 
 		for (auto c = obj_vect.begin(); c != objs_end; ++c) {
 			if (c->z1() > obj_z2 || c->z2() < obj_z1) continue; // wrong floor
-			// skip non-colliding objects except for balls, computers under desks, expanded objects from closets (since rats must collide with these)
-			if (((c->no_coll() && !c->was_expanded() && c->type != TYPE_COMPUTER) || !bldg_obj_types[c->type].ai_coll) && c->type != TYPE_LG_BALL) continue;
+			// skip non-colliding objects except for balls and books (that the player can drop), computers under desks, and expanded objects from closets,
+			// since rats must collide with these
+			if (((c->no_coll() && !c->was_expanded() && c->type != TYPE_COMPUTER) || !bldg_obj_types[c->type].ai_coll) && c->type != TYPE_LG_BALL && c->type != TYPE_BOOK) continue;
 			cube_t c_extended(*c);
 			if (c->type == TYPE_CLOSET) {c_extended = get_closet_bcube_including_door(*c);}
 			if (!line_bcube.intersects(*c) || !line_int_cube_exp(p1, p2, c_extended, expand)) continue;
