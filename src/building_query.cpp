@@ -1157,8 +1157,8 @@ bool building_t::check_line_of_sight_large_objs(point const &p1, point const &p2
 bool handle_vcylin_vcylin_int(point &p1, point const &p2, float rsum) {
 	if (!dist_xy_less_than(p1, p2, rsum)) return 0; // no collision
 	vector3d const delta(p1.x-p2.x, p1.y-p2.y, 0.0); // ignore zvals
-	float const delta_mag(delta.mag());
-	p1 += delta*((rsum - delta_mag)/delta_mag);
+	float const xy_dist(delta.mag());
+	p1 += delta*((rsum - xy_dist)/xy_dist);
 	return 1;
 }
 bool handle_dynamic_room_objs_coll(vect_room_object_t::const_iterator begin, vect_room_object_t::const_iterator end, point &pos, float radius, float z2, point &coll_pos) {
@@ -1199,12 +1199,19 @@ bool building_t::check_and_handle_dynamic_obj_coll(point &pos, float radius, flo
 			handle_dynamic_room_objs_coll(interior->room_geom->objs.begin(), objs_end, pos, radius, z2, coll_pos);
 		}
 	}
-	// TODO: find closest rat
+	float max_overlap(0.0);
+
 	for (rat_t &rat : interior->room_geom->rats) {
 		if (rat.pos == pos) continue; // skip ourself
 		if (pos.z > (rat.pos.z + rat.height) || z2 < rat.pos.z) continue; // different floors
-		// allow them to get a bit closer together, since radius is conservative
-		if (handle_vcylin_vcylin_int(pos, rat.pos, 0.67f*(radius + rat.radius))) {coll_pos = rat.pos; return 1;}
+		float const rsum(0.67f*(radius + rat.radius)); // allow them to get a bit closer together, since radius is conservative
+		if (!dist_xy_less_than(pos, rat.pos, rsum)) continue; // no collision
+		float const overlap(rsum - p2p_dist_xy(pos, rat.pos));
+		if (overlap > max_overlap) {max_overlap = overlap; coll_pos = rat.pos;}
+	} // for rat
+	if (max_overlap > 0.0) { // resolve the max overlap collision, which should be more stable than resolving the first collision
+		pos += (pos - point(coll_pos.x, coll_pos.y, pos.z)).get_norm()*max_overlap; // XY only
+		return 1;
 	}
 	return 0;
 }
