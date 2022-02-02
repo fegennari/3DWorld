@@ -195,13 +195,10 @@ void building_t::update_rat(rat_t &rat, point const &camera_bs, int ped_ix, rand
 		rat.anim_time = 0.0; // reset animation to rest pos
 	}
 	else { // apply movement and check for collisions with dynamic objects
-		point const new_pos(rat.pos + move_dist*rat.dir);
+		vector3d const dest_dir((rat.dest - rat.pos).get_norm());
 
-		if (p2p_dist_xy_sq(rat.pos, rat.dest) < p2p_dist_xy_sq(new_pos, rat.dest)) {
-			// new pos is further from our dest; stop moving (but don't set speed=0), and turn in the correct dir to avoid overshooting dest and spinning in place
-		}
-		else { // apply movement
-			rat.pos               = new_pos;
+		if (dot_product(dest_dir, rat.dir) > 0.75) { // only move if we're facing our dest, to avoid walking through an object
+			rat.pos               = rat.pos + move_dist*rat.dir;
 			rat.anim_time        += move_dist/rat.radius; // scale with size so that small rats' legs move faster
 			rat.dist_since_sleep += move_dist;
 		}
@@ -281,7 +278,7 @@ void building_t::update_rat(rat_t &rat, point const &camera_bs, int ped_ix, rand
 					float const move_dist(r_sum - p2p_dist_xy(cand_dest, other_rat.pos));
 					cand_dest += (p1 - cand_dest).get_norm()*move_dist; // move our target in front of this other rat
 					side_cov  -= move_dist; // moving to this misaligned position loses side coverage
-					score      = side_cov - 0.5f*top_gap + 0.2f*dist_to_fear - 0.1*max(dist, dist_thresh); // update score
+					score      = 4.0*side_cov - 0.5f*top_gap + 0.25f*dist_to_fear - 0.1*max(dist, dist_thresh); // update score
 					score     -= 0.2*dist; // less desirable when occupied
 					tot_mdist += move_dist;
 					if (tot_mdist > 4.0*rat.radius) {skip = 1; break;} // moved too far, there must be too many other rats at this location, skip it
@@ -361,7 +358,7 @@ void building_t::update_rat(rat_t &rat, point const &camera_bs, int ped_ix, rand
 	rat.is_hiding = (has_fear_dest && dist_less_than(rat.pos, rat.dest, 2.0*dist_thresh)); // close to fear_dest
 
 	if (new_dir != zero_vector) { // update dir if new_dir was set above
-		float const delta_dir((is_scared ? 1.2 : 1.0)*min(1.0f, 1.5f*(1.0f - pow(0.7f, timestep)))); // higher turning rate when scared
+		float const delta_dir((is_scared ? 1.1 : 1.0)*min(1.0f, 1.5f*(1.0f - pow(0.7f, timestep)))); // higher turning rate when scared
 		rat.dir = (delta_dir*new_dir + (1.0 - delta_dir)*rat.dir).get_norm();
 	}
 	if (rat.dir == zero_vector) {rat.dir = rgen.signed_rand_vector_xy().get_norm();} // dir must always be valid

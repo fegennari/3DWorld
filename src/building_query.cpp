@@ -1187,13 +1187,6 @@ bool building_t::check_and_handle_dynamic_obj_coll(point &pos, float radius, flo
 	}
 	// what about people in the building? maybe since rats are scared of them, they won't collide with people?
 	assert(has_room_geom());
-
-	for (rat_t &rat : interior->room_geom->rats) {
-		if (rat.pos == pos) continue; // skip ourself
-		if (pos.z > (rat.pos.z + rat.height) || z2 < rat.pos.z) continue; // different floors
-		// allow them to get a bit closer together, since radius is conservative
-		if (handle_vcylin_vcylin_int(pos, rat.pos, 0.7f*(radius + rat.radius))) {coll_pos = rat.pos; return 1;}
-	}
 	// check dynamic objects such as balls; currently, we only check this for houses because they have balls on the floor;
 	// in theory, the player can put a ball in an office building, but we don't handle that case because office buildings have tons of objects and this is too slow
 	if (is_house) {
@@ -1205,6 +1198,13 @@ bool building_t::check_and_handle_dynamic_obj_coll(point &pos, float radius, flo
 			auto objs_end(interior->room_geom->get_placed_objs_end()); // skip trim/buttons/stairs/elevators
 			handle_dynamic_room_objs_coll(interior->room_geom->objs.begin(), objs_end, pos, radius, z2, coll_pos);
 		}
+	}
+	// TODO: find closest rat
+	for (rat_t &rat : interior->room_geom->rats) {
+		if (rat.pos == pos) continue; // skip ourself
+		if (pos.z > (rat.pos.z + rat.height) || z2 < rat.pos.z) continue; // different floors
+		// allow them to get a bit closer together, since radius is conservative
+		if (handle_vcylin_vcylin_int(pos, rat.pos, 0.67f*(radius + rat.radius))) {coll_pos = rat.pos; return 1;}
 	}
 	return 0;
 }
