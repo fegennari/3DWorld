@@ -88,6 +88,7 @@ struct rat_t {
 	cube_t get_bcube () const; // used for collision detection and VFC; bounding cube across rotations
 	cube_t get_bcube_with_dir() const; // used for model drawing; must be correct aspect ratio
 	void sleep_for(float time_secs_min, float time_secs_max);
+	void move(float timestep);
 };
 
 struct vect_rat_t : public vector<rat_t> {
@@ -1123,7 +1124,7 @@ private:
 	point gen_rat_pos(float radius, rand_gen_t &rgen) const;
 	void add_rat(point const &pos, float length, vector3d const &dir, point const &placed_from);
 	bool is_rat_inside_building(point const &pos, float xy_pad, float hheight) const;
-	void update_rat(rat_t &rat, point const &camera_bs, int ped_ix, rand_gen_t &rgen) const;
+	void update_rat(rat_t &rat, point const &camera_bs, int ped_ix, float timestep, rand_gen_t &rgen) const;
 	void scare_rat(rat_t &rat, point const &camera_bs, int ped_ix) const;
 	void scare_rat_at_pos(rat_t &rat, point const &scare_pos, float amount, bool by_sight) const;
 	bool check_line_coll_expand(point const &p1, point const &p2, float radius, float height) const;

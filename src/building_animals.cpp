@@ -45,6 +45,24 @@ cube_t rat_t::get_bcube_with_dir() const {
 void rat_t::sleep_for(float time_secs_min, float time_secs_max) {
 	wake_time = (float)tfticks + rand_uniform(time_secs_min, time_secs_max)*TICKS_PER_SECOND;
 }
+void rat_t::move(float timestep) {
+	if (is_sleeping()) {
+		if ((float)tfticks > wake_time) {wake_time = speed = 0.0;} // time to wake up
+	}
+	else if (speed == 0.0) {
+		anim_time = 0.0; // reset animation to rest pos
+	}
+	else { // apply movement and check for collisions with dynamic objects
+		vector3d const dest_dir((dest - pos).get_norm());
+
+		if (dot_product(dest_dir, dir) > 0.75) { // only move if we're facing our dest, to avoid walking through an object
+			float const move_dist(timestep*speed);
+			pos               = pos + move_dist*dir;
+			anim_time        += move_dist/radius; // scale with size so that small rats' legs move faster
+			dist_since_sleep += move_dist;
+		}
+	}
+}
 
 void building_t::add_rat(point const &pos, float length, vector3d const &dir, point const &placed_from) {
 	rat_t rat(pos, 0.5*length, vector3d(dir.x, dir.y, 0.0).get_norm()); // dir in XY plane
@@ -81,12 +99,14 @@ void building_t::update_animals(point const &camera_bs, unsigned building_ix, in
 		rats.placed = 1; // even if there were no rats placed
 	}
 	// update rats
+	float const timestep(min(fticks, 4.0f)); // clamp fticks to 100ms
+	for (rat_t &rat : rats) {rat.move(timestep);}
 	rand_gen_t rgen;
 	rgen.set_state(building_ix+1, frame_counter+1); // unique per building and per frame
 
 	for (rat_t &rat : rats) {
 		rgen.rand_mix(); // make sure it's different per rat
-		update_rat(rat, camera_bs, ped_ix, rgen); // ~0.01ms per rat
+		update_rat(rat, camera_bs, ped_ix, timestep, rgen); // ~0.01ms per rat
 	}
 }
 
@@ -171,38 +191,20 @@ bool building_t::is_rat_inside_building(point const &pos, float xy_pad, float hh
 	return is_cube_contained_in_parts(req_area);
 }
 
-void building_t::update_rat(rat_t &rat, point const &camera_bs, int ped_ix, rand_gen_t &rgen) const {
+void building_t::update_rat(rat_t &rat, point const &camera_bs, int ped_ix, float timestep, rand_gen_t &rgen) const {
 	float const floor_spacing(get_window_vspace()), trim_thickness(get_trim_thickness()), view_dist(RAT_VIEW_FLOORS*floor_spacing);
 	float const hlength(rat.get_hlength()), hwidth(rat.hwidth), height(rat.height), hheight(0.5*height);
 	float const squish_hheight(0.75*hheight); // rats can squish to get under low objects and walk onto small steps
 	float const coll_radius(1.2f*hwidth); // slightly larger than half-width; maybe should use length so that the rat doesn't collide when turning?
 	float const line_project_dist(max(1.1f*(hlength - coll_radius), 0.0f)); // extra space in front of the target destination
-	float const timestep(min(fticks, 4.0f)); // clamp fticks to 100ms
 	// set dist_thresh based on the distance we can move this frame; if set too low, we may spin in circles trying to turn to stop on the right spot
-	float const move_dist(timestep*rat.speed), dist_thresh(2.0f*timestep*max(rat.speed, global_building_params.rat_speed));
+	float const dist_thresh(2.0f*timestep*max(rat.speed, global_building_params.rat_speed));
 	float const xy_pad(hlength + trim_thickness);
 	vector3d const center_dz(0.0, 0.0, hheight); // or squish_hheight?
 	assert(hwidth <= hlength); // otherwise the model is probably in the wrong orientation
 	bool collided(0), update_path(0);
 	point coll_pos;
 	vector3d coll_dir;
-
-	// move the rat
-	if (rat.is_sleeping()) {
-		if ((float)tfticks > rat.wake_time) {rat.wake_time = rat.speed = 0.0;} // time to wake up
-	}
-	else if (rat.speed == 0.0) {
-		rat.anim_time = 0.0; // reset animation to rest pos
-	}
-	else { // apply movement and check for collisions with dynamic objects
-		vector3d const dest_dir((rat.dest - rat.pos).get_norm());
-
-		if (dot_product(dest_dir, rat.dir) > 0.75) { // only move if we're facing our dest, to avoid walking through an object
-			rat.pos               = rat.pos + move_dist*rat.dir;
-			rat.anim_time        += move_dist/rat.radius; // scale with size so that small rats' legs move faster
-			rat.dist_since_sleep += move_dist;
-		}
-	}
 	point const prev_pos(rat.pos); // capture the pre-collision point
 
 	if (rat.is_sleeping() && rat.fear == 0.0) {} // peacefully sleeping, no collision needed
