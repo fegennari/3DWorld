@@ -106,9 +106,11 @@ void building_t::update_animals(point const &camera_bs, unsigned building_ix, in
 	rand_gen_t rgen;
 	rgen.set_state(building_ix+1, frame_counter+1); // unique per building and per frame
 
-	for (rat_t &rat : rats) {
-		rgen.rand_mix(); // make sure it's different per rat
-		update_rat(rat, camera_bs, ped_ix, timestep, rats.max_xmove, rgen); // ~0.01ms per rat
+	if (frame_counter & 1) { // reverse iteration, to avoid directional bias
+		for (auto r = rats.rbegin(); r != rats.rend(); ++r) {update_rat(*r, camera_bs, ped_ix, timestep, rats.max_xmove, rgen);} // ~0.004ms per rat
+	}
+	else { // forward iteration
+		for (auto r = rats. begin(); r != rats. end(); ++r) {update_rat(*r, camera_bs, ped_ix, timestep, rats.max_xmove, rgen);} // ~0.004ms per rat
 	}
 }
 
@@ -208,6 +210,7 @@ void building_t::update_rat(rat_t &rat, point const &camera_bs, int ped_ix, floa
 	point coll_pos;
 	vector3d coll_dir;
 	point const prev_pos(rat.pos); // capture the pre-collision point
+	rgen.rand_mix(); // make sure it's different per rat
 
 	if (rat.is_sleeping() && rat.fear == 0.0) {} // peacefully sleeping, no collision needed
 	else if (check_and_handle_dynamic_obj_coll(rat.pos, rat.radius, height, camera_bs, coll_pos)) { // check for collisions
