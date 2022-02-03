@@ -80,7 +80,10 @@ struct rat_t {
 	float radius, height, hwidth, speed, fear, anim_time, wake_time, dist_since_sleep;
 	bool is_hiding;
 
+	// this first destructor is for the lower_bound() call in vect_rat_t::get_first_rat_with_x2_gt()
+	rat_t(float xval) : pos(xval, 0.0, 0.0), radius(0), height(0), hwidth(0), speed(0), fear(0), anim_time(0), wake_time(0), dist_since_sleep(0), is_hiding(0) {}
 	rat_t(point const &pos_, float radius_, vector3d const &dir_);
+	bool operator<(rat_t const &r) const {return (pos.x < r.pos.x);} // compare only xvals
 	bool is_moving   () const {return (speed > 0.0);}
 	bool is_sleeping () const {return (wake_time > 0.0);}
 	float get_hlength() const {return radius;} // this is the bounding radius, so it represents the longest dim (half length)
@@ -93,7 +96,10 @@ struct rat_t {
 
 struct vect_rat_t : public vector<rat_t> {
 	bool placed;
-	vect_rat_t() : placed(0) {}
+	float max_radius, max_xmove;
+	vect_rat_t() : placed(0), max_radius(0.0), max_xmove(0.0) {}
+	void add(rat_t const &rat) {push_back(rat); max_eq(max_radius, rat.radius);}
+	const_iterator get_first_rat_with_xv_gt(float x) const {return std::lower_bound(begin(), end(), rat_t(x));}
 };
 
 struct building_occlusion_state_t {
@@ -1124,7 +1130,7 @@ private:
 	point gen_rat_pos(float radius, rand_gen_t &rgen) const;
 	void add_rat(point const &pos, float length, vector3d const &dir, point const &placed_from);
 	bool is_rat_inside_building(point const &pos, float xy_pad, float hheight) const;
-	void update_rat(rat_t &rat, point const &camera_bs, int ped_ix, float timestep, rand_gen_t &rgen) const;
+	void update_rat(rat_t &rat, point const &camera_bs, int ped_ix, float timestep, float &max_xmove, rand_gen_t &rgen) const;
 	void scare_rat(rat_t &rat, point const &camera_bs, int ped_ix) const;
 	void scare_rat_at_pos(rat_t &rat, point const &scare_pos, float amount, bool by_sight) const;
 	bool check_line_coll_expand(point const &p1, point const &p2, float radius, float height) const;

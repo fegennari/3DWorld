@@ -68,7 +68,7 @@ void building_t::add_rat(point const &pos, float length, vector3d const &dir, po
 	rat_t rat(pos, 0.5*length, vector3d(dir.x, dir.y, 0.0).get_norm()); // dir in XY plane
 	rat.fear_pos = placed_from;
 	rat.fear     = 1.0; // starts off with max fear
-	interior->room_geom->rats.push_back(rat);
+	interior->room_geom->rats.add(rat);
 	interior->room_geom->modified_by_player = 1;
 }
 
@@ -94,19 +94,21 @@ void building_t::update_animals(point const &camera_bs, unsigned building_ix, in
 			float const radius(0.5f*floor_spacing*sz_scale);
 			point const pos(gen_rat_pos(radius, rgen));
 			if (pos == all_zeros) continue; // bad pos? skip this rat
-			rats.emplace_back(pos, radius, rgen.signed_rand_vector_xy().get_norm());
+			rats.add(rat_t(pos, radius, rgen.signed_rand_vector_xy().get_norm()));
 		}
 		rats.placed = 1; // even if there were no rats placed
 	}
 	// update rats
 	float const timestep(min(fticks, 4.0f)); // clamp fticks to 100ms
-	for (rat_t &rat : rats) {rat.move(timestep);}
+	for (rat_t &rat : rats) {rat.move(timestep);} // must be done before sorting
+	sort(rats.begin(), rats.end()); // sort by xval
+	rats.max_xmove = 0.0; // reset for this frame
 	rand_gen_t rgen;
 	rgen.set_state(building_ix+1, frame_counter+1); // unique per building and per frame
 
 	for (rat_t &rat : rats) {
 		rgen.rand_mix(); // make sure it's different per rat
-		update_rat(rat, camera_bs, ped_ix, timestep, rgen); // ~0.01ms per rat
+		update_rat(rat, camera_bs, ped_ix, timestep, rats.max_xmove, rgen); // ~0.01ms per rat
 	}
 }
 
@@ -191,7 +193,7 @@ bool building_t::is_rat_inside_building(point const &pos, float xy_pad, float hh
 	return is_cube_contained_in_parts(req_area);
 }
 
-void building_t::update_rat(rat_t &rat, point const &camera_bs, int ped_ix, float timestep, rand_gen_t &rgen) const {
+void building_t::update_rat(rat_t &rat, point const &camera_bs, int ped_ix, float timestep, float &max_xmove, rand_gen_t &rgen) const {
 	float const floor_spacing(get_window_vspace()), trim_thickness(get_trim_thickness()), view_dist(RAT_VIEW_FLOORS*floor_spacing);
 	float const hlength(rat.get_hlength()), hwidth(rat.hwidth), height(rat.height), hheight(0.5*height);
 	float const squish_hheight(0.75*hheight); // rats can squish to get under low objects and walk onto small steps
@@ -221,6 +223,7 @@ void building_t::update_rat(rat_t &rat, point const &camera_bs, int ped_ix, floa
 			rat.pos = prev_pos; // restore previous pos before collision
 		}
 		else {
+			max_eq(max_xmove, fabs(rat.pos.x - prev_pos.x));
 			// update the path about every 30 frames of colliding; this prevents the rat from being stuck while also avoiding jittering due to frequent dest updates
 			update_path = ((rgen.rand()%30) == 0);
 		}
@@ -271,21 +274,24 @@ void building_t::update_rat(rat_t &rat, point const &camera_bs, int ped_ix, floa
 			point cand_dest(center);
 			float tot_mdist(0.0);
 			bool skip(0);
+			float const radius_scale = 0.8; // smaller dist (head can overlap tail)
+			vect_rat_t const &rats(interior->room_geom->rats);
+			float const rsum_max(radius_scale*(rat.radius + rats.max_radius) + rats.max_xmove), coll_x1(cand_dest.x - rsum_max), coll_x2(cand_dest.x + rsum_max);
+			auto it(rats.get_first_rat_with_xv_gt(coll_x1)); // use a binary search to speed up iteration
 
-			for (rat_t &other_rat : interior->room_geom->rats) {
-				if (&other_rat == &rat) continue; // skip ourself
-				float const r_sum(0.8f*(rat.radius + other_rat.radius)); // smaller dist (head can overlap tail)
-
-				if (dist_xy_less_than(cand_dest, other_rat.pos, r_sum)) { // another rat is in this spot
-					float const move_dist(r_sum - p2p_dist_xy(cand_dest, other_rat.pos));
-					cand_dest += (p1 - cand_dest).get_norm()*move_dist; // move our target in front of this other rat
-					side_cov  -= move_dist; // moving to this misaligned position loses side coverage
-					score      = 4.0*side_cov - 0.5f*top_gap + 0.25f*dist_to_fear - 0.1*max(dist, dist_thresh); // update score
-					score     -= 0.2*dist; // less desirable when occupied
-					tot_mdist += move_dist;
-					if (tot_mdist > 4.0*rat.radius) {skip = 1; break;} // moved too far, there must be too many other rats at this location, skip it
-				}
-			} // for other_rat
+			for (auto r = it; r != rats.end(); ++r) {
+				if (r->pos.x > coll_x2) break; // no rat after this can overlap - done
+				if (&(*r) == &rat) continue; // skip ourself
+				float const r_sum(radius_scale*(rat.radius + r->radius)); // smaller dist (head can overlap tail)
+				if (!dist_xy_less_than(cand_dest, r->pos, r_sum)) continue; // no rat in this spot
+				float const move_dist(r_sum - p2p_dist_xy(cand_dest, r->pos));
+				cand_dest += (p1 - cand_dest).get_norm()*move_dist; // move our target in front of this other rat
+				side_cov  -= move_dist; // moving to this misaligned position loses side coverage
+				score      = 4.0*side_cov - 0.5f*top_gap + 0.25f*dist_to_fear - 0.1*max(dist, dist_thresh); // update score
+				score     -= 0.2*dist; // less desirable when occupied
+				tot_mdist += move_dist;
+				if (tot_mdist > 4.0*rat.radius) {skip = 1; break;} // moved too far, there must be too many other rats at this location, skip it
+			} // for r
 			if (skip) continue;
 			if (best_score != 0.0 && score <= best_score) continue;
 			if (tot_mdist > 0.0 && !is_rat_inside_building(cand_dest, xy_pad, hheight)) continue; // check if outside the valid area if center was moved
@@ -352,6 +358,7 @@ void building_t::update_rat(rat_t &rat, point const &camera_bs, int ped_ix, floa
 		new_dir = (rat.dest - rat.pos).get_norm(); // point toward our destination
 	}
 	else if (has_fear_dest) { // stop, rest, and point toward what we fear
+		max_eq(max_xmove, fabs(rat.pos.x - rat.dest.x));
 		new_dir   = dir_to_fear;
 		rat.speed = rat.dist_since_sleep = 0.0;
 		rat.pos   = rat.dest; // just move it to the dest to prevent instability

@@ -1199,16 +1199,21 @@ bool building_t::check_and_handle_dynamic_obj_coll(point &pos, float radius, flo
 			handle_dynamic_room_objs_coll(interior->room_geom->objs.begin(), objs_end, pos, radius, z2, coll_pos);
 		}
 	}
+	float const radius_scale = 0.67; // allow them to get a bit closer together, since radius is conservative
 	float max_overlap(0.0);
+	vect_rat_t const &rats(interior->room_geom->rats);
+	float const rsum_max(radius_scale*(radius + rats.max_radius) + rats.max_xmove), coll_x1(pos.x - rsum_max), coll_x2(pos.x + rsum_max);
+	auto it(rats.get_first_rat_with_xv_gt(coll_x1)); // use a binary search to speed up iteration
 
-	for (rat_t &rat : interior->room_geom->rats) {
-		if (rat.pos == pos) continue; // skip ourself
-		if (pos.z > (rat.pos.z + rat.height) || z2 < rat.pos.z) continue; // different floors
-		float const rsum(0.67f*(radius + rat.radius)); // allow them to get a bit closer together, since radius is conservative
-		if (!dist_xy_less_than(pos, rat.pos, rsum)) continue; // no collision
-		float const overlap(rsum - p2p_dist_xy(pos, rat.pos));
-		if (overlap > max_overlap) {max_overlap = overlap; coll_pos = rat.pos;}
-	} // for rat
+	for (auto r = it; r != rats.end(); ++r) {
+		if (r->pos.x > coll_x2) break; // no rat after this can overlap - done
+		if (r->pos == pos) continue; // skip ourself
+		if (pos.z > (r->pos.z + r->height) || z2 < r->pos.z) continue; // different floors
+		float const rsum(radius_scale*(radius + r->radius));
+		if (!dist_xy_less_than(pos, r->pos, rsum)) continue; // no collision
+		float const overlap(rsum - p2p_dist_xy(pos, r->pos));
+		if (overlap > max_overlap) {max_overlap = overlap; coll_pos = r->pos;}
+	} // for r
 	if (max_overlap > 0.0) { // resolve the max overlap collision, which should be more stable than resolving the first collision
 		pos += (pos - point(coll_pos.x, coll_pos.y, pos.z)).get_norm()*max_overlap; // XY only
 		return 1;
