@@ -1161,28 +1161,28 @@ bool handle_vcylin_vcylin_int(point &p1, point const &p2, float rsum) {
 	p1 += delta*((rsum - xy_dist)/xy_dist);
 	return 1;
 }
-bool handle_dynamic_room_objs_coll(vect_room_object_t::const_iterator begin, vect_room_object_t::const_iterator end, point &pos, float radius, float z2, point &coll_pos) {
+bool handle_dynamic_room_objs_coll(vect_room_object_t::const_iterator begin, vect_room_object_t::const_iterator end, point &pos, float radius, float z2) {
 	for (auto c = begin; c != end; ++c) {
 		if (c->no_coll() || !c->has_dstate()) continue; // Note: no test of player_coll flag
 		assert(c->type == TYPE_LG_BALL); // currently, only large balls have has_dstate()
 		if (pos.z > c->z2() || z2 < c->z1())  continue; // different floors
 		// treat the ball as a vertical cylinder because it's too complex to find the collision point of a vertical cylinder with a sphere
 		point const center(c->get_cube_center());
-		if (handle_vcylin_vcylin_int(pos, center, (radius + c->get_radius()))) {coll_pos = center; return 1;} // early exit on first hit
+		if (handle_vcylin_vcylin_int(pos, center, (radius + c->get_radius()))) return 1; // early exit on first hit
 	} // for c
 	return 0;
 }
 
 // vertical cylinder collision detection with dynamic objects: balls, the player? people? other rats?
 // only handles the first collision
-bool building_t::check_and_handle_dynamic_obj_coll(point &pos, float radius, float height, point const &camera_bs, point &coll_pos) const {
+bool building_t::check_and_handle_dynamic_obj_coll(point &pos, float radius, float height, point const &camera_bs) const {
 	float const z2(pos.z + height);
 
 	if (camera_surf_collide) { // check the player; unclear if this is really needed, or if it actually works
 		float const player_radius(CAMERA_RADIUS), player_xy_radius(player_radius*global_building_params.player_coll_radius_scale);
 
 		if (pos.z < (camera_bs.z + player_radius + camera_zh) && z2 > (camera_bs.z - player_radius)) {
-			if (handle_vcylin_vcylin_int(pos, camera_bs, (radius + player_xy_radius))) {coll_pos = camera_bs; return 1;}
+			if (handle_vcylin_vcylin_int(pos, camera_bs, (radius + player_xy_radius))) return 1;
 		}
 	}
 	// what about people in the building? maybe since rats are scared of them, they won't collide with people?
@@ -1192,18 +1192,19 @@ bool building_t::check_and_handle_dynamic_obj_coll(point &pos, float radius, flo
 	if (is_house) {
 		if (z2 < get_ground_floor_z_thresh()) { // optimized for the case of rats where most are on the ground floor or basement
 			cached_room_objs.ensure_cached(*this);
-			handle_dynamic_room_objs_coll(cached_room_objs.objs.begin(), cached_room_objs.objs.end(), pos, radius, z2, coll_pos);
+			handle_dynamic_room_objs_coll(cached_room_objs.objs.begin(), cached_room_objs.objs.end(), pos, radius, z2);
 		}
 		else {
 			auto objs_end(interior->room_geom->get_placed_objs_end()); // skip trim/buttons/stairs/elevators
-			handle_dynamic_room_objs_coll(interior->room_geom->objs.begin(), objs_end, pos, radius, z2, coll_pos);
+			handle_dynamic_room_objs_coll(interior->room_geom->objs.begin(), objs_end, pos, radius, z2);
 		}
 	}
 	float const radius_scale = 0.67; // allow them to get a bit closer together, since radius is conservative
-	float max_overlap(0.0);
 	vect_rat_t const &rats(interior->room_geom->rats);
 	float const rsum_max(radius_scale*(radius + rats.max_radius) + rats.max_xmove), coll_x1(pos.x - rsum_max), coll_x2(pos.x + rsum_max);
 	auto it(rats.get_first_rat_with_xv_gt(coll_x1)); // use a binary search to speed up iteration
+	float max_overlap(0.0);
+	point coll_pos;
 
 	for (auto r = it; r != rats.end(); ++r) {
 		if (r->pos.x > coll_x2) break; // no rat after this can overlap - done

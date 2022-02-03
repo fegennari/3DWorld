@@ -207,15 +207,14 @@ void building_t::update_rat(rat_t &rat, point const &camera_bs, int ped_ix, floa
 	vector3d const center_dz(0.0, 0.0, hheight); // or squish_hheight?
 	assert(hwidth <= hlength); // otherwise the model is probably in the wrong orientation
 	bool collided(0), update_path(0);
-	point coll_pos;
 	vector3d coll_dir;
 	point const prev_pos(rat.pos); // capture the pre-collision point
 	rgen.rand_mix(); // make sure it's different per rat
 
 	if (rat.is_sleeping() && rat.fear == 0.0) {} // peacefully sleeping, no collision needed
-	else if (check_and_handle_dynamic_obj_coll(rat.pos, rat.radius, height, camera_bs, coll_pos)) { // check for collisions
+	else if (check_and_handle_dynamic_obj_coll(rat.pos, rat.radius, height, camera_bs)) { // check for collisions
 		collided = 1;
-		coll_dir = (point(coll_pos.x, coll_pos.y, rat.pos.z) - rat.pos).get_norm(); // points toward the collider in the XY plane
+		coll_dir = (prev_pos - rat.pos).get_norm(); // points toward the collider in the XY plane
 
 		// check if new pos is valid, and has a path to dest
 		if (!is_rat_inside_building(rat.pos, xy_pad, hheight)) {

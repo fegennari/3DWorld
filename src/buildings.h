@@ -1135,7 +1135,7 @@ private:
 	void scare_rat_at_pos(rat_t &rat, point const &scare_pos, float amount, bool by_sight) const;
 	bool check_line_coll_expand(point const &p1, point const &p2, float radius, float height) const;
 	bool check_line_of_sight_large_objs(point const &p1, point const &p2) const;
-	bool check_and_handle_dynamic_obj_coll(point &pos, float radius, float height, point const &camera_bs, point &coll_pos) const;
+	bool check_and_handle_dynamic_obj_coll(point &pos, float radius, float height, point const &camera_bs) const;
 
 public:
 	int get_room_containing_pt(point const &pt) const;
