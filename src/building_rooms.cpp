@@ -2416,9 +2416,14 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 				unsigned const num_tcs(add_table_and_chairs(rgen, *r, blockers, room_id, room_center, chair_color, 0.1, tot_light_amt));
 				if (num_tcs > 0) {added_tc = added_obj = can_place_onto = 1; num_chairs = num_tcs - 1;}
 				// on ground floor, try to make this a kitchen; not all houses will have a kitchen with this logic - maybe we need fewer bedrooms?
-				if (added_tc && !(added_kitchen_mask & floor_mask) && (!is_house || f == 0) && !is_basement) { // office buildings can also have kitchens, even on non-ground floors
-					is_kitchen = add_kitchen_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, added_living);
-					if (is_kitchen) {r->assign_to(RTYPE_KITCHEN, f); added_kitchen_mask |= floor_mask;}
+				if (!(added_kitchen_mask & floor_mask) && (!is_house || f == 0) && !is_basement) { // office buildings can also have kitchens, even on non-ground floors
+					if (added_tc || (is_house && (r+1) == rooms.end())) { // make it a kitchen if it's the last room in a house, even if there's no table
+						if (add_kitchen_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, added_living)) {
+							r->assign_to(RTYPE_KITCHEN, f);
+							added_kitchen_mask |= floor_mask;
+							is_kitchen = added_obj = 1;
+						}
+					}
 				}
 			}
 			if (!added_obj && (is_basement || (r->is_office && r->interior && f == 0 /*&& r->z1() == ground_floor_z1*/)) && rgen.rand_bool()) {
