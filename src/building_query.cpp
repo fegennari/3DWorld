@@ -1199,12 +1199,12 @@ bool building_t::check_and_handle_dynamic_obj_coll(point &pos, float radius, flo
 			handle_dynamic_room_objs_coll(interior->room_geom->objs.begin(), objs_end, pos, radius, z2);
 		}
 	}
-	float const radius_scale = 0.67; // allow them to get a bit closer together, since radius is conservative
+	float const radius_scale = 0.7; // allow them to get a bit closer together, since radius is conservative
 	vect_rat_t const &rats(interior->room_geom->rats);
 	float const rsum_max(radius_scale*(radius + rats.max_radius) + rats.max_xmove), coll_x1(pos.x - rsum_max), coll_x2(pos.x + rsum_max);
 	auto it(rats.get_first_rat_with_xv_gt(coll_x1)); // use a binary search to speed up iteration
 	float max_overlap(0.0);
-	point coll_pos;
+	vector3d delta_sum;
 
 	for (auto r = it; r != rats.end(); ++r) {
 		if (r->pos.x > coll_x2) break; // no rat after this can overlap - done
@@ -1213,10 +1213,14 @@ bool building_t::check_and_handle_dynamic_obj_coll(point &pos, float radius, flo
 		float const rsum(radius_scale*(radius + r->radius));
 		if (!dist_xy_less_than(pos, r->pos, rsum)) continue; // no collision
 		float const overlap(rsum - p2p_dist_xy(pos, r->pos));
-		if (overlap > max_overlap) {max_overlap = overlap; coll_pos = r->pos;}
+		vector3d const delta((pos - point(r->pos.x, r->pos.y, pos.z)).get_norm()*overlap);
+		delta_sum += delta; // accumulate weighted delta across collisions
+		max_eq(max_overlap, overlap);
 	} // for r
-	if (max_overlap > 0.0) { // resolve the max overlap collision, which should be more stable than resolving the first collision
-		pos += (pos - point(coll_pos.x, coll_pos.y, pos.z)).get_norm()*max_overlap; // XY only
+	if (max_overlap > 0.0) { // we have at least one collision
+		float const delta_mag(delta_sum.mag());
+		if (delta_mag > max_overlap) {delta_sum *= max_overlap/delta_mag;} // clamp to max_overlap
+		pos += 0.5*delta_sum; // dampen by 0.5 for stability
 		return 1;
 	}
 	return 0;
