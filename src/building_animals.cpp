@@ -78,6 +78,7 @@ void building_t::update_animals(point const &camera_bs, unsigned building_ix, in
 	vect_rat_t &rats(interior->room_geom->rats);
 	if (rats.placed && rats.empty()) return; // no rats placed in this building
 	if (!building_obj_model_loader.is_model_valid(OBJ_MODEL_RAT)) return; // no rat model
+	//timer_t timer("Update Rats"); // multi-part: 1.2ms, open door 2.3ms; office building 1.8ms
 
 	if (!rats.placed) { // new building - place rats
 		rand_gen_t rgen;
@@ -129,7 +130,6 @@ point building_t::gen_rat_pos(float radius, rand_gen_t &rgen) const {
 }
 
 bool can_hide_under(room_object_t const &c, float &zbot, cube_t &hide_area) {
-	if (c.shape != SHAPE_CUBE ) return 0; // cubes only for now
 	cube_t dishwasher; // used below
 
 	if (c.type == TYPE_CLOSET && c.is_open() && c.is_small_closet()) { // open small closet
@@ -254,7 +254,7 @@ void building_t::update_rat(rat_t &rat, point const &camera_bs, int ped_ix, floa
 		for (auto c = interior->room_geom->objs.begin(); c != objs_end; ++c) {
 			if (c->z1() > rat_z2 || c->z2() < rat_z1) continue; // wrong floor, or object not on the floor
 			cube_t hide_area;
-			if (!can_hide_under(*c, zbot, hide_area)) continue;
+			if (c->shape != SHAPE_CUBE || !can_hide_under(*c, zbot, hide_area)) continue; // only cubes for now
 			float const top_gap(zbot - rat_squish_z2); // space between top of rat and bottom of object
 			if (top_gap < 0.0) continue; // rat can't fit under this object; allowed area is waived
 			cube_t const &target(hide_area.is_all_zeros() ? *c : hide_area); // use hide_area if set (can be a subset of the object)
@@ -331,15 +331,17 @@ void building_t::update_rat(rat_t &rat, point const &camera_bs, int ped_ix, floa
 				target_fov_dp   -= 0.02; // allow for turns outside our field of view
 				target_max_dist *= 0.96;  // decrease the max distance considered
 			}
-			vector3d const vdir(rgen.signed_rand_vector_xy().get_norm()); // random XY direction
-			if (is_scared && n <= 100 && dot_product(dir_to_fear, vdir) > 0.0) continue; // don't move toward danger; may make the rat back into a corner
+			vector3d vdir(rgen.signed_rand_vector_xy().get_norm()); // random XY direction
 
 			if (collided && coll_dir != zero_vector) {
-				if (dot_product(coll_dir, vdir) > 0.0) continue; // must move away from the collision direction
+				if (dot_product(coll_dir, vdir) > 0.0) {vdir.negate();} // must move away from the collision direction
 			}
 			else {
-				if (dot_product(rat.dir, vdir) < target_fov_dp) continue; // not in field of view, use a new direction
+				float dp(dot_product(rat.dir, vdir));
+				if (dp < 0.0) {vdir.negate(); dp = -dp;}
+				if (dp < target_fov_dp) continue; // not in field of view, use a new direction
 			}
+			if (is_scared && n <= 100 && dot_product(dir_to_fear, vdir) > 0.0) continue; // don't move toward danger; may make the rat back into a corner
 			float dist(rgen.rand_uniform(0.1, dist_upper_bound)*target_max_dist); // random distance out to max view dist
 			max_eq(dist, min_step); // make sure distance isn't too short
 			point const cand(rat.pos + dist*vdir);
