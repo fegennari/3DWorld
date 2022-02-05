@@ -1049,6 +1049,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, building_t c
 	if (player_in_building) { // only drawn for the player building
 		for (rat_t &rat : rats) {
 			cube_t const bcube(rat.get_bcube());
+			if (check_clip_cube && !smap_light_clip_cube.intersects(bcube + xlate)) continue; // shadow map clip cube test: fast and high rejection ratio, do this first
 			if (!camera_pdu.cube_visible(bcube + xlate)) continue; // VFC
 			if ((display_mode & 0x08) && building.check_obj_occluded(bcube, camera_bs, oc, reflection_pass)) continue;
 			point const pos(bcube.get_cube_center());
