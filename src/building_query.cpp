@@ -951,6 +951,10 @@ struct cached_room_objs_t {
 };
 cached_room_objs_t cached_room_objs;
 
+bool room_object_t::is_floor_collidable() const {
+	return !(((no_coll() && !was_expanded() && type != TYPE_COMPUTER) || !bldg_obj_types[type].ai_coll) && type != TYPE_LG_BALL && type != TYPE_BOOK);
+}
+
 bool building_t::get_begin_end_room_objs_on_ground_floor(float zval, vect_room_object_t::const_iterator &b, vect_room_object_t::const_iterator &e) const {
 	if (zval < get_ground_floor_z_thresh()) { // optimized for the case of rats where most are on the ground floor or basement
 		cached_room_objs.ensure_cached(*this);
@@ -962,17 +966,16 @@ bool building_t::get_begin_end_room_objs_on_ground_floor(float zval, vect_room_o
 	e = interior->room_geom->get_placed_objs_end(); // skip trim/buttons/stairs/elevators
 	return 0; // use standard objects
 }
-
 void building_t::get_objs_at_or_below_ground_floor(vect_room_object_t &ret) const {
 	float const z_thresh(get_ground_floor_z_thresh());
 	assert(has_room_geom());
 	auto objs_end(interior->room_geom->get_placed_objs_end()); // skip trim/buttons/stairs/elevators
 
 	for (auto c = interior->room_geom->objs.begin(); c != objs_end; ++c) {
-		if (c->z1() < z_thresh) {ret.push_back(*c);}
+		if (c->z1() < z_thresh && c->is_floor_collidable()) {ret.push_back(*c);}
 	}
 	for (auto c = interior->room_geom->expanded_objs.begin(); c != interior->room_geom->expanded_objs.end(); ++c) {
-		if (c->z1() < z_thresh) {ret.push_back(*c);}
+		if (c->z1() < z_thresh && c->is_floor_collidable()) {ret.push_back(*c);}
 	}
 }
 
@@ -1068,7 +1071,7 @@ bool building_t::check_line_coll_expand(point const &p1, point const &p2, float 
 			if (c->z1() > obj_z2 || c->z2() < obj_z1) continue; // wrong floor
 			// skip non-colliding objects except for balls and books (that the player can drop), computers under desks, and expanded objects from closets,
 			// since rats must collide with these
-			if (((c->no_coll() && !c->was_expanded() && c->type != TYPE_COMPUTER) || !bldg_obj_types[c->type].ai_coll) && c->type != TYPE_LG_BALL && c->type != TYPE_BOOK) continue;
+			if (!c->is_floor_collidable()) continue;
 			cube_t c_extended(*c);
 			if (c->type == TYPE_CLOSET) {c_extended = get_closet_bcube_including_door(*c);}
 			if (!line_bcube.intersects(*c) || !line_int_cube_exp(p1, p2, c_extended, expand)) continue;

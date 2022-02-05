@@ -78,7 +78,7 @@ void building_t::update_animals(point const &camera_bs, unsigned building_ix, in
 	vect_rat_t &rats(interior->room_geom->rats);
 	if (rats.placed && rats.empty()) return; // no rats placed in this building
 	if (!building_obj_model_loader.is_model_valid(OBJ_MODEL_RAT)) return; // no rat model
-	//timer_t timer("Update Rats"); // multi-part: 1.2ms, open door 2.3ms; office building 1.8ms
+	//timer_t timer("Update Rats"); // multi-part: 1.1ms, open door 1.8ms; office building 1.7ms
 
 	if (!rats.placed) { // new building - place rats
 		rand_gen_t rgen;

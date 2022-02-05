@@ -473,6 +473,7 @@ struct room_object_t : public cube_t {
 	bool can_use        () const;
 	bool is_interactive () const {return (has_dstate() || can_use());}
 	bool can_place_onto () const;
+	bool is_floor_collidable() const;
 	unsigned get_bottle_type() const {return ((obj_id&63) % NUM_BOTTLE_TYPES);} // first 6 bits are bottle type
 	unsigned get_orient () const {return (2*dim + dir);}
 	float get_radius() const;
