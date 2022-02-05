@@ -1136,6 +1136,7 @@ private:
 	bool check_line_coll_expand(point const &p1, point const &p2, float radius, float height) const;
 	bool check_line_of_sight_large_objs(point const &p1, point const &p2) const;
 	bool check_and_handle_dynamic_obj_coll(point &pos, float radius, float height, point const &camera_bs) const;
+	bool get_begin_end_room_objs_on_ground_floor(float zval, vect_room_object_t::const_iterator &b, vect_room_object_t::const_iterator &e) const;
 
 public:
 	int get_room_containing_pt(point const &pt) const;

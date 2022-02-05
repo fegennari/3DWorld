@@ -242,7 +242,6 @@ void building_t::update_rat(rat_t &rat, point const &camera_bs, int ped_ix, floa
 	if (is_scared) {
 		// find hiding spot (pref in opposite direction from fear_pos);
 		// we must check this each frame in case the player took or moved the object we were hiding under
-		auto objs_end(interior->room_geom->get_placed_objs_end()); // skip trim/buttons/stairs/elevators
 		float const rat_z1(rat.pos.z), rat_z2(rat.pos.z + height), rat_squish_z2(p1.z + squish_hheight);
 		point best_dest;
 		float best_score(0.0), zbot(0.0);
@@ -250,8 +249,10 @@ void building_t::update_rat(rat_t &rat, point const &camera_bs, int ped_ix, floa
 		dir_to_fear.z = 0.0; // XY plane only
 		dir_to_fear.normalize();
 		rat.wake_time = 0.0; // wake up
+		vect_room_object_t::const_iterator b, e;
+		get_begin_end_room_objs_on_ground_floor(rat_z2, b, e);
 
-		for (auto c = interior->room_geom->objs.begin(); c != objs_end; ++c) {
+		for (auto c = b; c != e; ++c) {
 			if (c->z1() > rat_z2 || c->z2() < rat_z1) continue; // wrong floor, or object not on the floor
 			cube_t hide_area;
 			if (c->shape != SHAPE_CUBE || !can_hide_under(*c, zbot, hide_area)) continue; // only cubes for now

@@ -951,6 +951,18 @@ struct cached_room_objs_t {
 };
 cached_room_objs_t cached_room_objs;
 
+bool building_t::get_begin_end_room_objs_on_ground_floor(float zval, vect_room_object_t::const_iterator &b, vect_room_object_t::const_iterator &e) const {
+	if (zval < get_ground_floor_z_thresh()) { // optimized for the case of rats where most are on the ground floor or basement
+		cached_room_objs.ensure_cached(*this);
+		b = cached_room_objs.objs.begin();
+		e = cached_room_objs.objs.end();
+		return 1; // use cached objects
+	}
+	b = interior->room_geom->objs.begin();
+	e = interior->room_geom->get_placed_objs_end(); // skip trim/buttons/stairs/elevators
+	return 0; // use standard objects
+}
+
 void building_t::get_objs_at_or_below_ground_floor(vect_room_object_t &ret) const {
 	float const z_thresh(get_ground_floor_z_thresh());
 	assert(has_room_geom());
@@ -1006,10 +1018,11 @@ bool building_t::check_line_coll_expand(point const &p1, point const &p2, float 
 		if (zmin < ground_floor_z1)    return 1; // basement stairs are walled off - definitely a collision
 		if (s.z1() < zmin - 0.5f*get_window_vspace()) return 1; // not the ground floor - definitely a collision
 
-		// maybe we're under the stairs; check for individual stairs collisions
-		for (auto c = interior->room_geom->get_stairs_start(); c != interior->room_geom->objs.end(); ++c) {
-			if (c->no_coll() || c->type != TYPE_STAIR) continue;
-			if (line_int_cube_exp(p1, p2, *c, expand)) return 1;
+		if (has_room_geom()) { // maybe we're under the stairs; check for individual stairs collisions
+			for (auto c = interior->room_geom->get_stairs_start(); c != interior->room_geom->objs.end(); ++c) {
+				if (c->no_coll() || c->type != TYPE_STAIR) continue;
+				if (line_int_cube_exp(p1, p2, *c, expand)) return 1;
+			}
 		}
 	} // for s
 	if (line_int_cubes_exp(p1, p2, interior->elevators, expand, line_bcube)) return 1;
@@ -1044,14 +1057,14 @@ bool building_t::check_line_coll_expand(point const &p1, point const &p2, float 
 	if (!has_room_geom()) return 0; // done (but really shouldn't get here)
 	// check room objects and expanded objects (from closets)
 	float t(0.0);
-	bool const use_cached_objs(obj_z2 < get_ground_floor_z_thresh()); // optimized for the case of rats where most are on the ground floor or basement
-	if (use_cached_objs) {cached_room_objs.ensure_cached(*this);}
+	vect_room_object_t::const_iterator b, e;
+	bool const use_cached_objs(get_begin_end_room_objs_on_ground_floor(obj_z2, b, e));
 
 	for (unsigned vect_id = 0; vect_id < (use_cached_objs ? 1U : 2U); ++vect_id) {
-		auto const &obj_vect(use_cached_objs ? cached_room_objs.objs : ((vect_id == 1) ? interior->room_geom->expanded_objs : interior->room_geom->objs));
-		auto objs_end(use_cached_objs ? cached_room_objs.objs.end()  : ((vect_id == 1) ? obj_vect.end() : interior->room_geom->get_placed_objs_end()));
+		auto objs_beg((vect_id == 1) ? interior->room_geom->expanded_objs.begin() : b);
+		auto objs_end((vect_id == 1) ? interior->room_geom->expanded_objs.end  () : e);
 
-		for (auto c = obj_vect.begin(); c != objs_end; ++c) {
+		for (auto c = objs_beg; c != objs_end; ++c) {
 			if (c->z1() > obj_z2 || c->z2() < obj_z1) continue; // wrong floor
 			// skip non-colliding objects except for balls and books (that the player can drop), computers under desks, and expanded objects from closets,
 			// since rats must collide with these
@@ -1190,14 +1203,9 @@ bool building_t::check_and_handle_dynamic_obj_coll(point &pos, float radius, flo
 	// check dynamic objects such as balls; currently, we only check this for houses because they have balls on the floor;
 	// in theory, the player can put a ball in an office building, but we don't handle that case because office buildings have tons of objects and this is too slow
 	if (is_house) {
-		if (z2 < get_ground_floor_z_thresh()) { // optimized for the case of rats where most are on the ground floor or basement
-			cached_room_objs.ensure_cached(*this);
-			handle_dynamic_room_objs_coll(cached_room_objs.objs.begin(), cached_room_objs.objs.end(), pos, radius, z2);
-		}
-		else {
-			auto objs_end(interior->room_geom->get_placed_objs_end()); // skip trim/buttons/stairs/elevators
-			handle_dynamic_room_objs_coll(interior->room_geom->objs.begin(), objs_end, pos, radius, z2);
-		}
+		vect_room_object_t::const_iterator b, e;
+		get_begin_end_room_objs_on_ground_floor(z2, b, e);
+		handle_dynamic_room_objs_coll(b, e, pos, radius, z2);
 	}
 	float const radius_scale = 0.7; // allow them to get a bit closer together, since radius is conservative
 	vect_rat_t const &rats(interior->room_geom->rats);
