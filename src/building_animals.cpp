@@ -258,7 +258,7 @@ void building_t::update_rat(rat_t &rat, point const &camera_bs, int ped_ix, floa
 			if (c->shape != SHAPE_CUBE || !can_hide_under(*c, zbot, hide_area)) continue; // only cubes for now
 			float const top_gap(zbot - rat_squish_z2); // space between top of rat and bottom of object
 			if (top_gap < 0.0) continue; // rat can't fit under this object; allowed area is waived
-			cube_t const &target(hide_area.is_all_zeros() ? *c : hide_area); // use hide_area if set (can be a subset of the object)
+			cube_t const &target(hide_area.is_all_zeros() ? (cube_t)*c : hide_area); // use hide_area if set (can be a subset of the object)
 			point const center(target.xc(), target.yc(), p1.z);
 			float const dist(p2p_dist(p1, center));
 			if (dist > view_dist) continue; // too far away to see
