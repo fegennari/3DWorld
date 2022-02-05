@@ -1014,7 +1014,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, building_t c
 		bool const is_emissive(!shadow_only && obj.type == TYPE_LAMP && obj.is_lit());
 		if (is_emissive) {s.set_color_e(LAMP_COLOR*0.4);}
 		apply_room_obj_rotate(obj, *i); // Note: may modify obj by clearing flags
-		bool const use_low_z_bias(obj.type == TYPE_CUP);
+		bool const use_low_z_bias(obj.type == TYPE_CUP && !shadow_only);
 		bool const untextured(obj.flags & RO_FLAG_UNTEXTURED);
 		
 		if (use_low_z_bias) {
@@ -1052,7 +1052,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, building_t c
 			if (!camera_pdu.cube_visible(bcube + xlate)) continue; // VFC
 			if ((display_mode & 0x08) && building.check_obj_occluded(bcube, camera_bs, oc, reflection_pass)) continue;
 			point const pos(bcube.get_cube_center());
-			bool const animate(rat.anim_time > 0.0);
+			bool const animate(rat.anim_time > 0.0 && !shadow_only); // can't see the animation in the shadow pass anyway
 			
 			if (animate) {
 				int const animation_id = 7; // custom rat animation
