@@ -1785,7 +1785,10 @@ bool tile_t::try_bind_shadow_map(shader_t &s, bool check_only) const {
 
 void tile_t::bind_textures() const {
 
-	assert(weight_tid > 0 && height_tid > 0 && normal_tid > 0 && shadow_tid > 0);
+	assert(weight_tid > 0);
+	assert(height_tid > 0);
+	assert(normal_tid > 0);
+	assert(shadow_tid > 0);
 	bind_2d_texture(weight_tid);
 	bind_texture_tu(height_tid, 12);
 	bind_texture_tu(normal_tid, 7);
