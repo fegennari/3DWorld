@@ -263,6 +263,9 @@ tid_nm_pair_t get_scaled_wall_tex(tid_nm_pair_t const &wall_tex) {
 	wall_tex_scaled.tscale_y *= 2.0;
 	return wall_tex_scaled;
 }
+float get_closet_wall_thickness(room_object_t const &c) {
+	return (WALL_THICK_VAL*(1.0f - FLOOR_THICK_VAL_HOUSE)*c.dz()); // use c.dz() as floor_spacing
+}
 
 // cubes: front left, left side, front right, right side, door
 void get_closet_cubes(room_object_t const &c, cube_t cubes[5], bool for_collision) {
@@ -270,7 +273,7 @@ void get_closet_cubes(room_object_t const &c, cube_t cubes[5], bool for_collisio
 	bool const use_small_door(c.is_small_closet()), doors_fold(!use_small_door && (c.flags & RO_FLAG_HANGING));
 	// small closets: door does not collide when open; large closets: edges of door still collide even when open
 	float const wall_width(use_small_door ? 0.5*(width - 0.5*height) : ((for_collision && c.is_open()) ? (doors_fold ? 0.2 : 0.25) : 0.05)*width);
-	float const wall_thick(WALL_THICK_VAL*(1.0f - FLOOR_THICK_VAL_HOUSE)*height), wall_shift(width - wall_width);
+	float const wall_thick(get_closet_wall_thickness(c)), wall_shift(width - wall_width);
 	assert(wall_shift > 0.0);
 	cube_t doors(c), walls[2] = {c, c}; // left, right
 	walls[0].d[!c.dim][1] -= wall_shift;
@@ -404,7 +407,7 @@ void building_room_geom_t::add_closet(room_object_t const &c, tid_nm_pair_t cons
 	if (inc_sm) { // add wall trim for each side of the closet door
 		float const height(c.dz()), window_vspacing(height*(1.0 + FLOOR_THICK_VAL_HOUSE));
 		float const trim_height(0.04*window_vspacing), trim_thickness(0.1*WALL_THICK_VAL*window_vspacing);
-		float const wall_thick(WALL_THICK_VAL*(1.0f - FLOOR_THICK_VAL_HOUSE)*height), trim_plus_wall_thick(trim_thickness + wall_thick);
+		float const wall_thick(get_closet_wall_thickness(c)), trim_plus_wall_thick(trim_thickness + wall_thick);
 		colorRGBA const trim_color(WHITE); // assume trim is white
 		bool const draw_interior_trim(1 || draw_interior); // always enable so that we don't have to regenerate small geom when closet doors are opened or closed
 

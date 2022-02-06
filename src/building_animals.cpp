@@ -129,59 +129,57 @@ point building_t::gen_rat_pos(float radius, rand_gen_t &rgen) const {
 	return all_zeros; // failed
 }
 
-bool can_hide_under(room_object_t const &c, float &zbot, cube_t &hide_area) {
+bool can_hide_under(room_object_t const &c, cube_t &hide_area) {
 	cube_t dishwasher; // used below
 
 	if (c.type == TYPE_CLOSET && c.is_open() && c.is_small_closet()) { // open small closet
-		zbot = c.z2(); // closet ceiling
+		hide_area = c;
+		hide_area.expand_by(-get_closet_wall_thickness(c)); // we want the inside of the closet, excluding the walls
+		hide_area.z1() += 0.5*hide_area.dz(); // use the halfway point; somewhat arbitrary, but will affect the score
 		return 1;
 	}
 	else if (c.type == TYPE_BED) {
 		cube_t cubes[6]; // frame, head, foot, mattress, pillow, legs_bcube
 		get_bed_cubes(c, cubes);
-		zbot = cubes[0].z1(); // frame bottom
+		hide_area = cubes[0]; // frame
 		return 1;
 	}
 	else if (c.type == TYPE_DESK || c.type == TYPE_TABLE) {
 		cube_t cubes[5];
 		get_table_cubes(c, cubes); // body and legs
-		zbot = cubes[0].z1(); // body bottom
+		hide_area = cubes[0]; // body
 		return 1;
 	}
 	else if (c.type == TYPE_DRESSER || c.type == TYPE_NIGHTSTAND) {
 		hide_area = get_dresser_middle(c);
-		zbot = hide_area.z1();
 		return 1;
 	}
 	else if (c.type == TYPE_CHAIR) {
 		cube_t cubes[3]; // seat, back, legs_bcube
 		get_chair_cubes(c, cubes);
-		zbot = cubes[0].z1(); // seat bottom
+		hide_area = cubes[0]; // seat
 		return 1;
 	}
 	else if (c.type == TYPE_BCASE) {
 		cube_t top, middle, back, lr[2];
 		get_bookcase_cubes(c, top, middle, back, lr);
 		hide_area = middle;
-		zbot = hide_area.z1();
 		return 1;
 	}
 	else if (c.type == TYPE_KSINK && get_dishwasher_for_ksink(c, dishwasher)) {
 		hide_area = dishwasher;
 		hide_area.d[c.dim][!c.dir] = c.d[c.dim][!c.dir]; // use the back of the cabinet, not the back of the dishwasher door
-		zbot = hide_area.z1();
 		return 1;
 	}
 	else if (c.type == TYPE_COUCH) {
 		hide_area = c;
 		hide_area.z1() += 0.06*c.dz(); // there's space under the couch
-		zbot = hide_area.z1();
 		return 1;
 	}
 	else if (c.type == TYPE_BRSINK) { // office building bathroom sink
 		// not a very good hiding spot, but there aren't many in office buildings;
 		// this is just a placeholder anyway, since sinks don't extend down to the floor and won't pass the rat zval test
-		zbot = c.z1(); // bottom of sink
+		hide_area = c;
 		return 1;
 	}
 	return 0;
@@ -265,7 +263,7 @@ void building_t::update_rat(rat_t &rat, point const &camera_bs, int ped_ix, floa
 		// we must check this each frame in case the player took or moved the object we were hiding under
 		float const rat_z1(rat.pos.z), rat_z2(rat.pos.z + height), rat_squish_z2(p1.z + squish_hheight);
 		point best_dest;
-		float best_score(0.0), zbot(0.0);
+		float best_score(0.0);
 		dir_to_fear   = (rat.fear_pos - rat.pos);
 		dir_to_fear.z = 0.0; // XY plane only
 		dir_to_fear.normalize();
@@ -275,12 +273,11 @@ void building_t::update_rat(rat_t &rat, point const &camera_bs, int ped_ix, floa
 
 		for (auto c = b; c != e; ++c) {
 			if (c->z1() > rat_z2 || c->z2() < rat_z1) continue; // wrong floor, or object not on the floor
-			cube_t hide_area;
-			if (c->shape != SHAPE_CUBE || !can_hide_under(*c, zbot, hide_area)) continue; // only cubes for now
-			float const top_gap(zbot - rat_squish_z2); // space between top of rat and bottom of object
+			cube_t hide_area; // will be a subset of the object
+			if (c->shape != SHAPE_CUBE || !can_hide_under(*c, hide_area)) continue; // only cubes for now
+			float const top_gap(hide_area.z1() - rat_squish_z2); // space between top of rat and bottom of object
 			if (top_gap < 0.0) continue; // rat can't fit under this object; allowed area is waived
-			cube_t const &target(hide_area.is_all_zeros() ? (cube_t)*c : hide_area); // use hide_area if set (can be a subset of the object)
-			point const center(target.xc(), target.yc(), p1.z);
+			point const center(hide_area.xc(), hide_area.yc(), p1.z);
 			float const dist(p2p_dist(p1, center));
 			if (dist > view_dist) continue; // too far away to see
 			
@@ -290,7 +287,7 @@ void building_t::update_rat(rat_t &rat, point const &camera_bs, int ped_ix, floa
 				rat.speed     = 0.0;
 				break;
 			}
-			float side_cov(0.5f*min(target.dx(), target.dy()) - hlength); // amount of overhang of the object around the rat's extents
+			float side_cov(0.5f*min(hide_area.dx(), hide_area.dy()) - hlength); // amount of overhang of the object around the rat's extents
 			float const dist_to_fear(p2p_dist(rat.fear_pos, center));
 			float score(side_cov - 0.5f*top_gap + 0.2f*dist_to_fear - 0.1f*max(dist, dist_thresh)); // can be positive or negative
 			if (best_score != 0.0 && score <= best_score) continue; // check score before iterating over other rats; it can only decrease below
