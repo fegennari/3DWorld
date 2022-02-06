@@ -292,11 +292,12 @@ void building_t::update_rat(rat_t &rat, point const &camera_bs, int ped_ix, floa
 				side_cov  -= move_dist; // moving to this misaligned position loses side coverage
 				score      = 4.0*side_cov - 0.5f*top_gap + 0.25f*dist_to_fear - 0.1*max(dist, dist_thresh); // update score
 				score     -= 0.2*dist; // less desirable when occupied
+				score     -= 2.0*move_dist; // use prev accumulated move dist; even less desirable if there are many rats in the way
 				tot_mdist += move_dist;
 				if (tot_mdist > 4.0*rat.radius) {skip = 1; break;} // moved too far, there must be too many other rats at this location, skip it
+				if (best_score != 0.0 && score <= best_score) {skip = 1; break;} // score dropped too low
 			} // for r
 			if (skip) continue;
-			if (best_score != 0.0 && score <= best_score) continue;
 			if (tot_mdist > 0.0 && !is_rat_inside_building(cand_dest, xy_pad, hheight)) continue; // check if outside the valid area if center was moved
 			best_dest  = point(cand_dest.x, cand_dest.y, rat.pos.z); // keep zval on the floor
 			best_score = score;
