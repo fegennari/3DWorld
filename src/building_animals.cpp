@@ -78,7 +78,7 @@ void building_t::update_animals(point const &camera_bs, unsigned building_ix, in
 	vect_rat_t &rats(interior->room_geom->rats);
 	if (rats.placed && rats.empty()) return; // no rats placed in this building
 	if (!building_obj_model_loader.is_model_valid(OBJ_MODEL_RAT)) return; // no rat model
-	//timer_t timer("Update Rats"); // multi-part: 1.1ms, open door 1.8ms; office building 1.7ms
+	//timer_t timer("Update Rats"); // multi-part: 1.1ms, open door 1.8ms; office building 2.0ms
 
 	if (!rats.placed) { // new building - place rats
 		rand_gen_t rgen;
@@ -194,6 +194,27 @@ bool building_t::is_rat_inside_building(point const &pos, float xy_pad, float hh
 	req_area.z2() += hheight;
 	return is_cube_contained_in_parts(req_area);
 }
+
+class dir_gen_t {
+	vector<vector3d> dirs;
+	unsigned dir_ix;
+
+	void gen_dirs() {
+		rand_gen_t rgen;
+		dirs.resize(1000);
+		for (auto &dir : dirs) {dir = rgen.signed_rand_vector_spherical_xy().get_norm();}
+	}
+public:
+	dir_gen_t() : dir_ix(0) {}
+
+	vector3d const &gen_dir() {
+		if (dirs.empty()) {gen_dirs();}
+		vector3d const &dir(dirs[dir_ix++]);
+		if (dir_ix == dirs.size()) {dir_ix = 0;} // wrap around
+		return dir;
+	}
+};
+dir_gen_t dir_gen;
 
 void building_t::update_rat(rat_t &rat, point const &camera_bs, int ped_ix, float timestep, float &max_xmove, rand_gen_t &rgen) const {
 	float const floor_spacing(get_window_vspace()), trim_thickness(get_trim_thickness()), view_dist(RAT_VIEW_FLOORS*floor_spacing);
@@ -333,7 +354,7 @@ void building_t::update_rat(rat_t &rat, point const &camera_bs, int ped_ix, floa
 				target_fov_dp   -= 0.02; // allow for turns outside our field of view
 				target_max_dist *= 0.96;  // decrease the max distance considered
 			}
-			vector3d vdir(rgen.signed_rand_vector_xy().get_norm()); // random XY direction
+			vector3d vdir(dir_gen.gen_dir()); // random XY direction
 
 			if (collided && coll_dir != zero_vector) {
 				if (dot_product(coll_dir, vdir) > 0.0) {vdir.negate();} // must move away from the collision direction
