@@ -1105,7 +1105,7 @@ public:
 	}
 	bool check_road_sphere_coll(point const &pos, float radius, bool include_intersections, bool xy_only, bool exclude_bridges_and_tunnels) const {
 		if (roads.empty()) return 0;
-		point const query_pos(pos - get_camera_coord_space_xlate());
+		point const query_pos(pos - get_camera_coord_space_xlate()); // convert from camera space to building space
 		if (!check_bcube_sphere_coll(bcube, query_pos, radius, xy_only)) return 0;
 			
 		if (check_bcubes_sphere_coll(roads, query_pos, radius, xy_only)) { // collision with a road
@@ -2502,14 +2502,15 @@ public:
 	void get_all_plot_zones(vect_city_zone_t &zones) const {
 		for (auto r = road_networks.begin(); r != road_networks.end(); ++r) {r->get_plot_zones(zones);}
 	}
-	bool check_road_sphere_coll(point const &pos, float radius, bool xy_only, bool exclude_bridges_and_tunnels) const {
+	bool check_road_sphere_coll(point const &pos, float radius, bool xy_only, bool exclude_bridges_and_tunnels) const { // Note: pos is in camera space
 		if (global_rn.check_road_sphere_coll(pos, radius, 1, xy_only, exclude_bridges_and_tunnels)) return 1;
+		point const query_pos(pos - get_camera_coord_space_xlate()); // convert from camera space to global city space
 
 		// since transmission lines run between cities, we can check the cities_bcube for early rejection
-		if (!exclude_bridges_and_tunnels && xy_only && !transmission_lines.empty() && sphere_cube_intersect_xy(pos, radius, cities_bcube)) {
+		if (!exclude_bridges_and_tunnels && xy_only && !transmission_lines.empty() && sphere_cube_intersect_xy(query_pos, radius, cities_bcube)) {
 			// assume this is a valid scenery placement query and check transmission lines
 			for (auto const &t : transmission_lines) {
-				if (t.sphere_intersect_xy(pos, radius)) return 1;
+				if (t.sphere_intersect_xy(query_pos, radius)) return 1;
 			}
 		}
 		return 0;
@@ -2943,7 +2944,7 @@ public:
 	void get_all_road_bcubes(vect_cube_t &bcubes, bool connector_only) const {road_gen.get_all_road_bcubes(bcubes, connector_only);}
 	void get_all_plot_zones(vect_city_zone_t &zones) {road_gen.get_all_plot_zones(zones);} // caches plot_id_offset, so non-const
 
-	// return: 0=no coll, 1=plot coll, 2=road coll, 3=both plot and road coll
+	// return: 0=no coll, 1=plot coll, 2=road coll, 3=both plot and road coll; pos is in camera space
 	unsigned check_city_sphere_coll(point const &pos, float radius, bool xy_only, bool exclude_bridges_and_tunnels, bool ret_first_coll, unsigned check_mask) const {
 		int ret(0);
 		if ((check_mask & 1) && check_plot_sphere_coll(pos, radius, xy_only)) {ret |= 1;}
@@ -3142,15 +3143,15 @@ public:
 model_bcube_checker_t model_bcube_checker;
 
 bool check_valid_scenery_pos(point const &pos, float radius, bool is_tall) {
-	point const pos_bs(pos + get_tt_xlate_val()); // convert from city/building space to camera space
-	if (check_buildings_sphere_coll(pos_bs, radius, 0, 0, 0, 1)) return 0; // apply_tt_xlate=0, xy_only=0, check_interior=0, exclude_city=1 (since we're checking plots below)
+	point const pos_cs(pos + get_tt_xlate_val()); // convert from city/building space to camera space
+	if (check_buildings_sphere_coll(pos_cs, radius, 0, 0, 0, 1)) return 0; // apply_tt_xlate=0, xy_only=0, check_interior=0, exclude_city=1 (since we're checking plots below)
 	if (world_mode != WMODE_INF_TERRAIN) return 1; // the checks below are for tiled terrain mode only
 
 	if (have_cities()) {
-		if (city_gen.check_city_sphere_coll(pos_bs, radius, 1, !is_tall, 1, 3)) return 0; // check_mask=3 to include both plots and roads
-		if (city_gen.check_mesh_disable(pos_bs, radius)) return 0;
+		if (city_gen.check_city_sphere_coll(pos_cs, radius, 1, !is_tall, 1, 3)) return 0; // check_mask=3 to include both plots and roads
+		if (city_gen.check_mesh_disable(pos_cs, radius)) return 0;
 	}
-	if (model_bcube_checker.check_sphere_coll((pos_bs - get_tiled_terrain_model_xlate()), radius, 1)) return 0; // xy_only=1
+	if (model_bcube_checker.check_sphere_coll((pos_cs - get_tiled_terrain_model_xlate()), radius, 1)) return 0; // xy_only=1
 	return 1;
 }
 bool check_mesh_disable(point const &pos, float radius) { // Note: pos is in global space
