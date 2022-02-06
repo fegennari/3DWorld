@@ -388,6 +388,7 @@ public:
 			oss << ": " << round_fp(100.0*health) << "% Health";
 			text_color = RED;
 			add_camera_filter(colorRGBA(RED, 0.25), 4, -1, CAM_FILT_DAMAGE); // 4 ticks of red damage
+			gen_sound_thread_safe_at_player(SOUND_DOH, 0.5);
 		}
 		if (obj.type == TYPE_KEY) {
 			has_key = 1; // mark as having the key, but it doesn't go into the inventory or contribute to weight or value
