@@ -1040,14 +1040,14 @@ void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 		float const steep_mult_rock (1.0f/(0.8f*sthresh[0][0] - 0.5f*sthresh[0][0]));
 		float const vnz_scale((mesh_gen_mode == MGEN_DWARP_GPU) ? SQRT2 : 1.0); // allow for steeper slopes when domain warping is used
 		int const llc_x(x1 - xoff2), llc_y(y1 - yoff2);
-		point const query_pos(get_xval(tsize/2 + llc_x), get_yval(tsize/2 + llc_y), 0.0); // in local tile space
+		point const query_pos(get_xval(tsize/2 + llc_x), get_yval(tsize/2 + llc_y), 0.0); // in local tile space, not camera space
 		bool const check_mesh_mask(check_mesh_disable(query_pos, radius)), check_buildings(no_grass_under_buildings());
 		int k1, k2, k3, k4;
 		height_gen.build_arrays(MESH_NOISE_FREQ*get_xval(x1), MESH_NOISE_FREQ*get_yval(y1), MESH_NOISE_FREQ*deltax,
 			MESH_NOISE_FREQ*deltay, tsize, tsize, 0, 1); // force_sine_mode=1
 		vector<float> rand_vals(tsize*tsize);
 		//bool const same_dirt(params[0][1].dirt == params[0][0].dirt && params[1][0].dirt == params[0][0].dirt && params[1][1].dirt == params[0][0].dirt);
-		vector<cube_t> exclude_cubes, allow_cubes;
+		vector<cube_t> exclude_cubes, allow_cubes; // in camera space
 		get_city_sphere_coll_cubes(query_pos, radius, 1, 1, exclude_cubes, &allow_cubes);
 		has_tunnel |= tile_contains_tunnel(get_mesh_bcube());
 
@@ -1130,11 +1130,11 @@ void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 					bool replace_grass_with_dirt(0);
 
 					if (grass_scale > 0.0 && !exclude_cubes.empty()) { // exclude bridges and tunnels here
-						point const test_pt(get_xval(x + llc_x + xoff)+0.5*DX_VAL, get_yval(y + llc_y + yoff)+0.5*DY_VAL, 0.0);
+						point const test_pt(get_xval(x + llc_x + xoff)+0.5*DX_VAL, get_yval(y + llc_y + yoff)+0.5*DY_VAL, 0.0); // in camera space
 						replace_grass_with_dirt = (check_bcubes_sphere_coll(exclude_cubes, test_pt, HALF_DXY, 1) && !check_bcubes_sphere_coll(allow_cubes, test_pt, HALF_DXY, 1));
 					}
 					if (!replace_grass_with_dirt && check_buildings && grass_scale > 0.0 && mh01 == mh00 && mh10 == mh00 && mh11 == mh00) { // look for area flattened under a building
-						point const test_pt(get_xval(x + llc_x + xoff)+0.5*DX_VAL, get_yval(y + llc_y + yoff)+0.5*DY_VAL, mh00);
+						point const test_pt(get_xval(x + llc_x + xoff)+0.5*DX_VAL, get_yval(y + llc_y + yoff)+0.5*DY_VAL, mh00); // in camera space
 						replace_grass_with_dirt = check_buildings_no_grass(test_pt); // xy_only 1.61 => 1.76
 					}
 					if (replace_grass_with_dirt) {

@@ -244,7 +244,7 @@ template bool check_bcubes_sphere_coll(vector<cube_t> const &bcubes, point const
 
 template<typename T> void get_bcubes_sphere_coll(vector<T> const &bcubes, vect_cube_t &out, point const &sc, float radius, bool xy_only, vector3d const &xlate) {
 	for (auto i = bcubes.begin(); i != bcubes.end(); ++i) {
-		if (check_bcube_sphere_coll(get_bcube(*i), sc, radius, xy_only)) {out.push_back(get_bcube(*i) + xlate);}
+		if (check_bcube_sphere_coll(get_bcube(*i), sc, radius, xy_only)) {out.push_back(get_bcube(*i) + xlate);} // Note: out is in camera space
 	}
 }
 template<typename T> cube_t calc_cubes_bcube(vector<T> const &cubes) {
@@ -360,15 +360,15 @@ public:
 	}
 	bool check_plot_sphere_coll(point const &pos, float radius, bool xy_only=1) const { // Note: cities, not blocks
 		if (plots.empty()) return 0;
-		point const query_pos(pos - get_camera_coord_space_xlate());
+		point const query_pos(pos - get_camera_coord_space_xlate()); // convert from camera space to global city space
 		radius += 0.5*city_params.road_width; // add extra padding around city plots
 		if (!check_bcube_sphere_coll(bcube, query_pos, radius, xy_only)) return 0;
 		return check_bcubes_sphere_coll(plots, query_pos, radius, xy_only);
 	}
-	void get_plots_sphere_coll(point const &pos, float radius, bool xy_only, vect_cube_t &out) const {
+	void get_plots_sphere_coll(point const &pos, float radius, bool xy_only, vect_cube_t &out) const { // Note: pos is in camera space, and out is returned in camera space
 		if (plots.empty()) return;
 		vector3d const xlate(get_camera_coord_space_xlate());
-		point const query_pos(pos - xlate);
+		point const query_pos(pos - xlate); // in global city space
 		if (!check_bcube_sphere_coll(bcube, query_pos, radius, xy_only)) return;
 		get_bcubes_sphere_coll(plots, out, query_pos, radius, xy_only, xlate);
 	}
@@ -2953,7 +2953,7 @@ public:
 	}
 	bool check_tline_cube_intersect_xy(cube_t const &c) const {return road_gen.check_tline_cube_intersect_xy(c);}
 
-	void get_sphere_coll_cubes(point const &pos, float radius, bool include_intersections, bool xy_only, vect_cube_t &out, vect_cube_t *out_bt) const {
+	void get_sphere_coll_cubes(point const &pos, float radius, bool include_intersections, bool xy_only, vect_cube_t &out, vect_cube_t *out_bt) const { // pos in camera space
 		get_plots_sphere_coll(pos, radius, xy_only, out);
 		road_gen.get_roads_sphere_coll(pos, radius, include_intersections, xy_only, out, out_bt);
 		get_driveway_sphere_coll_cubes(pos, radius, xy_only, out);
@@ -3068,12 +3068,13 @@ void get_ped_bcubes_for_building(int first_ped_ix, vect_cube_t &bcubes, bool mov
 void register_person_hit(unsigned person_ix, room_object_t const &obj, vector3d const &velocity) {city_gen.register_person_hit(person_ix, obj, velocity);}
 void draw_player_model(shader_t &s, vector3d const &xlate, bool shadow_only) {city_gen.draw_player_model(s, xlate, shadow_only);}
 
+// Note: pos is in global space for these next two calls
 unsigned check_city_sphere_coll(point const &pos, float radius, bool exclude_bridges_and_tunnels, bool ret_first_coll, unsigned check_mask) {
 	if (!have_cities()) return 0;
 	return city_gen.check_city_sphere_coll((pos + get_tt_xlate_val()), radius, 1, exclude_bridges_and_tunnels, ret_first_coll, check_mask); // apply xlate for all static objects
 }
-void get_city_sphere_coll_cubes(point const &pos, float radius, bool include_intersections, bool xy_only, vect_cube_t &out, vect_cube_t *out_bt) {
-	city_gen.get_sphere_coll_cubes((pos + get_tt_xlate_val()), radius, include_intersections, xy_only, out, out_bt);
+void get_city_sphere_coll_cubes(point const &pos, float radius, bool include_intersections, bool xy_only, vect_cube_t &out, vect_cube_t *out_bt) { // Note: out is in camera space
+	city_gen.get_sphere_coll_cubes((pos + get_tt_xlate_val()), radius, include_intersections, xy_only, out, out_bt); // convert from city/building space to camera space
 }
 bool proc_city_sphere_coll(point &pos, point const &p_last, float radius, float prev_frame_zval, bool xy_only, bool inc_cars, vector3d *cnorm, bool check_interior) {
 	if (proc_buildings_sphere_coll(pos, p_last, radius, xy_only, cnorm, check_interior)) return 1;
@@ -3141,7 +3142,7 @@ public:
 model_bcube_checker_t model_bcube_checker;
 
 bool check_valid_scenery_pos(point const &pos, float radius, bool is_tall) {
-	point const pos_bs(pos + get_tt_xlate_val()); // convert from camera to city/building space
+	point const pos_bs(pos + get_tt_xlate_val()); // convert from city/building space to camera space
 	if (check_buildings_sphere_coll(pos_bs, radius, 0, 0, 0, 1)) return 0; // apply_tt_xlate=0, xy_only=0, check_interior=0, exclude_city=1 (since we're checking plots below)
 	if (world_mode != WMODE_INF_TERRAIN) return 1; // the checks below are for tiled terrain mode only
 
@@ -3152,7 +3153,7 @@ bool check_valid_scenery_pos(point const &pos, float radius, bool is_tall) {
 	if (model_bcube_checker.check_sphere_coll((pos_bs - get_tiled_terrain_model_xlate()), radius, 1)) return 0; // xy_only=1
 	return 1;
 }
-bool check_mesh_disable(point const &pos, float radius) {
+bool check_mesh_disable(point const &pos, float radius) { // Note: pos is in global space
 	if (!have_cities()) return 0;
 	return city_gen.check_mesh_disable((pos + get_tt_xlate_val()), radius); // apply xlate for all static objects
 }

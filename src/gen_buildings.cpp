@@ -2871,7 +2871,7 @@ public:
 		vector<point> points; // reused across calls
 
 		if (radius == 0.0) { // point coll - ignore p_last as well
-			point const p1x(pos - xlate);
+			point const p1x(pos - xlate); // convert back to building space
 			if (!range.contains_pt_xy(p1x)) return 0; // outside buildings bcube
 			unsigned const gix(get_grid_ix(p1x));
 			grid_elem_t const &ge(grid[gix]);
@@ -2916,7 +2916,7 @@ public:
 	}
 	bool check_road_seg_sphere_coll(grid_elem_t const &ge, point &pos, point const &p_last, vector3d const &xlate, float radius, bool xy_only, vector3d *cnorm) const {
 		for (auto r = ge.road_segs.begin(); r != ge.road_segs.end(); ++r) {
-			cube_t const cube(*r + xlate);
+			cube_t const cube(*r + xlate); // convert to camera space to agree with pos
 			if (!cube.contains_pt_xy(pos) || (pos.z - radius) > cube.z2()) continue; // no collision - test top surface only
 			pos.z = cube.z2() + radius;
 			if (cnorm) {*cnorm = plus_z;}
@@ -3436,14 +3436,14 @@ bool proc_buildings_sphere_coll(point &pos, point const &p_int, float radius, bo
 }
 bool check_buildings_sphere_coll(point const &pos, float radius, bool apply_tt_xlate, bool xy_only, bool check_interior, bool exclude_city) {
 	point center(pos);
-	if (apply_tt_xlate) {center += get_tt_xlate_val();} // apply xlate for all static objects - not the camera
+	if (apply_tt_xlate) {center += get_tt_xlate_val();} // apply xlate for all static objects to convert from building space to camera space - not the camera
 	return proc_buildings_sphere_coll(center, pos, radius, xy_only, nullptr, check_interior, exclude_city);
 }
 bool check_buildings_point_coll(point const &pos, bool apply_tt_xlate, bool xy_only, bool check_interior) {
 	return check_buildings_sphere_coll(pos, 0.0, apply_tt_xlate, xy_only, check_interior);
 }
-bool check_buildings_no_grass(point const &pos) { // for tiled terrain mode; pos is in local space
-	point center(pos + get_tt_xlate_val()); // convert from building space to camera space
+bool check_buildings_no_grass(point const &pos) { // for tiled terrain mode; pos is in camera
+	point center(pos); // passed into check_sphere_coll() as non-const, but not actually modified, so make a copy
 	if (building_creator.check_sphere_coll(center, pos, 0.0, 1, nullptr)) return 1; // secondary buildings only
 	if (building_tiles  .check_sphere_coll(center, pos, 0.0, 1, nullptr)) return 1;
 	return 0;
