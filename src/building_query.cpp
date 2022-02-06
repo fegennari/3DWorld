@@ -1213,11 +1213,11 @@ bool building_t::check_and_handle_dynamic_obj_coll(point &pos, float radius, flo
 	float const radius_scale = 0.7; // allow them to get a bit closer together, since radius is conservative
 	vect_rat_t const &rats(interior->room_geom->rats);
 	float const rsum_max(radius_scale*(radius + rats.max_radius) + rats.max_xmove), coll_x1(pos.x - rsum_max), coll_x2(pos.x + rsum_max);
-	auto it(rats.get_first_rat_with_xv_gt(coll_x1)); // use a binary search to speed up iteration
+	auto start(rats.get_first_rat_with_xv_gt(coll_x1)); // use a binary search to speed up iteration
 	float max_overlap(0.0);
 	vector3d delta_sum;
 
-	for (auto r = it; r != rats.end(); ++r) {
+	for (auto r = start; r != rats.end(); ++r) {
 		if (r->pos.x > coll_x2) break; // no rat after this can overlap - done
 		if (r->pos == pos) continue; // skip ourself
 		if (pos.z > (r->pos.z + r->height) || z2 < r->pos.z) continue; // different floors

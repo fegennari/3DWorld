@@ -298,14 +298,14 @@ void building_t::update_rat(rat_t &rat, point const &camera_bs, int ped_ix, floa
 			float const radius_scale = 0.8; // smaller dist (head can overlap tail)
 			vect_rat_t const &rats(interior->room_geom->rats);
 			float const rsum_max(radius_scale*(rat.radius + rats.max_radius) + rats.max_xmove), coll_x1(cand_dest.x - rsum_max), coll_x2(cand_dest.x + rsum_max);
-			auto it(rats.get_first_rat_with_xv_gt(coll_x1)); // use a binary search to speed up iteration
+			auto start(rats.get_first_rat_with_xv_gt(coll_x1)); // use a binary search to speed up iteration
 
-			for (auto r = it; r != rats.end(); ++r) {
+			for (auto r = start; r != rats.end(); ++r) {
 				if (r->pos.x > coll_x2) break; // no rat after this can overlap - done
 				if (&(*r) == &rat) continue; // skip ourself
 				float const r_sum(radius_scale*(rat.radius + r->radius)); // smaller dist (head can overlap tail)
 				if (!dist_xy_less_than(cand_dest, r->pos, r_sum)) continue; // no rat in this spot
-				float const move_dist(r_sum - p2p_dist_xy(cand_dest, r->pos));
+				float const move_dist(1.01*r_sum - p2p_dist_xy(cand_dest, r->pos)); // slightly larger than r_sum to prevent collisions
 				cand_dest += (p1 - cand_dest).get_norm()*move_dist; // move our target in front of this other rat
 				side_cov  -= move_dist; // moving to this misaligned position loses side coverage
 				score      = 4.0*side_cov - 0.5f*top_gap + 0.25f*dist_to_fear - 0.1*max(dist, dist_thresh); // update score
@@ -314,6 +314,7 @@ void building_t::update_rat(rat_t &rat, point const &camera_bs, int ped_ix, floa
 				tot_mdist += move_dist;
 				if (tot_mdist > 4.0*rat.radius) {skip = 1; break;} // moved too far, there must be too many other rats at this location, skip it
 				if (best_score != 0.0 && score <= best_score) {skip = 1; break;} // score dropped too low
+				r = start-1; // go back and test the other rats for collisions with this new position; maybe creates a bit more determinism/less chaos
 			} // for r
 			if (skip) continue;
 			if (tot_mdist > 0.0 && !is_rat_inside_building(cand_dest, xy_pad, hheight)) continue; // check if outside the valid area if center was moved
