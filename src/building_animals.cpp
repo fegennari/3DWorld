@@ -78,7 +78,7 @@ void building_t::update_animals(point const &camera_bs, unsigned building_ix, in
 	vect_rat_t &rats(interior->room_geom->rats);
 	if (rats.placed && rats.empty()) return; // no rats placed in this building
 	if (!building_obj_model_loader.is_model_valid(OBJ_MODEL_RAT)) return; // no rat model
-	//timer_t timer("Update Rats"); // multi-part: 1.1ms, open door 1.8ms; office building 2.0ms
+	//timer_t timer("Update Rats"); // multi-part: 1.1ms, open door 1.8ms; office building 1.7ms
 
 	if (!rats.placed) { // new building - place rats
 		rand_gen_t rgen;
@@ -245,7 +245,8 @@ void building_t::update_rat(rat_t &rat, point const &camera_bs, int ped_ix, floa
 		}
 		else {
 			max_eq(max_xmove, fabs(rat.pos.x - prev_pos.x));
-			// update the path about every 30 frames of colliding; this prevents the rat from being stuck while also avoiding jittering due to frequent dest updates
+			// update the path about every 30 frames of colliding; this prevents the rat from being stuck while also avoiding jittering due to frequent dest updates;
+			// using randomness rather than updating every 30 frames makes this process less regular and mechanical
 			update_path = ((rgen.rand()%30) == 0);
 		}
 	}
@@ -354,15 +355,21 @@ void building_t::update_rat(rat_t &rat, point const &camera_bs, int ped_ix, floa
 			}
 			vector3d vdir(dir_gen.gen_dir()); // random XY direction
 
-			if (collided && coll_dir != zero_vector) {
-				if (dot_product(coll_dir, vdir) > 0.0) {vdir.negate();} // must move away from the collision direction
+			if (collided && coll_dir != zero_vector) { // resolve the collision; target_fov_dp is ignored in this case
+				if (dot_product(coll_dir, vdir) > 0.0) { // must move away from the collision direction
+					if (n <= 10) { // earlier in the iteration, try to preserve direction by moving in a tangent to the collider
+						vdir = cross_product(coll_dir, plus_z);
+						if (dot_product(vdir, rat.dir) < 0.0) {vdir.negate();} // there are two solutions; choose the one closer to our current dir
+					}
+					else {vdir.negate();} // otherwise reverse direction
+				}
 			}
-			else {
+			else { // not colliding; check if the new direction is close enough to our current direction
 				float dp(dot_product(rat.dir, vdir));
-				if (n < 180 && dp < 0.0) {vdir.negate(); dp = -dp;} // only allow switching directions in the last 20 iterations
+				if (n < 180 && dp < 0.0) {vdir.negate(); dp = -dp;} // only allow switching directions in the last 20 iterations; can still fail the test below
 				if (dp < target_fov_dp) continue; // not in field of view, use a new direction
 			}
-			if (is_scared && n <= 100 && dot_product(dir_to_fear, vdir) > 0.0) continue; // don't move toward danger; may make the rat back into a corner
+			if (is_scared && n <= 100 && dot_product(dir_to_fear, vdir) > 0.0) continue; // don't move toward danger; may make the rat move into a corner
 			float dist(rgen.rand_uniform(0.1, dist_upper_bound)*target_max_dist); // random distance out to max view dist
 			max_eq(dist, min_step); // make sure distance isn't too short
 			point const cand(rat.pos + dist*vdir);
