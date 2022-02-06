@@ -1924,7 +1924,16 @@ int set_true_obj_height(point &pos, point const &lpos, float step_height, float 
 			}
 			else {
 				cylinder_3dw const cylin(cobj.get_bounding_cylinder());
-				coll = calc_cylin_z_bounds(cylin.p1, cylin.p2, cylin.r1, cylin.r2, pos, radius, zt, zb);
+				
+				if (calc_cylin_z_bounds(cylin.p1, cylin.p2, cylin.r1, cylin.r2, pos, radius, zt, zb)) {
+					if (is_player) { // check if player (camera or smiley) is inside the hole in the torus
+						point pos2(lpos); // copy to remove const-ness
+						vector3d norm; // unused
+						coll = sphere_torus_intersect(pos, CAMERA_RADIUS, cobj.points[0], cobj.norm, cobj.radius2, cobj.radius, pos,  norm, 0) ||
+						       sphere_torus_intersect(pos, CAMERA_RADIUS, cobj.points[0], cobj.norm, cobj.radius2, cobj.radius, pos2, norm, 0);
+					}
+					else {coll = 1;}
+				}
 			}
 			break;
 
