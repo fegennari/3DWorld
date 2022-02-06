@@ -349,7 +349,7 @@ void building_t::update_rat(rat_t &rat, point const &camera_bs, int ped_ix, floa
 		float const min_step(min(dist_thresh, 0.05f*rat.radius));
 		rat.speed = 0.0; // stop until we've found a valid destination
 
-		for (unsigned n = 0; n < 200; ++n) { // make 100 tries
+		for (unsigned n = 0; n < 200; ++n) { // make 200 tries
 			if (n > 50) { // we've been at this for a while, maybe we need to relax our constraints, maybe follow the walls?
 				target_fov_dp   -= 0.02; // allow for turns outside our field of view
 				target_max_dist *= 0.96;  // decrease the max distance considered
@@ -361,7 +361,7 @@ void building_t::update_rat(rat_t &rat, point const &camera_bs, int ped_ix, floa
 			}
 			else {
 				float dp(dot_product(rat.dir, vdir));
-				if (dp < 0.0) {vdir.negate(); dp = -dp;}
+				if (n < 180 && dp < 0.0) {vdir.negate(); dp = -dp;} // only allow switching directions in the last 20 iterations
 				if (dp < target_fov_dp) continue; // not in field of view, use a new direction
 			}
 			if (is_scared && n <= 100 && dot_product(dir_to_fear, vdir) > 0.0) continue; // don't move toward danger; may make the rat back into a corner
