@@ -1705,7 +1705,7 @@ class building_creator_t {
 
 	void add_building_to_grid(building_t const &b, unsigned gix, unsigned bix) {
 		grid_by_tile[gix].add(b.bcube, bix, 0);
-		if (b.enable_driveway_coll()) {grid_by_tile[gix].add(b.driveway, bix, 1);} // add driveway as well
+		if (b.enable_driveway_coll() && !b.driveway.is_all_zeros()) {grid_by_tile[gix].add(b.driveway, bix, 1);} // add driveway as well
 	}
 	void build_grid_by_tile(bool single_tile) {
 		grid_by_tile.clear();
