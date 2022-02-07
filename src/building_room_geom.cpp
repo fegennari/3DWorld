@@ -339,8 +339,8 @@ void building_room_geom_t::add_closet(room_object_t const &c, tid_nm_pair_t cons
 				get_material(tp, 1)       .add_cube_to_verts(door, WHITE, llc, ~get_skip_mask_for_xy(!c.dim), c.dim, !c.dir); // draw front and back faces
 				get_untextured_material(1).add_cube_to_verts(door, WHITE, llc, ~get_skip_mask_for_xy( c.dim)); // draw edges untextured
 			}
-			else { // draw only front face, back face if player in closet
-				unsigned const door_skip_faces(get_face_mask(c.dim, (c.dir ^ bool(player_in_closet & RO_FLAG_IN_CLOSET))));
+			else {
+				unsigned const door_skip_faces(~get_skip_mask_for_xy(c.dim)); // draw both front and back faces so that shadows are cast correctly / light doesn't leak
 				get_material(tp, 1).add_cube_to_verts(doors, WHITE, llc, door_skip_faces, !c.dim);
 			}
 		}
