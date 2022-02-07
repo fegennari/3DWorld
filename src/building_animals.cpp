@@ -295,9 +295,10 @@ void building_t::update_rat(rat_t &rat, point const &camera_bs, int ped_ix, floa
 			if (!dist_xy_less_than(hide_area.get_cube_center(), p1, view_dist)) continue; // too far away to see
 			// select our destination under this hiding spot;
 			// this must be unique per rat so that rats don't compete for the exact same spot, and must be the same across calls for stability;
-			// also use the obj_id to mix things up between objects; we can't use the obj vector position because it may change if the player takes or drops objects
+			// also use the obj_id to mix things up between objects, and throw in the type in case obj_id is left at 0;
+			// we can't use the obj vector position because it may change if the player takes or drops objects
 			rand_gen_t my_rgen;
-			my_rgen.set_state(rat.rat_id+1, c->obj_id+1);
+			my_rgen.set_state((rat.rat_id + 1), (c->obj_id + (c->type << 16) + 1));
 			cube_t safe_area(hide_area);
 			point cand_dest(0.0, 0.0, p1.z); // x/y will be set below
 
