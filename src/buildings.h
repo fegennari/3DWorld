@@ -75,7 +75,7 @@ bottle_params_t const bottle_params[NUM_BOTTLE_TYPES] = {
 };
 
 struct rat_t {
-	point pos, dest, fear_pos;
+	point pos, last_pos, dest, fear_pos;
 	vector3d dir;
 	float radius, height, hwidth, speed, fear, anim_time, wake_time, dist_since_sleep;
 	unsigned rat_id;

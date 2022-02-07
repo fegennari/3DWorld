@@ -46,6 +46,10 @@ void rat_t::sleep_for(float time_secs_min, float time_secs_max) {
 	wake_time = (float)tfticks + rand_uniform(time_secs_min, time_secs_max)*TICKS_PER_SECOND;
 }
 void rat_t::move(float timestep) {
+	// update animation time using position change; note that we can't just do the update in the rat movement code below because pos may be reset in case of collision
+	anim_time += p2p_dist_xy(pos, last_pos)/radius; // scale with size so that small rats' legs move faster; TODO: reset if move back
+	last_pos   = pos;
+
 	if (is_sleeping()) {
 		if ((float)tfticks > wake_time) {wake_time = speed = 0.0;} // time to wake up
 	}
@@ -58,7 +62,6 @@ void rat_t::move(float timestep) {
 		if (dot_product(dest_dir, dir) > 0.75) { // only move if we're facing our dest, to avoid walking through an object
 			float const move_dist(timestep*speed);
 			pos               = pos + move_dist*dir;
-			anim_time        += move_dist/radius; // scale with size so that small rats' legs move faster
 			dist_since_sleep += move_dist;
 		}
 	}
