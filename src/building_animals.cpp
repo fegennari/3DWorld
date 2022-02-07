@@ -47,7 +47,7 @@ void rat_t::sleep_for(float time_secs_min, float time_secs_max) {
 }
 void rat_t::move(float timestep) {
 	// update animation time using position change; note that we can't just do the update in the rat movement code below because pos may be reset in case of collision
-	anim_time += p2p_dist_xy(pos, last_pos)/radius; // scale with size so that small rats' legs move faster; TODO: reset if move back
+	anim_time += p2p_dist_xy(pos, last_pos)/radius; // scale with size so that small rats' legs move faster
 	last_pos   = pos;
 
 	if (is_sleeping()) {
@@ -87,7 +87,7 @@ void building_t::update_animals(point const &camera_bs, unsigned building_ix, in
 	vect_rat_t &rats(interior->room_geom->rats);
 	if (rats.placed && rats.empty()) return; // no rats placed in this building
 	if (!building_obj_model_loader.is_model_valid(OBJ_MODEL_RAT)) return; // no rat model
-	//timer_t timer("Update Rats"); // multi-part: 1.1ms, open door 1.8ms; office building 1.7ms
+	//timer_t timer("Update Rats"); // multi-part: 1.1ms, open door 1.7ms; office building 1.7ms
 
 	if (!rats.placed) { // new building - place rats
 		rand_gen_t rgen;
@@ -334,7 +334,7 @@ void building_t::update_rat(rat_t &rat, point const &camera_bs, int ped_ix, floa
 				score     -= 0.2*dist; // less desirable when occupied
 				score     -= 2.0*move_dist; // use prev accumulated move dist; even less desirable if there are many rats in the way
 				tot_mdist += move_dist;
-				if (tot_mdist > 4.0*rat.radius) {skip = 1; break;} // moved too far, there must be too many other rats at this location, skip it
+				if (tot_mdist > 4.0*rat.radius || !hide_area.contains_pt_xy(cand_dest)) {skip = 1; break;} // moved too far, too many other rats at this dest, skip it
 				if (best_score != 0.0 && score <= best_score) {skip = 1; break;} // score dropped too low
 				r = start-1; // go back and test the other rats for collisions with this new position; maybe creates a bit more determinism/less chaos
 			} // for r
