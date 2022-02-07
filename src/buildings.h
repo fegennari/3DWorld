@@ -1130,7 +1130,7 @@ public:
 	void get_objs_at_or_below_ground_floor(vect_room_object_t &ret) const;
 private:
 	point gen_rat_pos(float radius, rand_gen_t &rgen) const;
-	void add_rat(point const &pos, float length, vector3d const &dir, point const &placed_from);
+	bool add_rat(point const &pos, float hlength, vector3d const &dir, point const &placed_from);
 	bool is_rat_inside_building(point const &pos, float xy_pad, float hheight) const;
 	void update_rat(rat_t &rat, point const &camera_bs, int ped_ix, float timestep, float &max_xmove, rand_gen_t &rgen) const;
 	void scare_rat(rat_t &rat, point const &camera_bs, int ped_ix) const;

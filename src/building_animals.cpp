@@ -73,12 +73,16 @@ void vect_rat_t::add(rat_t const &rat) {
 	max_eq(max_radius, rat.radius);
 }
 
-void building_t::add_rat(point const &pos, float length, vector3d const &dir, point const &placed_from) {
-	rat_t rat(pos, 0.5*length, vector3d(dir.x, dir.y, 0.0).get_norm()); // dir in XY plane
+bool building_t::add_rat(point const &pos, float hlength, vector3d const &dir, point const &placed_from) {
+	point rat_pos(pos);
+	if (!get_zval_of_floor(pos, hlength, rat_pos.z)) return 0; // place on the floor, skip if there's no floor here
+	rat_t rat(rat_pos, hlength, vector3d(dir.x, dir.y, 0.0).get_norm()); // dir in XY plane
+	if (check_line_coll_expand(pos, rat_pos, hlength, rat.height)) return 0; // something is in the way
 	rat.fear_pos = placed_from;
 	rat.fear     = 1.0; // starts off with max fear
 	interior->room_geom->rats.add(rat);
 	interior->room_geom->modified_by_player = 1;
+	return 1;
 }
 
 void building_t::update_animals(point const &camera_bs, unsigned building_ix, int ped_ix) { // 0.01ms for 2 rats
@@ -129,6 +133,7 @@ point building_t::gen_rat_pos(float radius, rand_gen_t &rgen) const {
 		unsigned const room_ix(rgen.rand() % interior->rooms.size());
 		room_t const &room(interior->rooms[room_ix]);
 		if (room.z1() > ground_floor_z1) continue; // not on the ground floor or basement
+		//if (room.is_hallway) continue; // don't place in hallways?
 		cube_t place_area(room); // will represent the usable floor area
 		place_area.expand_by_xy(-(radius + get_wall_thickness()));
 		point pos(gen_xy_pos_in_area(place_area, radius, rgen));

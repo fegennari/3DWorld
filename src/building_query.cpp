@@ -1080,7 +1080,7 @@ bool building_t::check_line_coll_expand(point const &p1, point const &p2, float 
 				cylinder_3dw cylin(c->get_cylinder());
 				cylin.p1.z -= hheight; cylin.p2.z += hheight; // extend top and bottom
 				cylin.r1   += radius ; cylin.r2   += radius;
-				if (line_intersect_cylinder_with_t(p1, p2, cylin, 0, t)) return 1; // check_ends=0
+				if (line_intersect_cylinder_with_t(p1, p2, cylin, (p1.z != p2.z), t)) return 1; // check ends if zvals differ (such as when dropping a rat)
 			}
 			else if (c->shape == SHAPE_SPHERE) { // sphere (ball)
 				float const rsum(radius + c->get_radius());

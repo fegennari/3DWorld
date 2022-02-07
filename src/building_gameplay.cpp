@@ -1196,8 +1196,7 @@ bool building_t::maybe_use_last_pickup_room_object(point const &player_pos) {
 			if (is_rat) {
 				gen_sound_thread_safe(SOUND_RAT_SQUEAK, (get_camera_pos() + (obj.get_cube_center() - player_pos))); // play the sound whether or not we can drop the rat
 				register_building_sound(player_pos, 0.8);
-				if (!get_zval_of_floor(dest, half_width, dest.z)) return 0; // place on the floor, skip if there's no floor here
-				add_rat(dest, max(obj.dx(), obj.dy()), cview_dir, player_pos); // facing away from the player
+				if (!add_rat(dest, half_width, cview_dir, player_pos)) return 0; // facing away from the player
 			}
 			else { // book; orient based on the player's primary direction
 				if (!get_zval_for_obj_placement(dest, half_width, dest.z, 0)) return 0; // no suitable placement found; add_z_bias=0
