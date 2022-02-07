@@ -78,10 +78,11 @@ struct rat_t {
 	point pos, dest, fear_pos;
 	vector3d dir;
 	float radius, height, hwidth, speed, fear, anim_time, wake_time, dist_since_sleep;
+	unsigned rat_id;
 	bool is_hiding;
 
 	// this first destructor is for the lower_bound() call in vect_rat_t::get_first_rat_with_x2_gt()
-	rat_t(float xval) : pos(xval, 0.0, 0.0), radius(0), height(0), hwidth(0), speed(0), fear(0), anim_time(0), wake_time(0), dist_since_sleep(0), is_hiding(0) {}
+	rat_t(float xval) : pos(xval, 0.0, 0.0), radius(0), height(0), hwidth(0), speed(0), fear(0), anim_time(0), wake_time(0), dist_since_sleep(0), rat_id(0), is_hiding(0) {}
 	rat_t(point const &pos_, float radius_, vector3d const &dir_);
 	bool operator<(rat_t const &r) const {return (pos.x < r.pos.x);} // compare only xvals
 	bool is_moving   () const {return (speed > 0.0);}
@@ -98,7 +99,7 @@ struct vect_rat_t : public vector<rat_t> {
 	bool placed;
 	float max_radius, max_xmove;
 	vect_rat_t() : placed(0), max_radius(0.0), max_xmove(0.0) {}
-	void add(rat_t const &rat) {push_back(rat); max_eq(max_radius, rat.radius);}
+	void add(rat_t const &rat);
 	const_iterator get_first_rat_with_xv_gt(float x) const {return std::lower_bound(begin(), end(), rat_t(x));}
 };
 

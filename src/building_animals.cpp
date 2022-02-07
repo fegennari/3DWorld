@@ -10,7 +10,7 @@ float const RAT_FOV_DEG     = 60.0; // field of view in degrees
 float const RAT_VIEW_FLOORS = 4.0; // view distance in floors
 float const RAT_FOV_DP(cos(0.5*RAT_FOV_DEG*TO_RADIANS));
 
-extern int animate2, camera_surf_collide, frame_counter;
+extern int animate2, camera_surf_collide, frame_counter, display_mode;
 extern float fticks;
 extern double tfticks;
 extern building_params_t global_building_params;
@@ -21,7 +21,7 @@ sphere_t get_cur_frame_loudest_sound();
 
 
 rat_t::rat_t(point const &pos_, float radius_, vector3d const &dir_) : pos(pos_), dest(pos), dir(dir_), radius(radius_),
-speed(0.0), fear(0.0), anim_time(0.0), wake_time(0.0), dist_since_sleep(0.0), is_hiding(0)
+speed(0.0), fear(0.0), anim_time(0.0), wake_time(0.0), dist_since_sleep(0.0), rat_id(0), is_hiding(0)
 {
 	vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_RAT)); // L=3878, W=861, H=801
 	hwidth = radius*sz.y/sz.x; // scale radius by ratio of width to length
@@ -62,6 +62,12 @@ void rat_t::move(float timestep) {
 			dist_since_sleep += move_dist;
 		}
 	}
+}
+
+void vect_rat_t::add(rat_t const &rat) {
+	push_back(rat);
+	back().rat_id = size(); // rat_id starts at 1
+	max_eq(max_radius, rat.radius);
 }
 
 void building_t::add_rat(point const &pos, float length, vector3d const &dir, point const &placed_from) {
@@ -278,22 +284,34 @@ void building_t::update_rat(rat_t &rat, point const &camera_bs, int ped_ix, floa
 			if (c->shape != SHAPE_CUBE || !can_hide_under(*c, hide_area)) continue; // only cubes for now
 			float const top_gap(hide_area.z1() - rat_squish_z2); // space between top of rat and bottom of object
 			if (top_gap < 0.0) continue; // rat can't fit under this object; allowed area is waived
-			point const center(hide_area.xc(), hide_area.yc(), p1.z);
-			float const dist(p2p_dist(p1, center));
-			if (dist > view_dist) continue; // too far away to see
+			if (!dist_xy_less_than(hide_area.get_cube_center(), p1, view_dist)) continue; // too far away to see
+			// select our destination under this hiding spot;
+			// this must be unique per rat so that rats don't compete for the exact same spot, and must be the same across calls for stability;
+			// also use the obj_id to mix things up between objects; we can't use the obj vector position because it may change if the player takes or drops objects
+			rand_gen_t my_rgen;
+			my_rgen.set_state(rat.rat_id+1, c->obj_id+1);
+			cube_t safe_area(hide_area);
+			point cand_dest(0.0, 0.0, p1.z); // x/y will be set below
+
+			for (unsigned d = 0; d < 2; ++d) {
+				// shrink by half length so that any point inside this cube will be covered; add an extra factor of 1.5 to avoid table/chair/desk legs, etc.;
+				// make sure safe_area is strictly normalized
+				safe_area.expand_in_dim(d, -min(1.5f*hlength, 0.49f*safe_area.get_sz_dim(d)));
+				cand_dest[d] = my_rgen.rand_uniform(safe_area.d[d][0], safe_area.d[d][1]);
+			}
+			float const dist(p2p_dist(p1, cand_dest));
 			
 			if (dist < dist_thresh) { // already at this location
-				if (check_line_coll_expand(p1, center, coll_radius, squish_hheight)) {update_path = 1; continue;} // location is invalid, need to update the path below
+				if (check_line_coll_expand(p1, cand_dest, coll_radius, squish_hheight)) {update_path = 1; continue;} // location is invalid, need to update the path below
 				has_fear_dest = 1; // it's valid, so stay there
 				rat.speed     = 0.0;
 				break;
 			}
 			float side_cov(0.5f*min(hide_area.dx(), hide_area.dy()) - hlength); // amount of overhang of the object around the rat's extents
-			float const dist_to_fear(p2p_dist(rat.fear_pos, center));
+			float const dist_to_fear(p2p_dist(rat.fear_pos, cand_dest));
 			float score(side_cov - 0.5f*top_gap + 0.2f*dist_to_fear - 0.1f*max(dist, dist_thresh)); // can be positive or negative
 			if (best_score != 0.0 && score <= best_score) continue; // check score before iterating over other rats; it can only decrease below
-			if (check_line_coll_expand(p1, center, coll_radius, squish_hheight)) continue; // use center before checking other rats so that the entire path is valid
-			point cand_dest(center);
+			if (check_line_coll_expand(p1, cand_dest, coll_radius, squish_hheight)) continue; // use center before checking other rats so that the entire path is valid
 			float tot_mdist(0.0);
 			bool skip(0);
 			float const radius_scale = 0.8; // smaller dist (head can overlap tail)
