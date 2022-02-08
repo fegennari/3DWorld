@@ -69,6 +69,7 @@ public:
 person_name_gen_t person_name_gen;
 
 string gen_random_first_name(rand_gen_t &rgen) {return person_name_gen.gen_random_first_name(rgen);} // for use in naming other entities
+string gen_random_full_name (rand_gen_t &rgen) {return person_name_gen.gen_name(rgen.rand(), rgen.rand_bool(), 1, 1);} // first and last names, random gender
 
 string pedestrian_t::get_name() const {
 	return person_name_gen.gen_name(ssn, is_female, 1, 1); // use ssn as name rand gen seed; include both first and last name

@@ -21,6 +21,7 @@ extern int display_mode, player_in_closet;
 
 int get_rand_screenshot_texture(unsigned rand_ix);
 unsigned get_num_screenshot_tids();
+string gen_random_full_name (rand_gen_t &rgen);
 
 void gen_text_verts(vector<vert_tc_t> &verts, point const &pos, string const &text, float tsize, vector3d const &column_dir, vector3d const &line_dir, bool use_quads=0);
 string const &gen_book_title(unsigned rand_id, string *author, unsigned split_len);
@@ -1443,6 +1444,16 @@ void building_room_geom_t::add_book(room_object_t const &c, bool inc_lg, bool in
 				title_area_fc.expand_in_dim(!c.dim, -1.0*indent);
 			}
 			add_book_title(title, title_area_fc, mat, text_color, c.dim, !c.dim, 2, !c.dir, !top_dir, 0); // {columns, lines, normal}
+
+			if (!has_cover) { // add the author if there's no cover picture
+				rand_gen_t rgen;
+				rgen.set_state(c.obj_id+1, c.obj_id+123);
+				string const author(gen_random_full_name(rgen));
+				cube_t author_area(title_area_fc);
+				author_area.translate_dim(!c.dim, (top_dir ? -1.0 : 1.0)*0.25*c.get_sz_dim(!c.dim));
+				author_area.expand_by_xy(-0.25*author_area.get_size()); // make author smaller than the title
+				add_book_title(author, author_area, mat, text_color, c.dim, !c.dim, 2, !c.dir, !top_dir, 0); // {columns, lines, normal}
+			}
 		}
 		rotate_verts(mat.quad_verts, axis,   tilt_angle,  tilt_about, qv_start);
 		rotate_verts(mat.quad_verts, plus_z, z_rot_angle, zrot_about, qv_start);
