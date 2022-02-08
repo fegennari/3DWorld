@@ -796,6 +796,7 @@ int building_room_geom_t::find_nearest_pickup_object(building_t const &building,
 			if (!do_line_clip(p1c, p2c, obj_bcube.d)) continue; // test ray intersection vs. bcube
 			float const dsq(p2p_dist(at_pos, p1c)); // use closest intersection point
 			if (dmin_sq > 0.0 && dsq > dmin_sq)       continue; // not the closest
+			if (obj_bcube.contains_pt(at_pos))        continue; // skip when the player is standing inside a plant, etc.
 		
 			if (i->type == TYPE_CLOSET || (i->type == TYPE_STALL && i->shape != SHAPE_SHORT)) { // can only take short stalls (separating urinals)
 				if (!i->is_open() && !i->contains_pt(at_pos)) { // stalls/closets block the player from taking toilets/boxes unless open, or the player is inside
