@@ -423,15 +423,15 @@ unsigned const RO_FLAG_BROKEN   = 0x40000000; // for TVs and monitors, maybe can
 unsigned const RO_FLAG_MOVED    = 0x80000000; // for player push/pull
 
 struct bldg_obj_type_t {
-	bool player_coll=0, ai_coll=0, pickup=0, attached=0, is_model=0;
+	bool player_coll=0, ai_coll=0, rat_coll=0, pickup=0, attached=0, is_model=0;
 	uint8_t lg_sm=0; // 0=neither (model), 1=large item, 2=small item, 3=split into large and small
 	float value=0.0, weight=0.0;
 	unsigned capacity=0; // for consumable/usable objects
 	std::string name;
 
 	bldg_obj_type_t() {}
-	bldg_obj_type_t(bool pc, bool ac, bool pu, bool at, bool im, uint8_t ls, float v, float w, std::string const &n, unsigned cap=0) :
-		player_coll(pc), ai_coll(ac), pickup(pu), attached(at), is_model(im), lg_sm(ls), value(v), weight(w), capacity(cap), name(n) {}
+	bldg_obj_type_t(bool pc, bool ac, bool rc, bool pu, bool at, bool im, uint8_t ls, float v, float w, std::string const &n, unsigned cap=0) :
+		player_coll(pc), ai_coll(ac), rat_coll(rc), pickup(pu), attached(at), is_model(im), lg_sm(ls), value(v), weight(w), capacity(cap), name(n) {}
 };
 
 struct room_object_t : public cube_t {

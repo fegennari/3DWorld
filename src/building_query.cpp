@@ -951,9 +951,7 @@ struct cached_room_objs_t {
 };
 cached_room_objs_t cached_room_objs;
 
-bool room_object_t::is_floor_collidable() const {
-	return !(((no_coll() && !was_expanded() && type != TYPE_COMPUTER) || !bldg_obj_types[type].ai_coll) && type != TYPE_LG_BALL && type != TYPE_BOOK);
-}
+bool room_object_t::is_floor_collidable() const {return bldg_obj_types[type].rat_coll;}
 
 bool building_t::get_begin_end_room_objs_on_ground_floor(float zval, vect_room_object_t::const_iterator &b, vect_room_object_t::const_iterator &e) const {
 	if (zval < get_ground_floor_z_thresh()) { // optimized for the case of rats where most are on the ground floor or basement

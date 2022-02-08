@@ -37,96 +37,96 @@ void setup_bldg_obj_types() {
 	static bool was_setup(0);
 	if (was_setup) return; // nothing to do
 	was_setup = 1;
-	// player_coll, ai_coll, pickup, attached, is_model, lg_sm, value, weight, name [capacity]
-	//                                                pc ac pu at im ls value  weight  name
-	bldg_obj_types[TYPE_TABLE     ] = bldg_obj_type_t(1, 1, 1, 0, 0, 1, 70.0,  40.0,  "table");
-	bldg_obj_types[TYPE_CHAIR     ] = bldg_obj_type_t(0, 1, 1, 0, 0, 1, 50.0,  25.0,  "chair"); // skip player collisions because they can be in the way and block the path in some rooms
-	bldg_obj_types[TYPE_STAIR     ] = bldg_obj_type_t(1, 0, 0, 1, 0, 1, 0.0,   0.0,   "stair");
-	bldg_obj_types[TYPE_STAIR_WALL] = bldg_obj_type_t(1, 1, 0, 1, 0, 1, 0.0,   0.0,   "stairs wall");
-	bldg_obj_types[TYPE_ELEVATOR  ] = bldg_obj_type_t(1, 1, 0, 1, 0, 0, 0.0,   0.0,   "elevator");
-	bldg_obj_types[TYPE_LIGHT     ] = bldg_obj_type_t(0, 0, 1, 0, 0, 0, 40.0,  5.0,   "light");
-	bldg_obj_types[TYPE_RUG       ] = bldg_obj_type_t(0, 0, 1, 0, 0, 1, 50.0,  20.0,  "rug");
-	bldg_obj_types[TYPE_PICTURE   ] = bldg_obj_type_t(0, 0, 1, 0, 0, 1, 100.0, 1.0,   "picture"); // should be random value
-	bldg_obj_types[TYPE_WBOARD    ] = bldg_obj_type_t(0, 0, 1, 0, 0, 1, 50.0,  25.0,  "whiteboard");
-	bldg_obj_types[TYPE_BOOK      ] = bldg_obj_type_t(0, 0, 1, 0, 0, 3, 10.0,  1.0,   "book");
-	bldg_obj_types[TYPE_BCASE     ] = bldg_obj_type_t(1, 1, 1, 0, 0, 3, 150.0, 100.0, "bookcase"); // Note: can't pick up until bookcase can be expanded and books taken off
-	bldg_obj_types[TYPE_TCAN      ] = bldg_obj_type_t(0, 1, 1, 0, 0, 2, 12.0,  2.0,   "trashcan"); // skip player collisions because they can be in the way and block the path in some rooms
-	bldg_obj_types[TYPE_DESK      ] = bldg_obj_type_t(1, 1, 0, 0, 0, 3, 100.0, 80.0,  "desk"); // drawers are small items
-	bldg_obj_types[TYPE_BED       ] = bldg_obj_type_t(1, 1, 1, 0, 0, 3, 300.0, 200.0, "bed"); // pillows are small, and the rest is large
-	bldg_obj_types[TYPE_WINDOW    ] = bldg_obj_type_t(0, 0, 0, 1, 0, 1, 0.0,   0.0,   "window");
-	bldg_obj_types[TYPE_BLOCKER   ] = bldg_obj_type_t(0, 0, 0, 0, 0, 0, 0.0,   0.0,   "<blocker>");  // not a drawn object; block other objects, but not the player or AI
-	bldg_obj_types[TYPE_COLLIDER  ] = bldg_obj_type_t(1, 1, 0, 0, 0, 0, 0.0,   0.0,   "<collider>"); // not a drawn object; block the player and AI
-	bldg_obj_types[TYPE_CUBICLE   ] = bldg_obj_type_t(0, 0, 0, 1, 0, 1, 500.0, 250.0, "cubicle"); // skip collisions because they have their own colliders
-	bldg_obj_types[TYPE_STALL     ] = bldg_obj_type_t(1, 1, 1, 1, 0, 1, 40.0,  20.0,  "bathroom divider"); // can pick up short sections of bathroom stalls (urinal dividers)
-	bldg_obj_types[TYPE_SIGN      ] = bldg_obj_type_t(0, 0, 1, 0, 0, 3, 10.0,  1.0,   "sign");
-	bldg_obj_types[TYPE_COUNTER   ] = bldg_obj_type_t(1, 1, 0, 1, 0, 1, 0.0,   0.0,   "kitchen counter");
-	bldg_obj_types[TYPE_CABINET   ] = bldg_obj_type_t(0, 0, 0, 1, 0, 1, 0.0,   0.0,   "kitchen cabinet");
-	bldg_obj_types[TYPE_KSINK     ] = bldg_obj_type_t(1, 1, 0, 1, 0, 1, 0.0,   0.0,   "kitchen sink");
-	bldg_obj_types[TYPE_BRSINK    ] = bldg_obj_type_t(1, 1, 0, 1, 0, 1, 0.0,   0.0,   "bathroom sink"); // for office building bathrooms
-	bldg_obj_types[TYPE_PLANT     ] = bldg_obj_type_t(0, 1, 1, 0, 0, 3, 18.0,  8.0,   "potted plant"); // AI collides with plants on the floor
-	bldg_obj_types[TYPE_DRESSER   ] = bldg_obj_type_t(1, 1, 0, 0, 0, 3, 120.0, 110.0, "dresser"); // Note: can't pick up until drawers can be opened and items removed from them
-	bldg_obj_types[TYPE_NIGHTSTAND] = bldg_obj_type_t(1, 1, 1, 0, 0, 3, 60.0,  45.0,  "nightstand");
-	bldg_obj_types[TYPE_FLOORING  ] = bldg_obj_type_t(0, 0, 0, 1, 0, 1, 0.0,   0.0,   "flooring");
+	// player_coll, ai_coll, rat_coll, pickup, attached, is_model, lg_sm, value, weight, name [capacity]
+	//                                                pc ac rc pu at im ls value  weight  name
+	bldg_obj_types[TYPE_TABLE     ] = bldg_obj_type_t(1, 1, 1, 1, 0, 0, 1, 70.0,  40.0,  "table");
+	bldg_obj_types[TYPE_CHAIR     ] = bldg_obj_type_t(0, 1, 1, 1, 0, 0, 1, 50.0,  25.0,  "chair"); // skip player collisions because they can be in the way and block the path in some rooms
+	bldg_obj_types[TYPE_STAIR     ] = bldg_obj_type_t(1, 0, 1, 0, 1, 0, 1, 0.0,   0.0,   "stair");
+	bldg_obj_types[TYPE_STAIR_WALL] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 1, 0.0,   0.0,   "stairs wall");
+	bldg_obj_types[TYPE_ELEVATOR  ] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 0, 0.0,   0.0,   "elevator");
+	bldg_obj_types[TYPE_LIGHT     ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 0, 40.0,  5.0,   "light");
+	bldg_obj_types[TYPE_RUG       ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 1, 50.0,  20.0,  "rug");
+	bldg_obj_types[TYPE_PICTURE   ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 1, 100.0, 1.0,   "picture"); // should be random value
+	bldg_obj_types[TYPE_WBOARD    ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 1, 50.0,  25.0,  "whiteboard");
+	bldg_obj_types[TYPE_BOOK      ] = bldg_obj_type_t(0, 0, 1, 1, 0, 0, 3, 10.0,  1.0,   "book");
+	bldg_obj_types[TYPE_BCASE     ] = bldg_obj_type_t(1, 1, 1, 1, 0, 0, 3, 150.0, 100.0, "bookcase"); // Note: can't pick up until bookcase can be expanded and books taken off
+	bldg_obj_types[TYPE_TCAN      ] = bldg_obj_type_t(0, 1, 1, 1, 0, 0, 2, 12.0,  2.0,   "trashcan"); // skip player collisions because they can be in the way and block the path in some rooms
+	bldg_obj_types[TYPE_DESK      ] = bldg_obj_type_t(1, 1, 1, 0, 0, 0, 3, 100.0, 80.0,  "desk"); // drawers are small items
+	bldg_obj_types[TYPE_BED       ] = bldg_obj_type_t(1, 1, 1, 1, 0, 0, 3, 300.0, 200.0, "bed"); // pillows are small, and the rest is large
+	bldg_obj_types[TYPE_WINDOW    ] = bldg_obj_type_t(0, 0, 0, 0, 1, 0, 1, 0.0,   0.0,   "window");
+	bldg_obj_types[TYPE_BLOCKER   ] = bldg_obj_type_t(0, 0, 0, 0, 0, 0, 0, 0.0,   0.0,   "<blocker>");  // not a drawn object; block other objects, but not the player or AI
+	bldg_obj_types[TYPE_COLLIDER  ] = bldg_obj_type_t(1, 1, 1, 0, 0, 0, 0, 0.0,   0.0,   "<collider>"); // not a drawn object; block the player and AI
+	bldg_obj_types[TYPE_CUBICLE   ] = bldg_obj_type_t(0, 0, 0, 0, 1, 0, 1, 500.0, 250.0, "cubicle"); // skip collisions because they have their own colliders
+	bldg_obj_types[TYPE_STALL     ] = bldg_obj_type_t(1, 1, 1, 1, 1, 0, 1, 40.0,  20.0,  "bathroom divider"); // can pick up short sections of bathroom stalls (urinal dividers)
+	bldg_obj_types[TYPE_SIGN      ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 3, 10.0,  1.0,   "sign");
+	bldg_obj_types[TYPE_COUNTER   ] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 1, 0.0,   0.0,   "kitchen counter");
+	bldg_obj_types[TYPE_CABINET   ] = bldg_obj_type_t(0, 0, 0, 0, 1, 0, 1, 0.0,   0.0,   "kitchen cabinet");
+	bldg_obj_types[TYPE_KSINK     ] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 1, 0.0,   0.0,   "kitchen sink");
+	bldg_obj_types[TYPE_BRSINK    ] = bldg_obj_type_t(1, 1, 0, 0, 1, 0, 1, 0.0,   0.0,   "bathroom sink"); // for office building bathrooms
+	bldg_obj_types[TYPE_PLANT     ] = bldg_obj_type_t(0, 1, 1, 1, 0, 0, 3, 18.0,  8.0,   "potted plant"); // AI collides with plants on the floor
+	bldg_obj_types[TYPE_DRESSER   ] = bldg_obj_type_t(1, 1, 1, 0, 0, 0, 3, 120.0, 110.0, "dresser"); // Note: can't pick up until drawers can be opened and items removed from them
+	bldg_obj_types[TYPE_NIGHTSTAND] = bldg_obj_type_t(1, 1, 1, 1, 0, 0, 3, 60.0,  45.0,  "nightstand");
+	bldg_obj_types[TYPE_FLOORING  ] = bldg_obj_type_t(0, 0, 0, 0, 1, 0, 1, 0.0,   0.0,   "flooring");
 	// closets can't be picked up, but they can block a pickup; marked as large because small objects are not modified; marked as is_model because closets can contain lamps
-	bldg_obj_types[TYPE_CLOSET    ] = bldg_obj_type_t(1, 1, 1, 1, 1, 1, 0.0,   0.0,   "closet");
-	bldg_obj_types[TYPE_WALL_TRIM ] = bldg_obj_type_t(0, 0, 0, 1, 0, 2, 0.0,   0.0,   "wall trim");
-	bldg_obj_types[TYPE_RAILING   ] = bldg_obj_type_t(1, 0, 0, 1, 0, 2, 0.0,   0.0,   "railing");
-	bldg_obj_types[TYPE_CRATE     ] = bldg_obj_type_t(1, 1, 1, 0, 0, 2, 10.0,  12.0,  "crate"); // should be random value
-	bldg_obj_types[TYPE_BOX       ] = bldg_obj_type_t(1, 1, 1, 0, 0, 2, 5.0,   8.0,   "box");   // should be random value
-	bldg_obj_types[TYPE_MIRROR    ] = bldg_obj_type_t(0, 0, 1, 0, 0, 1, 40.0,  15.0,  "mirror");
-	bldg_obj_types[TYPE_SHELVES   ] = bldg_obj_type_t(1, 1, 1, 0, 0, 2, 0.0,   0.0,   "shelves");
-	bldg_obj_types[TYPE_KEYBOARD  ] = bldg_obj_type_t(0, 0, 1, 0, 0, 2, 15.0,  2.0,   "keyboard");
-	bldg_obj_types[TYPE_SHOWER    ] = bldg_obj_type_t(1, 1, 0, 1, 0, 1, 0.0,   0.0,   "shower");
-	bldg_obj_types[TYPE_RDESK     ] = bldg_obj_type_t(1, 1, 0, 0, 0, 1, 800.0, 300.0, "reception desk");
-	bldg_obj_types[TYPE_BOTTLE    ] = bldg_obj_type_t(0, 0, 1, 0, 0, 2, 1.0,   1.0,   "bottle");
-	bldg_obj_types[TYPE_WINE_RACK ] = bldg_obj_type_t(1, 1, 1, 0, 0, 3, 75.0,  40.0,  "wine rack");
-	bldg_obj_types[TYPE_COMPUTER  ] = bldg_obj_type_t(0, 1, 1, 0, 0, 2, 500.0, 20.0,  "computer"); // rats can collide with computers
-	bldg_obj_types[TYPE_MWAVE     ] = bldg_obj_type_t(0, 0, 1, 0, 0, 1, 100.0, 50.0,  "microwave oven");
-	bldg_obj_types[TYPE_PAPER     ] = bldg_obj_type_t(0, 0, 1, 0, 0, 2, 0.0,   0.0,   "sheet of paper"); // will have a random value that's often 0
-	bldg_obj_types[TYPE_BLINDS    ] = bldg_obj_type_t(0, 0, 0, 1, 0, 1, 50.0,  7.0,   "window blinds");
-	bldg_obj_types[TYPE_PEN       ] = bldg_obj_type_t(0, 0, 1, 0, 0, 2, 0.10,  0.02,  "pen");
-	bldg_obj_types[TYPE_PENCIL    ] = bldg_obj_type_t(0, 0, 1, 0, 0, 2, 0.10,  0.02,  "pencil");
-	bldg_obj_types[TYPE_PAINTCAN  ] = bldg_obj_type_t(0, 0, 1, 0, 0, 2, 12.0,  8.0,   "paint can");
-	bldg_obj_types[TYPE_LG_BALL   ] = bldg_obj_type_t(0, 0, 1, 0, 0, 2, 15.0,  1.2,   "ball");
-	bldg_obj_types[TYPE_HANGER_ROD] = bldg_obj_type_t(0, 0, 1, 0, 0, 2, 10.0,  5.0,   "hanger rod");
-	bldg_obj_types[TYPE_DRAIN     ] = bldg_obj_type_t(0, 0, 0, 1, 0, 2, 0.0,   0.0,   "drain pipe");
-	bldg_obj_types[TYPE_MONEY     ] = bldg_obj_type_t(0, 0, 1, 0, 0, 2, 20.0,  0.0,   "pile of money"); // $20 bills
-	bldg_obj_types[TYPE_PHONE     ] = bldg_obj_type_t(0, 0, 1, 0, 0, 2, 200.0, 0.1,   "cell phone");
-	bldg_obj_types[TYPE_TPROLL    ] = bldg_obj_type_t(0, 0, 1, 0, 0, 2, 0.25,  0.1,   "TP roll", 200);
-	bldg_obj_types[TYPE_SPRAYCAN  ] = bldg_obj_type_t(0, 0, 1, 0, 0, 2, 2.0,   1.0,   "spray paint", 5000);
-	bldg_obj_types[TYPE_MARKER    ] = bldg_obj_type_t(0, 0, 1, 0, 0, 2, 0.20,  0.05,  "marker",      10000);
-	bldg_obj_types[TYPE_BUTTON    ] = bldg_obj_type_t(0, 0, 1, 1, 0, 2, 1.0,   0.05,  "button");
-	bldg_obj_types[TYPE_CRACK     ] = bldg_obj_type_t(0, 0, 0, 1, 0, 2, 0.0,   0.0,   "crack");
-	bldg_obj_types[TYPE_SWITCH    ] = bldg_obj_type_t(0, 0, 0, 1, 0, 2, 0.0,   0.0,   "switch");
-	bldg_obj_types[TYPE_PLATE     ] = bldg_obj_type_t(0, 0, 1, 0, 0, 2, 6.0,   0.25,  "plate");
-	bldg_obj_types[TYPE_LAPTOP    ] = bldg_obj_type_t(0, 0, 1, 0, 0, 2, 600.0, 8.0,   "laptop");
-	bldg_obj_types[TYPE_FPLACE    ] = bldg_obj_type_t(1, 1, 0, 1, 0, 1, 0.0,   2000.0,"fireplace");
-	bldg_obj_types[TYPE_LBASKET   ] = bldg_obj_type_t(1, 1, 1, 0, 0, 2, 12.0,  2.0,   "laundry basket");
-	bldg_obj_types[TYPE_WHEATER   ] = bldg_obj_type_t(1, 1, 0, 1, 0, 2, 300.0, 500.0, "water heater");
-	bldg_obj_types[TYPE_TAPE      ] = bldg_obj_type_t(0, 0, 1, 0, 0, 2, 2.0,   0.4,   "duct tape", 1000);
-	// player_coll, ai_coll, pickup, attached, is_model, lg_sm, value, weight, name [capacity]
+	bldg_obj_types[TYPE_CLOSET    ] = bldg_obj_type_t(1, 1, 1, 1, 1, 1, 1, 0.0,   0.0,   "closet");
+	bldg_obj_types[TYPE_WALL_TRIM ] = bldg_obj_type_t(0, 0, 0, 0, 1, 0, 2, 0.0,   0.0,   "wall trim");
+	bldg_obj_types[TYPE_RAILING   ] = bldg_obj_type_t(1, 0, 0, 0, 1, 0, 2, 0.0,   0.0,   "railing");
+	bldg_obj_types[TYPE_CRATE     ] = bldg_obj_type_t(1, 1, 1, 1, 0, 0, 2, 10.0,  12.0,  "crate"); // should be random value
+	bldg_obj_types[TYPE_BOX       ] = bldg_obj_type_t(1, 1, 1, 1, 0, 0, 2, 5.0,   8.0,   "box");   // should be random value
+	bldg_obj_types[TYPE_MIRROR    ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 1, 40.0,  15.0,  "mirror");
+	bldg_obj_types[TYPE_SHELVES   ] = bldg_obj_type_t(1, 1, 1, 1, 0, 0, 2, 0.0,   0.0,   "shelves");
+	bldg_obj_types[TYPE_KEYBOARD  ] = bldg_obj_type_t(0, 0, 1, 1, 0, 0, 2, 15.0,  2.0,   "keyboard");
+	bldg_obj_types[TYPE_SHOWER    ] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 1, 0.0,   0.0,   "shower");
+	bldg_obj_types[TYPE_RDESK     ] = bldg_obj_type_t(1, 1, 1, 0, 0, 0, 1, 800.0, 300.0, "reception desk");
+	bldg_obj_types[TYPE_BOTTLE    ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 1.0,   1.0,   "bottle");
+	bldg_obj_types[TYPE_WINE_RACK ] = bldg_obj_type_t(1, 1, 1, 1, 0, 0, 3, 75.0,  40.0,  "wine rack");
+	bldg_obj_types[TYPE_COMPUTER  ] = bldg_obj_type_t(0, 1, 1, 1, 0, 0, 2, 500.0, 20.0,  "computer"); // rats can collide with computers
+	bldg_obj_types[TYPE_MWAVE     ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 1, 100.0, 50.0,  "microwave oven");
+	bldg_obj_types[TYPE_PAPER     ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 0.0,   0.0,   "sheet of paper"); // will have a random value that's often 0
+	bldg_obj_types[TYPE_BLINDS    ] = bldg_obj_type_t(0, 0, 0, 0, 1, 0, 1, 50.0,  7.0,   "window blinds");
+	bldg_obj_types[TYPE_PEN       ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 0.10,  0.02,  "pen");
+	bldg_obj_types[TYPE_PENCIL    ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 0.10,  0.02,  "pencil");
+	bldg_obj_types[TYPE_PAINTCAN  ] = bldg_obj_type_t(0, 0, 1, 1, 0, 0, 2, 12.0,  8.0,   "paint can");
+	bldg_obj_types[TYPE_LG_BALL   ] = bldg_obj_type_t(0, 0, 1, 1, 0, 0, 2, 15.0,  1.2,   "ball");
+	bldg_obj_types[TYPE_HANGER_ROD] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 10.0,  5.0,   "hanger rod");
+	bldg_obj_types[TYPE_DRAIN     ] = bldg_obj_type_t(0, 0, 1, 0, 1, 0, 2, 0.0,   0.0,   "drain pipe");
+	bldg_obj_types[TYPE_MONEY     ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 20.0,  0.0,   "pile of money"); // $20 bills
+	bldg_obj_types[TYPE_PHONE     ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 200.0, 0.1,   "cell phone");
+	bldg_obj_types[TYPE_TPROLL    ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 0.25,  0.1,   "TP roll", 200);
+	bldg_obj_types[TYPE_SPRAYCAN  ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 2.0,   1.0,   "spray paint", 5000);
+	bldg_obj_types[TYPE_MARKER    ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 0.20,  0.05,  "marker",      10000);
+	bldg_obj_types[TYPE_BUTTON    ] = bldg_obj_type_t(0, 0, 0, 1, 1, 0, 2, 1.0,   0.05,  "button");
+	bldg_obj_types[TYPE_CRACK     ] = bldg_obj_type_t(0, 0, 0, 0, 1, 0, 2, 0.0,   0.0,   "crack");
+	bldg_obj_types[TYPE_SWITCH    ] = bldg_obj_type_t(0, 0, 0, 0, 1, 0, 2, 0.0,   0.0,   "switch");
+	bldg_obj_types[TYPE_PLATE     ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 6.0,   0.25,  "plate");
+	bldg_obj_types[TYPE_LAPTOP    ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 600.0, 8.0,   "laptop");
+	bldg_obj_types[TYPE_FPLACE    ] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 1, 0.0,   2000.0,"fireplace");
+	bldg_obj_types[TYPE_LBASKET   ] = bldg_obj_type_t(1, 1, 1, 1, 0, 0, 2, 12.0,  2.0,   "laundry basket");
+	bldg_obj_types[TYPE_WHEATER   ] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 2, 300.0, 500.0, "water heater");
+	bldg_obj_types[TYPE_TAPE      ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 2.0,   0.4,   "duct tape", 1000);
+	// player_coll, ai_coll, rat_coll, pickup, attached, is_model, lg_sm, value, weight, name [capacity]
 	// 3D models
-	bldg_obj_types[TYPE_TOILET    ] = bldg_obj_type_t(1, 1, 1, 1, 1, 0, 120.0, 88.0,  "toilet");
-	bldg_obj_types[TYPE_SINK      ] = bldg_obj_type_t(1, 1, 1, 1, 1, 0, 80.0,  55.0,  "sink");
-	bldg_obj_types[TYPE_TUB       ] = bldg_obj_type_t(1, 1, 0, 1, 1, 1, 250.0, 200.0, "bathtub");
-	bldg_obj_types[TYPE_FRIDGE    ] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 700.0, 300.0, "refrigerator"); // no pickup, too large and may want to keep it for future hunger bar
-	bldg_obj_types[TYPE_STOVE     ] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 400.0, 150.0, "stove");
-	bldg_obj_types[TYPE_TV        ] = bldg_obj_type_t(1, 1, 1, 0, 1, 1, 400.0, 70.0,  "TV");
-	bldg_obj_types[TYPE_MONITOR   ] = bldg_obj_type_t(1, 1, 1, 0, 1, 1, 250.0, 15.0,  "computer monitor");
-	bldg_obj_types[TYPE_COUCH     ] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 600.0, 300.0, "couch");
-	bldg_obj_types[TYPE_OFF_CHAIR ] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 150.0, 60.0,  "office chair");
-	bldg_obj_types[TYPE_URINAL    ] = bldg_obj_type_t(1, 1, 1, 1, 1, 0, 100.0, 80.0,  "urinal");
-	bldg_obj_types[TYPE_LAMP      ] = bldg_obj_type_t(0, 0, 1, 0, 1, 0, 25.0,  12.0,  "lamp");
-	bldg_obj_types[TYPE_WASHER    ] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 300.0, 150.0, "washer");
-	bldg_obj_types[TYPE_DRYER     ] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 300.0, 160.0, "dryer");
+	bldg_obj_types[TYPE_TOILET    ] = bldg_obj_type_t(1, 1, 1, 1, 1, 1, 0, 120.0, 88.0,  "toilet");
+	bldg_obj_types[TYPE_SINK      ] = bldg_obj_type_t(1, 1, 1, 1, 1, 1, 0, 80.0,  55.0,  "sink");
+	bldg_obj_types[TYPE_TUB       ] = bldg_obj_type_t(1, 1, 1, 0, 1, 1, 1, 250.0, 200.0, "bathtub");
+	bldg_obj_types[TYPE_FRIDGE    ] = bldg_obj_type_t(1, 1, 1, 1, 0, 1, 0, 700.0, 300.0, "refrigerator"); // no pickup, too large and may want to keep it for future hunger bar
+	bldg_obj_types[TYPE_STOVE     ] = bldg_obj_type_t(1, 1, 1, 1, 0, 1, 0, 400.0, 150.0, "stove");
+	bldg_obj_types[TYPE_TV        ] = bldg_obj_type_t(1, 1, 1, 1, 0, 1, 1, 400.0, 70.0,  "TV");
+	bldg_obj_types[TYPE_MONITOR   ] = bldg_obj_type_t(0, 0, 0, 1, 0, 1, 1, 250.0, 15.0,  "computer monitor");
+	bldg_obj_types[TYPE_COUCH     ] = bldg_obj_type_t(1, 1, 1, 1, 0, 1, 0, 600.0, 300.0, "couch");
+	bldg_obj_types[TYPE_OFF_CHAIR ] = bldg_obj_type_t(1, 1, 1, 1, 0, 1, 0, 150.0, 60.0,  "office chair");
+	bldg_obj_types[TYPE_URINAL    ] = bldg_obj_type_t(1, 1, 1, 1, 1, 1, 0, 100.0, 80.0,  "urinal");
+	bldg_obj_types[TYPE_LAMP      ] = bldg_obj_type_t(0, 0, 1, 1, 0, 1, 0, 25.0,  12.0,  "lamp");
+	bldg_obj_types[TYPE_WASHER    ] = bldg_obj_type_t(1, 1, 1, 1, 0, 1, 0, 300.0, 150.0, "washer");
+	bldg_obj_types[TYPE_DRYER     ] = bldg_obj_type_t(1, 1, 1, 1, 0, 1, 0, 300.0, 160.0, "dryer");
 	// keys are special because they're potentially either a small object or an object model (in a drawer)
-	bldg_obj_types[TYPE_KEY       ] = bldg_obj_type_t(0, 0, 1, 0, 0, 2, 0.0,   0.05,  "room key"); // drawn as an object, not a model
-	bldg_obj_types[TYPE_HANGER    ] = bldg_obj_type_t(0, 0, 1, 0, 1, 0, 0.25,  0.05,  "clothes hanger");
-	bldg_obj_types[TYPE_CLOTHES   ] = bldg_obj_type_t(0, 0, 1, 0, 1, 0, 10.0,  0.25,  "clothes"); // teeshirt, shirt, pants, etc.
-	bldg_obj_types[TYPE_FESCAPE   ] = bldg_obj_type_t(1, 1, 0, 1, 1, 0, 10000, 4000,  "fire escape"); // technically exterior, not interior
-	bldg_obj_types[TYPE_CUP       ] = bldg_obj_type_t(0, 0, 1, 0, 1, 0, 5.0,   0.2,   "cup");
-	bldg_obj_types[TYPE_RAT       ] = bldg_obj_type_t(0, 0, 1, 0, 1, 0, 8.99,  1.0,   "rat"); // not a room object, but can be picked up
-	//                                                pc ac pu at im ls value  weight  name [capacity]
+	bldg_obj_types[TYPE_KEY       ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 0.0,   0.05,  "room key"); // drawn as an object, not a model
+	bldg_obj_types[TYPE_HANGER    ] = bldg_obj_type_t(0, 0, 0, 1, 0, 1, 0, 0.25,  0.05,  "clothes hanger");
+	bldg_obj_types[TYPE_CLOTHES   ] = bldg_obj_type_t(0, 0, 0, 1, 0, 1, 0, 10.0,  0.25,  "clothes"); // teeshirt, shirt, pants, etc.
+	bldg_obj_types[TYPE_FESCAPE   ] = bldg_obj_type_t(1, 1, 1, 0, 1, 1, 0, 10000, 4000,  "fire escape"); // technically exterior, not interior
+	bldg_obj_types[TYPE_CUP       ] = bldg_obj_type_t(0, 0, 0, 1, 0, 1, 0, 5.0,   0.2,   "cup");
+	bldg_obj_types[TYPE_RAT       ] = bldg_obj_type_t(0, 0, 1, 1, 0, 1, 0, 8.99,  1.0,   "rat"); // not a room object, but can be picked up
+	//                                                pc ac rc pu at im ls value  weight  name [capacity]
 }
 
 bldg_obj_type_t const &get_room_obj_type(room_object_t const &obj) {
@@ -139,28 +139,28 @@ float carried_item_t::get_remaining_capacity_ratio() const {
 }
 
 bldg_obj_type_t get_taken_obj_type(room_object_t const &obj) {
-	if (obj.type == TYPE_PICTURE && (obj.flags & RO_FLAG_TAKEN1)) {return bldg_obj_type_t(0, 0, 1, 0, 0, 1, 20.0, 6.0, "picture frame");} // second item to take from picture
-	if (obj.type == TYPE_TPROLL  && (obj.flags & RO_FLAG_TAKEN1)) {return bldg_obj_type_t(0, 0, 1, 0, 0, 2, 6.0,  0.5, "toilet paper holder");} // second item to take from tproll
+	if (obj.type == TYPE_PICTURE && (obj.flags & RO_FLAG_TAKEN1)) {return bldg_obj_type_t(0, 0, 0, 1, 0, 0, 1, 20.0, 6.0, "picture frame");} // second item to take from picture
+	if (obj.type == TYPE_TPROLL  && (obj.flags & RO_FLAG_TAKEN1)) {return bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 6.0,  0.5, "toilet paper holder");} // second item to take from tproll
 
 	if (obj.type == TYPE_BED) { // player_coll, ai_coll, pickup, attached, is_model, lg_sm, value, weight, name
-		if (obj.flags & RO_FLAG_TAKEN2) {return bldg_obj_type_t(0, 0, 1, 0, 0, 1, 250.0, 80.0, "mattress"  );} // third item to take from bed
-		if (obj.flags & RO_FLAG_TAKEN1) {return bldg_obj_type_t(0, 0, 1, 0, 0, 1, 80.0,  4.0,  "bed sheets");} // second item to take from bed
-		return bldg_obj_type_t(0, 0, 1, 0, 0, 2, 20.0, 1.0, "pillow"); // first item to take from bed
+		if (obj.flags & RO_FLAG_TAKEN2) {return bldg_obj_type_t(0, 0, 0, 1, 0, 0, 1, 250.0, 80.0, "mattress"  );} // third item to take from bed
+		if (obj.flags & RO_FLAG_TAKEN1) {return bldg_obj_type_t(0, 0, 0, 1, 0, 0, 1, 80.0,  4.0,  "bed sheets");} // second item to take from bed
+		return bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 20.0, 1.0, "pillow"); // first item to take from bed
 	}
 	if (obj.type == TYPE_PLANT && !(obj.flags & RO_FLAG_ADJ_BOT)) { // plant not on a table/desk
-		if (obj.flags & RO_FLAG_TAKEN2) {return bldg_obj_type_t(0, 0, 1, 0, 0, 1, 10.0, 10.0, "plant pot");} // third item to take
-		if (obj.flags & RO_FLAG_TAKEN1) {return bldg_obj_type_t(0, 0, 1, 0, 0, 1, 1.0,  10.0, "dirt"     );} // second item to take
-		return bldg_obj_type_t(0, 0, 1, 0, 0, 2, 25.0, 5.0, "plant"); // first item to take
+		if (obj.flags & RO_FLAG_TAKEN2) {return bldg_obj_type_t(0, 0, 1, 1, 0, 0, 1, 10.0, 10.0, "plant pot");} // third item to take
+		if (obj.flags & RO_FLAG_TAKEN1) {return bldg_obj_type_t(0, 0, 1, 1, 0, 0, 1, 1.0,  10.0, "dirt"     );} // second item to take
+		return bldg_obj_type_t(0, 0, 1, 1, 0, 0, 2, 25.0, 5.0, "plant"); // first item to take
 	}
-	if (obj.type == TYPE_COMPUTER && (obj.flags & RO_FLAG_WAS_EXP)) {return bldg_obj_type_t(0, 0, 1, 0, 0, 2, 100.0, 20.0, "old computer");}
-	if (obj.type == TYPE_BOX      && (obj.flags & RO_FLAG_OPEN   )) {return bldg_obj_type_t(0, 0, 1, 0, 0, 2,   0.0, 0.05, "opened box"  );}
-	if (obj.type == TYPE_CRATE    && (obj.flags & RO_FLAG_OPEN   )) {return bldg_obj_type_t(0, 0, 1, 0, 0, 2,   2.0, 0.5,  "opened crate");}
-	if (obj.type == TYPE_TV       && (obj.flags & RO_FLAG_BROKEN )) {return bldg_obj_type_t(1, 1, 1, 0, 1, 1,  20.0, 70.0, "broken TV"   );}
-	if (obj.type == TYPE_MONITOR  && (obj.flags & RO_FLAG_BROKEN )) {return bldg_obj_type_t(1, 1, 1, 0, 1, 1,  10.0, 15.0, "broken computer monitor");}
+	if (obj.type == TYPE_COMPUTER && (obj.flags & RO_FLAG_WAS_EXP)) {return bldg_obj_type_t(0, 0, 1, 1, 0, 0, 2, 100.0, 20.0, "old computer");}
+	if (obj.type == TYPE_BOX      && (obj.flags & RO_FLAG_OPEN   )) {return bldg_obj_type_t(1, 1, 1, 1, 0, 0, 2,   0.0, 0.05, "opened box"  );}
+	if (obj.type == TYPE_CRATE    && (obj.flags & RO_FLAG_OPEN   )) {return bldg_obj_type_t(1, 1, 1, 1, 0, 0, 2,   2.0, 0.5,  "opened crate");}
+	if (obj.type == TYPE_TV       && (obj.flags & RO_FLAG_BROKEN )) {return bldg_obj_type_t(1, 1, 1, 1, 0, 1, 1,  20.0, 70.0, "broken TV"   );}
+	if (obj.type == TYPE_MONITOR  && (obj.flags & RO_FLAG_BROKEN )) {return bldg_obj_type_t(1, 1, 1, 1, 0, 1, 1,  10.0, 15.0, "broken computer monitor");}
 
 	if (obj.type == TYPE_BOTTLE) {
 		bottle_params_t const &bparams(bottle_params[obj.get_bottle_type()]);
-		bldg_obj_type_t type(0, 0, 1, 0, 0, 2,  bparams.value, 1.0, bparams.name);
+		bldg_obj_type_t type(0, 0, 0, 1, 0, 0, 2,  bparams.value, 1.0, bparams.name);
 
 		if (obj.is_bottle_empty()) {
 			type.name    = "empty " + type.name;
