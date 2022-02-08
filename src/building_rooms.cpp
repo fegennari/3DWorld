@@ -167,7 +167,7 @@ void building_t::add_trashcan_to_room(rand_gen_t rgen, room_t const &room, float
 	int const floor_ix(int((zval - room.z1())/floor_spacing));
 	bool const cylin(((mat_ix + 13*real_num_parts + 5*hallway_dim + 131*floor_ix) % 7) < 4); // varies per-building, per-floor
 	point center;
-	center.z = zval + 0.001*floor_spacing; // slightly above the floor to avoid z-fighting
+	center.z = zval + 0.0012*floor_spacing; // slightly above the floor/rug to avoid z-fighting
 	unsigned skip_wall(4); // start at an invalid value
 	vect_door_stack_t const &doorways(get_doorways_for_room(room, zval));
 	vect_room_object_t &objs(interior->room_geom->objs);
