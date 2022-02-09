@@ -1395,7 +1395,7 @@ void building_room_geom_t::add_book(room_object_t const &c, bool inc_lg, bool in
 			rotate_verts(mat.quad_verts, plus_z, z_rot_angle, zrot_about, qv_start); // rotated, but not tilted
 		}
 	}
-	if (ADD_BOOK_COVERS && inc_sm && !is_open && c.enable_pictures() && (upright || (c.obj_id&2))) { // add picture to book cover
+	if (ADD_BOOK_COVERS && inc_sm && !is_open && c.enable_pictures() && (/*upright ||*/ (c.obj_id&2))) { // add picture to book cover
 		vector3d expand;
 		float const height(c.get_sz_dim(hdim)), img_width(0.9*width), img_height(min(0.9f*height, 0.67f*img_width)); // use correct aspect ratio
 		expand[ hdim] = -0.5f*(height - img_height);
@@ -1412,8 +1412,9 @@ void building_room_geom_t::add_book(room_object_t const &c, bool inc_lg, bool in
 		has_cover = 1;
 	} // end cover image
 	bool const add_spine_title(c.obj_id & 7); // 7/8 of the time
+	bool can_add_front_title(tilt_angle == 0.0 && !upright); // skip front title if tilted or upright because the logic is complex, it's slow, and usually not visible anyway
 
-	if (ADD_BOOK_TITLES && inc_sm && !is_open && !no_title && (!upright || add_spine_title)) { // add title(s) if not open
+	if (ADD_BOOK_TITLES && inc_sm && !is_open && !no_title && (can_add_front_title || add_spine_title)) { // add title(s) if not open
 		unsigned const SPLIT_LINE_SZ = 24;
 		string const &title(gen_book_title(c.obj_id, nullptr, SPLIT_LINE_SZ)); // select our title text
 		if (title.empty()) return; // no title
@@ -1432,7 +1433,7 @@ void building_room_geom_t::add_book(room_object_t const &c, bool inc_lg, bool in
 			title_area.expand_by(expand);
 			add_book_title(title, title_area, mat, text_color, hdim, tdim, c.dim, cdir, ldir, c.dir);
 		}
-		if (!upright && (!add_spine_title || (c.obj_id%3))) { // add title to front cover if upright
+		if (can_add_front_title && (!add_spine_title || (c.obj_id%3))) { // add title to front cover
 			cube_t title_area_fc(c);
 			title_area_fc.z1()  = title_area_fc.z2();
 			title_area_fc.z2() += 0.2*indent;
@@ -1443,17 +1444,18 @@ void building_room_geom_t::add_book(room_object_t const &c, bool inc_lg, bool in
 				title_area_fc.d[!c.dim][!top_dir] = cover.d[!c.dim][top_dir];
 				title_area_fc.expand_in_dim(!c.dim, -1.0*indent);
 			}
-			add_book_title(title, title_area_fc, mat, text_color, c.dim, !c.dim, 2, !c.dir, !top_dir, 0); // {columns, lines, normal}
-
-			if (!has_cover) { // add the author if there's no cover picture
+			else if (1) { // add the author if there's no cover picture
 				rand_gen_t rgen;
 				rgen.set_state(c.obj_id+1, c.obj_id+123);
 				string const author(gen_random_full_name(rgen));
+				float const translate_val((top_dir ? -1.0 : 1.0)*0.15*c.get_sz_dim(!c.dim));
 				cube_t author_area(title_area_fc);
-				author_area.translate_dim(!c.dim, (top_dir ? -1.0 : 1.0)*0.25*c.get_sz_dim(!c.dim));
+				author_area.translate_dim(!c.dim, translate_val); // shift down to not overlap the title
 				author_area.expand_by_xy(-0.25*author_area.get_size()); // make author smaller than the title
 				add_book_title(author, author_area, mat, text_color, c.dim, !c.dim, 2, !c.dir, !top_dir, 0); // {columns, lines, normal}
+				title_area_fc.translate_dim(!c.dim, -translate_val); // shift the title up in the other direction
 			}
+			add_book_title(title, title_area_fc, mat, text_color, c.dim, !c.dim, 2, !c.dir, !top_dir, 0); // {columns, lines, normal}
 		}
 		rotate_verts(mat.quad_verts, axis,   tilt_angle,  tilt_about, qv_start);
 		rotate_verts(mat.quad_verts, plus_z, z_rot_angle, zrot_about, qv_start);

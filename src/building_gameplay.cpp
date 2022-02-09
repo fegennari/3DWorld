@@ -406,8 +406,8 @@ public:
 					float const dx(co.dx()), dy(co.dy()), dz(co.dz());
 
 					if (dz > min(dx, dy)) { // upright book from a bookcase, put it on its side facing the player
-						co.x2() = co.x1() + dz;
-						co.y2() = co.y1() + max(dx, dy);
+						co.y2() = co.y1() + dz;
+						co.x2() = co.x1() + max(dx, dy);
 						co.z2() = co.z1() + min(dx, dy);
 					}
 					else if (co.dim) { // swap aspect ratio to make dim=0
