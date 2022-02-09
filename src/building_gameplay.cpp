@@ -1212,6 +1212,12 @@ bool building_t::maybe_use_last_pickup_room_object(point const &player_pos) {
 				obj.dir    = ((cview_dir[!place_dim] > 0) ^ place_dim);
 				obj.flags |= (RO_FLAG_TAKEN1 | RO_FLAG_WAS_EXP);
 				obj.translate(dest - point(obj.xc(), obj.yc(), obj.z1()));
+				int const room_id(get_room_containing_pt(obj.get_cube_center()));
+
+				if (room_id >= 0) { // set new room; required for opening books; room should be valid, but okay if not
+					obj.room_id   = room_id;
+					obj.light_amt = get_window_vspace()*interior->rooms[room_id].get_light_amt();
+				}
 				if (!interior->room_geom->add_room_object(obj, *this)) return 0;
 			}
 			player_inventory.return_object_to_building(obj); // re-add this object's value
