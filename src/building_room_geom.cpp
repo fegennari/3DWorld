@@ -1397,7 +1397,8 @@ void building_room_geom_t::add_book(room_object_t const &c, bool inc_lg, bool in
 	}
 	if (ADD_BOOK_COVERS && inc_sm && !is_open && c.enable_pictures() && (/*upright ||*/ (c.obj_id&2))) { // add picture to book cover
 		vector3d expand;
-		float const height(c.get_sz_dim(hdim)), img_width(0.9*width), img_height(min(0.9f*height, 0.67f*img_width)); // use correct aspect ratio
+		float const height(c.get_sz_dim(hdim));
+		float const img_width(0.9*width), img_height(min(0.8f*height, 0.65f*img_width)); // use correct aspect ratio
 		expand[ hdim] = -0.5f*(height - img_height);
 		expand[c.dim] = -0.5f*(width  - img_width);
 		expand[ tdim] = 0.1*indent; // expand outward, other dims expand inward
@@ -1444,16 +1445,19 @@ void building_room_geom_t::add_book(room_object_t const &c, bool inc_lg, bool in
 				title_area_fc.d[!c.dim][!top_dir] = cover.d[!c.dim][top_dir];
 				title_area_fc.expand_in_dim(!c.dim, -1.0*indent);
 			}
-			else if (1) { // add the author if there's no cover picture
+			else { // add the author if there's no cover picture
 				rand_gen_t rgen;
 				rgen.set_state(c.obj_id+1, c.obj_id+123);
-				string const author(gen_random_full_name(rgen));
-				float const translate_val((top_dir ? -1.0 : 1.0)*0.15*c.get_sz_dim(!c.dim));
-				cube_t author_area(title_area_fc);
-				author_area.translate_dim(!c.dim, translate_val); // shift down to not overlap the title
-				author_area.expand_by_xy(-0.25*author_area.get_size()); // make author smaller than the title
-				add_book_title(author, author_area, mat, text_color, c.dim, !c.dim, 2, !c.dir, !top_dir, 0); // {columns, lines, normal}
-				title_area_fc.translate_dim(!c.dim, -translate_val); // shift the title up in the other direction
+
+				if (rgen.rand() & 3) { // 75% of the time
+					string const author(gen_random_full_name(rgen));
+					float const translate_val((top_dir ? -1.0 : 1.0)*0.15*c.get_sz_dim(!c.dim));
+					cube_t author_area(title_area_fc);
+					author_area.translate_dim(!c.dim, translate_val); // shift down to not overlap the title
+					author_area.expand_by_xy(-0.25*author_area.get_size()); // make author smaller than the title
+					add_book_title(author, author_area, mat, text_color, c.dim, !c.dim, 2, !c.dir, !top_dir, 0); // {columns, lines, normal}
+					title_area_fc.translate_dim(!c.dim, -translate_val); // shift the title up in the other direction
+				}
 			}
 			add_book_title(title, title_area_fc, mat, text_color, c.dim, !c.dim, 2, !c.dir, !top_dir, 0); // {columns, lines, normal}
 		}
