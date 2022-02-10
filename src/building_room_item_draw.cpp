@@ -1062,6 +1062,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, building_t c
 			}
 			colorRGBA const color(rat_color); // make the rat's fur darker
 			//colorRGBA const color(blend_color(RED, WHITE, rat.fear, 0)); // used for debugging fear
+			//colorRGBA const color(blend_color(RED, WHITE, rat.attacking, 0));
 			building_obj_model_loader.draw_model(s, pos, rat.get_bcube_with_dir(), rat.dir, color, xlate, OBJ_MODEL_RAT, shadow_only, 0, animate);
 
 			if (animate) { // reset animations; could be done outside the loop, but there usually isn't more than one rat visible

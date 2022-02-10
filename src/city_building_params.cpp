@@ -229,8 +229,9 @@ void building_params_t::init_kw_maps() {
 	kwmb.add("ai_follow_player",   ai_follow_player);
 	kwmu.add("ai_player_vis_test", ai_player_vis_test); // 0=no test, 1=LOS, 2=LOS+FOV, 3=LOS+FOV+lit
 	// animals
-	kwmu.add("num_rats_min", num_rats_min);
-	kwmu.add("num_rats_max", num_rats_max);
+	kwmu.add("num_rats_min",    num_rats_min);
+	kwmu.add("num_rats_max",    num_rats_max);
+	kwmu.add("min_attack_rats", min_attack_rats);
 	kwmf.add("rat_speed",    rat_speed);
 	kwmr.add("rat_size_min", rat_size_min, FP_CHECK_POS);
 	kwmr.add("rat_size_max", rat_size_max, FP_CHECK_POS);

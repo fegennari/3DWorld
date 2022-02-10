@@ -1671,6 +1671,23 @@ void water_sound_manager_t::finalize() {
 
 bool player_has_room_key() {return player_inventory.player_has_key();}
 
+// returns player_dead
+bool player_take_damage(float damage_scale, bool &has_key) {
+	static double last_scream_time(0.0);
+
+	if (tfticks - last_scream_time > 2.0*TICKS_PER_SECOND) {
+		gen_sound_thread_safe_at_player(SOUND_SCREAM1);
+		last_scream_time = tfticks;
+	}
+	add_camera_filter(colorRGBA(RED, 0.25), 1, -1, CAM_FILT_DAMAGE); // 1 tick of red damage
+	player_inventory.take_damage(damage_scale*fticks); // take damage over time
+
+	if (player_inventory.player_is_dead()) {
+		if (player_has_room_key()) {has_key = 1;}
+		return 1;
+	}
+	return 0;
+}
 // return value: 0=no effect, 1=player is killed, 2=this person is killed
 int register_ai_player_coll(bool &has_key, float height) {
 	if (do_room_obj_pickup && player_inventory.take_person(has_key, height)) {
@@ -1678,20 +1695,7 @@ int register_ai_player_coll(bool &has_key, float height) {
 		do_room_obj_pickup = 0; // no more object pickups
 		return 2;
 	}
-	static double last_coll_time(0.0);
-	
-	if (tfticks - last_coll_time > 2.0*TICKS_PER_SECOND) {
-		gen_sound_thread_safe_at_player(SOUND_SCREAM1);
-		last_coll_time = tfticks;
-	}
-	add_camera_filter(colorRGBA(RED, 0.25), 1, -1, CAM_FILT_DAMAGE); // 1 tick of red damage
-	player_inventory.take_damage(0.04*fticks); // take damage over time
-	
-	if (player_inventory.player_is_dead()) {
-		if (player_has_room_key()) {has_key = 1;}
-		return 1;
-	}
-	return 0;
+	return player_take_damage(0.04, has_key);
 }
 
 void building_gameplay_action_key(int mode, bool mouse_wheel) {

@@ -6,8 +6,10 @@
 #include "buildings.h"
 #include "city_model.h" // for object_model_loader_t
 
-float const RAT_FOV_DEG     = 60.0; // field of view in degrees
-float const RAT_VIEW_FLOORS = 4.0; // view distance in floors
+float const RAT_FOV_DEG      = 60.0; // field of view in degrees
+float const RAT_VIEW_FLOORS  = 4.0; // view distance in floors
+float const RAT_FEAR_SPEED   = 1.3; // multiplier
+float const RAT_ATTACK_SPEED = 1.2; // multiplier
 float const RAT_FOV_DP(cos(0.5*RAT_FOV_DEG*TO_RADIANS));
 
 extern int animate2, camera_surf_collide, frame_counter, display_mode;
@@ -18,10 +20,12 @@ extern object_model_loader_t building_obj_model_loader;
 
 float get_closest_building_sound(point const &at_pos, point &sound_pos, float floor_spacing);
 sphere_t get_cur_frame_loudest_sound();
+bool in_building_gameplay_mode();
+bool player_take_damage(float damage_scale, bool &has_key);
 
 
 rat_t::rat_t(point const &pos_, float radius_, vector3d const &dir_) : pos(pos_), dest(pos), dir(dir_), radius(radius_),
-speed(0.0), fear(0.0), anim_time(0.0), wake_time(0.0), dist_since_sleep(0.0), rat_id(0), is_hiding(0)
+speed(0.0), fear(0.0), anim_time(0.0), wake_time(0.0), dist_since_sleep(0.0), rat_id(0), is_hiding(0), near_player(0), attacking(0)
 {
 	vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_RAT)); // L=3878, W=861, H=801
 	hwidth = radius*sz.y/sz.x; // scale radius by ratio of width to length
@@ -114,17 +118,23 @@ void building_t::update_animals(point const &camera_bs, unsigned building_ix, in
 	}
 	// update rats
 	float const timestep(min(fticks, 4.0f)); // clamp fticks to 100ms
-	for (rat_t &rat : rats) {rat.move(timestep);} // must be done before sorting
+	unsigned num_near_player(0);
+
+	for (rat_t &rat : rats) { // must be done before sorting
+		rat.move(timestep);
+		num_near_player += rat.near_player;
+	}
+	bool const can_attack_player(num_near_player >= global_building_params.min_attack_rats);
 	sort(rats.begin(), rats.end()); // sort by xval
 	rats.max_xmove = 0.0; // reset for this frame
 	rand_gen_t rgen;
 	rgen.set_state(building_ix+1, frame_counter+1); // unique per building and per frame
 
 	if (frame_counter & 1) { // reverse iteration, to avoid directional bias
-		for (auto r = rats.rbegin(); r != rats.rend(); ++r) {update_rat(*r, camera_bs, ped_ix, timestep, rats.max_xmove, rgen);} // ~0.004ms per rat
+		for (auto r = rats.rbegin(); r != rats.rend(); ++r) {update_rat(*r, camera_bs, ped_ix, timestep, rats.max_xmove, can_attack_player, rgen);}
 	}
-	else { // forward iteration
-		for (auto r = rats. begin(); r != rats. end(); ++r) {update_rat(*r, camera_bs, ped_ix, timestep, rats.max_xmove, rgen);} // ~0.004ms per rat
+	else { // forward iteration; ~0.004ms per rat
+		for (auto r = rats. begin(); r != rats. end(); ++r) {update_rat(*r, camera_bs, ped_ix, timestep, rats.max_xmove, can_attack_player, rgen);}
 	}
 }
 
@@ -228,7 +238,7 @@ public:
 };
 dir_gen_t dir_gen;
 
-void building_t::update_rat(rat_t &rat, point const &camera_bs, int ped_ix, float timestep, float &max_xmove, rand_gen_t &rgen) const {
+void building_t::update_rat(rat_t &rat, point const &camera_bs, int ped_ix, float timestep, float &max_xmove, bool can_attack_player, rand_gen_t &rgen) const {
 	float const floor_spacing(get_window_vspace()), trim_thickness(get_trim_thickness()), view_dist(RAT_VIEW_FLOORS*floor_spacing);
 	float const hlength(rat.get_hlength()), hwidth(rat.hwidth), height(rat.height), hheight(0.5*height);
 	float const squish_hheight(0.75*hheight); // rats can squish to get under low objects and walk onto small steps
@@ -270,9 +280,33 @@ void building_t::update_rat(rat_t &rat, point const &camera_bs, int ped_ix, floa
 	// apply scare logic
 	bool const was_scared(rat.fear > 0.0);
 	scare_rat(rat, camera_bs, ped_ix);
+	rat.attacking = (rat.near_player && can_attack_player);
+	if (rat.attacking) {rat.fear = 0.0;} // no fear when attacking
 	bool const is_scared(rat.fear > 0.0), newly_scared(is_scared && !was_scared);
 
 	// determine destination
+	if (rat.attacking) {
+		float const player_radius(CAMERA_RADIUS*global_building_params.player_coll_radius_scale), min_dist(player_radius + hlength);
+		point target(camera_bs.x, camera_bs.y, rat.pos.z);
+		vector3d const vdir((target - rat.pos).get_norm());
+		target -= vdir*(1.01*min_dist); // get within attacking range, but not at the center of the player
+		
+		if (is_rat_inside_building(target, xy_pad, hheight)) { // check if outside the valid area
+			point const p1_ext(p1 + coll_radius*vdir); // move the line slightly toward the dest to prevent collisions at the initial location
+			
+			if (!check_line_coll_expand(p1_ext, target, coll_radius, squish_hheight)) {
+				rat.dest      = target;
+				rat.speed     = RAT_ATTACK_SPEED*global_building_params.rat_speed;
+				rat.wake_time = 0.0; // wake up
+				update_path   = 0;
+
+				if (dist_xy_less_than(rat.pos, target, 0.05*min_dist)) { // do damage when nearly colliding with the player
+					bool has_key(0); // unused
+					player_take_damage(0.002, has_key);
+				}
+			}
+		}
+	}
 	if (is_scared) {
 		// find hiding spot (pref in opposite direction from fear_pos);
 		// we must check this each frame in case the player took or moved the object we were hiding under
@@ -353,7 +387,7 @@ void building_t::update_rat(rat_t &rat, point const &camera_bs, int ped_ix, floa
 		if (!has_fear_dest && best_score != 0.0) { // found a valid hiding place; score can be positive or negative
 			rat.dest = best_dest;
 			if (dist_less_than(rat.pos, rat.dest, dist_thresh)) {rat.speed = 0.0;} // close enough - stop
-			else {rat.speed = global_building_params.rat_speed*rgen.rand_uniform(1.0, 1.5);} // high speed if not at dest
+			else {rat.speed = RAT_FEAR_SPEED*global_building_params.rat_speed;} // high speed if not at dest
 			has_fear_dest = 1; // set to avoid triggering the code below if close to dest
 			assert(rat.pos.z == rat.dest.z);
 		}
@@ -442,7 +476,19 @@ void building_t::scare_rat(rat_t &rat, point const &camera_bs, int ped_ix) const
 	for (cube_t const &c : ped_bcubes) { // only the cube center is needed
 		scare_rat_at_pos(rat, point(c.xc(), c.yc(), c.z1()), sight_scare_amt, 1); // other people in the building scare the rats
 	}
-	if (camera_surf_collide) {scare_rat_at_pos(rat, camera_bs, sight_scare_amt, 1);} // the sight of the player walking in the building scares the rats
+	rat.near_player = 0;
+
+	if (camera_surf_collide) {
+		if (global_building_params.min_attack_rats > 0 && in_building_gameplay_mode()) { // rat attacks are enabled in gameplay mode
+			// determine if the player is close and visible for attack strength; can't use a return value of scare_rat_at_pos() due to early termination
+			if (fabs(rat.pos.z - camera_bs.z) < get_window_vspace()) { // same floor
+				if (dist_less_than(rat.pos, camera_bs, RAT_VIEW_FLOORS*get_window_vspace())) { // close enough; doesn't have to be in the same room
+					if (check_line_of_sight_large_objs(rat.pos, camera_bs)) {rat.near_player = 1;}
+				}
+			}
+		}
+		scare_rat_at_pos(rat, camera_bs, sight_scare_amt, 1); // the sight of the player walking in the building scares the rats
+	}
 	sphere_t const cur_sound(get_cur_frame_loudest_sound());
 	if (cur_sound.radius > 0.0) {scare_rat_at_pos(rat, cur_sound.pos, 4.0*cur_sound.radius, 0);}
 }
