@@ -389,6 +389,7 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, vec
 			break; // only change zval once
 		}
 	}
+	// *** Note ***: at this point pos.z is radius above the floors and *not* at the camera height, which is why we add camera_zh to pos.z below
 	// Note: this check must be after pos.z is set from interior->floors
 	// pass in radius as wall_test_extra_z as a hack to allow player to step over a wall that's below the stairs connecting stacked parts
 	had_coll |= interior->check_sphere_coll_walls_elevators_doors(*this, pos, p_last, xy_radius, radius, 0, cnorm); // check_open_doors=0 (to avoid getting the player stuck)
@@ -419,7 +420,7 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, vec
 			}
 			if ((c->type == TYPE_STAIR || on_stairs) && (obj_z + radius) > c->z2()) continue; // above the stair - allow it to be walked on
 			cube_t c_extended(*c);
-			if      (c->type == TYPE_STAIR ) {c_extended.z1() -= camera_zh;} // handle the player's head (for stairs), or is pos already at this height?
+			if      (c->type == TYPE_STAIR ) {c_extended.z1() -= camera_zh;} // handle the player's head for stairs
 			else if (c->type == TYPE_CLOSET) {c_extended = get_closet_bcube_including_door(*c);}
 			if (!sphere_cube_intersect(pos, xy_radius, c_extended)) continue; // optimization
 
@@ -1195,7 +1196,7 @@ bool building_t::check_and_handle_dynamic_obj_coll(point &pos, float radius, flo
 	if (camera_surf_collide) { // check the player; unclear if this is really needed, or if it actually works
 		float const player_radius(CAMERA_RADIUS), player_xy_radius(player_radius*global_building_params.player_coll_radius_scale);
 
-		if (pos.z < (camera_bs.z + player_radius + camera_zh) && z2 > (camera_bs.z - player_radius)) {
+		if (pos.z < camera_bs.z && z2 > (camera_bs.z - player_radius - camera_zh)) {
 			if (handle_vcylin_vcylin_int(pos, camera_bs, (radius + player_xy_radius))) return 1;
 		}
 	}
