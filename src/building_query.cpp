@@ -1013,7 +1013,7 @@ bool building_t::check_line_coll_expand(point const &p1, point const &p2, float 
 			}
 			else if (line_int_cube_exp(p1, p2, door, expand)) return 1;
 		}
-	} // for door
+	} // for door_stacks
 	for (auto const &s : interior->stairwells) {
 		if (!line_int_cube_exp(p1, p2, s, expand)) continue;
 		if (s.shape != SHAPE_STRAIGHT) return 1; // walled and U-shaped stairs always collide
@@ -1148,9 +1148,18 @@ bool building_t::check_line_of_sight_large_objs(point const &p1, point const &p2
 	for (unsigned d = 0; d < 2; ++d) {
 		if (line_int_cubes(p1, p2, interior->walls[d], line_bcube)) return 0;
 	}
-	for (auto const &door : interior->doors) { // check closed interior doors
-		if (!door.open && line_bcube.intersects(door) && door.line_intersects(p1, p2)) return 0;
-	}
+	for (auto const &ds : interior->door_stacks) {
+		cube_t const ds_bcube(ds.get_true_bcube()); // expand to nonzero area
+		if (!line_bcube.intersects(ds_bcube) || !ds_bcube.line_intersects(p1, p2)) continue; // no intersection with this stack
+		assert(ds.first_door_ix < interior->doors.size());
+
+		for (unsigned dix = ds.first_door_ix; dix < interior->doors.size(); ++dix) {
+			door_t const &door(interior->doors[dix]);
+			if (!ds.is_same_stack(door)) break; // moved to a different stack, done
+			cube_t const door_bcube(door.get_true_bcube()); // expand to nonzero area
+			if (!door.open && line_bcube.intersects(door_bcube) && door_bcube.line_intersects(p1, p2)) return 0;
+		}
+	} // for door_stacks
 	if (line_int_cubes(p1, p2, interior->elevators, line_bcube)) return 0; // check elevators only because stairs aren't solid visual blockers
 
 	if (real_num_parts > 1) { // check exterior walls; this is simpler than ray_cast_exterior_walls()
