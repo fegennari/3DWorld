@@ -5,6 +5,7 @@
 #include "function_registry.h"
 #include "buildings.h"
 #include "city_model.h" // for object_model_loader_t
+#include "openal_wrap.h"
 
 float const RAT_FOV_DEG      = 60.0; // field of view in degrees
 float const RAT_VIEW_FLOORS  = 4.0; // view distance in floors
@@ -119,12 +120,20 @@ void building_t::update_animals(point const &camera_bs, unsigned building_ix, in
 	// update rats
 	float const timestep(min(fticks, 4.0f)); // clamp fticks to 100ms
 	unsigned num_near_player(0);
+	point rat_alert_pos;
 
 	for (rat_t &rat : rats) { // must be done before sorting
 		rat.move(timestep);
 		num_near_player += rat.near_player;
+		if (num_near_player == global_building_params.min_attack_rats) {rat_alert_pos = rat.pos;}
 	}
+	static bool prev_can_attack_player(0);
 	bool const can_attack_player(num_near_player >= global_building_params.min_attack_rats);
+	
+	if (can_attack_player && !prev_can_attack_player) { // play sound on first attack
+		gen_sound_thread_safe(SOUND_RAT_SQUEAK, local_to_camera_space(rat_alert_pos), 1.0, 1.2); // high pitch
+	}
+	prev_can_attack_player = can_attack_player;
 	sort(rats.begin(), rats.end()); // sort by xval
 	rats.max_xmove = 0.0; // reset for this frame
 	rand_gen_t rgen;
@@ -301,8 +310,14 @@ void building_t::update_rat(rat_t &rat, point const &camera_bs, int ped_ix, floa
 				update_path   = 0;
 
 				if (dist_xy_less_than(rat.pos, target, 0.05*min_dist)) { // do damage when nearly colliding with the player
+					static double last_sound_time(0.0);
+
+					if (tfticks - last_sound_time > 0.4*TICKS_PER_SECOND) {
+						gen_sound_thread_safe(SOUND_SQUISH, local_to_camera_space(rat.pos));
+						last_sound_time = tfticks + 0.2f*TICKS_PER_SECOND*rgen.rand_float(); // add some randomness
+					}
 					bool has_key(0); // unused
-					player_take_damage(0.002, has_key);
+					player_take_damage(0.004, has_key);
 				}
 			}
 		}

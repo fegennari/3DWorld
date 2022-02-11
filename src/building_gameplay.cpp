@@ -1673,13 +1673,21 @@ bool player_has_room_key() {return player_inventory.player_has_key();}
 
 // returns player_dead
 bool player_take_damage(float damage_scale, bool &has_key) {
-	static double last_scream_time(0.0);
+	static double last_scream_time(0.0), last_hurt_time(0.0);
 
-	if (tfticks - last_scream_time > 2.0*TICKS_PER_SECOND) {
-		gen_sound_thread_safe_at_player(SOUND_SCREAM1);
-		last_scream_time = tfticks;
+	if (damage_scale < 0.01) { // hurt for rats, scream for zombies
+		if (tfticks - last_hurt_time > 0.5*TICKS_PER_SECOND) {
+			gen_sound_thread_safe_at_player(SOUND_HURT2);
+			last_hurt_time = tfticks;
+		}
 	}
-	add_camera_filter(colorRGBA(RED, 0.25), 1, -1, CAM_FILT_DAMAGE); // 1 tick of red damage
+	else {
+		if (tfticks - last_scream_time > 2.0*TICKS_PER_SECOND) {
+			gen_sound_thread_safe_at_player(SOUND_SCREAM1);
+			last_scream_time = tfticks;
+		}
+	}
+	add_camera_filter(colorRGBA(RED, (0.13 + 3.0*damage_scale)), 1, -1, CAM_FILT_DAMAGE); // 1 tick of red damage
 	player_inventory.take_damage(damage_scale*fticks); // take damage over time
 
 	if (player_inventory.player_is_dead()) {
