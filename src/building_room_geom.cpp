@@ -1424,7 +1424,16 @@ void building_room_geom_t::add_book(room_object_t const &c, bool inc_lg, bool in
 		text_color = apply_light_color(c, text_color);
 		rgeom_mat_t &mat(get_material(tid_nm_pair_t(FONT_TEXTURE_ID), 0, 0, 1)); // no shadows, small=1
 		unsigned const qv_start(mat.quad_verts.size());
-
+		// maybe choose author
+		rand_gen_t rgen;
+		rgen.set_state(c.obj_id+1, c.obj_id+123);
+		string author;
+		bool add_author(rgen.rand() & 3), add_spine_author(0); // add an author 75% of the time
+		
+		if (add_author) {
+			add_spine_author = (rgen.rand() & 3); // 75% of the time
+			if ((can_add_front_title && !has_cover) || add_spine_author) {author = gen_random_full_name(rgen);} // generate author if it will be added
+		}
 		if (add_spine_title) { // add title along spine
 			cube_t title_area(c);
 			vector3d expand;
@@ -1432,6 +1441,15 @@ void building_room_geom_t::add_book(room_object_t const &c, bool inc_lg, bool in
 			expand[ tdim] = -1.0*indent; // shrink
 			expand[c.dim] =  0.2*indent; // expand outward
 			title_area.expand_by(expand);
+
+			if (add_spine_author) {
+				bool const author_side(rgen.rand_bool());
+				float const title_height(title_area.get_sz_dim(hdim));
+				cube_t author_area(title_area);
+				author_area.d[hdim][!author_side] -= (author_side ? -1.0 : 1.0)*0.72*title_height; // 28% of height
+				title_area .d[hdim][ author_side] += (author_side ? -1.0 : 1.0)*0.34*title_height; // 66% of height
+				add_book_title(author, author_area, mat, text_color, hdim, tdim, c.dim, cdir, ldir, c.dir);
+			}
 			add_book_title(title, title_area, mat, text_color, hdim, tdim, c.dim, cdir, ldir, c.dir);
 		}
 		if (can_add_front_title && (!add_spine_title || (c.obj_id%3))) { // add title to front cover
@@ -1445,19 +1463,13 @@ void building_room_geom_t::add_book(room_object_t const &c, bool inc_lg, bool in
 				title_area_fc.d[!c.dim][!top_dir] = cover.d[!c.dim][top_dir];
 				title_area_fc.expand_in_dim(!c.dim, -1.0*indent);
 			}
-			else { // add the author if there's no cover picture
-				rand_gen_t rgen;
-				rgen.set_state(c.obj_id+1, c.obj_id+123);
-
-				if (rgen.rand() & 3) { // 75% of the time
-					string const author(gen_random_full_name(rgen));
-					float const translate_val((top_dir ? -1.0 : 1.0)*0.15*c.get_sz_dim(!c.dim));
-					cube_t author_area(title_area_fc);
-					author_area.translate_dim(!c.dim, translate_val); // shift down to not overlap the title
-					author_area.expand_by_xy(-0.25*author_area.get_size()); // make author smaller than the title
-					add_book_title(author, author_area, mat, text_color, c.dim, !c.dim, 2, !c.dir, !top_dir, 0); // {columns, lines, normal}
-					title_area_fc.translate_dim(!c.dim, -translate_val); // shift the title up in the other direction
-				}
+			else if (add_author) { // add the author if there's no cover picture
+				float const translate_val((top_dir ? -1.0 : 1.0)*0.15*c.get_sz_dim(!c.dim));
+				cube_t author_area(title_area_fc);
+				author_area.translate_dim(!c.dim, translate_val); // shift down to not overlap the title
+				author_area.expand_by_xy(-0.25*author_area.get_size()); // make author smaller than the title
+				add_book_title(author, author_area, mat, text_color, c.dim, !c.dim, 2, !c.dir, !top_dir, 0); // {columns, lines, normal}
+				title_area_fc.translate_dim(!c.dim, -translate_val); // shift the title up in the other direction
 			}
 			add_book_title(title, title_area_fc, mat, text_color, c.dim, !c.dim, 2, !c.dir, !top_dir, 0); // {columns, lines, normal}
 		}
