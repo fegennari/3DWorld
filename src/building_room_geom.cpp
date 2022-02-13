@@ -1332,7 +1332,8 @@ void building_room_geom_t::add_book(room_object_t const &c, bool inc_lg, bool in
 	bool const draw_cover_as_small(c.was_expanded() || is_held); // books in drawers, held, or dropped are always drawn as small objects
 	if (draw_cover_as_small && !inc_sm) return; // nothing to draw
 	bool const is_open(c.is_open()), upright(c.get_sz_dim(!c.dim) < c.dz()); // on a bookshelf
-	bool const tdir(upright ? (c.dim ^ c.dir ^ bool(c.obj_id%7)) : 1); // sometimes upside down when upright
+	bool const from_book_set(c.flags & RO_FLAG_FROM_SET);
+	bool const tdir((upright && !from_book_set) ? (c.dim ^ c.dir ^ bool(c.obj_id%7)) : 1); // sometimes upside down when upright and not from a set
 	bool const ldir(!tdir), cdir(c.dim ^ c.dir ^ upright ^ ldir); // colum and line directions (left/right/top/bot) + mirror flags for front cover
 	bool const was_dropped(c.flags & RO_FLAG_TAKEN1); // or held
 	bool const shadowed(was_dropped && !is_held); // only shadowed if dropped by the player, since otherwise shadows are too small to have much effect; skip held objects (don't work)
@@ -1395,7 +1396,7 @@ void building_room_geom_t::add_book(room_object_t const &c, bool inc_lg, bool in
 			rotate_verts(mat.quad_verts, plus_z, z_rot_angle, zrot_about, qv_start); // rotated, but not tilted
 		}
 	}
-	if (ADD_BOOK_COVERS && inc_sm && !is_open && c.enable_pictures() && (/*upright ||*/ (c.obj_id&2))) { // add picture to book cover
+	if (ADD_BOOK_COVERS && inc_sm && !from_book_set && !is_open && c.enable_pictures() && (/*upright ||*/ (c.obj_id&2))) { // add picture to book cover
 		vector3d expand;
 		float const height(c.get_sz_dim(hdim));
 		float const img_width(0.9*width), img_height(min(0.8f*height, 0.65f*img_width)); // use correct aspect ratio
@@ -1412,7 +1413,7 @@ void building_room_geom_t::add_book(room_object_t const &c, bool inc_lg, bool in
 		rotate_verts(cover_mat.quad_verts, plus_z, z_rot_angle, zrot_about, qv_start);
 		has_cover = 1;
 	} // end cover image
-	bool const add_spine_title(c.obj_id & 7); // 7/8 of the time
+	bool const add_spine_title(from_book_set || (c.obj_id & 7)); // 7/8 of the time, always for sets
 	bool can_add_front_title(tilt_angle == 0.0 && !upright); // skip front title if tilted or upright because the logic is complex, it's slow, and usually not visible anyway
 
 	if (ADD_BOOK_TITLES && inc_sm && !is_open && !no_title && (can_add_front_title || add_spine_title)) { // add title(s) if not open
@@ -1428,7 +1429,7 @@ void building_room_geom_t::add_book(room_object_t const &c, bool inc_lg, bool in
 		rand_gen_t rgen;
 		rgen.set_state(c.obj_id+1, c.obj_id+123);
 		string author;
-		bool add_author(rgen.rand() & 3), add_spine_author(0); // add an author 75% of the time
+		bool add_author(!from_book_set && (rgen.rand() & 3)), add_spine_author(0); // add an author 75% of the time if not from a set
 		
 		if (add_author) {
 			add_spine_author = (rgen.rand() & 3); // 75% of the time
@@ -1452,7 +1453,7 @@ void building_room_geom_t::add_book(room_object_t const &c, bool inc_lg, bool in
 			}
 			add_book_title(title, title_area, mat, text_color, hdim, tdim, c.dim, cdir, ldir, c.dir);
 		}
-		if (can_add_front_title && (!add_spine_title || (c.obj_id%3))) { // add title to front cover
+		if (can_add_front_title && (!add_spine_title || from_book_set || (c.obj_id%3))) { // add title to front cover
 			cube_t title_area_fc(c);
 			title_area_fc.z1()  = title_area_fc.z2();
 			title_area_fc.z2() += 0.2*indent;
@@ -1521,7 +1522,8 @@ void building_room_geom_t::add_bookcase(room_object_t const &c, bool inc_lg, boo
 	rgen.rand_mix();
 	unsigned const num_shelves(3 + ((17*c.room_id + int(1000.0*fabs(c.z1())))%3)); // 3-5, randomly selected by room ID and floor
 	float const shelf_dz(middle.dz()/num_shelves), shelf_thick(0.12*shelf_dz);
-	float const shelf_dz_range(rgen.rand_bool() ? rgen.rand_uniform(0.15, 0.28)*shelf_dz : 0.0); // half the time lower shelves are higher than upper shelves
+	// 40% of the time lower shelves are higher than upper shelves
+	float const shelf_dz_range((rgen.rand_float() < 0.4) ? rgen.rand_uniform(0.15, 0.28)*shelf_dz : 0.0);
 	unsigned const skip_book_flags(c.get_combined_flags());
 	cube_t shelves[5];
 	float cur_zval(0.0), shelf_heights[5] = {};
@@ -1555,7 +1557,7 @@ void building_room_geom_t::add_bookcase(room_object_t const &c, bool inc_lg, boo
 		}
 		colorRGBA book_color;
 		float width(0.0), height(0.0), depth_val(0.0);
-		bool const enable_sets(rgen.rand_bool()); // 50% of shelves can have sets
+		bool const enable_sets(rgen.rand_float() < 0.4); // 40% of shelves can have sets
 		bool in_set(enable_sets && (rgen.rand()&7) == 0);
 
 		for (unsigned n = 0; n < num_spaces; ++n) {
@@ -1574,13 +1576,14 @@ void building_room_geom_t::add_bookcase(room_object_t const &c, bool inc_lg, boo
 				in_set = 0;
 				continue;
 			}
-			float const right_pos(min((pos + width), shelf_end)), avail_space(right_pos - last_book_pos);
+			float const side_gap(0.05*width*rgen.rand_float()); // add a small gap between books to help separate books of different colors
+			float const right_pos(min((pos + width - side_gap), shelf_end)), avail_space(right_pos - last_book_pos);
 			float tilt_angle(0.0);
 			cube_t book;
 			book.z1() = shelf.z2();
 			book.d[c.dim][ c.dir] = shelf.d[c.dim][ c.dir] + depth_val; // facing out
 			book.d[c.dim][!c.dir] = shelf.d[c.dim][!c.dir]; // facing in
-			book.translate_dim(c.dim, depth*rgen.rand_uniform(0.0, 0.05)); // slight shift outward
+			book.translate_dim(c.dim, depth*rgen.rand_uniform(0.0, 0.05)); // slight random shift outward
 			min_height = 0.0;
 
 			if (avail_space > 1.1f*height && rgen.rand_float() < 0.5) { // book has space to fall over 50% of the time
@@ -1609,6 +1612,7 @@ void building_room_geom_t::add_bookcase(room_object_t const &c, bool inc_lg, boo
 				room_object_t obj(book, TYPE_BOOK, c.room_id, c.dim, book_dir, c.flags, c.light_amt, SHAPE_CUBE, book_color);
 				obj.obj_id     = c.obj_id + 123*i + 1367*n;
 				obj.item_flags = (uint16_t)book_ix;
+				if (in_set) {obj.flags |= RO_FLAG_FROM_SET;} // set a flag so that books are consistent: title on front and spine, no author, no picture
 				if (inc_lg || inc_sm) {add_book(obj, inc_lg, inc_sm, tilt_angle, skip_faces, backwards);} // detailed book, no title if backwards
 				if (books) {books->push_back(obj);}
 			}
