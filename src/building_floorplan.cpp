@@ -972,8 +972,9 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 			stairs.expand_in_dim(dim, -0.5*shrink); // centered in the hallway
 		}
 		room.has_stairs = 255; // stairs on all floors
-		stairs_cut      = stairs;
-		stairs_dim      = long_dim;
+		room.has_center_stairs = 1;
+		stairs_cut = stairs;
+		stairs_dim = long_dim;
 	}
 	else if (!is_house || interior->stairwells.empty()) { // only add stairs to first part of a house unless we haven't added stairs yet
 		// sometimes add an elevator to building parts, but not the first part in a stack (to guarantee we have at least one set of stairs)
@@ -1056,11 +1057,13 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 							} // for d
 						}
 					} // for dim
-					if (!is_house && (stairs_against_wall[0] || stairs_against_wall[1])) {sshape = SHAPE_WALLED_SIDES;} // add wall between room and office stairs if against a room wall
+					bool const against_wall(stairs_against_wall[0] || stairs_against_wall[1]);
+					if (!is_house && against_wall) {sshape = SHAPE_WALLED_SIDES;} // add wall between room and office stairs if against a room wall
 					if (interior->landings.empty()) {interior->landings.reserve(num_floors-1);}
 					assert(cutout.is_strictly_normalized());
 					stairs_cut      = cutout;
 					room.has_stairs = 255; // stairs on all floors
+					if (!against_wall) {room.has_center_stairs = 1;}
 					if (use_hallway || !pri_hall.is_all_zeros()) {room.no_geom = 1;} // no geom in an office with stairs for buildings with hallways
 				}
 				break; // success - done
