@@ -1517,7 +1517,7 @@ void building_room_geom_t::add_bookcase(room_object_t const &c, bool inc_lg, boo
 	point const tex_origin(use_this_tex_origin ? *use_this_tex_origin : c.get_llc());
 	unsigned const skip_faces(c.was_moved() ? 0 : ~get_face_mask(c.dim, !c.dir)); // skip back face, unless moved by the player and no longer against the wall
 	unsigned const skip_faces_shelves(skip_faces | get_skip_mask_for_xy(!c.dim)); // skip back face and sides
-	float const depth((c.dir ? -1.0 : 1.0)*c.get_sz_dim(c.dim)), height(c.dz()); // signed depth
+	float const depth((c.dir ? -1.0 : 1.0)*c.get_sz_dim(c.dim)); // signed depth
 	cube_t top, middle, back, lr[2];
 	get_bookcase_cubes(c, top, middle, back, lr, no_shelves, sides_scale);
 
@@ -1651,7 +1651,7 @@ void building_room_geom_t::add_bookcase(room_object_t const &c, bool inc_lg, boo
 				book.z2() = book.z1() + height;
 				assert(pos < right_pos);
 			}
-			bool const backwards(!in_set && (rgen.rand()%10) == 0), book_dir(c.dir ^ backwards ^ 1); // spine facing out 90% of the time if not in a set
+			bool const backwards(!in_set && (rgen.rand()%10) == 0); // spine facing out 90% of the time if not in a set
 
 			if (!(skip_book_flags & (1<<(book_ix&31)))) { // may have more than 32 books, and will wrap in that case
 				add_bcase_book(c, book, inc_lg, inc_sm, backwards, in_set, skip_faces, book_ix, book_color, books);
