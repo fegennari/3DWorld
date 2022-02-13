@@ -1015,7 +1015,12 @@ bool building_t::get_zval_for_obj_placement(point const &pos, float radius, floa
 	auto objs_end(interior->room_geom->get_placed_objs_end()); // skip trim/buttons/stairs/elevators
 
 	for (auto i = interior->room_geom->objs.begin(); i != objs_end; ++i) {
-		if (!i->can_place_onto())    continue; // can't place on this object type
+		if (!i->can_place_onto()) { // can't place on this object type
+			if (!i->is_floor_collidable()) continue; // ignore
+			if (!sphere_cube_intersect(pos, radius, *i)) continue; // no intersection
+			if ((i->shape == SHAPE_CYLIN || i->shape == SHAPE_SPHERE) && dist_xy_less_than(pos, i->get_cube_center(), (i->get_radius() + radius))) continue; // round object (approx)
+			return 0; // object in the way, can't place here
+		}
 		if (!i->contains_pt_xy(pos)) continue; // center of mass not contained
 		cube_t c(*i);
 
@@ -1026,7 +1031,7 @@ bool building_t::get_zval_for_obj_placement(point const &pos, float radius, floa
 			if (cubes[1].contains_pt_xy_exp(pos, radius) || cubes[2].contains_pt_xy_exp(pos, radius)) continue; // intersects the head or foot, skip
 			c = cubes[3]; // mattress
 		}
-		if (c.z2() < zval || c.z2() > start_zval) continue; // below the floor or above the object's starting position
+		if (c.z2() < zval || c.z2() > start_zval) continue; // below the floor or above the object's starting position; maybe can place under this object
 
 		if (i->shape == SHAPE_CYLIN) {
 			if (!dist_xy_less_than(pos, i->get_cube_center(), i->get_radius())) continue; // round table
