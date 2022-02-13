@@ -1543,11 +1543,9 @@ void building_room_geom_t::add_bookcase(room_object_t const &c, bool inc_lg, boo
 	for (unsigned i = 0, book_ix = 0; i < num_shelves; ++i) {
 		if (rgen.rand_float() < 0.2) continue; // no books on this shelf
 		cube_t const &shelf(shelves[i]);
+		float const shelf_width(shelf.get_sz_dim(!c.dim)), shelf_height(shelf_heights[i]);
 		unsigned const num_spaces(22 + (rgen.rand()%11)); // 22-32 books per shelf
-		float const book_space(shelf.get_sz_dim(!c.dim)/num_spaces);
-		float pos(shelf.d[!c.dim][0]), shelf_end(shelf.d[!c.dim][1]), last_book_pos(pos), min_height(0.0);
 		unsigned skip_mask(0);
-		bool prev_tilted(0);
 
 		for (unsigned n = 0; n < num_spaces; ++n) {
 			if (rgen.rand_float() < 0.12) {
@@ -1555,22 +1553,25 @@ void building_room_geom_t::add_bookcase(room_object_t const &c, bool inc_lg, boo
 				for (; n < skip_end; ++n) {skip_mask |= (1<<n);}
 			}
 		}
-		colorRGBA book_color;
-		float width(0.0), height(0.0), depth_val(0.0);
+		float const book_space(shelf_width/num_spaces), shelf_end(shelf.d[!c.dim][1]);
 		bool const enable_sets(rgen.rand_float() < 0.4); // 40% of shelves can have sets
-		bool in_set(enable_sets && (rgen.rand()&7) == 0);
+		bool prev_tilted(0), in_set(0), last_start_or_end_set(0);
+		colorRGBA book_color;
+		float pos(shelf.d[!c.dim][0]), last_book_pos(pos), min_height(0.0), width(0.0), height(0.0), depth_val(0.0);
 
 		for (unsigned n = 0; n < num_spaces; ++n) {
 			if ((pos + 0.7*book_space) > shelf_end) break; // not enough space for another book
+			// don't toggle on two consecutive books or on the last book on the shelf
+			bool const start_or_end_set(enable_sets && !last_start_or_end_set && n+1 < num_spaces && (rgen.rand()&7) == 0);
+			last_start_or_end_set = start_or_end_set;
+			if (start_or_end_set) {in_set ^= 1;}
 			
-			if (!in_set || width == 0.0) { // choose a new book set color/width/height
+			if (start_or_end_set || !in_set) { // choose a new book set color/width/height if we're starting a new set or not currently in a set
 				book_color = book_colors[rgen.rand() % NUM_BOOK_COLORS];
 				width      = book_space*rgen.rand_uniform(0.7, 1.3);
-				height     = max(shelf_heights[i]*rgen.rand_uniform(0.6, 0.98), min_height);
+				height     = max(shelf_height*rgen.rand_uniform(0.6, 0.98), min_height);
 				depth_val  = depth*rgen.rand_uniform(0.0, 0.2);
 			}
-			if (enable_sets && (rgen.rand()&7) == 0) {in_set ^= 1;}
-			
 			if (!prev_tilted && (skip_mask & (1<<n))) { // skip this book, and don't tilt the next one
 				pos   += width;
 				in_set = 0;
