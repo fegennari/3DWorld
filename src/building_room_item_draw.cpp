@@ -347,11 +347,11 @@ void rgeom_mat_t::create_vbo_inner() {
 	vao_mgr.vbo = ::create_vbo();
 	check_bind_vbo(vao_mgr.vbo);
 	upload_vbo_data(nullptr, num_verts*sizeof(vertex_t));
-	upload_vbo_sub_data(itri_verts.data(), 0, itsz);
-	upload_vbo_sub_data(quad_verts.data(), itsz, qsz);
+	if (itsz > 0) {upload_vbo_sub_data(itri_verts.data(), 0,    itsz);}
+	if (qsz  > 0) {upload_vbo_sub_data(quad_verts.data(), itsz, qsz );}
 	bind_vbo(0);
 	gen_quad_ixs(indices, 6*(quad_verts.size()/4), itri_verts.size()); // append indices for quad_verts
-	create_vbo_and_upload(vao_mgr.ivbo, indices, 1, 1);
+	create_vbo_and_upload(vao_mgr.ivbo, indices, 1, 1); // indices should always be nonempty
 	num_ixs = indices.size();
 
 	if (num_verts >= 32) {dir_mask = 63;} // too many verts, assume all orients
