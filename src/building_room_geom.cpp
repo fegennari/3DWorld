@@ -1497,6 +1497,19 @@ void get_bookcase_cubes(room_object_t const &c, cube_t &top, cube_t &middle, cub
 	middle.d[c.dim][!c.dir]  = back.d[c.dim][c.dir];
 }
 
+void building_room_geom_t::add_bcase_book(room_object_t const &c, cube_t const &book, bool inc_lg, bool inc_sm, bool backwards, bool in_set,
+	unsigned skip_faces, unsigned book_ix, colorRGBA const &color, vect_room_object_t *books)
+{
+	assert(book.is_strictly_normalized());
+	bool const book_dir(c.dir ^ backwards ^ 1);
+	room_object_t obj(book, TYPE_BOOK, c.room_id, c.dim, book_dir, c.flags, c.light_amt, SHAPE_CUBE, color);
+	obj.obj_id     = c.obj_id + 123*book_ix;
+	obj.item_flags = (uint16_t)book_ix;
+	if (in_set) {obj.flags |= RO_FLAG_FROM_SET;} // set a flag so that books are consistent: title on front and spine, no author, no picture
+	if (inc_lg || inc_sm) {add_book(obj, inc_lg, inc_sm, 0.0, skip_faces, backwards);} // detailed book, no title if backwards
+	if (books) {books->push_back(obj);}
+}
+
 void building_room_geom_t::add_bookcase(room_object_t const &c, bool inc_lg, bool inc_sm, float tscale, bool no_shelves, float sides_scale,
 	point const *const use_this_tex_origin, vect_room_object_t *books)
 {
@@ -1541,9 +1554,42 @@ void building_room_geom_t::add_bookcase(room_object_t const &c, bool inc_lg, boo
 	}
 	// add books
 	for (unsigned i = 0, book_ix = 0; i < num_shelves; ++i) {
-		if (rgen.rand_float() < 0.2) continue; // no books on this shelf
+		if (rgen.rand_float() < 0.15) continue; // no books on this shelf
 		cube_t const &shelf(shelves[i]);
 		float const shelf_width(shelf.get_sz_dim(!c.dim)), shelf_height(shelf_heights[i]);
+
+		if (rgen.rand_float() < 0.1) { // add a stack of books rather than upright books
+			unsigned const num_stacked((rgen.rand()%8) + 1); // 1-8
+			float const shelf_depth(shelf.get_sz_dim(c.dim)), max_book_width(1.0*shelf_depth); // must fit within shelf width
+			float const max_book_len(min(1.0f*shelf_height, 1.5f*max_book_width)), max_book_hlen(0.5*max_book_len), dist_from_end(1.2*max_book_hlen); // height along width of shelf
+			if (shelf_width <= 2.0*dist_from_end) continue; // shouldn't happen, but if it does it's probably best to skip this shelf
+			float const max_book_thick(min(0.8f*shelf_thick, shelf_height/(num_stacked+1)));
+			float const center_w(rgen.rand_uniform((shelf.d[!c.dim][0] + dist_from_end), (shelf.d[!c.dim][1] - dist_from_end)));
+			float const center_d(shelf.get_center_dim(c.dim));
+			float cur_zval(shelf.z2()); // stack starts on the top of the shelf
+
+			for (unsigned n = 0; n < num_stacked; ++n) {
+				float const book_thick(max_book_thick*rgen.rand_uniform(0.5, 1.0)), next_zval(cur_zval + book_thick);
+				if (next_zval + max_book_thick > shelf_height) break; // not enough space to stack this book - done
+				float const book_len(max_book_hlen*rgen.rand_uniform(0.7, 1.0)), book_width(min(0.5f*max_book_width*rgen.rand_uniform(0.7, 1.0), 1.1f*book_len));
+				point bot_center;
+				bot_center[ c.dim] = center_d + depth*rgen.rand_uniform(0.0, 0.05); // Note: signed depth
+				bot_center[!c.dim] = center_w + 0.1*shelf_depth*rgen.rand_uniform(-1.0, 1.0);
+				cube_t book(bot_center, bot_center);
+				set_cube_zvals(book, cur_zval, next_zval);
+				book.expand_in_dim( c.dim, book_width);
+				book.expand_in_dim(!c.dim, book_len  );
+				colorRGBA const book_color(book_colors[rgen.rand() % NUM_BOOK_COLORS]);
+				bool const backwards((rgen.rand()%10) == 0); // spine facing out 90% of the time
+
+				if (!(skip_book_flags & (1<<(book_ix&31)))) {
+					add_bcase_book(c, book, inc_lg, inc_sm, backwards, 0, skip_faces, book_ix, book_color, books); // in_set=0
+				}
+				++book_ix;
+				cur_zval = next_zval;
+			} // for n
+			continue; // done with this shelf
+		}
 		unsigned const num_spaces(22 + (rgen.rand()%11)); // 22-32 books per shelf
 		unsigned skip_mask(0);
 
@@ -1588,7 +1634,6 @@ void building_room_geom_t::add_bookcase(room_object_t const &c, bool inc_lg, boo
 			min_height = 0.0;
 
 			if (avail_space > 1.1f*height && rgen.rand_float() < 0.5) { // book has space to fall over 50% of the time
-				// TODO: stack of non-upright books?
 				book.d[!c.dim][0] = last_book_pos + rgen.rand_uniform(0.0, (right_pos - last_book_pos - height)); // shift a random amount within the gap
 				book.d[!c.dim][1] = book.d[!c.dim][0] + height;
 				book.z2() = shelf.z2() + width;
@@ -1609,13 +1654,7 @@ void building_room_geom_t::add_bookcase(room_object_t const &c, bool inc_lg, boo
 			bool const backwards(!in_set && (rgen.rand()%10) == 0), book_dir(c.dir ^ backwards ^ 1); // spine facing out 90% of the time if not in a set
 
 			if (!(skip_book_flags & (1<<(book_ix&31)))) { // may have more than 32 books, and will wrap in that case
-				assert(book.is_strictly_normalized());
-				room_object_t obj(book, TYPE_BOOK, c.room_id, c.dim, book_dir, c.flags, c.light_amt, SHAPE_CUBE, book_color);
-				obj.obj_id     = c.obj_id + 123*i + 1367*n;
-				obj.item_flags = (uint16_t)book_ix;
-				if (in_set) {obj.flags |= RO_FLAG_FROM_SET;} // set a flag so that books are consistent: title on front and spine, no author, no picture
-				if (inc_lg || inc_sm) {add_book(obj, inc_lg, inc_sm, tilt_angle, skip_faces, backwards);} // detailed book, no title if backwards
-				if (books) {books->push_back(obj);}
+				add_bcase_book(c, book, inc_lg, inc_sm, backwards, in_set, skip_faces, book_ix, book_color, books);
 			}
 			++book_ix;
 			pos += width;
