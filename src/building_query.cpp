@@ -346,10 +346,10 @@ bool check_stall_collision(room_object_t const &c, point &pos, point const &p_la
 	return had_coll;
 }
 bool check_shower_collision(room_object_t const &c, point &pos, point const &p_last, float radius, vector3d *cnorm) {
-	bool const door_dim(c.dx() < c.dy()), door_dir(door_dim ? c.dim : c.dir), side_dir(door_dim ? c.dir : c.dim); // {c.dim, c.dir} => {dir_x, dir_y}
+	bool const door_dim(c.dx() < c.dy()), door_dir(door_dim ? c.dir : c.dim), side_dir(door_dim ? c.dim : c.dir); // {c.dim, c.dir} => {dir_x, dir_y}
 	cube_t sides[2] = {c, c};
-	sides[0].d[!door_dim][!side_dir] -= (side_dir ? -1.0 : 1.0)*0.95*c.get_sz_dim(!door_dim); // shrink to just the outer glass wall of the shower
-	if (!c.is_open()) {sides[1].d[door_dim][!door_dir] += (door_dir ? 1.0 : -1.0)*0.95*c.get_sz_dim(door_dim);} // check collision with closed door
+	sides[0].d[!door_dim][side_dir] -= (side_dir ? 1.0 : -1.0)*0.95*c.get_sz_dim(!door_dim); // shrink to just the outer glass wall of the shower
+	if (!c.is_open()) {sides[1].d[door_dim][door_dir] += (door_dir ? -1.0 : 1.0)*0.95*c.get_sz_dim(door_dim);} // check collision with closed door
 	bool had_coll(0);
 	for (unsigned d = 0; d < (c.is_open() ? 1U : 2U); ++d) {had_coll |= sphere_cube_int_update_pos(pos, radius, sides[d], p_last, 1, 0, cnorm);}
 	return had_coll;
