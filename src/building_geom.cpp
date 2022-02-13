@@ -841,6 +841,7 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 	float const peak_height(rgen.rand_uniform(0.15, 0.5)); // same for all parts
 	float roof_dz[4] = {0.0f};
 	bool hipped_roof[4] = {0};
+	int last_hipped(2); // starts at <unset>
 
 	for (auto i = parts.begin(); (i + skip_last_roof) != parts.end(); ++i) {
 		if (is_basement(i)) continue; // skip the basement
@@ -859,11 +860,15 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 		bool can_be_hipped(main_part && extend_to == 0.0 && i->get_sz_dim(dim) > i->get_sz_dim(!dim)); // must be longer dim
 		
 		if (can_be_hipped && two_parts) {
-			float const part_roof_z (i->z2()    + min(peak_height*i->get_sz_dim(!dim), i->dz()));
-			float const other_roof_z(other.z2() + min(peak_height*other.get_sz_dim(!other_dim), other.dz()));
-			can_be_hipped = (part_roof_z >= other_roof_z); // no hipped for lower part
+			if (dim == other_dim && (i->d[!dim][0] == other.d[!dim][1] || i->d[!dim][1] == other.d[!dim][0])) {} // two parallel adjacent parts - hipped roof is allowed
+			else {
+				float const part_roof_z (i->z2()    + min(peak_height*i->get_sz_dim(!dim), i->dz()));
+				float const other_roof_z(other.z2() + min(peak_height*other.get_sz_dim(!other_dim), other.dz()));
+				can_be_hipped = (part_roof_z >= other_roof_z); // no hipped for lower part
+			}
 		}
-		bool const hipped(can_be_hipped && rgen.rand_bool()); // hipped roof 50% of the time
+		bool const hipped(can_be_hipped && ((last_hipped == 2) ? rgen.rand_bool() : last_hipped)); // hipped roof 50% of the time, with preference to share across parts
+		last_hipped = hipped;
 		if (hipped) {roof_dz[ix] = gen_hipped_roof(*i, peak_height, extend_to);}
 		else {
 			unsigned skip_side_tri(2); // default = skip neither
