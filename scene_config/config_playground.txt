@@ -1,0 +1,29 @@
+ntrees 0
+load_coll_objs 1
+disable_universe 1
+disable_water 1
+disable_scenery 1
+read_landscape 0
+read_heightmap 0
+toggle_reflections # reflections enabled by default
+toggle_mesh_enabled # disable mesh draw by default
+num_items 0 0 0 0 0 # override to select a single item
+nsmileys 0
+unlimited_weapons 1
+mesh_height 0.0
+start_maximized 1
+enable_mouse_look 1
+begin_motion 1
+
+camera_height 0.08
+player_start 4.0 -3.0 0.0
+player_speed 1.8
+
+mesh_size  128 128 1
+scene_size 8.0 8.0 2.0
+shadow_map_sz 4096
+
+reflect_plane_z -4.0 4.0  -4.0 4.0  -0.01 0.01 # ground plane (Note: must also enable specular for the ground plane in the cobjs file)
+
+include config_resolution.txt
+coll_obj_file coll_objs/coll_objs_playground.txt

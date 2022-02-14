@@ -1,0 +1,46 @@
+#cube_map_ref 1
+
+l 0.9 1.0 1.0 1.0 1.0 bathroom_tile.jpg 1 # elasticity R G B A texture_id draw
+r 0.8 60.0 # set specularity
+B -8.0 8.0  -8.0 8.0  -0.5 0.0 # ground plane
+
+jump_pad 1.40 -1.30 0.00  0.04   0.0 0.0 10.0
+
+# this block copied from mapx/courtyard.txt
+# add some movable objects
+movable 1
+density 19.3
+l 0.8 0.4 0.25 0.03 1.0 -1 1 # gold
+r 2.0 40.0  0.9 0.6 0.1 # set gold specular
+y 0.0 # use tex coords instead of texgen (force sphere rotation to make vertices and vertex normals agree)
+k 3.3 -1.4 0.04  3.3 -1.6 0.04  0.04 0.04
+z 2.5 -1.6 0.04  0.0 0.0 1.0  0.10 0.04 # vertical torus
+z 2.3 -2.8 0.14  1.0 0.0 0.0  0.10 0.04 # horizontal torus
+z 2.8 -1.4 0.21  0.0 1.0 0.0  0.20 0.01 # thin vertical torus
+z 2.8 -2.4 0.12  0.0 1.0 0.0  0.15 0.01 # thin vertical torus, stuck in the ground (can't actually be pushed)
+#D 0.0 0.0 0.001 100
+#z 1.4 -3.4 0.22  1.0 0.0 0.0  0.2 0.02 # large horizontal torus
+r 0.0 1.0 # reset specularity
+
+a 2 # destroyable/shatterable
+l 0.6 1.0 1.0 1.0 1.0 36 1 # wooden slats
+density 0.7
+y 0.0 # use tex coords instead of texgen
+#X normal_maps/fence_NRM.jpg 0 1 # disable normap map since it causes incorrect normals during rotation
+k 5.8 -1.5 0.04  5.8 -1.65 0.04  0.04 0.04 # rotatable
+X normal_maps/fence_NRM.jpg 0 1 # normal map (swap binorm sign)
+C 6.3 -1.5 0.04  6.3 -1.65 0.04  0.04 0.04 # rotatable
+y 8.0
+B 6.0 6.1  4.0 4.1  -0.4 -0.32 # testing
+#B 9.0 9.3  4.5 6.2  -0.4 -0.32 # testing
+B 4.0 4.1  -1.0 -0.9  0.0 0.1
+B 4.0 4.1  -1.0 -0.9  0.1 0.2 # top
+B -4.3 -4.2  5.5 5.6  0.006 0.106
+C 4.5 -1.2 0.0  4.5 -1.2 0.1  0.05 0.05
+C 7.5 -3.5 0.0  7.5 -3.5 0.1  0.05 0.05
+C 5.3 -1.6 0.05  5.3 -1.7 0.05  0.05 0.05
+C 7.3 -3.6 0.05  7.3 -3.7 0.05  0.05 0.05
+k 4.9 -2.0 0.05  5.0 -2.0 0.05  0.05 0.05 # capsule
+k 5.0 -2.3 0.05  5.05 -2.35 0.05  0.05 0.05 # capsule
+S 5.0 -1.4 0.05  0.05
+P 3  6.0 -2.5 0.0  6.2 -2.5 0.0  6.0 -2.5 0.1  0.1 # ramp

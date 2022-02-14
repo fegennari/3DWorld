@@ -1501,9 +1501,6 @@
     <Text Include="universe\ship_defs_colonize_sparse.txt">
       <Filter>Input Files\universe</Filter>
     </Text>
-    <Text Include="coll_objs\white_plane_test.txt">
-      <Filter>Input Files\coll_objs</Filter>
-    </Text>
     <Text Include="scene_config\building_materials.txt">
       <Filter>Input Files\config</Filter>
     </Text>
@@ -1603,9 +1600,6 @@
     <Text Include="scene_config\config_water.txt">
       <Filter>Input Files\config</Filter>
     </Text>
-    <Text Include="scene_config\config_white_plane.txt">
-      <Filter>Input Files\config</Filter>
-    </Text>
     <Text Include="scene_config\config_city.txt">
       <Filter>Input Files\config</Filter>
     </Text>
@@ -1623,6 +1617,18 @@
     </Text>
     <Text Include="text_data\book_titles.txt">
       <Filter>Input Files\text_data</Filter>
+    </Text>
+    <Text Include="scene_config\config_spheres.txt">
+      <Filter>Input Files\config</Filter>
+    </Text>
+    <Text Include="scene_config\config_playground.txt">
+      <Filter>Input Files\config</Filter>
+    </Text>
+    <Text Include="coll_objs\spheres.txt">
+      <Filter>Input Files\coll_objs</Filter>
+    </Text>
+    <Text Include="coll_objs\coll_objs_playground.txt">
+      <Filter>Input Files\coll_objs</Filter>
     </Text>
   </ItemGroup>
 </Project>

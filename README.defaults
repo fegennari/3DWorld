@@ -61,8 +61,8 @@ config_berkeley.txt - 1024x1024 Berkeley, CA model; height from USGS DEM databas
 config_puzzle.txt - Experimental platformer game; Use 'a'/'w'/'s'/'d' to move and <space> to jump; Very difficult - don't fall!
 config_buildings.txt - Procedural buildings test; Try F1 => 'm' => 'V' => 'h' => 'R' => 'w'
 
-config_white_plane.txt - 100 Reflective/refractive spheres test scene;
-Try F2 then 'b' for a short period of time the 'b' again to generate multiple reflections;
+config_spheres.txt - 100 Reflective/refractive spheres test scene;
+Use the 'i' key to toggle cube map updates, rotate the camera around, then use 'i' again to return to realtime mode
 Requires a good GPU and at least 2GB graphics memory
 
 The following config files require loading large models that aren't part of the 3DWorld git repo.
@@ -82,6 +82,7 @@ model_data/config_soda.txt - UC Berkeley Soda Hall scene with precomputed indire
 config_samples.txt - Assorted 3D models; Uncomment the one you want to try - though you'll have to find these for download
 config_san_miguel.txt : San Miguel 2.0; High geometry and texture detail, indirect lighting, reflections; need a good GPU with lots of memory: http://casual-effects.com/data/
 config_minecraft.txt - Rungholt Minecraft city, ported to OBJ format, converted to 3DWorld's model3d format: http://casual-effects.com/data/
+config_playground.txt - Test scene for player movement, collision detection, and object interaction
 
 Download from http://www.3drender.com/challenges/ : Challenge #17: Natural History
 config_museum.txt - Museum scene with precomputed indirect lighting (not included), shadows, reflections, and procedural texturing

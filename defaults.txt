@@ -32,5 +32,6 @@ mapx/config_mapx.txt # office building scene; F2 changes gameplay mode, 'b' enab
 #config_museum_tt_model.txt # for generating lighting for TT scenes, not for direcly viewing
 #config_puzzle.txt # platformer level, use WASD and space to jump
 #config_buildings.txt # infinite buildings in every direction
-#config_white_plane.txt # test scene for reflective/refractive/emissive spheres
+#config_spheres.txt # test scene for reflective/refractive/emissive spheres; use the 'i' key to toggle cube map updates
+#config_playground.txt # test scene for player movement, collision detection, and object interaction
 

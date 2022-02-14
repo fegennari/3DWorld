@@ -27,7 +27,7 @@ buildings ai_player_vis_test 1 # 0=no test, 1=LOS, 2=LOS+FOV, 3=LOS+FOV+lit
 
 # building animals
 buildings num_rats_min 5
-buildings num_rats_max 10
+buildings num_rats_max 8
 buildings min_attack_rats 3 # 0 disables rat attacks
 buildings rat_speed 0.0005
 buildings rat_size_min 0.10 # length relative to floor spacing

@@ -1313,6 +1313,7 @@
     <Text Include="coll_objs\coll_objs_minecraft.txt" />
     <Text Include="coll_objs\COLL_OBJS_museum.txt" />
     <Text Include="coll_objs\COLL_OBJS_museum_tt_model.txt" />
+    <Text Include="coll_objs\coll_objs_playground.txt" />
     <Text Include="coll_objs\coll_objs_puget_sound.txt" />
     <Text Include="coll_objs\coll_objs_puzzle.txt" />
     <Text Include="coll_objs\COLL_OBJS_River.TXT" />
@@ -1320,7 +1321,7 @@
     <Text Include="coll_objs\coll_objs_san_miguel.txt" />
     <Text Include="coll_objs\COLL_OBJS_Test.TXT" />
     <Text Include="coll_objs\coll_objs_transformed.txt" />
-    <Text Include="coll_objs\white_plane_test.txt" />
+    <Text Include="coll_objs\spheres.txt" />
     <Text Include="mapx\coll_objs_cubes.txt" />
     <Text Include="mapx\coll_objs_mapx.txt" />
     <Text Include="mapx\coll_objs_spheres.txt" />
@@ -1344,6 +1345,7 @@
     <Text Include="scene_config\config_minecraft.txt" />
     <Text Include="scene_config\config_museum.txt" />
     <Text Include="scene_config\config_museum_tt_model.txt" />
+    <Text Include="scene_config\config_playground.txt" />
     <Text Include="scene_config\config_post.txt" />
     <Text Include="scene_config\config_pre.txt" />
     <Text Include="scene_config\config_puget_sound.txt" />
@@ -1354,6 +1356,7 @@
     <Text Include="scene_config\config_samples.txt" />
     <Text Include="scene_config\config_san_miguel.txt" />
     <Text Include="scene_config\config_scrolling.txt" />
+    <Text Include="scene_config\config_spheres.txt" />
     <Text Include="scene_config\config_t.txt" />
     <Text Include="scene_config\config_trees.txt" />
     <Text Include="scene_config\config_voxels.txt" />
@@ -1361,7 +1364,6 @@
     <Text Include="scene_config\config_voxels_grass.txt" />
     <Text Include="scene_config\config_voxel_params.txt" />
     <Text Include="scene_config\config_water.txt" />
-    <Text Include="scene_config\config_white_plane.txt" />
     <Text Include="sphere_materials.txt" />
     <Text Include="text_data\book_titles.txt" />
     <Text Include="universe\ship_defs_colonize_sparse.txt" />
