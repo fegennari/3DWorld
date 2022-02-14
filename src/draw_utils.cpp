@@ -619,7 +619,7 @@ public:
 			vector<tri_ixs_t> faces2;
 
 			for (auto f = faces.begin(); f != faces.end(); ++f) { // replace triangle by 4 triangles
-				unsigned mps[3];
+				unsigned mps[3] = {};
 				UNROLL_3X(mps[i_] = get_midpoint(f->v[i_], f->v[(i_+1)%3]);)
 				UNROLL_3X(faces2.emplace_back(f->v[i_], mps[i_], mps[(i_+2)%3]);)
 				faces2.emplace_back(mps[0], mps[1], mps[2]);

@@ -1123,7 +1123,7 @@ void scenery_group::clear_vbos() {
 	
 	for (unsigned i = 0; i < rock_shapes.size(); ++i) {rock_shapes[i].clear_vbo();}
 	plant_vbo_manager.clear_vbo();
-	rock_vbo_manager.clear_vbo();
+	rock_vbo_manager .clear_vbo();
 	leafy_vbo_manager.clear_vbo();
 }
 
@@ -1141,7 +1141,7 @@ void scenery_group::clear() {
 	plants.clear();
 	leafy_plants.clear();
 	plant_vbo_manager.clear();
-	rock_vbo_manager.clear();
+	rock_vbo_manager .clear();
 	leafy_vbo_manager.clear();
 	generated = 0;
 }
