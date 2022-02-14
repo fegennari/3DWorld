@@ -47,7 +47,9 @@ class surface_rock : public scenery_obj { // size = 1456+
 
 public:
 	surface_rock() : vbo_mgr_ix(-1), scale(0.0), dir(zero_vector) {}
-	void create(int x, int y, int use_xy, vbo_vnt_block_manager_t &vbo_manager, bool fixed_sz_rock_cache);
+	void create(int x, int y, int use_xy, bool fixed_sz_rock_cache);
+	void gen_points(vbo_vnt_block_manager_t &vbo_manager);
+	unsigned get_num_verts() const;
 	void add_cobjs();
 	void draw(float sscale, bool shadow_only, bool reflection_pass, vector3d const &xlate, float scale_val, vbo_vnt_block_manager_t &vbo_manager) const;
 	void update_points_vbo(vbo_vnt_block_manager_t &vbo_manager);

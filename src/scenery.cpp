@@ -374,7 +374,7 @@ void surface_cache::clear_unref() {
 surface_cache surface_rock_cache;
 
 
-void surface_rock::create(int x, int y, int use_xy, vbo_vnt_block_manager_t &vbo_manager, bool fixed_sz_rock_cache) {
+void surface_rock::create(int x, int y, int use_xy, bool fixed_sz_rock_cache) {
 
 	gen_spos(x, y, use_xy);
 	radius  = rand_uniform2(0.1, 0.2)*rand_float2()/tree_scale;
@@ -389,9 +389,12 @@ void surface_rock::create(int x, int y, int use_xy, vbo_vnt_block_manager_t &vbo
 		surface->calc_rmax();
 	}
 	scale = radius/surface->rmax;
-	surface->sd.get_quad_points(vbo_manager.get_pts_vector_for_adding());
+}
+void surface_rock::gen_points(vbo_vnt_block_manager_t &vbo_manager) {
+	surface->sd.get_quad_points(vbo_manager.get_pts_vector_for_adding()); // use_tri_strip=0 (quads mode)
 	vbo_mgr_ix = vbo_manager.get_offset_for_last_points_added();
 }
+unsigned surface_rock::get_num_verts() const {return 4*ROCK_NDIV*ROCK_NDIV;} // one quad/4 verts per face
 
 void surface_rock::add_cobjs() {
 	coll_id = add_coll_sphere(pos, radius, cobj_params(0.95, WHITE, 0, 0, rock_collision, 1, ROCK_SPHERE_TEX));
@@ -1289,7 +1292,7 @@ void scenery_group::gen(int x1, int y1, int x2, int y2, float vegetation_, bool 
 			}
 			else if (val < 15) { // 7%
 				surface_rocks.push_back(surface_rock());
-				surface_rocks.back().create(j, i, 1, rock_vbo_manager, fixed_sz_rock_cache);
+				surface_rocks.back().create(j, i, 1, fixed_sz_rock_cache);
 				if (!check_valid_scenery_pos(surface_rocks.back())) {surface_rocks.pop_back(); continue;}
 				surface_rocks.back().add_bounds_to_bcube(all_bcube);
 			}
@@ -1335,16 +1338,22 @@ void scenery_group::post_gen_setup(tree_cont_t const &trees) {
 		add_sphere_quads(sphere_verts, nullptr, all_zeros, 1.0, 16, use_tri_strip,  0.5, 1.0, 0.125, 1.0); // only emit the textured top part of the sphere + the 'stem'
 		if (use_tri_strip) {leafy_vbo_manager.set_prim_type(GL_TRIANGLE_STRIP);}
 		unsigned num_lp_leaves(0);
-		for (auto i = leafy_plants.begin(); i != leafy_plants.end(); ++i) {num_lp_leaves += i->num_leaves();}
+		for (auto const &p : leafy_plants) {num_lp_leaves += p.num_leaves();}
 		leafy_vbo_manager.reserve_pts(num_lp_leaves*sphere_verts.size());
-		for (auto i = leafy_plants.begin(); i != leafy_plants.end(); ++i) {i->gen_points(leafy_vbo_manager, sphere_verts);}
+		for (auto &p : leafy_plants) {p.gen_points(leafy_vbo_manager, sphere_verts);}
+	}
+	if (!surface_rocks.empty()) {
+		unsigned tot_num_verts(0);
+		for (auto const &r : surface_rocks) {tot_num_verts += r.get_num_verts();}
+		rock_vbo_manager.reserve_pts(tot_num_verts);
+		for (auto &r : surface_rocks) {r.gen_points(rock_vbo_manager);}
 	}
 	sort(plants.begin(), plants.end()); // sort by type
 	if (!voxel_rocks.empty()) {voxel_rock_manager.build_models(VOX_ROCK_NUM_LOD);}
 		
-	for (auto i = voxel_rocks.begin(); i != voxel_rocks.end(); ++i) {
-		i->build_model();
-		i->add_bounds_to_bcube(all_bcube);
+	for (auto &r : voxel_rocks) {
+		r.build_model();
+		r.add_bounds_to_bcube(all_bcube);
 	}
 	for (auto &log   : logs  ) {log  .cache_closest_tree_type(trees);}
 	for (auto &stump : stumps) {stump.cache_closest_tree_type(trees);}
