@@ -69,7 +69,7 @@ int cube_polygon_intersect(coll_obj const &c, coll_obj const &p) {
 
 int cylin_cube_int_aa_via_circle_rect(coll_obj const &cube, cylinder_3dw const &cylin) {
 
-	bool deq[3];
+	bool deq[3] = {};
 	UNROLL_3X(deq[i_] = (cylin.p1[i_] == cylin.p2[i_]);)
 
 	for (unsigned d = 0; d < 3; ++d) { // approximate projected circle test for x/y/z oriented cylinders
@@ -955,9 +955,12 @@ vector3d get_cobj_drop_delta(unsigned index) {
 
 			if (min(overlap_sz.x, overlap_sz.y) < 0.05*overlap_sz.z) { // push rather than stack
 				int const dim(overlap_sz[1] < overlap_sz[0]);
-				//bool const dir(cobj.get_cube_center()[dim] < c.get_cube_center()[dim]);
 				float const delta(overlap_sz[dim]);
-				if (delta*delta > delta_max.mag_sq()) {delta_max = zero_vector; delta_max[dim] = delta;}
+
+				if (delta*delta > delta_max.mag_sq()) {
+					delta_max = zero_vector;
+					delta_max[dim] = delta*((cobj.get_center_dim(dim) < c.get_center_dim(dim)) ? -1.0 : 1.0); // use the correct sign
+				}
 				continue;
 			}
 		}
@@ -1094,13 +1097,13 @@ vector3d get_cobj_drop_delta(unsigned index) {
 	return delta;
 }
 
-void shift_cobj_up_down(coll_obj &cobj, unsigned index, vector3d const &delta) {
+void shift_cobj_up_down_or_push(coll_obj &cobj, unsigned index, vector3d const &delta) {
 	cobj.shift_by(delta); // move cobj down
 	cobj.cp.surfs = 0; // clear any invisible edge flags as moving may make these edges visible
 	check_moving_cobj_int_with_dynamic_objs(index, delta);
 }
 
-void try_drop_movable_cobj(unsigned index, set<unsigned> &seen) {
+void try_drop_or_push_movable_cobj(unsigned index, set<unsigned> &seen) {
 
 	if (seen.find(index) != seen.end()) return; // already seen (needed for grouped cobjs)
 	coll_obj &cobj(coll_objects.get_cobj(index));
@@ -1112,7 +1115,7 @@ void try_drop_movable_cobj(unsigned index, set<unsigned> &seen) {
 		assert(group->find(index) != group->end()); // must contain this cobj
 		
 		for (auto i = group->begin(); i != group->end(); ++i) { // if this cobj in a a group, we need to drop the whole group (or fail)
-			seen.insert(*i); // mark as seen so we don't try to call try_drop_movable_cobj() on it again
+			seen.insert(*i); // mark as seen so we don't try to call try_drop_or_push_movable_cobj() on it again
 			if (*i == index) continue; // already processed above
 			vector3d const delta_i(get_cobj_drop_delta(*i));
 			UNROLL_3X(delta[i_] = max(delta[i_], delta_i[i_]);) // use min fall dist or max rise dist (elevators)
@@ -1120,11 +1123,11 @@ void try_drop_movable_cobj(unsigned index, set<unsigned> &seen) {
 		}
 	}
 	if (delta == zero_vector) return;
-	shift_cobj_up_down(cobj, index, delta);
+	shift_cobj_up_down_or_push(cobj, index, delta);
 
 	if (group != nullptr) { // shift the group
 		for (auto i = group->begin(); i != group->end(); ++i) {
-			if (*i != index) {shift_cobj_up_down(coll_objects.get_cobj(*i), *i, delta);}
+			if (*i != index) {shift_cobj_up_down_or_push(coll_objects.get_cobj(*i), *i, delta);}
 		}
 	}
 	mark_movable_cobj_smap_update();
@@ -1349,7 +1352,7 @@ void proc_moving_cobjs() {
 	sort(by_z1.begin(), by_z1.end()); // sort by z1 so that stacked cobjs work correctly (processed bottom to top)
 	
 	for (auto i = by_z1.begin(); i != by_z1.end(); ++i) {
-		try_drop_movable_cobj(i->second, seen);
+		try_drop_or_push_movable_cobj(i->second, seen);
 		check_cobj_alignment(i->second);
 	}
 }

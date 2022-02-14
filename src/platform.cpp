@@ -391,7 +391,11 @@ void platform::advance_timestep() {
 			bool const update_colls(cobj.type != COLL_CUBE && (delta.x != 0.0 || delta.y != 0.0));
 			cobj.move_cobj(delta, update_colls); // move object
 			// may crush the player (see vert_coll_detector::check_cobj_intersect()); could also maybe make the platform stop when hitting the player
-			if (destroys) {destroy_coll_objs(cobj.get_center_pt(), 1000.0, NO_SOURCE, IMPACT, cobj.get_bsphere_radius());}
+			
+			if (destroys) {
+				//if (delta.x == 0.0 && delta.y == 0.0 && delta.z >= 0.0) continue; // doesn't destroy when going up (elevator)?
+				destroy_coll_objs(cobj.get_center_pt(), 1000.0, NO_SOURCE, IMPACT, cobj.get_bsphere_radius());
+			}
 		}
 		for (vector<unsigned>::const_iterator i = lights.begin(); i != lights.end(); ++i) {
 			assert(*i < light_sources_d.size());
