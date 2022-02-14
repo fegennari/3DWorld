@@ -1315,6 +1315,7 @@ void ped_manager_t::register_person_hit(unsigned person_ix, room_object_t const 
 		if (person.retreat_time == 0.0) {maybe_play_zombie_sound(person.pos, person_ix, 1, 1);} // player sound on first retreat: alert_other_zombies=1, high_priority=1
 		// Note: this isn't really thread safe, but it should be okay to modify this state while the AI thread is running
 		person.retreat_time = RETREAT_TIME; // retreat
+		register_achievement("Zombie Bashing");
 	}
 }
 

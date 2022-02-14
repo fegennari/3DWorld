@@ -317,7 +317,7 @@ void building_t::update_rat(rat_t &rat, point const &camera_bs, int ped_ix, floa
 						last_sound_time = tfticks + 0.2f*TICKS_PER_SECOND*rgen.rand_float(); // add some randomness
 					}
 					bool has_key(0); // unused
-					player_take_damage(0.004, has_key);
+					if (player_take_damage(0.004, has_key)) {register_achievement("Rat Food");} // achievement if the player dies
 				}
 			}
 		}

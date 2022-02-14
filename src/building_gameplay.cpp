@@ -6,6 +6,8 @@
 #include "buildings.h"
 #include "openal_wrap.h"
 
+using std::string;
+
 float const THROW_VELOCITY = 0.0050;
 float const ALERT_THRESH   = 0.08; // min sound alert level for AIs
 
@@ -192,7 +194,7 @@ float get_obj_value(room_object_t const &obj) {
 	else if (obj.type == TYPE_PAPER) {
 		rand_gen_t rgen(rgen_from_obj(obj));
 		if (rgen.rand_float() < 0.25) { // 25% of papers have some value
-			float const val_mult((rgen.rand_float() < 0.25) ? 10 : 1); // 25% of papers have higher value
+			float const val_mult((rgen.rand_float() < 0.25) ? 10.0 : 1.0); // 25% of papers have higher value
 			value = val_mult*(2 + (rgen.rand()%10))*(1 + (rgen.rand()%10));
 		}
 	}
@@ -300,12 +302,26 @@ struct tape_manager_t {
 
 tape_manager_t tape_manager;
 
+class achievement_tracker_t {
+	set<string> achievements;
+	// some way to make this persistent, print these out somewhere, or add small screen icons?
+public:
+	bool register_achievement(string const &achievement) {
+		if (!achievements.insert(achievement).second) return 0; // we already have this one
+		print_text_onscreen(("You have unlocked a new achievement:\n" + achievement), WHITE, 1.5, 4*TICKS_PER_SECOND, 20);
+		return 1;
+	}
+};
+achievement_tracker_t achievement_tracker;
+
+void register_achievement(string const &str) {achievement_tracker.register_achievement(str);}
+
 class player_inventory_t { // manages player inventory, health, and other stats
 	vector<carried_item_t> carried; // interactive items the player is currently carrying
 	float cur_value, cur_weight, tot_value, tot_weight, damage_done, best_value, player_health, drunkenness, bladder, bladder_time, prev_player_zval;
 	bool prev_in_building, has_key;
 
-	void register_player_death(unsigned sound_id, std::string const &why) {
+	void register_player_death(unsigned sound_id, string const &why) {
 		point const xlate(get_camera_coord_space_xlate());
 		place_player_at_xy(xlate.x, xlate.y); // move back to the origin/spawn location
 		gen_sound_thread_safe_at_player(sound_id);
@@ -364,6 +380,7 @@ public:
 		float health(0.0), drunk(0.0); // add these fields to bldg_obj_type_t?
 		bool const bladder_was_full(bladder >= 0.9);
 		float const value(get_obj_value(obj));
+		if (obj.type == TYPE_PAPER && value >= 500.0) {register_achievement("Top Secret Documents");}
 		damage_done += value;
 		colorRGBA text_color(GREEN);
 		std::ostringstream oss;
@@ -389,6 +406,7 @@ public:
 			text_color = RED;
 			add_camera_filter(colorRGBA(RED, 0.25), 4, -1, CAM_FILT_DAMAGE); // 4 ticks of red damage
 			gen_sound_thread_safe_at_player(SOUND_DOH, 0.5);
+			if (player_health < 0.0) {register_achievement("Mr Yuck");}
 		}
 		if (obj.type == TYPE_KEY) {
 			has_key = 1; // mark as having the key, but it doesn't go into the inventory or contribute to weight or value
@@ -457,6 +475,7 @@ public:
 		std::ostringstream oss;
 		oss << "zombie: value $" << value << " weight " << weight << " lbs";
 		print_text_onscreen(oss.str(), GREEN, 1.0, 4*TICKS_PER_SECOND, 0);
+		register_achievement("Zombie Snatcher");
 		return 1; // success
 	}
 	bool try_use_last_item(room_object_t &obj) {
@@ -561,7 +580,7 @@ public:
 
 				if (num_bars > 0) { // display sound meter
 					colorRGBA const color(lvl, (1.0 - lvl), 0.0, 1.0); // green => yellow => orange => red
-					draw_text(color, -0.005*aspect_ratio, -0.010, -0.02, std::string(num_bars, '#'));
+					draw_text(color, -0.005*aspect_ratio, -0.010, -0.02, string(num_bars, '#'));
 				}
 				if (player_is_hiding && !phone_manager.is_phone_ringing()) {draw_text(LT_BLUE, -0.001*aspect_ratio, -0.009, -0.02, "[Hiding]");}
 			}
@@ -603,6 +622,7 @@ public:
 #pragma omp critical(gen_sound)
 				gen_delayed_sound(1.0, SOUND_FLUSH, camera_pos); // delay by 1s
 				register_building_sound_at_player(0.5);
+				register_achievement("Royal Flush");
 			}
 			bladder = 0.0;
 		}

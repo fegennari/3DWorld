@@ -1437,6 +1437,7 @@ void draw_buildings_ext_paint();
 void subtract_cube_xy(cube_t const &c, cube_t const &r, cube_t *out);
 bool have_secondary_buildings();
 bool get_building_door_pos_closest_to(unsigned building_id, point const &target_pos, point &door_pos);
+void register_achievement(std::string const &str);
 // functions in building_room_obj_expand.cc
 point gen_xy_pos_in_area(cube_t const &S, vector3d const &sz, rand_gen_t &rgen);
 point gen_xy_pos_in_area(cube_t const &S, float radius, rand_gen_t &rgen);
