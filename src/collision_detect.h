@@ -508,6 +508,7 @@ public:
 	void add_triggers(multi_trigger_t const &t) {triggers.add_triggers(t);} // deep copy
 	bool has_dynamic_shadows() const {return (cont || state >= ST_FWD);}
 	bool get_update_light()    const {return update_light;}
+	bool is_elevator()         const {return (!is_rot && dir.x == 0.0 && dir.y == 0.0);}
 	vector3d get_delta()       const {return (pos - origin);}
 	vector3d get_range()       const {return (is_rot ? zero_vector : dir*ext_dist);}
 	vector3d get_rot_dir()     const {assert(is_rot); return dir;}

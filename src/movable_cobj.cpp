@@ -994,7 +994,20 @@ vector3d get_cobj_drop_delta(unsigned index) {
 	point const center(cobj.get_center_pt());
 	
 	if (!binary_step_moving_cobj_delta(cobj, cobjs, delta, tolerance)) { // stuck
-		if (prev_v_fall < 4.0*accel) {gen_sound(SOUND_OBJ_FALL, center, 0.5, 1.2);}
+		if (prev_v_fall < 4.0*accel) { // falling
+			bool on_elevator(0);
+
+			for (auto i = cobjs.begin(); i != cobjs.end(); ++i) {
+				coll_obj const &c(coll_objects.get_cobj(*i));
+				if (c.platform_id < 0) continue; // not a platform
+				platform const &pf(platforms.get_cobj_platform(c));
+				if (!pf.is_elevator()) continue; // not an elevator
+				cube_t test_cube(c);
+				test_cube.union_with_cube(c - 1.1f*pf.get_last_delta() + vector3d(0.0, 0.0, 0.1f*cobj.dz())); // extend with last frame's delta + extra padding
+				if (test_cube.intersects(cobj)) {on_elevator = 1; break;}
+			}
+			if (!on_elevator) {gen_sound(SOUND_OBJ_FALL, center, 0.5, 1.2);} // elevators cause no falling sound when descending
+		}
 		// check for rolling cobjs that can roll downhill
 		if (cobjs.size() != 1) return zero_vector; // can only handle a single supporting cobj
 		if (!is_rolling_cobj(cobj)) return zero_vector; // not rolling
