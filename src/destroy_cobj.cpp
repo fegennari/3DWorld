@@ -31,7 +31,7 @@ unsigned subtract_cube(vector<color_tid_vol> &cts, vector3d &cdir, csg_cube cons
 // **************** Cobj Destroy Code ****************
 
 
-void destroy_coll_objs(point const &pos, float damage, int shooter, int damage_type, float force_radius) {
+void destroy_coll_objs(point const &pos, float damage, int shooter, int damage_type, float force_radius, cube_t const &custom_cube) {
 
 	//RESET_TIME;
 	assert(damage >= 0.0);
@@ -40,8 +40,13 @@ void destroy_coll_objs(point const &pos, float damage, int shooter, int damage_t
 	vector3d cdir;
 	vector<color_tid_vol> cts;
 	int const dmin((damage_type == FIRE) ? (int)EXPLODEABLE : ((damage > 800.0) ? (int)DESTROYABLE : ((damage > 200.0) ? (int)SHATTERABLE : (int)EXPLODEABLE)));
-	csg_cube cube(pos.x, pos.x, pos.y, pos.y, pos.z, pos.z);
-	cube.expand_by(radius);
+	csg_cube cube;
+
+	if (!custom_cube.is_all_zeros()) {cube = custom_cube;} // set from cube
+	else { // set from radius
+		cube.set_from_point(pos);
+		cube.expand_by(radius);
+	}
 	unsigned nrem(subtract_cube(cts, cdir, cube, dmin));
 	if (nrem == 0 || cts.empty()) return; // nothing removed
 	int const xpos(get_xpos(pos.x)), ypos(get_ypos(pos.y));
@@ -129,7 +134,7 @@ void destroy_coll_objs(point const &pos, float damage, int shooter, int damage_t
 			float const time_mult((hotness > 0.0) ? 0.0 : 0.5*rand_float());
 			//vector3d const &orient(tri_fragments ? cts[i].min_thick_dir : zero_vector);
 			gen_fragment(fpos, velocity, size_scale, time_mult, cts[i].color, cts[i].tid, cts[i].tscale, shooter, tri_fragments, hotness);
-		}
+		} // for o
 		if (shattered && tri_fragments && cts[i].maybe_is_glass()) {maybe_is_glass = 1;}
 	} // for i
 	gen_delayed_from_player_sound((maybe_is_glass ? (unsigned)SOUND_GLASS : (unsigned)SOUND_WOOD_CRACK), pos);

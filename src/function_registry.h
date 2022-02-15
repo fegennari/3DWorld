@@ -866,7 +866,7 @@ void shift_waypoints(vector3d const &vd);
 void draw_waypoints();
 
 // function prototypes - destroy_cobj
-void destroy_coll_objs(point const &pos, float damage, int shooter, int damage_type, float force_radius=0.0);
+void destroy_coll_objs(point const &pos, float damage, int shooter, int damage_type, float force_radius=0.0, cube_t const &custom_cube=cube_t());
 void check_falling_cobjs();
 void fire_damage_cobjs(int xpos, int ypos);
 
