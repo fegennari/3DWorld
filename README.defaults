@@ -62,7 +62,7 @@ config_puzzle.txt - Experimental platformer game; Use 'a'/'w'/'s'/'d' to move an
 config_buildings.txt - Procedural buildings test; Try F1 => 'm' => 'V' => 'h' => 'R' => 'w'
 
 config_spheres.txt - 100 Reflective/refractive spheres test scene;
-Use the 'i' key to toggle cube map updates, rotate the camera around, then use 'i' again to return to realtime mode
+Use the 'i' key to toggle cube map updates, wait a few seconds, then use 'i' again to return to realtime mode
 Requires a good GPU and at least 2GB graphics memory
 
 The following config files require loading large models that aren't part of the 3DWorld git repo.
