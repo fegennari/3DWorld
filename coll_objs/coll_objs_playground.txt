@@ -38,7 +38,7 @@ B 1.5 1.525  -7.2 -7.7  -0.05 0.025  D -0.025 0.0 0.025  40 # super high
 S 2.0 -5.85 0.1  0.1 # sphere
 
 # jumping test
-B 0.3 0.5  -4.8 -5.3  0.0 0.4  D -0.3 0.0 0.0 4
+B 0.3 0.5  -4.8 -5.3  0.0 0.4  D -0.35 0.0 0.0 4
 
 # moving platforms
 # platform: enabled [fspeed rspeed sdelay rdelay ext_dist|rot_angle act_dist origin<x,y,z> dir|rot_axis<x,y,z> cont [is_rotation=0 [update_light=0 [destroys=0]]]]
