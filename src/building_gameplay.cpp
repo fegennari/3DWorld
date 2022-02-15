@@ -313,6 +313,7 @@ public:
 		if (!achievements.insert(achievement).second) return 0; // we already have this one
 		std::ostringstream msg;
 		msg << "You have unlocked a new achievement:\n" << achievement << " (" << achievements.size() << "/" << NUM_ACHIEVEMENTS << ")";
+		// Note: can set a yval of -0.005 to not block other text, but there can only be one active onscreen message at once anyway
 		print_text_onscreen(msg.str(), WHITE, 1.25, 3*TICKS_PER_SECOND, 20);
 		return 1;
 	}
