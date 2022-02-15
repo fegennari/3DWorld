@@ -17,6 +17,7 @@ extern bldg_obj_type_t bldg_obj_types[];
 float get_railing_height(room_object_t const &c);
 cylinder_3dw get_railing_cylinder(room_object_t const &c);
 bool sphere_vert_cylin_intersect_with_ends(point &center, float radius, cylinder_3dw const &c, vector3d *cnorm);
+void register_in_closed_bathroom_stall();
 
 
 bool building_t::check_bcube_overlap_xy(building_t const &b, float expand_rel, float expand_abs, vector<point> &points) const {
@@ -453,6 +454,7 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, vec
 			else if (c->type == TYPE_STALL && maybe_inside_room_object(*c, pos, xy_radius)) {
 				// stall is open and intersecting player, or player is inside stall; perform collision test with sides only
 				had_coll |= check_stall_collision(*c, pos, p_last, xy_radius, cnorm);
+				if (!c->is_open() && c->contains_pt(pos)) {register_in_closed_bathroom_stall();}
 			}
 			else if (c->type == TYPE_SHOWER && maybe_inside_room_object(*c, pos, xy_radius)) {
 				// shower is open and intersecting player, or player is inside shower; perform collision test with side only

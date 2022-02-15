@@ -480,6 +480,7 @@ bool building_t::interact_with_object(unsigned obj_ix, point const &int_pos, poi
 		else { // turn on shower water
 			gen_sound_thread_safe_at_player(SOUND_SINK);
 			sound_scale = 0.5;
+			if (!obj.is_open()) {register_achievement("Squeaky Clean");}
 		}
 	}
 	else if (obj.type == TYPE_BOX) {

@@ -302,13 +302,18 @@ struct tape_manager_t {
 
 tape_manager_t tape_manager;
 
+unsigned const NUM_ACHIEVEMENTS = 11;
+
 class achievement_tracker_t {
+	// Rat Food, Top Secret Documents, Mr. Yuck, Zombie Hunter, Royal Flush, Zombie Bashing, One More Drink, Bathroom Reader, TP Artist, Master Lockpick, Squeaky Clean
 	set<string> achievements;
 	// some way to make this persistent, print these out somewhere, or add small screen icons?
 public:
 	bool register_achievement(string const &achievement) {
 		if (!achievements.insert(achievement).second) return 0; // we already have this one
-		print_text_onscreen(("You have unlocked a new achievement:\n" + achievement), WHITE, 1.5, 4*TICKS_PER_SECOND, 20);
+		std::ostringstream msg;
+		msg << "You have unlocked a new achievement:\n" << achievement << " (" << achievements.size() << "/" << NUM_ACHIEVEMENTS << ")";
+		print_text_onscreen(msg.str(), WHITE, 1.25, 3*TICKS_PER_SECOND, 20);
 		return 1;
 	}
 };
@@ -319,6 +324,7 @@ void register_achievement(string const &str) {achievement_tracker.register_achie
 class player_inventory_t { // manages player inventory, health, and other stats
 	vector<carried_item_t> carried; // interactive items the player is currently carrying
 	float cur_value, cur_weight, tot_value, tot_weight, damage_done, best_value, player_health, drunkenness, bladder, bladder_time, prev_player_zval;
+	unsigned num_doors_unlocked;
 	bool prev_in_building, has_key;
 
 	void register_player_death(unsigned sound_id, string const &why) {
@@ -336,6 +342,7 @@ public:
 		cur_value     = cur_weight = tot_value = tot_weight = damage_done = 0.0;
 		drunkenness   = bladder = bladder_time = prev_player_zval = 0.0;
 		player_health = 1.0; // full health
+		num_doors_unlocked = 0; // not saved on death, but maybe should be?
 		prev_in_building = has_key = 0;
 		phone_manager.disable();
 		carried.clear();
@@ -356,7 +363,7 @@ public:
 	bool  player_is_dead () const {return (player_health <= 0.0);}
 	bool  player_has_key () const {return has_key;}
 
-	bool can_open_door(door_t const &door) const {
+	bool can_open_door(door_t const &door) { // non-const because num_doors_unlocked is modified
 		if (door.is_closed_and_locked() && !has_key) {
 			print_text_onscreen("Door is locked", RED, 1.0, 2.0*TICKS_PER_SECOND, 0);
 			gen_sound_thread_safe_at_player(SOUND_CLICK, 1.0, 0.6);
@@ -367,7 +374,15 @@ public:
 			gen_sound_thread_safe_at_player(SOUND_DOOR_CLOSE, 1.0, 0.6);
 			return 0;
 		}
+		if (door.is_closed_and_locked()) {
+			print_text_onscreen("Door unlocked", BLUE, 1.0, 1.8*TICKS_PER_SECOND, 0);
+			++num_doors_unlocked;
+			if (num_doors_unlocked == 5) {register_achievement("Master Lockpick");} // unlock 5 doors
+		}
 		return 1;
+	}
+	void register_in_closed_bathroom_stall() const {
+		if (!carried.empty() && carried.back().type == TYPE_BOOK) {register_achievement("Bathroom Reader");}
 	}
 	void switch_item(bool dir) { // Note: current item is always carried.back()
 		if (carried.size() <= 1) return; // no other item to switch to
@@ -406,7 +421,7 @@ public:
 			text_color = RED;
 			add_camera_filter(colorRGBA(RED, 0.25), 4, -1, CAM_FILT_DAMAGE); // 4 ticks of red damage
 			gen_sound_thread_safe_at_player(SOUND_DOH, 0.5);
-			if (player_health < 0.0) {register_achievement("Mr Yuck");}
+			if (player_is_dead()) {register_achievement("Mr. Yuck");}
 		}
 		if (obj.type == TYPE_KEY) {
 			has_key = 1; // mark as having the key, but it doesn't go into the inventory or contribute to weight or value
@@ -475,7 +490,7 @@ public:
 		std::ostringstream oss;
 		oss << "zombie: value $" << value << " weight " << weight << " lbs";
 		print_text_onscreen(oss.str(), GREEN, 1.0, 4*TICKS_PER_SECOND, 0);
-		register_achievement("Zombie Snatcher");
+		register_achievement("Zombie Hunter");
 		return 1; // success
 	}
 	bool try_use_last_item(room_object_t &obj) {
@@ -495,7 +510,12 @@ public:
 		if (capacity > 0) {
 			max_eq(val, -int(obj.use_count)); // can't go negative
 			obj.use_count += val;
-			if (obj.use_count >= capacity) {remove_last_item(); return 0;} // remove after too many uses
+
+			if (obj.use_count >= capacity) { // remove after too many uses
+				if (obj.type == TYPE_TPROLL) {register_achievement("TP Artist");}
+				remove_last_item();
+				return 0;
+			}
 		}
 		return 1;
 	}
@@ -612,7 +632,12 @@ public:
 		prev_player_zval = player_zval;
 		// handle death events
 		if (player_is_dead() ) {register_player_death(SOUND_SCREAM3, ""); return;} // dead
-		if (drunkenness > 2.0) {register_player_death(SOUND_DROWN,   " of alcohol poisoning"); return;}
+		
+		if (drunkenness > 2.0) {
+			register_player_death(SOUND_DROWN, " of alcohol poisoning");
+			register_achievement("One More Drink");
+			return;
+		}
 		// update state for next frame
 		drunkenness = max(0.0f, (drunkenness - 0.0001f*fticks)); // slowly decrease over time
 		
@@ -643,6 +668,7 @@ player_inventory_t player_inventory;
 float get_player_drunkenness() {return player_inventory.get_drunkenness();}
 float get_player_building_speed_mult() {return player_inventory.get_speed_mult();}
 bool player_can_open_door(door_t const &door) {return player_inventory.can_open_door(door);}
+void register_in_closed_bathroom_stall() {player_inventory.register_in_closed_bathroom_stall();}
 
 void register_building_sound_for_obj(room_object_t const &obj, point const &pos) {
 	float const weight(get_obj_weight(obj)), volume((weight <= 1.0) ? 0.0 : min(1.0f, 0.01f*weight)); // heavier objects make more sound
@@ -1692,6 +1718,8 @@ void water_sound_manager_t::finalize() {
 bool player_has_room_key() {return player_inventory.player_has_key();}
 
 // returns player_dead
+// should we include falling damage? currently the player can't fall down elevator shafts or stairwells,
+// and falling off building roofs doesn't count because gameplay isn't enabled because the player isn't in the building
 bool player_take_damage(float damage_scale, bool &has_key) {
 	static double last_scream_time(0.0), last_hurt_time(0.0);
 
