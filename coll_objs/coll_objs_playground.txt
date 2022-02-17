@@ -14,6 +14,9 @@ P 3  4.0 -6.4 0.0  5.0 -6.4 0.0  4.0 -6.4 1.00  0.5 # 45.0 degrees
 P 3  4.0 -7.2 0.0  5.0 -7.2 0.0  4.0 -7.2 1.30  0.5 # 52.5 degrees
 P 3  4.0 -8.0 0.0  5.0 -8.0 0.0  4.0 -8.0 1.73  0.5 # 60.0 degrees
 
+P 3  1.0 -2.0 0.0   2.0 -2.0 0.0  1.0 -2.0 0.58  0.5 # 30.0 degrees
+P 3  0.0 -2.0 0.0  -1.0 -2.0 0.0  0.0 -2.0 0.58  0.5 # 30.0 degrees
+
 # popup_text text_str R G B size duration(s) X Y Z dist mode (mode: 0=one time, 1=on enter, 2=continuous)
 popup_text "20 Degrees"    1.0 1.0 1.0  1.0 1.5  5.0 -4.0 0.0  0.3 1
 popup_text "30 Degrees"    1.0 1.0 1.0  1.0 1.5  5.0 -4.8 0.0  0.3 1
@@ -73,8 +76,13 @@ z 2.5 -1.6 0.04  0.0 0.0 1.0  0.10 0.04 # vertical torus
 z 2.3 -2.8 0.14  1.0 0.0 0.0  0.10 0.04 # horizontal torus
 z 2.8 -1.4 0.21  0.0 1.0 0.0  0.20 0.01 # thin vertical torus
 z 2.8 -2.4 0.12  0.0 1.0 0.0  0.15 0.01 # thin vertical torus, stuck in the ground (can't actually be pushed)
-#D 0.0 0.0 0.001 100
-#z 1.4 -3.4 0.22  1.0 0.0 0.0  0.2 0.02 # large horizontal torus
+z 0.475 -4.25 0.32  1.0 0.0 0.0  0.3 0.02 # large horizontal torus
+
+# extra cylinders to walk on
+C 0.0 -2.1 0.56  1.0 -2.1 0.56  0.02 0.02 # falls
+movable 0
+C 0.0 -1.9 0.56  1.0 -1.9 0.56  0.02 0.02 # stationary
+movable 1
 r 0.0 1.0 # reset specularity
 
 a 2 # destroyable/shatterable
