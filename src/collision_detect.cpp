@@ -1839,6 +1839,7 @@ bool calc_sphere_z_bounds(point const &sc, float sr, point &pos, float &zt, floa
 
 bool calc_cylin_z_bounds(point const &p1, point const &p2, float r1, float r2, point const &pos, float radius, float &zt, float &zb) {
 
+	assert(p1 != p2);
 	float t, rad;
 	vector3d v1, v2;
 	if (!sphere_int_cylinder_pretest(pos, radius, p1, p2, r1, r2, 0, v1, v2, t, rad)) return 0;
@@ -1849,10 +1850,17 @@ bool calc_cylin_z_bounds(point const &p1, point const &p2, float r1, float r2, p
 		zt = p1.z + r1;
 		zb = p1.z - r1;
 	}
+	else if (p1.x == p2.x && p1.y == p2.y) { // vertical cylinder: we shouldn't get here, but it can be handled anyway
+		zt = max(p1.z, p2.z);
+		zb = min(p1.z, p2.z);
+	}
 	else {
+		bool const dim(fabs(p1.x - p2.x) < fabs(p1.y < p2.y));
+		float const t((pos[dim] - p1[dim])/(p2[dim] - p1[dim]));
+		point const cp(p1 + t*(p2 - p1)); // closest point on the cylinder centerline to pos
 		float const val(fabs((rad/rdist - 1.0)*v2.z));
-		zt = p1.z + val;
-		zb = p1.z - val;
+		zt = cp.z + val;
+		zb = cp.z - val;
 	}
 	return 1;
 }
