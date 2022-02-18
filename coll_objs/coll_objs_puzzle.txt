@@ -324,7 +324,15 @@ metalness 1.0 # metal
 l 0.8 0.4 0.25 0.03 1.0 -1 1 # gold
 r 2.0 40.0  0.9 0.6 0.1 # set gold specular
 #cube_map_ref 1 # slower, and doesn't look quite right
-C -2.06 0.0 1.98  -0.14 0.0 2.48  0.02 0.02
+C -2.06 0.0 1.98  -0.14 0.0 2.48  0.02 0.02 # Note: player can no longer walk on this
 cube_map_ref 0
 r 0.0 1.0 # reset specularity
+
+# add some steps to jump onto
+l 0.8 1.0 1.0 1.0 1.0 tile.png 1
+X normal_maps/tile_NRM.jpg
+y 8.0
+B -2.02 -1.86  -0.1 0.1  2.0 2.02
+D 0.21 0.0 0.058 8
+X none
 

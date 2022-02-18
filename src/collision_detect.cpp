@@ -1365,7 +1365,15 @@ void vert_coll_detector::check_cobj_intersect(int index, bool enable_cfs, bool p
 		break;
 	}
 	case COLL_CYLINDER_ROT:
-		if (sphere_intersect_cylinder_ipt(pos, o_radius, cobj.points[0], cobj.points[1], cobj.radius, cobj.radius2, !(cobj.cp.surfs & 1), obj.pos, norm, 1)) {lcoll = 1;}
+		if (sphere_intersect_cylinder_ipt(pos, o_radius, cobj.points[0], cobj.points[1], cobj.radius, cobj.radius2, !(cobj.cp.surfs & 1), obj.pos, norm, 1)) {
+			lcoll = 1;
+
+			if (player_step && cobj.radius == cobj.radius2 && cobj.points[1].z == cobj.points[0].z) { // horizontal, same radius, maybe step up
+				obj.pos.assign(orig_pos.x, orig_pos.y, (cobj.points[0].z + cobj.radius + o_radius));
+				norm = plus_z;
+				break;
+			}
+		}
 		break;
 
 	case COLL_TORUS:
@@ -1836,9 +1844,16 @@ bool calc_cylin_z_bounds(point const &p1, point const &p2, float r1, float r2, p
 	if (!sphere_int_cylinder_pretest(pos, radius, p1, p2, r1, r2, 0, v1, v2, t, rad)) return 0;
 	float const rdist(v2.mag());
 	if (fabs(rdist) < TOLERANCE) return 0;
-	float const val(fabs((rad/rdist - 1.0)*v2.z));
-	zt = pos.z + val;
-	zb = pos.z - val;
+	
+	if (r1 == r2 && p1.z == p2.z) { // horizontal cylinder that we can walk on
+		zt = p1.z + r1;
+		zb = p1.z - r1;
+	}
+	else {
+		float const val(fabs((rad/rdist - 1.0)*v2.z));
+		zt = p1.z + val;
+		zb = p1.z - val;
+	}
 	return 1;
 }
 
