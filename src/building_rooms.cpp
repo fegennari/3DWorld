@@ -37,18 +37,6 @@ public:
 	}
 };
 
-bool building_t::overlaps_other_room_obj(cube_t const &c, unsigned objs_start) const {
-	assert(has_room_geom());
-	vect_room_object_t &objs(interior->room_geom->objs);
-	assert(objs_start <= objs.size());
-
-	for (auto i = objs.begin()+objs_start; i != objs.end(); ++i) {
-		// Note: light switches don't collide with the player or AI, but they collide with other placed objects
-		if ((!i->no_coll() || i->type == TYPE_SWITCH) && i->intersects(c)) return 1;
-	}
-	return 0;
-}
-
 bool building_t::is_valid_placement_for_room(cube_t const &c, cube_t const &room, vect_cube_t const &blockers, bool inc_open_doors, float room_pad) const {
 	cube_t place_area(room);
 	if (room_pad != 0.0f) {place_area.expand_by_xy(-room_pad);} // shrink by dmin

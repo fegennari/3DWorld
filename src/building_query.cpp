@@ -902,6 +902,30 @@ bool building_t::check_for_wall_ceil_floor_int(point const &p1, point const &p2)
 	return check_line_intersect_doors(p1, p2);
 }
 
+bool building_t::overlaps_other_room_obj(cube_t const &c, unsigned objs_start) const { // Note: collidable objects only, no expanded_objs
+	assert(has_room_geom());
+	vect_room_object_t &objs(interior->room_geom->objs);
+	assert(objs_start <= objs.size());
+
+	for (auto i = objs.begin()+objs_start; i != objs.end(); ++i) {
+		// Note: light switches don't collide with the player or AI, but they collide with other placed objects
+		if ((!i->no_coll() || i->type == TYPE_SWITCH) && i->intersects(c)) return 1;
+	}
+	return 0;
+}
+bool building_t::overlaps_any_placed_obj(cube_t const &c) const { // Note: includes expanded_objs
+	assert(has_room_geom());
+	auto objs_end(interior->room_geom->get_std_objs_end()); // skip buttons; must include stairs and elevators
+
+	for (auto i = interior->room_geom->objs.begin(); i != objs_end; ++i) {
+		if (i->type != TYPE_BLOCKER && i->intersects(c)) return 1; // only exclude blockers; maybe should use rat_coll flag?
+	}
+	for (auto i = interior->room_geom->expanded_objs.begin(); i != interior->room_geom->expanded_objs.end(); ++i) {
+		if (i->type != TYPE_BLOCKER && i->intersects(c)) return 1; // maybe should use rat_coll flag?
+	}
+	return 0;
+}
+
 bool line_int_cube_exp(point const &p1, point const &p2, cube_t const &cube, vector3d const &expand) {
 	cube_t tc(cube);
 	tc.expand_by(expand);

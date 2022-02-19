@@ -1592,7 +1592,7 @@ bool room_object_t::can_use() const { // excludes dynamic objects
 }
 bool room_object_t::can_place_onto() const {
 	return (type == TYPE_TABLE || type == TYPE_DESK || type == TYPE_DRESSER || type == TYPE_NIGHTSTAND || type == TYPE_COUNTER || type == TYPE_KSINK ||
-		type == TYPE_BRSINK || type == TYPE_BED || type == TYPE_BOX || type == TYPE_CRATE || type == TYPE_KEYBOARD || type == TYPE_BOOK);
+		type == TYPE_BRSINK || type == TYPE_BED || type == TYPE_BOX || type == TYPE_CRATE || type == TYPE_KEYBOARD || type == TYPE_BOOK); // TYPE_STAIR?
 }
 
 bool building_t::apply_toilet_paper(point const &pos, vector3d const &dir, float half_width) {

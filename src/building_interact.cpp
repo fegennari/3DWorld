@@ -465,6 +465,13 @@ bool building_t::interact_with_object(unsigned obj_ix, point const &int_pos, poi
 		update_draw_data = 1;
 	}
 	else if (obj.type == TYPE_BOOK) {
+		if (!obj.is_open()) { // check if there's space to open the book
+			room_object_t open_area(obj); // the area that must be clear if we want to open this book
+			open_area.z1() += 0.75*obj.dz(); // shift the bottom up to keep it from intersecting whatever this book is resting on
+			open_area.translate_dim(obj.dim, 1.01*(obj.dir ? -1.0 : 1.0)*obj.get_sz_dim(obj.dim)); // translate more than width to keep it from overlapping obj
+			if (!is_obj_pos_valid(open_area, 0))    return 0; // intersects some part of the building
+			if (overlaps_any_placed_obj(open_area)) return 0;
+		}
 		gen_sound_thread_safe_at_player(SOUND_OBJ_FALL, 0.25);
 		obj.flags       ^= RO_FLAG_OPEN; // toggle open/closed
 		sound_scale      = 0.1; // very little sound
@@ -1013,7 +1020,7 @@ bool building_t::get_zval_for_obj_placement(point const &pos, float radius, floa
 	if (!get_zval_of_floor(pos, radius, zval)) return 0; // if there's no floor, then there's probably no object to place on either
 	if (!has_room_geom()) return 1; // probably can't get here
 	float const z_bias(add_z_bias ? 0.0005*get_window_vspace() : 0.0); // maybe add a tiny bias to prevent z-fighting
-	auto objs_end(interior->room_geom->get_placed_objs_end()); // skip trim/buttons/stairs/elevators
+	auto objs_end(interior->room_geom->objs.end()); // must include stairs and elevators, which means we have to check all objects
 
 	for (auto i = interior->room_geom->objs.begin(); i != objs_end; ++i) {
 		if (!i->can_place_onto()) { // can't place on this object type
