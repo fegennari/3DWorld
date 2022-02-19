@@ -102,7 +102,7 @@ void building_room_geom_t::add_table(room_object_t const &c, float tscale, float
 		for (unsigned d = 0; d < 2; ++d) { // add crossed feet
 			cube_t foot(feet);
 			foot.expand_in_dim(d, -0.27*size[d]);
-			mat.add_cube_to_verts(foot, color, tex_origin, EF_Z1); // skip bottom surface
+			mat.add_cube_to_verts(foot, color, c.get_llc(), EF_Z1); // skip bottom surface
 		}
 	}
 	else { // cube or short table
@@ -207,6 +207,7 @@ void building_room_geom_t::add_dresser_drawers(room_object_t const &c, float tsc
 	colorRGBA const handle_color(apply_light_color(c, GRAY_BLACK));
 	unsigned const door_skip_faces(~get_face_mask(c.dim, !c.dir));
 	vect_room_object_t &objects(get_temp_objects());
+	point const tex_orig(c.get_llc()); // relative to the dresser so that textures don't slide when it's moved
 
 	for (auto i = drawers.begin(); i != drawers.end(); ++i) {
 		float const dwidth(i->get_sz_dim(!c.dim)), handle_shrink(0.5*dwidth - handle_width);
@@ -228,13 +229,13 @@ void building_room_geom_t::add_dresser_drawers(room_object_t const &c, float tsc
 			unsigned const skip_mask_front_back(get_skip_mask_for_xy(c.dim));
 			colorRGBA const blr_color(drawer_color*0.4 + apply_wood_light_color(c)*0.4); // halfway between base and drawer colors, but slightly darker
 			// swap the texture orientation of drawers to make them stand out more
-			drawer_mat.add_cube_to_verts(bottom, blr_color, tex_origin,  skip_mask_front_back, 1);
-			drawer_mat.add_cube_to_verts(left,   blr_color, tex_origin, (skip_mask_front_back | EF_Z1), 1);
-			drawer_mat.add_cube_to_verts(right,  blr_color, tex_origin, (skip_mask_front_back | EF_Z1), 1);
+			drawer_mat.add_cube_to_verts(bottom, blr_color, tex_orig,  skip_mask_front_back, 1);
+			drawer_mat.add_cube_to_verts(left,   blr_color, tex_orig, (skip_mask_front_back | EF_Z1), 1);
+			drawer_mat.add_cube_to_verts(right,  blr_color, tex_orig, (skip_mask_front_back | EF_Z1), 1);
 			// draw inside face of back of drawer;
 			// normally this wouldn't be visible here, but it's easier to drawn than holes for the drawers and it doesn't look as bad as doing nothing;
 			// it would be better to cut a hole into the front of the desk for the drawer to slide into, but that seems to be difficult
-			drawer_mat.add_cube_to_verts(back, drawer_color, tex_origin, get_face_mask(c.dim,c.dir), 1);
+			drawer_mat.add_cube_to_verts(back, drawer_color, tex_orig, get_face_mask(c.dim,c.dir), 1);
 			door_skip_faces_mod = 0; // need to draw interior face
 			cube_t interior(drawer_body);
 			interior.z1() = bottom.z2();
@@ -244,7 +245,7 @@ void building_room_geom_t::add_dresser_drawers(room_object_t const &c, float tsc
 			room_object_t const obj(get_item_in_drawer(c, interior, (i - drawers.begin())));
 			if (obj.type != TYPE_NONE) {objects.push_back(obj);}
 		}
-		drawer_mat.add_cube_to_verts(*i, drawer_color, tex_origin, door_skip_faces_mod, 1); // swap the texture orientation of drawers to make them stand out more
+		drawer_mat.add_cube_to_verts(*i, drawer_color, tex_orig, door_skip_faces_mod, 1); // swap the texture orientation of drawers to make them stand out more
 		// add door handle
 		cube_t handle(*i);
 		handle.d[c.dim][!c.dir]  = i->d[c.dim][c.dir];
@@ -253,7 +254,7 @@ void building_room_geom_t::add_dresser_drawers(room_object_t const &c, float tsc
 		handle.d[!c.dim][1] = i->d[!c.dim][1] - handle_shrink;
 		handle.z1() = i->z1() + 0.8*i->dz();
 		handle.z2() = handle.z1() + 0.1*i->dz();
-		handle_mat.add_cube_to_verts(handle, handle_color, tex_origin, door_skip_faces); // same skip_faces
+		handle_mat.add_cube_to_verts(handle, handle_color, tex_orig, door_skip_faces); // same skip_faces
 	} // for i
 	add_small_static_objs_to_verts(objects); // add any objects that were found in open drawers; must be small static objects
 }
@@ -1141,7 +1142,7 @@ void building_room_geom_t::add_elevator(room_object_t const &c, float tscale, fl
 	floor.expand_by_xy(-0.5f*thickness);
 	ceil .expand_by_xy(-0.5f*thickness);
 	back.d[c.dim][c.dir] = c.d[c.dim][!c.dir] + signed_thickness;
-	vector3d const tex_origin(c.get_llc());
+	point const tex_origin(c.get_llc());
 	unsigned const front_face_mask(get_face_mask(c.dim, c.dir)), floor_ceil_face_mask(front_face_mask & (EF_X12 | EF_Y12)); // +Z faces
 	tid_nm_pair_t const paneling(get_tex_auto_nm(PANELING_TEX, 2.0f*tscale));
 	get_material(get_tex_auto_nm(TILE_TEX, tscale), 1, 1).add_cube_to_verts(floor, WHITE, tex_origin, floor_ceil_face_mask);
@@ -1264,7 +1265,7 @@ void building_room_geom_t::add_picture(room_object_t const &c) { // also whitebo
 	}
 	unsigned skip_faces(get_face_mask(c.dim, c.dir)); // only the face oriented outward
 	bool const mirror_x(!whiteboard && !(c.dim ^ c.dir));
-	vector3d const tex_origin(c.get_llc());
+	point const tex_origin(c.get_llc());
 	get_untextured_material(); // ensure frame material is valid
 	rgeom_mat_t &picture_mat(get_material(tid_nm_pair_t(picture_tid, 0.0)));
 	unsigned const picture_qv_start(picture_mat.quad_verts.size());
@@ -1673,19 +1674,20 @@ void building_room_geom_t::add_wine_rack(room_object_t const &c, bool inc_lg, bo
 		rgeom_mat_t &wood_mat(get_wood_material(tscale));
 		cube_t frame(c);
 		frame.d[c.dim][c.dir] += (c.dir ? -1.0 : 1.0)*0.09*c.get_sz_dim(c.dim); // slightly less depth so that bottles stick out a bit
+		point const tex_orig(c.get_llc()); // relative to the wine rack so that textures don't slide when it's moved
 
 		// create rows and columns of cubbies by intersecting horizontal and vertical cubes
 		for (unsigned i = 0; i <= num_rows; ++i) { // rows/horizontal
 			cube_t hc(frame);
 			hc.z1() = c .z1() + row_step*i;
 			hc.z2() = hc.z1() + shelf_thick;
-			wood_mat.add_cube_to_verts(hc, color, tex_origin, 0); // draw all faces, even the back, in case it's visible through the window
+			wood_mat.add_cube_to_verts(hc, color, tex_orig, 0); // draw all faces, even the back, in case it's visible through the window
 		}
 		for (unsigned i = 0; i <= num_cols; ++i) { // columns/vertical
 			cube_t vc(frame);
 			vc.d[!c.dim][0] = c .d[!c.dim][0] + col_step*i;
 			vc.d[!c.dim][1] = vc.d[!c.dim][0] + shelf_thick;
-			wood_mat.add_cube_to_verts(vc, color, tex_origin, 0); // draw all faces, even the back, in case it's visible through the window
+			wood_mat.add_cube_to_verts(vc, color, tex_orig, 0); // draw all faces, even the back, in case it's visible through the window
 		}
 	}
 	if (inc_sm && !(c.flags & RO_FLAG_EXPANDED)) { // add wine bottles if not expanded
@@ -1710,7 +1712,7 @@ void building_room_geom_t::add_desk(room_object_t const &c, float tscale, bool i
 	float const height(c.dz());
 	cube_t top(c);
 	top.z1() += 0.85*height;
-	vector3d const tex_origin(c.get_llc());
+	point const tex_origin(c.get_llc());
 	colorRGBA const color(apply_wood_light_color(c));
 
 	if (inc_lg) {
@@ -1744,7 +1746,7 @@ void building_room_geom_t::add_reception_desk(room_object_t const &c, float tsca
 	colorRGBA const color(apply_light_color(c));
 	// wood paneling sides
 	rgeom_mat_t &side_mat(get_material(tid_nm_pair_t(PANELING_TEX, get_paneling_nm_tid(), 4.0*tscale, 4.0*tscale), 1)); // with shadows
-	vector3d const tex_origin(c.get_llc());
+	point const tex_origin(c.get_llc());
 	unsigned const lr_dim_mask(~get_face_mask(c.dim, c.dir));
 	cube_t base(c);
 	base.z2() = top_z1;
@@ -1774,7 +1776,7 @@ void building_room_geom_t::add_reception_desk(room_object_t const &c, float tsca
 	top_mat.add_cube_to_verts(top_right, color, tex_origin, lr_dim_mask);
 }
 
-void add_pillow(cube_t const &c, rgeom_mat_t &mat, colorRGBA const &color, vector3d const &tex_origin) {
+void add_pillow(cube_t const &c, rgeom_mat_t &mat, colorRGBA const &color, point const &tex_origin) {
 	unsigned const ndiv = 24; // number of quads in X and Y
 	float const ndiv_inv(1.0/ndiv), dx_inv(1.0/c.dx()), dy_inv(1.0/c.dy());
 	color_wrapper cw(color);
@@ -1852,7 +1854,7 @@ void building_room_geom_t::add_bed(room_object_t const &c, bool inc_lg, bool inc
 	cube_t const &frame(cubes[0]), &head(cubes[1]), &foot(cubes[2]), &mattress(cubes[3]), &pillow(cubes[4]), &legs_bcube(cubes[5]);
 	colorRGBA const sheet_color(apply_light_color(c));
 	tid_nm_pair_t const sheet_tex(c.get_sheet_tid(), tscale);
-	vector3d const tex_origin(c.get_llc());
+	point const tex_origin(c.get_llc());
 
 	if (inc_lg) {
 		bool const no_mattress(c.flags & RO_FLAG_TAKEN3);
@@ -2068,7 +2070,6 @@ void building_room_geom_t::add_laundry_basket(room_object_t const &c) {
 void building_room_geom_t::add_br_stall(room_object_t const &c) {
 	rgeom_mat_t &mat(get_untextured_material(1));
 	colorRGBA const color(apply_light_color(c));
-	point const tex_origin(c.get_llc()); // doesn't really need to be set, since stall is untextured
 
 	if (c.shape == SHAPE_SHORT) { // wall separating urinals, drawn as a single cube
 		mat.add_cube_to_verts_untextured(c, color, ~get_face_mask(c.dim, c.dir));
