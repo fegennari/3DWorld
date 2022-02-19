@@ -738,7 +738,6 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		}
 		float const bwidth = 0.25; // as close to 180 degree FOV as we can get without shadow clipping
 		colorRGBA color;
-		bool force_smap_update(0);
 		unsigned shadow_caster_hash(0);
 
 		if (is_lamp) { // no light refinement, since lamps are not aligned between floors; refinement doesn't help as much with houses anyway
@@ -787,14 +786,19 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		if (!is_rot_cube_visible(clipped_bc, xlate)) continue; // VFC - post clip
 		if ((display_mode & 0x08) && !clipped_bc.contains_pt(camera_rot) && check_obj_occluded(clipped_bc, camera_bs, oc, 0)) continue; // occlusion culling
 		dl_sources.emplace_back(light_radius, lpos_rot, lpos_rot, color, 0, -plus_z, bwidth); // points down
+		bool force_smap_update(0);
 
 		// check for dynamic shadows
-		if (camera_surf_collide && camera_in_building && (is_lamp || (lpos_rot.z > camera_bs.z && (camera_on_stairs || lpos_rot.z < (camera_bs.z + window_vspacing)))) &&
-			clipped_bc.contains_pt(camera_rot) && dist_less_than(lpos_rot, camera_bs, dshadow_radius))
-		{ // player shadow; includes lamps (with no zval test)
-			force_smap_update = 1; // always update, even if stationary; required to get correct shadows when player stands still and takes/moves objects
+		if (camera_surf_collide && camera_in_building && clipped_bc.contains_pt(camera_rot) && dist_less_than(lpos_rot, camera_bs, dshadow_radius)) {
+			// must update shadow maps for the room above if the player is on the stairs or in the same room when there are stairs
+			bool const check_floor_above(camera_on_stairs || (camera_by_stairs && camera_room == i->room_id));
+
+			if (is_lamp || (lpos_rot.z > camera_bs.z && (check_floor_above || lpos_rot.z < (camera_bs.z + window_vspacing)))) {
+				// player shadow; includes lamps (with no zval test)
+				force_smap_update = 1; // always update, even if stationary; required to get correct shadows when player stands still and takes/moves objects
+			}
 		}
-		else if (camera_near_building) {
+		if (!force_smap_update && camera_near_building) {
 			if (building_action_key) {
 				force_smap_update = 1; // toggling a door state or interacting with objects will generally invalidate shadows in the building for that frame
 			}
