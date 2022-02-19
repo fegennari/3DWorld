@@ -1258,7 +1258,10 @@ bool building_t::add_kitchen_objs(rand_gen_t rgen, room_t const &room, float zva
 		set_cube_zvals(cabinet_area, zval, (zval + vspace - floor_thickness));
 		static vect_cube_t blockers;
 		int const table_blocker_ix(gather_room_placement_blockers(cabinet_area, objs_start, blockers, 1, 1)); // inc_open_doors=1, ignore_chairs=1
-		bool is_sink(1), placed_mwave(0);
+		bool const have_toaster(building_obj_model_loader.is_model_valid(OBJ_MODEL_TOASTER));
+		vector3d const toaster_sz(have_toaster ? building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_TOASTER) : zero_vector); // L, D, H
+		bool is_sink(1), placed_mwave(0), placed_toaster(0);
+		cube_t mwave, toaster;
 
 		for (unsigned n = 0; n < 50; ++n) { // 50 attempts
 			bool const dim(rgen.rand_bool()), dir(rgen.rand_bool()); // choose a random wall
@@ -1320,10 +1323,10 @@ bool building_t::add_kitchen_objs(rand_gen_t rgen, room_t const &room, float zva
 			}
 			blockers.push_back(c); // add to blockers so that later counters don't intersect this one
 
-			if (!is_sink && !placed_mwave && c.get_sz_dim(!dim) > 0.5*vspace && rgen.rand_bool()) { // place a microwave on a counter 50% of the time
+			// place a microwave on a counter 50% of the time
+			if (!is_sink && !placed_mwave && c.get_sz_dim(!dim) > 0.5*vspace && rgen.rand_bool()) {
 				float const mheight(rgen.rand_uniform(1.0, 1.2)*0.14*vspace), mwidth(1.7*mheight), mdepth(1.2*mheight); // fixed AR=1.7 to match the texture
 				float const pos(rgen.rand_uniform((c.d[!dim][0] + 0.6*mwidth), (c.d[!dim][1] - 0.6*mwidth)));
-				cube_t mwave;
 				set_cube_zvals(mwave, c.z2(), c.z2()+mheight);
 				set_wall_width(mwave, pos, 0.5*mwidth, !dim);
 				mwave.d[dim][ dir] = wall_pos + dir_sign*0.05*mdepth;
@@ -1331,6 +1334,27 @@ bool building_t::add_kitchen_objs(rand_gen_t rgen, room_t const &room, float zva
 				objs.emplace_back(mwave, TYPE_MWAVE, room_id, dim, !dir, RO_FLAG_NOCOLL, tot_light_amt);
 				objs[cabinet_id].flags |= RO_FLAG_ADJ_TOP; // flag as having a microwave so that we don't add a book or bottle that could overlap it
 				placed_mwave = 1;
+			}
+			// place a toaster on a counter 90% of the time
+			if (!is_sink && !placed_toaster && have_toaster && rgen.rand_float() < 0.9) {
+				float const theight(0.09*vspace), twidth(theight*toaster_sz.x/toaster_sz.z), tdepth(theight*toaster_sz.y/toaster_sz.z);
+
+				if (c.get_sz_dim(!dim) > 1.25*twidth && c.get_sz_dim(dim) > 1.25*tdepth) { // add if it fits
+					float const pos_w(rgen.rand_uniform((c.d[!dim][0] + 0.6*twidth), (c.d[!dim][1] - 0.6*twidth)));
+					float const pos_d(rgen.rand_uniform((c.d[ dim][0] + 0.6*tdepth), (c.d[ dim][1] - 0.6*tdepth)));
+					set_cube_zvals(toaster, c.z2(), c.z2()+theight);
+					set_wall_width(toaster, pos_w, 0.5*twidth, !dim);
+					set_wall_width(toaster, pos_d, 0.5*tdepth,  dim);
+
+					if (!placed_mwave || !mwave.intersects(toaster)) { // don't overlap the microwave
+						unsigned const NUM_TOASTER_COLORS = 7;
+						colorRGBA const toaster_colors[NUM_TOASTER_COLORS] = {WHITE, LT_GRAY, GRAY, DK_GRAY, GRAY_BLACK, colorRGBA(0.0, 0.0, 0.5), colorRGBA(0.5, 0.0, 0.0)};
+						objs.emplace_back(toaster, TYPE_TOASTER, room_id, !dim, rgen.rand_bool(), RO_FLAG_NOCOLL, tot_light_amt); // random dir
+						objs.back().color = toaster_colors[rgen.rand()%NUM_TOASTER_COLORS];
+						objs[cabinet_id].flags |= RO_FLAG_ADJ_TOP; // flag as having a toaster so that we don't add a book or bottle that could overlap it
+						placed_toaster = 1;
+					}
+				}
 			}
 			is_sink = 0; // sink is in first placed counter only
 		} // for n
