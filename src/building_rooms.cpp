@@ -1974,9 +1974,10 @@ void building_t::add_light_switches_to_room(rand_gen_t rgen, room_t const &room,
 	}
 	for (unsigned ei = 0; ei < 2; ++ei) { // exterior, interior
 		vect_door_stack_t const &cands(ei ? doorways : ext_doors);
+		unsigned const max_ls(is_house ? 2 : 1); // place up to 2 light switches in this room if it's a house, otherwise place only 1
 		unsigned num_ls(0);
 
-		for (auto i = cands.begin(); i != cands.end() && num_ls < 2; ++i) { // place up to 2 light switches in this room
+		for (auto i = cands.begin(); i != cands.end() && num_ls < max_ls; ++i) {
 			// check for windows if (real_num_parts > 1)? is it actually possible for doors to be within far_spacing of a window?
 			bool const dim(i->dim), dir(i->get_center_dim(dim) > room.get_center_dim(dim));
 			float const door_width(i->get_width()), near_spacing(0.25*door_width), far_spacing(1.25*door_width); // off to the side of the door when open
@@ -2374,7 +2375,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 					// is there enough clearance between shelves and a car parked in the garage? there seems to be in all the cases I've seen
 					add_storage_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs.size(), is_basement);
 				}
-				if (is_house && has_light) {add_light_switches_to_room(rgen, *r, room_center.z, room_id, objs.size(), is_ground_floor);} // shed, garage, or hallway
+				if (has_light) {add_light_switches_to_room(rgen, *r, room_center.z, room_id, objs.size(), is_ground_floor);} // shed, garage, or hallway
 
 				if (is_house && r->is_hallway) { // allow pictures, rugs, and light switches in the hallways of houses
 					hang_pictures_in_room(rgen, *r, room_center.z, room_id, tot_light_amt, objs.size(), is_basement);
