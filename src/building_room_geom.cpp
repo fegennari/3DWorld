@@ -2503,6 +2503,13 @@ void building_room_geom_t::add_switch(room_object_t const &c) { // light switch,
 	rotate_verts(mat.quad_verts, rot_axis, 0.015*PI, plate.get_cube_center(), qv_start); // rotate rocker slightly about base plate center; could be optimized by caching
 }
 
+void building_room_geom_t::add_outlet(room_object_t const &c) {
+	unsigned const front_face_mask(get_face_mask(c.dim, !c.dir)); // skip face that's against the wall
+	rgeom_mat_t &front_mat(get_material(tid_nm_pair_t(get_texture_by_name("interiors/outlet1.jpg"), 0.0, 0), 0, 0, 1));
+	front_mat.add_cube_to_verts(c, c.color, zero_vector, front_face_mask, !c.dim); // textured front face; always fully lit to match wall
+	//get_untextured_material(0, 0, 1).add_cube_to_verts(c, c.color, zero_vector, get_skip_mask_for_xy(c.dim)); // unshadowed, small, skip front/back face
+}
+
 void building_room_geom_t::add_plate(room_object_t const &c) { // is_small=1
 	// select plate texture based on room and a property of this building; plates in the same room will match
 	unsigned const NUM_PLATE_TEXTURES = 6;

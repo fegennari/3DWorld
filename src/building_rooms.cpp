@@ -525,7 +525,7 @@ bool building_t::add_bedroom_objs(rand_gen_t rgen, room_t const &room, vect_cube
 	bool const first_dim(rgen.rand_bool());
 	cube_t const part(get_part_for_room(room));
 	bool is_ext_wall[2][2] = {0}; // precompute which walls are exterior, {dim}x{dir}
-	for (unsigned d = 0; d < 4; ++d) {is_ext_wall[d>>1][d&1] = (classify_room_wall(room, zval, (d>>1), (d&1), 0) == ROOM_WALL_EXT);} // check is_basement?
+	for (unsigned d = 0; d < 4; ++d) {is_ext_wall[d>>1][d&1] = (classify_room_wall(room, zval, (d>>1), (d&1), 0) == ROOM_WALL_EXT);} // check is_basement? are bedrooms in the basement?
 	bool placed_closet(0);
 	unsigned closet_obj_id(0);
 
@@ -1970,10 +1970,11 @@ void building_t::add_boxes_to_room(rand_gen_t rgen, room_t const &room, float zv
 }
 
 void building_t::add_light_switches_to_room(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned objs_start, bool is_ground_floor) {
-	vect_door_stack_t &doorways(get_doorways_for_room(room, zval)); // place light switch next to a door
 	float const floor_spacing(get_window_vspace()), wall_thickness(get_wall_thickness()), switch_thickness(0.2*wall_thickness);
 	float const switch_height(1.8*wall_thickness), switch_hwidth(0.5*wall_thickness), min_wall_spacing(switch_hwidth + 2.0*wall_thickness);
 	cube_t const room_bounds(get_walkable_room_bounds(room));
+	if (min(room_bounds.dx(), room_bounds.dy()) < 8.0*switch_hwidth) return; // room is too small; shouldn't happen
+	vect_door_stack_t &doorways(get_doorways_for_room(room, zval)); // place light switch next to a door
 	if (doorways.size() > 1 && rgen.rand_bool()) {std::reverse(doorways.begin(), doorways.end());} // random permute if more than 2 doorways?
 	vect_room_object_t &objs(interior->room_geom->objs);
 	unsigned const objs_end(objs.size());
@@ -2015,14 +2016,14 @@ void building_t::add_light_switches_to_room(rand_gen_t rgen, room_t const &room,
 
 				for (unsigned nf = 0; nf < 2; ++nf) { // {near, far}
 					float const spacing(nf ? far_spacing : near_spacing), wall_pos(i->d[!dim][side] + (side ? 1.0 : -1.0)*spacing);
-					if (wall_pos < room_bounds.d[!dim][0] + min_wall_spacing || wall_pos > room_bounds.d[!dim][1] - min_wall_spacing) continue; // to close to the adjacent wall
+					if (wall_pos < room_bounds.d[!dim][0] + min_wall_spacing || wall_pos > room_bounds.d[!dim][1] - min_wall_spacing) continue; // too close to the adjacent wall
 					set_wall_width(c, wall_pos, switch_hwidth, !dim);
 					cube_t c_test(c);
 					c_test.d[dim][!dir] += (dir ? -1.0 : 1.0)*wall_thickness; // expand out more so that it's guaranteed to intersect appliances placed near the wall
 					if (overlaps_other_room_obj(c_test, objs_start))        continue;
 					if (is_cube_close_to_doorway(c, room, 0.0, (ei==1), 1)) continue; // inc_open=1/check_open_dir=1 for inside, to avoid placing light switch behind an open door
 					if (interior->is_blocked_by_stairs_or_elevator(c))      continue; // check stairs and elevators
-					objs.emplace_back(c, TYPE_SWITCH, room_id, dim, dir, RO_FLAG_NOCOLL, 1.0); // dim/dir matches wall
+					objs.emplace_back(c, TYPE_SWITCH, room_id, dim, dir, RO_FLAG_NOCOLL, 1.0); // dim/dir matches wall; fully lit
 					done = 1; // done, only need to add one for this door
 					++num_ls;
 					break;
@@ -2048,9 +2049,59 @@ void building_t::add_light_switches_to_room(rand_gen_t rgen, room_t const &room,
 		c.d[dim][!dir] = c.d[dim][dir] + (dir ? -1.0 : 1.0)*switch_thickness; // expand out a bit
 		set_wall_width(c, target_wall.get_center_dim(!dim), switch_hwidth, !dim);
 		// since nothing is placed against the exterior wall of the closet near the door (to avoid blocking it), we don't need to check for collisions with room objects
-		objs.emplace_back(c, TYPE_SWITCH, room_id, dim, dir, (RO_FLAG_NOCOLL | RO_FLAG_IN_CLOSET), 1.0); // dim/dir matches wall; flag for closet
+		objs.emplace_back(c, TYPE_SWITCH, room_id, dim, dir, (RO_FLAG_NOCOLL | RO_FLAG_IN_CLOSET), 1.0); // dim/dir matches wall; fully lit; flag for closet
 		//break; // there can be only one closet per room; done (unless I add multiple closets later?)
 	} // for i
+}
+
+void building_t::add_outlets_to_room(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned objs_start, bool is_ground_floor, bool is_basement) {
+	float const floor_spacing(get_window_vspace()), wall_thickness(get_wall_thickness());
+	float const plate_thickness(0.02*wall_thickness), plate_height(1.8*wall_thickness), plate_hwidth(0.5*wall_thickness), min_wall_spacing(4.0*plate_hwidth);
+	cube_t const room_bounds(get_walkable_room_bounds(room));
+	if (min(room_bounds.dx(), room_bounds.dy()) < 3.0*min_wall_spacing) return; // room is too small; shouldn't happen
+	vect_door_stack_t const &doorways(get_doorways_for_room(room, zval));
+	cube_t c;
+	c.z1() = zval + 0.04*floor_spacing + 0.4*plate_height; // same for every outlet
+	c.z2() = c.z1() + plate_height;
+
+	// try to add an outlet to each wall, down near the floor so that they don't intersect objects such as pictures
+	for (unsigned wall = 0; wall < 4; ++wall) {
+		bool const dim(wall >> 1), dir(wall & 1);
+		float const wall_pos(rgen.rand_uniform((room_bounds.d[!dim][0] + min_wall_spacing), (room_bounds.d[!dim][1] - min_wall_spacing)));
+		c.d[dim][ dir] = room_bounds.d[dim][dir]; // flush with wall
+		c.d[dim][!dir] = c.d[dim][dir] + (dir ? -1.0 : 1.0)*plate_thickness; // expand out a bit
+		set_wall_width(c, wall_pos, plate_hwidth, !dim);
+
+		if (!is_basement && has_windows() && classify_room_wall(room, zval, dim, dir, 0) == ROOM_WALL_EXT) {
+#if 1
+			continue; // we need to take the blinds into account; for now, don't place outlets on exterior walls
+#else
+			cube_t const part(get_part_for_room(room));
+			float const window_hspacing(get_hspacing_for_part(part, dim));
+			if (is_val_inside_window(part, !dim, wall_pos, window_hspacing, get_window_h_border())) continue; // check for window intersection
+#endif
+		}
+		cube_t c_exp(c);
+		c_exp.expand_by_xy(0.5*wall_thickness);
+		if (overlaps_other_room_obj(c_exp, objs_start))        continue; // check for things like closets
+		if (interior->is_blocked_by_stairs_or_elevator(c_exp)) continue; // check stairs and elevators
+		bool bad_place(0);
+
+		if (is_ground_floor) { // handle exterior doors
+			for (auto d = doors.begin(); d != doors.end(); ++d) {
+				if (!d->is_exterior_door() || d->type == tquad_with_ix_t::TYPE_RDOOR) continue;
+				cube_t bc(d->get_bcube());
+				bc.expand_in_dim(dim, wall_thickness); // make sure it's nonzero area
+				if (bc.intersects(c_exp)) {bad_place = 1; break;}
+			}
+			if (bad_place) continue;
+		}
+		for (auto const &d : doorways) {
+			if (d.get_true_bcube().intersects(c_exp)) {bad_place = 1; break;}
+		}
+		if (bad_place) continue;
+		interior->room_geom->objs.emplace_back(c, TYPE_OUTLET, room_id, dim, dir, RO_FLAG_NOCOLL, 1.0); // dim/dir matches wall; fully lit
+	} // for wall
 }
 
 bool building_t::place_eating_items_on_table(rand_gen_t &rgen, unsigned table_obj_id) {
@@ -2399,6 +2450,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 					// is there enough clearance between shelves and a car parked in the garage? there seems to be in all the cases I've seen
 					add_storage_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs.size(), is_basement);
 				}
+				if (is_house ) {add_outlets_to_room(rgen, *r, room_center.z, room_id, objs.size(), is_ground_floor, is_basement);} // only skip office building hallways
 				if (has_light) {add_light_switches_to_room(rgen, *r, room_center.z, room_id, objs.size(), is_ground_floor);} // shed, garage, or hallway
 
 				if (is_house && r->is_hallway) { // allow pictures, rugs, and light switches in the hallways of houses
@@ -2546,6 +2598,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 				unsigned const num(is_house ? (rgen.rand() % ((is_living || is_dining) ? 3 : 2)) : ((rgen.rand()%((f == 0) ? 4 : 10)) == 0));
 				if (num > 0) {add_plants_to_room(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, num);}
 			}
+			add_outlets_to_room(rgen, *r, room_center.z, room_id, objs_start, is_ground_floor, is_basement);
 			if (has_light) {add_light_switches_to_room(rgen, *r, room_center.z, room_id, objs_start, is_ground_floor);} // add a light switch if this room has a light
 			// pictures and whiteboards must not be placed behind anything, excluding trashcans; so we add them here
 			bool const can_hang((is_house || !(is_bathroom || is_kitchen || no_whiteboard)) && !is_storage); // no whiteboards in office bathrooms or kitchens
