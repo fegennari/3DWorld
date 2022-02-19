@@ -2061,7 +2061,7 @@ void building_t::add_outlets_to_room(rand_gen_t rgen, room_t const &room, float 
 	if (min(room_bounds.dx(), room_bounds.dy()) < 3.0*min_wall_spacing) return; // room is too small; shouldn't happen
 	vect_door_stack_t const &doorways(get_doorways_for_room(room, zval));
 	cube_t c;
-	c.z1() = zval + 0.04*floor_spacing + 0.4*plate_height; // same for every outlet
+	c.z1() = zval + get_trim_height() + 0.4*plate_height; // wall trim height + some extra padding; same for every outlet
 	c.z2() = c.z1() + plate_height;
 
 	// try to add an outlet to each wall, down near the floor so that they don't intersect objects such as pictures
@@ -2072,18 +2072,18 @@ void building_t::add_outlets_to_room(rand_gen_t rgen, room_t const &room, float 
 		c.d[dim][!dir] = c.d[dim][dir] + (dir ? -1.0 : 1.0)*plate_thickness; // expand out a bit
 		set_wall_width(c, wall_pos, plate_hwidth, !dim);
 
-		if (!is_basement && has_windows() && classify_room_wall(room, zval, dim, dir, 0) == ROOM_WALL_EXT) {
-#if 1
-			continue; // we need to take the blinds into account; for now, don't place outlets on exterior walls
-#else
+		if (!is_basement && has_windows() && classify_room_wall(room, zval, dim, dir, 0) == ROOM_WALL_EXT) { // check for window intersection
 			cube_t const part(get_part_for_room(room));
-			float const window_hspacing(get_hspacing_for_part(part, dim));
-			if (is_val_inside_window(part, !dim, wall_pos, window_hspacing, get_window_h_border())) continue; // check for window intersection
-#endif
+			float const window_hspacing(get_hspacing_for_part(part, !dim)), window_h_border(get_window_h_border());
+			// expand by the width of the window trim, plus some padded wall plate width, then check to the left and right;
+			// 2*xy_expand should be smaller than a window so we can't have a window fit in between the left and right sides
+			float const xy_expand(get_trim_thickness() + 1.2f*plate_hwidth);
+			if (is_val_inside_window(part, !dim, (wall_pos - xy_expand), window_hspacing, window_h_border) ||
+				is_val_inside_window(part, !dim, (wall_pos + xy_expand), window_hspacing, window_h_border)) continue;
 		}
 		cube_t c_exp(c);
 		c_exp.expand_by_xy(0.5*wall_thickness);
-		if (overlaps_other_room_obj(c_exp, objs_start))        continue; // check for things like closets
+		if (overlaps_other_room_obj(c_exp, objs_start, 1))     continue; // check for things like closets; check_all=1 to include blinds
 		if (interior->is_blocked_by_stairs_or_elevator(c_exp)) continue; // check stairs and elevators
 		bool bad_place(0);
 
@@ -2695,7 +2695,7 @@ void building_t::add_wall_and_door_trim() { // and window trim
 	if (!is_cube()) return; // not yet supported for non-cube buildings
 	//highres_timer_t timer("Add Wall And Door Trim");
 	float const window_vspacing(get_window_vspace()), floor_thickness(get_floor_thickness()), fc_thick(0.5*floor_thickness), wall_thickness(get_wall_thickness());
-	float const trim_height(0.04*window_vspacing), trim_thickness(get_trim_thickness()), expand_val(2.0*trim_thickness);
+	float const trim_height(get_trim_height()), trim_thickness(get_trim_thickness()), expand_val(2.0*trim_thickness);
 	float const door_trim_exp(2.0*trim_thickness + 0.5*wall_thickness), door_trim_width(0.5*wall_thickness), floor_to_ceil_height(window_vspacing - floor_thickness);
 	float const trim_toler(0.1*trim_thickness); // required to handle wall intersections that were calculated with FP math and may misalign due to FP rounding error
 	float const ext_wall_toler(0.01*trim_thickness); // required to prevent z-fighting when AA is disabled

@@ -902,14 +902,15 @@ bool building_t::check_for_wall_ceil_floor_int(point const &p1, point const &p2)
 	return check_line_intersect_doors(p1, p2);
 }
 
-bool building_t::overlaps_other_room_obj(cube_t const &c, unsigned objs_start) const { // Note: collidable objects only, no expanded_objs
+bool building_t::overlaps_other_room_obj(cube_t const &c, unsigned objs_start, bool check_all) const { // Note: no expanded_objs
 	assert(has_room_geom());
 	vect_room_object_t &objs(interior->room_geom->objs);
 	assert(objs_start <= objs.size());
 
 	for (auto i = objs.begin()+objs_start; i != objs.end(); ++i) {
-		// Note: light switches don't collide with the player or AI, but they collide with other placed objects
-		if ((!i->no_coll() || i->type == TYPE_SWITCH) && i->intersects(c)) return 1;
+		// Note: light switches don't collide with the player or AI, but they collide with other placed objects to avoid blocking them;
+		// however, it's okay to block outlets with furniture
+		if ((check_all || !i->no_coll() || i->type == TYPE_SWITCH) && i->type != TYPE_BLOCKER && i->intersects(c)) return 1;
 	}
 	return 0;
 }

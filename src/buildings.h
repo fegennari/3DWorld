@@ -1005,6 +1005,7 @@ struct building_t : public building_geom_t {
 	float get_fc_thickness   () const {return 0.5*get_floor_thickness();} // floor/ceiling thickness
 	float get_wall_thickness () const {return WALL_THICK_VAL*get_window_vspace();}
 	float get_trim_thickness () const {return 0.1*get_wall_thickness();}
+	float get_trim_height    () const {return 0.04*get_window_vspace();}
 	float get_door_height    () const {return 0.95f*(get_window_vspace() - get_floor_thickness());} // set height based on window spacing, 95% of ceiling height (may be too large)
 	float get_doorway_width  () const;
 	float get_ground_floor_z_thresh() const {return (ground_floor_z1 + 0.25f*get_window_vspace());} // for rats
@@ -1199,7 +1200,7 @@ private:
 	unsigned add_room(cube_t const &room, unsigned part_id, unsigned num_lights, bool is_hallway, bool is_office, bool is_sec_bldg=0);
 	void add_or_extend_elevator(elevator_t const &elevator, bool add);
 	void remove_intersecting_roof_cubes(cube_t const &c);
-	bool overlaps_other_room_obj(cube_t const &c, unsigned objs_start=0) const;
+	bool overlaps_other_room_obj(cube_t const &c, unsigned objs_start=0, bool check_all=0) const;
 	bool overlaps_any_placed_obj(cube_t const &c) const;
 	int classify_room_wall(room_t const &room, float zval, bool dim, bool dir, bool ret_sep_if_part_int_part_ext) const;
 	unsigned count_ext_walls_for_room(room_t const &room, float zval) const;
