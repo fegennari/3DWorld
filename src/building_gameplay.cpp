@@ -789,10 +789,11 @@ bool is_obj_in_or_on_obj(room_object_t const &parent, room_object_t const &child
 	if (parent.type == TYPE_WINE_RACK && parent.contains_pt(child.get_cube_center()))     return 1; // check for wine bottles left in wine rack
 	if (fabs(child.z1() - parent.z2()) < 0.05*parent.dz() && child.intersects_xy(parent)) return 1; // zval test
 	if (parent.type == TYPE_BOX && parent.is_open() && parent.contains_cube(child))       return 1; // open box with an object inside
+	if (parent.type == TYPE_BED && child.z1() <= parent.z2() && child.z1() > parent.zc() && child.intersects_xy(parent)) return 1; // object on the mattress of a bed
 	return 0;
 }
 bool object_has_something_on_it(room_object_t const &obj, vect_room_object_t const &objs, vect_room_object_t::const_iterator objs_end) {
-	// only these types can have objects placed on them (what about TYPE_SHELF?)
+	// only these types can have objects placed on them (what about TYPE_SHELF? what about TYPE_BED with a ball or book placed on it?)
 	if (obj.type != TYPE_TABLE && obj.type != TYPE_DESK && obj.type != TYPE_COUNTER && obj.type != TYPE_DRESSER && obj.type != TYPE_NIGHTSTAND &&
 		obj.type != TYPE_BOX && obj.type != TYPE_CRATE && obj.type != TYPE_WINE_RACK && obj.type != TYPE_BOOK) return 0;
 
