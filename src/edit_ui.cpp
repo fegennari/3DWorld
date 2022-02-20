@@ -13,6 +13,8 @@ using namespace std;
 
 float const MENU_TEXT_SIZE = 1.0;
 
+extern bool camera_in_building;
+
 bool is_shift_key_pressed();
 
 class keyboard_menu_t {
@@ -742,14 +744,24 @@ bool ui_intercept_keyboard(unsigned char key, bool is_special) {
 	return 0;
 }
 
-
 // if is_up_down=0, button and state and invalid
 bool ui_intercept_mouse(int button, int state, int x, int y, bool is_up_down) {
 	return 0; // do nothing (for now)
 }
 
 
+void show_onscreen_building_help() { // non-interactive menu
+	ostringstream oss;
+	oss << "wasd: Move" << endl << "e: Take Item" << endl << "q: Interact/Push Object" << endl << "r: Pull Object" << endl << "E: Use Inventory Item" << endl
+		<< "S: Toggle Room Light" << endl << "Left/Right Mouse Button: Flashlight" << endl << "Mouse Wheel: Switch Inventory Item" << endl << "Tab: Toggle Help";
+	text_drawer text_draw;
+	text_draw.begin_draw();
+	text_draw.add_text(YELLOW, -0.01, 0.01, -0.02, oss.str().c_str(), MENU_TEXT_SIZE);
+	text_draw.end_draw();
+}
+
 void draw_enabled_ui_menus() {
+	if (show_scores && camera_in_building) {show_onscreen_building_help(); return;}
 	keyboard_menu_t const *const kbd_menu(get_enabled_menu());
 	if (kbd_menu) {kbd_menu->draw_controls();}
 }
