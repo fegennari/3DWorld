@@ -1076,7 +1076,9 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t const &roo
 	bool const two_rows(room_width > 1.5*req_depth), skip_stalls_side(room_id & 1); // put stalls on a side consistent across floors
 	float const sink_side_sign(sink_side ? 1.0 : -1.0), stall_step(sink_side_sign*stall_width), sink_step(-sink_side_sign*sink_spacing);
 	float const floor_thickness(get_floor_thickness());
-	colorRGBA const stall_color(0.75, 1.0, 0.9, 1.0); // blue-green
+	unsigned const NUM_STALL_COLORS = 4;
+	colorRGBA const stall_colors[NUM_STALL_COLORS] = {colorRGBA(0.75, 1.0, 0.9, 1.0), colorRGBA(0.7, 0.8, 1.0), WHITE, DK_GRAY}; // blue-green, light blue
+	colorRGBA const stall_color(stall_colors[interior->doors.size() % NUM_STALL_COLORS]); // random, but constant for each building
 	vect_room_object_t &objs(interior->room_geom->objs);
 
 	for (unsigned dir = 0; dir < 2; ++dir) { // each side of the wall
