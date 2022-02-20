@@ -1282,3 +1282,30 @@ bool building_t::is_cube_contained_in_parts(cube_t const &c) const {
 	return (cont_vol > 0.99*c.get_volume()); // add a bit of tolerance
 }
 
+void building_t::print_building_manifest() const { // Note: skips expanded_objs
+	cout << TXT(parts.size()) << TXT(doors.size()) << TXT(details.size());
+
+	if (interior) {
+		unsigned const walls(interior->walls[0].size() + interior->walls[1].size()), rooms(interior->rooms.size());
+		unsigned const floors(interior->floors.size()), ceilings(interior->ceilings.size()), door_stacks(interior->door_stacks.size());
+		unsigned const doors(interior->doors.size()), stairs(interior->stairwells.size()), elevators(interior->elevators.size());
+		cout << TXT(walls) << TXT(rooms) << TXT(floors) << TXT(ceilings) << TXT(door_stacks) << TXT(doors) << TXT(stairs) << TXT(elevators);
+	}
+	if (has_room_geom()) {
+		unsigned const objects(interior->room_geom->objs.size()), rats(interior->room_geom->rats.size()), models(interior->room_geom->obj_model_insts.size());
+		cout << TXT(objects) << TXT(rats) << TXT(models) << endl;
+		unsigned obj_counts[NUM_ROBJ_TYPES] = {};
+
+		for (auto const &i : interior->room_geom->objs) {
+			assert(i.type < NUM_ROBJ_TYPES);
+			++obj_counts[i.type];
+		}
+		for (unsigned n = 0; n < NUM_ROBJ_TYPES; ++n) {
+			if (obj_counts[n] == 0) continue;
+			std::string const &name(bldg_obj_types[n].name);
+			cout << name << ":" << std::string((18 - name.size()), ' ') << obj_counts[n] << endl;
+		}
+	}
+	else {cout << endl;}
+}
+

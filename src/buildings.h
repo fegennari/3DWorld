@@ -1175,6 +1175,7 @@ public:
 	void play_door_open_close_sound(point const &pos, bool open, float gain=1.0, float pitch=1.0) const;
 	void maybe_gen_chimney_smoke() const;
 	cube_t get_part_containing_pt(point const &pt) const;
+	void print_building_manifest() const;
 private:
 	void finish_gen_geometry(rand_gen_t &rgen, bool has_overlapping_cubes);
 	bool add_outdoor_ac_unit(rand_gen_t &rgen);

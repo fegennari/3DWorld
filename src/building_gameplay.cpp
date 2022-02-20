@@ -780,7 +780,7 @@ bool building_room_geom_t::player_pickup_object(building_t &building, point cons
 }
 
 void building_t::register_player_enter_building() const {
-	// nothing to do yet
+	//print_building_manifest(); // for debugging
 }
 void building_t::register_player_exit_building() const {
 	// only collect items in gameplay mode where there's a risk the player can lose them; otherwise, let the player carry items between buildings
