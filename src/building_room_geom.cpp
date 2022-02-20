@@ -58,11 +58,11 @@ void get_tc_leg_cubes_abs_width(cube_t const &c, float leg_width, cube_t cubes[4
 void get_tc_leg_cubes(cube_t const &c, float width, cube_t cubes[4]) {
 	get_tc_leg_cubes_abs_width(c, get_tc_leg_width(c, width), cubes);
 }
-void building_room_geom_t::add_tc_legs(cube_t const &c, colorRGBA const &color, float width, float tscale) {
-	rgeom_mat_t &mat(get_wood_material(tscale));
+void building_room_geom_t::add_tc_legs(cube_t const &c, colorRGBA const &color, float width, float tscale, bool use_metal_mat, bool draw_tops) {
+	rgeom_mat_t &mat(use_metal_mat ? get_metal_material(1) : get_wood_material(tscale)); // shadowed=1, dynamic=0, small=0
 	cube_t cubes[4];
 	get_tc_leg_cubes(c, width, cubes);
-	for (unsigned i = 0; i < 4; ++i) {mat.add_cube_to_verts(cubes[i], color, c.get_llc(), EF_Z12);} // skip top and bottom faces
+	for (unsigned i = 0; i < 4; ++i) {mat.add_cube_to_verts(cubes[i], color, c.get_llc(), (draw_tops ? EF_Z1 : EF_Z12));} // skip top and bottom faces
 }
 
 colorRGBA apply_light_color(room_object_t const &o, colorRGBA const &c) {
@@ -83,18 +83,33 @@ void get_table_cubes(room_object_t const &c, cube_t cubes[5]) {
 	cubes[0] = top;
 	get_tc_leg_cubes(legs_bcube, (is_desk ? 0.06 : (is_dns ? 0.10 : 0.08)), (cubes+1));
 }
+
+colorRGBA const table_glass_color(0.7, 1.0, 0.85, 0.25); // greenish tint, semi transparent
+
+colorRGBA get_table_color(room_object_t const &c) {
+	if (c.shape == SHAPE_CYLIN) { // round table
+		bool const marble(c.obj_id & 1);
+		return (marble ? texture_color(MARBLE_TEX) : get_textured_wood_color()); // ignore the black legs of marble tables
+	}
+	else { // rectangular or short table
+		bool const glass((c.flags & RO_FLAG_IS_HOUSE) && (c.obj_id & 1));
+		return (glass ? table_glass_color : get_textured_wood_color()); // ignore the black legs of glass tables
+	}
+}
 void building_room_geom_t::add_table(room_object_t const &c, float tscale, float top_dz, float leg_width) { // 6 quads for top + 4 quads per leg = 22 quads = 88 verts
 	cube_t top(c), legs_bcube(c);
-	top.z1() += (1.0 - top_dz)*c.dz();
-	legs_bcube.z2() = top.z1();
-	colorRGBA const color(apply_wood_light_color(c));
-	rgeom_mat_t &mat(get_wood_material(tscale));
 
-	if (c.shape == SHAPE_CYLIN) { // cylindrical table
+	if (c.shape == SHAPE_CYLIN) { // round table
+		bool const marble(c.obj_id & 1); // 50% marble top with metal base; else wood
 		vector3d const size(c.get_size());
+		top.z1()       += (1.0 - top_dz)*c.dz();
+		legs_bcube.z2() = top.z1();
 		legs_bcube.expand_by_xy(-0.46*size);
-		mat.add_vcylin_to_verts(top, color, 1, 1, 0, 0, 1.0, 1.0, 16.0, 2.0); // draw top and bottom with scaled side texture coords
-		mat.add_vcylin_to_verts(legs_bcube, color, 1, 1, 0, 0, 1.0, 1.0, 1.0); // support
+		colorRGBA const top_color(marble ? apply_light_color(c, LT_GRAY) : apply_wood_light_color(c)), base_color(marble ? BLACK : top_color);
+		rgeom_mat_t &top_mat(marble ? get_material(tid_nm_pair_t(MARBLE_TEX/*get_counter_tid()*/, 1.2*tscale), 1) : get_wood_material(tscale));
+		top_mat.add_vcylin_to_verts(top, top_color, 1, 1, 0, 0, 1.0, 1.0, 16.0, 2.0, 0, 64); // draw top and bottom with scaled side texture coords; ndiv=64
+		rgeom_mat_t &base_mat(marble ? get_metal_material(1) : get_wood_material(tscale)); // shadowed=1, dynamic=0, small=0
+		base_mat.add_vcylin_to_verts(legs_bcube, base_color, 1, 1, 0, 0, 1.0, 1.0, 1.0); // support
 		cube_t feet(c);
 		feet.z2() = c.z1() + 0.1*c.dz();
 		feet.expand_by_xy(-0.2*size);
@@ -102,13 +117,29 @@ void building_room_geom_t::add_table(room_object_t const &c, float tscale, float
 		for (unsigned d = 0; d < 2; ++d) { // add crossed feet
 			cube_t foot(feet);
 			foot.expand_in_dim(d, -0.27*size[d]);
-			mat.add_cube_to_verts(foot, color, c.get_llc(), EF_Z1); // skip bottom surface
+			base_mat.add_cube_to_verts(foot, base_color, c.get_llc(), EF_Z1); // skip bottom surface
 		}
 	}
-	else { // cube or short table
+	else { // rectangular or short table
 		assert(c.shape == SHAPE_CUBE || c.shape == SHAPE_SHORT);
-		mat.add_cube_to_verts(top, color, c.get_llc()); // all faces drawn
-		add_tc_legs(legs_bcube, color, leg_width, tscale);
+		// Note: glass table top and legs won't quite match the geometry used for collision detection and queries, but it's probably close enough
+		bool const glass(c.type == TYPE_TABLE && (c.flags & RO_FLAG_IS_HOUSE) && (c.obj_id & 1)); // 50% glass top with metal base; only in houses; not dressers/desks
+		top.z1()       += (1.0 - (glass ? 0.25 : 1.0)*top_dz)*c.dz(); // glass tables have a thinner top
+		legs_bcube.z2() = top.z1();
+
+		if (glass) {
+			legs_bcube.expand_by_xy(-0.05*min(c.dx(), c.dy())); // inset the legs
+			colorRGBA const top_color(apply_light_color(c, table_glass_color));
+			rgeom_mat_t &mat(get_untextured_material(0, 0, 0, 1)); // no shadows + transparent
+			mat.add_cube_to_verts(top, top_color, c.get_llc()); // all faces drawn
+			add_tc_legs(legs_bcube, BLACK, 0.5*leg_width, tscale, glass, glass); // use_metal_mat=1, draw_tops=1
+		}
+		else { // wood
+			colorRGBA const color(apply_wood_light_color(c));
+			rgeom_mat_t &mat(get_wood_material(tscale));
+			mat.add_cube_to_verts(top, color, c.get_llc()); // all faces drawn
+			add_tc_legs(legs_bcube, color, leg_width, tscale);
+		}
 	}
 }
 
@@ -2615,7 +2646,7 @@ void building_room_geom_t::add_lg_ball(room_object_t const &c) { // is_small=1
 
 colorRGBA room_object_t::get_color() const {
 	switch (type) {
-	case TYPE_TABLE:    return get_textured_wood_color();
+	case TYPE_TABLE:    return get_table_color(*this);
 	case TYPE_CHAIR:    return (color + get_textured_wood_color())*0.5; // 50% seat color / 50% wood legs color
 	case TYPE_STAIR:    return (STAIRS_COLOR_TOP*0.5 + STAIRS_COLOR_BOT*0.5).modulate_with(texture_color(MARBLE_TEX));
 	case TYPE_STAIR_WALL: return texture_color(STUCCO_TEX);

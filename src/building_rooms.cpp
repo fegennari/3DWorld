@@ -108,7 +108,8 @@ unsigned building_t::add_table_and_chairs(rand_gen_t rgen, cube_t const &room, v
 	urc.z = table_pos.z + rgen.rand_uniform(0.20, 0.22)*window_vspacing; // top
 	cube_t table(llc, urc);
 	if (!is_valid_placement_for_room(table, room, blockers, 0, room_pad)) return 0; // check proximity to doors and collision with blockers
-	objs.emplace_back(table, TYPE_TABLE, room_id, 0, 0, 0, tot_light_amt, (is_round ? SHAPE_CYLIN : SHAPE_CUBE));
+	objs.emplace_back(table, TYPE_TABLE, room_id, 0, 0, (is_house ? RO_FLAG_IS_HOUSE : 0), tot_light_amt, (is_round ? SHAPE_CYLIN : SHAPE_CUBE));
+	set_obj_id(objs);
 	unsigned num_added(1); // start with the table
 
 	// place some chairs around the table
@@ -1392,7 +1393,7 @@ bool building_t::add_livingroom_objs(rand_gen_t rgen, room_t const &room, float 
 		cube_t table(tv); // same XY bounds as the TV
 		tv.translate_dim(2, height); // move TV up
 		table.z2() = tv.z1();
-		objs.emplace_back(table, TYPE_TABLE, room_id, 0, 0, 0, tot_light_amt, SHAPE_SHORT); // short table
+		objs.emplace_back(table, TYPE_TABLE, room_id, 0, 0, RO_FLAG_IS_HOUSE, tot_light_amt, SHAPE_SHORT); // short table; houses only
 	}
 	if (placed_couch && placed_tv) {
 		room_object_t const &couch(objs[couch_ix]), &tv(objs[tv_ix]);
