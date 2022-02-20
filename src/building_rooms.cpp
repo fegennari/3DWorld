@@ -2067,6 +2067,7 @@ void building_t::add_outlets_to_room(rand_gen_t rgen, room_t const &room, float 
 	// try to add an outlet to each wall, down near the floor so that they don't intersect objects such as pictures
 	for (unsigned wall = 0; wall < 4; ++wall) {
 		bool const dim(wall >> 1), dir(wall & 1);
+		if (!is_house && room.get_sz_dim(!dim) < room.get_sz_dim(dim)) continue; // only add outlets to the long walls of office building rooms
 		float const wall_pos(rgen.rand_uniform((room_bounds.d[!dim][0] + min_wall_spacing), (room_bounds.d[!dim][1] - min_wall_spacing)));
 		c.d[dim][ dir] = room_bounds.d[dim][dir]; // flush with wall
 		c.d[dim][!dir] = c.d[dim][dir] + (dir ? -1.0 : 1.0)*plate_thickness; // expand out a bit
