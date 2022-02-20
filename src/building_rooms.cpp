@@ -2647,13 +2647,13 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 
 void building_t::maybe_add_fire_escape(rand_gen_t &rgen) {
 	if (!is_house) return; // houses only for now
-	// our hard-coded fire escape model is designed for a 5 story building; but the max number of floors for a 'house' is 5 anyway, which makes them relatively rare
+	// our hard-coded fire escape model is designed for a 5 story building; but the max number of floors for a 'house' is 5-6 anyway, which makes them relatively rare
 	if (!building_obj_model_loader.is_model_valid(OBJ_MODEL_FESCAPE)) return;
 	float const window_vspacing(get_window_vspace()), floor_thickness(get_floor_thickness()), fe_height(4.25*window_vspacing);
 
 	for (auto p = parts.begin(); p != get_real_parts_end(); ++p) {
 		unsigned const num_floors(calc_num_floors(*p, window_vspacing, floor_thickness));
-		if (num_floors != 5) continue; // not 5 story
+		if (num_floors != 5 && num_floors != 6) continue; // not 5-6 stories
 		unsigned const pref_dim_dir(rgen.rand() & 3);
 		// it's uncommon to get here, so we only check if the model size here
 		vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_FESCAPE)); // D, W, H
