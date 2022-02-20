@@ -218,7 +218,8 @@ bool check_obj_dir_dist(point const &closest_to, vector3d const &in_dir, cube_t 
 	return (dot_product(in_dir, (vis_pt - closest_to).get_norm()) > 0.5); // door is not in the correct direction, skip
 }
 
-bool can_open_bathroom_stall(room_object_t const &stall, point const &pos, vector3d const &from_dir) {
+bool can_open_bathroom_stall_or_shower(room_object_t const &stall, point const &pos, vector3d const &from_dir) {
+	// Note: since there currently aren't any objects the player can push/pull in bathrooms, we don't need to check if the door is blocked from opening; may need to revisit later
 	bool dim(0), dir(0); // dim/dir that door is on
 	if      (stall.type == TYPE_STALL ) {dim = stall.dim; dir = !stall.dir;} // bathroom stall
 	else if (stall.type == TYPE_SHOWER) { // show stall
@@ -302,7 +303,7 @@ bool building_t::apply_player_action_key(point const &closest_to_in, vector3d co
 				}
 				else if (!player_in_closet) {
 					if      (i->type == TYPE_TOILET || i->type == TYPE_URINAL) {keep = 1;} // toilet/urinal can be flushed
-					else if (i->type == TYPE_STALL && i->shape == SHAPE_CUBE && can_open_bathroom_stall(*i, closest_to, in_dir)) {keep = 1;} // cube bathroom stall can be opened
+					else if (i->type == TYPE_STALL && i->shape == SHAPE_CUBE && can_open_bathroom_stall_or_shower(*i, closest_to, in_dir)) {keep = 1;} // bathroom stall can be opened
 					else if (i->type == TYPE_OFF_CHAIR && (i->flags & RO_FLAG_RAND_ROT)) {keep = 1;} // office chair can be rotated
 					else if (i->is_sink_type() || i->type == TYPE_TUB) {keep = 1;} // sink/tub
 					else if (i->is_light_type()) {keep = 1;} // room light or lamp
@@ -478,9 +479,10 @@ bool building_t::interact_with_object(unsigned obj_ix, point const &int_pos, poi
 		update_draw_data = 1;
 	}
 	else if (obj.type == TYPE_SHOWER) { // shower
-		if (can_open_bathroom_stall(obj, int_pos, int_dir)) { // open/close shower door
-			obj.flags ^= RO_FLAG_OPEN; // toggle open/close
+		// if (interior->room_geom->cube_intersects_moved_obj(c_test)) continue; // not yet needed
+		if (can_open_bathroom_stall_or_shower(obj, int_pos, int_dir)) { // open/close shower door
 			gen_sound_thread_safe_at_player((obj.is_open() ? (unsigned)SOUND_DOOR_OPEN : (unsigned)SOUND_METAL_DOOR));
+			obj.flags       ^= RO_FLAG_OPEN; // toggle open/close
 			sound_scale      = 0.35;
 			update_draw_data = 1;
 		}
@@ -496,7 +498,7 @@ bool building_t::interact_with_object(unsigned obj_ix, point const &int_pos, poi
 		sound_scale      = 0.2;
 		update_draw_data = 1;
 	}
-	else if (obj.type == TYPE_CLOSET || obj.type == TYPE_STALL || obj.type == TYPE_SHOWER) {
+	else if (obj.type == TYPE_CLOSET || obj.type == TYPE_STALL) {
 		obj.flags ^= RO_FLAG_OPEN; // toggle open/close
 
 		if (obj.type == TYPE_CLOSET) {

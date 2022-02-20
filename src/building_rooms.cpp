@@ -2104,6 +2104,8 @@ void building_t::add_outlets_to_room(rand_gen_t rgen, room_t const &room, float 
 			if (d.get_true_bcube().intersects(c_exp)) {bad_place = 1; break;}
 		}
 		if (bad_place) continue;
+		// Note: it may be more efficient to have outlets be stored as static quads rather than objects, since there's currently no player or AI interaction with them;
+		// in fact, maybe wall trim should be the same way since there's so much of it?
 		interior->room_geom->objs.emplace_back(c, TYPE_OUTLET, room_id, dim, dir, RO_FLAG_NOCOLL, 1.0); // dim/dir matches wall; fully lit
 	} // for wall
 }
