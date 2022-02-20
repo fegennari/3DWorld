@@ -46,7 +46,7 @@ string lighting_update_text;
 
 extern bool combined_gu, have_sun, clear_landscape_vbo, show_lightning, spraypaint_mode, enable_depth_clamp, enable_multisample, water_is_lava;
 extern bool user_action_key, flashlight_on, enable_clip_plane_z, begin_motion, config_unlimited_weapons, start_maximized, show_bldg_pickup_crosshair;
-extern bool can_do_building_action, enable_tt_model_indir;
+extern bool can_do_building_action, enable_tt_model_indir, pre_load_full_tiled_terrain;
 extern unsigned inf_terrain_fire_mode, reflection_tid;
 extern int auto_time_adv, camera_flight, reset_timing, run_forward, window_width, window_height, voxel_editing, UNLIMITED_WEAPONS;
 extern int advanced, b2down, dynamic_mesh_scroll, spectate, animate2, used_objs, disable_inf_terrain, DISABLE_WATER, can_pickup_bldg_obj;
@@ -1276,6 +1276,9 @@ void display_inf_terrain() { // infinite terrain mode (Note: uses light params f
 	draw_sun_flare();
 	if (TIMETEST) PRINT_TIME("3.2");
 	if (show_lightning) {draw_tiled_terrain_lightning(0);}
+	// load all tiles/buildings around the player; since there's a cap on data generated per frame, we use the first 20 frames
+	bool const disable_vfc(pre_load_full_tiled_terrain && frame_counter <= 20), prev_pdu_valid(camera_pdu.valid);
+	if (disable_vfc) {camera_pdu.valid = 0;} // disable view frustum culling
 	pre_draw_tiled_terrain(); // must be before render_tt_models()
 	if (in_loading_screen) {glutSwapBuffers();} // show our cloud background
 	in_loading_screen = 0; // if we got here, loading is done
@@ -1297,6 +1300,7 @@ void display_inf_terrain() { // infinite terrain mode (Note: uses light params f
 		next_city_frame(0);
 		draw_tiled_terrain_and_transparent_geom(terrain_zmin, tt_reflection_tid, draw_water, camera_above_clouds);
 	}
+	camera_pdu.valid = prev_pdu_valid; // restore previous value
 	run_tt_gameplay(); // enable limited gameplay elements in tiled terrain mode
 	draw_game_elements(timer1);
 	draw_teleporters();
