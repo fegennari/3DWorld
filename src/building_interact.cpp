@@ -125,8 +125,8 @@ void building_t::set_obj_lit_state_to(unsigned room_id, float light_z2, bool lit
 		if (i->room_id != room_id || i->z1() < obj_zmin || i->z1() > light_z2) continue; // wrong room or floor
 		if (i->is_obj_model_type()) continue; // light_amt currently does not apply to 3D models; should it?
 
-		if (i->type == TYPE_STAIR || i->type == TYPE_STAIR_WALL || i->type == TYPE_ELEVATOR || i->type == TYPE_LIGHT || i->type == TYPE_BLOCKER ||
-			i->type == TYPE_COLLIDER || i->type == TYPE_SIGN || i->type == TYPE_WALL_TRIM || i->type == TYPE_RAILING || i->type == TYPE_BLINDS)
+		if (i->type == TYPE_STAIR || i->type == TYPE_STAIR_WALL || i->type == TYPE_ELEVATOR || i->type == TYPE_LIGHT  || i->type == TYPE_BLOCKER || i->type == TYPE_COLLIDER ||
+			i->type == TYPE_SIGN  || i->type == TYPE_WALL_TRIM  || i->type == TYPE_RAILING  || i->type == TYPE_BLINDS || i->type == TYPE_SWITCH  || i->type == TYPE_OUTLET)
 		{
 			continue; // not a type that uses light_amt
 		}
