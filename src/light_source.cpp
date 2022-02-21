@@ -389,14 +389,25 @@ void light_source_trig::register_activate(bool player_triggered) {
 
 // ************ SHADOW MAPS ***********
 
+// FIXME: doesn't work because shader wants to index texture layer and shadow matrix by the same index, and we may not have enough uniforms for caching
+unsigned const MAX_EXTRA_CACHED_SMAPS = 0;
+
 class local_smap_manager_t {
 
 	bool use_tex_array;
-	vector<local_smap_data_t> smap_data;
+	vector<local_smap_data_t> smap_data, cached_smap_data;
 	vector<unsigned> free_list;
 	smap_texture_array_t smap_tex_arr;
 
 	local_smap_data_t &get_smap(unsigned index) {assert(index < smap_data.size()); return smap_data[index];} // does bounds checking
+
+	void search_free_list_slot_for_id_and_make_last(unsigned id) {
+		for (unsigned i = 0; i < free_list.size(); ++i) {
+			if (get_smap(free_list[i]).user_smap_id != id) continue; // wrong ID
+			swap(free_list[i], free_list.back());
+			return; // done
+		}
+	}
 public:
 	local_smap_manager_t(bool use_tex_array_=1) : use_tex_array(use_tex_array_) {}
 
@@ -417,13 +428,41 @@ public:
 			if (user_smap_id > 0 || // caller requested a specific shadow map - see if it's available
 				get_smap(free_list.back()).user_smap_id > 0) // caller requested an unbound smap, and the last free list element is used - try to find an unused smap
 			{
-				for (unsigned i = 0; i < free_list.size(); ++i) {
-					if (get_smap(free_list[i]).user_smap_id != user_smap_id) continue; // wrong ID; only one ID should match
-					swap(free_list[i], free_list.back());
-					break; // done
-				}
+				search_free_list_slot_for_id_and_make_last(user_smap_id); // Note: only one ID should match
 			}
 			index = free_list.back(); // use the most recently used free list entry, which may have been moved to the back by the loop above
+			unsigned const fl_user_smap_id(get_smap(index).user_smap_id);
+
+			if (use_tex_array && user_smap_id > 0 && fl_user_smap_id != user_smap_id) { // ID not found, try looking in cached_smap_data; only for texture arrays
+				bool cache_slot_found(0);
+
+				for (unsigned i = 0; i < cached_smap_data.size(); ++i) {
+					if (cached_smap_data[i].user_smap_id != user_smap_id) continue; // wrong ID; only one ID should match
+					// match found in cache; try to find an empty slot to swap this smap into
+					search_free_list_slot_for_id_and_make_last(0);
+					index = free_list.back(); // use the most recently used free list entry, which may have been moved to the back by the loop above
+					swap(smap_data[index], cached_smap_data[i]); // swap cached slot with active slot, even if active slot has no ID (or could shrink the cache?)
+					cache_slot_found = 1;
+					break; // done
+				} // for i
+				if (!cache_slot_found && fl_user_smap_id > 0) { // don't invalidate an existing ID'ed shadow map, try to move it to the cache instead
+					cache_slot_found = 0;
+
+					// start by looking for an unused cache slot
+					for (unsigned i = 0; i < cached_smap_data.size(); ++i) {
+						if (cached_smap_data[i].user_smap_id > 0) continue; // slot already used
+						swap(smap_data[index], cached_smap_data[i]); // swap out our existing smap with the one in the cache
+						cache_slot_found = 1;
+						break;
+					}
+					if (!cache_slot_found && cached_smap_data.size() < MAX_EXTRA_CACHED_SMAPS) { // if no slot found, allocate a new cache entry if possible
+						local_smap_data_t smd(LOCAL_SMAP_START_TU_ID); // texture array, always uses this slot
+						smd.bind_tex_array(&smap_tex_arr);
+						cached_smap_data.push_back(smd);
+						swap(smap_data[index], cached_smap_data.back());
+					}
+				}
+			}
 			free_list.pop_back();
 		}
 		local_smap_data_t &smd(get_smap(index));
@@ -458,14 +497,19 @@ public:
 		for (auto &i : smap_data) { // there should be at most one match, but it shouldn't hurt to iterate until the end just in case
 			if (i.user_smap_id == smap_id) {i.user_smap_id = 0;} // invalidate if the ID matches
 		}
+		for (auto &i : cached_smap_data) {
+			if (i.user_smap_id == smap_id) {i.user_smap_id = 0;} // invalidate if the ID matches
+		}
 	}
 	void free_gl_state() {
-		for (auto i = smap_data.begin(); i != smap_data.end(); ++i) {i->free_gl_state();}
+		for (auto &i : smap_data       ) {i.free_gl_state();}
+		for (auto &i : cached_smap_data) {i.free_gl_state();}
 		smap_tex_arr.free_gl_state();
 	}
 	void clear() {
 		free_gl_state();
 		smap_data.clear();
+		cached_smap_data.clear();
 		free_list.clear();
 	}
 };
