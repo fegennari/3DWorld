@@ -63,7 +63,7 @@ bool building_t::maybe_teleport_to_screenshot() const {
 	if (!has_room_geom()) return 0;
 	if (!is_house) return 0; // currently only houses have pictures hanging on walls
 	if (get_num_screenshot_tids() == 0) return 0;
-	auto objs_end(interior->room_geom->get_placed_objs_end()); // skip trim/buttons/stairs/elevators
+	auto objs_end(interior->room_geom->get_placed_objs_end()); // skip buttons/stairs/elevators
 	vector3d const xlate(get_tiled_terrain_model_xlate());
 	point const camera_bs(get_camera_building_space());
 	int closest_obj_id(-1);

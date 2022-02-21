@@ -661,7 +661,7 @@ bool building_interior_t::line_coll(building_t const &building, point const &p1,
 	}
 	if (room_geom) { // check room geometry
 		for (auto c = room_geom->objs.begin(); c != room_geom->objs.end(); ++c) { // check for other objects to collide with (including stairs)
-			if ((c->no_coll() && c->type != TYPE_WALL_TRIM) || c->type == TYPE_BLOCKER || c->type == TYPE_ELEVATOR) continue; // keep wall trim but skip blockers and elevators
+			if (c->no_coll() || c->type == TYPE_BLOCKER || c->type == TYPE_ELEVATOR) continue; // skip blockers and elevators
 
 			if (c->type == TYPE_CLOSET) { // special case to handle closet interiors
 				cube_t cubes[5];
@@ -679,6 +679,7 @@ bool building_interior_t::line_coll(building_t const &building, point const &p1,
 			//else if (c->type == TYPE_STALL || c->type == TYPE_SHOWER) {}
 			else {had_coll |= get_line_clip_update_t(p1, p2, *c, t);} // assume it's a cube
 		} // for c
+		for (auto const &i : room_geom->trim_objs) {had_coll |= get_line_clip_update_t(p1, p2, i, t);} // include wall trim
 	}
 	if (had_coll) {p_int = p1 + t*(p2 - p1);}
 	return had_coll;
@@ -711,7 +712,7 @@ point building_interior_t::find_closest_pt_on_obj_to_pos(building_t const &build
 	}
 	if (room_geom) { // check room geometry
 		for (auto c = room_geom->objs.begin(); c != room_geom->objs.end(); ++c) { // check for other objects to collide with (including stairs)
-			if ((c->no_coll() && c->type != TYPE_WALL_TRIM) || c->type == TYPE_BLOCKER || c->type == TYPE_ELEVATOR) continue; // keep wall trim but skip blockers and elevators
+			if (c->no_coll() || c->type == TYPE_BLOCKER || c->type == TYPE_ELEVATOR) continue; // skip blockers and elevators
 
 			if (c->type == TYPE_CLOSET) { // special case to handle closet interiors
 				cube_t cubes[5];
@@ -732,6 +733,7 @@ point building_interior_t::find_closest_pt_on_obj_to_pos(building_t const &build
 			}
 			else {update_closest_pt(*c, pos, closest, pad_dist, dmin_sq);} // assume it's a cube
 		} // for c
+		for (auto const &i : room_geom->trim_objs) {update_closest_pt(i, pos, closest, pad_dist, dmin_sq);} // include wall trim
 	}
 	// what about exterior building walls?
 	return closest;
@@ -991,13 +993,13 @@ bool building_t::get_begin_end_room_objs_on_ground_floor(float zval, vect_room_o
 		return 1; // use cached objects
 	}
 	b = interior->room_geom->objs.begin();
-	e = interior->room_geom->get_placed_objs_end(); // skip trim/buttons/stairs/elevators
+	e = interior->room_geom->get_placed_objs_end(); // skip buttons/stairs/elevators
 	return 0; // use standard objects
 }
 void building_t::get_objs_at_or_below_ground_floor(vect_room_object_t &ret) const {
 	float const z_thresh(get_ground_floor_z_thresh());
 	assert(has_room_geom());
-	auto objs_end(interior->room_geom->get_placed_objs_end()); // skip trim/buttons/stairs/elevators
+	auto objs_end(interior->room_geom->get_placed_objs_end()); // skip buttons/stairs/elevators
 
 	for (auto c = interior->room_geom->objs.begin(); c != objs_end; ++c) {
 		if (c->z1() < z_thresh && c->is_floor_collidable()) {ret.push_back(*c);}

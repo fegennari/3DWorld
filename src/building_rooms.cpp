@@ -2637,8 +2637,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 	maybe_add_fire_escape(rgen);
 	add_extra_obj_slots(); // needed to handle balls taken from one building and brought to another
 	add_stairs_and_elevators(rgen); // the room objects - stairs and elevators have already been placed within a room
-	add_exterior_door_signs(rgen);
-	add_wall_and_door_trim();
+	add_exterior_door_signs (rgen);
 	objs.shrink_to_fit(); // Note: currently up to around 15K objs max for large office buildings
 	interior->room_geom->light_bcubes.resize(light_ix_assign.get_next_ix()); // allocate but don't fill un until needed
 	// randomly vary wood color for this building
@@ -2695,9 +2694,14 @@ void building_t::add_extra_obj_slots() {
 	for (unsigned n = num_slots; n < 20; ++n) {objs.emplace_back(c, TYPE_BLOCKER, 0, 0, 0, (RO_FLAG_INVIS | RO_FLAG_NOCOLL));}
 }
 
-void building_t::add_wall_and_door_trim() { // and window trim
-
+void building_t::add_wall_and_door_trim_if_needed() {
 	if (!is_cube()) return; // not yet supported for non-cube buildings
+	if (!interior->room_geom->trim_objs.empty()) return; // trim already generated
+	add_wall_and_door_trim();
+	interior->room_geom->trim_objs.shrink_to_fit();
+}
+
+void building_t::add_wall_and_door_trim() { // and window trim
 	//highres_timer_t timer("Add Wall And Door Trim");
 	float const window_vspacing(get_window_vspace()), floor_thickness(get_floor_thickness()), fc_thick(0.5*floor_thickness), wall_thickness(get_wall_thickness());
 	float const trim_height(get_trim_height()), trim_thickness(get_trim_thickness()), expand_val(2.0*trim_thickness);
@@ -2709,7 +2713,7 @@ void building_t::add_wall_and_door_trim() { // and window trim
 	// ceiling trim also disabled for non-houses (all office buildings), because it doesn't really work with acoustic paneling
 	bool const has_outside_corners(!is_house && !pri_hall.is_all_zeros()), has_ceil_trim(!has_outside_corners && is_house);
 	colorRGBA const &trim_color(is_house ? WHITE : DK_GRAY);
-	vect_room_object_t &objs(interior->room_geom->objs);
+	vect_room_object_t &objs(interior->room_geom->trim_objs);
 	vect_cube_t trim_cubes;
 
 	for (auto d = interior->door_stacks.begin(); d != interior->door_stacks.end(); ++d) { // vertical strips on each side + strip on top of interior doors

@@ -499,13 +499,16 @@ void building_room_geom_t::clear() {
 	light_bcubes.clear();
 	has_elevators = 0;
 }
-void building_room_geom_t::clear_materials() { // can be called to update textures, lighting state, etc.
+void building_room_geom_t::clear_materials() { // clears all materials
+	clear_lit_materials();
+	mats_detail.clear();
+}
+void building_room_geom_t::clear_lit_materials() { // clears materials that have color based on room lighting; mats_detail is excluded
 	clear_static_vbos();
 	clear_static_small_vbos();
 	mats_dynamic.clear();
 	mats_lights .clear();
 	mats_doors  .clear();
-	mats_detail .clear();
 }
 void building_room_geom_t::clear_static_vbos() { // used to clear pictures
 	mats_static.clear();
@@ -657,17 +660,16 @@ void building_room_geom_t::add_small_static_objs_to_verts(vect_room_object_t con
 
 void building_room_geom_t::create_detail_vbos(building_t const &building) {
 	mats_detail.clear();
-	//auto objs_end(get_stairs_start()); // skip buttons/stairs/elevators
-
 	// currently only small objects that are non-interactive and can't be taken; TYPE_SWITCH almost counts
-	for (auto i = objs.begin(); i != objs.end(); ++i) {
-		if (!i->is_visible()) continue; // skip invisible and dynamic objects
-		switch (i->type) {
-		case TYPE_WALL_TRIM: add_wall_trim(*i); break;
-		case TYPE_OUTLET:    add_outlet(*i); break;
-		default: break;
-		}
-	} // for i
+	auto objs_end(get_placed_objs_end()); // skip buttons/stairs/elevators
+
+	for (auto i = objs.begin(); i != objs_end; ++i) {
+		if (i->type == TYPE_OUTLET && !i->is_visible()) {add_outlet(*i);}
+	}
+	for (auto const &i : trim_objs) {
+		assert(i.type == TYPE_WALL_TRIM);
+		add_wall_trim(i);
+	}
 	mats_detail.create_vbos(building);
 }
 
@@ -678,7 +680,7 @@ void building_room_geom_t::create_obj_model_insts(building_t const &building) { 
 	for (unsigned vect_id = 0; vect_id < 2; ++vect_id) {
 		auto const &obj_vect((vect_id == 1) ? expanded_objs : objs);
 		unsigned const obj_id_offset((vect_id == 1) ? objs.size() : 0);
-		auto objs_end((vect_id == 1) ? expanded_objs.end() : get_placed_objs_end()); // skip trim/buttons/stairs/elevators
+		auto objs_end((vect_id == 1) ? expanded_objs.end() : get_placed_objs_end()); // skip buttons/stairs/elevators
 
 		for (auto i = obj_vect.begin(); i != objs_end; ++i) {
 			if (!i->is_visible() || !i->is_obj_model_type()) continue;
@@ -699,7 +701,7 @@ void building_room_geom_t::create_obj_model_insts(building_t const &building) { 
 void building_room_geom_t::create_lights_vbos(building_t const &building) {
 	//highres_timer_t timer("Gen Room Geom Light"); // 0.3ms
 	float const tscale(2.0/obj_scale);
-	auto objs_end(get_placed_objs_end()); // skip trim/buttons/stairs/elevators
+	auto objs_end(get_placed_objs_end()); // skip buttons/stairs/elevators
 
 	for (auto i = objs.begin(); i != objs_end; ++i) {
 		if (i->is_visible() && i->type == TYPE_LIGHT) {add_light(*i, tscale);}
@@ -711,7 +713,7 @@ void building_room_geom_t::create_dynamic_vbos(building_t const &building) {
 	//highres_timer_t timer(string("Gen Room Geom Dynamic ") + (building.is_house ? "house" : "office"));
 	
 	if (!obj_dstate.empty()) { // we have an object with dynamic state
-		auto objs_end(get_placed_objs_end()); // skip trim/buttons/stairs/elevators
+		auto objs_end(get_placed_objs_end()); // skip buttons/stairs/elevators
 
 		for (auto i = objs.begin(); i != objs_end; ++i) {
 			if (!i->is_dynamic() || !i->is_visible()) continue; // only visible + dynamic objects; can't do VFC because this is not updated every frame
@@ -899,6 +901,7 @@ void building_t::gen_and_draw_room_geom(brg_batch_draw_t *bbd, shader_t &s, occl
 		gen_room_details(rgen, ped_bcubes, building_ix); // generate so that we can draw it
 		assert(has_room_geom());
 	}
+	if (has_room_geom() && inc_small == 2) {add_wall_and_door_trim_if_needed();} // gen trim when close to the player
 	draw_room_geom(bbd, s, oc, xlate, building_ix, shadow_only, reflection_pass, inc_small, player_in_building);
 }
 void building_t::clear_room_geom(bool force) {
@@ -953,9 +956,9 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, building_t c
 	if (player_in_building) {bbd = nullptr;} // use immediate drawing when player is in the building because draw order matters for alpha blending
 	if (bbd != nullptr) {bbd->set_camera_dir_mask(camera_bs, building.bcube);}
 
-	if (materials_invalid) { // set in set_obj_lit_state_to()
-		clear_materials();
-		materials_invalid = 0;
+	if (lighting_invalid) { // set in set_obj_lit_state_to()
+		clear_lit_materials();
+		lighting_invalid = 0;
 	}
 	if (lights_changed) {
 		mats_lights.clear();
@@ -1101,7 +1104,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, building_t c
 	if (obj_drawn) {check_mvm_update();} // needed after popping model transform matrix
 
 	if (player_in_building && !shadow_only) { // draw water for sinks that are turned on
-		auto objs_end(get_placed_objs_end()); // skip trim/buttons/stairs/elevators
+		auto objs_end(get_placed_objs_end()); // skip buttons/stairs/elevators
 
 		for (auto i = objs.begin(); i != objs_end; ++i) {
 			if (i->type != TYPE_KSINK && i->type != TYPE_BRSINK) continue; // TYPE_SINK is handled above

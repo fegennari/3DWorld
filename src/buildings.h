@@ -613,13 +613,14 @@ struct building_decal_manager_t {
 
 struct building_room_geom_t {
 
-	bool has_elevators, has_pictures, lights_changed, materials_invalid, modified_by_player;
+	bool has_elevators, has_pictures, lights_changed, lighting_invalid, modified_by_player;
 	unsigned char num_pic_tids;
 	float obj_scale;
 	unsigned buttons_start, stairs_start; // index of first object of {TYPE_TRIM, TYPE_BUTTON, TYPE_STAIR}
 	point tex_origin;
 	colorRGBA wood_color;
-	vect_room_object_t objs, expanded_objs, model_objs; // objects in rooms; expanded_objs is for things that have been expanded for player interaction; model_objs is for models in drawers
+	// objects in rooms; expanded_objs is for things that have been expanded for player interaction; model_objs is for models in drawers; trim_objs is for wall/door/window trim
+	vect_room_object_t objs, expanded_objs, model_objs, trim_objs;
 	vector<room_obj_dstate_t> obj_dstate;
 	vector<obj_model_inst_t> obj_model_insts;
 	vector<unsigned> moved_obj_ids;
@@ -629,11 +630,12 @@ struct building_room_geom_t {
 	vect_cube_t light_bcubes;
 	building_decal_manager_t decal_manager;
 
-	building_room_geom_t(point const &tex_origin_=all_zeros) : has_elevators(0), has_pictures(0), lights_changed(0), materials_invalid(0), modified_by_player(0),
+	building_room_geom_t(point const &tex_origin_=all_zeros) : has_elevators(0), has_pictures(0), lights_changed(0), lighting_invalid(0), modified_by_player(0),
 		num_pic_tids(0), obj_scale(1.0), buttons_start(0), stairs_start(0), tex_origin(tex_origin_), wood_color(WHITE) {}
 	bool empty() const {return objs.empty();}
 	void clear();
 	void clear_materials();
+	void clear_lit_materials();
 	void clear_static_vbos();
 	void clear_static_small_vbos();
 	void clear_and_recreate_lights() {lights_changed = 1;} // cache the state and apply the change later in case this is called from a different thread
@@ -1259,6 +1261,7 @@ private:
 	tquad_with_ix_t const &find_main_roof_tquad(rand_gen_t &rgen, bool skip_if_has_other_obj) const;
 	void maybe_add_fire_escape(rand_gen_t &rgen);
 	void add_extra_obj_slots();
+	void add_wall_and_door_trim_if_needed();
 	void add_wall_and_door_trim();
 	unsigned count_num_int_doors(room_t const &room) const;
 	bool check_bcube_overlap_xy_one_dir(building_t const &b, float expand_rel, float expand_abs, vector<point> &points) const;

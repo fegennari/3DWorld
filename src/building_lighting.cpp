@@ -385,7 +385,7 @@ void building_t::order_lights_by_priority(point const &target, vector<unsigned> 
 	vector<pair<float, unsigned>> to_sort;
 	float const window_vspacing(get_window_vspace());
 	float const diag_dist_sq(bcube.dx()*bcube.dx() + bcube.dy()*bcube.dy()), other_floor_penalty(0.25*diag_dist_sq);
-	auto objs_end(interior->room_geom->get_placed_objs_end()); // skip trim/buttons/stairs/elevators
+	auto objs_end(interior->room_geom->get_placed_objs_end()); // skip buttons/stairs/elevators
 
 	for (auto i = objs.begin(); i != objs_end; ++i) {
 		if (!i->is_light_type() || !i->is_lit()) continue; // not a light, or light not on
@@ -594,7 +594,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 	bool const check_building_people(enable_building_people_ai());
 	vect_cube_t &light_bcubes(interior->room_geom->light_bcubes);
 	vect_room_object_t &objs(interior->room_geom->objs); // non-const, light flags are updated
-	auto objs_end(interior->room_geom->get_placed_objs_end()); // skip trim/buttons/stairs/elevators
+	auto objs_end(interior->room_geom->get_placed_objs_end()); // skip buttons/stairs/elevators
 	point camera_rot(camera_bs);
 	maybe_inv_rotate_point(camera_rot); // rotate camera pos into building space
 	unsigned camera_part(parts.size()); // start at an invalid value
