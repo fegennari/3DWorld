@@ -2010,7 +2010,8 @@ void building_t::add_light_switches_to_room(rand_gen_t rgen, room_t const &room,
 			bool const dim(i->dim), dir(i->get_center_dim(dim) > room.get_center_dim(dim));
 			float const door_width(i->get_width()), near_spacing(0.25*door_width), far_spacing(1.25*door_width); // off to the side of the door when open
 			assert(door_width > 0.0);
-			c.d[dim][ dir] = room_bounds.d[dim][dir]; // flush with wall
+			cube_t const wall_bounds(ei ? room_bounds : room); // exterior door should use the original room, not room_bounds
+			c.d[dim][ dir] = wall_bounds.d[dim][dir]; // flush with wall
 			c.d[dim][!dir] = c.d[dim][dir] + (dir ? -1.0 : 1.0)*switch_thickness; // expand out a bit
 			bool done(0);
 
