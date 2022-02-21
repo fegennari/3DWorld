@@ -752,7 +752,7 @@ bool ui_intercept_mouse(int button, int state, int x, int y, bool is_up_down) {
 
 void show_onscreen_building_help() { // non-interactive menu
 	ostringstream oss;
-	oss << "wasd: Move" << endl << "e: Take Item" << endl << "q: Interact/Push Object" << endl << "r: Pull Object" << endl << "E: Use Inventory Item" << endl
+	oss << "wasd: Move" << endl << "e: Take Item" << endl << "q: Interact/Push Object" << endl << "r: Pull Object" << endl << "E or <Space>: Use Inventory Item" << endl
 		<< "S: Toggle Room Light" << endl << "Left/Right Mouse Button: Flashlight" << endl << "Mouse Wheel: Switch Inventory Item" << endl << "Tab: Toggle Help";
 	text_drawer text_draw;
 	text_draw.begin_draw();
