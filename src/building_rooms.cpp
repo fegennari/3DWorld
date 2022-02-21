@@ -2636,10 +2636,9 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 	}
 	maybe_add_fire_escape(rgen);
 	add_extra_obj_slots(); // needed to handle balls taken from one building and brought to another
-	interior->room_geom->trim_start = objs.size();
-	add_wall_and_door_trim();
 	add_stairs_and_elevators(rgen); // the room objects - stairs and elevators have already been placed within a room
 	add_exterior_door_signs(rgen);
+	add_wall_and_door_trim();
 	objs.shrink_to_fit(); // Note: currently up to around 15K objs max for large office buildings
 	interior->room_geom->light_bcubes.resize(light_ix_assign.get_next_ix()); // allocate but don't fill un until needed
 	// randomly vary wood color for this building

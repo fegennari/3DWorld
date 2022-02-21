@@ -657,10 +657,10 @@ void building_room_geom_t::add_small_static_objs_to_verts(vect_room_object_t con
 
 void building_room_geom_t::create_detail_vbos(building_t const &building) {
 	mats_detail.clear();
-	auto objs_end(get_std_objs_end()); // skip buttons/stairs/elevators
+	//auto objs_end(get_stairs_start()); // skip buttons/stairs/elevators
 
 	// currently only small objects that are non-interactive and can't be taken; TYPE_SWITCH almost counts
-	for (auto i = objs.begin(); i != objs_end; ++i) {
+	for (auto i = objs.begin(); i != objs.end(); ++i) {
 		if (!i->is_visible()) continue; // skip invisible and dynamic objects
 		switch (i->type) {
 		case TYPE_WALL_TRIM: add_wall_trim(*i); break;

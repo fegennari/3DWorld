@@ -880,7 +880,7 @@ bool building_t::is_valid_ai_placement(point const &pos, float radius) const { /
 
 	// Note: people are placed before room geom is generated for all buildings, so this may not work and will have to be handled during room geom placement
 	if (interior->room_geom) { // check placement against room geom objects
-		auto objs_end(interior->room_geom->get_std_objs_end()); // skip buttons/stairs/elevators; I suppose trim can be included here
+		auto objs_end(interior->room_geom->get_placed_objs_end()); // skip trim/buttons/stairs/elevators
 
 		for (auto i = interior->room_geom->objs.begin(); i != objs_end; ++i) {
 			if (i->type == TYPE_FLOORING || i->type == TYPE_BLOCKER) continue; // okay to place on flooring; ignore blockers, which are used for placement clearance
