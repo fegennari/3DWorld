@@ -1301,7 +1301,7 @@ private:
 	void play_tape_sound(point const &sound_pos, float sound_gain) const;
 public:
 	// ray queries
-	bool check_line_intersect_doors(point const &p1, point const &p2) const;
+	bool check_line_intersect_doors(point const &p1, point const &p2, bool inc_open=0) const;
 	bool is_pt_visible(point const &p1, point const &p2) const;
 	bool is_sphere_visible(point const &center, float radius, point const &pt) const;
 	bool is_pt_lit(point const &pt) const;

@@ -913,11 +913,20 @@ bool trace_ray_through_cubes(vect_cube_t const &cubes, point const &p1, point co
 	} // for n
 	return 0; // ray has exited the cubes
 }
-bool building_t::check_line_intersect_doors(point const &p1, point const &p2) const {
+bool building_t::check_line_intersect_doors(point const &p1, point const &p2, bool inc_open) const {
 	for (auto i = interior->doors.begin(); i != interior->doors.end(); ++i) {
-		if (i->open) continue; // check only closed doors
-		if (i->get_true_bcube().line_intersects(p1, p2)) return 1;
-	}
+		if (i->open) {
+			if (!inc_open) continue; // check only closed doors
+			cube_t door_bounds(*i);
+			door_bounds.expand_by_xy(i->get_width());
+			if (!door_bounds.line_intersects(p1, p2)) continue; // check intersection with rough/conservative door bounds (optimization)
+			tquad_with_ix_t const door(set_interior_door_from_cube(*i));
+			//float const thickness(i->get_thickness()); // for now, we ignore the door thickness since it shouldn't really make a difference
+			float t(0.0); // unused
+			if (line_poly_intersect(p1, p2, door.pts, door.npts, door.get_norm(), t)) return 1;
+		}
+		else if (i->get_true_bcube().line_intersects(p1, p2)) return 1;
+	} // for i
 	return 0;
 }
 bool building_t::is_pt_visible(point const &p1, point const &p2) const {

@@ -1555,7 +1555,7 @@ bool building_t::apply_paint(point const &pos, vector3d const &dir, colorRGBA co
 	if (normal == zero_vector) return 0; // no walls, ceilings, floors, etc. hit
 	if (walls_blocked && normal.z == 0.0) return 0; // can't spraypaint walls through elevator, stairs, etc.
 	point p_int(pos + tmin*(pos2 - pos));
-	if (check_line_intersect_doors(pos, p_int)) return 0; // blocked by door, no spraypaint; can't add spraypaint over door in case door is opened
+	if (check_line_intersect_doors(pos, p_int, 1)) return 0; // blocked by door, no spraypaint; can't add spraypaint over door in case door is opened; inc_open=1
 	float const max_radius((is_spraypaint ? 2.0 : 0.035)*CAMERA_RADIUS);
 	float const dist(p2p_dist(pos, p_int)), radius(is_spraypaint ? min(max_radius, max(0.05f*max_radius, 0.1f*dist)) : max_radius); // modified version of get_spray_radius()
 	float const alpha((is_spraypaint && radius > 0.5*max_radius) ? (1.0 - (radius - 0.5*max_radius)/max_radius) : 1.0); // 0.5 - 1.0
