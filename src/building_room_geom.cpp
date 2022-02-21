@@ -40,7 +40,7 @@ int get_crate_tid(room_object_t const &c) {return get_texture_by_name((c.obj_id 
 colorRGBA get_textured_wood_color() {return WOOD_COLOR.modulate_with(texture_color(WOOD2_TEX));} // Note: uses default WOOD_COLOR, not the per-building random variant
 colorRGBA get_counter_color      () {return (get_textured_wood_color()*0.75 + texture_color(get_counter_tid())*0.25);}
 
-rgeom_mat_t &building_room_geom_t::get_wood_material(float tscale, bool inc_shadows, bool dynamic, bool small) {
+rgeom_mat_t &building_room_geom_t::get_wood_material(float tscale, bool inc_shadows, bool dynamic, unsigned small) {
 	return get_material(tid_nm_pair_t(WOOD2_TEX, get_texture_by_name("normal_maps/wood_NRM.jpg", 1),
 		3.0*tscale, 3.0*tscale, 0.0, 0.0, inc_shadows), inc_shadows, dynamic, small); // hard-coded for common material
 }
@@ -472,7 +472,7 @@ void building_room_geom_t::add_closet(room_object_t const &c, tid_nm_pair_t cons
 				btrim.z2() = c.z1() + trim_height;
 				get_untextured_material(0, 0, 1).add_cube_to_verts_untextured(btrim, trim_color, skip_faces); // is_small, untextured, no shadows; both interior and exterior
 				set_cube_zvals(trim, c.z2()-trim_height, c.z2());
-				add_wall_trim(room_object_t(trim, TYPE_WALL_TRIM, c.room_id, trim_dim, trim_dir, 0, 1.0, SHAPE_ANGLED, trim_color)); // ceiling trim, missing end caps; exterior only
+				add_wall_trim(room_object_t(trim, TYPE_WALL_TRIM, c.room_id, trim_dim, trim_dir, 0, 1.0, SHAPE_ANGLED, trim_color), 1); // ceiling trim, missing end caps; exterior only
 			} // for d
 		} // for is_side
 		// Note: always drawn to avoid recreating all small objects when the player opens/closes a closet door, and so that objects can be seen through the cracks in the doors
@@ -1009,8 +1009,8 @@ void building_room_geom_t::add_flooring(room_object_t const &c, float tscale) {
 	get_material(tid_nm_pair_t(MARBLE_TEX, 0.8*tscale)).add_cube_to_verts(c, apply_light_color(c), tex_origin, ~EF_Z2); // top face only, unshadowed
 }
 
-void building_room_geom_t::add_wall_trim(room_object_t const &c) {
-	rgeom_mat_t &mat(get_untextured_material(0, 0, 1)); // inc_shadows=0, dynamic=0, small=1
+void building_room_geom_t::add_wall_trim(room_object_t const &c, bool for_closet) { // uses mats_detail
+	rgeom_mat_t &mat(get_untextured_material(0, 0, (for_closet ? 1 : 2))); // inc_shadows=0, dynamic=0, small=2 (1 for closet)
 
 	if (c.shape == SHAPE_ANGLED) { // single quad
 		point pts[4];
@@ -2534,11 +2534,11 @@ void building_room_geom_t::add_switch(room_object_t const &c) { // light switch,
 	rotate_verts(mat.quad_verts, rot_axis, 0.015*PI, plate.get_cube_center(), qv_start); // rotate rocker slightly about base plate center; could be optimized by caching
 }
 
-void building_room_geom_t::add_outlet(room_object_t const &c) {
+void building_room_geom_t::add_outlet(room_object_t const &c) { // uses mats_detail
 	unsigned const front_face_mask(get_face_mask(c.dim, !c.dir)); // skip face that's against the wall
-	rgeom_mat_t &front_mat(get_material(tid_nm_pair_t(get_texture_by_name("interiors/outlet1.jpg"), 0.0, 0), 0, 0, 1));
+	rgeom_mat_t &front_mat(get_material(tid_nm_pair_t(get_texture_by_name("interiors/outlet1.jpg"), 0.0, 0), 0, 0, 2)); // small=2
 	front_mat.add_cube_to_verts(c, c.color, zero_vector, front_face_mask, !c.dim); // textured front face; always fully lit to match wall
-	//get_untextured_material(0, 0, 1).add_cube_to_verts(c, c.color, zero_vector, get_skip_mask_for_xy(c.dim)); // unshadowed, small, skip front/back face
+	//get_untextured_material(0, 0, 2).add_cube_to_verts(c, c.color, zero_vector, get_skip_mask_for_xy(c.dim)); // unshadowed, small, skip front/back face
 }
 
 void building_room_geom_t::add_plate(room_object_t const &c) { // is_small=1

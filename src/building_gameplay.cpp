@@ -71,7 +71,7 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_FLOORING  ] = bldg_obj_type_t(0, 0, 0, 0, 1, 0, 1, 0.0,   0.0,   "flooring");
 	// closets can't be picked up, but they can block a pickup; marked as large because small objects are not modified; marked as is_model because closets can contain lamps
 	bldg_obj_types[TYPE_CLOSET    ] = bldg_obj_type_t(1, 1, 1, 1, 1, 1, 1, 0.0,   0.0,   "closet");
-	bldg_obj_types[TYPE_WALL_TRIM ] = bldg_obj_type_t(0, 0, 0, 0, 1, 0, 2, 0.0,   0.0,   "wall trim");
+	bldg_obj_types[TYPE_WALL_TRIM ] = bldg_obj_type_t(0, 0, 0, 0, 1, 0, 0, 0.0,   0.0,   "wall trim");
 	bldg_obj_types[TYPE_RAILING   ] = bldg_obj_type_t(1, 0, 0, 0, 1, 0, 2, 0.0,   0.0,   "railing");
 	bldg_obj_types[TYPE_CRATE     ] = bldg_obj_type_t(1, 1, 1, 1, 0, 0, 2, 10.0,  12.0,  "crate"); // should be random value
 	bldg_obj_types[TYPE_BOX       ] = bldg_obj_type_t(1, 1, 1, 1, 0, 0, 2, 5.0,   8.0,   "box");   // should be random value
@@ -106,7 +106,7 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_LBASKET   ] = bldg_obj_type_t(1, 1, 1, 1, 0, 0, 2, 12.0,  2.0,   "laundry basket");
 	bldg_obj_types[TYPE_WHEATER   ] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 2, 300.0, 500.0, "water heater");
 	bldg_obj_types[TYPE_TAPE      ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 2.0,   0.4,   "duct tape", 1000);
-	bldg_obj_types[TYPE_OUTLET    ] = bldg_obj_type_t(0, 0, 0, 0, 1, 0, 2, 7.0,   0.1,   "Outlet");
+	bldg_obj_types[TYPE_OUTLET    ] = bldg_obj_type_t(0, 0, 0, 0, 1, 0, 0, 7.0,   0.1,   "Outlet");
 	// player_coll, ai_coll, rat_coll, pickup, attached, is_model, lg_sm, value, weight, name [capacity]
 	// 3D models
 	bldg_obj_types[TYPE_TOILET    ] = bldg_obj_type_t(1, 1, 1, 1, 1, 1, 0, 120.0, 88.0,  "toilet");

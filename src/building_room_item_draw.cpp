@@ -344,6 +344,7 @@ void rgeom_mat_t::create_vbo_inner() {
 	assert(itri_verts.empty() == indices.empty());
 	unsigned qsz(quad_verts.size()*sizeof(vertex_t)), itsz(itri_verts.size()*sizeof(vertex_t));
 	num_verts   = quad_verts.size() + itri_verts.size();
+	assert(num_verts > 0); // too strong?
 	vao_mgr.vbo = ::create_vbo();
 	check_bind_vbo(vao_mgr.vbo);
 	upload_vbo_data(nullptr, num_verts*sizeof(vertex_t));
@@ -434,7 +435,7 @@ void rgeom_mat_t::draw_inner(tid_nm_pair_dstate_t &state, int shadow_only) const
 }
 
 void rgeom_mat_t::upload_draw_and_clear(tid_nm_pair_dstate_t &state) { // Note: called by draw_interactive_player_obj() and water_draw_t
-	if (empty()) return; // nothing to do
+	if (empty()) return; // nothing to do; can this happen?
 	create_vbo_inner();
 	draw(state, nullptr, 0, 0); // no brg_batch_draw_t
 	clear();
@@ -502,8 +503,9 @@ void building_room_geom_t::clear_materials() { // can be called to update textur
 	clear_static_vbos();
 	clear_static_small_vbos();
 	mats_dynamic.clear();
-	mats_lights.clear();
-	mats_doors.clear();
+	mats_lights .clear();
+	mats_doors  .clear();
+	mats_detail .clear();
 }
 void building_room_geom_t::clear_static_vbos() { // used to clear pictures
 	mats_static.clear();
@@ -515,10 +517,11 @@ void building_room_geom_t::clear_static_small_vbos() {
 	mats_amask.clear();
 }
 
-rgeom_mat_t &building_room_geom_t::get_material(tid_nm_pair_t const &tex, bool inc_shadows, bool dynamic, bool small, bool transparent) {
-	return (dynamic ? mats_dynamic : (small ? mats_small : (transparent ? mats_alpha : mats_static))).get_material(tex, inc_shadows);
+rgeom_mat_t &building_room_geom_t::get_material(tid_nm_pair_t const &tex, bool inc_shadows, bool dynamic, unsigned small, bool transparent) {
+	// small: 0=mats_static, 1=mats_small, 2=mats_detail
+	return (dynamic ? mats_dynamic : (small ? ((small == 2) ? mats_detail : mats_small) : (transparent ? mats_alpha : mats_static))).get_material(tex, inc_shadows);
 }
-rgeom_mat_t &building_room_geom_t::get_metal_material(bool inc_shadows, bool dynamic, bool small) {
+rgeom_mat_t &building_room_geom_t::get_metal_material(bool inc_shadows, bool dynamic, unsigned small) {
 	tid_nm_pair_t tex(-1, 1.0, inc_shadows);
 	tex.set_specular(0.8, 60.0);
 	return get_material(tex, inc_shadows, dynamic, small);
@@ -618,7 +621,6 @@ void building_room_geom_t::add_small_static_objs_to_verts(vect_room_object_t con
 		case TYPE_DRESSER: case TYPE_NIGHTSTAND: add_dresser(*i, tscale, 0, 1); break;
 		case TYPE_TCAN:      add_trashcan (*i); break;
 		case TYPE_SIGN:      add_sign     (*i, 0, 1); break;
-		case TYPE_WALL_TRIM: add_wall_trim(*i); break;
 		case TYPE_CLOSET:    add_closet   (*i, tid_nm_pair_t(), 0, 1); break; // add closet wall trim and interior objects, don't need wall_tex
 		case TYPE_RAILING:   add_railing  (*i); break;
 		case TYPE_PLANT:     add_potted_plant(*i, 0, 1); break; // plant only
@@ -643,7 +645,6 @@ void building_room_geom_t::add_small_static_objs_to_verts(vect_room_object_t con
 		case TYPE_SPRAYCAN:  add_spraycan(*i); break;
 		case TYPE_CRACK:     add_crack (*i); break;
 		case TYPE_SWITCH:    add_switch(*i); break;
-		case TYPE_OUTLET:    add_outlet(*i); break;
 		case TYPE_PLATE:     add_plate (*i); break;
 		case TYPE_LAPTOP:    add_laptop(*i); break;
 		case TYPE_BUTTON:    if (!(i->flags & RO_FLAG_IN_ELEV)) {add_button(*i);} break; // skip buttons inside elevators, which are drawn as dynamic objects
@@ -652,6 +653,22 @@ void building_room_geom_t::add_small_static_objs_to_verts(vect_room_object_t con
 		default: break;
 		}
 	} // for i
+}
+
+void building_room_geom_t::create_detail_vbos(building_t const &building) {
+	mats_detail.clear();
+	auto objs_end(get_std_objs_end()); // skip buttons/stairs/elevators
+
+	// currently only small objects that are non-interactive and can't be taken; TYPE_SWITCH almost counts
+	for (auto i = objs.begin(); i != objs_end; ++i) {
+		if (!i->is_visible()) continue; // skip invisible and dynamic objects
+		switch (i->type) {
+		case TYPE_WALL_TRIM: add_wall_trim(*i); break;
+		case TYPE_OUTLET:    add_outlet(*i); break;
+		default: break;
+		}
+	} // for i
+	mats_detail.create_vbos(building);
 }
 
 void building_room_geom_t::create_obj_model_insts(building_t const &building) { // handle drawing of 3D models
@@ -853,14 +870,14 @@ int room_object_t::get_model_id() const {
 }
 
 void building_t::draw_room_geom(brg_batch_draw_t *bbd, shader_t &s, occlusion_checker_noncity_t &oc, vector3d const &xlate, unsigned building_ix,
-	bool shadow_only, bool reflection_pass, bool inc_small, bool player_in_building)
+	bool shadow_only, bool reflection_pass, unsigned inc_small, bool player_in_building)
 {
 	if (!interior || !interior->room_geom) return;
 	if (ENABLE_MIRROR_REFLECTIONS && !shadow_only && !reflection_pass && player_in_building) {find_mirror_needing_reflection(xlate);}
 	interior->room_geom->draw(bbd, s, *this, oc, xlate, building_ix, shadow_only, reflection_pass, inc_small, player_in_building);
 }
 void building_t::gen_and_draw_room_geom(brg_batch_draw_t *bbd, shader_t &s, occlusion_checker_noncity_t &oc, vector3d const &xlate, vect_cube_t &ped_bcubes,
-	unsigned building_ix, int ped_ix, bool shadow_only, bool reflection_pass, bool inc_small, bool player_in_building)
+	unsigned building_ix, int ped_ix, bool shadow_only, bool reflection_pass, unsigned inc_small, bool player_in_building)
 {
 	if (!interior) return;
 	if (!global_building_params.enable_rotated_room_geom && is_rotated()) return; // rotated buildings: need to fix texture coords, room object collisions, mirrors, etc.
@@ -922,16 +939,15 @@ void draw_stove_flames(room_object_t const &stove, point const &camera_bs, shade
 	s.set_color_e(BLACK);
 }
 
-// Note: non-const because it creates the VBO
+// Note: non-const because it creates the VBO; inc_small: 0=large only, 1=large+small, 2=large+small+detail
 void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, building_t const &building, occlusion_checker_noncity_t &oc, vector3d const &xlate,
-	unsigned building_ix, bool shadow_only, bool reflection_pass, bool inc_small, bool player_in_building)
+	unsigned building_ix, bool shadow_only, bool reflection_pass, unsigned inc_small, bool player_in_building)
 {
 	if (empty()) return; // no geom
 	unsigned const num_screenshot_tids(get_num_screenshot_tids());
 	static int last_frame(0);
 	static unsigned num_geom_this_frame(0); // used to limit per-frame geom gen time; doesn't apply to shadow pass, in case shadows are cached
 	if (frame_counter > last_frame) {num_geom_this_frame = 0; last_frame = frame_counter;}
-	bool const can_update_geom(shadow_only || num_geom_this_frame < MAX_ROOM_GEOM_GEN_PER_FRAME); // must be consistent for static and small geom
 	point const camera_bs(camera_pdu.pos - xlate);
 	bool const draw_lights(camera_bs.z < building.bcube.z2()); // don't draw ceiling lights when player is above the building
 	if (player_in_building) {bbd = nullptr;} // use immediate drawing when player is in the building because draw order matters for alpha blending
@@ -949,23 +965,31 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, building_t c
 		clear_static_vbos(); // user created a new screenshot texture, and this building has pictures - recreate room geom
 		num_pic_tids = num_screenshot_tids;
 	}
-	if (mats_static.empty() && can_update_geom) { // create static materials if needed
-		create_obj_model_insts(building);
-		create_static_vbos(building);
-		++num_geom_this_frame;
-	}
-	if (inc_small && mats_small.empty() && can_update_geom) { // create small materials if needed
-		create_small_static_vbos(building);
-		++num_geom_this_frame;
+	// generate vertex data in the shadow pass or if we haven't hit our generation limit; must be consistent for static and small geom
+	if (shadow_only || num_geom_this_frame < MAX_ROOM_GEOM_GEN_PER_FRAME) {
+		if (mats_static.empty()) { // create static materials if needed
+			create_obj_model_insts(building);
+			create_static_vbos(building);
+			++num_geom_this_frame;
+		}
+		if (inc_small && mats_small.empty()) { // create small materials if needed
+			create_small_static_vbos(building);
+			++num_geom_this_frame;
+		}
+		if (inc_small == 2 && mats_detail.empty()) { // create detail materials if needed
+			create_detail_vbos(building);
+			++num_geom_this_frame;
+		}
 	}
 	if (draw_lights && mats_lights .empty()) {create_lights_vbos (building);} // create lights  materials if needed (no limit)
 	if (inc_small   && mats_dynamic.empty()) {create_dynamic_vbos(building);} // create dynamic materials if needed (no limit); drawn with small objects
 	if (mats_doors.empty()) {create_door_vbos(building);} // create door materials if needed (no limit)
 	enable_blend(); // needed for rugs and book text
 	assert(s.is_setup());
-	mats_static .draw(bbd, s, shadow_only, reflection_pass); // this is the slowest call
-	if (draw_lights) {mats_lights .draw(bbd, s, shadow_only, reflection_pass);}
-	if (inc_small  ) {mats_dynamic.draw(bbd, s, shadow_only, reflection_pass);}
+	mats_static.draw(bbd, s, shadow_only, reflection_pass); // this is the slowest call
+	if (draw_lights)    {mats_lights .draw(bbd, s, shadow_only, reflection_pass);}
+	if (inc_small  )    {mats_dynamic.draw(bbd, s, shadow_only, reflection_pass);}
+	if (inc_small == 2) {mats_detail .draw(bbd, s, shadow_only, reflection_pass);}
 	mats_doors  .draw(bbd, s, shadow_only, reflection_pass);
 	
 	if (inc_small) {

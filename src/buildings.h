@@ -625,7 +625,7 @@ struct building_room_geom_t {
 	vector<unsigned> moved_obj_ids;
 	vect_rat_t rats;
 	// {large static, small static, dynamic, lights, alpha mask, transparent, door} materials
-	building_materials_t mats_static, mats_small, mats_dynamic, mats_lights, mats_amask, mats_alpha, mats_doors;
+	building_materials_t mats_static, mats_small, mats_detail, mats_dynamic, mats_lights, mats_amask, mats_alpha, mats_doors;
 	vect_cube_t light_bcubes;
 	building_decal_manager_t decal_manager;
 
@@ -637,14 +637,14 @@ struct building_room_geom_t {
 	void clear_static_vbos();
 	void clear_static_small_vbos();
 	void clear_and_recreate_lights() {lights_changed = 1;} // cache the state and apply the change later in case this is called from a different thread
-	unsigned get_num_verts() const {return (mats_static.count_all_verts() + mats_small.count_all_verts() + mats_dynamic.count_all_verts() +
+	unsigned get_num_verts() const {return (mats_static.count_all_verts() + mats_small.count_all_verts() + mats_detail.count_all_verts() + mats_dynamic.count_all_verts() +
 		mats_lights.count_all_verts() + mats_amask.count_all_verts() + mats_alpha.count_all_verts() + mats_doors.count_all_verts());}
-	rgeom_mat_t &get_material(tid_nm_pair_t const &tex, bool inc_shadows=0, bool dynamic=0, bool small=0, bool transparent=0);
-	rgeom_mat_t &get_untextured_material(bool inc_shadows=0, bool dynamic=0, bool small=0, bool transparent=0) {
+	rgeom_mat_t &get_material(tid_nm_pair_t const &tex, bool inc_shadows=0, bool dynamic=0, unsigned small=0, bool transparent=0);
+	rgeom_mat_t &get_untextured_material(bool inc_shadows=0, bool dynamic=0, unsigned small=0, bool transparent=0) {
 		return get_material(tid_nm_pair_t(-1, 1.0, inc_shadows), inc_shadows, dynamic, small, transparent);
 	}
-	rgeom_mat_t &get_wood_material(float tscale=1.0, bool inc_shadows=1, bool dynamic=0, bool small=0);
-	rgeom_mat_t &get_metal_material(bool inc_shadows=0, bool dynamic=0, bool small=0);
+	rgeom_mat_t &get_wood_material(float tscale=1.0, bool inc_shadows=1, bool dynamic=0, unsigned small=0);
+	rgeom_mat_t &get_metal_material(bool inc_shadows=0, bool dynamic=0, unsigned small=0);
 	colorRGBA apply_wood_light_color(room_object_t const &o) const;
 	void add_tquad(building_geom_t const &bg, tquad_with_ix_t const &tquad, cube_t const &bcube, tid_nm_pair_t const &tex,
 		colorRGBA const &color, bool invert_tc_x, bool exclude_frame, bool no_tc);
@@ -716,7 +716,7 @@ struct building_room_geom_t {
 	static void add_pen_pencil_marker_to_material(room_object_t const &c_, rgeom_mat_t &mat);
 	void add_pen_pencil_marker(room_object_t const &c);
 	void add_flooring(room_object_t const &c, float tscale);
-	void add_wall_trim(room_object_t const &c);
+	void add_wall_trim(room_object_t const &c, bool for_closet=0);
 	void add_blinds(room_object_t const &c);
 	void add_fireplace(room_object_t const &c, float tscale);
 	void add_railing(room_object_t const &c);
@@ -748,13 +748,14 @@ struct building_room_geom_t {
 	void update_dynamic_draw_data() {mats_dynamic.clear();}
 	void create_static_vbos(building_t const &building);
 	void create_small_static_vbos(building_t const &building);
+	void create_detail_vbos(building_t const &building);
 	void add_small_static_objs_to_verts(vect_room_object_t const &objs_to_add);
 	void create_obj_model_insts(building_t const &building);
 	void create_lights_vbos(building_t const &building);
 	void create_dynamic_vbos(building_t const &building);
 	void create_door_vbos(building_t const &building);
 	void draw(brg_batch_draw_t *bbd, shader_t &s, building_t const &building, occlusion_checker_noncity_t &oc, vector3d const &xlate,
-		unsigned building_ix, bool shadow_only, bool reflection_pass, bool inc_small, bool player_in_building);
+		unsigned building_ix, bool shadow_only, bool reflection_pass, unsigned inc_small, bool player_in_building);
 	unsigned allocate_dynamic_state();
 	room_obj_dstate_t &get_dstate(room_object_t const &obj);
 private:
@@ -1104,9 +1105,10 @@ struct building_t : public building_geom_t {
 	bool maybe_use_last_pickup_room_object(point const &player_pos);
 	bool maybe_update_tape(point const &player_pos, bool end_of_tape);
 	void handle_vert_cylin_tape_collision(point &cur_pos, point const &prev_pos, float z1, float z2, float radius, bool is_player) const;
-	void draw_room_geom(brg_batch_draw_t *bbd, shader_t &s, occlusion_checker_noncity_t &oc, vector3d const &xlate, unsigned building_ix, bool shadow_only, bool reflection_pass, bool inc_small, bool player_in_building);
+	void draw_room_geom(brg_batch_draw_t *bbd, shader_t &s, occlusion_checker_noncity_t &oc, vector3d const &xlate,
+		unsigned building_ix, bool shadow_only, bool reflection_pass, unsigned inc_small, bool player_in_building);
 	void gen_and_draw_room_geom(brg_batch_draw_t *bbd, shader_t &s, occlusion_checker_noncity_t &oc, vector3d const &xlate, vect_cube_t &ped_bcubes,
-		unsigned building_ix, int ped_ix, bool shadow_only, bool reflection_pass, bool inc_small, bool player_in_building);
+		unsigned building_ix, int ped_ix, bool shadow_only, bool reflection_pass, unsigned inc_small, bool player_in_building);
 	void add_split_roof_shadow_quads(building_draw_t &bdraw) const;
 	void clear_room_geom(bool force);
 	void update_grass_exclude_at_pos(point const &pos, vector3d const &xlate, bool camera_in_building) const;

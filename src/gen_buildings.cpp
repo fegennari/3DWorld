@@ -2239,7 +2239,7 @@ public:
 						(*i)->building_draw_interior.draw_quads_for_draw_range(s, b.interior->draw_range, 1); // shadow_only=1
 						b.add_split_roof_shadow_quads(ext_parts_draw);
 						// no batch draw for shadow pass since textures aren't used; draw everything, since shadow may be cached
-						b.draw_room_geom(nullptr, s, oc, xlate, bi->ix, 1, 0, 1, 1); // shadow_only=1, inc_small=1, player_in_building=1
+						b.draw_room_geom(nullptr, s, oc, xlate, bi->ix, 1, 0, 1, 1); // shadow_only=1, inc_small=1 (no detail objects in shadow pass), player_in_building=1
 						bool const player_close(dist_less_than(lpos, pre_smap_player_pos, camera_pdu.far_)); // Note: pre_smap_player_pos already in building space
 						b.get_ext_wall_verts_no_sec(ext_parts_draw); // add exterior walls to prevent light leaking between adjacent parts
 						bool const add_player_shadow(camera_surf_collide ? player_close : 0);
@@ -2380,7 +2380,8 @@ public:
 		if (have_interior) {
 			//timer_t timer2("Draw Building Interiors");
 			float const interior_draw_dist(global_building_params.interior_view_dist_scale*2.0f*(X_SCENE_SIZE + Y_SCENE_SIZE));
-			float const room_geom_draw_dist(0.4*interior_draw_dist), room_geom_sm_draw_dist(0.05*interior_draw_dist), z_prepass_dist(0.25*interior_draw_dist);
+			float const room_geom_draw_dist(0.4*interior_draw_dist), room_geom_sm_draw_dist(0.05*interior_draw_dist);
+			float const room_geom_detail_draw_dist(0.035*interior_draw_dist), z_prepass_dist(0.25*interior_draw_dist);
 			glEnable(GL_CULL_FACE); // back face culling optimization, helps with expensive lighting shaders
 			glCullFace(reflection_pass ? GL_FRONT : GL_BACK);
 
@@ -2458,7 +2459,8 @@ public:
 						bool const player_in_building_bcube(b.bcube.contains_pt_xy(camera_xlated)); // player is within the building's bcube
 						if ((display_mode & 0x08) && !player_in_building_bcube && b.is_entire_building_occluded(camera_xlated, oc)) continue; // check occlusion
 						int const ped_ix((*i)->get_ped_ix_for_bix(bi->ix)); // Note: assumes only one building_draw has people
-						bool const inc_small(b.bcube.closest_dist_less_than(camera_xlated, ddist_scale*room_geom_sm_draw_dist));
+						unsigned inc_small(b.bcube.closest_dist_less_than(camera_xlated, ddist_scale*room_geom_sm_draw_dist));
+						if (inc_small && b.bcube.closest_dist_less_than(camera_xlated, ddist_scale*room_geom_detail_draw_dist)) {inc_small = 2;} // include detail objects
 						b.gen_and_draw_room_geom(&bbd, s, oc, xlate, ped_bcubes, bi->ix, ped_ix, 0, reflection_pass, inc_small, player_in_building_bcube); // shadow_only=0
 						g->has_room_geom = 1;
 						if (!draw_interior) continue;
