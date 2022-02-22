@@ -61,17 +61,17 @@ typedef vector<vert_norm_comp_tc_color> vect_vnctcc_t;
 struct bottle_params_t {
 	std::string name, texture_fn;
 	colorRGBA color;
-	float value;
-	bottle_params_t(std::string const &n, std::string const &fn, colorRGBA const &c, float v) : name(n), texture_fn(fn), color(c), value(v) {}
+	float value, label_tscale;
+	bottle_params_t(std::string const &n, std::string const &fn, colorRGBA const &c, float v, float ts) : name(n), texture_fn(fn), color(c), value(v), label_tscale(ts) {}
 };
 
 // Note: we could add colorRGBA(0.8, 0.9, 1.0, 0.4) for water bottles, but transparent objects require removing interior faces such as half of the sphere
 bottle_params_t const bottle_params[NUM_BOTTLE_TYPES] = {
-	bottle_params_t("bottle of water",  "", colorRGBA(0.4, 0.7, 1.0 ), 1.0),
-	bottle_params_t("bottle of Coke",   "interiors/coke_label.jpg", colorRGBA(0.2, 0.1, 0.05), 1.0),
-	bottle_params_t("bottle of beer",   "", colorRGBA(0.1, 0.4, 0.1 ), 3.0),
-	bottle_params_t("bottle of wine",   "", BLACK, 10.0),
-	bottle_params_t("bottle of poison", "yuck.png", BLACK, 5.0),
+	bottle_params_t("bottle of water",  "interiors/arrowhead_logo.jpg", colorRGBA(0.4, 0.7, 1.0 ), 1.0, 1.0),
+	bottle_params_t("bottle of Coke",   "interiors/coke_label.jpg",     colorRGBA(0.2, 0.1, 0.05), 1.0, 1.0),
+	bottle_params_t("bottle of beer",   "interiors/heineken_label.jpg", colorRGBA(0.1, 0.4, 0.1 ), 3.0, 2.0),
+	bottle_params_t("bottle of wine",   "interiors/wine_label.jpg",     BLACK,                    10.0, 2.0),
+	bottle_params_t("bottle of poison", "yuck.png",                     BLACK,                     5.0, 2.0),
 };
 
 struct rat_t {

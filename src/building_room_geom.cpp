@@ -913,7 +913,6 @@ void building_room_geom_t::add_shower(room_object_t const &c, float tscale) {
 
 void building_room_geom_t::add_bottle(room_object_t const &c) {
 	// obj_id: bits 1-3 for type, bits 6-7 for emptiness, bit 6 for cap color
-	// for now, no texture, but could use a bottle label texture for the central cylinder
 	unsigned const bottle_ndiv = 16; // use smaller ndiv to reduce vertex count
 	tid_nm_pair_t tex(-1, 1.0, 1); // shadowed
 	tex.set_specular(0.5, 80.0);
@@ -941,20 +940,25 @@ void building_room_geom_t::add_bottle(room_object_t const &c) {
 	mat.add_sphere_to_verts(sphere, color, 1, skip_hemi_dir); // low_detail=1
 	mat.add_ortho_cylin_to_verts(body, color, dim, (add_bottom && !c.dir), (add_bottom && c.dir), 0, 0, 1.0, 1.0, 1.0, 1.0, 0, bottle_ndiv);
 	// draw neck of bottle as a truncated cone; draw top if empty
-	mat.add_ortho_cylin_to_verts(neck, color, dim, (is_empty && c.dir), (is_empty && !c.dir), 0, 0, (c.dir ? 0.85 : 1.0), (c.dir ? 1.0 : 0.85), 1.0, 1.0, 0, bottle_ndiv);
+	mat.add_ortho_cylin_to_verts(neck, color, dim, (is_empty && c.dir), (is_empty && !c.dir), 0, 0,
+		(c.dir ? 0.85 : 1.0), (c.dir ? 1.0 : 0.85), 1.0, 1.0, 0, bottle_ndiv);
 
 	if (!is_empty) { // draw cap if nonempty
 		bool const draw_bot(c.was_expanded());
-		mat.add_ortho_cylin_to_verts(cap, apply_light_color(c, cap_colors[bool(c.obj_id & 64)]), dim, (draw_bot || c.dir), (draw_bot || !c.dir), 0, 0, 1.0, 1.0, 1.0, 1.0, 0, bottle_ndiv);
+		mat.add_ortho_cylin_to_verts(cap, apply_light_color(c, cap_colors[bool(c.obj_id & 64)]), dim,
+			(draw_bot || c.dir), (draw_bot || !c.dir), 0, 0, 1.0, 1.0, 1.0, 1.0, 0, bottle_ndiv);
 	}
 	// add the label
 	// Note: we could add a bottom sphere to make it a capsule, then translate below the surface in -z to flatten the bottom
 	body.expand_in_dim(dim1, 0.03*radius); // expand slightly in radius
 	body.expand_in_dim(dim2, 0.03*radius); // expand slightly in radius
 	body.d[dim][c.dir] += dir_sign*0.24*length; body.d[dim][!c.dir] -= dir_sign*0.12*length; // shrink in length
-	string const &texture_fn(bottle_params[c.get_bottle_type()].texture_fn);
+	bottle_params_t const &bp(bottle_params[c.get_bottle_type()]);
+	float const tscale(bp.label_tscale); // some labels are more square and scaled 2x to repeat as they're more stretched out; should we use a partial cylinder instead?
+	float const tscale_add(0.123*c.obj_id); // add a pseudo-random rotation to the label texture
+	string const &texture_fn(bp.texture_fn); // select the custom label texture for each bottle type
 	rgeom_mat_t &label_mat(get_material(tid_nm_pair_t(texture_fn.empty() ? -1 : get_texture_by_name(texture_fn)), 0, 0, 1));
-	label_mat.add_ortho_cylin_to_verts(body, apply_light_color(c, WHITE), dim, 0, 0, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, bottle_ndiv); // white label
+	label_mat.add_ortho_cylin_to_verts(body, apply_light_color(c, WHITE), dim, 0, 0, 0, 0, 1.0, 1.0, tscale, 1.0, 0, bottle_ndiv, tscale_add); // draw label
 }
 
 void building_room_geom_t::add_paper(room_object_t const &c) {
