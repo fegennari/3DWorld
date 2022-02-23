@@ -2518,23 +2518,30 @@ void building_room_geom_t::add_window(room_object_t const &c, float tscale) { //
 	get_material(tex, 0).add_cube_to_verts(window, c.color, c.get_llc(), skip_faces); // no apply_light_color()
 }
 
-void building_room_geom_t::add_switch(room_object_t const &c) { // light switch, etc.
+void building_room_geom_t::add_switch(room_object_t const &c, bool draw_detail_pass) { // light switch, etc.
 	unsigned const skip_faces(~get_face_mask(c.dim, c.dir)), front_face_mask(get_face_mask(c.dim, !c.dir)); // skip face that's against the wall
 	vector3d const sz(c.get_size());
-	cube_t plate(c), rocker(c);
+	cube_t plate(c);
 	plate.d[c.dim][!c.dir] -= (c.dir ? -1.0 : 1.0)*0.70*sz[c.dim]; // front face of plate
-	set_wall_width(rocker, plate.d[c.dim][!c.dir], 0.15*sz[c.dim], c.dim);
-	rocker.expand_in_dim(!c.dim, -0.27*sz[!c.dim]); // shrink horizontally
-	rocker.expand_in_dim(2,      -0.39*sz[!c.dim]); // shrink vertically
-	rgeom_mat_t &front_mat(get_material(tid_nm_pair_t(get_texture_by_name("interiors/light_switch.jpg"), 0.0, 0), 0, 0, 1));
-	front_mat.add_cube_to_verts(plate, c.color, zero_vector, front_face_mask, !c.dim); // textured front face
-	rgeom_mat_t &mat(get_untextured_material(0, 0, 1)); // unshadowed, small
-	mat.add_cube_to_verts(plate,  c.color, zero_vector, (skip_faces | ~front_face_mask)); // skip front face; always fully lit to match wall
-	unsigned const qv_start(mat.quad_verts.size());
-	mat.add_cube_to_verts(rocker, c.color, zero_vector, (skip_faces | EF_Z1)); // skip bottom face
-	vector3d rot_axis(zero_vector);
-	rot_axis[!c.dim] = ((c.dir ^ c.is_open()) ? 1.0 : -1.0);
-	rotate_verts(mat.quad_verts, rot_axis, 0.015*PI, plate.get_cube_center(), qv_start); // rotate rocker slightly about base plate center; could be optimized by caching
+
+	if (draw_detail_pass) { // draw face plate (static detail)
+		rgeom_mat_t &front_mat(get_material(tid_nm_pair_t(get_texture_by_name("interiors/light_switch.jpg"), 0.0, 0), 0, 0, 2)); // small=2/detail
+		front_mat.add_cube_to_verts(plate, c.color, zero_vector, front_face_mask, !c.dim); // textured front face
+		rgeom_mat_t &mat(get_untextured_material(0, 0, 2)); // unshadowed, small=2/detail
+		mat.add_cube_to_verts(plate,  c.color, zero_vector, (skip_faces | ~front_face_mask)); // skip front face; always fully lit to match wall
+	}
+	else { // draw rocker (small object that can move/change state)
+		cube_t rocker(c);
+		set_wall_width(rocker, plate.d[c.dim][!c.dir], 0.15*sz[c.dim], c.dim);
+		rocker.expand_in_dim(!c.dim, -0.27*sz[!c.dim]); // shrink horizontally
+		rocker.expand_in_dim(2,      -0.39*sz[!c.dim]); // shrink vertically
+		rgeom_mat_t &mat(get_untextured_material(0, 0, 1)); // unshadowed, small
+		unsigned const qv_start(mat.quad_verts.size());
+		mat.add_cube_to_verts(rocker, c.color, zero_vector, (skip_faces | EF_Z1)); // skip bottom face
+		vector3d rot_axis(zero_vector);
+		rot_axis[!c.dim] = ((c.dir ^ c.is_open()) ? 1.0 : -1.0);
+		rotate_verts(mat.quad_verts, rot_axis, 0.015*PI, plate.get_cube_center(), qv_start); // rotate rocker slightly about base plate center; could be optimized by caching
+	}
 }
 
 void building_room_geom_t::add_outlet(room_object_t const &c) { // uses mats_detail

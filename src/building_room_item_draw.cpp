@@ -648,7 +648,7 @@ void building_room_geom_t::add_small_static_objs_to_verts(vect_room_object_t con
 		case TYPE_TAPE:      add_tape  (*i); break;
 		case TYPE_SPRAYCAN:  add_spraycan(*i); break;
 		case TYPE_CRACK:     add_crack (*i); break;
-		case TYPE_SWITCH:    add_switch(*i); break;
+		case TYPE_SWITCH:    add_switch(*i, 0); break; // draw_detail_pass=0
 		case TYPE_PLATE:     add_plate (*i); break;
 		case TYPE_LAPTOP:    add_laptop(*i); break;
 		case TYPE_BUTTON:    if (!(i->flags & RO_FLAG_IN_ELEV)) {add_button(*i);} break; // skip buttons inside elevators, which are drawn as dynamic objects
@@ -665,7 +665,9 @@ void building_room_geom_t::create_detail_vbos(building_t const &building) {
 	auto objs_end(get_placed_objs_end()); // skip buttons/stairs/elevators
 
 	for (auto i = objs.begin(); i != objs_end; ++i) {
-		if (i->type == TYPE_OUTLET && !i->is_visible()) {add_outlet(*i);}
+		if (!i->is_visible()) continue;
+		if      (i->type == TYPE_OUTLET) {add_outlet(*i);}
+		else if (i->type == TYPE_SWITCH) {add_switch(*i, 1);} // draw_detail_pass=0
 	}
 	for (auto const &i : trim_objs) {
 		assert(i.type == TYPE_WALL_TRIM);
@@ -994,7 +996,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, building_t c
 	if (draw_lights)    {mats_lights .draw(bbd, s, shadow_only, reflection_pass);}
 	if (inc_small  )    {mats_dynamic.draw(bbd, s, shadow_only, reflection_pass);}
 	if (inc_small == 2) {mats_detail .draw(bbd, s, shadow_only, reflection_pass);}
-	mats_doors  .draw(bbd, s, shadow_only, reflection_pass);
+	mats_doors.draw(bbd, s, shadow_only, reflection_pass);
 	
 	if (inc_small) {
 		mats_small.draw(bbd, s, shadow_only, reflection_pass);

@@ -676,7 +676,7 @@ struct building_room_geom_t {
 	void add_bed(room_object_t const &c, bool inc_lg, bool inc_sm, float tscale);
 	void add_window(room_object_t const &c, float tscale);
 	void add_crack(room_object_t const &c);
-	void add_switch(room_object_t const &c);
+	void add_switch(room_object_t const &c, bool draw_detail_pass);
 	void add_outlet(room_object_t const &c);
 	void add_plate(room_object_t const &c);
 	void add_tub_outer(room_object_t const &c);
