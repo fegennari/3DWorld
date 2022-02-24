@@ -1366,7 +1366,7 @@ void building_room_geom_t::add_book(room_object_t const &c, bool inc_lg, bool in
 	bool const is_held(z_rot_angle != 0.0); // held by the player, and need to draw the bottom
 	bool const draw_cover_as_small(c.was_expanded() || is_held); // books in drawers, held, or dropped are always drawn as small objects
 	if (draw_cover_as_small && !inc_sm) return; // nothing to draw
-	bool const is_open(c.is_open()), upright(c.get_sz_dim(!c.dim) < c.dz()); // on a bookshelf
+	bool const is_open(c.is_open()), upright(c.get_sz_dim(!c.dim) < c.dz()); // on a bookcase
 	bool const from_book_set(c.flags & RO_FLAG_FROM_SET);
 	bool const tdir((upright && !from_book_set) ? (c.dim ^ c.dir ^ bool(c.obj_id%7)) : 1); // sometimes upside down when upright and not from a set
 	bool const ldir(!tdir), cdir(c.dim ^ c.dir ^ upright ^ ldir); // colum and line directions (left/right/top/bot) + mirror flags for front cover
@@ -1453,18 +1453,27 @@ void building_room_geom_t::add_book(room_object_t const &c, bool inc_lg, bool in
 
 	if (ADD_BOOK_TITLES && inc_sm && !is_open && !no_title && (can_add_front_title || add_spine_title)) { // add title(s) if not open
 		unsigned const SPLIT_LINE_SZ = 24;
-		string const &title(gen_book_title(c.obj_id, nullptr, SPLIT_LINE_SZ)); // select our title text
-		if (title.empty()) return; // no title
+		bool const is_set_volume(from_book_set && c.drawer_flags > 0);
+		bool const add_volume_index(is_set_volume && c.drawer_flags <= 16 && (c.dim ^ c.dir ^ 1)); // only when placed left to right, otherwise the order is backwards
+		// if this is a set, but not a numbered volume, include the volume index in the title random seed so that the title is unique
+		unsigned const title_rand_id(c.obj_id + ((is_set_volume && !add_volume_index) ? (unsigned(c.drawer_flags) << 16) : 0));
+		string title(gen_book_title(title_rand_id, nullptr, SPLIT_LINE_SZ)); // select our title text
+		if (title.empty()) return; // no title (error?)
+		rand_gen_t rgen;
+		rgen.set_state(c.obj_id+1, c.obj_id+123);
+
+		if (add_volume_index) { // add book set volume index Roman numerals 1-16
+			string const vol_nums[16] = {"I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XI", "XII", "XII", "XIV", "XV", "XVI"};
+			title += " " + vol_nums[c.drawer_flags - 1];
+		}
 		colorRGBA text_color(BLACK);
 		for (unsigned i = 0; i < 3; ++i) {text_color[i] = ((c.color[i] > 0.5) ? 0.0 : 1.0);} // invert + saturate to contrast with book cover
 		text_color = apply_light_color(c, text_color);
 		rgeom_mat_t &mat(get_material(tid_nm_pair_t(FONT_TEXTURE_ID), 0, 0, 1)); // no shadows, small=1
 		unsigned const qv_start(mat.quad_verts.size());
 		// maybe choose author
-		rand_gen_t rgen;
-		rgen.set_state(c.obj_id+1, c.obj_id+123);
 		string author;
-		bool add_author(!from_book_set && (rgen.rand() & 3)), add_spine_author(0); // add an author 75% of the time if not from a set
+		bool add_author((!from_book_set || is_set_volume) && (rgen.rand() & 3)), add_spine_author(0); // add an author 75% of the time if not from a non-volume set
 		
 		if (add_author) {
 			add_spine_author = (rgen.rand() & 3); // 75% of the time
@@ -1533,14 +1542,21 @@ void get_bookcase_cubes(room_object_t const &c, cube_t &top, cube_t &middle, cub
 }
 
 void building_room_geom_t::add_bcase_book(room_object_t const &c, cube_t const &book, bool inc_lg, bool inc_sm, bool backwards, bool in_set,
-	unsigned skip_faces, unsigned book_ix, colorRGBA const &color, vect_room_object_t *books)
+	unsigned skip_faces, unsigned book_ix, unsigned set_start_ix, colorRGBA const &color, vect_room_object_t *books)
 {
 	assert(book.is_strictly_normalized());
 	bool const book_dir(c.dir ^ backwards ^ 1);
 	room_object_t obj(book, TYPE_BOOK, c.room_id, c.dim, book_dir, c.flags, c.light_amt, SHAPE_CUBE, color);
-	obj.obj_id     = c.obj_id + 123*book_ix;
-	obj.item_flags = (uint16_t)book_ix;
-	if (in_set) {obj.flags |= RO_FLAG_FROM_SET;} // set a flag so that books are consistent: title on front and spine, no author, no picture
+
+	if (in_set) {
+		obj.obj_id = c.obj_id + 123*set_start_ix;
+		obj.drawer_flags = (book_ix - set_start_ix + 1); // first book starts at 1
+		obj.flags |= RO_FLAG_FROM_SET; // set a flag so that books are consistent: title on front and spine, no author, no picture
+	}
+	else { // individual book; book_ix/obj_id is unique
+		obj.obj_id = c.obj_id + 123*book_ix;
+	}
+	obj.item_flags = (uint16_t)book_ix; // always unique per bookcase book; used for removing books from bookcases
 	if (inc_lg || inc_sm) {add_book(obj, inc_lg, inc_sm, 0.0, skip_faces, backwards);} // detailed book, no title if backwards
 	if (books) {books->push_back(obj);}
 }
@@ -1589,6 +1605,7 @@ void building_room_geom_t::add_bookcase(room_object_t const &c, bool inc_lg, boo
 	}
 	// add books
 	for (unsigned i = 0, book_ix = 0; i < num_shelves; ++i) {
+		// TODO: add vertical shelf splits as well? With recursive nesting?
 		if (rgen.rand_float() < 0.15) continue; // no books on this shelf
 		cube_t const &shelf(shelves[i]);
 		float const shelf_width(shelf.get_sz_dim(!c.dim)), shelf_height(shelf_heights[i]);
@@ -1618,7 +1635,7 @@ void building_room_geom_t::add_bookcase(room_object_t const &c, bool inc_lg, boo
 				bool const backwards((rgen.rand()%10) == 0); // spine facing out 90% of the time
 
 				if (!(skip_book_flags & (1<<(book_ix&31)))) {
-					add_bcase_book(c, book, inc_lg, inc_sm, backwards, 0, skip_faces, book_ix, book_color, books); // in_set=0
+					add_bcase_book(c, book, inc_lg, inc_sm, backwards, 0, skip_faces, book_ix, 0, book_color, books); // in_set=0, set_start_ix=0
 				}
 				++book_ix;
 				cur_zval = next_zval;
@@ -1626,7 +1643,7 @@ void building_room_geom_t::add_bookcase(room_object_t const &c, bool inc_lg, boo
 			continue; // done with this shelf
 		}
 		unsigned const num_spaces(22 + (rgen.rand()%11)); // 22-32 books per shelf
-		unsigned skip_mask(0);
+		unsigned skip_mask(0), set_start_ix(0);
 
 		for (unsigned n = 0; n < num_spaces; ++n) {
 			if (rgen.rand_float() < 0.12) {
@@ -1640,13 +1657,16 @@ void building_room_geom_t::add_bookcase(room_object_t const &c, bool inc_lg, boo
 		colorRGBA book_color;
 		float pos(shelf.d[!c.dim][0]), last_book_pos(pos), min_height(0.0), width(0.0), height(0.0), depth_val(0.0);
 
-		for (unsigned n = 0; n < num_spaces; ++n) {
+		for (unsigned n = 0; n < num_spaces; ++n) { // fill this shelf horizontally
 			if ((pos + 0.7*book_space) > shelf_end) break; // not enough space for another book
-			// don't toggle on two consecutive books or on the last book on the shelf
+			// don't toggle on two consecutive books or on the last book on the shelf; this should prevent single book sets except when there's a missing book
 			bool const start_or_end_set(enable_sets && !last_start_or_end_set && n+1 < num_spaces && (rgen.rand()&7) == 0);
 			last_start_or_end_set = start_or_end_set;
-			if (start_or_end_set) {in_set ^= 1;}
 			
+			if (start_or_end_set) {
+				in_set ^= 1;
+				if (in_set) {set_start_ix = book_ix;} // first book in this set
+			}
 			if (start_or_end_set || !in_set) { // choose a new book set color/width/height if we're starting a new set or not currently in a set
 				book_color = book_colors[rgen.rand() % NUM_BOOK_COLORS];
 				width      = book_space*rgen.rand_uniform(0.7, 1.3);
@@ -1674,10 +1694,11 @@ void building_room_geom_t::add_bookcase(room_object_t const &c, bool inc_lg, boo
 				book.z2() = shelf.z2() + width;
 			}
 			else { // upright
-				if (!prev_tilted && avail_space > 2.0*width && (right_pos + book_space) < shelf_end && n+1 < num_spaces) { // rotates about the URC
+				if (!prev_tilted && avail_space > 2.0*width && (right_pos + book_space) < shelf_end && n+1 < num_spaces) {
+					// rotates about the URC; note that books are limited to tilting only in the direction of iteration, which is constant per bookcase
 					float const lean_width(min((avail_space - width), rgen.rand_uniform(0.1, 0.6)*height)); // use part of the availabe space to lean
 					tilt_angle = asinf(lean_width/height);
-					float const delta_z(height - sqrt(height*height - lean_width*lean_width)); // move down to touch the bottom of the bookshelf when rotated
+					float const delta_z(height - sqrt(height*height - lean_width*lean_width)); // move down to touch the bottom of the bookcase when rotated
 					book.z1() -= delta_z;
 					min_height = rgen.rand_uniform(0.95, 1.05)*(height - delta_z); // make sure the book this book is leaning on is tall enough
 				}
@@ -1689,7 +1710,7 @@ void building_room_geom_t::add_bookcase(room_object_t const &c, bool inc_lg, boo
 			bool const backwards(!in_set && (rgen.rand()%10) == 0); // spine facing out 90% of the time if not in a set
 
 			if (!(skip_book_flags & (1<<(book_ix&31)))) { // may have more than 32 books, and will wrap in that case
-				add_bcase_book(c, book, inc_lg, inc_sm, backwards, in_set, skip_faces, book_ix, book_color, books);
+				add_bcase_book(c, book, inc_lg, inc_sm, backwards, in_set, skip_faces, book_ix, set_start_ix, book_color, books);
 			}
 			++book_ix;
 			pos += width;
