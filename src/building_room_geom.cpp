@@ -2118,6 +2118,16 @@ void building_room_geom_t::add_water_heater(room_object_t const &c) {
 	}
 }
 
+void building_room_geom_t::add_toaster_proxy(room_object_t const &c) { // draw a simple untextured XY cube to show a lower LOD model of the toaster
+	cube_t c2(c);
+	c2.expand_in_dim( c.dim, -0.10*c.get_sz_dim( c.dim));
+	c2.expand_in_dim(!c.dim, -0.05*c.get_sz_dim(!c.dim));
+	c2.z1() += 0.06*c.dz();
+	c2.z2() -= 0.02*c.dz();
+	unsigned const skip_faces(~get_skip_mask_for_xy(!c.dim));
+	get_untextured_material(0, 0, 1).add_cube_to_verts_untextured(c2, apply_light_color(c, c.color*0.75), skip_faces); // unshadowed, small=1, scaled by material color
+}
+
 void building_room_geom_t::add_laundry_basket(room_object_t const &c) {
 	// Note: no alpha test is enabled in the shader when drawing this, so the holes in the material may not be drawn correctly against objects such as exterior walls
 	rgeom_mat_t &tex_mat(get_material(tid_nm_pair_t(get_texture_by_name("interiors/plastic_mesh.png")), 1, 0, 1)); // inc_shadows=1, dynamic=0, small=1

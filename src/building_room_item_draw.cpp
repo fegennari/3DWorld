@@ -654,6 +654,7 @@ void building_room_geom_t::add_small_static_objs_to_verts(vect_room_object_t con
 		case TYPE_BUTTON:    if (!(i->flags & RO_FLAG_IN_ELEV)) {add_button(*i);} break; // skip buttons inside elevators, which are drawn as dynamic objects
 		case TYPE_LBASKET:   add_laundry_basket(*i); break;
 		case TYPE_WHEATER:   add_water_heater  (*i); break; // small since this object is only added to basements
+		case TYPE_TOASTER:   add_toaster_proxy(*i);  break;
 		default: break;
 		}
 	} // for i

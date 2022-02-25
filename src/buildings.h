@@ -685,6 +685,7 @@ struct building_room_geom_t {
 	void add_trashcan(room_object_t const &c);
 	void add_laundry_basket(room_object_t const &c);
 	void add_water_heater(room_object_t const &c);
+	void add_toaster_proxy(room_object_t const &c);
 	void add_br_stall(room_object_t const &c);
 	void add_cubicle(room_object_t const &c, float tscale);
 	void add_sign(room_object_t const &c, bool inc_back, bool inc_text);
