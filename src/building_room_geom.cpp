@@ -1454,17 +1454,27 @@ void building_room_geom_t::add_book(room_object_t const &c, bool inc_lg, bool in
 	if (ADD_BOOK_TITLES && inc_sm && !is_open && !no_title && (can_add_front_title || add_spine_title)) { // add title(s) if not open
 		unsigned const SPLIT_LINE_SZ = 24;
 		bool const is_set_volume(from_book_set && c.drawer_flags > 0);
-		bool const add_volume_index(is_set_volume && c.drawer_flags <= 16 && (c.dim ^ c.dir ^ 1)); // only when placed left to right, otherwise the order is backwards
+		bool const add_volume_index(is_set_volume && c.drawer_flags <= 20 && (c.dim ^ c.dir ^ 1)); // only when placed left to right, otherwise the order is backwards
 		// if this is a set, but not a numbered volume, include the volume index in the title random seed so that the title is unique
 		unsigned const title_rand_id(c.obj_id + ((is_set_volume && !add_volume_index) ? (unsigned(c.drawer_flags) << 16) : 0));
 		string title(gen_book_title(title_rand_id, nullptr, SPLIT_LINE_SZ)); // select our title text
 		if (title.empty()) return; // no title (error?)
 		rand_gen_t rgen;
 		rgen.set_state(c.obj_id+1, c.obj_id+123);
+		rgen.rand_mix();
 
-		if (add_volume_index) { // add book set volume index Roman numerals 1-16
-			string const vol_nums[16] = {"I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XI", "XII", "XII", "XIV", "XV", "XVI"};
-			title += " " + vol_nums[c.drawer_flags - 1];
+		if (add_volume_index) { // add book set volume index numbers
+			unsigned const vol_ix(c.drawer_flags);
+			title.push_back(' ');
+
+			if (rgen.rand_bool()) { // Roman numerals 1-20
+				string const vol_nums[20] = {"I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XI", "XII", "XII", "XIV", "XV", "XVI", "XVII", "XVIII", "XIX", "XX"};
+				title += vol_nums[vol_ix - 1];
+			}
+			else { // numbers 1-20; use individual digits for faster stringify
+				if (vol_ix >= 10) {title.push_back('0' + (vol_ix/10));} // tens digit
+				title.push_back('0' + (vol_ix%10)); // ones digit
+			}
 		}
 		colorRGBA text_color(BLACK);
 		for (unsigned i = 0; i < 3; ++i) {text_color[i] = ((c.color[i] > 0.5) ? 0.0 : 1.0);} // invert + saturate to contrast with book cover
@@ -1605,7 +1615,7 @@ void building_room_geom_t::add_bookcase(room_object_t const &c, bool inc_lg, boo
 	}
 	// add books
 	for (unsigned i = 0, book_ix = 0; i < num_shelves; ++i) {
-		// TODO: add vertical shelf splits as well? With recursive nesting?
+		// Future work: add vertical shelf splits as well? With recursive nesting?
 		if (rgen.rand_float() < 0.15) continue; // no books on this shelf
 		cube_t const &shelf(shelves[i]);
 		float const shelf_width(shelf.get_sz_dim(!c.dim)), shelf_height(shelf_heights[i]);
