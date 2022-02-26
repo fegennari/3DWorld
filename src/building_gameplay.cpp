@@ -450,8 +450,9 @@ public:
 						co.x2() = co.x1() + dy;
 						co.y2() = co.y1() + dx;
 					}
-					co.dim = co.dir = 0;
-					co.flags &= ~(RO_FLAG_RAND_ROT | RO_FLAG_OPEN); // remove the rotate and open bits
+					co.dim       = co.dir = 0;
+					co.flags    &= ~(RO_FLAG_RAND_ROT | RO_FLAG_OPEN); // remove the rotate and open bits
+					co.light_amt = 1.0; // max light for books when carrying
 				}
 				else if (obj.type == TYPE_PHONE) {
 					if (co.dim) { // swap aspect ratio to make dim=0
@@ -1266,7 +1267,7 @@ bool building_t::maybe_use_last_pickup_room_object(point const &player_pos) {
 
 				if (room_id >= 0) { // set new room; required for opening books; room should be valid, but okay if not
 					obj.room_id   = room_id;
-					obj.light_amt = get_window_vspace()*interior->rooms[room_id].get_light_amt();
+					obj.light_amt = 0.5f + 0.5f*get_window_vspace()*interior->rooms[room_id].get_light_amt(); // blend 50% max light to avoid harsh changes when moving between rooms
 				}
 				if (!interior->room_geom->add_room_object(obj, *this)) return 0;
 			}
