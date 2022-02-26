@@ -1141,8 +1141,8 @@ bool building_t::move_nearest_object(point const &at_pos, vector3d const &in_dir
 		for (unsigned n = 0; n < 5; ++n, move_vector *= 0.5) { // move in several incrementally smaller steps
 			room_object_t moved_obj(obj);
 			moved_obj += move_vector; // only the position changes
-			if (player_bcube.intersects(moved_obj)) continue; // don't intersect the player - applies to pull mode
-			if (!is_obj_pos_valid(moved_obj, 1))    continue; // try a smaller movement; keep_in_room=1
+			if (player_bcube.intersects(moved_obj))    continue; // don't intersect the player - applies to pull mode
+			if (!is_obj_pos_valid(moved_obj, 1, 0, 1)) continue; // try a smaller movement; keep_in_room=1, allow_block_door=0, check_stairs=1
 			bool bad_placement(0);
 
 			for (auto i = objs.begin(); i != objs_end && !bad_placement; ++i) {

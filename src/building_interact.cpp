@@ -470,8 +470,8 @@ bool building_t::interact_with_object(unsigned obj_ix, point const &int_pos, poi
 			room_object_t open_area(obj); // the area that must be clear if we want to open this book
 			open_area.z1() += 0.75*obj.dz(); // shift the bottom up to keep it from intersecting whatever this book is resting on
 			open_area.translate_dim(obj.dim, 1.01*(obj.dir ? -1.0 : 1.0)*obj.get_sz_dim(obj.dim)); // translate more than width to keep it from overlapping obj
-			if (!is_obj_pos_valid(open_area, 0))    return 0; // intersects some part of the building
-			if (overlaps_any_placed_obj(open_area)) return 0;
+			if (!is_obj_pos_valid(open_area, 0, 1, 0)) return 0; // intersects some part of the building; keep_in_room=0, allow_block_door=1, check_stairs=0
+			if (overlaps_any_placed_obj(open_area))    return 0;
 		}
 		gen_sound_thread_safe_at_player(SOUND_OBJ_FALL, 0.25);
 		obj.flags       ^= RO_FLAG_OPEN; // toggle open/closed
@@ -974,7 +974,8 @@ bool building_t::is_sphere_lit(point const &center, float radius) const {
 
 // room objects
 
-bool building_t::is_obj_pos_valid(room_object_t const &obj, bool keep_in_room) const { // used for pushing objects
+// used for pushing objects and opening books
+bool building_t::is_obj_pos_valid(room_object_t const &obj, bool keep_in_room, bool allow_block_door, bool check_stairs) const {
 	assert(interior);
 	room_t const &room(get_room(obj.room_id));
 
@@ -994,10 +995,15 @@ bool building_t::is_obj_pos_valid(room_object_t const &obj, bool keep_in_room) c
 		if (has_bcube_int_no_adj(obj, interior->walls[d])) return 0;
 	}
 	for (auto i = interior->doors.begin(); i != interior->doors.end(); ++i) { // check for door intersection
-		if (!i->open || !door_opens_inward(*i, room)) continue; // closed, or opens into the adjacent room, ignore
-		if (is_cube_close_to_door(obj, 0.0, 1, *i, i->get_check_dirs(), i->open_dir)) return 0;
+		if (!i->open) { // closed
+			if (!keep_in_room && i->get_true_bcube().intersects(obj)) return 0; // door blocking room boundary
+			continue; // ignore
+		}
+		if (!door_opens_inward(*i, room)) continue; // or opens into the adjacent room, ignore
+		if (is_cube_close_to_door(obj, 0.0, 1, *i, i->get_check_dirs(), i->open_dir, allow_block_door)) return 0;
 	}
-	if (has_bcube_int(obj, interior->stairwells) || has_bcube_int(obj, interior->elevators)) return 0;
+	if (check_stairs && has_bcube_int(obj, interior->stairwells)) return 0;
+	if (has_bcube_int(obj, interior->elevators)) return 0;
 	return 1;
 }
 
@@ -1061,6 +1067,9 @@ bool building_t::get_zval_for_obj_placement(point const &pos, float radius, floa
 	for (auto i = interior->room_geom->expanded_objs.begin(); i != interior->room_geom->expanded_objs.end(); ++i) { // check books, etc.
 		if (!i->can_place_onto() || !i->contains_pt_xy(pos) || i->z2() < zval || i->z2() > start_zval) continue; // not a valid placement
 		zval = i->z2() + z_bias; // place on top of this object
+	}
+	for (auto i = interior->doors.begin(); i != interior->doors.end(); ++i) { // check for door intersection
+		if (!i->open && sphere_cube_intersect(pos, radius, i->get_true_bcube())) return 0; // blocked by closed door (open doors are more difficult)
 	}
 	return 1;
 }
