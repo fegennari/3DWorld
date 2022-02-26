@@ -2589,7 +2589,7 @@ void building_room_geom_t::add_outlet(room_object_t const &c) { // uses mats_det
 	unsigned const front_face_mask(get_face_mask(c.dim, !c.dir)); // skip face that's against the wall
 	rgeom_mat_t &front_mat(get_material(tid_nm_pair_t(get_texture_by_name("interiors/outlet1.jpg"), 0.0, 0), 0, 0, 2)); // small=2
 	front_mat.add_cube_to_verts(c, c.color, zero_vector, front_face_mask, !c.dim); // textured front face; always fully lit to match wall
-	//get_untextured_material(0, 0, 2).add_cube_to_verts_untextured(c, c.color, get_skip_mask_for_xy(c.dim)); // unshadowed, small, skip front/back face
+	get_untextured_material(0, 0, 2).add_cube_to_verts_untextured(c, c.color, (get_skip_mask_for_xy(c.dim) | EF_Z1)); // unshadowed, small, skip front/back/bottom face
 }
 
 void building_room_geom_t::add_plate(room_object_t const &c) { // is_small=1
