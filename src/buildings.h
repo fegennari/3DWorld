@@ -651,8 +651,8 @@ struct building_room_geom_t {
 	colorRGBA apply_wood_light_color(room_object_t const &o) const;
 	void add_tquad(building_geom_t const &bg, tquad_with_ix_t const &tquad, cube_t const &bcube, tid_nm_pair_t const &tex,
 		colorRGBA const &color, bool invert_tc_x, bool exclude_frame, bool no_tc);
-	vect_room_object_t::const_iterator get_placed_objs_end() const {return (objs.begin() + buttons_start);}
-	vect_room_object_t::const_iterator get_stairs_start   () const {return (objs.begin() + stairs_start );}
+	vect_room_object_t::const_iterator get_placed_objs_end() const {return (objs.begin() + buttons_start);} // excludes buttons, stairs, and elevators
+	vect_room_object_t::const_iterator get_stairs_start   () const {return (objs.begin() + stairs_start );} // excludes stairs
 	// Note: these functions are all for drawing objects / adding them to the vertex list
 	void add_tc_legs(cube_t const &c, colorRGBA const &color, float width, float tscale, bool use_metal_mat=0, bool draw_tops=0);
 	void add_table(room_object_t const &c, float tscale, float top_dz, float leg_width);

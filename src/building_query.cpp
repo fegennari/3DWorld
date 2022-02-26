@@ -917,12 +917,11 @@ bool building_t::overlaps_other_room_obj(cube_t const &c, unsigned objs_start, b
 	}
 	return 0;
 }
-// Note: for dynamic player object placement; includes expanded_objs but not blockers
+// Note: for dynamic player object placement and book opening; includes expanded_objs but not blockers
 bool building_t::overlaps_any_placed_obj(cube_t const &c) const { // Note: includes expanded_objs
 	assert(has_room_geom());
-	auto objs_end(interior->room_geom->get_placed_objs_end()); // skip buttons; must include stairs and elevators
 
-	for (auto i = interior->room_geom->objs.begin(); i != objs_end; ++i) {
+	for (auto i = interior->room_geom->objs.begin(); i != interior->room_geom->objs.end(); ++i) { // include stairs and elevators
 		if (i->type != TYPE_BLOCKER && i->intersects(c)) return 1; // only exclude blockers; maybe should use rat_coll flag?
 	}
 	for (auto i = interior->room_geom->expanded_objs.begin(); i != interior->room_geom->expanded_objs.end(); ++i) {
