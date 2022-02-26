@@ -2360,6 +2360,11 @@ void building_room_geom_t::add_counter(room_object_t const &c, float tscale) { /
 		colorRGBA const sink_color(apply_light_color(c, GRAY));
 		rgeom_mat_t &basin_mat(get_metal_material(0));
 		basin_mat.add_cube_to_verts(sink, sink_color, tex_origin, EF_Z2, 0, 0, 0, 1); // basin: inverted, skip top face, unshadowed
+		// drain
+		cube_t drain(point(sink.xc(), sink.yc(), sink.z1()));
+		drain.expand_by_xy(0.1*min(sink.dx(), sink.dy()));
+		drain.z2() += 0.012*sink.dz();
+		basin_mat.add_vcylin_to_verts(drain, apply_light_color(c, BKGRAY), 0, 1, 0, 0, 1.0, 1.0, 1.0, 1.0, 1); // top only
 		
 		if (c.drawer_flags > 0) { // draw outside of sink basin if any drawers are open
 			cube_t sink_outer(sink);
