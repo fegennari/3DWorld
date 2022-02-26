@@ -45,8 +45,7 @@ void rgeom_mat_t::add_cube_to_verts(cube_t const &c, colorRGBA const &color, poi
 
 		for (unsigned j = 0; j < 2; ++j) { // iterate over opposing sides, min then max
 			if (skip_faces & (1 << (2*(2-n) + j))) continue; // skip this face
-			v.set_ortho_norm(n, j);
-			if (inverted) {v.invert_normal();}
+			v.set_ortho_norm(n, (bool(j) ^ inverted));
 			v.v[n] = c.d[n][j];
 
 			for (unsigned s1 = 0; s1 < 2; ++s1) {
@@ -66,7 +65,7 @@ void rgeom_mat_t::add_cube_to_verts(cube_t const &c, colorRGBA const &color, poi
 	} // for i
 }
 // untextured version of the above function
-void rgeom_mat_t::add_cube_to_verts_untextured(cube_t const &c, colorRGBA const &color, unsigned skip_faces) {
+void rgeom_mat_t::add_cube_to_verts_untextured(cube_t const &c, colorRGBA const &color, unsigned skip_faces) { // add an inverted flag?
 	vertex_t v;
 	v.set_c4(color);
 
