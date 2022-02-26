@@ -92,6 +92,7 @@ bool building_t::add_rat(point const &pos, float hlength, vector3d const &dir, p
 				point const sound_origin(i->get_cube_center());
 				gen_sound_thread_safe(SOUND_FLUSH, local_to_camera_space(sound_origin));
 				register_building_sound(sound_origin, 0.5);
+				register_achievement("Sleep with the Fishes");
 				return 1;
 			}
 		}

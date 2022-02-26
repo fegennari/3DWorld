@@ -304,10 +304,10 @@ struct tape_manager_t {
 
 tape_manager_t tape_manager;
 
-unsigned const NUM_ACHIEVEMENTS = 11;
+unsigned const NUM_ACHIEVEMENTS = 12;
 
 class achievement_tracker_t {
-	// Rat Food, Top Secret Documents, Mr. Yuck, Zombie Hunter, Royal Flush, Zombie Bashing, One More Drink, Bathroom Reader, TP Artist, Master Lockpick, Squeaky Clean
+	// Rat Food, Top Secret Documents, Mr. Yuck, Zombie Hunter, Royal Flush, Zombie Bashing, One More Drink, Bathroom Reader, TP Artist, Master Lockpick, Squeaky Clean, Sleep with the Fishes
 	set<string> achievements;
 	// some way to make this persistent, print these out somewhere, or add small screen icons?
 public:
