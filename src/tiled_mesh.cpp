@@ -2853,6 +2853,7 @@ bool tile_draw_t::find_and_bind_any_valid_shadow_map(shader_t &s) const {
 
 
 void tile_draw_t::draw_water(shader_t &s, float zval) const {
+	if (player_in_basement) return; // not needed, and not correct if the basement is below the water line
 	find_and_bind_any_valid_shadow_map(s);
 	for (tile_map::const_iterator i = tiles.begin(); i != tiles.end(); ++i) {i->second->draw_water(s, zval);}
 }
