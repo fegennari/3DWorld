@@ -1245,7 +1245,7 @@ bool building_t::maybe_use_last_pickup_room_object(point const &player_pos) {
 			point dest(player_pos + (1.2f*(get_scaled_player_radius() + half_width))*cview_dir);
 
 			if (is_rat) {
-				gen_sound_thread_safe(SOUND_RAT_SQUEAK, (get_camera_pos() + (obj.get_cube_center() - player_pos))); // play the sound whether or not we can drop the rat
+				gen_sound_thread_safe_at_player(SOUND_RAT_SQUEAK); // play the sound whether or not we can drop the rat
 				register_building_sound(player_pos, 0.8);
 				if (!add_rat(dest, half_width, cview_dir, player_pos)) return 0; // facing away from the player
 			}

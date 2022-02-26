@@ -82,7 +82,21 @@ bool building_t::add_rat(point const &pos, float hlength, vector3d const &dir, p
 	point rat_pos(pos);
 	if (!get_zval_of_floor(pos, hlength, rat_pos.z)) return 0; // place on the floor, skip if there's no floor here
 	rat_t rat(rat_pos, hlength, vector3d(dir.x, dir.y, 0.0).get_norm()); // dir in XY plane
-	if (check_line_coll_expand(pos, rat_pos, hlength, rat.height)) return 0; // something is in the way
+	
+	if (check_line_coll_expand(pos, rat_pos, hlength, rat.height)) { // something is in the way
+		point const test_pos(rat_pos + vector3d(0.0, 0.0, rat.height));
+		auto objs_end(interior->room_geom->get_placed_objs_end()); // skip buttons/stairs/elevators
+
+		for (auto i = interior->room_geom->objs.begin(); i != objs_end; ++i) { // check for a toilet that we can drop the rat into
+			if (i->type == TYPE_TOILET && i->contains_pt(test_pos) && i->room_id == get_room_containing_pt(placed_from)) {
+				point const sound_origin(i->get_cube_center());
+				gen_sound_thread_safe(SOUND_FLUSH, local_to_camera_space(sound_origin));
+				register_building_sound(sound_origin, 0.5);
+				return 1;
+			}
+		}
+		return 0; // can't place the rat here
+	}
 	rat.fear_pos = placed_from;
 	rat.fear     = 1.0; // starts off with max fear
 	interior->room_geom->rats.add(rat);
