@@ -2010,7 +2010,7 @@ void building_t::add_light_switches_to_room(rand_gen_t rgen, room_t const &room,
 			bool const dim(i->dim), dir(i->get_center_dim(dim) > room.get_center_dim(dim));
 			float const door_width(i->get_width()), near_spacing(0.25*door_width), far_spacing(1.25*door_width); // off to the side of the door when open
 			assert(door_width > 0.0);
-			cube_t const wall_bounds(ei ? room_bounds : room); // exterior door should use the original room, not room_bounds
+			cube_t const &wall_bounds(ei ? room_bounds : room); // exterior door should use the original room, not room_bounds
 			c.d[dim][ dir] = wall_bounds.d[dim][dir]; // flush with wall
 			c.d[dim][!dir] = c.d[dim][dir] + (dir ? -1.0 : 1.0)*switch_thickness; // expand out a bit
 			bool done(0);
@@ -2063,6 +2063,7 @@ void building_t::add_outlets_to_room(rand_gen_t rgen, room_t const &room, float 
 	float const plate_thickness(0.03*wall_thickness), plate_height(1.8*wall_thickness), plate_hwidth(0.5*wall_thickness), min_wall_spacing(4.0*plate_hwidth);
 	cube_t const room_bounds(get_walkable_room_bounds(room));
 	if (min(room_bounds.dx(), room_bounds.dy()) < 3.0*min_wall_spacing) return; // room is too small; shouldn't happen
+	bool const check_for_walls(!is_house && room.is_hallway); // office building hallways, which can connect to other hallways
 	vect_door_stack_t const &doorways(get_doorways_for_room(room, zval));
 	cube_t c;
 	c.z1() = zval + get_trim_height() + 0.4*plate_height; // wall trim height + some extra padding; same for every outlet
@@ -2072,12 +2073,15 @@ void building_t::add_outlets_to_room(rand_gen_t rgen, room_t const &room, float 
 	for (unsigned wall = 0; wall < 4; ++wall) {
 		bool const dim(wall >> 1), dir(wall & 1);
 		if (!is_house && room.get_sz_dim(!dim) < room.get_sz_dim(dim)) continue; // only add outlets to the long walls of office building rooms
+		bool const is_exterior_wall(classify_room_wall(room, zval, dim, dir, 0) == ROOM_WALL_EXT);
+		cube_t const &wall_bounds(is_exterior_wall ? room : room_bounds); // exterior wall should use the original room, not room_bounds
 		float const wall_pos(rgen.rand_uniform((room_bounds.d[!dim][0] + min_wall_spacing), (room_bounds.d[!dim][1] - min_wall_spacing)));
-		c.d[dim][ dir] = room_bounds.d[dim][dir]; // flush with wall
-		c.d[dim][!dir] = c.d[dim][dir] + (dir ? -1.0 : 1.0)*plate_thickness; // expand out a bit
+		float const wall_face(wall_bounds.d[dim][dir]);
+		c.d[dim][ dir] = wall_face; // flush with wall
+		c.d[dim][!dir] = wall_face + (dir ? -1.0 : 1.0)*plate_thickness; // expand out a bit
 		set_wall_width(c, wall_pos, plate_hwidth, !dim);
 
-		if (!is_basement && has_windows() && classify_room_wall(room, zval, dim, dir, 0) == ROOM_WALL_EXT) { // check for window intersection
+		if (!is_basement && has_windows() && is_exterior_wall) { // check for window intersection
 			cube_t const part(get_part_for_room(room));
 			float const window_hspacing(get_hspacing_for_part(part, !dim)), window_h_border(get_window_h_border());
 			// expand by the width of the window trim, plus some padded wall plate width, then check to the left and right;
@@ -2105,6 +2109,18 @@ void building_t::add_outlets_to_room(rand_gen_t rgen, room_t const &room, float 
 			if (d.get_true_bcube().intersects(c_exp)) {bad_place = 1; break;}
 		}
 		if (bad_place) continue;
+
+		if (check_for_walls && !is_exterior_wall) { // ensure the outlet is on a wall
+			cube_t test_cube(c);
+			test_cube.d[dim][0] = test_cube.d[dim][1] = wall_face - (dir ? -1.0 : 1.0)*0.5*wall_thickness; // move inward
+			test_cube.expand_in_dim(!dim, 0.5*wall_thickness);
+			bool on_wall(0);
+
+			for (auto const &w : interior->walls[dim]) {
+				if (w.contains_cube(test_cube)) {on_wall = 1; break;}
+			}
+			if (!on_wall) continue;
+		}
 		// Note: it may be more efficient to have outlets be stored as static quads rather than objects, since there's currently no player or AI interaction with them;
 		// in fact, maybe wall trim should be the same way since there's so much of it?
 		interior->room_geom->objs.emplace_back(c, TYPE_OUTLET, room_id, dim, dir, RO_FLAG_NOCOLL, 1.0); // dim/dir matches wall; fully lit
@@ -2457,7 +2473,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 					// is there enough clearance between shelves and a car parked in the garage? there seems to be in all the cases I've seen
 					add_storage_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs.size(), is_basement);
 				}
-				if (is_house ) {add_outlets_to_room(rgen, *r, room_center.z, room_id, objs.size(), is_ground_floor, is_basement);} // only skip office building hallways
+				add_outlets_to_room(rgen, *r, room_center.z, room_id, objs.size(), is_ground_floor, is_basement);
 				if (has_light) {add_light_switches_to_room(rgen, *r, room_center.z, room_id, objs.size(), is_ground_floor);} // shed, garage, or hallway
 
 				if (is_house && r->is_hallway) { // allow pictures, rugs, and light switches in the hallways of houses
