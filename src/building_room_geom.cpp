@@ -1359,7 +1359,7 @@ void building_room_geom_t::add_book_title(string const &title, cube_t const &tit
 		i->v[hdim] = (i->v[hdim] - text_bcube.d[hdim][cdir])*width_scale  + title_start_hdim;
 		i->v[tdim] = (i->v[tdim] - text_bcube.d[tdim][ldir])*height_scale + title_start_tdim;
 		mat.quad_verts.emplace_back(i->v, nc, i->t[0], i->t[1], cw);
-	} // for i
+	}
 }
 
 void building_room_geom_t::add_book(room_object_t const &c, bool inc_lg, bool inc_sm, float tilt_angle, unsigned extra_skip_faces, bool no_title, float z_rot_angle) {
@@ -1453,8 +1453,7 @@ void building_room_geom_t::add_book(room_object_t const &c, bool inc_lg, bool in
 
 	if (ADD_BOOK_TITLES && inc_sm && !is_open && !no_title && (can_add_front_title || add_spine_title)) { // add title(s) if not open
 		unsigned const SPLIT_LINE_SZ = 24;
-		bool const is_set_volume(from_book_set && c.drawer_flags > 0);
-		bool const add_volume_index(is_set_volume && c.drawer_flags <= 20 && (c.dim ^ c.dir ^ 1)); // only when placed left to right, otherwise the order is backwards
+		bool const is_set_volume(from_book_set && c.drawer_flags > 0), add_volume_index(c.drawer_flags <= 20 && (c.flags & RO_FLAG_HAS_VOL_IX));
 		// if this is a set, but not a numbered volume, include the volume index in the title random seed so that the title is unique
 		unsigned const title_rand_id(c.obj_id + ((is_set_volume && !add_volume_index) ? (unsigned(c.drawer_flags) << 16) : 0));
 		string title(gen_book_title(title_rand_id, nullptr, SPLIT_LINE_SZ)); // select our title text
@@ -1560,8 +1559,11 @@ void building_room_geom_t::add_bcase_book(room_object_t const &c, cube_t const &
 
 	if (in_set) {
 		obj.obj_id = c.obj_id + 123*set_start_ix;
-		obj.drawer_flags = (book_ix - set_start_ix + 1); // first book starts at 1
 		obj.flags |= RO_FLAG_FROM_SET; // set a flag so that books are consistent: title on front and spine, no author, no picture
+		obj.drawer_flags = (book_ix - set_start_ix + 1); // first book starts at 1
+		// only assign volume index when placed left to right, otherwise the order is backwards;
+		// we could use (num_in_set - (book_ix - set_start_ix)) if we knew num_in_set ahead of time
+		if (obj.dim ^ obj.dir ^ 1) {obj.flags |= RO_FLAG_HAS_VOL_IX;}
 	}
 	else { // individual book; book_ix/obj_id is unique
 		obj.obj_id = c.obj_id + 123*book_ix;
