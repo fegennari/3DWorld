@@ -10,6 +10,7 @@
 
 bool const USE_BKG_THREAD = 1;
 
+extern bool player_in_basement;
 extern int MESH_Z_SIZE, display_mode, display_framerate, camera_surf_collide, animate2, frame_counter, building_action_key;
 extern unsigned LOCAL_RAYS, MAX_RAY_BOUNCES, NUM_THREADS;
 extern float indir_light_exp;
@@ -659,11 +660,13 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		float const level_z(room.z1() + cur_floor*window_vspacing), floor_z(is_single_floor ? room.z1() : (level_z + fc_thick));
 		float const ceil_z(is_single_floor ? room.z2() : (level_z + window_vspacing - fc_thick)); // garages and sheds are all one floor
 		bool const floor_is_above((camera_z < floor_z) && !is_single_floor), floor_is_below(camera_z > ceil_z); // secondary buildings are all one floor independent of height
+		// the basement is a different part, but it's still the same vertical stack; consider this the same effective part if the camera is in the basement above the room's part
+		bool const camera_room_same_part(room.part_id == camera_part || (player_in_basement && parts[room.part_id].contains_pt_xy(camera_bs)));
 		// less culling if either the light or the camera is by stairs and light is on the floor above or below
 		bool stairs_light(0);
 
 		if ((camera_z > floor_z-window_vspacing) && (camera_z < ceil_z+window_vspacing)) { // light is on the floor above or below the camera
-			if (camera_in_hallway && camera_by_stairs && room.part_id == camera_part) { // special case for player in an office building primary hallway with stairs
+			if (camera_in_hallway && camera_by_stairs && camera_room_same_part) { // special case for player in an office building primary hallway with stairs
 				stairs_light = ((int)i->room_id == camera_room); // only handle the case where the light is in the hallway above or below
 			}
 			else {
@@ -680,7 +683,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			}
 		}
 		if (floor_is_above || floor_is_below) { // light is on a different floor from the camera
-			if (camera_in_building && (room.part_id == camera_part ||
+			if (camera_in_building && (camera_room_same_part ||
 				(room.contains_pt_xy(camera_rot) && camera_z < ceil_z+window_vspacing && camera_z > floor_z-window_vspacing)))
 			{
 				// player is on a different floor of the same building part, or more than one floor away in a part stack, and can't see a light from the floor above/below
