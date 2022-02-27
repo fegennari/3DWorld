@@ -1345,7 +1345,7 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 	//highres_timer_t timer("Connect Stairs"); // 72ms (serial)
 	float const window_vspacing(get_window_vspace()), floor_thickness(get_floor_thickness()), fc_thick(0.5*floor_thickness), wall_thickness(get_wall_thickness());
 	float const doorway_width(0.5*window_vspacing), stairs_len(4.0*doorway_width);
-	bool const is_basement(has_basement() && part == parts[basement_part_ix]);
+	bool const is_basement(has_basement() && part == parts[basement_part_ix]), use_basement_stairs(is_basement && is_house); // office basement has regular stairs
 	// use fewer iterations on tiled buildings to reduce the frame spikes when new tiles are generated
 	unsigned const iter_mult_factor(global_building_params.gen_inf_buildings() ? 1 : 10), num_iters(20*iter_mult_factor);
 	unsigned const num_floors(calc_num_floors(part, window_vspacing, floor_thickness));
@@ -1384,7 +1384,7 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 				if (n >= 4*iter_mult_factor && n < 16*iter_mult_factor && (n%iter_mult_factor) == 0) { // decrease stairs size slightly every 10 iterations, 12 times
 					stairs_width -= 0.025*doorway_width; // 1.2*DW => 0.9*DW
 					stairs_pad   -= 0.030*doorway_width; // 1.0*WD => 0.64*DW
-					len_with_pad -= 0.230*doorway_width*(is_basement ? 1.2 : 0.0); // 6.0*DW => 3.24*DW / 2.689*DW ; basement can have steeper stairs
+					len_with_pad -= 0.230*doorway_width*(use_basement_stairs ? 1.2 : 1.0); // 6.0*DW => 3.24*DW / 2.689*DW ; basement can have steeper stairs
 					max_eq(stairs_width, get_min_front_clearance()); // ensure the player can fit
 					max_eq(stairs_pad,   get_min_front_clearance()); // ensure the player can fit
 				}
@@ -1430,15 +1430,16 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 				if (!cand.is_strictly_normalized()) continue; // not enough space, likely because the player radius/front clearance is too large
 				// add walls around stairs if room walls were clipped or this is the basement; otherwise, make stairs straight with railings;
 				// basement stairs only have walls on the bottom floor, so we set is_at_top=0; skip basement back stairs wall to prevent the player from getting stuck
-				stairs_shape const sshape(is_basement ? (stairs_shape)SHAPE_WALLED_SIDES : (wall_clipped ? (stairs_shape)SHAPE_WALLED : (stairs_shape)SHAPE_STRAIGHT));
-				landing_t landing(cand, 0, 0, dim, stairs_dir, !wall_clipped, sshape, 0, !is_basement, 1); // roof_access=0, is_at_top=!is_basement, stacked_conn=1
+				stairs_shape const sshape(use_basement_stairs ? (stairs_shape)SHAPE_WALLED_SIDES : (wall_clipped ? (stairs_shape)SHAPE_WALLED : (stairs_shape)SHAPE_STRAIGHT));
+				bool const add_railing(!wall_clipped); // or awlays? wall clipped stairs can sometimes have problems with railings, but sometimes they're needed
+				landing_t landing(cand, 0, 0, dim, stairs_dir, add_railing, sshape, 0, !is_basement, 1); // roof_access=0, is_at_top=!is_basement, stacked_conn=1
 				landing.z1() = part.z2() - fc_thick; // only include the ceiling of this part and the floor of *p
 				cube_t stairwell(cand);
 				stairwell.z2() = part.z2() + window_vspacing - fc_thick; // bottom of ceiling of upper part; must cover z-range of upper floor for AIs and room object collisions
 				interior->landings.push_back(landing);
 				interior->stairwells.emplace_back(stairwell, 1, dim, stairs_dir, sshape, 0, 1); // roof_access=0, stack_conn=1
 
-				if (is_basement) { // add a basement door at the bottom of the stairs
+				if (use_basement_stairs) { // add a basement door at the bottom of the stairs
 					float const pos_shift((stairs_dir ? 1.0 : -1.0)*0.8*wall_thickness);
 					door_t door(cand, dim, !stairs_dir, 0, 1); // open=0, on_stairs=1
 					door.z2() -= fc_thick; // bottom of basement ceiling, not the floor above
@@ -1474,7 +1475,7 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 				connected = 1;
 				break; // success
 			} // for n
-			if (connected && is_basement) break; // only need to connect one part for the basement
+			if (connected && use_basement_stairs) break; // only need to connect one part for the basement
 		} // for p
 		if (!connected && is_basement) {interior->is_unconnected = 1;} // failed to connect basement with stairs - flag as unconnected
 	}

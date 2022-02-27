@@ -3155,7 +3155,8 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 		bool const side(dir); // for U-shaped stairs; for now this needs to be consistent for the entire stairwell, can't use rgen.rand_bool()
 		// Note: stairs always start at floor_thickness above the landing z1, ignoring landing z2/height
 		float const tot_len(i->get_sz_dim(dim)), floor_z(i->z1() + floor_thickness - window_vspacing), step_len_pos(tot_len/num_stairs);
-		float step_len((dir ? 1.0 : -1.0)*step_len_pos), wall_hw(max(0.15*step_len_pos, 0.15*stair_dz)), z(floor_z - floor_thickness), pos(i->d[dim][!dir]);
+		float const wall_hw(min(max(0.15*step_len_pos, 0.15*stair_dz), 0.25*stair_dz));
+		float step_len((dir ? 1.0 : -1.0)*step_len_pos), z(floor_z - floor_thickness), pos(i->d[dim][!dir]);
 		cube_t stair(*i);
 
 		if (i->shape != SHAPE_U) { // straight stairs
