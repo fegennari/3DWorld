@@ -1046,14 +1046,14 @@ bool building_t::check_line_coll_expand(point const &p1, point const &p2, float 
 	} // for door_stacks
 	for (auto const &s : interior->stairwells) {
 		if (!line_int_cube_exp(p1, p2, s, expand)) continue;
-		if (s.shape != SHAPE_STRAIGHT) return 1; // walled and U-shaped stairs always collide
-		if (zmin < ground_floor_z1)    return 1; // basement stairs are walled off - definitely a collision
-		if (s.z1() < zmin - 0.5f*get_window_vspace()) return 1; // not the ground floor - definitely a collision
+		bool walled_sides(s.shape == SHAPE_WALLED_SIDES);
+		if (s.shape != SHAPE_STRAIGHT && !walled_sides) return 1; // fully walled and U-shaped stairs always collide
+		if (s.z1() < zmin - 0.5f*get_window_vspace())   return 1; // not the ground floor - definitely a collision
 
 		if (has_room_geom()) { // maybe we're under the stairs; check for individual stairs collisions
 			for (auto c = interior->room_geom->get_stairs_start(); c != interior->room_geom->objs.end(); ++c) {
-				if (c->no_coll() || c->type != TYPE_STAIR) continue;
-				if (line_int_cube_exp(p1, p2, *c, expand)) return 1;
+				if (c->no_coll()) continue;
+				if ((c->type == TYPE_STAIR || (walled_sides && c->type == TYPE_STAIR_WALL)) && line_int_cube_exp(p1, p2, *c, expand)) return 1;
 			}
 		}
 	} // for s

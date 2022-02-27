@@ -2092,6 +2092,7 @@ void building_t::add_outlets_to_room(rand_gen_t rgen, room_t const &room, float 
 		}
 		cube_t c_exp(c);
 		c_exp.expand_by_xy(0.5*wall_thickness);
+		// Note: outlets can still be partially blocked by picture frames; I guess this is okay?
 		if (overlaps_other_room_obj(c_exp, objs_start, 1))     continue; // check for things like closets; check_all=1 to include blinds
 		if (interior->is_blocked_by_stairs_or_elevator(c_exp)) continue; // check stairs and elevators
 		bool bad_place(0);
