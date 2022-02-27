@@ -3155,7 +3155,7 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 		bool const side(dir); // for U-shaped stairs; for now this needs to be consistent for the entire stairwell, can't use rgen.rand_bool()
 		// Note: stairs always start at floor_thickness above the landing z1, ignoring landing z2/height
 		float const tot_len(i->get_sz_dim(dim)), floor_z(i->z1() + floor_thickness - window_vspacing), step_len_pos(tot_len/num_stairs);
-		float step_len((dir ? 1.0 : -1.0)*step_len_pos), wall_hw(0.15*step_len_pos), z(floor_z - floor_thickness), pos(i->d[dim][!dir]);
+		float step_len((dir ? 1.0 : -1.0)*step_len_pos), wall_hw(max(0.15*step_len_pos, 0.15*stair_dz)), z(floor_z - floor_thickness), pos(i->d[dim][!dir]);
 		cube_t stair(*i);
 
 		if (i->shape != SHAPE_U) { // straight stairs
@@ -3244,7 +3244,7 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 			objs.emplace_back(railing, TYPE_RAILING, 0, !dim, dir, (RO_FLAG_NOCOLL | RO_FLAG_ADJ_HI | RO_FLAG_ADJ_LO | RO_FLAG_INTERIOR), 1.0, SHAPE_CUBE, railing_color); // no ends
 		}
 		if (i->has_railing && (i->stack_conn || (extend_walls_up && i->shape == SHAPE_STRAIGHT))) {
-			// add railing around the top if: straight + top floor with no roof access, connector stairs, or basement stairs
+			// add railings around the top if: straight + top floor with no roof access, connector stairs, or basement stairs
 			room_object_t railing(*i, TYPE_RAILING, 0, !dim, dir, (RO_FLAG_TOS | RO_FLAG_INTERIOR), 1.0, SHAPE_CUBE, railing_color); // flag to skip drawing ends
 			railing.z1()  = railing.z2(); // starts at the floor
 			railing.z2() += window_vspacing - floor_thickness;
@@ -3253,7 +3253,15 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 			for (unsigned d = 0; d < 2; ++d) {
 				if (has_side_walls && !i->against_wall[d]) {railing.d[!dim][d] += (d ? -1.0 : 1.0)*2.0*wall_hw;} // shift railing inside of walls
 			}
-			objs.emplace_back(railing);
+			// if the stairs extend to a wall, the back railing can be omitted; this is rare but happens in one house near the starting area
+			cube_t railing_center(railing);
+			railing_center.d[dim][dir] = railing_center.d[dim][!dir]; // shrink to zero area in this dim
+			bool in_wall(0);
+
+			for (auto const &w : interior->walls[dim]) {
+				if (w.contains_cube(railing_center)) {in_wall = 1;}
+			}
+			if (!in_wall) {objs.emplace_back(railing);} // back railing
 			railing.d[dim][dir] = i->d[dim][dir]; // extend to the front of the stairs
 			railing.dim  ^= 1;
 			railing.flags = RO_FLAG_TOS | RO_FLAG_ADJ_TOP; // flag so that no vertical pole is added

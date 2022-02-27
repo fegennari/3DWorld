@@ -1122,7 +1122,7 @@ void building_room_geom_t::add_railing(room_object_t const &c) {
 			point pt(d ? railing.p2 : railing.p1);
 			if (!is_top_railing) {pt[c.dim] += ((c.dir ^ bool(d)) ? 1.0 : -1.0)*0.01*length;} // shift slightly inward toward the center
 			float const hscale((d && !is_top_railing) ? 1.25 : 1.0); // shorten for lower end, which rests on the step (unless top railing)
-			point const p1(pt - vector3d(0, 0, hscale*height)), p2(pt - vector3d(0, 0, 0.02*(d ? 1.0 : -1.0)*height));
+			point const p1(pt - vector3d(0, 0, hscale*height)), p2(pt - vector3d(0, 0, (is_top_railing ? 0.0 : 0.02*(d ? 1.0 : -1.0)*height)));
 			mat.add_cylin_to_verts(p1, p2, pole_radius, pole_radius, c.color, 0, 0); // no top or bottom
 		}
 		if (c.is_open()) { // add balusters
