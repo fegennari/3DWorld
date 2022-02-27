@@ -230,6 +230,12 @@ bool can_hide_under(room_object_t const &c, cube_t &hide_area) {
 		hide_area = c;
 		return 1;
 	}
+	else if (c.type == TYPE_SHELVES) {
+		hide_area = c;
+		hide_area.z1() += 0.05*c.dz();
+		return 1;
+	}
+	//else if (c.type == TYPE_STAIR) {} // what about hiding under the stairs? only for SHAPE_WALLED_SIDES?
 	return 0;
 }
 
@@ -355,7 +361,7 @@ void building_t::update_rat(rat_t &rat, point const &camera_bs, int ped_ix, floa
 			cube_t hide_area; // will be a subset of the object
 			if (c->shape != SHAPE_CUBE || !can_hide_under(*c, hide_area)) continue; // only cubes for now
 			float const top_gap(hide_area.z1() - rat_squish_z2); // space between top of rat and bottom of object
-			if (top_gap < 0.0) continue; // rat can't fit under this object; allowed area is waived
+			if (top_gap < 0.0) continue; // rat can't fit under this object
 			if (!dist_xy_less_than(hide_area.get_cube_center(), p1, view_dist)) continue; // too far away to see
 			// select our destination under this hiding spot;
 			// this must be unique per rat so that rats don't compete for the exact same spot, and must be the same across calls for stability;
