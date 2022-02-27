@@ -1082,30 +1082,52 @@ bool building_t::maybe_add_house_driveway(cube_t const &plot, cube_t &ret, unsig
 	return 0; // failed to add driveway; this is rare, but can happen with a house that's close to the road, close to the plot edge on one side, and has an AC unit on the other side
 }
 
-void building_t::maybe_add_basement(rand_gen_t &rgen) { // currently for houses only
+// for houses or office buildings
+void building_t::maybe_add_basement(rand_gen_t rgen) { // rgen passed by value so that the original isn't modified
 	if (global_building_params.basement_prob <= 0.0) return; // no basement
 
 	if (global_building_params.basement_prob < 1.0) {
-		rand_gen_t rgen_copy(rgen); // make a copy so that we don't modify the incoming rgen
-		if (rgen_copy.rand_float() > global_building_params.basement_prob) return;
+		if (rgen.rand_float() > global_building_params.basement_prob) return;
 	}
-	float const basement_z1(ground_floor_z1 - get_window_vspace());
-	if (basement_z1 < get_water_z_height() + ocean_wave_height) return; // no basement below the water line
+	float const floor_spacing(get_window_vspace()), max_sea_level(get_water_z_height() + ocean_wave_height);
+	float basement_z1(ground_floor_z1 - floor_spacing);
+	if (basement_z1 < max_sea_level) return; // no basement below the water line
 	basement_part_ix = (int8_t)parts.size(); // index of part that will be added below
-	cube_t basement(parts[0]);
+	cube_t basement;
 	
-	if (real_num_parts == 2) {
-		unsigned const ix(parts[1].get_area_xy() > parts[0].get_area_xy());
-		basement = parts[ix]; // start with the larger part
+	if (is_house) {
+		basement = parts[0]; // start at first part
 
-		// attempt to expand into the smaller part as long as it fits within the footprint of the upper floors
-		for (unsigned dim = 0; dim < 2; ++dim) {
-			for (unsigned dir = 0; dir < 2; ++dir) {
-				if (parts[ix].d[dim][dir] != parts[!ix].d[dim][!dir]) continue; // not adjacent in this dim
-				if (parts[ix].d[!dim][0] < parts[!ix].d[!dim][0] || parts[ix].d[!dim][1] > parts[!ix].d[!dim][1]) continue; // smaller part does not contain larger part in this dim
-				basement.d[dim][dir] = parts[!ix].d[dim][dir]; // extend into the other part
+		if (real_num_parts == 2) {
+			unsigned const ix(parts[1].get_area_xy() > parts[0].get_area_xy());
+			basement = parts[ix]; // start with the larger part
+
+			// attempt to expand into the smaller part as long as it fits within the footprint of the upper floors
+			for (unsigned dim = 0; dim < 2; ++dim) {
+				for (unsigned dir = 0; dir < 2; ++dir) {
+					if (parts[ix].d[dim][dir] != parts[!ix].d[dim][!dir]) continue; // not adjacent in this dim
+					if (parts[ix].d[!dim][0] < parts[!ix].d[!dim][0] || parts[ix].d[!dim][1] > parts[!ix].d[!dim][1]) continue; // smaller part does not contain larger part in this dim
+					basement.d[dim][dir] = parts[!ix].d[dim][dir]; // extend into the other part
+				}
 			}
 		}
+	}
+	else { // office building
+		unsigned num_gf_parts(0);
+		cube_t largest_gf_part;
+
+		for (auto const &p : parts) {
+			if (p.z1() != ground_floor_z1) continue; // only count ground floor parts
+			++num_gf_parts;
+			if (p.get_area_xy() > largest_gf_part.get_area_xy()) {largest_gf_part = p;}
+		}
+		assert(num_gf_parts > 0);
+		// Note: player collision is still based on ground floor building shape, so having the basement extend outside of this footprint still doesn't work
+		//if (num_gf_parts < 4) {basement = bcube;} // not an O-shaped building, don't need to handle tree in the middle, use full bcube
+		// use largest ground floor part, then try to expand
+		basement = largest_gf_part;
+		real_num_parts = (uint8_t)parts.size(); // set now because it's needed in the call below
+		expand_ground_floor_cube(basement);
 	}
 	set_cube_zvals(basement, basement_z1, ground_floor_z1);
 	parts.push_back(basement);
@@ -1729,30 +1751,19 @@ void building_t::gen_grayscale_detail_color(rand_gen_t &rgen, float imin, float 
 
 // *** Interiors ***
 
-void building_t::get_exclude_cube(point const &pos, cube_t const &skip, cube_t &exclude, bool camera_in_building) const {
-	float const cube_pad(4.0*grass_width*(camera_in_building ? 2.0 : 1.0)), extent(bcube.get_max_extent());
-	float dmin_sq(extent*extent); // start with a large value, squared
-
-	for (auto p = parts.begin(); p != get_real_parts_end_inc_sec(); ++p) { // find closest part, including garages/sheds
-		if (is_basement(p)) continue; // skip the basement
-		if (skip.contains_cube_xy(*p)) continue; // already contained, skip
-		float const dist_sq(p2p_dist_sq(pos, p->closest_pt(pos)));
-		if (dist_sq < dmin_sq) {exclude = *p; dmin_sq = dist_sq;} // keep if closest part to pos
-	}
+void building_t::expand_ground_floor_cube(cube_t &cube, cube_t const &skip) const {
 	for (auto p = parts.begin(); p != get_real_parts_end(); ++p) { // try to expand the cube to cover more parts (pri parts only)
-		if (is_basement(p)) continue; // skip the basement
-		if (skip.contains_cube_xy(*p)) continue; // already contained, skip
-		cube_t cand_ge(exclude);
+		if (p->z1() != ground_floor_z1) continue; // only count ground floor parts
+		if (skip.contains_cube_xy(*p))  continue; // already contained, skip
+		cube_t cand_ge(cube);
 		cand_ge.union_with_cube(*p);
-		if (cand_ge.get_area_xy() < 1.05f*(exclude.get_area_xy() + p->get_area_xy())) {exclude = cand_ge;} // union mostly includes the two parts
+		if (cand_ge.get_area_xy() < 1.05f*(cube.get_area_xy() + p->get_area_xy())) {cube = cand_ge;} // union mostly includes the two parts
 	}
-	if (exclude.is_all_zeros()) return; // not found
-
-	// try to expand the exclude cube to each edge of the building's bcube; this may produce overlaps, but may cover additional area (such as for O-shaped buildings)
+	// try to expand the cube to each edge of the building's bcube; this may produce overlaps, but may cover additional area (such as for O-shaped buildings)
 	for (unsigned d = 0; d < 4; ++d) {
 		bool const dim(d>>1), dir(d&1);
-		if (exclude.d[dim][dir] == bcube.d[dim][dir]) continue; // already at the bcube edge
-		cube_t cand(exclude);
+		if (cube.d[dim][dir] == bcube.d[dim][dir]) continue; // already at the bcube edge
+		cube_t cand(cube);
 		cand.d[dim][dir] = bcube.d[dim][dir];
 		float cov_area(0);
 
@@ -1760,8 +1771,22 @@ void building_t::get_exclude_cube(point const &pos, cube_t const &skip, cube_t &
 			if (p->z1() != ground_floor_z1) continue; // only count ground floor parts
 			if (p->intersects_xy(cand)) {cov_area += (min(cand.x2(), p->x2()) - max(cand.x1(), p->x1()))*(min(cand.y2(), p->y2()) - max(cand.y1(), p->y1()));}
 		}
-		if (cov_area > 0.99*cand.get_area_xy()) {exclude = cand;} // expand if covered (with some tolerance to allow for FP error)
+		if (cov_area > 0.99*cand.get_area_xy()) {cube = cand;} // expand if covered (with some tolerance to allow for FP error)
 	} // for d
+}
+
+void building_t::get_exclude_cube(point const &pos, cube_t const &skip, cube_t &exclude, bool camera_in_building) const {
+	float const cube_pad(4.0*grass_width*(camera_in_building ? 2.0 : 1.0)), extent(bcube.get_max_extent());
+	float dmin_sq(extent*extent); // start with a large value, squared
+
+	for (auto p = parts.begin(); p != get_real_parts_end_inc_sec(); ++p) { // find closest part, including garages/sheds
+		if (p->z1() != ground_floor_z1) continue; // only count ground floor parts
+		if (skip.contains_cube_xy(*p))  continue; // already contained, skip
+		float const dist_sq(p2p_dist_sq(pos, p->closest_pt(pos)));
+		if (dist_sq < dmin_sq) {exclude = *p; dmin_sq = dist_sq;} // keep if closest part to pos
+	}
+	if (exclude.is_all_zeros()) return; // not found (only ground floor part was skipped)
+	expand_ground_floor_cube(exclude, skip);
 	exclude.expand_by_xy(cube_pad); // exclude grass blades that partially intersect the building interior
 }
 

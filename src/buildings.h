@@ -1189,11 +1189,12 @@ private:
 	bool add_outdoor_ac_unit(rand_gen_t &rgen);
 	bool add_chimney(cube_t const &part, bool dim, bool dir, float chimney_dz, int garage_room, rand_gen_t &rgen);
 	void gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes);
-	void maybe_add_basement(rand_gen_t &rgen);
+	void maybe_add_basement(rand_gen_t rgen);
 	void clip_cube_to_parts(cube_t &c, vect_cube_t &cubes) const;
 	bool move_sphere_to_valid_part(point &pos, point const &p_last, float radius) const;
 	cube_t get_walkable_room_bounds(room_t const &room) const;
 	bool is_cube_contained_in_parts(cube_t const &c) const;
+	void expand_ground_floor_cube(cube_t &cube, cube_t const &skip=cube_t()) const;
 	void get_exclude_cube(point const &pos, cube_t const &skip, cube_t &exclude, bool camera_in_building) const;
 	void move_door_to_other_side_of_wall(tquad_with_ix_t &door, float dist_mult, bool invert_normal) const;
 	void clip_door_to_interior(tquad_with_ix_t &door, bool clip_to_floor) const;
