@@ -79,12 +79,13 @@ void building_t::toggle_light_object(room_object_t const &light, point const &so
 	bool updated(0);
 
 	for (auto i = interior->room_geom->objs.begin(); i != objs_end; ++i) { // toggle all lights on this floor of this room
-		if (i->is_light_type() && i->room_id == light.room_id && i->z1() == light.z1()) { // Note: closet light should have a different z1 that should not match the room lights
-			i->toggle_lit_state(); // Note: doesn't update indir lighting
-			if (i->type == TYPE_LAMP) continue; // lamps don't affect room object ambient lighting, and don't require regenerating the vertex data, so skip the step below
-			set_obj_lit_state_to(light.room_id, light.z2(), i->is_lit()); // update object lighting flags as well
-			updated = 1;
-		}
+		if (!i->is_light_type() || i->room_id != light.room_id) continue;
+		if ((light.flags & RO_FLAG_IN_CLOSET) != (i->flags & RO_FLAG_IN_CLOSET)) continue; // closet + room light are toggled independently
+		if (i->z2() != light.z2()) continue; // Note: uses light z2 rather than z1 so that thin lights near doors are handled correctly
+		i->toggle_lit_state(); // Note: doesn't update indir lighting
+		if (i->type == TYPE_LAMP)  continue; // lamps don't affect room object ambient lighting, and don't require regenerating the vertex data, so skip the step below
+		set_obj_lit_state_to(light.room_id, light.z2(), i->is_lit()); // update object lighting flags as well
+		updated = 1;
 	} // for i
 	if (updated) {interior->room_geom->clear_and_recreate_lights();} // recreate light geom with correct emissive properties
 	gen_sound_thread_safe(SOUND_CLICK, local_to_camera_space(sound_pos));

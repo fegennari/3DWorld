@@ -2351,6 +2351,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 					if (interior->is_blocked_by_stairs_or_elevator_no_expand(sec_light[d], fc_thick)) continue; // skip if blocked
 					cube_t test_cube(sec_light[d]);
 					test_cube.expand_in_dim(2, 0.4*window_vspacing); // expand to cover nearly an entire floor so that it's guaranteed to overlap a door
+					// maybe should exclude basement doors, since they don't show as open? but then it would be wrong if I later draw basement doors
 					sec_light_int_door[d] = is_cube_close_to_doorway(test_cube, *r, 0.0, 1, 1); // inc_open=1, check_open_dir=1
 					use_sec_light     [d] = 1;
 					break;
