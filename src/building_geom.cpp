@@ -1128,10 +1128,13 @@ void building_t::maybe_add_basement(rand_gen_t rgen) { // rgen passed by value s
 		basement = largest_gf_part;
 		real_num_parts = (uint8_t)parts.size(); // set now because it's needed in the call below
 		expand_ground_floor_cube(basement);
+		// maybe extend the basement downward with extra floors
+		unsigned const num_basement_floors(1 + (rgen.rand()&1)); // 1-2
+		for (unsigned n = 1; n < num_basement_floors && (basement_z1 - floor_spacing) > max_sea_level; ++n) {basement_z1 -= floor_spacing;}
 	}
 	set_cube_zvals(basement, basement_z1, ground_floor_z1);
 	parts.push_back(basement);
-	min_eq(bcube.z1(), basement.z1()); // not really necessary, will be updated later anyway, but good to have here for reference; orig bcube.z1() is saved in ground_floor_z1
+	min_eq(bcube.z1(), basement_z1); // not really necessary, will be updated later anyway, but good to have here for reference; orig bcube.z1() is saved in ground_floor_z1
 	++real_num_parts;
 }
 

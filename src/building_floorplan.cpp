@@ -227,8 +227,10 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 		vector3d const psz(p->get_size());
 		bool const min_dim(psz.y < psz.x); // hall dim
 		float const cube_width(psz[min_dim]);
-		bool const first_part(p == parts.begin()), first_part_this_stack(first_part || (p-1)->z1() < p->z1());
-		bool const use_hallway(!is_house && !has_complex_floorplan && first_part_this_stack && (p+1 == parts.end() || (p+1)->z1() > p->z1()) && cube_width > 4.0*min_wall_len);
+		bool const is_basement_part(is_basement(p));
+		bool const first_part(p == parts.begin()), first_part_this_stack(first_part || is_basement_part || (p-1)->z1() < p->z1());
+		bool const use_hallway(!is_house && !is_basement_part && !has_complex_floorplan && first_part_this_stack &&
+			(p+1 == parts.end() || (p+1)->z1() > p->z1()) && cube_width > 4.0*min_wall_len);
 		unsigned const rooms_start(interior->rooms.size()), part_id(p - parts.begin()), num_doors_per_stack(SPLIT_DOOR_PER_FLOOR ? num_floors : 1);
 		cube_t hall, place_area(*p);
 		place_area.expand_by_xy(-wall_edge_spacing); // shrink slightly to avoid z-fighting with walls
