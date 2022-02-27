@@ -1429,8 +1429,8 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 				cand.expand_in_dim(dim, -stairs_pad); // subtract off padding
 				if (!cand.is_strictly_normalized()) continue; // not enough space, likely because the player radius/front clearance is too large
 				// add walls around stairs if room walls were clipped or this is the basement; otherwise, make stairs straight with railings;
-				// basement stairs only have walls on the bottom floor, so we set is_at_top=0
-				stairs_shape const sshape((is_basement || wall_clipped) ? (stairs_shape)SHAPE_WALLED : (stairs_shape)SHAPE_STRAIGHT);
+				// basement stairs only have walls on the bottom floor, so we set is_at_top=0; skip basement back stairs wall to prevent the player from getting stuck
+				stairs_shape const sshape(is_basement ? (stairs_shape)SHAPE_WALLED_SIDES : (wall_clipped ? (stairs_shape)SHAPE_WALLED : (stairs_shape)SHAPE_STRAIGHT));
 				landing_t landing(cand, 0, 0, dim, stairs_dir, !wall_clipped, sshape, 0, !is_basement, 1); // roof_access=0, is_at_top=!is_basement, stacked_conn=1
 				landing.z1() = part.z2() - fc_thick; // only include the ceiling of this part and the floor of *p
 				cube_t stairwell(cand);
