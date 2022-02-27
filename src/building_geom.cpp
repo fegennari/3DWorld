@@ -11,7 +11,7 @@ cube_t grass_exclude1, grass_exclude2;
 
 extern bool begin_motion;
 extern int animate2;
-extern float grass_width, CAMERA_RADIUS, fticks;
+extern float grass_width, CAMERA_RADIUS, fticks, ocean_wave_height;
 extern building_params_t global_building_params;
 
 
@@ -1089,7 +1089,9 @@ void building_t::maybe_add_basement(rand_gen_t &rgen) { // currently for houses 
 		rand_gen_t rgen_copy(rgen); // make a copy so that we don't modify the incoming rgen
 		if (rgen_copy.rand_float() > global_building_params.basement_prob) return;
 	}
-	basement_part_ix = (int8_t)parts.size();
+	float const basement_z1(ground_floor_z1 - get_window_vspace());
+	if (basement_z1 < get_water_z_height() + ocean_wave_height) return; // no basement below the water line
+	basement_part_ix = (int8_t)parts.size(); // index of part that will be added below
 	cube_t basement(parts[0]);
 	
 	if (real_num_parts == 2) {
@@ -1105,7 +1107,7 @@ void building_t::maybe_add_basement(rand_gen_t &rgen) { // currently for houses 
 			}
 		}
 	}
-	set_cube_zvals(basement, (basement.z1() - get_window_vspace()), basement.z1());
+	set_cube_zvals(basement, basement_z1, ground_floor_z1);
 	parts.push_back(basement);
 	min_eq(bcube.z1(), basement.z1()); // not really necessary, will be updated later anyway, but good to have here for reference; orig bcube.z1() is saved in ground_floor_z1
 	++real_num_parts;
