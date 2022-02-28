@@ -62,7 +62,7 @@ extern bool use_instanced_pine_trees, enable_tt_model_reflect, water_is_lava, tt
 extern unsigned grass_density, max_unique_trees, shadow_map_sz, erosion_iters_tt, num_rnd_grass_blocks, tiled_terrain_gen_heightmap_sz;
 extern unsigned num_birds_per_tile, num_fish_per_tile, num_bflies_per_tile;
 extern int DISABLE_WATER, display_mode, tree_mode, leaf_color_changed, ground_effects_level, animate2, iticks, num_trees, window_width, window_height;
-extern int invert_mh_image, is_cloudy, camera_surf_collide, show_fog, mesh_gen_mode, mesh_gen_shape, cloud_model, precip_mode, auto_time_adv, draw_model;
+extern int invert_mh_image, is_cloudy, camera_surf_collide, show_fog, mesh_gen_mode, mesh_gen_shape, cloud_model, precip_mode, auto_time_adv, draw_model, player_in_elevator;
 extern float zmax, zmin, water_plane_z, mesh_scale, mesh_scale_z, vegetation, relh_adj_tex, grass_length, grass_width, fticks, cloud_height_offset, clouds_per_tile;
 extern float ocean_wave_height, sm_tree_density, tree_density_thresh, atmosphere, cloud_cover, temperature, flower_density, FAR_CLIP, shadow_map_pcf_offset, biome_x_offset;
 extern float smap_thresh_scale, tt_grass_scale_factor;
@@ -3458,6 +3458,7 @@ void render_tt_models(int reflection_pass, bool transparent_pass) {
 void draw_tiled_terrain(int reflection_pass) {
 
 	//RESET_TIME;
+	if (player_in_elevator == 2) return; // skip terrain draw if the player is in a closed elevator so that we don't see the terrain when crossing the ground
 	bool const disable_depth_clamp(enable_depth_clamp && !reflection_pass && camera_in_building); // helps with terrain covering basement stairs entrance
 	if (disable_depth_clamp) {glDisable(GL_DEPTH_CLAMP);}
 	// don't need to draw the bottom of the terrain when in the basement; for some reason the faces are backwards

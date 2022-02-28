@@ -6,9 +6,9 @@
 #include "buildings.h"
 
 
-extern bool draw_building_interiors, player_near_toilet, player_is_hiding, player_in_elevator;
+extern bool draw_building_interiors, player_near_toilet, player_is_hiding;
 extern float CAMERA_RADIUS;
-extern int player_in_closet, camera_surf_collide, frame_counter;
+extern int player_in_closet, camera_surf_collide, frame_counter, player_in_elevator;
 extern double camera_zh;
 extern building_params_t global_building_params;
 extern bldg_obj_type_t bldg_obj_types[];
@@ -415,8 +415,16 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, vec
 
 			if (c->type == TYPE_ELEVATOR) { // special handling for elevators
 				if (!c->contains_pt_xy(pos)) continue;
-				if      (obj_z >= c->z2()) {max_eq(pos.z, (c->z2() + radius)); had_coll = player_in_elevator = 1;} // standing on the roof of the elevator
-				else if (obj_z >= c->z1()) {max_eq(pos.z, (c->z1() + radius)); had_coll = player_in_elevator = 1;} // inside the elevator
+				bool ecoll(0);
+				if      (obj_z >= c->z2()) {max_eq(pos.z, (c->z2() + radius)); ecoll = 1;} // standing on the roof of the elevator
+				else if (obj_z >= c->z1()) {max_eq(pos.z, (c->z1() + radius)); ecoll = 1;} // inside the elevator
+				
+				if (ecoll) {
+					assert(c->obj_id < interior->elevators.size());
+					// 2 if doors are closed, otherwise 1; this is used to avoid drawing terrain as we pass through it when the elevator enters or leaves the basement
+					player_in_elevator = ((interior->elevators[c->obj_id].open_amt == 0.0) ? 2 : 1);
+					had_coll = 1;
+				}
 				continue;
 			}
 			if ((c->type == TYPE_STAIR || on_stairs) && (obj_z + radius) > c->z2()) continue; // above the stair - allow it to be walked on
