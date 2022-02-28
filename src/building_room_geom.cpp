@@ -1153,7 +1153,7 @@ void building_room_geom_t::add_stair(room_object_t const &c, float tscale, vecto
 }
 
 void building_room_geom_t::add_stairs_wall(room_object_t const &c, vector3d const &tex_origin, tid_nm_pair_t const &wall_tex) {
-	get_material(get_scaled_wall_tex(wall_tex), 1).add_cube_to_verts(c, c.color, tex_origin); // draw all 6 sides; no room lighting color atten
+	get_material(get_scaled_wall_tex(wall_tex), 1).add_cube_to_verts(c, c.color, tex_origin, EF_Z1); // skip bottom; no room lighting color atten
 }
 void building_room_geom_t::add_parking_garage_wall(room_object_t const &c, vector3d const &tex_origin, tid_nm_pair_t const &wall_tex) {
 	get_material(get_scaled_wall_tex(wall_tex), 1, 0, 2).add_cube_to_verts(c, c.color, tex_origin, EF_Z12); // small=2: drawn as detail object; no room lighting color atten
