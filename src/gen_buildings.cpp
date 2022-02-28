@@ -1216,16 +1216,21 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, 
 		colorRGBA const &ceil_color  (is_house ? mat.house_ceil_color : mat.ceil_color );
 
 		for (auto i = interior->floors.begin(); i != interior->floors.end(); ++i) { // 600K T
+			bool const is_basement(i->z2() < ground_floor_z1);
 			tid_nm_pair_t floor_tex;
 			colorRGBA floor_color;
 
 			if (is_house) {
 				if (has_sec_bldg() && get_sec_bldg().contains_cube(*i)) {floor_tex = tid_nm_pair_t(get_texture_by_name("roads/asphalt.jpg"), 16.0);} // garage or shed
-				else if (i->z2() < ground_floor_z1) {floor_tex = mat.basement_floor_tex;} // basement
+				else if (is_basement) {floor_tex = mat.basement_floor_tex;} // basement
 				else {floor_tex = mat.house_floor_tex;}
 				floor_color = mat.house_floor_color;
 			}
-			else {floor_tex = mat.floor_tex; floor_color = mat.floor_color;} // office
+			else { // office building
+				if (has_parking_garage && is_basement) {floor_tex = tid_nm_pair_t(get_texture_by_name("roads/asphalt.jpg"), 16.0);} // parking garage
+				else {floor_tex = mat.floor_tex;} // office block
+				floor_color = mat.floor_color;
+			}
 			// expand_by_xy(-get_trim_thickness()) to prevent z-fighting when AA is disabled? but that will leave small gaps where floors from adjacent parts meet
 			bdraw.add_section(*this, 0, *i, floor_tex, floor_color, 4, 1, 0, 1, 0); // no AO; skip_bottom; Z dim only
 		} // for i
@@ -1233,7 +1238,7 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, 
 			// skip top surface of all but top floor ceilings if the roof is sloped;
 			// if this is an office building, the ceiling could be at a lower floor with a flat roof even if the highest floor has a sloped roof, so we must skip it
 			bool const skip_top(roof_type == ROOF_TYPE_FLAT || !is_house || !(interior->top_ceilings_mask & (uint64_t(1) << ((i - interior->ceilings.begin()) & 63))));
-			bool const is_basement(is_house && i->z1() < ground_floor_z1); // use wall texture for basement ceilings, not fancy ceiling texture
+			bool const is_basement((is_house || has_parking_garage) && i->z1() < ground_floor_z1); // use wall texture for basement/parking garage ceilings, not ceiling texture
 			bdraw.add_section(*this, 0, *i, (is_basement ? mat.wall_tex : ceil_tex), ceil_color, 4, 0, skip_top, 1, 0); // no AO; Z dim only
 		}
 		// minor optimization: don't need shadows for ceilings because lights only point down; assumes ceil_tex is only used for ceilings; not true for all houses

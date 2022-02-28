@@ -250,6 +250,7 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 			for (unsigned d = 0; d < 2; ++d) {num_lights[d] = max(1U, unsigned(round_fp(0.5f*psz[d]/car_length)));}
 			add_room(*p, part_id, num_lights[0]*num_lights[1], 0, 0); // add entire part as a room
 			interior->rooms.back().assign_all_to(RTYPE_PARKING); // make it a parking garage
+			has_parking_garage = 1;
 		}
 		else if (use_hallway) {
 			// building with rectangular slice (no adjacent exterior walls at this level), generate rows of offices

@@ -1688,9 +1688,7 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 	float const window_vspacing(get_window_vspace()), ceiling_z(zval + window_vspacing - get_fc_thickness());
 	float const tot_light_amt(room.light_intensity), car_len(car_sz.x), car_width(car_sz.y);
 	assert(car_sz.z < (window_vspacing - get_floor_thickness())); // sanity check; may fail for some user parameters, but it's unclear what we do in that case
-	// TODO: more lights
-	// TODO: concrete floor
-	// TODO: concrete ceiling
+	// TODO: lights overlapping stairs
 	// TODO: add parking spaces texture
 	// TODO: elevator P1, etc.
 	// TODO: WRITE
@@ -2383,7 +2381,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 			// top floor may have stairs connecting to upper stack
 			bool const top_floor(!is_basement && f+1 == num_floors);
 			bool const check_stairs((!is_house || has_basement()) && real_num_parts > 1 && top_floor && r->z2() < bcube.z2()); // z2 check may not be effective
-			bool const has_stairs_this_floor(r->has_stairs_on_floor(f));
+			bool const has_stairs_this_floor(r->has_stairs_on_floor(f)), is_parking_garage(r->get_room_type(f) == RTYPE_PARKING);
 			bool is_lit(0), has_light(1), light_dim(room_dim), has_stairs(has_stairs_this_floor), top_of_stairs(has_stairs && top_floor);
 
 			if ((!has_stairs && (f == 0 || top_floor) && interior->stairwells.size() > 1) || top_of_stairs) { // should this be outside the loop?
@@ -2468,7 +2466,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 							objs.back().obj_id = light_ix_assign.get_ix_for_light(hall_light);
 						} // for d
 					}
-					else if (r->is_office) { // office with possibly multiple lights
+					else if (r->is_office || is_parking_garage) { // office or parking garage with possibly multiple lights
 						float const dx(r->dx()), dy(r->dy()), ldx(light.dx()), ldy(light.dy());
 						unsigned const nx(max(1U, unsigned(0.5*dx/window_vspacing))), ny(max(1U, unsigned(0.5*dy/window_vspacing))); // more lights for large offices
 						float const xstep(dx/nx), ystep(dy/ny);
@@ -2520,7 +2518,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 				}
 				continue; // no other geometry for this room
 			}
-			if (r->get_room_type(f) == RTYPE_PARKING) { // parking garage
+			if (is_parking_garage) { // parking garage
 				r->interior = 1;
 				add_parking_garage_objs(rgen, *r, room_center.z, room_id, objs.size());
 				for (auto i = objs.begin() + room_objs_start; i != objs.end(); ++i) {i->flags |= RO_FLAG_INTERIOR;}
