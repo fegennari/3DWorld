@@ -3091,11 +3091,21 @@ void add_elevator_button(point const &pos, float button_radius, bool dim, bool d
 	objs.emplace_back(c, TYPE_BUTTON, elevator_id, dim, dir, (RO_FLAG_NOCOLL | (inside ? RO_FLAG_IN_ELEV : 0)), 1.0, SHAPE_CYLIN, colorRGBA(1.0, 0.9, 0.5)); // room_id=elevator_id
 	objs.back().obj_id = floor_id; // encode floor index as obj_id
 }
-void set_floor_text_for_sign(room_object_t &sign, unsigned floor_ix, ostringstream &oss) {
+void add_floor_number(unsigned floor_ix, unsigned floor_offset, ostringstream &oss) { // Note: floor_ix=1 is ground floor
 	oss.str("");
-	oss << floor_ix;
+	int const adj_floor_ix(int(floor_ix) - int(floor_offset));
+	if (adj_floor_ix <= 0) {oss << "B" << (1 - adj_floor_ix);} // basement floors
+	else {oss << adj_floor_ix;} // above ground floors
+}
+void set_floor_text_for_sign(room_object_t &sign, unsigned floor_ix, unsigned floor_offset, ostringstream &oss) { // Note: floor_ix=1 is ground floor
+	add_floor_number(floor_ix, floor_offset, oss);
 	sign.obj_id = register_sign_text(oss.str());
-	if (floor_ix < 10) {sign.expand_in_dim(!sign.dim, -((floor_ix == 1) ? 0.2 : 0.1)*sign.get_sz_dim(!sign.dim));} // shrink width for single digit numbers
+	int const adj_floor_ix(int(floor_ix) - int(floor_offset));
+	bool const single_digit(adj_floor_ix > 0 && adj_floor_ix < 10); // 1-10, but not basement floors
+	if (single_digit) {sign.expand_in_dim(!sign.dim, -((adj_floor_ix == 1) ? 0.2 : 0.1)*sign.get_sz_dim(!sign.dim));} // shrink width for single digit numbers
+}
+unsigned building_t::calc_floor_offset(float zval) const { // for basements
+	return ((zval < ground_floor_z1) ? round_fp((ground_floor_z1 - zval)/get_window_vspace()) : 0);
 }
 
 void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
@@ -3108,6 +3118,7 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 	// add floor signs for U-shaped stairs
 	for (auto i = interior->landings.begin(); i != interior->landings.end(); ++i) {
 		if (i->for_elevator || i->shape != SHAPE_U) continue; // not U-shaped stairs
+		unsigned const floor_offset(calc_floor_offset(i->z1()));
 		point center;
 		center[ i->dim] = i->d[i->dim][!i->dir]; // front of stairs
 		center[!i->dim] = i->get_center_dim(!i->dim);
@@ -3117,13 +3128,13 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 		sign.expand_in_dim(!i->dim, 1.0*wall_thickness); // set sign width
 		sign.z1() -= 2.5*wall_thickness; // set sign height
 		objs.emplace_back(sign, TYPE_SIGN, 0, i->dim, !i->dir, (RO_FLAG_NOCOLL | RO_FLAG_HANGING), 1.0, SHAPE_CUBE, DK_BLUE); // no room_id
-		set_floor_text_for_sign(objs.back(), i->floor, oss);
+		set_floor_text_for_sign(objs.back(), i->floor, floor_offset, oss);
 
 		// if this is the top landing, we need to add a floor sign on the ceiling above it for the top floor
 		if (i->is_at_top && !i->roof_access) {
 			sign.translate_dim(2, window_vspacing); // move up one floor
 			objs.emplace_back(sign, TYPE_SIGN, 0, i->dim, !i->dir, (RO_FLAG_NOCOLL | RO_FLAG_HANGING), 1.0, SHAPE_CUBE, DK_BLUE); // no room_id
-			set_floor_text_for_sign(objs.back(), (i->floor + 1), oss);
+			set_floor_text_for_sign(objs.back(), (i->floor + 1), floor_offset, oss);
 		}
 	} // for i
 
@@ -3138,6 +3149,7 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 		objs.back().obj_id = uint16_t(i - interior->elevators.begin()); // encode elevator index as obj_id
 		// add floor signs
 		unsigned const num_floors(calc_num_floors(*i, window_vspacing, floor_thickness));
+		unsigned const floor_offset(calc_floor_offset(i->z1()));
 		float const ewidth(i->get_sz_dim(!i->dim));
 		cube_t sign;
 		sign.d[i->dim][0] = sign.d[i->dim][1] = i->d[i->dim][i->dir];
@@ -3148,7 +3160,7 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 			sign.z1() = i->z1()   + (f + 0.5)*window_vspacing;
 			sign.z2() = sign.z1() + 0.1*ewidth;
 			objs.emplace_back(sign, TYPE_SIGN, i->room_id, i->dim, i->dir, RO_FLAG_NOCOLL, 1.0, SHAPE_CUBE, DK_BLUE);
-			set_floor_text_for_sign(objs.back(), f+1, oss);
+			set_floor_text_for_sign(objs.back(), f+1, floor_offset, oss);
 		}
 	} // for e
 	interior->room_geom->buttons_start = objs.size();

@@ -665,7 +665,7 @@ struct building_room_geom_t {
 	void add_stair(room_object_t const &c, float tscale, vector3d const &tex_origin);
 	void add_stairs_wall(room_object_t const &c, vector3d const &tex_origin, tid_nm_pair_t const &wall_tex);
 	void add_parking_garage_wall(room_object_t const &c, vector3d const &tex_origin, tid_nm_pair_t const &wall_tex);
-	void add_elevator(room_object_t const &c, float tscale, float fc_thick_scale);
+	void add_elevator(room_object_t const &c, float tscale, float fc_thick_scale, unsigned floor_offset);
 	void add_elevator_doors(elevator_t const &e, float fc_thick_scale);
 	void add_light(room_object_t const &c, float tscale);
 	void add_rug(room_object_t const &c);
@@ -1074,6 +1074,7 @@ struct building_t : public building_geom_t {
 		unsigned rooms_start, bool use_hallway, bool first_part_this_stack, float window_hspacing[2], float window_border);
 	void connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t const &part);
 	void gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcubes, unsigned building_ix);
+	unsigned calc_floor_offset(float zval) const;
 	void add_stairs_and_elevators(rand_gen_t &rgen);
 	int get_ext_door_dir(cube_t const &door_bcube, bool dim) const;
 	void add_sign_by_door(tquad_with_ix_t const &door, bool outside, std::string const &text, colorRGBA const &color, bool emissive);
