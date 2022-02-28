@@ -2421,7 +2421,8 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 			}
 			if (nlights > 0) {
 				float const light_z2(z + floor_height - fc_thick);
-				is_lit = (r->is_hallway || ((rgen.rand() & (top_of_stairs ? 3 : 1)) != 0)); // 50% of lights are on, 75% for top of stairs, 100% for hallways
+				// 50% of lights are on, 75% for top of stairs, 100% for hallways, 100% for parking garages
+				is_lit = (r->is_hallway || is_parking_garage || ((rgen.rand() & (top_of_stairs ? 3 : 1)) != 0));
 
 				// check ped_bcubes and set is_lit if any people are in this floor of this room
 				for (auto p = ped_bcubes.begin(); p != ped_bcubes.end() && !is_lit; ++p) {
