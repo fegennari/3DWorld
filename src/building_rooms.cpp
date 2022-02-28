@@ -1689,7 +1689,6 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 	float const tot_light_amt(room.light_intensity), car_len(car_sz.x), car_width(car_sz.y);
 	assert(car_sz.z < (window_vspacing - get_floor_thickness())); // sanity check; may fail for some user parameters, but it's unclear what we do in that case
 	// TODO: add parking spaces texture
-	// TODO: elevator P1, etc.
 	// TODO: WRITE
 }
 

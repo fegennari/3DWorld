@@ -1209,9 +1209,12 @@ void building_room_geom_t::add_elevator(room_object_t const &c, float tscale, fl
 	// add floor numbers to either the panel (or the buttons themselves?)
 	unsigned const num_floors(c.drawer_flags), cur_floor(c.item_flags);
 	assert(num_floors > 1);
+	assert(num_floors >= floor_offset); // no sub-basement only elevators
+	bool const use_small_text(floor_offset > 1 || (num_floors - floor_offset) >= 20); // need more space for two non-1 digits (B2 | 20)
 	float const button_spacing(panel.dz()/(num_floors + 1)); // add extra spacing on bottom and top of panel
-	float const panel_width(panel.get_sz_dim(!c.dim)), text_height(min(0.5f*panel_width, 0.8f*button_spacing));
+	float const panel_width(panel.get_sz_dim(!c.dim));
 	float const inner_button_radius(min(0.6f*thickness, min(0.35f*button_spacing, 0.25f*panel.get_sz_dim(!c.dim)))); // approx match to elevator
+	float text_height(min(0.5f*panel_width, 0.8f*button_spacing));
 	bool const ldir(c.dim ^ c.dir);
 	point text_pos;
 	text_pos[ c.dim] = panel.d[c.dim][!c.dir] - 0.01*signed_thickness; // slightly in front of the panel
@@ -1228,6 +1231,7 @@ void building_room_geom_t::add_elevator(room_object_t const &c, float tscale, fl
 	rgeom_mat_t &mat(get_material(tp, 0, 1)); // dynamic=1
 	color_wrapper const cw(BLACK), lit_cw(colorRGBA(1.0, 0.9, 0.5));
 	norm_comp const nc(normal);
+	if (use_small_text) {text_height *= 0.67;} // shrink text if there are two wide digits, but leave text alignment unchanged
 
 	for (unsigned f = 0; f < num_floors; ++f) {
 		bool const is_lit(f == cur_floor);
