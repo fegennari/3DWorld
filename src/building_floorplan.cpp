@@ -195,6 +195,7 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 	float const doorway_width(0.5*window_vspacing), doorway_hwidth(0.5*doorway_width);
 	float const wall_thick(get_wall_thickness()), wall_half_thick(0.5*wall_thick), wall_edge_spacing(0.05*wall_thick), min_wall_len(4.0*doorway_width);
 	float const window_border(get_window_h_border());
+	float const car_length(get_nom_car_size().x); // used for parking garages
 	point bldg_door_open_dir_tp(bcube.get_cube_center()); // used to determine in which direction doors open; updated base on central hallway
 	// houses have at most two parts; exclude garage, shed, porch, porch support, etc.
 	auto parts_end(get_real_parts_end());
@@ -230,7 +231,7 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 		bool const is_basement_part(is_basement(p));
 		bool const first_part(p == parts.begin()), first_part_this_stack(first_part || is_basement_part || (p-1)->z1() < p->z1());
 		bool const use_hallway(!is_house && !is_basement_part && !has_complex_floorplan && first_part_this_stack &&
-			(p+1 == parts.end() || (p+1)->z1() > p->z1()) && cube_width > 4.0*min_wall_len);
+			(p+1 == parts.end() || (p+1)->z1() > p->z1()) && cube_width > 4.0*min_wall_len); // office building hallways only; house hallways are added later
 		unsigned const rooms_start(interior->rooms.size()), part_id(p - parts.begin()), num_doors_per_stack(SPLIT_DOOR_PER_FLOOR ? num_floors : 1);
 		cube_t hall, place_area(*p);
 		place_area.expand_by_xy(-wall_edge_spacing); // shrink slightly to avoid z-fighting with walls
@@ -243,6 +244,12 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 		}
 		if (!is_cube()) { // cylinder, etc.
 			// rooms/floorplans aren't yet supported for these building types, but we can still add the floors and ceilings
+		}
+		else if (!is_house && is_basement_part && min(psz.x, psz.y) > 4.0*car_length /*&& rgen.rand_bool()*/) { // make this a parking garage
+			unsigned num_lights[2] = {};
+			for (unsigned d = 0; d < 2; ++d) {num_lights[d] = max(1U, unsigned(round_fp(0.5f*psz[d]/car_length)));}
+			add_room(*p, part_id, num_lights[0]*num_lights[1], 0, 0); // add entire part as a room
+			interior->rooms.back().assign_all_to(RTYPE_PARKING); // make it a parking garage
 		}
 		else if (use_hallway) {
 			// building with rectangular slice (no adjacent exterior walls at this level), generate rows of offices
@@ -729,7 +736,7 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 			float const min_split_wall_len(0.5*min_wall_len); // allow a shorter than normal wall because these walls have higher priority
 			
 			if (min(p->dx(), p->dy()) > min_split_wall_len) { // if not too small
-				for (auto p2 = parts.begin(); p2 != get_real_parts_end(); ++p2) {
+				for (auto p2 = parts.begin(); p2 != parts_end; ++p2) {
 					if (p2 == p) continue; // skip self
 					if (min(p2->dx(), p2->dy()) < min_split_wall_len) continue; // too small, skip
 

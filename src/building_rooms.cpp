@@ -1683,6 +1683,19 @@ void building_t::add_pri_hall_objs(rand_gen_t rgen, room_t const &room, float zv
 	} // for dir
 }
 
+void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned objs_start) {
+	vector3d const car_sz(get_nom_car_size());
+	float const window_vspacing(get_window_vspace()), ceiling_z(zval + window_vspacing - get_fc_thickness());
+	float const tot_light_amt(room.light_intensity), car_len(car_sz.x), car_width(car_sz.y);
+	assert(car_sz.z < (window_vspacing - get_floor_thickness())); // sanity check; may fail for some user parameters, but it's unclear what we do in that case
+	// TODO: more lights
+	// TODO: concrete floor
+	// TODO: concrete ceiling
+	// TODO: add parking spaces texture
+	// TODO: elevator P1, etc.
+	// TODO: WRITE
+}
+
 colorRGBA choose_pot_color(rand_gen_t &rgen) {
 	unsigned const num_colors = 8;
 	colorRGBA const pot_colors[num_colors] = {LT_GRAY, GRAY, DK_GRAY, BKGRAY, WHITE, LT_BROWN, RED, colorRGBA(1.0, 0.35, 0.18)};
@@ -2506,6 +2519,12 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 					r->assign_to(RTYPE_LOBBY, f);
 				}
 				continue; // no other geometry for this room
+			}
+			if (r->get_room_type(f) == RTYPE_PARKING) { // parking garage
+				r->interior = 1;
+				add_parking_garage_objs(rgen, *r, room_center.z, room_id, objs.size());
+				for (auto i = objs.begin() + room_objs_start; i != objs.end(); ++i) {i->flags |= RO_FLAG_INTERIOR;}
+				continue; // done, no outlets or light switches
 			}
 			//if (has_stairs && !pri_hall.is_all_zeros()) continue; // no other geometry in office building base part rooms that have stairs
 			unsigned const objs_start(objs.size()), floor_mask(1<<f);

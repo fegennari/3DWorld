@@ -1151,8 +1151,9 @@ void building_room_geom_t::add_stair(room_object_t const &c, float tscale, vecto
 	mat.add_cube_to_verts(bot, STAIRS_COLOR_BOT, tex_origin, EF_Z2); // skip top face
 }
 
-void building_room_geom_t::add_stairs_wall(room_object_t const &c, vector3d const &tex_origin, tid_nm_pair_t const &wall_tex) { // Note: no room lighting color atten
-	get_material(get_scaled_wall_tex(wall_tex), 1).add_cube_to_verts(c, c.color, tex_origin); // all faces drawn
+void building_room_geom_t::add_interior_wall(room_object_t const &c, vector3d const &tex_origin, tid_nm_pair_t const &wall_tex, bool draw_top_bot) {
+	// Note: no room lighting color atten
+	get_material(get_scaled_wall_tex(wall_tex), 1).add_cube_to_verts(c, c.color, tex_origin, (draw_top_bot ? 0 : EF_Z12));
 }
 
 // Note: there is a lot duplicated with building_room_geom_t::add_elevator(), but we need a separate function for adding interior elevator buttons
@@ -2707,6 +2708,7 @@ colorRGBA room_object_t::get_color() const {
 	case TYPE_CHAIR:    return (color + get_textured_wood_color())*0.5; // 50% seat color / 50% wood legs color
 	case TYPE_STAIR:    return (STAIRS_COLOR_TOP*0.5 + STAIRS_COLOR_BOT*0.5).modulate_with(texture_color(MARBLE_TEX));
 	case TYPE_STAIR_WALL: return texture_color(STUCCO_TEX);
+	case TYPE_PG_WALL:    return texture_color(STUCCO_TEX);
 	case TYPE_ELEVATOR: return LT_BROWN; // ???
 	case TYPE_RUG:      return texture_color(get_rug_tid());
 	case TYPE_PICTURE:  return texture_color(get_picture_tid());
