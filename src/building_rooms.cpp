@@ -1683,13 +1683,53 @@ void building_t::add_pri_hall_objs(rand_gen_t rgen, room_t const &room, float zv
 	} // for dir
 }
 
-void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned objs_start) {
-	vector3d const car_sz(get_nom_car_size());
-	float const window_vspacing(get_window_vspace()), ceiling_z(zval + window_vspacing - get_fc_thickness());
-	float const tot_light_amt(room.light_intensity), car_len(car_sz.x), car_width(car_sz.y);
+void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned objs_start, unsigned &nlights_x, unsigned &nlights_y) {
+	// rows are separated by walls and run in dim, with a road and parking spaces on either side of it;
+	// spaces are arranged in !dim, with roads along the edges of the building that connect to the roads of each row
+	bool const dim(room.dx() < room.dy()); // long/primary dim; cars are lined up along this dim, oriented along the other dim
+	vector3d const car_sz(get_nom_car_size()), parking_sz(1.1*car_sz.x, 1.4*car_sz.y, 1.5*car_sz.z); // space is somewhat larger than a car; car length:width = 2.3
+	float const window_vspacing(get_window_vspace()), ceiling_z(zval + window_vspacing - get_fc_thickness()), wall_thickness(1.2*get_wall_thickness()); // thicker walls
+	float const pillar_width(0.6*car_sz.y), pillar_hwidth(0.5*pillar_width), road_width(2.3*car_sz.y); // road wide enough for two cars to pass
+	float const wid_sz(room.get_sz_dim(dim)), len_sz(room.get_sz_dim(!dim)), wid_sz_spaces(wid_sz - 2.0*road_width);
+	float const min_strip_sz(2.0*parking_sz.x + road_width + max(wall_thickness, pillar_width)); // road + parking spaces on each side + wall or pillar
 	assert(car_sz.z < (window_vspacing - get_floor_thickness())); // sanity check; may fail for some user parameters, but it's unclear what we do in that case
+	unsigned const num_space_wid(wid_sz_spaces/parking_sz.y), num_strips(len_sz/min_strip_sz); // take the floor
+	bool const half_strip(0);//num_strips*min_strip_sz + parking_sz.x + road_width < len_sz); // TODO: more complex, can add later
+	unsigned const num_rows(2*num_strips + half_strip), num_walls(num_strips + half_strip - 1);
+	unsigned const capacity(num_rows*num_space_wid); // ignoring space blocked by stairs and elevators
+	unsigned &nlights_len(dim ? nlights_x : nlights_y), &nlights_wid(dim ? nlights_y : nlights_x);
+	nlights_len = num_rows; // lights over each row of parking spaces
+	nlights_wid = round_fp(0.25*wid_sz/parking_sz.y); // 4 parking spaces per light on average, including roads
+	cout << TXT(nlights_len) << TXT(nlights_wid) << TXT(num_space_wid) << TXT(num_rows) << TXT(capacity) << endl;
+	assert(num_space_wid >= 4); // must fit at least 4 cars per row
+	assert(num_strips    >= 1);
+	float const tot_light_amt(room.light_intensity);
+	
+	// add walls and pillars between strips
+	vect_room_object_t &objs(interior->room_geom->objs);
+	colorRGBA const wall_color(WHITE);
+	cube_t wall(room), pillar(room);
+	wall.expand_in_dim(dim, -(road_width + pillar_width)); // wall ends at roads that line the sides of the room, shifted to the other side of the pillar
+	float const wall_len(wall.get_sz_dim(dim)), wall_spacing(len_sz/(num_walls + 1));
+	unsigned const num_pillars(max(2U, unsigned(round_fp(0.25*wall_len/parking_sz.y)))); // every 4 spaces, at least 2 at the ends of the wall
+	float const pillar_spacing((wall_len + pillar_width)/(num_pillars - 1));
+
+	for (unsigned n = 0; n < num_walls; ++n) {
+		float const pos(room.d[!dim][0] + (n + 1)*wall_spacing);
+		set_wall_width(wall, pos, 0.5*wall_thickness, !dim);
+		// TODO: cut out space for stairs and elevators
+		objs.emplace_back(wall, TYPE_PG_WALL, room_id, !dim, 0, 0, tot_light_amt, SHAPE_CUBE, wall_color);
+		set_wall_width(pillar, pos, pillar_hwidth, !dim);
+
+		for (unsigned p = 0; p < num_pillars; ++p) { // add support pillars
+			float const ppos(wall.d[dim][0] - pillar_hwidth + p*pillar_spacing);
+			set_wall_width(pillar, ppos, pillar_hwidth, dim);
+			if (interior->is_blocked_by_stairs_or_elevator(pillar, 4.0*wall_thickness)) continue;
+			objs.emplace_back(pillar, TYPE_PG_WALL, room_id, !dim, 0, 0, tot_light_amt, SHAPE_CUBE, wall_color);
+		}
+	} // for n
 	// TODO: add parking spaces texture
-	// TODO: WRITE
+	// TODO: add cars
 }
 
 colorRGBA choose_pot_color(rand_gen_t &rgen) {
@@ -2331,10 +2371,9 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 		unsigned const room_objs_start(objs.size());
 		unsigned nx(1), ny(1); // number of lights in X and Y for this room
 
-		if (r->is_office || is_parking_garage) { // more lights for large offices and parking garages
-			float const light_spacing((is_parking_garage ? 3.0 : 2.0)*window_vspacing); // further apart for parking garages
-			nx = max(1U, unsigned(r->dx()/light_spacing));
-			ny = max(1U, unsigned(r->dy()/light_spacing));
+		if (r->is_office) { // more lights for large offices; parking garages are handled later
+			nx = max(1U, unsigned(0.5*r->dx()/window_vspacing));
+			ny = max(1U, unsigned(0.5*r->dy()/window_vspacing));
 		}
 		if (r->is_sec_bldg) {
 			if    (has_garage) {r->assign_all_to(RTYPE_GARAGE);}
@@ -2353,7 +2392,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 		cube_t pri_light, sec_light[2];
 		set_light_xyz(pri_light, room_center, light_size, room_dim, light_shape);
 		if (!r->contains_cube_xy(pri_light)) {pri_light.set_to_zeros();} // disable light if it doesn't fit (small room)
-		bool const has_mult_lights(nx > 1 || ny > 1); // stairs are handled later when there are multiple lights
+		bool const has_mult_lights(is_parking_garage || nx > 1 || ny > 1); // stairs are handled later when there are multiple lights
 		bool const blocked_by_stairs(!has_mult_lights && !r->is_hallway && interior->is_blocked_by_stairs_or_elevator_no_expand(pri_light, fc_thick));
 		bool use_sec_light[2] = {0,0}, sec_light_int_door[2] = {0,0}, added_bathroom(0);
 		float z(r->z1());
@@ -2391,6 +2430,11 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 			bool const has_stairs_this_floor(r->has_stairs_on_floor(f));
 			bool is_lit(0), has_light(1), light_dim(room_dim), has_stairs(has_stairs_this_floor), top_of_stairs(has_stairs && top_floor_not_basement);
 
+			if (is_parking_garage) { // parking garage; added first because this sets the number of lights
+				r->interior = 1;
+				add_parking_garage_objs(rgen, *r, room_center.z, room_id, objs.size(), nx, ny);
+				for (auto i = objs.begin() + room_objs_start; i != objs.end(); ++i) {i->flags |= RO_FLAG_INTERIOR;}
+			}
 			if ((!has_stairs && (f == 0 || top_floor_not_basement) && interior->stairwells.size() > 1) || top_of_stairs) { // should this be outside the loop?
 				// check for stairwells connecting stacked parts (is this still needed?); check for roof access stairs and set top_of_stairs=0
 				for (auto s = interior->stairwells.begin(); s != interior->stairwells.end(); ++s) {
@@ -2501,6 +2545,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 				} // for lix
 				if (is_lit) {r->lit_by_floor |= (1ULL << (f&63));} // flag this floor as being lit (for up to 64 floors)
 			} // end light placement
+			if (is_parking_garage) continue; // generated above, done; no outlets or light switches
 			float tot_light_amt(light_amt); // unitless, somewhere around 1.0
 			if (is_lit) {tot_light_amt += r->light_intensity;}
 			bool const is_ground_floor(f == 0 && !is_basement), is_garage_or_shed(r->is_garage_or_shed(f));
@@ -2524,12 +2569,6 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 					r->assign_to(RTYPE_LOBBY, f);
 				}
 				continue; // no other geometry for this room
-			}
-			if (is_parking_garage) { // parking garage
-				r->interior = 1;
-				add_parking_garage_objs(rgen, *r, room_center.z, room_id, objs.size());
-				for (auto i = objs.begin() + room_objs_start; i != objs.end(); ++i) {i->flags |= RO_FLAG_INTERIOR;}
-				continue; // done, no outlets or light switches
 			}
 			//if (has_stairs && !pri_hall.is_all_zeros()) continue; // no other geometry in office building base part rooms that have stairs
 			unsigned const objs_start(objs.size()), floor_mask(1<<f);
