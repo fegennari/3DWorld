@@ -911,6 +911,7 @@ struct building_interior_t {
 	bool is_cube_close_to_doorway(cube_t const &c, cube_t const &room, float dmin=0.0f, bool inc_open=0, bool check_open_dir=0) const;
 	bool is_blocked_by_stairs_or_elevator(cube_t const &c, float dmin=0.0f, bool elevators_only=0) const;
 	bool is_blocked_by_stairs_or_elevator_no_expand(cube_t const &c, float dmin=0.0f) const;
+	void get_stairs_and_elevators_bcubes_intersecting_cube(cube_t const &c, vect_cube_t &bcubes, float min_clearance=0.0) const;
 	void finalize();
 	bool update_elevators(building_t const &building, point const &player_pos);
 	bool check_sphere_coll(building_t const &building, point &pos, point const &p_last, float radius,
@@ -1440,7 +1441,7 @@ void set_wall_width(cube_t &wall, float pos, float half_thick, unsigned dim);
 bool is_val_inside_window(cube_t const &c, bool dim, float val, float window_spacing, float window_border);
 void subtract_cube_from_cube(cube_t const &c, cube_t const &s, vect_cube_t &out);
 void subtract_cube_from_cube_inplace(cube_t const &s, vect_cube_t &cubes, unsigned &ix, unsigned &iter_end);
-template<typename T> void subtract_cubes_from_cube(cube_t const &c, T const &sub, vect_cube_t &out, vect_cube_t &out2);
+template<typename T> void subtract_cubes_from_cube(cube_t const &c, T const &sub, vect_cube_t &out, vect_cube_t &out2, bool ignore_zval=0);
 bool subtract_cube_from_cubes(cube_t const &s, vect_cube_t &cubes, vect_cube_t *holes=nullptr, bool clip_in_z=0, bool include_adj=0);
 int get_rect_panel_tid();
 int get_bath_wind_tid ();

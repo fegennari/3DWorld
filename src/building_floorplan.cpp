@@ -1277,12 +1277,12 @@ void subtract_cube_from_cube_inplace(cube_t const &s, vect_cube_t &cubes, unsign
 	cubes[ix] = cubes.back(); cubes.pop_back(); // reuse this slot for one of the output cubes (or move the last cube here if there are no output cubes)
 	if (cubes.size() <= prev_sz) {--ix; --iter_end;} // no cubes added, last cube was swapped into this slot and needs to be reprocessed
 }
-template<typename T> void subtract_cubes_from_cube(cube_t const &c, T const &sub, vect_cube_t &out, vect_cube_t &out2) { // XY only
+template<typename T> void subtract_cubes_from_cube(cube_t const &c, T const &sub, vect_cube_t &out, vect_cube_t &out2, bool ignore_zval) { // XY only
 	out.clear();
 	out.push_back(c);
 
 	for (auto s = sub.begin(); s != sub.end(); ++s) {
-		if (s->z1() <= c.z1() || s->z1() >= c.z2() || s->z2() <= c.z2()) continue; // not correct floor
+		if (!ignore_zval && (s->z1() <= c.z1() || s->z1() >= c.z2() || s->z2() <= c.z2())) continue; // not correct floor
 		if (!c.intersects_xy(c)) continue; // no overlap with orig cube (optimization)
 		out2.clear();
 
@@ -1294,7 +1294,7 @@ template<typename T> void subtract_cubes_from_cube(cube_t const &c, T const &sub
 		out.swap(out2);
 	} // for s
 }
-template void subtract_cubes_from_cube(cube_t const &c, vect_cube_t const &sub, vect_cube_t &out, vect_cube_t &out2); // explicit instantiation
+template void subtract_cubes_from_cube(cube_t const &c, vect_cube_t const &sub, vect_cube_t &out, vect_cube_t &out2, bool ignore_zval); // explicit instantiation
 
 bool subtract_cube_from_cubes(cube_t const &s, vect_cube_t &cubes, vect_cube_t *holes, bool clip_in_z, bool include_adj) {
 	unsigned iter_end(cubes.size()); // capture size before splitting
