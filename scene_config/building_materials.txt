@@ -93,7 +93,7 @@ buildings house_floor_tscale 32.0
 buildings house_floor_tid fence.jpg
 buildings house_floor_nm_tid normal_maps/fence_NRM.jpg
 buildings basement_floor_tscale 16.0
-buildings basement_floor_tid roads/asphalt.jpg
+buildings basement_floor_tid roads/concrete.jpg
 buildings house_ceil_tid stucco.jpg
 buildings house_ceil_nm_tid normal_maps/stucco_NRM.jpg
 buildings house_ceil_specular  0.15 60.0
