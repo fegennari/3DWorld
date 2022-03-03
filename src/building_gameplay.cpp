@@ -47,6 +47,7 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_STAIR_WALL] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 1, 0.0,   0.0,   "stairs wall");
 	bldg_obj_types[TYPE_PG_WALL   ] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 0, 0.0,   0.0,   "parking garage wall"); // or support column; drawn as detail object
 	bldg_obj_types[TYPE_ELEVATOR  ] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 0, 0.0,   0.0,   "elevator");
+	bldg_obj_types[TYPE_PARK_SPACE] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 0, 0.0,   0.0,   "parking space"); // drawn as detail object
 	bldg_obj_types[TYPE_LIGHT     ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 0, 40.0,  5.0,   "light");
 	bldg_obj_types[TYPE_RUG       ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 1, 50.0,  20.0,  "rug");
 	bldg_obj_types[TYPE_PICTURE   ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 1, 100.0, 1.0,   "picture"); // should be random value

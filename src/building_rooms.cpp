@@ -1683,14 +1683,16 @@ void building_t::add_pri_hall_objs(rand_gen_t rgen, room_t const &room, float zv
 	} // for dir
 }
 
-void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned objs_start, unsigned &nlights_x, unsigned &nlights_y) {
+void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned objs_start,
+	unsigned &nlights_x, unsigned &nlights_y, float &light_delta_z)
+{
 	// rows are separated by walls and run in dim, with a road and parking spaces on either side of it;
 	// spaces are arranged in !dim, with roads along the edges of the building that connect to the roads of each row
 	bool const dim(room.dx() < room.dy()); // long/primary dim; cars are lined up along this dim, oriented along the other dim
 	vector3d const car_sz(get_nom_car_size()), parking_sz(1.1*car_sz.x, 1.4*car_sz.y, 1.5*car_sz.z); // space is somewhat larger than a car; car length:width = 2.3
-	float const window_vspacing(get_window_vspace()), floor_thickness(get_floor_thickness()), wall_thickness(1.2*get_wall_thickness()); // thicker walls
+	float const window_vspacing(get_window_vspace()), floor_thickness(get_floor_thickness()), wall_thickness(1.2*get_wall_thickness()), wall_hc(0.5*wall_thickness); // thicker
 	float const ceiling_z(zval + window_vspacing - floor_thickness); // Note: zval is at floor level, not at the bottom of the room
-	float const pillar_width(0.5*car_sz.y), pillar_hwidth(0.5*pillar_width), road_width(2.3*car_sz.y); // road wide enough for two cars to pass
+	float const pillar_width(0.5*car_sz.y), pillar_hwidth(0.5*pillar_width), beam_hwidth(0.6*pillar_hwidth), road_width(2.3*car_sz.y); // road wide enough for two cars
 	float const wid_sz(room.get_sz_dim(dim)), len_sz(room.get_sz_dim(!dim)), wid_sz_spaces(wid_sz - 2.0*road_width);
 	float const min_strip_sz(2.0*parking_sz.x + road_width + max(wall_thickness, pillar_width)); // road + parking spaces on each side + wall or pillar
 	assert(car_sz.z < (window_vspacing - floor_thickness)); // sanity check; may fail for some user parameters, but it's unclear what we do in that case
@@ -1710,11 +1712,14 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 	colorRGBA const wall_color(WHITE);
 	cube_t room_floor_cube(room);
 	set_cube_zvals(room_floor_cube, zval, ceiling_z);
-	cube_t wall(room_floor_cube), pillar(room_floor_cube);
+	cube_t wall(room_floor_cube), pillar(room_floor_cube), beam(room_floor_cube);
 	wall.expand_in_dim(dim, -(road_width + pillar_width)); // wall ends at roads that line the sides of the room, shifted to the other side of the pillar
-	float const wall_len(wall.get_sz_dim(dim)), wall_spacing(len_sz/(num_walls + 1));
+	float const wall_len(wall.get_sz_dim(dim)), wall_spacing(len_sz/(num_walls + 1)), beam_spacing(len_sz/num_rows);
 	unsigned const num_pillars(max(2U, unsigned(round_fp(0.25*wall_len/parking_sz.y)))); // every 4 spaces, at least 2 at the ends of the wall
-	float const pillar_spacing((wall_len + pillar_width)/(num_pillars - 1)), tot_light_amt(room.light_intensity);
+	float const pillar_spacing((wall_len + pillar_width)/(num_pillars - 1)), beam_delta_z(0.95*wall.dz());
+	float const tot_light_amt(room.light_intensity);
+	light_delta_z = beam_delta_z - wall.dz(); // negative
+	beam.z1()    += beam_delta_z; // shift the bottom up to the ceiling
 	vect_cube_t obstacles, wall_parts, temp;
 	// get obstacles for walls; maybe later add entrance/exit ramps, etc.
 	interior->get_stairs_and_elevators_bcubes_intersecting_cube(room_floor_cube, obstacles, 0.9*window_vspacing); // set min_clearance
@@ -1722,10 +1727,10 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 	for (unsigned n = 0; n < num_walls+2; ++n) { // includes room far walls
 		if (n < num_walls) { // interior wall
 			float const pos(room.d[!dim][0] + (n + 1)*wall_spacing);
-			set_wall_width(wall,   pos, 0.5*wall_thickness, !dim);
+			set_wall_width(wall,   pos, wall_hc, !dim);
 			set_wall_width(pillar, pos, pillar_hwidth, !dim);
 			subtract_cubes_from_cube(wall, obstacles, wall_parts, temp, 1); // ignore_zval=1
-			for (auto const &w : wall_parts) {objs.emplace_back(w, TYPE_PG_WALL, room_id, !dim, 0, 0, tot_light_amt, SHAPE_CUBE, wall_color);}
+			for (auto const &w : wall_parts) {objs.emplace_back(w, TYPE_PG_WALL, room_id, !dim, 0, 0, tot_light_amt, SHAPE_CUBE, wall_color, 0);}
 		}
 		else { // room wall
 			bool const side(n == num_walls+1);
@@ -1736,11 +1741,61 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 			float const ppos(wall.d[dim][0] - pillar_hwidth + p*pillar_spacing);
 			set_wall_width(pillar, ppos, pillar_hwidth, dim);
 			if (has_bcube_int_xy(pillar, obstacles, 4.0*wall_thickness)) continue; // skip entire pillar if it intersects stairs or an elevator
-			objs.emplace_back(pillar, TYPE_PG_WALL, room_id, !dim, 0, 0, tot_light_amt, SHAPE_CUBE, wall_color);
-		}
+			objs.emplace_back(pillar, TYPE_PG_WALL, room_id, !dim, 0, 0, tot_light_amt, SHAPE_CUBE, wall_color, 1);
+		} // for p
+		// TODO
 	} // for n
-	// TODO: add parking spaces texture
+
+	// add beams in !dim, at and between pillars
+	unsigned const beam_flags(RO_FLAG_NOCOLL | RO_FLAG_HANGING);
+
+	for (unsigned p = 0; p < 2*num_pillars - 1; ++p) { // add support pillars
+		float const ppos(wall.d[dim][0] - pillar_hwidth + 0.5*p*pillar_spacing);
+		set_wall_width(beam, ppos, beam_hwidth, dim);
+		subtract_cubes_from_cube(beam, obstacles, wall_parts, temp, 1); // ignore_zval=1
+		for (auto const &w : wall_parts) {objs.emplace_back(w, TYPE_PG_WALL, room_id, !dim, 0, beam_flags, tot_light_amt, SHAPE_CUBE, wall_color, 2);}
+	}
+	// add beams in dim for each row of lights
+	for (unsigned n = 0; n < num_rows; ++n) {
+		float const pos(room.d[!dim][0] + (n + 0.5)*beam_spacing);
+		cube_t beam(room_floor_cube);
+		beam.z1() += beam_delta_z; // shift the bottom up to the ceiling
+		set_wall_width(beam, pos, beam_hwidth, !dim);
+		subtract_cubes_from_cube(beam, obstacles, wall_parts, temp, 1); // ignore_zval=1
+		for (auto const &w : wall_parts) {objs.emplace_back(w, TYPE_PG_WALL, room_id, !dim, 0, beam_flags, tot_light_amt, SHAPE_CUBE, wall_color, 2);}
+	}
+
+	// add parking spaces on both sides of each row
+	bool short_sides[2] = {0,0};
+	if (half_strip) {short_sides[rgen.rand_bool()] = 1;} // make a random side short
+	cube_t row(wall); // same length as the wall
+	row.z2() = row.z1() + 0.001*window_vspacing; // slightly above the floor
+	float const space_width(row.get_sz_dim(dim)/num_space_wid);
+
+	for (unsigned n = 0; n < num_strips; ++n) {
+		row.d[!dim][0] = room.d[!dim][0] + (n + 0)*wall_spacing + wall_hc;
+		row.d[!dim][1] = room.d[!dim][0] + (n + 1)*wall_spacing - wall_hc;
+		float const row_width(row.get_sz_dim(!dim)), space_length(0.5f*(row_width - road_width));
+		assert(space_length > 0.0);
+
+		for (unsigned d = 0; d < 2; ++d) { // for each side of the row
+			if (short_sides[0] && n   == 0        && d == 0) continue;
+			if (short_sides[1] && n+1 == num_rows && d == 1) continue;
+			cube_t space(row);
+			space.d[!dim][!d] += (d ? 1.0 : -1.0)*(row_width - space_length); // shrink
+			space.d[ dim][0]   = row.d[dim][0]; // spaces start flush with the row
+
+			for (unsigned s = 0; s < num_space_wid; ++s) {
+				space.d[dim][1] = space.d[dim][0] + space_width; // set width
+				assert(space.is_strictly_normalized());
+				if (has_bcube_int_xy(space, obstacles, 4.0*wall_thickness)) continue; // skip entire space if it intersects stairs or an elevator
+				objs.emplace_back(space, TYPE_PARK_SPACE, room_id, !dim, 0, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CUBE, wall_color); // floor_color?
+				space.d[dim][0] = space.d[dim][1]; // shift to next space
+			}
+		} // for d
+	} // for n
 	// TODO: add cars
+	// TODO: add pipes to the ceiling?
 }
 
 colorRGBA choose_pot_color(rand_gen_t &rgen) {
@@ -2440,10 +2495,11 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 			bool const check_stairs(!has_mult_lights && (!is_house || has_basement()) && real_num_parts > 1 && top_floor && r->z2() < bcube.z2()); // z2 check may not be effective
 			bool const has_stairs_this_floor(r->has_stairs_on_floor(f));
 			bool is_lit(0), has_light(1), light_dim(room_dim), has_stairs(has_stairs_this_floor), top_of_stairs(has_stairs && top_floor_not_basement);
+			float light_delta_z(0.0);
 
 			if (is_parking_garage) { // parking garage; added first because this sets the number of lights
 				r->interior = 1;
-				add_parking_garage_objs(rgen, *r, room_center.z, room_id, objs.size(), nx, ny);
+				add_parking_garage_objs(rgen, *r, room_center.z, room_id, objs.size(), nx, ny, light_delta_z);
 				for (auto i = objs.begin() + room_objs_start; i != objs.end(); ++i) {i->flags |= RO_FLAG_INTERIOR;}
 			}
 			if ((!has_stairs && (f == 0 || top_floor_not_basement) && interior->stairwells.size() > 1) || top_of_stairs) { // should this be outside the loop?
@@ -2474,7 +2530,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 				light_dim ^= 1; // orient lights the other way for better aspect ratio match for rectangular office lights
 			}
 			if (nlights > 0) {
-				float const light_z2(z + floor_height - fc_thick);
+				float const light_z2(z + floor_height - fc_thick + light_delta_z);
 				// 50% of lights are on, 75% for top of stairs, 100% for hallways, 100% for parking garages
 				is_lit = (r->is_hallway || is_parking_garage || ((rgen.rand() & (top_of_stairs ? 3 : 1)) != 0));
 

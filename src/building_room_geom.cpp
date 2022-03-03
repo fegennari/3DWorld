@@ -1156,7 +1156,14 @@ void building_room_geom_t::add_stairs_wall(room_object_t const &c, vector3d cons
 	get_material(get_scaled_wall_tex(wall_tex), 1).add_cube_to_verts(c, c.color, tex_origin, EF_Z1); // skip bottom; no room lighting color atten
 }
 void building_room_geom_t::add_parking_garage_wall(room_object_t const &c, vector3d const &tex_origin, tid_nm_pair_t const &wall_tex) {
-	get_material(get_scaled_wall_tex(wall_tex), 1, 0, 2).add_cube_to_verts(c, c.color, tex_origin, EF_Z12); // small=2: drawn as detail object; no room lighting color atten
+	// small=2: drawn as detail object; no room lighting color atten
+	if      (c.item_flags == 0) {get_material(get_scaled_wall_tex(wall_tex), 1, 0, 2).add_cube_to_verts(c, c.color, tex_origin, EF_Z12);} // wall
+	else if (c.item_flags == 1) {get_material(tid_nm_pair_t(get_concrete_tid(), wall_tex.tscale_x), 1, 0, 2).add_cube_to_verts(c, c.color, all_zeros, EF_Z12);} // pillar
+	else if (c.item_flags == 2) {get_material(tid_nm_pair_t(get_concrete_tid(), wall_tex.tscale_x), 1, 0, 2).add_cube_to_verts(c, c.color, all_zeros, EF_Z2 );} // beam
+	else {assert(0);}
+}
+void building_room_geom_t::add_parking_space(room_object_t const &c, vector3d const &tex_origin) {
+	get_material(WHITE_TEX/*get_texture_by_name("roads/concrete_stripe.jpg")*/, 1, 0, 2).add_cube_to_verts(c, c.color, tex_origin, ~EF_Z2); // small=2: top surface only
 }
 
 // Note: there is a lot duplicated with building_room_geom_t::add_elevator(), but we need a separate function for adding interior elevator buttons
@@ -2715,6 +2722,7 @@ colorRGBA room_object_t::get_color() const {
 	case TYPE_STAIR:    return (STAIRS_COLOR_TOP*0.5 + STAIRS_COLOR_BOT*0.5).modulate_with(texture_color(MARBLE_TEX));
 	case TYPE_STAIR_WALL: return texture_color(STUCCO_TEX);
 	case TYPE_PG_WALL:    return texture_color(STUCCO_TEX);
+	case TYPE_PARK_SPACE: return LT_GRAY; // texture_color(...)?
 	case TYPE_ELEVATOR: return LT_BROWN; // ???
 	case TYPE_RUG:      return texture_color(get_rug_tid());
 	case TYPE_PICTURE:  return texture_color(get_picture_tid());
