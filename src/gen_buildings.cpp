@@ -113,7 +113,7 @@ void building_geom_t::do_xy_rotate_normal_inv(point &n) const {::do_xy_rotate_no
 
 
 class building_texture_mgr_t {
-	int window_tid, hdoor_tid, odoor_tid, bdoor_tid, bdoor2_tid, gdoor_tid, ac_unit_tid1, ac_unit_tid2, bath_wind_tid, helipad_tex, solarp_tex;
+	int window_tid, hdoor_tid, odoor_tid, bdoor_tid, bdoor2_tid, gdoor_tid, ac_unit_tid1, ac_unit_tid2, bath_wind_tid, helipad_tex, solarp_tex, concrete_tex;
 
 	int ensure_tid(int &tid, const char *name) {
 		if (tid < 0) {tid = get_texture_by_name(name);}
@@ -122,7 +122,7 @@ class building_texture_mgr_t {
 	}
 public:
 	building_texture_mgr_t() : window_tid(-1), hdoor_tid(-1), odoor_tid(-1), bdoor_tid(-1), bdoor2_tid(-1), gdoor_tid(-1),
-		ac_unit_tid1(-1), ac_unit_tid2(-1), bath_wind_tid(-1), helipad_tex(-1), solarp_tex(-1) {}
+		ac_unit_tid1(-1), ac_unit_tid2(-1), bath_wind_tid(-1), helipad_tex(-1), solarp_tex(-1), concrete_tex(-1) {}
 	int get_window_tid   () const {return window_tid;}
 	int get_hdoor_tid    () {return ensure_tid(hdoor_tid,     "white_door.jpg");} // house door
 	int get_odoor_tid    () {return ensure_tid(odoor_tid,     "buildings/office_door.jpg");} // office door (low resolution); unused
@@ -134,6 +134,7 @@ public:
 	int get_bath_wind_tid() {return ensure_tid(bath_wind_tid, "buildings/window_blocks.jpg");} // bathroom window
 	int get_helipad_tid  () {return ensure_tid(helipad_tex,   "buildings/helipad.jpg");}
 	int get_solarp_tid   () {return ensure_tid(solarp_tex,    "buildings/solar_panel.jpg");}
+	int get_concrete_tid () {return ensure_tid(concrete_tex,  "roads/concrete.jpg");}
 
 	bool check_windows_texture() {
 		if (!global_building_params.windows_enabled()) return 0;
@@ -149,6 +150,7 @@ building_texture_mgr_t building_texture_mgr;
 int get_rect_panel_tid() {return building_texture_mgr.get_gdoor_tid();} // use garage doors
 int get_bath_wind_tid () {return building_texture_mgr.get_bath_wind_tid();}
 int get_int_door_tid  () {return building_texture_mgr.get_hdoor_tid();}
+int get_concrete_tid  () {return building_texture_mgr.get_concrete_tid();}
 
 
 class texture_id_mapper_t {
@@ -189,6 +191,7 @@ public:
 		register_tid(building_texture_mgr.get_ac_unit_tid2());
 		register_tid(building_texture_mgr.get_helipad_tid());
 		register_tid(building_texture_mgr.get_solarp_tid());
+		register_tid(building_texture_mgr.get_concrete_tid());
 		for (unsigned i = 0; i < num_special_tids; ++i) {register_tid(special_tids[i]);}
 
 		for (auto i = global_building_params.materials.begin(); i != global_building_params.materials.end(); ++i) {
@@ -1071,7 +1074,7 @@ int get_building_door_tid(unsigned type) { // exterior doors, and interior doors
 
 void add_driveway_or_porch(building_draw_t &bdraw, building_t const &building, cube_t const &c, colorRGBA const &color) {
 	if (c.is_all_zeros()) return;
-	tid_nm_pair_t const tex(get_texture_by_name("roads/asphalt.jpg"), 16.0);
+	tid_nm_pair_t const tex(get_concrete_tid(), 16.0);
 	bdraw.add_section(building, 0, c, tex, color, 7, 1, 0, 1, 0); // all dims, skip bottom, no AO
 }
 
@@ -1221,13 +1224,13 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, 
 			colorRGBA floor_color;
 
 			if (is_house) {
-				if (has_sec_bldg() && get_sec_bldg().contains_cube(*i)) {floor_tex = tid_nm_pair_t(get_texture_by_name("roads/asphalt.jpg"), 16.0);} // garage or shed
+				if (has_sec_bldg() && get_sec_bldg().contains_cube(*i)) {floor_tex = tid_nm_pair_t(get_concrete_tid(), 16.0);} // garage or shed
 				else if (is_basement) {floor_tex = mat.basement_floor_tex;} // basement
 				else {floor_tex = mat.house_floor_tex;}
 				floor_color = mat.house_floor_color;
 			}
 			else { // office building
-				if (has_parking_garage && is_basement) {floor_tex = tid_nm_pair_t(get_texture_by_name("roads/asphalt.jpg"), 16.0);} // parking garage
+				if (has_parking_garage && is_basement) {floor_tex = tid_nm_pair_t(get_concrete_tid(), 16.0);} // parking garage
 				else {floor_tex = mat.floor_tex;} // office block
 				floor_color = mat.floor_color;
 			}
