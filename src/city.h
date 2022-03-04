@@ -884,7 +884,7 @@ class ped_manager_t { // pedestrians
 	void register_ped_new_plot(pedestrian_t const &ped);
 	int get_road_ix_for_ped_crossing(pedestrian_t const &ped, bool road_dim) const;
 	bool draw_ped(pedestrian_t const &ped, shader_t &s, pos_dir_up const &pdu, vector3d const &xlate, float def_draw_dist, float draw_dist_sq,
-		bool &in_sphere_draw, bool shadow_only, bool is_dlight_shadows, bool enable_animations);
+		bool &in_sphere_draw, bool shadow_only, bool is_dlight_shadows, bool enable_animations, bool is_in_building);
 	car_city_vect_t const &get_cars_for_city(unsigned city) const {assert(city < cars_by_city.size()); return cars_by_city[city];}
 public:
 	friend class city_spectate_manager_t;

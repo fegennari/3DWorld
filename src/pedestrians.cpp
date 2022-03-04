@@ -20,6 +20,8 @@ extern object_model_loader_t building_obj_model_loader; // for umbrella model
 
 
 string gen_random_name(rand_gen_t &rgen); // from Universe_name.cpp
+bool in_building_gameplay_mode(); // from building_gameplay.cpp
+
 
 class person_name_gen_t {
 	bool loaded = 0;
@@ -1397,7 +1399,7 @@ void ped_manager_t::draw(vector3d const &xlate, bool use_dlights, bool shadow_on
 				pedestrian_t const &ped(peds[i]);
 				assert(ped.city == city && ped.plot == plot);
 				if (skip_ped_draw(ped)) continue;
-				if (!draw_ped(ped, dstate.s, pdu, xlate, def_draw_dist, draw_dist_sq, in_sphere_draw, shadow_only, is_dlight_shadows, enable_animations)) continue;
+				if (!draw_ped(ped, dstate.s, pdu, xlate, def_draw_dist, draw_dist_sq, in_sphere_draw, shadow_only, is_dlight_shadows, enable_animations, 0)) continue;
 
 				if (dist_less_than(pdu.pos, ped.pos, 0.5*draw_dist)) { // fake AO shadow at below half draw distance
 					float const ao_radius(0.6*ped.radius);
@@ -1457,7 +1459,7 @@ void ped_manager_t::draw_peds_in_building(int first_ped_ix, ped_draw_vars_t cons
 		if ((display_mode & 0x08) && !city_params.ped_model_files.empty()) { // occlusion culling, if using models
 			if (pdv.building.check_obj_occluded(p->get_bcube(), pdu.pos, pdv.oc, pdv.reflection_pass)) continue;
 		}
-		draw_ped(*p, pdv.s, pdu, pdv.xlate, def_draw_dist, draw_dist_sq, in_sphere_draw, pdv.shadow_only, pdv.shadow_only, enable_animations);
+		draw_ped(*p, pdv.s, pdu, pdv.xlate, def_draw_dist, draw_dist_sq, in_sphere_draw, pdv.shadow_only, pdv.shadow_only, enable_animations, 1);
 	} // for p
 	end_sphere_draw(in_sphere_draw);
 	pdv.s.upload_mvm(); // seems to be needed after applying model transforms, not sure why
@@ -1489,7 +1491,7 @@ void ped_manager_t::get_ped_bcubes_for_building(int first_ped_ix, vect_cube_t &b
 }
 
 bool ped_manager_t::draw_ped(pedestrian_t const &ped, shader_t &s, pos_dir_up const &pdu, vector3d const &xlate, float def_draw_dist, float draw_dist_sq,
-	bool &in_sphere_draw, bool shadow_only, bool is_dlight_shadows, bool enable_animations)
+	bool &in_sphere_draw, bool shadow_only, bool is_dlight_shadows, bool enable_animations, bool is_in_building)
 {
 	if (ped.destroyed) return 0; // skip
 	float const dist_sq(p2p_dist_sq(pdu.pos, ped.pos));
@@ -1514,10 +1516,13 @@ bool ped_manager_t::draw_ped(pedestrian_t const &ped, shader_t &s, pos_dir_up co
 		vector3d dir_horiz(ped.dir);
 		dir_horiz.z = 0.0; // always face a horizontal direction, even if walking on a slope
 		dir_horiz.normalize();
+		// A=0.0, leave unchanged; color applies to the skin of the Katie model (ID 3), but all of the other models since they're only one material
+		bool const has_sep_skin_mat(ped.model_id == 3);
 		//colorRGBA const &color(ped.following_player ? RED : WHITE); // force red when following player, for debugging purposes
 		//colorRGBA const &color(ped.on_stairs() ? RED : ALPHA0);
 		//colorRGBA const &color((ped.retreat_time > 0.0) ? RED : ALPHA0);
-		colorRGBA const &color(ALPHA0); // A=0.0, leave unchanged
+		colorRGBA const &color((has_sep_skin_mat && is_in_building && in_building_gameplay_mode()) ? OLIVE : ALPHA0); // gray for zombies in buildings
+		//colorRGBA const &color(ALPHA0);
 		ped_model_loader.draw_model(s, ped.pos, bcube, dir_horiz, color, xlate, ped.model_id, shadow_only, low_detail, enable_animations);
 
 		// draw umbrella 75% of the time if pedestrian is outside and in the rain
