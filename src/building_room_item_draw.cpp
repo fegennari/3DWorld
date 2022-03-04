@@ -1120,6 +1120,19 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, building_t c
 			obj_drawn = 1;
 		} // for rat
 		if (!shadow_only) {s.add_uniform_int("animation_id", 0);} // reset
+
+		if (!building.is_house && player_in_basement) { // or near basement stairs?
+			// draw cars in parking spaces
+			rand_gen_t rgen;
+			rgen.set_state(building_ix+1, building.mat_ix+1); // set to something canonical per building
+			auto objs_end(get_placed_objs_end()); // skip buttons/stairs/elevators
+
+			for (auto i = objs.begin(); i != objs_end; ++i) {
+				if (i->type != TYPE_PARK_SPACE) continue;
+				if (rgen.rand_float() < 0.75)   continue; // 25% populated with cars
+				// TODO
+			} // for i
+		}
 	}
 	if (disable_cull_face) {glEnable(GL_CULL_FACE);}
 	if (obj_drawn) {check_mvm_update();} // needed after popping model transform matrix
