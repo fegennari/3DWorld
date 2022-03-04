@@ -1789,7 +1789,8 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 				space.d[dim][1] = space.d[dim][0] + space_width; // set width
 				assert(space.is_strictly_normalized());
 				if (has_bcube_int_xy(space, obstacles, 4.0*wall_thickness)) continue; // skip entire space if it intersects stairs or an elevator
-				objs.emplace_back(space, TYPE_PARK_SPACE, room_id, !dim, 0, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CUBE, wall_color); // floor_color?
+				unsigned const flags(RO_FLAG_NOCOLL | ((s > 0) ? RO_FLAG_ADJ_LO : 0) | ((s+1 < num_space_wid) ? RO_FLAG_ADJ_HI : 0)); // track adjacent spaces
+				objs.emplace_back(space, TYPE_PARK_SPACE, room_id, !dim, d, flags, tot_light_amt, SHAPE_CUBE, wall_color); // floor_color?
 				space.d[dim][0] = space.d[dim][1]; // shift to next space
 			}
 		} // for d

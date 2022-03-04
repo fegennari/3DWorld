@@ -543,6 +543,7 @@ void building_room_geom_t::create_static_vbos(building_t const &building) {
 	float const tscale(2.0/obj_scale);
 	mats_static.clear();
 	mats_alpha .clear();
+	tid_nm_pair_t const &wall_tex(building.get_material().wall_tex);
 
 	for (auto i = objs.begin(); i != objs.end(); ++i) {
 		if (!i->is_visible() || i->is_dynamic()) continue; // skip invisible and dynamic objects
@@ -553,7 +554,7 @@ void building_room_geom_t::create_static_vbos(building_t const &building) {
 		case TYPE_TABLE:   add_table   (*i, tscale, 0.12, 0.08); break; // top_dz=12% of height, leg_width=8% of height
 		case TYPE_CHAIR:   add_chair   (*i, tscale); break;
 		case TYPE_STAIR:   add_stair   (*i, tscale, tex_origin); break;
-		case TYPE_STAIR_WALL: add_stairs_wall(*i, tex_origin, building.get_material().wall_tex); break;
+		case TYPE_STAIR_WALL: add_stairs_wall(*i, tex_origin, wall_tex); break;
 		case TYPE_RUG:     add_rug     (*i); break;
 		case TYPE_PICTURE: add_picture (*i); break;
 		case TYPE_WBOARD:  add_picture (*i); break;
@@ -576,7 +577,7 @@ void building_room_geom_t::create_static_vbos(building_t const &building) {
 		case TYPE_PLANT:   add_potted_plant(*i, 1, 0); break; // pot only
 		case TYPE_DRESSER: case TYPE_NIGHTSTAND: add_dresser(*i, tscale, 1, 0); break;
 		case TYPE_FLOORING:add_flooring(*i, tscale); break;
-		case TYPE_CLOSET:  add_closet  (*i, building.get_material().wall_tex, 1, 0); break;
+		case TYPE_CLOSET:  add_closet  (*i, wall_tex, 1, 0); break;
 		case TYPE_MIRROR:  add_mirror  (*i); break;
 		case TYPE_SHOWER:  add_shower  (*i, tscale); break;
 		case TYPE_MWAVE:   add_mwave   (*i); break;
@@ -663,6 +664,7 @@ void building_room_geom_t::create_detail_vbos(building_t const &building) {
 	mats_detail.clear();
 	// currently only small objects that are non-interactive and can't be taken; TYPE_SWITCH almost counts
 	auto objs_end(get_placed_objs_end()); // skip buttons/stairs/elevators
+	tid_nm_pair_t const &wall_tex(building.get_material().wall_tex);
 
 	for (auto i = objs.begin(); i != objs_end; ++i) {
 		if (!i->is_visible()) continue;
@@ -670,8 +672,8 @@ void building_room_geom_t::create_detail_vbos(building_t const &building) {
 		switch (i->type) {
 		case TYPE_OUTLET:     add_outlet(*i); break;
 		case TYPE_SWITCH:     add_switch(*i, 1); break; // draw_detail_pass=0
-		case TYPE_PG_WALL:    add_parking_garage_wall(*i, tex_origin, building.get_material().wall_tex); break;
-		case TYPE_PARK_SPACE: add_parking_space(*i, tex_origin);
+		case TYPE_PG_WALL:    add_parking_garage_wall(*i, tex_origin, wall_tex); break;
+		case TYPE_PARK_SPACE: add_parking_space(*i, tex_origin, wall_tex.tscale_x);
 		default: break;
 		} // end switch
 	} // for i

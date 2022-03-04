@@ -1162,8 +1162,10 @@ void building_room_geom_t::add_parking_garage_wall(room_object_t const &c, vecto
 	else if (c.item_flags == 2) {get_material(tid_nm_pair_t(get_concrete_tid(), wall_tex.tscale_x), 1, 0, 2).add_cube_to_verts(c, c.color, all_zeros, EF_Z2 );} // beam
 	else {assert(0);}
 }
-void building_room_geom_t::add_parking_space(room_object_t const &c, vector3d const &tex_origin) {
-	get_material(WHITE_TEX/*get_texture_by_name("roads/concrete_stripe.jpg")*/, 1, 0, 2).add_cube_to_verts(c, c.color, tex_origin, ~EF_Z2); // small=2: top surface only
+void building_room_geom_t::add_parking_space(room_object_t const &c, vector3d const &tex_origin, float tscale) {
+	// TODO: use RO_FLAG_ADJ_LO/RO_FLAG_ADJ_HI to add yellow stripes on the correct sides
+	rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_texture_by_name("roads/concrete_stripe.jpg"), tscale), 1, 0, 2));
+	mat.add_cube_to_verts(c, c.color, tex_origin, ~EF_Z2, c.dim); // small=2: top surface only
 }
 
 // Note: there is a lot duplicated with building_room_geom_t::add_elevator(), but we need a separate function for adding interior elevator buttons
