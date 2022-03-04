@@ -1086,6 +1086,10 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, building_t c
 		} // for i
 	}
 	if (player_in_building) { // only drawn for the player building
+		if (!shadow_only) {
+			int const animation_id = 7; // custom rat animation
+			s.add_uniform_int("animation_id", animation_id);
+		}
 		for (rat_t &rat : rats) {
 			cube_t const bcube(rat.get_bcube());
 			if (check_clip_cube && !smap_light_clip_cube.intersects(bcube + xlate)) continue; // shadow map clip cube test: fast and high rejection ratio, do this first
@@ -1093,23 +1097,29 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, building_t c
 			if ((display_mode & 0x08) && building.check_obj_occluded(bcube, camera_bs, oc, reflection_pass)) continue;
 			point const pos(bcube.get_cube_center());
 			bool const animate(rat.anim_time > 0.0 && !shadow_only); // can't see the animation in the shadow pass anyway
-			
-			if (animate) {
-				int const animation_id = 7; // custom rat animation
-				s.add_uniform_int  ("animation_id",   animation_id);
-				s.add_uniform_float("animation_time", rat.anim_time);
-			}
+			if (!shadow_only) {s.add_uniform_float("animation_time", rat.anim_time);}
 			colorRGBA const color(rat_color); // make the rat's fur darker
 			//colorRGBA const color(blend_color(RED, WHITE, rat.fear, 0)); // used for debugging fear
 			//colorRGBA const color(blend_color(RED, WHITE, rat.attacking, 0));
-			building_obj_model_loader.draw_model(s, pos, rat.get_bcube_with_dir(), rat.dir, color, xlate, OBJ_MODEL_RAT, shadow_only, 0, animate);
+			cube_t const rat_bcube(rat.get_bcube_with_dir());
+			building_obj_model_loader.draw_model(s, pos, rat_bcube, rat.dir, color, xlate, OBJ_MODEL_RAT, shadow_only, 0, animate);
 
-			if (animate) { // reset animations; could be done outside the loop, but there usually isn't more than one rat visible
-				s.add_uniform_int  ("animation_id",   0);
-				s.add_uniform_float("animation_time", 0.0);
+			if (rat.attacking) { // draw red glowing eyes
+				s.set_color_e(colorRGBA(0.5, 0.0, 0.0, 1.0)); // light emissive red
+				s.set_cur_color(RED);
+				select_texture(WHITE_TEX);
+				s.add_uniform_float("animation_time", 0.0); // clear animations
+				point eyes_center(pos + vector3d(0.0, 0.0, 0.09*rat.height) + 0.85*rat.get_hlength()*rat.dir);
+				vector3d const eye_sep_dir(0.21*rat.hwidth*cross_product(rat.dir, plus_z).get_norm());
+
+				for (unsigned d = 0; d < 2; ++d) { // draw left and right eye, untextured
+					draw_sphere_vbo((eyes_center + (d ? 1.0 : -1.0)*eye_sep_dir), 0.05*rat.height, 16, 0);
+				}
+				s.set_color_e(BLACK);
 			}
 			obj_drawn = 1;
 		} // for rat
+		if (!shadow_only) {s.add_uniform_int("animation_id", 0);} // reset
 	}
 	if (disable_cull_face) {glEnable(GL_CULL_FACE);}
 	if (obj_drawn) {check_mvm_update();} // needed after popping model transform matrix
