@@ -682,7 +682,8 @@ int building_t::choose_dest_room(building_ai_state_t &state, pedestrian_t &perso
 	if (interior->rooms.size() == 1) return 0; // no other room to move to
 	float const floor_spacing(get_window_vspace());
 
-	for (unsigned n = 0; n < 100; ++n) { // make 100 attempts at finding a valid room
+	// make 100 attempts at finding a valid room
+	for (unsigned n = 0; n < 100; ++n) {
 		unsigned const cand_room(rgen.rand() % interior->rooms.size());
 		if (cand_room == (unsigned)loc.room_ix) continue;
 		room_t const &room(interior->rooms[cand_room]);
@@ -712,7 +713,9 @@ int building_t::choose_dest_room(building_ai_state_t &state, pedestrian_t &perso
 		state.goal_type = GOAL_TYPE_ROOM;
 		return 1;
 	} // for n
-	if (!same_floor && loc.room_ix >= 0 && get_room(loc.room_ix).has_stairs == 255) { // how about a different floor of the same room?
+
+	// how about a different floor of the same room?
+	if (!same_floor && loc.room_ix >= 0 && get_room(loc.room_ix).has_stairs == 255) {
 		cube_t const &room(get_room(loc.room_ix));
 		float const new_z(person.target_pos.z + (rgen.rand_bool() ? -1.0 : 1.0)*floor_spacing); // one floor above or below
 		
@@ -723,7 +726,9 @@ int building_t::choose_dest_room(building_ai_state_t &state, pedestrian_t &perso
 			return 1;
 		}
 	}
-	if (loc.room_ix >= 0 && state.is_first_path) { // how about a different location in the same room? this will at least get the person unstuck from an object
+
+	// how about a different location in the same room? this will at least get the person unstuck from an object and moving inside a parking garage
+	if (loc.room_ix >= 0 && (state.is_first_path || get_room(loc.room_ix).get_room_type(0) == RTYPE_PARKING)) {
 		point dest_pos(get_center_of_room(loc.room_ix));
 		float const height(0.7*get_window_vspace()), radius(COLL_RADIUS_SCALE*person.radius);
 		static vect_cube_t avoid; // reuse across frames/people
@@ -1136,7 +1141,7 @@ int building_t::ai_room_update(building_ai_state_t &state, rand_gen_t &rgen, vec
 		} // for p
 	}
 	bool const player_in_this_building(cur_player_building_loc.building_ix == (int)person.dest_bldg); // basement door only counts if the player is in this building
-	bool const might_have_closed_door(global_building_params.open_door_prob < 1.0 || (player_in_this_building && has_basement()));
+	bool const might_have_closed_door(global_building_params.open_door_prob < 1.0 || (player_in_this_building && is_house && has_basement()));
 
 	if (interior->door_state_updated || (global_building_params.ai_opens_doors == 2 && might_have_closed_door)) {
 		for (auto i = interior->door_stacks.begin(); i != interior->door_stacks.end(); ++i) { // can be slow, but not as slow as iterating over doors
