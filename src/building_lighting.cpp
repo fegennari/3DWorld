@@ -600,7 +600,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 	maybe_inv_rotate_point(camera_rot); // rotate camera pos into building space; should use this pos below except with building bcube, occlusion checks, or lpos_rot
 	unsigned camera_part(parts.size()); // start at an invalid value
 	unsigned camera_floor(0);
-	bool camera_by_stairs(0), camera_on_stairs(0), camera_in_hallway(0), camera_near_building(camera_in_building);
+	bool camera_by_stairs(0), camera_on_stairs(0), camera_somewhat_by_stairs(0), camera_in_hallway(0), camera_near_building(camera_in_building);
 	int camera_room(-1);
 	vect_cube_t moving_objs;
 	ped_bcubes.clear();
@@ -615,7 +615,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			room_t const &room(get_room(room_ix));
 			camera_floor      = max(0.0f, (camera_rot.z - room.z1()))/window_vspacing;
 			camera_room       = room_ix;
-			camera_by_stairs  = room.has_stairs_on_floor(camera_floor);
+			camera_by_stairs  = camera_somewhat_by_stairs = room.has_stairs_on_floor(camera_floor);
 			camera_in_hallway = room.is_hallway;
 			unsigned const room_type(room.get_room_type(camera_floor));
 			assert(room_type < NUM_RTYPES);
@@ -625,6 +625,14 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			if (camera_by_stairs) {
 				for (auto i = interior->stairwells.begin(); i != interior->stairwells.end(); ++i) {
 					if (i->contains_pt(camera_rot)) {camera_on_stairs = 1; break;}
+				}
+			}
+			else { // what about camera in room adjacent to one with stairs?
+				cube_t cr(interior->rooms[camera_room]);
+				cr.expand_by_xy(2.0*wall_thickness);
+
+				for (auto r = interior->rooms.begin(); r != interior->rooms.end(); ++r) {
+					if (r->has_stairs_on_floor(camera_floor) && r->intersects_no_adj(cr)) {camera_somewhat_by_stairs = 1; break;}
 				}
 			}
 		}
@@ -655,7 +663,8 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		//if (is_light_occluded(lpos_rot, camera_bs))  continue; // too strong a test in general, but may be useful for selecting high importance lights
 		//if (!camera_in_building && i->is_interior()) continue; // skip interior lights when camera is outside the building: makes little difference, not worth the trouble
 		// basement lights are only visible if the player is inside the building on the basement or ground floor
-		if (lpos.z < ground_floor_z1 && (camera_z > (ground_floor_z1 + window_vspacing) || !bcube.contains_pt(camera_bs))) continue;
+		bool const light_in_basement(lpos.z < ground_floor_z1);
+		if (light_in_basement && (camera_z > (ground_floor_z1 + window_vspacing) || !bcube.contains_pt(camera_bs))) continue;
 		room_t const &room(get_room(i->room_id));
 		bool const is_lamp(i->type == TYPE_LAMP), is_in_elevator(i->flags & RO_FLAG_IN_ELEV), is_single_floor(room.is_sec_bldg || is_in_elevator);
 		int const cur_floor((i->z1() - room.z1())/window_vspacing);
@@ -665,6 +674,11 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		// secondary buildings are all one floor independent of height
 		bool const floor_is_above((camera_z < floor_z) && !is_single_floor), floor_is_below(camera_z > ceil_z);
 		bool const camera_room_same_part(room.part_id == camera_part);
+		bool const light_room_has_stairs(i->has_stairs() || room.has_stairs_on_floor(cur_floor));
+		// if the light is in the basement and the camera isn't, it's not visible unless the player is by the stairs
+		if ( light_in_basement && !player_in_basement && !camera_somewhat_by_stairs) continue;
+		// if the player is in the basement but the light isn't, it's not visible unless the room with the light has stairs (applies to parking garages)
+		if (!light_in_basement &&  player_in_basement && !light_room_has_stairs    ) continue;
 		// less culling if either the light or the camera is by stairs and light is on the floor above or below
 		bool stairs_light(0);
 
@@ -673,21 +687,12 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 				stairs_light = ((int)i->room_id == camera_room); // only handle the case where the light is in the hallway above or below
 			}
 			else {
-				stairs_light = (i->has_stairs() || room.has_stairs_on_floor(cur_floor) || camera_by_stairs); // either the light or the camera is by the stairs
-
-				if (!stairs_light /*&& floor_is_below*/ && camera_room >= 0) { // what about camera in room adjacent to one with stairs?
-					cube_t cr(interior->rooms[camera_room]);
-					cr.expand_by_xy(2.0*wall_thickness);
-
-					for (auto r = interior->rooms.begin(); r != interior->rooms.end(); ++r) {
-						if (r->has_stairs_on_floor(camera_floor) && r->intersects_no_adj(cr)) {stairs_light = 1; break;}
-					}
-				}
+				stairs_light = (light_room_has_stairs || camera_somewhat_by_stairs); // either the light or the camera is by the stairs
 			}
 		}
 		if (floor_is_above || floor_is_below) { // light is on a different floor from the camera
 			// the basement is a different part, but it's still the same vertical stack; consider this the same effective part if the camera is in the basement above the room's part
-			if (camera_in_building && (camera_room_same_part || (player_in_basement && parts[room.part_id].contains_pt_xy(camera_rot)) ||
+			if (camera_in_building && (camera_room_same_part || ((player_in_basement || light_in_basement) && parts[room.part_id].contains_pt_xy(camera_rot)) ||
 				(room.contains_pt_xy(camera_rot) && camera_z < ceil_above_zval && camera_z > floor_below_zval)))
 			{
 				// player is on a different floor of the same building part, or more than one floor away in a part stack, and can't see a light from the floor above/below
