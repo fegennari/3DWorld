@@ -1694,42 +1694,53 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 	float const ceiling_z(zval + window_vspacing - floor_thickness); // Note: zval is at floor level, not at the bottom of the room
 	float const pillar_width(0.5*car_sz.y), pillar_hwidth(0.5*pillar_width), beam_hwidth(0.6*pillar_hwidth), road_width(2.3*car_sz.y); // road wide enough for two cars
 	float const wid_sz(room.get_sz_dim(dim)), len_sz(room.get_sz_dim(!dim)), wid_sz_spaces(wid_sz - 2.0*road_width);
-	float const min_strip_sz(2.0*parking_sz.x + road_width + max(wall_thickness, pillar_width)); // road + parking spaces on each side + wall or pillar
+	float const min_strip_sz(2.0*parking_sz.x + road_width + max(wall_thickness, pillar_width)); // road + parking spaces on each side + wall/pillar
 	assert(car_sz.z < (window_vspacing - floor_thickness)); // sanity check; may fail for some user parameters, but it's unclear what we do in that case
-	unsigned const num_space_wid(wid_sz_spaces/parking_sz.y), num_strips(len_sz/min_strip_sz); // take the floor
-	bool const half_strip(0);//num_strips*min_strip_sz + parking_sz.x + road_width < len_sz); // TODO: more complex, can add later
-	unsigned const num_rows(2*num_strips + half_strip), num_walls(num_strips + half_strip - 1);
+	unsigned const num_space_wid(wid_sz_spaces/parking_sz.y), num_full_strips(len_sz/min_strip_sz); // take the floor
+	bool const half_strip((num_full_strips*min_strip_sz + parking_sz.x + road_width + wall_thickness) < len_sz); // no space for a full row, add a half row
+	bool const half_row_side(half_strip ? rgen.rand_bool() : 0); // pick a random side
+	unsigned const num_rows(2*num_full_strips + half_strip), num_strips(num_full_strips + half_strip), num_walls(num_strips - 1);
 	unsigned const capacity(num_rows*num_space_wid); // ignoring space blocked by stairs and elevators
 	unsigned &nlights_len(dim ? nlights_x : nlights_y), &nlights_wid(dim ? nlights_y : nlights_x);
 	nlights_len = num_rows; // lights over each row of parking spaces
 	nlights_wid = round_fp(0.25*wid_sz/parking_sz.y); // 4 parking spaces per light on average, including roads
 	cout << TXT(nlights_len) << TXT(nlights_wid) << TXT(num_space_wid) << TXT(num_rows) << TXT(capacity) << endl; // TESTING, remove later
-	assert(num_space_wid >= 4); // must fit at least 4 cars per row
-	assert(num_strips    >= 1);
+	assert(num_space_wid   >= 4); // must fit at least 4 cars per row
+	assert(num_full_strips >= 1);
 	
 	// add walls and pillars between strips
 	vect_room_object_t &objs(interior->room_geom->objs);
 	colorRGBA const wall_color(WHITE);
-	cube_t room_floor_cube(room);
+	cube_t room_floor_cube(room), virt_room_for_wall(room);
 	set_cube_zvals(room_floor_cube, zval, ceiling_z);
 	cube_t wall(room_floor_cube), pillar(room_floor_cube), beam(room_floor_cube);
 	wall.expand_in_dim(dim, -(road_width + pillar_width)); // wall ends at roads that line the sides of the room, shifted to the other side of the pillar
-	float const wall_len(wall.get_sz_dim(dim)), wall_spacing(len_sz/(num_walls + 1)), beam_spacing(len_sz/num_rows);
+	float wall_spacing(len_sz/(num_walls + 1));
+	float const wall_len(wall.get_sz_dim(dim)), beam_spacing(len_sz/num_rows);
+	float const row_width(wall_spacing - wall_thickness), space_length(0.5f*(row_width - road_width));
 	unsigned const num_pillars(max(2U, unsigned(round_fp(0.25*wall_len/parking_sz.y)))); // every 4 spaces, at least 2 at the ends of the wall
-	float const pillar_spacing((wall_len + pillar_width)/(num_pillars - 1)), beam_delta_z(0.95*wall.dz());
-	float const tot_light_amt(room.light_intensity);
+	float const pillar_spacing((wall_len + pillar_width)/(num_pillars - 1)), beam_delta_z(0.95*wall.dz()), tot_light_amt(room.light_intensity);
+	bool short_sides[2] = {0,0};
+	float side_clip_dist[2] = {0.0, 0.0};
+
+	if (half_strip) {
+		short_sides[half_row_side] = 1;
+		virt_room_for_wall.d[!dim][half_row_side] += (half_row_side ? 1.0 : -1.0)*space_length;
+		wall_spacing = virt_room_for_wall.get_sz_dim(!dim)/(num_walls + 1); // recalculate wall spacing
+	}
 	light_delta_z = beam_delta_z - wall.dz(); // negative
 	beam.z1()    += beam_delta_z; // shift the bottom up to the ceiling
-	vect_cube_t obstacles, wall_parts, temp;
-	// get obstacles for walls; maybe later add entrance/exit ramps, etc.
-	interior->get_stairs_and_elevators_bcubes_intersecting_cube(room_floor_cube, obstacles, 0.9*window_vspacing); // set min_clearance
+	vect_cube_t obstacles, obstacles_exp, wall_parts, temp;
+	// get obstacles for walls with and without clearance; maybe later add entrance/exit ramps, etc.
+	interior->get_stairs_and_elevators_bcubes_intersecting_cube(room_floor_cube, obstacles_exp, 0.9*window_vspacing); // with clearance
+	interior->get_stairs_and_elevators_bcubes_intersecting_cube(room_floor_cube, obstacles, 0.0); // without clearance
 
 	for (unsigned n = 0; n < num_walls+2; ++n) { // includes room far walls
 		if (n < num_walls) { // interior wall
-			float const pos(room.d[!dim][0] + (n + 1)*wall_spacing);
+			float const pos(virt_room_for_wall.d[!dim][0] + (n + 1)*wall_spacing); // reference from the room far wall, assuming we can fit a full width double row strip
 			set_wall_width(wall,   pos, wall_hc, !dim);
 			set_wall_width(pillar, pos, pillar_hwidth, !dim);
-			subtract_cubes_from_cube(wall, obstacles, wall_parts, temp, 1); // ignore_zval=1
+			subtract_cubes_from_cube(wall, obstacles_exp, wall_parts, temp, 1); // ignore_zval=1
 			for (auto const &w : wall_parts) {objs.emplace_back(w, TYPE_PG_WALL, room_id, !dim, 0, 0, tot_light_amt, SHAPE_CUBE, wall_color, 0);}
 		}
 		else { // room wall
@@ -1740,7 +1751,7 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 		for (unsigned p = 0; p < num_pillars; ++p) { // add support pillars
 			float const ppos(wall.d[dim][0] - pillar_hwidth + p*pillar_spacing);
 			set_wall_width(pillar, ppos, pillar_hwidth, dim);
-			if (has_bcube_int_xy(pillar, obstacles, 4.0*wall_thickness)) continue; // skip entire pillar if it intersects stairs or an elevator
+			if (has_bcube_int_xy(pillar, obstacles_exp, 4.0*wall_thickness)) continue; // skip entire pillar if it intersects stairs or an elevator
 			objs.emplace_back(pillar, TYPE_PG_WALL, room_id, !dim, 0, 0, tot_light_amt, SHAPE_CUBE, wall_color, 1);
 		} // for p
 		// TODO
@@ -1765,17 +1776,15 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 		for (auto const &w : wall_parts) {objs.emplace_back(w, TYPE_PG_WALL, room_id, !dim, 0, beam_flags, tot_light_amt, SHAPE_CUBE, wall_color, 2);}
 	}
 
-	// add parking spaces on both sides of each row
-	bool short_sides[2] = {0,0};
-	if (half_strip) {short_sides[rgen.rand_bool()] = 1;} // make a random side short
+	// add parking spaces on both sides of each row (one side if half row)
 	cube_t row(wall); // same length as the wall
+	row.expand_in_dim(dim, pillar_width); // includes the width of the pillars
 	row.z2() = row.z1() + 0.001*window_vspacing; // slightly above the floor
-	float const space_width(row.get_sz_dim(dim)/num_space_wid);
+	float const space_width(row.get_sz_dim(dim)/num_space_wid), strips_start(virt_room_for_wall.d[!dim][0]);
 
 	for (unsigned n = 0; n < num_strips; ++n) {
-		row.d[!dim][0] = room.d[!dim][0] + (n + 0)*wall_spacing + wall_hc;
-		row.d[!dim][1] = room.d[!dim][0] + (n + 1)*wall_spacing - wall_hc;
-		float const row_width(row.get_sz_dim(!dim)), space_length(0.5f*(row_width - road_width));
+		row.d[!dim][0] = strips_start + (n + 0)*wall_spacing + wall_hc;
+		row.d[!dim][1] = strips_start + (n + 1)*wall_spacing - wall_hc;
 		assert(space_length > 0.0);
 
 		for (unsigned d = 0; d < 2; ++d) { // for each side of the row
@@ -1788,9 +1797,11 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 			for (unsigned s = 0; s < num_space_wid; ++s) {
 				space.d[dim][1] = space.d[dim][0] + space_width; // set width
 				assert(space.is_strictly_normalized());
-				if (has_bcube_int_xy(space, obstacles, 4.0*wall_thickness)) continue; // skip entire space if it intersects stairs or an elevator
+				if (has_bcube_int_xy(space, obstacles_exp, 4.0*wall_thickness)) continue; // skip entire space if it intersects stairs or an elevator
 				unsigned const flags(RO_FLAG_NOCOLL | ((s > 0) ? RO_FLAG_ADJ_LO : 0) | ((s+1 < num_space_wid) ? RO_FLAG_ADJ_HI : 0)); // track adjacent spaces
-				objs.emplace_back(space, TYPE_PARK_SPACE, room_id, !dim, d, flags, tot_light_amt, SHAPE_CUBE, wall_color); // floor_color?
+				cube_t space_inner(space);
+				space_inner.expand_in_dim(dim, -0.1*wall_thickness); // shrink a tiny amount for the line, debug visualization, and car placement
+				objs.emplace_back(space_inner, TYPE_PARK_SPACE, room_id, !dim, d, flags, tot_light_amt, SHAPE_CUBE, wall_color); // floor_color?
 				space.d[dim][0] = space.d[dim][1]; // shift to next space
 			}
 		} // for d

@@ -1926,15 +1926,13 @@ bool building_interior_t::is_blocked_by_stairs_or_elevator_no_expand(cube_t cons
 }
 // similar to above (without stairs pretest), but returns bounding cubes rather than checking for intersections
 void building_interior_t::get_stairs_and_elevators_bcubes_intersecting_cube(cube_t const &c, vect_cube_t &bcubes, float min_clearance) const {
-	float const clearance(max(min_clearance, get_doorway_width())); // Note: can return zero
-
 	for (auto const &s : stairwells) {
-		cube_t const tc(get_stairs_bcube_expanded(s, clearance));
+		cube_t const tc(get_stairs_bcube_expanded(s, min_clearance));
 		if (tc.intersects(c)) {bcubes.push_back(tc);}
 	}
 	for (auto const &e : elevators) {
 		cube_t tc(e);
-		tc.d[e.dim][e.dir] += clearance*(e.dir ? 1.0 : -1.0); // add extra space in front of the elevator
+		tc.d[e.dim][e.dir] += min_clearance*(e.dir ? 1.0 : -1.0); // add extra space in front of the elevator
 		if (tc.intersects(c)) {bcubes.push_back(tc);}
 	}
 }
