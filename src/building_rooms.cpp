@@ -1776,6 +1776,8 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 		for (auto const &w : wall_parts) {objs.emplace_back(w, TYPE_PG_WALL, room_id, !dim, 0, beam_flags, tot_light_amt, SHAPE_CUBE, wall_color, 2);}
 	}
 
+	// TODO: add ramp of TYPE_RAMP before adding parking spaces, and add to obstacles_exp
+
 	// add parking spaces on both sides of each row (one side if half row)
 	cube_t row(wall); // same length as the wall
 	row.expand_in_dim(dim, pillar_width); // includes the width of the pillars

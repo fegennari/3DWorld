@@ -1173,6 +1173,12 @@ void building_room_geom_t::add_parking_space(room_object_t const &c, vector3d co
 		yellow_line.translate_dim(!c.dim, (space_width - line_width));
 		mat.add_cube_to_verts(yellow_line, c.color, yellow_line.get_llc(), ~EF_Z2, c.dim); // small=2: top surface only
 	}
+	//get_material(tid_nm_pair_t(WHITE_TEX), 0, 0, 2).add_cube_to_verts(c-vector3d(0.0, 0.0, 0.5*c.dz()), c.color, tex_origin, ~EF_Z2); // TESTING
+}
+
+void building_room_geom_t::add_pg_ramp(room_object_t const &c, vector3d const &tex_origin, float tscale) {
+	rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_concrete_tid(), tscale), 1, 0, 2));
+	// TODO: WRITE
 }
 
 // Note: there is a lot duplicated with building_room_geom_t::add_elevator(), but we need a separate function for adding interior elevator buttons
