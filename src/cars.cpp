@@ -540,7 +540,7 @@ void car_draw_state_t::draw_car(car_t const &car, bool is_dlight_shadows, bool i
 	point const center_xlated(center + xlate);
 	if (!shadow_only && !dist_less_than(camera_pdu.pos, center_xlated, 0.5*draw_tile_dist)) return; // check draw distance, dist_scale=0.5
 	if (!camera_pdu.sphere_visible_test(center_xlated, 0.5f*car.height*CAR_RADIUS_SCALE) || !camera_pdu.cube_visible(car.bcube + xlate)) return;
-	begin_tile(center); // enable shadows
+	if (!in_garage) {begin_tile(center);} // enable shadows if outside
 	colorRGBA const &color(car.get_color());
 	float const dist_val(p2p_dist(camera_pdu.pos, center_xlated)/draw_tile_dist);
 	bool const draw_top(dist_val < 0.25 && !car.is_truck), dim(car.dim), dir(car.dir);
