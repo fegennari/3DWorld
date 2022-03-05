@@ -1826,7 +1826,7 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 					unsigned flags(RO_FLAG_NOCOLL);
 					if (last_was_space          ) {flags |= RO_FLAG_ADJ_LO;} // adjacent space to the left
 					if (s+1 < num_spaces_per_row) {flags |= RO_FLAG_ADJ_HI;} // not the last space - assume there will be a space to the right
-					bool const add_car(add_cars && rgen.rand_float() < 0.75); // 25% populated with cars
+					bool const add_car(add_cars && rgen.rand_float() < 0.5); // 50% populated with cars
 					if (add_car) {flags |= RO_FLAG_USED;}
 					objs.emplace_back(space, TYPE_PARK_SPACE, room_id, !dim, d, flags, tot_light_amt, SHAPE_CUBE, wall_color); // floor_color?
 					last_was_space = 1;
@@ -1834,6 +1834,7 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 					if (add_car) { // add a collider to block this area from the player, people, and rats (though maybe rats should be able to hide under cars?)
 						objs.back().obj_id = rgen.rand(); // will be used for the car model and color
 						cube_t collider(space);
+						collider.z2() += car_sz.z;
 						collider.expand_in_dim( dim, -0.05*space_width ); // shrink width  slightly
 						collider.expand_in_dim(!dim, -0.05*space_length); // shrink length slightly
 						objs.emplace_back(collider, TYPE_COLLIDER, room_id, !dim, d, RO_FLAG_INVIS);

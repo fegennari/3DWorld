@@ -742,6 +742,7 @@ public:
 	void init_cars(unsigned num);
 	void add_parked_cars(vector<car_t> const &new_cars, vect_cube_t const &garages);
 	void finalize_cars();
+	void assign_car_model_size_color(car_t &car, bool is_in_garage);
 	void add_helicopters(vect_cube_t const &hp_locs);
 	void extract_car_data(vector<car_city_vect_t> &cars_by_city) const;
 	bool proc_sphere_coll(point &pos, point const &p_last, float radius, vector3d *cnorm) const;
@@ -757,6 +758,7 @@ public:
 	void helicopters_next_frame(float car_speed);
 	bool check_helicopter_coll(cube_t const &bc) const;
 	void draw(int trans_op_mask, vector3d const &xlate, bool use_dlights, bool shadow_only, bool is_dlight_shadows, bool garages_pass);
+	void draw_car_in_pspace(car_t &car, unsigned car_id, shader_t &s, vector3d const &xlate, bool shadow_only);
 	void add_car_headlights(vector3d const &xlate, cube_t &lights_bcube) {dstate.add_car_headlights(cars, xlate, lights_bcube);}
 	void free_context() {car_model_loader.free_context(); helicopter_model_loader.free_context();}
 }; // car_manager_t

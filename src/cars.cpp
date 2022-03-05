@@ -713,28 +713,31 @@ void car_manager_t::add_parked_cars(vector<car_t> const &new_cars, vect_cube_t c
 	} // for i
 }
 
+void car_manager_t::assign_car_model_size_color(car_t &car, bool is_in_garage) {
+	unsigned const num_models(car_model_loader.num_models());
+	int fixed_color(-1);
+
+	if (num_models > 0) {
+		for (unsigned n = 0; n < 20; ++n) {
+			if (FORCE_MODEL_ID >= 0) {car.model_id = (unsigned char)FORCE_MODEL_ID;}
+			else {car.model_id = ((num_models > 1) ? (rgen.rand() % num_models) : 0);}
+			city_model_t const &model(car_model_loader.get_model(car.model_id));
+			// if there are multiple models to choose from, and this car is in a garage, try for a model that's not scaled up (the truck) (what about driveways?)
+			if (FORCE_MODEL_ID < 0 && num_models > 1 && is_in_garage && n+1 < 20 && model.scale > 1.0) continue;
+			fixed_color = model.fixed_color_id;
+			car.apply_scale(model.scale);
+			break; // done
+		} // for n
+	}
+	car.color_id = ((fixed_color >= 0) ? fixed_color : (rgen.rand() % NUM_CAR_COLORS));
+	assert(car.is_valid());
+}
 void car_manager_t::finalize_cars() {
 	if (empty()) return;
-	unsigned const num_models(car_model_loader.num_models());
 
 	for (auto i = cars.begin(); i != cars.end(); ++i) {
-		int fixed_color(-1);
-
-		if (num_models > 0) {
-			for (unsigned n = 0; n < 20; ++n) {
-				if (FORCE_MODEL_ID >= 0) {i->model_id = (unsigned char)FORCE_MODEL_ID;}
-				else {i->model_id = ((num_models > 1) ? (rgen.rand() % num_models) : 0);}
-				city_model_t const &model(car_model_loader.get_model(i->model_id));
-				// if there are multiple models to choose from, and this car is in a garage, try for a model that's not scaled up (the truck) (what about driveways?)
-				if (FORCE_MODEL_ID < 0 && num_models > 1 && unsigned(i-cars.begin()) >= first_garage_car && n+1 < 20 && model.scale > 1.0) continue;
-				fixed_color = model.fixed_color_id;
-				i->apply_scale(model.scale);
-				break;
-			} // for n
-		}
-		i->color_id = ((fixed_color >= 0) ? fixed_color : (rgen.rand() % NUM_CAR_COLORS));
-		assert(i->is_valid());
-	} // for i
+		assign_car_model_size_color(*i, (unsigned(i-cars.begin()) >= first_garage_car));
+	}
 	cout << "Total Cars: " << cars.size() << endl; // 4000 on the road + 4372 parked + 433 garage (out of 594) = 8805
 }
 
@@ -1371,20 +1374,23 @@ void car_manager_t::draw_helicopters(bool shadow_only) {
 	for (auto i = helicopters.begin(); i != helicopters.end(); ++i) {dstate.draw_helicopter(*i, shadow_only);}
 }
 
+// for building parking garages
+void car_manager_t::draw_car_in_pspace(car_t &car, unsigned car_id, shader_t &s, vector3d const &xlate, bool shadow_only) {
+	rand_gen_t old_rgen(rgen);
+	rgen.set_state(car_id+1, car_id+100);
+	rgen.rand_mix();
+	assign_car_model_size_color(car, 1); // is_in_garage=1
+	
+	if (car_model_loader.is_model_valid(car.model_id)) { // else error?
+		vector3d dir(zero_vector);
+		dir[car.dim] = (car.dir ? 1.0 : -1.0);
+		car_model_loader.draw_model(s, car.get_center(), car.bcube, dir, car.get_color(), xlate, car.model_id, shadow_only, 0); // low_detail=0
+	}
+	rgen = old_rgen; // is this needed?
+}
+
 bool car_can_fit(cube_t const &c) {
 	vector3d const car_sz(get_nom_car_size());
 	return (max(c.dx(), c.dy()) > 1.2f*car_sz.x && min(c.dx(), c.dy()) > 1.2f*car_sz.y && c.dz() > 1.2f*car_sz.z);
-}
-
-// for building parking garages
-void draw_car_in_parking_space(room_object_t const &ps, shader_t &s, building_t const &building, vector3d const &xlate, bool shadow_only) {
-	car_t car;
-	car.dim = ps.dim;
-	car.dir = ps.dir; // or random?
-	point const center(ps.get_cube_center());
-	car.set_bcube(point(center.x, center.y, ps.z1()), city_params.get_nom_car_size());
-	if (!camera_pdu.cube_visible(car.bcube + xlate)) return;
-	// TODO: draw VFC, olcclusion culling with parking garage walls/ceilings/floors (start at pg_wall_start)
-	// TODO: draw parked car
 }
 

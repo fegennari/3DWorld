@@ -3007,6 +3007,7 @@ public:
 	}
 	void draw_roads(int trans_op_mask, vector3d const &xlate) {road_gen.draw(trans_op_mask, xlate, enable_lights(), 0);} // shadow_only=0
 	void draw_cars_in_garages(vector3d const &xlate, bool shadow_only) {car_manager.draw(1, xlate, 1, shadow_only, 0, 1);} // opaque + garages pass
+	void draw_car_in_pspace(car_t &car, unsigned car_id, shader_t &s, vector3d const &xlate, bool shadow_only) {car_manager.draw_car_in_pspace(car, car_id, s, xlate, shadow_only);}
 	void draw_peds_in_building(int first_ped_ix, ped_draw_vars_t const &pdv) {ped_manager.draw_peds_in_building(first_ped_ix, pdv);}
 	void get_locations_of_peds_in_building(int first_ped_ix, vector<point> &locs) {ped_manager.get_locations_of_peds_in_building(first_ped_ix, locs);}
 	void get_ped_bcubes_for_building(int first_ped_ix, vect_cube_t &bcubes, bool moving_only) const {ped_manager.get_ped_bcubes_for_building(first_ped_ix, bcubes, moving_only);}
@@ -3169,4 +3170,5 @@ void free_city_context() {city_gen.free_context();}
 bool has_city_trees() {return (city_params.max_trees_per_plot > 0);}
 vector3d get_nom_car_size() {return city_params.get_nom_car_size();}
 void draw_cars_in_garages(vector3d const &xlate, bool shadow_only) {city_gen.draw_cars_in_garages(xlate, shadow_only);}
+void draw_car_in_pspace(car_t &car, unsigned car_id, shader_t &s, vector3d const &xlate, bool shadow_only) {city_gen.draw_car_in_pspace(car, car_id, s, xlate, shadow_only);}
 

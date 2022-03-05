@@ -26,7 +26,7 @@ extern building_params_t global_building_params;
 unsigned get_num_screenshot_tids();
 tid_nm_pair_t get_phone_tex(room_object_t const &c);
 template< typename T > void gen_quad_ixs(vector<T> &ixs, unsigned size, unsigned ix_offset);
-void draw_car_in_parking_space(room_object_t const &ps, shader_t &s, building_t const &building, vector3d const &xlate, bool shadow_only);
+void draw_car_in_pspace(car_t &car, unsigned car_id, shader_t &s, vector3d const &xlate, bool shadow_only);
 
 bool has_key_3d_model() {return building_obj_model_loader.is_model_valid(OBJ_MODEL_KEY);}
 
@@ -1134,7 +1134,16 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, building_t c
 			for (auto i = (objs.begin() + pg_wall_start); i != objs_end; ++i) {
 				if (i->type != TYPE_PARK_SPACE) continue;
 				if (!(i->flags & RO_FLAG_USED)) continue; // no car in this space
-				draw_car_in_parking_space(*i, s, building, xlate, shadow_only);
+				car_t car;
+				car.dim = i->dim;
+				car.dir = i->dir; // or random?
+				point const center(i->get_cube_center());
+				car.set_bcube(point(center.x, center.y, i->z1()), get_nom_car_size());
+				if (!camera_pdu.cube_visible(car.bcube + xlate)) continue;
+				// TODO: draw VFC, olcclusion culling with parking garage walls/ceilings/floors (start at pg_wall_start)
+				// TODO: fix incorrect alpha blending
+				// TODO: draw in shadow pass even if player not in basement?
+				draw_car_in_pspace(car, i->obj_id, s, xlate, shadow_only);
 			} // for i
 		}
 	}
