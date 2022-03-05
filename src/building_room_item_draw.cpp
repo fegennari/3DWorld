@@ -26,6 +26,7 @@ extern building_params_t global_building_params;
 unsigned get_num_screenshot_tids();
 tid_nm_pair_t get_phone_tex(room_object_t const &c);
 template< typename T > void gen_quad_ixs(vector<T> &ixs, unsigned size, unsigned ix_offset);
+void draw_car_in_parking_space(room_object_t const &ps, shader_t &s, building_t const &building, vector3d const &xlate, bool shadow_only);
 
 bool has_key_3d_model() {return building_obj_model_loader.is_model_valid(OBJ_MODEL_KEY);}
 
@@ -1122,8 +1123,8 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, building_t c
 		} // for rat
 		if (!shadow_only) {s.add_uniform_int("animation_id", 0);} // reset
 
+		// draw cars in parking spaces if there's a parking garage and the player is in it
 		if (has_parking_garage && player_in_basement) { // or near basement stairs?
-			// draw cars in parking spaces
 			rand_gen_t rgen;
 			rgen.set_state(building_ix+1, building.mat_ix+1); // set to something canonical per building
 			auto objs_end(get_placed_objs_end()); // skip buttons/stairs/elevators
@@ -1133,8 +1134,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, building_t c
 			for (auto i = (objs.begin() + pg_wall_start); i != objs_end; ++i) {
 				if (i->type != TYPE_PARK_SPACE) continue;
 				if (!(i->flags & RO_FLAG_USED)) continue; // no car in this space
-				// TODO: draw VFC, olcclusion culling with parking garage walls/ceilings/floors (start at pg_wall_start)
-				// TODO: draw parked car
+				draw_car_in_parking_space(*i, s, building, xlate, shadow_only);
 			} // for i
 		}
 	}

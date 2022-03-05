@@ -1760,7 +1760,6 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 			if (has_bcube_int_xy(pillar, obstacles_exp_lg)) continue; // skip entire pillar if it intersects stairs or an elevator
 			pillars.push_back(pillar);
 		} // for p
-		// TODO
 	} // for n
 	for (auto const &p : pillars) {objs.emplace_back(p, TYPE_PG_WALL, room_id, !dim, 0, 0, tot_light_amt, SHAPE_CUBE, wall_color, 1);}
 
@@ -1783,14 +1782,16 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 		for (auto const &w : wall_parts) {objs.emplace_back(w, TYPE_PG_WALL, room_id, !dim, 0, beam_flags, tot_light_amt, SHAPE_CUBE, wall_color, 2);}
 	}
 
-	// TODO: add ramp of TYPE_RAMP before adding parking spaces, and add to obstacles_exp
+	// add ramp of TYPE_RAMP before adding parking spaces, and add to obstacles_exp; need to cut out the floor somehow
+	//bool const ramp_xc(rgen.rand_bool()), ramp_yc(rgen.rand_bool());
+	// TODO
 
 	// add parking spaces on both sides of each row (one side if half row)
 	cube_t row(wall); // same length as the wall
 	row.expand_in_dim(dim, pillar_width); // includes the width of the pillars
 	row.z2() = row.z1() + 0.001*window_vspacing; // slightly above the floor
 	float const space_width(row.get_sz_dim(dim)/num_space_wid), strips_start(virt_room_for_wall.d[!dim][0]);
-	bool const add_cars(city_params.num_cars > 0);
+	bool const add_cars(city_params.num_cars > 0 && !is_rotated() /*&& car_model_loader.num_models() > 0*/); // skip cars for rotated buildings
 
 	for (unsigned n = 0; n < num_strips; ++n) {
 		row.d[!dim][0] = strips_start + (n + 0)*wall_spacing + wall_hc;
@@ -1831,6 +1832,7 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 					last_was_space = 1;
 
 					if (add_car) { // add a collider to block this area from the player, people, and rats (though maybe rats should be able to hide under cars?)
+						objs.back().obj_id = rgen.rand(); // will be used for the car model and color
 						cube_t collider(space);
 						collider.expand_in_dim( dim, -0.05*space_width ); // shrink width  slightly
 						collider.expand_in_dim(!dim, -0.05*space_length); // shrink length slightly
@@ -1841,8 +1843,7 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 			} // for s
 		} // for d
 	} // for n
-	// TODO: add cars
-	// TODO: add pipes to the ceiling?
+	// TODO: add pipes to the ceiling and other details?
 }
 
 colorRGBA choose_pot_color(rand_gen_t &rgen) {

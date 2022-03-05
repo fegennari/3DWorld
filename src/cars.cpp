@@ -1376,3 +1376,15 @@ bool car_can_fit(cube_t const &c) {
 	return (max(c.dx(), c.dy()) > 1.2f*car_sz.x && min(c.dx(), c.dy()) > 1.2f*car_sz.y && c.dz() > 1.2f*car_sz.z);
 }
 
+// for building parking garages
+void draw_car_in_parking_space(room_object_t const &ps, shader_t &s, building_t const &building, vector3d const &xlate, bool shadow_only) {
+	car_t car;
+	car.dim = ps.dim;
+	car.dir = ps.dir; // or random?
+	point const center(ps.get_cube_center());
+	car.set_bcube(point(center.x, center.y, ps.z1()), city_params.get_nom_car_size());
+	if (!camera_pdu.cube_visible(car.bcube + xlate)) return;
+	// TODO: draw VFC, olcclusion culling with parking garage walls/ceilings/floors (start at pg_wall_start)
+	// TODO: draw parked car
+}
+
