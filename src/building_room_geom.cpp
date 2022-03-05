@@ -25,7 +25,7 @@ string gen_random_full_name (rand_gen_t &rgen);
 
 void gen_text_verts(vector<vert_tc_t> &verts, point const &pos, string const &text, float tsize, vector3d const &column_dir, vector3d const &line_dir, bool use_quads=0);
 string const &gen_book_title(unsigned rand_id, string *author, unsigned split_len);
-void add_floor_number(unsigned floor_ix, unsigned floor_offset, ostringstream &oss);
+void add_floor_number(unsigned floor_ix, unsigned floor_offset, bool has_parking_garage, ostringstream &oss);
 
 unsigned get_face_mask(unsigned dim, bool dir) {return ~(1 << (2*(2-dim) + dir));} // skip_faces: 1=Z1, 2=Z2, 4=Y1, 8=Y2, 16=X1, 32=X2
 unsigned get_skip_mask_for_xy(bool dim) {return (dim ? EF_Y12 : EF_X12);}
@@ -1259,7 +1259,7 @@ void building_room_geom_t::add_elevator(room_object_t const &c, float tscale, fl
 		bool const is_lit(f == cur_floor);
 		text_pos.z = panel.z1() + (f + 1)*button_spacing - 0.5*text_height;
 		verts.clear();
-		add_floor_number((f+1), floor_offset, oss);
+		add_floor_number((f+1), floor_offset, has_parking_garage, oss);
 		gen_text_verts(verts, text_pos, oss.str(), 1000.0*text_height, col_dir, plus_z, 1); // use_quads=1
 		assert(!verts.empty());
 		if (dot_product(normal, cross_product((verts[1].v - verts[0].v), (verts[2].v - verts[1].v))) < 0.0) {std::reverse(verts.begin(), verts.end());} // swap vertex winding order
