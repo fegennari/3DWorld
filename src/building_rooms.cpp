@@ -12,6 +12,7 @@ enum {PLACED_TOILET=1, PLACED_SINK=2, PLACED_TUB=4, PLACED_SHOWER=8}; // for bat
 extern bool camera_in_building;
 extern int display_mode;
 extern building_params_t global_building_params;
+extern city_params_t city_params; // for num_cars
 extern object_model_loader_t building_obj_model_loader;
 extern bldg_obj_type_t bldg_obj_types[];
 
@@ -1686,6 +1687,8 @@ void building_t::add_pri_hall_objs(rand_gen_t rgen, room_t const &room, float zv
 void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned objs_start,
 	unsigned &nlights_x, unsigned &nlights_y, float &light_delta_z)
 {
+	assert(has_room_geom());
+	interior->room_geom->has_parking_garage = 1;
 	// rows are separated by walls and run in dim, with a road and parking spaces on either side of it;
 	// spaces are arranged in !dim, with roads along the edges of the building that connect to the roads of each row
 	bool const dim(room.dx() < room.dy()); // long/primary dim; cars are lined up along this dim, oriented along the other dim
@@ -1730,17 +1733,20 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 	}
 	light_delta_z = beam_delta_z - wall.dz(); // negative
 	beam.z1()    += beam_delta_z; // shift the bottom up to the ceiling
-	vect_cube_t obstacles, obstacles_exp, wall_parts, temp;
+	vect_cube_t obstacles, obstacles_exp_sm, obstacles_exp_lg, wall_parts, temp;
 	// get obstacles for walls with and without clearance; maybe later add entrance/exit ramps, etc.
-	interior->get_stairs_and_elevators_bcubes_intersecting_cube(room_floor_cube, obstacles_exp, 0.9*window_vspacing); // with clearance
 	interior->get_stairs_and_elevators_bcubes_intersecting_cube(room_floor_cube, obstacles, 0.0); // without clearance
+	interior->get_stairs_and_elevators_bcubes_intersecting_cube(room_floor_cube, obstacles_exp_sm, 0.5*window_vspacing); // with small clearance
+	interior->get_stairs_and_elevators_bcubes_intersecting_cube(room_floor_cube, obstacles_exp_lg, 0.9*window_vspacing); // with large clearance
+	interior->room_geom->pg_wall_start = objs.size();
+	vect_cube_t pillars; // added after wall segments
 
 	for (unsigned n = 0; n < num_walls+2; ++n) { // includes room far walls
 		if (n < num_walls) { // interior wall
 			float const pos(virt_room_for_wall.d[!dim][0] + (n + 1)*wall_spacing); // reference from the room far wall, assuming we can fit a full width double row strip
 			set_wall_width(wall,   pos, wall_hc, !dim);
 			set_wall_width(pillar, pos, pillar_hwidth, !dim);
-			subtract_cubes_from_cube(wall, obstacles_exp, wall_parts, temp, 1); // ignore_zval=1
+			subtract_cubes_from_cube(wall, obstacles_exp_lg, wall_parts, temp, 1); // ignore_zval=1
 			for (auto const &w : wall_parts) {objs.emplace_back(w, TYPE_PG_WALL, room_id, !dim, 0, 0, tot_light_amt, SHAPE_CUBE, wall_color, 0);}
 		}
 		else { // room wall
@@ -1751,11 +1757,12 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 		for (unsigned p = 0; p < num_pillars; ++p) { // add support pillars
 			float const ppos(wall.d[dim][0] - pillar_hwidth + p*pillar_spacing);
 			set_wall_width(pillar, ppos, pillar_hwidth, dim);
-			if (has_bcube_int_xy(pillar, obstacles_exp, 4.0*wall_thickness)) continue; // skip entire pillar if it intersects stairs or an elevator
-			objs.emplace_back(pillar, TYPE_PG_WALL, room_id, !dim, 0, 0, tot_light_amt, SHAPE_CUBE, wall_color, 1);
+			if (has_bcube_int_xy(pillar, obstacles_exp_lg)) continue; // skip entire pillar if it intersects stairs or an elevator
+			pillars.push_back(pillar);
 		} // for p
 		// TODO
 	} // for n
+	for (auto const &p : pillars) {objs.emplace_back(p, TYPE_PG_WALL, room_id, !dim, 0, 0, tot_light_amt, SHAPE_CUBE, wall_color, 1);}
 
 	// add beams in !dim, at and between pillars
 	unsigned const beam_flags(RO_FLAG_NOCOLL | RO_FLAG_HANGING);
@@ -1783,6 +1790,7 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 	row.expand_in_dim(dim, pillar_width); // includes the width of the pillars
 	row.z2() = row.z1() + 0.001*window_vspacing; // slightly above the floor
 	float const space_width(row.get_sz_dim(dim)/num_space_wid), strips_start(virt_room_for_wall.d[!dim][0]);
+	bool const add_cars(city_params.num_cars > 0);
 
 	for (unsigned n = 0; n < num_strips; ++n) {
 		row.d[!dim][0] = strips_start + (n + 0)*wall_spacing + wall_hc;
@@ -1790,22 +1798,47 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 		assert(space_length > 0.0);
 
 		for (unsigned d = 0; d < 2; ++d) { // for each side of the row
-			if (short_sides[0] && n   == 0        && d == 0) continue;
-			if (short_sides[1] && n+1 == num_rows && d == 1) continue;
+			bool const at_ext_wall[2] = {(n == 0 && d == 0), (n+1 == num_strips && d == 1)};
+			if ((short_sides[0] && at_ext_wall[0]) || (short_sides[1] && at_ext_wall[1])) continue; // skip this row
+			float row_left_edge(row.d[dim][0]); // spaces start flush with the row, or flush with the room if this is the exterior wall
+			unsigned num_spaces_per_row(num_space_wid);
+
+			if (at_ext_wall[0] || at_ext_wall[1]) { // at either room exterior wall - can extend spaces up to the wall
+				float row_right_edge(row.d[dim][1]); // opposite end of the row
+				while ((row_left_edge  - space_width) > room.d[dim][0]) {row_left_edge  -= space_width; ++num_spaces_per_row;} // add rows to the left
+				while ((row_right_edge + space_width) < room.d[dim][1]) {row_right_edge += space_width; ++num_spaces_per_row;} // add rows to the right
+			}
 			cube_t space(row);
 			space.d[!dim][!d] += (d ? 1.0 : -1.0)*(row_width - space_length); // shrink
-			space.d[ dim][0]   = row.d[dim][0]; // spaces start flush with the row
-
-			for (unsigned s = 0; s < num_space_wid; ++s) {
+			space.d[ dim][0]   = row_left_edge;
+			bool last_was_space(0);
+			
+			for (unsigned s = 0; s < num_spaces_per_row; ++s) {
 				space.d[dim][1] = space.d[dim][0] + space_width; // set width
 				assert(space.is_strictly_normalized());
-				if (has_bcube_int_xy(space, obstacles_exp, 4.0*wall_thickness)) continue; // skip entire space if it intersects stairs or an elevator
-				unsigned const flags(RO_FLAG_NOCOLL | ((s > 0) ? RO_FLAG_ADJ_LO : 0) | ((s+1 < num_space_wid) ? RO_FLAG_ADJ_HI : 0)); // track adjacent spaces
-				cube_t space_inner(space);
-				space_inner.expand_in_dim(dim, -0.1*wall_thickness); // shrink a tiny amount for the line, debug visualization, and car placement
-				objs.emplace_back(space_inner, TYPE_PARK_SPACE, room_id, !dim, d, flags, tot_light_amt, SHAPE_CUBE, wall_color); // floor_color?
+				
+				if (has_bcube_int_xy(space, obstacles_exp_sm)) { // skip entire space if it intersects stairs or an elevator
+					if (last_was_space) {objs.back().flags &= ~RO_FLAG_ADJ_HI;} // no space to the right for the previous space
+					last_was_space = 0;
+				}
+				else {
+					unsigned flags(RO_FLAG_NOCOLL);
+					if (last_was_space          ) {flags |= RO_FLAG_ADJ_LO;} // adjacent space to the left
+					if (s+1 < num_spaces_per_row) {flags |= RO_FLAG_ADJ_HI;} // not the last space - assume there will be a space to the right
+					bool const add_car(add_cars && rgen.rand_float() < 0.75); // 25% populated with cars
+					if (add_car) {flags |= RO_FLAG_USED;}
+					objs.emplace_back(space, TYPE_PARK_SPACE, room_id, !dim, d, flags, tot_light_amt, SHAPE_CUBE, wall_color); // floor_color?
+					last_was_space = 1;
+
+					if (add_car) { // add a collider to block this area from the player, people, and rats (though maybe rats should be able to hide under cars?)
+						cube_t collider(space);
+						collider.expand_in_dim( dim, -0.05*space_width ); // shrink width  slightly
+						collider.expand_in_dim(!dim, -0.05*space_length); // shrink length slightly
+						objs.emplace_back(collider, TYPE_COLLIDER, room_id, !dim, d, RO_FLAG_INVIS);
+					}
+				}
 				space.d[dim][0] = space.d[dim][1]; // shift to next space
-			}
+			} // for s
 		} // for d
 	} // for n
 	// TODO: add cars
@@ -3235,6 +3268,7 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 
 	float const window_vspacing(get_window_vspace()), floor_thickness(get_floor_thickness()), half_thick(0.5*floor_thickness);
 	float const wall_thickness(get_wall_thickness()), elevator_car_z1_add(0.05*floor_thickness), fc_thick_scale(get_elevator_fc_thick_scale());
+	bool const has_parking_garage(interior->room_geom->has_parking_garage);
 	vect_room_object_t &objs(interior->room_geom->objs);
 	ostringstream oss; // reused across elevators/floors
 

@@ -424,7 +424,7 @@ unsigned const RO_FLAG_DYNAMIC  = 0x01000000; // dynamic object (balls, elevator
 unsigned const RO_FLAG_DSTATE   = 0x02000000; // this object has dynamic state
 unsigned const RO_FLAG_NO_CONS  = 0x04000000; // this object is not consumable (bottles)
 unsigned const RO_FLAG_IS_ACTIVE= 0x08000000; // active, for sinks, tubs, buttons, etc.
-unsigned const RO_FLAG_USED     = 0x10000000; // used by the player (spraypaint, marker, etc.)
+unsigned const RO_FLAG_USED     = 0x10000000; // used by the player (spraypaint, marker, etc.); used by parking spaces to indicate cars
 unsigned const RO_FLAG_IN_ELEV  = 0x20000000; // for elevator lights and buttons
 unsigned const RO_FLAG_BROKEN   = 0x40000000; // for TVs and monitors, maybe can use for windows
 unsigned const RO_FLAG_MOVED    = 0x80000000; // for player push/pull
@@ -617,10 +617,10 @@ struct building_decal_manager_t {
 
 struct building_room_geom_t {
 
-	bool has_elevators, has_pictures, lights_changed, lighting_invalid, modified_by_player;
+	bool has_elevators, has_pictures, has_parking_garage, lights_changed, lighting_invalid, modified_by_player;
 	unsigned char num_pic_tids;
 	float obj_scale;
-	unsigned buttons_start, stairs_start; // index of first object of {TYPE_TRIM, TYPE_BUTTON, TYPE_STAIR}
+	unsigned pg_wall_start, buttons_start, stairs_start; // index of first object of {TYPE_PG_WALL, TYPE_BUTTON, TYPE_STAIR}
 	point tex_origin;
 	colorRGBA wood_color;
 	// objects in rooms; expanded_objs is for things that have been expanded for player interaction; model_objs is for models in drawers; trim_objs is for wall/door/window trim
@@ -634,8 +634,8 @@ struct building_room_geom_t {
 	vect_cube_t light_bcubes;
 	building_decal_manager_t decal_manager;
 
-	building_room_geom_t(point const &tex_origin_=all_zeros) : has_elevators(0), has_pictures(0), lights_changed(0), lighting_invalid(0), modified_by_player(0),
-		num_pic_tids(0), obj_scale(1.0), buttons_start(0), stairs_start(0), tex_origin(tex_origin_), wood_color(WHITE) {}
+	building_room_geom_t(point const &tex_origin_=all_zeros) : has_elevators(0), has_pictures(0), has_parking_garage(0), lights_changed(0), lighting_invalid(0),
+		modified_by_player(0), num_pic_tids(0), obj_scale(1.0), pg_wall_start(0), buttons_start(0), stairs_start(0), tex_origin(tex_origin_), wood_color(WHITE) {}
 	bool empty() const {return objs.empty();}
 	void clear();
 	void clear_materials();
