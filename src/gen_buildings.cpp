@@ -2252,8 +2252,8 @@ public:
 						b.get_ext_wall_verts_no_sec(ext_parts_draw); // add exterior walls to prevent light leaking between adjacent parts
 						bool const add_player_shadow(camera_surf_collide ? player_close : 0);
 						int const ped_ix((*i)->get_ped_ix_for_bix(bi->ix)); // Note: assumes only one building_draw has people
-						if (ped_ix < 0 && !add_player_shadow) continue; // nothing else to draw
 						bool const camera_in_this_building(b.check_point_or_cylin_contained(pre_smap_player_pos, 0.0, points));
+						if (camera_in_this_building) {b.draw_pg_cars(s, xlate, 1);} // shadow_only=1
 
 						if (ped_ix >= 0 && (camera_in_this_building || player_close)) { // draw people in this building
 							if (global_building_params.enable_people_ai) { // handle animations
@@ -2347,7 +2347,8 @@ public:
 			enable_dlight_bcubes = 0; // disable when creating the reflection image (will be set when we re-enter multi_draw())
 			interior_shadow_maps = 0;
 			create_mirror_reflection_if_needed();
-			draw_cars_in_garages(xlate, 0); // must be done before drawing buildings because windows write to the depth buffer
+			// must be done before drawing buildings because windows write to the depth buffer; but then looking through car windows is incorrect
+			draw_cars_in_garages(xlate, 0);
 			player_building = nullptr; // reset, may be set below
 		}
 		//timer_t timer("Draw Buildings"); // 0.57ms (2.6ms with glFinish(), 6.3ms with building interiors)
@@ -2567,6 +2568,12 @@ public:
 				(*i)->building_draw_int_ext_walls.draw(s, 0, 0, 0, exclude); // exterior walls only, no stencil test
 				s.add_uniform_vector3d("texgen_origin", zero_vector);
 			} // for i
+			// draw parking garage cars
+			if (building_cont_player != nullptr) {
+				glCullFace(reflection_pass ? GL_FRONT : GL_BACK); // draw front faces
+				building_cont_player->draw_pg_cars(s, xlate, 0); // shadow_only=0
+				glCullFace(reflection_pass ? GL_BACK : GL_FRONT); // draw back faces
+			}
 			reset_interior_lighting_and_end_shader(s);
 
 			if (DRAW_EXT_REFLECTIONS || !reflection_pass) {

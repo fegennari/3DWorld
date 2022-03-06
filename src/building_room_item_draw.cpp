@@ -955,51 +955,6 @@ void draw_stove_flames(room_object_t const &stove, point const &camera_bs, shade
 	s.set_color_e(BLACK);
 }
 
-template<bool check_sz> bool are_pts_occluded_by_any_cubes(point const &pt, point const *const pts, unsigned npts, vect_cube_t const &cubes, unsigned dim, float min_sz=0.0) {
-	assert(npts > 0);
-
-	for (auto c = cubes.begin(); c != cubes.end(); ++c) {
-		if (check_sz && c->get_sz_dim(!dim) < min_sz) break; // too small an occluder; since cubes are sorted by size in this dim, we can exit the loop here
-		if (dim <= 2 && (pt[dim] < c->d[dim][0]) == (pts[0][dim] < c->d[dim][0])) continue; // skip if cube face does not separate pt from the first point (dim > 2 disables)
-		if (!check_line_clip(pt, pts[0], c->d)) continue; // first point does not intersect
-		bool not_occluded(0);
-
-		for (unsigned p = 1; p < npts; ++p) { // skip first point
-			if (!check_line_clip(pt, pts[p], c->d)) {not_occluded = 1; break;}
-		}
-		if (!not_occluded) return 1;
-	} // for c
-	return 0;
-}
-
-car_t car_from_parking_space(room_object_t const &o) {
-	rand_gen_t rgen;
-	rgen.set_state(12345*o.obj_id, 76543*o.obj_id);
-	rgen.rand_mix();
-	car_t car;
-	car.dim     = o.dim;
-	car.dir     = o.dir; // or random?
-	car.cur_seg = o.obj_id; // store the random seed in car.cur_seg
-	point center(o.get_cube_center());
-	center[ o.dim] += 0.03*o.get_sz_dim( o.dim)*rgen.signed_rand_float(); // small random misalign front/back
-	center[!o.dim] += 0.05*o.get_sz_dim(!o.dim)*rgen.signed_rand_float(); // small random misalign side
-	car.set_bcube(point(center.x, center.y, o.z1()), get_nom_car_size());
-	return car;
-}
-bool check_car_occluded(car_t const &car, vect_cube_t const &occluders, point const &viewer) {
-	if (occluders.empty()) return 0;
-	point pts[8];
-	unsigned const npts(get_cube_corners(car.bcube.d, pts, viewer, 0)); // should return only the 6 visible corners
-	return are_pts_occluded_by_any_cubes<0>(viewer, pts, npts, occluders, 3); // set invalid dim of 3 because cubes are of mixed dim and we can't use that optimization
-}
-struct comp_car_by_dist {
-	vector3d const &viewer;
-	comp_car_by_dist(vector3d const &viewer_) : viewer(viewer_) {}
-	bool operator()(car_t const &c1, car_t const &c2) const {
-		return (p2p_dist_xy_sq(c1.bcube.get_cube_center(), viewer) > p2p_dist_xy_sq(c2.bcube.get_cube_center(), viewer));
-	}
-};
-
 // Note: non-const because it creates the VBO; inc_small: 0=large only, 1=large+small, 2=large+small+detail
 void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, building_t const &building, occlusion_checker_noncity_t &oc, vector3d const &xlate,
 	unsigned building_ix, bool shadow_only, bool reflection_pass, unsigned inc_small, bool player_in_building)
@@ -1168,48 +1123,6 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, building_t c
 			obj_drawn = 1;
 		} // for rat
 		if (!shadow_only) {s.add_uniform_int("animation_id", 0);} // reset
-
-		// draw cars in parking spaces if there's a parking garage and the player is in it
-		if (has_parking_garage && player_in_building) {
-			// only draw cars in parking garages if the player or light is in the basement (or player is near basement stairs?)
-			if (shadow_only ? (camera_pos.z < building.ground_floor_z1) : player_in_basement) {
-				rand_gen_t rgen;
-				rgen.set_state(building_ix+1, building.mat_ix+1); // set to something canonical per building
-				auto objs_end(get_placed_objs_end()); // skip buttons/stairs/elevators
-				assert(pg_wall_start < objs.size());
-				vector<car_t> cars_to_draw;
-
-				// start at walls, since parking spaces are added after those
-				for (auto i = (objs.begin() + pg_wall_start); i != objs_end; ++i) {
-					if (i->type != TYPE_PARK_SPACE) continue;
-					if (!(i->flags & RO_FLAG_USED)) continue; // no car in this space
-					car_t car(car_from_parking_space(*i));
-					if (camera_pdu.cube_visible(car.bcube + xlate)) {cars_to_draw.push_back(car);}
-				}
-				if (!cars_to_draw.empty()) {
-					vect_cube_t occluders; // should this be split out per PG level?
-					point viewer(camera_bs);
-					building.maybe_inv_rotate_point(viewer); // not needed because there are no cars in rotated buildings?
-
-					if (check_occlusion) {
-						for (auto i = (objs.begin() + pg_wall_start); i != objs_end; ++i) {
-							if (i->type != TYPE_PG_WALL || i->item_flags != 0) continue; // not parking garage wall (breaking is incorrect for multiple PG levels)
-							occluders.push_back(*i);
-						}
-						// gather occluders from parking garage ceilings and floors (below ground floor)
-						for (auto const &ceiling : building.interior->ceilings) {
-							if (ceiling.z1() <= building.ground_floor_z1) {occluders.push_back(ceiling);}
-						}
-					}
-					sort(cars_to_draw.begin(), cars_to_draw.end(), comp_car_by_dist(viewer)); // required for correct window alpha blending
-
-					for (auto &car : cars_to_draw) {
-						if (check_occlusion && check_car_occluded(car, occluders, viewer)) continue; // occlusion culling
-						draw_car_in_pspace(car, s, xlate, shadow_only);
-					}
-				}
-			}
-		} // end parked car drawing
 	}
 	if (disable_cull_face) {glEnable(GL_CULL_FACE);}
 	if (obj_drawn) {check_mvm_update();} // needed after popping model transform matrix
@@ -1244,6 +1157,99 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, building_t c
 		glDepthMask(GL_TRUE);
 		disable_blend();
 		indexed_vao_manager_with_shadow_t::post_render();
+	}
+}
+
+template<bool check_sz> bool are_pts_occluded_by_any_cubes(point const &pt, point const *const pts, unsigned npts, vect_cube_t const &cubes, unsigned dim, float min_sz=0.0) {
+	assert(npts > 0);
+
+	for (auto c = cubes.begin(); c != cubes.end(); ++c) {
+		if (check_sz && c->get_sz_dim(!dim) < min_sz) break; // too small an occluder; since cubes are sorted by size in this dim, we can exit the loop here
+		if (dim <= 2 && (pt[dim] < c->d[dim][0]) == (pts[0][dim] < c->d[dim][0])) continue; // skip if cube face does not separate pt from the first point (dim > 2 disables)
+		if (!check_line_clip(pt, pts[0], c->d)) continue; // first point does not intersect
+		bool not_occluded(0);
+
+		for (unsigned p = 1; p < npts; ++p) { // skip first point
+			if (!check_line_clip(pt, pts[p], c->d)) {not_occluded = 1; break;}
+		}
+		if (!not_occluded) return 1;
+	} // for c
+	return 0;
+}
+
+car_t car_from_parking_space(room_object_t const &o) {
+	rand_gen_t rgen;
+	rgen.set_state(12345*o.obj_id, 76543*o.obj_id);
+	rgen.rand_mix();
+	car_t car;
+	car.dim     = o.dim;
+	car.dir     = o.dir; // or random?
+	car.cur_seg = o.obj_id; // store the random seed in car.cur_seg
+	point center(o.get_cube_center());
+	center[ o.dim] += 0.03*o.get_sz_dim( o.dim)*rgen.signed_rand_float(); // small random misalign front/back
+	center[!o.dim] += 0.05*o.get_sz_dim(!o.dim)*rgen.signed_rand_float(); // small random misalign side
+	car.set_bcube(point(center.x, center.y, o.z1()), get_nom_car_size());
+	return car;
+}
+bool check_car_occluded(car_t const &car, vect_cube_t const &occluders, point const &viewer) {
+	if (occluders.empty()) return 0;
+	point pts[8];
+	unsigned const npts(get_cube_corners(car.bcube.d, pts, viewer, 0)); // should return only the 6 visible corners
+	return are_pts_occluded_by_any_cubes<0>(viewer, pts, npts, occluders, 3); // set invalid dim of 3 because cubes are of mixed dim and we can't use that optimization
+}
+struct comp_car_by_dist {
+	vector3d const &viewer;
+	comp_car_by_dist(vector3d const &viewer_) : viewer(viewer_) {}
+	bool operator()(car_t const &c1, car_t const &c2) const {
+		return (p2p_dist_xy_sq(c1.bcube.get_cube_center(), viewer) > p2p_dist_xy_sq(c2.bcube.get_cube_center(), viewer));
+	}
+};
+
+void building_t::draw_pg_cars(shader_t &s, vector3d const &xlate, bool shadow_only) const {
+	// draw cars in parking spaces if there's a parking garage and the player is in it
+	if (!has_parking_garage || !has_room_geom()) return;
+	point const camera_bs(camera_pdu.pos - xlate);
+	// only draw cars in parking garages if the player or light is in the basement (or player is near basement stairs?)
+	if (shadow_only ? (camera_bs.z > ground_floor_z1) : !player_in_basement) return;
+	bool const check_occlusion(display_mode & 0x08);
+	vect_room_object_t const &objs(interior->room_geom->objs);
+	auto objs_end(interior->room_geom->get_placed_objs_end()); // skip buttons/stairs/elevators
+	unsigned const pg_wall_start(interior->room_geom->pg_wall_start);
+	assert(pg_wall_start < objs.size());
+	static vector<car_t> cars_to_draw; // reused across frames
+	cars_to_draw.clear();
+
+	// start at walls, since parking spaces are added after those
+	for (auto i = (objs.begin() + pg_wall_start); i != objs_end; ++i) {
+		if (i->type != TYPE_PARK_SPACE) continue;
+		if (!(i->flags & RO_FLAG_USED)) continue; // no car in this space
+		car_t car(car_from_parking_space(*i));
+		if (camera_pdu.cube_visible(car.bcube + xlate)) {cars_to_draw.push_back(car);}
+	}
+	if (!cars_to_draw.empty()) {
+		point viewer(camera_bs);
+		maybe_inv_rotate_point(viewer); // not needed because there are no cars in rotated buildings?
+
+		if (check_occlusion) {
+			vect_cube_t occluders; // should this be split out per PG level?
+
+			for (auto i = (objs.begin() + pg_wall_start); i != objs_end; ++i) {
+				if (i->type != TYPE_PG_WALL || i->item_flags != 0) continue; // not parking garage wall (breaking is incorrect for multiple PG levels)
+				occluders.push_back(*i);
+			}
+			// gather occluders from parking garage ceilings and floors (below ground floor)
+			for (auto const &ceiling : interior->ceilings) {
+				if (ceiling.z1() <= ground_floor_z1) {occluders.push_back(ceiling);}
+			}
+			auto in(cars_to_draw.begin()), out(in);
+
+			for (; in != cars_to_draw.end(); ++in) { // filter out occluded cars
+				if (!check_car_occluded(*in, occluders, viewer)) {*(out++) = *in;}
+			}
+			cars_to_draw.erase(out, cars_to_draw.end());
+		} // end check_occlusion
+		std::sort(cars_to_draw.begin(), cars_to_draw.end(), comp_car_by_dist(viewer)); // required for correct window alpha blending
+		for (auto &car : cars_to_draw) {draw_car_in_pspace(car, s, xlate, shadow_only);}
 	}
 }
 
