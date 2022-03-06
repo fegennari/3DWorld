@@ -1084,6 +1084,7 @@ bool building_t::maybe_add_house_driveway(cube_t const &plot, cube_t &ret, unsig
 
 // for houses or office buildings
 void building_t::maybe_add_basement(rand_gen_t rgen) { // rgen passed by value so that the original isn't modified
+	if (!is_simple_cube()) return; // simple cube shaped buildings only
 	if (global_building_params.basement_prob <= 0.0) return; // no basement
 
 	if (global_building_params.basement_prob < 1.0) {
