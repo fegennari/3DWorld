@@ -26,7 +26,7 @@ extern building_params_t global_building_params;
 unsigned get_num_screenshot_tids();
 tid_nm_pair_t get_phone_tex(room_object_t const &c);
 template< typename T > void gen_quad_ixs(vector<T> &ixs, unsigned size, unsigned ix_offset);
-void draw_car_in_pspace(car_t &car, unsigned car_id, shader_t &s, vector3d const &xlate, bool shadow_only);
+void draw_car_in_pspace(car_t &car, shader_t &s, vector3d const &xlate, bool shadow_only);
 
 bool has_key_3d_model() {return building_obj_model_loader.is_model_valid(OBJ_MODEL_KEY);}
 
@@ -955,6 +955,46 @@ void draw_stove_flames(room_object_t const &stove, point const &camera_bs, shade
 	s.set_color_e(BLACK);
 }
 
+template<bool check_sz> bool are_pts_occluded_by_any_cubes(point const &pt, point const *const pts, unsigned npts, vect_cube_t const &cubes, unsigned dim, float min_sz=0.0) {
+	assert(npts > 0);
+
+	for (auto c = cubes.begin(); c != cubes.end(); ++c) {
+		if (check_sz && c->get_sz_dim(!dim) < min_sz) break; // too small an occluder; since cubes are sorted by size in this dim, we can exit the loop here
+		if (dim <= 2 && (pt[dim] < c->d[dim][0]) == (pts[0][dim] < c->d[dim][0])) continue; // skip if cube face does not separate pt from the first point (dim > 2 disables)
+		if (!check_line_clip(pt, pts[0], c->d)) continue; // first point does not intersect
+		bool not_occluded(0);
+
+		for (unsigned p = 1; p < npts; ++p) { // skip first point
+			if (!check_line_clip(pt, pts[p], c->d)) {not_occluded = 1; break;}
+		}
+		if (!not_occluded) return 1;
+	} // for c
+	return 0;
+}
+
+car_t car_from_parking_space(room_object_t const &o) {
+	car_t car;
+	car.dim     = o.dim;
+	car.dir     = o.dir; // or random?
+	car.cur_seg = o.obj_id; // store the random seed in car.cur_seg
+	point const center(o.get_cube_center());
+	car.set_bcube(point(center.x, center.y, o.z1()), get_nom_car_size());
+	return car;
+}
+bool check_car_occluded(car_t const &car, vect_cube_t const &occluders, point const &viewer) {
+	if (occluders.empty()) return 0;
+	point pts[8];
+	unsigned const npts(get_cube_corners(car.bcube.d, pts, viewer, 0)); // should return only the 6 visible corners
+	return are_pts_occluded_by_any_cubes<0>(viewer, pts, npts, occluders, 3); // set invalid dim of 3 because cubes are of mixed dim and we can't use that optimization
+}
+struct comp_car_by_dist {
+	vector3d const &viewer;
+	comp_car_by_dist(vector3d const &viewer_) : viewer(viewer_) {}
+	bool operator()(car_t const &c1, car_t const &c2) const {
+		return (p2p_dist_xy_sq(c1.bcube.get_cube_center(), viewer) > p2p_dist_xy_sq(c2.bcube.get_cube_center(), viewer));
+	}
+};
+
 // Note: non-const because it creates the VBO; inc_small: 0=large only, 1=large+small, 2=large+small+detail
 void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, building_t const &building, occlusion_checker_noncity_t &oc, vector3d const &xlate,
 	unsigned building_ix, bool shadow_only, bool reflection_pass, unsigned inc_small, bool player_in_building)
@@ -1039,6 +1079,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, building_t c
 	bool obj_drawn(0);
 	water_sound_manager_t water_sound_manager(camera_bs);
 	bool const check_clip_cube(shadow_only && !is_rotated && !smap_light_clip_cube.is_all_zeros()); // check clip cube for shadow pass; not implemented for rotated buildings
+	bool const check_occlusion(display_mode & 0x08);
 
 	// draw object models
 	for (auto i = obj_model_insts.begin(); i != obj_model_insts.end(); ++i) {
@@ -1051,7 +1092,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, building_t c
 		bool const is_sink(player_in_building && !shadow_only && obj.type == TYPE_SINK);
 		if (is_sink) {water_sound_manager.register_running_water(obj, building);}
 		if (!(is_rotated ? building.is_rot_cube_visible(obj, xlate) : camera_pdu.cube_visible(obj + xlate))) continue; // VFC
-		if ((display_mode & 0x08) && building.check_obj_occluded(obj, camera_bs, oc, reflection_pass)) continue;
+		if (check_occlusion && building.check_obj_occluded(obj, camera_bs, oc, reflection_pass)) continue;
 		bool const is_emissive(!shadow_only && obj.type == TYPE_LAMP && obj.is_lit());
 		if (is_emissive) {s.set_color_e(LAMP_COLOR*0.4);}
 		apply_room_obj_rotate(obj, *i); // Note: may modify obj by clearing flags
@@ -1080,7 +1121,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, building_t c
 			if (is_rotated) {building.do_xy_rotate(building_center, obj_center);}
 			if (!shadow_only && !dist_less_than(camera_bs, obj_center, 100.0*i->max_len())) continue; // too far away
 			if (!(is_rotated ? building.is_rot_cube_visible(*i, xlate) : camera_pdu.cube_visible(*i + xlate))) continue; // VFC
-			if ((display_mode & 0x08) && building.check_obj_occluded(*i, camera_bs, oc, reflection_pass)) continue;
+			if (check_occlusion && building.check_obj_occluded(*i, camera_bs, oc, reflection_pass)) continue;
 			vector3d dir(i->get_dir());
 			if (is_rotated) {building.do_xy_rotate_normal(dir);}
 			building_obj_model_loader.draw_model(s, obj_center, *i, dir, i->color, xlate, i->get_model_id(), shadow_only, 0, 0);
@@ -1096,7 +1137,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, building_t c
 			cube_t const bcube(rat.get_bcube());
 			if (check_clip_cube && !smap_light_clip_cube.intersects(bcube + xlate)) continue; // shadow map clip cube test: fast and high rejection ratio, do this first
 			if (!camera_pdu.cube_visible(bcube + xlate)) continue; // VFC
-			if ((display_mode & 0x08) && building.check_obj_occluded(bcube, camera_bs, oc, reflection_pass)) continue;
+			if (check_occlusion && building.check_obj_occluded(bcube, camera_bs, oc, reflection_pass)) continue;
 			point const pos(bcube.get_cube_center());
 			bool const animate(rat.anim_time > 0.0 && !shadow_only); // can't see the animation in the shadow pass anyway
 			if (!shadow_only) {s.add_uniform_float("animation_time", rat.anim_time);}
@@ -1124,28 +1165,46 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, building_t c
 		if (!shadow_only) {s.add_uniform_int("animation_id", 0);} // reset
 
 		// draw cars in parking spaces if there's a parking garage and the player is in it
-		if (has_parking_garage && player_in_basement) { // or near basement stairs?
-			rand_gen_t rgen;
-			rgen.set_state(building_ix+1, building.mat_ix+1); // set to something canonical per building
-			auto objs_end(get_placed_objs_end()); // skip buttons/stairs/elevators
-			assert(pg_wall_start < objs.size());
+		if (has_parking_garage && player_in_building) {
+			// only draw cars in parking garages if the player or light is in the basement (or player is near basement stairs?)
+			if (shadow_only ? (camera_pos.z < building.ground_floor_z1) : player_in_basement) {
+				rand_gen_t rgen;
+				rgen.set_state(building_ix+1, building.mat_ix+1); // set to something canonical per building
+				auto objs_end(get_placed_objs_end()); // skip buttons/stairs/elevators
+				assert(pg_wall_start < objs.size());
+				vector<car_t> cars_to_draw;
 
-			// start at walls, since parking spaces are added after those
-			for (auto i = (objs.begin() + pg_wall_start); i != objs_end; ++i) {
-				if (i->type != TYPE_PARK_SPACE) continue;
-				if (!(i->flags & RO_FLAG_USED)) continue; // no car in this space
-				car_t car;
-				car.dim = i->dim;
-				car.dir = i->dir; // or random?
-				point const center(i->get_cube_center());
-				car.set_bcube(point(center.x, center.y, i->z1()), get_nom_car_size());
-				if (!camera_pdu.cube_visible(car.bcube + xlate)) continue;
-				// TODO: draw VFC, olcclusion culling with parking garage walls/ceilings/floors (start at pg_wall_start)
-				// TODO: fix incorrect alpha blending
-				// TODO: draw in shadow pass even if player not in basement?
-				draw_car_in_pspace(car, i->obj_id, s, xlate, shadow_only);
-			} // for i
-		}
+				// start at walls, since parking spaces are added after those
+				for (auto i = (objs.begin() + pg_wall_start); i != objs_end; ++i) {
+					if (i->type != TYPE_PARK_SPACE) continue;
+					if (!(i->flags & RO_FLAG_USED)) continue; // no car in this space
+					car_t car(car_from_parking_space(*i));
+					if (camera_pdu.cube_visible(car.bcube + xlate)) {cars_to_draw.push_back(car);}
+				}
+				if (!cars_to_draw.empty()) {
+					vect_cube_t occluders; // should this be split out per PG level?
+					point viewer(camera_bs);
+					building.maybe_inv_rotate_point(viewer); // not needed because there are no cars in rotated buildings?
+
+					if (check_occlusion) {
+						for (auto i = (objs.begin() + pg_wall_start); i != objs_end; ++i) {
+							if (i->type != TYPE_PG_WALL || i->item_flags != 0) continue; // not parking garage wall (breaking is incorrect for multiple PG levels)
+							occluders.push_back(*i);
+						}
+						// gather occluders from parking garage ceilings and floors (below ground floor)
+						for (auto const &ceiling : building.interior->ceilings) {
+							if (ceiling.z1() <= building.ground_floor_z1) {occluders.push_back(ceiling);}
+						}
+					}
+					sort(cars_to_draw.begin(), cars_to_draw.end(), comp_car_by_dist(viewer)); // required for correct window alpha blending
+
+					for (auto &car : cars_to_draw) {
+						if (check_occlusion && check_car_occluded(car, occluders, viewer)) continue; // occlusion culling
+						draw_car_in_pspace(car, s, xlate, shadow_only);
+					}
+				}
+			}
+		} // end parked car drawing
 	}
 	if (disable_cull_face) {glEnable(GL_CULL_FACE);}
 	if (obj_drawn) {check_mvm_update();} // needed after popping model transform matrix
@@ -1181,23 +1240,6 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, building_t c
 		disable_blend();
 		indexed_vao_manager_with_shadow_t::post_render();
 	}
-}
-
-template<bool check_sz> bool are_pts_occluded_by_any_cubes(point const &pt, point const *const pts, unsigned npts, vect_cube_t const &cubes, unsigned dim, float min_sz=0.0) {
-	assert(npts > 0 && dim <= 2);
-
-	for (auto c = cubes.begin(); c != cubes.end(); ++c) {
-		if (check_sz && c->get_sz_dim(!dim) < min_sz) break; // too small an occluder; since cubes are sorted by size in this dim, we can exit the loop here
-		if ((pt[dim] < c->d[dim][0]) == (pts[0][dim] < c->d[dim][0])) continue; // skip if cube face does not separate pt from the first point
-		if (!check_line_clip(pt, pts[0], c->d)) continue; // first point does not intersect
-		bool not_occluded(0);
-
-		for (unsigned p = 1; p < npts; ++p) { // skip first point
-			if (!check_line_clip(pt, pts[p], c->d)) {not_occluded = 1; break;}
-		}
-		if (!not_occluded) return 1;
-	} // for c
-	return 0;
 }
 
 // Note: c is in local building space and viewer_in is in non-rotated building space

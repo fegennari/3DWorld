@@ -133,8 +133,8 @@ struct waiting_obj_t {
 struct car_base_t { // the part needed for the pedestrian interface (size = 48)
 	cube_t bcube;
 	bool dim, dir, stopped_at_light;
-	unsigned char cur_road_type, turn_dir;
-	unsigned short cur_city, cur_road, cur_seg;
+	uint8_t cur_road_type, turn_dir;
+	uint16_t cur_city, cur_road, cur_seg;
 	short dest_driveway; // -1 is unset
 	float max_speed, cur_speed;
 
@@ -158,8 +158,8 @@ struct car_base_t { // the part needed for the pedestrian interface (size = 48)
 struct car_t : public car_base_t, public waiting_obj_t { // size = 100
 	cube_t prev_bcube;
 	bool is_truck, entering_city, in_tunnel, dest_valid, destroyed, in_reverse, engine_running;
-	unsigned char color_id, front_car_turn_dir, model_id;
-	unsigned short dest_city, dest_isec;
+	uint8_t color_id, front_car_turn_dir, model_id;
+	uint16_t dest_city, dest_isec;
 	float height, dz, rot_z, turn_val, waiting_pos, wake_time;
 	car_t const *car_in_front;
 
@@ -758,7 +758,7 @@ public:
 	void helicopters_next_frame(float car_speed);
 	bool check_helicopter_coll(cube_t const &bc) const;
 	void draw(int trans_op_mask, vector3d const &xlate, bool use_dlights, bool shadow_only, bool is_dlight_shadows, bool garages_pass);
-	void draw_car_in_pspace(car_t &car, unsigned car_id, shader_t &s, vector3d const &xlate, bool shadow_only);
+	void draw_car_in_pspace(car_t &car, shader_t &s, vector3d const &xlate, bool shadow_only);
 	void add_car_headlights(vector3d const &xlate, cube_t &lights_bcube) {dstate.add_car_headlights(cars, xlate, lights_bcube);}
 	void free_context() {car_model_loader.free_context(); helicopter_model_loader.free_context();}
 }; // car_manager_t

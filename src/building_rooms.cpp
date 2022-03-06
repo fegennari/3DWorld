@@ -17,6 +17,7 @@ extern object_model_loader_t building_obj_model_loader;
 extern bldg_obj_type_t bldg_obj_types[];
 
 void setup_bldg_obj_types();
+car_t car_from_parking_space(room_object_t const &o);
 
 
 class light_ix_assign_t {
@@ -1738,7 +1739,7 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 	interior->get_stairs_and_elevators_bcubes_intersecting_cube(room_floor_cube, obstacles, 0.0); // without clearance
 	interior->get_stairs_and_elevators_bcubes_intersecting_cube(room_floor_cube, obstacles_exp_sm, 0.5*window_vspacing); // with small clearance
 	interior->get_stairs_and_elevators_bcubes_intersecting_cube(room_floor_cube, obstacles_exp_lg, 0.9*window_vspacing); // with large clearance
-	interior->room_geom->pg_wall_start = objs.size();
+	if (interior->room_geom->pg_wall_start == 0) {interior->room_geom->pg_wall_start = objs.size();} // set if not set, on first level
 	vect_cube_t pillars; // added after wall segments
 
 	for (unsigned n = 0; n < num_walls+2; ++n) { // includes room far walls
@@ -1833,11 +1834,8 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 
 					if (add_car) { // add a collider to block this area from the player, people, and rats (though maybe rats should be able to hide under cars?)
 						objs.back().obj_id = rgen.rand(); // will be used for the car model and color
-						cube_t collider(space);
-						collider.z2() += car_sz.z;
-						collider.expand_in_dim( dim, -0.05*space_width ); // shrink width  slightly
-						collider.expand_in_dim(!dim, -0.05*space_length); // shrink length slightly
-						objs.emplace_back(collider, TYPE_COLLIDER, room_id, !dim, d, RO_FLAG_INVIS);
+						car_t car(car_from_parking_space(objs.back()));
+						objs.emplace_back(car.bcube, TYPE_COLLIDER, room_id, !dim, d, RO_FLAG_INVIS);
 					}
 				}
 				space.d[dim][0] = space.d[dim][1]; // shift to next space
