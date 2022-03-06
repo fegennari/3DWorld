@@ -1718,12 +1718,13 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 	cube_t room_floor_cube(room), virt_room_for_wall(room);
 	set_cube_zvals(room_floor_cube, zval, ceiling_z);
 	cube_t wall(room_floor_cube), pillar(room_floor_cube), beam(room_floor_cube);
-	wall.expand_in_dim(dim, -(road_width + pillar_width)); // wall ends at roads that line the sides of the room, shifted to the other side of the pillar
+	wall.expand_in_dim(dim, -road_width); // wall ends at roads that line the sides of the room; include pillar for better occluder and in case the pillar is skipped
 	float wall_spacing(len_sz/(num_walls + 1));
-	float const wall_len(wall.get_sz_dim(dim)), beam_spacing(len_sz/num_rows);
-	float const row_width(wall_spacing - wall_thickness), space_length(0.5f*(row_width - road_width));
+	float const pillar_shift(0.01*pillar_width); // small value to avoid z-fighting
+	float const wall_len(wall.get_sz_dim(dim) + 2.0f*pillar_shift), pillar_start(wall.d[dim][0] + pillar_hwidth - pillar_shift);
+	float const row_width(wall_spacing - wall_thickness), space_length(0.5f*(row_width - road_width)), beam_spacing(len_sz/num_rows);
 	unsigned const num_pillars(max(2U, unsigned(round_fp(0.25*wall_len/parking_sz.y)))); // every 4 spaces, at least 2 at the ends of the wall
-	float const pillar_spacing((wall_len + pillar_width)/(num_pillars - 1)), beam_delta_z(0.95*wall.dz()), tot_light_amt(room.light_intensity);
+	float const pillar_spacing((wall_len - pillar_width)/(num_pillars - 1)), beam_delta_z(0.95*wall.dz()), tot_light_amt(room.light_intensity);
 	bool short_sides[2] = {0,0};
 	float side_clip_dist[2] = {0.0, 0.0};
 
@@ -1756,7 +1757,7 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 			pillar.d[!dim][!side] = room.d[!dim][side] + (side ? -1.0 : 1.0)*pillar_hwidth; // half the width of an interior wall pillar
 		}
 		for (unsigned p = 0; p < num_pillars; ++p) { // add support pillars
-			float const ppos(wall.d[dim][0] - pillar_hwidth + p*pillar_spacing);
+			float const ppos(pillar_start + p*pillar_spacing);
 			set_wall_width(pillar, ppos, pillar_hwidth, dim);
 			if (has_bcube_int_xy(pillar, obstacles_exp_lg)) continue; // skip entire pillar if it intersects stairs or an elevator
 			pillars.push_back(pillar);
@@ -1768,7 +1769,7 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 	unsigned const beam_flags(RO_FLAG_NOCOLL | RO_FLAG_HANGING);
 
 	for (unsigned p = 0; p < 2*num_pillars - 1; ++p) { // add support pillars
-		float const ppos(wall.d[dim][0] - pillar_hwidth + 0.5*p*pillar_spacing);
+		float const ppos(pillar_start + 0.5*p*pillar_spacing);
 		set_wall_width(beam, ppos, beam_hwidth, dim);
 		subtract_cubes_from_cube(beam, obstacles, wall_parts, temp, 1); // ignore_zval=1
 		for (auto const &w : wall_parts) {objs.emplace_back(w, TYPE_PG_WALL, room_id, !dim, 0, beam_flags, tot_light_amt, SHAPE_CUBE, wall_color, 2);}
@@ -1788,8 +1789,7 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 	// TODO
 
 	// add parking spaces on both sides of each row (one side if half row)
-	cube_t row(wall); // same length as the wall
-	row.expand_in_dim(dim, pillar_width); // includes the width of the pillars
+	cube_t row(wall); // same length as the wall; includes the width of the pillars
 	row.z2() = row.z1() + 0.001*window_vspacing; // slightly above the floor
 	float const space_width(row.get_sz_dim(dim)/num_space_wid), strips_start(virt_room_for_wall.d[!dim][0]);
 	bool const add_cars(city_params.num_cars > 0 && !is_rotated() /*&& car_model_loader.num_models() > 0*/); // skip cars for rotated buildings
