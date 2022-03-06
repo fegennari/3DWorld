@@ -1726,7 +1726,6 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 	unsigned const num_pillars(max(2U, unsigned(round_fp(0.25*wall_len/parking_sz.y)))); // every 4 spaces, at least 2 at the ends of the wall
 	float const pillar_spacing((wall_len - pillar_width)/(num_pillars - 1)), beam_delta_z(0.95*wall.dz()), tot_light_amt(room.light_intensity);
 	bool short_sides[2] = {0,0};
-	float side_clip_dist[2] = {0.0, 0.0};
 
 	if (half_strip) {
 		short_sides[half_row_side] = 1;
