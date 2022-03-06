@@ -1208,9 +1208,16 @@ struct comp_car_by_dist {
 void building_t::draw_pg_cars(shader_t &s, vector3d const &xlate, bool shadow_only) const {
 	// draw cars in parking spaces if there's a parking garage and the player is in it
 	if (!has_parking_garage || !has_room_geom()) return;
-	point const camera_bs(camera_pdu.pos - xlate);
-	// only draw cars in parking garages if the player or light is in the basement (or player is near basement stairs?)
-	if (shadow_only ? (camera_bs.z > ground_floor_z1) : !player_in_basement) return;
+	point viewer(camera_pdu.pos - xlate);
+	maybe_inv_rotate_point(viewer); // not needed because there are no cars in rotated buildings?
+	// only draw cars in parking garages if the player or light is in the basement, or the player is on the first floor (near stairs)
+	float max_vis_zval(ground_floor_z1);
+
+	if (!shadow_only && viewer.z > max_vis_zval) { // player not in the basement - but maybe on the first floor near stairs to the basement?
+		int const room_ix(get_room_containing_pt(viewer));
+		if (room_ix >= 0 && get_room(room_ix).has_stairs_on_floor(0)) {max_vis_zval += get_window_vspace();}
+	}
+	if (viewer.z > max_vis_zval) return;
 	bool const check_occlusion(display_mode & 0x08);
 	vect_room_object_t const &objs(interior->room_geom->objs);
 	auto objs_end(interior->room_geom->get_placed_objs_end()); // skip buttons/stairs/elevators
@@ -1226,31 +1233,28 @@ void building_t::draw_pg_cars(shader_t &s, vector3d const &xlate, bool shadow_on
 		car_t car(car_from_parking_space(*i));
 		if (camera_pdu.cube_visible(car.bcube + xlate)) {cars_to_draw.push_back(car);}
 	}
-	if (!cars_to_draw.empty()) {
-		point viewer(camera_bs);
-		maybe_inv_rotate_point(viewer); // not needed because there are no cars in rotated buildings?
+	if (cars_to_draw.empty()) return;
 
-		if (check_occlusion) {
-			vect_cube_t occluders; // should this be split out per PG level?
+	if (check_occlusion) {
+		vect_cube_t occluders; // should this be split out per PG level?
 
-			for (auto i = (objs.begin() + pg_wall_start); i != objs_end; ++i) {
-				if (i->type != TYPE_PG_WALL || i->item_flags != 0) continue; // not parking garage wall (breaking is incorrect for multiple PG levels)
-				occluders.push_back(*i);
-			}
-			// gather occluders from parking garage ceilings and floors (below ground floor)
-			for (auto const &ceiling : interior->ceilings) {
-				if (ceiling.z1() <= ground_floor_z1) {occluders.push_back(ceiling);}
-			}
-			auto in(cars_to_draw.begin()), out(in);
+		for (auto i = (objs.begin() + pg_wall_start); i != objs_end; ++i) {
+			if (i->type != TYPE_PG_WALL || i->item_flags != 0) continue; // not parking garage wall (breaking is incorrect for multiple PG levels)
+			occluders.push_back(*i);
+		}
+		// gather occluders from parking garage ceilings and floors (below ground floor)
+		for (auto const &ceiling : interior->ceilings) {
+			if (ceiling.z1() <= max_vis_zval) {occluders.push_back(ceiling);}
+		}
+		auto in(cars_to_draw.begin()), out(in);
 
-			for (; in != cars_to_draw.end(); ++in) { // filter out occluded cars
-				if (!check_car_occluded(*in, occluders, viewer)) {*(out++) = *in;}
-			}
-			cars_to_draw.erase(out, cars_to_draw.end());
-		} // end check_occlusion
-		std::sort(cars_to_draw.begin(), cars_to_draw.end(), comp_car_by_dist(viewer)); // required for correct window alpha blending
-		for (auto &car : cars_to_draw) {draw_car_in_pspace(car, s, xlate, shadow_only);}
-	}
+		for (; in != cars_to_draw.end(); ++in) { // filter out occluded cars
+			if (!check_car_occluded(*in, occluders, viewer)) {*(out++) = *in;}
+		}
+		cars_to_draw.erase(out, cars_to_draw.end());
+	} // end check_occlusion
+	std::sort(cars_to_draw.begin(), cars_to_draw.end(), comp_car_by_dist(viewer)); // required for correct window alpha blending
+	for (auto &car : cars_to_draw) {draw_car_in_pspace(car, s, xlate, shadow_only);}
 }
 
 // Note: c is in local building space and viewer_in is in non-rotated building space
