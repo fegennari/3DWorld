@@ -1179,7 +1179,7 @@ template<bool check_sz> bool are_pts_occluded_by_any_cubes(point const &pt, poin
 
 car_t car_from_parking_space(room_object_t const &o) {
 	rand_gen_t rgen;
-	rgen.set_state(12345*o.obj_id, 76543*o.obj_id);
+	rgen.set_state(12345*o.obj_id+1, 76543*o.obj_id+3);
 	rgen.rand_mix();
 	car_t car;
 	car.dim     = o.dim;
@@ -1253,6 +1253,12 @@ void building_t::draw_pg_cars(shader_t &s, vector3d const &xlate, bool shadow_on
 		}
 		cars_to_draw.erase(out, cars_to_draw.end());
 	} // end check_occlusion
+	if (cars_to_draw.empty()) return;
+	
+	if (!s.is_setup()) { // caller didn't set up the shader
+		if (shadow_only) {s.begin_color_only_shader();} // this path should be unused
+		else {setup_building_draw_shader(s, 0.0, 1, 0, 0);} // min_alpha=0.0, enable_indir=1, force_tsl=0, use_texgen=0
+	}
 	std::sort(cars_to_draw.begin(), cars_to_draw.end(), comp_car_by_dist(viewer)); // required for correct window alpha blending
 	for (auto &car : cars_to_draw) {draw_car_in_pspace(car, s, xlate, shadow_only);}
 }

@@ -1377,7 +1377,7 @@ void car_manager_t::draw_helicopters(bool shadow_only) {
 // for building parking garages
 void car_manager_t::draw_car_in_pspace(car_t &car, shader_t &s, vector3d const &xlate, bool shadow_only) {
 	rand_gen_t old_rgen(rgen);
-	rgen.set_state(car.cur_seg+1, car.cur_seg+100); // random seed is stored in car.cur_seg
+	rgen.set_state(76543*car.cur_seg+1, 12345*car.cur_seg+3); // random seed is stored in car.cur_seg
 	rgen.rand_mix();
 	assign_car_model_size_color(car, 1); // is_in_garage=1
 	

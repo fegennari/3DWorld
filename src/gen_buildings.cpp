@@ -2568,14 +2568,15 @@ public:
 				(*i)->building_draw_int_ext_walls.draw(s, 0, 0, 0, exclude); // exterior walls only, no stencil test
 				s.add_uniform_vector3d("texgen_origin", zero_vector);
 			} // for i
-			// draw parking garage cars
-			if (building_cont_player != nullptr) {
-				glCullFace(reflection_pass ? GL_FRONT : GL_BACK); // draw front faces
-				building_cont_player->draw_pg_cars(s, xlate, 0); // shadow_only=0
-				glCullFace(reflection_pass ? GL_BACK : GL_FRONT); // draw back faces
-			}
 			reset_interior_lighting_and_end_shader(s);
 
+			// draw parking garage cars
+			if (building_cont_player != nullptr) {
+				glDisable(GL_CULL_FACE); // no back face culling for cars
+				building_cont_player->draw_pg_cars(s, xlate, 0); // shadow_only=0
+				if (s.is_setup()) {reset_interior_lighting_and_end_shader(s);}
+				glEnable(GL_CULL_FACE);
+			}
 			if (DRAW_EXT_REFLECTIONS || !reflection_pass) {
 				// if we're not by an exterior door, draw the back sides of exterior doors as closed; always draw non-ext walls/non doors (roof geom)
 				int const tex_filt_mode(ext_door_draw.empty() ? 2 : 3);

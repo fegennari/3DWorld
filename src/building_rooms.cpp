@@ -1685,10 +1685,11 @@ void building_t::add_pri_hall_objs(rand_gen_t rgen, room_t const &room, float zv
 	} // for dir
 }
 
-void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned objs_start,
+void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned objs_start, unsigned floor_ix,
 	unsigned &nlights_x, unsigned &nlights_y, float &light_delta_z)
 {
 	assert(has_room_geom());
+	rgen.rseed1 += 123*floor_ix; // make it unique per floor
 	interior->room_geom->has_parking_garage = 1;
 	// rows are separated by walls and run in dim, with a road and parking spaces on either side of it;
 	// spaces are arranged in !dim, with roads along the edges of the building that connect to the roads of each row
@@ -2545,7 +2546,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 
 			if (is_parking_garage) { // parking garage; added first because this sets the number of lights
 				r->interior = 1;
-				add_parking_garage_objs(rgen, *r, room_center.z, room_id, objs.size(), nx, ny, light_delta_z);
+				add_parking_garage_objs(rgen, *r, room_center.z, room_id, objs.size(), f, nx, ny, light_delta_z);
 				for (auto i = objs.begin() + room_objs_start; i != objs.end(); ++i) {i->flags |= RO_FLAG_INTERIOR;}
 			}
 			if ((!has_stairs && (f == 0 || top_floor_not_basement) && interior->stairwells.size() > 1) || top_of_stairs) { // should this be outside the loop?
