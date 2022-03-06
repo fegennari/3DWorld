@@ -1735,11 +1735,11 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 	}
 	light_delta_z = beam_delta_z - wall.dz(); // negative
 	beam.z1()    += beam_delta_z; // shift the bottom up to the ceiling
-	vect_cube_t obstacles, obstacles_exp_sm, obstacles_exp_lg, wall_parts, temp;
+	float const space_clearance(max(0.5f*window_vspacing, parking_sz.y)); // clearance between stairs/elevators and parking spaces so that cars and people can pass
+	vect_cube_t obstacles, obstacles_exp, wall_parts, temp;
 	// get obstacles for walls with and without clearance; maybe later add entrance/exit ramps, etc.
 	interior->get_stairs_and_elevators_bcubes_intersecting_cube(room_floor_cube, obstacles, 0.0); // without clearance
-	interior->get_stairs_and_elevators_bcubes_intersecting_cube(room_floor_cube, obstacles_exp_sm, 0.5*window_vspacing); // with small clearance
-	interior->get_stairs_and_elevators_bcubes_intersecting_cube(room_floor_cube, obstacles_exp_lg, 0.9*window_vspacing); // with large clearance
+	interior->get_stairs_and_elevators_bcubes_intersecting_cube(room_floor_cube, obstacles_exp, 0.9*window_vspacing); // with clearance
 	if (interior->room_geom->pg_wall_start == 0) {interior->room_geom->pg_wall_start = objs.size();} // set if not set, on first level
 	vect_cube_t pillars; // added after wall segments
 
@@ -1748,7 +1748,7 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 			float const pos(virt_room_for_wall.d[!dim][0] + (n + 1)*wall_spacing); // reference from the room far wall, assuming we can fit a full width double row strip
 			set_wall_width(wall,   pos, wall_hc, !dim);
 			set_wall_width(pillar, pos, pillar_hwidth, !dim);
-			subtract_cubes_from_cube(wall, obstacles_exp_lg, wall_parts, temp, 1); // ignore_zval=1
+			subtract_cubes_from_cube(wall, obstacles_exp, wall_parts, temp, 1); // ignore_zval=1
 			for (auto const &w : wall_parts) {objs.emplace_back(w, TYPE_PG_WALL, room_id, !dim, 0, 0, tot_light_amt, SHAPE_CUBE, wall_color, 0);}
 		}
 		else { // room wall
@@ -1759,7 +1759,7 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 		for (unsigned p = 0; p < num_pillars; ++p) { // add support pillars
 			float const ppos(pillar_start + p*pillar_spacing);
 			set_wall_width(pillar, ppos, pillar_hwidth, dim);
-			if (has_bcube_int_xy(pillar, obstacles_exp_lg)) continue; // skip entire pillar if it intersects stairs or an elevator
+			if (has_bcube_int_xy(pillar, obstacles_exp)) continue; // skip entire pillar if it intersects stairs or an elevator
 			pillars.push_back(pillar);
 		} // for p
 	} // for n
@@ -1785,8 +1785,21 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 	}
 
 	// add ramp of TYPE_RAMP before adding parking spaces, and add to obstacles_exp; need to cut out the floor somehow
-	//bool const ramp_xc(rgen.rand_bool()), ramp_yc(rgen.rand_bool());
-	// TODO
+	bool const ramp_pref_xdir(rgen.rand_bool()), ramp_pref_ydir(rgen.rand_bool());
+
+	for (unsigned xd = 0; xd < 2; ++xd) {
+		for (unsigned yd = 0; yd < 2; ++yd) {
+			bool const xdir(bool(xd) ^ ramp_pref_xdir), ydir(bool(yd) ^ ramp_pref_ydir);
+			point const outer_corner(room.d[0][xdir], room.d[1][ydir], zval);
+			point const inner_corner((outer_corner.x + (xdir ? -1.0 : 1.0)*road_width), (outer_corner.y + (ydir ? -1.0 : 1.0)*road_width), ceiling_z);
+			cube_t ramp(outer_corner, inner_corner);
+			if (has_bcube_int_xy(ramp, obstacles_exp)) continue; // bad ramp pos if it intersects stairs or an elevator
+			objs.emplace_back(ramp, TYPE_RAMP, room_id, xdir, ydir, 0, tot_light_amt, SHAPE_CUBE, wall_color);
+			obstacles.push_back(ramp); // don't place parking spaces next to the ramp
+			break; // done
+		} // for yd
+	} // for xd
+	// what if none of the 4 corners work for a ramp?
 
 	// add parking spaces on both sides of each row (one side if half row)
 	cube_t row(wall); // same length as the wall; includes the width of the pillars
@@ -1819,7 +1832,7 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 				space.d[dim][1] = space.d[dim][0] + space_width; // set width
 				assert(space.is_strictly_normalized());
 				
-				if (has_bcube_int_xy(space, obstacles_exp_sm)) { // skip entire space if it intersects stairs or an elevator
+				if (has_bcube_int_xy(space, obstacles, space_clearance)) { // skip entire space if it intersects stairs or an elevator, with padding
 					if (last_was_space) {objs.back().flags &= ~RO_FLAG_ADJ_HI;} // no space to the right for the previous space
 					last_was_space = 0;
 				}
@@ -1828,15 +1841,15 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 					if (last_was_space          ) {flags |= RO_FLAG_ADJ_LO;} // adjacent space to the left
 					if (s+1 < num_spaces_per_row) {flags |= RO_FLAG_ADJ_HI;} // not the last space - assume there will be a space to the right
 					bool const add_car(add_cars && rgen.rand_float() < 0.5); // 50% populated with cars
-					if (add_car) {flags |= RO_FLAG_USED;}
-					objs.emplace_back(space, TYPE_PARK_SPACE, room_id, !dim, d, flags, tot_light_amt, SHAPE_CUBE, wall_color); // floor_color?
-					last_was_space = 1;
 
-					if (add_car) { // add a collider to block this area from the player, people, and rats (though maybe rats should be able to hide under cars?)
+					if (add_car) { // add a collider to block this area from the player, people, and rats; add first so that objs.back() is correct for the next iter
 						objs.back().obj_id = rgen.rand(); // will be used for the car model and color
 						car_t car(car_from_parking_space(objs.back()));
 						objs.emplace_back(car.bcube, TYPE_COLLIDER, room_id, !dim, d, RO_FLAG_INVIS);
+						flags |= RO_FLAG_USED;
 					}
+					objs.emplace_back(space, TYPE_PARK_SPACE, room_id, !dim, d, flags, tot_light_amt, SHAPE_CUBE, wall_color); // floor_color?
+					last_was_space = 1;
 				}
 				space.d[dim][0] = space.d[dim][1]; // shift to next space
 			} // for s
