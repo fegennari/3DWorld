@@ -1210,13 +1210,10 @@ void building_t::draw_pg_cars(shader_t &s, vector3d const &xlate, bool shadow_on
 	if (!has_parking_garage || !has_room_geom()) return;
 	point viewer(camera_pdu.pos - xlate);
 	maybe_inv_rotate_point(viewer); // not needed because there are no cars in rotated buildings?
-	// only draw cars in parking garages if the player or light is in the basement, or the player is on the first floor (near stairs)
+	// only draw cars in parking garages if the player or light is in the basement, or the player is on the first floor where a car may be visible through the stairs
+	float const floor_spacing(get_window_vspace());
 	float max_vis_zval(ground_floor_z1);
-
-	if (!shadow_only && viewer.z > max_vis_zval) { // player not in the basement - but maybe on the first floor near stairs to the basement?
-		int const room_ix(get_room_containing_pt(viewer));
-		if (room_ix >= 0 && get_room(room_ix).has_stairs_on_floor(0)) {max_vis_zval += get_window_vspace();}
-	}
+	if (!shadow_only) {max_vis_zval += floor_spacing;} // player on first floor?
 	if (viewer.z > max_vis_zval) return;
 	bool const check_occlusion(display_mode & 0x08);
 	vect_room_object_t const &objs(interior->room_geom->objs);
@@ -1230,7 +1227,9 @@ void building_t::draw_pg_cars(shader_t &s, vector3d const &xlate, bool shadow_on
 	for (auto i = (objs.begin() + pg_wall_start); i != objs_end; ++i) {
 		if (i->type != TYPE_PARK_SPACE) continue;
 		if (!(i->flags & RO_FLAG_USED)) continue; // no car in this space
+		if (i->z2() < viewer.z - 2.0*floor_spacing) continue; // move than a floor below - skip
 		car_t car(car_from_parking_space(*i));
+		if (!shadow_only && check_occlusion && viewer.z > ground_floor_z1 && !line_intersect_stairs(viewer, car.get_center())) continue;
 		if (camera_pdu.cube_visible(car.bcube + xlate)) {cars_to_draw.push_back(car);}
 	}
 	if (cars_to_draw.empty()) return;
