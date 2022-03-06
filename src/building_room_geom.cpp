@@ -1165,7 +1165,7 @@ void building_room_geom_t::add_parking_garage_wall(room_object_t const &c, vecto
 void building_room_geom_t::add_parking_space(room_object_t const &c, vector3d const &tex_origin, float tscale) {
 	float const space_width(c.get_sz_dim(!c.dim)), line_width(0.04*space_width);
 	cube_t yellow_line(c);
-	yellow_line.d[!c.dim][1] -= (space_width - line_width); // left edge
+	yellow_line.d[!c.dim][1] -= (space_width - line_width); // shrink to line by moving the left edge
 	rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_texture_by_name("roads/concrete_stripe.jpg"), 0.0), 0, 0, 2)); // inc_shadows=0
 	mat.add_cube_to_verts(yellow_line, c.color, yellow_line.get_llc(), ~EF_Z2, c.dim); // small=2: top surface only
 
@@ -1178,7 +1178,49 @@ void building_room_geom_t::add_parking_space(room_object_t const &c, vector3d co
 
 void building_room_geom_t::add_pg_ramp(room_object_t const &c, vector3d const &tex_origin, float tscale) {
 	rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_concrete_tid(), tscale), 1, 0, 2));
-	// TODO: WRITE
+	//mat.add_cube_to_verts(c, WHITE, all_zeros); // TESTING
+	tquad_t ramp(4); // ramp surface
+	float const length(c.get_sz_dim(c.dim)), thickness(0.05*c.dz()), side_tc_y(thickness/length);
+	float const zv[2] = {c.z1(), c.z2()};
+	// dim dir z0 z1 z2 z3
+	// 0   0   1  0  0  1
+	// 0   1   0  1  1  0
+	// 1   0   1  1  0  0
+	// 1   1   0  0  1  1
+	ramp.pts[0].assign(c.x1(), c.y1(), zv[!c.dir]); // LL
+	ramp.pts[1].assign(c.x2(), c.y1(), zv[c.dim ^ c.dir]); // LR
+	ramp.pts[2].assign(c.x2(), c.y2(), zv[c.dir]); // UR
+	ramp.pts[3].assign(c.x1(), c.y2(), zv[c.dim ^ c.dir ^ 1]); // UL
+	vector3d const normal(ramp.get_norm());
+	auto &verts(mat.quad_verts);
+	rgeom_mat_t::vertex_t v;
+	v.set_c4(c.color); // no room lighting color atten
+	v.set_norm(normal);
+
+	for (unsigned tb = 0; tb < 2; ++tb) { // {top, bottom}
+		for (unsigned i = 0; i < 4; ++i) {
+			v.v    = ramp.pts[tb ? (3-i) : i]; // swap winding order for bottom surface
+			v.t[0] = float(v.v.x == c.x2());
+			v.t[1] = float(v.v.y == c.y2());
+			verts.push_back(v);
+			if (tb) {verts.back().v.z -= thickness;} // extrude thickness for bottom surface
+		}
+		if (tb == 0) {v.invert_normal();}
+	} // for tb
+	for (unsigned s = 0; s < 4; ++s) { // sides: {-y, +x, +y, -x}
+		point const pts[2] = {ramp.pts[s], ramp.pts[(s+1)&3]};
+		v.set_ortho_norm((s&1)^1, (s&1)^(s>>1)); // {1,0,1,0}, {0,1,1,0}
+
+		for (unsigned i = 0; i < 4; ++i) {
+			unsigned const ix(3-i); // use correct winding order
+			bool const tb(ix >> 1), lr(tb ^ (ix&1));
+			v.v    = pts[lr];
+			v.t[0] = float(lr);
+			v.t[1] = float(tb)*side_tc_y;
+			if (tb) {v.v.z -= thickness;} // extrude thickness for bottom surface
+			verts.push_back(v);
+		}
+	} // for s
 }
 
 // Note: there is a lot duplicated with building_room_geom_t::add_elevator(), but we need a separate function for adding interior elevator buttons

@@ -1787,20 +1787,24 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 
 	// add ramp of TYPE_RAMP before adding parking spaces, and add to obstacles_exp; need to cut out the floor somehow
 	bool const ramp_pref_xdir(rgen.rand_bool()), ramp_pref_ydir(rgen.rand_bool());
+	bool added_ramp(0);
 
-	for (unsigned xd = 0; xd < 2; ++xd) {
+	for (unsigned xd = 0; xd < 2 && !added_ramp; ++xd) {
 		for (unsigned yd = 0; yd < 2; ++yd) {
 			bool const xdir(bool(xd) ^ ramp_pref_xdir), ydir(bool(yd) ^ ramp_pref_ydir);
-			point const outer_corner(room.d[0][xdir], room.d[1][ydir], zval);
-			point const inner_corner((outer_corner.x + (xdir ? -1.0 : 1.0)*road_width), (outer_corner.y + (ydir ? -1.0 : 1.0)*road_width), ceiling_z);
-			cube_t ramp(outer_corner, inner_corner);
+			float const xsz((dim ? 2.0 : 1.0)*road_width), ysz((dim ? 1.0 : 2.0)*road_width); // longer in !dim
+			point const corner(room.d[0][xdir], room.d[1][ydir], zval);
+			point const c1((corner.x - 0.001*(xdir ? -1.0 : 1.0)*xsz), (corner.y - 0.001*(ydir ? -1.0 : 1.0)*ysz), zval); // slight inward shift to prevent z-fighting
+			point const c2((corner.x + (xdir ? -1.0 : 1.0)*xsz), (corner.y + (ydir ? -1.0 : 1.0)*ysz), ceiling_z);
+			cube_t ramp(c1, c2);
 			if (has_bcube_int_xy(ramp, obstacles_exp)) continue; // bad ramp pos if it intersects stairs or an elevator
-			objs.emplace_back(ramp, TYPE_RAMP, room_id, xdir, ydir, 0, tot_light_amt, SHAPE_CUBE, wall_color);
+			objs.emplace_back(ramp, TYPE_RAMP, room_id, !dim, (dim ? xdir: ydir), 0, tot_light_amt, SHAPE_CUBE, wall_color);
 			obstacles.push_back(ramp); // don't place parking spaces next to the ramp
+			added_ramp = 1;
 			break; // done
 		} // for yd
 	} // for xd
-	// what if none of the 4 corners work for a ramp?
+	if (!added_ramp) {} // what if none of the 4 corners work for a ramp?
 
 	// add parking spaces on both sides of each row (one side if half row)
 	cube_t row(wall); // same length as the wall; includes the width of the pillars

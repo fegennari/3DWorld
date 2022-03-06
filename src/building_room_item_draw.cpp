@@ -674,8 +674,8 @@ void building_room_geom_t::create_detail_vbos(building_t const &building) {
 		case TYPE_OUTLET:     add_outlet(*i); break;
 		case TYPE_SWITCH:     add_switch(*i, 1); break; // draw_detail_pass=0
 		case TYPE_PG_WALL:    add_parking_garage_wall(*i, tex_origin, wall_tex); break;
-		case TYPE_PARK_SPACE: add_parking_space(*i, tex_origin, wall_tex.tscale_x);
-		case TYPE_RAMP:       add_parking_space(*i, tex_origin, wall_tex.tscale_x);
+		case TYPE_PARK_SPACE: add_parking_space(*i, tex_origin, wall_tex.tscale_x); break;
+		case TYPE_RAMP:       add_pg_ramp(*i, tex_origin, wall_tex.tscale_x); break;
 		default: break;
 		} // end switch
 	} // for i
