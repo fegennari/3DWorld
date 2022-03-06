@@ -973,11 +973,16 @@ template<bool check_sz> bool are_pts_occluded_by_any_cubes(point const &pt, poin
 }
 
 car_t car_from_parking_space(room_object_t const &o) {
+	rand_gen_t rgen;
+	rgen.set_state(12345*o.obj_id, 76543*o.obj_id);
+	rgen.rand_mix();
 	car_t car;
 	car.dim     = o.dim;
 	car.dir     = o.dir; // or random?
 	car.cur_seg = o.obj_id; // store the random seed in car.cur_seg
-	point const center(o.get_cube_center());
+	point center(o.get_cube_center());
+	center[ o.dim] += 0.03*o.get_sz_dim( o.dim)*rgen.signed_rand_float(); // small random misalign front/back
+	center[!o.dim] += 0.05*o.get_sz_dim(!o.dim)*rgen.signed_rand_float(); // small random misalign side
 	car.set_bcube(point(center.x, center.y, o.z1()), get_nom_car_size());
 	return car;
 }
