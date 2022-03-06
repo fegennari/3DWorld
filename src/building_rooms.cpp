@@ -466,7 +466,7 @@ bool building_t::can_be_bedroom_or_bathroom(room_t const &room, unsigned floor, 
 			assert(cur_room >= 0); // must be found
 			assert(!stairs_rooms.empty());
 
-			if (!is_rotated() && is_cube()) { // too strong for rotated or non-cube buildings, where door placement can sometimes fail
+			if (!is_rotated() && is_simple_cube() && !has_complex_floorplan) { // too strong for rotated or non-cube buildings, where door placement can sometimes fail
 				assert(!doors.empty());
 				assert(!door_rooms.empty());
 			}
@@ -2503,9 +2503,9 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 		r->light_intensity = light_val*light_val/r->get_area_xy(); // average for room, unitless; light surface area divided by room surface area with some fudge constant
 		cube_t pri_light, sec_light[2];
 		set_light_xyz(pri_light, room_center, light_size, room_dim, light_shape);
-		if (!r->contains_cube_xy(pri_light)) {pri_light.set_to_zeros();} // disable light if it doesn't fit (small room)
+		bool const disable_light(!r->contains_cube_xy(pri_light)); // disable light if it doesn't fit (small room from has_complex_floorplan office buildings)
 		bool const has_mult_lights(is_parking_garage || nx > 1 || ny > 1); // stairs are handled later when there are multiple lights
-		bool const blocked_by_stairs(!has_mult_lights && !r->is_hallway && interior->is_blocked_by_stairs_or_elevator_no_expand(pri_light, fc_thick));
+		bool const blocked_by_stairs(!has_mult_lights && !r->is_hallway && !disable_light && interior->is_blocked_by_stairs_or_elevator_no_expand(pri_light, fc_thick));
 		bool use_sec_light[2] = {0,0}, sec_light_int_door[2] = {0,0}, added_bathroom(0);
 		float z(r->z1());
 
@@ -2565,7 +2565,8 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 			int light_obj_ix(-1);
 			unsigned num_lights(r->num_lights);
 			
-			if (!blocked_by_stairs || top_of_stairs) {lights[nlights++] = pri_light;}
+			if (disable_light) {} // do nothing, nlights=0
+			else if (!blocked_by_stairs || top_of_stairs) {lights[nlights++] = pri_light;}
 			else {
 				for (unsigned d = 0; d < 2; ++d) {
 					if (!use_sec_light[d]) continue;

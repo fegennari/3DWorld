@@ -33,7 +33,12 @@ bool add_if_not_intersecting(room_object_t const &obj, vect_room_object_t &objec
 }
 point gen_xy_pos_in_area(cube_t const &S, vector3d const &sz, rand_gen_t &rgen) {
 	point center;
-	for (unsigned d = 0; d < 2; ++d) {center[d] = rgen.rand_uniform(S.d[d][0]+sz[d], S.d[d][1]-sz[d]);} // randomly placed within the specified bounds
+	
+	for (unsigned d = 0; d < 2; ++d) {
+		float const lo(S.d[d][0]+sz[d]), hi(S.d[d][1]-sz[d]);
+		assert(lo <= hi);
+		center[d] = rgen.rand_uniform(lo, hi); // randomly placed within the specified bounds
+	}
 	return center;
 }
 point gen_xy_pos_in_area(cube_t const &S, float radius, rand_gen_t &rgen) {

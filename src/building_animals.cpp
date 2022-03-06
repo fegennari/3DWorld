@@ -170,6 +170,7 @@ point building_t::gen_rat_pos(float radius, rand_gen_t &rgen) const {
 		//if (room.is_hallway) continue; // don't place in hallways?
 		cube_t place_area(room); // will represent the usable floor area
 		place_area.expand_by_xy(-(radius + get_wall_thickness()));
+		if (min(place_area.dx(), place_area.dy()) < 4.0*radius) continue; // room too small (can happen for has_complex_floorplan office buildings)
 		point pos(gen_xy_pos_in_area(place_area, radius, rgen));
 		pos.z = place_area.z1() + get_fc_thickness(); // on top of the floor
 		if (is_valid_ai_placement(pos, radius)) {return pos;} // check room objects; start in the open, not under something
