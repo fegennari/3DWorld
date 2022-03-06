@@ -1379,6 +1379,7 @@ void car_manager_t::draw_car_in_pspace(car_t &car, shader_t &s, vector3d const &
 	rand_gen_t old_rgen(rgen);
 	rgen.set_state(76543*car.cur_seg+1, 12345*car.cur_seg+3); // random seed is stored in car.cur_seg
 	rgen.rand_mix();
+	rgen.rand_mix();
 	assign_car_model_size_color(car, 1); // is_in_garage=1
 	
 	if (car_model_loader.is_model_valid(car.model_id)) { // else error?
