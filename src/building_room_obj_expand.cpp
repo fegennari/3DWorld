@@ -306,7 +306,7 @@ void building_room_geom_t::expand_cabinet(room_object_t const &c) { // called on
 }
 
 unsigned building_room_geom_t::get_shelves_for_object(room_object_t const &c, cube_t shelves[4]) {
-	unsigned const num_shelves(2 + (c.room_id % 3)); // 2-4 shelves
+	unsigned const num_shelves(c.get_num_shelves()); // 2-4 shelves
 	float const thickness(0.02*c.dz()), bracket_thickness(0.8*thickness), z_step(c.dz()/(num_shelves + 1)); // include a space at the bottom
 	cube_t shelf(c);
 	shelf.z2() = shelf.z1() + thickness; // set shelf thickness

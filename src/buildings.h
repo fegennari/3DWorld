@@ -484,6 +484,7 @@ struct room_object_t : public cube_t {
 	bool is_floor_collidable() const;
 	unsigned get_bottle_type() const {return ((obj_id&63) % NUM_BOTTLE_TYPES);} // first 6 bits are bottle type
 	unsigned get_orient () const {return (2*dim + dir);}
+	unsigned get_num_shelves() const {assert(type == TYPE_SHELVES); return (2 + (room_id % 3));} // 2-4 shelves
 	float get_radius() const;
 	cylinder_3dw get_cylinder() const;
 	void toggle_lit_state() {flags ^= RO_FLAG_LIT;}
