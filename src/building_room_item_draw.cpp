@@ -1179,7 +1179,7 @@ template<bool check_sz> bool are_pts_occluded_by_any_cubes(point const &pt, poin
 
 car_t car_from_parking_space(room_object_t const &o) {
 	rand_gen_t rgen;
-	rgen.set_state(12345*o.obj_id+1, 76543*o.obj_id+3);
+	rgen.set_state(333*o.obj_id, o.obj_id+3);
 	rgen.rand_mix();
 	car_t car;
 	car.dim     = o.dim;

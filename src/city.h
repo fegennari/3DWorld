@@ -743,7 +743,7 @@ public:
 	void init_cars(unsigned num);
 	void add_parked_cars(vector<car_t> const &new_cars, vect_cube_t const &garages);
 	void finalize_cars();
-	void assign_car_model_size_color(car_t &car, bool is_in_garage);
+	void assign_car_model_size_color(car_t &car, rand_gen_t &local_rgen, bool is_in_garage);
 	void add_helicopters(vect_cube_t const &hp_locs);
 	void extract_car_data(vector<car_city_vect_t> &cars_by_city) const;
 	bool proc_sphere_coll(point &pos, point const &p_last, float radius, vector3d *cnorm) const;

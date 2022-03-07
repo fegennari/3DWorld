@@ -715,14 +715,14 @@ void car_manager_t::add_parked_cars(vector<car_t> const &new_cars, vect_cube_t c
 	} // for i
 }
 
-void car_manager_t::assign_car_model_size_color(car_t &car, bool is_in_garage) {
+void car_manager_t::assign_car_model_size_color(car_t &car, rand_gen_t &local_rgen, bool is_in_garage) {
 	unsigned const num_models(car_model_loader.num_models());
 	int fixed_color(-1);
 
 	if (num_models > 0) {
 		for (unsigned n = 0; n < 20; ++n) {
 			if (FORCE_MODEL_ID >= 0) {car.model_id = (unsigned char)FORCE_MODEL_ID;}
-			else {car.model_id = ((num_models > 1) ? (rgen.rand() % num_models) : 0);}
+			else {car.model_id = ((num_models > 1) ? (local_rgen.rand() % num_models) : 0);}
 			city_model_t const &model(car_model_loader.get_model(car.model_id));
 			// if there are multiple models to choose from, and this car is in a garage, try for a model that's not scaled up (the truck) (what about driveways?)
 			if (FORCE_MODEL_ID < 0 && num_models > 1 && is_in_garage && n+1 < 20 && model.scale > 1.0) continue;
@@ -731,14 +731,14 @@ void car_manager_t::assign_car_model_size_color(car_t &car, bool is_in_garage) {
 			break; // done
 		} // for n
 	}
-	car.color_id = ((fixed_color >= 0) ? fixed_color : (rgen.rand() % NUM_CAR_COLORS));
+	car.color_id = ((fixed_color >= 0) ? fixed_color : (local_rgen.rand() % NUM_CAR_COLORS));
 	assert(car.is_valid());
 }
 void car_manager_t::finalize_cars() {
 	if (empty()) return;
 
 	for (auto i = cars.begin(); i != cars.end(); ++i) {
-		assign_car_model_size_color(*i, (unsigned(i-cars.begin()) >= first_garage_car));
+		assign_car_model_size_color(*i, rgen, (unsigned(i-cars.begin()) >= first_garage_car));
 	}
 	cout << "Total Cars: " << cars.size() << endl; // 4000 on the road + 4372 parked + 433 garage (out of 594) = 8805
 }
@@ -1378,18 +1378,16 @@ void car_manager_t::draw_helicopters(bool shadow_only) {
 
 // for building parking garages
 void car_manager_t::draw_car_in_pspace(car_t &car, shader_t &s, vector3d const &xlate, bool shadow_only) {
-	rand_gen_t old_rgen(rgen);
-	rgen.set_state(76543*car.cur_seg+1, 12345*car.cur_seg+3); // random seed is stored in car.cur_seg
-	rgen.rand_mix();
-	rgen.rand_mix();
-	assign_car_model_size_color(car, 1); // is_in_garage=1
+	rand_gen_t rgen;
+	rgen.set_state(123*car.cur_seg, car.cur_seg+1); // random seed is stored in car.cur_seg
+	rgen.rand(); // mix it up better
+	assign_car_model_size_color(car, rgen, 1); // is_in_garage=1
 	
 	if (car_model_loader.is_model_valid(car.model_id)) { // else error?
 		vector3d dir(zero_vector);
 		dir[car.dim] = (car.dir ? 1.0 : -1.0);
 		car_model_loader.draw_model(s, car.get_center(), car.bcube, dir, car.get_color(), xlate, car.model_id, shadow_only, 0, 0, 0, 0, 1); // force_high_detail=1
 	}
-	rgen = old_rgen; // is this needed?
 }
 
 bool car_can_fit(cube_t const &c) {

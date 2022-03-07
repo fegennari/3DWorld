@@ -1848,12 +1848,12 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 					bool const add_car(add_cars && rgen.rand_float() < 0.5); // 50% populated with cars
 
 					if (add_car) { // add a collider to block this area from the player, people, and rats; add first so that objs.back() is correct for the next iter
-						objs.back().obj_id = rgen.rand(); // will be used for the car model and color
 						car_t car(car_from_parking_space(objs.back()));
 						objs.emplace_back(car.bcube, TYPE_COLLIDER, room_id, !dim, d, RO_FLAG_INVIS);
 						flags |= RO_FLAG_USED;
 					}
 					objs.emplace_back(space, TYPE_PARK_SPACE, room_id, !dim, d, flags, tot_light_amt, SHAPE_CUBE, wall_color); // floor_color?
+					if (add_car) {objs.back().obj_id = (uint16_t)objs.size();} // will be used for the car model and color
 					last_was_space = 1;
 				}
 				space.d[dim][0] = space.d[dim][1]; // shift to next space
