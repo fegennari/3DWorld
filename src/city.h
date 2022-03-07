@@ -738,6 +738,7 @@ public:
 		road_gen(road_gen_), dstate(car_model_loader, helicopter_model_loader), first_parked_car(0), first_garage_car(0), car_destroyed(0) {}
 	bool empty() const {return cars.empty();}
 	void clear() {cars.clear(); car_blocks.clear();}
+	bool has_car_models() const {return !car_model_loader.empty();}
 	unsigned get_model_gpu_mem() const {return (car_model_loader.get_gpu_mem() + helicopter_model_loader.get_gpu_mem());}
 	void init_cars(unsigned num);
 	void add_parked_cars(vector<car_t> const &new_cars, vect_cube_t const &garages);
