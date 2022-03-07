@@ -595,7 +595,8 @@ template<typename T> void indexed_vntc_vect_t<T>::render(shader_t &shader, bool 
 	else if (this->vbo) { // don't cull if vbo hasn't yet been allocated because this will cause it to be skipped in the shadow pass
 		if (!camera_pdu.sphere_and_cube_visible_test(bsphere.pos, bsphere.radius, bcube)) return; // view frustum culling
 		
-		if (indices.size() >= 100 && xlate != nullptr && (display_mode & 0x08) != 0) { // Note: null xlate implies there are transforms other than translate, so skip occlusion culling
+		// Note: null xlate implies there are transforms other than translate, so skip occlusion culling
+		if (world_mode == WMODE_GROUND && indices.size() >= 100 && xlate != nullptr && (display_mode & 0x08) != 0) {
 			if (cube_cobj_occluded((camera_pdu.pos + *xlate), (bcube + *xlate))) return; // occlusion culling
 		}
 	}
