@@ -553,7 +553,9 @@ void car_draw_state_t::draw_car(car_t const &car, bool is_dlight_shadows, bool i
 	if (draw_model && car_model_loader.is_model_valid(car.model_id)) {
 		if (!in_garage && is_occluded(car.bcube)) return; // only check occlusion for expensive car models; skip cars in garages (maybe exclude the containing building?)
 		vector3d const front_n(cross_product((pb[5] - pb[1]), (pb[0] - pb[1])).get_norm()*sign);
-		car_model_loader.draw_model(s, center, car.bcube, front_n, color, xlate, car.model_id, shadow_only, (dist_val > 0.035));
+		// force_high_detail=1 for cars in garages, since there is only once per building
+		bool const low_detail(!shadow_only && dist_val > 0.035), high_detail(shadow_only && in_garage);
+		car_model_loader.draw_model(s, center, car.bcube, front_n, color, xlate, car.model_id, shadow_only, low_detail, 0, 0, 0, high_detail);
 	}
 	else { // draw simple 1-2 cube model
 		quad_batch_draw &qbd(qbds[emit_now]);
@@ -1385,7 +1387,7 @@ void car_manager_t::draw_car_in_pspace(car_t &car, shader_t &s, vector3d const &
 	if (car_model_loader.is_model_valid(car.model_id)) { // else error?
 		vector3d dir(zero_vector);
 		dir[car.dim] = (car.dir ? 1.0 : -1.0);
-		car_model_loader.draw_model(s, car.get_center(), car.bcube, dir, car.get_color(), xlate, car.model_id, shadow_only, 0); // low_detail=0
+		car_model_loader.draw_model(s, car.get_center(), car.bcube, dir, car.get_color(), xlate, car.model_id, shadow_only, 0, 0, 0, 0, 1); // force_high_detail=1
 	}
 	rgen = old_rgen; // is this needed?
 }
