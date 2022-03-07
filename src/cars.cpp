@@ -20,6 +20,8 @@ extern vector<light_source> dl_sources;
 extern city_params_t city_params;
 
 
+void reset_interior_lighting(shader_t &s); // needed for drawing cargs in garages
+
 float get_clamped_fticks() {return min(fticks, 4.0f);} // clamp to 100ms
 
 float car_t::get_max_lookahead_dist() const {return (get_length() + city_params.road_width);} // extend one car length + one road width in front
@@ -1305,7 +1307,14 @@ void car_manager_t::draw(int trans_op_mask, vector3d const &xlate, bool use_dlig
 		fgPushMatrix();
 		translate_to(xlate);
 		dstate.pre_draw(xlate, use_dlights, shadow_only);
-		if (!shadow_only) {dstate.s.add_uniform_float("hemi_lighting_normal_scale", 0.0);} // disable hemispherical lighting normal because the transforms make it incorrect
+		
+		if (!shadow_only) {
+			if (garages_pass) { // using interior lighting, no sun or moon
+				dstate.s.add_uniform_float("diffuse_scale", 0.0);
+				dstate.s.add_uniform_float("ambient_scale", 0.5); // half ambient
+			}
+			dstate.s.add_uniform_float("hemi_lighting_normal_scale", 0.0); // disable hemispherical lighting normal because the transforms make it incorrect
+		}
 		float const draw_tile_dist(dstate.draw_tile_dist);
 
 		for (auto cb = car_blocks.begin(); cb+1 < car_blocks.end(); ++cb) {
@@ -1324,7 +1333,11 @@ void car_manager_t::draw(int trans_op_mask, vector3d const &xlate, bool use_dlig
 			}
 		} // for cb
 		if (!garages_pass && !is_dlight_shadows) {draw_helicopters(shadow_only);} // draw helicopters in the normal draw pass
-		if (!shadow_only) {dstate.s.add_uniform_float("hemi_lighting_normal_scale", 1.0);} // restore
+		
+		if (!shadow_only) { // restore shader uniforms
+			if (garages_pass) {reset_interior_lighting(dstate.s);}
+			dstate.s.add_uniform_float("hemi_lighting_normal_scale", 1.0);
+		}
 		dstate.post_draw();
 		fgPopMatrix();
 		static car_t const *sel_car(nullptr);
