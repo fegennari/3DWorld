@@ -1846,14 +1846,15 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 					if (last_was_space          ) {flags |= RO_FLAG_ADJ_LO;} // adjacent space to the left
 					if (s+1 < num_spaces_per_row) {flags |= RO_FLAG_ADJ_HI;} // not the last space - assume there will be a space to the right
 					bool const add_car(add_cars && rgen.rand_float() < 0.5); // 50% populated with cars
+					room_object_t pspace(space, TYPE_PARK_SPACE, room_id, !dim, d, flags, tot_light_amt, SHAPE_CUBE, wall_color); // floor_color?
 
 					if (add_car) { // add a collider to block this area from the player, people, and rats; add first so that objs.back() is correct for the next iter
-						car_t car(car_from_parking_space(objs.back()));
+						car_t car(car_from_parking_space(pspace));
 						objs.emplace_back(car.bcube, TYPE_COLLIDER, room_id, !dim, d, RO_FLAG_INVIS);
-						flags |= RO_FLAG_USED;
+						pspace.obj_id = (uint16_t)(objs.size() + rgen.rand()); // will be used for the car model and color
+						pspace.flags |= RO_FLAG_USED;
 					}
-					objs.emplace_back(space, TYPE_PARK_SPACE, room_id, !dim, d, flags, tot_light_amt, SHAPE_CUBE, wall_color); // floor_color?
-					if (add_car) {objs.back().obj_id = (uint16_t)objs.size();} // will be used for the car model and color
+					objs.push_back(pspace);
 					last_was_space = 1;
 				}
 				space.d[dim][0] = space.d[dim][1]; // shift to next space
