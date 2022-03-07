@@ -1301,6 +1301,17 @@ bool building_t::is_cube_contained_in_parts(cube_t const &c) const {
 	return (cont_vol > 0.99*c.get_volume()); // add a bit of tolerance
 }
 
+int building_t::check_player_in_basement(point const &pos) const {
+	if (!is_pos_in_basement(pos)) return 0;
+	
+	if (interior != nullptr) {
+		for (auto const &s : interior->stairwells) {
+			if (s.contains_pt(pos)) return 1; // player on stairs, upper floor and windows/outside may be visible
+		}
+	}
+	return 2; // player in basement but not on stairs
+}
+
 void building_t::print_building_manifest() const { // Note: skips expanded_objs
 	cout << TXT(parts.size()) << TXT(doors.size()) << TXT(details.size());
 

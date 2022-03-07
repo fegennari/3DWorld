@@ -13,7 +13,7 @@ colorRGBA const rat_color(GRAY); // make the rat's fur darker
 
 object_model_loader_t building_obj_model_loader;
 
-extern bool camera_in_building, player_in_basement;
+extern bool camera_in_building;
 extern int display_mode, frame_counter, animate2;
 extern float office_chair_rot_rate, cur_dlight_pcf_offset;
 extern point pre_smap_player_pos;

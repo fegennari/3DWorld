@@ -22,7 +22,8 @@ bool const DRAW_EXT_REFLECTIONS  = 1;
 float const WIND_LIGHT_ON_RAND      = 0.08;
 float const BASEMENT_ENTRANCE_SCALE = 0.33;
 
-bool camera_in_building(0), player_in_basement(0), interior_shadow_maps(0), player_is_hiding(0);
+bool camera_in_building(0), interior_shadow_maps(0), player_is_hiding(0);
+int player_in_basement(0); // 0=no, 1=below ground level, 2=in basement and not on stairs
 int player_in_closet(0); // uses flags RO_FLAG_IN_CLOSET (player in closet), RO_FLAG_LIT (closet light is on), RO_FLAG_OPEN (closet door is open)
 building_params_t global_building_params;
 building_t const *player_building(nullptr);
@@ -2358,7 +2359,8 @@ public:
 		bool const night(is_night(WIND_LIGHT_ON_RAND));
 		// check for sun or moon; also need the smap pass for drawing with dynamic lights at night, so basically it's always enabled
 		bool const use_tt_smap(check_tile_smap(0)); // && (night || light_valid_and_enabled(0) || light_valid_and_enabled(1)));
-		bool have_windows(0), have_wind_lights(0), have_interior(0), this_frame_camera_in_building(0), this_frame_player_in_basement(0);
+		bool have_windows(0), have_wind_lights(0), have_interior(0), this_frame_camera_in_building(0);
+		int this_frame_player_in_basement(0);
 		unsigned max_draw_ix(0);
 		shader_t s;
 
@@ -2496,7 +2498,7 @@ public:
 						per_bcs_exclude[bcs_ix] = b.ext_side_qv_range;
 						if (reflection_pass) continue; // don't execute the code below
 						this_frame_camera_in_building  = 1;
-						this_frame_player_in_basement |= b.is_pos_in_basement(camera_xlated - vector3d(0.0, 0.0, BASEMENT_ENTRANCE_SCALE*b.get_floor_thickness()));
+						this_frame_player_in_basement |= b.check_player_in_basement(camera_xlated - vector3d(0.0, 0.0, BASEMENT_ENTRANCE_SCALE*b.get_floor_thickness()));
 						player_building = &b;
 						if (display_mode & 0x10) {indir_bcs_ix = bcs_ix; indir_bix = bi->ix;} // compute indirect lighting for this building
 						// run any player interaction logic here
@@ -2507,7 +2509,9 @@ public:
 						if (teleport_to_screenshot) {b.maybe_teleport_to_screenshot();}
 						if (animate2) {b.update_player_interact_objects(camera_xlated, ped_ix);} // update dynamic objects if the player is in the building
 					} // for bi
+					if (this_frame_player_in_basement == 2) break; // player can only be in one basement - done
 				} // for g
+				if (this_frame_player_in_basement == 2) break; // player can only be in one basement - done
 			} // for i
 			bbd.draw_and_clear(s);
 			if (ADD_ROOM_LIGHTS) {set_std_depth_func();} // restore
@@ -2609,7 +2613,8 @@ public:
 		} // end draw_interior
 
 		// everything after this point is part of the building exteriors and uses city lights rather than building room lights
-		if (reflection_pass && (!DRAW_EXT_REFLECTIONS || reflection_pass != 3)) { // skip this early exit for house reflections if enabled
+		if (player_in_basement == 2 || (reflection_pass && (!DRAW_EXT_REFLECTIONS || reflection_pass != 3))) {
+			// early exit for player fully in basements or house reflections, if enabled
 			fgPopMatrix();
 			enable_dlight_bcubes = 0;
 			return;
