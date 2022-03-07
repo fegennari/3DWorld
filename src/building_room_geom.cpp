@@ -295,6 +295,7 @@ tid_nm_pair_t get_scaled_wall_tex(tid_nm_pair_t const &wall_tex) {
 	tid_nm_pair_t wall_tex_scaled(wall_tex);
 	wall_tex_scaled.tscale_x *= 2.0;
 	wall_tex_scaled.tscale_y *= 2.0;
+	wall_tex_scaled.shadowed  = 1;
 	return wall_tex_scaled;
 }
 float get_closet_wall_thickness(room_object_t const &c) {
@@ -1158,8 +1159,8 @@ void building_room_geom_t::add_stairs_wall(room_object_t const &c, vector3d cons
 void building_room_geom_t::add_parking_garage_wall(room_object_t const &c, vector3d const &tex_origin, tid_nm_pair_t const &wall_tex) {
 	// small=2: drawn as detail object; no room lighting color atten
 	if      (c.item_flags == 0) {get_material(get_scaled_wall_tex(wall_tex), 1, 0, 2).add_cube_to_verts(c, c.color, tex_origin, EF_Z12);} // wall
-	else if (c.item_flags == 1) {get_material(tid_nm_pair_t(get_concrete_tid(), wall_tex.tscale_x), 1, 0, 2).add_cube_to_verts(c, c.color, all_zeros, EF_Z12);} // pillar
-	else if (c.item_flags == 2) {get_material(tid_nm_pair_t(get_concrete_tid(), wall_tex.tscale_x), 1, 0, 2).add_cube_to_verts(c, c.color, all_zeros, EF_Z2 );} // beam
+	else if (c.item_flags == 1) {get_material(tid_nm_pair_t(get_concrete_tid(), wall_tex.tscale_x, 1), 1, 0, 2).add_cube_to_verts(c, c.color, all_zeros, EF_Z12);} // pillar
+	else if (c.item_flags == 2) {get_material(tid_nm_pair_t(get_concrete_tid(), wall_tex.tscale_x, 0), 0, 0, 2).add_cube_to_verts(c, c.color, all_zeros, EF_Z2 );} // beam
 	else {assert(0);}
 }
 void building_room_geom_t::add_parking_space(room_object_t const &c, vector3d const &tex_origin, float tscale) {
@@ -1177,7 +1178,7 @@ void building_room_geom_t::add_parking_space(room_object_t const &c, vector3d co
 }
 
 void building_room_geom_t::add_pg_ramp(room_object_t const &c, vector3d const &tex_origin, float tscale) {
-	rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_concrete_tid(), tscale), 1, 0, 2));
+	rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_concrete_tid(), tscale, 1), 1, 0, 2));
 	//mat.add_cube_to_verts(c, WHITE, all_zeros); // TESTING
 	tquad_t ramp(4); // ramp surface
 	float const length(c.get_sz_dim(c.dim)), thickness(0.05*c.dz()), side_tc_y(thickness/length);
