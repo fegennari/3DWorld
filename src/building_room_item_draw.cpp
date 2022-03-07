@@ -1242,7 +1242,7 @@ void building_t::draw_pg_cars(shader_t &s, vector3d const &xlate, bool shadow_on
 			occluders.push_back(*i);
 		}
 		// gather occluders from parking garage ceilings and floors (below ground floor)
-		for (auto const &ceiling : interior->ceilings) {
+		for (auto const &ceiling : interior->fc_occluders) {
 			if (ceiling.z1() <= max_vis_zval) {occluders.push_back(ceiling);}
 		}
 		auto in(cars_to_draw.begin()), out(in);
@@ -1281,9 +1281,9 @@ bool building_t::check_obj_occluded(cube_t const &c, point const &viewer_in, occ
 	}
 	if (!c_is_building_part && (reflection_pass || bcube.contains_pt(viewer))) {
 		// viewer inside this building; includes shadow_only case and reflection_pass (even if reflected camera is outside the building);
-		// check floors of this building (and technically also ceilings)
+		// check floors/ceilings of this building
 		if (fabs(viewer.z - c.zc()) > (reflection_pass ? 1.0 : 0.5)*get_window_vspace()) { // on different floors
-			if (are_pts_occluded_by_any_cubes<0>(viewer, pts, npts, interior->floors, 2)) return 1;
+			if (are_pts_occluded_by_any_cubes<0>(viewer, pts, npts, interior->fc_occluders, 2)) return 1;
 		}
 	}
 	else if (camera_in_building) { // player in some other building

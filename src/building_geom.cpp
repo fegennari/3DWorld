@@ -1947,3 +1947,35 @@ void building_interior_t::finalize() {
 	for (unsigned d = 0; d < 2; ++d) {remove_excess_cap(walls[d]);}
 }
 
+void building_interior_t::create_fc_occluders() {
+	if (!fc_occluders.empty() || ceilings.empty()) return; // already done, or no ceilings
+	fc_occluders = ceilings; // start by copying ceilings
+	cube_t bcube(ceilings[0]);
+	
+	for (auto &c : fc_occluders) {
+		assert(c.is_strictly_normalized());
+		c.z2() += c.dz(); // double the thickness to include the floor as well
+		bcube.union_with_cube(c);
+	}
+	// max merge across the ceilings of each floor (occluder fusion)
+	for (auto c = fc_occluders.begin(); c != fc_occluders.end();) { // Note: no increment
+		auto floor_end(c);
+		for (floor_end++; floor_end != fc_occluders.end() && floor_end->z1() == c->z1(); ++floor_end) {} // find all ceilings on this floor
+
+		for (auto c1 = c; c1 != floor_end; ++c1) { // source
+			for (auto c2 = c; c2 != floor_end; ++c2) { // merge cand
+				if (c1 != c2) {try_expand_into_xy(*c1, *c2);}
+			}
+		}
+		c = floor_end;
+	} // for c
+	// remove small slivers
+	auto i(fc_occluders.begin()), o(i);
+
+	for (; i != fc_occluders.end(); ++i) {
+		assert(i->is_strictly_normalized());
+		if (i->dx() > 0.01*bcube.dx() && i->dy() > 0.01*bcube.dy()) {*(o++) = *i;}
+	}
+	fc_occluders.erase(o, fc_occluders.end());
+}
+

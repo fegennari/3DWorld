@@ -893,7 +893,7 @@ typedef vector<roof_obj_t> vect_roof_obj_t;
 
 // may as well make this its own class, since it could get large and it won't be used for every building
 struct building_interior_t {
-	vect_cube_t floors, ceilings, walls[2]; // walls are split by dim
+	vect_cube_t floors, ceilings, walls[2], fc_occluders; // walls are split by dim
 	vect_stairwell_t stairwells;
 	vector<door_t> doors;
 	vector<door_stack_t> door_stacks;
@@ -924,6 +924,7 @@ struct building_interior_t {
 	point find_closest_pt_on_obj_to_pos(building_t const &building, point const &pos, float pad_dist, bool no_ceil_floor) const;
 	void update_dynamic_draw_data() {assert(room_geom); room_geom->update_dynamic_draw_data();}
 	void get_avoid_cubes(vect_cube_t &avoid, float z1, float z2, float floor_thickness, bool same_as_player) const;
+	void create_fc_occluders();
 };
 
 struct building_stats_t {
