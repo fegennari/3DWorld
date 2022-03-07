@@ -1082,6 +1082,16 @@ bool building_t::maybe_add_house_driveway(cube_t const &plot, cube_t &ret, unsig
 	return 0; // failed to add driveway; this is rare, but can happen with a house that's close to the road, close to the plot edge on one side, and has an AC unit on the other side
 }
 
+void try_expand_into_xy(cube_t &c1, cube_t const &c2) {
+	for (unsigned d = 0; d < 2; ++d) { // attempt to merge in this dim
+		if (c2.d[d][0] > c1.d[d][0] || c2.d[d][1] < c1.d[d][1]) continue; // edge not contained
+
+		for (unsigned e = 0; e < 2; ++e) {
+			if (c2.d[!d][!e] == c1.d[!d][e]) {c1.d[!d][e] = c2.d[!d][e];} // merge
+		}
+	}
+}
+
 // for houses or office buildings
 void building_t::maybe_add_basement(rand_gen_t rgen) { // rgen passed by value so that the original isn't modified
 	if (!is_simple_cube()) return; // simple cube shaped buildings only
@@ -1102,15 +1112,8 @@ void building_t::maybe_add_basement(rand_gen_t rgen) { // rgen passed by value s
 		if (real_num_parts == 2) {
 			unsigned const ix(parts[1].get_area_xy() > parts[0].get_area_xy());
 			basement = parts[ix]; // start with the larger part
-
 			// attempt to expand into the smaller part as long as it fits within the footprint of the upper floors
-			for (unsigned dim = 0; dim < 2; ++dim) {
-				for (unsigned dir = 0; dir < 2; ++dir) {
-					if (parts[ix].d[dim][dir] != parts[!ix].d[dim][!dir]) continue; // not adjacent in this dim
-					if (parts[ix].d[!dim][0] < parts[!ix].d[!dim][0] || parts[ix].d[!dim][1] > parts[!ix].d[!dim][1]) continue; // smaller part does not contain larger part in this dim
-					basement.d[dim][dir] = parts[!ix].d[dim][dir]; // extend into the other part
-				}
-			}
+			try_expand_into_xy(basement, parts[!ix]);
 		}
 	}
 	else { // office building
@@ -1762,21 +1765,8 @@ void building_t::expand_ground_floor_cube(cube_t &cube, cube_t const &skip) cons
 		cube_t cand_ge(cube);
 		cand_ge.union_with_cube(*p);
 		if (cand_ge.get_area_xy() < 1.05f*(cube.get_area_xy() + p->get_area_xy())) {cube = cand_ge;} // union mostly includes the two parts
+		else {try_expand_into_xy(cube, *p);}
 	}
-	// try to expand the cube to each edge of the building's bcube; this may produce overlaps, but may cover additional area (such as for O-shaped buildings)
-	for (unsigned d = 0; d < 4; ++d) {
-		bool const dim(d>>1), dir(d&1);
-		if (cube.d[dim][dir] == bcube.d[dim][dir]) continue; // already at the bcube edge
-		cube_t cand(cube);
-		cand.d[dim][dir] = bcube.d[dim][dir];
-		float cov_area(0);
-
-		for (auto p = parts.begin(); p != get_real_parts_end(); ++p) {
-			if (p->z1() != ground_floor_z1) continue; // only count ground floor parts
-			if (p->intersects_xy(cand)) {cov_area += (min(cand.x2(), p->x2()) - max(cand.x1(), p->x1()))*(min(cand.y2(), p->y2()) - max(cand.y1(), p->y1()));}
-		}
-		if (cov_area > 0.99*cand.get_area_xy()) {cube = cand;} // expand if covered (with some tolerance to allow for FP error)
-	} // for d
 }
 
 void building_t::get_exclude_cube(point const &pos, cube_t const &skip, cube_t &exclude, bool camera_in_building) const {
