@@ -2408,6 +2408,13 @@ void building_t::place_objects_onto_surfaces(rand_gen_t rgen, room_t const &room
 			place_book_on_obj(rgen, surface, room_id, tot_light_amt, (obj.type != TYPE_TABLE));
 			avoid = objs.back();
 		}
+		if (avoid.is_all_zeros() && obj.type == TYPE_DESK) {
+			// if we have no other avoid object, and this is a desk, try to avoid placing an object that overlaps a pen or pencil
+			for (unsigned j = i+1; j < objs_end; ++j) {
+				room_object_t const &obj2(objs[j]);
+				if (obj2.type == TYPE_PEN || obj2.type == TYPE_PENCIL) {avoid = obj2; break;} // we can only use the first one
+			}
+		}
 		if      (bottle_prob > 0.0 && rgen.rand_float() < bottle_prob && place_bottle_on_obj(rgen, surface, room_id, tot_light_amt, avoid)) {}
 		else if (cup_prob    > 0.0 && rgen.rand_float() < cup_prob    && place_cup_on_obj   (rgen, surface, room_id, tot_light_amt, avoid)) {}
 		else if (laptop_prob > 0.0 && rgen.rand_float() < laptop_prob && place_laptop_on_obj(rgen, surface, room_id, tot_light_amt, avoid, (obj.type != TYPE_TABLE))) {}
