@@ -1785,7 +1785,10 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 		float const ppos(pillar_start + 0.25*p*pillar_spacing);
 		set_wall_width(beam, ppos, beam_hwidth, dim);
 		subtract_cubes_from_cube(beam, obstacles, wall_parts, temp, 1); // ignore_zval=1
-		for (auto const &w : wall_parts) {objs.emplace_back(w, TYPE_PG_WALL, room_id, !dim, 0, beam_flags, tot_light_amt, SHAPE_CUBE, wall_color, 2);}
+		
+		for (auto const &w : wall_parts) {
+			if (min(w.dx(), w.dy()) > beam_hwidth) {objs.emplace_back(w, TYPE_PG_WALL, room_id, !dim, 0, beam_flags, tot_light_amt, SHAPE_CUBE, wall_color, 2);}
+		}
 	}
 	// add beams in dim for each row of lights
 	for (unsigned n = 0; n < num_rows; ++n) {
@@ -1794,7 +1797,10 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 		beam.z1() += beam_delta_z; // shift the bottom up to the ceiling
 		set_wall_width(beam, pos, beam_hwidth, !dim);
 		subtract_cubes_from_cube(beam, obstacles, wall_parts, temp, 1); // ignore_zval=1
-		for (auto const &w : wall_parts) {objs.emplace_back(w, TYPE_PG_WALL, room_id, !dim, 0, beam_flags, tot_light_amt, SHAPE_CUBE, wall_color, 2);}
+
+		for (auto const &w : wall_parts) {
+			if (min(w.dx(), w.dy()) > beam_hwidth) {objs.emplace_back(w, TYPE_PG_WALL, room_id, !dim, 0, beam_flags, tot_light_amt, SHAPE_CUBE, wall_color, 2);}
+		}
 	}
 
 	// add parking spaces on both sides of each row (one side if half row)
