@@ -1791,7 +1791,7 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 	// add beams in !dim, at and between pillars
 	unsigned const beam_flags(RO_FLAG_NOCOLL | RO_FLAG_HANGING);
 
-	for (unsigned p = 0; p < 4*num_pillars - 1; ++p) { // add support pillars
+	for (unsigned p = 0; p < (4*(num_pillars - 1) + 1); ++p) { // add beams, 4 per pillar
 		float const ppos(pillar_start + 0.25*p*pillar_spacing);
 		set_wall_width(beam, ppos, beam_hwidth, dim);
 		subtract_cubes_from_cube(beam, obstacles, wall_parts, temp, 1); // ignore_zval=1
