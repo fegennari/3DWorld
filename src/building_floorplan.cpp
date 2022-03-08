@@ -1115,8 +1115,9 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 			}
 			if (has_stairs) { // add landings and stairwells
 				// make sure to enable back wall for the first flight of stairs
- 				landing_t landing(stairs_cut, 0, f, stairs_dim, stairs_dir, stairs_have_railing, ((f == 1 && sshape == SHAPE_WALLED_SIDES) ? (stairs_shape)SHAPE_WALLED : sshape), 0, is_at_top);
-				landing.z1() = zc; landing.z2() = zf;
+ 				landing_t landing(stairs_cut, 0, f, stairs_dim, stairs_dir, stairs_have_railing,
+					((f == 1 && sshape == SHAPE_WALLED_SIDES) ? (stairs_shape)SHAPE_WALLED : sshape), 0, is_at_top);
+				set_cube_zvals(landing, zc, zf);
 				landing.set_against_wall(stairs_against_wall);
 				last_landing_ix = interior->landings.size();
 				interior->landings.push_back(landing);
@@ -1129,7 +1130,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 			if (has_elevator) {
 				assert(!interior->elevators.empty());
 				landing_t landing(elevator_cut, 1, f, interior->elevators.back().dim, interior->elevators.back().dir);
-				landing.z1() = zc; landing.z2() = zf;
+				set_cube_zvals(landing, zc, zf);
 				interior->landings.push_back(landing);
 			}
 		}
@@ -1158,7 +1159,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 			subtract_cube_xy(part, stairs_cut, to_add);
 			interior->landings[last_landing_ix].is_at_top = 0; // previous landing is no longer at the top
 			landing_t landing(stairs_cut, 0, num_floors, stairs_dim, stairs_dir, 1, sshape, 1, 1); // stairs_have_railing=1, roof_access=1, is_at_top=1
-			landing.z1() = zc; landing.z2() = z; // no floor above
+			set_cube_zvals(landing, zc, z); // no floor above
 			landing.set_against_wall(stairs_against_wall);
 			interior->landings.push_back(landing);
 			interior->stairwells.back().z2() += fc_thick; // extend upward
