@@ -1121,14 +1121,12 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, 
 			bool const is_stacked(num_sides == 4 && i->z1() > bcube.z1() && i->dz() > 0.5f*get_window_vspace());
 			if (is_stacked && skip_top) continue; // no top/bottom to draw
 
-			if (!is_house && !skip_top && interior) {
-				if (clip_part_ceiling_for_stairs(*i, bdraw.temp_cubes, bdraw.temp_cubes2)) {
-					for (auto c = bdraw.temp_cubes.begin(); c != bdraw.temp_cubes.end(); ++c) { // add floors after removing stairwells
-						bdraw.add_section(*this, 0, *c, mat.roof_tex, roof_color, 4, 1, 0, is_house, 0); // only Z dim
-					}
-					skip_top = 1;
-					if (is_stacked) continue; // no top/bottom to draw
+			if (!is_house && !skip_top && interior && clip_part_ceiling_for_stairs(*i, bdraw.temp_cubes, bdraw.temp_cubes2)) { // add roof quads
+				for (auto c = bdraw.temp_cubes.begin(); c != bdraw.temp_cubes.end(); ++c) { // add floors after removing stairwells
+					bdraw.add_section(*this, 0, *c, mat.roof_tex, roof_color, 4, 1, 0, is_house, 0); // only Z dim
 				}
+				skip_top = 1;
+				if (is_stacked) continue; // no top/bottom to draw
 			}
 			bdraw.add_section(*this, 1, *i, mat.roof_tex, roof_color, 4, is_stacked, skip_top, is_house, 0); // only Z dim
 		} // for i

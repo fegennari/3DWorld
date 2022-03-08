@@ -1181,7 +1181,7 @@ void building_room_geom_t::add_pg_ramp(room_object_t const &c, vector3d const &t
 	rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_concrete_tid(), tscale, 1), 1, 0, 2));
 	//mat.add_cube_to_verts(c, WHITE, all_zeros); // TESTING
 	tquad_t ramp(4); // ramp surface
-	float const length(c.get_sz_dim(c.dim)), thickness(0.05*c.dz()), side_tc_y(thickness/length);
+	float const length(c.get_sz_dim(c.dim)), thickness(FLOOR_THICK_VAL_OFFICE*c.dz()), side_tc_y(thickness/length);
 	float const zv[2] = {c.z1(), c.z2()};
 	// dim dir z0 z1 z2 z3
 	// 0   0   1  0  0  1
