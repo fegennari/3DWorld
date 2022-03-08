@@ -1933,9 +1933,17 @@ struct cube_by_sz { // sort cube by size in dim descending
 	cube_by_sz(bool dim_) : dim(dim_) {}
 	bool operator()(cube_t const &a, cube_t const &b) const {return (b.get_sz_dim(dim) < a.get_sz_dim(dim));}
 };
+struct cube_b_z1_descending {
+	bool operator()(cube_t const &a, cube_t const &b) const {return (a.z1() > b.z1());}
+};
+struct cube_b_z2_ascending {
+	bool operator()(cube_t const &a, cube_t const &b) const {return (a.z2() < b.z2());}
+};
 
 void building_interior_t::finalize() {
 	for (unsigned d = 0; d < 2; ++d) {sort(walls[d].begin(), walls[d].end(), cube_by_sz(!d));} // sort walls longest to shortest to improve occlusion culling time
+	sort(floors  .begin(), floors  .end(), cube_b_z1_descending()); // top down,  for early z culling and improved occluder fusion
+	sort(ceilings.begin(), ceilings.end(), cube_b_z2_ascending ()); // bottom up, for early z culling and improved occluder fusion
 	remove_excess_cap(floors);
 	remove_excess_cap(ceilings);
 	remove_excess_cap(rooms);
