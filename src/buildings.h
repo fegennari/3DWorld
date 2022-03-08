@@ -381,7 +381,7 @@ std::string const room_names[NUM_RTYPES] =
 	{"Unset", "Hallway", "Stairs", "Office", "Bathroom", "Bedroom", "Kitchen", "Living Room", "Dining Room", "Study",
 	 "Entryway", "Library", "Storage Room", "Garage", "Shed", "Lobby", "Laundry Room", "Card Room", "Play Room", "Art Room",
 	 "Parking Garage"};
-enum {SHAPE_STRAIGHT=0, SHAPE_U, SHAPE_WALLED, SHAPE_WALLED_SIDES};
+enum {SHAPE_STRAIGHT=0, SHAPE_U, SHAPE_WALLED, SHAPE_WALLED_SIDES, SHAPE_RAMP};
 typedef uint8_t stairs_shape;
 enum {ROOM_WALL_INT=0, ROOM_WALL_SEP, ROOM_WALL_EXT, ROOM_WALL_BASEMENT};
 enum {/*building models*/ OBJ_MODEL_TOILET=0, OBJ_MODEL_SINK, OBJ_MODEL_TUB, OBJ_MODEL_FRIDGE, OBJ_MODEL_STOVE, OBJ_MODEL_TV, OBJ_MODEL_MONITOR, OBJ_MODEL_COUCH,
@@ -832,12 +832,13 @@ struct stairs_landing_base_t {
 };
 
 struct landing_t : public cube_t, public stairs_landing_base_t {
-	bool for_elevator, has_railing, is_at_top;
+	bool for_elevator, for_ramp, has_railing, is_at_top;
 	uint8_t floor;
 
-	landing_t() : for_elevator(0), has_railing(0), is_at_top(0), floor(0) {}
-	landing_t(cube_t const &c, bool e, uint8_t f, bool dim_, bool dir_, bool railing=0, stairs_shape shape_=SHAPE_STRAIGHT, bool roof_access_=0, bool at_top=0, bool sc=0) :
-		cube_t(c), stairs_landing_base_t(dim_, dir_, roof_access_, shape_, sc), for_elevator(e), has_railing(railing), is_at_top(at_top), floor(f)
+	landing_t() : for_elevator(0), for_ramp(0), has_railing(0), is_at_top(0), floor(0) {}
+	landing_t(cube_t const &c, bool e, uint8_t f, bool dim_, bool dir_,
+		bool railing=0, stairs_shape shape_=SHAPE_STRAIGHT, bool roof_access_=0, bool at_top=0, bool sc=0, bool fr=0) :
+		cube_t(c), stairs_landing_base_t(dim_, dir_, roof_access_, shape_, sc), for_elevator(e), for_ramp(fr), has_railing(railing), is_at_top(at_top), floor(f)
 	{assert(is_strictly_normalized());}
 };
 
@@ -904,6 +905,7 @@ struct building_interior_t {
 	vect_cube_t exclusion;
 	std::unique_ptr<building_room_geom_t> room_geom;
 	std::unique_ptr<building_nav_graph_t> nav_graph;
+	cube_with_ix_t pg_ramp; // ix stores {dim, dir}
 	draw_range_t draw_range;
 	uint64_t top_ceilings_mask; // bit mask for ceilings that are on the top floor and have no floor above them
 	bool door_state_updated, is_unconnected;
@@ -1076,6 +1078,7 @@ struct building_t : public building_geom_t {
 	bool interior_enabled() const;
 	void gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes);
 	int maybe_assign_interior_garage(bool &gdim, bool &gdir);
+	void add_parking_garage_ramp(rand_gen_t &rgen);
 	void add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part, cube_t const &hall, unsigned part_ix, unsigned num_floors,
 		unsigned rooms_start, bool use_hallway, bool first_part_this_stack, float window_hspacing[2], float window_border);
 	void connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t const &part);

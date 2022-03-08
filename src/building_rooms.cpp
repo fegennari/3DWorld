@@ -1741,28 +1741,18 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 	// get obstacles for walls with and without clearance; maybe later add entrance/exit ramps, etc.
 	interior->get_stairs_and_elevators_bcubes_intersecting_cube(room_floor_cube, obstacles, 0.0); // without clearance
 	interior->get_stairs_and_elevators_bcubes_intersecting_cube(room_floor_cube, obstacles_exp, 0.9*window_vspacing); // with clearance
-
-	// add ramp of TYPE_RAMP before adding parking spaces, and add to obstacles_exp; need to cut out the floor somehow
-	bool const ramp_pref_xdir(rgen.rand_bool()), ramp_pref_ydir(rgen.rand_bool());
-	bool added_ramp(0);
-
-	for (unsigned xd = 0; xd < 2 && !added_ramp; ++xd) {
-		for (unsigned yd = 0; yd < 2; ++yd) {
-			bool const xdir(bool(xd) ^ ramp_pref_xdir), ydir(bool(yd) ^ ramp_pref_ydir);
-			float const xsz((dim ? 2.0 : 1.0)*road_width), ysz((dim ? 1.0 : 2.0)*road_width); // longer in !dim
-			point const corner(room.d[0][xdir], room.d[1][ydir], zval);
-			point const c1((corner.x - 0.001*(xdir ? -1.0 : 1.0)*xsz), (corner.y - 0.001*(ydir ? -1.0 : 1.0)*ysz), zval); // slight inward shift to prevent z-fighting
-			point const c2((corner.x + (xdir ? -1.0 : 1.0)*xsz), (corner.y + (ydir ? -1.0 : 1.0)*ysz), ceiling_z);
-			cube_t ramp(c1, c2);
-			if (has_bcube_int_xy(ramp, obstacles_exp)) continue; // bad ramp pos if it intersects stairs or an elevator
-			objs.emplace_back(ramp, TYPE_RAMP, room_id, !dim, (dim ? xdir: ydir), 0, tot_light_amt, SHAPE_CUBE, wall_color);
-			obstacles    .push_back(ramp); // don't place parking spaces next to the ramp
-			obstacles_exp.push_back(ramp); // clip beams to ramp
-			added_ramp = 1;
-			break; // done
-		} // for yd
-	} // for xd
-	if (!added_ramp) {} // what if none of the 4 corners work for a ramp?
+	cube_with_ix_t const &ramp(interior->pg_ramp);
+	
+	// add ramp if one was placed during floorplanning, before adding parking spaces
+	// Note: lights can be very close to ramps, but I haven't actually seen them touch; do we need to check for and handle that case?
+	if (!ramp.is_all_zeros()) {
+		cube_t rc(ramp); // ramp clipped to this parking garage floor
+		set_cube_zvals(rc, zval, (zval + window_vspacing));
+		objs.emplace_back(rc, TYPE_RAMP, room_id, (ramp.ix >> 1), (ramp.ix & 1), 0, tot_light_amt, SHAPE_ANGLED, wall_color);
+		obstacles    .push_back(rc); // don't place parking spaces next to the ramp
+		obstacles_exp.push_back(rc); // clip beams to ramp
+	}
+	// add walls and pillars
 	if (interior->room_geom->pg_wall_start == 0) {interior->room_geom->pg_wall_start = objs.size();} // set if not set, on first level
 	vect_cube_t pillars; // added after wall segments
 
@@ -3303,7 +3293,7 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 
 	// add floor signs for U-shaped stairs
 	for (auto i = interior->landings.begin(); i != interior->landings.end(); ++i) {
-		if (i->for_elevator || i->shape != SHAPE_U) continue; // not U-shaped stairs
+		if (i->for_elevator || i->for_ramp || i->shape != SHAPE_U) continue; // not U-shaped stairs
 		unsigned const floor_offset(calc_floor_offset(i->z1()));
 		point center;
 		center[ i->dim] = i->d[i->dim][!i->dir]; // front of stairs
@@ -3389,7 +3379,7 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 	colorRGBA const railing_color(railing_colors[rgen.rand()%3]); // set per-building
 
 	for (auto i = interior->landings.begin(); i != interior->landings.end(); ++i) {
-		if (i->for_elevator) continue; // for elevator, not stairs
+		if (i->for_elevator || i->for_ramp) continue; // for elevator or ramp, not stairs
 		unsigned const num_stairs(i->get_num_stairs());
 		float const stair_dz(window_vspacing/(num_stairs+1)), stair_height(stair_dz + floor_thickness);
 		bool const dim(i->dim), dir(i->dir), has_side_walls(i->shape == SHAPE_WALLED || i->shape == SHAPE_WALLED_SIDES || i->shape == SHAPE_U);

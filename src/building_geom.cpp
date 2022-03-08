@@ -1898,14 +1898,16 @@ float building_t::get_doorway_width() const {
 	if (interior) {width = interior->get_doorway_width();}
 	return (width ? width : DOOR_WIDTH_SCALE*get_door_height()); // calculate from window spacing/door height if there's no interior or no interior doors
 }
-bool building_interior_t::is_blocked_by_stairs_or_elevator(cube_t const &c, float dmin, bool elevators_only) const {
+bool building_interior_t::is_blocked_by_stairs_or_elevator(cube_t const &c, float dmin, bool elevators_only) const { // and ramps
 	cube_t tc(c);
 	tc.expand_by_xy(dmin); // no pad in z
 	float const doorway_width(get_doorway_width()); // Note: can return zero
-	if (has_bcube_int(tc, elevators, doorway_width)) return 1;
-	if (elevators_only || stairwells.empty()) return 0;
+	if (has_bcube_int(tc, elevators, doorway_width))       return 1;
+	if (elevators_only || stairwells.empty())              return 0;
 	tc.z1() -= 0.001*tc.dz(); // expand slightly to avoid placing an object exactly at the top of the stairs
-	return has_bcube_int(tc, stairwells, doorway_width); // must check zval to exclude stairs and elevators in parts with other z-ranges
+	if (has_bcube_int(tc, stairwells, doorway_width))      return 1; // must check zval to exclude stairs and elevators in parts with other z-ranges
+	if (!pg_ramp.is_all_zeros() && pg_ramp.intersects(tc)) return 1;
+	return 0;
 }
 // similar to above, but no expand for stairs/elevator, uses raw bcubes
 bool building_interior_t::is_blocked_by_stairs_or_elevator_no_expand(cube_t const &c, float dmin) const {
