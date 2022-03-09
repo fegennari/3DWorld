@@ -1256,6 +1256,10 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, 
 		for (auto i = interior->landings.begin(); i != interior->landings.end(); ++i) { // added per-floor (530K T)
 			unsigned dim_mask(3); // disable faces: 8=x1, 16=x2, 32=y1, 64=y2
 			if (i->for_elevator) {dim_mask |= (120 - (1 << (i->get_face_id() + 3)));} // disable all but the open side of the elevator
+			else if (i->for_ramp) {
+				if (i->dim == 0) {dim_mask |= ((i->yc() < bcube.yc()) ? 32 : 64);} // X, skip Y face closest to building wall
+				else             {dim_mask |= ((i->xc() < bcube.xc()) ?  8 : 16);} // Y, skip X face closest to building wall
+			}
 			bdraw.add_section(*this, 0, *i, mat.wall_tex, mat.wall_color, dim_mask, 0, 0, 1, 0, 0.0, 0, 1.0, 1); // no AO; X/Y dims only, inverted normals
 		}
 		for (auto i = interior->elevators.begin(); i != interior->elevators.end(); ++i) {
