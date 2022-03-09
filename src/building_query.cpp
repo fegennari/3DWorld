@@ -7,7 +7,7 @@
 
 
 extern bool draw_building_interiors, player_near_toilet, player_is_hiding;
-extern float CAMERA_RADIUS;
+extern float CAMERA_RADIUS, C_STEP_HEIGHT;
 extern int player_in_closet, camera_surf_collide, frame_counter, player_in_elevator;
 extern double camera_zh;
 extern building_params_t global_building_params;
@@ -431,6 +431,32 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, vec
 			cube_t c_extended(*c);
 			if      (c->type == TYPE_STAIR ) {c_extended.z1() -= camera_zh;} // handle the player's head for stairs
 			else if (c->type == TYPE_CLOSET) {c_extended = get_closet_bcube_including_door(*c);}
+
+			if (c->type == TYPE_RAMP) { // should be SHAPE_ANGLED
+				if (!sphere_cube_intersect_xy(pos, xy_radius, c_extended)) continue; // optimization
+				//if (obj_z - radius >= c->z2()) continue; // above the top of the ramp, ignore
+				float const length(c->get_sz_dim(c->dim)), height(c->dz()), t(CLIP_TO_01((pos[c->dim] - c->d[c->dim][0])/length)), T(c->dir ? t : (1.0-t));
+				float const ztop(c->z1() + height*T), zbot(ztop - FLOOR_THICK_VAL_OFFICE*height);
+					
+				if (ztop < obj_z - radius + C_STEP_HEIGHT*radius) { // step onto or move along ramp top surface
+					pos.z = ztop + radius;
+					obj_z = max(pos.z, p_last.z);
+					had_coll = 1;
+					continue;
+				}
+				else if (zbot < obj_z + camera_zh) { // colliding with sides or bottom of the ramp
+					cube_t ramp_ext(*c);
+					ramp_ext.expand_in_dim(c->dim, 1.01*xy_radius); // extend to include the player radius at both ends
+
+					if (ramp_ext.contains_pt_xy(pos)) { // colliding with the bottom
+						float const dz(obj_z + camera_zh - zbot), delta(dz*length/height);
+						pos[c->dim] += (c->dir ? 1.0 : -1.0)*delta;
+						had_coll = 1;
+						continue;
+					} // else treat it as a cube side collision
+				}
+				else {continue;} // under the ramp: no collision
+			}
 			if (!sphere_cube_intersect(pos, xy_radius, c_extended)) continue; // optimization
 
 			if (c->type == TYPE_RAILING) { // only collide with railing at top of stairs, not when walking under stairs
