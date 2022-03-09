@@ -1762,7 +1762,11 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 			set_wall_width(wall,   pos, wall_hc, !dim);
 			set_wall_width(pillar, pos, pillar_hwidth, !dim);
 			subtract_cubes_from_cube(wall, obstacles_exp, wall_parts, temp, 1); // ignore_zval=1
-			for (auto const &w : wall_parts) {objs.emplace_back(w, TYPE_PG_WALL, room_id, !dim, 0, 0, tot_light_amt, SHAPE_CUBE, wall_color, 0);}
+			
+			for (auto const &w : wall_parts) {
+				if (w.get_sz_dim(dim) < 2.0*window_vspacing) continue; // too short, skip
+				objs.emplace_back(w, TYPE_PG_WALL, room_id, !dim, 0, 0, tot_light_amt, SHAPE_CUBE, wall_color, 0);
+			}
 		}
 		else { // room wall
 			bool const side(n == num_walls+1);
