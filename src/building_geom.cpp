@@ -1907,7 +1907,7 @@ bool building_interior_t::is_blocked_by_stairs_or_elevator(cube_t const &c, floa
 	tc.z1() -= 0.001*tc.dz(); // expand slightly to avoid placing an object exactly at the top of the stairs
 	if (has_bcube_int(tc, stairwells, doorway_width))      return 1; // must check zval to exclude stairs and elevators in parts with other z-ranges
 	
-	if (!pg_ramp.is_all_zeros()) {
+	if (!ignore_ramp_placement && !pg_ramp.is_all_zeros()) {
 		cube_t ramp_ext(pg_ramp);
 		ramp_ext.z2() += 0.5*doorway_width; // extend the top upward a bit so that it intersects anything placed on/near the floor
 		if (ramp_ext.intersects(tc)) return 1;

@@ -1389,6 +1389,7 @@ void building_t::add_parking_garage_ramp(rand_gen_t &rgen) {
 	if (1) { // FIXME: rooms on the ground floor above ramps aren't yet handled, so clip ramps to avoid disrupting their floors until this is fixed
 		ramp.z2() -= 2.0*floor_thickness;
 		--num_floors;
+		interior->ignore_ramp_placement = 1; // okay to place room objects over ramps because the floor has not been removed
 	}
 	for (unsigned f = 0; f < num_floors; ++f, z += window_vspacing) { // skip first floor - draw pairs of floors and ceilings
 		landing_t landing(ramp, 0, f, !dim, dir, 0, SHAPE_RAMP, 0, (f+1 == num_floors), 0, 1); // for_ramp=1
@@ -1396,7 +1397,7 @@ void building_t::add_parking_garage_ramp(rand_gen_t &rgen) {
 		interior->landings.push_back(landing);
 	}
 	// cut out spaces from floors and ceilings
-	subtract_cube_from_floor_ceil(ramp, interior->floors);
+	subtract_cube_from_floor_ceil(ramp, interior->floors  );
 	subtract_cube_from_floor_ceil(ramp, interior->ceilings);
 }
 

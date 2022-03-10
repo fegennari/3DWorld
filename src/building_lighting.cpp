@@ -626,7 +626,9 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 					if (i->contains_pt(camera_rot)) {camera_on_stairs = 1; break;}
 				}
 			}
-			if (!camera_on_stairs && has_pg_ramp() && interior->pg_ramp.contains_pt(camera_rot - vector3d(0.0, 0.0, (CAMERA_RADIUS + camera_zh)))) { // what about on a ramp?
+			if (!camera_on_stairs && has_pg_ramp() && !interior->ignore_ramp_placement &&
+				interior->pg_ramp.contains_pt(camera_rot - vector3d(0.0, 0.0, (CAMERA_RADIUS + camera_zh)))) // what about on a ramp?
+			{
 				camera_on_stairs = camera_by_stairs = camera_somewhat_by_stairs = 1; // ramp counts as stairs
 			}
 			if (!camera_somewhat_by_stairs) { // what about camera in room adjacent to one with stairs? maybe set camera_somewhat_by_stairs

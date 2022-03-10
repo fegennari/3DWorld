@@ -908,7 +908,7 @@ struct building_interior_t {
 	cube_with_ix_t pg_ramp; // ix stores {dim, dir}
 	draw_range_t draw_range;
 	uint64_t top_ceilings_mask; // bit mask for ceilings that are on the top floor and have no floor above them
-	bool door_state_updated, is_unconnected;
+	bool door_state_updated, is_unconnected, ignore_ramp_placement;
 
 	building_interior_t();
 	~building_interior_t();
