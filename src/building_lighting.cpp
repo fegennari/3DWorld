@@ -621,15 +621,15 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			if (display_mode & 0x20) {lighting_update_text = room_names[room_type];} // debugging, key '6'
 			register_player_in_building(camera_bs, building_id); // required for AI following logic
 
-			if (camera_by_stairs) {
+			if (camera_by_stairs) { // by stairs - check if we're actually on the stairs
 				for (auto i = interior->stairwells.begin(); i != interior->stairwells.end(); ++i) {
 					if (i->contains_pt(camera_rot)) {camera_on_stairs = 1; break;}
 				}
 			}
-			else if (has_pg_ramp() && interior->pg_ramp.contains_pt(camera_bs)) {
-				camera_somewhat_by_stairs = 1; // ramp counts as stairs
+			if (!camera_on_stairs && has_pg_ramp() && interior->pg_ramp.contains_pt(camera_rot - vector3d(0.0, 0.0, (CAMERA_RADIUS + camera_zh)))) { // what about on a ramp?
+				camera_on_stairs = camera_by_stairs = camera_somewhat_by_stairs = 1; // ramp counts as stairs
 			}
-			else { // what about camera in room adjacent to one with stairs?
+			if (!camera_somewhat_by_stairs) { // what about camera in room adjacent to one with stairs? maybe set camera_somewhat_by_stairs
 				cube_t cr(interior->rooms[camera_room]);
 				cr.expand_by_xy(2.0*wall_thickness);
 
@@ -669,24 +669,26 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		if (light_in_basement && (camera_z > (ground_floor_z1 + window_vspacing) || !bcube.contains_pt(camera_bs))) continue;
 		room_t const &room(get_room(i->room_id));
 		bool const is_lamp(i->type == TYPE_LAMP), is_in_elevator(i->flags & RO_FLAG_IN_ELEV), is_single_floor(room.is_sec_bldg || is_in_elevator);
-		int const cur_floor((i->z1() - room.z1())/window_vspacing);
-		float const level_z(room.z1() + cur_floor*window_vspacing), floor_z(is_single_floor ? room.z1() : (level_z + fc_thick));
-		float const ceil_z(is_single_floor ? room.z2() : (level_z + window_vspacing - fc_thick)); // garages and sheds are all one floor
+		int const cur_floor(is_single_floor ? 0 : (i->z1() - room.z1())/window_vspacing); // garages and sheds are all one floor
+		float const level_z(room.z1() + cur_floor*window_vspacing), floor_z(level_z + fc_thick);
+		float const ceil_z(is_single_floor ? room.z2() : (level_z + window_vspacing - fc_thick));
 		float const floor_below_zval(floor_z - window_vspacing), ceil_above_zval(ceil_z + window_vspacing);
-		// secondary buildings are all one floor independent of height
-		bool const floor_is_above((camera_z < floor_z) && !is_single_floor), floor_is_below(camera_z > ceil_z);
-		bool const camera_room_same_part(room.part_id == camera_part);
-		bool const light_room_has_stairs_or_ramp(i->has_stairs() || room.has_stairs_on_floor(cur_floor) || is_room_above_ramp(room, i->z1()));
+		// Note: we use level_z rather than floor_z for floor_is_above test so that it agrees with the threshold logic for player_in_basement
+		bool const floor_is_above((camera_z < level_z) && !is_single_floor), floor_is_below(camera_z > ceil_z);
+		bool const camera_room_same_part(room.part_id == camera_part), has_stairs_this_floor(room.has_stairs_on_floor(cur_floor));
+		bool const light_room_has_stairs_or_ramp(i->has_stairs() || has_stairs_this_floor || is_room_above_ramp(room, i->z1()));
 		// if the light is in the basement and the camera isn't, it's not visible unless the player is by the stairs
-		if ( light_in_basement && !player_in_basement && !camera_somewhat_by_stairs    ) continue;
-		// if the player is in the basement but the light isn't, it's not visible unless the room with the light has stairs or a ramp up to it (applies to parking garages)
-		if (!light_in_basement &&  player_in_basement && !light_room_has_stairs_or_ramp) continue;
+		if ( light_in_basement && player_in_basement == 0 && !camera_somewhat_by_stairs    ) continue;
+		// if the player is fully in the basement but the light isn't, it's not visible unless the room with the light has stairs or a ramp up to it (applies to parking garages)
+		if (!light_in_basement && player_in_basement == 2 && !light_room_has_stairs_or_ramp) continue;
 		// less culling if either the light or the camera is by stairs and light is on the floor above or below
 		bool stairs_light(0);
 
 		if ((camera_z > floor_below_zval) && (camera_z < ceil_above_zval)) { // light is on the floor above or below the camera
-			if (camera_in_hallway && camera_by_stairs && camera_room_same_part) { // special case for player in an office building primary hallway with stairs
-				stairs_light = ((int)i->room_id == camera_room); // only handle the case where the light is in the hallway above or below
+			if (camera_in_hallway && camera_by_stairs && camera_room_same_part) {
+				// special case for player in an office building primary hallway with stairs; only handle the case where the light is in the hallway above or below;
+				// if camera is on the stairs or a ramp this also counts because this may be connecting two rooms in two different parts
+				stairs_light = ((int)i->room_id == camera_room || camera_on_stairs);
 			}
 			else {
 				stairs_light = (light_room_has_stairs_or_ramp || camera_somewhat_by_stairs); // either the light or the camera is by the stairs
@@ -699,7 +701,6 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			{
 				// player is on a different floor of the same building part, or more than one floor away in a part stack, and can't see a light from the floor above/below
 				if (!stairs_light) continue; // camera in building and on wrong floor, don't add light
-				if (camera_z < floor_below_zval || camera_z > ceil_above_zval) continue; // light is on the stairs, add if one floor above/below
 			}
 			else { // camera outside the building (or the part that contains this light)
 				float const xy_dist(p2p_dist_xy(camera_bs, lpos_rot));
@@ -851,7 +852,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			else { // add a second, smaller unshadowed light for the upper hemisphere
 				point const lpos_up(lpos_rot - vector3d(0.0, 0.0, 2.0*i->dz()));
 				// the upward pointing light is unshadowed and won't pick up shadows from any stairs in the room, so reduce the radius
-				float const rscale((room.is_hallway ? 0.25 : room.is_office ? 0.45 : 0.5)*(room.has_stairs_on_floor(cur_floor) ? 0.67 : 1.0));
+				float const rscale((room.is_hallway ? 0.25 : room.is_office ? 0.45 : 0.5)*(has_stairs_this_floor ? 0.67 : 1.0));
 				dl_sources.emplace_back(rscale*light_radius, lpos_up, lpos_up, color, 0, plus_z, 0.5);
 			}
 			if (!light_bc2.is_all_zeros()) {dl_sources.back().set_custom_bcube(light_bc2);}

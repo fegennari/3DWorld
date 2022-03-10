@@ -1337,19 +1337,20 @@ int building_t::check_player_in_basement(point const &pos) const {
 		for (auto const &s : interior->stairwells) {
 			if (s.contains_pt(pos)) return 1; // player on stairs, upper floor and windows/outside may be visible
 		}
+		if (has_pg_ramp() && interior->pg_ramp.contains_pt(pos)) return 1;
 	}
-	return 2; // player in basement but not on stairs
+	return 2; // player in basement but not on stairs or ramp
 }
 
 bool building_t::is_obj_above_ramp(cube_t const &c) const {
 	assert(interior);
 	if (!has_pg_ramp()) return 0;
-	return (interior->pg_ramp.contains_pt_xy(c.get_cube_center()) && c.z2() >= interior->pg_ramp.z2() && (c.z1() - interior->pg_ramp.z2()) < get_window_vspace());
+	return (interior->pg_ramp.contains_pt_xy(c.get_cube_center()) && c.z2() >= interior->pg_ramp.z2() && (c.z1() - interior->pg_ramp.z2()) <= get_window_vspace());
 }
 bool building_t::is_room_above_ramp(cube_t const &room, float zval) const {
 	assert(interior);
 	if (!has_pg_ramp()) return 0;
-	return (interior->pg_ramp.intersects_xy(room) && zval >= interior->pg_ramp.z2() && (zval - interior->pg_ramp.z2()) < get_window_vspace());
+	return (interior->pg_ramp.intersects_xy(room) && zval >= interior->pg_ramp.z2() && (zval - interior->pg_ramp.z2()) <= get_window_vspace());
 }
 
 void building_t::print_building_manifest() const { // Note: skips expanded_objs
