@@ -1619,7 +1619,7 @@ bool building_t::clip_part_ceiling_for_stairs(cube_t const &c, vect_cube_t &out,
 		if (e->z2() == c.z2()) continue; // don't cut a hole in the roof of the building where the top of the elevator shaft ends
 		subtract_cube_from_cubes(*e, out);
 	}
-	if (!interior->pg_ramp.is_all_zeros()) {subtract_cube_from_cubes(interior->pg_ramp, out);} // is this needed?
+	if (has_pg_ramp()) {subtract_cube_from_cubes(interior->pg_ramp, out);} // is this needed?
 	return 1;
 }
 
