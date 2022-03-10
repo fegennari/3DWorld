@@ -1224,6 +1224,11 @@ void building_room_geom_t::add_pg_ramp(room_object_t const &c, vector3d const &t
 	} // for s
 }
 
+void building_room_geom_t::add_pipe(room_object_t const &c) {
+	rgeom_mat_t &metal_mat(get_metal_material(0, 0, 2)); // unshadowed, detail object
+	// TODO
+}
+
 // Note: there is a lot duplicated with building_room_geom_t::add_elevator(), but we need a separate function for adding interior elevator buttons
 cube_t get_elevator_car_panel(room_object_t const &c, float fc_thick_scale) {
 	float const dz(c.dz()), thickness(fc_thick_scale*dz), signed_thickness((c.dir ? 1.0 : -1.0)*thickness);

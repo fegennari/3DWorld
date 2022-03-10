@@ -1862,7 +1862,7 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 			} // for s
 		} // for d
 	} // for n
-	// TODO: add pipes to the ceiling and other details?
+	// TODO: add pipes to the ceiling using TYPE_PIPE
 }
 
 colorRGBA choose_pot_color(rand_gen_t &rgen) {
