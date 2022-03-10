@@ -1229,7 +1229,7 @@ void building_t::draw_pg_cars(shader_t &s, vector3d const &xlate, bool shadow_on
 		if (!(i->flags & RO_FLAG_USED)) continue; // no car in this space
 		if (i->z2() < viewer.z - 2.0*floor_spacing) continue; // move than a floor below - skip
 		car_t car(car_from_parking_space(*i));
-		if (!shadow_only && check_occlusion && viewer.z > ground_floor_z1 && !line_intersect_stairs(viewer, car.get_center())) continue;
+		if (!shadow_only && check_occlusion && viewer.z > ground_floor_z1 && !line_intersect_stairs_or_ramp(viewer, car.get_center())) continue;
 		if (camera_pdu.cube_visible(car.bcube + xlate)) {cars_to_draw.push_back(car);}
 	}
 	if (cars_to_draw.empty()) return;

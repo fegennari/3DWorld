@@ -1121,7 +1121,7 @@ struct building_t : public building_geom_t {
 	void register_player_enter_building() const;
 	void register_player_exit_building () const;
 	bool check_for_wall_ceil_floor_int(point const &p1, point const &p2) const;
-	bool line_intersect_stairs(point const &p1, point const &p2) const;
+	bool line_intersect_stairs_or_ramp(point const &p1, point const &p2) const;
 	bool maybe_use_last_pickup_room_object(point const &player_pos);
 	bool maybe_update_tape(point const &player_pos, bool end_of_tape);
 	void handle_vert_cylin_tape_collision(point &cur_pos, point const &prev_pos, float z1, float z2, float radius, bool is_player) const;
@@ -1322,6 +1322,8 @@ private:
 	bool get_zval_for_obj_placement(point const &pos, float radius, float &zval, bool add_z_bias) const;
 	void add_blood_decal(point const &pos);
 	void play_tape_sound(point const &sound_pos, float sound_gain) const;
+	bool is_obj_above_ramp(cube_t const &c) const;
+	bool is_room_above_ramp(cube_t const &room, float zval) const;
 public:
 	// ray queries
 	bool check_line_intersect_doors(point const &p1, point const &p2, bool inc_open=0) const;

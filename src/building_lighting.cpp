@@ -626,6 +626,9 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 					if (i->contains_pt(camera_rot)) {camera_on_stairs = 1; break;}
 				}
 			}
+			else if (has_pg_ramp() && interior->pg_ramp.contains_pt(camera_bs)) {
+				camera_somewhat_by_stairs = 1; // ramp counts as stairs
+			}
 			else { // what about camera in room adjacent to one with stairs?
 				cube_t cr(interior->rooms[camera_room]);
 				cr.expand_by_xy(2.0*wall_thickness);
@@ -673,11 +676,11 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		// secondary buildings are all one floor independent of height
 		bool const floor_is_above((camera_z < floor_z) && !is_single_floor), floor_is_below(camera_z > ceil_z);
 		bool const camera_room_same_part(room.part_id == camera_part);
-		bool const light_room_has_stairs(i->has_stairs() || room.has_stairs_on_floor(cur_floor));
+		bool const light_room_has_stairs_or_ramp(i->has_stairs() || room.has_stairs_on_floor(cur_floor) || is_room_above_ramp(room, i->z1()));
 		// if the light is in the basement and the camera isn't, it's not visible unless the player is by the stairs
-		if ( light_in_basement && !player_in_basement && !camera_somewhat_by_stairs) continue;
-		// if the player is in the basement but the light isn't, it's not visible unless the room with the light has stairs (applies to parking garages)
-		if (!light_in_basement &&  player_in_basement && !light_room_has_stairs    ) continue;
+		if ( light_in_basement && !player_in_basement && !camera_somewhat_by_stairs    ) continue;
+		// if the player is in the basement but the light isn't, it's not visible unless the room with the light has stairs or a ramp up to it (applies to parking garages)
+		if (!light_in_basement &&  player_in_basement && !light_room_has_stairs_or_ramp) continue;
 		// less culling if either the light or the camera is by stairs and light is on the floor above or below
 		bool stairs_light(0);
 
@@ -686,7 +689,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 				stairs_light = ((int)i->room_id == camera_room); // only handle the case where the light is in the hallway above or below
 			}
 			else {
-				stairs_light = (light_room_has_stairs || camera_somewhat_by_stairs); // either the light or the camera is by the stairs
+				stairs_light = (light_room_has_stairs_or_ramp || camera_somewhat_by_stairs); // either the light or the camera is by the stairs
 			}
 		}
 		if (floor_is_above || floor_is_below) { // light is on a different floor from the camera

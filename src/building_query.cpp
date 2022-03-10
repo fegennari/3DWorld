@@ -938,8 +938,10 @@ bool building_t::check_for_wall_ceil_floor_int(point const &p1, point const &p2)
 	if (has_cube_line_coll(p1, p2, interior->ceilings) || has_cube_line_coll(p1, p2, interior->floors)) return 1; // or is only checking one good enough?
 	return check_line_intersect_doors(p1, p2);
 }
-bool building_t::line_intersect_stairs(point const &p1, point const &p2) const {
-	return (interior && has_cube_line_coll(p1, p2, interior->stairwells));
+bool building_t::line_intersect_stairs_or_ramp(point const &p1, point const &p2) const {
+	if (!interior) return 0;
+	if (has_pg_ramp() && interior->pg_ramp.line_intersects(p1, p2)) return 1;
+	return has_cube_line_coll(p1, p2, interior->stairwells);
 }
 
 // Note: for procedural object placement; no expanded_objs, but includes blockers
@@ -1337,6 +1339,17 @@ int building_t::check_player_in_basement(point const &pos) const {
 		}
 	}
 	return 2; // player in basement but not on stairs
+}
+
+bool building_t::is_obj_above_ramp(cube_t const &c) const {
+	assert(interior);
+	if (!has_pg_ramp()) return 0;
+	return (interior->pg_ramp.contains_pt_xy(c.get_cube_center()) && c.z2() >= interior->pg_ramp.z2() && (c.z1() - interior->pg_ramp.z2()) < get_window_vspace());
+}
+bool building_t::is_room_above_ramp(cube_t const &room, float zval) const {
+	assert(interior);
+	if (!has_pg_ramp()) return 0;
+	return (interior->pg_ramp.intersects_xy(room) && zval >= interior->pg_ramp.z2() && (zval - interior->pg_ramp.z2()) < get_window_vspace());
 }
 
 void building_t::print_building_manifest() const { // Note: skips expanded_objs
