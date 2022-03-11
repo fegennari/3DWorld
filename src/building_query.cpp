@@ -1345,7 +1345,7 @@ bool building_t::is_cube_contained_in_parts(cube_t const &c) const {
 int building_t::check_player_in_basement(point const &pos) const {
 	if (!is_pos_in_basement(pos)) return 0;
 	
-	if (interior) {
+	if (interior && (pos.z - CAMERA_RADIUS - camera_zh) > (ground_floor_z1 - get_window_vspace())) { // only need to check if on the top floor of the basement
 		for (auto const &s : interior->stairwells) {
 			if (s.contains_pt(pos)) return 1; // player on stairs, upper floor and windows/outside may be visible
 		}
