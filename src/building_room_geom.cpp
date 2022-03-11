@@ -1201,8 +1201,8 @@ void building_room_geom_t::add_pg_ramp(room_object_t const &c, vector3d const &t
 	for (unsigned tb = 0; tb < 2; ++tb) { // {top, bottom}
 		for (unsigned i = 0; i < 4; ++i) {
 			v.v    = ramp.pts[tb ? (3-i) : i]; // swap winding order for bottom surface
-			v.t[0] = float(v.v.x == c.x2());
-			v.t[1] = float(v.v.y == c.y2());
+			v.t[0] = 2.0*float(v.v.x == c.x2()); // stretch texture 2x in length
+			v.t[1] = 2.0*float(v.v.y == c.y2()); // stretch texture 2x in length
 			verts.push_back(v);
 			if (tb) {verts.back().v.z -= thickness;} // extrude thickness for bottom surface
 		}
