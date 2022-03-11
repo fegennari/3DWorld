@@ -1226,8 +1226,8 @@ void building_room_geom_t::add_pg_ramp(room_object_t const &c, vector3d const &t
 
 void building_room_geom_t::add_pipe(room_object_t const &c) { // should be SHAPE_CYLIN
 	unsigned const dim(c.dir ? 2 : unsigned(c.dim)); // encoded as: X:dim=0,dir=0 Y:dim=1,dir=0, Z:dim=x,dir=1
-	float const radius(c.get_sz_dim((dim+1)%3));
-	//assert(c.get_sz_dim((dim+2)%3) == radius); // must be a square cross section, but too strong due to FP error
+	float const radius(0.5*c.get_sz_dim((dim+1)%3));
+	//assert(0.5*c.get_sz_dim((dim+2)%3) == radius); // must be a square cross section, but too strong due to FP error
 	bool const shadowed(dim == 2); // only vertical pipes cast shadows; horizontal ceiling pipes are too high and outside the ceiling light shadow map
 	colorRGBA const color(apply_light_color(c));
 	rgeom_mat_t &mat(get_metal_material(shadowed, 0, 2)); // detail object
@@ -1239,7 +1239,7 @@ void building_room_geom_t::add_pipe(room_object_t const &c) { // should be SHAPE
 		if (!draw_joints[d]) continue;
 		point center(c.get_cube_center());
 		center[dim] = c.d[dim][d]; // move to one end along the cylinder
-		mat.add_sphere_to_verts(center, vector3d(radius, radius, radius), c.color);
+		mat.add_sphere_to_verts(center, vector3d(radius, radius, radius), color);
 	}
 }
 

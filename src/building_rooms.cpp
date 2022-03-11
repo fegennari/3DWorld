@@ -1685,7 +1685,7 @@ void building_t::add_pri_hall_objs(rand_gen_t rgen, room_t const &room, float zv
 	} // for dir
 }
 
-void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned objs_start, unsigned floor_ix,
+void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned floor_ix,
 	unsigned num_floors, unsigned &nlights_x, unsigned &nlights_y, float &light_delta_z)
 {
 	assert(has_room_geom());
@@ -1716,6 +1716,7 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 	
 	// add walls and pillars between strips
 	vect_room_object_t &objs(interior->room_geom->objs);
+	unsigned const objs_start(objs.size());
 	colorRGBA const wall_color(WHITE);
 	cube_t room_floor_cube(room), virt_room_for_wall(room);
 	set_cube_zvals(room_floor_cube, zval, ceiling_z);
@@ -1864,22 +1865,71 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 	} // for n
 	if (floor_ix+1 == num_floors) { // this is the top floor
 		//highres_timer_t timer("Get Pipe Basement Connections");
-		// add pipes to the ceiling
-		vector<sphere_t> pipes;
-		get_pipe_basement_connections(pipes);
-
-		for (sphere_t const &p : pipes) {
-			assert(p.radius > 0.0);
-			assert(p.pos.z > bcube.z1());
-			// curently connected straight down; TODO: connect with horizontal segments
-			cube_t c(p.pos);
-			c.expand_by_xy(p.radius);
-			c.z1() = bcube.z1(); // extend all the way down to the floor of the lowest basement
-			assert(c.is_strictly_normalized());
-			// encoded as: X:dim=0,dir=0 Y:dim=1,dir=0, Z:dim=x,dir=1
-			objs.emplace_back(c, TYPE_PIPE, room_id, 0, 1, /*RO_FLAG_NOCOLL*/0, tot_light_amt, SHAPE_CYLIN, DK_GRAY); // vertical pipe
-		} // for p
+		// move or remove pipes intersecting lights, pillars, walls, stairs, elevators, and ramps;
+		// note that lights haven't been added yet though, so maybe pipes need to be added later?
+		for (auto i = objs.begin()+objs_start; i != objs.end(); ++i) {
+			if (i->type == TYPE_PG_WALL || i->type == TYPE_RAMP) {obstacles.push_back(*i);} // walls, pillars, and ramps are obstacles for pipes
+		}
+		add_basement_pipes(obstacles, room_id, tot_light_amt);
 	}
+}
+
+float get_merged_pipe_radius(float r1, float r2) {return pow((r1*r1*r1 + r2*r2*r2), 1/3.0);} // scales as cubic
+
+void building_t::add_basement_pipes(vect_cube_t const &obstacles, unsigned room_id, float tot_light_amt) {
+	vect_room_object_t &objs(interior->room_geom->objs);
+	cube_t const &basement(get_basement());
+	// add pipes to the ceiling
+	vector<sphere_t> pipes;
+	get_pipe_basement_connections(pipes);
+	map<float, vector<unsigned>> xy_map[2];
+	unsigned num_connected(0);
+
+	// add pipe objects
+	for (auto p = pipes.begin(); p != pipes.end(); ++p) {
+		assert(p->radius > 0.0);
+		assert(p->pos.z > bcube.z1());
+		// curently connected straight down; TODO: connect with horizontal segments
+		cube_t c(p->pos);
+		c.expand_by_xy(p->radius);
+		c.z1() = bcube.z1(); // extend all the way down to the floor of the lowest basement
+		bool bad_place(0);
+
+		for (cube_t const &obstacle : obstacles) {
+			if (obstacle.intersects(c)) {bad_place = 1; break;}
+		}
+		if (bad_place) continue; // skip for now; TODO: maybe should move the pipe so as not to collide with the obstacle?
+		++num_connected;
+		// build a graph of connected rows/columns
+		for (unsigned d = 0; d < 2; ++d) {xy_map[d][p->pos[d]].push_back(p - pipes.begin());}
+		// encoded as: X:dim=0,dir=0 Y:dim=1,dir=0, Z:dim=x,dir=1
+		objs.emplace_back(c, TYPE_PIPE, room_id, 0, 1, /*RO_FLAG_NOCOLL*/0, tot_light_amt, SHAPE_CYLIN, DK_GRAY); // vertical
+	} // for p
+
+	// connect pipes in the same row or column
+	for (unsigned d = 0; d < 2; ++d) {
+		for (auto const &v : xy_map[d]) {
+			if (v.second.size() == 1) continue; // singleton
+			float radius(0.0), range_min(basement.d[!d][1]), range_max(basement.d[!d][0]); // start denormalized
+
+			for (unsigned ix : v.second) {
+				assert(ix < pipes.size());
+				float const val(pipes[ix].pos[!d]);
+				min_eq(range_min, val);
+				max_eq(range_max, val);
+				radius = get_merged_pipe_radius(radius, + pipes[ix].radius);
+			}
+			assert(range_min < range_max);
+			float const pipe_z2(pipes[v.second.front()].pos.z - 0.5*radius);
+			cube_t c;
+			set_cube_zvals(c, pipe_z2-2.0*radius, pipe_z2);
+			set_wall_width(c, v.first, radius, d);
+			c.d[!d][0] = range_min; c.d[!d][1] = range_max;
+			// TODO: check obstacles and split/clip/drop
+			objs.emplace_back(c, TYPE_PIPE, room_id, !d, 0, (RO_FLAG_NOCOLL | RO_FLAG_ADJ_LO | RO_FLAG_ADJ_HI), tot_light_amt, SHAPE_CYLIN, DK_GRAY); // horizontal
+		} // for v
+	} // for d
+	cout << TXT(obstacles.size()) << TXT(pipes.size()) << TXT(num_connected) << endl;
 }
 
 // here each sphere represents the entry point of a pipe with this radius into the basement ceiling
@@ -1890,11 +1940,13 @@ void building_t::get_pipe_basement_connections(vector<sphere_t> &pipes) const {
 	float const pipe_z2(ground_floor_z1 - get_fc_thickness()), merge_dist_sq(merge_dist*merge_dist);
 	auto const &objs(interior->room_geom->objs);
 	unsigned num_drains(0);
+	cube_t const &basement(get_basement());
 
 	for (auto i = objs.begin(); i != objs.end(); ++i) { // check all objects placed so far
 		if (i->type != TYPE_TOILET && i->type != TYPE_SINK && i->type != TYPE_URINAL && i->type != TYPE_TUB && i->type != TYPE_SHOWER &&
 			i->type != TYPE_BRSINK && i->type != TYPE_KSINK && i->type != TYPE_WASHER && i->type != TYPE_DRAIN) continue;
 		point const pos(i->xc(), i->yc(), pipe_z2);
+		if (!basement.contains_pt_xy(pos)) continue; // pipe doesn't pass through the basement, skip
 		bool merged(0);
 
 		// see if we can merge this pipe into an existing nearby pipe
@@ -1902,7 +1954,7 @@ void building_t::get_pipe_basement_connections(vector<sphere_t> &pipes) const {
 			float const p_area(p->radius*p->radius), sum_area(p_area + base_pipe_area);
 			if (!dist_xy_less_than(p->pos, pos, merge_dist_sq*sum_area)) continue;
 			p->pos    = (p_area*p->pos + base_pipe_area*pos)/sum_area; // merged position is weighted average area
-			p->radius = sqrt(sum_area);
+			p->radius = get_merged_pipe_radius(p->radius, base_pipe_radius);
 			merged    = 1;
 			break;
 		} // for p
@@ -2620,7 +2672,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 
 			if (is_parking_garage) { // parking garage; added first because this sets the number of lights
 				r->interior = 1;
-				add_parking_garage_objs(rgen, *r, room_center.z, room_id, objs.size(), f, num_floors, nx, ny, light_delta_z);
+				add_parking_garage_objs(rgen, *r, room_center.z, room_id, f, num_floors, nx, ny, light_delta_z);
 				for (auto i = objs.begin() + room_objs_start; i != objs.end(); ++i) {i->flags |= RO_FLAG_INTERIOR;}
 			}
 			if ((!has_stairs && (f == 0 || top_floor_not_basement) && interior->stairwells.size() > 1) || top_of_stairs) { // should this be outside the loop?
