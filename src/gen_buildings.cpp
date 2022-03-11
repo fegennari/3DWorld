@@ -1209,7 +1209,7 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, 
 			else {
 				tp = tid_nm_pair_t(get_texture_by_name("cblock2.jpg"), get_texture_by_name("normal_maps/cblock2_NRM.jpg", 1), 1.0, 1.0);
 			}
-			bdraw.add_section(*this, 1, parts[basement_part_ix], tp, WHITE, 3, 0, 0, 1, 0); // XY, always white
+			bdraw.add_section(*this, 1, get_basement(), tp, WHITE, 3, 0, 0, 1, 0); // XY, always white
 		}
 	}
 	if (get_interior && interior != nullptr) { // interior building parts
@@ -1257,8 +1257,7 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, 
 			unsigned dim_mask(3); // disable faces: 8=x1, 16=x2, 32=y1, 64=y2
 			if (i->for_elevator) {dim_mask |= (120 - (1 << (i->get_face_id() + 3)));} // disable all but the open side of the elevator
 			else if (i->for_ramp) {
-				assert(has_basement());
-				cube_t const &basement(parts[basement_part_ix]);
+				cube_t const &basement(get_basement());
 				if (i->dim == 0) {dim_mask |= ((i->yc() < basement.yc()) ? 32 : 64);} // X, skip Y face closest to building wall
 				else             {dim_mask |= ((i->xc() < basement.xc()) ?  8 : 16);} // Y, skip X face closest to building wall
 			}
@@ -1613,7 +1612,7 @@ void building_t::add_split_roof_shadow_quads(building_draw_t &bdraw) const {
 // to be called when the player is inside this building; when outside the building, the exterior walls/windows will write to the depth buffer instead
 void building_t::write_basement_entrance_depth_pass(shader_t &s) const {
 	if (!interior || !has_basement()) return;
-	float const zval(parts[basement_part_ix].z2()), z(zval + BASEMENT_ENTRANCE_SCALE*get_floor_thickness());
+	float const zval(get_basement().z2()), z(zval + BASEMENT_ENTRANCE_SCALE*get_floor_thickness());
 	s.set_cur_color(ALPHA0); // fully transparent
 	select_texture(WHITE_TEX);
 	enable_blend();

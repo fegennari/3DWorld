@@ -1351,10 +1351,10 @@ void subtract_cube_from_floor_ceil(cube_t const &c, vect_cube_t &fs) {
 }
 
 void building_t::add_parking_garage_ramp(rand_gen_t &rgen) {
-	assert(interior && !is_house && has_parking_garage && has_basement());
+	assert(interior && !is_house && has_parking_garage);
 	cube_with_ix_t &ramp(interior->pg_ramp);
 	assert(ramp.is_all_zeros()); // must not have been set
-	cube_t const &basement(parts[basement_part_ix]);
+	cube_t const &basement(get_basement());
 	bool const dim(basement.dx() < basement.dy()); // long/primary dim
 	// see building_t::add_parking_garage_objs(); make sure there's space for a ramp plus both exit dirs within the building width
 	float const width(basement.get_sz_dim(!dim)), road_width(min(0.25f*width, 2.3f*get_nom_car_size().y));
@@ -1406,7 +1406,7 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 	//highres_timer_t timer("Connect Stairs"); // 72ms (serial)
 	float const window_vspacing(get_window_vspace()), floor_thickness(get_floor_thickness()), fc_thick(0.5*floor_thickness), wall_thickness(get_wall_thickness());
 	float const doorway_width(0.5*window_vspacing), stairs_len(4.0*doorway_width);
-	bool const is_basement(has_basement() && part == parts[basement_part_ix]), use_basement_stairs(is_basement && is_house); // office basement has regular stairs
+	bool const is_basement(has_basement() && part == get_basement()), use_basement_stairs(is_basement && is_house); // office basement has regular stairs
 	// use fewer iterations on tiled buildings to reduce the frame spikes when new tiles are generated
 	unsigned const iter_mult_factor(global_building_params.gen_inf_buildings() ? 1 : 10), num_iters(20*iter_mult_factor);
 	unsigned const num_floors(calc_num_floors(part, window_vspacing, floor_thickness));
