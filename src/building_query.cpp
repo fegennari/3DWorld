@@ -383,8 +383,8 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, vec
 		float const floor_test_zval(obj_z + floor_thickness); // move up by floor thickness to better handle steep stairs
 
 		for (auto i = interior->floors.begin(); i != interior->floors.end(); ++i) {
-			if (!i->contains_pt_xy(pos)) continue; // sphere not in this part/cube
-			float const z1(i->z1());
+			if (!i->contains_pt_xy(pos)) continue; // sphere not in this floor
+			float const z1(i->z2());
 			if (floor_test_zval < z1 || floor_test_zval > z1 + floor_spacing) continue; // this is not the floor the sphere is on
 			if (pos.z < z1 + radius) {pos.z = z1 + radius; obj_z = max(pos.z, p_last.z); had_coll = 1;} // move up
 			break; // only change zval once
