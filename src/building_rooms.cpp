@@ -1686,7 +1686,7 @@ void building_t::add_pri_hall_objs(rand_gen_t rgen, room_t const &room, float zv
 }
 
 void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned objs_start, unsigned floor_ix,
-	unsigned &nlights_x, unsigned &nlights_y, float &light_delta_z)
+	unsigned num_floors, unsigned &nlights_x, unsigned &nlights_y, float &light_delta_z)
 {
 	assert(has_room_geom());
 	rgen.rseed1 += 123*floor_ix; // make it unique per floor
@@ -1862,7 +1862,54 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 			} // for s
 		} // for d
 	} // for n
-	// TODO: add pipes to the ceiling using TYPE_PIPE
+	if (floor_ix+1 == num_floors) { // this is the top floor
+		//highres_timer_t timer("Get Pipe Basement Connections");
+		// add pipes to the ceiling
+		vector<sphere_t> pipes;
+		get_pipe_basement_connections(pipes);
+
+		for (sphere_t const &p : pipes) {
+			assert(p.radius > 0.0);
+			assert(p.pos.z > bcube.z1());
+			// curently connected straight down; TODO: connect with horizontal segments
+			cube_t c(p.pos);
+			c.expand_by_xy(p.radius);
+			c.z1() = bcube.z1(); // extend all the way down to the floor of the lowest basement
+			assert(c.is_strictly_normalized());
+			// encoded as: X:dim=0,dir=0 Y:dim=1,dir=0, Z:dim=x,dir=1
+			objs.emplace_back(c, TYPE_PIPE, room_id, 0, 1, /*RO_FLAG_NOCOLL*/0, tot_light_amt, SHAPE_CYLIN, DK_GRAY); // vertical pipe
+		} // for p
+	}
+}
+
+// here each sphere represents the entry point of a pipe with this radius into the basement ceiling
+// find all plumbing fixtures such as toilets, urinals, sinks, and showers; these should have all been placed in rooms by now
+void building_t::get_pipe_basement_connections(vector<sphere_t> &pipes) const {
+	float const merge_dist = 4.0; // merge two pipes if their combined radius is within this distance
+	float const floor_spacing(get_window_vspace()), base_pipe_radius(0.01*floor_spacing), base_pipe_area(base_pipe_radius*base_pipe_radius);
+	float const pipe_z2(ground_floor_z1 - get_fc_thickness()), merge_dist_sq(merge_dist*merge_dist);
+	auto const &objs(interior->room_geom->objs);
+	unsigned num_drains(0);
+
+	for (auto i = objs.begin(); i != objs.end(); ++i) { // check all objects placed so far
+		if (i->type != TYPE_TOILET && i->type != TYPE_SINK && i->type != TYPE_URINAL && i->type != TYPE_TUB && i->type != TYPE_SHOWER &&
+			i->type != TYPE_BRSINK && i->type != TYPE_KSINK && i->type != TYPE_WASHER && i->type != TYPE_DRAIN) continue;
+		point const pos(i->xc(), i->yc(), pipe_z2);
+		bool merged(0);
+
+		// see if we can merge this pipe into an existing nearby pipe
+		for (auto p = pipes.begin(); p != pipes.end(); ++p) {
+			float const p_area(p->radius*p->radius), sum_area(p_area + base_pipe_area);
+			if (!dist_xy_less_than(p->pos, pos, merge_dist_sq*sum_area)) continue;
+			p->pos    = (p_area*p->pos + base_pipe_area*pos)/sum_area; // merged position is weighted average area
+			p->radius = sqrt(sum_area);
+			merged    = 1;
+			break;
+		} // for p
+		if (!merged) {pipes.emplace_back(pos, base_pipe_radius);} // create a new pipe
+		++num_drains;
+	} // for i
+	cout << TXT(objs.size()) << TXT(num_drains) << TXT(pipes.size()) << endl;
 }
 
 colorRGBA choose_pot_color(rand_gen_t &rgen) {
@@ -2573,7 +2620,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 
 			if (is_parking_garage) { // parking garage; added first because this sets the number of lights
 				r->interior = 1;
-				add_parking_garage_objs(rgen, *r, room_center.z, room_id, objs.size(), f, nx, ny, light_delta_z);
+				add_parking_garage_objs(rgen, *r, room_center.z, room_id, objs.size(), f, num_floors, nx, ny, light_delta_z);
 				for (auto i = objs.begin() + room_objs_start; i != objs.end(); ++i) {i->flags |= RO_FLAG_INTERIOR;}
 			}
 			if ((!has_stairs && (f == 0 || top_floor_not_basement) && interior->stairwells.size() > 1) || top_of_stairs) { // should this be outside the loop?

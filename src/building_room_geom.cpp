@@ -1226,14 +1226,14 @@ void building_room_geom_t::add_pg_ramp(room_object_t const &c, vector3d const &t
 
 void building_room_geom_t::add_pipe(room_object_t const &c) { // should be SHAPE_CYLIN
 	unsigned const dim(c.dir ? 2 : unsigned(c.dim)); // encoded as: X:dim=0,dir=0 Y:dim=1,dir=0, Z:dim=x,dir=1
-	unsigned const d1((dim+1)%3), d2((dim+2)%3);
-	float const radius(c.get_sz_dim(d1));
-	assert(c.get_sz_dim(d2) == radius); // must be a square cross section
+	float const radius(c.get_sz_dim((dim+1)%3));
+	//assert(c.get_sz_dim((dim+2)%3) == radius); // must be a square cross section, but too strong due to FP error
 	bool const shadowed(dim == 2); // only vertical pipes cast shadows; horizontal ceiling pipes are too high and outside the ceiling light shadow map
 	colorRGBA const color(apply_light_color(c));
 	rgeom_mat_t &mat(get_metal_material(shadowed, 0, 2)); // detail object
 	mat.add_ortho_cylin_to_verts(c, color, dim, 0, 0); // draw sides only
-	bool const draw_joints[2] = {(c.flags & RO_FLAG_ADJ_LO), (c.flags & RO_FLAG_ADJ_HI)}; // adj flags indicate adjacencies where we draw joints connecting to other pipe sections
+	// adj flags indicate adjacencies where we draw joints connecting to other pipe sections
+	bool const draw_joints[2] = {((c.flags & RO_FLAG_ADJ_LO) != 0), ((c.flags & RO_FLAG_ADJ_HI) != 0)};
 	
 	for (unsigned d = 0; d < 2; ++d) {
 		if (!draw_joints[d]) continue;
