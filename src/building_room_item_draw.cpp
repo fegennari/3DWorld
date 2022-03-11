@@ -993,7 +993,8 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, building_t c
 			create_small_static_vbos(building);
 			++num_geom_this_frame;
 		}
-		if (inc_small == 2 && mats_detail.empty()) { // create detail materials if needed
+		// Note: not created on the shadow pass, because trim_objs may not have been created yet and we would miss including it
+		if (inc_small == 2 && !shadow_only && mats_detail.empty()) { // create detail materials if needed
 			create_detail_vbos(building);
 			++num_geom_this_frame;
 		}
