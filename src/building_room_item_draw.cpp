@@ -207,7 +207,10 @@ void rgeom_mat_t::add_disk_to_verts(point const &pos, float radius, bool normal_
 	}
 }
 
-void rgeom_mat_t::add_sphere_to_verts(cube_t const &c, colorRGBA const &color, bool low_detail, vector3d const &skip_hemi_dir, xform_matrix const *const matrix) {
+// Note: size can be nonuniform in X/Y/Z
+void rgeom_mat_t::add_sphere_to_verts(point const &center, vector3d const &size, colorRGBA const &color, bool low_detail,
+	vector3d const &skip_hemi_dir, xform_matrix const *const matrix)
+{
 	static vector<vert_norm_tc> cached_verts[2]; // high/low detail, reused across all calls
 	static vector<vert_norm_comp_tc> cached_vncs[2];
 	static vector<unsigned> cached_ixs[2];
@@ -226,7 +229,6 @@ void rgeom_mat_t::add_sphere_to_verts(cube_t const &c, colorRGBA const &color, b
 		for (unsigned i = 0; i < verts.size(); ++i) {vncs[i] = vert_norm_comp_tc(verts[i].v, verts[i].n, verts[i].t[0], verts[i].t[1]);}
 	}
 	color_wrapper const cw(color);
-	point const center(c.get_cube_center()), size(0.5*c.get_size());
 	unsigned const ioff(itri_verts.size());
 
 	if (matrix) { // must apply matrix transform to verts and normals and reconstruct norm_comps

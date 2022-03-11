@@ -1224,9 +1224,23 @@ void building_room_geom_t::add_pg_ramp(room_object_t const &c, vector3d const &t
 	} // for s
 }
 
-void building_room_geom_t::add_pipe(room_object_t const &c) {
-	rgeom_mat_t &metal_mat(get_metal_material(0, 0, 2)); // unshadowed, detail object
-	// TODO
+void building_room_geom_t::add_pipe(room_object_t const &c) { // should be SHAPE_CYLIN
+	unsigned const dim(c.dir ? 2 : unsigned(c.dim)); // encoded as: X:dim=0,dir=0 Y:dim=1,dir=0, Z:dim=x,dir=1
+	unsigned const d1((dim+1)%3), d2((dim+2)%3);
+	float const radius(c.get_sz_dim(d1));
+	assert(c.get_sz_dim(d2) == radius); // must be a square cross section
+	bool const shadowed(dim == 2); // only vertical pipes cast shadows; horizontal ceiling pipes are too high and outside the ceiling light shadow map
+	colorRGBA const color(apply_light_color(c));
+	rgeom_mat_t &mat(get_metal_material(shadowed, 0, 2)); // detail object
+	mat.add_ortho_cylin_to_verts(c, color, dim, 0, 0); // draw sides only
+	bool const draw_joints[2] = {(c.flags & RO_FLAG_ADJ_LO), (c.flags & RO_FLAG_ADJ_HI)}; // adj flags indicate adjacencies where we draw joints connecting to other pipe sections
+	
+	for (unsigned d = 0; d < 2; ++d) {
+		if (!draw_joints[d]) continue;
+		point center(c.get_cube_center());
+		center[dim] = c.d[dim][d]; // move to one end along the cylinder
+		mat.add_sphere_to_verts(center, vector3d(radius, radius, radius), c.color);
+	}
 }
 
 // Note: there is a lot duplicated with building_room_geom_t::add_elevator(), but we need a separate function for adding interior elevator buttons
@@ -1364,7 +1378,7 @@ void building_room_geom_t::add_rug(room_object_t const &c) {
 	get_material(tid_nm_pair_t(c.get_rug_tid(), 0.0)).add_cube_to_verts(c, c.color, c.get_llc(), 61, swap_tex_st); // only draw top/+z face
 }
 
-void building_room_geom_t::add_picture(room_object_t const &c) { // also whiteboards
+void building_room_geom_t::add_picture(room_object_t const &c) { // also whiteboards; not affected by room color
 	bool const whiteboard(c.type == TYPE_WBOARD);
 	int picture_tid(WHITE_TEX);
 
