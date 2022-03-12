@@ -1269,7 +1269,7 @@ private:
 	void add_pri_hall_objs   (rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt);
 	void add_parking_garage_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned floor_ix,
 		unsigned num_floors, unsigned &nlights_x, unsigned &nlights_y, float &light_delta_z);
-	void add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t const &walls, unsigned room_id, float tot_light_amt);
+	void add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t const &walls, unsigned room_id, float tot_light_amt, float ceil_zval);
 	void get_pipe_basement_connections(vector<sphere_t> &pcs) const;
 	void place_book_on_obj   (rand_gen_t &rgen, room_object_t const &place_on, unsigned room_id, float tot_light_amt, bool use_dim_dir);
 	bool place_bottle_on_obj (rand_gen_t &rgen, room_object_t const &place_on, unsigned room_id, float tot_light_amt, cube_t const &avoid);

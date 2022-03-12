@@ -1031,6 +1031,7 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t const &roo
 	}
 	else {
 		sheight = 0.36*floor_spacing; swidth = 0.3*floor_spacing; slength = 0.32*floor_spacing;
+		//slength = (has_parking_garage ? (tlength + 2.0*wall_thickness) : 0.32*floor_spacing); // align sink drain to toilets for parking garage pipes?
 	}
 	float stall_width(2.0*twidth), sink_spacing(1.75*swidth);
 	bool br_dim(room.dy() < room.dx()), sink_side(0), sink_side_set(0); // br_dim is the smaller dim
@@ -1126,7 +1127,7 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t const &roo
 			point center(sink_from_wall, sink_pos, zval);
 			if (br_dim) {swap(center.x, center.y);} // R90 about z
 			cube_t sink(center, center);
-			sink.expand_in_dim( br_dim, 0.5*slength);
+			sink.expand_in_dim(br_dim, 0.5*slength);
 			sink.z2() += sheight;
 
 			if (use_sink_model) { // sink 3D model

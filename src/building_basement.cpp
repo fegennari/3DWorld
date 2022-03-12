@@ -237,10 +237,13 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 		vect_cube_t walls;
 
 		for (auto i = objs.begin()+objs_start; i != objs.end(); ++i) {
-			if      (i->type == TYPE_PG_WALL) {walls    .push_back(*i);} // walls and pillars
-			else if (i->type == TYPE_RAMP   ) {obstacles.push_back(*i);} // ramps are obstacles for pipes
+			if (i->type == TYPE_PG_WALL) {
+				if (i->item_flags != 2) {walls    .push_back(*i);} // walls and pillars (not beams)
+				if (i->item_flags == 1) {obstacles.push_back(*i);} // pillars also count as obstacles
+			}
+			else if (i->type == TYPE_RAMP) {obstacles.push_back(*i);} // ramps are obstacles for pipes
 		}
-		add_basement_pipes(obstacles, walls, room_id, tot_light_amt);
+		add_basement_pipes(obstacles, walls, room_id, tot_light_amt, beam.z1());
 	}
 }
 
@@ -296,7 +299,7 @@ struct pipe_t {
 	}
 };
 
-void building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t const &walls, unsigned room_id, float tot_light_amt) {
+void building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t const &walls, unsigned room_id, float tot_light_amt, float ceil_zval) {
 	vect_room_object_t &objs(interior->room_geom->objs);
 	cube_t const &basement(get_basement());
 
@@ -306,16 +309,18 @@ void building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 	if (pipe_ends.empty()) return; // can this happen?
 	float rmax(0.0);
 	for (sphere_t const &p : pipe_ends) {max_eq(rmax, p.radius);} // calculate max radius across all pipes
-	float const ceil_zval(pipe_ends.front().pos.z); // should be the same for all pipe ends
 	float const pipe_zval(ceil_zval - 1.5f*max(rmax, get_fc_thickness()));
+	float const align_dist(2.0*get_wall_thickness()); // align pipes within this range (in particular sinks and stall toilets)
+	assert(pipe_zval > bcube.z1());
 	vector<pipe_t> pipes;
 	map<float, vector<unsigned>> xy_map[2];
+	cube_t pipe_end_bcube;
 	unsigned num_connected(0);
 
 	// seed the pipe graph with valid vertical segments and build a graph of X/Y values
-	for (sphere_t const &p : pipe_ends) {
+	for (sphere_t &p : pipe_ends) {
 		assert(p.radius > 0.0);
-		assert(p.pos.z > bcube.z1());
+		assert(p.pos.z > pipe_zval);
 		cube_t c(p.pos);
 		c.expand_by_xy(p.radius);
 		c.z1() = bcube.z1(); // extend all the way down to the floor of the lowest basement
@@ -323,11 +328,22 @@ void building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 		if (has_bcube_int(c, obstacles) || has_bcube_int(c, walls)) { // can't place over stairs/elevators/ramps/pillars/walls
 			continue; // skip for now; TODO: maybe should move the pipe so as not to collide, or merge with a nearby pipe?
 		}
+		unsigned const pipe_ix(pipes.size());
+
 		for (unsigned d = 0; d < 2; ++d) {
-			// TODO: align if very close together
-			xy_map[d][p.pos[d]].push_back(pipes.size());
-		}
+			auto &m(xy_map[d]);
+			float &v(p.pos[d]);
+			auto it(m.find(v));
+			if (it != m.end()) {it->second.push_back(pipe_ix); continue;} // found
+			bool found(0);
+			// try to find an existing map value that's within align_dist of this value; messy and inefficient, but I'm not sure how else to do this
+			for (auto &i : m) {
+				if (fabs(i.first - v) < align_dist) {i.second.push_back(pipe_ix); v = i.first; found = 1; break;} // close enough
+			}
+			if (!found) {m[v].push_back(pipe_ix);}
+		} // for d
 		pipes.emplace_back(point(p.pos.x, p.pos.y, pipe_zval), p.pos, p.radius, 2);
+		pipe_end_bcube.assign_or_union_with_cube(pipes.back().get_bcube());
 		++num_connected;
 	} // for pipe_ends
 
@@ -337,16 +353,18 @@ void building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 			pipe_t exit_pipe(pipes[v.second.front()]); // deep copy
 			if (v.second.size() == 1) continue; // skip singleton
 			float radius(0.0), range_min(basement.d[d][1]), range_max(basement.d[d][0]); // start denormalized
+			unsigned num_unconn(0);
 
 			for (unsigned ix : v.second) {
 				assert(ix < pipes.size());
 				pipe_t &pipe(pipes[ix]);
+				num_unconn += !pipe.connected;
 				float const val(pipe.p1[d]);
 				min_eq(range_min, val-pipe.radius);
 				max_eq(range_max, val+pipe.radius);
 				radius = get_merged_pipe_radius(radius, + pipe.radius);
-				pipe.connected = 1;
 			} // for ix
+			if (num_unconn == 0) continue; // all pipes have already been connected in the other dim
 			assert(range_min < range_max);
 			float const val(exit_pipe.p1[d]);
 			min_eq(range_min, val-radius); // extend range to include the exit pipe
@@ -354,12 +372,11 @@ void building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 			point p1(exit_pipe.p1), p2(p1);
 			p1[d] = range_min; p2[d] = range_max;
 			pipe_t const pipe(p1, p2, radius, d, 1); // connected=1
-			cube_t const c(pipe.get_bcube());
-			// TODO: check c against obstacles and split/clip/drop
-			// TODO: track connected and avoid loops
+			if (has_bcube_int(pipe.get_bcube(), obstacles)) continue; // blocked, can't connect
+			for (unsigned ix : v.second) {pipes[ix].connected = 1;}
 			pipes.push_back(pipe);
 			// add exit pipe; TODO: only one per connected graph; must call get_closest_wall_pos()
-			exit_pipe.is_exit = 1;
+			exit_pipe.is_exit = exit_pipe.connected = 1;
 			exit_pipe.radius  = radius;
 			exit_pipe.p2.z    = exit_pipe.p1.z;
 			exit_pipe.p1.z    = basement.z1(); // exits to the basement floor
@@ -384,7 +401,7 @@ void building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 		cube_t const c(p.get_bcube());
 		objs.emplace_back(c, TYPE_PIPE, room_id, pdim, pdir, flags, tot_light_amt, SHAPE_CYLIN, DK_GRAY);
 	} // for p
-	cout << TXT(obstacles.size()) << TXT(pipe_ends.size()) << TXT(pipes.size()) << TXT(num_connected) << endl;
+	cout << TXT(obstacles.size()) << TXT(pipe_ends.size()) << TXT(pipes.size()) << TXT(num_connected) << TXT(xy_map[0].size()) << TXT(xy_map[1].size()) << endl;
 }
 
 // here each sphere represents the entry point of a pipe with this radius into the basement ceiling
@@ -392,15 +409,16 @@ void building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 void building_t::get_pipe_basement_connections(vector<sphere_t> &pipes) const {
 	float const merge_dist = 4.0; // merge two pipes if their combined radius is within this distance
 	float const floor_spacing(get_window_vspace()), base_pipe_radius(0.01*floor_spacing), base_pipe_area(base_pipe_radius*base_pipe_radius);
-	float const pipe_z2(ground_floor_z1 - get_fc_thickness()), merge_dist_sq(merge_dist*merge_dist), max_radius(0.4*get_wall_thickness());
+	float const merge_dist_sq(merge_dist*merge_dist), max_radius(0.4*get_wall_thickness());
 	auto const &objs(interior->room_geom->objs);
 	unsigned num_drains(0);
 	cube_t const &basement(get_basement());
+	float const ceil_zval(basement.z2() - get_fc_thickness());
 
 	for (auto i = objs.begin(); i != objs.end(); ++i) { // check all objects placed so far
 		if (i->type != TYPE_TOILET && i->type != TYPE_SINK && i->type != TYPE_URINAL && i->type != TYPE_TUB && i->type != TYPE_SHOWER &&
 			i->type != TYPE_BRSINK && i->type != TYPE_KSINK && i->type != TYPE_WASHER && i->type != TYPE_DRAIN) continue;
-		point const pos(i->xc(), i->yc(), pipe_z2);
+		point pos(i->xc(), i->yc(), ceil_zval);
 		if (!basement.contains_pt_xy(pos)) continue; // pipe doesn't pass through the basement, skip
 		bool merged(0);
 
