@@ -1229,12 +1229,14 @@ void building_room_geom_t::add_pipe(room_object_t const &c) { // should be SHAPE
 	float const radius(0.5*c.get_sz_dim((dim+1)%3));
 	//assert(0.5*c.get_sz_dim((dim+2)%3) == radius); // must be a square cross section, but too strong due to FP error
 	bool const shadowed(dim == 2); // only vertical pipes cast shadows; horizontal ceiling pipes are too high and outside the ceiling light shadow map
-	colorRGBA const color(apply_light_color(c));
-	rgeom_mat_t &mat(get_metal_material(shadowed, 0, 2)); // detail object
-	mat.add_ortho_cylin_to_verts(c, color, dim, 0, 0); // draw sides only
+	bool const flat_ends(c.flags & RO_FLAG_HANGING); // ???
 	// adj flags indicate adjacencies where we draw joints connecting to other pipe sections
 	bool const draw_joints[2] = {((c.flags & RO_FLAG_ADJ_LO) != 0), ((c.flags & RO_FLAG_ADJ_HI) != 0)};
-	
+	colorRGBA const color(apply_light_color(c));
+	rgeom_mat_t &mat(get_metal_material(shadowed, 0, 2)); // detail object
+	mat.add_ortho_cylin_to_verts(c, color, dim, (flat_ends && draw_joints[0]), (flat_ends && draw_joints[1])); // draw sides and possibly one or both ends
+	if (flat_ends) return; // done
+
 	for (unsigned d = 0; d < 2; ++d) {
 		if (!draw_joints[d]) continue;
 		point center(c.get_cube_center());

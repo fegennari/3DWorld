@@ -280,63 +280,112 @@ point get_closest_wall_pos(point const &pos, float radius, cube_t const &room, v
 
 float get_merged_pipe_radius(float r1, float r2) {return pow((r1*r1*r1 + r2*r2*r2), 1/3.0);} // scales as cubic
 
+struct pipe_t {
+	point p1, p2;
+	float radius;
+	unsigned dim;
+	bool connected, is_exit;
+
+	pipe_t(point const &p1_, point const &p2_, float radius_, unsigned dim_, bool connected_=0) :
+		p1(p1_), p2(p2_), radius(radius_), dim(dim_), connected(connected_), is_exit(0) {}
+
+	cube_t get_bcube() const {
+		cube_t bcube(p1, p2);
+		bcube.expand_by(radius);
+		bcube.expand_in_dim(dim, -radius); // oops, we shouldn't have expanded in this dim
+		return bcube;
+	}
+};
+
 void building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t const &walls, unsigned room_id, float tot_light_amt) {
 	vect_room_object_t &objs(interior->room_geom->objs);
 	cube_t const &basement(get_basement());
-	// add pipes to the ceiling
-	vector<sphere_t> pipes;
-	get_pipe_basement_connections(pipes);
+
+	// get pipe ends coming in through the ceiling
+	vector<sphere_t> pipe_ends;
+	get_pipe_basement_connections(pipe_ends);
+	if (pipe_ends.empty()) return; // can this happen?
+	float rmax(0.0);
+	for (sphere_t const &p : pipe_ends) {max_eq(rmax, p.radius);} // calculate max radius across all pipes
+	float const ceil_zval(pipe_ends.front().pos.z); // should be the same for all pipe ends
+	float const pipe_zval(ceil_zval - 1.5f*max(rmax, get_fc_thickness()));
+	vector<pipe_t> pipes;
 	map<float, vector<unsigned>> xy_map[2];
 	unsigned num_connected(0);
 
-	// add pipe objects
-	for (auto p = pipes.begin(); p != pipes.end(); ++p) {
-		assert(p->radius > 0.0);
-		assert(p->pos.z > bcube.z1());
-		// curently connected straight down; TODO: connect with horizontal segments
-		cube_t c(p->pos);
-		c.expand_by_xy(p->radius);
+	// seed the pipe graph with valid vertical segments and build a graph of X/Y values
+	for (sphere_t const &p : pipe_ends) {
+		assert(p.radius > 0.0);
+		assert(p.pos.z > bcube.z1());
+		cube_t c(p.pos);
+		c.expand_by_xy(p.radius);
 		c.z1() = bcube.z1(); // extend all the way down to the floor of the lowest basement
 
 		if (has_bcube_int(c, obstacles) || has_bcube_int(c, walls)) { // can't place over stairs/elevators/ramps/pillars/walls
 			continue; // skip for now; TODO: maybe should move the pipe so as not to collide, or merge with a nearby pipe?
 		}
-		++num_connected;
-
-		// build a graph of connected rows/columns
 		for (unsigned d = 0; d < 2; ++d) {
 			// TODO: align if very close together
-			xy_map[d][p->pos[d]].push_back(p - pipes.begin());
+			xy_map[d][p.pos[d]].push_back(pipes.size());
 		}
-		// encoded as: X:dim=0,dir=0 Y:dim=1,dir=0, Z:dim=x,dir=1
-		objs.emplace_back(c, TYPE_PIPE, room_id, 0, 1, /*RO_FLAG_NOCOLL*/0, tot_light_amt, SHAPE_CYLIN, DK_GRAY); // vertical
-	} // for p
+		pipes.emplace_back(point(p.pos.x, p.pos.y, pipe_zval), p.pos, p.radius, 2);
+		++num_connected;
+	} // for pipe_ends
 
 	// connect pipes in the same row or column
 	for (unsigned d = 0; d < 2; ++d) {
-		for (auto const &v : xy_map[d]) {
-			if (v.second.size() == 1) continue; // singleton
-			float radius(0.0), range_min(basement.d[!d][1]), range_max(basement.d[!d][0]); // start denormalized
+		for (auto const &v : xy_map[!d]) {
+			pipe_t exit_pipe(pipes[v.second.front()]); // deep copy
+			if (v.second.size() == 1) continue; // skip singleton
+			float radius(0.0), range_min(basement.d[d][1]), range_max(basement.d[d][0]); // start denormalized
 
 			for (unsigned ix : v.second) {
 				assert(ix < pipes.size());
-				float const val(pipes[ix].pos[!d]);
-				min_eq(range_min, val);
-				max_eq(range_max, val);
-				radius = get_merged_pipe_radius(radius, + pipes[ix].radius);
-			}
+				pipe_t &pipe(pipes[ix]);
+				float const val(pipe.p1[d]);
+				min_eq(range_min, val-pipe.radius);
+				max_eq(range_max, val+pipe.radius);
+				radius = get_merged_pipe_radius(radius, + pipe.radius);
+				pipe.connected = 1;
+			} // for ix
 			assert(range_min < range_max);
-			float const pipe_z2(pipes[v.second.front()].pos.z - 0.5*radius);
-			cube_t c;
-			set_cube_zvals(c, pipe_z2-2.0*radius, pipe_z2);
-			set_wall_width(c, v.first, radius, d);
-			c.d[!d][0] = range_min; c.d[!d][1] = range_max;
-			// TODO: check obstacles and split/clip/drop
+			float const val(exit_pipe.p1[d]);
+			min_eq(range_min, val-radius); // extend range to include the exit pipe
+			max_eq(range_max, val+radius);
+			point p1(exit_pipe.p1), p2(p1);
+			p1[d] = range_min; p2[d] = range_max;
+			pipe_t const pipe(p1, p2, radius, d, 1); // connected=1
+			cube_t const c(pipe.get_bcube());
+			// TODO: check c against obstacles and split/clip/drop
 			// TODO: track connected and avoid loops
-			objs.emplace_back(c, TYPE_PIPE, room_id, !d, 0, (RO_FLAG_NOCOLL | RO_FLAG_ADJ_LO | RO_FLAG_ADJ_HI), tot_light_amt, SHAPE_CYLIN, DK_GRAY); // horizontal
+			pipes.push_back(pipe);
+			// add exit pipe; TODO: only one per connected graph; must call get_closest_wall_pos()
+			exit_pipe.is_exit = 1;
+			exit_pipe.radius  = radius;
+			exit_pipe.p2.z    = exit_pipe.p1.z;
+			exit_pipe.p1.z    = basement.z1(); // exits to the basement floor
+			pipes.push_back(exit_pipe);
 		} // for v
 	} // for d
-	cout << TXT(obstacles.size()) << TXT(pipes.size()) << TXT(num_connected) << endl;
+
+	// handle any remaining unconnected pipes
+	for (pipe_t &p : pipes) {
+		if (p.connected) continue; // already connected, has an exit
+		p.p1.z    = basement.z1(); // exits to the basement floor
+		p.is_exit = 1;
+	}
+
+	// add pipe objects
+	for (pipe_t const &p : pipes) {
+		bool const pdim(p.dim & 1), pdir(p.dim >> 1); // encoded as: X:dim=0,dir=0 Y:dim=1,dir=0, Z:dim=x,dir=1
+		unsigned flags(0);
+		if      (p.is_exit ) {flags = RO_FLAG_ADJ_HI;} // collidable, round end at top
+		else if (p.dim == 2) {flags = RO_FLAG_NOCOLL;}
+		else                 {flags = (RO_FLAG_NOCOLL | RO_FLAG_ADJ_LO | RO_FLAG_ADJ_HI | RO_FLAG_HANGING);} // add both flat ends
+		cube_t const c(p.get_bcube());
+		objs.emplace_back(c, TYPE_PIPE, room_id, pdim, pdir, flags, tot_light_amt, SHAPE_CYLIN, DK_GRAY);
+	} // for p
+	cout << TXT(obstacles.size()) << TXT(pipe_ends.size()) << TXT(pipes.size()) << TXT(num_connected) << endl;
 }
 
 // here each sphere represents the entry point of a pipe with this radius into the basement ceiling
