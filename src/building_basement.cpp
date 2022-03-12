@@ -269,6 +269,7 @@ point get_closest_wall_pos(point const &pos, float radius, cube_t const &room, v
 	}
 	for (cube_t const &wall : walls) { // check all interior walls
 		for (unsigned dim = 0; dim < 2; ++dim) {
+			if (pos[!dim] < wall.d[!dim][0]+radius || pos[!dim] > wall.d[!dim][1]-radius) continue; // doesn't project in this dim
 			bool const dir(wall.get_center_dim(dim) < pos[dim]);
 			float const val(wall.d[dim][dir] - (dir ? -radius : radius)), dist(fabs(val - pos[dim])); // shift val outward
 			if (dist >= dmin) continue;
@@ -282,14 +283,16 @@ point get_closest_wall_pos(point const &pos, float radius, cube_t const &room, v
 
 float get_merged_pipe_radius(float r1, float r2) {return pow((r1*r1*r1 + r2*r2*r2), 1/3.0);} // scales as cubic
 
+enum {PIPE_DRAIN=0, PIPE_CONN, PIPE_MAIN, PIPE_MEC, PIPE_EXIT};
+
 struct pipe_t {
 	point p1, p2;
 	float radius;
-	unsigned dim;
-	bool connected, is_exit;
+	unsigned dim, type;
+	bool connected;
 
-	pipe_t(point const &p1_, point const &p2_, float radius_, unsigned dim_, bool connected_=0) :
-		p1(p1_), p2(p2_), radius(radius_), dim(dim_), connected(connected_), is_exit(0) {}
+	pipe_t(point const &p1_, point const &p2_, float radius_, unsigned dim_, unsigned type_) :
+		p1(p1_), p2(p2_), radius(radius_), dim(dim_), type(type_), connected(type != PIPE_DRAIN) {}
 
 	cube_t get_bcube() const {
 		cube_t bcube(p1, p2);
@@ -307,9 +310,9 @@ void building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 	vector<sphere_t> pipe_ends;
 	get_pipe_basement_connections(pipe_ends);
 	if (pipe_ends.empty()) return; // can this happen?
-	float rmax(0.0);
-	for (sphere_t const &p : pipe_ends) {max_eq(rmax, p.radius);} // calculate max radius across all pipes
-	float const pipe_zval(ceil_zval - 1.5f*max(rmax, get_fc_thickness()));
+	float r_main(0.0);
+	for (sphere_t &p : pipe_ends) {r_main = get_merged_pipe_radius(r_main, + p.radius);}
+	float const pipe_zval(ceil_zval - r_main);
 	float const align_dist(2.0*get_wall_thickness()); // align pipes within this range (in particular sinks and stall toilets)
 	assert(pipe_zval > bcube.z1());
 	vector<pipe_t> pipes;
@@ -342,62 +345,92 @@ void building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 			}
 			if (!found) {m[v].push_back(pipe_ix);}
 		} // for d
-		pipes.emplace_back(point(p.pos.x, p.pos.y, pipe_zval), p.pos, p.radius, 2);
+		pipes.emplace_back(point(p.pos.x, p.pos.y, pipe_zval), p.pos, p.radius, 2, PIPE_DRAIN);
 		pipe_end_bcube.assign_or_union_with_cube(pipes.back().get_bcube());
 		++num_connected;
 	} // for pipe_ends
 
-	// connect pipes in the same row or column
-	for (unsigned d = 0; d < 2; ++d) {
-		for (auto const &v : xy_map[!d]) {
-			pipe_t exit_pipe(pipes[v.second.front()]); // deep copy
-			if (v.second.size() == 1) continue; // skip singleton
-			float radius(0.0), range_min(basement.d[d][1]), range_max(basement.d[d][0]); // start denormalized
-			unsigned num_unconn(0);
+	// create main pipe that runs in the longer dim (based on drain pipe XY bounds)
+	bool const dim(pipe_end_bcube.dx() < pipe_end_bcube.dy()); // main sewer line dim
+	pipe_end_bcube.expand_in_dim(dim, r_main); // TODO: too large?
+	float centerline(pipe_end_bcube.get_center_dim(!dim));
+	point mp[2]; // {lo, hi} ends
+	float exit_dmin(0.0);
+	bool exit_dir(0);
+	point exit_pos;
 
-			for (unsigned ix : v.second) {
-				assert(ix < pipes.size());
-				pipe_t &pipe(pipes[ix]);
-				num_unconn += !pipe.connected;
-				float const val(pipe.p1[d]);
-				min_eq(range_min, val-pipe.radius);
-				max_eq(range_max, val+pipe.radius);
-				radius = get_merged_pipe_radius(radius, + pipe.radius);
-			} // for ix
-			if (num_unconn == 0) continue; // all pipes have already been connected in the other dim
-			assert(range_min < range_max);
-			float const val(exit_pipe.p1[d]);
-			min_eq(range_min, val-radius); // extend range to include the exit pipe
-			max_eq(range_max, val+radius);
-			point p1(exit_pipe.p1), p2(p1);
-			p1[d] = range_min; p2[d] = range_max;
-			pipe_t const pipe(p1, p2, radius, d, 1); // connected=1
-			if (has_bcube_int(pipe.get_bcube(), obstacles)) continue; // blocked, can't connect
-			for (unsigned ix : v.second) {pipes[ix].connected = 1;}
-			pipes.push_back(pipe);
-			// add exit pipe; TODO: only one per connected graph; must call get_closest_wall_pos()
-			exit_pipe.is_exit = exit_pipe.connected = 1;
-			exit_pipe.radius  = radius;
-			exit_pipe.p2.z    = exit_pipe.p1.z;
-			exit_pipe.p1.z    = basement.z1(); // exits to the basement floor
-			pipes.push_back(exit_pipe);
-		} // for v
-	} // for d
-
-	// handle any remaining unconnected pipes
-	for (pipe_t &p : pipes) {
-		if (p.connected) continue; // already connected, has an exit
-		p.p1.z    = basement.z1(); // exits to the basement floor
-		p.is_exit = 1;
+	for (unsigned d = 0; d < 2; ++d) { // dim
+		mp[d][ dim] = pipe_end_bcube.d[dim][d];
+		mp[d][!dim] = centerline;
+		mp[d].z     = pipe_zval;
 	}
+	// shift pipe until it clears all obstacles
+	float const step_dist(2.0*r_main), step_area(basement.get_sz_dim(!dim));
+	unsigned const max_steps(step_area/step_dist);
+	bool success(0);
+
+	for (unsigned n = 0; n < max_steps; ++n) {
+		cube_t const c(pipe_t(mp[0], mp[1], r_main, dim, PIPE_MAIN).get_bcube());
+		if (!basement.contains_cube_xy(c)) break; // outside valid area
+		if (!has_bcube_int(c, obstacles)) {success = 1; break;} // success/done
+		float const xlate(((n>>1)+1)*((n&1) ? -1.0 : 1.0)*step_dist);
+		UNROLL_2X(mp[i_][!dim] += xlate;)
+	} // for n
+	if (success) {centerline = mp[0][!dim];} // update centerline based on translate
+	else {UNROLL_2X(mp[i_][!dim] = centerline;)} // if failed, go back to the centerline, even though it's invalid
+	// create exit segment and vertical pipe
+	for (unsigned d = 0; d < 2; ++d) { // dim
+		point const cand_exit_pos(get_closest_wall_pos(mp[d], r_main, basement, walls, obstacles));
+		float const dist(p2p_dist(mp[d], cand_exit_pos));
+		if (exit_dmin == 0.0 || dist < exit_dmin) {exit_pos = cand_exit_pos; exit_dir = d; exit_dmin = dist;}
+	}
+	point const &exit_conn(mp[exit_dir]);
+
+	if (exit_pos[!dim] == exit_conn[!dim]) { // exit point is along the main pipe
+		if ((exit_conn[dim] < exit_pos[dim]) == exit_dir) {mp[exit_dir] = exit_pos;} // extend main pipe to exit point
+	}
+	else { // create a right angle bend
+		pipes.emplace_back(exit_conn, exit_pos, r_main, !dim, PIPE_MEC); // main exit connector
+	}
+	point exit_floor_pos(exit_pos);
+	exit_floor_pos.z = basement.z1();
+	pipes.emplace_back(exit_floor_pos, exit_pos, r_main, 2, PIPE_EXIT);
+	// add main pipe
+	pipe_t main_pipe(mp[0], mp[1], r_main, dim, PIPE_MAIN);
+	cube_t const main_pipe_bcube(main_pipe.get_bcube());
+	assert(main_pipe_bcube.is_strictly_normalized());
+	pipes.push_back(main_pipe);
+	// connect drains to main pipe in !dim
+	bool const d(!dim);
+
+	for (auto const &v : xy_map[!d]) {
+		float radius(0.0), range_min(centerline), range_max(centerline);
+
+		for (unsigned ix : v.second) {
+			assert(ix < pipes.size());
+			pipe_t &pipe(pipes[ix]);
+			float const val(pipe.p1[d]);
+			min_eq(range_min, val-pipe.radius);
+			max_eq(range_max, val+pipe.radius);
+			radius = get_merged_pipe_radius(radius, + pipe.radius);
+		} // for ix
+		assert(range_min < range_max);
+		point p1(pipes[v.second.front()].p1), p2(p1); // copy dims !d and z from a representative pipe
+		p1[d] = range_min; p2[d] = range_max;
+		pipe_t const pipe(p1, p2, radius, d, PIPE_CONN);
+		if (has_bcube_int(pipe.get_bcube(), obstacles)) continue; // blocked, can't connect TODO: clip to shorter segment, as long as centerline is included
+		for (unsigned ix : v.second) {pipes[ix].connected = 1;}
+		pipes.push_back(pipe);
+	} // for v
 
 	// add pipe objects
 	for (pipe_t const &p : pipes) {
 		bool const pdim(p.dim & 1), pdir(p.dim >> 1); // encoded as: X:dim=0,dir=0 Y:dim=1,dir=0, Z:dim=x,dir=1
-		unsigned flags(0);
-		if      (p.is_exit ) {flags = RO_FLAG_ADJ_HI;} // collidable, round end at top
-		else if (p.dim == 2) {flags = RO_FLAG_NOCOLL;}
-		else                 {flags = (RO_FLAG_NOCOLL | RO_FLAG_ADJ_LO | RO_FLAG_ADJ_HI | RO_FLAG_HANGING);} // add both flat ends
+		unsigned flags(0); // PIPE_DRAIN has no flags set
+		if (p.type == PIPE_EXIT) {flags |= RO_FLAG_ADJ_HI;} // round at the top
+		else                     {flags |= RO_FLAG_NOCOLL;} // only exit pipe has collisions enabled
+		if (p.type == PIPE_CONN || p.type == PIPE_MAIN) {flags |= RO_FLAG_HANGING;} // hanging connector/main pipe with flat ends
+		if (p.type == PIPE_CONN || p.type == PIPE_MAIN || p.type == PIPE_MEC) {flags |= RO_FLAG_ADJ_LO | RO_FLAG_ADJ_HI;} // flat or round ends
 		cube_t const c(p.get_bcube());
 		objs.emplace_back(c, TYPE_PIPE, room_id, pdim, pdir, flags, tot_light_amt, SHAPE_CYLIN, DK_GRAY);
 	} // for p
@@ -435,7 +468,7 @@ void building_t::get_pipe_basement_connections(vector<sphere_t> &pipes) const {
 		++num_drains;
 	} // for i
 	for (sphere_t &p : pipes) {min_eq(p.radius, max_radius);} // clamp radius to a reasonable value after all merges
-	cout << TXT(objs.size()) << TXT(num_drains) << TXT(pipes.size()) << endl;
+	cout << TXT(objs.size()) << TXT(num_drains) << TXT(pipes.size());
 }
 
 void building_t::add_parking_garage_ramp(rand_gen_t &rgen) {
