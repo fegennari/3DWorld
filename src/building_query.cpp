@@ -446,7 +446,7 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, vec
 					obj_z = max(pos.z, p_last.z);
 					had_coll = 1;
 
-					if (interior->ignore_ramp_placement) { // top floor ramp can't be walked on if blocked by a ceiling
+					if (!(c->flags & RO_FLAG_OPEN)) { // top floor ramp can't be walked on if blocked by a ceiling
 						for (auto i = interior->ceilings.begin(); i != interior->ceilings.end(); ++i) {
 							if (!i->contains_pt_xy(pos)) continue; // sphere not in this ceiling
 							if (player_bot_z_step > i->z2() || player_top_z < i->z1()) continue; // no Z overlap

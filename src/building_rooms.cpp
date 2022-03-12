@@ -1743,13 +1743,15 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 	interior->get_stairs_and_elevators_bcubes_intersecting_cube(room_floor_cube, obstacles, 0.0); // without clearance
 	interior->get_stairs_and_elevators_bcubes_intersecting_cube(room_floor_cube, obstacles_exp, 0.9*window_vspacing); // with clearance
 	cube_with_ix_t const &ramp(interior->pg_ramp);
+	bool const is_top_floor(floor_ix+1 == num_floors);
 	
 	// add ramp if one was placed during floorplanning, before adding parking spaces
 	// Note: lights can be very close to ramps, but I haven't actually seen them touch; do we need to check for and handle that case?
 	if (!ramp.is_all_zeros()) {
 		cube_t rc(ramp); // ramp clipped to this parking garage floor
 		set_cube_zvals(rc, zval, (zval + window_vspacing));
-		objs.emplace_back(rc, TYPE_RAMP, room_id, (ramp.ix >> 1), (ramp.ix & 1), 0, tot_light_amt, SHAPE_ANGLED, wall_color);
+		unsigned const flags((is_top_floor && interior->ignore_ramp_placement) ? 0 : RO_FLAG_OPEN); // ramp is open if the top exit is open
+		objs.emplace_back(rc, TYPE_RAMP, room_id, (ramp.ix >> 1), (ramp.ix & 1), flags, tot_light_amt, SHAPE_ANGLED, wall_color);
 		obstacles    .push_back(rc); // don't place parking spaces next to the ramp
 		obstacles_exp.push_back(rc); // clip beams to ramp
 	}
@@ -1863,7 +1865,7 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 			} // for s
 		} // for d
 	} // for n
-	if (floor_ix+1 == num_floors) { // this is the top floor
+	if (is_top_floor) {
 		//highres_timer_t timer("Get Pipe Basement Connections");
 		// move or remove pipes intersecting lights, pillars, walls, stairs, elevators, and ramps;
 		// note that lights haven't been added yet though, so maybe pipes need to be added later?
