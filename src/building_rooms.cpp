@@ -3079,7 +3079,6 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 
 	float const window_vspacing(get_window_vspace()), floor_thickness(get_floor_thickness()), half_thick(0.5*floor_thickness);
 	float const wall_thickness(get_wall_thickness()), elevator_car_z1_add(0.05*floor_thickness), fc_thick_scale(get_elevator_fc_thick_scale());
-	bool const has_parking_garage(interior->room_geom->has_parking_garage);
 	vect_room_object_t &objs(interior->room_geom->objs);
 	ostringstream oss; // reused across elevators/floors
 

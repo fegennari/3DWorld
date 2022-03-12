@@ -1257,7 +1257,7 @@ cube_t get_elevator_car_panel(room_object_t const &c, float fc_thick_scale) {
 	panel.z1() += 0.28*dz; panel.z2() -= 0.28*dz;
 	return panel;
 }
-void building_room_geom_t::add_elevator(room_object_t const &c, float tscale, float fc_thick_scale, unsigned floor_offset) { // elevator car; dynamic=1
+void building_room_geom_t::add_elevator(room_object_t const &c, float tscale, float fc_thick_scale, unsigned floor_offset, bool has_parking_garage) { // dynamic=1
 	// elevator car, all materials are dynamic; no lighting scale
 	float const dz(c.dz()), thickness(fc_thick_scale*dz), dir_sign(c.dir ? 1.0 : -1.0), signed_thickness(dir_sign*thickness);
 	cube_t floor(c), ceil(c), back(c);

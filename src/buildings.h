@@ -622,7 +622,7 @@ struct building_decal_manager_t {
 
 struct building_room_geom_t {
 
-	bool has_elevators, has_pictures, has_parking_garage, lights_changed, lighting_invalid, modified_by_player;
+	bool has_elevators, has_pictures, lights_changed, lighting_invalid, modified_by_player;
 	unsigned char num_pic_tids;
 	float obj_scale;
 	unsigned pg_wall_start, buttons_start, stairs_start; // index of first object of {TYPE_PG_WALL, TYPE_BUTTON, TYPE_STAIR}
@@ -639,7 +639,7 @@ struct building_room_geom_t {
 	vect_cube_t light_bcubes;
 	building_decal_manager_t decal_manager;
 
-	building_room_geom_t(point const &tex_origin_=all_zeros) : has_elevators(0), has_pictures(0), has_parking_garage(0), lights_changed(0), lighting_invalid(0),
+	building_room_geom_t(point const &tex_origin_=all_zeros) : has_elevators(0), has_pictures(0), lights_changed(0), lighting_invalid(0),
 		modified_by_player(0), num_pic_tids(0), obj_scale(1.0), pg_wall_start(0), buttons_start(0), stairs_start(0), tex_origin(tex_origin_), wood_color(WHITE) {}
 	bool empty() const {return objs.empty();}
 	void clear();
@@ -673,7 +673,7 @@ struct building_room_geom_t {
 	void add_parking_space(room_object_t const &c, vector3d const &tex_origin, float tscale);
 	void add_pg_ramp(room_object_t const &c, vector3d const &tex_origin, float tscale);
 	void add_pipe(room_object_t const &c);
-	void add_elevator(room_object_t const &c, float tscale, float fc_thick_scale, unsigned floor_offset);
+	void add_elevator(room_object_t const &c, float tscale, float fc_thick_scale, unsigned floor_offset, bool has_parking_garage);
 	void add_elevator_doors(elevator_t const &e, float fc_thick_scale);
 	void add_light(room_object_t const &c, float tscale);
 	void add_rug(room_object_t const &c);

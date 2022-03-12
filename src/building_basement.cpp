@@ -57,7 +57,6 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 	assert(has_room_geom());
 	rgen.rseed1 += 123*floor_ix; // make it unique per floor
 	rgen.rseed2 += room_id;
-	interior->room_geom->has_parking_garage = 1;
 	// rows are separated by walls and run in dim, with a road and parking spaces on either side of it;
 	// spaces are arranged in !dim, with roads along the edges of the building that connect to the roads of each row
 	bool const dim(room.dx() < room.dy()); // long/primary dim; cars are lined up along this dim, oriented along the other dim
