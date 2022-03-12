@@ -483,6 +483,7 @@
     <ClCompile Include="src\animals.cpp" />
     <ClCompile Include="src\asteroid.cpp" />
     <ClCompile Include="src\building_animals.cpp" />
+    <ClCompile Include="src\building_basement.cpp" />
     <ClCompile Include="src\building_floorplan.cpp" />
     <ClCompile Include="src\building_gameplay.cpp" />
     <ClCompile Include="src\building_geom.cpp" />

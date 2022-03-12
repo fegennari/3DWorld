@@ -1350,57 +1350,6 @@ void subtract_cube_from_floor_ceil(cube_t const &c, vect_cube_t &fs) {
 	}
 }
 
-void building_t::add_parking_garage_ramp(rand_gen_t &rgen) {
-	assert(interior && !is_house && has_parking_garage);
-	cube_with_ix_t &ramp(interior->pg_ramp);
-	assert(ramp.is_all_zeros()); // must not have been set
-	cube_t const &basement(get_basement());
-	bool const dim(basement.dx() < basement.dy()); // long/primary dim
-	// see building_t::add_parking_garage_objs(); make sure there's space for a ramp plus both exit dirs within the building width
-	float const width(basement.get_sz_dim(!dim)), road_width(min(0.25f*width, 2.3f*get_nom_car_size().y));
-	float const window_vspacing(get_window_vspace()), floor_thickness(get_floor_thickness()), fc_thick(0.5*floor_thickness);
-	float const z1(basement.z1() + fc_thick), z2(basement.z2() + fc_thick); // bottom level basement floor to first floor floor
-	bool const ramp_pref_xdir(rgen.rand_bool()), ramp_pref_ydir(rgen.rand_bool());
-	bool added_ramp(0), dir(0);
-
-	for (unsigned pass = 0; pass < 2 && !added_ramp; ++pass) {
-		for (unsigned xd = 0; xd < 2 && !added_ramp; ++xd) {
-			for (unsigned yd = 0; yd < 2; ++yd) {
-				bool const xdir(bool(xd) ^ ramp_pref_xdir), ydir(bool(yd) ^ ramp_pref_ydir);
-				float const xsz((dim ? 2.0 : 1.0)*road_width), ysz((dim ? 1.0 : 2.0)*road_width); // longer in !dim
-				unsigned const num_ext(unsigned(basement.d[0][xdir] == bcube.d[0][xdir]) + unsigned(basement.d[1][ydir] == bcube.d[1][ydir]));
-				if (num_ext < 2-pass) continue; // must be on the exterior edge of the building in both dims for pass 0, and one dim for pass 1
-				dir = (dim ? xdir : ydir);
-				point corner(basement.d[0][xdir], basement.d[1][ydir], z1);
-				corner[!dim] += (dir ? -1.0 : 1.0)*road_width; // shift away from the wall so that cars have space to turn onto the level floor
-				point const c1((corner.x - 0.001*(xdir ? 1.0 : -1.0)*xsz), (corner.y - 0.001*(ydir ? 1.0 : -1.0)*ysz), z1); // slight inward shift to prevent z-fighting
-				point const c2((corner.x + (xdir ? -1.0 : 1.0)*xsz), (corner.y + (ydir ? -1.0 : 1.0)*ysz), z2);
-				ramp = cube_with_ix_t(cube_t(c1, c2), (((!dim)<<1) + dir)); // encode dim and dir in ramp index field
-				added_ramp = 1;
-				break; // done
-			} // for yd
-		} // for xd
-	} // for pass
-	if (!added_ramp) return; // what if none of the 4 corners work for a ramp?
-	// add landings, which are used to draw the vertical edges of the cutout
-	unsigned num_floors(calc_num_floors(basement, window_vspacing, floor_thickness));
-	float z(basement.z1() + window_vspacing); // start at upper floor rather than lower floor
-
-	if (1) { // FIXME: rooms on the ground floor above ramps aren't yet handled, so clip ramps to avoid disrupting their floors until this is fixed
-		ramp.z2() -= 2.0*floor_thickness;
-		--num_floors;
-		interior->ignore_ramp_placement = 1; // okay to place room objects over ramps because the floor has not been removed
-	}
-	for (unsigned f = 0; f < num_floors; ++f, z += window_vspacing) { // skip first floor - draw pairs of floors and ceilings
-		landing_t landing(ramp, 0, f, !dim, dir, 0, SHAPE_RAMP, 0, (f+1 == num_floors), 0, 1); // for_ramp=1
-		set_cube_zvals(landing, (z - fc_thick), (z + fc_thick));
-		interior->landings.push_back(landing);
-	}
-	// cut out spaces from floors and ceilings
-	subtract_cube_from_floor_ceil(ramp, interior->floors  );
-	subtract_cube_from_floor_ceil(ramp, interior->ceilings);
-}
-
 void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t const &part) { // and extend elevators vertically; part is on the bottom
 
 	//highres_timer_t timer("Connect Stairs"); // 72ms (serial)
