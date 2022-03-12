@@ -1869,16 +1869,54 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 		//highres_timer_t timer("Get Pipe Basement Connections");
 		// move or remove pipes intersecting lights, pillars, walls, stairs, elevators, and ramps;
 		// note that lights haven't been added yet though, so maybe pipes need to be added later?
+		vect_cube_t walls;
+
 		for (auto i = objs.begin()+objs_start; i != objs.end(); ++i) {
-			if (i->type == TYPE_PG_WALL || i->type == TYPE_RAMP) {obstacles.push_back(*i);} // walls, pillars, and ramps are obstacles for pipes
+			if      (i->type == TYPE_PG_WALL) {walls    .push_back(*i);} // walls and pillars
+			else if (i->type == TYPE_RAMP   ) {obstacles.push_back(*i);} // ramps are obstacles for pipes
 		}
-		add_basement_pipes(obstacles, room_id, tot_light_amt);
+		add_basement_pipes(obstacles, walls, room_id, tot_light_amt);
 	}
+}
+
+bool line_int_cubes_exp(point const &p1, point const &p2, vect_cube_t const &cubes, vector3d const &expand);
+
+// find the closest wall (including room wall) to this location, avoiding obstacles, and shift outward by radius; routes in X or Y only, for now
+point get_closest_wall_pos(point const &pos, float radius, cube_t const &room, vect_cube_t const &walls, vect_cube_t const &obstacles) {
+	if (!room.contains_pt_xy_exp(pos, radius)) {return pos;} // error?
+	// what about checking pos intersecting walls or obstacles? is that up to the caller to handle?
+	vector3d const expand(radius, radius, radius);
+	point best(pos);
+	float dmin(room.dx() + room.dy()); // use an initial distance larger than what we can return
+
+	if (!room.is_all_zeros()) { // check room exterior walls first
+		for (unsigned dim = 0; dim < 2; ++dim) {
+			for (unsigned dir = 0; dir < 2; ++dir) {
+				float const val(room.d[dim][dir] + (dir ? -radius : radius)), dist(fabs(val - pos[dim])); // shift val inward
+				if (dist >= dmin) continue;
+				point cand(pos);
+				cand[dim] = val;
+				// check walls as well, even though any wall hit should be replaced with a closer point below
+				if (!line_int_cubes_exp(pos, cand, obstacles, expand) && !line_int_cubes_exp(pos, cand, walls, expand)) {best = cand; dmin = dist;}
+			} // for dir
+		} // for dim
+	}
+	for (cube_t const &wall : walls) { // check all interior walls
+		for (unsigned dim = 0; dim < 2; ++dim) {
+			bool const dir(wall.get_center_dim(dim) < pos[dim]);
+			float const val(wall.d[dim][dir] - (dir ? -radius : radius)), dist(fabs(val - pos[dim])); // shift val outward
+			if (dist >= dmin) continue;
+			point cand(pos);
+			cand[dim] = val;
+			if (!line_int_cubes_exp(pos, cand, obstacles, expand)) {best = cand; dmin = dist;} // check obstacles only
+		} // for dim
+	}
+	return best;
 }
 
 float get_merged_pipe_radius(float r1, float r2) {return pow((r1*r1*r1 + r2*r2*r2), 1/3.0);} // scales as cubic
 
-void building_t::add_basement_pipes(vect_cube_t const &obstacles, unsigned room_id, float tot_light_amt) {
+void building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t const &walls, unsigned room_id, float tot_light_amt) {
 	vect_room_object_t &objs(interior->room_geom->objs);
 	cube_t const &basement(get_basement());
 	// add pipes to the ceiling
@@ -1895,15 +1933,17 @@ void building_t::add_basement_pipes(vect_cube_t const &obstacles, unsigned room_
 		cube_t c(p->pos);
 		c.expand_by_xy(p->radius);
 		c.z1() = bcube.z1(); // extend all the way down to the floor of the lowest basement
-		bool bad_place(0);
 
-		for (cube_t const &obstacle : obstacles) {
-			if (obstacle.intersects(c)) {bad_place = 1; break;}
+		if (has_bcube_int(c, obstacles) || has_bcube_int(c, walls)) { // can't place over stairs/elevators/ramps/pillars/walls
+			continue; // skip for now; TODO: maybe should move the pipe so as not to collide, or merge with a nearby pipe?
 		}
-		if (bad_place) continue; // skip for now; TODO: maybe should move the pipe so as not to collide with the obstacle?
 		++num_connected;
+
 		// build a graph of connected rows/columns
-		for (unsigned d = 0; d < 2; ++d) {xy_map[d][p->pos[d]].push_back(p - pipes.begin());}
+		for (unsigned d = 0; d < 2; ++d) {
+			// TODO: align if very close together
+			xy_map[d][p->pos[d]].push_back(p - pipes.begin());
+		}
 		// encoded as: X:dim=0,dir=0 Y:dim=1,dir=0, Z:dim=x,dir=1
 		objs.emplace_back(c, TYPE_PIPE, room_id, 0, 1, /*RO_FLAG_NOCOLL*/0, tot_light_amt, SHAPE_CYLIN, DK_GRAY); // vertical
 	} // for p
@@ -1928,6 +1968,7 @@ void building_t::add_basement_pipes(vect_cube_t const &obstacles, unsigned room_
 			set_wall_width(c, v.first, radius, d);
 			c.d[!d][0] = range_min; c.d[!d][1] = range_max;
 			// TODO: check obstacles and split/clip/drop
+			// TODO: track connected and avoid loops
 			objs.emplace_back(c, TYPE_PIPE, room_id, !d, 0, (RO_FLAG_NOCOLL | RO_FLAG_ADJ_LO | RO_FLAG_ADJ_HI), tot_light_amt, SHAPE_CYLIN, DK_GRAY); // horizontal
 		} // for v
 	} // for d
@@ -1939,7 +1980,7 @@ void building_t::add_basement_pipes(vect_cube_t const &obstacles, unsigned room_
 void building_t::get_pipe_basement_connections(vector<sphere_t> &pipes) const {
 	float const merge_dist = 4.0; // merge two pipes if their combined radius is within this distance
 	float const floor_spacing(get_window_vspace()), base_pipe_radius(0.01*floor_spacing), base_pipe_area(base_pipe_radius*base_pipe_radius);
-	float const pipe_z2(ground_floor_z1 - get_fc_thickness()), merge_dist_sq(merge_dist*merge_dist);
+	float const pipe_z2(ground_floor_z1 - get_fc_thickness()), merge_dist_sq(merge_dist*merge_dist), max_radius(0.4*get_wall_thickness());
 	auto const &objs(interior->room_geom->objs);
 	unsigned num_drains(0);
 	cube_t const &basement(get_basement());
@@ -1963,6 +2004,7 @@ void building_t::get_pipe_basement_connections(vector<sphere_t> &pipes) const {
 		if (!merged) {pipes.emplace_back(pos, base_pipe_radius);} // create a new pipe
 		++num_drains;
 	} // for i
+	for (sphere_t &p : pipes) {min_eq(p.radius, max_radius);} // clamp radius to a reasonable value after all merges
 	cout << TXT(objs.size()) << TXT(num_drains) << TXT(pipes.size()) << endl;
 }
 

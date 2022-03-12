@@ -993,6 +993,16 @@ bool line_int_cubes_exp(point const &p1, point const &p2, cube_t const *const cu
 	}
 	return 0;
 }
+// specialized for cube_t, line_bcube calculated internally
+bool line_int_cubes_exp(point const &p1, point const &p2, vect_cube_t const &cubes, vector3d const &expand) {
+	cube_t line_bcube(p1, p2);
+	line_bcube.expand_by(expand);
+
+	for (auto const &c : cubes) {
+		if (line_bcube.intersects(c) && line_int_cube_exp(p1, p2, c, expand)) return 1;
+	}
+	return 0;
+}
 template<typename T> bool line_int_cubes_exp(point const &p1, point const &p2, vector<T> const &cubes, vector3d const &expand, cube_t const &line_bcube) {
 	for (auto const &c : cubes) {
 		if (line_bcube.intersects(c) && line_int_cube_exp(p1, p2, c, expand)) return 1;
