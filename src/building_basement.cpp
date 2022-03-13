@@ -121,7 +121,7 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 		obstacles_exp.push_back(rc); // clip beams to ramp
 	}
 	// add walls and pillars
-	bool const no_sep_wall(num_walls == 0 || capacity < 100 && rgen.rand_bool());
+	bool const no_sep_wall(num_walls == 0 || (capacity < 100 && rgen.rand_bool()));
 	bool const split_sep_wall(!no_sep_wall && (num_pillars >= 5 || (num_pillars >= 4 && rgen.rand_bool())));
 	if (interior->room_geom->pg_wall_start == 0) {interior->room_geom->pg_wall_start = objs.size();} // set if not set, on first level
 	float center_pos(wall.get_center_dim(dim));
