@@ -257,7 +257,7 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 			}
 			else if (i->type == TYPE_RAMP) {obstacles.push_back(*i);} // ramps are obstacles for pipes
 		}
-		add_basement_pipes(obstacles, walls, room_id, tot_light_amt, beam.z1());
+		add_basement_pipes(obstacles, walls, room_id, tot_light_amt, beam.z1(), rgen);
 	}
 }
 
@@ -316,7 +316,7 @@ struct pipe_t {
 	}
 };
 
-void building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t const &walls, unsigned room_id, float tot_light_amt, float ceil_zval) {
+void building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t const &walls, unsigned room_id, float tot_light_amt, float ceil_zval, rand_gen_t &rgen) {
 	vect_room_object_t &objs(interior->room_geom->objs);
 	cube_t const &basement(get_basement());
 
@@ -326,30 +326,43 @@ void building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 	if (pipe_ends.empty()) return; // can this happen?
 	float r_main(0.0);
 	for (sphere_t &p : pipe_ends) {r_main = get_merged_pipe_radius(r_main, + p.radius);}
-	float const pipe_zval(ceil_zval - r_main);
-	float const align_dist(2.0*get_wall_thickness()); // align pipes within this range (in particular sinks and stall toilets)
+	float const window_vspacing(get_window_vspace()), wall_thickness(get_wall_thickness());
+	float const pipe_zval(ceil_zval - r_main), align_dist(2.0*wall_thickness); // align pipes within this range (in particular sinks and stall toilets)
 	assert(pipe_zval > bcube.z1());
 	vector<pipe_t> pipes;
 	map<float, vector<unsigned>> xy_map[2];
 	cube_t pipe_end_bcube;
 	unsigned num_connected(0);
+	// build random shifts table; make consistent per pipe to preserve X/Y alignments
+	unsigned const NUM_SHIFTS = 11; // {0,0} + 10 random shifts
+	vector3d rshifts[NUM_SHIFTS] = {};
+	for (unsigned n = 1; n < NUM_SHIFTS; ++n) {rshifts[n][rgen.rand_bool()] = 0.25*window_vspacing*rgen.signed_rand_float();} // random shift in a random dir
 
 	// seed the pipe graph with valid vertical segments and build a graph of X/Y values
-	for (sphere_t &p : pipe_ends) {
+	for (sphere_t const &p : pipe_ends) {
 		assert(p.radius > 0.0);
 		assert(p.pos.z > pipe_zval);
-		cube_t c(p.pos);
-		c.expand_by_xy(p.radius);
-		c.z1() = bcube.z1(); // extend all the way down to the floor of the lowest basement
+		point pos(p.pos);
+		bool valid(0);
 
-		if (has_bcube_int(c, obstacles) || has_bcube_int(c, walls)) { // can't place over stairs/elevators/ramps/pillars/walls
-			continue; // skip for now; TODO: maybe should move the pipe so as not to collide, or merge with a nearby pipe?
-		}
+		for (unsigned n = 0; n < NUM_SHIFTS; ++n) { // try zero + random shifts
+			cube_t c(pos);
+			c.expand_by_xy(p.radius);
+			c.z1() = bcube.z1(); // extend all the way down to the floor of the lowest basement
+
+			if (!basement.contains_cube_xy(c) || has_bcube_int(c, obstacles) || has_bcube_int(c, walls)) { // can't place over stairs/elevators/ramps/pillars/walls
+				pos = p.pos + rshifts[n]; // apply shift
+				continue;
+			}
+			valid = 1;
+			break;
+		} // for n
+		if (!valid) continue; // no valid shift, skip this connection
 		unsigned const pipe_ix(pipes.size());
 
 		for (unsigned d = 0; d < 2; ++d) {
 			auto &m(xy_map[d]);
-			float &v(p.pos[d]);
+			float &v(pos[d]);
 			auto it(m.find(v));
 			if (it != m.end()) {it->second.push_back(pipe_ix); continue;} // found
 			bool found(0);
@@ -359,17 +372,17 @@ void building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 			}
 			if (!found) {m[v].push_back(pipe_ix);}
 		} // for d
-		pipes.emplace_back(point(p.pos.x, p.pos.y, pipe_zval), p.pos, p.radius, 2, PIPE_DRAIN);
+		pipes.emplace_back(point(pos.x, pos.y, pipe_zval), pos, p.radius, 2, PIPE_DRAIN);
 		pipe_end_bcube.assign_or_union_with_cube(pipes.back().get_bcube());
 		++num_connected;
 	} // for pipe_ends
+	if (pipes.empty()) return; // no valid pipes
 
 	// create main pipe that runs in the longer dim (based on drain pipe XY bounds)
 	bool const dim(pipe_end_bcube.dx() < pipe_end_bcube.dy()); // main sewer line dim
-	pipe_end_bcube.expand_in_dim(dim, r_main); // TODO: too large?
-	float centerline(pipe_end_bcube.get_center_dim(!dim));
+	pipe_end_bcube.expand_in_dim(dim, r_main);
+	float centerline(pipe_end_bcube.get_center_dim(!dim)), exit_dmin(0.0);
 	point mp[2]; // {lo, hi} ends
-	float exit_dmin(0.0);
 	bool exit_dir(0);
 	point exit_pos;
 
@@ -379,7 +392,7 @@ void building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 		mp[d].z     = pipe_zval;
 	}
 	// shift pipe until it clears all obstacles
-	float const step_dist(2.0*r_main), step_area(basement.get_sz_dim(!dim));
+	float const step_dist(2.0*r_main), step_area(basement.get_sz_dim(!dim)); // step by pipe radius
 	unsigned const max_steps(step_area/step_dist);
 	bool success(0);
 
@@ -392,6 +405,44 @@ void building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 	} // for n
 	if (success) {centerline = mp[0][!dim];} // update centerline based on translate
 	else {UNROLL_2X(mp[i_][!dim] = centerline;)} // if failed, go back to the centerline, even though it's invalid
+	if (!success) {cout << "******************* Failed **********************" << TXT(basement.str()) << endl;} // TESTING
+	mp[0][dim] = basement.d[dim][1]; mp[1][dim] = basement.d[dim][0]; // make dim range denormalized; will recalculate below with correct range
+	// connect drains to main pipe in !dim
+	bool const d(!dim);
+
+	for (auto const &v : xy_map[!d]) {
+		float radius(0.0), range_min(centerline), range_max(centerline);
+
+		for (unsigned ix : v.second) {
+			assert(ix < pipes.size());
+			pipe_t &pipe(pipes[ix]);
+			float const val(pipe.p1[d]);
+
+			if (fabs(val - centerline) < r_main) {pipe.p1[d] = pipe.p2[d] = centerline;} // shift to connect directly to main pipe since it's close enough
+			else {
+				min_eq(range_min, val-pipe.radius);
+				max_eq(range_max, val+pipe.radius);
+			}
+			radius = get_merged_pipe_radius(radius, + pipe.radius);
+		} // for ix
+		// we can skip adding a connector if the main pipe is short and under the main pipe
+		if (range_max - range_min > r_main) {
+			point p1(pipes[v.second.front()].p1), p2(p1); // copy dims !d and z from a representative pipe
+			p1[d] = range_min; p2[d] = range_max;
+			pipe_t const pipe(p1, p2, radius, d, PIPE_CONN);
+			
+			if (has_bcube_int(pipe.get_bcube(), obstacles)) { // blocked, can't connect
+				// TODO: clip to shorter segment, as long as centerline is included
+				continue;
+			}
+			pipes.push_back(pipe);
+		}
+		min_eq(mp[0][dim], v.first-radius); // update main pipe endpoints to include this connector pipe range
+		max_eq(mp[1][dim], v.first+radius);
+		for (unsigned ix : v.second) {pipes[ix].connected = 1;}
+	} // for v
+	if (mp[0][dim] >= mp[1][dim]) return; // no pipes connected to main? I guess there's nothing to do here
+
 	// create exit segment and vertical pipe
 	for (unsigned d = 0; d < 2; ++d) { // dim
 		point const cand_exit_pos(get_closest_wall_pos(mp[d], r_main, basement, walls, obstacles));
@@ -411,31 +462,8 @@ void building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 	pipes.emplace_back(exit_floor_pos, exit_pos, r_main, 2, PIPE_EXIT);
 	// add main pipe
 	pipe_t main_pipe(mp[0], mp[1], r_main, dim, PIPE_MAIN);
-	cube_t const main_pipe_bcube(main_pipe.get_bcube());
-	assert(main_pipe_bcube.is_strictly_normalized());
+	assert(main_pipe.get_bcube().is_strictly_normalized());
 	pipes.push_back(main_pipe);
-	// connect drains to main pipe in !dim
-	bool const d(!dim);
-
-	for (auto const &v : xy_map[!d]) {
-		float radius(0.0), range_min(centerline), range_max(centerline);
-
-		for (unsigned ix : v.second) {
-			assert(ix < pipes.size());
-			pipe_t &pipe(pipes[ix]);
-			float const val(pipe.p1[d]);
-			min_eq(range_min, val-pipe.radius);
-			max_eq(range_max, val+pipe.radius);
-			radius = get_merged_pipe_radius(radius, + pipe.radius);
-		} // for ix
-		assert(range_min < range_max);
-		point p1(pipes[v.second.front()].p1), p2(p1); // copy dims !d and z from a representative pipe
-		p1[d] = range_min; p2[d] = range_max;
-		pipe_t const pipe(p1, p2, radius, d, PIPE_CONN);
-		if (has_bcube_int(pipe.get_bcube(), obstacles)) continue; // blocked, can't connect TODO: clip to shorter segment, as long as centerline is included
-		for (unsigned ix : v.second) {pipes[ix].connected = 1;}
-		pipes.push_back(pipe);
-	} // for v
 
 	// add pipe objects
 	for (pipe_t const &p : pipes) {
@@ -448,7 +476,7 @@ void building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 		cube_t const c(p.get_bcube());
 		objs.emplace_back(c, TYPE_PIPE, room_id, pdim, pdir, flags, tot_light_amt, SHAPE_CYLIN, DK_GRAY);
 	} // for p
-	cout << TXT(obstacles.size()) << TXT(pipe_ends.size()) << TXT(pipes.size()) << TXT(num_connected) << TXT(xy_map[0].size()) << TXT(xy_map[1].size()) << endl;
+	cout << TXT(pipe_ends.size()) << TXT(pipes.size()) << TXT(num_connected) << TXT(obstacles.size()) << TXT(xy_map[0].size()) << TXT(xy_map[1].size()) << endl;
 }
 
 // here each sphere represents the entry point of a pipe with this radius into the basement ceiling
