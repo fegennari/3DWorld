@@ -1610,6 +1610,11 @@ void building_t::add_split_roof_shadow_quads(building_draw_t &bdraw) const {
 
 // writes to the depth buffer only to prevent the terrain from being drawn in the basement
 // to be called when the player is inside this building; when outside the building, the exterior walls/windows will write to the depth buffer instead
+void draw_basement_entrance_cap(cube_t const &c, float z) {
+	// only draw top surface - bottom surface of terrain is not drawn when player is in the basement
+	vert_wrap_t const verts[4] = {point(c.x1(), c.y1(), z), point(c.x2(), c.y1(), z), point(c.x2(), c.y2(), z), point(c.x1(), c.y2(), z)};
+	draw_verts(verts, 4, GL_TRIANGLE_FAN); // single quad
+}
 void building_t::write_basement_entrance_depth_pass(shader_t &s) const {
 	if (!interior || !has_basement()) return;
 	float const zval(get_basement().z2()), z(zval + BASEMENT_ENTRANCE_SCALE*get_floor_thickness());
@@ -1619,10 +1624,10 @@ void building_t::write_basement_entrance_depth_pass(shader_t &s) const {
 	glEnable(GL_CULL_FACE);
 
 	for (auto i = interior->stairwells.begin(); i != interior->stairwells.end(); ++i) {
-		if (i->z1() >= zval) continue; // not basement stairwell
-		// only draw top surface - bottom surface of terrain is not drawn when player is in the basement
-		vert_wrap_t const verts[4] = {point(i->x1(), i->y1(), z), point(i->x2(), i->y1(), z), point(i->x2(), i->y2(), z), point(i->x1(), i->y2(), z)};
-		draw_verts(verts, 4, GL_TRIANGLE_FAN); // single quad
+		if (i->z1() < zval) {draw_basement_entrance_cap(*i, z);} // draw if this is a basement stairwell
+	}
+	if (has_pg_ramp() && !interior->ignore_ramp_placement) { // add opening for the ramp onto the ground floor
+		draw_basement_entrance_cap(interior->pg_ramp, z);
 	}
 	glDisable(GL_CULL_FACE);
 	disable_blend();
