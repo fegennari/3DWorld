@@ -416,7 +416,17 @@ void building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 	for (unsigned n = 0; n < max_steps; ++n) {
 		cube_t const c(pipe_t(mp[0], mp[1], r_main, dim, PIPE_MAIN, 3).get_bcube());
 		if (!basement.contains_cube_xy(c)) break; // outside valid area
-		if (!has_bcube_int(c, obstacles)) {success = 1; break;} // success/done
+		
+		if (!has_bcube_int(c, obstacles)) {
+			success = 1;
+
+			// check for overlap with beam running parallel to the main pipe, and reject it; mostly there to avoid blocking lights that may be on the beam
+			for (cube_t const &beam : beams) {
+				if (beam.get_sz_dim(dim) < beam.get_sz_dim(!dim)) continue; // beam not parallel to pipe, ignore
+				if (c.intersects_xy(beam)) {success = 0; break;}
+			}
+			if (success) break; // success/done
+		}
 		float const xlate(((n>>1)+1)*((n&1) ? -1.0 : 1.0)*step_dist);
 		UNROLL_2X(mp[i_][!dim] += xlate;)
 	} // for n
