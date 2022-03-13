@@ -387,9 +387,9 @@ void building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 			c.expand_by_xy(p.radius);
 			c.z1() = bcube.z1(); // extend all the way down to the floor of the lowest basement
 
-			// can't place outside basement, or over stairs/elevators/ramps/pillars/walls/beams;
+			// can't place outside building bcube, or over stairs/elevators/ramps/pillars/walls/beams;
 			// here beams are included because lights are attached to the underside of them, so avoiding beams should hopefully also avoid lights
-			if (!basement.contains_cube_xy(c) || has_bcube_int(c, obstacles) || has_bcube_int(c, walls) || has_bcube_int(c, beams)) {
+			if (!bcube.contains_cube_xy(c) || has_bcube_int(c, obstacles) || has_bcube_int(c, walls) || has_bcube_int(c, beams)) {
 				pos = p.pos + rshifts[n]; // apply shift
 				continue;
 			}
@@ -426,7 +426,8 @@ void building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 
 	// create main pipe that runs in the longer dim (based on drain pipe XY bounds)
 	pipe_end_bcube.expand_in_dim(dim, r_main);
-	float const pipes_bcube_center(pipe_end_bcube.get_center_dim(!dim));
+	// use the center of the pipes bcube to minimize run length, but clamp to the interior of the basement
+	float const pipes_bcube_center(max(basement.d[!dim][0]+r_main, min(basement.d[!dim][1]-r_main, pipe_end_bcube.get_center_dim(!dim))));
 	float centerline(pipes_bcube_center), exit_dmin(0.0);
 	point mp[2]; // {lo, hi} ends
 	bool exit_dir(0);
@@ -438,13 +439,14 @@ void building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 		mp[d].z     = pipe_zval;
 	}
 	// shift pipe until it clears all obstacles
-	float const step_dist(2.0*r_main), step_area(basement.get_sz_dim(!dim)); // step by pipe radius
+	float const step_dist(2.0*r_main), step_area(bcube.get_sz_dim(!dim)); // step by pipe radius
 	unsigned const max_steps(step_area/step_dist);
 	bool success(0);
 
 	for (unsigned n = 0; n < max_steps; ++n) {
 		cube_t const c(pipe_t(mp[0], mp[1], r_main, dim, PIPE_MAIN, 3).get_bcube());
-		if (!basement.contains_cube_xy(c)) break; // outside valid area
+		if (!bcube   .contains_cube_xy(c)) break; // outside valid area
+		if (!basement.contains_cube_xy(c)) continue; // outside the basement
 		
 		if (!has_bcube_int(c, obstacles)) {
 			success = 1;
@@ -461,7 +463,7 @@ void building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 	} // for n
 	if (success) {centerline = mp[0][!dim];} // update centerline based on translate
 	else {UNROLL_2X(mp[i_][!dim] = centerline;)} // if failed, use the centerline, even though it's invalid; rare, and I don't have an example where it looks wrong
-	mp[0][dim] = basement.d[dim][1]; mp[1][dim] = basement.d[dim][0]; // make dim range denormalized; will recalculate below with correct range
+	mp[0][dim] = bcube.d[dim][1]; mp[1][dim] = bcube.d[dim][0]; // make dim range denormalized; will recalculate below with correct range
 	bool const d(!dim);
 
 	// connect drains to main pipe in !dim
@@ -597,11 +599,13 @@ void building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 	// add pipe objects
 	for (pipe_t const &p : pipes) {
 		if (!p.connected) continue; // unconnected drain, skip
+		cube_t const pbc(p.get_bcube());
+		if (!basement.intersects_xy(pbc)) continue; // outside the basement, don't need to draw
 		bool const pdim(p.dim & 1), pdir(p.dim >> 1); // encoded as: X:dim=0,dir=0 Y:dim=1,dir=0, Z:dim=x,dir=1
 		unsigned flags(0);
 		if (p.type != PIPE_EXIT) {flags |= RO_FLAG_NOCOLL;} // only exit pipe has collisions enabled
 		if (p.type == PIPE_CONN || p.type == PIPE_MAIN) {flags |= RO_FLAG_HANGING;} // hanging connector/main pipe with flat ends
-		room_object_t const pipe(p.get_bcube(), TYPE_PIPE, room_id, pdim, pdir, flags, tot_light_amt, SHAPE_CYLIN, DK_GRAY);
+		room_object_t const pipe(pbc, TYPE_PIPE, room_id, pdim, pdir, flags, tot_light_amt, SHAPE_CYLIN, DK_GRAY);
 		objs.push_back(pipe);
 
 		// add pipe fittings around ends and joins; only fittings have flat and round ends because raw pipe ends should never be exposed
@@ -615,6 +619,7 @@ void building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 			pf.color  = fittings_color;
 			expand_cube_except_in_dim(pf, fitting_expand, p.dim); // expand slightly
 			pf.d[p.dim][!d] = pf.d[p.dim][d] + (d ? -1.0 : 1.0)*fitting_len;
+			if (!basement.intersects_xy(pf)) continue;
 			objs.push_back(pf);
 
 			if (p.type == PIPE_MEC || p.type == PIPE_EXIT) {
@@ -632,9 +637,11 @@ void building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 		} // for d
 	} // for p
 	for (pipe_t const &p : fittings) {
+		cube_t const pbc(p.get_bcube());
+		if (!basement.intersects_xy(pbc)) continue; // outside the basement, don't need to draw
 		bool const pdim(p.dim & 1), pdir(p.dim >> 1);
 		unsigned const flags(RO_FLAG_NOCOLL | RO_FLAG_HANGING | RO_FLAG_ADJ_LO | RO_FLAG_ADJ_HI); // non-colliding, flat ends on both sides
-		objs.emplace_back(p.get_bcube(), TYPE_PIPE, room_id, pdim, pdir, flags, tot_light_amt, SHAPE_CYLIN, fittings_color);
+		objs.emplace_back(pbc, TYPE_PIPE, room_id, pdim, pdir, flags, tot_light_amt, SHAPE_CYLIN, fittings_color);
 	} // for p
 	cout << TXT(pipe_ends.size()) << TXT(num_valid) << TXT(num_connected) << TXT(pipes.size()) << TXT(xy_map.size()) << endl;
 }
@@ -654,7 +661,7 @@ void building_t::get_pipe_basement_connections(vector<sphere_t> &pipes) const {
 		if (i->type != TYPE_TOILET && i->type != TYPE_SINK && i->type != TYPE_URINAL && i->type != TYPE_TUB && i->type != TYPE_SHOWER &&
 			i->type != TYPE_BRSINK && i->type != TYPE_KSINK && i->type != TYPE_WASHER && i->type != TYPE_DRAIN) continue;
 		point pos(i->xc(), i->yc(), ceil_zval);
-		if (!basement.contains_pt_xy(pos)) continue; // pipe doesn't pass through the basement, skip
+		//if (!basement.contains_pt_xy(pos)) continue; // pipe doesn't pass through the basement, but this is now allowed
 		bool merged(0);
 
 		// see if we can merge this pipe into an existing nearby pipe
