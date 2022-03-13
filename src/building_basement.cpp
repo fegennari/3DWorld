@@ -296,7 +296,7 @@ point get_closest_wall_pos(point const &pos, float radius, cube_t const &room, v
 	return best;
 }
 
-float get_merged_pipe_radius(float r1, float r2) {return pow((r1*r1*r1 + r2*r2*r2), 1/3.0);} // scales as cubic
+float get_merged_pipe_radius(float r1, float r2, float exponent) {return pow((pow(r1, exponent) + pow(r2, exponent)), 1/exponent);}
 
 enum {PIPE_DRAIN=0, PIPE_CONN, PIPE_MAIN, PIPE_MEC, PIPE_EXIT, PIPE_FITTING};
 
@@ -333,9 +333,10 @@ void building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 	get_pipe_basement_connections(pipe_ends);
 	if (pipe_ends.empty()) return; // can this happen?
 	float r_main(0.0);
-	for (sphere_t &p : pipe_ends) {r_main = get_merged_pipe_radius(r_main, + p.radius);}
+	for (sphere_t &p : pipe_ends) {r_main = get_merged_pipe_radius(r_main, + p.radius, 4.0);} // higher exponent to avoid pipes that are too large
 	float const window_vspacing(get_window_vspace()), wall_thickness(get_wall_thickness());
-	float const pipe_zval(ceil_zval - r_main), align_dist(2.0*wall_thickness); // align pipes within this range (in particular sinks and stall toilets)
+	float const pipe_zval(ceil_zval - FITTING_RADIUS*r_main); // includes clearance for fittings vs. beams (and lights - mostly)
+	float const align_dist(2.0*wall_thickness); // align pipes within this range (in particular sinks and stall toilets)
 	assert(pipe_zval > bcube.z1());
 	vector<pipe_t> pipes, fittings;
 	cube_t pipe_end_bcube;
@@ -357,7 +358,8 @@ void building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 			c.expand_by_xy(p.radius);
 			c.z1() = bcube.z1(); // extend all the way down to the floor of the lowest basement
 
-			// can't place outside basement, or over stairs/elevators/ramps/pillars/walls/beams
+			// can't place outside basement, or over stairs/elevators/ramps/pillars/walls/beams;
+			// here beams are included because lights are attached to the underside of them, so avoiding beams should hopefully also avoid lights
 			if (!basement.contains_cube_xy(c) || has_bcube_int(c, obstacles) || has_bcube_int(c, walls) || has_bcube_int(c, beams)) {
 				pos = p.pos + rshifts[n]; // apply shift
 				continue;
@@ -395,7 +397,8 @@ void building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 
 	// create main pipe that runs in the longer dim (based on drain pipe XY bounds)
 	pipe_end_bcube.expand_in_dim(dim, r_main);
-	float centerline(pipe_end_bcube.get_center_dim(!dim)), exit_dmin(0.0);
+	float const pipes_bcube_center(pipe_end_bcube.get_center_dim(!dim));
+	float centerline(pipes_bcube_center), exit_dmin(0.0);
 	point mp[2]; // {lo, hi} ends
 	bool exit_dir(0);
 	point exit_pos;
@@ -420,10 +423,10 @@ void building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 	if (success) {centerline = mp[0][!dim];} // update centerline based on translate
 	else {UNROLL_2X(mp[i_][!dim] = centerline;)} // if failed, use the centerline, even though it's invalid; rare, and I don't have an example where it looks wrong
 	mp[0][dim] = basement.d[dim][1]; mp[1][dim] = basement.d[dim][0]; // make dim range denormalized; will recalculate below with correct range
-	// connect drains to main pipe in !dim
 	bool const d(!dim);
 
-	for (auto const &v : xy_map) {
+	// connect drains to main pipe in !dim
+	for (auto const &v : xy_map) { // for each unique position along the main pipe
 		float radius(0.0), range_min(centerline), range_max(centerline);
 		point const &ref_p1(pipes[v.second.front()].p1);
 		unsigned num_keep(0);
@@ -451,7 +454,7 @@ void building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 				}
 			}
 			pipe.connected = 1;
-			radius = get_merged_pipe_radius(radius, + pipe.radius);
+			radius = get_merged_pipe_radius(radius, + pipe.radius, 3.0); // cubic
 			++num_keep;
 		} // for ix
 		if (num_keep == 0) continue; // no valid connections for this row
@@ -496,11 +499,13 @@ void building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 			break; // success
 		} // for d
 		if (!has_exit) { // no straight segment? how about a right angle?
-			bool const fdim1(rgen.rand_bool()), fdim2(rgen.rand_bool());
+			bool first_side(0);
+			if (centerline == pipes_bcube_center) {first_side = rgen.rand_bool();} // centered, choose a random side
+			else {first_side = ((basement.d[!dim][1] - mp[0][!dim]) < (mp[0][!dim] - basement.d[!dim][0]));} // off-center, choose closer basement exterior wall
 
 			for (unsigned d = 0; d < 2 && !has_exit; ++d) { // dir
 				for (unsigned e = 0; e < 2; ++e) { // side
-					bool const dir(bool(d) ^ fdim1), side(bool(e) ^ fdim2);
+					bool const dir(bool(d) ^ first_dir), side(bool(e) ^ first_side);
 					point ext[2] = {mp[dir], mp[dir]};
 					ext[side][!dim] = basement.d[!dim][side]; // shift this end to the basement wall
 					pipe_t const exit_pipe(ext[0], ext[1], r_main, !dim, PIPE_MEC, (side ? 1 : 2)); // add a bend in the side connecting to the main pipe
@@ -618,7 +623,7 @@ void building_t::get_pipe_basement_connections(vector<sphere_t> &pipes) const {
 			float const p_area(p->radius*p->radius), sum_area(p_area + base_pipe_area);
 			if (!dist_xy_less_than(p->pos, pos, merge_dist_sq*sum_area)) continue;
 			p->pos    = (p_area*p->pos + base_pipe_area*pos)/sum_area; // merged position is weighted average area
-			p->radius = get_merged_pipe_radius(p->radius, base_pipe_radius);
+			p->radius = get_merged_pipe_radius(p->radius, base_pipe_radius, 3.0); // cubic
 			merged    = 1;
 			break;
 		} // for p
