@@ -3258,18 +3258,18 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 					if (bool(d) == side) {railing.z1() = z_split + railing_side_dz; flags |= RO_FLAG_ADJ_HI; railing_dir ^= 1;}
 					else                 {railing.z2() = z_split - railing_side_dz; flags |= RO_FLAG_ADJ_LO;}
 				}
-				objs.emplace_back(railing, TYPE_RAILING, 0, dim, railing_dir, flags, 1.0, SHAPE_CUBE, railing_color); // collision works like a cube
+				objs.emplace_back(railing, TYPE_RAILING, 0, dim, railing_dir, flags, 1.0, SHAPE_CUBE, railing_color);
 			}
 		} // for d
 		if (i->has_railing && i->shape == SHAPE_U) { // add a railing for the back wall of U-shaped stairs
 			cube_t railing(*i);
 			set_wall_width(railing, (i->d[dim][dir] + (dir ? -1.0 : 1.0)*2.0*wall_hw), wall_hw, dim);
 			set_wall_width(railing, (wall.z1() + 0.819*window_vspacing), 1.4*railing_side_dz, 2); // set zvals: small dz to make it normalized (determined experimentally)
-			objs.emplace_back(railing, TYPE_RAILING, 0, !dim, dir, (RO_FLAG_NOCOLL | RO_FLAG_ADJ_HI | RO_FLAG_ADJ_LO | RO_FLAG_INTERIOR), 1.0, SHAPE_CUBE, railing_color); // no ends
+			objs.emplace_back(railing, TYPE_RAILING, 0, !dim, dir, (RO_FLAG_NOCOLL | RO_FLAG_ADJ_HI | RO_FLAG_ADJ_LO | RO_FLAG_ADJ_BOT), 1.0, SHAPE_CUBE, railing_color); // no ends
 		}
 		if (i->has_railing && (i->stack_conn || (extend_walls_up && i->shape == SHAPE_STRAIGHT))) {
 			// add railings around the top if: straight + top floor with no roof access, connector stairs, or basement stairs
-			room_object_t railing(*i, TYPE_RAILING, 0, !dim, dir, (RO_FLAG_TOS | RO_FLAG_INTERIOR), 1.0, SHAPE_CUBE, railing_color); // flag to skip drawing ends
+			room_object_t railing(*i, TYPE_RAILING, 0, !dim, dir, (RO_FLAG_TOS | RO_FLAG_ADJ_BOT), 1.0, SHAPE_CUBE, railing_color); // flag to skip drawing ends
 			railing.z1()  = railing.z2(); // starts at the floor
 			railing.z2() += window_vspacing - floor_thickness;
 			set_wall_width(railing, (i->d[dim][!dir] + (dir ? -1.0 : 1.0)*wall_hw), wall_hw, dim); // no overlap with stairs cutout
