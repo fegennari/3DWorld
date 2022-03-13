@@ -297,7 +297,12 @@ point get_closest_wall_pos(point const &pos, float radius, cube_t const &room, v
 
 float get_merged_pipe_radius(float r1, float r2) {return pow((r1*r1*r1 + r2*r2*r2), 1/3.0);} // scales as cubic
 
-enum {PIPE_DRAIN=0, PIPE_CONN, PIPE_MAIN, PIPE_MEC, PIPE_EXIT};
+enum {PIPE_DRAIN=0, PIPE_CONN, PIPE_MAIN, PIPE_MEC, PIPE_EXIT, PIPE_FITTING};
+
+void expand_cube_except_in_dim(cube_t &c, float expand, unsigned not_dim) {
+	c.expand_by(expand);
+	c.expand_in_dim(not_dim, -expand); // oops, we shouldn't have expanded in this dim
+}
 
 struct pipe_t {
 	point p1, p2;
@@ -310,8 +315,7 @@ struct pipe_t {
 
 	cube_t get_bcube() const {
 		cube_t bcube(p1, p2);
-		bcube.expand_by(radius);
-		bcube.expand_in_dim(dim, -radius); // oops, we shouldn't have expanded in this dim
+		expand_cube_except_in_dim(bcube, radius, dim);
 		return bcube;
 	}
 };
@@ -319,6 +323,7 @@ struct pipe_t {
 void building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t const &walls, unsigned room_id, unsigned num_floors,
 	float tot_light_amt, float ceil_zval, rand_gen_t &rgen)
 {
+	float const FITTING_LEN(1.2), FITTING_RADIUS(1.1); // relative to radius
 	vect_room_object_t &objs(interior->room_geom->objs);
 	cube_t const &basement(get_basement());
 
@@ -331,7 +336,7 @@ void building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 	float const window_vspacing(get_window_vspace()), wall_thickness(get_wall_thickness());
 	float const pipe_zval(ceil_zval - r_main), align_dist(2.0*wall_thickness); // align pipes within this range (in particular sinks and stall toilets)
 	assert(pipe_zval > bcube.z1());
-	vector<pipe_t> pipes;
+	vector<pipe_t> pipes, fittings;
 	map<float, vector<unsigned>> xy_map[2];
 	cube_t pipe_end_bcube;
 	unsigned num_connected(0);
@@ -437,13 +442,25 @@ void building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 				continue;
 			}
 			pipes.push_back(pipe);
-		}
-		min_eq(mp[0][dim], v.first-radius); // update main pipe endpoints to include this connector pipe range
+
+			for (unsigned ix : v.second) { // add fittings
+				float const val(pipes[ix].p1[d]), fitting_len(FITTING_LEN*radius);
+				p1[d] = val - fitting_len; p2[d] = val + fitting_len;
+				fittings.emplace_back(p1, p2, FITTING_RADIUS*radius, d, PIPE_FITTING, 3);
+			}
+		} // end connector
+		// add fitting to the main pipe
+		point p1(mp[0]), p2(p1);
+		float const fitting_len(FITTING_LEN*r_main);
+		p1[!d] = v.first - fitting_len; p2[!d] = v.first + fitting_len;
+		fittings.emplace_back(p1, p2, FITTING_RADIUS*r_main, !d, PIPE_FITTING, 3);
+		// update main pipe endpoints to include this connector pipe range
+		min_eq(mp[0][dim], v.first-radius);
 		max_eq(mp[1][dim], v.first+radius);
-		for (unsigned ix : v.second) {pipes[ix].connected = 1;}
+		for (unsigned ix : v.second) {pipes[ix].connected = 1;} // mark all drains as connected
 	} // for v
 	if (mp[0][dim] >= mp[1][dim]) return; // no pipes connected to main? I guess there's nothing to do here
-	unsigned main_pipe_end_flags(3); // start with both ends capped
+	unsigned main_pipe_end_flags(0); // start with both ends unconnected
 	bool has_exit(0);
 
 	if (num_floors > 1 || rgen.rand_bool()) { // exit into the wall of the building
@@ -456,7 +473,7 @@ void building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 			if (has_bcube_int(pipe_t(ext[0], ext[1], r_main, dim, PIPE_MAIN, 0).get_bcube(), obstacles)) continue; // can't extend to ext wall in this dim
 			mp[dir]  = ext[dir];
 			has_exit = 1;
-			main_pipe_end_flags = (dir ? 1 : 2); // cap only the end not going to the exit
+			main_pipe_end_flags = (dir ? 2 : 1); // connect the end going to the exit
 			break; // success
 		} // for d
 		if (!has_exit) { // no straight segment? how about a right angle?
@@ -471,7 +488,7 @@ void building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 					if (has_bcube_int(exit_pipe.get_bcube(), obstacles)) continue; // can't extend to the ext wall in this dim
 					pipes.push_back(exit_pipe);
 					has_exit = 1;
-					main_pipe_end_flags = (dir ? 1 : 2); // cap only the end not going to the exit connector pipe
+					main_pipe_end_flags = (dir ? 2 : 1); // connect the end going to the exit connector pipe
 					break; // success
 				} // for e
 			} // for d
@@ -487,33 +504,74 @@ void building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 		unsigned exit_pipe_end_flags(2); // bend at the top only
 
 		if (exit_pos[!dim] == exit_conn[!dim]) { // exit point is along the main pipe
-			if ((exit_conn[dim] < exit_pos[dim]) == exit_dir) {mp[exit_dir] = exit_pos;} // extend main pipe to exit point
+			if ((exit_conn[dim] < exit_pos[dim]) == exit_dir) { // extend main pipe to exit point
+				mp[exit_dir] = exit_pos;
+				main_pipe_end_flags = (exit_dir ? 2 : 1); // connect the end going to the exit
+			}
+			else { // exit is in the middle of the pipe; add fitting to the main pipe
+				point p1(exit_pos), p2(p1);
+				float const fitting_len(FITTING_LEN*r_main);
+				p1[dim] -= fitting_len; p2[dim] += fitting_len;
+				fittings.emplace_back(p1, p2, FITTING_RADIUS*r_main, !d, PIPE_FITTING, 3);
+				exit_pipe_end_flags = 0; // no bend needed
+			}
 		}
 		else { // create a right angle bend
 			pipes.emplace_back(exit_conn, exit_pos, r_main, !dim, PIPE_MEC, 3); // main exit connector, bends at both ends
 			exit_pipe_end_flags = 0; // the above pipe will provide the bend, so it's not needed at the top of the exit pipe
-			main_pipe_end_flags = (exit_dir ? 1 : 2); // cap only the end not going to the exit connector pipe
+			main_pipe_end_flags = (exit_dir ? 2 : 1); // connect the end going to the exit connector pipe
 		}
 		point exit_floor_pos(exit_pos);
-		exit_floor_pos.z = basement.z1();
+		exit_floor_pos.z = basement.z1() + get_fc_thickness(); // on the bottom level floor
 		pipes.emplace_back(exit_floor_pos, exit_pos, r_main, 2, PIPE_EXIT, exit_pipe_end_flags);
 	}
 	// add main pipe
 	pipe_t main_pipe(mp[0], mp[1], r_main, dim, PIPE_MAIN, main_pipe_end_flags);
 	assert(main_pipe.get_bcube().is_strictly_normalized());
 	pipes.push_back(main_pipe);
+	colorRGBA fittings_color(0.7, 0.6, 0.5, 1.0); // gray/brown
 
 	// add pipe objects
 	for (pipe_t const &p : pipes) {
 		if (!p.connected) continue; // unconnected drain, skip
 		bool const pdim(p.dim & 1), pdir(p.dim >> 1); // encoded as: X:dim=0,dir=0 Y:dim=1,dir=0, Z:dim=x,dir=1
-		unsigned flags(0); // PIPE_DRAIN has no flags set
+		unsigned flags(0);
 		if (p.type != PIPE_EXIT) {flags |= RO_FLAG_NOCOLL;} // only exit pipe has collisions enabled
 		if (p.type == PIPE_CONN || p.type == PIPE_MAIN) {flags |= RO_FLAG_HANGING;} // hanging connector/main pipe with flat ends
-		if (p.end_flags & 1) {flags |= RO_FLAG_ADJ_LO;} // tag lo bend or end cap
-		if (p.end_flags & 2) {flags |= RO_FLAG_ADJ_HI;} // tag hi bend or end cap
-		cube_t const c(p.get_bcube());
-		objs.emplace_back(c, TYPE_PIPE, room_id, pdim, pdir, flags, tot_light_amt, SHAPE_CYLIN, DK_GRAY);
+		room_object_t const pipe(p.get_bcube(), TYPE_PIPE, room_id, pdim, pdir, flags, tot_light_amt, SHAPE_CYLIN, DK_GRAY);
+		objs.push_back(pipe);
+
+		// add pipe fittings around ends and joins; only fittings have flat and round ends because raw pipe ends should never be exposed
+		if (p.type == PIPE_DRAIN) continue; // not for vertical drain pipes, since they're so short and mostly hidden above the connector pipes
+		float const fitting_len(FITTING_LEN*p.radius), fitting_expand((FITTING_RADIUS - 1.0)*p.radius);
+
+		for (unsigned d = 0; d < 2; ++d) {
+			if ((p.type == PIPE_CONN || p.type == PIPE_MAIN) && !(p.end_flags & (1<<d))) continue; // already have fittings added from connecting pipes
+			room_object_t pf(pipe);
+			pf.flags |= RO_FLAG_NOCOLL | RO_FLAG_ADJ_LO | RO_FLAG_ADJ_HI; // make sure these flags are set
+			pf.color  = fittings_color;
+			expand_cube_except_in_dim(pf, fitting_expand, p.dim); // expand slightly
+			pf.d[p.dim][!d] = pf.d[p.dim][d] + (d ? -1.0 : 1.0)*fitting_len;
+			objs.push_back(pf);
+
+			if (p.type == PIPE_MEC || p.type == PIPE_EXIT) {
+				if (p.end_flags & (1<<d)) { // connector or exit pipe with a round bend needs special handling
+					objs.back().flags &= ~(d ? RO_FLAG_ADJ_LO : RO_FLAG_ADJ_HI); // unset end flag on the end that was cut to length, since that's not a bend
+					// create a second fitting segment for the flat end; the sides will overlap with the previous fitting
+					pf.flags &= ~(d ? RO_FLAG_ADJ_HI : RO_FLAG_ADJ_LO);
+					pf.flags |= RO_FLAG_HANGING; // flat ends
+					objs.push_back(pf);
+				}
+				else { // connector or exit pipe entering the wall or floor
+					objs.back().flags |= RO_FLAG_HANGING; // flat ends
+				}
+			}
+		} // for d
+	} // for p
+	for (pipe_t const &p : fittings) {
+		bool const pdim(p.dim & 1), pdir(p.dim >> 1);
+		unsigned const flags(RO_FLAG_NOCOLL | RO_FLAG_HANGING | RO_FLAG_ADJ_LO | RO_FLAG_ADJ_HI); // non-colliding, flat ends on both sides
+		objs.emplace_back(p.get_bcube(), TYPE_PIPE, room_id, pdim, pdir, flags, tot_light_amt, SHAPE_CYLIN, fittings_color);
 	} // for p
 	cout << TXT(pipe_ends.size()) << TXT(pipes.size()) << TXT(num_connected) << TXT(obstacles.size()) << TXT(xy_map[0].size()) << TXT(xy_map[1].size()) << endl;
 }
