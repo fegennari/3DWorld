@@ -248,16 +248,17 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 		//highres_timer_t timer("Get Pipe Basement Connections");
 		// move or remove pipes intersecting lights, pillars, walls, stairs, elevators, and ramps;
 		// note that lights haven't been added yet though, so maybe pipes need to be added later?
-		vect_cube_t walls;
+		vect_cube_t walls, beams;
 
 		for (auto i = objs.begin()+objs_start; i != objs.end(); ++i) {
 			if (i->type == TYPE_PG_WALL) {
-				if (i->item_flags != 2) {walls    .push_back(*i);} // walls and pillars (not beams)
+				if (i->item_flags == 2) {beams    .push_back(*i);} // beams
+				else                    {walls    .push_back(*i);} // walls and pillars
 				if (i->item_flags == 1) {obstacles.push_back(*i);} // pillars also count as obstacles
 			}
 			else if (i->type == TYPE_RAMP) {obstacles.push_back(*i);} // ramps are obstacles for pipes
 		}
-		add_basement_pipes(obstacles, walls, room_id, num_floors, tot_light_amt, beam.z1(), rgen);
+		add_basement_pipes(obstacles, walls, beams, room_id, num_floors, tot_light_amt, beam.z1(), rgen);
 	}
 }
 
@@ -320,8 +321,8 @@ struct pipe_t {
 	}
 };
 
-void building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t const &walls, unsigned room_id, unsigned num_floors,
-	float tot_light_amt, float ceil_zval, rand_gen_t &rgen)
+void building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t const &walls, vect_cube_t const &beams,
+	unsigned room_id, unsigned num_floors, float tot_light_amt, float ceil_zval, rand_gen_t &rgen)
 {
 	float const FITTING_LEN(1.2), FITTING_RADIUS(1.1); // relative to radius
 	vect_room_object_t &objs(interior->room_geom->objs);
@@ -340,7 +341,7 @@ void building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 	cube_t pipe_end_bcube;
 	unsigned num_valid(0), num_connected(0);
 	// build random shifts table; make consistent per pipe to preserve X/Y alignments
-	unsigned const NUM_SHIFTS = 11; // {0,0} + 10 random shifts
+	unsigned const NUM_SHIFTS = 21; // {0,0} + 20 random shifts
 	vector3d rshifts[NUM_SHIFTS] = {};
 	for (unsigned n = 1; n < NUM_SHIFTS; ++n) {rshifts[n][rgen.rand_bool()] = 0.25*window_vspacing*rgen.signed_rand_float();} // random shift in a random dir
 
@@ -356,7 +357,8 @@ void building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 			c.expand_by_xy(p.radius);
 			c.z1() = bcube.z1(); // extend all the way down to the floor of the lowest basement
 
-			if (!basement.contains_cube_xy(c) || has_bcube_int(c, obstacles) || has_bcube_int(c, walls)) { // can't place over stairs/elevators/ramps/pillars/walls
+			// can't place outside basement, or over stairs/elevators/ramps/pillars/walls/beams
+			if (!basement.contains_cube_xy(c) || has_bcube_int(c, obstacles) || has_bcube_int(c, walls) || has_bcube_int(c, beams)) {
 				pos = p.pos + rshifts[n]; // apply shift
 				continue;
 			}
@@ -423,6 +425,8 @@ void building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 
 	for (auto const &v : xy_map) {
 		float radius(0.0), range_min(centerline), range_max(centerline);
+		point const &ref_p1(pipes[v.second.front()].p1);
+		unsigned num_keep(0);
 
 		for (unsigned ix : v.second) {
 			assert(ix < pipes.size());
@@ -431,22 +435,32 @@ void building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 
 			if (fabs(val - centerline) < r_main) {pipe.p1[d] = pipe.p2[d] = centerline;} // shift to connect directly to main pipe since it's close enough
 			else {
-				min_eq(range_min, val-pipe.radius);
-				max_eq(range_max, val+pipe.radius);
+				float const lo(val - pipe.radius), hi(val + pipe.radius);
+				
+				if (lo < range_min) { // on the lo side; check for valid connector extension
+					point p1(ref_p1), p2(p1);
+					p1[d] = lo; p2[d] = range_min;
+					if (has_bcube_int(pipe_t(p1, p2, radius, d, PIPE_CONN, 3).get_bcube(), obstacles)) continue; // blocked, can't connect
+					range_min = lo;
+				}
+				else if (hi > range_max) { // on the hi side; check for valid connector extension
+					point p1(ref_p1), p2(p1);
+					p1[d] = range_max; p2[d] = hi;
+					if (has_bcube_int(pipe_t(p1, p2, radius, d, PIPE_CONN, 3).get_bcube(), obstacles)) continue; // blocked, can't connect
+					range_max = hi;
+				}
 			}
+			pipe.connected = 1;
 			radius = get_merged_pipe_radius(radius, + pipe.radius);
+			++num_keep;
 		} // for ix
+		if (num_keep == 0) continue; // no valid connections for this row
+
 		// we can skip adding a connector if the main pipe is short and under the main pipe
 		if (range_max - range_min > r_main) {
-			point p1(pipes[v.second.front()].p1), p2(p1); // copy dims !d and z from a representative pipe
+			point p1(ref_p1), p2(p1); // copy dims !d and z from a representative pipe
 			p1[d] = range_min; p2[d] = range_max;
-			pipe_t const pipe(p1, p2, radius, d, PIPE_CONN, 3); // cap both ends
-			
-			if (has_bcube_int(pipe.get_bcube(), obstacles)) { // blocked, can't connect
-				// TODO: clip to shorter segment, as long as centerline is included
-				continue;
-			}
-			pipes.push_back(pipe);
+			pipes.emplace_back(p1, p2, radius, d, PIPE_CONN, 3); // cap both ends
 
 			for (unsigned ix : v.second) { // add fittings
 				float const val(pipes[ix].p1[d]), fitting_len(FITTING_LEN*radius);
@@ -462,8 +476,7 @@ void building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 		// update main pipe endpoints to include this connector pipe range
 		min_eq(mp[0][dim], v.first-radius);
 		max_eq(mp[1][dim], v.first+radius);
-		for (unsigned ix : v.second) {pipes[ix].connected = 1;} // mark all drains as connected
-		num_connected += v.second.size();
+		num_connected += num_keep;
 	} // for v
 	if (mp[0][dim] >= mp[1][dim]) return; // no pipes connected to main? I guess there's nothing to do here
 	unsigned main_pipe_end_flags(0); // start with both ends unconnected
@@ -579,7 +592,7 @@ void building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 		unsigned const flags(RO_FLAG_NOCOLL | RO_FLAG_HANGING | RO_FLAG_ADJ_LO | RO_FLAG_ADJ_HI); // non-colliding, flat ends on both sides
 		objs.emplace_back(p.get_bcube(), TYPE_PIPE, room_id, pdim, pdir, flags, tot_light_amt, SHAPE_CYLIN, fittings_color);
 	} // for p
-	cout << TXT(pipe_ends.size()) << TXT(num_valid) << TXT(num_connected) << TXT(pipes.size()) << TXT(xy_map[0].size()) << TXT(xy_map[1].size()) << endl;
+	cout << TXT(pipe_ends.size()) << TXT(num_valid) << TXT(num_connected) << TXT(pipes.size()) << TXT(xy_map.size()) << endl;
 }
 
 // here each sphere represents the entry point of a pipe with this radius into the basement ceiling
@@ -613,7 +626,7 @@ void building_t::get_pipe_basement_connections(vector<sphere_t> &pipes) const {
 		++num_drains;
 	} // for i
 	for (sphere_t &p : pipes) {min_eq(p.radius, max_radius);} // clamp radius to a reasonable value after all merges
-	cout << TXT(objs.size()) << TXT(num_drains) << TXT(pipes.size());
+	cout << TXT(objs.size()) << TXT(num_drains);
 }
 
 void building_t::add_parking_garage_ramp(rand_gen_t &rgen) {
