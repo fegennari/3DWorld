@@ -113,12 +113,41 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 	// add ramp if one was placed during floorplanning, before adding parking spaces
 	// Note: lights can be very close to ramps, but I haven't actually seen them touch; do we need to check for and handle that case?
 	if (!ramp.is_all_zeros()) {
+		bool const dim(ramp.ix >> 1), dir(ramp.ix & 1), is_blocked(is_top_floor && interior->ignore_ramp_placement);
 		cube_t rc(ramp); // ramp clipped to this parking garage floor
 		set_cube_zvals(rc, zval, (zval + window_vspacing));
-		unsigned const flags((is_top_floor && interior->ignore_ramp_placement) ? 0 : RO_FLAG_OPEN); // ramp is open if the top exit is open
-		objs.emplace_back(rc, TYPE_RAMP, room_id, (ramp.ix >> 1), (ramp.ix & 1), flags, tot_light_amt, SHAPE_ANGLED, wall_color);
+		unsigned const flags(is_blocked ? 0 : RO_FLAG_OPEN); // ramp is open if the top exit is open
+		objs.emplace_back(rc, TYPE_RAMP, room_id, dim, dir, flags, tot_light_amt, SHAPE_ANGLED, wall_color);
 		obstacles    .push_back(rc); // don't place parking spaces next to the ramp
 		obstacles_exp.push_back(rc); // clip beams to ramp
+		// add ramp railings
+		bool const side(ramp.get_center_dim(!dim) < room.get_center_dim(!dim)); // which side of the ramp the railing is on (opposite the wall the ramp is against)
+		float const railing_thickness(0.4*wall_thickness), ramp_length(rc.get_sz_dim(dim)), dir_sign(dir ? 1.0 : -1.0), side_sign(side ? 1.0 : -1.0), shorten_factor(0.35);
+		cube_t railing(rc);
+		railing.d[!dim][!side] = railing.d[!dim][side] - side_sign*railing_thickness;
+		railing.z1() += 0.5*railing_thickness; // place bottom of bar along ramp/floor
+		cube_t ramp_railing(railing);
+		ramp_railing.d[dim][dir] -= dir_sign*shorten_factor*ramp_length; // shorten length to only the lower part
+		ramp_railing.z2() -= shorten_factor*railing.dz(); // shorten height by the same amount to preserve the slope
+		colorRGBA const railing_color(LT_GRAY);
+		objs.emplace_back(ramp_railing, TYPE_RAILING, room_id, dim, dir, RO_FLAG_OPEN, tot_light_amt, SHAPE_CUBE, railing_color); // lower railing
+		set_cube_zvals(railing, rc.z2(), (rc.z2() + window_vspacing));
+		railing.translate_dim(!dim, side_sign*railing_thickness); // shift off the ramp and onto the ajdacent floor
+
+		if (!is_top_floor) { // add side railing for lower level
+			railing.d[dim][!dir] += dir_sign*shorten_factor*ramp_length; // shorten length to only the upper part
+			objs.emplace_back(railing, TYPE_RAILING, room_id, dim, 0, (RO_FLAG_OPEN | RO_FLAG_TOS), tot_light_amt, SHAPE_CUBE, railing_color);
+		}
+		else if (!is_blocked) { // add upper railings at the top for the full length
+			railing.translate_dim( dim, -0.5*dir_sign*railing_thickness); // shift down the ramp a bit
+			objs.emplace_back(railing, TYPE_RAILING, room_id, dim, 0, (RO_FLAG_OPEN | RO_FLAG_TOS), tot_light_amt, SHAPE_CUBE, railing_color);
+			cube_t back_railing(rc);
+			set_cube_zvals(back_railing, railing.z1(), railing.z2());
+			back_railing.translate_dim( dim, -dir_sign*railing_thickness); // shift onto the ajdacent floor
+			back_railing.translate_dim(!dim, 0.5*side_sign*railing_thickness); // shift away from the exterior wall
+			back_railing.d[dim][dir] = back_railing.d[dim][!dir] + dir_sign*railing_thickness;
+			objs.emplace_back(back_railing, TYPE_RAILING, room_id, !dim, 0, (RO_FLAG_OPEN | RO_FLAG_TOS), tot_light_amt, SHAPE_CUBE, railing_color);
+		}
 	}
 	// add walls and pillars
 	bool const no_sep_wall(num_walls == 0 || (capacity < 100 && rgen.rand_bool()));
