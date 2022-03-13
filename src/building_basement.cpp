@@ -337,9 +337,8 @@ void building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 	float const pipe_zval(ceil_zval - r_main), align_dist(2.0*wall_thickness); // align pipes within this range (in particular sinks and stall toilets)
 	assert(pipe_zval > bcube.z1());
 	vector<pipe_t> pipes, fittings;
-	map<float, vector<unsigned>> xy_map[2];
 	cube_t pipe_end_bcube;
-	unsigned num_connected(0);
+	unsigned num_valid(0), num_connected(0);
 	// build random shifts table; make consistent per pipe to preserve X/Y alignments
 	unsigned const NUM_SHIFTS = 11; // {0,0} + 10 random shifts
 	vector3d rshifts[NUM_SHIFTS] = {};
@@ -365,28 +364,34 @@ void building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 			break;
 		} // for n
 		if (!valid) continue; // no valid shift, skip this connection
-		unsigned const pipe_ix(pipes.size());
-
-		for (unsigned d = 0; d < 2; ++d) {
-			auto &m(xy_map[d]);
-			float &v(pos[d]);
-			auto it(m.find(v));
-			if (it != m.end()) {it->second.push_back(pipe_ix); continue;} // found
-			bool found(0);
-			// try to find an existing map value that's within align_dist of this value; messy and inefficient, but I'm not sure how else to do this
-			for (auto &i : m) {
-				if (fabs(i.first - v) < align_dist) {i.second.push_back(pipe_ix); v = i.first; found = 1; break;} // close enough
-			}
-			if (!found) {m[v].push_back(pipe_ix);}
-		} // for d
 		pipes.emplace_back(point(pos.x, pos.y, pipe_zval), pos, p.radius, 2, PIPE_DRAIN, 0); // neither end capped
 		pipe_end_bcube.assign_or_union_with_cube(pipes.back().get_bcube());
-		++num_connected;
+		++num_valid;
 	} // for pipe_ends
 	if (pipes.empty()) return; // no valid pipes
 
-	// create main pipe that runs in the longer dim (based on drain pipe XY bounds)
+	// calculate unique positions of pipes along the main pipe
 	bool const dim(pipe_end_bcube.dx() < pipe_end_bcube.dy()); // main sewer line dim
+	map<float, vector<unsigned>> xy_map;
+
+	for (auto p = pipes.begin(); p != pipes.end(); ++p) {
+		unsigned const pipe_ix(p - pipes.begin());
+		float &v(p->p1[dim]);
+		auto it(xy_map.find(v));
+		if (it != xy_map.end()) {it->second.push_back(pipe_ix); continue;} // found
+		bool found(0);
+		// try to find an existing map value that's within align_dist of this value; messy and inefficient, but I'm not sure how else to do this
+		for (auto &i : xy_map) {
+			if (fabs(i.first - v) > align_dist) continue; // too far
+			i.second.push_back(pipe_ix);
+			v = p->p2[dim] = i.first;
+			found = 1;
+			break;
+		}
+		if (!found) {xy_map[v].push_back(pipe_ix);}
+	} // for pipes
+
+	// create main pipe that runs in the longer dim (based on drain pipe XY bounds)
 	pipe_end_bcube.expand_in_dim(dim, r_main);
 	float centerline(pipe_end_bcube.get_center_dim(!dim)), exit_dmin(0.0);
 	point mp[2]; // {lo, hi} ends
@@ -416,7 +421,7 @@ void building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 	// connect drains to main pipe in !dim
 	bool const d(!dim);
 
-	for (auto const &v : xy_map[!d]) {
+	for (auto const &v : xy_map) {
 		float radius(0.0), range_min(centerline), range_max(centerline);
 
 		for (unsigned ix : v.second) {
@@ -458,6 +463,7 @@ void building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 		min_eq(mp[0][dim], v.first-radius);
 		max_eq(mp[1][dim], v.first+radius);
 		for (unsigned ix : v.second) {pipes[ix].connected = 1;} // mark all drains as connected
+		num_connected += v.second.size();
 	} // for v
 	if (mp[0][dim] >= mp[1][dim]) return; // no pipes connected to main? I guess there's nothing to do here
 	unsigned main_pipe_end_flags(0); // start with both ends unconnected
@@ -573,7 +579,7 @@ void building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 		unsigned const flags(RO_FLAG_NOCOLL | RO_FLAG_HANGING | RO_FLAG_ADJ_LO | RO_FLAG_ADJ_HI); // non-colliding, flat ends on both sides
 		objs.emplace_back(p.get_bcube(), TYPE_PIPE, room_id, pdim, pdir, flags, tot_light_amt, SHAPE_CYLIN, fittings_color);
 	} // for p
-	cout << TXT(pipe_ends.size()) << TXT(pipes.size()) << TXT(num_connected) << TXT(obstacles.size()) << TXT(xy_map[0].size()) << TXT(xy_map[1].size()) << endl;
+	cout << TXT(pipe_ends.size()) << TXT(num_valid) << TXT(num_connected) << TXT(pipes.size()) << TXT(xy_map[0].size()) << TXT(xy_map[1].size()) << endl;
 }
 
 // here each sphere represents the entry point of a pipe with this radius into the basement ceiling
