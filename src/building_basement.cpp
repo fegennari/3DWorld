@@ -5,7 +5,6 @@
 #include "function_registry.h"
 #include "buildings.h"
 #include "city.h" // for car_t
-#include "profiler.h"
 
 extern city_params_t city_params; // for num_cars
 
@@ -275,7 +274,6 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 		} // for d
 	} // for n
 	if (is_top_floor) {
-		//highres_timer_t timer("Get Pipe Basement Connections");
 		// move or remove pipes intersecting lights, pillars, walls, stairs, elevators, and ramps;
 		// note that lights haven't been added yet though, so maybe pipes need to be added later?
 		vect_cube_t walls, beams;
@@ -644,7 +642,7 @@ void building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 		unsigned const flags(RO_FLAG_NOCOLL | RO_FLAG_HANGING | RO_FLAG_ADJ_LO | RO_FLAG_ADJ_HI); // non-colliding, flat ends on both sides
 		objs.emplace_back(pbc, TYPE_PIPE, room_id, pdim, pdir, flags, tot_light_amt, SHAPE_CYLIN, fittings_color);
 	} // for p
-	cout << TXT(pipe_ends.size()) << TXT(num_valid) << TXT(num_connected) << TXT(pipes.size()) << TXT(xy_map.size()) << endl;
+	//cout << TXT(pipe_ends.size()) << TXT(num_valid) << TXT(num_connected) << TXT(pipes.size()) << TXT(xy_map.size()) << endl;
 }
 
 // here each sphere represents the entry point of a pipe with this radius into the basement ceiling
@@ -678,7 +676,6 @@ void building_t::get_pipe_basement_connections(vector<sphere_t> &pipes) const {
 		++num_drains;
 	} // for i
 	for (sphere_t &p : pipes) {min_eq(p.radius, max_radius);} // clamp radius to a reasonable value after all merges
-	cout << TXT(objs.size()) << TXT(num_drains);
 }
 
 void building_t::add_parking_garage_ramp(rand_gen_t &rgen) {
