@@ -705,7 +705,11 @@ void building_t::add_parking_garage_ramp(rand_gen_t &rgen) {
 				corner[!dim] += (dir ? -1.0 : 1.0)*road_width; // shift away from the wall so that cars have space to turn onto the level floor
 				point const c1((corner.x - 0.001*(xdir ? 1.0 : -1.0)*xsz), (corner.y - 0.001*(ydir ? 1.0 : -1.0)*ysz), z1); // slight inward shift to prevent z-fighting
 				point const c2((corner.x + (xdir ? -1.0 : 1.0)*xsz), (corner.y + (ydir ? -1.0 : 1.0)*ysz), z2);
-				ramp = cube_with_ix_t(cube_t(c1, c2), (((!dim)<<1) + dir)); // encode dim and dir in ramp index field
+				cube_t const ramp_cand(c1, c2);
+				cube_t test_cube(ramp_cand);
+				test_cube.expand_in_dim(!dim, road_width); // extend outward for clearance to enter/exit the ramp (ramp dim is actually !dim)
+				if (interior->is_blocked_by_stairs_or_elevator(test_cube)) continue;
+				ramp = cube_with_ix_t(ramp_cand, (((!dim)<<1) + dir)); // encode dim and dir in ramp index field
 				added_ramp = 1;
 				break; // done
 			} // for yd
