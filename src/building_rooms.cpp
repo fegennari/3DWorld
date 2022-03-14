@@ -2207,13 +2207,12 @@ void building_t::place_objects_onto_surfaces(rand_gen_t rgen, room_t const &room
 	} // for i
 }
 
-void set_light_xyz(cube_t &light, point const &center, float z1, float z2, float light_size, bool light_dim, room_obj_shape light_shape) {
+void set_light_xy(cube_t &light, point const &center, float light_size, bool light_dim, room_obj_shape light_shape) {
 	for (unsigned dim = 0; dim < 2; ++dim) {
 		float const sz(((light_shape == SHAPE_CYLIN || light_shape == SHAPE_SPHERE) ? 1.6 : ((bool(dim) == light_dim) ? 2.2 : 1.0))*light_size);
 		light.d[dim][0] = center[dim] - sz;
 		light.d[dim][1] = center[dim] + sz;
 	}
-	set_cube_zvals(light, z1, z2);
 }
 
 bool has_bcube_int_stairs_exp(cube_t const &bcube, vect_stairwell_t const &stairs, float expand, bool stacked_only) {
@@ -2248,8 +2247,7 @@ void building_t::try_place_light_on_ceiling(cube_t const &light, room_t const &r
 	if (is_light_placement_valid(light, room, pad)) {lights.push_back(light); return;} // contained = done
 	point room_center(room.get_cube_center());
 	bool const first_dir(rgen.rand_bool());
-	float const window_vspacing(get_window_vspace());//, room_len(room.get_sz_dim(room_dim));
-	float const light_width(light.get_sz_dim(!room_dim));
+	float const window_vspacing(get_window_vspace()), light_width(light.get_sz_dim(!room_dim));
 	cube_t light_cand(light);
 
 	if (allow_rot) { // flip aspect ratio
@@ -2258,10 +2256,8 @@ void building_t::try_place_light_on_ceiling(cube_t const &light, room_t const &r
 		light_cand.expand_in_dim(1,  sz_diff);
 	}
 	for (unsigned d = 0; d < 2; ++d) { // see if we can place it by moving on one direction
-		//for (unsigned n = 0; n < 6; ++n) { // try 6 different shift values: 0.2, 0.25, 0.3, 0.35, 0.4, 0.45
 		for (unsigned n = 0; n < 10; ++n) { // try 10 different shift values
 			cube_t cand(light_cand);
-			//cand.translate_dim(room_dim, ((bool(d) ^ first_dir) ? -1.0 : 1.0)*(0.2 + 0.05*n)*room_len);
 			cand.translate_dim(room_dim, ((bool(d) ^ first_dir) ? -1.0 : 1.0)*n*light_width);
 			if (!is_light_placement_valid(cand, room, pad)) continue;
 			cube_t test_cube(cand);
@@ -2358,38 +2354,12 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 			float const room_size(min(r->dx(), r->dy())); // normalized to hallway width
 			light_size = max(0.06f*room_size, 0.67f*def_light_size);
 		}
-		// light spans the entire room (minus floor and ceiling), except the bottom floor is skipped because stairs there won't intersect lights; may be denormalized
-		float const light_z1(r->z1() + floor_thickness + window_vspacing), light_z2(r->z2() - floor_thickness);
 		float const light_val(22.0*light_size);
 		r->light_intensity = light_val*light_val/r->get_area_xy(); // average for room, unitless; light surface area divided by room surface area with some fudge constant
-		cube_t pri_light, sec_light[2];
-		set_light_xyz(pri_light, room_center, light_z1, light_z2, light_size, room_dim, light_shape);
-		bool const disable_light(!r->contains_cube_xy(pri_light)); // disable light if it doesn't fit (small room from has_complex_floorplan office buildings)
-		bool const has_mult_lights(is_parking_garage || nx > 1 || ny > 1); // stairs are handled later when there are multiple lights
-		bool const blocked_by_stairs(0 && !has_mult_lights && !r->is_hallway && !disable_light && interior->is_light_blocked_by_stairs_or_elevator(pri_light, fc_thick)); // DISABLED
+		cube_t light;
+		set_light_xy(light, room_center, light_size, room_dim, light_shape);
 		bool use_sec_light[2] = {0,0}, sec_light_int_door[2] = {0,0}, added_bathroom(0);
 		float z(r->z1());
-
-		if (blocked_by_stairs) { // blocked by stairs - see if we can add a light off to the side in the other orient
-			bool const first_dir(rgen.rand_bool());
-			float const room_len(r->get_sz_dim(room_dim));
-
-			for (unsigned d = 0; d < 2; ++d) { // see if we can place it by moving on one direction
-				for (unsigned n = 0; n < 6; ++n) { // try 6 different shift values: 0.2, 0.25, 0.3, 0.35, 0.4, 0.45
-					point new_center(room_center);
-					new_center[room_dim] += ((bool(d) ^ first_dir) ? -1.0 : 1.0)*(0.2 + 0.05*n)*room_len;
-					set_light_xyz(sec_light[d], new_center, light_z1, light_z2, light_size, !room_dim, light_shape); // flip the light dim
-					if (!r->contains_cube_xy(sec_light[d])) continue; // shifted outside the room
-					if (interior->is_light_blocked_by_stairs_or_elevator(sec_light[d], fc_thick)) continue; // skip if blocked
-					cube_t test_cube(sec_light[d]);
-					test_cube.expand_in_dim(2, 0.4*window_vspacing); // expand to cover nearly an entire floor so that it's guaranteed to overlap a door
-					// maybe should exclude basement doors, since they don't show as open? but then it would be wrong if I later draw basement doors
-					sec_light_int_door[d] = is_cube_close_to_doorway(test_cube, *r, 0.0, 1, 1); // inc_open=1, check_open_dir=1
-					use_sec_light     [d] = 1;
-					break;
-				} // for n
-			} // for d
-		}
 		r->interior = (is_basement || get_part_for_room(*r).contains_cube_xy_no_adj(*r)); // AKA windowless
 		// make chair colors consistent for each part by using a few variables for a hash
 		colorRGBA chair_colors[12] = {WHITE, WHITE, GRAY, DK_GRAY, LT_GRAY, BLUE, DK_BLUE, LT_BLUE, YELLOW, RED, DK_GREEN, LT_BROWN};
@@ -2400,10 +2370,9 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 		for (unsigned f = 0; f < num_floors; ++f, z += floor_height) {
 			room_center.z = z + fc_thick; // floor height
 			// top floor may have stairs connecting to upper stack
-			bool const top_floor(f+1 == num_floors);//, top_floor_not_basement(top_floor && (!is_basement /*|| num_floors > 1*/));
-			bool const check_stairs(0 && !has_mult_lights && (!is_house || has_basement()) && real_num_parts > 1 && top_floor && r->z2() < bcube.z2()); // DISABLED
+			bool const top_floor(f+1 == num_floors);
 			bool const has_stairs_this_floor(r->has_stairs_on_floor(f));
-			bool is_lit(0), has_light(1), light_dim(room_dim), has_stairs(has_stairs_this_floor), top_of_stairs(has_stairs && top_floor/*top_floor_not_basement*/);
+			bool is_lit(0), has_light(1), light_dim(room_dim), has_stairs(has_stairs_this_floor), top_of_stairs(has_stairs && top_floor);
 			float light_delta_z(0.0);
 
 			if (is_parking_garage) { // parking garage; added first because this sets the number of lights
@@ -2411,7 +2380,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 				add_parking_garage_objs(rgen, *r, room_center.z, room_id, f, num_floors, nx, ny, light_delta_z);
 				for (auto i = objs.begin() + room_objs_start; i != objs.end(); ++i) {i->flags |= RO_FLAG_INTERIOR;}
 			}
-			if ((!has_stairs && (f == 0 || /*top_floor_not_basement*/top_floor) && interior->stairwells.size() > 1) || top_of_stairs) { // should this be outside the loop?
+			if ((!has_stairs && (f == 0 || top_floor) && interior->stairwells.size() > 1) || top_of_stairs) { // should this be outside the loop?
 				// check for stairwells connecting stacked parts (is this still needed?); check for roof access stairs and set top_of_stairs=0
 				for (auto s = interior->stairwells.begin(); s != interior->stairwells.end(); ++s) {
 					if (!r->contains_cube_xy(*s)) continue; // stairs not in this room
@@ -2422,149 +2391,63 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 					has_stairs = 1;
 				} // for s
 			}
-			cube_t lights[2];
-			bool lights_int_door[2] = {0,0};
-			unsigned nlights(0);
 			int light_obj_ix(-1);
 			unsigned num_lights(r->num_lights);
-			
-			if (disable_light) {} // do nothing, nlights=0
-			else if (!blocked_by_stairs || top_of_stairs) {lights[nlights++] = pri_light;}
-			else {
-				for (unsigned d = 0; d < 2; ++d) {
-					if (!use_sec_light[d]) continue;
-					lights[nlights++]  = sec_light[d];
-					lights_int_door[d] = sec_light_int_door[d];
-					if (num_lights > 1) break; // if we have multiple lights in this room, only use the first secondary light
-				}
-				light_dim ^= 1; // orient lights the other way for better aspect ratio match for rectangular office lights
+			float const light_z2(z + floor_height - fc_thick + light_delta_z);
+			// 50% of lights are on, 75% for top of stairs, 100% for hallways, 100% for parking garages
+			is_lit = (r->is_hallway || is_parking_garage || ((rgen.rand() & (top_of_stairs ? 3 : 1)) != 0));
+
+			// check ped_bcubes and set is_lit if any people are in this floor of this room
+			for (auto p = ped_bcubes.begin(); p != ped_bcubes.end() && !is_lit; ++p) {
+				if (!p->intersects_xy(*r)) continue; // person not in this room
+				if (p->z2() < light_z2 && p->z1() + floor_height > light_z2) {is_lit = 1;} // on this floor
 			}
-			if (nlights > 0) {
-				float const light_z2(z + floor_height - fc_thick + light_delta_z);
-				// 50% of lights are on, 75% for top of stairs, 100% for hallways, 100% for parking garages
-				is_lit = (r->is_hallway || is_parking_garage || ((rgen.rand() & (top_of_stairs ? 3 : 1)) != 0));
+			uint8_t flags(RO_FLAG_NOCOLL); // no collision detection with lights
+			if (is_lit)        {flags |= RO_FLAG_LIT | RO_FLAG_EMISSIVE;}
+			if (top_of_stairs) {flags |= RO_FLAG_TOS;}
+			if (has_stairs)    {flags |= RO_FLAG_RSTAIRS;}
+			colorRGBA color;
+			if      (is_house)                      {color = colorRGBA(1.0, 1.0, 0.9);} // house - yellowish
+			else if (is_parking_garage)             {color = colorRGBA(1.0, 1.0, 0.8);} // parking garage - yellowish
+			else if (r->is_hallway || r->is_office) {color = colorRGBA(0.9, 0.9, 1.0);} // office building - blueish
+			else                                    {color = colorRGBA(1.0, 1.0, 1.0);} // white - small office
+			// add a light to the ceiling of this room if there's space (always for top of stairs);
+			set_cube_zvals(light, (light_z2 - light_thick), light_z2);
+			valid_lights.clear();
 
-				// check ped_bcubes and set is_lit if any people are in this floor of this room
-				for (auto p = ped_bcubes.begin(); p != ped_bcubes.end() && !is_lit; ++p) {
-					if (!p->intersects_xy(*r)) continue; // person not in this room
-					if (p->z2() < light_z2 && p->z1() + floor_height > light_z2) {is_lit = 1;} // on this floor
+			if (r->is_hallway && num_lights > 1) { // hallway: place a light on each side (of the stairs if they exist), and also between stairs and elevator if there are both
+				if (r->has_elevator && r->has_stairs == 255) {num_lights = 3;} // main hallway with elevator + stairs on all floors: we really should have 3 lights in this case
+				float const offset(((num_lights == 3) ? 0.3 : 0.2)*r->get_sz_dim(light_dim)); // closer to the ends in the 3 lights case
+
+				for (unsigned d = 0; d < num_lights; ++d) {
+					float const delta((d == 2) ? 0.0 : (d ? -1.0 : 1.0)*offset); // last light is in the center
+					cube_t hall_light(light);
+					hall_light.translate_dim(light_dim, delta);
+					try_place_light_on_ceiling(hall_light, *r, room_dim, fc_thick, 0, 0, valid_lights, rgen); // allow_rot=0, allow_mult=0
 				}
-				uint8_t flags(RO_FLAG_NOCOLL); // no collision detection with lights
-				if (is_lit)        {flags |= RO_FLAG_LIT | RO_FLAG_EMISSIVE;}
-				if (top_of_stairs) {flags |= RO_FLAG_TOS;}
-				if (has_stairs)    {flags |= RO_FLAG_RSTAIRS;}
-				colorRGBA color;
-				if      (is_house)                      {color = colorRGBA(1.0, 1.0, 0.9);} // house - yellowish
-				else if (is_parking_garage)             {color = colorRGBA(1.0, 1.0, 0.8);} // parking garage - yellowish
-				else if (r->is_hallway || r->is_office) {color = colorRGBA(0.9, 0.9, 1.0);} // office building - blueish
-				else                                    {color = colorRGBA(1.0, 1.0, 1.0);} // white - small office
+			}
+			else if (nx > 1 || ny > 1) { // office or parking garage with multiple lights
+				float const dx(r->dx()), dy(r->dy()), xstep(dx/nx), ystep(dy/ny);
+				vector3d const shrink(0.5*light.dx()*sqrt((nx - 1)/nx), 0.5*light.dy()*sqrt((ny - 1)/ny), 0.0);
 
-				for (unsigned lix = 0; lix < nlights; ++lix) {
-					cube_t &light(lights[lix]);
-					bool const light_int_door(lights_int_door[lix]);
-					// add a light to the ceiling of this room if there's space (always for top of stairs)
-					light.z2() = light_z2;
-					light.z1() = light_z2 - (light_int_door ? 0.01 : 1.0)*light_thick; // if light intersects door, move it up into the ceiling rather than letting it hang down into the room
-
-					if (r->is_hallway && num_lights > 1) { // hallway: place a light on each side (of the stairs if they exist), and also between stairs and elevator if there are both
-						if (r->has_elevator && r->has_stairs == 255) {num_lights = 3;} // main hallway with elevator + stairs on all floors: we really should have 3 lights in this case
-						float const offset(((num_lights == 3) ? 0.3 : 0.2)*r->get_sz_dim(light_dim)); // closer to the ends in the 3 lights case
-#if 1
-						valid_lights.clear();
-
-						for (unsigned d = 0; d < num_lights; ++d) {
-							float const delta((d == 2) ? 0.0 : (d ? -1.0 : 1.0)*offset); // last light is in the center
-							cube_t hall_light(light);
-							hall_light.translate_dim(light_dim, delta);
-							try_place_light_on_ceiling(hall_light, *r, room_dim, fc_thick, 0, 0, valid_lights, rgen); // allow_rot=0, allow_mult=0
-						}
-						for (cube_t const &l : valid_lights) {
-							objs.emplace_back(l, TYPE_LIGHT, room_id, light_dim, 0, flags, light_amt, light_shape, color); // dir=0 (unused)
-							objs.back().obj_id = light_ix_assign.get_ix_for_light(l);
-						}
-#else
-						cube_t valid_bounds(*r);
-						valid_bounds.expand_by_xy(-0.1*floor_height); // add some padding
-
-						for (unsigned d = 0; d < num_lights; ++d) {
-							float const delta((d == 2) ? 0.0 : (d ? -1.0 : 1.0)*offset); // last light is in the center
-							cube_t hall_light(light);
-							hall_light.translate_dim(light_dim, delta);
-
-							if (check_stairs && has_bcube_int_stairs_exp(hall_light, interior->stairwells, fc_thick, 1)) { // keep moving until not blocked by stairs
-								cube_t const hall_light_start(hall_light);
-								bool is_valid(0);
-
-								for (unsigned shift_dir = 0; shift_dir < 2 && !is_valid; ++shift_dir) {
-									hall_light = hall_light_start;
-
-									for (unsigned n = 0; n < 40; ++n) {
-										if (!has_bcube_int_stairs_exp(hall_light, interior->stairwells, fc_thick, 1)) {is_valid = 1; break;}
-										hall_light.translate_dim(light_dim, 0.04*delta*(shift_dir ? -1.0 : 1.0));
-										if (!valid_bounds.contains_cube_xy(hall_light)) break; // translated outside the hall, give up
-									}
-								} // for shift_dir
-								if (!is_valid) continue; // skip adding this light
-							} // end check_stairs
-							objs.emplace_back(hall_light, TYPE_LIGHT, room_id, light_dim, 0, flags, light_amt, light_shape, color); // dir=0 (unused)
-							objs.back().obj_id = light_ix_assign.get_ix_for_light(hall_light);
-						} // for d
-#endif
+				for (unsigned y = 0; y < ny; ++y) {
+					for (unsigned x = 0; x < nx; ++x) {
+						cube_t cur_light(light);
+						cur_light.expand_by_xy(-shrink);
+						cur_light.translate(point((-0.5f*dx + (x + 0.5)*xstep), (-0.5f*dy + (y + 0.5)*ystep), 0.0));
+						try_place_light_on_ceiling(cur_light, *r, room_dim, fc_thick, 0, 0, valid_lights, rgen); // allow_rot=0, allow_mult=0
 					}
-					else if (has_mult_lights) { // office or parking garage with multiple lights
-						assert(nlights == 1); // secondary light split case should not have happened
-						float const dx(r->dx()), dy(r->dy()), xstep(dx/nx), ystep(dy/ny);
-						vector3d const shrink(0.5*light.dx()*sqrt((nx - 1)/nx), 0.5*light.dy()*sqrt((ny - 1)/ny), 0.0);
-#if 1
-						valid_lights.clear();
-
-						for (unsigned y = 0; y < ny; ++y) {
-							for (unsigned x = 0; x < nx; ++x) {
-								cube_t cur_light(light);
-								cur_light.expand_by_xy(-shrink);
-								cur_light.translate(point((-0.5f*dx + (x + 0.5)*xstep), (-0.5f*dy + (y + 0.5)*ystep), 0.0));
-								try_place_light_on_ceiling(cur_light, *r, room_dim, fc_thick, 0, 0, valid_lights, rgen); // allow_rot=0, allow_mult=0
-							}
-						} // for y
-						for (cube_t const &l : valid_lights) {
-							objs.emplace_back(l, TYPE_LIGHT, room_id, light_dim, 0, flags, light_amt, light_shape, color); // dir=0 (unused)
-							objs.back().obj_id = light_ix_assign.get_ix_for_light(l);
-						}
-#else
-						for (unsigned y = 0; y < ny; ++y) {
-							for (unsigned x = 0; x < nx; ++x) {
-								cube_t cur_light(light);
-								cur_light.expand_by_xy(-shrink);
-								cur_light.translate(point((-0.5f*dx + (x + 0.5)*xstep), (-0.5f*dy + (y + 0.5)*ystep), 0.0));
-								if (interior->is_light_blocked_by_stairs_or_elevator(cur_light, fc_thick)) continue; // skip if blocked // DISABLED
-								objs.emplace_back(cur_light, TYPE_LIGHT, room_id, light_dim, 0, flags, light_amt, light_shape, color); // dir=0 (unused)
-								objs.back().obj_id = light_ix_assign.get_ix_for_light(cur_light);
-							} // for x
-						} // for y
-#endif
-					}
-					else { // normal room with a single light
-#if 1
-						valid_lights.clear();
-						try_place_light_on_ceiling(light, *r, room_dim, fc_thick, 1, 1, valid_lights, rgen); // allow_rot=1, allow_mult=1
-
-						for (cube_t const &l : valid_lights) {
-							light_obj_ix = objs.size();
-							objs.emplace_back(l, TYPE_LIGHT, room_id, (light.dx() < light.dy()), 0, flags, light_amt, light_shape, color); // dir=0 (unused)
-							objs.back().obj_id = light_ix_assign.get_ix_for_light(l);
-						}
-#else
-						if (check_stairs && has_bcube_int_stairs_exp(light, interior->stairwells, fc_thick, 1)) {is_lit = has_light = 0;} // disable if blocked by stairs
-						else {
-							light_obj_ix = objs.size();
-							objs.emplace_back(light, TYPE_LIGHT, room_id, light_dim, 0, flags, light_amt, light_shape, color); // dir=0 (unused)
-							objs.back().obj_id = light_ix_assign.get_ix_for_light(light);
-						}
-#endif
-					}
-				} // for lix
-				if (is_lit) {r->lit_by_floor |= (1ULL << (f&63));} // flag this floor as being lit (for up to 64 floors)
-			} // end light placement
+				} // for y
+			}
+			else { // normal room with a single light
+				try_place_light_on_ceiling(light, *r, room_dim, fc_thick, 1, 1, valid_lights, rgen); // allow_rot=1, allow_mult=1
+				if (!valid_lights.empty()) {light_obj_ix = objs.size();} // this will be the index of the light to be added later
+			}
+			for (cube_t const &l : valid_lights) {
+				objs.emplace_back(l, TYPE_LIGHT, room_id, (light.dx() < light.dy()), 0, flags, light_amt, light_shape, color); // reclaculate dim; dir=0 (unused)
+				objs.back().obj_id = light_ix_assign.get_ix_for_light(l);
+			}
+			if (is_lit) {r->lit_by_floor |= (1ULL << (f&63));} // flag this floor as being lit (for up to 64 floors)
 			if (is_parking_garage) continue; // generated above, done; no outlets or light switches
 			float tot_light_amt(light_amt); // unitless, somewhere around 1.0
 			if (is_lit) {tot_light_amt += r->light_intensity;}
