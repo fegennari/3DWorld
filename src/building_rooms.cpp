@@ -2317,19 +2317,21 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 		set_light_xyz(pri_light, room_center, light_size, room_dim, light_shape);
 		bool const disable_light(!r->contains_cube_xy(pri_light)); // disable light if it doesn't fit (small room from has_complex_floorplan office buildings)
 		bool const has_mult_lights(is_parking_garage || nx > 1 || ny > 1); // stairs are handled later when there are multiple lights
-		bool const blocked_by_stairs(!has_mult_lights && !r->is_hallway && !disable_light && interior->is_blocked_by_stairs_or_elevator_no_expand(pri_light, fc_thick));
+		bool const blocked_by_stairs(!has_mult_lights && !r->is_hallway && !disable_light && interior->is_light_blocked_by_stairs_or_elevator(pri_light, fc_thick));
 		bool use_sec_light[2] = {0,0}, sec_light_int_door[2] = {0,0}, added_bathroom(0);
 		float z(r->z1());
 
 		if (blocked_by_stairs) { // blocked by stairs - see if we can add a light off to the side in the other orient
 			bool const first_dir(rgen.rand_bool());
+			float const room_len(r->get_sz_dim(room_dim));
 
 			for (unsigned d = 0; d < 2; ++d) { // see if we can place it by moving on one direction
-				for (unsigned n = 0; n < 5; ++n) { // try 5 different shift values: 0.2, 0.25, 0.3, 0.35, 0.4
+				for (unsigned n = 0; n < 6; ++n) { // try 6 different shift values: 0.2, 0.25, 0.3, 0.35, 0.4, 0.45
 					point new_center(room_center);
-					new_center[room_dim] += ((bool(d) ^ first_dir) ? -1.0 : 1.0)*(0.2 + 0.05*n)*r->get_sz_dim(room_dim);
+					new_center[room_dim] += ((bool(d) ^ first_dir) ? -1.0 : 1.0)*(0.2 + 0.05*n)*room_len;
 					set_light_xyz(sec_light[d], new_center, light_size, !room_dim, light_shape); // flip the light dim
-					if (interior->is_blocked_by_stairs_or_elevator_no_expand(sec_light[d], fc_thick)) continue; // skip if blocked
+					if (!r->contains_cube_xy(sec_light[d])) continue; // shifted outside the room
+					if (interior->is_light_blocked_by_stairs_or_elevator(sec_light[d], fc_thick)) continue; // skip if blocked
 					cube_t test_cube(sec_light[d]);
 					test_cube.expand_in_dim(2, 0.4*window_vspacing); // expand to cover nearly an entire floor so that it's guaranteed to overlap a door
 					// maybe should exclude basement doors, since they don't show as open? but then it would be wrong if I later draw basement doors
@@ -2349,7 +2351,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 		for (unsigned f = 0; f < num_floors; ++f, z += floor_height) {
 			room_center.z = z + fc_thick; // floor height
 			// top floor may have stairs connecting to upper stack
-			bool const top_floor(f+1 == num_floors), top_floor_not_basement(top_floor && !is_basement);
+			bool const top_floor(f+1 == num_floors), top_floor_not_basement(top_floor && (!is_basement || num_floors > 1));
 			bool const check_stairs(!has_mult_lights && (!is_house || has_basement()) && real_num_parts > 1 && top_floor && r->z2() < bcube.z2()); // z2 check may not be effective
 			bool const has_stairs_this_floor(r->has_stairs_on_floor(f));
 			bool is_lit(0), has_light(1), light_dim(room_dim), has_stairs(has_stairs_this_floor), top_of_stairs(has_stairs && top_floor_not_basement);
@@ -2455,7 +2457,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 								cube_t cur_light(light);
 								cur_light.expand_by_xy(-shrink);
 								cur_light.translate(point((-0.5f*dx + (x + 0.5)*xstep), (-0.5f*dy + (y + 0.5)*ystep), 0.0));
-								if (interior->is_blocked_by_stairs_or_elevator_no_expand(cur_light, fc_thick)) continue; // skip if blocked
+								if (interior->is_light_blocked_by_stairs_or_elevator(cur_light, fc_thick)) continue; // skip if blocked
 								objs.emplace_back(cur_light, TYPE_LIGHT, room_id, light_dim, 0, flags, light_amt, light_shape, color); // dir=0 (unused)
 								objs.back().obj_id = light_ix_assign.get_ix_for_light(cur_light);
 							} // for x

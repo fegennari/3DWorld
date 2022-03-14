@@ -1916,12 +1916,11 @@ bool building_interior_t::is_blocked_by_stairs_or_elevator(cube_t const &c, floa
 	}
 	return 0;
 }
-// similar to above, but no expand for stairs/elevator, uses raw bcubes
-bool building_interior_t::is_blocked_by_stairs_or_elevator_no_expand(cube_t const &c, float dmin) const {
+// similar to above, but no expand for stairs/elevator; c can be zero height
+bool building_interior_t::is_light_blocked_by_stairs_or_elevator(cube_t const &c, float dmin) const {
 	cube_t tc(c);
 	tc.expand_by_xy(dmin); // no pad in z
-	if (has_bcube_int(c, elevators)) return 1;
-	tc.z1() -= 0.001*tc.dz(); // expand slightly to avoid placing an object exactly at the top of the stairs
+	if (has_bcube_int(tc, elevators)) return 1;
 	return has_bcube_int(tc, stairwells); // must check zval to exclude stairs and elevators in parts with other z-ranges
 }
 // similar to above (without stairs pretest), but returns bounding cubes rather than checking for intersections
