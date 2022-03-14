@@ -2402,9 +2402,10 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 				if (top_of_stairs) {flags |= RO_FLAG_TOS;}
 				if (has_stairs)    {flags |= RO_FLAG_RSTAIRS;}
 				colorRGBA color;
-				if (is_house) {color = colorRGBA(1.0, 1.0, 0.9);} // house - yellowish
+				if      (is_house)                      {color = colorRGBA(1.0, 1.0, 0.9);} // house - yellowish
+				else if (is_parking_garage)             {color = colorRGBA(1.0, 1.0, 0.8);} // parking garage - yellowish
 				else if (r->is_hallway || r->is_office) {color = colorRGBA(0.9, 0.9, 1.0);} // office building - blueish
-				else {color = colorRGBA(1.0, 1.0, 1.0);} // white - small office
+				else                                    {color = colorRGBA(1.0, 1.0, 1.0);} // white - small office
 
 				for (unsigned lix = 0; lix < nlights; ++lix) {
 					cube_t &light(lights[lix]);
