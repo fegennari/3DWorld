@@ -150,7 +150,7 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 		}
 	}
 	// add walls and pillars
-	bool const no_sep_wall(num_walls == 0 || (capacity < 100 && rgen.rand_bool()));
+	bool const no_sep_wall(num_walls == 0 || (capacity < 100 && (room_id & 1))); // use room_id rather than rgen so that this agrees between floors
 	bool const split_sep_wall(!no_sep_wall && (num_pillars >= 5 || (num_pillars >= 4 && rgen.rand_bool())));
 	if (interior->room_geom->pg_wall_start == 0) {interior->room_geom->pg_wall_start = objs.size();} // set if not set, on first level
 	float center_pos(wall.get_center_dim(dim));
@@ -163,21 +163,23 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 			float const pos(virt_room_for_wall.d[!dim][0] + (n + 1)*wall_spacing); // reference from the room far wall, assuming we can fit a full width double row strip
 			set_wall_width(wall,   pos, wall_hc, !dim);
 			set_wall_width(pillar, pos, pillar_hwidth, !dim);
-			if (no_sep_wall) continue;
-			cube_t walls[2] = {wall, wall};
-
-			if (split_sep_wall) { // add a gap between the walls for people to walk through
-				walls[0].d[dim][1] = center_pos - 0.4*window_vspacing;
-				walls[1].d[dim][0] = center_pos + 0.4*window_vspacing;
-			}
-			for (unsigned side = 0; side < (split_sep_wall ? 2U : 1U); ++side) {
-				subtract_cubes_from_cube(walls[side], obstacles_exp, wall_parts, temp, 1); // ignore_zval=1
 			
-				for (auto const &w : wall_parts) {
-					if (w.get_sz_dim(dim) < 2.0*window_vspacing) continue; // too short, skip
-					objs.emplace_back(w, TYPE_PG_WALL, room_id, !dim, 0, 0, tot_light_amt, SHAPE_CUBE, wall_color, 0);
+			if (!no_sep_wall) {
+				cube_t walls[2] = {wall, wall};
+
+				if (split_sep_wall) { // add a gap between the walls for people to walk through
+					walls[0].d[dim][1] = center_pos - 0.4*window_vspacing;
+					walls[1].d[dim][0] = center_pos + 0.4*window_vspacing;
 				}
-			} // for side
+				for (unsigned side = 0; side < (split_sep_wall ? 2U : 1U); ++side) {
+					subtract_cubes_from_cube(walls[side], obstacles_exp, wall_parts, temp, 1); // ignore_zval=1
+			
+					for (auto const &w : wall_parts) {
+						if (w.get_sz_dim(dim) < 2.0*window_vspacing) continue; // too short, skip
+						objs.emplace_back(w, TYPE_PG_WALL, room_id, !dim, 0, 0, tot_light_amt, SHAPE_CUBE, wall_color, 0);
+					}
+				} // for side
+			}
 		}
 		else { // room wall
 			bool const side(n == num_walls+1);
