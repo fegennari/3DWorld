@@ -561,13 +561,15 @@ bool building_t::are_rooms_connected_without_using_room(unsigned room1, unsigned
 	if (room1 == room2) return 1;
 	float const wall_width(get_wall_thickness());
 	bool const use_bit_mask(num_rooms <= 64); // almost always true
-	vector<unsigned> pend;
+	static vector<unsigned> pend; // reused across calls
+	pend.clear();
 	pend.push_back(room1);
-	vector<uint8_t> seen;
+	static vector<uint8_t> seen; // reused across calls
 	uint64_t seen_mask(0);
 
 	if (use_bit_mask) {seen_mask |= ((1ULL << room1) | (1ULL << room_exclude));}
 	else { // must use seen vector
+		seen.clear();
 		seen.resize(num_rooms, 0);
 		seen[room1       ] = 1;
 		seen[room_exclude] = 1; // mark as seen so that we won't visit it
