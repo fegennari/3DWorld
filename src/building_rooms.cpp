@@ -2274,6 +2274,17 @@ void building_t::try_place_light_on_ceiling(cube_t const &light, room_t const &r
 	} // for d
 }
 
+colorRGBA get_light_color_temp(float t) {
+	// 0.0: 1.0 1.0 0.5
+	// 0.5: 1.0 1.0 1.0
+	// 1.0: 0.5 0.5 1.0
+	if (t > 0.5) {return colorRGBA(1.5-t, 1.5-t, 1.0  );} // high temp blue spectrum
+	else         {return colorRGBA(1.0,   1.0,   t+0.5);} // low temp yellow spectrum
+}
+colorRGBA get_light_color_temp_range(float tmin, float tmax, rand_gen_t &rgen) {
+	return get_light_color_temp(((tmin == tmax) ? tmin : rgen.rand_uniform(tmin, tmax)));
+}
+
 // Note: these three floats can be calculated from get_window_vspace(), but it's easier to change the constants if we just pass them in
 void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcubes, unsigned building_ix) {
 
@@ -2406,10 +2417,11 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 			if (is_lit)     {flags |= RO_FLAG_LIT | RO_FLAG_EMISSIVE;}
 			if (has_stairs) {flags |= RO_FLAG_RSTAIRS;}
 			colorRGBA color;
-			if      (is_house)                      {color = colorRGBA(1.0, 1.0, 0.9);} // house - yellowish
-			else if (is_parking_garage)             {color = colorRGBA(1.0, 1.0, 0.8);} // parking garage - yellowish
-			else if (r->is_hallway || r->is_office) {color = colorRGBA(0.9, 0.9, 1.0);} // office building - blueish
-			else                                    {color = colorRGBA(1.0, 1.0, 1.0);} // white - small office
+			if      (is_house)          {color = get_light_color_temp(0.4);} // house - yellowish
+			else if (is_parking_garage) {color = get_light_color_temp_range(0.2, 0.5, rgen);} // parking garage - yellow-white
+			else if (r->is_office)      {color = get_light_color_temp(0.6);} // office - blueish
+			else if (r->is_hallway)     {color = get_light_color_temp(0.6);} // hallway - blueish
+			else                        {color = get_light_color_temp(0.5);} // small office - white
 			// add a light to the ceiling of this room if there's space (always for top of stairs);
 			set_cube_zvals(light, (light_z2 - light_thick), light_z2);
 			valid_lights.clear();
