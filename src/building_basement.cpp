@@ -731,5 +731,6 @@ void building_t::add_parking_garage_ramp(rand_gen_t &rgen) {
 	// cut out spaces from floors and ceilings
 	subtract_cube_from_floor_ceil(ramp, interior->floors  );
 	subtract_cube_from_floor_ceil(ramp, interior->ceilings);
+	// make rooms over the ramp of type RTYPE_RAMP_EXIT
 }
 
