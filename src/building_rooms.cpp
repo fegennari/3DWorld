@@ -3286,7 +3286,8 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 		i->car_obj_id = objs.size();
 		objs.emplace_back(elevator_car, TYPE_ELEVATOR, elevator_id, i->dim, i->dir, RO_FLAG_DYNAMIC);
 		objs.back().drawer_flags = (uint16_t)calc_num_floors(*i, window_vspacing, floor_thickness); // store the number of floors in drawer_flags; used for drawing
-	}
+		objs.back().item_flags   = (uint16_t)calc_floor_offset(i->z1()); // use correct starting floor index
+	} // for i
 }
 
 int building_t::get_ext_door_dir(cube_t const &door_bcube, bool dim) const { // erturn value of 2 means 'not found'
