@@ -3087,7 +3087,8 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 	for (auto i = interior->elevators.begin(); i != interior->elevators.end(); ++i) {
 		// add light
 		i->light_obj_id = objs.size();
-		cube_t light(point(i->xc(), i->yc(), (i->z1() + elevator_car_z1_add + (1.0 - fc_thick_scale)*window_vspacing))); // starts on the first floor
+		float const light_zval(max(ground_floor_z1, i->z1()) + elevator_car_z1_add + (1.0 - fc_thick_scale)*window_vspacing); // starts on the ground floor
+		cube_t light(point(i->xc(), i->yc(), light_zval));
 		light.z1() -= 0.02*window_vspacing;
 		light.expand_by_xy(0.06*window_vspacing);
 		objs.emplace_back(light, TYPE_LIGHT, i->room_id, i->dim, i->dir, (RO_FLAG_NOCOLL | RO_FLAG_IN_ELEV | RO_FLAG_LIT), 0.0, SHAPE_CYLIN, WHITE);
@@ -3127,6 +3128,7 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 		}
 		// call buttons for each floor inside the elevator car; first find the panel location for the starting elevator car position
 		cube_t elevator_car(*i);
+		max_eq(elevator_car.z1(), ground_floor_z1); // always starts on the ground floor, not the bottom of the basement
 		elevator_car.z1() += elevator_car_z1_add;
 		elevator_car.z2()  = elevator_car.z1() + window_vspacing; // currently at the bottom floor
 		cube_t const panel(get_elevator_car_panel(room_object_t(elevator_car, TYPE_ELEVATOR, elevator_id, i->dim, i->dir, 0), fc_thick_scale));
@@ -3278,8 +3280,9 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 	for (auto i = interior->elevators.begin(); i != interior->elevators.end(); ++i) {
 		unsigned const elevator_id(i - interior->elevators.begin()); // used for room_object_t::room_id
 		cube_t elevator_car(*i);
+		max_eq(elevator_car.z1(), ground_floor_z1); // always starts on the ground floor, not the bottom of the basement
 		elevator_car.z1() += elevator_car_z1_add; // to prevent z-fighting when looking at the building from the bottom
-		elevator_car.z2()  = elevator_car.z1() + window_vspacing; // currently at the bottom floor
+		elevator_car.z2()  = elevator_car.z1() + window_vspacing; // one floor of height
 		i->car_obj_id = objs.size();
 		objs.emplace_back(elevator_car, TYPE_ELEVATOR, elevator_id, i->dim, i->dir, RO_FLAG_DYNAMIC);
 		objs.back().drawer_flags = (uint16_t)calc_num_floors(*i, window_vspacing, floor_thickness); // store the number of floors in drawer_flags; used for drawing
