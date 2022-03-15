@@ -1173,6 +1173,7 @@ bool building_t::move_nearest_object(point const &at_pos, vector3d const &in_dir
 					if (i->type == TYPE_BLOCKER || *i == obj) continue; // ignore blockers and self
 					if (!is_obj_in_or_on_obj(obj, *i))        continue;
 					*i += move_vector; // move this object as well
+					i->flags |= RO_FLAG_MOVED;
 					if (i->is_dynamic()) {interior->room_geom->mats_dynamic.clear();} // dynamic object
 					else {
 						bldg_obj_type_t const &type(get_room_obj_type(*i));

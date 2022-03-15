@@ -786,6 +786,10 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 				assert(i->obj_id < light_bcubes.size());
 				cube_t &light_bcube(light_bcubes[i->obj_id]);
 
+				if (is_lamp && (i->flags & RO_FLAG_MOVED)) {
+					i->flags &= ~RO_FLAG_MOVED; // clear moved flag, since we noticed it was moved
+					light_bcube.set_to_zeros(); // will be recalculated below
+				}
 				if (light_bcube.is_all_zeros()) { // not yet calculated - calculate and cache
 					light_bcube = clipped_bc;
 					refine_light_bcube(lpos, light_radius, room, light_bcube);
