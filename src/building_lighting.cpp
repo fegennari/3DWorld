@@ -667,10 +667,11 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		//if (is_light_occluded(lpos_rot, camera_bs))  continue; // too strong a test in general, but may be useful for selecting high importance lights
 		//if (!camera_in_building && i->is_interior()) continue; // skip interior lights when camera is outside the building: makes little difference, not worth the trouble
 		// basement lights are only visible if the player is inside the building on the basement or ground floor
-		bool const light_in_basement(lpos.z < ground_floor_z1);
+		bool const light_in_basement(lpos.z < ground_floor_z1), is_in_elevator(i->flags & RO_FLAG_IN_ELEV), is_in_closet(i->flags & RO_FLAG_IN_CLOSET);
+		if ((is_in_elevator || is_in_closet) && camera_z > lpos.z) continue; // elevator or closet light on the floor below the player
 		if (light_in_basement && (camera_z > (ground_floor_z1 + window_vspacing) || !bcube.contains_pt(camera_bs))) continue;
 		room_t const &room(get_room(i->room_id));
-		bool const is_lamp(i->type == TYPE_LAMP), is_in_elevator(i->flags & RO_FLAG_IN_ELEV), is_single_floor(room.is_sec_bldg || is_in_elevator);
+		bool const is_lamp(i->type == TYPE_LAMP), is_single_floor(room.is_sec_bldg || is_in_elevator);
 		int const cur_floor(is_single_floor ? 0 : (i->z1() - room.z1())/window_vspacing); // garages and sheds are all one floor
 		float const level_z(room.z1() + cur_floor*window_vspacing), floor_z(level_z + fc_thick);
 		float const ceil_z(is_single_floor ? room.z2() : (level_z + window_vspacing - fc_thick));
@@ -679,56 +680,67 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		bool const floor_is_above((camera_z < level_z) && !is_single_floor), floor_is_below(camera_z > ceil_z);
 		bool const camera_room_same_part(room.part_id == camera_part), has_stairs_this_floor(room.has_stairs_on_floor(cur_floor));
 		bool const light_room_has_stairs_or_ramp(i->has_stairs() || has_stairs_this_floor || is_room_above_ramp(room, i->z1()));
-		// if the light is in the basement and the camera isn't, it's not visible unless the player is by the stairs
-		if ( light_in_basement && player_in_basement == 0 && !camera_somewhat_by_stairs    ) continue;
-		// if the player is fully in the basement but the light isn't, it's not visible unless the room with the light has stairs or a ramp up to it (applies to parking garages)
-		if (!light_in_basement && player_in_basement == 2 && !light_room_has_stairs_or_ramp) continue;
-		// less culling if either the light or the camera is by stairs and light is on the floor above or below
-		bool stairs_light(0);
+		bool stairs_light(0), player_in_elevator(0);
 
-		if ((camera_z > floor_below_zval) && (camera_z < ceil_above_zval)) { // light is on the floor above or below the camera
-			if (camera_in_hallway && camera_by_stairs && camera_room_same_part) {
-				// special case for player in an office building primary hallway with stairs; only handle the case where the light is in the hallway above or below;
-				// if camera is on the stairs or a ramp this also counts because this may be connecting two rooms in two different parts
-				stairs_light = ((int)i->room_id == camera_room || camera_on_stairs);
-			}
-			else {
-				stairs_light = (light_room_has_stairs_or_ramp || camera_somewhat_by_stairs); // either the light or the camera is by the stairs
-			}
+		if (is_in_elevator) {
+			assert(i->obj_id < interior->elevators.size());
+			elevator_t const &e(interior->elevators[i->obj_id]);
+			assert(e.car_obj_id < objs.size());
+			room_object_t const &car(objs[e.car_obj_id]); // elevator car for this elevator
+			if (car.contains_pt(camera_rot)) {player_in_elevator = 1;} // player inside elevator
+			else if (e.open_amt == 0.0 && (floor_is_above || floor_is_below)) continue; // closed elevator viewed from a different floor
 		}
-		if (floor_is_above || floor_is_below) { // light is on a different floor from the camera
-			// the basement is a different part, but it's still the same vertical stack; consider this the same effective part if the camera is in the basement above the room's part
-			if (camera_in_building && (camera_room_same_part || ((player_in_basement || light_in_basement) && parts[room.part_id].contains_pt_xy(camera_rot)) ||
-				(room.contains_pt_xy(camera_rot) && camera_z < ceil_above_zval && camera_z > floor_below_zval)))
-			{
-				// player is on a different floor of the same building part, or more than one floor away in a part stack, and can't see a light from the floor above/below
-				if (!stairs_light) continue; // camera in building and on wrong floor, don't add light
-			}
-			else { // camera outside the building (or the part that contains this light)
-				float const xy_dist(p2p_dist_xy(camera_bs, lpos_rot));
-				if (!stairs_light && ((camera_z - lpos_rot.z) > 2.0f*xy_dist || (lpos_rot.z - camera_z) > 1.0f*xy_dist)) continue; // light viewed at too high an angle
-
-				if (camera_in_building) { // camera and light are in different buildings/parts
-					if (camera_part >= real_num_parts) continue; // camera in garage or shed
-					assert(camera_part < parts.size());
-					cube_t const &cpart(parts[camera_part]);
-					if (cpart.z2() <= room.z1() || cpart.z1() >= room.z2()) continue; // light in a different vertical stack than the camera
-
-					if (!is_rotated()) { // check exterior wall visibility; this part doesn't work for rotated buildings
-						// is it better to check if light half sphere is occluded by the floor above/below?
-						cube_t const &part(get_part_for_room(room));
-						bool visible[2] = {0};
-
-						for (unsigned d = 0; d < 2; ++d) { // for each dim
-							bool const dir(camera_bs[d] > lpos_rot[d]);
-							if ((camera_rot[d] > part.d[d][dir]) ^ dir) continue; // camera not on the outside face of the part containing this room, so can't see through any windows
-							visible[d] = (room.ext_sides & (1 << (2*d + dir)));
-						}
-						if (!visible[0] && !visible[1]) continue; // room is not on the exterior of the building on either side facing the camera
-					}
+		if (!player_in_elevator) { // none of the below culling applies when the player is in the elevator
+			// if the light is in the basement and the camera isn't, it's not visible unless the player is by the stairs
+			if ( light_in_basement && player_in_basement == 0 && !camera_somewhat_by_stairs    ) continue;
+			// if the player is fully in the basement but the light isn't, it's not visible unless the room with the light has stairs or a ramp up to it (parking garages)
+			if (!light_in_basement && player_in_basement == 2 && !light_room_has_stairs_or_ramp) continue;
+			// less culling if either the light or the camera is by stairs and light is on the floor above or below
+		
+			if (camera_z > floor_below_zval && camera_z < ceil_above_zval) { // light is on the floor above or below the camera
+				if (camera_in_hallway && camera_by_stairs && camera_room_same_part) {
+					// special case for player in an office building primary hallway with stairs; only handle the case where the light is in the hallway above or below;
+					// if camera is on the stairs or a ramp this also counts because this may be connecting two rooms in two different parts
+					stairs_light = ((int)i->room_id == camera_room || camera_on_stairs);
+				}
+				else {
+					stairs_light = (light_room_has_stairs_or_ramp || camera_somewhat_by_stairs); // either the light or the camera is by the stairs
 				}
 			}
-		} // end camera on different floor case
+			if (floor_is_above || floor_is_below) { // light is on a different floor from the camera
+				// the basement is a different part, but it's still the same vertical stack; consider this the same effective part if the camera is in the basement above the room's part
+				if (camera_in_building && (camera_room_same_part || ((player_in_basement || light_in_basement) && parts[room.part_id].contains_pt_xy(camera_rot)) ||
+					(room.contains_pt_xy(camera_rot) && camera_z < ceil_above_zval && camera_z > floor_below_zval)))
+				{
+					// player is on a different floor of the same building part, or more than one floor away in a part stack, and can't see a light from the floor above/below
+					if (!stairs_light) continue; // camera in building and on wrong floor, don't add light
+				}
+				else { // camera outside the building (or the part that contains this light)
+					float const xy_dist(p2p_dist_xy(camera_bs, lpos_rot));
+					if (!stairs_light && ((camera_z - lpos_rot.z) > 2.0f*xy_dist || (lpos_rot.z - camera_z) > 1.0f*xy_dist)) continue; // light viewed at too high an angle
+
+					if (camera_in_building) { // camera and light are in different buildings/parts
+						if (camera_part >= real_num_parts) continue; // camera in garage or shed
+						assert(camera_part < parts.size());
+						cube_t const &cpart(parts[camera_part]);
+						if (cpart.z2() <= room.z1() || cpart.z1() >= room.z2()) continue; // light in a different vertical stack than the camera
+
+						if (!is_rotated()) { // check exterior wall visibility; this part doesn't work for rotated buildings
+							// is it better to check if light half sphere is occluded by the floor above/below?
+							cube_t const &part(get_part_for_room(room));
+							bool visible[2] = {0};
+
+							for (unsigned d = 0; d < 2; ++d) { // for each dim
+								bool const dir(camera_bs[d] > lpos_rot[d]);
+								if ((camera_rot[d] > part.d[d][dir]) ^ dir) continue; // camera not on the outside face of the part containing this room, so can't see through any windows
+								visible[d] = (room.ext_sides & (1 << (2*d + dir)));
+							}
+							if (!visible[0] && !visible[1]) continue; // room is not on the exterior of the building on either side facing the camera
+						}
+					}
+				}
+			} // end camera on different floor case
+		} // end !player_in_elevator
 		float const light_radius(get_radius_for_room_light(*i)), cull_radius(0.95*light_radius), dshadow_radius(0.8*light_radius); // what about light_radius for lamps?
 		if (!camera_pdu.sphere_visible_test((lpos_rot + xlate), cull_radius)) continue; // VFC
 		// check visibility of bcube of light sphere clipped to building bcube; this excludes lights behind the camera and improves shadow map assignment quality
@@ -769,9 +781,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			color = i->get_color()*1.1; // make it extra bright
 		}
 		if (is_in_elevator) {
-			assert(i->obj_id < interior->elevators.size());
 			elevator_t const &e(interior->elevators[i->obj_id]);
-			assert(e.car_obj_id < objs.size());
 			room_object_t const &car(objs[e.car_obj_id]); // elevator car for this elevator
 			assert(car.contains_pt(lpos));
 			cube_t clip_cube(car); // light is constrained to the elevator car
