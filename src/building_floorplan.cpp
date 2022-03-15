@@ -1261,6 +1261,22 @@ bool building_t::is_valid_stairs_elevator_placement(cube_t const &c, float pad, 
 	if (check_walls && check_cube_intersect_walls(c)) return 0;
 	// if we're not checking walls, then at least check for open doors to avoid having the stairs intersect an open door
 	if (is_cube_close_to_doorway(c, cube_t(), pad, !check_walls)) return 0;
+
+	if (!is_house && has_pri_hall() && pri_hall.z1() == ground_floor_z1) { // office building with primary hallway on ground floor
+		// add extra padding around exterior doors to avoid blocking them with stairs
+		float const floor_spacing(get_window_vspace());
+		point end_pt;
+		end_pt[!hallway_dim] = pri_hall.get_center_dim(!hallway_dim); // assumes door is centered in the hallway
+
+		for (unsigned d = 0; d < 2; ++d) { // check both hallway ends
+			end_pt[hallway_dim] = pri_hall.d[hallway_dim][d];
+			cube_t blocked(end_pt);
+			blocked.expand_by_xy(1.0*floor_spacing); // ensure at least one floor of spacing around the door
+			set_cube_zvals(blocked, pri_hall.z1(), (pri_hall.z1() + floor_spacing)); // clip to ground floor
+			blocked.intersect_with_cube_xy(pri_hall);
+			if (blocked.intersects(c)) return 0;
+		}
+	}
 	return 1;
 }
 
