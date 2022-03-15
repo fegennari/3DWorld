@@ -391,7 +391,7 @@ enum {/*building models*/ OBJ_MODEL_TOILET=0, OBJ_MODEL_SINK, OBJ_MODEL_TUB, OBJ
 
 // object flags
 unsigned const RO_FLAG_LIT     = 0x01; // light is on
-unsigned const RO_FLAG_TOS     = 0x02; // at top of stairs
+unsigned const RO_FLAG_TOS     = 0x02; // at top of stairs; used for railings
 unsigned const RO_FLAG_RSTAIRS = 0x04; // in a room with stairs
 unsigned const RO_FLAG_INVIS   = 0x08; // invisible
 unsigned const RO_FLAG_NOCOLL  = 0x10; // no collision detection
@@ -461,7 +461,7 @@ struct room_object_t : public cube_t {
 	void set_combined_flags(unsigned v) {drawer_flags = (v >> 16); item_flags = (v & 0xFFFF);}
 	bool is_valid   () const {return  (type != TYPE_NONE);}
 	bool is_lit     () const {return  (flags & RO_FLAG_LIT);}
-	bool has_stairs () const {return  (flags & (RO_FLAG_TOS | RO_FLAG_RSTAIRS));}
+	bool has_stairs () const {return  (flags & RO_FLAG_RSTAIRS);}
 	bool is_visible () const {return !(flags & RO_FLAG_INVIS);}
 	bool no_coll    () const {return  (flags & RO_FLAG_NOCOLL);}
 	bool is_interior() const {return  (flags & RO_FLAG_INTERIOR);}

@@ -2403,9 +2403,8 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 				if (p->z2() < light_z2 && p->z1() + floor_height > light_z2) {is_lit = 1;} // on this floor
 			}
 			uint8_t flags(RO_FLAG_NOCOLL); // no collision detection with lights
-			if (is_lit)        {flags |= RO_FLAG_LIT | RO_FLAG_EMISSIVE;}
-			if (top_of_stairs) {flags |= RO_FLAG_TOS;}
-			if (has_stairs)    {flags |= RO_FLAG_RSTAIRS;}
+			if (is_lit)     {flags |= RO_FLAG_LIT | RO_FLAG_EMISSIVE;}
+			if (has_stairs) {flags |= RO_FLAG_RSTAIRS;}
 			colorRGBA color;
 			if      (is_house)                      {color = colorRGBA(1.0, 1.0, 0.9);} // house - yellowish
 			else if (is_parking_garage)             {color = colorRGBA(1.0, 1.0, 0.8);} // parking garage - yellowish
