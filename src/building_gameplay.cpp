@@ -1709,7 +1709,7 @@ void maybe_play_zombie_sound(point const &sound_pos_bs, unsigned zombie_ix, bool
 }
 
 void water_sound_manager_t::register_running_water(room_object_t const &obj, building_t const &building) {
-	if (!(obj.flags & RO_FLAG_IS_ACTIVE)) return; // not turned on
+	if (!obj.is_active()) return; // not turned on
 	if (fabs(obj.z2() - camera_bs.z) > building.get_window_vspace()) return; // on the wrong floor
 	point const pos(obj.get_cube_center());
 	float const dsq(p2p_dist_sq(pos, camera_bs));

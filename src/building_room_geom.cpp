@@ -606,7 +606,7 @@ void building_room_geom_t::add_spraycan(room_object_t const &c) { // is_small=1
 void building_room_geom_t::add_button(room_object_t const &c) {
 	bool const in_elevator(c.flags & RO_FLAG_IN_ELEV);
 	tid_nm_pair_t tp; // unshadowed
-	if (c.flags & RO_FLAG_IS_ACTIVE) {tp.emissive = 1.0;} // make it lit when active
+	if (c.is_active()) {tp.emissive = 1.0;} // make it lit when active
 	colorRGBA const color(apply_light_color(c));
 	rgeom_mat_t &mat(get_material(tp, 0, in_elevator, !in_elevator)); // (in_elevator ? dynamic : small)
 	if      (c.shape == SHAPE_CUBE ) {mat.add_cube_to_verts_untextured(c, color, ~get_face_mask(c.dim, !c.dir));} // square button

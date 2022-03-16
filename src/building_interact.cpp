@@ -370,7 +370,7 @@ bool building_t::interact_with_object(unsigned obj_ix, point const &int_pos, poi
 		sound_scale = 0.5;
 	}
 	else if (obj.is_sink_type() || obj.type == TYPE_TUB) { // sink or tub
-		if (!(obj.flags & RO_FLAG_IS_ACTIVE) && obj.type == TYPE_TUB) {gen_sound_thread_safe(SOUND_SINK, local_center);} // play sound when turning the tub on
+		if (!obj.is_active() && obj.type == TYPE_TUB) {gen_sound_thread_safe(SOUND_SINK, local_center);} // play sound when turning the tub on
 		if (obj.is_sink_type()) {obj.flags ^= RO_FLAG_IS_ACTIVE;} // toggle active bit, only for sinks for now
 		sound_scale = 0.4;
 	}
@@ -447,7 +447,7 @@ bool building_t::interact_with_object(unsigned obj_ix, point const &int_pos, poi
 		gen_sound_thread_safe(SOUND_CLICK, local_center, 0.4);
 	}
 	else if (obj.type == TYPE_BUTTON) {
-		if (!(obj.flags & RO_FLAG_IS_ACTIVE)) { // if not already active
+		if (!obj.is_active()) { // if not already active
 			register_button_event(obj);
 			interior->room_geom->clear_static_small_vbos(); // need to regen object data due to lit state change; don't have to set modified_by_player
 			obj.flags |= RO_FLAG_IS_ACTIVE;
@@ -808,7 +808,7 @@ bool building_interior_t::update_elevators(building_t const &building, point con
 			for (auto j = objs.begin() + e->button_id_start; j != objs.begin() + e->button_id_end; ++j) { // disable all call buttons for this elevator
 				if (j->type == TYPE_BLOCKER) continue; // button was removed?
 				assert(j->type == TYPE_BUTTON);
-				if (j->flags & RO_FLAG_IS_ACTIVE) {j->flags &= ~RO_FLAG_IS_ACTIVE; was_updated = 1;} // clear active/lit state
+				if (j->is_active()) {j->flags &= ~RO_FLAG_IS_ACTIVE; was_updated = 1;} // clear active/lit state
 			}
 			if (was_updated) {room_geom->clear_static_small_vbos();} // need to regen object data due to lit state change
 			point const sound_pos(obj.get_cube_center());

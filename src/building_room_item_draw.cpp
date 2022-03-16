@@ -852,7 +852,7 @@ public:
 	water_draw_t() : mat(rgeom_mat_t(tid_nm_pair_t(FOAM_TEX))), tex_off(0.0) {}
 
 	void add_water_for_sink(room_object_t const &obj) {
-		if (!(obj.flags & RO_FLAG_IS_ACTIVE)) return; // not turned on
+		if (!obj.is_active()) return; // not turned on
 		bool const is_cube(obj.type == TYPE_KSINK || obj.type == TYPE_BRSINK);
 		float const dz(obj.dz());
 		cube_t c;
