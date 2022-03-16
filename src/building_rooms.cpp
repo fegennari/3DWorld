@@ -2420,7 +2420,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 				if (!p->intersects_xy(*r)) continue; // person not in this room
 				if (p->z2() < light_z2 && p->z1() + floor_height > light_z2) {is_lit = 1;} // on this floor
 			}
-			uint8_t flags(RO_FLAG_NOCOLL); // no collision detection with lights
+			unsigned flags(RO_FLAG_NOCOLL); // no collision detection with lights
 			if (is_lit)     {flags |= RO_FLAG_LIT | RO_FLAG_EMISSIVE;}
 			if (has_stairs) {flags |= RO_FLAG_RSTAIRS;}
 			// add a light to the ceiling of this room if there's space (always for top of stairs);

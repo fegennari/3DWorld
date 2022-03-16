@@ -165,6 +165,7 @@ bldg_obj_type_t get_taken_obj_type(room_object_t const &obj) {
 	if (obj.type == TYPE_CRATE    && (obj.flags & RO_FLAG_OPEN   )) {return bldg_obj_type_t(1, 1, 1, 1, 0, 0, 2,   2.0, 0.5,  "opened crate");}
 	if (obj.type == TYPE_TV       && (obj.flags & RO_FLAG_BROKEN )) {return bldg_obj_type_t(1, 1, 1, 1, 0, 1, 1,  20.0, 70.0, "broken TV"   );}
 	if (obj.type == TYPE_MONITOR  && (obj.flags & RO_FLAG_BROKEN )) {return bldg_obj_type_t(1, 1, 1, 1, 0, 1, 1,  10.0, 15.0, "broken computer monitor");}
+	if (obj.type == TYPE_LIGHT    && (obj.flags & RO_FLAG_BROKEN )) {return bldg_obj_type_t(0, 0, 0, 1, 0, 0, 0,  10.0,  5.0, "broken light");}
 
 	if (obj.type == TYPE_BOTTLE) {
 		bottle_params_t const &bparams(bottle_params[obj.get_bottle_type()]);
