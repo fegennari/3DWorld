@@ -1176,7 +1176,13 @@ void building_room_geom_t::add_parking_space(room_object_t const &c, vector3d co
 		yellow_line.translate_dim(!c.dim, (space_width - line_width));
 		mat.add_cube_to_verts(yellow_line, c.color, yellow_line.get_llc(), ~EF_Z2, c.dim); // small=2: top surface only
 	}
-	//get_material(tid_nm_pair_t(WHITE_TEX), 0, 0, 2).add_cube_to_verts(c-vector3d(0.0, 0.0, 0.5*c.dz()), c.color, tex_origin, ~EF_Z2); // TESTING
+	if (c.flags & RO_FLAG_IS_ACTIVE) { // handicap spot
+		cube_t icon(c.get_cube_center());
+		icon.expand_by_xy(0.25*space_width);
+		set_cube_zvals(icon, c.z2(), c.z2()+0.002*space_width);
+		rgeom_mat_t &mat2(get_material(tid_nm_pair_t(get_texture_by_name("roads/handicap_parking.jpg"), 0.0), 0, 0, 2)); // inc_shadows=0
+		mat2.add_cube_to_verts(icon, c.color, icon.get_llc(), ~EF_Z2, c.dim, (c.dim ^ c.dir), c.dir^1); // small=2: top surface only
+	}
 }
 
 void building_room_geom_t::add_pg_ramp(room_object_t const &c, vector3d const &tex_origin, float tscale) {

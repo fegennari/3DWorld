@@ -225,6 +225,8 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 	row.z2() = row.z1() + 0.001*window_vspacing; // slightly above the floor
 	float const space_width(row.get_sz_dim(dim)/num_space_wid), strips_start(virt_room_for_wall.d[!dim][0]);
 	bool const add_cars(city_params.num_cars > 0 && !city_params.car_model_files.empty() && !is_rotated()); // skip cars for rotated buildings
+	unsigned const max_handicap_spots(capacity/20 + 1);
+	unsigned num_handicap_spots(0);
 
 	for (unsigned n = 0; n < num_strips; ++n) {
 		row.d[!dim][0] = strips_start + (n + 0)*wall_spacing + wall_hc;
@@ -260,6 +262,18 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 					if (last_was_space          ) {flags |= RO_FLAG_ADJ_LO;} // adjacent space to the left
 					if (s+1 < num_spaces_per_row) {flags |= RO_FLAG_ADJ_HI;} // not the last space - assume there will be a space to the right
 					bool const add_car(add_cars && rgen.rand_float() < 0.5); // 50% populated with cars
+
+					// make it a handicap spot if near an elevator and there aren't already too many
+					if (num_handicap_spots < max_handicap_spots) {
+						cube_t hc_area(space);
+						hc_area.expand_by(1.5*space_width);
+						if (!no_sep_wall) {hc_area.intersect_with_cube_xy(row);} // keep within the current row if there are walls in between rows
+
+						for (elevator_t const &e : interior->elevators) {
+							if (e.z1() > space.z2()) continue; // doesn't extend down to this level
+							if (e.intersects_xy(hc_area)) {flags |= RO_FLAG_IS_ACTIVE; ++num_handicap_spots; break;}
+						}
+					}
 					room_object_t pspace(space, TYPE_PARK_SPACE, room_id, !dim, d, flags, tot_light_amt, SHAPE_CUBE, wall_color); // floor_color?
 
 					if (add_car) { // add a collider to block this area from the player, people, and rats; add first so that objs.back() is correct for the next iter
