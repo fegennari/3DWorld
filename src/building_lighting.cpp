@@ -419,12 +419,12 @@ bool building_t::is_light_occluded(point const &lpos, point const &camera_bs) co
 	if (line_int_cubes(lpos, camera_bs, interior->ceilings)) return 1;
 	return 0;
 }
-void building_t::clip_ray_to_walls(point const &p1, point &p2) const { // Note: assumes p1.z == p2.z
+void building_t::clip_ray_to_walls(point const &p1, point &p2, vect_cube_t const walls[2]) const { // Note: assumes p1.z == p2.z
 	for (unsigned d = 0; d < 2; ++d) {
 		bool const dir(p2[d] < p1[d]);
 		float mult((p2[!d] - p1[!d])/(p2[d] - p1[d]));
 
-		for (auto c = interior->walls[d].begin(); c != interior->walls[d].end(); ++c) {
+		for (auto c = walls[d].begin(); c != walls[d].end(); ++c) {
 			float const v(c->d[d][dir]);
 			if ((p1[d] < v) == (p2[d] < v)) continue; // no crossing
 			if (p1.z < c->z1() || p1.z > c->z2()) continue; // no z overlap
@@ -449,9 +449,10 @@ bool do_line_clip_xy_p2(point const &p1, point &p2, cube_t const &c) {
 void building_t::refine_light_bcube(point const &lpos, float light_radius, cube_t const &room, cube_t &light_bcube) const {
 	// base: 173613 / bcube: 163942 / clipped bcube: 161455 / tight: 159005 / rays: 101205 / no ls bcube expand: 74538
 	// starts with building bcube clipped to light bcube
-	//timer_t timer("refine_light_bcube"); // 0.055ms average
+	//timer_t timer("refine_light_bcube"); // 0.035ms average
+	assert(interior);
 	cube_t tight_bcube, part;
-	static vect_cube_t other_parts;
+	static vect_cube_t other_parts, walls[2];
 	other_parts.clear();
 
 	// first determine the union of all intersections with parts; ignore zvals here so that we get the same result for every floor
@@ -474,6 +475,14 @@ void building_t::refine_light_bcube(point const &lpos, float light_radius, cube_
 	float const wall_thickness(get_wall_thickness()), tolerance(0.01*wall_thickness);
 	room_exp.expand_by_xy(wall_thickness + tolerance); // to include points on the border + some FP error
 
+	// pre-compute the nearby walls we will use for clipping
+	for (unsigned d = 0; d < 2; ++d) {
+		walls[d].clear();
+
+		for (cube_t const &c : interior->walls[d]) {
+			if (tight_bcube.intersects(c)) {walls[d].push_back(c);}
+		}
+	} // for d
 	for (unsigned n = 0; n < NUM_RAYS; ++n) {
 		float const angle(TWO_PI*n/NUM_RAYS), dx(light_radius*sin(angle)), dy(light_radius*cos(angle));
 		point p2(lpos + point(dx, dy, 0.0));
@@ -481,7 +490,7 @@ void building_t::refine_light_bcube(point const &lpos, float light_radius, cube_
 		if (!do_line_clip_xy_p2(lpos, p2, tight_bcube)) continue; // bad ray, skip
 
 		if (other_parts.empty() || part.contains_pt_xy(p2)) {
-			clip_ray_to_walls(lpos, p2); // the simple case where we don't need to handle part boundaries (optimization)
+			clip_ray_to_walls(lpos, p2, walls); // the simple case where we don't need to handle part boundaries (optimization)
 		}
 		else {
 			// find the point where this ray exits the building by following it through all parts; parts should be exactly adjacent to each other in X or Y
@@ -502,7 +511,7 @@ void building_t::refine_light_bcube(point const &lpos, float light_radius, cube_
 			} // for n
 			p2 = cur_pt;
 			if (room_exp.contains_pt_xy_inclusive(p2)) {} // ray ends in this room; it may have exited the building from this room
-			else {clip_ray_to_walls(lpos, p2);} // ray ends in another room, need to clip it to the building walls
+			else {clip_ray_to_walls(lpos, p2, walls);} // ray ends in another room, need to clip it to the building walls
 		}
 		rays_bcube.union_with_pt(p2);
 	} // for n
@@ -802,7 +811,8 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 				}
 				if (light_bcube.is_all_zeros()) { // not yet calculated - calculate and cache
 					light_bcube = clipped_bc;
-					refine_light_bcube(lpos, light_radius, room, light_bcube);
+					if (light_in_basement && has_parking_garage) {} // not needed for parking garage, since there are no true walls
+					else {refine_light_bcube(lpos, light_radius, room, light_bcube);}
 				}
 				clipped_bc.x1() = light_bcube.x1(); clipped_bc.x2() = light_bcube.x2(); // copy X/Y but keep orig zvals
 				clipped_bc.y1() = light_bcube.y1(); clipped_bc.y2() = light_bcube.y2();
