@@ -2376,6 +2376,13 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 		colorRGBA chair_colors[12] = {WHITE, WHITE, GRAY, DK_GRAY, LT_GRAY, BLUE, DK_BLUE, LT_BLUE, YELLOW, RED, DK_GREEN, LT_BROWN};
 		colorRGBA chair_color(chair_colors[(13*r->part_id + 123*tot_num_rooms + 617*mat_ix + 1367*num_floors) % 12]);
 		light_ix_assign.next_room();
+		// select light color for this room
+		colorRGBA color;
+		if      (is_house)          {color = get_light_color_temp(0.4);} // house - yellowish
+		else if (is_parking_garage) {color = get_light_color_temp_range(0.2, 0.5, rgen);} // parking garage - yellow-white
+		else if (r->is_office)      {color = get_light_color_temp(0.6);} // office - blueish
+		else if (r->is_hallway)     {color = get_light_color_temp(0.6);} // hallway - blueish
+		else                        {color = get_light_color_temp(0.5);} // small office - white
 
 		// place objects on each floor for this room
 		for (unsigned f = 0; f < num_floors; ++f, z += floor_height) {
@@ -2416,12 +2423,6 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 			uint8_t flags(RO_FLAG_NOCOLL); // no collision detection with lights
 			if (is_lit)     {flags |= RO_FLAG_LIT | RO_FLAG_EMISSIVE;}
 			if (has_stairs) {flags |= RO_FLAG_RSTAIRS;}
-			colorRGBA color;
-			if      (is_house)          {color = get_light_color_temp(0.4);} // house - yellowish
-			else if (is_parking_garage) {color = get_light_color_temp_range(0.2, 0.5, rgen);} // parking garage - yellow-white
-			else if (r->is_office)      {color = get_light_color_temp(0.6);} // office - blueish
-			else if (r->is_hallway)     {color = get_light_color_temp(0.6);} // hallway - blueish
-			else                        {color = get_light_color_temp(0.5);} // small office - white
 			// add a light to the ceiling of this room if there's space (always for top of stairs);
 			set_cube_zvals(light, (light_z2 - light_thick), light_z2);
 			valid_lights.clear();
