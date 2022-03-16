@@ -1417,7 +1417,7 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 				bool dim(0), too_small(0);
 				if (min(place_region.dx(), place_region.dy()) < 1.5*len_with_pad) {dim = (place_region.dx() < place_region.dy());} // use larger dim
 				else {dim = rgen.rand_bool();}
-				bool const stairs_dir(rgen.rand_bool()); // the direction we move in when going up the stairs
+				bool stairs_dir(rgen.rand_bool()); // the direction we move in when going up the stairs
 
 				for (unsigned d = 0; d < 2; ++d) {
 					float const stairs_sz((bool(d) == dim) ? len_with_pad : stairs_width);
@@ -1428,6 +1428,11 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 					cand.d[d][1] = cand.d[d][0] + stairs_sz; // URC
 				}
 				if (too_small) continue;
+
+				if (is_basement && !is_house && has_pri_hall() && pri_hall.z1() == ground_floor_z1 && dim == hallway_dim) {
+					// basement stairs placed in a first floor office building primary hallway should face the door
+					if (pri_hall.contains_cube_xy(cand)) {stairs_dir = (pri_hall.get_center_dim(dim) < cand.get_center_dim(dim));}
+				}
 				cube_t cand_test[2] = {cand, cand}; // {lower, upper} parts, starts on lower floor
 				cand_test[0].z1() += 0.1*window_vspacing; cand_test[0].z2() -= 0.1*window_vspacing; // shrink to lower part
 				cand_test[1].z1() += 1.1*window_vspacing; cand_test[1].z2() += 0.9*window_vspacing; // move to upper part
