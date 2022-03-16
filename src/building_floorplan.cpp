@@ -1429,7 +1429,7 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 				}
 				if (too_small) continue;
 
-				if (is_basement && !is_house && has_pri_hall() && pri_hall.z1() == ground_floor_z1 && dim == hallway_dim) {
+				if (is_basement && !is_house && has_pri_hall() && pri_hall.z1() == ground_floor_z1 && dim == (hallway_dim == 1)) {
 					// basement stairs placed in a first floor office building primary hallway should face the door
 					if (pri_hall.contains_cube_xy(cand)) {stairs_dir = (pri_hall.get_center_dim(dim) < cand.get_center_dim(dim));}
 				}
