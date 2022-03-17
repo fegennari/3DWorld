@@ -1572,7 +1572,7 @@ void building_t::add_garage_objs(rand_gen_t rgen, room_t const &room, float zval
 	car_t car(car_from_parking_space(pspace));
 	interior->room_geom->wall_ps_start = objs.size(); // first parking space index
 	objs.push_back(pspace);
-	objs.emplace_back(car.bcube, TYPE_COLLIDER, room_id, dim, dir, RO_FLAG_INVIS);
+	objs.emplace_back(car.bcube, TYPE_COLLIDER, room_id, dim, dir, (RO_FLAG_INVIS | RO_FLAG_FOR_CAR));
 	interior->room_geom->has_garage_car = 1;
 }
 

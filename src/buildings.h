@@ -410,6 +410,7 @@ unsigned const RO_FLAG_RAND_ROT= 0x8000; // random rotation; used for office cha
 unsigned const RO_FLAG_UNTEXTURED = 0x1000; // for shirts, aliased with RO_FLAG_ADJ_BOT
 unsigned const RO_FLAG_FROM_SET   = 0x1000; // for books, aliased with RO_FLAG_ADJ_BOT
 unsigned const RO_FLAG_HAS_VOL_IX = 0x2000; // for books, aliased with RO_FLAG_ADJ_TOP
+unsigned const RO_FLAG_FOR_CAR    = 0x1000; // for car blockers, aliased with RO_FLAG_ADJ_BOT
 // object flags, third byte, for pickup/interact state
 unsigned const RO_FLAG_TAKEN1  = 0x010000; // no picture / no bed pillows
 unsigned const RO_FLAG_TAKEN2  = 0x020000; // no bed sheets

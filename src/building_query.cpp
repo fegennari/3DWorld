@@ -1070,6 +1070,25 @@ void building_t::get_objs_at_or_below_ground_floor(vect_room_object_t &ret) cons
 	}
 }
 
+void get_approx_car_cubes(room_object_t const &cb, cube_t cubes[5]) {
+	vector3d const sz(cb.get_size());
+	float const bot_zval(cb.z1() + 0.12*sz.z);
+	cubes[0] = cb; // body
+	cubes[0].z1() = bot_zval;
+
+	for (unsigned bf = 0; bf < 2; ++bf) { // {back, front}
+		for (unsigned lr = 0; lr < 2; ++lr) { // {left, right, front}
+			float const signed_side_len((bf ? -1.0 : 1.0)*sz[ cb.dim]);
+			cube_t &c(cubes[2*bf + lr + 1]);
+			c = cb;
+			c.z2() = bot_zval;
+			c.d[ cb.dim][ bf] += 0.1*signed_side_len; // shift in from ends
+			c.d[ cb.dim][!bf] -= 0.7*signed_side_len; // middle of side is open
+			c.d[!cb.dim][!lr] -= (lr ? -1.0 : 1.0)*0.85*sz[!cb.dim]; // middle 70% of ends is open
+		} // for lr
+	} // for bf
+}
+
 // collision query used for rats: p1 and p2 are line end points; radius applies in X and Y, hheight is half height and applies in +/- z
 bool building_t::check_line_coll_expand(point const &p1, point const &p2, float radius, float hheight) const {
 	assert(interior != nullptr);
@@ -1228,6 +1247,11 @@ bool building_t::check_line_coll_expand(point const &p1, point const &p2, float 
 				cube_t c_coll(*c);
 				c_coll.z1() += 0.05*c->dz(); // there's space under the shelves
 				if (line_int_cube_exp(p1, p2, c_coll, expand)) return 1;
+			}
+			else if (c->type == TYPE_COLLIDER && (c->flags & RO_FLAG_FOR_CAR)) { // parked car
+				cube_t cubes[5];
+				get_approx_car_cubes(*c, cubes);
+				if (line_int_cubes_exp(p1, p2, cubes, 5, expand)) return 1;
 			}
 			//else if (c->type == TYPE_STALL && maybe_inside_room_object(*c, p2, radius)) {} // is this useful? inside test only applied to end point
 			else return 1; // intersection

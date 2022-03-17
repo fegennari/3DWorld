@@ -237,8 +237,10 @@ bool can_hide_under(room_object_t const &c, cube_t &hide_area) {
 		hide_area.z1() += 0.05*c.dz();
 		return 1;
 	}
-	else if (c.type == TYPE_PARK_SPACE && (c.flags & RO_FLAG_USED)) { // parked car
-		// maybe, but there's a blocker and we don't know where the wheels are
+	else if (c.type == TYPE_COLLIDER && (c.flags & RO_FLAG_FOR_CAR)) { // parked car
+		hide_area = c;
+		hide_area.z1() += 0.12*c.dz(); // there's space under the car
+		return 1;
 	}
 	//else if (c.type == TYPE_STAIR) {} // what about hiding under the stairs? only for SHAPE_WALLED_SIDES?
 	return 0;

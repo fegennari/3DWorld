@@ -280,7 +280,7 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 
 					if (add_car) { // add a collider to block this area from the player, people, and rats; add first so that objs.back() is correct for the next iter
 						car_t car(car_from_parking_space(pspace));
-						objs.emplace_back(car.bcube, TYPE_COLLIDER, room_id, !dim, d, RO_FLAG_INVIS);
+						objs.emplace_back(car.bcube, TYPE_COLLIDER, room_id, !dim, d, (RO_FLAG_INVIS | RO_FLAG_FOR_CAR));
 						pspace.obj_id = (uint16_t)(objs.size() + rgen.rand()); // will be used for the car model and color
 						pspace.flags |= RO_FLAG_USED;
 					}
