@@ -2725,8 +2725,7 @@ void building_room_geom_t::add_crack(room_object_t const &c) { // in window? (TV
 }
 
 void building_room_geom_t::add_tv_picture(room_object_t const &c) {
-	bool const is_broken(c.flags & RO_FLAG_BROKEN);
-	if ((c.obj_id & 1) && !is_broken) return; // TV is off half the time
+	if ((c.obj_id & 1) && !c.is_broken()) return; // TV is off half the time
 	cube_t screen(c);
 	screen.d[c.dim][c.dir] += (c.dir ? -1.0 : 1.0)*0.35*c.get_sz_dim(c.dim);
 	screen.expand_in_dim(!c.dim, -0.03*c.get_sz_dim(!c.dim)); // shrink the sides in
@@ -2734,7 +2733,7 @@ void building_room_geom_t::add_tv_picture(room_object_t const &c) {
 	screen.z2() -= 0.04*c.dz();
 	unsigned skip_faces(get_face_mask(c.dim, c.dir)); // only the face oriented outward
 
-	if (is_broken) {
+	if (c.is_broken()) {
 		rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_crack_tid(c), 0.0)));
 		mat.add_cube_to_verts(screen, apply_light_color(c, WHITE), c.get_llc(), skip_faces, !c.dim, (c.obj_id&1), (c.obj_id&2)); // X/Y mirror based on obj_id
 	}

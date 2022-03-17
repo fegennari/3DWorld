@@ -439,7 +439,7 @@ bool building_t::interact_with_object(unsigned obj_ix, point const &int_pos, poi
 		}
 	}
 	else if (obj.type == TYPE_TV || obj.type == TYPE_MONITOR) {
-		if (!(obj.flags & RO_FLAG_BROKEN)) { // no visual effect if broken, but still clicks
+		if (!obj.is_broken()) { // no visual effect if broken, but still clicks
 			if (obj.type == TYPE_MONITOR && (obj.obj_id & 1)) {--obj.obj_id;} // toggle on and off, but don't change the desktop
 			else {++obj.obj_id;} // toggle on/off, and also change the picture
 			update_draw_data = 1;
@@ -704,7 +704,7 @@ void building_t::update_player_interact_objects(point const &player_pos, int fir
 					bool handled(0);
 
 					// break the glass if not already broken
-					if ((obj.type == TYPE_TV || obj.type == TYPE_MONITOR) && velocity.mag() > 2.0*MIN_VELOCITY && !(obj.flags & RO_FLAG_BROKEN)) {
+					if ((obj.type == TYPE_TV || obj.type == TYPE_MONITOR) && velocity.mag() > 2.0*MIN_VELOCITY && !obj.is_broken()) {
 						vector3d front_dir(all_zeros);
 						front_dir[obj.dim] = (obj.dir ? 1.0 : -1.0);
 						

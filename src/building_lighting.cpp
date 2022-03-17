@@ -678,7 +678,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		if ((is_in_elevator || is_in_closet) && camera_z > lpos.z) continue; // elevator or closet light on the floor below the player
 		if (light_in_basement && (camera_z > (ground_floor_z1 + window_vspacing) || !bcube.contains_pt(camera_bs))) continue;
 
-		if (i->flags & RO_FLAG_BROKEN) { // run flicker logic for broken lights
+		if (i->is_broken()) { // run flicker logic for broken lights
 			static rand_gen_t rgen;
 
 			if (tfticks > i->light_amt) { // time for state transition

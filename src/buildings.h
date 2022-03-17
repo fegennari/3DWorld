@@ -473,6 +473,7 @@ struct room_object_t : public cube_t {
 	bool has_dstate () const {return  (flags & RO_FLAG_DSTATE);}
 	bool is_moving  () const {return (is_dynamic() && has_dstate());}
 	bool was_moved  () const {return  (flags & RO_FLAG_MOVED);}
+	bool is_broken  () const {return  (flags & RO_FLAG_BROKEN);}
 	bool is_active  () const {return  (flags & RO_FLAG_IS_ACTIVE);}
 	bool is_light_type() const {return (type == TYPE_LIGHT || (type == TYPE_LAMP && !was_expanded()));} // light, or lamp not in closet
 	bool is_sink_type () const {return (type == TYPE_SINK || type == TYPE_KSINK || type == TYPE_BRSINK);}
