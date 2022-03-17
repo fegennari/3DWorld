@@ -670,7 +670,7 @@ public:
 	virtual void draw_unshadowed();
 	void add_car_headlights(vector<car_t> const &cars, vector3d const &xlate_, cube_t &lights_bcube);
 	static void gen_car_pts(car_t const &car, bool include_top, point pb[8], point pt[8]);
-	void draw_car(car_t const &car, bool is_dlight_shadows, bool in_garage);
+	void draw_car(car_t const &car, bool is_dlight_shadows);
 	void draw_helicopter(helicopter_t const &h, bool shadow_only);
 	void add_car_headlights(car_t const &car, cube_t &lights_bcube);
 }; // car_draw_state_t
@@ -696,7 +696,6 @@ class car_manager_t { // and trucks and helicopters
 	struct car_block_t {
 		unsigned start, cur_city, first_parked;
 		car_block_t(unsigned s, unsigned c) : start(s), cur_city(c), first_parked(0) {}
-		bool is_in_building() const {return (cur_city == NO_CITY_IX);}
 	};
 
 	struct helipad_t {
@@ -715,8 +714,7 @@ class car_manager_t { // and trucks and helicopters
 	car_draw_state_t dstate;
 	rand_gen_t rgen;
 	vector<unsigned> entering_city;
-	cube_t garages_bcube;
-	unsigned first_parked_car, first_garage_car;
+	unsigned first_parked_car;
 	bool car_destroyed;
 
 	cube_t get_cb_bcube(car_block_t const &cb ) const;
@@ -735,13 +733,13 @@ class car_manager_t { // and trucks and helicopters
 public:
 	friend class city_spectate_manager_t;
 	car_manager_t(city_road_gen_t const &road_gen_) :
-		road_gen(road_gen_), dstate(car_model_loader, helicopter_model_loader), first_parked_car(0), first_garage_car(0), car_destroyed(0) {}
+		road_gen(road_gen_), dstate(car_model_loader, helicopter_model_loader), first_parked_car(0), car_destroyed(0) {}
 	bool empty() const {return cars.empty();}
 	void clear() {cars.clear(); car_blocks.clear();}
 	bool has_car_models() const {return !car_model_loader.empty();}
 	unsigned get_model_gpu_mem() const {return (car_model_loader.get_gpu_mem() + helicopter_model_loader.get_gpu_mem());}
 	void init_cars(unsigned num);
-	void add_parked_cars(vector<car_t> const &new_cars, vect_cube_t const &garages);
+	void add_parked_cars(vector<car_t> const &new_cars);
 	void finalize_cars();
 	void assign_car_model_size_color(car_t &car, rand_gen_t &local_rgen, bool is_in_garage);
 	void add_helicopters(vect_cube_t const &hp_locs);
@@ -758,7 +756,7 @@ public:
 	void next_frame(ped_manager_t const &ped_manager, float car_speed);
 	void helicopters_next_frame(float car_speed);
 	bool check_helicopter_coll(cube_t const &bc) const;
-	void draw(int trans_op_mask, vector3d const &xlate, bool use_dlights, bool shadow_only, bool is_dlight_shadows, bool garages_pass);
+	void draw(int trans_op_mask, vector3d const &xlate, bool use_dlights, bool shadow_only, bool is_dlight_shadows);
 	void draw_car_in_pspace(car_t &car, shader_t &s, vector3d const &xlate, bool shadow_only);
 	void add_car_headlights(vector3d const &xlate, cube_t &lights_bcube) {dstate.add_car_headlights(cars, xlate, lights_bcube);}
 	void free_context() {car_model_loader.free_context(); helicopter_model_loader.free_context();}
@@ -959,7 +957,6 @@ bool have_city_buildings();
 bool enable_building_people_ai();
 bool place_building_people(vect_building_place_t &locs, float radius, float speed_mult, unsigned num);
 void update_building_ai_state(vector<pedestrian_t> &people, float delta_dir);
-void get_all_garages(vect_cube_t &garages);
 void get_all_city_helipads(vect_cube_t &helipads);
 bool check_city_building_line_coll_bs(point const &p1, point const &p2, point &p_int);
 void update_buildings_zmax_for_line(point const &p1, point const &p2, float radius, float house_extra_zval, float &cur_zmax);

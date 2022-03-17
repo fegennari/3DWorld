@@ -2139,12 +2139,6 @@ public:
 		cout << "Num Placed Trees: " << placements.size() << ", Blocks: " << num_blocks << endl;
 	}
 
-	void get_all_garages(vect_cube_t &garages) const {
-		for (auto const &b : buildings) {
-			cube_t const garage(b.get_garage_bcube());
-			if (!garage.is_all_zeros()) {garages.push_back(garage);}
-		}
-	}
 	void get_all_helipads(vect_cube_t &helipads) const {
 		for (auto b = buildings.begin(); b != buildings.end(); ++b) {
 			if (b->has_helipad) {helipads.push_back(b->get_helipad_bcube());}
@@ -2225,7 +2219,6 @@ public:
 		glEnable(GL_CULL_FACE); // slightly faster for interior shadow maps
 		vector<point> points; // reused temporary
 		building_draw_t ext_parts_draw; // roof and exterior walls
-		bool has_garage(0);
 
 		for (auto i = bcs.begin(); i != bcs.end(); ++i) {
 			if (interior_shadow_maps) { // draw interior shadow maps
@@ -2239,7 +2232,6 @@ public:
 					for (auto bi = g->bc_ixs.begin(); bi != g->bc_ixs.end(); ++bi) {
 						building_t &b((*i)->get_building(bi->ix));
 						if (!b.interior || !b.bcube.contains_pt(lpos)) continue; // no interior or wrong building
-						has_garage |= b.has_a_garage();
 						(*i)->building_draw_interior.draw_quads_for_draw_range(s, b.interior->draw_range, 1); // shadow_only=1
 						b.add_split_roof_shadow_quads(ext_parts_draw);
 						// no batch draw for shadow pass since textures aren't used; draw everything, since shadow may be cached
@@ -2285,7 +2277,6 @@ public:
 		if (!interior_shadow_maps) {glDisable(GL_CULL_FACE);}
 		s.end_shader();
 		fgPopMatrix();
-		if (has_garage) {draw_cars_in_garages(xlate, 1);} // only for building interior shadows, not city shadows
 	}
 	static bool check_tile_smap(bool shadow_only) {
 		return (!shadow_only && world_mode == WMODE_INF_TERRAIN && shadow_map_enabled());
@@ -2344,8 +2335,6 @@ public:
 			enable_dlight_bcubes = 0; // disable when creating the reflection image (will be set when we re-enter multi_draw())
 			interior_shadow_maps = 0;
 			create_mirror_reflection_if_needed();
-			// must be done before drawing buildings because windows write to the depth buffer; but then looking through car windows is incorrect
-			draw_cars_in_garages(xlate, 0);
 			player_building = nullptr; // reset, may be set below
 		}
 		//timer_t timer("Draw Buildings"); // 0.57ms (2.6ms with glFinish(), 6.3ms with building interiors)
@@ -2572,7 +2561,6 @@ public:
 			} // for i
 			reset_interior_lighting_and_end_shader(s);
 
-#if 1
 			// draw parked cars in building parking garages or house garages
 			if (!buildings_with_cars.empty()) {
 				glDisable(GL_CULL_FACE); // no back face culling for cars
@@ -2580,15 +2568,6 @@ public:
 				if (s.is_setup()) {reset_interior_lighting_and_end_shader(s);}
 				glEnable(GL_CULL_FACE);
 			}
-#else
-			// draw parking garage cars
-			if (building_cont_player != nullptr) {
-				glDisable(GL_CULL_FACE); // no back face culling for cars
-				building_cont_player->draw_pg_cars(s, xlate, 0); // shadow_only=0
-				if (s.is_setup()) {reset_interior_lighting_and_end_shader(s);}
-				glEnable(GL_CULL_FACE);
-			}
-#endif
 			if (DRAW_EXT_REFLECTIONS || !reflection_pass) {
 				// if we're not by an exterior door, draw the back sides of exterior doors as closed; always draw non-ext walls/non doors (roof geom)
 				int const tex_filt_mode(ext_door_draw.empty() ? 2 : 3);
@@ -3383,9 +3362,6 @@ public:
 		auto it(get_tile_by_pos_cs(state.pos));
 		return ((it == tiles.end()) ? 0 : it->second.check_pts_occluded(pts, npts, state));
 	}
-	void get_all_garages(vect_cube_t &garages) const {
-		for (auto i = tiles.begin(); i != tiles.end(); ++i) {i->second.get_all_garages(garages);}
-	}
 	unsigned get_tot_num_buildings() const {
 		unsigned num(0);
 		for (auto i = tiles.begin(); i != tiles.end(); ++i) {num += i->second.get_num_buildings();}
@@ -3592,11 +3568,6 @@ void update_building_ai_state(vector<pedestrian_t> &people, float delta_dir) { /
 	building_tiles       .update_ai_state(people, delta_dir);
 }
 
-void get_all_garages(vect_cube_t &garages) {
-	building_creator.get_all_garages(garages);
-	building_creator_city.get_all_garages(garages); // doesn't have houses/garages yet, but leave it in in case they're added in the future
-	building_tiles.get_all_garages(garages); // not sure if this should be included
-}
 void get_all_city_helipads(vect_cube_t &helipads) {building_creator_city.get_all_helipads(helipads);} // city only for now
 
 bool is_pos_in_player_building(point const &pos) { // pos is in global space

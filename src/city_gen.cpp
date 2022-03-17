@@ -2678,10 +2678,7 @@ public:
 
 
 // Note: the car_manager_t member functions that use road_gen are here rather than in cars.cpp
-cube_t car_manager_t::get_cb_bcube(car_block_t const &cb ) const {
-	if (cb.is_in_building()) {return garages_bcube;}
-	return road_gen.get_city_bcube_for_cars(cb.cur_city);
-}
+cube_t car_manager_t::get_cb_bcube(car_block_t const &cb )       const {return road_gen.get_city_bcube_for_cars(cb.cur_city);}
 road_isec_t const &car_manager_t::get_car_isec(car_t const &car) const {return road_gen.get_car_isec(car);}
 bool car_manager_t::check_collision(car_t &c1, car_t &c2)        const {return c1.check_collision(c2, road_gen);}
 void car_manager_t::register_car_at_city(car_t const &car) {road_gen.register_car_at_city(car.cur_city);}
@@ -2697,7 +2694,6 @@ void car_manager_t::update_cars() {
 void car_manager_t::get_car_ix_range_for_cube(vector<car_block_t>::const_iterator cb, cube_t const &bc, unsigned &start, unsigned &end) const {
 	start = cb->start; end = (cb+1)->start;
 	assert(end <= cars.size());
-	if (cb->is_in_building()) return; // cars parked in garages - keep full start/end range
 	if (!road_gen.cube_overlaps_pl_or_dw_xy(bc, cb->cur_city)) {end   = cb->first_parked;} // moving cars only (beginning of range)
 	if (!road_gen.cube_overlaps_road_xy    (bc, cb->cur_city)) {start = cb->first_parked;} // parked cars only (end of range)
 	assert(start <= end);
@@ -2926,15 +2922,14 @@ public:
 	void gen_details() {
 		if (road_gen.empty()) return; // nothing to do - no roads or cars
 		vector<car_t> parked_cars;
-		vect_cube_t garages, hp_locs;
+		vect_cube_t hp_locs;
 		bool const have_cars(!car_manager.empty());
 		highres_timer_t timer("Gen City Details");
 		road_gen.gen_parking_lots_and_place_objects(parked_cars, have_cars);
 		road_gen.connect_power_poles_to_transmission_lines(); // must be after placing power poles
-		if (have_cars) {get_all_garages(garages);}
 		if (city_params.has_helicopter_model()) {get_all_city_helipads(hp_locs);}
 		timer.end(); // exclude the steps below, which are dominated by model load time
-		car_manager.add_parked_cars(parked_cars, garages);
+		car_manager.add_parked_cars(parked_cars);
 		car_manager.finalize_cars();
 		car_manager.add_helicopters(hp_locs);
 		ped_manager.init(city_params.num_peds, city_params.num_building_peds); // must be after buildings are placed
@@ -3001,13 +2996,12 @@ public:
 		if (!shadow_only && !reflection_pass && (trans_op_mask & 1)) {setup_city_lights(xlate);} // setup lights on first (opaque) non-shadow pass
 		bool const use_dlights(enable_lights()), is_dlight_shadows(shadow_only == 2);
 		if (reflection_pass == 0) {road_gen.draw(trans_op_mask, xlate, use_dlights, (shadow_only != 0));} // roads don't cast shadows/aren't reflected in water, but stoplights cast shadows
-		car_manager.draw(trans_op_mask, xlate, use_dlights, (shadow_only != 0), is_dlight_shadows, 0);
+		car_manager.draw(trans_op_mask, xlate, use_dlights, (shadow_only != 0), is_dlight_shadows);
 		if  (trans_op_mask & 1) {ped_manager.draw(xlate, use_dlights, (shadow_only != 0), is_dlight_shadows);} // opaque
 		if ((trans_op_mask & 1) && !shadow_only) {road_gen.draw_label();} // after drawing cars so that it's in front
 		// Note: buildings are drawn through draw_buildings()
 	}
 	void draw_roads(int trans_op_mask, vector3d const &xlate) {road_gen.draw(trans_op_mask, xlate, enable_lights(), 0);} // shadow_only=0
-	void draw_cars_in_garages(vector3d const &xlate, bool shadow_only) {car_manager.draw(1, xlate, 1, shadow_only, 0, 1);} // opaque + garages pass
 	void draw_car_in_pspace(car_t &car, shader_t &s, vector3d const &xlate, bool shadow_only) {car_manager.draw_car_in_pspace(car, s, xlate, shadow_only);}
 	void draw_peds_in_building(int first_ped_ix, ped_draw_vars_t const &pdv) {ped_manager.draw_peds_in_building(first_ped_ix, pdv);}
 	void get_locations_of_peds_in_building(int first_ped_ix, vector<point> &locs) {ped_manager.get_locations_of_peds_in_building(first_ped_ix, locs);}
@@ -3170,6 +3164,5 @@ void next_pedestrian_animation() {city_gen.next_ped_animation();}
 void free_city_context() {city_gen.free_context();}
 bool has_city_trees() {return (city_params.max_trees_per_plot > 0);}
 vector3d get_nom_car_size() {return city_params.get_nom_car_size();}
-void draw_cars_in_garages(vector3d const &xlate, bool shadow_only) {city_gen.draw_cars_in_garages(xlate, shadow_only);}
 void draw_car_in_pspace(car_t &car, shader_t &s, vector3d const &xlate, bool shadow_only) {city_gen.draw_car_in_pspace(car, s, xlate, shadow_only);}
 

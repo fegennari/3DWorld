@@ -936,22 +936,6 @@ bool building_t::maybe_assign_interior_garage(bool &gdim, bool &gdir) {
 	return 1;
 }
 
-cube_t building_t::get_garage_bcube() const {
-	if (!interior) return cube_t(); // no interior
-	cube_t garage;
-
-	if (has_garage) { // exterior/detatched garage
-		assert(parts.size() >= 3); // must be at least two parts + garage
-		garage = parts[2]; // this is the garage
-		garage.z1() += get_fc_thickness(); // set correct bottom of the floor
-	}
-	else if (has_int_garage) { // interior garage
-		garage = interior->get_garage_room();
-		garage.z1() += get_fc_thickness(); // set correct bottom of the floor
-	}
-	return garage;
-}
-
 void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part, cube_t const &hall, unsigned part_ix, unsigned num_floors,
 	unsigned rooms_start, bool use_hallway, bool first_part_this_stack, float window_hspacing[2], float window_border)
 {

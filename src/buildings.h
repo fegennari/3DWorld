@@ -1018,7 +1018,6 @@ struct building_t : public building_geom_t {
 	bool is_basement(vect_cube_t::const_iterator it) const {return (int(it - parts.begin()) == basement_part_ix);}
 	bool is_pos_in_basement(point const &pos) const {return (has_basement() && parts[basement_part_ix].contains_pt(pos));};
 	cube_t const &get_basement() const {assert(has_basement()); return parts[basement_part_ix];}
-	cube_t get_garage_bcube() const;
 	int check_player_in_basement(point const &pos) const;
 	colorRGBA get_avg_side_color  () const {return side_color  .modulate_with(get_material().side_tex.get_avg_color());}
 	colorRGBA get_avg_roof_color  () const {return roof_color  .modulate_with(get_material().roof_tex.get_avg_color());}
@@ -1511,7 +1510,6 @@ void register_person_hit(unsigned person_ix, room_object_t const &obj, vector3d 
 void draw_player_model(shader_t &s, vector3d const &xlate, bool shadow_only);
 vector3d get_nom_car_size();
 bool car_can_fit(cube_t const &c);
-void draw_cars_in_garages(vector3d const &xlate, bool shadow_only);
 void create_mirror_reflection_if_needed();
 void draw_city_roads(int trans_op_mask, vector3d const &xlate);
 void get_closest_dim_dir_xy(cube_t const &inner, cube_t const &outer, bool &dim, bool &dir);

@@ -20,8 +20,6 @@ extern vector<light_source> dl_sources;
 extern city_params_t city_params;
 
 
-void reset_interior_lighting(shader_t &s); // needed for drawing cargs in garages
-
 float get_clamped_fticks() {return min(fticks, 4.0f);} // clamp to 100ms
 
 float car_t::get_max_lookahead_dist() const {return (get_length() + city_params.road_width);} // extend one car length + one road width in front
@@ -529,7 +527,7 @@ bool sphere_in_light_cone_approx(pos_dir_up const &pdu, point const &center, flo
 	return pt_line_dist_less_than(center, pdu.pos, (pdu.pos + pdu.dir), rmod);
 }
 
-void car_draw_state_t::draw_car(car_t const &car, bool is_dlight_shadows, bool in_garage) { // Note: all quads
+void car_draw_state_t::draw_car(car_t const &car, bool is_dlight_shadows) { // Note: all quads
 	if (car.destroyed) return;
 	point const center(car.get_center());
 
@@ -542,7 +540,7 @@ void car_draw_state_t::draw_car(car_t const &car, bool is_dlight_shadows, bool i
 	point const center_xlated(center + xlate);
 	if (!shadow_only && !dist_less_than(camera_pdu.pos, center_xlated, 0.5*draw_tile_dist)) return; // check draw distance, dist_scale=0.5
 	if (!camera_pdu.sphere_visible_test(center_xlated, 0.5f*car.height*CAR_RADIUS_SCALE) || !camera_pdu.cube_visible(car.bcube + xlate)) return;
-	if (!in_garage) {begin_tile(center);} // enable shadows if outside
+	begin_tile(center); // enable shadows
 	colorRGBA const &color(car.get_color());
 	float const dist_val(p2p_dist(camera_pdu.pos, center_xlated)/draw_tile_dist);
 	bool const draw_top(dist_val < 0.25 && !car.is_truck), dim(car.dim), dir(car.dir);
@@ -553,11 +551,10 @@ void car_draw_state_t::draw_car(car_t const &car, bool is_dlight_shadows, bool i
 	gen_car_pts(car, draw_top, pb, pt);
 
 	if (draw_model && car_model_loader.is_model_valid(car.model_id)) {
-		if (!in_garage && is_occluded(car.bcube)) return; // only check occlusion for expensive car models; skip cars in garages (maybe exclude the containing building?)
+		if (is_occluded(car.bcube)) return; // only check occlusion for expensive car models
 		vector3d const front_n(cross_product((pb[5] - pb[1]), (pb[0] - pb[1])).get_norm()*sign);
-		// force_high_detail=1 for cars in garages, since there is only once per building
-		bool const low_detail(!shadow_only && dist_val > 0.035), high_detail(shadow_only && in_garage);
-		car_model_loader.draw_model(s, center, car.bcube, front_n, color, xlate, car.model_id, shadow_only, low_detail, 0, 0, 0, high_detail);
+		bool const low_detail(!shadow_only && dist_val > 0.035);
+		car_model_loader.draw_model(s, center, car.bcube, front_n, color, xlate, car.model_id, shadow_only, low_detail);
 	}
 	else { // draw simple 1-2 cube model
 		quad_batch_draw &qbd(qbds[emit_now]);
@@ -567,7 +564,7 @@ void car_draw_state_t::draw_car(car_t const &car, bool is_dlight_shadows, bool i
 		if (emit_now) {qbds[1].draw_and_clear();} // shadowed (only emit when tile changes?)
 	}
 	if (shadow_only) return; // shadow pass - done
-	if (car.cur_road_type == TYPE_BUILDING) return; // in a garage/building, nothing else to draw
+	if (car.cur_road_type == TYPE_BUILDING) return; // in a building, nothing else to draw
 
 	if (dist_val < 0.04 && fabs(car.dz) < 0.01) { // add AO planes when close to the camera and on a level road
 		float const length(car.get_length());
@@ -692,30 +689,10 @@ void car_manager_t::init_cars(unsigned num) {
 	cout << "Dynamic Cars: " << cars.size() << endl;
 }
 
-void car_manager_t::add_parked_cars(vector<car_t> const &new_cars, vect_cube_t const &garages) {
+void car_manager_t::add_parked_cars(vector<car_t> const &new_cars) {
 	first_parked_car = cars.size(); // Note: sort may invalidate this, but okay for use in finalize_cars()
-	cars.reserve(cars.size() + new_cars.size() + garages.size());
+	cars.reserve(cars.size() + new_cars.size());
 	vector_add_to(new_cars, cars);
-	first_garage_car = cars.size(); // Note: sort may invalidate this, but okay for use in finalize_cars()
-	if (garages.empty()) return; // done
-	return; // FIXME
-	vector3d const nom_car_size(city_params.get_nom_car_size());
-	car_t car; // no cur_city/cur_road/cur_segq
-	car.park();
-	car.cur_city      = NO_CITY_IX; // special value
-	car.cur_road_type = TYPE_BUILDING; // garage
-	rand_gen_t rgen;
-	
-	for (auto i = garages.begin(); i != garages.end(); ++i) {
-		if ((rgen.rand()&3) == 0) continue; // 25% of garages have no car
-		car.dim = (i->dx() < i->dy()); // long dim
-		car.dir = rgen.rand_bool(); // Note: ignores garage dir because some cars and backed in and some are pulled in
-		point const center(i->get_cube_center());
-		car.set_bcube(point(center.x, center.y, i->z1()), nom_car_size);
-		assert(i->contains_cube_xy(car.bcube));
-		cars.push_back(car);
-		garages_bcube.assign_or_union_with_cube(car.bcube);
-	} // for i
 }
 
 void car_manager_t::assign_car_model_size_color(car_t &car, rand_gen_t &local_rgen, bool is_in_garage) {
@@ -739,11 +716,8 @@ void car_manager_t::assign_car_model_size_color(car_t &car, rand_gen_t &local_rg
 }
 void car_manager_t::finalize_cars() {
 	if (empty()) return;
-
-	for (auto i = cars.begin(); i != cars.end(); ++i) {
-		assign_car_model_size_color(*i, rgen, (unsigned(i-cars.begin()) >= first_garage_car));
-	}
-	cout << "Total Cars: " << cars.size() << endl; // 4000 on the road + 4372 parked + 433 garage (out of 594) = 8805
+	for (auto i = cars.begin(); i != cars.end(); ++i) {assign_car_model_size_color(*i, rgen, 0);} // is_in_garage=0
+	cout << "Total Cars: " << cars.size() << endl; // 4000 on the road + 4372 parked = 8372
 }
 
 vector3d car_manager_t::get_helicopter_size(unsigned model_id) { // Note: non-const because this call may load the model
@@ -1293,33 +1267,25 @@ bool car_manager_t::check_helicopter_coll(cube_t const &bc) const {
 	return 0;
 }
 
-void car_manager_t::draw(int trans_op_mask, vector3d const &xlate, bool use_dlights, bool shadow_only, bool is_dlight_shadows, bool garages_pass) {
+void car_manager_t::draw(int trans_op_mask, vector3d const &xlate, bool use_dlights, bool shadow_only, bool is_dlight_shadows) {
 	if (cars.empty()  && helicopters.empty()) return; // nothing to draw
-	if ( garages_pass && first_garage_car == cars.size()) return; // no cars in garages
-	if (!garages_pass && first_garage_car == 0 && helicopters.empty()) return; // only cars in garages
 
 	if (trans_op_mask & 1) { // opaque pass, should be first
 		if (is_dlight_shadows && !city_params.car_shadows) return;
-		//timer_t timer(string("Draw Cars") + (garages_pass ? " Garages" : " City") + (shadow_only ? " Shadow" : "")); // 10K cars = 1.5ms / 2K cars = 0.33ms
+		//timer_t timer(string("Draw Cars") + (shadow_only ? " Shadow" : "")); // 10K cars = 1.5ms / 2K cars = 0.33ms
 		bool const only_parked(shadow_only && !is_dlight_shadows); // sun/moon shadows are precomputed and cached, so only include static objects such as parked cars
 		setup_occluders();
 		dstate.xlate = xlate;
-		dstate.use_building_lights = garages_pass;
 		fgPushMatrix();
 		translate_to(xlate);
 		dstate.pre_draw(xlate, use_dlights, shadow_only);
 		
 		if (!shadow_only) {
-			if (garages_pass) { // using interior lighting, no sun or moon
-				dstate.s.add_uniform_float("diffuse_scale", 0.0);
-				dstate.s.add_uniform_float("ambient_scale", 0.5); // half ambient
-			}
 			dstate.s.add_uniform_float("hemi_lighting_normal_scale", 0.0); // disable hemispherical lighting normal because the transforms make it incorrect
 		}
 		float const draw_tile_dist(dstate.draw_tile_dist);
 
 		for (auto cb = car_blocks.begin(); cb+1 < car_blocks.end(); ++cb) {
-			if (cb->is_in_building() != garages_pass) continue; // wrong pass
 			cube_t const block_bcube(get_cb_bcube(*cb) + xlate);
 			if (!shadow_only && !block_bcube.closest_dist_less_than(camera_pdu.pos, 0.5*draw_tile_dist)) continue; // check draw distance, dist_scale=0.5
 			if (!camera_pdu.cube_visible(block_bcube)) continue; // city not visible - skip
@@ -1330,20 +1296,16 @@ void car_manager_t::draw(int trans_op_mask, vector3d const &xlate, bool use_dlig
 				car_t const &car(cars[c]);
 				if (only_parked && !(car.is_parked() && !car.is_sleeping())) continue; // skip non-parked cars
 				if (skip_car_draw(car)) continue;
-				dstate.draw_car(car, is_dlight_shadows, garages_pass);
+				dstate.draw_car(car, is_dlight_shadows);
 			}
 		} // for cb
-		if (!garages_pass && !is_dlight_shadows) {draw_helicopters(shadow_only);} // draw helicopters in the normal draw pass
-		
-		if (!shadow_only) { // restore shader uniforms
-			if (garages_pass) {reset_interior_lighting(dstate.s);}
-			dstate.s.add_uniform_float("hemi_lighting_normal_scale", 1.0);
-		}
+		if (!is_dlight_shadows) {draw_helicopters(shadow_only);} // draw helicopters in the normal draw pass
+		if (!shadow_only) {dstate.s.add_uniform_float("hemi_lighting_normal_scale", 1.0);} // restore shader uniform
 		dstate.post_draw();
 		fgPopMatrix();
 		static car_t const *sel_car(nullptr);
 
-		if (!game_mode && !garages_pass && !shadow_only) {
+		if (!game_mode && !shadow_only) {
 			if (tt_fire_button_down) {sel_car = get_car_at_player(FAR_CLIP);} // no distance limit
 			
 			if (sel_car != nullptr && !sel_car->in_garage()) { // car found
@@ -1378,7 +1340,7 @@ void car_manager_t::draw(int trans_op_mask, vector3d const &xlate, bool use_dlig
 		if (animate2) {sel_car = nullptr;} // only reset sel_car when physics is enabled so that debug display will stay enabled when stopping time
 		dstate.show_label_text();
 
-		if (city_action_key && !garages_pass && !shadow_only) {
+		if (city_action_key && !shadow_only) {
 			car_t const *const car(get_car_at_player(8.0*CAMERA_RADIUS));
 			if (car != nullptr) {print_text_onscreen(car->label_str(), YELLOW, 1.0, 1.5*TICKS_PER_SECOND, 0);}
 		}
