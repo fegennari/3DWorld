@@ -2250,7 +2250,7 @@ public:
 						bool const add_player_shadow(camera_surf_collide ? player_close : 0);
 						int const ped_ix((*i)->get_ped_ix_for_bix(bi->ix)); // Note: assumes only one building_draw has people
 						bool const camera_in_this_building(b.check_point_or_cylin_contained(pre_smap_player_pos, 0.0, points));
-						if (camera_in_this_building) {b.draw_pg_cars(s, xlate, 1);} // shadow_only=1
+						b.draw_cars_in_building(s, xlate, 1, 1); // player_in_building=1, shadow_only=1
 
 						if (ped_ix >= 0 && (camera_in_this_building || player_close)) { // draw people in this building
 							if (global_building_params.enable_people_ai) { // handle animations
@@ -2382,6 +2382,7 @@ public:
 		vector<building_draw_t> int_wall_draw_front, int_wall_draw_back;
 		vector<vertex_range_t> per_bcs_exclude;
 		building_t const *building_cont_player(nullptr);
+		vector<building_t *> buildings_with_cars;
 
 		// draw building interiors with standard shader and no shadow maps; must be drawn first before windows depth pass
 		if (have_interior) {
@@ -2472,6 +2473,7 @@ public:
 						g->has_room_geom = 1;
 						if (!draw_interior) continue;
 						if (ped_ix >= 0) {draw_peds_in_building(ped_ix, ped_draw_vars_t(b, oc, s, xlate, bi->ix, 0, reflection_pass));} // draw people in this building
+						if (b.has_cars_to_draw(player_in_building_bcube)) {buildings_with_cars.push_back(&b);}
 						// check the bcube rather than check_point_or_cylin_contained() so that it works with roof doors that are outside any part?
 						if (!camera_near_building) {b.player_not_near_building(); continue;} // camera not near building
 						if (reflection_pass == 2) continue; // interior room, don't need to draw windows and exterior doors
@@ -2570,6 +2572,15 @@ public:
 			} // for i
 			reset_interior_lighting_and_end_shader(s);
 
+#if 1
+			// draw parked cars in building parking garages or house garages
+			if (!buildings_with_cars.empty()) {
+				glDisable(GL_CULL_FACE); // no back face culling for cars
+				for (auto const &b : buildings_with_cars) {b->draw_cars_in_building(s, xlate, camera_in_building, 0);} // shadow_only=0
+				if (s.is_setup()) {reset_interior_lighting_and_end_shader(s);}
+				glEnable(GL_CULL_FACE);
+			}
+#else
 			// draw parking garage cars
 			if (building_cont_player != nullptr) {
 				glDisable(GL_CULL_FACE); // no back face culling for cars
@@ -2577,6 +2588,7 @@ public:
 				if (s.is_setup()) {reset_interior_lighting_and_end_shader(s);}
 				glEnable(GL_CULL_FACE);
 			}
+#endif
 			if (DRAW_EXT_REFLECTIONS || !reflection_pass) {
 				// if we're not by an exterior door, draw the back sides of exterior doors as closed; always draw non-ext walls/non doors (roof geom)
 				int const tex_filt_mode(ext_door_draw.empty() ? 2 : 3);

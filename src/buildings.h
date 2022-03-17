@@ -623,10 +623,10 @@ struct building_decal_manager_t {
 
 struct building_room_geom_t {
 
-	bool has_elevators, has_pictures, lights_changed, lighting_invalid, modified_by_player;
+	bool has_elevators, has_pictures, has_garage_car, lights_changed, lighting_invalid, modified_by_player;
 	unsigned char num_pic_tids;
 	float obj_scale;
-	unsigned pg_wall_start, buttons_start, stairs_start; // index of first object of {TYPE_PG_WALL, TYPE_BUTTON, TYPE_STAIR}
+	unsigned wall_ps_start, buttons_start, stairs_start; // index of first object of {TYPE_PG_WALL|TYPE_PSPACE, TYPE_BUTTON, TYPE_STAIR}
 	point tex_origin;
 	colorRGBA wood_color;
 	// objects in rooms; expanded_objs is for things that have been expanded for player interaction; model_objs is for models in drawers; trim_objs is for wall/door/window trim
@@ -640,8 +640,8 @@ struct building_room_geom_t {
 	vect_cube_t light_bcubes;
 	building_decal_manager_t decal_manager;
 
-	building_room_geom_t(point const &tex_origin_=all_zeros) : has_elevators(0), has_pictures(0), lights_changed(0), lighting_invalid(0),
-		modified_by_player(0), num_pic_tids(0), obj_scale(1.0), pg_wall_start(0), buttons_start(0), stairs_start(0), tex_origin(tex_origin_), wood_color(WHITE) {}
+	building_room_geom_t(point const &tex_origin_=all_zeros) : has_elevators(0), has_pictures(0), has_garage_car(0), lights_changed(0), lighting_invalid(0),
+		modified_by_player(0), num_pic_tids(0), obj_scale(1.0), wall_ps_start(0), buttons_start(0), stairs_start(0), tex_origin(tex_origin_), wood_color(WHITE) {}
 	bool empty() const {return objs.empty();}
 	void clear();
 	void clear_materials();
@@ -1138,7 +1138,8 @@ struct building_t : public building_geom_t {
 		unsigned building_ix, bool shadow_only, bool reflection_pass, unsigned inc_small, bool player_in_building);
 	void gen_and_draw_room_geom(brg_batch_draw_t *bbd, shader_t &s, occlusion_checker_noncity_t &oc, vector3d const &xlate, vect_cube_t &ped_bcubes,
 		unsigned building_ix, int ped_ix, bool shadow_only, bool reflection_pass, unsigned inc_small, bool player_in_building);
-	void draw_pg_cars(shader_t &s, vector3d const &xlate, bool shadow_only) const;
+	bool has_cars_to_draw(bool player_in_building) const;
+	void draw_cars_in_building(shader_t &s, vector3d const &xlate, bool player_in_building, bool shadow_only) const;
 	void add_split_roof_shadow_quads(building_draw_t &bdraw) const;
 	void clear_room_geom(bool force);
 	void update_grass_exclude_at_pos(point const &pos, vector3d const &xlate, bool camera_in_building) const;
@@ -1269,6 +1270,7 @@ private:
 	void add_diningroom_objs (rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start);
 	bool add_library_objs    (rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, bool is_basement);
 	bool add_storage_objs    (rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, bool is_basement);
+	void add_garage_objs     (rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt);
 	bool add_basement_utility_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start);
 	bool add_laundry_objs    (rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, unsigned &added_bathroom_objs_mask);
 	void add_pri_hall_objs   (rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt);

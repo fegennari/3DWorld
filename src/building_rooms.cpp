@@ -1559,6 +1559,22 @@ bool building_t::add_storage_objs(rand_gen_t rgen, room_t const &room, float zva
 	return 1; // it's always a storage room, even if it's empty
 }
 
+void building_t::add_garage_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt) {
+	//if ((rgen.rand()&3) == 0) return; // 75% of garages have cars
+	unsigned const flags(RO_FLAG_NOCOLL | RO_FLAG_USED | RO_FLAG_INVIS); // lines not shown
+	bool const dim(room.dx() < room.dy()), dir(rgen.rand_bool()); // long dim, random dir; should we use street_dir?
+	vect_room_object_t &objs(interior->room_geom->objs);
+	cube_t space(room); // full room, car will be centered here
+	set_cube_zvals(space, zval, (zval + 0.001*get_window_vspace()));
+	room_object_t pspace(space, TYPE_PARK_SPACE, room_id, dim, dir, flags, tot_light_amt, SHAPE_CUBE, WHITE);
+	pspace.obj_id = (uint16_t)(objs.size() + rgen.rand()); // will be used for the car model and color
+	car_t car(car_from_parking_space(pspace));
+	interior->room_geom->wall_ps_start = objs.size(); // first parking space index
+	objs.push_back(pspace);
+	objs.emplace_back(car.bcube, TYPE_COLLIDER, room_id, dim, dir, RO_FLAG_INVIS);
+	interior->room_geom->has_garage_car = 1;
+}
+
 bool building_t::add_laundry_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, unsigned &added_bathroom_objs_mask) {
 	float const front_clearance(get_min_front_clearance());
 	cube_t place_area(get_walkable_room_bounds(room));
@@ -2468,7 +2484,10 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 
 			if (r->no_geom || is_garage_or_shed) {
 				if (is_garage_or_shed) {
-					if (r->get_room_type(0) == RTYPE_GARAGE) {room_center.z = add_flooring(*r, room_center.z, room_id, tot_light_amt);}
+					if (r->get_room_type(0) == RTYPE_GARAGE) {
+						room_center.z = add_flooring(*r, room_center.z, room_id, tot_light_amt);
+						add_garage_objs(rgen, *r, room_center.z, room_id, tot_light_amt);
+					}
 					// is there enough clearance between shelves and a car parked in the garage? there seems to be in all the cases I've seen
 					add_storage_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs.size(), is_basement);
 				}

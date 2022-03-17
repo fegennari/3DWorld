@@ -698,6 +698,7 @@ void car_manager_t::add_parked_cars(vector<car_t> const &new_cars, vect_cube_t c
 	vector_add_to(new_cars, cars);
 	first_garage_car = cars.size(); // Note: sort may invalidate this, but okay for use in finalize_cars()
 	if (garages.empty()) return; // done
+	return; // FIXME
 	vector3d const nom_car_size(city_params.get_nom_car_size());
 	car_t car; // no cur_city/cur_road/cur_segq
 	car.park();
@@ -1389,8 +1390,10 @@ void car_manager_t::draw_helicopters(bool shadow_only) {
 	for (auto i = helicopters.begin(); i != helicopters.end(); ++i) {dstate.draw_helicopter(*i, shadow_only);}
 }
 
-// for building parking garages
+// for house garages and building parking garages
 void car_manager_t::draw_car_in_pspace(car_t &car, shader_t &s, vector3d const &xlate, bool shadow_only) {
+	float const draw_dist(shadow_only ? camera_pdu.far_ : 0.05*get_draw_tile_dist());
+	if (!dist_less_than(camera_pdu.pos, (car.get_center() + xlate), draw_dist)) return; // distance culling
 	rand_gen_t rgen;
 	rgen.set_state(123*car.cur_seg, car.cur_seg+1); // random seed is stored in car.cur_seg
 	rgen.rand(); // mix it up better
