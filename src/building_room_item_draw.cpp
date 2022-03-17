@@ -14,7 +14,7 @@ colorRGBA const rat_color(GRAY); // make the rat's fur darker
 object_model_loader_t building_obj_model_loader;
 
 extern bool camera_in_building;
-extern int display_mode, frame_counter, animate2;
+extern int display_mode, frame_counter, animate2, player_in_basement;
 extern float office_chair_rot_rate, cur_dlight_pcf_offset;
 extern point pre_smap_player_pos;
 extern cube_t smap_light_clip_cube;
@@ -1228,12 +1228,12 @@ void building_t::draw_cars_in_building(shader_t &s, vector3d const &xlate, bool 
 	static vector<car_t> cars_to_draw; // reused across frames
 	cars_to_draw.clear();
 
-	if (interior->room_geom->has_garage_car) { // car in a house garage
+	if (interior->room_geom->has_garage_car && player_in_basement != 2) { // car in a house garage
 		room_object_t const &obj(objs[pg_wall_start]);
 		assert(obj.type == TYPE_PARK_SPACE); // must be a parking space
 
 		// skip if viewer is in this building and on a different floor
-		if ((obj.flags & RO_FLAG_USED) && (!player_in_this_building || !check_occlusion ||
+		if ((obj.flags & RO_FLAG_USED) && (!player_in_this_building || !check_occlusion || !has_int_garage ||
 			int((viewer.z - bcube.z1())/floor_spacing) == int((obj.z2() - bcube.z1())/floor_spacing)))
 		{
 			car_t car(car_from_parking_space(obj));

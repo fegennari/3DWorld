@@ -13,6 +13,8 @@ void subtract_cube_from_floor_ceil(cube_t const &c, vect_cube_t &fs);
 bool line_int_cubes_exp(point const &p1, point const &p2, vect_cube_t const &cubes, vector3d const &expand);
 
 
+bool enable_parked_cars() {return (city_params.num_cars > 0 && !city_params.car_model_files.empty());}
+
 bool building_t::add_basement_utility_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
 	float const height(get_window_vspace() - get_floor_thickness()), radius(0.18*height);
 	cube_t place_area(get_walkable_room_bounds(room));
@@ -224,7 +226,7 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 	cube_t row(wall); // same length as the wall; includes the width of the pillars
 	row.z2() = row.z1() + 0.001*window_vspacing; // slightly above the floor
 	float const space_width(row.get_sz_dim(dim)/num_space_wid), strips_start(virt_room_for_wall.d[!dim][0]);
-	bool const add_cars(city_params.num_cars > 0 && !city_params.car_model_files.empty() && !is_rotated()); // skip cars for rotated buildings
+	bool const add_cars(enable_parked_cars() && !is_rotated()); // skip cars for rotated buildings
 	unsigned const max_handicap_spots(capacity/20 + 1);
 	unsigned num_handicap_spots(0);
 

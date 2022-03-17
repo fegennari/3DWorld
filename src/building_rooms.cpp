@@ -16,6 +16,7 @@ extern object_model_loader_t building_obj_model_loader;
 extern bldg_obj_type_t bldg_obj_types[];
 
 void setup_bldg_obj_types();
+bool enable_parked_cars();
 car_t car_from_parking_space(room_object_t const &o);
 
 
@@ -1560,7 +1561,7 @@ bool building_t::add_storage_objs(rand_gen_t rgen, room_t const &room, float zva
 }
 
 void building_t::add_garage_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt) {
-	//if ((rgen.rand()&3) == 0) return; // 75% of garages have cars
+	if (!enable_parked_cars() || (rgen.rand()&3) == 0) return; // 75% of garages have cars
 	unsigned const flags(RO_FLAG_NOCOLL | RO_FLAG_USED | RO_FLAG_INVIS); // lines not shown
 	bool const dim(room.dx() < room.dy()), dir(rgen.rand_bool()); // long dim, random dir; should we use street_dir?
 	vect_room_object_t &objs(interior->room_geom->objs);
