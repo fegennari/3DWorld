@@ -2472,9 +2472,12 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 				try_place_light_on_ceiling(light, *r, room_dim, fc_thick, 1, 1, valid_lights, rgen); // allow_rot=1, allow_mult=1
 				if (!valid_lights.empty()) {light_obj_ix = objs.size();} // this will be the index of the light to be added later
 			}
+			rand_gen_t rgen_lights(rgen); // copy state so that we don't modify rgen
+
 			for (cube_t const &l : valid_lights) {
 				objs.emplace_back(l, TYPE_LIGHT, room_id, (light.dx() < light.dy()), 0, flags, light_amt, light_shape, color); // reclaculate dim; dir=0 (unused)
 				objs.back().obj_id = light_ix_assign.get_ix_for_light(l);
+				if (is_parking_garage && (rgen_lights.rand()%50 == 13)) {objs.back().flags |= RO_FLAG_BROKEN;} // 2% chance of a flickering light
 			}
 			if (is_lit) {r->lit_by_floor |= (1ULL << (f&63));} // flag this floor as being lit (for up to 64 floors)
 			if (is_parking_garage) continue; // generated above, done; no outlets or light switches

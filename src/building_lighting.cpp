@@ -682,8 +682,10 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			static rand_gen_t rgen;
 
 			if (tfticks > i->light_amt) { // time for state transition
-				i->light_amt = tfticks + rgen.rand_uniform(0.05, 1.0)*TICKS_PER_SECOND; // schedule time for next transition
+				float const delay_mult(i->is_active() ? 0.1 : 1.0);
+				i->light_amt = tfticks + rgen.rand_uniform(0.1, 1.0)*TICKS_PER_SECOND*delay_mult; // schedule time for next transition
 				i->flags    ^= RO_FLAG_IS_ACTIVE;
+				interior->room_geom->lights_changed = 1; // regenerate lights geometry
 			}
 			if (!i->is_active()) continue; // not currently on
 		}
