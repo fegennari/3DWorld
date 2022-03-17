@@ -860,16 +860,16 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 	if (has_parking_garage) {add_parking_garage_ramp(rgen);}
 } // end gen_interior_int()
 
-int building_t::maybe_assign_interior_garage(bool &gdim, bool &gdir) {
+bool building_t::maybe_assign_interior_garage(bool &gdim, bool &gdir) {
 	assert(interior != nullptr);
 	vector<room_t> &rooms(interior->rooms);
 	unsigned const num_rooms(rooms.size());
-	if (!is_house || has_sec_bldg() || num_rooms < 8U) return -1; // no garage for this building (including the case where we have a shed)
+	if (!is_house || has_sec_bldg() || num_rooms < 8U) return 0; // no garage for this building (including the case where we have a shed)
 
 	if (has_basement()) { // count non-basement rooms
 		unsigned non_basement_rooms(0);
 		for (auto r = rooms.begin(); r != rooms.end(); ++r) {non_basement_rooms += (!(r->z1() < ground_floor_z1));}
-		if (non_basement_rooms < 8) return -1; // not enough non-basement rooms
+		if (non_basement_rooms < 8) return 0; // not enough non-basement rooms
 	}
 	rand_gen_t rgen;
 	rgen.set_state(mat_ix+1, num_rooms+1);
@@ -904,7 +904,7 @@ int building_t::maybe_assign_interior_garage(bool &gdim, bool &gdir) {
 			break; // no need to try the other dir
 		} // for d
 	} // for r
-	if (best_room < 0) return -1; // failed
+	if (best_room < 0) return 0; // failed
 	assert((unsigned)best_room < rooms.size());
 	room_t &room(rooms[best_room]);
 	room.assign_to(RTYPE_GARAGE, 0);
@@ -932,7 +932,24 @@ int building_t::maybe_assign_interior_garage(bool &gdim, bool &gdir) {
 			} // for dir
 		} // for dim
 	} // for d
-	return best_room;
+	interior->garage_room = best_room;
+	return 1;
+}
+
+cube_t building_t::get_garage_bcube() const {
+	if (!interior) return cube_t(); // no interior
+	cube_t garage;
+
+	if (has_garage) { // exterior/detatched garage
+		assert(parts.size() >= 3); // must be at least two parts + garage
+		garage = parts[2]; // this is the garage
+		garage.z1() += get_fc_thickness(); // set correct bottom of the floor
+	}
+	else if (has_int_garage) { // interior garage
+		garage = interior->get_garage_room();
+		garage.z1() += get_fc_thickness(); // set correct bottom of the floor
+	}
+	return garage;
 }
 
 void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part, cube_t const &hall, unsigned part_ix, unsigned num_floors,

@@ -914,6 +914,7 @@ struct building_interior_t {
 	cube_with_ix_t pg_ramp; // ix stores {dim, dir}
 	draw_range_t draw_range;
 	uint64_t top_ceilings_mask; // bit mask for ceilings that are on the top floor and have no floor above them
+	int garage_room;
 	bool door_state_updated, is_unconnected, ignore_ramp_placement;
 
 	building_interior_t();
@@ -933,6 +934,7 @@ struct building_interior_t {
 	void update_dynamic_draw_data() {assert(room_geom); room_geom->update_dynamic_draw_data();}
 	void get_avoid_cubes(vect_cube_t &avoid, float z1, float z2, float floor_thickness, bool same_as_player) const;
 	void create_fc_occluders();
+	room_t const &get_garage_room() const {assert((unsigned)garage_room < rooms.size()); return rooms[garage_room];}
 };
 
 struct building_stats_t {
@@ -1016,6 +1018,7 @@ struct building_t : public building_geom_t {
 	bool is_basement(vect_cube_t::const_iterator it) const {return (int(it - parts.begin()) == basement_part_ix);}
 	bool is_pos_in_basement(point const &pos) const {return (has_basement() && parts[basement_part_ix].contains_pt(pos));};
 	cube_t const &get_basement() const {assert(has_basement()); return parts[basement_part_ix];}
+	cube_t get_garage_bcube() const;
 	int check_player_in_basement(point const &pos) const;
 	colorRGBA get_avg_side_color  () const {return side_color  .modulate_with(get_material().side_tex.get_avg_color());}
 	colorRGBA get_avg_roof_color  () const {return roof_color  .modulate_with(get_material().roof_tex.get_avg_color());}
@@ -1084,7 +1087,7 @@ struct building_t : public building_geom_t {
 	float get_hspacing_for_part(cube_t const &part, bool dim) const;
 	bool interior_enabled() const;
 	void gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes);
-	int maybe_assign_interior_garage(bool &gdim, bool &gdir);
+	bool maybe_assign_interior_garage(bool &gdim, bool &gdir);
 	void add_parking_garage_ramp(rand_gen_t &rgen);
 	void add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part, cube_t const &hall, unsigned part_ix, unsigned num_floors,
 		unsigned rooms_start, bool use_hallway, bool first_part_this_stack, float window_hspacing[2], float window_border);
@@ -1208,7 +1211,7 @@ public:
 private:
 	void finish_gen_geometry(rand_gen_t &rgen, bool has_overlapping_cubes);
 	bool add_outdoor_ac_unit(rand_gen_t &rgen);
-	bool add_chimney(cube_t const &part, bool dim, bool dir, float chimney_dz, int garage_room, rand_gen_t &rgen);
+	bool add_chimney(cube_t const &part, bool dim, bool dir, float chimney_dz, rand_gen_t &rgen);
 	void gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes);
 	void maybe_add_basement(rand_gen_t rgen);
 	bool is_light_placement_valid(cube_t const &light, room_t const &room, float pad) const;

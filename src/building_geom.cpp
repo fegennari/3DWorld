@@ -485,7 +485,7 @@ void add_cube_top(cube_t const &c, vector<tquad_with_ix_t> &tquads, unsigned typ
 	tquads.emplace_back(tquad, type);
 }
 
-bool building_t::add_chimney(cube_t const &part, bool dim, bool dir, float chimney_dz, int garage_room, rand_gen_t &rgen) {
+bool building_t::add_chimney(cube_t const &part, bool dim, bool dir, float chimney_dz, rand_gen_t &rgen) {
 	cube_t c(part);
 	float const sz1(c.get_sz_dim(!dim)), sz2(c.get_sz_dim(dim)), center(c.get_center_dim(!dim));
 	float const chimney_depth(0.03f*(sz1 + sz2)), window_vspace(get_window_vspace());
@@ -526,8 +526,7 @@ bool building_t::add_chimney(cube_t const &part, bool dim, bool dir, float chimn
 					bad_pos = interior->is_blocked_by_stairs_or_elevator(fireplace_ext);
 				}
 				if (!bad_pos && has_int_garage) { // check garage, which shouldn't have a fireplace
-					assert(garage_room >= 0 && garage_room < (int)interior->rooms.size());
-					bad_pos = interior->rooms[garage_room].intersects(test_cube);
+					bad_pos = interior->get_garage_room().intersects(test_cube);
 				}
 			}
 			if (bad_pos) { // failed to place chimney
@@ -763,17 +762,14 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 	}
 	calc_bcube_from_parts(); // maybe calculate a tighter bounding cube
 	gen_interior(rgen, 0); // before adding door
-	int garage_room(-1); // unset
 
 	if (gen_door) {
 		if (!has_garage && (street_dir || (rand_num & 24))) { // attempt to add an interior garage when legal, always when along a street, else 75% of the time
 			bool gdim(0), gdir(0);
-			garage_room = maybe_assign_interior_garage(gdim, gdir);
 
-			if (garage_room >= 0) { // assigned a garage
+			if (maybe_assign_interior_garage(gdim, gdir)) { // assigned a garage
 				has_int_garage = 1;
-				assert((unsigned)garage_room < interior->rooms.size());
-				room_t const &garage(interior->rooms[garage_room]);
+				room_t const &garage(interior->get_garage_room());
 				float const wscale(0.9*garage.get_sz_dim(!gdim)/door_height);
 				add_door(place_door(garage, gdim, gdir, door_height, 0.0, 0.0, 0.0, wscale, 0, 1, rgen), garage.part_id, gdim, gdir, 0); // centered in garage
 				doors.back().type = tquad_with_ix_t::TYPE_GDOOR; // make it a garage door
@@ -806,7 +802,7 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 						driveway.set_to_zeros();
 						doors.pop_back();
 						has_int_garage = 0;
-						garage_room    = -1;
+						interior->garage_room = -1;
 					}
 					gen_interior(rgen, 0);
 				}
@@ -905,7 +901,7 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 		bool dir(rgen.rand_bool());
 		if (two_parts && part.d[dim][dir] != bcube.d[dim][dir]) {dir ^= 1;} // force dir to be on the edge of the house bcube (not at a point interior to the house)
 		float const chimney_dz((hipped_roof[part_ix] ? 0.5 : 1.0)*roof_dz[part_ix]); // lower for hipped roof
-		add_chimney(part, dim, dir, chimney_dz, garage_room, rgen); // Note: return value is ignored
+		add_chimney(part, dim, dir, chimney_dz, rgen); // Note: return value is ignored
 	}
 	roof_type = ROOF_TYPE_PEAK; // peaked and hipped roofs are both this type
 	add_roof_to_bcube();
