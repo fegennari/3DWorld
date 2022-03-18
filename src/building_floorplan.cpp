@@ -1400,12 +1400,34 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 			}
 			// place stairs in shared area if there's space and no walls are in the way for either the room above or below
 			cube_t cand;
+			bool cand_is_valid(0), dim(0), stairs_dir(0), add_railing(1), stack_conn(1);
+			stairs_shape sshape;
+			
+			// try to extend primary hallway stairs down to parking garage below; should this apply to all ground floor stairwells?
+			// TODO: Extend through all floors - maybe by making the stairwell for the basement part also a copy of the hallway stairs?
+			if (is_basement && has_parking_garage && !pri_hall.is_all_zeros() && pri_hall.z1() == ground_floor_z1 && part.contains_cube_xy(pri_hall)) {
+				assert(!interior->stairwells.empty());
+				assert(!interior->landings  .empty());
+				stairwell_t &s(interior->stairwells.front());
+				landing_t &landing(interior->landings.front());
+
+				if (stairs_contained_in_part(s, pri_hall)) {
+					// copy fields from these stairs and extend down
+					cand          = s;
+					dim           = s.dim;
+					stairs_dir    = s.dir;
+					sshape        = s.shape;
+					stack_conn    = 0; // not stacked - extended main stairs
+					cand_is_valid = 1;
+					if (landing.shape == SHAPE_WALLED) {sshape = SHAPE_WALLED; landing.shape = SHAPE_WALLED_SIDES;} // shift bottom wall down a floor
+				}
+			}
 			cand.z1() = part.z2() - window_vspacing + fc_thick; // top of top floor for this part
 			cand.z2() = part.z2() + fc_thick; // top of bottom floor of upper part *p
 
 			// is it better to extend the existing stairs in *p, or the stairs we're creating here (stairs_cut) if they line up?
 			// iterations: 0-19: place in pri hallway, 20-39: place anywhere, 40-159: shrink size, 150-179: compact stairs, 180-199: allow cut walls
-			for (unsigned n = 0; n < num_iters; ++n) { // make 200 tries to add stairs
+			for (unsigned n = 0; n < num_iters && !cand_is_valid; ++n) { // make 200 tries to add stairs
 				cube_t place_region((n < 2*iter_mult_factor) ? pref_shared : shared); // use preferred shared area from primary hallway for first 20 iterations
 
 				if (n >= 4*iter_mult_factor && n < 16*iter_mult_factor && (n%iter_mult_factor) == 0) { // decrease stairs size slightly every 10 iterations, 12 times
@@ -1415,10 +1437,10 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 					max_eq(stairs_width, get_min_front_clearance()); // ensure the player can fit
 					max_eq(stairs_pad,   get_min_front_clearance()); // ensure the player can fit
 				}
-				bool dim(0), too_small(0);
+				bool too_small(0);
 				if (min(place_region.dx(), place_region.dy()) < 1.5*len_with_pad) {dim = (place_region.dx() < place_region.dy());} // use larger dim
-				else {dim = rgen.rand_bool();}
-				bool stairs_dir(rgen.rand_bool()); // the direction we move in when going up the stairs
+				else {dim  = rgen.rand_bool();}
+				stairs_dir = rgen.rand_bool(); // the direction we move in when going up the stairs
 
 				for (unsigned d = 0; d < 2; ++d) {
 					float const stairs_sz((bool(d) == dim) ? len_with_pad : stairs_width);
@@ -1462,52 +1484,52 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 				if (!cand.is_strictly_normalized()) continue; // not enough space, likely because the player radius/front clearance is too large
 				// add walls around stairs if room walls were clipped or this is the basement; otherwise, make stairs straight with railings;
 				// basement stairs only have walls on the bottom floor, so we set is_at_top=0; skip basement back stairs wall to prevent the player from getting stuck
-				stairs_shape const sshape(use_basement_stairs ? (stairs_shape)SHAPE_WALLED_SIDES : (wall_clipped ? (stairs_shape)SHAPE_WALLED : (stairs_shape)SHAPE_STRAIGHT));
-				bool const add_railing(!wall_clipped); // or awlays? wall clipped stairs can sometimes have problems with railings, but sometimes they're needed
-				landing_t landing(cand, 0, 0, dim, stairs_dir, add_railing, sshape, 0, !is_basement, 1); // roof_access=0, is_at_top=!is_basement, stacked_conn=1
-				landing.z1() = part.z2() - fc_thick; // only include the ceiling of this part and the floor of *p
-				cube_t stairwell(cand);
-				stairwell.z2() = part.z2() + window_vspacing - fc_thick; // bottom of ceiling of upper part; must cover z-range of upper floor for AIs and room object collisions
-				interior->landings.push_back(landing);
-				interior->stairwells.emplace_back(stairwell, 1, dim, stairs_dir, sshape, 0, 1); // roof_access=0, stack_conn=1
-
-				if (use_basement_stairs) { // add a basement door at the bottom of the stairs
-					float const pos_shift((stairs_dir ? 1.0 : -1.0)*0.8*wall_thickness);
-					door_t door(cand, dim, !stairs_dir, 0, 1); // open=0, on_stairs=1
-					door.z2() -= fc_thick; // bottom of basement ceiling, not the floor above
-					door.d[dim][stairs_dir] = door.d[dim][!stairs_dir] + pos_shift; // shift from the edge slightly into the stairwell, inserting the door as an end cap
-					if (!stairs_dir) {door.translate_dim(dim, -pos_shift);} // why the asymmetry?
-					door.translate_dim( dim, -0.2*pos_shift); // shift so that the door doesn't intersect the railing, covers the stairs overhang, and the top edge can't be seen
-					door.expand_in_dim(!dim, -0.15*cand.get_sz_dim(dim)/NUM_STAIRS_PER_FLOOR); // shrink by stairs wall half width
-					assert(door.is_strictly_normalized());
-					interior->stairwells.back().stairs_door_ix = (int16_t)interior->doors.size(); // record door index gating stairs for AI navigation
-					add_interior_door(door);
-				}
-				// attempt to cut holes in ceiling of this part and floor of above part
-				cube_t cut_cube(cand);
-				cut_cube.z1() += fc_thick; // shrink to avoid clipping floors exactly at the base of the stairs
-				subtract_cube_from_floor_ceil(cut_cube, interior->floors);
-				subtract_cube_from_floor_ceil(cut_cube, interior->ceilings);
-
-				for (auto r = interior->rooms.begin(); r != interior->rooms.end(); ++r) {
-					if (!r->intersects(stairwell)) continue; // no stairs in this room
-					// set the test point to the stairs entrance on the correct level using stairs_dir; the room contains stairs if it contains the stairs entrance
-					point test_pt(stairwell.get_cube_center());
-
-					if (part.contains_cube(*r)) { // bottom of stairs
-						test_pt[dim] = stairwell.d[dim][!stairs_dir];
-						if (r->contains_pt_xy(test_pt)) {r->has_stairs |= (1U << min(num_floors-1U, 7U));} // top floor (clamp to 7 to avoid 8-bit overflow)
-					}
-					else if (p->contains_cube(*r)) { // top of stairs
-						test_pt[dim] = stairwell.d[dim][stairs_dir];
-						if (r->contains_pt_xy(test_pt)) {r->has_stairs |= 1;} // bottom floor
-					}
-					else {assert(0);}
-				} // for r
-				connected = 1;
-				break; // success
+				sshape        = (use_basement_stairs ? (stairs_shape)SHAPE_WALLED_SIDES : (wall_clipped ? (stairs_shape)SHAPE_WALLED : (stairs_shape)SHAPE_STRAIGHT));
+				add_railing   = !wall_clipped; // or awlays? wall clipped stairs can sometimes have problems with railings, but sometimes they're needed
+				cand_is_valid = 1;
+				break;
 			} // for n
-			if (connected && use_basement_stairs) break; // only need to connect one part for the basement
+			landing_t landing(cand, 0, 0, dim, stairs_dir, add_railing, sshape, 0, !is_basement, stack_conn); // roof_access=0, is_at_top=!is_basement
+			landing.z1() = part.z2() - fc_thick; // only include the ceiling of this part and the floor of *p
+			cube_t stairwell(cand);
+			stairwell.z2() = part.z2() + window_vspacing - fc_thick; // bottom of ceiling of upper part; must cover z-range of upper floor for AIs and room object collisions
+			interior->landings.push_back(landing);
+			interior->stairwells.emplace_back(stairwell, 1, dim, stairs_dir, sshape, 0, stack_conn); // num_floors=1, roof_access=0
+			// attempt to cut holes in ceiling of this part and floor of above part
+			cube_t cut_cube(cand);
+			cut_cube.z1() += fc_thick; // shrink to avoid clipping floors exactly at the base of the stairs
+			subtract_cube_from_floor_ceil(cut_cube, interior->floors);
+			subtract_cube_from_floor_ceil(cut_cube, interior->ceilings);
+
+			for (auto r = interior->rooms.begin(); r != interior->rooms.end(); ++r) {
+				if (!r->intersects(stairwell)) continue; // no stairs in this room
+				// set the test point to the stairs entrance on the correct level using stairs_dir; the room contains stairs if it contains the stairs entrance
+				point test_pt(stairwell.get_cube_center());
+
+				if (part.contains_cube(*r)) { // bottom of stairs
+					test_pt[dim] = stairwell.d[dim][!stairs_dir];
+					if (r->contains_pt_xy(test_pt)) {r->has_stairs |= (1U << min(num_floors-1U, 7U));} // top floor (clamp to 7 to avoid 8-bit overflow)
+				}
+				else if (p->contains_cube(*r)) { // top of stairs
+					test_pt[dim] = stairwell.d[dim][stairs_dir];
+					if (r->contains_pt_xy(test_pt)) {r->has_stairs |= 1;} // bottom floor
+				}
+				else {assert(0);}
+			} // for r
+			if (use_basement_stairs) { // add a basement door at the bottom of the stairs
+				float const pos_shift((stairs_dir ? 1.0 : -1.0)*0.8*wall_thickness);
+				door_t door(cand, dim, !stairs_dir, 0, 1); // open=0, on_stairs=1
+				door.z2() -= fc_thick; // bottom of basement ceiling, not the floor above
+				door.d[dim][stairs_dir] = door.d[dim][!stairs_dir] + pos_shift; // shift from the edge slightly into the stairwell, inserting the door as an end cap
+				if (!stairs_dir) {door.translate_dim(dim, -pos_shift);} // why the asymmetry?
+				door.translate_dim( dim, -0.2*pos_shift); // shift so that the door doesn't intersect the railing, covers the stairs overhang, and the top edge can't be seen
+				door.expand_in_dim(!dim, -0.15*cand.get_sz_dim(dim)/NUM_STAIRS_PER_FLOOR); // shrink by stairs wall half width
+				assert(door.is_strictly_normalized());
+				interior->stairwells.back().stairs_door_ix = (int16_t)interior->doors.size(); // record door index gating stairs for AI navigation
+				add_interior_door(door);
+			}
+			connected = 1;
+			if (use_basement_stairs) break; // only need to connect one part for the basement
 		} // for p
 		if (!connected && is_basement) {interior->is_unconnected = 1;} // failed to connect basement with stairs - flag as unconnected
 	}
