@@ -18,6 +18,7 @@ extern std::string lighting_update_text;
 extern vector<light_source> dl_sources;
 
 bool enable_building_people_ai();
+bool check_cube_occluded(cube_t const &cube, vect_cube_t const &occluders, point const &viewer);
 
 
 bool ray_cast_cube(point const &p1, point const &p2, cube_t const &c, vector3d &cnorm, float &t) {
@@ -758,11 +759,12 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		clipped_bc.intersect_with_cube(bcube);
 
 		if (!stairs_light && !is_in_elevator) { // clip zval to current floor if light not in a room with stairs or elevator
-			clipped_bc.z1() = floor_z - fc_thick;
-			clipped_bc.z2() = ceil_z + fc_thick;
+			max_eq(clipped_bc.z1(), (floor_z - fc_thick));
 		}
+		min_eq(clipped_bc.z2(), (ceil_z  + fc_thick)); // ceiling is always valid, since lights point downward
 		if (!is_rot_cube_visible(clipped_bc, xlate)) continue; // VFC
 		//if (line_intersect_walls(lpos, camera_rot)) continue; // straight line visibility test - for debugging, or maybe future use in assigning priorities
+		//if (check_cube_occluded(clipped_bc, interior->fc_occluders, camera_rot)) continue; // legal, but may not help much
 		
 		// run flicker logic for broken lights; this is done later in the control flow because setting lights_changed=1 can be expensive
 		if (i->is_broken()) {
