@@ -715,7 +715,7 @@ void building_room_geom_t::create_obj_model_insts(building_t const &building) { 
 }
 
 void building_room_geom_t::create_lights_vbos(building_t const &building) {
-	//highres_timer_t timer("Gen Room Geom Light"); // 0.3ms
+	//highres_timer_t timer("Gen Room Geom Light"); // 0.75ms
 	float const tscale(2.0/obj_scale);
 	auto objs_end(get_placed_objs_end()); // skip buttons/stairs/elevators
 

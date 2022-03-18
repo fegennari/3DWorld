@@ -676,18 +676,6 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		bool const light_in_basement(lpos.z < ground_floor_z1), is_in_elevator(i->flags & RO_FLAG_IN_ELEV), is_in_closet(i->flags & RO_FLAG_IN_CLOSET);
 		if ((is_in_elevator || is_in_closet) && camera_z > lpos.z) continue; // elevator or closet light on the floor below the player
 		if (light_in_basement && (camera_z > (ground_floor_z1 + window_vspacing) || !bcube.contains_pt(camera_bs))) continue;
-
-		if (i->is_broken()) { // run flicker logic for broken lights
-			static rand_gen_t rgen;
-
-			if (tfticks > i->light_amt) { // time for state transition
-				float const delay_mult(i->is_active() ? 0.1 : 1.0);
-				i->light_amt = tfticks + rgen.rand_uniform(0.1, 1.0)*TICKS_PER_SECOND*delay_mult; // schedule time for next transition
-				i->flags    ^= RO_FLAG_IS_ACTIVE;
-				interior->room_geom->lights_changed = 1; // regenerate lights geometry
-			}
-			if (!i->is_active()) continue; // not currently on
-		}
 		//if (is_light_occluded(lpos_rot, camera_bs))  continue; // too strong a test in general, but may be useful for selecting high importance lights
 		//if (!camera_in_building && i->is_interior()) continue; // skip interior lights when camera is outside the building: makes little difference, not worth the trouble
 		room_t const &room(get_room(i->room_id));
@@ -775,6 +763,20 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		}
 		if (!is_rot_cube_visible(clipped_bc, xlate)) continue; // VFC
 		//if (line_intersect_walls(lpos, camera_rot)) continue; // straight line visibility test - for debugging, or maybe future use in assigning priorities
+		
+		// run flicker logic for broken lights; this is done later in the control flow because setting lights_changed=1 can be expensive
+		if (i->is_broken()) {
+			static rand_gen_t rgen;
+
+			if (tfticks > i->light_amt) { // time for state transition
+				float const delay_mult(i->is_active() ? 0.1 : 1.0);
+				i->light_amt = tfticks + rgen.rand_uniform(0.1, 1.0)*TICKS_PER_SECOND*delay_mult; // schedule time for next transition
+				i->flags    ^= RO_FLAG_IS_ACTIVE;
+				// regenerate lights geometry (can be somewhat slow); only update if player is below the level of the light
+				if (camera_bs.z < i->z2()) {interior->room_geom->lights_changed = 1;}
+			}
+			if (!i->is_active()) continue; // not currently on
+		}
 		// update lights_bcube and add light(s)
 
 		if (is_lamp) { // lamps are generally against a wall and not in a room with stairs and only illuminate that one room
