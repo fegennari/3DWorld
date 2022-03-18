@@ -646,6 +646,13 @@ bool building_t::choose_dest_goal(building_ai_state_t &state, pedestrian_t &pers
 		// else if floors differ by more than 1, we'll end up visiting the room on the wrong floor
 	}
 	if (global_building_params.ai_target_player) { // ensure target is a valid location in this building; this must be done *after* adjacent floor zval adjustment
+		// handle the case where the player is standing on the stairs on the same floor by moving zval to a different floor to force this person to use the stairs
+		if (state.goal_type == GOAL_TYPE_PLAYER && loc.floor_ix == goal.floor_ix && goal.stairs_ix >= 0) {
+			float const person_z1(person.get_z1()), player_z1(cur_player_building_loc.pos.z - CAMERA_RADIUS - camera_zh), fc_thick(get_fc_thickness());
+			// make destination exactly one floor above or below of where we currently are; some hysteresis is required to handle the case where the player is at the same zval
+			if      (player_z1 + fc_thick < person_z1) {person.target_pos.z -= floor_spacing;} // move down one floor
+			else if (player_z1 - fc_thick > person_z1) {person.target_pos.z += floor_spacing;} // move up   one floor
+		}
 		float const z2_add(person.get_height() - person.radius), coll_dist(COLL_RADIUS_SCALE*person.radius);
 		cube_t legal_area(bcube);
 		legal_area.expand_by_xy(-coll_dist);
@@ -663,7 +670,7 @@ bool building_t::choose_dest_goal(building_ai_state_t &state, pedestrian_t &pers
 		}
 		if (dmin_sq > 0.0 && !closest_part.is_all_zeros()) {closest_part.clamp_pt(person.target_pos);} // clamp to closest part
 		static vect_cube_t avoid; // reuse across frames/people
-		interior->get_avoid_cubes(avoid, (person.target_pos.z - person.radius), (person.target_pos.z + z2_add), get_floor_thickness(), 1); // same_as_player=1
+		interior->get_avoid_cubes(avoid, (person.target_pos.z - person.radius), (person.target_pos.z + z2_add), get_floor_thickness(), 1, 1); // same_as_player=1, skip_stairs=1
 
 		for (unsigned n = 0; n < 4; ++n) { // iterate a few times in case a collision moves pos into another object
 			for (auto i = avoid.begin(); i != avoid.end(); ++i) { // move target_pos to avoid room objects
@@ -754,9 +761,9 @@ template<typename T> void add_bcube_if_overlaps_zval(vector<T> const &cubes, vec
 	}
 }
 
-void building_interior_t::get_avoid_cubes(vect_cube_t &avoid, float z1, float z2, float floor_thickness, bool same_as_player) const { // for AI
+void building_interior_t::get_avoid_cubes(vect_cube_t &avoid, float z1, float z2, float floor_thickness, bool same_as_player, bool skip_stairs) const { // for AI
 	avoid.clear();
-	add_bcube_if_overlaps_zval(stairwells, avoid, z1, z2); // clearance not required
+	if (!skip_stairs) {add_bcube_if_overlaps_zval(stairwells, avoid, z1, z2);} // clearance not required
 	add_bcube_if_overlaps_zval(elevators,  avoid, z1, z2); // clearance not required
 	if (!room_geom) return; // no room objects
 	auto objs_end(room_geom->get_placed_objs_end()); // skip buttons/stairs/elevators
@@ -941,7 +948,7 @@ bool has_nearby_sound(pedestrian_t const &person, float floor_spacing) {
 }
 
 bool building_t::same_room_and_floor_as_player(building_ai_state_t const &state, pedestrian_t const &person) const {
-	return (cur_player_building_loc.room_ix == state.cur_room && cur_player_building_loc.floor_ix == get_floor_for_zval(person.pos.z));
+	return (cur_player_building_loc.room_ix == state.cur_room && cur_player_building_loc.floor_ix == get_floor_for_zval(person.pos.z) && cur_player_building_loc.stairs_ix < 0);
 }
 bool building_t::is_player_visible(building_ai_state_t const &state, pedestrian_t const &person, unsigned vis_test) const {
 	if (vis_test == 0) return 1; // no visibility test
