@@ -774,7 +774,7 @@ bool building_t::stairs_contained_in_part(stairwell_t const &s, cube_t const &p)
 	if (s.roof_access) {sc.z2() -= get_window_vspace();} // clip off top floor roof access
 	return p.contains_cube(sc);
 }
-void building_t::find_nearest_stairs(point const &p1, point const &p2, vector<unsigned> &nearest_stairs, bool straight_only, int part_ix) const {
+void building_t::find_nearest_stairs(point const &p1, point const &p2, vector<unsigned> &nearest_stairs, int part_ix) const {
 	nearest_stairs.clear();
 	assert(interior);
 	if (interior->stairwells.empty()) return; // no stairs
@@ -784,9 +784,8 @@ void building_t::find_nearest_stairs(point const &p1, point const &p2, vector<un
 
 	for (unsigned s = 0; s < interior->stairwells.size(); ++s) {
 		stairwell_t const &stairs(interior->stairwells[s]);
-		if (straight_only && stairs.shape == SHAPE_U) continue; // skip U-shaped stairs
 		if (zmin < stairs.z1() || zmax > stairs.z2()) continue; // stairs don't span the correct floors
-		if (part_ix >= 0 && !stairs_contained_in_part(stairs, parts[part_ix])) continue; // stairs don't belong to this part
+		if (part_ix >= 0 && !stairs_contained_in_part(stairs, parts[part_ix])) continue; // stairs don't belong to this part (Note: this option is currently unused)
 		point const center(stairs.get_cube_center());
 		float const dist(p2p_dist(p1, center) + p2p_dist(center, p2));
 		sorted.emplace_back(dist, s);
@@ -805,7 +804,7 @@ void building_t::get_avoid_cubes(float zval, float height, float radius, vect_cu
 	assert(interior);
 	interior->get_avoid_cubes(avoid, (zval - radius), (zval + (height - radius)), get_floor_thickness(), following_player);
 }
-bool building_t::find_route_to_point(pedestrian_t const &person, float radius, bool is_first_path, bool is_moving_target, bool following_player, vector<point> &path) const {
+bool building_t::find_route_to_point(pedestrian_t const &person, float radius, bool is_first_path, bool following_player, vector<point> &path) const {
 
 	assert(interior && interior->nav_graph);
 	point const &from(person.pos), &to(person.target_pos);
@@ -823,9 +822,8 @@ bool building_t::find_route_to_point(pedestrian_t const &person, float radius, b
 		return interior->nav_graph->complete_path_within_room(from, to, loc1.room_ix, person.ssn, radius, person.cur_rseed, is_first_path, avoid, path);
 	}
 	if (loc1.floor_ix != loc2.floor_ix) { // different floors: find path from <from> to nearest stairs, then find path from stairs to <to>
-		bool const straight_only = 0;
 		vector<unsigned> nearest_stairs;
-		find_nearest_stairs(from, to, nearest_stairs, straight_only); // pass in loc1.part_ix if both loc part_ix values are equal?
+		find_nearest_stairs(from, to, nearest_stairs); // pass in loc1.part_ix if both loc part_ix values are equal?
 		bool const up_or_down(loc1.floor_ix > loc2.floor_ix); // 0=up, 1=down; Note: floor_ix is relative to bcube.z1(), so is consistent across parts
 
 		for (auto s = nearest_stairs.begin(); s != nearest_stairs.end(); ++s) { // try using stairs, closest to furthest
@@ -1066,7 +1064,7 @@ int building_t::ai_room_update(building_ai_state_t &state, rand_gen_t &rgen, vec
 
 	if (update_path) { // need to update based on player movement; higher priority than choose_dest
 		if (choose_dest_goal(state, person, rgen, stay_on_one_floor) != 1 || // check if person can reach the target
-			!find_route_to_point(person, coll_dist, 0, 1, 1, state.path)) // is_first_path=0, is_moving_target=1, following_player=1
+			!find_route_to_point(person, coll_dist, 0, 1, state.path)) // is_first_path=0, following_player=1
 		{
 			choose_dest = 1; // or increment person.cur_rseed and return AI_WAITING? or restore person and state to prev values?
 		}
@@ -1099,7 +1097,7 @@ int building_t::ai_room_update(building_ai_state_t &state, rand_gen_t &rgen, vec
 			}
 			return AI_STOP;
 		}
-		if (!find_route_to_point(person, coll_dist, state.is_first_path, 0, 0, state.path)) { // following_player=0, is_moving_target=0
+		if (!find_route_to_point(person, coll_dist, state.is_first_path, 0, state.path)) { // following_player=0
 			person.wait_for(1.0); // stop for 1 second, then try again
 			return AI_WAITING;
 		}
