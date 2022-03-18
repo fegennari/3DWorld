@@ -1400,7 +1400,7 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 			}
 			// place stairs in shared area if there's space and no walls are in the way for either the room above or below
 			cube_t cand;
-			bool cand_is_valid(0), dim(0), stairs_dir(0), add_railing(1), stack_conn(1);
+			bool cand_is_valid(0), dim(0), stairs_dir(0), add_railing(1), stack_conn(1), is_at_top(0);
 			stairs_shape sshape;
 			
 			// try to extend primary hallway stairs down to parking garage below; should this apply to all ground floor stairwells?
@@ -1486,10 +1486,11 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 				// basement stairs only have walls on the bottom floor, so we set is_at_top=0; skip basement back stairs wall to prevent the player from getting stuck
 				sshape        = (use_basement_stairs ? (stairs_shape)SHAPE_WALLED_SIDES : (wall_clipped ? (stairs_shape)SHAPE_WALLED : (stairs_shape)SHAPE_STRAIGHT));
 				add_railing   = !wall_clipped; // or awlays? wall clipped stairs can sometimes have problems with railings, but sometimes they're needed
+				is_at_top     = !is_basement; // no walls around the top of basement stairs; top floor signs are handled by the hallway case above
 				cand_is_valid = 1;
 				break;
 			} // for n
-			landing_t landing(cand, 0, 0, dim, stairs_dir, add_railing, sshape, 0, !is_basement, stack_conn); // roof_access=0, is_at_top=!is_basement
+			landing_t landing(cand, 0, 0, dim, stairs_dir, add_railing, sshape, 0, is_at_top, stack_conn); // roof_access=0
 			landing.z1() = part.z2() - fc_thick; // only include the ceiling of this part and the floor of *p
 			cube_t stairwell(cand);
 			stairwell.z2() = part.z2() + window_vspacing - fc_thick; // bottom of ceiling of upper part; must cover z-range of upper floor for AIs and room object collisions
