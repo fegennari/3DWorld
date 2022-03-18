@@ -1037,17 +1037,22 @@ int building_t::ai_room_update(building_ai_state_t &state, rand_gen_t &rgen, vec
 	assert(bcube.contains_pt(person.pos)); // person must be inside the building
 	build_nav_graph();
 
-	if (can_ai_follow_player(person) && dist_less_than(person.pos, cur_player_building_loc.pos, 1.2f*(person.radius + get_scaled_player_radius()))) {
-		if (!check_for_wall_ceil_floor_int(person.pos, cur_player_building_loc.pos)) {
-			int const ret_status(register_ai_player_coll(person.has_key, person.get_height())); // return value: 0=no effect, 1=player is killed, 2=this person is killed
+	if (can_ai_follow_player(person)) {
+		// use zval of the feet to handle cases where the person and the player are different heights
+		point const feet_pos(person.pos.x, person.pos.y, person.get_z1()), player_feet_pos(cur_player_building_loc.pos - vector3d(0.0, 0.0, CAMERA_RADIUS+camera_zh));
+
+		if (dist_less_than(feet_pos, player_feet_pos, 1.2f*(person.radius + get_scaled_player_radius()))) {
+			if (!check_for_wall_ceil_floor_int(person.pos, cur_player_building_loc.pos)) {
+				int const ret_status(register_ai_player_coll(person.has_key, person.get_height())); // return value: 0=no effect, 1=player is killed, 2=this person is killed
 			
-			if (ret_status == 1) { // player is killed, we could track kills here
-				add_blood_decal(cur_player_building_loc.pos);
-			}
-			else if (ret_status == 2) { // player defeats zombie
-				person.destroyed = 1;
-				person.speed     = 0.0;
-				return AI_STOP;
+				if (ret_status == 1) { // player is killed, we could track kills here
+					add_blood_decal(cur_player_building_loc.pos);
+				}
+				else if (ret_status == 2) { // player defeats zombie
+					person.destroyed = 1;
+					person.speed     = 0.0;
+					return AI_STOP;
+				}
 			}
 		}
 	}
