@@ -947,7 +947,7 @@ template <typename T> bool has_cube_line_coll(point const &p1, point const &p2, 
 bool building_t::check_for_wall_ceil_floor_int(point const &p1, point const &p2) const { // and interior doors
 	if (!interior) return 0;
 	for (unsigned d = 0; d < 2; ++d) {if (has_cube_line_coll(p1, p2, interior->walls[d])) return 1;}
-	if (has_cube_line_coll(p1, p2, interior->ceilings) || has_cube_line_coll(p1, p2, interior->floors)) return 1; // or is only checking one good enough?
+	if (has_cube_line_coll(p1, p2, interior->fc_occluders)) return 1;
 	return check_line_intersect_doors(p1, p2);
 }
 bool building_t::line_intersect_stairs_or_ramp(point const &p1, point const &p2) const {
@@ -1264,7 +1264,7 @@ bool building_t::check_line_coll_expand(point const &p1, point const &p2, float 
 bool building_t::check_line_of_sight_large_objs(point const &p1, point const &p2) const {
 	assert(interior != nullptr);
 	cube_t line_bcube(p1, p2);
-	if (line_int_cubes(p1, p2, interior->ceilings, line_bcube)) return 0; // only need to check one of {ceilings, floors}; likely fastest test
+	if (line_int_cubes(p1, p2, interior->fc_occluders, line_bcube)) return 0; // likely fastest test
 
 	for (unsigned d = 0; d < 2; ++d) {
 		if (line_int_cubes(p1, p2, interior->walls[d], line_bcube)) return 0;

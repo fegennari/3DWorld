@@ -415,8 +415,7 @@ bool building_t::is_light_occluded(point const &lpos, point const &camera_bs) co
 	for (unsigned d = 0; d < 2; ++d) {
 		if (line_int_cubes(lpos, camera_bs, interior->walls[d])) return 1;
 	}
-	if (line_int_cubes(lpos, camera_bs, interior->floors  )) return 1;
-	if (line_int_cubes(lpos, camera_bs, interior->ceilings)) return 1;
+	if (line_int_cubes(lpos, camera_bs, interior->fc_occluders)) return 1;
 	return 0;
 }
 void building_t::clip_ray_to_walls(point const &p1, point &p2, vect_cube_t const walls[2]) const { // Note: assumes p1.z == p2.z

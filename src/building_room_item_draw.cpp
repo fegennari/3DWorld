@@ -1195,10 +1195,10 @@ car_t car_from_parking_space(room_object_t const &o) {
 	car.set_bcube(point(center.x, center.y, o.z1()), get_nom_car_size());
 	return car;
 }
-bool check_car_occluded(car_t const &car, vect_cube_t const &occluders, point const &viewer) {
+bool check_cube_occluded(cube_t const &cube, vect_cube_t const &occluders, point const &viewer) {
 	if (occluders.empty()) return 0;
 	point pts[8];
-	unsigned const npts(get_cube_corners(car.bcube.d, pts, viewer, 0)); // should return only the 6 visible corners
+	unsigned const npts(get_cube_corners(cube.d, pts, viewer, 0)); // should return only the 6 visible corners
 	return are_pts_occluded_by_any_cubes<0>(viewer, pts, npts, occluders, 3); // set invalid dim of 3 because cubes are of mixed dim and we can't use that optimization
 }
 struct comp_car_by_dist {
@@ -1272,7 +1272,7 @@ void building_t::draw_cars_in_building(shader_t &s, vector3d const &xlate, bool 
 			auto in(cars_to_draw.begin()), out(in);
 
 			for (; in != cars_to_draw.end(); ++in) { // filter out occluded cars
-				if (!check_car_occluded(*in, occluders, viewer)) {*(out++) = *in;}
+				if (!check_cube_occluded(in->bcube, occluders, viewer)) {*(out++) = *in;}
 			}
 			cars_to_draw.erase(out, cars_to_draw.end());
 		} // end check_occlusion

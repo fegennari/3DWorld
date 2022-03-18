@@ -2260,7 +2260,6 @@ bool building_t::is_light_placement_valid(cube_t const &light, room_t const &roo
 }
 void building_t::try_place_light_on_ceiling(cube_t const &light, room_t const &room, bool room_dim, float pad, bool allow_rot, bool allow_mult, vect_cube_t &lights, rand_gen_t &rgen) {
 	assert(has_room_geom());
-	interior->create_fc_occluders(); // we're going to use the occluders rather than ceilings because they're alreay max merged
 	if (is_light_placement_valid(light, room, pad)) {lights.push_back(light); return;} // contained = done
 	point room_center(room.get_cube_center());
 	bool const first_dir(rgen.rand_bool());
@@ -2327,6 +2326,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 	unsigned added_bathroom_objs_mask(0);
 	bool added_bedroom(0), added_living(0), added_library(0), added_dining(0), added_laundry(0), added_basement_utility(0);
 	light_ix_assign_t light_ix_assign;
+	interior->create_fc_occluders(); // not really part of room geom, but needed for generating and drawing room geom, so we create them here
 
 	if (rooms.size() > 1) { // choose best room assignments for required rooms; if a single room, skip this step
 		float min_score(0.0);
@@ -2680,7 +2680,6 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 	add_extra_obj_slots(); // needed to handle balls taken from one building and brought to another
 	add_stairs_and_elevators(rgen); // the room objects - stairs and elevators have already been placed within a room
 	add_exterior_door_signs (rgen);
-	interior->create_fc_occluders(); // not really part of room geom, but needed for drawing room geom, so we create them here
 	objs.shrink_to_fit(); // Note: currently up to around 15K objs max for large office buildings
 	interior->room_geom->light_bcubes.resize(light_ix_assign.get_next_ix()); // allocate but don't fill un until needed
 	// randomly vary wood color for this building
