@@ -769,6 +769,11 @@ void building_interior_t::get_avoid_cubes(vect_cube_t &avoid, float z1, float z2
 	}
 }
 
+bool building_t::stairs_contained_in_part(stairwell_t const &s, cube_t const &p) const {
+	cube_t sc(s);
+	if (s.roof_access) {sc.z2() -= get_window_vspace();} // clip off top floor roof access
+	return p.contains_cube(sc);
+}
 void building_t::find_nearest_stairs(point const &p1, point const &p2, vector<unsigned> &nearest_stairs, bool straight_only, int part_ix) const {
 	nearest_stairs.clear();
 	assert(interior);
@@ -781,7 +786,7 @@ void building_t::find_nearest_stairs(point const &p1, point const &p2, vector<un
 		stairwell_t const &stairs(interior->stairwells[s]);
 		if (straight_only && stairs.shape == SHAPE_U) continue; // skip U-shaped stairs
 		if (zmin < stairs.z1() || zmax > stairs.z2()) continue; // stairs don't span the correct floors
-		if (part_ix >= 0 && !parts[part_ix].contains_cube(stairs)) continue; // stairs don't belong to this part
+		if (part_ix >= 0 && !stairs_contained_in_part(stairs, parts[part_ix])) continue; // stairs don't belong to this part
 		point const center(stairs.get_cube_center());
 		float const dist(p2p_dist(p1, center) + p2p_dist(center, p2));
 		sorted.emplace_back(dist, s);
