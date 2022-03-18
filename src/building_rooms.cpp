@@ -3102,6 +3102,7 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 		point center;
 		center[ i->dim] = i->d[i->dim][!i->dir]; // front of stairs
 		center[!i->dim] = i->get_center_dim(!i->dim);
+		if (has_parking_garage && i->z1() < ground_floor_z1) {center[!i->dim] += 0.25*i->get_sz_dim(!i->dim);} // shift to the side for parking garages to avoid center beams
 		center.z = i->z1();
 		cube_t sign(center);
 		sign.d[i->dim][!i->dir] += (i->dir ? -1.0 : 1.0)*0.25*wall_thickness; // set sign thickness
@@ -3276,12 +3277,13 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 			}
 		} // for d
 		if (i->has_railing && i->shape == SHAPE_U) { // add a railing for the back wall of U-shaped stairs
+			float const railing_dz(((wall.z1() < ground_floor_z1) ? 0.77 : 0.819)*window_vspacing); // determined experimentally, and different for basement stacked part conn stairs
 			cube_t railing(*i);
 			set_wall_width(railing, (i->d[dim][dir] + (dir ? -1.0 : 1.0)*2.0*wall_hw), wall_hw, dim);
-			set_wall_width(railing, (wall.z1() + 0.819*window_vspacing), 1.4*railing_side_dz, 2); // set zvals: small dz to make it normalized (determined experimentally)
+			set_wall_width(railing, (wall.z1() + railing_dz), 1.4*railing_side_dz, 2); // set zvals
 			objs.emplace_back(railing, TYPE_RAILING, 0, !dim, dir, (RO_FLAG_NOCOLL | RO_FLAG_ADJ_HI | RO_FLAG_ADJ_LO | RO_FLAG_ADJ_BOT), 1.0, SHAPE_CUBE, railing_color); // no ends
 		}
-		if (i->has_railing && (i->stack_conn || (extend_walls_up && i->shape == SHAPE_STRAIGHT))) {
+		else if (i->has_railing && (i->stack_conn || (extend_walls_up && i->shape == SHAPE_STRAIGHT))) {
 			// add railings around the top if: straight + top floor with no roof access, connector stairs, or basement stairs
 			room_object_t railing(*i, TYPE_RAILING, 0, !dim, dir, (RO_FLAG_TOS | RO_FLAG_ADJ_BOT), 1.0, SHAPE_CUBE, railing_color); // flag to skip drawing ends
 			railing.z1()  = railing.z2(); // starts at the floor
