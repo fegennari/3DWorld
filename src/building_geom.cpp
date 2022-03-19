@@ -1850,11 +1850,11 @@ bool building_interior_t::is_cube_close_to_doorway(cube_t const &c, cube_t const
 	return 0;
 }
 
-cube_t get_stairs_bcube_expanded(stairwell_t const &s, float clearance) {
+cube_t get_stairs_bcube_expanded(stairwell_t const &s, float ends_clearance, float sides_clearance) {
 	cube_t tc(s);
-	tc.expand_in_dim(s.dim, clearance); // add extra space at both ends of stairs; may only need to add on open ends, but this is difficult to check for
+	tc.expand_in_dim(s.dim, ends_clearance); // add extra space at both ends of stairs; may only need to add on open ends, but this is difficult to check for
 	float const wall_hw(0.15*s.get_sz_dim(s.dim)/NUM_STAIRS_PER_FLOOR); // see step_len_pos logic in building_t::add_stairs_and_elevators()
-	tc.expand_in_dim(!s.dim, wall_hw); // add extra space to account for walls and railings on stairs
+	tc.expand_in_dim(!s.dim, (sides_clearance + wall_hw)); // add extra space to account for walls and railings on stairs
 	return tc;
 }
 bool has_bcube_int(cube_t const &bcube, vect_stairwell_t const &stairs, float doorway_width) {
@@ -1863,7 +1863,7 @@ bool has_bcube_int(cube_t const &bcube, vect_stairwell_t const &stairs, float do
 
 	for (auto s = stairs.begin(); s != stairs.end(); ++s) {
 		if (!s->intersects(pre_test)) continue; // early termination test optimization
-		cube_t const tc(get_stairs_bcube_expanded(*s, doorway_width));
+		cube_t const tc(get_stairs_bcube_expanded(*s, doorway_width, 0.0)); // sides_clearance=0.0
 		if (tc.intersects(bcube)) return 1;
 		// extra check for objects blocking the entrance/exit to the side; this is really only needed for open ends, but helps to avoid squeezing objects behind stairs as well
 		if (s->shape == SHAPE_U) continue; // U-shaped stairs are only open on one side and generally placed in hallways, so ignore
@@ -1913,14 +1913,15 @@ bool building_interior_t::is_blocked_by_stairs_or_elevator(cube_t const &c, floa
 	return 0;
 }
 // similar to above (without stairs pretest), but returns bounding cubes rather than checking for intersections
-void building_interior_t::get_stairs_and_elevators_bcubes_intersecting_cube(cube_t const &c, vect_cube_t &bcubes, float min_clearance) const {
+void building_interior_t::get_stairs_and_elevators_bcubes_intersecting_cube(cube_t const &c, vect_cube_t &bcubes, float ends_clearance, float sides_clearance) const {
 	for (auto const &s : stairwells) {
-		cube_t const tc(get_stairs_bcube_expanded(s, min_clearance));
+		cube_t const tc(get_stairs_bcube_expanded(s, ends_clearance, sides_clearance));
 		if (tc.intersects(c)) {bcubes.push_back(tc);}
 	}
 	for (auto const &e : elevators) {
 		cube_t tc(e);
-		tc.d[e.dim][e.dir] += min_clearance*(e.dir ? 1.0 : -1.0); // add extra space in front of the elevator
+		tc.expand_by_xy(sides_clearance);
+		tc.d[e.dim][e.dir] += (ends_clearance - sides_clearance)*(e.dir ? 1.0 : -1.0); // add extra space in front of the elevator
 		if (tc.intersects(c)) {bcubes.push_back(tc);}
 	}
 }

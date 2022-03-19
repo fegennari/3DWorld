@@ -103,11 +103,10 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 	}
 	light_delta_z = beam_delta_z - wall.dz(); // negative
 	beam.z1()    += beam_delta_z; // shift the bottom up to the ceiling
-	float const space_clearance(max(0.5f*window_vspacing, parking_sz.y)); // clearance between stairs/elevators and parking spaces so that cars and people can pass
-	vect_cube_t obstacles, obstacles_exp, wall_parts, temp;
+	vect_cube_t obstacles, obstacles_exp, obstacles_ps, wall_parts, temp;
 	// get obstacles for walls with and without clearance; maybe later add entrance/exit ramps, etc.
-	interior->get_stairs_and_elevators_bcubes_intersecting_cube(room_floor_cube, obstacles, 0.0); // without clearance
-	interior->get_stairs_and_elevators_bcubes_intersecting_cube(room_floor_cube, obstacles_exp, 0.9*window_vspacing); // with clearance
+	interior->get_stairs_and_elevators_bcubes_intersecting_cube(room_floor_cube, obstacles, 0.0); // without clearance, for beams
+	interior->get_stairs_and_elevators_bcubes_intersecting_cube(room_floor_cube, obstacles_exp, 0.9*window_vspacing); // with clearance in front, for walls and pillars
 	cube_with_ix_t const &ramp(interior->pg_ramp);
 	bool const is_top_floor(floor_ix+1 == num_floors);
 	
@@ -121,7 +120,9 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 		objs.emplace_back(rc, TYPE_RAMP, room_id, dim, dir, flags, tot_light_amt, SHAPE_ANGLED, wall_color);
 		obstacles    .push_back(rc); // don't place parking spaces next to the ramp
 		obstacles_exp.push_back(rc); // clip beams to ramp
+		obstacles_exp.back().expand_in_dim( dim,      road_width); // keep entrance and exit areas clear of parking spaces, even the ones against exterior walls
 		obstacles_exp.back().expand_in_dim(!dim, 0.75*road_width); // keep walls and pillars away from the sides of ramps
+		obstacles_ps .push_back(obstacles_exp.back()); // also keep parking spaces away from ramp
 		// add ramp railings
 		bool const side(ramp.get_center_dim(!dim) < room.get_center_dim(!dim)); // which side of the ramp the railing is on (opposite the wall the ramp is against)
 		float const railing_thickness(0.4*wall_thickness), ramp_length(rc.get_sz_dim(dim)), dir_sign(dir ? 1.0 : -1.0), side_sign(side ? 1.0 : -1.0), shorten_factor(0.35);
@@ -154,6 +155,15 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 	// add walls and pillars
 	bool const no_sep_wall(num_walls == 0 || (capacity < 100 && (room_id & 1))); // use room_id rather than rgen so that this agrees between floors
 	bool const split_sep_wall(!no_sep_wall && (num_pillars >= 5 || (num_pillars >= 4 && rgen.rand_bool())));
+	bool const have_cent_stairs(can_extend_pri_hall_stairs_to_pg()); // assume pri hall stairs were extended down to PG
+	float sp_const(0.0);
+	if      (no_sep_wall)      {sp_const = 0.25;} // no separator wall, minimal clearance around stairs
+	else if (have_cent_stairs) {sp_const = 0.50;} // central stairs should open along the wall, not a tight space, need less clearance
+	else if (split_sep_wall)   {sp_const = 0.75;} // gap should provide access, need slightly less clearance
+	else                       {sp_const = 1.00;} // stairs may cut through/along full wall, need max clearance
+	float const space_clearance(sp_const*max(0.5f*window_vspacing, parking_sz.y));
+	// obstacles with clearance all sides, for parking spaces
+	interior->get_stairs_and_elevators_bcubes_intersecting_cube(room_floor_cube, obstacles_ps, max(space_clearance, 0.9f*window_vspacing), space_clearance);
 	if (interior->room_geom->wall_ps_start == 0) {interior->room_geom->wall_ps_start = objs.size();} // set if not set, on first level
 	float center_pos(wall.get_center_dim(dim));
 	// if there's an odd number of pillars, move the gap between two pillars on one side or the other
@@ -255,7 +265,7 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 				space.d[dim][1] = space.d[dim][0] + space_width; // set width
 				assert(space.is_strictly_normalized());
 				
-				if (has_bcube_int_xy(space, obstacles, space_clearance)) { // skip entire space if it intersects stairs or an elevator, with padding
+				if (has_bcube_int_xy(space, obstacles_ps)) { // skip entire space if it intersects stairs or an elevator
 					if (last_was_space) {objs.back().flags &= ~RO_FLAG_ADJ_HI;} // no space to the right for the previous space
 					last_was_space = 0;
 				}
