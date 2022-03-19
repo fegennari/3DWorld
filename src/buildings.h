@@ -442,8 +442,15 @@ struct bldg_obj_type_t {
 		player_coll(pc), ai_coll(ac), rat_coll(rc), pickup(pu), attached(at), is_model(im), lg_sm(ls), value(v), weight(w), capacity(cap), name(n) {}
 };
 
-struct room_object_t : public cube_t {
+struct oriented_cube_t : public cube_t {
 	bool dim, dir;
+	oriented_cube_t() : dim(0), dir(0) {}
+	oriented_cube_t(cube_t const &c, bool dim_, bool dir_) : cube_t(c), dim(dim_), dir(dir_) {}
+	float get_length() const {return get_sz_dim( dim);}
+	float get_width () const {return get_sz_dim(!dim);}
+};
+
+struct room_object_t : public oriented_cube_t {
 	uint8_t room_id; // for at most 256 rooms per floor
 	uint16_t obj_id, drawer_flags, item_flags;
 	room_object type; // 8-bit
@@ -452,10 +459,10 @@ struct room_object_t : public cube_t {
 	float light_amt;
 	colorRGBA color;
 
-	room_object_t() : dim(0), dir(0), room_id(0), obj_id(0), drawer_flags(0), item_flags(0), type(TYPE_NONE), shape(SHAPE_CUBE), flags(0), light_amt(1.0) {}
+	room_object_t() : room_id(0), obj_id(0), drawer_flags(0), item_flags(0), type(TYPE_NONE), shape(SHAPE_CUBE), flags(0), light_amt(1.0) {}
 	room_object_t(cube_t const &c, room_object type_, uint8_t rid, bool dim_=0, bool dir_=0, unsigned f=0, float light=1.0,
 		room_obj_shape shape_=SHAPE_CUBE, colorRGBA const color_=WHITE, uint16_t iflags=0) :
-		cube_t(c), dim(dim_), dir(dir_), room_id(rid), obj_id(0), drawer_flags(0), item_flags(iflags), type(type_), shape(shape_), flags(f), light_amt(light), color(color_)
+		oriented_cube_t(c, dim_, dir_), room_id(rid), obj_id(0), drawer_flags(0), item_flags(iflags), type(type_), shape(shape_), flags(f), light_amt(light), color(color_)
 	{check_normalized();}
 	void check_normalized() const;
 	unsigned get_combined_flags() const {return (((unsigned)drawer_flags << 16) + (unsigned)item_flags);} // treat {drawer_flags, item_flags} as a single 32-bit flags
@@ -478,7 +485,7 @@ struct room_object_t : public cube_t {
 	bool is_light_type() const {return (type == TYPE_LIGHT || (type == TYPE_LAMP && !was_expanded()));} // light, or lamp not in closet
 	bool is_sink_type () const {return (type == TYPE_SINK || type == TYPE_KSINK || type == TYPE_BRSINK);}
 	bool is_obj_model_type() const {return (type >= TYPE_TOILET && type < NUM_ROBJ_TYPES);}
-	bool is_small_closet() const {return (get_sz_dim(!dim) < 1.2*dz());}
+	bool is_small_closet() const {return (get_width() < 1.2*dz());}
 	bool is_bottle_empty() const {return ((obj_id & 192) == 192);} // empty if both bits 6 and 7 are set
 	bool desk_has_drawers()const {return bool(room_id & 3);} // 75% of the time
 	bool can_use        () const;
@@ -786,17 +793,17 @@ private:
 		unsigned skip_faces, unsigned book_ix, unsigned set_start_ix, colorRGBA const &color, vect_room_object_t *books);
 }; // building_room_geom_t
 
-struct elevator_t : public cube_t {
-	bool dim, dir, at_edge, was_called; // door dim/dir
+struct elevator_t : public oriented_cube_t {
+	bool at_edge, was_called; // dim/dir applies to the door
 	unsigned room_id, car_obj_id, light_obj_id, button_id_start, button_id_end;
 	float target_zval, open_amt;
 
 	elevator_t(cube_t const &c, unsigned rid, bool dim_, bool dir_, bool at_edge_) :
-		cube_t(c), dim(dim_), dir(dir_), at_edge(at_edge_), was_called(0), room_id(rid), car_obj_id(0),
+		oriented_cube_t(c, dim_, dir_), at_edge(at_edge_), was_called(0), room_id(rid), car_obj_id(0),
 		light_obj_id(0), button_id_start(0), button_id_end(0), target_zval(0.0), open_amt(0.0)
 	{assert(is_strictly_normalized());}
-	float get_wall_thickness () const {return 0.02*get_sz_dim(!dim);}
-	float get_frame_width    () const {return 0.20*get_sz_dim(!dim);}
+	float get_wall_thickness () const {return 0.02*get_width();}
+	float get_frame_width    () const {return 0.20*get_width();}
 	unsigned get_door_face_id() const {return (2*dim + dir);}
 	unsigned get_coll_cubes(cube_t cubes[5]) const; // returns 1 or 5 cubes
 	void call_elevator(float targ_z) {target_zval = targ_z; was_called = 1;}

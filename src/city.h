@@ -307,17 +307,15 @@ struct road_seg_t : public road_t {
 	void next_frame() {car_count = 0;}
 };
 
-struct driveway_t : public cube_t {
-	bool dim, dir; // direction to road; d[dim][dir] is the edge shared with the road
+struct driveway_t : public oriented_cube_t {
+	// dim/dir: direction to road; d[dim][dir] is the edge shared with the road
 	// in_use is modified by car_manager in a different thread - must be mutable, maybe should be atomic
 	mutable uint8_t in_use; // either reserves the spot, or a car is parked there; 1=temporary, 2=permanent
 	mutable unsigned last_ped_frame;
 	unsigned plot_ix;
-	driveway_t() : dim(0), dir(0), in_use(0), last_ped_frame(0), plot_ix(0) {}
-	driveway_t(cube_t const &c, bool dim_, bool dir_, unsigned pix) : cube_t(c), dim(dim_), dir(dir_), in_use(0), last_ped_frame(0), plot_ix(pix) {}
+	driveway_t() : in_use(0), last_ped_frame(0), plot_ix(0) {}
+	driveway_t(cube_t const &c, bool dim_, bool dir_, unsigned pix) : oriented_cube_t(c, dim_, dir_), in_use(0), last_ped_frame(0), plot_ix(pix) {}
 	float get_edge_at_road() const {return d[dim][dir];}
-	float get_length() const {return get_sz_dim( dim);}
-	float get_width () const {return get_sz_dim(!dim);}
 	void mark_ped_this_frame() const;
 	bool has_recent_ped() const;
 	cube_t extend_across_road() const;
@@ -354,13 +352,13 @@ struct plot_xy_t {
 	int get_adj(unsigned x, unsigned y, unsigned dir) const {assert(x < nx && y < ny); return adj_plots[y*nx + x].adj[dir];} // -1 == no plot
 };
 
-struct parking_lot_t : public cube_t {
-	bool dim, dir;
+struct parking_lot_t : public oriented_cube_t {
 	unsigned short row_sz, num_rows;
 	vector<unsigned char> used_spaces;
-	parking_lot_t(cube_t const &c, bool dim_, bool dir_, unsigned row_sz_=0, unsigned num_rows_=0) : cube_t(c), dim(dim_), dir(dir_), row_sz(row_sz_), num_rows(num_rows_) {}
+	parking_lot_t(cube_t const &c, bool dim_, bool dir_, unsigned row_sz_=0, unsigned num_rows_=0) : oriented_cube_t(c, dim_, dir_), row_sz(row_sz_), num_rows(num_rows_) {}
 	tex_range_t get_tex_range(float ar) const;
 };
+
 
 namespace stoplight_ns {
 

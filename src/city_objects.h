@@ -18,9 +18,13 @@ struct city_obj_t : public sphere_t {
 	bool proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const; // default, can be overridden in derived class
 };
 
-struct bench_t : public city_obj_t {
+struct oriented_city_obj_t : public city_obj_t {
 	bool dim, dir;
-	bench_t() : dim(0), dir(0) {}
+	oriented_city_obj_t(bool dim_=0, bool dir_=0) : dim(dim_), dir(dir_) {}
+	oriented_city_obj_t(point const &pos_, float radius_, bool dim_=0, bool dir_=0) : city_obj_t(pos_, radius_), dim(dim_), dir(dir_) {}
+};
+
+struct bench_t : public oriented_city_obj_t {
 	void calc_bcube();
 	static void pre_draw(draw_state_t &dstate, bool shadow_only);
 	void draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_draw &untex_qbd, float dist_scale, bool shadow_only) const;
@@ -52,33 +56,31 @@ struct fire_hydrant_t : public city_obj_t {
 	bool proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const;
 };
 
-struct substation_t : public city_obj_t {
-	bool dim, dir;
+struct substation_t : public oriented_city_obj_t {
 	substation_t(cube_t const &bcube_, bool dim_, bool dir_);
 	static void pre_draw (draw_state_t &dstate, bool shadow_only);
 	static void post_draw(draw_state_t &dstate, bool shadow_only);
 	void draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_draw &untex_qbd, float dist_scale, bool shadow_only) const;
 };
 
-struct divider_t : public city_obj_t {
+struct divider_t : public oriented_city_obj_t {
 	unsigned type;
-	bool dim, dir;
 	uint8_t skip_dims;
-	divider_t() : type(0), dim(0), dir(0), skip_dims(0) {}
+	divider_t() : type(0), skip_dims(0) {}
 	divider_t(cube_t const &c, unsigned type_, bool dim_, bool dir_, unsigned sd=0) :
-		city_obj_t(c.get_cube_center(), c.get_bsphere_radius()), type(type_), dim(dim_), dir(dir_), skip_dims(sd) {bcube = c;}
+		oriented_city_obj_t(c.get_cube_center(), c.get_bsphere_radius(), dim_, dir_), type(type_), skip_dims(sd) {bcube = c;}
 	static void pre_draw (draw_state_t &dstate, bool shadow_only);
 	static void post_draw(draw_state_t &dstate, bool shadow_only);
 	void draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_draw &untex_qbd, float dist_scale, bool shadow_only) const;
 	bool proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const;
 };
 
-struct swimming_pool_t : public city_obj_t {
+struct swimming_pool_t : public oriented_city_obj_t { // Note: dim and dir are used for the ladder and face toward the house
 	colorRGBA color, wcolor; // wall color and water color
-	bool above_ground, dim, dir; // dim and dir are used for the ladder and face toward the house
+	bool above_ground;
 
 	swimming_pool_t(cube_t const &c, colorRGBA const &color_, colorRGBA const &wcolor_, bool above_ground_, bool dim_, bool dir_) :
-		city_obj_t(c.get_cube_center(), c.get_bsphere_radius()), color(color_), wcolor(wcolor_), above_ground(above_ground_), dim(dim_), dir(dir_) {bcube = c;}
+		oriented_city_obj_t(c.get_cube_center(), c.get_bsphere_radius(), dim_, dir_), color(color_), wcolor(wcolor_), above_ground(above_ground_) {bcube = c;}
 	float get_radius() const {assert(above_ground); return 0.25f*(bcube.dx() + bcube.dy());}
 	static void pre_draw (draw_state_t &dstate, bool shadow_only);
 	static void post_draw(draw_state_t &dstate, bool shadow_only);

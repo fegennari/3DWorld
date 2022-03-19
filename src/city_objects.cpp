@@ -288,7 +288,7 @@ bool fire_hydrant_t::proc_sphere_coll(point &pos_, point const &p_last, float ra
 
 // substations
 
-substation_t::substation_t(cube_t const &bcube_, bool dim_, bool dir_) : dim(dim_), dir(dir_) {
+substation_t::substation_t(cube_t const &bcube_, bool dim_, bool dir_) : oriented_city_obj_t(dim_, dir_) {
 	bcube = bcube_;
 	set_bsphere_from_bcube(); // recompute bcube from bsphere
 }
