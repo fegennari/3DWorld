@@ -2389,7 +2389,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 		r->light_intensity = light_val*light_val/r->get_area_xy(); // average for room, unitless; light surface area divided by room surface area with some fudge constant
 		cube_t light;
 		set_light_xy(light, room_center, light_size, room_dim, light_shape);
-		bool use_sec_light[2] = {0,0}, sec_light_int_door[2] = {0,0}, added_bathroom(0);
+		bool added_bathroom(0);
 		float z(r->z1());
 		r->interior = (is_basement || get_part_for_room(*r).contains_cube_xy_no_adj(*r)); // AKA windowless
 		// make chair colors consistent for each part by using a few variables for a hash
