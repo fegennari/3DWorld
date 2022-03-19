@@ -1329,7 +1329,7 @@ void building_room_geom_t::add_elevator(room_object_t const &c, float tscale, fl
 	norm_comp const nc(normal);
 	if (use_small_text) {text_height *= 0.67;} // shrink text if there are two wide digits, but leave text alignment unchanged
 
-	for (unsigned f = 0; f < num_floors; ++f) {
+	for (unsigned f = 0; f < num_floors; ++f) { // Note: floor number starts at 1 even if the elevator doesn't extend to the ground floor
 		bool const is_lit(f == cur_floor);
 		text_pos.z = panel.z1() + (f + 1)*button_spacing - 0.5*text_height;
 		verts.clear();

@@ -3101,7 +3101,9 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 	// add floor signs for U-shaped stairs
 	for (auto i = interior->landings.begin(); i != interior->landings.end(); ++i) {
 		if (i->for_elevator || i->for_ramp || i->shape != SHAPE_U) continue; // not U-shaped stairs
-		unsigned const floor_offset(calc_floor_offset(i->z1()));
+		// stacked conn stairs start at floor 0 but are really the top floor of the part below; i->floor is not a global index and can't be used
+		unsigned const floor_offset(calc_floor_offset(bcube.z1())); // use building z1 - should return number of underground levels
+		unsigned const real_floor(round_fp((i->z1() - bcube.z1())/get_window_vspace()));
 		point center;
 		center[ i->dim] = i->d[i->dim][!i->dir]; // front of stairs
 		center[!i->dim] = i->get_center_dim(!i->dim);
@@ -3112,13 +3114,13 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 		sign.expand_in_dim(!i->dim, 1.0*wall_thickness); // set sign width
 		sign.z1() -= 2.5*wall_thickness; // set sign height
 		objs.emplace_back(sign, TYPE_SIGN, 0, i->dim, !i->dir, (RO_FLAG_NOCOLL | RO_FLAG_HANGING), 1.0, SHAPE_CUBE, DK_BLUE); // no room_id
-		set_floor_text_for_sign(objs.back(), i->floor, floor_offset, has_parking_garage, oss);
+		set_floor_text_for_sign(objs.back(), real_floor, floor_offset, has_parking_garage, oss);
 
 		// if this is the top landing, we need to add a floor sign on the ceiling above it for the top floor
 		if (i->is_at_top && !i->roof_access) {
 			sign.translate_dim(2, window_vspacing); // move up one floor
 			objs.emplace_back(sign, TYPE_SIGN, 0, i->dim, !i->dir, (RO_FLAG_NOCOLL | RO_FLAG_HANGING), 1.0, SHAPE_CUBE, DK_BLUE); // no room_id
-			set_floor_text_for_sign(objs.back(), (i->floor + 1), floor_offset, has_parking_garage, oss);
+			set_floor_text_for_sign(objs.back(), (real_floor + 1), floor_offset, has_parking_garage, oss);
 		}
 	} // for i
 
@@ -3141,7 +3143,7 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 		sign.d[i->dim][i->dir] += (i->dir ? 1.0 : -1.0)*0.1*wall_thickness; // front of sign
 		set_wall_width(sign, (i->d[!i->dim][1] - 0.1*ewidth), 0.04*ewidth, !i->dim); // to the high side, opposite the call button
 
-		for (unsigned f = 0; f < num_floors; ++f) {
+		for (unsigned f = 0; f < num_floors; ++f) { // Note: floor number starts at 1 even if the elevator doesn't extend to the ground floor
 			sign.z1() = i->z1()   + (f + 0.5)*window_vspacing;
 			sign.z2() = sign.z1() + 0.1*ewidth;
 			objs.emplace_back(sign, TYPE_SIGN, i->room_id, i->dim, i->dir, RO_FLAG_NOCOLL, 1.0, SHAPE_CUBE, DK_BLUE);
