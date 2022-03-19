@@ -1017,6 +1017,7 @@ struct building_t : public building_geom_t {
 	bool has_a_garage () const {return (has_garage || has_int_garage);} // external or internal
 	bool enable_driveway_coll() const {return !is_rotated();} // no collision with rotated driveways/porches for now
 	bool has_pg_ramp() const {return (interior && !interior->pg_ramp.is_all_zeros());}
+	bool can_extend_pri_hall_stairs_to_pg() const {return (has_parking_garage && has_pri_hall() && pri_hall.z1() == ground_floor_z1);}
 	bool is_basement(vect_cube_t::const_iterator it) const {return (int(it - parts.begin()) == basement_part_ix);}
 	bool is_pos_in_basement(point const &pos) const {return (has_basement() && parts[basement_part_ix].contains_pt(pos));};
 	cube_t const &get_basement() const {assert(has_basement()); return parts[basement_part_ix];}

@@ -945,9 +945,11 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 	float ewidth(1.5*doorway_width); // for elevators
 	float z(part.z1());
 	cube_t stairs_cut, elevator_cut;
-	bool stairs_dim(0), add_elevator(0), stairs_have_railing(1), stairs_against_wall[2] = {0, 0};
+	bool stairs_dim(0), add_elevator(0), stairs_have_railing(1), extended_from_above(0);
+	bool stairs_against_wall[2] = {0, 0};
 	stairs_shape sshape(SHAPE_STRAIGHT); // straight by default
 	bool const must_add_stairs(first_part_this_stack || (has_complex_floorplan && part == parts.back())); // first part in stack, or tallest/last part of complex building
+	int force_stairs_dir(2); // 2=unset
 
 	// add stairwells and elevator shafts
 	if (!is_cube()) {} // rooms are not yet supported, and neither are stairs or elevators
@@ -985,6 +987,21 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 		room.has_center_stairs = 1;
 		stairs_cut = stairs;
 		stairs_dim = long_dim;
+	}
+	else if ((int)part_ix == basement_part_ix && can_extend_pri_hall_stairs_to_pg() && part.contains_cube_xy(pri_hall)) {
+		assert(!interior->stairwells.empty());
+		stairwell_t const &s(interior->stairwells.front());
+		assert(stairs_contained_in_part(s, pri_hall));
+		// copy fields from these stairs and extend down
+		stairs_cut = s;
+		stairs_dim = s.dim;
+		force_stairs_dir    = s.dir;
+		extended_from_above = 1;
+		sshape       = s.shape;
+		add_elevator = 0; // assume we can extend the existing hallway elevator downward
+		set_cube_zvals(stairs_cut, part.z1(), part.z2());
+		room_t &room(interior->rooms.back()); // should be the last room
+		room.has_stairs = 255; // stairs on all floors
 	}
 	else if (!is_house || interior->stairwells.empty()) { // only add stairs to first part of a house unless we haven't added stairs yet
 		// sometimes add an elevator to building parts, but not the first part in a stack (to guarantee we have at least one set of stairs)
@@ -1090,7 +1107,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 	interior->floors.push_back(C); // ground floor, full area
 	z += window_vspacing; // move to next floor
 	bool const has_stairs(!stairs_cut.is_all_zeros()), has_elevator(!elevator_cut.is_all_zeros());
-	bool const stairs_dir(has_stairs ? rgen.rand_bool() : 0); // same for every floor, could maybe alternate for stairwells
+	bool const stairs_dir((force_stairs_dir < 2) ? force_stairs_dir : (has_stairs ? rgen.rand_bool() : 0)); // same for every floor, could maybe alternate for stairwells
 	cube_t &first_cut(has_elevator ? elevator_cut : stairs_cut); // elevator is larger
 	unsigned last_landing_ix(0);
 
@@ -1100,7 +1117,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 
 		if (!has_stairs && !has_elevator) {to_add[0] = part;} // neither - add single cube
 		else {
-			bool const is_at_top(f+1 == num_floors);
+			bool const is_at_top(f+1 == num_floors && !extended_from_above);
 			subtract_cube_xy(part, first_cut, to_add);
 
 			if (has_stairs && has_elevator) { // both
@@ -1394,7 +1411,7 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 			float stairs_pad(doorway_width), len_with_pad(stairs_len + 2.0*stairs_pad); // pad both ends of stairs to make sure player has space to enter/exit
 			if (max(shared.dx(), shared.dy()) < 1.0*len_with_pad || min(shared.dx(), shared.dy()) < 1.2*stairs_width) continue; // too small to add stairs between these parts
 
-			if (!pri_hall.is_all_zeros() && part.contains_cube(pri_hall) && pri_hall.intersects_xy(shared)) { // have a primary hallway in this part
+			if (has_pri_hall() && part.contains_cube(pri_hall) && pri_hall.intersects_xy(shared)) { // have a primary hallway in this part
 				pref_shared.intersect_with_cube(pri_hall);
 				if (max(pref_shared.dx(), pref_shared.dy()) < 1.2*len_with_pad || min(pref_shared.dx(), pref_shared.dy()) < 1.5*stairs_width) {pref_shared = shared;} // too small
 			}
@@ -1404,23 +1421,22 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 			stairs_shape sshape;
 			
 			// try to extend primary hallway stairs down to parking garage below; should this apply to all ground floor stairwells?
-			// TODO: Extend through all floors - maybe by making the stairwell for the basement part also a copy of the hallway stairs?
-			if (is_basement && has_parking_garage && !pri_hall.is_all_zeros() && pri_hall.z1() == ground_floor_z1 && part.contains_cube_xy(pri_hall)) {
+			if (is_basement && can_extend_pri_hall_stairs_to_pg() && part.contains_cube_xy(pri_hall)) {
 				assert(!interior->stairwells.empty());
-				assert(!interior->landings  .empty());
-				stairwell_t &s(interior->stairwells.front());
-				landing_t &landing(interior->landings.front());
-
-				if (stairs_contained_in_part(s, pri_hall)) {
-					// copy fields from these stairs and extend down
-					cand          = s;
-					dim           = s.dim;
-					stairs_dir    = s.dir;
-					sshape        = s.shape;
-					stack_conn    = 0; // not stacked - extended main stairs
-					cand_is_valid = 1;
-					if (landing.shape == SHAPE_WALLED) {sshape = SHAPE_WALLED; landing.shape = SHAPE_WALLED_SIDES;} // shift bottom wall down a floor
-				}
+				stairwell_t const &s(interior->stairwells.front());
+				assert(stairs_contained_in_part(s, pri_hall));
+				// copy fields from these stairs and extend down
+				cand          = s;
+				dim           = s.dim;
+				stairs_dir    = s.dir;
+				sshape        = s.shape;
+				stack_conn    = 0; // not stacked - extended main stairs
+				cand_is_valid = 1;
+				assert(!interior->landings.empty());
+				landing_t &landing(interior->landings.front()); // bottom landing
+				if (landing.shape == SHAPE_WALLED) {sshape = SHAPE_WALLED; landing.shape = SHAPE_WALLED_SIDES;} // shift bottom wall down a floor
+				// if the parking garage is multiple levels, exclude the back wall so that we can connect the lower level(s) with this same stairwell
+				if (sshape == SHAPE_WALLED && num_floors > 1) {sshape = SHAPE_WALLED_SIDES;}
 			}
 			cand.z1() = part.z2() - window_vspacing + fc_thick; // top of top floor for this part
 			cand.z2() = part.z2() + fc_thick; // top of bottom floor of upper part *p
