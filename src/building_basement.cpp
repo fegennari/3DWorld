@@ -235,14 +235,14 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 	// add parking spaces on both sides of each row (one side if half row)
 	cube_t row(wall); // same length as the wall; includes the width of the pillars
 	row.z2() = row.z1() + 0.001*window_vspacing; // slightly above the floor
-	float const space_width(row.get_sz_dim(dim)/num_space_wid), strips_start(virt_room_for_wall.d[!dim][0]);
+	float const space_width(row.get_sz_dim(dim)/num_space_wid), strips_start(virt_room_for_wall.d[!dim][0]), wall_half_gap(2.0*wall_hc);
 	bool const add_cars(enable_parked_cars() && !is_rotated()); // skip cars for rotated buildings
 	unsigned const max_handicap_spots(capacity/20 + 1);
 	unsigned num_handicap_spots(0);
 
 	for (unsigned n = 0; n < num_strips; ++n) {
-		row.d[!dim][0] = strips_start + (n + 0)*wall_spacing + wall_hc;
-		row.d[!dim][1] = strips_start + (n + 1)*wall_spacing - wall_hc;
+		row.d[!dim][0] = strips_start + (n + 0)*wall_spacing + wall_half_gap;
+		row.d[!dim][1] = strips_start + (n + 1)*wall_spacing - wall_half_gap;
 		assert(space_length > 0.0);
 
 		for (unsigned d = 0; d < 2; ++d) { // for each side of the row
