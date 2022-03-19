@@ -184,11 +184,16 @@ public:
 		vector2d const &pt(node.conn_rooms.front().pt[up_or_down]); // Note: all conn_rooms should be the same value
 		return point(pt.x, pt.y, zval);
 	}
-	static bool find_valid_pt_in_room(vect_cube_t const &avoid, float radius, float height, float zval, cube_t const &room, rand_gen_t &rgen, point &pos) {
-		if (avoid.empty()) return 1; // no colliders, any point is valid, choose the center
+	static bool find_valid_pt_in_room(vect_cube_t const &avoid, float radius, float height, float zval, cube_t const &room, rand_gen_t &rgen, point &pos, bool no_use_init=0) {
+		if (!no_use_init && avoid.empty()) return 1; // no colliders, any point is valid, choose the initial point (which should be the room center)
 		cube_t place_area(room);
 		place_area.expand_by_xy(-2.0*radius); // shrink by twice the radius
 		if (!place_area.is_strictly_normalized()) return 0; // should generally not be true
+
+		if (no_use_init) { // chose a new initial point
+			choose_pt_xy_in_room(pos, place_area, rgen);
+			if (avoid.empty()) return 1;
+		}
 		point orig_pos(pos);
 
 		for (unsigned n = 0; n < 100; ++n) { // 100 random tries to find a valid dest_pos
@@ -683,6 +688,18 @@ bool building_t::choose_dest_goal(building_ai_state_t &state, pedestrian_t &pers
 	return 1;
 }
 
+bool building_t::select_person_dest_in_room(building_ai_state_t &state, pedestrian_t &person, rand_gen_t &rgen, room_t const &room) const {
+	float const height(0.7*get_window_vspace()), radius(COLL_RADIUS_SCALE*person.radius);
+	point dest_pos(room.get_cube_center());
+	static vect_cube_t avoid; // reuse across frames/people
+	get_avoid_cubes(person.target_pos.z, height, radius, avoid, 0); // following_player=0
+	bool const no_use_init(room.get_room_type(0) == RTYPE_PARKING); // don't use the room center for a parking garage
+	if (!interior->nav_graph->find_valid_pt_in_room(avoid, radius, height, person.target_pos.z, room, rgen, dest_pos, no_use_init)) return 0;
+	person.target_pos.x = dest_pos.x; person.target_pos.y = dest_pos.y;
+	state.goal_type = GOAL_TYPE_ROOM;
+	return 1;
+}
+
 int building_t::choose_dest_room(building_ai_state_t &state, pedestrian_t &person, rand_gen_t &rgen, bool same_floor) const {
 
 	assert(interior && interior->nav_graph);
@@ -725,32 +742,22 @@ int building_t::choose_dest_room(building_ai_state_t &state, pedestrian_t &perso
 		state.goal_type = GOAL_TYPE_ROOM;
 		return 1;
 	} // for n
+	if (loc.room_ix < 0) return 2; // failed - room not vali (error?)
+	room_t const &room(get_room(loc.room_ix));
+	bool const is_parking_garage(room.get_room_type(0) == RTYPE_PARKING);
 
-	// how about a different floor of the same room?
-	if (!same_floor && loc.room_ix >= 0 && get_room(loc.room_ix).has_stairs == 255) {
-		cube_t const &room(get_room(loc.room_ix));
+	// how about a different floor of the same room? only check this 50% of the time for parking garages to allow movement within a level
+	if (!same_floor && room.has_stairs == 255 && (!is_parking_garage || rgen.rand_bool())) {
 		float const new_z(person.target_pos.z + (rgen.rand_bool() ? -1.0 : 1.0)*floor_spacing); // one floor above or below
-		
+
 		if (new_z > room.z1() && new_z < room.z2()) { // valid if this floor is inside the room
-			person.target_pos   = room.get_cube_center();
 			person.target_pos.z = new_z;
-			state.goal_type     = GOAL_TYPE_ROOM;
-			return 1;
+			if (select_person_dest_in_room(state, person, rgen, room)) return 1;
 		}
 	}
-
 	// how about a different location in the same room? this will at least get the person unstuck from an object and moving inside a parking garage
-	if (loc.room_ix >= 0 && (state.is_first_path || get_room(loc.room_ix).get_room_type(0) == RTYPE_PARKING)) {
-		point dest_pos(get_center_of_room(loc.room_ix));
-		float const height(0.7*get_window_vspace()), radius(COLL_RADIUS_SCALE*person.radius);
-		static vect_cube_t avoid; // reuse across frames/people
-		get_avoid_cubes(person.pos.z, height, radius, avoid, 0); // following_player=0
-		
-		if (interior->nav_graph->find_valid_pt_in_room(avoid, radius, height, person.pos.z, get_room(loc.room_ix), rgen, dest_pos)) { // if center is not valid, choose a valid point
-			person.target_pos.x = dest_pos.x; person.target_pos.y = dest_pos.y;
-			state.goal_type = GOAL_TYPE_ROOM;
-			return 1;
-		}
+	if (state.is_first_path || is_parking_garage) {
+		if (select_person_dest_in_room(state, person, rgen, room)) return 1;
 	}
 	return 2; // failed, but can retry
 }

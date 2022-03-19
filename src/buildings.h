@@ -1160,6 +1160,7 @@ private:
 	bool is_valid_ai_placement(point const &pos, float radius) const;
 	bool choose_dest_goal(building_ai_state_t &state, pedestrian_t &person, rand_gen_t &rgen, bool same_floor) const;
 	int  choose_dest_room(building_ai_state_t &state, pedestrian_t &person, rand_gen_t &rgen, bool same_floor) const;
+	bool select_person_dest_in_room(building_ai_state_t &state, pedestrian_t &person, rand_gen_t &rgen, room_t const &room) const;
 	void get_avoid_cubes(float zval, float height, float radius, vect_cube_t &avoid, bool following_player) const;
 	bool find_route_to_point(pedestrian_t const &person, float radius, bool is_first_path, bool following_player, vector<point> &path) const;
 	bool stairs_contained_in_part(stairwell_t const &s, cube_t const &p) const;
