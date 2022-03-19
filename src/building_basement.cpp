@@ -632,7 +632,9 @@ void building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 		for (unsigned d = 0; d < 2; ++d) {
 			if ((p.type == PIPE_CONN || p.type == PIPE_MAIN) && !(p.end_flags & (1<<d))) continue; // already have fittings added from connecting pipes
 			room_object_t pf(pipe);
-			pf.flags |= RO_FLAG_NOCOLL | RO_FLAG_ADJ_LO | RO_FLAG_ADJ_HI; // make sure these flags are set
+			pf.flags |= RO_FLAG_NOCOLL;
+			if (d == 1 || p.type != PIPE_MAIN) {pf.flags |= RO_FLAG_ADJ_LO;} // skip end cap for main pipe exiting through the wall
+			if (d == 0 || p.type != PIPE_MAIN) {pf.flags |= RO_FLAG_ADJ_HI;} // skip end cap for main pipe exiting through the wall
 			pf.color  = fittings_color;
 			expand_cube_except_in_dim(pf, fitting_expand, p.dim); // expand slightly
 			pf.d[p.dim][!d] = pf.d[p.dim][d] + (d ? -1.0 : 1.0)*fitting_len;
