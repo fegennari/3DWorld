@@ -99,7 +99,7 @@ void road_t::add_road_quad(quad_batch_draw &qbd, colorRGBA const &color, float a
 tex_range_t parking_lot_t::get_tex_range(float ar) const { // ar is unused
 	bool const d(!dim); // Note: R90
 	float const xscale(1.0/(2.0*PARK_SPACE_WIDTH *city_params.get_nom_car_size().y));
-	float const yscale(1.0/(1.0*PARK_SPACE_LENGTH*city_params.get_nom_car_size().x));
+	float const yscale(1.0/(1.0*PARK_SPACE_LENGTH*city_params.get_nom_car_size().x)*((dim^dir) ? -1.0 : 1.0)); // swap texture in Y for some dim/dir
 	float const tx(0.24), ty(0.0); // x=cols, y=rows
 	return tex_range_t(tx, ty, (xscale*(d ? dy() : dx()) + tx), (yscale*(d ? dx() : dy()) + ty), 0, d);
 }

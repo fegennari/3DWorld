@@ -1013,7 +1013,7 @@ bool city_obj_placer_t::gen_parking_lots_for_plot(cube_t plot, vector<car_t> &ca
 		used_spaces.resize(nspaces, 0); // start empty
 		car.dim = car_dim; car.dir = car_dir;
 		point pos(corner_pos.x, corner_pos.y, plot.z2());
-		pos[car_dim] += 0.5*dr + (car_dim ? 0.15 : -0.15)*fabs(dr); // offset for centerline, biased toward the front of the parking space
+		pos[car_dim] += 0.5*dr + (car_dir ? 0.15 : -0.15)*fabs(dr); // offset for centerline, biased toward the front of the parking space
 		float const car_density(rgen.rand_uniform(city_params.min_park_density, city_params.max_park_density));
 
 		for (unsigned row = 0; row < park.num_rows; ++row) {
