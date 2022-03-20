@@ -314,20 +314,11 @@ void toggle_fullscreen() {
 }
 
 
-void enable_blend() {
-	glEnable(GL_BLEND);
-	//glEnable(GL_LINE_SMOOTH);
-}
-
-void disable_blend() {
-	glDisable(GL_BLEND);
-	//glDisable(GL_LINE_SMOOTH);
-}
-
+void enable_blend () {glEnable (GL_BLEND);}
+void disable_blend() {glDisable(GL_BLEND);}
 
 void set_std_blend_mode     () {glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);}
 void set_additive_blend_mode() {glBlendFunc(GL_SRC_ALPHA, GL_ONE);}
-
 
 void reset_fog() {
 	setup_linear_fog(GRAY, ((world_mode == WMODE_INF_TERRAIN) ? get_inf_terrain_fog_dist() : 2.5*Z_SCENE_SIZE*fog_dist_scale));
