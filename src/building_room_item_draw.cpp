@@ -857,7 +857,7 @@ public:
 		float const dz(obj.dz());
 		cube_t c;
 		point pos(obj.get_cube_center());
-		pos[obj.dim] += (obj.dir ? -1.0 : 1.0)*(is_cube ? 0.25 : 0.095)*obj.get_sz_dim(obj.dim); // move toward the back of the sink
+		pos[obj.dim] += (obj.dir ? -1.0 : 1.0)*(is_cube ? 0.25 : 0.095)*obj.get_length(); // move toward the back of the sink
 		c.set_from_sphere(pos, (is_cube ? 0.02 : 0.0055)*dz);
 		set_cube_zvals(c, (obj.z1() + (is_cube ? 0.7 : 0.6)*dz), (obj.z1() + (is_cube ? 1.3 : 0.925)*dz));
 		unsigned const verts_start(mat.itri_verts.size());
@@ -1190,8 +1190,8 @@ car_t car_from_parking_space(room_object_t const &o) {
 	car.dir     = o.dir; // or random?
 	car.cur_seg = o.obj_id; // store the random seed in car.cur_seg
 	point center(o.get_cube_center());
-	center[ o.dim] += 0.03*o.get_sz_dim( o.dim)*rgen.signed_rand_float(); // small random misalign front/back
-	center[!o.dim] += 0.05*o.get_sz_dim(!o.dim)*rgen.signed_rand_float(); // small random misalign side
+	center[ o.dim] += 0.03*o.get_length()*rgen.signed_rand_float(); // small random misalign front/back
+	center[!o.dim] += 0.05*o.get_width ()*rgen.signed_rand_float(); // small random misalign side
 	car.set_bcube(point(center.x, center.y, o.z1()), get_nom_car_size());
 	return car;
 }

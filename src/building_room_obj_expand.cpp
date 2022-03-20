@@ -255,7 +255,7 @@ void building_room_geom_t::expand_cabinet(room_object_t const &c) { // called on
 	}
 	// add boxes
 	unsigned const num_boxes(rgen.rand()%4); // 0-3
-	float const box_sz(0.3*c.get_sz_dim(c.dim));
+	float const box_sz(0.3*c.get_length());
 	room_object_t cb(c);
 	cb.light_amt = light_amt;
 	add_boxes_to_space(cb, expanded_objs, interior, cubes, rgen, num_boxes, box_sz, 0.8*box_sz, 1.5*box_sz, 0, flags); // allow_crates=0
@@ -453,7 +453,7 @@ void building_room_geom_t::expand_shelves(room_object_t const &c) {
 }
 
 void building_room_geom_t::add_wine_rack_bottles(room_object_t const &c, vect_room_object_t &objects) {
-	float const height(c.dz()), width(c.get_sz_dim(!c.dim)), depth(c.get_sz_dim(c.dim)), shelf_thick(0.1*depth);
+	float const height(c.dz()), width(c.get_width()), depth(c.get_depth()), shelf_thick(0.1*depth);
 	unsigned const num_rows(max(1, round_fp(2.0*height/depth))), num_cols(max(1, round_fp(2.0*width/depth)));
 	float const row_step((height - shelf_thick)/num_rows), col_step((width - shelf_thick)/num_cols);
 	float const space_w(col_step - shelf_thick), space_h(row_step - shelf_thick), diameter(min(space_w, space_h) - shelf_thick);

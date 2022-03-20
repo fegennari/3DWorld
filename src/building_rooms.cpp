@@ -3137,7 +3137,7 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 		// add floor signs
 		unsigned const num_floors(calc_num_floors(*i, window_vspacing, floor_thickness));
 		unsigned const floor_offset(calc_floor_offset(i->z1()));
-		float const ewidth(i->get_sz_dim(!i->dim));
+		float const ewidth(i->get_width());
 		cube_t sign;
 		sign.d[i->dim][0] = sign.d[i->dim][1] = i->d[i->dim][i->dir];
 		sign.d[i->dim][i->dir] += (i->dir ? 1.0 : -1.0)*0.1*wall_thickness; // front of sign
@@ -3154,7 +3154,7 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 
 	// add elevator buttons for each floor; must be done before setting stairs_start
 	for (auto i = interior->elevators.begin(); i != interior->elevators.end(); ++i) {
-		float const button_radius(0.3*wall_thickness), ewidth(i->get_sz_dim(!i->dim));
+		float const button_radius(0.3*wall_thickness), ewidth(i->get_width());
 		unsigned const num_floors(calc_num_floors(*i, window_vspacing, floor_thickness)), elevator_id(i - interior->elevators.begin());
 		assert(num_floors > 1); // otherwise, why have an elevator?
 		i->button_id_start = objs.size();

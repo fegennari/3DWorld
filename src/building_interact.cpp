@@ -295,7 +295,7 @@ bool building_t::apply_player_action_key(point const &closest_to_in, vector3d co
 
 					if (/*!i->is_open() &&*/ i->is_small_closet() && !interior->room_geom->moved_obj_ids.empty()) { // only applies to small closets
 						cube_t c_test(*i);
-						float const width(i->get_sz_dim(!i->dim)), wall_width(0.5*(width - 0.5*i->dz())); // see get_closet_cubes()
+						float const width(i->get_width()), wall_width(0.5*(width - 0.5*i->dz())); // see get_closet_cubes()
 						c_test.d[i->dim][ i->dir] += (i->dir ? 1.0f : -1.0f)*(width - 2.0f*wall_width); // extend outward
 						c_test.d[i->dim][!i->dir]  = i->d[i->dim][i->dir]; // back is flush with front of closet
 						c_test.expand_in_dim(!i->dim, -wall_width); // shrink to door width
@@ -543,7 +543,7 @@ bool building_t::adjust_blinds_state(unsigned obj_ix) {
 		}
 		auto &other_blinds(interior->room_geom->get_room_object_by_index(other_blinds_ix));
 		if (other_blinds.type != TYPE_BLINDS) {assert(0); return 0;} // was taken, etc.
-		float const fixed_end(obj.d[!obj.dim][!move_dir]), width(obj.get_sz_dim(!obj.dim));
+		float const fixed_end(obj.d[!obj.dim][!move_dir]), width(obj.get_width());
 		float const window_center(0.5f*(fixed_end + other_blinds.d[!obj.dim][move_dir])); // center of the span of the pair of left/right blinds
 		bool const mostly_open(width < 0.5*fabs(fixed_end - window_center));
 		float &move_edge(obj.d[!obj.dim][move_dir]);
@@ -709,7 +709,7 @@ void building_t::update_player_interact_objects(point const &player_pos, int fir
 						front_dir[obj.dim] = (obj.dir ? 1.0 : -1.0);
 						
 						if (dot_product(cnorm, front_dir) > 0.9) { // hit the front side of the screen
-							if (dist_less_than(center, obj.get_cube_center(), (radius + 0.5*obj.get_sz_dim(obj.dim) + 0.2*obj.dz()))) { // near the screen center
+							if (dist_less_than(center, obj.get_cube_center(), (radius + 0.5*obj.get_length() + 0.2*obj.dz()))) { // near the screen center
 								// capture value before breaking; if the player then takes this object, damage will be higher, but we can attribute this to making a mess of broken glass
 								register_broken_object(obj);
 								obj.flags |= RO_FLAG_BROKEN;

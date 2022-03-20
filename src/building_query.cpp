@@ -337,11 +337,11 @@ unsigned check_chair_collision(room_object_t const &c, point &pos, point const &
 }
 // Note: these next two are intended to be called when maybe_inside_room_object() returns true
 bool check_stall_collision(room_object_t const &c, point &pos, point const &p_last, float radius, vector3d *cnorm) {
-	float const width(c.get_sz_dim(!c.dim));
+	float const width(c.get_width());
 	cube_t sides[3] = {c, c, c};
 	sides[0].d[!c.dim][1] -= 0.95*width;
 	sides[1].d[!c.dim][0] += 0.95*width;
-	if (!c.is_open()) {sides[2].d[c.dim][c.dir] += (c.dir ? -1.0 : 1.0)*0.975*c.get_sz_dim(c.dim);} // check collision with closed door
+	if (!c.is_open()) {sides[2].d[c.dim][c.dir] += (c.dir ? -1.0 : 1.0)*0.975*c.get_length();} // check collision with closed door
 	bool had_coll(0);
 	for (unsigned d = 0; d < (c.is_open() ? 2U : 3U); ++d) {had_coll |= sphere_cube_int_update_pos(pos, radius, sides[d], p_last, 1, 0, cnorm);}
 	return had_coll;
@@ -362,7 +362,7 @@ bool maybe_inside_room_object(room_object_t const &obj, point const &pos, float 
 cube_t get_closet_bcube_including_door(room_object_t const &c) {
 	if (c.type != TYPE_CLOSET || !c.is_open() || !c.is_small_closet()) return c;
 	cube_t bcube(c); // only applies to small closets with open doors
-	float const width(c.get_sz_dim(!c.dim)), wall_width(0.5*(width - 0.5*c.dz())); // see get_closet_cubes()
+	float const width(c.get_width()), wall_width(0.5*(width - 0.5*c.dz())); // see get_closet_cubes()
 	bcube.d[c.dim][c.dir] += (c.dir ? 1.0f : -1.0f)*(width - 2.0f*wall_width); // extend outward
 	return bcube;
 }
@@ -435,7 +435,7 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, vec
 			// Note: slight adjust so that player is above ramp when on the floor
 			if (c->type == TYPE_RAMP && (obj_z - 0.99f*radius) < c->z2()) { // ramp should be SHAPE_ANGLED
 				if (!sphere_cube_intersect_xy(pos, xy_radius, c_extended)) continue; // optimization
-				float const length(c->get_sz_dim(c->dim)), height(c->dz()), t(CLIP_TO_01((pos[c->dim] - c->d[c->dim][0])/length)), T(c->dir ? t : (1.0-t));
+				float const length(c->get_length()), height(c->dz()), t(CLIP_TO_01((pos[c->dim] - c->d[c->dim][0])/length)), T(c->dir ? t : (1.0-t));
 				float const ztop(c->z1() + height*T), zbot(ztop - FLOOR_THICK_VAL_OFFICE*height);
 				float const player_height(camera_zh + NEAR_CLIP); // include near clip for collisions with the bottom of ramps
 				float const player_bot_z(obj_z - radius), player_bot_z_step(player_bot_z + C_STEP_HEIGHT*radius), player_top_z(obj_z + player_height);

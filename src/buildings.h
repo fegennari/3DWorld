@@ -448,6 +448,7 @@ struct oriented_cube_t : public cube_t {
 	oriented_cube_t(cube_t const &c, bool dim_, bool dir_) : cube_t(c), dim(dim_), dir(dir_) {}
 	float get_length() const {return get_sz_dim( dim);}
 	float get_width () const {return get_sz_dim(!dim);}
+	float get_height() const {return dz();}
 };
 
 struct room_object_t : public oriented_cube_t {
@@ -495,6 +496,7 @@ struct room_object_t : public oriented_cube_t {
 	unsigned get_bottle_type() const {return ((obj_id&63) % NUM_BOTTLE_TYPES);} // first 6 bits are bottle type
 	unsigned get_orient () const {return (2*dim + dir);}
 	unsigned get_num_shelves() const {assert(type == TYPE_SHELVES); return (2 + (room_id % 3));} // 2-4 shelves
+	float get_depth () const {return get_length();} // some objects use depth rather than length
 	float get_radius() const;
 	cylinder_3dw get_cylinder() const;
 	void toggle_lit_state() {flags ^= RO_FLAG_LIT;}

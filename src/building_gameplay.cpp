@@ -206,7 +206,7 @@ float get_obj_value(room_object_t const &obj) {
 		}
 	}
 	else if (obj.type == TYPE_MONEY) {
-		unsigned const num_bills(round_fp(obj.dz()/(0.01*obj.get_sz_dim(obj.dim))));
+		unsigned const num_bills(round_fp(obj.dz()/(0.01*obj.get_length())));
 		value *= num_bills;
 	}
 	if (obj.flags & RO_FLAG_USED) {value = 0.01*floor(50.0*value);} // used objects have half value, rounded down to the nearest cent
@@ -816,7 +816,7 @@ bool object_has_something_on_it(room_object_t const &obj, vect_room_object_t con
 cube_t get_true_obj_bcube(room_object_t const &obj) {
 	if (obj.type == TYPE_PEN || obj.type == TYPE_PENCIL) {
 		cube_t obj_bcube(obj);
-		obj_bcube.expand_in_dim(!obj.dim, obj.get_sz_dim(!obj.dim));
+		obj_bcube.expand_in_dim(!obj.dim, obj.get_width());
 		return obj_bcube;
 	}
 	if (obj.type == TYPE_BED) { // do more accurate check with various parts of the bed
@@ -909,7 +909,7 @@ bool building_room_geom_t::open_nearest_drawer(building_t &building, point const
 		cube_t bcube(*i);
 		float &front_face(bcube.d[i->dim][i->dir]);
 		if ((front_face < at_pos[i->dim]) ^ i->dir) continue; // can't open from behind
-		if (!is_counter_type) {front_face += 0.75*(i->dir ? 1.0 : -1.0)*i->get_sz_dim(i->dim);} // expand outward to include open drawers
+		if (!is_counter_type) {front_face += 0.75*(i->dir ? 1.0 : -1.0)*i->get_length();} // expand outward to include open drawers
 		point p1c(at_pos), p2c(p2);
 		if (!do_line_clip(p1c, p2c, bcube.d)) continue; // test ray intersection vs. bcube
 		float const dsq(p2p_dist_sq(at_pos, p1c)); // use closest intersection point
@@ -981,7 +981,7 @@ bool building_room_geom_t::open_nearest_drawer(building_t &building, point const
 				if (i->dim == obj.dim) continue; // not opposing dim (also skips obj itself)
 				float const dir_sign(i->dir ? 1.0 : -1.0);
 				cube_t i_exp(*i);
-				i_exp.d[i->dim][i->dir] += dir_sign*i->get_sz_dim(i->dim); // expand other counter/cabinet to account for open doors
+				i_exp.d[i->dim][i->dir] += dir_sign*i->get_length(); // expand other counter/cabinet to account for open doors
 				if (!i_exp.intersects(c_test)) continue;
 				get_cabinet_or_counter_doors(*i, drawers);
 
