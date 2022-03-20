@@ -634,6 +634,7 @@ void building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 		if (p.type == PIPE_CONN || p.type == PIPE_MAIN) {flags |= RO_FLAG_HANGING;} // hanging connector/main pipe with flat ends
 		room_object_t const pipe(pbc, TYPE_PIPE, room_id, pdim, pdir, flags, tot_light_amt, SHAPE_CYLIN, DK_GRAY);
 		objs.push_back(pipe);
+		if (p.type == PIPE_EXIT && p.dim == 2) {objs.back().flags |= RO_FLAG_LIT;} // vertical exit pipes are shadow casting; applies to pipe but not fittings
 
 		// add pipe fittings around ends and joins; only fittings have flat and round ends because raw pipe ends should never be exposed
 		if (p.type == PIPE_DRAIN) continue; // not for vertical drain pipes, since they're so short and mostly hidden above the connector pipes
