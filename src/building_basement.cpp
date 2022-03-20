@@ -294,6 +294,9 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 						pspace.obj_id = (uint16_t)(objs.size() + rgen.rand()); // will be used for the car model and color
 						pspace.flags |= RO_FLAG_USED;
 					}
+					if (no_sep_wall) {
+						// TODO: add those small yellow curbs to block cars
+					}
 					objs.push_back(pspace);
 					last_was_space = 1;
 				}

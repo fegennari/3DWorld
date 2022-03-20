@@ -679,6 +679,7 @@ void building_room_geom_t::create_detail_vbos(building_t const &building) {
 		case TYPE_PARK_SPACE: add_parking_space(*i, tex_origin, wall_tex.tscale_x); break;
 		case TYPE_RAMP:       add_pg_ramp(*i, tex_origin, wall_tex.tscale_x); break;
 		case TYPE_PIPE:       add_pipe(*i); break;
+		case TYPE_CURB:       add_curb(*i); break;
 		default: break;
 		} // end switch
 	} // for i

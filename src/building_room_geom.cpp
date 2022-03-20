@@ -1254,6 +1254,13 @@ void building_room_geom_t::add_pipe(room_object_t const &c) { // should be SHAPE
 	}
 }
 
+void building_room_geom_t::add_curb(room_object_t const &c) {
+	rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_texture_by_name("roads/asphalt.jpg"), 1.0/c.get_width()), 0, 0, 2)); // unshadowed, detail object
+	colorRGBA const color(apply_light_color(c));
+	// TODO: pinch the top into a trapezoid
+	mat.add_cube_to_verts(c, color, c.get_llc(), EF_Z1); // skip bottom surface
+}
+
 // Note: there is a lot duplicated with building_room_geom_t::add_elevator(), but we need a separate function for adding interior elevator buttons
 cube_t get_elevator_car_panel(room_object_t const &c, float fc_thick_scale) {
 	float const dz(c.dz()), thickness(fc_thick_scale*dz), signed_thickness((c.dir ? 1.0 : -1.0)*thickness);
