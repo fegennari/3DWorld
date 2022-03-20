@@ -939,7 +939,8 @@ bool transmission_line_t::cube_intersect_xy(cube_t const &c) const {
 
 // handicap spaces
 
-hcap_space_t::hcap_space_t(point const &pos, float radius, bool dim_, bool dir_) : oriented_city_obj_t(pos, radius, dim_, dir_) {
+hcap_space_t::hcap_space_t(point const &pos_, float radius_, bool dim_, bool dir_) : oriented_city_obj_t(pos_, radius_, dim_, dir_) {
+	assert(radius > 0.0);
 	bcube.set_from_point(pos);
 	bcube.expand_by_xy(radius);
 	bcube.z2() += 0.01*radius; // make nonzero height
@@ -950,8 +951,23 @@ hcap_space_t::hcap_space_t(point const &pos, float radius, bool dim_, bool dir_)
 }
 void hcap_space_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_draw &untex_qbd, float dist_scale, bool shadow_only) const {
 	if (!dstate.check_cube_visible(bcube, dist_scale)) return;
-	dstate.draw_cube(qbd, bcube, WHITE, 1, 0.0, 3); // top only (skip X, Y, and bottom)
+	float const x1(bcube.x1()), y1(bcube.y1()), x2(bcube.x2()), y2(bcube.y2()), z(bcube.z2());
+	point const pts[4] = {point(x1, y1, z), point(x2, y1, z), point(x2, y2, z), point(x1, y2, z)};
+	qbd.add_quad_pts(pts, WHITE, plus_z, tex_range_t(0.0, float(dir^dim), 1.0, float(dir^dim^1), 0, !dim));
 }
+struct hcap_with_dist_t : public hcap_space_t {
+	float dmin_sq;
+
+	hcap_with_dist_t(hcap_space_t const &hs, cube_t const &plot, vect_cube_t &bcubes, unsigned bcubes_end) : hcap_space_t(hs), dmin_sq(plot.dx() + plot.dy()) {
+		assert(bcubes_end <= bcubes.size());
+		point const center(hs.bcube.get_cube_center());
+		
+		for (auto c = bcubes.begin(); c != bcubes.begin()+bcubes_end; ++c) {
+			min_eq(dmin_sq, p2p_dist_xy_sq(center, c->get_cube_center())); // use distance to building center; c->closest_pt() has too many ties
+		}
+	}
+	bool operator<(hcap_with_dist_t const &v) const {return (dmin_sq < v.dmin_sq);}
+};
 
 
 bool city_obj_placer_t::gen_parking_lots_for_plot(cube_t plot, vector<car_t> &cars, unsigned city_id, unsigned plot_ix,
@@ -963,12 +979,12 @@ bool city_obj_placer_t::gen_parking_lots_for_plot(cube_t plot, vector<car_t> &ca
 	float const pad_dist   (max(1.0f*nom_car_size.x, get_min_obj_spacing())); // one car length or min building spacing
 	plot.expand_by_xy(-pad_dist);
 	if (bcubes.empty()) return 0; // shouldn't happen, unless buildings are disabled; skip to avoid perf problems with an entire plot of parking lot
-	unsigned const first_corner(rgen.rand()&3); // 0-3
+	unsigned const buildings_end(bcubes.size()), first_corner(rgen.rand()&3); // 0-3
 	bool const car_dim(rgen.rand() & 1); // 0=cars face in X; 1=cars face in Y
 	bool const car_dir(rgen.rand() & 1);
 	float const xsz(car_dim ? space_width : space_len), ysz(car_dim ? space_len : space_width);
 	bool has_parking(0);
-	//cout << "max_row_sz: " << floor(plot.get_size()[!car_dim]/space_width) << ", max_num_rows: " << floor(plot.get_size()[car_dim]/space_len) << endl;
+	vector<hcap_with_dist_t> hcap_cands;
 	car_t car;
 	car.park();
 	car.cur_city = city_id;
@@ -1038,7 +1054,7 @@ bool city_obj_placer_t::gen_parking_lots_for_plot(cube_t plot, vector<car_t> &ca
 					++filled_spaces;
 					has_parking = 1;
 				}
-				// TODO: create hcaps from pos
+				hcap_cands.emplace_back(hcap_space_t(point(pos.x, pos.y, park.z2()), 0.25*space_width, car_dim, car_dir), plot, bcubes, buildings_end);
 				pos[!car_dim] += dw;
 			} // for col
 			pos[car_dim] += dr;
@@ -1065,6 +1081,13 @@ bool city_obj_placer_t::gen_parking_lots_for_plot(cube_t plot, vector<car_t> &ca
 			}
 		} // for col
 	} // for c
+	// assign handicap spots
+	unsigned const num_hcap_spots((hcap_cands.size() + 10)/20); // 5% of total spots, rounded to the center
+
+	if (num_hcap_spots > 0) {
+		sort(hcap_cands.begin(), hcap_cands.end());
+		for (unsigned n = 0; n < num_hcap_spots; ++n) {hcap_groups.add_obj(hcap_space_t(hcap_cands[n]), hcaps);}
+	}
 	return has_parking;
 }
 
@@ -1789,7 +1812,7 @@ void city_obj_placer_t::draw_detail_objects(draw_state_t &dstate, bool shadow_on
 	draw_objects(fhydrants, fhydrant_groups, dstate, 0.07, shadow_only, 1); // dist_scale=0.07, has_immediate_draw=1
 	draw_objects(sstations, sstation_groups, dstate, 0.15, shadow_only, 1); // dist_scale=0.15, has_immediate_draw=1
 	draw_objects(ppoles,    ppole_groups,    dstate, 0.20, shadow_only, 0); // dist_scale=0.20
-	if (!shadow_only) {draw_objects(hcaps, hcap_groups, dstate, 0.20, shadow_only, 0);} // dist_scale=0.20, no shadows
+	if (!shadow_only) {draw_objects(hcaps, hcap_groups, dstate, 0.12, shadow_only, 0);} // dist_scale=0.12, no shadows
 	dstate.s.add_uniform_float("min_alpha", DEF_CITY_MIN_ALPHA); // reset back to default after drawing fire hydrant and substation models
 			
 	for (dstate.pass_ix = 0; dstate.pass_ix < 2; ++dstate.pass_ix) { // {cube/city, cylindre/residential}

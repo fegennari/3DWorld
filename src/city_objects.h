@@ -126,7 +126,7 @@ public:
 };
 
 struct hcap_space_t : public oriented_city_obj_t { // handicap space
-	hcap_space_t(point const &pos, float radius, bool dim_, bool dir_);
+	hcap_space_t(point const &pos_, float radius_, bool dim_, bool dir_);
 	static void pre_draw(draw_state_t &dstate, bool shadow_only);
 	void draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_draw &untex_qbd, float dist_scale, bool shadow_only) const;
 };
