@@ -246,18 +246,19 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 		assert(space_length > 0.0);
 
 		for (unsigned d = 0; d < 2; ++d) { // for each side of the row
-			bool const at_ext_wall[2] = {(n == 0 && d == 0), (n+1 == num_strips && d == 1)};
+			bool const at_ext_wall[2] = {(n == 0 && d == 0), (n+1 == num_strips && d == 1)}, at_either_ext_wall(at_ext_wall[0] || at_ext_wall[1]);
 			if ((short_sides[0] && at_ext_wall[0]) || (short_sides[1] && at_ext_wall[1])) continue; // skip this row
 			float row_left_edge(row.d[dim][0]); // spaces start flush with the row, or flush with the room if this is the exterior wall
 			unsigned num_spaces_per_row(num_space_wid);
 
-			if (at_ext_wall[0] || at_ext_wall[1]) { // at either room exterior wall - can extend spaces up to the wall
+			if (at_either_ext_wall) { // at either room exterior wall - can extend spaces up to the wall
 				float row_right_edge(row.d[dim][1]); // opposite end of the row
 				while ((row_left_edge  - space_width) > room.d[dim][0]) {row_left_edge  -= space_width; ++num_spaces_per_row;} // add rows to the left
 				while ((row_right_edge + space_width) < room.d[dim][1]) {row_right_edge += space_width; ++num_spaces_per_row;} // add rows to the right
 			}
+			float const d_sign(d ? 1.0 : -1.0);
 			cube_t space(row);
-			space.d[!dim][!d] += (d ? 1.0 : -1.0)*(row_width - space_length); // shrink
+			space.d[!dim][!d] += d_sign*(row_width - space_length); // shrink
 			space.d[ dim][0]   = row_left_edge;
 			bool last_was_space(0);
 			
@@ -294,8 +295,14 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 						pspace.obj_id = (uint16_t)(objs.size() + rgen.rand()); // will be used for the car model and color
 						pspace.flags |= RO_FLAG_USED;
 					}
-					if (no_sep_wall) {
-						// TODO: add those small yellow curbs to block cars
+					if (no_sep_wall && !at_either_ext_wall) { // add small yellow curbs to block cars
+						float const curb_height(0.04*window_vspacing), curb_width(1.5*curb_height);
+						cube_t curb(space);
+						curb.z2() += curb_height; // set height
+						curb.d[!dim][!d] += d_sign*(space.get_sz_dim(!dim) - curb_width);   // shrink to the correct width
+						curb.translate_dim(!dim, -d_sign*(0.5*pillar_hwidth + curb_width)); // move inward to avoid pillars and walls
+						curb.expand_in_dim(dim, -0.2*space_width);
+						objs.emplace_back(curb, TYPE_CURB, room_id, dim, 0, 0, 1.0, SHAPE_CUBE, colorRGBA(1.0, 0.8, 0.3)); // dir=0
 					}
 					objs.push_back(pspace);
 					last_was_space = 1;

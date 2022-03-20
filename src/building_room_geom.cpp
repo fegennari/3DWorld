@@ -1255,10 +1255,33 @@ void building_room_geom_t::add_pipe(room_object_t const &c) { // should be SHAPE
 }
 
 void building_room_geom_t::add_curb(room_object_t const &c) {
-	rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_texture_by_name("roads/asphalt.jpg"), 1.0/c.get_width()), 0, 0, 2)); // unshadowed, detail object
+	float const tscale(1.0/c.get_length());
+	rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_concrete_tid(), tscale, 1), 1, 0, 2)); // shadowed, detail object
 	colorRGBA const color(apply_light_color(c));
-	// TODO: pinch the top into a trapezoid
-	mat.add_cube_to_verts(c, color, c.get_llc(), EF_Z1); // skip bottom surface
+	cube_t t(c);
+	t.expand_by_xy(-0.25*c.get_width()); // pinch the top face into a trapezoid
+	mat.add_cube_to_verts(t, color, c.get_llc(), ~EF_Z2); // top surface only
+	point const bot_pts[4] = {point(c.x1(), c.y1(), c.z1()), point(c.x2(), c.y1(), c.z1()), point(c.x2(), c.y2(), c.z1()), point(c.x1(), c.y2(), c.z1())};
+	point const top_pts[4] = {point(t.x1(), t.y1(), t.z2()), point(t.x2(), t.y1(), t.z2()), point(t.x2(), t.y2(), t.z2()), point(t.x1(), t.y2(), t.z2())};
+	rgeom_mat_t::vertex_t v;
+	v.set_c4(color);
+
+	for (unsigned s = 0; s < 4; ++s) { // sides: {-y, +x, +y, -x}
+		tquad_t tq(4);
+		tq.pts[0] = bot_pts[s];
+		tq.pts[1] = bot_pts[(s+1)&3];
+		tq.pts[2] = top_pts[(s+1)&3];
+		tq.pts[3] = top_pts[s];
+		auto &verts(mat.quad_verts);
+		v.set_norm(tq.get_norm());
+
+		for (unsigned i = 0; i < 4; ++i) {
+			v.v    = tq.pts[i];
+			v.t[0] = tscale*(v.v[s&1] - c.d[s&1][0]); // scales with horizontal position
+			v.t[1] = tscale*(v.v.z - c.z1()); // scales with vertical position
+			verts.push_back(v);
+		}
+	} // for s
 }
 
 // Note: there is a lot duplicated with building_room_geom_t::add_elevator(), but we need a separate function for adding interior elevator buttons
