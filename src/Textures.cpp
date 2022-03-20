@@ -524,9 +524,8 @@ void texture_t::do_gl_init(bool free_after_upload) {
 		tmem += tsize;
 		cout << "tex vmem = " << tmem << endl;
 	}
-	//timer_t timer("Load and Upload Texture " + name);
 	//cout << "bind texture " << name << " size " << width << "x" << height << endl;
-	//RESET_TIME;
+	//timer_t timer("Load and Upload Texture " + name);
 	setup_texture(tid, (use_mipmaps != 0 && !defer_load()), wrap, wrap, mirror, mirror, 0, anisotropy);
 	if (defer_load()) {deferred_load_and_bind();} // Note: mipmaps are stored in the DDS file and aren't controlled by the use_mipmaps option
 	else {
@@ -536,9 +535,7 @@ void texture_t::do_gl_init(bool free_after_upload) {
 		if (use_mipmaps == 1 || use_mipmaps == 2) {gen_mipmaps();}
 		if (use_mipmaps == 3 || use_mipmaps == 4) {create_custom_mipmaps();}
 	}
-	//assert(glIsTexture(tid)); // for some reason this check is slow
 	if (free_after_upload) {free_client_mem();}
-	//PRINT_TIME("Texture Init");
 }
 
 void texture_t::upload_cube_map_face(unsigned ix) {
