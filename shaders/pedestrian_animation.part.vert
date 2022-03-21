@@ -32,7 +32,8 @@ void rotate_about(inout vec3 vertex, inout vec3 normal, in float yval, in vec3 a
 	vertex.y += yval;
 }
 
-void apply_vertex_animation(inout vec4 vertex, inout vec3 normal) {
+// Note: this is no longer just for pedestrians, it now has cases for rats and spiders
+void apply_vertex_animation(inout vec4 vertex, inout vec3 normal, in vec2 tc) {
 	if (animation_id == 0 || animation_time == 0.0) return; // animation disabled
 	float anim_scale = 0.01*animation_scale;
 	float anim_val   = 150.0*animation_time;
@@ -99,4 +100,15 @@ void apply_vertex_animation(inout vec4 vertex, inout vec3 normal) {
 			vertex.z += move_amt*sin(cycle_pos); // forward and backward
 		}
 	}
+	else if (animation_id == 8) { // spiders
+		// tc.x is the position of the leg from front to back: {0.0, 0.25, 0.5, 0.75}
+		// tc.y is the joint index: negative for left, positive for right; 0.0 for body joint, 0.5 for knee, 1.0 for foot
+		// first and thrid legs move together; second and fourth legs move together
+		float leg_dist = abs(tc.y);
+		float lr_off   = ((tc.y < 0.0) ? 0.0 : 1.0);
+		float delta    = animation_scale*leg_dist*cos(0.1*animation_time + 2.0*PI*(2.0*tc.x + 0.5*lr_off));
+		vertex.x      += 0.25*delta; // move forward and backward
+		vertex.z      += 0.50*max(delta, 0.0); // only move up
+	}
+	// else error/skip
 }
