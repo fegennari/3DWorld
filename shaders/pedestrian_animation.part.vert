@@ -102,13 +102,15 @@ void apply_vertex_animation(inout vec4 vertex, inout vec3 normal, in vec2 tc) {
 	}
 	else if (animation_id == 8) { // spiders
 		// tc.x is the position of the leg from front to back: {0.0, 0.25, 0.5, 0.75}
-		// tc.y is the joint index: negative for left, positive for right; 0.0 for body joint, 0.5 for knee, 1.0 for foot
+		// tc.y is the joint index: negative for left, positive for right; 0.0 for body joint, 0.3 for knee, 0.7 for ankle, 1.0 for foot
 		// first and thrid legs move together; second and fourth legs move together
-		float leg_dist = abs(tc.y);
-		float lr_off   = ((tc.y < 0.0) ? 0.0 : 1.0);
-		float delta    = animation_scale*leg_dist*cos(0.1*animation_time + 2.0*PI*(2.0*tc.x + 0.5*lr_off));
-		vertex.x      += 0.25*delta; // move forward and backward
-		vertex.z      += 0.50*max(delta, 0.0); // only move up
+		float leg_dist  = abs(tc.y);
+		float lr_off    = ((tc.y < 0.0) ? 0.0 : 1.0);
+		float cycle_pos = 0.25*animation_time + 2.0*PI*(2.0*tc.x + 0.5*lr_off);
+		float up_amt    = max(sin(-cycle_pos), 0.0);
+		vertex.x += 0.25*animation_scale*leg_dist*cos(cycle_pos); // move forward and backward
+		vertex.z += ((leg_dist > 0.1) ? 1.2*animation_scale*(leg_dist - 0.5)*up_amt : 0.0); // knee moves down, angle and foot move up, body joint stays in place
+		vertex.y += 0.50*animation_scale*tc.y*up_amt;
 	}
 	// else error/skip
 }
