@@ -106,6 +106,11 @@ bool object_model_loader_t::can_skip_model(unsigned id) const {
 	return 0;
 }
 
+/*static*/ void city_model_loader_t::rotate_model_from_plus_x_to_dir(vector3d const &dir) {
+	if (fabs(dir.y) > 0.001) {rotate_to_plus_x(dir);} // orient facing front
+	else if (dir.x < 0.0) {fgRotate(180.0, 0.0, 0.0, 1.0);}
+}
+
 void city_model_loader_t::draw_model(shader_t &s, vector3d const &pos, cube_t const &obj_bcube, vector3d const &dir, colorRGBA const &color, vector3d const &xlate,
 	unsigned model_id, bool is_shadow_pass, bool low_detail, bool enable_animations, unsigned skip_mat_mask, bool untextured, bool force_high_detail)
 {
@@ -137,8 +142,7 @@ void city_model_loader_t::draw_model(shader_t &s, vector3d const &pos, cube_t co
 	}
 	fgPushMatrix();
 	translate_to(pos + vector3d(0.0, 0.0, z_offset*sz_scale)); // z_offset is in model space, scale to world space
-	if (fabs(dir.y) > 0.001) {rotate_to_plus_x(dir);} // orient facing front
-	else if (dir.x < 0.0) {fgRotate(180.0, 0.0, 0.0, 1.0);}
+	rotate_model_from_plus_x_to_dir(dir);
 	if (dir.z != 0.0) {fgRotate(TO_DEG*asinf(-dir.z), 0.0, 1.0, 0.0);} // handle cars on a slope
 	if (model_file.xy_rot != 0.0) {fgRotate(model_file.xy_rot, 0.0, 0.0, 1.0);} // apply model rotation about z/up axis (in degrees)
 	if (model_file.swap_xz) {fgRotate(90.0, 0.0, 1.0, 0.0);} // swap X and Z dirs; models have up=X, but we want up=Z

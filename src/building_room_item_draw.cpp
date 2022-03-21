@@ -319,7 +319,7 @@ void rgeom_storage_t::swap(rgeom_storage_t &s) {
 
 void rgeom_mat_t::clear() {
 	vao_mgr.clear_vbos();
-	rgeom_storage_t::clear();
+	clear_vectors();
 	num_verts = num_ixs = 0;
 }
 
@@ -403,7 +403,7 @@ void brg_batch_draw_t::draw_and_clear(shader_t &s) {
 	for (auto &i : to_draw) {
 		if (i.mats.empty()) continue; // empty slot
 		i.tex.set_gl(state);
-		for (auto const &m : i.mats) {m->draw_inner(state, 0);} // shadow_only=0
+		for (auto const &m : i.mats) {m->draw_inner(0);} // shadow_only=0
 		i.tex.unset_gl(state);
 		i.mats.clear(); // clear mats but not to_draw
 	}
@@ -418,7 +418,7 @@ void rgeom_mat_t::draw(tid_nm_pair_dstate_t &state, brg_batch_draw_t *bbd, int s
 	if (reflection_pass && tex.tid == REFLECTION_TEXTURE_ID) return; // don't draw reflections of mirrors as this doesn't work correctly
 	assert(num_verts > 0); // too strong? should be okay to remove this check
 	if (num_verts == 0) return;
-	vao_mgr.create_and_upload(vector<vertex_t>(), vector<unsigned>(), shadow_only, 0, 1); // pass empty vectors because data is already uploaded; dynamic_level=0, setup_pointers=1
+	vao_setup(shadow_only);
 
 	// Note: the shadow pass doesn't normally bind textures and set uniforms, so we don't need to combine those calls into batches
 	if (bbd != nullptr && !shadow_only) { // add to batch draw (optimization)
@@ -427,15 +427,17 @@ void rgeom_mat_t::draw(tid_nm_pair_dstate_t &state, brg_batch_draw_t *bbd, int s
 	}
 	else { // draw this material now
 		if (shadow_only != 1) {tex.set_gl  (state);} // ignores texture scale for now; enable alpha texture for shadow pass
-		draw_inner(state, shadow_only);
+		draw_inner(shadow_only);
 		if (shadow_only != 1) {tex.unset_gl(state);}
 	}
 }
-void rgeom_mat_t::draw_inner(tid_nm_pair_dstate_t &state, int shadow_only) const {
+void rgeom_mat_t::draw_inner(int shadow_only) const {
 	vao_mgr.pre_render(shadow_only != 0);
 	glDrawRangeElements(GL_TRIANGLES, 0, num_verts, num_ixs, GL_UNSIGNED_INT, nullptr);
 }
-
+void rgeom_mat_t::vao_setup(bool shadow_only) {
+	vao_mgr.create_and_upload(vector<vertex_t>(), vector<unsigned>(), shadow_only, 0, 1); // pass empty vectors because data is already uploaded; dynamic_level=0, setup_pointers=1
+}
 void rgeom_mat_t::upload_draw_and_clear(tid_nm_pair_dstate_t &state) { // Note: called by draw_interactive_player_obj() and water_draw_t
 	if (empty()) return; // nothing to do; can this happen?
 	create_vbo_inner();

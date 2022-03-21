@@ -558,6 +558,7 @@ public:
 	//~rgeom_mat_t() {assert(vbo_mgr.vbo == 0); assert(vbo_mgr.ivbo == 0);} // VBOs should be freed before destruction
 	void enable_shadows() {en_shadows = 1;}
 	void clear();
+	void clear_vectors() {rgeom_storage_t::clear();}
 	void add_cube_to_verts(cube_t const &c, colorRGBA const &color, point const &tex_origin=all_zeros,
 		unsigned skip_faces=0, bool swap_tex_st=0, bool mirror_x=0, bool mirror_y=0, bool inverted=0);
 	void add_cube_to_verts_untextured(cube_t const &c, colorRGBA const &color, unsigned skip_faces=0);
@@ -576,8 +577,9 @@ public:
 	void add_triangle_to_verts(point const v[3], colorRGBA const &color, bool two_sided, float tscale=1.0);
 	void create_vbo(building_t const &building);
 	void create_vbo_inner();
+	void vao_setup(bool shadow_only);
 	void draw(tid_nm_pair_dstate_t &state, brg_batch_draw_t *bbd, int shadow_only, bool reflection_pass);
-	void draw_inner(tid_nm_pair_dstate_t &state, int shadow_only) const;
+	void draw_inner(int shadow_only) const;
 	void upload_draw_and_clear(tid_nm_pair_dstate_t &state);
 };
 
