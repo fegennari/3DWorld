@@ -2320,12 +2320,7 @@ public:
 			multi_draw_shadow(xlate, bcs);
 			return;
 		}
-		// ensure shadow map TU_IDs are valid in case we try to use them without binding to a tile;
-		// maybe this fixes the occasional shader undefined behavior warning we get with the debug callback?
-		for (unsigned l = 0; l < NUM_LIGHT_SRC; ++l) {
-			if (!light_valid_and_enabled(l)) continue;
-			bind_texture_tu(get_empty_smap_tid(), GLOBAL_SMAP_START_TU_ID+l); // bind empty shadow map
-		}
+		bind_default_sun_moon_smap_textures(); // bind default sun/moon smap textures
 		building_t const *const prev_player_building(player_building);
 
 		if (!reflection_pass) {

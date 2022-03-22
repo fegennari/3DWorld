@@ -342,6 +342,15 @@ unsigned get_empty_smap_tid() {
 	return empty_smap_tid;
 }
 
+void bind_default_sun_moon_smap_textures() {
+	// ensure shadow map TU_IDs are valid in case we try to use them without binding to a tile;
+	// maybe this fixes the occasional shader undefined behavior warning we get with the debug callback?
+	for (unsigned l = 0; l < NUM_LIGHT_SRC; ++l) {
+		if (!light_valid_and_enabled(l)) continue;
+		bind_texture_tu(get_empty_smap_tid(), GLOBAL_SMAP_START_TU_ID+l); // bind empty shadow map
+	}
+}
+
 bool smap_data_t::bind_smap_texture(bool light_valid) const {
 
 	set_active_texture(tu_id);

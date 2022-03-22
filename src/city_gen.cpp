@@ -73,6 +73,7 @@ void city_shader_setup(shader_t &s, cube_t const &lights_bcube, bool use_dlights
 		0, 0, ((use_smap == 1) ? 2 : 0), use_bmap, 0, use_dlights, force_tsl, 0.0, 0.0, 0, 0, is_outside); // use_spec_map=0
 	set_city_lighting_shader_opts(s, lights_bcube, use_dlights, (use_smap != 0), pcf_scale);
 	if (use_texgen) {s.add_uniform_float("tc_texgen_mix", 0.0);} // always uses texgen in this mode
+	//if (use_smap) {bind_default_sun_moon_smap_textures();} // bind default sun/moon smap textures
 }
 
 void enable_animations_for_shader(shader_t &s) {s.add_property("animation_shader", "pedestrian_animation.part+");}

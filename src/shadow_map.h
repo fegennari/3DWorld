@@ -121,4 +121,5 @@ template<class SD> struct vect_smap_t : public vector<SD> { // one per light sou
 };
 
 unsigned get_empty_smap_tid();
+void bind_default_sun_moon_smap_textures();
 
