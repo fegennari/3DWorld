@@ -983,7 +983,6 @@ void texture_t::create_custom_mipmaps() {
 
 
 void texture_t::load_from_gl() { // also set tid?
-
 	alloc();
 	glGetTexImage(GL_TEXTURE_2D, 0, calc_format(), get_data_format(), data);
 }

@@ -37,20 +37,17 @@ unsigned const MAX_MULTITEX = 32; // max is GL_TEXTURE31
 
 
 void set_active_texture(unsigned tu_id) {
-
 	assert(tu_id < MAX_MULTITEX); // Note: Assumes textures are defined sequentially
 	glActiveTexture((GL_TEXTURE0 + tu_id));
 }
 
 void select_multitex(int id, unsigned tu_id, bool reset) {
-
 	set_active_texture(tu_id);
 	select_texture(id);
 	if (reset) {set_active_texture(0);}
 }
 
 void bind_texture_tu(unsigned tid, unsigned tu_id, bool is_cube_map) {
-
 	assert(tid);
 	set_active_texture(tu_id);
 	if (is_cube_map) {bind_cube_map_texture(tid);} else {bind_2d_texture(tid);}
@@ -62,7 +59,6 @@ void bind_texture_tu(unsigned tid, unsigned tu_id, bool is_cube_map) {
 
 
 void bind_3d_texture(unsigned tid) {
-
 	glBindTexture(GL_TEXTURE_3D, tid);
 	assert(glIsTexture(tid));
 }
