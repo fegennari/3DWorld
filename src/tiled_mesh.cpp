@@ -1856,7 +1856,6 @@ void tile_t::draw(shader_t &s, indexed_vbo_manager_t const &vbo_mgr, unsigned co
 	fgPushMatrix();
 	vector3d const xlate(get_mesh_xlate());
 	translate_to(xlate); // Note: not easy to replace with a uniform, due to texgen and fog dist calculations in the shader
-	bind_textures();
 	bool const draw_near_water(!is_distant && !reflection_pass && is_water_enabled() && has_water());
 
 	if (!reflection_pass && cloud_shadows_enabled()) {
@@ -1869,6 +1868,7 @@ void tile_t::draw(shader_t &s, indexed_vbo_manager_t const &vbo_mgr, unsigned co
 	}
 	if (reflection_pass == 2) {disable_shadow_maps(s);} // disabled for mirror reflections because shadows don't work
 	else {shader_shadow_map_setup(s);}
+	bind_textures(); // Note:moved after the disable_shadow_maps() call to ensure TU 0 is not overwritten
 	unsigned const lod_level(get_lod_level(reflection_pass));
 	draw_mesh_vbo(vbo_mgr, ivbo_ixs, lod_level);
 	
@@ -2512,6 +2512,7 @@ void tile_draw_t::pre_draw() { // view-dependent updates/GPU uploads
 	//timer_t timer("TT Pre-Draw");
 	vector<tile_t *> to_update, to_update_shadows, to_gen_trees;
 	assert((vbo == 0) == (ivbo == 0)); // either neither or both are valid
+	get_empty_smap_tid(); // we're going to need this later, so make sure to allocate the texture first so that it doesn't invalidate TU 0 mid-tile draw
 
 	// handle clearing of tile shadow maps
 	vector<clear_area_t> to_clear_next_frame;
@@ -2810,6 +2811,7 @@ void tile_draw_t::draw_shadow_pass(point const &lpos, tile_t *tile, bool decid_t
 	camera_pdu.near_ = 0.0; // move the near clipping plane to zero to prevent clipping of tiles that are between the light and the target but not in the shadow frustum
 	fog_enabled      = 0; // optimization?
 	to_draw.clear();
+	select_texture(WHITE_TEX); // make sure TU 0 is valid and not left as a shadow map texture
 
 	for (tile_map::const_iterator i = tiles.begin(); i != tiles.end(); ++i) { // 0.03ms
 		if (decid_trees_only && i->second->num_decid_trees() == 0) continue; // no decid trees to draw, don't bother checking visibility
