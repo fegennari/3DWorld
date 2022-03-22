@@ -25,6 +25,8 @@ bool in_building_gameplay_mode();
 bool player_take_damage(float damage_scale, bool &has_key);
 
 
+// *** Rats ***
+
 rat_t::rat_t(point const &pos_, float radius_, vector3d const &dir_) : pos(pos_), dest(pos), dir(dir_), radius(radius_),
 speed(0.0), fear(0.0), anim_time(0.0), wake_time(0.0), dist_since_sleep(0.0), rat_id(0), is_hiding(0), near_player(0), attacking(0)
 {
@@ -550,5 +552,13 @@ void building_t::scare_rat_at_pos(rat_t &rat, point const &scare_pos, float amou
 	if (by_sight && !check_line_of_sight_large_objs(pos, scare_pos)) return; // check line of sight
 	rat.fear     = min(1.0f, (rat.fear + fear));
 	rat.fear_pos = scare_pos;
+}
+
+
+// *** Spiders ***
+
+void spider_t::animate() {
+	if (animate2) {anim_time += fticks;}
+	if (anim_time > 100000.0) {anim_time = 0.0;} // reset animation after awhile to avoid precision problems
 }
 

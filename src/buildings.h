@@ -104,6 +104,15 @@ struct vect_rat_t : public vector<rat_t> {
 	const_iterator get_first_rat_with_xv_gt(float x) const {return std::lower_bound(begin(), end(), rat_t(x));}
 };
 
+struct spider_t {
+	point pos;
+	vector3d dir;
+	float radius, anim_time;
+
+	spider_t(point const &pos_, vector3d const &dir_, float radius_, float t=0.0) : pos(pos_), dir(dir_), radius(radius_), anim_time(t) {}
+	void animate();
+};
+
 struct building_occlusion_state_t {
 	int exclude_bix;
 	bool skip_cont_camera;
