@@ -302,10 +302,10 @@ public:
 
 rgeom_alloc_t rgeom_alloc; // static allocator with free list, shared across all buildings; not thread safe
 
-void rgeom_storage_t::clear() {
-	quad_verts.clear();
-	itri_verts.clear();
-	indices.clear();
+void rgeom_storage_t::clear(bool free_memory) {
+	if (free_memory) {clear_container(quad_verts);} else {quad_verts.clear();}
+	if (free_memory) {clear_container(itri_verts);} else {itri_verts.clear();}
+	if (free_memory) {clear_container(indices   );} else {indices   .clear();}
 }
 void rgeom_storage_t::swap_vectors(rgeom_storage_t &s) { // Note: doesn't swap tex
 	quad_verts.swap(s.quad_verts);
@@ -1020,7 +1020,7 @@ class spider_draw_t {
 			} // for n
 		} // for d
 		mat.create_vbo_inner();
-		mat.clear_vectors(); // vector data no longer needed
+		mat.clear_vectors(1); // free_memory=1: vector data no longer needed
 		is_setup = 1;
 	}
 	void assign_tc_range(float ts, float tt_lo, float tt_hi) {
@@ -1064,10 +1064,10 @@ public:
 };
 spider_draw_t spider_draw;
 
-// TODO: placeholder, move into building_room_geom_t::draw() next to where rats are drawn
+// TODO: placeholder for debugging spider drawing and animation
 void draw_spider() {
 	static vector<spider_t> spiders;
-	if (spiders.empty()) {spiders.emplace_back(point(0.0, 0.0, 1.0), plus_y, 1.0);}
+	if (spiders.empty()) {spiders.emplace_back(point(0.0, 0.0, 1.0), 1.0, plus_y);}
 	for (spider_t &S : spiders) {S.animate();}
 	shader_t s;
 	enable_animations_for_shader(s);
@@ -1197,54 +1197,65 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, building_t c
 		if (is_sink) {water_draw.add_water_for_sink(obj);}
 		obj_drawn = 1;
 	} // for i
-	if (player_in_building && !shadow_only && !reflection_pass) { // these models aren't drawn in the shadow or reflection passes; no emissive or rotated objects
-		for (auto i = model_objs.begin(); i != model_objs.end(); ++i) {
-			point obj_center(i->get_cube_center());
-			if (is_rotated) {building.do_xy_rotate(building_center, obj_center);}
-			if (!shadow_only && !dist_less_than(camera_bs, obj_center, 100.0*i->max_len())) continue; // too far away
-			if (!(is_rotated ? building.is_rot_cube_visible(*i, xlate) : camera_pdu.cube_visible(*i + xlate))) continue; // VFC
-			if (check_occlusion && building.check_obj_occluded(*i, camera_bs, oc, reflection_pass)) continue;
-			vector3d dir(i->get_dir());
-			if (is_rotated) {building.do_xy_rotate_normal(dir);}
-			building_obj_model_loader.draw_model(s, obj_center, *i, dir, i->color, xlate, i->get_model_id(), shadow_only, 0, 0);
-			obj_drawn = 1;
-		} // for i
-	}
 	if (player_in_building) { // only drawn for the player building
-		if (!shadow_only) {
-			int const animation_id = 7; // custom rat animation
-			s.add_uniform_int("animation_id", animation_id);
+		if (!shadow_only && !reflection_pass) { // these models aren't drawn in the shadow or reflection passes; no emissive or rotated objects
+			for (auto i = model_objs.begin(); i != model_objs.end(); ++i) {
+				point obj_center(i->get_cube_center());
+				if (is_rotated) {building.do_xy_rotate(building_center, obj_center);}
+				if (!shadow_only && !dist_less_than(camera_bs, obj_center, 100.0*i->max_len())) continue; // too far away
+				if (!(is_rotated ? building.is_rot_cube_visible(*i, xlate) : camera_pdu.cube_visible(*i + xlate))) continue; // VFC
+				if (check_occlusion && building.check_obj_occluded(*i, camera_bs, oc, reflection_pass)) continue;
+				vector3d dir(i->get_dir());
+				if (is_rotated) {building.do_xy_rotate_normal(dir);}
+				building_obj_model_loader.draw_model(s, obj_center, *i, dir, i->color, xlate, i->get_model_id(), shadow_only, 0, 0);
+				obj_drawn = 1;
+			} // for model_objs
 		}
-		for (rat_t &rat : rats) {
-			cube_t const bcube(rat.get_bcube());
-			if (check_clip_cube && !smap_light_clip_cube.intersects(bcube + xlate)) continue; // shadow map clip cube test: fast and high rejection ratio, do this first
-			if (!camera_pdu.cube_visible(bcube + xlate)) continue; // VFC
-			if (check_occlusion && building.check_obj_occluded(bcube, camera_bs, oc, reflection_pass)) continue;
-			point const pos(bcube.get_cube_center());
-			bool const animate(rat.anim_time > 0.0 && !shadow_only); // can't see the animation in the shadow pass anyway
-			if (!shadow_only) {s.add_uniform_float("animation_time", rat.anim_time);}
-			colorRGBA const color(rat_color); // make the rat's fur darker
-			//colorRGBA const color(blend_color(RED, WHITE, rat.fear, 0)); // used for debugging fear
-			//colorRGBA const color(blend_color(RED, WHITE, rat.attacking, 0));
-			cube_t const rat_bcube(rat.get_bcube_with_dir());
-			building_obj_model_loader.draw_model(s, pos, rat_bcube, rat.dir, color, xlate, OBJ_MODEL_RAT, shadow_only, 0, animate);
-
-			if (rat.attacking) { // draw red glowing eyes
-				s.set_color_e(colorRGBA(0.5, 0.0, 0.0, 1.0)); // light emissive red
-				s.set_cur_color(RED);
-				select_texture(WHITE_TEX);
-				s.add_uniform_float("animation_time", 0.0); // clear animations
-				point eyes_center(pos + vector3d(0.0, 0.0, 0.09*rat.height) + 0.85*rat.get_hlength()*rat.dir);
-				vector3d const eye_sep_dir(0.21*rat.hwidth*cross_product(rat.dir, plus_z).get_norm());
-
-				for (unsigned d = 0; d < 2; ++d) { // draw left and right eye, untextured
-					draw_sphere_vbo((eyes_center + (d ? 1.0 : -1.0)*eye_sep_dir), 0.05*rat.height, 16, 0);
-				}
-				s.set_color_e(BLACK);
+		if (!rats.empty()) {
+			if (!shadow_only) {
+				int const animation_id = 7; // custom rat animation
+				s.add_uniform_int("animation_id", animation_id);
 			}
-			obj_drawn = 1;
-		} // for rat
-		if (!shadow_only) {s.add_uniform_int("animation_id", 0);} // reset
+			//spiders.clear(); // FIXME
+
+			for (rat_t &rat : rats) {
+				cube_t const bcube(rat.get_bcube());
+				if (check_clip_cube && !smap_light_clip_cube.intersects(bcube + xlate)) continue; // shadow map clip cube test: fast and high rejection ratio, do this first
+				if (!camera_pdu.cube_visible(bcube + xlate)) continue; // VFC
+				if (check_occlusion && building.check_obj_occluded(bcube, camera_bs, oc, reflection_pass)) continue;
+	#if 0 // FIXME: hack to draw rats as spiders
+				float const radius(0.5*rat.radius);
+				spiders.push_back(spider_t((rat.pos + vector3d(0.0, 0.0, radius)), radius, rat.dir));
+				spiders.back().anim_time = 20.0*rat.anim_time;
+				continue;
+	#endif
+				point const pos(bcube.get_cube_center());
+				bool const animate(rat.anim_time > 0.0 && !shadow_only); // can't see the animation in the shadow pass anyway
+				if (!shadow_only) {s.add_uniform_float("animation_time", rat.anim_time);}
+				colorRGBA const color(rat_color); // make the rat's fur darker
+				//colorRGBA const color(blend_color(RED, WHITE, rat.fear, 0)); // used for debugging fear
+				//colorRGBA const color(blend_color(RED, WHITE, rat.attacking, 0));
+				cube_t const rat_bcube(rat.get_bcube_with_dir());
+				building_obj_model_loader.draw_model(s, pos, rat_bcube, rat.dir, color, xlate, OBJ_MODEL_RAT, shadow_only, 0, animate);
+
+				if (rat.attacking) { // draw red glowing eyes
+					s.set_color_e(colorRGBA(0.5, 0.0, 0.0, 1.0)); // light emissive red
+					s.set_cur_color(RED);
+					select_texture(WHITE_TEX);
+					s.add_uniform_float("animation_time", 0.0); // clear animations
+					point eyes_center(pos + vector3d(0.0, 0.0, 0.09*rat.height) + 0.85*rat.get_hlength()*rat.dir);
+					vector3d const eye_sep_dir(0.21*rat.hwidth*cross_product(rat.dir, plus_z).get_norm());
+
+					for (unsigned d = 0; d < 2; ++d) { // draw left and right eye, untextured
+						draw_sphere_vbo((eyes_center + (d ? 1.0 : -1.0)*eye_sep_dir), 0.05*rat.height, 16, 0);
+					}
+					s.set_color_e(BLACK);
+				}
+				obj_drawn = 1;
+			} // for rat
+			if (!shadow_only) {s.add_uniform_int("animation_id", 0);} // reset
+		} // end rats drawing
+		spider_draw.draw(spiders, s, shadow_only);
 	}
 	if (disable_cull_face) {glEnable(GL_CULL_FACE);}
 	if (obj_drawn) {check_mvm_update();} // needed after popping model transform matrix

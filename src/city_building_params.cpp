@@ -228,13 +228,19 @@ void building_params_t::init_kw_maps() {
 	kwmb.add("ai_target_player",   ai_target_player);
 	kwmb.add("ai_follow_player",   ai_follow_player);
 	kwmu.add("ai_player_vis_test", ai_player_vis_test); // 0=no test, 1=LOS, 2=LOS+FOV, 3=LOS+FOV+lit
-	// animals
+	// rats
 	kwmu.add("num_rats_min",    num_rats_min);
 	kwmu.add("num_rats_max",    num_rats_max);
 	kwmu.add("min_attack_rats", min_attack_rats);
-	kwmf.add("rat_speed",    rat_speed);
-	kwmr.add("rat_size_min", rat_size_min, FP_CHECK_POS);
-	kwmr.add("rat_size_max", rat_size_max, FP_CHECK_POS);
+	kwmf.add("rat_speed",       rat_speed);
+	kwmr.add("rat_size_min",    rat_size_min, FP_CHECK_POS);
+	kwmr.add("rat_size_max",    rat_size_max, FP_CHECK_POS);
+	// spiders
+	kwmu.add("num_spiders_min", num_spiders_min);
+	kwmu.add("num_spiders_max", num_spiders_max);
+	kwmf.add("spider_speed",    spider_speed);
+	kwmr.add("spider_size_min", spider_size_min, FP_CHECK_POS);
+	kwmr.add("spider_size_max", spider_size_max, FP_CHECK_POS);
 	// gameplay state
 	kwmr.add("open_door_prob",   open_door_prob,   FP_CHECK_01);
 	kwmr.add("locked_door_prob", locked_door_prob, FP_CHECK_01);

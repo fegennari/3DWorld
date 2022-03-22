@@ -74,19 +74,27 @@ bottle_params_t const bottle_params[NUM_BOTTLE_TYPES] = {
 	bottle_params_t("bottle of poison", "yuck.png",                     BLACK,                     5.0, 2.0),
 };
 
-struct rat_t {
-	point pos, last_pos, dest, fear_pos;
+struct building_animal_t {
+	point pos, last_pos, dest;
 	vector3d dir;
-	float radius, height, hwidth, speed, fear, anim_time, wake_time, dist_since_sleep;
+	float radius, speed, anim_time;
+
+	building_animal_t(float xval) : pos(xval, 0.0, 0.0), radius(0), speed(0), anim_time(0) {}
+	building_animal_t(point const &pos_, float radius_, vector3d const &dir_) : pos(pos_), dest(pos), dir(dir_), radius(radius_), speed(0.0), anim_time(0.0) {}
+	bool operator<(building_animal_t const &a) const {return (pos.x < a.pos.x);} // compare only xvals
+	bool is_moving() const {return (speed > 0.0);}
+};
+
+struct rat_t : public building_animal_t {
+	point fear_pos;
+	float height, hwidth, fear, wake_time, dist_since_sleep;
 	unsigned rat_id;
 	bool is_hiding, near_player, attacking;
 
-	// this first destructor is for the lower_bound() call in vect_rat_t::get_first_rat_with_x2_gt()
-	rat_t(float xval) : pos(xval, 0.0, 0.0), radius(0), height(0), hwidth(0), speed(0), fear(0),
-		anim_time(0), wake_time(0), dist_since_sleep(0), rat_id(0), is_hiding(0), near_player(0), attacking(0) {}
+	// this first constructor is for the lower_bound() call in vect_rat_t::get_first_rat_with_x2_gt()
+	rat_t(float xval) : building_animal_t(xval), height(0), hwidth(0), fear(0), wake_time(0), dist_since_sleep(0), rat_id(0), is_hiding(0), near_player(0), attacking(0) {}
 	rat_t(point const &pos_, float radius_, vector3d const &dir_);
 	bool operator<(rat_t const &r) const {return (pos.x < r.pos.x);} // compare only xvals
-	bool is_moving   () const {return (speed > 0.0);}
 	bool is_sleeping () const {return (wake_time > 0.0);}
 	float get_hlength() const {return radius;} // this is the bounding radius, so it represents the longest dim (half length)
 	point get_center () const {return point(pos.x, pos.y, (pos.z + 0.5f*height));}
@@ -104,12 +112,9 @@ struct vect_rat_t : public vector<rat_t> {
 	const_iterator get_first_rat_with_xv_gt(float x) const {return std::lower_bound(begin(), end(), rat_t(x));}
 };
 
-struct spider_t {
-	point pos;
-	vector3d dir;
-	float radius, anim_time;
-
-	spider_t(point const &pos_, vector3d const &dir_, float radius_, float t=0.0) : pos(pos_), dir(dir_), radius(radius_), anim_time(t) {}
+struct spider_t : public building_animal_t {
+	spider_t(point const &pos_, float radius_, vector3d const &dir_) : building_animal_t(pos_, radius_, dir_) {}
+	cube_t get_bcube() const; // used for collision detection and VFC
 	void animate();
 };
 
@@ -264,8 +269,8 @@ struct building_params_t {
 	unsigned ai_opens_doors; // 0=don't open doors, 1=only open if player closed door after path selection; 2=always open doors
 	unsigned ai_player_vis_test; // 0=no test, 1=LOS, 2=LOS+FOV, 3=LOS+FOV+lit
 	// building animal params
-	unsigned num_rats_min, num_rats_max, min_attack_rats;
-	float rat_speed, rat_size_min, rat_size_max;
+	unsigned num_rats_min, num_rats_max, min_attack_rats, num_spiders_min, num_spiders_max;
+	float rat_speed, rat_size_min, rat_size_max, spider_speed, spider_size_min, spider_size_max;
 	// gameplay state
 	float player_weight_limit;
 	// materials
@@ -287,8 +292,9 @@ struct building_params_t {
 		add_office_basements(0), num_place(num), num_tries(10), cur_prob(1), max_shadow_maps(32), buildings_rand_seed(0), ao_factor(0.0), sec_extra_spacing(0.0),
 		player_coll_radius_scale(1.0), interior_view_dist_scale(1.0), window_width(0.0), window_height(0.0), window_xspace(0.0), window_yspace(0.0),
 		wall_split_thresh(4.0), max_fp_wind_xscale(0.0), max_fp_wind_yscale(0.0), open_door_prob(1.0), locked_door_prob(0.0), basement_prob(0.5), ball_prob(0.3),
-		ai_target_player(1), ai_follow_player(0), ai_opens_doors(1), ai_player_vis_test(0), num_rats_min(0), num_rats_max(0), min_attack_rats(0), rat_speed(0.0),
-		rat_size_min(0.5), rat_size_max(1.0), player_weight_limit(100.0), range_translate(zero_vector), read_error(0),
+		ai_target_player(1), ai_follow_player(0), ai_opens_doors(1), ai_player_vis_test(0), num_rats_min(0), num_rats_max(0), min_attack_rats(0),
+		num_spiders_min(0), num_spiders_max(0), rat_speed(0.0), rat_size_min(0.5), rat_size_max(1.0), spider_speed(0.0), spider_size_min(0.5), spider_size_max(1.0),
+		player_weight_limit(100.0), range_translate(zero_vector), read_error(0),
 		kwmb(read_error, "buildings"), kwmu(read_error, "buildings"), kwmf(read_error, "buildings"), kwmc(read_error, "buildings"), kwmr(read_error, "buildings") {init_kw_maps();}
 	bool parse_buildings_option(FILE *fp);
 	int get_wrap_mir() const {return (tex_mirror ? 2 : 1);}
@@ -548,7 +554,7 @@ struct rgeom_storage_t {
 	rgeom_storage_t() {}
 	rgeom_storage_t(tid_nm_pair_t const &tex_) : tex(tex_) {}
 	bool empty() const {return (quad_verts.empty() && itri_verts.empty());}
-	void clear();
+	void clear(bool free_memory=0);
 	void swap_vectors(rgeom_storage_t &s);
 	void swap(rgeom_storage_t &s);
 	unsigned get_tot_vert_capacity() const {return (quad_verts.capacity() + itri_verts.capacity());}
@@ -567,7 +573,7 @@ public:
 	//~rgeom_mat_t() {assert(vbo_mgr.vbo == 0); assert(vbo_mgr.ivbo == 0);} // VBOs should be freed before destruction
 	void enable_shadows() {en_shadows = 1;}
 	void clear();
-	void clear_vectors() {rgeom_storage_t::clear();}
+	void clear_vectors(bool free_memory=0) {rgeom_storage_t::clear(free_memory);}
 	void add_cube_to_verts(cube_t const &c, colorRGBA const &color, point const &tex_origin=all_zeros,
 		unsigned skip_faces=0, bool swap_tex_st=0, bool mirror_x=0, bool mirror_y=0, bool inverted=0);
 	void add_cube_to_verts_untextured(cube_t const &c, colorRGBA const &color, unsigned skip_faces=0);
@@ -658,6 +664,7 @@ struct building_room_geom_t {
 	vector<obj_model_inst_t> obj_model_insts;
 	vector<unsigned> moved_obj_ids;
 	vect_rat_t rats;
+	vector<spider_t> spiders;
 	// {large static, small static, dynamic, lights, alpha mask, transparent, door} materials
 	building_materials_t mats_static, mats_small, mats_detail, mats_dynamic, mats_lights, mats_amask, mats_alpha, mats_doors;
 	vect_cube_t light_bcubes;

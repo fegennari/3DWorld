@@ -1409,8 +1409,9 @@ void building_t::print_building_manifest() const { // Note: skips expanded_objs
 		cout << TXT(walls) << TXT(rooms) << TXT(floors) << TXT(ceilings) << TXT(door_stacks) << TXT(doors) << TXT(stairs) << TXT(elevators);
 	}
 	if (has_room_geom()) {
-		unsigned const objects(interior->room_geom->objs.size()), rats(interior->room_geom->rats.size()), models(interior->room_geom->obj_model_insts.size());
-		cout << TXT(objects) << TXT(rats) << TXT(models) << endl;
+		unsigned const objects(interior->room_geom->objs.size()), models(interior->room_geom->obj_model_insts.size());
+		unsigned const rats(interior->room_geom->rats.size()), spiders(interior->room_geom->spiders.size());
+		cout << TXT(objects) << TXT(models) << TXT(rats) << TXT(spiders) << endl;
 		unsigned obj_counts[NUM_ROBJ_TYPES] = {};
 
 		for (auto const &i : interior->room_geom->objs) {

@@ -27,8 +27,8 @@ bool player_take_damage(float damage_scale, bool &has_key);
 
 // *** Rats ***
 
-rat_t::rat_t(point const &pos_, float radius_, vector3d const &dir_) : pos(pos_), dest(pos), dir(dir_), radius(radius_),
-speed(0.0), fear(0.0), anim_time(0.0), wake_time(0.0), dist_since_sleep(0.0), rat_id(0), is_hiding(0), near_player(0), attacking(0)
+rat_t::rat_t(point const &pos_, float radius_, vector3d const &dir_) : building_animal_t(pos_, radius_, dir_),
+fear(0.0), wake_time(0.0), dist_since_sleep(0.0), rat_id(0), is_hiding(0), near_player(0), attacking(0)
 {
 	vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_RAT)); // L=3878, W=861, H=801
 	hwidth = radius*sz.y/sz.x; // scale radius by ratio of width to length
@@ -557,6 +557,11 @@ void building_t::scare_rat_at_pos(rat_t &rat, point const &scare_pos, float amou
 
 // *** Spiders ***
 
+cube_t spider_t::get_bcube() const {
+	cube_t bcube(pos);
+	bcube.expand_by(vector3d(2.0*radius, 2.0*radius, radius)); // conservative?
+	return bcube;
+}
 void spider_t::animate() {
 	if (animate2) {anim_time += fticks;}
 	if (anim_time > 100000.0) {anim_time = 0.0;} // reset animation after awhile to avoid precision problems
