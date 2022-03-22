@@ -891,7 +891,7 @@ void road_draw_state_t::end_cur_tile() {
 		assert(!shadow_only);
 		text_drawer::bind_font_texture();
 		enable_blend();
-		draw_verts(text_verts, GL_QUADS);
+		draw_quad_verts_as_tris(text_verts);
 		text_verts.clear();
 		disable_blend();
 	}
