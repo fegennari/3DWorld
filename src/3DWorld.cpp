@@ -2171,6 +2171,7 @@ void
 openglCallbackFunction(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar* message, const void* userParam) {
 
 	if (severity == GL_DEBUG_SEVERITY_NOTIFICATION) return; // don't spam stdout with notifications
+	if (type == GL_DEBUG_TYPE_PERFORMANCE && severity == GL_DEBUG_SEVERITY_MEDIUM && id == 131218) return; // perf warning: shader recompile based on state change, skip
 	cout << "### OpenGL message: " << message << endl << "type: ";
 	switch (type) {
 	case GL_DEBUG_TYPE_ERROR: cout << "ERROR"; break;
@@ -2189,6 +2190,7 @@ openglCallbackFunction(GLenum source, GLenum type, GLuint id, GLenum severity, G
 	default: cout << hex << severity << dec << " ";
 	}
 	cout << endl;
+	//assert(type != GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR); // uncomment to break/exit on this type of error
 }
 
 void init_debug_callback() {
