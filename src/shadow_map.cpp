@@ -378,6 +378,11 @@ void set_smap_shader_for_all_lights(shader_t &s, float z_bias) {
 	upload_shadow_data_to_shader(s);
 }
 
+void pre_bind_smap_tus(shader_t &s) {
+	if (is_light_enabled(0)) {s.add_uniform_int("sm_tex0", GLOBAL_SMAP_START_TU_ID+0);}
+	if (is_light_enabled(0)) {s.add_uniform_int("sm_tex1", GLOBAL_SMAP_START_TU_ID+1);}
+}
+
 
 // should this be a pos_dir_up member function?
 void set_smap_mvm_pjm(point const &eye, point const &center, vector3d const &up_dir, float angle, float aspect, float near_clip, float far_clip) {

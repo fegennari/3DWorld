@@ -80,6 +80,7 @@ extern reflective_cobjs_t reflective_cobjs;
 
 void create_dlight_volumes();
 void create_sky_vis_zval_texture(unsigned &tid);
+void pre_bind_smap_tus(shader_t &s);
 
 
 void set_fill_mode() {
@@ -275,6 +276,7 @@ void common_shader_block_post(shader_t &s, bool dlights, bool use_shadow_map, bo
 	// the z plane bias is somewhat of a hack, set experimentally; maybe should be one pixel in world space?
 	if (enable_clip_plane_z) {s.add_uniform_float("clip_plane_z", clip_plane_z);}
 	if (use_shadow_map && shadow_map_enabled() && world_mode == WMODE_GROUND) {set_smap_shader_for_all_lights(s, cobj_z_bias);}
+	else {pre_bind_smap_tus(s);} // required to avoid undefined behavior, even if smaps aren't used
 	set_active_texture(0);
 	s.clear_specular();
 	if (world_mode == WMODE_INF_TERRAIN) {setup_tt_fog_post(s);}
