@@ -1758,7 +1758,7 @@ unsigned tile_t::get_lod_level(bool reflection_pass) const {
 }
 
 
-void disable_shadow_maps(shader_t &s) {
+void disable_shadow_maps(shader_t &s) { // Note: uses different TUs compared to bind_default_sun_moon_smap_textures()
 	for (unsigned l = 0; l < NUM_LIGHT_SRC; ++l) {
 		if (!light_valid_and_enabled(l)) continue;
 		bind_texture_tu(get_empty_smap_tid(), TILE_SMAP_START_TU_ID+l); // bind empty shadow map

@@ -275,8 +275,11 @@ void common_shader_block_post(shader_t &s, bool dlights, bool use_shadow_map, bo
 	if (dlights) {s.add_uniform_float("dlight_intensity_scale", dlight_intensity_scale);}
 	// the z plane bias is somewhat of a hack, set experimentally; maybe should be one pixel in world space?
 	if (enable_clip_plane_z) {s.add_uniform_float("clip_plane_z", clip_plane_z);}
-	if (use_shadow_map && shadow_map_enabled() && world_mode == WMODE_GROUND) {set_smap_shader_for_all_lights(s, cobj_z_bias);}
-	else {pre_bind_smap_tus(s);} // required to avoid undefined behavior, even if smaps aren't used
+
+	if (use_shadow_map && shadow_map_enabled()) {
+		if (world_mode == WMODE_GROUND) {set_smap_shader_for_all_lights(s, cobj_z_bias);}
+		else {pre_bind_smap_tus(s);} // TT mode still requires binding the texture units
+	}
 	set_active_texture(0);
 	s.clear_specular();
 	if (world_mode == WMODE_INF_TERRAIN) {setup_tt_fog_post(s);}

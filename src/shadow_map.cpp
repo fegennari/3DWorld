@@ -342,7 +342,7 @@ unsigned get_empty_smap_tid() {
 	return empty_smap_tid;
 }
 
-void bind_default_sun_moon_smap_textures() {
+void bind_default_sun_moon_smap_textures() { // Note: uses different TUs compared to tiled terrain disable_shadow_maps()
 	// ensure shadow map TU_IDs are valid in case we try to use them without binding to a tile;
 	// maybe this fixes the occasional shader undefined behavior warning we get with the debug callback?
 	for (unsigned l = 0; l < NUM_LIGHT_SRC; ++l) {
@@ -380,7 +380,7 @@ void set_smap_shader_for_all_lights(shader_t &s, float z_bias) {
 
 void pre_bind_smap_tus(shader_t &s) {
 	if (is_light_enabled(0)) {s.add_uniform_int("sm_tex0", GLOBAL_SMAP_START_TU_ID+0);}
-	if (is_light_enabled(0)) {s.add_uniform_int("sm_tex1", GLOBAL_SMAP_START_TU_ID+1);}
+	if (is_light_enabled(1)) {s.add_uniform_int("sm_tex1", GLOBAL_SMAP_START_TU_ID+1);}
 }
 
 
