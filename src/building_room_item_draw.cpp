@@ -1037,7 +1037,7 @@ public:
 	spider_draw_t() : cur_vert_pos(0), is_setup(0) {}
 	void clear() {mat.clear(); is_setup = 0;}
 
-	void draw(vector<spider_t> const &spiders, shader_t &s, bool shadow_only) {
+	void draw(vect_spider_t const &spiders, shader_t &s, bool shadow_only) {
 		if (spiders.empty()) return; // nothing to draw
 		if (!is_setup) {init();}
 		mat.vao_setup(shadow_only);

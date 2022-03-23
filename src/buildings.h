@@ -77,31 +77,32 @@ bottle_params_t const bottle_params[NUM_BOTTLE_TYPES] = {
 struct building_animal_t {
 	point pos, last_pos, dest;
 	vector3d dir;
-	float radius, speed, anim_time;
+	float radius, speed, anim_time, wake_time, dist_since_sleep;
 
-	building_animal_t(float xval) : pos(xval, 0.0, 0.0), radius(0), speed(0), anim_time(0) {}
-	building_animal_t(point const &pos_, float radius_, vector3d const &dir_) : pos(pos_), dest(pos), dir(dir_), radius(radius_), speed(0.0), anim_time(0.0) {}
+	building_animal_t(float xval) : pos(xval, 0.0, 0.0), radius(0), speed(0), anim_time(0), wake_time(0), dist_since_sleep(0) {}
+	building_animal_t(point const &pos_, float radius_, vector3d const &dir_) :
+		pos(pos_), dest(pos), dir(dir_), radius(radius_), speed(0.0), anim_time(0.0), wake_time(0), dist_since_sleep(0) {}
 	bool operator<(building_animal_t const &a) const {return (pos.x < a.pos.x);} // compare only xvals
-	bool is_moving() const {return (speed > 0.0);}
+	bool is_moving  () const {return (speed     > 0.0);}
+	bool is_sleeping() const {return (wake_time > 0.0);}
+	void sleep_for(float time_secs_min, float time_secs_max);
+	void move(float timestep);
 };
 
 struct rat_t : public building_animal_t {
 	point fear_pos;
-	float height, hwidth, fear, wake_time, dist_since_sleep;
+	float height, hwidth, fear;
 	unsigned rat_id;
 	bool is_hiding, near_player, attacking;
 
 	// this first constructor is for the lower_bound() call in vect_rat_t::get_first_rat_with_x2_gt()
-	rat_t(float xval) : building_animal_t(xval), height(0), hwidth(0), fear(0), wake_time(0), dist_since_sleep(0), rat_id(0), is_hiding(0), near_player(0), attacking(0) {}
+	rat_t(float xval) : building_animal_t(xval), height(0), hwidth(0), fear(0), rat_id(0), is_hiding(0), near_player(0), attacking(0) {}
 	rat_t(point const &pos_, float radius_, vector3d const &dir_);
 	bool operator<(rat_t const &r) const {return (pos.x < r.pos.x);} // compare only xvals
-	bool is_sleeping () const {return (wake_time > 0.0);}
 	float get_hlength() const {return radius;} // this is the bounding radius, so it represents the longest dim (half length)
 	point get_center () const {return point(pos.x, pos.y, (pos.z + 0.5f*height));}
 	cube_t get_bcube () const; // used for collision detection and VFC; bounding cube across rotations
 	cube_t get_bcube_with_dir() const; // used for model drawing; must be correct aspect ratio
-	void sleep_for(float time_secs_min, float time_secs_max);
-	void move(float timestep);
 };
 
 struct vect_rat_t : public vector<rat_t> {
@@ -115,7 +116,12 @@ struct vect_rat_t : public vector<rat_t> {
 struct spider_t : public building_animal_t {
 	spider_t(point const &pos_, float radius_, vector3d const &dir_) : building_animal_t(pos_, radius_, dir_) {}
 	cube_t get_bcube() const; // used for collision detection and VFC
-	void animate();
+};
+
+struct vect_spider_t : public vector<spider_t> {
+	bool placed;
+	vect_spider_t() : placed(0) {}
+	void add(spider_t const &spider) {push_back(spider);}
 };
 
 struct building_occlusion_state_t {
@@ -664,7 +670,7 @@ struct building_room_geom_t {
 	vector<obj_model_inst_t> obj_model_insts;
 	vector<unsigned> moved_obj_ids;
 	vect_rat_t rats;
-	vector<spider_t> spiders;
+	vect_spider_t spiders;
 	// {large static, small static, dynamic, lights, alpha mask, transparent, door} materials
 	building_materials_t mats_static, mats_small, mats_detail, mats_dynamic, mats_lights, mats_amask, mats_alpha, mats_doors;
 	vect_cube_t light_bcubes;
@@ -1199,15 +1205,19 @@ private:
 
 	// animals
 public:
+	template<typename T> void add_animals_on_floor(T &animals, unsigned building_ix, unsigned num_min, unsigned num_max, float sz_min, float sz_max) const;
 	void update_animals(point const &camera_bs, unsigned building_ix, int ped_ix);
+	void update_rats(point const &camera_bs, unsigned building_ix, int ped_ix);
+	void update_spiders(point const &camera_bs, unsigned building_ix, int ped_ix);
 	void get_objs_at_or_below_ground_floor(vect_room_object_t &ret) const;
 private:
-	point gen_rat_pos(float radius, rand_gen_t &rgen) const;
+	point gen_animal_floor_pos(float radius, rand_gen_t &rgen) const;
 	bool add_rat(point const &pos, float hlength, vector3d const &dir, point const &placed_from);
-	bool is_rat_inside_building(point const &pos, float xy_pad, float hheight) const;
+	bool is_pos_inside_building(point const &pos, float xy_pad, float hheight) const;
 	void update_rat(rat_t &rat, point const &camera_bs, int ped_ix, float timestep, float &max_xmove, bool can_attack_player, rand_gen_t &rgen) const;
 	void scare_rat(rat_t &rat, point const &camera_bs, int ped_ix) const;
 	void scare_rat_at_pos(rat_t &rat, point const &scare_pos, float amount, bool by_sight) const;
+	void update_spider(spider_t &spider, point const &camera_bs, float timestep, rand_gen_t &rgen) const;
 	bool check_line_coll_expand(point const &p1, point const &p2, float radius, float height) const;
 	bool check_line_of_sight_large_objs(point const &p1, point const &p2) const;
 	bool check_and_handle_dynamic_obj_coll(point &pos, float radius, float height, point const &camera_bs) const;

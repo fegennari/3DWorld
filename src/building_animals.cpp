@@ -25,10 +25,92 @@ bool in_building_gameplay_mode();
 bool player_take_damage(float damage_scale, bool &has_key);
 
 
+void building_animal_t::sleep_for(float time_secs_min, float time_secs_max) {
+	wake_time = (float)tfticks + rand_uniform(time_secs_min, time_secs_max)*TICKS_PER_SECOND;
+}
+void building_animal_t::move(float timestep) {
+	// update animation time using position change; note that we can't just do the update in the rat movement code below because pos may be reset in case of collision
+	anim_time += p2p_dist_xy(pos, last_pos)/radius; // scale with size so that small rats' legs move faster
+	last_pos   = pos;
+	if (anim_time > 100000.0) {anim_time = 0.0;} // reset animation after awhile to avoid precision problems; should this be done when the player isn't looking?
+
+	if (is_sleeping()) {
+		if ((float)tfticks > wake_time) {wake_time = speed = 0.0;} // time to wake up
+	}
+	else if (speed == 0.0) {
+		anim_time = 0.0; // reset animation to rest pos
+	}
+	else { // apply movement and check for collisions with dynamic objects
+		vector3d const dest_dir((dest - pos).get_norm());
+
+		if (dot_product(dest_dir, dir) > 0.75) { // only move if we're facing our dest, to avoid walking through an object
+			float const move_dist(timestep*speed);
+			pos               = pos + move_dist*dir;
+			dist_since_sleep += move_dist;
+		}
+	}
+}
+
+void building_t::update_animals(point const &camera_bs, unsigned building_ix, int ped_ix) {
+	if (!animate2 || is_rotated() || !has_room_geom() || interior->rooms.empty()) return;
+	update_rats   (camera_bs, building_ix, ped_ix);
+	update_spiders(camera_bs, building_ix, ped_ix);
+}
+
+template<typename T> void building_t::add_animals_on_floor(T &animals, unsigned building_ix, unsigned num_min, unsigned num_max, float sz_min, float sz_max) const {
+	if (animals.placed) return; // already placed
+	rand_gen_t rgen;
+	rgen.set_state(building_ix+1, mat_ix+1); // unique per building
+	float const floor_spacing(get_window_vspace());
+	unsigned const num(num_min + ((num_min == num_max) ? 0 : (rgen.rand() % (num_max - num_min + 1))));
+	animals.reserve(num);
+
+	for (unsigned n = 0; n < num; ++n) {
+		// there's no error check for min_sz <= max_sz, so just use min_sz in that case
+		float const sz_scale((sz_min >= sz_max) ? sz_min : rgen.rand_uniform(sz_min, sz_max)), radius(0.5f*floor_spacing*sz_scale);
+		point const pos(gen_animal_floor_pos(radius, rgen));
+		if (pos == all_zeros) continue; // bad pos? skip this animal
+		animals.add(typename T::value_type(pos, radius, rgen.signed_rand_vector_xy().get_norm()));
+	}
+	animals.placed = 1; // even if there were no animals placed
+}
+
+point building_t::gen_animal_floor_pos(float radius, rand_gen_t &rgen) const {
+	for (unsigned n = 0; n < 100; ++n) { // make up to 100 tries
+		unsigned const room_ix(rgen.rand() % interior->rooms.size());
+		room_t const &room(interior->rooms[room_ix]);
+		if (room.z1() > ground_floor_z1) continue; // not on the ground floor or basement
+		cube_t place_area(room); // will represent the usable floor area
+		place_area.expand_by_xy(-(radius + get_wall_thickness()));
+		if (min(place_area.dx(), place_area.dy()) < 4.0*radius) continue; // room too small (can happen for has_complex_floorplan office buildings)
+		point pos(gen_xy_pos_in_area(place_area, radius, rgen));
+		pos.z = place_area.z1() + get_fc_thickness(); // on top of the floor
+		if (is_valid_ai_placement(pos, radius)) {return pos;} // check room objects; start in the open, not under something
+	} // for n
+	return all_zeros; // failed
+}
+
+bool building_t::is_pos_inside_building(point const &pos, float xy_pad, float hheight) const {
+	if (!bcube.contains_pt_xy_exp(pos, -xy_pad)) return 0; // check for end point inside building bcube
+	cube_t req_area(pos, pos);
+	req_area.expand_by_xy(xy_pad);
+	req_area.z2() += hheight;
+	return is_cube_contained_in_parts(req_area);
+}
+
+void update_dir_incremental(vector3d &dir, vector3d const &new_dir, float turn_rate, float timestep, rand_gen_t &rgen) {
+	if (new_dir != zero_vector) { // update dir if new_dir was set above
+		float const delta_dir(turn_rate*min(1.0f, 1.5f*(1.0f - pow(0.7f, timestep))));
+		dir = (delta_dir*new_dir + (1.0 - delta_dir)*dir).get_norm();
+	}
+	if (dir == zero_vector) {dir = rgen.signed_rand_vector_xy().get_norm();} // dir must always be valid
+}
+
+
 // *** Rats ***
 
 rat_t::rat_t(point const &pos_, float radius_, vector3d const &dir_) : building_animal_t(pos_, radius_, dir_),
-fear(0.0), wake_time(0.0), dist_since_sleep(0.0), rat_id(0), is_hiding(0), near_player(0), attacking(0)
+fear(0.0), rat_id(0), is_hiding(0), near_player(0), attacking(0)
 {
 	vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_RAT)); // L=3878, W=861, H=801
 	hwidth = radius*sz.y/sz.x; // scale radius by ratio of width to length
@@ -48,30 +130,6 @@ cube_t rat_t::get_bcube_with_dir() const {
 	bcube.expand_in_dim(!pri_dim, radius*min(sz.x, sz.y)/max(sz.x, sz.y)); // smaller dim
 	bcube.z2() += height;
 	return bcube;
-}
-void rat_t::sleep_for(float time_secs_min, float time_secs_max) {
-	wake_time = (float)tfticks + rand_uniform(time_secs_min, time_secs_max)*TICKS_PER_SECOND;
-}
-void rat_t::move(float timestep) {
-	// update animation time using position change; note that we can't just do the update in the rat movement code below because pos may be reset in case of collision
-	anim_time += p2p_dist_xy(pos, last_pos)/radius; // scale with size so that small rats' legs move faster
-	last_pos   = pos;
-
-	if (is_sleeping()) {
-		if ((float)tfticks > wake_time) {wake_time = speed = 0.0;} // time to wake up
-	}
-	else if (speed == 0.0) {
-		anim_time = 0.0; // reset animation to rest pos
-	}
-	else { // apply movement and check for collisions with dynamic objects
-		vector3d const dest_dir((dest - pos).get_norm());
-
-		if (dot_product(dest_dir, dir) > 0.75) { // only move if we're facing our dest, to avoid walking through an object
-			float const move_dist(timestep*speed);
-			pos               = pos + move_dist*dir;
-			dist_since_sleep += move_dist;
-		}
-	}
 }
 
 void vect_rat_t::add(rat_t const &rat) {
@@ -107,33 +165,14 @@ bool building_t::add_rat(point const &pos, float hlength, vector3d const &dir, p
 	return 1;
 }
 
-void building_t::update_animals(point const &camera_bs, unsigned building_ix, int ped_ix) { // 0.01ms for 2 rats
-	if (global_building_params.num_rats_max == 0 || !animate2) return;
-	if (is_rotated() || !has_room_geom() || interior->rooms.empty()) return;
+void building_t::update_rats(point const &camera_bs, unsigned building_ix, int ped_ix) {
+	if (global_building_params.num_rats_max == 0) return;
 	vect_rat_t &rats(interior->room_geom->rats);
 	if (rats.placed && rats.empty()) return; // no rats placed in this building
 	if (!building_obj_model_loader.is_model_valid(OBJ_MODEL_RAT)) return; // no rat model
 	//timer_t timer("Update Rats"); // multi-part: 1.1ms, open door 1.7ms; office building 1.7ms
-
-	if (!rats.placed) { // new building - place rats
-		rand_gen_t rgen;
-		rgen.set_state(building_ix+1, mat_ix+1); // unique per building
-		float const floor_spacing(get_window_vspace());
-		float const min_sz(global_building_params.rat_size_min), max_sz(global_building_params.rat_size_max);
-		unsigned const rmin(global_building_params.num_rats_min), rmax(global_building_params.num_rats_max);
-		unsigned const num(rmin + ((rmin == rmax) ? 0 : (rgen.rand() % (rmax - rmin + 1))));
-		rats.reserve(num);
-
-		for (unsigned n = 0; n < num; ++n) {
-			// there's no error check for min_sz <= max_sz, so just use min_sz in that case
-			float const sz_scale((min_sz >= max_sz) ? min_sz : rgen.rand_uniform(min_sz, max_sz));
-			float const radius(0.5f*floor_spacing*sz_scale);
-			point const pos(gen_rat_pos(radius, rgen));
-			if (pos == all_zeros) continue; // bad pos? skip this rat
-			rats.add(rat_t(pos, radius, rgen.signed_rand_vector_xy().get_norm()));
-		}
-		rats.placed = 1; // even if there were no rats placed
-	}
+	add_animals_on_floor(rats, building_ix, global_building_params.num_rats_min, global_building_params.num_rats_max,
+		global_building_params.rat_size_min, global_building_params.rat_size_max);
 	// update rats
 	float const timestep(min(fticks, 4.0f)); // clamp fticks to 100ms
 	unsigned num_near_player(0);
@@ -162,22 +201,6 @@ void building_t::update_animals(point const &camera_bs, unsigned building_ix, in
 	else { // forward iteration; ~0.004ms per rat
 		for (auto r = rats. begin(); r != rats. end(); ++r) {update_rat(*r, camera_bs, ped_ix, timestep, rats.max_xmove, can_attack_player, rgen);}
 	}
-}
-
-point building_t::gen_rat_pos(float radius, rand_gen_t &rgen) const {
-	for (unsigned n = 0; n < 100; ++n) { // make up to 100 tries
-		unsigned const room_ix(rgen.rand() % interior->rooms.size());
-		room_t const &room(interior->rooms[room_ix]);
-		if (room.z1() > ground_floor_z1) continue; // not on the ground floor or basement
-		//if (room.is_hallway) continue; // don't place in hallways?
-		cube_t place_area(room); // will represent the usable floor area
-		place_area.expand_by_xy(-(radius + get_wall_thickness()));
-		if (min(place_area.dx(), place_area.dy()) < 4.0*radius) continue; // room too small (can happen for has_complex_floorplan office buildings)
-		point pos(gen_xy_pos_in_area(place_area, radius, rgen));
-		pos.z = place_area.z1() + get_fc_thickness(); // on top of the floor
-		if (is_valid_ai_placement(pos, radius)) {return pos;} // check room objects; start in the open, not under something
-	} // for n
-	return all_zeros; // failed
 }
 
 bool can_hide_under(room_object_t const &c, cube_t &hide_area) {
@@ -248,14 +271,6 @@ bool can_hide_under(room_object_t const &c, cube_t &hide_area) {
 	return 0;
 }
 
-bool building_t::is_rat_inside_building(point const &pos, float xy_pad, float hheight) const {
-	if (!bcube.contains_pt_xy_exp(pos, -xy_pad)) return 0; // check for end point inside building bcube
-	cube_t req_area(pos, pos);
-	req_area.expand_by_xy(xy_pad);
-	req_area.z2() += hheight;
-	return is_cube_contained_in_parts(req_area);
-}
-
 class dir_gen_t {
 	vector<vector3d> dirs;
 	unsigned dir_ix;
@@ -278,6 +293,7 @@ public:
 dir_gen_t dir_gen;
 
 void building_t::update_rat(rat_t &rat, point const &camera_bs, int ped_ix, float timestep, float &max_xmove, bool can_attack_player, rand_gen_t &rgen) const {
+
 	float const floor_spacing(get_window_vspace()), trim_thickness(get_trim_thickness()), view_dist(RAT_VIEW_FLOORS*floor_spacing);
 	float const hlength(rat.get_hlength()), hwidth(rat.hwidth), height(rat.height), hheight(0.5*height);
 	float const squish_hheight(0.75*hheight); // rats can squish to get under low objects and walk onto small steps
@@ -299,7 +315,7 @@ void building_t::update_rat(rat_t &rat, point const &camera_bs, int ped_ix, floa
 		coll_dir = (prev_pos - rat.pos).get_norm(); // points toward the collider in the XY plane
 
 		// check if new pos is valid, and has a path to dest
-		if (!is_rat_inside_building(rat.pos, xy_pad, hheight)) {
+		if (!is_pos_inside_building(rat.pos, xy_pad, hheight)) {
 			rat.pos = prev_pos; // restore previous pos before collision
 			rat.sleep_for(0.1, 0.2); // wait 0.1-0.2s so that we don't immediately collide and get pushed out again
 		}
@@ -330,7 +346,7 @@ void building_t::update_rat(rat_t &rat, point const &camera_bs, int ped_ix, floa
 		vector3d const vdir((target - rat.pos).get_norm());
 		target -= vdir*(1.01*min_dist); // get within attacking range, but not at the center of the player
 		
-		if (is_rat_inside_building(target, xy_pad, hheight)) { // check if outside the valid area
+		if (is_pos_inside_building(target, xy_pad, hheight)) { // check if outside the valid area
 			point const p1_ext(p1 + coll_radius*vdir); // move the line slightly toward the dest to prevent collisions at the initial location
 			
 			if (!check_line_coll_expand(p1_ext, target, coll_radius, squish_hheight)) {
@@ -424,7 +440,7 @@ void building_t::update_rat(rat_t &rat, point const &camera_bs, int ped_ix, floa
 				r = start-1; // go back and test the other rats for collisions with this new position; maybe creates a bit more determinism/less chaos
 			} // for r
 			if (skip) continue;
-			if (tot_mdist > 0.0 && !is_rat_inside_building(cand_dest, xy_pad, hheight)) continue; // check if outside the valid area if center was moved
+			if (tot_mdist > 0.0 && !is_pos_inside_building(cand_dest, xy_pad, hheight)) continue; // check if outside the valid area if center was moved
 			best_dest  = point(cand_dest.x, cand_dest.y, rat.pos.z); // keep zval on the floor
 			best_score = score;
 			if (cand_dest.x == rat.dest.x && cand_dest.y == rat.dest.y) break; // keep the same dest (optimization)
@@ -479,7 +495,7 @@ void building_t::update_rat(rat_t &rat, point const &camera_bs, int ped_ix, floa
 			float dist(rgen.rand_uniform(0.1, dist_upper_bound)*target_max_dist); // random distance out to max view dist
 			max_eq(dist, min_step); // make sure distance isn't too short
 			point const cand(rat.pos + dist*vdir);
-			if (!is_rat_inside_building(cand, xy_pad, hheight)) continue; // check if outside the valid area
+			if (!is_pos_inside_building(cand, xy_pad, hheight)) continue; // check if outside the valid area
 			point const p2(cand + line_project_dist*vdir + center_dz); // extend in vdir so that the head doesn't collide
 			point const p1_ext(p1 + coll_radius*vdir); // move the line slightly toward the dest to prevent collisions at the initial location
 			if (check_line_coll_expand(p1_ext, p2, coll_radius, squish_hheight)) continue;
@@ -503,12 +519,8 @@ void building_t::update_rat(rat_t &rat, point const &camera_bs, int ped_ix, floa
 	}
 	// else dir is unchanged
 	rat.is_hiding = (has_fear_dest && dist_less_than(rat.pos, rat.dest, 2.0*dist_thresh)); // close to fear_dest
-
-	if (new_dir != zero_vector) { // update dir if new_dir was set above
-		float const delta_dir((is_scared ? 1.1 : 1.0)*min(1.0f, 1.5f*(1.0f - pow(0.7f, timestep)))); // higher turning rate when scared
-		rat.dir = (delta_dir*new_dir + (1.0 - delta_dir)*rat.dir).get_norm();
-	}
-	if (rat.dir == zero_vector) {rat.dir = rgen.signed_rand_vector_xy().get_norm();} // dir must always be valid
+	float const turn_rate(is_scared ? 1.1 : 1.0); // higher turning rate when scared
+	update_dir_incremental(rat.dir, new_dir, turn_rate, timestep, rgen);
 	assert(rat.dir.z == 0.0); // must be in XY plane
 }
 
@@ -562,8 +574,23 @@ cube_t spider_t::get_bcube() const {
 	bcube.expand_by(vector3d(2.0*radius, 2.0*radius, radius)); // conservative?
 	return bcube;
 }
-void spider_t::animate() {
-	if (animate2) {anim_time += fticks;}
-	if (anim_time > 100000.0) {anim_time = 0.0;} // reset animation after awhile to avoid precision problems
+
+void building_t::update_spiders(point const &camera_bs, unsigned building_ix, int ped_ix) {
+	if (global_building_params.num_spiders_max == 0) return;
+	vect_spider_t &spiders(interior->room_geom->spiders);
+	if (spiders.placed && spiders.empty()) return; // no spiders placed in this building
+	//timer_t timer("Update Spiders");
+	add_animals_on_floor(spiders, building_ix, global_building_params.num_spiders_min, global_building_params.num_spiders_max,
+		global_building_params.spider_size_min, global_building_params.spider_size_max);
+	// update spiders
+	float const timestep(min(fticks, 4.0f)); // clamp fticks to 100ms
+	for (spider_t &spider : spiders) {spider.move(timestep);}
+	rand_gen_t rgen;
+	rgen.set_state(building_ix+1, frame_counter+1); // unique per building and per frame
+	for (spider_t &spider : spiders) {update_spider(spider, camera_bs, timestep, rgen);}
+}
+
+void building_t::update_spider(spider_t &spider, point const &camera_bs, float timestep, rand_gen_t &rgen) const {
+	// WRITE
 }
 
