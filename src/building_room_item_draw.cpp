@@ -1049,7 +1049,7 @@ public:
 		for (spider_t const &S : spiders) { // future work: use instancing
 			s.add_uniform_float("animation_time", S.anim_time);
 			fgPushMatrix();
-			translate_to(S.pos);
+			fgTranslate(S.pos.x, S.pos.y, (S.pos.z + S.radius)); // shift up by radius when drawing
 			city_model_loader_t::rotate_model_from_plus_x_to_dir(S.dir);
 			uniform_scale(S.radius);
 			check_mvm_update();
@@ -1063,18 +1063,6 @@ public:
 	}
 };
 spider_draw_t spider_draw;
-
-// TODO: placeholder for debugging spider drawing and animation
-void draw_spider() {
-	static vector<spider_t> spiders;
-	if (spiders.empty()) {spiders.emplace_back(point(0.0, 0.0, 1.0), 1.0, plus_y);}
-	for (spider_t &S : spiders) {S.animate();}
-	shader_t s;
-	enable_animations_for_shader(s);
-	city_shader_setup(s, cube_t(), 0, 0, 0);
-	spider_draw.draw(spiders, s, 0); // shadow_only=0
-	s.end_shader();
-}
 
 // Note: non-const because it creates the VBO; inc_small: 0=large only, 1=large+small, 2=large+small+detail
 void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, building_t const &building, occlusion_checker_noncity_t &oc, vector3d const &xlate,
