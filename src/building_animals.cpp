@@ -12,6 +12,7 @@ float const RAT_VIEW_FLOORS  = 4.0; // view distance in floors
 float const RAT_FEAR_SPEED   = 1.3; // multiplier
 float const RAT_ATTACK_SPEED = 1.2; // multiplier
 float const RAT_FOV_DP(cos(0.5*RAT_FOV_DEG*TO_RADIANS));
+float const SPIDER_VIEW_FLOORS = 4.0; // view distance in floors
 
 extern int animate2, camera_surf_collide, frame_counter, display_mode;
 extern float fticks;
@@ -27,6 +28,7 @@ bool player_take_damage(float damage_scale, bool &has_key);
 
 void building_animal_t::sleep_for(float time_secs_min, float time_secs_max) {
 	wake_time = (float)tfticks + rand_uniform(time_secs_min, time_secs_max)*TICKS_PER_SECOND;
+	dist_since_sleep = 0.0; // reset the counter
 }
 void building_animal_t::move(float timestep) {
 	// update animation time using position change; note that we can't just do the update in the rat movement code below because pos may be reset in case of collision
@@ -105,12 +107,21 @@ void update_dir_incremental(vector3d &dir, vector3d const &new_dir, float turn_r
 	}
 	if (dir == zero_vector) {dir = rgen.signed_rand_vector_xy().get_norm();} // dir must always be valid
 }
+void try_resolve_coll(vector3d const &dir, vector3d const &coll_dir, vector3d &new_dir, bool try_tangent) {
+	if (dot_product(coll_dir, new_dir) > 0.0) { // must move away from the collision direction
+		if (try_tangent) { // try to preserve direction by moving in a tangent to the collider
+			new_dir = cross_product(coll_dir, plus_z);
+			if (dot_product(new_dir, dir) < 0.0) {new_dir.negate();} // there are two solutions; choose the one closer to our current dir
+		}
+		else {new_dir.negate();} // otherwise reverse direction
+	}
+}
 
 
 // *** Rats ***
 
 rat_t::rat_t(point const &pos_, float radius_, vector3d const &dir_) : building_animal_t(pos_, radius_, dir_),
-fear(0.0), rat_id(0), is_hiding(0), near_player(0), attacking(0)
+fear(0.0), is_hiding(0), near_player(0), attacking(0)
 {
 	vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_RAT)); // L=3878, W=861, H=801
 	hwidth = radius*sz.y/sz.x; // scale radius by ratio of width to length
@@ -130,12 +141,6 @@ cube_t rat_t::get_bcube_with_dir() const {
 	bcube.expand_in_dim(!pri_dim, radius*min(sz.x, sz.y)/max(sz.x, sz.y)); // smaller dim
 	bcube.z2() += height;
 	return bcube;
-}
-
-void vect_rat_t::add(rat_t const &rat) {
-	push_back(rat);
-	back().rat_id = size(); // rat_id starts at 1
-	max_eq(max_radius, rat.radius);
 }
 
 bool building_t::add_rat(point const &pos, float hlength, vector3d const &dir, point const &placed_from) {
@@ -190,8 +195,7 @@ void building_t::update_rats(point const &camera_bs, unsigned building_ix, int p
 		gen_sound_thread_safe(SOUND_RAT_SQUEAK, local_to_camera_space(rat_alert_pos), 1.0, 1.2); // high pitch
 	}
 	prev_can_attack_player = can_attack_player;
-	sort(rats.begin(), rats.end()); // sort by xval
-	rats.max_xmove = 0.0; // reset for this frame
+	rats.do_sort();
 	rand_gen_t rgen;
 	rgen.set_state(building_ix+1, frame_counter+1); // unique per building and per frame
 
@@ -393,7 +397,7 @@ void building_t::update_rat(rat_t &rat, point const &camera_bs, int ped_ix, floa
 			// also use the obj_id to mix things up between objects, and throw in the type in case obj_id is left at 0;
 			// we can't use the obj vector position because it may change if the player takes or drops objects
 			rand_gen_t my_rgen;
-			my_rgen.set_state((rat.rat_id + 1), (c->obj_id + (c->type << 16) + 1));
+			my_rgen.set_state((rat.id + 1), (c->obj_id + (c->type << 16) + 1));
 			cube_t safe_area(hide_area);
 			point cand_dest(0.0, 0.0, p1.z); // x/y will be set below
 
@@ -421,7 +425,7 @@ void building_t::update_rat(rat_t &rat, point const &camera_bs, int ped_ix, floa
 			float const radius_scale = 0.8; // smaller dist (head can overlap tail)
 			vect_rat_t const &rats(interior->room_geom->rats);
 			float const rsum_max(radius_scale*(rat.radius + rats.max_radius) + rats.max_xmove), coll_x1(cand_dest.x - rsum_max), coll_x2(cand_dest.x + rsum_max);
-			auto start(rats.get_first_rat_with_xv_gt(coll_x1)); // use a binary search to speed up iteration
+			auto start(rats.get_first_with_xv_gt(coll_x1)); // use a binary search to speed up iteration
 
 			for (auto r = start; r != rats.end(); ++r) {
 				if (r->pos.x > coll_x2) break; // no rat after this can overlap - done
@@ -458,8 +462,7 @@ void building_t::update_rat(rat_t &rat, point const &camera_bs, int ped_ix, floa
 
 	if (!is_scared && !rat.is_sleeping() && is_at_dest && rat.dist_since_sleep > 1.5*floor_spacing && (rgen.rand()&2) == 0) { // 25% chance of taking a rest
 		rat.sleep_for(0.0, 4.0); // 0-4s
-		rat.dist_since_sleep = 0.0; // reset the counter
-		rat.speed            = 0.0; // will reset anim_time in the next frame
+		rat.speed = 0.0; // will reset anim_time in the next frame
 	}
 	else if (!has_fear_dest && !rat.is_sleeping() &&
 		(rat.speed == 0.0 || newly_scared || update_path || is_at_dest || check_line_coll_expand(rat.pos, rat.dest, coll_radius, hheight)))
@@ -478,13 +481,7 @@ void building_t::update_rat(rat_t &rat, point const &camera_bs, int ped_ix, floa
 			vector3d vdir(dir_gen.gen_dir()); // random XY direction
 
 			if (collided && coll_dir != zero_vector) { // resolve the collision; target_fov_dp is ignored in this case
-				if (dot_product(coll_dir, vdir) > 0.0) { // must move away from the collision direction
-					if (n <= 10) { // earlier in the iteration, try to preserve direction by moving in a tangent to the collider
-						vdir = cross_product(coll_dir, plus_z);
-						if (dot_product(vdir, rat.dir) < 0.0) {vdir.negate();} // there are two solutions; choose the one closer to our current dir
-					}
-					else {vdir.negate();} // otherwise reverse direction
-				}
+				try_resolve_coll(rat.dir, coll_dir, vdir, (n <= 10)); // if earlier in the iteration, try moving in a tangent
 			}
 			else { // not colliding; check if the new direction is close enough to our current direction
 				float dp(dot_product(rat.dir, vdir));
@@ -569,6 +566,10 @@ void building_t::scare_rat_at_pos(rat_t &rat, point const &scare_pos, float amou
 
 // *** Spiders ***
 
+// Note: radius is really used for height and body size; legs can extend out to ~2x radius, so we decrease radius to half the user-specified value to account for this
+spider_t::spider_t(point const &pos_, float radius_, vector3d const &dir_) : building_animal_t(pos_, 0.5*radius_, dir_) {
+	pos.z += radius; // shift upward so that the center is off the ground
+}
 cube_t spider_t::get_bcube() const {
 	cube_t bcube(pos);
 	bcube.expand_by(vector3d(2.0*radius, 2.0*radius, radius)); // conservative?
@@ -585,12 +586,81 @@ void building_t::update_spiders(point const &camera_bs, unsigned building_ix, in
 	// update spiders
 	float const timestep(min(fticks, 4.0f)); // clamp fticks to 100ms
 	for (spider_t &spider : spiders) {spider.move(timestep);}
+	spiders.do_sort();
 	rand_gen_t rgen;
 	rgen.set_state(building_ix+1, frame_counter+1); // unique per building and per frame
-	for (spider_t &spider : spiders) {update_spider(spider, camera_bs, timestep, rgen);}
+	for (spider_t &spider : spiders) {update_spider(spider, camera_bs, timestep, spiders.max_xmove, rgen);}
 }
 
-void building_t::update_spider(spider_t &spider, point const &camera_bs, float timestep, rand_gen_t &rgen) const {
-	// WRITE
+void building_t::update_spider(spider_t &spider, point const &camera_bs, float timestep, float &max_xmove, rand_gen_t &rgen) const {
+	
+	float const floor_spacing(get_window_vspace()), trim_thickness(get_trim_thickness()), view_dist(SPIDER_VIEW_FLOORS*floor_spacing);
+	float const radius(spider.radius), height(2.0*radius), coll_radius(2.0f*radius), xy_pad(coll_radius + trim_thickness);
+	// set dist_thresh based on the distance we can move this frame; if set too low, we may spin in circles trying to turn to stop on the right spot
+	float const dist_thresh(2.0f*timestep*max(spider.speed, global_building_params.spider_speed));
+	bool collided(0), update_path(0);
+	vector3d coll_dir;
+	point const prev_pos(spider.pos); // capture the pre-collision point
+	rgen.rand_mix(); // make sure it's different per spider
+
+	if (spider.is_sleeping()) {} // peacefully sleeping, no collision needed
+	else if (check_and_handle_dynamic_obj_coll(spider.pos, coll_radius, height, camera_bs)) { // check for collisions
+		collided = 1;
+		coll_dir = (prev_pos - spider.pos).get_norm(); // points toward the collider in the XY plane
+
+		// check if new pos is valid, and has a path to dest
+		if (!is_pos_inside_building(spider.pos, xy_pad, radius)) {
+			spider.pos = prev_pos; // restore previous pos before collision
+			spider.sleep_for(0.1, 0.2); // wait 0.1-0.2s so that we don't immediately collide and get pushed out again
+		}
+		else if (check_line_coll_expand(spider.pos, spider.dest, coll_radius, radius)) {
+			spider.pos = prev_pos; // restore previous pos before collision
+		}
+		else {
+			max_eq(max_xmove, fabs(spider.pos.x - prev_pos.x));
+			// update the path about every 30 frames of colliding; this prevents the spider from being stuck while also avoiding jittering due to frequent dest updates;
+			// using randomness rather than updating every 30 frames makes this process less regular and mechanical
+			update_path = ((rgen.rand()%30) == 0);
+		}
+	}
+
+	// determine destination
+	// TODO: logic to attack the player; see spiders logic
+	bool const is_at_dest(dist_less_than(spider.pos, spider.dest, dist_thresh));
+
+	if (!spider.is_sleeping() && is_at_dest && spider.dist_since_sleep > 1.5*floor_spacing && (rgen.rand()&2) == 0) { // 25% chance of taking a rest
+		spider.sleep_for(0.0, 4.0); // 0-4s
+		spider.speed = 0.0; // will reset anim_time in the next frame
+	}
+	else if (!spider.is_sleeping() && (spider.speed == 0.0 || update_path || is_at_dest || check_line_coll_expand(spider.pos, spider.dest, coll_radius, radius))) {
+		// stopped, no dest, at dest, or collided - choose a new dest
+		float const min_step(min(dist_thresh, 0.05f*spider.radius));
+		spider.speed = 0.0; // stop until we've found a valid destination
+
+		for (unsigned n = 0; n < 200; ++n) { // make 200 tries
+			vector3d vdir(dir_gen.gen_dir()); // random XY direction
+
+			if (collided && coll_dir != zero_vector) { // resolve the collision
+				try_resolve_coll(spider.dir, coll_dir, vdir, (n <= 10)); // if earlier in the iteration, try moving in a tangent
+			}
+			else { // not colliding; check if the new direction is close enough to our current direction
+				if (n < 180 && dot_product(spider.dir, vdir) < 0.0) {vdir.negate();} // only allow switching directions in the last 20 iterations
+			}
+			float dist(rgen.rand_uniform(0.1, 1.0)*view_dist); // random distance out to max view dist
+			max_eq(dist, min_step); // make sure distance isn't too short
+			point const cand(spider.pos + dist*vdir);
+			if (!is_pos_inside_building(cand, xy_pad, radius)) continue; // check if outside the valid area
+			point const p1_ext(spider.pos + coll_radius*vdir); // move the line slightly toward the dest to prevent collisions at the initial location
+			if (check_line_coll_expand(p1_ext, cand, coll_radius, radius)) continue;
+			spider.dest  = cand;
+			spider.speed = global_building_params.spider_speed*rgen.rand_uniform(0.5, 1.0); // random speed
+			break; // success
+		} // for n
+	}
+	// update direction
+	vector3d new_dir;
+	if (!dist_less_than(spider.pos, spider.dest, dist_thresh)) {new_dir = (spider.dest - spider.pos).get_norm();} // point toward our destination
+	// else dir is unchanged
+	update_dir_incremental(spider.dir, new_dir, 1.0, timestep, rgen);
 }
 

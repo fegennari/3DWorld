@@ -1045,11 +1045,13 @@ public:
 		select_texture(WHITE_TEX);
 		int const animation_id = 8; // custom spider animation
 		s.add_uniform_int("animation_id", animation_id);
+		s.add_uniform_float("animation_scale",    1.0); // not using a model, nominal size is 1.0
+		s.add_uniform_float("model_delta_height", 1.0); // not using a model, nominal size is 1.0
 
 		for (spider_t const &S : spiders) { // future work: use instancing
 			s.add_uniform_float("animation_time", S.anim_time);
 			fgPushMatrix();
-			fgTranslate(S.pos.x, S.pos.y, (S.pos.z + S.radius)); // shift up by radius when drawing
+			translate_to(S.pos);
 			city_model_loader_t::rotate_model_from_plus_x_to_dir(S.dir);
 			uniform_scale(S.radius);
 			check_mvm_update();

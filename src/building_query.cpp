@@ -1318,6 +1318,25 @@ bool handle_dynamic_room_objs_coll(vect_room_object_t::const_iterator begin, vec
 	return 0;
 }
 
+template<typename T> void vect_animal_t<T>::update_delta_sum_for_animal_coll(point const &pos, float radius, float height,
+	float radius_scale, float &max_overlap, vector3d &delta_sum) const
+{
+	float const rsum_max(radius_scale*(radius + max_radius) + max_xmove), coll_x1(pos.x - rsum_max), coll_x2(pos.x + rsum_max), z2(pos.z + height);
+	auto start(get_first_with_xv_gt(coll_x1)); // use a binary search to speed up iteration
+
+	for (auto r = start; r != end(); ++r) {
+		if (r->pos.x > coll_x2) break; // none after this can overlap - done
+		if (r->pos == pos) continue; // skip ourself
+		if (pos.z > (r->pos.z + r->get_height()) || z2 < r->pos.z) continue; // different floors
+		float const rsum(radius_scale*(radius + r->radius));
+		if (!dist_xy_less_than(pos, r->pos, rsum)) continue; // no collision
+		float const overlap(rsum - p2p_dist_xy(pos, r->pos));
+		vector3d const delta((pos - point(r->pos.x, r->pos.y, pos.z)).get_norm()*overlap);
+		delta_sum += delta; // accumulate weighted delta across collisions
+		max_eq(max_overlap, overlap);
+	} // for r
+}
+
 // vertical cylinder collision detection with dynamic objects: balls, the player? people? other rats?
 // only handles the first collision
 bool building_t::check_and_handle_dynamic_obj_coll(point &pos, float radius, float height, point const &camera_bs) const {
@@ -1339,24 +1358,13 @@ bool building_t::check_and_handle_dynamic_obj_coll(point &pos, float radius, flo
 		get_begin_end_room_objs_on_ground_floor(z2, b, e);
 		handle_dynamic_room_objs_coll(b, e, pos, radius, z2);
 	}
-	float const radius_scale = 0.7; // allow them to get a bit closer together, since radius is conservative
-	vect_rat_t const &rats(interior->room_geom->rats);
-	float const rsum_max(radius_scale*(radius + rats.max_radius) + rats.max_xmove), coll_x1(pos.x - rsum_max), coll_x2(pos.x + rsum_max);
-	auto start(rats.get_first_rat_with_xv_gt(coll_x1)); // use a binary search to speed up iteration
 	float max_overlap(0.0);
 	vector3d delta_sum;
-
-	for (auto r = start; r != rats.end(); ++r) {
-		if (r->pos.x > coll_x2) break; // no rat after this can overlap - done
-		if (r->pos == pos) continue; // skip ourself
-		if (pos.z > (r->pos.z + r->height) || z2 < r->pos.z) continue; // different floors
-		float const rsum(radius_scale*(radius + r->radius));
-		if (!dist_xy_less_than(pos, r->pos, rsum)) continue; // no collision
-		float const overlap(rsum - p2p_dist_xy(pos, r->pos));
-		vector3d const delta((pos - point(r->pos.x, r->pos.y, pos.z)).get_norm()*overlap);
-		delta_sum += delta; // accumulate weighted delta across collisions
-		max_eq(max_overlap, overlap);
-	} // for r
+	float const rat_radius_scale    = 0.7; // allow them to get a bit closer together, since radius is conservative
+	float const spider_radius_scale = 1.5; // legs go outside radius, use a larger scale
+	interior->room_geom->rats   .update_delta_sum_for_animal_coll(pos, radius, height, rat_radius_scale,    max_overlap, delta_sum);
+	interior->room_geom->spiders.update_delta_sum_for_animal_coll(pos, radius, height, spider_radius_scale, max_overlap, delta_sum);
+	
 	if (max_overlap > 0.0) { // we have at least one collision
 		float const delta_mag(delta_sum.mag());
 		if (delta_mag > max_overlap) {delta_sum *= max_overlap/delta_mag;} // clamp to max_overlap

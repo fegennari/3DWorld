@@ -106,7 +106,7 @@ void apply_vertex_animation(inout vec4 vertex, inout vec3 normal, in vec2 tc) {
 		// first and thrid legs move together; second and fourth legs move together
 		float leg_dist  = abs(tc.y);
 		float lr_off    = ((tc.y < 0.0) ? 0.0 : 1.0);
-		float cycle_pos = 0.25*animation_time + 2.0*PI*(2.0*tc.x + 0.5*lr_off);
+		float cycle_pos = 0.04*anim_val + 2.0*PI*(2.0*tc.x + 0.5*lr_off);
 		float up_amt    = max(sin(-cycle_pos), 0.0);
 		vertex.x += 0.25*animation_scale*leg_dist*cos(cycle_pos); // move forward and backward
 		vertex.z += ((leg_dist > 0.1) ? 1.2*animation_scale*(leg_dist - 0.5)*up_amt : 0.0); // knee moves down, angle and foot move up, body joint stays in place

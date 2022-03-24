@@ -78,10 +78,11 @@ struct building_animal_t {
 	point pos, last_pos, dest;
 	vector3d dir;
 	float radius, speed, anim_time, wake_time, dist_since_sleep;
+	unsigned id;
 
-	building_animal_t(float xval) : pos(xval, 0.0, 0.0), radius(0), speed(0), anim_time(0), wake_time(0), dist_since_sleep(0) {}
+	building_animal_t(float xval) : pos(xval, 0.0, 0.0), radius(0), speed(0), anim_time(0), wake_time(0), dist_since_sleep(0), id(0) {}
 	building_animal_t(point const &pos_, float radius_, vector3d const &dir_) :
-		pos(pos_), dest(pos), dir(dir_), radius(radius_), speed(0.0), anim_time(0.0), wake_time(0), dist_since_sleep(0) {}
+		pos(pos_), dest(pos), dir(dir_), radius(radius_), speed(0.0), anim_time(0.0), wake_time(0), dist_since_sleep(0), id(0) {}
 	bool operator<(building_animal_t const &a) const {return (pos.x < a.pos.x);} // compare only xvals
 	bool is_moving  () const {return (speed     > 0.0);}
 	bool is_sleeping() const {return (wake_time > 0.0);}
@@ -92,37 +93,47 @@ struct building_animal_t {
 struct rat_t : public building_animal_t {
 	point fear_pos;
 	float height, hwidth, fear;
-	unsigned rat_id;
 	bool is_hiding, near_player, attacking;
 
 	// this first constructor is for the lower_bound() call in vect_rat_t::get_first_rat_with_x2_gt()
-	rat_t(float xval) : building_animal_t(xval), height(0), hwidth(0), fear(0), rat_id(0), is_hiding(0), near_player(0), attacking(0) {}
+	rat_t(float xval) : building_animal_t(xval), height(0), hwidth(0), fear(0), is_hiding(0), near_player(0), attacking(0) {}
 	rat_t(point const &pos_, float radius_, vector3d const &dir_);
 	bool operator<(rat_t const &r) const {return (pos.x < r.pos.x);} // compare only xvals
 	float get_hlength() const {return radius;} // this is the bounding radius, so it represents the longest dim (half length)
+	float get_height () const {return height;}
 	point get_center () const {return point(pos.x, pos.y, (pos.z + 0.5f*height));}
 	cube_t get_bcube () const; // used for collision detection and VFC; bounding cube across rotations
 	cube_t get_bcube_with_dir() const; // used for model drawing; must be correct aspect ratio
 };
 
-struct vect_rat_t : public vector<rat_t> {
-	bool placed;
-	float max_radius, max_xmove;
-	vect_rat_t() : placed(0), max_radius(0.0), max_xmove(0.0) {}
-	void add(rat_t const &rat);
-	const_iterator get_first_rat_with_xv_gt(float x) const {return std::lower_bound(begin(), end(), rat_t(x));}
-};
-
 struct spider_t : public building_animal_t {
-	spider_t(point const &pos_, float radius_, vector3d const &dir_) : building_animal_t(pos_, radius_, dir_) {}
+	// this first constructor is for the lower_bound() call in vect_rat_t::get_first_rat_with_x2_gt()
+	spider_t(float xval) : building_animal_t(xval) {}
+	spider_t(point const &pos_, float radius_, vector3d const &dir_);
+	float get_height() const {return 2.0*radius;}
 	cube_t get_bcube() const; // used for collision detection and VFC
 };
 
-struct vect_spider_t : public vector<spider_t> {
+template<typename T> struct vect_animal_t : public vector<T> {
 	bool placed;
-	vect_spider_t() : placed(0) {}
-	void add(spider_t const &spider) {push_back(spider);}
+	float max_radius, max_xmove;
+	vect_animal_t() : placed(0), max_radius(0.0), max_xmove(0.0) {}
+	
+	void add(T const &animal) {
+		push_back(animal);
+		back().id = size(); // rat_id starts at 1
+		max_eq(max_radius, animal.radius);
+	}
+	void do_sort() {
+		sort(begin(), end()); // sort by xval
+		max_xmove = 0.0; // reset for this frame
+	}
+	const_iterator get_first_with_xv_gt(float x) const {return std::lower_bound(begin(), end(), T(x));}
+	void update_delta_sum_for_animal_coll(point const &pos, float radius, float height, float radius_scale, float &max_overlap, vector3d &delta_sum) const;
 };
+typedef vect_animal_t<rat_t   > vect_rat_t;
+typedef vect_animal_t<spider_t> vect_spider_t;
+
 
 struct building_occlusion_state_t {
 	int exclude_bix;
@@ -1217,7 +1228,7 @@ private:
 	void update_rat(rat_t &rat, point const &camera_bs, int ped_ix, float timestep, float &max_xmove, bool can_attack_player, rand_gen_t &rgen) const;
 	void scare_rat(rat_t &rat, point const &camera_bs, int ped_ix) const;
 	void scare_rat_at_pos(rat_t &rat, point const &scare_pos, float amount, bool by_sight) const;
-	void update_spider(spider_t &spider, point const &camera_bs, float timestep, rand_gen_t &rgen) const;
+	void update_spider(spider_t &spider, point const &camera_bs, float timestep, float &max_xmove, rand_gen_t &rgen) const;
 	bool check_line_coll_expand(point const &p1, point const &p2, float radius, float height) const;
 	bool check_line_of_sight_large_objs(point const &p1, point const &p2) const;
 	bool check_and_handle_dynamic_obj_coll(point &pos, float radius, float height, point const &camera_bs) const;
