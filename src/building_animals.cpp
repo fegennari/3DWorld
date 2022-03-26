@@ -308,14 +308,13 @@ void building_t::update_rat(rat_t &rat, point const &camera_bs, int ped_ix, floa
 	float const xy_pad(hlength + trim_thickness);
 	vector3d const center_dz(0.0, 0.0, hheight); // or squish_hheight?
 	assert(hwidth <= hlength); // otherwise the model is probably in the wrong orientation
-	bool collided(0), update_path(0);
+	bool update_path(0);
 	vector3d coll_dir;
 	point const prev_pos(rat.pos); // capture the pre-collision point
 	rgen.rand_mix(); // make sure it's different per rat
 
 	if (rat.is_sleeping() && rat.fear == 0.0) {} // peacefully sleeping, no collision needed
-	else if (check_and_handle_dynamic_obj_coll(rat.pos, rat.radius, height, camera_bs)) { // check for collisions
-		collided = 1;
+	else if (check_and_handle_dynamic_obj_coll(rat.pos, rat.radius, rat.pos.z, (rat.pos.z + height), camera_bs)) { // check for collisions
 		coll_dir = (prev_pos - rat.pos).get_norm(); // points toward the collider in the XY plane
 
 		// check if new pos is valid, and has a path to dest
@@ -480,7 +479,7 @@ void building_t::update_rat(rat_t &rat, point const &camera_bs, int ped_ix, floa
 			}
 			vector3d vdir(dir_gen.gen_dir()); // random XY direction
 
-			if (collided && coll_dir != zero_vector) { // resolve the collision; target_fov_dp is ignored in this case
+			if (coll_dir != zero_vector) { // resolve the collision; target_fov_dp is ignored in this case
 				try_resolve_coll(rat.dir, coll_dir, vdir, (n <= 10)); // if earlier in the iteration, try moving in a tangent
 			}
 			else { // not colliding; check if the new direction is close enough to our current direction
@@ -661,11 +660,10 @@ struct surface_orienter_t {
 
 void building_t::update_spider(spider_t &spider, point const &camera_bs, float timestep, float &max_xmove, rand_gen_t &rgen) const {
 	
-	float const floor_spacing(get_window_vspace()), trim_thickness(get_trim_thickness()), view_dist(SPIDER_VIEW_FLOORS*floor_spacing);
-	float const radius(spider.radius), height(2.0*radius), coll_radius(2.0f*radius), xy_pad(coll_radius + trim_thickness);
+	float const radius(spider.radius), height(2.0*radius), coll_radius(2.0f*radius), xy_pad(coll_radius + get_trim_thickness());
 
-	if (1) { // experimental logic to walk on walls, etc.
-		if (spider.dir == zero_vector) {spider.dir = rgen.signed_rand_vector_xy().get_norm();}
+	if (1) { // logic to walk on walls, etc.
+		if (spider.dir == zero_vector) {spider.dir = rgen.signed_rand_vector_xy().get_norm();} // FIXME: must be orthogonal to spider.upv
 		if (spider.speed == 0.0) {spider.speed = global_building_params.spider_speed*rgen.rand_uniform(0.5, 1.0);} // random speed
 
 		if (!is_pos_inside_building(spider.pos, xy_pad, radius)) {
@@ -685,7 +683,8 @@ void building_t::update_spider(spider_t &spider, point const &camera_bs, float t
 	}
 	// set dist_thresh based on the distance we can move this frame; if set too low, we may spin in circles trying to turn to stop on the right spot
 	float const dist_thresh(2.0f*timestep*max(spider.speed, global_building_params.spider_speed));
-	bool collided(0), update_path(0);
+	float const floor_spacing(get_window_vspace()), view_dist(SPIDER_VIEW_FLOORS*floor_spacing);
+	bool update_path(0);
 	vector3d coll_dir;
 	point const prev_pos(spider.pos); // capture the pre-collision point
 	rgen.rand_mix(); // make sure it's different per spider
@@ -727,7 +726,7 @@ void building_t::update_spider(spider_t &spider, point const &camera_bs, float t
 		for (unsigned n = 0; n < 200; ++n) { // make 200 tries
 			vector3d vdir(dir_gen.gen_dir()); // random XY direction
 
-			if (collided && coll_dir != zero_vector) { // resolve the collision
+			if (coll_dir != zero_vector) { // resolve the collision
 				try_resolve_coll(spider.dir, coll_dir, vdir, (n <= 10)); // if earlier in the iteration, try moving in a tangent
 			}
 			else { // not colliding; check if the new direction is close enough to our current direction
