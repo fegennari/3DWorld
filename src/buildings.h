@@ -121,15 +121,15 @@ template<typename T> struct vect_animal_t : public vector<T> {
 	vect_animal_t() : placed(0), max_radius(0.0), max_xmove(0.0) {}
 	
 	void add(T const &animal) {
-		push_back(animal);
-		back().id = size(); // rat_id starts at 1
+		this->push_back(animal);
+		this->back().id = this->size(); // rat_id starts at 1
 		max_eq(max_radius, animal.radius);
 	}
 	void do_sort() {
-		sort(begin(), end()); // sort by xval
+		sort(this->begin(), this->end()); // sort by xval
 		max_xmove = 0.0; // reset for this frame
 	}
-	const_iterator get_first_with_xv_gt(float x) const {return std::lower_bound(begin(), end(), T(x));}
+	typename vector<T>::const_iterator get_first_with_xv_gt(float x) const {return std::lower_bound(this->begin(), this->end(), T(x));}
 	void update_delta_sum_for_animal_coll(point const &pos, float radius, float height, float radius_scale, float &max_overlap, vector3d &delta_sum) const;
 };
 typedef vect_animal_t<rat_t   > vect_rat_t;

@@ -1324,7 +1324,7 @@ template<typename T> void vect_animal_t<T>::update_delta_sum_for_animal_coll(poi
 	float const rsum_max(radius_scale*(radius + max_radius) + max_xmove), coll_x1(pos.x - rsum_max), coll_x2(pos.x + rsum_max), z2(pos.z + height);
 	auto start(get_first_with_xv_gt(coll_x1)); // use a binary search to speed up iteration
 
-	for (auto r = start; r != end(); ++r) {
+	for (auto r = start; r != this->end(); ++r) {
 		if (r->pos.x > coll_x2) break; // none after this can overlap - done
 		if (r->pos == pos) continue; // skip ourself
 		if (pos.z > (r->pos.z + r->get_height()) || z2 < r->pos.z) continue; // different floors
