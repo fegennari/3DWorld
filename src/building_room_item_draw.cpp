@@ -1052,7 +1052,10 @@ public:
 			s.add_uniform_float("animation_time", S.anim_time);
 			fgPushMatrix();
 			translate_to(S.pos);
-			city_model_loader_t::rotate_model_from_plus_x_to_dir(S.dir);
+			rotate_from_v2v(S.dir, plus_x);
+			vector3d model_up(plus_z);
+			rotate_vector3d_by_vr(S.dir, plus_x, model_up); // the model up vector is now pointing in this direction
+			rotate_about(TO_DEG*get_angle(S.upv, model_up), plus_x);
 			uniform_scale(S.radius);
 			check_mvm_update();
 			mat.draw_inner(shadow_only);

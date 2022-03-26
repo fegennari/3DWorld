@@ -32,7 +32,7 @@ void building_animal_t::sleep_for(float time_secs_min, float time_secs_max) {
 }
 void building_animal_t::move(float timestep) {
 	// update animation time using position change; note that we can't just do the update in the rat movement code below because pos may be reset in case of collision
-	anim_time += p2p_dist_xy(pos, last_pos)/radius; // scale with size so that small rats' legs move faster
+	anim_time += p2p_dist(pos, last_pos)/radius; // scale with size so that small rat/spider legs move faster
 	last_pos   = pos;
 	if (anim_time > 100000.0) {anim_time = 0.0;} // reset animation after awhile to avoid precision problems; should this be done when the player isn't looking?
 
@@ -567,7 +567,7 @@ void building_t::scare_rat_at_pos(rat_t &rat, point const &scare_pos, float amou
 // *** Spiders ***
 
 // Note: radius is really used for height and body size; legs can extend out to ~2x radius, so we decrease radius to half the user-specified value to account for this
-spider_t::spider_t(point const &pos_, float radius_, vector3d const &dir_) : building_animal_t(pos_, 0.5*radius_, dir_) {
+spider_t::spider_t(point const &pos_, float radius_, vector3d const &dir_) : building_animal_t(pos_, 0.5*radius_, dir_), upv(plus_z) {
 	pos.z += radius; // shift upward so that the center is off the ground
 }
 cube_t spider_t::get_bcube() const {
@@ -592,10 +592,97 @@ void building_t::update_spiders(point const &camera_bs, unsigned building_ix, in
 	for (spider_t &spider : spiders) {update_spider(spider, camera_bs, timestep, spiders.max_xmove, rgen);}
 }
 
+struct surface_orienter_t {
+	point pos;
+	float radius, r_outer, surf_pos[2] = {}, surf_dists[2];
+	unsigned surf_dims[2] = {};
+	bool surf_dirs[2] = {};
+
+	surface_orienter_t(point const &pos_, float radius_, float transition_dist) : pos(pos_), radius(radius_), r_outer(radius + transition_dist) {
+		surf_dists[0] = surf_dists[1] = 2.0*r_outer; // set larger than any possible value
+	}
+	void register_cube(cube_t const &c, unsigned dim_mask=7, unsigned dir_mask=3) {
+		if (!c.contains_pt_exp(pos, r_outer)) return;
+		point const center(c.get_cube_center());
+
+		for (unsigned d = 0; d < 3; ++d) {
+			if (!(dim_mask & (1<<d  ))) continue;
+			unsigned const dir(center[d] < pos[d]);
+			if (!(dir_mask & (1<<dir))) continue;
+			float const dsign(dir ? 1.0 : -1.0), edge(c.d[d][dir]), dist(dsign*(pos[d] - edge)); // Note: can be negative if pos is inside the cube
+			if (dist >= r_outer) continue; // too far from this cube side
+			unsigned dix(0);
+			if      (dist < surf_dists[0]) {dix = 0;}
+			else if (dist < surf_dists[1]) {dix = 1;}
+			else {continue;} // not a closest distance; can happen at cube corners
+			surf_dists[dix] = dist;
+			surf_pos  [dix] = edge;
+			surf_dims [dix] = d;
+			surf_dirs [dix] = dir;
+		} // for d
+	}
+	void register_cubes(vect_cube_t const &cubes, unsigned dim_mask=7, unsigned dir_mask=3) {
+		for (cube_t const &c : cubes) {register_cube(c, dim_mask, dir_mask);}
+	}
+	void align_to_surfaces(point &pos, vector3d &forward, vector3d &up, float hheight, point const &camera_bs) {
+		//bool const debug(dist_xy_less_than(pos, camera_bs, 4.0*CAMERA_RADIUS));
+		if (surf_dists[0] >= r_outer) return; // no surface to align to; error, or simply don't update?
+		unsigned const dim(surf_dims[0]);
+		float const dsign (surf_dirs[0] ? 1.0 : -1.0);
+		up = zero_vector; // will recompte below
+		pos[dim] = surf_pos[0] + dsign*hheight; // place onto closest surface, always
+
+		if (surf_dists[1] < r_outer && surf_dims[1] != dim) { // 2 orthogonal surfaces
+			unsigned const dim2(surf_dims[1]);
+			float const dsign2 (surf_dirs[1] ? 1.0 : -1.0), gap1(r_outer - surf_dists[0]), gap2(r_outer - surf_dists[1]);
+			float const weight1(gap1/(gap1 + gap2)), weight2(1.0 - weight1);
+			if (surf_dists[1] < hheight) {pos[dim2] = surf_pos[1] + dsign2*hheight;} // place onto second surface if intersecting
+			up[dim ] = weight1*dsign;
+			up[dim2] = weight2*dsign2;
+			up.normalize();
+			vector3d f_keep(forward), f_update(zero_vector); // split forward vector into two components (parallel to either surface vs. perpendicular to both)
+			f_keep  [dim] = f_keep[dim2] = 0.0;
+			f_update[dim] = forward[dim]; f_update[dim2] = forward[dim2];
+			float const update_mag(f_update.mag());
+			// set correct ratio of each dim to preserve the angle across the R90 turn; set dir to move away from the edge if not set, otherwise preserve the original dir
+			f_update[dim2] = weight1*((f_update[dim2] == 0.0) ? dsign2 : SIGN(f_update[dim2]));
+			f_update[dim ] = weight2*((f_update[dim ] == 0.0) ? dsign  : SIGN(f_update[dim ]));
+			f_update.normalize();
+			//if (debug) {cout << TXT(dim) << TXT(dim2) << TXT(dsign) << TXT(dsign2) << TXT(gap1) << TXT(gap2) << TXT(weight1) << TXT(weight2) << TXT(forward.str()) << TXT(f_keep.str()) << TXT(f_update.str()) << TXT(update_mag) << endl;}
+			forward = f_keep + update_mag*f_update; // re-combine the two components in a way that preserves their relative weights
+		}
+		else { // 1 surface
+			up     [dim] = dsign;
+			forward[dim] = 0.0; // must be orthogonal to surface and up vector
+		}
+		forward.normalize(); // Note: up to the caller to handle zero forward vector
+	}
+}; // surface_orienter_t
+
 void building_t::update_spider(spider_t &spider, point const &camera_bs, float timestep, float &max_xmove, rand_gen_t &rgen) const {
 	
 	float const floor_spacing(get_window_vspace()), trim_thickness(get_trim_thickness()), view_dist(SPIDER_VIEW_FLOORS*floor_spacing);
 	float const radius(spider.radius), height(2.0*radius), coll_radius(2.0f*radius), xy_pad(coll_radius + trim_thickness);
+
+	if (1) { // experimental logic to walk on walls, etc.
+		if (spider.dir == zero_vector) {spider.dir = rgen.signed_rand_vector_xy().get_norm();}
+		if (spider.speed == 0.0) {spider.speed = global_building_params.spider_speed*rgen.rand_uniform(0.5, 1.0);} // random speed
+
+		if (!is_pos_inside_building(spider.pos, xy_pad, radius)) {
+			spider.pos = spider.last_pos; // restore previous pos before collision
+			spider.dir = zero_vector; // will be set to a valid value on the next frame
+			return;
+		}
+		assert(interior);
+		surface_orienter_t surface_orienter(spider.pos, coll_radius, 0.5*radius);
+		//surface_orienter.register_cubes(interior->fc_occluders, 4); // Z surface only
+		surface_orienter.register_cubes(interior->floors,   4, 2); // Z2 surface only
+		surface_orienter.register_cubes(interior->ceilings, 4, 1); // Z1 surface only
+		for (unsigned d = 0; d < 2; ++d) {surface_orienter.register_cubes(interior->walls[d], (1<<d));} // XY walls
+		surface_orienter.align_to_surfaces(spider.pos, spider.dir, spider.upv, spider.radius, camera_bs);
+		spider.dest = spider.pos + radius*spider.dir; // put our destination in front of us (temporary)
+		return;
+	}
 	// set dist_thresh based on the distance we can move this frame; if set too low, we may spin in circles trying to turn to stop on the right spot
 	float const dist_thresh(2.0f*timestep*max(spider.speed, global_building_params.spider_speed));
 	bool collided(0), update_path(0);
