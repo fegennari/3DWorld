@@ -130,7 +130,7 @@ template<typename T> struct vect_animal_t : public vector<T> {
 		max_xmove = 0.0; // reset for this frame
 	}
 	typename vector<T>::const_iterator get_first_with_xv_gt(float x) const {return std::lower_bound(this->begin(), this->end(), T(x));}
-	void update_delta_sum_for_animal_coll(point const &pos, float radius, float height, float radius_scale, float &max_overlap, vector3d &delta_sum) const;
+	void update_delta_sum_for_animal_coll(point const &pos, float radius, float z1, float z2, float radius_scale, float &max_overlap, vector3d &delta_sum) const;
 };
 typedef vect_animal_t<rat_t   > vect_rat_t;
 typedef vect_animal_t<spider_t> vect_spider_t;
@@ -1232,7 +1232,7 @@ private:
 	void update_spider(spider_t &spider, point const &camera_bs, float timestep, float &max_xmove, rand_gen_t &rgen) const;
 	bool check_line_coll_expand(point const &p1, point const &p2, float radius, float height) const;
 	bool check_line_of_sight_large_objs(point const &p1, point const &p2) const;
-	bool check_and_handle_dynamic_obj_coll(point &pos, float radius, float height, point const &camera_bs) const;
+	bool check_and_handle_dynamic_obj_coll(point &pos, float radius, float z1, float z2, point const &camera_bs) const;
 	bool get_begin_end_room_objs_on_ground_floor(float zval, vect_room_object_t::const_iterator &b, vect_room_object_t::const_iterator &e) const;
 
 public:

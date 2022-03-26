@@ -591,12 +591,13 @@ void building_t::update_spiders(point const &camera_bs, unsigned building_ix, in
 	for (spider_t &spider : spiders) {update_spider(spider, camera_bs, timestep, spiders.max_xmove, rgen);}
 }
 
-struct surface_orienter_t {
+class surface_orienter_t {
 	point pos;
 	float radius, r_outer, surf_pos[2] = {}, surf_dists[2];
 	unsigned surf_dims[2] = {};
 	bool surf_dirs[2] = {};
 
+public:
 	surface_orienter_t(point const &pos_, float radius_, float transition_dist) : pos(pos_), radius(radius_), r_outer(radius + transition_dist) {
 		surf_dists[0] = surf_dists[1] = 2.0*r_outer; // set larger than any possible value
 	}
@@ -614,6 +615,7 @@ struct surface_orienter_t {
 			if      (dist < surf_dists[0]) {dix = 0;}
 			else if (dist < surf_dists[1]) {dix = 1;}
 			else {continue;} // not a closest distance; can happen at cube corners
+			if (dix == 1 && surf_dims[0] == d) continue; // don't want both surfaces in the same direction (for example between two adjacent floor/ceiling cubes)
 			surf_dists[dix] = dist;
 			surf_pos  [dix] = edge;
 			surf_dims [dix] = d;
@@ -625,7 +627,11 @@ struct surface_orienter_t {
 	}
 	void align_to_surfaces(point &pos, vector3d &forward, vector3d &up, float hheight, point const &camera_bs) {
 		//bool const debug(dist_xy_less_than(pos, camera_bs, 4.0*CAMERA_RADIUS));
-		if (surf_dists[0] >= r_outer) return; // no surface to align to; error, or simply don't update?
+		
+		if (surf_dists[0] >= r_outer) { // no surface to align to; for example, reaching the doorway opening of a wall
+			// FIXME: drop down to the floor?
+			return;
+		}
 		unsigned const dim(surf_dims[0]);
 		float const dsign (surf_dirs[0] ? 1.0 : -1.0);
 		up = zero_vector; // will recompte below
@@ -646,9 +652,9 @@ struct surface_orienter_t {
 			// set correct ratio of each dim to preserve the angle across the R90 turn; set dir to move away from the edge if not set, otherwise preserve the original dir
 			f_update[dim2] = weight1*((f_update[dim2] == 0.0) ? dsign2 : SIGN(f_update[dim2]));
 			f_update[dim ] = weight2*((f_update[dim ] == 0.0) ? dsign  : SIGN(f_update[dim ]));
-			f_update.normalize();
 			//if (debug) {cout << TXT(dim) << TXT(dim2) << TXT(dsign) << TXT(dsign2) << TXT(gap1) << TXT(gap2) << TXT(weight1) << TXT(weight2) << TXT(forward.str()) << TXT(f_keep.str()) << TXT(f_update.str()) << TXT(update_mag) << endl;}
-			forward = f_keep + update_mag*f_update; // re-combine the two components in a way that preserves their relative weights
+			// re-combine the two components in a way that preserves their relative weights
+			if (f_update != zero_vector) {forward = f_keep + (update_mag/f_update.mag())*f_update;} // reset f_update length to the original value
 		}
 		else { // 1 surface
 			up     [dim] = dsign;
@@ -673,12 +679,14 @@ void building_t::update_spider(spider_t &spider, point const &camera_bs, float t
 		}
 		assert(interior);
 		surface_orienter_t surface_orienter(spider.pos, coll_radius, 0.5*radius);
+		// Note: we can almost use fc_occluders, except this doesn't contain the very bottom floor because it's not an occluder
 		//surface_orienter.register_cubes(interior->fc_occluders, 4); // Z surface only
 		surface_orienter.register_cubes(interior->floors,   4, 2); // Z2 surface only
 		surface_orienter.register_cubes(interior->ceilings, 4, 1); // Z1 surface only
 		for (unsigned d = 0; d < 2; ++d) {surface_orienter.register_cubes(interior->walls[d], (1<<d));} // XY walls
 		surface_orienter.align_to_surfaces(spider.pos, spider.dir, spider.upv, spider.radius, camera_bs);
-		spider.dest = spider.pos + radius*spider.dir; // put our destination in front of us (temporary)
+		// TODO: replace this with correct destination logic
+		spider.dest = spider.pos + radius*spider.dir; // put our destination in front of us
 		return;
 	}
 	// set dist_thresh based on the distance we can move this frame; if set too low, we may spin in circles trying to turn to stop on the right spot
@@ -690,8 +698,8 @@ void building_t::update_spider(spider_t &spider, point const &camera_bs, float t
 	rgen.rand_mix(); // make sure it's different per spider
 
 	if (spider.is_sleeping()) {} // peacefully sleeping, no collision needed
-	else if (check_and_handle_dynamic_obj_coll(spider.pos, coll_radius, height, camera_bs)) { // check for collisions
-		collided = 1;
+	// FIXME: does this work with non-vertically oriented animals?
+	else if (check_and_handle_dynamic_obj_coll(spider.pos, coll_radius, (spider.pos.z - height), (spider.pos.z + height), camera_bs)) { // check for collisions
 		coll_dir = (prev_pos - spider.pos).get_norm(); // points toward the collider in the XY plane
 
 		// check if new pos is valid, and has a path to dest
