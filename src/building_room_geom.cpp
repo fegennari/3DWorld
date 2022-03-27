@@ -775,11 +775,42 @@ void building_room_geom_t::add_laptop  (room_object_t const &c) {add_obj_with_to
 void building_room_geom_t::add_computer(room_object_t const &c) {add_obj_with_front_texture(c, "interiors/computer.jpg",  BKGRAY, 1);} // is_small=1
 void building_room_geom_t::add_mwave   (room_object_t const &c) {add_obj_with_front_texture(c, "interiors/microwave.jpg", GRAY,   0);} // is_small=0
 
+cube_t get_mirror_surface(room_object_t const &c) {
+	if (!c.is_open()) return c;
+	float const thickness(0.15*c.get_sz_dim(c.dim));
+	cube_t mirror(c);
+	mirror .d[!c.dim][0]       = mirror.d[!c.dim][1]; // shrink to zero area
+	mirror .d[!c.dim][1]      += thickness; // shift outward by thickness
+	mirror .d[ c.dim][!c.dir] -= (c.dir ? 1.0 : -1.0)*thickness; // move to front
+	mirror .d[ c.dim][ c.dir] += (c.dir ? 1.0 : -1.0)*(c.get_sz_dim(!c.dim) - thickness); // expand outward
+	return mirror;
+}
 void building_room_geom_t::add_mirror(room_object_t const &c) {
 	tid_nm_pair_t tp(REFLECTION_TEXTURE_ID, 0.0);
 	if (ENABLE_MIRROR_REFLECTIONS) {tp.emissive = 1.0;}
-	get_material(tp, 0).add_cube_to_verts(c, c.color, zero_vector, get_face_mask(c.dim, c.dir), !c.dim); // draw only the front face
-	get_untextured_material(0).add_cube_to_verts_untextured(c, apply_light_color(c), get_skip_mask_for_xy(c.dim)); // draw only the sides untextured
+	colorRGBA const side_color(apply_light_color(c));
+
+	if (c.is_open()) {
+		cube_t const mirror(get_mirror_surface(c));
+		cube_t outside(c), inside(c);
+		inside.expand_by(-mirror.get_sz_dim(!c.dim)); // shrink sides by mirror thickness
+		outside.d[c.dim][c.dir] = inside.d[c.dim][c.dir]; // shift front side in slightly
+		unsigned const mirror_face_mask(get_face_mask(!c.dim, 1)); // always +dir
+		get_material(tp, 0).add_cube_to_verts(mirror, c.color, zero_vector, mirror_face_mask, c.dim);
+		vect_cube_t &cubes(get_temp_cubes());
+		subtract_cube_from_cube(outside, inside, cubes); // should always be 3 cubes (sides + back) since this subtract is XY only
+		cubes.push_back(inside);
+		set_cube_zvals(cubes.back(), outside.z1(), inside.z1()); // bottom
+		cubes.push_back(inside);
+		set_cube_zvals(cubes.back(), inside.z2(), outside.z2()); // top
+		rgeom_mat_t &mat(get_untextured_material(0));
+		mat.add_cube_to_verts(mirror, side_color, zero_vector, ~mirror_face_mask); // non-front sides of mirror
+		for (auto i = cubes.begin(); i != cubes.end(); ++i) {mat.add_cube_to_verts(*i, side_color, zero_vector, ~get_face_mask(c.dim, !c.dir));} // skip back face
+	}
+	else { // closed
+		get_material(tp, 0).add_cube_to_verts(c, c.color, zero_vector, get_face_mask(c.dim, c.dir), !c.dim); // draw only the front face
+		get_untextured_material(0).add_cube_to_verts_untextured(c, side_color, get_skip_mask_for_xy(c.dim)); // draw only the exterior sides, untextured
+	}
 }
 
 void building_room_geom_t::add_shower(room_object_t const &c, float tscale) {

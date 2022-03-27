@@ -14,6 +14,8 @@ extern int display_mode, window_width, window_height;
 extern float CAMERA_RADIUS;
 extern vector4d clip_plane;
 
+cube_t get_mirror_surface(room_object_t const &c);
+
 
 void draw_mirror_to_stencil_buffer(vector3d const &xlate) {
 	setup_stencil_buffer_write();
@@ -21,18 +23,19 @@ void draw_mirror_to_stencil_buffer(vector3d const &xlate) {
 	glStencilOpSeparate(GL_FRONT, GL_KEEP, GL_KEEP, GL_INCR); // mark stencil on front faces
 	shader_t s;
 	s.begin_color_only_shader();
-	draw_simple_cube((cur_room_mirror + xlate), 0); // draw translated mirror
+	draw_simple_cube((get_mirror_surface(cur_room_mirror) + xlate), 0); // draw translated mirror
 	s.end_shader();
 	end_stencil_write();
 }
 
 void create_mirror_reflection_if_needed() {
 	if (cur_room_mirror.type != TYPE_MIRROR) return; // not enabled
-	bool const dim(cur_room_mirror.dim), interior_room(cur_room_mirror.is_interior()), is_house(cur_room_mirror.is_house());
+	bool const interior_room(cur_room_mirror.is_interior()), is_house(cur_room_mirror.is_house()), is_open(cur_room_mirror.is_open());
+	bool const dim(cur_room_mirror.dim ^ is_open), dir(is_open ? 1 : cur_room_mirror.dir); // always opens in +dir
 	int const reflection_pass(is_house ? 3 : (interior_room ? 2 : 1));
 	vector3d const xlate(get_tiled_terrain_model_xlate());
-	float const reflect_plane(cur_room_mirror.d[dim][cur_room_mirror.dir]), reflect_plane_xf(reflect_plane + xlate[dim]);
-	float const reflect_sign(cur_room_mirror.dir ? -1.0 : 1.0);
+	float const reflect_plane(is_open ? get_mirror_surface(cur_room_mirror).d[dim][1] : cur_room_mirror.d[dim][dir]);
+	float const reflect_plane_xf(reflect_plane + xlate[dim]), reflect_sign(dir ? -1.0 : 1.0);
 	clip_plane      = vector4d();
 	clip_plane[dim] = -reflect_sign;
 	clip_plane.w    = reflect_sign*reflect_plane;

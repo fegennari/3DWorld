@@ -307,6 +307,7 @@ bool building_t::apply_player_action_key(point const &closest_to_in, vector3d co
 					if      (i->type == TYPE_TOILET || i->type == TYPE_URINAL) {keep = 1;} // toilet/urinal can be flushed
 					else if (i->type == TYPE_STALL && i->shape == SHAPE_CUBE && can_open_bathroom_stall_or_shower(*i, closest_to, in_dir)) {keep = 1;} // bathroom stall can be opened
 					else if (i->type == TYPE_OFF_CHAIR && (i->flags & RO_FLAG_RAND_ROT)) {keep = 1;} // office chair can be rotated
+					else if (i->type == TYPE_MIRROR && i->is_house())  {keep = 1;} // medicine cabinet
 					else if (i->is_sink_type() || i->type == TYPE_TUB) {keep = 1;} // sink/tub
 					else if (i->is_light_type()) {keep = 1;} // room light or lamp
 					else if (i->type == TYPE_PICTURE || i->type == TYPE_TPROLL || i->type == TYPE_BUTTON || i->type == TYPE_MWAVE || i->type == TYPE_STOVE ||
@@ -509,6 +510,13 @@ bool building_t::interact_with_object(unsigned obj_ix, point const &int_pos, poi
 		}
 		if (obj.is_small_closet()) {play_door_open_close_sound(sound_origin, obj.is_open(), 1.0, pitch);}
 		else {gen_sound_thread_safe_at_player(SOUND_SLIDING);}
+		update_draw_data = 1;
+	}
+	else if (obj.type == TYPE_MIRROR && obj.is_house()) { // medicine cabinet
+		obj.flags ^= RO_FLAG_OPEN; // toggle open/close
+		//interior->room_geom->expand_object(obj); // TODO: add medicine
+		play_door_open_close_sound(sound_origin, obj.is_open(), 0.4, 1.6);
+		sound_scale      = 0.4;
 		update_draw_data = 1;
 	}
 	else {assert(0);} // unhandled type
