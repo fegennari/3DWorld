@@ -1949,8 +1949,9 @@ void draw_compass_and_alt() { // and temperature
 	string const dirs[8] = {"N", "NW", "W", "SW", "S", "SE", "E", "NE"};
 	sprintf(text, "Loc: (%3.2f, %3.2f, %3.2f)", (camera_origin.x+double(int64_t(xoff2)-xoff)*DX_VAL), (camera_origin.y+double(int64_t(yoff2)-yoff)*DY_VAL), camera_origin.z);
 	draw_text(YELLOW, -0.005*aspect_ratio, -0.01, -0.02, text);
-	float const theta(safe_acosf(cview_dir.x)*TO_DEG);
-	int const octant(int(((cview_dir.y < 0) ? (360.0 - theta) : theta)/45.0 + 22.5)&7);
+	vector3d dir_xy(vector3d(cview_dir.x, cview_dir.y, 0.0).get_norm());
+	float const theta(safe_acosf(dir_xy.x)*TO_DEG);
+	int const octant(int(((dir_xy.y < 0) ? (360.0 - theta) : theta)/45.0 + 22.5)&7);
 	sprintf(text, "%s", dirs[octant].c_str());
 	draw_text(YELLOW, 0.005*aspect_ratio, -0.01, -0.02, text);
 
