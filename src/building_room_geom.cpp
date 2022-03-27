@@ -794,8 +794,9 @@ void building_room_geom_t::add_mirror(room_object_t const &c) {
 
 	if (c.is_open()) {
 		cube_t const mirror(get_mirror_surface(c));
+		float const wall_thickness(get_med_cab_wall_thickness(c));
 		cube_t outside(c), inside(c);
-		inside.expand_by(-get_med_cab_wall_thickness(c)); // shrink sides by wall thickness
+		inside.expand_by(-wall_thickness); // shrink sides by wall thickness
 		outside.d[c.dim][c.dir] = inside.d[c.dim][c.dir]; // shift front side in slightly
 		unsigned const mirror_face_mask(get_face_mask(!c.dim, 1)); // always +dir
 		get_material(tp, 0).add_cube_to_verts(mirror, c.color, zero_vector, mirror_face_mask, c.dim);
@@ -805,9 +806,16 @@ void building_room_geom_t::add_mirror(room_object_t const &c) {
 		set_cube_zvals(cubes.back(), outside.z1(), inside.z1()); // bottom
 		cubes.push_back(inside);
 		set_cube_zvals(cubes.back(), inside.z2(), outside.z2()); // top
+		cubes.push_back(inside);
+		set_wall_width(cubes.back(), inside.zc(), 0.5*wall_thickness, 2); // middle shelf
 		rgeom_mat_t &mat(get_untextured_material(0));
 		mat.add_cube_to_verts(mirror, side_color, zero_vector, ~mirror_face_mask); // non-front sides of mirror
-		for (auto i = cubes.begin(); i != cubes.end(); ++i) {mat.add_cube_to_verts(*i, side_color, zero_vector, ~get_face_mask(c.dim, !c.dir));} // skip back face
+		
+		for (auto i = cubes.begin(); i != cubes.end(); ++i) {
+			unsigned sf(~get_face_mask(c.dim, !c.dir));
+			if (i - cubes.begin() > 3) {sf |= get_skip_mask_for_xy(!c.dim);} // sip side faces
+			mat.add_cube_to_verts(*i, side_color, zero_vector, sf); // skip back face
+		}
 	}
 	else { // closed
 		get_material(tp, 0).add_cube_to_verts(c, c.color, zero_vector, get_face_mask(c.dim, c.dir), !c.dim); // draw only the front face
