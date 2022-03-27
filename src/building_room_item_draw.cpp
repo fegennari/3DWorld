@@ -1052,10 +1052,19 @@ public:
 			s.add_uniform_float("animation_time", S.anim_time);
 			fgPushMatrix();
 			translate_to(S.pos);
-			rotate_from_v2v(S.dir, plus_x);
-			vector3d model_up(plus_z);
-			rotate_vector3d_by_vr(S.dir, plus_x, model_up); // the model up vector is now pointing in this direction
-			rotate_about(TO_DEG*get_angle(S.upv, model_up), plus_x);
+			vector3d const right(cross_product(S.dir, S.upv));
+			xform_matrix xm;
+			float *m(xm.get_ptr());
+			m[0] = S.dir.x; // x
+			m[1] = S.dir.y;
+			m[2] = S.dir.z;
+			m[4] = right.x; // y
+			m[5] = right.y;
+			m[6] = right.z;
+			m[8] = S.upv.x; // z
+			m[9] = S.upv.y;
+			m[10]= S.upv.z;
+			fgMultMatrix(xm);
 			uniform_scale(S.radius);
 			check_mvm_update();
 			mat.draw_inner(shadow_only);
