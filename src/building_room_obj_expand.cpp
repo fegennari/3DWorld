@@ -299,7 +299,7 @@ void building_room_geom_t::expand_cabinet(room_object_t const &c) { // called on
 		cube_t bottle;
 		gen_xy_pos_for_round_obj(bottle, interior, bottle_radius, bottle_height, 1.5*bottle_radius, rgen, 1); // place_at_z1=1
 		room_object_t obj(bottle, TYPE_BOTTLE, c.room_id, 0, 0, flags, light_amt, SHAPE_CYLIN); // vertical
-		obj.set_as_bottle(rgen.rand(), NUM_BOTTLE_TYPES-1, 1); // all bottle types, no_empty=1
+		obj.set_as_bottle(rgen.rand(), NUM_BOTTLE_TYPES-2, 1); // all bottle types except for medicine, no_empty=1
 		add_if_not_intersecting(obj, expanded_objs, cubes);
 	}
 	if (cubes.size() > start_num_cubes) {clear_static_small_vbos();} // some object was added
@@ -380,7 +380,7 @@ void building_room_geom_t::get_shelf_objects(room_object_t const &c_in, cube_t c
 			float const bottle_height(z_step*rgen.rand_uniform(0.4, 0.7)), bottle_radius(z_step*rgen.rand_uniform(0.07, 0.11));
 			if (min(c_sz.x, c_sz.y) < 5.0*bottle_radius) continue; // shelf not wide/deep enough to add this bottle
 			gen_xy_pos_for_round_obj(C, S, bottle_radius, bottle_height, 2.0*bottle_radius, rgen);
-			C.set_as_bottle(rgen.rand(), NUM_BOTTLE_TYPES-1, 1); // all bottle types, no_empty=1
+			C.set_as_bottle(rgen.rand(), NUM_BOTTLE_TYPES-2, 1); // all bottle types except for medicine, no_empty=1
 			add_if_not_intersecting(C, objects, cubes);
 		}
 		// add paint cans
@@ -672,7 +672,7 @@ void building_t::add_box_contents(room_object_t const &box) {
 
 			for (auto i = obj_bcubes.begin(); i != obj_bcubes.end(); ++i) {
 				objs.emplace_back(*i, TYPE_BOTTLE, room_id, 0, 0, (flags | RO_FLAG_NO_CONS), light_amt, SHAPE_CYLIN);
-				objs.back().set_as_bottle(bottle_id, 3, 1); // 0-3; excludes poison; no_empty=1
+				objs.back().set_as_bottle(bottle_id, 3, 1); // 0-3; excludes poison and medicine; no_empty=1
 			}
 		}
 		else if (obj_type == 2) { // ball - only 1

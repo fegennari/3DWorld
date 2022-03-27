@@ -23,7 +23,7 @@ float const WALL_THICK_VAL         = 0.05; // 5% of floor spacing
 float const DOOR_THICK_TO_WIDTH    = 0.04; // ratio of door thickness to width for doors opening to the side
 float const DEF_CITY_MIN_ALPHA     = 0.01;
 
-unsigned const NUM_BOTTLE_TYPES = 5;
+unsigned const NUM_BOTTLE_TYPES = 6;
 unsigned const NUM_BOOK_COLORS  = 16;
 unsigned const NUM_PAPER_COLORS = 6;
 unsigned const NUM_SPCAN_COLORS = 10;
@@ -67,11 +67,12 @@ struct bottle_params_t {
 
 // Note: we could add colorRGBA(0.8, 0.9, 1.0, 0.4) for water bottles, but transparent objects require removing interior faces such as half of the sphere
 bottle_params_t const bottle_params[NUM_BOTTLE_TYPES] = {
-	bottle_params_t("bottle of water",  "interiors/arrowhead_logo.jpg", colorRGBA(0.4, 0.7, 1.0 ), 1.0, 1.0),
-	bottle_params_t("bottle of Coke",   "interiors/coke_label.jpg",     colorRGBA(0.2, 0.1, 0.05), 1.0, 1.0),
-	bottle_params_t("bottle of beer",   "interiors/heineken_label.jpg", colorRGBA(0.1, 0.4, 0.1 ), 3.0, 2.0),
-	bottle_params_t("bottle of wine",   "interiors/wine_label.jpg",     BLACK,                    10.0, 2.0),
-	bottle_params_t("bottle of poison", "yuck.png",                     BLACK,                     5.0, 2.0),
+	bottle_params_t("bottle of water",    "interiors/arrowhead_logo.jpg", colorRGBA(0.4, 0.7, 1.0 ), 1.0, 1.0),
+	bottle_params_t("bottle of Coke",     "interiors/coke_label.jpg",     colorRGBA(0.2, 0.1, 0.05), 1.0, 1.0),
+	bottle_params_t("bottle of beer",     "interiors/heineken_label.jpg", colorRGBA(0.1, 0.4, 0.1 ), 3.0, 2.0),
+	bottle_params_t("bottle of wine",     "interiors/wine_label.jpg",     BLACK,                    10.0, 2.0),
+	bottle_params_t("bottle of poison",   "yuck.png",                     BLACK,                     5.0, 2.0),
+	bottle_params_t("bottle of medicine", "interiors/red_cross.png",      LT_BLUE,                  20.0, 1.0),
 };
 
 struct building_animal_t {
@@ -431,7 +432,7 @@ unsigned const RO_FLAG_TOS     = 0x02; // at top of stairs; used for railings
 unsigned const RO_FLAG_RSTAIRS = 0x04; // in a room with stairs
 unsigned const RO_FLAG_INVIS   = 0x08; // invisible
 unsigned const RO_FLAG_NOCOLL  = 0x10; // no collision detection
-unsigned const RO_FLAG_OPEN    = 0x20; // open, for elevators, closet doors, bathroom stalls, and phones
+unsigned const RO_FLAG_OPEN    = 0x20; // open, for elevators, closet doors, bathroom stalls, phones, etc.
 unsigned const RO_FLAG_NODYNAM = 0x40; // for light shadow maps
 unsigned const RO_FLAG_INTERIOR= 0x80; // applies to containing room
 // object flags, second byte

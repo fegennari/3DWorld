@@ -417,6 +417,7 @@ public:
 			case 2: drunk  =  0.25; break; // beer
 			case 3: drunk  =  0.50; break; // wine (entire bottle)
 			case 4: health = -0.50; break; // poison - take damage
+			case 5: health =  1.00; break; // medicine, restore full health (to be used to cure future poisoning from spider bites)
 			default: assert(0);
 			}
 		}
