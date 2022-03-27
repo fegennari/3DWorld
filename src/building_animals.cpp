@@ -661,7 +661,7 @@ public:
 			f_update[dim2] = weight1*((f_update[dim2] == 0.0) ? dsign2 : SIGN(f_update[dim2]));
 			f_update[dim ] = weight2*((f_update[dim ] == 0.0) ? dsign  : SIGN(f_update[dim ]));
 			// re-combine the two components in a way that preserves their relative weights
-			if (f_update != zero_vector) {forward = f_keep + (update_mag/f_update.mag())*f_update;} // reset f_update length to the original value
+			if (f_update.mag() > 0.001) {forward = f_keep + (update_mag/f_update.mag())*f_update;} // reset f_update length to the original value
 		}
 		else { // 1 surface
 			up     [dim] = dsign;
@@ -691,24 +691,24 @@ void building_t::update_spider(spider_t &spider, point const &camera_bs, float t
 	// FIXME: clips through the floor when falling and basement is below
 	surface_orienter.register_cubes(interior->floors,   4, 2); // Z2 surface only
 	surface_orienter.register_cubes(interior->ceilings, 4, 1); // Z1 surface only
-	for (unsigned d = 0; d < 2; ++d) {surface_orienter.register_cubes(interior->walls[d], (1<<d));} // XY walls
+	for (unsigned d = 0; d < 2; ++d) {surface_orienter.register_cubes(interior->walls[d], (1<<d));} // XY walls; should we check the wall ends as well?
 	// TODO: interior->door_stacks
 	// TODO: exterior walls
 	// TODO: interior->room_geom->objs
 	bool const on_surface(surface_orienter.align_to_surfaces(spider.pos, spider.dir, spider.upv, spider.radius, spider.speed, timestep, camera_bs));
 
-	if (spider.dir == zero_vector) {spider.choose_new_dir(rgen);}
-	else if (on_surface && (float)tfticks > spider.update_time) { // direction change
+	if (spider.dir.mag() < 0.5) {spider.choose_new_dir(rgen);} // regenerate dir if zero or otherwise bad
+	else if (on_surface && (float)tfticks > spider.update_time) { // direction change or sleep
 		if (spider.dist_since_sleep > 2.0*get_window_vspace() && rgen.rand_bool()) { // 50% chance of taking a rest
 			spider.sleep_for(0.0, 4.0); // 0-4s
 			spider.speed = 0.0; // will reset anim_time in the next frame
 		}
 		else {
 			spider.update_time = (float)tfticks + rand_uniform(4.0, 10.0)*TICKS_PER_SECOND; // 4-10s
+			vector3d const prev_dir(spider.dir);
+			spider.choose_new_dir(rgen);
+			spider.dir = (spider.dir + prev_dir).get_norm(); // 50% mix of prev and new dir to avoid sharp turns
 		}
-		vector3d const prev_dir(spider.dir);
-		spider.choose_new_dir(rgen);
-		spider.dir = (spider.dir + prev_dir).get_norm(); // 50% mix of prev and new dir to avoid sharp turns
 	}
 	vector3d coll_dir;
 	point const prev_pos(spider.pos); // capture the pre-collision point
