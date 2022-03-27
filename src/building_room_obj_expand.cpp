@@ -738,7 +738,7 @@ void building_t::add_box_contents(room_object_t const &box) {
 }
 
 void building_room_geom_t::expand_object(room_object_t &c) {
-	if (c.flags & RO_FLAG_EXPANDED) return; // already expanded
+	if (c.obj_expanded()) return; // already expanded
 	switch (c.type) {
 	case TYPE_CLOSET:    expand_closet   (c); break;
 	case TYPE_SHELVES:   expand_shelves  (c); break;

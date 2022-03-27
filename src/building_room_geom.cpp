@@ -478,7 +478,7 @@ void building_room_geom_t::add_closet(room_object_t const &c, tid_nm_pair_t cons
 			} // for d
 		} // for is_side
 		// Note: always drawn to avoid recreating all small objects when the player opens/closes a closet door, and so that objects can be seen through the cracks in the doors
-		if (!(c.flags & RO_FLAG_EXPANDED)) { // add boxes if not expanded
+		if (!c.obj_expanded()) { // add boxes if not expanded
 			vect_room_object_t &objects(get_temp_objects());
 			add_closet_objects(c, objects);
 			add_small_static_objs_to_verts(objects);
@@ -752,7 +752,7 @@ void building_room_geom_t::add_shelves(room_object_t const &c, float tscale) {
 		} // for s
 	}
 	// add objects to the shelves
-	if (c.flags & RO_FLAG_EXPANDED) return; // shelves have already been expanded, don't need to create contained objects below
+	if (c.obj_expanded()) return; // shelves have already been expanded, don't need to create contained objects below
 	vect_room_object_t &objects(get_temp_objects());
 	get_shelf_objects(c, shelves, num_shelves, objects);
 	add_small_static_objs_to_verts(objects);
@@ -1920,7 +1920,7 @@ void building_room_geom_t::add_wine_rack(room_object_t const &c, bool inc_lg, bo
 			wood_mat.add_cube_to_verts(vc, color, tex_orig, 0); // draw all faces, even the back, in case it's visible through the window
 		}
 	}
-	if (inc_sm && !(c.flags & RO_FLAG_EXPANDED)) { // add wine bottles if not expanded
+	if (inc_sm && !c.obj_expanded()) { // add wine bottles if not expanded
 		vect_room_object_t &objects(get_temp_objects());
 		add_wine_rack_bottles(c, objects);
 		add_small_static_objs_to_verts(objects);

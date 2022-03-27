@@ -514,6 +514,7 @@ struct room_object_t : public oriented_cube_t {
 	bool is_open    () const {return  (flags & RO_FLAG_OPEN);}
 	bool is_house   () const {return  (flags & RO_FLAG_IS_HOUSE);}
 	bool was_expanded() const{return  (flags & RO_FLAG_WAS_EXP);}
+	bool obj_expanded() const{return  (flags & RO_FLAG_EXPANDED);}
 	bool is_dynamic () const {return  (flags & RO_FLAG_DYNAMIC);}
 	bool has_dstate () const {return  (flags & RO_FLAG_DSTATE);}
 	bool is_moving  () const {return (is_dynamic() && has_dstate());}

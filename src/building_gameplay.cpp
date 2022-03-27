@@ -750,8 +750,8 @@ bool building_room_geom_t::player_pickup_object(building_t &building, point cons
 	}
 	room_object_t &obj(get_room_object_by_index(obj_id));
 
-	if (obj.type == TYPE_SHELVES || (obj.type == TYPE_WINE_RACK && !(obj.flags & RO_FLAG_EXPANDED))) { // shelves or unexpanded wine rack
-		assert(!(obj.flags & RO_FLAG_EXPANDED)); // should not have been expanded
+	if (obj.type == TYPE_SHELVES || (obj.type == TYPE_WINE_RACK && !obj.obj_expanded())) { // shelves or unexpanded wine rack
+		assert(!obj.obj_expanded()); // should not have been expanded
 		expand_object(obj);
 		bool const picked_up(player_pickup_object(building, at_pos, in_dir)); // call recursively on contents
 		// if we picked up an object, assume the VBOs have already been updated; otherwise we need to update them to expand this object
