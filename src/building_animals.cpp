@@ -629,7 +629,7 @@ public:
 	void register_cubes(vect_cube_t const &cubes, unsigned dim_mask=7, unsigned dir_mask=3) {
 		for (cube_t const &c : cubes) {register_cube(c, dim_mask, dir_mask);}
 	}
-	void align_to_surfaces(point &pos, vector3d &forward, vector3d &up, float hheight, float speed, float timestep, point const &camera_bs) {
+	bool align_to_surfaces(point &pos, vector3d &forward, vector3d &up, float hheight, float speed, float timestep, point const &camera_bs) {
 		//bool const debug(dist_xy_less_than(pos, camera_bs, 2.0*CAMERA_RADIUS));
 		//if (debug) {cout << TXT(forward.str()) << TXT(up.str()) << endl;}
 		
@@ -638,7 +638,7 @@ public:
 			forward = (-delta_dir*plus_z + (1.0 - delta_dir)*forward).get_norm(); // slowly reorient to -z
 			pos.z  -= 0.5*timestep*speed; // drop at half speed
 			orthogonalize_dir(up, forward, up, 1);
-			return;
+			return 0;
 		}
 		unsigned const dim(surf_dims[0]);
 		float const dsign (surf_dirs[0] ? 1.0 : -1.0);
@@ -668,6 +668,7 @@ public:
 			forward[dim] = 0.0; // must be orthogonal to surface and up vector
 		}
 		forward.normalize(); // Note: up to the caller to handle zero forward vector
+		return 1;
 	}
 }; // surface_orienter_t
 
@@ -687,16 +688,17 @@ void building_t::update_spider(spider_t &spider, point const &camera_bs, float t
 	surface_orienter_t surface_orienter(spider.pos, coll_radius, 0.5*radius);
 	// Note: we can almost use fc_occluders, except this doesn't contain the very bottom floor because it's not an occluder
 	//surface_orienter.register_cubes(interior->fc_occluders, 4); // Z surface only
+	// FIXME: clips through the floor when falling and basement is below
 	surface_orienter.register_cubes(interior->floors,   4, 2); // Z2 surface only
 	surface_orienter.register_cubes(interior->ceilings, 4, 1); // Z1 surface only
 	for (unsigned d = 0; d < 2; ++d) {surface_orienter.register_cubes(interior->walls[d], (1<<d));} // XY walls
 	// TODO: interior->door_stacks
 	// TODO: exterior walls
 	// TODO: interior->room_geom->objs
-	surface_orienter.align_to_surfaces(spider.pos, spider.dir, spider.upv, spider.radius, spider.speed, timestep, camera_bs);
+	bool const on_surface(surface_orienter.align_to_surfaces(spider.pos, spider.dir, spider.upv, spider.radius, spider.speed, timestep, camera_bs));
 
 	if (spider.dir == zero_vector) {spider.choose_new_dir(rgen);}
-	else if ((float)tfticks > spider.update_time) { // direction change
+	else if (on_surface && (float)tfticks > spider.update_time) { // direction change
 		if (spider.dist_since_sleep > 2.0*get_window_vspace() && rgen.rand_bool()) { // 50% chance of taking a rest
 			spider.sleep_for(0.0, 4.0); // 0-4s
 			spider.speed = 0.0; // will reset anim_time in the next frame
