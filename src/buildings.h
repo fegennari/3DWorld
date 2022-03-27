@@ -453,7 +453,7 @@ unsigned const RO_FLAG_TAKEN1  = 0x010000; // no picture / no bed pillows
 unsigned const RO_FLAG_TAKEN2  = 0x020000; // no bed sheets
 unsigned const RO_FLAG_TAKEN3  = 0x040000; // no bed mattress
 unsigned const RO_FLAG_TAKEN4  = 0x080000; // for future use
-unsigned const RO_FLAG_EXPANDED= 0x100000; // for shelves and closets
+unsigned const RO_FLAG_EXPANDED= 0x100000; // for shelves, closets, boxes, and mirrors
 unsigned const RO_FLAG_WAS_EXP = 0x200000; // for objects in/on shelves, closets, and drawers, cabinets, and books
 unsigned const RO_FLAG_ROTATING= 0x400000; // for office chairs
 unsigned const RO_FLAG_IN_CLOSET=0x800000; // for closet lights
@@ -799,6 +799,7 @@ struct building_room_geom_t {
 	void expand_closet(room_object_t const &c) {add_closet_objects(c, expanded_objs);}
 	void expand_cabinet(room_object_t const &c);
 	void expand_wine_rack(room_object_t const &c) {add_wine_rack_bottles(c, expanded_objs);}
+	void expand_med_cab(room_object_t const &c);
 	void expand_object(room_object_t &c);
 	static room_object_t get_item_in_drawer(room_object_t const &c, cube_t const &drawer, unsigned drawer_ix);
 	// other functions
@@ -835,6 +836,7 @@ private:
 	static void add_vert_roll_to_material(room_object_t const &c, rgeom_mat_t &mat, float sz_ratio=1.0, bool player_held=0);
 	void add_bcase_book(room_object_t const &c, cube_t const &book, bool inc_lg, bool inc_sm, bool backwards, bool in_set,
 		unsigned skip_faces, unsigned book_ix, unsigned set_start_ix, colorRGBA const &color, vect_room_object_t *books);
+	void remove_objs_contained_in(cube_t const &c, vect_room_object_t &obj_vect, building_t &building);
 }; // building_room_geom_t
 
 struct elevator_t : public oriented_cube_t {

@@ -775,9 +775,11 @@ void building_room_geom_t::add_laptop  (room_object_t const &c) {add_obj_with_to
 void building_room_geom_t::add_computer(room_object_t const &c) {add_obj_with_front_texture(c, "interiors/computer.jpg",  BKGRAY, 1);} // is_small=1
 void building_room_geom_t::add_mwave   (room_object_t const &c) {add_obj_with_front_texture(c, "interiors/microwave.jpg", GRAY,   0);} // is_small=0
 
+float get_med_cab_wall_thickness(room_object_t const &c) {return 0.15*c.get_sz_dim(c.dim);}
+
 cube_t get_mirror_surface(room_object_t const &c) {
 	if (!c.is_open()) return c;
-	float const thickness(0.15*c.get_sz_dim(c.dim));
+	float const thickness(get_med_cab_wall_thickness(c));
 	cube_t mirror(c);
 	mirror .d[!c.dim][0]       = mirror.d[!c.dim][1]; // shrink to zero area
 	mirror .d[!c.dim][1]      += thickness; // shift outward by thickness
@@ -793,7 +795,7 @@ void building_room_geom_t::add_mirror(room_object_t const &c) {
 	if (c.is_open()) {
 		cube_t const mirror(get_mirror_surface(c));
 		cube_t outside(c), inside(c);
-		inside.expand_by(-mirror.get_sz_dim(!c.dim)); // shrink sides by mirror thickness
+		inside.expand_by(-get_med_cab_wall_thickness(c)); // shrink sides by wall thickness
 		outside.d[c.dim][c.dir] = inside.d[c.dim][c.dir]; // shift front side in slightly
 		unsigned const mirror_face_mask(get_face_mask(!c.dim, 1)); // always +dir
 		get_material(tp, 0).add_cube_to_verts(mirror, c.color, zero_vector, mirror_face_mask, c.dim);

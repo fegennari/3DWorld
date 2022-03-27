@@ -14,6 +14,7 @@ float get_lamp_width_scale();
 vect_cube_t &get_temp_cubes();
 bool get_dishwasher_for_ksink(room_object_t const &c, cube_t &dishwasher);
 void set_wall_width(cube_t &wall, float pos, float half_thick, unsigned dim);
+float get_med_cab_wall_thickness(room_object_t const &c);
 
 void resize_model_cube_xy(cube_t &cube, float dim_pos, float not_dim_pos, unsigned id, bool dim) {
 	vector3d const sz(building_obj_model_loader.get_model_world_space_size(id)); // L, W, H
@@ -303,6 +304,23 @@ void building_room_geom_t::expand_cabinet(room_object_t const &c) { // called on
 		add_if_not_intersecting(obj, expanded_objs, cubes);
 	}
 	if (cubes.size() > start_num_cubes) {clear_static_small_vbos();} // some object was added
+}
+
+void building_room_geom_t::expand_med_cab(room_object_t const &c) { // aka house "mirrors"
+	rand_gen_t rgen;
+	c.set_rand_gen_state(rgen);
+	rgen.rand_mix();
+	// add medicine bottle
+	unsigned const flags(RO_FLAG_NOCOLL | RO_FLAG_INTERIOR | RO_FLAG_WAS_EXP);
+	float const wall_thickness(get_med_cab_wall_thickness(c));
+	float const height(0.3*c.dz()*rgen.rand_uniform(0.75, 1.0)), radius(0.35*c.get_sz_dim(c.dim)*rgen.rand_uniform(0.75, 1.0));
+	cube_t interior(c), bottle;
+	interior.expand_by(-wall_thickness);
+	gen_xy_pos_for_round_obj(bottle, interior, radius, height, 0.1*radius, rgen, 1); // place_at_z1=1
+	room_object_t obj(bottle, TYPE_BOTTLE, c.room_id, 0, 0, flags, c.light_amt, SHAPE_CYLIN); // vertical
+	obj.set_as_bottle(NUM_BOTTLE_TYPES-1, NUM_BOTTLE_TYPES-1, 1); // medicine, no_empty=1
+	expanded_objs.push_back(obj);
+	clear_static_small_vbos();
 }
 
 unsigned building_room_geom_t::get_shelves_for_object(room_object_t const &c, cube_t shelves[4]) {
@@ -744,6 +762,7 @@ void building_room_geom_t::expand_object(room_object_t &c) {
 	case TYPE_SHELVES:   expand_shelves  (c); break;
 	case TYPE_WINE_RACK: expand_wine_rack(c); break;
 	case TYPE_CABINET: case TYPE_COUNTER: case TYPE_KSINK: expand_cabinet(c); break;
+	case TYPE_MIRROR:    expand_med_cab(c); break;
 	default: assert(0); // not a supported expand type
 	}
 	c.flags |= RO_FLAG_EXPANDED; // flag as expanded
