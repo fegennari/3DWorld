@@ -1052,18 +1052,19 @@ public:
 			s.add_uniform_float("animation_time", S.anim_time);
 			fgPushMatrix();
 			translate_to(S.pos);
-			vector3d const right(cross_product(S.dir, S.upv));
+			vector3d const dir(S.dir.get_norm()), upv(S.upv.get_norm()); // normalize, just in case
+			vector3d const right(cross_product(S.dir, S.upv).get_norm());
 			xform_matrix xm;
 			float *m(xm.get_ptr());
-			m[0] = S.dir.x; // x
-			m[1] = S.dir.y;
-			m[2] = S.dir.z;
+			m[0] = dir.x; // x
+			m[1] = dir.y;
+			m[2] = dir.z;
 			m[4] = right.x; // y
 			m[5] = right.y;
 			m[6] = right.z;
-			m[8] = S.upv.x; // z
-			m[9] = S.upv.y;
-			m[10]= S.upv.z;
+			m[8] = upv.x; // z
+			m[9] = upv.y;
+			m[10]= upv.z;
 			fgMultMatrix(xm);
 			uniform_scale(S.radius);
 			check_mvm_update();
