@@ -609,22 +609,30 @@ public:
 		if (!c.contains_pt_exp(pos, r_outer)) return;
 		point const center(c.get_cube_center());
 
-		for (unsigned d = 0; d < 3; ++d) {
-			if (!(dim_mask & (1<<d  ))) continue;
-			unsigned const dir(center[d] < pos[d]);
-			if (!(dir_mask & (1<<dir))) continue;
-			float const dsign(dir ? 1.0 : -1.0), edge(c.d[d][dir]), dist(dsign*(pos[d] - edge)); // Note: can be negative if pos is inside the cube
-			if (dist >= r_outer) continue; // too far from this cube side
-			unsigned dix(0);
-			if      (dist < surf_dists[0]) {dix = 0;}
-			else if (dist < surf_dists[1]) {dix = 1;}
-			else {continue;} // not a closest distance; can happen at cube corners
-			if (dix == 1 && surf_dims[0] == d) continue; // don't want both surfaces in the same direction (for example between two adjacent floor/ceiling cubes)
-			surf_dists[dix] = dist;
-			surf_pos  [dix] = edge;
-			surf_dims [dix] = d;
-			surf_dirs [dix] = dir;
-		} // for d
+		for (unsigned pass = 0; pass < 2; ++pass) {
+			bool was_close(0), was_inside(0);
+
+			for (unsigned d = 0; d < 3; ++d) {
+				if (!(dim_mask & (1<<d  ))) continue;
+				unsigned const dir(center[d] < pos[d]);
+				if (!(dir_mask & (1<<dir))) continue;
+				float const dsign(dir ? 1.0 : -1.0), edge(c.d[d][dir]), dist(dsign*(pos[d] - edge)); // Note: can be negative if pos is inside the cube
+				if (dist >= r_outer) continue; // too far from this cube side
+				if (dist < 0.0 && pass == 0) {was_inside = 1; continue;} // inside the cube on the first pass, record and skip
+				was_close = 1;
+				unsigned dix(0);
+				if      (dist < surf_dists[0]) {dix = 0;}
+				else if (dist < surf_dists[1]) {dix = 1;}
+				else {continue;} // not a closest distance; can happen at cube corners
+				if (dix == 1 && surf_dims[0] == d) continue; // don't want both surfaces in the same direction (for example between two adjacent floor/ceiling cubes)
+				surf_dists[dix] = dist;
+				surf_pos  [dix] = edge;
+				surf_dims [dix] = d;
+				surf_dirs [dix] = dir;
+			} // for d
+			if (was_close || !was_inside) break; // done
+			// if we get here on the first pass, we have a contained dimand no other nearby dims, so run the second pass to resolve the intersection
+		} // for pass
 	}
 	void register_cubes(vect_cube_t const &cubes, unsigned dim_mask=7, unsigned dir_mask=3) {
 		for (cube_t const &c : cubes) {register_cube(c, dim_mask, dir_mask);}
@@ -691,7 +699,8 @@ void building_t::update_spider(spider_t &spider, point const &camera_bs, float t
 	// FIXME: clips through the floor when falling and basement is below
 	surface_orienter.register_cubes(interior->floors,   4, 2); // Z2 surface only
 	surface_orienter.register_cubes(interior->ceilings, 4, 1); // Z1 surface only
-	for (unsigned d = 0; d < 2; ++d) {surface_orienter.register_cubes(interior->walls[d], (1<<d));} // XY walls; should we check the wall ends as well?
+	// XY walls; should we check the wall ends as well? using dim_mask=3 sort of works but can lead to some odd behavior at door frames
+	for (unsigned d = 0; d < 2; ++d) {surface_orienter.register_cubes(interior->walls[d], (1<<d));}
 	// TODO: interior->door_stacks
 	// TODO: exterior walls
 	// TODO: interior->room_geom->objs
