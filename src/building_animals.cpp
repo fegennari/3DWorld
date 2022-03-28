@@ -597,12 +597,12 @@ void building_t::update_spiders(point const &camera_bs, unsigned building_ix, in
 
 class surface_orienter_t {
 	point pos;
-	float radius, r_outer, surf_pos[2] = {}, surf_dists[2];
+	float r_outer, surf_pos[2] = {}, surf_dists[2];
 	unsigned surf_dims[2] = {};
 	bool surf_dirs[2] = {};
 
 public:
-	surface_orienter_t(point const &pos_, float radius_, float transition_dist) : pos(pos_), radius(radius_), r_outer(radius + transition_dist) {
+	surface_orienter_t(point const &pos_, float r_outer_) : pos(pos_), r_outer(r_outer_) {
 		surf_dists[0] = surf_dists[1] = 2.0*r_outer; // set larger than any possible value
 	}
 	void register_cube(cube_t const &c, unsigned dim_mask=7, unsigned dir_mask=3) {
@@ -680,11 +680,113 @@ public:
 	}
 }; // surface_orienter_t
 
+class obj_avoid_t {
+	point &pos;
+	point const &p_last;
+	float radius;
+public:
+	bool had_int;
+	obj_avoid_t(point &pos_, point const &p_last_, float radius_) : pos(pos_), p_last(p_last_), radius(radius_), had_int(0) {}
+	
+	void register_avoid_cube(cube_t const &c) {
+		// TODO: update dir on coll
+		had_int |= sphere_cube_int_update_pos(pos, radius, c, p_last);
+	}
+};
+
+bool building_t::update_spider_pos_orient(spider_t &spider, point const &camera_bs, float timestep) const {
+	assert(interior);
+	float const trim_thickness(get_trim_thickness());
+	float const coll_radius(2.0f*spider.radius), r_outer(coll_radius + 0.5*spider.radius); // use an expanded transition zone
+	surface_orienter_t surface_orienter(spider.pos, r_outer);
+	// Note: we can almost use fc_occluders, except this doesn't contain the very bottom floor because it's not an occluder
+	//surface_orienter.register_cubes(interior->fc_occluders, 4); // Z surface only
+	surface_orienter.register_cubes(interior->floors,   4, 2); // Z2 surface only
+	surface_orienter.register_cubes(interior->ceilings, 4, 1); // Z1 surface only
+	// XY walls; should we check the wall ends as well? using dim_mask=3 sort of works but can lead to some odd behavior at door frames
+	for (unsigned d = 0; d < 2; ++d) {surface_orienter.register_cubes(interior->walls[d], (1<<d));}
+	// check doors
+	cube_t tc(spider.pos);
+	tc.expand_by_xy(r_outer);
+	tc.expand_in_dim(2, 1.5*spider.radius); // smaller expand in Z
+	obj_avoid_t obj_avoid(spider.pos, spider.last_pos, coll_radius);
+
+	for (auto const &ds : interior->door_stacks) {
+		if (ds.z1() > tc.z2() || ds.z2() < tc.z1()) continue; // wrong floor for this stack/part
+		// calculate door bounds for bcube test, assuming it's open
+		cube_t door_bounds(ds);
+		door_bounds.expand_by_xy(ds.get_width());
+		if (!tc.intersects(door_bounds)) continue; // optimization
+		assert(ds.first_door_ix < interior->doors.size());
+
+		for (unsigned dix = ds.first_door_ix; dix < interior->doors.size(); ++dix) {
+			door_t const &door(interior->doors[dix]);
+			if (!ds.is_same_stack(door)) break; // moved to a different stack, done
+			if (door.z1() > tc.z2() || door.z2() < tc.z1()) continue; // wrong floor
+
+			if (door.open) { // how to handle open doors? they're not cubes; avoid them entirely? use their bcubes?
+				tquad_with_ix_t const door_tq(set_interior_door_from_cube(door));
+				cube_t tight_door_bounds(door_tq.get_bcube()); // somewhat more accurate
+				tight_door_bounds.expand_by_xy(door.get_thickness()); // conservative
+				if (tc.intersects(tight_door_bounds)) {obj_avoid.register_avoid_cube(tight_door_bounds);}
+			}
+			else if (tc.intersects(door)) { // closed door
+				surface_orienter.register_cube(door, (1<<unsigned(door.dim)));
+			}
+		}
+	} // for door_stacks
+	// check interior objects
+	auto objs_end(interior->room_geom->get_placed_objs_end()); // skip buttons/stairs/elevators
+
+	for (auto i = interior->room_geom->objs.begin(); i != objs_end; ++i) {
+		if (!tc.intersects(*i)) continue; // no intersection with this object
+		if (!i->is_floor_collidable() && i->type != TYPE_LIGHT && i->type != TYPE_BRSINK && i->type != TYPE_RAILING &&
+			i->type != TYPE_MIRROR && i->type != TYPE_MWAVE && i->type != TYPE_HANGER_ROD && i->type != TYPE_LAPTOP &&
+			i->type != TYPE_MONITOR && i->type != TYPE_CLOTHES && i->type != TYPE_TOASTER) continue; // include objects on the floor, walls, and ceilings
+		if (i->type == TYPE_BOOK) continue; // I guess books don't count, since they're too small to walk on?
+		if (i->get_max_extent() < spider.radius) continue; // too small, skip
+		//if (i->type == TYPE_CLOSET && i->is_small_closet() && i->is_open()) {} // TODO: open closet doors
+		// TODO: all the various multi-cube objects such as beds and chairs
+		// TODO: handle spider getting stuck between furniture and the wall
+		if (i->shape != SHAPE_CUBE) {obj_avoid.register_avoid_cube(*i);} // avoid non-cubes
+		else {surface_orienter.register_cube(*i, 7);} // all sides? what about non-cube objects?
+	} // for i
+	// check stairs and elevators
+	for (elevator_t const &e : interior->elevators) {
+		surface_orienter.register_cube(e, 3); // XY surfaces; what about open elevators, should we avoid those?
+	}
+	for (stairwell_t const &s : interior->stairwells) {
+		obj_avoid.register_avoid_cube(s); // stairs are too difficult to handle, avoid them
+	}
+	// check exterior walls; exterior doors are ignored for now (meaning the spider can walk on them)
+	static vect_cube_t cubes;
+
+	for (auto i = parts.begin(); i != get_real_parts_end_inc_sec(); ++i) {
+		for (unsigned dim = 0; dim < 2; ++dim) {
+			for (unsigned dir = 0; dir < 2; ++dir) {
+				cube_t cube(*i);
+				cube.d[dim][!dir] = i->d[dim][dir] + (dir ? -1.0 : 1.0)*trim_thickness; // shrink to trim thickness
+				cubes.clear();
+				cubes.push_back(cube); // start with entire length
+
+				for (auto j = parts.begin(); j != get_real_parts_end(); ++j) { // clip against other parts
+					if (j == i) continue; // skip self
+					subtract_cube_from_cubes(*j, cubes); // subtract this part from current cubes by clipping in XY
+				}
+				for (cube_t const &c : cubes) {surface_orienter.register_cube(c, (1<<dim), (1<<(1-dir)));}
+			} // for dir
+		} // for dim
+	} // for i
+	//if (obj_avoid.had_int) {} // TODO
+	return surface_orienter.align_to_surfaces(spider.pos, spider.dir, spider.upv, spider.radius, spider.speed, timestep, camera_bs);
+}
+
 void building_t::update_spider(spider_t &spider, point const &camera_bs, float timestep, float &max_xmove, rand_gen_t &rgen) const {
 	
 	if (spider.is_sleeping()) return; // peacefully sleeping
 	rgen.rand_mix(); // make sure it's different per spider
-	float const radius(spider.radius), height(2.0*radius), coll_radius(2.0f*radius), xy_pad(coll_radius + get_trim_thickness());
+	// Note: we use a small xy_pad to allow the spider to climb on exterior walls
+	float const radius(spider.radius), height(2.0*radius), coll_radius(2.0f*radius), xy_pad(radius/*coll_radius + get_trim_thickness()*/);
 	if (spider.speed == 0.0) {spider.speed = global_building_params.spider_speed*rgen.rand_uniform(0.5, 1.0);} // random speed
 
 	if (!is_pos_inside_building(spider.pos, xy_pad, radius)) {
@@ -692,19 +794,7 @@ void building_t::update_spider(spider_t &spider, point const &camera_bs, float t
 		spider.dir = zero_vector; // will be set to a valid value on the next frame
 		return;
 	}
-	assert(interior);
-	surface_orienter_t surface_orienter(spider.pos, coll_radius, 0.5*radius);
-	// Note: we can almost use fc_occluders, except this doesn't contain the very bottom floor because it's not an occluder
-	//surface_orienter.register_cubes(interior->fc_occluders, 4); // Z surface only
-	// FIXME: clips through the floor when falling and basement is below
-	surface_orienter.register_cubes(interior->floors,   4, 2); // Z2 surface only
-	surface_orienter.register_cubes(interior->ceilings, 4, 1); // Z1 surface only
-	// XY walls; should we check the wall ends as well? using dim_mask=3 sort of works but can lead to some odd behavior at door frames
-	for (unsigned d = 0; d < 2; ++d) {surface_orienter.register_cubes(interior->walls[d], (1<<d));}
-	// TODO: interior->door_stacks
-	// TODO: exterior walls
-	// TODO: interior->room_geom->objs
-	bool const on_surface(surface_orienter.align_to_surfaces(spider.pos, spider.dir, spider.upv, spider.radius, spider.speed, timestep, camera_bs));
+	bool const on_surface(update_spider_pos_orient(spider, camera_bs, timestep));
 
 	if (spider.dir.mag() < 0.5) {spider.choose_new_dir(rgen);} // regenerate dir if zero or otherwise bad
 	else if (on_surface && (float)tfticks > spider.update_time) { // direction change or sleep
