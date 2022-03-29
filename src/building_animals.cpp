@@ -750,11 +750,13 @@ void building_t::update_spider_pos_orient(spider_t &spider, point const &camera_
 	} // for door_stacks
 	// check interior objects
 	static vect_cube_t cubes, avoid;
-	//auto objs_end(interior->room_geom->get_placed_objs_end()); // skip buttons/stairs/elevators
-	auto objs_end(interior->room_geom->objs.end()); // allow walking on stairs
+	// skip buttons/stairs/elevators, unless we're by the stairs, in which case the iteration must include stairs
+	bool near_stairs(0);
+	for (stairwell_t const &s : interior->stairwells) {near_stairs |= s.intersects(tc);}
+	auto objs_end(near_stairs ? interior->room_geom->objs.end() : interior->room_geom->get_placed_objs_end());
 
 	for (auto i = interior->room_geom->objs.begin(); i != objs_end; ++i) {
-		if (!tc.intersects(get_true_room_obj_bcube(*i))) continue; // no intersection with this object
+		if (!tc.intersects((i->type == TYPE_CLOSET) ? get_true_room_obj_bcube(*i) : *i)) continue; // no intersection with this object
 		if (!i->is_floor_collidable() && i->type != TYPE_LIGHT && i->type != TYPE_BRSINK && i->type &&
 			i->type != TYPE_MIRROR && i->type != TYPE_MWAVE && i->type != TYPE_HANGER_ROD && i->type != TYPE_LAPTOP &&
 			i->type != TYPE_MONITOR && i->type != TYPE_CLOTHES && i->type != TYPE_TOASTER) continue; // include objects on the floor, walls, and ceilings
@@ -769,9 +771,8 @@ void building_t::update_spider_pos_orient(spider_t &spider, point const &camera_
 		cubes.clear();
 		avoid.clear();
 	} // for i
-	// check stairs and elevators
+	// check elevators
 	for (elevator_t const &e : interior->elevators) {surface_orienter.register_cube(e, EF_XY12);} // XY surfaces; should we avoid open elevators?
-	//for (stairwell_t const &s : interior->stairwells) {obj_avoid.register_avoid_cube(s);} // stairs are too difficult to handle, avoid them
 	// check exterior walls; exterior doors are ignored for now (meaning the spider can walk on them)
 	for (auto i = parts.begin(); i != get_real_parts_end_inc_sec(); ++i) {
 		for (unsigned dim = 0; dim < 2; ++dim) {
