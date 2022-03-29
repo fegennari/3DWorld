@@ -24,6 +24,7 @@ float get_closest_building_sound(point const &at_pos, point &sound_pos, float fl
 sphere_t get_cur_frame_loudest_sound();
 bool in_building_gameplay_mode();
 bool player_take_damage(float damage_scale, bool &has_key);
+cube_t get_true_room_obj_bcube(room_object_t const &c);
 
 
 void building_animal_t::sleep_for(float time_secs_min, float time_secs_max) {
@@ -735,7 +736,7 @@ void building_t::update_spider_pos_orient(spider_t &spider, point const &camera_
 	auto objs_end(interior->room_geom->get_placed_objs_end()); // skip buttons/stairs/elevators
 
 	for (auto i = interior->room_geom->objs.begin(); i != objs_end; ++i) {
-		if (!tc.intersects(*i)) continue; // no intersection with this object
+		if (!tc.intersects(get_true_room_obj_bcube(*i))) continue; // no intersection with this object
 		if (!i->is_floor_collidable() && i->type != TYPE_LIGHT && i->type != TYPE_BRSINK && i->type != TYPE_RAILING &&
 			i->type != TYPE_MIRROR && i->type != TYPE_MWAVE && i->type != TYPE_HANGER_ROD && i->type != TYPE_LAPTOP &&
 			i->type != TYPE_MONITOR && i->type != TYPE_CLOTHES && i->type != TYPE_TOASTER) continue; // include objects on the floor, walls, and ceilings

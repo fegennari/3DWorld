@@ -359,7 +359,7 @@ bool maybe_inside_room_object(room_object_t const &obj, point const &pos, float 
 	return ((obj.is_open() && sphere_cube_intersect(pos, radius, obj)) || obj.contains_pt(pos));
 }
 
-cube_t get_closet_bcube_including_door(room_object_t const &c) {
+cube_t get_true_room_obj_bcube(room_object_t const &c) { // special cased only for closets
 	if (c.type != TYPE_CLOSET || !c.is_open() || !c.is_small_closet()) return c;
 	cube_t bcube(c); // only applies to small closets with open doors
 	float const width(c.get_width()), wall_width(0.5*(width - 0.5*c.dz())); // see get_closet_cubes()
@@ -428,9 +428,8 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, vec
 				continue;
 			}
 			if ((c->type == TYPE_STAIR || on_stairs) && (obj_z + radius) > c->z2()) continue; // above the stair - allow it to be walked on
-			cube_t c_extended(*c);
-			if      (c->type == TYPE_STAIR ) {c_extended.z1() -= camera_zh;} // handle the player's head for stairs
-			else if (c->type == TYPE_CLOSET) {c_extended = get_closet_bcube_including_door(*c);}
+			cube_t c_extended(get_true_room_obj_bcube(*c));
+			if (c->type == TYPE_STAIR ) {c_extended.z1() -= camera_zh;} // handle the player's head for stairs
 
 			// Note: slight adjust so that player is above ramp when on the floor
 			if (c->type == TYPE_RAMP && (obj_z - 0.99f*radius) < c->z2()) { // ramp should be SHAPE_ANGLED
@@ -564,7 +563,7 @@ bool building_interior_t::check_sphere_coll(building_t const &building, point &p
 		if (c == self || c->type == TYPE_BLOCKER || c->type == TYPE_RAILING || c->type == TYPE_PAPER || c->type == TYPE_PEN || c->type == TYPE_PENCIL ||
 			c->type == TYPE_BOTTLE || c->type == TYPE_FLOORING || c->type == TYPE_SIGN || c->type == TYPE_WBOARD || c->type == TYPE_WALL_TRIM ||
 			c->type == TYPE_DRAIN || c->type == TYPE_CRACK || c->type == TYPE_SWITCH || c->type == TYPE_OUTLET) continue;
-		if (!sphere_cube_intersect(pos, radius, ((c->type == TYPE_CLOSET) ? get_closet_bcube_including_door(*c) : *c))) continue; // no intersection (optimization)
+		if (!sphere_cube_intersect(pos, radius, get_true_room_obj_bcube(*c))) continue; // no intersection (optimization)
 		unsigned coll_ret(0);
 		// add special handling for things like elevators and cubicles? right now these are only in office buildings, where there are no dynamic objects
 
@@ -1182,9 +1181,7 @@ bool building_t::check_line_coll_expand(point const &p1, point const &p2, float 
 			// skip non-colliding objects except for balls and books (that the player can drop), computers under desks, and expanded objects from closets,
 			// since rats must collide with these
 			if (!c->is_floor_collidable()) continue;
-			cube_t c_extended(*c);
-			if (c->type == TYPE_CLOSET) {c_extended = get_closet_bcube_including_door(*c);}
-			if (!line_bcube.intersects(*c) || !line_int_cube_exp(p1, p2, c_extended, expand)) continue;
+			if (!line_bcube.intersects(*c) || !line_int_cube_exp(p1, p2, get_true_room_obj_bcube(*c), expand)) continue;
 
 			if (c->shape == SHAPE_CYLIN) { // vertical cylinder
 				cylinder_3dw cylin(c->get_cylinder());
