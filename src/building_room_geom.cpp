@@ -448,7 +448,7 @@ void building_room_geom_t::add_closet(room_object_t const &c, tid_nm_pair_t cons
 
 		for (unsigned is_side = 0; is_side < 2; ++is_side) { // front wall, side wall
 			for (unsigned d = 0; d < 2; ++d) {
-				unsigned skip_faces((draw_interior_trim ? 0 : ~get_face_mask(c.dim, !c.dir)) | EF_Z1);
+				unsigned skip_faces((draw_interior_trim ? 0 : ~get_face_mask(c.dim, !c.dir)) | EF_Z1), trim_flags(0);
 				cube_t trim;
 				
 				if (is_side) { // sides of closet
@@ -463,9 +463,15 @@ void building_room_geom_t::add_closet(room_object_t const &c, tid_nm_pair_t cons
 					trim.d[!c.dim][!d    ] -= (d ? -1.0 : 1.0)*0.1*trim_thickness; // shrink slightly to avoid z-fighting with closet wall/door frame when the door is open
 					trim.d[ c.dim][!c.dir]  = trim.d[c.dim][c.dir];
 					trim.d[ c.dim][ c.dir] += (c.dir ? 1.0 : -1.0)*trim_thickness; // expand away from wall
+					
 					// expand to cover the outside corner gap if not along room wall, otherwise hide the face; doesn't really line up properly for angled ceiling trim though
-					if (c.flags & (d ? RO_FLAG_ADJ_HI : RO_FLAG_ADJ_LO)) {skip_faces |= ~get_face_mask(!c.dim, d);} // disable hidden faces
-					else {trim.d[!c.dim][d] += (d ? 1.0 : -1.0)*trim_thickness;}
+					if (c.flags & (d ? RO_FLAG_ADJ_HI : RO_FLAG_ADJ_LO)) {
+						skip_faces |= ~get_face_mask(!c.dim, d); // disable hidden faces
+					}
+					else {
+						trim.d[!c.dim][d] += (d ? 1.0 : -1.0)*trim_thickness;
+						trim_flags |= (d ? RO_FLAG_ADJ_HI : RO_FLAG_ADJ_LO); // shift trim bottom edge to prevent intersection with trim in other dim at outside corner
+					}
 				}
 				bool const trim_dim(c.dim ^ bool(is_side)), trim_dir(is_side ? d : c.dir);
 				cube_t btrim(trim); // bottom trim
@@ -474,7 +480,8 @@ void building_room_geom_t::add_closet(room_object_t const &c, tid_nm_pair_t cons
 				btrim.z2() = c.z1() + trim_height;
 				get_untextured_material(0, 0, 1).add_cube_to_verts_untextured(btrim, trim_color, skip_faces); // is_small, untextured, no shadows; both interior and exterior
 				set_cube_zvals(trim, c.z2()-trim_height, c.z2());
-				add_wall_trim(room_object_t(trim, TYPE_WALL_TRIM, c.room_id, trim_dim, trim_dir, 0, 1.0, SHAPE_ANGLED, trim_color), 1); // ceiling trim, missing end caps; exterior only
+				// ceiling trim, missing end caps; exterior only
+				add_wall_trim(room_object_t(trim, TYPE_WALL_TRIM, c.room_id, trim_dim, trim_dir, trim_flags, 1.0, SHAPE_ANGLED, trim_color), 1);
 			} // for d
 		} // for is_side
 		// Note: always drawn to avoid recreating all small objects when the player opens/closes a closet door, and so that objects can be seen through the cracks in the doors
@@ -1066,6 +1073,8 @@ void building_room_geom_t::add_wall_trim(room_object_t const &c, bool for_closet
 		pts[1][ c.dim] = pts[2][ c.dim] = c.d[ c.dim][ c.dir];
 		pts[0].z = pts[3].z = c.z1();
 		pts[1].z = pts[2].z = c.z2();
+		if (c.flags & RO_FLAG_ADJ_LO) {pts[0][!c.dim] += c.get_sz_dim(c.dim);} // add closet outside corner bevel/miter
+		if (c.flags & RO_FLAG_ADJ_HI) {pts[3][!c.dim] -= c.get_sz_dim(c.dim);} // add closet outside corner bevel/miter
 		if (c.dir ^ c.dim) {swap(pts[0], pts[3]); swap(pts[1], pts[2]);} // change winding order/normal sign
 		rgeom_mat_t::vertex_t v;
 		v.set_norm(get_poly_norm(pts));
