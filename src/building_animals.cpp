@@ -110,7 +110,7 @@ void update_dir_incremental(vector3d &dir, vector3d const &new_dir, float turn_r
 void try_resolve_coll(vector3d const &dir, vector3d const &upv, vector3d const &coll_dir, vector3d &new_dir, bool try_tangent) {
 	if (dot_product(coll_dir, new_dir) > 0.0) { // must move away from the collision direction
 		if (try_tangent) { // try to preserve direction by moving in a tangent to the collider
-			new_dir = cross_product(coll_dir, upv);
+			new_dir = cross_product(coll_dir, upv).get_norm(); // should be orthogonal, but we can be safe and normalize
 			if (dot_product(new_dir, dir) < 0.0) {new_dir.negate();} // there are two solutions; choose the one closer to our current dir
 		}
 		else {new_dir.negate();} // otherwise reverse direction
@@ -672,7 +672,7 @@ public:
 			if (f_update.mag() > 0.001) {forward = f_keep + (update_mag/f_update.mag())*f_update;} // reset f_update length to the original value
 		}
 		else { // 1 surface
-			up     [dim] = dsign;
+			up     [dim] = dsign; // normalized
 			forward[dim] = 0.0; // must be orthogonal to surface and up vector
 		}
 		forward.normalize(); // Note: up to the caller to handle zero forward vector
@@ -685,16 +685,12 @@ class obj_avoid_t {
 	point const &p_last;
 	float radius;
 public:
-	bool had_int;
-	obj_avoid_t(point &pos_, point const &p_last_, float radius_) : pos(pos_), p_last(p_last_), radius(radius_), had_int(0) {}
-	
-	void register_avoid_cube(cube_t const &c) {
-		// TODO: update dir on coll
-		had_int |= sphere_cube_int_update_pos(pos, radius, c, p_last);
-	}
+	bool had_coll;
+	obj_avoid_t(point &pos_, point const &p_last_, float radius_) : pos(pos_), p_last(p_last_), radius(radius_), had_coll(0) {}
+	void register_avoid_cube(cube_t const &c) {had_coll |= sphere_cube_int_update_pos(pos, radius, c, p_last);}
 };
 
-bool building_t::update_spider_pos_orient(spider_t &spider, point const &camera_bs, float timestep) const {
+void building_t::update_spider_pos_orient(spider_t &spider, point const &camera_bs, float timestep, bool &on_surface, bool &had_coll) const {
 	assert(interior);
 	float const trim_thickness(get_trim_thickness());
 	float const coll_radius(2.0f*spider.radius), r_outer(coll_radius + 0.5*spider.radius); // use an expanded transition zone
@@ -748,7 +744,7 @@ bool building_t::update_spider_pos_orient(spider_t &spider, point const &camera_
 		//if (i->type == TYPE_CLOSET && i->is_small_closet() && i->is_open()) {} // TODO: open closet doors
 		// TODO: all the various multi-cube objects such as beds and chairs
 		// TODO: handle spider getting stuck between furniture and the wall
-		if (i->shape != SHAPE_CUBE) {obj_avoid.register_avoid_cube(*i);} // avoid non-cubes
+		if (i->shape == SHAPE_CYLIN || i->shape == SHAPE_SPHERE) {obj_avoid.register_avoid_cube(*i);} // avoid non-cubes
 		else {surface_orienter.register_cube(*i, 7);} // all sides? what about non-cube objects?
 	} // for i
 	// check stairs and elevators
@@ -777,8 +773,8 @@ bool building_t::update_spider_pos_orient(spider_t &spider, point const &camera_
 			} // for dir
 		} // for dim
 	} // for i
-	//if (obj_avoid.had_int) {} // TODO
-	return surface_orienter.align_to_surfaces(spider.pos, spider.dir, spider.upv, spider.radius, spider.speed, timestep, camera_bs);
+	had_coll   = obj_avoid.had_coll;
+	on_surface = surface_orienter.align_to_surfaces(spider.pos, spider.dir, spider.upv, spider.radius, spider.speed, timestep, camera_bs);
 }
 
 void building_t::update_spider(spider_t &spider, point const &camera_bs, float timestep, float &max_xmove, rand_gen_t &rgen) const {
@@ -794,9 +790,10 @@ void building_t::update_spider(spider_t &spider, point const &camera_bs, float t
 		spider.dir = zero_vector; // will be set to a valid value on the next frame
 		return;
 	}
-	bool const on_surface(update_spider_pos_orient(spider, camera_bs, timestep));
+	bool on_surface(0), had_coll(0);
+	update_spider_pos_orient(spider, camera_bs, timestep, on_surface, had_coll);
 
-	if (spider.dir.mag() < 0.5) {spider.choose_new_dir(rgen);} // regenerate dir if zero or otherwise bad
+	if (had_coll || spider.dir.mag() < 0.5) {spider.choose_new_dir(rgen);} // regenerate dir if collided, zero, or otherwise bad
 	else if (on_surface && (float)tfticks > spider.update_time) { // direction change or sleep
 		if (spider.dist_since_sleep > 2.0*get_window_vspace() && rgen.rand_bool()) { // 50% chance of taking a rest
 			spider.sleep_for(0.0, 4.0); // 0-4s
