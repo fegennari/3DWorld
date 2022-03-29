@@ -1071,6 +1071,7 @@ public:
 			mat.draw_inner(shadow_only);
 			fgPopMatrix();
 		} // for S
+		check_mvm_update(); // make sure to reset MVM
 		s.add_uniform_float("animation_time", 0.0); // reset animation time
 		s.add_uniform_int("animation_id", 0); // clear animation
 		s.clear_specular();
