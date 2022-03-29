@@ -598,15 +598,18 @@ void building_t::update_spiders(point const &camera_bs, unsigned building_ix, in
 
 class surface_orienter_t {
 	point pos;
-	float r_outer, surf_pos[2] = {}, surf_dists[2];
+	vector3d upv;
+	float r_inner, r_outer, surf_pos[2] = {}, surf_dists[2];
 	unsigned surf_dims[2] = {};
 	bool surf_dirs[2] = {};
 
 public:
-	surface_orienter_t(point const &pos_, float r_outer_) : pos(pos_), r_outer(r_outer_) {
+	bool had_coll;
+
+	surface_orienter_t(point const &pos_, vector3d const &upv_, float r_inner_, float r_outer_) : pos(pos_), upv(upv_), r_inner(r_inner_), r_outer(r_outer_), had_coll(0) {
 		surf_dists[0] = surf_dists[1] = 2.0*r_outer; // set larger than any possible value
 	}
-	void register_cube(cube_t const &c, unsigned dim_mask=7, unsigned dir_mask=3) {
+	void register_cube(cube_t const &c, unsigned enable_faces) {
 		if (!c.contains_pt_exp(pos, r_outer)) return;
 		point const center(c.get_cube_center());
 
@@ -614,12 +617,16 @@ public:
 			bool was_close(0), was_inside(0);
 
 			for (unsigned d = 0; d < 3; ++d) {
-				if (!(dim_mask & (1<<d  ))) continue;
 				unsigned const dir(center[d] < pos[d]);
-				if (!(dir_mask & (1<<dir))) continue;
+				if (!(enable_faces & (1 << (2*(2-d) + dir)))) continue; // skip this face
 				float const dsign(dir ? 1.0 : -1.0), edge(c.d[d][dir]), dist(dsign*(pos[d] - edge)); // Note: can be negative if pos is inside the cube
 				if (dist >= r_outer) continue; // too far from this cube side
 				if (dist < 0.0 && pass == 0) {was_inside = 1; continue;} // inside the cube on the first pass, record and skip
+
+				if (dir ? (upv[d] < -0.9) : (upv[d] > 0.9)) { // opposite our up dir
+					if (dist < r_inner) {had_coll = 1;}
+					continue; // skip (lets spiders squeeze into narrow spaces - but maybe we don't want that)
+				}
 				was_close = 1;
 				unsigned dix(0);
 				if      (dist < surf_dists[0]) {dix = 0;}
@@ -635,33 +642,38 @@ public:
 			// if we get here on the first pass, we have a contained dimand no other nearby dims, so run the second pass to resolve the intersection
 		} // for pass
 	}
-	void register_cubes(vect_cube_t const &cubes, unsigned dim_mask=7, unsigned dir_mask=3) {
-		for (cube_t const &c : cubes) {register_cube(c, dim_mask, dir_mask);}
+	void register_cubes(vect_cube_t const &cubes, unsigned enable_faces) {
+		for (cube_t const &c : cubes) {register_cube(c, enable_faces);}
 	}
 	bool align_to_surfaces(point &pos, vector3d &forward, vector3d &up, float hheight, float speed, float timestep, point const &camera_bs) {
 		//bool const debug(dist_xy_less_than(pos, camera_bs, 2.0*CAMERA_RADIUS));
 		//if (debug) {cout << TXT(forward.str()) << TXT(up.str()) << endl;}
+		float const delta_dir(min(1.0f, 1.5f*(1.0f - pow(0.7f, timestep))));
 		
-		if (surf_dists[0] >= r_outer) { // no surface to align to; for example, reaching the doorway opening of a wall; drop down to the floor
-			float const delta_dir(min(1.0f, 1.5f*(1.0f - pow(0.7f, timestep))));
-			forward = (-delta_dir*plus_z + (1.0 - delta_dir)*forward).get_norm(); // slowly reorient to -z
+		if (surf_dists[0] >= r_outer) { // no surface to align to; for example, reaching the doorway opening of a wall
+			//forward = (delta_dir*-upv + (1.0 - delta_dir)*forward).get_norm(); // pivot around left-right - doesn't seem to work
+			// drop down to the floor (on a web?)
+			forward = (delta_dir*-plus_z + (1.0 - delta_dir)*forward).get_norm(); // slowly reorient to -z
 			pos.z  -= 0.5*timestep*speed; // drop at half speed
 			orthogonalize_dir(up, forward, up, 1);
 			return 0;
 		}
 		unsigned const dim(surf_dims[0]);
-		float const dsign (surf_dirs[0] ? 1.0 : -1.0);
-		up = zero_vector; // will recompte below
-		pos[dim] = surf_pos[0] + dsign*hheight; // place onto closest surface, always
+		float const dsign (surf_dirs[0] ? 1.0 : -1.0), max_move_dist(0.5*r_inner);
+		float const new_pos_dim(surf_pos[0] + dsign*hheight), pos_dim_delta(new_pos_dim - pos[dim]); // place onto closest surface
+		pos[dim] += min(max_move_dist, max(-max_move_dist, pos_dim_delta)); // clamp to a reasonable movement distance
+		vector3d new_up(zero_vector); // will compte below
 
 		if (surf_dists[1] < r_outer && surf_dims[1] != dim) { // 2 orthogonal surfaces
 			unsigned const dim2(surf_dims[1]);
-			float const dsign2 (surf_dirs[1] ? 1.0 : -1.0), gap1(r_outer - surf_dists[0]), gap2(r_outer - surf_dists[1]);
-			float const weight1(gap1/(gap1 + gap2)), weight2(1.0 - weight1);
+			float const dsign2 (surf_dirs[1] ? 1.0 : -1.0), proximity1(r_outer - surf_dists[0]), proximity2(r_outer - surf_dists[1]);
+			float const weight1(proximity1/(proximity1 + proximity2)), weight2(1.0 - weight1);
+			assert(proximity1 > 0.0 && proximity2 > 0.0);
+			//if (debug) {cout << "2S " << TXT(dim) << TXT(dsign) << TXT(dim2) << TXT(dsign2) << TXT(weight1) << TXT(weight2) << endl;}
 			if (surf_dists[1] < hheight) {pos[dim2] = surf_pos[1] + dsign2*hheight;} // place onto second surface if intersecting
-			up[dim ] = weight1*dsign;
-			up[dim2] = weight2*dsign2;
-			up.normalize();
+			new_up[dim ] = weight1*dsign;
+			new_up[dim2] = weight2*dsign2;
+			new_up.normalize();
 			vector3d f_keep(forward), f_update(zero_vector); // split forward vector into two components (parallel to either surface vs. perpendicular to both)
 			f_keep  [dim] = f_keep[dim2] = 0.0;
 			f_update[dim] = forward[dim]; f_update[dim2] = forward[dim2];
@@ -673,10 +685,13 @@ public:
 			if (f_update.mag() > 0.001) {forward = f_keep + (update_mag/f_update.mag())*f_update;} // reset f_update length to the original value
 		}
 		else { // 1 surface
-			up     [dim] = dsign; // normalized
+			//if (debug) {cout << "1S " << TXT(dim) << TXT(dsign) << endl;}
+			new_up [dim] = dsign; // normalized
 			forward[dim] = 0.0; // must be orthogonal to surface and up vector
 		}
+		up = (delta_dir*new_up + (1.0 - delta_dir)*up); // slowly reorient
 		forward.normalize(); // Note: up to the caller to handle zero forward vector
+		orthogonalize_dir(up, forward, up, 1);
 		return 1;
 	}
 }; // surface_orienter_t
@@ -693,15 +708,16 @@ public:
 
 void building_t::update_spider_pos_orient(spider_t &spider, point const &camera_bs, float timestep, bool &on_surface, bool &had_coll) const {
 	assert(interior);
+	unsigned const EF_XY12(EF_X12 | EF_Y12);
 	float const trim_thickness(get_trim_thickness());
 	float const coll_radius(2.0f*spider.radius), r_outer(coll_radius + 0.5*spider.radius); // use an expanded transition zone
-	surface_orienter_t surface_orienter(spider.pos, r_outer);
+	surface_orienter_t surface_orienter(spider.pos, spider.upv, spider.radius, r_outer);
 	// Note: we can almost use fc_occluders, except this doesn't contain the very bottom floor because it's not an occluder
-	//surface_orienter.register_cubes(interior->fc_occluders, 4); // Z surface only
-	surface_orienter.register_cubes(interior->floors,   4, 2); // Z2 surface only
-	surface_orienter.register_cubes(interior->ceilings, 4, 1); // Z1 surface only
-	// XY walls; should we check the wall ends as well? using dim_mask=3 sort of works but can lead to some odd behavior at door frames
-	for (unsigned d = 0; d < 2; ++d) {surface_orienter.register_cubes(interior->walls[d], (1<<d));}
+	//surface_orienter.register_cubes(interior->fc_occluders, EF_Z12); // Z surface only
+	surface_orienter.register_cubes(interior->floors,   EF_Z2); // Z2 surface only
+	surface_orienter.register_cubes(interior->ceilings, EF_Z1); // Z1 surface only
+	// XY walls; should we check the wall ends as well?
+	for (unsigned d = 0; d < 2; ++d) {surface_orienter.register_cubes(interior->walls[d], /*(d ? EF_Y12 : EF_X12)*/EF_XY12);}
 	// check doors
 	cube_t tc(spider.pos);
 	tc.expand_by_xy(r_outer);
@@ -728,36 +744,35 @@ void building_t::update_spider_pos_orient(spider_t &spider, point const &camera_
 				if (tc.intersects(tight_door_bounds)) {obj_avoid.register_avoid_cube(tight_door_bounds);}
 			}
 			else if (tc.intersects(door)) { // closed door
-				surface_orienter.register_cube(door, (1<<unsigned(door.dim)));
+				surface_orienter.register_cube(door, (door.dim ? EF_Y12 : EF_X12));
 			}
 		}
 	} // for door_stacks
 	// check interior objects
-	auto objs_end(interior->room_geom->get_placed_objs_end()); // skip buttons/stairs/elevators
+	static vect_cube_t cubes, avoid;
+	//auto objs_end(interior->room_geom->get_placed_objs_end()); // skip buttons/stairs/elevators
+	auto objs_end(interior->room_geom->objs.end()); // allow walking on stairs
 
 	for (auto i = interior->room_geom->objs.begin(); i != objs_end; ++i) {
 		if (!tc.intersects(get_true_room_obj_bcube(*i))) continue; // no intersection with this object
-		if (!i->is_floor_collidable() && i->type != TYPE_LIGHT && i->type != TYPE_BRSINK && i->type != TYPE_RAILING &&
+		if (!i->is_floor_collidable() && i->type != TYPE_LIGHT && i->type != TYPE_BRSINK && i->type &&
 			i->type != TYPE_MIRROR && i->type != TYPE_MWAVE && i->type != TYPE_HANGER_ROD && i->type != TYPE_LAPTOP &&
 			i->type != TYPE_MONITOR && i->type != TYPE_CLOTHES && i->type != TYPE_TOASTER) continue; // include objects on the floor, walls, and ceilings
 		if (i->type == TYPE_BOOK) continue; // I guess books don't count, since they're too small to walk on?
 		if (i->get_max_extent() < spider.radius) continue; // too small, skip
-		//if (i->type == TYPE_CLOSET && i->is_small_closet() && i->is_open()) {} // TODO: open closet doors
-		// TODO: all the various multi-cube objects such as beds and chairs
 		// TODO: handle spider getting stuck between furniture and the wall
-		if (i->shape == SHAPE_CYLIN || i->shape == SHAPE_SPHERE) {obj_avoid.register_avoid_cube(*i);} // avoid non-cubes
-		else {surface_orienter.register_cube(*i, 7);} // all sides? what about non-cube objects?
+		get_room_obj_cubes(*i, spider.pos, cubes, avoid, avoid); // climb on large objects and avoid small and non-cube objects
+		unsigned faces(EF_XY12 | EF_Z2); // all sides except for Z1
+		if (i->type == TYPE_LIGHT || i->type == TYPE_MIRROR) {faces |= EF_Z1;} // hanging objects
+		surface_orienter.register_cubes(cubes, faces);
+		for (cube_t const &c : avoid) {obj_avoid.register_avoid_cube(c);}
+		cubes.clear();
+		avoid.clear();
 	} // for i
 	// check stairs and elevators
-	for (elevator_t const &e : interior->elevators) {
-		surface_orienter.register_cube(e, 3); // XY surfaces; what about open elevators, should we avoid those?
-	}
-	for (stairwell_t const &s : interior->stairwells) {
-		obj_avoid.register_avoid_cube(s); // stairs are too difficult to handle, avoid them
-	}
+	for (elevator_t const &e : interior->elevators) {surface_orienter.register_cube(e, EF_XY12);} // XY surfaces; should we avoid open elevators?
+	//for (stairwell_t const &s : interior->stairwells) {obj_avoid.register_avoid_cube(s);} // stairs are too difficult to handle, avoid them
 	// check exterior walls; exterior doors are ignored for now (meaning the spider can walk on them)
-	static vect_cube_t cubes;
-
 	for (auto i = parts.begin(); i != get_real_parts_end_inc_sec(); ++i) {
 		for (unsigned dim = 0; dim < 2; ++dim) {
 			for (unsigned dir = 0; dir < 2; ++dir) {
@@ -770,12 +785,13 @@ void building_t::update_spider_pos_orient(spider_t &spider, point const &camera_
 					if (j == i) continue; // skip self
 					subtract_cube_from_cubes(*j, cubes); // subtract this part from current cubes by clipping in XY
 				}
-				for (cube_t const &c : cubes) {surface_orienter.register_cube(c, (1<<dim), (1<<(1-dir)));}
+				unsigned const face(dim ? (dir ? EF_Y1 : EF_Y2) : (dir ? EF_X1 : EF_X2));
+				for (cube_t const &c : cubes) {surface_orienter.register_cube(c, face);}
 			} // for dir
 		} // for dim
 	} // for i
-	had_coll   = obj_avoid.had_coll;
 	on_surface = surface_orienter.align_to_surfaces(spider.pos, spider.dir, spider.upv, spider.radius, spider.speed, timestep, camera_bs);
+	had_coll   = (obj_avoid.had_coll || surface_orienter.had_coll);
 }
 
 void building_t::update_spider(spider_t &spider, point const &camera_bs, float timestep, float &max_xmove, rand_gen_t &rgen) const {

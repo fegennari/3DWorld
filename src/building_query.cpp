@@ -1088,6 +1088,41 @@ void get_approx_car_cubes(room_object_t const &cb, cube_t cubes[5]) {
 	} // for bf
 }
 
+void building_t::get_room_obj_cubes(room_object_t const &c, point const &pos, vect_cube_t &lg_cubes, vect_cube_t &sm_cubes, vect_cube_t &non_cubes) const {
+	if (c.shape == SHAPE_CYLIN || c.shape == SHAPE_SPHERE) {non_cubes.push_back(c);}
+	else if (c.type == TYPE_CLOSET && (c.is_open() || c.contains_pt(pos))) {
+		cube_t cubes[5];
+		get_closet_cubes(c, cubes, 1); // get cubes for walls and door; for_collision=1
+		// skip check of open doors for large closets since this case is more complex
+		unsigned const ncubes((c.is_open() && !c.is_small_closet()) ? 4U : 5U);
+		lg_cubes.insert(lg_cubes.end(), cubes, cubes+ncubes);
+	}
+	else if (c.type == TYPE_BED) {
+		cube_t cubes[6]; // frame, head, foot, mattress, pillow, legs_bcube
+		get_bed_cubes(c, cubes);
+		cubes[3].z1() = cubes[0].z1(); // extend mattress downward to include the frame
+		lg_cubes.insert(lg_cubes.end(), cubes+1, cubes+5); // head, foot, mattress (+ frame), pillow (or should pillow be small?)
+		get_tc_leg_cubes(cubes[5], 0.04, cubes); // head_width=0.04
+		sm_cubes.insert(sm_cubes.end(), cubes, cubes+4); // legs are small
+	}
+	else if (c.type == TYPE_DESK || c.type == TYPE_DRESSER || c.type == TYPE_NIGHTSTAND || c.type == TYPE_TABLE) { // objects with legs
+		cube_t cubes[5];
+		get_table_cubes(c, cubes); // body and legs
+		lg_cubes.push_back(cubes[0]); // top of table, etc.
+		sm_cubes.insert(sm_cubes.end(), cubes+1, cubes+5); // skip body; legs are small
+		if      (c.type == TYPE_DRESSER || c.type == TYPE_NIGHTSTAND) {lg_cubes.push_back(get_dresser_middle   (c));}
+		else if (c.type == TYPE_DESK && c.desk_has_drawers())         {lg_cubes.push_back(get_desk_drawers_part(c));}
+	}
+	else if (c.type == TYPE_CHAIR) {
+		cube_t cubes[3], leg_cubes[4]; // seat, back, legs_bcube
+		lg_cubes.insert(lg_cubes.end(), cubes, cubes+2); // seat, back
+		get_tc_leg_cubes(cubes[2], 0.15, leg_cubes); // width=0.15
+		sm_cubes.insert(sm_cubes.end(), leg_cubes, leg_cubes+4); // legs are small
+	}
+	// otherwise, treat as a large object; this includes: TYPE_BCASE, TYPE_KSINK (with dishwasher), TYPE_COUCH, TYPE_SHELVES, TYPE_COLLIDER (cars)
+	else {lg_cubes.push_back(c);}
+}
+
 // collision query used for rats: p1 and p2 are line end points; radius applies in X and Y, hheight is half height and applies in +/- z
 bool building_t::check_line_coll_expand(point const &p1, point const &p2, float radius, float hheight) const {
 	assert(interior != nullptr);
@@ -1206,7 +1241,7 @@ bool building_t::check_line_coll_expand(point const &p1, point const &p2, float 
 				get_tc_leg_cubes(cubes[5], 0.04, cubes); // head_width=0.04
 				if (line_int_cubes_exp(p1, p2, cubes, 4, expand)) return 1; // check legs
 			}
-			else if (c->type == TYPE_DESK || c->type == TYPE_DRESSER || c->type == TYPE_NIGHTSTAND || c->type == TYPE_TABLE) {
+			else if (c->type == TYPE_DESK || c->type == TYPE_DRESSER || c->type == TYPE_NIGHTSTAND || c->type == TYPE_TABLE) { // objects with legs
 				cube_t cubes[5];
 				get_table_cubes(*c, cubes); // body and legs
 				if (line_int_cubes_exp(p1, p2, cubes, 5, expand)) return 1;

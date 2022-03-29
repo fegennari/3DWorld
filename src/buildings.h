@@ -1237,6 +1237,7 @@ private:
 	void scare_rat_at_pos(rat_t &rat, point const &scare_pos, float amount, bool by_sight) const;
 	void update_spider_pos_orient(spider_t &spider, point const &camera_bs, float timestep, bool &on_surface, bool &had_coll) const;
 	void update_spider(spider_t &spider, point const &camera_bs, float timestep, float &max_xmove, rand_gen_t &rgen) const;
+	void get_room_obj_cubes(room_object_t const &c, point const &pos, vect_cube_t &lg_cubes, vect_cube_t &sm_cubes, vect_cube_t &non_cubes) const;
 	bool check_line_coll_expand(point const &p1, point const &p2, float radius, float height) const;
 	bool check_line_of_sight_large_objs(point const &p1, point const &p2) const;
 	bool check_and_handle_dynamic_obj_coll(point &pos, float radius, float z1, float z2, point const &camera_bs) const;
