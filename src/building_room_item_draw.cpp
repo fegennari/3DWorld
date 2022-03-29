@@ -1037,7 +1037,9 @@ public:
 	spider_draw_t() : cur_vert_pos(0), is_setup(0) {}
 	void clear() {mat.clear(); is_setup = 0;}
 
-	void draw(vect_spider_t const &spiders, shader_t &s, bool shadow_only) {
+	void draw(vect_spider_t const &spiders, shader_t &s, building_t const &building, occlusion_checker_noncity_t &oc,
+		vector3d const &xlate, bool shadow_only, bool reflection_pass, bool check_clip_cube)
+	{
 		if (spiders.empty()) return; // nothing to draw
 		if (!is_setup) {init();}
 		mat.vao_setup(shadow_only);
@@ -1047,8 +1049,14 @@ public:
 		s.add_uniform_int("animation_id", animation_id);
 		s.add_uniform_float("animation_scale",    1.0); // not using a model, nominal size is 1.0
 		s.add_uniform_float("model_delta_height", 1.0); // not using a model, nominal size is 1.0
+		point const camera_bs(camera_pdu.pos - xlate);
+		bool const check_occlusion(display_mode & 0x08);
 
 		for (spider_t const &S : spiders) { // future work: use instancing
+			cube_t const bcube(S.get_bcube());
+			if (check_clip_cube && !smap_light_clip_cube.intersects(bcube + xlate)) continue; // shadow map clip cube test: fast and high rejection ratio, do this first
+			if (!camera_pdu.cube_visible(bcube + xlate)) continue; // VFC
+			if (check_occlusion && building.check_obj_occluded(bcube, camera_bs, oc, reflection_pass)) continue;
 			s.add_uniform_float("animation_time", S.anim_time);
 			fgPushMatrix();
 			translate_to(S.pos);
@@ -1220,19 +1228,11 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, building_t c
 				int const animation_id = 7; // custom rat animation
 				s.add_uniform_int("animation_id", animation_id);
 			}
-			//spiders.clear(); // FIXME
-
 			for (rat_t &rat : rats) {
 				cube_t const bcube(rat.get_bcube());
 				if (check_clip_cube && !smap_light_clip_cube.intersects(bcube + xlate)) continue; // shadow map clip cube test: fast and high rejection ratio, do this first
 				if (!camera_pdu.cube_visible(bcube + xlate)) continue; // VFC
 				if (check_occlusion && building.check_obj_occluded(bcube, camera_bs, oc, reflection_pass)) continue;
-	#if 0 // FIXME: hack to draw rats as spiders
-				float const radius(0.5*rat.radius);
-				spiders.push_back(spider_t((rat.pos + vector3d(0.0, 0.0, radius)), radius, rat.dir));
-				spiders.back().anim_time = 20.0*rat.anim_time;
-				continue;
-	#endif
 				point const pos(bcube.get_cube_center());
 				bool const animate(rat.anim_time > 0.0 && !shadow_only); // can't see the animation in the shadow pass anyway
 				if (!shadow_only) {s.add_uniform_float("animation_time", rat.anim_time);}
@@ -1259,7 +1259,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, building_t c
 			} // for rat
 			if (!shadow_only) {s.add_uniform_int("animation_id", 0);} // reset
 		} // end rats drawing
-		spider_draw.draw(spiders, s, shadow_only);
+		spider_draw.draw(spiders, s, building, oc, xlate, shadow_only, reflection_pass, check_clip_cube);
 	}
 	if (disable_cull_face) {glEnable(GL_CULL_FACE);}
 	if (obj_drawn) {check_mvm_update();} // needed after popping model transform matrix
