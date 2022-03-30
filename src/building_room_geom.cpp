@@ -457,6 +457,7 @@ void building_room_geom_t::add_closet(room_object_t const &c, tid_nm_pair_t cons
 					trim.d[!c.dim][!d]     = trim.d[!c.dim][d];
 					trim.d[!c.dim][ d]    += (d     ? 1.0 : -1.0)*trim_thickness; // expand away from wall
 					trim.d[ c.dim][c.dir] += (c.dir ? 1.0 : -1.0)*trim_thickness; // expand to cover the outside corner gap; doesn't really line up properly for angled ceiling trim though
+					trim_flags |= (c.dir ? RO_FLAG_ADJ_HI : RO_FLAG_ADJ_LO); // shift trim bottom edge to prevent intersection with trim in other dim at outside corner
 				}
 				else { // front of closet on sides of door
 					trim = cubes[2*d]; // start with front wall on this side
@@ -472,6 +473,7 @@ void building_room_geom_t::add_closet(room_object_t const &c, tid_nm_pair_t cons
 						trim.d[!c.dim][d] += (d ? 1.0 : -1.0)*trim_thickness;
 						trim_flags |= (d ? RO_FLAG_ADJ_HI : RO_FLAG_ADJ_LO); // shift trim bottom edge to prevent intersection with trim in other dim at outside corner
 					}
+					trim_flags |= (d ? RO_FLAG_ADJ_BOT : RO_FLAG_ADJ_TOP); // flag ends that meet the door, which need to be capped
 				}
 				bool const trim_dim(c.dim ^ bool(is_side)), trim_dir(is_side ? d : c.dir);
 				cube_t btrim(trim); // bottom trim
@@ -1066,19 +1068,33 @@ void building_room_geom_t::add_wall_trim(room_object_t const &c, bool for_closet
 	rgeom_mat_t &mat(get_untextured_material(0, 0, (for_closet ? 1 : 2))); // inc_shadows=0, dynamic=0, small=2 (1 for closet)
 
 	if (c.shape == SHAPE_ANGLED) { // single quad
-		point pts[4];
+		bool const draw_ends[2] = {bool(c.flags & RO_FLAG_ADJ_TOP), bool(c.flags & RO_FLAG_ADJ_BOT)}; // triangle end cap for closets
+		point pts[4]; // {LLC, ULC, URC, LRC}
 		pts[0][!c.dim] = pts[1][!c.dim] = c.d[!c.dim][0];
 		pts[2][!c.dim] = pts[3][!c.dim] = c.d[!c.dim][1];
 		pts[0][ c.dim] = pts[3][ c.dim] = c.d[ c.dim][!c.dir];
 		pts[1][ c.dim] = pts[2][ c.dim] = c.d[ c.dim][ c.dir];
 		pts[0].z = pts[3].z = c.z1();
 		pts[1].z = pts[2].z = c.z2();
+		rgeom_mat_t::vertex_t v;
+		v.set_c4(c.color);
+
+		for (unsigned d = 0; d < 2; ++d) { // draw end caps (before swapping vertex winding order)
+			if (!draw_ends[d]) continue;
+			v.set_ortho_norm(!c.dim, !d);
+			point epts[3] = {pts[d ? 1:3], pts[d ? 0:2], (pts[d ? 0:3] + vector3d(0.0, 0.0, c.dz()))};
+			if (c.dir ^ c.dim) {swap(epts[0], epts[1]);} // reverse the winding order
+
+			for (unsigned i = 0; i < 3; ++i) {
+				v.v = epts[i];
+				mat.indices.push_back(mat.itri_verts.size());
+				mat.itri_verts.push_back(v);
+			}
+		} // for d
 		if (c.flags & RO_FLAG_ADJ_LO) {pts[0][!c.dim] += c.get_sz_dim(c.dim);} // add closet outside corner bevel/miter
 		if (c.flags & RO_FLAG_ADJ_HI) {pts[3][!c.dim] -= c.get_sz_dim(c.dim);} // add closet outside corner bevel/miter
 		if (c.dir ^ c.dim) {swap(pts[0], pts[3]); swap(pts[1], pts[2]);} // change winding order/normal sign
-		rgeom_mat_t::vertex_t v;
 		v.set_norm(get_poly_norm(pts));
-		v.set_c4(c.color);
 		float const tcs[2][4] = {{0,0,1,1}, {0,1,1,0}};
 
 		for (unsigned n = 0; n < 4; ++n) {
