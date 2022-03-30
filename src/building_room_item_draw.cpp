@@ -431,9 +431,15 @@ void rgeom_mat_t::draw(tid_nm_pair_dstate_t &state, brg_batch_draw_t *bbd, int s
 		if (shadow_only != 1) {tex.unset_gl(state);}
 	}
 }
-void rgeom_mat_t::draw_inner(int shadow_only) const {
+void rgeom_mat_t::pre_draw(int shadow_only) const {
 	vao_mgr.pre_render(shadow_only != 0);
+}
+void rgeom_mat_t::draw_geom() const {
 	glDrawRangeElements(GL_TRIANGLES, 0, num_verts, num_ixs, GL_UNSIGNED_INT, nullptr);
+}
+void rgeom_mat_t::draw_inner(int shadow_only) const {
+	pre_draw(shadow_only);
+	draw_geom();
 }
 void rgeom_mat_t::vao_setup(bool shadow_only) {
 	vao_mgr.create_and_upload(vector<vertex_t>(), vector<unsigned>(), shadow_only, 0, 1); // pass empty vectors because data is already uploaded; dynamic_level=0, setup_pointers=1
@@ -1041,23 +1047,32 @@ public:
 		vector3d const &xlate, bool shadow_only, bool reflection_pass, bool check_clip_cube)
 	{
 		if (spiders.empty()) return; // nothing to draw
-		if (!is_setup) {init();}
-		mat.vao_setup(shadow_only);
-		s.set_specular(0.2, 80.0); // FIXME: building interior lighting specular looks wrong for rotated models and with sunlight
-		select_texture(WHITE_TEX);
-		int const animation_id = 8; // custom spider animation
-		s.add_uniform_int("animation_id", animation_id);
-		s.add_uniform_float("animation_scale",    1.0); // not using a model, nominal size is 1.0
-		s.add_uniform_float("model_delta_height", 1.0); // not using a model, nominal size is 1.0
+		int anim_time_loc(-1);
 		point const camera_bs(camera_pdu.pos - xlate);
 		bool const check_occlusion(display_mode & 0x08);
+		bool any_drawn(0);
 
 		for (spider_t const &S : spiders) { // future work: use instancing
 			cube_t const bcube(S.get_bcube());
 			if (check_clip_cube && !smap_light_clip_cube.intersects(bcube + xlate)) continue; // shadow map clip cube test: fast and high rejection ratio, do this first
 			if (!camera_pdu.cube_visible(bcube + xlate)) continue; // VFC
 			if (check_occlusion && building.check_obj_occluded(bcube, camera_bs, oc, reflection_pass)) continue;
-			s.add_uniform_float("animation_time", S.anim_time);
+
+			if (!any_drawn) { // setup shaders
+				if (!is_setup) {init();}
+				mat.vao_setup(shadow_only);
+				s.set_specular(0.2, 80.0); // FIXME: building interior lighting specular looks wrong for rotated models and with sunlight
+				select_texture(WHITE_TEX);
+				int const animation_id = 8; // custom spider animation
+				s.add_uniform_int("animation_id", animation_id);
+				s.add_uniform_float("animation_scale",    1.0); // not using a model, nominal size is 1.0
+				s.add_uniform_float("model_delta_height", 1.0); // not using a model, nominal size is 1.0
+				mat.pre_draw(shadow_only);
+				glCullFace(GL_FRONT); // not sure why, but it seems the winding order for spiders is wrong
+				anim_time_loc = s.get_uniform_loc("animation_time");
+				any_drawn = 1;
+			}
+			s.set_uniform_float(anim_time_loc, S.anim_time);
 			fgPushMatrix();
 			translate_to(S.pos);
 			vector3d const dir(S.dir.get_norm()), upv(S.upv.get_norm()); // normalize, just in case
@@ -1076,14 +1091,17 @@ public:
 			fgMultMatrix(xm);
 			uniform_scale(S.radius);
 			check_mvm_update();
-			mat.draw_inner(shadow_only);
+			mat.draw_geom();
 			fgPopMatrix();
 		} // for S
-		check_mvm_update(); // make sure to reset MVM
-		s.add_uniform_float("animation_time", 0.0); // reset animation time
-		s.add_uniform_int("animation_id", 0); // clear animation
-		s.clear_specular();
-		indexed_vao_manager_with_shadow_t::post_render();
+		if (any_drawn) { // reset state
+			check_mvm_update(); // make sure to reset MVM
+			s.add_uniform_float("animation_time", 0.0); // reset animation time
+			s.add_uniform_int("animation_id", 0); // clear animation
+			s.clear_specular();
+			indexed_vao_manager_with_shadow_t::post_render();
+			glCullFace(GL_BACK);
+		}
 	}
 };
 spider_draw_t spider_draw;

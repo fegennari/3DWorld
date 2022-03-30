@@ -616,6 +616,8 @@ public:
 	void create_vbo_inner();
 	void vao_setup(bool shadow_only);
 	void draw(tid_nm_pair_dstate_t &state, brg_batch_draw_t *bbd, int shadow_only, bool reflection_pass);
+	void pre_draw(int shadow_only) const;
+	void draw_geom() const;
 	void draw_inner(int shadow_only) const;
 	void upload_draw_and_clear(tid_nm_pair_dstate_t &state);
 };
