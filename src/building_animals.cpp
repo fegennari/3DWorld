@@ -315,7 +315,7 @@ void building_t::update_rat(rat_t &rat, point const &camera_bs, int ped_ix, floa
 	rgen.rand_mix(); // make sure it's different per rat
 
 	if (rat.is_sleeping() && rat.fear == 0.0) {} // peacefully sleeping, no collision needed
-	else if (check_and_handle_dynamic_obj_coll(rat.pos, rat.radius, rat.pos.z, (rat.pos.z + height), camera_bs)) { // check for collisions
+	else if (check_and_handle_dynamic_obj_coll(rat.pos, rat.radius, rat.pos.z, (rat.pos.z + height), camera_bs, 0)) { // check for collisions; for_spider=0
 		coll_dir = (prev_pos - rat.pos).get_norm(); // points toward the collider in the XY plane
 
 		// check if new pos is valid, and has a path to dest
@@ -383,7 +383,7 @@ void building_t::update_rat(rat_t &rat, point const &camera_bs, int ped_ix, floa
 		dir_to_fear.normalize();
 		rat.wake_time = 0.0; // wake up
 		vect_room_object_t::const_iterator b, e;
-		get_begin_end_room_objs_on_ground_floor(rat_z2, b, e);
+		get_begin_end_room_objs_on_ground_floor(rat_z2, 0, b, e); // for_spider=0
 
 		for (auto c = b; c != e; ++c) {
 			if (c->z1() > rat_z2 || c->z2() < rat_z1) continue; // wrong floor, or object not on the floor
@@ -750,17 +750,13 @@ void building_t::update_spider_pos_orient(spider_t &spider, point const &camera_
 	} // for door_stacks
 	// check interior objects
 	static vect_cube_t cubes, avoid;
-	// skip buttons/stairs/elevators, unless we're by the stairs, in which case the iteration must include stairs
-	bool near_stairs(0);
-	for (stairwell_t const &s : interior->stairwells) {near_stairs |= s.intersects(tc);}
-	auto objs_end(near_stairs ? interior->room_geom->objs.end() : interior->room_geom->get_placed_objs_end());
+	vect_room_object_t::const_iterator b, e;
+	get_begin_end_room_objs_on_ground_floor(tc.z2(), 1, b, e); // for_spider=1
 
-	for (auto i = interior->room_geom->objs.begin(); i != objs_end; ++i) {
+	for (auto i = b; i != e; ++i) {
+		if (i->z1() > tc.z2() || i->z2() < tc.z1()) continue;
 		if (!tc.intersects((i->type == TYPE_CLOSET) ? get_true_room_obj_bcube(*i) : *i)) continue; // no intersection with this object
-		if (!i->is_floor_collidable() && i->type != TYPE_LIGHT && i->type != TYPE_BRSINK && i->type &&
-			i->type != TYPE_MIRROR && i->type != TYPE_MWAVE && i->type != TYPE_HANGER_ROD && i->type != TYPE_LAPTOP &&
-			i->type != TYPE_MONITOR && i->type != TYPE_CLOTHES && i->type != TYPE_TOASTER) continue; // include objects on the floor, walls, and ceilings
-		if (i->type == TYPE_BOOK) continue; // I guess books don't count, since they're too small to walk on?
+		if (!i->is_spider_collidable()) continue;
 		if (i->get_max_extent() < spider.radius) continue; // too small, skip
 		// TODO: handle spider getting stuck between furniture and the wall
 		get_room_obj_cubes(*i, spider.pos, cubes, avoid, avoid); // climb on large objects and avoid small and non-cube objects
@@ -827,7 +823,7 @@ void building_t::update_spider(spider_t &spider, point const &camera_bs, float t
 	vector3d coll_dir;
 	point const prev_pos(spider.pos); // capture the pre-collision point
 
-	if (check_and_handle_dynamic_obj_coll(spider.pos, coll_radius, (spider.pos.z - height), (spider.pos.z + height), camera_bs)) { // check for collisions
+	if (check_and_handle_dynamic_obj_coll(spider.pos, coll_radius, (spider.pos.z - height), (spider.pos.z + height), camera_bs, 1)) { // check for collisions; for_spider=1
 		coll_dir = (prev_pos - spider.pos).get_norm(); // points toward the collider in the XY plane
 
 		// check if new pos is valid, and has a path to dest

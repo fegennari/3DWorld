@@ -1027,45 +1027,58 @@ unsigned get_ksink_cubes(room_object_t const &sink, cube_t cubes[3]) {
 	return 3;
 }
 
-struct cached_room_objs_t {
-	vect_room_object_t objs;
+class cached_room_objs_t {
+	vect_room_object_t rat_objs, spi_objs;
 	building_t const *building;
 	int cur_frame;
+public:
 	cached_room_objs_t() : building(nullptr), cur_frame(0) {}
 
-	void ensure_cached(building_t const &b) {
+	void ensure_cached(building_t const &b) { // for now, we cache objects for both rats and spiders
 		if (building == &b && cur_frame == frame_counter) return; // already cached
-		building = &b;
+		building  = &b;
 		cur_frame = frame_counter;
-		objs.clear();
-		b.get_objs_at_or_below_ground_floor(objs);
+		rat_objs.clear();
+		spi_objs.clear();
+		if (global_building_params.num_rats_max    > 0) {b.get_objs_at_or_below_ground_floor(rat_objs, 0);}
+		if (global_building_params.num_spiders_max > 0) {b.get_objs_at_or_below_ground_floor(spi_objs, 1);}
 	}
+	vect_room_object_t const &get_objs(bool for_spider) const {return (for_spider ? spi_objs : rat_objs);}
 };
 cached_room_objs_t cached_room_objs;
 
 bool room_object_t::is_floor_collidable() const {return bldg_obj_types[type].rat_coll;}
 
-bool building_t::get_begin_end_room_objs_on_ground_floor(float zval, vect_room_object_t::const_iterator &b, vect_room_object_t::const_iterator &e) const {
-	if (zval < get_ground_floor_z_thresh()) { // optimized for the case of rats where most are on the ground floor or basement
+bool room_object_t::is_spider_collidable() const {
+	if (!is_floor_collidable() && type != TYPE_LIGHT && type != TYPE_BRSINK && type && type != TYPE_MIRROR && type != TYPE_MWAVE && type != TYPE_HANGER_ROD &&
+		type != TYPE_LAPTOP && type != TYPE_MONITOR && type != TYPE_CLOTHES && type != TYPE_TOASTER) return 0; // include objects on the floor, walls, and ceilings
+	if (type == TYPE_BOOK) return 0; // I guess books don't count, since they're too small to walk on?
+	return 1;
+}
+float building_t::get_ground_floor_z_thresh(bool for_spider) const {
+	return (ground_floor_z1 + (for_spider ? 1.0f : 0.25f)*get_window_vspace()); // rats are on the ground, while spiders can climb walls
+}
+bool building_t::get_begin_end_room_objs_on_ground_floor(float zval, bool for_spider, vect_room_object_t::const_iterator &b, vect_room_object_t::const_iterator &e) const {
+	if (zval < get_ground_floor_z_thresh(for_spider)) { // optimized for the case of rats and spiders where most are on the ground floor or basement
 		cached_room_objs.ensure_cached(*this);
-		b = cached_room_objs.objs.begin();
-		e = cached_room_objs.objs.end();
+		b = cached_room_objs.get_objs(for_spider).begin();
+		e = cached_room_objs.get_objs(for_spider).end();
 		return 1; // use cached objects
 	}
 	b = interior->room_geom->objs.begin();
 	e = interior->room_geom->get_placed_objs_end(); // skip buttons/stairs/elevators
 	return 0; // use standard objects
 }
-void building_t::get_objs_at_or_below_ground_floor(vect_room_object_t &ret) const {
-	float const z_thresh(get_ground_floor_z_thresh());
+void building_t::get_objs_at_or_below_ground_floor(vect_room_object_t &ret, bool for_spider) const {
+	float const z_thresh(get_ground_floor_z_thresh(for_spider));
 	assert(has_room_geom());
 	auto objs_end(interior->room_geom->get_placed_objs_end()); // skip buttons/stairs/elevators
 
 	for (auto c = interior->room_geom->objs.begin(); c != objs_end; ++c) {
-		if (c->z1() < z_thresh && c->is_floor_collidable()) {ret.push_back(*c);}
+		if (c->z1() < z_thresh && c->is_collidable(for_spider)) {ret.push_back(*c);}
 	}
 	for (auto c = interior->room_geom->expanded_objs.begin(); c != interior->room_geom->expanded_objs.end(); ++c) {
-		if (c->z1() < z_thresh && c->is_floor_collidable()) {ret.push_back(*c);}
+		if (c->z1() < z_thresh && c->is_collidable(for_spider)) {ret.push_back(*c);}
 	}
 }
 
@@ -1205,7 +1218,7 @@ bool building_t::check_line_coll_expand(point const &p1, point const &p2, float 
 	// check room objects and expanded objects (from closets)
 	float t(0.0);
 	vect_room_object_t::const_iterator b, e;
-	bool const use_cached_objs(get_begin_end_room_objs_on_ground_floor(obj_z2, b, e));
+	bool const use_cached_objs(get_begin_end_room_objs_on_ground_floor(obj_z2, 0, b, e)); // for_spiders=0
 
 	for (unsigned vect_id = 0; vect_id < (use_cached_objs ? 1U : 2U); ++vect_id) {
 		auto objs_beg((vect_id == 1) ? interior->room_geom->expanded_objs.begin() : b);
@@ -1371,7 +1384,7 @@ template<typename T> void vect_animal_t<T>::update_delta_sum_for_animal_coll(poi
 
 // vertical cylinder collision detection with dynamic objects: balls, the player? people? other rats?
 // only handles the first collision
-bool building_t::check_and_handle_dynamic_obj_coll(point &pos, float radius, float z1, float z2, point const &camera_bs) const {
+bool building_t::check_and_handle_dynamic_obj_coll(point &pos, float radius, float z1, float z2, point const &camera_bs, bool for_spider) const {
 	if (camera_surf_collide) { // check the player; unclear if this is really needed, or if it actually works
 		float const player_radius(CAMERA_RADIUS), player_xy_radius(player_radius*global_building_params.player_coll_radius_scale);
 
@@ -1385,7 +1398,7 @@ bool building_t::check_and_handle_dynamic_obj_coll(point &pos, float radius, flo
 	// in theory, the player can put a ball in an office building, but we don't handle that case because office buildings have tons of objects and this is too slow
 	if (is_house) {
 		vect_room_object_t::const_iterator b, e;
-		get_begin_end_room_objs_on_ground_floor(z2, b, e);
+		get_begin_end_room_objs_on_ground_floor(z2, for_spider, b, e);
 		handle_dynamic_room_objs_coll(b, e, pos, radius, z2);
 	}
 	float max_overlap(0.0);

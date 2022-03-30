@@ -530,7 +530,9 @@ struct room_object_t : public oriented_cube_t {
 	bool can_use        () const;
 	bool is_interactive () const {return (has_dstate() || can_use());}
 	bool can_place_onto () const;
-	bool is_floor_collidable() const;
+	bool is_floor_collidable () const;
+	bool is_spider_collidable() const;
+	bool is_collidable(bool for_spider) const {return (for_spider ? is_spider_collidable() : is_floor_collidable());}
 	unsigned get_bottle_type() const {return ((obj_id&63) % NUM_BOTTLE_TYPES);} // first 6 bits are bottle type
 	unsigned get_orient () const {return (2*dim + dir);}
 	unsigned get_num_shelves() const {assert(type == TYPE_SHELVES); return (2 + (room_id % 3));} // 2-4 shelves
@@ -1092,7 +1094,7 @@ struct building_t : public building_geom_t {
 	float get_trim_height    () const {return 0.04*get_window_vspace();}
 	float get_door_height    () const {return 0.95f*(get_window_vspace() - get_floor_thickness());} // set height based on window spacing, 95% of ceiling height (may be too large)
 	float get_doorway_width  () const;
-	float get_ground_floor_z_thresh() const {return (ground_floor_z1 + 0.25f*get_window_vspace());} // for rats
+	float get_ground_floor_z_thresh(bool for_spider) const;
 	unsigned get_person_capacity_mult() const;
 	void gen_rotation(rand_gen_t &rgen);
 	void maybe_inv_rotate_point(point &p) const {if (is_rotated()) {do_xy_rotate_inv(bcube.get_cube_center(), p);}} // inverse rotate - negate the sine term
@@ -1229,7 +1231,7 @@ public:
 	void update_animals(point const &camera_bs, unsigned building_ix, int ped_ix);
 	void update_rats(point const &camera_bs, unsigned building_ix, int ped_ix);
 	void update_spiders(point const &camera_bs, unsigned building_ix, int ped_ix);
-	void get_objs_at_or_below_ground_floor(vect_room_object_t &ret) const;
+	void get_objs_at_or_below_ground_floor(vect_room_object_t &ret, bool for_spider) const;
 private:
 	point gen_animal_floor_pos(float radius, rand_gen_t &rgen) const;
 	bool add_rat(point const &pos, float hlength, vector3d const &dir, point const &placed_from);
@@ -1242,8 +1244,8 @@ private:
 	void get_room_obj_cubes(room_object_t const &c, point const &pos, vect_cube_t &lg_cubes, vect_cube_t &sm_cubes, vect_cube_t &non_cubes) const;
 	bool check_line_coll_expand(point const &p1, point const &p2, float radius, float height) const;
 	bool check_line_of_sight_large_objs(point const &p1, point const &p2) const;
-	bool check_and_handle_dynamic_obj_coll(point &pos, float radius, float z1, float z2, point const &camera_bs) const;
-	bool get_begin_end_room_objs_on_ground_floor(float zval, vect_room_object_t::const_iterator &b, vect_room_object_t::const_iterator &e) const;
+	bool check_and_handle_dynamic_obj_coll(point &pos, float radius, float z1, float z2, point const &camera_bs, bool for_spider) const;
+	bool get_begin_end_room_objs_on_ground_floor(float zval, bool for_spider, vect_room_object_t::const_iterator &b, vect_room_object_t::const_iterator &e) const;
 
 public:
 	int get_room_containing_pt(point const &pt) const;
