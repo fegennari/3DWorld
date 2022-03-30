@@ -2554,7 +2554,7 @@ void get_cur_model_edges_as_cubes(vector<cube_t> &cubes, model3d_xform_t const &
 	uint64_t tot_grid(1);
 	for (unsigned i = 0; i < 3; ++i) {ndiv[i] = max(2U, min(1024U, unsigned(csz[i]/grid_spacing))); tot_grid *= ndiv[i];} // clamp to [2,1024] range
 	cout << "polygons: " << ppts.size() << ", grid: " << ndiv[0] << "x" << ndiv[1] << "x" << ndiv[2] << endl;
-	if (tot_grid > (1<<20)) {cerr << "Error: Too many model3d grid voxels: " << tot_grid << endl; assert(0);}
+	if (tot_grid > (1ULL<<20)) {cerr << "Error: Too many model3d grid voxels: " << tot_grid << endl; assert(0);}
 	RESET_TIME;
 	voxel_grid<cube_t> grid;
 	grid.init(ndiv[0], ndiv[1], ndiv[2], bcube, all_zeros_cube);

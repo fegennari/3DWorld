@@ -499,7 +499,7 @@ public:
 				}
 			}
 		}
-		model.load_all_used_tids();
+		model.load_all_used_tids(); // Note: required, even if we're only using this for shadows
 		if (verbose) {model.show_stats();}
 		return 1;
 	}
