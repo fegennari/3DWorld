@@ -1068,7 +1068,6 @@ public:
 				s.add_uniform_float("animation_scale",    1.0); // not using a model, nominal size is 1.0
 				s.add_uniform_float("model_delta_height", 1.0); // not using a model, nominal size is 1.0
 				mat.pre_draw(shadow_only);
-				glCullFace(GL_FRONT); // not sure why, but it seems the winding order for spiders is wrong
 				anim_time_loc = s.get_uniform_loc("animation_time");
 				any_drawn = 1;
 			}
@@ -1076,7 +1075,7 @@ public:
 			fgPushMatrix();
 			translate_to(S.pos);
 			vector3d const dir(S.dir.get_norm()), upv(S.upv.get_norm()); // normalize, just in case
-			vector3d const right(cross_product(S.dir, S.upv).get_norm());
+			vector3d const right(cross_product(S.upv, S.dir).get_norm());
 			xform_matrix xm;
 			float *m(xm.get_ptr());
 			m[0] = dir.x; // x
@@ -1100,7 +1099,6 @@ public:
 			s.add_uniform_int("animation_id", 0); // clear animation
 			s.clear_specular();
 			indexed_vao_manager_with_shadow_t::post_render();
-			glCullFace(GL_BACK);
 		}
 	}
 };
