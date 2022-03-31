@@ -17,18 +17,17 @@ void set_indir_lighting_block(shader_t &s, bool use_smoke, bool use_indir);
 
 
 void colorRGB::set_for_cur_shader() const {
-	assert(cur_shader != NULL);
+	assert(cur_shader);
 	cur_shader->set_cur_color(*this);
 }
 void colorRGBA::set_for_cur_shader() const {
-	assert(cur_shader != NULL);
+	assert(cur_shader);
 	cur_shader->set_cur_color(*this);
 }
 
 
 void set_array_client_state(bool va, bool tca, bool na, bool ca, bool actually_set_state) {
-
-	assert(cur_shader != NULL);
+	assert(cur_shader);
 	if (actually_set_state) {cur_shader->enable_vnct_atribs(va, tca, na, ca);}
 	else {check_mvm_update();}
 }

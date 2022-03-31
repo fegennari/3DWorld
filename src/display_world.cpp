@@ -724,6 +724,7 @@ void flashlight_next_frame() {
 
 void maybe_update_loading_screen(const char *str) {
 	if (!in_loading_screen) return;
+	if (shader_is_active()) return; // don't update loading screen in the middle of drawing something else
 	static string suffix;
 	check_gl_error(566);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);

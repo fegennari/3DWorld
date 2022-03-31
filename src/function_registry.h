@@ -848,6 +848,7 @@ char const *append_ix(std::string &s, unsigned i, bool as_array);
 bool setup_shaders();
 void clear_shaders();
 void reload_all_shaders();
+bool shader_is_active();
 void check_mvm_update();
 void upload_mvm_to_shader(shader_t &s, char const *const var_name);
 void set_point_sprite_mode(bool enabled);

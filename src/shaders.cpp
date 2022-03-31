@@ -965,6 +965,8 @@ void shader_t::disable() {
 }
 
 
+bool shader_is_active() {return (cur_shader != nullptr);}
+
 // Note 1: We don't handle the case where the projection matrix is updated while a shader is active because this currently doesn't occur.
 // Note 2: We assume we only need to update the MVM in at most one active shader, and once updated we can clear the changed flag
 void check_mvm_update() {
