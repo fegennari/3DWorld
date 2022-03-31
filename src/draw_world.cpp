@@ -1968,7 +1968,7 @@ void draw_stats_bar(shader_t &s, colorRGBA const &color, float max_val, float cu
 	s.set_cur_color(color);
 	draw_one_tquad(-0.9*x, y1, (-0.9 + 0.2*cur_val)*x, y2, zval);
 }
-void draw_health_bar(float health, float shields, float pu_time, colorRGBA const &pu_color, float extra_bar, colorRGBA const &extra_bar_color) {
+void draw_health_bar(float health, float shields, float pu_time, colorRGBA const &pu_color, float extra_bar, colorRGBA const &extra_bar_color, float poisoned) {
 
 	shader_t s;
 	s.begin_color_only_shader();
@@ -1977,7 +1977,9 @@ void draw_health_bar(float health, float shields, float pu_time, colorRGBA const
 	bool const building_gameplay_mode(world_mode == WMODE_INF_TERRAIN && game_mode == 2);
 	float const zval(-1.1*perspective_nclip), tan_val(tan(perspective_fovy/TO_DEG));
 	float const y(-0.7*0.5*zval*tan_val), x((y*window_width)/window_height);
-	draw_stats_bar(s, RED, 1.0, min(0.01f*health, 1.0f), x, 0.92*y, 0.94*y, zval); // health bar up to 100
+	colorRGBA hb_color(RED);
+	if (poisoned) {hb_color = blend_color(RED, YELLOW, fabs(sin(0.2*tfticks)), 0);} // slowly change between red and black
+	draw_stats_bar(s, hb_color, 1.0, min(0.01f*health, 1.0f), x, 0.92*y, 0.94*y, zval); // health bar up to 100
 
 	if (health < 25.0 && ((int(tfticks)/12)&1)) { // low on health, add flashing red strip
 		s.set_cur_color(colorRGBA(RED, 0.5)); // translucent red

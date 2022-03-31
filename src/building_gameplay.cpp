@@ -334,7 +334,7 @@ class player_inventory_t { // manages player inventory, health, and other stats
 	vector<carried_item_t> carried; // interactive items the player is currently carrying
 	float cur_value, cur_weight, tot_value, tot_weight, damage_done, best_value, player_health, drunkenness, bladder, bladder_time, prev_player_zval;
 	unsigned num_doors_unlocked;
-	bool prev_in_building, has_key;
+	bool prev_in_building, has_key, is_poisoned;
 
 	void register_player_death(unsigned sound_id, string const &why) {
 		point const xlate(get_camera_coord_space_xlate());
@@ -352,7 +352,7 @@ public:
 		drunkenness   = bladder = bladder_time = prev_player_zval = 0.0;
 		player_health = 1.0; // full health
 		num_doors_unlocked = 0; // not saved on death, but maybe should be?
-		prev_in_building = has_key = 0;
+		prev_in_building = has_key = is_poisoned = 0;
 		phone_manager.disable();
 		carried.clear();
 		tape_manager.clear();
@@ -361,7 +361,14 @@ public:
 		tot_value = best_value = 0.0;
 		clear();
 	}
-	void take_damage(float amt) {player_health -= amt*(1.0f - 0.75f*min(drunkenness, 1.0f));} // up to 75% damage reduction when drunk
+	void take_damage(float amt, bool poisoned=0) {
+		player_health -= amt*(1.0f - 0.75f*min(drunkenness, 1.0f)); // up to 75% damage reduction when drunk
+
+		if (poisoned && !is_poisoned) { // first poisoning (by spider)
+			print_text_onscreen("You have been poisoned", DK_RED, 1.0, 2.5*TICKS_PER_SECOND, 0);
+			is_poisoned = 1;
+		}
+	}
 	void record_damage_done(float amt) {damage_done += amt;}
 	void return_object_to_building(room_object_t const &obj) {damage_done -= get_obj_value(obj);}
 	bool check_weight_limit(float weight) const {return ((cur_weight + weight) <= global_building_params.player_weight_limit);}
@@ -417,7 +424,7 @@ public:
 			case 2: drunk  =  0.25; break; // beer
 			case 3: drunk  =  0.50; break; // wine (entire bottle)
 			case 4: health = -0.50; break; // poison - take damage
-			case 5: health =  1.00; break; // medicine, restore full health (to be used to cure future poisoning from spider bites)
+			case 5: health =  1.00; is_poisoned = 0; break; // medicine, restore full health and cure poisoning
 			default: assert(0);
 			}
 		}
@@ -618,7 +625,7 @@ public:
 		}
 		if (in_building_gameplay_mode()) {
 			// Note: shields is used for drunkenness; values are scaled from 0-1 to 0-100; powerup values are for bladder fullness
-			draw_health_bar(100.0*player_health, 100.0*drunkenness, bladder, YELLOW, get_carry_weight_ratio(), WHITE);
+			draw_health_bar(100.0*player_health, 100.0*drunkenness, bladder, YELLOW, get_carry_weight_ratio(), WHITE, is_poisoned);
 			if (has_key) {show_key_icon();}
 		}
 	}
@@ -642,12 +649,20 @@ public:
 		}
 		prev_player_zval = player_zval;
 		// handle death events
-		if (player_is_dead() ) {register_player_death(SOUND_SCREAM3, ""); return;} // dead
+		if (player_is_dead()) {register_player_death(SOUND_SCREAM3, ""); return;} // dead
 		
 		if (drunkenness > 2.0) {
 			register_player_death(SOUND_DROWN, " of alcohol poisoning");
 			register_achievement("One More Drink");
 			return;
+		}
+		if (is_poisoned) {
+			player_health -= 0.0004*fticks;
+
+			if (player_is_dead()) {
+				register_player_death(SOUND_DEATH, " of spider poison");
+				return;
+			}
 		}
 		// update state for next frame
 		drunkenness = max(0.0f, (drunkenness - 0.0001f*fticks)); // slowly decrease over time
@@ -1747,10 +1762,10 @@ bool player_has_room_key() {return player_inventory.player_has_key();}
 // returns player_dead
 // should we include falling damage? currently the player can't fall down elevator shafts or stairwells,
 // and falling off building roofs doesn't count because gameplay isn't enabled because the player isn't in the building
-bool player_take_damage(float damage_scale, bool &has_key) {
+bool player_take_damage(float damage_scale, bool poisoned, bool *has_key) {
 	static double last_scream_time(0.0), last_hurt_time(0.0);
 
-	if (damage_scale < 0.01) { // hurt for rats, scream for zombies
+	if (damage_scale < 0.01) { // hurt for rats, scream for zombies and spiders
 		if (tfticks - last_hurt_time > 0.5*TICKS_PER_SECOND) {
 			gen_sound_thread_safe_at_player(SOUND_HURT2);
 			last_hurt_time = tfticks;
@@ -1763,10 +1778,10 @@ bool player_take_damage(float damage_scale, bool &has_key) {
 		}
 	}
 	add_camera_filter(colorRGBA(RED, (0.13 + 3.0*damage_scale)), 1, -1, CAM_FILT_DAMAGE); // 1 tick of red damage
-	player_inventory.take_damage(damage_scale*fticks); // take damage over time
+	player_inventory.take_damage(damage_scale*fticks, poisoned); // take damage over time
 
 	if (player_inventory.player_is_dead()) {
-		if (player_has_room_key()) {has_key = 1;}
+		if (has_key && player_has_room_key()) {*has_key = 1;}
 		return 1;
 	}
 	return 0;
@@ -1778,7 +1793,7 @@ int register_ai_player_coll(bool &has_key, float height) {
 		do_room_obj_pickup = 0; // no more object pickups
 		return 2;
 	}
-	return player_take_damage(0.04, has_key);
+	return player_take_damage(0.04, 0, &has_key);
 }
 
 void building_gameplay_action_key(int mode, bool mouse_wheel) {

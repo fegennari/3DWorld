@@ -23,7 +23,7 @@ extern object_model_loader_t building_obj_model_loader;
 float get_closest_building_sound(point const &at_pos, point &sound_pos, float floor_spacing);
 sphere_t get_cur_frame_loudest_sound();
 bool in_building_gameplay_mode();
-bool player_take_damage(float damage_scale, bool &has_key);
+bool player_take_damage(float damage_scale, bool poisoned=0, bool *has_key=nullptr);
 cube_t get_true_room_obj_bcube(room_object_t const &c);
 
 
@@ -116,6 +116,17 @@ void try_resolve_coll(vector3d const &dir, vector3d const &upv, vector3d const &
 		}
 		else {new_dir.negate();} // otherwise reverse direction
 	}
+}
+
+bool play_attack_sound(point const &pos, float gain, float pitch, rand_gen_t &rgen) {
+	static double last_sound_time(0.0);
+
+	if (tfticks - last_sound_time > 0.4*TICKS_PER_SECOND) {
+		gen_sound_thread_safe(SOUND_SQUISH, pos, gain, pitch);
+		last_sound_time = tfticks + 0.2f*TICKS_PER_SECOND*rgen.rand_float(); // add some randomness
+		return 1;
+	}
+	return 0;
 }
 
 
@@ -360,14 +371,8 @@ void building_t::update_rat(rat_t &rat, point const &camera_bs, int ped_ix, floa
 				update_path   = 0;
 
 				if (dist_xy_less_than(rat.pos, target, 0.05*min_dist)) { // do damage when nearly colliding with the player
-					static double last_sound_time(0.0);
-
-					if (tfticks - last_sound_time > 0.4*TICKS_PER_SECOND) {
-						gen_sound_thread_safe(SOUND_SQUISH, local_to_camera_space(rat.pos));
-						last_sound_time = tfticks + 0.2f*TICKS_PER_SECOND*rgen.rand_float(); // add some randomness
-					}
-					bool has_key(0); // unused
-					if (player_take_damage(0.004, has_key)) {register_achievement("Rat Food");} // achievement if the player dies
+					play_attack_sound(local_to_camera_space(rat.pos), 1.0, 1.0, rgen);
+					if (player_take_damage(0.004, 0)) {register_achievement("Rat Food");} // damage over time; achievement if the player dies
 				}
 			}
 		}
@@ -843,7 +848,17 @@ void building_t::update_spider(spider_t &spider, point const &camera_bs, float t
 		}
 	}
 	spider.dest = spider.pos + radius*spider.dir; // put our destination in front of us
-	// TODO: logic to attack the player; see spiders logic
 	//update_dir_incremental(spider.dir, new_dir, 1.0, timestep, rgen);
+
+	// handle biting the player
+	if (!in_building_gameplay_mode()) return;
+	if (dot_product_ptv(spider.dir, camera_bs, spider.pos) < 0.0) return; // facing the wrong direction
+	if (get_floor_for_zval(camera_bs.z) != get_floor_for_zval(spider.pos.z)) return; // wrong floor
+	float const player_radius(CAMERA_RADIUS*global_building_params.player_coll_radius_scale), min_dist(player_radius + coll_radius);
+
+	if (dist_xy_less_than(spider.pos, camera_bs, (player_radius + coll_radius))) { // do damage when nearly colliding with the player
+		bool const played_sound(play_attack_sound(local_to_camera_space(spider.pos), 0.5, 1.5, rgen)); // quieter and higher pitch than rats
+		if (played_sound) {player_take_damage(0.1, 1);} // poisoned every so often
+	}
 }
 
