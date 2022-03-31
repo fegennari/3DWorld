@@ -100,7 +100,7 @@ void texture_t::load(int index, bool allow_diff_width_height, bool allow_two_byt
 	}
 	else {
 		if (format == 7) { // auto
-			// format: 0: RAW, 1: BMP, 2: RAW (upside down), 3: RAW (alpha channel), 4: targa (*tga), 5: jpeg, 6: png, 7: auto, 8: tiff, 10: DDS, 11:ppm
+			// format: 0: RAW, 1: BMP, 2: RAW (upside down), 3: RAW (alpha channel), 4: targa (*tga), 5: jpeg, 6: png, 7: auto, 8: tiff, 10: DDS, 11:ppm, 12:3dwt
 			string const ext(get_file_extension(name, 0, 1));
 		
 			if (0) {}
@@ -112,6 +112,7 @@ void texture_t::load(int index, bool allow_diff_width_height, bool allow_two_byt
 			else if (ext == "tif" || ext == "tiff") {format = 8;}
 			else if (ext == "dds") {format = 10;}
 			else if (ext == "ppm") {format = 11;}
+			else if (ext == "3dwt"){format = 12;}
 			else if (ext == "hdr") {
 				cerr << "Error: HDR texture format is not yet supported: " << name << endl;
 				exit(1);
@@ -132,6 +133,7 @@ void texture_t::load(int index, bool allow_diff_width_height, bool allow_two_byt
 		case 8: load_tiff (index, allow_diff_width_height, allow_two_byte_grayscale); break;
 		case 10: load_dds (index); break;
 		case 11: load_ppm (index, allow_diff_width_height); break;
+		case 12: load_3dwt(index); break;
 		default:
 			cerr << "Unsupported image format: " << format << endl;
 			exit(1);
@@ -701,8 +703,21 @@ void texture_t::load_tiff(int index, bool allow_diff_width_height, bool allow_tw
 }
 
 
+// compressed/deferred load texture formats
+
+void texture_t::deferred_load_and_bind() {
+	assert(defer_load());
+
+	switch (defer_load_type) {
+	case DEFER_TYPE_DDS:  deferred_load_dds (); break;
+	case DEFER_TYPE_3DWT: deferred_load_3dwt(); break;
+	default:
+		cerr << "Unhandled texture defer type " << defer_load_type << endl;
+		exit(1);
+	}
+}
+
 void texture_t::load_dds(int index) {
-	
 #ifdef ENABLE_DDS
 	defer_load_type = DEFER_TYPE_DDS;
 #else
@@ -711,49 +726,38 @@ void texture_t::load_dds(int index) {
 #endif
 }
 
-
-void texture_t::deferred_load_and_bind() {
-
-	defer_load();
-
+void texture_t::deferred_load_dds() {
 #ifdef ENABLE_DDS
-	switch (defer_load_type) {
-	case DEFER_TYPE_DDS:
-		{
-			//cout << "Loading DDS image " << name << endl;
-			gli::texture2d Texture(gli::load_dds(name.c_str()));
-			bool const compressed(gli::is_compressed(Texture.format()));
-			// here we assume the texture is upside down and flip it, if it's uncompressed and flippable
-			if (!compressed && !invert_y) {Texture = flip(Texture);}
-			assert(!Texture.empty());
-			width   = Texture.extent().x;
-			height  = Texture.extent().y;
-			ncolors = component_count(Texture.format());
-			assert(width > 0 && height > 0);
-			gli::gl GL(gli::gl::PROFILE_GL33);
-			gli::gl::format const Format(GL.translate(Texture.format(), Texture.swizzles()));
-			glBindTexture(GL_TEXTURE_2D, tid);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, GLint(Texture.levels() - 1));
-			glTexStorage2D(GL_TEXTURE_2D, Texture.levels(), Format.Internal, width, height);
+	//cout << "Loading DDS image " << name << endl;
+	gli::texture2d Texture(gli::load_dds(name.c_str()));
+	bool const compressed(gli::is_compressed(Texture.format()));
+	// here we assume the texture is upside down and flip it, if it's uncompressed and flippable
+	if (!compressed && !invert_y) {Texture = flip(Texture);}
+	assert(!Texture.empty());
+	width   = Texture.extent().x;
+	height  = Texture.extent().y;
+	ncolors = component_count(Texture.format());
+	assert(width > 0 && height > 0);
+	gli::gl GL(gli::gl::PROFILE_GL33);
+	gli::gl::format const Format(GL.translate(Texture.format(), Texture.swizzles()));
+	glBindTexture(GL_TEXTURE_2D, tid);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, GLint(Texture.levels() - 1));
+	glTexStorage2D(GL_TEXTURE_2D, Texture.levels(), Format.Internal, width, height);
 
-			// handle mipmaps; the value of use_mipmaps is ignored here
-			for (gli::texture2d::size_type Level = 0; Level < Texture.levels(); ++Level) {
-				if (compressed) {
-					glCompressedTexSubImage2D(GL_TEXTURE_2D, Level, 0, 0, Texture[Level].extent().x, Texture[Level].extent().y,
-						Format.Internal, Texture[Level].size(), Texture[Level].data());
-				}
-				else {
-					glTexSubImage2D(GL_TEXTURE_2D, Level, 0, 0, Texture[Level].extent().x, Texture[Level].extent().y,
-						Format.External, Format.Type, Texture[Level].data());
-				}
-			} 
+	// handle mipmaps; the value of use_mipmaps is ignored here
+	for (gli::texture2d::size_type Level = 0; Level < Texture.levels(); ++Level) {
+		if (compressed) {
+			glCompressedTexSubImage2D(GL_TEXTURE_2D, Level, 0, 0, Texture[Level].extent().x, Texture[Level].extent().y,
+				Format.Internal, Texture[Level].size(), Texture[Level].data());
 		}
-		break;
-	default:
-		cerr << "Unhandled texture defer type " << defer_load_type << endl;
-		exit(1);
+		else {
+			glTexSubImage2D(GL_TEXTURE_2D, Level, 0, 0, Texture[Level].extent().x, Texture[Level].extent().y,
+				Format.External, Format.Type, Texture[Level].data());
+		}
 	}
+#else
+	assert(0);
 #endif
 }
 
@@ -774,7 +778,7 @@ void texture_t::load_ppm(int index, bool allow_diff_width_height) {
 
 	filebuf fb;
 
-	if (!fb.open(append_texture_dir(name), ios::in | ios::binary)) {
+	if (!fb.open(append_texture_dir(name), (ios::in | ios::binary))) {
 		cerr << "Error: Couldn't open ppm file " << name << endl;
 		exit(1);
 	}
@@ -809,4 +813,60 @@ void texture_t::load_ppm(int index, bool allow_diff_width_height) {
 		cerr << "Error reading PPM file" << endl;
 		exit(1);
 	}
+}
+
+
+void texture_t::load_3dwt(int index) {
+	defer_load_type = DEFER_TYPE_3DWT;
+}
+void texture_t::deferred_load_3dwt() {
+	filebuf fb;
+
+	if (!fb.open(append_texture_dir(name), (ios::in | ios::binary))) {
+		cerr << "Error: Couldn't open ppm file " << name << endl;
+		exit(1);
+	}
+	istream in(&fb);
+	// read header and data
+	ncolors = 3; // TODO: 3=RGB; add support for 4=RGBA
+	int size(0), internal_format(0);
+	in.read((char*)&width,  sizeof(int));
+	in.read((char*)&height, sizeof(int));
+	in.read((char*)&size,   sizeof(int));
+	in.read((char*)&internal_format, sizeof(int));
+	vector<char> data(size);
+	in.read(data.data(), size);
+
+	if (!in.good()) {
+		cerr << "Error reading 3DW file" << endl;
+		exit(1);
+	}
+	unsigned const num_levels(1); // TODO: handle mipmaps
+	glBindTexture(GL_TEXTURE_2D, tid);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL,  GLint(num_levels - 1));
+	glTexStorage2D(GL_TEXTURE_2D, num_levels, internal_format, width, height);
+	//glCompressedTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, width, height, internal_format, size, data.data());
+	glCompressedTexImage2D(GL_TEXTURE_2D, 0, internal_format, width, height, 0, size, data.data());
+}
+
+bool texture_t::write_3dwc(string const &filename) {
+	int internal_format(0), width(0), height(0), size(0), is_compressed(0);
+	glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_COMPRESSED,            (GLint *)&is_compressed);
+	if (!is_compressed) return 0;
+	glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_INTERNAL_FORMAT,       (GLint *)&internal_format);
+	glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH,                 (GLint *)&width);
+	glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT,                (GLint *)&height);
+	glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_COMPRESSED_IMAGE_SIZE, (GLint *)&size);
+	vector<char> data(size);
+	glGetCompressedTexImage(GL_TEXTURE_2D, 0, data.data());
+	string const fn(filename.empty() ? (name + ".3dw") : filename);
+	ofstream ofs(fn, (ios::out | ios::binary));
+	if (!ofs.good()) return 0;
+	ofs.write((char*)&width,  sizeof(int));
+	ofs.write((char*)&height, sizeof(int));
+	ofs.write((char*)&size,   sizeof(int));
+	ofs.write((char*)&internal_format, sizeof(int));
+	ofs.write(data.data(), size);
+	return 1;
 }
