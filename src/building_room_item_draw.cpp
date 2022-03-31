@@ -972,33 +972,35 @@ class spider_draw_t {
 	unsigned cur_vert_pos;
 	bool is_setup;
 
-	void add_eye(point const &pos, float radius) {
+	void add_eye(point const &pos, float radius, bool low_detail) {
 		cube_t eye_bc(pos);
 		eye_bc.expand_by(radius);
-		mat.add_sphere_to_verts(eye_bc, DK_RED); // eye
+		mat.add_sphere_to_verts(eye_bc, DK_RED, low_detail); // eye
 	}
 	void init() {
 		// generate spider geometry; centered at (0,0,0) with radius=1.0; head is in +X
+		bool const low_detail = 1; // 3.5x fewer verts and looks almost identical
+		unsigned const ndiv(low_detail ? N_SPHERE_DIV/2 : N_SPHERE_DIV);
 		colorRGBA const color(BLACK);
 		float const body_zval(-0.3);
 		cube_t abdomen(point(-0.8, 0.0, body_zval)), body(point(0.0, 0.0, body_zval));
 		abdomen.expand_by(vector3d(0.50, 0.35, 0.35));
 		body   .expand_by(vector3d(0.45, 0.30, 0.20));
-		mat.add_sphere_to_verts(abdomen, color);
-		mat.add_sphere_to_verts(body,    color);
+		mat.add_sphere_to_verts(abdomen, color); // always high detail
+		mat.add_sphere_to_verts(body,    color); // always high detail
 		assign_tc_range(0.0, 0.0, 0.0); // head and body aren't animated
 		float const leg_radius(0.03);
 
 		for (unsigned d = 0; d < 2; ++d) { // {left, right}
 			float const d_sign(d ? -1.0 : 1.0);
-			add_eye(point(0.30, 0.080*d_sign, body_zval+0.14), 0.026);
-			add_eye(point(0.40, 0.045*d_sign, body_zval+0.08), 0.028);
-			add_eye(point(0.44, 0.020*d_sign, body_zval+0.04), 0.016);
-			add_eye(point(0.43, 0.055*d_sign, body_zval+0.03), 0.015);
+			add_eye(point(0.30, 0.080*d_sign, body_zval+0.14), 0.026, low_detail);
+			add_eye(point(0.40, 0.045*d_sign, body_zval+0.08), 0.028, low_detail);
+			add_eye(point(0.44, 0.020*d_sign, body_zval+0.04), 0.016, low_detail);
+			add_eye(point(0.43, 0.055*d_sign, body_zval+0.03), 0.015, low_detail);
 			float const fang_radius(0.05);
 			point const fang_top(0.44, 0.05*d_sign, body_zval-0.04), fang_bot(fang_top - vector3d(0.0, 0.0, 0.2));
-			mat.add_sphere_to_verts(fang_top, vector3d(fang_radius, fang_radius, fang_radius), color); // top of fang
-			mat.add_cylin_to_verts (fang_bot, fang_top, 0.0, fang_radius, color, 0, 0); // fang
+			mat.add_sphere_to_verts(fang_top, vector3d(fang_radius, fang_radius, fang_radius), color, low_detail); // top of fang
+			mat.add_cylin_to_verts (fang_bot, fang_top, 0.0, fang_radius, color, 0, 0, 0, 0, 1.0, 1.0, 0, ndiv); // fang
 			// hourglass shape? colorRGBA(0.7, 0.2, 0.0)
 			assign_tc_range(0.0, 0.0, 0.0); // not animated
 
@@ -1011,17 +1013,17 @@ class spider_draw_t {
 				point const foot (3.5*knee .x, 3.5*knee .y, -1.0);
 				vector3d const sphere_radius(leg_radius, leg_radius, leg_radius);
 				float const joint_tt(0.0*d_sign), knee_tt(0.3*d_sign), ankle_tt(0.7*d_sign), foot_tt(1.0*d_sign);
-				mat.add_sphere_to_verts(joint, sphere_radius, color); // round body joint
+				mat.add_sphere_to_verts(joint, sphere_radius, color, low_detail); // round body joint
 				assign_tc_range(ts, joint_tt, joint_tt);
-				mat.add_cylin_to_verts(joint, knee, leg_radius, leg_radius, color, 0, 0);
+				mat.add_cylin_to_verts(joint, knee, leg_radius, leg_radius, color, 0, 0, 0, 0, 1.0, 1.0, 0, ndiv);
 				assign_tc_range(ts, joint_tt, knee_tt);
-				mat.add_sphere_to_verts(knee, sphere_radius, color); // round knee joint
+				mat.add_sphere_to_verts(knee, sphere_radius, color, low_detail); // round knee joint
 				assign_tc_range(ts, knee_tt, knee_tt);
-				mat.add_cylin_to_verts(ankle, knee, leg_radius, leg_radius, color, 0, 0);
+				mat.add_cylin_to_verts(ankle, knee, leg_radius, leg_radius, color, 0, 0, 0, 0, 1.0, 1.0, 0, ndiv);
 				assign_tc_range(ts, ankle_tt, knee_tt);
-				mat.add_sphere_to_verts(ankle, sphere_radius, color); // round ankle joint
+				mat.add_sphere_to_verts(ankle, sphere_radius, color, low_detail); // round ankle joint
 				assign_tc_range(ts, ankle_tt, ankle_tt);
-				mat.add_cylin_to_verts(foot,  ankle, 0.1*leg_radius, leg_radius, color, 0, 0);
+				mat.add_cylin_to_verts(foot,  ankle, 0.1*leg_radius, leg_radius, color, 0, 0, 0, 0, 1.0, 1.0, 0, ndiv);
 				assign_tc_range(ts, foot_tt, ankle_tt);
 			} // for n
 		} // for d
