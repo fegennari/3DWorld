@@ -638,16 +638,15 @@ public:
 		float best_score(0.0); // distance squared
 
 		// generate a number of possible new vectors in the forward direction, perform sphere-cube intersection with each one, and choose the new location closest to the target
-		for (unsigned n = 0; n <= 64; ++n) { // include forward on first iteration
+		for (unsigned n = 0; n <= 50; ++n) { // include forward on first iteration
 			if (n == 0) {dir = s.dir;}
 			else { // maybe this should be more consistent, such as all multiples of 45 degrees from "forward"
-				dir = rgen.signed_rand_vector().get_norm();
+				dir = rgen.signed_rand_vector().get_norm(); // TODO: precompute and cache
 				if (dot_product(dir, s.dir) < 0.0) {dir.negate();} // face forward
 			}
 			point cand(s.last_pos + dist*dir);
-			//if (dmin_sq > 0.0 && p2p_dist_sq(pos, cand) >= dmin_sq) continue; // not closer, skip
 			bool had_coll(0);
-			for (auto const &c : colliders) {had_coll |= ellipse_cube_intersect(cand, size, c);}
+			for (auto const &c : colliders) {had_coll |= ellipse_cube_intersect(cand, 1.05*size, c);} // slightly larger radius to pick up nearby objects
 			if (!had_coll) continue; // floating in space, not a valid dir
 			had_coll = 0;
 			vector3d coll_norm(s.upv);
@@ -661,14 +660,13 @@ public:
 			float const dir_dp(dot_product(dir, s.dir)), up_dp(fabs(dot_product(dir, s.upv)));
 			float const score(p2p_dist_sq(cand, s.last_pos)*(dir_dp + 0.25*up_dp));
 			if (score > best_score) {best_dir = dir; best_up = coll_norm; best_pos = cand; best_score = score;}
-			//if (n == 0 && !had_coll) break; // forward direction is still valid, done (early termination optimization)
+			if (n == 0 && !had_coll) break; // forward direction is still valid, done (early termination optimization)
 		} // for n
 		if (best_score == 0.0) return 0; // no valid directions, must be floating in space
 		s.dir = ((delta_dir*best_dir + (1.0 - delta_dir)*s.dir)).get_norm(); // slowly reorient
 		s.upv = ((delta_dir*best_up  + (1.0 - delta_dir)*s.upv)).get_norm(); // slowly reorient
 		s.pos = best_pos;
 		orthogonalize_dir(s.dir, s.upv, s.dir, 1);
-		// TODO: optimize
 		return 1;
 	}
 }; // surface_orienter_t
@@ -780,11 +778,11 @@ void building_t::update_spider(spider_t &spider, point const &camera_bs, float t
 	if (had_coll || spider.dir.mag() < 0.5) {spider.choose_new_dir(rgen);} // regenerate dir if collided, zero, or otherwise bad
 	else if (on_surface && (float)tfticks > spider.update_time) { // direction change or sleep
 		if (spider.dist_since_sleep > 2.0*get_window_vspace() && rgen.rand_bool()) { // 50% chance of taking a rest
-			spider.sleep_for(0.0, 4.0); // 0-4s
+			spider.sleep_for(0.1, 5.0); // 0.1-5s
 			spider.speed = 0.0; // will reset anim_time in the next frame
 		}
 		else {
-			spider.update_time = (float)tfticks + rand_uniform(4.0, 10.0)*TICKS_PER_SECOND; // 4-10s
+			spider.update_time = (float)tfticks + rand_uniform(5.0, 15.0)*TICKS_PER_SECOND; // 5-15s
 			vector3d const prev_dir(spider.dir);
 			spider.choose_new_dir(rgen);
 			spider.dir = (spider.dir + prev_dir).get_norm(); // 50% mix of prev and new dir to avoid sharp turns
