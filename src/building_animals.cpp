@@ -603,107 +603,60 @@ void building_t::update_spiders(point const &camera_bs, unsigned building_ix, in
 
 class surface_orienter_t {
 	point pos;
-	vector3d upv;
-	float r_inner, r_outer, surf_pos[2] = {}, surf_dists[2];
-	unsigned surf_dims[2] = {};
-	bool surf_dirs[2] = {};
-	bool outside_edge;
+	float r_inner, r_outer;
+	vect_cube_t colliders; // share across calls?
 public:
-	bool had_coll;
+	surface_orienter_t(point const &pos_, float rxy, float rz) : pos(pos_), r_inner(min(rxy, rz)), r_outer(max(rxy, rz)) {}
 
-	surface_orienter_t(point const &pos_, vector3d const &upv_, float r_inner_, float r_outer_) :
-		pos(pos_), upv(upv_), r_inner(r_inner_), r_outer(r_outer_), outside_edge(0), had_coll(0)
-	{
-		surf_dists[0] = surf_dists[1] = 2.0*r_outer; // set larger than any possible value
-	}
 	void register_cube(cube_t const &c, unsigned enable_faces) {
-		if (!c.contains_pt_exp(pos, r_outer)) return;
-		point const center(c.get_cube_center());
-		unsigned update_ixs(0); // bits for surf_dists 0 and 1
-
-		for (unsigned pass = 0; pass < 2; ++pass) {
-			bool was_close(0), was_inside(0);
-
-			for (unsigned d = 0; d < 3; ++d) {
-				unsigned const dir(center[d] < pos[d]);
-				if (!(enable_faces & (1 << (2*(2-d) + dir)))) continue; // skip this face
-				float const dsign(dir ? 1.0 : -1.0), edge(c.d[d][dir]), dist(dsign*(pos[d] - edge)); // Note: can be negative if pos is inside the cube
-				if (dist >= r_outer) continue; // too far from this cube side
-				if (dist < 0.0 && pass == 0) {was_inside = 1; continue;} // inside the cube on the first pass, record and skip
-
-				if (dir ? (upv[d] < -0.9) : (upv[d] > 0.9)) { // opposite our up dir
-					if (dist < r_inner) {had_coll = 1;}
-					continue; // skip (lets spiders squeeze into narrow spaces - but maybe we don't want that)
-				}
-				was_close = 1;
-				unsigned dix(0);
-				if      (dist < surf_dists[0]) {dix = 0;}
-				else if (dist < surf_dists[1]) {dix = 1;}
-				else {continue;} // not a closest distance; can happen at cube corners
-				if (dix == 1 && surf_dims[0] == d) continue; // don't want both surfaces in the same direction (for example between two adjacent floor/ceiling cubes)
-				surf_dists[dix] = dist;
-				surf_pos  [dix] = edge;
-				surf_dims [dix] = d;
-				surf_dirs [dix] = dir;
-				update_ixs     |= (1 << dix);
-			} // for d
-			if (was_close || !was_inside) break; // done
-			// if we get here on the first pass, we have a contained dimand no other nearby dims, so run the second pass to resolve the intersection
-		} // for pass
-		outside_edge = (update_ixs == 3); // this is an outside edge if the same cube updates both surfaces
+		if (c.contains_pt_exp(pos, r_outer)) {colliders.push_back(c);} // record for later processing
 	}
 	void register_cubes(vect_cube_t const &cubes, unsigned enable_faces) {
 		for (cube_t const &c : cubes) {register_cube(c, enable_faces);}
 	}
-	bool align_to_surfaces(point &pos, vector3d &forward, vector3d &up, float hheight, float speed, float timestep, point const &camera_bs) {
-		//bool const debug(dist_xy_less_than(pos, camera_bs, 2.0*CAMERA_RADIUS));
-		//if (debug) {cout << TXT(forward.str()) << TXT(up.str()) << endl;}
-		float const delta_dir(min(1.0f, 1.5f*(1.0f - pow(0.7f, timestep))));
-		
-		if (surf_dists[0] >= r_outer) { // no surface to align to; for example, reaching the doorway opening of a wall
-			//forward = (delta_dir*-upv + (1.0 - delta_dir)*forward).get_norm(); // pivot around left-right - doesn't seem to work
-			// drop down to the floor (on a web?)
-			forward = (delta_dir*-plus_z + (1.0 - delta_dir)*forward).get_norm(); // slowly reorient to -z
-			pos.z  -= 0.5*timestep*speed; // drop at half speed
-			orthogonalize_dir(up, forward, up, 1);
-			return 0;
-		}
-		unsigned const dim(surf_dims[0]);
-		float const dsign (surf_dirs[0] ? 1.0 : -1.0), max_move_dist(0.5*r_inner);
-		float const new_pos_dim(surf_pos[0] + dsign*hheight), pos_dim_delta(new_pos_dim - pos[dim]); // place onto closest surface
-		pos[dim] += min(max_move_dist, max(-max_move_dist, pos_dim_delta)); // clamp to a reasonable movement distance
-		vector3d new_up(zero_vector); // will compte below
+	bool align_to_surfaces(point &pos, vector3d &forward, vector3d &up, point const &last_pos, float hheight, float speed, float timestep, point const &camera_bs, rand_gen_t &rgen) {
+		if (colliders.empty()) return 0;
+		// Note: assumes last_pos is valid and non-intersecting; may not hold for initial placement or when objects are moved
+		float const dist(p2p_dist(pos, last_pos));
+		unsigned const NUM_DIRS = 64; // generate this many random directions
+		vector3d best_dir(forward), best_up(up);
+		point best_pos(pos);
+		float best_score(0.0); // distance squared
 
-		if (surf_dists[1] < r_outer && surf_dims[1] != dim) { // 2 orthogonal surfaces
-			unsigned const dim2(surf_dims[1]);
-			float const dsign2 (surf_dirs[1] ? 1.0 : -1.0), proximity1(r_outer - surf_dists[0]), proximity2(r_outer - surf_dists[1]);
-			float const weight1(proximity1/(proximity1 + proximity2)), weight2(1.0 - weight1);
-			assert(proximity1 > 0.0 && proximity2 > 0.0);
-			//if (debug) {cout << "2S " << TXT(dim) << TXT(dsign) << TXT(dim2) << TXT(dsign2) << TXT(weight1) << TXT(weight2) << endl;}
-			if (surf_dists[1] < hheight) {pos[dim2] = surf_pos[1] + dsign2*hheight;} // place onto second surface if intersecting
-			new_up[dim ] = weight1*dsign;
-			new_up[dim2] = weight2*dsign2;
-			new_up.normalize();
-			vector3d f_keep(forward), f_update(zero_vector); // split forward vector into two components (parallel to either surface vs. perpendicular to both)
-			f_keep  [dim] = f_keep[dim2] = 0.0;
-			f_update[dim] = forward[dim]; f_update[dim2] = forward[dim2];
-			float const update_mag(f_update.mag());
-			// set correct ratio of each dim to preserve the angle across the R90 turn;
-			// set dir to move away from the edge if not set (toward the edge if it's outside edge), otherwise preserve the original dir
-			float const dsign_sign(outside_edge ? -1.0 : 1.0);
-			f_update[dim2] = weight1*((f_update[dim2] == 0.0) ? dsign_sign*dsign2 : SIGN(f_update[dim2]));
-			f_update[dim ] = weight2*((f_update[dim ] == 0.0) ? dsign_sign*dsign  : SIGN(f_update[dim ]));
-			// re-combine the two components in a way that preserves their relative weights
-			if (f_update.mag() > 0.001) {forward = f_keep + (update_mag/f_update.mag())*f_update;} // reset f_update length to the original value
-		}
-		else { // 1 surface
-			//if (debug) {cout << "1S " << TXT(dim) << TXT(dsign) << endl;}
-			new_up [dim] = dsign; // normalized
-			forward[dim] = 0.0; // must be orthogonal to surface and up vector
-		}
-		up = (delta_dir*new_up + (1.0 - delta_dir)*up); // slowly reorient
-		forward.normalize(); // Note: up to the caller to handle zero forward vector
-		orthogonalize_dir(up, forward, up, 1);
+		// generate a number of possible new vectors in the forward direction, perform sphere-cube intersection with each one, and choose the new location closest to the target
+		for (unsigned n = 0; n <= NUM_DIRS; ++n) { // include forward on first iteration
+			vector3d dir;
+
+			if (n == 0) {dir = forward;}
+			else { // maybe this should be more consistent, such as all multiples of 45 degrees from "forward"
+				dir = rgen.signed_rand_vector().get_norm();
+				if (dot_product(dir, forward) < 0.0) {dir.negate();} // face forward
+			}
+			point cand(last_pos + dist*dir);
+			//if (dmin_sq > 0.0 && p2p_dist_sq(pos, cand) >= dmin_sq) continue; // not closer, skip
+			bool had_coll(0);
+			for (auto const &c : colliders) {had_coll |= sphere_cube_intersect(cand, r_outer, c);}
+			if (!had_coll) continue; // floating in space, not a valid dir
+			had_coll = 0;
+			vector3d coll_norm(up);
+			for (auto const &c : colliders) {had_coll |= sphere_cube_int_update_pos(cand, r_inner, c, last_pos, 1, 0, &coll_norm);}
+
+			if (n == 0 && !had_coll) { // forward vector, no coll
+				// rerun with outer radius to ensure coll_norm is correct
+				for (auto const &c : colliders) {point tmp(cand); sphere_cube_int_update_pos(tmp, r_outer, c, last_pos, 1, 0, &coll_norm);}
+				//return; // forward direction is still valid, done (early termination optimization)
+			}
+			float const score(p2p_dist_sq(cand, last_pos)*dot_product(dir, forward)); // squared movement distance, with higher weight for moving in the correct direction
+			if (score > best_score) {best_dir = dir; best_up = coll_norm; best_pos = cand; best_score = score;}
+		} // for n
+		if (best_score == 0.0) return 0; // no valid directions, must be floating in space
+		//float const delta_dir(min(1.0f, 1.5f*(1.0f - pow(0.7f, timestep))));
+		//forward = ((delta_dir*best_dir + (1.0 - delta_dir)*forward)).get_norm(); // slowly reorient
+		forward = best_dir;
+		up      = best_up;
+		pos     = best_pos;
+		orthogonalize_dir(forward, up, forward, 1);
+		// TODO: stuck against each other
 		return 1;
 	}
 }; // surface_orienter_t
@@ -718,21 +671,20 @@ public:
 	void register_avoid_cube(cube_t const &c) {had_coll |= sphere_cube_int_update_pos(pos, radius, c, p_last);}
 };
 
-void building_t::update_spider_pos_orient(spider_t &spider, point const &camera_bs, float timestep, bool &on_surface, bool &had_coll) const {
+void building_t::update_spider_pos_orient(spider_t &spider, point const &camera_bs, float timestep, bool &on_surface, bool &had_coll, rand_gen_t &rgen) const {
 	assert(interior);
 	unsigned const EF_XY12(EF_X12 | EF_Y12);
 	float const trim_thickness(get_trim_thickness());
-	float const coll_radius(2.0f*spider.radius), r_outer(coll_radius + 0.5*spider.radius); // use an expanded transition zone
-	surface_orienter_t surface_orienter(spider.pos, spider.upv, spider.radius, r_outer);
+	float const coll_radius(2.0f*spider.radius);
+	surface_orienter_t surface_orienter(spider.pos, spider.radius, coll_radius);
 	// Note: we can almost use fc_occluders, except this doesn't contain the very bottom floor because it's not an occluder
 	//surface_orienter.register_cubes(interior->fc_occluders, EF_Z12); // Z surface only
 	surface_orienter.register_cubes(interior->floors,   EF_Z2); // Z2 surface only
 	surface_orienter.register_cubes(interior->ceilings, EF_Z1); // Z1 surface only
-	// XY walls; should we check the wall ends as well?
-	for (unsigned d = 0; d < 2; ++d) {surface_orienter.register_cubes(interior->walls[d], /*(d ? EF_Y12 : EF_X12)*/EF_XY12);}
+	for (unsigned d = 0; d < 2; ++d) {surface_orienter.register_cubes(interior->walls[d], EF_XY12);} // XY walls
 	// check doors
 	cube_t tc(spider.pos);
-	tc.expand_by_xy(r_outer);
+	tc.expand_by_xy(coll_radius);
 	tc.expand_in_dim(2, 1.5*spider.radius); // smaller expand in Z
 	obj_avoid_t obj_avoid(spider.pos, spider.last_pos, coll_radius);
 
@@ -770,7 +722,6 @@ void building_t::update_spider_pos_orient(spider_t &spider, point const &camera_
 		if (!tc.intersects((i->type == TYPE_CLOSET) ? get_true_room_obj_bcube(*i) : *i)) continue; // no intersection with this object
 		if (!i->is_spider_collidable()) continue;
 		if (i->get_max_extent() < spider.radius) continue; // too small, skip
-		// TODO: handle spider getting stuck between furniture and the wall
 		get_room_obj_cubes(*i, spider.pos, cubes, avoid, avoid); // climb on large objects and avoid small and non-cube objects
 		unsigned faces(EF_XY12 | EF_Z2); // all sides except for Z1
 		if (i->type == TYPE_LIGHT || i->type == TYPE_MIRROR) {faces |= EF_Z1;} // hanging objects
@@ -799,8 +750,8 @@ void building_t::update_spider_pos_orient(spider_t &spider, point const &camera_
 			} // for dir
 		} // for dim
 	} // for i
-	on_surface = surface_orienter.align_to_surfaces(spider.pos, spider.dir, spider.upv, spider.radius, spider.speed, timestep, camera_bs);
-	had_coll   = (obj_avoid.had_coll || surface_orienter.had_coll);
+	on_surface = surface_orienter.align_to_surfaces(spider.pos, spider.dir, spider.upv, spider.last_pos, spider.radius, spider.speed, timestep, camera_bs, rgen);
+	had_coll   = obj_avoid.had_coll;
 }
 
 void building_t::update_spider(spider_t &spider, point const &camera_bs, float timestep, float &max_xmove, rand_gen_t &rgen) const {
@@ -817,7 +768,7 @@ void building_t::update_spider(spider_t &spider, point const &camera_bs, float t
 		return;
 	}
 	bool on_surface(0), had_coll(0);
-	update_spider_pos_orient(spider, camera_bs, timestep, on_surface, had_coll);
+	update_spider_pos_orient(spider, camera_bs, timestep, on_surface, had_coll, rgen);
 
 	if (had_coll || spider.dir.mag() < 0.5) {spider.choose_new_dir(rgen);} // regenerate dir if collided, zero, or otherwise bad
 	else if (on_surface && (float)tfticks > spider.update_time) { // direction change or sleep
