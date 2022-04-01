@@ -341,7 +341,7 @@ struct building_params_t {
 	void restore_prev_pos_range();
 private:
 	void init_kw_maps();
-	int read_building_texture(FILE *fp, std::string const &str, int &error, bool check_filename=0);
+	int read_building_texture(FILE *fp, std::string const &str, bool is_normal_map, int &error, bool check_filename=0);
 	void read_texture_and_add_if_valid(FILE *fp, std::string const &str, int &error, vector<unsigned> &tids);
 };
 

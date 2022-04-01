@@ -2874,7 +2874,7 @@ void building_room_geom_t::add_potted_plant(room_object_t const &c, bool inc_pot
 }
 
 int get_lg_ball_tid   (room_object_t const &c) {return get_texture_by_name((c.item_flags & 1) ? "interiors/basketball.png" : "interiors/soccer_ball_diffuse.png");}
-int get_lg_ball_nm_tid(room_object_t const &c) {return ((c.item_flags & 1) ? -1 : get_texture_by_name("interiors/soccer_ball_normal.png"));}
+int get_lg_ball_nm_tid(room_object_t const &c) {return ((c.item_flags & 1) ? -1 : get_texture_by_name("interiors/soccer_ball_normal.png", 1));}
 
 xform_matrix get_player_cview_rot_matrix() {
 	float const angle(atan2(cview_dir.y, cview_dir.x)); // angle of camera view in XY plane, for rotating about Z

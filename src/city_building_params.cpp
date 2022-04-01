@@ -129,7 +129,7 @@ void buildings_file_err(string const &str, int &error) {
 
 bool check_texture_file_exists(string const &filename);
 
-int building_params_t::read_building_texture(FILE *fp, string const &str, int &error, bool check_filename) {
+int building_params_t::read_building_texture(FILE *fp, string const &str, bool is_normal_map, int &error, bool check_filename) {
 	char strc[MAX_CHARS] = {0};
 	if (!read_str(fp, strc)) {buildings_file_err(str, error);}
 
@@ -137,13 +137,13 @@ int building_params_t::read_building_texture(FILE *fp, string const &str, int &e
 		std::cerr << "Warning: Skipping texture '" << strc << "' that can't be loaded" << endl;
 		return -1; // texture filename doesn't exist
 	}
-	int const ret(get_texture_by_name(std::string(strc), 0, tex_inv_y, get_wrap_mir()));
+	int const ret(get_texture_by_name(std::string(strc), is_normal_map, tex_inv_y, get_wrap_mir()));
 	//cout << "texture filename: " << str << ", ID: " << ret << endl;
 	return ret;
 }
 void building_params_t::read_texture_and_add_if_valid(FILE *fp, string const &str, int &error, vector<unsigned> &tids) {
 	// Note: this version doesn't accept numbered texture IDs, but it also doesn't fail on missing files
-	int const tid(read_building_texture(fp, str, error, 1)); // check_filename=1
+	int const tid(read_building_texture(fp, str, 0, error, 1)); // is_normal_map=0, check_filename=1
 	if (tid >= 0) {tids.push_back(tid);}
 }
 void read_building_tscale(FILE *fp, tid_nm_pair_t &tex, string const &str, int &error) {
@@ -304,23 +304,23 @@ bool building_params_t::parse_buildings_option(FILE *fp) {
 	else if (str == "basement_floor_tscale") {read_building_tscale(fp, cur_mat.basement_floor_tex, str, read_error);} // both X and Y
 	// building textures
 	// Warning: setting options such as tex_inv_y for textures that have already been loaded will have no effect!
-	else if (str == "side_tid"    ) {cur_mat.side_tex.tid     = read_building_texture(fp, str, read_error);}
-	else if (str == "side_nm_tid" ) {cur_mat.side_tex.nm_tid  = read_building_texture(fp, str, read_error);}
-	else if (str == "roof_tid"    ) {cur_mat.roof_tex.tid     = read_building_texture(fp, str, read_error);}
-	else if (str == "roof_nm_tid" ) {cur_mat.roof_tex.nm_tid  = read_building_texture(fp, str, read_error);}
+	else if (str == "side_tid"    ) {cur_mat.side_tex.tid     = read_building_texture(fp, str, 0, read_error);}
+	else if (str == "side_nm_tid" ) {cur_mat.side_tex.nm_tid  = read_building_texture(fp, str, 1, read_error);}
+	else if (str == "roof_tid"    ) {cur_mat.roof_tex.tid     = read_building_texture(fp, str, 0, read_error);}
+	else if (str == "roof_nm_tid" ) {cur_mat.roof_tex.nm_tid  = read_building_texture(fp, str, 1, read_error);}
 	// interiors
-	else if (str == "wall_tid"    ) {cur_mat.wall_tex.tid     = read_building_texture(fp, str, read_error);}
-	else if (str == "wall_nm_tid" ) {cur_mat.wall_tex.nm_tid  = read_building_texture(fp, str, read_error);}
-	else if (str == "floor_tid"   ) {cur_mat.floor_tex.tid    = read_building_texture(fp, str, read_error);}
-	else if (str == "floor_nm_tid") {cur_mat.floor_tex.nm_tid = read_building_texture(fp, str, read_error);}
-	else if (str == "ceil_tid"    ) {cur_mat.ceil_tex.tid     = read_building_texture(fp, str, read_error);}
-	else if (str == "ceil_nm_tid" ) {cur_mat.ceil_tex.nm_tid  = read_building_texture(fp, str, read_error);}
-	else if (str == "house_floor_tid"   ) {cur_mat.house_floor_tex.tid    = read_building_texture(fp, str, read_error);}
-	else if (str == "house_floor_nm_tid") {cur_mat.house_floor_tex.nm_tid = read_building_texture(fp, str, read_error);}
-	else if (str == "house_ceil_tid"    ) {cur_mat.house_ceil_tex.tid     = read_building_texture(fp, str, read_error);}
-	else if (str == "house_ceil_nm_tid" ) {cur_mat.house_ceil_tex.nm_tid  = read_building_texture(fp, str, read_error);}
-	else if (str == "basement_floor_tid"   ) {cur_mat.basement_floor_tex.tid    = read_building_texture(fp, str, read_error);}
-	else if (str == "basement_floor_nm_tid") {cur_mat.basement_floor_tex.nm_tid = read_building_texture(fp, str, read_error);}
+	else if (str == "wall_tid"    ) {cur_mat.wall_tex.tid     = read_building_texture(fp, str, 0, read_error);}
+	else if (str == "wall_nm_tid" ) {cur_mat.wall_tex.nm_tid  = read_building_texture(fp, str, 1, read_error);}
+	else if (str == "floor_tid"   ) {cur_mat.floor_tex.tid    = read_building_texture(fp, str, 0, read_error);}
+	else if (str == "floor_nm_tid") {cur_mat.floor_tex.nm_tid = read_building_texture(fp, str, 1, read_error);}
+	else if (str == "ceil_tid"    ) {cur_mat.ceil_tex.tid     = read_building_texture(fp, str, 0, read_error);}
+	else if (str == "ceil_nm_tid" ) {cur_mat.ceil_tex.nm_tid  = read_building_texture(fp, str, 1, read_error);}
+	else if (str == "house_floor_tid"   ) {cur_mat.house_floor_tex.tid    = read_building_texture(fp, str, 0, read_error);}
+	else if (str == "house_floor_nm_tid") {cur_mat.house_floor_tex.nm_tid = read_building_texture(fp, str, 1, read_error);}
+	else if (str == "house_ceil_tid"    ) {cur_mat.house_ceil_tex.tid     = read_building_texture(fp, str, 0, read_error);}
+	else if (str == "house_ceil_nm_tid" ) {cur_mat.house_ceil_tex.nm_tid  = read_building_texture(fp, str, 1, read_error);}
+	else if (str == "basement_floor_tid"   ) {cur_mat.basement_floor_tex.tid    = read_building_texture(fp, str, 0, read_error);}
+	else if (str == "basement_floor_nm_tid") {cur_mat.basement_floor_tex.nm_tid = read_building_texture(fp, str, 1, read_error);}
 	// specular
 	else if (str == "side_specular" ) {read_building_mat_specular(fp, str, cur_mat.side_tex,  read_error);}
 	else if (str == "roof_specular" ) {read_building_mat_specular(fp, str, cur_mat.roof_tex,  read_error);}
