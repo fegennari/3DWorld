@@ -1132,6 +1132,7 @@ void building_t::get_room_obj_cubes(room_object_t const &c, point const &pos, ve
 	}
 	else if (c.type == TYPE_CHAIR) {
 		cube_t cubes[3], leg_cubes[4]; // seat, back, legs_bcube
+		get_chair_cubes(c, cubes);
 		lg_cubes.insert(lg_cubes.end(), cubes, cubes+2); // seat, back
 		get_tc_leg_cubes(cubes[2], 0.15, leg_cubes); // width=0.15
 		sm_cubes.insert(sm_cubes.end(), leg_cubes, leg_cubes+4); // legs are small
