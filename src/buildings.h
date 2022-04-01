@@ -113,8 +113,10 @@ struct spider_t : public building_animal_t {
 	// this first constructor is for the lower_bound() call in vect_rat_t::get_first_rat_with_x2_gt()
 	spider_t(float xval) : building_animal_t(xval), update_time(0.0) {}
 	spider_t(point const &pos_, float radius_, vector3d const &dir_);
-	float get_height() const {return 2.0*radius;}
-	cube_t get_bcube() const; // used for collision detection and VFC
+	float get_xy_radius() const {return 2.0*radius;}
+	float get_height   () const {return 2.0*radius;}
+	vector3d get_size  () const;
+	cube_t get_bcube   () const; // used for collision detection and VFC
 	void choose_new_dir(rand_gen_t &rgen);
 };
 
