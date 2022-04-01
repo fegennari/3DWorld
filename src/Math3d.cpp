@@ -928,25 +928,26 @@ bool sphere_torus_intersect(point const &sc, float sr, point const &tc, vector3d
 					   if (dmin > r2) return 0;}
 
 bool circle_rect_intersect(point const &pos, float radius, cube_t const &cube, int dim) {
-
 	float dmin(0.0);
 	float const r2(radius*radius);
 	UNROLL_3X(if (dim != i_) {DMIN_CHECK(i_);})
 	return 1;
 }
-
 bool sphere_cube_intersect(point const &pos, float radius, cube_t const &cube) {
-
 	float dmin(0.0);
 	float const r2(radius*radius);
 	UNROLL_3X(DMIN_CHECK(i_));
 	return 1;
 }
 bool sphere_cube_intersect_xy(point const &pos, float radius, cube_t const &cube) {
-
 	float dmin(0.0);
 	float const r2(radius*radius);
 	UNROLL_2X(DMIN_CHECK(i_));
+	return 1;
+}
+bool ellipse_cube_intersect(point const &pos, vector3d const &radius, cube_t const &cube) {
+	float dmin(0.0);
+	UNROLL_3X(float const r2(radius[i_]*radius[i_]); DMIN_CHECK(i_));
 	return 1;
 }
 
@@ -988,7 +989,7 @@ bool sphere_cube_intersect(point const &pos, float radius, cube_t const &cube, p
 						   vector3d &norm, unsigned &cdir, bool check_int, bool skip_z)
 {
 	if (check_int && !(skip_z ? sphere_cube_intersect_xy(pos, radius, cube) : sphere_cube_intersect(pos, radius, cube))) return 0;
-	float min_dist(0.0);
+	float dmin(0.0);
 	bool found(0);
 
 	// first iteration:  find closest side where object has crossed a face of the cube, and if not found
@@ -997,20 +998,15 @@ bool sphere_cube_intersect(point const &pos, float radius, cube_t const &cube, p
 	for (unsigned iter = (pos == p_last); iter < 2 && !found; ++iter) {
 		for (unsigned i = 0; i < unsigned(2 + !skip_z); ++i) {
 			for (unsigned j = 0; j < 2; ++j) {
-				//if (iter == 0 && pos[i] != p_last[i] && ((pos[i] - p_last[i]) < 0) ^ j) continue; // ignore back-facing sides (is this correct?)
 				float const delta(j ? 1.0 : -1.0), side_pos(cube.d[i][j] + delta*radius); // cube expanded by radius
 				if (iter == 0 && !((p_last[i] < side_pos) ^ j) && ((pos[i] >= side_pos) ^ j)) continue;
 				float const dist(fabs(pos[i] - side_pos));
-
-				if (!found || dist < min_dist) {
-					min_dist = dist;
-					p_int    = pos;
-					p_int[i] = side_pos;
-					norm     = zero_vector;
-					norm[i]  = delta;
-					cdir     = (i << 1) + j; // x0 x1 y0 y1 z0 z1
-					found    = 1;
-				}
+				if (found && dist >= dmin) continue; // not closer
+				dmin  = dist;
+				p_int = pos; p_int[i] = side_pos;
+				norm  = zero_vector; norm[i] = delta;
+				cdir  = (i << 1) + j; // x0 x1 y0 y1 z0 z1
+				found = 1;
 			} // for j
 		} // for i
 	} // for iter

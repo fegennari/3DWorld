@@ -524,6 +524,7 @@ bool sphere_torus_intersect(point const &sc, float sr, point const &tc, vector3d
 bool circle_rect_intersect(point const &pos, float radius, cube_t const &cube, int dim);
 bool sphere_cube_intersect(point const &pos, float radius, cube_t const &cube);
 bool sphere_cube_intersect_xy(point const &pos, float radius, cube_t const &cube);
+bool ellipse_cube_intersect(point const &pos, vector3d const &radius, cube_t const &cube);
 bool sphere_cube_intersect(point const &pos, float radius, cube_t const &cube, point const &p_last,
 						   point &p_int, vector3d &norm, unsigned &cdir, bool check_int=1, bool skip_z=0);
 bool sphere_cube_int_update_pos(point &pos, float radius, cube_t const &cube, point const &p_last, bool check_int=1, bool skip_z=0, vector3d *cnorm=nullptr);
