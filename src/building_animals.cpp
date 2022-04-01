@@ -607,16 +607,19 @@ class surface_orienter_t {
 	float r_inner, r_outer, surf_pos[2] = {}, surf_dists[2];
 	unsigned surf_dims[2] = {};
 	bool surf_dirs[2] = {};
-
+	bool outside_edge;
 public:
 	bool had_coll;
 
-	surface_orienter_t(point const &pos_, vector3d const &upv_, float r_inner_, float r_outer_) : pos(pos_), upv(upv_), r_inner(r_inner_), r_outer(r_outer_), had_coll(0) {
+	surface_orienter_t(point const &pos_, vector3d const &upv_, float r_inner_, float r_outer_) :
+		pos(pos_), upv(upv_), r_inner(r_inner_), r_outer(r_outer_), outside_edge(0), had_coll(0)
+	{
 		surf_dists[0] = surf_dists[1] = 2.0*r_outer; // set larger than any possible value
 	}
 	void register_cube(cube_t const &c, unsigned enable_faces) {
 		if (!c.contains_pt_exp(pos, r_outer)) return;
 		point const center(c.get_cube_center());
+		unsigned update_ixs(0); // bits for surf_dists 0 and 1
 
 		for (unsigned pass = 0; pass < 2; ++pass) {
 			bool was_close(0), was_inside(0);
@@ -642,10 +645,12 @@ public:
 				surf_pos  [dix] = edge;
 				surf_dims [dix] = d;
 				surf_dirs [dix] = dir;
+				update_ixs     |= (1 << dix);
 			} // for d
 			if (was_close || !was_inside) break; // done
 			// if we get here on the first pass, we have a contained dimand no other nearby dims, so run the second pass to resolve the intersection
 		} // for pass
+		outside_edge = (update_ixs == 3); // this is an outside edge if the same cube updates both surfaces
 	}
 	void register_cubes(vect_cube_t const &cubes, unsigned enable_faces) {
 		for (cube_t const &c : cubes) {register_cube(c, enable_faces);}
@@ -683,9 +688,11 @@ public:
 			f_keep  [dim] = f_keep[dim2] = 0.0;
 			f_update[dim] = forward[dim]; f_update[dim2] = forward[dim2];
 			float const update_mag(f_update.mag());
-			// set correct ratio of each dim to preserve the angle across the R90 turn; set dir to move away from the edge if not set, otherwise preserve the original dir
-			f_update[dim2] = weight1*((f_update[dim2] == 0.0) ? dsign2 : SIGN(f_update[dim2]));
-			f_update[dim ] = weight2*((f_update[dim ] == 0.0) ? dsign  : SIGN(f_update[dim ]));
+			// set correct ratio of each dim to preserve the angle across the R90 turn;
+			// set dir to move away from the edge if not set (toward the edge if it's outside edge), otherwise preserve the original dir
+			float const dsign_sign(outside_edge ? -1.0 : 1.0);
+			f_update[dim2] = weight1*((f_update[dim2] == 0.0) ? dsign_sign*dsign2 : SIGN(f_update[dim2]));
+			f_update[dim ] = weight2*((f_update[dim ] == 0.0) ? dsign_sign*dsign  : SIGN(f_update[dim ]));
 			// re-combine the two components in a way that preserves their relative weights
 			if (f_update.mag() > 0.001) {forward = f_keep + (update_mag/f_update.mag())*f_update;} // reset f_update length to the original value
 		}
