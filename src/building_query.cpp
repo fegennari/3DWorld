@@ -1073,7 +1073,8 @@ bool building_t::get_begin_end_room_objs_on_ground_floor(float zval, bool for_sp
 void building_t::get_objs_at_or_below_ground_floor(vect_room_object_t &ret, bool for_spider) const {
 	float const z_thresh(get_ground_floor_z_thresh(for_spider));
 	assert(has_room_geom());
-	auto objs_end(interior->room_geom->get_placed_objs_end()); // skip buttons/stairs/elevators
+	// skip buttons/stairs/elevators for rats, but include stairs for spiders
+	auto objs_end(for_spider ? interior->room_geom->objs.end() : interior->room_geom->get_placed_objs_end());
 
 	for (auto c = interior->room_geom->objs.begin(); c != objs_end; ++c) {
 		if (c->z1() < z_thresh && c->is_collidable(for_spider)) {ret.push_back(*c);}
