@@ -16,6 +16,7 @@ extern bldg_obj_type_t bldg_obj_types[];
 
 float get_railing_height(room_object_t const &c);
 cylinder_3dw get_railing_cylinder(room_object_t const &c);
+room_object_t get_desk_top_back(room_object_t const &c, cube_t const &top);
 bool sphere_vert_cylin_intersect_with_ends(point &center, float radius, cylinder_3dw const &c, vector3d *cnorm);
 void register_in_closed_bathroom_stall();
 
@@ -327,7 +328,7 @@ unsigned check_bed_collision(room_object_t const &c, point &pos, point const &p_
 // actually applies to tables, desks, dressers, and nightstands
 unsigned check_table_collision(room_object_t const &c, point &pos, point const &p_last, float radius, vector3d *cnorm) {
 	cube_t cubes[5];
-	get_table_cubes(c, cubes); // body and legs
+	get_table_cubes(c, cubes); // top and 4 legs
 	return check_cubes_collision(cubes, 5, pos, p_last, radius, cnorm);
 }
 unsigned check_chair_collision(room_object_t const &c, point &pos, point const &p_last, float radius, vector3d *cnorm) {
@@ -1120,11 +1121,14 @@ void building_t::get_room_obj_cubes(room_object_t const &c, point const &pos, ve
 	}
 	else if (c.type == TYPE_DESK || c.type == TYPE_DRESSER || c.type == TYPE_NIGHTSTAND || c.type == TYPE_TABLE) { // objects with legs
 		cube_t cubes[5];
-		get_table_cubes(c, cubes); // body and legs
+		get_table_cubes(c, cubes); // top and 4 legs
 		lg_cubes.push_back(cubes[0]); // top of table, etc.
-		sm_cubes.insert(sm_cubes.end(), cubes+1, cubes+5); // skip body; legs are small
-		if      (c.type == TYPE_DRESSER || c.type == TYPE_NIGHTSTAND) {lg_cubes.push_back(get_dresser_middle   (c));}
-		else if (c.type == TYPE_DESK && c.desk_has_drawers())         {lg_cubes.push_back(get_desk_drawers_part(c));}
+		sm_cubes.insert(sm_cubes.end(), cubes+1, cubes+5); // skip table top; legs are small
+		if      (c.type == TYPE_DRESSER || c.type == TYPE_NIGHTSTAND) {lg_cubes.push_back(get_dresser_middle(c));}
+		else if (c.type == TYPE_DESK) {
+			if (c.desk_has_drawers() ) {lg_cubes.push_back(get_desk_drawers_part(c));}
+			if (c.shape == SHAPE_TALL) {lg_cubes.push_back(get_desk_top_back(c, cubes[0]));} // tall desk
+		}
 	}
 	else if (c.type == TYPE_CHAIR) {
 		cube_t cubes[3], leg_cubes[4]; // seat, back, legs_bcube
@@ -1256,7 +1260,7 @@ bool building_t::check_line_coll_expand(point const &p1, point const &p2, float 
 			}
 			else if (c->type == TYPE_DESK || c->type == TYPE_DRESSER || c->type == TYPE_NIGHTSTAND || c->type == TYPE_TABLE) { // objects with legs
 				cube_t cubes[5];
-				get_table_cubes(*c, cubes); // body and legs
+				get_table_cubes(*c, cubes); // top and 4 legs
 				if (line_int_cubes_exp(p1, p2, cubes, 5, expand)) return 1;
 
 				if (c->type == TYPE_DRESSER || c->type == TYPE_NIGHTSTAND) {

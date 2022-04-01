@@ -1972,11 +1972,16 @@ room_object_t get_desk_drawers_part(room_object_t const &c) {
 	drawers.d[!c.dim][!side] += (side ? 1.0 : -1.0)*0.75*desk_width; // put the drawers off to one side
 	return drawers;
 }
+room_object_t get_desk_top_back(room_object_t const &c, cube_t const &top) {
+	room_object_t c_top_back(c);
+	set_cube_zvals(c_top_back, top.z2(), (top.z2() + 1.8*c.dz()));
+	c_top_back.d[c.dim][c.dir] += 0.75*(c.dir ? -1.0 : 1.0)*c.get_depth();
+	return c_top_back;
+}
 void building_room_geom_t::add_desk(room_object_t const &c, float tscale, bool inc_lg, bool inc_sm) {
 	// desk top and legs, similar to add_table()
-	float const height(c.dz());
 	cube_t top(c);
-	top.z1() += 0.85*height;
+	top.z1() += 0.85*c.dz();
 	point const tex_origin(c.get_llc());
 	colorRGBA const color(apply_wood_light_color(c));
 
@@ -1997,10 +2002,7 @@ void building_room_geom_t::add_desk(room_object_t const &c, float tscale, bool i
 		}
 	}
 	if (inc_lg && c.shape == SHAPE_TALL) { // add top/back section of desk; this part is outside the bcube
-		room_object_t c_top_back(c);
-		set_cube_zvals(c_top_back, top.z2(), (top.z2() + 1.8*height));
-		c_top_back.d[c.dim][c.dir] += 0.75*(c.dir ? -1.0 : 1.0)*c.get_depth();
-		add_bookcase(c_top_back, 1, 1, tscale, 1, 0.4, &tex_origin); // no_shelves=1, side_width=0.4, both large and small, use same tex origin
+		add_bookcase(get_desk_top_back(c, top), 1, 1, tscale, 1, 0.4, &tex_origin); // no_shelves=1, side_width=0.4, both large and small, use same tex origin
 	}
 }
 

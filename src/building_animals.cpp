@@ -730,8 +730,9 @@ void building_t::update_spider_pos_orient(spider_t &spider, point const &camera_
 	get_begin_end_room_objs_on_ground_floor(tc.z2(), 1, b, e); // for_spider=1
 
 	for (auto i = b; i != e; ++i) {
-		if (i->z1() > tc.z2() || i->z2() < tc.z1()) continue;
-		if (!tc.intersects((i->type == TYPE_CLOSET) ? get_true_room_obj_bcube(*i) : *i)) continue; // no intersection with this object
+		if (i->z1() > tc.z2()) continue; // object is too high
+		if (i->z2() < tc.z1() && !(i->type == TYPE_DESK && i->shape == SHAPE_TALL)) continue; // sigh, tall desks are special
+		if (!tc.intersects_xy((i->type == TYPE_CLOSET) ? get_true_room_obj_bcube(*i) : *i)) continue; // no intersection with this object
 		if (!i->is_spider_collidable()) continue;
 		if (i->get_max_extent() < spider.radius) continue; // too small, skip
 		get_room_obj_cubes(*i, spider.pos, cubes, avoid, avoid); // climb on large objects and avoid small and non-cube objects
