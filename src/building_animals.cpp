@@ -615,11 +615,11 @@ class surface_orienter_t {
 public:
 	surface_orienter_t(point const &center_, vector3d const &size_) : center(center_), size(size_), r_outer(size.get_max_val()) {}
 
-	void register_cube(cube_t const &c, unsigned enable_faces) {
+	void register_cube(cube_t const &c) {
 		if (c.contains_pt_exp(center, r_outer)) {colliders.push_back(c);} // record for later processing
 	}
-	void register_cubes(vect_cube_t const &cubes, unsigned enable_faces) {
-		for (cube_t const &c : cubes) {register_cube(c, enable_faces);}
+	void register_cubes(vect_cube_t const &cubes) {
+		for (cube_t const &c : cubes) {register_cube(c);}
 	}
 	bool align_to_surfaces(spider_t &s, float timestep, point const &camera_bs, rand_gen_t &rgen) {
 		float const delta_dir(min(1.0f, 1.5f*(1.0f - pow(0.7f, timestep))));
@@ -685,15 +685,14 @@ public:
 
 void building_t::update_spider_pos_orient(spider_t &spider, point const &camera_bs, float timestep, bool &on_surface, bool &had_coll, rand_gen_t &rgen) const {
 	assert(interior);
-	unsigned const EF_XY12(EF_X12 | EF_Y12);
 	float const trim_thickness(get_trim_thickness());
 	vector3d const size(spider.get_size());
 	surface_orienter_t surface_orienter(spider.pos, size);
 	// Note: we can almost use fc_occluders, except this doesn't contain the very bottom floor because it's not an occluder
 	//surface_orienter.register_cubes(interior->fc_occluders, EF_Z12); // Z surface only
-	surface_orienter.register_cubes(interior->floors,   EF_Z2); // Z2 surface only
-	surface_orienter.register_cubes(interior->ceilings, EF_Z1); // Z1 surface only
-	for (unsigned d = 0; d < 2; ++d) {surface_orienter.register_cubes(interior->walls[d], EF_XY12);} // XY walls
+	surface_orienter.register_cubes(interior->floors);
+	surface_orienter.register_cubes(interior->ceilings);
+	for (unsigned d = 0; d < 2; ++d) {surface_orienter.register_cubes(interior->walls[d]);} // XY walls
 	// check doors
 	cube_t tc(spider.pos);
 	tc.expand_by_xy(size); // use xy_radius for all dims; okay to be convervative
@@ -719,9 +718,7 @@ void building_t::update_spider_pos_orient(spider_t &spider, point const &camera_
 				tight_door_bounds.expand_by_xy(door.get_thickness()); // conservative
 				if (tc.intersects(tight_door_bounds)) {obj_avoid.register_avoid_cube(tight_door_bounds);}
 			}
-			else if (tc.intersects(door)) { // closed door
-				surface_orienter.register_cube(door, (door.dim ? EF_Y12 : EF_X12));
-			}
+			else if (tc.intersects(door)) {surface_orienter.register_cube(door);} // closed door
 		}
 	} // for door_stacks
 	// check interior objects
@@ -735,16 +732,14 @@ void building_t::update_spider_pos_orient(spider_t &spider, point const &camera_
 		if (!tc.intersects_xy((i->type == TYPE_CLOSET) ? get_true_room_obj_bcube(*i) : *i)) continue; // no intersection with this object
 		if (!i->is_spider_collidable()) continue;
 		if (i->get_max_extent() < spider.radius) continue; // too small, skip
-		get_room_obj_cubes(*i, spider.pos, cubes, avoid, avoid); // climb on large objects and avoid small and non-cube objects
-		unsigned faces(EF_XY12 | EF_Z2); // all sides except for Z1
-		if (i->type == TYPE_LIGHT || i->type == TYPE_MIRROR) {faces |= EF_Z1;} // hanging objects
-		surface_orienter.register_cubes(cubes, faces);
+		get_room_obj_cubes(*i, spider.pos, cubes, cubes, avoid); // climb on large and small objects and avoid non-cube objects
+		surface_orienter.register_cubes(cubes);
 		for (cube_t const &c : avoid) {obj_avoid.register_avoid_cube(c);}
 		cubes.clear();
 		avoid.clear();
 	} // for i
 	// check elevators
-	for (elevator_t const &e : interior->elevators) {surface_orienter.register_cube(e, EF_XY12);} // XY surfaces; should we avoid open elevators?
+	for (elevator_t const &e : interior->elevators) {surface_orienter.register_cube(e);} // should we avoid open elevators?
 	// check exterior walls; exterior doors are ignored for now (meaning the spider can walk on them)
 	for (auto i = parts.begin(); i != get_real_parts_end_inc_sec(); ++i) {
 		for (unsigned dim = 0; dim < 2; ++dim) {
@@ -758,8 +753,7 @@ void building_t::update_spider_pos_orient(spider_t &spider, point const &camera_
 					if (j == i) continue; // skip self
 					subtract_cube_from_cubes(*j, cubes); // subtract this part from current cubes by clipping in XY
 				}
-				unsigned const face(dim ? (dir ? EF_Y1 : EF_Y2) : (dir ? EF_X1 : EF_X2));
-				for (cube_t const &c : cubes) {surface_orienter.register_cube(c, face);}
+				for (cube_t const &c : cubes) {surface_orienter.register_cube(c);}
 			} // for dir
 		} // for dim
 	} // for i
