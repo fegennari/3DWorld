@@ -287,14 +287,14 @@ bool can_hide_under(room_object_t const &c, cube_t &hide_area) {
 	return 0;
 }
 
-class dir_gen_t {
+template<bool xy_only> class dir_gen_t {
 	vector<vector3d> dirs;
 	unsigned dir_ix;
 
 	void gen_dirs() {
 		rand_gen_t rgen;
-		dirs.resize(1000);
-		for (auto &dir : dirs) {dir = rgen.signed_rand_vector_spherical_xy().get_norm();}
+		dirs.resize(1009); // make it a prime number
+		for (auto &dir : dirs) {dir = (xy_only ? rgen.signed_rand_vector_spherical_xy() : rgen.signed_rand_vector_spherical()).get_norm();}
 	}
 public:
 	dir_gen_t() : dir_ix(0) {}
@@ -306,7 +306,8 @@ public:
 		return dir;
 	}
 };
-dir_gen_t dir_gen;
+dir_gen_t<1> dir_gen_xy;
+dir_gen_t<0> dir_gen_xyz;
 
 void building_t::update_rat(rat_t &rat, point const &camera_bs, int ped_ix, float timestep, float &max_xmove, bool can_attack_player, rand_gen_t &rgen) const {
 
@@ -483,7 +484,7 @@ void building_t::update_rat(rat_t &rat, point const &camera_bs, int ped_ix, floa
 				target_fov_dp   -= 0.02; // allow for turns outside our field of view
 				target_max_dist *= 0.96;  // decrease the max distance considered
 			}
-			vector3d vdir(dir_gen.gen_dir()); // random XY direction
+			vector3d vdir(dir_gen_xy.gen_dir()); // random XY direction
 
 			if (coll_dir != zero_vector) { // resolve the collision; target_fov_dp is ignored in this case
 				try_resolve_coll(rat.dir, plus_z, coll_dir, vdir, (n <= 10)); // if earlier in the iteration, try moving in a tangent
@@ -608,31 +609,27 @@ void building_t::update_spiders(point const &camera_bs, unsigned building_ix, in
 }
 
 class surface_orienter_t {
-	point center;
 	vector3d size;
-	float r_outer;
-	vect_cube_t colliders; // share across calls?
+	cube_t check_cube;
+	vect_cube_t colliders;
 public:
-	surface_orienter_t(point const &center_, vector3d const &size_) : center(center_), size(size_), r_outer(size.get_max_val()) {}
-
+	void init(point const &p1, point const &p2, vector3d const &size_) {
+		size = size_;
+		check_cube.set_from_point(p1); // include both cur and last points
+		check_cube.union_with_pt (p2);
+		check_cube.expand_by(size.get_max_val()); // we could expand by size, but expanding by the max dim is more conservative and possibly better
+		colliders.clear();
+	}
 	void register_cube(cube_t const &c) {
-		if (c.contains_pt_exp(center, r_outer)) {colliders.push_back(c);} // record for later processing
+		if (c.intersects(check_cube)) {colliders.push_back(c);} // record for later processing in align_to_surfaces()
 	}
 	void register_cubes(vect_cube_t const &cubes) {
 		for (cube_t const &c : cubes) {register_cube(c);}
 	}
-	bool align_to_surfaces(spider_t &s, float timestep, point const &camera_bs, rand_gen_t &rgen) {
-		float const delta_dir(min(1.0f, 1.5f*(1.0f - pow(0.7f, timestep))));
-
-		if (colliders.empty()) { // floating in midair
-			s.pos    = s.last_pos;
-			s.dir    = (delta_dir*-plus_z + (1.0 - delta_dir)*s.dir).get_norm(); // slowly reorient to -z
-			s.pos.z -= 0.5*timestep*s.speed; // drop at half speed
-			orthogonalize_dir(s.upv, s.dir, s.upv, 1);
-			return 0;
-		}
+	bool align_to_surfaces(spider_t &s, float delta_dir, point const &camera_bs, rand_gen_t &rgen) {
+		if (colliders.empty()) return 0; // floating in midair
 		// Note: assumes last_pos is valid and non-intersecting; may not hold for initial placement or when objects are moved
-		float const dist(p2p_dist(s.pos, s.last_pos)), r_inner(size.get_min_val());
+		float const dist(p2p_dist(s.pos, s.last_pos)), r_inner(size.get_min_val()), r_outer(size.get_max_val());
 		vector3d dir, best_dir(s.dir), best_up(s.upv);
 		point best_pos(s.pos);
 		float best_score(0.0); // distance squared
@@ -641,7 +638,7 @@ public:
 		for (unsigned n = 0; n <= 50; ++n) { // include forward on first iteration
 			if (n == 0) {dir = s.dir;}
 			else { // maybe this should be more consistent, such as all multiples of 45 degrees from "forward"
-				dir = rgen.signed_rand_vector().get_norm(); // TODO: precompute and cache
+				dir = dir_gen_xyz.gen_dir(); // random XYZ direction
 				if (dot_product(dir, s.dir) < 0.0) {dir.negate();} // face forward
 			}
 			point cand(s.last_pos + dist*dir);
@@ -662,14 +659,21 @@ public:
 			if (score > best_score) {best_dir = dir; best_up = coll_norm; best_pos = cand; best_score = score;}
 			if (n == 0 && !had_coll) break; // forward direction is still valid, done (early termination optimization)
 		} // for n
-		if (best_score == 0.0) return 0; // no valid directions, must be floating in space
+		if (best_score == 0.0) { // no valid directions, must be floating in space
+			if (colliders.size() == 1) {} // TODO: wrap around the side of the cube?
+			return 0;
+		}
+		vector3d const delta(best_pos - s.pos);
+		float const delta_mag(delta.mag());
+		s.pos = ((delta_mag > s.radius) ? (s.pos + (s.radius/delta_mag)*delta) : best_pos); // limit movement distance to radius
 		s.dir = ((delta_dir*best_dir + (1.0 - delta_dir)*s.dir)).get_norm(); // slowly reorient
 		s.upv = ((delta_dir*best_up  + (1.0 - delta_dir)*s.upv)).get_norm(); // slowly reorient
-		s.pos = best_pos;
 		orthogonalize_dir(s.dir, s.upv, s.dir, 1);
 		return 1;
 	}
 }; // surface_orienter_t
+
+surface_orienter_t surface_orienter; // reused across spiders
 
 class obj_avoid_t {
 	point &pos;
@@ -685,9 +689,8 @@ void building_t::update_spider_pos_orient(spider_t &spider, point const &camera_
 	assert(interior);
 	float const trim_thickness(get_trim_thickness());
 	vector3d const size(spider.get_size());
-	surface_orienter_t surface_orienter(spider.pos, size);
-	// Note: we can almost use fc_occluders, except this doesn't contain the very bottom floor because it's not an occluder
-	//surface_orienter.register_cubes(interior->fc_occluders, EF_Z12); // Z surface only
+	surface_orienter.init(spider.pos, spider.last_pos, size);
+	// Note: we can almost use fc_occluders, except this doesn't contain the very bottom floor because it's not an occluder, and maybe the overlaps would cause problems
 	surface_orienter.register_cubes(interior->floors);
 	surface_orienter.register_cubes(interior->ceilings);
 	for (unsigned d = 0; d < 2; ++d) {surface_orienter.register_cubes(interior->walls[d]);} // XY walls
@@ -755,8 +758,17 @@ void building_t::update_spider_pos_orient(spider_t &spider, point const &camera_
 			} // for dir
 		} // for dim
 	} // for i
-	on_surface = surface_orienter.align_to_surfaces(spider, timestep, camera_bs, rgen);
+	float const delta_dir(min(1.0f, 1.5f*(1.0f - pow(0.7f, timestep))));
+	on_surface = surface_orienter.align_to_surfaces(spider, delta_dir, camera_bs, rgen);
 	had_coll   = obj_avoid.had_coll;
+
+	if (!on_surface) {
+		spider.pos    = spider.last_pos;
+		spider.dir    = (delta_dir*-plus_z + (1.0 - delta_dir)*spider.dir).get_norm(); // slowly reorient to -z
+		spider.pos.z -= 0.5*timestep*spider.speed; // drop at half speed
+		orthogonalize_dir(spider.upv, spider.dir, spider.upv, 1);
+		// TODO: add a web line from the ceiling or object above down to spider.pos
+	}
 }
 
 void building_t::update_spider(spider_t &spider, point const &camera_bs, float timestep, float &max_xmove, rand_gen_t &rgen) const {
