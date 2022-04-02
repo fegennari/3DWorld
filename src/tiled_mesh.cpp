@@ -1852,7 +1852,7 @@ void tile_t::draw(shader_t &s, indexed_vbo_manager_t const &vbo_mgr, unsigned co
 	//timer_t timer("Draw Tile Mesh");
 	// check if the tile was visible in the building mirror reflection but not in normal view (so wasn't setup)
 	//if (get_checkerboard_bit()) return; // checkerboard drawing, for debugging
-	if (reflection_pass == 2 && !(weight_tid > 0 && height_tid > 0 && normal_tid > 0 && shadow_tid > 0)) return;
+	if (!(weight_tid > 0 && height_tid > 0 && normal_tid > 0 && shadow_tid > 0)) return; // textures not yet created
 	fgPushMatrix();
 	vector3d const xlate(get_mesh_xlate());
 	translate_to(xlate); // Note: not easy to replace with a uniform, due to texgen and fog dist calculations in the shader
@@ -1868,7 +1868,7 @@ void tile_t::draw(shader_t &s, indexed_vbo_manager_t const &vbo_mgr, unsigned co
 	}
 	if (reflection_pass == 2) {disable_shadow_maps(s);} // disabled for mirror reflections because shadows don't work
 	else {shader_shadow_map_setup(s);}
-	bind_textures(); // Note:moved after the disable_shadow_maps() call to ensure TU 0 is not overwritten
+	bind_textures(); // Note: moved after the disable_shadow_maps() call to ensure TU 0 is not overwritten
 	unsigned const lod_level(get_lod_level(reflection_pass));
 	draw_mesh_vbo(vbo_mgr, ivbo_ixs, lod_level);
 	
@@ -1908,8 +1908,8 @@ void tile_t::draw_water_cap(shader_t &s, bool textures_already_set) const {
 	bool const dist_water(draw_distant_water());
 	//if (dist_water) return; // skip water cap
 	cube_t const bcube(get_mesh_bcube());
-	static vector<vert_wrap_t> wverts;
-	wverts.resize(0);
+	static vector<vert_wrap_t> wverts; // reused across tiles/frames
+	wverts.clear();
 
 	// draw vertical edges that cap the water volume and will be blended between underwater black and fog colors
 	for (unsigned dim = 0; dim < 2; ++dim) {
@@ -1929,10 +1929,10 @@ void tile_t::draw_water_cap(shader_t &s, bool textures_already_set) const {
 			wverts.emplace_back(point(x2, y2, mzmin));
 			wverts.emplace_back(point(x2, y2, ztop));
 			wverts.emplace_back(point(x1, y1, ztop));
-		}
-	}
+		} // for dir
+	} // for dim
 	if (!wverts.empty()) {
-		if (!textures_already_set) {bind_textures();}
+		if (!textures_already_set && weight_tid > 0) {bind_textures();} // in the rare case where textures haven't been created, I guess we don't bind them
 		int const loc(s.get_uniform_loc("htex_scale"));
 		if (loc >= 0) {s.set_uniform_float(loc, 0.0);} // disable height texture
 		draw_quad_verts_as_tris(wverts);
