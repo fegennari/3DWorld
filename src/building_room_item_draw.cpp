@@ -968,7 +968,7 @@ void draw_stove_flames(room_object_t const &stove, point const &camera_bs, shade
 }
 
 class spider_draw_t {
-	rgeom_mat_t mat;
+	rgeom_mat_t mat, web_mat;
 	unsigned cur_vert_pos;
 	bool is_setup;
 
@@ -1055,6 +1055,15 @@ public:
 		bool any_drawn(0);
 
 		for (spider_t const &S : spiders) { // future work: use instancing
+			if (!shadow_only && S.on_web) { // draw spider webs
+				cube_t strand(S.pos - 0.3*S.radius*S.upv); // end of abdomen
+				set_cube_zvals(strand, (S.pos.z + 1.3*S.radius), S.web_start_zval);
+				strand.expand_by_xy(0.02*S.radius);
+
+				if (strand.z1() < strand.z2() && camera_pdu.cube_visible(strand + xlate)) {
+					web_mat.add_vcylin_to_verts(strand, WHITE, 0, 0, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, 16); // ndiv=16
+				}
+			}
 			cube_t const bcube(S.get_bcube());
 			if (check_clip_cube && !smap_light_clip_cube.intersects(bcube + xlate)) continue; // shadow map clip cube test: fast and high rejection ratio, do this first
 			if (!camera_pdu.cube_visible(bcube + xlate)) continue; // VFC
@@ -1100,6 +1109,12 @@ public:
 			s.add_uniform_float("animation_time", 0.0); // reset animation time
 			s.add_uniform_int("animation_id", 0); // clear animation
 			s.clear_specular();
+			indexed_vao_manager_with_shadow_t::post_render();
+		}
+		if (!web_mat.empty()) {
+			select_texture(WHITE_TEX);
+			tid_nm_pair_dstate_t state(s);
+			web_mat.upload_draw_and_clear(state);
 			indexed_vao_manager_with_shadow_t::post_render();
 		}
 	}

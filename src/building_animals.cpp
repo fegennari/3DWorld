@@ -685,7 +685,7 @@ public:
 	void register_avoid_cube(cube_t const &c) {had_coll |= sphere_cube_int_update_pos(pos, radius, c, p_last);}
 };
 
-void building_t::update_spider_pos_orient(spider_t &spider, point const &camera_bs, float timestep, bool &on_surface, bool &had_coll, rand_gen_t &rgen) const {
+bool building_t::update_spider_pos_orient(spider_t &spider, point const &camera_bs, float timestep, rand_gen_t &rgen) const {
 	assert(interior);
 	float const trim_thickness(get_trim_thickness());
 	vector3d const size(spider.get_size());
@@ -759,16 +759,21 @@ void building_t::update_spider_pos_orient(spider_t &spider, point const &camera_
 		} // for dim
 	} // for i
 	float const delta_dir(min(1.0f, 1.5f*(1.0f - pow(0.7f, timestep))));
-	on_surface = surface_orienter.align_to_surfaces(spider, delta_dir, camera_bs, rgen);
-	had_coll   = obj_avoid.had_coll;
 
-	if (!on_surface) {
+	if (!surface_orienter.align_to_surfaces(spider, delta_dir, camera_bs, rgen)) { // not on a surface
+		if (!spider.on_web) {
+			spider.web_start_zval = max(spider.pos.z, spider.last_pos.z) + spider.get_xy_radius();
+			spider.on_web = 1;
+		}
 		spider.pos    = spider.last_pos;
 		spider.dir    = (delta_dir*-plus_z + (1.0 - delta_dir)*spider.dir).get_norm(); // slowly reorient to -z
 		spider.pos.z -= 0.5*timestep*spider.speed; // drop at half speed
 		orthogonalize_dir(spider.upv, spider.dir, spider.upv, 1);
-		// TODO: add a web line from the ceiling or object above down to spider.pos
 	}
+	else { // on a surface
+		spider.on_web = 0;
+	}
+	return obj_avoid.had_coll;
 }
 
 void building_t::update_spider(spider_t &spider, point const &camera_bs, float timestep, float &max_xmove, rand_gen_t &rgen) const {
@@ -784,12 +789,14 @@ void building_t::update_spider(spider_t &spider, point const &camera_bs, float t
 		spider.dir = zero_vector; // will be set to a valid value on the next frame
 		return;
 	}
-	bool on_surface(0), had_coll(0);
-	update_spider_pos_orient(spider, camera_bs, timestep, on_surface, had_coll, rgen);
+	bool const had_coll(update_spider_pos_orient(spider, camera_bs, timestep, rgen));
 
 	if (had_coll || spider.dir.mag() < 0.5) {spider.choose_new_dir(rgen);} // regenerate dir if collided, zero, or otherwise bad
-	else if (on_surface && (float)tfticks > spider.update_time) { // direction change or sleep
-		if (spider.dist_since_sleep > 2.0*get_window_vspace() && rgen.rand_bool()) { // 50% chance of taking a rest
+	else if ((float)tfticks > spider.update_time) { // direction change or sleep
+		if (spider.on_web) {
+			spider.update_time = (float)tfticks + 1.0*TICKS_PER_SECOND; // wait another 1s before updating
+		}
+		else if (spider.dist_since_sleep > 2.0*get_window_vspace() && rgen.rand_bool()) { // 50% chance of taking a rest
 			spider.sleep_for(0.1, 5.0); // 0.1-5s
 			spider.speed = 0.0; // will reset anim_time in the next frame
 		}

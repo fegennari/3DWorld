@@ -109,9 +109,10 @@ struct rat_t : public building_animal_t {
 
 struct spider_t : public building_animal_t {
 	vector3d upv;
-	float update_time;
+	float update_time, web_start_zval;
+	bool on_web;
 	// this first constructor is for the lower_bound() call in vect_rat_t::get_first_rat_with_x2_gt()
-	spider_t(float xval) : building_animal_t(xval), update_time(0.0) {}
+	spider_t(float xval) : building_animal_t(xval), update_time(0.0), web_start_zval(0.0), on_web(0) {}
 	spider_t(point const &pos_, float radius_, vector3d const &dir_);
 	float get_xy_radius() const {return 2.0*radius;}
 	float get_height   () const {return 2.0*radius;}
@@ -1241,7 +1242,7 @@ private:
 	void update_rat(rat_t &rat, point const &camera_bs, int ped_ix, float timestep, float &max_xmove, bool can_attack_player, rand_gen_t &rgen) const;
 	void scare_rat(rat_t &rat, point const &camera_bs, int ped_ix) const;
 	void scare_rat_at_pos(rat_t &rat, point const &scare_pos, float amount, bool by_sight) const;
-	void update_spider_pos_orient(spider_t &spider, point const &camera_bs, float timestep, bool &on_surface, bool &had_coll, rand_gen_t &rgen) const;
+	bool update_spider_pos_orient(spider_t &spider, point const &camera_bs, float timestep, rand_gen_t &rgen) const;
 	void update_spider(spider_t &spider, point const &camera_bs, float timestep, float &max_xmove, rand_gen_t &rgen) const;
 	void get_room_obj_cubes(room_object_t const &c, point const &pos, vect_cube_t &lg_cubes, vect_cube_t &sm_cubes, vect_cube_t &non_cubes) const;
 	bool check_line_coll_expand(point const &p1, point const &p2, float radius, float height) const;
