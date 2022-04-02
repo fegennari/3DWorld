@@ -1050,9 +1050,9 @@ cached_room_objs_t cached_room_objs;
 
 bool room_object_t::is_floor_collidable() const {return bldg_obj_types[type].rat_coll;}
 
-bool room_object_t::is_spider_collidable() const {
+bool room_object_t::is_spider_collidable() const { // include objects on the floor, walls, and ceilings
 	if (!is_floor_collidable() && type != TYPE_LIGHT && type != TYPE_BRSINK && type && type != TYPE_MIRROR && type != TYPE_MWAVE && type != TYPE_HANGER_ROD &&
-		type != TYPE_LAPTOP && type != TYPE_MONITOR && type != TYPE_CLOTHES && type != TYPE_TOASTER) return 0; // include objects on the floor, walls, and ceilings
+		type != TYPE_LAPTOP && type != TYPE_MONITOR && type != TYPE_CLOTHES && type != TYPE_TOASTER && type != TYPE_CABINET) return 0;
 	if (type == TYPE_BOOK) return 0; // I guess books don't count, since they're too small to walk on?
 	return 1;
 }
