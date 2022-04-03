@@ -991,7 +991,7 @@ bool building_t::add_bathroom_objs(rand_gen_t rgen, room_t const &room, float &z
 		room_object_t const &sink((objs.back().type == TYPE_SINK) ? objs.back() : objs[objs.size()-2]); // find sink, skip blocker
 		
 		if (is_basement || classify_room_wall(room, zval, sink.dim, !sink.dir, 0) != ROOM_WALL_EXT) { // interior wall only
-			// add a mirror above the sink; could later make into medicine cabinet
+			// add a mirror/medicine cabinet above the sink; could later make into medicine cabinet
 			cube_t mirror(sink); // start with the sink left and right position
 			mirror.expand_in_dim(!sink.dim, 0.1*mirror.get_sz_dim(!sink.dim)); // make slightly wider
 			set_cube_zvals(mirror, sink.z2(), sink.z2()+0.3*floor_spacing);

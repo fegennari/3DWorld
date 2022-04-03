@@ -801,7 +801,7 @@ void building_room_geom_t::add_mirror(room_object_t const &c) {
 	if (ENABLE_MIRROR_REFLECTIONS) {tp.emissive = 1.0;}
 	colorRGBA const side_color(apply_light_color(c));
 
-	if (c.is_open()) {
+	if (c.is_open()) { // open medicine cabinet
 		cube_t const mirror(get_mirror_surface(c));
 		float const wall_thickness(get_med_cab_wall_thickness(c));
 		cube_t outside(c), inside(c);

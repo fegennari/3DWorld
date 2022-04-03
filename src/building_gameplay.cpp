@@ -189,6 +189,9 @@ bldg_obj_type_t get_taken_obj_type(room_object_t const &obj) {
 		if      (is_shirt_model(obj)) {type.name = "shirt";}
 		else if (is_pants_model(obj)) {type.name = "pants";}
 	}
+	else if (obj.type == TYPE_MIRROR && (obj.flags & RO_FLAG_IS_HOUSE)) {
+		type.name = "medicine cabinet";
+	}
 	return type;
 }
 rand_gen_t rgen_from_obj(room_object_t const &obj) {
