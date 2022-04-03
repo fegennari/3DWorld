@@ -2767,15 +2767,15 @@ void building_t::add_wall_and_door_trim() { // and window trim
 		trim.expand_in_dim(d->dim, door_trim_exp);
 
 		for (unsigned side = 0; side < 2; ++side) { // left/right of door
-			trim.d[!d->dim][0] = d->d[!d->dim][side] - (side ? door_trim_width : trim_thickness);
-			trim.d[!d->dim][1] = d->d[!d->dim][side] + (side ? trim_thickness : door_trim_width);
+			trim.d[!d->dim][0] = d->d[!d->dim][side] - (side ? trim_thickness : door_trim_width);
+			trim.d[!d->dim][1] = d->d[!d->dim][side] + (side ? door_trim_width : trim_thickness);
 			objs.emplace_back(trim, TYPE_WALL_TRIM, 0, d->dim, side, (flags | RO_FLAG_ADJ_BOT | RO_FLAG_ADJ_TOP), 1.0, SHAPE_TALL, trim_color); // abuse tall flag
 		}
 		// add trim at top of door
 		unsigned const num_floors(calc_num_floors(*d, window_vspacing, floor_thickness));
 		float z(d->z1() + floor_to_ceil_height);
-		trim.d[!d->dim][0] = d->d[!d->dim][0] + door_trim_width;
-		trim.d[!d->dim][1] = d->d[!d->dim][1] - door_trim_width;
+		trim.d[!d->dim][0] = d->d[!d->dim][0] + trim_thickness;
+		trim.d[!d->dim][1] = d->d[!d->dim][1] - trim_thickness;
 
 		for (unsigned f = 0; f < num_floors; ++f, z += window_vspacing) {
 			set_cube_zvals(trim, z-trim_thickness, z); // z2=ceil height
