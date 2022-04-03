@@ -181,7 +181,7 @@ void toggle_city_spectate_mode();
 
 
 // all OpenGL error handling goes through these functions
-bool get_gl_error(unsigned loc_id) {
+bool get_gl_error(unsigned loc_id, const char* stmt, const char* fname) {
 
 	bool had_error(0);
 
@@ -189,10 +189,13 @@ bool get_gl_error(unsigned loc_id) {
 		int const error(glGetError());
 		if (!error) break;
 		const GLubyte *const error_str(gluErrorString(error));
-		cout << "GL Error " << error << " at location id " << loc_id << ": ";
-		if (error_str) {cout << error_str << "." << endl;} else {cout << "<NULL>." << endl;}
+		cerr << "GL Error " << error;
+		if (fname) {cerr << " in statement " << stmt << " file " << fname << " line " << loc_id << ": ";} // from source file
+		else {cerr << " at location id " << loc_id << ": ";} // from check_gl_error()
+		if (error_str) {cerr << error_str << "." << endl;} else {cerr << "<NULL>." << endl;}
 		had_error = 1;
 	}
+	if (fname) {assert(!had_error);} // caller ignores return code in this case, add the assert here
 	return had_error;
 }
 bool check_gl_error(unsigned loc_id) {

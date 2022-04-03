@@ -211,7 +211,6 @@ void draw_stuff(int draw_uw, int timer1, int reflection_pass=0) {
 		draw_splashes();
 		draw_snow();
 		draw_trees(0, (reflection_pass != 0));
-		assert(!get_gl_error());
 		render_voxel_data(0);
 		check_gl_error(20);
 		if (TIMETEST) PRINT_TIME("O");

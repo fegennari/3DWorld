@@ -8,11 +8,19 @@
 struct xform_matrix;
 class tree_cont_t;
 
+// glGetError wrappers
+bool get_gl_error(unsigned loc_id=0, const char* stmt=nullptr, const char* fname=nullptr);
+bool check_gl_error(unsigned loc_id);
+
+#ifdef _DEBUG
+#define GL_CHECK(stmt) stmt; get_gl_error(__LINE__, #stmt, __FILE__);
+#else
+#define GL_CHECK(stmt) stmt
+#endif
+
 int omp_get_thread_num_3dw();
 
 // function prototypes - main (3DWorld.cpp, etc.)
-bool get_gl_error(unsigned loc_id=0);
-bool check_gl_error(unsigned loc_id);
 void enable_blend();
 void disable_blend();
 void set_std_blend_mode();
