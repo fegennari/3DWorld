@@ -1056,7 +1056,7 @@ public:
 
 		for (spider_t const &S : spiders) { // future work: use instancing
 			if (!shadow_only && S.on_web) { // draw spider webs
-				cube_t strand(S.pos - 0.3*S.radius*S.upv); // end of abdomen
+				cube_t strand(S.pos - 0.3*S.radius*S.upv); // end of abdomen (matches body_zval)
 				set_cube_zvals(strand, (S.pos.z + 1.3*S.radius), S.web_start_zval);
 				strand.expand_by_xy(0.02*S.radius);
 
@@ -1101,6 +1101,7 @@ public:
 			fgMultMatrix(xm);
 			uniform_scale(S.radius);
 			check_mvm_update();
+			// Note: we could use hardware instancing here if the MVM is used as a uniform in the shader, but we also need to set per-instance anim_time
 			mat.draw_geom();
 			fgPopMatrix();
 		} // for S

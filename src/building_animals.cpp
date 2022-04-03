@@ -660,8 +660,12 @@ public:
 			if (n == 0 && !had_coll) break; // forward direction is still valid, done (early termination optimization)
 		} // for n
 		if (best_score == 0.0) { // no valid directions, must be floating in space
-			if (colliders.size() == 1) {} // TODO: wrap around the side of the cube?
-			return 0;
+			if (colliders.size() > 1) return 0; // multiple colliders is too complex to handle here
+			point const contact_pt(colliders.back().closest_pt(s.pos));
+			best_up  = (s.pos - contact_pt).get_norm(); // point away from the collider
+			best_pos = contact_pt + r_inner*best_up;
+			orthogonalize_dir(best_dir, best_up, best_dir, 1);
+			delta_dir *= 0.25; // update more smoothly for stability
 		}
 		vector3d const delta(best_pos - s.pos);
 		float const delta_mag(delta.mag());
