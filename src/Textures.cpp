@@ -22,6 +22,7 @@ bool const RELOAD_TEX_ON_HOLE  = 0;
 bool const LANDSCAPE_MIPMAP    = 1; // looks better, but texture update requires mipmap updates
 bool const SHOW_TEXTURE_MEMORY = 0;
 bool const COMPRESS_TEXTURES   = 1;
+bool const ALLOW_SLOW_COMPRESS = 0;
 bool const CHECK_FOR_LUM       = 1;
 float const SMOOTH_SKY_POLES   = 0.2;
 
@@ -37,12 +38,12 @@ texture_t(0, 6, 128,  128,  1, 3, 2, "grass.png", 0, 1, LS_TEX_ANISO), // mipmap
 //texture_t(0, 5, 0,    0,    1, 3, 2, "grass_new.jpg", 0, 1, LS_TEX_ANISO), // 1024x1024; has texture seams, not as bright as other grass
 texture_t(0, 6, 256,  256,  1, 3, 1, "rock.png"),
 texture_t(0, 5, 512,  512,  1, 3, 1, "water.jpg"),
-texture_t(0, 5, 0,    0,    1, 3, 1, "stucco.jpg", 0, 0), // compression is slow
+texture_t(0, 5, 0,    0,    1, 3, 1, "stucco.jpg", 0, ALLOW_SLOW_COMPRESS),
 texture_t(0, 5, 0,    0,    1, 4, 0, "sky.jpg", 1), // 1024x1024
 texture_t(0, 5, 0,    0,    1, 3, 1, "brick1.jpg"), // brick2?
 texture_t(0, 5, 0,    0,    1, 3, 1, "moon.jpg"),
 texture_t(0, 6, 256,  256,  0, 3, 1, "earth.png", 1),
-texture_t(0, 5, 0,    0,    1, 3, 1, "marble.jpg", 0, 0), // or marble2.jpg, compression is slow
+texture_t(0, 5, 0,    0,    1, 3, 1, "marble.jpg", 0, ALLOW_SLOW_COMPRESS), // or marble2.jpg
 texture_t(0, 7, 0,    0,    1, 3, 2, "snow2.jpg", 0, 1, LS_TEX_ANISO),
 texture_t(0, 5, 0,    0,    0, 4, 4, "leaves/green_maple_leaf.jpg", 1, 1, 4.0), // 960x744
 //texture_t(0, 6, 0,    0,    0, 4, 4, "leaves/maple_leaf.png", 1, 1, 4.0), // 344x410
@@ -50,7 +51,7 @@ texture_t(0, 5, 0,    0,    1, 3, 1, "bark2.jpg"), // 512x512 (Note: must match 
 texture_t(0, 5, 512,  512,  1, 3, 2, "desert_sand.jpg", 0, 1, LS_TEX_ANISO),
 texture_t(0, 6, 256,  256,  1, 3, 2, "rock2.png", 0, 1, LS_TEX_ANISO),
 texture_t(0, 5, 512,  512,  1, 3, 1, "camoflage.jpg"),
-texture_t(0, 5, 0,    0,    1, 3, 1, "hedges.jpg", 0, 0), // 1024x1024, compression is slow
+texture_t(0, 5, 0,    0,    1, 3, 1, "hedges.jpg", 0, ALLOW_SLOW_COMPRESS), // 1024x1024
 texture_t(0, 1, 512,  512,  1, 3, 1, "brick1.bmp", 0, 1, 8.0),
 texture_t(0, 5, 512,  512,  1, 3, 1, "manhole.jpg", 1),
 texture_t(0, 5, 0,    0,    0, 4, 4, "leaves/palm_frond_diff.jpg", 0, 1, 4.0), // 512x1024
@@ -59,8 +60,8 @@ texture_t(1, 9, 64,   64,   1, 4, 1, "@plasma"), // not real file
 texture_t(1, 9, 8,    8,    0, 3, 0, "@gen"),    // not real file - unused placeholder
 texture_t(2, 7, 1024, 1024, 0, 3, LANDSCAPE_MIPMAP, "@landscape_tex"), // for loading real landscape texture
 texture_t(1, 9, 128,  128,  0, 3, 0, "@tree_end"),  // not real file
-texture_t(1, 9, 1024, 1024, 1, 4, 1, "@tree_hemi", 0, 1), // not real file, compression is too slow, mipmap for trees?
-texture_t(0, 5, 0  ,  0,    1, 3, 1, "shingles.jpg", 0, 0, 8.0), // compression is slow
+texture_t(1, 9, 1024, 1024, 1, 4, 1, "@tree_hemi", 0, 1), // not real file, mipmap for trees?
+texture_t(0, 5, 0  ,  0,    1, 3, 1, "shingles.jpg", 0, ALLOW_SLOW_COMPRESS, 8.0),
 texture_t(0, 6, 256,  256,  1, 3, 1, "paneling.png", 0, 1, 16.0),
 texture_t(0, 6, 256,  256,  1, 3, 1, "cblock.png", 0, 1, 8.0),
 texture_t(0, 5, 0,    0,    0, 4, 3, "mj_leaf.jpg", 1), // 128x128
@@ -73,7 +74,7 @@ texture_t(0, 6, 256,  256,  0, 4, 3, "plant2.png", 1),
 texture_t(0, 6, 256,  256,  0, 4, 3, "plant3.png", 1),
 //texture_t(0, 5, 0,    0,    0, 4, 3, "plant3.jpg", 1), // 176x256
 texture_t(0, 5, 0,    0,    0, 4, 4, "leaves/leaf_d.jpg", 1), // 200x500
-texture_t(0, 5, 0,    0,    1, 3, 1, "fence.jpg", 0, 0, 8.0), // 896x896, compression is slow
+texture_t(0, 5, 0,    0,    1, 3, 1, "fence.jpg", 0, ALLOW_SLOW_COMPRESS, 8.0), // 896x896
 texture_t(0, 6, 128,  128,  1, 3, 1, "skull.png"),
 texture_t(0, 6, 64,   64,   1, 3, 1, "radiation.png", 1),
 texture_t(0, 6, 128,  128,  1, 3, 1, "yuck.png"),
@@ -83,7 +84,7 @@ texture_t(0, 6, 256,  256,  0, 4, 1, "blur.png", 0, 0), // disable compression -
 texture_t(0, 6, 256,  256,  1, 4, 1, "blur_s.png"),
 texture_t(0, 5, 0,    0,    0, 4, 3, "pine2.jpg", 1, 1, 1.0, 0.5),
 texture_t(0, 6, 128,  128,  1, 3, 1, "noise.png"),
-texture_t(0, 5, 0,    0,    1, 3, 1, "wood.jpg", 0, 0, 4.0), // 768x768, compression is slow
+texture_t(0, 5, 0,    0,    1, 3, 1, "wood.jpg", 0, ALLOW_SLOW_COMPRESS, 4.0), // 768x768
 texture_t(0, 6, 128,  128,  1, 3, 1, "hb_brick.png", 0, 1, 8.0),
 texture_t(0, 6, 128,  128,  1, 3, 1, "particleb.png", 0, 1, 8.0),
 texture_t(0, 6, 128,  128,  1, 3, 1, "plaster.png"),
@@ -119,8 +120,8 @@ texture_t(0, 5, 0,    0,    1, 3, 1, "mossy_rock.jpg"), // 500x500
 texture_t(0, 5, 0,    0,    1, 3, 1, "bark/bark1.jpg"), // 600x600
 texture_t(0, 5, 0,    0,    1, 3, 1, "bark/bark2.jpg"), // 512x512
 texture_t(0, 5, 0,    0,    1, 3, 1, "bark/bark2-normal.jpg", 0, 0, 4.0, 1.0, 1), // 512x512, no compress
-texture_t(0, 5, 0,    0,    1, 3, 1, "bark/bark_lendrick.jpg", 0, 0), // 892x892, compression is slow
-texture_t(0, 6, 0,    0,    1, 3, 1, "bark/bark_lylejk.png", 0, 0), // 1024x768, compression is slow
+texture_t(0, 5, 0,    0,    1, 3, 1, "bark/bark_lendrick.jpg", 0, ALLOW_SLOW_COMPRESS), // 892x892
+texture_t(0, 6, 0,    0,    1, 3, 1, "bark/bark_lylejk.png", 0, ALLOW_SLOW_COMPRESS), // 1024x768
 // normal/caustic maps
 texture_t(0, 4, 0,    0,    1, 3, 1, "normal_maps/water_normal.tga", 0, 0, 8.0, 1.0, 1), // 512x512, no compress
 texture_t(0, 6, 0,    0,    1, 3, 1, "normal_maps/ocean_water_normal.png", 0, 0, 4.0, 1.0, 1), // 1024x1024 (Note: compression disabled as it causes artifacts)
@@ -151,7 +152,7 @@ texture_t(0, 5, 0,    0,    1, 3, 1, "raindrop_dots.jpg"),
 texture_t(0, 5, 0,    0,    1, 3, 1, "spaceship1.jpg"),
 texture_t(0, 5, 0,    0,    1, 3, 1, "spaceship2.jpg"),
 texture_t(0, 6, 0,    0,    0, 4, 1, "atlas/blood.png"),
-texture_t(0, 5, 0,    0,    1, 3, 1, "lichen.jpg", 0, 0), // 1500x1500, compression is probably slow
+texture_t(0, 5, 0,    0,    1, 3, 1, "lichen.jpg", 0, ALLOW_SLOW_COMPRESS), // 1500x1500
 texture_t(0, 5, 0,    0,    1, 3, 1, "bark/palm_bark.jpg"), // 512x512
 texture_t(0, 5, 0,    0,    0, 4, 0, "daisy.jpg", 0, 1, 4.0), // 1024x1024 - no mipmap to avoid filtering artifacts making distant flowers look square (but not too bad with mode 3)
 texture_t(0, 5, 0,    0,    1, 3, 1, "lava.jpg"), // 512x512
@@ -306,11 +307,13 @@ unsigned get_loaded_textures_cpu_mem() {
 	for (auto i = textures.begin(); i != textures.end(); ++i) {mem += i->get_cpu_mem();}
 	return mem;
 }
-
-unsigned get_loaded_textures_gpu_mem() { // Note: ignores texture compression
+unsigned get_loaded_textures_gpu_mem() {
 	unsigned mem(0);
 	for (auto i = textures.begin(); i != textures.end(); ++i) {mem += i->get_gpu_mem();}
 	return mem;
+}
+void print_texture_memory_usage() { // full cities scene: 142MB / 272MB (660MB uncompressed) (244MB with ALLOW_SLOW_COMPRESS=1)
+	cout << "Texture Memory: " << get_loaded_textures_cpu_mem() << " CPU / " << get_loaded_textures_gpu_mem() << " GPU" << endl;
 }
 
 
@@ -499,11 +502,13 @@ void texture_t::init() {
 	build_mipmaps();
 }
 
+bool texture_t::is_texture_compressed() const {
+	return (COMPRESS_TEXTURES && do_compress && type != 2); // no compress if dynamically updated
+}
 GLenum texture_t::calc_internal_format() const {
-
 	assert(ncolors >= 1 && ncolors <= 4);
 	if (is_16_bit_gray) {return GL_R16;} // compressed?
-	return get_internal_texture_format(ncolors, (COMPRESS_TEXTURES && do_compress && type != 2), 0); // linear_space=0
+	return get_internal_texture_format(ncolors, is_texture_compressed(), 0); // linear_space=0
 }
 
 GLenum texture_t::calc_format() const {
@@ -513,16 +518,15 @@ GLenum texture_t::calc_format() const {
 
 void texture_t::do_gl_init(bool free_after_upload) {
 
-	if (SHOW_TEXTURE_MEMORY) {
-		static unsigned tmem(0);
-		unsigned tsize(num_bytes());
-		if (use_mipmaps) {tsize = 4*tsize/3;}
-		tmem += tsize;
-		cout << "tex vmem = " << tmem << endl;
-	}
 	//cout << "bind texture " << name << " size " << width << "x" << height << endl;
 	//timer_t timer("Load and Upload Texture " + name);
 	setup_texture(tid, (use_mipmaps != 0 && !defer_load()), wrap, wrap, mirror, mirror, 0, anisotropy);
+
+	if (SHOW_TEXTURE_MEMORY) {
+		static unsigned tmem(0);
+		tmem += get_gpu_mem();
+		cout << "tex vmem = " << tmem << endl;
+	}
 	if (defer_load()) {deferred_load_and_bind();} // Note: mipmaps are stored in the DDS file and aren't controlled by the use_mipmaps option
 	else {
 		assert(is_allocated());
@@ -986,7 +990,6 @@ void texture_t::load_from_gl() { // also set tid?
 
 void bind_1d_texture(unsigned tid, bool is_array) {
 	glBindTexture((is_array ? GL_TEXTURE_1D_ARRAY : GL_TEXTURE_1D), tid);
-	//assert(glIsTexture(tid)); // too slow?
 }
 
 void bind_2d_texture(unsigned tid, bool is_array, bool multisample) {
@@ -1940,9 +1943,10 @@ float texture_t::get_component(float u, float v, int comp) const {
 
 unsigned texture_t::get_gpu_mem() const {
 	if (!is_bound()) return 0;
-	unsigned mem(num_bytes());
+	unsigned mem(0);
+	if (is_texture_compressed()) {mem = (num_pixels()/16) * ((ncolors == 4) ? 16 : 8);} // assumes DXT1 8:1 RGB and DXT5 4:1 RGBA compression
+	else {mem = num_bytes();}
 	if (use_mipmaps) {mem += mem/3;} // 33% overhead
-	if (do_compress) {mem /= 4;} // assumes DXT2-DXT5 4:1 compression
 	return mem;
 }
 

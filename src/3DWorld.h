@@ -1028,6 +1028,7 @@ public:
 	void init();
 	void do_gl_init(bool free_after_upload=0);
 	void upload_cube_map_face(unsigned ix);
+	bool is_texture_compressed() const;
 	GLenum calc_internal_format() const;
 	GLenum calc_format() const;
 	GLenum get_data_format() const {return (is_16_bit_gray ? GL_UNSIGNED_SHORT : GL_UNSIGNED_BYTE);}

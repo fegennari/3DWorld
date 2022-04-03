@@ -76,6 +76,7 @@ void draw_voxel_edit_volume();
 void play_switch_weapon_sound();
 void toggle_fullscreen();
 void calc_cur_ambient_diffuse();
+void print_texture_memory_usage();
 
 vector3d calc_camera_direction();
 void draw_player_model(point const &pos, vector3d const &dir, int time);
@@ -752,6 +753,8 @@ void display() {
 
 	check_gl_error(0);
 	static unsigned counter(0);
+	//if (counter <= 120) {cout << "frame " << counter << " time " << GET_TIME_MS() << "ms" << endl;} // TESTING: 32s for config_heightmap, 39s with people+cars
+	//print_texture_memory_usage(); // TESTING
 
 	// hack to avoid slow frames when starting OpenMP threads; for some reason, threads started during the first 100 frames slow those frames down
 	if (counter++ < 100) {
