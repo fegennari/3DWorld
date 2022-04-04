@@ -1005,10 +1005,9 @@ public:
 	std::string name;
 
 protected:
-	unsigned char *data, *orig_data, *colored_data, *mm_data;
+	unsigned char *data, *orig_data, *colored_data;
 	unsigned tid;
 	colorRGBA color;
-	vector<unsigned> mm_offsets;
 	enum {DEFER_TYPE_NONE=0, DEFER_TYPE_DDS, DEFER_TYPE_3DWT, NUM_DEFER_TYPE};
 
 	void maybe_swap_rb(unsigned char *ptr) const;
@@ -1016,16 +1015,16 @@ protected:
 public:
 	texture_t() : type(0), format(0), use_mipmaps(0), defer_load_type(DEFER_TYPE_NONE), wrap(0), mirror(0), invert_y(0), do_compress(0), has_binary_alpha(0),
 		is_16_bit_gray(0), no_avg_color_alpha_fill(0), invert_alpha(0), normal_map(0), width(0), height(0), ncolors(0), bump_tid(-1), alpha_tid(-1),
-		anisotropy(1.0), mipmap_alpha_weight(1.0), data(0), orig_data(0), colored_data(0), mm_data(0), tid(0), color(DEF_TEX_COLOR) {}
+		anisotropy(1.0), mipmap_alpha_weight(1.0), data(0), orig_data(0), colored_data(0), tid(0), color(DEF_TEX_COLOR) {}
 
 	texture_t(char t, char f, int w, int h, int wrap_mir, int nc, char um, std::string const &n, bool inv=0, bool do_comp=1, float a=1.0, float maw=1.0, bool nm=0)
 		: type(t), format(f), use_mipmaps(um), defer_load_type(DEFER_TYPE_NONE), wrap(wrap_mir != 0), mirror(wrap_mir == 2), invert_y(inv), do_compress(do_comp),
 		has_binary_alpha(0), is_16_bit_gray(0), no_avg_color_alpha_fill(0), invert_alpha(0), normal_map(nm), width(w), height(h), ncolors(nc), bump_tid(-1),
-		alpha_tid(-1), anisotropy(a), mipmap_alpha_weight(maw), name(n), data(0), orig_data(0), colored_data(0), mm_data(0), tid(0), color(DEF_TEX_COLOR) {}
+		alpha_tid(-1), anisotropy(a), mipmap_alpha_weight(maw), name(n), data(0), orig_data(0), colored_data(0), tid(0), color(DEF_TEX_COLOR) {}
 	bool is_inverted_y_type() const {return (defer_load_type == DEFER_TYPE_DDS);}
 	void set_existing_tid(unsigned tid_, colorRGBA const &color_) {tid = tid_; color = color_;}
 	void set_16_bit_grayscale();
-	void init();
+	void init() {calc_color();}
 	void do_gl_init(bool free_after_upload=0);
 	void upload_cube_map_face(unsigned ix);
 	bool is_texture_compressed() const;
@@ -1035,14 +1034,11 @@ public:
 	void calc_color();
 	void copy_alpha_from_texture(texture_t const &at, bool alpha_in_red_comp);
 	void merge_in_alpha_channel(texture_t const &at);
-	void build_mipmaps();
 	void create_custom_mipmaps();
-	unsigned char const *get_mipmap_data(unsigned level) const;
 	void set_to_color(colorRGBA const &c);
 	void maybe_assign_normal_map_tid(int nm_tid) {if (nm_tid >= 0 && bump_tid < 0) {bump_tid = nm_tid;}}
 	void alloc();
 	void bind_gl() const;
-	void free_mm_data();
 	void free_client_mem();
 	void free_data() {gl_delete(); free_client_mem();}
 	void gl_delete();

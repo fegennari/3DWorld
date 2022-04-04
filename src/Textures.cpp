@@ -477,29 +477,16 @@ void texture_t::bind_gl() const {
 	bind_2d_texture(tid);
 }
 
-void texture_t::free_mm_data() {
-
-	delete [] mm_data;
-	mm_data = NULL;
-	mm_offsets.clear();
-}
-
 void texture_t::free_client_mem() {
 
 	if (orig_data    != data) {delete [] orig_data;}
 	if (colored_data != data) {delete [] colored_data;}
 	delete [] data;
 	data = orig_data = colored_data = NULL;
-	free_mm_data();
 }
 
 void texture_t::gl_delete() {
 	free_texture(tid);
-}
-
-void texture_t::init() {
-	calc_color();
-	build_mipmaps();
 }
 
 bool texture_t::is_texture_compressed() const {
@@ -510,7 +497,6 @@ GLenum texture_t::calc_internal_format() const {
 	if (is_16_bit_gray) {return GL_R16;} // compressed?
 	return get_internal_texture_format(ncolors, is_texture_compressed(), 0); // linear_space=0
 }
-
 GLenum texture_t::calc_format() const {
 	return (is_16_bit_gray ? GL_RED : get_texture_format(ncolors));
 }
@@ -606,40 +592,6 @@ void texture_t::merge_in_alpha_channel(texture_t const &at) {
 }
 
 
-void texture_t::build_mipmaps() {
-
-	if (use_mipmaps != 2) return; // not enabled
-	assert(width == height);
-	if (!mm_offsets.empty()) {assert(mm_data); return;} // already built
-	assert(mm_data == NULL);
-	unsigned data_size(0);
-
-	for (unsigned tsz = width/2; tsz >= 1; tsz /= 2) {
-		mm_offsets.push_back(data_size);
-		data_size += ncolors*tsz*tsz;
-	}
-	mm_data = new unsigned char[data_size];
-	GLenum const format(calc_format());
-
-	for (unsigned level = 0; level < mm_offsets.size(); ++level) {
-		unsigned const tsz(width >> level);
-		assert(tsz > 1);
-		int const ret(gluScaleImage(format, tsz,   tsz,   get_data_format(), get_mipmap_data(level),
-			                                tsz/2, tsz/2, get_data_format(), (mm_data + mm_offsets[level])));
-		if (ret) cout << "GLU error during mipmap image scale: " << gluErrorString(ret) << "." << endl;
-	}
-}
-
-
-unsigned char const *texture_t::get_mipmap_data(unsigned level) const {
-
-	if (level == 0) return get_data(); // base texture
-	assert(level-1 < mm_offsets.size());
-	assert(mm_data != NULL);
-	return (mm_data + mm_offsets[level-1]);
-}
-
-
 void texture_t::set_to_color(colorRGBA const &c) {
 
 	assert(is_allocated());
@@ -647,20 +599,14 @@ void texture_t::set_to_color(colorRGBA const &c) {
 	if (c == ALPHA0 && (orig_data == NULL || data == orig_data)) return; // color disabled (but never enabled)
 	color = c;
 	gl_delete();
-
-	if (c == ALPHA0) { // color disabled
-		data = orig_data;
-		free_mm_data();
-		build_mipmaps();
-		return;
-	}
+	if (c == ALPHA0) {data = orig_data; return;} // color disabled
 	assert(ncolors == 3 || ncolors == 4);
 	color_wrapper c4;
 	c4.set_c4(c);
 	unsigned const size(num_pixels());
 	float const cw_scale(1.0f/(float(c4.c[0]) + float(c4.c[1]) + float(c4.c[2])));
-	if (colored_data == NULL) colored_data = new unsigned char[num_bytes()];
-	if (orig_data    == NULL) orig_data    = data; // make a copy
+	if (colored_data == NULL) {colored_data = new unsigned char[num_bytes()];}
+	if (orig_data    == NULL) {orig_data    = data;} // make a copy
 	data = colored_data;
 	assert(data != NULL);
 
@@ -672,9 +618,7 @@ void texture_t::set_to_color(colorRGBA const &c) {
 		for (int n = 0; n < ncolors; ++n) {
 			d[n] = (unsigned char)min(255.0f, (0.5f*cscale*c4.c[n] + 0.5f*orig_data[pos+n]));
 		}
-	}
-	free_mm_data();
-	build_mipmaps();
+	} // for i
 }
 
 
@@ -864,12 +808,8 @@ bool texture_t::try_compact_to_lum() {
 	// determine if it's really a luminance texture
 	unsigned const npixels(num_pixels());
 	bool is_lum(1);
-
-	for (unsigned i = 0; i < npixels && is_lum; ++i) {
-		is_lum &= (data[3*i+1] == data[3*i] && data[3*i+2] == data[3*i]);
-	}
+	for (unsigned i = 0; i < npixels && is_lum; ++i) {is_lum &= (data[3*i+1] == data[3*i] && data[3*i+2] == data[3*i]);}
 	if (!is_lum) return 0;
-	//cout << "make luminance " << name << endl;
 	// RGB equal, make it a single color (luminance) channel
 	ncolors = 1; // add alpha channel
 	unsigned char *new_data(new unsigned char[num_bytes()]);
