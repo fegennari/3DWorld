@@ -459,6 +459,9 @@
     <ClCompile Include="src\building_basement.cpp">
       <Filter>Source Files\City</Filter>
     </ClCompile>
+    <ClCompile Include="src\texture_utils.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\3DWorld.h">

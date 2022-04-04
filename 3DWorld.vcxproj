@@ -870,6 +870,7 @@
     <ClCompile Include="src\tessellate.cpp" />
     <ClCompile Include="src\Textures.cpp" />
     <ClCompile Include="src\texture_tile_blend\texture_tile_blend.cpp" />
+    <ClCompile Include="src\texture_utils.cpp" />
     <ClCompile Include="src\tiled_mesh.cpp" />
     <ClCompile Include="src\transform_obj.cpp" />
     <ClCompile Include="src\Tree.cpp" />

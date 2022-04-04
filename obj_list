@@ -78,6 +78,7 @@ spray_paint.o
 teleporter.o
 tessellate.o
 Textures.o
+texture_utils.o
 tiled_mesh.o
 transform_obj.o
 Tree.o
