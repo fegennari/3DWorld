@@ -519,7 +519,7 @@ GLenum texture_t::calc_format() const {
 void texture_t::do_gl_init(bool free_after_upload) {
 
 	//cout << "bind texture " << name << " size " << width << "x" << height << endl;
-	//timer_t timer("Load and Upload Texture " + name);
+	//timer_t timer(("Load and Upload Texture " + name), 1, 1);
 	setup_texture(tid, (use_mipmaps != 0 && !defer_load()), wrap, wrap, mirror, mirror, 0, anisotropy);
 
 	if (SHOW_TEXTURE_MEMORY) {

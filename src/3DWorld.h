@@ -1264,7 +1264,7 @@ colorRGBA const BACKGROUND_DAY(0.2, 0.3, 0.8, 1.0);
 colorRGBA const BACKGROUND_NIGHT(BLACK);
 
 
-void register_timing_value(const char *str, int delta_time);
+void register_timing_value(const char *str, int delta_time, bool no_loading_screen=0);
 void toggle_timing_profiler();
 void timing_profiler_stats();
 
@@ -1292,12 +1292,12 @@ void timing_profiler_stats();
 class timer_t {
 	std::string name;
 	int timer1;
-	bool enabled;
+	bool enabled, no_loading_screen;
 public:
-	timer_t(char const *const name_,  bool enabled_=1) : name(name_), timer1(GET_TIME_MS()), enabled(enabled_) {}
-	timer_t(std::string const &name_, bool enabled_=1) : name(name_), timer1(GET_TIME_MS()), enabled(enabled_) {}
+	timer_t(char const *const name_,  bool enabled_=1, bool nls=0) : name(name_), timer1(GET_TIME_MS()), enabled(enabled_), no_loading_screen(nls) {}
+	timer_t(std::string const &name_, bool enabled_=1, bool nls=0) : name(name_), timer1(GET_TIME_MS()), enabled(enabled_), no_loading_screen(nls) {}
 	~timer_t() {end();}
-	void end() {if (enabled && !name.empty()) {register_timing_value(name.c_str(), GET_DELTA_TIME); name.clear();}}
+	void end() {if (enabled && !name.empty()) {register_timing_value(name.c_str(), GET_DELTA_TIME, no_loading_screen); name.clear();}}
 };
 
 
