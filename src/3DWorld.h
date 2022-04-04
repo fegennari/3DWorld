@@ -1026,6 +1026,7 @@ public:
 	void set_16_bit_grayscale();
 	void init() {calc_color();}
 	void do_gl_init(bool free_after_upload=0);
+	void compress_and_send_texture();
 	void upload_cube_map_face(unsigned ix);
 	bool is_texture_compressed() const;
 	GLenum calc_internal_format() const;

@@ -4,6 +4,49 @@
 #include "3DWorld.h"
 #include "function_registry.h"
 
+#define STB_DXT_IMPLEMENTATION
+#include "../dependencies/stb/stb_dxt.h"
+
+
+void dxt_texture_compress(uint8_t const *const data, vector<uint8_t> &comp_data, int width, int height, int ncolors) {
+	timer_t timer("stb_dxt Texture Compress", 1, 1); // enabled, no loading screen
+	assert(width > 0 && height > 0);
+	assert(ncolors == 3 || ncolors == 4);
+	assert(data != nullptr);
+	// RGB=DXT1, RGBA=DXT5
+	bool const has_alpha(ncolors == 4);
+	unsigned const block_sz(has_alpha ? 16 : 8), x_blocks((width + 3)/4), y_blocks((height + 3)/4); // take ceil() for x_blocks/y_blocks
+	comp_data.resize(x_blocks*y_blocks*block_sz);
+
+#pragma omp parallel for schedule(static)
+	for (int y = 0; y < height; y += 4) {
+		uint8_t block[4*4*4] = {};
+
+		for (int x = 0; x < width; x += 4) {
+			for (int yy = 0; yy < 4; ++yy) {
+				for (int xx = 0; xx < 4; ++xx) {
+					unsigned const bix(4*(4*yy + xx));
+					// clamp to valid input texture range in case width and height are not a multiple of 4, which duplicates rows and columns
+					unsigned const dix(ncolors*(width*min(y+yy, height-1) + min(x+xx, width-1)));
+					for (int c = 0; c < ncolors; ++c) {block[bix + c] = data[dix + c];}
+					if (!has_alpha) {block[bix + 3] = 255;} // set alpha=255
+				}
+			}
+			unsigned const comp_offset(((y/4)*x_blocks + (x/4))*block_sz);
+			assert(comp_offset < comp_data.size());
+			stb_compress_dxt_block(&comp_data[comp_offset], block, has_alpha, /*STB_DXT_NORMAL*/STB_DXT_HIGHQUAL);
+		} // for x
+	} // for y
+}
+
+void texture_t::compress_and_send_texture() {
+	vector<uint8_t> comp_data;
+	dxt_texture_compress(data, comp_data, width, height, ncolors);
+	timer_t timer("glCompressedTexImage2D", 1, 1); // enabled, no loading screen
+	GL_CHECK(glCompressedTexImage2D(GL_TEXTURE_2D, 0, calc_internal_format(), width, height, 0, comp_data.size(), comp_data.data());)
+}
+
+// TODO: compress mipmaps as well
 
 void texture_t::create_custom_mipmaps() {
 
