@@ -5,7 +5,7 @@
 #include "function_registry.h"
 
 #define STB_DXT_IMPLEMENTATION
-#include "../dependencies/stb/stb_dxt.h"
+#include "stb_dxt.h"
 
 
 void dxt_texture_compress(uint8_t const *const data, vector<uint8_t> &comp_data, int width, int height, int ncolors) {
@@ -52,7 +52,7 @@ void texture_t::create_compressed_mipmaps() {
 	vector<uint8_t> idata(data, data+num_bytes()), odata, comp_data;
 
 	for (unsigned w = width, h = height, level = 1; w > 1 || h > 1; w >>= 1, h >>= 1, ++level) {
-		unsigned const w1(max(w, 1U)), h1(max(h, 1U)), const w2(max(w>>1, 1U)), h2(max(h>>1, 1U));
+		unsigned const w1(max(w, 1U)), h1(max(h, 1U)), w2(max(w>>1, 1U)), h2(max(h>>1, 1U));
 		unsigned const xinc((w2 < w1) ? ncolors : 0), yinc((h2 < h1) ? ncolors*w1 : 0);
 		odata.resize(ncolors*w2*h2);
 
@@ -74,12 +74,13 @@ void texture_t::create_compressed_mipmaps() {
 
 void texture_t::create_custom_mipmaps() {
 
+	timer_t timer("create_custom_mipmaps", 1, 1); // 600ms
 	assert(is_allocated());
 	vector<uint8_t> idata(data, data+num_bytes()), odata;
 	color_wrapper cw; cw.set_c4(color); // for use_mipmaps == 4 with RGBA
 
 	for (unsigned w = width, h = height, level = 1; w > 1 || h > 1; w >>= 1, h >>= 1, ++level) {
-		unsigned const w1(max(w, 1U)), h1(max(h, 1U)), const w2(max(w>>1, 1U)), h2(max(h>>1, 1U));
+		unsigned const w1(max(w, 1U)), h1(max(h, 1U)), w2(max(w>>1, 1U)), h2(max(h>>1, 1U));
 		unsigned const xinc((w2 < w1) ? ncolors : 0), yinc((h2 < h1) ? ncolors*w1 : 0);
 		odata.resize(ncolors*w2*h2);
 
