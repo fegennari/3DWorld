@@ -415,8 +415,8 @@ void texture_t::load_targa(int index, bool allow_diff_width_height) {
 void texture_t::load_jpeg(int index, bool allow_diff_width_height) {
 
 #ifdef ENABLE_JPEG
-	jpeg_decompress_struct cinfo;
-	jpeg_error_mgr jerr;
+	jpeg_decompress_struct cinfo = {};
+	jpeg_error_mgr jerr = {};
 	cinfo.err = jpeg_std_error(&jerr);
 	jpeg_create_decompress(&cinfo);
 	FILE *fp(open_texture_file(name));
@@ -465,8 +465,8 @@ void texture_t::load_jpeg(int index, bool allow_diff_width_height) {
 int write_jpeg_data(unsigned width, unsigned height, FILE *fp, unsigned char const *const data, bool invert_y) {
 
 #ifdef ENABLE_JPEG
-	struct jpeg_compress_struct cinfo;
-	struct jpeg_error_mgr jerr;
+	struct jpeg_compress_struct cinfo = {};
+	struct jpeg_error_mgr jerr = {};
 	unsigned const step_size(3*width);
 	cinfo.err = jpeg_std_error(&jerr);
 	jpeg_create_compress(&cinfo);
@@ -480,7 +480,7 @@ int write_jpeg_data(unsigned width, unsigned height, FILE *fp, unsigned char con
 	jpeg_start_compress(&cinfo, TRUE);
 
 	while (cinfo.next_scanline < cinfo.image_height) {
-		JSAMPROW row_pointer[1];
+		JSAMPROW row_pointer[1] = {};
 		unsigned const yval(invert_y ? (height-cinfo.next_scanline-1) : cinfo.next_scanline);
 		row_pointer[0] = const_cast<unsigned char *>(&data[yval*step_size]); // cast away the const (we know the data won't be modified)
 		jpeg_write_scanlines(&cinfo, row_pointer, 1);
