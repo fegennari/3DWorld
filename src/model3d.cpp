@@ -1636,7 +1636,7 @@ void model3d::load_all_used_tids() {
 	timer_t timer("Model3d Texture Load", !tmgr.empty());
 #if 0
 	// MT loading flow; will fail with an error if any textures require calling texture_t::resize() due to nested OpenGL calls;
-	// while this mostly works, it's not much faster because the majority of the time is spent in OpenGL calls for things like texture compression
+	// while this mostly works, it's only ~1s faster because of poor load balancing, and there's a lot of time taken later to compress, build mipmaps, and send to the GPU
 	// build a worklist of files to load from disk
 	for (auto &m : materials) {m.queue_textures_to_load(tmgr);}
 	// load the textures from disk in parallel; requires sorting and uniquing textures, which may be shared across multiple materials

@@ -9,7 +9,7 @@
 
 
 void dxt_texture_compress(uint8_t const *const data, vector<uint8_t> &comp_data, int width, int height, int ncolors) {
-	timer_t timer("stb_dxt Texture Compress", 1, 1); // enabled, no loading screen
+	//timer_t timer("stb_dxt Texture Compress", 1, 1); // enabled, no loading screen
 	assert(width > 0 && height > 0);
 	assert(ncolors == 3 || ncolors == 4);
 	assert(data != nullptr);
@@ -46,7 +46,7 @@ void texture_t::compress_and_send_texture() {
 }
 
 void texture_t::create_compressed_mipmaps() {
-	timer_t timer("create_compressed_mipmaps", 1, 1); // enabled, no loading screen
+	//timer_t timer("create_compressed_mipmaps", 1, 1); // enabled, no loading screen
 	assert(is_allocated());
 	vector<uint8_t> idata(data, data+num_bytes()), odata, comp_data;
 
@@ -55,11 +55,14 @@ void texture_t::create_compressed_mipmaps() {
 		unsigned const xinc((w2 < w1) ? ncolors : 0), yinc((h2 < h1) ? ncolors*w1 : 0);
 		odata.resize(ncolors*w2*h2);
 
-		for (unsigned y = 0; y < h2; ++y) { // simple 2x2 box filter
-			for (unsigned x = 0; x < w2; ++x) {
+#pragma omp parallel for schedule(static)
+		for (int y = 0; y < (int)h2; ++y) { // simple 2x2 box filter
+			for (int x = 0; x < (int)w2; ++x) {
 				unsigned const ix1(ncolors*(y*w2+x)), ix2(ncolors*((y<<1)*w1+(x<<1)));
-				UNROLL_3X(odata[ix1+i_] = uint8_t(((unsigned)idata[ix2+i_] + idata[ix2+xinc+i_] + idata[ix2+yinc+i_] + idata[ix2+yinc+xinc+i_]) >> 2););
-				if (ncolors == 4) {odata[ix1+3] = uint8_t(((unsigned)idata[ix2+3] + idata[ix2+xinc+3] + idata[ix2+yinc+3] + idata[ix2+yinc+xinc+3]) >> 2);} // alpha
+
+				for (int n = 0; n < ncolors; ++n) {
+					odata[ix1+n] = uint8_t(((unsigned)idata[ix2+n] + idata[ix2+xinc+n] + idata[ix2+yinc+n] + idata[ix2+yinc+xinc+n]) >> 2);
+				}
 			}
 		}
 		dxt_texture_compress(odata.data(), comp_data, w2, h2, ncolors);
