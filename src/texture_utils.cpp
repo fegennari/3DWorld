@@ -42,7 +42,6 @@ void dxt_texture_compress(uint8_t const *const data, vector<uint8_t> &comp_data,
 void texture_t::compress_and_send_texture() {
 	vector<uint8_t> comp_data;
 	dxt_texture_compress(data, comp_data, width, height, ncolors);
-	timer_t timer("glCompressedTexImage2D", 1, 1); // enabled, no loading screen
 	GL_CHECK(glCompressedTexImage2D(GL_TEXTURE_2D, 0, calc_internal_format(), width, height, 0, comp_data.size(), comp_data.data());)
 }
 
@@ -64,7 +63,6 @@ void texture_t::create_compressed_mipmaps() {
 			}
 		}
 		dxt_texture_compress(odata.data(), comp_data, w2, h2, ncolors);
-		timer_t timer("glCompressedTexImage2D", 1, 1); // enabled, no loading screen
 		glPixelStorei(GL_UNPACK_ALIGNMENT, 1); // is this needed?
 		GL_CHECK(glCompressedTexImage2D(GL_TEXTURE_2D, level, calc_internal_format(), w2, h2, 0, comp_data.size(), comp_data.data());)
 		glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
@@ -72,9 +70,8 @@ void texture_t::create_compressed_mipmaps() {
 	} // for level
 }
 
-void texture_t::create_custom_mipmaps() {
+void texture_t::create_custom_mipmaps() { // 600ms total for city + cars + people
 
-	timer_t timer("create_custom_mipmaps", 1, 1); // 600ms
 	assert(is_allocated());
 	vector<uint8_t> idata(data, data+num_bytes()), odata;
 	color_wrapper cw; cw.set_c4(color); // for use_mipmaps == 4 with RGBA

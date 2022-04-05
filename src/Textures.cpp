@@ -22,7 +22,8 @@ bool const RELOAD_TEX_ON_HOLE  = 0;
 bool const LANDSCAPE_MIPMAP    = 1; // looks better, but texture update requires mipmap updates
 bool const SHOW_TEXTURE_MEMORY = 0;
 bool const COMPRESS_TEXTURES   = 1;
-bool const ALLOW_SLOW_COMPRESS = 0;
+bool const ALLOW_SLOW_COMPRESS = 1;
+bool const USE_STB_DXT         = 1;
 bool const CHECK_FOR_LUM       = 1;
 float const SMOOTH_SKY_POLES   = 0.2;
 
@@ -517,9 +518,17 @@ void texture_t::do_gl_init(bool free_after_upload) {
 	else {
 		assert(is_allocated());
 		assert(width > 0 && height > 0);
-		glTexImage2D(GL_TEXTURE_2D, 0, calc_internal_format(), width, height, 0, calc_format(), get_data_format(), data);
-		if (use_mipmaps == 1 || use_mipmaps == 2) {gen_mipmaps();}
-		if (use_mipmaps == 3 || use_mipmaps == 4) {create_custom_mipmaps();}
+		bool const compressed(is_texture_compressed()), use_custom_compress(USE_STB_DXT && compressed && (ncolors == 3 || ncolors == 4));
+
+		if (use_custom_compress) {compress_and_send_texture();} // compressed RGB or RGBA
+		else { // font atlas and noise gen texture
+			glTexImage2D(GL_TEXTURE_2D, 0, calc_internal_format(), width, height, 0, calc_format(), get_data_format(), data);
+		}
+		if (use_mipmaps == 1 || use_mipmaps == 2) {
+			if (use_custom_compress) {create_compressed_mipmaps();}
+			else {gen_mipmaps();}
+		}
+		else if (use_mipmaps == 3 || use_mipmaps == 4) {create_custom_mipmaps();}
 	}
 	if (free_after_upload) {free_client_mem();}
 }
