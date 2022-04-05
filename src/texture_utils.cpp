@@ -13,9 +13,9 @@ void dxt_texture_compress(uint8_t const *const data, vector<uint8_t> &comp_data,
 	assert(width > 0 && height > 0);
 	assert(ncolors == 3 || ncolors == 4);
 	assert(data != nullptr);
-	// RGB=DXT1, RGBA=DXT5
+	// RGB=DXT1/BC1, RGBA=DXT5/BC3
 	bool const has_alpha(ncolors == 4);
-	unsigned const block_sz(has_alpha ? 16 : 8), x_blocks((width + 3)/4), y_blocks((height + 3)/4); // take ceil() for x_blocks/y_blocks
+	unsigned const block_sz(has_alpha ? 16 : 8), x_blocks((width + 3)/4), y_blocks((height + 3)/4); // take ceil()
 	comp_data.resize(x_blocks*y_blocks*block_sz);
 
 #pragma omp parallel for schedule(static)
@@ -46,7 +46,31 @@ void texture_t::compress_and_send_texture() {
 	GL_CHECK(glCompressedTexImage2D(GL_TEXTURE_2D, 0, calc_internal_format(), width, height, 0, comp_data.size(), comp_data.data());)
 }
 
-// TODO: compress mipmaps as well
+void texture_t::create_compressed_mipmaps() {
+	timer_t timer("create_compressed_mipmaps", 1, 1); // enabled, no loading screen
+	assert(is_allocated());
+	vector<uint8_t> idata(data, data+num_bytes()), odata, comp_data;
+
+	for (unsigned w = width, h = height, level = 1; w > 1 || h > 1; w >>= 1, h >>= 1, ++level) {
+		unsigned const w1(max(w, 1U)), h1(max(h, 1U)), const w2(max(w>>1, 1U)), h2(max(h>>1, 1U));
+		unsigned const xinc((w2 < w1) ? ncolors : 0), yinc((h2 < h1) ? ncolors*w1 : 0);
+		odata.resize(ncolors*w2*h2);
+
+		for (unsigned y = 0; y < h2; ++y) { // simple 2x2 box filter
+			for (unsigned x = 0; x < w2; ++x) {
+				unsigned const ix1(ncolors*(y*w2+x)), ix2(ncolors*((y<<1)*w1+(x<<1)));
+				UNROLL_3X(odata[ix1+i_] = uint8_t(((unsigned)idata[ix2+i_] + idata[ix2+xinc+i_] + idata[ix2+yinc+i_] + idata[ix2+yinc+xinc+i_]) >> 2););
+				if (ncolors == 4) {odata[ix1+3] = uint8_t(((unsigned)idata[ix2+3] + idata[ix2+xinc+3] + idata[ix2+yinc+3] + idata[ix2+yinc+xinc+3]) >> 2);} // alpha
+			}
+		}
+		dxt_texture_compress(odata.data(), comp_data, w2, h2, ncolors);
+		timer_t timer("glCompressedTexImage2D", 1, 1); // enabled, no loading screen
+		glPixelStorei(GL_UNPACK_ALIGNMENT, 1); // is this needed?
+		GL_CHECK(glCompressedTexImage2D(GL_TEXTURE_2D, level, calc_internal_format(), w2, h2, 0, comp_data.size(), comp_data.data());)
+		glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
+		idata.swap(odata);
+	} // for level
+}
 
 void texture_t::create_custom_mipmaps() {
 
