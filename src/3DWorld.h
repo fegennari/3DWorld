@@ -1008,7 +1008,7 @@ protected:
 	unsigned char *data, *orig_data, *colored_data;
 	unsigned tid;
 	colorRGBA color;
-	enum {DEFER_TYPE_NONE=0, DEFER_TYPE_DDS, DEFER_TYPE_3DWC, NUM_DEFER_TYPE};
+	enum {DEFER_TYPE_NONE=0, DEFER_TYPE_DDS, NUM_DEFER_TYPE};
 
 	void maybe_swap_rb(unsigned char *ptr) const;
 
@@ -1053,8 +1053,6 @@ public:
 	void load_dds(int index);
 	void deferred_load_dds();
 	void load_ppm(int index, bool allow_diff_width_height);
-	void load_3dwc(int index);
-	void deferred_load_3dwc();
 	void auto_insert_alpha_channel(int index);
 	void fill_to_grayscale_color(unsigned char color_val);
 	void fill_transparent_with_avg_color();
@@ -1071,7 +1069,6 @@ public:
 	int write_to_jpg(std::string const &fn) const;
 	int write_to_bmp(std::string const &fn) const;
 	int write_to_png(std::string const &fn) const;
-	bool write_3dwc(std::string const &filename="");
 	unsigned get_texel_ix(float u, float v) const;
 	// assumes width and height are a power of 2
 	unsigned get_texel_ix_fast_pow2(float u, float v) const {return (width*(int(height*v) & (height-1)) + (int(width*u) & (width-1)));}
