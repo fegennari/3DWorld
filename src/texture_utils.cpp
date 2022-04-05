@@ -66,9 +66,7 @@ void texture_t::create_compressed_mipmaps() {
 			}
 		}
 		dxt_texture_compress(odata.data(), comp_data, w2, h2, ncolors);
-		glPixelStorei(GL_UNPACK_ALIGNMENT, 1); // is this needed?
 		GL_CHECK(glCompressedTexImage2D(GL_TEXTURE_2D, level, calc_internal_format(), w2, h2, 0, comp_data.size(), comp_data.data());)
-		glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
 		idata.swap(odata);
 	} // for level
 }

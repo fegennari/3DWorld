@@ -820,6 +820,8 @@ void texture_t::load_ppm(int index, bool allow_diff_width_height) {
 }
 
 
+bool gen_mipmaps(unsigned dim=2);
+
 void texture_t::load_3dwc(int index) {
 	defer_load_type = DEFER_TYPE_3DWC;
 }
@@ -849,9 +851,8 @@ void texture_t::deferred_load_3dwc() {
 	glBindTexture(GL_TEXTURE_2D, tid);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL,  GLint(num_levels - 1));
-	glTexStorage2D(GL_TEXTURE_2D, num_levels, internal_format, width, height);
-	//glCompressedTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, width, height, internal_format, size, data.data());
 	glCompressedTexImage2D(GL_TEXTURE_2D, 0, internal_format, width, height, 0, size, data.data());
+	if (use_mipmaps) {gen_mipmaps();} // Note: can't call create_compressed_mipmaps() because we don't have the uncompressed data to start with
 }
 
 bool texture_t::write_3dwc(string const &filename) {
