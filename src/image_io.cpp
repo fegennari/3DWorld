@@ -374,7 +374,6 @@ void texture_t::load_targa(int index, bool allow_diff_width_height) {
 	assert(!is_allocated());
 	tga_image img;
 	tga_result ret(tga_read(&img, append_texture_dir(name).c_str())); // try textures directory
-	//cout << "load texture" << name << endl;
 
 	if (ret != TGA_NOERR) {
 		ret = tga_read(&img, name.c_str()); // try current directory
@@ -393,10 +392,13 @@ void texture_t::load_targa(int index, bool allow_diff_width_height) {
 		cerr << "Incorrect image size for " << name << ": expected " << width << "x" << height << ", got " << img.width << "x" << img.height << endl;
 		exit(1);
 	}
+	// overwrite ncolors; if caller set ncolors=4 then it's not respected because TGA doesn't have an alpha channel
+	if      (img.image_type == TGA_IMAGE_TYPE_BGR  || img.image_type == TGA_IMAGE_TYPE_BGR_RLE ) {ncolors = 3;} // RGB
+	else if (img.image_type == TGA_IMAGE_TYPE_MONO || img.image_type == TGA_IMAGE_TYPE_MONO_RLE) {ncolors = 1;} // Red
+	// else leave ncolors unchanged from what was specified by the caller before load_targa()
 	alloc();
-	//if (!tga_is_top_to_bottom(&img)) tga_flip_vert(&img);
-	//if (tga_is_right_to_left(&img)) tga_flip_horiz(&img);
 
+#pragma omp parallel for schedule(static)
 	for (int y = 0; y < height; ++y) {
 		for (int x = 0; x < width; ++x) {
 			unsigned char const *const pixel(tga_find_pixel(&img, x, height-y-1)); // flip vert
