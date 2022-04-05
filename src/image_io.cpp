@@ -772,13 +772,17 @@ string read_string_ignore_comment_line(istream &in) {
 	return s;
 }
 
+bool open_texture_filebuf(filebuf &fb, string const &name) {
+	return (fb.open(name, (ios::in | ios::binary)) || fb.open(append_texture_dir(name), (ios::in | ios::binary)));
+}
+
 // from Deliot2019
 // https://eheitzresearch.wordpress.com/738-2/
 void texture_t::load_ppm(int index, bool allow_diff_width_height) {
 
 	filebuf fb;
 
-	if (!fb.open(append_texture_dir(name), (ios::in | ios::binary))) {
+	if (!open_texture_filebuf(fb, name)) {
 		cerr << "Error: Couldn't open ppm file " << name << endl;
 		exit(1);
 	}
@@ -822,8 +826,8 @@ void texture_t::load_3dwc(int index) {
 void texture_t::deferred_load_3dwc() {
 	filebuf fb;
 
-	if (!fb.open(append_texture_dir(name), (ios::in | ios::binary))) {
-		cerr << "Error: Couldn't open ppm file " << name << endl;
+	if (!open_texture_filebuf(fb, name)) {
+		cerr << "Error: Couldn't open 3DWC file " << name << endl;
 		exit(1);
 	}
 	istream in(&fb);
