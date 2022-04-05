@@ -1008,7 +1008,7 @@ protected:
 	unsigned char *data, *orig_data, *colored_data;
 	unsigned tid;
 	colorRGBA color;
-	enum {DEFER_TYPE_NONE=0, DEFER_TYPE_DDS, DEFER_TYPE_3DWT, NUM_DEFER_TYPE};
+	enum {DEFER_TYPE_NONE=0, DEFER_TYPE_DDS, DEFER_TYPE_3DWC, NUM_DEFER_TYPE};
 
 	void maybe_swap_rb(unsigned char *ptr) const;
 
@@ -1053,8 +1053,8 @@ public:
 	void load_dds(int index);
 	void deferred_load_dds();
 	void load_ppm(int index, bool allow_diff_width_height);
-	void load_3dwt(int index);
-	void deferred_load_3dwt();
+	void load_3dwc(int index);
+	void deferred_load_3dwc();
 	void auto_insert_alpha_channel(int index);
 	void fill_to_grayscale_color(unsigned char color_val);
 	void fill_transparent_with_avg_color();

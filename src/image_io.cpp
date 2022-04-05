@@ -100,7 +100,7 @@ void texture_t::load(int index, bool allow_diff_width_height, bool allow_two_byt
 	}
 	else {
 		if (format == 7) { // auto
-			// format: 0: RAW, 1: BMP, 2: RAW (upside down), 3: RAW (alpha channel), 4: targa (*tga), 5: jpeg, 6: png, 7: auto, 8: tiff, 10: DDS, 11:ppm, 12:3dwt
+			// format: 0: RAW, 1: BMP, 2: RAW (upside down), 3: RAW (alpha channel), 4: targa (*tga), 5: jpeg, 6: png, 7: auto, 8: tiff, 10: DDS, 11:ppm, 12:3dwc
 			string const ext(get_file_extension(name, 0, 1));
 		
 			if (0) {}
@@ -112,7 +112,7 @@ void texture_t::load(int index, bool allow_diff_width_height, bool allow_two_byt
 			else if (ext == "tif" || ext == "tiff") {format = 8;}
 			else if (ext == "dds") {format = 10;}
 			else if (ext == "ppm") {format = 11;}
-			else if (ext == "3dwt"){format = 12;}
+			else if (ext == "3dwc"){format = 12;}
 			else if (ext == "hdr") {
 				cerr << "Error: HDR texture format is not yet supported: " << name << endl;
 				exit(1);
@@ -133,7 +133,7 @@ void texture_t::load(int index, bool allow_diff_width_height, bool allow_two_byt
 		case 8: load_tiff (index, allow_diff_width_height, allow_two_byte_grayscale); break;
 		case 10: load_dds (index); break;
 		case 11: load_ppm (index, allow_diff_width_height); break;
-		case 12: load_3dwt(index); break;
+		case 12: load_3dwc(index); break;
 		default:
 			cerr << "Unsupported image format: " << format << endl;
 			exit(1);
@@ -710,7 +710,7 @@ void texture_t::deferred_load_and_bind() {
 
 	switch (defer_load_type) {
 	case DEFER_TYPE_DDS:  deferred_load_dds (); break;
-	case DEFER_TYPE_3DWT: deferred_load_3dwt(); break;
+	case DEFER_TYPE_3DWC: deferred_load_3dwc(); break;
 	default:
 		cerr << "Unhandled texture defer type " << defer_load_type << endl;
 		exit(1);
@@ -816,10 +816,10 @@ void texture_t::load_ppm(int index, bool allow_diff_width_height) {
 }
 
 
-void texture_t::load_3dwt(int index) {
-	defer_load_type = DEFER_TYPE_3DWT;
+void texture_t::load_3dwc(int index) {
+	defer_load_type = DEFER_TYPE_3DWC;
 }
-void texture_t::deferred_load_3dwt() {
+void texture_t::deferred_load_3dwc() {
 	filebuf fb;
 
 	if (!fb.open(append_texture_dir(name), (ios::in | ios::binary))) {
@@ -838,7 +838,7 @@ void texture_t::deferred_load_3dwt() {
 	in.read(data.data(), size);
 
 	if (!in.good()) {
-		cerr << "Error reading 3DW file" << endl;
+		cerr << "Error reading 3DWC file" << endl;
 		exit(1);
 	}
 	unsigned const num_levels(1); // TODO: handle mipmaps
@@ -860,7 +860,7 @@ bool texture_t::write_3dwc(string const &filename) {
 	glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_COMPRESSED_IMAGE_SIZE, (GLint *)&size);
 	vector<char> data(size);
 	glGetCompressedTexImage(GL_TEXTURE_2D, 0, data.data());
-	string const fn(filename.empty() ? (name + ".3dw") : filename);
+	string const fn(filename.empty() ? (name + ".3dwc") : filename);
 	ofstream ofs(fn, (ios::out | ios::binary));
 	if (!ofs.good()) return 0;
 	ofs.write((char*)&width,  sizeof(int));
