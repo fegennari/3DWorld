@@ -549,7 +549,7 @@ void texture_t::calc_color() { // incorrect in is_16_bit_gray mode
 	has_binary_alpha = 1;
 
 	if (ncolors == 4) { // RGBA - with alpha component
-		for(unsigned i = 0; i < size; ++i) {
+		for (unsigned i = 0; i < size; ++i) {
 			int const offset(i*ncolors);
 			unsigned char const alpha(data[offset+3]);
 			float const cscale(alpha); // alpha scale
@@ -562,12 +562,15 @@ void texture_t::calc_color() { // incorrect in is_16_bit_gray mode
 		color.alpha = CLIP_TO_01(colors[3]/(255.0f*size));
 	}
 	else {
-		unsigned icolors[3] = {0};
+		unsigned icolors[3] = {};
 
-		for(unsigned i = 0; i < size; ++i) {
-			if (ncolors == 1) {UNROLL_3X(icolors[i_] += data[i*ncolors];);} // grayscale luminance
-			else {UNROLL_3X(icolors[i_] += data[i*ncolors+i_];);} // RGB
-		} // for i
+		if (ncolors == 1) { // grayscale luminance
+			for (unsigned i = 0; i < size; ++i) {icolors[0] += data[i];}
+			icolors[1] = icolors[2] = icolors[0]; // set G and B to the calculated value of R
+		}
+		else { // RGB
+			for (unsigned i = 0; i < size; ++i) {UNROLL_3X(icolors[i_] += data[i*ncolors+i_];);}
+		}
 		UNROLL_3X(color[i_] = icolors[i_]/(255.0*size);) // all weights are 1.0
 		color.alpha = 1.0;
 	}
