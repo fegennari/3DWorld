@@ -46,13 +46,14 @@ void texture_t::compress_and_send_texture() {
 }
 
 void texture_t::create_compressed_mipmaps() {
-	//timer_t timer("create_compressed_mipmaps", 1, 1); // enabled, no loading screen
+	//timer_t timer("create_compressed_mipmaps", 1, 1); // enabled, no loading screen; 1448ms total for city + cars + people
 	assert(is_allocated());
-	vector<uint8_t> idata(data, data+num_bytes()), odata, comp_data;
+	vector<uint8_t> idatav, odata, comp_data;
 
 	for (unsigned w = width, h = height, level = 1; w > 1 || h > 1; w >>= 1, h >>= 1, ++level) {
 		unsigned const w1(max(w, 1U)), h1(max(h, 1U)), w2(max(w>>1, 1U)), h2(max(h>>1, 1U));
 		unsigned const xinc((w2 < w1) ? ncolors : 0), yinc((h2 < h1) ? ncolors*w1 : 0);
+		uint8_t const *const idata((level == 1) ? data : idatav.data());
 		odata.resize(ncolors*w2*h2);
 
 #pragma omp parallel for schedule(static)
@@ -67,19 +68,20 @@ void texture_t::create_compressed_mipmaps() {
 		}
 		dxt_texture_compress(odata.data(), comp_data, w2, h2, ncolors);
 		GL_CHECK(glCompressedTexImage2D(GL_TEXTURE_2D, level, calc_internal_format(), w2, h2, 0, comp_data.size(), comp_data.data());)
-		idata.swap(odata);
+		idatav.swap(odata);
 	} // for level
 }
 
-void texture_t::create_custom_mipmaps() { // 600ms total for city + cars + people
+void texture_t::create_custom_mipmaps() { // 558ms total for city + cars + people
 
 	assert(is_allocated());
-	vector<uint8_t> idata(data, data+num_bytes()), odata;
-	color_wrapper cw; cw.set_c4(color); // for use_mipmaps == 4 with RGBA
+	vector<uint8_t> idatav, odata;
+	color_wrapper cw(color); // for use_mipmaps == 4 with RGBA
 
 	for (unsigned w = width, h = height, level = 1; w > 1 || h > 1; w >>= 1, h >>= 1, ++level) {
 		unsigned const w1(max(w, 1U)), h1(max(h, 1U)), w2(max(w>>1, 1U)), h2(max(h>>1, 1U));
 		unsigned const xinc((w2 < w1) ? ncolors : 0), yinc((h2 < h1) ? ncolors*w1 : 0);
+		uint8_t const *const idata((level == 1) ? data : idatav.data());
 		odata.resize(ncolors*w2*h2);
 
 		for (unsigned y = 0; y < h2; ++y) {
@@ -120,7 +122,7 @@ void texture_t::create_custom_mipmaps() { // 600ms total for city + cars + peopl
 		glPixelStorei(GL_UNPACK_ALIGNMENT, 1); // needed for mipmap levels where width*ncolors is not aligned
 		glTexImage2D(GL_TEXTURE_2D, level, calc_internal_format(), w2, h2, 0, calc_format(), get_data_format(), odata.data());
 		glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
-		idata.swap(odata);
+		idatav.swap(odata);
 	} // for level
 }
 

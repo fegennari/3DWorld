@@ -753,7 +753,7 @@ void display() {
 
 	check_gl_error(0);
 	static unsigned counter(0);
-	//if (counter <= 120) {cout << "frame " << counter << " time " << GET_TIME_MS() << "ms" << endl;} // TESTING: 27s for config_heightmap with people+cars
+	//if (counter <= 120) {cout << "frame " << counter << " time " << GET_TIME_MS() << "ms" << endl;} // TESTING: 26s for config_heightmap with people+cars
 	//print_texture_memory_usage(); // TESTING
 
 	// hack to avoid slow frames when starting OpenMP threads; for some reason, threads started during the first 100 frames slow those frames down
