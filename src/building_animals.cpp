@@ -31,7 +31,7 @@ void building_animal_t::sleep_for(float time_secs_min, float time_secs_max) {
 	wake_time = (float)tfticks + rand_uniform(time_secs_min, time_secs_max)*TICKS_PER_SECOND;
 	dist_since_sleep = 0.0; // reset the counter
 }
-void building_animal_t::move(float timestep) {
+void building_animal_t::move(float timestep, bool can_move_forward) {
 	// update animation time using position change; note that we can't just do the update in the rat movement code below because pos may be reset in case of collision
 	anim_time += p2p_dist(pos, last_pos)/radius; // scale with size so that small rat/spider legs move faster
 	last_pos   = pos;
@@ -43,14 +43,10 @@ void building_animal_t::move(float timestep) {
 	else if (speed == 0.0) {
 		anim_time = 0.0; // reset animation to rest pos
 	}
-	else { // apply movement and check for collisions with dynamic objects
-		vector3d const dest_dir((dest - pos).get_norm());
-
-		if (dot_product(dest_dir, dir) > 0.75) { // only move if we're facing our dest, to avoid walking through an object
-			float const move_dist(timestep*speed);
-			pos               = pos + move_dist*dir;
-			dist_since_sleep += move_dist;
-		}
+	else if (can_move_forward) { // apply movement
+		float const move_dist(timestep*speed);
+		pos = pos + move_dist*dir;
+		dist_since_sleep += move_dist;
 	}
 }
 
@@ -133,7 +129,7 @@ bool play_attack_sound(point const &pos, float gain, float pitch, rand_gen_t &rg
 // *** Rats ***
 
 rat_t::rat_t(point const &pos_, float radius_, vector3d const &dir_) : building_animal_t(pos_, radius_, dir_),
-fear(0.0), is_hiding(0), near_player(0), attacking(0)
+dest(pos), fear(0.0), is_hiding(0), near_player(0), attacking(0)
 {
 	vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_RAT)); // L=3878, W=861, H=801
 	hwidth = radius*sz.y/sz.x; // scale radius by ratio of width to length
@@ -153,6 +149,9 @@ cube_t rat_t::get_bcube_with_dir() const {
 	bcube.expand_in_dim(!pri_dim, radius*min(sz.x, sz.y)/max(sz.x, sz.y)); // smaller dim
 	bcube.z2() += height;
 	return bcube;
+}
+bool rat_t::is_facing_dest() const {
+	return (dot_product((dest - pos).get_norm(), dir) > 0.75); // only move if we're facing our dest, to avoid walking through an object
 }
 
 bool building_t::add_rat(point const &pos, float hlength, vector3d const &dir, point const &placed_from) {
@@ -196,7 +195,7 @@ void building_t::update_rats(point const &camera_bs, unsigned building_ix, int p
 	point rat_alert_pos;
 
 	for (rat_t &rat : rats) { // must be done before sorting
-		rat.move(timestep);
+		rat.move(timestep, rat.is_facing_dest());
 		num_near_player += rat.near_player;
 		if (num_near_player == global_building_params.min_attack_rats) {rat_alert_pos = rat.pos;}
 	}
@@ -849,9 +848,6 @@ void building_t::update_spider(spider_t &spider, point const &camera_bs, float t
 			}
 		}
 	}
-	spider.dest = spider.pos + radius*spider.dir; // put our destination in front of us
-	//update_dir_incremental(spider.dir, new_dir, 1.0, timestep, rgen);
-
 	// handle biting the player
 	if (!in_building_gameplay_mode()) return;
 	if (dot_product_ptv(spider.dir, camera_bs, spider.pos) < 0.0) return; // facing the wrong direction

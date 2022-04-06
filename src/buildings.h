@@ -76,23 +76,23 @@ bottle_params_t const bottle_params[NUM_BOTTLE_TYPES] = {
 };
 
 struct building_animal_t {
-	point pos, last_pos, dest;
+	point pos, last_pos;
 	vector3d dir;
 	float radius, speed, anim_time, wake_time, dist_since_sleep;
 	unsigned id;
 
 	building_animal_t(float xval) : pos(xval, 0.0, 0.0), radius(0), speed(0), anim_time(0), wake_time(0), dist_since_sleep(0), id(0) {}
 	building_animal_t(point const &pos_, float radius_, vector3d const &dir_) :
-		pos(pos_), dest(pos), dir(dir_), radius(radius_), speed(0.0), anim_time(0.0), wake_time(0), dist_since_sleep(0), id(0) {}
+		pos(pos_), dir(dir_), radius(radius_), speed(0.0), anim_time(0.0), wake_time(0), dist_since_sleep(0), id(0) {}
 	bool operator<(building_animal_t const &a) const {return (pos.x < a.pos.x);} // compare only xvals
 	bool is_moving  () const {return (speed     > 0.0);}
 	bool is_sleeping() const {return (wake_time > 0.0);}
 	void sleep_for(float time_secs_min, float time_secs_max);
-	void move(float timestep);
+	void move(float timestep, bool can_move_forward=1);
 };
 
 struct rat_t : public building_animal_t {
-	point fear_pos;
+	point dest, fear_pos;
 	float height, hwidth, fear;
 	bool is_hiding, near_player, attacking;
 
@@ -105,6 +105,7 @@ struct rat_t : public building_animal_t {
 	point get_center () const {return point(pos.x, pos.y, (pos.z + 0.5f*height));}
 	cube_t get_bcube () const; // used for collision detection and VFC; bounding cube across rotations
 	cube_t get_bcube_with_dir() const; // used for model drawing; must be correct aspect ratio
+	bool is_facing_dest() const;
 };
 
 struct spider_t : public building_animal_t {
