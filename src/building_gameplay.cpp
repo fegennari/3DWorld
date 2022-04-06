@@ -994,7 +994,7 @@ bool building_room_geom_t::open_nearest_drawer(building_t &building, point const
 
 		if ((obj.drawer_flags & flag_bit) && !(obj.state_flags & flag_bit)) { // first opening of this drawer
 			maybe_spawn_spider_in_drawer(obj, c_test, has_doors);
-			obj.state_flags |= flag_bit;
+			obj.state_flags |= flag_bit; // mark as having been opened so that we don't try to spawn another spider next time
 		}
 		point const drawer_center(drawer.get_cube_center());
 		if (has_doors) {building.play_door_open_close_sound(drawer_center, obj.is_open(), 0.5, 1.5);}

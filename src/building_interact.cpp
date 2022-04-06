@@ -616,6 +616,11 @@ bool check_ball_kick(room_object_t &ball, vector3d &velocity, point &new_center,
 	return 1;
 }
 
+void apply_building_gravity(float &vz, float dt_ticks) {
+	vz -= OBJ_GRAVITY*dt_ticks; // apply gravitational acceleration
+	max_eq(vz, -TERM_VELOCITY);
+}
+
 void building_t::update_player_interact_objects(point const &player_pos, int first_ped_ix) {
 	assert(interior);
 	interior->update_elevators(*this, player_pos);
@@ -684,8 +689,7 @@ void building_t::update_player_interact_objects(point const &player_pos, int fir
 					if (velocity.mag_sq() < MIN_VELOCITY*MIN_VELOCITY) {velocity = zero_vector;} // zero velocity if stopped
 				}
 				else { // in the air - apply gravity
-					velocity.z -= OBJ_GRAVITY*step_sz; // apply gravitational acceleration
-					max_eq(velocity.z, -TERM_VELOCITY);
+					apply_building_gravity(velocity.z, step_sz);
 				}
 				if (velocity == zero_vector) { // stopped
 					c->flags &= ~RO_FLAG_DYNAMIC; // clear dynamic flag

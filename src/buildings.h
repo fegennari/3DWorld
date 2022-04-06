@@ -110,16 +110,20 @@ struct rat_t : public building_animal_t {
 
 struct spider_t : public building_animal_t {
 	vector3d upv;
-	float update_time, web_start_zval;
+	float update_time, web_start_zval, jump_vel_z, jump_dist;
 	bool on_web;
 	// this first constructor is for the lower_bound() call in vect_rat_t::get_first_rat_with_x2_gt()
-	spider_t(float xval) : building_animal_t(xval), update_time(0.0), web_start_zval(0.0), on_web(0) {}
+	spider_t(float xval) : building_animal_t(xval), update_time(0.0), web_start_zval(0.0), jump_vel_z(0.0), jump_dist(0.0), on_web(0) {}
 	spider_t(point const &pos_, float radius_, vector3d const &dir_);
 	float get_xy_radius() const {return 2.0*radius;}
 	float get_height   () const {return 2.0*radius;}
 	vector3d get_size  () const;
 	cube_t get_bcube   () const; // used for collision detection and VFC
 	void choose_new_dir(rand_gen_t &rgen);
+	// jumping logic
+	void jump(float vel);
+	bool is_jumping() const {return (jump_vel_z != 0.0);}
+	void end_jump  ();
 };
 
 template<typename T> struct vect_animal_t : public vector<T> {
@@ -811,7 +815,7 @@ struct building_room_geom_t {
 	void expand_med_cab(room_object_t const &c);
 	void expand_object(room_object_t &c);
 	static room_object_t get_item_in_drawer(room_object_t const &c, cube_t const &drawer, unsigned drawer_ix);
-	void maybe_spawn_spider_in_drawer(room_object_t const &c, cube_t const &drawer, bool is_door);
+	bool maybe_spawn_spider_in_drawer(room_object_t const &c, cube_t const &drawer, bool is_door);
 	// other functions
 	bool closet_light_is_on(cube_t const &closet) const;
 	int find_nearest_pickup_object(building_t const &building, point const &at_pos, vector3d const &in_dir, float range, float &obj_dist) const;

@@ -25,6 +25,7 @@ sphere_t get_cur_frame_loudest_sound();
 bool in_building_gameplay_mode();
 bool player_take_damage(float damage_scale, bool poisoned=0, bool *has_key=nullptr);
 cube_t get_true_room_obj_bcube(room_object_t const &c);
+void apply_building_gravity(float &vz, float dt_ticks);
 
 
 void building_animal_t::sleep_for(float time_secs_min, float time_secs_max) {
@@ -573,7 +574,7 @@ void building_t::scare_rat_at_pos(rat_t &rat, point const &scare_pos, float amou
 
 // Note: radius is really used for height and body size; legs can extend out to ~2x radius, so we decrease radius to half the user-specified value to account for this
 spider_t::spider_t(point const &pos_, float radius_, vector3d const &dir_) :
-	building_animal_t(pos_, 0.5*radius_, dir_), upv(plus_z), update_time(0.0), web_start_zval(0.0), on_web(0)
+	building_animal_t(pos_, 0.5*radius_, dir_), upv(plus_z), update_time(0.0), web_start_zval(0.0), jump_vel_z(0.0), jump_dist(0.0), on_web(0)
 {
 	pos.z += radius; // shift upward so that the center is off the ground
 }
@@ -592,19 +593,28 @@ void spider_t::choose_new_dir(rand_gen_t &rgen) {
 	if (upv == zero_vector) {upv = plus_z;} // can this ever happen?
 	dir = cross_product(rgen.signed_rand_vector(), upv).get_norm(); // must be orthogonal to upv
 }
+void spider_t::jump(float vel) {
+	assert(vel > 0.0);
+	jump_vel_z = vel; // overwrite if already set
+	speed      = 0.5*vel; // set forward speed lower for a steeper jump; dir must be set (and should probably be in the XY plane)
+}
+void spider_t::end_jump() {
+	if (is_jumping()) {jump_vel_z = speed = 0.0;}
+}
 
-void building_room_geom_t::maybe_spawn_spider_in_drawer(room_object_t const &c, cube_t const &drawer, bool is_door) {
-	if (global_building_params.num_spiders_max == 0) return; // no spiders
-	float radius(0.5f*(global_building_params.spider_size_min + global_building_params.spider_size_max)); // average size
-	min_eq(radius, 0.8f*min(drawer.dz(), 0.5f*min(drawer.dx(), drawer.dy()))); // make sure it fits in the drawer
+bool building_room_geom_t::maybe_spawn_spider_in_drawer(room_object_t const &c, cube_t const &drawer, bool is_door) {
+	if (global_building_params.spider_drawer_prob == 0.0) return 0; // no spiders
+	rand_gen_t rgen;
+	c.set_rand_gen_state(rgen);
+	if (rgen.rand_float() >= global_building_params.spider_drawer_prob) return 0; // no spider
+	float radius(rgen.rand_uniform(global_building_params.spider_size_min, global_building_params.spider_size_max));
+	min_eq(radius, rgen.rand_uniform(0.5, 0.9)*min(drawer.dz(), 0.5f*min(drawer.dx(), drawer.dy()))); // make sure it fits in the drawer
 	vector3d dir;
 	dir[c.dim] = (c.dir ? 1.0 : -1.0); // face the outside of the drawer
 	point const pos(drawer.xc(), drawer.yc(), drawer.z1());
 	spiders.emplace_back(pos, radius, dir);
-
-	if (!is_door) {
-		// TODO: make it jump up and outward
-	}
+	if (!is_door) {spiders.back().jump(0.0025);} // jump out of drawers
+	return 1;
 }
 
 void building_t::update_spiders(point const &camera_bs, unsigned building_ix, int ped_ix) {
@@ -778,18 +788,22 @@ bool building_t::update_spider_pos_orient(spider_t &spider, point const &camera_
 		} // for dim
 	} // for i
 	float const delta_dir(min(1.0f, 1.5f*(1.0f - pow(0.7f, timestep))));
+	if (obj_avoid.had_coll) {spider.end_jump();}
 
 	if (!surface_orienter.align_to_surfaces(spider, delta_dir, camera_bs, rgen)) { // not on a surface
-		if (!spider.on_web) {
-			spider.web_start_zval = max(spider.pos.z, spider.last_pos.z) + spider.get_xy_radius();
-			spider.on_web = 1;
+		if (!spider.is_jumping()) { // if jumping, we continue the jump; otherwise, drop to a surface below
+			if (!spider.on_web) {
+				spider.web_start_zval = max(spider.pos.z, spider.last_pos.z) + spider.get_xy_radius();
+				spider.on_web = 1;
+			}
+			spider.pos    = spider.last_pos;
+			spider.dir    = (delta_dir*-plus_z + (1.0 - delta_dir)*spider.dir).get_norm(); // slowly reorient to -z
+			spider.pos.z -= 0.5*timestep*spider.speed; // drop at half speed
+			orthogonalize_dir(spider.upv, spider.dir, spider.upv, 1);
 		}
-		spider.pos    = spider.last_pos;
-		spider.dir    = (delta_dir*-plus_z + (1.0 - delta_dir)*spider.dir).get_norm(); // slowly reorient to -z
-		spider.pos.z -= 0.5*timestep*spider.speed; // drop at half speed
-		orthogonalize_dir(spider.upv, spider.dir, spider.upv, 1);
 	}
 	else { // on a surface
+		spider.end_jump();
 		spider.on_web = 0;
 	}
 	return obj_avoid.had_coll;
@@ -798,17 +812,28 @@ bool building_t::update_spider_pos_orient(spider_t &spider, point const &camera_
 void building_t::update_spider(spider_t &spider, point const &camera_bs, float timestep, float &max_xmove, rand_gen_t &rgen) const {
 	
 	if (spider.is_sleeping()) return; // peacefully sleeping
+	float const radius(spider.radius), height(2.0*radius), coll_radius(2.0f*radius);
+	float const spider_z1(spider.pos.z - height), spider_z2(spider.pos.z + height);
+
+	if (spider.is_jumping()) { // jumping
+		spider.jump_dist += p2p_dist_xy(spider.pos, spider.last_pos);
+		spider.pos.z     += timestep*spider.jump_vel_z;
+		apply_building_gravity(spider.jump_vel_z, timestep);
+		// if we're still in the initial phase of our jump, skip collision and movement logic below to avoid initial coll with our starting object
+		if (spider.jump_dist < 2.0*spider.radius && is_pos_inside_building(spider.pos, radius, radius)) return;
+	}
 	rgen.rand_mix(); // make sure it's different per spider
 	// Note: we use a small xy_pad to allow the spider to climb on exterior walls
-	float const radius(spider.radius), height(2.0*radius), coll_radius(2.0f*radius), xy_pad(radius/*coll_radius + get_trim_thickness()*/);
 	if (spider.speed == 0.0) {spider.speed = global_building_params.spider_speed*rgen.rand_uniform(0.5, 1.0);} // random speed
 
-	if (!is_pos_inside_building(spider.pos, xy_pad, radius)) {
+	if (!is_pos_inside_building(spider.pos, radius, radius)) {
+		spider.end_jump();
 		spider.pos = spider.last_pos; // restore previous pos before collision
 		spider.dir = zero_vector; // will be set to a valid value on the next frame
 		return;
 	}
 	bool const had_coll(update_spider_pos_orient(spider, camera_bs, timestep, rgen));
+	if (had_coll) {spider.end_jump();}
 
 	if (had_coll || spider.dir.mag() < 0.5) {spider.choose_new_dir(rgen);} // regenerate dir if collided, zero, or otherwise bad
 	else if ((float)tfticks > spider.update_time) { // direction change or sleep
@@ -829,11 +854,12 @@ void building_t::update_spider(spider_t &spider, point const &camera_bs, float t
 	vector3d coll_dir;
 	point const prev_pos(spider.pos); // capture the pre-collision point
 
-	if (check_and_handle_dynamic_obj_coll(spider.pos, coll_radius, (spider.pos.z - height), (spider.pos.z + height), camera_bs, 1)) { // check for collisions; for_spider=1
+	if (!spider.is_jumping() && check_and_handle_dynamic_obj_coll(spider.pos, coll_radius, spider_z1, spider_z2, camera_bs, 1)) { // check for collisions; for_spider=1
+		spider.end_jump();
 		coll_dir = (prev_pos - spider.pos).get_norm(); // points toward the collider in the XY plane
 
 		// check if new pos is valid, and has a path to dest
-		if (!is_pos_inside_building(spider.pos, xy_pad, radius)) {
+		if (!is_pos_inside_building(spider.pos, radius, radius)) {
 			spider.pos = prev_pos; // restore previous pos before collision
 			spider.sleep_for(0.1, 0.2); // wait 0.1-0.2s so that we don't immediately collide and get pushed out again
 		}
