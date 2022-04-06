@@ -241,6 +241,7 @@ void building_params_t::init_kw_maps() {
 	kwmf.add("spider_speed",    spider_speed);
 	kwmr.add("spider_size_min", spider_size_min, FP_CHECK_POS);
 	kwmr.add("spider_size_max", spider_size_max, FP_CHECK_POS);
+	kwmr.add("spider_drawer_prob", spider_drawer_prob, FP_CHECK_01);
 	// gameplay state
 	kwmr.add("open_door_prob",   open_door_prob,   FP_CHECK_01);
 	kwmr.add("locked_door_prob", locked_door_prob, FP_CHECK_01);
