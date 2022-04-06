@@ -573,7 +573,9 @@ void building_t::scare_rat_at_pos(rat_t &rat, point const &scare_pos, float amou
 // *** Spiders ***
 
 // Note: radius is really used for height and body size; legs can extend out to ~2x radius, so we decrease radius to half the user-specified value to account for this
-spider_t::spider_t(point const &pos_, float radius_, vector3d const &dir_) : building_animal_t(pos_, 0.5*radius_, dir_), upv(plus_z), update_time(0.0) {
+spider_t::spider_t(point const &pos_, float radius_, vector3d const &dir_) :
+	building_animal_t(pos_, 0.5*radius_, dir_), upv(plus_z), update_time(0.0), web_start_zval(0.0), on_web(0)
+{
 	pos.z += radius; // shift upward so that the center is off the ground
 }
 cube_t spider_t::get_bcube() const {
