@@ -491,19 +491,20 @@ struct oriented_cube_t : public cube_t {
 	float get_height() const {return dz();}
 };
 
-struct room_object_t : public oriented_cube_t {
+struct room_object_t : public oriented_cube_t { // size=64
 	uint8_t room_id; // for at most 256 rooms per floor
-	uint16_t obj_id, drawer_flags, item_flags;
+	uint16_t obj_id, drawer_flags, item_flags, state_flags; // Note: state_flags is used for drawer was_opened state
 	room_object type; // 8-bit
 	room_obj_shape shape; // 8-bit
 	unsigned flags;
 	float light_amt;
 	colorRGBA color;
 
-	room_object_t() : room_id(0), obj_id(0), drawer_flags(0), item_flags(0), type(TYPE_NONE), shape(SHAPE_CUBE), flags(0), light_amt(1.0) {}
+	room_object_t() : room_id(0), obj_id(0), drawer_flags(0), item_flags(0), state_flags(0), type(TYPE_NONE), shape(SHAPE_CUBE), flags(0), light_amt(1.0) {}
 	room_object_t(cube_t const &c, room_object type_, uint8_t rid, bool dim_=0, bool dir_=0, unsigned f=0, float light=1.0,
 		room_obj_shape shape_=SHAPE_CUBE, colorRGBA const color_=WHITE, uint16_t iflags=0) :
-		oriented_cube_t(c, dim_, dir_), room_id(rid), obj_id(0), drawer_flags(0), item_flags(iflags), type(type_), shape(shape_), flags(f), light_amt(light), color(color_)
+		oriented_cube_t(c, dim_, dir_), room_id(rid), obj_id(0), drawer_flags(0), item_flags(iflags),
+		state_flags(0), type(type_), shape(shape_), flags(f), light_amt(light), color(color_)
 	{check_normalized();}
 	void check_normalized() const;
 	unsigned get_combined_flags() const {return (((unsigned)drawer_flags << 16) + (unsigned)item_flags);} // treat {drawer_flags, item_flags} as a single 32-bit flags
@@ -809,6 +810,7 @@ struct building_room_geom_t {
 	void expand_med_cab(room_object_t const &c);
 	void expand_object(room_object_t &c);
 	static room_object_t get_item_in_drawer(room_object_t const &c, cube_t const &drawer, unsigned drawer_ix);
+	void maybe_spawn_spider_in_drawer(room_object_t const &c, cube_t const &drawer, bool is_door);
 	// other functions
 	bool closet_light_is_on(cube_t const &closet) const;
 	int find_nearest_pickup_object(building_t const &building, point const &at_pos, vector3d const &in_dir, float range, float &obj_dist) const;

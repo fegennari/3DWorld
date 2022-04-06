@@ -989,7 +989,13 @@ bool building_room_geom_t::open_nearest_drawer(building_t &building, point const
 		else {c_test.d[obj.dim][obj.dir] += drawer_extend;} // drawer
 		if (cube_intersects_moved_obj(c_test, closest_obj_id)) return 0; // blocked, can't open; ignore this object
 		if (check_only) return 1;
-		obj.drawer_flags ^= (1U << (unsigned)closest_obj_id); // toggle flag bit for selected drawer
+		unsigned const flag_bit(1U << (unsigned)closest_obj_id);
+		obj.drawer_flags ^= flag_bit; // toggle flag bit for selected drawer
+
+		if ((obj.drawer_flags & flag_bit) && !(obj.state_flags & flag_bit)) { // first opening of this drawer
+			maybe_spawn_spider_in_drawer(obj, c_test, has_doors);
+			obj.state_flags |= flag_bit;
+		}
 		point const drawer_center(drawer.get_cube_center());
 		if (has_doors) {building.play_door_open_close_sound(drawer_center, obj.is_open(), 0.5, 1.5);}
 		else {gen_sound_thread_safe(SOUND_SLIDING, building.local_to_camera_space(drawer_center), 0.5);}

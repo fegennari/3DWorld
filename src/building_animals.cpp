@@ -594,6 +594,20 @@ void spider_t::choose_new_dir(rand_gen_t &rgen) {
 	dir = cross_product(rgen.signed_rand_vector(), upv).get_norm(); // must be orthogonal to upv
 }
 
+void building_room_geom_t::maybe_spawn_spider_in_drawer(room_object_t const &c, cube_t const &drawer, bool is_door) {
+	if (global_building_params.num_spiders_max == 0) return; // no spiders
+	float radius(0.5f*(global_building_params.spider_size_min + global_building_params.spider_size_max)); // average size
+	min_eq(radius, 0.8f*min(drawer.dz(), 0.5f*min(drawer.dx(), drawer.dy()))); // make sure it fits in the drawer
+	vector3d dir;
+	dir[c.dim] = (c.dir ? 1.0 : -1.0); // face the outside of the drawer
+	point const pos(drawer.xc(), drawer.yc(), drawer.z1());
+	spiders.emplace_back(pos, radius, dir);
+
+	if (!is_door) {
+		// TODO: make it jump up and outward
+	}
+}
+
 void building_t::update_spiders(point const &camera_bs, unsigned building_ix, int ped_ix) {
 	if (global_building_params.num_spiders_max == 0) return;
 	vect_spider_t &spiders(interior->room_geom->spiders);
