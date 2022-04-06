@@ -59,6 +59,8 @@ void building_t::update_animals(point const &camera_bs, unsigned building_ix, in
 
 template<typename T> void building_t::add_animals_on_floor(T &animals, unsigned building_ix, unsigned num_min, unsigned num_max, float sz_min, float sz_max) const {
 	if (animals.placed) return; // already placed
+	animals.placed = 1; // even if there were no animals placed
+	if (num_max == 0) return; // none to place
 	rand_gen_t rgen;
 	rgen.set_state(building_ix+1, mat_ix+1); // unique per building
 	float const floor_spacing(get_window_vspace());
@@ -72,7 +74,6 @@ template<typename T> void building_t::add_animals_on_floor(T &animals, unsigned 
 		if (pos == all_zeros) continue; // bad pos? skip this animal
 		animals.add(typename T::value_type(pos, radius, rgen.signed_rand_vector_xy().get_norm()));
 	}
-	animals.placed = 1; // even if there were no animals placed
 }
 
 point building_t::gen_animal_floor_pos(float radius, rand_gen_t &rgen) const {
@@ -183,7 +184,6 @@ bool building_t::add_rat(point const &pos, float hlength, vector3d const &dir, p
 }
 
 void building_t::update_rats(point const &camera_bs, unsigned building_ix, int ped_ix) {
-	if (global_building_params.num_rats_max == 0) return;
 	vect_rat_t &rats(interior->room_geom->rats);
 	if (rats.placed && rats.empty()) return; // no rats placed in this building
 	if (!building_obj_model_loader.is_model_valid(OBJ_MODEL_RAT)) return; // no rat model
@@ -618,7 +618,6 @@ bool building_room_geom_t::maybe_spawn_spider_in_drawer(room_object_t const &c, 
 }
 
 void building_t::update_spiders(point const &camera_bs, unsigned building_ix, int ped_ix) {
-	if (global_building_params.num_spiders_max == 0) return;
 	vect_spider_t &spiders(interior->room_geom->spiders);
 	if (spiders.placed && spiders.empty()) return; // no spiders placed in this building
 	//timer_t timer("Update Spiders");
