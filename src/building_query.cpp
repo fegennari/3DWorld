@@ -1378,9 +1378,9 @@ template<typename T> void vect_animal_t<T>::update_delta_sum_for_animal_coll(poi
 	for (auto r = start; r != this->end(); ++r) {
 		if (r->pos.x > coll_x2) break; // none after this can overlap - done
 		if (r->pos == pos) continue; // skip ourself
-		if (z1 > (r->pos.z + r->get_height()) || z2 < r->pos.z) continue; // different floors
 		float const rsum(radius_scale*(radius + r->radius));
 		if (!dist_xy_less_than(pos, r->pos, rsum)) continue; // no collision
+		if (z2 < r->pos.z || z1 > (r->pos.z + r->get_height())) continue; // different floors; less likely to reject, so done last
 		float const overlap(rsum - p2p_dist_xy(pos, r->pos));
 		vector3d const delta((pos - point(r->pos.x, r->pos.y, pos.z)).get_norm()*overlap);
 		delta_sum += delta; // accumulate weighted delta across collisions
