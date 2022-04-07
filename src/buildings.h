@@ -82,8 +82,8 @@ struct building_animal_t {
 	unsigned id;
 
 	building_animal_t(float xval) : pos(xval, 0.0, 0.0), radius(0), speed(0), anim_time(0), wake_time(0), dist_since_sleep(0), id(0) {}
-	building_animal_t(point const &pos_, float radius_, vector3d const &dir_) :
-		pos(pos_), dir(dir_), radius(radius_), speed(0.0), anim_time(0.0), wake_time(0), dist_since_sleep(0), id(0) {}
+	building_animal_t(point const &pos_, float radius_, vector3d const &dir_, unsigned id_) :
+		pos(pos_), dir(dir_), radius(radius_), speed(0.0), anim_time(0.0), wake_time(0), dist_since_sleep(0), id(id_) {}
 	bool operator<(building_animal_t const &a) const {return (pos.x < a.pos.x);} // compare only xvals
 	bool is_moving  () const {return (speed     > 0.0);}
 	bool is_sleeping() const {return (wake_time > 0.0);}
@@ -98,7 +98,7 @@ struct rat_t : public building_animal_t {
 
 	// this first constructor is for the lower_bound() call in vect_rat_t::get_first_rat_with_x2_gt()
 	rat_t(float xval) : building_animal_t(xval), height(0), hwidth(0), fear(0), is_hiding(0), near_player(0), attacking(0) {}
-	rat_t(point const &pos_, float radius_, vector3d const &dir_);
+	rat_t(point const &pos_, float radius_, vector3d const &dir_, unsigned id_);
 	bool operator<(rat_t const &r) const {return (pos.x < r.pos.x);} // compare only xvals
 	float get_hlength() const {return radius;} // this is the bounding radius, so it represents the longest dim (half length)
 	float get_height () const {return height;}
@@ -114,7 +114,7 @@ struct spider_t : public building_animal_t {
 	bool on_web;
 	// this first constructor is for the lower_bound() call in vect_rat_t::get_first_rat_with_x2_gt()
 	spider_t(float xval) : building_animal_t(xval), update_time(0.0), web_start_zval(0.0), jump_vel_z(0.0), jump_dist(0.0), on_web(0) {}
-	spider_t(point const &pos_, float radius_, vector3d const &dir_);
+	spider_t(point const &pos_, float radius_, vector3d const &dir_, unsigned id_);
 	float get_xy_radius() const {return 2.0*radius;}
 	float get_height   () const {return 2.0*radius;}
 	vector3d get_size  () const;

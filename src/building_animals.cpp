@@ -72,7 +72,7 @@ template<typename T> void building_t::add_animals_on_floor(T &animals, unsigned 
 		float const sz_scale((sz_min >= sz_max) ? sz_min : rgen.rand_uniform(sz_min, sz_max)), radius(0.5f*floor_spacing*sz_scale);
 		point const pos(gen_animal_floor_pos(radius, rgen));
 		if (pos == all_zeros) continue; // bad pos? skip this animal
-		animals.add(typename T::value_type(pos, radius, rgen.signed_rand_vector_xy().get_norm()));
+		animals.add(typename T::value_type(pos, radius, rgen.signed_rand_vector_xy().get_norm(), n));
 	}
 }
 
@@ -130,7 +130,7 @@ bool play_attack_sound(point const &pos, float gain, float pitch, rand_gen_t &rg
 
 // *** Rats ***
 
-rat_t::rat_t(point const &pos_, float radius_, vector3d const &dir_) : building_animal_t(pos_, radius_, dir_),
+rat_t::rat_t(point const &pos_, float radius_, vector3d const &dir_, unsigned id_) : building_animal_t(pos_, radius_, dir_, id_),
 dest(pos), fear(0.0), is_hiding(0), near_player(0), attacking(0)
 {
 	vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_RAT)); // L=3878, W=861, H=801
@@ -159,7 +159,7 @@ bool rat_t::is_facing_dest() const {
 bool building_t::add_rat(point const &pos, float hlength, vector3d const &dir, point const &placed_from) {
 	point rat_pos(pos);
 	if (!get_zval_of_floor(pos, hlength, rat_pos.z)) return 0; // place on the floor, skip if there's no floor here
-	rat_t rat(rat_pos, hlength, vector3d(dir.x, dir.y, 0.0).get_norm()); // dir in XY plane
+	rat_t rat(rat_pos, hlength, vector3d(dir.x, dir.y, 0.0).get_norm(), interior->room_geom->rats.size()); // dir in XY plane
 	
 	if (check_line_coll_expand(pos, rat_pos, hlength, rat.height)) { // something is in the way
 		point const test_pos(rat_pos + vector3d(0.0, 0.0, rat.height));
@@ -573,8 +573,8 @@ void building_t::scare_rat_at_pos(rat_t &rat, point const &scare_pos, float amou
 // *** Spiders ***
 
 // Note: radius is really used for height and body size; legs can extend out to ~2x radius, so we decrease radius to half the user-specified value to account for this
-spider_t::spider_t(point const &pos_, float radius_, vector3d const &dir_) :
-	building_animal_t(pos_, 0.5*radius_, dir_), upv(plus_z), update_time(0.0), web_start_zval(0.0), jump_vel_z(0.0), jump_dist(0.0), on_web(0)
+spider_t::spider_t(point const &pos_, float radius_, vector3d const &dir_, unsigned id_) :
+	building_animal_t(pos_, 0.5*radius_, dir_, id_), upv(plus_z), update_time(0.0), web_start_zval(0.0), jump_vel_z(0.0), jump_dist(0.0), on_web(0)
 {
 	pos.z += radius; // shift upward so that the center is off the ground
 }
