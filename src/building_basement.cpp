@@ -395,11 +395,11 @@ void building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 	cube_t const &basement(get_basement());
 
 	// get pipe ends coming in through the ceiling
-	vector<sphere_t> pipe_ends;
-	get_pipe_basement_connections(pipe_ends);
-	if (pipe_ends.empty()) return; // can this happen?
+	vector<sphere_t> risers;
+	get_pipe_basement_connections(risers);
+	if (risers.empty()) return; // can this happen?
 	float r_main(0.0);
-	for (sphere_t &p : pipe_ends) {r_main = get_merged_pipe_radius(r_main, + p.radius, 4.0);} // higher exponent to avoid pipes that are too large
+	for (sphere_t &p : risers) {r_main = get_merged_pipe_radius(r_main, + p.radius, 4.0);} // higher exponent to avoid pipes that are too large
 	float const window_vspacing(get_window_vspace()), wall_thickness(get_wall_thickness());
 	float const pipe_zval(ceil_zval - FITTING_RADIUS*r_main); // includes clearance for fittings vs. beams (and lights - mostly)
 	float const align_dist(2.0*wall_thickness); // align pipes within this range (in particular sinks and stall toilets)
@@ -413,7 +413,7 @@ void building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 	for (unsigned n = 1; n < NUM_SHIFTS; ++n) {rshifts[n][rgen.rand_bool()] = 0.25*window_vspacing*rgen.signed_rand_float();} // random shift in a random dir
 
 	// seed the pipe graph with valid vertical segments and build a graph of X/Y values
-	for (sphere_t const &p : pipe_ends) {
+	for (sphere_t const &p : risers) {
 		assert(p.radius > 0.0);
 		assert(p.pos.z > pipe_zval);
 		point pos(p.pos);
@@ -564,6 +564,7 @@ void building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 	bool has_exit(0);
 
 	if (num_floors > 1 || rgen.rand_bool()) { // exit into the wall of the building
+		// Note: if roads are added for secondary buildings, we should have the exit on the side of the building closest to the road
 		bool const first_dir((basement.d[dim][1] - mp[1][dim]) < (mp[0][dim] - basement.d[dim][0])); // closer basement exterior wall
 
 		for (unsigned d = 0; d < 2; ++d) { // dir
