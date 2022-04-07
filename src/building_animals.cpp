@@ -602,18 +602,20 @@ void spider_t::end_jump() {
 	if (is_jumping()) {jump_vel_z = speed = 0.0;}
 }
 
-bool building_room_geom_t::maybe_spawn_spider_in_drawer(room_object_t const &c, cube_t const &drawer, bool is_door) {
+bool building_room_geom_t::maybe_spawn_spider_in_drawer(room_object_t const &c, cube_t const &drawer, float floor_spacing, bool is_door) {
 	if (global_building_params.spider_drawer_prob == 0.0) return 0; // no spiders
 	rand_gen_t rgen;
 	c.set_rand_gen_state(rgen);
 	if (rgen.rand_float() >= global_building_params.spider_drawer_prob) return 0; // no spider
-	float radius(rgen.rand_uniform(global_building_params.spider_size_min, global_building_params.spider_size_max));
-	min_eq(radius, rgen.rand_uniform(0.5, 0.9)*min(drawer.dz(), 0.5f*min(drawer.dx(), drawer.dy()))); // make sure it fits in the drawer
+	float radius(0.5f*floor_spacing*rgen.rand_uniform(global_building_params.spider_size_min, global_building_params.spider_size_max));
+	min_eq(radius, rgen.rand_uniform(0.6, 0.9)*min(drawer.dz(), 0.5f*min(drawer.dx(), drawer.dy()))); // make sure it fits in the drawer
 	vector3d dir;
-	dir[c.dim] = (c.dir ? 1.0 : -1.0); // face the outside of the drawer
+	dir[ c.dim] = (c.dir ? 1.0 : -1.0); // face the outside of the drawer
+	dir[!c.dim] = 0.25*rgen.signed_rand_float(); // not straight out
+	dir.normalize();
 	point const pos(drawer.xc(), drawer.yc(), drawer.z1());
-	spiders.emplace_back(pos, radius, dir);
-	if (!is_door) {spiders.back().jump(0.0025);} // jump out of drawers
+	spiders.emplace_back(pos, radius, dir, spiders.size());
+	if (!is_door) {spiders.back().jump(0.002*rgen.rand_uniform(1.0, 1.4));} // jump out of drawers
 	return 1;
 }
 

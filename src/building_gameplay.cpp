@@ -993,7 +993,7 @@ bool building_room_geom_t::open_nearest_drawer(building_t &building, point const
 		obj.drawer_flags ^= flag_bit; // toggle flag bit for selected drawer
 
 		if ((obj.drawer_flags & flag_bit) && !(obj.state_flags & flag_bit)) { // first opening of this drawer
-			maybe_spawn_spider_in_drawer(obj, c_test, has_doors);
+			maybe_spawn_spider_in_drawer(obj, c_test, building.get_window_vspace(), has_doors);
 			obj.state_flags |= flag_bit; // mark as having been opened so that we don't try to spawn another spider next time
 		}
 		point const drawer_center(drawer.get_cube_center());
