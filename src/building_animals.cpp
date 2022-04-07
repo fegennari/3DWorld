@@ -852,6 +852,12 @@ void building_t::update_spider(spider_t &spider, point const &camera_bs, float t
 			spider.dir = (spider.dir + prev_dir).get_norm(); // 50% mix of prev and new dir to avoid sharp turns
 		}
 	}
+	if (spider.on_web) { // rotate around the vertical axis
+		bool const rotate_dir(spider.id & 1);
+		float const angle(0.04*timestep*(rotate_dir ? 1.0 : -1.0));
+		rotate_vector3d(plus_z, angle, spider.upv);
+		spider.dir.normalize();
+	}
 	vector3d coll_dir;
 	point const prev_pos(spider.pos); // capture the pre-collision point
 

@@ -756,8 +756,8 @@ void building_t::add_box_contents(room_object_t const &box) {
 	} // for n
 }
 
-void building_room_geom_t::expand_object(room_object_t &c) {
-	if (c.obj_expanded()) return; // already expanded
+bool building_room_geom_t::expand_object(room_object_t &c) {
+	if (c.obj_expanded()) return 0; // already expanded
 	switch (c.type) {
 	case TYPE_CLOSET:    expand_closet   (c); break;
 	case TYPE_SHELVES:   expand_shelves  (c); break;
@@ -767,5 +767,6 @@ void building_room_geom_t::expand_object(room_object_t &c) {
 	default: assert(0); // not a supported expand type
 	}
 	c.flags |= RO_FLAG_EXPANDED; // flag as expanded
+	return 1;
 }
 
