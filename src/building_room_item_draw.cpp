@@ -968,70 +968,75 @@ void draw_stove_flames(room_object_t const &stove, point const &camera_bs, shade
 }
 
 class spider_draw_t {
-	rgeom_mat_t mat, web_mat;
-	unsigned cur_vert_pos;
+	// could make mats[1] a subset of mats[0], but index logic is more complex
+	rgeom_mat_t mats[2], web_mat; // mats: {high detail/67K verts, low detail shadow pass/4.2K verts}
 	bool is_setup;
 
-	void add_eye(point const &pos, float radius, bool low_detail) {
+	void add_eye(rgeom_mat_t &mat, point const &pos, float radius) {
 		cube_t eye_bc(pos);
 		eye_bc.expand_by(radius);
-		mat.add_sphere_to_verts(eye_bc, DK_RED, low_detail); // eye
+		mat.add_sphere_to_verts(eye_bc, DK_RED, 1); // low_detail=1
 	}
 	void init() {
 		// generate spider geometry; centered at (0,0,0) with radius=1.0; head is in +X
-		bool const low_detail = 1; // 3.5x fewer verts and looks almost identical
-		unsigned const ndiv(low_detail ? N_SPHERE_DIV/2 : N_SPHERE_DIV);
 		colorRGBA const color(BLACK);
-		float const body_zval(-0.3);
+		float const body_zval(-0.3), leg_radius(0.03);
 		cube_t abdomen(point(-0.8, 0.0, body_zval)), body(point(0.0, 0.0, body_zval));
 		abdomen.expand_by(vector3d(0.50, 0.35, 0.35));
 		body   .expand_by(vector3d(0.45, 0.30, 0.20));
-		mat.add_sphere_to_verts(abdomen, color); // always high detail
-		mat.add_sphere_to_verts(body,    color); // always high detail
-		assign_tc_range(0.0, 0.0, 0.0); // head and body aren't animated
-		float const leg_radius(0.03);
 
-		for (unsigned d = 0; d < 2; ++d) { // {left, right}
-			float const d_sign(d ? -1.0 : 1.0);
-			add_eye(point(0.30, 0.080*d_sign, body_zval+0.14), 0.026, low_detail);
-			add_eye(point(0.40, 0.045*d_sign, body_zval+0.08), 0.028, low_detail);
-			add_eye(point(0.44, 0.020*d_sign, body_zval+0.04), 0.016, low_detail);
-			add_eye(point(0.43, 0.055*d_sign, body_zval+0.03), 0.015, low_detail);
-			float const fang_radius(0.05);
-			point const fang_top(0.44, 0.05*d_sign, body_zval-0.04), fang_bot(fang_top - vector3d(0.0, 0.0, 0.2));
-			mat.add_sphere_to_verts(fang_top, vector3d(fang_radius, fang_radius, fang_radius), color, low_detail); // top of fang
-			mat.add_cylin_to_verts (fang_bot, fang_top, 0.0, fang_radius, color, 0, 0, 0, 0, 1.0, 1.0, 0, ndiv); // fang
-			// hourglass shape? colorRGBA(0.7, 0.2, 0.0)
-			assign_tc_range(0.0, 0.0, 0.0); // not animated
+		for (unsigned n = 0; n < 2; ++n) { // {high detail, low detail shadow pass}
+			bool const low_detail(n == 1);
+			unsigned const ndiv(low_detail ? N_SPHERE_DIV/4 : N_SPHERE_DIV/2);
+			unsigned cur_vert_pos(0);
+			rgeom_mat_t &mat(mats[n]);
+			mat.add_sphere_to_verts(abdomen, color, low_detail); // always high detail
+			mat.add_sphere_to_verts(body,    color, low_detail); // always high detail
+			assign_tc_range(mat, cur_vert_pos, 0.0, 0.0, 0.0); // head and body aren't animated
 
-			// add legs
-			for (unsigned n = 0; n < 4; ++n) {
-				float const ts(n/4.0);
-				point const joint(0.12*(n - 1.5), 0.26*d_sign, body_zval);
-				point const knee (2.0*joint.x, 2.0*joint.y,  0.5);
-				point const ankle(2.8*knee .x, 2.8*knee .y,  0.0);
-				point const foot (3.5*knee .x, 3.5*knee .y, -1.0);
-				vector3d const sphere_radius(leg_radius, leg_radius, leg_radius);
-				float const joint_tt(0.0*d_sign), knee_tt(0.3*d_sign), ankle_tt(0.7*d_sign), foot_tt(1.0*d_sign);
-				mat.add_sphere_to_verts(joint, sphere_radius, color, low_detail); // round body joint
-				assign_tc_range(ts, joint_tt, joint_tt);
-				mat.add_cylin_to_verts(joint, knee, leg_radius, leg_radius, color, 0, 0, 0, 0, 1.0, 1.0, 0, ndiv);
-				assign_tc_range(ts, joint_tt, knee_tt);
-				mat.add_sphere_to_verts(knee, sphere_radius, color, low_detail); // round knee joint
-				assign_tc_range(ts, knee_tt, knee_tt);
-				mat.add_cylin_to_verts(ankle, knee, leg_radius, leg_radius, color, 0, 0, 0, 0, 1.0, 1.0, 0, ndiv);
-				assign_tc_range(ts, ankle_tt, knee_tt);
-				mat.add_sphere_to_verts(ankle, sphere_radius, color, low_detail); // round ankle joint
-				assign_tc_range(ts, ankle_tt, ankle_tt);
-				mat.add_cylin_to_verts(foot,  ankle, 0.1*leg_radius, leg_radius, color, 0, 0, 0, 0, 1.0, 1.0, 0, ndiv);
-				assign_tc_range(ts, foot_tt, ankle_tt);
-			} // for n
-		} // for d
-		mat.create_vbo_inner();
-		mat.clear_vectors(1); // free_memory=1: vector data no longer needed
+			for (unsigned d = 0; d < 2; ++d) { // {left, right}
+				float const d_sign(d ? -1.0 : 1.0);
+
+				if (n == 0) { // eyes and fangs are high detail only
+					float const fang_radius(0.05);
+					point const fang_top(0.44, 0.05*d_sign, body_zval-0.04), fang_bot(fang_top - vector3d(0.0, 0.0, 0.2));
+					add_eye(mat, point(0.30, 0.080*d_sign, body_zval+0.14), 0.026);
+					add_eye(mat, point(0.40, 0.045*d_sign, body_zval+0.08), 0.028);
+					add_eye(mat, point(0.44, 0.020*d_sign, body_zval+0.04), 0.016);
+					add_eye(mat, point(0.43, 0.055*d_sign, body_zval+0.03), 0.015);
+					mat.add_sphere_to_verts(fang_top, vector3d(fang_radius, fang_radius, fang_radius), color, 1); // top of fang; low_detail=1
+					mat.add_cylin_to_verts(fang_bot, fang_top, 0.0, fang_radius, color, 0, 0, 0, 0, 1.0, 1.0, 0, ndiv); // fang
+					assign_tc_range(mat, cur_vert_pos, 0.0, 0.0, 0.0); // not animated
+				}
+				// add legs
+				for (unsigned l = 0; l < 4; ++l) {
+					float const ts(l/4.0);
+					point const joint(0.12*(l - 1.5), 0.26*d_sign, body_zval);
+					point const knee (2.0*joint.x, 2.0*joint.y,  0.5);
+					point const ankle(2.8*knee .x, 2.8*knee .y,  0.0);
+					point const foot (3.5*knee .x, 3.5*knee .y, -1.0);
+					vector3d const sphere_radius(leg_radius, leg_radius, leg_radius);
+					float const joint_tt(0.0*d_sign), knee_tt(0.3*d_sign), ankle_tt(0.7*d_sign), foot_tt(1.0*d_sign);
+					if (n == 0) {mat.add_sphere_to_verts(joint, sphere_radius, color, 1);} // round body joint; high detail only; low_detail=1
+					assign_tc_range(mat, cur_vert_pos, ts, joint_tt, joint_tt);
+					mat.add_cylin_to_verts(joint, knee, leg_radius, leg_radius, color, 0, 0, 0, 0, 1.0, 1.0, 0, ndiv);
+					assign_tc_range(mat, cur_vert_pos, ts, joint_tt, knee_tt);
+					if (n == 0) {mat.add_sphere_to_verts(knee, sphere_radius, color, 1);} // round knee joint; high detail only; low_detail=1
+					assign_tc_range(mat, cur_vert_pos, ts, knee_tt, knee_tt);
+					mat.add_cylin_to_verts(ankle, knee, leg_radius, leg_radius, color, 0, 0, 0, 0, 1.0, 1.0, 0, ndiv);
+					assign_tc_range(mat, cur_vert_pos, ts, ankle_tt, knee_tt);
+					if (n == 0) {mat.add_sphere_to_verts(ankle, sphere_radius, color, 1);} // round ankle joint; high detail only; low_detail=1
+					assign_tc_range(mat, cur_vert_pos, ts, ankle_tt, ankle_tt);
+					mat.add_cylin_to_verts(foot,  ankle, 0.1*leg_radius, leg_radius, color, 0, 0, 0, 0, 1.0, 1.0, 0, ndiv);
+					assign_tc_range(mat, cur_vert_pos, ts, foot_tt, ankle_tt);
+				} // for n
+			} // for d
+			mat.create_vbo_inner();
+			mat.clear_vectors(1); // free_memory=1: vector data no longer needed
+		} // for n
 		is_setup = 1;
 	}
-	void assign_tc_range(float ts, float tt_lo, float tt_hi) {
+	void assign_tc_range(rgeom_mat_t &mat, unsigned &cur_vert_pos, float ts, float tt_lo, float tt_hi) {
 		// tcs are used for animation:
 		// ts is the position of the leg from front to back: {0.0, 0.25, 0.5, 0.75}
 		// tt is the joint index: negative for left, positive for right; 0.0 for body joint, 0.5 for knee, 1.0 for foot
@@ -1042,8 +1047,8 @@ class spider_draw_t {
 		cur_vert_pos = mat.itri_verts.size();
 	}
 public:
-	spider_draw_t() : cur_vert_pos(0), is_setup(0) {}
-	void clear() {mat.clear(); is_setup = 0;}
+	spider_draw_t() : is_setup(0) {}
+	void clear() {mats[0].clear(); mats[1].clear(); is_setup = 0;}
 
 	void draw(vect_spider_t const &spiders, shader_t &s, building_t const &building, occlusion_checker_noncity_t &oc,
 		vector3d const &xlate, bool shadow_only, bool reflection_pass, bool check_clip_cube)
@@ -1053,6 +1058,7 @@ public:
 		point const camera_bs(camera_pdu.pos - xlate);
 		bool const check_occlusion(display_mode & 0x08);
 		bool any_drawn(0);
+		rgeom_mat_t &mat(mats[shadow_only]);
 
 		for (spider_t const &S : spiders) { // future work: use instancing
 			if (!shadow_only && S.on_web) { // draw spider webs
@@ -1072,7 +1078,7 @@ public:
 			if (!any_drawn) { // setup shaders
 				if (!is_setup) {init();}
 				mat.vao_setup(shadow_only);
-				s.set_specular(0.2, 80.0); // FIXME: building interior lighting specular looks wrong for rotated models and with sunlight
+				s.set_specular(0.1, 80.0); // FIXME: building interior lighting specular looks wrong for rotated models and with sunlight
 				select_texture(WHITE_TEX);
 				int const animation_id = 8; // custom spider animation
 				s.add_uniform_int("animation_id", animation_id);
