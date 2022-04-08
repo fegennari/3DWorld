@@ -1078,12 +1078,13 @@ public:
 			if (!any_drawn) { // setup shaders
 				if (!is_setup) {init();}
 				mat.vao_setup(shadow_only);
-				s.set_specular(0.1, 80.0); // FIXME: building interior lighting specular looks wrong for rotated models and with sunlight
+				s.set_specular(0.5, 80.0);
 				select_texture(WHITE_TEX);
 				int const animation_id = 8; // custom spider animation
 				s.add_uniform_int("animation_id", animation_id);
 				s.add_uniform_float("animation_scale",    1.0); // not using a model, nominal size is 1.0
 				s.add_uniform_float("model_delta_height", 1.0); // not using a model, nominal size is 1.0
+				s.add_uniform_float("bump_map_mag",       0.0);
 				mat.pre_draw(shadow_only);
 				anim_time_loc = s.get_uniform_loc("animation_time");
 				any_drawn = 1;
@@ -1113,8 +1114,9 @@ public:
 		} // for S
 		if (any_drawn) { // reset state
 			check_mvm_update(); // make sure to reset MVM
+			s.add_uniform_float("bump_map_mag",   1.0);
 			s.add_uniform_float("animation_time", 0.0); // reset animation time
-			s.add_uniform_int("animation_id", 0); // clear animation
+			s.add_uniform_int  ("animation_id",   0); // clear animation
 			s.clear_specular();
 			indexed_vao_manager_with_shadow_t::post_render();
 		}
