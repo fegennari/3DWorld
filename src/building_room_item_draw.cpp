@@ -143,19 +143,31 @@ void rgeom_mat_t::add_cylin_to_verts(point const &bot, point const &top, float b
 	unsigned itris_start(itri_verts.size()), ixs_start(indices.size()), itix(itris_start), iix(ixs_start);
 
 	if (!skip_sides) {
-		itri_verts.resize(itris_start + 2*(ndiv+1));
-		indices.resize(ixs_start + 6*ndiv);
 		unsigned const ixs_off[6] = {1,2,0, 3,2,1}; // 1 quad = 2 triangles
+		bool const flat_sides(ndiv <= 6 && side_tscale == 0.0); // hack to draw bolts untextured with flat sides, since no other cylinders have only 6 sides
+		unsigned const num_side_verts(flat_sides ? 4*ndiv : 2*(ndiv+1)), unique_verts_per_side(flat_sides ? 4 : 2);
+		itri_verts.resize(itris_start + num_side_verts);
+		indices.resize(ixs_start + 6*ndiv);
 
-		for (unsigned i = 0; i <= ndiv; ++i) { // vertex data
-			unsigned const s(i%ndiv);
-			float const ts(side_tscale*(1.0f - i*ndiv_inv) + side_tscale_add);
-			norm_comp const normal(0.5*(vpn.n[s] + vpn.n[(i+ndiv-1)%ndiv])); // normalize?
-			itri_verts[itix++].assign(vpn.p[(s<<1)+0], normal, (swap_txy ? 0.0 : ts), (swap_txy ? ts : 0.0), cw);
-			itri_verts[itix++].assign(vpn.p[(s<<1)+1], normal, (swap_txy ? 1.0 : ts), (swap_txy ? ts : 1.0), cw);
+		if (flat_sides) {
+			for (unsigned i = 0; i < ndiv; ++i) { // vertex data
+				unsigned const in((i+1)%ndiv);
+				point const pts[4] = {vpn.p[(i<<1)+0], vpn.p[(i<<1)+1], vpn.p[(in<<1)+0], vpn.p[(in<<1)+1]};
+				norm_comp const normal(get_poly_norm(pts));
+				for (unsigned n = 0; n < 4; ++n) {itri_verts[itix++].assign(pts[n], normal, 0.0, 0.0, cw);} // all tcs=0
+			}
+		}
+		else {
+			for (unsigned i = 0; i <= ndiv; ++i) { // vertex data
+				unsigned const s(i%ndiv);
+				float const ts(side_tscale*(1.0f - i*ndiv_inv) + side_tscale_add);
+				norm_comp const normal(0.5*(vpn.n[s] + vpn.n[(i+ndiv-1)%ndiv])); // normalize?
+				itri_verts[itix++].assign(vpn.p[(s<<1)+0], normal, (swap_txy ? 0.0 : ts), (swap_txy ? ts : 0.0), cw);
+				itri_verts[itix++].assign(vpn.p[(s<<1)+1], normal, (swap_txy ? 1.0 : ts), (swap_txy ? ts : 1.0), cw);
+			}
 		}
 		for (unsigned i = 0; i < ndiv; ++i) { // index data
-			unsigned const ix0(itris_start + 2*i);
+			unsigned const ix0(itris_start + unique_verts_per_side*i);
 			for (unsigned j = 0; j < 6; ++j) {indices[iix++] = ix0 + ixs_off[j];}
 		}
 		// room object drawing uses back face culling and single sided lighting; to make lighting two sided, need to add verts with inverted normals/winding dirs
