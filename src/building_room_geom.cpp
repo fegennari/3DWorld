@@ -1309,7 +1309,11 @@ void building_room_geom_t::add_pipe(room_object_t const &c) { // should be SHAPE
 	bool const draw_joints[2] = {((c.flags & RO_FLAG_ADJ_LO) != 0), ((c.flags & RO_FLAG_ADJ_HI) != 0)};
 	colorRGBA const color(apply_light_color(c));
 	rgeom_mat_t &mat(get_metal_material(shadowed, 0, 2)); // detail object
-	mat.add_ortho_cylin_to_verts(c, color, dim, (flat_ends && draw_joints[0]), (flat_ends && draw_joints[1])); // draw sides and possibly one or both ends
+	bool const is_bolt(c.flags & RO_FLAG_RAND_ROT); // use RO_FLAG_RAND_ROT to indicate this is a bolt on the pipe rather than a pipe section
+	unsigned const ndiv(is_bolt ? 6 : N_CYL_SIDES);
+	float const side_tscale(is_bolt ? 0.0 : 1.0); // bolts are untextured
+	// draw sides and possibly one or both ends
+	mat.add_ortho_cylin_to_verts(c, color, dim, (flat_ends && draw_joints[0]), (flat_ends && draw_joints[1]), 0, 0, 1.0, 1.0, side_tscale, 1.0, 0, ndiv);
 	if (flat_ends) return; // done
 
 	for (unsigned d = 0; d < 2; ++d) {

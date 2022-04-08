@@ -387,6 +387,13 @@ struct pipe_t {
 	}
 };
 
+bool cube_intersects_pipes(cube_t const &c, vector<pipe_t> const &pipes) {
+	for (pipe_t const &p : pipes) {
+		if (c.intersects(p.get_bcube())) return 1;
+	}
+	return 0;
+}
+
 void building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t const &walls, vect_cube_t const &beams,
 	unsigned room_id, unsigned num_floors, float tot_light_amt, float ceil_zval, rand_gen_t &rgen)
 {
@@ -400,7 +407,7 @@ void building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 	if (risers.empty()) return; // can this happen?
 	float r_main(0.0);
 	for (sphere_t &p : risers) {r_main = get_merged_pipe_radius(r_main, + p.radius, 4.0);} // higher exponent to avoid pipes that are too large
-	float const window_vspacing(get_window_vspace()), wall_thickness(get_wall_thickness());
+	float const window_vspacing(get_window_vspace()), fc_thickness(get_fc_thickness()), wall_thickness(get_wall_thickness());
 	float const pipe_zval(ceil_zval - FITTING_RADIUS*r_main); // includes clearance for fittings vs. beams (and lights - mostly)
 	float const align_dist(2.0*wall_thickness); // align pipes within this range (in particular sinks and stall toilets)
 	assert(pipe_zval > bcube.z1());
@@ -625,7 +632,7 @@ void building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 			main_pipe_end_flags = (exit_dir ? 2 : 1); // connect the end going to the exit connector pipe
 		}
 		point exit_floor_pos(exit_pos);
-		exit_floor_pos.z = basement.z1() + get_fc_thickness(); // on the bottom level floor
+		exit_floor_pos.z = basement.z1() + fc_thickness; // on the bottom level floor
 		pipes.emplace_back(exit_floor_pos, exit_pos, r_main, 2, PIPE_EXIT, exit_pipe_end_flags);
 	}
 	// add main pipe
@@ -684,6 +691,43 @@ void building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 		unsigned const flags(RO_FLAG_NOCOLL | RO_FLAG_HANGING | RO_FLAG_ADJ_LO | RO_FLAG_ADJ_HI); // non-colliding, flat ends on both sides
 		objs.emplace_back(pbc, TYPE_PIPE, room_id, pdim, pdir, flags, tot_light_amt, SHAPE_CYLIN, fittings_color);
 	} // for p
+	// add red sprinkler system pipe
+	float const sp_radius(1.2*wall_thickness), spacing(2.0*sp_radius), flange_expand(0.3*sp_radius);
+	float const bolt_dist(sp_radius + 0.5*flange_expand), bolt_radius(0.32*flange_expand), bolt_height(0.1*fc_thickness);
+
+	for (unsigned n = 0; n < 100; ++n) { // 100 random tries
+		bool const dim(rgen.rand_bool()), dir(rgen.rand_bool());
+		cube_t c;
+		set_cube_zvals(c, (basement.z1() + fc_thickness), (basement.z2() - fc_thickness));
+		set_wall_width(c, rgen.rand_uniform(basement.d[!dim][0]+spacing, basement.d[!dim][1]-spacing), sp_radius, !dim);
+		c.d[dim][ dir] = basement.d[dim][dir] + (dir ? -1.0 : 1.0)*flange_expand; // against the wall (with space for the flange)
+		c.d[dim][!dir] = c.d[dim][dir] + (dir ? -1.0 : 1.0)*2.0*sp_radius;
+		if (has_bcube_int(c, obstacles) || has_bcube_int(c, walls) || has_bcube_int(c, beams) || cube_intersects_pipes(c, pipes)) continue; // bad position
+		objs.emplace_back(c, TYPE_PIPE, room_id, 0, 1, RO_FLAG_LIT, tot_light_amt, SHAPE_CYLIN, RED); // dir=1 for vertical; casts shadows
+		// add flanges at top and bottom of each floor
+		cube_t flange(c);
+		flange.expand_by_xy(flange_expand);
+		point const center(c.get_cube_center());
+
+		for (unsigned f = 0; f <= num_floors; ++f) { // flanges for each ceiling/floor
+			unsigned flags(RO_FLAG_HANGING | (f > 0)*RO_FLAG_ADJ_LO | (f < num_floors)*RO_FLAG_ADJ_HI);
+			float const z(basement.z1() + f*window_vspacing);
+			flange.z1() = z - ((f ==          0) ? -1.0 : 1.15)*fc_thickness;
+			flange.z2() = z + ((f == num_floors) ? -1.0 : 1.15)*fc_thickness;
+			objs.emplace_back(flange, TYPE_PIPE, room_id, 0, 1, flags, tot_light_amt, SHAPE_CYLIN, RED);
+			unsigned const NUM_BOLTS = 8;
+			float const angle_step(TWO_PI/NUM_BOLTS);
+
+			for (unsigned m = 0; m < NUM_BOLTS; ++m) { // add bolts
+				float const angle(m*angle_step), dx(bolt_dist*sin(angle)), dy(bolt_dist*cos(angle));
+				cube_t bolt;
+				bolt.set_from_sphere(point(center.x+dx, center.y+dy, 0.0), bolt_radius);
+				set_cube_zvals(bolt, flange.z1()-bolt_height, flange.z2()+bolt_height);
+				objs.emplace_back(bolt, TYPE_PIPE, room_id, 0, 1, (flags | RO_FLAG_RAND_ROT), tot_light_amt, SHAPE_CYLIN, RED);
+			} // for m
+		} // for f
+		break; // done
+	} // for n
 	//cout << TXT(pipe_ends.size()) << TXT(num_valid) << TXT(num_connected) << TXT(pipes.size()) << TXT(xy_map.size()) << endl;
 }
 
