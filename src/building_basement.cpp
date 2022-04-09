@@ -313,7 +313,7 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 	} // for n
 	if (is_top_floor) {
 		// move or remove pipes intersecting lights, pillars, walls, stairs, elevators, and ramps;
-		// note that lights haven't been added yet though, so maybe pipes need to be added later?
+		// note that lights haven't been added yet though, but they're placed on beams, so we can have pipes avoid beams
 		vect_cube_t walls, beams;
 
 		for (auto i = objs.begin()+objs_start; i != objs.end(); ++i) {
@@ -324,10 +324,36 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 			}
 			else if (i->type == TYPE_RAMP) {obstacles.push_back(*i);} // ramps are obstacles for pipes
 		}
+		// get pipe ends (risers) coming in through the ceiling
+		vector<sphere_t> risers;
+		get_pipe_basement_connections(risers);
 		vect_cube_t pipe_cubes;
-		add_basement_pipes(obstacles, walls, beams, pipe_cubes, room_id, num_floors, tot_light_amt, beam.z1(), rgen);
-		add_sprinkler_pipe(obstacles, walls, beams, pipe_cubes, room_id, num_floors, tot_light_amt, rgen);
+		float const ceil_zval(beam.z1()); // hang sewer pipes under the ceiling beams
+		add_basement_pipes(obstacles, walls, beams, risers, pipe_cubes, room_id, num_floors, tot_light_amt, ceil_zval, rgen, 0); // sewer pipes; add_water_pipes=0
+
+		if (1) { // add water pipes
+			water_pipes_from_sewer_pipes(risers, rgen);
+			float const water_ceil_zval(beam.z2()); // hang water pipes from the ceiling, above sewer pipes and through the beams
+			add_basement_pipes(obstacles, walls, beams, risers, pipe_cubes, room_id, num_floors, tot_light_amt, water_ceil_zval, rgen, 1); // add_water_pipes=1
+		}
+		add_sprinkler_pipe(obstacles, walls, beams, pipe_cubes, room_id, num_floors, tot_light_amt, rgen); // sprinkler pipe
 	}
+}
+
+void building_t::water_pipes_from_sewer_pipes(vector<sphere_t> &risers, rand_gen_t &rgen) const { // shift risers for water pipes to avoid sewer pipes
+	// choose a shift direction 45 degrees diagonally in the XY plane to avoid collisions with sewer pipes placed in either dim
+	vector3d const shift_dir(vector3d((rgen.rand_bool() ? -1.0 : 1.0), (rgen.rand_bool() ? -1.0 : 1.0), 0.0).get_norm());
+	cube_t const &basement(get_basement());
+
+	for (sphere_t &riser : risers) {
+		float const wp_radius(0.5*riser.radius), pipe_spacing(2.0*(riser.radius + wp_radius));
+		cube_t place_area(basement.contains_pt_xy(riser.pos) ? basement : bcube); // force the water riser to be in the basement if the sewer riser is there
+		place_area.expand_by_xy(-wp_radius);
+		point wp_pos(riser.pos + shift_dir*pipe_spacing);
+		if (!place_area.contains_pt_xy(wp_pos)) {wp_pos = riser.pos - shift_dir*pipe_spacing;} // if this shift takes pos outside the placement area, shift in the other direction
+		riser.pos    = wp_pos;
+		riser.radius = wp_radius;
+	} // for riser
 }
 
 // find the closest wall (including room wall) to this location, avoiding obstacles, and shift outward by radius; routes in X or Y only, for now
@@ -389,19 +415,15 @@ struct pipe_t {
 	}
 };
 
-void building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t const &walls, vect_cube_t const &beams, vect_cube_t &pipe_cubes,
-	unsigned room_id, unsigned num_floors, float tot_light_amt, float ceil_zval, rand_gen_t &rgen)
+void building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t const &walls, vect_cube_t const &beams, vector<sphere_t> const &risers,
+	vect_cube_t &pipe_cubes, unsigned room_id, unsigned num_floors, float tot_light_amt, float ceil_zval, rand_gen_t &rgen, bool add_water_pipes)
 {
+	if (risers.empty()) return; // can this happen?
 	float const FITTING_LEN(1.2), FITTING_RADIUS(1.1); // relative to radius
 	vect_room_object_t &objs(interior->room_geom->objs);
 	cube_t const &basement(get_basement());
-
-	// get pipe ends coming in through the ceiling
-	vector<sphere_t> risers;
-	get_pipe_basement_connections(risers);
-	if (risers.empty()) return; // can this happen?
 	float r_main(0.0);
-	for (sphere_t &p : risers) {r_main = get_merged_pipe_radius(r_main, + p.radius, 4.0);} // higher exponent to avoid pipes that are too large
+	for (sphere_t const &p : risers) {r_main = get_merged_pipe_radius(r_main, + p.radius, 4.0);} // higher exponent to avoid pipes that are too large
 	float const window_vspacing(get_window_vspace()), fc_thickness(get_fc_thickness()), wall_thickness(get_wall_thickness());
 	float const pipe_zval(ceil_zval - FITTING_RADIUS*r_main); // includes clearance for fittings vs. beams (and lights - mostly)
 	float const align_dist(2.0*wall_thickness); // align pipes within this range (in particular sinks and stall toilets)
@@ -634,9 +656,11 @@ void building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 	pipe_t main_pipe(mp[0], mp[1], r_main, dim, PIPE_MAIN, main_pipe_end_flags);
 	assert(main_pipe.get_bcube().is_strictly_normalized());
 	pipes.push_back(main_pipe);
-	colorRGBA fittings_color(0.7, 0.6, 0.5, 1.0); // gray/brown
 
 	// add pipe objects
+	colorRGBA const pipes_color   (add_water_pipes ? COPPER_C : DK_GRAY);
+	colorRGBA const fittings_color(add_water_pipes ? BRASS_C : colorRGBA(0.7, 0.6, 0.5, 1.0)); // gray/brown
+
 	for (pipe_t const &p : pipes) {
 		if (!p.connected) continue; // unconnected drain, skip
 		cube_t const pbc(p.get_bcube());
@@ -645,7 +669,7 @@ void building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 		unsigned flags(0);
 		if (p.type != PIPE_EXIT) {flags |= RO_FLAG_NOCOLL;} // only exit pipe has collisions enabled
 		if (p.type == PIPE_CONN || p.type == PIPE_MAIN) {flags |= RO_FLAG_HANGING;} // hanging connector/main pipe with flat ends
-		room_object_t const pipe(pbc, TYPE_PIPE, room_id, pdim, pdir, flags, tot_light_amt, SHAPE_CYLIN, DK_GRAY);
+		room_object_t const pipe(pbc, TYPE_PIPE, room_id, pdim, pdir, flags, tot_light_amt, SHAPE_CYLIN, pipes_color);
 		objs.push_back(pipe);
 		if (p.type == PIPE_EXIT && p.dim == 2) {objs.back().flags |= RO_FLAG_LIT;} // vertical exit pipes are shadow casting; applies to pipe but not fittings
 

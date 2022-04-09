@@ -1353,11 +1353,12 @@ private:
 	void add_pri_hall_objs   (rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt);
 	void add_parking_garage_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned floor_ix,
 		unsigned num_floors, unsigned &nlights_x, unsigned &nlights_y, float &light_delta_z);
-	void add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t const &walls, vect_cube_t const &beams, vect_cube_t &pipe_cubes,
-		unsigned room_id, unsigned num_floors, float tot_light_amt, float ceil_zval, rand_gen_t &rgen);
+	void add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t const &walls, vect_cube_t const &beams, vector<sphere_t> const &risers,
+		vect_cube_t &pipe_cubes, unsigned room_id, unsigned num_floors, float tot_light_amt, float ceil_zval, rand_gen_t &rgen, bool add_water_pipes);
 	void add_sprinkler_pipe(vect_cube_t const &obstacles, vect_cube_t const &walls, vect_cube_t const &beams, vect_cube_t const &pipe_cubes,
 		unsigned room_id, unsigned num_floors, float tot_light_amt, rand_gen_t &rgen);
-	void get_pipe_basement_connections(vector<sphere_t> &pcs) const;
+	void get_pipe_basement_connections(vector<sphere_t> &risers) const;
+	void water_pipes_from_sewer_pipes (vector<sphere_t> &risers, rand_gen_t &rgen) const;
 	void place_book_on_obj   (rand_gen_t &rgen, room_object_t const &place_on, unsigned room_id, float tot_light_amt, bool use_dim_dir);
 	bool place_bottle_on_obj (rand_gen_t &rgen, room_object_t const &place_on, unsigned room_id, float tot_light_amt, cube_t const &avoid);
 	bool place_plant_on_obj  (rand_gen_t &rgen, room_object_t const &place_on, unsigned room_id, float tot_light_amt, cube_t const &avoid);
