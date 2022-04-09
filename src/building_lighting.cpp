@@ -446,7 +446,7 @@ bool do_line_clip_xy_p2(point const &p1, point &p2, cube_t const &c) {
 	return 1;
 }
 
-void building_t::refine_light_bcube(point const &lpos, float light_radius, cube_t const &room, cube_t &light_bcube) const {
+void building_t::refine_light_bcube(point const &lpos, float light_radius, cube_t const &room, cube_t &light_bcube, bool is_parking_garage) const {
 	// base: 173613 / bcube: 163942 / clipped bcube: 161455 / tight: 159005 / rays: 101205 / no ls bcube expand: 74538
 	// starts with building bcube clipped to light bcube
 	//timer_t timer("refine_light_bcube"); // 0.035ms average
@@ -456,14 +456,17 @@ void building_t::refine_light_bcube(point const &lpos, float light_radius, cube_
 	other_parts.clear();
 
 	// first determine the union of all intersections with parts; ignore zvals here so that we get the same result for every floor
-	for (auto p = parts.begin(); p != get_real_parts_end(); ++p) { // secondary buildings aren't handled here
-		//if (lpos.z < p->z1() || lpos.z > p->z2()) continue; // light zval not included (doesn't seem to work)
-		if (!light_bcube.intersects_xy(*p)) continue;
-		cube_t c(light_bcube);
-		c.intersect_with_cube_xy(*p);
-		if (tight_bcube.is_all_zeros()) {tight_bcube = c;} else {tight_bcube.union_with_cube_xy(c);}
-		if (p->contains_pt(lpos)) {part = *p;} else {other_parts.push_back(*p);}
-	} // for p
+	if (is_parking_garage) {tight_bcube = part = room;} // parking garage is the entire room; other_parts remains empty
+	else {
+		for (auto p = parts.begin(); p != get_real_parts_end(); ++p) { // secondary buildings aren't handled here
+			//if (lpos.z < p->z1() || lpos.z > p->z2()) continue; // light zval not included (doesn't seem to work)
+			if (!light_bcube.intersects_xy(*p)) continue;
+			cube_t c(light_bcube);
+			c.intersect_with_cube_xy(*p);
+			if (tight_bcube.is_all_zeros()) {tight_bcube = c;} else {tight_bcube.union_with_cube_xy(c);}
+			if (p->contains_pt(lpos)) {part = *p;} else {other_parts.push_back(*p);}
+		} // for p
+	}
 	assert(!part.is_all_zeros());
 	tight_bcube.z1() = light_bcube.z1();
 	tight_bcube.z2() = light_bcube.z2();
@@ -474,15 +477,26 @@ void building_t::refine_light_bcube(point const &lpos, float light_radius, cube_
 	cube_t rays_bcube(lpos, lpos), room_exp(room);
 	float const wall_thickness(get_wall_thickness()), tolerance(0.01*wall_thickness);
 	room_exp.expand_by_xy(wall_thickness + tolerance); // to include points on the border + some FP error
-
 	// pre-compute the nearby walls we will use for clipping
-	for (unsigned d = 0; d < 2; ++d) {
-		walls[d].clear();
+	for (unsigned d = 0; d < 2; ++d) {walls[d].clear();}
 
-		for (cube_t const &c : interior->walls[d]) {
-			if (tight_bcube.intersects(c)) {walls[d].push_back(c);}
+	if (is_parking_garage) {
+		auto objs_end(interior->room_geom->get_placed_objs_end()); // skip buttons/stairs/elevators
+		unsigned const pg_wall_start(interior->room_geom->wall_ps_start);
+		assert(pg_wall_start < interior->room_geom->objs.size());
+
+		for (auto i = (interior->room_geom->objs.begin() + pg_wall_start); i != objs_end; ++i) {
+			if (i->type != TYPE_PG_WALL || i->item_flags != 0) continue; // not parking garage wall (breaking is incorrect for multiple PG levels)
+			if (tight_bcube.intersects(*i)) {walls[i->dim].push_back(*i);}
 		}
-	} // for d
+	}
+	else {
+		for (unsigned d = 0; d < 2; ++d) {
+			for (cube_t const &c : interior->walls[d]) {
+				if (tight_bcube.intersects(c)) {walls[d].push_back(c);}
+			}
+		}
+	}
 	for (unsigned n = 0; n < NUM_RAYS; ++n) {
 		float const angle(TWO_PI*n/NUM_RAYS), dx(light_radius*sin(angle)), dy(light_radius*cos(angle));
 		point p2(lpos + point(dx, dy, 0.0));
@@ -829,8 +843,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 				}
 				if (light_bcube.is_all_zeros()) { // not yet calculated - calculate and cache
 					light_bcube = clipped_bc;
-					if (light_in_basement && has_parking_garage) {} // not needed for parking garage, since there are no true walls
-					else {refine_light_bcube(lpos, light_radius, room, light_bcube);}
+					refine_light_bcube(lpos, light_radius, room, light_bcube, (light_in_basement && has_parking_garage));
 				}
 				clipped_bc.x1() = light_bcube.x1(); clipped_bc.x2() = light_bcube.x2(); // copy X/Y but keep orig zvals
 				clipped_bc.y1() = light_bcube.y1(); clipped_bc.y2() = light_bcube.y2();
