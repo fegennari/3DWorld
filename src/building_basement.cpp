@@ -324,7 +324,9 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 			}
 			else if (i->type == TYPE_RAMP) {obstacles.push_back(*i);} // ramps are obstacles for pipes
 		}
-		add_basement_pipes(obstacles, walls, beams, room_id, num_floors, tot_light_amt, beam.z1(), rgen);
+		vect_cube_t pipe_cubes;
+		add_basement_pipes(obstacles, walls, beams, pipe_cubes, room_id, num_floors, tot_light_amt, beam.z1(), rgen);
+		add_sprinkler_pipe(obstacles, walls, beams, pipe_cubes, room_id, num_floors, tot_light_amt, rgen);
 	}
 }
 
@@ -387,14 +389,7 @@ struct pipe_t {
 	}
 };
 
-bool cube_intersects_pipes(cube_t const &c, vector<pipe_t> const &pipes) {
-	for (pipe_t const &p : pipes) {
-		if (c.intersects(p.get_bcube())) return 1;
-	}
-	return 0;
-}
-
-void building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t const &walls, vect_cube_t const &beams,
+void building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t const &walls, vect_cube_t const &beams, vect_cube_t &pipe_cubes,
 	unsigned room_id, unsigned num_floors, float tot_light_amt, float ceil_zval, rand_gen_t &rgen)
 {
 	float const FITTING_LEN(1.2), FITTING_RADIUS(1.1); // relative to radius
@@ -691,9 +686,19 @@ void building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 		unsigned const flags(RO_FLAG_NOCOLL | RO_FLAG_HANGING | RO_FLAG_ADJ_LO | RO_FLAG_ADJ_HI); // non-colliding, flat ends on both sides
 		objs.emplace_back(pbc, TYPE_PIPE, room_id, pdim, pdir, flags, tot_light_amt, SHAPE_CYLIN, fittings_color);
 	} // for p
+	pipe_cubes.reserve(pipe_cubes.size() + pipes.size());
+	for (pipe_t const &p : pipes) {pipe_cubes.push_back(p.get_bcube());}
+}
+
+void building_t::add_sprinkler_pipe(vect_cube_t const &obstacles, vect_cube_t const &walls, vect_cube_t const &beams, vect_cube_t const &pipe_cubes,
+		unsigned room_id, unsigned num_floors, float tot_light_amt, rand_gen_t &rgen)
+{
 	// add red sprinkler system pipe
-	float const sp_radius(1.2*wall_thickness), spacing(2.0*sp_radius), flange_expand(0.3*sp_radius);
+	float const floor_spacing(get_window_vspace()), fc_thickness(get_fc_thickness());
+	float const sp_radius(1.2*get_wall_thickness()), spacing(2.0*sp_radius), flange_expand(0.3*sp_radius);
 	float const bolt_dist(sp_radius + 0.5*flange_expand), bolt_radius(0.32*flange_expand), bolt_height(0.1*fc_thickness);
+	vect_room_object_t &objs(interior->room_geom->objs);
+	cube_t const &basement(get_basement());
 
 	for (unsigned n = 0; n < 100; ++n) { // 100 random tries
 		bool const dim(rgen.rand_bool()), dir(rgen.rand_bool());
@@ -702,8 +707,8 @@ void building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 		set_wall_width(c, rgen.rand_uniform(basement.d[!dim][0]+spacing, basement.d[!dim][1]-spacing), sp_radius, !dim);
 		c.d[dim][ dir] = basement.d[dim][dir] + (dir ? -1.0 : 1.0)*flange_expand; // against the wall (with space for the flange)
 		c.d[dim][!dir] = c.d[dim][dir] + (dir ? -1.0 : 1.0)*2.0*sp_radius;
-		if (has_bcube_int(c, obstacles) || has_bcube_int(c, walls) || has_bcube_int(c, beams) || cube_intersects_pipes(c, pipes)) continue; // bad position
-		objs.emplace_back(c, TYPE_PIPE, room_id, 0, 1, RO_FLAG_LIT, tot_light_amt, SHAPE_CYLIN, RED); // dir=1 for vertical; casts shadows
+		if (has_bcube_int(c, obstacles) || has_bcube_int(c, walls) || has_bcube_int(c, beams) || has_bcube_int(c, pipe_cubes)) continue; // bad position
+		objs.emplace_back(c, TYPE_PIPE, room_id, 0, 1, RO_FLAG_LIT, tot_light_amt, SHAPE_CYLIN, RED); // dir=1 for vertical; casts shadows; add to pipe_cubes?
 		// add flanges at top and bottom of each floor
 		cube_t flange(c);
 		flange.expand_by_xy(flange_expand);
@@ -711,7 +716,7 @@ void building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 
 		for (unsigned f = 0; f <= num_floors; ++f) { // flanges for each ceiling/floor
 			unsigned flags(RO_FLAG_HANGING | (f > 0)*RO_FLAG_ADJ_LO | (f < num_floors)*RO_FLAG_ADJ_HI);
-			float const z(basement.z1() + f*window_vspacing);
+			float const z(basement.z1() + f*floor_spacing);
 			flange.z1() = z - ((f ==          0) ? -1.0 : 1.15)*fc_thickness;
 			flange.z2() = z + ((f == num_floors) ? -1.0 : 1.15)*fc_thickness;
 			objs.emplace_back(flange, TYPE_PIPE, room_id, 0, 1, flags, tot_light_amt, SHAPE_CYLIN, RED);
