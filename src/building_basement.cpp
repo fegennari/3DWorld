@@ -627,12 +627,12 @@ void building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 			float const dist(p2p_dist(mp[d], cand_exit_pos));
 			if (exit_dmin == 0.0 || dist < exit_dmin) {exit_pos = cand_exit_pos; exit_dir = d; exit_dmin = dist;}
 		}
-		point const &exit_conn(mp[exit_dir]);
+		point &exit_conn(mp[exit_dir]);
 		unsigned exit_pipe_end_flags(2); // bend at the top only
 
 		if (exit_pos[!dim] == exit_conn[!dim]) { // exit point is along the main pipe
 			if ((exit_conn[dim] < exit_pos[dim]) == exit_dir) { // extend main pipe to exit point
-				mp[exit_dir] = exit_pos;
+				exit_conn[dim] = exit_pos[dim];
 				main_pipe_end_flags = (exit_dir ? 2 : 1); // connect the end going to the exit
 			}
 			else { // exit is in the middle of the pipe; add fitting to the main pipe
@@ -644,6 +644,9 @@ void building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 			}
 		}
 		else { // create a right angle bend
+			// extend by 2*radius to avoid overlapping a connector pipe or it's fittings, but keep it inside the building
+			if (exit_dir) {exit_conn[dim] = exit_pos[dim] = min(exit_conn[dim]+2.0f*r_main, bcube.d[dim][1]-r_main);}
+			else          {exit_conn[dim] = exit_pos[dim] = max(exit_conn[dim]-2.0f*r_main, bcube.d[dim][0]+r_main);}
 			pipes.emplace_back(exit_conn, exit_pos, r_main, !dim, PIPE_MEC, 3); // main exit connector, bends at both ends
 			exit_pipe_end_flags = 0; // the above pipe will provide the bend, so it's not needed at the top of the exit pipe
 			main_pipe_end_flags = (exit_dir ? 2 : 1); // connect the end going to the exit connector pipe
