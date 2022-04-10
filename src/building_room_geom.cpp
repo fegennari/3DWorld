@@ -59,11 +59,26 @@ void get_tc_leg_cubes_abs_width(cube_t const &c, float leg_width, cube_t cubes[4
 void get_tc_leg_cubes(cube_t const &c, float width, cube_t cubes[4]) {
 	get_tc_leg_cubes_abs_width(c, get_tc_leg_width(c, width), cubes);
 }
-void building_room_geom_t::add_tc_legs(cube_t const &c, colorRGBA const &color, float width, float tscale, bool use_metal_mat, bool draw_tops) {
+void building_room_geom_t::add_tc_legs(cube_t const &c, colorRGBA const &color, float width, float tscale, bool use_metal_mat, bool draw_tops, float frame_height) {
 	rgeom_mat_t &mat(use_metal_mat ? get_metal_material(1) : get_wood_material(tscale)); // shadowed=1, dynamic=0, small=0
 	cube_t cubes[4];
 	get_tc_leg_cubes(c, width, cubes);
-	for (unsigned i = 0; i < 4; ++i) {mat.add_cube_to_verts(cubes[i], color, c.get_llc(), (draw_tops ? EF_Z1 : EF_Z12));} // skip top and bottom faces
+	point const llc(c.get_llc());
+	for (unsigned i = 0; i < 4; ++i) {mat.add_cube_to_verts(cubes[i], color, llc, (draw_tops ? EF_Z1 : EF_Z12));} // skip top and bottom faces
+
+	if (frame_height > 0.0) {
+		float const leg_width(get_tc_leg_width(c, width));
+
+		for (unsigned dim = 0; dim < 2; ++dim) {
+			for (unsigned dir = 0; dir < 2; ++dir) {
+				cube_t frame(c);
+				frame.z1() = c.z2() - frame_height;
+				frame.expand_in_dim(!dim, -leg_width); // inside the legs
+				frame.d[dim][!dir] = frame.d[dim][dir] + (dir ? -1.0 : 1.0)*leg_width; // shrink to leg width
+				mat.add_cube_to_verts(frame, color, llc, ((draw_tops ? 0 : EF_Z2) | get_skip_mask_for_xy(!dim)));
+			} // for dir
+		} // for dim
+	}
 }
 
 colorRGBA apply_light_color(room_object_t const &o, colorRGBA const &c) {
@@ -133,7 +148,7 @@ void building_room_geom_t::add_table(room_object_t const &c, float tscale, float
 			colorRGBA const top_color(apply_light_color(c, table_glass_color));
 			rgeom_mat_t &mat(get_untextured_material(0, 0, 0, 1)); // no shadows + transparent
 			mat.add_cube_to_verts(top, top_color, c.get_llc()); // all faces drawn
-			add_tc_legs(legs_bcube, BLACK, 0.5*leg_width, tscale, glass, glass); // use_metal_mat=1, draw_tops=1
+			add_tc_legs(legs_bcube, BLACK, 0.5*leg_width, tscale, glass, glass, 1.0*top.dz()); // use_metal_mat=1, draw_tops=1, frame_height=nonzero
 		}
 		else { // wood
 			colorRGBA const color(apply_wood_light_color(c));
