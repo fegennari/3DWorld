@@ -506,7 +506,7 @@ bool building_t::interact_with_object(unsigned obj_ix, point const &int_pos, poi
 
 		if (obj.type == TYPE_CLOSET) {
 			bool const was_expanded(interior->room_geom->expand_object(obj)); // expand any boxes so that the player can pick them up
-			if (was_expanded) {interior->room_geom->maybe_spawn_spider_in_drawer(obj, obj, get_window_vspace(), 1);} // spawn spider when first opened
+			if (was_expanded) {interior->room_geom->maybe_spawn_spider_in_drawer(obj, obj, 0, get_window_vspace(), 1);} // spawn spider when first opened
 			sound_scale = 0.25; // closets are quieter, to allow players to more easily hide
 		}
 		if (obj.is_small_closet()) {play_door_open_close_sound(sound_origin, obj.is_open(), 1.0, pitch);}

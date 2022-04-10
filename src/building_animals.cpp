@@ -602,10 +602,10 @@ void spider_t::end_jump() {
 	if (is_jumping()) {jump_vel_z = speed = 0.0;}
 }
 
-bool building_room_geom_t::maybe_spawn_spider_in_drawer(room_object_t const &c, cube_t const &drawer, float floor_spacing, bool is_door) {
+bool building_room_geom_t::maybe_spawn_spider_in_drawer(room_object_t const &c, cube_t const &drawer, unsigned drawer_id, float floor_spacing, bool is_door) {
 	if (global_building_params.spider_drawer_prob == 0.0) return 0; // no spiders
 	rand_gen_t rgen;
-	c.set_rand_gen_state(rgen);
+	rgen.set_state((unsigned(c.obj_id) << 8)+drawer_id+1, c.room_id+1);
 	if (rgen.rand_float() >= global_building_params.spider_drawer_prob) return 0; // no spider
 	float radius(0.5f*floor_spacing*rgen.rand_uniform(global_building_params.spider_size_min, global_building_params.spider_size_max));
 	min_eq(radius, rgen.rand_uniform(0.6, 0.9)*min(drawer.dz(), 0.5f*min(drawer.dx(), drawer.dy()))); // make sure it fits in the drawer

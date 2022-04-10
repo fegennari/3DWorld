@@ -815,7 +815,7 @@ struct building_room_geom_t {
 	void expand_med_cab(room_object_t const &c);
 	bool expand_object(room_object_t &c);
 	static room_object_t get_item_in_drawer(room_object_t const &c, cube_t const &drawer, unsigned drawer_ix);
-	bool maybe_spawn_spider_in_drawer(room_object_t const &c, cube_t const &drawer, float floor_spacing, bool is_door);
+	bool maybe_spawn_spider_in_drawer(room_object_t const &c, cube_t const &drawer, unsigned drawer_id, float floor_spacing, bool is_door);
 	// other functions
 	bool closet_light_is_on(cube_t const &closet) const;
 	int find_nearest_pickup_object(building_t const &building, point const &at_pos, vector3d const &in_dir, float range, float &obj_dist) const;
