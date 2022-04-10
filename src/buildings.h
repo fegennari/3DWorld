@@ -248,12 +248,18 @@ struct building_tex_params_t {
 };
 
 struct color_range_t {
-
 	float grayscale_rand;
 	colorRGBA cmin, cmax; // alpha is unused?
 
 	color_range_t() : grayscale_rand(0.0), cmin(WHITE), cmax(WHITE) {}
 	void gen_color(colorRGBA &color, rand_gen_t &rgen) const;
+};
+
+struct riser_pos_t : public sphere_t {
+	bool has_hot;
+	vector3d water_shift;
+	riser_pos_t() : has_hot(0) {}
+	riser_pos_t(point const &pos_, float radius_, bool hh=0) : sphere_t(pos_, radius_), has_hot(hh) {}
 };
 
 struct building_mat_t : public building_tex_params_t {
@@ -1353,12 +1359,12 @@ private:
 	void add_pri_hall_objs   (rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt);
 	void add_parking_garage_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned floor_ix,
 		unsigned num_floors, unsigned &nlights_x, unsigned &nlights_y, float &light_delta_z);
-	void add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t const &walls, vect_cube_t const &beams, vector<sphere_t> const &risers,
-		vect_cube_t &pipe_cubes, unsigned room_id, unsigned num_floors, float tot_light_amt, float ceil_zval, rand_gen_t &rgen, bool add_water_pipes);
+	void add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t const &walls, vect_cube_t const &beams, vector<riser_pos_t> const &risers,
+		vect_cube_t &pipe_cubes, unsigned room_id, unsigned num_floors, float tot_light_amt, float ceil_zval, rand_gen_t &rgen, int add_water_pipes);
 	void add_sprinkler_pipe(vect_cube_t const &obstacles, vect_cube_t const &walls, vect_cube_t const &beams, vect_cube_t const &pipe_cubes,
 		unsigned room_id, unsigned num_floors, float tot_light_amt, rand_gen_t &rgen);
-	void get_pipe_basement_connections(vector<sphere_t> &risers) const;
-	void water_pipes_from_sewer_pipes (vector<sphere_t> &risers, rand_gen_t &rgen) const;
+	void get_pipe_basement_connections(vector<riser_pos_t> &risers) const;
+	void water_pipes_from_sewer_pipes (vector<riser_pos_t> &risers, rand_gen_t &rgen) const;
 	void place_book_on_obj   (rand_gen_t &rgen, room_object_t const &place_on, unsigned room_id, float tot_light_amt, bool use_dim_dir);
 	bool place_bottle_on_obj (rand_gen_t &rgen, room_object_t const &place_on, unsigned room_id, float tot_light_amt, cube_t const &avoid);
 	bool place_plant_on_obj  (rand_gen_t &rgen, room_object_t const &place_on, unsigned room_id, float tot_light_amt, cube_t const &avoid);

@@ -325,32 +325,45 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 			else if (i->type == TYPE_RAMP) {obstacles.push_back(*i);} // ramps are obstacles for pipes
 		}
 		// get pipe ends (risers) coming in through the ceiling
-		vector<sphere_t> risers;
+		vector<riser_pos_t> risers;
 		get_pipe_basement_connections(risers);
 		vect_cube_t pipe_cubes;
 		float const ceil_zval(beam.z1()); // hang sewer pipes under the ceiling beams
 		add_basement_pipes(obstacles, walls, beams, risers, pipe_cubes, room_id, num_floors, tot_light_amt, ceil_zval, rgen, 0); // sewer pipes; add_water_pipes=0
-
-		if (1) { // add water pipes
-			water_pipes_from_sewer_pipes(risers, rgen);
-			float const water_ceil_zval(beam.z2()); // hang water pipes from the ceiling, above sewer pipes and through the beams
-			add_basement_pipes(obstacles, walls, beams, risers, pipe_cubes, room_id, num_floors, tot_light_amt, water_ceil_zval, rgen, 1); // add_water_pipes=1
+		// add water pipes
+		water_pipes_from_sewer_pipes(risers, rgen);
+		float const water_ceil_zval(beam.z2()); // hang water pipes from the ceiling, above sewer pipes and through the beams
+		add_basement_pipes(obstacles, walls, beams, risers, pipe_cubes, room_id, num_floors, tot_light_amt, water_ceil_zval, rgen, 1); // add_water_pipes=1 (cold water)
+		
+		if (0) {
+			// remove risers with only cold water
+			auto i(risers.begin()), o(i);
+			for (; i != risers.end(); ++i) {
+				if (i->has_hot) {*(o++) = *i;} // keep risers with hot water
+			}
+			risers.erase(o, risers.end());
+			add_basement_pipes(obstacles, walls, beams, risers, pipe_cubes, room_id, num_floors, tot_light_amt, water_ceil_zval, rgen, 1); // add_water_pipes=2 (hot water)
 		}
 		add_sprinkler_pipe(obstacles, walls, beams, pipe_cubes, room_id, num_floors, tot_light_amt, rgen); // sprinkler pipe
 	}
 }
 
-void building_t::water_pipes_from_sewer_pipes(vector<sphere_t> &risers, rand_gen_t &rgen) const { // shift risers for water pipes to avoid sewer pipes
+void building_t::water_pipes_from_sewer_pipes(vector<riser_pos_t> &risers, rand_gen_t &rgen) const { // shift risers for water pipes to avoid sewer pipes
 	// choose a shift direction 45 degrees diagonally in the XY plane to avoid collisions with sewer pipes placed in either dim
 	vector3d const shift_dir(vector3d((rgen.rand_bool() ? -1.0 : 1.0), (rgen.rand_bool() ? -1.0 : 1.0), 0.0).get_norm());
 	cube_t const &basement(get_basement());
 
-	for (sphere_t &riser : risers) {
+	for (riser_pos_t &riser : risers) {
 		float const wp_radius(0.5*riser.radius), pipe_spacing(2.0*(riser.radius + wp_radius));
 		cube_t place_area(basement.contains_pt_xy(riser.pos) ? basement : bcube); // force the water riser to be in the basement if the sewer riser is there
 		place_area.expand_by_xy(-wp_radius);
 		point wp_pos(riser.pos + shift_dir*pipe_spacing);
-		if (!place_area.contains_pt_xy(wp_pos)) {wp_pos = riser.pos - shift_dir*pipe_spacing;} // if this shift takes pos outside the placement area, shift in the other direction
+		riser.water_shift = shift_dir;
+
+		if (!place_area.contains_pt_xy(wp_pos)) { // if this shift takes pos outside the placement area, shift in the other direction
+			wp_pos = riser.pos - shift_dir*pipe_spacing;
+			riser.water_shift.negate();
+		}
 		riser.pos    = wp_pos;
 		riser.radius = wp_radius;
 	} // for riser
@@ -415,8 +428,9 @@ struct pipe_t {
 	}
 };
 
-void building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t const &walls, vect_cube_t const &beams, vector<sphere_t> const &risers,
-	vect_cube_t &pipe_cubes, unsigned room_id, unsigned num_floors, float tot_light_amt, float ceil_zval, rand_gen_t &rgen, bool add_water_pipes)
+// add_water_pipes: 0=sewer pipes, 1=cold water pipes, 2=hot water pipes
+void building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t const &walls, vect_cube_t const &beams, vector<riser_pos_t> const &risers,
+	vect_cube_t &pipe_cubes, unsigned room_id, unsigned num_floors, float tot_light_amt, float ceil_zval, rand_gen_t &rgen, int add_water_pipes)
 {
 	if (risers.empty()) return; // can this happen?
 	float const FITTING_LEN(1.2), FITTING_RADIUS(1.1); // relative to radius
@@ -765,7 +779,7 @@ void building_t::add_sprinkler_pipe(vect_cube_t const &obstacles, vect_cube_t co
 
 // here each sphere represents the entry point of a pipe with this radius into the basement ceiling
 // find all plumbing fixtures such as toilets, urinals, sinks, and showers; these should have all been placed in rooms by now
-void building_t::get_pipe_basement_connections(vector<sphere_t> &pipes) const {
+void building_t::get_pipe_basement_connections(vector<riser_pos_t> &risers) const {
 	float const merge_dist = 4.0; // merge two pipes if their combined radius is within this distance
 	float const floor_spacing(get_window_vspace()), base_pipe_radius(0.01*floor_spacing), base_pipe_area(base_pipe_radius*base_pipe_radius);
 	float const merge_dist_sq(merge_dist*merge_dist), max_radius(0.4*get_wall_thickness());
@@ -775,25 +789,27 @@ void building_t::get_pipe_basement_connections(vector<sphere_t> &pipes) const {
 	float const ceil_zval(basement.z2() - get_fc_thickness());
 
 	for (auto i = objs.begin(); i != objs.end(); ++i) { // check all objects placed so far
-		if (i->type != TYPE_TOILET && i->type != TYPE_SINK && i->type != TYPE_URINAL && i->type != TYPE_TUB && i->type != TYPE_SHOWER &&
-			i->type != TYPE_BRSINK && i->type != TYPE_KSINK && i->type != TYPE_WASHER && i->type != TYPE_DRAIN) continue;
+		bool const hot_cold_obj (i->type == TYPE_SINK || i->type == TYPE_TUB || i->type == TYPE_SHOWER || i->type == TYPE_BRSINK || i->type == TYPE_KSINK || i->type == TYPE_WASHER);
+		bool const cold_only_obj(i->type == TYPE_TOILET || i->type == TYPE_URINAL || i->type == TYPE_DRAIN);
+		if (!hot_cold_obj && !cold_only_obj) continue;
 		point pos(i->xc(), i->yc(), ceil_zval);
-		//if (!basement.contains_pt_xy(pos)) continue; // pipe doesn't pass through the basement, but this is now allowed
+		//if (!basement.contains_pt_xy(pos)) continue; // riser/pipe doesn't pass through the basement, but this is now allowed
 		bool merged(0);
 
-		// see if we can merge this pipe into an existing nearby pipe
-		for (auto p = pipes.begin(); p != pipes.end(); ++p) {
-			float const p_area(p->radius*p->radius), sum_area(p_area + base_pipe_area);
-			if (!dist_xy_less_than(p->pos, pos, merge_dist_sq*sum_area)) continue;
-			p->pos    = (p_area*p->pos + base_pipe_area*pos)/sum_area; // merged position is weighted average area
-			p->radius = get_merged_pipe_radius(p->radius, base_pipe_radius, 3.0); // cubic
-			merged    = 1;
+		// see if we can merge this riser into an existing nearby riser
+		for (auto &r : risers) {
+			float const p_area(r.radius*r.radius), sum_area(p_area + base_pipe_area);
+			if (!dist_xy_less_than(r.pos, pos, merge_dist_sq*sum_area)) continue;
+			r.pos      = (p_area*r.pos + base_pipe_area*pos)/sum_area; // merged position is weighted average area
+			r.radius   = get_merged_pipe_radius(r.radius, base_pipe_radius, 3.0); // cubic
+			r.has_hot |= hot_cold_obj;
+			merged     = 1;
 			break;
 		} // for p
-		if (!merged) {pipes.emplace_back(pos, base_pipe_radius);} // create a new pipe
+		if (!merged) {risers.emplace_back(pos, base_pipe_radius, hot_cold_obj);} // create a new riser
 		++num_drains;
 	} // for i
-	for (sphere_t &p : pipes) {min_eq(p.radius, max_radius);} // clamp radius to a reasonable value after all merges
+	for (sphere_t &r : risers) {min_eq(r.radius, max_radius);} // clamp radius to a reasonable value after all merges
 }
 
 void building_t::add_parking_garage_ramp(rand_gen_t &rgen) {
