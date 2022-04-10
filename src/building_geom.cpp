@@ -1091,11 +1091,9 @@ void try_expand_into_xy(cube_t &c1, cube_t const &c2) {
 // for houses or office buildings
 void building_t::maybe_add_basement(rand_gen_t rgen) { // rgen passed by value so that the original isn't modified
 	if (!is_simple_cube()) return; // simple cube shaped buildings only
-	if (global_building_params.basement_prob <= 0.0) return; // no basement
-
-	if (global_building_params.basement_prob < 1.0) {
-		if (rgen.rand_float() > global_building_params.basement_prob) return;
-	}
+	float const basement_prob(is_house ? global_building_params.basement_prob_house : global_building_params.basement_prob_office);
+	if (basement_prob <= 0.0) return; // no basement
+	if (basement_prob <  1.0 && rgen.rand_float() > basement_prob) return;
 	float const floor_spacing(get_window_vspace()), max_sea_level(get_water_z_height() + ocean_wave_height);
 	float basement_z1(ground_floor_z1 - floor_spacing);
 	if (basement_z1 < max_sea_level) return; // no basement below the water line

@@ -12,7 +12,8 @@ buildings wall_split_thresh 2.5 # typically 1.0-5.0, smaller is slower with more
 buildings player_coll_radius_scale 0.75
 buildings open_door_prob   0.75 # usually open
 buildings locked_door_prob 0.50 # fraction of closed doors that are locked
-buildings basement_prob 0.5
+buildings basement_prob_house  0.5
+buildings basement_prob_office 0.5
 buildings ball_prob 0.6 # set to 1.0 for testing of balls
 buildings add_office_basements 1
 
