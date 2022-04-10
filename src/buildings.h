@@ -1369,6 +1369,7 @@ private:
 		unsigned room_id, unsigned num_floors, float tot_light_amt, rand_gen_t &rgen);
 	void get_pipe_basement_connections(vector<riser_pos_t> &risers) const;
 	void water_pipes_from_sewer_pipes (vector<riser_pos_t> &risers, rand_gen_t &rgen) const;
+	void hot_water_pipes_from_cold_water_pipes(vector<riser_pos_t> &risers) const;
 	void place_book_on_obj   (rand_gen_t &rgen, room_object_t const &place_on, unsigned room_id, float tot_light_amt, bool use_dim_dir);
 	bool place_bottle_on_obj (rand_gen_t &rgen, room_object_t const &place_on, unsigned room_id, float tot_light_amt, cube_t const &avoid);
 	bool place_plant_on_obj  (rand_gen_t &rgen, room_object_t const &place_on, unsigned room_id, float tot_light_amt, cube_t const &avoid);

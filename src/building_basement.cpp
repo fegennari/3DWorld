@@ -330,21 +330,21 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 		vect_cube_t pipe_cubes;
 		float const ceil_zval(beam.z1()); // hang sewer pipes under the ceiling beams
 		add_basement_pipes(obstacles, walls, beams, risers, pipe_cubes, room_id, num_floors, tot_light_amt, ceil_zval, rgen, 0); // sewer pipes; add_water_pipes=0
-		// add water pipes
+		// add cold water pipes
 		water_pipes_from_sewer_pipes(risers, rgen);
 		float const water_ceil_zval(beam.z2()); // hang water pipes from the ceiling, above sewer pipes and through the beams
 		add_basement_pipes(obstacles, walls, beams, risers, pipe_cubes, room_id, num_floors, tot_light_amt, water_ceil_zval, rgen, 1); // add_water_pipes=1 (cold water)
-		
-		if (0) {
-			// remove risers with only cold water
-			auto i(risers.begin()), o(i);
-			for (; i != risers.end(); ++i) {
-				if (i->has_hot) {*(o++) = *i;} // keep risers with hot water
-			}
-			risers.erase(o, risers.end());
-			add_basement_pipes(obstacles, walls, beams, risers, pipe_cubes, room_id, num_floors, tot_light_amt, water_ceil_zval, rgen, 1); // add_water_pipes=2 (hot water)
+		// remove risers with only cold water
+		auto i(risers.begin()), o(i);
+		for (; i != risers.end(); ++i) {
+			if (i->has_hot) {*(o++) = *i;} // keep risers with hot water
 		}
-		add_sprinkler_pipe(obstacles, walls, beams, pipe_cubes, room_id, num_floors, tot_light_amt, rgen); // sprinkler pipe
+		risers.erase(o, risers.end());
+		// add hot water pipes
+		// TODO: these can intersect cold water pipes; should we add cold water pipe_cubes to obstacles for this?
+		hot_water_pipes_from_cold_water_pipes(risers);
+		add_basement_pipes(obstacles, walls, beams, risers, pipe_cubes, room_id, num_floors, tot_light_amt, water_ceil_zval, rgen, 2); // add_water_pipes=2 (hot water)
+		add_sprinkler_pipe(obstacles, walls, beams, pipe_cubes, room_id, num_floors, tot_light_amt, rgen);
 	}
 }
 
@@ -363,6 +363,22 @@ void building_t::water_pipes_from_sewer_pipes(vector<riser_pos_t> &risers, rand_
 		if (!place_area.contains_pt_xy(wp_pos)) { // if this shift takes pos outside the placement area, shift in the other direction
 			wp_pos = riser.pos - shift_dir*pipe_spacing;
 			riser.water_shift.negate();
+		}
+		riser.pos    = wp_pos;
+		riser.radius = wp_radius;
+	} // for riser
+}
+void building_t::hot_water_pipes_from_cold_water_pipes(vector<riser_pos_t> &risers) const {
+	cube_t const &basement(get_basement());
+
+	for (riser_pos_t &riser : risers) {
+		float const wp_radius(riser.radius), pipe_spacing(2.0*(2.0*riser.radius + wp_radius)); // same radius as cold water pipe; same spacing as drain to cold water pipe
+		cube_t place_area(basement.contains_pt_xy(riser.pos) ? basement : bcube); // force the water riser to be in the basement if the sewer riser is there
+		place_area.expand_by_xy(-wp_radius);
+		point wp_pos(riser.pos - riser.water_shift*(2.0*pipe_spacing)); // shift opposite the drain
+
+		if (!place_area.contains_pt_xy(wp_pos)) { // if this shift takes pos outside the placement area, shift further from the drain
+			wp_pos = riser.pos + riser.water_shift*pipe_spacing;
 		}
 		riser.pos    = wp_pos;
 		riser.radius = wp_radius;
@@ -575,7 +591,7 @@ void building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 		} // for ix
 		if (num_keep == 0) continue; // no valid connections for this row
 
-		// we can skip adding a connector if the main pipe is short and under the main pipe
+		// we can skip adding a connector if short and under the main pipe
 		if (range_max - range_min > r_main) {
 			point p1(ref_p1), p2(p1); // copy dims !d and z from a representative pipe
 			p1[d] = range_min; p2[d] = range_max;
@@ -674,9 +690,9 @@ void building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 	assert(main_pipe.get_bcube().is_strictly_normalized());
 	pipes.push_back(main_pipe);
 
-	// add pipe objects
-	colorRGBA const pipes_color   (add_water_pipes ? COPPER_C : DK_GRAY);
-	colorRGBA const fittings_color(add_water_pipes ? BRASS_C : colorRGBA(0.7, 0.6, 0.5, 1.0)); // gray/brown
+	// add pipe objects: sewer: dark gray pipes / gray-brown fittings; cold water: copper pipes / brass fittings; hot water: insulated white pipes and fittings
+	colorRGBA const pipes_color   (add_water_pipes ? ((add_water_pipes == 2) ? WHITE : COPPER_C) : DK_GRAY);
+	colorRGBA const fittings_color(add_water_pipes ? ((add_water_pipes == 2) ? WHITE : BRASS_C ) : colorRGBA(0.7, 0.6, 0.5, 1.0));
 
 	for (pipe_t const &p : pipes) {
 		if (!p.connected) continue; // unconnected drain, skip
@@ -690,7 +706,8 @@ void building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 		objs.push_back(pipe);
 		if (p.type == PIPE_EXIT && p.dim == 2) {objs.back().flags |= RO_FLAG_LIT;} // vertical exit pipes are shadow casting; applies to pipe but not fittings
 
-		// add pipe fittings around ends and joins; only fittings have flat and round ends because raw pipe ends should never be exposed
+		// add pipe fittings around ends and joins; only fittings have flat and round ends because raw pipe ends should never be exposed;
+		// note that we may not need fittings at T-junctions for hot water pipes, but then we would need to cap the ends
 		if (p.type == PIPE_DRAIN) continue; // not for vertical drain pipes, since they're so short and mostly hidden above the connector pipes
 		float const fitting_len(FITTING_LEN*p.radius), fitting_expand((FITTING_RADIUS - 1.0)*p.radius);
 
