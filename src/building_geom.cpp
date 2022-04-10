@@ -1322,6 +1322,13 @@ tquad_with_ix_t building_t::set_interior_door_from_cube(door_t const &door) cons
 	unsigned const type(is_house ? (unsigned)tquad_with_ix_t::TYPE_IDOOR : (unsigned)tquad_with_ix_t::TYPE_ODOOR); // house or office door
 	return set_door_from_cube(door, door.dim, door.open_dir, type, 0.0, 0, door.open, 0, 0, door.hinge_side);
 }
+cube_t building_t::get_door_bounding_cube(door_t const &door) const {
+	tquad_with_ix_t const door_tq(set_interior_door_from_cube(door));
+	vector3d const normal(door_tq.get_norm());
+	cube_t door_bcube(door_tq.get_bcube());
+	door_bcube.expand_by(door.get_thickness()*vector3d(fabs(normal.x), fabs(normal.y), 0.0));
+	return door_bcube;
+}
 
 bool building_t::add_door(cube_t const &c, unsigned part_ix, bool dim, bool dir, bool for_office_building, bool roof_access) { // exterior doors
 

@@ -717,7 +717,7 @@ public:
 
 bool building_t::update_spider_pos_orient(spider_t &spider, point const &camera_bs, float timestep, rand_gen_t &rgen) const {
 	assert(interior);
-	float const trim_thickness(get_trim_thickness());
+	float const trim_thickness(get_trim_thickness()), coll_radius(spider.get_xy_radius());
 	vector3d const size(spider.get_size());
 	surface_orienter.init(spider.pos, spider.last_pos, size);
 	// Note: we can almost use fc_occluders, except this doesn't contain the very bottom floor because it's not an occluder, and maybe the overlaps would cause problems
@@ -728,7 +728,7 @@ bool building_t::update_spider_pos_orient(spider_t &spider, point const &camera_
 	cube_t tc(spider.pos);
 	tc.expand_by_xy(size); // use xy_radius for all dims; okay to be convervative
 	tc.expand_in_dim(2, 1.5*spider.radius); // smaller expand in Z
-	obj_avoid_t obj_avoid(spider.pos, spider.last_pos, spider.get_xy_radius()); // use xy_radius for all dims
+	obj_avoid_t obj_avoid(spider.pos, spider.last_pos, coll_radius); // use xy_radius for all dims
 
 	for (auto const &ds : interior->door_stacks) {
 		if (ds.z1() > tc.z2() || ds.z2() < tc.z1()) continue; // wrong floor for this stack/part
@@ -744,10 +744,15 @@ bool building_t::update_spider_pos_orient(spider_t &spider, point const &camera_
 			if (door.z1() > tc.z2() || door.z2() < tc.z1()) continue; // wrong floor
 
 			if (door.open) { // how to handle open doors? they're not cubes; avoid them entirely? use their bcubes?
-				tquad_with_ix_t const door_tq(set_interior_door_from_cube(door));
-				cube_t tight_door_bounds(door_tq.get_bcube()); // somewhat more accurate
-				tight_door_bounds.expand_by_xy(door.get_thickness()); // conservative
-				if (tc.intersects(tight_door_bounds)) {obj_avoid.register_avoid_cube(tight_door_bounds);}
+				cube_t door_bcube(get_door_bounding_cube(door));
+				bool const dir(door.get_check_dirs()); // side of the door frame the door opens to
+				door_bcube.d[!door.dim][!dir] += (dir ? 1.0 : -1.0)*spider.radius; // shift edge away from door frame to allow spider to walk on inside of the frame
+				
+				if (tc.intersects(door_bcube)) {
+					obj_avoid.register_avoid_cube(door_bcube);
+					// while the extruded polygon collision check below is more accurate, it can result in spiders getting stuck behind open doors
+					//if (sphere_ext_poly_intersect(door_tq.pts, 4, normal, spider.pos, coll_radius, door.get_thickness(), 0.0)) {obj_avoid.had_coll = 1;}
+				}
 			}
 			else if (tc.intersects(door)) {surface_orienter.register_cube(door);} // closed door
 		}

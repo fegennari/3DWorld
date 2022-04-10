@@ -1170,10 +1170,7 @@ bool building_t::check_line_coll_expand(point const &p1, point const &p2, float 
 			if (door.z1() > obj_z2 || door.z2() < obj_z1) continue; // wrong floor
 
 			if (door.open) {
-				tquad_with_ix_t const door_tq(set_interior_door_from_cube(door));
-				cube_t tight_door_bounds(door_tq.get_bcube()); // somewhat more accurate
-				tight_door_bounds.expand_by_xy(door.get_thickness()); // conservative
-				if (line_int_cube_exp(p1, p2, tight_door_bounds, expand)) return 1;
+				if (line_int_cube_exp(p1, p2, get_door_bounding_cube(door), expand)) return 1;
 			}
 			else if (line_int_cube_exp(p1, p2, door, expand)) return 1;
 		}
