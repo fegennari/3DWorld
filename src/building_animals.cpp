@@ -841,7 +841,8 @@ void building_t::update_spider(spider_t &spider, point const &camera_bs, float t
 	bool const had_coll(update_spider_pos_orient(spider, camera_bs, timestep, rgen));
 	if (had_coll) {spider.end_jump();}
 
-	if (had_coll || spider.dir.mag() < 0.5) {spider.choose_new_dir(rgen);} // regenerate dir if collided, zero, or otherwise bad
+	// regenerate dir if collided and not on a web, or if dir is somehow bad
+	if ((had_coll && !spider.on_web) || spider.dir.mag() < 0.5) {spider.choose_new_dir(rgen);}
 	else if ((float)tfticks > spider.update_time) { // direction change or sleep
 		if (spider.on_web) {
 			spider.update_time = (float)tfticks + 1.0*TICKS_PER_SECOND; // wait another 1s before updating
