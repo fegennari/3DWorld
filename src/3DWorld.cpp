@@ -96,7 +96,7 @@ int read_snow_file(0), write_snow_file(0), mesh_detail_tex(NOISE_TEX);
 int read_light_files[NUM_LIGHTING_TYPES] = {0}, write_light_files[NUM_LIGHTING_TYPES] = {0};
 unsigned num_snowflakes(0), create_voxel_landscape(0), hmap_filter_width(0), num_dynam_parts(100), snow_coverage_resolution(2);
 unsigned num_birds_per_tile(2), num_fish_per_tile(15), num_bflies_per_tile(4);
-unsigned erosion_iters(0), erosion_iters_tt(0), video_framerate(60), num_video_threads(0), skybox_tid(0), tiled_terrain_gen_heightmap_sz(0);
+unsigned erosion_iters(0), erosion_iters_tt(0), skybox_tid(0), tiled_terrain_gen_heightmap_sz(0);
 float NEAR_CLIP(DEF_NEAR_CLIP), FAR_CLIP(DEF_FAR_CLIP), system_max_orbit(1.0), sky_occlude_scale(0.0), tree_slope_thresh(5.0), mouse_sensitivity(1.0), tt_grass_scale_factor(1.0);
 float water_plane_z(0.0), base_gravity(1.0), crater_depth(1.0), crater_radius(1.0), disabled_mesh_z(FAR_CLIP), vegetation(1.0), atmosphere(1.0), biome_x_offset(0.0);
 float mesh_file_scale(1.0), mesh_file_tz(0.0), speed_mult(1.0), mesh_z_cutoff(-FAR_CLIP), relh_adj_tex(0.0), dodgeball_metalness(1.0), ray_step_size_mult(1.0);
@@ -261,7 +261,7 @@ void quit_3dworld() { // called once at the end for proper cleanup
 }
 
 
-int get_swap_interval() {return ((vsync_enabled || is_video_recording()) ? 1 : 0);}
+int get_swap_interval() {return (vsync_enabled ? 1 : 0);}
 #ifdef _WIN32
 void set_vsync() {wglSwapIntervalEXT(get_swap_interval());}
 #else // linux
@@ -793,7 +793,7 @@ void show_bool_option_change(string const &name, bool new_val) {
 // key repeat is only enabled for movement keys wasd
 void keyboard_proc(unsigned char key, int x, int y) {
 
-    switch (key) { // available: O,. somtimes Z
+    switch (key) { // available: O, P,. somtimes Z
 	case 0x1B: // ESC key (27)
 		quit_3dworld();
 		break;
@@ -1120,16 +1120,12 @@ void keyboard_proc(unsigned char key, int x, int y) {
 		else if (world_mode == WMODE_INF_TERRAIN) {draw_building_interiors ^= 1;}
 		break;
 
-	// screenshots/video
+	// screenshots
 	case 'D': // .bmp
 		screenshot(window_width, window_height, "./", 1);
 		break;
 	case 'F': // .jpg
 		write_jpeg(window_width, window_height, "./");
-		break;
-	case 'P': // start/stop video recording
-		toggle_video_capture();
-		set_vsync();
 		break;
 
 	// rotate sun/moon
@@ -1774,8 +1770,6 @@ int load_config(string const &config_file) {
 	kwmu.add("max_cube_map_tex_sz", max_cube_map_tex_sz);
 	kwmu.add("snow_coverage_resolution", snow_coverage_resolution);
 	kwmu.add("dlight_grid_bitshift", DL_GRID_BS);
-	kwmu.add("video_framerate", video_framerate);
-	kwmu.add("num_video_threads", num_video_threads);
 	kwmu.add("tiled_terrain_gen_heightmap_sz", tiled_terrain_gen_heightmap_sz);
 
 	kw_to_val_map_t<float> kwmf(error);

@@ -6,6 +6,8 @@
 #include "function_registry.h"
 #include <iostream>
 #include <assert.h>
+#include <thread>
+#include <chrono>
 
 using namespace std;
 
@@ -31,6 +33,10 @@ extern int frame_counter, iticks;
 
 float const loop_sound_gains  [NUM_LOOP_SOUNDS] = {0.5, 0.1, 0.1, 0.1};
 float const loop_sound_pitches[NUM_LOOP_SOUNDS] = {1.0, 1.0, 1.0, 1.0};
+
+void sleep_for_ms(unsigned milliseconds) {
+	std::this_thread::sleep_for(std::chrono::milliseconds(milliseconds));
+}
 
 
 void placed_sound_t::write_to_cobj_file(ostream &out, string const &name) const {

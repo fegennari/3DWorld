@@ -266,7 +266,7 @@ void draw_frame_rate(float framerate) {
 		log_location(camera);
 		show_framerate = 0;
 	}
-	if (display_framerate && !is_video_recording()) {
+	if (display_framerate) {
 		static int fr_counter(0);
 		static float fr2(0.0);
 		static double last_tfticks(0.0);
@@ -307,10 +307,8 @@ void final_draw(float framerate) {
 
 
 void swap_buffers_and_redraw() {
-
 	glutSwapBuffers();
 	if (animate) {post_window_redisplay();} // before glutSwapBuffers()?
-	video_capture_end_frame(); // only does something when video capture is enabled
 }
 
 
@@ -1059,7 +1057,7 @@ void display() {
 		else if (spraypaint_mode) {
 			draw_spraypaint_crosshair();
 		}
-		if (display_framerate && !is_video_recording() && !game_mode && ((world_mode == WMODE_INF_TERRAIN && !show_bldg_pickup_crosshair) || (world_mode == WMODE_GROUND && camera_mode == 1))) {
+		if (display_framerate && !game_mode && ((world_mode == WMODE_INF_TERRAIN && !show_bldg_pickup_crosshair) || (world_mode == WMODE_GROUND && camera_mode == 1))) {
 			draw_compass_and_alt();
 		}
 		if (world_mode == WMODE_GROUND && camera_mode == 1 && camera_surf_collide) {show_player_keycards();}
@@ -1133,7 +1131,7 @@ void display_universe() { // infinite universe
 	if (TIMETEST) PRINT_TIME("Draw Blasts");
 	final_draw(framerate);
 	show_crosshair(WHITE, do_zoom);
-	if (display_framerate && !is_video_recording()) {draw_universe_stats();}
+	if (display_framerate) {draw_universe_stats();}
 	camera_surf_collide = last_csc;
 	check_gl_error(33);
 }

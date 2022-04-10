@@ -6,5 +6,3 @@ window_height 512
 
 #window_width 1280
 #window_height 720 # 720p
-#video_framerate 30
-#num_video_threads 3

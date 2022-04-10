@@ -371,10 +371,9 @@ bool throw_sphere(bool mode) {
 		cobj_params cp(0.0, BLACK, 1, 0); // elastic, color, draw, is_dynamic
 		add_static_material_object(cp, mat, fpos, base_radius, is_cube);
 
-		if (display_framerate && !is_video_recording()) {
+		if (display_framerate) {
 			ostringstream oss;
 			oss << num_objs_thrown;
-			//oss << endl << "throw pos: " << fpos.str() << endl << "throw dir: " << cview_dir.str();
 			print_debug_text(oss.str(), -100); // low priority
 		}
 		return 1;

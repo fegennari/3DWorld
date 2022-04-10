@@ -901,7 +901,6 @@
       <BrowseInformation Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</BrowseInformation>
     </ClCompile>
     <ClCompile Include="src\vertex_opt.cpp" />
-    <ClCompile Include="src\video_capture.cpp" />
     <ClCompile Include="src\visibility.cpp">
       <Optimization Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">MaxSpeed</Optimization>
       <Optimization Condition="'$(Configuration)|$(Platform)'=='Tracy|Win32'">MaxSpeed</Optimization>

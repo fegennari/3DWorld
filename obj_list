@@ -90,7 +90,6 @@ Universe_name.o
 upsurface.o
 u_ship.o
 vertex_opt.o
-video_capture.o
 visibility.o
 voxels.o
 Water.o

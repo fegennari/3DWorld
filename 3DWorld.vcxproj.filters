@@ -327,9 +327,6 @@
     <ClCompile Include="src\movable_cobj.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\video_capture.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="src\reflections.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
