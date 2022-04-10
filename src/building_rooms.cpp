@@ -1574,8 +1574,16 @@ void building_t::add_garage_objs(rand_gen_t rgen, room_t const &room, float zval
 	pspace.obj_id = (uint16_t)(objs.size() + rgen.rand()); // will be used for the car model and color
 	car_t car(car_from_parking_space(pspace));
 	interior->room_geom->wall_ps_start = objs.size(); // first parking space index
+	cube_t collider(car.bcube);
+	float const min_spacing(2.1*get_scaled_player_radius()); // space for the player to fit
+
+	for (unsigned d = 0; d < 2; ++d) { // make sure there's enough spacing around the car for the player to walk without getting stuck
+		max_eq(collider.d[d][0], (room.d[d][0] + min_spacing));
+		min_eq(collider.d[d][1], (room.d[d][1] - min_spacing));
+	}
+	if (!collider.is_strictly_normalized()) {collider = car.bcube;} // garage is too small for player to fit; shouldn't happen
 	objs.push_back(pspace);
-	objs.emplace_back(car.bcube, TYPE_COLLIDER, room_id, dim, dir, (RO_FLAG_INVIS | RO_FLAG_FOR_CAR));
+	objs.emplace_back(collider, TYPE_COLLIDER, room_id, dim, dir, (RO_FLAG_INVIS | RO_FLAG_FOR_CAR));
 	interior->room_geom->has_garage_car = 1;
 }
 
