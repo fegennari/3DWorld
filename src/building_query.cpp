@@ -1389,10 +1389,8 @@ template<typename T> void vect_animal_t<T>::update_delta_sum_for_animal_coll(poi
 // only handles the first collision
 bool building_t::check_and_handle_dynamic_obj_coll(point &pos, float radius, float z1, float z2, point const &camera_bs, bool for_spider) const {
 	if (camera_surf_collide) { // check the player; unclear if this is really needed, or if it actually works
-		float const player_radius(CAMERA_RADIUS), player_xy_radius(player_radius*global_building_params.player_coll_radius_scale);
-
-		if (z1 < camera_bs.z && z2 > (camera_bs.z - player_radius - camera_zh)) {
-			if (handle_vcylin_vcylin_int(pos, camera_bs, (radius + player_xy_radius))) return 1;
+		if (z1 < camera_bs.z && z2 > (camera_bs.z - CAMERA_RADIUS - camera_zh)) {
+			if (handle_vcylin_vcylin_int(pos, camera_bs, (radius + get_scaled_player_radius()))) return 1;
 		}
 	}
 	// what about people in the building? maybe since rats are scared of them, they won't collide with people?

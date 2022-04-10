@@ -357,7 +357,7 @@ void building_t::update_rat(rat_t &rat, point const &camera_bs, int ped_ix, floa
 
 	// determine destination
 	if (rat.attacking) {
-		float const player_radius(CAMERA_RADIUS*global_building_params.player_coll_radius_scale), min_dist(player_radius + hlength);
+		float const player_radius(get_scaled_player_radius()), min_dist(player_radius + hlength);
 		point target(camera_bs.x, camera_bs.y, rat.pos.z);
 		vector3d const vdir((target - rat.pos).get_norm());
 		target -= vdir*(1.01*min_dist); // get within attacking range, but not at the center of the player
@@ -891,7 +891,7 @@ void building_t::update_spider(spider_t &spider, point const &camera_bs, float t
 	if (!in_building_gameplay_mode()) return;
 	if (dot_product_ptv(spider.dir, camera_bs, spider.pos) < 0.0) return; // facing the wrong direction
 	if (get_floor_for_zval(camera_bs.z) != get_floor_for_zval(spider.pos.z)) return; // wrong floor
-	float const player_radius(CAMERA_RADIUS*global_building_params.player_coll_radius_scale);
+	float const player_radius(get_scaled_player_radius());
 
 	if (dist_xy_less_than(spider.pos, camera_bs, (player_radius + coll_radius))) { // do damage when nearly colliding with the player
 		bool const played_sound(play_attack_sound(local_to_camera_space(spider.pos), 0.5, 1.5, rgen)); // quieter and higher pitch than rats
