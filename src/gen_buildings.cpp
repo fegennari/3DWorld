@@ -59,6 +59,13 @@ tid_nm_pair_t tid_nm_pair_t::get_scaled_version(float scale) const {
 	tex.tscale_y *= scale;
 	return tex;
 }
+void tid_nm_pair_t::set_specular_color(colorRGB const &color, float mag, float shine) {
+	if (shine == 0.0) {assert(color == WHITE);} // can't set zero shininess with a colored specular
+	float max_comp(max(color.R, max(color.G, color.B)));
+	if (max_comp == 0.0) {spec_color.set_c3(colorRGB(mag, mag, mag));} // black material has white specular; avoid divide-by-zero
+	else {spec_color.set_c3(color*(mag/max_comp));} // extract color value normalized to largest component and multiply by mag; will cancel out any lighting
+	shininess = (unsigned char)max(1, min(255, round_fp(shine)));
+}
 void tid_nm_pair_t::set_gl(tid_nm_pair_dstate_t &state) const {
 	if (tid == FONT_TEXTURE_ID) {text_drawer::bind_font_texture();}
 	else if (tid == REFLECTION_TEXTURE_ID) {
@@ -67,15 +74,15 @@ void tid_nm_pair_t::set_gl(tid_nm_pair_dstate_t &state) const {
 	bool const has_normal_map(get_nm_tid() != FLAT_NMAP_TEX);
 	if (has_normal_map) {select_multitex(get_nm_tid(), 5);} // else we set bump_map_mag=0.0
 	state.set_for_shader(has_normal_map ? 1.0 : 0.0); // enable or disable normal map (only ~25% of calls have a normal map)
-	if (emissive > 0.0) {state.s.add_uniform_float("emissive_scale", emissive);} // enable emissive
-	if (spec_mag > 0  ) {state.s.set_specular(spec_mag/255.0, shininess);}
+	if (emissive  > 0.0) {state.s.add_uniform_float("emissive_scale", emissive);} // enable emissive
+	if (shininess > 0  ) {state.s.set_specular_color(spec_color.get_c3(), shininess);} // colored specular
 }
 void tid_nm_pair_t::unset_gl(tid_nm_pair_dstate_t &state) const {
 	if (tid == REFLECTION_TEXTURE_ID && room_mirror_ref_tid != 0) {state.s.make_current(); return;}
 	bool const has_normal_map(get_nm_tid() != FLAT_NMAP_TEX);
 	if (has_normal_map) {select_multitex(FLAT_NMAP_TEX, 5);} // reset back to flat normal map
-	if (emissive > 0.0) {state.s.add_uniform_float("emissive_scale", 0.0);} // disable emissive
-	if (spec_mag > 0  ) {state.s.clear_specular();}
+	if (emissive  > 0.0) {state.s.add_uniform_float("emissive_scale", 0.0);} // disable emissive
+	if (shininess > 0  ) {state.s.clear_specular();} // clear specular
 }
 void tid_nm_pair_t::toggle_transparent_windows_mode() { // hack
 	if      (tid == BLDG_WINDOW_TEX    ) {tid = BLDG_WIND_TRANS_TEX;}
@@ -563,7 +570,7 @@ class building_draw_t {
 				}
 			}
 			// if new texture has specular and block does not, copy specular parameters from new texture; this is needed for house wood floors
-			if (tex.spec_mag && !block.tex.spec_mag) {block.tex.spec_mag = tex.spec_mag; block.tex.shininess = tex.shininess;}
+			if (tex.shininess && !block.tex.shininess) {block.tex.spec_color = tex.spec_color; block.tex.shininess = tex.shininess;}
 		}
 		return (quads_or_tris ? block.tri_verts : block.quad_verts);
 	}

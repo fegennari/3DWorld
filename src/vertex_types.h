@@ -153,6 +153,7 @@ struct color_wrapper { // size = 4, can be used in a union
 	color_wrapper() {c[0] = c[1] = c[2] = c[3] = 0;}
 	color_wrapper(colorRGBA const &c_) {set_c4(c_);}
 	color_wrapper(colorRGB  const &c_) {set_c3(c_);}
+	bool operator==(color_wrapper const &w) const {return (c[0] == w.c[0] && c[1] == w.c[1] && c[2] == w.c[2] && c[3] == w.c[3]);}
 	template<typename T> void set_c3(T const &c_) {UNROLL_3X(c[i_] = (unsigned char)(255.0*CLIP_TO_01(c_[i_]));) c[3] = 255;}
 	void set_c4(colorRGBA const &c_) {UNROLL_4X(c[i_]  = (unsigned char)(255.0*CLIP_TO_01(c_[i_]));)}
 	void add_c4(colorRGBA const &c_) {UNROLL_4X(c[i_] += (unsigned char)(255.0*CLIP_TO_01(c_[i_]));)}

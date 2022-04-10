@@ -208,24 +208,27 @@ struct tid_nm_pair_dstate_t {
 	~tid_nm_pair_dstate_t();
 };
 
-struct tid_nm_pair_t { // size=28
+struct tid_nm_pair_t { // size=32
 
 	int tid, nm_tid; // Note: assumes each tid has only one nm_tid
 	float tscale_x, tscale_y, txoff, tyoff, emissive;
-	unsigned char spec_mag, shininess; // Note: spec_mag is divided by 255.0
+	color_wrapper spec_color;
+	unsigned char shininess; // Note: spec_mag is divided by 255.0
 	bool shadowed; // Note: doesn't directly affect rendering, only used for uniquing/operator==()
 	bool transparent; // used to draw batched alpha blended materials last
 
-	tid_nm_pair_t() : tid(-1), nm_tid(-1), tscale_x(1.0), tscale_y(1.0), txoff(0.0), tyoff(0.0), emissive(0.0), spec_mag(0), shininess(0), shadowed(0), transparent(0) {}
+	tid_nm_pair_t() : tid(-1), nm_tid(-1), tscale_x(1.0), tscale_y(1.0), txoff(0.0), tyoff(0.0), emissive(0.0), shininess(0), shadowed(0), transparent(0) {}
 	tid_nm_pair_t(int tid_, float txy=1.0, bool shadowed_=0, bool transparent_=0) : tid(tid_), nm_tid(FLAT_NMAP_TEX), tscale_x(txy), tscale_y(txy),
-		txoff(0.0), tyoff(0.0), emissive(0.0), spec_mag(0), shininess(0), shadowed(shadowed_), transparent(transparent_) {} // non-normal mapped 1:1 texture AR
+		txoff(0.0), tyoff(0.0), emissive(0.0), shininess(0), shadowed(shadowed_), transparent(transparent_) {} // non-normal mapped 1:1 texture AR
 	tid_nm_pair_t(int tid_, int nm_tid_, float tx, float ty, float xo=0.0, float yo=0.0, bool shadowed_=0, bool transparent_=0) :
-		tid(tid_), nm_tid(nm_tid_), tscale_x(tx), tscale_y(ty), txoff(xo), tyoff(yo), emissive(0.0), spec_mag(0), shininess(0), shadowed(shadowed_), transparent(transparent_) {}
-	void set_specular(float mag, float shine) {spec_mag = (unsigned char)(CLIP_TO_01(mag)*255.0f); shininess = (unsigned char)max(1, min(255, round_fp(shine)));}
+		tid(tid_), nm_tid(nm_tid_), tscale_x(tx), tscale_y(ty), txoff(xo), tyoff(yo), emissive(0.0), shininess(0), shadowed(shadowed_), transparent(transparent_) {}
+	void set_shininess(float shine) {shininess = (unsigned char)max(1, min(255, round_fp(shine)));}
+	void set_specular(float mag, float shine) {set_specular_color(WHITE, mag, shine);}
+	void set_specular_color(colorRGB const &color, float mag, float shine);
 	bool enabled() const {return (tid >= 0 || nm_tid >= 0);}
 
 	bool is_compat_ignore_shadowed(tid_nm_pair_t const &t) const {
-		return (tid == t.tid && nm_tid == t.nm_tid && emissive == t.emissive && spec_mag == t.spec_mag && shininess == t.shininess && transparent == t.transparent);
+		return (tid == t.tid && nm_tid == t.nm_tid && emissive == t.emissive && shininess == t.shininess && transparent == t.transparent && spec_color == t.spec_color);
 	}
 	bool is_compatible(tid_nm_pair_t const &t) const {return (is_compat_ignore_shadowed(t) && shadowed == t.shadowed);}
 	bool operator==(tid_nm_pair_t const &t) const {return (is_compatible(t) && tscale_x == t.tscale_x && tscale_y == t.tscale_y && txoff == t.txoff && tyoff == t.tyoff);}
@@ -727,7 +730,7 @@ struct building_room_geom_t {
 		return get_material(tid_nm_pair_t(-1, 1.0, inc_shadows, transparent), inc_shadows, dynamic, small, transparent);
 	}
 	rgeom_mat_t &get_wood_material(float tscale=1.0, bool inc_shadows=1, bool dynamic=0, unsigned small=0);
-	rgeom_mat_t &get_metal_material(bool inc_shadows=0, bool dynamic=0, unsigned small=0);
+	rgeom_mat_t &get_metal_material(bool inc_shadows=0, bool dynamic=0, unsigned small=0, colorRGBA const &spec_color=WHITE);
 	colorRGBA apply_wood_light_color(room_object_t const &o) const;
 	void add_tquad(building_geom_t const &bg, tquad_with_ix_t const &tquad, cube_t const &bcube, tid_nm_pair_t const &tex,
 		colorRGBA const &color, bool invert_tc_x, bool exclude_frame, bool no_tc);

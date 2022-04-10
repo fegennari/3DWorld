@@ -41,6 +41,8 @@ int get_crate_tid(room_object_t const &c) {return get_texture_by_name((c.obj_id 
 colorRGBA get_textured_wood_color() {return WOOD_COLOR.modulate_with(texture_color(WOOD2_TEX));} // Note: uses default WOOD_COLOR, not the per-building random variant
 colorRGBA get_counter_color      () {return (get_textured_wood_color()*0.75 + texture_color(get_counter_tid())*0.25);}
 
+bool is_known_metal_color(colorRGBA const &c) {return (c == COPPER_C || c == BRASS_C || c == BRONZE_C || c == GOLD);}
+
 rgeom_mat_t &building_room_geom_t::get_wood_material(float tscale, bool inc_shadows, bool dynamic, unsigned small) {
 	return get_material(tid_nm_pair_t(WOOD2_TEX, get_texture_by_name("normal_maps/wood_NRM.jpg", 1),
 		3.0*tscale, 3.0*tscale, 0.0, 0.0, inc_shadows), inc_shadows, dynamic, small); // hard-coded for common material
@@ -984,7 +986,7 @@ void building_room_geom_t::add_bottle(room_object_t const &c) {
 	tid_nm_pair_t tex(-1, 1.0, 1); // shadowed
 	tex.set_specular(0.5, 80.0);
 	rgeom_mat_t &mat(get_material(tex, 1, 0, 1)); // inc_shadows=1, dynamic=0, small=1
-	colorRGBA const color(apply_light_color(c)), cap_colors[2] = {LT_GRAY, GOLD};
+	colorRGBA const color(apply_light_color(c)), cap_colors[2] = {LT_GRAY, GOLD}; // should gold caps have gold colored specular?
 	vector3d const sz(c.get_size());
 	unsigned const dim(get_max_dim(sz)), dim1((dim+1)%3), dim2((dim+2)%3);
 	bool const is_empty(c.is_bottle_empty()), add_bottom(dim != 2); // add bottom if bottle is on its side
@@ -1196,7 +1198,7 @@ void building_room_geom_t::add_railing(room_object_t const &c) {
 	bool const is_u_stairs(c.flags & (RO_FLAG_ADJ_LO | RO_FLAG_ADJ_HI)), is_top_railing(c.flags & RO_FLAG_TOS), draw_ends(!(c.flags & RO_FLAG_ADJ_BOT));
 	float const pole_radius(0.75*railing.r1), length(c.get_length()), height(get_railing_height(c));
 	tid_nm_pair_t tex(-1, 1.0, 1); // shadowed
-	tex.set_specular(0.7, 70.0);
+	tex.set_specular_color(c.color, 0.7, 70.0); // use a non-white metal specular color
 	rgeom_mat_t &mat(get_material(tex, 1, 0, 1)); // inc_shadows=1, dynamic=0, small=1
 	mat.add_cylin_to_verts(railing.p1, railing.p2, railing.r1, railing.r2, c.color, draw_ends, draw_ends); // draw sloped railing
 
@@ -1323,7 +1325,8 @@ void building_room_geom_t::add_pipe(room_object_t const &c) { // should be SHAPE
 	// adj flags indicate adjacencies where we draw joints connecting to other pipe sections
 	bool const draw_joints[2] = {((c.flags & RO_FLAG_ADJ_LO) != 0), ((c.flags & RO_FLAG_ADJ_HI) != 0)};
 	colorRGBA const color(apply_light_color(c));
-	rgeom_mat_t &mat(get_metal_material(shadowed, 0, 2)); // detail object
+	colorRGBA const spec_color(is_known_metal_color(c.color) ? c.color : WHITE); // special case metals
+	rgeom_mat_t &mat(get_metal_material(shadowed, 0, 2, spec_color)); // detail object with custom specular color
 	bool const is_bolt(c.flags & RO_FLAG_RAND_ROT); // use RO_FLAG_RAND_ROT to indicate this is a bolt on the pipe rather than a pipe section
 	unsigned const ndiv(is_bolt ? 6 : N_CYL_SIDES);
 	float const side_tscale(is_bolt ? 0.0 : 1.0); // bolts are untextured
@@ -2327,7 +2330,9 @@ void building_room_geom_t::add_water_heater(room_object_t const &c) {
 	metal_mat.add_vcylin_to_verts(top,  apply_light_color(c, DK_GRAY), 0, 1, 0); // top - draw top
 	metal_mat.add_vcylin_to_verts(vent, apply_light_color(c, LT_GRAY), 0, 0, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, 16); // ndiv=16
 	metal_mat.add_vcylin_to_verts(cone, apply_light_color(c, LT_GRAY), 0, 0, 0, 0, 1.8, 0.0); // cone
-	for (unsigned d = 0; d < 2; ++d) {metal_mat.add_vcylin_to_verts(pipes[d], apply_light_color(c, COPPER_C), 0, 0, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, 16);} // ndiv=16
+	rgeom_mat_t &copper_mat(get_metal_material(1, 0, 1, COPPER_C));
+	colorRGBA const copper_color(apply_light_color(c, COPPER_C));
+	for (unsigned d = 0; d < 2; ++d) {copper_mat.add_vcylin_to_verts(pipes[d], copper_color, 0, 0, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, 16);} // ndiv=16
 	get_untextured_material(1, 0, 1).add_cube_to_verts_untextured(box, apply_light_color(c, LT_GRAY)); // control box
 
 	if (c.room_id & 1) { // add sticker 50% of the time

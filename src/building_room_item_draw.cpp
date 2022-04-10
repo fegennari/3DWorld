@@ -547,9 +547,9 @@ rgeom_mat_t &building_room_geom_t::get_material(tid_nm_pair_t const &tex, bool i
 	// small: 0=mats_static, 1=mats_small, 2=mats_detail
 	return (dynamic ? mats_dynamic : (small ? ((small == 2) ? mats_detail : mats_small) : (transparent ? mats_alpha : mats_static))).get_material(tex, inc_shadows);
 }
-rgeom_mat_t &building_room_geom_t::get_metal_material(bool inc_shadows, bool dynamic, unsigned small) {
+rgeom_mat_t &building_room_geom_t::get_metal_material(bool inc_shadows, bool dynamic, unsigned small, colorRGBA const &spec_color) {
 	tid_nm_pair_t tex(-1, 1.0, inc_shadows);
-	tex.set_specular(0.8, 60.0);
+	tex.set_specular_color(spec_color, 0.8, 60.0);
 	return get_material(tex, inc_shadows, dynamic, small);
 }
 
