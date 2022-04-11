@@ -15,6 +15,31 @@ bool line_int_cubes_exp(point const &p1, point const &p2, vect_cube_t const &cub
 
 bool enable_parked_cars() {return (city_params.num_cars > 0 && !city_params.car_model_files.empty());}
 
+void subtract_cubes_from_cube_split_in_dim(cube_t const &c, vect_cube_t const &sub, vect_cube_t &out, vect_cube_t &out2, unsigned dim) {
+	out.clear();
+	out.push_back(c);
+
+	for (auto s = sub.begin(); s != sub.end(); ++s) {
+		if (!c.intersects(c)) continue; // no overlap with orig cube (optimization)
+		out2.clear();
+
+		// clip all of out against *s, write results to out2, then swap with out
+		for (auto i = out.begin(); i != out.end(); ++i) {
+			if (!i->intersects(*s)) {out2.push_back(*i); continue;} // no overlap, keep entire cube
+
+			if (i->d[dim][0] < s->d[dim][0]) { // lo side
+				out2.push_back(*i);
+				out2.back().d[dim][1] = s->d[dim][0];
+			}
+			if (i->d[dim][1] > s->d[dim][1]) { // hi side
+				out2.push_back(*i);
+				out2.back().d[dim][0] = s->d[dim][1];
+			}
+		} // for i
+		out.swap(out2);
+	} // for s
+}
+
 bool building_t::add_basement_utility_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
 	float const height(get_window_vspace() - get_floor_thickness()), radius(0.18*height);
 	cube_t place_area(get_walkable_room_bounds(room));
@@ -184,7 +209,7 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 					walls[1].d[dim][0] = center_pos + 0.4*window_vspacing;
 				}
 				for (unsigned side = 0; side < (split_sep_wall ? 2U : 1U); ++side) {
-					subtract_cubes_from_cube(walls[side], obstacles_exp, wall_parts, temp, 1); // ignore_zval=1
+					subtract_cubes_from_cube_split_in_dim(walls[side], obstacles_exp, wall_parts, temp, dim);
 			
 					for (auto const &w : wall_parts) {
 						if (w.get_sz_dim(dim) < 2.0*window_vspacing) continue; // too short, skip
@@ -213,7 +238,7 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 	for (unsigned p = 0; p < (4*(num_pillars - 1) + 1); ++p) { // add beams, 4 per pillar
 		float const ppos(pillar_start + 0.25*p*pillar_spacing);
 		set_wall_width(beam, ppos, beam_hwidth, dim);
-		subtract_cubes_from_cube(beam, obstacles, wall_parts, temp, 1); // ignore_zval=1
+		subtract_cubes_from_cube_split_in_dim(beam, obstacles, wall_parts, temp, !dim);
 		
 		for (auto const &w : wall_parts) {
 			if (min(w.dx(), w.dy()) > beam_hwidth) {objs.emplace_back(w, TYPE_PG_WALL, room_id, !dim, 0, beam_flags, tot_light_amt, SHAPE_CUBE, wall_color, 2);}
@@ -225,7 +250,7 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 		cube_t beam(room_floor_cube);
 		beam.z1() += beam_delta_z; // shift the bottom up to the ceiling
 		set_wall_width(beam, pos, beam_hwidth, !dim);
-		subtract_cubes_from_cube(beam, obstacles, wall_parts, temp, 1); // ignore_zval=1
+		subtract_cubes_from_cube_split_in_dim(beam, obstacles, wall_parts, temp, dim);
 
 		for (auto const &w : wall_parts) {
 			if (min(w.dx(), w.dy()) > beam_hwidth) {objs.emplace_back(w, TYPE_PG_WALL, room_id, !dim, 0, beam_flags, tot_light_amt, SHAPE_CUBE, wall_color, 2);}
@@ -334,7 +359,6 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 		// TODO: some sort of water heater or boiler that connects to both hot water and cold water pipes
 		// add cold water pipes
 		water_pipes_from_sewer_pipes(risers, rgen);
-		unsigned const cw_pipes_start(pipe_cubes.size());
 		float const water_ceil_zval(beam.z2()); // hang water pipes from the ceiling, above sewer pipes and through the beams
 		add_basement_pipes(obstacles, walls, beams, risers, pipe_cubes, room_id, num_floors, pipe_light_amt, water_ceil_zval, rgen, 1); // add_water_pipes=1 (cold water)
 		// remove risers with only cold water
@@ -345,7 +369,7 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 		risers.erase(o, risers.end());
 		// add hot water pipes; these can intersect cold water pipes, so we have to add those to obstacles
 		vect_cube_t hw_obstacles(obstacles);
-		hw_obstacles.insert(hw_obstacles.end(), pipe_cubes.begin()+cw_pipes_start, pipe_cubes.end()); // add cold water pipes
+		vector_add_to(pipe_cubes, hw_obstacles); // add sewer and cold water pipes
 		hot_water_pipes_from_cold_water_pipes(risers);
 		add_basement_pipes(hw_obstacles, walls, beams, risers, pipe_cubes, room_id, num_floors, pipe_light_amt, water_ceil_zval, rgen, 2); // add_water_pipes=2 (hot water)
 		add_sprinkler_pipe(obstacles, walls, beams, pipe_cubes, room_id, num_floors, pipe_light_amt, rgen);
@@ -467,9 +491,11 @@ void building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 	cube_t const &basement(get_basement());
 	float r_main(0.0);
 	for (sphere_t const &p : risers) {r_main = get_merged_pipe_radius(r_main, + p.radius, 4.0);} // higher exponent to avoid pipes that are too large
+	float const insul_thickness(0.5), min_insum_len(4.0); // both relative to pipe radius
 	float const window_vspacing(get_window_vspace()), fc_thickness(get_fc_thickness()), wall_thickness(get_wall_thickness());
 	float const pipe_zval(ceil_zval - FITTING_RADIUS*r_main); // includes clearance for fittings vs. beams (and lights - mostly)
 	float const align_dist(2.0*wall_thickness); // align pipes within this range (in particular sinks and stall toilets)
+	float const r_main_spacing(((add_water_pipes == 2) ? 1.0+insul_thickness : 1.0)*r_main); // include insulation thickness for hot water pipes
 	assert(pipe_zval > bcube.z1());
 	vector<pipe_t> pipes, fittings;
 	cube_t pipe_end_bcube;
@@ -548,7 +574,7 @@ void building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 	bool success(0);
 
 	for (unsigned n = 0; n < max_steps; ++n) {
-		cube_t const c(pipe_t(mp[0], mp[1], r_main, dim, PIPE_MAIN, 3).get_bcube());
+		cube_t const c(pipe_t(mp[0], mp[1], r_main_spacing, dim, PIPE_MAIN, 3).get_bcube());
 		if (!bcube   .contains_cube_xy(c)) break; // outside valid area
 		if (!basement.contains_cube_xy(c)) continue; // outside the basement
 		
@@ -638,7 +664,7 @@ void building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 			bool const dir(bool(d) ^ first_dir);
 			point ext[2] = {mp[dir], mp[dir]};
 			ext[dir][dim] = basement.d[dim][dir]; // shift this end to the basement wall
-			if (has_bcube_int(pipe_t(ext[0], ext[1], r_main, dim, PIPE_MAIN, 0).get_bcube(), obstacles)) continue; // can't extend to ext wall in this dim
+			if (has_bcube_int(pipe_t(ext[0], ext[1], r_main_spacing, dim, PIPE_MAIN, 0).get_bcube(), obstacles)) continue; // can't extend to ext wall in this dim
 			mp[dir]  = ext[dir];
 			has_exit = 1;
 			main_pipe_end_flags = (dir ? 2 : 1); // connect the end going to the exit
@@ -666,7 +692,7 @@ void building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 	}
 	if (!has_exit) { // create exit segment and vertical pipe into the floor
 		for (unsigned d = 0; d < 2; ++d) { // dim
-			point const cand_exit_pos(get_closest_wall_pos(mp[d], r_main, basement, walls, obstacles));
+			point const cand_exit_pos(get_closest_wall_pos(mp[d], r_main_spacing, basement, walls, obstacles));
 			float const dist(p2p_dist(mp[d], cand_exit_pos));
 			if (exit_dmin == 0.0 || dist < exit_dmin) {exit_pos = cand_exit_pos; exit_dir = d; exit_dmin = dist;}
 		}
@@ -765,7 +791,6 @@ void building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 		if (add_insul) {add_insul_exclude(p, pbc, insul_exclude);}
 	} // for p
 	if (add_insul) { // add hot water pipe insulation
-		float const insul_thickness(0.5), min_insum_len(4.0); // both relative to pipe radius
 		colorRGBA const insul_color(WHITE);
 		vect_cube_t insulation, temp;
 
@@ -775,7 +800,7 @@ void building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 			if (p.get_length() < min_len) continue; // length is too short
 			cube_t const pbc(p.get_bcube());
 			insulation.clear();
-			subtract_cubes_from_cube(pbc, insul_exclude, insulation, temp, 1); // ignore_zval=1
+			subtract_cubes_from_cube_split_in_dim(pbc, insul_exclude, insulation, temp, p.dim);
 			unsigned const d1((p.dim+1)%3), d2((p.dim+2)%3);
 			bool const pdim(p.dim & 1), pdir(p.dim >> 1); // encoded as: X:dim=0,dir=0 Y:dim=1,dir=0, Z:dim=x,dir=1
 			unsigned flags(RO_FLAG_NOCOLL | RO_FLAG_HANGING | RO_FLAG_ADJ_HI | RO_FLAG_ADJ_LO); // not collidable, always flat ends
