@@ -331,9 +331,10 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 		vect_cube_t pipe_cubes;
 		float const ceil_zval(beam.z1()); // hang sewer pipes under the ceiling beams
 		add_basement_pipes(obstacles, walls, beams, risers, pipe_cubes, room_id, num_floors, pipe_light_amt, ceil_zval, rgen, 0); // sewer pipes; add_water_pipes=0
+		// TODO: some sort of water heater or boiler that connects to both hot water and cold water pipes
 		// add cold water pipes
-		unsigned const cw_pipes_start(pipe_cubes.size());
 		water_pipes_from_sewer_pipes(risers, rgen);
+		unsigned const cw_pipes_start(pipe_cubes.size());
 		float const water_ceil_zval(beam.z2()); // hang water pipes from the ceiling, above sewer pipes and through the beams
 		add_basement_pipes(obstacles, walls, beams, risers, pipe_cubes, room_id, num_floors, pipe_light_amt, water_ceil_zval, rgen, 1); // add_water_pipes=1 (cold water)
 		// remove risers with only cold water
@@ -346,7 +347,7 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 		vect_cube_t hw_obstacles(obstacles);
 		hw_obstacles.insert(hw_obstacles.end(), pipe_cubes.begin()+cw_pipes_start, pipe_cubes.end()); // add cold water pipes
 		hot_water_pipes_from_cold_water_pipes(risers);
-		add_basement_pipes(obstacles, walls, beams, risers, pipe_cubes, room_id, num_floors, pipe_light_amt, water_ceil_zval, rgen, 2); // add_water_pipes=2 (hot water)
+		add_basement_pipes(hw_obstacles, walls, beams, risers, pipe_cubes, room_id, num_floors, pipe_light_amt, water_ceil_zval, rgen, 2); // add_water_pipes=2 (hot water)
 		add_sprinkler_pipe(obstacles, walls, beams, pipe_cubes, room_id, num_floors, pipe_light_amt, rgen);
 	}
 }
@@ -375,7 +376,8 @@ void building_t::hot_water_pipes_from_cold_water_pipes(vector<riser_pos_t> &rise
 	cube_t const &basement(get_basement());
 
 	for (riser_pos_t &riser : risers) {
-		float const wp_radius(riser.radius), pipe_spacing(2.0*(2.0*riser.radius + wp_radius)); // same radius as cold water pipe; same spacing as drain to cold water pipe
+		float const wp_radius(0.67*riser.radius); // smaller radius than cold water pipe
+		float const pipe_spacing(2.0*(2.0*riser.radius + riser.radius)); // same spacing as drain to cold water pipe
 		cube_t place_area(basement.contains_pt_xy(riser.pos) ? basement : bcube); // force the water riser to be in the basement if the sewer riser is there
 		place_area.expand_by_xy(-wp_radius);
 		point wp_pos(riser.pos - riser.water_shift*(2.0*pipe_spacing)); // shift opposite the drain
@@ -435,10 +437,11 @@ struct pipe_t {
 	point p1, p2;
 	float radius;
 	unsigned dim, type, end_flags; // end_flags: 1 bit is low end, 2 bit is high end
-	bool connected;
+	bool connected, outside_pg;
 
 	pipe_t(point const &p1_, point const &p2_, float radius_, unsigned dim_, unsigned type_, unsigned end_flags_) :
-		p1(p1_), p2(p2_), radius(radius_), dim(dim_), type(type_), end_flags(end_flags_), connected(type != PIPE_DRAIN) {}
+		p1(p1_), p2(p2_), radius(radius_), dim(dim_), type(type_), end_flags(end_flags_), connected(type != PIPE_DRAIN), outside_pg(0) {}
+	float get_length() const {return fabs(p2[dim] - p1[dim]);}
 
 	cube_t get_bcube() const {
 		cube_t bcube(p1, p2);
@@ -446,6 +449,13 @@ struct pipe_t {
 		return bcube;
 	}
 };
+
+void add_insul_exclude(pipe_t const &pipe, cube_t const &fitting, vect_cube_t &insul_exclude) {
+	cube_t ie(fitting);
+	ie.expand_by(2.0*pipe.radius); // expand in all dims; needed for right angle and T junctions because they're in multiple dims
+	ie.expand_in_dim(pipe.dim, 1.0*pipe.radius); // expand a bit more in pipe dim
+	insul_exclude.push_back(ie);
+}
 
 // add_water_pipes: 0=sewer pipes, 1=cold water pipes, 2=hot water pipes
 void building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t const &walls, vect_cube_t const &beams, vector<riser_pos_t> const &risers,
@@ -693,14 +703,18 @@ void building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 	assert(main_pipe.get_bcube().is_strictly_normalized());
 	pipes.push_back(main_pipe);
 
-	// add pipe objects: sewer: dark gray pipes / gray-brown fittings; cold water: copper pipes / brass fittings; hot water: insulated white pipes and fittings
-	colorRGBA const pipes_color   (add_water_pipes ? ((add_water_pipes == 2) ? WHITE : COPPER_C) : DK_GRAY);
-	colorRGBA const fittings_color(add_water_pipes ? ((add_water_pipes == 2) ? WHITE : BRASS_C ) : colorRGBA(0.7, 0.6, 0.5, 1.0));
+	// add pipe objects: sewer: dark gray pipes / gray-brown fittings; water: copper pipes / brass fittings; hot water: white insulation
+	colorRGBA const pipes_color   (add_water_pipes ? COPPER_C : DK_GRAY);
+	colorRGBA const fittings_color(add_water_pipes ? BRASS_C  : colorRGBA(0.7, 0.6, 0.5, 1.0));
+	bool const add_insul(add_water_pipes == 2); // hot water pipes have insulation
+	vect_cube_t insul_exclude;
+	pipe_cubes.reserve(pipe_cubes.size() + pipes.size());
 
-	for (pipe_t const &p : pipes) {
+	for (pipe_t &p : pipes) {
 		if (!p.connected) continue; // unconnected drain, skip
 		cube_t const pbc(p.get_bcube());
-		if (!basement.intersects_xy(pbc)) continue; // outside the basement, don't need to draw
+		if (!basement.intersects_xy(pbc)) {p.outside_pg = 1; continue;} // outside the basement, don't need to draw
+		pipe_cubes.push_back(pbc);
 		bool const pdim(p.dim & 1), pdir(p.dim >> 1); // encoded as: X:dim=0,dir=0 Y:dim=1,dir=0, Z:dim=x,dir=1
 		unsigned flags(0);
 		if (p.type != PIPE_EXIT) {flags |= RO_FLAG_NOCOLL;} // only exit pipe has collisions enabled
@@ -725,6 +739,7 @@ void building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 			pf.d[p.dim][!d] = pf.d[p.dim][d] + (d ? -1.0 : 1.0)*fitting_len;
 			if (!basement.intersects_xy(pf)) continue;
 			objs.push_back(pf);
+			if (add_insul) {add_insul_exclude(p, pf, insul_exclude);}
 
 			if (p.type == PIPE_MEC || p.type == PIPE_EXIT) {
 				if (p.end_flags & (1<<d)) { // connector or exit pipe with a round bend needs special handling
@@ -733,6 +748,7 @@ void building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 					pf.flags &= ~(d ? RO_FLAG_ADJ_HI : RO_FLAG_ADJ_LO);
 					pf.flags |= RO_FLAG_HANGING; // flat ends
 					objs.push_back(pf);
+					if (add_insul) {add_insul_exclude(p, pf, insul_exclude);}
 				}
 				else { // connector or exit pipe entering the wall or floor
 					objs.back().flags |= RO_FLAG_HANGING; // flat ends
@@ -746,9 +762,34 @@ void building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 		bool const pdim(p.dim & 1), pdir(p.dim >> 1);
 		unsigned const flags(RO_FLAG_NOCOLL | RO_FLAG_HANGING | RO_FLAG_ADJ_LO | RO_FLAG_ADJ_HI); // non-colliding, flat ends on both sides
 		objs.emplace_back(pbc, TYPE_PIPE, room_id, pdim, pdir, flags, tot_light_amt, SHAPE_CYLIN, fittings_color);
+		if (add_insul) {add_insul_exclude(p, pbc, insul_exclude);}
 	} // for p
-	pipe_cubes.reserve(pipe_cubes.size() + pipes.size());
-	for (pipe_t const &p : pipes) {pipe_cubes.push_back(p.get_bcube());}
+	if (add_insul) { // add hot water pipe insulation
+		float const insul_thickness(0.5), min_insum_len(4.0); // both relative to pipe radius
+		colorRGBA const insul_color(WHITE);
+		vect_cube_t insulation, temp;
+
+		for (pipe_t const &p : pipes) {
+			if (!p.connected || p.outside_pg || p.type == PIPE_DRAIN) continue; // unconnected, outside, or drain, skip
+			float const min_len(min_insum_len*p.radius), radius_exp(insul_thickness*p.radius);
+			if (p.get_length() < min_len) continue; // length is too short
+			cube_t const pbc(p.get_bcube());
+			insulation.clear();
+			subtract_cubes_from_cube(pbc, insul_exclude, insulation, temp, 1); // ignore_zval=1
+			unsigned const d1((p.dim+1)%3), d2((p.dim+2)%3);
+			bool const pdim(p.dim & 1), pdir(p.dim >> 1); // encoded as: X:dim=0,dir=0 Y:dim=1,dir=0, Z:dim=x,dir=1
+			unsigned flags(RO_FLAG_NOCOLL | RO_FLAG_HANGING | RO_FLAG_ADJ_HI | RO_FLAG_ADJ_LO); // not collidable, always flat ends
+			if (p.type == PIPE_EXIT && p.dim == 2) {objs.back().flags |= RO_FLAG_LIT;} // vertical exit pipes are shadow casting
+			
+			for (cube_t &i : insulation) {
+				if (i.d[d1][0] != pbc.d[d1][0] || i.d[d1][1] != pbc.d[d1][1] || i.d[d2][0] != pbc.d[d2][0] || i.d[d2][1] != pbc.d[d2][1]) continue; // clipped on any side
+				if (i.get_sz_dim(p.dim) < min_len) continue; // too short
+				i.expand_in_dim(d1, radius_exp);
+				i.expand_in_dim(d2, radius_exp);
+				objs.emplace_back(i, TYPE_PIPE, room_id, pdim, pdir, flags, tot_light_amt, SHAPE_CYLIN, insul_color);
+			}
+		} // for p
+	}
 }
 
 void building_t::add_sprinkler_pipe(vect_cube_t const &obstacles, vect_cube_t const &walls, vect_cube_t const &beams, vect_cube_t const &pipe_cubes,
