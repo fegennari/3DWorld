@@ -1858,7 +1858,10 @@ bool building_interior_t::is_cube_close_to_doorway(cube_t const &c, cube_t const
 cube_t get_stairs_bcube_expanded(stairwell_t const &s, float ends_clearance, float sides_clearance) {
 	cube_t tc(s);
 	tc.expand_in_dim(s.dim, ends_clearance); // add extra space at both ends of stairs; may only need to add on open ends, but this is difficult to check for
-	float const wall_hw(0.15*s.get_sz_dim(s.dim)/NUM_STAIRS_PER_FLOOR); // see step_len_pos logic in building_t::add_stairs_and_elevators()
+	// see step_len_pos logic in building_t::add_stairs_and_elevators()
+	unsigned const num_stairs(s.get_num_stairs());
+	//float const stair_dz(floor_spacing/(num_stairs+1)), wall_hw(min(max(0.15*s.get_sz_dim(s.dim)/num_stairs, 0.15*stair_dz), 0.25*stair_dz)); // more accurate, but need floor_spacing
+	float const wall_hw(0.15*s.get_sz_dim(s.dim)/num_stairs);
 	tc.expand_in_dim(!s.dim, (sides_clearance + wall_hw)); // add extra space to account for walls and railings on stairs
 	return tc;
 }
