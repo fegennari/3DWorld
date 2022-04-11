@@ -312,6 +312,7 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 		} // for d
 	} // for n
 	if (is_top_floor) {
+		float const pipe_light_amt = 1.0; // make pipes brighter and easier to see
 		// move or remove pipes intersecting lights, pillars, walls, stairs, elevators, and ramps;
 		// note that lights haven't been added yet though, but they're placed on beams, so we can have pipes avoid beams
 		vect_cube_t walls, beams;
@@ -329,12 +330,12 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 		get_pipe_basement_connections(risers);
 		vect_cube_t pipe_cubes;
 		float const ceil_zval(beam.z1()); // hang sewer pipes under the ceiling beams
-		add_basement_pipes(obstacles, walls, beams, risers, pipe_cubes, room_id, num_floors, tot_light_amt, ceil_zval, rgen, 0); // sewer pipes; add_water_pipes=0
+		add_basement_pipes(obstacles, walls, beams, risers, pipe_cubes, room_id, num_floors, pipe_light_amt, ceil_zval, rgen, 0); // sewer pipes; add_water_pipes=0
 		// add cold water pipes
 		unsigned const cw_pipes_start(pipe_cubes.size());
 		water_pipes_from_sewer_pipes(risers, rgen);
 		float const water_ceil_zval(beam.z2()); // hang water pipes from the ceiling, above sewer pipes and through the beams
-		add_basement_pipes(obstacles, walls, beams, risers, pipe_cubes, room_id, num_floors, tot_light_amt, water_ceil_zval, rgen, 1); // add_water_pipes=1 (cold water)
+		add_basement_pipes(obstacles, walls, beams, risers, pipe_cubes, room_id, num_floors, pipe_light_amt, water_ceil_zval, rgen, 1); // add_water_pipes=1 (cold water)
 		// remove risers with only cold water
 		auto i(risers.begin()), o(i);
 		for (; i != risers.end(); ++i) {
@@ -345,8 +346,8 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 		vect_cube_t hw_obstacles(obstacles);
 		hw_obstacles.insert(hw_obstacles.end(), pipe_cubes.begin()+cw_pipes_start, pipe_cubes.end()); // add cold water pipes
 		hot_water_pipes_from_cold_water_pipes(risers);
-		add_basement_pipes(hw_obstacles, walls, beams, risers, pipe_cubes, room_id, num_floors, tot_light_amt, water_ceil_zval, rgen, 2); // add_water_pipes=2 (hot water)
-		add_sprinkler_pipe(obstacles, walls, beams, pipe_cubes, room_id, num_floors, tot_light_amt, rgen);
+		add_basement_pipes(obstacles, walls, beams, risers, pipe_cubes, room_id, num_floors, pipe_light_amt, water_ceil_zval, rgen, 2); // add_water_pipes=2 (hot water)
+		add_sprinkler_pipe(obstacles, walls, beams, pipe_cubes, room_id, num_floors, pipe_light_amt, rgen);
 	}
 }
 
