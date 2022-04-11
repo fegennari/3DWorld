@@ -2678,7 +2678,8 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 			for (auto i = objs.begin() + room_objs_start; i != objs.end(); ++i) {i->flags |= RO_FLAG_INTERIOR;}
 		}
 	} // for r (room)
-	if (num_bathrooms == 0) { // can happen, but very rare
+	if (is_rotated()) {} // skip for rotated buildings, since toilets, etc. may not be placed
+	else if (num_bathrooms == 0) { // can happen, but very rare
 		cout << "no bathroom in building " << bcube.xc() << " " << bcube.yc() << endl;
 		if (cand_bathroom < rooms.size()) {cout << "cand bathroom was at " << rooms[cand_bathroom].str() << endl;}
 	}
