@@ -677,7 +677,7 @@ void building_room_geom_t::add_small_static_objs_to_verts(vect_room_object_t con
 		case TYPE_BUTTON:    if (!(i->flags & RO_FLAG_IN_ELEV)) {add_button(*i);} break; // skip buttons inside elevators, which are drawn as dynamic objects
 		case TYPE_LBASKET:   add_laundry_basket(*i); break;
 		case TYPE_WHEATER:   add_water_heater  (*i); break; // small since this object is only added to basements
-		case TYPE_TOASTER:   add_toaster_proxy(*i);  break;
+		case TYPE_TOASTER:   add_toaster_proxy (*i); break;
 		default: break;
 		} // end switch
 	} // for i
@@ -685,7 +685,7 @@ void building_room_geom_t::add_small_static_objs_to_verts(vect_room_object_t con
 
 void building_room_geom_t::create_detail_vbos(building_t const &building) {
 	mats_detail.clear();
-	// currently only small objects that are non-interactive and can't be taken; TYPE_SWITCH almost counts
+	// currently only small objects that are non-interactive and can't be taken; TYPE_SWITCH almost counts; also, anything in the basement not seen from outside the building
 	auto objs_end(get_placed_objs_end()); // skip buttons/stairs/elevators
 	tid_nm_pair_t const &wall_tex(building.get_material().wall_tex);
 
@@ -700,6 +700,7 @@ void building_room_geom_t::create_detail_vbos(building_t const &building) {
 		case TYPE_RAMP:       add_pg_ramp(*i, tex_origin, wall_tex.tscale_x); break;
 		case TYPE_PIPE:       add_pipe(*i); break;
 		case TYPE_CURB:       add_curb(*i); break;
+		case TYPE_BRK_PANEL:  add_breaker_panel (*i); break;
 		default: break;
 		} // end switch
 	} // for i

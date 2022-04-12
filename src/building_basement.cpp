@@ -342,9 +342,9 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 		} // for d
 	} // for n
 	if (is_top_floor) {
-		float const pipe_light_amt = 1.0; // make pipes brighter and easier to see
-		// move or remove pipes intersecting lights, pillars, walls, stairs, elevators, and ramps;
-		// note that lights haven't been added yet though, but they're placed on beams, so we can have pipes avoid beams
+		float const pipe_light_amt = 1.0; // make pipes and electrical brighter and easier to see
+		// avoid intersecting lights, pillars, walls, stairs, elevators, and ramps;
+		// note that lights haven't been added yet though, but they're placed on beams, so we can avoid beams instead
 		vect_cube_t walls, beams;
 
 		for (auto i = objs.begin()+objs_start; i != objs.end(); ++i) {
@@ -355,6 +355,7 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 			}
 			else if (i->type == TYPE_RAMP) {obstacles.push_back(*i);} // ramps are obstacles for pipes
 		}
+		add_basement_electrical(obstacles, walls, beams, room_id, pipe_light_amt, rgen);
 		// get pipe ends (risers) coming in through the ceiling
 		vector<riser_pos_t> risers;
 		get_pipe_basement_connections(risers);
@@ -831,11 +832,11 @@ void building_t::add_sprinkler_pipe(vect_cube_t const &obstacles, vect_cube_t co
 	float const bolt_dist(sp_radius + 0.5*flange_expand), bolt_radius(0.32*flange_expand), bolt_height(0.1*fc_thickness);
 	vect_room_object_t &objs(interior->room_geom->objs);
 	cube_t const &basement(get_basement());
+	cube_t c;
+	set_cube_zvals(c, (basement.z1() + fc_thickness), (basement.z2() - fc_thickness));
 
 	for (unsigned n = 0; n < 100; ++n) { // 100 random tries
 		bool const dim(rgen.rand_bool()), dir(rgen.rand_bool());
-		cube_t c;
-		set_cube_zvals(c, (basement.z1() + fc_thickness), (basement.z2() - fc_thickness));
 		set_wall_width(c, rgen.rand_uniform(basement.d[!dim][0]+spacing, basement.d[!dim][1]-spacing), sp_radius, !dim);
 		c.d[dim][ dir] = basement.d[dim][dir] + (dir ? -1.0 : 1.0)*flange_expand; // against the wall (with space for the flange)
 		c.d[dim][!dir] = c.d[dim][dir] + (dir ? -1.0 : 1.0)*2.0*sp_radius;
@@ -901,6 +902,38 @@ void building_t::get_pipe_basement_connections(vector<riser_pos_t> &risers) cons
 		++num_drains;
 	} // for i
 	for (sphere_t &r : risers) {min_eq(r.radius, max_radius);} // clamp radius to a reasonable value after all merges
+}
+
+void building_t::add_basement_electrical(vect_cube_t &obstacles, vect_cube_t const &walls, vect_cube_t const &beams, unsigned room_id, float tot_light_amt, rand_gen_t &rgen) {
+	cube_t const &basement(get_basement());
+	float const floor_spacing(get_window_vspace()), fc_thickness(get_fc_thickness()), floor_height(floor_spacing - 2.0*fc_thickness), ceil_zval(basement.z2() - fc_thickness);
+	unsigned const num_panels(1 + (rgen.rand()&3)); // 1-3
+
+	for (unsigned n = 0; n < num_panels; ++n) {
+		float const bp_hwidth(rgen.rand_uniform(0.15, 0.25)*floor_height), bp_depth(rgen.rand_uniform(0.05, 0.07)*floor_height);
+		if (bp_hwidth > 0.25*min(basement.dx(), basement.dy())) continue; // basement too small
+		cube_t c;
+		set_cube_zvals(c, (ceil_zval - 0.8*floor_height), (ceil_zval - rgen.rand_uniform(0.25, 0.4)*floor_height));
+
+		for (unsigned t = 0; t < ((n == 0) ? 10 : 1); ++t) { // 10 tries for the first panel, one try after that
+			bool const dim(rgen.rand_bool()), dir(rgen.rand_bool());
+			set_wall_width(c, rgen.rand_uniform(basement.d[!dim][0]+bp_hwidth, basement.d[!dim][1]-bp_hwidth), bp_hwidth, !dim);
+			c.d[dim][ dir] = basement.d[dim][dir];
+			c.d[dim][!dir] = c.d[dim][dir] + (dir ? -1.0 : 1.0)*2.0*bp_depth;
+			assert(c.is_strictly_normalized());
+			if (has_bcube_int(c, obstacles) || has_bcube_int(c, walls)) continue; // bad breaker box position
+			point top_center(c.xc(), c.yc(), c.z2());
+			cube_t conduit(top_center);
+			conduit.z2() = ceil_zval;
+			conduit.expand_by_xy(rgen.rand_uniform(0.38, 0.46)*bp_depth);
+			if (has_bcube_int(conduit, beams)) continue; // bad conduit position
+			interior->room_geom->objs.emplace_back(c, TYPE_BRK_PANEL, room_id, dim, dir, 0, tot_light_amt, SHAPE_CUBE, colorRGBA(0.4, 0.6, 0.5));
+			interior->room_geom->objs.emplace_back(conduit, TYPE_PIPE, room_id, 0, 1, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CYLIN, LT_GRAY); // vertical pipe
+			set_cube_zvals(c, ceil_zval-floor_height, ceil_zval); // expand to floor-to-ceiling
+			obstacles.push_back(c); // block off from pipes
+			break; // done
+		} // for t
+	} // for n
 }
 
 void building_t::add_parking_garage_ramp(rand_gen_t &rgen) {

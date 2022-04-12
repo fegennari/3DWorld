@@ -27,8 +27,8 @@ void gen_text_verts(vector<vert_tc_t> &verts, point const &pos, string const &te
 string const &gen_book_title(unsigned rand_id, string *author, unsigned split_len);
 void add_floor_number(unsigned floor_ix, unsigned floor_offset, bool has_parking_garage, ostringstream &oss);
 
-unsigned get_face_mask(unsigned dim, bool dir) {return ~(1 << (2*(2-dim) + dir));} // skip_faces: 1=Z1, 2=Z2, 4=Y1, 8=Y2, 16=X1, 32=X2
-unsigned get_skip_mask_for_xy(bool dim) {return (dim ? EF_Y12 : EF_X12);}
+unsigned get_face_mask(unsigned dim, bool dir) {return ~(1 << (2*(2-dim) + dir));} // draw only these faces: 1=Z1, 2=Z2, 4=Y1, 8=Y2, 16=X1, 32=X2
+unsigned get_skip_mask_for_xy(bool dim) {return (dim ? EF_Y12 : EF_X12);} // skip these faces
 tid_nm_pair_t get_tex_auto_nm(int tid, float tscale=1.0, bool shadowed=1) {return tid_nm_pair_t(tid, get_normal_map_for_bldg_tid(tid), tscale, tscale, 0.0, 0.0, shadowed);}
 int get_counter_tid    () {return get_texture_by_name("marble2.jpg");}
 int get_paneling_nm_tid() {return get_texture_by_name("normal_maps/paneling_NRM.jpg", 1);}
@@ -1370,6 +1370,17 @@ void building_room_geom_t::add_curb(room_object_t const &c) {
 			verts.push_back(v);
 		}
 	} // for s
+}
+
+void building_room_geom_t::add_breaker_panel(room_object_t const &c) {
+	unsigned skip_faces(~get_face_mask(c.dim, c.dir)); // skip back face, which is against the wall
+
+	if (c.is_open()) {
+		// TODO: draw some textured inside and the open door
+		skip_faces |= ~get_face_mask(c.dim, !c.dir); // skip front face of box
+	}
+	rgeom_mat_t &mat(get_metal_material(1, 0, 2)); // untextured, shadowed, small=2/detail object
+	mat.add_cube_to_verts(c, apply_light_color(c), all_zeros, skip_faces); // skip back face
 }
 
 // Note: there is a lot duplicated with building_room_geom_t::add_elevator(), but we need a separate function for adding interior elevator buttons
