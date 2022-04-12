@@ -80,7 +80,7 @@ bool building_t::add_basement_utility_objs(rand_gen_t rgen, room_t const &room, 
 vector3d building_t::get_parked_car_size() const {
 	vector3d car_sz(get_nom_car_size());
 	if (car_sz.x != 0.0) return car_sz; // valid car size, use this
-	return get_window_vspace()*vector3d(1.7, 0.75, 0.45); // no cars, use size relative to building floor spacing
+	return get_window_vspace()*vector3d(1.67, 0.73, 0.45); // no cars, use size relative to building floor spacing
 }
 
 void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned floor_ix,
