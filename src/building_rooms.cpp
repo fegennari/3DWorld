@@ -2688,6 +2688,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 		if (!(added_bathroom_objs_mask & PLACED_SINK  )) {cout << "no sink in building "   << bcube.xc() << " " << bcube.yc() << endl;}
 		//if (is_house && !(added_bathroom_objs_mask & (PLACED_TUB | PLACED_SHOWER))) {cout << "no bathtub or shower in building " << bcube.xc() << " " << bcube.yc() << endl;} // common
 	}
+	if (is_house && has_basement()) {add_basement_electrical_house(rgen);}
 	maybe_add_fire_escape(rgen);
 	add_extra_obj_slots(); // needed to handle balls taken from one building and brought to another
 	add_stairs_and_elevators(rgen); // the room objects - stairs and elevators have already been placed within a room

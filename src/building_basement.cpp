@@ -907,15 +907,16 @@ void building_t::get_pipe_basement_connections(vector<riser_pos_t> &risers) cons
 void building_t::add_basement_electrical(vect_cube_t &obstacles, vect_cube_t const &walls, vect_cube_t const &beams, unsigned room_id, float tot_light_amt, rand_gen_t &rgen) {
 	cube_t const &basement(get_basement());
 	float const floor_spacing(get_window_vspace()), fc_thickness(get_fc_thickness()), floor_height(floor_spacing - 2.0*fc_thickness), ceil_zval(basement.z2() - fc_thickness);
-	unsigned const num_panels(1 + (rgen.rand()&3)); // 1-3
+	unsigned const num_panels(is_house ? 1 : (1 + (rgen.rand()&3))); // 1 for houses, 1-3 for office buildings
+	colorRGBA const color(0.5, 0.6, 0.7);
 
 	for (unsigned n = 0; n < num_panels; ++n) {
-		float const bp_hwidth(rgen.rand_uniform(0.15, 0.25)*floor_height), bp_depth(rgen.rand_uniform(0.05, 0.07)*floor_height);
+		float const bp_hwidth(rgen.rand_uniform(0.15, 0.25)*(is_house ? 0.7 : 1.0)*floor_height), bp_depth(rgen.rand_uniform(0.05, 0.07)*(is_house ? 0.5 : 1.0)*floor_height);
 		if (bp_hwidth > 0.25*min(basement.dx(), basement.dy())) continue; // basement too small
 		cube_t c;
 		set_cube_zvals(c, (ceil_zval - 0.8*floor_height), (ceil_zval - rgen.rand_uniform(0.25, 0.4)*floor_height));
 
-		for (unsigned t = 0; t < ((n == 0) ? 10 : 1); ++t) { // 10 tries for the first panel, one try after that
+		for (unsigned t = 0; t < ((n == 0) ? 100 : 1); ++t) { // 100 tries for the first panel, one try after that
 			bool const dim(rgen.rand_bool()), dir(rgen.rand_bool());
 			set_wall_width(c, rgen.rand_uniform(basement.d[!dim][0]+bp_hwidth, basement.d[!dim][1]-bp_hwidth), bp_hwidth, !dim);
 			c.d[dim][ dir] = basement.d[dim][dir];
@@ -927,13 +928,32 @@ void building_t::add_basement_electrical(vect_cube_t &obstacles, vect_cube_t con
 			conduit.z2() = ceil_zval;
 			conduit.expand_by_xy(rgen.rand_uniform(0.38, 0.46)*bp_depth);
 			if (has_bcube_int(conduit, beams)) continue; // bad conduit position
-			interior->room_geom->objs.emplace_back(c, TYPE_BRK_PANEL, room_id, dim, dir, 0, tot_light_amt, SHAPE_CUBE, colorRGBA(0.4, 0.6, 0.5));
+			interior->room_geom->objs.emplace_back(c, TYPE_BRK_PANEL, room_id, dim, dir, 0, tot_light_amt, SHAPE_CUBE, color);
 			interior->room_geom->objs.emplace_back(conduit, TYPE_PIPE, room_id, 0, 1, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CYLIN, LT_GRAY); // vertical pipe
 			set_cube_zvals(c, ceil_zval-floor_height, ceil_zval); // expand to floor-to-ceiling
 			obstacles.push_back(c); // block off from pipes
 			break; // done
 		} // for t
 	} // for n
+}
+
+void building_t::add_basement_electrical_house(rand_gen_t &rgen) {
+	assert(has_room_geom());
+	float const tot_light_amt = 1.0; // ???
+	float const obj_expand(0.5*get_wall_thickness());
+	vect_cube_t obstacles, walls;
+
+	for (unsigned d = 0; d < 2; ++d) { // add basement walls
+		for (cube_t const &wall : interior->walls[d]) {
+			if (wall.zc() < ground_floor_z1) {walls.push_back(wall);}
+		}
+	}
+	// add basement objects; include them all, since it's not perf critical; we haven't added objects such as trim yet;
+	// what about blocking the breaker box with something, is that possible?
+	for (room_object_t const &c : interior->room_geom->objs) {
+		if (c.z1() < ground_floor_z1) {obstacles.push_back(c); obstacles.back().expand_by(obj_expand);} // with some clearance
+	}
+	add_basement_electrical(obstacles, walls, vect_cube_t(), 0, tot_light_amt, rgen); // no beams, room_id=0
 }
 
 void building_t::add_parking_garage_ramp(rand_gen_t &rgen) {
