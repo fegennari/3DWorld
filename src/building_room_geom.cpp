@@ -2324,7 +2324,8 @@ void building_room_geom_t::add_water_heater(room_object_t const &c) {
 	}
 	pan .z1() = c.z1() + 0.001*height; // prevent z-fighting
 	pan .z2() = c.z1() + 0.05*height;
-	body.z2() = top .z1() = top_z - 0.02*height;
+	top .z1() = top_z - 0.02*height;
+	body.z2() = top_z - 0.01*height; // overlap top to fill the gap
 	top .z2() = cone.z1() = vent.z1() = top_z;
 	cone.z2() = top_z + 0.08*height;
 	set_cube_zvals(box, (c.z1() + 0.14*height), (c.z1() + 0.2*height));
@@ -2335,13 +2336,13 @@ void building_room_geom_t::add_water_heater(room_object_t const &c) {
 	set_wall_width(box, c.get_center_dim(!c.dim), 0.2*radius, !c.dim);
 	box.d[c.dim][!c.dir] = front_pos - front_dir*0.10*radius; // back  of box
 	box.d[c.dim][ c.dir] = front_pos + front_dir*0.12*radius; // front of box
-	rgeom_mat_t &metal_mat(get_metal_material(1, 0, 1));
+	rgeom_mat_t &metal_mat(get_metal_material(1, 0, 2)); // small=2 / detail
 	metal_mat.add_vcylin_to_verts(body, apply_light_color(c, GRAY   ), 0, 0, 0); // main body - draw sides only
 	metal_mat.add_vcylin_to_verts(pan,  apply_light_color(c, LT_GRAY), 1, 0, 1, 0, 1.0, 1.0, 1.0, 1.0, 0, 64); // bottom pan - two sided, with bottom; ndiv=64
-	metal_mat.add_vcylin_to_verts(top,  apply_light_color(c, DK_GRAY), 0, 1, 0); // top - draw top
+	metal_mat.add_vcylin_to_verts(top,  apply_light_color(c, DK_GRAY), 0, 1, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, 64); // top - draw top; ndiv=64
 	metal_mat.add_vcylin_to_verts(vent, apply_light_color(c, LT_GRAY), 0, 0, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, 16); // ndiv=16
 	metal_mat.add_vcylin_to_verts(cone, apply_light_color(c, LT_GRAY), 0, 0, 0, 0, 1.8, 0.0); // cone
-	rgeom_mat_t &copper_mat(get_metal_material(1, 0, 1, COPPER_C));
+	rgeom_mat_t &copper_mat(get_metal_material(1, 0, 2, COPPER_C)); // small=2 / detail
 	colorRGBA const copper_color(apply_light_color(c, COPPER_C));
 	for (unsigned d = 0; d < 2; ++d) {copper_mat.add_vcylin_to_verts(pipes[d], copper_color, 0, 0, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, 16);} // ndiv=16
 	get_untextured_material(1, 0, 1).add_cube_to_verts_untextured(box, apply_light_color(c, LT_GRAY)); // control box
@@ -2350,7 +2351,7 @@ void building_room_geom_t::add_water_heater(room_object_t const &c) {
 		cube_t sticker(c);
 		sticker.expand_by_xy(0.005*radius);
 		set_cube_zvals(sticker, (c.z1() + 0.30*height), (c.z1() + 0.50*height));
-		rgeom_mat_t &sticker_mat(get_material(tid_nm_pair_t(get_texture_by_name("interiors/water_heater_sticker.jpg")), 0, 0, 1)); // no shadows, small
+		rgeom_mat_t &sticker_mat(get_material(tid_nm_pair_t(get_texture_by_name("interiors/water_heater_sticker.jpg")), 0, 0, 2)); // no shadows, small=2 / detail
 		sticker_mat.add_vcylin_to_verts(sticker, apply_light_color(c, LT_GRAY), 0, 0, 0, 0, 1.0, 1.0, 2.0); // sticker - draw sides only with scaled texture
 	}
 }
