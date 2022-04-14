@@ -807,10 +807,10 @@ cube_t get_mirror_surface(room_object_t const &c) {
 	if (!c.is_open()) return c;
 	float const thickness(get_med_cab_wall_thickness(c));
 	cube_t mirror(c);
-	mirror .d[!c.dim][0]       = mirror.d[!c.dim][1]; // shrink to zero area
-	mirror .d[!c.dim][1]      += thickness; // shift outward by thickness
-	mirror .d[ c.dim][!c.dir] -= (c.dir ? 1.0 : -1.0)*thickness; // move to front
-	mirror .d[ c.dim][ c.dir] += (c.dir ? 1.0 : -1.0)*(c.get_sz_dim(!c.dim) - thickness); // expand outward
+	mirror.d[!c.dim][0]       = mirror.d[!c.dim][1]; // shrink to zero area
+	mirror.d[!c.dim][1]      += thickness; // shift outward by thickness
+	mirror.d[ c.dim][!c.dir] -= (c.dir ? 1.0 : -1.0)*thickness; // move to front
+	mirror.d[ c.dim][ c.dir] += (c.dir ? 1.0 : -1.0)*(c.get_sz_dim(!c.dim) - thickness); // expand outward
 	return mirror;
 }
 void building_room_geom_t::add_mirror(room_object_t const &c) {
@@ -1373,16 +1373,34 @@ void building_room_geom_t::add_curb(room_object_t const &c) {
 }
 
 void building_room_geom_t::add_breaker_panel(room_object_t const &c) {
-	unsigned skip_faces(~get_face_mask(c.dim, c.dir)); // skip back face, which is against the wall
+	colorRGBA const color(apply_light_color(c));
+	rgeom_mat_t &mat(get_metal_material(1, 0, 1)); // untextured, shadowed, small=1
+	mat.add_cube_to_verts(c, color, all_zeros, ~get_face_mask(c.dim, c.dir)); // skip back face, which is against the wall
 
 	if (c.is_open()) {
-		rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_texture_by_name("interiors/breaker_panel.jpg"), 0.0), 0, 0, 1)); // unshadowed, is_small=1
-		mat.add_cube_to_verts(c, apply_light_color(c), all_zeros, get_face_mask(c.dim, !c.dir)); // draw only the front face
-		skip_faces |= ~get_face_mask(c.dim, !c.dir); // skip front face of box
-		// TODO: draw open door
+		// draw open door
+		bool const open_dir(c.obj_id & 1);
+		unsigned const door_face_mask(~get_face_mask(!c.dim, open_dir)); // skip inside face
+		float const thickness(0.02*c.dz()), box_width(c.get_sz_dim(!c.dim)), box_depth(c.get_sz_dim(c.dim)), dir_sign(c.dir ? -1.0 : 1.0);
+		cube_t door(c);
+		door.d[!c.dim][ open_dir]  = c.d[!c.dim][!open_dir]; // shrink to zero area
+		door.d[!c.dim][!open_dir] += (open_dir ? -1.0 : 1.0)*thickness; // shift outward by thickness
+		door.d[ c.dim][ c.dir   ]  = door.d[ c.dim][!c.dir]; // front of box
+		door.d[ c.dim][!c.dir   ] += dir_sign*(box_width - box_depth); // expand outward, subtract depth to make it artificially shorter
+		mat.add_cube_to_verts(door, color, all_zeros, door_face_mask); // outside
+		mat.add_cube_to_verts(door, color, all_zeros, door_face_mask, 0, 0, 0, 1); // inside, inverted=1
+		// draw the breakers
+		cube_t breakers(c);
+		breakers.expand_in_dim(!c.dim, -0.2*box_width); // shrink the width
+		breakers.expand_in_dim(2, -0.1*c.dz()); // shrink vertically
+		breakers.d[c.dim][!c.dir] += dir_sign*0.01*box_depth; // expand out slightly to prevent Z-fighting
+		float const width(breakers.get_sz_dim(!c.dim)), height(breakers.dz());
+		bool const is_wide(width > 0.7*height);
+		float const tx((is_wide ? 1.0 : 0.667)/width), ty(1.0/height); // use only two rows rather than three if not wide
+		int const tid(get_texture_by_name("interiors/breaker_panel.jpg"));
+		rgeom_mat_t &face_mat(get_material(tid_nm_pair_t(tid, -1, (c.dim ? tx : ty), (c.dim ? ty : tx)), 0, 0, 1)); // unshadowed, is_small=1
+		face_mat.add_cube_to_verts(breakers, apply_light_color(c, WHITE), breakers.get_llc(), get_face_mask(c.dim, !c.dir), !c.dim, (c.dim ^ c.dir)); // draw front face
 	}
-	rgeom_mat_t &mat(get_metal_material(1, 0, 1)); // untextured, shadowed, small=1
-	mat.add_cube_to_verts(c, apply_light_color(c), all_zeros, skip_faces); // skip back face
 }
 
 // Note: there is a lot duplicated with building_room_geom_t::add_elevator(), but we need a separate function for adding interior elevator buttons

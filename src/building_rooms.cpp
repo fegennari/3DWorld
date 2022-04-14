@@ -53,7 +53,6 @@ float get_radius_for_square_model(unsigned model_id) {
 	vector3d const chair_sz(building_obj_model_loader.get_model_world_space_size(model_id));
 	return 0.5f*(chair_sz.x + chair_sz.y)/chair_sz.z; // assume square and take average of xsize and ysize
 }
-void set_obj_id(vect_room_object_t &objs) {objs.back().obj_id = (uint16_t)objs.size();}
 
 bool building_t::add_chair(rand_gen_t &rgen, cube_t const &room, vect_cube_t const &blockers, unsigned room_id, point const &place_pos,
 	colorRGBA const &chair_color, bool dim, bool dir, float tot_light_amt, bool office_chair_model)

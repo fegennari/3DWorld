@@ -575,6 +575,8 @@ struct room_object_t : public oriented_cube_t { // size=64
 };
 typedef vector<room_object_t> vect_room_object_t;
 
+inline void set_obj_id(vect_room_object_t &objs) {objs.back().obj_id = (uint16_t)objs.size();}
+
 struct carried_item_t : public room_object_t {
 	unsigned use_count;
 	carried_item_t() : use_count(0) {}
