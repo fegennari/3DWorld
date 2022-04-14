@@ -65,11 +65,11 @@ void apply_vertex_animation(inout vec4 vertex, inout vec3 normal, in vec2 tc) {
 	else if (animation_id == 1 || animation_id == 6) { // walk
 		float hip_height = 1.25*anim_scale + model_delta_height*((animation_id == 6) ? -1.0 : 1.0);
 		float hip_scale  = 1.0 - clamp((10.0*(vertex.y - hip_height) + 0.5), 0.0, 1.0);
+		float time       = 2.0*anim_val;
 		
 		if (hip_scale > 0.0) {
-			float time = 2.0*anim_val;
-			float v    = hip_scale * sin(time);
-			vec3 axis  = vec3(((vertex.x > 0.0) ? 1.0 : -1.0),0,0);
+			float v   = hip_scale * sin(time);
+			vec3 axis = vec3(((vertex.x > 0.0) ? 1.0 : -1.0),0,0);
 			
 			if (animation_id == 1) { // normal walk
 				float dv = cos(time); // derivative of v
@@ -85,6 +85,7 @@ void apply_vertex_animation(inout vec4 vertex, inout vec3 normal, in vec2 tc) {
 				rotate_about(vertex.xyz, normal, hip_height, axis, v); // alien
 			}
 		}
+		vertex.y += 0.02*anim_scale*sin(2.0*time); // small amount of bob up and down when walking
 	}
 	else if (animation_id == 7) { // rats
 		// y = up/down, x = left/right, z = front/back; x and z are centered around 0, y is about [0, height]
