@@ -866,6 +866,7 @@ class ped_manager_t { // pedestrians
 	vector<city_ixs_t> by_city; // first ped/plot index for each city
 	vector<unsigned> by_plot;
 	vector<unsigned char> need_to_sort_city;
+	car_city_vect_t empty_cars_vect;
 	vector<car_city_vect_t> cars_by_city;
 	vector<point> bldg_ppl_pos;
 	rand_gen_t rgen;
@@ -884,7 +885,7 @@ class ped_manager_t { // pedestrians
 	int get_road_ix_for_ped_crossing(pedestrian_t const &ped, bool road_dim) const;
 	bool draw_ped(pedestrian_t const &ped, shader_t &s, pos_dir_up const &pdu, vector3d const &xlate, float def_draw_dist, float draw_dist_sq,
 		bool &in_sphere_draw, bool shadow_only, bool is_dlight_shadows, bool enable_animations, bool is_in_building);
-	car_city_vect_t const &get_cars_for_city(unsigned city) const {assert(city < cars_by_city.size()); return cars_by_city[city];}
+	car_city_vect_t const &get_cars_for_city(unsigned city) const {return ((city < cars_by_city.size()) ? cars_by_city[city] : empty_cars_vect);}
 public:
 	friend class city_spectate_manager_t;
 	// for use in pedestrian_t, mostly for collisions and path finding
