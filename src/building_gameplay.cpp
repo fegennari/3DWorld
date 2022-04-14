@@ -45,10 +45,10 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_CHAIR     ] = bldg_obj_type_t(0, 1, 1, 1, 0, 0, 1, 50.0,  25.0,  "chair"); // skip player collisions because they can be in the way and block the path in some rooms
 	bldg_obj_types[TYPE_STAIR     ] = bldg_obj_type_t(1, 0, 1, 0, 1, 0, 1, 0.0,   0.0,   "stair");
 	bldg_obj_types[TYPE_STAIR_WALL] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 1, 0.0,   0.0,   "stairs wall");
-	bldg_obj_types[TYPE_PG_WALL   ] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 0, 0.0,   0.0,   "parking garage wall"); // or support column; drawn as detail object
+	bldg_obj_types[TYPE_PG_WALL   ] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 0, 0.0,   0.0,   "parking garage wall"); // or support column; detail object
 	bldg_obj_types[TYPE_ELEVATOR  ] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 0, 0.0,   0.0,   "elevator");
-	bldg_obj_types[TYPE_PARK_SPACE] = bldg_obj_type_t(0, 0, 0, 0, 1, 0, 0, 0.0,   0.0,   "parking space"); // drawn as detail object
-	bldg_obj_types[TYPE_RAMP      ] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 0, 0.0,   0.0,   "ramp"); // drawn as detail object
+	bldg_obj_types[TYPE_PARK_SPACE] = bldg_obj_type_t(0, 0, 0, 0, 1, 0, 0, 0.0,   0.0,   "parking space"); // detail object
+	bldg_obj_types[TYPE_RAMP      ] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 0, 0.0,   0.0,   "ramp"); // detail object
 	bldg_obj_types[TYPE_LIGHT     ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 0, 40.0,  5.0,   "light");
 	bldg_obj_types[TYPE_RUG       ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 1, 50.0,  20.0,  "rug");
 	bldg_obj_types[TYPE_PICTURE   ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 1, 100.0, 1.0,   "picture"); // should be random value
@@ -74,7 +74,7 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_FLOORING  ] = bldg_obj_type_t(0, 0, 0, 0, 1, 0, 1, 0.0,   0.0,   "flooring");
 	// closets can't be picked up, but they can block a pickup; marked as large because small objects are not modified; marked as is_model because closets can contain lamps
 	bldg_obj_types[TYPE_CLOSET    ] = bldg_obj_type_t(1, 1, 1, 1, 1, 1, 1, 0.0,   0.0,   "closet");
-	bldg_obj_types[TYPE_WALL_TRIM ] = bldg_obj_type_t(0, 0, 0, 0, 1, 0, 0, 0.0,   0.0,   "wall trim");
+	bldg_obj_types[TYPE_WALL_TRIM ] = bldg_obj_type_t(0, 0, 0, 0, 1, 0, 0, 0.0,   0.0,   "wall trim"); // detail object
 	bldg_obj_types[TYPE_RAILING   ] = bldg_obj_type_t(1, 0, 0, 0, 1, 0, 2, 0.0,   0.0,   "railing");
 	bldg_obj_types[TYPE_CRATE     ] = bldg_obj_type_t(1, 1, 1, 1, 0, 0, 2, 10.0,  12.0,  "crate"); // should be random value
 	bldg_obj_types[TYPE_BOX       ] = bldg_obj_type_t(1, 1, 1, 1, 0, 0, 2, 5.0,   8.0,   "box");   // should be random value
@@ -107,10 +107,10 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_LAPTOP    ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 600.0, 8.0,   "laptop");
 	bldg_obj_types[TYPE_FPLACE    ] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 1, 0.0,   2000.0,"fireplace");
 	bldg_obj_types[TYPE_LBASKET   ] = bldg_obj_type_t(1, 1, 1, 1, 0, 0, 2, 12.0,  2.0,   "laundry basket");
-	bldg_obj_types[TYPE_WHEATER   ] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 2, 300.0, 500.0, "water heater");
+	bldg_obj_types[TYPE_WHEATER   ] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 0, 300.0, 500.0, "water heater"); // detail object
 	bldg_obj_types[TYPE_TAPE      ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 2.0,   0.4,   "duct tape", 1000);
-	bldg_obj_types[TYPE_OUTLET    ] = bldg_obj_type_t(0, 0, 0, 0, 1, 0, 0, 7.0,   0.1,   "Outlet");
-	bldg_obj_types[TYPE_PIPE      ] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 0, 0.0,   0.0,   "Pipe"); // only vertical pipes are collidable
+	bldg_obj_types[TYPE_OUTLET    ] = bldg_obj_type_t(0, 0, 0, 0, 1, 0, 0, 7.0,   0.1,   "Outlet"); // detail object
+	bldg_obj_types[TYPE_PIPE      ] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 0, 0.0,   0.0,   "Pipe"); // detail object; only vertical pipes are collidable
 	bldg_obj_types[TYPE_CURB      ] = bldg_obj_type_t(0, 0, 1, 0, 1, 0, 0, 0.0,   100.0, "Curb"); // for parking garages; only rats collide
 	bldg_obj_types[TYPE_BRK_PANEL ] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 2, 1000.0,100.0, "Breaker Panel");
 	// player_coll, ai_coll, rat_coll, pickup, attached, is_model, lg_sm, value, weight, name [capacity]

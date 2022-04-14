@@ -1376,10 +1376,12 @@ void building_room_geom_t::add_breaker_panel(room_object_t const &c) {
 	unsigned skip_faces(~get_face_mask(c.dim, c.dir)); // skip back face, which is against the wall
 
 	if (c.is_open()) {
-		// TODO: draw some textured inside and the open door
+		rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_texture_by_name("interiors/breaker_panel.jpg"), 0.0), 0, 0, 1)); // unshadowed, is_small=1
+		mat.add_cube_to_verts(c, apply_light_color(c), all_zeros, get_face_mask(c.dim, !c.dir)); // draw only the front face
 		skip_faces |= ~get_face_mask(c.dim, !c.dir); // skip front face of box
+		// TODO: draw open door
 	}
-	rgeom_mat_t &mat(get_metal_material(1, 0, 2)); // untextured, shadowed, small=2/detail object
+	rgeom_mat_t &mat(get_metal_material(1, 0, 1)); // untextured, shadowed, small=1
 	mat.add_cube_to_verts(c, apply_light_color(c), all_zeros, skip_faces); // skip back face
 }
 
