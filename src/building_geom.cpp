@@ -682,7 +682,7 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 				c.d[ dim][dir  ]  = base.d[ dim][dir ]; // shove it into the opposite corner of the bcube
 				c.d[!dim][!dir2] -= dist1; // move away from bcube edge
 				c.d[ dim][!dir ] -= dist2; // move away from bcube edge
-				c.z2() = c.z1() + min(min(c.dx(), c.dy()), height); // no taller than x or y size; Note: z1 same as part1
+				c.z2() = c.z1() + max(floor_spacing, min(min(c.dx(), c.dy()), height)); // no taller than x or y size, but at least one floor high; Note: z1 same as part1
 				bool is_garage(car_can_fit(c)), pri_dim(c.dx() < c.dy()); // garage must be able to fit a car
 				// maybe we could extend the garage in the correct dim to fit a car, but that can lead to problems with the fence and driveway placement
 				//if (street_dir && pri_dim != pref_street_dim) {is_garage = 0;} // garage is in wrong dim, make it a shed instead (we're allowing driveway bends, so this is okay now)
