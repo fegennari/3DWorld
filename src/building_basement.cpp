@@ -44,6 +44,7 @@ bool building_t::add_basement_utility_objs(rand_gen_t rgen, room_t const &room, 
 	float const height(get_window_vspace() - get_floor_thickness()), radius(0.18*height);
 	cube_t place_area(get_walkable_room_bounds(room));
 	place_area.expand_by(-(1.05*radius + get_trim_thickness())); // account for the pan
+	if (!place_area.is_strictly_normalized()) return 0; // too small to place water heater
 	vect_room_object_t &objs(interior->room_geom->objs);
 	point center(0.0, 0.0, zval);
 	bool was_placed(0);

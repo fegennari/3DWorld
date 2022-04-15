@@ -1946,7 +1946,8 @@ public:
 					city_plot_ix    = ((plot.parent_plot_ix >= 0) ? plot.parent_plot_ix : plot_ix);
 					max_floors      = plot.max_floors;
 					if (residential) {pref_dir = plot.street_dir;}
-					pos_range.expand_by_xy(-min_building_spacing); // force min spacing between building and edge of plot
+					// force min spacing between building and edge of plot, but make sure the plot remains normalized after shrinking
+					pos_range.expand_by_xy(-min(min_building_spacing, 0.45f*min(plot.dx(), plot.dy())));
 					if (plot.capacity == 1) {border_scale *= 2.0;} // use smaller border scale since the individual building plots should handle borders
 				}
 				else {

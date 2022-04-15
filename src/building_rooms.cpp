@@ -1259,6 +1259,7 @@ bool building_t::add_kitchen_objs(rand_gen_t rgen, room_t const &room, float zva
 		float const min_clearance(get_min_front_clearance()), front_clearance(max(0.6f*height, min_clearance));
 		cube_t cabinet_area(room_bounds);
 		cabinet_area.expand_by(-0.05*wall_thickness); // smaller gap than place_area; this is needed to prevent z-fighting with exterior walls
+		if (min(cabinet_area.dx(), cabinet_area.dy()) < 4.0*min_hwidth) return placed_obj; // no space for cabinets, room is too small
 		vect_room_object_t &objs(interior->room_geom->objs);
 		unsigned const counters_start(objs.size());
 		cube_t c;

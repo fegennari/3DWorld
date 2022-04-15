@@ -1490,7 +1490,7 @@ void city_obj_placer_t::place_residential_plot_objects(road_plot_t const &plot, 
 			unsigned const house_side(rgen.rand() % 3); // any side but the front
 			if (house_side == 0) {tc_dim = dim; tc_dir = !dir;} // put it in the back yard
 			else {tc_dim = !dim; tc_dir = rgen.rand_bool();} // put it on a random side of the house
-			if (tc_radius > 4.0*house.get_sz_dim(!tc_dim)) continue; // house wall is too short - shouldn't happen in the normal case
+			if (tc_radius > 0.25*house.get_sz_dim(!tc_dim)) continue; // house wall is too short - shouldn't happen in the normal case
 			point pos, door_pos;
 			pos.z = i->z2();
 			pos[ tc_dim] = house.d[tc_dim][tc_dir] + (tc_dir ? 1.0 : -1.0)*1.5*tc_radius; // place near this wall of the house
