@@ -491,7 +491,7 @@ void add_cube_top(cube_t const &c, vector<tquad_with_ix_t> &tquads, unsigned typ
 bool building_t::add_chimney(cube_t const &part, bool dim, bool dir, float chimney_dz, rand_gen_t &rgen) {
 	cube_t c(part);
 	float const sz1(c.get_sz_dim(!dim)), sz2(c.get_sz_dim(dim)), center(c.get_center_dim(!dim));
-	float const chimney_depth(0.03f*(sz1 + sz2)), window_vspace(get_window_vspace());
+	float const window_vspace(get_window_vspace()), sz1_sane(max(sz1, 2.0f*window_vspace)), chimney_depth(0.03f*(sz1_sane + sz2));
 	float shift(0.0);
 
 	if ((rgen.rand()%3) != 0) { // make the chimney non-centered 67% of the time
@@ -501,7 +501,7 @@ bool building_t::add_chimney(cube_t const &part, bool dim, bool dir, float chimn
 	float chimney_height(rgen.rand_uniform(1.25, 1.5)*chimney_dz);
 
 	if (rgen.rand()&3) { // chimney outside the bounds of the house, 75% of the time
-		float const hwidth(0.04*sz1);
+		float const hwidth(0.04f*sz1_sane);
 		c.d[dim][!dir]  = c.d[dim][dir] + 0.001*(dir ? 1.0 : -1.0)*chimney_depth; // slight shift to avoid Z-fighting
 		c.d[dim][ dir] += (dir ? 1.0 : -1.0)*chimney_depth;
 
@@ -544,7 +544,7 @@ bool building_t::add_chimney(cube_t const &part, bool dim, bool dir, float chimn
 		if (!has_chimney) return 0; // failed to place
 	}
 	else { // chimney inside the bounds of the house; placement can't fail
-		set_wall_width(c, (center + shift), 0.05*sz1, !dim); // set chimney width
+		set_wall_width(c, (center + shift), 0.05*sz1_sane, !dim); // set chimney width
 		c.d[dim][!dir]  = c.d[dim][dir] + (dir ? -1.0 : 1.0)*chimney_depth;
 		c.d[dim][ dir] += (dir ? -1.0 : 1.0)*0.01*sz2; // slight shift from edge of house to avoid z-fighting
 		c.z1() = c.z2();
