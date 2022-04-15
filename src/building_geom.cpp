@@ -1773,6 +1773,7 @@ void building_t::expand_ground_floor_cube(cube_t &cube, cube_t const &skip) cons
 		cube_t cand_ge(cube);
 		cand_ge.union_with_cube(*p);
 		if (cand_ge.get_area_xy() < 1.05f*(cube.get_area_xy() + p->get_area_xy())) {cube = cand_ge;} // union mostly includes the two parts
+		else if (real_num_parts && is_cube_contained_in_parts(cand_ge)) {cube = cand_ge;} // useful for cross-shaped building
 		else {try_expand_into_xy(cube, *p);}
 	}
 }
