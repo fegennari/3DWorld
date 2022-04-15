@@ -734,10 +734,13 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 			// insert walls to split up parts into rectangular rooms
 			float const min_split_wall_len(0.5*min_wall_len); // allow a shorter than normal wall because these walls have higher priority
 			
-			if (min(p->dx(), p->dy()) > min_split_wall_len) { // if not too small
+			if (min(p->dx(), p->dy()) < min_split_wall_len) { // too small, skip
+				has_small_part = 1;
+			}
+			else {
 				for (auto p2 = parts.begin(); p2 != parts_end; ++p2) {
 					if (p2 == p) continue; // skip self
-					if (min(p2->dx(), p2->dy()) < min_split_wall_len) continue; // too small, skip
+					if (min(p2->dx(), p2->dy()) < min_split_wall_len) {has_small_part = 1; continue;} // too small, skip
 
 					for (unsigned dim = 0; dim < 2; ++dim) {
 						for (unsigned dir = 0; dir < 2; ++dir) {
