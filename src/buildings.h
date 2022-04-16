@@ -259,11 +259,11 @@ struct color_range_t {
 };
 
 struct riser_pos_t : public sphere_t {
-	bool has_hot;
-	vector3d water_shift;
-	riser_pos_t() : has_hot(0) {}
-	riser_pos_t(point const &pos_, float radius_, bool hh=0) : sphere_t(pos_, radius_), has_hot(hh) {}
+	bool has_hot, flow_dir; // flow_dir: 0=out/down, 1=in/up
+	riser_pos_t() : has_hot(0), flow_dir(0) {}
+	riser_pos_t(point const &pos_, float radius_, bool hh=0, float fd=0) : sphere_t(pos_, radius_), has_hot(hh), flow_dir(fd) {}
 };
+typedef vector<riser_pos_t> vect_riser_pos_t;
 
 struct building_mat_t : public building_tex_params_t {
 
@@ -1367,13 +1367,11 @@ private:
 	vector3d get_parked_car_size() const;
 	void add_parking_garage_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned floor_ix,
 		unsigned num_floors, unsigned &nlights_x, unsigned &nlights_y, float &light_delta_z);
-	void add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t const &walls, vect_cube_t const &beams, vector<riser_pos_t> const &risers,
+	void add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t const &walls, vect_cube_t const &beams, vect_riser_pos_t const &risers,
 		vect_cube_t &pipe_cubes, unsigned room_id, unsigned num_floors, float tot_light_amt, float ceil_zval, rand_gen_t &rgen, int add_water_pipes);
 	void add_sprinkler_pipe(vect_cube_t const &obstacles, vect_cube_t const &walls, vect_cube_t const &beams, vect_cube_t const &pipe_cubes,
 		unsigned room_id, unsigned num_floors, float tot_light_amt, rand_gen_t &rgen);
-	void get_pipe_basement_connections(vector<riser_pos_t> &risers) const;
-	void water_pipes_from_sewer_pipes (vector<riser_pos_t> &risers, rand_gen_t &rgen) const;
-	void hot_water_pipes_from_cold_water_pipes(vector<riser_pos_t> &risers) const;
+	void get_pipe_basement_connections(vect_riser_pos_t &sewer, vect_riser_pos_t &cold_water, vect_riser_pos_t &hot_water, rand_gen_t &rgen) const;
 	void add_basement_electrical(vect_cube_t &obstacles, vect_cube_t const &walls, vect_cube_t const &beams, unsigned room_id, float tot_light_amt, rand_gen_t &rgen);
 	void add_basement_electrical_house(rand_gen_t &rgen);
 	void place_book_on_obj   (rand_gen_t &rgen, room_object_t const &place_on, unsigned room_id, float tot_light_amt, bool use_dim_dir);

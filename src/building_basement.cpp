@@ -358,67 +358,19 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 		}
 		add_basement_electrical(obstacles, walls, beams, room_id, pipe_light_amt, rgen);
 		// get pipe ends (risers) coming in through the ceiling
-		vector<riser_pos_t> risers;
-		get_pipe_basement_connections(risers);
+		vect_riser_pos_t sewer, cold_water, hot_water;
+		get_pipe_basement_connections(sewer, cold_water, hot_water, rgen);
 		vect_cube_t pipe_cubes;
-		float const ceil_zval(beam.z1()); // hang sewer pipes under the ceiling beams
-		add_basement_pipes(obstacles, walls, beams, risers, pipe_cubes, room_id, num_floors, pipe_light_amt, ceil_zval, rgen, 0); // sewer pipes; add_water_pipes=0
-		// TODO: some sort of water heater or boiler that connects to both hot water and cold water pipes
-		// add cold water pipes
-		water_pipes_from_sewer_pipes(risers, rgen);
-		float const water_ceil_zval(beam.z2()); // hang water pipes from the ceiling, above sewer pipes and through the beams
-		add_basement_pipes(obstacles, walls, beams, risers, pipe_cubes, room_id, num_floors, pipe_light_amt, water_ceil_zval, rgen, 1); // add_water_pipes=1 (cold water)
-		// remove risers with only cold water
-		auto i(risers.begin()), o(i);
-		for (; i != risers.end(); ++i) {
-			if (i->has_hot) {*(o++) = *i;} // keep risers with hot water
-		}
-		risers.erase(o, risers.end());
+		// hang sewer pipes under the ceiling beams; hang water pipes from the ceiling, above sewer pipes and through the beams
+		float const ceil_zval(beam.z1()), water_ceil_zval(beam.z2());
+		add_basement_pipes(obstacles, walls, beams, sewer, pipe_cubes, room_id, num_floors, pipe_light_amt, ceil_zval, rgen, 0); // sewer pipes; add_water_pipes=0
+		add_basement_pipes(obstacles, walls, beams, cold_water, pipe_cubes, room_id, num_floors, pipe_light_amt, water_ceil_zval, rgen, 1); // add_water_pipes=1 (cold water)
 		// add hot water pipes; these can intersect cold water pipes, so we have to add those to obstacles
 		vect_cube_t hw_obstacles(obstacles);
 		vector_add_to(pipe_cubes, hw_obstacles); // add sewer and cold water pipes
-		hot_water_pipes_from_cold_water_pipes(risers);
-		add_basement_pipes(hw_obstacles, walls, beams, risers, pipe_cubes, room_id, num_floors, pipe_light_amt, water_ceil_zval, rgen, 2); // add_water_pipes=2 (hot water)
+		add_basement_pipes(hw_obstacles, walls, beams, hot_water, pipe_cubes, room_id, num_floors, pipe_light_amt, water_ceil_zval, rgen, 2); // add_water_pipes=2 (hot water)
 		add_sprinkler_pipe(obstacles, walls, beams, pipe_cubes, room_id, num_floors, pipe_light_amt, rgen);
 	}
-}
-
-void building_t::water_pipes_from_sewer_pipes(vector<riser_pos_t> &risers, rand_gen_t &rgen) const { // shift risers for water pipes to avoid sewer pipes
-	// choose a shift direction 45 degrees diagonally in the XY plane to avoid collisions with sewer pipes placed in either dim
-	vector3d const shift_dir(vector3d((rgen.rand_bool() ? -1.0 : 1.0), (rgen.rand_bool() ? -1.0 : 1.0), 0.0).get_norm());
-	cube_t const &basement(get_basement());
-
-	for (riser_pos_t &riser : risers) {
-		float const wp_radius(0.5*riser.radius), pipe_spacing(2.0*(riser.radius + wp_radius));
-		cube_t place_area(basement.contains_pt_xy(riser.pos) ? basement : bcube); // force the water riser to be in the basement if the sewer riser is there
-		place_area.expand_by_xy(-wp_radius);
-		point wp_pos(riser.pos + shift_dir*pipe_spacing);
-		riser.water_shift = shift_dir;
-
-		if (!place_area.contains_pt_xy(wp_pos)) { // if this shift takes pos outside the placement area, shift in the other direction
-			wp_pos = riser.pos - shift_dir*pipe_spacing;
-			riser.water_shift.negate();
-		}
-		riser.pos    = wp_pos;
-		riser.radius = wp_radius;
-	} // for riser
-}
-void building_t::hot_water_pipes_from_cold_water_pipes(vector<riser_pos_t> &risers) const {
-	cube_t const &basement(get_basement());
-
-	for (riser_pos_t &riser : risers) {
-		float const wp_radius(0.67*riser.radius); // smaller radius than cold water pipe
-		float const pipe_spacing(2.0*(2.0*riser.radius + riser.radius)); // same spacing as drain to cold water pipe
-		cube_t place_area(basement.contains_pt_xy(riser.pos) ? basement : bcube); // force the water riser to be in the basement if the sewer riser is there
-		place_area.expand_by_xy(-wp_radius);
-		point wp_pos(riser.pos - riser.water_shift*(2.0*pipe_spacing)); // shift opposite the drain
-
-		if (!place_area.contains_pt_xy(wp_pos)) { // if this shift takes pos outside the placement area, shift further from the drain
-			wp_pos = riser.pos + riser.water_shift*pipe_spacing;
-		}
-		riser.pos    = wp_pos;
-		riser.radius = wp_radius;
-	} // for riser
 }
 
 // find the closest wall (including room wall) to this location, avoiding obstacles, and shift outward by radius; routes in X or Y only, for now
@@ -457,6 +409,12 @@ point get_closest_wall_pos(point const &pos, float radius, cube_t const &room, v
 
 float get_merged_pipe_radius(float r1, float r2, float exponent) {return pow((pow(r1, exponent) + pow(r2, exponent)), 1/exponent);}
 
+float get_merged_risers_radius(vect_riser_pos_t const &risers) {
+	float radius(0.0);
+	for (riser_pos_t const &p : risers) {radius = get_merged_pipe_radius(radius, + p.radius, 4.0);} // higher exponent to avoid pipes that are too large
+	return radius;
+}
+
 enum {PIPE_DRAIN=0, PIPE_CONN, PIPE_MAIN, PIPE_MEC, PIPE_EXIT, PIPE_FITTING};
 
 void expand_cube_except_in_dim(cube_t &c, float expand, unsigned not_dim) {
@@ -489,15 +447,14 @@ void add_insul_exclude(pipe_t const &pipe, cube_t const &fitting, vect_cube_t &i
 }
 
 // add_water_pipes: 0=sewer pipes, 1=cold water pipes, 2=hot water pipes
-void building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t const &walls, vect_cube_t const &beams, vector<riser_pos_t> const &risers,
+void building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t const &walls, vect_cube_t const &beams, vect_riser_pos_t const &risers,
 	vect_cube_t &pipe_cubes, unsigned room_id, unsigned num_floors, float tot_light_amt, float ceil_zval, rand_gen_t &rgen, int add_water_pipes)
 {
 	if (risers.empty()) return; // can this happen?
 	float const FITTING_LEN(1.2), FITTING_RADIUS(1.1); // relative to radius
 	vect_room_object_t &objs(interior->room_geom->objs);
 	cube_t const &basement(get_basement());
-	float r_main(0.0);
-	for (sphere_t const &p : risers) {r_main = get_merged_pipe_radius(r_main, + p.radius, 4.0);} // higher exponent to avoid pipes that are too large
+	float const r_main(get_merged_risers_radius(risers));
 	float const insul_thickness(0.5), min_insum_len(4.0); // both relative to pipe radius
 	float const window_vspacing(get_window_vspace()), fc_thickness(get_fc_thickness()), wall_thickness(get_wall_thickness());
 	float const pipe_zval(ceil_zval - FITTING_RADIUS*r_main); // includes clearance for fittings vs. beams (and lights - mostly)
@@ -873,25 +830,31 @@ void building_t::add_sprinkler_pipe(vect_cube_t const &obstacles, vect_cube_t co
 
 // here each sphere represents the entry point of a pipe with this radius into the basement ceiling
 // find all plumbing fixtures such as toilets, urinals, sinks, and showers; these should have all been placed in rooms by now
-void building_t::get_pipe_basement_connections(vector<riser_pos_t> &risers) const {
+void building_t::get_pipe_basement_connections(vect_riser_pos_t &sewer, vect_riser_pos_t &cold_water, vect_riser_pos_t &hot_water, rand_gen_t &rgen) const {
+	cube_t const &basement(get_basement());
 	float const merge_dist = 4.0; // merge two pipes if their combined radius is within this distance
 	float const floor_spacing(get_window_vspace()), base_pipe_radius(0.01*floor_spacing), base_pipe_area(base_pipe_radius*base_pipe_radius);
-	float const merge_dist_sq(merge_dist*merge_dist), max_radius(0.4*get_wall_thickness());
-	auto const &objs(interior->room_geom->objs);
-	unsigned num_drains(0);
-	cube_t const &basement(get_basement());
-	float const ceil_zval(basement.z2() - get_fc_thickness());
+	float const merge_dist_sq(merge_dist*merge_dist), max_radius(0.4*get_wall_thickness()), ceil_zval(basement.z2() - get_fc_thickness());
+	vector<room_object_t> water_heaters;
 
-	for (auto i = objs.begin(); i != objs.end(); ++i) { // check all objects placed so far
-		bool const hot_cold_obj (i->type == TYPE_SINK || i->type == TYPE_TUB || i->type == TYPE_SHOWER || i->type == TYPE_BRSINK || i->type == TYPE_KSINK || i->type == TYPE_WASHER);
-		bool const cold_only_obj(i->type == TYPE_TOILET || i->type == TYPE_URINAL || i->type == TYPE_DRAIN);
+	// start with sewer pipes and water heaters
+	for (room_object_t const &i : interior->room_geom->objs) { // check all objects placed so far
+		if (i.type == TYPE_WHEATER) { // water heaters are special because they take cold water and return hot water
+			// skip if in the basement, since this must connect directly to pipes rather than through a riser;
+			// this can happen for houses (which don't have parking garages or pipes), but currently not for office buildings
+			if (i.z1() < ground_floor_z1) continue;
+			water_heaters.push_back(i);
+			continue;
+		}
+		bool const hot_cold_obj (i.type == TYPE_SINK || i.type == TYPE_TUB || i.type == TYPE_SHOWER || i.type == TYPE_BRSINK || i.type == TYPE_KSINK || i.type == TYPE_WASHER);
+		bool const cold_only_obj(i.type == TYPE_TOILET || i.type == TYPE_URINAL || i.type == TYPE_DRAIN);
 		if (!hot_cold_obj && !cold_only_obj) continue;
-		point pos(i->xc(), i->yc(), ceil_zval);
+		point pos(i.xc(), i.yc(), ceil_zval);
 		//if (!basement.contains_pt_xy(pos)) continue; // riser/pipe doesn't pass through the basement, but this is now allowed
 		bool merged(0);
 
-		// see if we can merge this riser into an existing nearby riser
-		for (auto &r : risers) {
+		// see if we can merge this sewer riser into an existing nearby riser
+		for (auto &r : sewer) {
 			float const p_area(r.radius*r.radius), sum_area(p_area + base_pipe_area);
 			if (!dist_xy_less_than(r.pos, pos, merge_dist_sq*sum_area)) continue;
 			r.pos      = (p_area*r.pos + base_pipe_area*pos)/sum_area; // merged position is weighted average area
@@ -900,10 +863,39 @@ void building_t::get_pipe_basement_connections(vector<riser_pos_t> &risers) cons
 			merged     = 1;
 			break;
 		} // for p
-		if (!merged) {risers.emplace_back(pos, base_pipe_radius, hot_cold_obj);} // create a new riser
-		++num_drains;
+		if (!merged) {sewer.emplace_back(pos, base_pipe_radius, hot_cold_obj, 0);} // create a new riser; flow_dir=0/out
 	} // for i
-	for (sphere_t &r : risers) {min_eq(r.radius, max_radius);} // clamp radius to a reasonable value after all merges
+	for (riser_pos_t &s : sewer) {min_eq(s.radius, max_radius);} // clamp radius to a reasonable value after all merges
+
+	// generate hot and cold water pipes
+	// choose a shift direction 45 degrees diagonally in the XY plane to avoid collisions with sewer pipes placed in either dim
+	vector3d const shift_dir(vector3d((rgen.rand_bool() ? -1.0 : 1.0), (rgen.rand_bool() ? -1.0 : 1.0), 0.0).get_norm());
+	cold_water.reserve(sewer.size()); // one cold water pipe per sewer pipe
+
+	for (riser_pos_t &s : sewer) {
+		float const wp_radius(0.5*s.radius), pipe_spacing(2.0*(s.radius + wp_radius));
+		cube_t place_area(basement.contains_pt_xy(s.pos) ? basement : bcube); // force the water riser to be in the basement if the sewer riser is there
+		place_area.expand_by_xy(-wp_radius);
+		vector3d delta(shift_dir*pipe_spacing);
+		if (!place_area.contains_pt_xy(s.pos + delta)) {delta.negate();} // if shift takes pos outside placement area, shift in the other direction
+		cold_water.emplace_back((s.pos + delta), wp_radius, 0, 1); // has_hot=0, flow_dir=1/in
+		if (!s.has_hot) continue; // no hot water, done
+		float const hot_radius(0.67*wp_radius); // smaller radius than cold water pipe
+		place_area.expand_by_xy(wp_radius - hot_radius); // resize for new radius
+		if (!place_area.contains_pt_xy(s.pos - delta)) {delta *= 2.0;} // if shift takes pos outside placement area, shift further from the drain
+		hot_water.emplace_back((s.pos - delta), wp_radius, 1, 1); // shift in opposite dir; has_hot=1, flow_dir=1/in
+	} // for sewer
+	if (!water_heaters.empty()) { // add connections for water heaters
+		float const radius_hot(get_merged_risers_radius(hot_water)); // this is the radius of the main hot water supply
+		float const per_wh_radius(pow(1.0/water_heaters.size(), 1/4.0)); // distribute evenly among the water heaters using the same merge exponent
+
+		for (room_object_t const &wh : water_heaters) {
+			float const shift_val(0.75*wh.get_radius());
+			point const center(wh.xc(), wh.yc(), ceil_zval);
+			cold_water.emplace_back((center + shift_val*shift_dir), per_wh_radius, 0, 1); // has_hot=0, flow_dir=1/in
+			hot_water .emplace_back((center - shift_val*shift_dir), per_wh_radius, 1, 0); // has_hot=1, flow_dir=0/out
+		} // for wh
+	}
 }
 
 void building_t::add_basement_electrical(vect_cube_t &obstacles, vect_cube_t const &walls, vect_cube_t const &beams, unsigned room_id, float tot_light_amt, rand_gen_t &rgen) {
