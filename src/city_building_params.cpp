@@ -228,6 +228,10 @@ void building_params_t::init_kw_maps() {
 	kwmb.add("ai_target_player",   ai_target_player);
 	kwmb.add("ai_follow_player",   ai_follow_player);
 	kwmu.add("ai_player_vis_test", ai_player_vis_test); // 0=no test, 1=LOS, 2=LOS+FOV, 3=LOS+FOV+lit
+	kwmu.add("people_per_office_min", people_per_office_min);
+	kwmu.add("people_per_office_max", people_per_office_max);
+	kwmu.add("people_per_house_min",  people_per_house_min);
+	kwmu.add("people_per_house_max",  people_per_house_max);
 	// rats
 	kwmu.add("num_rats_min",    num_rats_min);
 	kwmu.add("num_rats_max",    num_rats_max);
