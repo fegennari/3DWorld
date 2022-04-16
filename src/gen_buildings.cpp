@@ -3329,34 +3329,6 @@ public:
 			i->second.add_interior_lights(xlate, lights_bcube);
 		}
 	}
-	unsigned get_person_capacity() const {
-		return 0; // Note: incomplete, and won't place any people anyway because there are no tiles created when ped_manager_t::init() is called
-		unsigned cap(0);
-		for (auto i = tiles.begin(); i != tiles.end(); ++i) {cap += i->second.get_person_capacity();}
-		return cap;
-	}
-	bool place_people(vect_building_place_t &locs, float radius, float speed_mult, unsigned num, unsigned start) {
-		assert(locs.empty());
-		unsigned tot_buildings(0);
-		for (auto i = tiles.begin(); i != tiles.end(); ++i) {tot_buildings += i->second.get_num_buildings();}
-		if (tot_buildings == 0) return 0; // no tiles with buildings
-		float const people_per_building(float(num)/float(tot_buildings)); // on average
-		vect_building_place_t cur_locs;
-		
-		for (auto i = tiles.begin(); i != tiles.end(); ++i) {
-			unsigned const num_this_tile(round_fp(people_per_building*i->second.get_num_buildings()));
-			if (num_this_tile == 0) continue; // no buildings, no people
-			cur_locs.clear();
-			i->second.place_people(cur_locs, radius, speed_mult, num_this_tile, (start + locs.size()));
-			vector_add_to(cur_locs, locs);
-		}
-		cout << TXT(num) << TXT(locs.size()) << TXT(tiles.size()) << TXT(tot_buildings) << endl; // TESTING
-		return 1;
-	}
-	void update_ai_state(vector<pedestrian_t> &people, float delta_dir) {
-		// not yet implemented; see above code
-		//for (auto i = tiles.begin(); i != tiles.end(); ++i) {i->second.update_ai_state(people, delta_dir);}
-	}
 	void get_occluders(pos_dir_up const &pdu, building_occlusion_state_t &state) const {
 		auto it(get_tile_by_pos_cs(pdu.pos));
 		if (it != tiles.end()) {it->second.get_occluders(pdu, state);}
@@ -3556,10 +3528,9 @@ template<typename T> void place_people_in_buildings(T &bc, vect_building_place_t
 	if (locs.empty()) {locs.swap(cur_locs);} else {vector_add_to(cur_locs, locs);}
 }
 bool place_building_people(vect_building_place_t &locs, float radius, float speed_mult, unsigned num) {
-	unsigned const bt_cap(building_tiles.get_person_capacity()), bc_cap(building_creator.get_person_capacity()), bcc_cap(building_creator_city.get_person_capacity());
-	unsigned const tot_cap(bt_cap + bc_cap + bcc_cap);
+	unsigned const bc_cap(building_creator.get_person_capacity()), bcc_cap(building_creator_city.get_person_capacity());
+	unsigned const tot_cap(bc_cap + bcc_cap);
 	if (tot_cap == 0) return 0; // can't place any people
-	place_people_in_buildings(building_tiles,        locs, radius, speed_mult, num, bt_cap,  tot_cap);
 	place_people_in_buildings(building_creator,      locs, radius, speed_mult, num, bc_cap,  tot_cap); // regular/secondary buildings
 	place_people_in_buildings(building_creator_city, locs, radius, speed_mult, num, bcc_cap, tot_cap); // city buildings
 	return 1;
@@ -3568,7 +3539,6 @@ void update_building_ai_state(vector<pedestrian_t> &people, float delta_dir) { /
 	if (!global_building_params.enable_people_ai || !draw_building_interiors || !animate2) return;
 	building_creator     .update_ai_state(people, delta_dir);
 	building_creator_city.update_ai_state(people, delta_dir);
-	building_tiles       .update_ai_state(people, delta_dir);
 }
 
 void get_all_city_helipads(vect_cube_t &helipads) {building_creator_city.get_all_helipads(helipads);} // city only for now
