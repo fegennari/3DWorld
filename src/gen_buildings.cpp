@@ -2149,7 +2149,13 @@ public:
 			if (b->has_helipad) {helipads.push_back(b->get_helipad_bcube());}
 		}
 	}
-	void update_ai_state(float delta_dir) {buildings.ai_room_update(delta_dir, ai_rgen);} // called once per frame
+	void update_ai_state(float delta_dir) { // called once per frame
+		if (!global_building_params.building_people_enabled()) return;
+		point const camera_bs(get_camera_building_space());
+		float const dmax(1.5f*(X_SCENE_SIZE + Y_SCENE_SIZE));
+		if (!get_bcube().closest_dist_less_than(camera_bs, dmax)) return; // too far away
+		buildings.ai_room_update(delta_dir, dmax, camera_bs, ai_rgen);
+	}
 
 	static void select_person_shadow_shader(shader_t &person_shader) {
 		if (!person_shader.is_setup()) {
@@ -3277,6 +3283,9 @@ public:
 		for (auto i = tiles.begin(); i != tiles.end(); ++i) {mem += i->second.get_gpu_mem_usage();}
 		return mem;
 	}
+	void update_ai_state(float delta_dir) { // called once per frame
+		for (auto i = tiles.begin(); i != tiles.end(); ++i) {i->second.update_ai_state(delta_dir);}
+	}
 }; // end building_tiles_t
 
 
@@ -3454,6 +3463,7 @@ void update_building_ai_state(float delta_dir) { // Note: each creator will mana
 	if (!global_building_params.enable_people_ai || !draw_building_interiors || !animate2) return;
 	building_creator     .update_ai_state(delta_dir);
 	building_creator_city.update_ai_state(delta_dir);
+	building_tiles       .update_ai_state(delta_dir);
 }
 
 void get_all_city_helipads(vect_cube_t &helipads) {building_creator_city.get_all_helipads(helipads);} // city only for now

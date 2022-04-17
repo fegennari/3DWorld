@@ -1276,11 +1276,8 @@ void building_t::move_person_to_not_collide(pedestrian_t &person, pedestrian_t c
 }
 
 // Note: non-const because this updates room lights
-void vect_building_t::ai_room_update(float delta_dir, rand_gen_t &rgen) {
-	if (!global_building_params.building_people_enabled()) return;
+void vect_building_t::ai_room_update(float delta_dir, float dmax, point const &camera_bs, rand_gen_t &rgen) {
 	//timer_t timer("Building People Update"); // 0.25ms, mostly iteration overhead, for sparse update with 2-6 people per building (avg for 2 calls city + secondary)
-	point const camera_bs(get_camera_building_space());
-	float const dmax(1.5f*(X_SCENE_SIZE + Y_SCENE_SIZE));
 
 	for (iterator b = begin(); b != end(); ++b) {
 		if (!b->interior || b->interior->people.empty() || !b->bcube.closest_dist_less_than(camera_bs, dmax)) continue; // no people or too far away, no updates

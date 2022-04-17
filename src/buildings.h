@@ -1455,7 +1455,7 @@ public:
 };
 
 struct vect_building_t : public vector<building_t> {
-	void ai_room_update(float delta_dir, rand_gen_t &rgen);
+	void ai_room_update(float delta_dir, float dmax, point const &camera_bs, rand_gen_t &rgen);
 };
 
 struct building_draw_utils {
