@@ -1279,9 +1279,8 @@ bool building_t::check_cube_intersect_walls(cube_t const &c) const {
 bool building_t::is_valid_stairs_elevator_placement(cube_t const &c, float pad, bool check_walls) const {
 	// check if any previously placed walls intersect this cand stairs/elevator; we really only need to check the walls from <part> and *p though
 	if (interior->is_blocked_by_stairs_or_elevator(c, pad)) return 0;
-	if (check_walls && check_cube_intersect_walls(c)) return 0;
-	// if we're not checking walls, then at least check for open doors to avoid having the stairs intersect an open door
-	if (is_cube_close_to_doorway(c, cube_t(), pad, !check_walls)) return 0;
+	if (check_walls && check_cube_intersect_walls(c))       return 0;
+	if (is_cube_close_to_doorway(c, cube_t(), pad, 1))      return 0; // check for open doors to avoid having the stairs intersect an open door
 
 	if (!is_house && has_pri_hall() && pri_hall.z1() == ground_floor_z1) { // office building with primary hallway on ground floor
 		// add extra padding around exterior doors to avoid blocking them with stairs
