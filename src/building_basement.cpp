@@ -917,7 +917,9 @@ void building_t::add_basement_electrical(vect_cube_t &obstacles, vect_cube_t con
 			c.d[dim][ dir] = basement.d[dim][dir];
 			c.d[dim][!dir] = c.d[dim][dir] + (dir ? -1.0 : 1.0)*2.0*bp_depth;
 			assert(c.is_strictly_normalized());
-			if (has_bcube_int(c, obstacles) || has_bcube_int(c, walls)) continue; // bad breaker box position
+			cube_t test_cube(c);
+			test_cube.d[dim][!dir] += (dir ? -1.0 : 1.0)*2.0*bp_hwidth; // add a width worth of clearance in the front so that the door can be opened
+			if (has_bcube_int(test_cube, obstacles) || has_bcube_int(test_cube, walls)) continue; // bad breaker box position
 			point top_center(c.xc(), c.yc(), c.z2());
 			cube_t conduit(top_center);
 			conduit.z2() = ceil_zval;
@@ -950,6 +952,8 @@ void building_t::add_basement_electrical_house(rand_gen_t &rgen) {
 	for (room_object_t const &c : interior->room_geom->objs) {
 		if (c.z1() < ground_floor_z1) {obstacles.push_back(c); obstacles.back().expand_by(obj_expand);} // with some clearance
 	}
+	vector_add_to(interior->stairwells, obstacles); // add stairs; what about open doors?
+	vector_add_to(interior->elevators,  obstacles); // there probably are none, but it doesn't hurt to add them
 	add_basement_electrical(obstacles, walls, vect_cube_t(), -1, tot_light_amt, rgen); // no beams, room_id=-1 (to be calculated)
 }
 

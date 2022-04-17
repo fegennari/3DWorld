@@ -750,7 +750,7 @@ template<typename T> void remove_element(vector<T> &v, unsigned &ix) {
 	--ix;
 }
 
-template<typename T> void vector_add_to(T const &src, T &dest) {dest.insert(dest.end(), src.begin(), src.end());}
+template<typename S, typename T> void vector_add_to(S const &src, T &dest) {dest.insert(dest.end(), src.begin(), src.end());}
 
 template<typename T> void sort_and_unique(T &v) {
 	std::sort(v.begin(), v.end());
