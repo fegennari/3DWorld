@@ -2454,7 +2454,6 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 
 			if (!is_lit) { // check people and set is_lit if anyone is in this floor of this room
 				for (person_t const &p : interior->people) {
-					if (p.destroyed) continue; // dead
 					cube_t const bc(p.get_bcube());
 					if (!bc.intersects_xy(*r)) continue; // person not in this room
 					if (bc.z2() < light_z2 && bc.z1() + floor_height > light_z2) {is_lit = 1; break;} // on this floor

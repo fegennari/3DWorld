@@ -515,7 +515,6 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, flo
 		} // for c
 	}
 	for (person_t const &p : interior->people) {
-		if (p.destroyed) continue; // dead
 		float const dist(p2p_dist(pos, p.pos)), r_sum(xy_radius + 0.5*p.get_width()); // ped_radius is a bit too large, multiply it by 0.5
 		if (dist >= r_sum) continue; // no intersection
 		vector3d const normal(vector3d(pos.x-p.pos.x, pos.y-p.pos.y, 0.0).get_norm()); // XY direction

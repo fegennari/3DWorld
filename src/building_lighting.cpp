@@ -876,9 +876,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			}
 			if (check_building_people && !is_lamp) { // update shadow_caster_hash for moving people, but not for lamps, because their light points toward the floor
 				if (ped_bcubes.empty()) { // get all cubes on first light
-					for (person_t const &p : interior->people) {
-						if (!p.destroyed) {ped_bcubes.push_back(p.get_bcube());}
-					}
+					for (person_t const &p : interior->people) {ped_bcubes.push_back(p.get_bcube());}
 				}
 				check_for_shadow_caster(ped_bcubes, clipped_bc, lpos_rot, dshadow_radius, stairs_light, xlate, shadow_caster_hash);
 			}

@@ -1373,7 +1373,7 @@ void ped_manager_t::draw(vector3d const &xlate, bool use_dlights, bool shadow_on
 				assert(i < peds.size());
 				pedestrian_t const &ped(peds[i]);
 				assert(ped.city == city && ped.plot == plot);
-				if (skip_ped_draw(ped)) continue;
+				if (ped.destroyed || skip_ped_draw(ped)) continue;
 				if (!draw_ped(ped, dstate.s, pdu, xlate, def_draw_dist, draw_dist_sq, in_sphere_draw, shadow_only, is_dlight_shadows, enable_animations, 0)) continue;
 
 				if (dist_less_than(pdu.pos, ped.pos, 0.5*draw_dist)) { // fake AO shadow at below half draw distance
@@ -1446,7 +1446,6 @@ void ped_manager_t::draw_people_in_building(vector<person_t> const &people, ped_
 
 	// Note: no far clip adjustment or draw dist scale
 	for (person_t const &p : people) {
-		if (p.destroyed) continue; // dead
 		if (skip_bai_draw(p)) continue;
 		
 		if ((display_mode & 0x08) && !city_params.ped_model_files.empty()) { // occlusion culling, if using models
@@ -1462,7 +1461,6 @@ void ped_manager_t::draw_people_in_building(vector<person_t> const &people, ped_
 bool ped_manager_t::draw_ped(person_base_t const &ped, shader_t &s, pos_dir_up const &pdu, vector3d const &xlate, float def_draw_dist, float draw_dist_sq,
 	bool &in_sphere_draw, bool shadow_only, bool is_dlight_shadows, bool enable_animations, bool is_in_building)
 {
-	if (ped.destroyed) return 0; // skip
 	float const dist_sq(p2p_dist_sq(pdu.pos, ped.pos));
 	if (dist_sq > draw_dist_sq) return 0; // too far - skip
 	if (is_dlight_shadows && !dist_less_than(pre_smap_player_pos, ped.pos, 0.4*def_draw_dist)) return 0; // too far from the player

@@ -656,8 +656,7 @@ void building_t::update_player_interact_objects(point const &player_pos) {
 		bool const is_moving_fast(velocity.mag() > 0.5*KICK_VELOCITY);
 
 		for (auto p = interior->people.begin(); p != interior->people.end(); ++p) { // check building AI people
-			if (p->destroyed) {} // dead, skip
-			else if (is_moving_fast) { // treat collision as a bounce
+			if (is_moving_fast) { // treat collision as a bounce
 				vector3d cnorm;
 
 				if (sphere_cube_int_update_pos(new_center, radius, p->get_bcube(), center, 1, 0, &cnorm)) {

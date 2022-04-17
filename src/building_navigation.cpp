@@ -1027,7 +1027,13 @@ bool building_t::need_to_update_ai_path(person_t const &person) const {
 
 void building_t::all_ai_room_update(rand_gen_t &rgen, float delta_dir, bool stay_on_one_floor) {
 	assert(interior);
-	for (unsigned i = 0; i < interior->people.size(); ++i) {ai_room_update(rgen, delta_dir, i, stay_on_one_floor);}
+
+	for (unsigned i = 0; i < interior->people.size(); ) { // Note: no increment
+		if (ai_room_update(rgen, delta_dir, i, stay_on_one_floor) == AI_TO_REMOVE) {
+			interior->people.erase(interior->people.begin() + i); // remove this person
+		}
+		else {++i;}
+	}
 }
 
 // Note: non-const because this updates room light and door state
@@ -1035,7 +1041,6 @@ int building_t::ai_room_update(rand_gen_t &rgen, float delta_dir, unsigned perso
 
 	assert(person_ix < interior->people.size());
 	person_t &person(interior->people[person_ix]);
-	if (person.destroyed) return AI_STOP; // dead
 	if (person.speed == 0.0) {person.anim_time = 0.0; return AI_STOP;} // stopped
 	if (!interior->room_geom && frame_counter < 60) {person.anim_time = 0.0; return AI_WAITING;} // wait until room geom is generated for this building
 	float const coll_dist(COLL_RADIUS_SCALE*person.radius);
@@ -1057,7 +1062,6 @@ int building_t::ai_room_update(rand_gen_t &rgen, float delta_dir, unsigned perso
 		if (wait_time > fticks && !can_ai_follow_player(person)) { // waiting; don't wait if there's a player to follow
 			for (auto p = interior->people.begin()+person_ix+1; p < interior->people.end(); ++p) { // check for other people colliding with this person and handle it
 				if (fabs(person.pos.z - p->pos.z) > coll_dist) continue; // different floors
-				if (p->destroyed) continue; // dead
 				float const rsum(coll_dist + COLL_RADIUS_SCALE*p->radius);
 				if (!dist_xy_less_than(person.pos, p->pos, rsum)) continue; // not intersecting
 				move_person_to_not_collide(person, *p, person.pos, rsum, coll_dist); // if we get here, we have to actively move out of the way
@@ -1081,15 +1085,9 @@ int building_t::ai_room_update(rand_gen_t &rgen, float delta_dir, unsigned perso
 		if (dist_less_than(feet_pos, player_feet_pos, 1.2f*(person.radius + get_scaled_player_radius()))) {
 			if (!check_for_wall_ceil_floor_int(person.pos, cur_player_building_loc.pos)) {
 				int const ret_status(register_ai_player_coll(person.has_key, person.get_height())); // return value: 0=no effect, 1=player is killed, 2=this person is killed
-			
-				if (ret_status == 1) { // player is killed, we could track kills here
-					add_blood_decal(cur_player_building_loc.pos);
-				}
-				else if (ret_status == 2) { // player defeats zombie
-					person.destroyed = 1;
-					person.speed     = 0.0;
-					return AI_STOP;
-				}
+				// player is killed, we could track kills here
+				if (ret_status == 1) {add_blood_decal(cur_player_building_loc.pos);}
+				else if (ret_status == 2) {return AI_TO_REMOVE;} // player defeats zombie, remove it
 			}
 		}
 	}
@@ -1177,7 +1175,6 @@ int building_t::ai_room_update(rand_gen_t &rgen, float delta_dir, unsigned perso
 	if (!person.on_stairs()) {
 		for (auto p = interior->people.begin()+person_ix+1; p < interior->people.end(); ++p) { // check all other people in the same building after this one and attempt to avoid them
 			if (fabs(person.pos.z - p->pos.z) > coll_dist) continue; // different floors
-			if (p->destroyed) continue; // dead
 			float const rsum(coll_dist + COLL_RADIUS_SCALE*p->radius);
 			if (!dist_xy_less_than(new_pos, p->pos, rsum)) continue; // new pos not close
 			if (!dist_xy_less_than(person.pos, p->pos, rsum)) return AI_STOP; // old pos not intersecting, stop
@@ -1248,7 +1245,7 @@ void building_t::ai_room_lights_update(person_t const &person) {
 
 	// check for other people in the room before turning the lights off on them
 	for (person_t const &p : interior->people) {
-		if (p.destroyed || p.pos == person.pos) continue; // dead or ourself
+		if (p.pos == person.pos) continue; // skip ourself
 		if (get_room_containing_pt(p.pos) == person.cur_room && fabs(person.pos.z - p.pos.z) < get_window_vspace()) {other_person_in_room = 1; break;}
 	}
 	if (!other_person_in_room) {set_room_light_state_to(get_room(person.cur_room), person.pos.z, 0);} // make sure old room light is off
@@ -1322,7 +1319,6 @@ void building_t::register_person_hit(unsigned person_ix, room_object_t const &ob
 	if (!ai_follow_player())     return; // not in gameplay mode, ignore it
 	assert(interior && person_ix < interior->people.size());
 	person_t &person(interior->people[person_ix]);
-	if (person.destroyed) return; // dead
 
 	if (obj.type == TYPE_LG_BALL) { // currently this is the only throwable/dynamic object
 		if (obj.zc() < (person.get_z1() + 0.25*person.get_height())) return; // less than 25% up, coll with legs, assume this is kicking a ball that's on the floor
