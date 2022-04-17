@@ -1587,6 +1587,11 @@ void building_t::add_garage_objs(rand_gen_t rgen, room_t const &room, float zval
 	interior->room_geom->has_garage_car = 1;
 }
 
+bool building_t::add_office_utility_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
+	// TODO
+	return 0;
+}
+
 bool building_t::add_laundry_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, unsigned &added_bathroom_objs_mask) {
 	float const front_clearance(get_min_front_clearance());
 	cube_t place_area(get_walkable_room_bounds(room));
@@ -2546,6 +2551,9 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				added_obj = is_bathroom = added_bathroom = no_whiteboard =
 					add_bathroom_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, f, is_basement, added_bathroom_objs_mask); // add bathroom
 			}
+			else if (!is_house && f == 0 && r->get_room_type(f) == RTYPE_UTILITY) { // office building utility room; currently first floor only
+				added_obj = add_office_utility_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);
+			}
 			// bedroom or bathroom case; need to check first floor even if must_be_bathroom
 			if (!added_obj && allow_br && can_be_bedroom_or_bathroom(*r, f)) {
 				// place a bedroom 75% of the time unless this must be a bathroom; if we got to the second floor and haven't placed a bedroom, always place it; houses only
@@ -2635,7 +2643,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 
 			if (room_type_was_not_set) { // attempt to assign it with an optional room type
 				if (!is_basement && f == 0 && is_room_adjacent_to_ext_door(*r)) { // entryway/lobby if on first floor, has exterior door, and unassigned
-					r->assign_to((is_house ? RTYPE_ENTRY : RTYPE_LOBBY), f); // office building lobby can have a whiteboard - is that okay?
+					r->assign_to((is_house ? (room_type)RTYPE_ENTRY : (room_type)RTYPE_LOBBY), f); // office building lobby can have a whiteboard - is that okay?
 				}
 				else if (!is_house) {r->assign_to(RTYPE_OFFICE, f);} // any unset room in an office building is an office
 				// else house
@@ -2660,7 +2668,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			if (is_house && is_basement && !added_basement_utility && !has_stairs && (is_storage || room_type_was_not_set) && rgen.rand_bool()) {
 				// basement laundry, storage, or card room; should this be placed before adding boxes to the floor of storage rooms?
 				added_basement_utility = add_basement_utility_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);
-				// special room type?
+				if (added_basement_utility) {r->assign_to(RTYPE_UTILITY, f);}
 			}
 			if (!is_bathroom && !is_bedroom && !is_kitchen && !is_storage && !is_basement) { // add potted plants to some room types
 				// 0-2 for living/dining rooms, 50% chance for houses, 25% (first floor) / 10% (other floors) chance for offices
