@@ -74,7 +74,7 @@ person_name_gen_t person_name_gen;
 string gen_random_first_name(rand_gen_t &rgen) {return person_name_gen.gen_random_first_name(rgen);} // for use in naming other entities
 string gen_random_full_name (rand_gen_t &rgen) {return person_name_gen.gen_name(rgen.rand(), rgen.rand_bool(), 1, 1);} // first and last names, random gender
 
-string pedestrian_t::get_name() const {
+string person_base_t::get_name() const {
 	return person_name_gen.gen_name(ssn, is_female, 1, 1); // use ssn as name rand gen seed; include both first and last name
 }
 string pedestrian_t::str() const { // Note: no label_str()
@@ -87,22 +87,22 @@ string pedestrian_t::str() const { // Note: no label_str()
 
 float pedestrian_t::get_speed_mult() const {return (in_the_road ? CROSS_SPEED_MULT : 1.0);}
 
-void pedestrian_t::stop() {
+void person_base_t::stop() {
 	//dir = vel.get_norm(); // ???
 	vel = zero_vector;
 	anim_time  = 0.0; // reset animation so that ped is standing normally and not mid-stride - should really transition this gradually somehow
 	is_stopped = 1;
 }
-void pedestrian_t::go() {
+void person_base_t::go() {
 	vel = dir * speed; // assumes dir is correct
 	is_stopped = 0;
 }
-void pedestrian_t::wait_for(float seconds) {
+void person_base_t::wait_for(float seconds) {
 	anim_time     = 0.0; // reset animation
 	waiting_start = seconds*TICKS_PER_SECOND; // stop for N seconds
 	target_pos    = all_zeros; // clear any previous target
 }
-cube_t pedestrian_t::get_bcube() const {
+cube_t person_base_t::get_bcube() const {
 	cube_t c;
 	c.set_from_sphere(pos, get_width());
 	set_cube_zvals(c, get_z1(), get_z2());
@@ -115,7 +115,6 @@ float get_inner_sidewalk_width  () {return 1.00*get_sidewalk_width();} // walkab
 
 // Note: may update plot_bcube and next_plot_bcube
 bool pedestrian_t::check_inside_plot(ped_manager_t &ped_mgr, point const &prev_pos, cube_t &plot_bcube, cube_t &next_plot_bcube) {
-	if (in_building) return 0; // not implemented yet
 	//if (ssn == 2516) {cout << "in_the_road: " << in_the_road << ", pos: " << pos.str() << ", plot_bcube: " << plot_bcube.str() << ", npbc: " << next_plot_bcube.str() << endl;}
 	if (plot_bcube.contains_pt_xy(pos)) {return 1;} // inside the plot
 	stuck_count = 0; // no longer stuck
@@ -154,7 +153,7 @@ bool pedestrian_t::check_road_coll(ped_manager_t const &ped_mgr, cube_t const &p
 }
 
 bool pedestrian_t::is_valid_pos(vect_cube_t const &colliders, bool &ped_at_dest, ped_manager_t const *const ped_mgr) const {
-	if (in_the_road || in_building) return 1; // not in a plot, no collision detection needed
+	if (in_the_road) return 1; // not in a plot, no collision detection needed
 	unsigned building_id(0);
 
 	if (check_buildings_ped_coll(pos, radius, plot, building_id)) {
@@ -233,7 +232,6 @@ bool pedestrian_t::check_ped_ped_coll_range(vector<pedestrian_t> &peds, unsigned
 }
 
 bool pedestrian_t::check_ped_ped_coll(ped_manager_t const &ped_mgr, vector<pedestrian_t> &peds, unsigned pid, float delta_dir) {
-	if (in_building) return 0; // no ped-ped collisions in buildings (yet)
 	assert(pid < peds.size());
 	float const lookahead_dist(LOOKAHEAD_TICKS*speed); // how far we can travel in 2s
 	float const prox_radius(1.2*radius + lookahead_dist); // assume other ped has a similar radius
@@ -251,7 +249,6 @@ bool pedestrian_t::check_ped_ped_coll(ped_manager_t const &ped_mgr, vector<pedes
 }
 
 bool pedestrian_t::check_ped_ped_coll_stopped(vector<pedestrian_t> &peds, unsigned pid) {
-	if (in_building) return 0; // no ped-ped collisions in buildings (yet)
 	assert(pid < peds.size());
 
 	// Note: shouldn't have to check peds in the next plot, assuming that if we're stopped, they likely are as well, and won't be walking toward us
@@ -552,7 +549,6 @@ void pedestrian_t::get_avoid_cubes(ped_manager_t const &ped_mgr, vect_cube_t con
 	cube_t const &plot_bcube, cube_t const &next_plot_bcube, point &dest_pos, vect_cube_t &avoid) const
 {
 	avoid.clear();
-	if (in_building) return; // not yet implemented, but if it was we would get the nearby building walls, objects, etc.
 	float const height(get_height()), expand(1.1*radius); // slightly larger than radius to leave some room for floating-point error
 	road_plot_t const &cur_plot(ped_mgr.get_city_plot_for_peds(city, plot));
 	bool const is_home_plot(plot == dest_plot); // plot contains our destination
@@ -641,40 +637,38 @@ bool pedestrian_t::check_for_safe_road_crossing(ped_manager_t const &ped_mgr, cu
 }
 
 void pedestrian_t::move(ped_manager_t const &ped_mgr, cube_t const &plot_bcube, cube_t const &next_plot_bcube, float &delta_dir) {
-	if (!in_building) { // in the city
-		if (in_the_road) {
-			if (!check_for_safe_road_crossing(ped_mgr, plot_bcube, next_plot_bcube)) {stop(); return;}
-		}
-		else if (city_params.cars_use_driveways) { // in a plot; check for cars if about to enter a driveway that's in use
-			float const sw_width(get_sidewalk_width());
-			dw_query_t const dw(ped_mgr.get_nearby_driveway(city, plot, pos, max(sw_width, radius)));
+	if (in_the_road) {
+		if (!check_for_safe_road_crossing(ped_mgr, plot_bcube, next_plot_bcube)) {stop(); return;}
+	}
+	else if (city_params.cars_use_driveways) { // in a plot; check for cars if about to enter a driveway that's in use
+		float const sw_width(get_sidewalk_width());
+		dw_query_t const dw(ped_mgr.get_nearby_driveway(city, plot, pos, max(sw_width, radius)));
 
-			if (dw.driveway != nullptr && dw.driveway->in_use == 1) { // crossing into a driveway used/reserved by a non-parked car
-				bool const ddim(dw.driveway->dim), ddir(dw.driveway->dir);
-				cube_t dw_extend(*dw.driveway);
-				dw_extend.d[ddim][ddir] += (ddir ? 1.0 : -1.0)*sw_width; // extend to include the sidewalk
-				cube_t dw_wider(dw_extend);
-				dw_wider.expand_in_dim(!ddim, 0.25*dw.driveway->get_width());
+		if (dw.driveway != nullptr && dw.driveway->in_use == 1) { // crossing into a driveway used/reserved by a non-parked car
+			bool const ddim(dw.driveway->dim), ddir(dw.driveway->dir);
+			cube_t dw_extend(*dw.driveway);
+			dw_extend.d[ddim][ddir] += (ddir ? 1.0 : -1.0)*sw_width; // extend to include the sidewalk
+			cube_t dw_wider(dw_extend);
+			dw_wider.expand_in_dim(!ddim, 0.25*dw.driveway->get_width());
 
-				// check for crossing the side (not end) of the driveway this frame; use next pos assuming we're not stopped
-				if (dw_extend.contains_pt_xy(pos)) {
-					// would this deadlock if the car and ped are waiting on each other?
-					dw.driveway->mark_ped_this_frame(); // flag the driveway as blocked so that cars don't pull into it
-				}
-				else if (dw_wider.contains_pt_xy(pos) && dw_extend.contains_pt_xy(pos + 1.5f*fticks*dir*speed)) {
-					car_base_t const *const car(ped_mgr.find_car_using_driveway(city, dw));
+			// check for crossing the side (not end) of the driveway this frame; use next pos assuming we're not stopped
+			if (dw_extend.contains_pt_xy(pos)) {
+				// would this deadlock if the car and ped are waiting on each other?
+				dw.driveway->mark_ped_this_frame(); // flag the driveway as blocked so that cars don't pull into it
+			}
+			else if (dw_wider.contains_pt_xy(pos) && dw_extend.contains_pt_xy(pos + 1.5f*fticks*dir*speed)) {
+				car_base_t const *const car(ped_mgr.find_car_using_driveway(city, dw));
 
-					if (car != nullptr && !car->is_parked()) { // car using this driveway, not parked (though there shouldn't be any parked cars returned, car should be null if parked)
-						cube_t query_cube(dw.driveway->extend_across_road());
+				if (car != nullptr && !car->is_parked()) { // car using this driveway, not parked (though there shouldn't be any parked cars returned, car should be null if parked)
+					cube_t query_cube(dw.driveway->extend_across_road());
 
-						if (car->dest_driveway == (int)dw.dix && car->dim != ddim) { // car turning/entering driveway
-							query_cube.d[!ddim][!car->dir] -= 1.0*(car->dir ? 1.0 : -1.0)*city_params.road_width; // extend for car lead distance
-						}
-						if (query_cube.intersects_xy(car->bcube)) { // car entering or leaving driveway
-							//if (city_single_cube_visible_check(pos, car->bcube) {} // we could check this, but it's generally always true
-							stop();
-							return;
-						}
+					if (car->dest_driveway == (int)dw.dix && car->dim != ddim) { // car turning/entering driveway
+						query_cube.d[!ddim][!car->dir] -= 1.0*(car->dir ? 1.0 : -1.0)*city_params.road_width; // extend for car lead distance
+					}
+					if (query_cube.intersects_xy(car->bcube)) { // car entering or leaving driveway
+						//if (city_single_cube_visible_check(pos, car->bcube) {} // we could check this, but it's generally always true
+						stop();
+						return;
 					}
 				}
 			}
@@ -716,7 +710,6 @@ void pedestrian_t::get_plot_bcubes_inc_sidewalks(ped_manager_t const &ped_mgr, c
 void pedestrian_t::next_frame(ped_manager_t &ped_mgr, vector<pedestrian_t> &peds, unsigned pid, rand_gen_t &rgen, float delta_dir) {
 	if (destroyed)    return; // destroyed
 	if (speed == 0.0) return; // not moving, no update needed
-	if (in_building)  return; // building update/movement logic handled elsewhere
 
 	// navigation with destination
 	if (at_dest) {
@@ -832,7 +825,7 @@ void pedestrian_t::register_at_dest() {
 	//cout << get_name() << " at destination " << (has_dest_car ? "car " : (has_dest_bldg ? "building " : "")) << dest_bldg << " in plot " << dest_plot << endl; // placeholder
 }
 
-bool pedestrian_t::is_close_to_player() const { // for debug printouts, etc.
+bool person_base_t::is_close_to_player() const { // for debug printouts, etc.
 	return dist_less_than((pos + get_tiled_terrain_model_xlate()), get_camera_pos(), 4.0*radius);
 }
 
@@ -894,7 +887,7 @@ void ped_manager_t::init(unsigned num_city) {
 	sort_by_city_and_plot();
 }
 
-void ped_manager_t::assign_ped_model(pedestrian_t &ped) { // Note: non-const, modifies rgen
+void ped_manager_t::assign_ped_model(person_base_t &ped) { // Note: non-const, modifies rgen
 	unsigned const num_models(ped_model_loader.num_models());
 	if (num_models == 0) {ped.model_id = 0; return;} // will be unused
 	ped.model_id  = rgen.rand()%num_models;
@@ -1421,17 +1414,16 @@ void ped_manager_t::draw(vector3d const &xlate, bool use_dlights, bool shadow_on
 	dstate.show_label_text();
 }
 
-pedestrian_t ped_manager_t::add_person_to_building(point const &pos, unsigned bix, unsigned ssn) {
-	pedestrian_t ped(get_ped_radius());
-	assign_ped_model(ped);
+person_t ped_manager_t::add_person_to_building(point const &pos, unsigned bix, unsigned ssn) {
+	person_t per(get_ped_radius());
+	assign_ped_model(per);
 	float const angle(rgen.rand_uniform(0.0, TWO_PI));
-	ped.pos   = pos + vector3d(0.0, 0.0, ped.radius);
-	ped.dir   = vector3d(cosf(angle), sinf(angle), 0.0);
-	ped.speed = (enable_building_people_ai() ? city_params.ped_speed*rgen.rand_uniform(0.5, 0.75) : 0.0f); // small range, slower than outdoor city pedestrians
-	ped.ssn   = ssn; // may wrap
-	ped.dest_bldg   = bix; // store building index in dest_bldg field
-	ped.in_building = 1;
-	return ped;
+	per.pos   = pos + vector3d(0.0, 0.0, per.radius);
+	per.dir   = vector3d(cosf(angle), sinf(angle), 0.0);
+	per.speed = (enable_building_people_ai() ? city_params.ped_speed*rgen.rand_uniform(0.5, 0.75) : 0.0f); // small range, slower than outdoor city pedestrians
+	per.ssn   = ssn; // may wrap
+	per.cur_bldg = bix; // store building index in dest_bldg field
+	return per;
 }
 
 void ped_manager_t::gen_and_draw_people_in_building(building_t &building, ped_draw_vars_t const &pdv) {
@@ -1446,7 +1438,7 @@ void ped_manager_t::gen_and_draw_people_in_building(building_t &building, ped_dr
 	draw_people_in_building(people, pdv);
 }
 
-void ped_manager_t::draw_people_in_building(vector<pedestrian_t> const &people, ped_draw_vars_t const &pdv) {
+void ped_manager_t::draw_people_in_building(vector<person_t> const &people, ped_draw_vars_t const &pdv) {
 	float const def_draw_dist(120.0*get_ped_radius()); // smaller than city peds
 	float const draw_dist(pdv.shadow_only ? camera_pdu.far_ : def_draw_dist), draw_dist_sq(draw_dist*draw_dist);
 	pos_dir_up pdu(camera_pdu); // decrease the far clipping plane for pedestrians
@@ -1456,7 +1448,7 @@ void ped_manager_t::draw_people_in_building(vector<pedestrian_t> const &people, 
 	if (enable_animations) {pdv.s.add_uniform_int("animation_id", animation_id);}
 
 	// Note: no far clip adjustment or draw dist scale
-	for (pedestrian_t const &p : people) {
+	for (person_t const &p : people) {
 		if (p.destroyed) continue; // dead
 		if (skip_bai_draw(p)) continue;
 		
@@ -1470,7 +1462,7 @@ void ped_manager_t::draw_people_in_building(vector<pedestrian_t> const &people, 
 	if (enable_animations) {pdv.s.add_uniform_int("animation_id", 0);} // make sure to leave animations disabled so that they don't apply to buildings
 }
 
-bool ped_manager_t::draw_ped(pedestrian_t const &ped, shader_t &s, pos_dir_up const &pdu, vector3d const &xlate, float def_draw_dist, float draw_dist_sq,
+bool ped_manager_t::draw_ped(person_base_t const &ped, shader_t &s, pos_dir_up const &pdu, vector3d const &xlate, float def_draw_dist, float draw_dist_sq,
 	bool &in_sphere_draw, bool shadow_only, bool is_dlight_shadows, bool enable_animations, bool is_in_building)
 {
 	if (ped.destroyed) return 0; // skip

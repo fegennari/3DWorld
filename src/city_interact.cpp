@@ -23,7 +23,7 @@ class city_spectate_manager_t {
 
 	template<typename T> bool match_id(T const &actor) const {return (actor.get_unique_id() == follow_id);}
 
-	int find_closest_person(vector<pedestrian_t> const &peds, point const &pos) const {
+	template<typename PERSON_T> int find_closest_person(vector<PERSON_T> const &peds, point const &pos) const {
 		float const dmax(4.0*CAMERA_RADIUS); // max distance for spectate
 		float dmin_sq(dmax*dmax);
 		int closest_ix(-1);
@@ -46,9 +46,9 @@ class city_spectate_manager_t {
 		}
 		return closest_ix;
 	}
-	void set_camera_to_follow_person(vector<pedestrian_t> const &people) const {
+	template<typename PERSON_T> void set_camera_to_follow_person(vector<PERSON_T> const &people) const {
 		assert(unsigned(follow_ix) < people.size());
-		pedestrian_t const &person(people[follow_ix]);
+		PERSON_T const &person(people[follow_ix]);
 		surface_pos = person.get_eye_pos();
 		spectate    = !enable_mouse_look; // 'V' key contols whether or not the player can move the camera
 		if (spectate) {cview_dir = person.dir;}
@@ -167,7 +167,7 @@ public:
 		surface_pos += get_tiled_terrain_model_xlate(); // convert back to camera space
 	}
 	// functions used to disable drawing of the actor the player is following
-	bool skip_bai_draw(pedestrian_t const &ped) const {return (spectate_mode == FOLLOW_BAI && match_id(ped));}
+	bool skip_bai_draw(person_t     const &per) const {return (spectate_mode == FOLLOW_BAI && match_id(per));}
 	bool skip_ped_draw(pedestrian_t const &ped) const {return (spectate_mode == FOLLOW_PED && match_id(ped));}
 	bool skip_car_draw(car_t        const &car) const {return (spectate_mode == FOLLOW_CAR && match_id(car));} // almost exact ; id collision is rare
 };
@@ -177,7 +177,7 @@ city_spectate_manager_t city_spectate_manager;
 void init_city_spectate_manager(car_manager_t &car_manager, ped_manager_t &ped_manager) {city_spectate_manager.init(car_manager, ped_manager);}
 void toggle_city_spectate_mode() {city_spectate_manager.toggle_enabled();} // key F8
 void follow_city_actor() {city_spectate_manager.next_frame();}
-bool skip_bai_draw(pedestrian_t const &bai) {return city_spectate_manager.skip_bai_draw(bai);}
+bool skip_bai_draw(person_t     const &bai) {return city_spectate_manager.skip_bai_draw(bai);}
 bool skip_ped_draw(pedestrian_t const &ped) {return city_spectate_manager.skip_ped_draw(ped);}
 bool skip_car_draw(car_t        const &car) {return city_spectate_manager.skip_car_draw(car);}
 

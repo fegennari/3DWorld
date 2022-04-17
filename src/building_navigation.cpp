@@ -4,7 +4,7 @@
 #include "3DWorld.h"
 #include "function_registry.h"
 #include "buildings.h"
-#include "city.h" // for pedestrian_t
+#include "city.h" // for person_t
 #include <queue>
 
 
@@ -24,7 +24,7 @@ extern bldg_obj_type_t bldg_obj_types[];
 
 bool in_building_gameplay_mode();
 bool ai_follow_player() {return (global_building_params.ai_follow_player || in_building_gameplay_mode());}
-bool can_ai_follow_player(pedestrian_t const &person);
+bool can_ai_follow_player(person_t const &person);
 float get_closest_building_sound(point const &at_pos, point &sound_pos, float floor_spacing);
 void maybe_play_zombie_sound(point const &sound_pos_bs, unsigned zombie_ix, bool alert_other_zombies, bool high_priority=0);
 int register_ai_player_coll(bool &has_key, float height);
@@ -611,7 +611,7 @@ void end_register_player_in_building() {
 	if (cpbl_update_frame != frame_counter) {prev_player_building_loc = cur_player_building_loc = building_dest_t();} // player not in building, reset
 }
 
-bool building_t::choose_dest_goal(building_ai_state_t &state, pedestrian_t &person, rand_gen_t &rgen, bool same_floor) const {
+bool building_t::choose_dest_goal(building_ai_state_t &state, person_t &person, rand_gen_t &rgen, bool same_floor) const {
 
 	assert(interior && interior->nav_graph);
 	building_loc_t const loc(get_building_loc_for_pt(person.pos));
@@ -688,7 +688,7 @@ bool building_t::choose_dest_goal(building_ai_state_t &state, pedestrian_t &pers
 	return 1;
 }
 
-bool building_t::select_person_dest_in_room(building_ai_state_t &state, pedestrian_t &person, rand_gen_t &rgen, room_t const &room) const {
+bool building_t::select_person_dest_in_room(building_ai_state_t &state, person_t &person, rand_gen_t &rgen, room_t const &room) const {
 	float const height(0.7*get_window_vspace()), radius(COLL_RADIUS_SCALE*person.radius);
 	point dest_pos(room.get_cube_center());
 	static vect_cube_t avoid; // reuse across frames/people
@@ -700,7 +700,7 @@ bool building_t::select_person_dest_in_room(building_ai_state_t &state, pedestri
 	return 1;
 }
 
-int building_t::choose_dest_room(building_ai_state_t &state, pedestrian_t &person, rand_gen_t &rgen, bool same_floor) const {
+int building_t::choose_dest_room(building_ai_state_t &state, person_t &person, rand_gen_t &rgen, bool same_floor) const {
 
 	assert(interior && interior->nav_graph);
 	building_loc_t const loc(get_building_loc_for_pt(person.pos));
@@ -818,7 +818,7 @@ void building_t::get_avoid_cubes(float zval, float height, float radius, vect_cu
 	assert(interior);
 	interior->get_avoid_cubes(avoid, (zval - radius), (zval + (height - radius)), get_floor_thickness(), following_player);
 }
-bool building_t::find_route_to_point(pedestrian_t const &person, float radius, bool is_first_path, bool following_player, vector<point> &path) const {
+bool building_t::find_route_to_point(person_t const &person, float radius, bool is_first_path, bool following_player, vector<point> &path) const {
 
 	assert(interior && interior->nav_graph);
 	point const &from(person.pos), &to(person.target_pos);
@@ -887,7 +887,7 @@ bool building_t::find_route_to_point(pedestrian_t const &person, float radius, b
 	return 1;
 }
 
-void building_ai_state_t::next_path_pt(pedestrian_t &person, bool same_floor, bool starting_path) {
+void building_ai_state_t::next_path_pt(person_t &person, bool same_floor, bool starting_path) {
 	assert(!path.empty());
 	person.is_on_stairs = (!same_floor && !starting_path && person.target_pos.z != path.back().z);
 	person.target_pos   = path.back();
@@ -955,24 +955,24 @@ bool building_t::place_person(point &ppos, float radius, rand_gen_t &rgen) const
 	return 0;
 }
 
-bool can_ai_follow_player(pedestrian_t const &person) {
+bool can_ai_follow_player(person_t const &person) {
 	if (!ai_follow_player()) return 0; // disabled
 	if (!cur_player_building_loc.is_valid()) return 0; // no target
-	if (cur_player_building_loc.building_ix != (int)person.dest_bldg) return 0; // wrong building
+	if (cur_player_building_loc.building_ix != person.cur_bldg) return 0; // wrong building
 	if (player_is_hiding) return 0; // ignore player if in the closet, bathroom stall, or shower with the door closed
 	if (person.retreat_time > 0.0) return 0; // ignore the player if retreating
 	return 1;
 }
-bool has_nearby_sound(pedestrian_t const &person, float floor_spacing) {
+bool has_nearby_sound(person_t const &person, float floor_spacing) {
 	if (!can_ai_follow_player(person)) return 0; // no need to track sounds
 	point sound_pos; // unused
 	return get_closest_building_sound(person.pos, sound_pos, floor_spacing);
 }
 
-bool building_t::same_room_and_floor_as_player(building_ai_state_t const &state, pedestrian_t const &person) const {
+bool building_t::same_room_and_floor_as_player(building_ai_state_t const &state, person_t const &person) const {
 	return (cur_player_building_loc.room_ix == state.cur_room && cur_player_building_loc.floor_ix == get_floor_for_zval(person.pos.z) && cur_player_building_loc.stairs_ix < 0);
 }
-bool building_t::is_player_visible(building_ai_state_t const &state, pedestrian_t const &person, unsigned vis_test) const {
+bool building_t::is_player_visible(building_ai_state_t const &state, person_t const &person, unsigned vis_test) const {
 	if (vis_test == 0) return 1; // no visibility test
 	building_dest_t const &target(cur_player_building_loc);
 	float const player_radius(get_scaled_player_radius());
@@ -994,12 +994,12 @@ bool building_t::is_player_visible(building_ai_state_t const &state, pedestrian_
 	}
 	return 1;
 }
-bool building_t::can_target_player(building_ai_state_t const &state, pedestrian_t const &person) const {
+bool building_t::can_target_player(building_ai_state_t const &state, person_t const &person) const {
 	if (!can_ai_follow_player(person)) return 0;
 	return is_player_visible(state, person, global_building_params.ai_player_vis_test); // 0=no test, 1=LOS, 2=LOS+FOV, 3=LOS+FOV+lit
 }
 
-bool building_t::need_to_update_ai_path(building_ai_state_t const &state, pedestrian_t const &person) const {
+bool building_t::need_to_update_ai_path(building_ai_state_t const &state, person_t const &person) const {
 	if (!global_building_params.ai_target_player || !can_ai_follow_player(person) || !interior) return 0; // disabled
 	building_dest_t const &target(cur_player_building_loc);
 	bool const same_room(same_room_and_floor_as_player(state, person)); // check room and floor
@@ -1034,7 +1034,7 @@ void building_t::all_ai_room_update(rand_gen_t &rgen, float delta_dir, bool stay
 int building_t::ai_room_update(rand_gen_t &rgen, float delta_dir, unsigned person_ix, bool stay_on_one_floor) {
 
 	assert(person_ix < interior->people.size() && person_ix < interior->states.size());
-	pedestrian_t &person(interior->people[person_ix]);
+	person_t &person(interior->people[person_ix]);
 	if (person.destroyed) return AI_STOP; // dead
 	if (person.speed == 0.0) {person.anim_time = 0.0; return AI_STOP;} // stopped
 	if (!interior->room_geom && frame_counter < 60) {person.anim_time = 0.0; return AI_WAITING;} // wait until room geom is generated for this building
@@ -1187,7 +1187,7 @@ int building_t::ai_room_update(rand_gen_t &rgen, float delta_dir, unsigned perso
 			return AI_MOVING; // return here, but don't update animation or dir; only handles a single collision
 		} // for p
 	}
-	bool const player_in_this_building(cur_player_building_loc.building_ix == (int)person.dest_bldg); // basement door only counts if the player is in this building
+	bool const player_in_this_building(cur_player_building_loc.building_ix == person.cur_bldg); // basement door only counts if the player is in this building
 	bool const might_have_closed_door(global_building_params.open_door_prob < 1.0 || (player_in_this_building && is_house && has_basement()));
 
 	if (interior->door_state_updated || (global_building_params.ai_opens_doors == 2 && might_have_closed_door)) {
@@ -1240,7 +1240,7 @@ int building_t::ai_room_update(rand_gen_t &rgen, float delta_dir, unsigned perso
 	return AI_MOVING;
 }
 
-void building_t::ai_room_lights_update(building_ai_state_t const &state, pedestrian_t const &person) {
+void building_t::ai_room_lights_update(building_ai_state_t const &state, person_t const &person) {
 	int const room_ix(get_room_containing_pt(person.pos));
 	if (room_ix < 0) return; // room is not valid (between rooms, etc.)
 	set_room_light_state_to(get_room(room_ix), person.pos.z, 1); // make sure current room light is on
@@ -1248,14 +1248,14 @@ void building_t::ai_room_lights_update(building_ai_state_t const &state, pedestr
 	bool other_person_in_room(0);
 
 	// check for other people in the room before turning the lights off on them
-	for (pedestrian_t const &p : interior->people) {
+	for (person_t const &p : interior->people) {
 		if (p.destroyed || p.pos == person.pos) continue; // dead or ourself
 		if (get_room_containing_pt(p.pos) == state.cur_room && fabs(person.pos.z - p.pos.z) < get_window_vspace()) {other_person_in_room = 1; break;}
 	}
 	if (!other_person_in_room) {set_room_light_state_to(get_room(state.cur_room), person.pos.z, 0);} // make sure old room light is off
 }
 
-void building_t::move_person_to_not_collide(pedestrian_t &person, pedestrian_t const &other, point const &new_pos, float rsum, float coll_dist) const {
+void building_t::move_person_to_not_collide(person_t &person, person_t const &other, point const &new_pos, float rsum, float coll_dist) const {
 	point const other_pos(other.pos.x, other.pos.y, person.pos.z); // use same zval to ignore height differences
 	float const sep_dist(p2p_dist_xy(person.pos, other_pos)), move_dist(rsum - sep_dist); // distance we have to move
 	// move away from the other person, hopefully not through a wall
@@ -1322,7 +1322,7 @@ void building_t::register_person_hit(unsigned person_ix, room_object_t const &ob
 	if (velocity == zero_vector) return; // stationary object, ignore it
 	if (!ai_follow_player())     return; // not in gameplay mode, ignore it
 	assert(interior && person_ix < interior->people.size());
-	pedestrian_t &person(interior->people[person_ix]);
+	person_t &person(interior->people[person_ix]);
 	if (person.destroyed) return; // dead
 
 	if (obj.type == TYPE_LG_BALL) { // currently this is the only throwable/dynamic object

@@ -514,7 +514,7 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, flo
 			if ((c->type == TYPE_STALL || c->type == TYPE_SHOWER) && !c->is_open() && c->contains_pt(pos)) {player_is_hiding = 1;} // player is hiding in the stall/shower
 		} // for c
 	}
-	for (pedestrian_t const &p : interior->people) {
+	for (person_t const &p : interior->people) {
 		if (p.destroyed) continue; // dead
 		float const dist(p2p_dist(pos, p.pos)), r_sum(xy_radius + 0.5*p.get_width()); // ped_radius is a bit too large, multiply it by 0.5
 		if (dist >= r_sum) continue; // no intersection

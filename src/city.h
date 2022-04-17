@@ -664,9 +664,42 @@ public:
 
 // forward declarations of some classes
 class city_road_gen_t;
-struct pedestrian_t;
 class ped_manager_t;
 class city_spectate_manager_t;
+
+struct pedestrian_t : public person_base_t { // city pedestrian
+	point dest_car_center; // since cars are sorted each frame, we can't find their positions by index so we need to cache them here
+	unsigned plot, next_plot, dest_plot, dest_bldg; // Note: can probably be made unsigned short later, though these are global plot and building indices
+	unsigned short city, colliding_ped;
+	unsigned char stuck_count;
+	bool collided, ped_coll, in_the_road, at_crosswalk, at_dest, has_dest_bldg, has_dest_car;
+
+	pedestrian_t(float radius_) : person_base_t(radius_), plot(0), next_plot(0), dest_plot(0), dest_bldg(0), city(0), colliding_ped(0),
+		stuck_count(0), collided(0), ped_coll(0), in_the_road(0), at_crosswalk(0), at_dest(0), has_dest_bldg(0), has_dest_car(0) {}
+
+	bool operator<(pedestrian_t const &ped) const {return ((city == ped.city) ? (plot < ped.plot) : (city < ped.city));} // currently only compares city + plot
+	std::string str() const;
+	float get_coll_radius() const {return 0.6f*radius;} // using a smaller radius to allow peds to get close to each other
+	float get_speed_mult () const;
+	void move(ped_manager_t const &ped_mgr, cube_t const &plot_bcube, cube_t const &next_plot_bcube, float &delta_dir);
+	bool check_for_safe_road_crossing(ped_manager_t const &ped_mgr, cube_t const &plot_bcube, cube_t const &next_plot_bcube, vect_cube_t *dbg_cubes=nullptr) const;
+	bool check_ped_ped_coll_range(vector<pedestrian_t> &peds, unsigned pid, unsigned ped_start, unsigned target_plot, float prox_radius, vector3d &force);
+	bool check_ped_ped_coll(ped_manager_t const &ped_mgr, vector<pedestrian_t> &peds, unsigned pid, float delta_dir);
+	bool check_ped_ped_coll_stopped(vector<pedestrian_t> &peds, unsigned pid);
+	bool check_inside_plot(ped_manager_t &ped_mgr, point const &prev_pos, cube_t &plot_bcube, cube_t &next_plot_bcube);
+	bool check_road_coll(ped_manager_t const &ped_mgr, cube_t const &plot_bcube, cube_t const &next_plot_bcube) const;
+	bool is_valid_pos(vect_cube_t const &colliders, bool &ped_at_dest, ped_manager_t const *const ped_mgr) const;
+	bool try_place_in_plot(cube_t const &plot_cube, vect_cube_t const &colliders, unsigned plot_id, rand_gen_t &rgen);
+	point get_dest_pos(cube_t const &plot_bcube, cube_t const &next_plot_bcube, ped_manager_t const &ped_mgr, int &debug_state) const;
+	bool choose_alt_next_plot(ped_manager_t const &ped_mgr);
+	void get_avoid_cubes(ped_manager_t const &ped_mgr, vect_cube_t const &colliders, cube_t const &plot_bcube, cube_t const &next_plot_bcube, point &dest_pos, vect_cube_t &avoid) const;
+	void next_frame(ped_manager_t &ped_mgr, vector<pedestrian_t> &peds, unsigned pid, rand_gen_t &rgen, float delta_dir);
+	void register_at_dest();
+	void debug_draw(ped_manager_t &ped_mgr) const;
+private:
+	void run_path_finding(ped_manager_t &ped_mgr, cube_t const &plot_bcube, cube_t const &next_plot_bcube, vect_cube_t const &colliders, vector3d &dest_pos);
+	void get_plot_bcubes_inc_sidewalks(ped_manager_t const &ped_mgr, cube_t &plot_bcube, cube_t &next_plot_bcube) const;
+};
 
 struct ped_city_vect_t {
 	vector<vector<vector<sphere_t>>> peds; // per city per road
@@ -807,7 +840,7 @@ class ped_manager_t { // pedestrians
 	unsigned animation_id;
 	bool ped_destroyed, need_to_sort_peds;
 
-	void assign_ped_model(pedestrian_t &ped);
+	void assign_ped_model(person_base_t &ped);
 	bool gen_ped_pos(pedestrian_t &ped);
 	void expand_cube_for_ped(cube_t &cube) const;
 	void remove_destroyed_peds();
@@ -815,7 +848,7 @@ class ped_manager_t { // pedestrians
 	road_isec_t const &get_car_isec(car_base_t const &car) const;
 	void register_ped_new_plot(pedestrian_t const &ped);
 	int get_road_ix_for_ped_crossing(pedestrian_t const &ped, bool road_dim) const;
-	bool draw_ped(pedestrian_t const &ped, shader_t &s, pos_dir_up const &pdu, vector3d const &xlate, float def_draw_dist, float draw_dist_sq,
+	bool draw_ped(person_base_t const &ped, shader_t &s, pos_dir_up const &pdu, vector3d const &xlate, float def_draw_dist, float draw_dist_sq,
 		bool &in_sphere_draw, bool shadow_only, bool is_dlight_shadows, bool enable_animations, bool is_in_building);
 	car_city_vect_t const &get_cars_for_city(unsigned city) const {return ((city < cars_by_city.size()) ? cars_by_city[city] : empty_cars_vect);}
 public:
@@ -851,7 +884,7 @@ public:
 	void clear() {peds.clear(); by_city.clear();}
 	unsigned get_model_gpu_mem() const {return ped_model_loader.get_gpu_mem();}
 	void init(unsigned num_city);
-	pedestrian_t add_person_to_building(point const &pos, unsigned bix, unsigned ssn);
+	person_t add_person_to_building(point const &pos, unsigned bix, unsigned ssn);
 	bool proc_sphere_coll(point &pos, float radius, vector3d *cnorm) const;
 	bool line_intersect_peds(point const &p1, point const &p2, float &t) const;
 	void destroy_peds_in_radius(point const &pos_in, float radius);
@@ -861,7 +894,7 @@ public:
 	void get_peds_crossing_roads(ped_city_vect_t &pcv) const;
 	void draw(vector3d const &xlate, bool use_dlights, bool shadow_only, bool is_dlight_shadows);
 	void gen_and_draw_people_in_building(building_t &building, ped_draw_vars_t const &pdv);
-	void draw_people_in_building(vector<pedestrian_t> const &people, ped_draw_vars_t const &pdv);
+	void draw_people_in_building(vector<person_t> const &people, ped_draw_vars_t const &pdv);
 	void draw_player_model(shader_t &s, vector3d const &xlate, bool shadow_only);
 	void free_context() {ped_model_loader.free_context();}
 }; // end ped_manager_t
@@ -890,6 +923,6 @@ void update_buildings_zmax_for_line(point const &p1, point const &p2, float radi
 
 // from city_interact.cpp
 void init_city_spectate_manager(car_manager_t &car_manager, ped_manager_t &ped_manager);
-bool skip_bai_draw(pedestrian_t const &bai);
+bool skip_bai_draw(person_t     const &bai);
 bool skip_ped_draw(pedestrian_t const &ped);
 bool skip_car_draw(car_t        const &car);

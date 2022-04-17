@@ -1010,7 +1010,7 @@ struct building_ai_state_t {
 	vector<point> path; // stored backwards, next point on path is path.back()
 
 	building_ai_state_t() : is_first_path(1), on_new_path_seg(0), goal_type(GOAL_TYPE_NONE), cur_room(-1), dest_room(-1) {}
-	void next_path_pt(pedestrian_t &person, bool same_floor, bool starting_path);
+	void next_path_pt(person_t &person, bool same_floor, bool starting_path);
 };
 
 
@@ -1025,7 +1025,7 @@ struct building_interior_t {
 	vector<elevator_t> elevators;
 	vect_cube_t exclusion;
 	vector<building_ai_state_t> states;
-	vector<pedestrian_t> people;
+	vector<person_t> people;
 	std::unique_ptr<building_room_geom_t> room_geom;
 	std::unique_ptr<building_nav_graph_t> nav_graph;
 	cube_with_ix_t pg_ramp; // ix stores {dim, dir}
@@ -1246,15 +1246,15 @@ struct building_t : public building_geom_t {
 private:
 	void build_nav_graph() const;
 	bool is_valid_ai_placement(point const &pos, float radius) const;
-	bool choose_dest_goal(building_ai_state_t &state, pedestrian_t &person, rand_gen_t &rgen, bool same_floor) const;
-	int  choose_dest_room(building_ai_state_t &state, pedestrian_t &person, rand_gen_t &rgen, bool same_floor) const;
-	bool select_person_dest_in_room(building_ai_state_t &state, pedestrian_t &person, rand_gen_t &rgen, room_t const &room) const;
+	bool choose_dest_goal(building_ai_state_t &state, person_t &person, rand_gen_t &rgen, bool same_floor) const;
+	int  choose_dest_room(building_ai_state_t &state, person_t &person, rand_gen_t &rgen, bool same_floor) const;
+	bool select_person_dest_in_room(building_ai_state_t &state, person_t &person, rand_gen_t &rgen, room_t const &room) const;
 	void get_avoid_cubes(float zval, float height, float radius, vect_cube_t &avoid, bool following_player) const;
-	bool find_route_to_point(pedestrian_t const &person, float radius, bool is_first_path, bool following_player, vector<point> &path) const;
+	bool find_route_to_point(person_t const &person, float radius, bool is_first_path, bool following_player, vector<point> &path) const;
 	bool stairs_contained_in_part(stairwell_t const &s, cube_t const &p) const;
 	void find_nearest_stairs(point const &p1, point const &p2, vector<unsigned> &nearest_stairs, int part_ix=-1) const;
-	void ai_room_lights_update(building_ai_state_t const &state, pedestrian_t const &person);
-	void move_person_to_not_collide(pedestrian_t &person, pedestrian_t const &other, point const &new_pos, float rsum, float coll_dist) const;
+	void ai_room_lights_update(building_ai_state_t const &state, person_t const &person);
+	void move_person_to_not_collide(person_t &person, person_t const &other, point const &new_pos, float rsum, float coll_dist) const;
 
 	// animals
 public:
@@ -1431,10 +1431,10 @@ private:
 	unsigned get_floor_for_zval(float zval) const {return unsigned((zval - bcube.z1())/get_window_vspace());}
 	building_loc_t get_building_loc_for_pt(point const &pt) const;
 	void register_player_in_building(point const &camera_bs, unsigned building_id) const;
-	bool same_room_and_floor_as_player(building_ai_state_t const &state, pedestrian_t const &person) const;
-	bool is_player_visible(building_ai_state_t const &state, pedestrian_t const &person, unsigned vis_test) const;
-	bool can_target_player(building_ai_state_t const &state, pedestrian_t const &person) const;
-	bool need_to_update_ai_path(building_ai_state_t const &state, pedestrian_t const &person) const;
+	bool same_room_and_floor_as_player(building_ai_state_t const &state, person_t const &person) const;
+	bool is_player_visible(building_ai_state_t const &state, person_t const &person, unsigned vis_test) const;
+	bool can_target_player(building_ai_state_t const &state, person_t const &person) const;
+	bool need_to_update_ai_path(building_ai_state_t const &state, person_t const &person) const;
 	void set_bcube_from_rotated_cube(cube_t const &bc);
 	bool apply_paint(point const &pos, vector3d const &dir, colorRGBA const &color, room_object const obj_type) const;
 	bool apply_toilet_paper(point const &pos, vector3d const &dir, float half_width);

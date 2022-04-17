@@ -2453,7 +2453,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			is_lit = (r->is_hallway || is_parking_garage || ((rgen.rand() & (top_of_stairs ? 3 : 1)) != 0));
 
 			if (!is_lit) { // check people and set is_lit if anyone is in this floor of this room
-				for (pedestrian_t const &p : interior->people) {
+				for (person_t const &p : interior->people) {
 					if (p.destroyed) continue; // dead
 					cube_t const bc(p.get_bcube());
 					if (!bc.intersects_xy(*r)) continue; // person not in this room

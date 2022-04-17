@@ -533,7 +533,7 @@ void building_t::scare_rat(rat_t &rat, point const &camera_bs) const {
 	float const sight_scare_amt = 0.5;
 	rat.near_player = 0;
 
-	for (pedestrian_t const &p : interior->people) { // other people in the building scare the rats
+	for (person_t const &p : interior->people) { // other people in the building scare the rats
 		if (p.destroyed || p.is_waiting_or_stopped()) continue; // only scare if moving
 		scare_rat_at_pos(rat, point(p.pos.x, p.pos.y, p.get_z1()), sight_scare_amt, 1);
 	}
