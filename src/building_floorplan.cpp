@@ -1509,6 +1509,7 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 				cand_is_valid = 1;
 				break;
 			} // for n
+			if (!cand_is_valid) continue; // no valid candidate found
 			landing_t landing(cand, 0, 0, dim, stairs_dir, add_railing, sshape, 0, is_at_top, stack_conn); // roof_access=0
 			landing.z1() = part.z2() - fc_thick; // only include the ceiling of this part and the floor of *p
 			cube_t stairwell(cand);
