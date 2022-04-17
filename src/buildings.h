@@ -1253,7 +1253,7 @@ private:
 	bool find_route_to_point(pedestrian_t const &person, float radius, bool is_first_path, bool following_player, vector<point> &path) const;
 	bool stairs_contained_in_part(stairwell_t const &s, cube_t const &p) const;
 	void find_nearest_stairs(point const &p1, point const &p2, vector<unsigned> &nearest_stairs, int part_ix=-1) const;
-	void ai_room_lights_update(building_ai_state_t const &state, pedestrian_t const &person, unsigned person_ix);
+	void ai_room_lights_update(building_ai_state_t const &state, pedestrian_t const &person);
 	void move_person_to_not_collide(pedestrian_t &person, pedestrian_t const &other, point const &new_pos, float rsum, float coll_dist) const;
 
 	// animals

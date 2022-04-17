@@ -1233,15 +1233,14 @@ int building_t::ai_room_update(rand_gen_t &rgen, float delta_dir, unsigned perso
 	// update state
 	person.pos        = new_pos; // Note: new_pos.z should equal person.poz.z unless on stairs, which is difficult to accurately check for in this function
 	person.anim_time += max_dist;
-	if (player_in_this_building) {state.cur_room = get_room_containing_pt(person.pos);} // update cur_room after moving
-	ai_room_lights_update(state, person, person_ix); // non-const part
+	bool enable_bl_update(display_mode & 0x20); // disabled by default, enable with key '6'
+	if (ai_follow_player() && global_building_params.ai_player_vis_test >= 3) {enable_bl_update = 0;} // if AI tests that player is lit, don't turn on/off lights
+	if (enable_bl_update) {ai_room_lights_update(state, person);} // non-const part
+	if (player_in_this_building) {state.cur_room = get_room_containing_pt(person.pos);} // update cur_room after moving and lights update
 	return AI_MOVING;
 }
 
-void building_t::ai_room_lights_update(building_ai_state_t const &state, pedestrian_t const &person, unsigned person_ix) {
-	if (!(display_mode & 0x20)) return; // disabled by default, enable with key '6'
-	if (ai_follow_player() && global_building_params.ai_player_vis_test >= 3) return; // if AI tests that the player is lit, then we shouldn't be turning on and off the lights
-	if ((frame_counter + person_ix) & 7) return; // update room info only every 8 frames
+void building_t::ai_room_lights_update(building_ai_state_t const &state, pedestrian_t const &person) {
 	int const room_ix(get_room_containing_pt(person.pos));
 	if (room_ix < 0) return; // room is not valid (between rooms, etc.)
 	set_room_light_state_to(get_room(room_ix), person.pos.z, 1); // make sure current room light is on
