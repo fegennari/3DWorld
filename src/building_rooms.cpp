@@ -2060,7 +2060,6 @@ void building_t::add_outlets_to_room(rand_gen_t rgen, room_t const &room, float 
 	float const plate_thickness(0.03*wall_thickness), plate_height(1.8*wall_thickness), plate_hwidth(0.5*wall_thickness), min_wall_spacing(4.0*plate_hwidth);
 	cube_t const room_bounds(get_walkable_room_bounds(room));
 	if (min(room_bounds.dx(), room_bounds.dy()) < 3.0*min_wall_spacing) return; // room is too small; shouldn't happen
-	bool const check_for_walls(has_small_part || (!is_house && room.is_hallway)); // small parts, or office building hallways, which can connect to other hallways
 	vect_door_stack_t const &doorways(get_doorways_for_room(room, zval));
 	cube_t c;
 	c.z1() = zval + get_trim_height() + 0.4*plate_height; // wall trim height + some extra padding; same for every outlet

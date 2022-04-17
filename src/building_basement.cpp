@@ -887,7 +887,7 @@ void building_t::get_pipe_basement_connections(vect_riser_pos_t &sewer, vect_ris
 	} // for sewer
 	if (!water_heaters.empty()) { // add connections for water heaters
 		float const radius_hot(get_merged_risers_radius(hot_water)); // this is the radius of the main hot water supply
-		float const per_wh_radius(pow(1.0/water_heaters.size(), 1/4.0)); // distribute evenly among the water heaters using the same merge exponent
+		float const per_wh_radius(radius_hot*pow(1.0/water_heaters.size(), 1/4.0)); // distribute evenly among the water heaters using the same merge exponent
 
 		for (room_object_t const &wh : water_heaters) {
 			float const shift_val(0.75*wh.get_radius());
