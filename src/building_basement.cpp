@@ -898,7 +898,7 @@ void building_t::get_pipe_basement_connections(vect_riser_pos_t &sewer, vect_ris
 	}
 }
 
-void building_t::add_basement_electrical(vect_cube_t &obstacles, vect_cube_t const &walls, vect_cube_t const &beams, unsigned room_id, float tot_light_amt, rand_gen_t &rgen) {
+void building_t::add_basement_electrical(vect_cube_t &obstacles, vect_cube_t const &walls, vect_cube_t const &beams, int room_id, float tot_light_amt, rand_gen_t &rgen) {
 	cube_t const &basement(get_basement());
 	float const floor_spacing(get_window_vspace()), fc_thickness(get_fc_thickness()), floor_height(floor_spacing - 2.0*fc_thickness), ceil_zval(basement.z2() - fc_thickness);
 	unsigned const num_panels(is_house ? 1 : (1 + (rgen.rand()&3))); // 1 for houses, 1-3 for office buildings
@@ -923,8 +923,9 @@ void building_t::add_basement_electrical(vect_cube_t &obstacles, vect_cube_t con
 			conduit.z2() = ceil_zval;
 			conduit.expand_by_xy(rgen.rand_uniform(0.38, 0.46)*bp_depth);
 			if (has_bcube_int(conduit, beams)) continue; // bad conduit position
-			objs.emplace_back(c, TYPE_BRK_PANEL, room_id, dim, dir, 0, tot_light_amt, SHAPE_CUBE, color);
-			objs.emplace_back(conduit, TYPE_PIPE, room_id, 0, 1, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CYLIN, LT_GRAY); // vertical pipe
+			unsigned cur_room_id((room_id < 0) ? get_room_containing_pt(c.get_cube_center()) : (unsigned)room_id); // calculate room_id if needed
+			objs.emplace_back(c, TYPE_BRK_PANEL, cur_room_id, dim, dir, RO_FLAG_INTERIOR, tot_light_amt, SHAPE_CUBE, color);
+			objs.emplace_back(conduit, TYPE_PIPE, cur_room_id, 0, 1, (RO_FLAG_NOCOLL | RO_FLAG_INTERIOR), tot_light_amt, SHAPE_CYLIN, LT_GRAY); // vertical pipe
 			set_obj_id(objs);
 			set_cube_zvals(c, ceil_zval-floor_height, ceil_zval); // expand to floor-to-ceiling
 			obstacles.push_back(c); // block off from pipes
@@ -949,7 +950,7 @@ void building_t::add_basement_electrical_house(rand_gen_t &rgen) {
 	for (room_object_t const &c : interior->room_geom->objs) {
 		if (c.z1() < ground_floor_z1) {obstacles.push_back(c); obstacles.back().expand_by(obj_expand);} // with some clearance
 	}
-	add_basement_electrical(obstacles, walls, vect_cube_t(), 0, tot_light_amt, rgen); // no beams, room_id=0
+	add_basement_electrical(obstacles, walls, vect_cube_t(), -1, tot_light_amt, rgen); // no beams, room_id=-1 (to be calculated)
 }
 
 void building_t::add_parking_garage_ramp(rand_gen_t &rgen) {
