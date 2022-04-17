@@ -916,8 +916,8 @@ void building_t::draw_room_geom(brg_batch_draw_t *bbd, shader_t &s, occlusion_ch
 	if (ENABLE_MIRROR_REFLECTIONS && !shadow_only && !reflection_pass && player_in_building) {find_mirror_needing_reflection(xlate);}
 	interior->room_geom->draw(bbd, s, *this, oc, xlate, building_ix, shadow_only, reflection_pass, inc_small, player_in_building);
 }
-void building_t::gen_and_draw_room_geom(brg_batch_draw_t *bbd, shader_t &s, occlusion_checker_noncity_t &oc, vector3d const &xlate, vect_cube_t &ped_bcubes,
-	unsigned building_ix, int ped_ix, bool shadow_only, bool reflection_pass, unsigned inc_small, bool player_in_building)
+void building_t::gen_and_draw_room_geom(brg_batch_draw_t *bbd, shader_t &s, occlusion_checker_noncity_t &oc, vector3d const &xlate,
+	unsigned building_ix, bool shadow_only, bool reflection_pass, unsigned inc_small, bool player_in_building)
 {
 	if (!interior) return;
 	if (!global_building_params.enable_rotated_room_geom && is_rotated()) return; // rotated buildings: need to fix texture coords, room object collisions, mirrors, etc.
@@ -934,9 +934,7 @@ void building_t::gen_and_draw_room_geom(brg_batch_draw_t *bbd, shader_t &s, occl
 	if (!has_room_geom()) {
 		rand_gen_t rgen;
 		rgen.set_state(building_ix, parts.size()); // set to something canonical per building
-		ped_bcubes.clear();
-		if (ped_ix >= 0) {get_ped_bcubes_for_building(ped_ix, ped_bcubes);}
-		gen_room_details(rgen, ped_bcubes, building_ix); // generate so that we can draw it
+		gen_room_details(rgen, building_ix); // generate so that we can draw it
 		assert(has_room_geom());
 	}
 	if (has_room_geom() && inc_small == 2) {add_wall_and_door_trim_if_needed();} // gen trim when close to the player

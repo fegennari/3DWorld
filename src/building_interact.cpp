@@ -629,7 +629,7 @@ void apply_building_gravity(float &vz, float dt_ticks) {
 	max_eq(vz, -TERM_VELOCITY);
 }
 
-void building_t::update_player_interact_objects(point const &player_pos, int first_ped_ix) {
+void building_t::update_player_interact_objects(point const &player_pos) {
 	assert(interior);
 	interior->update_elevators(*this, player_pos);
 	if (!has_room_geom()) return; // nothing else to do
@@ -637,8 +637,6 @@ void building_t::update_player_interact_objects(point const &player_pos, int fir
 	float const fc_thick(get_fc_thickness()), fticks_stable(min(fticks, 1.0f)); // cap to 1/40s to improve stability
 	static float last_sound_tfticks(0);
 	static point last_sound_pt(all_zeros), last_player_pos(all_zeros);
-	vect_cube_t ped_bcubes;
-	if (first_ped_ix >= 0) {get_ped_bcubes_for_building(first_ped_ix, ped_bcubes);}
 	bool const player_is_moving(player_pos != last_player_pos);
 	last_player_pos = player_pos;
 	auto &objs(interior->room_geom->objs), &expanded_objs(interior->room_geom->expanded_objs);
@@ -657,17 +655,18 @@ void building_t::update_player_interact_objects(point const &player_pos, int fir
 		bool kicked(camera_surf_collide && player_is_moving && check_ball_kick(*c, velocity, new_center, player_pos, player_z1, player_z2, player_radius)); // check the player
 		bool const is_moving_fast(velocity.mag() > 0.5*KICK_VELOCITY);
 
-		for (auto p = ped_bcubes.begin(); p != ped_bcubes.end(); ++p) { // check building AI people
-			if (is_moving_fast) { // treat collision as a bounce
+		for (auto p = interior->people.begin(); p != interior->people.end(); ++p) { // check building AI people
+			if (p->destroyed) {} // dead, skip
+			else if (is_moving_fast) { // treat collision as a bounce
 				vector3d cnorm;
 
-				if (sphere_cube_int_update_pos(new_center, radius, *p, center, 1, 0, &cnorm)) {
-					register_person_hit((first_ped_ix + (p - ped_bcubes.begin())), *c, velocity);
+				if (sphere_cube_int_update_pos(new_center, radius, p->get_bcube(), center, 1, 0, &cnorm)) {
+					register_person_hit((p - interior->people.begin()), *c, velocity);
 					apply_object_bounce(*this, velocity, cnorm, new_center, 0.75, on_floor); // hardness=0.75
 				}
 			}
 			else { // treat collision as a kick
-				kicked = check_ball_kick(*c, velocity, new_center, p->get_cube_center(), p->z1(), p->z2(), 0.6*p->dx()); // assume dx == dy == radius
+				kicked = check_ball_kick(*c, velocity, new_center, p->pos, p->get_z1(), p->get_z2(), 0.6*p->get_width());
 			}
 		}
 		if (kicked) {

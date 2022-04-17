@@ -44,7 +44,6 @@ void city_params_t::init_kw_maps() {
 	kwmr.add("new_city_prob",       new_city_prob,       FP_CHECK_01);
 	// pedestrians
 	kwmu.add("num_peds", num_peds);
-	kwmu.add("num_building_peds",   num_building_peds);
 	kwmb.add("ped_respawn_at_dest", ped_respawn_at_dest);
 	kwmr.add("ped_speed",           ped_speed, FP_CHECK_NONNEG);
 	// parking lots / trees / detail objects

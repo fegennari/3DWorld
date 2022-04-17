@@ -8,6 +8,7 @@ extern int spectate;
 extern float CAMERA_RADIUS;
 extern point surface_pos;
 extern city_params_t city_params;
+extern building_t const *player_building;
 
 
 // spectate mode
@@ -86,13 +87,12 @@ public:
 		point const camera_bs(get_camera_building_space());
 
 		if (camera_in_building) {
-			if (ped_manager && city_params.num_building_peds > 0) {
-				int const ix(find_closest_person(ped_manager->peds_b, camera_bs));
+			if (player_building && player_building->interior) {
+				int const ix(find_closest_person(player_building->interior->people, camera_bs));
 				if (ix >= 0) {
-					assert(unsigned(ix) < ped_manager->peds_b.size());
-					//if (ped_manager->peds_b[ix].dest_bldg != player_building) break; // wrong building; doesn't work, but the dmax test should be good enough
+					assert(unsigned(ix) < player_building->interior->people.size());
 					follow_ix = ix;
-					follow_id = ped_manager->peds_b[ix].get_unique_id();
+					follow_id = player_building->interior->people[ix].get_unique_id();
 					spectate_mode = FOLLOW_BAI;
 				}
 			}
@@ -132,8 +132,8 @@ public:
 		case FOLLOW_NONE:
 			return;
 		case FOLLOW_BAI: {
-			assert(ped_manager);
-			set_camera_to_follow_person(ped_manager->peds_b); // index never changes (no peds_b sort), don't need to update
+			if (!player_building || !player_building->interior) break; // no building
+			set_camera_to_follow_person(player_building->interior->people); // index never changes, don't need to update
 			break;
 		}
 		case FOLLOW_PED: {

@@ -606,7 +606,7 @@ bool check_for_shadow_caster(vect_cube_t const &cubes, cube_t const &light_bcube
 }
 
 // Note: non const because this caches light_bcubes
-void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bool camera_in_building, int ped_ix,
+void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bool camera_in_building,
 	occlusion_checker_noncity_t &oc, vect_cube_t &ped_bcubes, cube_t &lights_bcube)
 {
 	if (!has_room_geom()) return; // error?
@@ -875,7 +875,11 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 				force_smap_update = 1; // toggling a door state or interacting with objects will generally invalidate shadows in the building for that frame
 			}
 			if (check_building_people && !is_lamp) { // update shadow_caster_hash for moving people, but not for lamps, because their light points toward the floor
-				if (ped_ix >= 0 && ped_bcubes.empty()) {get_ped_bcubes_for_building(ped_ix, ped_bcubes);} // get all cubes on first light
+				if (ped_bcubes.empty()) { // get all cubes on first light
+					for (pedestrian_t const &p : interior->people) {
+						if (!p.destroyed) {ped_bcubes.push_back(p.get_bcube());}
+					}
+				}
 				check_for_shadow_caster(ped_bcubes, clipped_bc, lpos_rot, dshadow_radius, stairs_light, xlate, shadow_caster_hash);
 			}
 			// update shadow_caster_hash for moving objects

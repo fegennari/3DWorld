@@ -2322,7 +2322,7 @@ colorRGBA get_light_color_temp_range(float tmin, float tmax, rand_gen_t &rgen) {
 }
 
 // Note: these three floats can be calculated from get_window_vspace(), but it's easier to change the constants if we just pass them in
-void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcubes, unsigned building_ix) {
+void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 
 	assert(interior);
 	if (interior->room_geom) return; // already generated?
@@ -2452,10 +2452,13 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 			// 50% of lights are on, 75% for top of stairs, 100% for hallways, 100% for parking garages
 			is_lit = (r->is_hallway || is_parking_garage || ((rgen.rand() & (top_of_stairs ? 3 : 1)) != 0));
 
-			// check ped_bcubes and set is_lit if any people are in this floor of this room
-			for (auto p = ped_bcubes.begin(); p != ped_bcubes.end() && !is_lit; ++p) {
-				if (!p->intersects_xy(*r)) continue; // person not in this room
-				if (p->z2() < light_z2 && p->z1() + floor_height > light_z2) {is_lit = 1;} // on this floor
+			if (!is_lit) { // check people and set is_lit if anyone is in this floor of this room
+				for (pedestrian_t const &p : interior->people) {
+					if (p.destroyed) continue; // dead
+					cube_t const bc(p.get_bcube());
+					if (!bc.intersects_xy(*r)) continue; // person not in this room
+					if (bc.z2() < light_z2 && bc.z1() + floor_height > light_z2) {is_lit = 1; break;} // on this floor
+				}
 			}
 			unsigned flags(RO_FLAG_NOCOLL); // no collision detection with lights
 			if (is_lit)     {flags |= RO_FLAG_LIT | RO_FLAG_EMISSIVE;}

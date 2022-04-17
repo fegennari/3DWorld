@@ -8,6 +8,7 @@
 #include "transform_obj.h" // for xform_matrix
 #include "draw_utils.h" // for quad_batch_draw
 #include "file_utils.h" // for kw_to_val_map_t
+#include "pedestrians.h"
 
 bool const EXACT_MULT_FLOOR_HEIGHT = 1;
 bool const ENABLE_MIRROR_REFLECTIONS = 1;
@@ -50,7 +51,6 @@ inline colorRGBA gen_box_color(rand_gen_t &rgen) {return colorRGBA(rgen.rand_uni
 class light_source;
 class lmap_manager_t;
 class building_nav_graph_t;
-struct pedestrian_t;
 struct building_t;
 class building_creator_t;
 class light_ix_assign_t;
@@ -983,49 +983,7 @@ struct roof_obj_t : public cube_t {
 typedef vector<roof_obj_t> vect_roof_obj_t;
 
 
-// may as well make this its own class, since it could get large and it won't be used for every building
-struct building_interior_t {
-	vect_cube_t floors, ceilings, walls[2], fc_occluders; // walls are split by dim
-	vect_stairwell_t stairwells;
-	vector<door_t> doors;
-	vector<door_stack_t> door_stacks;
-	vector<landing_t> landings; // for stairs and elevators
-	vector<room_t> rooms;
-	vector<elevator_t> elevators;
-	vect_cube_t exclusion;
-	std::unique_ptr<building_room_geom_t> room_geom;
-	std::unique_ptr<building_nav_graph_t> nav_graph;
-	cube_with_ix_t pg_ramp; // ix stores {dim, dir}
-	draw_range_t draw_range;
-	uint64_t top_ceilings_mask; // bit mask for ceilings that are on the top floor and have no floor above them
-	int garage_room;
-	bool door_state_updated, is_unconnected, ignore_ramp_placement;
-
-	building_interior_t();
-	~building_interior_t();
-	float get_doorway_width() const;
-	bool is_cube_close_to_doorway(cube_t const &c, cube_t const &room, float dmin=0.0f, bool inc_open=0, bool check_open_dir=0) const;
-	bool is_blocked_by_stairs_or_elevator(cube_t const &c, float dmin=0.0f, bool elevators_only=0) const;
-	void get_stairs_and_elevators_bcubes_intersecting_cube(cube_t const &c, vect_cube_t &bcubes, float ends_clearance=0.0, float sides_clearance=0.0) const;
-	void finalize();
-	bool update_elevators(building_t const &building, point const &player_pos);
-	bool check_sphere_coll(building_t const &building, point &pos, point const &p_last, float radius,
-		vect_room_object_t::const_iterator self, vector3d &cnorm, float &hardness, int &obj_ix) const;
-	bool check_sphere_coll_walls_elevators_doors(building_t const &building, point &pos, point const &p_last, float radius,
-		float wall_test_extra_z, bool check_open_doors, vector3d *cnorm) const;
-	bool line_coll(building_t const &building, point const &p1, point const &p2, point &p_int) const;
-	point find_closest_pt_on_obj_to_pos(building_t const &building, point const &pos, float pad_dist, bool no_ceil_floor) const;
-	void update_dynamic_draw_data() {assert(room_geom); room_geom->update_dynamic_draw_data();}
-	void get_avoid_cubes(vect_cube_t &avoid, float z1, float z2, float floor_thickness, bool same_as_player, bool skip_stairs=0) const;
-	void create_fc_occluders();
-	room_t const &get_garage_room() const {assert((unsigned)garage_room < rooms.size()); return rooms[garage_room];}
-};
-
-struct building_stats_t {
-	unsigned nbuildings, nparts, ndetails, ntquads, ndoors, ninterior, nrooms, nceils, nfloors, nwalls, nrgeom, nobjs, nverts;
-	building_stats_t() : nbuildings(0), nparts(0), ndetails(0), ntquads(0), ndoors(0), ninterior(0), nrooms(0), nceils(0), nfloors(0), nwalls(0), nrgeom(0), nobjs(0), nverts(0) {}
-};
-
+// building AI
 struct building_loc_t {
 	int part_ix, room_ix, stairs_ix; // -1 is not contained; what about elevator_ix?
 	unsigned floor_ix; // global for this building, rather than the current part/room
@@ -1053,6 +1011,52 @@ struct building_ai_state_t {
 
 	building_ai_state_t() : is_first_path(1), on_new_path_seg(0), goal_type(GOAL_TYPE_NONE), cur_room(-1), dest_room(-1) {}
 	void next_path_pt(pedestrian_t &person, bool same_floor, bool starting_path);
+};
+
+
+// may as well make this its own class, since it could get large and it won't be used for every building
+struct building_interior_t {
+	vect_cube_t floors, ceilings, walls[2], fc_occluders; // walls are split by dim
+	vect_stairwell_t stairwells;
+	vector<door_t> doors;
+	vector<door_stack_t> door_stacks;
+	vector<landing_t> landings; // for stairs and elevators
+	vector<room_t> rooms;
+	vector<elevator_t> elevators;
+	vect_cube_t exclusion;
+	vector<building_ai_state_t> states;
+	vector<pedestrian_t> people;
+	std::unique_ptr<building_room_geom_t> room_geom;
+	std::unique_ptr<building_nav_graph_t> nav_graph;
+	cube_with_ix_t pg_ramp; // ix stores {dim, dir}
+	draw_range_t draw_range;
+	uint64_t top_ceilings_mask; // bit mask for ceilings that are on the top floor and have no floor above them
+	int garage_room;
+	bool door_state_updated, is_unconnected, ignore_ramp_placement, placed_people;
+
+	building_interior_t();
+	~building_interior_t();
+	float get_doorway_width() const;
+	bool is_cube_close_to_doorway(cube_t const &c, cube_t const &room, float dmin=0.0f, bool inc_open=0, bool check_open_dir=0) const;
+	bool is_blocked_by_stairs_or_elevator(cube_t const &c, float dmin=0.0f, bool elevators_only=0) const;
+	void get_stairs_and_elevators_bcubes_intersecting_cube(cube_t const &c, vect_cube_t &bcubes, float ends_clearance=0.0, float sides_clearance=0.0) const;
+	void finalize();
+	bool update_elevators(building_t const &building, point const &player_pos);
+	bool check_sphere_coll(building_t const &building, point &pos, point const &p_last, float radius,
+		vect_room_object_t::const_iterator self, vector3d &cnorm, float &hardness, int &obj_ix) const;
+	bool check_sphere_coll_walls_elevators_doors(building_t const &building, point &pos, point const &p_last, float radius,
+		float wall_test_extra_z, bool check_open_doors, vector3d *cnorm) const;
+	bool line_coll(building_t const &building, point const &p1, point const &p2, point &p_int) const;
+	point find_closest_pt_on_obj_to_pos(building_t const &building, point const &pos, float pad_dist, bool no_ceil_floor) const;
+	void update_dynamic_draw_data() {assert(room_geom); room_geom->update_dynamic_draw_data();}
+	void get_avoid_cubes(vect_cube_t &avoid, float z1, float z2, float floor_thickness, bool same_as_player, bool skip_stairs=0) const;
+	void create_fc_occluders();
+	room_t const &get_garage_room() const {assert((unsigned)garage_room < rooms.size()); return rooms[garage_room];}
+};
+
+struct building_stats_t {
+	unsigned nbuildings, nparts, ndetails, ntquads, ndoors, ninterior, nrooms, nceils, nfloors, nwalls, nrgeom, nobjs, nverts;
+	building_stats_t() : nbuildings(0), nparts(0), ndetails(0), ntquads(0), ndoors(0), ninterior(0), nrooms(0), nceils(0), nfloors(0), nwalls(0), nrgeom(0), nobjs(0), nverts(0) {}
 };
 
 struct colored_cube_t;
@@ -1120,7 +1124,6 @@ struct building_t : public building_geom_t {
 	float get_door_height    () const {return 0.95f*(get_window_vspace() - get_floor_thickness());} // set height based on window spacing, 95% of ceiling height (may be too large)
 	float get_doorway_width  () const;
 	float get_ground_floor_z_thresh(bool for_spider) const;
-	unsigned get_person_capacity_mult() const;
 	void gen_rotation(rand_gen_t &rgen);
 	void maybe_inv_rotate_point(point &p) const {if (is_rotated()) {do_xy_rotate_inv(bcube.get_cube_center(), p);}} // inverse rotate - negate the sine term
 	void maybe_inv_rotate_pos_dir(point &pos, vector3d &dir) const;
@@ -1137,11 +1140,11 @@ struct building_t : public building_geom_t {
 
 	bool check_sphere_coll(point const &pos, float radius, bool xy_only, vector<point> &points, vector3d *cnorm=nullptr) const {
 		point pos2(pos);
-		return check_sphere_coll(pos2, pos, vect_cube_t(), zero_vector, radius, xy_only, points, cnorm);
+		return check_sphere_coll(pos2, pos, zero_vector, radius, xy_only, points, cnorm);
 	}
-	bool check_sphere_coll(point &pos, point const &p_last, vect_cube_t const &ped_bcubes, vector3d const &xlate, float radius, bool xy_only,
+	bool check_sphere_coll(point &pos, point const &p_last, vector3d const &xlate, float radius, bool xy_only,
 		vector<point> &points, vector3d *cnorm=nullptr, bool check_interior=0) const;
-	bool check_sphere_coll_interior(point &pos, point const &p_last, vect_cube_t const &ped_bcubes, float radius, bool xy_only, vector3d *cnorm=nullptr) const;
+	bool check_sphere_coll_interior(point &pos, point const &p_last, float radius, bool xy_only, vector3d *cnorm=nullptr) const;
 	unsigned check_line_coll(point const &p1, point const &p2, float &t, vector<point> &points, bool occlusion_only=0, bool ret_any_pt=0, bool no_coll_pt=0) const;
 	bool check_point_or_cylin_contained(point const &pos, float xy_radius, vector<point> &points) const;
 	bool check_point_xy_in_part(point const &pos) const;
@@ -1176,7 +1179,7 @@ struct building_t : public building_geom_t {
 	void add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part, cube_t const &hall, unsigned part_ix, unsigned num_floors,
 		unsigned rooms_start, bool use_hallway, bool first_part_this_stack, float window_hspacing[2], float window_border);
 	void connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t const &part);
-	void gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcubes, unsigned building_ix);
+	void gen_room_details(rand_gen_t &rgen, unsigned building_ix);
 	unsigned calc_floor_offset(float zval) const;
 	void add_stairs_and_elevators(rand_gen_t &rgen);
 	int get_ext_door_dir(cube_t const &door_bcube, bool dim) const;
@@ -1199,7 +1202,7 @@ struct building_t : public building_geom_t {
 	void get_split_int_window_wall_verts(building_draw_t &bdraw_front, building_draw_t &bdraw_back, point const &only_cont_pt_in, bool make_all_front=0) const;
 	void get_ext_wall_verts_no_sec(building_draw_t &bdraw) const;
 	void write_basement_entrance_depth_pass(shader_t &s) const;
-	void add_room_lights(vector3d const &xlate, unsigned building_id, bool camera_in_building, int ped_ix, occlusion_checker_noncity_t &oc, vect_cube_t &ped_bcubes, cube_t &lights_bcube);
+	void add_room_lights(vector3d const &xlate, unsigned building_id, bool camera_in_building, occlusion_checker_noncity_t &oc, vect_cube_t &ped_bcubes, cube_t &lights_bcube);
 	bool toggle_room_light(point const &closest_to, bool sound_from_closest_to=0, int room_id=-1, bool inc_lamps=1, bool closet_light=0);
 	void toggle_light_object(room_object_t const &light, point const &sound_pos);
 	bool apply_player_action_key(point const &closest_to_in, vector3d const &in_dir_in, int mode, bool check_only=0);
@@ -1220,8 +1223,8 @@ struct building_t : public building_geom_t {
 	void handle_vert_cylin_tape_collision(point &cur_pos, point const &prev_pos, float z1, float z2, float radius, bool is_player) const;
 	void draw_room_geom(brg_batch_draw_t *bbd, shader_t &s, occlusion_checker_noncity_t &oc, vector3d const &xlate,
 		unsigned building_ix, bool shadow_only, bool reflection_pass, unsigned inc_small, bool player_in_building);
-	void gen_and_draw_room_geom(brg_batch_draw_t *bbd, shader_t &s, occlusion_checker_noncity_t &oc, vector3d const &xlate, vect_cube_t &ped_bcubes,
-		unsigned building_ix, int ped_ix, bool shadow_only, bool reflection_pass, unsigned inc_small, bool player_in_building);
+	void gen_and_draw_room_geom(brg_batch_draw_t *bbd, shader_t &s, occlusion_checker_noncity_t &oc, vector3d const &xlate,
+		unsigned building_ix, bool shadow_only, bool reflection_pass, unsigned inc_small, bool player_in_building);
 	bool has_cars_to_draw(bool player_in_building) const;
 	void draw_cars_in_building(shader_t &s, vector3d const &xlate, bool player_in_building, bool shadow_only) const;
 	void add_split_roof_shadow_quads(building_draw_t &bdraw) const;
@@ -1235,8 +1238,11 @@ struct building_t : public building_geom_t {
 
 	// building AI people
 	unsigned count_connected_room_components();
+	bool place_people_if_needed(unsigned building_ix, float radius, vector<point> &locs) const;
 	bool place_person(point &ppos, float radius, rand_gen_t &rgen) const;
-	int ai_room_update(building_ai_state_t &state, rand_gen_t &rgen, vector<pedestrian_t> &people, float delta_dir, unsigned person_ix, bool stay_on_one_floor);
+	void all_ai_room_update(rand_gen_t &rgen, float delta_dir, bool stay_on_one_floor);
+	int ai_room_update(rand_gen_t &rgen, float delta_dir, unsigned person_ix, bool stay_on_one_floor);
+	void register_person_hit(unsigned person_ix, room_object_t const &obj, vector3d const &velocity);
 private:
 	void build_nav_graph() const;
 	bool is_valid_ai_placement(point const &pos, float radius) const;
@@ -1247,22 +1253,22 @@ private:
 	bool find_route_to_point(pedestrian_t const &person, float radius, bool is_first_path, bool following_player, vector<point> &path) const;
 	bool stairs_contained_in_part(stairwell_t const &s, cube_t const &p) const;
 	void find_nearest_stairs(point const &p1, point const &p2, vector<unsigned> &nearest_stairs, int part_ix=-1) const;
-	void ai_room_lights_update(building_ai_state_t const &state, pedestrian_t const &person, vector<pedestrian_t> const &people, unsigned person_ix);
+	void ai_room_lights_update(building_ai_state_t const &state, pedestrian_t const &person, unsigned person_ix);
 	void move_person_to_not_collide(pedestrian_t &person, pedestrian_t const &other, point const &new_pos, float rsum, float coll_dist) const;
 
 	// animals
 public:
 	template<typename T> void add_animals_on_floor(T &animals, unsigned building_ix, unsigned num_min, unsigned num_max, float sz_min, float sz_max) const;
-	void update_animals(point const &camera_bs, unsigned building_ix, int ped_ix);
-	void update_rats(point const &camera_bs, unsigned building_ix, int ped_ix);
-	void update_spiders(point const &camera_bs, unsigned building_ix, int ped_ix);
+	void update_animals(point const &camera_bs, unsigned building_ix);
+	void update_rats(point const &camera_bs, unsigned building_ix);
+	void update_spiders(point const &camera_bs, unsigned building_ix);
 	void get_objs_at_or_below_ground_floor(vect_room_object_t &ret, bool for_spider) const;
 private:
 	point gen_animal_floor_pos(float radius, rand_gen_t &rgen) const;
 	bool add_rat(point const &pos, float hlength, vector3d const &dir, point const &placed_from);
 	bool is_pos_inside_building(point const &pos, float xy_pad, float hheight) const;
-	void update_rat(rat_t &rat, point const &camera_bs, int ped_ix, float timestep, float &max_xmove, bool can_attack_player, rand_gen_t &rgen) const;
-	void scare_rat(rat_t &rat, point const &camera_bs, int ped_ix) const;
+	void update_rat(rat_t &rat, point const &camera_bs, float timestep, float &max_xmove, bool can_attack_player, rand_gen_t &rgen) const;
+	void scare_rat(rat_t &rat, point const &camera_bs) const;
 	void scare_rat_at_pos(rat_t &rat, point const &scare_pos, float amount, bool by_sight) const;
 	bool update_spider_pos_orient(spider_t &spider, point const &camera_bs, float timestep, rand_gen_t &rgen) const;
 	void update_spider(spider_t &spider, point const &camera_bs, float timestep, float &max_xmove, rand_gen_t &rgen) const;
@@ -1283,7 +1289,7 @@ public:
 		float zval, unsigned room_id, float tot_light_amt, cube_t const &place_area, unsigned objs_start, float front_clearance=0.0,
 		unsigned pref_orient=4, bool pref_centered=0, colorRGBA const &color=WHITE, bool not_at_window=0);
 	int check_valid_picture_placement(room_t const &room, cube_t const &c, float width, float zval, bool dim, bool dir, unsigned objs_start) const;
-	void update_player_interact_objects(point const &player_pos, int first_ped_ix);
+	void update_player_interact_objects(point const &player_pos);
 	bool line_intersect_walls(point const &p1, point const &p2) const;
 	bool is_obj_pos_valid(room_object_t const &obj, bool keep_in_room, bool allow_block_door, bool check_stairs) const;
 	bool is_rot_cube_visible(cube_t const &c, vector3d const &xlate) const;
@@ -1449,8 +1455,7 @@ public:
 };
 
 struct vect_building_t : public vector<building_t> {
-	vect_cube_with_ix_t building_to_person;
-	void ai_room_update(vector<building_ai_state_t> &ai_state, vector<pedestrian_t> &people, unsigned p_start, unsigned p_end, float delta_dir, rand_gen_t &rgen);
+	void ai_room_update(float delta_dir, rand_gen_t &rgen);
 };
 
 struct building_draw_utils {
@@ -1475,15 +1480,6 @@ public:
 	void setup_shadow_maps(vector<light_source> &light_sources, point const &cpos, unsigned max_smaps);
 	virtual bool enable_lights() const = 0;
 };
-
-struct building_place_t {
-	point p;
-	unsigned bix;
-	building_place_t() : bix(0) {}
-	building_place_t(point const &p_, unsigned bix_) : p(p_), bix(bix_) {}
-	bool operator<(building_place_t const &p) const {return (bix < p.bix);} // only compare building index
-};
-typedef vector<building_place_t> vect_building_place_t;
 
 struct ped_draw_vars_t {
 	building_t const &building;
@@ -1603,11 +1599,8 @@ void city_shader_setup(shader_t &s, cube_t const &lights_bcube, bool use_dlights
 	float min_alpha=0.0, bool force_tsl=0, float pcf_scale=1.0, bool use_texgen=0, bool indir_lighting=0, bool is_outside=1);
 void enable_animations_for_shader(shader_t &s);
 void setup_city_lights(vector3d const &xlate);
-void draw_peds_in_building(int first_ped_ix, ped_draw_vars_t const &pdv); // from city_gen.cpp
-void get_locations_of_peds_in_building(int first_ped_ix, vector<point> &locs); // from city_gen.cpp
-void get_ped_bcubes_for_building(int first_ped_ix, vect_cube_t &bcubes, bool moving_only=0); // from city_gen.cpp
-void register_person_hit(unsigned person_ix, room_object_t const &obj, vector3d const &velocity);
 void draw_player_model(shader_t &s, vector3d const &xlate, bool shadow_only);
+void gen_and_draw_people_in_building(building_t &building, ped_draw_vars_t const &pdv);
 vector3d get_nom_car_size();
 bool car_can_fit(cube_t const &c);
 void create_mirror_reflection_if_needed();

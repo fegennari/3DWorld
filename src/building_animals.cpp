@@ -51,10 +51,10 @@ void building_animal_t::move(float timestep, bool can_move_forward) {
 	}
 }
 
-void building_t::update_animals(point const &camera_bs, unsigned building_ix, int ped_ix) {
+void building_t::update_animals(point const &camera_bs, unsigned building_ix) {
 	if (!animate2 || is_rotated() || !has_room_geom() || interior->rooms.empty()) return;
-	update_rats   (camera_bs, building_ix, ped_ix);
-	update_spiders(camera_bs, building_ix, ped_ix);
+	update_rats   (camera_bs, building_ix);
+	update_spiders(camera_bs, building_ix);
 }
 
 template<typename T> void building_t::add_animals_on_floor(T &animals, unsigned building_ix, unsigned num_min, unsigned num_max, float sz_min, float sz_max) const {
@@ -183,7 +183,7 @@ bool building_t::add_rat(point const &pos, float hlength, vector3d const &dir, p
 	return 1;
 }
 
-void building_t::update_rats(point const &camera_bs, unsigned building_ix, int ped_ix) {
+void building_t::update_rats(point const &camera_bs, unsigned building_ix) {
 	vect_rat_t &rats(interior->room_geom->rats);
 	if (rats.placed && rats.empty()) return; // no rats placed in this building
 	if (!building_obj_model_loader.is_model_valid(OBJ_MODEL_RAT)) return; // no rat model
@@ -212,10 +212,10 @@ void building_t::update_rats(point const &camera_bs, unsigned building_ix, int p
 	rgen.set_state(building_ix+1, frame_counter+1); // unique per building and per frame
 
 	if (frame_counter & 1) { // reverse iteration, to avoid directional bias
-		for (auto r = rats.rbegin(); r != rats.rend(); ++r) {update_rat(*r, camera_bs, ped_ix, timestep, rats.max_xmove, can_attack_player, rgen);}
+		for (auto r = rats.rbegin(); r != rats.rend(); ++r) {update_rat(*r, camera_bs, timestep, rats.max_xmove, can_attack_player, rgen);}
 	}
 	else { // forward iteration; ~0.004ms per rat
-		for (auto r = rats. begin(); r != rats. end(); ++r) {update_rat(*r, camera_bs, ped_ix, timestep, rats.max_xmove, can_attack_player, rgen);}
+		for (auto r = rats. begin(); r != rats. end(); ++r) {update_rat(*r, camera_bs, timestep, rats.max_xmove, can_attack_player, rgen);}
 	}
 }
 
@@ -309,7 +309,7 @@ public:
 dir_gen_t<1> dir_gen_xy;
 dir_gen_t<0> dir_gen_xyz;
 
-void building_t::update_rat(rat_t &rat, point const &camera_bs, int ped_ix, float timestep, float &max_xmove, bool can_attack_player, rand_gen_t &rgen) const {
+void building_t::update_rat(rat_t &rat, point const &camera_bs, float timestep, float &max_xmove, bool can_attack_player, rand_gen_t &rgen) const {
 
 	float const floor_spacing(get_window_vspace()), trim_thickness(get_trim_thickness()), view_dist(RAT_VIEW_FLOORS*floor_spacing);
 	float const hlength(rat.get_hlength()), hwidth(rat.hwidth), height(rat.height), hheight(0.5*height);
@@ -350,7 +350,7 @@ void building_t::update_rat(rat_t &rat, point const &camera_bs, int ped_ix, floa
 	bool has_fear_dest(0);
 	// apply scare logic
 	bool const was_scared(rat.fear > 0.0);
-	scare_rat(rat, camera_bs, ped_ix);
+	scare_rat(rat, camera_bs);
 	rat.attacking = (rat.near_player && can_attack_player);
 	if (rat.attacking) {rat.fear = 0.0;} // no fear when attacking
 	bool const is_scared(rat.fear > 0.0), newly_scared(is_scared && !was_scared);
@@ -527,17 +527,16 @@ void building_t::update_rat(rat_t &rat, point const &camera_bs, int ped_ix, floa
 	assert(rat.dir.z == 0.0); // must be in XY plane
 }
 
-void building_t::scare_rat(rat_t &rat, point const &camera_bs, int ped_ix) const {
+void building_t::scare_rat(rat_t &rat, point const &camera_bs) const {
 	// Note: later calls to scare_rat_at_pos() have priority and will set rat.fear_pos, but all calls will accumulate fear
+	assert(interior);
 	float const sight_scare_amt = 0.5;
-	vect_cube_t ped_bcubes;
-	if (ped_ix >= 0) {get_ped_bcubes_for_building(ped_ix, ped_bcubes, 1);} // moving_only=1
-
-	for (cube_t const &c : ped_bcubes) { // only the cube center is needed
-		scare_rat_at_pos(rat, point(c.xc(), c.yc(), c.z1()), sight_scare_amt, 1); // other people in the building scare the rats
-	}
 	rat.near_player = 0;
 
+	for (pedestrian_t const &p : interior->people) { // other people in the building scare the rats
+		if (p.destroyed || p.is_waiting_or_stopped()) continue; // only scare if moving
+		scare_rat_at_pos(rat, point(p.pos.x, p.pos.y, p.get_z1()), sight_scare_amt, 1);
+	}
 	if (camera_surf_collide) {
 		if (global_building_params.min_attack_rats > 0 && in_building_gameplay_mode()) { // rat attacks are enabled in gameplay mode
 			// determine if the player is close and visible for attack strength; can't use a return value of scare_rat_at_pos() due to early termination
@@ -619,7 +618,7 @@ bool building_room_geom_t::maybe_spawn_spider_in_drawer(room_object_t const &c, 
 	return 1;
 }
 
-void building_t::update_spiders(point const &camera_bs, unsigned building_ix, int ped_ix) {
+void building_t::update_spiders(point const &camera_bs, unsigned building_ix) {
 	vect_spider_t &spiders(interior->room_geom->spiders);
 	if (spiders.placed && spiders.empty()) return; // no spiders placed in this building
 	//timer_t timer("Update Spiders");

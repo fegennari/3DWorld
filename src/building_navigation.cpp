@@ -895,11 +895,6 @@ void building_ai_state_t::next_path_pt(pedestrian_t &person, bool same_floor, bo
 	path.pop_back();
 }
 
-unsigned building_t::get_person_capacity_mult() const {
-	if (!interior || interior->rooms.empty() || is_rotated()) return 0; // skip rotated buildings because AI logic doesn't work in them
-	return (is_house ? 1 : 2);
-}
-
 bool building_t::is_valid_ai_placement(point const &pos, float radius) const { // for people and animals
 	cube_t ai_bcube(pos);
 	ai_bcube.expand_by(radius); // expand more in Z?
@@ -913,6 +908,26 @@ bool building_t::is_valid_ai_placement(point const &pos, float radius) const { /
 			if (i->type == TYPE_FLOORING || i->type == TYPE_BLOCKER) continue; // okay to place on flooring; ignore blockers, which are used for placement clearance
 			if (i->intersects(ai_bcube)) return 0;
 		}
+	}
+	return 1;
+}
+
+bool building_t::place_people_if_needed(unsigned building_ix, float radius, vector<point> &locs) const {
+	if (!interior || interior->rooms.empty() || is_rotated()) return 0; // no people in these cases
+	if (interior->placed_people) return 0; // already placed
+	interior->placed_people = 1; // set, even if no people are placed below
+	if (!global_building_params.gen_building_interiors) return 0; // no interiors, no people
+	unsigned num_min(is_house ? global_building_params.people_per_house_min : global_building_params.people_per_office_min);
+	unsigned num_max(is_house ? global_building_params.people_per_house_max : global_building_params.people_per_office_max);
+	if (num_max < num_min) {swap(num_min, num_max);} // or error? if so, it should be checked during option processing
+	if (num_max == 0) return 0;
+	rand_gen_t rgen;
+	rgen.set_state(building_ix+1, mat_ix); // should be canonical per building
+	unsigned const num_people(num_min + (rgen.rand()%(num_max - num_min + 1)));
+
+	for (unsigned n = 0; n < num_people; ++n) {
+		point ppos;
+		if (place_person(ppos, radius, rgen)) {locs.push_back(ppos);}
 	}
 	return 1;
 }
@@ -1010,13 +1025,20 @@ bool building_t::need_to_update_ai_path(building_ai_state_t const &state, pedest
 	return 0; // continue on the previously chosen path
 }
 
-// Note: non-const because this updates room light and door state
-int building_t::ai_room_update(building_ai_state_t &state, rand_gen_t &rgen, vector<pedestrian_t> &people, float delta_dir, unsigned person_ix, bool stay_on_one_floor) {
+void building_t::all_ai_room_update(rand_gen_t &rgen, float delta_dir, bool stay_on_one_floor) {
+	assert(interior);
+	for (unsigned i = 0; i < interior->people.size(); ++i) {ai_room_update(rgen, delta_dir, i, stay_on_one_floor);}
+}
 
-	assert(person_ix < people.size());
-	pedestrian_t &person(people[person_ix]);
+// Note: non-const because this updates room light and door state
+int building_t::ai_room_update(rand_gen_t &rgen, float delta_dir, unsigned person_ix, bool stay_on_one_floor) {
+
+	assert(person_ix < interior->people.size() && person_ix < interior->states.size());
+	pedestrian_t &person(interior->people[person_ix]);
+	if (person.destroyed) return AI_STOP; // dead
 	if (person.speed == 0.0) {person.anim_time = 0.0; return AI_STOP;} // stopped
 	if (!interior->room_geom && frame_counter < 60) {person.anim_time = 0.0; return AI_WAITING;} // wait until room geom is generated for this building
+	building_ai_state_t &state(interior->states[person_ix]);
 	float const coll_dist(COLL_RADIUS_SCALE*person.radius);
 	float &wait_time(person.waiting_start); // reuse this field
 	float speed_mult(1.0);
@@ -1034,8 +1056,7 @@ int building_t::ai_room_update(building_ai_state_t &state, rand_gen_t &rgen, vec
 	}
 	if (wait_time > 0) {
 		if (wait_time > fticks && !can_ai_follow_player(person)) { // waiting; don't wait if there's a player to follow
-			for (auto p = people.begin()+person_ix+1; p < people.end(); ++p) { // check for other people colliding with this person and handle it
-				if (p->dest_bldg != person.dest_bldg) break; // done with this building
+			for (auto p = interior->people.begin()+person_ix+1; p < interior->people.end(); ++p) { // check for other people colliding with this person and handle it
 				if (fabs(person.pos.z - p->pos.z) > coll_dist) continue; // different floors
 				if (p->destroyed) continue; // dead
 				float const rsum(coll_dist + COLL_RADIUS_SCALE*p->radius);
@@ -1155,8 +1176,7 @@ int building_t::ai_room_update(building_ai_state_t &state, rand_gen_t &rgen, vec
 	}
 	// don't do collision detection while on stairs because it doesn't work properly; just let people walk through each other
 	if (!person.on_stairs()) {
-		for (auto p = people.begin()+person_ix+1; p < people.end(); ++p) { // check all other people in the same building after this one and attempt to avoid them
-			if (p->dest_bldg != person.dest_bldg) break; // done with this building
+		for (auto p = interior->people.begin()+person_ix+1; p < interior->people.end(); ++p) { // check all other people in the same building after this one and attempt to avoid them
 			if (fabs(person.pos.z - p->pos.z) > coll_dist) continue; // different floors
 			if (p->destroyed) continue; // dead
 			float const rsum(coll_dist + COLL_RADIUS_SCALE*p->radius);
@@ -1214,11 +1234,11 @@ int building_t::ai_room_update(building_ai_state_t &state, rand_gen_t &rgen, vec
 	person.pos        = new_pos; // Note: new_pos.z should equal person.poz.z unless on stairs, which is difficult to accurately check for in this function
 	person.anim_time += max_dist;
 	if (player_in_this_building) {state.cur_room = get_room_containing_pt(person.pos);} // update cur_room after moving
-	ai_room_lights_update(state, person, people, person_ix); // non-const part
+	ai_room_lights_update(state, person, person_ix); // non-const part
 	return AI_MOVING;
 }
 
-void building_t::ai_room_lights_update(building_ai_state_t const &state, pedestrian_t const &person, vector<pedestrian_t> const &people, unsigned person_ix) {
+void building_t::ai_room_lights_update(building_ai_state_t const &state, pedestrian_t const &person, unsigned person_ix) {
 	if (!(display_mode & 0x20)) return; // disabled by default, enable with key '6'
 	if (ai_follow_player() && global_building_params.ai_player_vis_test >= 3) return; // if AI tests that the player is lit, then we shouldn't be turning on and off the lights
 	if ((frame_counter + person_ix) & 7) return; // update room info only every 8 frames
@@ -1229,14 +1249,8 @@ void building_t::ai_room_lights_update(building_ai_state_t const &state, pedestr
 	bool other_person_in_room(0);
 
 	// check for other people in the room before turning the lights off on them
-	for (unsigned i = person_ix; i-- ;) { // look behind
-		pedestrian_t const &p(people[i]);
-		if (p.dest_bldg != person.dest_bldg) break; // done with this building
-		if (get_room_containing_pt(p.pos) == state.cur_room && fabs(person.pos.z - p.pos.z) < get_window_vspace()) {other_person_in_room = 1; break;}
-	}
-	for (unsigned i = person_ix+1; i < people.size() && !other_person_in_room; ++i) { // look ahead
-		pedestrian_t const &p(people[i]);
-		if (p.dest_bldg != person.dest_bldg) break; // done with this building
+	for (pedestrian_t const &p : interior->people) {
+		if (p.destroyed || p.pos == person.pos) continue; // dead or ourself
 		if (get_room_containing_pt(p.pos) == state.cur_room && fabs(person.pos.z - p.pos.z) < get_window_vspace()) {other_person_in_room = 1; break;}
 	}
 	if (!other_person_in_room) {set_room_light_state_to(get_room(state.cur_room), person.pos.z, 0);} // make sure old room light is off
@@ -1263,43 +1277,15 @@ void building_t::move_person_to_not_collide(pedestrian_t &person, pedestrian_t c
 }
 
 // Note: non-const because this updates room lights
-void vect_building_t::ai_room_update(vector<building_ai_state_t> &ai_state, vector<pedestrian_t> &people, unsigned p_start, unsigned p_end, float delta_dir, rand_gen_t &rgen) {
-	//timer_t timer("Building People Update"); // ~6.7ms for 55K people, 0.39ms with distance check (avg for 2 calls city + secondary, 502/1383 people)
-	assert(p_start < p_end);
+void vect_building_t::ai_room_update(float delta_dir, rand_gen_t &rgen) {
+	if (!global_building_params.building_people_enabled()) return;
+	//timer_t timer("Building People Update"); // 0.25ms, mostly iteration overhead, for sparse update with 2-6 people per building (avg for 2 calls city + secondary)
 	point const camera_bs(get_camera_building_space());
 	float const dmax(1.5f*(X_SCENE_SIZE + Y_SCENE_SIZE));
-	unsigned const num_buildings(size());
-	ai_state.resize(people.size());
 
-	if ((p_end - p_start) > num_buildings) { // more people than buildings: build a mapping from person to building and iterate over buildings
-		if (building_to_person.empty()) { // generate on the first call; people don't switch buildings, so their ordering is constant
-			building_to_person.resize(num_buildings + 1); // add 1 for terminator
-			unsigned person_ix(p_start);
-		
-			for (unsigned bix = 0; bix < num_buildings; ++bix) {
-				building_to_person[bix] = cube_with_ix_t(operator[](bix).bcube, person_ix);
-				while (person_ix < p_end && people[person_ix].dest_bldg <= bix) {++person_ix;} // skip over the rest of the people assigned to this building
-			}
-			assert(person_ix == p_end);
-			building_to_person.back().ix = p_end; // add the terminator
-		}
-		assert(building_to_person.size() == num_buildings+1);
-
-		for (unsigned bix = 0; bix < num_buildings; ++bix) {
-			cube_with_ix_t const &c(building_to_person[bix]);
-			if (!c.closest_dist_less_than(camera_bs, dmax)) continue; // building is too far
-			unsigned const iter_end(building_to_person[bix+1].ix);
-			assert(c.ix <= iter_end);
-			for (unsigned pix = c.ix; pix < iter_end; ++pix) {operator[](bix).ai_room_update(ai_state[pix], rgen, people, delta_dir, pix, STAY_ON_ONE_FLOOR);}
-		}
-	}
-	else { // more buildings than people: iterate directly over people
-		for (auto i = (people.begin() + p_start); i != (people.begin() + p_end); ++i) {
-			if (!dist_less_than(i->pos, camera_bs, dmax)) continue; // too far away, no updates
-			unsigned const bix(i->dest_bldg), pix(i - people.begin());
-			assert(bix < size());
-			operator[](bix).ai_room_update(ai_state[pix], rgen, people, delta_dir, pix, STAY_ON_ONE_FLOOR); // dispatch to the correct building
-		}
+	for (iterator b = begin(); b != end(); ++b) {
+		if (!b->interior || b->interior->people.empty() || !b->bcube.closest_dist_less_than(camera_bs, dmax)) continue; // no people or too far away, no updates
+		b->all_ai_room_update(rgen, delta_dir, STAY_ON_ONE_FLOOR);
 	}
 }
 
@@ -1336,11 +1322,12 @@ bool building_t::room_containing_pt_has_stairs(point const &pt) const {
 	return get_room(room_ix).has_stairs; // Note: used for drawing, can be conservative and return true if any floor of this room has stairs
 }
 
-void ped_manager_t::register_person_hit(unsigned person_ix, room_object_t const &obj, vector3d const &velocity) {
+void building_t::register_person_hit(unsigned person_ix, room_object_t const &obj, vector3d const &velocity) {
 	if (velocity == zero_vector) return; // stationary object, ignore it
 	if (!ai_follow_player())     return; // not in gameplay mode, ignore it
-	assert(person_ix < peds_b.size());
-	pedestrian_t &person(peds_b[person_ix]);
+	assert(interior && person_ix < interior->people.size());
+	pedestrian_t &person(interior->people[person_ix]);
+	if (person.destroyed) return; // dead
 
 	if (obj.type == TYPE_LG_BALL) { // currently this is the only throwable/dynamic object
 		if (obj.zc() < (person.get_z1() + 0.25*person.get_height())) return; // less than 25% up, coll with legs, assume this is kicking a ball that's on the floor
@@ -1352,5 +1339,5 @@ void ped_manager_t::register_person_hit(unsigned person_ix, room_object_t const 
 }
 
 // these must be here to handle deletion of building_nav_graph_t, which is only defined in this file
-building_interior_t::building_interior_t() : top_ceilings_mask(0), garage_room(-1), door_state_updated(0), is_unconnected(0), ignore_ramp_placement(0) {}
+building_interior_t::building_interior_t() : top_ceilings_mask(0), garage_room(-1), door_state_updated(0), is_unconnected(0), ignore_ramp_placement(0), placed_people(0) {}
 building_interior_t::~building_interior_t() {}

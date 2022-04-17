@@ -1643,14 +1643,12 @@ void building_t::write_basement_entrance_depth_pass(shader_t &s) const {
 
 class building_creator_t {
 
-	unsigned grid_sz, gpu_mem_usage, person_start, person_end;
+	unsigned grid_sz, gpu_mem_usage;
 	vector3d range_sz, range_sz_inv, max_extent;
 	cube_t range, buildings_bcube;
 	rand_gen_t rgen, ai_rgen;
 	vect_building_t buildings;
 	vector<vector<unsigned>> bix_by_plot; // cached for use with pedestrian collisions
-	vector<int> peds_by_bix; // index of first person in each building; -1 is empty
-	vector<building_ai_state_t> ai_state;
 	// dynamic verts, static exterior verts, windows, window lights, interior walls/ceilings/floors, interior exterior walls
 	building_draw_t building_draw, building_draw_vbo, building_draw_windows, building_draw_wind_lights, building_draw_interior, building_draw_int_ext_walls;
 	point_sprite_drawer_sized building_lights;
@@ -1812,7 +1810,7 @@ class building_creator_t {
 	};
 
 public:
-	building_creator_t(bool is_city=0) : grid_sz(1), gpu_mem_usage(0), person_start(0), person_end(0), max_extent(zero_vector),
+	building_creator_t(bool is_city=0) : grid_sz(1), gpu_mem_usage(0), max_extent(zero_vector),
 		building_draw(is_city), building_draw_vbo(is_city), use_smap_this_frame(0), has_interior_geom(0) {}
 	bool empty() const {return buildings.empty();}
 
@@ -1821,7 +1819,6 @@ public:
 		grid.clear();
 		grid_by_tile.clear();
 		bix_by_plot.clear();
-		peds_by_bix.clear();
 		clear_vbos();
 		buildings_bcube = cube_t();
 		gpu_mem_usage = 0;
@@ -2152,64 +2149,7 @@ public:
 			if (b->has_helipad) {helipads.push_back(b->get_helipad_bcube());}
 		}
 	}
-
-	struct building_ai_cand_t {
-		unsigned bix, num;
-		bool is_house;
-		building_ai_cand_t(unsigned b, bool h) : bix(b), num(0), is_house(h) {}
-	};
-
-	unsigned get_person_capacity() const {
-		unsigned cap(0);
-		for (auto b = buildings.begin(); b != buildings.end(); ++b) {cap += b->get_person_capacity_mult();}
-		return cap;
-	}
-	bool place_people(vect_building_place_t &locs, float radius, float speed_mult, unsigned num, unsigned start) {
-		assert(locs.empty());
-		if (num == 0 || empty() || !global_building_params.gen_building_interiors) return 0; // no people, buildings, or interiors
-		vector<building_ai_cand_t> cand_buildings; // {building_ix, is_house}
-
-		for (auto b = buildings.begin(); b != buildings.end(); ++b) {
-			unsigned const cap_mult(b->get_person_capacity_mult()); // 0-2
-			for (unsigned n = 0; n < cap_mult; ++n) {cand_buildings.emplace_back((b - buildings.begin()), b->is_house);}
-		}
-		if (cand_buildings.empty()) return 0; // no interiors, or all buildings rotated
-		locs.reserve(num);
-		rand_gen_t rgen2; // Note: we could also use our rgen member variable
-		point ppos;
-
-		if (num >= cand_buildings.size()) {
-			// assign one person per building slot ahead of time, then randomly distribute the remaining people; should ensure each building has at least one person
-			for (auto i = cand_buildings.begin(); i != cand_buildings.end(); ++i) {
-				if (get_building(i->bix).place_person(ppos, radius, rgen2)) {locs.emplace_back(ppos, i->bix); ++i->num; --num;}
-			}
-		}
-		for (unsigned n = 0; n < num; ++n) {
-			for (unsigned attempts = 0; attempts < 5; ++attempts) { // make up to 5 attempts to choose a building
-				building_ai_cand_t &chosen(cand_buildings[rgen2.rand() % cand_buildings.size()]);
-				if (attempts < 3 && chosen.is_house && chosen.num >= 4) continue; // try another building if this is a house and already has > 4 people in it
-				if (get_building(chosen.bix).place_person(ppos, radius, rgen2)) {locs.emplace_back(ppos, chosen.bix); ++chosen.num; break;}
-			}
-		} // for n
-		if (locs.empty()) return 0;
-		sort(locs.begin(), locs.end());
-		peds_by_bix.resize(buildings.size(), -1);
-
-		for (unsigned i = 0; i < locs.size(); ++i) {
-			unsigned const bix(locs[i].bix);
-			assert(bix < peds_by_bix.size());
-			if (peds_by_bix[bix] < 0) {peds_by_bix[bix] = start + i;} // record first ped index for each building
-		}
-		person_start = start; person_end = start + locs.size();
-		return 1;
-	}
-	int get_ped_ix_for_bix(unsigned bix) const {return ((bix < peds_by_bix.size()) ? peds_by_bix[bix] : -1);}
-
-	// called once per frame
-	void update_ai_state(vector<pedestrian_t> &people, float delta_dir) { // returns the new pos of each person; dir/orient can be determined from the delta
-		if (person_start == person_end) return; // no people to update
-		buildings.ai_room_update(ai_state, people, person_start, person_end, delta_dir, ai_rgen);
-	}
+	void update_ai_state(float delta_dir) {buildings.ai_room_update(delta_dir, ai_rgen);} // called once per frame
 
 	static void select_person_shadow_shader(shader_t &person_shader) {
 		if (!person_shader.is_setup()) {
@@ -2248,17 +2188,16 @@ public:
 						bool const player_close(dist_less_than(lpos, pre_smap_player_pos, camera_pdu.far_)); // Note: pre_smap_player_pos already in building space
 						b.get_ext_wall_verts_no_sec(ext_parts_draw); // add exterior walls to prevent light leaking between adjacent parts
 						bool const add_player_shadow(camera_surf_collide ? player_close : 0);
-						int const ped_ix((*i)->get_ped_ix_for_bix(bi->ix)); // Note: assumes only one building_draw has people
 						bool const camera_in_this_building(b.check_point_or_cylin_contained(pre_smap_player_pos, 0.0, points));
 						b.draw_cars_in_building(s, xlate, 1, 1); // player_in_building=1, shadow_only=1
 
-						if (ped_ix >= 0 && (camera_in_this_building || player_close)) { // draw people in this building
+						if (camera_in_this_building || player_close) { // draw people in this building
 							if (global_building_params.enable_people_ai) { // handle animations
 								select_person_shadow_shader(person_shader);
-								draw_peds_in_building(ped_ix, ped_draw_vars_t(b, oc, person_shader, xlate, bi->ix, 1, 0)); // draw people in this building
+								gen_and_draw_people_in_building(b, ped_draw_vars_t(b, oc, person_shader, xlate, bi->ix, 1, 0)); // draw people in this building
 								s.make_current(); // switch back to normal building shader
 							}
-							else {draw_peds_in_building(ped_ix, ped_draw_vars_t(b, oc, s, xlate, bi->ix, 1, 0));} // no animations
+							else {gen_and_draw_people_in_building(b, ped_draw_vars_t(b, oc, s, xlate, bi->ix, 1, 0));} // no animations
 						}
 						if (add_player_shadow && camera_in_this_building) {
 							if (global_building_params.enable_people_ai) { // handle animations
@@ -2314,7 +2253,7 @@ public:
 				if (is_first_building) {oc.set_camera(camera_pdu);} // setup occlusion culling on the first visible building
 				is_first_building = 0;
 				oc.set_exclude_bix(bi->ix);
-				b.add_room_lights(xlate, bi->ix, camera_in_this_building, get_ped_ix_for_bix(bi->ix), oc, ped_bcubes, lights_bcube);
+				b.add_room_lights(xlate, bi->ix, camera_in_this_building, oc, ped_bcubes, lights_bcube);
 			} // for bi
 		} // for g
 	}
@@ -2413,7 +2352,6 @@ public:
 			if (enable_animations) {s.add_uniform_int("animation_id", 0);}
 			if (reflection_pass) {draw_player_model(s, xlate, 0);} // shadow_only=0
 			vector<point> points; // reused temporary
-			vect_cube_t ped_bcubes; // reused temporary
 			static brg_batch_draw_t bbd; // allocated memory is reused across calls
 			int indir_bcs_ix(-1), indir_bix(-1);
 
@@ -2458,13 +2396,12 @@ public:
 						if (!camera_near_building && !b.has_windows()) continue; // player is outside a windowless building (city office building)
 						bool const player_in_building_bcube(b.bcube.contains_pt_xy(camera_xlated)); // player is within the building's bcube
 						if ((display_mode & 0x08) && !player_in_building_bcube && b.is_entire_building_occluded(camera_xlated, oc)) continue; // check occlusion
-						int const ped_ix((*i)->get_ped_ix_for_bix(bi->ix)); // Note: assumes only one building_draw has people
 						unsigned inc_small(b.bcube.closest_dist_less_than(camera_xlated, ddist_scale*room_geom_sm_draw_dist));
 						if (inc_small && b.bcube.closest_dist_less_than(camera_xlated, ddist_scale*room_geom_detail_draw_dist)) {inc_small = 2;} // include detail objects
-						b.gen_and_draw_room_geom(&bbd, s, oc, xlate, ped_bcubes, bi->ix, ped_ix, 0, reflection_pass, inc_small, player_in_building_bcube); // shadow_only=0
+						b.gen_and_draw_room_geom(&bbd, s, oc, xlate, bi->ix, 0, reflection_pass, inc_small, player_in_building_bcube); // shadow_only=0
 						g->has_room_geom = 1;
 						if (!draw_interior) continue;
-						if (ped_ix >= 0) {draw_peds_in_building(ped_ix, ped_draw_vars_t(b, oc, s, xlate, bi->ix, 0, reflection_pass));} // draw people in this building
+						gen_and_draw_people_in_building(b, ped_draw_vars_t(b, oc, s, xlate, bi->ix, 0, reflection_pass)); // draw people in this building
 						if (b.has_cars_to_draw(player_in_building_bcube)) {buildings_with_cars.push_back(&b);}
 						// check the bcube rather than check_point_or_cylin_contained() so that it works with roof doors that are outside any part?
 						if (!camera_near_building) {b.player_not_near_building(); continue;} // camera not near building
@@ -2472,7 +2409,7 @@ public:
 						b.get_nearby_ext_door_verts(ext_door_draw, s, camera_xlated, door_open_dist); // and draw opened door
 						bool const camera_in_building(b.check_point_or_cylin_contained(camera_xlated, 0.0, points));
 						if (!reflection_pass) {b.update_grass_exclude_at_pos(camera_xlated, xlate, camera_in_building);} // disable any grass inside the building part(s) containing the player
-						if (!reflection_pass && player_in_building_bcube) {b.update_animals(camera_xlated, bi->ix, ped_ix);}
+						if (!reflection_pass && player_in_building_bcube) {b.update_animals(camera_xlated, bi->ix);}
 						// Note: if we skip this check and treat all walls/windows as front/containing part, this almost works, but will skip front faces of other buildings
 						if (!camera_in_building) continue; // camera not in building
 						// pass in camera pos to only include the part that contains the camera to avoid drawing artifacts when looking into another part of the building
@@ -2496,7 +2433,7 @@ public:
 						else {can_do_building_action = b.apply_player_action_key(camera_xlated, cview_dir, 0, 1);} // mode=0, check_only=1
 						b.player_pickup_object(camera_xlated, cview_dir);
 						if (teleport_to_screenshot) {b.maybe_teleport_to_screenshot();}
-						if (animate2) {b.update_player_interact_objects(camera_xlated, ped_ix);} // update dynamic objects if the player is in the building
+						if (animate2) {b.update_player_interact_objects(camera_xlated);} // update dynamic objects if the player is in the building
 					} // for bi
 					if (this_frame_player_in_basement == 2) break; // player can only be in one basement - done
 				} // for g
@@ -2880,7 +2817,6 @@ public:
 	bool check_sphere_coll(point &pos, point const &p_last, float radius, bool xy_only=0, vector3d *cnorm=nullptr, bool check_interior=0) const { // Note: pos is in camera space
 		if (empty()) return 0;
 		vector3d const xlate(get_camera_coord_space_xlate());
-		vect_cube_t ped_bcubes; // reused across calls
 		vector<point> points; // reused across calls
 
 		if (radius == 0.0) { // point coll - ignore p_last as well
@@ -2893,7 +2829,7 @@ public:
 
 			for (auto b = ge.bc_ixs.begin(); b != ge.bc_ixs.end(); ++b) {
 				if (!(xy_only ? b->contains_pt_xy(p1x) : b->contains_pt(p1x))) continue;
-				if (get_building(b->ix).check_sphere_coll(pos, p_last, ped_bcubes, xlate, 0.0, xy_only, points, cnorm, check_interior)) return 1;
+				if (get_building(b->ix).check_sphere_coll(pos, p_last, xlate, 0.0, xy_only, points, cnorm, check_interior)) return 1;
 			}
 			return check_road_seg_sphere_coll(ge, pos, p_last, xlate, radius, xy_only, cnorm);
 		}
@@ -2914,13 +2850,7 @@ public:
 				// Note: assumes buildings are separated so that only one sphere collision can occur
 				for (auto b = ge.bc_ixs.begin(); b != ge.bc_ixs.end(); ++b) {
 					if (!b->intersects_xy(bcube)) continue;
-
-					if (check_interior) {
-						ped_bcubes.clear();
-						int const ped_ix(get_ped_ix_for_bix(b->ix));
-						if (ped_ix >= 0) {get_ped_bcubes_for_building(ped_ix, ped_bcubes);}
-					}
-					if (get_building(b->ix).check_sphere_coll(pos, p_last, ped_bcubes, xlate, radius, xy_only, points, cnorm, check_interior)) return 1;
+					if (get_building(b->ix).check_sphere_coll(pos, p_last, xlate, radius, xy_only, points, cnorm, check_interior)) return 1;
 				} // for b
 				if (check_road_seg_sphere_coll(ge, pos, p_last, xlate, radius, xy_only, cnorm)) return 1;
 			} // for x
@@ -3520,25 +3450,10 @@ bool select_building_in_plot(unsigned plot_id, unsigned rand_val, unsigned &buil
 cube_t get_sec_building_bcube(unsigned building_id) {return building_creator.get_building_bcube(building_id);} // unused
 bool enable_building_people_ai() {return global_building_params.enable_people_ai;}
 
-template<typename T> void place_people_in_buildings(T &bc, vect_building_place_t &locs, float radius, float speed_mult, unsigned tot_num, unsigned cap, unsigned tot_cap) {
-	unsigned const num(uint64_t(tot_num)*cap/tot_cap);
-	if (num == 0) return;
-	vect_building_place_t cur_locs;
-	bc.place_people(cur_locs, radius, speed_mult, num, locs.size());
-	if (locs.empty()) {locs.swap(cur_locs);} else {vector_add_to(cur_locs, locs);}
-}
-bool place_building_people(vect_building_place_t &locs, float radius, float speed_mult, unsigned num) {
-	unsigned const bc_cap(building_creator.get_person_capacity()), bcc_cap(building_creator_city.get_person_capacity());
-	unsigned const tot_cap(bc_cap + bcc_cap);
-	if (tot_cap == 0) return 0; // can't place any people
-	place_people_in_buildings(building_creator,      locs, radius, speed_mult, num, bc_cap,  tot_cap); // regular/secondary buildings
-	place_people_in_buildings(building_creator_city, locs, radius, speed_mult, num, bcc_cap, tot_cap); // city buildings
-	return 1;
-}
-void update_building_ai_state(vector<pedestrian_t> &people, float delta_dir) { // Note: each creator will manage its own range of people
+void update_building_ai_state(float delta_dir) { // Note: each creator will manage its own range of people
 	if (!global_building_params.enable_people_ai || !draw_building_interiors || !animate2) return;
-	building_creator     .update_ai_state(people, delta_dir);
-	building_creator_city.update_ai_state(people, delta_dir);
+	building_creator     .update_ai_state(delta_dir);
+	building_creator_city.update_ai_state(delta_dir);
 }
 
 void get_all_city_helipads(vect_cube_t &helipads) {building_creator_city.get_all_helipads(helipads);} // city only for now

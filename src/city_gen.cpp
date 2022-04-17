@@ -25,6 +25,7 @@ extern bool enable_dlight_shadows, dl_smap_enabled, flashlight_on, camera_in_bui
 extern int rand_gen_index, display_mode, animate2, draw_model, player_in_basement;
 extern unsigned shadow_map_sz, cur_display_iter;
 extern float shadow_map_pcf_offset, cobj_z_bias, rain_wetness;
+extern building_params_t global_building_params;
 extern vector<light_source> dl_sources;
 
 
@@ -2933,7 +2934,7 @@ public:
 		car_manager.add_parked_cars(parked_cars);
 		car_manager.finalize_cars();
 		car_manager.add_helicopters(hp_locs);
-		ped_manager.init(city_params.num_peds, city_params.num_building_peds); // must be after buildings are placed
+		ped_manager.init(city_params.num_peds); // must be after buildings are placed
 	}
 	cube_t get_city_bcube(unsigned city_id) const {return road_gen.get_city_bcube(city_id);}
 	void get_city_bcubes(vect_cube_t &bcubes) const {road_gen.get_city_bcubes(bcubes);}
@@ -3004,10 +3005,7 @@ public:
 	}
 	void draw_roads(int trans_op_mask, vector3d const &xlate) {road_gen.draw(trans_op_mask, xlate, enable_lights(), 0);} // shadow_only=0
 	void draw_car_in_pspace(car_t &car, shader_t &s, vector3d const &xlate, bool shadow_only) {car_manager.draw_car_in_pspace(car, s, xlate, shadow_only);}
-	void draw_peds_in_building(int first_ped_ix, ped_draw_vars_t const &pdv) {ped_manager.draw_peds_in_building(first_ped_ix, pdv);}
-	void get_locations_of_peds_in_building(int first_ped_ix, vector<point> &locs) {ped_manager.get_locations_of_peds_in_building(first_ped_ix, locs);}
-	void get_ped_bcubes_for_building(int first_ped_ix, vect_cube_t &bcubes, bool moving_only) const {ped_manager.get_ped_bcubes_for_building(first_ped_ix, bcubes, moving_only);}
-	void register_person_hit(unsigned person_ix, room_object_t const &obj, vector3d const &velocity) {ped_manager.register_person_hit(person_ix, obj, velocity);}
+	void gen_and_draw_people_in_building(building_t &building, ped_draw_vars_t const &pdv) {ped_manager.gen_and_draw_people_in_building(building, pdv);}
 	void draw_player_model(shader_t &s, vector3d const &xlate, bool shadow_only) {ped_manager.draw_player_model(s, xlate, shadow_only);}
 
 	void setup_city_lights(vector3d const &xlate) {
@@ -3035,10 +3033,10 @@ city_gen_t city_gen;
 
 bool parse_city_option(FILE *fp) {return city_params.read_option(fp);}
 bool have_cities() {return city_params.enabled();}
-// Note: this is used for parallel car/pedestrian updates and does not include city_params.num_building_peds
+// Note: this is used for parallel car/pedestrian updates
 bool have_city_models() {
 	return ((have_cities() && (city_params.num_cars > 0 || city_params.num_peds > 0)) ||
-		    (have_buildings() && enable_building_people_ai() && city_params.num_building_peds > 0));
+		    (have_buildings() && enable_building_people_ai() && global_building_params.building_people_enabled()));
 }
 vector2d get_road_max_len() {return vector2d(max(city_params.road_spacing, actual_max_road_seg_len.x), max(city_params.road_spacing, actual_max_road_seg_len.y));}
 float get_road_max_width () {return city_params.road_width;}
@@ -3060,10 +3058,7 @@ void draw_cities(int shadow_only, int reflection_pass, int trans_op_mask, vector
 void draw_city_roads(int trans_op_mask, vector3d const &xlate) {city_gen.draw_roads(trans_op_mask, xlate);}
 void setup_city_lights(vector3d const &xlate) {city_gen.setup_city_lights(xlate);}
 
-void draw_peds_in_building(int first_ped_ix, ped_draw_vars_t const &pdv) {city_gen.draw_peds_in_building(first_ped_ix, pdv);}
-void get_locations_of_peds_in_building(int first_ped_ix, vector<point> &locs) {city_gen.get_locations_of_peds_in_building(first_ped_ix, locs);}
-void get_ped_bcubes_for_building(int first_ped_ix, vect_cube_t &bcubes, bool moving_only) {city_gen.get_ped_bcubes_for_building(first_ped_ix, bcubes, moving_only);}
-void register_person_hit(unsigned person_ix, room_object_t const &obj, vector3d const &velocity) {city_gen.register_person_hit(person_ix, obj, velocity);}
+void gen_and_draw_people_in_building(building_t &building, ped_draw_vars_t const &pdv) {city_gen.gen_and_draw_people_in_building(building, pdv);}
 void draw_player_model(shader_t &s, vector3d const &xlate, bool shadow_only) {city_gen.draw_player_model(s, xlate, shadow_only);}
 
 // Note: pos is in global space for these next two calls

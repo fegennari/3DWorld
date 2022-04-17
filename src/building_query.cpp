@@ -122,7 +122,7 @@ cube_t building_t::get_coll_bcube() const {
 }
 
 // Note: used for the player
-bool building_t::check_sphere_coll(point &pos, point const &p_last, vect_cube_t const &ped_bcubes, vector3d const &xlate,
+bool building_t::check_sphere_coll(point &pos, point const &p_last, vector3d const &xlate,
 	float radius, bool xy_only, vector<point> &points, vector3d *cnorm_ptr, bool check_interior) const
 {
 	if (!is_valid()) return 0; // invalid building
@@ -189,7 +189,7 @@ bool building_t::check_sphere_coll(point &pos, point const &p_last, vect_cube_t 
 	}
 	if (is_interior) {
 		point pos2_bs(pos2 - xlate);
-		if (check_sphere_coll_interior(pos2_bs, (p_last2 - xlate), ped_bcubes, radius, xy_only, cnorm_ptr)) {pos2 = pos2_bs + xlate; had_coll = 1;}
+		if (check_sphere_coll_interior(pos2_bs, (p_last2 - xlate), radius, xy_only, cnorm_ptr)) {pos2 = pos2_bs + xlate; had_coll = 1;}
 	}
 	else {
 		for (auto i = parts.begin(); i != parts.end(); ++i) {
@@ -371,7 +371,7 @@ cube_t get_true_room_obj_bcube(room_object_t const &c) { // special cased only f
 // Note: used for the player; pos and p_last are already in rotated coordinate space
 // default player is actually too large to fit through doors and too tall to fit between the floor and celing,
 // so player size/height must be reduced in the config file
-bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, vect_cube_t const &ped_bcubes, float radius, bool xy_only, vector3d *cnorm) const {
+bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, float radius, bool xy_only, vector3d *cnorm) const {
 	pos.z = bcube.z1(); // start at building z1 rather than the terrain height in case we're at the foot of a steep hill
 	assert(interior);
 	float const floor_spacing(get_window_vspace()), floor_thickness(get_floor_thickness());
@@ -514,12 +514,11 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, vec
 			if ((c->type == TYPE_STALL || c->type == TYPE_SHOWER) && !c->is_open() && c->contains_pt(pos)) {player_is_hiding = 1;} // player is hiding in the stall/shower
 		} // for c
 	}
-	for (auto i = ped_bcubes.begin(); i != ped_bcubes.end(); ++i) {
-		float const ped_radius(0.5*max(i->dx(), i->dy())); // determine radius from bcube X/Y
-		point const center(i->get_cube_center());
-		float const dist(p2p_dist(pos, center)), r_sum(xy_radius + 0.5*ped_radius); // ped_radius is a bit too large
+	for (pedestrian_t const &p : interior->people) {
+		if (p.destroyed) continue; // dead
+		float const dist(p2p_dist(pos, p.pos)), r_sum(xy_radius + 0.5*p.get_width()); // ped_radius is a bit too large, multiply it by 0.5
 		if (dist >= r_sum) continue; // no intersection
-		vector3d const normal(vector3d(pos.x-center.x, pos.y-center.y, 0.0).get_norm()); // XY direction
+		vector3d const normal(vector3d(pos.x-p.pos.x, pos.y-p.pos.y, 0.0).get_norm()); // XY direction
 		if (cnorm) {*cnorm = normal;}
 		pos += normal*(r_sum - dist);
 		had_coll = 1;

@@ -16,6 +16,7 @@ extern float FAR_CLIP;
 extern double camera_zh;
 extern point pre_smap_player_pos;
 extern city_params_t city_params;
+extern building_params_t global_building_params;
 extern object_model_loader_t building_obj_model_loader; // for umbrella model
 
 
@@ -869,8 +870,8 @@ void ped_manager_t::expand_cube_for_ped(cube_t &cube) const {
 	cube.z2() += PED_HEIGHT_SCALE*radius;
 }
 
-void ped_manager_t::init(unsigned num_city, unsigned num_building) {
-	if (num_city == 0 && num_building == 0) return;
+void ped_manager_t::init(unsigned num_city) {
+	if (num_city == 0) return;
 	timer_t timer("Gen Peds");
 	peds.reserve(num_city);
 	float const radius(get_ped_radius()); // base radius
@@ -889,26 +890,7 @@ void ped_manager_t::init(unsigned num_city, unsigned num_building) {
 			peds.push_back(ped);
 		}
 	} // for n
-
-	// place people in buildings
-	vect_building_place_t locs;
-	place_building_people(locs, radius, city_params.ped_speed, num_building);
-	peds_b.reserve(locs.size());
-	bool const enable_bp_ai(enable_building_people_ai());
-
-	for (auto i = locs.begin(); i != locs.end(); ++i) {
-		pedestrian_t ped(radius);
-		assign_ped_model(ped);
-		float const angle(rgen.rand_uniform(0.0, TWO_PI));
-		ped.pos   = i->p + vector3d(0.0, 0.0, ped.radius);
-		ped.dir   = vector3d(cosf(angle), sinf(angle), 0.0);
-		ped.speed = (enable_bp_ai ? city_params.ped_speed*rgen.rand_uniform(0.5, 0.75) : 0.0f); // small range, slower than outdoor city pedestrians
-		ped.ssn   = (unsigned short)(peds.size() + peds_b.size()); // may wrap
-		ped.dest_bldg   = i->bix; // store building index in dest_bldg field
-		ped.in_building = 1;
-		peds_b.push_back(ped);
-	} // for i
-	cout << "City Pedestrians: " << peds.size() << ", Building Residents: " << peds_b.size() << endl; // testing
+	cout << "City Pedestrians: " << peds.size() << endl; // testing
 	sort_by_city_and_plot();
 }
 
@@ -1050,7 +1032,7 @@ void ped_manager_t::next_frame() {
 	float const delta_dir(1.2*(1.0 - pow(0.7f, fticks))); // controls pedestrian turning rate
 	// Note: peds and peds_b can be processed in parallel, but that doesn't seem to make a significant difference in framerate
 	// update people in buildings first, so that it can overlap with car sort and spend less time in the modify_car_data critical section
-	if (!peds_b.empty()) {update_building_ai_state(peds_b, delta_dir);}
+	update_building_ai_state(delta_dir);
 
 	if (!peds.empty()) {
 		//timer_t timer("Ped Update"); // ~4.2ms for 10K peds; 1ms for sparse per-city update
@@ -1358,7 +1340,7 @@ void ped_manager_t::next_animation() {
 }
 
 void ped_manager_t::draw(vector3d const &xlate, bool use_dlights, bool shadow_only, bool is_dlight_shadows) {
-	if (empty()) return;
+	if (peds.empty()) return;
 	if (is_dlight_shadows && !city_params.car_shadows) return; // use car_shadows as ped_shadows
 	if (shadow_only && !is_dlight_shadows) return; // don't add to precomputed shadow map
 	//timer_t timer("Ped Draw"); // ~1ms
@@ -1439,10 +1421,32 @@ void ped_manager_t::draw(vector3d const &xlate, bool use_dlights, bool shadow_on
 	dstate.show_label_text();
 }
 
-void ped_manager_t::draw_peds_in_building(int first_ped_ix, ped_draw_vars_t const &pdv) {
-	if (first_ped_ix < 0) return; // no peds - error?
-	assert((unsigned)first_ped_ix < peds_b.size());
-	assert(peds_b[first_ped_ix].dest_bldg == pdv.bix); // consistency check
+pedestrian_t ped_manager_t::add_person_to_building(point const &pos, unsigned bix, unsigned ssn) {
+	pedestrian_t ped(get_ped_radius());
+	assign_ped_model(ped);
+	float const angle(rgen.rand_uniform(0.0, TWO_PI));
+	ped.pos   = pos + vector3d(0.0, 0.0, ped.radius);
+	ped.dir   = vector3d(cosf(angle), sinf(angle), 0.0);
+	ped.speed = (enable_building_people_ai() ? city_params.ped_speed*rgen.rand_uniform(0.5, 0.75) : 0.0f); // small range, slower than outdoor city pedestrians
+	ped.ssn   = ssn; // may wrap
+	ped.dest_bldg   = bix; // store building index in dest_bldg field
+	ped.in_building = 1;
+	return ped;
+}
+
+void ped_manager_t::gen_and_draw_people_in_building(building_t &building, ped_draw_vars_t const &pdv) {
+	if (!building.interior) return;
+	auto &people(building.interior->people);
+	vector<point> locs;
+	
+	if (building.place_people_if_needed(pdv.bix, get_ped_radius(), locs)) { // people placed
+		for (point const &p : locs) {people.push_back(add_person_to_building(p, pdv.bix, people.size()));}
+		building.interior->states.resize(people.size());
+	}
+	draw_people_in_building(people, pdv);
+}
+
+void ped_manager_t::draw_people_in_building(vector<pedestrian_t> const &people, ped_draw_vars_t const &pdv) {
 	float const def_draw_dist(120.0*get_ped_radius()); // smaller than city peds
 	float const draw_dist(pdv.shadow_only ? camera_pdu.far_ : def_draw_dist), draw_dist_sq(draw_dist*draw_dist);
 	pos_dir_up pdu(camera_pdu); // decrease the far clipping plane for pedestrians
@@ -1452,42 +1456,18 @@ void ped_manager_t::draw_peds_in_building(int first_ped_ix, ped_draw_vars_t cons
 	if (enable_animations) {pdv.s.add_uniform_int("animation_id", animation_id);}
 
 	// Note: no far clip adjustment or draw dist scale
-	for (auto p = peds_b.begin()+first_ped_ix; p != peds_b.end(); ++p) {
-		if (p->dest_bldg != pdv.bix) break; // done with this building
-		if (skip_bai_draw(*p)) continue;
+	for (pedestrian_t const &p : people) {
+		if (p.destroyed) continue; // dead
+		if (skip_bai_draw(p)) continue;
 		
 		if ((display_mode & 0x08) && !city_params.ped_model_files.empty()) { // occlusion culling, if using models
-			if (pdv.building.check_obj_occluded(p->get_bcube(), pdu.pos, pdv.oc, pdv.reflection_pass)) continue;
+			if (pdv.building.check_obj_occluded(p.get_bcube(), pdu.pos, pdv.oc, pdv.reflection_pass)) continue;
 		}
-		draw_ped(*p, pdv.s, pdu, pdv.xlate, def_draw_dist, draw_dist_sq, in_sphere_draw, pdv.shadow_only, pdv.shadow_only, enable_animations, 1);
+		draw_ped(p, pdv.s, pdu, pdv.xlate, def_draw_dist, draw_dist_sq, in_sphere_draw, pdv.shadow_only, pdv.shadow_only, enable_animations, 1);
 	} // for p
 	end_sphere_draw(in_sphere_draw);
 	pdv.s.upload_mvm(); // seems to be needed after applying model transforms, not sure why
 	if (enable_animations) {pdv.s.add_uniform_int("animation_id", 0);} // make sure to leave animations disabled so that they don't apply to buildings
-}
-
-void ped_manager_t::get_locations_of_peds_in_building(int first_ped_ix, vector<point> &locs) const {
-	locs.clear();
-	if (first_ped_ix < 0) return; // no peds
-	assert((unsigned)first_ped_ix < peds_b.size());
-	unsigned const bix(peds_b[first_ped_ix].dest_bldg);
-
-	for (auto p = peds_b.begin()+first_ped_ix; p != peds_b.end(); ++p) {
-		if (p->dest_bldg != bix) break; // done with this building
-		locs.push_back(p->pos);
-	}
-}
-
-void ped_manager_t::get_ped_bcubes_for_building(int first_ped_ix, vect_cube_t &bcubes, bool moving_only) const {
-	if (first_ped_ix < 0) return; // no peds
-	assert((unsigned)first_ped_ix < peds_b.size());
-	unsigned const bix(peds_b[first_ped_ix].dest_bldg);
-
-	for (auto p = peds_b.begin()+first_ped_ix; p != peds_b.end(); ++p) {
-		if (p->dest_bldg != bix) break; // done with this building
-		if (moving_only && p->is_waiting_or_stopped()) continue;
-		if (!p->destroyed) {bcubes.push_back(p->get_bcube());}
-	}
 }
 
 bool ped_manager_t::draw_ped(pedestrian_t const &ped, shader_t &s, pos_dir_up const &pdu, vector3d const &xlate, float def_draw_dist, float draw_dist_sq,
@@ -1560,7 +1540,7 @@ void ped_manager_t::draw_player_model(shader_t &s, vector3d const &xlate, bool s
 	pos_dir_up pdu(camera_pdu);
 	pdu.pos -= xlate; // adjust for local translate
 	unsigned const model_id = 0; // player is always the first model specified/loaded
-	if (city_params.num_peds == 0 && city_params.num_building_peds == 0) {ped_model_loader.load_model_id(model_id);} // only need to load this particular model
+	if (city_params.num_peds == 0 && !global_building_params.building_people_enabled()) {ped_model_loader.load_model_id(model_id);} // only need to load this particular model
 	if (enable_animations) {s.add_uniform_int("animation_id", animation_id);}
 	float const player_eye_height(CAMERA_RADIUS + camera_zh), player_height(1.1*player_eye_height), player_radius(player_height/PED_HEIGHT_SCALE);
 	point const pos(pre_smap_player_pos + vector3d(0.0, 0.0, (player_radius - player_eye_height)));
