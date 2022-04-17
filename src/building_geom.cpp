@@ -1851,9 +1851,9 @@ bool building_t::is_cube_close_to_doorway(cube_t const &c, cube_t const &room, f
 	return (interior ? interior->is_cube_close_to_doorway(c, room, dmin, inc_open, check_open_dir) : 0); // test interior doors
 }
 bool building_interior_t::is_cube_close_to_doorway(cube_t const &c, cube_t const &room, float dmin, bool inc_open, bool check_open_dir) const { // ignores zvals
-	if (door_stacks.empty()) return 0; // can't happen?
+	if (door_stacks.empty()) return 0; // single room house with no door?
 	cube_t test_cube(c);
-	// assume all doors are the same size and use the first for reference, but pad by 1.5x anyway; upper bound on the door bcube when open any amount in any direction
+	// assume all doors are the same size and use the last for reference, but pad by 1.5x anyway; upper bound on the door bcube when open any amount in any direction
 	test_cube.expand_by_xy(1.5*max(dmin, max(door_stacks.back().dx(), door_stacks.back().dy())));
 
 	for (auto i = door_stacks.begin(); i != door_stacks.end(); ++i) { // interior doors
