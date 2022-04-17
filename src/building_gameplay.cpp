@@ -1174,6 +1174,7 @@ bool building_t::move_nearest_object(point const &at_pos, vector3d const &in_dir
 	cube_t player_bcube;
 	player_bcube.set_from_sphere(at_pos, get_scaled_player_radius());
 	player_bcube.z1() -= camera_zh;
+	bool const keep_in_room = 1; // true, for now
 
 	// attempt to move the object
 	for (unsigned mdir = 0; mdir < 3; ++mdir) { // X+Y, closer dim, further dim
@@ -1187,8 +1188,8 @@ bool building_t::move_nearest_object(point const &at_pos, vector3d const &in_dir
 		for (unsigned n = 0; n < 5; ++n, move_vector *= 0.5) { // move in several incrementally smaller steps
 			room_object_t moved_obj(obj);
 			moved_obj += move_vector; // only the position changes
-			if (player_bcube.intersects(moved_obj))    continue; // don't intersect the player - applies to pull mode
-			if (!is_obj_pos_valid(moved_obj, 1, 0, 1)) continue; // try a smaller movement; keep_in_room=1, allow_block_door=0, check_stairs=1
+			if (player_bcube.intersects(moved_obj)) continue; // don't intersect the player - applies to pull mode
+			if (!is_obj_pos_valid(moved_obj, keep_in_room, 0, 1)) continue; // try a smaller movement; allow_block_door=0, check_stairs=1
 			bool bad_placement(0);
 
 			for (auto i = objs.begin(); i != objs_end && !bad_placement; ++i) {
@@ -1253,6 +1254,15 @@ void play_obj_fall_sound(room_object_t const &obj, point const &player_pos) {
 	register_building_sound_for_obj(obj, player_pos);
 }
 
+void building_t::assign_correct_room_to_object(room_object_t &obj) const {
+	int const room_id(get_room_containing_pt(obj.get_cube_center()));
+
+	if (room_id >= 0) { // room should be valid, but okay if not
+		obj.room_id   = room_id;
+		obj.light_amt = 0.5f + 0.5f*get_window_vspace()*interior->rooms[room_id].get_light_amt(); // blend 50% max light to avoid harsh changes when moving between rooms
+	}
+}
+
 bool building_t::maybe_use_last_pickup_room_object(point const &player_pos) {
 	if (player_in_elevator) return 0; // can't use items in elevators
 	assert(has_room_geom());
@@ -1310,12 +1320,7 @@ bool building_t::maybe_use_last_pickup_room_object(point const &player_pos) {
 				obj.dir    = ((cview_dir[!place_dim] > 0) ^ place_dim);
 				obj.flags |= (RO_FLAG_TAKEN1 | RO_FLAG_WAS_EXP);
 				obj.translate(dest - point(obj.xc(), obj.yc(), obj.z1()));
-				int const room_id(get_room_containing_pt(obj.get_cube_center()));
-
-				if (room_id >= 0) { // set new room; required for opening books; room should be valid, but okay if not
-					obj.room_id   = room_id;
-					obj.light_amt = 0.5f + 0.5f*get_window_vspace()*interior->rooms[room_id].get_light_amt(); // blend 50% max light to avoid harsh changes when moving between rooms
-				}
+				assign_correct_room_to_object(obj); // set new room; required for opening books; room should be valid, but okay if not
 				if (!interior->room_geom->add_room_object(obj, *this)) return 0;
 			}
 			player_inventory.return_object_to_building(obj); // re-add this object's value
