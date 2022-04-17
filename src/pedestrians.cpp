@@ -1430,11 +1430,8 @@ void ped_manager_t::gen_and_draw_people_in_building(building_t &building, ped_dr
 	if (!building.interior) return;
 	auto &people(building.interior->people);
 	vector<point> locs;
-	
-	if (building.place_people_if_needed(pdv.bix, get_ped_radius(), locs)) { // people placed
-		for (point const &p : locs) {people.push_back(add_person_to_building(p, pdv.bix, people.size()));}
-		building.interior->states.resize(people.size());
-	}
+	building.place_people_if_needed(pdv.bix, get_ped_radius(), locs);
+	for (point const &p : locs) {people.push_back(add_person_to_building(p, pdv.bix, people.size()));}
 	draw_people_in_building(people, pdv);
 }
 

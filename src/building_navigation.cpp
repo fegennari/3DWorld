@@ -611,7 +611,7 @@ void end_register_player_in_building() {
 	if (cpbl_update_frame != frame_counter) {prev_player_building_loc = cur_player_building_loc = building_dest_t();} // player not in building, reset
 }
 
-bool building_t::choose_dest_goal(building_ai_state_t &state, person_t &person, rand_gen_t &rgen, bool same_floor) const {
+bool building_t::choose_dest_goal(person_t &person, rand_gen_t &rgen, bool same_floor) const {
 
 	assert(interior && interior->nav_graph);
 	building_loc_t const loc(get_building_loc_for_pt(person.pos));
@@ -620,20 +620,20 @@ bool building_t::choose_dest_goal(building_ai_state_t &state, person_t &person, 
 	building_dest_t goal;
 	point sound_pos;
 
-	if ((global_building_params.ai_target_player || cur_player_building_loc.same_room_floor(loc)) && can_target_player(state, person)) {
+	if ((global_building_params.ai_target_player || cur_player_building_loc.same_room_floor(loc)) && can_target_player(person)) {
 		goal = cur_player_building_loc; // player is in a different room of our building, or we're following the player's position
-		state.goal_type = GOAL_TYPE_PLAYER;
+		person.goal_type = GOAL_TYPE_PLAYER;
 	}
 	else if (can_ai_follow_player(person) && get_closest_building_sound(person.pos, sound_pos, floor_spacing)) { // target the loudest sound
 		goal = building_dest_t(get_building_loc_for_pt(sound_pos), sound_pos, cur_player_building_loc.building_ix); // same building as player (current building)
-		state.goal_type = GOAL_TYPE_SOUND;
+		person.goal_type = GOAL_TYPE_SOUND;
 	}
 	if (!goal.is_valid()) return 0; // player or sound
 	unsigned const cand_room(goal.room_ix);
 	room_t const &room(get_room(cand_room)); // target room
 	if (!interior->nav_graph->is_room_connected_to(loc.room_ix, cand_room, interior->doors, person.pos.z, person.has_key)) return 0; // unreachable
-	state.cur_room      = loc.room_ix;
-	state.dest_room     = cand_room; // set but not yet used
+	person.cur_room     = loc.room_ix;
+	person.dest_room    = cand_room; // set but not yet used
 	person.target_pos   = (global_building_params.ai_target_player ? goal.pos: get_center_of_room(cand_room));
 	person.target_pos.z = person.pos.z; // keep orig zval to stay on the same floor
 	person.is_on_stairs = 0;
@@ -652,7 +652,7 @@ bool building_t::choose_dest_goal(building_ai_state_t &state, person_t &person, 
 	}
 	if (global_building_params.ai_target_player) { // ensure target is a valid location in this building; this must be done *after* adjacent floor zval adjustment
 		// handle the case where the player is standing on the stairs on the same floor by moving zval to a different floor to force this person to use the stairs
-		if (state.goal_type == GOAL_TYPE_PLAYER && loc.floor_ix == goal.floor_ix && goal.stairs_ix >= 0) {
+		if (person.goal_type == GOAL_TYPE_PLAYER && loc.floor_ix == goal.floor_ix && goal.stairs_ix >= 0) {
 			float const person_z1(person.get_z1()), player_z1(cur_player_building_loc.pos.z - CAMERA_RADIUS - camera_zh), fc_thick(get_fc_thickness());
 			// make destination exactly one floor above or below of where we currently are; some hysteresis is required to handle the case where the player is at the same zval
 			if      (player_z1 + fc_thick < person_z1) {person.target_pos.z -= floor_spacing;} // move down one floor
@@ -688,7 +688,7 @@ bool building_t::choose_dest_goal(building_ai_state_t &state, person_t &person, 
 	return 1;
 }
 
-bool building_t::select_person_dest_in_room(building_ai_state_t &state, person_t &person, rand_gen_t &rgen, room_t const &room) const {
+bool building_t::select_person_dest_in_room(person_t &person, rand_gen_t &rgen, room_t const &room) const {
 	float const height(0.7*get_window_vspace()), radius(COLL_RADIUS_SCALE*person.radius);
 	point dest_pos(room.get_cube_center());
 	static vect_cube_t avoid; // reuse across frames/people
@@ -696,16 +696,16 @@ bool building_t::select_person_dest_in_room(building_ai_state_t &state, person_t
 	bool const no_use_init(room.get_room_type(0) == RTYPE_PARKING); // don't use the room center for a parking garage
 	if (!interior->nav_graph->find_valid_pt_in_room(avoid, radius, height, person.target_pos.z, room, rgen, dest_pos, no_use_init)) return 0;
 	person.target_pos.x = dest_pos.x; person.target_pos.y = dest_pos.y;
-	state.goal_type = GOAL_TYPE_ROOM;
+	person.goal_type = GOAL_TYPE_ROOM;
 	return 1;
 }
 
-int building_t::choose_dest_room(building_ai_state_t &state, person_t &person, rand_gen_t &rgen, bool same_floor) const {
+int building_t::choose_dest_room(person_t &person, rand_gen_t &rgen, bool same_floor) const {
 
 	assert(interior && interior->nav_graph);
 	building_loc_t const loc(get_building_loc_for_pt(person.pos));
 	if (loc.room_ix < 0) return 0; // not in a room
-	state.dest_room     = state.cur_room = loc.room_ix; // set to the same room and pos just in case
+	person.dest_room    = person.cur_room = loc.room_ix; // set to the same room and pos just in case
 	person.target_pos   = person.pos; // set but not yet used
 	person.is_on_stairs = 0;
 	if (interior->rooms.size() == 1) return 0; // no other room to move to
@@ -722,7 +722,7 @@ int building_t::choose_dest_room(building_ai_state_t &state, person_t &person, r
 			if (person.pos.z < room.z1() || person.pos.z > room.z2()) continue; // room above or below the current pos (won't walk between stacks)
 		}
 		if (!interior->nav_graph->is_room_connected_to(loc.room_ix, cand_room, interior->doors, person.pos.z, person.has_key)) continue;
-		state.dest_room     = cand_room; // set but not yet used
+		person.dest_room    = cand_room; // set but not yet used
 		person.target_pos   = get_center_of_room(cand_room);
 		person.target_pos.z = person.pos.z; // keep orig zval to stay on the same floor
 
@@ -739,7 +739,7 @@ int building_t::choose_dest_room(building_ai_state_t &state, person_t &person, r
 				if (new_z < part.z2()) {person.target_pos.z = new_z;} // change if there is a floor above
 			}
 		}
-		state.goal_type = GOAL_TYPE_ROOM;
+		person.goal_type = GOAL_TYPE_ROOM;
 		return 1;
 	} // for n
 	if (loc.room_ix < 0) return 2; // failed - room not vali (error?)
@@ -752,12 +752,12 @@ int building_t::choose_dest_room(building_ai_state_t &state, person_t &person, r
 
 		if (new_z > room.z1() && new_z < room.z2()) { // valid if this floor is inside the room
 			person.target_pos.z = new_z;
-			if (select_person_dest_in_room(state, person, rgen, room)) return 1;
+			if (select_person_dest_in_room(person, rgen, room)) return 1;
 		}
 	}
 	// how about a different location in the same room? this will at least get the person unstuck from an object and moving inside a parking garage
-	if (state.is_first_path || is_parking_garage) {
-		if (select_person_dest_in_room(state, person, rgen, room)) return 1;
+	if (person.is_first_path || is_parking_garage) {
+		if (select_person_dest_in_room(person, rgen, room)) return 1;
 	}
 	return 2; // failed, but can retry
 }
@@ -887,11 +887,11 @@ bool building_t::find_route_to_point(person_t const &person, float radius, bool 
 	return 1;
 }
 
-void building_ai_state_t::next_path_pt(person_t &person, bool same_floor, bool starting_path) {
+void person_t::next_path_pt(bool same_floor, bool starting_path) {
 	assert(!path.empty());
-	person.is_on_stairs = (!same_floor && !starting_path && person.target_pos.z != path.back().z);
-	person.target_pos   = path.back();
-	if (same_floor) {person.target_pos.z = person.pos.z;} // make sure zvals are equal (ignore zval of room center)
+	is_on_stairs = (!same_floor && !starting_path && target_pos.z != path.back().z);
+	target_pos   = path.back();
+	if (same_floor) {target_pos.z = pos.z;} // make sure zvals are equal (ignore zval of room center)
 	path.pop_back();
 }
 
@@ -969,15 +969,15 @@ bool has_nearby_sound(person_t const &person, float floor_spacing) {
 	return get_closest_building_sound(person.pos, sound_pos, floor_spacing);
 }
 
-bool building_t::same_room_and_floor_as_player(building_ai_state_t const &state, person_t const &person) const {
-	return (cur_player_building_loc.room_ix == state.cur_room && cur_player_building_loc.floor_ix == get_floor_for_zval(person.pos.z) && cur_player_building_loc.stairs_ix < 0);
+bool building_t::same_room_and_floor_as_player(person_t const &person) const {
+	return (cur_player_building_loc.room_ix == person.cur_room && cur_player_building_loc.floor_ix == get_floor_for_zval(person.pos.z) && cur_player_building_loc.stairs_ix < 0);
 }
-bool building_t::is_player_visible(building_ai_state_t const &state, person_t const &person, unsigned vis_test) const {
+bool building_t::is_player_visible(person_t const &person, unsigned vis_test) const {
 	if (vis_test == 0) return 1; // no visibility test
 	building_dest_t const &target(cur_player_building_loc);
 	float const player_radius(get_scaled_player_radius());
 	point const pp2(target.pos - vector3d(0.0, 0.0, camera_zh)); // player's bottom sphere
-	bool const same_room_and_floor(same_room_and_floor_as_player(state, person));
+	bool const same_room_and_floor(same_room_and_floor_as_player(person));
 
 	if (!same_room_and_floor) { // check visibility; assume LOS if in the same room
 		point const eye_pos(person.get_eye_pos());
@@ -994,22 +994,22 @@ bool building_t::is_player_visible(building_ai_state_t const &state, person_t co
 	}
 	return 1;
 }
-bool building_t::can_target_player(building_ai_state_t const &state, person_t const &person) const {
+bool building_t::can_target_player(person_t const &person) const {
 	if (!can_ai_follow_player(person)) return 0;
-	return is_player_visible(state, person, global_building_params.ai_player_vis_test); // 0=no test, 1=LOS, 2=LOS+FOV, 3=LOS+FOV+lit
+	return is_player_visible(person, global_building_params.ai_player_vis_test); // 0=no test, 1=LOS, 2=LOS+FOV, 3=LOS+FOV+lit
 }
 
-bool building_t::need_to_update_ai_path(building_ai_state_t const &state, person_t const &person) const {
+bool building_t::need_to_update_ai_path(person_t const &person) const {
 	if (!global_building_params.ai_target_player || !can_ai_follow_player(person) || !interior) return 0; // disabled
 	building_dest_t const &target(cur_player_building_loc);
-	bool const same_room(same_room_and_floor_as_player(state, person)); // check room and floor
+	bool const same_room(same_room_and_floor_as_player(person)); // check room and floor
 
 	if (global_building_params.ai_player_vis_test == 0) { // the below logic only applies if there's no line of sight test and is an optimization
 		// if the player's room has not changed, and the person is not yet in this room, continue on the same path to the dest room;
 		// however, if the path is empty, continue to choose a new path (needed for AI more than one floor away from target to take multiple flights of stairs)
-		if (target.same_room_floor(prev_player_building_loc) && !same_room && !state.on_new_path_seg && !state.path.empty()) return 0;
+		if (target.same_room_floor(prev_player_building_loc) && !same_room && !person.on_new_path_seg && !person.path.empty()) return 0;
 	}
-	//if (same_room && state.path.size() > 1) return 0; // same room but path has a jog, continue on existing path (faster, but slower to adapt to player position change)
+	//if (same_room && person.path.size() > 1) return 0; // same room but path has a jog, continue on existing path (faster, but slower to adapt to player position change)
 	if (dist_less_than(person.pos, target.pos, person.radius)) return 0; // already close enough
 	if (person.on_stairs()) return 0; // don't change paths when on the stairs
 	float const floor_spacing(get_window_vspace());
@@ -1017,8 +1017,8 @@ bool building_t::need_to_update_ai_path(building_ai_state_t const &state, person
 	if (int(target.pos.z/floor_spacing) != int(prev_player_building_loc.pos.z/floor_spacing)) { // if player did not change floors
 		if (fabs(person.pos.z - target.pos.z) > 2.0f*floor_spacing) return 0; // person and player are > 2 floors apart, continue toward stairs (or should it be one floor apart?) (optimization)
 	}
-	if (can_target_player(state, person)) { // have player visibility
-		if (state.goal_type == GOAL_TYPE_PLAYER && target.same_room_floor(prev_player_building_loc) && !same_room && !state.on_new_path_seg && !state.path.empty()) return 0;
+	if (can_target_player(person)) { // have player visibility
+		if (person.goal_type == GOAL_TYPE_PLAYER && target.same_room_floor(prev_player_building_loc) && !same_room && !person.on_new_path_seg && !person.path.empty()) return 0;
 		return 1;
 	}
 	if (has_nearby_sound(person, floor_spacing)) return 1; // new sound source
@@ -1033,12 +1033,11 @@ void building_t::all_ai_room_update(rand_gen_t &rgen, float delta_dir, bool stay
 // Note: non-const because this updates room light and door state
 int building_t::ai_room_update(rand_gen_t &rgen, float delta_dir, unsigned person_ix, bool stay_on_one_floor) {
 
-	assert(person_ix < interior->people.size() && person_ix < interior->states.size());
+	assert(person_ix < interior->people.size());
 	person_t &person(interior->people[person_ix]);
 	if (person.destroyed) return AI_STOP; // dead
 	if (person.speed == 0.0) {person.anim_time = 0.0; return AI_STOP;} // stopped
 	if (!interior->room_geom && frame_counter < 60) {person.anim_time = 0.0; return AI_WAITING;} // wait until room geom is generated for this building
-	building_ai_state_t &state(interior->states[person_ix]);
 	float const coll_dist(COLL_RADIUS_SCALE*person.radius);
 	float &wait_time(person.waiting_start); // reuse this field
 	float speed_mult(1.0);
@@ -1046,9 +1045,9 @@ int building_t::ai_room_update(rand_gen_t &rgen, float delta_dir, unsigned perso
 	
 	if (person.retreat_time > 0.0) {
 		if (person.retreat_time == RETREAT_TIME) { // first retreating frame - clear path
-			state.path.clear();
+			person.path.clear();
 			person.target_pos = all_zeros;
-			//state.is_first_path = 1; // probably not needed
+			//person.is_first_path = 1; // probably not needed
 		}
 		wait_time = 0.0; // no waiting while retreating
 		person.retreat_time -= fticks;
@@ -1065,7 +1064,7 @@ int building_t::ai_room_update(rand_gen_t &rgen, float delta_dir, unsigned perso
 			} // for p
 			wait_time -= fticks;
 			person.anim_time = 0.0; // reset just in case (though should already be at 0.0)
-			state.goal_type  = GOAL_TYPE_NONE;
+			person.goal_type = GOAL_TYPE_NONE;
 			return AI_WAITING;
 		}
 		wait_time = 0.0;
@@ -1095,23 +1094,23 @@ int building_t::ai_room_update(rand_gen_t &rgen, float delta_dir, unsigned perso
 		}
 	}
 	bool choose_dest(!person.target_valid());
-	bool const update_path(need_to_update_ai_path(state, person));
+	bool const update_path(need_to_update_ai_path(person));
 
 	if (update_path) { // need to update based on player movement; higher priority than choose_dest
-		if (choose_dest_goal(state, person, rgen, stay_on_one_floor) != 1 || // check if person can reach the target
-			!find_route_to_point(person, coll_dist, 0, 1, state.path)) // is_first_path=0, following_player=1
+		if (choose_dest_goal(person, rgen, stay_on_one_floor) != 1 || // check if person can reach the target
+			!find_route_to_point(person, coll_dist, 0, 1, person.path)) // is_first_path=0, following_player=1
 		{
-			choose_dest = 1; // or increment person.cur_rseed and return AI_WAITING? or restore person and state to prev values?
+			choose_dest = 1; // or increment person.cur_rseed and return AI_WAITING? or restore person to prev value?
 		}
 		else { // success
-			state.next_path_pt(person, stay_on_one_floor, 1);
+			person.next_path_pt(stay_on_one_floor, 1);
 			person.following_player = 1;
 			choose_dest = 0;
 			speed_mult  = 1.5; // faster when the player is in the same room
 			// run logic to play zombie sounds
-			bool const same_room_and_floor(same_room_and_floor_as_player(state, person));
+			bool const same_room_and_floor(same_room_and_floor_as_player(person));
 			bool play_sound(same_room_and_floor); // always play sound if in the same room and floor
-			if (!play_sound && (person_ix & 1)) {play_sound |= is_player_visible(state, person, 1);} // 50% of zombies use line of sight test
+			if (!play_sound && (person_ix & 1)) {play_sound |= is_player_visible(person, 1);} // 50% of zombies use line of sight test
 			if (!play_sound && (person_ix & 2)) {play_sound |= has_nearby_sound(person, get_window_vspace());} // 50% of zombies use sound test
 			if (play_sound) {maybe_play_zombie_sound(person.pos, person_ix, same_room_and_floor);} // alert other zombies if in the same room and floor as the player
 		}
@@ -1119,7 +1118,7 @@ int building_t::ai_room_update(rand_gen_t &rgen, float delta_dir, unsigned perso
 	if (choose_dest) { // no current destination, choose a new destination
 		++person.cur_rseed; // update rseed so that this person will choose a different path if the previous path finding call failed
 		if (!update_path) {person.anim_time = 0.0;} // reset animation if not a failed update path frame
-		int const ret(choose_dest_room(state, person, rgen, stay_on_one_floor)); // 0=failed, 1=success, 2=failed but can retry
+		int const ret(choose_dest_room(person, rgen, stay_on_one_floor)); // 0=failed, 1=success, 2=failed but can retry
 
 		if (ret == 2 && interior->door_state_updated) { // wait rather than stopping in case the player trapped this person in a room by closing the door
 			person.wait_for(2.0); // stop for 2 seconds, then try again
@@ -1132,26 +1131,26 @@ int building_t::ai_room_update(rand_gen_t &rgen, float delta_dir, unsigned perso
 			}
 			return AI_STOP;
 		}
-		if (!find_route_to_point(person, coll_dist, state.is_first_path, 0, state.path)) { // following_player=0
+		if (!find_route_to_point(person, coll_dist, person.is_first_path, 0, person.path)) { // following_player=0
 			person.wait_for(1.0); // stop for 1 second, then try again
 			return AI_WAITING;
 		}
-		if (has_room_geom()) {state.is_first_path = 0;} // treat the path as the first path until room geom is generated
-		state.next_path_pt(person, stay_on_one_floor, 1);
+		if (has_room_geom()) {person.is_first_path = 0;} // treat the path as the first path until room geom is generated
+		person.next_path_pt(stay_on_one_floor, 1);
 		return AI_BEGIN_PATH;
 	}
 	float const max_dist(person.speed*speed_mult*min(fticks, 4.0f)); // clamp fticks to 100ms
-	state.on_new_path_seg = 0; // clear flag for this frame
-	//person.following_player = can_target_player(state, person); // for debugging visualization
+	person.on_new_path_seg = 0; // clear flag for this frame
+	//person.following_player = can_target_player(person); // for debugging visualization
 
 	if (dist_less_than(person.pos, person.target_pos, 1.1f*max_dist)) { // at dest
 		assert(bcube.contains_pt(person.target_pos));
 		person.pos = person.target_pos;
-		if (!state.path.empty()) {state.next_path_pt(person, stay_on_one_floor, 0); return AI_NEXT_PT;} // move to next path point
+		if (!person.path.empty()) {person.next_path_pt(stay_on_one_floor, 0); return AI_NEXT_PT;} // move to next path point
 		// don't wait if we can follow the player
-		bool const no_wait(global_building_params.ai_target_player && (can_target_player(state, person) || has_nearby_sound(person, get_window_vspace())));
+		bool const no_wait(global_building_params.ai_target_player && (can_target_player(person) || has_nearby_sound(person, get_window_vspace())));
 		if (!no_wait) {person.wait_for(rgen.rand_uniform(1.0, (can_ai_follow_player(person) ? 2.0 : 10.0)));} // stop for 1-10s, 1-2s if player is in this building in gameplay mode
-		state.on_new_path_seg = 1; // allow player following AI update logic to rerun this frame
+		person.on_new_path_seg = 1; // allow player following AI update logic to rerun this frame
 		return AI_AT_DEST;
 	}
 	// this person is walking to a destination point
@@ -1218,14 +1217,14 @@ int building_t::ai_room_update(rand_gen_t &rgen, float delta_dir, unsigned perso
 	// Note: we probably can't use the room Z bounds here becase the person may be on the stairs connecting two stacked parts
 	float const min_valid_zval(bcube.z1() + 0.5f*get_floor_thickness() + person.radius), max_valid_zval(bcube.z2() - person.radius);
 
-	if (player_in_this_building && !person.on_stairs() && state.cur_room >= 0) { // movement in XY, not on stairs, room is valid: snap to nearest floor
+	if (player_in_this_building && !person.on_stairs() && person.cur_room >= 0) { // movement in XY, not on stairs, room is valid: snap to nearest floor
 		// this is optional and is done just in case something went wrong
-		room_t const &room(get_room(state.cur_room));
+		room_t const &room(get_room(person.cur_room));
 		float const floor_spacing(get_window_vspace());
 		int cur_floor(max(0, round_fp((new_pos.z - min_valid_zval)/floor_spacing)));
 		min_eq(cur_floor, (round_fp((room.z2() - bcube.z1())/floor_spacing) - 1)); // clip to the valid floors for this room relative to lowest building floor
 		float const adj_zval(cur_floor*floor_spacing + min_valid_zval);
-		if (fabs(adj_zval - new_pos.z) > 0.1*person.radius) {person.target_pos = all_zeros; state.path.clear();} // if we snap to the floor, reset the target and path
+		if (fabs(adj_zval - new_pos.z) > 0.1*person.radius) {person.target_pos = all_zeros; person.path.clear();} // if we snap to the floor, reset the target and path
 		new_pos.z = adj_zval;
 	}
 	max_eq(new_pos.z, min_valid_zval); // don't let the person go below the ground floor
@@ -1235,24 +1234,24 @@ int building_t::ai_room_update(rand_gen_t &rgen, float delta_dir, unsigned perso
 	person.anim_time += max_dist;
 	bool enable_bl_update(display_mode & 0x20); // disabled by default, enable with key '6'
 	if (ai_follow_player() && global_building_params.ai_player_vis_test >= 3) {enable_bl_update = 0;} // if AI tests that player is lit, don't turn on/off lights
-	if (enable_bl_update) {ai_room_lights_update(state, person);} // non-const part
-	if (player_in_this_building) {state.cur_room = get_room_containing_pt(person.pos);} // update cur_room after moving and lights update
+	if (enable_bl_update) {ai_room_lights_update(person);} // non-const part
+	if (player_in_this_building) {person.cur_room = get_room_containing_pt(person.pos);} // update cur_room after moving and lights update
 	return AI_MOVING;
 }
 
-void building_t::ai_room_lights_update(building_ai_state_t const &state, person_t const &person) {
+void building_t::ai_room_lights_update(person_t const &person) {
 	int const room_ix(get_room_containing_pt(person.pos));
 	if (room_ix < 0) return; // room is not valid (between rooms, etc.)
 	set_room_light_state_to(get_room(room_ix), person.pos.z, 1); // make sure current room light is on
-	if (room_ix == state.cur_room) return; // same room as last time - done
+	if (room_ix == person.cur_room) return; // same room as last time - done
 	bool other_person_in_room(0);
 
 	// check for other people in the room before turning the lights off on them
 	for (person_t const &p : interior->people) {
 		if (p.destroyed || p.pos == person.pos) continue; // dead or ourself
-		if (get_room_containing_pt(p.pos) == state.cur_room && fabs(person.pos.z - p.pos.z) < get_window_vspace()) {other_person_in_room = 1; break;}
+		if (get_room_containing_pt(p.pos) == person.cur_room && fabs(person.pos.z - p.pos.z) < get_window_vspace()) {other_person_in_room = 1; break;}
 	}
-	if (!other_person_in_room) {set_room_light_state_to(get_room(state.cur_room), person.pos.z, 0);} // make sure old room light is off
+	if (!other_person_in_room) {set_room_light_state_to(get_room(person.cur_room), person.pos.z, 0);} // make sure old room light is off
 }
 
 void building_t::move_person_to_not_collide(person_t &person, person_t const &other, point const &new_pos, float rsum, float coll_dist) const {
