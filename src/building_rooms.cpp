@@ -862,10 +862,14 @@ bool building_t::add_bathroom_objs(rand_gen_t rgen, room_t const &room, float &z
 		zval       = add_flooring(room, zval, room_id, tot_light_amt); // move the effective floor up
 		objs_start = objs.size(); // exclude this from collision checks
 	}
-	if (have_toilet && room.is_office && min(place_area.dx(), place_area.dy()) > 1.5*floor_spacing && max(place_area.dx(), place_area.dy()) > 2.0*floor_spacing) {
-		if (divide_bathroom_into_stalls(rgen, room, zval, room_id, tot_light_amt, floor)) { // large enough, try to divide into bathroom stalls
-			added_bathroom_objs_mask |= (PLACED_TOILET | PLACED_SINK);
-			return 1;
+	if (have_toilet && room.is_office) { // office bathroom
+		float const room_dx(place_area.dx()), room_dy(place_area.dy());
+
+		if (min(room_dx, room_dy) > 1.5*floor_spacing && max(room_dx, room_dy) > 2.0*floor_spacing) {
+			if (divide_bathroom_into_stalls(rgen, room, zval, room_id, tot_light_amt, floor)) { // large enough, try to divide into bathroom stalls
+				added_bathroom_objs_mask |= (PLACED_TOILET | PLACED_SINK);
+				return 1;
+			}
 		}
 	}
 	bool placed_obj(0), placed_toilet(0);
@@ -1075,8 +1079,9 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t const &roo
 	float const room_len(place_area.get_sz_dim(!br_dim)), room_width(place_area.get_sz_dim(br_dim));
 	float const sinks_len(0.4*room_len), stalls_len(room_len - sinks_len), req_depth(2.0f*max(stall_depth, slength));
 	if (room_width < req_depth) return 0;
+	if (sinks_len < 2.0*sink_spacing) {sink_spacing *= 0.8;} // reduce sink spacing a bit to try and fit at least two
 	unsigned const num_stalls(std::floor(stalls_len/stall_width)), num_sinks(std::floor(sinks_len/sink_spacing));
-	if (num_stalls < 2 || num_sinks < 2) return 0; // not enough space for 2 stalls and 2 sinks
+	if (num_stalls < 2 || num_sinks < 1) return 0; // not enough space for 2 stalls and a sink
 	stall_width  = stalls_len/num_stalls; // reclaculate to fill the gaps
 	sink_spacing = sinks_len/num_sinks;
 	bool const two_rows(room_width > 1.5*req_depth), skip_stalls_side(room_id & 1); // put stalls on a side consistent across floors
