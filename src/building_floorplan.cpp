@@ -218,6 +218,7 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 	interior->floors  .reserve(tot_num_floors);
 	interior->landings.reserve(tot_num_landings);
 	interior->stairwells.reserve(tot_num_stairwells);
+	vector<room_t> &rooms(interior->rooms);
 	
 	// generate walls and floors for each part;
 	// this will need to be modified to handle buildings that have overlapping parts, or skip those building types completely
@@ -232,7 +233,7 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 		bool const next_diff_stack(p+1 == parts.end() || (p+1)->z1() != p->z1());
 		// office building hallways only; house hallways are added later
 		bool const use_hallway(!is_house && !is_basement_part && !has_complex_floorplan && first_part_this_stack && next_diff_stack && cube_width > 4.0*min_wall_len);
-		unsigned const rooms_start(interior->rooms.size()), part_id(p - parts.begin()), num_doors_per_stack(SPLIT_DOOR_PER_FLOOR ? num_floors : 1);
+		unsigned const rooms_start(rooms.size()), part_id(p - parts.begin()), num_doors_per_stack(SPLIT_DOOR_PER_FLOOR ? num_floors : 1);
 		cube_t hall, place_area(*p);
 		place_area.expand_by_xy(-wall_edge_spacing); // shrink slightly to avoid z-fighting with walls
 		float window_hspacing[2] = {0.0};
@@ -247,7 +248,7 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 		}
 		else if (!is_house && is_basement_part && min(psz.x, psz.y) > 5.0*car_sz.x && max(psz.x, psz.y) > 12.0*car_sz.y) { // make this a parking garage
 			add_room(*p, part_id, 1, 0, 0); // add entire part as a room; num_lights will be calculated later
-			interior->rooms.back().assign_all_to(RTYPE_PARKING); // make it a parking garage
+			rooms.back().assign_all_to(RTYPE_PARKING); // make it a parking garage
 			has_parking_garage = 1;
 		}
 		else if (use_hallway) {
@@ -295,7 +296,7 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 					assert(num_cent_rooms > 0);
 					hall_walls.reserve(2*(11 + num_doors_inner_rooms*num_cent_rooms)); // long dim (along hall dir)
 					room_walls.reserve(2*(10 + 2*num_cent_rooms)); // short dim
-					interior->rooms.reserve(num_offices + 7); // num_offices + pri hall + 2 sec hall + 4 conn hall
+					rooms.reserve(num_offices + 7); // num_offices + pri hall + 2 sec hall + 4 conn hall
 					interior->door_stacks.reserve(min_num_doors);
 					interior->doors.reserve(num_doors_per_stack*min_num_doors);
 					interior->exclusion.reserve(6); // 2 sec hallways + 4 conn hallways
@@ -401,7 +402,7 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 								insert_door_in_wall_and_add_seg(long_swall, lo_pos, hi_pos, !min_dim, d, !e);
 							}
 						} // for e
-						for (unsigned n = 0; n <= num_cent_rooms; ++n) {
+						for (unsigned n = 0; n <= num_cent_rooms; ++n) { // center rooms, inside and outside
 							float const start_pos(shift_val_to_not_intersect_window(*p, room_pos, hspace, window_border, !min_dim));
 
 							if (n < num_cent_rooms) { // add a room
@@ -462,7 +463,7 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 					vect_cube_t &split_walls(hall_walls);
 					room_walls.reserve(4*(rooms_per_side+1)*num_sec_halls + 2*(num_sec_halls-1)); // walls with doors + room dividers
 					split_walls.reserve(2*rooms_per_side*(num_sec_halls+1));
-					interior->rooms.reserve(num_offices + 2*num_sec_halls + 1); // offices + sec hallways + pri hallway
+					rooms.reserve(num_offices + 2*num_sec_halls + 1); // offices + sec hallways + pri hallway
 					interior->door_stacks.reserve(num_offices); // one per office
 					interior->doors.reserve(num_doors_per_stack*num_offices);
 					interior->exclusion.reserve(2*num_sec_halls);
@@ -508,7 +509,7 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 								s_hall.d[ min_dim][!d] = hall.d[min_dim][d]; // ends at main hall
 								s_hall.d[!min_dim][ 0] = hall_start_pos;
 								s_hall.d[!min_dim][ 1] = hall_end_pos;
-								add_room(s_hall, part_id, 2, 1, 0); // add sec hallway as room with 2 lights
+								add_room(s_hall, part_id, 2, 1, 0); // add sec hallway as room with 2 lights (could use more lights if longer?)
 								cube_t exclude(s_hall);
 								exclude.d[min_dim][!d] += dsign*doorway_width; // expand out a bit into the main hallway to ensure there's space to enter this hallway
 								interior->exclusion.push_back(exclude); // excluded from placing stairs and elevators
@@ -519,7 +520,7 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 									set_wall_width(sep_walls[dir], s_hall.d[!min_dim][dir], wall_half_thick, !min_dim);
 								}
 							}
-							for (int r = 0; r < rooms_per_side; ++r) {
+							for (int r = 0; r < rooms_per_side; ++r) { // add office rooms, working from the windows inside
 								float const next_split_pos(room_split_pos + dsign*room_sub_width);
 								cube_t room(split_wall);
 								room.d[!min_dim][0] = room_start; // end exactly at part bcube
@@ -595,7 +596,7 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 					}
 				} // for s
 				// add rooms and doors
-				interior->rooms.reserve(2*num_rooms + 1); // two rows of rooms + hallway
+				rooms.reserve(2*num_rooms + 1); // two rows of rooms + hallway
 				interior->door_stacks.reserve(2*num_rooms);
 				interior->doors.reserve(num_doors_per_stack*2*num_rooms);
 				float const wall_end(p->d[!min_dim][1]);
@@ -610,8 +611,8 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 						c.d[ min_dim][!d] = hall_wall_pos[d];
 						c.d[!min_dim][ 0] = pos;
 						c.d[!min_dim][ 1] = next_pos;
-						add_room(c, part_id, 1, 0, 1); // office
-						if (i == num_rooms/2) {interior->rooms.back().assign_all_to(RTYPE_BATH);} // assign the middle room to be a bathroom
+						add_room(c, part_id, 1, 0, 1); // office or bathroom; no utility rooms for now
+						if (i == num_rooms/2) {rooms.back().assign_all_to(RTYPE_BATH);} // assign the middle room to be a bathroom
 						door_t door(c, min_dim, d); // copy zvals and wall pos
 						clip_wall_to_ceil_floor(door, fc_thick);
 						door.d[ min_dim][d] = hall_wall_pos[d]; // set to zero area at hallway
@@ -639,7 +640,7 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 			if (first_part) { // reserve walls/rooms/doors - take a guess at the correct size
 				unsigned const num_doors_est(4*real_num_parts + has_basement());
 				for (unsigned d = 0; d < 2; ++d) {interior->walls[d].reserve(8*real_num_parts);}
-				interior->rooms.reserve(8*real_num_parts + has_sec_bldg()); // two rows of rooms + optional hallway
+				rooms.reserve(8*real_num_parts + has_sec_bldg()); // two rows of rooms + optional hallway
 				interior->door_stacks.reserve(num_doors_est);
 				interior->doors.reserve(num_doors_per_stack*num_doors_est);
 			}
@@ -678,8 +679,9 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 				float const lo_pos(doorway_pos - doorway_hwidth), hi_pos(doorway_pos + doorway_hwidth);
 				bool const open_dir(wall_pos > part_door_open_dir_tp[wall_dim]); // doors open away from the building center
 				remove_section_from_cube_and_add_door(wall, wall2, lo_pos, hi_pos, !wall_dim, open_dir);
-				interior->walls[wall_dim].push_back(wall);
-				interior->walls[wall_dim].push_back(wall2);
+				vect_cube_t &walls(interior->walls[wall_dim]);
+				walls.push_back(wall);
+				walls.push_back(wall2);
 				float door_lo[2] = {lo_pos, lo_pos}, door_hi[2] = {hi_pos, hi_pos}; // passed to next split step to avoid placing a wall that intersects this doorway
 				// split into two smaller rooms; ensure we can split at least once per dim
 				bool const do_split(csz[wall_dim] > min(min_split_len, max(min_wall_len, 0.9f*bcube.get_sz_dim(wall_dim))));
@@ -714,8 +716,8 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 						float const door_pos(cube_rand_side_pos(c, !wall_dim, 0.25, doorway_width, rgen));
 						float const o_lo_pos(door_pos - doorway_hwidth), o_hi_pos(door_pos + doorway_hwidth);
 						remove_section_from_cube_and_add_door(o_wall1, o_wall2, o_lo_pos, o_hi_pos, !wall_dim, !open_dir); // opens in other dir
-						interior->walls[wall_dim].push_back(o_wall1);
-						interior->walls[wall_dim].push_back(o_wall2);
+						walls.push_back(o_wall1);
+						walls.push_back(o_wall2);
 						wall.d[wall_dim][dir] = o_wall1.d[wall_dim][dir]; // make original wall the entire width of the hall so that the room on the other side doesn't overlap the hall
 						door_lo[dir] = o_lo_pos;
 						door_hi[dir] = o_hi_pos;
@@ -767,9 +769,9 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 							wall.d[!dim][!dir] = val + (dir ? -1.0 : 1.0)*wall_thick;
 							must_split[!dim] |= (1ULL << (interior->walls[!dim].size() & 63)); // flag this wall for extra splitting
 							interior->walls[!dim].push_back(wall);
-							assert(rooms_start < interior->rooms.size()); // must have added at least one room
+							assert(rooms_start < rooms.size()); // must have added at least one room
 
-							for (auto r = (interior->rooms.begin() + rooms_start); r != interior->rooms.end(); ++r) {
+							for (auto r = (rooms.begin() + rooms_start); r != rooms.end(); ++r) {
 								assert(p->contains_cube(*r));
 								if (r->d[!dim][dir] == val) {r->d[!dim][dir] = wall.d[!dim][!dir];} // clip room to exclude this newly added wall
 							}
@@ -791,7 +793,7 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 		C.z1() = C.z2() - fc_thick;
 		interior->ceilings.push_back(C);
 		add_room(garage, (parts_end - parts.begin()), 1, 0, 0, 1); // is_sec_bldg=1
-		interior->rooms.back().no_geom = 1;
+		rooms.back().no_geom = 1;
 	}
 	// attempt to cut extra doorways into long walls if there's space to produce a more connected floorplan
 	for (unsigned d = 0; d < 2; ++d) { // x,y: dim in which the wall partitions the room (wall runs in dim !d)
@@ -828,7 +830,7 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 							bool contained[2] = {0,0};
 
 							for (unsigned e = 0; e < 2; ++e) { // check both directions from the wall
-								for (auto r = interior->rooms.begin(); r != interior->rooms.end(); ++r) {
+								for (auto r = rooms.begin(); r != rooms.end(); ++r) {
 									if (r->z1() >= wall.z2() || r->z2() <= wall.z1()) continue; // no overlap in Z
 									// skip wall edges co-incident with room edges where the entire wall is contained in the room; this can happen at part boundaries
 									if (wall.d[d][e] == r->d[d][e] && wall.d[d][!e] < r->d[d][1] && wall.d[d][!e] > r->d[d][0]) continue;
