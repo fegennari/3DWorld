@@ -1220,12 +1220,7 @@ bool building_t::move_nearest_object(point const &at_pos, vector3d const &in_dir
 					i->flags |= RO_FLAG_MOVED;
 					if (!keep_in_room) {assign_correct_room_to_object(*i);}
 					if (i->is_dynamic()) {interior->room_geom->mats_dynamic.clear();} // dynamic object
-					else {
-						bldg_obj_type_t const &type(get_room_obj_type(*i));
-						type_flags.lg_sm    |= type.lg_sm;
-						type_flags.is_model |= type.is_model;
-						type_flags.ai_coll  |= type.ai_coll;
-					}
+					else {type_flags.update_modified_flags_for_type(get_room_obj_type(*i));}
 				} // for i
 			} // for vect_id
 			// mark doors as blocked

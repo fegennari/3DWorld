@@ -578,11 +578,25 @@ void building_t::toggle_door_state(unsigned door_ix, bool player_in_this_buildin
 	if (door.on_stairs) {invalidate_nav_graph();} // any in-progress paths may have people walking to and stopping at closed/locked doors
 	interior->door_state_updated = 1; // required for AI navigation logic to adjust to this change
 	if (has_room_geom()) {interior->room_geom->mats_doors.clear();} // need to recreate doors VBO
+	bldg_obj_type_t type_flags;
 
 	if (player_in_this_building) { // is it really safe to call this from the AI thread?
 		point const door_center(door.xc(), door.yc(), zval);
 		play_door_open_close_sound(door_center, door.open);
 		if (by_player) {register_building_sound(door_center, 0.5);}
+	}
+	if (!door.open && has_room_geom()) { // door was closed, check if we need to move any objects out of the way
+		cube_t const door_bcube(door.get_true_bcube());
+
+		for (room_object_t &obj : interior->room_geom->expanded_objs) { // currently only expanded objects such as books
+			if (!obj.intersects(door_bcube)) continue;
+			float const door_center(door_bcube.get_center_dim(door.dim)), obj_center(obj.get_center_dim(door.dim));
+			bool const move_dir(door_center < obj_center);
+			float const move_dist(door_bcube.d[door.dim][move_dir] - obj.d[door.dim][!move_dir]);
+			obj.translate_dim(door.dim, move_dist);
+			type_flags.update_modified_flags_for_type(get_room_obj_type(obj));
+		} // for obj
+		interior->room_geom->update_draw_state_for_obj_type_flags(type_flags, *this);
 	}
 }
 

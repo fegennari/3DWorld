@@ -497,6 +497,7 @@ struct bldg_obj_type_t {
 	bldg_obj_type_t() {}
 	bldg_obj_type_t(bool pc, bool ac, bool rc, bool pu, bool at, bool im, uint8_t ls, float v, float w, std::string const &n, unsigned cap=0) :
 		player_coll(pc), ai_coll(ac), rat_coll(rc), pickup(pu), attached(at), is_model(im), lg_sm(ls), value(v), weight(w), capacity(cap), name(n) {}
+	void update_modified_flags_for_type(bldg_obj_type_t t) {lg_sm |= t.lg_sm; is_model |= t.is_model; ai_coll |= t.ai_coll;}
 };
 
 struct oriented_cube_t : public cube_t {
@@ -1582,6 +1583,7 @@ void gen_sound_thread_safe(unsigned id, point const &pos, float gain=1.0, float 
 inline void gen_sound_thread_safe_at_player(unsigned id, float gain=1.0, float pitch=1.0) {gen_sound_thread_safe(id, get_camera_pos(), gain, pitch);}
 void register_building_sound(point const &pos, float volume);
 void register_building_sound_at_player(float volume);
+bldg_obj_type_t const &get_room_obj_type(room_object_t const &obj);
 // functions in city_gen.cc
 void city_shader_setup(shader_t &s, cube_t const &lights_bcube, bool use_dlights, int use_smap, int use_bmap,
 	float min_alpha=0.0, bool force_tsl=0, float pcf_scale=1.0, bool use_texgen=0, bool indir_lighting=0, bool is_outside=1);
