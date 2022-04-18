@@ -1014,14 +1014,31 @@ bool building_t::is_obj_pos_valid(room_object_t const &obj, bool keep_in_room, b
 	for (unsigned d = 0; d < 2; ++d) { // check for wall intersection
 		if (has_bcube_int_no_adj(obj, interior->walls[d])) return 0;
 	}
-	for (auto i = interior->doors.begin(); i != interior->doors.end(); ++i) { // check for door intersection
-		if (!i->open) { // closed
-			if (!keep_in_room && i->get_true_bcube().intersects(obj)) return 0; // door blocking room boundary
-			continue; // ignore
-		}
-		if (!door_opens_inward(*i, room)) continue; // or opens into the adjacent room, ignore
-		if (is_cube_close_to_door(obj, 0.0, 1, *i, i->get_check_dirs(), i->open_dir, allow_block_door)) return 0;
-	}
+	for (auto const &ds : interior->door_stacks) {
+		if (ds.z1() > obj.z2() || ds.z2() < obj.z1()) continue; // wrong floor for this stack/part
+		// calculate door bounds for bcube test, assuming it's open
+		cube_t door_bounds(ds);
+		door_bounds.expand_by_xy(ds.get_width());
+		if (!door_bounds.intersects(obj)) continue; // optimization
+		assert(ds.first_door_ix < interior->doors.size());
+
+		for (unsigned dix = ds.first_door_ix; dix < interior->doors.size(); ++dix) {
+			door_t const &door(interior->doors[dix]);
+			if (!ds.is_same_stack(door)) break; // moved to a different stack, done
+
+			if (!door.open) { // closed
+				if (!keep_in_room && door.get_true_bcube().intersects(obj)) return 0; // door blocking room boundary
+				continue; // ignore
+			}
+			if (!door_opens_inward(door, room)) continue; // or opens into the adjacent room, ignore
+			
+			if (allow_block_door) {
+				// check current position of open door; ignore closed position; if the door is closed later, it may intersect the object
+				if (get_door_bounding_cube(door).intersects(obj)) return 0;
+			}
+			else if (is_cube_close_to_door(obj, 0.0, 1, door, door.get_check_dirs(), door.open_dir, allow_block_door)) return 0;
+		} // for dix
+	} // for door_stacks
 	if (check_stairs && has_bcube_int(obj, interior->stairwells)) return 0;
 	if (has_bcube_int(obj, interior->elevators)) return 0;
 	return 1;
