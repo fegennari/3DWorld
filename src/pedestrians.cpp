@@ -11,7 +11,7 @@ float const LOOKAHEAD_TICKS  = 2.0*TICKS_PER_SECOND; // 2s
 bool const FORCE_USE_CROSSWALKS = 0; // more realistic and safe, but causes problems with pedestian collisions
 
 extern bool tt_fire_button_down;
-extern int display_mode, game_mode, animate2, frame_counter;
+extern int display_mode, game_mode, animate2, frame_counter, camera_surf_collide;
 extern float FAR_CLIP;
 extern double camera_zh;
 extern point pre_smap_player_pos;
@@ -1516,7 +1516,7 @@ void ped_manager_t::draw_player_model(shader_t &s, vector3d const &xlate, bool s
 		draw_sphere_vbo(player_pos, 0.5f*CAMERA_RADIUS, N_SPHERE_DIV, 0); // use a smaller radius
 		return;
 	}
-	bool const enable_animations(enable_building_people_ai());
+	bool const enable_animations(camera_surf_collide); // animate when walking but not when flying
 	static float player_anim_time(0.0);
 	static point prev_player_pos;
 	
