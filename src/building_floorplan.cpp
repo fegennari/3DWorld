@@ -415,8 +415,9 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 								room_inner.d[!min_dim][1] = ((n+1 == num_cent_rooms) ? (rooms_end - wall_half_thick) : next_pos); // last inner room is relative to sec hallway
 								add_room(room_outer, part_id, 1, 0, 1); // office
 								add_room(room_inner, part_id, 1, 0, 1); // office or bathroom
+								bool const is_bathroom(n == bathroom_ix);
 
-								if (n == bathroom_ix) {rooms.back().assign_all_to(RTYPE_BATH);} // make it a bathroom (windowless)
+								if (is_bathroom) {rooms.back().assign_all_to(RTYPE_BATH);} // make it a bathroom (windowless)
 								else if (is_ground_floor) { // previous inner room room (windowless) for the ground floor
 									if (n+1 == bathroom_ix || n == bathroom_ix+1) {utility_room_cands.push_back(rooms.size() - 1);} // next to the bathroom
 								}
@@ -425,7 +426,7 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 								cube_t *to_split[3] = {&long_swall, &short_swall, &main_wall};
 
 								for (unsigned k = 0; k < num_doors_inner_rooms; ++k) {
-									insert_door_in_wall_and_add_seg(*to_split[k], lo_pos, hi_pos, !min_dim, (d^(k&1)), 1); // not tagged as is_bathroom because it's not a shared BR
+									insert_door_in_wall_and_add_seg(*to_split[k], lo_pos, hi_pos, !min_dim, (d^(k&1)), 1, is_bathroom);
 								}
 							}
 							// add walls separating rooms
@@ -621,12 +622,13 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 						c.d[!min_dim][ 0] = pos;
 						c.d[!min_dim][ 1] = next_pos;
 						add_room(c, part_id, 1, 0, 1); // office or bathroom; no utility rooms for now
-						if (i == num_rooms/2) {rooms.back().assign_all_to(RTYPE_BATH);} // assign the middle room to be a bathroom
+						bool const is_bathroom(i == num_rooms/2);
+						if (is_bathroom) {rooms.back().assign_all_to(RTYPE_BATH);} // assign the middle room to be a bathroom
 						door_t door(c, min_dim, d); // copy zvals and wall pos
 						clip_wall_to_ceil_floor(door, fc_thick);
 						door.d[ min_dim][d] = hall_wall_pos[d]; // set to zero area at hallway
 						for (unsigned e = 0; e < 2; ++e) {door.d[!min_dim][e] = doorway_vals[2*i+e];}
-						add_interior_door(door);
+						add_interior_door(door, is_bathroom);
 					}
 					pos = next_pos;
 				} // for i
