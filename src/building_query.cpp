@@ -1171,7 +1171,7 @@ bool building_t::check_line_coll_expand(point const &p1, point const &p2, float 
 				if (line_int_cube_exp(p1, p2, get_door_bounding_cube(door), expand)) return 1;
 			}
 			else if (line_int_cube_exp(p1, p2, door, expand)) return 1;
-		}
+		} // for dix
 	} // for door_stacks
 	for (auto const &s : interior->stairwells) {
 		if (!line_int_cube_exp(p1, p2, s, expand)) continue;

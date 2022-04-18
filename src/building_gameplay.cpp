@@ -1174,7 +1174,8 @@ bool building_t::move_nearest_object(point const &at_pos, vector3d const &in_dir
 	cube_t player_bcube;
 	player_bcube.set_from_sphere(at_pos, get_scaled_player_radius());
 	player_bcube.z1() -= camera_zh;
-	bool const keep_in_room = 1; // true, for now
+	// Note: setting this to 0 will allow objects to be pushed/pulled out of the room, but it may also allow doors to be closed on objects
+	bool const keep_in_room = 1;
 
 	// attempt to move the object
 	for (unsigned mdir = 0; mdir < 3; ++mdir) { // X+Y, closer dim, further dim
@@ -1189,7 +1190,7 @@ bool building_t::move_nearest_object(point const &at_pos, vector3d const &in_dir
 			room_object_t moved_obj(obj);
 			moved_obj += move_vector; // only the position changes
 			if (player_bcube.intersects(moved_obj)) continue; // don't intersect the player - applies to pull mode
-			if (!is_obj_pos_valid(moved_obj, keep_in_room, 0, 1)) continue; // try a smaller movement; allow_block_door=0, check_stairs=1
+			if (!is_obj_pos_valid(moved_obj, keep_in_room, !keep_in_room, 1)) continue; // allow_block_door=!keep_in_room, check_stairs=1
 			bool bad_placement(0);
 
 			for (auto i = objs.begin(); i != objs_end && !bad_placement; ++i) {
@@ -1217,6 +1218,7 @@ bool building_t::move_nearest_object(point const &at_pos, vector3d const &in_dir
 					if (!is_obj_in_or_on_obj(obj, *i))        continue;
 					*i += move_vector; // move this object as well
 					i->flags |= RO_FLAG_MOVED;
+					if (!keep_in_room) {assign_correct_room_to_object(*i);}
 					if (i->is_dynamic()) {interior->room_geom->mats_dynamic.clear();} // dynamic object
 					else {
 						bldg_obj_type_t const &type(get_room_obj_type(*i));
@@ -1230,13 +1232,16 @@ bool building_t::move_nearest_object(point const &at_pos, vector3d const &in_dir
 			room_t const &room(get_room(obj.room_id));
 
 			for (auto i = interior->doors.begin(); i != interior->doors.end(); ++i) { // check for door intersection
-				if (i->open || !door_opens_inward(*i, room)) continue; // if the door is already open, or opens in the other direction, it can't be blocked
+				if (keep_in_room) { // in this case the object can't be pushed into the path of the door
+					if (i->open || !door_opens_inward(*i, room)) continue; // if the door is already open, or opens in the other direction, it can't be blocked
+				}
 				bool const inc_open(0), check_dirs(i->get_check_dirs());
 				if (is_cube_close_to_door(moved_obj, 0.0, inc_open, *i, check_dirs))              {i->blocked = 1; interior->door_state_updated = 1;} // newly blocked, either dir
 				else if (i->blocked && is_cube_close_to_door(obj, 0.0, inc_open, *i, check_dirs)) {i->blocked = 0; interior->door_state_updated = 1;} // newly unblocked, either dir
 			}
 			// update this object
 			obj = moved_obj; // keep this placement
+			if (!keep_in_room) {assign_correct_room_to_object(obj);}
 			if (!obj.was_moved()) {interior->room_geom->moved_obj_ids.push_back(closest_obj_id);} // add to moved_obj_ids on first movement
 			obj.flags |= RO_FLAG_MOVED;
 			interior->room_geom->update_draw_state_for_obj_type_flags(type_flags, *this);
@@ -1257,7 +1262,7 @@ void play_obj_fall_sound(room_object_t const &obj, point const &player_pos) {
 void building_t::assign_correct_room_to_object(room_object_t &obj) const {
 	int const room_id(get_room_containing_pt(obj.get_cube_center()));
 
-	if (room_id >= 0) { // room should be valid, but okay if not
+	if (room_id >= 0 && room_id != obj.room_id) { // room should be valid, but okay if not; don't update lighting if it's the same room
 		obj.room_id   = room_id;
 		obj.light_amt = 0.5f + 0.5f*get_window_vspace()*interior->rooms[room_id].get_light_amt(); // blend 50% max light to avoid harsh changes when moving between rooms
 	}

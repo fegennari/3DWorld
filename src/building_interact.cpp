@@ -999,7 +999,7 @@ bool building_t::is_obj_pos_valid(room_object_t const &obj, bool keep_in_room, b
 	assert(interior);
 	room_t const &room(get_room(obj.room_id));
 
-	if (keep_in_room) {
+	if (keep_in_room) { // check room bounds
 		cube_t place_area(room);
 		place_area.expand_by_xy(-0.99*get_trim_thickness()); // shrink to exclude wall trim
 		if (!place_area.contains_cube(obj)) return 0; // outside the room
