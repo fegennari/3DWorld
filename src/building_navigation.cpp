@@ -380,22 +380,23 @@ public:
 		} // end while()
 		return 0; // never gets here
 	}
-	bool complete_path_within_room(point const &p1, point const &p2, unsigned room, unsigned ped_ix, float radius,
-		unsigned ped_rseed, bool is_first_path, vect_cube_t const &avoid, vector<point> &path) const
+	bool complete_path_within_room(point const &from, point const &to, unsigned room, unsigned ped_ix, float radius,
+		unsigned ped_rseed, bool is_first_path, bool following_player, vect_cube_t const &avoid, vector<point> &path) const
 	{
 		// used for reaching a goal such as the player within the same room
 		cube_t const walk_area(calc_walkable_room_area(get_node(room), radius));
 		rand_gen_t rgen;
 		rgen.set_state((ped_ix + 13*room + 1), (ped_rseed + 1));
 		vect_cube_t keepout;
-		path.push_back(p2); // Note: path is constructed backwards, so p2 is added first and connect_room_endpoints takes swapped arguments
+		path.push_back(to); // Note: path is constructed backwards, so "to" is added first and connect_room_endpoints takes swapped arguments
 		// ignore starting collisions, for example collisions with stairwell when exiting stairs?
-		if (!connect_room_endpoints(avoid, walk_area, p2, p1, radius, path, keepout, rgen, 0, 1)) { // ignore initial coll with p1
+		// ignore initial coll with "from", and coll with "to" when following the player
+		if (!connect_room_endpoints(avoid, walk_area, to, from, radius, path, keepout, rgen, 1, following_player)) {
 			if (!is_first_path) {path.clear(); return 0;} // ignore failure on first path to allow person to get out from an object they spawn in
 		}
 		// maybe add an extra path point to prevent clipping through walls when walking throug a doorway
-		point const p1_extend_pt(closest_room_pt(walk_area, p1));
-		if (p1_extend_pt != p1) {path.push_back(p1_extend_pt);} // add if p1 was clamped
+		point const from_extend_pt(closest_room_pt(walk_area, from));
+		if (from_extend_pt != from) {path.push_back(from_extend_pt);} // add if p1 was clamped
 		return 1;
 	}
 
@@ -677,6 +678,8 @@ bool building_t::choose_dest_goal(person_t &person, rand_gen_t &rgen, bool same_
 		static vect_cube_t avoid; // reuse across frames/people
 		interior->get_avoid_cubes(avoid, (person.target_pos.z - person.radius), (person.target_pos.z + z2_add), get_floor_thickness(), 1, 1); // same_as_player=1, skip_stairs=1
 
+		// check for initial collisions at the player's location, but exclude stairs in case the player is standing on them;
+		// this may no longer be required since complete_path_within_room() now ignores initial collisions with the dest, but is likely still a good idea
 		for (unsigned n = 0; n < 4; ++n) { // iterate a few times in case a collision moves pos into another object
 			bool any_updated(0);
 
@@ -774,7 +777,7 @@ template<typename T> void add_bcube_if_overlaps_zval(vector<T> const &cubes, vec
 void building_interior_t::get_avoid_cubes(vect_cube_t &avoid, float z1, float z2, float floor_thickness, bool same_as_player, bool skip_stairs) const { // for AI
 	avoid.clear();
 	if (!skip_stairs) {add_bcube_if_overlaps_zval(stairwells, avoid, z1, z2);} // clearance not required
-	add_bcube_if_overlaps_zval(elevators,  avoid, z1, z2); // clearance not required
+	add_bcube_if_overlaps_zval(elevators, avoid, z1, z2); // clearance not required
 	if (!room_geom) return; // no room objects
 	auto objs_end(room_geom->get_placed_objs_end()); // skip buttons/stairs/elevators
 
@@ -836,7 +839,7 @@ bool building_t::find_route_to_point(person_t const &person, float radius, bool 
 
 	if (loc1.same_room_floor(loc2)) { // same room/floor (not checking stairs_ix)
 		assert(from.z == to.z);
-		return interior->nav_graph->complete_path_within_room(from, to, loc1.room_ix, person.ssn, radius, person.cur_rseed, is_first_path, avoid, path);
+		return interior->nav_graph->complete_path_within_room(from, to, loc1.room_ix, person.ssn, radius, person.cur_rseed, is_first_path, following_player, avoid, path);
 	}
 	if (loc1.floor_ix != loc2.floor_ix) { // different floors: find path from <from> to nearest stairs, then find path from stairs to <to>
 		vector<unsigned> nearest_stairs;
