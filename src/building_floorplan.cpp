@@ -278,11 +278,11 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 			vect_cube_t &room_walls(interior->walls[!min_dim]), &hall_walls(interior->walls[min_dim]);
 			hall = *p;
 			for (unsigned e = 0; e < 2; ++e) {hall.d[min_dim][e] = hall_wall_pos[e];}
+			vector<unsigned> utility_room_cands;
 			
 			if (num_windows_od >= 7 && num_rooms >= 4) { // at least 7 windows (3 on each side of hallway)
 				float const min_hall_width(1.5f*doorway_width), max_hall_width(2.5f*doorway_width);
 				float const sh_width(max(min(0.4f*hall_width, max_hall_width), min_hall_width)), hspace(window_hspacing[!min_dim]);
-				// TODO: make at least one office of type RTYPE_UTILITY instead: interior->rooms.back().assign_to(RTYPE_UTILITY, 0);
 
 				if (rgen.rand_bool()) { // ring hallway
 					float const room_depth(0.5f*(room_width - sh_width)); // for inner and outer rows of rooms
@@ -414,7 +414,8 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 								room_inner.d[!min_dim][1] = ((n+1 == num_cent_rooms) ? (rooms_end - wall_half_thick) : next_pos); // last inner room is relative to sec hallway
 								add_room(room_outer, part_id, 1, 0, 1); // office
 								add_room(room_inner, part_id, 1, 0, 1); // office or bathroom
-								if (n == bathroom_ix) {interior->rooms.back().assign_all_to(RTYPE_BATH);} // make it a bathroom
+								if (n == bathroom_ix) {rooms.back().assign_all_to(RTYPE_BATH);} // make it a bathroom (windowless)
+								else {utility_room_cands.push_back(rooms.size() - 1);} // add prev inner room room (windowless)
 								// add doors to 2-3 walls
 								float const door_pos(0.5f*(start_pos + next_pos)), lo_pos(door_pos - doorway_hwidth), hi_pos(door_pos + doorway_hwidth);
 								cube_t *to_split[3] = {&long_swall, &short_swall, &main_wall};
@@ -536,7 +537,8 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 								}
 								add_room(room, part_id, 1, 0, 1); // office or bathroom along sec hallway
 								bool const is_bathroom(r+1 == rooms_per_side && (unsigned)i == (bathroom_ix+1)); // bathroom must be an interior/windowless room
-								if (is_bathroom) {interior->rooms.back().assign_all_to(RTYPE_BATH);}
+								if (is_bathroom) {rooms.back().assign_all_to(RTYPE_BATH);}
+								else if (div_room && r > 0) {utility_room_cands.push_back(rooms.size() - 1);} // windowless room, not along exterior wall
 
 								if (add_sec_hall) { // add doorways + doors
 									float const doorway_pos(0.5f*(room_split_pos + next_split_pos)); // room center
@@ -625,6 +627,12 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 			add_room(hall, part_id, 3, 1, 0); // add hallway as room with 3 lights
 			if (p->z1() == ground_floor_z1 || pri_hall.is_all_zeros()) {pri_hall = hall;} // assign to primary hallway if on first floor of hasn't yet been assigned
 			for (unsigned d = 0; d < 2; ++d) {first_wall_to_split[d] = interior->walls[d].size();} // don't split any walls added up to this point
+
+			if (!utility_room_cands.empty()) {
+				unsigned const utility_room_ix(utility_room_cands[rand() % utility_room_cands.size()]);
+				assert(utility_room_ix < rooms.size());
+				rooms[utility_room_ix].assign_to(RTYPE_UTILITY, 0); // make this room a utility room on floor 0
+			}
 		} // end use_hallway
 
 		else { // generate random walls using recursive 2D slices

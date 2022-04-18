@@ -2552,7 +2552,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 					add_bathroom_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, f, is_basement, added_bathroom_objs_mask); // add bathroom
 			}
 			else if (!is_house && f == 0 && r->get_room_type(f) == RTYPE_UTILITY) { // office building utility room; currently first floor only
-				added_obj = add_office_utility_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);
+				added_obj = no_whiteboard = add_office_utility_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);
 			}
 			// bedroom or bathroom case; need to check first floor even if must_be_bathroom
 			if (!added_obj && allow_br && can_be_bedroom_or_bathroom(*r, f)) {
