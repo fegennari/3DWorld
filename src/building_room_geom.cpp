@@ -2333,6 +2333,7 @@ void building_room_geom_t::add_trashcan(room_object_t const &c) {
 }
 
 void building_room_geom_t::add_water_heater(room_object_t const &c) {
+	bool const is_house(c.flags & RO_FLAG_IS_HOUSE);
 	float const height(c.dz()), radius(c.get_radius()), front_pos(c.d[c.dim][c.dir]), front_dir(c.dir ? 1.0 : -1.0), top_z(c.z1() + 0.8*height);
 	cube_t body(c), pan(c), top(c), vent(c), cone(c), box, pipes[2];
 
@@ -2364,10 +2365,11 @@ void building_room_geom_t::add_water_heater(room_object_t const &c) {
 	metal_mat.add_vcylin_to_verts(cone, apply_light_color(c, LT_GRAY), 0, 0, 0, 0, 1.8, 0.0); // cone
 	rgeom_mat_t &copper_mat(get_metal_material(1, 0, 2, COPPER_C)); // small=2 / detail
 	colorRGBA const copper_color(apply_light_color(c, COPPER_C));
+	// TODO: if !is_house, bend the pipes back down to the floor or into the nearby wall at dim, !dir?
 	for (unsigned d = 0; d < 2; ++d) {copper_mat.add_vcylin_to_verts(pipes[d], copper_color, 0, 0, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, 16);} // ndiv=16
-	get_untextured_material(1, 0, 1).add_cube_to_verts_untextured(box, apply_light_color(c, LT_GRAY)); // control box
+	get_untextured_material(1, 0, 2).add_cube_to_verts_untextured(box, apply_light_color(c, LT_GRAY)); // control box
 
-	if (c.room_id & 1) { // add sticker 50% of the time
+	if (is_house && (c.room_id & 1)) { // add sticker 50% of the time for houses
 		cube_t sticker(c);
 		sticker.expand_by_xy(0.005*radius);
 		set_cube_zvals(sticker, (c.z1() + 0.30*height), (c.z1() + 0.50*height));
