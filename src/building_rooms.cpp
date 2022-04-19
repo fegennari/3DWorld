@@ -1592,11 +1592,6 @@ void building_t::add_garage_objs(rand_gen_t rgen, room_t const &room, float zval
 	interior->room_geom->has_garage_car = 1;
 }
 
-bool building_t::add_office_utility_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
-	// TODO
-	return 0;
-}
-
 bool building_t::add_laundry_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, unsigned &added_bathroom_objs_mask) {
 	float const front_clearance(get_min_front_clearance());
 	cube_t place_area(get_walkable_room_bounds(room));

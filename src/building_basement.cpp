@@ -40,22 +40,24 @@ void subtract_cubes_from_cube_split_in_dim(cube_t const &c, vect_cube_t const &s
 	} // for s
 }
 
-bool building_t::add_basement_utility_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
-	float const height(get_window_vspace() - get_floor_thickness()), radius(0.18*height);
-	cube_t place_area(get_walkable_room_bounds(room));
+bool building_t::add_water_heater(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
+	float const floor_spacing(get_window_vspace()), height(floor_spacing - get_floor_thickness());
+	float const radius((is_house ? 0.18 : 0.20)*height); // larger radius for office buildings
+	cube_t const room_bounds(get_walkable_room_bounds(room));
+	cube_t place_area(room_bounds);
 	place_area.expand_by(-(1.05*radius + get_trim_thickness())); // account for the pan
 	if (!place_area.is_strictly_normalized()) return 0; // too small to place water heater
 	vect_room_object_t &objs(interior->room_geom->objs);
 	point center(0.0, 0.0, zval);
-	bool was_placed(0);
 
-	for (unsigned n = 0; n < 5; ++n) { // make 14 attempts to place a water heater - one in each corner and 1 along a random wall for variety
-		bool const dim(rgen.rand_bool());
-		bool dir(0);
+	for (unsigned n = 0; n < 5; ++n) { // make 5 attempts to place a water heater - one in each corner and 1 along a random wall for variety
+		bool const dim(is_house ? rgen.rand_bool() : (room.dy() < room.dx())); // face the shorter dim for office buildings so that we can place longer rows
+		bool dir(0), xdir(0), ydir(0);
 
 		if (n < 4) { // corner
-			bool const xdir(rgen.rand_bool()), ydir(rgen.rand_bool());
-			dir = (dim ? ydir : xdir);
+			xdir = rgen.rand_bool();
+			ydir = rgen.rand_bool();
+			dir  = (dim ? ydir : xdir);
 			center.x = place_area.d[0][xdir];
 			center.y = place_area.d[1][ydir];
 		}
@@ -64,18 +66,48 @@ bool building_t::add_basement_utility_objs(rand_gen_t rgen, room_t const &room, 
 			center[ dim] = place_area.d[dim][dir]; // against this wall
 			center[!dim] = rgen.rand_uniform(place_area.d[!dim][0], place_area.d[!dim][1]);
 		}
-		cube_t const c(get_cube_height_radius(center, radius, height));
-		if (is_cube_close_to_doorway(c, room, 0.0, !room.is_hallway) || interior->is_blocked_by_stairs_or_elevator(c)) continue;
+		cube_t c(get_cube_height_radius(center, radius, height));
+		if (is_cube_close_to_doorway(c, room, 0.0, 1) || interior->is_blocked_by_stairs_or_elevator(c)) continue;
 		cube_t c_exp(c);
 		c_exp.expand_by_xy(0.2*radius); // small keepout in XY
 		c_exp.d[dim][!dir] += (dir ? -1.0 : 1.0)*0.25*radius; // add more keepout in front where the controls are
 		c_exp.intersect_with_cube(room); // don't pick up objects on the other side of the wall
 		if (overlaps_other_room_obj(c_exp, objs_start)) continue; // check existing objects, in particular storage room boxes that will have already been placed
-		objs.emplace_back(c, TYPE_WHEATER, room_id, dim, !dir, 0, tot_light_amt, SHAPE_CYLIN);
-		was_placed = 1;
-		break; // done
+		objs.emplace_back(c, TYPE_WHEATER, room_id, dim, !dir, (is_house ? RO_FLAG_IS_HOUSE : 0), tot_light_amt, SHAPE_CYLIN);
+
+		if (!is_house && n < 4) { // office building, placed at corner; try to add additional water heaters along the wall
+			vector3d step;
+			step[!dim] = 2.2*radius*((dim ? xdir : ydir) ? -1.0 : 1.0); // step in the opposite dim
+			// ideally we would iterate over all the plumbing fixtures to determine water usage, but they might not be placed yet, so instead count rooms;
+			// but rooms can be of very different sizes, so maybe counting volume is the best?
+			float tot_volume(0.0);
+			for (auto i = parts.begin(); i != get_real_parts_end(); ++i) {tot_volume += i->get_volume();}
+			tot_volume /= floor_spacing*floor_spacing*floor_spacing;
+			unsigned const max_wh(max(1, min(5, round_fp(tot_volume/1200.0))));
+
+			for (unsigned n = 1; n < max_wh; ++n) { // one has already been placed
+				c.translate(step);
+				if (!room_bounds.contains_cube(c)) break; // went outside the room, done
+				if (is_cube_close_to_doorway(c, room, 0.0, 1) || interior->is_blocked_by_stairs_or_elevator(c)) continue; // bad placement, skip
+				c_exp.translate(step);
+				if (overlaps_other_room_obj(c_exp, objs_start)) continue; // check existing objects
+				objs.emplace_back(c, TYPE_WHEATER, room_id, dim, !dir, 0, tot_light_amt, SHAPE_CYLIN);
+			} // for n
+		}
+		return 1; // done
 	} // for n
-	return was_placed;
+	return 0;
+}
+
+bool building_t::add_basement_utility_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
+	// for now, this is only the water heater; we may want to add a furnace, etc. later
+	return add_water_heater(rgen, room, zval, room_id, tot_light_amt, objs_start);
+}
+
+// Note: this function is here rather than in building_rooms.cpp because utility rooms are connected to utilities in the basement, and it's similar to the code above
+bool building_t::add_office_utility_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
+	// for now, this is only the water heater; we may want to add other objects later
+	return add_water_heater(rgen, room, zval, room_id, tot_light_amt, objs_start);
 }
 
 vector3d building_t::get_parked_car_size() const {
@@ -468,9 +500,17 @@ void building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 	unsigned const NUM_SHIFTS = 21; // {0,0} + 20 random shifts
 	vector3d rshifts[NUM_SHIFTS] = {};
 	for (unsigned n = 1; n < NUM_SHIFTS; ++n) {rshifts[n][rgen.rand_bool()] = 0.25*window_vspacing*rgen.signed_rand_float();} // random shift in a random dir
+	// determine if we need to add an entrance/exit pipe
+	bool add_exit_pipe(1);
+
+	if (add_water_pipes == 2) { // hot water pipes; sewer pipes always have an exit and cold water always has an entrance
+		for (riser_pos_t const &p : risers) {
+			if (p.flow_dir == 0) {add_exit_pipe = 0; break;} // hot water flowing out of a water heater
+		}
+	}
 
 	// seed the pipe graph with valid vertical segments and build a graph of X/Y values
-	for (sphere_t const &p : risers) {
+	for (riser_pos_t const &p : risers) {
 		assert(p.radius > 0.0);
 		assert(p.pos.z > pipe_zval);
 		point pos(p.pos);
@@ -620,7 +660,7 @@ void building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 	unsigned main_pipe_end_flags(0); // start with both ends unconnected
 	bool has_exit(0);
 
-	if (num_floors > 1 || rgen.rand_bool()) { // exit into the wall of the building
+	if (add_exit_pipe && (num_floors > 1 || rgen.rand_bool())) { // exit into the wall of the building
 		// Note: if roads are added for secondary buildings, we should have the exit on the side of the building closest to the road
 		bool const first_dir((basement.d[dim][1] - mp[1][dim]) < (mp[0][dim] - basement.d[dim][0])); // closer basement exterior wall
 
@@ -654,7 +694,7 @@ void building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 			} // for d
 		}
 	}
-	if (!has_exit) { // create exit segment and vertical pipe into the floor
+	if (add_exit_pipe && !has_exit) { // create exit segment and vertical pipe into the floor
 		for (unsigned d = 0; d < 2; ++d) { // dim
 			point const cand_exit_pos(get_closest_wall_pos(mp[d], r_main_spacing, basement, walls, obstacles));
 			float const dist(p2p_dist(mp[d], cand_exit_pos));
