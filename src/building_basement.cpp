@@ -641,6 +641,7 @@ void building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 			pipes.emplace_back(p1, p2, radius, d, PIPE_CONN, 3); // cap both ends
 
 			for (unsigned ix : v.second) { // add fittings
+				if (!pipes[ix].connected) continue; // pipe was not connected, don't add the fitting
 				float const val(pipes[ix].p1[d]), fitting_len(FITTING_LEN*radius);
 				p1[d] = val - fitting_len; p2[d] = val + fitting_len;
 				fittings.emplace_back(p1, p2, FITTING_RADIUS*radius, d, PIPE_FITTING, 3);
