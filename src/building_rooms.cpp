@@ -839,11 +839,11 @@ bool building_t::place_model_along_wall(unsigned model_id, room_object type, roo
 		place_area, objs_start, front_clearance, pref_orient, pref_centered, color, not_at_window);
 }
 
-float building_t::add_flooring(room_t const &room, float &zval, unsigned room_id, float tot_light_amt) {
+float building_t::add_flooring(room_t const &room, float &zval, unsigned room_id, float tot_light_amt, unsigned flooring_type) {
 	float const new_zval(zval + 0.0012*get_window_vspace());
 	cube_t floor(get_walkable_room_bounds(room));
 	set_cube_zvals(floor, zval, new_zval);
-	interior->room_geom->objs.emplace_back(floor, TYPE_FLOORING, room_id, 0, 0, RO_FLAG_NOCOLL, tot_light_amt);
+	interior->room_geom->objs.emplace_back(floor, TYPE_FLOORING, room_id, 0, 0, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CUBE, WHITE, flooring_type);
 	return new_zval;
 }
 
@@ -859,7 +859,7 @@ bool building_t::add_bathroom_objs(rand_gen_t rgen, room_t const &room, float &z
 	vect_room_object_t &objs(interior->room_geom->objs);
 
 	if (!is_house && (have_toilet || have_sink)) { // office with at least a toilet or sink - replace carpet with tile
-		zval       = add_flooring(room, zval, room_id, tot_light_amt); // move the effective floor up
+		zval       = add_flooring(room, zval, room_id, tot_light_amt, FLOORING_MARBLE); // move the effective floor up
 		objs_start = objs.size(); // exclude this from collision checks
 	}
 	if (have_toilet && room.is_office) { // office bathroom
@@ -2515,7 +2515,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			if (r->no_geom || is_garage_or_shed) {
 				if (is_garage_or_shed) {
 					if (r->get_room_type(0) == RTYPE_GARAGE) {
-						room_center.z = add_flooring(*r, room_center.z, room_id, tot_light_amt);
+						room_center.z = add_flooring(*r, room_center.z, room_id, tot_light_amt, FLOORING_CONCRETE);
 						add_garage_objs(rgen, *r, room_center.z, room_id, tot_light_amt);
 					}
 					// is there enough clearance between shelves and a car parked in the garage? there seems to be in all the cases I've seen

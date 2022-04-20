@@ -1077,8 +1077,19 @@ void building_room_geom_t::add_pen_pencil_marker(room_object_t const &c) {
 	add_pen_pencil_marker_to_material(c, get_untextured_material(0, 0, 1)); // unshadowed, small
 }
 
+int get_flooring_texture(room_object_t const &c) {
+	switch (c.item_flags) { // select texture for flooring type
+	case FLOORING_MARBLE:   return MARBLE_TEX;
+	case FLOORING_TILE:     return get_texture_by_name("bathroom_tile.jpg");
+	case FLOORING_CONCRETE: return get_concrete_tid();
+	case FLOORING_CARPET:   return get_texture_by_name((c.obj_id & 1) ? "carpet/carpet1.jpg" : "carpet/carpet2.jpg"); // select between two textures
+	case FLOORING_WOOD:     return ((c.obj_id & 1) ? (int)FENCE_TEX : (int)PANELING_TEX); // select between two textures
+	default: assert(0);
+	}
+	return -1; // shouldn't get here
+}
 void building_room_geom_t::add_flooring(room_object_t const &c, float tscale) {
-	get_material(tid_nm_pair_t(MARBLE_TEX, 0.8*tscale)).add_cube_to_verts(c, apply_light_color(c), tex_origin, ~EF_Z2); // top face only, unshadowed
+	get_material(tid_nm_pair_t(get_flooring_texture(c), 0.8*tscale)).add_cube_to_verts(c, apply_light_color(c), tex_origin, ~EF_Z2); // top face only, unshadowed
 }
 
 void building_room_geom_t::add_wall_trim(room_object_t const &c, bool for_closet) { // uses mats_detail
@@ -2982,7 +2993,7 @@ colorRGBA room_object_t::get_color() const {
 	case TYPE_CLOSET:   return (color*0.5 + WHITE*0.5); // half white door and half wall color
 	case TYPE_DRESSER:  return  get_textured_wood_color();
 	case TYPE_NIGHTSTAND:return get_textured_wood_color();
-	case TYPE_FLOORING: return texture_color(MARBLE_TEX).modulate_with(color);
+	case TYPE_FLOORING: return texture_color(get_flooring_texture(*this)).modulate_with(color);
 	case TYPE_CRATE:    return texture_color(get_crate_tid(*this)).modulate_with(color);
 	case TYPE_BOX:      return texture_color(get_box_tid()).modulate_with(color);
 	case TYPE_CUBICLE:  return texture_color(get_cubicle_tid(*this));
