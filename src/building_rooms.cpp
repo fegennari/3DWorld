@@ -858,8 +858,10 @@ bool building_t::add_bathroom_objs(rand_gen_t rgen, room_t const &room, float &z
 	bool const have_toilet(building_obj_model_loader.is_model_valid(OBJ_MODEL_TOILET)), have_sink(building_obj_model_loader.is_model_valid(OBJ_MODEL_SINK));
 	vect_room_object_t &objs(interior->room_geom->objs);
 
-	if (!is_house && (have_toilet || have_sink)) { // office with at least a toilet or sink - replace carpet with tile
-		zval       = add_flooring(room, zval, room_id, tot_light_amt, FLOORING_MARBLE); // move the effective floor up
+	if (have_toilet || have_sink) { // bathroom with at least a toilet or sink
+		// replace carpet/wood with marble/tile/concrete; basement floor may already be concrete, should we skip it in that case
+		int const flooring_type(is_house ? (is_basement ? (int)FLOORING_CONCRETE : (int)FLOORING_TILE) : (int)FLOORING_MARBLE);
+		zval       = add_flooring(room, zval, room_id, tot_light_amt, flooring_type); // move the effective floor up
 		objs_start = objs.size(); // exclude this from collision checks
 	}
 	if (have_toilet && room.is_office) { // office bathroom
@@ -1796,6 +1798,7 @@ bool building_t::add_rug_to_room(rand_gen_t rgen, cube_t const &room, float zval
 			rug.d[d][1] = center[d] + radius;
 		}
 		for (auto i = objs.begin() + objs_start; i != objs.end() && valid_placement; ++i) { // check for objects overlapping the rug
+			if (i->type == TYPE_FLOORING) continue; // allow placing rugs over flooring
 			if (!i->intersects(rug)) continue;
 
 			if (bldg_obj_types[i->type].attached) { // rugs can't overlap these object types; first, see if we can shrink the rug on one side and get it to fit
