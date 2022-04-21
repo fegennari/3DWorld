@@ -859,10 +859,12 @@ bool building_t::add_bathroom_objs(rand_gen_t rgen, room_t const &room, float &z
 	vect_room_object_t &objs(interior->room_geom->objs);
 
 	if (have_toilet || have_sink) { // bathroom with at least a toilet or sink
-		// replace carpet/wood with marble/tile/concrete; basement floor may already be concrete, should we skip it in that case
 		int const flooring_type(is_house ? (is_basement ? (int)FLOORING_CONCRETE : (int)FLOORING_TILE) : (int)FLOORING_MARBLE);
-		zval       = add_flooring(room, zval, room_id, tot_light_amt, flooring_type); // move the effective floor up
-		objs_start = objs.size(); // exclude this from collision checks
+		if (flooring_type == FLOORING_CONCRETE && get_material().basement_floor_tex.tid == get_concrete_tid()) {} // already concrete
+		else { // replace carpet/wood with marble/tile/concrete
+			zval       = add_flooring(room, zval, room_id, tot_light_amt, flooring_type); // move the effective floor up
+			objs_start = objs.size(); // exclude this from collision checks
+		}
 	}
 	if (have_toilet && room.is_office) { // office bathroom
 		float const room_dx(place_area.dx()), room_dy(place_area.dy());
