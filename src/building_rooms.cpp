@@ -970,6 +970,7 @@ bool building_t::add_bathroom_objs(rand_gen_t rgen, room_t const &room, float &z
 				c2.d[1][!ydir] += (ydir ? -1.0 : 1.0)*(  hdim  ? 1.1*shower_dx : 0.2*shower_dy);
 				if (overlaps_other_room_obj(c2, objs_start) || is_cube_close_to_doorway(c2, room, 0.0, 1)) continue; // bad placement
 				objs.emplace_back(c,  TYPE_SHOWER,  room_id, xdir, ydir, 0, tot_light_amt);
+				set_obj_id(objs); // selects tile texture/color
 				objs.emplace_back(c2, TYPE_BLOCKER, room_id, 0, 0, RO_FLAG_INVIS); // add blocker cube to ensure no other object overlaps this space
 				placed_obj = placed_shower = 1;
 				added_bathroom_objs_mask  |= PLACED_SHOWER;

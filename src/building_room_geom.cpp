@@ -851,20 +851,22 @@ void building_room_geom_t::add_mirror(room_object_t const &c) {
 
 void building_room_geom_t::add_shower(room_object_t const &c, float tscale) {
 	bool const xdir(c.dim), ydir(c.dir), dirs[2] = {xdir, ydir}; // placed in this corner
+	bool const tile_type2(c.obj_id & 1);
 	vector3d const sz(c.get_size());
 	float const signs[2] = {(xdir ? -1.0f : 1.0f), (ydir ? -1.0f : 1.0f)};
-	colorRGBA const color(apply_light_color(c));
+	colorRGBA tile_color(apply_light_color(c));
+	if (!tile_type2) {tile_color = tile_color.modulate_with(colorRGBA(0.8, 0.6, 0.4));} // darker/browner
 	// add tile material along walls and floor
 	int const skip_faces[2] = {(EF_Z1 | (xdir ? EF_X2 : EF_X1)), (EF_Z1 | (ydir ? EF_Y2 : EF_Y1))};
-	rgeom_mat_t &tile_mat(get_material(tid_nm_pair_t(get_texture_by_name("bathroom_tile.jpg"), 2.5*tscale), 0)); // no shadows
+	rgeom_mat_t &tile_mat(get_material(tid_nm_pair_t((tile_type2 ? TILE_TEX : get_texture_by_name("bathroom_tile.jpg")), 2.5*tscale), 0)); // no shadows
 	cube_t bottom(c), sides[2] = {c, c};
 	bottom.z2() = c.z1() + 0.025*sz.z;
-	tile_mat.add_cube_to_verts(bottom,   color, zero_vector, (skip_faces[0] | skip_faces[1]));
+	tile_mat.add_cube_to_verts(bottom, tile_color, zero_vector, (skip_faces[0] | skip_faces[1]));
 
 	for (unsigned d = 0; d < 2; ++d) {
 		sides[d].d[d][!dirs[d]] -= signs[d]*0.98*sz[d];
 		sides[d].z1() = bottom.z2();
-		tile_mat.add_cube_to_verts(sides[d], color, zero_vector, skip_faces[d]);
+		tile_mat.add_cube_to_verts(sides[d], tile_color, zero_vector, skip_faces[d]);
 	}
 	// add metal frame around glass
 	colorRGBA const metal_color(apply_light_color(c, GRAY));
