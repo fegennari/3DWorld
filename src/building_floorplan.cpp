@@ -546,7 +546,9 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 
 								if (is_bathroom) {rooms.back().assign_all_to(RTYPE_BATH);}
 								else if (is_ground_floor && div_room && r > 0) { // windowless room on ground floor, not at ext wall
-									if (rooms_per_side <= 2 || is_br_aisle) {utility_room_cands.push_back(rooms.size() - 1);} // next to the bathroom
+									if ((rooms_per_side <= 2) ? ((unsigned)i == (bathroom_ix) || (unsigned)i == (bathroom_ix+2)) : is_br_aisle) { // next to the bathroom
+										utility_room_cands.push_back(rooms.size() - 1);
+									}
 								}
 								if (add_sec_hall) { // add doorways + doors
 									float const doorway_pos(0.5f*(room_split_pos + next_split_pos)); // room center
