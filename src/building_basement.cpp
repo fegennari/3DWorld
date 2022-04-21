@@ -616,18 +616,16 @@ void building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 			if (fabs(val - centerline) < r_main) {pipe.p1[d] = pipe.p2[d] = centerline;} // shift to connect directly to main pipe since it's close enough
 			else {
 				float const lo(val - pipe.radius), hi(val + pipe.radius);
+				point p1(ref_p1), p2(p1);
 				
 				if (lo < range_min) { // on the lo side; check for valid connector extension
-					point p1(ref_p1), p2(p1);
-					p1[d] = lo; p2[d] = range_min;
-					if (has_bcube_int(pipe_t(p1, p2, radius, d, PIPE_CONN, 3).get_bcube(), obstacles)) continue; // blocked, can't connect
-					range_min = lo;
+					p1[d] = lo; p2[d] = range_min; range_min = lo;
 				}
 				else if (hi > range_max) { // on the hi side; check for valid connector extension
-					point p1(ref_p1), p2(p1);
-					p1[d] = range_max; p2[d] = hi;
-					if (has_bcube_int(pipe_t(p1, p2, radius, d, PIPE_CONN, 3).get_bcube(), obstacles)) continue; // blocked, can't connect
-					range_max = hi;
+					p1[d] = range_max; p2[d] = hi; range_max = hi;
+				}
+				if (has_bcube_int(pipe_t(p1, p2, radius, d, PIPE_CONN, 3).get_bcube(), obstacles)) { // blocked, can't connect
+					continue; // TODO: try shifting less or halfway?
 				}
 			}
 			pipe.connected = 1;
