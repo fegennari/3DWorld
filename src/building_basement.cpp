@@ -443,13 +443,17 @@ point get_closest_wall_pos(point const &pos, float radius, cube_t const &room, v
 
 float get_merged_pipe_radius(float r1, float r2, float exponent) {return pow((pow(r1, exponent) + pow(r2, exponent)), 1/exponent);}
 
-float get_merged_risers_radius(vect_riser_pos_t const &risers) {
+float get_merged_risers_radius(vect_riser_pos_t const &risers, int exclude_flow_dir=2) {
 	float radius(0.0);
-	for (riser_pos_t const &p : risers) {radius = get_merged_pipe_radius(radius, + p.radius, 4.0);} // higher exponent to avoid pipes that are too large
+	
+	for (riser_pos_t const &p : risers) {
+		if ((int)p.flow_dir == exclude_flow_dir) continue;
+		radius = get_merged_pipe_radius(radius, + p.radius, 4.0); // higher exponent to avoid pipes that are too large
+	}
 	return radius;
 }
 
-enum {PIPE_DRAIN=0, PIPE_CONN, PIPE_MAIN, PIPE_MEC, PIPE_EXIT, PIPE_FITTING};
+enum {PIPE_RISER=0, PIPE_CONN, PIPE_MAIN, PIPE_MEC, PIPE_EXIT, PIPE_FITTING};
 
 void expand_cube_except_in_dim(cube_t &c, float expand, unsigned not_dim) {
 	c.expand_by(expand);
@@ -463,7 +467,7 @@ struct pipe_t {
 	bool connected, outside_pg;
 
 	pipe_t(point const &p1_, point const &p2_, float radius_, unsigned dim_, unsigned type_, unsigned end_flags_) :
-		p1(p1_), p2(p2_), radius(radius_), dim(dim_), type(type_), end_flags(end_flags_), connected(type != PIPE_DRAIN), outside_pg(0) {}
+		p1(p1_), p2(p2_), radius(radius_), dim(dim_), type(type_), end_flags(end_flags_), connected(type != PIPE_RISER), outside_pg(0) {}
 	float get_length() const {return fabs(p2[dim] - p1[dim]);}
 
 	cube_t get_bcube() const {
@@ -486,14 +490,15 @@ void building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 {
 	if (risers.empty()) return; // can this happen?
 	float const FITTING_LEN(1.2), FITTING_RADIUS(1.1); // relative to radius
+	bool const is_hot_water(add_water_pipes == 2);
 	vect_room_object_t &objs(interior->room_geom->objs);
 	cube_t const &basement(get_basement());
-	float const r_main(get_merged_risers_radius(risers));
+	float const r_main(get_merged_risers_radius(risers, (is_hot_water ? 0 : 2))); // exclude incoming water from hot water heaters for hot water pipes
 	float const insul_thickness(0.5), min_insum_len(4.0); // both relative to pipe radius
 	float const window_vspacing(get_window_vspace()), fc_thickness(get_fc_thickness()), wall_thickness(get_wall_thickness());
 	float const pipe_zval(ceil_zval - FITTING_RADIUS*r_main); // includes clearance for fittings vs. beams (and lights - mostly)
 	float const align_dist(2.0*wall_thickness); // align pipes within this range (in particular sinks and stall toilets)
-	float const r_main_spacing(((add_water_pipes == 2) ? 1.0+insul_thickness : 1.0)*r_main); // include insulation thickness for hot water pipes
+	float const r_main_spacing((is_hot_water ? 1.0+insul_thickness : 1.0)*r_main); // include insulation thickness for hot water pipes
 	assert(pipe_zval > bcube.z1());
 	vector<pipe_t> pipes, fittings;
 	cube_t pipe_end_bcube;
@@ -505,7 +510,7 @@ void building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 	// determine if we need to add an entrance/exit pipe
 	bool add_exit_pipe(1);
 
-	if (add_water_pipes == 2) { // hot water pipes; sewer pipes always have an exit and cold water always has an entrance
+	if (is_hot_water) { // hot water pipes; sewer pipes always have an exit and cold water always has an entrance
 		for (riser_pos_t const &p : risers) {
 			if (p.flow_dir == 0) {add_exit_pipe = 0; break;} // hot water flowing out of a water heater
 		}
@@ -533,7 +538,7 @@ void building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 			break;
 		} // for n
 		if (!valid) continue; // no valid shift, skip this connection
-		pipes.emplace_back(point(pos.x, pos.y, pipe_zval), pos, p.radius, 2, PIPE_DRAIN, 0); // neither end capped
+		pipes.emplace_back(point(pos.x, pos.y, pipe_zval), pos, p.radius, 2, PIPE_RISER, 0); // neither end capped
 		pipe_end_bcube.assign_or_union_with_cube(pipes.back().get_bcube());
 		++num_valid;
 	} // for pipe_ends
@@ -737,7 +742,7 @@ void building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 	// add pipe objects: sewer: dark gray pipes / gray-brown fittings; water: copper pipes / brass fittings; hot water: white insulation
 	colorRGBA const pipes_color   (add_water_pipes ? COPPER_C : DK_GRAY);
 	colorRGBA const fittings_color(add_water_pipes ? BRASS_C  : colorRGBA(0.7, 0.6, 0.5, 1.0));
-	bool const add_insul(add_water_pipes == 2); // hot water pipes have insulation
+	bool const add_insul(is_hot_water); // hot water pipes have insulation
 	vect_cube_t insul_exclude;
 	pipe_cubes.reserve(pipe_cubes.size() + pipes.size());
 
@@ -757,7 +762,7 @@ void building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 
 		// add pipe fittings around ends and joins; only fittings have flat and round ends because raw pipe ends should never be exposed;
 		// note that we may not need fittings at T-junctions for hot water pipes, but then we would need to cap the ends
-		if (p.type == PIPE_DRAIN) continue; // not for vertical drain pipes, since they're so short and mostly hidden above the connector pipes
+		if (p.type == PIPE_RISER) continue; // not for vertical drain pipes, since they're so short and mostly hidden above the connector pipes
 		float const fitting_len(FITTING_LEN*p.radius), fitting_expand((FITTING_RADIUS - 1.0)*p.radius);
 
 		for (unsigned d = 0; d < 2; ++d) {
@@ -801,7 +806,7 @@ void building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 		vect_cube_t insulation, temp;
 
 		for (pipe_t const &p : pipes) {
-			if (!p.connected || p.outside_pg || p.type == PIPE_DRAIN) continue; // unconnected, outside, or drain, skip
+			if (!p.connected || p.outside_pg || p.type == PIPE_RISER) continue; // unconnected, outside, or drain, skip
 			float const min_len(min_insum_len*p.radius), radius_exp(insul_thickness*p.radius);
 			if (p.get_length() < min_len) continue; // length is too short
 			cube_t const pbc(p.get_bcube());
