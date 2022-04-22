@@ -1189,6 +1189,9 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t const &roo
 		}
 	} // for dir
 	// add a sign outside the bathroom door
+#if 0
+	add_door_sign((mens_room ? "Men" : "Women"), room, zval, room_id, tot_light_amt);
+#else
 	bool const shift_dir(room_center[br_dim] < part_center[br_dim]); // put the sign toward the outside of the building because there's more space and more light
 	float const door_width(br_door.get_sz_dim(br_dim));
 	cube_t sign(br_door);
@@ -1200,7 +1203,30 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t const &roo
 	objs.emplace_back(sign, TYPE_SIGN, room_id, !br_dim, sink_side, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CUBE, DK_BLUE); // technically should use hallway room_id
 	string const sign_text(mens_room ? "Men" : "Women");
 	objs.back().obj_id = register_sign_text(sign_text);
+#endif
 	return 1;
+}
+
+void building_t::add_door_sign(string const &text, room_t const &room, float zval, unsigned room_id, float tot_light_amt) {
+	float const floor_spacing(get_window_vspace()), wall_thickness(get_wall_thickness());
+	point const part_center(get_part_for_room(room).get_cube_center()), room_center(room.get_cube_center());
+	cube_t c(room);
+	set_cube_zvals(c, zval, zval+wall_thickness); // reduce to a small z strip for this floor to avoid picking up doors on floors above or below
+
+	for (auto i = interior->door_stacks.begin(); i != interior->door_stacks.end(); ++i) {
+		if (!is_cube_close_to_door(c, 0.0, 0, *i, 2)) continue; // check both dirs
+		// put the sign toward the outside of the building because there's more space and more light
+		bool const side(room_center[i->dim] < part_center[i->dim]), shift_dir(room_center[!i->dim] < part_center[!i->dim]);
+		float const door_width(i->get_width()), side_sign(side ? 1.0 : -1.0);
+		cube_t sign(*i);
+		set_cube_zvals(sign, zval+0.50*floor_spacing, zval+0.55*floor_spacing);
+		sign.translate_dim(!i->dim, (shift_dir ? -1.0 : 1.0)*0.8*door_width);
+		sign.expand_in_dim(!i->dim, -(0.45 - 0.03*min(text.size(), 6U))*door_width); // shrink a bit
+		sign.translate_dim( i->dim, side_sign*0.5*wall_thickness); // move to outside wall
+		sign.d[i->dim][side] += side_sign*0.1*wall_thickness; // make nonzero area
+		interior->room_geom->objs.emplace_back(sign, TYPE_SIGN, room_id, i->dim, side, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CUBE, DK_BLUE); // technically should use hallway room_id
+		interior->room_geom->objs.back().obj_id = register_sign_text(text);
+	} // for i
 }
 
 void add_door_if_blocker(cube_t const &door, cube_t const &room, bool inc_open, bool dir, bool hinge_side, vect_cube_t &blockers) {

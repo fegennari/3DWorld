@@ -643,6 +643,7 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 				unsigned const utility_room_ix(utility_room_cands[rand() % utility_room_cands.size()]);
 				assert(utility_room_ix < rooms.size());
 				rooms[utility_room_ix].assign_to(RTYPE_UTILITY, 0); // make this room a utility room on floor 0
+				// is there a way to make the door(s) to this room always closed? we would need to track door_ix for each door in utility_room_cands
 			}
 		} // end use_hallway
 

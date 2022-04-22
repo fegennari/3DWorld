@@ -109,7 +109,9 @@ bool building_t::add_office_utility_objs(rand_gen_t rgen, room_t const &room, fl
 	zval       = add_flooring(room, zval, room_id, tot_light_amt, FLOORING_CONCRETE); // add concreate and move the effective floor up
 	objs_start = interior->room_geom->objs.size(); // exclude this from collision checks
 	// for now, this is only the water heater; we may want to add other objects later
-	return add_water_heater(rgen, room, zval, room_id, tot_light_amt, objs_start);
+	if (!add_water_heater(rgen, room, zval, room_id, tot_light_amt, objs_start)) return 0;
+	add_door_sign("Utility", room, zval, room_id, tot_light_amt);
+	return 1;
 }
 
 vector3d building_t::get_parked_car_size() const {
