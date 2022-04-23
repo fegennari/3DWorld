@@ -1218,7 +1218,7 @@ void building_t::add_door_sign(string const &text, room_t const &room, float zva
 		cube_t sign(*i);
 		set_cube_zvals(sign, zval+0.50*floor_spacing, zval+0.55*floor_spacing);
 		sign.translate_dim(!i->dim, (shift_dir ? -1.0 : 1.0)*0.8*door_width);
-		sign.expand_in_dim(!i->dim, -(0.45 - 0.03*min(text.size(), 6U))*door_width); // shrink a bit
+		sign.expand_in_dim(!i->dim, -(0.45 - 0.03*min((unsigned)text.size(), 6U))*door_width); // shrink a bit
 		sign.translate_dim( i->dim, side_sign*0.5*wall_thickness); // move to outside wall
 		sign.d[i->dim][side] += side_sign*0.1*wall_thickness; // make nonzero area
 		interior->room_geom->objs.emplace_back(sign, TYPE_SIGN, room_id, i->dim, side, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CUBE, DK_BLUE); // technically should use hallway room_id
