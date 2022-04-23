@@ -1482,7 +1482,9 @@ bool building_t::add_library_objs(rand_gen_t rgen, room_t const &room, float zva
 		bool const added(add_bookcase_to_room(rgen, room, zval, room_id, tot_light_amt, objs_start, is_basement));
 		if (added) {++num_added;} else {break;}
 	}
-	return (num_added > 0);
+	if (num_added == 0) return 0;
+	if (!is_house) {add_door_sign("Library", room, zval, room_id, tot_light_amt);} // add office building library sign
+	return 1;
 }
 
 void gen_crate_sz(vector3d &sz, rand_gen_t &rgen, float window_vspacing) {
@@ -1590,6 +1592,7 @@ bool building_t::add_storage_objs(rand_gen_t rgen, room_t const &room, float zva
 		set_obj_id(objs); // used to select texture and box contents
 		if (++num_placed == num_crates) break; // we're done
 	} // for n
+	if (!is_house) {add_door_sign("Storage", room, zval, room_id, tot_light_amt);} // add office building storage room sign
 	return 1; // it's always a storage room, even if it's empty
 }
 
