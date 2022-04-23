@@ -2376,23 +2376,35 @@ void building_room_geom_t::add_water_heater(room_object_t const &c) {
 	metal_mat.add_vcylin_to_verts(top,  apply_light_color(c, DK_GRAY), 0, 1, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, 64); // top - draw top; ndiv=64
 	metal_mat.add_vcylin_to_verts(vent, apply_light_color(c, LT_GRAY), 0, 0, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, 16); // ndiv=16
 	metal_mat.add_vcylin_to_verts(cone, apply_light_color(c, LT_GRAY), 0, 0, 0, 0, 1.8, 0.0); // cone
+	if (!is_house) {get_metal_material(1, 0, 2, BRASS_C);} // make sure it exists in the materials
 	rgeom_mat_t &copper_mat(get_metal_material(1, 0, 2, COPPER_C)); // small=2 / detail
 	colorRGBA const copper_color(apply_light_color(c, COPPER_C));
-	unsigned const pipe_ndiv = 16;
+	bool const low_detail = 1;
+	unsigned const pipe_ndiv(low_detail ? 16 : 32);
 	
 	for (unsigned d = 0; d < 2; ++d) {
 		cube_t &pipe(pipes[d]);
 
 		if (!is_house) { // bend office building water pipes back down into the floor since routing is in the basement
-			float const bend_zval(pipe.zc());
+			float const bend_zval(pipe.zc()), pipe_len(0.92*radius);
 			pipe.z2() = bend_zval; // shorten; no longer reaches the ceiling
 			cube_t v_pipe(pipe);
 			v_pipe.z1() = c.z1(); // down to the floor
-			v_pipe.translate_dim(c.dim, (c.dir ? 1.0 : -1.0)*0.92*radius); // shift in front of water heater
-			point const top1(pipe.xc(), pipe.yc(), bend_zval), top2(v_pipe.xc(), v_pipe.yc(), bend_zval);
+			v_pipe.translate_dim(c.dim, (c.dir ? 1.0 : -1.0)*pipe_len); // shift in front of water heater
+			point const bends[2] = {point(pipe.xc(), pipe.yc(), bend_zval), point(v_pipe.xc(), v_pipe.yc(), bend_zval)};
 			copper_mat.add_vcylin_to_verts(v_pipe, copper_color, 0, 0, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, pipe_ndiv);
-			copper_mat.add_cylin_to_verts(top1, top2, pipe_radius, pipe_radius, copper_color, 0, 0, 0, 0, 1.0, 1.0, 0, pipe_ndiv);
-			// TODO: add brass fittings
+			copper_mat.add_cylin_to_verts(bends[0], bends[1], pipe_radius, pipe_radius, copper_color, 0, 0, 0, 0, 1.0, 1.0, 0, pipe_ndiv);
+			// add brass fittings
+			rgeom_mat_t &brass_mat(get_metal_material(1, 0, 2, BRASS_C )); // small=2 / detail
+			colorRGBA const brass_color(apply_light_color(c, BRASS_C));
+			float const fr(1.1*pipe_radius), extend(2.0*fr);
+			vector3d const delta((bends[0] - bends[1])*(extend/pipe_len));
+
+			for (unsigned f = 0; f < 2; ++f) {
+				brass_mat.add_sphere_to_verts(bends[f], vector3d(fr, fr, fr), brass_color, low_detail); // round part
+				brass_mat.add_cylin_to_verts(bends[f]-vector3d(0.0, 0.0, extend), bends[f], fr, fr, brass_color, 1, 0, 0, 0, 1.0, 1.0, 0, pipe_ndiv); // vertical
+				brass_mat.add_cylin_to_verts(bends[f]+(f ? 1.0 : -1.0)*delta,     bends[f], fr, fr, brass_color, 1, 0, 0, 0, 1.0, 1.0, 0, pipe_ndiv); // horizontal
+			}
 		}
 		copper_mat.add_vcylin_to_verts(pipe, copper_color, 0, 0, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, pipe_ndiv);
 	} // for d
