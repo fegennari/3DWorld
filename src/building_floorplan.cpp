@@ -280,6 +280,7 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 			hall = *p;
 			for (unsigned e = 0; e < 2; ++e) {hall.d[min_dim][e] = hall_wall_pos[e];}
 			vector<unsigned> utility_room_cands;
+			unsigned const doors_start(interior->doors.size());
 			
 			if (num_windows_od >= 7 && num_rooms >= 4) { // at least 7 windows (3 on each side of hallway)
 				float const min_hall_width(1.5f*doorway_width), max_hall_width(2.5f*doorway_width);
@@ -642,8 +643,15 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 			if (!utility_room_cands.empty()) {
 				unsigned const utility_room_ix(utility_room_cands[rand() % utility_room_cands.size()]);
 				assert(utility_room_ix < rooms.size());
-				rooms[utility_room_ix].assign_to(RTYPE_UTILITY, 0); // make this room a utility room on floor 0
-				// is there a way to make the door(s) to this room always closed? we would need to track door_ix for each door in utility_room_cands
+				room_t &utility_room(rooms[utility_room_ix]);
+				utility_room.assign_to(RTYPE_UTILITY, 0); // make this room a utility room on floor 0
+				cube_t test_cube(utility_room);
+				test_cube.expand_by_xy(wall_thick);
+				set_cube_zvals(test_cube, utility_room.z1()+floor_thickness, utility_room.z1()+window_vspacing-floor_thickness); // shrink to first floor
+
+				for (auto i = interior->doors.begin()+doors_start; i != interior->doors.end(); ++i) {
+					if (i->open && i->get_true_bcube().intersects(test_cube)) {i->open = 0;} // make sure door is closed
+				}
 			}
 		} // end use_hallway
 
