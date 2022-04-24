@@ -2370,14 +2370,14 @@ void building_room_geom_t::add_water_heater(room_object_t const &c) {
 	set_wall_width(box, c.get_center_dim(!c.dim), 0.2*radius, !c.dim);
 	box.d[c.dim][!c.dir] = front_pos - front_dir*0.10*radius; // back  of box
 	box.d[c.dim][ c.dir] = front_pos + front_dir*0.12*radius; // front of box
-	rgeom_mat_t &metal_mat(get_metal_material(1, 0, 2)); // small=2 / detail
+	rgeom_mat_t &metal_mat(get_metal_material(1, 0, 1)); // small=1
 	metal_mat.add_vcylin_to_verts(body, apply_light_color(c, GRAY   ), 0, 0, 0); // main body - draw sides only
 	metal_mat.add_vcylin_to_verts(pan,  apply_light_color(c, LT_GRAY), 1, 0, 1, 0, 1.0, 1.0, 1.0, 1.0, 0, 64); // bottom pan - two sided, with bottom; ndiv=64
 	metal_mat.add_vcylin_to_verts(top,  apply_light_color(c, DK_GRAY), 0, 1, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, 64); // top - draw top; ndiv=64
 	metal_mat.add_vcylin_to_verts(vent, apply_light_color(c, LT_GRAY), 0, 0, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, 16); // ndiv=16
 	metal_mat.add_vcylin_to_verts(cone, apply_light_color(c, LT_GRAY), 0, 0, 0, 0, 1.8, 0.0); // cone
-	if (!is_house) {get_metal_material(1, 0, 2, BRASS_C);} // make sure it exists in the materials
-	rgeom_mat_t &copper_mat(get_metal_material(1, 0, 2, COPPER_C)); // small=2 / detail
+	if (!is_house) {get_metal_material(1, 0, 1, BRASS_C);} // make sure it exists in the materials
+	rgeom_mat_t &copper_mat(get_metal_material(1, 0, 1, COPPER_C)); // small=1
 	colorRGBA const copper_color(apply_light_color(c, COPPER_C));
 	bool const low_detail = 1;
 	unsigned const pipe_ndiv(low_detail ? 16 : 32);
@@ -2395,7 +2395,7 @@ void building_room_geom_t::add_water_heater(room_object_t const &c) {
 			copper_mat.add_vcylin_to_verts(v_pipe, copper_color, 0, 0, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, pipe_ndiv);
 			copper_mat.add_cylin_to_verts(bends[0], bends[1], pipe_radius, pipe_radius, copper_color, 0, 0, 0, 0, 1.0, 1.0, 0, pipe_ndiv);
 			// add brass fittings
-			rgeom_mat_t &brass_mat(get_metal_material(1, 0, 2, BRASS_C )); // small=2 / detail
+			rgeom_mat_t &brass_mat(get_metal_material(1, 0, 1, BRASS_C )); // small=1
 			colorRGBA const brass_color(apply_light_color(c, BRASS_C));
 			float const fr(1.1*pipe_radius), extend(2.0*fr);
 			vector3d const delta((bends[0] - bends[1])*(extend/pipe_len));
@@ -2408,13 +2408,13 @@ void building_room_geom_t::add_water_heater(room_object_t const &c) {
 		}
 		copper_mat.add_vcylin_to_verts(pipe, copper_color, 0, 0, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, pipe_ndiv);
 	} // for d
-	get_untextured_material(1, 0, 2).add_cube_to_verts_untextured(box, apply_light_color(c, LT_GRAY)); // control box
+	get_untextured_material(1, 0, 1).add_cube_to_verts_untextured(box, apply_light_color(c, LT_GRAY)); // control box
 
 	if (is_house && (c.room_id & 1)) { // add sticker 50% of the time for houses
 		cube_t sticker(c);
 		sticker.expand_by_xy(0.005*radius);
 		set_cube_zvals(sticker, (c.z1() + 0.30*height), (c.z1() + 0.50*height));
-		rgeom_mat_t &sticker_mat(get_material(tid_nm_pair_t(get_texture_by_name("interiors/water_heater_sticker.jpg")), 0, 0, 2)); // no shadows, small=2 / detail
+		rgeom_mat_t &sticker_mat(get_material(tid_nm_pair_t(get_texture_by_name("interiors/water_heater_sticker.jpg")), 0, 0, 1)); // no shadows, small=1
 		sticker_mat.add_vcylin_to_verts(sticker, apply_light_color(c, LT_GRAY), 0, 0, 0, 0, 1.0, 1.0, 2.0); // sticker - draw sides only with scaled texture
 	}
 }
