@@ -694,6 +694,7 @@ void building_room_geom_t::create_detail_vbos(building_t const &building) {
 
 		switch (i->type) {
 		case TYPE_OUTLET:     add_outlet(*i); break;
+		case TYPE_VENT:       add_vent(*i); break;
 		case TYPE_SWITCH:     add_switch(*i, 1); break; // draw_detail_pass=0
 		case TYPE_PG_WALL:    add_parking_garage_wall(*i, tex_origin, wall_tex); break;
 		case TYPE_PARK_SPACE: add_parking_space(*i, tex_origin, wall_tex.tscale_x); break;
