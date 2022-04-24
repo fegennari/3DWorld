@@ -1843,6 +1843,10 @@ public:
 		unsigned const ret(check_line_coll(p1, p2, t, hit_bix, 0, 1)); // no_coll_pt=1; returns: 0=no hit, 1=hit side, 2=hit roof
 		if (ret == 0) return 0;
 		building_t const &b(get_building(hit_bix));
+
+		if (p1.x == p2.x && p1.y == p2.y && b.get_interior_color_at_xy(p1, color)) {
+			return 1; // vertical line (from map mode) hit the roof of a building with an interior
+		}
 		switch (ret) {
 		case 1: color = b.get_avg_side_color  (); break;
 		case 2: color = b.get_avg_roof_color  (); break;
