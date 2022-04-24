@@ -780,7 +780,7 @@ struct building_room_geom_t {
 	void add_window(room_object_t const &c, float tscale);
 	void add_crack(room_object_t const &c);
 	void add_switch(room_object_t const &c, bool draw_detail_pass);
-	void add_flat_textured_detail_wall_object(room_object_t const &c, int tid);
+	void add_flat_textured_detail_wall_object(room_object_t const &c, int tid, bool draw_z1_face);
 	void add_outlet(room_object_t const &c);
 	void add_vent(room_object_t const &c);
 	void add_plate(room_object_t const &c);
