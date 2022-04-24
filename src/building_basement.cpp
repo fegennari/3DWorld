@@ -40,7 +40,7 @@ void subtract_cubes_from_cube_split_in_dim(cube_t const &c, vect_cube_t const &s
 	} // for s
 }
 
-bool building_t::add_water_heater(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
+bool building_t::add_water_heaters(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
 	float const floor_spacing(get_window_vspace()), height(floor_spacing - get_floor_thickness());
 	float const radius((is_house ? 0.18 : 0.20)*height); // larger radius for office buildings
 	cube_t const room_bounds(get_walkable_room_bounds(room));
@@ -49,19 +49,34 @@ bool building_t::add_water_heater(rand_gen_t &rgen, room_t const &room, float zv
 	if (!place_area.is_strictly_normalized()) return 0; // too small to place water heater
 	vect_room_object_t &objs(interior->room_geom->objs);
 	point center(0.0, 0.0, zval);
+	bool first_xdir(rgen.rand_bool()), first_ydir(rgen.rand_bool()), first_dim(0);
 
+	if (is_house) { // random corner selection
+		first_dim = rgen.rand_bool();
+	}
+	else { // select corners furthest from the door (back wall)
+		first_dim = (room.dy() < room.dx()); // face the shorter dim for office buildings so that we can place longer rows
+		vect_door_stack_t const &doorways(get_doorways_for_room(room, zval));
+
+		for (auto i = doorways.begin(); i != doorways.end(); ++i) {
+			bool const dir(room.get_center_dim(i->dim) < i->get_center_dim(i->dim));
+			(i->dim ? first_ydir : first_xdir) = !dir; // opposite the door
+			//first_dim = i->dim; // place against back wall; too restrictive?
+		}
+	}
 	for (unsigned n = 0; n < 5; ++n) { // make 5 attempts to place a water heater - one in each corner and 1 along a random wall for variety
-		bool const dim(is_house ? rgen.rand_bool() : (room.dy() < room.dx())); // face the shorter dim for office buildings so that we can place longer rows
-		bool dir(0), xdir(0), ydir(0);
+		bool dim(0), dir(0), xdir(0), ydir(0);
 
 		if (n < 4) { // corner
-			xdir = rgen.rand_bool();
-			ydir = rgen.rand_bool();
+			dim  = (first_dim  ^ (n >= 2));
+			xdir = (first_xdir ^ bool(n & 1));
+			ydir = (first_ydir ^ bool(n & 1));
 			dir  = (dim ? ydir : xdir);
 			center.x = place_area.d[0][xdir];
 			center.y = place_area.d[1][ydir];
 		}
 		else { // wall
+			dim = rgen.rand_bool();
 			dir = rgen.rand_bool(); // choose a random wall
 			center[ dim] = place_area.d[dim][dir]; // against this wall
 			center[!dim] = rgen.rand_uniform(place_area.d[!dim][0], place_area.d[!dim][1]);
@@ -83,7 +98,7 @@ bool building_t::add_water_heater(rand_gen_t &rgen, room_t const &room, float zv
 			float tot_volume(0.0);
 			for (auto i = parts.begin(); i != get_real_parts_end(); ++i) {tot_volume += i->get_volume();}
 			tot_volume /= floor_spacing*floor_spacing*floor_spacing;
-			unsigned const max_wh(max(1, min(5, round_fp(tot_volume/1200.0))));
+			unsigned const max_wh(max(1, min(5, round_fp(tot_volume/1000.0))));
 
 			for (unsigned n = 1; n < max_wh; ++n) { // one has already been placed
 				c.translate(step);
@@ -101,7 +116,7 @@ bool building_t::add_water_heater(rand_gen_t &rgen, room_t const &room, float zv
 
 bool building_t::add_basement_utility_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
 	// for now, this is only the water heater; we may want to add a furnace, etc. later
-	return add_water_heater(rgen, room, zval, room_id, tot_light_amt, objs_start);
+	return add_water_heaters(rgen, room, zval, room_id, tot_light_amt, objs_start);
 }
 
 // Note: this function is here rather than in building_rooms.cpp because utility rooms are connected to utilities in the basement, and it's similar to the code above
@@ -109,7 +124,7 @@ bool building_t::add_office_utility_objs(rand_gen_t rgen, room_t const &room, fl
 	zval       = add_flooring(room, zval, room_id, tot_light_amt, FLOORING_CONCRETE); // add concreate and move the effective floor up
 	objs_start = interior->room_geom->objs.size(); // exclude this from collision checks
 	// for now, this is only the water heater; we may want to add other objects later
-	if (!add_water_heater(rgen, room, zval, room_id, tot_light_amt, objs_start)) return 0;
+	if (!add_water_heaters(rgen, room, zval, room_id, tot_light_amt, objs_start)) return 0;
 	add_door_sign("Utility", room, zval, room_id, tot_light_amt);
 	return 1;
 }
