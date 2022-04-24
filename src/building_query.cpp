@@ -887,18 +887,23 @@ bool building_t::get_interior_color_at_xy(point const &pos, colorRGBA &color) co
 	if (!interior || !is_simple_cube() || is_rotated()) return 0; // these cases aren't handled
 	bool const player_in_this_building(camera_in_building && player_building == this);
 	if (!player_in_this_building) return 0; // not currently handled; maybe could allow this if the zoom level is high enough
+	point pos2(pos); // set zval to the player's height if in this building, otherwise use the ground floor
+	pos2.z = (player_in_this_building ? camera_pos.z : (ground_floor_z1 + get_floor_thickness()));
 	bool cont_in_part(0);
 
 	for (auto i = parts.begin(); i != get_real_parts_end_inc_sec(); ++i) {
-		if (i->contains_pt_xy(pos)) {cont_in_part = 1; break;}
+		if (i->contains_pt(pos2)) {cont_in_part = 1; break;} // only check zval if player in building
 	}
 	if (!cont_in_part) return 0;
-	point pos2(pos); // set zval to the player's height if in this building, otherwise use the ground floor
-	pos2.z = (player_in_this_building ? camera_pos.z : (ground_floor_z1 + get_floor_thickness()));
 
 	for (unsigned d = 0; d < 2; ++d) { // // check walls
 		for (cube_t const &wall : interior->walls[d]) {
 			if (wall.contains_pt(pos2)) {color = WHITE; return 1;} // wall hit
+		}
+	}
+	if (player_in_this_building && has_room_geom()) { // check room objects; slow
+		for (room_object_t const &obj : interior->room_geom->objs) {
+			if (obj.contains_pt(pos2)) {color = obj.get_color(); return 1;} // return first object's color
 		}
 	}
 	color = (is_house ? LT_BROWN : GRAY); // floor
