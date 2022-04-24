@@ -1628,8 +1628,8 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 					} // for h
 				} // for d
 			}
+			float const prev_z1(e->z1()), shift((is_above ? -1.1 : 1.1)*fc_thick);
 			min_eq(e->z1(), extension.z1()); max_eq(e->z2(), extension.z2()); // perform extension in Z
-			float const shift((is_above ? -1.1 : 1.1)*fc_thick);
 			extension.z1() += shift; extension.z2() += shift; // also cut a hole in the lower ceiling/upper floor
 			holes.clear();
 			subtract_cube_from_cubes(extension, interior->ceilings);
@@ -1641,8 +1641,9 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 				landing.z1() -= fc_thick; // since we only captured floor cutouts, extend them downward to include the ceiling below
 				interior->landings.push_back(landing);
 			}
+			// find all intersecting rooms and set has_elevator flag
 			for (auto r = interior->rooms.begin(); r != interior->rooms.end(); ++r) {
-				if (r->intersects(cand_test)) {r->has_elevator = 1;} // find all intersecting rooms and set has_elevator flag
+				if (r->intersects(cand_test)) {++r->has_elevator;} // add another elevator
 			}
 		} // for p
 	} // for e

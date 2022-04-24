@@ -2502,12 +2502,15 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			set_cube_zvals(light, (light_z2 - light_thick), light_z2);
 			valid_lights.clear();
 
-			if (r->is_hallway && num_lights > 1) { // hallway: place a light on each side (of the stairs if they exist), and also between stairs and elevator if there are both
-				if (r->has_elevator && r->has_stairs == 255) {num_lights = 3;} // main hallway with elevator + stairs on all floors: we really should have 3 lights in this case
-				float const offset(((num_lights == 3) ? 0.3 : 0.2)*r->get_sz_dim(light_dim)); // closer to the ends in the 3 lights case
+			if (r->is_hallway && num_lights > 1) {
+				// hallway: place a light on each side (of the stairs if they exist), and also between stairs and elevator if there are both
+				if (r->has_elevator && r->has_stairs == 255) {max_eq(num_lights, (2U + r->has_elevator));} // main hallway with elevator + stairs on all floors; 3+ lights
+				min_eq(num_lights, 6U);
+				float const offsets[6] = {0.0, -0.2, -0.3, -0.36, -0.4, -0.43}, steps[6] = {0.0, 0.4, 0.3, 0.24, 0.2, 0.172}; // indexed by num_lights-1
+				float const hallway_len(r->get_sz_dim(light_dim));
 
 				for (unsigned d = 0; d < num_lights; ++d) {
-					float const delta((d == 2) ? 0.0 : (d ? -1.0 : 1.0)*offset); // last light is in the center
+					float const delta((offsets[num_lights-1] + d*steps[num_lights-1])*hallway_len);
 					cube_t hall_light(light);
 					hall_light.translate_dim(light_dim, delta);
 					try_place_light_on_ceiling(hall_light, *r, room_dim, fc_thick, 0, 0, valid_lights, rgen); // allow_rot=0, allow_mult=0

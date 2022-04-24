@@ -896,7 +896,8 @@ unsigned const NUM_RTYPE_SLOTS = 6; // enough for houses
 
 struct room_t : public cube_t {
 	uint8_t has_stairs; // per-floor bit mask; always set to 255 for stairs that span the entire room
-	bool has_elevator, has_center_stairs, no_geom, is_hallway, is_office, is_sec_bldg, interior;
+	uint8_t has_elevator; // number of elevators, usually either 0 or 1
+	bool has_center_stairs, no_geom, is_hallway, is_office, is_sec_bldg, interior;
 	uint8_t ext_sides; // sides that have exteriors, and likely windows (bits for x1, x2, y1, y2)
 	uint8_t part_id, num_lights;
 	room_type rtype[NUM_RTYPE_SLOTS]; // this applies to the first floor because some rooms can have variable per-floor assignment
