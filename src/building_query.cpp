@@ -883,6 +883,42 @@ unsigned building_t::check_line_coll(point const &p1, point const &p2, float &t,
 	return coll; // Note: no collisions with windows or doors, since they're colinear with walls; no collision with interior for now
 }
 
+class building_color_query_geom_cache_t {
+	struct cube_with_color_t : public cube_t {
+		colorRGBA color;
+		cube_with_color_t(cube_t const &cube, colorRGBA const &c) : cube_t(cube), color(c) {}
+	};
+	vector<cube_with_color_t> objs;
+	unsigned cur_frame;
+public:
+	building_color_query_geom_cache_t() : cur_frame(0) {}
+
+	void gen_objs(building_t const &building, float z1, float z2) {
+		if (cur_frame == frame_counter) return; // already handled by another thread
+		assert(building.has_room_geom());
+		objs.clear();
+
+		for (room_object_t const &obj : building.interior->room_geom->objs) {
+			if (obj.flags & RO_FLAG_INVIS) continue;
+			if (z1 < obj.z2() && z2 > obj.z1()) {objs.emplace_back(obj, obj.get_color());}
+		}
+		cur_frame = frame_counter;
+	}
+	bool query_objs(building_t const &building, point const &pos, colorRGBA &color) {
+		if (frame_counter != cur_frame) {
+			// the first thread to get here generates the objects; technically this isn't thread safe, but it's nonfatal if multiple threads do this due to a race
+#pragma omp critical(collect_building_objects)
+			gen_objs(building, pos.z, pos.z);
+		}
+		for (cube_with_color_t const &obj : objs) {
+			if (obj.contains_pt(pos)) {color = obj.color; return 1;} // return first object's color
+		}
+		return 0; // no hit
+	}
+};
+
+building_color_query_geom_cache_t building_color_query_geom_cache;
+
 bool building_t::get_interior_color_at_xy(point const &pos, colorRGBA &color) const {
 	if (!interior || !is_simple_cube() || is_rotated()) return 0; // these cases aren't handled
 	bool const player_in_this_building(camera_in_building && player_building == this);
@@ -902,9 +938,7 @@ bool building_t::get_interior_color_at_xy(point const &pos, colorRGBA &color) co
 		}
 	}
 	if (player_in_this_building && has_room_geom()) { // check room objects; slow
-		for (room_object_t const &obj : interior->room_geom->objs) {
-			if (obj.contains_pt(pos2)) {color = obj.get_color(); return 1;} // return first object's color
-		}
+		if (building_color_query_geom_cache.query_objs(*this, pos2, color)) return 1;
 	}
 	color = (is_house ? LT_BROWN : GRAY); // floor
 	return 1;
