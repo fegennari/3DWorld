@@ -902,48 +902,56 @@ public:
 		for (room_object_t const &obj : building.interior->room_geom->objs) {
 			if (obj.flags & RO_FLAG_INVIS) continue;
 			if (min(obj.dx(), obj.dy()) < sz_thresh) continue; // too small
-			if (obj.type == TYPE_BOOK || obj.type == TYPE_PLANT || obj.type == TYPE_RAILING || obj.type == TYPE_BOTTLE || obj.type == TYPE_PAPER || obj.type == TYPE_PAINTCAN ||
-				obj.type == TYPE_DRAIN || obj.type == TYPE_PLATE || obj.type == TYPE_LBASKET || obj.type == TYPE_PARK_SPACE || obj.type == TYPE_LAMP || obj.type == TYPE_CUP) continue;
+			if (obj.type == TYPE_BOOK || obj.type == TYPE_PLANT || obj.type == TYPE_RAILING || obj.type == TYPE_BOTTLE || obj.type == TYPE_PAPER ||
+				obj.type == TYPE_PAINTCAN || obj.type == TYPE_WBOARD || obj.type == TYPE_DRAIN || obj.type == TYPE_PLATE || obj.type == TYPE_LBASKET ||
+				obj.type == TYPE_PARK_SPACE || obj.type == TYPE_LAMP || obj.type == TYPE_CUP || obj.type == TYPE_LAPTOP || obj.type == TYPE_LG_BALL) continue;
 			if (z1 < obj.z2() && z2 > obj.z1()) {objs.emplace_back(obj, obj.get_color());}
 		}
 		cur_frame = frame_counter;
 	}
-	bool query_objs(building_t const &building, point const &pos, colorRGBA &color) {
+	bool query_objs(building_t const &building, point const &pos, float z1, float z2, colorRGBA &color) {
 		if (frame_counter != cur_frame) {
-			float const z1(pos.z - CAMERA_RADIUS - camera_zh), z2(pos.z); // approx span of player height
 			// the first thread to get here generates the objects; is this always thread safe?
 #pragma omp critical(collect_building_objects)
 			gen_objs(building, z1, z2);
 		}
-		for (cube_with_color_t const &obj : objs) {
-			if (obj.contains_pt_xy(pos)) {color = obj.color; return 1;} // return first object's color; zval is already checked
+		float zmax(z1);
+
+		for (cube_with_color_t const &obj : objs) { // return topmost object; zval is already checked
+			if (obj.contains_pt_xy(pos) && obj.z2() > zmax) {color = obj.color; zmax = obj.z2();}
 		}
-		return 0; // no hit
+		return (zmax > z1);
 	}
 };
 
 building_color_query_geom_cache_t building_color_query_geom_cache;
 
-bool building_t::get_interior_color_at_xy(point const &pos, colorRGBA &color) const {
+bool building_t::get_interior_color_at_xy(point const &pos_in, colorRGBA &color) const {
 	if (!interior || !is_simple_cube() || is_rotated()) return 0; // these cases aren't handled
 	bool const player_in_this_building(camera_in_building && player_building == this);
 	if (!player_in_this_building) return 0; // not currently handled; maybe could allow this if the zoom level is high enough
-	point pos2(pos); // set zval to the player's height if in this building, otherwise use the ground floor
-	pos2.z = (player_in_this_building ? camera_pos.z : (ground_floor_z1 + get_floor_thickness()));
+	point pos(pos_in); // set zval to the player's height if in this building, otherwise use the ground floor
+	pos.z = (player_in_this_building ? camera_pos.z : (ground_floor_z1 + get_floor_thickness()));
 	bool cont_in_part(0);
 
 	for (auto i = parts.begin(); i != get_real_parts_end_inc_sec(); ++i) {
-		if (i->contains_pt(pos2)) {cont_in_part = 1; break;} // only check zval if player in building
+		if (i->contains_pt(pos)) {cont_in_part = 1; break;} // only check zval if player in building
 	}
 	if (!cont_in_part) return 0;
 
-	for (unsigned d = 0; d < 2; ++d) { // // check walls
+	for (unsigned d = 0; d < 2; ++d) { // check walls
 		for (cube_t const &wall : interior->walls[d]) {
-			if (wall.contains_pt(pos2)) {color = WHITE; return 1;} // wall hit
+			if (wall.contains_pt(pos)) {color = WHITE; return 1;} // wall hit
 		}
 	}
+	float const z1(pos.z - CAMERA_RADIUS - camera_zh), z2(z1 + get_window_vspace() - get_floor_thickness()); // approx span of one floor
+	// what about cars, using TYPE_PARK_SPACE?
+
+	for (person_t const &p : interior->people) { // check people (drawn in red)
+		if (dist_xy_less_than(p.pos, pos, 0.6*p.radius) && p.get_z1() < z2 && p.get_z2() > z1) {color = RED; return 1;}
+	}
 	if (player_in_this_building && has_room_geom()) { // check room objects; slow
-		if (building_color_query_geom_cache.query_objs(*this, pos2, color)) return 1;
+		if (building_color_query_geom_cache.query_objs(*this, pos, z1, z2, color)) return 1;
 	}
 	color = (is_house ? LT_BROWN : GRAY); // floor
 	return 1;
