@@ -886,7 +886,8 @@ unsigned building_t::check_line_coll(point const &p1, point const &p2, float &t,
 class building_color_query_geom_cache_t {
 	struct cube_with_color_t : public cube_t {
 		colorRGBA color;
-		cube_with_color_t(cube_t const &cube, colorRGBA const &c) : cube_t(cube), color(c) {}
+		bool is_round;
+		cube_with_color_t(cube_t const &cube, colorRGBA const &c, bool is_round_) : cube_t(cube), color(c), is_round(is_round_) {}
 	};
 	vector<cube_with_color_t> objs;
 	unsigned cur_frame;
@@ -905,7 +906,7 @@ public:
 			if (obj.type == TYPE_BOOK || obj.type == TYPE_PLANT || obj.type == TYPE_RAILING || obj.type == TYPE_BOTTLE || obj.type == TYPE_PAPER ||
 				obj.type == TYPE_PAINTCAN || obj.type == TYPE_WBOARD || obj.type == TYPE_DRAIN || obj.type == TYPE_PLATE || obj.type == TYPE_LBASKET ||
 				obj.type == TYPE_PARK_SPACE || obj.type == TYPE_LAMP || obj.type == TYPE_CUP || obj.type == TYPE_LAPTOP || obj.type == TYPE_LG_BALL) continue;
-			if (z1 < obj.z2() && z2 > obj.z1()) {objs.emplace_back(obj, obj.get_color());}
+			if (z1 < obj.z2() && z2 > obj.z1()) {objs.emplace_back(obj, obj.get_color(), (obj.shape == SHAPE_CYLIN || obj.shape == SHAPE_SPHERE));}
 		}
 		cur_frame = frame_counter;
 	}
@@ -918,7 +919,10 @@ public:
 		float zmax(z1);
 
 		for (cube_with_color_t const &obj : objs) { // return topmost object; zval is already checked
-			if (obj.contains_pt_xy(pos) && obj.z2() > zmax) {color = obj.color; zmax = obj.z2();}
+			if (!obj.contains_pt_xy(pos) || obj.z2() <= zmax) continue;
+			if (obj.is_round && !dist_xy_less_than(pos, obj.get_cube_center(), 0.5*obj.dx())) continue; // handle cylinders and spheres
+			color = obj.color;
+			zmax  = obj.z2();
 		}
 		return (zmax > z1);
 	}
