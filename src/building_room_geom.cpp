@@ -3031,7 +3031,7 @@ colorRGBA room_object_t::get_color() const {
 	case TYPE_CRATE:    return texture_color(get_crate_tid(*this)).modulate_with(color);
 	case TYPE_BOX:      return texture_color(get_box_tid()).modulate_with(color);
 	case TYPE_CUBICLE:  return texture_color(get_cubicle_tid(*this));
-	case TYPE_SHELVES:  return (WHITE*0.75 + get_textured_wood_color()*0.25); // mostly white walls (sparse), with some wood mixed in
+	case TYPE_SHELVES:  return get_textured_wood_color();
 	case TYPE_KEYBOARD: return BKGRAY;
 	case TYPE_COMPUTER: return BKGRAY;
 	case TYPE_MWAVE:    return GRAY;
