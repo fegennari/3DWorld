@@ -897,21 +897,26 @@ public:
 		if (cur_frame == frame_counter) return; // already handled by another thread
 		assert(building.has_room_geom());
 		objs.clear();
+		float const sz_thresh(0.5*building.get_wall_thickness());
 
 		for (room_object_t const &obj : building.interior->room_geom->objs) {
 			if (obj.flags & RO_FLAG_INVIS) continue;
+			if (min(obj.dx(), obj.dy()) < sz_thresh) continue; // too small
+			if (obj.type == TYPE_BOOK || obj.type == TYPE_PLANT || obj.type == TYPE_RAILING || obj.type == TYPE_BOTTLE || obj.type == TYPE_PAPER || obj.type == TYPE_PAINTCAN ||
+				obj.type == TYPE_DRAIN || obj.type == TYPE_PLATE || obj.type == TYPE_LBASKET || obj.type == TYPE_PARK_SPACE || obj.type == TYPE_LAMP || obj.type == TYPE_CUP) continue;
 			if (z1 < obj.z2() && z2 > obj.z1()) {objs.emplace_back(obj, obj.get_color());}
 		}
 		cur_frame = frame_counter;
 	}
 	bool query_objs(building_t const &building, point const &pos, colorRGBA &color) {
 		if (frame_counter != cur_frame) {
-			// the first thread to get here generates the objects; technically this isn't thread safe, but it's nonfatal if multiple threads do this due to a race
+			float const z1(pos.z - CAMERA_RADIUS - camera_zh), z2(pos.z); // approx span of player height
+			// the first thread to get here generates the objects; is this always thread safe?
 #pragma omp critical(collect_building_objects)
-			gen_objs(building, pos.z, pos.z);
+			gen_objs(building, z1, z2);
 		}
 		for (cube_with_color_t const &obj : objs) {
-			if (obj.contains_pt(pos)) {color = obj.color; return 1;} // return first object's color
+			if (obj.contains_pt_xy(pos)) {color = obj.color; return 1;} // return first object's color; zval is already checked
 		}
 		return 0; // no hit
 	}
