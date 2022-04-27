@@ -1312,6 +1312,7 @@ bool building_t::check_line_coll_expand(point const &p1, point const &p2, float 
 			if (!line_bcube.intersects(*c) || !line_int_cube_exp(p1, p2, get_true_room_obj_bcube(*c), expand)) continue;
 
 			if (c->shape == SHAPE_CYLIN) { // vertical cylinder
+				if (!is_house && c->type == TYPE_WHEATER) return 1; // office building water heaters have pipes into the floor, more than a cylinder, so use their bcubes
 				cylinder_3dw cylin(c->get_cylinder());
 				cylin.p1.z -= hheight; cylin.p2.z += hheight; // extend top and bottom
 				cylin.r1   += radius ; cylin.r2   += radius;
