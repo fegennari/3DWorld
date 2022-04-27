@@ -1389,6 +1389,11 @@ car_t car_from_parking_space(room_object_t const &o) {
 	car.set_bcube(point(center.x, center.y, o.z1()), get_nom_car_size());
 	return car;
 }
+pair<cube_t, colorRGBA> car_bcube_color_from_parking_space(room_object_t const &o) {
+	car_t const car(car_from_parking_space(o));
+	// TODO: need to call car_manager_t::assign_car_model_size_color() to get the correct color, but that's expensive and we don't have the car_manager here
+	return make_pair(car.bcube, car.get_color());
+}
 bool check_cube_occluded(cube_t const &cube, vect_cube_t const &occluders, point const &viewer) {
 	if (occluders.empty()) return 0;
 	point pts[8];

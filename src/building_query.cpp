@@ -20,6 +20,7 @@ cylinder_3dw get_railing_cylinder(room_object_t const &c);
 room_object_t get_desk_top_back(room_object_t const &c, cube_t const &top);
 bool sphere_vert_cylin_intersect_with_ends(point &center, float radius, cylinder_3dw const &c, vector3d *cnorm);
 void register_in_closed_bathroom_stall();
+pair<cube_t, colorRGBA> car_bcube_color_from_parking_space(room_object_t const &o);
 
 
 bool building_t::check_bcube_overlap_xy(building_t const &b, float expand_rel, float expand_abs, vector<point> &points) const {
@@ -883,30 +884,63 @@ unsigned building_t::check_line_coll(point const &p1, point const &p2, float &t,
 	return coll; // Note: no collisions with windows or doors, since they're colinear with walls; no collision with interior for now
 }
 
+unsigned const OBJS_GRID_SZ = 4;
+
 class building_color_query_geom_cache_t {
 	struct cube_with_color_t : public cube_t {
 		colorRGBA color;
 		bool is_round;
 		cube_with_color_t(cube_t const &cube, colorRGBA const &c, bool is_round_) : cube_t(cube), color(c), is_round(is_round_) {}
 	};
-	vector<cube_with_color_t> objs;
-	unsigned cur_frame;
-public:
-	building_color_query_geom_cache_t() : cur_frame(0) {}
+	vector<cube_with_color_t> objs[OBJS_GRID_SZ*OBJS_GRID_SZ];
+	cube_t bcube;
+	float gxy_inv[2] = {};
+	unsigned cur_frame = 0;
 
+	void add_obj(cube_with_color_t const &obj) {
+		unsigned gix[2][2] = {}; // {x,y}, {lo,hi}
+
+		for (unsigned d = 0; d < 2; ++d) {
+			for (unsigned e = 0; e < 2; ++e) {gix[d][e] = min(OBJS_GRID_SZ-1U, unsigned(max(0.0f, (obj.d[d][e] - bcube.d[d][0])*gxy_inv[d])));}
+		}
+		for (unsigned y = gix[1][0]; y <= gix[1][1]; ++y) {
+			for (unsigned x = gix[0][0]; x <= gix[0][1]; ++x) {objs[y*OBJS_GRID_SZ + x].push_back(obj);}
+		}
+	}
+public:
 	void gen_objs(building_t const &building, float z1, float z2) {
 		if (cur_frame == frame_counter) return; // already handled by another thread
 		assert(building.has_room_geom());
-		objs.clear();
+		for (unsigned n = 0; n < OBJS_GRID_SZ*OBJS_GRID_SZ; ++n) {objs[n].clear();}
+		bcube = building.bcube;
+		for (unsigned d = 0; d < 2; ++d) {gxy_inv[d] = OBJS_GRID_SZ/bcube.get_sz_dim(d);}
 		float const sz_thresh(0.5*building.get_wall_thickness());
 
-		for (room_object_t const &obj : building.interior->room_geom->objs) {
-			if (obj.flags & RO_FLAG_INVIS) continue;
-			if (min(obj.dx(), obj.dy()) < sz_thresh) continue; // too small
-			if (obj.type == TYPE_BOOK || obj.type == TYPE_PLANT || obj.type == TYPE_RAILING || obj.type == TYPE_BOTTLE || obj.type == TYPE_PAPER ||
-				obj.type == TYPE_PAINTCAN || obj.type == TYPE_WBOARD || obj.type == TYPE_DRAIN || obj.type == TYPE_PLATE || obj.type == TYPE_LBASKET ||
-				obj.type == TYPE_PARK_SPACE || obj.type == TYPE_LAMP || obj.type == TYPE_CUP || obj.type == TYPE_LAPTOP || obj.type == TYPE_LG_BALL) continue;
-			if (z1 < obj.z2() && z2 > obj.z1()) {objs.emplace_back(obj, obj.get_color(), (obj.shape == SHAPE_CYLIN || obj.shape == SHAPE_SPHERE));}
+		for (unsigned d = 0; d < 2; ++d) { // add walls
+			for (cube_t const &wall : building.interior->walls[d]) {
+				if (z1 < wall.z2() && z2 > wall.z1()) {add_obj(cube_with_color_t(wall, WHITE, 0));} // is_round=0
+			}
+		}
+		for (person_t const &p : building.interior->people) { // add people (drawn in red)
+			cube_t const bcube(p.get_bcube());
+			if (z1 < bcube.z2() && z2 > bcube.z1()) {add_obj(cube_with_color_t(bcube, RED, 1));} // is_round=1
+		}
+		if (building.has_room_geom()) {
+			for (room_object_t const &obj : building.interior->room_geom->objs) { // add room objects
+				if (obj.flags & RO_FLAG_INVIS) continue;
+				if (min(obj.dx(), obj.dy()) < sz_thresh) continue; // too small
+				if (obj.type == TYPE_BOOK || obj.type == TYPE_PLANT || obj.type == TYPE_RAILING || obj.type == TYPE_BOTTLE || obj.type == TYPE_PAPER ||
+					obj.type == TYPE_PAINTCAN || obj.type == TYPE_WBOARD || obj.type == TYPE_DRAIN || obj.type == TYPE_PLATE || obj.type == TYPE_LBASKET ||
+					obj.type == TYPE_LAMP || obj.type == TYPE_CUP || obj.type == TYPE_LAPTOP || obj.type == TYPE_LG_BALL) continue;
+				if (z1 > obj.z2() || z2 < obj.z1()) continue; // zval test
+
+				if (obj.type == TYPE_PARK_SPACE) {
+					if (!obj.is_used()) continue; // no car in this space
+					pair<cube_t, colorRGBA> const ret(car_bcube_color_from_parking_space(obj)); // Note: currently always white
+					add_obj(cube_with_color_t(ret.first, ret.second, 0)); // is_round=0
+				}
+				else {add_obj(cube_with_color_t(obj, obj.get_color(), (obj.shape == SHAPE_CYLIN || obj.shape == SHAPE_SPHERE)));}
+			} // for obj
 		}
 		cur_frame = frame_counter;
 	}
@@ -917,8 +951,10 @@ public:
 			gen_objs(building, z1, z2);
 		}
 		float zmax(z1);
+		unsigned gix[2]; // {x,y}
+		for (unsigned d = 0; d < 2; ++d) {gix[d] = min(OBJS_GRID_SZ-1U, unsigned(max(0.0f, (pos[d] - bcube.d[d][0])*gxy_inv[d])));}
 
-		for (cube_with_color_t const &obj : objs) { // return topmost object; zval is already checked
+		for (cube_with_color_t const &obj : objs[OBJS_GRID_SZ*gix[1] + gix[0]]) { // return topmost object; zval is already checked
 			if (!obj.contains_pt_xy(pos) || obj.z2() <= zmax) continue;
 			if (obj.is_round && !dist_xy_less_than(pos, obj.get_cube_center(), 0.5*obj.dx())) continue; // handle cylinders and spheres
 			color = obj.color;
@@ -942,21 +978,8 @@ bool building_t::get_interior_color_at_xy(point const &pos_in, colorRGBA &color)
 		if (i->contains_pt(pos)) {cont_in_part = 1; break;} // only check zval if player in building
 	}
 	if (!cont_in_part) return 0;
-
-	for (unsigned d = 0; d < 2; ++d) { // check walls
-		for (cube_t const &wall : interior->walls[d]) {
-			if (wall.contains_pt(pos)) {color = WHITE; return 1;} // wall hit
-		}
-	}
-	float const z1(pos.z - CAMERA_RADIUS - camera_zh), z2(z1 + get_window_vspace() - get_floor_thickness()); // approx span of one floor
-	// what about cars, using TYPE_PARK_SPACE?
-
-	for (person_t const &p : interior->people) { // check people (drawn in red)
-		if (dist_xy_less_than(p.pos, pos, 0.6*p.radius) && p.get_z1() < z2 && p.get_z2() > z1) {color = RED; return 1;}
-	}
-	if (player_in_this_building && has_room_geom()) { // check room objects; slow
-		if (building_color_query_geom_cache.query_objs(*this, pos, z1, z2, color)) return 1;
-	}
+	float const z1(pos.z - CAMERA_RADIUS), z2(z1 + get_window_vspace() - get_floor_thickness()); // approx span of one floor
+	if (building_color_query_geom_cache.query_objs(*this, pos, z1, z2, color)) return 1;
 	color = (is_house ? LT_BROWN : GRAY); // floor
 	return 1;
 }
