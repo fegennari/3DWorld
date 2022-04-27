@@ -215,7 +215,7 @@ float get_obj_value(room_object_t const &obj) {
 		unsigned const num_bills(round_fp(obj.dz()/(0.01*obj.get_length())));
 		value *= num_bills;
 	}
-	if (obj.flags & RO_FLAG_USED) {value = 0.01*floor(50.0*value);} // used objects have half value, rounded down to the nearest cent
+	if (obj.is_used()) {value = 0.01*floor(50.0*value);} // used objects have half value, rounded down to the nearest cent
 	return value;
 }
 float get_obj_weight(room_object_t const &obj) {

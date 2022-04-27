@@ -1427,7 +1427,7 @@ void building_t::draw_cars_in_building(shader_t &s, vector3d const &xlate, bool 
 		assert(obj.type == TYPE_PARK_SPACE); // must be a parking space
 
 		// skip if viewer is in this building and on a different floor
-		if ((obj.flags & RO_FLAG_USED) && (!player_in_this_building || !check_occlusion || !has_int_garage ||
+		if (obj.is_used() && (!player_in_this_building || !check_occlusion || !has_int_garage ||
 			int((viewer.z - bcube.z1())/floor_spacing) == int((obj.z2() - bcube.z1())/floor_spacing)))
 		{
 			car_t car(car_from_parking_space(obj));
@@ -1443,8 +1443,7 @@ void building_t::draw_cars_in_building(shader_t &s, vector3d const &xlate, bool 
 
 		// start at walls, since parking spaces are added after those
 		for (auto i = (objs.begin() + pg_wall_start); i != objs_end; ++i) {
-			if (i->type != TYPE_PARK_SPACE) continue;
-			if (!(i->flags & RO_FLAG_USED)) continue; // no car in this space
+			if (i->type != TYPE_PARK_SPACE || !i->is_used()) continue; // not a space, or no car in this space
 			if (i->z2() < viewer.z - 2.0*floor_spacing) continue; // move than a floor below - skip
 			car_t car(car_from_parking_space(*i));
 			if (!shadow_only && check_occlusion && viewer.z > ground_floor_z1 && !line_intersect_stairs_or_ramp(viewer, car.get_center())) continue;
