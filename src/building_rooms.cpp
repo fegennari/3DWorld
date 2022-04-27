@@ -2150,6 +2150,10 @@ void building_t::add_outlets_to_room(rand_gen_t rgen, room_t const &room, float 
 	} // for wall
 }
 
+void building_t::add_vent_to_room(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned objs_start) {
+	// TODO
+}
+
 bool building_t::check_of_placed_on_interior_wall(cube_t const &c, room_t const &room, bool dim, bool dir) const {
 	if (!has_small_part && (is_house || !room.is_hallway)) return 1; // check not needed in this case, any non-door location is a wall
 	float const wall_thickness(get_wall_thickness()), wall_face(c.d[dim][dir]);
@@ -2713,6 +2717,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			}
 			add_outlets_to_room(rgen, *r, room_center.z, room_id, objs_start, is_ground_floor, is_basement);
 			if (has_light) {add_light_switches_to_room(rgen, *r, room_center.z, room_id, objs_start, is_ground_floor);} // add a light switch if this room has a light
+			if (!is_house && !r->is_hallway) {add_vent_to_room(rgen, *r, room_center.z, room_id, objs_start);} // office building vents
 			// pictures and whiteboards must not be placed behind anything, excluding trashcans; so we add them here
 			bool const can_hang((is_house || !(is_bathroom || is_kitchen || no_whiteboard)) && !is_storage); // no whiteboards in office bathrooms or kitchens
 			bool const was_hung(can_hang && hang_pictures_in_room(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, is_basement));
