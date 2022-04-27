@@ -2060,7 +2060,7 @@ void building_t::add_light_switches_to_room(rand_gen_t rgen, room_t const &room,
 					if (overlaps_other_room_obj(c_test, objs_start))        continue;
 					if (is_cube_close_to_doorway(c, room, 0.0, (ei==1), 1)) continue; // inc_open=1/check_open_dir=1 for inside, to avoid placing light switch behind an open door
 					if (interior->is_blocked_by_stairs_or_elevator(c))      continue; // check stairs and elevators
-					if (!check_of_placed_on_interior_wall(c, room, dim, dir)) continue; // ensure the switch is on a wall
+					if (!check_if_placed_on_interior_wall(c, room, dim, dir)) continue; // ensure the switch is on a wall
 					objs.emplace_back(c, TYPE_SWITCH, room_id, dim, dir, RO_FLAG_NOCOLL, 1.0); // dim/dir matches wall; fully lit
 					done = 1; // done, only need to add one for this door
 					++num_ls;
@@ -2143,18 +2143,17 @@ void building_t::add_outlets_to_room(rand_gen_t rgen, room_t const &room, float 
 			if (d.get_true_bcube().intersects(c_exp)) {bad_place = 1; break;}
 		}
 		if (bad_place) continue;
-		if (!check_of_placed_on_interior_wall(c, room, dim, dir)) continue; // ensure the outlet is on a wall
-		// Note: it may be more efficient to have outlets be stored as static quads rather than objects, since there's currently no player or AI interaction with them;
-		// in fact, maybe wall trim should be the same way since there's so much of it?
+		if (!check_if_placed_on_interior_wall(c, room, dim, dir)) continue; // ensure the outlet is on a wall
 		interior->room_geom->objs.emplace_back(c, TYPE_OUTLET, room_id, dim, dir, RO_FLAG_NOCOLL, 1.0); // dim/dir matches wall; fully lit
 	} // for wall
 }
 
-void building_t::add_vent_to_room(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned objs_start) {
+bool building_t::add_vent_to_room(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned objs_start) {
 	// TODO
+	return 0; // failed
 }
 
-bool building_t::check_of_placed_on_interior_wall(cube_t const &c, room_t const &room, bool dim, bool dir) const {
+bool building_t::check_if_placed_on_interior_wall(cube_t const &c, room_t const &room, bool dim, bool dir) const {
 	if (!has_small_part && (is_house || !room.is_hallway)) return 1; // check not needed in this case, any non-door location is a wall
 	float const wall_thickness(get_wall_thickness()), wall_face(c.d[dim][dir]);
 	cube_t test_cube(c);
