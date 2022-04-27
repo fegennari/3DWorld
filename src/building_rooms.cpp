@@ -2149,7 +2149,38 @@ void building_t::add_outlets_to_room(rand_gen_t rgen, room_t const &room, float 
 }
 
 bool building_t::add_vent_to_room(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned objs_start) {
-	// TODO
+	float const wall_thickness(get_wall_thickness()), ceiling_zval(zval + get_window_vspace() - get_floor_thickness());
+	float const thickness(0.1*wall_thickness), height(3.0*wall_thickness), hwidth(2.5*wall_thickness), min_wall_spacing(1.5*hwidth);
+	cube_t const room_bounds(get_walkable_room_bounds(room));
+	if (min(room_bounds.dx(), room_bounds.dy()) < 3.0*min_wall_spacing) return 0; // room is too small; shouldn't happen
+	vect_door_stack_t const &doorways(get_doorways_for_room(room, zval));
+	cube_t c;
+	c.z2() = ceiling_zval - 0.25*height;
+	c.z1() = c.z2() - height;
+
+	for (unsigned n = 0; n < 100; ++n) { // 100 tries
+		bool const dim(rgen.rand_bool()), dir(rgen.rand_bool());
+		if (classify_room_wall(room, zval, dim, dir, 0) == ROOM_WALL_EXT) continue; // skip exterior walls
+		float const wall_pos(rgen.rand_uniform((room_bounds.d[!dim][0] + min_wall_spacing), (room_bounds.d[!dim][1] - min_wall_spacing)));
+		float const wall_face(room_bounds.d[dim][dir]);
+		c.d[dim][ dir] = wall_face; // flush with wall
+		c.d[dim][!dir] = wall_face + (dir ? -1.0 : 1.0)*thickness; // expand out a bit
+		set_wall_width(c, wall_pos, hwidth, !dim);
+		cube_t c_exp(c);
+		c_exp.expand_by_xy(0.5*wall_thickness);
+		c_exp.d[dim][!dir] += (dir ? -1.0 : 1.0)*hwidth; // add some clearance in front
+		if (overlaps_other_room_obj(c_exp, objs_start, 1))     continue; // check for things like closets; check_all=1 to inc whiteboards; excludes picture frames
+		if (interior->is_blocked_by_stairs_or_elevator(c_exp)) continue; // check stairs and elevators
+		bool bad_place(0);
+
+		for (auto const &d : doorways) {
+			if (d.get_true_bcube().intersects(c_exp)) {bad_place = 1; break;}
+		}
+		if (bad_place) continue;
+		if (!check_if_placed_on_interior_wall(c, room, dim, dir)) continue; // ensure the vent is on a wall; is this really needed?
+		interior->room_geom->objs.emplace_back(c, TYPE_VENT, room_id, dim, dir, RO_FLAG_NOCOLL, 1.0); // dim/dir matches wall; fully lit
+		return 1; // done
+	} // for n
 	return 0; // failed
 }
 
