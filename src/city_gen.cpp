@@ -3005,6 +3005,7 @@ public:
 	}
 	void draw_roads(int trans_op_mask, vector3d const &xlate) {road_gen.draw(trans_op_mask, xlate, enable_lights(), 0);} // shadow_only=0
 	void draw_car_in_pspace(car_t &car, shader_t &s, vector3d const &xlate, bool shadow_only) {car_manager.draw_car_in_pspace(car, s, xlate, shadow_only);}
+	void set_car_model_color(car_t &car) {car_manager.set_car_model_color(car);}
 	void gen_and_draw_people_in_building(building_t &building, ped_draw_vars_t const &pdv) {ped_manager.gen_and_draw_people_in_building(building, pdv);}
 	void draw_player_model(shader_t &s, vector3d const &xlate, bool shadow_only) {ped_manager.draw_player_model(s, xlate, shadow_only);}
 
@@ -3161,4 +3162,5 @@ void free_city_context() {city_gen.free_context();}
 bool has_city_trees() {return (city_params.max_trees_per_plot > 0);}
 vector3d get_nom_car_size() {return city_params.get_nom_car_size();}
 void draw_car_in_pspace(car_t &car, shader_t &s, vector3d const &xlate, bool shadow_only) {city_gen.draw_car_in_pspace(car, s, xlate, shadow_only);}
+void set_car_model_color(car_t &car) {city_gen.set_car_model_color(car);}
 

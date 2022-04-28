@@ -27,6 +27,7 @@ unsigned get_num_screenshot_tids();
 tid_nm_pair_t get_phone_tex(room_object_t const &c);
 template< typename T > void gen_quad_ixs(vector<T> &ixs, unsigned size, unsigned ix_offset);
 void draw_car_in_pspace(car_t &car, shader_t &s, vector3d const &xlate, bool shadow_only);
+void set_car_model_color(car_t &car);
 
 bool has_key_3d_model() {return building_obj_model_loader.is_model_valid(OBJ_MODEL_KEY);}
 
@@ -1390,8 +1391,8 @@ car_t car_from_parking_space(room_object_t const &o) {
 	return car;
 }
 pair<cube_t, colorRGBA> car_bcube_color_from_parking_space(room_object_t const &o) {
-	car_t const car(car_from_parking_space(o));
-	// TODO: need to call car_manager_t::assign_car_model_size_color() to get the correct color, but that's expensive and we don't have the car_manager here
+	car_t car(car_from_parking_space(o));
+	set_car_model_color(car);
 	return make_pair(car.bcube, car.get_color());
 }
 bool check_cube_occluded(cube_t const &cube, vect_cube_t const &occluders, point const &viewer) {

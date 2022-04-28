@@ -777,6 +777,7 @@ public:
 	void helicopters_next_frame(float car_speed);
 	bool check_helicopter_coll(cube_t const &bc) const;
 	void draw(int trans_op_mask, vector3d const &xlate, bool use_dlights, bool shadow_only, bool is_dlight_shadows);
+	void set_car_model_color(car_t &car);
 	void draw_car_in_pspace(car_t &car, shader_t &s, vector3d const &xlate, bool shadow_only);
 	void add_car_headlights(vector3d const &xlate, cube_t &lights_bcube) {dstate.add_car_headlights(cars, xlate, lights_bcube);}
 	void free_context() {car_model_loader.free_context(); helicopter_model_loader.free_context();}

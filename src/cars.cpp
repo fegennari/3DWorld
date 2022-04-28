@@ -1353,13 +1353,16 @@ void car_manager_t::draw_helicopters(bool shadow_only) {
 }
 
 // for house garages and building parking garages
-void car_manager_t::draw_car_in_pspace(car_t &car, shader_t &s, vector3d const &xlate, bool shadow_only) {
-	float const draw_dist(shadow_only ? camera_pdu.far_ : 0.05*get_draw_tile_dist());
-	if (!dist_less_than(camera_pdu.pos, (car.get_center() + xlate), draw_dist)) return; // distance culling
+void car_manager_t::set_car_model_color(car_t &car) {
 	rand_gen_t rgen;
 	rgen.set_state(123*car.cur_seg, car.cur_seg+1); // random seed is stored in car.cur_seg
 	rgen.rand(); // mix it up better
 	assign_car_model_size_color(car, rgen, 1); // is_in_garage=1
+}
+void car_manager_t::draw_car_in_pspace(car_t &car, shader_t &s, vector3d const &xlate, bool shadow_only) {
+	float const draw_dist(shadow_only ? camera_pdu.far_ : 0.05*get_draw_tile_dist());
+	if (!dist_less_than(camera_pdu.pos, (car.get_center() + xlate), draw_dist)) return; // distance culling
+	set_car_model_color(car);
 	
 	if (car_model_loader.is_model_valid(car.model_id)) { // else error?
 		vector3d dir(zero_vector);
