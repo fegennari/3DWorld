@@ -40,6 +40,35 @@ void gen_sound_thread_safe(unsigned id, point const &pos, float gain, float pitc
 
 float get_radius_for_room_light(room_object_t const &obj);
 
+bool is_motion_detected(point const &activator, cube_t const &light, cube_t const &room, float floor_spacing) {
+	return (room.contains_pt(activator) && activator.z < light.z1() && activator.z > (light.z2() - floor_spacing));
+}
+
+void building_t::run_light_motion_detect_logic(point const &camera_bs) {
+	if (is_house || !interior) return; // office buildings only
+	float const floor_spacing(get_window_vspace());
+	auto objs_end(interior->room_geom->get_placed_objs_end()); // skip buttons/stairs/elevators
+
+	for (auto i = interior->room_geom->objs.begin(); i != objs_end; ++i) {
+		if (i->type != TYPE_LIGHT || !(i->flags & RO_FLAG_IS_ACTIVE)) continue; // not a light, or not motion activated
+
+		if (i->is_lit()) {
+			// TODO: turn off after some period of time
+			continue;
+		}
+		else {
+			assert(i->room_id < interior->rooms.size());
+			room_t const &room(interior->rooms[i->room_id]);
+			bool activated(is_motion_detected(camera_bs, *i, room, floor_spacing));
+			for (auto p = interior->people.begin(); p != interior->people.end() && !activated; ++p) {activated |= is_motion_detected(p->pos, *i, room, floor_spacing);}
+			if (!activated) continue;
+		}
+		i->toggle_lit_state();
+		set_obj_lit_state_to(i->room_id, i->z2(), i->is_lit());
+		register_light_state_change(*i, i->get_cube_center());
+	} // for i
+}
+
 // Note: called by the player; closest_to is in building space, not camera space
 bool building_t::toggle_room_light(point const &closest_to, bool sound_from_closest_to, int room_id, bool inc_lamps, bool closet_light) {
 	if (!has_room_geom()) return 0; // error?
@@ -84,10 +113,14 @@ void building_t::toggle_light_object(room_object_t const &light, point const &so
 		if (i->z2() != light.z2()) continue; // Note: uses light z2 rather than z1 so that thin lights near doors are handled correctly
 		i->toggle_lit_state(); // Note: doesn't update indir lighting
 		if (i->type == TYPE_LAMP)  continue; // lamps don't affect room object ambient lighting, and don't require regenerating the vertex data, so skip the step below
-		set_obj_lit_state_to(light.room_id, light.z2(), i->is_lit()); // update object lighting flags as well
+		if (!updated) {set_obj_lit_state_to(light.room_id, light.z2(), i->is_lit());} // update object lighting flags as well, for first light
 		updated = 1;
 	} // for i
-	if (updated) {interior->room_geom->clear_and_recreate_lights();} // recreate light geom with correct emissive properties
+	if (!updated) return; // can we get here?
+	register_light_state_change(light, sound_pos);
+}
+void building_t::register_light_state_change(room_object_t const &light, point const &sound_pos) {
+	interior->room_geom->clear_and_recreate_lights(); // recreate light geom with correct emissive properties; deferred until next draw pass
 	gen_sound_thread_safe(SOUND_CLICK, local_to_camera_space(sound_pos));
 	register_building_sound(sound_pos, 0.1);
 	//interior->room_geom->modified_by_player = 1; // should light state always be preserved?
