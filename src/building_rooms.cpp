@@ -1869,10 +1869,11 @@ int building_t::check_valid_picture_placement(room_t const &room, cube_t const &
 	float const wall_thickness(get_wall_thickness()), clearance(4.0*wall_thickness), side_clearance(1.0*wall_thickness);
 	cube_t tc(c), keepout(c);
 	tc.expand_in_dim(!dim, 0.1*width); // expand slightly to account for frame
-	keepout.z1() = zval; // extend to the floor
+	//keepout.z1() = zval; // extend to the floor
+	keepout.z1() -= 0.1*c.dz(); // more padding on the bottom
 	keepout.d[dim][!dir] += (dir ? -1.0 : 1.0)*clearance;
 	keepout.expand_in_dim(!dim, side_clearance); // make sure there's space for the frame
-	if (overlaps_other_room_obj(keepout, objs_start)) return 0;
+	if (overlaps_other_room_obj(keepout, objs_start, 1)) return 0; // check_all=1, to include outlets, vents, etc.
 	bool const inc_open(!is_house && !room.is_office);
 	if (is_cube_close_to_doorway(tc, room, 0.0, inc_open)) return 0; // bad placement
 	// Note: it's not legal to guard the below check with (room.has_stairs || room.has_elevator) because room.has_stairs may not be set for stack connector stairs that split a wall
@@ -1919,7 +1920,7 @@ bool building_t::hang_pictures_in_room(rand_gen_t rgen, room_t const &room, floa
 	bool was_hung(0);
 
 	if (!is_house || room.is_office) { // add whiteboards
-		if (rgen.rand_float() < 0.2) return 0; // skip 20% of the time
+		if (rgen.rand_float() < 0.1) return 0; // skip 10% of the time
 		bool const pref_dim(rgen.rand_bool()), pref_dir(rgen.rand_bool());
 		float const floor_thick(get_floor_thickness());
 
@@ -1930,14 +1931,20 @@ bool building_t::hang_pictures_in_room(rand_gen_t rgen, room_t const &room, floa
 				cube_t c(room);
 				set_cube_zvals(c, zval+0.25*floor_height, zval+0.9*floor_height-floor_thick);
 				c.d[dim][!dir] = c.d[dim][dir] + (dir ? -1.0 : 1.0)*0.6*wall_thickness; // Note: offset by an additional half wall thickness
-				c.expand_in_dim(!dim, -0.2*room.get_sz_dim(!dim)); // xy_space
-				if (!check_valid_picture_placement(room, c, 0.6*room.get_sz_dim(!dim), zval, dim, dir, objs_start)) continue;
+				float const room_len(room.get_sz_dim(!dim));
+				c.expand_in_dim(!dim, -0.2*room_len); // xy_space
+				
+				if (!check_valid_picture_placement(room, c, 0.6*room_len, zval, dim, dir, objs_start)) {
+					c.expand_in_dim(!dim, -0.1*room_len); // shrink a bit and try again
+					if (!check_valid_picture_placement(room, c, 0.4*room_len, zval, dim, dir, objs_start)) continue;
+				}
 				objs.emplace_back(c, TYPE_WBOARD, room_id, dim, !dir, RO_FLAG_NOCOLL, tot_light_amt); // whiteboard faces dir opposite the wall
 				return 1; // done, only need to add one
 			} // for dir
 		} // for dim
 		return 0;
 	}
+	// add pictures
 	for (unsigned dim = 0; dim < 2; ++dim) {
 		for (unsigned dir = 0; dir < 2; ++dir) {
 			float const wall_pos(room.d[dim][dir]);
@@ -2125,7 +2132,6 @@ void building_t::add_outlets_to_room(rand_gen_t rgen, room_t const &room, float 
 		}
 		cube_t c_exp(c);
 		c_exp.expand_by_xy(0.5*wall_thickness);
-		// Note: outlets can still be partially blocked by picture frames; I guess this is okay?
 		if (overlaps_other_room_obj(c_exp, objs_start, 1))     continue; // check for things like closets; check_all=1 to include blinds
 		if (interior->is_blocked_by_stairs_or_elevator(c_exp)) continue; // check stairs and elevators
 		bool bad_place(0);
@@ -2150,16 +2156,17 @@ void building_t::add_outlets_to_room(rand_gen_t rgen, room_t const &room, float 
 
 bool building_t::add_vent_to_room(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned objs_start) {
 	float const wall_thickness(get_wall_thickness()), ceiling_zval(zval + get_window_vspace() - get_floor_thickness());
-	float const thickness(0.1*wall_thickness), height(3.0*wall_thickness), hwidth(2.5*wall_thickness), min_wall_spacing(1.5*hwidth);
+	float const thickness(0.1*wall_thickness), height(2.5*wall_thickness), hwidth(2.0*wall_thickness), min_wall_spacing(1.5*hwidth);
 	cube_t const room_bounds(get_walkable_room_bounds(room));
 	if (min(room_bounds.dx(), room_bounds.dy()) < 3.0*min_wall_spacing) return 0; // room is too small; shouldn't happen
+	bool const pref_dim(room.dx() < room.dy()); // shorter dir, to make it less likely to conflict with whiteboards
 	vect_door_stack_t const &doorways(get_doorways_for_room(room, zval));
 	cube_t c;
-	c.z2() = ceiling_zval - 0.25*height;
+	c.z2() = ceiling_zval - 0.1*height;
 	c.z1() = c.z2() - height;
 
 	for (unsigned n = 0; n < 100; ++n) { // 100 tries
-		bool const dim(rgen.rand_bool()), dir(rgen.rand_bool());
+		bool const dim((n < 10) ? pref_dim : rgen.rand_bool()), dir(rgen.rand_bool());
 		if (classify_room_wall(room, zval, dim, dir, 0) == ROOM_WALL_EXT) continue; // skip exterior walls
 		float const wall_pos(rgen.rand_uniform((room_bounds.d[!dim][0] + min_wall_spacing), (room_bounds.d[!dim][1] - min_wall_spacing)));
 		float const wall_face(room_bounds.d[dim][dir]);
@@ -2171,10 +2178,15 @@ bool building_t::add_vent_to_room(rand_gen_t rgen, room_t const &room, float zva
 		c_exp.d[dim][!dir] += (dir ? -1.0 : 1.0)*hwidth; // add some clearance in front
 		if (overlaps_other_room_obj(c_exp, objs_start, 1))     continue; // check for things like closets; check_all=1 to inc whiteboards; excludes picture frames
 		if (interior->is_blocked_by_stairs_or_elevator(c_exp)) continue; // check stairs and elevators
+		cube_t door_test_cube(c_exp);
+		door_test_cube.expand_in_dim(!dim, 0.25*hwidth); // not too close to doors
 		bool bad_place(0);
 
 		for (auto const &d : doorways) {
-			if (d.get_true_bcube().intersects(c_exp)) {bad_place = 1; break;}
+			bool const dir(d.get_check_dirs());
+			cube_t door_bcube(d.get_true_bcube());
+			if (door_opens_inward(d, room)) {door_bcube.d[!d.dim][dir] += (dir ? 1.0 : -1.0)*d.get_width();} // include open door
+			if (door_bcube.intersects(door_test_cube)) {bad_place = 1; break;}
 		}
 		if (bad_place) continue;
 		if (!check_if_placed_on_interior_wall(c, room, dim, dir)) continue; // ensure the vent is on a wall; is this really needed?
