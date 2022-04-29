@@ -1934,9 +1934,15 @@ bool building_t::hang_pictures_in_room(rand_gen_t rgen, room_t const &room, floa
 				float const room_len(room.get_sz_dim(!dim));
 				c.expand_in_dim(!dim, -0.2*room_len); // xy_space
 				
-				if (!check_valid_picture_placement(room, c, 0.6*room_len, zval, dim, dir, objs_start)) {
-					c.expand_in_dim(!dim, -0.1*room_len); // shrink a bit and try again
-					if (!check_valid_picture_placement(room, c, 0.4*room_len, zval, dim, dir, objs_start)) continue;
+				if (!check_valid_picture_placement(room, c, 0.6*room_len, zval, dim, dir, objs_start)) { // fails wide/tall placement
+					cube_t c_prev(c);
+					c.expand_in_dim(!dim, -0.1*room_len); // shrink width a bit and try again
+					
+					if (!check_valid_picture_placement(room, c, 0.4*room_len, zval, dim, dir, objs_start)) { // fails narrow/tall placement
+						c = c_prev;
+						c.z2() -= 0.15*c.dz(); // shrink height and try again with wide placement
+						if (!check_valid_picture_placement(room, c, 0.6*room_len, zval, dim, dir, objs_start)) continue; // give up/fail
+					}
 				}
 				objs.emplace_back(c, TYPE_WBOARD, room_id, dim, !dir, RO_FLAG_NOCOLL, tot_light_amt); // whiteboard faces dir opposite the wall
 				return 1; // done, only need to add one
