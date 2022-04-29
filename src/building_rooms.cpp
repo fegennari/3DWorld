@@ -2544,6 +2544,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			unsigned flags(RO_FLAG_NOCOLL); // no collision detection with lights
 			if (is_lit)     {flags |= RO_FLAG_LIT | RO_FLAG_EMISSIVE;}
 			if (has_stairs) {flags |= RO_FLAG_RSTAIRS;}
+			if (!is_house && has_pri_hall() && r->is_office) {flags |= RO_FLAG_IS_ACTIVE;} // large office building office; enable motion detection for lights
 			// add a light to the ceiling of this room if there's space (always for top of stairs);
 			set_cube_zvals(light, (light_z2 - light_thick), light_z2);
 			valid_lights.clear();

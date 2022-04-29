@@ -628,6 +628,8 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 	ped_bcubes.clear();
 
 	if (camera_in_building) {
+		run_light_motion_detect_logic(camera_bs);
+
 		for (auto i = parts.begin(); i != get_real_parts_end_inc_sec(); ++i) {
 			if (i->contains_pt(camera_rot)) {camera_part = (i - parts.begin()); break;}
 		}

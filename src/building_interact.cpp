@@ -53,14 +53,18 @@ void building_t::run_light_motion_detect_logic(point const &camera_bs) {
 		if (i->type != TYPE_LIGHT || !(i->flags & RO_FLAG_IS_ACTIVE)) continue; // not a light, or not motion activated
 
 		if (i->is_lit()) {
-			// TODO: turn off after some period of time
+			// TODO: turn off after some period of time?
 			continue;
 		}
 		else {
 			assert(i->room_id < interior->rooms.size());
 			room_t const &room(interior->rooms[i->room_id]);
 			bool activated(is_motion_detected(camera_bs, *i, room, floor_spacing));
-			for (auto p = interior->people.begin(); p != interior->people.end() && !activated; ++p) {activated |= is_motion_detected(p->pos, *i, room, floor_spacing);}
+
+			for (auto p = interior->people.begin(); p != interior->people.end() && !activated; ++p) {
+				if (p->is_waiting_or_stopped()) continue; // skip if stopped/waiting
+				activated |= is_motion_detected(p->pos, *i, room, floor_spacing);
+			}
 			if (!activated) continue;
 		}
 		i->toggle_lit_state();
