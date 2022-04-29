@@ -928,7 +928,7 @@ public:
 		if (building.has_room_geom()) {
 			for (room_object_t const &obj : building.interior->room_geom->objs) { // add room objects
 				if (obj.flags & RO_FLAG_INVIS) continue;
-				if (min(obj.dx(), obj.dy()) < sz_thresh) continue; // too small
+				if (obj.type != TYPE_PIPE && min(obj.dx(), obj.dy()) < sz_thresh) continue; // too small; exclude pipes
 				if (obj.type == TYPE_BOOK || obj.type == TYPE_PLANT || obj.type == TYPE_RAILING || obj.type == TYPE_BOTTLE || obj.type == TYPE_PAPER ||
 					obj.type == TYPE_PAINTCAN || obj.type == TYPE_WBOARD || obj.type == TYPE_DRAIN || obj.type == TYPE_PLATE || obj.type == TYPE_LBASKET ||
 					obj.type == TYPE_LAMP || obj.type == TYPE_CUP || obj.type == TYPE_LAPTOP || obj.type == TYPE_LG_BALL) continue;
@@ -940,7 +940,7 @@ public:
 					pair<cube_t, colorRGBA> const ret(car_bcube_color_from_parking_space(obj)); // Note: currently always white
 					add_obj(cube_with_color_t(ret.first, ret.second, 0)); // is_round=0
 				}
-				else {add_obj(cube_with_color_t(obj, obj.get_color(), (obj.shape == SHAPE_CYLIN || obj.shape == SHAPE_SPHERE)));}
+				else {add_obj(cube_with_color_t(obj, obj.get_color(), ((obj.shape == SHAPE_CYLIN || obj.shape == SHAPE_SPHERE) && obj.type != TYPE_PIPE)));}
 			} // for obj
 		}
 		cur_frame = frame_counter;
