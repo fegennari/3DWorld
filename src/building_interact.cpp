@@ -51,21 +51,22 @@ void building_t::run_light_motion_detect_logic(point const &camera_bs) {
 
 	for (auto i = interior->room_geom->objs.begin(); i != objs_end; ++i) {
 		if (i->type != TYPE_LIGHT || !(i->flags & RO_FLAG_IS_ACTIVE)) continue; // not a light, or not motion activated
+		assert(i->room_id < interior->rooms.size());
+		room_t const &room(interior->rooms[i->room_id]);
+		bool activated(is_motion_detected(camera_bs, *i, room, floor_spacing));
+		float &off_time(i->light_amt); // store auto off time in the light_amt field
 
-		if (i->is_lit()) {
-			// TODO: turn off after some period of time?
-			continue;
+		for (auto p = interior->people.begin(); p != interior->people.end() && !activated; ++p) {
+			if (p->is_waiting_or_stopped()) continue; // skip if stopped/waiting
+			activated |= is_motion_detected(p->pos, *i, room, floor_spacing);
+		}
+		if (activated) {
+			off_time = tfticks + 10.0*TICKS_PER_SECOND; // automatically turn off 10s since last activation
+			if (i->is_lit()) continue; // stays lit - no change
 		}
 		else {
-			assert(i->room_id < interior->rooms.size());
-			room_t const &room(interior->rooms[i->room_id]);
-			bool activated(is_motion_detected(camera_bs, *i, room, floor_spacing));
-
-			for (auto p = interior->people.begin(); p != interior->people.end() && !activated; ++p) {
-				if (p->is_waiting_or_stopped()) continue; // skip if stopped/waiting
-				activated |= is_motion_detected(p->pos, *i, room, floor_spacing);
-			}
-			if (!activated) continue;
+			if (!i->is_lit())       continue; // already off, and stays off
+			if (tfticks < off_time) continue; // already on, and not yet time to switch off
 		}
 		i->toggle_lit_state();
 		set_obj_lit_state_to(i->room_id, i->z2(), i->is_lit());
@@ -116,6 +117,7 @@ void building_t::toggle_light_object(room_object_t const &light, point const &so
 		if ((light.flags & RO_FLAG_IN_CLOSET) != (i->flags & RO_FLAG_IN_CLOSET)) continue; // closet + room light are toggled independently
 		if (i->z2() != light.z2()) continue; // Note: uses light z2 rather than z1 so that thin lights near doors are handled correctly
 		i->toggle_lit_state(); // Note: doesn't update indir lighting
+		i->flags &= ~RO_FLAG_IS_ACTIVE; // disable motion detection feature if the player manually switches lights off
 		if (i->type == TYPE_LAMP)  continue; // lamps don't affect room object ambient lighting, and don't require regenerating the vertex data, so skip the step below
 		if (!updated) {set_obj_lit_state_to(light.room_id, light.z2(), i->is_lit());} // update object lighting flags as well, for first light
 		updated = 1;

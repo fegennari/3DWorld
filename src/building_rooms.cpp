@@ -2529,22 +2529,27 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				} // for s
 			}
 			int light_obj_ix(-1);
-			unsigned num_lights(r->num_lights);
+			unsigned num_lights(r->num_lights), flags(RO_FLAG_NOCOLL); // no collision detection with lights
 			float const light_z2(z + floor_height - fc_thick + light_delta_z);
-			// 50% of lights are on, 75% for top of stairs, 100% for hallways, 100% for parking garages
-			is_lit = (r->is_hallway || is_parking_garage || ((rgen.rand() & (top_of_stairs ? 3 : 1)) != 0));
 
-			if (!is_lit) { // check people and set is_lit if anyone is in this floor of this room
-				for (person_t const &p : interior->people) {
-					cube_t const bc(p.get_bcube());
-					if (!bc.intersects_xy(*r)) continue; // person not in this room
-					if (bc.z2() < light_z2 && bc.z1() + floor_height > light_z2) {is_lit = 1; break;} // on this floor
+			// motion detection lights for large office building office; limit to interior rooms so that we still have some lit rooms viewed through windows
+			if (!is_house && has_pri_hall() && r->is_office && r->interior) {
+				flags |= RO_FLAG_IS_ACTIVE; // leave unlit and enable motion detection for lights
+			}
+			else {
+				// 50% of lights are on, 75% for top of stairs, 100% for hallways, 100% for parking garages
+				is_lit = (r->is_hallway || is_parking_garage || ((rgen.rand() & (top_of_stairs ? 3 : 1)) != 0));
+
+				if (!is_lit) { // check people and set is_lit if anyone is in this floor of this room
+					for (person_t const &p : interior->people) {
+						cube_t const bc(p.get_bcube());
+						if (!bc.intersects_xy(*r)) continue; // person not in this room
+						if (bc.z2() < light_z2 && bc.z1() + floor_height > light_z2) {is_lit = 1; break;} // on this floor
+					}
 				}
 			}
-			unsigned flags(RO_FLAG_NOCOLL); // no collision detection with lights
 			if (is_lit)     {flags |= RO_FLAG_LIT | RO_FLAG_EMISSIVE;}
 			if (has_stairs) {flags |= RO_FLAG_RSTAIRS;}
-			if (!is_house && has_pri_hall() && r->is_office) {flags |= RO_FLAG_IS_ACTIVE;} // large office building office; enable motion detection for lights
 			// add a light to the ceiling of this room if there's space (always for top of stairs);
 			set_cube_zvals(light, (light_z2 - light_thick), light_z2);
 			valid_lights.clear();
