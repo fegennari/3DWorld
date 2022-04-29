@@ -16,6 +16,7 @@ struct city_model_t {
 	int blade_mat_id; // for helicopters
 	int model3d_id; // index into model3ds vector; -1 is not set
 	float xy_rot, lod_mult, scale; // xy_rot in degrees
+	colorRGBA custom_color;
 	vector<unsigned> shadow_mat_ids;
 
 	city_model_t() : valid(0), swap_xz(0), swap_yz(1), two_sided(0), body_mat_id(-1), fixed_color_id(-1), recalc_normals(1),

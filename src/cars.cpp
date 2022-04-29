@@ -31,6 +31,14 @@ void car_t::set_bcube(point const &center, vector3d const &sz) {
 	bcube.expand_by_xy(0.5*(dim ? vector3d(sz.y, sz.x, sz.z) : sz)); // swap size X and Y when dim==1
 	bcube.z2() += height; // set height
 }
+colorRGBA const &car_t::get_color() const {
+	if (color_id == 255) { // custom color from car model file
+		assert(model_id < city_params.car_model_files.size());
+		return city_params.car_model_files[model_id].custom_color;
+	}
+	assert(color_id < NUM_CAR_COLORS);
+	return car_colors[color_id];
+}
 bool car_t::headlights_on() const { // no headlights when parked
 	return (engine_running && (in_tunnel || ((light_factor < (0.5 + HEADLIGHT_ON_RAND)) && is_night(HEADLIGHT_ON_RAND*signed_rand_hash(height + max_speed)))));
 }
@@ -711,7 +719,13 @@ void car_manager_t::assign_car_model_size_color(car_t &car, rand_gen_t &local_rg
 			break; // done
 		} // for n
 	}
-	car.color_id = ((fixed_color >= 0) ? fixed_color : (local_rgen.rand() % NUM_CAR_COLORS));
+	if (fixed_color == -3) { // auto detect color from model using textures and material colors; recommended to use with single material models
+		car_model_loader.get_model(car.model_id).custom_color = car_model_loader.get_avg_color(car.model_id); // precompute and cache; may require loading models here
+		car.color_id = 255; // special 'use model file custom color' value
+	}
+	if      (fixed_color == -2) {car.color_id = 255;} // special 'use model file custom color' value; custom_color should already be set
+	else if (fixed_color == -1) {car.color_id = (local_rgen.rand() % NUM_CAR_COLORS);} // choose a random color
+	else {car.color_id = fixed_color;} // use this specific fixed color
 	assert(car.is_valid());
 }
 void car_manager_t::finalize_cars() {

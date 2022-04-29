@@ -17,8 +17,12 @@ bool city_model_t::read(FILE *fp, bool is_helicopter) {
 	if (!read_int  (fp, recalc_normals)) return 0; // 0,1,2
 	if (!read_bool (fp, two_sided))      return 0;
 	if (!read_int  (fp, centered))       return 0; // bit mask for {X, Y, Z}
-	if (!read_int  (fp, body_mat_id))    return 0;
-	if (!read_int  (fp, fixed_color_id)) return 0;
+	if (!read_int  (fp, body_mat_id))    return 0; // -1=all
+	if (!read_int  (fp, fixed_color_id)) return 0; // -1=none, -2=specified RGBA, -3=auto-from-model
+	
+	if (fixed_color_id == -2) { // read RGBA color
+		if (!read_color(fp, custom_color)) return 0;
+	}
 	if (!read_float(fp, xy_rot))         return 0;
 	if (!read_uint(fp, swap_xyz))        return 0; // {swap none, swap Y with Z, swap X with Z}
 	if (!read_float(fp, scale))          return 0;

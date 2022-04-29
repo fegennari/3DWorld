@@ -161,7 +161,7 @@ struct car_t : public car_base_t, public waiting_obj_t { // size = 100
 	bool headlights_on() const;
 	float get_turn_rot_z(float dist_to_turn) const;
 	bool is_close_to_player() const;
-	colorRGBA const &get_color() const {assert(color_id < NUM_CAR_COLORS); return car_colors[color_id];}
+	colorRGBA const &get_color() const;
 	unsigned get_unique_id() const {return (unsigned(1000000.0*max_speed) + color_id + (model_id<<8));} // not guaranteed to be unique, but pretty close
 	void apply_scale(float scale);
 	void destroy();
