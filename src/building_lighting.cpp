@@ -786,7 +786,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		//if (check_cube_occluded(clipped_bc, interior->fc_occluders, camera_rot)) continue; // legal, but may not help much
 		
 		// run flicker logic for broken lights; this is done later in the control flow because updating light gemetry can be expensive
-		if (i->is_broken()) {
+		if (animate2 && i->is_broken()) {
 			static rand_gen_t rgen;
 
 			if (tfticks > i->light_amt) { // time for state transition

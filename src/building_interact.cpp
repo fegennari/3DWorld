@@ -16,7 +16,7 @@ float const TERM_VELOCITY  = 1.0;
 float const OBJ_ELASTICITY = 0.8;
 
 extern bool tt_fire_button_down, flashlight_on, player_is_hiding, use_last_pickup_object, city_action_key;
-extern int player_in_closet, camera_surf_collide, building_action_key, can_pickup_bldg_obj;
+extern int player_in_closet, camera_surf_collide, building_action_key, can_pickup_bldg_obj, animate2;
 extern float fticks, CAMERA_RADIUS, office_chair_rot_rate;
 extern double tfticks, camera_zh;
 extern building_dest_t cur_player_building_loc;
@@ -65,6 +65,7 @@ void building_t::run_light_motion_detect_logic(point const &camera_bs) {
 			if (i->is_lit()) continue; // stays lit - no change
 		}
 		else {
+			if (!animate2)          continue; // no auto off
 			if (!i->is_lit())       continue; // already off, and stays off
 			if (tfticks < off_time) continue; // already on, and not yet time to switch off
 		}
