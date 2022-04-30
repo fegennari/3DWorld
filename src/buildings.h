@@ -447,6 +447,7 @@ typedef uint8_t stairs_shape;
 
 enum {ROOM_WALL_INT=0, ROOM_WALL_SEP, ROOM_WALL_EXT, ROOM_WALL_BASEMENT};
 enum {FLOORING_MARBLE=0, FLOORING_TILE, FLOORING_CONCRETE, FLOORING_CARPET, FLOORING_WOOD}; // Note: not all are used
+enum {MAT_TYPE_STATIC=0, MAT_TYPE_SMALL, MAT_TYPE_DYNAMIC, MAT_TYPE_DETAIL, MAT_TYPE_DOORS, MAT_TYPE_LIGHTS}; // building_room_geom_t material types; max is 8
 
 enum {/*building models*/ OBJ_MODEL_TOILET=0, OBJ_MODEL_SINK, OBJ_MODEL_TUB, OBJ_MODEL_FRIDGE, OBJ_MODEL_STOVE, OBJ_MODEL_TV, OBJ_MODEL_MONITOR, OBJ_MODEL_COUCH,
 	OBJ_MODEL_OFFICE_CHAIR, OBJ_MODEL_URINAL, OBJ_MODEL_LAMP, OBJ_MODEL_WASHER, OBJ_MODEL_DRYER, OBJ_MODEL_KEY, OBJ_MODEL_HANGER, OBJ_MODEL_CLOTHES,
@@ -710,8 +711,8 @@ struct building_decal_manager_t {
 
 struct building_room_geom_t {
 
-	bool has_elevators, has_pictures, has_garage_car, lights_changed, lighting_invalid, modified_by_player;
-	unsigned char num_pic_tids;
+	bool has_elevators, has_pictures, has_garage_car, modified_by_player;
+	unsigned char num_pic_tids, invalidate_mats_mask;
 	float obj_scale;
 	unsigned wall_ps_start, buttons_start, stairs_start; // index of first object of {TYPE_PG_WALL|TYPE_PSPACE, TYPE_BUTTON, TYPE_STAIR}
 	point tex_origin;
@@ -728,15 +729,17 @@ struct building_room_geom_t {
 	vect_cube_t light_bcubes;
 	building_decal_manager_t decal_manager;
 
-	building_room_geom_t(point const &tex_origin_=all_zeros) : has_elevators(0), has_pictures(0), has_garage_car(0), lights_changed(0), lighting_invalid(0),
-		modified_by_player(0), num_pic_tids(0), obj_scale(1.0), wall_ps_start(0), buttons_start(0), stairs_start(0), tex_origin(tex_origin_), wood_color(WHITE) {}
+	building_room_geom_t(point const &tex_origin_=all_zeros) : has_elevators(0), has_pictures(0), has_garage_car(0), modified_by_player(0),
+		num_pic_tids(0), invalidate_mats_mask(0), obj_scale(1.0), wall_ps_start(0), buttons_start(0), stairs_start(0), tex_origin(tex_origin_), wood_color(WHITE) {}
 	bool empty() const {return objs.empty();}
 	void clear();
 	void clear_materials();
-	void clear_lit_materials();
 	void clear_static_vbos();
 	void clear_static_small_vbos();
-	void clear_and_recreate_lights() {lights_changed = 1;} // cache the state and apply the change later in case this is called from a different thread
+	void clear_and_recreate_lights() {invalidate_mats_mask |= (1 << MAT_TYPE_LIGHTS );} // cache state and apply change later in case this is called from a different thread
+	void update_dynamic_draw_data () {invalidate_mats_mask |= (1 << MAT_TYPE_DYNAMIC);}
+	void check_invalid_draw_data();
+	void invalidate_draw_data_for_obj(room_object_t const &obj);
 	unsigned get_num_verts() const {return (mats_static.count_all_verts() + mats_small.count_all_verts() + mats_detail.count_all_verts() + mats_dynamic.count_all_verts() +
 		mats_lights.count_all_verts() + mats_amask.count_all_verts() + mats_alpha.count_all_verts() + mats_doors.count_all_verts());}
 	rgeom_mat_t &get_material(tid_nm_pair_t const &tex, bool inc_shadows=0, bool dynamic=0, unsigned small=0, bool transparent=0);
@@ -855,7 +858,6 @@ struct building_room_geom_t {
 	int find_avail_obj_slot() const;
 	void add_expanded_object(room_object_t const &obj);
 	bool add_room_object(room_object_t const &obj, building_t &building, bool set_obj_id=0, vector3d const &velocity=zero_vector);
-	void update_dynamic_draw_data() {mats_dynamic.clear();}
 	void create_static_vbos(building_t const &building);
 	void create_small_static_vbos(building_t const &building);
 	void create_detail_vbos(building_t const &building);

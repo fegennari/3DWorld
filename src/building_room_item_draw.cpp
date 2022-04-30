@@ -523,25 +523,36 @@ void building_room_geom_t::clear() {
 	has_elevators = 0;
 }
 void building_room_geom_t::clear_materials() { // clears all materials
-	clear_lit_materials();
-	mats_doors .clear();
-	mats_lights.clear();
-	mats_detail.clear();
-}
-void building_room_geom_t::clear_lit_materials() { // clears materials that have color based on room lighting
-	// Note: mats_detail, mats_lights, and mats_doors are excluded
 	clear_static_vbos();
 	clear_static_small_vbos();
 	mats_dynamic.clear();
+	mats_doors  .clear();
+	mats_lights .clear();
+	mats_detail .clear();
 }
 void building_room_geom_t::clear_static_vbos() { // used to clear pictures
-	mats_static.clear();
+	mats_static    .clear();
 	obj_model_insts.clear(); // these are associated with static VBOs
-	mats_alpha.clear();
+	mats_alpha     .clear();
 }
 void building_room_geom_t::clear_static_small_vbos() {
 	mats_small.clear();
 	mats_amask.clear();
+}
+// Note: used for room lighting changes; detail object changes are not supported
+void building_room_geom_t::check_invalid_draw_data() {
+	if (invalidate_mats_mask & (1 << MAT_TYPE_SMALL  )) {clear_static_small_vbos();} // small objects
+	if (invalidate_mats_mask & (1 << MAT_TYPE_STATIC )) {clear_static_vbos ();} // large objects and 3D models
+	if (invalidate_mats_mask & (1 << MAT_TYPE_DYNAMIC)) {mats_dynamic.clear();} // dynamic objects
+	if (invalidate_mats_mask & (1 << MAT_TYPE_DOORS  )) {mats_doors  .clear();}
+	if (invalidate_mats_mask & (1 << MAT_TYPE_LIGHTS )) {mats_lights .clear();}
+	invalidate_mats_mask = 0; // reset for next frame
+}
+void building_room_geom_t::invalidate_draw_data_for_obj(room_object_t const &obj) {
+	bldg_obj_type_t const &type(get_room_obj_type(obj));
+	if ( type.lg_sm & 2 )                  {invalidate_mats_mask |= (1 << MAT_TYPE_SMALL  );} // small objects
+	if ((type.lg_sm & 1) || type.is_model) {invalidate_mats_mask |= (1 << MAT_TYPE_STATIC );} // large objects and 3D models
+	if (obj.is_dynamic())                  {invalidate_mats_mask |= (1 << MAT_TYPE_DYNAMIC);} // dynamic objects
 }
 
 rgeom_mat_t &building_room_geom_t::get_material(tid_nm_pair_t const &tex, bool inc_shadows, bool dynamic, unsigned small, bool transparent) {
@@ -1163,15 +1174,8 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, building_t c
 	bool const draw_lights(camera_bs.z < building.bcube.z2()); // don't draw ceiling lights when player is above the building
 	if (player_in_building) {bbd = nullptr;} // use immediate drawing when player is in the building because draw order matters for alpha blending
 	if (bbd != nullptr) {bbd->set_camera_dir_mask(camera_bs, building.bcube);}
+	check_invalid_draw_data();
 
-	if (lighting_invalid) { // set in set_obj_lit_state_to()
-		clear_lit_materials();
-		lighting_invalid = 0;
-	}
-	if (lights_changed) {
-		mats_lights.clear();
-		lights_changed = 0;
-	}
 	if (has_pictures && num_pic_tids != num_screenshot_tids) {
 		clear_static_vbos(); // user created a new screenshot texture, and this building has pictures - recreate room geom
 		num_pic_tids = num_screenshot_tids;

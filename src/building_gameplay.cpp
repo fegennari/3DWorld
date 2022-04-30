@@ -1096,8 +1096,7 @@ void building_room_geom_t::update_draw_state_for_obj_type_flags(bldg_obj_type_t 
 // Note: called when adding, removing, or moving objects
 void building_room_geom_t::update_draw_state_for_room_object(room_object_t const &obj, building_t &building, bool was_taken) {
 	// reuild necessary VBOs and other data structures
-	if (obj.is_dynamic()) {mats_dynamic.clear();} // dynamic object
-	else if (obj.type == TYPE_BUTTON && (obj.flags & RO_FLAG_IN_ELEV)) {update_dynamic_draw_data();} // interior elevator buttons are drawn as dynamic objects
+	if (obj.is_dynamic() || (obj.type == TYPE_BUTTON && (obj.flags & RO_FLAG_IN_ELEV))) {update_dynamic_draw_data();} // elevator buttons are drawn as dynamic objects
 	else {update_draw_state_for_obj_type_flags((was_taken ? get_taken_obj_type(obj) : get_room_obj_type(obj)), building);} // static object
 	modified_by_player = 1; // flag so that we avoid re-generating room geom if the player leaves and comes back
 }

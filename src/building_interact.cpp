@@ -159,7 +159,6 @@ void building_t::set_obj_lit_state_to(unsigned room_id, float light_z2, bool lit
 	float const light_intensity(get_room(room_id).light_intensity);
 	auto objs_end(interior->room_geom->get_placed_objs_end()); // skip buttons/stairs/elevators
 	float const obj_zmin(light_z2 - get_window_vspace()); // get_floor_thickness()?
-	bool was_updated(0);
 
 	for (auto i = interior->room_geom->objs.begin(); i != objs_end; ++i) {
 		if (i->room_id != room_id || i->z1() < obj_zmin || i->z1() > light_z2) continue; // wrong room or floor
@@ -177,9 +176,8 @@ void building_t::set_obj_lit_state_to(unsigned room_id, float light_z2, bool lit
 		else {
 			if (lit_state) {i->light_amt += light_intensity;} else {i->light_amt = max((i->light_amt - light_intensity), 0.0f);} // shouldn't be negative, but clamp to 0 just in case
 		}
-		was_updated = 1;
+		interior->room_geom->invalidate_draw_data_for_obj(*i); // Note: can't clear here if called from building AI (not in the draw thread)
 	} // for i
-	if (was_updated) {interior->room_geom->lighting_invalid = 1;} // need to recreate them; can't clear here if called from building AI (not in the draw thread)
 }
 
 bool building_room_geom_t::closet_light_is_on(cube_t const &closet) const {
@@ -616,7 +614,7 @@ void building_t::toggle_door_state(unsigned door_ix, bool player_in_this_buildin
 	// we changed the door state, but navigation should adapt to this, except for doors on stairs (which are special)
 	if (door.on_stairs) {invalidate_nav_graph();} // any in-progress paths may have people walking to and stopping at closed/locked doors
 	interior->door_state_updated = 1; // required for AI navigation logic to adjust to this change
-	if (has_room_geom()) {interior->room_geom->mats_doors.clear();} // need to recreate doors VBO
+	if (has_room_geom()) {interior->room_geom->invalidate_mats_mask |= (1 << MAT_TYPE_DOORS);} // need to recreate doors VBO
 	bldg_obj_type_t type_flags;
 
 	if (player_in_this_building) { // is it really safe to call this from the AI thread?
