@@ -1536,7 +1536,7 @@ void building_room_geom_t::add_elevator_doors(elevator_t const &e, float fc_thic
 
 void building_room_geom_t::add_light(room_object_t const &c, float tscale) {
 	// Note: need to use a different texture (or -1) for is_on because emissive flag alone does not cause a material change
-	bool const is_on(c.is_lit() && !(c.is_broken() && !c.is_active()));
+	bool const is_on(c.is_lit() && !(c.is_broken() && !c.is_open()));
 	tid_nm_pair_t tp(((is_on || c.shape == SHAPE_SPHERE) ? (int)WHITE_TEX : (int)PLASTER_TEX), tscale);
 	tp.emissive = (is_on ? 1.0 : 0.0);
 	rgeom_mat_t &mat(mats_lights.get_material(tp, 0)); // no shadows

@@ -785,18 +785,18 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		//if (line_intersect_walls(lpos, camera_rot)) continue; // straight line visibility test - for debugging, or maybe future use in assigning priorities
 		//if (check_cube_occluded(clipped_bc, interior->fc_occluders, camera_rot)) continue; // legal, but may not help much
 		
-		// run flicker logic for broken lights; this is done later in the control flow because setting lights_changed=1 can be expensive
+		// run flicker logic for broken lights; this is done later in the control flow because updating light gemetry can be expensive
 		if (i->is_broken()) {
 			static rand_gen_t rgen;
 
 			if (tfticks > i->light_amt) { // time for state transition
-				float const delay_mult(i->is_active() ? 0.1 : 1.0);
+				float const delay_mult(i->is_open() ? 0.1 : 1.0);
 				i->light_amt = tfticks + rgen.rand_uniform(0.1, 1.0)*TICKS_PER_SECOND*delay_mult; // schedule time for next transition
-				i->flags    ^= RO_FLAG_IS_ACTIVE;
+				i->flags    ^= RO_FLAG_OPEN;
 				// regenerate lights geometry (can be somewhat slow); only update if player is below the level of the light
-				if (camera_bs.z < i->z2()) {interior->room_geom->lights_changed = 1;}
+				if (camera_bs.z < i->z2()) {interior->room_geom->invalidate_mats_mask |= (1 << MAT_TYPE_LIGHTS);}
 			}
-			if (!i->is_active()) continue; // not currently on
+			if (!i->is_open()) continue; // not currently on
 		}
 		// update lights_bcube and add light(s)
 
