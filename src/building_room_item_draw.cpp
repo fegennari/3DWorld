@@ -524,15 +524,15 @@ void building_room_geom_t::clear() {
 }
 void building_room_geom_t::clear_materials() { // clears all materials
 	clear_lit_materials();
+	mats_doors .clear();
 	mats_lights.clear();
 	mats_detail.clear();
 }
 void building_room_geom_t::clear_lit_materials() { // clears materials that have color based on room lighting
-	// Note: mats_detail and mats_lights are excluded
+	// Note: mats_detail, mats_lights, and mats_doors are excluded
 	clear_static_vbos();
 	clear_static_small_vbos();
 	mats_dynamic.clear();
-	mats_doors  .clear();
 }
 void building_room_geom_t::clear_static_vbos() { // used to clear pictures
 	mats_static.clear();
