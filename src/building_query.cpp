@@ -895,7 +895,7 @@ class building_color_query_geom_cache_t {
 	vector<cube_with_color_t> objs[OBJS_GRID_SZ*OBJS_GRID_SZ];
 	cube_t bcube;
 	float gxy_inv[2] = {};
-	unsigned cur_frame = 0;
+	int cur_frame = 0;
 
 	void add_obj(cube_with_color_t const &obj) {
 		unsigned gix[2][2] = {}; // {x,y}, {lo,hi}

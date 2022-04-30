@@ -2866,7 +2866,6 @@ void building_room_geom_t::add_window(room_object_t const &c, float tscale) { //
 }
 
 void building_room_geom_t::add_switch(room_object_t const &c, bool draw_detail_pass) { // light switch, etc.
-	unsigned const skip_faces(~get_face_mask(c.dim, c.dir)), front_face_mask(get_face_mask(c.dim, !c.dir)); // skip face that's against the wall
 	vector3d const sz(c.get_size());
 	room_object_t plate(c);
 	plate.d[c.dim][!c.dir] -= (c.dir ? -1.0 : 1.0)*0.70*sz[c.dim]; // front face of plate
@@ -2881,7 +2880,7 @@ void building_room_geom_t::add_switch(room_object_t const &c, bool draw_detail_p
 		rocker.expand_in_dim(2,      -0.39*sz[!c.dim]); // shrink vertically
 		rgeom_mat_t &mat(get_untextured_material(0, 0, 1)); // unshadowed, small
 		unsigned const qv_start(mat.quad_verts.size());
-		mat.add_cube_to_verts_untextured(rocker, c.color, (skip_faces | EF_Z1)); // skip bottom face
+		mat.add_cube_to_verts_untextured(rocker, c.color, (~get_face_mask(c.dim, c.dir) | EF_Z1)); // skip bottom face and face that's against the wall
 		vector3d rot_axis(zero_vector);
 		rot_axis[!c.dim] = ((c.dir ^ c.is_open()) ? 1.0 : -1.0);
 		rotate_verts(mat.quad_verts, rot_axis, 0.015*PI, plate.get_cube_center(), qv_start); // rotate rocker slightly about base plate center; could be optimized by caching
@@ -2889,9 +2888,8 @@ void building_room_geom_t::add_switch(room_object_t const &c, bool draw_detail_p
 }
 
 void building_room_geom_t::add_flat_textured_detail_wall_object(room_object_t const &c, int tid, bool draw_z1_face) { // uses mats_detail
-	unsigned const front_face_mask(get_face_mask(c.dim, !c.dir)); // skip face that's against the wall
 	rgeom_mat_t &front_mat(get_material(tid_nm_pair_t(tid, 0.0, 0), 0, 0, 2)); // small=2/detail
-	front_mat.add_cube_to_verts(c, c.color, zero_vector, front_face_mask, !c.dim); // textured front face; always fully lit to match wall
+	front_mat.add_cube_to_verts(c, c.color, zero_vector, get_face_mask(c.dim, !c.dir), !c.dim); // textured front face; always fully lit to match wall
 	unsigned const skip_faces(get_skip_mask_for_xy(c.dim) | (draw_z1_face ? EF_Z1 : 0)); // skip front/back and maybe bottom faces
 	get_untextured_material(0, 0, 2).add_cube_to_verts_untextured(c, c.color, skip_faces); // unshadowed, small
 }

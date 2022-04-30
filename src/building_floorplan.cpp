@@ -1628,7 +1628,7 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 					} // for h
 				} // for d
 			}
-			float const prev_z1(e->z1()), shift((is_above ? -1.1 : 1.1)*fc_thick);
+			float const shift((is_above ? -1.1 : 1.1)*fc_thick);
 			min_eq(e->z1(), extension.z1()); max_eq(e->z2(), extension.z2()); // perform extension in Z
 			extension.z1() += shift; extension.z2() += shift; // also cut a hole in the lower ceiling/upper floor
 			holes.clear();
