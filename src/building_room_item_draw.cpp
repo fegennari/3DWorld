@@ -1169,7 +1169,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, building_t c
 	unsigned const num_screenshot_tids(get_num_screenshot_tids());
 	static int last_frame(0);
 	static unsigned num_geom_this_frame(0); // used to limit per-frame geom gen time; doesn't apply to shadow pass, in case shadows are cached
-	if (frame_counter > last_frame) {num_geom_this_frame = 0; last_frame = frame_counter;}
+	if (frame_counter < 100 || frame_counter > last_frame) {num_geom_this_frame = 0; last_frame = frame_counter;} // unlimited for the first 100 frames
 	point const camera_bs(camera_pdu.pos - xlate);
 	bool const draw_lights(camera_bs.z < building.bcube.z2()); // don't draw ceiling lights when player is above the building
 	if (player_in_building) {bbd = nullptr;} // use immediate drawing when player is in the building because draw order matters for alpha blending
