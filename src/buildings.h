@@ -1468,7 +1468,7 @@ struct vect_building_t : public vector<building_t> {
 
 struct building_draw_utils {
 	static void calc_normals(building_geom_t const &bg, vector<vector3d> &nv, unsigned ndiv);
-	static void calc_poly_pts(building_geom_t const &bg, cube_t const &bcube, vector<point> &pts, float expand=0.0);
+	static void calc_poly_pts(building_geom_t const &bg, cube_t const &bcube, cube_t const &part, vector<point> &pts, float expand=0.0);
 };
 
 class city_lights_manager_t {

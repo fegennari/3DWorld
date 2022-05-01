@@ -36,7 +36,7 @@ bool building_t::check_part_contains_pt_xy(cube_t const &part, point const &pt, 
 
 	if (!part.contains_pt_xy(pt)) return 0; // check bounding cube
 	if (is_simple_cube()) return 1; // that's it
-	building_draw_utils::calc_poly_pts(*this, part, points);
+	building_draw_utils::calc_poly_pts(*this, bcube, part, points);
 	return point_in_polygon_2d(pt.x, pt.y, points.data(), points.size(), 0, 1); // 2D x/y containment
 }
 
@@ -82,7 +82,7 @@ bool building_t::check_bcube_overlap_xy_one_dir(building_t const &b, float expan
 // called for players and butterfiles
 bool building_t::test_coll_with_sides(point &pos, point const &p_last, float radius, cube_t const &part, vector<point> &points, vector3d *cnorm) const {
 
-	building_draw_utils::calc_poly_pts(*this, part, points); // without the expand
+	building_draw_utils::calc_poly_pts(*this, bcube, part, points); // without the expand
 	point quad_pts[4]; // quads
 	unsigned const num_steps(max(1U, min(100U, (unsigned)ceil(2.0*p2p_dist_xy(pos, p_last)/radius))));
 	vector3d const step_delta((pos - p_last)/num_steps);
@@ -835,7 +835,7 @@ unsigned building_t::check_line_coll(point const &p1, point const &p2, float &t,
 			}
 		}
 		else if (num_sides != 4) {
-			building_draw_utils::calc_poly_pts(*this, *i, points);
+			building_draw_utils::calc_poly_pts(*this, bcube, *i, points);
 			float const tz((i->z2() - p1r.z)/(p2r.z - p1r.z)); // t value at zval = top of cube
 
 			if (tz >= 0.0 && tz < t) {
@@ -1003,7 +1003,7 @@ bool building_t::check_point_or_cylin_contained(point const &pos, float xy_radiu
 			return 1;
 		}
 		else if (num_sides != 4) {
-			building_draw_utils::calc_poly_pts(*this, *i, points);
+			building_draw_utils::calc_poly_pts(*this, bcube, *i, points);
 
 			if (xy_radius > 0.0) { // cylinder case: expand polygon by xy_radius; assumes a convex polygon
 				point const center(i->get_cube_center());

@@ -361,13 +361,26 @@ void setup_building_draw_shader(shader_t &s, float min_alpha, bool enable_indir,
 	}
 }
 
-/*static*/ void building_draw_utils::calc_poly_pts(building_geom_t const &bg, cube_t const &bcube, vector<point> &pts, float expand) {
+/*static*/ void building_draw_utils::calc_poly_pts(building_geom_t const &bg, cube_t const &bcube, cube_t const &part, vector<point> &pts, float expand) {
 
 	calc_normals(bg, pts, bg.num_sides);
-	vector3d const sz(bcube.get_size());
-	point const cc(bcube.get_cube_center());
+	vector3d const sz(part.get_size());
+	point const cc(part.get_cube_center());
 	float const rx(0.5*sz.x + expand), ry(0.5*sz.y + expand); // expand polygon by sphere radius
-	for (unsigned i = 0; i < bg.num_sides; ++i) {pts[i].assign((cc.x + rx*pts[i].x), (cc.y + ry*pts[i].y), 0.0);} // convert normals to points
+
+	if (bg.is_rotated() && part != bcube) {
+		// the building is rotated around the bcube center, but the part itself is rotated around its own center, so we have to adjust the points correctly
+		point const rot_pos(part.get_cube_center()), inv_rot_pos(bcube.get_cube_center());
+
+		for (point &pt : pts) {
+			pt.assign((cc.x + rx*pt.x), (cc.y + ry*pt.y), 0.0); // convert normals to points
+			bg.do_xy_rotate(rot_pos, pt);
+			bg.do_xy_rotate_inv(inv_rot_pos, pt);
+		}
+	}
+	else {
+		for (point &pt : pts) {pt.assign((cc.x + rx*pt.x), (cc.y + ry*pt.y), 0.0);} // convert normals to points
+	}
 }
 
 // Note: invert_tc only applies to doors
