@@ -895,7 +895,7 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 } // end gen_interior_int()
 
 bool building_t::maybe_assign_interior_garage(bool &gdim, bool &gdir) {
-	assert(interior != nullptr);
+	if (interior == nullptr) return 0;
 	vector<room_t> &rooms(interior->rooms);
 	unsigned const num_rooms(rooms.size());
 	if (!is_house || has_sec_bldg() || num_rooms < 8U) return 0; // no garage for this building (including the case where we have a shed)

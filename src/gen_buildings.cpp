@@ -2483,7 +2483,7 @@ public:
 			glCullFace(reflection_pass ? GL_BACK : GL_FRONT); // draw back faces
 
 			for (auto i = bcs.begin(); i != bcs.end(); ++i) {
-				if ((*i)->empty()) continue; // no buildings
+				if ((*i)->empty() || !(*i)->has_interior_geom) continue; // no buildings or no interiors
 				unsigned const bcs_ix(i - bcs.begin());
 				vertex_range_t const *exclude(nullptr);
 				building_mat_t const &mat((*i)->buildings.front().get_material()); // Note: assumes all wall textures have a consistent tscale
@@ -2579,13 +2579,13 @@ public:
 		glPolygonOffset(-1.0, -1.0); // useful for avoiding z-fighting on building windows
 
 		if (have_windows) { // draw windows, front facing only (not viewed from interior)
-			bool const transparent_windows(draw_interior && !reflection_pass);
 			enable_blend();
 			glDepthMask(GL_FALSE); // disable depth writing
 			glEnable(GL_POLYGON_OFFSET_FILL);
 
 			for (auto i = bcs.begin(); i != bcs.end(); ++i) { // draw windows on top of other buildings
 				// need to swap opaque window texture with transparent texture for this draw pass
+				bool const transparent_windows(draw_interior && (*i)->has_interior_geom && !reflection_pass);
 				if (transparent_windows) {(*i)->building_draw_windows.toggle_transparent_windows_mode();}
 				(*i)->building_draw_windows.draw(s, 0);
 				if (transparent_windows) {(*i)->building_draw_windows.toggle_transparent_windows_mode();}
@@ -2608,7 +2608,7 @@ public:
 			glEnable(GL_CULL_FACE); // cull back faces to avoid lighting/shadows on inside walls of building interiors
 
 			for (auto i = bcs.begin(); i != bcs.end(); ++i) {
-				bool const single_tile((*i)->is_single_tile()), no_depth_write(!single_tile);
+				bool const single_tile((*i)->is_single_tile()), no_depth_write(!single_tile), transparent_windows(draw_interior && (*i)->has_interior_geom);
 				if (single_tile && !(*i)->use_smap_this_frame) continue; // optimization
 				if (no_depth_write) {glDepthMask(GL_FALSE);} // disable depth writing
 
@@ -2624,9 +2624,9 @@ public:
 						enable_blend();
 						glEnable(GL_POLYGON_OFFSET_FILL);
 						if (!no_depth_write) {glDepthMask(GL_FALSE);} // always disable depth writing
-						if (draw_interior) {(*i)->building_draw_windows.toggle_transparent_windows_mode();}
+						if (transparent_windows) {(*i)->building_draw_windows.toggle_transparent_windows_mode();}
 						(*i)->building_draw_windows.draw_tile(s, tile_id); // draw windows on top of other buildings
-						if (draw_interior) {(*i)->building_draw_windows.toggle_transparent_windows_mode();}
+						if (transparent_windows) {(*i)->building_draw_windows.toggle_transparent_windows_mode();}
 						if (!no_depth_write) {glDepthMask(GL_TRUE);} // always re-enable depth writing
 						glDisable(GL_POLYGON_OFFSET_FILL);
 						disable_blend();
