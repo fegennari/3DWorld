@@ -751,7 +751,7 @@ void building_t::add_box_contents(room_object_t const &box) {
 			objs.back().obj_id += rgen.rand();
 		}
 		else {continue;} // empty box?
-		interior->room_geom->clear_static_small_vbos();
+		interior->room_geom->invalidate_small_geom();
 		break; // if we got here, something was placed in the box
 	} // for n
 }

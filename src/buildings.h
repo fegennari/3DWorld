@@ -734,8 +734,8 @@ struct building_room_geom_t {
 	bool empty() const {return objs.empty();}
 	void clear();
 	void clear_materials();
-	void clear_static_vbos();
-	void clear_static_small_vbos();
+	void invalidate_static_geom   () {invalidate_mats_mask |= (1 << MAT_TYPE_STATIC );}
+	void invalidate_small_geom    () {invalidate_mats_mask |= (1 << MAT_TYPE_SMALL  );}
 	void clear_and_recreate_lights() {invalidate_mats_mask |= (1 << MAT_TYPE_LIGHTS );} // cache state and apply change later in case this is called from a different thread
 	void update_dynamic_draw_data () {invalidate_mats_mask |= (1 << MAT_TYPE_DYNAMIC);}
 	void check_invalid_draw_data();
@@ -870,6 +870,8 @@ private:
 	void create_lights_vbos(building_t const &building);
 	void create_dynamic_vbos(building_t const &building);
 	void create_door_vbos(building_t const &building);
+	void clear_static_vbos();
+	void clear_static_small_vbos();
 	static void add_closet_objects(room_object_t const &c, vect_room_object_t &objects);
 	static unsigned get_shelves_for_object(room_object_t const &c, cube_t shelves[4]);
 	static void get_shelf_objects(room_object_t const &c_in, cube_t const shelves[4], unsigned num_shelves, vect_room_object_t &objects);

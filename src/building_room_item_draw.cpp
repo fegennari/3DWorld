@@ -550,11 +550,13 @@ void building_room_geom_t::check_invalid_draw_data() {
 	invalidate_mats_mask = 0; // reset for next frame
 }
 void building_room_geom_t::invalidate_draw_data_for_obj(room_object_t const &obj, bool was_taken) {
-	if (obj.type == TYPE_BUTTON && (obj.flags & RO_FLAG_IN_ELEV)) {invalidate_mats_mask |= (1 << MAT_TYPE_DYNAMIC); return;} // elevator buttons are drawn as dynamic objects
+	if (obj.is_dynamic() || obj.type == TYPE_BUTTON && (obj.flags & RO_FLAG_IN_ELEV)) { // elevator buttons are drawn as dynamic objects
+		update_dynamic_draw_data();
+		return;
+	}
 	bldg_obj_type_t const type(was_taken ? get_taken_obj_type(obj) : get_room_obj_type(obj));
-	if ( type.lg_sm & 2 )                  {invalidate_mats_mask |= (1 << MAT_TYPE_SMALL  );} // small objects
-	if ((type.lg_sm & 1) || type.is_model) {invalidate_mats_mask |= (1 << MAT_TYPE_STATIC );} // large objects and 3D models
-	if (obj.is_dynamic())                  {invalidate_mats_mask |= (1 << MAT_TYPE_DYNAMIC);} // dynamic objects
+	if ( type.lg_sm & 2 )                  {invalidate_small_geom ();} // small objects
+	if ((type.lg_sm & 1) || type.is_model) {invalidate_static_geom();} // large objects and 3D models
 }
 // Note: called when adding, removing, or moving objects
 void building_room_geom_t::update_draw_state_for_room_object(room_object_t const &obj, building_t &building, bool was_taken) {
@@ -1183,13 +1185,15 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, building_t c
 	bool const draw_lights(camera_bs.z < building.bcube.z2()); // don't draw ceiling lights when player is above the building
 	if (player_in_building) {bbd = nullptr;} // use immediate drawing when player is in the building because draw order matters for alpha blending
 	if (bbd != nullptr) {bbd->set_camera_dir_mask(camera_bs, building.bcube);}
-	check_invalid_draw_data();
 
 	if (has_pictures && num_pic_tids != num_screenshot_tids) {
-		clear_static_vbos(); // user created a new screenshot texture, and this building has pictures - recreate room geom
+		invalidate_static_geom(); // user created a new screenshot texture, and this building has pictures - recreate room geom
 		num_pic_tids = num_screenshot_tids;
 	}
+	check_invalid_draw_data();
 	// generate vertex data in the shadow pass or if we haven't hit our generation limit; must be consistent for static and small geom
+	// Note that the distance cutoff for mats_static and mats_small is different, so we generally won't be creating them both
+	// unless the player just appeared by this building, or we need to update the geometry; in either case this is higher priority and we want to update both
 	if (shadow_only || num_geom_this_frame < MAX_ROOM_GEOM_GEN_PER_FRAME) {
 		if (mats_static.empty()) { // create static materials if needed
 			create_obj_model_insts(building);

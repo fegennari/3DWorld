@@ -775,7 +775,7 @@ bool building_room_geom_t::player_pickup_object(building_t &building, point cons
 		expand_object(obj);
 		bool const picked_up(player_pickup_object(building, at_pos, in_dir)); // call recursively on contents
 		// if we picked up an object, assume the VBOs have already been updated; otherwise we need to update them to expand this object
-		if (!picked_up) {invalidate_mats_mask |= (1 << MAT_TYPE_SMALL);} // assumes expanded objects are all "small"
+		if (!picked_up) {invalidate_small_geom();} // assumes expanded objects are all "small"
 		return picked_up;
 	}
 	if (obj.type == TYPE_BCASE) {
@@ -1025,7 +1025,7 @@ bool building_room_geom_t::open_nearest_drawer(building_t &building, point const
 			update_draw_state_for_room_object(obj, building, 0);
 		}
 		else {
-			invalidate_mats_mask |= (1 << MAT_TYPE_SMALL); // only need to update small objects for drawers
+			invalidate_small_geom(); // only need to update small objects for drawers
 		}
 	}
 	return 1;

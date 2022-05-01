@@ -794,7 +794,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 				i->light_amt = tfticks + rgen.rand_uniform(0.1, 1.0)*TICKS_PER_SECOND*delay_mult; // schedule time for next transition
 				i->flags    ^= RO_FLAG_OPEN;
 				// regenerate lights geometry (can be somewhat slow); only update if player is below the level of the light
-				if (camera_bs.z < i->z2()) {interior->room_geom->invalidate_mats_mask |= (1 << MAT_TYPE_LIGHTS);}
+				if (camera_bs.z < i->z2()) {interior->room_geom->clear_and_recreate_lights();}
 			}
 			if (!i->is_open()) continue; // not currently on
 		}

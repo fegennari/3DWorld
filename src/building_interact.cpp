@@ -489,8 +489,8 @@ bool building_t::interact_with_object(unsigned obj_ix, point const &int_pos, poi
 	else if (obj.type == TYPE_BUTTON) {
 		if (!obj.is_active()) { // if not already active
 			register_button_event(obj);
-			interior->room_geom->clear_static_small_vbos(); // need to regen object data due to lit state change; don't have to set modified_by_player
 			obj.flags |= RO_FLAG_IS_ACTIVE;
+			interior->room_geom->invalidate_draw_data_for_obj(obj); // need to regen object data due to lit state change; don't have to set modified_by_player
 		}
 	}
 	else if (obj.type == TYPE_SWITCH) {
@@ -750,7 +750,7 @@ void building_t::update_player_interact_objects(point const &player_pos) {
 				if (velocity == zero_vector) { // stopped
 					c->flags &= ~RO_FLAG_DYNAMIC; // clear dynamic flag
 					interior->update_dynamic_draw_data(); // remove from dynamic objects and schedule an update
-					interior->room_geom->clear_static_small_vbos(); // add to small static objects
+					interior->room_geom->invalidate_draw_data_for_obj(*c); // add to small static objects
 					break; // done
 				}
 				new_center += velocity*step_sz; // move based on velocity
@@ -803,7 +803,7 @@ void building_t::update_player_interact_objects(point const &player_pos) {
 				// add TYPE_CRACK if collides with a window?
 			}
 			if (new_center != center) {apply_roll_to_matrix(dstate.rot_matrix, new_center, center, plus_z, radius, (on_floor ? 0.0 : 0.01), (on_floor ? 1.0 : 0.2));}
-			if (!was_dynamic) {interior->room_geom->clear_static_small_vbos();} // static => dynamic transition, need to remove from static object vertex data
+			if (!was_dynamic) {interior->room_geom->invalidate_small_geom();} // static => dynamic transition, need to remove from static object vertex data
 			interior->update_dynamic_draw_data();
 			c->translate(new_center - center);
 		}
@@ -867,14 +867,14 @@ bool building_interior_t::update_elevators(building_t const &building, point con
 			max_eq(e->open_amt, delta_open_amt); // begin to open if not already open
 			e->was_called = 0;
 			obj.flags    |= RO_FLAG_OPEN;
-			bool was_updated(0);
 
 			for (auto j = objs.begin() + e->button_id_start; j != objs.begin() + e->button_id_end; ++j) { // disable all call buttons for this elevator
 				if (j->type == TYPE_BLOCKER) continue; // button was removed?
 				assert(j->type == TYPE_BUTTON);
-				if (j->is_active()) {j->flags &= ~RO_FLAG_IS_ACTIVE; was_updated = 1;} // clear active/lit state
+				if (!j->is_active()) continue; // already unlit
+				j->flags &= ~RO_FLAG_IS_ACTIVE; // clear active/lit state
+				room_geom->invalidate_small_geom(); // need to regen object data due to lit state change
 			}
-			if (was_updated) {room_geom->clear_static_small_vbos();} // need to regen object data due to lit state change
 			point const sound_pos(obj.get_cube_center());
 			gen_sound_thread_safe(SOUND_BEEP, building.local_to_camera_space(sound_pos), 0.5, 0.75); // lower frequency beep
 			register_building_sound(sound_pos, 0.5);
