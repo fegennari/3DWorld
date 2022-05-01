@@ -955,7 +955,7 @@ void building_t::get_pipe_basement_connections(vect_riser_pos_t &sewer, vect_ris
 		if (!place_area.contains_pt_xy(s.pos - delta)) {delta *= 2.0;} // if shift takes pos outside placement area, shift further from the drain
 		hot_water.emplace_back((s.pos - delta), hot_radius, 1, 1); // shift in opposite dir; has_hot=1, flow_dir=1/in
 	} // for sewer
-	if (!water_heaters.empty()) { // add connections for water heaters
+	if (!water_heaters.empty() && !hot_water.empty()) { // add connections for water heaters if there are hot water pipes
 		float const radius_hot(get_merged_risers_radius(hot_water)); // this is the radius of the main hot water supply
 		float const per_wh_radius(radius_hot*pow(1.0/water_heaters.size(), 1/4.0)); // distribute evenly among the water heaters using the same merge exponent
 
