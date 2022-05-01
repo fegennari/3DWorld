@@ -811,8 +811,6 @@ void building_t::update_player_interact_objects(point const &player_pos) {
 		}
 	} // for c
 	if (player_in_closet) { // check for collisions with expanded objects in closets
-		bool updated_rot(0);
-
 		for (auto c = expanded_objs.begin(); c != expanded_objs.end(); ++c) {
 			if (c->type == TYPE_CLOTHES && sphere_cube_intersect(player_pos, player_radius, *c)) { // shirt in a closet with the player
 				assert(c != objs.begin());
@@ -822,12 +820,10 @@ void building_t::update_player_interact_objects(point const &player_pos) {
 				unsigned const orig_flags(c->flags), add_flag(rot_dir ? RO_FLAG_ADJ_LO : RO_FLAG_ADJ_HI), rem_flag(rot_dir ? RO_FLAG_ADJ_HI : RO_FLAG_ADJ_LO);
 				c->flags     |= ((c->type == TYPE_CLOTHES) ? RO_FLAG_ROTATING : 0) | add_flag;
 				c->flags     &= ~rem_flag;
-				hanger.flags |= RO_FLAG_ROTATING | add_flag;
+				hanger.flags |= RO_FLAG_ROTATING | add_flag; // play a sound as well?
 				hanger.flags &= ~rem_flag;
-				updated_rot  |= (c->flags != orig_flags);
 			}
 		} // for c
-		if (updated_rot) {interior->room_geom->create_small_static_vbos(*this);} // play a sound as well?
 	}
 	if (use_last_pickup_object || (tt_fire_button_down && !flashlight_on)) { // use object not active, and not using fire key without flashlight (space bar)
 		maybe_use_last_pickup_room_object(player_pos);
