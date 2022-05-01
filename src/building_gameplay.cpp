@@ -775,7 +775,7 @@ bool building_room_geom_t::player_pickup_object(building_t &building, point cons
 		expand_object(obj);
 		bool const picked_up(player_pickup_object(building, at_pos, in_dir)); // call recursively on contents
 		// if we picked up an object, assume the VBOs have already been updated; otherwise we need to update them to expand this object
-		if (!picked_up) {create_small_static_vbos(building);} // assumes expanded objects are all "small"
+		if (!picked_up) {invalidate_mats_mask |= (1 << MAT_TYPE_SMALL);} // assumes expanded objects are all "small"
 		return picked_up;
 	}
 	if (obj.type == TYPE_BCASE) {
@@ -1025,7 +1025,7 @@ bool building_room_geom_t::open_nearest_drawer(building_t &building, point const
 			update_draw_state_for_room_object(obj, building, 0);
 		}
 		else {
-			create_small_static_vbos(building); // only need to update small objects for drawers
+			invalidate_mats_mask |= (1 << MAT_TYPE_SMALL); // only need to update small objects for drawers
 		}
 	}
 	return 1;
@@ -1074,7 +1074,7 @@ void building_room_geom_t::remove_object(unsigned obj_id, building_t &building) 
 		drain.expand_by_xy(0.065*obj.dz());
 		drain.z2() += 0.02*obj.dz();
 		obj = room_object_t(drain, TYPE_DRAIN, obj.room_id, 0, 0, RO_FLAG_NOCOLL, obj.light_amt, SHAPE_CYLIN, DK_GRAY);
-		create_small_static_vbos(building);
+		invalidate_draw_data_for_obj(obj);
 	}
 	else { // replace it with an invisible blocker that won't collide with anything
 		obj.type  = TYPE_BLOCKER;
@@ -1085,20 +1085,6 @@ void building_room_geom_t::remove_object(unsigned obj_id, building_t &building) 
 	}
 	if (is_light) {clear_and_recreate_lights();}
 	update_draw_state_for_room_object(old_obj, building, 1);
-}
-
-void building_room_geom_t::update_draw_state_for_obj_type_flags(bldg_obj_type_t const &type, building_t &building) {
-	if (type.lg_sm & 2) {create_small_static_vbos(building);} // small object
-	if (type.lg_sm & 1) {create_static_vbos      (building);} // large object
-	if (type.is_model ) {create_obj_model_insts  (building);} // 3D model
-	//if (type.ai_coll  ) {building.invalidate_nav_graph();} // removing this object should not affect the AI navigation graph
-}
-// Note: called when adding, removing, or moving objects
-void building_room_geom_t::update_draw_state_for_room_object(room_object_t const &obj, building_t &building, bool was_taken) {
-	// reuild necessary VBOs and other data structures
-	if (obj.is_dynamic() || (obj.type == TYPE_BUTTON && (obj.flags & RO_FLAG_IN_ELEV))) {update_dynamic_draw_data();} // elevator buttons are drawn as dynamic objects
-	else {update_draw_state_for_obj_type_flags((was_taken ? get_taken_obj_type(obj) : get_room_obj_type(obj)), building);} // static object
-	modified_by_player = 1; // flag so that we avoid re-generating room geom if the player leaves and comes back
 }
 
 int building_room_geom_t::find_avail_obj_slot() const {
@@ -1207,7 +1193,7 @@ bool building_t::move_nearest_object(point const &at_pos, vector3d const &in_dir
 			} // for i
 			// Note: okay to skip expanded_objs because these should already be on/inside some other object; this allows us to move wine racks containing wine
 			if (bad_placement) continue; // intersects another object, try a smaller movement
-			bldg_obj_type_t type_flags(get_room_obj_type(obj));
+			interior->room_geom->invalidate_draw_data_for_obj(obj);
 
 			// move objects inside or on top of this one
 			for (unsigned vect_id = 0; vect_id < 2; ++vect_id) {
@@ -1220,8 +1206,7 @@ bool building_t::move_nearest_object(point const &at_pos, vector3d const &in_dir
 					*i += move_vector; // move this object as well
 					i->flags |= RO_FLAG_MOVED;
 					if (!keep_in_room) {assign_correct_room_to_object(*i);}
-					if (i->is_dynamic()) {interior->room_geom->mats_dynamic.clear();} // dynamic object
-					else {type_flags.update_modified_flags_for_type(get_room_obj_type(*i));}
+					interior->room_geom->invalidate_draw_data_for_obj(*i);
 				} // for i
 			} // for vect_id
 			// mark doors as blocked
@@ -1240,7 +1225,6 @@ bool building_t::move_nearest_object(point const &at_pos, vector3d const &in_dir
 			if (!keep_in_room) {assign_correct_room_to_object(obj);}
 			if (!obj.was_moved()) {interior->room_geom->moved_obj_ids.push_back(closest_obj_id);} // add to moved_obj_ids on first movement
 			obj.flags |= RO_FLAG_MOVED;
-			interior->room_geom->update_draw_state_for_obj_type_flags(type_flags, *this);
 			interior->room_geom->modified_by_player = 1; // flag so that we avoid re-generating room geom if the player leaves and comes back
 			gen_sound_thread_safe_at_player(SOUND_SLIDING);
 			register_building_sound_at_player(0.7);

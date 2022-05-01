@@ -616,7 +616,6 @@ void building_t::toggle_door_state(unsigned door_ix, bool player_in_this_buildin
 	if (door.on_stairs) {invalidate_nav_graph();} // any in-progress paths may have people walking to and stopping at closed/locked doors
 	interior->door_state_updated = 1; // required for AI navigation logic to adjust to this change
 	if (has_room_geom()) {interior->room_geom->invalidate_mats_mask |= (1 << MAT_TYPE_DOORS);} // need to recreate doors VBO
-	bldg_obj_type_t type_flags;
 
 	if (player_in_this_building) { // is it really safe to call this from the AI thread?
 		point const door_center(door.xc(), door.yc(), zval);
@@ -632,9 +631,8 @@ void building_t::toggle_door_state(unsigned door_ix, bool player_in_this_buildin
 			bool const move_dir(door_center < obj_center);
 			float const move_dist(door_bcube.d[door.dim][move_dir] - obj.d[door.dim][!move_dir]);
 			obj.translate_dim(door.dim, move_dist);
-			type_flags.update_modified_flags_for_type(get_room_obj_type(obj));
+			interior->room_geom->invalidate_draw_data_for_obj(obj);
 		} // for obj
-		interior->room_geom->update_draw_state_for_obj_type_flags(type_flags, *this);
 	}
 }
 

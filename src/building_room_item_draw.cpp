@@ -28,6 +28,7 @@ tid_nm_pair_t get_phone_tex(room_object_t const &c);
 template< typename T > void gen_quad_ixs(vector<T> &ixs, unsigned size, unsigned ix_offset);
 void draw_car_in_pspace(car_t &car, shader_t &s, vector3d const &xlate, bool shadow_only);
 void set_car_model_color(car_t &car);
+bldg_obj_type_t get_taken_obj_type(room_object_t const &obj);
 
 bool has_key_3d_model() {return building_obj_model_loader.is_model_valid(OBJ_MODEL_KEY);}
 
@@ -548,11 +549,18 @@ void building_room_geom_t::check_invalid_draw_data() {
 	if (invalidate_mats_mask & (1 << MAT_TYPE_LIGHTS )) {mats_lights .clear();}
 	invalidate_mats_mask = 0; // reset for next frame
 }
-void building_room_geom_t::invalidate_draw_data_for_obj(room_object_t const &obj) {
-	bldg_obj_type_t const &type(get_room_obj_type(obj));
+void building_room_geom_t::invalidate_draw_data_for_obj(room_object_t const &obj, bool was_taken) {
+	if (obj.type == TYPE_BUTTON && (obj.flags & RO_FLAG_IN_ELEV)) {invalidate_mats_mask |= (1 << MAT_TYPE_DYNAMIC); return;} // elevator buttons are drawn as dynamic objects
+	bldg_obj_type_t const type(was_taken ? get_taken_obj_type(obj) : get_room_obj_type(obj));
 	if ( type.lg_sm & 2 )                  {invalidate_mats_mask |= (1 << MAT_TYPE_SMALL  );} // small objects
 	if ((type.lg_sm & 1) || type.is_model) {invalidate_mats_mask |= (1 << MAT_TYPE_STATIC );} // large objects and 3D models
 	if (obj.is_dynamic())                  {invalidate_mats_mask |= (1 << MAT_TYPE_DYNAMIC);} // dynamic objects
+}
+// Note: called when adding, removing, or moving objects
+void building_room_geom_t::update_draw_state_for_room_object(room_object_t const &obj, building_t &building, bool was_taken) {
+	invalidate_draw_data_for_obj(obj, was_taken);
+	//if (type.ai_coll) {building.invalidate_nav_graph();} // removing this object should not affect the AI navigation graph
+	modified_by_player = 1; // flag so that we avoid re-generating room geom if the player leaves and comes back
 }
 
 rgeom_mat_t &building_room_geom_t::get_material(tid_nm_pair_t const &tex, bool inc_shadows, bool dynamic, unsigned small, bool transparent) {
@@ -625,7 +633,7 @@ void building_room_geom_t::create_static_vbos(building_t const &building) {
 		} // end switch
 	} // for i
 	// Note: verts are temporary, but cubes are needed for things such as collision detection with the player and ray queries for indir lighting
-	//timer_t timer2("Create VBOs"); // < 2ms
+	//highres_timer_t timer2("Gen Room Geom VBOs"); // < 2ms
 	mats_static.create_vbos(building);
 	mats_alpha .create_vbos(building);
 	//cout << "static: size: " << rgeom_alloc.size() << " mem: " << rgeom_alloc.get_mem_usage() << endl; // start=78MB, peak=193MB
@@ -638,6 +646,7 @@ void building_room_geom_t::create_small_static_vbos(building_t const &building) 
 	model_objs.clear(); // currently model_objs are only created for small objects in drawers, so we clear this here
 	add_small_static_objs_to_verts(expanded_objs);
 	add_small_static_objs_to_verts(objs);
+	//highres_timer_t timer2("Gen Room Geom Small VBOs");
 	mats_small.create_vbos(building);
 	mats_amask.create_vbos(building);
 }

@@ -739,7 +739,7 @@ struct building_room_geom_t {
 	void clear_and_recreate_lights() {invalidate_mats_mask |= (1 << MAT_TYPE_LIGHTS );} // cache state and apply change later in case this is called from a different thread
 	void update_dynamic_draw_data () {invalidate_mats_mask |= (1 << MAT_TYPE_DYNAMIC);}
 	void check_invalid_draw_data();
-	void invalidate_draw_data_for_obj(room_object_t const &obj);
+	void invalidate_draw_data_for_obj(room_object_t const &obj, bool was_taken=0);
 	unsigned get_num_verts() const {return (mats_static.count_all_verts() + mats_small.count_all_verts() + mats_detail.count_all_verts() + mats_dynamic.count_all_verts() +
 		mats_lights.count_all_verts() + mats_amask.count_all_verts() + mats_alpha.count_all_verts() + mats_doors.count_all_verts());}
 	rgeom_mat_t &get_material(tid_nm_pair_t const &tex, bool inc_shadows=0, bool dynamic=0, unsigned small=0, bool transparent=0);
@@ -853,11 +853,15 @@ struct building_room_geom_t {
 	void remove_object(unsigned obj_id, building_t &building);
 	bool player_pickup_object(building_t &building, point const &at_pos, vector3d const &in_dir);
 	void update_draw_state_for_room_object(room_object_t const &obj, building_t &building, bool was_taken);
-	void update_draw_state_for_obj_type_flags(bldg_obj_type_t const &type, building_t &building);
 	room_object_t &get_room_object_by_index(unsigned obj_id);
 	int find_avail_obj_slot() const;
 	void add_expanded_object(room_object_t const &obj);
 	bool add_room_object(room_object_t const &obj, building_t &building, bool set_obj_id=0, vector3d const &velocity=zero_vector);
+	void draw(brg_batch_draw_t *bbd, shader_t &s, building_t const &building, occlusion_checker_noncity_t &oc, vector3d const &xlate,
+		unsigned building_ix, bool shadow_only, bool reflection_pass, unsigned inc_small, bool player_in_building);
+	unsigned allocate_dynamic_state();
+	room_obj_dstate_t &get_dstate(room_object_t const &obj);
+private:
 	void create_static_vbos(building_t const &building);
 	void create_small_static_vbos(building_t const &building);
 	void create_detail_vbos(building_t const &building);
@@ -866,11 +870,6 @@ struct building_room_geom_t {
 	void create_lights_vbos(building_t const &building);
 	void create_dynamic_vbos(building_t const &building);
 	void create_door_vbos(building_t const &building);
-	void draw(brg_batch_draw_t *bbd, shader_t &s, building_t const &building, occlusion_checker_noncity_t &oc, vector3d const &xlate,
-		unsigned building_ix, bool shadow_only, bool reflection_pass, unsigned inc_small, bool player_in_building);
-	unsigned allocate_dynamic_state();
-	room_obj_dstate_t &get_dstate(room_object_t const &obj);
-private:
 	static void add_closet_objects(room_object_t const &c, vect_room_object_t &objects);
 	static unsigned get_shelves_for_object(room_object_t const &c, cube_t shelves[4]);
 	static void get_shelf_objects(room_object_t const &c_in, cube_t const shelves[4], unsigned num_shelves, vect_room_object_t &objects);
