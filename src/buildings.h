@@ -658,6 +658,7 @@ public:
 };
 
 struct building_materials_t : public vector<rgeom_mat_t> {
+	bool valid = 0;
 	void clear();
 	unsigned count_all_verts() const;
 	rgeom_mat_t &get_material(tid_nm_pair_t const &tex, bool inc_shadows);

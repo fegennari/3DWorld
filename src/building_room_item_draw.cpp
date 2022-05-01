@@ -468,6 +468,7 @@ void rgeom_mat_t::upload_draw_and_clear(tid_nm_pair_dstate_t &state) { // Note: 
 void building_materials_t::clear() {
 	for (iterator m = begin(); m != end(); ++m) {m->clear();}
 	vector<rgeom_mat_t>::clear();
+	valid = 0;
 }
 unsigned building_materials_t::count_all_verts() const {
 	unsigned num_verts(0);
@@ -485,13 +486,15 @@ rgeom_mat_t &building_materials_t::get_material(tid_nm_pair_t const &tex, bool i
 	}
 	emplace_back(tex); // not found, add a new material
 	if (inc_shadows) {back().enable_shadows();}
-	rgeom_alloc.alloc(back());
+	rgeom_alloc.alloc(back()); // Note: must add an omp critical around this if materials are generated in parallel
 	return back();
 }
 void building_materials_t::create_vbos(building_t const &building) {
 	for (iterator m = begin(); m != end(); ++m) {m->create_vbo(building);}
+	valid = 1;
 }
 void building_materials_t::draw(brg_batch_draw_t *bbd, shader_t &s, int shadow_only, bool reflection_pass) {
+	if (!valid) return; // pending generation of data, don't draw yet
 	//highres_timer_t timer("Draw Materials"); // 0.0168
 	static vector<iterator> text_mats;
 	text_mats.clear();
@@ -638,7 +641,7 @@ void building_room_geom_t::create_static_vbos(building_t const &building) {
 	//highres_timer_t timer2("Gen Room Geom VBOs"); // < 2ms
 	mats_static.create_vbos(building);
 	mats_alpha .create_vbos(building);
-	//cout << "static: size: " << rgeom_alloc.size() << " mem: " << rgeom_alloc.get_mem_usage() << endl; // start=78MB, peak=193MB
+	//cout << "static: size: " << rgeom_alloc.size() << " mem: " << rgeom_alloc.get_mem_usage() << endl; // start=50MB, peak=76MB
 }
 
 void building_room_geom_t::create_small_static_vbos(building_t const &building) {
@@ -1195,24 +1198,24 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, building_t c
 	// Note that the distance cutoff for mats_static and mats_small is different, so we generally won't be creating them both
 	// unless the player just appeared by this building, or we need to update the geometry; in either case this is higher priority and we want to update both
 	if (shadow_only || num_geom_this_frame < MAX_ROOM_GEOM_GEN_PER_FRAME) {
-		if (mats_static.empty()) { // create static materials if needed
+		if (!mats_static.valid) { // create static materials if needed
 			create_obj_model_insts(building);
 			create_static_vbos(building);
 			++num_geom_this_frame;
 		}
-		if (inc_small && mats_small.empty()) { // create small materials if needed
+		if (inc_small && !mats_small.valid) { // create small materials if needed
 			create_small_static_vbos(building);
 			++num_geom_this_frame;
 		}
 		// Note: not created on the shadow pass, because trim_objs may not have been created yet and we would miss including it
-		if (inc_small == 2 && !shadow_only && mats_detail.empty()) { // create detail materials if needed
+		if (inc_small == 2 && !shadow_only && !mats_detail.valid) { // create detail materials if needed
 			create_detail_vbos(building);
 			++num_geom_this_frame;
 		}
 	}
-	if (draw_lights && mats_lights .empty()) {create_lights_vbos (building);} // create lights  materials if needed (no limit)
-	if (inc_small   && mats_dynamic.empty()) {create_dynamic_vbos(building);} // create dynamic materials if needed (no limit); drawn with small objects
-	if (mats_doors.empty()) {create_door_vbos(building);} // create door materials if needed (no limit)
+	if (draw_lights && !mats_lights .valid) {create_lights_vbos (building);} // create lights  materials if needed (no limit)
+	if (inc_small   && !mats_dynamic.valid) {create_dynamic_vbos(building);} // create dynamic materials if needed (no limit); drawn with small objects
+	if (!mats_doors.valid) {create_door_vbos(building);} // create door materials if needed (no limit)
 	enable_blend(); // needed for rugs and book text
 	assert(s.is_setup());
 	mats_static.draw(bbd, s, shadow_only, reflection_pass); // this is the slowest call
