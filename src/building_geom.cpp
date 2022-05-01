@@ -1628,9 +1628,10 @@ void building_t::gen_details(rand_gen_t &rgen, bool is_rectangle) { // for the r
 
 	if (has_helipad) { // add helipad
 		tquad_t helipad(4); // quad
-		point const center(top.get_cube_center());
+		point top_center(top.get_cube_center());
+		if (is_rotated() && !is_cube()) {do_xy_rotate_inv(bcube.get_cube_center(), top_center);} // put antenna center in building bcube coordinate space
 		float const z(top.z2() + 0.01*window_vspacing); // slightly above the roof to avoid Z-fighting
-		float const x1(center.x - helipad_radius), x2(center.x + helipad_radius), y1(center.y - helipad_radius), y2(center.y + helipad_radius);
+		float const x1(top_center.x - helipad_radius), x2(top_center.x + helipad_radius), y1(top_center.y - helipad_radius), y2(top_center.y + helipad_radius);
 		bool const dir(rgen.rand_bool()); // R90 50% of the time
 		helipad.pts[ dir+0   ].assign(x1, y1, z);
 		helipad.pts[ dir+1   ].assign(x2, y1, z);
@@ -1687,10 +1688,11 @@ void building_t::gen_details(rand_gen_t &rgen, bool is_rectangle) { // for the r
 		float const radius(0.003f*rgen.rand_uniform(1.0, 2.0)*(top.dx() + top.dy()));
 		float const height(rgen.rand_uniform(0.25, 0.5)*top.dz());
 		roof_obj_t antenna(ROOF_OBJ_ANT);
-		antenna.set_from_point(top.get_cube_center());
+		point top_center(top.get_cube_center());
+		if (is_rotated() && !is_cube()) {do_xy_rotate_inv(bcube.get_cube_center(), top_center);} // put antenna center in building bcube coordinate space
+		antenna.set_from_point(top_center);
 		antenna.expand_by_xy(radius);
-		antenna.z1() = top.z2(); // z1
-		antenna.z2() = bcube.z2() + height; // z2 (use bcube to include sloped roof)
+		set_cube_zvals(antenna, top.z2(), (bcube.z2() + height)); // z2 uses bcube to include sloped roof
 		details.push_back(antenna);
 	}
 	for (auto i = details.begin(); i != details.end(); ++i) {assert(i->is_strictly_normalized()); max_eq(bcube.z2(), i->z2());} // extend bcube z2 to contain details
