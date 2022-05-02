@@ -367,6 +367,11 @@ template<typename T> struct hash_by_bytes { // should work with all packed verte
 };
 inline unsigned hash_point(point const &p) {return hash_by_bytes<point>()(p);}
 
+template<typename T> unsigned hash_vect_as_int(vector<T> const &v) {
+	assert((sizeof(T) % sizeof(int)) == 0); // must be a multiple of 4 bytes
+	return jenkins_one_at_a_time_hash((int const*)v.data(), sizeof(T)*v.size()/sizeof(int));
+}
+
 
 struct vector4d : public vector3d { // size = 16
 	float w;
