@@ -303,6 +303,7 @@ public:
 	}
 	void free(rgeom_storage_t &s) {
 		s.clear(); // in case the caller didn't clear it
+		if (s.get_mem_usage() == 0) return; // no memory allocated, no point in adding to the free list
 		free_list.push_back(rgeom_storage_t(s.tex)); // record tex of incoming element
 		s.swap_vectors(free_list.back()); // transfer existing capacity to free list; clear capacity from s
 	}
