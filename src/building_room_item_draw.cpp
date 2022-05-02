@@ -370,17 +370,11 @@ void rgeom_mat_t::create_vbo(building_t const &building) {
 }
 void rgeom_mat_t::create_vbo_inner() {
 	assert(itri_verts.empty() == indices.empty());
-	unsigned const qsz(quad_verts.size()*sizeof(vertex_t)), itsz(itri_verts.size()*sizeof(vertex_t)), num_quad_ixs(6*(quad_verts.size()/4));
-	unsigned const prev_num_verts(num_verts), prev_num_ixs(num_ixs);
+	unsigned const qsz(quad_verts.size()*sizeof(vertex_t)), itsz(itri_verts.size()*sizeof(vertex_t));
 	num_verts = quad_verts.size() + itri_verts.size();
-	num_ixs   = indices.size() + num_quad_ixs;
 	if (num_verts == 0) return; // nothing to do
-#if 0 // doesn't seem to help, makes this slower
-	unsigned const hv(hash_vect_as_int(quad_verts) ^ hash_vect_as_int(itri_verts) ^ jenkins_one_at_a_time_hash(indices.data(), indices.size()));
-	if (num_verts == prev_num_verts && num_ixs == prev_num_ixs && hv == verts_hashval) return; // data is unchanged, no update needed
-	verts_hashval = hv;
-#endif
-	gen_quad_ixs(indices, num_quad_ixs, itri_verts.size()); // append indices for quad_verts
+	gen_quad_ixs(indices, 6*(quad_verts.size()/4), itri_verts.size()); // append indices for quad_verts
+	num_ixs = indices.size();
 
 	if (vao_mgr.vbo && num_verts <= vert_vbo_sz && vao_mgr.ivbo && num_ixs <= ixs_vbo_sz) { // reuse previous VBOs
 		check_bind_vbo(vao_mgr.ivbo, 1);

@@ -622,12 +622,11 @@ class rgeom_mat_t : public rgeom_storage_t { // simplified version of building_d
 
 	indexed_vao_manager_with_shadow_t vao_mgr;
 public:
-	unsigned num_verts, num_ixs, vert_vbo_sz, ixs_vbo_sz, verts_hashval; // for drawing
+	unsigned num_verts, num_ixs, vert_vbo_sz, ixs_vbo_sz; // for drawing
 	uint8_t dir_mask; // {-x, +x, -y, +y, -z, +z}
 	bool en_shadows;
 
-	rgeom_mat_t(tid_nm_pair_t const &tex_=tid_nm_pair_t()) : rgeom_storage_t(tex_),
-		num_verts(0), num_ixs(0), vert_vbo_sz(0), ixs_vbo_sz(0), verts_hashval(0), dir_mask(0), en_shadows(0) {}
+	rgeom_mat_t(tid_nm_pair_t const &tex_=tid_nm_pair_t()) : rgeom_storage_t(tex_), num_verts(0), num_ixs(0), vert_vbo_sz(0), ixs_vbo_sz(0), dir_mask(0), en_shadows(0) {}
 	//~rgeom_mat_t() {assert(vbo_mgr.vbo == 0); assert(vbo_mgr.ivbo == 0);} // VBOs should be freed before destruction
 	void enable_shadows() {en_shadows = 1;}
 	void clear();
