@@ -2843,7 +2843,7 @@ void building_t::maybe_add_fire_escape(rand_gen_t &rgen) {
 			if (has_bcube_int_no_adj(fe_bc, parts)) continue; // check for intersection with other parts, in particular the chimney and fireplace
 			if (has_driveway() && fe_bc.intersects_xy(driveway)) continue; // skip if intersects driveway or garage
 			interior->room_geom->objs.emplace_back(fe_bc, TYPE_FESCAPE, 0, dim, dir, 0, 1.0, SHAPE_CUBE, BLACK); // room_id=0
-			break; // success/done
+			return; // success/done
 		} // for d
 	} // for p
 }
