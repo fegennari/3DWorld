@@ -303,7 +303,7 @@ void building_room_geom_t::expand_cabinet(room_object_t const &c) { // called on
 		obj.set_as_bottle(rgen.rand(), NUM_BOTTLE_TYPES-2, 1); // all bottle types except for medicine, no_empty=1
 		add_if_not_intersecting(obj, expanded_objs, cubes);
 	}
-	if (cubes.size() > start_num_cubes) {clear_static_small_vbos();} // some object was added
+	if (cubes.size() > start_num_cubes) {invalidate_small_geom();} // some object was added
 }
 
 void building_room_geom_t::expand_med_cab(room_object_t const &c) { // aka house "mirrors"
@@ -321,7 +321,7 @@ void building_room_geom_t::expand_med_cab(room_object_t const &c) { // aka house
 	room_object_t obj(bottle, TYPE_BOTTLE, c.room_id, 0, 0, flags, c.light_amt, SHAPE_CYLIN); // vertical
 	obj.set_as_bottle(NUM_BOTTLE_TYPES-1, NUM_BOTTLE_TYPES-1, 1); // medicine, no_empty=1
 	expanded_objs.push_back(obj);
-	clear_static_small_vbos();
+	invalidate_small_geom();
 }
 
 unsigned building_room_geom_t::get_shelves_for_object(room_object_t const &c, cube_t shelves[4]) {
