@@ -622,14 +622,15 @@ class rgeom_mat_t : public rgeom_storage_t { // simplified version of building_d
 
 	indexed_vao_manager_with_shadow_t vao_mgr;
 public:
-	unsigned num_verts, num_ixs; // for drawing
+	unsigned num_verts, num_ixs, vert_vbo_sz, ixs_vbo_sz; // for drawing
 	uint8_t dir_mask; // {-x, +x, -y, +y, -z, +z}
 	bool en_shadows;
 
-	rgeom_mat_t(tid_nm_pair_t const &tex_=tid_nm_pair_t()) : rgeom_storage_t(tex_), num_verts(0), num_ixs(0), dir_mask(0), en_shadows(0) {}
+	rgeom_mat_t(tid_nm_pair_t const &tex_=tid_nm_pair_t()) : rgeom_storage_t(tex_), num_verts(0), num_ixs(0), vert_vbo_sz(0), ixs_vbo_sz(0), dir_mask(0), en_shadows(0) {}
 	//~rgeom_mat_t() {assert(vbo_mgr.vbo == 0); assert(vbo_mgr.ivbo == 0);} // VBOs should be freed before destruction
 	void enable_shadows() {en_shadows = 1;}
 	void clear();
+	void clear_vbos();
 	void clear_vectors(bool free_memory=0) {rgeom_storage_t::clear(free_memory);}
 	void add_cube_to_verts(cube_t const &c, colorRGBA const &color, point const &tex_origin=all_zeros,
 		unsigned skip_faces=0, bool swap_tex_st=0, bool mirror_x=0, bool mirror_y=0, bool inverted=0);
@@ -660,6 +661,7 @@ public:
 struct building_materials_t : public vector<rgeom_mat_t> {
 	bool valid = 0;
 	void clear();
+	void invalidate() {valid = 0;}
 	unsigned count_all_verts() const;
 	rgeom_mat_t &get_material(tid_nm_pair_t const &tex, bool inc_shadows);
 	void create_vbos(building_t const &building);
@@ -871,8 +873,6 @@ private:
 	void create_lights_vbos(building_t const &building);
 	void create_dynamic_vbos(building_t const &building);
 	void create_door_vbos(building_t const &building);
-	void clear_static_vbos();
-	void clear_static_small_vbos();
 	static void add_closet_objects(room_object_t const &c, vect_room_object_t &objects);
 	static unsigned get_shelves_for_object(room_object_t const &c, cube_t shelves[4]);
 	static void get_shelf_objects(room_object_t const &c_in, cube_t const shelves[4], unsigned num_shelves, vect_room_object_t &objects);

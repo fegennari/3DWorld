@@ -335,9 +335,13 @@ void rgeom_storage_t::swap(rgeom_storage_t &s) {
 }
 
 void rgeom_mat_t::clear() {
-	vao_mgr.clear_vbos();
+	clear_vbos();
 	clear_vectors();
 	num_verts = num_ixs = 0;
+}
+void rgeom_mat_t::clear_vbos() {
+	vao_mgr.clear_vbos();
+	vert_vbo_sz = ixs_vbo_sz = 0;
 }
 
 void rotate_verts(vector<rgeom_mat_t::vertex_t> &verts, building_t const &building) {
@@ -362,17 +366,28 @@ void rgeom_mat_t::create_vbo(building_t const &building) {
 void rgeom_mat_t::create_vbo_inner() {
 	assert(itri_verts.empty() == indices.empty());
 	unsigned qsz(quad_verts.size()*sizeof(vertex_t)), itsz(itri_verts.size()*sizeof(vertex_t));
-	num_verts   = quad_verts.size() + itri_verts.size();
-	assert(num_verts > 0); // too strong?
-	vao_mgr.vbo = ::create_vbo();
-	check_bind_vbo(vao_mgr.vbo);
-	upload_vbo_data(nullptr, num_verts*sizeof(vertex_t));
+	gen_quad_ixs(indices, 6*(quad_verts.size()/4), itri_verts.size()); // append indices for quad_verts
+	num_verts = quad_verts.size() + itri_verts.size();
+	num_ixs   = indices.size();
+	if (num_verts == 0) return; // nothing to do
+
+	if (vao_mgr.vbo && num_verts <= vert_vbo_sz && vao_mgr.ivbo && num_ixs <= ixs_vbo_sz) { // reuse previous VBOs
+		check_bind_vbo(vao_mgr.ivbo, 1);
+		upload_vbo_sub_data(indices.data(), 0, indices.size()*sizeof(unsigned), 1);
+		check_bind_vbo(vao_mgr.vbo);
+	}
+	else { // create a new VBO
+		clear_vbos(); // free any existing VBO memory
+		create_vbo_and_upload(vao_mgr.ivbo, indices, 1, 1); // indices should always be nonempty
+		vao_mgr.vbo = ::create_vbo();
+		check_bind_vbo(vao_mgr.vbo);
+		upload_vbo_data(nullptr, num_verts*sizeof(vertex_t));
+		vert_vbo_sz = num_verts;
+		ixs_vbo_sz  = num_ixs;
+	}
 	if (itsz > 0) {upload_vbo_sub_data(itri_verts.data(), 0,    itsz);}
 	if (qsz  > 0) {upload_vbo_sub_data(quad_verts.data(), itsz, qsz );}
 	bind_vbo(0);
-	gen_quad_ixs(indices, 6*(quad_verts.size()/4), itri_verts.size()); // append indices for quad_verts
-	create_vbo_and_upload(vao_mgr.ivbo, indices, 1, 1); // indices should always be nonempty
-	num_ixs = indices.size();
 
 	if (num_verts >= 32) {dir_mask = 63;} // too many verts, assume all orients
 	else {
@@ -420,8 +435,7 @@ void rgeom_mat_t::draw(tid_nm_pair_dstate_t &state, brg_batch_draw_t *bbd, int s
 	if (shadow_only && !en_shadows)  return; // shadows not enabled for this material (picture, whiteboard, rug, etc.)
 	if (shadow_only && tex.emissive) return; // assume this is a light source and shouldn't produce shadows (also applies to bathroom windows, which don't produce shadows)
 	if (reflection_pass && tex.tid == REFLECTION_TEXTURE_ID) return; // don't draw reflections of mirrors as this doesn't work correctly
-	assert(num_verts > 0); // too strong? should be okay to remove this check
-	if (num_verts == 0) return;
+	if (num_verts == 0) return; // Note: should only happen when reusing materials and all objects using this material were removed
 	vao_setup(shadow_only);
 
 	// Note: the shadow pass doesn't normally bind textures and set uniforms, so we don't need to combine those calls into batches
@@ -456,9 +470,9 @@ void rgeom_mat_t::upload_draw_and_clear(tid_nm_pair_dstate_t &state) { // Note: 
 }
 
 void building_materials_t::clear() {
+	invalidate();
 	for (iterator m = begin(); m != end(); ++m) {m->clear();}
 	vector<rgeom_mat_t>::clear();
-	valid = 0;
 }
 unsigned building_materials_t::count_all_verts() const {
 	unsigned num_verts(0);
@@ -472,6 +486,7 @@ rgeom_mat_t &building_materials_t::get_material(tid_nm_pair_t const &tex, bool i
 		if (inc_shadows) {m->enable_shadows();}
 		// tscale diffs don't make new materials; copy tscales from incoming tex; this field may be used locally by the caller, but isn't used for drawing
 		m->tex.tscale_x = tex.tscale_x; m->tex.tscale_y = tex.tscale_y;
+		if (m->get_tot_vert_capacity() == 0) {rgeom_alloc.alloc(*m);} // existing but empty entry, allocate capacity from the allocator free list
 		return *m;
 	}
 	emplace_back(tex); // not found, add a new material
@@ -517,29 +532,30 @@ void building_room_geom_t::clear() {
 	has_elevators = 0;
 }
 void building_room_geom_t::clear_materials() { // clears all materials
-	clear_static_vbos();
-	clear_static_small_vbos();
+	mats_static .clear();
+	mats_alpha  .clear();
+	mats_small  .clear();
+	mats_amask  .clear();
 	mats_dynamic.clear();
 	mats_doors  .clear();
 	mats_lights .clear();
 	mats_detail .clear();
-}
-void building_room_geom_t::clear_static_vbos() { // used to clear pictures
-	mats_static    .clear();
 	obj_model_insts.clear(); // these are associated with static VBOs
-	mats_alpha     .clear();
-}
-void building_room_geom_t::clear_static_small_vbos() {
-	mats_small.clear();
-	mats_amask.clear();
 }
 // Note: used for room lighting changes; detail object changes are not supported
 void building_room_geom_t::check_invalid_draw_data() {
-	if (invalidate_mats_mask & (1 << MAT_TYPE_SMALL  )) {clear_static_small_vbos();} // small objects
-	if (invalidate_mats_mask & (1 << MAT_TYPE_STATIC )) {clear_static_vbos ();} // large objects and 3D models
-	if (invalidate_mats_mask & (1 << MAT_TYPE_DYNAMIC)) {mats_dynamic.clear();} // dynamic objects
-	if (invalidate_mats_mask & (1 << MAT_TYPE_DOORS  )) {mats_doors  .clear();}
-	if (invalidate_mats_mask & (1 << MAT_TYPE_LIGHTS )) {mats_lights .clear();}
+	if (invalidate_mats_mask & (1 << MAT_TYPE_SMALL  )) { // small objects
+		mats_small.invalidate();
+		mats_amask.invalidate();
+	}
+	if (invalidate_mats_mask & (1 << MAT_TYPE_STATIC )) { // large objects and 3D models
+		mats_static.invalidate();
+		mats_alpha .invalidate();
+		obj_model_insts.clear();
+	}
+	if (invalidate_mats_mask & (1 << MAT_TYPE_DYNAMIC)) {mats_dynamic.invalidate();} // dynamic objects
+	if (invalidate_mats_mask & (1 << MAT_TYPE_DOORS  )) {mats_doors  .invalidate();}
+	if (invalidate_mats_mask & (1 << MAT_TYPE_LIGHTS )) {mats_lights .invalidate();}
 	invalidate_mats_mask = 0; // reset for next frame
 }
 void building_room_geom_t::invalidate_draw_data_for_obj(room_object_t const &obj, bool was_taken) {
@@ -579,8 +595,6 @@ void room_object_t::set_as_bottle(unsigned rand_id, unsigned max_type, bool no_e
 void building_room_geom_t::create_static_vbos(building_t const &building) {
 	//highres_timer_t timer("Gen Room Geom"); // 2.35ms
 	float const tscale(2.0/obj_scale);
-	mats_static.clear();
-	mats_alpha .clear();
 	tid_nm_pair_t const &wall_tex(building.get_material().wall_tex);
 
 	for (auto i = objs.begin(); i != objs.end(); ++i) {
@@ -636,8 +650,6 @@ void building_room_geom_t::create_static_vbos(building_t const &building) {
 
 void building_room_geom_t::create_small_static_vbos(building_t const &building) {
 	//highres_timer_t timer("Gen Room Geom Small"); // 7.8ms, slow building at 26,16
-	mats_small.clear();
-	mats_amask.clear();
 	model_objs.clear(); // currently model_objs are only created for small objects in drawers, so we clear this here
 	add_small_static_objs_to_verts(expanded_objs);
 	add_small_static_objs_to_verts(objs);
@@ -701,7 +713,6 @@ void building_room_geom_t::add_small_static_objs_to_verts(vect_room_object_t con
 }
 
 void building_room_geom_t::create_detail_vbos(building_t const &building) {
-	mats_detail.clear();
 	// currently only small objects that are non-interactive and can't be taken; TYPE_SWITCH almost counts; also, anything in the basement not seen from outside the building
 	auto objs_end(get_placed_objs_end()); // skip buttons/stairs/elevators
 	tid_nm_pair_t const &wall_tex(building.get_material().wall_tex);
