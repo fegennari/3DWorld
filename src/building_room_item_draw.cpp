@@ -317,8 +317,56 @@ public:
 	}
 	unsigned size() const {return free_list.size();}
 };
-
 rgeom_alloc_t rgeom_alloc; // static allocator with free list, shared across all buildings; not thread safe
+
+struct vbo_cache_entry_t {
+	unsigned vbo, size;
+	vbo_cache_entry_t(unsigned vbo_, unsigned size_) : vbo(vbo_), size(size_) {}
+};
+class vbo_cache_t {
+	vector<vbo_cache_entry_t> entries[2]; // {vertex, index}
+	unsigned num_allocs=0, num_frees=0;
+public:
+	vbo_cache_entry_t alloc(unsigned size, bool is_index) {
+		++num_allocs;
+		unsigned const max_size(5*size/4); // no more than 20% wasted cap
+		auto &e(entries[is_index]);
+
+		for (auto i = e.begin(); i != e.end(); ++i) {
+			if (i->size < size || i->size > max_size) continue;
+			//if (!is_index) {cout << "found " << size << "/" << i->size << endl;} // TESTING
+			vbo_cache_entry_t ret(*i); // deep copy
+			swap(*i, e.back());
+			e.pop_back();
+			return ret; // done
+		} // for i
+		//if (!is_index) {cout << "new " << size << endl;} // TESTING
+		return vbo_cache_entry_t(create_vbo(), size);
+	}
+	void free(unsigned &vbo, unsigned size, bool is_index) {
+		if (!vbo) return; // nothing allocated
+		++num_frees;
+		//if ((vbo % 1000) == 0) {cout << TXT(num_allocs) << TXT(num_frees) << TXT((num_allocs-num_frees)) << endl;} // TESTING
+		if (size == 0) {delete_and_zero_vbo(vbo); return;}
+		entries[is_index].emplace_back(vbo, size);
+
+		/*if (!is_index && (vbo % 1000) == 0) { // print every so often
+			static unsigned mem_peak(0);
+			unsigned mem(0);
+			for (auto const &e : entries[is_index]) {mem += e.size;}
+			max_eq(mem_peak, mem);
+			cout << "free " << size << " total " << entries[is_index].size() << " mem " << mem << " peak " << mem_peak << endl; // TESTING
+		}*/
+		vbo = 0;
+	}
+	void clear() {
+		for (unsigned d = 0; d < 2; ++d) {
+			for (vbo_cache_entry_t &entry : entries[d]) {delete_vbo(entry.vbo);}
+			entries[d].clear();
+		}
+	}
+};
+vbo_cache_t vbo_cache;
 
 void rgeom_storage_t::clear(bool free_memory) {
 	if (free_memory) {clear_container(quad_verts);} else {quad_verts.clear();}
@@ -341,7 +389,14 @@ void rgeom_mat_t::clear() {
 	num_verts = num_ixs = 0;
 }
 void rgeom_mat_t::clear_vbos() {
+#if 0
+	vbo_cache.free(vao_mgr.vbo,  vert_vbo_sz, 0);
+	vbo_cache.free(vao_mgr.ivbo, ixs_vbo_sz,  1);
+	vao_mgr.clear_vaos(); // Note: VAOs not reused because they generally won't be used with the same {vbo, ivbo} pair
+	vao_mgr.reset_vbos_to_zero();
+#else
 	vao_mgr.clear_vbos();
+#endif
 	vert_vbo_sz = ixs_vbo_sz = 0;
 }
 
@@ -365,28 +420,41 @@ void rgeom_mat_t::create_vbo(building_t const &building) {
 }
 void rgeom_mat_t::create_vbo_inner() {
 	assert(itri_verts.empty() == indices.empty());
-	unsigned const qsz(quad_verts.size()*sizeof(vertex_t)), itsz(itri_verts.size()*sizeof(vertex_t));
+	unsigned const qsz(quad_verts.size()*sizeof(vertex_t)), itsz(itri_verts.size()*sizeof(vertex_t)), tot_verts_sz(qsz + itsz);
 	num_verts = quad_verts.size() + itri_verts.size();
 	if (num_verts == 0) return; // nothing to do
 	gen_quad_ixs(indices, 6*(quad_verts.size()/4), itri_verts.size()); // append indices for quad_verts
 	num_ixs = indices.size();
+	unsigned const ix_data_sz(num_ixs*sizeof(unsigned));
+	//bind_vao(0); // is this needed?
 
-	if (vao_mgr.vbo && num_verts <= vert_vbo_sz && vao_mgr.ivbo && num_ixs <= ixs_vbo_sz) { // reuse previous VBOs
-		check_bind_vbo(vao_mgr.ivbo, 1);
-		upload_vbo_sub_data(indices.data(), 0, indices.size()*sizeof(unsigned), 1);
+	if (vao_mgr.vbo && tot_verts_sz <= vert_vbo_sz && vao_mgr.ivbo && ix_data_sz <= ixs_vbo_sz) { // reuse previous VBOs
+		cout << vao_mgr.vbo << " " << vao_mgr.ivbo << " " << tot_verts_sz << " " << vert_vbo_sz << " " << ix_data_sz << " " << ixs_vbo_sz << endl;
+		//vao_mgr.clear_vaos();
+		GL_CHECK(check_bind_vbo(vao_mgr.ivbo, 1);)
+		GL_CHECK(upload_vbo_sub_data(indices.data(), 0, ix_data_sz, 1);)
+		bind_vbo(0, 1); // is this needed?
 		check_bind_vbo(vao_mgr.vbo);
 	}
 	else { // create a new VBO
 		clear_vbos(); // free any existing VBO memory
+#if 0
+		auto vret(vbo_cache.alloc(tot_verts_sz, 0)); // verts
+		auto iret(vbo_cache.alloc(ix_data_sz,   1)); // indices
+		vao_mgr.vbo  = vret.vbo; vert_vbo_sz = vret.size; assert(tot_verts_sz <= vert_vbo_sz);
+		vao_mgr.ivbo = iret.vbo; ixs_vbo_sz  = iret.size; assert(ix_data_sz   <= ixs_vbo_sz );
+		GL_CHECK(upload_to_vbo(vao_mgr.ivbo, indices, 1, 1);)
+#else
 		create_vbo_and_upload(vao_mgr.ivbo, indices, 1, 1); // indices should always be nonempty
 		vao_mgr.vbo = ::create_vbo();
-		check_bind_vbo(vao_mgr.vbo);
-		upload_vbo_data(nullptr, num_verts*sizeof(vertex_t));
-		vert_vbo_sz = num_verts;
-		ixs_vbo_sz  = num_ixs;
+		vert_vbo_sz = tot_verts_sz;
+		ixs_vbo_sz  = ix_data_sz;
+#endif
+		GL_CHECK(check_bind_vbo(vao_mgr.vbo);)
+		GL_CHECK(upload_vbo_data(nullptr, tot_verts_sz);)
 	}
-	if (itsz > 0) {upload_vbo_sub_data(itri_verts.data(), 0,    itsz);}
-	if (qsz  > 0) {upload_vbo_sub_data(quad_verts.data(), itsz, qsz );}
+	if (itsz > 0) {GL_CHECK(upload_vbo_sub_data(itri_verts.data(), 0,    itsz);)}
+	if (qsz  > 0) {GL_CHECK(upload_vbo_sub_data(quad_verts.data(), itsz, qsz ));}
 	bind_vbo(0);
 
 	if (num_verts >= 32) {dir_mask = 63;} // too many verts, assume all orients
