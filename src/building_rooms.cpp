@@ -2366,7 +2366,9 @@ bool building_t::is_light_placement_valid(cube_t const &light, room_t const &roo
 	light_ext.z1() = light_ext.z1() = light.z2() + get_fc_thickness(); // shift in between the ceiling and floor so that we can do a cube contains check
 	return any_cube_contains(light_ext, interior->fc_occluders);
 }
-void building_t::try_place_light_on_ceiling(cube_t const &light, room_t const &room, bool room_dim, float pad, bool allow_rot, bool allow_mult, vect_cube_t &lights, rand_gen_t &rgen) {
+void building_t::try_place_light_on_ceiling(cube_t const &light, room_t const &room, bool room_dim, float pad, bool allow_rot, bool allow_mult,
+	vect_cube_t &lights, rand_gen_t &rgen) const
+{
 	assert(has_room_geom());
 	if (is_light_placement_valid(light, room, pad)) {lights.push_back(light); return;} // contained = done
 	point room_center(room.get_cube_center());
@@ -2435,6 +2437,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 	bool added_bedroom(0), added_living(0), added_library(0), added_dining(0), added_laundry(0), added_basement_utility(0);
 	light_ix_assign_t light_ix_assign;
 	interior->create_fc_occluders(); // not really part of room geom, but needed for generating and drawing room geom, so we create them here
+	has_int_fplace = 0; // reset for this generation
 
 	if (rooms.size() > 1) { // choose best room assignments for required rooms; if a single room, skip this step
 		float min_score(0.0);
