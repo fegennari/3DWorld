@@ -392,8 +392,8 @@ void texture_t::load_targa(int index, bool allow_diff_width_height) {
 		cerr << "Incorrect image size for " << name << ": expected " << width << "x" << height << ", got " << img.width << "x" << img.height << endl;
 		exit(1);
 	}
-	// overwrite ncolors; if caller set ncolors=4 then it's not respected because TGA doesn't have an alpha channel
-	if      (img.image_type == TGA_IMAGE_TYPE_BGR  || img.image_type == TGA_IMAGE_TYPE_BGR_RLE ) {ncolors = 3;} // RGB
+	// overwrite ncolors; if caller set ncolors=4 then assume it has an alpha channel
+	if      (img.image_type == TGA_IMAGE_TYPE_BGR  || img.image_type == TGA_IMAGE_TYPE_BGR_RLE ) {ncolors = ((ncolors == 4) ? 4 : 3);} // RGB/RGBA
 	else if (img.image_type == TGA_IMAGE_TYPE_MONO || img.image_type == TGA_IMAGE_TYPE_MONO_RLE) {ncolors = 1;} // Red
 	// else leave ncolors unchanged from what was specified by the caller before load_targa()
 	alloc();
