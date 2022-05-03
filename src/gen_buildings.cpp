@@ -2342,7 +2342,7 @@ public:
 		if (have_interior) {
 			//timer_t timer2("Draw Building Interiors");
 			float const interior_draw_dist(global_building_params.interior_view_dist_scale*2.0f*(X_SCENE_SIZE + Y_SCENE_SIZE));
-			float const room_geom_draw_dist(0.4*interior_draw_dist), room_geom_sm_draw_dist(0.05*interior_draw_dist);
+			float const room_geom_draw_dist(0.4*interior_draw_dist), room_geom_clear_dist(1.05*room_geom_draw_dist), room_geom_sm_draw_dist(0.05*interior_draw_dist);
 			float const room_geom_detail_draw_dist(0.04*interior_draw_dist), z_prepass_dist(0.25*interior_draw_dist);
 			glEnable(GL_CULL_FACE); // back face culling optimization, helps with expensive lighting shaders
 			glCullFace(reflection_pass ? GL_FRONT : GL_BACK);
@@ -2386,26 +2386,31 @@ public:
 			for (auto i = bcs.begin(); i != bcs.end(); ++i) { // draw only nearby interiors
 				unsigned const bcs_ix(i - bcs.begin());
 				float const door_open_dist(get_door_open_dist());
-				float const ddist_scale((*i)->building_draw_windows.empty() ? 0.05 : 1.0); // if there are no windows, we can wait until the player is very close to draw the interior
+				// if there are no windows, we can wait until the player is very close to draw the interior
+				float const ddist_scale((*i)->building_draw_windows.empty() ? 0.05 : 1.0), ddist_scale_sq(ddist_scale*ddist_scale);
+				float const int_draw_dist_sq(ddist_scale_sq*interior_draw_dist*interior_draw_dist);
+				float const rgeom_clear_dist_sq(ddist_scale_sq*room_geom_clear_dist*room_geom_clear_dist);
+				float const rgeom_draw_dist_sq(ddist_scale_sq*room_geom_draw_dist*room_geom_draw_dist);
+				float const rgeom_sm_draw_dist_sq(ddist_scale_sq*room_geom_sm_draw_dist*room_geom_draw_dist);
+				float const rgeom_detail_dist_sq(ddist_scale_sq*room_geom_sm_draw_dist*room_geom_detail_draw_dist);
 				occlusion_checker_noncity_t oc(**i);
 				bool is_first_tile(1);
 
 				for (auto g = (*i)->grid_by_tile.begin(); g != (*i)->grid_by_tile.end(); ++g) { // Note: all grids should be nonempty
 					if (reflection_pass && !g->bcube.contains_pt_xy(camera_xlated)) continue; // not the correct tile
+					float const gdist_sq(p2p_dist_sq(camera_xlated, g->bcube.closest_pt(camera_xlated)));
 
-					if (!g->bcube.closest_dist_less_than(camera_xlated, ddist_scale*interior_draw_dist)) { // too far
-						if (g->has_room_geom) { // need to clear room geom
-							//highres_timer_t timer("Clear Room Geom");
-							for (auto bi = g->bc_ixs.begin(); bi != g->bc_ixs.end(); ++bi) {(*i)->get_building(bi->ix).clear_room_geom();} // force=0
-							g->has_room_geom = 0;
-						}
-						continue;
+					if (gdist_sq > rgeom_clear_dist_sq && g->has_room_geom) { // need to clear room geom
+						//highres_timer_t timer("Clear Room Geom");
+						for (auto bi = g->bc_ixs.begin(); bi != g->bc_ixs.end(); ++bi) {(*i)->get_building(bi->ix).clear_room_geom();}
+						g->has_room_geom = 0;
 					}
+					if (gdist_sq > int_draw_dist_sq) continue; // too far
 					if (!camera_pdu.sphere_and_cube_visible_test((g->bcube.get_cube_center() + xlate), g->bcube.get_bsphere_radius(), (g->bcube + xlate))) continue; // VFC
 					if (is_first_tile) {(*i)->ensure_interior_geom_vbos();} // we need the interior geom at this point
 					(*i)->building_draw_interior.draw_tile(s, (g - (*i)->grid_by_tile.begin()));
 					// iterate over nearby buildings in this tile and draw interior room geom, generating it if needed
-					if (!g->bcube.closest_dist_less_than(camera_xlated, ddist_scale*room_geom_draw_dist)) continue; // too far
+					if (gdist_sq > rgeom_draw_dist_sq) continue; // too far
 					if (is_first_tile && !reflection_pass) {oc.set_camera(camera_pdu);} // setup occlusion culling on the first visible tile
 					is_first_tile = 0;
 					
@@ -2413,15 +2418,17 @@ public:
 						building_t &b((*i)->get_building(bi->ix));
 						if (!b.interior) continue; // no interior, skip
 						if (reflection_pass && !b.bcube.contains_pt_xy(camera_xlated)) continue; // not the correct building
-						if (!b.bcube.closest_dist_less_than(camera_xlated, ddist_scale*room_geom_draw_dist)) continue; // too far away
+						float const bdist_sq(p2p_dist_sq(camera_xlated, b.bcube.closest_pt(camera_xlated)));
+						//if (bdist_sq > rgeom_clear_dist_sq) {b.clear_room_geom(); continue;} // too far away - is this useful?
+						if (bdist_sq > rgeom_draw_dist_sq) continue; // too far away
 						if (!camera_pdu.cube_visible(b.bcube + xlate)) continue; // VFC
 						b.maybe_gen_chimney_smoke();
 						bool const camera_near_building(b.bcube.contains_pt_xy_exp(camera_xlated, door_open_dist));
 						if (!camera_near_building && !b.has_windows()) continue; // player is outside a windowless building (city office building)
 						bool const player_in_building_bcube(b.bcube.contains_pt_xy(camera_xlated)); // player is within the building's bcube
 						if ((display_mode & 0x08) && !player_in_building_bcube && b.is_entire_building_occluded(camera_xlated, oc)) continue; // check occlusion
-						unsigned inc_small(b.bcube.closest_dist_less_than(camera_xlated, ddist_scale*room_geom_sm_draw_dist));
-						if (inc_small && b.bcube.closest_dist_less_than(camera_xlated, ddist_scale*room_geom_detail_draw_dist)) {inc_small = 2;} // include detail objects
+						unsigned inc_small(bdist_sq < rgeom_sm_draw_dist_sq);
+						if (inc_small && bdist_sq < rgeom_detail_dist_sq) {inc_small = 2;} // include detail objects
 						b.gen_and_draw_room_geom(&bbd, s, oc, xlate, bi->ix, 0, reflection_pass, inc_small, player_in_building_bcube); // shadow_only=0
 						g->has_room_geom = 1;
 						if (!draw_interior) continue;
