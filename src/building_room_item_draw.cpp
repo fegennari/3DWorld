@@ -355,12 +355,6 @@ void rotate_verts(vector<rgeom_mat_t::vertex_t> &verts, building_t const &buildi
 		i->set_norm(n);
 	}
 }
-
-template<typename T> unsigned hash_vect_as_int(vector<T> const &v) {
-	assert((sizeof(T) % sizeof(int)) == 0); // must be a multiple of 4 bytes
-	return jenkins_one_at_a_time_hash((int const*)v.data(), sizeof(T)*v.size()/sizeof(int));
-}
-
 void rgeom_mat_t::create_vbo(building_t const &building) {
 	if (building.is_rotated()) { // rotate all vertices to match the building rotation
 		rotate_verts(quad_verts, building);
