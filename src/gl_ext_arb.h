@@ -199,7 +199,8 @@ private:
 public:
 	bool is_vao_setup(bool shadow) const {return vaos[shadow].is_valid();}
 	void reset_vbos_to_zero() {indexed_vbo_manager_t::reset_vbos_to_zero(); vaos[0].vao = vaos[1].vao = 0;} // virtual?
-	void clear_vbos() {indexed_vbo_manager_t::clear_vbos(); vaos[0].clear(); vaos[1].clear();} // and VAOs
+	void clear_vaos() {vaos[0].clear(); vaos[1].clear();}
+	void clear_vbos() {indexed_vbo_manager_t::clear_vbos(); clear_vaos();} // and VAOs
 
 	template<typename vert_type_t, typename index_type_t>
 	void create_and_upload(vector<vert_type_t> const &data, vector<index_type_t> const &idata, bool shadow, int dynamic_level=0, bool setup_pointers=0) {
