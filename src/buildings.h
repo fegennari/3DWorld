@@ -1234,7 +1234,7 @@ struct building_t : public building_geom_t {
 	bool has_cars_to_draw(bool player_in_building) const;
 	void draw_cars_in_building(shader_t &s, vector3d const &xlate, bool player_in_building, bool shadow_only) const;
 	void add_split_roof_shadow_quads(building_draw_t &bdraw) const;
-	void clear_room_geom(bool force);
+	void clear_room_geom();
 	void update_grass_exclude_at_pos(point const &pos, vector3d const &xlate, bool camera_in_building) const;
 	void update_stats(building_stats_t &s) const;
 	bool are_rooms_connected_without_using_room(unsigned room1, unsigned room2, unsigned room_exclude) const;

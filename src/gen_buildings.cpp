@@ -2395,7 +2395,8 @@ public:
 
 					if (!g->bcube.closest_dist_less_than(camera_xlated, ddist_scale*interior_draw_dist)) { // too far
 						if (g->has_room_geom) { // need to clear room geom
-							for (auto bi = g->bc_ixs.begin(); bi != g->bc_ixs.end(); ++bi) {(*i)->get_building(bi->ix).clear_room_geom(0);} // force=0
+							//highres_timer_t timer("Clear Room Geom");
+							for (auto bi = g->bc_ixs.begin(); bi != g->bc_ixs.end(); ++bi) {(*i)->get_building(bi->ix).clear_room_geom();} // force=0
 							g->has_room_geom = 0;
 						}
 						continue;
@@ -2834,7 +2835,7 @@ public:
 		building_draw_wind_lights.clear_vbos();
 		building_draw_interior.clear_vbos();
 		building_draw_int_ext_walls.clear_vbos();
-		for (auto i = buildings.begin(); i != buildings.end(); ++i) {i->clear_room_geom(1);} // force=1; likely required for tiled buildings
+		for (auto i = buildings.begin(); i != buildings.end(); ++i) {i->clear_room_geom();} // likely required for tiled buildings
 		gpu_mem_usage = 0;
 	}
 	bool check_sphere_coll(point &pos, point const &p_last, float radius, bool xy_only=0, vector3d *cnorm=nullptr, bool check_interior=0) const { // Note: pos is in camera space

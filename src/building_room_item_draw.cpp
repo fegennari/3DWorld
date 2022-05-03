@@ -491,7 +491,7 @@ rgeom_mat_t &building_materials_t::get_material(tid_nm_pair_t const &tex, bool i
 	}
 	emplace_back(tex); // not found, add a new material
 	if (inc_shadows) {back().enable_shadows();}
-	rgeom_alloc.alloc(back()); // Note: must add an omp critical around this if materials are generated in parallel
+	rgeom_alloc.alloc(back());
 	return back();
 }
 void building_materials_t::create_vbos(building_t const &building) {
@@ -968,7 +968,7 @@ void building_t::gen_and_draw_room_geom(brg_batch_draw_t *bbd, shader_t &s, occl
 	if (has_room_geom() && inc_small == 2) {add_wall_and_door_trim_if_needed();} // gen trim when close to the player
 	draw_room_geom(bbd, s, oc, xlate, building_ix, shadow_only, reflection_pass, inc_small, player_in_building);
 }
-void building_t::clear_room_geom(bool force) {
+void building_t::clear_room_geom() {
 	if (!has_room_geom()) return;
 	if (interior->room_geom->modified_by_player) return; // keep the player's modifications and don't delete the room geom
 	interior->room_geom->clear(); // free VBO data before deleting the room_geom object
