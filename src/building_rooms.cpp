@@ -2844,8 +2844,9 @@ void building_t::maybe_add_fire_escape(rand_gen_t &rgen) {
 			set_wall_width(fe_bc, rgen.rand_uniform((p->d[!dim][0] + 1.2*fe_hwidth), (p->d[!dim][1] - 1.2*fe_hwidth)), fe_hwidth, !dim);
 			fe_bc.d[dim][0] = fe_bc.d[dim][1] = p->d[dim][dir];
 			fe_bc.d[dim][dir] += (dir ? 1.0 : -1.0)*fe_depth;
-			if (has_bcube_int_no_adj(fe_bc, parts)) continue; // check for intersection with other parts, in particular the chimney and fireplace
+			if (has_bcube_int_no_adj(fe_bc, parts))              continue; // check for intersection with other parts, in particular the chimney and fireplace
 			if (has_driveway() && fe_bc.intersects_xy(driveway)) continue; // skip if intersects driveway or garage
+			if (is_room_adjacent_to_ext_door(fe_bc, 0))          continue; // check exterior doors; front_door_only=0
 			interior->room_geom->objs.emplace_back(fe_bc, TYPE_FESCAPE, 0, dim, dir, 0, 1.0, SHAPE_CUBE, BLACK); // room_id=0
 			return; // success/done
 		} // for d
@@ -3559,7 +3560,7 @@ void room_t::assign_all_to(room_type rt, bool locked) {
 void room_t::assign_to(room_type rt, unsigned floor, bool locked) {
 	min_eq(floor, NUM_RTYPE_SLOTS-1U); // room types are only tracked up to the 4th floor, and every floor above that has the same type as the 4th floor; good enough for houses at least
 	if (rtype[floor] == RTYPE_BATH) return; // assign unless already set to a bathroom, since we need that for has_bathroom()
-	rtype[floor]  = rt;
+	rtype[floor] = rt;
 	if (locked) {rtype_locked |= (1 << floor);} // lock this floor
 }
 bool room_t::has_bathroom() const {
