@@ -649,7 +649,7 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 				unsigned const utility_room_ix(utility_room_cands[rand() % utility_room_cands.size()]);
 				assert(utility_room_ix < rooms.size());
 				room_t &utility_room(rooms[utility_room_ix]);
-				utility_room.assign_to(RTYPE_UTILITY, 0); // make this room a utility room on floor 0
+				utility_room.assign_to(RTYPE_UTILITY, 0, 1); // make this room a utility room on floor 0; locked=1
 				cube_t test_cube(utility_room);
 				test_cube.expand_by_xy(wall_thick);
 				set_cube_zvals(test_cube, utility_room.z1()+floor_thickness, utility_room.z1()+window_vspacing-floor_thickness); // shrink to first floor
@@ -946,7 +946,7 @@ bool building_t::maybe_assign_interior_garage(bool &gdim, bool &gdir) {
 	if (best_room < 0) return 0; // failed
 	assert((unsigned)best_room < rooms.size());
 	room_t &room(rooms[best_room]);
-	room.assign_to(RTYPE_GARAGE, 0);
+	room.assign_to(RTYPE_GARAGE, 0, 1); // first floor, locked=1
 	cube_t room_exp(room);
 	room_exp.expand_by_xy(wall_thickness);
 

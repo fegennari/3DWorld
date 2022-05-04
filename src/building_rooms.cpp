@@ -242,7 +242,7 @@ bool building_t::room_has_stairs_or_elevator(room_t const &room, float zval, uns
 }
 
 bool building_t::is_room_office_bathroom(room_t const &room, float zval, unsigned floor) const {
-	return room.is_office && room.get_room_type(floor) == RTYPE_BATH && !room_has_stairs_or_elevator(room, zval, floor);
+	return (room.is_office && room.get_room_type(floor) == RTYPE_BATH && !room_has_stairs_or_elevator(room, zval, floor));
 }
 
 // Note: must be first placed object
@@ -749,7 +749,6 @@ bool building_t::add_bed_to_room(rand_gen_t &rgen, room_t const &room, vect_cube
 
 // Note: modified blockers rather than using it; fireplace must be the first placed object
 bool building_t::maybe_add_fireplace_to_room(room_t const &room, vect_cube_t &blockers, float zval, unsigned room_id, float tot_light_amt) {
-	if (has_int_fplace) return 0; // already added an interior fireplace
 	// Note: the first part of the code below is run on every first floor room and will duplicate work, so it may be better to factor it out somehow
 	cube_t fireplace(get_fireplace()); // make a copy of the exterior fireplace that will be converted to an interior fireplace
 	bool dim(0), dir(0);
@@ -2434,7 +2433,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 	unsigned cand_bathroom(rooms.size()); // start at an invalid value
 	unsigned added_kitchen_mask(0); // per-floor
 	unsigned added_bathroom_objs_mask(0);
-	bool added_bedroom(0), added_living(0), added_library(0), added_dining(0), added_laundry(0), added_basement_utility(0);
+	bool added_bedroom(0), added_living(0), added_library(0), added_dining(0), added_laundry(0), added_basement_utility(0), added_fireplace(0);
 	light_ix_assign_t light_ix_assign;
 	interior->create_fc_occluders(); // not really part of room geom, but needed for generating and drawing room geom, so we create them here
 	has_int_fplace = 0; // reset for this generation
@@ -2635,14 +2634,16 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			bool added_tc(0), added_desk(0), added_obj(0), can_place_onto(0), no_whiteboard(0);
 			bool is_bathroom(0), is_bedroom(0), is_kitchen(0), is_living(0), is_dining(0), is_storage(0), is_utility(0);
 			unsigned num_chairs(0);
+			// unset room type if not locked on this floor during floorplanning; required to generate determinstic room geom
+			if (!r->is_rtype_locked(f)) {r->assign_to(RTYPE_NOTSET, f);}
 
 			// place room objects
 			bool const allow_br(!is_house || must_be_bathroom || f > 0 || num_floors == 1 || (rgen.rand_float() < 0.33f*(added_living + (added_kitchen_mask&1) + 1))); // bed/bath
 			bool is_office_bathroom(is_room_office_bathroom(*r, room_center.z, f)), has_fireplace(0);
 			blockers.clear(); // clear for this new room
 			
-			if (has_chimney == 2 && !is_basement && f == 0) { // handle fireplaces on the first floor
-				has_fireplace = maybe_add_fireplace_to_room(*r, blockers, room_center.z, room_id, tot_light_amt);
+			if (has_chimney == 2 && !is_basement && f == 0 && !added_fireplace) { // handle fireplaces on the first floor
+				has_fireplace = added_fireplace = maybe_add_fireplace_to_room(*r, blockers, room_center.z, room_id, tot_light_amt);
 			}
 			if (is_office_bathroom) { // bathroom is already assigned
 				added_obj = is_bathroom = added_bathroom = no_whiteboard =
@@ -3543,20 +3544,23 @@ void building_t::add_exterior_door_signs(rand_gen_t &rgen) {
 
 room_t::room_t(cube_t const &c, unsigned p, unsigned nl, bool is_hallway_, bool is_office_, bool is_sec_bldg_) :
 	cube_t(c), has_stairs(0), has_elevator(0), has_center_stairs(0), no_geom(is_hallway_), is_hallway(is_hallway_), is_office(is_office_), // no geom in hallways
-	is_sec_bldg(is_sec_bldg_), interior(0), ext_sides(0), part_id(p), num_lights(nl), lit_by_floor(0), light_intensity(0.0)
+	is_sec_bldg(is_sec_bldg_), interior(0), ext_sides(0), part_id(p), num_lights(nl), rtype_locked(0), lit_by_floor(0), light_intensity(0.0)
 {
 	if      (is_sec_bldg) {assign_all_to(RTYPE_GARAGE);} // or RTYPE_SHED - will be set later
-	else if (is_hallway)  {assign_all_to(RTYPE_HALL);}
+	else if (is_hallway)  {assign_all_to(RTYPE_HALL  );}
 	else if (is_office)   {assign_all_to(RTYPE_OFFICE);}
 	else if (has_stairs)  {assign_all_to(RTYPE_STAIRS);} // not really correct since has_stairs is now a per-floor bit flag, but this will likely be overwritten later anyway
-	else                  {assign_all_to(RTYPE_NOTSET);}
+	else                  {assign_all_to(RTYPE_NOTSET, 0);} // locked=0
 }
-void room_t::assign_all_to(room_type rt) {
+void room_t::assign_all_to(room_type rt, bool locked) {
 	for (unsigned n = 0; n < NUM_RTYPE_SLOTS; ++n) {rtype[n] = rt;}
+	if (locked) {rtype_locked = 0xFF;} // room type is locked on all floors
 }
-void room_t::assign_to(room_type rt, unsigned floor) {
+void room_t::assign_to(room_type rt, unsigned floor, bool locked) {
 	min_eq(floor, NUM_RTYPE_SLOTS-1U); // room types are only tracked up to the 4th floor, and every floor above that has the same type as the 4th floor; good enough for houses at least
-	if (rtype[floor] != RTYPE_BATH) {rtype[floor] = rt;} // assign unless already set to a bathroom, since we need that for has_bathroom()
+	if (rtype[floor] == RTYPE_BATH) return; // assign unless already set to a bathroom, since we need that for has_bathroom()
+	rtype[floor]  = rt;
+	if (locked) {rtype_locked |= (1 << floor);} // lock this floor
 }
 bool room_t::has_bathroom() const {
 	for (unsigned n = 0; n < NUM_RTYPE_SLOTS; ++n) {
