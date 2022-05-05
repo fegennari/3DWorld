@@ -470,9 +470,7 @@ class building_draw_t {
 			vert_ix_pair(unsigned qix_, unsigned tix_) : qix(qix_), tix(tix_) {}
 			bool operator==(vert_ix_pair const &v) const {return (qix == v.qix && tix == v.tix);}
 		};
-		// Note: not easy to use vao_manager_t due to upload done before active shader + shadow vs. geometry pass, but we can use vao_wrap_t's directly
-		vbo_wrap_t vbo;
-		vao_wrap_t vao, svao; // regular + shadow; do we need a vao_manager_with_shadow_t?
+		indexed_vao_manager_with_shadow_t vao_mgr; // Note: not using the indexed part
 		vector<vert_ix_pair> pos_by_tile; // {quads, tris}
 		unsigned tri_vbo_off;
 		unsigned start_num_verts[2] = {0}; // for quads and triangles
@@ -488,8 +486,8 @@ class building_draw_t {
 			if (vstart == vend) return; // empty range - no verts for this tile
 			if (shadow_only && no_shadows) return; // no shadows on this material
 			if (!shadow_only) {tex.set_gl(state);}
-			assert(vbo.vbo_valid());
-			(shadow_only ? svao : vao).create_from_vbo<vert_norm_comp_tc_color>(vbo, 1, 1); // setup_pointers=1, always_bind=1
+			assert(vao_mgr.vbo_valid());
+			vao_mgr.create_from_vbo<vert_norm_comp_tc_color>(shadow_only, 1, 1); // setup_pointers=1, always_bind=1
 
 			if (vstart.qix != vend.qix) {
 				assert(vstart.qix < vend.qix);
@@ -538,7 +536,7 @@ class building_draw_t {
 			tri_vbo_off = quad_verts.size(); // triangles start after quads
 			quad_verts.insert(quad_verts.end(), tri_verts.begin(), tri_verts.end()); // add tri_verts to quad_verts
 			clear_cont(tri_verts); // no longer needed
-			if (!quad_verts.empty()) {vbo.create_and_upload(quad_verts, 0, 1);}
+			if (!quad_verts.empty()) {vao_mgr.vbo_wrap_t::create_and_upload(quad_verts, 0, 1);} // use VBO directly
 			clear_cont(quad_verts); // no longer needed
 		}
 		void register_tile_id(unsigned tid) {
@@ -552,7 +550,7 @@ class building_draw_t {
 			remove_excess_cap(pos_by_tile);
 		}
 		void clear_verts() {quad_verts.clear(); tri_verts.clear(); pos_by_tile.clear();}
-		void clear_vbos () {vbo.clear(); vao.clear(); svao.clear();}
+		void clear_vbos () {vao_mgr.clear_vbos();}
 		void clear() {clear_vbos(); clear_verts();}
 		bool empty() const {return (quad_verts.empty() && tri_verts.empty());}
 		bool has_drawn() const {return !pos_by_tile.empty();}

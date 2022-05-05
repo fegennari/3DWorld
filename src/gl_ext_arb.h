@@ -154,7 +154,7 @@ struct indexed_vbo_manager_t : public vbo_wrap_t {
 	void create_and_upload_vbo_with_vao(vector<vert_type_t> const &data, vector<index_type_t> const &idata, vao_wrap_t &vao_wrap, int dynamic_level=0, bool setup_pointers=0) {
 		if (vao_wrap.vao) return; // already set
 		vao_wrap.ensure_vao_bound();
-		if (vbo) {indexed_vbo_manager_t::pre_render(1);} else {indexed_vbo_manager_t::create_and_upload(data, idata, dynamic_level);}
+		if (vbo) {indexed_vbo_manager_t::pre_render(!idata.empty());} else {indexed_vbo_manager_t::create_and_upload(data, idata, dynamic_level);}
 		if (setup_pointers) {vert_type_t::set_vbo_arrays();}
 	}
 	void clear_vbos() {
@@ -214,6 +214,9 @@ public:
 	template<typename vert_type_t, typename index_type_t>
 	void create_and_upload(vector<vert_type_t> const &data, vector<index_type_t> const &idata, bool shadow, int dynamic_level=0, bool setup_pointers=0) {
 		create_and_upload_vbo_with_vao(data, idata, vaos[shadow], dynamic_level, setup_pointers);
+	}
+	template<typename vert_type_t> void create_from_vbo(bool shadow, bool setup_pointers=0, bool always_bind=0) {
+		vaos[shadow].create_from_vbo<vert_type_t>(*this, setup_pointers, always_bind);
 	}
 	void pre_render(bool shadow, bool using_index=1, bool do_bind_vbo=0) const {
 		vaos[shadow].enable_vao();
