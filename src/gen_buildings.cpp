@@ -1851,6 +1851,7 @@ public:
 	building_creator_t(bool is_city=0) : grid_sz(1), gpu_mem_usage(0), max_extent(zero_vector),
 		building_draw(is_city), building_draw_vbo(is_city), use_smap_this_frame(0), has_interior_geom(0) {}
 	bool empty() const {return buildings.empty();}
+	bool has_interior_to_draw() const {return (has_interior_geom && !building_draw_interior.empty());}
 
 	void clear() {
 		buildings.clear();
@@ -2529,7 +2530,7 @@ public:
 			glCullFace(reflection_pass ? GL_BACK : GL_FRONT); // draw back faces
 
 			for (auto i = bcs.begin(); i != bcs.end(); ++i) {
-				if ((*i)->empty() || !(*i)->has_interior_geom) continue; // no buildings or no interiors
+				if ((*i)->empty() || !(*i)->has_interior_to_draw()) continue; // no buildings or no interiors
 				unsigned const bcs_ix(i - bcs.begin());
 				vertex_range_t const *exclude(nullptr);
 				building_mat_t const &mat((*i)->buildings.front().get_material()); // Note: assumes all wall textures have a consistent tscale
@@ -2631,7 +2632,7 @@ public:
 
 			for (auto i = bcs.begin(); i != bcs.end(); ++i) { // draw windows on top of other buildings
 				// need to swap opaque window texture with transparent texture for this draw pass
-				bool const transparent_windows(draw_interior && (*i)->has_interior_geom && !reflection_pass);
+				bool const transparent_windows(draw_interior && (*i)->has_interior_to_draw() && !reflection_pass);
 				if (transparent_windows) {(*i)->building_draw_windows.toggle_transparent_windows_mode();}
 				(*i)->building_draw_windows.draw(s, 0);
 				if (transparent_windows) {(*i)->building_draw_windows.toggle_transparent_windows_mode();}
@@ -2654,7 +2655,7 @@ public:
 			glEnable(GL_CULL_FACE); // cull back faces to avoid lighting/shadows on inside walls of building interiors
 
 			for (auto i = bcs.begin(); i != bcs.end(); ++i) {
-				bool const single_tile((*i)->is_single_tile()), no_depth_write(!single_tile), transparent_windows(draw_interior && (*i)->has_interior_geom);
+				bool const single_tile((*i)->is_single_tile()), no_depth_write(!single_tile), transparent_windows(draw_interior && (*i)->has_interior_to_draw());
 				if (single_tile && !(*i)->use_smap_this_frame) continue; // optimization
 				if (no_depth_write) {glDepthMask(GL_FALSE);} // disable depth writing
 
