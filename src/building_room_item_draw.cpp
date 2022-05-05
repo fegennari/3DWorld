@@ -327,7 +327,7 @@ class vbo_cache_t {
 	vector<vbo_cache_entry_t> entries[2]; // {vertex, index}
 public:
 	vbo_cache_entry_t alloc(unsigned size, bool is_index) {
-		unsigned const max_size(5*size/4); // no more than 20% wasted cap
+		unsigned const max_size(6U*size/5U); // no more than 20% wasted cap
 		auto &e(entries[is_index]);
 
 		for (auto i = e.begin(); i != e.end(); ++i) {
@@ -350,6 +350,14 @@ public:
 			for (vbo_cache_entry_t &entry : entries[d]) {delete_vbo(entry.vbo);}
 			entries[d].clear();
 		}
+	}
+	unsigned get_tot_mem() const { // unused
+		unsigned mem(0);
+
+		for (unsigned d = 0; d < 2; ++d) {
+			for (vbo_cache_entry_t const &entry : entries[d]) {mem += entry.size;}
+		}
+		return mem;
 	}
 };
 vbo_cache_t vbo_cache;
@@ -375,14 +383,10 @@ void rgeom_mat_t::clear() {
 	num_verts = num_ixs = 0;
 }
 void rgeom_mat_t::clear_vbos() {
-#if 1
 	vbo_cache.free(vao_mgr.vbo,  vert_vbo_sz, 0);
 	vbo_cache.free(vao_mgr.ivbo, ixs_vbo_sz,  1);
 	vao_mgr.clear_vaos(); // Note: VAOs not reused because they generally won't be used with the same {vbo, ivbo} pair
 	vao_mgr.reset_vbos_to_zero();
-#else
-	vao_mgr.clear_vbos();
-#endif
 	vert_vbo_sz = ixs_vbo_sz = 0;
 }
 
@@ -419,7 +423,6 @@ void rgeom_mat_t::create_vbo_inner() {
 	}
 	else { // create a new VBO
 		clear_vbos(); // free any existing VBO memory
-#if 1
 		auto vret(vbo_cache.alloc(tot_verts_sz, 0)); // verts
 		auto iret(vbo_cache.alloc(ix_data_sz,   1)); // indices
 		vao_mgr.vbo  = vret.vbo;
@@ -443,14 +446,6 @@ void rgeom_mat_t::create_vbo_inner() {
 			assert(ix_data_sz <= ixs_vbo_sz );
 			update_indices(vao_mgr.ivbo, indices, ix_data_sz);
 		}
-#else
-		create_vbo_and_upload(vao_mgr.ivbo, indices, 1, 1); // indices should always be nonempty
-		vao_mgr.vbo = ::create_vbo();
-		vert_vbo_sz = tot_verts_sz;
-		ixs_vbo_sz  = ix_data_sz;
-		check_bind_vbo(vao_mgr.vbo);
-		upload_vbo_data(nullptr, tot_verts_sz);
-#endif
 	}
 	if (itsz > 0) {upload_vbo_sub_data(itri_verts.data(), 0,    itsz);}
 	if (qsz  > 0) {upload_vbo_sub_data(quad_verts.data(), itsz, qsz );}
