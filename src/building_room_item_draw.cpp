@@ -380,7 +380,6 @@ void rgeom_mat_t::clear_vbos() {
 	vbo_cache.free(vao_mgr.vbo,  vert_vbo_sz, 0);
 	vbo_cache.free(vao_mgr.ivbo, ixs_vbo_sz,  1);
 	vao_mgr.clear_vaos(); // Note: VAOs not reused because they generally won't be used with the same {vbo, ivbo} pair
-	vao_mgr.reset_vbos_to_zero(); // only needed to clear gpu_mem
 	vert_vbo_sz = ixs_vbo_sz = 0;
 }
 

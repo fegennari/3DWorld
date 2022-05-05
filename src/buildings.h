@@ -610,9 +610,10 @@ class vbo_cache_t {
 private:
 	vector<vbo_cache_entry_t> entries[2]; // {vertex, index}
 public:
-	vbo_cache_entry_t alloc(unsigned size, bool is_index);
-	void free(unsigned &vbo, unsigned size, bool is_index);
+	vbo_cache_entry_t alloc( unsigned size, bool is_index=0);
+	void free(unsigned &vbo, unsigned size, bool is_index=0);
 	void clear(); // unused
+	unsigned size() const {return (entries[0].size() + entries[1].size());}
 	unsigned get_tot_mem() const;
 };
 

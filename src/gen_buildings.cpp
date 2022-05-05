@@ -464,6 +464,8 @@ void add_tquad_to_verts(building_geom_t const &bg, tquad_with_ix_t const &tquad,
 
 class building_draw_t {
 
+	static vbo_cache_t vbo_cache; // shared across all bdraws/tiles/blocks/buildings
+
 	class draw_block_t {
 		struct vert_ix_pair {
 			unsigned qix, tix; // {quads, tris}
@@ -472,14 +474,14 @@ class building_draw_t {
 		};
 		indexed_vao_manager_with_shadow_t vao_mgr; // Note: not using the indexed part
 		vector<vert_ix_pair> pos_by_tile; // {quads, tris}
-		unsigned tri_vbo_off;
+		unsigned tri_vbo_off, vert_vbo_sz;
 		unsigned start_num_verts[2] = {0}; // for quads and triangles
 	public:
 		bool no_shadows;
 		tid_nm_pair_t tex;
 		vect_vnctcc_t quad_verts, tri_verts;
 
-		draw_block_t() : tri_vbo_off(0), no_shadows(0) {}
+		draw_block_t() : tri_vbo_off(0), vert_vbo_sz(0), no_shadows(0) {}
 		void record_num_verts() {start_num_verts[0] = num_quad_verts(); start_num_verts[1] = num_tri_verts();}
 
 		void draw_geom_range(tid_nm_pair_dstate_t &state, bool shadow_only, vert_ix_pair const &vstart, vert_ix_pair const &vend) { // use VBO rendering
@@ -536,7 +538,25 @@ class building_draw_t {
 			tri_vbo_off = quad_verts.size(); // triangles start after quads
 			vector_add_to(tri_verts, quad_verts);
 			clear_cont(tri_verts); // no longer needed
-			if (!quad_verts.empty()) {vao_mgr.vbo_wrap_t::create_and_upload(quad_verts, 0, 1);} // use VBO directly
+			
+			if (!quad_verts.empty()) {
+				assert(!vao_mgr.vbo_valid());
+				unsigned const verts_sz(quad_verts.size()*sizeof(vect_vnctcc_t::value_type));
+				auto vret(vbo_cache.alloc(verts_sz, 0));
+				vao_mgr.vbo = vret.vbo;
+				check_bind_vbo(vao_mgr.vbo);
+
+				if (vret.size == 0) { // newly created
+					vert_vbo_sz = verts_sz;
+					upload_vbo_data(quad_verts.data(), verts_sz);
+				}
+				else { // existing
+					vert_vbo_sz = vret.size;
+					assert(verts_sz <= vert_vbo_sz);
+					upload_vector_to_vbo(quad_verts);
+				}
+				bind_vbo(0);
+			}
 			clear_cont(quad_verts); // no longer needed
 		}
 		void register_tile_id(unsigned tid) {
@@ -550,7 +570,12 @@ class building_draw_t {
 			remove_excess_cap(pos_by_tile);
 		}
 		void clear_verts() {quad_verts.clear(); tri_verts.clear(); pos_by_tile.clear();}
-		void clear_vbos () {vao_mgr.clear_vbos();}
+		
+		void clear_vbos() {
+			vbo_cache.free(vao_mgr.vbo, vert_vbo_sz, 0);
+			vao_mgr.clear_vaos(); // Note: VAOs not reused
+			vert_vbo_sz = 0;
+		}
 		void clear() {clear_vbos(); clear_verts();}
 		bool empty() const {return (quad_verts.empty() && tri_verts.empty());}
 		bool has_drawn() const {return !pos_by_tile.empty();}
@@ -1073,6 +1098,8 @@ public:
 		for (unsigned i = 0; i < MAX_DRAW_BLOCKS; ++i) {draw_quad_geom_range(state, draw_range.vr[i], shadow_only);}
 	}
 }; // end building_draw_t
+
+/*static*/ vbo_cache_t building_draw_t::vbo_cache;
 
 
 // *** Drawing ***
