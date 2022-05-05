@@ -2861,9 +2861,8 @@ void building_t::add_extra_obj_slots() {
 	for (auto i = objs.begin(); i != objs.end(); ++i) {num_slots += (i->type == TYPE_BLOCKER);}
 	if (num_slots >= 10) return;
 	// make sure there are at least 10 blockers that will create free slots when adding dynamic objects
-	float const v(0.01*get_wall_thickness()); // some tiny number
-	point const llc(bcube.get_llc());
-	cube_t const c(llc, llc+vector3d(v, v, v));
+	float const v(get_wall_thickness()); // arbitrary
+	cube_t const c(all_zeros, vector3d(v, v, v)); // arbitrary, doesn't have to be inside building, only needs to be strictly normalized
 	for (unsigned n = num_slots; n < 20; ++n) {objs.emplace_back(c, TYPE_BLOCKER, 0, 0, 0, (RO_FLAG_INVIS | RO_FLAG_NOCOLL));}
 }
 

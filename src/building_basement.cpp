@@ -170,6 +170,7 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 	set_cube_zvals(room_floor_cube, zval, ceiling_z);
 	cube_t wall(room_floor_cube), pillar(room_floor_cube), beam(room_floor_cube);
 	wall.expand_in_dim(dim, -road_width); // wall ends at roads that line the sides of the room; include pillar for better occluder and in case the pillar is skipped
+	assert(wall.is_strictly_normalized());
 	float wall_spacing(len_sz/(num_walls + 1));
 	float const pillar_shift(0.01*pillar_width); // small value to avoid z-fighting
 	float const wall_len(wall.get_sz_dim(dim) + 2.0f*pillar_shift), pillar_start(wall.d[dim][0] + pillar_hwidth - pillar_shift);
@@ -317,15 +318,19 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 	// add parking spaces on both sides of each row (one side if half row)
 	cube_t row(wall); // same length as the wall; includes the width of the pillars
 	row.z2() = row.z1() + 0.001*window_vspacing; // slightly above the floor
-	float const space_width(row.get_sz_dim(dim)/num_space_wid), strips_start(virt_room_for_wall.d[!dim][0]), wall_half_gap(2.0*wall_hc);
+	float const space_width(row.get_sz_dim(dim)/num_space_wid), strips_start(virt_room_for_wall.d[!dim][0]), wall_half_gap(2.0*wall_hc), space_shrink(row_width - space_length);
 	bool const add_cars(enable_parked_cars() && !is_rotated()); // skip cars for rotated buildings
 	unsigned const max_handicap_spots(capacity/20 + 1);
 	unsigned num_handicap_spots(0);
 
 	for (unsigned n = 0; n < num_strips; ++n) {
+		assert(space_length > 0.0);
+		assert(space_width  > 0.0);
+		assert(wall_spacing > 2.0*wall_half_gap);
 		row.d[!dim][0] = strips_start + (n + 0)*wall_spacing + wall_half_gap;
 		row.d[!dim][1] = strips_start + (n + 1)*wall_spacing - wall_half_gap;
-		assert(space_length > 0.0);
+		assert(row.is_strictly_normalized());
+		if (row.get_sz_dim(!dim) < 1.2*space_shrink) continue; // space too small, likely due to incorrect building scale relative to car size; skip parking space placement
 
 		for (unsigned d = 0; d < 2; ++d) { // for each side of the row
 			bool const at_ext_wall[2] = {(n == 0 && d == 0), (n+1 == num_strips && d == 1)}, at_either_ext_wall(at_ext_wall[0] || at_ext_wall[1]);
@@ -340,10 +345,10 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 			}
 			float const d_sign(d ? 1.0 : -1.0);
 			cube_t space(row);
-			space.d[!dim][!d] += d_sign*(row_width - space_length); // shrink
+			space.d[!dim][!d] += d_sign*space_shrink; // shrink
 			space.d[ dim][0]   = row_left_edge;
 			bool last_was_space(0);
-			
+
 			for (unsigned s = 0; s < num_spaces_per_row; ++s) {
 				space.d[dim][1] = space.d[dim][0] + space_width; // set width
 				assert(space.is_strictly_normalized());

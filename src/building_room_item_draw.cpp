@@ -1013,7 +1013,7 @@ int room_object_t::get_model_id() const {
 void building_t::draw_room_geom(brg_batch_draw_t *bbd, shader_t &s, occlusion_checker_noncity_t &oc, vector3d const &xlate, unsigned building_ix,
 	bool shadow_only, bool reflection_pass, unsigned inc_small, bool player_in_building)
 {
-	if (!interior || !interior->room_geom) return;
+	if (!has_room_geom()) return;
 	if (ENABLE_MIRROR_REFLECTIONS && !shadow_only && !reflection_pass && player_in_building) {find_mirror_needing_reflection(xlate);}
 	interior->room_geom->draw(bbd, s, *this, oc, xlate, building_ix, shadow_only, reflection_pass, inc_small, player_in_building);
 }
@@ -1510,7 +1510,7 @@ bool building_t::has_cars_to_draw(bool player_in_building) const {
 	return 0;
 }
 void building_t::draw_cars_in_building(shader_t &s, vector3d const &xlate, bool player_in_building, bool shadow_only) const {
-	assert(has_room_geom());
+	if (!has_room_geom()) return; // can get here in rare cases, maybe only shadow_only pass
 	point viewer(camera_pdu.pos - xlate);
 	bool const player_in_this_building(player_in_building && bcube.contains_pt(viewer)); // check before rotating
 	bool const check_occlusion(display_mode & 0x08);
