@@ -456,7 +456,7 @@ public:
 			add_to_vbo_data(grass[i], vertex_data_buffer, ix, norm);
 
 			if (ix == block_size || i+1 == end) { // filled block or last entry
-				upload_vbo_sub_data(&vertex_data_buffer.front(), offset*vntc_sz, ix*vntc_sz); // upload part or all of the data
+				upload_vbo_sub_data(vertex_data_buffer.data(), offset*vntc_sz, ix*vntc_sz); // upload part or all of the data
 				offset += ix;
 				ix = 0; // reset to the beginning of the buffer
 			}
@@ -809,7 +809,7 @@ void flower_manager_t::upload_range(unsigned start, unsigned end) const {
 	create_verts_range(verts, start, end);
 	pre_render();
 	unsigned const flower_sz(4*sizeof(vert_norm_comp_color));
-	upload_vbo_sub_data(&verts.front(), start*flower_sz, (end - start)*flower_sz);
+	upload_vbo_sub_data(verts.data(), start*flower_sz, (end - start)*flower_sz);
 	post_render();
 }
 

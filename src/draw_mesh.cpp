@@ -386,7 +386,7 @@ public:
 		}
 		else {
 			pre_render(1);
-			upload_vbo_sub_data(&data.front(), 0, c*sizeof(vert_norm_color));
+			upload_vector_to_vbo(data);
 		}
 		for (vector<unsigned>::const_iterator i = strip_ixs.begin(); i+1 != strip_ixs.end(); ++i) {
 			glDrawArrays(GL_TRIANGLE_STRIP, *i, (*(i+1) - *i));

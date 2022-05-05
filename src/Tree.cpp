@@ -1158,7 +1158,7 @@ void tree_data_t::ensure_leaf_vbo() {
 		assert(leaf_change_end <= leaves.size());
 		bind_vbo(leaf_vbo);
 		unsigned const per_leaf_stride(4*sizeof(leaf_vert_type_t));
-		upload_vbo_sub_data((&leaf_data.front() + 4*leaf_change_start), leaf_change_start*per_leaf_stride, (leaf_change_end - leaf_change_start)*per_leaf_stride);
+		upload_vbo_sub_data((leaf_data.data() + 4*leaf_change_start), leaf_change_start*per_leaf_stride, (leaf_change_end - leaf_change_start)*per_leaf_stride);
 	}
 	leaf_change_start = leaves.size();
 	leaf_change_end   = 0;

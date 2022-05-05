@@ -66,8 +66,11 @@ void end_stencil_write();
 
 template<typename T> void upload_to_vbo(unsigned &vbo, vector<T> const &data, bool is_index=0, bool end_with_bind0=0, int dynamic_level=0) {
 	check_bind_vbo(vbo, is_index);
-	upload_vbo_data(&data.front(), data.size()*sizeof(T), is_index, dynamic_level);
+	upload_vbo_data(data.data(), data.size()*sizeof(T), is_index, dynamic_level);
 	if (end_with_bind0) {bind_vbo(0, is_index);}
+}
+template<typename T> void upload_vector_to_vbo(vector<T> const &data, bool is_index=0) {
+	upload_vbo_sub_data(data.data(), 0, data.size()*sizeof(T), is_index); // offset=0
 }
 
 template<typename T> bool create_vbo_and_upload(unsigned &vbo, vector<T> const &data, bool is_index=0, bool end_with_bind0=0, int dynamic_level=0) {
@@ -85,6 +88,12 @@ inline void create_vbo_with_null_data(unsigned &vbo, size_t size, bool is_index=
 	vbo = create_vbo();
 	bind_vbo(vbo, is_index);
 	upload_vbo_data(NULL, size, is_index, dynamic_level);
+}
+
+template<typename T> void update_indices(unsigned ivbo, vector<T> const &indices, bool end_with_bind_0=1) {
+	check_bind_vbo(ivbo, 1);
+	upload_vector_to_vbo(indices, 1);
+	if (end_with_bind_0) {bind_vbo(0, 1);}
 }
 
 

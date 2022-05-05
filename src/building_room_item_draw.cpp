@@ -404,11 +404,6 @@ void rgeom_mat_t::create_vbo(building_t const &building) {
 	create_vbo_inner();
 	rgeom_alloc.free(*this); // vertex and index data is no longer needed and can be cleared
 }
-void update_indices(unsigned ivbo, vector<unsigned> const &indices, unsigned ix_data_sz) {
-	check_bind_vbo(ivbo, 1);
-	upload_vbo_sub_data(indices.data(), 0, ix_data_sz, 1);
-	bind_vbo(0, 1);
-}
 void rgeom_mat_t::create_vbo_inner() {
 	assert(itri_verts.empty() == indices.empty());
 	unsigned const qsz(quad_verts.size()*sizeof(vertex_t)), itsz(itri_verts.size()*sizeof(vertex_t)), tot_verts_sz(qsz + itsz);
@@ -419,7 +414,7 @@ void rgeom_mat_t::create_vbo_inner() {
 	unsigned const ix_data_sz(num_ixs*sizeof(unsigned));
 
 	if (vao_mgr.vbo && tot_verts_sz <= vert_vbo_sz && vao_mgr.ivbo && ix_data_sz <= ixs_vbo_sz) { // reuse previous VBOs
-		update_indices(vao_mgr.ivbo, indices, ix_data_sz);
+		update_indices(vao_mgr.ivbo, indices);
 		check_bind_vbo(vao_mgr.vbo);
 	}
 	else { // create a new VBO

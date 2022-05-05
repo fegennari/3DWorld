@@ -757,7 +757,7 @@ void vbo_block_manager_t<vert_type_t>::update_range(typename vert_type_t::non_co
 	vector<vert_type_t> update_verts;
 	add_points_int(update_verts, p, npts, color);
 	pre_render();
-	upload_vbo_sub_data(&update_verts.front(), start*sizeof(vert_type_t), update_size*sizeof(vert_type_t));
+	upload_vbo_sub_data(update_verts.data(), start*sizeof(vert_type_t), update_size*sizeof(vert_type_t));
 	post_render();
 }
 
