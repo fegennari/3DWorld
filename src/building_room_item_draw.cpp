@@ -319,48 +319,42 @@ public:
 };
 rgeom_alloc_t rgeom_alloc; // static allocator with free list, shared across all buildings; not thread safe
 
-struct vbo_cache_entry_t {
-	unsigned vbo, size;
-	vbo_cache_entry_t(unsigned vbo_, unsigned size_) : vbo(vbo_), size(size_) {}
-};
-class vbo_cache_t {
-	vector<vbo_cache_entry_t> entries[2]; // {vertex, index}
-public:
-	vbo_cache_entry_t alloc(unsigned size, bool is_index) {
-		unsigned const max_size(6U*size/5U); // no more than 20% wasted cap
-		auto &e(entries[is_index]);
 
-		for (auto i = e.begin(); i != e.end(); ++i) {
-			if (i->size < size || i->size > max_size) continue;
-			vbo_cache_entry_t ret(*i); // deep copy
-			swap(*i, e.back());
-			e.pop_back();
-			return ret; // done
-		} // for i
-		return vbo_cache_entry_t(create_vbo(), 0); // create a new VBO
-	}
-	void free(unsigned &vbo, unsigned size, bool is_index) {
-		if (!vbo) return; // nothing allocated
-		if (size == 0) {delete_and_zero_vbo(vbo); return;}
-		entries[is_index].emplace_back(vbo, size);
-		vbo = 0;
-	}
-	void clear() { // unused
-		for (unsigned d = 0; d < 2; ++d) {
-			for (vbo_cache_entry_t &entry : entries[d]) {delete_vbo(entry.vbo);}
-			entries[d].clear();
-		}
-	}
-	unsigned get_tot_mem() const { // unused
-		unsigned mem(0);
+vbo_cache_t::vbo_cache_entry_t vbo_cache_t::alloc(unsigned size, bool is_index) {
+	unsigned const max_size(6U*size/5U); // no more than 20% wasted cap
+	auto &e(entries[is_index]);
 
-		for (unsigned d = 0; d < 2; ++d) {
-			for (vbo_cache_entry_t const &entry : entries[d]) {mem += entry.size;}
-		}
-		return mem;
+	for (auto i = e.begin(); i != e.end(); ++i) {
+		if (i->size < size || i->size > max_size) continue;
+		vbo_cache_entry_t ret(*i); // deep copy
+		swap(*i, e.back());
+		e.pop_back();
+		return ret; // done
+	} // for i
+	return vbo_cache_entry_t(create_vbo(), 0); // create a new VBO
+}
+void vbo_cache_t::free(unsigned &vbo, unsigned size, bool is_index) {
+	if (!vbo) return; // nothing allocated
+	if (size == 0) {delete_and_zero_vbo(vbo); return;}
+	entries[is_index].emplace_back(vbo, size);
+	vbo = 0;
+}
+void vbo_cache_t::clear() { // unused
+	for (unsigned d = 0; d < 2; ++d) {
+		for (vbo_cache_entry_t &entry : entries[d]) {delete_vbo(entry.vbo);}
+		entries[d].clear();
 	}
-};
-vbo_cache_t vbo_cache;
+}
+unsigned vbo_cache_t::get_tot_mem() const { // unused
+	unsigned mem(0);
+
+	for (unsigned d = 0; d < 2; ++d) {
+		for (vbo_cache_entry_t const &entry : entries[d]) {mem += entry.size;}
+	}
+	return mem;
+}
+
+/*static*/ vbo_cache_t rgeom_mat_t::vbo_cache;
 
 void rgeom_storage_t::clear(bool free_memory) {
 	if (free_memory) {clear_container(quad_verts);} else {quad_verts.clear();}
@@ -386,7 +380,7 @@ void rgeom_mat_t::clear_vbos() {
 	vbo_cache.free(vao_mgr.vbo,  vert_vbo_sz, 0);
 	vbo_cache.free(vao_mgr.ivbo, ixs_vbo_sz,  1);
 	vao_mgr.clear_vaos(); // Note: VAOs not reused because they generally won't be used with the same {vbo, ivbo} pair
-	vao_mgr.reset_vbos_to_zero();
+	vao_mgr.reset_vbos_to_zero(); // only needed to clear gpu_mem
 	vert_vbo_sz = ixs_vbo_sz = 0;
 }
 

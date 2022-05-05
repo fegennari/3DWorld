@@ -602,6 +602,20 @@ struct room_obj_dstate_t { // state used for dynamic room objects
 	xform_matrix rot_matrix;
 };
 
+class vbo_cache_t {
+	struct vbo_cache_entry_t {
+		unsigned vbo, size;
+		vbo_cache_entry_t(unsigned vbo_, unsigned size_) : vbo(vbo_), size(size_) {}
+	};
+private:
+	vector<vbo_cache_entry_t> entries[2]; // {vertex, index}
+public:
+	vbo_cache_entry_t alloc(unsigned size, bool is_index);
+	void free(unsigned &vbo, unsigned size, bool is_index);
+	void clear(); // unused
+	unsigned get_tot_mem() const;
+};
+
 struct rgeom_storage_t {
 	typedef vert_norm_comp_tc_color vertex_t;
 	vector<vertex_t> quad_verts, itri_verts;
@@ -621,6 +635,7 @@ struct rgeom_storage_t {
 class rgeom_mat_t : public rgeom_storage_t { // simplified version of building_draw_t::draw_block_t
 
 	indexed_vao_manager_with_shadow_t vao_mgr;
+	static vbo_cache_t vbo_cache; // shared across all buildings and materials
 public:
 	unsigned num_verts, num_ixs, vert_vbo_sz, ixs_vbo_sz; // for drawing
 	uint8_t dir_mask; // {-x, +x, -y, +y, -z, +z}
