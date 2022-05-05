@@ -531,10 +531,10 @@ class building_draw_t {
 			draw_geom_range(state, shadow_only, pos_by_tile[tile_id], pos_by_tile[tile_id+1]); // shadow_only=0
 		}
 		void upload_to_vbos() {
-			assert((quad_verts.size()%4) == 0);
-			assert((tri_verts.size()%3) == 0);
+			assert((num_quad_verts()%4) == 0);
+			assert((num_tri_verts ()%3) == 0);
 			tri_vbo_off = quad_verts.size(); // triangles start after quads
-			quad_verts.insert(quad_verts.end(), tri_verts.begin(), tri_verts.end()); // add tri_verts to quad_verts
+			vector_add_to(tri_verts, quad_verts);
 			clear_cont(tri_verts); // no longer needed
 			if (!quad_verts.empty()) {vao_mgr.vbo_wrap_t::create_and_upload(quad_verts, 0, 1);} // use VBO directly
 			clear_cont(quad_verts); // no longer needed
@@ -542,7 +542,7 @@ class building_draw_t {
 		void register_tile_id(unsigned tid) {
 			if (tid+1 == pos_by_tile.size()) return; // already saw this tile
 			assert(tid >= pos_by_tile.size()); // tid must be strictly increasing
-			pos_by_tile.resize(tid+1, vert_ix_pair(quad_verts.size(), tri_verts.size())); // push start of new range back onto all previous tile slots
+			pos_by_tile.resize(tid+1, vert_ix_pair(num_quad_verts(), num_tri_verts())); // push start of new range back onto all previous tile slots
 		}
 		void finalize(unsigned num_tiles) {
 			if (pos_by_tile.empty()) return; // nothing to do
@@ -556,8 +556,8 @@ class building_draw_t {
 		bool has_drawn() const {return !pos_by_tile.empty();}
 		unsigned num_quad_verts() const {return quad_verts.size();}
 		unsigned num_tri_verts () const {return tri_verts .size();}
-		unsigned num_verts() const {return (quad_verts.size() + tri_verts.size());}
-		unsigned num_tris () const {return (quad_verts.size()/2 + tri_verts.size()/3);} // Note: 1 quad = 4 verts = 2 triangles
+		unsigned num_verts() const {return (num_quad_verts() + num_tri_verts());}
+		unsigned num_tris () const {return (num_quad_verts()/2 + num_tri_verts()/3);} // Note: 1 quad = 4 verts = 2 triangles
 		unsigned start_quad_vert() const {return start_num_verts[0];}
 		unsigned start_tri_vert () const {return start_num_verts[0];}
 	}; // end draw_block_t
