@@ -324,6 +324,10 @@ void building_room_geom_t::expand_med_cab(room_object_t const &c) { // aka house
 	invalidate_small_geom();
 }
 
+void building_room_geom_t::expand_breaker_panel(room_object_t const &c) {
+	// TODO: WRITE
+}
+
 unsigned building_room_geom_t::get_shelves_for_object(room_object_t const &c, cube_t shelves[4]) {
 	unsigned const num_shelves(c.get_num_shelves()); // 2-4 shelves
 	float const thickness(0.02*c.dz()), bracket_thickness(0.8*thickness), z_step(c.dz()/(num_shelves + 1)); // include a space at the bottom
@@ -764,6 +768,7 @@ bool building_room_geom_t::expand_object(room_object_t &c) {
 	case TYPE_WINE_RACK: expand_wine_rack(c); break;
 	case TYPE_CABINET: case TYPE_COUNTER: case TYPE_KSINK: expand_cabinet(c); break;
 	case TYPE_MIRROR:    expand_med_cab(c); break;
+	case TYPE_BRK_PANEL: expand_breaker_panel(c); break;
 	default: assert(0); // not a supported expand type
 	}
 	c.flags |= RO_FLAG_EXPANDED; // flag as expanded

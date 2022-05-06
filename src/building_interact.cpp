@@ -561,6 +561,7 @@ bool building_t::interact_with_object(unsigned obj_ix, point const &int_pos, poi
 	}
 	else if (obj.type == TYPE_BRK_PANEL) { // breaker panel
 		obj.flags ^= RO_FLAG_OPEN; // toggle open/close
+		interior->room_geom->expand_object(obj);
 		play_door_open_close_sound(sound_origin, obj.is_open(), 0.6, 1.8);
 		sound_scale      = 0.6;
 		update_draw_data = 1;
