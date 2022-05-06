@@ -321,21 +321,37 @@ rgeom_alloc_t rgeom_alloc; // static allocator with free list, shared across all
 
 
 vbo_cache_t::vbo_cache_entry_t vbo_cache_t::alloc(unsigned size, bool is_index) {
-	unsigned const max_size(6U*size/5U); // no more than 20% wasted cap
+	assert(size > 0); // not required, but a good sanity check
 	auto &e(entries[is_index]);
+	//if ((v_used % 1000) == 0) {print_stats();} // TESTING
+	unsigned const max_size(size + size/5); // no more than 20% wasted cap
+	auto best_fit(e.end());
+	unsigned target_sz(size);
 
 	for (auto i = e.begin(); i != e.end(); ++i) {
-		if (i->size < size || i->size > max_size) continue;
-		vbo_cache_entry_t ret(*i); // deep copy
-		swap(*i, e.back());
+		target_sz += 8; // increase with every iteration
+		if (i->size < size || i->size > max_size) continue; // too small or too large
+		if (best_fit != e.end() && i->size >= best_fit->size) continue; // not the best fit
+		best_fit = i;
+		if (i->size < target_sz) break; // close fit, done
+	}
+	if (best_fit != e.end()) {
+		vbo_cache_entry_t const ret(*best_fit); // deep copy
+		swap(*best_fit, e.back());
 		e.pop_back();
+		++v_reuse; s_reuse += ret.size; ++v_used; s_used += ret.size; // Note: s_reuse can overflow
+		assert(v_free >= 0); assert(s_free >= size);
+		--v_free; s_free -= size;
 		return ret; // done
 	} // for i
+	++v_alloc; s_alloc += size; ++v_used; s_used += size;
 	return vbo_cache_entry_t(create_vbo(), 0); // create a new VBO
 }
 void vbo_cache_t::free(unsigned &vbo, unsigned size, bool is_index) {
 	if (!vbo) return; // nothing allocated
-	if (size == 0) {delete_and_zero_vbo(vbo); return;}
+	if (size == 0) {delete_and_zero_vbo(vbo); return;} // shouldn't get here?
+	assert(v_used >= 0); assert(s_used >= size);
+	--v_used; s_used -= size; ++v_free; s_free += size;
 	entries[is_index].emplace_back(vbo, size);
 	vbo = 0;
 }
@@ -345,13 +361,9 @@ void vbo_cache_t::clear() { // unused
 		entries[d].clear();
 	}
 }
-unsigned vbo_cache_t::get_tot_mem() const { // unused
-	unsigned mem(0);
-
-	for (unsigned d = 0; d < 2; ++d) {
-		for (vbo_cache_entry_t const &entry : entries[d]) {mem += entry.size;}
-	}
-	return mem;
+void vbo_cache_t::print_stats() const {
+	cout << "VBOs: A " << v_alloc << " U " << v_used << " R " << v_reuse << " F " << v_free
+		 << "  SZ: A " << (s_alloc>>20) << " U " << (s_used>>20) << " R " << (s_reuse>>20) << " F " << (s_free>>20) << endl; // in MB
 }
 
 /*static*/ vbo_cache_t rgeom_mat_t::vbo_cache;
