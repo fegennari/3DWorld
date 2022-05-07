@@ -340,7 +340,7 @@ vbo_cache_t::vbo_cache_entry_t vbo_cache_t::alloc(unsigned size, bool is_index) 
 		swap(*best_fit, e.back());
 		e.pop_back();
 		++v_reuse; s_reuse += ret.size; ++v_used; s_used += ret.size; // Note: s_reuse can overflow
-		assert(v_free >= 0); assert(s_free >= size);
+		assert(v_free > 0); assert(s_free >= size);
 		--v_free; s_free -= size;
 		return ret; // done
 	} // for i
@@ -350,7 +350,7 @@ vbo_cache_t::vbo_cache_entry_t vbo_cache_t::alloc(unsigned size, bool is_index) 
 void vbo_cache_t::free(unsigned &vbo, unsigned size, bool is_index) {
 	if (!vbo) return; // nothing allocated
 	if (size == 0) {delete_and_zero_vbo(vbo); return;} // shouldn't get here?
-	assert(v_used >= 0); assert(s_used >= size);
+	assert(v_used > 0); assert(s_used >= size);
 	--v_used; s_used -= size; ++v_free; s_free += size;
 	entries[is_index].emplace_back(vbo, size);
 	vbo = 0;
@@ -627,7 +627,7 @@ void building_room_geom_t::check_invalid_draw_data() {
 	invalidate_mats_mask = 0; // reset for next frame
 }
 void building_room_geom_t::invalidate_draw_data_for_obj(room_object_t const &obj, bool was_taken) {
-	if (obj.is_dynamic() || obj.type == TYPE_BUTTON && (obj.flags & RO_FLAG_IN_ELEV)) { // elevator buttons are drawn as dynamic objects
+	if (obj.is_dynamic() || (obj.type == TYPE_BUTTON && (obj.flags & RO_FLAG_IN_ELEV))) { // elevator buttons are drawn as dynamic objects
 		update_dynamic_draw_data();
 		return;
 	}

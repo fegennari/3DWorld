@@ -816,7 +816,7 @@ void building_t::update_player_interact_objects(point const &player_pos) {
 				room_object_t &hanger(*(c-1)); // hanger is the previous object
 				assert(hanger.type == TYPE_HANGER);
 				bool const rot_dir(dot_product(c->get_dir(), (player_pos - c->get_cube_center())) < 0);
-				unsigned const orig_flags(c->flags), add_flag(rot_dir ? RO_FLAG_ADJ_LO : RO_FLAG_ADJ_HI), rem_flag(rot_dir ? RO_FLAG_ADJ_HI : RO_FLAG_ADJ_LO);
+				unsigned const add_flag(rot_dir ? RO_FLAG_ADJ_LO : RO_FLAG_ADJ_HI), rem_flag(rot_dir ? RO_FLAG_ADJ_HI : RO_FLAG_ADJ_LO);
 				c->flags     |= ((c->type == TYPE_CLOTHES) ? RO_FLAG_ROTATING : 0) | add_flag;
 				c->flags     &= ~rem_flag;
 				hanger.flags |= RO_FLAG_ROTATING | add_flag; // play a sound as well?
