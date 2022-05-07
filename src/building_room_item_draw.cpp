@@ -535,6 +535,7 @@ void rgeom_mat_t::upload_draw_and_clear(tid_nm_pair_dstate_t &state) { // Note: 
 	create_vbo_inner();
 	draw(state, nullptr, 0, 0); // no brg_batch_draw_t
 	clear();
+	indexed_vao_manager_with_shadow_t::post_render();
 }
 
 void building_materials_t::clear() {
@@ -1238,7 +1239,6 @@ public:
 			select_texture(WHITE_TEX);
 			tid_nm_pair_dstate_t state(s);
 			web_mat.upload_draw_and_clear(state);
-			indexed_vao_manager_with_shadow_t::post_render();
 		}
 	}
 };
