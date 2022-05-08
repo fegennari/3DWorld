@@ -164,21 +164,25 @@ void building_t::set_obj_lit_state_to(unsigned room_id, float light_z2, bool lit
 	for (auto i = interior->room_geom->objs.begin(); i != objs_end; ++i) {
 		if (i->room_id != room_id || i->z1() < obj_zmin || i->z1() > light_z2) continue; // wrong room or floor
 		if (i->is_obj_model_type()) continue; // light_amt currently does not apply to 3D models; should it?
+		bool invalidate(0);
 
 		if (i->type == TYPE_STAIR || i->type == TYPE_STAIR_WALL || i->type == TYPE_ELEVATOR || i->type == TYPE_LIGHT || i->type == TYPE_BLOCKER ||
 			i->type == TYPE_COLLIDER || i->type == TYPE_SIGN || i->type == TYPE_WALL_TRIM || i->type == TYPE_RAILING || i->type == TYPE_BLINDS ||
 			i->type == TYPE_SWITCH || i->type == TYPE_OUTLET || i->type == TYPE_PG_WALL || i->type == TYPE_PARK_SPACE || i->type == TYPE_RAMP ||
-			i->type == TYPE_VENT || i->type == TYPE_BREAKER)
+			i->type == TYPE_VENT)
 		{
 			continue; // not a type that uses light_amt
 		}
 		else if (i->type == TYPE_WINDOW) {
 			if (lit_state) {i->flags |= RO_FLAG_LIT;} else {i->flags &= ~RO_FLAG_LIT;}
+			invalidate = 1;
 		}
 		else {
+			float const prev_light_amt(i->light_amt);
 			if (lit_state) {i->light_amt += light_intensity;} else {i->light_amt = max((i->light_amt - light_intensity), 0.0f);} // shouldn't be negative, but clamp to 0 just in case
+			invalidate = (fabs(i->light_amt - prev_light_amt) > 0.1); // generally always true, but good to have this check/optimization in the future
 		}
-		interior->room_geom->invalidate_draw_data_for_obj(*i); // Note: can't clear here if called from building AI (not in the draw thread)
+		if (invalidate) {interior->room_geom->invalidate_draw_data_for_obj(*i);} // Note: can't clear here if called from building AI (not in the draw thread)
 	} // for i
 }
 
