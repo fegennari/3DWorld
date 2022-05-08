@@ -1388,14 +1388,22 @@ void building_room_geom_t::add_curb(room_object_t const &c) {
 void building_room_geom_t::add_breaker_panel(room_object_t const &c) {
 	colorRGBA const color(apply_light_color(c));
 	rgeom_mat_t &mat(get_metal_material(1, 0, 1)); // untextured, shadowed, small=1
-	mat.add_cube_to_verts(c, color, all_zeros, ~get_face_mask(c.dim, c.dir)); // skip back face, which is against the wall
+	// skip back face, which is against the wall; skip front face when open because it's recessed
+	unsigned const box_skip_faces(c.is_open() ? get_skip_mask_for_xy(c.dim) : ~get_face_mask(c.dim, c.dir));
+	mat.add_cube_to_verts(c, color, all_zeros, box_skip_faces);
 
 	if (c.is_open()) {
+		// draw inside face and inside edges of open box
+		float const box_width(c.get_sz_dim(!c.dim)), box_depth(c.get_sz_dim(c.dim)), thickness(0.2*box_depth), dir_sign(c.dir ? -1.0 : 1.0);
+		unsigned const front_face_mask(get_face_mask(c.dim, !c.dir));
+		cube_t box(c);
+		box.d[c.dim][!c.dir] -= dir_sign*thickness; // expand in to recess
+		mat.add_cube_to_verts(box, color, all_zeros, front_face_mask);
+		mat.add_cube_to_verts(c,   color, all_zeros, box_skip_faces, 0, 0, 0, 1); // inverted=1
 		// draw open door
 		bool const open_dir(c.obj_id & 1);
 		unsigned const door_face_mask(~get_face_mask(!c.dim, open_dir)); // skip inside face
-		float const thickness(0.02*c.dz()), box_width(c.get_sz_dim(!c.dim)), box_depth(c.get_sz_dim(c.dim)), dir_sign(c.dir ? -1.0 : 1.0);
-		cube_t door(c);
+		cube_t door(box);
 		door.d[!c.dim][ open_dir]  = c.d[!c.dim][!open_dir]; // shrink to zero area
 		door.d[!c.dim][!open_dir] += (open_dir ? -1.0 : 1.0)*thickness; // shift outward by thickness
 		door.d[ c.dim][ c.dir   ]  = door.d[ c.dim][!c.dir]; // front of box
@@ -1403,7 +1411,7 @@ void building_room_geom_t::add_breaker_panel(room_object_t const &c) {
 		mat.add_cube_to_verts(door, color, all_zeros, door_face_mask); // outside
 		mat.add_cube_to_verts(door, color, all_zeros, door_face_mask, 0, 0, 0, 1); // inside, inverted=1
 		// draw the breakers
-		cube_t breakers(c);
+		cube_t breakers(box);
 		breakers.expand_in_dim(!c.dim, -0.2*box_width); // shrink the width
 		breakers.expand_in_dim(2, -0.1*c.dz()); // shrink vertically
 		breakers.d[c.dim][!c.dir] += dir_sign*0.01*box_depth; // expand out slightly to prevent Z-fighting
@@ -1412,7 +1420,7 @@ void building_room_geom_t::add_breaker_panel(room_object_t const &c) {
 		float const tx((is_wide ? 1.0 : 0.667)/width), ty(1.0/height); // use only two rows rather than three if not wide
 		int const tid(get_texture_by_name("interiors/breaker_panel.jpg"));
 		rgeom_mat_t &face_mat(get_material(tid_nm_pair_t(tid, -1, (c.dim ? tx : ty), (c.dim ? ty : tx)), 0, 0, 1)); // unshadowed, is_small=1
-		face_mat.add_cube_to_verts(breakers, apply_light_color(c, WHITE), breakers.get_llc(), get_face_mask(c.dim, !c.dir), !c.dim, (c.dim ^ c.dir)); // draw front face
+		face_mat.add_cube_to_verts(breakers, apply_light_color(c, WHITE), breakers.get_llc(), front_face_mask, !c.dim, (c.dim ^ c.dir)); // draw front face
 	}
 }
 
