@@ -327,17 +327,18 @@ void building_room_geom_t::expand_med_cab(room_object_t const &c) { // aka house
 // Note: see building_room_geom_t::add_breaker_panel()
 void building_room_geom_t::expand_breaker_panel(room_object_t const &c) {
 	float const box_width(c.get_sz_dim(!c.dim)), box_depth(c.get_sz_dim(c.dim)), box_height(c.dz());
-	float const thickness(0.2*box_depth), dir_sign(c.dir ? -1.0 : 1.0);
+	float const thickness(0.25*box_depth), dir_sign(c.dir ? -1.0 : 1.0);
 	cube_t breakers(c);
 	breakers.d[c.dim][0] = breakers.d[c.dim][1] = breakers.d[c.dim][!c.dir] - dir_sign*thickness; // move both edges to front of panel
 	breakers.d[c.dim][!c.dir] += dir_sign*0.5*thickness; // expand out for correct width
 	breakers.expand_in_dim(!c.dim, -0.2*box_width); // shrink the width
 	breakers.expand_in_dim(2, -0.1*box_height); // shrink vertically
 	float const width(breakers.get_sz_dim(!c.dim)), height(breakers.dz());
-	float const breaker_height(0.1*box_depth + 0.04*box_width + 0.06*box_height), breaker_width(2.0*breaker_height);
-	unsigned const num_cols(max(1, round_fp(width/breaker_width))), num_rows(max(1, round_fp(height/breaker_height)));
-	float const breaker_dc(width/num_cols), breaker_dr(height/num_rows), breaker_cs(0.1*breaker_dc), breaker_rs(0.1*breaker_dr);
+	float const breaker_height(0.1*box_depth + 0.025*box_width + 0.05*box_height), breaker_width(2.4*breaker_height);
+	unsigned const num_cols(max(1, round_fp(width/breaker_width))), num_rows(max(1, round_fp(height/breaker_height))), num_breakers(num_cols*num_rows);
+	float const breaker_dc(width/num_cols), breaker_dr(height/num_rows), breaker_cs(0.1*breaker_dc), breaker_rs(0.06*breaker_dr);
 	cube_t breaker(breakers);
+	colorRGBA const color(0.03, 0.015, 0.01); // black-brown
 
 	for (unsigned C = 0; C < num_cols; ++C) {
 		float const cv(breakers.d[!c.dim][0] + C*breaker_dc);
@@ -348,7 +349,10 @@ void building_room_geom_t::expand_breaker_panel(room_object_t const &c) {
 			float const rv(breakers.z1() + r*breaker_dr);
 			breaker.z1() = rv + breaker_rs;
 			breaker.z2() = rv - breaker_rs + breaker_dr;
-			expanded_objs.emplace_back(breaker, TYPE_BREAKER, c.room_id, c.dim, c.dir, RO_FLAG_NOCOLL, c.light_amt, SHAPE_CUBE, BKGRAY);
+			room_object_t obj(breaker, TYPE_BREAKER, c.room_id, c.dim, c.dir, RO_FLAG_NOCOLL, c.light_amt, SHAPE_CUBE, color);
+			obj.obj_id     = C*num_rows + r; // store breaker index
+			obj.item_flags = num_breakers; // store the number of breakers
+			expanded_objs.push_back(obj);
 		}
 	} // for C
 	invalidate_small_geom();

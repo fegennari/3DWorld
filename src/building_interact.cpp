@@ -500,16 +500,19 @@ bool building_t::interact_with_object(unsigned obj_ix, point const &int_pos, poi
 			interior->room_geom->invalidate_draw_data_for_obj(obj); // need to regen object data due to lit state change; don't have to set modified_by_player
 		}
 	}
-	else if (obj.type == TYPE_SWITCH || obj.type == TYPE_BREAKER) {
-		if (obj.type == TYPE_BREAKER) {
-			// TODO: special logic for breakers
-		}
-		else { // light: should select the correct light(s) for the room containing the switch
-			toggle_room_light(obj.get_cube_center(), 1, obj.room_id, 0, (obj.flags & RO_FLAG_IN_CLOSET)); // exclude lamps; select closet lights if a closet light switch
-		}
+	else if (obj.type == TYPE_SWITCH) {
+		// should select the correct light(s) for the room containing the switch
+		toggle_room_light(obj.get_cube_center(), 1, obj.room_id, 0, (obj.flags & RO_FLAG_IN_CLOSET)); // exclude lamps; select closet lights if a closet light switch
 		gen_sound_thread_safe_at_player(SOUND_CLICK, 0.5);
 		obj.flags       ^= RO_FLAG_OPEN; // toggle on/off
 		sound_scale      = 0.1;
+		update_draw_data = 1;
+	}
+	else if (obj.type == TYPE_BREAKER) {
+		// TODO: special logic for breakers using obj.obj_id for index and obj.item_flags for number of breakers
+		gen_sound_thread_safe_at_player(SOUND_CLICK, 1.0);
+		obj.flags       ^= RO_FLAG_OPEN; // toggle on/off
+		sound_scale      = 0.25;
 		update_draw_data = 1;
 	}
 	else if (obj.type == TYPE_BLINDS) { // see building_t::add_window_blinds()
