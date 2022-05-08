@@ -287,7 +287,7 @@ bool building_t::add_desk_to_room(rand_gen_t rgen, room_t const &room, vect_cube
 			tv.d[dim][ dir] = c. d[dim][dir] + dsign*0.25*depth; // 25% of the way from the wall
 			tv.d[dim][!dir] = tv.d[dim][dir] + dsign*tv_depth;
 			set_wall_width(tv, center, tv_hwidth, !dim);
-			objs.emplace_back(tv, TYPE_MONITOR, room_id, dim, !dir, 0, tot_light_amt, SHAPE_SHORT, BLACK); // monitors are shorter than TVs
+			objs.emplace_back(tv, TYPE_MONITOR, room_id, dim, !dir, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_SHORT, BLACK); // monitors are shorter than TVs
 			set_obj_id(objs);
 			// add a keyboard as well
 			float const kbd_hwidth(0.7*tv_hwidth), kbd_depth(0.6*kbd_hwidth), kbd_height(0.06*kbd_hwidth);

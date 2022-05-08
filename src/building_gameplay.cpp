@@ -963,25 +963,25 @@ bool building_room_geom_t::open_nearest_drawer(building_t &building, point const
 		}
 		drawer_extend = get_drawer_cubes(drawers_part, drawers, 0, 1); // front_only=0, inside_only=1
 	}
-	dmin_sq        = 0.0;
-	closest_obj_id = -1;
+	dmin_sq = 0.0;
+	int closest_drawer_id(-1);
 
 	for (auto i = drawers.begin(); i != drawers.end(); ++i) {
 		point p1c(at_pos), p2c(p2);
 		if (!do_line_clip(p1c, p2c, i->d)) continue; // test ray intersection vs. drawer
 		float const dsq(p2p_dist_sq(at_pos, p1c)); // use closest intersection point
-		if (dmin_sq == 0.0 || dsq < dmin_sq) {closest_obj_id = (i - drawers.begin()); dmin_sq = dsq;} // update if closest
+		if (dmin_sq == 0.0 || dsq < dmin_sq) {closest_drawer_id = (i - drawers.begin()); dmin_sq = dsq;} // update if closest
 	}
-	if (closest_obj_id < 0) return 0; // no drawer
-	cube_t const &drawer(drawers[closest_obj_id]); // Note: drawer cube is the interior part
+	if (closest_drawer_id < 0) return 0; // no drawer
+	cube_t const &drawer(drawers[closest_drawer_id]); // Note: drawer cube is the interior part
 	
 	if (pickup_item && !has_doors) { // pick up item in drawer rather than opening drawer; no pickup items behind doors yet
-		if (!(obj.drawer_flags & (1U << closest_obj_id))) return 0; // drawer is not open
-		room_object_t const item(get_item_in_drawer(obj, drawer, closest_obj_id));
+		if (!(obj.drawer_flags & (1U << closest_drawer_id))) return 0; // drawer is not open
+		room_object_t const item(get_item_in_drawer(obj, drawer, closest_drawer_id));
 		if (item.type == TYPE_NONE) return 0; // no item
 		if (check_only) return 1;
 		if (!register_player_object_pickup(item, at_pos)) return 0;
-		obj.item_flags |= (1U << closest_obj_id); // flag item as taken
+		obj.item_flags |= (1U << closest_drawer_id); // flag item as taken
 		player_inventory.add_item(item);
 		update_draw_state_for_room_object(item, building, 1);
 	}
@@ -991,11 +991,11 @@ bool building_room_geom_t::open_nearest_drawer(building_t &building, point const
 		else {c_test.d[obj.dim][obj.dir] += drawer_extend;} // drawer
 		if (cube_intersects_moved_obj(c_test, closest_obj_id)) return 0; // blocked, can't open; ignore this object
 		if (check_only) return 1;
-		unsigned const flag_bit(1U << (unsigned)closest_obj_id);
+		unsigned const flag_bit(1U << (unsigned)closest_drawer_id);
 		obj.drawer_flags ^= flag_bit; // toggle flag bit for selected drawer
 
 		if ((obj.drawer_flags & flag_bit) && !(obj.state_flags & flag_bit)) { // first opening of this drawer
-			maybe_spawn_spider_in_drawer(obj, c_test, closest_obj_id, building.get_window_vspace(), has_doors);
+			maybe_spawn_spider_in_drawer(obj, c_test, closest_drawer_id, building.get_window_vspace(), has_doors);
 			obj.state_flags |= flag_bit; // mark as having been opened so that we don't try to spawn another spider next time
 		}
 		point const drawer_center(drawer.get_cube_center());
