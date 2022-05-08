@@ -167,7 +167,8 @@ void building_t::set_obj_lit_state_to(unsigned room_id, float light_z2, bool lit
 
 		if (i->type == TYPE_STAIR || i->type == TYPE_STAIR_WALL || i->type == TYPE_ELEVATOR || i->type == TYPE_LIGHT || i->type == TYPE_BLOCKER ||
 			i->type == TYPE_COLLIDER || i->type == TYPE_SIGN || i->type == TYPE_WALL_TRIM || i->type == TYPE_RAILING || i->type == TYPE_BLINDS ||
-			i->type == TYPE_SWITCH || i->type == TYPE_OUTLET || i->type == TYPE_PG_WALL || i->type == TYPE_PARK_SPACE || i->type == TYPE_RAMP || i->type == TYPE_VENT)
+			i->type == TYPE_SWITCH || i->type == TYPE_OUTLET || i->type == TYPE_PG_WALL || i->type == TYPE_PARK_SPACE || i->type == TYPE_RAMP ||
+			i->type == TYPE_VENT || i->type == TYPE_BREAKER)
 		{
 			continue; // not a type that uses light_amt
 		}
@@ -350,7 +351,7 @@ bool building_t::apply_player_action_key(point const &closest_to_in, vector3d co
 					else if (i->is_light_type()) {keep = 1;} // room light or lamp
 					else if (i->type == TYPE_PICTURE || i->type == TYPE_TPROLL || i->type == TYPE_BUTTON || i->type == TYPE_MWAVE || i->type == TYPE_STOVE ||
 						i->type == TYPE_TV || i->type == TYPE_MONITOR || i->type == TYPE_BLINDS || i->type == TYPE_SHOWER || i->type == TYPE_SWITCH ||
-						i->type == TYPE_BOOK || i->type == TYPE_BRK_PANEL) {keep = 1;}
+						i->type == TYPE_BOOK || i->type == TYPE_BRK_PANEL || i->type == TYPE_BREAKER) {keep = 1;}
 				}
 				else if (i->type == TYPE_LIGHT) {keep = 1;} // closet light
 				if (!keep) continue;
@@ -364,7 +365,9 @@ bool building_t::apply_player_action_key(point const &closest_to_in, vector3d co
 				}
 				else {center = obj_bc.closest_pt(closest_to);}
 				if (fabs(center.z - closest_to.z) > 0.7*floor_spacing) continue; // wrong floor
-				float const dist_sq((i->type == TYPE_CLOSET) ? dmax*dmax : p2p_dist_sq(closest_to, center)); // use dmax for closets to prioritize objects inside closets
+				// use dmax for closets and open breaker boxes to prioritize objects inside
+				bool const low_priority(i->type == TYPE_CLOSET || (i->type == TYPE_BRK_PANEL && i->is_open()));
+				float const dist_sq(low_priority ? dmax*dmax : p2p_dist_sq(closest_to, center));
 				if (found_item && dist_sq >= closest_dist_sq)          continue; // not the closest
 				if (!obj_bc.closest_dist_less_than(closest_to, dmax))  continue; // too far
 				if (in_dir != zero_vector && !obj_bc.line_intersects(closest_to, query_ray_end)) continue; // player is not pointing at this object
@@ -493,10 +496,14 @@ bool building_t::interact_with_object(unsigned obj_ix, point const &int_pos, poi
 			interior->room_geom->invalidate_draw_data_for_obj(obj); // need to regen object data due to lit state change; don't have to set modified_by_player
 		}
 	}
-	else if (obj.type == TYPE_SWITCH) {
+	else if (obj.type == TYPE_SWITCH || obj.type == TYPE_BREAKER) {
+		if (obj.type == TYPE_BREAKER) {
+			// TODO: special logic for breakers
+		}
+		else { // light: should select the correct light(s) for the room containing the switch
+			toggle_room_light(obj.get_cube_center(), 1, obj.room_id, 0, (obj.flags & RO_FLAG_IN_CLOSET)); // exclude lamps; select closet lights if a closet light switch
+		}
 		gen_sound_thread_safe_at_player(SOUND_CLICK, 0.5);
-		// should select the correct light(s) for the room containing the switch
-		toggle_room_light(obj.get_cube_center(), 1, obj.room_id, 0, (obj.flags & RO_FLAG_IN_CLOSET)); // exclude lamps; select closet lights if a closet light switch
 		obj.flags       ^= RO_FLAG_OPEN; // toggle on/off
 		sound_scale      = 0.1;
 		update_draw_data = 1;
@@ -791,7 +798,7 @@ void building_t::update_player_interact_objects(point const &player_pos) {
 						}
 					}
 					if (obj.type == TYPE_PICTURE || obj.type == TYPE_TV || obj.type == TYPE_MONITOR || obj.type == TYPE_BUTTON || obj.type == TYPE_SWITCH ||
-						(obj.type == TYPE_OFF_CHAIR && (obj.flags & RO_FLAG_RAND_ROT)))
+						obj.type == TYPE_BREAKER || (obj.type == TYPE_OFF_CHAIR && (obj.flags & RO_FLAG_RAND_ROT)))
 					{
 						if (!handled) {interact_with_object(obj_ix, center, center, velocity.get_norm());}
 					}

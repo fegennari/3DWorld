@@ -1411,6 +1411,7 @@ void building_room_geom_t::add_breaker_panel(room_object_t const &c) {
 		mat.add_cube_to_verts(door, color, all_zeros, door_face_mask); // outside
 		mat.add_cube_to_verts(door, color, all_zeros, door_face_mask, 0, 0, 0, 1); // inside, inverted=1
 		// draw the breakers
+#if 0
 		cube_t breakers(box);
 		breakers.expand_in_dim(!c.dim, -0.2*box_width); // shrink the width
 		breakers.expand_in_dim(2, -0.1*c.dz()); // shrink vertically
@@ -1421,6 +1422,7 @@ void building_room_geom_t::add_breaker_panel(room_object_t const &c) {
 		int const tid(get_texture_by_name("interiors/breaker_panel.jpg"));
 		rgeom_mat_t &face_mat(get_material(tid_nm_pair_t(tid, -1, (c.dim ? tx : ty), (c.dim ? ty : tx)), 0, 0, 1)); // unshadowed, is_small=1
 		face_mat.add_cube_to_verts(breakers, apply_light_color(c, WHITE), breakers.get_llc(), front_face_mask, !c.dim, (c.dim ^ c.dir)); // draw front face
+#endif
 	}
 }
 
@@ -2893,6 +2895,18 @@ void building_room_geom_t::add_switch(room_object_t const &c, bool draw_detail_p
 		rot_axis[!c.dim] = ((c.dir ^ c.is_open()) ? 1.0 : -1.0);
 		rotate_verts(mat.quad_verts, rot_axis, 0.015*PI, plate.get_cube_center(), qv_start); // rotate rocker slightly about base plate center; could be optimized by caching
 	}
+}
+
+void building_room_geom_t::add_breaker(room_object_t const &c) {
+	vector3d const sz(c.get_size());
+	cube_t plate(c), rocker(c);
+	plate.d[c.dim][!c.dir] -= (c.dir ? -1.0 : 1.0)*0.70*sz[c.dim]; // front face of plate
+	set_wall_width(rocker, plate.d[c.dim][!c.dir], 0.5*sz[c.dim], c.dim);
+	rgeom_mat_t &mat(get_untextured_material(0, 0, 1)); // unshadowed, small
+	unsigned const qv_start(mat.quad_verts.size());
+	mat.add_cube_to_verts_untextured(rocker, c.color, (~get_face_mask(c.dim, c.dir) | EF_Z1)); // skip bottom face and face that's against the wall
+	vector3d const rot_axis(0.0, 0.0, (c.is_open() ? 1.0 : -1.0));
+	rotate_verts(mat.quad_verts, rot_axis, 0.04*PI, plate.get_cube_center(), qv_start); // rotate rocker slightly about base plate center
 }
 
 void building_room_geom_t::add_flat_textured_detail_wall_object(room_object_t const &c, int tid, bool draw_z1_face) { // uses mats_detail

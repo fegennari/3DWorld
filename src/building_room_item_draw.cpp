@@ -769,6 +769,7 @@ void building_room_geom_t::add_small_static_objs_to_verts(vect_room_object_t con
 		case TYPE_SPRAYCAN:  add_spraycan(*i); break;
 		case TYPE_CRACK:     add_crack (*i); break;
 		case TYPE_SWITCH:    add_switch(*i, 0); break; // draw_detail_pass=0
+		case TYPE_BREAKER:   add_breaker(*i); break;
 		case TYPE_PLATE:     add_plate (*i); break;
 		case TYPE_LAPTOP:    add_laptop(*i); break;
 		case TYPE_BUTTON:    if (!(i->flags & RO_FLAG_IN_ELEV)) {add_button(*i);} break; // skip buttons inside elevators, which are drawn as dynamic objects

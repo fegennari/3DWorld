@@ -102,7 +102,8 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_MARKER    ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 0.20,  0.05,  "marker",      10000);
 	bldg_obj_types[TYPE_BUTTON    ] = bldg_obj_type_t(0, 0, 0, 1, 1, 0, 2, 1.0,   0.05,  "button");
 	bldg_obj_types[TYPE_CRACK     ] = bldg_obj_type_t(0, 0, 0, 0, 1, 0, 2, 0.0,   0.0,   "crack");
-	bldg_obj_types[TYPE_SWITCH    ] = bldg_obj_type_t(0, 0, 0, 0, 1, 0, 2, 0.0,   0.0,   "switch");
+	bldg_obj_types[TYPE_SWITCH    ] = bldg_obj_type_t(0, 0, 0, 0, 1, 0, 2, 10.0,  0.1,   "switch");
+	bldg_obj_types[TYPE_BREAKER   ] = bldg_obj_type_t(0, 0, 0, 0, 1, 0, 2, 20.0,  0.1,   "breaker");
 	bldg_obj_types[TYPE_PLATE     ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 6.0,   0.25,  "plate");
 	bldg_obj_types[TYPE_LAPTOP    ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 600.0, 8.0,   "laptop");
 	bldg_obj_types[TYPE_FPLACE    ] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 1, 0.0,   2000.0,"fireplace");
