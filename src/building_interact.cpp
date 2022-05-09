@@ -195,6 +195,22 @@ bool building_room_geom_t::closet_light_is_on(cube_t const &closet) const {
 	return 0;
 }
 
+void building_t::toggle_circuit_breaker(bool is_on, unsigned zone_id, unsigned num_zones) {
+	assert(zone_id < num_zones);
+	assert(has_room_geom());
+
+	if (!interior->elevators.empty()) { // elevators are always zone 0
+		if (zone_id == 0) {
+			// TODO: disable elevator
+			return;
+		}
+		--zone_id; --num_zones;
+	}
+	if (num_zones == 0) return; // no zones left
+	//float const rooms_per_zone(max(1.0f, float(interior->rooms.size())/num_zones));
+	// TODO
+}
+
 // doors and other interactive objects
 
 // used for drawing open doors
@@ -509,9 +525,9 @@ bool building_t::interact_with_object(unsigned obj_ix, point const &int_pos, poi
 		update_draw_data = 1;
 	}
 	else if (obj.type == TYPE_BREAKER) {
-		// TODO: special logic for breakers using obj.obj_id for index and obj.item_flags for number of breakers
 		gen_sound_thread_safe_at_player(SOUND_CLICK, 1.0);
 		obj.flags       ^= RO_FLAG_OPEN; // toggle on/off
+		toggle_circuit_breaker(obj.is_open(), obj.obj_id, obj.item_flags);
 		sound_scale      = 0.25;
 		update_draw_data = 1;
 	}

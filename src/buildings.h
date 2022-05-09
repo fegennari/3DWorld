@@ -1232,6 +1232,7 @@ struct building_t : public building_geom_t {
 	bool toggle_room_light(point const &closest_to, bool sound_from_closest_to=0, int room_id=-1, bool inc_lamps=1, bool closet_light=0);
 	void toggle_light_object(room_object_t const &light, point const &sound_pos);
 	void register_light_state_change(room_object_t const &light, point const &sound_pos);
+	void toggle_circuit_breaker(bool is_on, unsigned zone_id, unsigned num_zones);
 	bool apply_player_action_key(point const &closest_to_in, vector3d const &in_dir_in, int mode, bool check_only=0);
 	void assign_correct_room_to_object(room_object_t &obj) const;
 	bool move_nearest_object(point const &at_pos, vector3d const &in_dir, float range, int mode);
