@@ -531,9 +531,14 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, flo
 }
 
 bool building_t::check_pos_in_unlit_room(point const &pos) const {
-	if (!interior)      return 0; // error?
+	if (!interior) return 0; // error?
+	set<unsigned> rooms_visited;
+	return check_pos_in_unlit_room_recur(pos, rooms_visited);
+}
+bool building_t::check_pos_in_unlit_room_recur(point const &pos, set<unsigned> &rooms_visited) const {
 	int const room_id(get_room_containing_pt(pos));
 	if (room_id < 0)    return 0; // not in a room
+	if (rooms_visited.find(room_id) != rooms_visited.end()) return 1; // already visited, return true
 	room_t const &room(get_room(room_id));
 	if (!room.interior) return 0; // room has windows and may be lit from outside
 	float const floor_spacing(get_window_vspace());
@@ -548,20 +553,30 @@ bool building_t::check_pos_in_unlit_room(point const &pos) const {
 		if (unsigned(max(0.0f, (i->z1() - room.z1()))/floor_spacing) != floor_ix) continue; // different floors
 		return 0; // lit by a room light, including one in a closet (Note that closets are only in house bedrooms, which should always have windows anyway)
 	}
+	rooms_visited.insert(room_id); // mark this room as visited before making recursive calls
 	// check if all doors are closed
-	vect_door_stack_t const &doorways(get_doorways_for_room(room, (room.z1() + floor_ix*floor_spacing))); // use floor zval
+	float const floor_thickness(get_floor_thickness()), wall_thickness(get_wall_thickness()), floor_zval(room.z1() + floor_ix*floor_spacing);
+	cube_t room_exp(room);
+	room_exp.expand_by_xy(wall_thickness);
+	set_cube_zvals(room_exp, (floor_zval + floor_thickness), (floor_zval + floor_spacing - floor_thickness)); // clip to z-range of this floor
 
-	for (auto const &ds : doorways) {
-		assert(ds.first_door_ix < interior->doors.size());
+	for (auto i = interior->door_stacks.begin(); i != interior->door_stacks.end(); ++i) {
+		if (i->on_stairs) continue; // skip basement door
+		if (!i->intersects(room_exp)) continue; // wrong room
+		assert(i->first_door_ix < interior->doors.size());
 
-		for (unsigned dix = ds.first_door_ix; dix < interior->doors.size(); ++dix) {
+		for (unsigned dix = i->first_door_ix; dix < interior->doors.size(); ++dix) {
 			door_t const &door(interior->doors[dix]);
-			if (!ds.is_same_stack(door)) break; // moved to a different stack, done
+			if (!i->is_same_stack(door)) break; // moved to a different stack, done
 			if (door.z1() > pos.z || door.z2() < pos.z) continue; // wrong floor
-			// TODO: recursively check all rooms connected to this one through open doors? would that be too slow?
-			if (door.open) return 0; // door open, assume room is lit from an adjacent room; usually windowless rooms are connected to office building hallways
-		}
-	} // for ds
+			if (!door.open) continue; // closet
+			// check adjacent room; Note: usually windowless rooms are connected to office building hallways
+			point pos2(door.get_cube_center());
+			bool const dir(pos2[door.dim] < room.get_center_dim(door.dim));
+			pos2[door.dim] += (dir ? -1.0 : 1.0)*wall_thickness; // move point into adjacen room
+			if (!check_pos_in_unlit_room_recur(pos2, rooms_visited)) return 0; // if adjacent room is lit, return false
+		} // for dix
+	} // for i
 	return 1;
 }
 
