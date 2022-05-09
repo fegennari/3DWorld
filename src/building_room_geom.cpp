@@ -2591,7 +2591,7 @@ void building_room_geom_t::add_sign(room_object_t const &c, bool inc_back, bool 
 	// add sign text
 	tid_nm_pair_t tex(FONT_TEXTURE_ID);
 	if (c.flags & RO_FLAG_EMISSIVE) {tex.emissive = 1.0;}
-	rgeom_mat_t &mat(get_material(tex, 0, 0, 1));
+	rgeom_mat_t &mat(get_material(tex, 0, 0, 1)); // small=1
 	add_sign_text_verts(sign_helper.get_text(c.obj_id), c, c.dim, c.dir, apply_light_color(c), mat.quad_verts);
 }
 

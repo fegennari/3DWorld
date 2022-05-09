@@ -6,7 +6,7 @@
 #include "buildings.h"
 
 
-extern bool draw_building_interiors, camera_in_building, player_near_toilet, player_is_hiding;
+extern bool draw_building_interiors, camera_in_building, player_near_toilet, player_is_hiding, player_in_unlit_room;
 extern float CAMERA_RADIUS, C_STEP_HEIGHT, NEAR_CLIP;
 extern int player_in_closet, camera_surf_collide, frame_counter, player_in_elevator;
 extern double camera_zh;
@@ -525,7 +525,44 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, flo
 		had_coll = 1;
 	} // for i
 	handle_vert_cylin_tape_collision(pos, p_last, pos.z-radius, pos.z+camera_zh, xy_radius, 1); // is_player=1
+	// not sure where this belongs, but the closet hiding logic is in this function, so I guess it goes here? player must be inside the building to see a windowless room anyway
+	player_in_unlit_room = check_pos_in_unlit_room(pos);
 	return had_coll; // will generally always be true due to floors
+}
+
+bool building_t::check_pos_in_unlit_room(point const &pos) const {
+	if (!interior)      return 0; // error?
+	int const room_id(get_room_containing_pt(pos));
+	if (room_id < 0)    return 0; // not in a room
+	room_t const &room(get_room(room_id));
+	if (!room.interior) return 0; // room has windows and may be lit from outside
+	float const floor_spacing(get_window_vspace());
+	unsigned const floor_ix(max(0.0f, (pos.z - room.z1()))/floor_spacing);
+	if (room.has_elevator || room.has_stairs_on_floor(floor_ix)) return 0; // assume light can come from stairs or open elevator door
+	// check if all lights are off
+	auto objs_end(interior->room_geom->get_placed_objs_end()); // skip buttons/stairs/elevators
+
+	for (auto i = interior->room_geom->objs.begin(); i != objs_end; ++i) {
+		if (!i->is_light_type() || !i->is_lit()) continue; // not a light, or light not on
+		if ((int)i->room_id != room_id) continue; // wrong room
+		if (unsigned(max(0.0f, (i->z1() - room.z1()))/floor_spacing) != floor_ix) continue; // different floors
+		return 0; // lit by a room light, including one in a closet (Note that closets are only in house bedrooms, which should always have windows anyway)
+	}
+	// check if all doors are closed
+	vect_door_stack_t const &doorways(get_doorways_for_room(room, (room.z1() + floor_ix*floor_spacing))); // use floor zval
+
+	for (auto const &ds : doorways) {
+		assert(ds.first_door_ix < interior->doors.size());
+
+		for (unsigned dix = ds.first_door_ix; dix < interior->doors.size(); ++dix) {
+			door_t const &door(interior->doors[dix]);
+			if (!ds.is_same_stack(door)) break; // moved to a different stack, done
+			if (door.z1() > pos.z || door.z2() < pos.z) continue; // wrong floor
+			// TODO: recursively check all rooms connected to this one through open doors? would that be too slow?
+			if (door.open) return 0; // door open, assume room is lit from an adjacent room; usually windowless rooms are connected to office building hallways
+		}
+	} // for ds
+	return 1;
 }
 
 // Note: called on basketballs and soccer balls

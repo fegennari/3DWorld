@@ -1167,6 +1167,7 @@ struct building_t : public building_geom_t {
 	bool check_sphere_coll(point &pos, point const &p_last, vector3d const &xlate, float radius, bool xy_only,
 		vector<point> &points, vector3d *cnorm=nullptr, bool check_interior=0) const;
 	bool check_sphere_coll_interior(point &pos, point const &p_last, float radius, bool xy_only, vector3d *cnorm=nullptr) const;
+	bool check_pos_in_unlit_room(point const &pos) const;
 	unsigned check_line_coll(point const &p1, point const &p2, float &t, vector<point> &points, bool occlusion_only=0, bool ret_any_pt=0, bool no_coll_pt=0) const;
 	bool get_interior_color_at_xy(point const &pos, colorRGBA &color) const;
 	bool check_point_or_cylin_contained(point const &pos, float xy_radius, vector<point> &points) const;
