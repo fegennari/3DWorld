@@ -570,17 +570,8 @@ void building_materials_t::create_vbos(building_t const &building) {
 void building_materials_t::draw(brg_batch_draw_t *bbd, shader_t &s, int shadow_only, bool reflection_pass) {
 	if (!valid) return; // pending generation of data, don't draw yet
 	//highres_timer_t timer("Draw Materials"); // 0.0168
-	static vector<iterator> text_mats;
-	text_mats.clear();
 	tid_nm_pair_dstate_t state(s);
-
-	// first pass, draw regular materials (excluding text)
-	for (iterator m = begin(); m != end(); ++m) {
-		if (m->tex.tid == FONT_TEXTURE_ID) {text_mats.push_back(m);} // skip in this pass
-		else {m->draw(state, bbd, shadow_only, reflection_pass);}
-	}
-	// second pass, draw text (if it exists) so that alpha blending works; really only needed for the building the player is in
-	for (auto m = text_mats.begin(); m != text_mats.end(); ++m) {(*m)->draw(state, bbd, shadow_only, reflection_pass);}
+	for (iterator m = begin(); m != end(); ++m) {m->draw(state, bbd, shadow_only, reflection_pass);}
 }
 void building_materials_t::upload_draw_and_clear(shader_t &s) {
 	tid_nm_pair_dstate_t state(s);
@@ -604,6 +595,7 @@ void building_room_geom_t::clear_materials() { // clears all materials
 	mats_static .clear();
 	mats_alpha  .clear();
 	mats_small  .clear();
+	mats_text   .clear();
 	mats_amask  .clear();
 	mats_dynamic.clear();
 	mats_doors  .clear();
@@ -616,12 +608,14 @@ void building_room_geom_t::check_invalid_draw_data() {
 	if (invalidate_mats_mask & (1 << MAT_TYPE_SMALL  )) { // small objects
 		mats_small.invalidate();
 		mats_amask.invalidate();
+		mats_text .invalidate(); // Note: for now text is assigned to type MAT_TYPE_SMALL since it's always drawn with small objects
 	}
 	if (invalidate_mats_mask & (1 << MAT_TYPE_STATIC )) { // large objects and 3D models
 		mats_static.invalidate();
 		mats_alpha .invalidate();
 		obj_model_insts.clear();
 	}
+	//if (invalidate_mats_mask & (1 << MAT_TYPE_TEXT   )) {mats_text   .invalidate();} // text objects
 	if (invalidate_mats_mask & (1 << MAT_TYPE_DYNAMIC)) {mats_dynamic.invalidate();} // dynamic objects
 	if (invalidate_mats_mask & (1 << MAT_TYPE_DOORS  )) {mats_doors  .invalidate();}
 	if (invalidate_mats_mask & (1 << MAT_TYPE_LIGHTS )) {mats_lights .invalidate();}
@@ -645,6 +639,7 @@ void building_room_geom_t::update_draw_state_for_room_object(room_object_t const
 
 rgeom_mat_t &building_room_geom_t::get_material(tid_nm_pair_t const &tex, bool inc_shadows, bool dynamic, unsigned small, bool transparent) {
 	// small: 0=mats_static, 1=mats_small, 2=mats_detail
+	if (small == 1 && tex.tid == FONT_TEXTURE_ID) {return mats_text.get_material(tex, inc_shadows);} // inc_shadows should be 0
 	return (dynamic ? mats_dynamic : (small ? ((small == 2) ? mats_detail : mats_small) : (transparent ? mats_alpha : mats_static))).get_material(tex, inc_shadows);
 }
 rgeom_mat_t &building_room_geom_t::get_metal_material(bool inc_shadows, bool dynamic, unsigned small, colorRGBA const &spec_color) {
@@ -679,8 +674,8 @@ void building_room_geom_t::create_static_vbos(building_t const &building) {
 		case TYPE_RUG:     add_rug     (*i); break;
 		case TYPE_PICTURE: add_picture (*i); break;
 		case TYPE_WBOARD:  add_picture (*i); break;
-		case TYPE_BOOK:    add_book    (*i, 1, 0); break;
-		case TYPE_BCASE:   add_bookcase(*i, 1, 0, tscale, 0); break;
+		case TYPE_BOOK:    add_book    (*i, 1, 0, 0); break; // lg
+		case TYPE_BCASE:   add_bookcase(*i, 1, 0, 0, tscale, 0); break; // lg
 		case TYPE_WINE_RACK: add_wine_rack(*i, 1, 0, tscale); break;
 		case TYPE_DESK:    add_desk    (*i, tscale, 1, 0); break;
 		case TYPE_RDESK:   add_reception_desk(*i, tscale); break;
@@ -737,13 +732,13 @@ void building_room_geom_t::add_small_static_objs_to_verts(vect_room_object_t con
 		assert(i->type < NUM_ROBJ_TYPES);
 
 		switch (i->type) {
-		case TYPE_BOOK:      add_book     (*i, 0, 1); break;
-		case TYPE_BCASE:     add_bookcase (*i, 0, 1, tscale, 0); break;
+		case TYPE_BOOK:      add_book     (*i, 0, 1, 0); break; // sm only
+		case TYPE_BCASE:     add_bookcase (*i, 0, 1, 0, tscale, 0); break; // sm only
 		case TYPE_BED:       add_bed      (*i, 0, 1, tscale); break;
 		case TYPE_DESK:      add_desk     (*i, tscale, 0, 1); break;
 		case TYPE_DRESSER: case TYPE_NIGHTSTAND: add_dresser(*i, tscale, 0, 1); break;
 		case TYPE_TCAN:      add_trashcan (*i); break;
-		case TYPE_SIGN:      add_sign     (*i, 0, 1); break;
+		case TYPE_SIGN:      add_sign     (*i, 0, 0); break; // sm only
 		case TYPE_CLOSET:    add_closet   (*i, tid_nm_pair_t(), 0, 1); break; // add closet wall trim and interior objects, don't need wall_tex
 		case TYPE_RAILING:   add_railing  (*i); break;
 		case TYPE_PLANT:     add_potted_plant(*i, 0, 1); break; // plant only
@@ -779,6 +774,25 @@ void building_room_geom_t::add_small_static_objs_to_verts(vect_room_object_t con
 		default: break;
 		} // end switch
 	} // for i
+}
+
+void building_room_geom_t::create_text_vbos(building_t const &building) {
+	//highres_timer_t timer("Gen Room Geom Text");
+
+	for (unsigned d = 0; d < 2; ++d) { // {objs, expanded_objs}
+		vect_room_object_t const &v(d ? expanded_objs : objs);
+
+		for (auto i = v.begin(); i != v.end(); ++i) {
+			if (!i->is_visible()) continue; // skip invisible objects
+			switch (i->type) {
+			case TYPE_BOOK:  add_book    (*i, 0, 0, 1); break; // text only
+			case TYPE_BCASE: add_bookcase(*i, 0, 0, 1, 1.0, 0); break; // text only
+			case TYPE_SIGN:  add_sign    (*i, 0, 1); break; // text only
+			default: break;
+			} // end switch
+		} // for i
+	} // for d
+	mats_text.create_vbos(building);
 }
 
 void building_room_geom_t::create_detail_vbos(building_t const &building) {
@@ -931,9 +945,10 @@ void apply_room_obj_rotate(room_object_t &obj, obj_model_inst_t &inst) {
 	else if (c.type == TYPE_BOOK) {
 		static building_room_geom_t tmp_rgeom;
 		float const z_rot_angle(-(atan2(cview_dir.y, cview_dir.x) + PI_TWO));
-		tmp_rgeom.add_book(c, 1, 1, 0.0, 0, 0, z_rot_angle);
+		tmp_rgeom.add_book(c, 1, 1, 1, 0.0, 0, 0, z_rot_angle); // draw lg/sm/text
 		enable_blend(); // needed for book text
 		tmp_rgeom.mats_small.upload_draw_and_clear(s);
+		tmp_rgeom.mats_text .upload_draw_and_clear(s);
 		disable_blend();
 		return;
 	}
@@ -1270,16 +1285,20 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, building_t c
 		if (!mats_static.valid) { // create static materials if needed
 			create_obj_model_insts(building);
 			create_static_vbos(building);
-			++num_geom_this_frame;
+			if (!shadow_only) {++num_geom_this_frame;}
 		}
 		if (inc_small && !mats_small.valid) { // create small materials if needed
 			create_small_static_vbos(building);
-			++num_geom_this_frame;
+			if (!shadow_only) {++num_geom_this_frame;}
+		}
+		if (inc_small == 2 && !shadow_only && !mats_text.valid) { // create text materials if needed; drawn as detail object
+			create_text_vbos(building);
+			if (!shadow_only) {++num_geom_this_frame;}
 		}
 		// Note: not created on the shadow pass, because trim_objs may not have been created yet and we would miss including it
 		if (inc_small == 2 && !shadow_only && !mats_detail.valid) { // create detail materials if needed
 			create_detail_vbos(building);
-			++num_geom_this_frame;
+			if (!shadow_only) {++num_geom_this_frame;}
 		}
 	}
 	if (draw_lights && !mats_lights .valid) {create_lights_vbos (building);} // create lights  materials if needed (no limit)
@@ -1314,6 +1333,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, building_t c
 			}
 		}
 	}
+	if (inc_small == 2 && !shadow_only) {mats_text.draw(bbd, s, shadow_only, reflection_pass);} // text must be drawn last; drawn as detail objects
 	disable_blend();
 	indexed_vao_manager_with_shadow_t::post_render();
 	bool const disable_cull_face(0); // better but slower?

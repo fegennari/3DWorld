@@ -447,7 +447,7 @@ typedef uint8_t stairs_shape;
 
 enum {ROOM_WALL_INT=0, ROOM_WALL_SEP, ROOM_WALL_EXT, ROOM_WALL_BASEMENT};
 enum {FLOORING_MARBLE=0, FLOORING_TILE, FLOORING_CONCRETE, FLOORING_CARPET, FLOORING_WOOD}; // Note: not all are used
-enum {MAT_TYPE_STATIC=0, MAT_TYPE_SMALL, MAT_TYPE_DYNAMIC, MAT_TYPE_DETAIL, MAT_TYPE_DOORS, MAT_TYPE_LIGHTS}; // building_room_geom_t material types; max is 8
+enum {MAT_TYPE_STATIC=0, MAT_TYPE_SMALL, MAT_TYPE_DYNAMIC, MAT_TYPE_DETAIL, MAT_TYPE_DOORS, MAT_TYPE_LIGHTS, MAT_TYPE_TEXT}; // building_room_geom_t material types; max is 8
 
 enum {/*building models*/ OBJ_MODEL_TOILET=0, OBJ_MODEL_SINK, OBJ_MODEL_TUB, OBJ_MODEL_FRIDGE, OBJ_MODEL_STOVE, OBJ_MODEL_TV, OBJ_MODEL_MONITOR, OBJ_MODEL_COUCH,
 	OBJ_MODEL_OFFICE_CHAIR, OBJ_MODEL_URINAL, OBJ_MODEL_LAMP, OBJ_MODEL_WASHER, OBJ_MODEL_DRYER, OBJ_MODEL_KEY, OBJ_MODEL_HANGER, OBJ_MODEL_CLOTHES,
@@ -745,7 +745,7 @@ struct building_room_geom_t {
 	vect_rat_t rats;
 	vect_spider_t spiders;
 	// {large static, small static, dynamic, lights, alpha mask, transparent, door} materials
-	building_materials_t mats_static, mats_small, mats_detail, mats_dynamic, mats_lights, mats_amask, mats_alpha, mats_doors;
+	building_materials_t mats_static, mats_small, mats_text, mats_detail, mats_dynamic, mats_lights, mats_amask, mats_alpha, mats_doors;
 	vect_cube_t light_bcubes;
 	building_decal_manager_t decal_manager;
 
@@ -756,12 +756,13 @@ struct building_room_geom_t {
 	void clear_materials();
 	void invalidate_static_geom   () {invalidate_mats_mask |= (1 << MAT_TYPE_STATIC );}
 	void invalidate_small_geom    () {invalidate_mats_mask |= (1 << MAT_TYPE_SMALL  );}
+	void update_text_draw_data    () {invalidate_mats_mask |= (1 << MAT_TYPE_TEXT   );}
 	void clear_and_recreate_lights() {invalidate_mats_mask |= (1 << MAT_TYPE_LIGHTS );} // cache state and apply change later in case this is called from a different thread
 	void update_dynamic_draw_data () {invalidate_mats_mask |= (1 << MAT_TYPE_DYNAMIC);}
 	void check_invalid_draw_data();
 	void invalidate_draw_data_for_obj(room_object_t const &obj, bool was_taken=0);
-	unsigned get_num_verts() const {return (mats_static.count_all_verts() + mats_small.count_all_verts() + mats_detail.count_all_verts() + mats_dynamic.count_all_verts() +
-		mats_lights.count_all_verts() + mats_amask.count_all_verts() + mats_alpha.count_all_verts() + mats_doors.count_all_verts());}
+	unsigned get_num_verts() const {return (mats_static.count_all_verts() + mats_small.count_all_verts() + mats_text.count_all_verts() + mats_detail.count_all_verts() +
+		mats_dynamic.count_all_verts() + mats_lights.count_all_verts() + mats_amask.count_all_verts() + mats_alpha.count_all_verts() + mats_doors.count_all_verts());}
 	rgeom_mat_t &get_material(tid_nm_pair_t const &tex, bool inc_shadows=0, bool dynamic=0, unsigned small=0, bool transparent=0);
 	rgeom_mat_t &get_untextured_material(bool inc_shadows=0, bool dynamic=0, unsigned small=0, bool transparent=0) {
 		return get_material(tid_nm_pair_t(-1, 1.0, inc_shadows, transparent), inc_shadows, dynamic, small, transparent);
@@ -794,9 +795,9 @@ struct building_room_geom_t {
 	void add_picture(room_object_t const &c);
 	void add_book_title(std::string const &title, cube_t const &title_area, rgeom_mat_t &mat, colorRGBA const &color,
 		unsigned hdim, unsigned tdim, unsigned wdim, bool cdir, bool ldir, bool wdir);
-	void add_book(room_object_t const &c, bool inc_lg, bool inc_sm, float tilt_angle=0.0, unsigned extra_skip_faces=0, bool no_title=0, float z_rot_angle=0.0);
-	void add_bookcase(room_object_t const &c, bool inc_lg, bool inc_sm, float tscale, bool no_shelves=0, float sides_scale=1.0,
-		point const *const use_this_tex_origin=nullptr, vect_room_object_t *books=nullptr);
+	void add_book(room_object_t const &c, bool inc_lg, bool inc_sm, bool inc_text, float tilt_angle=0.0, unsigned extra_skip_faces=0, bool no_title=0, float z_rot_angle=0.0);
+	void add_bookcase(room_object_t const &c, bool inc_lg, bool inc_sm, bool inc_text, float tscale,
+		bool no_shelves=0, float sides_scale=1.0, point const *const use_this_tex_origin=nullptr, vect_room_object_t *books=nullptr);
 	void add_wine_rack(room_object_t const &c, bool inc_lg, bool inc_sm, float tscale);
 	void add_desk(room_object_t const &c, float tscale, bool inc_lg, bool inc_sm);
 	void add_reception_desk(room_object_t const &c, float tscale);
@@ -858,7 +859,7 @@ struct building_room_geom_t {
 	static void draw_interactive_player_obj(carried_item_t const &c, shader_t &s, vector3d const &xlate);
 	// functions for expanding nested objects
 	void expand_shelves(room_object_t const &c);
-	void get_bookcase_books(room_object_t const &c, vect_room_object_t &books) {add_bookcase(c, 0, 0, 1.0, 0, 1.0, nullptr, &books);} // Note: technically const
+	void get_bookcase_books(room_object_t const &c, vect_room_object_t &books) {add_bookcase(c, 0, 0, 0, 1.0, 0, 1.0, nullptr, &books);} // Note: technically const
 	void expand_closet(room_object_t const &c) {add_closet_objects(c, expanded_objs);}
 	void expand_cabinet(room_object_t const &c);
 	void expand_wine_rack(room_object_t const &c) {add_wine_rack_bottles(c, expanded_objs);}
@@ -886,6 +887,7 @@ struct building_room_geom_t {
 private:
 	void create_static_vbos(building_t const &building);
 	void create_small_static_vbos(building_t const &building);
+	void create_text_vbos(building_t const &building);
 	void create_detail_vbos(building_t const &building);
 	void add_small_static_objs_to_verts(vect_room_object_t const &objs_to_add);
 	void create_obj_model_insts(building_t const &building);
@@ -897,7 +899,7 @@ private:
 	static void get_shelf_objects(room_object_t const &c_in, cube_t const shelves[4], unsigned num_shelves, vect_room_object_t &objects);
 	static void add_wine_rack_bottles(room_object_t const &c, vect_room_object_t &objects);
 	static void add_vert_roll_to_material(room_object_t const &c, rgeom_mat_t &mat, float sz_ratio=1.0, bool player_held=0);
-	void add_bcase_book(room_object_t const &c, cube_t const &book, bool inc_lg, bool inc_sm, bool backwards, bool in_set,
+	void add_bcase_book(room_object_t const &c, cube_t const &book, bool inc_lg, bool inc_sm, bool inc_text, bool backwards, bool in_set,
 		unsigned skip_faces, unsigned book_ix, unsigned set_start_ix, colorRGBA const &color, vect_room_object_t *books);
 	void remove_objs_contained_in(cube_t const &c, vect_room_object_t &obj_vect, building_t &building);
 }; // building_room_geom_t
