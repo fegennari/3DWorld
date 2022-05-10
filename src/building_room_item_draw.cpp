@@ -730,7 +730,6 @@ void building_room_geom_t::create_small_static_vbos(building_t const &building) 
 void building_room_geom_t::add_small_static_objs_to_verts(vect_room_object_t const &objs_to_add) {
 	if (objs_to_add.empty()) return; // don't add untextured material, otherwise we may fail the (num_verts > 0) assert
 	float const tscale(2.0/obj_scale);
-	// Note: we no longer have to add an untextured material here for book covers/text because the mats_detail should add that first
 
 	for (auto i = objs_to_add.begin(); i != objs_to_add.end(); ++i) {
 		if (!i->is_visible() || i->is_dynamic()) continue; // skip invisible and dynamic objects

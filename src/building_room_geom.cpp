@@ -1482,7 +1482,7 @@ void building_room_geom_t::add_elevator(room_object_t const &c, float tscale, fl
 	tid_nm_pair_t tp(FONT_TEXTURE_ID), lit_tp(tp);
 	lit_tp.emissive = 1.0;
 	get_material(lit_tp, 0, 1); // make sure it's allocated
-	rgeom_mat_t &mat(get_material(tp, 0, 1)); // dynamic=1
+	rgeom_mat_t &mat(get_material(tp, 0, 1)); // unshadowed, dynamic=1
 	color_wrapper const cw(BLACK), lit_cw(colorRGBA(1.0, 0.9, 0.5));
 	norm_comp const nc(normal);
 	if (use_small_text) {text_height *= 0.67;} // shrink text if there are two wide digits, but leave text alignment unchanged
@@ -1657,14 +1657,14 @@ void building_room_geom_t::add_book(room_object_t const &c, bool inc_lg, bool in
 	if (z_rot_angle == 0.0 && (c.flags & RO_FLAG_RAND_ROT) && (c.obj_id%3) == 0) { // books placed on tables/desks are sometimes randomly rotated a bit
 		z_rot_angle = (PI/12.0)*(fract(123.456*c.obj_id) - 0.5);
 	}
-	if ((draw_cover_as_small || inc_lg) && !is_open) { // draw large faces: outside faces of covers and spine; not for open books
+	if ((draw_cover_as_small ? inc_sm : inc_lg) && !is_open) { // draw large faces: outside faces of covers and spine; not for open books
 		rgeom_mat_t &mat(get_untextured_material(shadowed, 0, draw_cover_as_small));
 		unsigned const qv_start(mat.quad_verts.size());
 		mat.add_cube_to_verts_untextured(c, color, (extra_skip_faces | ~(sides_mask | spine_mask))); // untextured
 		rotate_verts(mat.quad_verts, axis,   tilt_angle,  tilt_about, qv_start);
 		rotate_verts(mat.quad_verts, plus_z, z_rot_angle, zrot_about, qv_start);
 	}
-	if (draw_cover_as_small || inc_sm) { // draw small faces: insides of covers, edges, and pages
+	if (inc_sm) { // draw small faces: insides of covers, edges, and pages
 		rgeom_mat_t &mat(get_untextured_material(shadowed, 0, 1));
 		unsigned const qv_start(mat.quad_verts.size());
 		unsigned const bot_skip_faces(extra_skip_faces | (was_dropped ? 0 : (EF_Z1 | ~get_face_mask(tdim, 0)))); // skip bottom face if not dropped
@@ -2585,13 +2585,13 @@ void add_sign_text_verts(string const &text, cube_t const &sign, bool dim, bool 
 void building_room_geom_t::add_sign(room_object_t const &c, bool inc_back, bool inc_text) {
 	if (inc_back) {
 		unsigned const skip_faces((c.flags & RO_FLAG_HANGING) ? 0 : ~get_face_mask(c.dim, !c.dir)); // skip back face, unless hanging
-		get_untextured_material(0).add_cube_to_verts_untextured(c, WHITE, skip_faces); // back of the sign, always white (for now)
+		get_untextured_material(0).add_cube_to_verts_untextured(c, WHITE, skip_faces); // back of the sign, always white (for now); unshadowed
 	}
 	if (!inc_text) return;
 	// add sign text
 	tid_nm_pair_t tex(FONT_TEXTURE_ID);
 	if (c.flags & RO_FLAG_EMISSIVE) {tex.emissive = 1.0;}
-	rgeom_mat_t &mat(get_material(tex, 0, 0, 1)); // small=1
+	rgeom_mat_t &mat(get_material(tex, 0, 0, 1)); // unshadowed, small=1
 	add_sign_text_verts(sign_helper.get_text(c.obj_id), c, c.dim, c.dir, apply_light_color(c), mat.quad_verts);
 }
 
