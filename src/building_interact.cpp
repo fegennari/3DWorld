@@ -1147,14 +1147,21 @@ bool building_t::get_zval_of_floor(point const &pos, float radius, float &zval) 
 	return 0; // no suitable floor found
 }
 bool building_t::get_zval_for_obj_placement(point const &pos, float radius, float &zval, bool add_z_bias) const {
+	if (!has_room_geom()) return 0; // error?
 	float const start_zval(pos.z);
 	if (!get_zval_of_floor(pos, radius, zval)) return 0; // if there's no floor, then there's probably no object to place on either
 	if (!has_room_geom()) return 1; // probably can't get here
+
+	for (unsigned d = 0; d < 2; ++d) { // check walls
+		for (cube_t const &wall : interior->walls[d]) {
+			if (pos.z > wall.z1() && pos.z < wall.z2() && sphere_cube_intersect(pos, radius, wall)) return 0; // intersects a wall, can't place here
+		}
+	}
 	float const z_bias(add_z_bias ? 0.0005*get_window_vspace() : 0.0); // maybe add a tiny bias to prevent z-fighting
 	auto objs_end(interior->room_geom->objs.end()); // must include stairs and elevators, which means we have to check all objects
 
 	for (auto i = interior->room_geom->objs.begin(); i != objs_end; ++i) {
-		if (!i->can_place_onto()) { // can't place on this object type
+		if (!i->can_place_onto() && i->type != TYPE_RUG) { // can't place on this object type
 			if (!i->is_floor_collidable()) continue; // ignore
 			if (!sphere_cube_intersect(pos, radius, *i)) continue; // no intersection
 			if ((i->shape == SHAPE_CYLIN || i->shape == SHAPE_SPHERE) && dist_xy_less_than(pos, i->get_cube_center(), (i->get_radius() + radius))) continue; // round object (approx)

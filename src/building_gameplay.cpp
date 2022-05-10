@@ -1285,7 +1285,7 @@ bool building_t::maybe_use_last_pickup_room_object(point const &player_pos) {
 		}
 		else if (obj.type == TYPE_BOOK || obj.type == TYPE_RAT) { // items that can be dropped
 			bool const is_rat(obj.type == TYPE_RAT);
-			float const half_width(0.5*max(max(obj.dx(), obj.dy()), obj.dz()));
+			float const half_width(0.5*max(max(obj.dx(), obj.dy()), obj.dz())); // use conservative max dim
 			point dest(player_pos + (1.2f*(get_scaled_player_radius() + half_width))*cview_dir);
 
 			if (is_rat) {
