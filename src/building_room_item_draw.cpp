@@ -288,6 +288,10 @@ void rgeom_mat_t::add_triangle_to_verts(point const v[3], colorRGBA const &color
 class rgeom_alloc_t {
 	deque<rgeom_storage_t> free_list; // one per unique texture ID/material
 public:
+	void alloc_safe(rgeom_storage_t &s) {
+#pragma omp critical(rgeom_alloc)
+		alloc(s);
+	}
 	void alloc(rgeom_storage_t &s) { // attempt to use free_list entry to reuse existing capacity
 		if (free_list.empty()) return; // no pre-alloc
 		//cout << TXT(free_list.size()) << TXT(free_list.back().get_tot_vert_capacity()) << endl; // total mem usage is 913/1045
@@ -555,12 +559,12 @@ rgeom_mat_t &building_materials_t::get_material(tid_nm_pair_t const &tex, bool i
 		if (inc_shadows) {m->enable_shadows();}
 		// tscale diffs don't make new materials; copy tscales from incoming tex; this field may be used locally by the caller, but isn't used for drawing
 		m->tex.tscale_x = tex.tscale_x; m->tex.tscale_y = tex.tscale_y;
-		if (m->get_tot_vert_capacity() == 0) {rgeom_alloc.alloc(*m);} // existing but empty entry, allocate capacity from the allocator free list
+		if (m->get_tot_vert_capacity() == 0) {rgeom_alloc.alloc_safe(*m);} // existing but empty entry, allocate capacity from the allocator free list
 		return *m;
 	}
 	emplace_back(tex); // not found, add a new material
 	if (inc_shadows) {back().enable_shadows();}
-	rgeom_alloc.alloc(back());
+	rgeom_alloc.alloc_safe(back());
 	return back();
 }
 void building_materials_t::create_vbos(building_t const &building) {
@@ -717,9 +721,6 @@ void building_room_geom_t::create_small_static_vbos(building_t const &building) 
 	model_objs.clear(); // currently model_objs are only created for small objects in drawers, so we clear this here
 	add_small_static_objs_to_verts(expanded_objs);
 	add_small_static_objs_to_verts(objs);
-	//highres_timer_t timer2("Gen Room Geom Small VBOs");
-	mats_small.create_vbos(building);
-	mats_amask.create_vbos(building);
 }
 
 void building_room_geom_t::add_small_static_objs_to_verts(vect_room_object_t const &objs_to_add) {
@@ -792,7 +793,6 @@ void building_room_geom_t::create_text_vbos(building_t const &building) {
 			} // end switch
 		} // for i
 	} // for d
-	mats_text.create_vbos(building);
 }
 
 void building_room_geom_t::create_detail_vbos(building_t const &building) {
@@ -1270,6 +1270,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, building_t c
 	if (frame_counter < 100 || frame_counter > last_frame) {num_geom_this_frame = 0; last_frame = frame_counter;} // unlimited for the first 100 frames
 	point const camera_bs(camera_pdu.pos - xlate);
 	bool const draw_lights(camera_bs.z < building.bcube.z2()); // don't draw ceiling lights when player is above the building
+	bool const draw_detail_objs(inc_small == 2 && (!shadow_only || building.has_parking_garage)); // only parking garages have detail objects that cast shadows
 	if (player_in_building) {bbd = nullptr;} // use immediate drawing when player is in the building because draw order matters for alpha blending
 	if (bbd != nullptr) {bbd->set_camera_dir_mask(camera_bs, building.bcube);}
 
@@ -1287,16 +1288,26 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, building_t c
 			create_static_vbos(building);
 			if (!shadow_only) {++num_geom_this_frame;}
 		}
-		if (inc_small && !mats_small.valid) { // create small materials if needed
-			create_small_static_vbos(building);
-			if (!shadow_only) {++num_geom_this_frame;}
+		bool const create_small(inc_small && !mats_small.valid), create_text(inc_small == 2 && !mats_text.valid);
+		//highres_timer_t timer("Create Small + Text VBOs", (create_small || create_text));
+
+		if (create_small && create_text) {
+#pragma omp parallel num_threads(2)
+			if (omp_get_thread_num_3dw() == 0) {create_small_static_vbos(building);} else {create_text_vbos(building);}
 		}
-		if (inc_small == 2 && !shadow_only && !mats_text.valid) { // create text materials if needed; drawn as detail object
-			create_text_vbos(building);
-			if (!shadow_only) {++num_geom_this_frame;}
+		else if (create_small) {create_small_static_vbos(building);}
+		else if (create_text ) {create_text_vbos        (building);}
+
+		// upload VBO data serially
+		if (create_small) {
+			mats_small.create_vbos(building);
+			mats_amask.create_vbos(building);
 		}
+		if (create_text) {mats_text.create_vbos(building);}
+		if (!shadow_only) {num_geom_this_frame += (unsigned(create_small) + unsigned(create_text));}
+
 		// Note: not created on the shadow pass, because trim_objs may not have been created yet and we would miss including it
-		if (inc_small == 2 && !shadow_only && !mats_detail.valid) { // create detail materials if needed
+		if (draw_detail_objs && !shadow_only && !mats_detail.valid) { // create detail materials if needed
 			create_detail_vbos(building);
 			if (!shadow_only) {++num_geom_this_frame;}
 		}
@@ -1307,9 +1318,9 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, building_t c
 	enable_blend(); // needed for rugs and book text
 	assert(s.is_setup());
 	mats_static.draw(bbd, s, shadow_only, reflection_pass); // this is the slowest call
-	if (draw_lights)    {mats_lights .draw(bbd, s, shadow_only, reflection_pass);}
-	if (inc_small  )    {mats_dynamic.draw(bbd, s, shadow_only, reflection_pass);}
-	if (inc_small == 2) {mats_detail .draw(bbd, s, shadow_only, reflection_pass);}
+	if (draw_lights)      {mats_lights .draw(bbd, s, shadow_only, reflection_pass);}
+	if (inc_small  )      {mats_dynamic.draw(bbd, s, shadow_only, reflection_pass);}
+	if (draw_detail_objs) {mats_detail .draw(bbd, s, shadow_only, reflection_pass);}
 	mats_doors.draw(bbd, s, shadow_only, reflection_pass);
 	
 	if (inc_small) {
