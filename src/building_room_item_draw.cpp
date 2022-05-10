@@ -1429,6 +1429,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, building_t c
 				obj_drawn = 1;
 			} // for rat
 			if (!shadow_only) {s.add_uniform_int("animation_id", 0);} // reset
+			model3d::bind_default_flat_normal_map();
 		} // end rats drawing
 		spider_draw.draw(spiders, s, building, oc, xlate, shadow_only, reflection_pass, check_clip_cube);
 	}
