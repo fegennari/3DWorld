@@ -1829,8 +1829,8 @@ bool is_cube_close_to_door(cube_t const &c, float dmin, bool inc_open, cube_t co
 	if (c.z2() < door.z1() || c.z1() > door.z2()) return 0;
 	bool const dim(door.dy() < door.dx());
 	// we don't know how much the door is open and in which direction, so expand by door width in both dirs to be conservative
-	float const width(door.get_sz_dim(!dim)), keepout(inc_open ? width : 0.0f);
-	float const lo_edge(door.d[!dim][0] - ((check_dirs == 1) ? 0 : keepout)), hi_edge(door.d[!dim][1] + ((check_dirs == 0) ? 0 : keepout));
+	float const width(door.get_sz_dim(!dim)), trim_width(0.5*WALL_THICK_VAL*door.dz()), keepout(inc_open ? width : trim_width);
+	float const lo_edge(door.d[!dim][0] - ((check_dirs == 1) ? trim_width : keepout)), hi_edge(door.d[!dim][1] + ((check_dirs == 0) ? trim_width : keepout));
 	if (c.d[!dim][0] > hi_edge || c.d[!dim][1] < lo_edge) return 0; // no overlap in !dim
 	float dmin_lo(dmin), dmin_hi(dmin);
 	
