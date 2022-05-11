@@ -33,7 +33,7 @@ unsigned const NUM_TCAN_COLORS  = 6;
 unsigned const NUM_TAPE_COLORS  = 7;
 unsigned const NUM_SHIRT_COLORS  = 14;
 unsigned const NUM_SP_EMISSIVE_COLORS = 2;
-colorRGBA const GD_SP_COLOR(0.6, 1.0, 1.0); // used for glow-in-the-dark spraypaint
+colorRGBA const GD_SP_COLOR(0.5, 1.0, 1.0); // used for glow-in-the-dark spraypaint
 colorRGBA const book_colors [NUM_BOOK_COLORS ] = {GRAY_BLACK, WHITE, LT_GRAY, GRAY, DK_GRAY, DK_BLUE, BLUE, LT_BLUE, DK_RED, RED, ORANGE, YELLOW, DK_GREEN, LT_BROWN, BROWN, DK_BROWN};
 colorRGBA const spcan_colors[NUM_SPCAN_COLORS] = {GD_SP_COLOR, WHITE, RED, GREEN, BLUE, YELLOW, PINK, ORANGE, PURPLE, BROWN, BLACK};
 colorRGBA const sp_emissive_colors[NUM_SP_EMISSIVE_COLORS] = {colorRGBA(0.2, 1.0, 0.2), colorRGBA(0.0, 0.4, 1.0)}; // light green, greenish blue

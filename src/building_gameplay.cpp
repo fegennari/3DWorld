@@ -1617,11 +1617,12 @@ bool building_t::apply_paint(point const &pos, vector3d const &dir, colorRGBA co
 	float const winding_order_sign(-SIGN(normal[dim])); // make sure to invert the winding order to match the normal sign
 	// Note: interior spraypaint draw uses back face culling while exterior draw does not; invert the winding order for exterior quads so that they show through windows correctly
 	vector3d const dx(radius*dir1*winding_order_sign*(exterior_wall ? -1.0 : 1.0));
+	colorRGBA const paint_color(((emissive_color_id > 0) ? WHITE : color), alpha); // color is always white if emissive
 	quad_batch_draw &qbd(interior->room_geom->decal_manager.paint_draw[exterior_wall].get_paint_qbd(is_marker, emissive_color_id));
-	qbd.add_quad_dirs(p_int, dx, radius*dir2, colorRGBA(color, alpha), normal); // add interior/exterior paint
+	qbd.add_quad_dirs(p_int, dx, radius*dir2, paint_color, normal); // add interior/exterior paint
 	
 	if (exterior_wall) { // add exterior paint only
-		ext_paint_manager.get_paint_qbd_for_bldg(this, is_marker, emissive_color_id).add_quad_dirs(p_int, dx, radius*dir2, colorRGBA(color, alpha), normal);
+		ext_paint_manager.get_paint_qbd_for_bldg(this, is_marker, emissive_color_id).add_quad_dirs(p_int, dx, radius*dir2, paint_color, normal);
 	}
 	static double next_sound_time(0.0);
 

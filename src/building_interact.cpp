@@ -131,7 +131,7 @@ void building_t::register_light_state_change(room_object_t const &light, point c
 	if (!is_lamp) {interior->room_geom->clear_and_recreate_lights();} // recreate light geom with correct emissive properties if not a lamp; deferred until next draw pass
 	gen_sound_thread_safe(SOUND_CLICK, local_to_camera_space(sound_pos));
 	register_building_sound(sound_pos, 0.1);
-	//interior->room_geom->modified_by_player = 1; // should light state always be preserved?
+	//interior->room_geom->modified_by_player = 1; // should light state always be preserved? maybe if toggled by the player, not for motion detect, probably not for AIs
 	float const fear_amt((light.is_lit() ? 1.0 : 0.5)*(is_lamp ? 0.5 : 1.0)); // max fear from lights turning on; lamps are half as much fear
 
 	for (rat_t &rat : interior->room_geom->rats) { // light change scares rats
