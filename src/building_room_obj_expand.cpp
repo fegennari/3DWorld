@@ -461,7 +461,8 @@ void building_room_geom_t::get_shelf_objects(room_object_t const &c_in, cube_t c
 
 			for (unsigned n = 0; n < num_spcans; ++n) {
 				gen_xy_pos_for_round_obj(C, S, spcan_radius, spcan_height, 1.5*spcan_radius, rgen);
-				C.color = spcan_colors[rgen.rand() % NUM_SPCAN_COLORS]; // random color
+				C.color  = spcan_colors[rgen.rand() % NUM_SPCAN_COLORS]; // random color
+				C.obj_id = rgen.rand(); // used to select emissive color
 				add_if_not_intersecting(C, objects, cubes);
 			}
 		}
@@ -646,7 +647,8 @@ void set_rand_pos_for_sz(cube_t &c, bool dim, float length, float width, rand_ge
 		bool const dim(c.dim ^ rgen.rand_bool() ^ 1); // random orient
 		float const length(rgen.rand_uniform(0.8, 0.9)*min(1.8f*sz.z, min(sz.x, sz.y))), diameter(0.34*length);
 		obj = room_object_t(drawer, TYPE_SPRAYCAN, c.room_id, dim, rgen.rand_bool(), 0, 1.0, SHAPE_CYLIN, spcan_colors[rgen.rand() % NUM_SPCAN_COLORS]);
-		obj.z2() = (obj.z1() + diameter);
+		obj.z2()   = obj.z1() + diameter;
+		obj.obj_id = rgen.rand(); // used to select emissive color
 		set_rand_pos_for_sz(obj, dim, length, diameter, rgen);
 		break;
 	}
@@ -753,7 +755,8 @@ void building_t::add_box_contents(room_object_t const &box) {
 			
 			for (auto i = obj_bcubes.begin(); i != obj_bcubes.end(); ++i) {
 				objs.emplace_back(*i, TYPE_SPRAYCAN, room_id, 0, 0, flags, light_amt, SHAPE_CYLIN);
-				objs.back().color = spcan_colors[(color_ix++) % NUM_SPCAN_COLORS];
+				objs.back().color  = spcan_colors[(color_ix++) % NUM_SPCAN_COLORS];
+				objs.back().obj_id = rgen.rand(); // used to select emissive color
 			}
 		}
 		else if (obj_type == 5) { // toilet paper rolls

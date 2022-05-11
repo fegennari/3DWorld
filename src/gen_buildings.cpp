@@ -2592,7 +2592,7 @@ public:
 
 			if (reflection_pass != 2 && have_buildings_ext_paint()) { // draw spraypaint/markers on building exterior, if needed
 				setup_building_draw_shader(s, DEF_CITY_MIN_ALPHA, 1, 1, 0); // alpha test, enable_indir=1, force_tsl=1, use_texgen=0
-				draw_buildings_ext_paint();
+				draw_buildings_ext_paint(s);
 				reset_interior_lighting_and_end_shader(s);
 			}
 		} // end draw_interior

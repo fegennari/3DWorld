@@ -1472,7 +1472,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, building_t c
 		else {assert(0);}
 	}
 	// alpha blended, should be drawn near last
-	decal_manager.draw_building_interior_decals(player_in_building, shadow_only); // draw decals in this building
+	decal_manager.draw_building_interior_decals(s, player_in_building, shadow_only); // draw decals in this building
 	
 	if (!shadow_only && !mats_alpha.empty()) { // draw last; not shadow casters; for shower glass, etc.
 		enable_blend();
@@ -1676,28 +1676,50 @@ bool building_t::is_entire_building_occluded(point const &viewer, occlusion_chec
 	return 1; // all parts occluded
 }
 
-void paint_draw_t::draw_paint() const {
-	if (qbd[0].empty() && qbd[1].empty()) return; // nothing to do
+bool paint_draw_t::have_any_sp() const {
+	for (unsigned i = 0; i <= NUM_SP_EMISSIVE_COLORS; ++i) {
+		if (!sp_qbd[i].empty()) return 1;
+	}
+	return 0;
+}
+quad_batch_draw &paint_draw_t::get_paint_qbd(bool is_marker, unsigned emissive_color_id) {
+	if (is_marker) return m_qbd;
+	return sp_qbd[(emissive_color_id == 0) ? 0 : (1 + ((emissive_color_id-1)%NUM_SP_EMISSIVE_COLORS))]; // choose spraypaint emissive color
+}
+void paint_draw_t::draw_paint(shader_t &s) const {
+	bool const have_sp(have_any_sp());
+	if (!have_sp && m_qbd.empty()) return; // nothing to do
 	glDepthMask(GL_FALSE); // disable depth write
 	enable_blend();
 
-	if (!qbd[0].empty()) {
+	if (have_sp) {
 		select_texture(BLUR_CENT_TEX); // spraypaint - smooth alpha blended edges
-		qbd[0].draw();
+
+		for (unsigned i = 0; i <= NUM_SP_EMISSIVE_COLORS; ++i) {
+			quad_batch_draw const &qbd(sp_qbd[i]);
+			if (qbd.empty()) continue;
+			if (i > 0) {s.set_color_e(sp_emissive_colors[i-1]);}
+			qbd.draw();
+			if (i > 0) {s.clear_color_e();}
+		} // for i
 	}
-	if (!qbd[1].empty()) {
+	if (!m_qbd.empty()) {
 		select_texture(get_texture_by_name("circle.png", 0, 0, 1, 0.0, 1, 1, 1)); // markers - sharp edges, used as alpha mask with white background color
-		qbd[1].draw();
+		m_qbd.draw();
 	}
 	disable_blend();
 	glDepthMask(GL_TRUE);
+}
+void paint_draw_t::clear() {
+	for (unsigned i = 0; i <= NUM_SP_EMISSIVE_COLORS; ++i) {sp_qbd[i].clear();}
+	m_qbd.clear();
 }
 
 void building_decal_manager_t::commit_pend_tape_qbd() {
 	pend_tape_qbd.add_quads(tape_qbd);
 	pend_tape_qbd.clear();
 }
-void building_decal_manager_t::draw_building_interior_decals(bool player_in_building, bool shadow_only) const {
+void building_decal_manager_t::draw_building_interior_decals(shader_t &s, bool player_in_building, bool shadow_only) const {
 	if (shadow_only) { // shadow pass, draw tape only
 		if (player_in_building) {
 			tape_qbd.draw(); // somewhat inefficient, since we have to send all the data for every light source
@@ -1705,9 +1727,9 @@ void building_decal_manager_t::draw_building_interior_decals(bool player_in_buil
 		}
 		return;
 	}
-	paint_draw[1].draw_paint(); // draw exterior paint always - this will show up on windows (even when looking outside into another part of the same building)
+	paint_draw[1].draw_paint(s); // draw exterior paint always - this will show up on windows (even when looking outside into another part of the same building)
 	if (!player_in_building) return;
-	paint_draw[0].draw_paint(); // draw interior paint
+	paint_draw[0].draw_paint(s); // draw interior paint
 
 	if (!tp_qbd.empty()) { // toilet paper squares: double sided, lit from top
 		glDisable(GL_CULL_FACE); // draw both sides

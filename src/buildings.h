@@ -27,13 +27,16 @@ float const DEF_CITY_MIN_ALPHA     = 0.01;
 unsigned const NUM_BOTTLE_TYPES = 6;
 unsigned const NUM_BOOK_COLORS  = 16;
 unsigned const NUM_PAPER_COLORS = 6;
-unsigned const NUM_SPCAN_COLORS = 10;
+unsigned const NUM_SPCAN_COLORS = 11;
 unsigned const NUM_LAMP_COLORS  = 6;
 unsigned const NUM_TCAN_COLORS  = 6;
 unsigned const NUM_TAPE_COLORS  = 7;
 unsigned const NUM_SHIRT_COLORS  = 14;
+unsigned const NUM_SP_EMISSIVE_COLORS = 2;
+colorRGBA const GD_SP_COLOR(0.6, 1.0, 1.0); // used for glow-in-the-dark spraypaint
 colorRGBA const book_colors [NUM_BOOK_COLORS ] = {GRAY_BLACK, WHITE, LT_GRAY, GRAY, DK_GRAY, DK_BLUE, BLUE, LT_BLUE, DK_RED, RED, ORANGE, YELLOW, DK_GREEN, LT_BROWN, BROWN, DK_BROWN};
-colorRGBA const spcan_colors[NUM_SPCAN_COLORS] = {WHITE, RED, GREEN, BLUE, YELLOW, PINK, ORANGE, PURPLE, BROWN, BLACK};
+colorRGBA const spcan_colors[NUM_SPCAN_COLORS] = {GD_SP_COLOR, WHITE, RED, GREEN, BLUE, YELLOW, PINK, ORANGE, PURPLE, BROWN, BLACK};
+colorRGBA const sp_emissive_colors[NUM_SP_EMISSIVE_COLORS] = {colorRGBA(0.2, 1.0, 0.2), colorRGBA(0.0, 0.4, 1.0)}; // light green, greenish blue
 colorRGBA const lamp_colors[NUM_LAMP_COLORS]   = {WHITE, GRAY_BLACK, BROWN, LT_BROWN, DK_BROWN, OLIVE};
 colorRGBA const cream(0.9, 0.9, 0.8), vlt_yellow(1.0, 1.0, 0.5);
 colorRGBA const paper_colors[NUM_PAPER_COLORS] = {WHITE, WHITE, WHITE, cream, cream, vlt_yellow};
@@ -717,8 +720,11 @@ struct tape_quad_batch_draw : public quad_batch_draw {
 };
 
 struct paint_draw_t {
-	quad_batch_draw qbd[2]; // {spraypaint, markers}
-	void draw_paint() const;
+	quad_batch_draw sp_qbd[NUM_SP_EMISSIVE_COLORS+1], m_qbd; // {spraypaint, markers}
+	bool have_any_sp() const;
+	quad_batch_draw &get_paint_qbd(bool is_marker, unsigned emissive_color_id);
+	void draw_paint(shader_t &s) const;
+	void clear();
 };
 struct building_decal_manager_t {
 	paint_draw_t paint_draw[2]; // {interior, exterior}
@@ -726,7 +732,7 @@ struct building_decal_manager_t {
 	tape_quad_batch_draw tape_qbd; // for tape, but not pend_tape because it hasn't been placed yet
 
 	void commit_pend_tape_qbd();
-	void draw_building_interior_decals(bool player_in_building, bool shadow_only) const;
+	void draw_building_interior_decals(shader_t &s, bool player_in_building, bool shadow_only) const;
 };
 
 struct building_room_geom_t {
@@ -1471,7 +1477,7 @@ private:
 	bool can_target_player(person_t const &person) const;
 	bool need_to_update_ai_path(person_t const &person) const;
 	void set_bcube_from_rotated_cube(cube_t const &bc);
-	bool apply_paint(point const &pos, vector3d const &dir, colorRGBA const &color, room_object const obj_type) const;
+	bool apply_paint(point const &pos, vector3d const &dir, colorRGBA const &color, unsigned emissive_color_id, room_object const obj_type) const;
 	bool apply_toilet_paper(point const &pos, vector3d const &dir, float half_width);
 	void register_button_event(room_object_t const &button);
 	bool get_zval_of_floor(point const &pos, float radius, float &zval) const;
@@ -1615,7 +1621,7 @@ void add_tquad_to_verts(building_geom_t const &bg, tquad_with_ix_t const &tquad,
 	colorRGBA const &color, vect_vnctcc_t &verts, bool invert_tc_x=0, bool exclude_frame=0, bool no_tc=0, bool no_rotate=0);
 void get_driveway_sphere_coll_cubes(point const &pos, float radius, bool xy_only, vect_cube_t &out);
 bool have_buildings_ext_paint();
-void draw_buildings_ext_paint();
+void draw_buildings_ext_paint(shader_t &s);
 void subtract_cube_xy(cube_t const &c, cube_t const &r, cube_t *out);
 bool have_secondary_buildings();
 bool get_building_door_pos_closest_to(unsigned building_id, point const &target_pos, point &door_pos);

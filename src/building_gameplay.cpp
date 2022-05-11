@@ -1277,7 +1277,9 @@ bool building_t::maybe_use_last_pickup_room_object(point const &player_pos) {
 			player_inventory.mark_last_item_used();
 		}
 		else if (obj.type == TYPE_SPRAYCAN || obj.type == TYPE_MARKER) { // spraypaint or marker
-			if (!apply_paint(player_pos, cview_dir, obj.color, obj.type)) return 0;
+			unsigned emissive_color_id(0);
+			if (obj.type == TYPE_SPRAYCAN && obj.color == GD_SP_COLOR) {emissive_color_id = 1 + (obj.obj_id % NUM_SP_EMISSIVE_COLORS);} // spraypaint glows in the dark
+			if (!apply_paint(player_pos, cview_dir, obj.color, emissive_color_id, obj.type)) return 0;
 			player_inventory.mark_last_item_used();
 		}
 		else if (obj.type == TYPE_TAPE) {
@@ -1479,22 +1481,22 @@ class paint_manager_t : public paint_draw_t { // for paint on exterior walls/win
 	building_t const *paint_bldg = nullptr;
 public:
 	bool have_paint_for_building() const { // only true if the building contains the player
-		return (paint_bldg && !(qbd[0].empty() && qbd[1].empty()) && paint_bldg->bcube.contains_pt(get_camera_building_space()));
+		return (paint_bldg && (have_any_sp() || !m_qbd.empty()) && paint_bldg->bcube.contains_pt(get_camera_building_space()));
 	}
-	quad_batch_draw &get_paint_qbd(building_t const *const building, bool is_marker) {
+	quad_batch_draw &get_paint_qbd_for_bldg(building_t const *const building, bool is_marker, unsigned emissive_color_id) {
 		if (building != paint_bldg) { // paint switches to this building
-			for (unsigned d = 0; d < 2; ++d) {qbd[d].clear();}
+			clear();
 			paint_bldg = building;
 		}
-		return qbd[is_marker];
+		return get_paint_qbd(is_marker, emissive_color_id);
 	}
 };
 
 paint_manager_t ext_paint_manager;
 bool have_buildings_ext_paint() {return ext_paint_manager.have_paint_for_building();}
-void draw_buildings_ext_paint() {ext_paint_manager.draw_paint();}
+void draw_buildings_ext_paint(shader_t &s) {ext_paint_manager.draw_paint(s);}
 
-bool building_t::apply_paint(point const &pos, vector3d const &dir, colorRGBA const &color, room_object const obj_type) const { // spraypaint or marker
+bool building_t::apply_paint(point const &pos, vector3d const &dir, colorRGBA const &color, unsigned emissive_color_id, room_object const obj_type) const { // spraypaint/marker
 	bool const is_spraypaint(obj_type == TYPE_SPRAYCAN), is_marker(obj_type == TYPE_MARKER);
 	assert(is_spraypaint || is_marker); // only these two are supported
 	// find intersection point and normal; assumes pos is inside the building
@@ -1615,8 +1617,12 @@ bool building_t::apply_paint(point const &pos, vector3d const &dir, colorRGBA co
 	float const winding_order_sign(-SIGN(normal[dim])); // make sure to invert the winding order to match the normal sign
 	// Note: interior spraypaint draw uses back face culling while exterior draw does not; invert the winding order for exterior quads so that they show through windows correctly
 	vector3d const dx(radius*dir1*winding_order_sign*(exterior_wall ? -1.0 : 1.0));
-	interior->room_geom->decal_manager.paint_draw[exterior_wall].qbd[is_marker].add_quad_dirs(p_int, dx, radius*dir2, colorRGBA(color, alpha), normal); // add interior/exterior paint
-	if (exterior_wall) {ext_paint_manager.get_paint_qbd(this, is_marker).add_quad_dirs(p_int, dx, radius*dir2, colorRGBA(color, alpha), normal);} // add exterior paint only
+	quad_batch_draw &qbd(interior->room_geom->decal_manager.paint_draw[exterior_wall].get_paint_qbd(is_marker, emissive_color_id));
+	qbd.add_quad_dirs(p_int, dx, radius*dir2, colorRGBA(color, alpha), normal); // add interior/exterior paint
+	
+	if (exterior_wall) { // add exterior paint only
+		ext_paint_manager.get_paint_qbd_for_bldg(this, is_marker, emissive_color_id).add_quad_dirs(p_int, dx, radius*dir2, colorRGBA(color, alpha), normal);
+	}
 	static double next_sound_time(0.0);
 
 	if (tfticks > next_sound_time) { // play sound if sprayed/marked, but not too frequently; marker has no sound
