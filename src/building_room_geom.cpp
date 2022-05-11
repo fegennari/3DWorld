@@ -305,7 +305,7 @@ void building_room_geom_t::add_dresser_drawers(room_object_t const &c, float tsc
 		handle.z2() = handle.z1() + 0.1*i->dz();
 		handle_mat.add_cube_to_verts_untextured(handle, handle_color, door_skip_faces); // same skip_faces
 	} // for i
-	add_small_static_objs_to_verts(objects); // add any objects that were found in open drawers; must be small static objects
+	add_small_static_objs_to_verts(objects, 1); // add any objects that were found in open drawers; must be small static objects; is_nested=1
 }
 
 tid_nm_pair_t get_scaled_wall_tex(tid_nm_pair_t const &wall_tex) {
@@ -507,7 +507,7 @@ void building_room_geom_t::add_closet(room_object_t const &c, tid_nm_pair_t cons
 		if (!c.obj_expanded()) { // add boxes if not expanded
 			vect_room_object_t &objects(get_temp_objects());
 			add_closet_objects(c, objects);
-			add_small_static_objs_to_verts(objects);
+			add_small_static_objs_to_verts(objects, 1); // is_nested=1
 		}
 	} // end inc_sm
 }
@@ -781,7 +781,7 @@ void building_room_geom_t::add_shelves(room_object_t const &c, float tscale) {
 	if (c.obj_expanded()) return; // shelves have already been expanded, don't need to create contained objects below
 	vect_room_object_t &objects(get_temp_objects());
 	get_shelf_objects(c, shelves, num_shelves, objects);
-	add_small_static_objs_to_verts(objects);
+	add_small_static_objs_to_verts(objects, 1); // is_nested=1
 }
 
 void building_room_geom_t::add_obj_with_top_texture(room_object_t const &c, string const &texture_name, colorRGBA const &sides_color, bool is_small) {
@@ -2026,7 +2026,7 @@ void building_room_geom_t::add_wine_rack(room_object_t const &c, bool inc_lg, bo
 	if (inc_sm && !c.obj_expanded()) { // add wine bottles if not expanded
 		vect_room_object_t &objects(get_temp_objects());
 		add_wine_rack_bottles(c, objects);
-		add_small_static_objs_to_verts(objects);
+		add_small_static_objs_to_verts(objects, 1); // is_nested=1
 	}
 }
 

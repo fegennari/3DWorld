@@ -11,6 +11,7 @@
 unsigned const MAX_ROOM_GEOM_GEN_PER_FRAME = 1;
 colorRGBA const rat_color(GRAY); // make the rat's fur darker
 
+vect_room_object_t pending_objs;
 object_model_loader_t building_obj_model_loader;
 
 extern bool camera_in_building;
@@ -723,8 +724,9 @@ void building_room_geom_t::create_small_static_vbos(building_t const &building) 
 	add_small_static_objs_to_verts(objs);
 }
 
-void building_room_geom_t::add_small_static_objs_to_verts(vect_room_object_t const &objs_to_add) {
+void building_room_geom_t::add_small_static_objs_to_verts(vect_room_object_t const &objs_to_add, bool is_nested, bool inc_text) {
 	if (objs_to_add.empty()) return; // don't add untextured material, otherwise we may fail the (num_verts > 0) assert
+	if (is_nested) {vector_add_to(objs_to_add, pending_objs); return;} // nested objects are added at the end so that small and text materials are thread safe
 	float const tscale(2.0/obj_scale);
 
 	for (auto i = objs_to_add.begin(); i != objs_to_add.end(); ++i) {
@@ -733,13 +735,13 @@ void building_room_geom_t::add_small_static_objs_to_verts(vect_room_object_t con
 		assert(i->type < NUM_ROBJ_TYPES);
 
 		switch (i->type) {
-		case TYPE_BOOK:      add_book     (*i, 0, 1, 0); break; // sm only
-		case TYPE_BCASE:     add_bookcase (*i, 0, 1, 0, tscale, 0); break; // sm only
+		case TYPE_BOOK:      add_book     (*i, 0, 1, inc_text); break; // sm, maybe text
+		case TYPE_BCASE:     add_bookcase (*i, 0, 1, inc_text, tscale, 0); break; // sm, maybe text
 		case TYPE_BED:       add_bed      (*i, 0, 1, tscale); break;
 		case TYPE_DESK:      add_desk     (*i, tscale, 0, 1); break;
 		case TYPE_DRESSER: case TYPE_NIGHTSTAND: add_dresser(*i, tscale, 0, 1); break;
 		case TYPE_TCAN:      add_trashcan (*i); break;
-		case TYPE_SIGN:      add_sign     (*i, 0, 0); break; // sm only
+		case TYPE_SIGN:      add_sign     (*i, 0, inc_text); break; // sm, maybe text
 		case TYPE_CLOSET:    add_closet   (*i, tid_nm_pair_t(), 0, 1); break; // add closet wall trim and interior objects, don't need wall_tex
 		case TYPE_RAILING:   add_railing  (*i); break;
 		case TYPE_PLANT:     add_potted_plant(*i, 0, 1); break; // plant only
@@ -1297,6 +1299,8 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, building_t c
 		}
 		else if (create_small) {create_small_static_vbos(building);}
 		else if (create_text ) {create_text_vbos        (building);}
+		add_small_static_objs_to_verts(pending_objs, 0, create_text); // is_nested=0
+		pending_objs.clear();
 
 		// upload VBO data serially
 		if (create_small) {

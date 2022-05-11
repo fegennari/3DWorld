@@ -889,7 +889,7 @@ private:
 	void create_small_static_vbos(building_t const &building);
 	void create_text_vbos(building_t const &building);
 	void create_detail_vbos(building_t const &building);
-	void add_small_static_objs_to_verts(vect_room_object_t const &objs_to_add);
+	void add_small_static_objs_to_verts(vect_room_object_t const &objs_to_add, bool is_nested=0, bool inc_text=0);
 	void create_obj_model_insts(building_t const &building);
 	void create_lights_vbos(building_t const &building);
 	void create_dynamic_vbos(building_t const &building);
