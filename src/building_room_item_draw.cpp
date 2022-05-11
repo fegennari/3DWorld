@@ -724,56 +724,59 @@ void building_room_geom_t::create_small_static_vbos(building_t const &building) 
 	add_small_static_objs_to_verts(objs);
 }
 
-void building_room_geom_t::add_small_static_objs_to_verts(vect_room_object_t const &objs_to_add, bool is_nested, bool inc_text) {
+void building_room_geom_t::add_nested_objs_to_verts(vect_room_object_t const &objs_to_add) {
+	vector_add_to(objs_to_add, pending_objs); // nested objects are added at the end so that small and text materials are thread safe
+}
+void building_room_geom_t::add_small_static_objs_to_verts(vect_room_object_t const &objs_to_add, bool inc_text) {
 	if (objs_to_add.empty()) return; // don't add untextured material, otherwise we may fail the (num_verts > 0) assert
-	if (is_nested) {vector_add_to(objs_to_add, pending_objs); return;} // nested objects are added at the end so that small and text materials are thread safe
 	float const tscale(2.0/obj_scale);
 
-	for (auto i = objs_to_add.begin(); i != objs_to_add.end(); ++i) {
-		if (!i->is_visible() || i->is_dynamic()) continue; // skip invisible and dynamic objects
-		assert(i->is_strictly_normalized());
-		assert(i->type < NUM_ROBJ_TYPES);
+	for (unsigned i = 0; i < objs_to_add.size(); ++i) { // Note: iterating with indices to avoid invalid ref when add_nested_objs_to_verts() is called
+		room_object_t const &c(objs_to_add[i]);
+		if (!c.is_visible() || c.is_dynamic()) continue; // skip invisible and dynamic objects
+		assert(c.is_strictly_normalized());
+		assert(c.type < NUM_ROBJ_TYPES);
 
-		switch (i->type) {
-		case TYPE_BOOK:      add_book     (*i, 0, 1, inc_text); break; // sm, maybe text
-		case TYPE_BCASE:     add_bookcase (*i, 0, 1, inc_text, tscale, 0); break; // sm, maybe text
-		case TYPE_BED:       add_bed      (*i, 0, 1, tscale); break;
-		case TYPE_DESK:      add_desk     (*i, tscale, 0, 1); break;
-		case TYPE_DRESSER: case TYPE_NIGHTSTAND: add_dresser(*i, tscale, 0, 1); break;
-		case TYPE_TCAN:      add_trashcan (*i); break;
-		case TYPE_SIGN:      add_sign     (*i, 0, inc_text); break; // sm, maybe text
-		case TYPE_CLOSET:    add_closet   (*i, tid_nm_pair_t(), 0, 1); break; // add closet wall trim and interior objects, don't need wall_tex
-		case TYPE_RAILING:   add_railing  (*i); break;
-		case TYPE_PLANT:     add_potted_plant(*i, 0, 1); break; // plant only
-		case TYPE_CRATE:     add_crate    (*i); break; // not small but only added to windowless rooms
-		case TYPE_BOX:       add_box      (*i); break; // not small but only added to windowless rooms
-		case TYPE_SHELVES:   add_shelves  (*i, tscale); break; // not small but only added to windowless rooms
-		case TYPE_COMPUTER:  add_computer (*i); break;
-		case TYPE_KEYBOARD:  add_keyboard (*i); break;
-		case TYPE_WINE_RACK: add_wine_rack(*i, 0, 1, tscale); break;
-		case TYPE_BOTTLE:    add_bottle   (*i); break;
-		case TYPE_PAPER:     add_paper    (*i); break;
-		case TYPE_PAINTCAN:  add_paint_can(*i); break;
-		case TYPE_PEN: case TYPE_PENCIL: case TYPE_MARKER: add_pen_pencil_marker(*i); break;
-		case TYPE_LG_BALL:   add_lg_ball  (*i); break;
-		case TYPE_HANGER_ROD:add_hanger_rod(*i); break;
-		case TYPE_DRAIN:     add_drain_pipe(*i); break;
-		case TYPE_KEY:       if (has_key_3d_model()) {model_objs.push_back(*i);} else {add_key(*i);} break; // draw or add as 3D model
-		case TYPE_MONEY:     add_money (*i); break;
-		case TYPE_PHONE:     add_phone (*i); break;
-		case TYPE_TPROLL:    add_tproll(*i); break;
-		case TYPE_TAPE:      add_tape  (*i); break;
-		case TYPE_SPRAYCAN:  add_spraycan(*i); break;
-		case TYPE_CRACK:     add_crack (*i); break;
-		case TYPE_SWITCH:    add_switch(*i, 0); break; // draw_detail_pass=0
-		case TYPE_BREAKER:   add_breaker(*i); break;
-		case TYPE_PLATE:     add_plate (*i); break;
-		case TYPE_LAPTOP:    add_laptop(*i); break;
-		case TYPE_BUTTON:    if (!(i->flags & RO_FLAG_IN_ELEV)) {add_button(*i);} break; // skip buttons inside elevators, which are drawn as dynamic objects
-		case TYPE_LBASKET:   add_laundry_basket(*i); break;
-		case TYPE_TOASTER:   add_toaster_proxy (*i); break;
-		case TYPE_WHEATER:   add_water_heater  (*i); break;
-		case TYPE_BRK_PANEL: add_breaker_panel (*i); break; // only added to basements
+		switch (c.type) {
+		case TYPE_BOOK:      add_book     (c, 0, 1, inc_text); break; // sm, maybe text
+		case TYPE_BCASE:     add_bookcase (c, 0, 1, inc_text, tscale, 0); break; // sm, maybe text
+		case TYPE_BED:       add_bed      (c, 0, 1, tscale); break;
+		case TYPE_DESK:      add_desk     (c, tscale, 0, 1); break;
+		case TYPE_DRESSER: case TYPE_NIGHTSTAND: add_dresser(c, tscale, 0, 1); break;
+		case TYPE_TCAN:      add_trashcan (c); break;
+		case TYPE_SIGN:      add_sign     (c, 0, inc_text); break; // sm, maybe text
+		case TYPE_CLOSET:    add_closet   (c, tid_nm_pair_t(), 0, 1); break; // add closet wall trim and interior objects, don't need wall_tex
+		case TYPE_RAILING:   add_railing  (c); break;
+		case TYPE_PLANT:     add_potted_plant(c, 0, 1); break; // plant only
+		case TYPE_CRATE:     add_crate    (c); break; // not small but only added to windowless rooms
+		case TYPE_BOX:       add_box      (c); break; // not small but only added to windowless rooms
+		case TYPE_SHELVES:   add_shelves  (c, tscale); break; // not small but only added to windowless rooms
+		case TYPE_COMPUTER:  add_computer (c); break;
+		case TYPE_KEYBOARD:  add_keyboard (c); break;
+		case TYPE_WINE_RACK: add_wine_rack(c, 0, 1, tscale); break;
+		case TYPE_BOTTLE:    add_bottle   (c); break;
+		case TYPE_PAPER:     add_paper    (c); break;
+		case TYPE_PAINTCAN:  add_paint_can(c); break;
+		case TYPE_PEN: case TYPE_PENCIL: case TYPE_MARKER: add_pen_pencil_marker(c); break;
+		case TYPE_LG_BALL:   add_lg_ball   (c); break;
+		case TYPE_HANGER_ROD:add_hanger_rod(c); break;
+		case TYPE_DRAIN:     add_drain_pipe(c); break;
+		case TYPE_KEY:       if (has_key_3d_model()) {model_objs.push_back(c);} else {add_key(c);} break; // draw or add as 3D model
+		case TYPE_MONEY:     add_money   (c); break;
+		case TYPE_PHONE:     add_phone   (c); break;
+		case TYPE_TPROLL:    add_tproll  (c); break;
+		case TYPE_TAPE:      add_tape    (c); break;
+		case TYPE_SPRAYCAN:  add_spraycan(c); break;
+		case TYPE_CRACK:     add_crack   (c); break;
+		case TYPE_SWITCH:    add_switch  (c, 0); break; // draw_detail_pass=0
+		case TYPE_BREAKER:   add_breaker (c); break;
+		case TYPE_PLATE:     add_plate   (c); break;
+		case TYPE_LAPTOP:    add_laptop  (c); break;
+		case TYPE_BUTTON:    if (!(c.flags & RO_FLAG_IN_ELEV)) {add_button(c);} break; // skip buttons inside elevators, which are drawn as dynamic objects
+		case TYPE_LBASKET:   add_laundry_basket(c); break;
+		case TYPE_TOASTER:   add_toaster_proxy (c); break;
+		case TYPE_WHEATER:   add_water_heater  (c); break;
+		case TYPE_BRK_PANEL: add_breaker_panel (c); break; // only added to basements
 		default: break;
 		} // end switch
 	} // for i
@@ -1299,7 +1302,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, building_t c
 		}
 		else if (create_small) {create_small_static_vbos(building);}
 		else if (create_text ) {create_text_vbos        (building);}
-		add_small_static_objs_to_verts(pending_objs, 0, create_text); // is_nested=0
+		add_small_static_objs_to_verts(pending_objs, create_text);
 		pending_objs.clear();
 
 		// upload VBO data serially
