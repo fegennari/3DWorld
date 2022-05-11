@@ -2589,8 +2589,10 @@ void add_sign_text_verts(string const &text, cube_t const &sign, bool dim, bool 
 
 void building_room_geom_t::add_sign(room_object_t const &c, bool inc_back, bool inc_text) {
 	if (inc_back) {
-		unsigned const skip_faces((c.flags & RO_FLAG_HANGING) ? 0 : ~get_face_mask(c.dim, !c.dir)); // skip back face, unless hanging
-		get_untextured_material(0).add_cube_to_verts_untextured(c, WHITE, skip_faces); // back of the sign, always white (for now); unshadowed
+		bool const hanging(c.flags & RO_FLAG_HANGING); // for exit sign
+		unsigned const skip_faces(hanging ? EF_Z2 : ~get_face_mask(c.dim, !c.dir)); // skip back face, top face if hanging
+		// what about transparent plastic back for hanging signs?
+		get_untextured_material(0).add_cube_to_verts_untextured(c, apply_light_color(c, WHITE), skip_faces); // back of the sign, always white (for now); unshadowed
 	}
 	if (!inc_text) return;
 	// add sign text
