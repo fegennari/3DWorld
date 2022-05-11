@@ -1025,6 +1025,13 @@ bool building_t::add_tp_roll(cube_t const &room, unsigned room_id, float tot_lig
 	return 1;
 }
 
+void add_hallway_sign(vect_room_object_t &objs, cube_t const &sign, string const &text, unsigned room_id, bool dim, bool dir) {
+	// Note: room_id is for the sign's room, not the hallway, though this doesn't seem to be a problem
+	float const sign_light_amt(1.0); // assume well lit since it's in the hallway, not in the room that the sign is attached to
+	objs.emplace_back(sign, TYPE_SIGN, room_id, dim, dir, RO_FLAG_NOCOLL, sign_light_amt, SHAPE_CUBE, DK_BLUE); // technically should use hallway room_id
+	objs.back().obj_id = register_sign_text(text);
+}
+
 bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned floor) {
 	// Note: assumes no prior placed objects
 	bool const use_sink_model(0 && building_obj_model_loader.is_model_valid(OBJ_MODEL_SINK)); // not using sink models
@@ -1197,9 +1204,7 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t const &roo
 	sign.expand_in_dim( br_dim, -(mens_room ? 0.36 : 0.30)*door_width); // shrink a bit
 	sign.translate_dim(!br_dim, sink_side_sign*0.5*wall_thickness); // move to outside wall
 	sign.d[!br_dim][sink_side] += sink_side_sign*0.1*wall_thickness; // make nonzero area
-	objs.emplace_back(sign, TYPE_SIGN, room_id, !br_dim, sink_side, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CUBE, DK_BLUE); // technically should use hallway room_id
-	string const sign_text(mens_room ? "Men" : "Women");
-	objs.back().obj_id = register_sign_text(sign_text);
+	add_hallway_sign(objs, sign, (mens_room ? "Men" : "Women"), room_id, !br_dim, sink_side);
 	return 1;
 }
 
@@ -1220,8 +1225,7 @@ void building_t::add_door_sign(string const &text, room_t const &room, float zva
 		sign.expand_in_dim(!i->dim, -(0.45 - 0.03*min((unsigned)text.size(), 6U))*door_width); // shrink a bit
 		sign.translate_dim( i->dim, side_sign*0.5*wall_thickness); // move to outside wall
 		sign.d[i->dim][side] += side_sign*0.1*wall_thickness; // make nonzero area
-		interior->room_geom->objs.emplace_back(sign, TYPE_SIGN, room_id, i->dim, side, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CUBE, DK_BLUE); // technically should use hallway room_id
-		interior->room_geom->objs.back().obj_id = register_sign_text(text);
+		add_hallway_sign(interior->room_geom->objs, sign, text, room_id, i->dim, side);
 	} // for i
 }
 
@@ -2463,7 +2467,8 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 	}
 	for (auto r = rooms.begin(); r != rooms.end(); ++r) {
 		bool const is_basement(has_basement() && r->part_id == (int)basement_part_ix);
-		float const light_amt(is_basement ? 0.0f : window_vspacing*r->get_light_amt()); // exterior light: multiply perimeter/area by window spacing to make unitless; none for basement rooms
+		float light_amt(is_basement ? 0.0f : window_vspacing*r->get_light_amt()); // exterior light: multiply perimeter/area by window spacing to make unitless; none for basement rooms
+		if (!is_house && r->is_hallway) {light_amt *= 2.0;} // double the light in office building hallways because they often connect to other lit hallways
 		float const floor_height(r->is_sec_bldg ? r->dz() : window_vspacing); // secondary buildings are always one floor
 		unsigned const num_floors(calc_num_floors_room(*r, floor_height, floor_thickness)), room_id(r - rooms.begin());
 		point room_center(r->get_cube_center());
