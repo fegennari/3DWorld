@@ -554,10 +554,11 @@ void set_rand_pos_for_sz(cube_t &c, bool dim, float length, float width, rand_ge
 	switch (type_ix) {
 	case 0: // box
 	{
-		float const length(rgen.rand_uniform(0.4, 0.9)*sz[c.dim]), width(rgen.rand_uniform(0.4, 0.9)*sz[!c.dim]);
+		float length(rgen.rand_uniform(0.4, 0.9)*sz[c.dim]), width(rgen.rand_uniform(0.4, 0.9)*sz[!c.dim]);
+		min_eq(length, 1.8f*width); min_eq(width, 1.8f*length); // limit aspect ratio to 1.8
 		obj = room_object_t(drawer, TYPE_BOX, c.room_id, rgen.rand_bool(), rgen.rand_bool());
 		obj.color = gen_box_color(rgen);
-		obj.z2()  = (obj.z1() + rgen.rand_uniform(0.4, 0.8)*sz.z);
+		obj.z2()  = obj.z1() + rgen.rand_uniform(0.4, 0.8)*sz.z;
 		set_rand_pos_for_sz(obj, c.dim, length, width, rgen);
 		break;
 	}
@@ -569,7 +570,7 @@ void set_rand_pos_for_sz(cube_t &c, bool dim, float length, float width, rand_ge
 			obj = room_object_t(drawer, TYPE_PAPER, c.room_id, c.dim, c.dir);
 			obj.obj_id = rgen.rand();
 			obj.color  = paper_colors[rgen.rand()%NUM_PAPER_COLORS];
-			obj.z2()   = (obj.z1() + 0.01*sz.z);
+			obj.z2()   = obj.z1() + 0.01*sz.z;
 			set_rand_pos_for_sz(obj, c.dim, length, width, rgen);
 		}
 		break;
@@ -581,7 +582,7 @@ void set_rand_pos_for_sz(cube_t &c, bool dim, float length, float width, rand_ge
 		float const length(min(1.7f*sz.z, 0.9f*sz[dim])), diameter(((type == TYPE_MARKER) ? 0.08 : 0.036)*length);
 		obj = room_object_t(drawer, type, c.room_id, dim, rgen.rand_bool(), 0, 1.0, SHAPE_CYLIN);
 		obj.color = ((obj.type == TYPE_MARKER) ? marker_colors[rgen.rand()&7] : ((obj.type == TYPE_PEN) ? pen_colors[rgen.rand()&3] : pencil_colors[rgen.rand()&1]));
-		obj.z2()  = (obj.z1() + diameter);
+		obj.z2()  = obj.z1() + diameter;
 		set_rand_pos_for_sz(obj, dim, length, diameter, rgen);
 		break;
 	}
@@ -591,7 +592,7 @@ void set_rand_pos_for_sz(cube_t &c, bool dim, float length, float width, rand_ge
 		obj = room_object_t(drawer, TYPE_BOOK, c.room_id, !c.dim, (c.dir ^ c.dim));
 		obj.obj_id = rgen.rand();
 		obj.color  = book_colors[rgen.rand() % NUM_BOOK_COLORS];
-		obj.z2()   = (obj.z1() + min(0.3f*width, rgen.rand_uniform(0.1, 0.35)*sz.z));
+		obj.z2()   = obj.z1() + min(0.3f*width, rgen.rand_uniform(0.1, 0.35)*sz.z);
 		set_rand_pos_for_sz(obj, c.dim, length, width, rgen);
 		break;
 	}
@@ -610,7 +611,7 @@ void set_rand_pos_for_sz(cube_t &c, bool dim, float length, float width, rand_ge
 		float const length(rgen.rand_uniform(0.7, 0.9)*min(1.8f*sz.z, min(sz.x, sz.y))), diameter(length*rgen.rand_uniform(0.26, 0.34));
 		obj = room_object_t(drawer, TYPE_BOTTLE, c.room_id, dim, rgen.rand_bool(), 0, 1.0, SHAPE_CYLIN);
 		obj.set_as_bottle(rgen.rand()); // can be empty
-		obj.z2() = (obj.z1() + diameter);
+		obj.z2() = obj.z1() + diameter;
 		set_rand_pos_for_sz(obj, dim, length, diameter, rgen);
 		break;
 	}
@@ -620,7 +621,7 @@ void set_rand_pos_for_sz(cube_t &c, bool dim, float length, float width, rand_ge
 
 		if (length < 0.9*sz[c.dim] && width < 0.9*sz[!c.dim]) { // if it can fit
 			obj = room_object_t(drawer, TYPE_MONEY, c.room_id, c.dim, c.dir);
-			obj.z2() = (obj.z1() + 0.01f*length*((rgen.rand()%20) + 1)); // 1-20 bills
+			obj.z2() = obj.z1() + 0.01f*length*((rgen.rand()%20) + 1); // 1-20 bills
 			set_rand_pos_for_sz(obj, c.dim, length, width, rgen);
 		}
 		break;
@@ -635,7 +636,7 @@ void set_rand_pos_for_sz(cube_t &c, bool dim, float length, float width, rand_ge
 			colorRGBA const phone_colors[NUM_PHONE_COLORS] = {WHITE, GRAY, DK_GRAY, GRAY_BLACK, BLUE, RED, PINK};
 			obj = room_object_t(drawer, TYPE_PHONE, c.room_id, dim, c.dir);
 			obj.color = phone_colors[rgen.rand() % NUM_PHONE_COLORS];
-			obj.z2()  = (obj.z1() + 0.045*length);
+			obj.z2()  = obj.z1() + 0.045*length;
 			set_rand_pos_for_sz(obj, dim, length, width, rgen);
 		}
 		break;
@@ -655,7 +656,7 @@ void set_rand_pos_for_sz(cube_t &c, bool dim, float length, float width, rand_ge
 
 		if (diameter < 0.9*min(sz.x, sz.y)) { // if it can fit
 			obj = room_object_t(drawer, TYPE_TAPE, c.room_id, 0, 0, 0, 1.0, SHAPE_CYLIN, tape_colors[rgen.rand() % NUM_TAPE_COLORS]); // dim/dir don't matter, so use 0
-			obj.z2() = (obj.z1() + 0.5f*TAPE_HEIGHT_TO_RADIUS*diameter); // set height
+			obj.z2() = obj.z1() + 0.5f*TAPE_HEIGHT_TO_RADIUS*diameter; // set height
 			set_rand_pos_for_sz(obj, 0, diameter, diameter, rgen);
 		}
 		break;
