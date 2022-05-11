@@ -121,7 +121,7 @@ void building_t::toggle_light_object(room_object_t const &light, point const &so
 		i->flags &= ~RO_FLAG_IS_ACTIVE; // disable motion detection feature if the player manually switches lights off
 		updated = 1;
 		if (i->type == TYPE_LAMP)  continue; // lamps don't affect room object ambient lighting, and don't require regenerating the vertex data, so skip the step below
-		if (!is_lamp) {set_obj_lit_state_to(light.room_id, light.z2(), i->is_lit());} // update object lighting flags as well, for first non-lamp light
+		if (is_lamp) {set_obj_lit_state_to(light.room_id, light.z2(), i->is_lit());} // update object lighting flags as well, for first non-lamp light
 		is_lamp = 0;
 	} // for i
 	if (!updated) return; // can we get here?
