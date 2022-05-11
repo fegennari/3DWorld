@@ -111,7 +111,7 @@ bool building_t::toggle_room_light(point const &closest_to, bool sound_from_clos
 void building_t::toggle_light_object(room_object_t const &light, point const &sound_pos) {
 	assert(has_room_geom());
 	auto objs_end(interior->room_geom->get_placed_objs_end()); // skip buttons/stairs/elevators
-	bool updated(0);
+	bool updated(0), is_lamp(1);
 
 	for (auto i = interior->room_geom->objs.begin(); i != objs_end; ++i) { // toggle all lights on this floor of this room
 		if (!i->is_light_type() || i->room_id != light.room_id) continue;
@@ -119,19 +119,20 @@ void building_t::toggle_light_object(room_object_t const &light, point const &so
 		if (i->z2() != light.z2()) continue; // Note: uses light z2 rather than z1 so that thin lights near doors are handled correctly
 		i->toggle_lit_state(); // Note: doesn't update indir lighting
 		i->flags &= ~RO_FLAG_IS_ACTIVE; // disable motion detection feature if the player manually switches lights off
-		if (i->type == TYPE_LAMP)  continue; // lamps don't affect room object ambient lighting, and don't require regenerating the vertex data, so skip the step below
-		if (!updated) {set_obj_lit_state_to(light.room_id, light.z2(), i->is_lit());} // update object lighting flags as well, for first light
 		updated = 1;
+		if (i->type == TYPE_LAMP)  continue; // lamps don't affect room object ambient lighting, and don't require regenerating the vertex data, so skip the step below
+		if (!is_lamp) {set_obj_lit_state_to(light.room_id, light.z2(), i->is_lit());} // update object lighting flags as well, for first non-lamp light
+		is_lamp = 0;
 	} // for i
 	if (!updated) return; // can we get here?
-	register_light_state_change(light, sound_pos);
+	register_light_state_change(light, sound_pos, is_lamp);
 }
-void building_t::register_light_state_change(room_object_t const &light, point const &sound_pos) {
-	interior->room_geom->clear_and_recreate_lights(); // recreate light geom with correct emissive properties; deferred until next draw pass
+void building_t::register_light_state_change(room_object_t const &light, point const &sound_pos, bool is_lamp) {
+	if (!is_lamp) {interior->room_geom->clear_and_recreate_lights();} // recreate light geom with correct emissive properties if not a lamp; deferred until next draw pass
 	gen_sound_thread_safe(SOUND_CLICK, local_to_camera_space(sound_pos));
 	register_building_sound(sound_pos, 0.1);
 	//interior->room_geom->modified_by_player = 1; // should light state always be preserved?
-	float const fear_amt(light.is_lit() ? 1.0 : 0.5); // max fear from lights turning on
+	float const fear_amt((light.is_lit() ? 1.0 : 0.5)*(is_lamp ? 0.5 : 1.0)); // max fear from lights turning on; lamps are half as much fear
 
 	for (rat_t &rat : interior->room_geom->rats) { // light change scares rats
 		if (get_room_containing_pt(rat.pos) == light.room_id) {scare_rat_at_pos(rat, sound_pos, fear_amt, 0);} // scare if in the same room
