@@ -349,7 +349,7 @@ void building_room_geom_t::expand_breaker_panel(room_object_t const &c) {
 			float const rv(breakers.z1() + r*breaker_dr);
 			breaker.z1() = rv + breaker_rs;
 			breaker.z2() = rv - breaker_rs + breaker_dr;
-			room_object_t obj(breaker, TYPE_BREAKER, c.room_id, c.dim, c.dir, RO_FLAG_NOCOLL, c.light_amt, SHAPE_CUBE, color);
+			room_object_t obj(breaker, TYPE_BREAKER, c.room_id, c.dim, c.dir, (RO_FLAG_NOCOLL | RO_FLAG_OPEN), c.light_amt, SHAPE_CUBE, color); // starts on
 			obj.obj_id     = C*num_rows + r; // store breaker index
 			obj.item_flags = num_breakers; // store the number of breakers
 			expanded_objs.push_back(obj);

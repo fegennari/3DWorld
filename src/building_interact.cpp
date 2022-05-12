@@ -202,23 +202,38 @@ void building_t::toggle_circuit_breaker(bool is_on, unsigned zone_id, unsigned n
 
 	if (!interior->elevators.empty()) { // elevators are always zone 0 (lower left or right breaker)
 		if (zone_id == 0) { // disable elevator; as long as we don't place breakers in elevators, the player can't get trapped in an elevator
-			interior->elevators_disabled ^= 1;
+			interior->elevators_disabled = !is_on;
 			interior->room_geom->modified_by_player = 1;
 			interior->room_geom->invalidate_lights_geom();
 			auto objs_end(interior->room_geom->get_placed_objs_end()); // skip buttons/stairs/elevators
 
 			for (auto i = interior->room_geom->objs.begin(); i != objs_end; ++i) {
-				if (i->type != TYPE_LIGHT || !(i->flags & RO_FLAG_IN_ELEV)) continue;
+				if (i->type != TYPE_LIGHT || !(i->flags & RO_FLAG_IN_ELEV) || i->is_lit() == is_on) continue;
 				i->flags ^= RO_FLAG_LIT; // toggle elevator light lit state
 			}
 			return;
 		}
 		--zone_id; --num_zones;
 	}
-	if (num_zones == 0) return; // no zones left
-	//float const rooms_per_zone(max(1.0f, float(interior->rooms.size())/num_zones));
-	// TODO
-	//interior->room_geom->modified_by_player = 1; // I guess we need to set this, to be safe, as this breaker will likely have some effect
+	unsigned const num_rooms(interior->rooms.size());
+	if (num_zones == 0 || num_rooms == 0) return; // no zones left, or no rooms
+	// determine which rooms this breaker controls;
+	// we really should have breakers control lights on separate floors rather than vertical rooms stacks, but this is much easier
+	float const rooms_per_zone(max(1.0f, float(num_rooms)/num_zones));
+	unsigned const rooms_start(round_fp(zone_id*rooms_per_zone)), rooms_end(min((unsigned)round_fp((zone_id+1)*rooms_per_zone), num_rooms));
+	//cout << TXT(is_on) << TXT(zone_id) << TXT(num_zones) << TXT(rooms_per_zone) << TXT(rooms_start) << TXT(rooms_end) << endl;
+	if (rooms_start >= rooms_end) return; // no rooms
+	bool updated(0);
+	auto objs_end(interior->room_geom->get_placed_objs_end()); // skip buttons/stairs/elevators
+
+	for (auto i = interior->room_geom->objs.begin(); i != objs_end; ++i) {
+		if (!i->is_light_type() || i->is_lit() == is_on || i->room_id < rooms_start || i->room_id >= rooms_end) continue;
+		i->flags ^= RO_FLAG_LIT; // TODO: not strong enough, need to disable this light and not allow the player/AI/motion detector to turn it back on
+		updated   = 1;
+	}
+	if (!updated) return;
+	interior->room_geom->modified_by_player = 1; // I guess we need to set this, to be safe, as this breaker will likely have some effect
+	interior->room_geom->invalidate_lights_geom();
 }
 
 // doors and other interactive objects
