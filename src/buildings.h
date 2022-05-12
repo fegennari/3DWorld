@@ -31,12 +31,12 @@ unsigned const NUM_SPCAN_COLORS = 11;
 unsigned const NUM_LAMP_COLORS  = 6;
 unsigned const NUM_TCAN_COLORS  = 6;
 unsigned const NUM_TAPE_COLORS  = 7;
-unsigned const NUM_SHIRT_COLORS  = 14;
+unsigned const NUM_SHIRT_COLORS = 14;
 unsigned const NUM_SP_EMISSIVE_COLORS = 2;
 colorRGBA const GD_SP_COLOR(0.5, 1.0, 1.0); // used for glow-in-the-dark spraypaint
 colorRGBA const book_colors [NUM_BOOK_COLORS ] = {GRAY_BLACK, WHITE, LT_GRAY, GRAY, DK_GRAY, DK_BLUE, BLUE, LT_BLUE, DK_RED, RED, ORANGE, YELLOW, DK_GREEN, LT_BROWN, BROWN, DK_BROWN};
 colorRGBA const spcan_colors[NUM_SPCAN_COLORS] = {GD_SP_COLOR, WHITE, RED, GREEN, BLUE, YELLOW, PINK, ORANGE, PURPLE, BROWN, BLACK};
-colorRGBA const sp_emissive_colors[NUM_SP_EMISSIVE_COLORS] = {colorRGBA(0.2, 1.0, 0.2), colorRGBA(0.0, 0.4, 1.0)}; // light green, greenish blue
+colorRGBA const sp_emissive_colors[NUM_SP_EMISSIVE_COLORS] = {colorRGBA(0.2, 1.0, 0.2), colorRGBA(0.2, 0.5, 1.0)}; // light green, greenish blue
 colorRGBA const lamp_colors[NUM_LAMP_COLORS]   = {WHITE, GRAY_BLACK, BROWN, LT_BROWN, DK_BROWN, OLIVE};
 colorRGBA const cream(0.9, 0.9, 0.8), vlt_yellow(1.0, 1.0, 0.5);
 colorRGBA const paper_colors[NUM_PAPER_COLORS] = {WHITE, WHITE, WHITE, cream, cream, vlt_yellow};
@@ -760,11 +760,11 @@ struct building_room_geom_t {
 	bool empty() const {return objs.empty();}
 	void clear();
 	void clear_materials();
-	void invalidate_static_geom   () {invalidate_mats_mask |= (1 << MAT_TYPE_STATIC );}
-	void invalidate_small_geom    () {invalidate_mats_mask |= (1 << MAT_TYPE_SMALL  );}
-	void update_text_draw_data    () {invalidate_mats_mask |= (1 << MAT_TYPE_TEXT   );}
-	void clear_and_recreate_lights() {invalidate_mats_mask |= (1 << MAT_TYPE_LIGHTS );} // cache state and apply change later in case this is called from a different thread
-	void update_dynamic_draw_data () {invalidate_mats_mask |= (1 << MAT_TYPE_DYNAMIC);}
+	void invalidate_static_geom  () {invalidate_mats_mask |= (1 << MAT_TYPE_STATIC );}
+	void invalidate_small_geom   () {invalidate_mats_mask |= (1 << MAT_TYPE_SMALL  );}
+	void update_text_draw_data   () {invalidate_mats_mask |= (1 << MAT_TYPE_TEXT   );}
+	void invalidate_lights_geom  () {invalidate_mats_mask |= (1 << MAT_TYPE_LIGHTS );} // cache state and apply change later in case this is called from a different thread
+	void update_dynamic_draw_data() {invalidate_mats_mask |= (1 << MAT_TYPE_DYNAMIC);}
 	void check_invalid_draw_data();
 	void invalidate_draw_data_for_obj(room_object_t const &obj, bool was_taken=0);
 	unsigned get_num_verts() const {return (mats_static.count_all_verts() + mats_small.count_all_verts() + mats_text.count_all_verts() + mats_detail.count_all_verts() +

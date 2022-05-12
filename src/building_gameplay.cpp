@@ -1084,7 +1084,7 @@ void building_room_geom_t::remove_object(unsigned obj_id, building_t &building) 
 	if (old_obj.type == TYPE_MIRROR && old_obj.obj_expanded()) {
 		remove_objs_contained_in(old_obj, expanded_objs, building); // search for and remove any contained medicine or other objects
 	}
-	if (is_light) {clear_and_recreate_lights();}
+	if (is_light) {invalidate_lights_geom();}
 	update_draw_state_for_room_object(old_obj, building, 1);
 }
 

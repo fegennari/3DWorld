@@ -108,7 +108,7 @@ bool building_t::toggle_room_light(point const &closest_to, bool sound_from_clos
 	return 1;
 }
 
-void building_t::toggle_light_object(room_object_t const &light, point const &sound_pos) {
+void building_t::toggle_light_object(room_object_t const &light, point const &sound_pos) { // called by the player
 	assert(has_room_geom());
 	auto objs_end(interior->room_geom->get_placed_objs_end()); // skip buttons/stairs/elevators
 	bool updated(0), is_lamp(1);
@@ -126,12 +126,12 @@ void building_t::toggle_light_object(room_object_t const &light, point const &so
 	} // for i
 	if (!updated) return; // can we get here?
 	register_light_state_change(light, sound_pos, is_lamp);
+	//interior->room_geom->modified_by_player = 1; // should light state always be preserved?
 }
 void building_t::register_light_state_change(room_object_t const &light, point const &sound_pos, bool is_lamp) {
-	if (!is_lamp) {interior->room_geom->clear_and_recreate_lights();} // recreate light geom with correct emissive properties if not a lamp; deferred until next draw pass
+	if (!is_lamp) {interior->room_geom->invalidate_lights_geom();} // recreate light geom with correct emissive properties if not a lamp; deferred until next draw pass
 	gen_sound_thread_safe(SOUND_CLICK, local_to_camera_space(sound_pos));
 	register_building_sound(sound_pos, 0.1);
-	//interior->room_geom->modified_by_player = 1; // should light state always be preserved? maybe if toggled by the player, not for motion detect, probably not for AIs
 	float const fear_amt((light.is_lit() ? 1.0 : 0.5)*(is_lamp ? 0.5 : 1.0)); // max fear from lights turning on; lamps are half as much fear
 
 	for (rat_t &rat : interior->room_geom->rats) { // light change scares rats
@@ -152,7 +152,7 @@ bool building_t::set_room_light_state_to(room_t const &room, float zval, bool ma
 		if (i->z1() < zval || i->z1() > (zval + window_vspacing) || !room.contains_cube_xy(*i)) continue; // light is on the wrong floor or in the wrong room
 		if (i->is_lit() != make_on) {i->toggle_lit_state(); updated = 1;} // Note: doesn't update indir lighting or room light value
 	} // for i
-	if (updated) {interior->room_geom->clear_and_recreate_lights();} // recreate light geom with correct emissive properties; will flag for update next frame
+	if (updated) {interior->room_geom->invalidate_lights_geom();} // recreate light geom with correct emissive properties; will flag for update next frame
 	return updated;
 }
 
@@ -204,7 +204,13 @@ void building_t::toggle_circuit_breaker(bool is_on, unsigned zone_id, unsigned n
 		if (zone_id == 0) { // disable elevator; as long as we don't place breakers in elevators, the player can't get trapped in an elevator
 			interior->elevators_disabled ^= 1;
 			interior->room_geom->modified_by_player = 1;
-			interior->room_geom->clear_and_recreate_lights(); // TODO: toggle elevator lights
+			interior->room_geom->invalidate_lights_geom();
+			auto objs_end(interior->room_geom->get_placed_objs_end()); // skip buttons/stairs/elevators
+
+			for (auto i = interior->room_geom->objs.begin(); i != objs_end; ++i) {
+				if (i->type != TYPE_LIGHT || !(i->flags & RO_FLAG_IN_ELEV)) continue;
+				i->flags ^= RO_FLAG_LIT; // toggle elevator light lit state
+			}
 			return;
 		}
 		--zone_id; --num_zones;
@@ -924,7 +930,7 @@ bool building_interior_t::update_elevators(building_t const &building, point con
 		if (light.type != TYPE_BLOCKER) { // translate light as well, if not taken
 			assert(light.type == TYPE_LIGHT);
 			light.translate_dim(2, dist); // translate in Z
-			room_geom->clear_and_recreate_lights(); // or make elevator lights part of the elevator instead?
+			room_geom->invalidate_lights_geom(); // or make elevator lights part of the elevator instead?
 		}
 		for (auto j = objs.begin() + e->button_id_start; j != objs.begin() + e->button_id_end; ++j) {
 			if (j->type == TYPE_BLOCKER) continue; // button was removed?
