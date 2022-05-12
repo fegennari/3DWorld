@@ -530,7 +530,7 @@ void building_t::build_nav_graph() const { // Note: does not depend on room geom
 				ng.connect_rooms(r, r2, -1, conn_cube);
 			} // for r2
 		}
-		//for (unsigned e = 0; e < interior->elevators.size(); ++e) {} // elevators are not yet used by AIs so are ignored here
+		//for (unsigned e = 0; e < interior->elevators.size(); ++e) {} // elevators are not yet used by AIs so are ignored here; should check interior->elevators_disabled
 	} // for r
 	//if (is_house && has_basement()) {cout << TXT(ng.is_fully_connected()) << endl;}
 }
@@ -1336,5 +1336,6 @@ void building_t::register_person_hit(unsigned person_ix, room_object_t const &ob
 }
 
 // these must be here to handle deletion of building_nav_graph_t, which is only defined in this file
-building_interior_t::building_interior_t() : top_ceilings_mask(0), garage_room(-1), door_state_updated(0), is_unconnected(0), ignore_ramp_placement(0), placed_people(0) {}
+building_interior_t::building_interior_t() :
+	top_ceilings_mask(0), garage_room(-1), door_state_updated(0), is_unconnected(0), ignore_ramp_placement(0), placed_people(0), elevators_disabled(0) {}
 building_interior_t::~building_interior_t() {}

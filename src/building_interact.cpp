@@ -200,9 +200,11 @@ void building_t::toggle_circuit_breaker(bool is_on, unsigned zone_id, unsigned n
 	assert(zone_id < num_zones);
 	assert(has_room_geom());
 
-	if (!interior->elevators.empty()) { // elevators are always zone 0
-		if (zone_id == 0) {
-			// TODO: disable elevator
+	if (!interior->elevators.empty()) { // elevators are always zone 0 (lower left or right breaker)
+		if (zone_id == 0) { // disable elevator; as long as we don't place breakers in elevators, the player can't get trapped in an elevator
+			interior->elevators_disabled ^= 1;
+			interior->room_geom->modified_by_player = 1;
+			interior->room_geom->clear_and_recreate_lights(); // TODO: toggle elevator lights
 			return;
 		}
 		--zone_id; --num_zones;
@@ -210,6 +212,7 @@ void building_t::toggle_circuit_breaker(bool is_on, unsigned zone_id, unsigned n
 	if (num_zones == 0) return; // no zones left
 	//float const rooms_per_zone(max(1.0f, float(interior->rooms.size())/num_zones));
 	// TODO
+	//interior->room_geom->modified_by_player = 1; // I guess we need to set this, to be safe, as this breaker will likely have some effect
 }
 
 // doors and other interactive objects
@@ -510,8 +513,8 @@ bool building_t::interact_with_object(unsigned obj_ix, point const &int_pos, poi
 		}
 		gen_sound_thread_safe(SOUND_CLICK, local_center, 0.4);
 	}
-	else if (obj.type == TYPE_BUTTON) {
-		if (!obj.is_active()) { // if not already active
+	else if (obj.type == TYPE_BUTTON) { // Note: currently, buttons are only used for elevators
+		if (!obj.is_active() && !interior->elevators_disabled) { // if not already active
 			register_button_event(obj);
 			obj.flags |= RO_FLAG_IS_ACTIVE;
 			interior->room_geom->invalidate_draw_data_for_obj(obj); // need to regen object data due to lit state change; don't have to set modified_by_player
@@ -863,6 +866,7 @@ void building_t::update_player_interact_objects(point const &player_pos) {
 }
 
 bool building_interior_t::update_elevators(building_t const &building, point const &player_pos) { // Note: player_pos is in building space
+	if (elevators_disabled) return 0;
 	float const z_space(0.05*building.get_floor_thickness()); // to prevent z-fighting
 	float const delta_open_amt(min(1.0f, 2.0f*fticks/TICKS_PER_SECOND)); // 0.5s for full open
 	static int prev_move_dir(2); // starts at not-moving
@@ -943,6 +947,7 @@ bool building_interior_t::update_elevators(building_t const &building, point con
 void building_t::register_button_event(room_object_t const &button) {
 	assert(interior);
 	assert(button.room_id < interior->elevators.size()); // here room_id is elevator_id (buttons are only used with elevators)
+	if (interior->elevators_disabled) return;
 	unsigned const floor_ix(button.obj_id);
 	elevator_t &elevator(interior->elevators[button.room_id]);
 	elevator.call_elevator(elevator.z1() + max(get_window_vspace()*floor_ix, 0.05f*get_floor_thickness())); // bottom of elevator car for this floor
