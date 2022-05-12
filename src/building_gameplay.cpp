@@ -19,7 +19,7 @@ carried_item_t player_held_object;
 bldg_obj_type_t bldg_obj_types[NUM_ROBJ_TYPES];
 vector<sphere_t> cur_sounds; // radius = sound volume
 
-extern bool camera_in_building, player_is_hiding;
+extern bool camera_in_building, player_is_hiding, player_in_unlit_room;
 extern int window_width, window_height, display_framerate, display_mode, game_mode, building_action_key, frame_counter;
 extern float fticks, CAMERA_RADIUS;
 extern double tfticks, camera_zh;
@@ -1846,7 +1846,7 @@ void building_gameplay_next_frame() {
 	player_inventory.next_frame();
 	// reset state for next frame
 	can_pickup_bldg_obj = 0;
-	do_room_obj_pickup  = city_action_key = can_do_building_action = 0;
+	do_room_obj_pickup  = city_action_key = can_do_building_action = player_in_unlit_room = 0;
 }
 
 void enter_building_gameplay_mode() {player_inventory.clear_all();}
