@@ -24,6 +24,13 @@
 #include <GL/glxew.h>
 #endif
 
+#ifdef _WIN32
+extern "C" { // force use of dedicated GPUs rather than Intel integrated graphics
+	_declspec(dllexport) DWORD NvOptimusEnablement = 1;
+	_declspec(dllexport) int AmdPowerXpressRequestHighPerformance = 1;
+}
+#endif
+
 using namespace std;
 typedef set<unsigned char>::iterator keyset_it;
 
