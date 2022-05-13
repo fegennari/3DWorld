@@ -50,7 +50,7 @@ void building_t::run_light_motion_detect_logic(point const &camera_bs) {
 	auto objs_end(interior->room_geom->get_placed_objs_end()); // skip buttons/stairs/elevators
 
 	for (auto i = interior->room_geom->objs.begin(); i != objs_end; ++i) {
-		if (i->type != TYPE_LIGHT || !(i->flags & RO_FLAG_IS_ACTIVE)) continue; // not a light, or not motion activated
+		if (i->type != TYPE_LIGHT || !(i->flags & RO_FLAG_IS_ACTIVE) || !i->is_powered()) continue; // not a light, unpowered, or not motion activated
 		assert(i->room_id < interior->rooms.size());
 		room_t const &room(interior->rooms[i->room_id]);
 		bool activated(is_motion_detected(camera_bs, *i, room, floor_spacing));
@@ -114,7 +114,7 @@ void building_t::toggle_light_object(room_object_t const &light, point const &so
 	bool updated(0), is_lamp(1);
 
 	for (auto i = interior->room_geom->objs.begin(); i != objs_end; ++i) { // toggle all lights on this floor of this room
-		if (!i->is_light_type() || i->room_id != light.room_id) continue;
+		if (!i->is_light_type() || i->room_id != light.room_id || !i->is_powered()) continue;
 		if ((light.flags & RO_FLAG_IN_CLOSET) != (i->flags & RO_FLAG_IN_CLOSET)) continue; // closet + room light are toggled independently
 		if (i->z2() != light.z2()) continue; // Note: uses light z2 rather than z1 so that thin lights near doors are handled correctly
 		i->toggle_lit_state(); // Note: doesn't update indir lighting
@@ -132,7 +132,7 @@ void building_t::register_light_state_change(room_object_t const &light, point c
 	if (!is_lamp) {interior->room_geom->invalidate_lights_geom();} // recreate light geom with correct emissive properties if not a lamp; deferred until next draw pass
 	gen_sound_thread_safe(SOUND_CLICK, local_to_camera_space(sound_pos));
 	register_building_sound(sound_pos, 0.1);
-	float const fear_amt((light.is_lit() ? 1.0 : 0.5)*(is_lamp ? 0.5 : 1.0)); // max fear from lights turning on; lamps are half as much fear
+	float const fear_amt((light.is_light_on() ? 1.0 : 0.5)*(is_lamp ? 0.5 : 1.0)); // max fear from lights turning on; lamps are half as much fear
 
 	for (rat_t &rat : interior->room_geom->rats) { // light change scares rats
 		if (get_room_containing_pt(rat.pos) == light.room_id) {scare_rat_at_pos(rat, sound_pos, fear_amt, 0);} // scare if in the same room
@@ -191,7 +191,7 @@ bool building_room_geom_t::closet_light_is_on(cube_t const &closet) const {
 	auto objs_end(get_placed_objs_end()); // skip buttons/stairs/elevators
 
 	for (auto i = objs.begin(); i != objs_end; ++i) {
-		if (i->type == TYPE_LIGHT && (i->flags & RO_FLAG_IN_CLOSET) && closet.contains_cube(*i)) {return i->is_lit();}
+		if (i->type == TYPE_LIGHT && (i->flags & RO_FLAG_IN_CLOSET) && closet.contains_cube(*i)) {return i->is_light_on();}
 	}
 	return 0;
 }
@@ -223,17 +223,23 @@ void building_t::toggle_circuit_breaker(bool is_on, unsigned zone_id, unsigned n
 	unsigned const rooms_start(round_fp(zone_id*rooms_per_zone)), rooms_end(min((unsigned)round_fp((zone_id+1)*rooms_per_zone), num_rooms));
 	//cout << TXT(is_on) << TXT(zone_id) << TXT(num_zones) << TXT(rooms_per_zone) << TXT(rooms_start) << TXT(rooms_end) << endl;
 	if (rooms_start >= rooms_end) return; // no rooms
+	for (unsigned r = rooms_start; r < rooms_end; ++r) {interior->rooms[r].unpowered = !is_on;} // update room unpowered flags; not yet used, but they may be later
 	bool updated(0);
 	auto objs_end(interior->room_geom->get_placed_objs_end()); // skip buttons/stairs/elevators
 
 	for (auto i = interior->room_geom->objs.begin(); i != objs_end; ++i) {
-		if (!i->is_light_type() || i->is_lit() == is_on || i->room_id < rooms_start || i->room_id >= rooms_end) continue;
-		i->flags ^= RO_FLAG_LIT; // TODO: not strong enough, need to disable this light and not allow the player/AI/motion detector to turn it back on
-		updated   = 1;
+		if (!i->is_light_type() || (i->is_powered() == is_on) || i->room_id < rooms_start || i->room_id >= rooms_end) continue;
+		bool const was_on(i->is_light_on());
+		i->flags ^= RO_FLAG_NO_POWER; // need to disable this light and not allow the player/AI/motion detector to turn it back on
+		updated  |= (i->is_light_on() != was_on); // update if light on state changed
 	}
-	if (!updated) return;
 	interior->room_geom->modified_by_player = 1; // I guess we need to set this, to be safe, as this breaker will likely have some effect
+	if (!updated) return; // that's it, don't need to update geom
+	// since the state of at least one light has changed, it's likely that other geom has been invalidated, so just update it all
 	interior->room_geom->invalidate_lights_geom();
+	interior->room_geom->invalidate_static_geom();
+	interior->room_geom->invalidate_small_geom ();
+	interior->room_geom->update_text_draw_data ();
 }
 
 // doors and other interactive objects
@@ -1078,7 +1084,7 @@ bool building_t::is_pt_lit(point const &pt) const {
 	auto objs_end(interior->room_geom->get_placed_objs_end()); // skip buttons/stairs/elevators
 
 	for (auto i = interior->room_geom->objs.begin(); i != objs_end; ++i) {
-		if (!i->is_light_type() || !i->is_lit()) continue; // not a light, or light not on
+		if (!i->is_light_type() || !i->is_light_on()) continue; // not a light, or light not on
 		bool const same_room((int)i->room_id == room_id);
 		//if (!same_room) continue; // different room (optimization); too strong?
 		//bool const same_floor(fabs(i->z1() - pt.z) < floor_spacing); // doesn't work with lamps

@@ -492,6 +492,7 @@ unsigned const RO_FLAG_IN_CLOSET=0x800000; // for closet lights
 unsigned const RO_FLAG_DYNAMIC  = 0x01000000; // dynamic object (balls, elevators, etc.)
 unsigned const RO_FLAG_DSTATE   = 0x02000000; // this object has dynamic state
 unsigned const RO_FLAG_NO_CONS  = 0x04000000; // this object is not consumable (bottles)
+unsigned const RO_FLAG_NO_POWER = 0x04000000; // unpowered; related to circuit breakers; aliased with RO_FLAG_NO_CONS
 unsigned const RO_FLAG_IS_ACTIVE= 0x08000000; // active, for sinks, tubs, buttons, etc.
 unsigned const RO_FLAG_USED     = 0x10000000; // used by the player (spraypaint, marker, etc.); used by parking spaces to indicate cars
 unsigned const RO_FLAG_IN_ELEV  = 0x20000000; // for elevator lights and buttons
@@ -540,6 +541,8 @@ struct room_object_t : public oriented_cube_t { // size=64
 	void set_combined_flags(unsigned v) {drawer_flags = (v >> 16); item_flags = (v & 0xFFFF);}
 	bool is_valid   () const {return  (type != TYPE_NONE);}
 	bool is_lit     () const {return  (flags & RO_FLAG_LIT);}
+	bool is_powered () const {return !(flags & RO_FLAG_NO_POWER);}
+	bool is_light_on() const {return  (is_lit() && is_powered());}
 	bool has_stairs () const {return  (flags & RO_FLAG_RSTAIRS);}
 	bool is_visible () const {return !(flags & RO_FLAG_INVIS);}
 	bool no_coll    () const {return  (flags & RO_FLAG_NOCOLL);}
@@ -932,14 +935,14 @@ unsigned const NUM_RTYPE_SLOTS = 6; // enough for houses; hard max is 8
 struct room_t : public cube_t {
 	uint8_t has_stairs; // per-floor bit mask; always set to 255 for stairs that span the entire room
 	uint8_t has_elevator; // number of elevators, usually either 0 or 1
-	bool has_center_stairs, no_geom, is_hallway, is_office, is_sec_bldg, interior;
+	bool has_center_stairs, no_geom, is_hallway, is_office, is_sec_bldg, interior, unpowered;
 	uint8_t ext_sides; // sides that have exteriors, and likely windows (bits for x1, x2, y1, y2)
 	uint8_t part_id, num_lights, rtype_locked;
 	room_type rtype[NUM_RTYPE_SLOTS]; // this applies to the first few floors because some rooms can have variable per-floor assignment
 	uint64_t lit_by_floor;
 	float light_intensity; // due to room lights, if turned on
 
-	room_t() : has_stairs(0), has_elevator(0), has_center_stairs(0), no_geom(0), is_hallway(0), is_office(0), is_sec_bldg(0), interior(0),
+	room_t() : has_stairs(0), has_elevator(0), has_center_stairs(0), no_geom(0), is_hallway(0), is_office(0), is_sec_bldg(0), interior(0), unpowered(0),
 		ext_sides(0), part_id(0), num_lights(0), rtype_locked(0), lit_by_floor(0), light_intensity(0.0) {assign_all_to(RTYPE_NOTSET, 0);} // locked=0
 	room_t(cube_t const &c, unsigned p, unsigned nl, bool is_hallway_, bool is_office_, bool is_sec_bldg_);
 	void assign_all_to(room_type rt, bool locked=1); // locked by default

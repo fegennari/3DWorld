@@ -1533,7 +1533,7 @@ void building_room_geom_t::add_elevator_doors(elevator_t const &e, float fc_thic
 
 void building_room_geom_t::add_light(room_object_t const &c, float tscale) {
 	// Note: need to use a different texture (or -1) for is_on because emissive flag alone does not cause a material change
-	bool const is_on(c.is_lit() && !(c.is_broken() && !c.is_open()));
+	bool const is_on(c.is_light_on() && !(c.is_broken() && !c.is_open()));
 	tid_nm_pair_t tp(((is_on || c.shape == SHAPE_SPHERE) ? (int)WHITE_TEX : (int)PLASTER_TEX), tscale);
 	tp.emissive = (is_on ? 1.0 : 0.0);
 	rgeom_mat_t &mat(mats_lights.get_material(tp, 0)); // no shadows
@@ -2865,7 +2865,7 @@ void building_room_geom_t::add_window(room_object_t const &c, float tscale) { //
 	unsigned const skip_faces(get_skip_mask_for_xy(!c.dim) | EF_Z12); // only enable faces in dim
 	cube_t window(c);
 	tid_nm_pair_t tex(get_bath_wind_tid(), 0.0); // fit texture to the window front/back faces
-	if (c.is_lit()) {tex.emissive = 0.33;} // one third emissive
+	if (c.is_light_on()) {tex.emissive = 0.33;} // one third emissive
 	get_material(tex, 0).add_cube_to_verts(window, c.color, c.get_llc(), skip_faces); // no apply_light_color()
 }
 

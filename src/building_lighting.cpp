@@ -389,7 +389,7 @@ void building_t::order_lights_by_priority(point const &target, vector<unsigned> 
 	auto objs_end(interior->room_geom->get_placed_objs_end()); // skip buttons/stairs/elevators
 
 	for (auto i = objs.begin(); i != objs_end; ++i) {
-		if (!i->is_light_type() || !i->is_lit()) continue; // not a light, or light not on
+		if (!i->is_light_type() || !i->is_light_on()) continue; // not a light, or light not on
 		float dist_sq(p2p_dist_sq(i->get_cube_center(), target));
 		dist_sq *= 0.005f*window_vspacing/(i->dx()*i->dy()); // account for the size of the light, larger lights smaller/higher priority
 
@@ -686,7 +686,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		}
 	}
 	for (auto i = objs.begin(); i != objs_end; ++i) {
-		if (!i->is_lit() || !i->is_light_type()) continue; // light not on, or not a light or lamp
+		if (!i->is_light_on() || !i->is_light_type()) continue; // light not on, or not a light or lamp
 		point lpos(i->get_cube_center()); // centered in the light fixture
 		min_eq(lpos.z, (i->z2() - 0.0125f*window_vspacing)); // make sure the light isn't too close to the ceiling (if shifted up to avoid a door intersection)
 		point lpos_rot(lpos);

@@ -1376,7 +1376,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, building_t c
 		if (is_sink) {water_sound_manager.register_running_water(obj, building);}
 		if (!(is_rotated ? building.is_rot_cube_visible(obj, xlate) : camera_pdu.cube_visible(obj + xlate))) continue; // VFC
 		if (check_occlusion && building.check_obj_occluded(obj, camera_bs, oc, reflection_pass)) continue;
-		bool const is_emissive(!shadow_only && obj.type == TYPE_LAMP && obj.is_lit());
+		bool const is_emissive(!shadow_only && obj.type == TYPE_LAMP && obj.is_light_on());
 		if (is_emissive) {s.set_color_e(LAMP_COLOR*0.4);}
 		apply_room_obj_rotate(obj, *i); // Note: may modify obj by clearing flags
 		bool const use_low_z_bias(obj.type == TYPE_CUP && !shadow_only);
