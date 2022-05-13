@@ -1425,7 +1425,7 @@ cube_t get_elevator_car_panel(room_object_t const &c, float fc_thick_scale) {
 	panel.z1() += 0.28*dz; panel.z2() -= 0.28*dz;
 	return panel;
 }
-void building_room_geom_t::add_elevator(room_object_t const &c, float tscale, float fc_thick_scale, unsigned floor_offset, bool has_parking_garage) { // dynamic=1
+void building_room_geom_t::add_elevator(room_object_t const &c, float tscale, float fc_thick_scale, unsigned floor_offset, bool has_parking_garage, bool is_powered) { // dynamic=1
 	// elevator car, all materials are dynamic; no lighting scale
 	float const dz(c.dz()), thickness(fc_thick_scale*dz), dir_sign(c.dir ? 1.0 : -1.0), signed_thickness(dir_sign*thickness);
 	cube_t floor(c), ceil(c), back(c);
@@ -1488,7 +1488,7 @@ void building_room_geom_t::add_elevator(room_object_t const &c, float tscale, fl
 	if (use_small_text) {text_height *= 0.67;} // shrink text if there are two wide digits, but leave text alignment unchanged
 
 	for (unsigned f = 0; f < num_floors; ++f) { // Note: floor number starts at 1 even if the elevator doesn't extend to the ground floor
-		bool const is_lit(f == cur_floor);
+		bool const is_lit(is_powered && f == cur_floor);
 		text_pos.z = panel.z1() + (f + 1)*button_spacing - 0.5*text_height;
 		verts.clear();
 		add_floor_number((f+1), floor_offset, has_parking_garage, oss);

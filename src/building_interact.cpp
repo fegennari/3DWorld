@@ -204,7 +204,8 @@ void building_t::toggle_circuit_breaker(bool is_on, unsigned zone_id, unsigned n
 		if (zone_id == 0) { // disable elevator; as long as we don't place breakers in elevators, the player can't get trapped in an elevator
 			interior->elevators_disabled = !is_on;
 			interior->room_geom->modified_by_player = 1;
-			interior->room_geom->invalidate_lights_geom();
+			interior->room_geom->invalidate_lights_geom  ();
+			interior->room_geom->update_dynamic_draw_data(); // needed for lit buttons
 			auto objs_end(interior->room_geom->get_placed_objs_end()); // skip buttons/stairs/elevators
 
 			for (auto i = interior->room_geom->objs.begin(); i != objs_end; ++i) {
@@ -221,17 +222,29 @@ void building_t::toggle_circuit_breaker(bool is_on, unsigned zone_id, unsigned n
 	// we really should have breakers control lights on separate floors rather than vertical rooms stacks, but this is much easier
 	float const rooms_per_zone(max(1.0f, float(num_rooms)/num_zones));
 	unsigned const rooms_start(round_fp(zone_id*rooms_per_zone)), rooms_end(min((unsigned)round_fp((zone_id+1)*rooms_per_zone), num_rooms));
-	//cout << TXT(is_on) << TXT(zone_id) << TXT(num_zones) << TXT(rooms_per_zone) << TXT(rooms_start) << TXT(rooms_end) << endl;
 	if (rooms_start >= rooms_end) return; // no rooms
 	for (unsigned r = rooms_start; r < rooms_end; ++r) {interior->rooms[r].unpowered = !is_on;} // update room unpowered flags; not yet used, but they may be later
 	bool updated(0);
 	auto objs_end(interior->room_geom->get_placed_objs_end()); // skip buttons/stairs/elevators
 
 	for (auto i = interior->room_geom->objs.begin(); i != objs_end; ++i) {
-		if (!i->is_light_type() || (i->is_powered() == is_on) || i->room_id < rooms_start || i->room_id >= rooms_end) continue;
-		bool const was_on(i->is_light_on());
-		i->flags ^= RO_FLAG_NO_POWER; // need to disable this light and not allow the player/AI/motion detector to turn it back on
-		updated  |= (i->is_light_on() != was_on); // update if light on state changed
+		if ((i->is_powered() == is_on) || i->room_id < rooms_start || i->room_id >= rooms_end) continue;
+
+		if (i->is_light_type()) { // light
+			if (i->flags & RO_FLAG_IN_ELEV) continue; // handled above
+			bool const was_on(i->is_light_on());
+			i->flags ^= RO_FLAG_NO_POWER; // need to disable this light and not allow the player/AI/motion detector to turn it back on
+			updated  |= (i->is_light_on() != was_on); // update if light on state changed
+		}
+		else if (i->type == TYPE_MONITOR || i->type == TYPE_TV) { // interactive + drawn powered devices
+			if (i->obj_id != 1) {interior->room_geom->invalidate_draw_data_for_obj(*i);}
+			i->obj_id = 1; // turn it off
+			i->flags ^= RO_FLAG_NO_POWER;
+		}
+		else if (i->type == TYPE_MWAVE) { // interactive powered devices
+			i->flags ^= RO_FLAG_NO_POWER;
+		}
+		// Note: stoves use gas rather than electricity and don't need power; lit exit signs are always on
 	}
 	interior->room_geom->modified_by_player = 1; // I guess we need to set this, to be safe, as this breaker will likely have some effect
 	if (!updated) return; // that's it, don't need to update geom
@@ -497,10 +510,12 @@ bool building_t::interact_with_object(unsigned obj_ix, point const &int_pos, poi
 		sound_scale = 0.2;
 	}
 	else if (obj.type == TYPE_MWAVE) { // beeps
-		gen_sound_thread_safe(SOUND_BEEP, local_center, 0.25);
-		sound_scale = 0.6;
+		if (obj.is_powered()) {
+			gen_sound_thread_safe(SOUND_BEEP, local_center, 0.25);
+			sound_scale = 0.6;
+		}
 	}
-	else if (obj.type == TYPE_STOVE) { // toggle burners
+	else if (obj.type == TYPE_STOVE) { // toggle burners; doesn't need power
 		float const height(obj.dz());
 		bool const dim(obj.dim), dir(obj.dir);
 		unsigned burner_id(0);
@@ -536,12 +551,14 @@ bool building_t::interact_with_object(unsigned obj_ix, point const &int_pos, poi
 		}
 	}
 	else if (obj.type == TYPE_TV || obj.type == TYPE_MONITOR) {
-		if (!obj.is_broken()) { // no visual effect if broken, but still clicks
-			if (obj.type == TYPE_MONITOR && (obj.obj_id & 1)) {--obj.obj_id;} // toggle on and off, but don't change the desktop
-			else {++obj.obj_id;} // toggle on/off, and also change the picture
-			update_draw_data = 1;
+		if (obj.is_powered()) {
+			if (!obj.is_broken()) { // no visual effect if broken, but still clicks
+				if (obj.type == TYPE_MONITOR && (obj.obj_id & 1)) {--obj.obj_id;} // toggle on and off, but don't change the desktop
+				else {++obj.obj_id;} // toggle on/off, and also change the picture
+				update_draw_data = 1;
+			}
+			gen_sound_thread_safe(SOUND_CLICK, local_center, 0.4);
 		}
-		gen_sound_thread_safe(SOUND_CLICK, local_center, 0.4);
 	}
 	else if (obj.type == TYPE_BUTTON) { // Note: currently, buttons are only used for elevators
 		if (!obj.is_active() && !interior->elevators_disabled) { // if not already active
