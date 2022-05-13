@@ -785,8 +785,20 @@ void building_interior_t::get_avoid_cubes(vect_cube_t &avoid, float z1, float z2
 		// these object types are not collided with by people and can be skipped
 		if (c->no_coll() || c->is_dynamic() || c->type == TYPE_LG_BALL) continue; // skip dynamic objects (balls, etc.)
 		if (!(same_as_player ? bldg_obj_types[c->type].player_coll : bldg_obj_types[c->type].ai_coll)) continue;
-		if (c->z1() < z2 && c->z2() > z1) {avoid.push_back(*c);}
-	}
+		if (c->z1() > z2 || c->z2() < z1) continue;
+		avoid.push_back(*c);
+		
+		if (same_as_player && c->type == TYPE_TABLE && c->shape == SHAPE_CYLIN) {
+			// special handling of round table so that the player can't hide in the area unreachable from the bounding cube
+			float const shrink_val(c->get_radius()/SQRT2); // small shrink
+			avoid.back().expand_by(-shrink_val);
+
+			for (unsigned d = 0; d < 2; ++d) { // create a cross shape
+				avoid.push_back(*c);
+				avoid.back().expand_in_dim(d, -2.0*shrink_val);
+			}
+		}
+	} // for c
 }
 
 bool building_t::stairs_contained_in_part(stairwell_t const &s, cube_t const &p) const {
