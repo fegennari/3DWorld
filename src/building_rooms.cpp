@@ -2073,9 +2073,9 @@ void building_t::add_light_switches_to_room(rand_gen_t rgen, room_t const &room,
 					set_wall_width(c, wall_pos, switch_hwidth, !dim);
 					cube_t c_test(c);
 					c_test.d[dim][!dir] += (dir ? -1.0 : 1.0)*wall_thickness; // expand out more so that it's guaranteed to intersect appliances placed near the wall
-					if (overlaps_other_room_obj(c_test, objs_start))        continue;
-					if (is_cube_close_to_doorway(c, room, 0.0, (ei==1), 1)) continue; // inc_open=1/check_open_dir=1 for inside, to avoid placing light switch behind an open door
-					if (interior->is_blocked_by_stairs_or_elevator(c))      continue; // check stairs and elevators
+					if (overlaps_other_room_obj(c_test, objs_start))          continue;
+					if (is_cube_close_to_doorway(c, room, 0.0, (ei==1), 1))   continue; // inc_open=1/check_open_dir=1 for inside, to avoid placing behind an open door
+					if (interior->is_blocked_by_stairs_or_elevator(c))        continue; // check stairs and elevators
 					if (!check_if_placed_on_interior_wall(c, room, dim, dir)) continue; // ensure the switch is on a wall
 					objs.emplace_back(c, TYPE_SWITCH, room_id, dim, dir, RO_FLAG_NOCOLL, 1.0); // dim/dir matches wall; fully lit
 					done = 1; // done, only need to add one for this door
