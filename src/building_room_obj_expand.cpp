@@ -325,7 +325,7 @@ void building_room_geom_t::expand_med_cab(room_object_t const &c) { // aka house
 }
 
 // Note: see building_room_geom_t::add_breaker_panel()
-void building_room_geom_t::expand_breaker_panel(room_object_t const &c) {
+void building_room_geom_t::expand_breaker_panel(room_object_t const &c, bool has_elevator, bool has_parking_garage) {
 	float const box_width(c.get_sz_dim(!c.dim)), box_depth(c.get_sz_dim(c.dim)), box_height(c.dz());
 	float const thickness(0.25*box_depth), dir_sign(c.dir ? -1.0 : 1.0);
 	cube_t breakers(c);
@@ -353,6 +353,25 @@ void building_room_geom_t::expand_breaker_panel(room_object_t const &c) {
 			obj.obj_id     = C*num_rows + r; // store breaker index
 			obj.item_flags = num_breakers; // store the number of breakers
 			expanded_objs.push_back(obj);
+			// add labels
+			cube_t label(breaker);
+			string label_text;
+
+			if (has_elevator && C == 0 && r == 0) { // first breaker - add elevator label
+				label.translate_dim(!c.dim, -0.75*breaker_dc);
+				label_text = "Elevator";
+			}
+			else if (has_parking_garage && C == num_cols-1 && r == num_rows-1) { // last breaker - add parking garage label
+				label.translate_dim(!c.dim, 0.75*breaker_dc);
+				label_text = "Garage";
+			}
+			if (!label_text.empty()) {
+				label.d[c.dim][!c.dir] = label.d[c.dim][c.dir] + dir_sign*0.05*thickness;
+				label.expand_in_dim(!c.dim, -0.2*breaker_dc); // small shrink
+				label.expand_in_dim(2,      -0.2*breaker_dr); // small shrink
+				expanded_objs.emplace_back(label, TYPE_SIGN, c.room_id, c.dim, !c.dir, RO_FLAG_NOCOLL, c.light_amt, SHAPE_CUBE, BLACK);
+				expanded_objs.back().obj_id = register_sign_text(label_text);
+			}
 		}
 	} // for C
 	invalidate_small_geom();
@@ -794,7 +813,7 @@ void building_t::add_box_contents(room_object_t const &box) {
 	} // for n
 }
 
-bool building_room_geom_t::expand_object(room_object_t &c) {
+bool building_room_geom_t::expand_object(room_object_t &c, building_t const &building) {
 	if (c.obj_expanded()) return 0; // already expanded
 	switch (c.type) {
 	case TYPE_CLOSET:    expand_closet   (c); break;
@@ -802,7 +821,7 @@ bool building_room_geom_t::expand_object(room_object_t &c) {
 	case TYPE_WINE_RACK: expand_wine_rack(c); break;
 	case TYPE_CABINET: case TYPE_COUNTER: case TYPE_KSINK: expand_cabinet(c); break;
 	case TYPE_MIRROR:    expand_med_cab(c); break;
-	case TYPE_BRK_PANEL: expand_breaker_panel(c); break;
+	case TYPE_BRK_PANEL: expand_breaker_panel(c, !building.interior->elevators.empty(), building.has_parking_garage); break;
 	default: assert(0); // not a supported expand type
 	}
 	c.flags |= RO_FLAG_EXPANDED; // flag as expanded

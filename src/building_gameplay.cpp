@@ -773,7 +773,7 @@ bool building_room_geom_t::player_pickup_object(building_t &building, point cons
 
 	if (obj.type == TYPE_SHELVES || (obj.type == TYPE_WINE_RACK && !obj.obj_expanded())) { // shelves or unexpanded wine rack
 		assert(!obj.obj_expanded()); // should not have been expanded
-		expand_object(obj);
+		expand_object(obj, building);
 		bool const picked_up(player_pickup_object(building, at_pos, in_dir)); // call recursively on contents
 		// if we picked up an object, assume the VBOs have already been updated; otherwise we need to update them to expand this object
 		if (!picked_up) {invalidate_small_geom();} // assumes expanded objects are all "small"
@@ -1022,7 +1022,7 @@ bool building_room_geom_t::open_nearest_drawer(building_t &building, point const
 				}
 			} // for i
 			// Note: expanding cabinets by opening a single door will allow the player to take items from anywhere in the cabinet, even if behind a closed door
-			expand_object(obj);
+			expand_object(obj, building);
 			update_draw_state_for_room_object(obj, building, 0);
 		}
 		else {

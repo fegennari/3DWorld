@@ -200,6 +200,8 @@ void building_t::toggle_circuit_breaker(bool is_on, unsigned zone_id, unsigned n
 	assert(zone_id < num_zones);
 	assert(has_room_geom());
 
+	// Note: if there are multiple panels, they will affect the same set of zones; it seems too difficult to assign rooms/zones across panels;
+	// this means that zones will follow the state of the last breaker that was toggled to a different state
 	if (!interior->elevators.empty()) { // elevators are always zone 0 (lower left or right breaker)
 		if (zone_id == 0) { // disable elevator; as long as we don't place breakers in elevators, the player can't get trapped in an elevator
 			interior->elevators_disabled = !is_on;
@@ -625,7 +627,7 @@ bool building_t::interact_with_object(unsigned obj_ix, point const &int_pos, poi
 		obj.flags ^= RO_FLAG_OPEN; // toggle open/close
 
 		if (obj.type == TYPE_CLOSET) {
-			bool const was_expanded(interior->room_geom->expand_object(obj)); // expand any boxes so that the player can pick them up
+			bool const was_expanded(interior->room_geom->expand_object(obj, *this)); // expand any boxes so that the player can pick them up
 			if (was_expanded) {interior->room_geom->maybe_spawn_spider_in_drawer(obj, obj, 0, get_window_vspace(), 1);} // spawn spider when first opened
 			sound_scale = 0.25; // closets are quieter, to allow players to more easily hide
 		}
@@ -635,14 +637,14 @@ bool building_t::interact_with_object(unsigned obj_ix, point const &int_pos, poi
 	}
 	else if (obj.type == TYPE_MIRROR && obj.is_house()) { // medicine cabinet
 		obj.flags ^= RO_FLAG_OPEN; // toggle open/close
-		interior->room_geom->expand_object(obj);
+		interior->room_geom->expand_object(obj, *this);
 		play_door_open_close_sound(sound_origin, obj.is_open(), 0.4, 1.6);
 		sound_scale      = 0.4;
 		update_draw_data = 1;
 	}
 	else if (obj.type == TYPE_BRK_PANEL) { // breaker panel
 		obj.flags ^= RO_FLAG_OPEN; // toggle open/close
-		interior->room_geom->expand_object(obj);
+		interior->room_geom->expand_object(obj, *this);
 		play_door_open_close_sound(sound_origin, obj.is_open(), 0.6, 1.8);
 		sound_scale      = 0.6;
 		update_draw_data = 1;
