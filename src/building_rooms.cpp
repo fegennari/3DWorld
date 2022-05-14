@@ -1848,11 +1848,9 @@ bool building_t::add_rug_to_room(rand_gen_t rgen, cube_t const &room, float zval
 				}
 				if (max_area > 0.8*rug.dx()*rug.dy()) {rug = best_cand;} // good enough
 				else {valid_placement = 0;} // shrink is not enough, try again
-				break;
 			}
 			else if (i->type == TYPE_TABLE || i->type == TYPE_DESK) { // rugs can't partially overlap these object types
 				valid_placement = rug.contains_cube_xy(*i); // don't expand as that could cause the rug to intersect a previous object
-				break;
 				// maybe beds should be included as well, but then rugs are unlikely to be placed in bedrooms
 			}
 		} // for i
