@@ -665,6 +665,8 @@ void building_room_geom_t::create_static_vbos(building_t const &building) {
 	//highres_timer_t timer("Gen Room Geom"); // 2.35ms
 	float const tscale(2.0/obj_scale);
 	tid_nm_pair_t const &wall_tex(building.get_material().wall_tex);
+	static vect_room_object_t rugs;
+	rugs.clear();
 
 	for (auto i = objs.begin(); i != objs.end(); ++i) {
 		if (!i->is_visible() || i->is_dynamic()) continue; // skip invisible and dynamic objects
@@ -676,7 +678,7 @@ void building_room_geom_t::create_static_vbos(building_t const &building) {
 		case TYPE_CHAIR:   add_chair   (*i, tscale); break;
 		case TYPE_STAIR:   add_stair   (*i, tscale, tex_origin); break;
 		case TYPE_STAIR_WALL: add_stairs_wall(*i, tex_origin, wall_tex); break;
-		case TYPE_RUG:     add_rug     (*i); break;
+		case TYPE_RUG:     rugs.push_back(*i); break; // must be drawn last - save until later
 		case TYPE_PICTURE: add_picture (*i); break;
 		case TYPE_WBOARD:  add_picture (*i); break;
 		case TYPE_BOOK:    add_book    (*i, 1, 0, 0); break; // lg
@@ -710,6 +712,7 @@ void building_room_geom_t::create_static_vbos(building_t const &building) {
 		default: break;
 		} // end switch
 	} // for i
+	for (room_object_t &rug : rugs) {add_rug(rug);} // rugs are added last so that alpha blending of their edges works
 	// Note: verts are temporary, but cubes are needed for things such as collision detection with the player and ray queries for indir lighting
 	//highres_timer_t timer2("Gen Room Geom VBOs"); // < 2ms
 	mats_static.create_vbos(building);
