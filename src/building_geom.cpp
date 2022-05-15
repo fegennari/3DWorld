@@ -580,10 +580,9 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 	parts.push_back(base);
 	// add a door
 	bool const gen_door(global_building_params.windows_enabled());
-	float const floor_spacing(get_window_vspace());
 	unsigned const rand_num(rgen.rand()); // some bits will be used for random bools
 	float door_height(get_door_height()), door_center(0.0), door_pos(0.0), dist1(0.0), dist2(0.0);
-	float const driveway_dz(0.004*door_height);
+	float const floor_spacing(get_window_vspace()), driveway_dz(0.004*door_height);
 	bool const pref_street_dim(street_dir ? ((street_dir-1) >> 1) : 0), pref_street_dir(street_dir ? ((street_dir-1)&1) : 0);
 	bool door_dim(street_dir ? pref_street_dim : (rand_num & 1)), door_dir(0), dim(0), dir(0), dir2(0);
 	unsigned door_part(0), detail_type(0);
@@ -789,7 +788,7 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 		}
 		cube_t door(place_door(parts[door_part], door_dim, door_dir, door_height, door_center, door_pos, 0.25, DOOR_WIDTH_SCALE, 0, 0, rgen));
 
-		if (!is_valid_door_pos(door, 0.5*door_height, door_dim)) { // blocked by stairs or door - switch door to other side/dim
+		if (!is_valid_door_pos(door, 0.5*door_height, door_dim)) { // blocked by stairs or another door - switch door to other side/dim
 			door_dim ^= 1;
 			door_dir  = (two_parts ? ((door_dim == dim) ? dir : dir2) : (door_dir^1)); // if we have a porch/shed/garage, put the door on that side
 			if (door_dim == dim && two_parts && detail_type == 0) {door_dir ^= 1;} // put it on the opposite side so that the second part isn't in the way
@@ -839,6 +838,13 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 				} // for d
 			} // for p
 		} // end back door
+		if (0 && has_basement()) { // add door inside basement
+			cube_t const &basement(get_basement());
+			bool dim(rgen.rand_bool()), dir(rgen.rand_bool());
+			if (basement.d[dim][dir] != bcube.d[dim][dir]) {dir ^= 1;} // find a wall on the building bcube
+			float const height(floor_spacing - get_fc_thickness()); // full height of floor to avoid a gap at the top
+			has_basement_door = add_door(place_door(basement, dim, dir, height, 0.0, 0.0, 0.25, DOOR_WIDTH_SCALE, 1, 0, rgen), basement_part_ix, dim, dir, 0);
+		}
 	} // end gen_door
 	// add roof tquads
 	float const peak_height(rgen.rand_uniform(0.15, 0.5)); // same for all parts

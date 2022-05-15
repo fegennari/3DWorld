@@ -1255,7 +1255,30 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, 
 			else {
 				tp = tid_nm_pair_t(get_texture_by_name("cblock2.jpg"), get_texture_by_name("normal_maps/cblock2_NRM.jpg", 1), 1.0, 1.0);
 			}
-			bdraw.add_section(*this, 1, get_basement(), tp, WHITE, 3, 0, 0, 1, 0); // XY, always white
+			// find basement door and exclude it
+			// dim_mask bits: enable dims: 1=x, 2=y, 4=z | disable cube faces: 8=x1, 16=x2, 32=y1, 64=y2, 128=z1, 256=z2
+			unsigned dim_mask(3); // XY
+			cube_t const &basement(get_basement());
+
+			if (has_basement_door) {
+				// find basement door and remove a section of wall around it; can't use stencil test associated with ext_side_qv_range
+				for (auto const &door : doors) { // check all exterior doors
+					cube_t const c(door.get_bcube());
+					if (c.z2() > basement.z2()) continue; // not a basement door
+					bool const dim(c.dy() < c.dx()), dir(basement.get_center_dim(dim) < c.get_center_dim(dim));
+					float const door_lo(c.d[!dim][0]), door_hi(c.d[!dim][1]);
+					unsigned const this_face(1 << (2*dim + dir + 3));
+					dim_mask |= this_face; // skip this face for the full basement call below
+
+					for (unsigned d = 0; d < 2; ++d) {
+						cube_t side(basement);
+						side.d[!dim][!d] = c.d[!dim][d];
+						bdraw.add_section(*this, 0, side, tp, WHITE, ~(this_face | 4), 0, 0, 1, 0); // single face, always white
+					}
+					break; // there should be only one basement door
+				} // for doors
+			}
+			bdraw.add_section(*this, 0, basement, tp, WHITE, dim_mask, 0, 0, 1, 0); // XY, always white
 		}
 	}
 	if (get_interior && interior != nullptr) { // interior building parts
