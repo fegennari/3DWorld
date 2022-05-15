@@ -165,7 +165,7 @@ public:
 
 	bool read(vector<coll_tquad> *ppts, geom_xform_t const &xf, bool verbose) {
 		RESET_TIME;
-		if (!open_file()) return 0;
+		if (!open_file(1)) return 0; // binary mode is faster
 		cout << "Reading object file " << filename << endl;
 		vector<point> v; // vertices
 		char s[MAX_CHARS];
@@ -519,7 +519,7 @@ public:
 
 	bool read(geom_xform_t const &xf, int recalc_normals, bool verbose) {
 		RESET_TIME;
-		if (!open_file()) return 0;
+		if (!open_file(1)) return 0; // binary mode is faster
 		cout << "Reading object file " << filename << endl;
 		unsigned const block_size = (1 << 18); // 256K
 		int cur_mat_id(-1);
