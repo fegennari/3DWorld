@@ -125,6 +125,8 @@ bool building_t::add_office_utility_objs(rand_gen_t rgen, room_t const &room, fl
 	objs_start = interior->room_geom->objs.size(); // exclude this from collision checks
 	// for now, this is only the water heater; we may want to add other objects later
 	if (!add_water_heaters(rgen, room, zval, room_id, tot_light_amt, objs_start)) return 0;
+	cube_t place_area(get_walkable_room_bounds(room));
+	place_model_along_wall(OBJ_MODEL_SINK, TYPE_SINK, room, 0.45, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 0.6); // place janitorial sink
 	add_door_sign("Utility", room, zval, room_id, tot_light_amt);
 	return 1;
 }

@@ -6,6 +6,8 @@
 #include "buildings.h"
 #include "profiler.h"
 
+unsigned const MAX_OFFICE_UTILITY_ROOMS = 1;
+
 extern building_params_t global_building_params;
 
 
@@ -645,8 +647,9 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 			if (is_ground_floor || pri_hall.is_all_zeros()) {pri_hall = hall;} // assign to primary hallway if on first floor of hasn't yet been assigned
 			for (unsigned d = 0; d < 2; ++d) {first_wall_to_split[d] = interior->walls[d].size();} // don't split any walls added up to this point
 
-			if (!utility_room_cands.empty()) {
-				unsigned const utility_room_ix(utility_room_cands[rand() % utility_room_cands.size()]);
+			for (unsigned n = 0; n < MAX_OFFICE_UTILITY_ROOMS; ++n) {
+				if (utility_room_cands.empty()) break; // no more rooms to assign
+				unsigned &utility_room_ix(utility_room_cands[rand() % utility_room_cands.size()]);
 				assert(utility_room_ix < rooms.size());
 				room_t &utility_room(rooms[utility_room_ix]);
 				utility_room.assign_to(RTYPE_UTILITY, 0, 1); // make this room a utility room on floor 0; locked=1
@@ -657,7 +660,9 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 				for (auto i = interior->doors.begin()+doors_start; i != interior->doors.end(); ++i) {
 					if (i->open && i->get_true_bcube().intersects(test_cube)) {i->open = 0;} // make sure door is closed
 				}
-			}
+				utility_room_ix = utility_room_cands.back();
+				utility_room_cands.pop_back(); // remove this room from consideration
+			} // for n
 		} // end use_hallway
 
 		else { // generate random walls using recursive 2D slices
