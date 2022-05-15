@@ -37,8 +37,8 @@ void base_file_reader::close_file() {
 }
 
 void base_file_reader::unget_last_char(int c) {
-	if (FILE_BUF_SZ == 0) {assert(fp != nullptr); _ungetc_nolock(c, fp); return;}
 	if (c == EOF) return; // can't unget EOF
+	if (FILE_BUF_SZ == 0) {assert(fp != nullptr); _ungetc_nolock(c, fp); return;}
 	assert(file_buf_pos > 0); // can't unget without previous get
 	--file_buf_pos;
 }
@@ -56,33 +56,20 @@ int base_file_reader::get_char(FILE *fp_) {
 	return file_buf[file_buf_pos++];
 }
 
-int base_file_reader::fast_atoi(char *str) {
-	//return atoi(str);
-	assert(str && str[0] != 0);
-	int v(0);
-	bool is_neg(0);
-	if (*str == '-') {is_neg = 1; ++str;} // negative
-
-	for (; *str; ++str) {
-		if (!fast_isdigit(*str)) return 0; // error
-		v = 10*v + unsigned(*str - '0');
-	}
-	return (is_neg ? -v : v);
-}
-
 bool base_file_reader::read_int(int &v) {
-	unsigned ix(0);
-			
+	bool first_char(1), is_neg(0);
+	v = 0;
+
 	while (1) {
-		if (ix+1 >= MAX_CHARS) return 0; // buffer overrun
 		char const c(get_next_char());
-		if (ix == 0 && fast_isspace(c)) continue; // skip leading whitespace
-		if (!fast_isdigit(c) && !(ix == 0 && c == '-')) {unget_last_char(c); break;} // non-integer character, unget it and finish
-		buffer[ix++] = c;
+		if (first_char && fast_isspace(c)) continue; // skip leading whitespace
+		if (first_char && c == '-') {is_neg = 1; first_char = 0; continue;} // negative
+		if (!fast_isdigit(c)) {unget_last_char(c); break;} // non-integer character, unget it and finish
+		v = 10*v + int(c - '0');
+		first_char = 0;
 	}
-	if (ix == 0) return 0; // no integer characters were read
-	buffer[ix] = 0; // add null terminator
-	v = fast_atoi(buffer);
+	if (first_char) return 0; // no integer characters were read
+	if (is_neg) {v = -v;}
 	return 1;
 }
 
@@ -99,6 +86,7 @@ bool base_file_reader::read_string(char *s, unsigned max_len) {
 	while (1) {
 		if (ix+1 >= max_len) return 0; // buffer overrun
 		char const c(get_next_char());
+		if (c == EOF) break;
 		if (fast_isspace(c)) {
 			if (ix == 0) continue; // leading whitespace
 			if (c == '\n') {unget_last_char(c);} // preserve the newline
@@ -106,6 +94,7 @@ bool base_file_reader::read_string(char *s, unsigned max_len) {
 		}
 		s[ix++] = c;
 	}
+	if (ix == 0) return 0; // nothing was read
 	s[ix] = 0; // add null terminator
 	return 1;
 }
@@ -144,6 +133,7 @@ protected:
 		while (1) {
 			if (ix+1 >= MAX_CHARS) return 0; // buffer overrun
 			char const c(get_next_char());
+			if (c == EOF) break;
 			if (fast_isspace(c)) {if (ix == 0) continue; else break;} // leading/trailing whitespace
 
 			if (ix == 0 && !fast_isdigit(c) && c != '.' && c != '-') { // not a fp number

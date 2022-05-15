@@ -7,7 +7,7 @@
 #include <iostream>
 #include "3DWorld.h"
 
-unsigned const FILE_BUF_SZ = 4096;
+unsigned const FILE_BUF_SZ = (1U<<16); // 64k
 
 class base_file_reader {
 
@@ -16,7 +16,7 @@ protected:
 	FILE *fp; // Note: we use a FILE* here instead of an ifstream because it's ~2.2x faster in MSVS
 	static unsigned const MAX_CHARS = 1024;
 	bool verbose;
-	char buffer[MAX_CHARS] = {0};
+	char buffer[MAX_CHARS]     = {0};
 	char file_buf[FILE_BUF_SZ] = {0};
 	unsigned file_buf_pos, file_buf_end;
 
@@ -63,7 +63,6 @@ protected:
 		strip_trailing_ws(str);
 		return;
 	}
-	static int fast_atoi(char *str);
 	bool read_int(int &v);
 	bool read_uint(unsigned &v);
 	bool read_string(char *s, unsigned max_len);

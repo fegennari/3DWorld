@@ -1345,7 +1345,7 @@ void create_landscape_texture() {
 	int const j0((tox0 < 0) ? width -1 : 0), j1((tox0 < 0) ? -1 : width ), dj((tox0 < 0) ? -1 : 1);
 	int const wxtx(wx-tox0), wxtx3(3*wxtx), j00(max(0, -tox0)), j01(min(width, wx-tox0));
 	
-	#pragma omp parallel for schedule(static,1)
+#pragma omp parallel for schedule(static,1)
 	for (int ii = 0; ii < height; ++ii) {
 		int const i((toy0 < 0) ? height-ii-1 : ii);
 		float const yp(yscale*(float)i);
