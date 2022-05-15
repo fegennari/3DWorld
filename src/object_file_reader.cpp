@@ -30,30 +30,9 @@ bool base_file_reader::open_file(bool binary) {
 	if (!fp) {cerr << "Error: Could not open object file " << filename << endl;}
 	return (fp != 0);
 }
-
 void base_file_reader::close_file() {
 	if (fp) {checked_fclose(fp);}
 	fp = NULL;
-}
-
-void base_file_reader::unget_last_char(int c) {
-	if (c == EOF) return; // can't unget EOF
-	if (FILE_BUF_SZ == 0) {assert(fp != nullptr); _ungetc_nolock(c, fp); return;}
-	assert(file_buf_pos > 0); // can't unget without previous get
-	--file_buf_pos;
-}
-
-int base_file_reader::get_char(FILE *fp_) {
-
-	if (FILE_BUF_SZ == 0) {return _getc_nolock(fp_);}
-
-	if (file_buf_pos == file_buf_end) { // fill file buffer
-		file_buf_pos = 0;
-		file_buf_end = fread(file_buf, 1, FILE_BUF_SZ, fp);
-		if (file_buf_end == 0) return EOF; // end of file
-	}
-	assert(file_buf_pos < file_buf_end);
-	return file_buf[file_buf_pos++];
 }
 
 bool base_file_reader::read_int(int &v) {
@@ -61,7 +40,7 @@ bool base_file_reader::read_int(int &v) {
 	v = 0;
 
 	while (1) {
-		char const c(get_next_char());
+		char const c(get_char(fp));
 		if (first_char && fast_isspace(c)) continue; // skip leading whitespace
 		if (first_char && c == '-') {is_neg = 1; first_char = 0; continue;} // negative
 		if (!fast_isdigit(c)) {unget_last_char(c); break;} // non-integer character, unget it and finish
@@ -72,7 +51,6 @@ bool base_file_reader::read_int(int &v) {
 	if (is_neg) {v = -v;}
 	return 1;
 }
-
 bool base_file_reader::read_uint(unsigned &v) {
 	int temp(-1);
 	if (!read_int(temp) || temp < 0) return 0;
@@ -85,7 +63,7 @@ bool base_file_reader::read_string(char *s, unsigned max_len) {
 			
 	while (1) {
 		if (ix+1 >= max_len) return 0; // buffer overrun
-		char const c(get_next_char());
+		char const c(get_char(fp));
 		if (c == EOF) break;
 		if (fast_isspace(c)) {
 			if (ix == 0) continue; // leading whitespace
@@ -132,7 +110,7 @@ protected:
 
 		while (1) {
 			if (ix+1 >= MAX_CHARS) return 0; // buffer overrun
-			char const c(get_next_char());
+			char const c(get_char(fp));
 			if (c == EOF) break;
 			if (fast_isspace(c)) {if (ix == 0) continue; else break;} // leading/trailing whitespace
 

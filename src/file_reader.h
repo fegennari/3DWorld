@@ -23,10 +23,25 @@ protected:
 	bool open_file(bool binary=0);
 	void close_file();
 	int get_next_char() {assert(fp); return get_char(fp);}
-	void unget_last_char(int c);
 	static bool fast_isspace(char c) {return (c == ' ' || c == '\t' || c == '\n' || c == '\v' || c == '\f' || c == '\r');}
 	static bool fast_isdigit(char c) {return (c >= '0' && c <= '9');}
-	int get_char(FILE *fp_);
+
+	void unget_last_char(int c) {
+		if (c == EOF) return; // can't unget EOF
+		//if (FILE_BUF_SZ == 0) {assert(fp != nullptr); _ungetc_nolock(c, fp); return;}
+		assert(file_buf_pos > 0); // can't unget without previous get
+		--file_buf_pos;
+	}
+	int get_char(FILE *fp_) {
+		//if (FILE_BUF_SZ == 0) {return _getc_nolock(fp_);}
+		if (file_buf_pos == file_buf_end) { // fill file buffer
+			file_buf_pos = 0;
+			file_buf_end = fread(file_buf, 1, FILE_BUF_SZ, fp);
+			if (file_buf_end == 0) return EOF; // end of file
+		}
+		assert(file_buf_pos < file_buf_end);
+		return file_buf[file_buf_pos++];
+	}
 	int get_char(std::ifstream &in) const {return in.get();}
 
 	void strip_trailing_ws(string &str) const {
