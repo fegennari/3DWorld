@@ -9,7 +9,3 @@ s 1 2  M 0
 #m 0.1  O ../models/rungholt/house.model3d 5 0 0 1.0
 m 0.012  O ../models/rungholt/rungholt.model3d 5 0 0 1.0
 #m 0.1  O ../models/voxelia/voxelia1.model3d 5 0 0 0.1
-
-
-
-
