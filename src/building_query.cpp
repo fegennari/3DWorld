@@ -17,7 +17,6 @@ extern building_t const *player_building;
 
 float get_railing_height(room_object_t const &c);
 cylinder_3dw get_railing_cylinder(room_object_t const &c);
-room_object_t get_desk_top_back(room_object_t const &c, cube_t const &top);
 bool sphere_vert_cylin_intersect_with_ends(point &center, float radius, cylinder_3dw const &c, vector3d *cnorm);
 void register_in_closed_bathroom_stall();
 pair<cube_t, colorRGBA> car_bcube_color_from_parking_space(room_object_t const &o);
@@ -323,7 +322,7 @@ unsigned check_bed_collision(room_object_t const &c, point &pos, point const &p_
 	if (c.flags & RO_FLAG_TAKEN1) {--num_to_check;} // skip pillows
 	if (c.flags & RO_FLAG_TAKEN3) {--num_to_check;} // skip mattress
 	unsigned coll_ret(check_cubes_collision(cubes, num_to_check, pos, p_last, radius, cnorm));
-	get_tc_leg_cubes(cubes[5], 0.04, cubes); // head_width=0.04
+	get_tc_leg_cubes(cubes[5], 0.04, cubes); // head_width=0.04; cubes[5] is not overwritten
 	coll_ret |= (check_cubes_collision(cubes, 4, pos, p_last, radius, cnorm) << 5); // check legs
 	return coll_ret;
 }
@@ -1270,7 +1269,7 @@ void building_t::get_room_obj_cubes(room_object_t const &c, point const &pos, ve
 		get_bed_cubes(c, cubes);
 		cubes[3].z1() = cubes[0].z1(); // extend mattress downward to include the frame
 		lg_cubes.insert(lg_cubes.end(), cubes+1, cubes+5); // head, foot, mattress (+ frame), pillow (or should pillow be small?)
-		get_tc_leg_cubes(cubes[5], 0.04, cubes); // head_width=0.04
+		get_tc_leg_cubes(cubes[5], 0.04, cubes); // head_width=0.04; cubes[5] is not overwritten
 		sm_cubes.insert(sm_cubes.end(), cubes, cubes+4); // legs are small
 	}
 	else if (c.type == TYPE_DESK || c.type == TYPE_DRESSER || c.type == TYPE_NIGHTSTAND || c.type == TYPE_TABLE) { // objects with legs
@@ -1408,7 +1407,7 @@ bool building_t::check_line_coll_expand(point const &p1, point const &p2, float 
 				cube_t cubes[6]; // frame, head, foot, mattress, pillow, legs_bcube
 				get_bed_cubes(*c, cubes);
 				if (line_int_cube_exp(p1, p2, cubes[0], expand)) return 1; // check bed frame (in case p1.z is high enough)
-				get_tc_leg_cubes(cubes[5], 0.04, cubes); // head_width=0.04
+				get_tc_leg_cubes(cubes[5], 0.04, cubes); // head_width=0.04; cubes[5] is not overwritten
 				if (line_int_cubes_exp(p1, p2, cubes, 4, expand)) return 1; // check legs
 			}
 			else if (c->type == TYPE_DESK || c->type == TYPE_DRESSER || c->type == TYPE_NIGHTSTAND || c->type == TYPE_TABLE) { // objects with legs

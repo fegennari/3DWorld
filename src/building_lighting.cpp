@@ -139,6 +139,11 @@ unsigned elevator_t::get_coll_cubes(cube_t cubes[5]) const {
 template<typename T> void add_colored_cubes(vector<T> const &cubes, colorRGBA const &color, vect_colored_cube_t &cc) {
 	for (auto c = cubes.begin(); c != cubes.end(); ++c) {cc.emplace_back(*c, color);}
 }
+void add_colored_cubes(cube_t const *const cubes, unsigned num_cubes, colorRGBA const &color, vect_colored_cube_t &cc) {
+	for (unsigned n = 0; n < num_cubes; ++n) {
+		if (!cubes[n].is_all_zeros()) {cc.emplace_back(cubes[n], color);}
+	}
+}
 void building_t::gather_interior_cubes(vect_colored_cube_t &cc) const {
 
 	if (!interior) return; // nothing to do
@@ -150,7 +155,7 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc) const {
 		cube_t cubes[5];
 		unsigned const num_cubes(e->get_coll_cubes(cubes));
 		// for now elevators are treated the same as walls with the same color, even though the inside of open elevators is wood
-		for (unsigned n = 0; n < num_cubes; ++n) {cc.emplace_back(cubes[n], wall_color);} // can only assign the same color to all sides of the cube
+		add_colored_cubes(cubes, num_cubes, wall_color, cc); // can only assign the same color to all sides of the cube
 	}
 	for (auto i = interior->doors.begin(); i != interior->doors.end(); ++i) {
 		if (i->open) continue; // add only closed doors
@@ -161,28 +166,51 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc) const {
 	add_colored_cubes(details,            detail_color.   modulate_with(mat.roof_tex. get_avg_color()), cc); // should this be included?
 	if (!has_room_geom()) return; // nothing else to add
 	vect_room_object_t const &objs(interior->room_geom->objs);
-	cc.reserve(cc.size() + objs.size());
+	cc.reserve(cc.size() + objs.size()); // likely an undercount due to split objects, but in the correct range
 		
 	for (auto c = objs.begin(); c != objs.end(); ++c) {
-		if (c->shape == SHAPE_CYLIN || c->shape == SHAPE_SPHERE)  continue; // cylinders (lights, etc.) and spheres (balls, etc.) are not cubes
+		if (!c->is_visible()) continue;
+		if (c->shape == SHAPE_CYLIN || c->shape == SHAPE_SPHERE)  continue; // cylinders (lights, etc.) and spheres (balls, etc.) are not cubes, skip for now
 		if (c->type  == TYPE_ELEVATOR) continue; // elevator cars/internals can move so should not contribute to lighting
 		if (c->type  == TYPE_BLOCKER || c->type == TYPE_COLLIDER) continue; // blockers and colliders are not drawn
-		if (c->type  == TYPE_WALL_TRIM || c->type == TYPE_BOOK)   continue; // too small to count (optimization)
-		if (c->type  == TYPE_CRACK) continue; // not reflected
+		// skip other object types that are too small, not cube shaped, or not interior
+		if (c->type == TYPE_WALL_TRIM || c->type == TYPE_BOOK || c->type == TYPE_CRACK || c->type == TYPE_PLANT || c->type == TYPE_RAILING || c->type == TYPE_SHELVES ||
+			c->type == TYPE_BOTTLE || c->type == TYPE_PEN || c->type == TYPE_PENCIL || c->type == TYPE_LG_BALL || c->type == TYPE_HANGER_ROD || c->type == TYPE_DRAIN ||
+			c->type == TYPE_MONEY || c->type == TYPE_PHONE || c->type == TYPE_TPROLL || c->type == TYPE_SPRAYCAN || c->type == TYPE_MARKER || c->type == TYPE_BUTTON ||
+			c->type == TYPE_SWITCH || c->type == TYPE_TAPE || c->type == TYPE_OUTLET || c->type == TYPE_PARK_SPACE || c->type == TYPE_RAMP || c->type == TYPE_PIPE ||
+			c->type == TYPE_VENT || c->type == TYPE_BREAKER || c->type == TYPE_KEY || c->type == TYPE_HANGER || c->type == TYPE_FESCAPE || c->type == TYPE_CUP) continue;
+		colorRGBA const color(c->get_color());
 		
 		if (c->type == TYPE_CLOSET && c->is_open()) {
 			cube_t cubes[5];
 			get_closet_cubes(*c, cubes);
-			
-			for (unsigned n = 0; n < 4; ++n) { // skip the door (cubes[4]), which is open
-				if (!cubes[n].is_all_zeros()) {cc.emplace_back(cubes[n], c->get_color());}
-			}
-			continue;
+			add_colored_cubes(cubes, 4, color, cc); // skip the door (cubes[4]), which is open
 		}
-		// to be more accurate, we could use the actual cubes of tables and chairs, but this adds a lot of complexity, increases lighting time, and makes little difference
-		cc.emplace_back(*c, c->get_color());
-		if (c->type == TYPE_TABLE) {cc.back().z1() += 0.88*c->dz();} // at least be a bit more accurate for tables by using only the top
-		if (c->type == TYPE_DESK ) {cc.back().z1() += 0.85*c->dz();} // at least be a bit more accurate for desks  by using only the top
+		else if (c->type == TYPE_BED) {
+			cube_t cubes[6]; // frame, head, foot, mattress, pillow, legs_bcube
+			get_bed_cubes(*c, cubes);
+			add_colored_cubes(cubes, 5, color, cc); // frame, head, foot, mattress, pillow; should the colors be set properly for these?
+			get_tc_leg_cubes(cubes[5], 0.04, cubes); // head_width=0.04; cubes[5] is not overwritten
+			add_colored_cubes(cubes, 4, color, cc);
+		}
+		else if (c->type == TYPE_DESK || c->type == TYPE_DRESSER || c->type == TYPE_NIGHTSTAND || c->type == TYPE_TABLE) { // objects with legs
+			cube_t cubes[5];
+			get_table_cubes(*c, cubes); // top and 4 legs
+			add_colored_cubes(cubes, 5, color, cc);
+			if      (c->type == TYPE_DRESSER || c->type == TYPE_NIGHTSTAND) {cc.emplace_back(get_dresser_middle(*c), color);}
+			else if (c->type == TYPE_DESK) {
+				if (c->desk_has_drawers() ) {cc.emplace_back(get_desk_drawers_part(*c), color);}
+				if (c->shape == SHAPE_TALL) {cc.emplace_back(get_desk_top_back(*c, cubes[0]), color);} // tall desk
+			}
+		}
+		else if (c->type == TYPE_CHAIR) {
+			cube_t cubes[3], leg_cubes[4]; // seat, back, legs_bcube
+			get_chair_cubes(*c, cubes);
+			add_colored_cubes(cubes, 2, color, cc); // seat, back
+			get_tc_leg_cubes(cubes[2], 0.15, leg_cubes); // width=0.15
+			add_colored_cubes(leg_cubes, 4, color, cc);
+		}
+		else {cc.emplace_back(*c, color);} // single cube
 	} // for c
 }
 
