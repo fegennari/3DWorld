@@ -296,7 +296,8 @@ building_lights_manager_t building_lights_manager;
 void set_interior_lighting(shader_t &s, bool have_indir) {
 	if (have_indir || player_in_dark_room()) { // using indir lighting, or player in a closed closet/windowless room with the light off
 		s.add_uniform_float("diffuse_scale",       0.0); // no diffuse from sun/moon
-		s.add_uniform_float("ambient_scale",       (player_in_dark_room() ? 0.1 : 0.0)); // no ambient for indir; slight ambient for closed closet/windowless room with light off
+		// no ambient for indir; slight ambient for closed closet/windowless room with light off
+		s.add_uniform_float("ambient_scale",       ((!have_indir && player_in_dark_room()) ? 0.1 : 0.0));
 		s.add_uniform_float("hemi_lighting_scale", 0.0); // disable hemispherical lighting (should we set hemi_lighting=0 in the shader?)
 	}
 	else {

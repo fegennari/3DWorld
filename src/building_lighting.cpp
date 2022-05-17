@@ -258,6 +258,12 @@ class building_indir_light_mgr_t {
 		pos = cpos + tolerance*dir; // move slightly away from the surface
 	}
 	void cast_light_rays(building_t const &b) {
+		// Future work:
+		// * Option for basements only
+		// * Include light from windows
+		// * Disable indir for all but the building the player is in
+		// * Update lighting when lights are toggled on/off and doors are opened/closed
+		// * Some type of blur to remove noise that doesn't blur across walls
 		// Note: modifies lmgr, but otherwise thread safe
 		unsigned const num_rt_threads(NUM_THREADS - (USE_BKG_THREAD ? 1 : 0)); // reserve a thread for the main thread if running in the background
 		vect_room_object_t const &objs(b.interior->room_geom->objs);
