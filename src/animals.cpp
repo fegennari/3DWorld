@@ -25,7 +25,7 @@ void do_xy_rotate_normal(float rot_sin, float rot_cos, point &pos);
 bool choose_pt_in_city_park(point const &pos, point &park_pos, rand_gen_t &rgen);
 
 bool birds_active     () {return (light_factor >= 0.4);} // birds are only active whe the sun is out
-bool debug_animal_draw() {return (display_mode & 0x10);}
+bool debug_animal_draw() {return (0/*display_mode & 0x10*/);}
 
 enum {BF_BODY=0, BF_LWING, BF_RWING, BF_NUM_PARTS};
 
@@ -580,7 +580,7 @@ void butterfly_t::draw(shader_t &s, tile_t const *const tile, bool &first_draw) 
 	if (!enabled) return;
 	point const pos_(get_camera_space_pos());
 	bool const visible(is_visible(pos_, 0.4));
-	bool const debug_lines(debug_animal_draw()), debug_spheres(display_mode & 0x20);
+	bool const debug_lines(debug_animal_draw()), debug_spheres(0/*display_mode & 0x20*/);
 	if (!debug_lines && !debug_spheres && !visible) return;
 	
 	if (!s.is_setup()) {
