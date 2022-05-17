@@ -8,8 +8,10 @@
 #include "cobj_bsp_tree.h"
 #include <thread>
 
-bool const USE_BKG_THREAD = 1;
+bool const USE_BKG_THREAD      = 1;
+bool const INDIR_BASEMENT_ONLY = 0;
 
+extern bool camera_in_building;
 extern int MESH_Z_SIZE, display_mode, display_framerate, camera_surf_collide, animate2, frame_counter, building_action_key, player_in_basement;
 extern unsigned LOCAL_RAYS, MAX_RAY_BOUNCES, NUM_THREADS;
 extern float indir_light_exp;
@@ -20,6 +22,12 @@ extern vector<light_source> dl_sources;
 bool enable_building_people_ai();
 bool check_cube_occluded(cube_t const &cube, vect_cube_t const &occluders, point const &viewer);
 
+bool enable_building_indir_lighting_no_cib() {
+	if (!(display_mode & 0x10)) return 0; // key 5
+	if (INDIR_BASEMENT_ONLY && !player_in_basement) return 0;
+	return 1;
+}
+bool enable_building_indir_lighting() {return (camera_in_building && enable_building_indir_lighting_no_cib());}
 
 bool ray_cast_cube(point const &p1, point const &p2, cube_t const &c, vector3d &cnorm, float &t) {
 	float tmin(0.0), tmax(1.0);
@@ -259,9 +267,7 @@ class building_indir_light_mgr_t {
 	}
 	void cast_light_rays(building_t const &b) {
 		// Future work:
-		// * Option for basements only
 		// * Include light from windows
-		// * Disable indir for all but the building the player is in
 		// * Update lighting when lights are toggled on/off and doors are opened/closed
 		// * Some type of blur to remove noise that doesn't blur across walls
 		// Note: modifies lmgr, but otherwise thread safe
@@ -269,15 +275,17 @@ class building_indir_light_mgr_t {
 		vect_room_object_t const &objs(b.interior->room_geom->objs);
 		assert((unsigned)cur_light < objs.size());
 		room_object_t const &ro(objs[cur_light]);
+		bool const light_in_basement(ro.z1() < b.ground_floor_z1);
 		colorRGBA const lcolor((ro.type == TYPE_LAMP) ? LAMP_COLOR : ro.get_color());
 		cube_t const scene_bounds(get_scene_bounds_bcube()); // expected by lmap update code
 		point const ray_scale(scene_bounds.get_size()/b.bcube.get_size()), llc_shift(scene_bounds.get_llc() - b.bcube.get_llc()*ray_scale);
 		float const tolerance(1.0E-5*b.bcube.get_max_extent()), light_zval(ro.z1() - 0.01*ro.dz()); // set slightly below bottom of light
 		float const surface_area(ro.dx()*ro.dy() + 2.0f*(ro.dx() + ro.dy())*ro.dz()); // bottom + 4 sides (top is occluded), 0.0003 for houses
 		float weight(100.0f*(surface_area/0.0003f)/LOCAL_RAYS); // normalize to the number of rays
-		if (b.has_pri_hall())     {weight *= 0.8 ;} // floorplan is open and well lit, indir lighting value seems too high
+		if (b.has_pri_hall())     {weight *= 0.75;} // floorplan is open and well lit, indir lighting value seems too high
 		if (b.is_house)           {weight *= 2.0 ;} // houses have dimmer lights and seem to work better with more indir
 		if (ro.type == TYPE_LAMP) {weight *= 0.33;} // lamps are less bright
+		if (light_in_basement)    {weight *= (b.has_parking_garage ? 0.25 : 0.5);} // basement is darker, parking garages are even darker
 		unsigned const NUM_PRI_SPLITS = 16;
 		int const num_rays(LOCAL_RAYS/NUM_PRI_SPLITS);
 
@@ -412,7 +420,7 @@ bool building_t::ray_cast_camera_dir(point const &camera_bs, point &cpos, colorR
 	return ray_cast_interior(camera_bs, cview_dir, building_indir_light_mgr.get_bvh(), cpos, cnorm, ccolor);
 }
 
-void building_t::order_lights_by_priority(point const &target, vector<unsigned> &light_ids) const {
+void building_t::order_lights_by_priority(point const &target, vector<unsigned> &light_ids) const { // Note: target is building space camera
 
 	light_ids.clear();
 	if (!has_room_geom()) return; // error?
@@ -424,6 +432,8 @@ void building_t::order_lights_by_priority(point const &target, vector<unsigned> 
 
 	for (auto i = objs.begin(); i != objs_end; ++i) {
 		if (!i->is_light_type() || !i->is_light_on()) continue; // not a light, or light not on
+		if (INDIR_BASEMENT_ONLY && i->z1() > ground_floor_z1) continue; // not a basement light
+		// TODO: Only update lights on current floor or room with stairs
 		float dist_sq(p2p_dist_sq(i->get_cube_center(), target));
 		dist_sq *= 0.005f*window_vspacing/(i->dx()*i->dy()); // account for the size of the light, larger lights smaller/higher priority
 

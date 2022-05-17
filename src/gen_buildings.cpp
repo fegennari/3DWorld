@@ -15,10 +15,10 @@
 
 using std::string;
 
-bool const DRAW_WINDOWS_AS_HOLES = 1;
-bool const ADD_ROOM_SHADOWS      = 1;
-bool const ADD_ROOM_LIGHTS       = 1;
-bool const DRAW_EXT_REFLECTIONS  = 1;
+bool const DRAW_WINDOWS_AS_HOLES    = 1;
+bool const ADD_ROOM_SHADOWS         = 1;
+bool const ADD_ROOM_LIGHTS          = 1;
+bool const DRAW_EXT_REFLECTIONS     = 1;
 float const WIND_LIGHT_ON_RAND      = 0.08;
 float const BASEMENT_ENTRANCE_SCALE = 0.33;
 
@@ -322,7 +322,8 @@ void reset_interior_lighting_and_end_shader(shader_t &s) {
 }
 void setup_building_draw_shader(shader_t &s, float min_alpha, bool enable_indir, bool force_tsl, bool use_texgen) { // for building interiors
 	float const pcf_scale = 0.2;
-	bool const have_indir(enable_indir && indir_tex_mgr.enabled() && !(player_in_closet && !(player_in_closet & RO_FLAG_OPEN))); // disable indir if the player is in a closed closet
+	// disable indir if the player is in a closed closet
+	bool const have_indir(enable_indir && indir_tex_mgr.enabled() && enable_building_indir_lighting() && !(player_in_closet && !(player_in_closet & RO_FLAG_OPEN)));
 	int const use_bmap(global_building_params.has_normal_map), interior_use_smaps((ADD_ROOM_SHADOWS && ADD_ROOM_LIGHTS) ? 2 : 1); // dynamic light smaps only
 	cube_t const lights_bcube(building_lights_manager.get_lights_bcube());
 	s.set_prefix("#define LINEAR_DLIGHT_ATTEN", 1); // FS; improves room lighting (better light distribution vs. framerate trade-off)
@@ -2509,7 +2510,7 @@ public:
 						this_frame_camera_in_building  = 1;
 						this_frame_player_in_basement |= b.check_player_in_basement(camera_xlated - vector3d(0.0, 0.0, BASEMENT_ENTRANCE_SCALE*b.get_floor_thickness()));
 						player_building = &b;
-						if (display_mode & 0x10) {indir_bcs_ix = bcs_ix; indir_bix = bi->ix;} // compute indirect lighting for this building
+						if (enable_building_indir_lighting()) {indir_bcs_ix = bcs_ix; indir_bix = bi->ix;} // compute indirect lighting for this building
 						// run any player interaction logic here
 						if (toggle_room_light  ) {b.toggle_room_light(camera_xlated);}
 						if (building_action_key) {b.apply_player_action_key(camera_xlated, cview_dir, (building_action_key-1), 0);} // check_only=0

@@ -84,7 +84,7 @@ void building_room_geom_t::add_tc_legs(cube_t const &c, colorRGBA const &color, 
 }
 
 colorRGBA apply_light_color(room_object_t const &o, colorRGBA const &c) {
-	if (display_mode & 0x10) return c; // disable this when using indir lighting
+	if (enable_building_indir_lighting()) return c; // disable this when using indir lighting
 	return c * (0.5f + 0.5f*min(sqrt(o.light_amt), 1.5f)); // use c.light_amt as an approximation for ambient lighting due to sun/moon
 }
 colorRGBA building_room_geom_t::apply_wood_light_color(room_object_t const &o) const {return apply_light_color(o, wood_color);}

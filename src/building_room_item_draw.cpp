@@ -1283,6 +1283,12 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, building_t c
 	if (player_in_building) {bbd = nullptr;} // use immediate drawing when player is in the building because draw order matters for alpha blending
 	if (bbd != nullptr) {bbd->set_camera_dir_mask(camera_bs, building.bcube);}
 
+	if (player_in_building && !shadow_only && !reflection_pass) { // indir lighting auto update logic
+		static bool last_enable_indir(0);
+		bool const enable_indir(enable_building_indir_lighting_no_cib());
+		if (enable_indir != last_enable_indir) {invalidate_mats_mask |= 0xFF;} // update all geom when material lighting changes due to indir
+		last_enable_indir = enable_indir;
+	}
 	if (has_pictures && num_pic_tids != num_screenshot_tids) {
 		invalidate_static_geom(); // user created a new screenshot texture, and this building has pictures - recreate room geom
 		num_pic_tids = num_screenshot_tids;
