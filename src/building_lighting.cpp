@@ -771,7 +771,8 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		// Note: we use level_z rather than floor_z for floor_is_above test so that it agrees with the threshold logic for player_in_basement
 		bool const floor_is_above((camera_z < level_z) && !is_single_floor), floor_is_below(camera_z > ceil_z);
 		bool const camera_room_same_part(room.part_id == camera_part), has_stairs_this_floor(room.has_stairs_on_floor(cur_floor));
-		bool const light_room_has_stairs_or_ramp(i->has_stairs() || has_stairs_this_floor || is_room_above_ramp(room, i->z1()));
+		bool const has_ramp(!interior->ignore_ramp_placement && is_room_above_ramp(room, i->z1()));
+		bool const light_room_has_stairs_or_ramp(i->has_stairs() || has_stairs_this_floor || has_ramp);
 		bool stairs_light(0), player_in_elevator(0);
 
 		if (is_in_elevator) {
@@ -784,9 +785,20 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		}
 		if (!player_in_elevator) { // none of the below culling applies when the player is in the elevator
 			// if the light is in the basement and the camera isn't, it's not visible unless the player is by the stairs
-			if ( light_in_basement && player_in_basement == 0 && !camera_somewhat_by_stairs    ) continue;
-			// if the player is fully in the basement but the light isn't, it's not visible unless the room with the light has stairs or a ramp up to it (parking garages)
-			if (!light_in_basement && player_in_basement == 2 && !light_room_has_stairs_or_ramp) continue;
+			if ( light_in_basement && player_in_basement == 0 && !camera_somewhat_by_stairs) continue;
+			
+			if (!light_in_basement && player_in_basement == 2) { // the player is fully in the basement but the light isn't
+				if (!light_room_has_stairs_or_ramp) continue; // it's not visible unless the room with the light has stairs or a ramp up to it (parking garages)
+
+				if (!has_ramp) { // no ramp, but we know there are stairs - check for basement connector stairs
+					bool has_basement_stairs(0);
+
+					for (auto const &s : interior->stairwells) {
+						if (s.z1() < ground_floor_z1 && s.intersects(room)) {has_basement_stairs = 1; break;}
+					}
+					if (!has_basement_stairs) continue; // room has stairs, but not basement stairs
+				}
+			}
 			// less culling if either the light or the camera is by stairs and light is on the floor above or below
 		
 			if (camera_z > floor_below_zval && camera_z < ceil_above_zval) { // light is on the floor above or below the camera
