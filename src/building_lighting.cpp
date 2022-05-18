@@ -159,6 +159,7 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc) const {
 	if (!interior) return; // nothing to do
 	building_mat_t const &mat(get_material());
 	colorRGBA const wall_color(mat.wall_color.modulate_with(mat.wall_tex.get_avg_color()));
+	// TODO: clip per light source to current floor
 	for (unsigned d = 0; d < 2; ++d) {add_colored_cubes(interior->walls[d], wall_color, cc);}
 
 	for (auto e = interior->elevators.begin(); e != interior->elevators.end(); ++e) {
@@ -382,7 +383,7 @@ public:
 
 		if (lighting_updated) { // update lighting texture based on incremental progress
 			maybe_join_thread();
-			update_volume_light_texture();
+			update_volume_light_texture(); // TODO: small incremental update
 			lighting_updated = 0;
 		}
 		// nothing is running and there is more work to do, find the nearest light to the target and process it
@@ -394,6 +395,7 @@ public:
 		}
 		if (cur_light >= 0) {start_lighting_compute(b);} // this light is next
 		else if (COMP_INDIR_PER_FLOOR) {is_done = 1;} // no more lights to process
+		// TODO: handle a new batch of lights when the player changes floors
 		//cout << "Process light " << lights_complete.size() << " of " << light_ids.size() << endl;
 		tid = cur_tid;
 	}
