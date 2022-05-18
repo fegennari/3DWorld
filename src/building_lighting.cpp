@@ -99,9 +99,10 @@ bool building_t::ray_cast_interior(point const &pos, vector3d const &dir, cube_b
 
 	// check parts (exterior walls); should chimneys and porch roofs be included?
 	if (ray_cast_exterior_walls(p1, p2, cnorm, t)) { // interior ray - find furthest exit point
-		ccolor = mat.wall_color.modulate_with(mat.wall_tex.get_avg_color());
 		p2  = p1 + (p2 - p1)*t; t = 1.0; // clip p2 to t (minor optimization)
 		hit = 1;
+		if (p2.z < ground_floor_z1) {ccolor = get_basement_wall_texture().get_avg_color();} // basement wall
+		else {ccolor = mat.wall_color.modulate_with(mat.wall_tex.get_avg_color());} // non-basement wall
 	}
 	else { // check for exterior rays
 		bool hit(0);

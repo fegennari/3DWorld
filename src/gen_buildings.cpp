@@ -1127,6 +1127,15 @@ void add_driveway_or_porch(building_draw_t &bdraw, building_t const &building, c
 	bdraw.add_section(building, 0, c, tex, color, 7, 1, 0, 1, 0); // all dims, skip bottom, no AO
 }
 
+tid_nm_pair_t building_t::get_basement_wall_texture() const { // okay to call if there's no basement
+	if ((mat_ix + parts.size()) & 1) { // randomly select one of two textures
+		return tid_nm_pair_t(CBLOCK_TEX, get_texture_by_name("normal_maps/cblock_NRM.jpg", 1), 1.0, 1.0);
+	}
+	else {
+		return tid_nm_pair_t(get_texture_by_name("cblock2.jpg"), get_texture_by_name("normal_maps/cblock2_NRM.jpg", 1), 1.0, 1.0);
+	}
+}
+
 void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, bool get_interior, bool get_int_ext_walls) {
 
 	assert(get_exterior || get_interior || get_int_ext_walls); // must be at least one of these
@@ -1249,14 +1258,7 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, 
 		ext_side_qv_range.end = bdraw.get_num_verts(mat.wall_tex);
 
 		if (has_basement()) {
-			tid_nm_pair_t tp;
-
-			if ((mat_ix + parts.size()) & 1) { // randomly select one of two textures
-				tp = tid_nm_pair_t(CBLOCK_TEX, get_texture_by_name("normal_maps/cblock_NRM.jpg", 1), 1.0, 1.0);
-			}
-			else {
-				tp = tid_nm_pair_t(get_texture_by_name("cblock2.jpg"), get_texture_by_name("normal_maps/cblock2_NRM.jpg", 1), 1.0, 1.0);
-			}
+			tid_nm_pair_t const tp(get_basement_wall_texture());
 			// find basement door and exclude it
 			// dim_mask bits: enable dims: 1=x, 2=y, 4=z | disable cube faces: 8=x1, 16=x2, 32=y1, 64=y2, 128=z1, 256=z2
 			unsigned dim_mask(3); // XY
