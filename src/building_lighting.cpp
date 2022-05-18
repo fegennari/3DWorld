@@ -350,6 +350,7 @@ public:
 	building_indir_light_mgr_t() : is_running(0), is_done(0), kill_thread(0), lighting_updated(0), needs_to_join(0), cur_bix(-1), cur_light(-1), cur_tid(0) {}
 
 	void clear() {
+		bool const cur_bix_was_valid(cur_bix >= 0);
 		is_done = lighting_updated = 0;
 		cur_bix = cur_light = -1;
 		tex_data.clear();
@@ -357,6 +358,7 @@ public:
 		lights_complete.clear();
 		end_rt_job();
 		lmgr.reset_all(); // clear lighting values back to 0
+		if (cur_bix_was_valid) {update_volume_light_texture();} // reset lighting from prev building
 		bvh.clear();
 	}
 	void end_rt_job() {
@@ -376,7 +378,7 @@ public:
 
 		if (display_framerate && (is_running || lighting_updated)) { // show progress to the user
 			std::ostringstream oss;
-			oss << "Lights: " << lights_complete.size() << " / " << light_ids.size();
+			oss << "Lights: " << lights_complete.size() << " / " << max(light_ids.size(), lights_complete.size());
 			lighting_update_text = oss.str();
 		}
 		if (is_running) return; // still running, let it continue
@@ -394,8 +396,7 @@ public:
 			if (lights_complete.find(*i) == lights_complete.end()) {cur_light = *i; break;} // find an incomplete light
 		}
 		if (cur_light >= 0) {start_lighting_compute(b);} // this light is next
-		else if (COMP_INDIR_PER_FLOOR) {is_done = 1;} // no more lights to process
-		// TODO: handle a new batch of lights when the player changes floors
+		else if (!COMP_INDIR_PER_FLOOR) {is_done = 1;} // no more lights to process
 		//cout << "Process light " << lights_complete.size() << " of " << light_ids.size() << endl;
 		tid = cur_tid;
 	}
@@ -431,7 +432,7 @@ void building_t::order_lights_by_priority(point const &target, vector<unsigned> 
 	//if (is_rotated()) {} // do we need to handle this case?
 	vect_room_object_t const &objs(interior->room_geom->objs);
 	vector<pair<float, unsigned>> to_sort;
-	float const window_vspacing(get_window_vspace());
+	float const window_vspacing(get_window_vspace()), window_vspacing_inv(1.0/window_vspacing);
 	float const diag_dist_sq(bcube.dx()*bcube.dx() + bcube.dy()*bcube.dy()), other_floor_penalty(0.25*diag_dist_sq);
 	auto objs_end(interior->room_geom->get_placed_objs_end()); // skip buttons/stairs/elevators
 
@@ -443,15 +444,20 @@ void building_t::order_lights_by_priority(point const &target, vector<unsigned> 
 		if (COMP_INDIR_PER_FLOOR) { // check if this light is visible to target
 			bool const is_in_elevator(i->flags & RO_FLAG_IN_ELEV), is_in_closet(i->flags & RO_FLAG_IN_CLOSET);
 			if ((is_in_elevator || is_in_closet) && target.z > i->z1()) continue; // elevator or closet light on the floor below
-			if (light_in_basement && (target.z > (ground_floor_z1 + window_vspacing))) continue;
+			if (light_in_basement && (target.z > (ground_floor_z1 + window_vspacing))) continue; // basement light, player is more than one floor above
 			room_t const &room(get_room(i->room_id));
-			bool const is_single_floor(room.is_sec_bldg || is_in_elevator);
-			int const cur_floor   (is_single_floor ? 0 : (i->z1()  - room.z1())/window_vspacing); // garages and sheds are all one floor
-			int const target_floor(is_single_floor ? 0 : (target.z - room.z1())/window_vspacing);
+			bool const is_single_floor(room.is_sec_bldg || is_in_elevator); // garages and sheds are all one floor
+			int const cur_floor   (is_single_floor ? 0 : (i->z1()  - bcube.z1())*window_vspacing_inv); // use global floor index
+			int const target_floor(is_single_floor ? 0 : (target.z - bcube.z1())*window_vspacing_inv); // use global floor index
 
 			if (cur_floor != target_floor) { // different floors
 				if (abs(cur_floor - target_floor) > 1) continue; // more than one floor apart, skip
-				if (!i->has_stairs() && !room.has_stairs_on_floor(cur_floor)) continue; // no stairs, skip (what about ramps? what about player near stairs?)
+				int const room_cur_floor(is_single_floor ? 0 : (i->z1()  - room.z1())*window_vspacing_inv);
+				if (!i->has_stairs() && !room.has_stairs_on_floor(room_cur_floor)) continue; // no stairs, skip (what about ramps? what about player near stairs?)
+			}
+			if (light_in_basement != (target.z < ground_floor_z1)) { // light and target on different side of basement boundary
+				if (is_house) continue; // basement door starts closed, and stairs are very narrow anyway - no light transfer
+				if (light_in_basement && has_parking_garage) continue; // parking garage lights don't light the hallway above
 			}
 		}
 		float dist_sq(p2p_dist_sq(i->get_cube_center(), target));
