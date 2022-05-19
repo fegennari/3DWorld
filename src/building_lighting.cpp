@@ -227,7 +227,7 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc) const {
 
 
 class building_indir_light_mgr_t {
-	bool is_running, is_done, kill_thread, lighting_updated, needs_to_join;
+	bool is_running, is_done, kill_thread, lighting_updated, needs_to_join, need_bvh_rebuild;
 	int cur_bix, cur_light;
 	unsigned cur_tid;
 	vector<unsigned char> tex_data;
@@ -347,7 +347,8 @@ class building_indir_light_mgr_t {
 		if (needs_to_join) {rt_thread.join(); needs_to_join = 0;}
 	}
 public:
-	building_indir_light_mgr_t() : is_running(0), is_done(0), kill_thread(0), lighting_updated(0), needs_to_join(0), cur_bix(-1), cur_light(-1), cur_tid(0) {}
+	building_indir_light_mgr_t() :
+		is_running(0), is_done(0), kill_thread(0), lighting_updated(0), needs_to_join(0), need_bvh_rebuild(0), cur_bix(-1), cur_light(-1), cur_tid(0) {}
 
 	void clear() {
 		bool const cur_bix_was_valid(cur_bix >= 0);
@@ -390,6 +391,7 @@ public:
 			lighting_updated = 0;
 		}
 		// nothing is running and there is more work to do, find the nearest light to the target and process it
+		if (need_bvh_rebuild) {build_bvh(b);}
 		if (cur_light >= 0) {lights_complete.insert(cur_light); cur_light = -1;} // mark the most recent light as complete
 		b.order_lights_by_priority(target, light_ids);
 
@@ -401,10 +403,18 @@ public:
 		else if (!COMP_INDIR_PER_FLOOR) {is_done = 1;} // no more lights to process
 		tid = cur_tid;
 	}
+	void register_light_state_change(unsigned light_ix, bool light_is_on, bool geom_changed) {
+		unsigned const num_erased(lights_complete.erase(light_ix)); // light is no longer completed; erase its state
+		bool const is_cur_light((int)light_ix == cur_light && is_running);
+		if (geom_changed && (num_erased > 0 || is_cur_light)) {need_bvh_rebuild = 1;}
+		if (is_cur_light) {kill_thread = 1; cur_light = -1;} // cur_light is no longer valid
+		cout << TXT(cur_light) << TXT(is_running) << TXT(num_erased) << TXT(need_bvh_rebuild) << endl; // TESTING
+	}
 	void build_bvh(building_t const &b) {
 		bvh.clear();
 		b.gather_interior_cubes(bvh.get_objs());
 		bvh.build_tree_top(0); // verbose=0
+		need_bvh_rebuild = 0;
 	}
 	cube_bvh_t const &get_bvh() const {return bvh;}
 };
@@ -427,7 +437,6 @@ bool building_t::ray_cast_camera_dir(point const &camera_bs, point &cpos, colorR
 }
 
 void building_t::order_lights_by_priority(point const &target, vector<unsigned> &light_ids) const { // Note: target is building space camera
-
 	light_ids.clear();
 	if (!has_room_geom()) return; // error?
 	//if (is_rotated()) {} // do we need to handle this case?
@@ -472,6 +481,18 @@ void building_t::order_lights_by_priority(point const &target, vector<unsigned> 
 	} // for i
 	sort(to_sort.begin(), to_sort.end()); // sort by increasing distance
 	for (auto i = to_sort.begin(); i != to_sort.end(); ++i) {light_ids.push_back(i->second);}
+}
+
+bool building_t::register_indir_lighting_state_change(unsigned light_ix, bool is_door_change) {
+	cout << "Update light " << light_ix << endl; // TESTING
+	if (!enable_building_indir_lighting()) return 0; // no update needed
+	assert(has_room_geom());
+	assert(light_ix < interior->room_geom->objs.size());
+	room_object_t const &obj(interior->room_geom->objs[light_ix]);
+	assert(obj.is_light_type());
+	if (is_door_change && !obj.is_light_on()) return 0; // light off, no state change
+	building_indir_light_mgr.register_light_state_change(light_ix, obj.is_light_on(), is_door_change);
+	return 1;
 }
 
 bool line_int_cubes(point const &p1, point const &p2, vect_cube_t const &cubes) {

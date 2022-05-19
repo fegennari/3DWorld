@@ -53,7 +53,8 @@ void building_t::run_light_motion_detect_logic(point const &camera_bs) {
 		if (i->type != TYPE_LIGHT || !(i->flags & RO_FLAG_IS_ACTIVE) || !i->is_powered()) continue; // not a light, unpowered, or not motion activated
 		assert(i->room_id < interior->rooms.size());
 		room_t const &room(interior->rooms[i->room_id]);
-		bool activated(is_motion_detected(camera_bs, *i, room, floor_spacing));
+		bool const is_player(is_motion_detected(camera_bs, *i, room, floor_spacing));
+		bool activated(is_player);
 		float &off_time(i->light_amt); // store auto off time in the light_amt field
 
 		for (auto p = interior->people.begin(); p != interior->people.end() && !activated; ++p) {
@@ -72,6 +73,7 @@ void building_t::run_light_motion_detect_logic(point const &camera_bs) {
 		i->toggle_lit_state();
 		set_obj_lit_state_to(i->room_id, i->z2(), i->is_lit());
 		register_light_state_change(*i, i->get_cube_center());
+		if (1 || is_player) {register_indir_lighting_state_change(i - interior->room_geom->objs.begin());} // only update for player activations?
 	} // for i
 }
 
@@ -115,10 +117,11 @@ void building_t::toggle_light_object(room_object_t const &light, point const &so
 
 	for (auto i = interior->room_geom->objs.begin(); i != objs_end; ++i) { // toggle all lights on this floor of this room
 		if (!i->is_light_type() || i->room_id != light.room_id || !i->is_powered()) continue;
-		if ((light.flags & RO_FLAG_IN_CLOSET) != (i->flags & RO_FLAG_IN_CLOSET)) continue; // closet + room light are toggled independently
+		if ((light.flags & RO_FLAG_IN_CLOSET) != (i->flags & RO_FLAG_IN_CLOSET))    continue; // closet + room light are toggled independently
 		if (i->z2() != light.z2()) continue; // Note: uses light z2 rather than z1 so that thin lights near doors are handled correctly
 		i->toggle_lit_state(); // Note: doesn't update indir lighting
 		i->flags &= ~RO_FLAG_IS_ACTIVE; // disable motion detection feature if the player manually switches lights off
+		register_indir_lighting_state_change(i - interior->room_geom->objs.begin());
 		updated = 1;
 		if (i->type == TYPE_LAMP)  continue; // lamps don't affect room object ambient lighting, and don't require regenerating the vertex data, so skip the step below
 		if (is_lamp) {set_obj_lit_state_to(light.room_id, light.z2(), i->is_lit());} // update object lighting flags as well, for first non-lamp light
@@ -705,6 +708,13 @@ void building_t::toggle_door_state(unsigned door_ix, bool player_in_this_buildin
 		point const door_center(door.xc(), door.yc(), zval);
 		play_door_open_close_sound(door_center, door.open);
 		if (by_player) {register_building_sound(door_center, 0.5);}
+		
+		// update indir lighting state if needed; for now this is only for player actions to avoid thread safety issues and too many updates
+		if (by_player && enable_building_indir_lighting()) {
+			static vector<unsigned> light_ids;
+			get_lights_near_door(door_ix, light_ids);
+			for (unsigned light_ix : light_ids) {register_indir_lighting_state_change(light_ix, 1);} // is_door_change=1
+		}
 	}
 	if (!door.open && has_room_geom()) { // door was closed, check if we need to move any objects out of the way
 		cube_t const door_bcube(door.get_true_bcube());

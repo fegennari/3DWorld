@@ -1461,6 +1461,7 @@ private:
 	bool test_coll_with_sides(point &pos, point const &p_last, float radius, cube_t const &part, vector<point> &points, vector3d *cnorm) const;
 	void gather_interior_cubes(vect_colored_cube_t &cc) const;
 	void order_lights_by_priority(point const &target, vector<unsigned> &light_ids) const;
+	bool register_indir_lighting_state_change(unsigned light_ix, bool is_door_change=0);
 	bool is_light_occluded(point const &lpos, point const &camera_bs) const;
 	void clip_ray_to_walls(point const &p1, point &p2, vect_cube_t const walls[2]) const;
 	void refine_light_bcube(point const &lpos, float light_radius, cube_t const &room, cube_t &light_bcube, bool is_parking_garage) const;
