@@ -232,7 +232,7 @@ class building_indir_light_mgr_t {
 	unsigned cur_tid;
 	vector<unsigned char> tex_data;
 	vector<unsigned> light_ids;
-	set<unsigned> lights_complete;
+	set<unsigned> lights_complete, lights_seen;
 	cube_bvh_t bvh;
 	lmap_manager_t lmgr;
 	std::thread rt_thread;
@@ -379,7 +379,7 @@ public:
 
 		if (display_framerate && (is_running || lighting_updated)) { // show progress to the user
 			std::ostringstream oss;
-			oss << "Lights: " << lights_complete.size() << " / " << max(light_ids.size(), lights_complete.size());
+			oss << "Lights: " << lights_complete.size() << " / " << max(light_ids.size(), lights_seen.size());
 			lighting_update_text = oss.str();
 		}
 		if (is_running) return; // still running, let it continue
@@ -394,11 +394,11 @@ public:
 		b.order_lights_by_priority(target, light_ids);
 
 		for (auto i = light_ids.begin(); i != light_ids.end(); ++i) {
-			if (lights_complete.find(*i) == lights_complete.end()) {cur_light = *i; break;} // find an incomplete light
+			if (COMP_INDIR_PER_FLOOR) {lights_seen.insert(*i);} // must track lights across all floors seen for correct progress update
+			if (cur_light < 0 && lights_complete.find(*i) == lights_complete.end()) {cur_light = *i;} // find an incomplete light
 		}
 		if (cur_light >= 0) {start_lighting_compute(b);} // this light is next
 		else if (!COMP_INDIR_PER_FLOOR) {is_done = 1;} // no more lights to process
-		//cout << "Process light " << lights_complete.size() << " of " << light_ids.size() << endl;
 		tid = cur_tid;
 	}
 	void build_bvh(building_t const &b) {
