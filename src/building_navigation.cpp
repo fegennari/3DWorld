@@ -516,8 +516,7 @@ void building_t::build_nav_graph() const { // Note: does not depend on room geom
 			stairwell_t const &stairwell(interior->stairwells[s]);
 
 			if (stairwell.stairs_door_ix >= 0 && global_building_params.ai_opens_doors < 2) { // check for open doors; doors on stairs can't be locked
-				assert((unsigned)stairwell.stairs_door_ix < interior->doors.size());
-				if (!interior->doors[stairwell.stairs_door_ix].open) continue; // stairs blocked by closed door, don't connect (even if unlocked)
+				if (!get_door(stairwell.stairs_door_ix).open) continue; // stairs blocked by closed door, don't connect (even if unlocked)
 			}
 			if (room.intersects_no_adj(stairwell)) {ng.connect_stairs(r, s, stairwell.dim, stairwell.dir, (stairwell.shape == SHAPE_U));}
 		}

@@ -1277,6 +1277,7 @@ struct building_t : public building_geom_t {
 	bool are_rooms_connected_without_using_room(unsigned room1, unsigned room2, unsigned room_exclude) const;
 	bool is_room_adjacent_to_ext_door(cube_t const &room, bool front_door_only=0) const;
 	room_t const &get_room(unsigned room_ix) const {assert(interior && room_ix < interior->rooms.size()); return interior->rooms[room_ix];}
+	door_t const &get_door(unsigned door_ix) const {assert(interior && door_ix < interior->doors.size()); return interior->doors[door_ix];}
 	point get_center_of_room(unsigned room_ix) const {return get_room(room_ix).get_cube_center();}
 
 	// building AI people
@@ -1492,6 +1493,9 @@ private:
 	void play_tape_sound(point const &sound_pos, float sound_gain) const;
 	bool is_obj_above_ramp(cube_t const &c) const;
 	bool is_room_above_ramp(cube_t const &room, float zval) const;
+	void get_rooms_for_door(unsigned door_ix, int room_ix[2]) const;
+	void get_lights_for_room_and_floor(unsigned room_ix, unsigned floor_ix, vector<unsigned> &light_ids) const;
+	void get_lights_near_door(unsigned door_ix, vector<unsigned> &light_ids) const;
 public:
 	// ray queries
 	bool check_line_intersect_doors(point const &p1, point const &p2, bool inc_open=0) const;

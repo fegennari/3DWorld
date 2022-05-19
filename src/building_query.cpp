@@ -1604,6 +1604,40 @@ bool building_t::is_room_above_ramp(cube_t const &room, float zval) const {
 	return (interior->pg_ramp.intersects_xy(room) && zval >= interior->pg_ramp.z2() && (zval - interior->pg_ramp.z2()) <= get_window_vspace());
 }
 
+// for use with in dir lighting updates when interior doors are opened or closed
+void building_t::get_rooms_for_door(unsigned door_ix, int room_ix[2]) const {
+	door_t const &door(get_door(door_ix));
+	cube_t dbc(door.get_true_bcube());
+	dbc.expand_in_dim(door.dim, get_wall_thickness()); // make sure it overlaps the room
+	room_ix[0] = room_ix[1] = -1; // reset to invalid rooms in case no rooms are found
+
+	for (auto r = interior->rooms.begin(); r != interior->rooms.end(); ++r) {
+		if (!r->intersects(dbc)) continue;
+		bool const side(r->get_center_dim(door.dim) < door.get_center_dim(door.dim));
+		assert(room_ix[side] == -1); // should not have been set yet
+		room_ix[side] = (r - interior->rooms.begin());
+	}
+}
+void building_t::get_lights_for_room_and_floor(unsigned room_ix, unsigned floor_ix, vector<unsigned> &light_ids) const {
+	assert(has_room_geom());
+	auto objs_end(interior->room_geom->get_placed_objs_end()); // skip buttons/stairs/elevators
+
+	for (auto i = interior->room_geom->objs.begin(); i != objs_end; ++i) {
+		if (!i->is_light_type() || i->room_id != room_ix || get_floor_for_zval(i->z1() != floor_ix)) continue; // not a light, wrong room, or wrong floor
+		light_ids.push_back(i - interior->room_geom->objs.begin());
+	}
+}
+void building_t::get_lights_near_door(unsigned door_ix, vector<unsigned> &light_ids) const {
+	light_ids.clear();
+	int room_ix[2] = {};
+	get_rooms_for_door(door_ix, room_ix);
+	unsigned const floor_ix(get_floor_for_zval(get_door(door_ix).get_center_dim(2)));
+
+	for (unsigned d = 0; d < 2; ++d) {
+		if (room_ix[d] >= 0) {get_lights_for_room_and_floor((unsigned)room_ix[d], floor_ix, light_ids);}
+	}
+}
+
 void building_t::print_building_manifest() const { // Note: skips expanded_objs
 	cout << TXT(parts.size()) << TXT(doors.size()) << TXT(details.size());
 
