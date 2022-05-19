@@ -13,7 +13,7 @@ bool const INDIR_BASEMENT_ONLY  = 0;
 bool const COMP_INDIR_PER_FLOOR = 1;
 
 extern bool camera_in_building;
-extern int MESH_Z_SIZE, display_mode, display_framerate, camera_surf_collide, animate2, frame_counter, building_action_key, player_in_basement;
+extern int MESH_Z_SIZE, display_mode, display_framerate, camera_surf_collide, animate2, frame_counter, building_action_key, player_in_basement, player_in_elevator;
 extern unsigned LOCAL_RAYS, MAX_RAY_BOUNCES, NUM_THREADS;
 extern float indir_light_exp;
 extern double camera_zh, tfticks;
@@ -274,7 +274,7 @@ class building_indir_light_mgr_t {
 		// * Update lighting when lights are toggled on/off and doors are opened/closed
 		// * Some type of blur to remove noise that doesn't blur across walls
 		// Note: modifies lmgr, but otherwise thread safe
-		unsigned const num_rt_threads(NUM_THREADS - (USE_BKG_THREAD ? 1 : 0)); // reserve a thread for the main thread if running in the background
+		unsigned const num_rt_threads(max(1U, (NUM_THREADS - (USE_BKG_THREAD ? 1 : 0)))); // reserve a thread for the main thread if running in the background
 		vect_room_object_t const &objs(b.interior->room_geom->objs);
 		assert((unsigned)cur_light < objs.size());
 		room_object_t const &ro(objs[cur_light]);
@@ -374,7 +374,8 @@ public:
 			assert(!is_running);
 			build_bvh(b);
 		}
-		if (cur_tid > 0 && is_done) return; // nothing else to do
+		if (cur_tid > 0 && is_done)  return; // nothing else to do
+		if (player_in_elevator == 2) return; // pause updates for player in closed elevator since lighting is not visible
 
 		if (display_framerate && (is_running || lighting_updated)) { // show progress to the user
 			std::ostringstream oss;
