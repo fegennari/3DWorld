@@ -385,7 +385,7 @@ public:
 
 		if (lighting_updated) { // update lighting texture based on incremental progress
 			maybe_join_thread();
-			update_volume_light_texture(); // TODO: small incremental update
+			update_volume_light_texture();
 			lighting_updated = 0;
 		}
 		// nothing is running and there is more work to do, find the nearest light to the target and process it

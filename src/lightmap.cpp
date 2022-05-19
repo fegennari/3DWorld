@@ -723,7 +723,7 @@ void build_lightmap(bool verbose) {
 			if (!is_over_mesh(lposc)) continue;
 			colorRGBA const &lcolor(ls.get_color());
 			cube_t bcube; // unused
-			int bnds[3][2], cent[3], cobj(-1), last_cobj(-1);
+			int bnds[3][2] = {}, cent[3] = {}, cobj(-1), last_cobj(-1);
 			
 			for (unsigned j = 0; j < 3; ++j) {
 				cent[j] = max(0, min(MESH_SIZE[j]-1, get_dim_pos(lposc[j], j))); // clamp to mesh bounds
@@ -828,8 +828,18 @@ void update_indir_light_tex_range(lmap_manager_t const &lmap, vector<unsigned ch
 
 			for (unsigned z = 0; z < zsize; ++z) {
 				unsigned const off2(4*(off + z));
-				if (local_only) {vlm[z].get_final_color_local(color);} // optimization
-				else {vlm[z].get_final_color(color, 1.0, 1.0);}
+				lmcell const &lmc(vlm[z]);
+				
+				if (local_only) { // optimization
+					if (lmc.lc[0] == 0.0 && lmc.lc[1] == 0.0 && lmc.lc[2] == 0.0) { // special case for all zeros
+						tex_data[off2+0] = tex_data[off2+1] = tex_data[off2+2] = 0;
+						continue;
+					}
+					lmc.get_final_color_local(color);
+				}
+				else {
+					lmc.get_final_color(color, 1.0, 1.0);
+				}
 				if      (apply_sqrt) {UNROLL_3X(color[i_] = sqrt(color[i_]););}
 				else if (apply_exp)  {UNROLL_3X(color[i_] = pow(color[i_], lighting_exponent););}
 				UNROLL_3X(tex_data[off2+i_] = (unsigned char)(255*CLIP_TO_01(color[i_]));)
