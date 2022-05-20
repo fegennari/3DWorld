@@ -1623,7 +1623,7 @@ void building_t::get_lights_for_room_and_floor(unsigned room_ix, unsigned floor_
 	auto objs_end(interior->room_geom->get_placed_objs_end()); // skip buttons/stairs/elevators
 
 	for (auto i = interior->room_geom->objs.begin(); i != objs_end; ++i) {
-		if (!i->is_light_type() || i->room_id != room_ix || get_floor_for_zval(i->z1() != floor_ix)) continue; // not a light, wrong room, or wrong floor
+		if (!i->is_light_type() || i->room_id != room_ix || get_floor_for_zval(i->z1()) != floor_ix) continue; // not a light, wrong room, or wrong floor
 		light_ids.push_back(i - interior->room_geom->objs.begin());
 	}
 }
