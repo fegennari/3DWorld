@@ -227,11 +227,12 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc) const {
 
 
 class building_indir_light_mgr_t {
-	bool is_running, is_done, kill_thread, lighting_updated, needs_to_join, need_bvh_rebuild;
+	bool is_running, is_done, kill_thread, lighting_updated, needs_to_join, need_bvh_rebuild, is_negative_light;
 	int cur_bix, cur_light;
 	unsigned cur_tid;
 	vector<unsigned char> tex_data;
 	vector<unsigned> light_ids;
+	deque<unsigned> remove_queue;
 	set<unsigned> lights_complete, lights_seen;
 	cube_bvh_t bvh;
 	lmap_manager_t lmgr;
@@ -269,10 +270,8 @@ class building_indir_light_mgr_t {
 		pos = cpos + tolerance*dir; // move slightly away from the surface
 	}
 	void cast_light_rays(building_t const &b) {
-		// Future work:
-		// * Include light from windows
-		// * Update lighting when lights are toggled on/off and doors are opened/closed
-		// * Some type of blur to remove noise that doesn't blur across walls
+		// TODO: Include light from windows
+		// TODO: Some type of blur to remove noise that doesn't blur across walls
 		// Note: modifies lmgr, but otherwise thread safe
 		unsigned const num_rt_threads(max(1U, (NUM_THREADS - (USE_BKG_THREAD ? 1 : 0)))); // reserve a thread for the main thread if running in the background
 		vect_room_object_t const &objs(b.interior->room_geom->objs);
@@ -289,6 +288,7 @@ class building_indir_light_mgr_t {
 		if (b.is_house)           {weight *= 2.0 ;} // houses have dimmer lights and seem to work better with more indir
 		if (ro.type == TYPE_LAMP) {weight *= 0.33;} // lamps are less bright
 		if (light_in_basement)    {weight *= (b.has_parking_garage ? 0.25 : 0.5);} // basement is darker, parking garages are even darker
+		if (is_negative_light)    {weight *= -1.0;}
 		unsigned const NUM_PRI_SPLITS = 16;
 		int const num_rays(LOCAL_RAYS/NUM_PRI_SPLITS);
 
@@ -346,17 +346,25 @@ class building_indir_light_mgr_t {
 	void maybe_join_thread() {
 		if (needs_to_join) {rt_thread.join(); needs_to_join = 0;}
 	}
+	void add_to_remove_queue(unsigned light_ix) {
+		for (unsigned v : remove_queue) {
+			if (v == light_ix) return; // already in the queue
+		}
+		remove_queue.push_back(light_ix);
+	}
 public:
-	building_indir_light_mgr_t() :
-		is_running(0), is_done(0), kill_thread(0), lighting_updated(0), needs_to_join(0), need_bvh_rebuild(0), cur_bix(-1), cur_light(-1), cur_tid(0) {}
+	building_indir_light_mgr_t() : is_running(0), is_done(0), kill_thread(0), lighting_updated(0), needs_to_join(0),
+		need_bvh_rebuild(0), is_negative_light(0), cur_bix(-1), cur_light(-1), cur_tid(0) {}
 
 	void clear() {
 		bool const cur_bix_was_valid(cur_bix >= 0);
-		is_done = lighting_updated = 0;
+		is_done = lighting_updated = need_bvh_rebuild = is_negative_light = 0;
 		cur_bix = cur_light = -1;
 		tex_data.clear();
 		light_ids.clear();
+		remove_queue.clear();
 		lights_complete.clear();
+		lights_seen.clear();
 		end_rt_job();
 		lmgr.reset_all(); // clear lighting values back to 0
 		if (cur_bix_was_valid) {update_volume_light_texture();} // reset lighting from prev building
@@ -380,7 +388,7 @@ public:
 
 		if (display_framerate && (is_running || lighting_updated)) { // show progress to the user
 			std::ostringstream oss;
-			oss << "Lights: " << lights_complete.size() << " / " << max(light_ids.size(), lights_seen.size());
+			oss << "Lights: " << lights_complete.size() << " / " << (max(light_ids.size(), lights_seen.size()) + remove_queue.size());
 			lighting_update_text = oss.str();
 		}
 		if (is_running) return; // still running, let it continue
@@ -393,22 +401,37 @@ public:
 		// nothing is running and there is more work to do, find the nearest light to the target and process it
 		if (need_bvh_rebuild) {build_bvh(b);}
 		if (cur_light >= 0) {lights_complete.insert(cur_light); cur_light = -1;} // mark the most recent light as complete
-		b.order_lights_by_priority(target, light_ids);
 
-		for (auto i = light_ids.begin(); i != light_ids.end(); ++i) {
-			if (COMP_INDIR_PER_FLOOR) {lights_seen.insert(*i);} // must track lights across all floors seen for correct progress update
-			if (cur_light < 0 && lights_complete.find(*i) == lights_complete.end()) {cur_light = *i;} // find an incomplete light
+		if (!remove_queue.empty()) { // remove an existing light
+			cur_light = remove_queue.front();
+			remove_queue.pop_front();
+			is_negative_light = 1;
+		}
+		else { // find a new light to add
+			is_negative_light = 0; // back to normal positive lights
+			b.order_lights_by_priority(target, light_ids);
+
+			for (auto i = light_ids.begin(); i != light_ids.end(); ++i) {
+				if (COMP_INDIR_PER_FLOOR) {lights_seen.insert(*i);} // must track lights across all floors seen for correct progress update
+				if (cur_light < 0 && lights_complete.find(*i) == lights_complete.end()) {cur_light = *i;} // find an incomplete light
+			}
 		}
 		if (cur_light >= 0) {start_lighting_compute(b);} // this light is next
 		else if (!COMP_INDIR_PER_FLOOR) {is_done = 1;} // no more lights to process
 		tid = cur_tid;
 	}
 	void register_light_state_change(unsigned light_ix, bool light_is_on, bool geom_changed) {
+		if (geom_changed) {
+			// TODO: have to first remove the lighting with the old geom, and then re-add it - but the geometry has already been updated
+			return;
+		}
 		unsigned const num_erased(lights_complete.erase(light_ix)); // light is no longer completed; erase its state
 		bool const is_cur_light((int)light_ix == cur_light && is_running);
-		if (geom_changed && (num_erased > 0 || is_cur_light)) {need_bvh_rebuild = 1;}
-		if (is_cur_light) {kill_thread = 1; cur_light = -1;} // cur_light is no longer valid
-		cout << TXT(cur_light) << TXT(is_running) << TXT(num_erased) << TXT(need_bvh_rebuild) << endl; // TESTING
+		// Note: we can't just stop in the middle, because that will leave cur_light in an invalid/incomplete state
+		//if (is_cur_light) {kill_thread = 1; cur_light = -1;} // cur_light is no longer valid
+		// Note: if door state changed since this light was turned on, removing it may leave some light
+		if ((geom_changed || !light_is_on) && (num_erased || is_cur_light)) {add_to_remove_queue(light_ix);} // must remove the light instead
+		//cout << TXT(cur_light) << TXT(is_running) << TXT(num_erased) << TXT(need_bvh_rebuild) << endl; // TESTING
 	}
 	void build_bvh(building_t const &b) {
 		bvh.clear();
@@ -416,6 +439,7 @@ public:
 		bvh.build_tree_top(0); // verbose=0
 		need_bvh_rebuild = 0;
 	}
+	void invalidate_bvh() {need_bvh_rebuild = 1;} // Note: can't directly clear bvh because a thread may be using it
 	cube_bvh_t const &get_bvh() const {return bvh;}
 };
 
@@ -484,7 +508,6 @@ void building_t::order_lights_by_priority(point const &target, vector<unsigned> 
 }
 
 bool building_t::register_indir_lighting_state_change(unsigned light_ix, bool is_door_change) {
-	cout << "Update light " << light_ix << endl; // TESTING
 	if (!enable_building_indir_lighting()) return 0; // no update needed
 	assert(has_room_geom());
 	assert(light_ix < interior->room_geom->objs.size());
@@ -493,6 +516,9 @@ bool building_t::register_indir_lighting_state_change(unsigned light_ix, bool is
 	if (is_door_change && !obj.is_light_on()) return 0; // light off, no state change
 	building_indir_light_mgr.register_light_state_change(light_ix, obj.is_light_on(), is_door_change);
 	return 1;
+}
+void building_t::register_indir_lighting_geom_change() {
+	building_indir_light_mgr.invalidate_bvh();
 }
 
 bool line_int_cubes(point const &p1, point const &p2, vect_cube_t const &cubes) {

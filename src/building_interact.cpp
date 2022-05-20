@@ -711,6 +711,8 @@ void building_t::toggle_door_state(unsigned door_ix, bool player_in_this_buildin
 		
 		// update indir lighting state if needed; for now this is only for player actions to avoid thread safety issues and too many updates
 		if (by_player && enable_building_indir_lighting()) {
+			// Note: only have to register geom change if the light is on the same floor as the player, but this should always be true if the player just closed this door
+			register_indir_lighting_geom_change();
 			static vector<unsigned> light_ids;
 			get_lights_near_door(door_ix, light_ids);
 			for (unsigned light_ix : light_ids) {register_indir_lighting_state_change(light_ix, 1);} // is_door_change=1
