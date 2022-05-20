@@ -214,6 +214,7 @@ light_volume_local &get_local_light_volume(int ltype) {
 }
 
 
+// Note: weight can be negative
 unsigned add_path_to_lmcs(lmap_manager_t *lmgr, cube_t *bcube, point p1, point const &p2, float weight, colorRGBA const &color, int ltype, bool first_pt) {
 
 	bool const dynamic(is_ltype_dynamic(ltype));

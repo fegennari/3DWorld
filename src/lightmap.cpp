@@ -840,9 +840,10 @@ void update_indir_light_tex_range(lmap_manager_t const &lmap, vector<unsigned ch
 				else {
 					lmc.get_final_color(color, 1.0, 1.0);
 				}
+				UNROLL_3X(color[i_] = CLIP_TO_01(color[i_]);) // map to [0,1] range before calling pow()/sqrt()
 				if      (apply_sqrt) {UNROLL_3X(color[i_] = sqrt(color[i_]););}
 				else if (apply_exp)  {UNROLL_3X(color[i_] = pow(color[i_], lighting_exponent););}
-				UNROLL_3X(tex_data[off2+i_] = (unsigned char)(255*CLIP_TO_01(color[i_]));)
+				UNROLL_3X(tex_data[off2+i_] = (unsigned char)(255*color[i_]);)
 			} // for z
 		} // for x
 	} // for y
