@@ -14,7 +14,7 @@ uniform vec2 resolution; // for screen space tiles
 #endif
 
 const   float SPOTLIGHT_LEAKAGE = 0.0;  // simulates indirect lighting - however, doesn't match dlights XY grid, so has artifacts, and doesn't look right
-const   float SHADOW_LEAKAGE    = 0.05; // simulates indirect lighting, but indir may already be enabled for this light
+uniform float SHADOW_LEAKAGE    = 0.05; // simulates indirect lighting, but indir may already be enabled for this light
 uniform float LT_DIR_FALLOFF    = 0.005;
 uniform float LT_DIR_FALLOFF_SM = 0.005;
 uniform float LDIR_FALL_THRESH  = 0.0;

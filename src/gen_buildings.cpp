@@ -299,6 +299,7 @@ void set_interior_lighting(shader_t &s, bool have_indir) {
 		// no ambient for indir; slight ambient for closed closet/windowless room with light off
 		s.add_uniform_float("ambient_scale",       ((!have_indir && player_in_dark_room()) ? 0.1 : 0.0));
 		s.add_uniform_float("hemi_lighting_scale", 0.0); // disable hemispherical lighting (should we set hemi_lighting=0 in the shader?)
+		s.add_uniform_float("SHADOW_LEAKAGE",      0.0); // no light lealage
 	}
 	else {
 		float const light_scale(ADD_ROOM_LIGHTS ? 0.5 : 1.0); // lower for basement, lower when using room lights
@@ -312,9 +313,10 @@ void set_interior_lighting(shader_t &s, bool have_indir) {
 	}
 }
 void reset_interior_lighting(shader_t &s) {
-	s.add_uniform_float("diffuse_scale", 1.0); // re-enable diffuse and specular lighting for sun/moon
-	s.add_uniform_float("ambient_scale", 1.0); // reset to default
-	s.add_uniform_float("hemi_lighting_scale", 0.5); // reset to default
+	s.add_uniform_float("diffuse_scale",       1.0 ); // re-enable diffuse and specular lighting for sun/moon
+	s.add_uniform_float("ambient_scale",       1.0 ); // reset to default
+	s.add_uniform_float("hemi_lighting_scale", 0.5 ); // reset to default
+	s.add_uniform_float("SHADOW_LEAKAGE",      0.05); // reset to default
 }
 void reset_interior_lighting_and_end_shader(shader_t &s) {
 	reset_interior_lighting(s);
