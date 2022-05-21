@@ -141,7 +141,7 @@ void building_room_geom_t::add_table(room_object_t const &c, float tscale, float
 	else { // rectangular or short table
 		assert(c.shape == SHAPE_CUBE || c.shape == SHAPE_SHORT);
 		// Note: glass table top and legs won't quite match the geometry used for collision detection and queries, but it's probably close enough
-		bool const glass(c.type == TYPE_TABLE && (c.flags & RO_FLAG_IS_HOUSE) && (c.obj_id & 1)); // 50% glass top with metal base; only in houses; not dressers/desks
+		bool const glass(c.is_glass_table()); // 50% glass top with metal base; only in houses; not dressers/desks
 		top.z1()       += (1.0 - (glass ? 0.25 : 1.0)*top_dz)*c.dz(); // glass tables have a thinner top
 		legs_bcube.z2() = top.z1();
 

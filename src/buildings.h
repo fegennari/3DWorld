@@ -564,6 +564,7 @@ struct room_object_t : public oriented_cube_t { // size=64
 	bool is_small_closet() const {return (get_width() < 1.2*dz());}
 	bool is_bottle_empty() const {return ((obj_id & 192) == 192);} // empty if both bits 6 and 7 are set
 	bool desk_has_drawers()const {return bool(room_id & 3);} // 75% of the time
+	bool is_glass_table () const {return (type == TYPE_TABLE && (flags & RO_FLAG_IS_HOUSE) && (obj_id & 1));} // 50% chance if in a house
 	bool can_use        () const;
 	bool is_interactive () const {return (has_dstate() || can_use());}
 	bool can_place_onto () const;

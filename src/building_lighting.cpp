@@ -195,6 +195,7 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc, int only_this_fl
 		if (c->z1() > z2 || c->z2() < z1) continue;
 		if (c->shape == SHAPE_CYLIN || c->shape == SHAPE_SPHERE)  continue; // cylinders (lights, etc.) and spheres (balls, etc.) are not cubes, skip for now
 		if (c->type  == TYPE_ELEVATOR) continue; // elevator cars/internals can move so should not contribute to lighting
+		if (c->type  == TYPE_SHOWER  ) continue; // transparent
 		if (c->type  == TYPE_BLOCKER || c->type == TYPE_COLLIDER) continue; // blockers and colliders are not drawn
 		// skip other object types that are too small, not cube shaped, or not interior
 		if (c->type == TYPE_WALL_TRIM || c->type == TYPE_BOOK || c->type == TYPE_CRACK || c->type == TYPE_PLANT || c->type == TYPE_RAILING || c->type == TYPE_SHELVES ||
@@ -219,7 +220,8 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc, int only_this_fl
 		else if (c->type == TYPE_DESK || c->type == TYPE_DRESSER || c->type == TYPE_NIGHTSTAND || c->type == TYPE_TABLE) { // objects with legs
 			cube_t cubes[5];
 			get_table_cubes(*c, cubes); // top and 4 legs
-			add_colored_cubes(cubes, 5, color, cc);
+			if (c->is_glass_table()) {add_colored_cubes(cubes+1, 4, color, cc);} // skip glass top surface
+			else                     {add_colored_cubes(cubes,   5, color, cc);}
 			if      (c->type == TYPE_DRESSER || c->type == TYPE_NIGHTSTAND) {cc.emplace_back(get_dresser_middle(*c), color);}
 			else if (c->type == TYPE_DESK) {
 				if (c->desk_has_drawers() ) {cc.emplace_back(get_desk_drawers_part(*c), color);}
@@ -232,6 +234,28 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc, int only_this_fl
 			add_colored_cubes(cubes, 2, color, cc); // seat, back
 			get_tc_leg_cubes(cubes[2], 0.15, leg_cubes); // width=0.15
 			add_colored_cubes(leg_cubes, 4, color, cc);
+		}
+		else if (c->type == TYPE_CUBICLE || (c->type == TYPE_STALL && c->shape != SHAPE_SHORT)) { // cubicle or bathroom stall - hollow
+			bool const is_stall(c->type != TYPE_CUBICLE);
+			cube_t sides(*c);
+			float const dz(c->dz());
+			
+			if (is_stall) { // set halfway between sides and door height for simplicity; cubicle ls already the correct height
+				sides.z2() -= 0.365*dz;
+				sides.z1() += 0.165*dz;
+			}
+			cube_t center(sides);
+			center.expand_by_xy(-(is_stall ? 0.0125 : 0.07)*dz); // shrink by wall thickness
+			static vect_cube_t temp;
+			temp.clear();
+			subtract_cube_from_cube(sides, center, temp);
+			assert(temp.size() == 4); // -y, +y, -x, +x
+			unsigned const front_ix(3 - (2*c->dim + c->dir)); // dim|dir:front_ix: 00:3, 01:2, 10:1, 11:0
+
+			for (unsigned n = 0; n < 4; ++n) { // front at dim,!dir
+				if ((!is_stall || c->is_open()) && n == front_ix) continue; // open front, skip
+				cc.emplace_back(temp[n], color);
+			}
 		}
 		else {cc.emplace_back(*c, color);} // single cube
 	} // for c
