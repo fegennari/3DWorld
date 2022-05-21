@@ -65,14 +65,16 @@ public:
 };
 
 bool follow_ray_through_cubes_recur(point const &p1, point const &p2, point const &start, vect_cube_t const &cubes,
-	vect_cube_t::const_iterator end, vect_cube_t::const_iterator parent, vector3d &cnorm, float &t)
+	vect_cube_t::const_iterator end, vect_cube_t::const_iterator parent, unsigned depth, vector3d &cnorm, float &t)
 {
+	if (depth > 32) return 0; // occasional ray trace query can cause a stack overflow, likely due to FP error, so limit recursion to 32
+
 	for (auto c = cubes.begin(); c != end; ++c) {
 		if (c == parent || !c->contains_pt(start)) continue;
 		float tmin(0.0), tmax(1.0);
 		if (!get_line_clip(p1, p2, c->d, tmin, tmax) || tmax >= t) continue;
 		point const cpos(p1 + (p2 - p1)*(tmax + 0.001)); // move slightly beyond the hit point
-		if ((end - cubes.begin()) > 1 && follow_ray_through_cubes_recur(p1, p2, cpos, cubes, end, c, cnorm, t)) return 1;
+		if ((end - cubes.begin()) > 1 && follow_ray_through_cubes_recur(p1, p2, cpos, cubes, end, c, depth+1, cnorm, t)) return 1;
 		t = tmax;
 		get_closest_cube_norm(c->d, (p1 + (p2 - p1)*t), cnorm); // this is the final point, update cnorm
 		cnorm.negate(); // reverse hit dir
@@ -81,7 +83,7 @@ bool follow_ray_through_cubes_recur(point const &p1, point const &p2, point cons
 	return 0;
 }
 bool building_t::ray_cast_exterior_walls(point const &p1, point const &p2, vector3d &cnorm, float &t) const {
-	return follow_ray_through_cubes_recur(p1, p2, p1, parts, get_real_parts_end_inc_sec(), parts.end(), cnorm, t);
+	return follow_ray_through_cubes_recur(p1, p2, p1, parts, get_real_parts_end_inc_sec(), parts.end(), 0, cnorm, t);
 }
 // Note: static objects only; excludes people; pos in building space
 bool building_t::ray_cast_interior(point const &pos, vector3d const &dir, cube_bvh_t const &bvh, point &cpos, vector3d &cnorm, colorRGBA &ccolor) const {
