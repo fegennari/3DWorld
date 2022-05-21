@@ -1459,7 +1459,7 @@ private:
 	bool check_bcube_overlap_xy_one_dir(building_t const &b, float expand_rel, float expand_abs, vector<point> &points) const;
 	void split_in_xy(cube_t const &seed_cube, rand_gen_t &rgen);
 	bool test_coll_with_sides(point &pos, point const &p_last, float radius, cube_t const &part, vector<point> &points, vector3d *cnorm) const;
-	void gather_interior_cubes(vect_colored_cube_t &cc) const;
+	void gather_interior_cubes(vect_colored_cube_t &cc, int only_this_floor=-1) const;
 	void order_lights_by_priority(point const &target, vector<unsigned> &light_ids) const;
 	bool register_indir_lighting_state_change(unsigned light_ix, bool is_door_change=0);
 	void register_indir_lighting_geom_change();

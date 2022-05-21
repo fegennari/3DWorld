@@ -148,23 +148,32 @@ unsigned elevator_t::get_coll_cubes(cube_t cubes[5]) const {
 	}
 }
 
-template<typename T> void add_colored_cubes(vector<T> const &cubes, colorRGBA const &color, vect_colored_cube_t &cc) {
-	for (auto c = cubes.begin(); c != cubes.end(); ++c) {cc.emplace_back(*c, color);}
+template<typename T> void add_colored_cubes(vector<T> const &cubes, colorRGBA const &color, float z1, float z2, vect_colored_cube_t &cc) {
+	for (auto c = cubes.begin(); c != cubes.end(); ++c) {
+		if (c->z1() < z2 && c->z2() > z1) {cc.emplace_back(*c, color);}
+	}
 }
 void add_colored_cubes(cube_t const *const cubes, unsigned num_cubes, colorRGBA const &color, vect_colored_cube_t &cc) {
 	for (unsigned n = 0; n < num_cubes; ++n) {
 		if (!cubes[n].is_all_zeros()) {cc.emplace_back(cubes[n], color);}
 	}
 }
-void building_t::gather_interior_cubes(vect_colored_cube_t &cc) const {
+void building_t::gather_interior_cubes(vect_colored_cube_t &cc, int only_this_floor) const {
 
 	if (!interior) return; // nothing to do
 	building_mat_t const &mat(get_material());
 	colorRGBA const wall_color(mat.wall_color.modulate_with(mat.wall_tex.get_avg_color()));
-	// TODO: clip per light source to current floor
-	for (unsigned d = 0; d < 2; ++d) {add_colored_cubes(interior->walls[d], wall_color, cc);}
+	float z1(bcube.z1()), z2(bcube.z2()); // start with full bcube Z range
+
+	if (only_this_floor >= 0) { // clip per light source to current floor
+		float const floor_spacing(get_window_vspace());
+		z1 += only_this_floor*floor_spacing;
+		z2  = z1 + floor_spacing;
+	}
+	for (unsigned d = 0; d < 2; ++d) {add_colored_cubes(interior->walls[d], wall_color, z1, z2, cc);}
 
 	for (auto e = interior->elevators.begin(); e != interior->elevators.end(); ++e) {
+		if (e->z1() > z2 || e->z2() < z1) continue;
 		cube_t cubes[5];
 		unsigned const num_cubes(e->get_coll_cubes(cubes));
 		// for now elevators are treated the same as walls with the same color, even though the inside of open elevators is wood
@@ -172,17 +181,18 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc) const {
 	}
 	for (auto i = interior->doors.begin(); i != interior->doors.end(); ++i) {
 		if (i->open) continue; // add only closed doors
+		if (i->z1() > z2 || i->z2() < z1) continue;
 		cc.emplace_back(i->get_true_bcube(), WHITE);
 	}
-	add_colored_cubes(interior->ceilings, mat.ceil_color .modulate_with(mat.ceil_tex .get_avg_color()), cc);
-	add_colored_cubes(interior->floors,   mat.floor_color.modulate_with(mat.floor_tex.get_avg_color()), cc);
-	add_colored_cubes(details,            detail_color.   modulate_with(mat.roof_tex. get_avg_color()), cc); // should this be included?
+	add_colored_cubes(interior->ceilings, mat.ceil_color .modulate_with(mat.ceil_tex .get_avg_color()), z1, z2, cc);
+	add_colored_cubes(interior->floors,   mat.floor_color.modulate_with(mat.floor_tex.get_avg_color()), z1, z2, cc);
+	add_colored_cubes(details,            detail_color.   modulate_with(mat.roof_tex. get_avg_color()), z1, z2, cc); // should this be included?
 	if (!has_room_geom()) return; // nothing else to add
 	vect_room_object_t const &objs(interior->room_geom->objs);
-	cc.reserve(cc.size() + objs.size()); // likely an undercount due to split objects, but in the correct range
 		
 	for (auto c = objs.begin(); c != objs.end(); ++c) {
 		if (!c->is_visible()) continue;
+		if (c->z1() > z2 || c->z2() < z1) continue;
 		if (c->shape == SHAPE_CYLIN || c->shape == SHAPE_SPHERE)  continue; // cylinders (lights, etc.) and spheres (balls, etc.) are not cubes, skip for now
 		if (c->type  == TYPE_ELEVATOR) continue; // elevator cars/internals can move so should not contribute to lighting
 		if (c->type  == TYPE_BLOCKER || c->type == TYPE_COLLIDER) continue; // blockers and colliders are not drawn
@@ -230,7 +240,7 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc) const {
 
 class building_indir_light_mgr_t {
 	bool is_running, is_done, kill_thread, lighting_updated, needs_to_join, need_bvh_rebuild, is_negative_light;
-	int cur_bix, cur_light;
+	int cur_bix, cur_light, cur_floor;
 	unsigned cur_tid;
 	vector<unsigned char> tex_data;
 	vector<unsigned> light_ids;
@@ -356,12 +366,12 @@ class building_indir_light_mgr_t {
 	}
 public:
 	building_indir_light_mgr_t() : is_running(0), is_done(0), kill_thread(0), lighting_updated(0), needs_to_join(0),
-		need_bvh_rebuild(0), is_negative_light(0), cur_bix(-1), cur_light(-1), cur_tid(0) {}
+		need_bvh_rebuild(0), is_negative_light(0), cur_bix(-1), cur_light(-1), cur_floor(-1), cur_tid(0) {}
 
 	void clear() {
 		bool const cur_bix_was_valid(cur_bix >= 0);
 		is_done = lighting_updated = need_bvh_rebuild = is_negative_light = 0;
-		cur_bix = cur_light = -1;
+		cur_bix = cur_light = cur_floor = -1;
 		tex_data.clear();
 		light_ids.clear();
 		remove_queue.clear();
@@ -383,7 +393,7 @@ public:
 			clear();
 			cur_bix = bix;
 			assert(!is_running);
-			build_bvh(b);
+			build_bvh(b, target);
 		}
 		if (cur_tid > 0 && is_done)  return; // nothing else to do
 		if (player_in_elevator == 2) return; // pause updates for player in closed elevator since lighting is not visible
@@ -401,7 +411,8 @@ public:
 			lighting_updated = 0;
 		}
 		// nothing is running and there is more work to do, find the nearest light to the target and process it
-		if (need_bvh_rebuild) {build_bvh(b);}
+		need_bvh_rebuild |= (COMP_INDIR_PER_FLOOR && cur_floor >= 0 && cur_floor != (int)b.get_floor_for_zval(target.z)); // rebuild on player floor change
+		if (need_bvh_rebuild) {build_bvh(b, target);}
 		if (cur_light >= 0) {lights_complete.insert(cur_light); cur_light = -1;} // mark the most recent light as complete
 
 		if (!remove_queue.empty()) { // remove an existing light
@@ -435,9 +446,11 @@ public:
 		if ((geom_changed || !light_is_on) && (num_erased || is_cur_light)) {add_to_remove_queue(light_ix);} // must remove the light instead
 		//cout << TXT(cur_light) << TXT(is_running) << TXT(num_erased) << TXT(need_bvh_rebuild) << endl; // TESTING
 	}
-	void build_bvh(building_t const &b) {
+	void build_bvh(building_t const &b, point const &target) {
+		//timer_t timer("Build BVH");
+		if (COMP_INDIR_PER_FLOOR) {cur_floor = b.get_floor_for_zval(target.z);}
 		bvh.clear();
-		b.gather_interior_cubes(bvh.get_objs());
+		b.gather_interior_cubes(bvh.get_objs(), cur_floor);
 		bvh.build_tree_top(0); // verbose=0
 		need_bvh_rebuild = 0;
 	}
@@ -457,7 +470,7 @@ void building_t::create_building_volume_light_texture(unsigned bix, point const 
 
 bool building_t::ray_cast_camera_dir(point const &camera_bs, point &cpos, colorRGBA &ccolor) const {
 	assert(!USE_BKG_THREAD); // not legal to call when running lighting in a background thread
-	building_indir_light_mgr.build_bvh(*this);
+	building_indir_light_mgr.build_bvh(*this, camera_bs);
 	vector3d cnorm; // unused
 	return ray_cast_interior(camera_bs, cview_dir, building_indir_light_mgr.get_bvh(), cpos, cnorm, ccolor);
 }

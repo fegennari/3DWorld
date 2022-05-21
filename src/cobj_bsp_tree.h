@@ -60,7 +60,7 @@ public:
 	
 	void clear() {
 		cobj_tree_base::clear();
-		objects.clear(); // reserve(0)?
+		objects.clear();
 	}
 	void build_tree_top(bool verbose);
 };
