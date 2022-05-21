@@ -546,6 +546,61 @@ void building_t::order_lights_by_priority(point const &target, vector<unsigned> 
 	for (auto i = to_sort.begin(); i != to_sort.end(); ++i) {light_ids.push_back(i->second);}
 }
 
+bool get_wall_quad_window_area(vect_vnctcc_t const &wall_quad_verts, unsigned i, cube_t &c, float &tx1, float &tx2, float &tz1, float &tz2) {
+	auto const &v0(wall_quad_verts[i]);
+	c = cube_t(v0.v);
+	tx1 = v0.t[0]; tx2 = tx1; tz1 = v0.t[1]; tz2 = tz1; // tex coord ranges (xy, z); should generally be whole integers
+
+	for (unsigned j = 1; j < 4; ++j) {
+		auto const &vj(wall_quad_verts[i + j]);
+		c.union_with_pt(vj.v);
+		min_eq(tx1, vj.t[0]);
+		max_eq(tx2, vj.t[0]);
+		min_eq(tz1, vj.t[1]);
+		max_eq(tz2, vj.t[1]);
+	}
+	if (tx1 == tx2 || tz1 == tz2) return 0; // wall is too small to contain a window
+	assert(tx2 - tx1 < 1000.0f && tz2 - tz1 < 1000.0f); // sanity check - less than 1000 windows in each dim
+	assert(c.dz() > 0.0);
+	return 1;
+}
+
+void building_t::get_all_windows(vect_cube_with_ix_t windows) const { // Note: ix encodes 2*dim+dir
+	if (!has_windows()) return; // no windows
+	float const window_vspacing(get_window_vspace()), floor_thickness(get_floor_thickness());
+	float const border_mult(0.94); // account for the frame part of the window texture, which is included in the interior cutout of the window
+	float const window_offset(0.01*window_vspacing); // must match building_draw_t::add_section()
+	float const window_h_border(border_mult*get_window_h_border()), window_v_border(border_mult*get_window_v_border()); // (0, 1) range
+	static vect_vnctcc_t wall_quad_verts;
+	wall_quad_verts.clear();
+	get_all_drawn_window_verts_as_quads(wall_quad_verts);
+
+	for (unsigned i = 0; i < wall_quad_verts.size(); i += 4) { // iterate over each quad
+		cube_t c;
+		float tx1, tx2, tz1, tz2;
+		if (!get_wall_quad_window_area(wall_quad_verts, i, c, tx1, tx2, tz1, tz2)) continue;
+		bool const dim(c.dy() < c.dx()), dir(wall_quad_verts[i].get_norm()[dim] > 0.0);
+		assert(c.get_sz_dim(dim) == 0.0); // must be zero size in one dim (X or Y oriented); could also use the vertex normal
+		float const d_tx_inv(1.0f/(tx2 - tx1)), d_tz_inv(1.0f/(tz2 - tz1));
+		float const window_width(c.get_sz_dim(!dim)*d_tx_inv), window_height(c.dz()*d_tz_inv); // window_height should be equal to window_vspacing
+		float const border_xy(window_width*window_h_border), border_z(window_height*window_v_border);
+		cube_t window(c); // copy dim <dim>
+		window.translate_dim(dim, (dir ? -1.0 : 1.0)*window_offset);
+
+		for (float z = tz1; z < tz2; z += 1.0) { // each floor
+			float const bot_edge(c.z1() + (z - tz1)*window_height);
+			set_cube_zvals(window, bot_edge+border_z, bot_edge+window_height-border_z);
+
+			for (float xy = tx1; xy < tx2; xy += 1.0) { // windows along each wall
+				float const low_edge(c.d[!dim][0] + (xy - tx1)*window_width);
+				window.d[!dim][0] = low_edge + border_xy;
+				window.d[!dim][1] = low_edge + window_width - border_xy;
+				windows.emplace_back(window, (2*dim + dir));
+			}
+		} // for z
+	} // for i
+}
+
 bool building_t::register_indir_lighting_state_change(unsigned light_ix, bool is_door_change) {
 	if (!enable_building_indir_lighting()) return 0; // no update needed
 	assert(has_room_geom());

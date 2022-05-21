@@ -18,6 +18,7 @@ extern bldg_obj_type_t bldg_obj_types[];
 void setup_bldg_obj_types();
 bool enable_parked_cars();
 car_t car_from_parking_space(room_object_t const &o);
+bool get_wall_quad_window_area(vect_vnctcc_t const &wall_quad_verts, unsigned i, cube_t &c, float &tx1, float &tx2, float &tz1, float &tz2);
 
 
 class light_ix_assign_t {
@@ -3056,25 +3057,12 @@ void building_t::add_wall_and_door_trim() { // and window trim
 	static vect_vnctcc_t wall_quad_verts;
 	wall_quad_verts.clear();
 	get_all_drawn_window_verts_as_quads(wall_quad_verts);
-	assert((wall_quad_verts.size() & 3) == 0); // must be a multiple of 4
 
 	for (unsigned i = 0; i < wall_quad_verts.size(); i += 4) { // iterate over each quad
-		auto const &v0(wall_quad_verts[i]);
-		cube_t c(v0.v);
-		float tx1(v0.t[0]), tx2(tx1), tz1(v0.t[1]), tz2(tz1); // tex coord ranges (xy, z); should generally be whole integers
-
-		for (unsigned j = 1; j < 4; ++j) {
-			auto const &vj(wall_quad_verts[i + j]);
-			c.union_with_pt(vj.v);
-			min_eq(tx1, vj.t[0]);
-			max_eq(tx2, vj.t[0]);
-			min_eq(tz1, vj.t[1]);
-			max_eq(tz2, vj.t[1]);
-		}
-		if (tx1 == tx2 || tz1 == tz2) continue; // wall is too small to contain a window
-		assert(tx2 - tx1 < 1000.0f && tz2 - tz1 < 1000.0f); // sanity check - less than 1000 windows in each dim
-		assert(c.dz() > 0.0);
-		bool const dim(c.dy() < c.dx()), dir(v0.get_norm()[dim] > 0.0);
+		cube_t c;
+		float tx1, tx2, tz1, tz2;
+		if (!get_wall_quad_window_area(wall_quad_verts, i, c, tx1, tx2, tz1, tz2)) continue;
+		bool const dim(c.dy() < c.dx()), dir(wall_quad_verts[i].get_norm()[dim] > 0.0);
 		assert(c.get_sz_dim(dim) == 0.0); // must be zero size in one dim (X or Y oriented); could also use the vertex normal
 		float const d_tx_inv(1.0f/(tx2 - tx1)), d_tz_inv(1.0f/(tz2 - tz1));
 		float const window_width(c.get_sz_dim(!dim)*d_tx_inv), window_height(c.dz()*d_tz_inv); // window_height should be equal to window_vspacing

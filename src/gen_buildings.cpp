@@ -1422,6 +1422,7 @@ template<typename T> void building_t::add_door_verts(cube_t const &D, T &drawer,
 template void building_t::add_door_verts(cube_t const &D, building_room_geom_t &drawer, uint8_t door_type,
 	bool dim, bool dir, bool opened, bool opens_out, bool exterior, bool on_stairs, bool hinge_side) const;
 
+// Note: this is actually the geometry of walls that have windows, not the windows themselves
 void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_pass, float offset_scale, point const *const only_cont_pt_in) const {
 
 	if (!is_valid()) return; // invalid building
@@ -1546,6 +1547,7 @@ void building_t::get_all_drawn_window_verts_as_quads(vect_vnctcc_t &verts) const
 	building_draw_t bdraw; // should this be a static variable?
 	get_all_drawn_window_verts(bdraw);
 	bdraw.get_all_mat_verts(verts, 0); // combine quad verts across materials (should only be one)
+	assert((verts.size() & 3) == 0); // must be a multiple of 4
 }
 
 void building_t::cut_holes_for_ext_doors(building_draw_t &bdraw, point const &contain_pt, unsigned draw_parts_mask) const {
