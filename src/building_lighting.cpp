@@ -573,7 +573,7 @@ bool get_wall_quad_window_area(vect_vnctcc_t const &wall_quad_verts, unsigned i,
 void building_t::get_all_windows(vect_cube_with_ix_t &windows) const { // Note: ix encodes 2*dim+dir
 	windows.clear();
 	if (!has_windows()) return; // no windows
-	float const window_vspacing(get_window_vspace()), floor_thickness(get_floor_thickness());
+	float const window_vspacing(get_window_vspace());
 	float const border_mult(0.94); // account for the frame part of the window texture, which is included in the interior cutout of the window
 	float const window_offset(0.01*window_vspacing); // must match building_draw_t::add_section()
 	float const window_h_border(border_mult*get_window_h_border()), window_v_border(border_mult*get_window_v_border()); // (0, 1) range

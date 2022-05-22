@@ -1272,7 +1272,6 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, 
 					cube_t const c(door.get_bcube());
 					if (c.z2() > basement.z2()) continue; // not a basement door
 					bool const dim(c.dy() < c.dx()), dir(basement.get_center_dim(dim) < c.get_center_dim(dim));
-					float const door_lo(c.d[!dim][0]), door_hi(c.d[!dim][1]);
 					unsigned const this_face(1 << (2*dim + dir + 3));
 					dim_mask |= this_face; // skip this face for the full basement call below
 
