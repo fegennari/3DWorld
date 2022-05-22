@@ -163,7 +163,6 @@ void add_colored_cubes(cube_t const *const cubes, unsigned num_cubes, colorRGBA 
 	}
 }
 void building_t::gather_interior_cubes(vect_colored_cube_t &cc, int only_this_floor) const {
-
 	if (!interior) return; // nothing to do
 	building_mat_t const &mat(get_material());
 	colorRGBA const wall_color(mat.wall_color.modulate_with(mat.wall_tex.get_avg_color()));
@@ -195,6 +194,7 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc, int only_this_fl
 	add_colored_cubes(details,            detail_color.   modulate_with(mat.roof_tex. get_avg_color()), z1, z2, cc); // should this be included?
 	if (!has_room_geom()) return; // nothing else to add
 	vect_room_object_t const &objs(interior->room_geom->objs);
+	static vect_cube_t temp; // used across calls for subtracting holes
 		
 	for (auto c = objs.begin(); c != objs.end(); ++c) {
 		if (!c->is_visible()) continue;
@@ -252,11 +252,10 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc, int only_this_fl
 				sides.z2() -= 0.365*dz;
 				sides.z1() += 0.165*dz;
 			}
-			cube_t center(sides);
-			center.expand_by_xy(-(is_stall ? 0.0125 : 0.07)*dz); // shrink by wall thickness
-			static vect_cube_t temp;
+			cube_t inside(sides);
+			inside.expand_by_xy(-(is_stall ? 0.0125 : 0.07)*dz); // shrink by wall thickness
 			temp.clear();
-			subtract_cube_from_cube(sides, center, temp);
+			subtract_cube_from_cube(sides, inside, temp);
 			assert(temp.size() == 4); // -y, +y, -x, +x
 			unsigned const front_ix(3 - (2*c->dim + c->dir)); // dim|dir:front_ix: 00:3, 01:2, 10:1, 11:0
 
@@ -267,11 +266,29 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc, int only_this_fl
 		}
 		else { // single cube
 			cube_t bc(*c); // handle 3D models that don't fill the entire cube
-			if      (c->type == TYPE_COUCH ) {bc.z2() -= 0.5*bc.dz();}
-			else if (c->type == TYPE_STOVE ) {bc.z2() -= 0.2*bc.dz();}
-			else if (c->type == TYPE_TOILET) {bc.z2() -= 0.3*bc.dz();}
-			else if (c->type == TYPE_SINK  ) {bc.z2() -= 0.2*bc.dz(); bc.z1() += 0.5*bc.dz();}
-			// what about TYPE_TUB, TYPE_TV, TYPE_MONITOR, TYPE_OFF_CHAIR, TYPE_URINAL?
+			if (c->type == TYPE_COUCH) {
+				bc.z2() -= 0.5*bc.dz(); // bottom
+				cube_t top(*c);
+				top.z1() = bc.z2();
+				top.d[c->dim][c->dir] += (c->dir ? -1.0 : 1.0)*0.6*bc.get_sz_dim(c->dim); // reduce thickness
+				top.expand_in_dim(!c->dim, -0.1*c->get_sz_dim(!c->dim));
+				cc.emplace_back(top, color);
+			}
+			else if (c->type == TYPE_TUB) {
+				bc.z2() -= 0.9*bc.dz(); // bottom
+				cube_t top(*c);
+				top.z1() = bc.z2();
+				cube_t inside(top);
+				inside.expand_by_xy(-0.1*c->get_sz_dim(c->dim)); // shrink
+				temp.clear();
+				subtract_cube_from_cube(top, inside, temp);
+				assert(temp.size() == 4); // -y, +y, -x, +x
+				add_colored_cubes(temp, color, z1, z2, cc);
+			}
+			else if (c->type == TYPE_STOVE ) {bc.z2() -= 0.20*bc.dz();}
+			else if (c->type == TYPE_TOILET) {bc.z2() -= 0.33*bc.dz();}
+			else if (c->type == TYPE_SINK  ) {bc.z2() -= 0.20*bc.dz(); bc.z1() += 0.65*bc.dz();}
+			else if (c->type == TYPE_MONITOR || c->type == TYPE_TV) {bc.expand_in_dim(c->dim, -0.3*bc.get_sz_dim(c->dim));} // reduce thickness
 			cc.emplace_back(bc, color);
 		}
 	} // for c
