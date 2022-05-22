@@ -6,11 +6,11 @@
 #include "buildings.h"
 #include "lightmap.h" // for light_source
 #include "cobj_bsp_tree.h"
+#include "profiler.h"
 #include <thread>
 
-bool const USE_BKG_THREAD       = 1;
-bool const INDIR_BASEMENT_ONLY  = 0;
-bool const COMP_INDIR_PER_FLOOR = 1;
+bool const USE_BKG_THREAD      = 1;
+bool const INDIR_BASEMENT_ONLY = 0;
 
 extern bool camera_in_building;
 extern int MESH_Z_SIZE, display_mode, display_framerate, camera_surf_collide, animate2, frame_counter, building_action_key, player_in_basement, player_in_elevator;
@@ -92,6 +92,7 @@ bool building_t::ray_cast_interior(point const &pos, vector3d const &dir, cube_b
 	float const extent(bcube.get_max_extent());
 	cube_t clip_cube(bcube);
 	clip_cube.expand_by(0.01*extent); // expand slightly so that collisions with objects on the edge are still considered interior
+	// TODO: clip to current floor
 	point p1(pos), p2(pos + dir*(2.0*extent));
 	if (!do_line_clip(p1, p2, clip_cube.d)) return 0; // ray does not intersect building bcube
 	building_mat_t const &mat(get_material());
@@ -263,13 +264,14 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc, int only_this_fl
 
 
 class building_indir_light_mgr_t {
-	bool is_running, is_done, kill_thread, lighting_updated, needs_to_join, need_bvh_rebuild, is_negative_light;
+	bool is_running, kill_thread, lighting_updated, needs_to_join, need_bvh_rebuild, is_negative_light;
 	int cur_bix, cur_light, cur_floor;
 	unsigned cur_tid;
 	vector<unsigned char> tex_data;
 	vector<unsigned> light_ids;
 	deque<unsigned> remove_queue;
 	set<unsigned> lights_complete, lights_seen;
+	vect_cube_with_ix_t windows;
 	cube_bvh_t bvh;
 	lmap_manager_t lmgr;
 	std::thread rt_thread;
@@ -292,7 +294,7 @@ class building_indir_light_mgr_t {
 			needs_to_join = 1;
 		}
 		else {
-			timer_t timer("Ray Cast Building Light");
+			highres_timer_t timer("Ray Cast Building Light");
 			cast_light_rays(b);
 		}
 	}
@@ -313,20 +315,22 @@ class building_indir_light_mgr_t {
 		vect_room_object_t const &objs(b.interior->room_geom->objs);
 		assert((unsigned)cur_light < objs.size());
 		room_object_t const &ro(objs[cur_light]);
-		bool const light_in_basement(ro.z1() < b.ground_floor_z1);
-		colorRGBA const lcolor((ro.type == TYPE_LAMP) ? LAMP_COLOR : ro.get_color());
+		bool const light_in_basement(ro.z1() < b.ground_floor_z1), is_lamp(ro.type == TYPE_LAMP);
+		colorRGBA const lcolor(is_lamp ? LAMP_COLOR : ro.get_color());
+		unsigned const NUM_PRI_SPLITS = 16;
+		unsigned const base_num_rays(max((is_lamp ? LOCAL_RAYS/2 : LOCAL_RAYS), NUM_PRI_SPLITS)); // half the rays for lamps
 		cube_t const scene_bounds(get_scene_bounds_bcube()); // expected by lmap update code
+		// TODO: use current floor zvals for bcube?
 		point const ray_scale(scene_bounds.get_size()/b.bcube.get_size()), llc_shift(scene_bounds.get_llc() - b.bcube.get_llc()*ray_scale);
 		float const tolerance(1.0E-5*b.bcube.get_max_extent()), light_zval(ro.z1() - 0.01*ro.dz()); // set slightly below bottom of light
 		float const surface_area(ro.dx()*ro.dy() + 2.0f*(ro.dx() + ro.dy())*ro.dz()); // bottom + 4 sides (top is occluded), 0.0003 for houses
-		float weight(100.0f*(surface_area/0.0003f)/LOCAL_RAYS); // normalize to the number of rays
+		float weight(100.0f*(surface_area/0.0003f)/base_num_rays); // normalize to the number of rays
 		if (b.has_pri_hall())     {weight *= 0.75;} // floorplan is open and well lit, indir lighting value seems too high
 		if (b.is_house)           {weight *= 2.0 ;} // houses have dimmer lights and seem to work better with more indir
 		if (ro.type == TYPE_LAMP) {weight *= 0.33;} // lamps are less bright
 		if (light_in_basement)    {weight *= (b.has_parking_garage ? 0.25 : 0.5);} // basement is darker, parking garages are even darker
 		if (is_negative_light)    {weight *= -1.0;}
-		unsigned const NUM_PRI_SPLITS = 16;
-		int const num_rays(LOCAL_RAYS/NUM_PRI_SPLITS);
+		int const num_rays(base_num_rays/NUM_PRI_SPLITS);
 
 #pragma omp parallel for schedule(dynamic) num_threads(num_rt_threads)
 		for (int n = 0; n < num_rays; ++n) {
@@ -376,7 +380,7 @@ class building_indir_light_mgr_t {
 		kill_thread = 0;
 	}
 	void update_volume_light_texture() { // full update, 6.6ms for z=128
-		//timer_t timer("Lighting Tex Create");
+		//highres_timer_t timer("Lighting Tex Create");
 		indir_light_tex_from_lmap(cur_tid, lmgr, tex_data, MESH_X_SIZE, MESH_Y_SIZE, MESH_SIZE[2], indir_light_exp, 1); // local_only=1
 	}
 	void maybe_join_thread() {
@@ -389,18 +393,19 @@ class building_indir_light_mgr_t {
 		remove_queue.push_back(light_ix);
 	}
 public:
-	building_indir_light_mgr_t() : is_running(0), is_done(0), kill_thread(0), lighting_updated(0), needs_to_join(0),
+	building_indir_light_mgr_t() : is_running(0), kill_thread(0), lighting_updated(0), needs_to_join(0),
 		need_bvh_rebuild(0), is_negative_light(0), cur_bix(-1), cur_light(-1), cur_floor(-1), cur_tid(0) {}
 
 	void clear() {
 		bool const cur_bix_was_valid(cur_bix >= 0);
-		is_done = lighting_updated = need_bvh_rebuild = is_negative_light = 0;
+		lighting_updated = need_bvh_rebuild = is_negative_light = 0;
 		cur_bix = cur_light = cur_floor = -1;
 		tex_data.clear();
 		light_ids.clear();
 		remove_queue.clear();
 		lights_complete.clear();
 		lights_seen.clear();
+		windows.clear();
 		end_rt_job();
 		lmgr.reset_all(); // clear lighting values back to 0
 		if (cur_bix_was_valid) {update_volume_light_texture();} // reset lighting from prev building
@@ -418,8 +423,8 @@ public:
 			cur_bix = bix;
 			assert(!is_running);
 			build_bvh(b, target);
+			b.get_all_windows(windows);
 		}
-		if (cur_tid > 0 && is_done)  return; // nothing else to do
 		if (player_in_elevator == 2) return; // pause updates for player in closed elevator since lighting is not visible
 
 		if (display_framerate && (is_running || lighting_updated)) { // show progress to the user
@@ -435,7 +440,7 @@ public:
 			lighting_updated = 0;
 		}
 		// nothing is running and there is more work to do, find the nearest light to the target and process it
-		need_bvh_rebuild |= (COMP_INDIR_PER_FLOOR && cur_floor >= 0 && cur_floor != (int)b.get_floor_for_zval(target.z)); // rebuild on player floor change
+		need_bvh_rebuild |= (cur_floor >= 0 && cur_floor != (int)b.get_floor_for_zval(target.z)); // rebuild on player floor change
 		if (need_bvh_rebuild) {build_bvh(b, target);}
 		if (cur_light >= 0) {lights_complete.insert(cur_light); cur_light = -1;} // mark the most recent light as complete
 
@@ -449,12 +454,11 @@ public:
 			b.order_lights_by_priority(target, light_ids);
 
 			for (auto i = light_ids.begin(); i != light_ids.end(); ++i) {
-				if (COMP_INDIR_PER_FLOOR) {lights_seen.insert(*i);} // must track lights across all floors seen for correct progress update
+				lights_seen.insert(*i); // must track lights across all floors seen for correct progress update
 				if (cur_light < 0 && lights_complete.find(*i) == lights_complete.end()) {cur_light = *i;} // find an incomplete light
 			}
 		}
 		if (cur_light >= 0) {start_lighting_compute(b);} // this light is next
-		else if (!COMP_INDIR_PER_FLOOR) {is_done = 1;} // no more lights to process
 		tid = cur_tid;
 	}
 	void register_light_state_change(unsigned light_ix, bool light_is_on, bool geom_changed) {
@@ -471,8 +475,8 @@ public:
 		//cout << TXT(cur_light) << TXT(is_running) << TXT(num_erased) << TXT(need_bvh_rebuild) << endl; // TESTING
 	}
 	void build_bvh(building_t const &b, point const &target) {
-		//timer_t timer("Build BVH");
-		if (COMP_INDIR_PER_FLOOR) {cur_floor = b.get_floor_for_zval(target.z);}
+		//highres_timer_t timer("Build BVH");
+		cur_floor = b.get_floor_for_zval(target.z);
 		bvh.clear();
 		b.gather_interior_cubes(bvh.get_objs(), cur_floor);
 		bvh.build_tree_top(0); // verbose=0
@@ -513,25 +517,23 @@ void building_t::order_lights_by_priority(point const &target, vector<unsigned> 
 		if (!i->is_light_type() || !i->is_light_on())  continue; // not a light, or light not on
 		bool const light_in_basement(i->z1() < ground_floor_z1);
 		if (INDIR_BASEMENT_ONLY && !light_in_basement) continue; // not a basement light
+		// check if this light is visible to target
+		bool const is_in_elevator(i->flags & RO_FLAG_IN_ELEV), is_in_closet(i->flags & RO_FLAG_IN_CLOSET);
+		if ((is_in_elevator || is_in_closet) && target.z > i->z1()) continue; // elevator or closet light on the floor below
+		if (light_in_basement && (target.z > (ground_floor_z1 + window_vspacing))) continue; // basement light, player is more than one floor above
+		room_t const &room(get_room(i->room_id));
+		bool const is_single_floor(room.is_sec_bldg || is_in_elevator); // garages and sheds are all one floor
+		int const cur_floor   (is_single_floor ? 0 : (i->z1()  - bcube.z1())*window_vspacing_inv); // use global floor index
+		int const target_floor(is_single_floor ? 0 : (target.z - bcube.z1())*window_vspacing_inv); // use global floor index
 
-		if (COMP_INDIR_PER_FLOOR) { // check if this light is visible to target
-			bool const is_in_elevator(i->flags & RO_FLAG_IN_ELEV), is_in_closet(i->flags & RO_FLAG_IN_CLOSET);
-			if ((is_in_elevator || is_in_closet) && target.z > i->z1()) continue; // elevator or closet light on the floor below
-			if (light_in_basement && (target.z > (ground_floor_z1 + window_vspacing))) continue; // basement light, player is more than one floor above
-			room_t const &room(get_room(i->room_id));
-			bool const is_single_floor(room.is_sec_bldg || is_in_elevator); // garages and sheds are all one floor
-			int const cur_floor   (is_single_floor ? 0 : (i->z1()  - bcube.z1())*window_vspacing_inv); // use global floor index
-			int const target_floor(is_single_floor ? 0 : (target.z - bcube.z1())*window_vspacing_inv); // use global floor index
-
-			if (cur_floor != target_floor) { // different floors
-				if (abs(cur_floor - target_floor) > 1) continue; // more than one floor apart, skip
-				int const room_cur_floor(is_single_floor ? 0 : (i->z1()  - room.z1())*window_vspacing_inv);
-				if (!i->has_stairs() && !room.has_stairs_on_floor(room_cur_floor)) continue; // no stairs, skip (what about ramps? what about player near stairs?)
-			}
-			if (light_in_basement != (target.z < ground_floor_z1)) { // light and target on different side of basement boundary
-				if (is_house) continue; // basement door starts closed, and stairs are very narrow anyway - no light transfer
-				if (light_in_basement && has_parking_garage) continue; // parking garage lights don't light the hallway above
-			}
+		if (cur_floor != target_floor) { // different floors
+			if (abs(cur_floor - target_floor) > 1) continue; // more than one floor apart, skip
+			int const room_cur_floor(is_single_floor ? 0 : (i->z1()  - room.z1())*window_vspacing_inv);
+			if (!i->has_stairs() && !room.has_stairs_on_floor(room_cur_floor)) continue; // no stairs, skip (what about ramps? what about player near stairs?)
+		}
+		if (light_in_basement != (target.z < ground_floor_z1)) { // light and target on different side of basement boundary
+			if (is_house) continue; // basement door starts closed, and stairs are very narrow anyway - no light transfer
+			if (light_in_basement && has_parking_garage) continue; // parking garage lights don't light the hallway above
 		}
 		float dist_sq(p2p_dist_sq(i->get_cube_center(), target));
 		dist_sq *= 0.005f*window_vspacing/(i->dx()*i->dy()); // account for the size of the light, larger lights smaller/higher priority
@@ -565,7 +567,8 @@ bool get_wall_quad_window_area(vect_vnctcc_t const &wall_quad_verts, unsigned i,
 	return 1;
 }
 
-void building_t::get_all_windows(vect_cube_with_ix_t windows) const { // Note: ix encodes 2*dim+dir
+void building_t::get_all_windows(vect_cube_with_ix_t &windows) const { // Note: ix encodes 2*dim+dir
+	windows.clear();
 	if (!has_windows()) return; // no windows
 	float const window_vspacing(get_window_vspace()), floor_thickness(get_floor_thickness());
 	float const border_mult(0.94); // account for the frame part of the window texture, which is included in the interior cutout of the window
@@ -661,7 +664,7 @@ bool do_line_clip_xy_p2(point const &p1, point &p2, cube_t const &c) {
 void building_t::refine_light_bcube(point const &lpos, float light_radius, cube_t const &room, cube_t &light_bcube, bool is_parking_garage) const {
 	// base: 173613 / bcube: 163942 / clipped bcube: 161455 / tight: 159005 / rays: 101205 / no ls bcube expand: 74538
 	// starts with building bcube clipped to light bcube
-	//timer_t timer("refine_light_bcube"); // 0.035ms average
+	//highres_timer_t timer("refine_light_bcube"); // 0.035ms average
 	assert(interior);
 	cube_t tight_bcube, part;
 	static vect_cube_t other_parts, walls[2];

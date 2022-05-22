@@ -1462,7 +1462,7 @@ private:
 	bool test_coll_with_sides(point &pos, point const &p_last, float radius, cube_t const &part, vector<point> &points, vector3d *cnorm) const;
 	void gather_interior_cubes(vect_colored_cube_t &cc, int only_this_floor=-1) const;
 	void order_lights_by_priority(point const &target, vector<unsigned> &light_ids) const;
-	void get_all_windows(vect_cube_with_ix_t windows) const;
+	void get_all_windows(vect_cube_with_ix_t &windows) const;
 	bool register_indir_lighting_state_change(unsigned light_ix, bool is_door_change=0);
 	void register_indir_lighting_geom_change();
 	bool is_light_occluded(point const &lpos, point const &camera_bs) const;
