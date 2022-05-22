@@ -329,6 +329,7 @@ class building_indir_light_mgr_t {
 			needs_to_join = 1;
 		}
 		else {
+			// per-light time for large office building: orig: 194ms, per-floorBVH: 96ms, clip rays to floor: 44ms
 			highres_timer_t timer("Ray Cast Building Light");
 			cast_light_rays(b);
 		}
@@ -344,7 +345,8 @@ class building_indir_light_mgr_t {
 	}
 	void cast_light_rays(building_t const &b) {
 		// TODO: Some type of blur to remove noise that doesn't blur across walls
-		// TODO: use current floor zvals for bcube?
+		// TODO: use current floor zvals for bcube
+		// TODO: visualize volumes
 		// Note: modifies lmgr, but otherwise thread safe
 		unsigned const NUM_PRI_SPLITS = 16;
 		unsigned const num_rt_threads(max(1U, (NUM_THREADS - (USE_BKG_THREAD ? 1 : 0)))); // reserve a thread for the main thread if running in the background
@@ -399,11 +401,12 @@ class building_indir_light_mgr_t {
 			valid_area.z1() += cur_floor*floor_spacing;
 			valid_area.z2()  = valid_area.z1() + floor_spacing;
 		}
+		// Note: dynamic scheduling is faster, and using blocks doesn't help
 #pragma omp parallel for schedule(dynamic) num_threads(num_rt_threads)
 		for (int n = 0; n < num_rays; ++n) {
 			if (kill_thread) continue;
 			rand_gen_t rgen;
-			rgen.set_state(n+1, cur_light);
+			rgen.set_state(n+1, cur_light); // should be deterministic, though add_path_to_lmcs() is not (due to thread races)
 			vector3d pri_dir(rgen.signed_rand_vector_spherical(1.0).get_norm());
 			if (dir < 2 && ((pri_dir[dim] > 0.0) ^ dir)) {pri_dir[dim] *= -1.0;}
 			point origin, init_cpos, cpos;
@@ -464,13 +467,16 @@ class building_indir_light_mgr_t {
 	}
 	void add_window_lights(building_t const &b, point const &target) {
 		float const window_vspacing(b.get_window_vspace());
+		int const target_room(b.get_room_containing_pt(target)); // generally always should be >= 0
 
 		for (auto i = windows.begin(); i != windows.end(); ++i) {
 			if (cur_floor >= 0 && (int)b.get_floor_for_zval(i->zc()) != cur_floor) continue; // wrong floor
-			float dist_sq(p2p_dist_sq(i->get_cube_center(), target));
+			point const center(i->get_cube_center());
+			float dist_sq(p2p_dist_sq(center, target));
 			dist_sq *= 0.05f*window_vspacing/(i->dz()*(i->dx() + i->dy())); // account for the size of the window, larger window smaller/higher priority
+			if (target_room >= 0 && b.get_room_containing_pt(center) == target_room) {dist_sq *= 0.1;} // prioritize the room the player is in
 			lights_to_sort.emplace_back(dist_sq, ((i - windows.begin()) | IS_WINDOW_BIT));
-		}
+		} // for i
 	}
 	void sort_lights_by_priority() {
 		light_ids.clear();
@@ -600,6 +606,7 @@ void building_t::get_lights_with_priorities(point const &target, vector<pair<flo
 	float const window_vspacing(get_window_vspace()), window_vspacing_inv(1.0/window_vspacing);
 	float const diag_dist_sq(bcube.dx()*bcube.dx() + bcube.dy()*bcube.dy()), other_floor_penalty(0.25*diag_dist_sq);
 	auto objs_end(interior->room_geom->get_placed_objs_end()); // skip buttons/stairs/elevators
+	int const target_room(get_room_containing_pt(target)); // generally always should be >= 0
 
 	for (auto i = objs.begin(); i != objs_end; ++i) {
 		if (!i->is_light_type() || !i->is_light_on())  continue; // not a light, or light not on
@@ -623,12 +630,14 @@ void building_t::get_lights_with_priorities(point const &target, vector<pair<flo
 			if (is_house) continue; // basement door starts closed, and stairs are very narrow anyway - no light transfer
 			if (light_in_basement && has_parking_garage) continue; // parking garage lights don't light the hallway above
 		}
-		float dist_sq(p2p_dist_sq(i->get_cube_center(), target));
+		point const center(i->get_cube_center());
+		float dist_sq(p2p_dist_sq(center, target));
 		dist_sq *= 0.005f*window_vspacing/(i->dx()*i->dy()); // account for the size of the light, larger lights smaller/higher priority
 
 		if (i->z1() < target.z || i->z2() > (target.z + window_vspacing)) { // penalty if on a different floor
 			dist_sq += (i->has_stairs() ? 0.25 : 1.0)*other_floor_penalty; // less penalty for lights on stairs
 		}
+		if (target_room >= 0 && get_room_containing_pt(center) == target_room) {dist_sq *= 0.1;} // prioritize the room the player is in
 		// reduce distance for lights visible to target?
 		lights_to_sort.emplace_back(dist_sq, (i - objs.begin()));
 	} // for i
@@ -655,7 +664,7 @@ bool get_wall_quad_window_area(vect_vnctcc_t const &wall_quad_verts, unsigned i,
 
 void building_t::get_all_windows(vect_cube_with_ix_t &windows) const { // Note: ix encodes 2*dim+dir
 	windows.clear();
-	if (!has_windows()) return; // no windows
+	if (!has_windows() || is_rotated()) return; // no windows; rotated buildings not handled
 	float const window_vspacing(get_window_vspace());
 	float const border_mult(0.94); // account for the frame part of the window texture, which is included in the interior cutout of the window
 	float const window_h_border(border_mult*get_window_h_border()), window_v_border(border_mult*get_window_v_border()); // (0, 1) range
