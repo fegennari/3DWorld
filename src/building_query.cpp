@@ -1613,10 +1613,14 @@ void building_t::get_rooms_for_door(unsigned door_ix, int room_ix[2]) const {
 
 	for (auto r = interior->rooms.begin(); r != interior->rooms.end(); ++r) {
 		if (!r->intersects(dbc)) continue;
-		bool const side(r->get_center_dim(door.dim) < door.get_center_dim(door.dim));
-		assert(room_ix[side] == -1); // should not have been set yet
+		bool side(r->get_center_dim(door.dim) < door.get_center_dim(door.dim));
+		
+		if (room_ix[side] >= 0) { // must be basement door with room on top and bottom rather than each side
+			assert(door.on_stairs);
+			if (room_ix[!side] < 0) {side ^= 1;} // use the other side if unassigned
+		}
 		room_ix[side] = (r - interior->rooms.begin());
-	}
+	} // for r
 }
 void building_t::get_lights_for_room_and_floor(unsigned room_ix, unsigned floor_ix, vector<unsigned> &light_ids) const {
 	assert(has_room_geom());
