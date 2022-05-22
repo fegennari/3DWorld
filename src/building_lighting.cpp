@@ -164,12 +164,14 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc, int only_this_fl
 	if (!interior) return; // nothing to do
 	building_mat_t const &mat(get_material());
 	colorRGBA const wall_color(mat.wall_color.modulate_with(mat.wall_tex.get_avg_color()));
-	float z1(bcube.z1()), z2(bcube.z2()); // start with full bcube Z range
+	float z1(bcube.z1()), z2(bcube.z2()), stairs_z1(z1), stairs_z2(z2); // start with full bcube Z range
 
 	if (only_this_floor >= 0) { // clip per light source to current floor
 		float const floor_spacing(get_window_vspace());
 		z1 += only_this_floor*floor_spacing;
 		z2  = z1 + floor_spacing;
+		stairs_z1 = z1 - floor_spacing; // stairs extend an extra floor up and down to block rays in stairwells
+		stairs_z2 = z2 + floor_spacing;
 	}
 	for (unsigned d = 0; d < 2; ++d) {add_colored_cubes(interior->walls[d], wall_color, z1, z2, cc);}
 
@@ -193,7 +195,6 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc, int only_this_fl
 		
 	for (auto c = objs.begin(); c != objs.end(); ++c) {
 		if (!c->is_visible()) continue;
-		if (c->z1() > z2 || c->z2() < z1) continue;
 		if (c->shape == SHAPE_CYLIN || c->shape == SHAPE_SPHERE)  continue; // cylinders (lights, etc.) and spheres (balls, etc.) are not cubes, skip for now
 		if (c->type  == TYPE_ELEVATOR) continue; // elevator cars/internals can move so should not contribute to lighting
 		if (c->type  == TYPE_SHOWER  ) continue; // transparent
@@ -204,6 +205,8 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc, int only_this_fl
 			c->type == TYPE_MONEY || c->type == TYPE_PHONE || c->type == TYPE_TPROLL || c->type == TYPE_SPRAYCAN || c->type == TYPE_MARKER || c->type == TYPE_BUTTON ||
 			c->type == TYPE_SWITCH || c->type == TYPE_TAPE || c->type == TYPE_OUTLET || c->type == TYPE_PARK_SPACE || c->type == TYPE_RAMP || c->type == TYPE_PIPE ||
 			c->type == TYPE_VENT || c->type == TYPE_BREAKER || c->type == TYPE_KEY || c->type == TYPE_HANGER || c->type == TYPE_FESCAPE || c->type == TYPE_CUP) continue;
+		bool const is_stairs(c->type == TYPE_STAIR || c->type == TYPE_STAIR_WALL);
+		if (c->z1() > (is_stairs ? stairs_z2 : z2) || c->z2() < (is_stairs ? stairs_z1 : z1)) continue;
 		colorRGBA const color(c->get_color());
 		
 		if (c->type == TYPE_CLOSET && c->is_open()) {
