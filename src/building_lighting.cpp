@@ -17,11 +17,13 @@ extern int MESH_Z_SIZE, display_mode, display_framerate, camera_surf_collide, an
 extern unsigned LOCAL_RAYS, MAX_RAY_BOUNCES, NUM_THREADS;
 extern float indir_light_exp;
 extern double camera_zh, tfticks;
+extern colorRGB cur_ambient, cur_diffuse;
 extern std::string lighting_update_text;
 extern vector<light_source> dl_sources;
 
 bool enable_building_people_ai();
 bool check_cube_occluded(cube_t const &cube, vect_cube_t const &occluders, point const &viewer);
+void calc_cur_ambient_diffuse();
 
 bool enable_building_indir_lighting_no_cib() {
 	if (!(display_mode & 0x10)) return 0; // key 5
@@ -86,7 +88,7 @@ bool building_t::ray_cast_exterior_walls(point const &p1, point const &p2, vecto
 	return follow_ray_through_cubes_recur(p1, p2, p1, parts, get_real_parts_end_inc_sec(), parts.end(), 0, cnorm, t);
 }
 // Note: static objects only; excludes people; pos in building space
-bool building_t::ray_cast_interior(point const &pos, vector3d const &dir, cube_bvh_t const &bvh, point &cpos, vector3d &cnorm, colorRGBA &ccolor) const {
+bool building_t::ray_cast_interior(point const &pos, vector3d const &dir, cube_bvh_t const &bvh, point &cpos, vector3d &cnorm, colorRGBA &ccolor, rand_gen_t *rgen) const {
 
 	if (!interior || is_rotated() || !is_simple_cube()) return 0; // these cases are not yet supported
 	float const extent(bcube.get_max_extent());
@@ -112,6 +114,7 @@ bool building_t::ray_cast_interior(point const &pos, vector3d const &dir, cube_b
 		for (auto p = parts.begin(); p != parts.end(); ++p) {hit |= ray_cast_cube(p1, p2, *p, cnorm, t);} // find closest entrance point
 		
 		if (hit) { // exterior hit - don't need to check interior geometry
+			if (rgen && has_windows() && rgen->rand_bool()) return 0; // 50% chance of exiting through a window
 			ccolor = side_color.modulate_with(mat.side_tex.get_avg_color());
 			cpos   = p1 + (p2 - p1)*t;
 			return 1;
@@ -204,7 +207,8 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc, int only_this_fl
 			c->type == TYPE_BOTTLE || c->type == TYPE_PEN || c->type == TYPE_PENCIL || c->type == TYPE_LG_BALL || c->type == TYPE_HANGER_ROD || c->type == TYPE_DRAIN ||
 			c->type == TYPE_MONEY || c->type == TYPE_PHONE || c->type == TYPE_TPROLL || c->type == TYPE_SPRAYCAN || c->type == TYPE_MARKER || c->type == TYPE_BUTTON ||
 			c->type == TYPE_SWITCH || c->type == TYPE_TAPE || c->type == TYPE_OUTLET || c->type == TYPE_PARK_SPACE || c->type == TYPE_RAMP || c->type == TYPE_PIPE ||
-			c->type == TYPE_VENT || c->type == TYPE_BREAKER || c->type == TYPE_KEY || c->type == TYPE_HANGER || c->type == TYPE_FESCAPE || c->type == TYPE_CUP) continue;
+			c->type == TYPE_VENT || c->type == TYPE_BREAKER || c->type == TYPE_KEY || c->type == TYPE_HANGER || c->type == TYPE_FESCAPE || c->type == TYPE_CUP ||
+			c->type == TYPE_CLOTHES || c->type == TYPE_LAMP || c->type == TYPE_OFF_CHAIR) continue;
 		bool const is_stairs(c->type == TYPE_STAIR || c->type == TYPE_STAIR_WALL);
 		if (c->z1() > (is_stairs ? stairs_z2 : z2) || c->z2() < (is_stairs ? stairs_z1 : z1)) continue;
 		colorRGBA const color(c->get_color());
@@ -261,10 +265,20 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc, int only_this_fl
 				cc.emplace_back(temp[n], color);
 			}
 		}
-		else {cc.emplace_back(*c, color);} // single cube
+		else { // single cube
+			cube_t bc(*c); // handle 3D models that don't fill the entire cube
+			if      (c->type == TYPE_COUCH ) {bc.z2() -= 0.5*bc.dz();}
+			else if (c->type == TYPE_STOVE ) {bc.z2() -= 0.2*bc.dz();}
+			else if (c->type == TYPE_TOILET) {bc.z2() -= 0.3*bc.dz();}
+			else if (c->type == TYPE_SINK  ) {bc.z2() -= 0.2*bc.dz(); bc.z1() += 0.5*bc.dz();}
+			// what about TYPE_TUB, TYPE_TV, TYPE_MONITOR, TYPE_OFF_CHAIR, TYPE_URINAL?
+			cc.emplace_back(bc, color);
+		}
 	} // for c
 }
 
+
+unsigned const IS_WINDOW_BIT = (1<<24); // if this bit is set, the light is from a window; if not, it's from a light room object
 
 class building_indir_light_mgr_t {
 	bool is_running, kill_thread, lighting_updated, needs_to_join, need_bvh_rebuild, is_negative_light;
@@ -272,6 +286,7 @@ class building_indir_light_mgr_t {
 	unsigned cur_tid;
 	vector<unsigned char> tex_data;
 	vector<unsigned> light_ids;
+	vector<pair<float, unsigned>> lights_to_sort;
 	deque<unsigned> remove_queue;
 	set<unsigned> lights_complete, lights_seen;
 	vect_cube_with_ix_t windows;
@@ -311,28 +326,54 @@ class building_indir_light_mgr_t {
 		pos = cpos + tolerance*dir; // move slightly away from the surface
 	}
 	void cast_light_rays(building_t const &b) {
-		// TODO: Include light from windows
 		// TODO: Some type of blur to remove noise that doesn't blur across walls
-		// Note: modifies lmgr, but otherwise thread safe
-		unsigned const num_rt_threads(max(1U, (NUM_THREADS - (USE_BKG_THREAD ? 1 : 0)))); // reserve a thread for the main thread if running in the background
-		vect_room_object_t const &objs(b.interior->room_geom->objs);
-		assert((unsigned)cur_light < objs.size());
-		room_object_t const &ro(objs[cur_light]);
-		bool const light_in_basement(ro.z1() < b.ground_floor_z1), is_lamp(ro.type == TYPE_LAMP);
-		colorRGBA const lcolor(is_lamp ? LAMP_COLOR : ro.get_color());
-		unsigned const NUM_PRI_SPLITS = 16;
-		unsigned const base_num_rays(max((is_lamp ? LOCAL_RAYS/2 : LOCAL_RAYS), NUM_PRI_SPLITS)); // half the rays for lamps
-		cube_t const scene_bounds(get_scene_bounds_bcube()); // expected by lmap update code
 		// TODO: use current floor zvals for bcube?
+		// Note: modifies lmgr, but otherwise thread safe
+		unsigned const NUM_PRI_SPLITS = 16;
+		unsigned const num_rt_threads(max(1U, (NUM_THREADS - (USE_BKG_THREAD ? 1 : 0)))); // reserve a thread for the main thread if running in the background
+		unsigned base_num_rays(LOCAL_RAYS), dim(2), dir(0); // default dim is z; dir=2 is omnidirectional
+		cube_t const scene_bounds(get_scene_bounds_bcube()); // expected by lmap update code
 		point const ray_scale(scene_bounds.get_size()/b.bcube.get_size()), llc_shift(scene_bounds.get_llc() - b.bcube.get_llc()*ray_scale);
-		float const tolerance(1.0E-5*b.bcube.get_max_extent()), light_zval(ro.z1() - 0.01*ro.dz()); // set slightly below bottom of light
-		float const surface_area(ro.dx()*ro.dy() + 2.0f*(ro.dx() + ro.dy())*ro.dz()); // bottom + 4 sides (top is occluded), 0.0003 for houses
-		float weight(100.0f*(surface_area/0.0003f)/base_num_rays); // normalize to the number of rays
-		if (b.has_pri_hall())     {weight *= 0.75;} // floorplan is open and well lit, indir lighting value seems too high
-		if (b.is_house)           {weight *= 2.0 ;} // houses have dimmer lights and seem to work better with more indir
-		if (ro.type == TYPE_LAMP) {weight *= 0.33;} // lamps are less bright
-		if (light_in_basement)    {weight *= (b.has_parking_garage ? 0.25 : 0.5);} // basement is darker, parking garages are even darker
-		if (is_negative_light)    {weight *= -1.0;}
+		float const tolerance(1.0E-5*b.bcube.get_max_extent());
+		float weight(100.0);
+		cube_t light_cube;
+		colorRGBA lcolor;
+		assert(cur_light >= 0);
+
+		if (cur_light & IS_WINDOW_BIT) { // window
+			calc_cur_ambient_diffuse(); // needed for correct outdoor color
+			unsigned const window_ix(cur_light & ~IS_WINDOW_BIT);
+			assert(window_ix < windows.size());
+			cube_with_ix_t const &window(windows[window_ix]);
+			assert(window.ix < 4); // encodes 2*dim + dir
+			dim =  bool(window.ix >> 1);
+			dir = !bool(window.ix &  1); // cast toward the interior
+			float const surface_area(window.dz()*window.get_sz_dim(!bool(dim)));
+			lcolor     = blend_color(cur_ambient, cur_diffuse, 0.5, 0); // a mix of each
+			weight    *= surface_area/0.001f; // 1/3 the surface area weight of lights
+			light_cube = window;
+			light_cube.translate_dim(dim, (dir ? 1.0 : -1.0)*0.5*b.get_wall_thickness()); // shift slightly inside the building to avoid collision with the exterior wall
+		}
+		else { // room light or lamp, pointing downward
+			vect_room_object_t const &objs(b.interior->room_geom->objs);
+			assert((unsigned)cur_light < objs.size());
+			room_object_t const &ro(objs[cur_light]);
+			light_cube      = ro;
+			light_cube.z1() = light_cube.z2() = (ro.z1() - 0.01*ro.dz()); // set slightly below bottom of light
+			bool const light_in_basement(ro.z1() < b.ground_floor_z1), is_lamp(ro.type == TYPE_LAMP);
+			if (is_lamp) {base_num_rays /= 2;} // half the rays for lamps
+			if (is_lamp) {dir = 2;} // onmidirectional; dim stays at 2/Z
+			float const surface_area(ro.dx()*ro.dy() + 2.0f*(ro.dx() + ro.dy())*ro.dz()); // bottom + 4 sides (top is occluded), 0.0003 for houses
+			lcolor  = (is_lamp ? LAMP_COLOR : ro.get_color());
+			weight *= surface_area/0.0003f;
+			if (b.has_pri_hall())     {weight *= 0.70;} // floorplan is open and well lit, indir lighting value seems too high
+			if (ro.type == TYPE_LAMP) {weight *= 0.33;} // lamps are less bright
+			if (light_in_basement)    {weight *= (b.has_parking_garage ? 0.25 : 0.5);} // basement is darker, parking garages are even darker
+		}
+		if (b.is_house) {weight *= 2.0 ;} // houses have dimmer lights and seem to work better with more indir
+		if (is_negative_light) {weight *= -1.0;}
+		weight /= base_num_rays; // normalize to the number of rays
+		max_eq(base_num_rays, NUM_PRI_SPLITS);
 		int const num_rays(base_num_rays/NUM_PRI_SPLITS);
 
 #pragma omp parallel for schedule(dynamic) num_threads(num_rt_threads)
@@ -341,15 +382,18 @@ class building_indir_light_mgr_t {
 			rand_gen_t rgen;
 			rgen.set_state(n+1, cur_light);
 			vector3d pri_dir(rgen.signed_rand_vector_spherical(1.0).get_norm());
-			pri_dir.z = -fabs(pri_dir.z); // make sure dir points down
+			if (dir < 2 && ((pri_dir[dim] > 0.0) ^ dir)) {pri_dir[dim] *= -1.0;}
 			point origin, init_cpos, cpos;
 			vector3d init_cnorm, cnorm;
 			colorRGBA ccolor(WHITE);
+
 			// select a random point on the light cube (close enough for (ro.shape == SHAPE_CYLIN))
-			for (unsigned d = 0; d < 2; ++d) {origin[d] = rgen.rand_uniform(ro.d[d][0], ro.d[d][1]);}
-			origin.z = light_zval;
+			for (unsigned d = 0; d < 3; ++d) {
+				float const lo(light_cube.d[d][0]), hi(light_cube.d[d][1]);
+				origin[d] = ((lo == hi) ? lo : rgen.rand_uniform(lo, hi));
+			}
 			init_cpos = origin; // init value
-			if (!b.ray_cast_interior(origin, pri_dir, bvh, init_cpos, init_cnorm, ccolor)) continue;
+			if (!b.ray_cast_interior(origin, pri_dir, bvh, init_cpos, init_cnorm, ccolor, &rgen)) continue;
 			colorRGBA const init_color(lcolor.modulate_with(ccolor));
 			if (init_color.get_weighted_luminance() < 0.1) continue; // done
 
@@ -361,7 +405,7 @@ class building_indir_light_mgr_t {
 
 				for (unsigned bounce = 1; bounce < MAX_RAY_BOUNCES; ++bounce) { // allow up to MAX_RAY_BOUNCES bounces
 					cpos = pos; // init value
-					bool const hit(b.ray_cast_interior(pos, dir, bvh, cpos, cnorm, ccolor));
+					bool const hit(b.ray_cast_interior(pos, dir, bvh, cpos, cnorm, ccolor, &rgen));
 
 					if (cpos != pos) { // accumulate light along the ray from pos to cpos (which is always valid) with color cur_color
 						point const p1(pos*ray_scale + llc_shift), p2(cpos*ray_scale + llc_shift); // transform building space to global scene space
@@ -374,7 +418,7 @@ class building_indir_light_mgr_t {
 				} // for bounce
 			} // for splits
 		} // for n
-		is_running = 0;
+		is_running = 0; // flag as done
 	}
 	void wait_for_finish(bool force_kill) {
 		// Note: for now the time taken to process a light should be pretty fast so we just block until finished; set kill_thread=1 to be faster
@@ -395,6 +439,22 @@ class building_indir_light_mgr_t {
 		}
 		remove_queue.push_back(light_ix);
 	}
+	void add_window_lights(building_t const &b, point const &target) {
+		float const window_vspacing(b.get_window_vspace());
+
+		for (auto i = windows.begin(); i != windows.end(); ++i) {
+			if (cur_floor >= 0 && (int)b.get_floor_for_zval(i->zc()) != cur_floor) continue; // wrong floor
+			float dist_sq(p2p_dist_sq(i->get_cube_center(), target));
+			dist_sq *= 0.05f*window_vspacing/(i->dz()*(i->dx() + i->dy())); // account for the size of the window, larger window smaller/higher priority
+			lights_to_sort.emplace_back(dist_sq, ((i - windows.begin()) | IS_WINDOW_BIT));
+		}
+	}
+	void sort_lights_by_priority() {
+		light_ids.clear();
+		sort(lights_to_sort.begin(), lights_to_sort.end()); // sort by increasing distance
+		for (auto const &light : lights_to_sort) {light_ids.push_back(light.second);}
+		lights_to_sort.clear();
+	}
 public:
 	building_indir_light_mgr_t() : is_running(0), kill_thread(0), lighting_updated(0), needs_to_join(0),
 		need_bvh_rebuild(0), is_negative_light(0), cur_bix(-1), cur_light(-1), cur_floor(-1), cur_tid(0) {}
@@ -405,6 +465,7 @@ public:
 		cur_bix = cur_light = cur_floor = -1;
 		tex_data.clear();
 		light_ids.clear();
+		lights_to_sort.clear();
 		remove_queue.clear();
 		lights_complete.clear();
 		lights_seen.clear();
@@ -454,7 +515,9 @@ public:
 		}
 		else { // find a new light to add
 			is_negative_light = 0; // back to normal positive lights
-			b.order_lights_by_priority(target, light_ids);
+			b.get_lights_with_priorities(target, lights_to_sort);
+			add_window_lights(b, target);
+			sort_lights_by_priority();
 
 			for (auto i = light_ids.begin(); i != light_ids.end(); ++i) {
 				lights_seen.insert(*i); // must track lights across all floors seen for correct progress update
@@ -465,6 +528,7 @@ public:
 		tid = cur_tid;
 	}
 	void register_light_state_change(unsigned light_ix, bool light_is_on, bool geom_changed) {
+		// TODO: update window light indir when outdoor lighting changes due to sun or moon change?
 		if (geom_changed) {
 			// TODO: have to first remove the lighting with the old geom, and then re-add it - but the geometry has already been updated
 			return;
@@ -506,12 +570,10 @@ bool building_t::ray_cast_camera_dir(point const &camera_bs, point &cpos, colorR
 	return ray_cast_interior(camera_bs, cview_dir, building_indir_light_mgr.get_bvh(), cpos, cnorm, ccolor);
 }
 
-void building_t::order_lights_by_priority(point const &target, vector<unsigned> &light_ids) const { // Note: target is building space camera
-	light_ids.clear();
+void building_t::get_lights_with_priorities(point const &target, vector<pair<float, unsigned>> &lights_to_sort) const { // Note: target is building space camera
 	if (!has_room_geom()) return; // error?
 	//if (is_rotated()) {} // do we need to handle this case?
 	vect_room_object_t const &objs(interior->room_geom->objs);
-	vector<pair<float, unsigned>> to_sort;
 	float const window_vspacing(get_window_vspace()), window_vspacing_inv(1.0/window_vspacing);
 	float const diag_dist_sq(bcube.dx()*bcube.dx() + bcube.dy()*bcube.dy()), other_floor_penalty(0.25*diag_dist_sq);
 	auto objs_end(interior->room_geom->get_placed_objs_end()); // skip buttons/stairs/elevators
@@ -545,10 +607,8 @@ void building_t::order_lights_by_priority(point const &target, vector<unsigned> 
 			dist_sq += (i->has_stairs() ? 0.25 : 1.0)*other_floor_penalty; // less penalty for lights on stairs
 		}
 		// reduce distance for lights visible to target?
-		to_sort.emplace_back(dist_sq, (i - objs.begin()));
+		lights_to_sort.emplace_back(dist_sq, (i - objs.begin()));
 	} // for i
-	sort(to_sort.begin(), to_sort.end()); // sort by increasing distance
-	for (auto i = to_sort.begin(); i != to_sort.end(); ++i) {light_ids.push_back(i->second);}
 }
 
 bool get_wall_quad_window_area(vect_vnctcc_t const &wall_quad_verts, unsigned i, cube_t &c, float &tx1, float &tx2, float &tz1, float &tz2) {
@@ -575,7 +635,6 @@ void building_t::get_all_windows(vect_cube_with_ix_t &windows) const { // Note: 
 	if (!has_windows()) return; // no windows
 	float const window_vspacing(get_window_vspace());
 	float const border_mult(0.94); // account for the frame part of the window texture, which is included in the interior cutout of the window
-	float const window_offset(0.01*window_vspacing); // must match building_draw_t::add_section()
 	float const window_h_border(border_mult*get_window_h_border()), window_v_border(border_mult*get_window_v_border()); // (0, 1) range
 	static vect_vnctcc_t wall_quad_verts;
 	wall_quad_verts.clear();
@@ -591,7 +650,6 @@ void building_t::get_all_windows(vect_cube_with_ix_t &windows) const { // Note: 
 		float const window_width(c.get_sz_dim(!dim)*d_tx_inv), window_height(c.dz()*d_tz_inv); // window_height should be equal to window_vspacing
 		float const border_xy(window_width*window_h_border), border_z(window_height*window_v_border);
 		cube_t window(c); // copy dim <dim>
-		window.translate_dim(dim, (dir ? -1.0 : 1.0)*window_offset);
 
 		for (float z = tz1; z < tz2; z += 1.0) { // each floor
 			float const bot_edge(c.z1() + (z - tz1)*window_height);

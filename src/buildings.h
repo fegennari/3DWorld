@@ -1188,7 +1188,7 @@ struct building_t : public building_geom_t {
 	bool check_point_or_cylin_contained(point const &pos, float xy_radius, vector<point> &points) const;
 	bool check_point_xy_in_part(point const &pos) const;
 	bool ray_cast_exterior_walls(point const &p1, point const &p2, vector3d &cnorm, float &t) const;
-	bool ray_cast_interior(point const &pos, vector3d const &dir, cube_bvh_t const &bvh, point &cpos, vector3d &cnorm, colorRGBA &ccolor) const;
+	bool ray_cast_interior(point const &pos, vector3d const &dir, cube_bvh_t const &bvh, point &cpos, vector3d &cnorm, colorRGBA &ccolor, rand_gen_t *rgen=nullptr) const;
 	void create_building_volume_light_texture(unsigned bix, point const &target, unsigned &tid) const;
 	bool ray_cast_camera_dir(point const &camera_bs, point &cpos, colorRGBA &ccolor) const;
 	void calc_bcube_from_parts();
@@ -1461,7 +1461,7 @@ private:
 	void split_in_xy(cube_t const &seed_cube, rand_gen_t &rgen);
 	bool test_coll_with_sides(point &pos, point const &p_last, float radius, cube_t const &part, vector<point> &points, vector3d *cnorm) const;
 	void gather_interior_cubes(vect_colored_cube_t &cc, int only_this_floor=-1) const;
-	void order_lights_by_priority(point const &target, vector<unsigned> &light_ids) const;
+	void get_lights_with_priorities(point const &target, vector<pair<float, unsigned>> &lights_to_sort) const;
 	void get_all_windows(vect_cube_with_ix_t &windows) const;
 	bool register_indir_lighting_state_change(unsigned light_ix, bool is_door_change=0);
 	void register_indir_lighting_geom_change();
