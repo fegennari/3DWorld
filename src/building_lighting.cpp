@@ -88,15 +88,15 @@ bool building_t::ray_cast_exterior_walls(point const &p1, point const &p2, vecto
 	return follow_ray_through_cubes_recur(p1, p2, p1, parts, get_real_parts_end_inc_sec(), parts.end(), 0, cnorm, t);
 }
 // Note: static objects only; excludes people; pos in building space
-bool building_t::ray_cast_interior(point const &pos, vector3d const &dir, cube_bvh_t const &bvh, point &cpos, vector3d &cnorm, colorRGBA &ccolor, rand_gen_t *rgen) const {
-
+bool building_t::ray_cast_interior(point const &pos, vector3d const &dir, cube_t const &valid_area, cube_bvh_t const &bvh,
+	point &cpos, vector3d &cnorm, colorRGBA &ccolor, rand_gen_t *rgen) const
+{
 	if (!interior || is_rotated() || !is_simple_cube()) return 0; // these cases are not yet supported
 	float const extent(bcube.get_max_extent());
-	cube_t clip_cube(bcube);
+	cube_t clip_cube(valid_area);
 	clip_cube.expand_by(0.01*extent); // expand slightly so that collisions with objects on the edge are still considered interior
-	// TODO: clip to current floor
 	point p1(pos), p2(pos + dir*(2.0*extent));
-	if (!do_line_clip(p1, p2, clip_cube.d)) return 0; // ray does not intersect building bcube
+	if (!do_line_clip(p1, p2, clip_cube.d)) return 0; // ray does not intersect clip bcube
 	building_mat_t const &mat(get_material());
 	float t(1.0); // start at p2
 	bool hit(0);
@@ -375,7 +375,13 @@ class building_indir_light_mgr_t {
 		weight /= base_num_rays; // normalize to the number of rays
 		max_eq(base_num_rays, NUM_PRI_SPLITS);
 		int const num_rays(base_num_rays/NUM_PRI_SPLITS);
-
+		cube_t valid_area(b.bcube);
+		
+		if (cur_floor >= 0) { // clip per light source to current floor; note that this will exclude stairs going up or down
+			float const floor_spacing(b.get_window_vspace());
+			valid_area.z1() += cur_floor*floor_spacing;
+			valid_area.z2()  = valid_area.z1() + floor_spacing;
+		}
 #pragma omp parallel for schedule(dynamic) num_threads(num_rt_threads)
 		for (int n = 0; n < num_rays; ++n) {
 			if (kill_thread) continue;
@@ -393,7 +399,7 @@ class building_indir_light_mgr_t {
 				origin[d] = ((lo == hi) ? lo : rgen.rand_uniform(lo, hi));
 			}
 			init_cpos = origin; // init value
-			if (!b.ray_cast_interior(origin, pri_dir, bvh, init_cpos, init_cnorm, ccolor, &rgen)) continue;
+			if (!b.ray_cast_interior(origin, pri_dir, valid_area, bvh, init_cpos, init_cnorm, ccolor, &rgen)) continue;
 			colorRGBA const init_color(lcolor.modulate_with(ccolor));
 			if (init_color.get_weighted_luminance() < 0.1) continue; // done
 
@@ -405,7 +411,7 @@ class building_indir_light_mgr_t {
 
 				for (unsigned bounce = 1; bounce < MAX_RAY_BOUNCES; ++bounce) { // allow up to MAX_RAY_BOUNCES bounces
 					cpos = pos; // init value
-					bool const hit(b.ray_cast_interior(pos, dir, bvh, cpos, cnorm, ccolor, &rgen));
+					bool const hit(b.ray_cast_interior(pos, dir, valid_area, bvh, cpos, cnorm, ccolor, &rgen));
 
 					if (cpos != pos) { // accumulate light along the ray from pos to cpos (which is always valid) with color cur_color
 						point const p1(pos*ray_scale + llc_shift), p2(cpos*ray_scale + llc_shift); // transform building space to global scene space
@@ -567,7 +573,7 @@ bool building_t::ray_cast_camera_dir(point const &camera_bs, point &cpos, colorR
 	assert(!USE_BKG_THREAD); // not legal to call when running lighting in a background thread
 	building_indir_light_mgr.build_bvh(*this, camera_bs);
 	vector3d cnorm; // unused
-	return ray_cast_interior(camera_bs, cview_dir, building_indir_light_mgr.get_bvh(), cpos, cnorm, ccolor);
+	return ray_cast_interior(camera_bs, cview_dir, bcube, building_indir_light_mgr.get_bvh(), cpos, cnorm, ccolor);
 }
 
 void building_t::get_lights_with_priorities(point const &target, vector<pair<float, unsigned>> &lights_to_sort) const { // Note: target is building space camera
