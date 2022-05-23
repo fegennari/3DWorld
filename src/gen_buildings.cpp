@@ -2369,6 +2369,7 @@ public:
 			enable_dlight_bcubes = 0; // disable when creating the reflection image (will be set when we re-enter multi_draw())
 			interior_shadow_maps = 0;
 			create_mirror_reflection_if_needed();
+			end_register_player_in_building(); // required for AI player following
 			player_building = nullptr; // reset, may be set below
 		}
 		//timer_t timer("Draw Buildings"); // 0.57ms (2.6ms with glFinish(), 6.3ms with building interiors)
@@ -3530,7 +3531,6 @@ void add_building_interior_lights(point const &xlate, cube_t &lights_bcube) {
 	building_creator.add_interior_lights(xlate, lights_bcube);
 	building_creator_city.add_interior_lights(xlate, lights_bcube);
 	building_tiles.add_interior_lights(xlate, lights_bcube);
-	end_register_player_in_building(); // required for AI player following
 }
 // cars + peds
 void get_city_building_occluders(pos_dir_up const &pdu, building_occlusion_state_t &state) {building_creator_city.get_occluders(pdu, state);}
