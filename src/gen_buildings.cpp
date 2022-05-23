@@ -41,6 +41,8 @@ extern shader_t reflection_shader;
 
 
 void get_all_model_bcubes(vector<cube_t> &bcubes); // from model3d.h
+cube_t get_building_indir_light_bounds(); // from building_lighting.cpp
+void end_register_player_in_building();
 
 float get_door_open_dist() {return 3.5*CAMERA_RADIUS;}
 
@@ -251,18 +253,17 @@ public:
 
 class indir_tex_mgr_t {
 	unsigned tid; // Note: owned by building_indir_light_mgr, not us
-	cube_t lighting_bcube;
 public:
 	indir_tex_mgr_t() : tid(0) {}
 	bool enabled() const {return (tid > 0);}
 
 	bool create_for_building(building_t const &b, unsigned bix, point const &target) {
 		b.create_building_volume_light_texture(bix, target, tid);
-		lighting_bcube = b.bcube;
 		return 1;
 	}
 	bool setup_for_building(shader_t &s) const {
 		if (!enabled()) return 0; // no texture set
+		cube_t const lighting_bcube(get_building_indir_light_bounds());
 		float const dx(lighting_bcube.dx()/MESH_X_SIZE), dy(lighting_bcube.dy()/MESH_Y_SIZE), dxy_offset(0.5f*(dx + dy));
 		set_3d_texture_as_current(tid, 1); // indir texture uses TU_ID=1
 		s.add_uniform_vector3d("alt_scene_llc",   lighting_bcube.get_llc());
@@ -3522,7 +3523,6 @@ void get_building_bcubes(cube_t const &xy_range, vect_cube_with_ix_t &bcubes) {b
 void get_building_bcubes(cube_t const &xy_range, vect_cube_t         &bcubes) {building_creator_city.get_overlapping_bcubes(xy_range, bcubes);}
 void get_building_power_points(cube_t const &xy_range, vector<point> &ppts  ) {building_creator_city.get_power_points(xy_range, ppts);}
 void add_house_driveways_for_plot(cube_t const &plot, vect_cube_t &driveways) {building_creator_city.add_house_driveways_for_plot(plot, driveways);}
-void end_register_player_in_building();
 float get_max_house_size() {return global_building_params.get_max_house_size();}
 
 void add_building_interior_lights(point const &xlate, cube_t &lights_bcube) {

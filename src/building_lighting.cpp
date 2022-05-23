@@ -11,6 +11,7 @@
 
 bool const USE_BKG_THREAD      = 1;
 bool const INDIR_BASEMENT_ONLY = 0;
+bool const INDIR_VOL_PER_FLOOR = 0;
 
 extern bool camera_in_building;
 extern int MESH_Z_SIZE, display_mode, display_framerate, camera_surf_collide, animate2, frame_counter, building_action_key, player_in_basement, player_in_elevator;
@@ -92,11 +93,11 @@ bool building_t::ray_cast_interior(point const &pos, vector3d const &dir, cube_t
 	point &cpos, vector3d &cnorm, colorRGBA &ccolor, rand_gen_t *rgen) const
 {
 	if (!interior || is_rotated() || !is_simple_cube()) return 0; // these cases are not yet supported
-	float const extent(bcube.get_max_extent());
+	float const extent(valid_area.get_max_extent());
 	cube_t clip_cube(valid_area);
 	clip_cube.expand_by(0.01*extent); // expand slightly so that collisions with objects on the edge are still considered interior
 	point p1(pos), p2(pos + dir*(2.0*extent));
-	if (!do_line_clip(p1, p2, clip_cube.d)) return 0; // ray does not intersect clip bcube
+	if (!do_line_clip(p1, p2, clip_cube.d)) return 0; // ray does not intersect clip cube
 	building_mat_t const &mat(get_material());
 	float t(1.0); // start at p2
 	bool hit(0);
@@ -302,6 +303,7 @@ class building_indir_light_mgr_t {
 	int cur_bix, cur_light, cur_floor;
 	unsigned cur_tid;
 	colorRGBA outdoor_color;
+	cube_t valid_area, light_bounds;
 	vector<unsigned char> tex_data;
 	vector<unsigned> light_ids;
 	vector<pair<float, unsigned>> lights_to_sort;
@@ -346,15 +348,14 @@ class building_indir_light_mgr_t {
 	}
 	void cast_light_rays(building_t const &b) {
 		// TODO: Some type of blur to remove noise that doesn't blur across walls
-		// TODO: use current floor zvals for bcube
 		// TODO: visualize volumes
 		// Note: modifies lmgr, but otherwise thread safe
 		unsigned const NUM_PRI_SPLITS = 16;
 		unsigned const num_rt_threads(max(1U, (NUM_THREADS - (USE_BKG_THREAD ? 1 : 0)))); // reserve a thread for the main thread if running in the background
 		unsigned base_num_rays(LOCAL_RAYS), dim(2), dir(0); // default dim is z; dir=2 is omnidirectional
 		cube_t const scene_bounds(get_scene_bounds_bcube()); // expected by lmap update code
-		point const ray_scale(scene_bounds.get_size()/b.bcube.get_size()), llc_shift(scene_bounds.get_llc() - b.bcube.get_llc()*ray_scale);
-		float const tolerance(1.0E-5*b.bcube.get_max_extent());
+		point const ray_scale(scene_bounds.get_size()/light_bounds.get_size()), llc_shift(scene_bounds.get_llc() - light_bounds.get_llc()*ray_scale);
+		float const tolerance(1.0E-5*valid_area.get_max_extent());
 		float weight(100.0);
 		cube_t light_cube;
 		colorRGBA lcolor;
@@ -394,13 +395,8 @@ class building_indir_light_mgr_t {
 		weight /= base_num_rays; // normalize to the number of rays
 		max_eq(base_num_rays, NUM_PRI_SPLITS);
 		int const num_rays(base_num_rays/NUM_PRI_SPLITS);
-		cube_t valid_area(b.bcube);
+		//assert(valid_area.contains_cube(light_cube)); // TESTING
 		
-		if (cur_floor >= 0) { // clip per light source to current floor; note that this will exclude stairs going up or down
-			float const floor_spacing(b.get_window_vspace());
-			valid_area.z1() += cur_floor*floor_spacing;
-			valid_area.z2()  = valid_area.z1() + floor_spacing;
-		}
 		// Note: dynamic scheduling is faster, and using blocks doesn't help
 #pragma omp parallel for schedule(dynamic) num_threads(num_rt_threads)
 		for (int n = 0; n < num_rays; ++n) {
@@ -488,6 +484,8 @@ public:
 	building_indir_light_mgr_t() : is_running(0), kill_thread(0), lighting_updated(0), needs_to_join(0),
 		need_bvh_rebuild(0), is_negative_light(0), cur_bix(-1), cur_light(-1), cur_floor(-1), cur_tid(0) {}
 
+	cube_t get_light_bounds() const {return light_bounds;}
+
 	void invalidate_lighting() {
 		is_negative_light = 0;
 		cur_light = -1;
@@ -516,12 +514,21 @@ public:
 	void free_indir_texture() {free_texture(cur_tid);}
 
 	void register_cur_building(building_t const &b, unsigned bix, point const &target, unsigned &tid) { // target is in building space
+		bool floor_change(0);
+
 		if ((int)bix != cur_bix) { // change to a different building
 			clear();
 			cur_bix = bix;
 			assert(!is_running);
 			build_bvh(b, target);
 			b.get_all_windows(windows);
+		}
+		else {
+			floor_change = (cur_floor >= 0 && cur_floor != (int)b.get_floor_for_zval(target.z));
+		}
+		if (INDIR_VOL_PER_FLOOR && floor_change) { // handle floor change
+			invalidate_lighting();
+			build_bvh(b, target);
 		}
 		if (player_in_elevator == 2) return; // pause updates for player in closed elevator since lighting is not visible
 		calc_cur_ambient_diffuse(); // needed for correct outdoor color
@@ -547,7 +554,7 @@ public:
 			lighting_updated = 0;
 		}
 		// nothing is running and there is more work to do, find the nearest light to the target and process it
-		need_bvh_rebuild |= (cur_floor >= 0 && cur_floor != (int)b.get_floor_for_zval(target.z)); // rebuild on player floor change
+		if (!INDIR_VOL_PER_FLOOR) {need_bvh_rebuild |= floor_change;} // rebuild on player floor change
 		if (need_bvh_rebuild) {build_bvh(b, target);}
 		if (cur_light >= 0) {lights_complete.insert(cur_light); cur_light = -1;} // mark the most recent light as complete
 
@@ -586,7 +593,13 @@ public:
 	}
 	void build_bvh(building_t const &b, point const &target) {
 		//highres_timer_t timer("Build BVH");
-		cur_floor = b.get_floor_for_zval(target.z);
+		cur_floor  = b.get_floor_for_zval(target.z);
+		valid_area = b.bcube;
+		// clip per light source to current floor; note that this will exclude stairs going up or down
+		float const floor_spacing(b.get_window_vspace());
+		valid_area.z1() += cur_floor*floor_spacing;
+		valid_area.z2()  = valid_area.z1() + floor_spacing;
+		light_bounds     = (INDIR_VOL_PER_FLOOR ? valid_area : b.bcube);
 		bvh.clear();
 		b.gather_interior_cubes(bvh.get_objs(), cur_floor);
 		bvh.build_tree_top(0); // verbose=0
@@ -600,6 +613,7 @@ building_indir_light_mgr_t building_indir_light_mgr;
 
 void free_building_indir_texture() {building_indir_light_mgr.free_indir_texture();}
 void end_building_rt_job() {building_indir_light_mgr.end_rt_job();}
+cube_t get_building_indir_light_bounds() {return building_indir_light_mgr.get_light_bounds();}
 
 void building_t::create_building_volume_light_texture(unsigned bix, point const &target, unsigned &tid) const {
 	if (!has_room_geom()) return; // error?
