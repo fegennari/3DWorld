@@ -301,6 +301,7 @@ class building_indir_light_mgr_t {
 	bool is_running, kill_thread, lighting_updated, needs_to_join, need_bvh_rebuild, is_negative_light;
 	int cur_bix, cur_light, cur_floor;
 	unsigned cur_tid;
+	colorRGBA outdoor_color;
 	vector<unsigned char> tex_data;
 	vector<unsigned> light_ids;
 	vector<pair<float, unsigned>> lights_to_sort;
@@ -360,7 +361,6 @@ class building_indir_light_mgr_t {
 		assert(cur_light >= 0);
 
 		if (cur_light & IS_WINDOW_BIT) { // window
-			calc_cur_ambient_diffuse(); // needed for correct outdoor color
 			unsigned const window_ix(cur_light & ~IS_WINDOW_BIT);
 			assert(window_ix < windows.size());
 			cube_with_ix_t const &window(windows[window_ix]);
@@ -368,7 +368,7 @@ class building_indir_light_mgr_t {
 			dim =  bool(window.ix >> 1);
 			dir = !bool(window.ix &  1); // cast toward the interior
 			float const surface_area(window.dz()*window.get_sz_dim(!bool(dim)));
-			lcolor     = blend_color(cur_ambient, cur_diffuse, 0.5, 0); // a mix of each
+			lcolor     = outdoor_color;
 			weight    *= surface_area/0.001f; // 1/3 the surface area weight of lights
 			light_cube = window;
 			light_cube.translate_dim(dim, (dir ? 1.0 : -1.0)*0.5*b.get_wall_thickness()); // shift slightly inside the building to avoid collision with the exterior wall
@@ -407,7 +407,7 @@ class building_indir_light_mgr_t {
 			if (kill_thread) continue;
 			rand_gen_t rgen;
 			rgen.set_state(n+1, cur_light); // should be deterministic, though add_path_to_lmcs() is not (due to thread races)
-			vector3d pri_dir(rgen.signed_rand_vector_spherical(1.0).get_norm());
+			vector3d pri_dir(rgen.signed_rand_vector_spherical(1.0).get_norm()); // should this be cosine weighted for windows?
 			if (dir < 2 && ((pri_dir[dim] > 0.0) ^ dir)) {pri_dir[dim] *= -1.0;}
 			point origin, init_cpos, cpos;
 			vector3d init_cnorm, cnorm;
@@ -488,19 +488,24 @@ public:
 	building_indir_light_mgr_t() : is_running(0), kill_thread(0), lighting_updated(0), needs_to_join(0),
 		need_bvh_rebuild(0), is_negative_light(0), cur_bix(-1), cur_light(-1), cur_floor(-1), cur_tid(0) {}
 
-	void clear() {
-		bool const cur_bix_was_valid(cur_bix >= 0);
-		lighting_updated = need_bvh_rebuild = is_negative_light = 0;
-		cur_bix = cur_light = cur_floor = -1;
-		tex_data.clear();
-		light_ids.clear();
-		lights_to_sort.clear();
+	void invalidate_lighting() {
+		is_negative_light = 0;
+		cur_light = -1;
 		remove_queue.clear();
 		lights_complete.clear();
 		lights_seen.clear();
-		windows.clear();
 		end_rt_job();
 		lmgr.reset_all(); // clear lighting values back to 0
+	}
+	void clear() {
+		bool const cur_bix_was_valid(cur_bix >= 0);
+		lighting_updated = need_bvh_rebuild = 0;
+		cur_bix = cur_floor = -1;
+		invalidate_lighting();
+		tex_data.clear();
+		light_ids.clear();
+		lights_to_sort.clear();
+		windows.clear();
 		if (cur_bix_was_valid) {update_volume_light_texture();} // reset lighting from prev building
 		bvh.clear();
 	}
@@ -519,7 +524,16 @@ public:
 			b.get_all_windows(windows);
 		}
 		if (player_in_elevator == 2) return; // pause updates for player in closed elevator since lighting is not visible
+		calc_cur_ambient_diffuse(); // needed for correct outdoor color
+		colorRGBA const cur_outdoor_color(blend_color(cur_ambient, cur_diffuse, 0.5, 0)); // a mix of each
 
+		if (!windows.empty() && cur_outdoor_color != outdoor_color) {
+			// outdoor color change, need to update lighting
+			// Note1: we could remove and re-add window lights, but that may be more work than clearing and re-adding both lights and windows
+			// Note2: we could store separate volumes for indoor vs. outdoor lights, but that would add some overhead per-update, while sun/moon changes would be uncommon
+			invalidate_lighting();
+			outdoor_color = cur_outdoor_color;
+		}
 		if (display_framerate && (is_running || lighting_updated)) { // show progress to the user
 			std::ostringstream oss;
 			oss << "Lights: " << lights_complete.size() << " / " << (max(light_ids.size(), lights_seen.size()) + remove_queue.size());
