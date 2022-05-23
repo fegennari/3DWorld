@@ -5,7 +5,8 @@ uniform float hemi_lighting_normal_scale = 1.0;
 // Note: these next two come from dynamic_lighting.part, which must always be included first
 //uniform vec3 scene_llc, scene_scale; // scene bounds (world space)
 uniform sampler3D smoke_and_indir_tex;
-uniform vec3 const_indir_color = vec3(0.0);
+uniform vec3 const_indir_color     = vec3(0.0);
+uniform vec3 out_range_indir_color = vec3(0.1);
 
 // HEMI_LIGHTING uniforms
 uniform vec3 sky_color;
@@ -26,9 +27,14 @@ float cube_light_lookup(in vec3 normal_in, in vec3 plus_xyz, in vec3 minus_xyz) 
 
 vec3 map_to_indir_space(in vec3 pos) {
 #ifdef USE_ALT_SCENE_BOUNDS
-	return clamp((pos - alt_scene_llc)/alt_scene_scale, 0.0, 1.0); // should be in [0.0, 1.0] range
+	vec3 ret = (pos - alt_scene_llc)/alt_scene_scale;
 #else
-	return clamp((pos - scene_llc)/scene_scale, 0.0, 1.0); // should be in [0.0, 1.0] range
+	vec3 ret = (pos - scene_llc)/scene_scale;
+#endif
+#ifdef ENABLE_OUTSIDE_INDIR_RANGE
+	return ret; // no clamp
+#else
+	return clamp(ret, 0.0, 1.0); // should be in [0.0, 1.0] range
 #endif
 }
 
@@ -43,6 +49,9 @@ vec3 indir_lookup(in vec3 pos, in vec3 n) {
 #else
 vec3 indir_lookup(in vec3 pos, in vec3 n) {
 	vec3 spos = map_to_indir_space(pos);
+#ifdef ENABLE_OUTSIDE_INDIR_RANGE
+	if (spos.x < -0.01 || spos.y < -0.01 || spos.z < -0.01 || spos.x > 1.01 || spos.y > 1.01 || spos.z > 1.01) {return out_range_indir_color;} // outside the volume
+#endif
 	return texture(smoke_and_indir_tex, spos.zxy).rgb; // add indir light color from texture
 }
 #endif

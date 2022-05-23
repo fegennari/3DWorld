@@ -33,6 +33,7 @@ extern bool teleport_to_screenshot, enable_dlight_bcubes, can_do_building_action
 extern unsigned room_mirror_ref_tid;
 extern int rand_gen_index, display_mode, window_width, window_height, camera_surf_collide, animate2, building_action_key, player_in_elevator;
 extern float CAMERA_RADIUS, city_dlight_pcf_offset_scale, fticks, FAR_CLIP;
+extern colorRGB cur_ambient, cur_diffuse;
 extern point sun_pos, pre_smap_player_pos;
 extern vector<light_source> dl_sources;
 extern tree_placer_t tree_placer;
@@ -294,21 +295,29 @@ building_lights_manager_t building_lights_manager;
 
 
 void set_interior_lighting(shader_t &s, bool have_indir) {
+	float const light_scale(ADD_ROOM_LIGHTS ? 0.5 : 1.0); // lower for basement, lower when using room lights
+	float const light_change_amt(fticks/(2.0f*TICKS_PER_SECOND));
+	static float blscale(1.0); // indir/ambient lighting slowly transitions when entering or leaving the basement
+	if (player_in_basement) {blscale = max(0.0f, (blscale - light_change_amt));} // decrease
+	else                    {blscale = min(1.0f, (blscale + light_change_amt));} // increase
+	float const ambient_scale(0.5f*(1.0f + blscale)*light_scale); // brighter ambient
+	float const diffuse_scale(0.2f*blscale*light_scale); // reduce diffuse and specular lighting for sun/moon
+
 	if (have_indir || player_in_dark_room()) { // using indir lighting, or player in a closed closet/windowless room with the light off
 		s.add_uniform_float("diffuse_scale",       0.0); // no diffuse from sun/moon
 		// no ambient for indir; slight ambient for closed closet/windowless room with light off
 		s.add_uniform_float("ambient_scale",       ((!have_indir && player_in_dark_room()) ? 0.1 : 0.0));
 		s.add_uniform_float("hemi_lighting_scale", 0.0); // disable hemispherical lighting (should we set hemi_lighting=0 in the shader?)
 		s.add_uniform_float("SHADOW_LEAKAGE",      0.0); // no light lealage
+		
+		if (have_indir) { // set ambient color to use with indir lookups outside the current building
+			// since we can't add proper diffuse, make 50% of diffuse the ambient color assuming 50% of surfaces are diffusely lit
+			s.add_uniform_color("out_range_indir_color", (cur_ambient*ambient_scale + cur_diffuse*(0.5*diffuse_scale)));
+		}
 	}
 	else {
-		float const light_scale(ADD_ROOM_LIGHTS ? 0.5 : 1.0); // lower for basement, lower when using room lights
-		float const light_change_amt(fticks/(2.0f*TICKS_PER_SECOND));
-		static float blscale(1.0); // indir/ambient lighting slowly transitions when entering or leaving the basement
-		if (player_in_basement) {blscale = max(0.0f, (blscale - light_change_amt));} // decrease
-		else                    {blscale = min(1.0f, (blscale + light_change_amt));} // increase
-		s.add_uniform_float("diffuse_scale",       0.2f*blscale*light_scale); // reduce diffuse and specular lighting for sun/moon
-		s.add_uniform_float("ambient_scale",       0.5f*(1.0f + blscale)*light_scale); // brighter ambient
+		s.add_uniform_float("diffuse_scale",       diffuse_scale);
+		s.add_uniform_float("ambient_scale",       ambient_scale);
 		s.add_uniform_float("hemi_lighting_scale", 0.2f*blscale*light_scale); // reduced hemispherical lighting
 	}
 }
@@ -328,6 +337,7 @@ void setup_building_draw_shader(shader_t &s, float min_alpha, bool enable_indir,
 	bool const have_indir(enable_indir && indir_tex_mgr.enabled() && enable_building_indir_lighting() && !(player_in_closet && !(player_in_closet & RO_FLAG_OPEN)));
 	int const use_bmap(global_building_params.has_normal_map), interior_use_smaps((ADD_ROOM_SHADOWS && ADD_ROOM_LIGHTS) ? 2 : 1); // dynamic light smaps only
 	cube_t const lights_bcube(building_lights_manager.get_lights_bcube());
+	if (enable_indir) {s.set_prefix("#define ENABLE_OUTSIDE_INDIR_RANGE", 1);} // FS
 	s.set_prefix("#define LINEAR_DLIGHT_ATTEN", 1); // FS; improves room lighting (better light distribution vs. framerate trade-off)
 	city_shader_setup(s, lights_bcube, ADD_ROOM_LIGHTS, interior_use_smaps, use_bmap, min_alpha, force_tsl, pcf_scale, use_texgen, have_indir, 0); // is_outside=0
 	set_interior_lighting(s, have_indir);
