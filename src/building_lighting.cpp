@@ -395,7 +395,6 @@ class building_indir_light_mgr_t {
 		weight /= base_num_rays; // normalize to the number of rays
 		max_eq(base_num_rays, NUM_PRI_SPLITS);
 		int const num_rays(base_num_rays/NUM_PRI_SPLITS);
-		//assert(valid_area.contains_cube(light_cube)); // TESTING
 		
 		// Note: dynamic scheduling is faster, and using blocks doesn't help
 #pragma omp parallel for schedule(dynamic) num_threads(num_rt_threads)
@@ -466,8 +465,8 @@ class building_indir_light_mgr_t {
 		int const target_room(b.get_room_containing_pt(target)); // generally always should be >= 0
 
 		for (auto i = windows.begin(); i != windows.end(); ++i) {
-			if (cur_floor >= 0 && (int)b.get_floor_for_zval(i->zc()) != cur_floor) continue; // wrong floor
 			point const center(i->get_cube_center());
+			if (center.z < valid_area.z1() || center.z > valid_area.z2()) continue; // wrong floor
 			float dist_sq(p2p_dist_sq(center, target));
 			dist_sq *= 0.05f*window_vspacing/(i->dz()*(i->dx() + i->dy())); // account for the size of the window, larger window smaller/higher priority
 			if (target_room >= 0 && b.get_room_containing_pt(center) == target_room) {dist_sq *= 0.1;} // prioritize the room the player is in
@@ -565,7 +564,7 @@ public:
 		}
 		else { // find a new light to add
 			is_negative_light = 0; // back to normal positive lights
-			b.get_lights_with_priorities(target, lights_to_sort);
+			b.get_lights_with_priorities(target, valid_area, lights_to_sort);
 			add_window_lights(b, target);
 			sort_lights_by_priority();
 
@@ -627,7 +626,8 @@ bool building_t::ray_cast_camera_dir(point const &camera_bs, point &cpos, colorR
 	return ray_cast_interior(camera_bs, cview_dir, bcube, building_indir_light_mgr.get_bvh(), cpos, cnorm, ccolor);
 }
 
-void building_t::get_lights_with_priorities(point const &target, vector<pair<float, unsigned>> &lights_to_sort) const { // Note: target is building space camera
+// Note: target is building space camera
+void building_t::get_lights_with_priorities(point const &target, cube_t const &valid_area, vector<pair<float, unsigned>> &lights_to_sort) const {
 	if (!has_room_geom()) return; // error?
 	//if (is_rotated()) {} // do we need to handle this case?
 	vect_room_object_t const &objs(interior->room_geom->objs);
@@ -640,24 +640,8 @@ void building_t::get_lights_with_priorities(point const &target, vector<pair<flo
 		if (!i->is_light_type() || !i->is_light_on())  continue; // not a light, or light not on
 		bool const light_in_basement(i->z1() < ground_floor_z1);
 		if (INDIR_BASEMENT_ONLY && !light_in_basement) continue; // not a basement light
-		// check if this light is visible to target
-		bool const is_in_elevator(i->flags & RO_FLAG_IN_ELEV), is_in_closet(i->flags & RO_FLAG_IN_CLOSET);
-		if ((is_in_elevator || is_in_closet) && target.z > i->z1()) continue; // elevator or closet light on the floor below
-		if (light_in_basement && (target.z > (ground_floor_z1 + window_vspacing))) continue; // basement light, player is more than one floor above
-		room_t const &room(get_room(i->room_id));
-		bool const is_single_floor(room.is_sec_bldg || is_in_elevator); // garages and sheds are all one floor
-		int const cur_floor   (is_single_floor ? 0 : (i->z1()  - bcube.z1())*window_vspacing_inv); // use global floor index
-		int const target_floor(is_single_floor ? 0 : (target.z - bcube.z1())*window_vspacing_inv); // use global floor index
-
-		if (cur_floor != target_floor) { // different floors
-			if (abs(cur_floor - target_floor) > 1) continue; // more than one floor apart, skip
-			int const room_cur_floor(is_single_floor ? 0 : (i->z1()  - room.z1())*window_vspacing_inv);
-			if (!i->has_stairs() && !room.has_stairs_on_floor(room_cur_floor)) continue; // no stairs, skip (what about ramps? what about player near stairs?)
-		}
-		if (light_in_basement != (target.z < ground_floor_z1)) { // light and target on different side of basement boundary
-			if (is_house) continue; // basement door starts closed, and stairs are very narrow anyway - no light transfer
-			if (light_in_basement && has_parking_garage) continue; // parking garage lights don't light the hallway above
-		}
+		//if (i->flags & RO_FLAG_IN_ELEV)                continue; // elevator lights don't contribute to indir
+		if (!valid_area.contains_cube(*i))             continue; // outside valid area
 		point const center(i->get_cube_center());
 		float dist_sq(p2p_dist_sq(center, target));
 		dist_sq *= 0.005f*window_vspacing/(i->dx()*i->dy()); // account for the size of the light, larger lights smaller/higher priority
