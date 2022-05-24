@@ -115,9 +115,9 @@ bool building_t::ray_cast_interior(point const &pos, vector3d const &dir, cube_t
 		for (auto p = parts.begin(); p != parts.end(); ++p) {hit |= ray_cast_cube(p1, p2, *p, cnorm, t);} // find closest entrance point
 		
 		if (hit) { // exterior hit - don't need to check interior geometry
+			cpos   = p1 + (p2 - p1)*t;
 			if (rgen && has_windows() && rgen->rand_bool()) return 0; // 50% chance of exiting through a window
 			ccolor = side_color.modulate_with(mat.side_tex.get_avg_color());
-			cpos   = p1 + (p2 - p1)*t;
 			return 1;
 		}
 	}
