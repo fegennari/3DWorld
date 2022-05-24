@@ -1,0 +1,6 @@
+﻿E:\Program Files (x86)\Microsoft Visual Studio\2019\MSBuild\Microsoft\VC\v160\Microsoft.CppCommon.targets(39,5): warning MSB4211: The property "IntermediateOutputPath" is being set to a value for the first time, but it was already consumed at "E:\Program Files (x86)\Microsoft Visual Studio\2019\MSBuild\Microsoft\VC\v160\Microsoft.CppCommon.targets (38,5)".
+E:\Program Files (x86)\Microsoft Visual Studio\2019\MSBuild\Microsoft\VC\v160\Microsoft.BuildSteps.Targets(29,5): warning MSB4211: The property "DebugType" is being set to a value for the first time, but it was already consumed at "E:\Program Files (x86)\Microsoft Visual Studio\2019\MSBuild\Microsoft\VC\v160\Microsoft.BuildSteps.Targets (28,5)".
+E:\Program Files (x86)\Microsoft Visual Studio\2019\MSBuild\Current\Bin\Microsoft.Common.CurrentVersion.targets(370,5): warning MSB4211: The property "CleanFile" is being set to a value for the first time, but it was already consumed at "E:\Program Files (x86)\Microsoft Visual Studio\2019\MSBuild\Microsoft\VC\v160\Microsoft.CppCommon.targets (38,5)".
+alutBufferData.obj : warning LNK4075: ignoring '/EDITANDCONTINUE' due to '/SAFESEH' specification
+     Creating library Debug\alut.lib and object Debug\alut.exp
+  alut.vcxproj -> E:\Frank\Desktop\Frank\CS184\3DWorld_git\deps_build\freealut\admin\VisualStudioDotNET\alut\Debug\alut.dll
