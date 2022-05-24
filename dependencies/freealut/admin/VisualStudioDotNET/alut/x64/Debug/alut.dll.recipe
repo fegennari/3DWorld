@@ -2,7 +2,7 @@
 <Project>
   <ProjectOutputs>
     <ProjectOutput>
-      <FullPath>E:\Frank\Desktop\Frank\CS184\3DWorld_git\deps_build\freealut\admin\VisualStudioDotNET\x64\Debug\alut.dll</FullPath>
+      <FullPath>E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\freealut\admin\VisualStudioDotNET\x64\Debug\alut.dll</FullPath>
     </ProjectOutput>
   </ProjectOutputs>
   <ContentFiles />

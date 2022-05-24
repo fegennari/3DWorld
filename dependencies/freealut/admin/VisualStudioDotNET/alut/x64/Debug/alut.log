@@ -1,5 +1,16 @@
-﻿E:\Program Files (x86)\Microsoft Visual Studio\2019\MSBuild\Microsoft\VC\v160\Microsoft.CppCommon.targets(39,5): warning MSB4211: The property "IntermediateOutputPath" is being set to a value for the first time, but it was already consumed at "E:\Program Files (x86)\Microsoft Visual Studio\2019\MSBuild\Microsoft\VC\v160\Microsoft.CppCommon.targets (38,5)".
-E:\Program Files (x86)\Microsoft Visual Studio\2019\MSBuild\Microsoft\VC\v160\Microsoft.BuildSteps.Targets(29,5): warning MSB4211: The property "DebugType" is being set to a value for the first time, but it was already consumed at "E:\Program Files (x86)\Microsoft Visual Studio\2019\MSBuild\Microsoft\VC\v160\Microsoft.BuildSteps.Targets (28,5)".
-E:\Program Files (x86)\Microsoft Visual Studio\2019\MSBuild\Current\Bin\Microsoft.Common.CurrentVersion.targets(370,5): warning MSB4211: The property "CleanFile" is being set to a value for the first time, but it was already consumed at "E:\Program Files (x86)\Microsoft Visual Studio\2019\MSBuild\Microsoft\VC\v160\Microsoft.CppCommon.targets (38,5)".
-     Creating library E:\Frank\Desktop\Frank\CS184\3DWorld_git\deps_build\freealut\admin\VisualStudioDotNET\x64\Debug\alut.lib and object E:\Frank\Desktop\Frank\CS184\3DWorld_git\deps_build\freealut\admin\VisualStudioDotNET\x64\Debug\alut.exp
-  alut.vcxproj -> E:\Frank\Desktop\Frank\CS184\3DWorld_git\deps_build\freealut\admin\VisualStudioDotNET\x64\Debug\alut.dll
+﻿  alutBufferData.c
+  alutCodec.c
+  alutError.c
+E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\freealut\src\alutError.c(10,7): warning C4996: 'getenv': This function or variable may be unsafe. Consider using _dupenv_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+  alutInit.c
+  alutInputStream.c
+E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\freealut\src\alutInputStream.c(56,20): warning C4996: 'fopen': This function or variable may be unsafe. Consider using fopen_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\freealut\src\alutInputStream.c(72,22): warning C4996: 'strcpy': This function or variable may be unsafe. Consider using strcpy_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+  alutLoader.c
+  alutOutputStream.c
+  alutUtil.c
+  alutVersion.c
+  alutWaveform.c
+  Generating Code...
+     Creating library E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\freealut\admin\VisualStudioDotNET\x64\Debug\alut.lib and object E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\freealut\admin\VisualStudioDotNET\x64\Debug\alut.exp
+  alut.vcxproj -> E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\freealut\admin\VisualStudioDotNET\x64\Debug\alut.dll
