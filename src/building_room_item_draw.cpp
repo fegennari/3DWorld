@@ -1034,6 +1034,19 @@ void building_t::draw_room_geom(brg_batch_draw_t *bbd, shader_t &s, occlusion_ch
 	bool shadow_only, bool reflection_pass, unsigned inc_small, bool player_in_building)
 {
 	if (!has_room_geom()) return;
+
+	if (0 && (display_mode & 0x20) && player_in_building && bcube.contains_pt(camera_pdu.pos - xlate)) { // debug visualization of light occluders
+		int const cur_floor(get_floor_for_zval(camera_pdu.pos.z));
+		vect_colored_cube_t cc;
+		gather_interior_cubes(cc, cur_floor);
+		select_texture(WHITE_TEX);
+
+		for (colored_cube_t const &c : cc) {
+			s.set_cur_color(c.color);
+			draw_simple_cube(c);
+		}
+		return;
+	}
 	if (ENABLE_MIRROR_REFLECTIONS && !shadow_only && !reflection_pass && player_in_building) {find_mirror_needing_reflection(xlate);}
 	interior->room_geom->draw(bbd, s, *this, oc, xlate, building_ix, shadow_only, reflection_pass, inc_small, player_in_building);
 }

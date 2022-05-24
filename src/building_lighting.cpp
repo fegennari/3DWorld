@@ -352,7 +352,6 @@ class building_indir_light_mgr_t {
 	}
 	void cast_light_rays(building_t const &b) {
 		// TODO: Some type of blur to remove noise that doesn't blur across walls
-		// TODO: visualize volumes
 		// Note: modifies lmgr, but otherwise thread safe
 		unsigned const NUM_PRI_SPLITS = 16;
 		unsigned const num_rt_threads(max(1U, (NUM_THREADS - (USE_BKG_THREAD ? 1 : 0)))); // reserve a thread for the main thread if running in the background
