@@ -25,6 +25,7 @@ extern vector<light_source> dl_sources;
 bool enable_building_people_ai();
 bool check_cube_occluded(cube_t const &cube, vect_cube_t const &occluders, point const &viewer);
 void calc_cur_ambient_diffuse();
+colorRGBA get_textured_wood_color();
 
 bool enable_building_indir_lighting_no_cib() {
 	if (!(display_mode & 0x10)) return 0; // key 5
@@ -202,7 +203,6 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc, int only_this_fl
 		
 	for (auto c = objs.begin(); c != objs.end(); ++c) {
 		if (!c->is_visible()) continue;
-		if (c->shape == SHAPE_CYLIN || c->shape == SHAPE_SPHERE)  continue; // cylinders (lights, etc.) and spheres (balls, etc.) are not cubes, skip for now
 		if (c->type  == TYPE_ELEVATOR) continue; // elevator cars/internals can move so should not contribute to lighting
 		if (c->type  == TYPE_SHOWER  ) continue; // transparent
 		if (c->type  == TYPE_BLOCKER || c->type == TYPE_COLLIDER) continue; // blockers and colliders are not drawn
@@ -212,28 +212,39 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc, int only_this_fl
 			c->type == TYPE_MONEY || c->type == TYPE_PHONE || c->type == TYPE_TPROLL || c->type == TYPE_SPRAYCAN || c->type == TYPE_MARKER || c->type == TYPE_BUTTON ||
 			c->type == TYPE_SWITCH || c->type == TYPE_TAPE || c->type == TYPE_OUTLET || c->type == TYPE_PARK_SPACE || c->type == TYPE_RAMP || c->type == TYPE_PIPE ||
 			c->type == TYPE_VENT || c->type == TYPE_BREAKER || c->type == TYPE_KEY || c->type == TYPE_HANGER || c->type == TYPE_FESCAPE || c->type == TYPE_CUP ||
-			c->type == TYPE_CLOTHES || c->type == TYPE_LAMP || c->type == TYPE_OFF_CHAIR || c->type == TYPE_LIGHT || c->type == TYPE_SIGN || c->type == TYPE_PAPER) continue;
+			c->type == TYPE_CLOTHES || c->type == TYPE_LAMP || c->type == TYPE_OFF_CHAIR || c->type == TYPE_LIGHT || c->type == TYPE_SIGN || c->type == TYPE_PAPER ||
+			c->type == TYPE_PLANT) continue;
 		bool const is_stairs(c->type == TYPE_STAIR || c->type == TYPE_STAIR_WALL);
 		if (c->z1() > (is_stairs ? stairs_z2 : z2) || c->z2() < (is_stairs ? stairs_z1 : z1)) continue;
 		colorRGBA const color(c->get_color());
 		
-		if (c->type == TYPE_CLOSET && c->is_open()) {
+		if (c->shape == SHAPE_CYLIN || c->shape == SHAPE_SPHERE) {
+			float const shrink(c->get_radius()*(1.0 - 1.0/SQRT2));
+			cube_t inner_cube(*c);
+			inner_cube.expand_by_xy(-shrink); // shrink to inscribed cube in XY
+			if (c->shape == SHAPE_SPHERE) {inner_cube.expand_in_dim(2, -shrink);} // shrink in Z as well
+			if (c->type  == TYPE_TABLE  ) {inner_cube.z1() += 0.88*c->dz();} // top of table
+			cc.emplace_back(inner_cube, color);
+		}
+		else if (c->type == TYPE_CLOSET && c->is_open()) {
 			cube_t cubes[5];
 			get_closet_cubes(*c, cubes);
 			add_colored_cubes(cubes, 4, color, cc); // skip the door (cubes[4]), which is open
 		}
-		else if (c->type == TYPE_BED) {
+		else if (c->type == TYPE_BED) { // Note: posts and canopy are not included
+			colorRGBA const wood_color(get_textured_wood_color()), sheets_color(c->color.modulate_with(texture_color(c->get_sheet_tid())));
 			cube_t cubes[6]; // frame, head, foot, mattress, pillow, legs_bcube
 			get_bed_cubes(*c, cubes);
-			add_colored_cubes(cubes, 5, color, cc); // frame, head, foot, mattress, pillow; should the colors be set properly for these?
+			add_colored_cubes(cubes,   3, wood_color,   cc); // frame, head, foot
+			add_colored_cubes(cubes+3, 2, sheets_color, cc); // mattress, pillow
 			get_tc_leg_cubes(cubes[5], 0.04, cubes); // head_width=0.04; cubes[5] is not overwritten
-			add_colored_cubes(cubes, 4, color, cc);
+			add_colored_cubes(cubes,   4, wood_color,   cc); // legs
 		}
 		else if (c->type == TYPE_DESK || c->type == TYPE_DRESSER || c->type == TYPE_NIGHTSTAND || c->type == TYPE_TABLE) { // objects with legs
+			if (c->is_glass_table()) continue; // skip glass table (transparent with thin legs)
 			cube_t cubes[5];
 			get_table_cubes(*c, cubes); // top and 4 legs
-			if (c->is_glass_table()) {add_colored_cubes(cubes+1, 4, color, cc);} // skip glass top surface
-			else                     {add_colored_cubes(cubes,   5, color, cc);}
+			add_colored_cubes(cubes, 5, color, cc);
 			if      (c->type == TYPE_DRESSER || c->type == TYPE_NIGHTSTAND) {cc.emplace_back(get_dresser_middle(*c), color);}
 			else if (c->type == TYPE_DESK) {
 				if (c->desk_has_drawers() ) {cc.emplace_back(get_desk_drawers_part(*c), color);}
@@ -241,11 +252,13 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc, int only_this_fl
 			}
 		}
 		else if (c->type == TYPE_CHAIR) {
+			colorRGBA const wood_color(get_textured_wood_color());
 			cube_t cubes[3], leg_cubes[4]; // seat, back, legs_bcube
 			get_chair_cubes(*c, cubes);
-			add_colored_cubes(cubes, 2, color, cc); // seat, back
+			cc.emplace_back(cubes[0], color     ); // seat
+			cc.emplace_back(cubes[1], wood_color); // back
 			get_tc_leg_cubes(cubes[2], 0.15, leg_cubes); // width=0.15
-			add_colored_cubes(leg_cubes, 4, color, cc);
+			add_colored_cubes(leg_cubes, 4, wood_color, cc);
 		}
 		else if (c->type == TYPE_CUBICLE || (c->type == TYPE_STALL && c->shape != SHAPE_SHORT)) { // cubicle or bathroom stall - hollow
 			bool const is_stall(c->type != TYPE_CUBICLE);
