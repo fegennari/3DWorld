@@ -121,6 +121,12 @@ cube_t building_t::get_coll_bcube() const {
 	if (has_driveway()) {cc.union_with_cube(driveway);}
 	return cc;
 }
+cube_t building_t::get_interior_bcube() const { // Note: called for indir lighting; could cache z2
+	cube_t int_bcube(bcube);
+	int_bcube.z2() = ground_floor_z1;
+	for (auto i = parts.begin(); i != get_real_parts_end_inc_sec(); ++i) {max_eq(int_bcube.z2(), i->z2());}
+	return int_bcube;
+}
 
 // Note: used for the player
 bool building_t::check_sphere_coll(point &pos, point const &p_last, vector3d const &xlate,

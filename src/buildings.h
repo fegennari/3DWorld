@@ -1173,6 +1173,7 @@ struct building_t : public building_geom_t {
 	cube_t const &get_fireplace() const {assert(has_chimney == 2 && parts.size() > 2); return parts[parts.size()-2];}
 	void end_add_parts() {assert(parts.size() < 256); real_num_parts = uint8_t(parts.size());}
 	cube_t get_coll_bcube() const;
+	cube_t get_interior_bcube() const;
 
 	bool check_sphere_coll(point const &pos, float radius, bool xy_only, vector<point> &points, vector3d *cnorm=nullptr) const {
 		point pos2(pos);

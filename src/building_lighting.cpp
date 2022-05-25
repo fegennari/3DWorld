@@ -349,7 +349,7 @@ class building_indir_light_mgr_t {
 			needs_to_join = 1;
 		}
 		else {
-			// per-light time for large office building: orig: 194ms, per-floorBVH: 96ms, clip rays to floor: 44ms
+			// per-light time for large office building: orig: 194ms, per-floorBVH: 96ms, clip rays to floor: 44ms, now 37ms
 			highres_timer_t timer("Ray Cast Building Light");
 			cast_light_rays(b);
 		}
@@ -617,7 +617,7 @@ public:
 		float const floor_spacing(b.get_window_vspace());
 		valid_area.z1() += cur_floor*floor_spacing;
 		valid_area.z2()  = valid_area.z1() + floor_spacing;
-		light_bounds     = (INDIR_VOL_PER_FLOOR ? valid_area : b.bcube);
+		light_bounds     = (INDIR_VOL_PER_FLOOR ? valid_area : b.get_interior_bcube());
 		bvh.clear();
 		b.gather_interior_cubes(bvh.get_objs(), cur_floor);
 		bvh.build_tree_top(0); // verbose=0
