@@ -1187,6 +1187,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			if (e.open_amt > 0.0) {clip_cube.d[e.dim][e.dir] += (e.dir ? 1.0 : -1.0)*light_radius;} // allow light to extend outside open elevator door
 			clipped_bc.intersect_with_cube(clip_cube); // Note: clipped_bc is likely contained in clip_cube and could be replaced with it
 			if (e.was_called) {shadow_caster_hash += hash_point(e.get_llc());} // make sure to update shadows if elevator is moving
+			if (e.open_amt > 0.0 && e.open_amt < 1.0) {shadow_caster_hash += hash_by_bytes<float>()(e.open_amt);} // update shadows if door is opening or closing
 		}
 		else {
 			if (room.is_sec_bldg) {clipped_bc.intersect_with_cube(room);} // secondary buildings only light their single room
