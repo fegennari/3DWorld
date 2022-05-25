@@ -1342,6 +1342,7 @@ public:
 	bool is_cube_face_visible_from_pt(cube_t const &c, point const &p, unsigned dim, bool dir) const;
 	bool check_obj_occluded(cube_t const &c, point const &viewer, occlusion_checker_noncity_t &oc, bool reflection_pass, bool c_is_building_part=0) const;
 	bool is_entire_building_occluded(point const &viewer, occlusion_checker_noncity_t &oc) const;
+	bool register_indir_lighting_state_change(unsigned light_ix, bool is_door_change=0) const;
 	template<typename T> void add_door_verts(cube_t const &D, T &drawer, uint8_t door_type,
 		bool dim, bool dir, bool opened, bool opens_out, bool exterior, bool on_stairs=0, bool hinge_side=0) const;
 	tquad_with_ix_t set_door_from_cube(cube_t const &c, bool dim, bool dir, unsigned type, float pos_adj,
@@ -1464,7 +1465,6 @@ private:
 	void gather_interior_cubes(vect_colored_cube_t &cc, int only_this_floor=-1) const;
 	void get_lights_with_priorities(point const &target, cube_t const &valid_area, vector<pair<float, unsigned>> &lights_to_sort) const;
 	void get_all_windows(vect_cube_with_ix_t &windows) const;
-	bool register_indir_lighting_state_change(unsigned light_ix, bool is_door_change=0);
 	void register_indir_lighting_geom_change();
 	bool is_light_occluded(point const &lpos, point const &camera_bs) const;
 	void clip_ray_to_walls(point const &p1, point &p2, vect_cube_t const walls[2]) const;

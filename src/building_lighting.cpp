@@ -545,7 +545,6 @@ public:
 			invalidate_lighting();
 			build_bvh(b, target);
 		}
-		if (player_in_elevator == 2) return; // pause updates for player in closed elevator since lighting is not visible
 		calc_cur_ambient_diffuse(); // needed for correct outdoor color
 		colorRGBA const cur_outdoor_color(blend_color(cur_ambient, cur_diffuse, 0.5, 0)); // a mix of each
 
@@ -571,14 +570,18 @@ public:
 		// nothing is running and there is more work to do, find the nearest light to the target and process it
 		if (!INDIR_VOL_PER_FLOOR) {need_bvh_rebuild |= floor_change;} // rebuild on player floor change
 		if (need_bvh_rebuild) {build_bvh(b, target);}
-		if (cur_light >= 0) {lights_complete.insert(cur_light); cur_light = -1;} // mark the most recent light as complete
-
-		if (!remove_queue.empty()) { // remove an existing light
+		
+		if (cur_light >= 0) {
+			if (!is_negative_light) {lights_complete.insert(cur_light);} // mark the most recent light as complete if not a light removal
+			cur_light = -1;
+		}
+		if (!remove_queue.empty()) { // remove an existing light; must run even when player_in_elevator==2 to remove elevator light at old pos
 			cur_light = remove_queue.front();
 			remove_queue.pop_front();
 			is_negative_light = 1;
 		}
 		else { // find a new light to add
+			if (player_in_elevator == 2) return; // pause updates for player in closed elevator since lighting is not visible
 			is_negative_light = 0; // back to normal positive lights
 			b.get_lights_with_priorities(target, valid_area, lights_to_sort);
 			add_window_lights(b, target);
@@ -592,7 +595,7 @@ public:
 		if (cur_light >= 0) {start_lighting_compute(b);} // this light is next
 		tid = cur_tid;
 	}
-	void register_light_state_change(unsigned light_ix, bool light_is_on, bool geom_changed) {
+	void register_light_state_change(unsigned light_ix, bool light_is_on, bool in_elevator, bool geom_changed) {
 		// TODO: update window light indir when outdoor lighting changes due to sun or moon change?
 		if (geom_changed) {
 			// TODO: have to first remove the lighting with the old geom, and then re-add it - but the geometry has already been updated
@@ -603,7 +606,7 @@ public:
 		// Note: we can't just stop in the middle, because that will leave cur_light in an invalid/incomplete state
 		//if (is_cur_light) {kill_thread = 1; cur_light = -1;} // cur_light is no longer valid
 		// Note: if door state changed since this light was turned on, removing it may leave some light
-		if ((geom_changed || !light_is_on) && (num_erased || is_cur_light)) {add_to_remove_queue(light_ix);} // must remove the light instead
+		if ((geom_changed || !light_is_on || (in_elevator && num_erased)) && (num_erased || is_cur_light)) {add_to_remove_queue(light_ix);} // must remove the light instead
 		//cout << TXT(cur_light) << TXT(is_running) << TXT(num_erased) << TXT(need_bvh_rebuild) << endl; // TESTING
 	}
 	void build_bvh(building_t const &b, point const &target) {
@@ -656,8 +659,12 @@ void building_t::get_lights_with_priorities(point const &target, cube_t const &v
 		if (!i->is_light_type() || !i->is_light_on())  continue; // not a light, or light not on
 		bool const light_in_basement(i->z1() < ground_floor_z1);
 		if (INDIR_BASEMENT_ONLY && !light_in_basement) continue; // not a basement light
-		//if (i->flags & RO_FLAG_IN_ELEV)                continue; // elevator lights don't contribute to indir
 		if (!valid_area.contains_cube(*i))             continue; // outside valid area
+
+		if (i->flags & RO_FLAG_IN_ELEV) { // elevator light
+			elevator_t const &e(interior->elevators[i->obj_id]);
+			if (e.was_called) continue; // moving elevator, don't update light yet
+		}
 		point const center(i->get_cube_center());
 		float dist_sq(p2p_dist_sq(center, target));
 		dist_sq *= 0.005f*window_vspacing/(i->dx()*i->dy()); // account for the size of the light, larger lights smaller/higher priority
@@ -725,14 +732,14 @@ void building_t::get_all_windows(vect_cube_with_ix_t &windows) const { // Note: 
 	} // for i
 }
 
-bool building_t::register_indir_lighting_state_change(unsigned light_ix, bool is_door_change) {
+bool building_t::register_indir_lighting_state_change(unsigned light_ix, bool is_door_change) const {
 	if (!enable_building_indir_lighting()) return 0; // no update needed
 	assert(has_room_geom());
 	assert(light_ix < interior->room_geom->objs.size());
 	room_object_t const &obj(interior->room_geom->objs[light_ix]);
 	assert(obj.is_light_type());
 	if (is_door_change && !obj.is_light_on()) return 0; // light off, no state change
-	building_indir_light_mgr.register_light_state_change(light_ix, obj.is_light_on(), is_door_change);
+	building_indir_light_mgr.register_light_state_change(light_ix, obj.is_light_on(), (obj.flags & RO_FLAG_IN_ELEV), is_door_change);
 	return 1;
 }
 void building_t::register_indir_lighting_geom_change() {

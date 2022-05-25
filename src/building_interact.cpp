@@ -986,6 +986,7 @@ bool building_interior_t::update_elevators(building_t const &building, point con
 			assert(light.type == TYPE_LIGHT);
 			light.translate_dim(2, dist); // translate in Z
 			room_geom->invalidate_lights_geom(); // or make elevator lights part of the elevator instead?
+			building.register_indir_lighting_state_change(e->light_obj_id);
 		}
 		for (auto j = objs.begin() + e->button_id_start; j != objs.begin() + e->button_id_end; ++j) {
 			if (j->type == TYPE_BLOCKER) continue; // button was removed?
