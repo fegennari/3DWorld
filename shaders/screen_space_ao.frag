@@ -33,6 +33,10 @@ void main() {
 			}
 		}
 	}
-	float darken = max(0.0, 2.0*(weight/max(denom, 1.0)-0.5));
-	fg_FragColor = vec4(0.0, 0.0, 0.0, darken); // darken by weight
+	float darken = clamp(2.0*(weight/max(denom, 1.0)-0.5), 0.0, 1.0);
+#ifdef WRITE_COLOR
+    fg_FragColor = vec4(1.0-darken, 1.0-darken, 1.0-darken, 1.0); // write grayscale values
+#else
+    fg_FragColor = vec4(0.0, 0.0, 0.0, darken); // write as alpha blend of black color
+#endif
 }

@@ -93,15 +93,58 @@ void add_god_rays() {
 	color_buffer_frame = 0; // reset to invalidate buffer
 }
 
+class ssao_state_manager_t {
+	unsigned width=0, height=0, tid=0, fbo=0;
+public:
+	void begin() {
+		if (width != window_width || height != window_height) { // size change, clear
+			clear();
+			width  = window_width;
+			height = window_height;
+		}
+		if (!tid) {
+			setup_texture(tid, 0, 0, 0);
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+		}
+		enable_fbo(fbo, tid, 0);
+	}
+	void end () {disable_fbo();}
+	void bind() {bind_2d_texture(tid);}
+
+	void clear() {
+		free_texture(tid);
+		free_fbo(fbo);
+		width = height = 0; // is this needed?
+	}
+};
+
+ssao_state_manager_t ssao_state_manager;
+
 void add_ssao() {
 
+	bool const USE_SSAO_BLUR = 0;
 	bind_depth_buffer();
 	shader_t s;
 	s.set_vert_shader("no_lighting_tex_coord");
 	s.set_frag_shader("depth_utils.part+screen_space_ao"); // too blocky, doesn't work on transparent objects, sky/clouds, or grass
 	//s.set_frag_shader("depth_utils.part+screen_space_ao_v2"); // black checkerboard patterns, needs blurring
+	if (USE_SSAO_BLUR) {s.set_prefix("#define WRITE_COLOR", 1);} // FS
 	s.begin_shader();
 	setup_depth_tex(s, 0);
+
+	if (USE_SSAO_BLUR) {
+		// render SSAO weight to an FBO texture
+		ssao_state_manager.begin();
+		fill_screen_white_and_end_shader(s);
+		ssao_state_manager.end();
+		// blur SSAO
+		ssao_state_manager.bind();
+		s.set_vert_shader("no_lighting_tex_coord");
+		s.set_frag_shader("screen_space_ao_blur"); // TODO: 2x 1D blurs?
+		s.begin_shader();
+		s.add_uniform_int("frame_buffer_tex", 0);
+		set_xy_step(s);
+	}
 	fill_screen_white_and_end_shader(s);
 }
 

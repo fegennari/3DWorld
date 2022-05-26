@@ -1440,6 +1440,9 @@
     <None Include="shaders\fish_animate.vert">
       <Filter>Shaders\vert</Filter>
     </None>
+    <None Include="shaders\screen_space_ao_blur.frag">
+      <Filter>Shaders\frag\Fullscreen</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Script1.rc">

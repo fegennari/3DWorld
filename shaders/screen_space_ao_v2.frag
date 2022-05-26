@@ -164,6 +164,9 @@ void main() {
     float h2 = n + min(h2a - n, PI_HALF);
    
     float visibility = mix(1.0, IntegrateArc(h1, h2, n), length(projectedNormal));
-   
-    fg_FragColor = vec4(0.0, 0.0, 0.0, 1.0-visibility);
+#ifdef WRITE_COLOR
+    fg_FragColor = vec4(visibility, visibility, visibility, 1.0); // write grayscale values
+#else
+    fg_FragColor = vec4(0.0, 0.0, 0.0, 1.0-visibility); // write as alpha blend of black color
+#endif
 }
