@@ -26,6 +26,9 @@ bool enable_building_people_ai();
 bool check_cube_occluded(cube_t const &cube, vect_cube_t const &occluders, point const &viewer);
 void calc_cur_ambient_diffuse();
 colorRGBA get_textured_wood_color();
+bool bed_has_canopy_mat(room_object_t const &c);
+int get_canopy_texture();
+colorRGBA get_canopy_base_color(room_object_t const &c);
 
 bool enable_building_indir_lighting_no_cib() {
 	if (!(display_mode & 0x10)) return 0; // key 5
@@ -231,12 +234,19 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc, int only_this_fl
 			get_closet_cubes(*c, cubes);
 			add_colored_cubes(cubes, 4, color, cc); // skip the door (cubes[4]), which is open
 		}
-		else if (c->type == TYPE_BED) { // Note: posts and canopy are not included
+		else if (c->type == TYPE_BED) { // Note: posts are not included
 			colorRGBA const wood_color(get_textured_wood_color()), sheets_color(c->color.modulate_with(texture_color(c->get_sheet_tid())));
 			cube_t cubes[6]; // frame, head, foot, mattress, pillow, legs_bcube
 			get_bed_cubes(*c, cubes);
 			add_colored_cubes(cubes,   3, wood_color,   cc); // frame, head, foot
 			add_colored_cubes(cubes+3, 2, sheets_color, cc); // mattress, pillow
+
+			if (bed_has_canopy_mat(*c)) { // add canopy (but not posts); only the top surface, not the corner triangles
+				cube_t canopy(*c);
+				canopy.z1() = cubes[2].z2() + 1.4*c->dz();
+				canopy.z2() = canopy.z1() + 0.001*c->dz(); // almost zero thickness
+				cc.emplace_back(canopy, get_canopy_base_color(*c).modulate_with(texture_color(get_canopy_texture())));
+			}
 			get_tc_leg_cubes(cubes[5], 0.04, cubes); // head_width=0.04; cubes[5] is not overwritten
 			add_colored_cubes(cubes,   4, wood_color,   cc); // legs
 		}

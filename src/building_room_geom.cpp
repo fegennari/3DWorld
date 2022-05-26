@@ -2157,10 +2157,20 @@ void add_pillow(cube_t const &c, rgeom_mat_t &mat, colorRGBA const &color, point
 	} // for y
 }
 
-void get_bed_cubes(room_object_t const &c, cube_t cubes[6]) {
+bool bed_is_wide       (room_object_t const &c) {return (c.get_width() > 0.7*c.get_length());}
+bool bed_has_posts     (room_object_t const &c) {return (bed_is_wide   (c) && (c.obj_id & 1 ));} // no posts for twin beds
+bool bed_has_canopy    (room_object_t const &c) {return (bed_has_posts (c) && (c.obj_id & 2 ));}
+bool bed_has_canopy_mat(room_object_t const &c) {return (bed_has_canopy(c) && (c.obj_id & 12) != 0);} // 75% of the time
+int get_canopy_texture() {return get_texture_by_name("fabrics/wool.jpg");}
+
+colorRGBA get_canopy_base_color(room_object_t const &c) {
+	return (WHITE*0.5 + c.color.modulate_with(texture_color(c.get_sheet_tid()))*0.5); // brighter version of sheet color, 50% white
+}
+
+void get_bed_cubes(room_object_t const &c, cube_t cubes[6]) { // frame, head, foot, mattress, pillow, legs_bcube; no posts or canopy
+	bool const is_wide(bed_is_wide(c));
 	float const height(c.dz()), length(c.get_length()), width(c.get_width());
-	bool const is_wide(width > 0.7*length), add_posts(is_wide && (c.obj_id & 1)); // no posts for twin beds
-	float const head_width(0.04), foot_width(add_posts ? head_width : 0.03f); // relative to length
+	float const head_width(0.04), foot_width(bed_has_posts(c) ? head_width : 0.03f); // relative to length
 	cube_t frame(c), head(c), foot(c), mattress(c), legs_bcube(c), pillow(c);
 	head.d[c.dim][!c.dir] += (c.dir ? 1.0 : -1.0)*(1.0 - head_width)*length;
 	foot.d[c.dim][ c.dir] -= (c.dir ? 1.0 : -1.0)*(1.0 - foot_width)*length;
@@ -2181,10 +2191,9 @@ void get_bed_cubes(room_object_t const &c, cube_t cubes[6]) {
 	cubes[0] = frame; cubes[1] = head; cubes[2] = foot; cubes[3] = mattress; cubes[4] = pillow; cubes[5] = legs_bcube;
 }
 void building_room_geom_t::add_bed(room_object_t const &c, bool inc_lg, bool inc_sm, float tscale) {
-	float const height(c.dz()), length(c.get_length()), width(c.get_width());
-	bool const is_wide(width > 0.7*length), add_posts(is_wide && (c.obj_id & 1)), add_canopy(add_posts && (c.obj_id & 2)); // no posts for twin beds
-	float const head_width(0.04), foot_width(add_posts ? head_width : 0.03f); // relative to length
-	cube_t cubes[6]; // frame, head, foot, mattress, pillow, legs_bcube
+	bool const add_posts(bed_has_posts(c));
+	float const length(c.get_length()), head_width(0.04), foot_width(add_posts ? head_width : 0.03f); // relative to length
+	cube_t cubes[6]; // frame, head, foot, mattress, pillow, legs_bcube; no posts or canopy
 	get_bed_cubes(c, cubes);
 	cube_t const &frame(cubes[0]), &head(cubes[1]), &foot(cubes[2]), &mattress(cubes[3]), &pillow(cubes[4]), &legs_bcube(cubes[5]);
 	colorRGBA const sheet_color(apply_light_color(c));
@@ -2201,7 +2210,7 @@ void building_room_geom_t::add_bed(room_object_t const &c, bool inc_lg, bool inc
 		if (no_mattress) { // mattress is gone, draw the slats on the bottom of the bed
 			unsigned const num_slats = 12;
 			unsigned const slat_skip_faces(get_skip_mask_for_xy(!c.dim));
-			float const side_width(0.08*width), slat_spacing(length/num_slats), slat_width(0.45*slat_spacing), slat_gap(0.5f*(slat_spacing - slat_width));
+			float const width(c.get_width()), side_width(0.08*width), slat_spacing(length/num_slats), slat_width(0.45*slat_spacing), slat_gap(0.5f*(slat_spacing - slat_width));
 			cube_t sides[2] = {frame, frame}, slat(frame);
 			sides[0].d[!c.dim][1] -= (width - side_width);
 			sides[1].d[!c.dim][0] += (width - side_width);
@@ -2229,10 +2238,11 @@ void building_room_geom_t::add_bed(room_object_t const &c, bool inc_lg, bool inc
 		wood_mat.add_cube_to_verts(foot, color, tex_origin, EF_Z1);
 		
 		if (add_posts) { // maybe add bed posts and canopy; these extend outside of the bed bcube, but that probably doesn't matter
+			bool const add_canopy(bed_has_canopy(c));
 			float const post_width(min(head_width, foot_width)*length);
 			cube_t posts_area(c);
 			posts_area.z1() = foot.z2(); // start at the foot
-			posts_area.z2() = posts_area.z1() + (add_canopy ? 1.4 : 0.6)*height; // higher posts for canopy bed
+			posts_area.z2() = posts_area.z1() + (add_canopy ? 1.4 : 0.6)*c.dz(); // higher posts for canopy bed
 			cube_t posts[4];
 			get_tc_leg_cubes_abs_width(posts_area, post_width, posts);
 			bool const use_cylinders(!add_canopy && (c.obj_id & 4));
@@ -2252,11 +2262,11 @@ void building_room_geom_t::add_bed(room_object_t const &c, bool inc_lg, bool inc
 					top.expand_in_dim(dim, -post_width); // remove overlaps with the post
 					wood_mat.add_cube_to_verts(top, color, tex_origin, get_skip_mask_for_xy(dim));
 				}
-				if ((c.obj_id & 12) != 0) { // 75% of the time
+				if (bed_has_canopy_mat(c)) { // 75% of the time
 					// add material to the top; it would be great if this could be partially transparent, but I can't figure out how to make that draw properly
 					bool const shadowed(1); // partially transparent? sadly, we can't make it partially shadow casting
 					float const canopy_tscale(5.0*tscale);
-					rgeom_mat_t &canopy_mat(get_material(tid_nm_pair_t(get_texture_by_name("fabrics/wool.jpg"), canopy_tscale, shadowed), shadowed));
+					rgeom_mat_t &canopy_mat(get_material(tid_nm_pair_t(get_canopy_texture(), canopy_tscale, shadowed), shadowed));
 					colorRGBA const base_color(WHITE*0.5 + c.color.modulate_with(texture_color(sheet_tex.tid))*0.5); // brighter version of sheet color, 50% white
 					colorRGBA const color(apply_light_color(c, base_color)); // partially transparent?
 					float const dz(posts[0].z2() - c.z1()), offset(0.0001*dz); // full bed height
@@ -2293,7 +2303,7 @@ void building_room_geom_t::add_bed(room_object_t const &c, bool inc_lg, bool inc
 	if (inc_sm && !(c.flags & RO_FLAG_TAKEN1)) { // draw pillows if not taken
 		rgeom_mat_t &pillow_mat(get_material(sheet_tex, 1, 0, 1)); // small=1
 
-		if (is_wide) { // two pillows
+		if (bed_is_wide(c)) { // two pillows
 			for (unsigned d = 0; d < 2; ++d) {
 				cube_t p(pillow);
 				p.d[!c.dim][d] += (d ? -1.0 : 1.0)*0.55*pillow.get_sz_dim(!c.dim);
