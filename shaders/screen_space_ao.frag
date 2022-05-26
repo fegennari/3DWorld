@@ -1,5 +1,6 @@
-uniform int NUM_DIRS  = 8;
-uniform int NUM_STEPS = 4;
+uniform int NUM_DIRS   = 8;
+uniform int NUM_STEPS  = 4;
+uniform float step_len = 4.0; // in pixels
 
 in vec2 tc;
 
@@ -19,7 +20,7 @@ void main() {
 		vec2 pos    = tc;
 		float theta = d*dir_mul;
 		vec2 dir    = vec2(sin(theta), cos(theta));
-		vec2 step   = xy_step * dir;
+		vec2 step   = step_len * xy_step * dir;
 
 		for (int s = 0; s < NUM_STEPS; s++) {
 			pos += step;

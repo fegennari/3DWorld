@@ -122,7 +122,8 @@ ssao_state_manager_t ssao_state_manager;
 
 void add_ssao() {
 
-	bool const USE_SSAO_BLUR = 0;
+	// Note: somewhat works, but looks very bad on windows, grass, and clouds
+	bool const USE_SSAO_BLUR = 1; // looks better, but slightly slower
 	bind_depth_buffer();
 	shader_t s;
 	s.set_vert_shader("no_lighting_tex_coord");
