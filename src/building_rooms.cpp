@@ -2022,7 +2022,7 @@ void building_t::add_boxes_to_room(rand_gen_t rgen, room_t const &room, float zv
 	} // for n
 }
 
-void building_t::add_light_switches_to_room(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned objs_start, bool is_ground_floor) {
+void building_t::add_light_switches_to_room(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned objs_start, bool is_ground_floor, bool is_basement) {
 	float const floor_spacing(get_window_vspace()), wall_thickness(get_wall_thickness()), switch_thickness(0.2*wall_thickness);
 	float const switch_height(1.8*wall_thickness), switch_hwidth(0.5*wall_thickness), min_wall_spacing(switch_hwidth + 2.0*wall_thickness);
 	cube_t const room_bounds(get_walkable_room_bounds(room));
@@ -2078,6 +2078,7 @@ void building_t::add_light_switches_to_room(rand_gen_t rgen, room_t const &room,
 					if (is_cube_close_to_doorway(c, room, 0.0, (ei==1), 1))   continue; // inc_open=1/check_open_dir=1 for inside, to avoid placing behind an open door
 					if (interior->is_blocked_by_stairs_or_elevator(c))        continue; // check stairs and elevators
 					if (!check_if_placed_on_interior_wall(c, room, dim, dir)) continue; // ensure the switch is on a wall
+					// if is_basement, and this is an exterior wall, use a non-recessed light switch? but the basement ext wall will never have a doorway; next to basement stairs?
 					objs.emplace_back(c, TYPE_SWITCH, room_id, dim, dir, RO_FLAG_NOCOLL, 1.0); // dim/dir matches wall; fully lit
 					done = 1; // done, only need to add one for this door
 					++num_ls;
@@ -2086,6 +2087,8 @@ void building_t::add_light_switches_to_room(rand_gen_t rgen, room_t const &room,
 			} // for side
 		} // for i
 	} // for ei
+	if (!is_house || is_basement) return; // no closets - done
+
 	// add closet light switches
 	for (unsigned i = objs_start; i < objs_end; ++i) { // can't iterate over objs while modifying it
 		room_object_t const &obj(objs[i]);
@@ -2624,7 +2627,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 					add_storage_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs.size(), is_basement);
 				}
 				add_outlets_to_room(rgen, *r, room_center.z, room_id, objs.size(), is_ground_floor, is_basement);
-				if (has_light) {add_light_switches_to_room(rgen, *r, room_center.z, room_id, objs.size(), is_ground_floor);} // shed, garage, or hallway
+				if (has_light) {add_light_switches_to_room(rgen, *r, room_center.z, room_id, objs.size(), is_ground_floor, is_basement);} // shed, garage, or hallway
 
 				if (is_house && r->is_hallway) { // allow pictures, rugs, and light switches in the hallways of houses
 					hang_pictures_in_room(rgen, *r, room_center.z, room_id, tot_light_amt, objs.size(), is_basement);
@@ -2781,7 +2784,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				if (num > 0) {add_plants_to_room(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, num);}
 			}
 			add_outlets_to_room(rgen, *r, room_center.z, room_id, objs_start, is_ground_floor, is_basement);
-			if (has_light) {add_light_switches_to_room(rgen, *r, room_center.z, room_id, objs_start, is_ground_floor);} // add a light switch if this room has a light
+			if (has_light) {add_light_switches_to_room(rgen, *r, room_center.z, room_id, objs_start, is_ground_floor, is_basement);} // add light switch if room has a light
 			if (!is_house && !r->is_hallway) {add_vent_to_room(rgen, *r, room_center.z, room_id, objs_start);} // office building vents
 			// pictures and whiteboards must not be placed behind anything, excluding trashcans; so we add them here
 			bool const can_hang((is_house || !(is_bathroom || is_kitchen || no_whiteboard)) && !is_storage); // no whiteboards in office bathrooms or kitchens
