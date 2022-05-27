@@ -1034,6 +1034,10 @@ void building_t::add_basement_electrical_house(rand_gen_t &rgen) {
 	add_basement_electrical(obstacles, walls, vect_cube_t(), -1, tot_light_amt, rgen); // no beams, room_id=-1 (to be calculated)
 }
 
+void building_t::add_house_basement_pipes(rand_gen_t &rgen) {
+	// TODO: WRITE
+}
+
 void building_t::add_parking_garage_ramp(rand_gen_t &rgen) {
 	assert(interior && !is_house && has_parking_garage);
 	cube_with_ix_t &ramp(interior->pg_ramp);

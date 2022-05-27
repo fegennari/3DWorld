@@ -1106,7 +1106,7 @@ struct building_t : public building_geom_t {
 	uint8_t street_dir; // encoded as 2*dim + dir + 1; 0 is unassigned
 	int8_t open_door_ix, basement_part_ix, has_chimney; // has_chimney: 0=none, 1=interior, 2=exterior with fireplace
 	bool is_house, has_garage, has_shed, has_int_garage, has_courtyard, has_complex_floorplan, has_helipad, has_ac;
-	bool has_int_fplace, has_parking_garage, has_small_part, has_basement_door;
+	bool has_int_fplace, has_parking_garage, has_small_part, has_basement_door, has_basement_pipes;
 	colorRGBA side_color, roof_color, detail_color, door_color, wall_color;
 	cube_t bcube, pri_hall, driveway, porch, assigned_plot;
 	vect_cube_t parts, fences;
@@ -1121,12 +1121,13 @@ struct building_t : public building_geom_t {
 
 	building_t(unsigned mat_ix_=0) : mat_ix(mat_ix_), hallway_dim(2), real_num_parts(0), roof_type(ROOF_TYPE_FLAT), street_dir(0), open_door_ix(-1),
 		basement_part_ix(-1), has_chimney(0), is_house(0), has_garage(0), has_shed(0), has_int_garage(0), has_courtyard(0), has_complex_floorplan(0),
-		has_helipad(0), has_ac(0), has_int_fplace(0), has_parking_garage(0), has_small_part(0), has_basement_door(0),
+		has_helipad(0), has_ac(0), has_int_fplace(0), has_parking_garage(0), has_small_part(0), has_basement_door(0), has_basement_pipes(0),
 		side_color(WHITE), roof_color(WHITE), detail_color(BLACK), door_color(WHITE), wall_color(WHITE), ao_bcz2(0.0), ground_floor_z1(0.0) {}
 	building_t(building_geom_t const &bg) : building_geom_t(bg), mat_ix(0), hallway_dim(2), real_num_parts(0), roof_type(ROOF_TYPE_FLAT), street_dir(0),
 		open_door_ix(-1), basement_part_ix(-1), has_chimney(0), is_house(0), has_garage(0), has_shed(0), has_int_garage(0), has_courtyard(0),
 		has_complex_floorplan(0), has_helipad(0), has_ac(0), has_int_fplace(0), has_parking_garage(0), has_small_part(0), has_basement_door(0),
-		side_color(WHITE), roof_color(WHITE), detail_color(BLACK), door_color(WHITE), wall_color(WHITE), ao_bcz2(0.0), ground_floor_z1(0.0) {}
+		has_basement_pipes(0), side_color(WHITE), roof_color(WHITE), detail_color(BLACK), door_color(WHITE), wall_color(WHITE), ao_bcz2(0.0),
+		ground_floor_z1(0.0) {}
 	static float get_scaled_player_radius();
 	static float get_min_front_clearance() {return 2.05f*get_scaled_player_radius();} // slightly larger than the player diameter
 	bool is_valid() const {return !bcube.is_all_zeros();}
@@ -1434,6 +1435,7 @@ private:
 	void get_pipe_basement_connections(vect_riser_pos_t &sewer, vect_riser_pos_t &cold_water, vect_riser_pos_t &hot_water, rand_gen_t &rgen) const;
 	void add_basement_electrical(vect_cube_t &obstacles, vect_cube_t const &walls, vect_cube_t const &beams, int room_id, float tot_light_amt, rand_gen_t &rgen);
 	void add_basement_electrical_house(rand_gen_t &rgen);
+	void add_house_basement_pipes(rand_gen_t &rgen);
 	void place_book_on_obj   (rand_gen_t &rgen, room_object_t const &place_on, unsigned room_id, float tot_light_amt, bool use_dim_dir);
 	bool place_bottle_on_obj (rand_gen_t &rgen, room_object_t const &place_on, unsigned room_id, float tot_light_amt, cube_t const &avoid);
 	bool place_plant_on_obj  (rand_gen_t &rgen, room_object_t const &place_on, unsigned room_id, float tot_light_amt, cube_t const &avoid);
