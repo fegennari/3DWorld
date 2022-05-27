@@ -108,26 +108,30 @@ bool building_t::ray_cast_interior(point const &pos, vector3d const &dir, cube_t
 	cpos = p2; // use far clip point for clip cube if there is no hit
 
 	// check parts (exterior walls); should chimneys and porch roofs be included?
-	if (ray_cast_exterior_walls(p1, p2, cnorm, t)) { // interior ray - find furthest exit point
+	if (ray_cast_exterior_walls(p1, p2, cnorm, t)) { // interior ray (common case) - find furthest exit point
 		p2  = p1 + (p2 - p1)*t; t = 1.0; // clip p2 to t (minor optimization)
 		hit = 1;
 		if (p2.z < ground_floor_z1) {ccolor = get_basement_wall_texture().get_avg_color();} // basement wall
 		else {ccolor = mat.wall_color.modulate_with(mat.wall_tex.get_avg_color());} // non-basement wall
 	}
-	else { // check for exterior rays
+	else { // check for exterior rays (uncommon case)
 		bool hit(0);
 		for (auto p = parts.begin(); p != parts.end(); ++p) {hit |= ray_cast_cube(p1, p2, *p, cnorm, t);} // find closest entrance point
 		
-		if (hit) { // exterior hit - don't need to check interior geometry
+		if (hit) { // exterior hit (ray outside building) - don't need to check interior geometry
 			cpos   = p1 + (p2 - p1)*t;
-			if (rgen && has_windows() && rgen->rand_bool()) return 0; // 50% chance of exiting through a window
 			ccolor = side_color.modulate_with(mat.side_tex.get_avg_color());
 			return 1;
 		}
 	}
-	//for (auto r = roof_tquads.begin(); r != roof_tquads.end(); ++r) {} // WRITE; use roof_color/mat.roof_tex; only needed for exterior rays?
 	bvh.ray_cast(p1, p2, cnorm, ccolor, t);
-	if (t == 1.0) {cpos = p2; return hit;} // no intersection with bvh
+
+	if (t == 1.0) { // no intersection with bvh
+		cpos = p2;
+		if (!hit) return 0;
+		if (rgen && p2.z > ground_floor_z1 && has_windows() && rgen->rand_bool()) return 0; // 50% chance of exiting through a window
+		return 1;
+	}
 	cpos = p1 + (p2 - p1)*t;
 	return 1;
 }
@@ -364,10 +368,13 @@ class building_indir_light_mgr_t {
 			cast_light_rays(b);
 		}
 	}
-	void calc_reflect_ray(point &pos, point const &cpos, vector3d &dir, vector3d const &cnorm, rand_gen_t &rgen, float tolerance) const {
+	vector3d get_reflect_dir(vector3d const &dir, vector3d const &cnorm) {
 		vector3d v_ref;
 		calc_reflection_angle(dir, v_ref, cnorm);
 		v_ref.normalize();
+		return v_ref;
+	}
+	void calc_reflect_ray(point &pos, point const &cpos, vector3d &dir, vector3d const &cnorm, vector3d const &v_ref, rand_gen_t &rgen, float tolerance) const {
 		vector3d const rand_dir(rgen.signed_rand_vector().get_norm());
 		dir = (v_ref + rand_dir).get_norm(); // diffuse reflection: new dir is mix 50% specular with 50% random
 		if (dot_product(dir, cnorm) < 0.0) {dir.negate();} // make sure it points away from the surface (is this needed?)
@@ -443,12 +450,13 @@ class building_indir_light_mgr_t {
 			if (!b.ray_cast_interior(origin, pri_dir, valid_area, bvh, init_cpos, init_cnorm, ccolor, &rgen)) continue;
 			colorRGBA const init_color(lcolor.modulate_with(ccolor));
 			if (init_color.get_weighted_luminance() < 0.1) continue; // done
+			vector3d const v_ref(get_reflect_dir(pri_dir, init_cnorm));
 
 			for (unsigned splits = 0; splits < NUM_PRI_SPLITS; ++splits) {
 				point pos(origin);
 				vector3d dir(pri_dir);
 				colorRGBA cur_color(init_color);
-				calc_reflect_ray(pos, init_cpos, dir, init_cnorm, rgen, tolerance);
+				calc_reflect_ray(pos, init_cpos, dir, init_cnorm, v_ref, rgen, tolerance);
 
 				for (unsigned bounce = 1; bounce < MAX_RAY_BOUNCES; ++bounce) { // allow up to MAX_RAY_BOUNCES bounces
 					cpos = pos; // init value
@@ -461,7 +469,7 @@ class building_indir_light_mgr_t {
 					if (!hit) break; // done
 					cur_color = cur_color.modulate_with(ccolor);
 					if (cur_color.get_weighted_luminance() < 0.1) break; // done
-					calc_reflect_ray(pos, cpos, dir, cnorm, rgen, tolerance);
+					calc_reflect_ray(pos, cpos, dir, cnorm, get_reflect_dir(dir, cnorm), rgen, tolerance);
 				} // for bounce
 			} // for splits
 		} // for n
@@ -606,7 +614,6 @@ public:
 		tid = cur_tid;
 	}
 	void register_light_state_change(unsigned light_ix, bool light_is_on, bool in_elevator, bool geom_changed) {
-		// TODO: update window light indir when outdoor lighting changes due to sun or moon change?
 		if (geom_changed) {
 			// TODO: have to first remove the lighting with the old geom, and then re-add it - but the geometry has already been updated
 			return;
@@ -614,10 +621,8 @@ public:
 		unsigned const num_erased(lights_complete.erase(light_ix)); // light is no longer completed; erase its state
 		bool const is_cur_light((int)light_ix == cur_light && is_running);
 		// Note: we can't just stop in the middle, because that will leave cur_light in an invalid/incomplete state
-		//if (is_cur_light) {kill_thread = 1; cur_light = -1;} // cur_light is no longer valid
 		// Note: if door state changed since this light was turned on, removing it may leave some light
 		if ((geom_changed || !light_is_on || (in_elevator && num_erased)) && (num_erased || is_cur_light)) {add_to_remove_queue(light_ix);} // must remove the light instead
-		//cout << TXT(cur_light) << TXT(is_running) << TXT(num_erased) << TXT(need_bvh_rebuild) << endl; // TESTING
 	}
 	void build_bvh(building_t const &b, point const &target) {
 		//highres_timer_t timer("Build BVH");

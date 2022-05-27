@@ -71,8 +71,8 @@ coll_obj_file coll_objs/coll_objs_heightmap.txt
 
 mesh_size  128 128 128 # need zsize > 0 for building lighting
 num_threads 6 # trade-off: 8 threads has faster update than 4 threads but introduces more lag
-max_ray_bounces 4
-num_light_rays 0 0 120000 # npts nrays local_rays
+max_ray_bounces 3
+num_light_rays 0 0 500000 # npts nrays local_rays
 lighting_file_local "" 1 1.0 0.0 # <filename> <write_mode> <light_scale> [<first_ray_weight>]
 indir_light_exp 0.5
 indir_vert_offset 1.0
