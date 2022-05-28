@@ -446,12 +446,13 @@ void add_tquad_to_verts(building_geom_t const &bg, tquad_with_ix_t const &tquad,
 		else if (tquad.is_exterior_door() || tquad.type == tquad_with_ix_t::TYPE_HELIPAD || tquad.type == tquad_with_ix_t::TYPE_SOLAR) { // textured from (0,0) to (1,1)
 			vert.t[0] = float((i == 1 || i == 2) ^ invert_tc_x);
 			vert.t[1] = float((i == 2 || i == 3));
-			if (tquad.type == tquad_with_ix_t::TYPE_SOLAR) {vert.t[0] *= 4.0; vert.t[1] *= 4.0;} // 4 reptitions in each dimension
+			if      (tquad.type == tquad_with_ix_t::TYPE_SOLAR ) {vert.t[0] *= 4.0; vert.t[1] *= 4.0;} // 4 reptitions in each dimension
+			else if (tquad.type == tquad_with_ix_t::TYPE_RDOOR2) {vert.t[0] *= 0.5;} // only one half of the door
 		}
 		else if (tquad.is_interior_door()) { // interior door textured/stretched in Y unless SPLIT_DOOR_PER_FLOOR=1
 			vert.t[0] = tex.tscale_x*((i == 1 || i == 2) ^ invert_tc_x);
 			vert.t[1] = tex.tscale_y*((i == 2 || i == 3));
-			if (exclude_frame) {vert.t[0] = 0.07 + 0.86*vert.t[0];}
+			if (exclude_frame)        {vert.t[0]  = 0.07 + 0.86*vert.t[0];}
 			if (SPLIT_DOOR_PER_FLOOR) {vert.t[1] *= 0.97;} // trim off the top door frame
 		}
 		else if (tquad.type == tquad_with_ix_t::TYPE_TRIM) {} // untextured - no tex coords
@@ -1212,6 +1213,9 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, 
 			}
 			else if (i->type == tquad_with_ix_t::TYPE_ROOF || i->type == tquad_with_ix_t::TYPE_ROOF_ACC) { // use roof texture
 				bdraw.add_tquad(*this, *i, bcube, mat.roof_tex.get_scaled_version(2.0), roof_color);
+			}
+			else if (i->type == tquad_with_ix_t::TYPE_BDOOR2 || i->type == tquad_with_ix_t::TYPE_RDOOR2) {
+				bdraw.add_tquad(*this, *i, bcube, building_texture_mgr.get_bdoor2_tid(), WHITE);
 			}
 			else { // use wall texture
 				bdraw.add_tquad(*this, *i, bcube, mat.side_tex, side_color);

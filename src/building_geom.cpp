@@ -1661,7 +1661,7 @@ void building_t::gen_details(rand_gen_t &rgen, bool is_rectangle) { // for the r
 	for (unsigned i = 0; i < num_blocks; ++i) {
 		roof_obj_t c(ROOF_OBJ_BLOCK); // generic block
 		float const height_scale(0.0035f*(top.dz() + bcube.dz())); // based on avg height of current section and entire building
-		float const height(height_scale*rgen.rand_uniform(1.0, 4.0));
+		float height(height_scale*rgen.rand_uniform(1.0, 4.0));
 		bool placed(0);
 
 		for (unsigned n = 0; n < 100 && !placed; ++n) { // limited to 100 attempts to prevent infinite loop
@@ -1678,6 +1678,25 @@ void building_t::gen_details(rand_gen_t &rgen, bool is_rectangle) { // for the r
 			}
 		} // for n
 		if (!placed) break; // failed, exit loop
+
+		if (num_blocks == 1) { // single block case - make it tall and add a door (that the player can't open)
+			float const door_width(get_doorway_width());
+
+			if (min(c.dx(), c.dy()) > 1.5*door_width) { // block is large enough to place a door
+				bool const door_dim(rgen.rand_bool());
+				bool const door_dir((c.d[door_dim][0] - top.d[door_dim][0]) < (top.d[door_dim][1] - c.d[door_dim][1])); // closer to building center/further from roof edge
+				float const door_height(get_door_height()), center(c.get_center_dim(!door_dim));
+				float const wall_pos(c.d[door_dim][door_dir] + (door_dir ? 1.0 : -1.0)*0.02*door_width); // move slightly away from the wall
+				max_eq(height, 1.1f*door_height);
+				tquad_t door(4);
+				for (unsigned n = 0; n < 4; ++n) {door.pts[n][door_dim] = wall_pos;}
+				door.pts[0].z = door.pts[1].z = c.z1(); // bottom
+				door.pts[2].z = door.pts[3].z = c.z1() + door_height; // top
+				door.pts[0][!door_dim] = door.pts[3][!door_dim] = center - 0.5*door_width; // left  side
+				door.pts[1][!door_dim] = door.pts[2][!door_dim] = center + 0.5*door_width; // right side
+				roof_tquads.emplace_back(door, (unsigned)tquad_with_ix_t::TYPE_RDOOR2);
+			}
+		}
 		c.z2() += height; // z2
 		details.push_back(c);
 	} // for i
