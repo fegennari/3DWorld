@@ -993,6 +993,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 	bool stairs_against_wall[2] = {0, 0};
 	stairs_shape sshape(SHAPE_STRAIGHT); // straight by default
 	bool const must_add_stairs(first_part_this_stack || (has_complex_floorplan && part == parts.back())); // first part in stack, or tallest/last part of complex building
+	bool const is_basement((int)part_ix == basement_part_ix);
 	int force_stairs_dir(2); // 2=unset
 
 	// add stairwells and elevator shafts
@@ -1032,7 +1033,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 		stairs_cut = stairs;
 		stairs_dim = long_dim;
 	}
-	else if ((int)part_ix == basement_part_ix && can_extend_pri_hall_stairs_to_pg() && part.contains_cube_xy(pri_hall)) {
+	else if (is_basement && can_extend_pri_hall_stairs_to_pg() && part.contains_cube_xy(pri_hall)) {
 		assert(!interior->stairwells.empty());
 		stairwell_t const &s(interior->stairwells.front());
 		assert(stairs_contained_in_part(s, pri_hall));
@@ -1302,28 +1303,40 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 		}
 	}
 	if (!has_roof_access) { // roof ceiling, full area
-		interior->top_ceilings_mask |= (uint64_t(1) << (interior->ceilings.size() & 63)); // mark this as a top ceiling so that it can be drawn; okay if wraps around
 		set_cube_zvals(C, (z - fc_thick), z);
 		bool added(0);
 
 		if (0 && is_house && part_ix == 0) { // add a ceiling cutout for attic access
 			cube_t best_room;
 			float best_area(0.0);
+			bool in_hallway(0);
 
 			for (unsigned r = rooms_start; r < interior->rooms.size(); ++r) {
 				room_t const &room(interior->rooms[r]);
 				if (room.has_stairs_on_floor(num_floors-1)) continue; // skip room with stairs
-				if (room.is_hallway) {best_room = room; break;} // hallway is always preferred
+				if (room.is_hallway) {best_room = room; in_hallway = 1; break;} // hallway is always preferred
 				float const area(room.dx()*room.dy());
 				if (area > best_area) {best_room = room; best_area = area;} // choose room with the largest area
 			}
 			if (!best_room.is_all_zeros()) {
-				point const center(best_room.get_cube_center());
-				best_room.set_from_point(center);
-				best_room.expand_by_xy(0.4*doorway_width); // 0.8*doorway_width in X/Y size
-				set_cube_zvals(best_room, C.z1(), C.z2()); // same zvals as ceiling
+				rand_gen_t rgen2(rgen); // deep copy to avoid disrupting rgen state
+				point access_pos;
+
+				if (in_hallway) {
+					bool const dim(best_room.dx() < best_room.dy());
+					access_pos = best_room.get_cube_center();
+					access_pos[dim] += (rgen2.rand_bool() ? -1.0 : 1.0)*0.1*best_room.get_sz_dim(dim); // place off center to avoid blocking the center light
+				}
+				else {
+					bool const xd(rgen2.rand_bool()), yd(rgen2.rand_bool()); // choose a random corner (off to that side) to avoid blocking the light
+					access_pos.x = 0.7*best_room.d[0][xd] + 0.3*best_room.d[0][!xd];
+					access_pos.y = 0.7*best_room.d[1][yd] + 0.3*best_room.d[1][!yd];
+				}
+				interior->attic_access.set_from_point(access_pos);
+				interior->attic_access.expand_by_xy(0.375*doorway_width); // 0.75*doorway_width in X/Y size
+				set_cube_zvals(interior->attic_access, C.z1(), C.z2()); // same zvals as ceiling
 				cube_t ceiling_parts[4];
-				subtract_cube_xy(C, best_room, ceiling_parts);
+				subtract_cube_xy(C, interior->attic_access, ceiling_parts);
 
 				for (unsigned i = 0; i < 4; ++i) {
 					if (!ceiling_parts[i].is_zero_area()) {interior->ceilings.push_back(ceiling_parts[i]);}

@@ -1063,9 +1063,9 @@ struct building_interior_t {
 	vector<person_t> people;
 	std::unique_ptr<building_room_geom_t> room_geom;
 	std::unique_ptr<building_nav_graph_t> nav_graph;
+	cube_t attic_access;
 	cube_with_ix_t pg_ramp; // ix stores {dim, dir}
 	draw_range_t draw_range;
-	uint64_t top_ceilings_mask; // bit mask for ceilings that are on the top floor and have no floor above them
 	int garage_room;
 	bool door_state_updated, is_unconnected, ignore_ramp_placement, placed_people, elevators_disabled;
 
@@ -1138,6 +1138,7 @@ struct building_t : public building_geom_t {
 	bool has_basement () const {return (basement_part_ix >= 0);}
 	bool has_driveway () const {return !driveway.is_all_zeros();}
 	bool has_a_garage () const {return (has_garage || has_int_garage);} // external or internal
+	bool has_attic    () const {return (interior && !interior->attic_access.is_all_zeros());}
 	bool enable_driveway_coll() const {return !is_rotated();} // no collision with rotated driveways/porches for now
 	bool has_pg_ramp() const {return (interior && !interior->pg_ramp.is_all_zeros());}
 	bool can_extend_pri_hall_stairs_to_pg() const {return (has_parking_garage && has_pri_hall() && pri_hall.z1() == ground_floor_z1);}

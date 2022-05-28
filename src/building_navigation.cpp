@@ -1347,6 +1347,5 @@ void building_t::register_person_hit(unsigned person_ix, room_object_t const &ob
 }
 
 // these must be here to handle deletion of building_nav_graph_t, which is only defined in this file
-building_interior_t::building_interior_t() :
-	top_ceilings_mask(0), garage_room(-1), door_state_updated(0), is_unconnected(0), ignore_ramp_placement(0), placed_people(0), elevators_disabled(0) {}
+building_interior_t::building_interior_t() : garage_room(-1), door_state_updated(0), is_unconnected(0), ignore_ramp_placement(0), placed_people(0), elevators_disabled(0) {}
 building_interior_t::~building_interior_t() {}

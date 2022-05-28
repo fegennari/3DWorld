@@ -1322,7 +1322,16 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, 
 		for (auto i = interior->ceilings.begin(); i != interior->ceilings.end(); ++i) { // 600K T
 			// skip top surface of all but top floor ceilings if the roof is sloped;
 			// if this is an office building, the ceiling could be at a lower floor with a flat roof even if the highest floor has a sloped roof, so we must skip it
-			bool const skip_top(roof_type == ROOF_TYPE_FLAT || !is_house || !(interior->top_ceilings_mask & (uint64_t(1) << ((i - interior->ceilings.begin()) & 63))));
+			bool skip_top(roof_type == ROOF_TYPE_FLAT || !is_house);
+
+			if (!skip_top) { // check if this is a top ceiling; needed for light occlusion
+				float const toler(get_floor_thickness());
+				skip_top = 1; // assume it's not
+
+				for (auto p = parts.begin(); p != get_real_parts_end(); ++p) { // Note: excludes garages and sheds
+					if (!is_basement(p) && p->contains_cube_xy(*i) && fabs(i->z2() - p->z2()) < toler) {skip_top = 0; break;}
+				}
+			}
 			bool const is_basement((is_house || has_parking_garage) && i->z1() < ground_floor_z1); // use wall texture for basement/parking garage ceilings, not ceiling texture
 			bool const use_floor_tex(is_house && is_basement && has_basement_pipes); // draw wood flooring for basement ceiling
 			tid_nm_pair_t const &tex(use_floor_tex ? mat.house_floor_tex : (is_basement ? mat.wall_tex : ceil_tex));
@@ -1372,6 +1381,9 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, 
 			bdraw.add_section(*this, 0, inner_cube, wall_tex, WHITE, dim_mask, 0, 0, 1, 0, 0.0, 0, 1.0, 1);
 			// Note elevator doors are dynamic and are drawn as part of room_geom
 		} // for i
+		if (has_attic()) { // add inside surface of attic access hole; could be draw as room geom if needed
+			bdraw.add_section(*this, 0, interior->attic_access, mat.wall_tex, mat.wall_color, 3, 0, 0, 1, 0, 0.0, 0, 1.0, 1); // no AO; X/Y dims only, inverted normals
+		}
 		// Note: interior doors are drawn as part of room_geom
 		bdraw.end_draw_range_capture(interior->draw_range); // 80MB, 394MB, 836ms
 	} // end interior case
