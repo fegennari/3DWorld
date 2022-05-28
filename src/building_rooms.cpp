@@ -2168,7 +2168,7 @@ void building_t::add_outlets_to_room(rand_gen_t rgen, room_t const &room, float 
 }
 
 bool building_t::add_vent_to_room(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned objs_start) {
-	float const wall_thickness(get_wall_thickness()), ceiling_zval(zval + get_window_vspace() - get_floor_thickness());
+	float const wall_thickness(get_wall_thickness()), ceiling_zval(zval + get_floor_ceil_gap());
 	float const thickness(0.1*wall_thickness), height(2.5*wall_thickness), hwidth(2.0*wall_thickness), min_wall_spacing(1.5*hwidth);
 	cube_t const room_bounds(get_walkable_room_bounds(room));
 	if (min(room_bounds.dx(), room_bounds.dy()) < 3.0*min_wall_spacing) return 0; // room is too small; shouldn't happen

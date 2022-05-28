@@ -41,7 +41,7 @@ void subtract_cubes_from_cube_split_in_dim(cube_t const &c, vect_cube_t const &s
 }
 
 bool building_t::add_water_heaters(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
-	float const floor_spacing(get_window_vspace()), height(floor_spacing - get_floor_thickness());
+	float const floor_spacing(get_window_vspace()), height(get_floor_ceil_gap());
 	float const radius((is_house ? 0.18 : 0.20)*height); // larger radius for office buildings
 	cube_t const room_bounds(get_walkable_room_bounds(room));
 	cube_t place_area(room_bounds);
