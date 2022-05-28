@@ -1234,14 +1234,14 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 				c.z1() = zc; c.z2() = z; interior->ceilings.push_back(c);
 				c.set_to_zeros();
 			}
-			bool const dir(stairs_dir^(sshape == SHAPE_U));
+			bool const dir(stairs_dir ^ (sshape == SHAPE_U)), u_side(dir); // see logic in building_t::add_stairs_and_elevators() for side
 			box.z1() = z;
 			// add a door to the roof
 			float const door_shift(0.2*(dir ? -1.0 : 1.0)*fc_thick);
 			cube_t door(box);
 			door.d[stairs_dim][ dir] += door_shift; // shift slightly to fill the gap
 			door.d[stairs_dim][!dir]  = door.d[stairs_dim][dir];
-			if (!is_sloped) {door.d[!stairs_dim][1] = door.get_center_dim(!stairs_dim);} // only the open half
+			if (!is_sloped) {door.d[!stairs_dim][u_side] = door.get_center_dim(!stairs_dim);} // U-shaped stairs; only the open half
 			add_door(door, part_ix, stairs_dim, dir, 1, 1); // roof_access=1
 			// clear any roof objects that are in the way
 			cube_t clear_cube(box);
@@ -1258,7 +1258,8 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 				tquad_t top(4); // quad
 				for (unsigned n = 0; n < 4; ++n) {top.pts[n] = pts[n];}
 				top.pts[top_vix[0]].z = top.pts[top_vix[1]].z = z2; // these are the higher points
-				roof_tquads.emplace_back(top, (unsigned)tquad_with_ix_t::TYPE_ROOF_ACC);
+				unsigned const tquad_type(tquad_with_ix_t::TYPE_ROOF_ACC);
+				roof_tquads.emplace_back(top, tquad_type);
 				tquad_t frame_top(4); // top of door frame
 
 				for (unsigned s = 0; s < 2; ++s) {
@@ -1267,7 +1268,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 					side.pts[1] = pts[top_vix[s]]; // bottom
 					side.pts[2] = top.pts[top_vix[s]]; // top
 					if (s) {swap(side.pts[0], side.pts[1]);} // make normal point outward for correct BFC
-					roof_tquads.emplace_back(side, (unsigned)tquad_with_ix_t::TYPE_ROOF_ACC);
+					roof_tquads.emplace_back(side, tquad_type);
 
 					tquad_t frame(4); // quads on sides of door frame
 					frame.pts[0] = frame.pts[3] =     pts[top_vix[s]]; // bottom
@@ -1275,18 +1276,18 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 					float const frame_width(0.08*((bool(s)^dir^stairs_dim^1) ? -1.0 : 1.0)*box.get_sz_dim(!stairs_dim));
 					for (unsigned d = 0; d < 2; ++d) {frame.pts[(s<<1)+d][!stairs_dim] +=    frame_width;} // move toward center of door
 					for (unsigned n = 0; n < 4; ++n) {frame.pts[n]       [ stairs_dim] += 0.6*door_shift;} // shift back behind the door
-					roof_tquads.emplace_back(frame, (unsigned)tquad_with_ix_t::TYPE_ROOF_ACC);
+					roof_tquads.emplace_back(frame, tquad_type);
 					frame_top.pts[2*s +   s] = frame.pts[s+1];
 					frame_top.pts[2*s + 1-s] = frame.pts[s+1] - vector3d(0.0, 0.0, 0.5*fc_thick);
 				} // for s
-				roof_tquads.emplace_back(frame_top, (unsigned)tquad_with_ix_t::TYPE_ROOF_ACC);
+				roof_tquads.emplace_back(frame_top, tquad_type);
 			}
-			else { // box roof
+			else { // U-shaped stairs; box roof
 				cube_t hole(stairs_cut), front(box);
 				hole.expand_by_xy(0.1*fc_thick); // to prevent z-fighting
-				front.d[ stairs_dim][!dir] = hole.d[stairs_dim][dir];
-				hole .d[ stairs_dim][ dir] = box. d[stairs_dim][dir]; // move edge flush with box to remove this wall and create an opening
-				front.d[!stairs_dim][   0] = front.get_center_dim(!stairs_dim); // block off the non-opening half
+				front.d[ stairs_dim][!dir   ] = hole.d[stairs_dim][dir];
+				hole .d[ stairs_dim][ dir   ] = box. d[stairs_dim][dir]; // move edge flush with box to remove this wall and create an opening
+				front.d[!stairs_dim][!u_side] = front.get_center_dim(!stairs_dim); // block off the non-opening half
 				subtract_cube_xy(box, hole, to_add);
 
 				for (unsigned i = 0; i < 4; ++i) {
@@ -1294,8 +1295,8 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 					if (!c.is_zero_area()) {details.emplace_back(c, (uint8_t)ROOF_OBJ_SCAP);} // skip open side
 				}
 				box.z1() = front.z2() = box.z2() - fc_thick;
-				details.emplace_back(box,   ROOF_OBJ_SCAP); // top
-				details.emplace_back(front, ROOF_OBJ_SCAP); // front half
+				details.emplace_back(box,   (uint8_t)ROOF_OBJ_SCAP); // top
+				details.emplace_back(front, (uint8_t)ROOF_OBJ_SCAP); // front half
 				max_eq(bcube.z2(), box.z2());
 			}
 			interior->stairwells.back().roof_access = 1;
