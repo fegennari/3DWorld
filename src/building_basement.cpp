@@ -923,6 +923,7 @@ void building_t::get_pipe_basement_connections(vect_riser_pos_t &sewer, vect_ris
 			water_heaters.push_back(i);
 			continue;
 		}
+		if (i.z1() < ground_floor_z1) continue; // object in the house basement; unclear how to handle it here
 		bool const hot_cold_obj (i.type == TYPE_SINK || i.type == TYPE_TUB || i.type == TYPE_SHOWER || i.type == TYPE_BRSINK || i.type == TYPE_KSINK || i.type == TYPE_WASHER);
 		bool const cold_only_obj(i.type == TYPE_TOILET || i.type == TYPE_URINAL || i.type == TYPE_DRAIN);
 		if (!hot_cold_obj && !cold_only_obj) continue;
@@ -1035,7 +1036,43 @@ void building_t::add_basement_electrical_house(rand_gen_t &rgen) {
 }
 
 void building_t::add_house_basement_pipes(rand_gen_t &rgen) {
-	// TODO: WRITE
+	if (!has_room_geom()) return; // error?
+	float const fc_thick(get_fc_thickness());
+	cube_t const &basement(get_basement());
+	// get pipe ends (risers) coming in through the ceiling
+	vect_riser_pos_t sewer, cold_water, hot_water;
+	get_pipe_basement_connections(sewer, cold_water, hot_water, rgen);
+	vect_cube_t pipe_cubes;
+	// hang sewer pipes under the ceiling beams; hang water pipes from the ceiling, above sewer pipes and through the beams
+	unsigned const num_floors(1); // basement is always a single floor
+	unsigned const room_id(0); // ???
+	float const pipe_light_amt = 1.0; // make pipes brighter and easier to see
+	float const ceil_zval(basement.z2() - 1.6*fc_thick), water_ceil_zval(basement.z2() - 1.0*fc_thick);
+	vect_cube_t obstacles, walls, beams; // beams remains empty
+
+	for (unsigned d = 0; d < 2; ++d) { // add all basement walls
+		for (cube_t &wall : interior->walls[d]) {
+			if (wall.z1() < ground_floor_z1) {walls.push_back(wall);}
+		}
+	}
+	auto objs_end(interior->room_geom->get_placed_objs_end()); // skip buttons/stairs/elevators
+
+	for (auto i = interior->room_geom->objs.begin(); i != objs_end; ++i) {
+		if (i->no_coll() || i->z1() >= ground_floor_z1) continue; // not in the basement
+		obstacles.push_back(*i); // TODO: what about lights?
+	}
+	for (auto i = interior->doors.begin(); i != interior->doors.end(); ++i) {
+		if (i->z1() >= ground_floor_z1) continue; // not in the basement
+		cube_t door_bounds(*i); // i->get_true_bcube()?
+		door_bounds.expand_by_xy(i->get_width()); // TODO: conservative - check only open side
+		obstacles.push_back(door_bounds);
+	}
+	add_basement_pipes(obstacles, walls, beams, sewer, pipe_cubes, room_id, num_floors, pipe_light_amt, ceil_zval, rgen, 0); // sewer pipes; add_water_pipes=0
+	add_basement_pipes(obstacles, walls, beams, cold_water, pipe_cubes, room_id, num_floors, pipe_light_amt, water_ceil_zval, rgen, 1); // add_water_pipes=1 (cold water)
+	// add hot water pipes; these can intersect cold water pipes, so we have to add those to obstacles
+	vect_cube_t hw_obstacles(obstacles);
+	vector_add_to(pipe_cubes, hw_obstacles); // add sewer and cold water pipes
+	add_basement_pipes(hw_obstacles, walls, beams, hot_water, pipe_cubes, room_id, num_floors, pipe_light_amt, water_ceil_zval, rgen, 2); // add_water_pipes=2 (hot water)
 }
 
 void building_t::add_parking_garage_ramp(rand_gen_t &rgen) {
