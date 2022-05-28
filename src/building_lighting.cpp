@@ -665,8 +665,7 @@ void building_t::get_lights_with_priorities(point const &target, cube_t const &v
 	if (!has_room_geom()) return; // error?
 	//if (is_rotated()) {} // do we need to handle this case?
 	vect_room_object_t const &objs(interior->room_geom->objs);
-	float const window_vspacing(get_window_vspace()), window_vspacing_inv(1.0/window_vspacing);
-	float const diag_dist_sq(bcube.dx()*bcube.dx() + bcube.dy()*bcube.dy()), other_floor_penalty(0.25*diag_dist_sq);
+	float const window_vspacing(get_window_vspace()), diag_dist_sq(bcube.dx()*bcube.dx() + bcube.dy()*bcube.dy()), other_floor_penalty(0.25*diag_dist_sq);
 	auto objs_end(interior->room_geom->get_placed_objs_end()); // skip buttons/stairs/elevators
 	int const target_room(get_room_containing_pt(target)); // generally always should be >= 0
 
@@ -715,7 +714,6 @@ bool get_wall_quad_window_area(vect_vnctcc_t const &wall_quad_verts, unsigned i,
 void building_t::get_all_windows(vect_cube_with_ix_t &windows) const { // Note: ix encodes 2*dim+dir
 	windows.clear();
 	if (!has_windows() || is_rotated()) return; // no windows; rotated buildings not handled
-	float const window_vspacing(get_window_vspace());
 	float const border_mult(0.94); // account for the frame part of the window texture, which is included in the interior cutout of the window
 	float const window_h_border(border_mult*get_window_h_border()), window_v_border(border_mult*get_window_v_border()); // (0, 1) range
 	static vect_vnctcc_t wall_quad_verts;

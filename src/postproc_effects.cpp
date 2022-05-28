@@ -97,7 +97,7 @@ class ssao_state_manager_t {
 	unsigned width=0, height=0, tid=0, fbo=0;
 public:
 	void begin() {
-		if (width != window_width || height != window_height) { // size change, clear
+		if (width != (unsigned)window_width || height != (unsigned)window_height) { // size change, clear
 			clear();
 			width  = window_width;
 			height = window_height;
