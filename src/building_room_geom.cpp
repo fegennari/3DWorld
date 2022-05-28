@@ -2879,19 +2879,22 @@ void building_room_geom_t::add_window(room_object_t const &c, float tscale) { //
 	get_material(tex, 0).add_cube_to_verts(window, c.color, c.get_llc(), skip_faces); // no apply_light_color()
 }
 
+colorRGBA const &get_outlet_or_switch_box_color(room_object_t const &c) {return ((c.flags & RO_FLAG_HANGING) ? GRAY : c.color);} // should be silver metal
+
 void building_room_geom_t::add_switch(room_object_t const &c, bool draw_detail_pass) { // light switch, etc.
-	vector3d const sz(c.get_size());
+	float const scaled_depth(((c.flags & RO_FLAG_HANGING) ? 0.2 : 1.0)*c.get_sz_dim(c.dim)); // non-recessed switch has smaller face plate depth
 	room_object_t plate(c);
-	plate.d[c.dim][!c.dir] -= (c.dir ? -1.0 : 1.0)*0.70*sz[c.dim]; // front face of plate
+	plate.d[c.dim][!c.dir] -= (c.dir ? -1.0 : 1.0)*0.70*scaled_depth; // front face of plate
 
 	if (draw_detail_pass) { // draw face plate (static detail)
-		add_flat_textured_detail_wall_object(plate, get_texture_by_name("interiors/light_switch.jpg"), 0); // draw_z1_face=0
+		add_flat_textured_detail_wall_object(plate, get_outlet_or_switch_box_color(c), get_texture_by_name("interiors/light_switch.jpg"), 0); // draw_z1_face=0
 	}
 	else { // draw rocker (small object that can move/change state)
+		float const width(c.get_sz_dim(!c.dim));
 		cube_t rocker(c);
-		set_wall_width(rocker, plate.d[c.dim][!c.dir], 0.15*sz[c.dim], c.dim);
-		rocker.expand_in_dim(!c.dim, -0.27*sz[!c.dim]); // shrink horizontally
-		rocker.expand_in_dim(2,      -0.39*sz[!c.dim]); // shrink vertically
+		set_wall_width(rocker, plate.d[c.dim][!c.dir], 0.15*scaled_depth, c.dim);
+		rocker.expand_in_dim(!c.dim, -0.27*width); // shrink horizontally
+		rocker.expand_in_dim(2,      -0.39*width); // shrink vertically
 		rgeom_mat_t &mat(get_untextured_material(0, 0, 1)); // unshadowed, small
 		unsigned const qv_start(mat.quad_verts.size());
 		mat.add_cube_to_verts_untextured(rocker, c.color, (~get_face_mask(c.dim, c.dir) | EF_Z1)); // skip bottom face and face that's against the wall
@@ -2917,17 +2920,17 @@ void building_room_geom_t::add_breaker(room_object_t const &c) {
 	rotate_verts(mat.quad_verts, rot_axis, 0.12*PI, plate.get_cube_center(), qv_start); // rotate rocker slightly about base plate center
 }
 
-void building_room_geom_t::add_flat_textured_detail_wall_object(room_object_t const &c, int tid, bool draw_z1_face) { // uses mats_detail
+void building_room_geom_t::add_flat_textured_detail_wall_object(room_object_t const &c, colorRGBA const &side_color, int tid, bool draw_z1_face) { // uses mats_detail
 	rgeom_mat_t &front_mat(get_material(tid_nm_pair_t(tid, 0.0, 0), 0, 0, 2)); // small=2/detail
 	front_mat.add_cube_to_verts(c, c.color, zero_vector, get_face_mask(c.dim, !c.dir), !c.dim); // textured front face; always fully lit to match wall
 	unsigned const skip_faces(get_skip_mask_for_xy(c.dim) | (draw_z1_face ? EF_Z1 : 0)); // skip front/back and maybe bottom faces
-	get_untextured_material(0, 0, 2).add_cube_to_verts_untextured(c, c.color, skip_faces); // unshadowed, small
+	get_untextured_material(0, 0, 2).add_cube_to_verts_untextured(c, side_color, skip_faces); // sides: unshadowed, small
 }
 void building_room_geom_t::add_outlet(room_object_t const &c) {
-	add_flat_textured_detail_wall_object(c, get_texture_by_name("interiors/outlet1.jpg"), 1); // draw_z1_face=1 (optimization)
+	add_flat_textured_detail_wall_object(c, get_outlet_or_switch_box_color(c), get_texture_by_name("interiors/outlet1.jpg"), 1); // draw_z1_face=1 (optimization)
 }
 void building_room_geom_t::add_vent(room_object_t const &c) {
-	add_flat_textured_detail_wall_object(c, get_texture_by_name("interiors/vent.jpg"), 0); // draw_z1_face=0
+	add_flat_textured_detail_wall_object(c, c.color, get_texture_by_name("interiors/vent.jpg"), 0); // draw_z1_face=0
 }
 
 void building_room_geom_t::add_plate(room_object_t const &c) { // is_small=1

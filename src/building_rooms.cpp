@@ -2022,6 +2022,15 @@ void building_t::add_boxes_to_room(rand_gen_t rgen, room_t const &room, float zv
 	} // for n
 }
 
+room_object_t get_conduit(bool dim, bool dir, float radius, float wall_pos_dim, float wall_pos_not_dim, float z1, float z2, unsigned room_id) {
+	cube_t conduit;
+	set_wall_width(conduit, wall_pos_not_dim, radius, !dim);
+	conduit.d[dim][ dir] = wall_pos_dim; // flush with wall
+	conduit.d[dim][!dir] = conduit.d[dim][dir] + (dir ? -1.0 : 1.0)*2.0*radius;
+	set_cube_zvals(conduit, z1, z2);
+	return room_object_t(conduit, TYPE_PIPE, room_id, 0, 1, RO_FLAG_NOCOLL, 1.0, SHAPE_CYLIN, LT_GRAY);
+}
+
 void building_t::add_light_switches_to_room(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned objs_start, bool is_ground_floor, bool is_basement) {
 	float const floor_spacing(get_window_vspace()), wall_thickness(get_wall_thickness()), switch_thickness(0.2*wall_thickness);
 	float const switch_height(1.8*wall_thickness), switch_hwidth(0.5*wall_thickness), min_wall_spacing(switch_hwidth + 2.0*wall_thickness);
@@ -2058,11 +2067,11 @@ void building_t::add_light_switches_to_room(rand_gen_t rgen, room_t const &room,
 		for (auto i = cands.begin(); i != cands.end() && num_ls < max_ls; ++i) {
 			// check for windows if (real_num_parts > 1)? is it actually possible for doors to be within far_spacing of a window?
 			bool const dim(i->dim), dir(i->get_center_dim(dim) > room.get_center_dim(dim));
-			float const door_width(i->get_width()), near_spacing(0.25*door_width), far_spacing(1.25*door_width); // off to the side of the door when open
+			float const dir_sign(dir ? -1.0 : 1.0), door_width(i->get_width()), near_spacing(0.25*door_width), far_spacing(1.25*door_width); // off to side of door when open
 			assert(door_width > 0.0);
 			cube_t const &wall_bounds(ei ? room_bounds : room); // exterior door should use the original room, not room_bounds
 			c.d[dim][ dir] = wall_bounds.d[dim][dir]; // flush with wall
-			c.d[dim][!dir] = c.d[dim][dir] + (dir ? -1.0 : 1.0)*switch_thickness; // expand out a bit
+			c.d[dim][!dir] = c.d[dim][dir] + dir_sign*switch_thickness; // expand out a bit
 			bool done(0);
 
 			for (unsigned Side = 0; Side < 2 && !done; ++Side) { // try both sides of the doorway
@@ -2073,13 +2082,20 @@ void building_t::add_light_switches_to_room(rand_gen_t rgen, room_t const &room,
 					if (wall_pos < room_bounds.d[!dim][0] + min_wall_spacing || wall_pos > room_bounds.d[!dim][1] - min_wall_spacing) continue; // too close to the adjacent wall
 					set_wall_width(c, wall_pos, switch_hwidth, !dim);
 					cube_t c_test(c);
-					c_test.d[dim][!dir] += (dir ? -1.0 : 1.0)*wall_thickness; // expand out more so that it's guaranteed to intersect appliances placed near the wall
+					c_test.d[dim][!dir] += dir_sign*wall_thickness; // expand out more so that it's guaranteed to intersect appliances placed near the wall
 					if (overlaps_other_room_obj(c_test, objs_start))          continue;
 					if (is_cube_close_to_doorway(c, room, 0.0, (ei==1), 1))   continue; // inc_open=1/check_open_dir=1 for inside, to avoid placing behind an open door
 					if (interior->is_blocked_by_stairs_or_elevator(c))        continue; // check stairs and elevators
 					if (!check_if_placed_on_interior_wall(c, room, dim, dir)) continue; // ensure the switch is on a wall
 					// if is_basement, and this is an exterior wall, use a non-recessed light switch? but the basement ext wall will never have a doorway; next to basement stairs?
-					objs.emplace_back(c, TYPE_SWITCH, room_id, dim, dir, RO_FLAG_NOCOLL, 1.0); // dim/dir matches wall; fully lit
+					unsigned flags(RO_FLAG_NOCOLL);
+
+					if (is_house && is_basement && classify_room_wall(room, zval, dim, dir, 0) == ROOM_WALL_EXT) { // house exterior basement wall; non-recessed
+						objs.push_back(get_conduit(dim, dir, 0.25*switch_hwidth, c.d[dim][dir], wall_pos, c.z2(), (zval + get_floor_ceil_gap()), room_id));
+						c.d[dim][!dir] += dir_sign*1.0*switch_hwidth; // shift front outward more
+						flags |= RO_FLAG_HANGING;
+					}
+					objs.emplace_back(c, TYPE_SWITCH, room_id, dim, dir, flags, 1.0); // dim/dir matches wall; fully lit
 					done = 1; // done, only need to add one for this door
 					++num_ls;
 					break;
@@ -2118,6 +2134,7 @@ void building_t::add_outlets_to_room(rand_gen_t rgen, room_t const &room, float 
 	cube_t const room_bounds(get_walkable_room_bounds(room));
 	if (min(room_bounds.dx(), room_bounds.dy()) < 3.0*min_wall_spacing) return; // room is too small; shouldn't happen
 	vect_door_stack_t const &doorways(get_doorways_for_room(room, zval));
+	vect_room_object_t &objs(interior->room_geom->objs);
 	cube_t c;
 	c.z1() = zval + get_trim_height() + 0.4*plate_height; // wall trim height + some extra padding; same for every outlet
 	c.z2() = c.z1() + plate_height;
@@ -2129,9 +2146,9 @@ void building_t::add_outlets_to_room(rand_gen_t rgen, room_t const &room, float 
 		bool const is_exterior_wall(classify_room_wall(room, zval, dim, dir, 0) == ROOM_WALL_EXT); // includes basement
 		cube_t const &wall_bounds(is_exterior_wall ? room : room_bounds); // exterior wall should use the original room, not room_bounds
 		float const wall_pos(rgen.rand_uniform((room_bounds.d[!dim][0] + min_wall_spacing), (room_bounds.d[!dim][1] - min_wall_spacing)));
-		float const wall_face(wall_bounds.d[dim][dir]);
+		float const wall_face(wall_bounds.d[dim][dir]), dir_sign(dir ? -1.0 : 1.0);
 		c.d[dim][ dir] = wall_face; // flush with wall
-		c.d[dim][!dir] = wall_face + (dir ? -1.0 : 1.0)*plate_thickness; // expand out a bit
+		c.d[dim][!dir] = wall_face + dir_sign*plate_thickness; // expand out a bit
 		set_wall_width(c, wall_pos, plate_hwidth, !dim);
 
 		if (!is_basement && has_windows() && is_exterior_wall) { // check for window intersection
@@ -2163,7 +2180,14 @@ void building_t::add_outlets_to_room(rand_gen_t rgen, room_t const &room, float 
 		}
 		if (bad_place) continue;
 		if (!check_if_placed_on_interior_wall(c, room, dim, dir)) continue; // ensure the outlet is on a wall
-		interior->room_geom->objs.emplace_back(c, TYPE_OUTLET, room_id, dim, dir, RO_FLAG_NOCOLL, 1.0); // dim/dir matches wall; fully lit
+		unsigned flags(RO_FLAG_NOCOLL);
+
+		if (is_house && is_basement && is_exterior_wall) { // house exterior basement wall; non-recessed
+			objs.push_back(get_conduit(dim, dir, 0.25*plate_hwidth, c.d[dim][dir], wall_pos, c.z2(), (zval + get_floor_ceil_gap()), room_id));
+			c.d[dim][!dir] += dir_sign*1.2*plate_hwidth; // shift front outward more
+			flags |= RO_FLAG_HANGING;
+		}
+		objs.emplace_back(c, TYPE_OUTLET, room_id, dim, dir, flags, 1.0); // dim/dir matches wall; fully lit
 	} // for wall
 }
 
