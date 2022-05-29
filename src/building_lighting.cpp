@@ -389,12 +389,13 @@ class building_indir_light_mgr_t {
 		cube_t const scene_bounds(get_scene_bounds_bcube()); // expected by lmap update code
 		point const ray_scale(scene_bounds.get_size()/light_bounds.get_size()), llc_shift(scene_bounds.get_llc() - light_bounds.get_llc()*ray_scale);
 		float const tolerance(1.0E-5*valid_area.get_max_extent());
+		bool const is_window(cur_light & IS_WINDOW_BIT);
 		float weight(100.0);
 		cube_t light_cube;
 		colorRGBA lcolor;
 		assert(cur_light >= 0);
 
-		if (cur_light & IS_WINDOW_BIT) { // window
+		if (is_window) { // window
 			unsigned const window_ix(cur_light & ~IS_WINDOW_BIT);
 			assert(window_ix < windows.size());
 			cube_with_ix_t const &window(windows[window_ix]);
@@ -403,7 +404,7 @@ class building_indir_light_mgr_t {
 			dir = !bool(window.ix &  1); // cast toward the interior
 			float const surface_area(window.dz()*window.get_sz_dim(!bool(dim)));
 			lcolor     = outdoor_color;
-			weight    *= surface_area/0.001f; // 1/3 the surface area weight of lights
+			weight    *= surface_area/0.0012f; // 1/4 the surface area weight of lights
 			light_cube = window;
 			light_cube.translate_dim(dim, (dir ? 1.0 : -1.0)*0.5*b.get_wall_thickness()); // shift slightly inside the building to avoid collision with the exterior wall
 		}
@@ -447,7 +448,14 @@ class building_indir_light_mgr_t {
 				origin[d] = ((lo == hi) ? lo : rgen.rand_uniform(lo, hi));
 			}
 			init_cpos = origin; // init value
-			if (!b.ray_cast_interior(origin, pri_dir, valid_area, bvh, init_cpos, init_cnorm, ccolor, &rgen)) continue;
+			bool const hit(b.ray_cast_interior(origin, pri_dir, valid_area, bvh, init_cpos, init_cnorm, ccolor, &rgen));
+
+			// room lights lights already contribute direct lighting, so we skip this ray; however, windows don't, so we add their primary ray contribution
+			if (is_window && init_cpos != origin) {
+				point const p1(origin*ray_scale + llc_shift), p2(init_cpos*ray_scale + llc_shift); // transform building space to global scene space
+				add_path_to_lmcs(&lmgr, nullptr, p1, p2, weight, lcolor*NUM_PRI_SPLITS, LIGHTING_LOCAL, 0); // local light, no bcube; scale color based on splits
+			}
+			if (!hit) continue; // done
 			colorRGBA const init_color(lcolor.modulate_with(ccolor));
 			if (init_color.get_weighted_luminance() < 0.1) continue; // done
 			vector3d const v_ref(get_reflect_dir(pri_dir, init_cnorm));
