@@ -175,8 +175,7 @@ bool building_t::check_sphere_coll(point &pos, point const &p_last, vector3d con
 			}
 		}
 		for (auto i = parts.begin(); i != get_real_parts_end_inc_sec(); ++i) { // include garages and sheds
-			cube_t c(*i + xlate);
-			if (!c.contains_pt(point(pos2.x, pos2.y, zval))) continue; // not interior to this part
+			if (!i->contains_pt(point(pos2_bs.x, pos2_bs.y, zval))) continue; // not interior to this part
 			float cont_area(0.0);
 
 			for (auto p = parts.begin(); p != get_real_parts_end(); ++p) {
@@ -184,6 +183,7 @@ bool building_t::check_sphere_coll(point &pos, point const &p_last, vector3d con
 				if (p->intersects_xy(sc)) {cont_area += (min(p->x2(), sc.x2()) - max(p->x1(), sc.x1()))*(min(p->y2(), sc.y2()) - max(p->y1(), sc.y1()));} // accumulate shared XY area
 			}
 			if (cont_area < 0.99*sc.get_area_xy()) { // sphere bounding cube not contained in union of parts - sphere is partially outside the building
+				cube_t c(*i + xlate); // convert to camera space
 				c.expand_by_xy(-radius); // shrink part by sphere radius
 				c.clamp_pt_xy(pos2); // force pos2 into interior of the cube to prevent the sphere from intersecting the part
 				had_coll = 1;
@@ -191,6 +191,17 @@ bool building_t::check_sphere_coll(point &pos, point const &p_last, vector3d con
 			is_interior = 1;
 			break; // flag for interior collision detection
 		} // for i
+		if (!is_interior && has_attic() && zval > interior->attic_access.z1()) {
+			// find part containing the attic
+			cube_t aa_bot(interior->attic_access);
+			aa_bot.z2() = aa_bot.z1(); // shrink to the bottom face, which should be inside the part
+
+			for (auto i = parts.begin(); i != get_real_parts_end(); ++i) {
+				if (!i->contains_cube(aa_bot)) continue; // not the part containing the attic access
+				if (!i->contains_pt_xy(pos2_bs)) break; // this is the part, but the player is not over it (TODO: is this correct for L-shaped buildings?)
+				is_interior = 1; // TODO: check that pos2 is under the roof
+			}
+		}
 		if (!is_interior) { // not interior to a part - check roof access
 			float const floor_thickness(get_floor_thickness());
 
