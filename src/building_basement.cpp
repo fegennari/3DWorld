@@ -6,6 +6,8 @@
 #include "buildings.h"
 #include "city.h" // for car_t
 
+enum {PIPE_TYPE_SEWER=0, PIPE_TYPE_CW, PIPE_TYPE_HW, PIPE_TYPE_GAS, NUM_PIPE_TYPES};
+
 extern city_params_t city_params; // for num_cars
 
 car_t car_from_parking_space(room_object_t const &o);
@@ -423,12 +425,12 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 		vect_cube_t pipe_cubes;
 		// hang sewer pipes under the ceiling beams; hang water pipes from the ceiling, above sewer pipes and through the beams
 		float const ceil_zval(beam.z1()), water_ceil_zval(beam.z2());
-		add_basement_pipes(obstacles, walls, beams, sewer, pipe_cubes, room_id, num_floors, pipe_light_amt, ceil_zval, rgen, 0); // sewer pipes; add_water_pipes=0
-		add_basement_pipes(obstacles, walls, beams, cold_water, pipe_cubes, room_id, num_floors, pipe_light_amt, water_ceil_zval, rgen, 1); // add_water_pipes=1 (cold water)
+		add_basement_pipes(obstacles, walls, beams, sewer, pipe_cubes, room_id, num_floors, pipe_light_amt, ceil_zval, rgen, PIPE_TYPE_SEWER); // sewer
+		add_basement_pipes(obstacles, walls, beams, cold_water, pipe_cubes, room_id, num_floors, pipe_light_amt, water_ceil_zval, rgen, PIPE_TYPE_CW); // cold water
 		// add hot water pipes; these can intersect cold water pipes, so we have to add those to obstacles
 		vect_cube_t hw_obstacles(obstacles);
 		vector_add_to(pipe_cubes, hw_obstacles); // add sewer and cold water pipes
-		add_basement_pipes(hw_obstacles, walls, beams, hot_water, pipe_cubes, room_id, num_floors, pipe_light_amt, water_ceil_zval, rgen, 2); // add_water_pipes=2 (hot water)
+		add_basement_pipes(hw_obstacles, walls, beams, hot_water, pipe_cubes, room_id, num_floors, pipe_light_amt, water_ceil_zval, rgen, PIPE_TYPE_HW); // hot water
 		add_sprinkler_pipe(obstacles, walls, beams, pipe_cubes, room_id, num_floors, pipe_light_amt, rgen);
 	}
 }
@@ -510,22 +512,22 @@ void add_insul_exclude(pipe_t const &pipe, cube_t const &fitting, vect_cube_t &i
 	insul_exclude.push_back(ie);
 }
 
-// add_water_pipes: 0=sewer pipes, 1=cold water pipes, 2=hot water pipes
 void building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t const &walls, vect_cube_t const &beams, vect_riser_pos_t const &risers,
-	vect_cube_t &pipe_cubes, unsigned room_id, unsigned num_floors, float tot_light_amt, float ceil_zval, rand_gen_t &rgen, int add_water_pipes, bool allow_place_fail)
+	vect_cube_t &pipe_cubes, unsigned room_id, unsigned num_floors, float tot_light_amt, float ceil_zval, rand_gen_t &rgen, unsigned pipe_type, bool allow_place_fail)
 {
+	assert(pipe_type < NUM_PIPE_TYPES);
 	if (risers.empty()) return; // can this happen?
 	float const FITTING_LEN(1.2), FITTING_RADIUS(1.1); // relative to radius
-	bool const is_hot_water(add_water_pipes == 2);
+	bool const is_hot_water(pipe_type == PIPE_TYPE_HW), is_water(is_hot_water || pipe_type == PIPE_TYPE_CW), is_closed_loop(is_hot_water), add_insul(is_hot_water);
 	vect_room_object_t &objs(interior->room_geom->objs);
 	cube_t const &basement(get_basement());
-	float const r_main(get_merged_risers_radius(risers, (is_hot_water ? 0 : 2))); // exclude incoming water from hot water heaters for hot water pipes
+	float const r_main(get_merged_risers_radius(risers, (is_closed_loop ? 0 : 2))); // exclude incoming water from hot water heaters for hot water pipes
 	float const insul_thickness(0.4), min_insum_len(4.0); // both relative to pipe radius
 	float const window_vspacing(get_window_vspace()), fc_thickness(get_fc_thickness()), wall_thickness(get_wall_thickness());
 	float const pipe_zval(ceil_zval   - FITTING_RADIUS*r_main); // includes clearance for fittings vs. beams (and lights - mostly)
 	float const pipe_min_z1(pipe_zval - FITTING_RADIUS*r_main);
 	float const align_dist(2.0*wall_thickness); // align pipes within this range (in particular sinks and stall toilets)
-	float const r_main_spacing((is_hot_water ? 1.0+insul_thickness : 1.0)*r_main); // include insulation thickness for hot water pipes
+	float const r_main_spacing((add_insul ? 1.0+insul_thickness : 1.0)*r_main); // include insulation thickness for hot water pipes
 	assert(pipe_zval > bcube.z1());
 	vector<pipe_t> pipes, fittings;
 	cube_t pipe_end_bcube;
@@ -537,7 +539,7 @@ void building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 	// determine if we need to add an entrance/exit pipe
 	bool add_exit_pipe(1);
 
-	if (is_hot_water) { // hot water pipes; sewer pipes always have an exit and cold water always has an entrance
+	if (is_closed_loop) { // hot water pipes; sewer pipes always have an exit and cold water always has an entrance
 		for (riser_pos_t const &p : risers) {
 			if (p.flow_dir == 0) {add_exit_pipe = 0; break;} // hot water flowing out of a water heater
 		}
@@ -776,9 +778,9 @@ void building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 	pipes.push_back(main_pipe);
 
 	// add pipe objects: sewer: dark gray pipes / gray-brown fittings; water: copper pipes / brass fittings; hot water: white insulation
-	colorRGBA const pipes_color   (add_water_pipes ? COPPER_C : DK_GRAY);
-	colorRGBA const fittings_color(add_water_pipes ? BRASS_C  : colorRGBA(0.7, 0.6, 0.5, 1.0));
-	bool const add_insul(is_hot_water); // hot water pipes have insulation
+	colorRGBA const pcolors[4] = {DK_GRAY, COPPER_C, COPPER_C, GRAY}; // sewer, cw, hw, gas
+	colorRGBA const fcolors[4] = {colorRGBA(0.7, 0.6, 0.5, 1.0), BRASS_C, BRASS_C, DK_GRAY}; // sewer, cw, hw, gas
+	colorRGBA const &pipes_color(pcolors[pipe_type]), &fittings_color(fcolors[pipe_type]);
 	vect_cube_t insul_exclude;
 	pipe_cubes.reserve(pipe_cubes.size() + pipes.size());
 
@@ -1058,9 +1060,6 @@ void building_t::add_house_basement_pipes(rand_gen_t &rgen) {
 	if (!has_room_geom()) return; // error?
 	float const fc_thick(get_fc_thickness());
 	cube_t const &basement(get_basement());
-	// get pipe ends (risers) coming in through the ceiling
-	vect_riser_pos_t sewer, cold_water, hot_water;
-	get_pipe_basement_water_connections(sewer, cold_water, hot_water, rgen);
 	// hang sewer pipes under the ceiling beams; hang water pipes from the ceiling, above sewer pipes and through the beams
 	unsigned const num_floors(1); // basement is always a single floor
 	float const pipe_light_amt = 1.0; // make pipes brighter and easier to see
@@ -1110,14 +1109,24 @@ void building_t::add_house_basement_pipes(rand_gen_t &rgen) {
 		if (s.z1() >= ground_floor_z1) continue; // not in the basement
 		obstacles.push_back(s);
 	}
-	add_basement_pipes(obstacles, walls, beams, sewer, pipe_cubes, room_id, num_floors, pipe_light_amt, sewer_zval,   rgen, 0); // sewer pipes; add_water_pipes=0
-	add_basement_pipes(obstacles, walls, beams, cold_water, pipe_cubes, room_id, num_floors, pipe_light_amt, cw_zval, rgen, 1); // add_water_pipes=1 (cold water)
+	// get pipe ends (risers) coming in through the ceiling
+	vect_riser_pos_t sewer, cold_water, hot_water;
+	get_pipe_basement_water_connections(sewer, cold_water, hot_water, rgen);
+	add_basement_pipes(obstacles, walls, beams, sewer, pipe_cubes, room_id, num_floors, pipe_light_amt, sewer_zval,   rgen, PIPE_TYPE_SEWER); // sewer
+	add_basement_pipes(obstacles, walls, beams, cold_water, pipe_cubes, room_id, num_floors, pipe_light_amt, cw_zval, rgen, PIPE_TYPE_CW); // cold water
 	// add hot water pipes; these can intersect cold water pipes, so we have to add those to obstacles
 	vect_cube_t hw_obstacles(obstacles);
 	vector_add_to(pipe_cubes, hw_obstacles); // add sewer and cold water pipes
+	pipe_cubes.clear();
 	// should we set allow_place_fail=1 for this call?
-	add_basement_pipes(hw_obstacles, walls, beams, hot_water, pipe_cubes, room_id, num_floors, pipe_light_amt, hw_zval, rgen, 2); // add_water_pipes=2 (hot water)
-	// TODO: what about gas lines connecting water heater, stove, fireplace, and dryer?
+	add_basement_pipes(hw_obstacles, walls, beams, hot_water, pipe_cubes, room_id, num_floors, pipe_light_amt, hw_zval, rgen, PIPE_TYPE_HW); // hot water
+#if 0 // TODO: finish/enable
+	float const gas_zval(basement.z2() - 2.2*fc_thick);
+	vector_add_to(pipe_cubes, hw_obstacles); // add hot water pipes as well
+	vect_riser_pos_t gas_pipes;
+	get_pipe_basement_gas_connections(gas_pipes);
+	add_basement_pipes(hw_obstacles, walls, beams, gas_pipes, pipe_cubes, room_id, num_floors, pipe_light_amt, gas_zval, rgen, PIPE_TYPE_GAS);
+#endif
 }
 
 void building_t::add_parking_garage_ramp(rand_gen_t &rgen) {
