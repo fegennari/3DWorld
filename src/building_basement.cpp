@@ -510,7 +510,7 @@ void add_insul_exclude(pipe_t const &pipe, cube_t const &fitting, vect_cube_t &i
 
 // add_water_pipes: 0=sewer pipes, 1=cold water pipes, 2=hot water pipes
 void building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t const &walls, vect_cube_t const &beams, vect_riser_pos_t const &risers,
-	vect_cube_t &pipe_cubes, unsigned room_id, unsigned num_floors, float tot_light_amt, float ceil_zval, rand_gen_t &rgen, int add_water_pipes)
+	vect_cube_t &pipe_cubes, unsigned room_id, unsigned num_floors, float tot_light_amt, float ceil_zval, rand_gen_t &rgen, int add_water_pipes, bool allow_place_fail)
 {
 	if (risers.empty()) return; // can this happen?
 	float const FITTING_LEN(1.2), FITTING_RADIUS(1.1); // relative to radius
@@ -520,7 +520,8 @@ void building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 	float const r_main(get_merged_risers_radius(risers, (is_hot_water ? 0 : 2))); // exclude incoming water from hot water heaters for hot water pipes
 	float const insul_thickness(0.4), min_insum_len(4.0); // both relative to pipe radius
 	float const window_vspacing(get_window_vspace()), fc_thickness(get_fc_thickness()), wall_thickness(get_wall_thickness());
-	float const pipe_zval(ceil_zval - FITTING_RADIUS*r_main); // includes clearance for fittings vs. beams (and lights - mostly)
+	float const pipe_zval(ceil_zval   - FITTING_RADIUS*r_main); // includes clearance for fittings vs. beams (and lights - mostly)
+	float const pipe_min_z1(pipe_zval - FITTING_RADIUS*r_main);
 	float const align_dist(2.0*wall_thickness); // align pipes within this range (in particular sinks and stall toilets)
 	float const r_main_spacing((is_hot_water ? 1.0+insul_thickness : 1.0)*r_main); // include insulation thickness for hot water pipes
 	assert(pipe_zval > bcube.z1());
@@ -550,7 +551,8 @@ void building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 		for (unsigned n = 0; n < NUM_SHIFTS; ++n) { // try zero + random shifts
 			cube_t c(pos);
 			c.expand_by_xy(p.radius);
-			c.z1() = bcube.z1(); // extend all the way down to the floor of the lowest basement
+			//c.z1() = bcube.z1(); // extend all the way down to the floor of the lowest basement
+			c.z1() = pipe_min_z1; // extend down to the lowest pipe z1
 
 			// can't place outside building bcube, or over stairs/elevators/ramps/pillars/walls/beams;
 			// here beams are included because lights are attached to the underside of them, so avoiding beams should hopefully also avoid lights
@@ -627,7 +629,8 @@ void building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 		UNROLL_2X(mp[i_][!dim] += xlate;)
 	} // for n
 	if (success) {centerline = mp[0][!dim];} // update centerline based on translate
-	else {UNROLL_2X(mp[i_][!dim] = centerline;)} // if failed, use the centerline, even though it's invalid; rare, and I don't have an example where it looks wrong
+	else if (allow_place_fail) return; // fail case
+	else {UNROLL_2X(mp[i_][!dim] = centerline;)} // else use the centerline, even though it's invalid; rare, and I don't have an example where it looks wrong
 	mp[0][dim] = bcube.d[dim][1]; mp[1][dim] = bcube.d[dim][0]; // make dim range denormalized; will recalculate below with correct range
 	bool const d(!dim);
 	float const conn_pipe_merge_exp = 3.0; // cubic
@@ -913,13 +916,14 @@ void building_t::get_pipe_basement_connections(vect_riser_pos_t &sewer, vect_ris
 	float const floor_spacing(get_window_vspace()), base_pipe_radius(0.01*floor_spacing), base_pipe_area(base_pipe_radius*base_pipe_radius);
 	float const merge_dist_sq(merge_dist*merge_dist), max_radius(0.4*get_wall_thickness()), ceil_zval(basement.z2() - get_fc_thickness());
 	vector<room_object_t> water_heaters;
+	bool const inc_basement_wheaters = 1;
 
 	// start with sewer pipes and water heaters
 	for (room_object_t const &i : interior->room_geom->objs) { // check all objects placed so far
 		if (i.type == TYPE_WHEATER) { // water heaters are special because they take cold water and return hot water
-			// skip if in the basement, since this must connect directly to pipes rather than through a riser;
+			// maybe skip if in the basement, since this must connect directly to pipes rather than through a riser;
 			// this can happen for houses (which don't have parking garages or pipes), but currently not for office buildings
-			if (i.z1() < ground_floor_z1) continue;
+			if (!inc_basement_wheaters && i.z1() < ground_floor_z1) continue;
 			water_heaters.push_back(i);
 			continue;
 		}
@@ -968,6 +972,9 @@ void building_t::get_pipe_basement_connections(vect_riser_pos_t &sewer, vect_ris
 		float const per_wh_radius(radius_hot*pow(1.0/water_heaters.size(), 1/4.0)); // distribute evenly among the water heaters using the same merge exponent
 
 		for (room_object_t const &wh : water_heaters) {
+			if (wh.z1() < ground_floor_z1) { // house basement water heater
+				// should this connect directly? what if vent or other pipe is in the way? how to match pipe radius?
+			}
 			float const shift_val(0.75*wh.get_radius());
 			point const center(wh.xc(), wh.yc(), ceil_zval);
 			cold_water.emplace_back((center + shift_val*shift_dir), per_wh_radius, 0, 1); // has_hot=0, flow_dir=1/in
@@ -1061,16 +1068,31 @@ void building_t::add_house_basement_pipes(rand_gen_t &rgen) {
 	}
 	// Note: elevators/buttons/stairs haven't been placed at this point, so iterate over all objects
 	for (room_object_t const &i : interior->room_geom->objs) {
-		if ((i.no_coll() && i.type != TYPE_LIGHT) || i.z1() >= ground_floor_z1) continue; // no collisions, or not in the basement
-		obstacles.push_back(i);
+		if (i.no_coll() && i.type != TYPE_LIGHT && i.type != TYPE_MIRROR) continue; // no collisions (mirrors don't seem to work?)
+		if (i.z1() >= ground_floor_z1) continue; // not in the basement
+		// Note: we could maybe skip if i.z2() < sewer_zval-pipe_radius, but we still need to handle collisions with vertical exit pipe segments
+
+		if (i.type == TYPE_WHEATER) {
+			// shrink to include the pipes since routing should be above the body
+			float const radius(i.get_radius());
+			cube_t c(i), tank(i);
+			set_wall_width(c, i.get_center_dim( i.dim), 0.2*radius,  i.dim); // width of vent
+			set_wall_width(c, i.get_center_dim(!i.dim), 0.7*radius, !i.dim); // width of top pipes extent
+			obstacles.push_back(c);
+			// shorten the height for the tank; needed for vertical exit pipes
+			tank.z2() -= 0.2*i.dz();
+			obstacles.push_back(tank);
+		}
+		else {obstacles.push_back(i);}
 	}
 	// TODO: maybe should move the ceiling up or move th tops of the doors down to avoid door collisions
 	for (door_t const &d : interior->doors) {
 		if (d.z1() >= ground_floor_z1) continue; // not in the basement
 		door_t door(d);
-		obstacles.push_back(get_door_bounding_cube(door));
+		cube_t door_bcube(get_door_bounding_cube(door));
 		door.open ^= 1; // toggle open state so that we have obstacles for both the open and closed door
-		obstacles.push_back(get_door_bounding_cube(door));
+		door_bcube.union_with_cube(get_door_bounding_cube(door)); // better, but still doesn't cover the full path of the door
+		obstacles.push_back(door_bcube);
 	}
 	for (stairwell_t const &s : interior->stairwells) { // add stairwells (basement stairs); there should be no elevators
 		if (s.z1() >= ground_floor_z1) continue; // not in the basement
@@ -1081,6 +1103,7 @@ void building_t::add_house_basement_pipes(rand_gen_t &rgen) {
 	// add hot water pipes; these can intersect cold water pipes, so we have to add those to obstacles
 	vect_cube_t hw_obstacles(obstacles);
 	vector_add_to(pipe_cubes, hw_obstacles); // add sewer and cold water pipes
+	// should we set allow_place_fail=1 for this call?
 	add_basement_pipes(hw_obstacles, walls, beams, hot_water, pipe_cubes, room_id, num_floors, pipe_light_amt, hw_zval, rgen, 2); // add_water_pipes=2 (hot water)
 }
 

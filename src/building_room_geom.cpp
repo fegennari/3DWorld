@@ -2359,7 +2359,8 @@ void building_room_geom_t::add_trashcan(room_object_t const &c) {
 
 void building_room_geom_t::add_water_heater(room_object_t const &c) {
 	bool const is_house(c.flags & RO_FLAG_IS_HOUSE);
-	float const height(c.dz()), radius(c.get_radius()), pipe_radius(0.08*radius), front_pos(c.d[c.dim][c.dir]), front_dir(c.dir ? 1.0 : -1.0), top_z(c.z1() + 0.8*height);
+	float const height(c.dz()), radius(c.get_radius()), pipe_radius(0.05*radius);
+	float const front_pos(c.d[c.dim][c.dir]), front_dir(c.dir ? 1.0 : -1.0), top_z(c.z1() + 0.8*height);
 	cube_t body(c), pan(c), top(c), vent(c), cone(c), box, pipes[2];
 
 	for (unsigned d = 0; d < 2; ++d) {
