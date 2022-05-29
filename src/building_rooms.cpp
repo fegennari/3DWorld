@@ -3166,7 +3166,7 @@ void building_t::add_window_blinds(cube_t const &window, bool dim, bool dir, uns
 	
 	if (vertical) { // check for horizontal wall clearance
 		room_t const &room(get_room(room_id));
-		if ((window.d[!dim][0] - 2.0*wall_thickness) < room.d[!dim][0] || (window.d[!dim][1] + 2.0*wall_thickness) > room.d[!dim][1]) {vertical = 0;} // not enough space for vertical blinds
+		if ((window.d[!dim][0] - 2.0*wall_thickness) < room.d[!dim][0] || (window.d[!dim][1] + 2.0*wall_thickness) > room.d[!dim][1]) {vertical = 0;} // not enough space for vertical
 	}
 	rand_gen_t rgen;
 	rgen.set_state((123*room_id + 211*interior->rooms.size()), (777*floor + 1));
@@ -3178,7 +3178,7 @@ void building_t::add_window_blinds(cube_t const &window, bool dim, bool dir, uns
 	c.d[dim][!dir] += (dir ? -1.0 : 1.0)*0.15*wall_thickness*(vertical ? 0.05 : (open_amt + 0.025)); // vertical blinds have no furniture clearance and can't bunch up
 	c.expand_in_dim(2, extend); // extend in Z to cover window trim
 
-	if (vertical) {
+	if (vertical) { // vertical, moves horizontally
 		c.expand_in_dim(!dim, 1.5*wall_thickness); // larger expand value (beyond the wall trim)
 		float const center(c.get_center_dim(!dim)), half_width(0.5*c.get_sz_dim(!dim));
 		float const shift_val(1.44*max(0.0f, (open_amt - 0.4f))*half_width); // more likely to be fully closed
@@ -3189,10 +3189,11 @@ void building_t::add_window_blinds(cube_t const &window, bool dim, bool dir, uns
 			objs.emplace_back(c2, TYPE_BLINDS, room_id, dim, dir, (RO_FLAG_NOCOLL | (d ? RO_FLAG_ADJ_LO : RO_FLAG_ADJ_HI)), 1.0); // always fully lit
 		}
 	}
-	else {
+	else { // horizontal, moves vertically
 		c.expand_in_dim(!dim, extend); // expand width to cover trim +15% WT
 		c.z2() += extend + 0.05*floor_spacing; // expand height to allow space for it to bunch up at the top
 		c.z1() += open_amt*window.dz(); // raise amount is random per-room
+		// TODO: limit z1 value to avoid desks and dressers?
 		objs.emplace_back(c, TYPE_BLINDS, room_id, dim, dir, (RO_FLAG_NOCOLL | RO_FLAG_HANGING), 1.0); // always fully lit
 	}
 }
