@@ -636,6 +636,7 @@ bool building_t::interact_with_object(unsigned obj_ix, point const &int_pos, poi
 		}
 		if (obj.is_small_closet()) {play_door_open_close_sound(sound_origin, obj.is_open(), 1.0, pitch);}
 		else {gen_sound_thread_safe_at_player(SOUND_SLIDING);}
+		register_indir_lighting_geom_change();
 		update_draw_data = 1;
 	}
 	else if (obj.type == TYPE_MIRROR && obj.is_house()) { // medicine cabinet

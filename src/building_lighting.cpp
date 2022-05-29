@@ -233,10 +233,10 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc, int only_this_fl
 			if (c->type  == TYPE_TABLE  ) {inner_cube.z1() += 0.88*c->dz();} // top of table
 			cc.emplace_back(inner_cube, color);
 		}
-		else if (c->type == TYPE_CLOSET && c->is_open()) {
+		else if (c->type == TYPE_CLOSET) {
 			cube_t cubes[5];
-			get_closet_cubes(*c, cubes);
-			add_colored_cubes(cubes, 4, color, cc); // skip the door (cubes[4]), which is open
+			get_closet_cubes(*c, cubes, 1); // for_collision=1
+			add_colored_cubes(cubes, 5, color, cc); // include door, whether closed or open
 		}
 		else if (c->type == TYPE_BED) { // Note: posts are not included
 			colorRGBA const wood_color(get_textured_wood_color()), sheets_color(c->color.modulate_with(texture_color(c->get_sheet_tid())));
