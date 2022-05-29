@@ -109,6 +109,7 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_FPLACE    ] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 1, 0.0,   2000.0,"fireplace");
 	bldg_obj_types[TYPE_LBASKET   ] = bldg_obj_type_t(1, 1, 1, 1, 0, 0, 2, 12.0,  2.0,   "laundry basket");
 	bldg_obj_types[TYPE_WHEATER   ] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 0, 300.0, 500.0, "water heater"); // detail object
+	bldg_obj_types[TYPE_FURNACE   ] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 0, 500.0, 200.0, "furnace"); // detail object
 	bldg_obj_types[TYPE_TAPE      ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 2.0,   0.4,   "duct tape", 1000);
 	bldg_obj_types[TYPE_OUTLET    ] = bldg_obj_type_t(0, 0, 0, 0, 1, 0, 0, 7.0,   0.1,   "Outlet"); // detail object
 	bldg_obj_types[TYPE_PIPE      ] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 0, 0.0,   0.0,   "Pipe"); // detail object; only vertical pipes are collidable

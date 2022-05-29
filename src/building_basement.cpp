@@ -116,7 +116,9 @@ bool building_t::add_water_heaters(rand_gen_t &rgen, room_t const &room, float z
 
 bool building_t::add_basement_utility_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
 	// for now, this is only the water heater; we may want to add a furnace, etc. later
-	return add_water_heaters(rgen, room, zval, room_id, tot_light_amt, objs_start);
+	bool was_added(add_water_heaters(rgen, room, zval, room_id, tot_light_amt, objs_start));
+	// TODO: add TYPE_FURNACE
+	return was_added;
 }
 
 // Note: this function is here rather than in building_rooms.cpp because utility rooms are connected to utilities in the basement, and it's similar to the code above
@@ -124,7 +126,7 @@ bool building_t::add_office_utility_objs(rand_gen_t rgen, room_t const &room, fl
 	zval       = add_flooring(room, zval, room_id, tot_light_amt, FLOORING_CONCRETE); // add concreate and move the effective floor up
 	objs_start = interior->room_geom->objs.size(); // exclude this from collision checks
 	// for now, this is only the water heater; we may want to add other objects later
-	if (!add_water_heaters(rgen, room, zval, room_id, tot_light_amt, objs_start)) return 0;
+	if (!add_water_heaters(rgen, room, zval, room_id, tot_light_amt, objs_start)) return 0; // and TYPE_FURNACE?
 	cube_t place_area(get_walkable_room_bounds(room));
 	place_model_along_wall(OBJ_MODEL_SINK, TYPE_SINK, room, 0.45, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 0.6); // place janitorial sink
 	add_door_sign("Utility", room, zval, room_id, tot_light_amt);
@@ -417,7 +419,7 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 		add_basement_electrical(obstacles, walls, beams, room_id, pipe_light_amt, rgen);
 		// get pipe ends (risers) coming in through the ceiling
 		vect_riser_pos_t sewer, cold_water, hot_water;
-		get_pipe_basement_connections(sewer, cold_water, hot_water, rgen);
+		get_pipe_basement_water_connections(sewer, cold_water, hot_water, rgen);
 		vect_cube_t pipe_cubes;
 		// hang sewer pipes under the ceiling beams; hang water pipes from the ceiling, above sewer pipes and through the beams
 		float const ceil_zval(beam.z1()), water_ceil_zval(beam.z2());
@@ -910,7 +912,7 @@ void building_t::add_sprinkler_pipe(vect_cube_t const &obstacles, vect_cube_t co
 
 // here each sphere represents the entry point of a pipe with this radius into the basement ceiling
 // find all plumbing fixtures such as toilets, urinals, sinks, and showers; these should have all been placed in rooms by now
-void building_t::get_pipe_basement_connections(vect_riser_pos_t &sewer, vect_riser_pos_t &cold_water, vect_riser_pos_t &hot_water, rand_gen_t &rgen) const {
+void building_t::get_pipe_basement_water_connections(vect_riser_pos_t &sewer, vect_riser_pos_t &cold_water, vect_riser_pos_t &hot_water, rand_gen_t &rgen) const {
 	cube_t const &basement(get_basement());
 	float const merge_dist = 4.0; // merge two pipes if their combined radius is within this distance
 	float const floor_spacing(get_window_vspace()), base_pipe_radius(0.01*floor_spacing), base_pipe_area(base_pipe_radius*base_pipe_radius);
@@ -983,6 +985,16 @@ void building_t::get_pipe_basement_connections(vect_riser_pos_t &sewer, vect_ris
 	}
 }
 
+void building_t::get_pipe_basement_gas_connections(vect_riser_pos_t &pipes) const {
+	float const pipe_radius(0.02*get_window_vspace()), ceil_zval(get_basement().z2() - get_fc_thickness());
+
+	for (room_object_t const &i : interior->room_geom->objs) { // check all objects placed so far
+		if (i.z1() < ground_floor_z1) continue; // object in the house basement; unclear how to handle it here
+		if (i.type != TYPE_WHEATER && i.type != TYPE_FURNACE && i.type != TYPE_STOVE && i.type != TYPE_DRYER && i.type != TYPE_FPLACE) continue;
+		pipes.emplace_back(point(i.xc(), i.yc(), ceil_zval), pipe_radius, 0, 1); // flows in
+	}
+}
+
 void building_t::add_basement_electrical(vect_cube_t &obstacles, vect_cube_t const &walls, vect_cube_t const &beams, int room_id, float tot_light_amt, rand_gen_t &rgen) {
 	cube_t const &basement(get_basement());
 	float const floor_spacing(get_window_vspace()), fc_thickness(get_fc_thickness()), floor_height(floor_spacing - 2.0*fc_thickness), ceil_zval(basement.z2() - fc_thickness);
@@ -1048,7 +1060,7 @@ void building_t::add_house_basement_pipes(rand_gen_t &rgen) {
 	cube_t const &basement(get_basement());
 	// get pipe ends (risers) coming in through the ceiling
 	vect_riser_pos_t sewer, cold_water, hot_water;
-	get_pipe_basement_connections(sewer, cold_water, hot_water, rgen);
+	get_pipe_basement_water_connections(sewer, cold_water, hot_water, rgen);
 	// hang sewer pipes under the ceiling beams; hang water pipes from the ceiling, above sewer pipes and through the beams
 	unsigned const num_floors(1); // basement is always a single floor
 	float const pipe_light_amt = 1.0; // make pipes brighter and easier to see
@@ -1105,6 +1117,7 @@ void building_t::add_house_basement_pipes(rand_gen_t &rgen) {
 	vector_add_to(pipe_cubes, hw_obstacles); // add sewer and cold water pipes
 	// should we set allow_place_fail=1 for this call?
 	add_basement_pipes(hw_obstacles, walls, beams, hot_water, pipe_cubes, room_id, num_floors, pipe_light_amt, hw_zval, rgen, 2); // add_water_pipes=2 (hot water)
+	// TODO: what about gas lines connecting water heater, stove, fireplace, and dryer?
 }
 
 void building_t::add_parking_garage_ramp(rand_gen_t &rgen) {
