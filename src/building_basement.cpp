@@ -436,25 +436,25 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 }
 
 // find the closest wall (including room wall) to this location, avoiding obstacles, and shift outward by radius; routes in X or Y only, for now
-point get_closest_wall_pos(point const &pos, float radius, cube_t const &room, vect_cube_t const &walls, vect_cube_t const &obstacles) {
+point get_closest_wall_pos(point const &pos, float radius, cube_t const &room, vect_cube_t const &walls, vect_cube_t const &obstacles, bool vertical) {
 	if (!room.contains_pt_xy_exp(pos, radius)) {return pos;} // error?
 	// what about checking pos intersecting walls or obstacles? is that up to the caller to handle?
 	vector3d const expand(radius, radius, radius);
 	point best(pos);
 	float dmin(room.dx() + room.dy()); // use an initial distance larger than what we can return
 
-	if (!room.is_all_zeros()) { // check room exterior walls first
-		for (unsigned dim = 0; dim < 2; ++dim) {
-			for (unsigned dir = 0; dir < 2; ++dir) {
-				float const val(room.d[dim][dir] + (dir ? -radius : radius)), dist(fabs(val - pos[dim])); // shift val inward
-				if (dist >= dmin) continue;
-				point cand(pos);
-				cand[dim] = val;
-				// check walls as well, even though any wall hit should be replaced with a closer point below
-				if (!line_int_cubes_exp(pos, cand, obstacles, expand) && !line_int_cubes_exp(pos, cand, walls, expand)) {best = cand; dmin = dist;}
-			} // for dir
-		} // for dim
-	}
+	for (unsigned dim = 0; dim < 2; ++dim) { // check room exterior walls first
+		for (unsigned dir = 0; dir < 2; ++dir) {
+			float const val(room.d[dim][dir] + (dir ? -radius : radius)), dist(fabs(val - pos[dim])); // shift val inward
+			if (dist >= dmin) continue;
+			point cand(pos);
+			cand[dim] = val;
+			// check walls as well, even though any wall hit should be replaced with a closer point below
+			if (line_int_cubes_exp(pos, cand, obstacles, expand) || line_int_cubes_exp(pos, cand, walls, expand)) continue;
+			if (vertical && line_int_cubes_exp(cand, point(cand.x, cand.y, room.z1()), obstacles, expand)) continue; // check for vertical obstacles
+			best = cand; dmin = dist; // success
+		} // for dir
+	} // for dim
 	for (cube_t const &wall : walls) { // check all interior walls
 		for (unsigned dim = 0; dim < 2; ++dim) {
 			if (pos[!dim] < wall.d[!dim][0]+radius || pos[!dim] > wall.d[!dim][1]-radius) continue; // doesn't project in this dim
@@ -463,7 +463,9 @@ point get_closest_wall_pos(point const &pos, float radius, cube_t const &room, v
 			if (dist >= dmin) continue;
 			point cand(pos);
 			cand[dim] = val;
-			if (!line_int_cubes_exp(pos, cand, obstacles, expand)) {best = cand; dmin = dist;} // check obstacles only
+			if (line_int_cubes_exp(pos, cand, obstacles, expand)) continue; // check obstacles only
+			if (vertical && line_int_cubes_exp(cand, point(cand.x, cand.y, room.z1()), obstacles, expand)) continue; // check for vertical obstacles
+			best = cand; dmin = dist; // success
 		} // for dim
 	}
 	return best;
@@ -740,7 +742,7 @@ void building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 	}
 	if (add_exit_pipe && !has_exit) { // create exit segment and vertical pipe into the floor
 		for (unsigned d = 0; d < 2; ++d) { // dim
-			point const cand_exit_pos(get_closest_wall_pos(mp[d], r_main_spacing, basement, walls, obstacles));
+			point const cand_exit_pos(get_closest_wall_pos(mp[d], r_main_spacing, basement, walls, obstacles, 1)); // vertical=1
 			float const dist(p2p_dist(mp[d], cand_exit_pos));
 			if (exit_dmin == 0.0 || dist < exit_dmin) {exit_pos = cand_exit_pos; exit_dir = d; exit_dmin = dist;}
 		}
@@ -1065,6 +1067,7 @@ void building_t::add_house_basement_pipes(rand_gen_t &rgen) {
 	float const pipe_light_amt = 1.0; // make pipes brighter and easier to see
 	// houses have smaller radius pipes, so we should have enough space to stack sewer below hot water below cold water
 	float const sewer_zval(basement.z2() - 1.8*fc_thick), cw_zval(basement.z2() - 1.0*fc_thick), hw_zval(basement.z2() - 1.4*fc_thick);
+	float const trim_thickness(get_trim_thickness()), wall_thickness(get_wall_thickness());
 	vect_cube_t pipe_cubes, obstacles, walls, beams; // beams remains empty
 	unsigned room_id(0);
 
@@ -1074,35 +1077,42 @@ void building_t::add_house_basement_pipes(rand_gen_t &rgen) {
 	}
 	for (unsigned d = 0; d < 2; ++d) { // add all basement walls
 		for (cube_t &wall : interior->walls[d]) {
-			if (wall.z1() < ground_floor_z1) {walls.push_back(wall);}
+			if (wall.z1() >= ground_floor_z1) continue; // not in the basement
+			walls.push_back(wall);
+			walls.back().expand_by_xy(trim_thickness); // include the trim
 		}
 	}
 	// Note: elevators/buttons/stairs haven't been placed at this point, so iterate over all objects
 	for (room_object_t const &i : interior->room_geom->objs) {
-		if (i.no_coll() && i.type != TYPE_LIGHT && i.type != TYPE_MIRROR) continue; // no collisions (mirrors don't seem to work?)
+		bool no_blocking(i.type == TYPE_PICTURE || i.type == TYPE_WBOARD);
+		if (i.no_coll() && !no_blocking && i.type != TYPE_LIGHT) continue; // no collisions
 		if (i.z1() >= ground_floor_z1) continue; // not in the basement
+		cube_t obstacle(i);
 		// Note: we could maybe skip if i.z2() < sewer_zval-pipe_radius, but we still need to handle collisions with vertical exit pipe segments
 
 		if (i.type == TYPE_WHEATER) {
 			// shrink to include the pipes since routing should be above the body
 			float const radius(i.get_radius());
-			cube_t c(i), tank(i);
+			cube_t c(i);
 			set_wall_width(c, i.get_center_dim( i.dim), 0.2*radius,  i.dim); // width of vent
 			set_wall_width(c, i.get_center_dim(!i.dim), 0.7*radius, !i.dim); // width of top pipes extent
 			obstacles.push_back(c);
-			// shorten the height for the tank; needed for vertical exit pipes
-			tank.z2() -= 0.2*i.dz();
-			obstacles.push_back(tank);
+			obstacle.z2() -= 0.2*i.dz(); // shorten the height for the tank; needed for vertical exit pipes
 		}
-		else {obstacles.push_back(i);}
+		else if (no_blocking) {
+			obstacle.d[i.dim][!i.dir] += (i.dir ? 1.0 : -1.0)*wall_thickness; // add a wall thickness of clearance
+		}
+		obstacles.push_back(obstacle);
 	}
 	// TODO: maybe should move the ceiling up or move th tops of the doors down to avoid door collisions
 	for (door_t const &d : interior->doors) {
 		if (d.z1() >= ground_floor_z1) continue; // not in the basement
 		door_t door(d);
+		door.open = 0; // start closed
 		cube_t door_bcube(get_door_bounding_cube(door));
-		door.open ^= 1; // toggle open state so that we have obstacles for both the open and closed door
-		door_bcube.union_with_cube(get_door_bounding_cube(door)); // better, but still doesn't cover the full path of the door
+		door_bcube.d[d.dim][d.open_dir] += (d.open_dir ? 1.0 : -1.0)*d.get_width(); // include space for door to swing open
+		door.open = 1; // now try the open door to avoid blocking it when open
+		door_bcube.union_with_cube(get_door_bounding_cube(door));
 		obstacles.push_back(door_bcube);
 	}
 	for (stairwell_t const &s : interior->stairwells) { // add stairwells (basement stairs); there should be no elevators
