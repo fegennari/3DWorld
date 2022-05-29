@@ -391,7 +391,7 @@ bool building_t::apply_player_action_key(point const &closest_to_in, vector3d co
 			if (mode > 0) continue; // pull object only mode, skip this step
 			auto const &obj_vect((vect_id == 1) ? expanded_objs : objs);
 			unsigned const obj_id_offset((vect_id == 1) ? objs.size() : 0);
-			auto obj_vect_end((vect_id == 1) ? expanded_objs.end() : objs_end); // skip stairs and elevators
+			auto obj_vect_end((vect_id == 1) ? expanded_objs.end() : objs.end()); // include all objects because blinds are added at the end
 
 			for (auto i = obj_vect.begin(); i != obj_vect_end; ++i) {
 				if (cur_player_building_loc.room_ix >= 0 && i->room_id != cur_player_building_loc.room_ix && i->type != TYPE_BUTTON) continue; // not in the same room as the player

@@ -747,6 +747,7 @@ void building_t::get_all_windows(vect_cube_with_ix_t &windows) const { // Note: 
 				float const low_edge(c.d[!dim][0] + (xy - tx1)*window_width);
 				window.d[!dim][0] = low_edge + border_xy;
 				window.d[!dim][1] = low_edge + window_width - border_xy;
+				// TODO: if this is in a bedroom, clip to the area inside the blinds and adjust light level accordingly
 				windows.emplace_back(window, (2*dim + dir));
 			}
 		} // for z
