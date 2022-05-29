@@ -1719,6 +1719,15 @@ void building_t::add_pri_hall_objs(rand_gen_t rgen, room_t const &room, float zv
 	} // for dir
 }
 
+void building_t::add_attic_objects(rand_gen_t rgen) {
+	cube_t adoor(interior->attic_access);
+	assert(adoor.is_strictly_normalized());
+	adoor.expand_in_dim(2, -0.2*adoor.dz()); // shrink in z
+	int const room_id(get_room_containing_pt(point(adoor.xc(), adoor.yc(), adoor.z1()-get_floor_thickness()))); // should we cache this during floorplanning?
+	assert(room_id >= 0); // must be found
+	interior->room_geom->objs.emplace_back(adoor, TYPE_ATTIC_DOOR, room_id, 0, 0, RO_FLAG_NOCOLL, 1.0, SHAPE_CUBE); // is light_amount=1.0 correct?
+}
+
 colorRGBA choose_pot_color(rand_gen_t &rgen) {
 	unsigned const num_colors = 8;
 	colorRGBA const pot_colors[num_colors] = {LT_GRAY, GRAY, DK_GRAY, BKGRAY, WHITE, LT_BROWN, RED, colorRGBA(1.0, 0.35, 0.18)};
@@ -2841,6 +2850,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 	}
 	if (is_house && has_basement()) {add_basement_electrical_house(rgen);}
 	if (is_house && has_basement_pipes) {add_house_basement_pipes (rgen);}
+	if (has_attic()) {add_attic_objects(rgen);}
 	maybe_add_fire_escape(rgen);
 	add_extra_obj_slots(); // needed to handle balls taken from one building and brought to another
 	add_stairs_and_elevators(rgen); // the room objects - stairs and elevators have already been placed within a room

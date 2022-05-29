@@ -1307,7 +1307,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 		set_cube_zvals(C, (z - fc_thick), z);
 		bool added(0);
 
-		if (0 && is_house && part_ix == 0) { // add a ceiling cutout for attic access
+		if (is_house && part_ix == 0) { // add a ceiling cutout for attic access
 			cube_t best_room;
 			float best_area(0.0);
 			bool in_hallway(0);

@@ -779,6 +779,7 @@ void building_room_geom_t::add_small_static_objs_to_verts(vect_room_object_t con
 		case TYPE_TOASTER:   add_toaster_proxy (c); break;
 		case TYPE_WHEATER:   add_water_heater  (c); break;
 		case TYPE_BRK_PANEL: add_breaker_panel (c); break; // only added to basements
+		case TYPE_ATTIC_DOOR:add_attic_door(c, tscale); break;
 		default: break;
 		} // end switch
 	} // for i

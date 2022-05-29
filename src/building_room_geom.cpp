@@ -1413,6 +1413,15 @@ void building_room_geom_t::add_breaker_panel(room_object_t const &c) {
 	}
 }
 
+void building_room_geom_t::add_attic_door(room_object_t const &c, float tscale) {
+	if (c.is_open()) {
+		// TODO: draw a ladder or something
+	}
+	else { // draw only the top and bottom faces of the door
+		get_wood_material(tscale, 1, 0, 1).add_cube_to_verts(c, apply_light_color(c), c.get_llc(), ~EF_Z12); // shadows + small
+	}
+}
+
 // Note: there is a lot duplicated with building_room_geom_t::add_elevator(), but we need a separate function for adding interior elevator buttons
 cube_t get_elevator_car_panel(room_object_t const &c, float fc_thick_scale) {
 	float const dz(c.dz()), thickness(fc_thick_scale*dz), signed_thickness((c.dir ? 1.0 : -1.0)*thickness);
@@ -3079,6 +3088,7 @@ colorRGBA room_object_t::get_color() const {
 	case TYPE_CRACK:    return ALPHA0; // transparent
 	case TYPE_FPLACE:   return texture_color(BRICK2_TEX).modulate_with(color);
 	case TYPE_WHEATER:  return LT_GRAY;
+	case TYPE_ATTIC_DOOR:return get_textured_wood_color();
 	default: return color; // TYPE_LIGHT, TYPE_TCAN, TYPE_BOOK, TYPE_BOTTLE, TYPE_PEN_PENCIL, etc.
 	}
 	if (is_obj_model_type()) {return color.modulate_with(get_model_color());} // handle models

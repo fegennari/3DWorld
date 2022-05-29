@@ -420,7 +420,7 @@ bool building_t::apply_player_action_key(point const &closest_to_in, vector3d co
 					else if (i->is_light_type()) {keep = 1;} // room light or lamp
 					else if (i->type == TYPE_PICTURE || i->type == TYPE_TPROLL || i->type == TYPE_BUTTON || i->type == TYPE_MWAVE || i->type == TYPE_STOVE ||
 						i->type == TYPE_TV || i->type == TYPE_MONITOR || i->type == TYPE_BLINDS || i->type == TYPE_SHOWER || i->type == TYPE_SWITCH ||
-						i->type == TYPE_BOOK || i->type == TYPE_BRK_PANEL || i->type == TYPE_BREAKER) {keep = 1;}
+						i->type == TYPE_BOOK || i->type == TYPE_BRK_PANEL || i->type == TYPE_BREAKER || i->type == TYPE_ATTIC_DOOR) {keep = 1;}
 				}
 				else if (i->type == TYPE_LIGHT) {keep = 1;} // closet light
 				if (!keep) continue;
@@ -651,6 +651,12 @@ bool building_t::interact_with_object(unsigned obj_ix, point const &int_pos, poi
 		interior->room_geom->expand_object(obj, *this);
 		play_door_open_close_sound(sound_origin, obj.is_open(), 0.6, 1.8);
 		sound_scale      = 0.6;
+		update_draw_data = 1;
+	}
+	else if (obj.type == TYPE_ATTIC_DOOR) {
+		gen_sound_thread_safe_at_player(SOUND_SLIDING, 1.0); // better sound?
+		obj.flags       ^= RO_FLAG_OPEN; // open/close
+		sound_scale      = 0.5;
 		update_draw_data = 1;
 	}
 	else {assert(0);} // unhandled type
