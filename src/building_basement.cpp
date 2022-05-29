@@ -1042,37 +1042,46 @@ void building_t::add_house_basement_pipes(rand_gen_t &rgen) {
 	// get pipe ends (risers) coming in through the ceiling
 	vect_riser_pos_t sewer, cold_water, hot_water;
 	get_pipe_basement_connections(sewer, cold_water, hot_water, rgen);
-	vect_cube_t pipe_cubes;
 	// hang sewer pipes under the ceiling beams; hang water pipes from the ceiling, above sewer pipes and through the beams
 	unsigned const num_floors(1); // basement is always a single floor
-	unsigned const room_id(0); // ???
 	float const pipe_light_amt = 1.0; // make pipes brighter and easier to see
-	float const ceil_zval(basement.z2() - 1.6*fc_thick), water_ceil_zval(basement.z2() - 1.0*fc_thick);
-	vect_cube_t obstacles, walls, beams; // beams remains empty
+	// houses have smaller radius pipes, so we should have enough space to stack sewer below hot water below cold water
+	float const sewer_zval(basement.z2() - 1.8*fc_thick), cw_zval(basement.z2() - 1.0*fc_thick), hw_zval(basement.z2() - 1.4*fc_thick);
+	vect_cube_t pipe_cubes, obstacles, walls, beams; // beams remains empty
+	unsigned room_id(0);
 
+	// we can't pass in a single valid room_id because house basements/pipes span multiple rooms, but we can at least use the ID of a room in the basement
+	for (auto r = interior->rooms.begin(); r != interior->rooms.end(); ++r) {
+		if (basement.contains_cube(*r)) {room_id = (r - interior->rooms.begin()); break;}
+	}
 	for (unsigned d = 0; d < 2; ++d) { // add all basement walls
 		for (cube_t &wall : interior->walls[d]) {
 			if (wall.z1() < ground_floor_z1) {walls.push_back(wall);}
 		}
 	}
-	auto objs_end(interior->room_geom->get_placed_objs_end()); // skip buttons/stairs/elevators
-
-	for (auto i = interior->room_geom->objs.begin(); i != objs_end; ++i) {
-		if (i->no_coll() || i->z1() >= ground_floor_z1) continue; // not in the basement
-		obstacles.push_back(*i); // TODO: what about lights?
+	// Note: elevators/buttons/stairs haven't been placed at this point, so iterate over all objects
+	for (room_object_t const &i : interior->room_geom->objs) {
+		if ((i.no_coll() && i.type != TYPE_LIGHT) || i.z1() >= ground_floor_z1) continue; // no collisions, or not in the basement
+		obstacles.push_back(i);
 	}
-	for (auto i = interior->doors.begin(); i != interior->doors.end(); ++i) {
-		if (i->z1() >= ground_floor_z1) continue; // not in the basement
-		cube_t door_bounds(*i); // i->get_true_bcube()?
-		door_bounds.expand_by_xy(i->get_width()); // TODO: conservative - check only open side
-		obstacles.push_back(door_bounds);
+	// TODO: maybe should move the ceiling up or move th tops of the doors down to avoid door collisions
+	for (door_t const &d : interior->doors) {
+		if (d.z1() >= ground_floor_z1) continue; // not in the basement
+		door_t door(d);
+		obstacles.push_back(get_door_bounding_cube(door));
+		door.open ^= 1; // toggle open state so that we have obstacles for both the open and closed door
+		obstacles.push_back(get_door_bounding_cube(door));
 	}
-	add_basement_pipes(obstacles, walls, beams, sewer, pipe_cubes, room_id, num_floors, pipe_light_amt, ceil_zval, rgen, 0); // sewer pipes; add_water_pipes=0
-	add_basement_pipes(obstacles, walls, beams, cold_water, pipe_cubes, room_id, num_floors, pipe_light_amt, water_ceil_zval, rgen, 1); // add_water_pipes=1 (cold water)
+	for (stairwell_t const &s : interior->stairwells) { // add stairwells (basement stairs); there should be no elevators
+		if (s.z1() >= ground_floor_z1) continue; // not in the basement
+		obstacles.push_back(s);
+	}
+	add_basement_pipes(obstacles, walls, beams, sewer, pipe_cubes, room_id, num_floors, pipe_light_amt, sewer_zval,   rgen, 0); // sewer pipes; add_water_pipes=0
+	add_basement_pipes(obstacles, walls, beams, cold_water, pipe_cubes, room_id, num_floors, pipe_light_amt, cw_zval, rgen, 1); // add_water_pipes=1 (cold water)
 	// add hot water pipes; these can intersect cold water pipes, so we have to add those to obstacles
 	vect_cube_t hw_obstacles(obstacles);
 	vector_add_to(pipe_cubes, hw_obstacles); // add sewer and cold water pipes
-	add_basement_pipes(hw_obstacles, walls, beams, hot_water, pipe_cubes, room_id, num_floors, pipe_light_amt, water_ceil_zval, rgen, 2); // add_water_pipes=2 (hot water)
+	add_basement_pipes(hw_obstacles, walls, beams, hot_water, pipe_cubes, room_id, num_floors, pipe_light_amt, hw_zval, rgen, 2); // add_water_pipes=2 (hot water)
 }
 
 void building_t::add_parking_garage_ramp(rand_gen_t &rgen) {
