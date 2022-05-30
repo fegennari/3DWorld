@@ -514,11 +514,11 @@ void add_insul_exclude(pipe_t const &pipe, cube_t const &fitting, vect_cube_t &i
 	insul_exclude.push_back(ie);
 }
 
-void building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t const &walls, vect_cube_t const &beams, vect_riser_pos_t const &risers,
+bool building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t const &walls, vect_cube_t const &beams, vect_riser_pos_t const &risers,
 	vect_cube_t &pipe_cubes, unsigned room_id, unsigned num_floors, float tot_light_amt, float ceil_zval, rand_gen_t &rgen, unsigned pipe_type, bool allow_place_fail)
 {
 	assert(pipe_type < NUM_PIPE_TYPES);
-	if (risers.empty()) return; // can this happen?
+	if (risers.empty()) return 0; // can this happen?
 	float const FITTING_LEN(1.2), FITTING_RADIUS(1.1); // relative to radius
 	bool const is_hot_water(pipe_type == PIPE_TYPE_HW), is_water(is_hot_water || pipe_type == PIPE_TYPE_CW), is_closed_loop(is_hot_water), add_insul(is_hot_water);
 	vect_room_object_t &objs(interior->room_geom->objs);
@@ -574,7 +574,7 @@ void building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 		pipe_end_bcube.assign_or_union_with_cube(pipes.back().get_bcube());
 		++num_valid;
 	} // for pipe_ends
-	if (pipes.empty()) return; // no valid pipes
+	if (pipes.empty()) return 0; // no valid pipes
 
 	// calculate unique positions of pipes along the main pipe
 	bool const dim(pipe_end_bcube.dx() < pipe_end_bcube.dy()); // main sewer line dim
@@ -634,9 +634,33 @@ void building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 		float const xlate(((n>>1)+1)*((n&1) ? -1.0 : 1.0)*step_dist);
 		UNROLL_2X(mp[i_][!dim] += xlate;)
 	} // for n
-	if (success) {centerline = mp[0][!dim];} // update centerline based on translate
-	else if (allow_place_fail) return; // fail case
-	else {UNROLL_2X(mp[i_][!dim] = centerline;)} // else use the centerline, even though it's invalid; rare, and I don't have an example where it looks wrong
+	if (success) {
+		centerline = mp[0][!dim]; // update centerline based on translate
+	}
+	else if (allow_place_fail) { // fail case
+		// try stripping off some risers from the end and connecting the remaining ones
+		vect_riser_pos_t risers_sub;
+		float riser_min(FLT_MAX), riser_max(-FLT_MAX);
+
+		for (riser_pos_t const &r : risers) {
+			min_eq(riser_min, r.pos[dim]);
+			max_eq(riser_max, r.pos[dim]);
+		}
+		for (unsigned dir = 0; dir < 2; ++dir) {
+			risers_sub.clear();
+			// try to remove risers at each end recursively until successful
+			for (riser_pos_t const &r : risers) {
+				if (r.pos[dim] != (dir ? riser_max : riser_min)) {risers_sub.push_back(r);}
+			}
+			if (risers_sub.empty()) continue;
+			assert(risers_sub.size() < risers.size());
+			if (add_basement_pipes(obstacles, walls, beams, risers_sub, pipe_cubes, room_id, num_floors, tot_light_amt, ceil_zval, rgen, pipe_type, 1)) return 1;
+		} // for dir
+		return 0;
+	}
+	else {
+		UNROLL_2X(mp[i_][!dim] = centerline;) // else use the centerline, even though it's invalid; rare, and I don't have a non-house example where it looks wrong
+	}
 	mp[0][dim] = bcube.d[dim][1]; mp[1][dim] = bcube.d[dim][0]; // make dim range denormalized; will recalculate below with correct range
 	bool const d(!dim);
 	float const conn_pipe_merge_exp = 3.0; // cubic
@@ -702,7 +726,7 @@ void building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 		max_eq(mp[1][dim], v.first+radius);
 		num_connected += num_keep;
 	} // for v
-	if (mp[0][dim] >= mp[1][dim]) return; // no pipes connected to main? I guess there's nothing to do here
+	if (mp[0][dim] >= mp[1][dim]) return 0; // no pipes connected to main? I guess there's nothing to do here
 	unsigned main_pipe_end_flags(0); // start with both ends unconnected
 	bool has_exit(0);
 
@@ -866,6 +890,7 @@ void building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 			}
 		} // for p
 	}
+	return 1;
 }
 
 void building_t::add_sprinkler_pipe(vect_cube_t const &obstacles, vect_cube_t const &walls, vect_cube_t const &beams, vect_cube_t const &pipe_cubes,
@@ -1103,7 +1128,7 @@ void building_t::add_house_basement_pipes(rand_gen_t &rgen) {
 			obstacle.d[i.dim][!i.dir] += (i.dir ? 1.0 : -1.0)*wall_thickness; // add a wall thickness of clearance
 		}
 		obstacles.push_back(obstacle);
-	}
+	} // for i
 	// TODO: maybe should move the ceiling up or move th tops of the doors down to avoid door collisions
 	for (door_t const &d : interior->doors) {
 		if (d.z1() >= ground_floor_z1) continue; // not in the basement
@@ -1111,25 +1136,27 @@ void building_t::add_house_basement_pipes(rand_gen_t &rgen) {
 		door.open = 0; // start closed
 		cube_t door_bcube(get_door_bounding_cube(door));
 		door_bcube.d[d.dim][d.open_dir] += (d.open_dir ? 1.0 : -1.0)*d.get_width(); // include space for door to swing open
-		door.open = 1; // now try the open door to avoid blocking it when open
-		door_bcube.union_with_cube(get_door_bounding_cube(door));
+
+		if (!d.on_stairs) { // [basement] stairs doors don't really open, so we only need clearance in front
+			door.open = 1; // now try the open door to avoid blocking it when open
+			door_bcube.union_with_cube(get_door_bounding_cube(door));
+		}
 		obstacles.push_back(door_bcube);
-	}
+	} // for doors
 	for (stairwell_t const &s : interior->stairwells) { // add stairwells (basement stairs); there should be no elevators
 		if (s.z1() >= ground_floor_z1) continue; // not in the basement
 		obstacles.push_back(s);
 	}
-	// get pipe ends (risers) coming in through the ceiling
+	// get pipe ends (risers) coming in through the ceiling; set allow_place_fail=1 here because there are many obstacles
 	vect_riser_pos_t sewer, cold_water, hot_water;
 	get_pipe_basement_water_connections(sewer, cold_water, hot_water, rgen);
-	add_basement_pipes(obstacles, walls, beams, sewer, pipe_cubes, room_id, num_floors, pipe_light_amt, sewer_zval,   rgen, PIPE_TYPE_SEWER); // sewer
-	add_basement_pipes(obstacles, walls, beams, cold_water, pipe_cubes, room_id, num_floors, pipe_light_amt, cw_zval, rgen, PIPE_TYPE_CW); // cold water
+	add_basement_pipes(obstacles, walls, beams, sewer, pipe_cubes, room_id, num_floors, pipe_light_amt, sewer_zval,   rgen, PIPE_TYPE_SEWER, 1); // sewer
+	add_basement_pipes(obstacles, walls, beams, cold_water, pipe_cubes, room_id, num_floors, pipe_light_amt, cw_zval, rgen, PIPE_TYPE_CW, 1); // cold water
 	// add hot water pipes; these can intersect cold water pipes, so we have to add those to obstacles
 	vect_cube_t hw_obstacles(obstacles);
 	vector_add_to(pipe_cubes, hw_obstacles); // add sewer and cold water pipes
 	pipe_cubes.clear();
-	// should we set allow_place_fail=1 for this call?
-	add_basement_pipes(hw_obstacles, walls, beams, hot_water, pipe_cubes, room_id, num_floors, pipe_light_amt, hw_zval, rgen, PIPE_TYPE_HW); // hot water
+	add_basement_pipes(hw_obstacles, walls, beams, hot_water, pipe_cubes, room_id, num_floors, pipe_light_amt, hw_zval, rgen, PIPE_TYPE_HW, 1); // hot water
 #if 0 // TODO: finish/enable
 	float const gas_zval(basement.z2() - 2.2*fc_thick);
 	vector_add_to(pipe_cubes, hw_obstacles); // add hot water pipes as well
