@@ -1021,7 +1021,7 @@ void building_t::get_pipe_basement_water_connections(vect_riser_pos_t &sewer, ve
 }
 
 void building_t::get_pipe_basement_gas_connections(vect_riser_pos_t &pipes) const {
-	float const pipe_radius(0.02*get_window_vspace()), ceil_zval(get_basement().z2() - get_fc_thickness());
+	float const pipe_radius(0.005*get_window_vspace()), ceil_zval(get_basement().z2() - get_fc_thickness());
 
 	for (room_object_t const &i : interior->room_geom->objs) { // check all objects placed so far
 		if (i.z1() < ground_floor_z1) continue; // object in the house basement; unclear how to handle it here
@@ -1097,7 +1097,7 @@ void building_t::add_house_basement_pipes(rand_gen_t &rgen) {
 	unsigned const num_floors(1); // basement is always a single floor
 	float const pipe_light_amt = 1.0; // make pipes brighter and easier to see
 	// houses have smaller radius pipes, so we should have enough space to stack sewer below hot water below cold water
-	float const sewer_zval(basement.z2() - 1.8*fc_thick), cw_zval(basement.z2() - 1.0*fc_thick), hw_zval(basement.z2() - 1.4*fc_thick);
+	float const ceil_z(basement.z2()), sewer_zval(ceil_z - 1.8*fc_thick), cw_zval(ceil_z - 1.0*fc_thick), hw_zval(ceil_z - 1.4*fc_thick), gas_zval(ceil_z - 2.8*fc_thick);
 	float const trim_thickness(get_trim_thickness()), wall_thickness(get_wall_thickness());
 	vect_cube_t pipe_cubes, obstacles, walls, beams; // beams remains empty
 	unsigned room_id(0);
@@ -1157,20 +1157,16 @@ void building_t::add_house_basement_pipes(rand_gen_t &rgen) {
 		if (s.z1() >= ground_floor_z1) continue; // not in the basement
 		obstacles.push_back(s);
 	}
-	vect_riser_pos_t sewer, cold_water, hot_water;
+	vect_riser_pos_t sewer, cold_water, hot_water, gas_pipes;
 	get_pipe_basement_water_connections(sewer, cold_water, hot_water, rgen);
 	add_basement_pipes(obstacles, walls, beams, sewer, pipe_cubes, room_id, num_floors, pipe_light_amt, sewer_zval,   rgen, PIPE_TYPE_SEWER, 1); // sewer
 	add_to_and_clear(pipe_cubes, obstacles); // add sewer pipes to obstacles
 	add_basement_pipes(obstacles, walls, beams, cold_water, pipe_cubes, room_id, num_floors, pipe_light_amt, cw_zval, rgen, PIPE_TYPE_CW,    1); // cold water
 	add_to_and_clear(pipe_cubes, obstacles); // add cold water pipes to obstacles
 	add_basement_pipes(obstacles, walls, beams, hot_water,  pipe_cubes, room_id, num_floors, pipe_light_amt, hw_zval, rgen, PIPE_TYPE_HW,    1); // hot water
-#if 0 // TODO: finish/enable
-	float const gas_zval(basement.z2() - 2.2*fc_thick);
 	add_to_and_clear(pipe_cubes, obstacles); // add hot water pipes to obstacles
-	vect_riser_pos_t gas_pipes;
 	get_pipe_basement_gas_connections(gas_pipes);
-	add_basement_pipes(obstacles, walls, beams, gas_pipes, pipe_cubes, room_id, num_floors, pipe_light_amt, gas_zval, rgen, PIPE_TYPE_GAS);
-#endif
+	add_basement_pipes(obstacles, walls, beams, gas_pipes, pipe_cubes, room_id, num_floors, pipe_light_amt, gas_zval, rgen, PIPE_TYPE_GAS,   1); // gas
 }
 
 void building_t::add_parking_garage_ramp(rand_gen_t &rgen) {
