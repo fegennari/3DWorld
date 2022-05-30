@@ -1141,9 +1141,9 @@ bool building_t::overlaps_other_room_obj(cube_t const &c, unsigned objs_start, b
 	assert(objs_start <= objs.size());
 
 	for (auto i = objs.begin()+objs_start; i != objs.end(); ++i) {
-		// Note: light switches and outlets don't collide with the player or AI, but they collide with other placed objects to avoid blocking them;
+		// Note: light switches/outlets/vents/pipes don't collide with the player or AI, but they collide with other placed objects to avoid blocking them;
 		// however, it's okay to block outlets with furniture
-		if ((check_all || !i->no_coll() || i->type == TYPE_SWITCH || i->type == TYPE_OUTLET) && i->intersects(c)) return 1;
+		if ((check_all || !i->no_coll() || i->type == TYPE_SWITCH || i->type == TYPE_OUTLET || i->type == TYPE_VENT || i->type == TYPE_PIPE) && i->intersects(c)) return 1;
 	}
 	return 0;
 }

@@ -2652,6 +2652,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			if (is_lit) {tot_light_amt += r->light_intensity;}
 			bool const is_ground_floor(f == 0 && (!is_basement || has_basement_door) && r->z1() <= ground_floor_z1);
 			bool const is_garage_or_shed(r->is_garage_or_shed(f));
+			unsigned const objs_start(objs.size());
 			rgen.rand_mix();
 
 			if (r->no_geom || is_garage_or_shed) {
@@ -2661,14 +2662,14 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 						add_garage_objs(rgen, *r, room_center.z, room_id, tot_light_amt);
 					}
 					// is there enough clearance between shelves and a car parked in the garage? there seems to be in all the cases I've seen
-					add_storage_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs.size(), is_basement);
+					add_storage_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, is_basement);
 				}
-				add_outlets_to_room(rgen, *r, room_center.z, room_id, objs.size(), is_ground_floor, is_basement);
-				if (has_light) {add_light_switches_to_room(rgen, *r, room_center.z, room_id, objs.size(), is_ground_floor, is_basement);} // shed, garage, or hallway
+				add_outlets_to_room(rgen, *r, room_center.z, room_id, objs_start, is_ground_floor, is_basement);
+				if (has_light) {add_light_switches_to_room(rgen, *r, room_center.z, room_id, objs_start, is_ground_floor, is_basement);} // shed, garage, or hallway
 
 				if (is_house && r->is_hallway) { // allow pictures, rugs, and light switches in the hallways of houses
-					hang_pictures_in_room(rgen, *r, room_center.z, room_id, tot_light_amt, objs.size(), f, is_basement);
-					if (rgen.rand_bool()) {add_rug_to_room(rgen, *r, room_center.z, room_id, tot_light_amt, objs.size());} // 50% of the time; not all rugs will be placed
+					hang_pictures_in_room(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, f, is_basement);
+					if (rgen.rand_bool()) {add_rug_to_room(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);} // 50% of the time; not all rugs will be placed
 				}
 				if (!is_house && r->is_hallway && f == 0 && *r == pri_hall) { // first floor primary hallway, make it the lobby
 					add_pri_hall_objs(rgen, *r, room_center.z, room_id, tot_light_amt);
@@ -2677,7 +2678,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				continue; // no other geometry for this room
 			}
 			//if (has_stairs && !pri_hall.is_all_zeros()) continue; // no other geometry in office building base part rooms that have stairs
-			unsigned const objs_start(objs.size()), floor_mask(1<<f);
+			unsigned const floor_mask(1<<f);
 			bool added_tc(0), added_desk(0), added_obj(0), can_place_onto(0), no_whiteboard(0);
 			bool is_bathroom(0), is_bedroom(0), is_kitchen(0), is_living(0), is_dining(0), is_storage(0), is_utility(0);
 			unsigned num_chairs(0);
