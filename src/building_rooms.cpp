@@ -1917,7 +1917,9 @@ int building_t::check_valid_picture_placement(room_t const &room, cube_t const &
 	return 1; // success
 }
 
-bool building_t::hang_pictures_in_room(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, bool is_basement) {
+bool building_t::hang_pictures_in_room(rand_gen_t rgen, room_t const &room, float zval,
+	unsigned room_id, float tot_light_amt, unsigned objs_start, unsigned floor_ix, bool is_basement)
+{
 	if (!room_object_t::enable_pictures()) return 0; // disabled
 	
 	if (!is_house && !room.is_office) {
@@ -1971,6 +1973,7 @@ bool building_t::hang_pictures_in_room(rand_gen_t rgen, room_t const &room, floa
 			if (!room.is_hallway && rgen.rand_float() < 0.2) continue; // skip 20% of the time unless it's a hallway
 			float const height(floor_height*rgen.rand_uniform(0.3, 0.6)), width(height*rgen.rand_uniform(1.5, 2.0)); // width > height
 			if (width > 0.8*room.get_sz_dim(!dim)) continue; // not enough space
+			float const base_shift((dir ? -1.0 : 1.0)*0.5*wall_thickness); // half a wall's thickness in dir
 			point center;
 			center[ dim] = wall_pos;
 			center[!dim] = room.get_center_dim(!dim);
@@ -1985,8 +1988,9 @@ bool building_t::hang_pictures_in_room(rand_gen_t rgen, room_t const &room, floa
 				}
 				cube_t c(center, center);
 				c.expand_in_dim(2, 0.5*height);
-				c.d[dim][!dir] += (dir ? -1.0 : 1.0)*0.1*wall_thickness; // move out to prevent z-fighting
-				if (room.is_hallway) {c.translate_dim(dim, (dir ? -1.0 : 1.0)*0.5*wall_thickness);} // add an additional half wall thickness for hallways
+				c.d[dim][!dir] += 0.2*base_shift; // move out to prevent z-fighting
+				// add an additional half wall thickness for interior hallway walls
+				if (room.is_hallway && classify_room_wall(room, zval, dim, dir, 0) != ROOM_WALL_EXT) {c.translate_dim(dim, base_shift);}
 				c.expand_in_dim(!dim, 0.5*width);
 				int const ret(check_valid_picture_placement(room, c, width, zval, dim, dir, objs_start));
 				if (ret == 0) continue; // invalid, retry
@@ -1995,7 +1999,7 @@ bool building_t::hang_pictures_in_room(rand_gen_t rgen, room_t const &room, floa
 			} // for n
 			if (best_pos.is_all_zeros()) continue; // failed placement
 			objs.emplace_back(best_pos, TYPE_PICTURE, room_id, dim, !dir, RO_FLAG_NOCOLL, tot_light_amt); // picture faces dir opposite the wall
-			objs.back().obj_id = uint16_t(objs.size() + 13*room_id + 31*mat_ix + 61*dim + 123*dir); // determines picture texture
+			objs.back().obj_id = uint16_t(objs.size() + 13*room_id + 17*floor_ix + 31*mat_ix + 61*dim + 123*dir); // determines picture texture
 			was_hung = 1;
 		} // for dir
 	} // for dim
@@ -2663,7 +2667,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				if (has_light) {add_light_switches_to_room(rgen, *r, room_center.z, room_id, objs.size(), is_ground_floor, is_basement);} // shed, garage, or hallway
 
 				if (is_house && r->is_hallway) { // allow pictures, rugs, and light switches in the hallways of houses
-					hang_pictures_in_room(rgen, *r, room_center.z, room_id, tot_light_amt, objs.size(), is_basement);
+					hang_pictures_in_room(rgen, *r, room_center.z, room_id, tot_light_amt, objs.size(), f, is_basement);
 					if (rgen.rand_bool()) {add_rug_to_room(rgen, *r, room_center.z, room_id, tot_light_amt, objs.size());} // 50% of the time; not all rugs will be placed
 				}
 				if (!is_house && r->is_hallway && f == 0 && *r == pri_hall) { // first floor primary hallway, make it the lobby
@@ -2821,7 +2825,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			if (!is_house && !r->is_hallway) {add_vent_to_room(rgen, *r, room_center.z, room_id, objs_start);} // office building vents
 			// pictures and whiteboards must not be placed behind anything, excluding trashcans; so we add them here
 			bool const can_hang((is_house || !(is_bathroom || is_kitchen || no_whiteboard)) && !is_storage); // no whiteboards in office bathrooms or kitchens
-			bool const was_hung(can_hang && hang_pictures_in_room(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, is_basement));
+			bool const was_hung(can_hang && hang_pictures_in_room(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, f, is_basement));
 
 			if (is_bathroom || is_kitchen || rgen.rand_float() < 0.8) { // 80% of the time, always in bathrooms and kitchens
 				add_trashcan_to_room(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, (was_hung && !is_house)); // no trashcans on same wall as office whiteboard
