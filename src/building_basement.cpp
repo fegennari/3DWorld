@@ -1135,12 +1135,15 @@ void building_t::add_house_basement_pipes(rand_gen_t &rgen) {
 		obstacles.push_back(obstacle);
 	} // for i
 	// TODO: maybe should move the ceiling up or move th tops of the doors down to avoid door collisions
+	float const door_trim_exp(2.0*trim_thickness + 0.5*wall_thickness);
+
 	for (door_t const &d : interior->doors) {
 		if (d.z1() >= ground_floor_z1) continue; // not in the basement
 		door_t door(d);
 		door.open = 0; // start closed
 		cube_t door_bcube(get_door_bounding_cube(door));
-		door_bcube.d[d.dim][d.open_dir] += (d.open_dir ? 1.0 : -1.0)*d.get_width(); // include space for door to swing open
+		door_bcube.d[d.dim][ d.open_dir] += (d.open_dir ? 1.0 : -1.0)*d.get_width(); // include space for door to swing open
+		door_bcube.d[d.dim][!d.open_dir] -= (d.open_dir ? 1.0 : -1.0)*door_trim_exp; // include door trim width on the other side
 
 		if (!d.on_stairs) { // [basement] stairs doors don't really open, so we only need clearance in front
 			door.open = 1; // now try the open door to avoid blocking it when open
