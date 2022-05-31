@@ -2290,7 +2290,7 @@ public:
 						(*i)->building_draw_interior.draw_quads_for_draw_range(s, b.interior->draw_range, 1); // shadow_only=1
 						b.add_split_roof_shadow_quads(ext_parts_draw);
 						// no batch draw for shadow pass since textures aren't used; draw everything, since shadow may be cached
-						bool const camera_in_this_building(b.check_point_or_cylin_contained(pre_smap_player_pos, 0.0, points));
+						bool const camera_in_this_building(b.check_point_or_cylin_contained(pre_smap_player_pos, 0.0, points, 1)); // inc_attic=1
 						// generate detail objects during the shadow pass when the player is in the building so that it can be done in parallel with small static geom gen
 						int const inc_small(camera_in_this_building ? 2 : 1);
 						b.draw_room_geom(nullptr, s, oc, xlate, bi->ix, 1, 0, inc_small, 1); // shadow_only=1, player_in_building=1
@@ -2355,7 +2355,7 @@ public:
 				building_t &b(get_building(bi->ix));
 				if (!b.has_room_geom()) continue; // no interior room geom, skip
 				if (!lights_bcube.intersects_xy(b.bcube)) continue; // not within light volume (too far from camera)
-				bool const camera_in_this_building(b.check_point_or_cylin_contained(camera_xlated, 0.0, points));
+				bool const camera_in_this_building(b.check_point_or_cylin_contained(camera_xlated, 0.0, points, 1)); // inc_attic=1
 				// limit room lights to when the player is in a building because we can restrict them to a single floor, otherwise it's too slow
 				if (!camera_pdu.cube_visible(b.bcube + xlate)) continue; // VFC
 				if (is_first_building) {oc.set_camera(camera_pdu);} // setup occlusion culling on the first visible building
@@ -2524,7 +2524,7 @@ public:
 						if (!camera_near_building) {b.player_not_near_building(); continue;} // camera not near building
 						if (reflection_pass == 2) continue; // interior room, don't need to draw windows and exterior doors
 						b.get_nearby_ext_door_verts(ext_door_draw, s, camera_xlated, door_open_dist); // and draw opened door
-						bool const camera_in_building(b.check_point_or_cylin_contained(camera_xlated, 0.0, points));
+						bool const camera_in_building(b.check_point_or_cylin_contained(camera_xlated, 0.0, points, 1)); // inc_attic=1
 						if (!reflection_pass) {b.update_grass_exclude_at_pos(camera_xlated, xlate, camera_in_building);} // disable any grass inside the building part(s) containing the player
 						if (!reflection_pass && player_in_building_bcube) {b.update_animals(camera_xlated, bi->ix);}
 						// Note: if we skip this check and treat all walls/windows as front/containing part, this almost works, but will skip front faces of other buildings

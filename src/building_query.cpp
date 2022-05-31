@@ -149,7 +149,7 @@ bool building_t::check_sphere_coll(point &pos, point const &p_last, vector3d con
 	}
 	if (check_interior && draw_building_interiors && interior != nullptr) { // check for interior case first
 		float const zval(max(pos2.z, p_last2.z) - xlate.z); // this is the real zval for use in collsion detection, in building space
-		point const pos2_bs(pos2 - xlate);
+		point const pos2_bs(pos2 - xlate), query_pt(pos2_bs.x, pos2_bs.y, zval);
 		cube_t sc; sc.set_from_sphere(pos2_bs, radius); // sphere bounding cube
 
 		// Note: first check uses min of the two zvals to reject the basement, which is actually under the mesh
@@ -165,7 +165,7 @@ bool building_t::check_sphere_coll(point &pos, point const &p_last, vector3d con
 			}
 		}
 		for (auto i = parts.begin(); i != get_real_parts_end_inc_sec(); ++i) { // include garages and sheds
-			if (!i->contains_pt(point(pos2_bs.x, pos2_bs.y, zval))) continue; // not interior to this part
+			if (!i->contains_pt(query_pt)) continue; // not interior to this part
 			float cont_area(0.0);
 
 			for (auto p = parts.begin(); p != get_real_parts_end(); ++p) {
@@ -181,17 +181,8 @@ bool building_t::check_sphere_coll(point &pos, point const &p_last, vector3d con
 			is_interior = 1;
 			break; // flag for interior collision detection
 		} // for i
-		if (!is_interior && has_attic() && zval > interior->attic_access.z1()) {
-			// find part containing the attic
-			cube_t aa_bot(interior->attic_access);
-			aa_bot.z2() = aa_bot.z1(); // shrink to the bottom face, which should be inside the part
+		is_interior |= point_in_attic(query_pt);
 
-			for (auto i = parts.begin(); i != get_real_parts_end(); ++i) {
-				if (!i->contains_cube(aa_bot)) continue; // not the part containing the attic access
-				if (!i->contains_pt_xy(pos2_bs)) break; // this is the part, but the player is not over it (TODO: is this correct for L-shaped buildings?)
-				is_interior = 1; // TODO: check that pos2 is under the roof
-			}
-		}
 		if (!is_interior) { // not interior to a part - check roof access
 			float const floor_thickness(get_floor_thickness());
 
@@ -1053,8 +1044,7 @@ bool building_t::get_interior_color_at_xy(point const &pos_in, colorRGBA &color)
 }
 
 // Note: if xy_radius == 0.0, this is a point test; otherwise, it's an approximate vertical cylinder test
-bool building_t::check_point_or_cylin_contained(point const &pos, float xy_radius, vector<point> &points) const {
-
+bool building_t::check_point_or_cylin_contained(point const &pos, float xy_radius, vector<point> &points, bool inc_attic) const {
 	if (xy_radius == 0.0 && !bcube.contains_pt(pos)) return 0; // no intersection (bcube does not need to be rotated)
 	point pr(pos);
 	maybe_inv_rotate_point(pr);
@@ -1092,6 +1082,21 @@ bool building_t::check_point_or_cylin_contained(point const &pos, float xy_radiu
 			else if (i->contains_pt(pr)) return 1;
 		}
 	} // for i
+	if (inc_attic && point_in_attic(pos)) return 1;
+	return 0;
+}
+
+bool building_t::point_in_attic(point const &pos) const {
+	if (!has_attic() || pos.z < interior->attic_access.z1() || pos.z > interior_z2) return 0;
+
+	// check if pos is under the roof
+	for (auto const &tq : roof_tquads) {
+		if (tq.type != tquad_with_ix_t::TYPE_ROOF) continue;
+		if (!point_in_polygon_2d(pos.x, pos.y, tq.pts, tq.npts, 0, 1)) continue; // check 2D XY point containment
+		vector3d const normal(tq.get_norm());
+		if (normal.z == 0.0) continue; // skip vertical sides
+		if (dot_product_ptv(normal, pos, tq.pts[0]) < 0.0) return 1;
+	}
 	return 0;
 }
 
