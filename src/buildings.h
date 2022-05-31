@@ -1473,7 +1473,8 @@ private:
 	void gather_interior_cubes(vect_colored_cube_t &cc, int only_this_floor=-1) const;
 	void get_lights_with_priorities(point const &target, cube_t const &valid_area, vector<pair<float, unsigned>> &lights_to_sort) const;
 	void get_all_windows(vect_cube_with_ix_t &windows) const;
-	void register_indir_lighting_geom_change();
+	void register_indir_lighting_geom_change() const;
+	void register_blinds_state_change() const;
 	bool is_light_occluded(point const &lpos, point const &camera_bs) const;
 	void clip_ray_to_walls(point const &p1, point &p2, vect_cube_t const walls[2]) const;
 	void refine_light_bcube(point const &lpos, float light_radius, cube_t const &room, cube_t &light_bcube, bool is_parking_garage) const;

@@ -699,6 +699,7 @@ bool building_t::adjust_blinds_state(unsigned obj_ix) {
 		else             {move_edge = 0.25*window_center + 0.75*fixed_end;} // open the blinds
 	}
 	assert(obj.is_strictly_normalized());
+	register_blinds_state_change();
 	return 1;
 }
 

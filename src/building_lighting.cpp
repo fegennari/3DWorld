@@ -330,7 +330,7 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc, int only_this_fl
 unsigned const IS_WINDOW_BIT = (1<<24); // if this bit is set, the light is from a window; if not, it's from a light room object
 
 class building_indir_light_mgr_t {
-	bool is_running, kill_thread, lighting_updated, needs_to_join, need_bvh_rebuild, is_negative_light;
+	bool is_running, kill_thread, lighting_updated, needs_to_join, need_bvh_rebuild, update_windows, is_negative_light;
 	int cur_bix, cur_light, cur_floor;
 	unsigned cur_tid;
 	colorRGBA outdoor_color;
@@ -363,7 +363,7 @@ class building_indir_light_mgr_t {
 			needs_to_join = 1;
 		}
 		else {
-			// per-light time for large office building: orig: 194ms, per-floorBVH: 96ms, clip rays to floor: 44ms, now 37ms
+			// per-light time for large office building: orig: 194ms, per-floor BVH: 96ms, clip rays to floor: 44ms, now 37ms
 			highres_timer_t timer("Ray Cast Building Light");
 			cast_light_rays(b);
 		}
@@ -402,6 +402,7 @@ class building_indir_light_mgr_t {
 			assert(window.ix < 4); // encodes 2*dim + dir
 			dim =  bool(window.ix >> 1);
 			dir = !bool(window.ix &  1); // cast toward the interior
+			// light intensity scales with surface area, since incoming light is a constant per unit area (large windows = more light)
 			float const surface_area(window.dz()*window.get_sz_dim(!bool(dim)));
 			lcolor     = outdoor_color;
 			weight    *= surface_area/0.0012f; // 1/4 the surface area weight of lights
@@ -507,6 +508,7 @@ class building_indir_light_mgr_t {
 		int const target_room(b.get_room_containing_pt(target)); // generally always should be >= 0
 
 		for (auto i = windows.begin(); i != windows.end(); ++i) {
+			if (i->ix & 4) continue; // blocked bit is set, skip
 			point const center(i->get_cube_center());
 			if (center.z < valid_area.z1() || center.z > valid_area.z2()) continue; // wrong floor
 			float dist_sq(p2p_dist_sq(center, target));
@@ -514,6 +516,10 @@ class building_indir_light_mgr_t {
 			if (target_room >= 0 && b.get_room_containing_pt(center) == target_room) {dist_sq *= 0.1;} // prioritize the room the player is in
 			lights_to_sort.emplace_back(dist_sq, ((i - windows.begin()) | IS_WINDOW_BIT));
 		} // for i
+	}
+	void get_windows(building_t const &b) {
+		b.get_all_windows(windows);
+		update_windows = 0;
 	}
 	void sort_lights_by_priority() {
 		light_ids.clear();
@@ -523,7 +529,7 @@ class building_indir_light_mgr_t {
 	}
 public:
 	building_indir_light_mgr_t() : is_running(0), kill_thread(0), lighting_updated(0), needs_to_join(0),
-		need_bvh_rebuild(0), is_negative_light(0), cur_bix(-1), cur_light(-1), cur_floor(-1), cur_tid(0) {}
+		need_bvh_rebuild(0), update_windows(0), is_negative_light(0), cur_bix(-1), cur_light(-1), cur_floor(-1), cur_tid(0) {}
 
 	cube_t get_light_bounds() const {return light_bounds;}
 
@@ -538,7 +544,7 @@ public:
 	}
 	void clear() {
 		bool const cur_bix_was_valid(cur_bix >= 0);
-		lighting_updated = need_bvh_rebuild = 0;
+		lighting_updated = need_bvh_rebuild = update_windows = 0;
 		cur_bix = cur_floor = -1;
 		invalidate_lighting();
 		tex_data.clear();
@@ -562,9 +568,10 @@ public:
 			cur_bix = bix;
 			assert(!is_running);
 			build_bvh(b, target);
-			b.get_all_windows(windows);
+			get_windows(b);
 		}
 		else {
+			if (update_windows) {get_windows(b);}
 			floor_change = (cur_floor >= 0 && cur_floor != (int)b.get_floor_for_zval(target.z));
 		}
 		if (INDIR_VOL_PER_FLOOR && floor_change) { // handle floor change
@@ -646,7 +653,8 @@ public:
 		bvh.build_tree_top(0); // verbose=0
 		need_bvh_rebuild = 0;
 	}
-	void invalidate_bvh() {need_bvh_rebuild = 1;} // Note: can't directly clear bvh because a thread may be using it
+	void invalidate_bvh    () {need_bvh_rebuild = 1;} // Note: can't directly clear bvh because a thread may be using it
+	void invalidate_windows() {update_windows = 1;}
 	cube_bvh_t const &get_bvh() const {return bvh;}
 };
 
@@ -724,6 +732,17 @@ void building_t::get_all_windows(vect_cube_with_ix_t &windows) const { // Note: 
 	if (!has_windows() || is_rotated()) return; // no windows; rotated buildings not handled
 	float const border_mult(0.94); // account for the frame part of the window texture, which is included in the interior cutout of the window
 	float const window_h_border(border_mult*get_window_h_border()), window_v_border(border_mult*get_window_v_border()); // (0, 1) range
+	vect_room_object_t blinds;
+
+	if (is_house && has_room_geom()) { // find all bedroom blinds and use them to partially block windows
+		float const width_expand(get_wall_thickness());
+
+		for (room_object_t const &c : interior->room_geom->objs) {
+			if (c.type != TYPE_BLINDS) continue;
+			blinds.push_back(c);
+			blinds.back().expand_in_dim(c.dim, width_expand); // make sure the intersect the windows
+		}
+	}
 	static vect_vnctcc_t wall_quad_verts;
 	wall_quad_verts.clear();
 	get_all_drawn_window_verts_as_quads(wall_quad_verts);
@@ -747,8 +766,21 @@ void building_t::get_all_windows(vect_cube_with_ix_t &windows) const { // Note: 
 				float const low_edge(c.d[!dim][0] + (xy - tx1)*window_width);
 				window.d[!dim][0] = low_edge + border_xy;
 				window.d[!dim][1] = low_edge + window_width - border_xy;
-				// TODO: if this is in a bedroom, clip to the area inside the blinds and adjust light level accordingly
-				windows.emplace_back(window, (2*dim + dir));
+
+				for (room_object_t const &b : blinds) {
+					if (!b.intersects(window)) continue;
+					
+					if (b.flags & RO_FLAG_HANGING) { // horizontal (comes from the top)
+						min_eq(window.z2(), b.z1());
+					}
+					else { // vertical (comes from the sides)
+						bool const side(b.get_center_dim(!dim) < window.get_center_dim(!dim));
+						if (side) {max_eq(window.d[!dim][0], b.d[!dim][1]);} // left  side
+						else      {min_eq(window.d[!dim][1], b.d[!dim][0]);} // right side
+					}
+				} // for b
+				bool const is_blocked(window.dz() <= 0.0 || window.get_sz_dim(!dim) <= 0.0);
+				windows.emplace_back(window, (4*is_blocked + 2*dim + dir)); // Note: must include blocked window for seen cache to work
 			}
 		} // for z
 	} // for i
@@ -764,8 +796,12 @@ bool building_t::register_indir_lighting_state_change(unsigned light_ix, bool is
 	building_indir_light_mgr.register_light_state_change(light_ix, obj.is_light_on(), (obj.flags & RO_FLAG_IN_ELEV), is_door_change);
 	return 1;
 }
-void building_t::register_indir_lighting_geom_change() {
+void building_t::register_indir_lighting_geom_change() const {
 	building_indir_light_mgr.invalidate_bvh();
+}
+void building_t::register_blinds_state_change() const {
+	building_indir_light_mgr.invalidate_windows();
+	register_indir_lighting_geom_change();
 }
 
 bool line_int_cubes(point const &p1, point const &p2, vect_cube_t const &cubes) {
