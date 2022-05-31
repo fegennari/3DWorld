@@ -192,6 +192,9 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 		if (!interior->is_unconnected) break; // done
 	}
 	interior->finalize();
+	// calculate and cache interior_z2
+	interior_z2 = ground_floor_z1;
+	for (auto i = parts.begin(); i != get_real_parts_end_inc_sec(); ++i) {max_eq(interior_z2, i->z2());}
 }
 
 void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) { // Note: contained in building bcube, so no bcube update is needed

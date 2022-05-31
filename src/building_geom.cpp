@@ -1784,7 +1784,14 @@ void building_t::gen_sloped_roof(rand_gen_t &rgen, cube_t const &top) { // Note:
 }
 
 void building_t::add_roof_to_bcube() {
-	for (auto i = roof_tquads.begin(); i != roof_tquads.end(); ++i) {i->update_bcube(bcube);} // technically should only need to update z2
+	for (auto const &tq : roof_tquads) {
+		tq.update_bcube(bcube); // technically should only need to update z2
+		
+		if (has_attic()) { // use roof tquads to include the attic space
+			if (tq.type != tquad_with_ix_t::TYPE_ROOF) continue;
+			for (unsigned n = 0; n < tq.npts; ++n) {max_eq(interior_z2, tq.pts[n].z);}
+		}
+	} // for tq
 }
 void building_t::gen_grayscale_detail_color(rand_gen_t &rgen, float imin, float imax) {
 	float const cscale(rgen.rand_uniform(imin, imax));

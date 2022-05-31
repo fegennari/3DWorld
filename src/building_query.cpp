@@ -123,17 +123,7 @@ cube_t building_t::get_coll_bcube() const {
 }
 cube_t building_t::get_interior_bcube() const { // Note: called for indir lighting; could cache z2
 	cube_t int_bcube(bcube);
-	int_bcube.z2() = ground_floor_z1;
-
-	if (has_attic()) { // use roof tquads to include the attic space
-		for (auto const &tq : roof_tquads) {
-			if (tq.type != tquad_with_ix_t::TYPE_ROOF) continue;
-			for (unsigned n = 0; n < tq.npts; ++n) {max_eq(int_bcube.z2(), tq.pts[n].z);}
-		}
-	}
-	else { // use real parts
-		for (auto i = parts.begin(); i != get_real_parts_end_inc_sec(); ++i) {max_eq(int_bcube.z2(), i->z2());}
-	}
+	int_bcube.z2() = interior_z2;
 	return int_bcube;
 }
 
