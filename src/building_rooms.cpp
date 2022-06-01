@@ -3198,7 +3198,6 @@ void building_t::add_window_blinds(cube_t const &window, bool dim, bool dir, uns
 		c.expand_in_dim(!dim, extend); // expand width to cover trim +15% WT
 		c.z2() += extend + 0.05*floor_spacing; // expand height to allow space for it to bunch up at the top
 		c.z1() += open_amt*window.dz(); // raise amount is random per-room
-		// TODO: limit z1 value to avoid desks and dressers?
 		objs.emplace_back(c, TYPE_BLINDS, room_id, dim, dir, (RO_FLAG_NOCOLL | RO_FLAG_HANGING), 1.0); // always fully lit
 	}
 }

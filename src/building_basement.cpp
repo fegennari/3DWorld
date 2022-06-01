@@ -1136,7 +1136,7 @@ void building_t::add_house_basement_pipes(rand_gen_t &rgen) {
 		}
 		obstacles.push_back(obstacle);
 	} // for i
-	// TODO: maybe should move the ceiling up or move th tops of the doors down to avoid door collisions
+	// TODO: maybe should move the ceiling up or move the tops of the doors down to avoid door collisions
 	float const door_trim_exp(2.0*trim_thickness + 0.5*wall_thickness);
 
 	for (door_t const &d : interior->doors) {
