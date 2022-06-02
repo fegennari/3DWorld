@@ -605,7 +605,7 @@ bool building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 	// create main pipe that runs in the longer dim (based on drain pipe XY bounds)
 	pipe_end_bcube.expand_in_dim(dim, r_main);
 	// use the center of the pipes bcube to minimize run length, but clamp to the interior of the basement;
-	// in the case where all risers are outside of the basement perimeter, this will make pipes run against the exterior basement wall (and possibly intersect electical conduits)
+	// in the case where all risers are outside of the basement perimeter, this will make pipes run against the exterior basement wall
 	float const pipes_bcube_center(max(basement.d[!dim][0]+r_main, min(basement.d[!dim][1]-r_main, pipe_end_bcube.get_center_dim(!dim))));
 	float centerline(pipes_bcube_center), exit_dmin(0.0);
 	point mp[2]; // {lo, hi} ends
@@ -624,9 +624,6 @@ bool building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 
 	for (unsigned n = 0; n < max_steps; ++n) {
 		cube_t const c(pipe_t(mp[0], mp[1], r_main_spacing, dim, PIPE_MAIN, 3).get_bcube());
-		if (!bcube   .contains_cube_xy(c)) break; // outside valid area
-		if (!basement.contains_cube_xy(c)) continue; // outside the basement
-		
 		if (!has_bcube_int(c, obstacles)) {
 			success = 1;
 
@@ -638,7 +635,12 @@ bool building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 			if (success) break; // success/done
 		}
 		float const xlate(((n>>1)+1)*((n&1) ? -1.0 : 1.0)*step_dist);
-		UNROLL_2X(mp[i_][!dim] += xlate;)
+		UNROLL_2X(mp[i_][!dim] += xlate;); // try the new position
+		
+		if (!basement.contains_cube_xy(pipe_t(mp[0], mp[1], r_main_spacing, dim, PIPE_MAIN, 3).get_bcube())) { // outside the basement
+			UNROLL_2X(mp[i_][!dim] -= 2.0*xlate;); // try shifting in the other direction
+			if (!basement.contains_cube_xy(pipe_t(mp[0], mp[1], r_main_spacing, dim, PIPE_MAIN, 3).get_bcube())) break; // outside the basement in both dirs, fail
+		}
 	} // for n
 	if (success) {
 		centerline = mp[0][!dim]; // update centerline based on translate
@@ -1116,8 +1118,8 @@ void building_t::add_house_basement_pipes(rand_gen_t &rgen) {
 	// Note: elevators/buttons/stairs haven't been placed at this point, so iterate over all objects
 	for (room_object_t const &i : interior->room_geom->objs) {
 		bool no_blocking(i.type == TYPE_PICTURE || i.type == TYPE_WBOARD);
-		// Note: we exclude TYPE_PIPE (vertical electrical conduits from outlets) here because they may block pipes from running horizontally along walls
-		if (i.no_coll() && !no_blocking && i.type != TYPE_LIGHT /*&& i.type != TYPE_PIPE*/) continue; // no collisions
+		// Note: TYPE_PIPE (vertical electrical conduits from outlets) may block pipes from running horizontally along walls
+		if (i.no_coll() && !no_blocking && i.type != TYPE_LIGHT && i.type != TYPE_PIPE) continue; // no collisions
 		if (i.z1() >= ground_floor_z1) continue; // not in the basement
 		cube_t obstacle(i);
 		// Note: we could maybe skip if i.z2() < sewer_zval-pipe_radius, but we still need to handle collisions with vertical exit pipe segments
