@@ -1971,7 +1971,8 @@ bool building_t::hang_pictures_in_room(rand_gen_t rgen, room_t const &room, floa
 			float const wall_pos(room.d[dim][dir]);
 			if (check_for_windows && fabs(room.d[dim][dir] - part.d[dim][dir]) < 1.1*wall_thickness) continue; // on part boundary, likely exterior wall where there may be windows, skip
 			if (!room.is_hallway && rgen.rand_float() < 0.2) continue; // skip 20% of the time unless it's a hallway
-			float const height(floor_height*rgen.rand_uniform(0.3, 0.6)), width(height*rgen.rand_uniform(1.5, 2.0)); // width > height
+			float const height(floor_height*rgen.rand_uniform(0.3, 0.6)*(is_basement ? 0.8 : 1.0)); // smaller pictures in basement to avoid the pipes
+			float const width(height*rgen.rand_uniform(1.5, 2.0)); // width > height
 			if (width > 0.8*room.get_sz_dim(!dim)) continue; // not enough space
 			float const base_shift((dir ? -1.0 : 1.0)*0.5*wall_thickness); // half a wall's thickness in dir
 			point center;
