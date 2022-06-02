@@ -1091,6 +1091,15 @@ void building_t::add_basement_electrical_house(rand_gen_t &rgen) {
 	add_basement_electrical(obstacles, walls, vect_cube_t(), -1, tot_light_amt, rgen); // no beams, room_id=-1 (to be calculated)
 }
 
+void get_water_heater_cubes(room_object_t const &wh, cube_t cubes[2]) { // {tank, pipes}
+	cubes[0] = cubes[1] = wh;
+	// shrink to include the pipes
+	float const radius(wh.get_radius());
+	set_wall_width(cubes[1], wh.get_center_dim( wh.dim), 0.2*radius,  wh.dim); // width of vent
+	set_wall_width(cubes[1], wh.get_center_dim(!wh.dim), 0.7*radius, !wh.dim); // width of top pipes extent
+	cubes[0].z2() -= 0.2*wh.dz(); // shorten the height for the tank; needed for vertical exit pipes
+}
+
 void building_t::add_house_basement_pipes(rand_gen_t &rgen) {
 	if (!has_room_geom()) return; // error?
 	float const fc_thick(get_fc_thickness());
@@ -1121,22 +1130,19 @@ void building_t::add_house_basement_pipes(rand_gen_t &rgen) {
 		// Note: TYPE_PIPE (vertical electrical conduits from outlets) may block pipes from running horizontally along walls
 		if (i.no_coll() && !no_blocking && i.type != TYPE_LIGHT && i.type != TYPE_PIPE) continue; // no collisions
 		if (i.z1() >= ground_floor_z1) continue; // not in the basement
-		cube_t obstacle(i);
 		// Note: we could maybe skip if i.z2() < sewer_zval-pipe_radius, but we still need to handle collisions with vertical exit pipe segments
 
 		if (i.type == TYPE_WHEATER) {
-			// shrink to include the pipes since routing should be above the body
-			float const radius(i.get_radius());
-			cube_t c(i);
-			set_wall_width(c, i.get_center_dim( i.dim), 0.2*radius,  i.dim); // width of vent
-			set_wall_width(c, i.get_center_dim(!i.dim), 0.7*radius, !i.dim); // width of top pipes extent
-			obstacles.push_back(c);
-			obstacle.z2() -= 0.2*i.dz(); // shorten the height for the tank; needed for vertical exit pipes
+			cube_t cubes[2];
+			get_water_heater_cubes(i, cubes);
+			UNROLL_2X(obstacles.push_back(cubes[i_]);)
 		}
 		else if (no_blocking) {
-			obstacle.d[i.dim][!i.dir] += (i.dir ? 1.0 : -1.0)*wall_thickness; // add a wall thickness of clearance
+			cube_t c(i);
+			c.d[i.dim][!i.dir] += (i.dir ? 1.0 : -1.0)*wall_thickness; // add a wall thickness of clearance
+			cube_t obstacle(c);
 		}
-		obstacles.push_back(obstacle);
+		else {obstacles.push_back(i);}
 	} // for i
 	// TODO: maybe should move the ceiling up or move the tops of the doors down to avoid door collisions
 	float const door_trim_exp(2.0*trim_thickness + 0.5*wall_thickness);

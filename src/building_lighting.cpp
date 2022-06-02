@@ -29,6 +29,7 @@ colorRGBA get_textured_wood_color();
 bool bed_has_canopy_mat(room_object_t const &c);
 int get_canopy_texture();
 colorRGBA get_canopy_base_color(room_object_t const &c);
+void get_water_heater_cubes(room_object_t const &wh, cube_t cubes[2]);
 
 bool enable_building_indir_lighting_no_cib() {
 	if (!(display_mode & 0x10)) return 0; // key 5
@@ -226,8 +227,15 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc, int only_this_fl
 		colorRGBA const color(c->get_color());
 		
 		if (c->shape == SHAPE_CYLIN || c->shape == SHAPE_SPHERE) {
-			float const shrink(c->get_radius()*(1.0 - 1.0/SQRT2));
 			cube_t inner_cube(*c);
+
+			if (c->type == TYPE_WHEATER) { // {tank, pipes}
+				cube_t cubes[2];
+				get_water_heater_cubes(*c, cubes);
+				cc.emplace_back(cubes[1], color); // add pipes directly
+				inner_cube = cubes[0]; // tank
+			}
+			float const shrink(c->get_radius()*(1.0 - 1.0/SQRT2));
 			inner_cube.expand_by_xy(-shrink); // shrink to inscribed cube in XY
 			if (c->shape == SHAPE_SPHERE) {inner_cube.expand_in_dim(2, -shrink);} // shrink in Z as well
 			if (c->type  == TYPE_TABLE  ) {inner_cube.z1() += 0.88*c->dz();} // top of table
