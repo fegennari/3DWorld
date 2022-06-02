@@ -1725,7 +1725,9 @@ void building_t::add_attic_objects(rand_gen_t rgen) {
 	adoor.expand_in_dim(2, -0.2*adoor.dz()); // shrink in z
 	int const room_id(get_room_containing_pt(point(adoor.xc(), adoor.yc(), adoor.z1()-get_floor_thickness()))); // should we cache this during floorplanning?
 	assert(room_id >= 0); // must be found
-	interior->room_geom->objs.emplace_back(adoor, TYPE_ATTIC_DOOR, room_id, 0, 0, RO_FLAG_NOCOLL, 1.0, SHAPE_CUBE); // is light_amount=1.0 correct?
+	bool const dim(adoor.dx() < adoor.dy()), dir(get_room(room_id).get_center_dim(dim) < adoor.get_center_dim(dim));
+	// is light_amount=1.0 correct? since this door can be viewed from both inside and outside the attic, a single number doesn't really work anyway
+	interior->room_geom->objs.emplace_back(adoor, TYPE_ATTIC_DOOR, room_id, dim, dir, RO_FLAG_NOCOLL, 1.0, SHAPE_CUBE);
 }
 
 colorRGBA choose_pot_color(rand_gen_t &rgen) {
