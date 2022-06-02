@@ -391,7 +391,6 @@ class building_indir_light_mgr_t {
 	void cast_light_rays(building_t const &b) {
 		// TODO: Some type of blur to remove noise that doesn't blur across walls
 		// Note: modifies lmgr, but otherwise thread safe
-		unsigned const NUM_PRI_SPLITS = 16;
 		unsigned const num_rt_threads(max(1U, (NUM_THREADS - (USE_BKG_THREAD ? 1 : 0)))); // reserve a thread for the main thread if running in the background
 		unsigned base_num_rays(LOCAL_RAYS), dim(2), dir(0); // default dim is z; dir=2 is omnidirectional
 		cube_t const scene_bounds(get_scene_bounds_bcube()); // expected by lmap update code
@@ -436,6 +435,7 @@ class building_indir_light_mgr_t {
 		if (b.is_house) {weight *= 2.0 ;} // houses have dimmer lights and seem to work better with more indir
 		if (is_negative_light) {weight *= -1.0;}
 		weight /= base_num_rays; // normalize to the number of rays
+		unsigned NUM_PRI_SPLITS(is_window ? 4 : 16); // we're counting primary rays for windows, use fewer primary splits to reduce noise at the cost of increased time
 		max_eq(base_num_rays, NUM_PRI_SPLITS);
 		int const num_rays(base_num_rays/NUM_PRI_SPLITS);
 		
