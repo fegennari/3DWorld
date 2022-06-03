@@ -392,7 +392,9 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, flo
 	
 	if (!xy_only && 2.2f*radius < (floor_spacing - floor_thickness)) { // diameter is smaller than space between floor and ceiling
 		if (is_in_attic) {
-			max_eq(pos.z, (interior->attic_access.z2() + 0.2f*get_floor_thickness())); // place on attic floor
+			// TODO: check player's head against the roof to avoid clipping through it
+			max_eq(pos.z, (interior->attic_access.z2() + 0.2f*get_floor_thickness() + radius)); // place on attic floor
+			obj_z    = max(pos.z, p_last.z);
 			had_coll = 1;
 		}
 		else { // check Z collision with floors; no need to check ceilings; this will set pos.z correctly so that we can set skip_z=0 in later tests
