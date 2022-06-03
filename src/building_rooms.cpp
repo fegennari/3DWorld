@@ -1727,7 +1727,7 @@ void building_t::add_attic_objects(rand_gen_t rgen) {
 	assert(room_id >= 0); // must be found
 	bool const dim(adoor.dx() < adoor.dy()), dir(get_room(room_id).get_center_dim(dim) < adoor.get_center_dim(dim));
 	// is light_amount=1.0 correct? since this door can be viewed from both inside and outside the attic, a single number doesn't really work anyway
-	interior->room_geom->objs.emplace_back(adoor, TYPE_ATTIC_DOOR, room_id, dim, dir, RO_FLAG_NOCOLL, 1.0, SHAPE_CUBE);
+	interior->room_geom->objs.emplace_back(adoor, TYPE_ATTIC_DOOR, room_id, dim, dir, 0, 1.0, SHAPE_CUBE); // Note: player collides with open attic door
 }
 
 colorRGBA choose_pot_color(rand_gen_t &rgen) {

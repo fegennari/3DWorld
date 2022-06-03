@@ -305,6 +305,7 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc, int only_this_fl
 		}
 		else { // single cube
 			cube_t bc(*c); // handle 3D models that don't fill the entire cube
+
 			if (c->type == TYPE_COUCH) {
 				bc.z2() -= 0.5*bc.dz(); // bottom
 				cube_t top(*c);
@@ -329,6 +330,7 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc, int only_this_fl
 			else if (c->type == TYPE_SINK  ) {bc.z2() -= 0.20*bc.dz(); bc.z1() += 0.65*bc.dz();}
 			else if (c->type == TYPE_MONITOR || c->type == TYPE_TV) {bc.expand_in_dim(c->dim, -0.3*bc.get_sz_dim(c->dim));} // reduce thickness
 			else if (c->type == TYPE_BRSINK) {bc.z1() += 0.60*bc.dz();}
+			else if (c->type == TYPE_ATTIC_DOOR) {bc = get_attic_access_door_cube(*c);}
 			cc.emplace_back(bc, color);
 		}
 	} // for c

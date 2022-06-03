@@ -368,12 +368,15 @@ bool maybe_inside_room_object(room_object_t const &obj, point const &pos, float 
 	return ((obj.is_open() && sphere_cube_intersect(pos, radius, obj)) || obj.contains_pt(pos));
 }
 
-cube_t get_true_room_obj_bcube(room_object_t const &c) { // special cased only for closets
-	if (c.type != TYPE_CLOSET || !c.is_open() || !c.is_small_closet()) return c;
-	cube_t bcube(c); // only applies to small closets with open doors
-	float const width(c.get_width()), wall_width(0.5*(width - 0.5*c.dz())); // see get_closet_cubes()
-	bcube.d[c.dim][c.dir] += (c.dir ? 1.0f : -1.0f)*(width - 2.0f*wall_width); // extend outward
-	return bcube;
+cube_t get_true_room_obj_bcube(room_object_t const &c) {
+	if (c.type == TYPE_CLOSET && c.is_open() && c.is_small_closet()) { // special case for open closets
+		cube_t bcube(c); // only applies to small closets with open doors
+		float const width(c.get_width()), wall_width(0.5*(width - 0.5*c.dz())); // see get_closet_cubes()
+		bcube.d[c.dim][c.dir] += (c.dir ? 1.0f : -1.0f)*(width - 2.0f*wall_width); // extend outward
+		return bcube;
+	}
+	if (c.type == TYPE_ATTIC_DOOR) {return get_attic_access_door_cube(c);}
+	return c; // default cube case
 }
 
 // Note: used for the player; pos and p_last are already in rotated coordinate space
@@ -438,7 +441,7 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, flo
 			}
 			if ((c->type == TYPE_STAIR || on_stairs) && (obj_z + radius) > c->z2()) continue; // above the stair - allow it to be walked on
 			cube_t c_extended(get_true_room_obj_bcube(*c));
-			if (c->type == TYPE_STAIR ) {c_extended.z1() -= camera_zh;} // handle the player's head for stairs
+			if (c->type == TYPE_STAIR || c->type == TYPE_ATTIC_DOOR) {c_extended.z1() -= camera_zh;} // handle the player's head for stairs and attic doors
 
 			// Note: slight adjust so that player is above ramp when on the floor
 			if (c->type == TYPE_RAMP && (obj_z - 0.99f*radius) < c->z2()) { // ramp should be SHAPE_ANGLED

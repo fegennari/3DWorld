@@ -1413,15 +1413,20 @@ void building_room_geom_t::add_breaker_panel(room_object_t const &c) {
 	}
 }
 
+cube_t get_attic_access_door_cube(room_object_t const &c) {
+	if (!c.is_open()) return c;
+	float const len(c.get_sz_dim(c.dim)), thickness(c.dz()), delta(len - thickness);
+	cube_t door(c);
+	door.z1() -= delta; // open downward
+	door.d[c.dim][!c.dir] -= (c.dir ? -1.0 : 1.0)*delta; // shorten to expose the opening
+	return door;
+}
 void building_room_geom_t::add_attic_door(room_object_t const &c, float tscale) {
 	rgeom_mat_t &wood_mat(get_wood_material(tscale, 1, 0, 1));
 	colorRGBA const color(apply_light_color(c));
 
 	if (c.is_open()) {
-		float const len(c.get_sz_dim(c.dim)), thickness(c.dz()), delta(len - thickness);
-		cube_t door(c);
-		door.z1() -= delta; // open downward
-		door.d[c.dim][!c.dir] -= (c.dir ? -1.0 : 1.0)*delta; // shorten to expose the opening
+		cube_t const door(get_attic_access_door_cube(c));
 		wood_mat.add_cube_to_verts(door, color, door.get_llc(), 0); // shadows + small, all sides
 		// TODO: draw a ladder or something
 	}

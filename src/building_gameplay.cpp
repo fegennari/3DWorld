@@ -116,7 +116,7 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_CURB      ] = bldg_obj_type_t(0, 0, 1, 0, 1, 0, 0, 0.0,   100.0, "Curb"); // for parking garages; only rats collide
 	bldg_obj_types[TYPE_BRK_PANEL ] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 2, 1000.0,100.0, "Breaker Panel");
 	bldg_obj_types[TYPE_VENT      ] = bldg_obj_type_t(0, 0, 0, 0, 1, 0, 0, 20.0,  2.0,   "Vent"); // detail object
-	bldg_obj_types[TYPE_ATTIC_DOOR] = bldg_obj_type_t(0, 0, 0, 0, 1, 0, 2, 100.0, 50.0,  "Attic Door"); // door/ladder
+	bldg_obj_types[TYPE_ATTIC_DOOR] = bldg_obj_type_t(1, 1, 0, 0, 1, 0, 2, 100.0, 50.0,  "Attic Door"); // door/ladder
 	// player_coll, ai_coll, rat_coll, pickup, attached, is_model, lg_sm, value, weight, name [capacity]
 	// 3D models
 	bldg_obj_types[TYPE_TOILET    ] = bldg_obj_type_t(1, 1, 1, 1, 1, 1, 0, 120.0, 88.0,  "toilet");

@@ -426,9 +426,9 @@ bool building_t::apply_player_action_key(point const &closest_to_in, vector3d co
 				if (!keep) continue;
 				cube_t obj_bc(*i);
 				if (i->type == TYPE_KSINK || i->type == TYPE_BRSINK) {obj_bc = get_sink_cube(*i);} // the sink itself is actually smaller
-				else if (i->type == TYPE_LAMP) { // shrink lamps in XY to a cube interior to their building cylinder to make drawers under lamps easier to select
-					obj_bc.expand_by(vector3d(-i->dx(), -i->dy(), 0.0)*(0.5*(1.0 - 1.0/SQRT2)));
-				}
+				// shrink lamps in XY to a cube interior to their building cylinder to make drawers under lamps easier to select
+				else if (i->type == TYPE_LAMP      ) {obj_bc.expand_by(vector3d(-i->dx(), -i->dy(), 0.0)*(0.5*(1.0 - 1.0/SQRT2)));}
+				else if (i->type == TYPE_ATTIC_DOOR) {obj_bc = get_attic_access_door_cube(*i);}
 				point center;
 
 				if (i->type == TYPE_CLOSET) {
