@@ -139,7 +139,7 @@ bool building_t::check_sphere_coll(point &pos, point const &p_last, vector3d con
 	}
 	float const xy_radius(radius*global_building_params.player_coll_radius_scale);
 	point pos2(pos), p_last2(p_last), center;
-	bool had_coll(0), is_interior(0);
+	bool had_coll(0), is_interior(0), is_in_attic(0);
 	float part_z2(bcube.z2());
 
 	if (is_rotated()) {
@@ -181,7 +181,7 @@ bool building_t::check_sphere_coll(point &pos, point const &p_last, vector3d con
 			is_interior = 1;
 			break; // flag for interior collision detection
 		} // for i
-		is_interior |= point_in_attic(query_pt);
+		if (point_in_attic(query_pt)) {is_interior = is_in_attic = 1;}
 
 		if (!is_interior) { // not interior to a part - check roof access
 			float const floor_thickness(get_floor_thickness());
@@ -197,7 +197,7 @@ bool building_t::check_sphere_coll(point &pos, point const &p_last, vector3d con
 	}
 	if (is_interior) {
 		point pos2_bs(pos2 - xlate);
-		if (check_sphere_coll_interior(pos2_bs, (p_last2 - xlate), radius, xy_only, cnorm_ptr)) {pos2 = pos2_bs + xlate; had_coll = 1;}
+		if (check_sphere_coll_interior(pos2_bs, (p_last2 - xlate), radius, is_in_attic, xy_only, cnorm_ptr)) {pos2 = pos2_bs + xlate; had_coll = 1;}
 	}
 	else {
 		for (auto i = parts.begin(); i != parts.end(); ++i) {
@@ -382,7 +382,7 @@ cube_t get_true_room_obj_bcube(room_object_t const &c) {
 // Note: used for the player; pos and p_last are already in rotated coordinate space
 // default player is actually too large to fit through doors and too tall to fit between the floor and celing,
 // so player size/height must be reduced in the config file
-bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, float radius, bool xy_only, vector3d *cnorm) const {
+bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, float radius, bool is_in_attic, bool xy_only, vector3d *cnorm) const {
 	pos.z = bcube.z1(); // start at building z1 rather than the terrain height in case we're at the foot of a steep hill
 	assert(interior);
 	float const floor_spacing(get_window_vspace()), floor_thickness(get_floor_thickness());
@@ -391,15 +391,20 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, flo
 	float obj_z(max(pos.z, p_last.z)); // use p_last to get orig zval
 	
 	if (!xy_only && 2.2f*radius < (floor_spacing - floor_thickness)) { // diameter is smaller than space between floor and ceiling
-		// check Z collision with floors; no need to check ceilings; this will set pos.z correctly so that we can set skip_z=0 in later tests
-		float const floor_test_zval(obj_z + floor_thickness); // move up by floor thickness to better handle steep stairs
+		if (is_in_attic) {
+			max_eq(pos.z, (interior->attic_access.z2() + 0.2f*get_floor_thickness())); // place on attic floor
+			had_coll = 1;
+		}
+		else { // check Z collision with floors; no need to check ceilings; this will set pos.z correctly so that we can set skip_z=0 in later tests
+			float const floor_test_zval(obj_z + floor_thickness); // move up by floor thickness to better handle steep stairs
 
-		for (auto i = interior->floors.begin(); i != interior->floors.end(); ++i) {
-			if (!i->contains_pt_xy(pos)) continue; // sphere not in this floor
-			float const z1(i->z2());
-			if (floor_test_zval < z1 || floor_test_zval > z1 + floor_spacing) continue; // this is not the floor the sphere is on
-			if (pos.z < z1 + radius) {pos.z = z1 + radius; obj_z = max(pos.z, p_last.z); had_coll = 1;} // move up
-			break; // only change zval once
+			for (auto i = interior->floors.begin(); i != interior->floors.end(); ++i) {
+				if (!i->contains_pt_xy(pos)) continue; // sphere not in this floor
+				float const z1(i->z2());
+				if (floor_test_zval < z1 || floor_test_zval > z1 + floor_spacing) continue; // this is not the floor the sphere is on
+				if (pos.z < z1 + radius) {pos.z = z1 + radius; obj_z = max(pos.z, p_last.z); had_coll = 1;} // move up
+				break; // only change zval once
+			}
 		}
 	}
 	// *** Note ***: at this point pos.z is radius above the floors and *not* at the camera height, which is why we add camera_zh to pos.z below
