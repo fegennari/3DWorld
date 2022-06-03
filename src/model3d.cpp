@@ -43,6 +43,7 @@ bool enable_spec_map() {return (ENABLE_SPEC_MAPS && !disable_shader_effects);}
 bool no_sparse_smap_update();
 bool enable_reflection_dynamic_updates();
 string texture_str(int tid);
+bool endswith(string const &value, string const &ending);
 bool use_model3d_bump_maps() {return enable_bump_map();} // global function export
 
 
@@ -568,7 +569,6 @@ template<typename T> void vntc_vect_t<T>::write(ostream &out) const {
 }
 
 template<typename T> void vntc_vect_t<T>::read(istream &in) {
-
 	// Note: it would be nice to write/read without the tangent vectors and recalculate them later,
 	// but knowing which materials require tangents requires loading the material file first, but that requires the model,
 	// so we would have to read the model3d material headers, then read the material file, then read the polygon data into the correct geometry type,
@@ -798,6 +798,31 @@ template<typename T> void indexed_vntc_vect_t<T>::read(istream &in, unsigned npt
 	finalize_lod_blocks(npts);
 }
 
+// Note: will also match vert_norm_tc_tan, but we don't write the tangent
+void write_vertex_to_obj_file(vert_norm_tc const &v, ostream &out) {
+	out << "v "  << v.v.raw_str() << endl; // vertex
+	out << "vn " << v.n.raw_str() << endl; // normal
+	out << "vt " << v.t[0] << " " << v.t[1] << endl; // tex coords (always? do we skip these when they're invalid?)
+}
+
+template<typename T> void indexed_vntc_vect_t<T>::write_to_obj_file(ostream &out, unsigned &cur_vert_ix, unsigned npts) const {
+	unsigned const nv(num_verts());
+	assert((nv % npts) == 0);
+	unsigned const start_vert_ix(cur_vert_ix);
+	for (auto v = begin(); v != end(); ++v) {write_vertex_to_obj_file(*v, out);}
+
+	for (unsigned i = 0; i < indices.size(); i += npts) {
+		out << "f";
+		
+		for (unsigned n = 0; n < npts; ++n) {
+			unsigned const ix(start_vert_ix + indices[i + n] + 1); // always the same index for v/vn/vt; starts at 1
+			out << " " << ix << "/" << ix << "/" << ix;
+		}
+		out << endl;
+	} // for i
+	cur_vert_ix += size();
+}
+
 
 // ************ polygon_t ************
 
@@ -950,18 +975,21 @@ template<typename T> void vntc_vect_block_t<T>::merge_into_single_vector() {
 }
 
 template<typename T> bool vntc_vect_block_t<T>::write(ostream &out) const {
-
 	write_uint(out, (unsigned)this->size());
 	for (auto i = begin(); i != end(); ++i) {i->write(out);}
 	return 1;
 }
 
 template<typename T> bool vntc_vect_block_t<T>::read(istream &in, unsigned npts) {
-
 	this->clear();
 	this->resize(read_uint(in));
 	for (auto i = begin(); i != end(); ++i) {i->read(in, npts);}
 	if (merge_model_objects) {merge_into_single_vector();} // model was split per object, and we don't want that; merge into a single vector
+	return 1;
+}
+
+template<typename T> bool vntc_vect_block_t<T>::write_to_obj_file(ostream &out, unsigned &cur_vert_ix, unsigned npts) const {
+	for (auto i = begin(); i != end(); ++i) {i->write_to_obj_file(out, cur_vert_ix, npts);}
 	return 1;
 }
 
@@ -1244,7 +1272,6 @@ colorRGBA material_t::get_avg_color(texture_manager const &tmgr, int default_tid
 	return avg_color;
 }
 
-
 bool material_t::add_poly(polygon_t const &poly, vntc_map_t vmap[2], vntct_map_t vmap_tan[2], unsigned obj_id) {
 	
 	if (skip) return 0;
@@ -1256,20 +1283,22 @@ bool material_t::add_poly(polygon_t const &poly, vntc_map_t vmap[2], vntct_map_t
 
 
 bool material_t::write(ostream &out) const {
-
 	out.write((char const *)this, sizeof(material_params_t));
 	write_vector(out, name);
 	write_vector(out, filename);
 	return (geom.write(out) && geom_tan.write(out));
 }
 
-
 bool material_t::read(istream &in) {
-
 	in.read((char *)this, sizeof(material_params_t));
 	read_vector(in, name);
 	read_vector(in, filename);
 	return (geom.read(in) && geom_tan.read(in));
+}
+
+bool material_t::write_to_obj_file(ostream &out, unsigned &cur_vert_ix) const {
+	out << "usemtl " << name << endl;
+	return (geom.write_to_obj_file(out, cur_vert_ix) && geom_tan.write_to_obj_file(out, cur_vert_ix));
 }
 
 
@@ -2226,7 +2255,7 @@ void model3d::show_stats() const {
 }
 
 
-bool model3d::write_to_disk(string const &fn) const { // Note: transforms not written
+bool model3d::write_to_disk(string const &fn) const { // as model3d file; Note: transforms not written
 
 	ofstream out(fn, ios::out | ios::binary);
 	
@@ -2242,7 +2271,7 @@ bool model3d::write_to_disk(string const &fn) const { // Note: transforms not wr
 	
 	for (deque<material_t>::const_iterator m = materials.begin(); m != materials.end(); ++m) {
 		if (!m->write(out)) {
-			cerr << "Error writing material" << endl;
+			cerr << "Error writing material " << m->name << endl;
 			return 0;
 		}
 	}
@@ -2250,7 +2279,7 @@ bool model3d::write_to_disk(string const &fn) const { // Note: transforms not wr
 }
 
 
-bool model3d::read_from_disk(string const &fn) { // Note: transforms not read
+bool model3d::read_from_disk(string const &fn) { // as model3d file; Note: transforms not read
 
 	ifstream in(fn, ios::in | ios::binary);
 	
@@ -2279,7 +2308,33 @@ bool model3d::read_from_disk(string const &fn) { // Note: transforms not read
 		mat_map[m->name] = (m - materials.begin());
 	}
 	//simplify_indices(0.1); // TESTING
+	//if (fn == "model_data/fish/fishOBJ.model3d") {write_as_obj_file(fn + ".obj");} // TESTING
 	return in.good();
+}
+
+bool model3d::write_as_obj_file(string const &fn) {
+
+	ofstream out(fn, ios::out);
+
+	if (!out.good()) {
+		cerr << "Error opening obj file for write: " << fn << endl;
+		return 0;
+	}
+	string const mtllib_fn((endswith(fn, ".obj") ? fn.substr(0, fn.size()-4) : fn) + ".mtl"); // replace ".obj" with ".mtl" or append ".mtl"
+	cout << "Writing obj file " << fn << endl;
+	out << "mtllib " << mtllib_fn << endl;
+	unsigned cur_vert_ix(0);
+	if (!unbound_geom.write_to_obj_file(out, cur_vert_ix)) return 0; // no usemtl
+
+	for (deque<material_t>::const_iterator m = materials.begin(); m != materials.end(); ++m) {
+		if (!m->write_to_obj_file(out, cur_vert_ix)) {
+			cerr << "Error writing material " << m->name << endl;
+			return 0;
+		}
+	} // for m
+	if (!out.good()) return 0;
+	// TODO: write mtllib_fn
+	return 1;
 }
 
 

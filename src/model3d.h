@@ -300,6 +300,7 @@ public:
 	void invert_tcy();
 	void write(ostream &out) const;
 	void read(istream &in, unsigned npts);
+	void write_to_obj_file(ostream &out, unsigned &cur_vert_ix, unsigned npts) const;
 	bool indexing_enabled() const {return !indices.empty();}
 	void mark_need_normalize() {need_normalize = 1;}
 };
@@ -326,6 +327,7 @@ template<typename T> struct vntc_vect_block_t : public deque<indexed_vntc_vect_t
 	void merge_into_single_vector();
 	bool write(ostream &out) const;
 	bool read(istream &in, unsigned npts);
+	bool write_to_obj_file(ostream &out, unsigned &cur_vert_ix, unsigned npts) const;
 };
 
 
@@ -352,6 +354,7 @@ template<typename T> struct geometry_t {
 	void simplify_indices(float reduce_target);
 	bool write(ostream &out) const {return (triangles.write(out)  && quads.write(out)) ;}
 	bool read(istream &in)         {return (triangles.read(in, 3) && quads.read(in, 4));}
+	bool write_to_obj_file(ostream &out, unsigned &cur_vert_ix) const {return (triangles.write_to_obj_file(out, cur_vert_ix, 3) && quads.write_to_obj_file(out, cur_vert_ix, 4));}
 };
 
 
@@ -440,6 +443,7 @@ struct material_t : public material_params_t {
 	colorRGBA get_avg_color(texture_manager const &tmgr, int default_tid=-1) const;
 	bool write(ostream &out) const;
 	bool read(istream &in);
+	bool write_to_obj_file(ostream &out, unsigned &cur_vert_ix) const;
 };
 
 
@@ -583,6 +587,7 @@ public:
 	void get_all_mat_lib_fns(set<std::string> &mat_lib_fns) const;
 	bool write_to_disk (string const &fn) const;
 	bool read_from_disk(string const &fn);
+	bool write_as_obj_file(string const &fn);
 	static void proc_model_normals(vector<counted_normal> &cn, int recalc_normals, float nmag_thresh=0.7);
 	static void proc_model_normals(vector<weighted_normal> &wn, int recalc_normals, float nmag_thresh=0.7);
 	void write_to_cobj_file(std::ostream &out) const;
