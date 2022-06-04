@@ -392,12 +392,28 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, flo
 	
 	if (!xy_only && 2.2f*radius < (floor_spacing - floor_thickness)) { // diameter is smaller than space between floor and ceiling
 		if (is_in_attic) {
-			// TODO: check player's head against the roof to avoid clipping through it
-			max_eq(pos.z, (interior->attic_access.z2() + 0.2f*get_floor_thickness() + radius)); // place on attic floor
-			obj_z    = max(pos.z, p_last.z);
+			float const attic_floor_zval(interior->attic_access.z2() + 0.2f*get_floor_thickness() + radius); // relative to pos.z
 			had_coll = 1;
+
+			if (interior->attic_access_open && interior->attic_access.contains_pt_xy(pos)) {
+				is_in_attic = 0; // standing over the open attic access door, fall down/no longer in the attic
+				max_eq(pos.z, (attic_floor_zval - floor_spacing)); // place on floor below attic level
+			}
+			else {
+				max_eq(pos.z, attic_floor_zval); // place on attic floor
+				vector3d roof_normal;
+
+				// check player's head against the roof to avoid clipping through it
+				if (!point_in_attic(point(pos.x, pos.y, (pos.z + 1.1f*camera_zh)), &roof_normal)) {
+					for (unsigned d = 0; d < 2; ++d) { // reset pos X/Y if oriented toward the roof
+						if (roof_normal[d] != 0.0 && ((roof_normal[d] < 0.0) ^ (pos[d] < p_last[d]))) {pos[d] = p_last[d];}
+					}
+					if (cnorm) {*cnorm = roof_normal;}
+				}
+			}
+			obj_z = max(pos.z, p_last.z);
 		}
-		else { // check Z collision with floors; no need to check ceilings; this will set pos.z correctly so that we can set skip_z=0 in later tests
+		if (!is_in_attic) { // check Z collision with floors; no need to check ceilings; this will set pos.z correctly so that we can set skip_z=0 in later tests
 			float const floor_test_zval(obj_z + floor_thickness); // move up by floor thickness to better handle steep stairs
 
 			for (auto i = interior->floors.begin(); i != interior->floors.end(); ++i) {
@@ -1096,7 +1112,7 @@ bool building_t::check_point_or_cylin_contained(point const &pos, float xy_radiu
 	return 0;
 }
 
-bool building_t::point_in_attic(point const &pos) const {
+bool building_t::point_in_attic(point const &pos, vector3d *const cnorm) const {
 	if (!has_attic() || pos.z < interior->attic_access.z1() || pos.z > interior_z2) return 0;
 
 	// check if pos is under the roof
@@ -1105,6 +1121,7 @@ bool building_t::point_in_attic(point const &pos) const {
 		if (!point_in_polygon_2d(pos.x, pos.y, tq.pts, tq.npts, 0, 1)) continue; // check 2D XY point containment
 		vector3d const normal(tq.get_norm());
 		if (normal.z == 0.0) continue; // skip vertical sides
+		if (cnorm) {*cnorm = -normal;} // we're looking at the underside of the roof, so reverse the normal; set whether or not we're inside the attic
 		if (dot_product_ptv(normal, pos, tq.pts[0]) < 0.0) return 1;
 	}
 	return 0;
