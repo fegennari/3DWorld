@@ -1068,7 +1068,7 @@ struct building_interior_t {
 	cube_with_ix_t pg_ramp; // ix stores {dim, dir}
 	draw_range_t draw_range;
 	int garage_room;
-	bool door_state_updated, is_unconnected, ignore_ramp_placement, placed_people, elevators_disabled;
+	bool door_state_updated, is_unconnected, ignore_ramp_placement, placed_people, elevators_disabled, attic_access_open;
 
 	building_interior_t();
 	~building_interior_t();

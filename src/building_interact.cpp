@@ -658,6 +658,7 @@ bool building_t::interact_with_object(unsigned obj_ix, point const &int_pos, poi
 		obj.flags       ^= RO_FLAG_OPEN; // open/close
 		sound_scale      = 0.5;
 		update_draw_data = 1;
+		interior->attic_access_open ^= 1;
 	}
 	else {assert(0);} // unhandled type
 	if (update_draw_data) {interior->room_geom->update_draw_state_for_room_object(obj, *this, 0);}

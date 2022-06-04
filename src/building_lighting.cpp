@@ -1025,7 +1025,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 	if ((display_mode & 0x08) && !bcube.contains_pt_xy(camera_bs) && is_entire_building_occluded(camera_bs, oc)) return; // check occlusion (optimization)
 	float const window_vspacing(get_window_vspace()), wall_thickness(get_wall_thickness()), fc_thick(get_fc_thickness());
 	float const camera_z(camera_bs.z), room_xy_expand(0.75*wall_thickness);
-	bool const check_building_people(enable_building_people_ai()), check_attic(camera_in_building && has_attic() /*&& attic_is_open*/);
+	bool const check_building_people(enable_building_people_ai()), check_attic(camera_in_building && has_attic() && interior->attic_access_open);
 	cube_t const &attic_access(interior->attic_access);
 	vect_cube_t &light_bcubes(interior->room_geom->light_bcubes);
 	vect_room_object_t &objs(interior->room_geom->objs); // non-const, light flags are updated
