@@ -1308,9 +1308,12 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 	}
 	if (!has_roof_access) { // roof ceiling, full area
 		set_cube_zvals(C, (z - fc_thick), z);
-		bool added(0);
-
-		if (is_house && part_ix == 0) { // add a ceiling cutout for attic access
+		bool enable_attic(is_house && part_ix == 0), added(0);
+		//if ((roof_z2 - z) < 1.0*window_vspacing) {enable_attic = 0;} // TODO: not enough space for the player to stand
+		// roof tquads don't intersect correct on the interior for L-shaped house attics, so skip the attic in this case, for now
+		if (real_num_parts >= 2 && parts[0].z2() == parts[1].z2()) {enable_attic = 0;}
+		
+		if (enable_attic) { // add a ceiling cutout for attic access
 			cube_t best_room;
 			float best_area(0.0);
 			bool in_hallway(0);
