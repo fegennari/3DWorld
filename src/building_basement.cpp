@@ -5,6 +5,7 @@
 #include "function_registry.h"
 #include "buildings.h"
 #include "city.h" // for car_t
+#include <cfloat> // for FLT_MAX
 
 enum {PIPE_TYPE_SEWER=0, PIPE_TYPE_CW, PIPE_TYPE_HW, PIPE_TYPE_GAS, NUM_PIPE_TYPES};
 
@@ -525,7 +526,7 @@ bool building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 	assert(pipe_type < NUM_PIPE_TYPES);
 	if (risers.empty()) return 0; // can this happen?
 	float const FITTING_LEN(1.2), FITTING_RADIUS(1.1); // relative to radius
-	bool const is_hot_water(pipe_type == PIPE_TYPE_HW), is_water(is_hot_water || pipe_type == PIPE_TYPE_CW), is_closed_loop(is_hot_water), add_insul(is_hot_water);
+	bool const is_hot_water(pipe_type == PIPE_TYPE_HW), is_closed_loop(is_hot_water), add_insul(is_hot_water);
 	vect_room_object_t &objs(interior->room_geom->objs);
 	cube_t const &basement(get_basement());
 	float const r_main(get_merged_risers_radius(risers, (is_closed_loop ? 0 : 2))); // exclude incoming water from hot water heaters for hot water pipes
