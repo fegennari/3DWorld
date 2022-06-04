@@ -401,7 +401,7 @@ void setup_building_draw_shader(shader_t &s, float min_alpha, bool enable_indir,
 
 // Note: invert_tc only applies to doors
 void add_tquad_to_verts(building_geom_t const &bg, tquad_with_ix_t const &tquad, cube_t const &bcube, tid_nm_pair_t const &tex,
-	colorRGBA const &color, vect_vnctcc_t &verts, bool invert_tc_x, bool exclude_frame, bool no_tc, bool no_rotate)
+	colorRGBA const &color, vect_vnctcc_t &verts, bool invert_tc_x, bool exclude_frame, bool no_tc, bool no_rotate, bool swap_tc_xy)
 {
 	assert(tquad.npts == 3 || tquad.npts == 4); // triangles or quads
 	bool const do_rotate(bg.is_rotated() && !no_rotate);
@@ -458,6 +458,7 @@ void add_tquad_to_verts(building_geom_t const &bg, tquad_with_ix_t const &tquad,
 		else if (tquad.type == tquad_with_ix_t::TYPE_TRIM) {} // untextured - no tex coords
 		else {assert(0);}
 		if (do_rotate) {bg.do_xy_rotate(center, vert.v);}
+		if (swap_tc_xy) {swap(vert.t[0], vert.t[1]);}
 		verts.push_back(vert);
 	} // for i
 }
@@ -771,9 +772,9 @@ public:
 	}
 
 	void add_tquad(building_geom_t const &bg, tquad_with_ix_t const &tquad, cube_t const &bcube, tid_nm_pair_t const &tex, colorRGBA const &color,
-		bool invert_tc_x=0, bool exclude_frame=0, bool no_tc=0)
+		bool invert_tc_x=0, bool exclude_frame=0, bool no_tc=0, bool swap_tc_xy=0)
 	{
-		add_tquad_to_verts(bg, tquad, bcube, tex, color, get_verts(tex, (tquad.npts == 3)), invert_tc_x, exclude_frame, no_tc); // 0=quads, 1=tris
+		add_tquad_to_verts(bg, tquad, bcube, tex, color, get_verts(tex, (tquad.npts == 3)), invert_tc_x, exclude_frame, no_tc, 0, swap_tc_xy); // 0=quads, 1=tris
 	}
 
 	static void set_rotated_normal(vert_norm_comp_tc_color &vert, building_t const &b, vector3d &norm, unsigned n, bool dir) {
@@ -1220,7 +1221,7 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, 
 			else { // use wall texture
 				bdraw.add_tquad(*this, *i, bcube, mat.side_tex, side_color);
 			}
-		}
+		} // for i
 		for (auto i = details.begin(); i != details.end(); ++i) { // draw roof details
 			if (i->type == ROOF_OBJ_AC) {
 				bool const swap_st(i->dx() > i->dy());
@@ -1245,7 +1246,7 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, 
 				color = detail_color*(pointed ? 0.5 : 1.0);
 			}
 			bdraw.add_section(b, 0, *i, tex, color, 7, skip_bot, 0, 1, 0); // all dims, no AO
-		}
+		} // for i
 		for (auto i = doors.begin(); i != doors.end(); ++i) { // these are the exterior doors
 			colorRGBA const &dcolor((i->type == tquad_with_ix_t::TYPE_GDOOR) ? WHITE : door_color); // garage doors are always white
 			bdraw.add_tquad(*this, *i, bcube, tid_nm_pair_t(get_building_door_tid(i->type), -1, 1.0, 1.0), dcolor);
@@ -1307,6 +1308,7 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, 
 		colorRGBA const &ceil_color  (is_house ? mat.house_ceil_color  : mat.ceil_color );
 		colorRGBA const &floor_color (is_house ? mat.house_floor_color : mat.floor_color);
 		colorRGBA const basement_wall_color(WHITE); // basement walls are always white
+		tid_nm_pair_t const attic_tex(FENCE_TEX, -1, 0.25*mat.house_floor_tex.tscale_x, 0.25*mat.house_floor_tex.tscale_y);
 
 		for (auto i = interior->floors.begin(); i != interior->floors.end(); ++i) { // 600K T
 			bool const is_basement(i->z2() < ground_floor_z1);
@@ -1350,7 +1352,7 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, 
 				color = basement_wall_color;
 			}
 			else if (!skip_top && has_attic()) { // attic floor
-				tex   = mat.house_floor_tex; tex.tid = FENCE_TEX; tex.nm_tid = -1; // use same tscale, but a different texture
+				tex   = attic_tex;
 				color = WHITE;
 				bdraw.add_section(*this, 0, *i, tex, color, 4, 1, 0, 1, 0); // no AO; top Z only (skip_bottom=1)
 				// now draw the bottom surface as a normal ceiling
@@ -1363,7 +1365,7 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, 
 				color = ceil_color;
 			}
 			bdraw.add_section(*this, 0, *i, tex, color, 4, 0, skip_top, 1, 0); // no AO; Z dim only
-		}
+		} // for i
 		// minor optimization: don't need shadows for ceilings because lights only point down; assumes ceil_tex is only used for ceilings; not true for all houses
 		if (!is_house) {bdraw.set_no_shadows_for_tex(mat.ceil_tex);}
 
@@ -1408,8 +1410,26 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, 
 			bdraw.add_section(*this, 0, inner_cube, wall_tex, WHITE, dim_mask, 0, 0, 1, 0, 0.0, 0, 1.0, 1);
 			// Note elevator doors are dynamic and are drawn as part of room_geom
 		} // for i
-		if (has_attic()) { // add inside surface of attic access hole; could be draw as room geom if needed
+		if (has_attic()) {
+			// add inside surface of attic access hole; could be draw as room geom if needed
 			bdraw.add_section(*this, 0, interior->attic_access, mat.wall_tex, mat.wall_color, 3, 0, 0, 1, 0, 0.0, 0, 1.0, 1); // no AO; X/Y dims only, inverted normals
+			// add inside surfaces of roof tquads
+			float const delta_z(0.1*get_floor_thickness()); // enough to prevent Z-fighting
+
+			for (auto i = roof_tquads.begin(); i != roof_tquads.end(); ++i) {
+				if (i->type != tquad_with_ix_t::TYPE_ROOF && i->type != tquad_with_ix_t::TYPE_WALL) continue; // not a roof or triangular wall section
+				if (i->get_bcube().z1() < interior->attic_access.z1()) continue; // not the top section that has the attic (porch roof, lower floor roof)
+				tquad_with_ix_t tq(*i);
+				std::reverse(tq.pts, tq.pts+tq.npts); // reverse the normal and winding order
+				for (unsigned n = 0; n < tq.npts; ++n) {tq.pts[n].z -= delta_z;} // shift down slightly
+				bool swap_tc_xy(0);
+
+				if (i->type == tquad_with_ix_t::TYPE_ROOF) { // make sure wood orient is vertical
+					vector3d const normal(tq.get_norm());
+					swap_tc_xy = (fabs(normal.y) < fabs(normal.x));
+				}
+				bdraw.add_tquad(*this, tq, bcube, attic_tex, WHITE, 0, 0, 0, swap_tc_xy);
+			} // for i
 		}
 		// Note: interior doors are drawn as part of room_geom
 		bdraw.end_draw_range_capture(interior->draw_range); // 80MB, 394MB, 836ms
