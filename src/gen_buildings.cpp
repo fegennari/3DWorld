@@ -1306,6 +1306,7 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, 
 		tid_nm_pair_t const &ceil_tex(is_house ? mat.house_ceil_tex    : mat.ceil_tex   );
 		colorRGBA const &ceil_color  (is_house ? mat.house_ceil_color  : mat.ceil_color );
 		colorRGBA const &floor_color (is_house ? mat.house_floor_color : mat.floor_color);
+		colorRGBA const basement_wall_color(WHITE); // basement walls are always white
 
 		for (auto i = interior->floors.begin(); i != interior->floors.end(); ++i) { // 600K T
 			bool const is_basement(i->z2() < ground_floor_z1);
@@ -1336,17 +1337,39 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, 
 					if (!is_basement(p) && p->contains_cube_xy(*i) && fabs(i->z2() - p->z2()) < toler) {skip_top = 0; break;}
 				}
 			}
-			bool const is_basement((is_house || has_parking_garage) && i->z1() < ground_floor_z1); // use wall texture for basement/parking garage ceilings, not ceiling texture
-			bool const use_floor_tex(is_house && is_basement && has_basement_pipes); // draw wood flooring for basement ceiling
-			tid_nm_pair_t const &tex(use_floor_tex ? mat.house_floor_tex : (is_basement ? mat.wall_tex : ceil_tex));
-			bdraw.add_section(*this, 0, *i, tex, (use_floor_tex ? floor_color : ceil_color), 4, 0, skip_top, 1, 0); // no AO; Z dim only
+			bool const is_basement((is_house || has_parking_garage) && i->z1() < ground_floor_z1);
+			tid_nm_pair_t tex;
+			colorRGBA color;
+
+			if (is_house && is_basement && has_basement_pipes) { // draw wood flooring for basement ceiling
+				tex   = mat.house_floor_tex;
+				color = floor_color;
+			}
+			else if (is_basement) { // use wall texture for basement/parking garage ceilings, not ceiling texture
+				tex   = mat.wall_tex;
+				color = basement_wall_color;
+			}
+			else if (!skip_top && has_attic()) { // attic floor
+				tex   = mat.house_floor_tex; tex.tid = FENCE_TEX; tex.nm_tid = -1; // use same tscale, but a different texture
+				color = WHITE;
+				bdraw.add_section(*this, 0, *i, tex, color, 4, 1, 0, 1, 0); // no AO; top Z only (skip_bottom=1)
+				// now draw the bottom surface as a normal ceiling
+				skip_top = 1;
+				tex   = ceil_tex;
+				color = ceil_color;
+			}
+			else { // normal ceiling texture
+				tex   = ceil_tex;
+				color = ceil_color;
+			}
+			bdraw.add_section(*this, 0, *i, tex, color, 4, 0, skip_top, 1, 0); // no AO; Z dim only
 		}
 		// minor optimization: don't need shadows for ceilings because lights only point down; assumes ceil_tex is only used for ceilings; not true for all houses
 		if (!is_house) {bdraw.set_no_shadows_for_tex(mat.ceil_tex);}
 
 		for (unsigned dim = 0; dim < 2; ++dim) { // Note: can almost pass in (1U << dim) as dim_filt, if it wasn't for door cutouts (2.2M T)
 			for (auto i = interior->walls[dim].begin(); i != interior->walls[dim].end(); ++i) {
-				colorRGBA const &color((i->z1() < ground_floor_z1) ? WHITE : wall_color); // basement walls are always white
+				colorRGBA const &color((i->z1() < ground_floor_z1) ? basement_wall_color : wall_color);
 				bdraw.add_section(*this, 0, *i, mat.wall_tex, color, 3, 0, 0, 1, 0); // no AO; X/Y dims only
 			}
 		}
