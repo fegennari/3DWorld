@@ -1026,6 +1026,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 	float const window_vspacing(get_window_vspace()), wall_thickness(get_wall_thickness()), fc_thick(get_fc_thickness());
 	float const camera_z(camera_bs.z), room_xy_expand(0.75*wall_thickness);
 	bool const check_building_people(enable_building_people_ai()), check_attic(camera_in_building && has_attic() && interior->attic_access_open);
+	bool const show_room_name(display_mode & 0x20); // debugging, key '6'
 	cube_t const &attic_access(interior->attic_access);
 	vect_cube_t &light_bcubes(interior->room_geom->light_bcubes);
 	vect_room_object_t &objs(interior->room_geom->objs); // non-const, light flags are updated
@@ -1047,7 +1048,8 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		}
 		int const room_ix(get_room_containing_pt(camera_rot));
 
-		if (room_ix >= 0) { // Note: stairs connecting stacked parts aren't flagged with has_stairs because stairs only connect to the bottom floor, but they're partially handled below
+		if (room_ix >= 0) {
+			// Note: stairs connecting stacked parts aren't flagged with has_stairs because stairs only connect to the bottom floor, but they're partially handled below
 			room_t const &room(get_room(room_ix));
 			camera_floor      = max(0.0f, (camera_rot.z - room.z1()))/window_vspacing;
 			camera_room       = room_ix;
@@ -1055,7 +1057,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			camera_in_hallway = room.is_hallway;
 			unsigned const room_type(room.get_room_type(camera_floor));
 			assert(room_type < NUM_RTYPES);
-			if (display_mode & 0x20) {lighting_update_text = room_names[room_type];} // debugging, key '6'
+			if (show_room_name) {lighting_update_text = room_names[room_type];}
 			register_player_in_building(camera_bs, building_id); // required for AI following logic
 
 			if (camera_by_stairs) { // by stairs - check if we're actually on the stairs
@@ -1076,6 +1078,9 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 					if (r->has_stairs_on_floor(camera_floor) && r->intersects_no_adj(cr)) {camera_somewhat_by_stairs = 1; break;}
 				}
 			}
+		}
+		else if (point_in_attic(camera_rot)) {
+			if (show_room_name) {lighting_update_text = room_names[RTYPE_ATTIC];}
 		}
 		//lighting_update_text = ((is_sphere_lit(camera_rot, get_scaled_player_radius()) || is_sphere_lit((camera_rot - vector3d(0.0, 0.0, camera_zh)), get_scaled_player_radius())) ? "Lit" : "Unlit");
 	}
