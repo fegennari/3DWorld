@@ -410,6 +410,14 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, flo
 					}
 					if (cnorm) {*cnorm = roof_normal;}
 				}
+				// find the part the player is in and clamp our bsphere to it; currently attics are limited to a single part
+				for (auto i = parts.begin(); i != get_real_parts_end(); ++i) {
+					if (!i->contains_pt_xy(pos)) continue; // wrong part
+					cube_t valid_area(*i);
+					valid_area.expand_by_xy(-xy_radius);
+					valid_area.clamp_pt_xy(pos);
+					break;
+				} // for i
 			}
 			obj_z = max(pos.z, p_last.z);
 		}

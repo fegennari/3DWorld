@@ -847,7 +847,8 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 		}
 	} // end gen_door
 	// add roof tquads
-	float const peak_height(rgen.rand_uniform(0.15, 0.5)); // same for all parts
+	float peak_height(rgen.rand_uniform(0.15, 0.5)); // same for all parts
+	if (has_attic()) {max_eq(peak_height, 0.3f);} // set larger min size if there's an attic
 	float roof_dz[4] = {0.0f};
 	bool hipped_roof[4] = {0};
 	int last_hipped(2); // starts at <unset>

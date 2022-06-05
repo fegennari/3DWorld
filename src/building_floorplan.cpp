@@ -1309,12 +1309,12 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 	if (!has_roof_access) { // roof ceiling, full area
 		set_cube_zvals(C, (z - fc_thick), z);
 		bool enable_attic(is_house && part_ix == 0), added(0);
-		//if ((roof_z2 - z) < 1.0*window_vspacing) {enable_attic = 0;} // TODO: not enough space for the player to stand
+		if (interior_z2 != 0.0 && (interior_z2 - z) < 1.0*window_vspacing) {enable_attic = 0;} // check for enough space for the player to stand if interior_z2 has been set
 		// roof tquads don't intersect correct on the interior for L-shaped house attics, so skip the attic in this case, for now
 		if (real_num_parts >= 2 && parts[0].z2() == parts[1].z2()) {enable_attic = 0;}
 		
 		if (enable_attic) { // add a ceiling cutout for attic access
-			cube_t best_room;
+			room_t best_room;
 			float best_area(0.0);
 			bool in_hallway(0);
 
@@ -1322,6 +1322,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 				room_t const &room(interior->rooms[r]);
 				if (room.has_stairs_on_floor(num_floors-1)) continue; // skip room with stairs
 				if (room.is_hallway) {best_room = room; in_hallway = 1; break;} // hallway is always preferred
+				// should we reject this room if there's not enough head clearance above it in the attic?
 				float const area(room.dx()*room.dy());
 				if (area > best_area) {best_room = room; best_area = area;} // choose room with the largest area
 			}
@@ -1335,7 +1336,8 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 					access_pos[dim] += (rgen2.rand_bool() ? -1.0 : 1.0)*0.1*best_room.get_sz_dim(dim); // place off center to avoid blocking the center light
 				}
 				else {
-					bool const xd(rgen2.rand_bool()), yd(rgen2.rand_bool()); // choose a random corner (off to that side) to avoid blocking the light
+					cube_t const &part(get_part_for_room(best_room));
+					bool const xd(best_room.xc() < part.xc()), yd(best_room.yc() < part.yc()); // closer to the center of the part to maximize head space
 					access_pos.x = 0.7*best_room.d[0][xd] + 0.3*best_room.d[0][!xd];
 					access_pos.y = 0.7*best_room.d[1][yd] + 0.3*best_room.d[1][!yd];
 				}
