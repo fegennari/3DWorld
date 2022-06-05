@@ -1301,6 +1301,31 @@ bool material_t::write_to_obj_file(ostream &out, unsigned &cur_vert_ix) const {
 	return (geom.write_to_obj_file(out, cur_vert_ix) && geom_tan.write_to_obj_file(out, cur_vert_ix));
 }
 
+void write_mtllib_texture(string const &opt_name, int tid, texture_manager const &tmgr, ostream &out) {
+	if (tid >= 0) {out << "\t" << opt_name << " " << tmgr.get_texture(tid).name << endl;}
+}
+void material_t::write_mtllib_entry(ostream &out, texture_manager const &tmgr) const {
+	out << "newmtl "  << name  << endl;
+	out << "\tNs "    << ns    << endl;
+	out << "\tNi "    << ni    << endl;
+	out << "\td "     << alpha << endl;
+	out << "\tTr "    << tr    << endl;
+	out << "\tTf "    << tf.raw_str() << endl;
+	out << "\tillum " << illum << endl;
+	out << "\tKa "    << ka.raw_str() << endl;
+	out << "\tKd "    << kd.raw_str() << endl;
+	out << "\tKs "    << ks.raw_str() << endl;
+	out << "\tKe "    << ke.raw_str() << endl;
+	write_mtllib_texture("map_Ka",   a_tid,     tmgr, out);
+	write_mtllib_texture("map_Kd",   d_tid,     tmgr, out);
+	write_mtllib_texture("map_Ks",   s_tid,     tmgr, out);
+	write_mtllib_texture("map_ns",   ns_tid,    tmgr, out);
+	write_mtllib_texture("map_d",    alpha_tid, tmgr, out);
+	write_mtllib_texture("map_bump", bump_tid,  tmgr, out);
+	write_mtllib_texture("map_refl", refl_tid,  tmgr, out);
+	// what about metalness?
+}
+
 
 // ************ model3d ************
 
@@ -2322,6 +2347,7 @@ bool model3d::write_as_obj_file(string const &fn) {
 	}
 	string const mtllib_fn((endswith(fn, ".obj") ? fn.substr(0, fn.size()-4) : fn) + ".mtl"); // replace ".obj" with ".mtl" or append ".mtl"
 	cout << "Writing obj file " << fn << endl;
+	out << "# Created by 3DWorld, by Frank Gennari 2022" << endl;
 	out << "mtllib " << mtllib_fn << endl;
 	unsigned cur_vert_ix(0);
 	if (!unbound_geom.write_to_obj_file(out, cur_vert_ix)) return 0; // no usemtl
@@ -2333,8 +2359,19 @@ bool model3d::write_as_obj_file(string const &fn) {
 		}
 	} // for m
 	if (!out.good()) return 0;
-	// TODO: write mtllib_fn
-	return 1;
+	out.close();
+
+	// write mtllib file
+	out.open(mtllib_fn, ios::out);
+
+	if (!out.good()) {
+		cerr << "Error opening mtllib file for write: " << mtllib_fn << endl;
+		return 0;
+	}
+	cout << "Writing mtllib file " << mtllib_fn << endl;
+	out << "# Created by 3DWorld, by Frank Gennari 2022" << endl;
+	for (deque<material_t>::const_iterator m = materials.begin(); m != materials.end(); ++m) {m->write_mtllib_entry(out, tmgr);}
+	return out.good();
 }
 
 

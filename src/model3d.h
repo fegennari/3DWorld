@@ -444,6 +444,7 @@ struct material_t : public material_params_t {
 	bool write(ostream &out) const;
 	bool read(istream &in);
 	bool write_to_obj_file(ostream &out, unsigned &cur_vert_ix) const;
+	void write_mtllib_entry(ostream &out, texture_manager const &tmgr) const;
 };
 
 
