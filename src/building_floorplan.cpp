@@ -1343,8 +1343,8 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 				}
 				bool const long_dim(best_room.dx() < best_room.dy());
 				interior->attic_access.set_from_point(access_pos);
-				interior->attic_access.expand_in_dim( long_dim, 0.45*doorway_width); // 0.9*doorway_width
-				interior->attic_access.expand_in_dim(!long_dim, 0.35*doorway_width); // 0.7*doorway_width
+				interior->attic_access.expand_in_dim( long_dim, 0.22*window_vspacing); // long dim
+				interior->attic_access.expand_in_dim(!long_dim, 0.17*window_vspacing); // short dim
 				set_cube_zvals(interior->attic_access, C.z1(), C.z2()); // same zvals as ceiling
 				cube_t ceiling_parts[4];
 				subtract_cube_xy(C, interior->attic_access, ceiling_parts);
