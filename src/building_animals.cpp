@@ -24,7 +24,6 @@ float get_closest_building_sound(point const &at_pos, point &sound_pos, float fl
 sphere_t get_cur_frame_loudest_sound();
 bool in_building_gameplay_mode();
 bool player_take_damage(float damage_scale, bool poisoned=0, bool *has_key=nullptr);
-cube_t get_true_room_obj_bcube(room_object_t const &c);
 void apply_building_gravity(float &vz, float dt_ticks);
 
 
