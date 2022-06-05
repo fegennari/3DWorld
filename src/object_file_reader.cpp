@@ -406,10 +406,6 @@ public:
 				if (!read_map_name(mat_in, tfn)) {cerr << "Error reading material map_refl for " << material_name << endl; return 0;}
 				check_and_bind(cur_mat->refl_tid, tfn, 0, verbose);
 			}
-			else if (s == "map_ns") { // Note: unused
-				assert(cur_mat);
-				if (!read_map_name(mat_in, tfn)) {cerr << "Error reading material map_Ns for " << material_name << endl; return 0;}
-			}
 			// unsupported
 			else if (s == "kt") {unhandled(s, mat_in);} // transmission color
 			else if (s == "map_aat") {unhandled(s, mat_in);} // toggle antialiasing
