@@ -817,6 +817,7 @@ void update_indir_light_tex_range(lmap_manager_t const &lmap, vector<unsigned ch
 	unsigned xsize, unsigned y1, unsigned y2, unsigned zsize, float lighting_exponent, bool local_only, bool mt)
 {
 	bool const apply_sqrt(lighting_exponent > 0.49 && lighting_exponent < 0.51), apply_exp(!apply_sqrt && lighting_exponent != 1.0);
+	assert(lmap.is_allocated());
 
 #pragma omp parallel for schedule(static) if (mt)
 	for (int y = y1; y < (int)y2; ++y) {

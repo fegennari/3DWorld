@@ -501,6 +501,7 @@ class building_indir_light_mgr_t {
 		kill_thread = 0;
 	}
 	void update_volume_light_texture() { // full update, 6.6ms for z=128
+		init_lmgr(0); // init on first call; clear_lighting=0
 		//highres_timer_t timer("Lighting Tex Create");
 		indir_light_tex_from_lmap(cur_tid, lmgr, tex_data, MESH_X_SIZE, MESH_Y_SIZE, MESH_SIZE[2], indir_light_exp, 1); // local_only=1
 	}
@@ -553,7 +554,6 @@ public:
 		lmgr.reset_all(); // clear lighting values back to 0
 	}
 	void clear() {
-		bool const cur_bix_was_valid(cur_bix >= 0);
 		lighting_updated = need_bvh_rebuild = update_windows = 0;
 		cur_bix = cur_floor = -1;
 		invalidate_lighting();
@@ -561,7 +561,7 @@ public:
 		light_ids.clear();
 		lights_to_sort.clear();
 		windows.clear();
-		if (cur_bix_was_valid) {update_volume_light_texture();} // reset lighting from prev building
+		update_volume_light_texture(); // reset lighting from prev building, or reset to dark when entering first building
 		bvh.clear();
 	}
 	void end_rt_job() {
