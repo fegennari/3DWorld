@@ -653,11 +653,17 @@ public:
 		//highres_timer_t timer("Build BVH");
 		cur_floor  = b.get_floor_for_zval(target.z);
 		valid_area = b.bcube;
+		
 		// clip per light source to current floor; note that this will exclude stairs going up or down
-		float const floor_spacing(b.get_window_vspace());
-		valid_area.z1() += cur_floor*floor_spacing;
-		valid_area.z2()  = valid_area.z1() + floor_spacing;
-		light_bounds     = (INDIR_VOL_PER_FLOOR ? valid_area : b.get_interior_bcube());
+		if (b.point_in_attic(target)) {
+			set_cube_zvals(valid_area, b.interior->attic_access.z1(), b.interior_z2);
+		}
+		else {
+			float const floor_spacing(b.get_window_vspace());
+			valid_area.z1() += cur_floor*floor_spacing;
+			valid_area.z2()  = valid_area.z1() + floor_spacing;
+		}
+		light_bounds = (INDIR_VOL_PER_FLOOR ? valid_area : b.get_interior_bcube());
 		bvh.clear();
 		b.gather_interior_cubes(bvh.get_objs(), cur_floor);
 		bvh.build_tree_top(0); // verbose=0
