@@ -1422,11 +1422,11 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, 
 				tquad_with_ix_t tq(*i);
 				std::reverse(tq.pts, tq.pts+tq.npts); // reverse the normal and winding order
 				for (unsigned n = 0; n < tq.npts; ++n) {tq.pts[n].z -= delta_z;} // shift down slightly
-				bool swap_tc_xy(0);
+				bool swap_tc_xy(1); // horizontal by default
 
-				if (i->type == tquad_with_ix_t::TYPE_ROOF) { // make sure wood orient is vertical
+				if (i->type == tquad_with_ix_t::TYPE_ROOF) { // make sure wood orient is horizontal
 					vector3d const normal(tq.get_norm());
-					swap_tc_xy = (fabs(normal.y) < fabs(normal.x));
+					swap_tc_xy = (fabs(normal.x) < fabs(normal.y));
 				}
 				bdraw.add_tquad(*this, tq, bcube, attic_tex, WHITE, 0, 0, 0, swap_tc_xy);
 			} // for i
