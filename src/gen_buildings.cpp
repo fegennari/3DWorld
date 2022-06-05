@@ -22,7 +22,7 @@ bool const DRAW_EXT_REFLECTIONS     = 1;
 float const WIND_LIGHT_ON_RAND      = 0.08;
 float const BASEMENT_ENTRANCE_SCALE = 0.33;
 
-bool camera_in_building(0), interior_shadow_maps(0), player_is_hiding(0), player_in_unlit_room(0);
+bool camera_in_building(0), interior_shadow_maps(0), player_is_hiding(0), player_in_unlit_room(0), player_in_attic(0);
 int player_in_basement(0); // 0=no, 1=below ground level, 2=in basement and not on stairs
 int player_in_closet(0); // uses flags RO_FLAG_IN_CLOSET (player in closet), RO_FLAG_LIT (closet light is on), RO_FLAG_OPEN (closet door is open)
 building_params_t global_building_params;
@@ -299,8 +299,8 @@ void set_interior_lighting(shader_t &s, bool have_indir) {
 	float const light_scale(ADD_ROOM_LIGHTS ? 0.5 : 1.0); // lower for basement, lower when using room lights
 	float const light_change_amt(fticks/(2.0f*TICKS_PER_SECOND));
 	static float blscale(1.0); // indir/ambient lighting slowly transitions when entering or leaving the basement
-	if (player_in_basement) {blscale = max(0.0f, (blscale - light_change_amt));} // decrease
-	else                    {blscale = min(1.0f, (blscale + light_change_amt));} // increase
+	if (player_in_basement || player_in_attic) {blscale = max(0.0f, (blscale - light_change_amt));} // decrease
+	else                                       {blscale = min(1.0f, (blscale + light_change_amt));} // increase
 	float const ambient_scale(0.5f*(1.0f + blscale)*light_scale); // brighter ambient
 	float const diffuse_scale(0.2f*blscale*light_scale); // reduce diffuse and specular lighting for sun/moon
 
@@ -2437,7 +2437,7 @@ public:
 		bool const night(is_night(WIND_LIGHT_ON_RAND));
 		// check for sun or moon; also need the smap pass for drawing with dynamic lights at night, so basically it's always enabled
 		bool const use_tt_smap(check_tile_smap(0)); // && (night || light_valid_and_enabled(0) || light_valid_and_enabled(1)));
-		bool have_windows(0), have_wind_lights(0), have_interior(0), this_frame_camera_in_building(0);
+		bool have_windows(0), have_wind_lights(0), have_interior(0), this_frame_camera_in_building(0), this_frame_player_in_attic(0);
 		int this_frame_player_in_basement(0);
 		unsigned max_draw_ix(0);
 		shader_t s;
@@ -2585,6 +2585,7 @@ public:
 						if (reflection_pass) continue; // don't execute the code below
 						this_frame_camera_in_building  = 1;
 						this_frame_player_in_basement |= b.check_player_in_basement(camera_xlated - vector3d(0.0, 0.0, BASEMENT_ENTRANCE_SCALE*b.get_floor_thickness()));
+						this_frame_player_in_attic    |= b.point_in_attic(camera_xlated);
 						player_building = &b;
 						if (enable_building_indir_lighting()) {indir_bcs_ix = bcs_ix; indir_bix = bi->ix;} // compute indirect lighting for this building
 						// run any player interaction logic here
@@ -2606,6 +2607,7 @@ public:
 			if (!reflection_pass) { // update once; non-interior buildings (such as city buildings) won't update this
 				camera_in_building = this_frame_camera_in_building;
 				player_in_basement = this_frame_player_in_basement;
+				player_in_attic    = this_frame_player_in_attic;
 			}
 			reset_interior_lighting_and_end_shader(s);
 			reflection_shader.clear();

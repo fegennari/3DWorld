@@ -6,7 +6,7 @@
 #include "buildings.h"
 
 
-extern bool draw_building_interiors, camera_in_building, player_near_toilet, player_is_hiding, player_in_unlit_room;
+extern bool draw_building_interiors, camera_in_building, player_near_toilet, player_is_hiding, player_in_unlit_room, player_in_attic;
 extern float CAMERA_RADIUS, C_STEP_HEIGHT, NEAR_CLIP;
 extern int player_in_closet, camera_surf_collide, frame_counter, player_in_elevator;
 extern double camera_zh;
@@ -418,6 +418,7 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, flo
 					valid_area.clamp_pt_xy(pos);
 					break;
 				} // for i
+				player_in_attic = 1;
 			}
 			obj_z = max(pos.z, p_last.z);
 		}
