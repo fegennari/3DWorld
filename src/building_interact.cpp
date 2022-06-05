@@ -80,14 +80,15 @@ void building_t::run_light_motion_detect_logic(point const &camera_bs) {
 // Note: called by the player; closest_to is in building space, not camera space
 bool building_t::toggle_room_light(point const &closest_to, bool sound_from_closest_to, int room_id, bool inc_lamps, bool closet_light) {
 	if (!has_room_geom()) return 0; // error?
+	bool const in_attic(point_in_attic(closest_to));
 
-	if (room_id < 0) { // caller has not provided a valid room_id, so determine it now
+	if (room_id < 0 && !in_attic) { // caller has not provided a valid room_id, so determine it now
 		point query_pt(closest_to);
 		if (is_rotated()) {do_xy_rotate_inv(bcube.get_cube_center(), query_pt);}
 		room_id = get_room_containing_pt(query_pt);
 		if (room_id < 0) return 0; // closest_to is not contained in a room of this building
 	}
-	room_t const &room(get_room(room_id));
+	bool const ignore_floor(in_attic || get_room(room_id).is_sec_bldg);
 	vect_room_object_t &objs(interior->room_geom->objs);
 	auto objs_end(interior->room_geom->get_placed_objs_end()); // skip buttons/stairs/elevators
 	bool const in_closet(closet_light || bool(player_in_closet)); // while in the closet, player can only toggle closet lights and not room lights
@@ -95,10 +96,12 @@ bool building_t::toggle_room_light(point const &closest_to, bool sound_from_clos
 	int closest_light(-1);
 
 	for (auto i = objs.begin(); i != objs_end; ++i) {
-		if (!i->is_light_type() || (!inc_lamps && i->type == TYPE_LAMP) || i->room_id != room_id) continue; // not a light, or the wrong room
+		if (!i->is_light_type() || (!inc_lamps && i->type == TYPE_LAMP)) continue; // not a light
+		if ( in_attic && !(i->flags & RO_FLAG_IN_ATTIC)) continue;
+		if (!in_attic && i->room_id != room_id) continue; // wrong room
 		if (bool(i->flags & RO_FLAG_IN_CLOSET) != in_closet) continue;
 		if (i->flags & RO_FLAG_IN_ELEV) continue; // can't toggle elevator light
-		if (!room.is_sec_bldg && get_floor_for_zval(i->z1()) != get_floor_for_zval(closest_to.z)) continue; // wrong floor (skip garages and sheds)
+		if (!ignore_floor && get_floor_for_zval(i->z1()) != get_floor_for_zval(closest_to.z)) continue; // wrong floor (skip garages and sheds)
 		point center(i->get_cube_center());
 		if (is_rotated()) {do_xy_rotate(bcube.get_cube_center(), center);}
 		float const dist_sq(p2p_dist_sq(closest_to, center));

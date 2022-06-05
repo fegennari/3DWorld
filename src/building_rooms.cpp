@@ -40,6 +40,17 @@ public:
 	}
 };
 
+colorRGBA get_light_color_temp(float t) {
+	// 0.0: 1.0 1.0 0.5
+	// 0.5: 1.0 1.0 1.0
+	// 1.0: 0.5 0.5 1.0
+	if (t > 0.5) {return colorRGBA(1.5-t, 1.5-t, 1.0  );} // high temp blue spectrum
+	else         {return colorRGBA(1.0,   1.0,   t+0.5);} // low temp yellow spectrum
+}
+colorRGBA get_light_color_temp_range(float tmin, float tmax, rand_gen_t &rgen) {
+	return get_light_color_temp(((tmin == tmax) ? tmin : rgen.rand_uniform(tmin, tmax)));
+}
+
 bool building_t::is_valid_placement_for_room(cube_t const &c, cube_t const &room, vect_cube_t const &blockers, bool inc_open_doors, float room_pad) const {
 	cube_t place_area(room);
 	if (room_pad != 0.0f) {place_area.expand_by_xy(-room_pad);} // shrink by dmin
@@ -1720,6 +1731,8 @@ void building_t::add_pri_hall_objs(rand_gen_t rgen, room_t const &room, float zv
 }
 
 void building_t::add_attic_objects(rand_gen_t rgen) {
+	vect_room_object_t &objs(interior->room_geom->objs);
+	// add attic access door
 	cube_t adoor(interior->attic_access);
 	assert(adoor.is_strictly_normalized());
 	adoor.expand_in_dim(2, -0.2*adoor.dz()); // shrink in z
@@ -1728,9 +1741,21 @@ void building_t::add_attic_objects(rand_gen_t rgen) {
 	room_t const &room(get_room(room_id));
 	bool const dim(adoor.dx() < adoor.dy()), dir(room.get_center_dim(dim) < adoor.get_center_dim(dim));
 	// Note: not setting RO_FLAG_NOCOLL because we do want to collide with this when open
-	unsigned const flags(room.is_hallway ? RO_FLAG_HANGING : 0); // reuse the RO_FLAG_HANGING flag to indicate <in_hallway>
+	unsigned const acc_flags(room.is_hallway ? RO_FLAG_IN_HALLWAY : 0);
 	// is light_amount=1.0 correct? since this door can be viewed from both inside and outside the attic, a single number doesn't really work anyway
-	interior->room_geom->objs.emplace_back(adoor, TYPE_ATTIC_DOOR, room_id, dim, dir, flags, 1.0, SHAPE_CUBE); // Note: player collides with open attic door
+	objs.emplace_back(adoor, TYPE_ATTIC_DOOR, room_id, dim, dir, acc_flags, 1.0, SHAPE_CUBE); // Note: player collides with open attic door
+
+	// add light
+	float const attic_height(interior_z2 - adoor.z2()), light_radius(0.06*attic_height);
+	cube_t const part(get_part_for_room(room)); // Note: assumes attic is a single part
+	point const light_center(part.xc(), part.yc(), (interior_z2 - 1.33*light_radius)); // center of the part near the ceiling
+	cube_t light; light.set_from_sphere(light_center, light_radius);
+	// start off lit for now; maybe should start off and auto turn on when the player enters the attic?
+	unsigned const light_flags(RO_FLAG_LIT | RO_FLAG_EMISSIVE | RO_FLAG_NOCOLL | RO_FLAG_INTERIOR | RO_FLAG_IN_ATTIC);
+	objs.emplace_back(light, TYPE_LIGHT, room_id, 0, 0, light_flags, 1.0, SHAPE_SPHERE, get_light_color_temp(0.45)); // yellow-shite
+
+	// add beams/joices/rafters
+	// TODO
 }
 
 colorRGBA choose_pot_color(rand_gen_t &rgen) {
@@ -2448,17 +2473,6 @@ void building_t::try_place_light_on_ceiling(cube_t const &light, room_t const &r
 		} // for n
 		if (!allow_mult) break;
 	} // for d
-}
-
-colorRGBA get_light_color_temp(float t) {
-	// 0.0: 1.0 1.0 0.5
-	// 0.5: 1.0 1.0 1.0
-	// 1.0: 0.5 0.5 1.0
-	if (t > 0.5) {return colorRGBA(1.5-t, 1.5-t, 1.0  );} // high temp blue spectrum
-	else         {return colorRGBA(1.0,   1.0,   t+0.5);} // low temp yellow spectrum
-}
-colorRGBA get_light_color_temp_range(float tmin, float tmax, rand_gen_t &rgen) {
-	return get_light_color_temp(((tmin == tmax) ? tmin : rgen.rand_uniform(tmin, tmax)));
 }
 
 // Note: these three floats can be calculated from get_window_vspace(), but it's easier to change the constants if we just pass them in

@@ -1105,7 +1105,8 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		if (is_rotated()) {do_xy_rotate(building_center, lpos_rot);}
 		if (!lights_bcube.contains_pt_xy(lpos_rot)) continue; // not contained within the light volume
 		// basement lights are only visible if the player is inside the building on the basement or ground floor
-		bool const light_in_basement(lpos.z < ground_floor_z1), is_in_elevator(i->flags & RO_FLAG_IN_ELEV), is_in_closet(i->flags & RO_FLAG_IN_CLOSET);
+		bool const light_in_basement(lpos.z < ground_floor_z1), is_in_elevator(i->flags & RO_FLAG_IN_ELEV);
+		bool const is_in_closet(i->flags & RO_FLAG_IN_CLOSET), is_in_attic(i->flags & RO_FLAG_IN_ATTIC);
 		if ((is_in_elevator || is_in_closet) && camera_z > lpos.z) continue; // elevator or closet light on the floor below the player
 		if (light_in_basement && (camera_z > (ground_floor_z1 + window_vspacing) || !bcube.contains_pt(camera_bs))) continue;
 		//if (is_light_occluded(lpos_rot, camera_bs))  continue; // too strong a test in general, but may be useful for selecting high importance lights
@@ -1113,12 +1114,12 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		room_t const &room(get_room(i->room_id));
 		bool const is_lamp(i->type == TYPE_LAMP), is_single_floor(room.is_sec_bldg || is_in_elevator);
 		int const cur_floor(is_single_floor ? 0 : (i->z1() - room.z1())/window_vspacing); // garages and sheds are all one floor
-		float const level_z(room.z1() + cur_floor*window_vspacing), floor_z(level_z + fc_thick);
-		float const ceil_z(is_single_floor ? room.z2() : (level_z + window_vspacing - fc_thick));
+		float const level_z(is_in_attic ? interior->attic_access.z1() : (room.z1() + cur_floor*window_vspacing));
+		float const floor_z(level_z + fc_thick), ceil_z(is_in_attic ? interior_z2 : (is_single_floor ? room.z2() : (level_z + window_vspacing - fc_thick)));
 		float const floor_below_zval(floor_z - window_vspacing), ceil_above_zval(ceil_z + window_vspacing);
 		// Note: we use level_z rather than floor_z for floor_is_above test so that it agrees with the threshold logic for player_in_basement
 		bool const floor_is_above((camera_z < level_z) && !is_single_floor), floor_is_below(camera_z > ceil_z);
-		bool const camera_room_same_part(room.part_id == camera_part), has_stairs_this_floor(room.has_stairs_on_floor(cur_floor));
+		bool const camera_room_same_part(room.part_id == camera_part), has_stairs_this_floor(!is_in_attic && room.has_stairs_on_floor(cur_floor));
 		bool const has_ramp(!interior->ignore_ramp_placement && is_room_above_ramp(room, i->z1()));
 		bool const light_room_has_stairs_or_ramp(i->has_stairs() || has_stairs_this_floor || has_ramp);
 		bool stairs_light(0), player_in_elevator(0);
@@ -1209,7 +1210,8 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		if (!stairs_light && !is_in_elevator) { // clip zval to current floor if light not in a room with stairs or elevator
 			max_eq(clipped_bc.z1(), (floor_z - fc_thick));
 		}
-		min_eq(clipped_bc.z2(), (ceil_z  + fc_thick)); // ceiling is always valid, since lights point downward
+		min_eq(clipped_bc.z2(), (ceil_z + fc_thick)); // ceiling is always valid, since lights point downward
+		assert(clipped_bc.is_strictly_normalized());
 		if (!is_rot_cube_visible(clipped_bc, xlate)) continue; // VFC
 		//if (line_intersect_walls(lpos, camera_rot)) continue; // straight line visibility test - for debugging, or maybe future use in assigning priorities
 		//if (check_cube_occluded(clipped_bc, interior->fc_occluders, camera_rot)) continue; // legal, but may not help much
@@ -1264,7 +1266,8 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			if (e.open_amt > 0.0 && e.open_amt < 1.0) {shadow_caster_hash += hash_by_bytes<float>()(e.open_amt);} // update shadows if door is opening or closing
 		}
 		else {
-			if (room.is_sec_bldg) {clipped_bc.intersect_with_cube(room);} // secondary buildings only light their single room
+			if (is_in_attic) {} // nothing else to do?
+			else if (room.is_sec_bldg) {clipped_bc.intersect_with_cube(room);} // secondary buildings only light their single room
 			else {
 				assert(i->obj_id < light_bcubes.size());
 				cube_t &light_bcube(light_bcubes[i->obj_id]);
@@ -1325,7 +1328,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			if (is_in_elevator) {
 				light_bc2.intersect_with_cube(interior->elevators[i->obj_id]); // clip to elevator to avoid light leaking onto walls outside but near the elevator
 			}
-			else {
+			else if (!is_in_attic) {
 				cube_t room_exp(room);
 				room_exp.expand_by(room_xy_expand); // expand slightly so that points exactly on the room bounds and exterior doors are included
 				light_bc2.intersect_with_cube(room_exp); // upward facing light is for this room only

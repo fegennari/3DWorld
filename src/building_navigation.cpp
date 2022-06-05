@@ -784,7 +784,7 @@ void building_interior_t::get_avoid_cubes(vect_cube_t &avoid, float z1, float z2
 		// these object types are not collided with by people and can be skipped
 		if (c->no_coll() || c->is_dynamic() || c->type == TYPE_LG_BALL) continue; // skip dynamic objects (balls, etc.)
 		if (!(same_as_player ? bldg_obj_types[c->type].player_coll : bldg_obj_types[c->type].ai_coll)) continue;
-		if (c->type == TYPE_ATTIC_DOOR && (c->flags & RO_FLAG_HANGING)) continue; // skip open attic doors in hallways because they block the path too much
+		if (c->type == TYPE_ATTIC_DOOR && (c->flags & RO_FLAG_IN_HALLWAY)) continue; // skip open attic doors in hallways because they block the path too much
 		cube_t const bc(get_true_room_obj_bcube(*c)); // needed for open attic door
 		if (bc.z1() > z2 || bc.z2() < z1) continue;
 		avoid.push_back(bc);
