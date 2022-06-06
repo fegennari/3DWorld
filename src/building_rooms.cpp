@@ -58,6 +58,7 @@ bool building_t::is_valid_placement_for_room(cube_t const &c, cube_t const &room
 	if (is_cube_close_to_doorway(c, room, 0.0, inc_open_doors)) return 0; // too close to a doorway
 	if (interior && interior->is_blocked_by_stairs_or_elevator(c)) return 0; // faster to check only one per stairwell, but then we need to store another vector?
 	if (has_bcube_int(c, blockers)) return 0; // Note: ignores dmin
+	if (has_attic() && c.intersects_xy(interior->attic_access) && (c.z2() + get_window_vspace()) > interior->attic_access.z1()) return 0; // blocked by attic access door (when open)
 	return 1;
 }
 

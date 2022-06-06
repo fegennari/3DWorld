@@ -375,7 +375,11 @@ cube_t get_true_room_obj_bcube(room_object_t const &c) {
 		bcube.d[c.dim][c.dir] += (c.dir ? 1.0f : -1.0f)*(width - 2.0f*wall_width); // extend outward
 		return bcube;
 	}
-	if (c.type == TYPE_ATTIC_DOOR) {return get_attic_access_door_cube(c);}
+	if (c.type == TYPE_ATTIC_DOOR) {
+		cube_t bcube(get_attic_access_door_cube(c));
+		if (c.is_open()) {bcube.union_with_cube(get_ladder_bcube_from_open_attic_door(c, bcube));} // include ladder as well
+		return bcube;
+	}
 	return c; // default cube case
 }
 
@@ -658,7 +662,8 @@ bool building_interior_t::check_sphere_coll(building_t const &building, point &p
 		if (c == self || c->type == TYPE_BLOCKER || c->type == TYPE_RAILING || c->type == TYPE_PAPER || c->type == TYPE_PEN || c->type == TYPE_PENCIL ||
 			c->type == TYPE_BOTTLE || c->type == TYPE_FLOORING || c->type == TYPE_SIGN || c->type == TYPE_WBOARD || c->type == TYPE_WALL_TRIM ||
 			c->type == TYPE_DRAIN || c->type == TYPE_CRACK || c->type == TYPE_SWITCH || c->type == TYPE_BREAKER || c->type == TYPE_OUTLET || c->type == TYPE_VENT) continue;
-		if (!sphere_cube_intersect(pos, radius, get_true_room_obj_bcube(*c))) continue; // no intersection (optimization)
+		cube_t const bc(get_true_room_obj_bcube(*c));
+		if (!sphere_cube_intersect(pos, radius, bc)) continue; // no intersection (optimization)
 		unsigned coll_ret(0);
 		// add special handling for things like elevators and cubicles? right now these are only in office buildings, where there are no dynamic objects
 
@@ -688,7 +693,7 @@ bool building_interior_t::check_sphere_coll(building_t const &building, point &p
 			else if (c->type == TYPE_CHAIR)  {coll_ret |= check_chair_collision (*c, pos, p_last, radius, &cnorm);}
 			else if (c->type == TYPE_STALL  && maybe_inside_room_object(*c, pos, radius)) {coll_ret |= (unsigned)check_stall_collision (*c, pos, p_last, radius, &cnorm);}
 			else if (c->type == TYPE_SHOWER && maybe_inside_room_object(*c, pos, radius)) {coll_ret |= (unsigned)check_shower_collision(*c, pos, p_last, radius, &cnorm);}
-			else {coll_ret |= (unsigned)sphere_cube_int_update_pos(pos, radius, *c, p_last, 1, 0, &cnorm);} // skip_z=0
+			else {coll_ret |= (unsigned)sphere_cube_int_update_pos(pos, radius, bc, p_last, 1, 0, &cnorm);} // skip_z=0
 		}
 		if (coll_ret) { // collision with this object - set hardness
 			if      (c->type == TYPE_COUCH ) {hardness = 0.6;} // couches are soft

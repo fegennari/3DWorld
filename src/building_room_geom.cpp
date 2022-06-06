@@ -1421,31 +1421,42 @@ cube_t get_attic_access_door_cube(room_object_t const &c) {
 	door.d[c.dim][!c.dir] -= (c.dir ? -1.0 : 1.0)*delta; // shorten to expose the opening
 	return door;
 }
+cube_t get_ladder_bcube_from_open_attic_door(room_object_t const &c, cube_t const &door) {
+	float const door_len(c.get_sz_dim(c.dim)), door_width(c.get_sz_dim(!c.dim)), door_inside_edge(door.d[c.dim][!c.dir]);
+	cube_t ladder(door); // sets ladder step depth
+	ladder.expand_in_dim(!c.dim, -0.05*door_width); // a bit narrower
+	ladder.d[c.dim][ c.dir] = door_inside_edge; // flush with open side of door
+	ladder.d[c.dim][!c.dir] = door_inside_edge + (c.dir ? -1.0 : 1.0)*2.0*c.dz();
+	ladder.z1() = door.z2() - 0.95*(door_len/0.44); // matches door length calculation used in floorplanning step
+	return ladder;
+}
 void building_room_geom_t::add_attic_door(room_object_t const &c, float tscale) {
-	rgeom_mat_t &wood_mat(get_wood_material(tscale, 1, 0, 1));
+	rgeom_mat_t &wood_mat(get_wood_material(tscale, 1, 0, 1)); // shadows + small
 	colorRGBA const color(apply_light_color(c));
 
 	if (c.is_open()) {
 		cube_t const door(get_attic_access_door_cube(c));
-		wood_mat.add_cube_to_verts(door, color, door.get_llc(), 0); // shadows + small, all sides
+		wood_mat.add_cube_to_verts(door, color, door.get_llc(), 0); // all sides
 		// draw the ladder
-		unsigned const num_steps = 10;
-		float const door_len(c.get_sz_dim(c.dim)), door_width(c.get_sz_dim(!c.dim)), door_thickness(c.dz());
-		float const floor_ceil_spacing(0.95*(door_len/0.44)); // matches door length calculation used in floorplanning step
-		float const door_inside_edge(door.d[c.dim][!c.dir]), step_spacing(floor_ceil_spacing/(num_steps+1)), step_thickness(0.1*step_spacing);
-		cube_t ladder(door); // sets ladder step depth
-		ladder.d[c.dim][ c.dir] = door_inside_edge; // flush with open side of door
-		ladder.d[c.dim][!c.dir] = door_inside_edge + (c.dir ? -1.0 : 1.0)*2.0*door_thickness;
+		cube_t const ladder(get_ladder_bcube_from_open_attic_door(c, door));
+		float const ladder_width(ladder.get_sz_dim(!c.dim));
+		float const side_width_factor = 0.05; // relative to door_width
 
 		for (unsigned n = 0; n < 2; ++n) { // sides
 			cube_t side(ladder);
-			side.z1() = side.z2() - floor_ceil_spacing;
-			side.d[!c.dim][!n] -= (n ? -1.0 : 1.0)*0.94*door_width;
-			wood_mat.add_cube_to_verts(side, color, side.get_llc(), EF_Z1); // shadows + small, skip bottom
+			side.d[!c.dim][!n] -= (n ? -1.0 : 1.0)*(1.0 - side_width_factor)*ladder_width;
+			wood_mat.add_cube_to_verts(side, color, side.get_llc(), EF_Z1); // skip bottom
 		}
+		// draw the steps
+		unsigned const num_steps = 10;
+		float const step_spacing(ladder.dz()/(num_steps+1)), step_thickness(0.1*step_spacing);
+		cube_t step(ladder);
+		step.expand_in_dim(!c.dim, -side_width_factor*ladder_width);
+
 		for (unsigned n = 0; n < num_steps; ++n) { // steps
-			cube_t step(ladder);
-			// TODO
+			step.z1() = ladder.z1() + (n+1)*step_spacing;
+			step.z2() = step  .z1() + step_thickness;
+			wood_mat.add_cube_to_verts(step, color, step.get_llc(), get_skip_mask_for_xy(!c.dim)); // skip sides
 		}
 	}
 	else { // draw only the top and bottom faces of the door

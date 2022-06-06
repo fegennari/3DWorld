@@ -1625,6 +1625,7 @@ room_object_t get_dresser_middle(room_object_t const &c);
 room_object_t get_desk_drawers_part(room_object_t const &c);
 room_object_t get_desk_top_back(room_object_t const &c, cube_t const &top);
 cube_t get_attic_access_door_cube(room_object_t const &c);
+cube_t get_ladder_bcube_from_open_attic_door(room_object_t const &c, cube_t const &door);
 cube_t get_elevator_car_panel(room_object_t const &c, float fc_thick_scale);
 cube_t get_true_room_obj_bcube(room_object_t const &c);
 void set_rand_pos_for_sz(cube_t &c, bool dim, float length, float width, rand_gen_t &rgen);
