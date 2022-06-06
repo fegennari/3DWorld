@@ -1471,6 +1471,36 @@ void building_room_geom_t::add_attic_door(room_object_t const &c, float tscale) 
 	}
 }
 
+void building_room_geom_t::add_attic_woodwork(building_t const &b, float tscale) {
+	if (!b.has_attic()) return;
+	rgeom_mat_t &wood_mat(get_wood_material(tscale, 1, 0, 1)); // shadows + small
+	float const attic_z1(b.interior->attic_access.z1()), delta_z(0.1*b.get_floor_thickness()); // matches value in get_all_drawn_verts()
+	float const floor_spacing(b.get_window_vspace());
+
+	// Note: there may be a chimney in the attic, but for now we ignore it
+	for (auto i = b.roof_tquads.begin(); i != b.roof_tquads.end(); ++i) {
+		if (i->get_bcube().z1() < attic_z1) continue; // not the top section that has the attic (porch roof, lower floor roof)
+
+		if (i->type == tquad_with_ix_t::TYPE_ROOF) { // roof tquad
+			tquad_with_ix_t tq(*i);
+			for (unsigned n = 0; n < tq.npts; ++n) {tq.pts[n].z -= delta_z;} // shift down slightly
+			cube_t const bcube(tq.get_bcube());
+			vector3d const normal(tq.get_norm());
+			bool const dim(fabs(normal.x) < fabs(normal.y));
+			float const base_width(bcube.get_sz_dim(!dim));
+			unsigned const num_beams(max(1, round_fp(4.0f*base_width/floor_spacing)));
+
+			for (unsigned n = 0; n < num_beams; ++n) {
+				// TODO
+			}
+		}
+		else if (i->type != tquad_with_ix_t::TYPE_WALL) { // triangular exterior wall section
+			// TODO?
+		}
+	} // for i
+	// TODO
+}
+
 // Note: there is a lot duplicated with building_room_geom_t::add_elevator(), but we need a separate function for adding interior elevator buttons
 cube_t get_elevator_car_panel(room_object_t const &c, float fc_thick_scale) {
 	float const dz(c.dz()), thickness(fc_thick_scale*dz), signed_thickness((c.dir ? 1.0 : -1.0)*thickness);
