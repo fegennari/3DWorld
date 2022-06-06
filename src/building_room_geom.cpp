@@ -1435,6 +1435,7 @@ void building_room_geom_t::add_attic_door(room_object_t const &c, float tscale) 
 	colorRGBA const color(apply_light_color(c));
 
 	if (c.is_open()) {
+		unsigned const qv_start(wood_mat.quad_verts.size());
 		cube_t const door(get_attic_access_door_cube(c));
 		wood_mat.add_cube_to_verts(door, color, door.get_llc(), 0); // all sides
 		// draw the ladder
@@ -1458,6 +1459,12 @@ void building_room_geom_t::add_attic_door(room_object_t const &c, float tscale) 
 			step.z2() = step  .z1() + step_thickness;
 			wood_mat.add_cube_to_verts(step, color, step.get_llc(), get_skip_mask_for_xy(!c.dim)); // skip sides
 		}
+		// rotate 10 degrees
+		point rot_pt;
+		rot_pt[ c.dim] = door.d[c.dim][!c.dir]; // door inside edge
+		rot_pt[!c.dim] = c.get_center_dim(!c.dim); // doesn't matter?
+		rot_pt.z       = door.z2(); // top of door
+		rotate_verts(wood_mat.quad_verts, (c.dim ? -plus_x : plus_y), (c.dir ? -1.0 : 1.0)*10.0*TO_RADIANS, rot_pt, qv_start);
 	}
 	else { // draw only the top and bottom faces of the door
 		wood_mat.add_cube_to_verts(c, color, c.get_llc(), ~EF_Z12); // shadows + small, top and bottom only
