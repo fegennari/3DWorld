@@ -1734,13 +1734,13 @@ void building_t::add_pri_hall_objs(rand_gen_t rgen, room_t const &room, float zv
 void building_t::add_attic_objects(rand_gen_t rgen) {
 	vect_room_object_t &objs(interior->room_geom->objs);
 	// add attic access door
-	cube_t adoor(interior->attic_access);
+	cube_with_ix_t adoor(interior->attic_access);
 	assert(adoor.is_strictly_normalized());
 	adoor.expand_in_dim(2, -0.2*adoor.dz()); // shrink in z
 	int const room_id(get_room_containing_pt(point(adoor.xc(), adoor.yc(), adoor.z1()-get_floor_thickness()))); // should we cache this during floorplanning?
 	assert(room_id >= 0); // must be found
 	room_t const &room(get_room(room_id));
-	bool const dim(adoor.dx() < adoor.dy()), dir(room.get_center_dim(dim) < adoor.get_center_dim(dim));
+	bool const dim(adoor.ix >> 1), dir(adoor.ix & 1);
 	// Note: not setting RO_FLAG_NOCOLL because we do want to collide with this when open
 	unsigned const acc_flags(room.is_hallway ? RO_FLAG_IN_HALLWAY : 0);
 	// is light_amount=1.0 correct? since this door can be viewed from both inside and outside the attic, a single number doesn't really work anyway

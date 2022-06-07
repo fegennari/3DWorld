@@ -1067,8 +1067,7 @@ struct building_interior_t {
 	vector<person_t> people;
 	std::unique_ptr<building_room_geom_t> room_geom;
 	std::unique_ptr<building_nav_graph_t> nav_graph;
-	cube_t attic_access;
-	cube_with_ix_t pg_ramp; // ix stores {dim, dir}
+	cube_with_ix_t pg_ramp, attic_access; // ix stores {dim, dir}
 	draw_range_t draw_range;
 	int garage_room;
 	bool door_state_updated, is_unconnected, ignore_ramp_placement, placed_people, elevators_disabled, attic_access_open;

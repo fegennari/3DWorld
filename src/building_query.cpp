@@ -389,17 +389,18 @@ cube_t get_true_room_obj_bcube(room_object_t const &c) {
 bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, float radius, bool is_in_attic, bool xy_only, vector3d *cnorm) const {
 	pos.z = bcube.z1(); // start at building z1 rather than the terrain height in case we're at the foot of a steep hill
 	assert(interior);
-	float const floor_spacing(get_window_vspace()), floor_thickness(get_floor_thickness());
+	float const floor_spacing(get_window_vspace()), floor_thickness(get_floor_thickness()), attic_door_z_gap(0.2f*floor_thickness);
 	float const xy_radius(radius*global_building_params.player_coll_radius_scale); // XY radius can be smaller to allow player to fit between furniture
-	bool had_coll(0), on_stairs(0);
+	bool had_coll(0), on_stairs(0), on_attic_ladder(0);
 	float obj_z(max(pos.z, p_last.z)); // use p_last to get orig zval
+	cube_with_ix_t const &attic_access(interior->attic_access);
 	
 	if (!xy_only && 2.2f*radius < (floor_spacing - floor_thickness)) { // diameter is smaller than space between floor and ceiling
 		if (is_in_attic) {
-			float const attic_floor_zval(interior->attic_access.z2() + 0.2f*get_floor_thickness() + radius); // relative to pos.z
+			float const attic_floor_zval(attic_access.z2() + attic_door_z_gap + radius); // relative to pos.z
 			had_coll = 1;
 
-			if (interior->attic_access_open && interior->attic_access.contains_pt_xy(pos)) {
+			if (interior->attic_access_open && attic_access.contains_pt_xy(pos)) {
 				is_in_attic = 0; // standing over the open attic access door, fall down/no longer in the attic
 				max_eq(pos.z, (attic_floor_zval - floor_spacing)); // place on floor below attic level
 			}
@@ -437,6 +438,15 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, flo
 				if (pos.z < z1 + radius) {pos.z = z1 + radius; obj_z = max(pos.z, p_last.z); had_coll = 1;} // move up
 				break; // only change zval once
 			}
+			if (interior->attic_access_open && attic_access.contains_pt_xy(pos) && obj_z > (attic_access.z2() - floor_spacing)) { // attic ladder - handle like a ramp
+				float const speed_factor = 0.3; // slow down when climbing the ladder
+				for (unsigned d = 0; d < 2; ++d) {pos[d] = speed_factor*pos[d] + (1.0 - speed_factor)*p_last[d];}
+				bool const dim(attic_access.ix >> 1), dir(attic_access.ix & 1);
+				float const length(attic_access.get_sz_dim(dim)), t(CLIP_TO_01((pos[dim] - attic_access.d[dim][0])/length)), T(dir ? t : (1.0-t));
+				pos.z = (attic_access.z2() + attic_door_z_gap) - floor_spacing*(1.0 - T) + radius;
+				obj_z = max(pos.z, p_last.z);
+				had_coll = on_attic_ladder = 1;
+			}
 		}
 	}
 	// *** Note ***: at this point pos.z is radius above the floors and *not* at the camera height, which is why we add camera_zh to pos.z below
@@ -461,6 +471,7 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, flo
 		} // for c
 		for (auto c = objs.begin(); c != objs.end(); ++c) { // check for other objects to collide with (including stairs)
 			if (c->no_coll() || !bldg_obj_types[c->type].player_coll) continue;
+			if (on_attic_ladder && c->type == TYPE_ATTIC_DOOR) continue; // collision with attic door/ladder is handled above
 
 			if (c->type == TYPE_ELEVATOR) { // special handling for elevators
 				if (!c->contains_pt_xy(pos)) continue;

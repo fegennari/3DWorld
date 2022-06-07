@@ -1340,10 +1340,9 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 					point access_pos;
 
 					if (in_hallway) {
-						bool const dim(best_room.dx() < best_room.dy());
 						access_pos = best_room.get_cube_center();
-						access_pos[ dim] += (rgen2.rand_bool() ? -1.0 : 1.0)*0.1*best_room.get_sz_dim( dim); // place off center to avoid blocking the center light
-						access_pos[!dim] += (rgen2.rand_bool() ? -1.0 : 1.0)*0.2*best_room.get_sz_dim(!dim); // place off center to allow player to walk past
+						access_pos[ long_dim] += (rgen2.rand_bool() ? -1.0 : 1.0)*0.1*best_room.get_sz_dim( long_dim); // place off center to avoid blocking center light
+						access_pos[!long_dim] += (rgen2.rand_bool() ? -1.0 : 1.0)*0.2*best_room.get_sz_dim(!long_dim); // place off center to allow player to walk past
 					}
 					else {
 						cube_t const &part(get_part_for_room(best_room));
@@ -1356,6 +1355,8 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 					interior->attic_access.expand_in_dim( long_dim, half_len); // long dim
 					interior->attic_access.expand_in_dim(!long_dim, half_wid); // short dim
 					set_cube_zvals(interior->attic_access, C.z1(), C.z2()); // same zvals as ceiling
+					bool const dir(best_room.get_center_dim(long_dim) < interior->attic_access.get_center_dim(long_dim));
+					interior->attic_access.ix = 2*long_dim + dir;
 					cube_t ceiling_parts[4];
 					subtract_cube_xy(C, interior->attic_access, ceiling_parts);
 
