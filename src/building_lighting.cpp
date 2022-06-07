@@ -13,7 +13,7 @@ bool const USE_BKG_THREAD      = 1;
 bool const INDIR_BASEMENT_ONLY = 0;
 bool const INDIR_VOL_PER_FLOOR = 0;
 
-extern bool camera_in_building;
+extern bool camera_in_building, player_in_attic;
 extern int MESH_Z_SIZE, display_mode, display_framerate, camera_surf_collide, animate2, frame_counter, building_action_key, player_in_basement, player_in_elevator;
 extern unsigned LOCAL_RAYS, MAX_RAY_BOUNCES, NUM_THREADS;
 extern float indir_light_exp;
@@ -1039,6 +1039,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 	auto objs_end(interior->room_geom->get_placed_objs_end()); // skip buttons/stairs/elevators
 	point camera_rot(camera_bs);
 	maybe_inv_rotate_point(camera_rot); // rotate camera pos into building space; should use this pos below except with building bcube, occlusion checks, or lpos_rot
+	bool const player_on_attic_stairs(player_in_attic && interior->attic_access_open && interior->attic_access.contains_pt_xy(camera_rot));
 	unsigned camera_part(parts.size()); // start at an invalid value
 	unsigned camera_floor(0);
 	bool camera_by_stairs(0), camera_on_stairs(0), camera_somewhat_by_stairs(0), camera_in_hallway(0), camera_near_building(camera_in_building);
@@ -1307,13 +1308,20 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		bool force_smap_update(0);
 
 		// check for dynamic shadows
-		if (camera_surf_collide && camera_in_building && clipped_bc.contains_pt(camera_rot) && dist_less_than(lpos_rot, camera_bs, dshadow_radius)) {
-			// must update shadow maps for the room above if the player is on the stairs or in the same room when there are stairs
-			bool const check_floor_above(camera_on_stairs || (camera_by_stairs && camera_room == i->room_id));
+		if (camera_surf_collide && camera_in_building && dist_less_than(lpos_rot, camera_bs, dshadow_radius)) {
+			bool player_on_ladder_this_room(player_on_attic_stairs && (is_in_attic || room.intersects_xy(interior->attic_access)));
 
-			if (is_lamp || (lpos_rot.z > camera_bs.z && (check_floor_above || lpos_rot.z < (camera_bs.z + window_vspacing)))) {
-				// player shadow; includes lamps (with no zval test)
-				force_smap_update = 1; // always update, even if stationary; required to get correct shadows when player stands still and takes/moves objects
+			if (clipped_bc.contains_pt(camera_rot) || player_on_ladder_this_room) {
+				// must update shadow maps for the room above if the player is on the stairs or in the same room when there are stairs
+				bool const check_floor_above(camera_on_stairs || (camera_by_stairs && camera_room == i->room_id));
+
+				if (is_lamp || player_on_ladder_this_room || (player_in_attic && is_in_attic) ||
+					(lpos_rot.z > camera_bs.z && (check_floor_above || lpos_rot.z < (camera_bs.z + window_vspacing))))
+				{
+					// player shadow; includes lamps (with no zval test)
+					force_smap_update   = 1; // always update, even if stationary; required to get correct shadows when player stands still and takes/moves objects
+					shadow_caster_hash ^= 0xdeadbeef; // update hash when player enters or leaves the light's area
+				}
 			}
 		}
 		if (!force_smap_update && camera_near_building) {
