@@ -1435,10 +1435,21 @@ void building_room_geom_t::add_attic_door(room_object_t const &c, float tscale) 
 	colorRGBA const color(apply_light_color(c));
 
 	if (c.is_open()) {
-		unsigned const qv_start(wood_mat.quad_verts.size());
+		unsigned const qv_start1(wood_mat.quad_verts.size());
 		cube_t const door(get_attic_access_door_cube(c));
 		wood_mat.add_cube_to_verts(door, color, door.get_llc(), 0); // all sides
+		// rotate 10 degrees
+		point rot_pt;
+		rot_pt[ c.dim] = door.d[c.dim][!c.dir]; // door inside edge
+		rot_pt[!c.dim] = c.get_center_dim(!c.dim); // doesn't matter?
+		rot_pt.z       = door.z2(); // top of door
+		vector3d const rot_axis(c.dim ? -plus_x : plus_y);
+		float const rot_angle((c.dir ? -1.0 : 1.0)*10.0*TO_RADIANS);
+		rotate_verts(wood_mat.quad_verts, rot_axis, rot_angle, rot_pt, qv_start1);
 		// draw the ladder
+		colorRGBA const ladder_color(apply_light_color(c, LT_BROWN)); // slightly darker
+		rgeom_mat_t &ladder_mat(get_wood_material(2.0*tscale, 1, 0, 1)); // shadows + small; larger tscale
+		unsigned const qv_start2(ladder_mat.quad_verts.size());
 		cube_t const ladder(get_ladder_bcube_from_open_attic_door(c, door));
 		float const ladder_width(ladder.get_sz_dim(!c.dim));
 		float const side_width_factor = 0.05; // relative to door_width
@@ -1446,7 +1457,7 @@ void building_room_geom_t::add_attic_door(room_object_t const &c, float tscale) 
 		for (unsigned n = 0; n < 2; ++n) { // sides
 			cube_t side(ladder);
 			side.d[!c.dim][!n] -= (n ? -1.0 : 1.0)*(1.0 - side_width_factor)*ladder_width;
-			wood_mat.add_cube_to_verts(side, color, side.get_llc(), EF_Z1); // skip bottom
+			ladder_mat.add_cube_to_verts(side, ladder_color, side.get_llc(), EF_Z1, 1); // skip bottom, swap_tex_st=1
 		}
 		// draw the steps
 		unsigned const num_steps = 10;
@@ -1457,14 +1468,9 @@ void building_room_geom_t::add_attic_door(room_object_t const &c, float tscale) 
 		for (unsigned n = 0; n < num_steps; ++n) { // steps
 			step.z1() = ladder.z1() + (n+1)*step_spacing;
 			step.z2() = step  .z1() + step_thickness;
-			wood_mat.add_cube_to_verts(step, color, step.get_llc(), get_skip_mask_for_xy(!c.dim)); // skip sides
+			ladder_mat.add_cube_to_verts(step, ladder_color, step.get_llc(), get_skip_mask_for_xy(!c.dim), 1); // skip sides, swap_tex_st=1
 		}
-		// rotate 10 degrees
-		point rot_pt;
-		rot_pt[ c.dim] = door.d[c.dim][!c.dir]; // door inside edge
-		rot_pt[!c.dim] = c.get_center_dim(!c.dim); // doesn't matter?
-		rot_pt.z       = door.z2(); // top of door
-		rotate_verts(wood_mat.quad_verts, (c.dim ? -plus_x : plus_y), (c.dir ? -1.0 : 1.0)*10.0*TO_RADIANS, rot_pt, qv_start);
+		rotate_verts(ladder_mat.quad_verts, rot_axis, rot_angle, rot_pt, qv_start2);
 	}
 	else { // draw only the top and bottom faces of the door
 		wood_mat.add_cube_to_verts(c, color, c.get_llc(), ~EF_Z12); // shadows + small, top and bottom only
