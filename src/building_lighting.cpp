@@ -117,7 +117,8 @@ bool building_t::ray_cast_interior(point const &pos, vector3d const &dir, cube_t
 	}
 	else { // check for exterior rays (uncommon case)
 		bool hit(0);
-		for (auto p = parts.begin(); p != parts.end(); ++p) {hit |= ray_cast_cube(p1, p2, *p, cnorm, t);} // find closest entrance point
+		auto const parts_end(get_real_parts_end_inc_sec());
+		for (auto p = parts.begin(); p != parts_end; ++p) {hit |= ray_cast_cube(p1, p2, *p, cnorm, t);} // find closest entrance point
 		
 		if (hit) { // exterior hit (ray outside building) - don't need to check interior geometry
 			cpos   = p1 + (p2 - p1)*t;

@@ -2596,9 +2596,9 @@ public:
 						if (teleport_to_screenshot) {b.maybe_teleport_to_screenshot();}
 						if (animate2) {b.update_player_interact_objects(camera_xlated);} // update dynamic objects if the player is in the building
 					} // for bi
-					if (this_frame_player_in_basement == 2) break; // player can only be in one basement - done
+					if (this_frame_player_in_basement == 2 || this_frame_player_in_attic) break; // player can only be in one basement or attic - done
 				} // for g
-				if (this_frame_player_in_basement == 2) break; // player can only be in one basement - done
+				if (this_frame_player_in_basement == 2 || this_frame_player_in_attic) break; // player can only be in one basement or attic - done
 			} // for i
 			bbd.draw_and_clear(s);
 			if (ADD_ROOM_LIGHTS) {set_std_depth_func();} // restore
@@ -2701,8 +2701,8 @@ public:
 		} // end draw_interior
 
 		// everything after this point is part of the building exteriors and uses city lights rather than building room lights
-		if (player_in_basement == 2 || (reflection_pass && (!DRAW_EXT_REFLECTIONS || reflection_pass != 3))) {
-			// early exit for player fully in basements or house reflections, if enabled
+		if (player_in_basement == 2 || player_in_attic || (reflection_pass && (!DRAW_EXT_REFLECTIONS || reflection_pass != 3))) {
+			// early exit for player fully in basement or attic, or house reflections, if enabled
 			fgPopMatrix();
 			enable_dlight_bcubes = 0;
 			return;
@@ -3245,7 +3245,7 @@ public:
 				if ((int)b->ix == state.exclude_bix) continue; // excluded
 				cube_t const c(*b + state.xlate); // check far clipping plane first because that's more likely to reject buildings
 				// if player's inside this building, skip occlusion so that objects are visible through windows
-				if (state.skip_cont_camera && !player_in_basement && c.contains_pt(pdu.pos) && get_building(b->ix).has_windows()) continue;
+				if (state.skip_cont_camera && !(player_in_basement || player_in_attic) && c.contains_pt(pdu.pos) && get_building(b->ix).has_windows()) continue;
 				if (dist_less_than(pdu.pos, c.closest_pt(pdu.pos), pdu.far_) && pdu.cube_visible(c)) {state.building_ids.push_back(*b);}
 			}
 		}
