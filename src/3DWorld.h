@@ -152,6 +152,9 @@ unsigned const cube_dim_table[2][3] = {{1, 2, 0}, {2, 0, 1}};
 #define UNROLL_3X(expr) {UNROLL_2X(expr) {unsigned const i_(2); expr}}
 #define UNROLL_4X(expr) {UNROLL_3X(expr) {unsigned const i_(3); expr}}
 
+template<typename T> inline void min_eq(T &A, T const B) {A = min(A, B);}
+template<typename T> inline void max_eq(T &A, T const B) {A = max(A, B);}
+
 enum {CAM_FILT_DAMAGE=0, CAM_FILT_FOG, CAM_FILT_BURN, CAMERA_FILT_BKG, CAM_FILT_UWATER, CAM_FILT_TELEPORT, CAM_FILT_FROZEN, CAM_FILT_END};
 enum {FG_PROJECTION=0, FG_MODELVIEW};
 
@@ -169,8 +172,8 @@ template<typename T> struct point2d { // size = 8
 	T mag_sq() const {return (x*x + y*y);}
 	T mag()    const {return sqrt(mag_sq());}
 	T cp_mag(point2d const &p) const {return (x*p.y - y*p.x);}
-	T get_max_val() const {return std::max(x, y);}
-	T get_min_val() const {return std::min(x, y);}
+	T get_max_val() const {return max(x, y);}
+	T get_min_val() const {return min(x, y);}
 	void operator+=(point2d const &p) {x += p.x; y += p.y;}
 	void operator-=(point2d const &p) {x -= p.x; y -= p.y;}
 	void operator*=(point2d const &p) {x *= p.x; y *= p.y;} // component multiply
@@ -477,7 +480,7 @@ struct cube_t { // size = 24
 	bool is_all_zeros() const {return (x1() == 0 && x2() == 0 && y1() == 0 && y2() == 0 && z1() == 0 && z2() == 0);}
 
 	void union_with_pt(point const &pt) {
-		UNROLL_3X(d[i_][0] = min(d[i_][0], pt[i_]); d[i_][1] = max(d[i_][1], pt[i_]);)
+		UNROLL_3X(min_eq(d[i_][0], pt[i_]); max_eq(d[i_][1], pt[i_]);)
 	}
 	void assign_or_union_with_pt(point const &pt) {
 		if (is_all_zeros()) {set_from_point(pt);} else {union_with_pt(pt);} // Note: won't work if pt == (0,0,0)
@@ -486,24 +489,24 @@ struct cube_t { // size = 24
 		if (is_zero_area()) {set_from_sphere(pt, radius);} else {union_with_sphere(pt, radius);} // Note: won't work if pt == (0,0,0)
 	}
 	void union_with_sphere(point const &pt, float radius) {
-		UNROLL_3X(d[i_][0] = min(d[i_][0], pt[i_]-radius); d[i_][1] = max(d[i_][1], pt[i_]+radius);)
+		UNROLL_3X(min_eq(d[i_][0], pt[i_]-radius); max_eq(d[i_][1], pt[i_]+radius);)
 	}
 	void union_with_sphere(sphere_t const &s) {union_with_sphere(s.pos, s.radius);}
 	void union_with_cube(cube_t const &c) {
-		UNROLL_3X(d[i_][0] = min(d[i_][0], c.d[i_][0]); d[i_][1] = max(d[i_][1], c.d[i_][1]);)
+		UNROLL_3X(min_eq(d[i_][0], c.d[i_][0]); max_eq(d[i_][1], c.d[i_][1]);)
 	}
 	void union_with_cube_xy(cube_t const &c) {
-		UNROLL_2X(d[i_][0] = min(d[i_][0], c.d[i_][0]); d[i_][1] = max(d[i_][1], c.d[i_][1]);)
+		UNROLL_2X(min_eq(d[i_][0], c.d[i_][0]); max_eq(d[i_][1], c.d[i_][1]);)
 	}
 	void assign_or_union_with_cube(cube_t const &c) {
 		if (c.is_zero_area()) return;
 		if (is_zero_area()) {copy_from(c);} else {union_with_cube(c);}
 	}
 	void intersect_with_cube(cube_t const &c) { // Note: cube and *this must overlap
-		UNROLL_3X(d[i_][0] = max(d[i_][0], c.d[i_][0]); d[i_][1] = min(d[i_][1], c.d[i_][1]);)
+		UNROLL_3X(max_eq(d[i_][0], c.d[i_][0]); min_eq(d[i_][1], c.d[i_][1]);)
 	}
 	void intersect_with_cube_xy(cube_t const &c) { // Note: cube and *this must overlap
-		UNROLL_2X(d[i_][0] = max(d[i_][0], c.d[i_][0]); d[i_][1] = min(d[i_][1], c.d[i_][1]);)
+		UNROLL_2X(max_eq(d[i_][0], c.d[i_][0]); min_eq(d[i_][1], c.d[i_][1]);)
 	}
 	void normalize() {UNROLL_3X(if (d[i_][1] < d[i_][0]) swap(d[i_][0], d[i_][1]);)}
 
@@ -606,9 +609,9 @@ struct cube_t { // size = 24
 	bool closest_dist_less_than(point const &pos, float dist) const;
 	bool closest_dist_xy_less_than(point const &pos, float dist) const;
 	
-	point closest_pt(point const &pos) const {
-		point pt;
-		UNROLL_3X(pt[i_] = max(d[i_][0], min(d[i_][1], pos[i_]));)
+	point closest_pt(point const &pos) const { // closest point inside this cube
+		point pt(pos);
+		clamp_pt(pt);
 		return pt;
 	}
 	float get_max_extent() const { // from (0,0,0)

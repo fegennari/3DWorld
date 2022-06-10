@@ -74,9 +74,6 @@ inline float get_pos_fract(float v) {
 inline float extract_low_bits_01 (float v, float m) {return     get_pos_fract(m*v)      ;}
 inline float extract_low_bits_pm1(float v, float m) {return 2.0*get_pos_fract(m*v) - 1.0;}
 
-template<typename T> inline void min_eq(T &A, T const B) {A = min(A, B);}
-template<typename T> inline void max_eq(T &A, T const B) {A = max(A, B);}
-
 
 // ***************** RANDOM NUMBER GENERATION ********************
 
