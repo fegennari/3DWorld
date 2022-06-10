@@ -1504,7 +1504,7 @@ void building_room_geom_t::add_attic_woodwork(building_t const &b, float tscale)
 		vector3d const normal(tq.get_norm()); // points outside of the attic
 		bool const dim(fabs(normal.x) < fabs(normal.y)), dir(normal[dim] > 0); // dim this tquad is facing; beams run in the other dim
 		float const base_width(bcube.get_sz_dim(!dim)), run_len(bcube.get_sz_dim(dim)), height(bcube.dz()), height_scale(1.0/fabs(normal[dim]));
-		float const beam_width(0.04*floor_spacing), beam_hwidth(0.5*beam_width), beam_depth(3.0*beam_width);
+		float const beam_width(0.04*floor_spacing), beam_hwidth(0.5*beam_width), beam_depth(2.0*beam_width);
 		float const epsilon(0.02*beam_hwidth), beam_edge_gap(beam_hwidth + epsilon), dir_sign(dir ? -1.0 : 1.0);
 		unsigned const num_beams(max(2, round_fp(3.0f*base_width/floor_spacing)));
 		float const beam_spacing((base_width - 2.0f*beam_edge_gap)/(num_beams - 1));
@@ -1512,11 +1512,7 @@ void building_room_geom_t::add_attic_woodwork(building_t const &b, float tscale)
 		float const beam_pos_start(bcube.d[!dim][0] + beam_edge_gap + dir_sign*0.5*epsilon);
 		unsigned const qv_start(wood_mat.quad_verts.size());
 		cube_t beam(bcube); // set the z1 base and exterior edge d[dim][dir]
-		
-		if (is_roof) {
-			assert(run_len > 0.0);
-			beam.z1() += beam_depth*height/run_len; // shift up to avoid clipping through the ceiling of the room below
-		}
+		if (is_roof) {beam.z1() += beam_depth*run_len/height;} // shift up to avoid clipping through the ceiling of the room below
 		// determine segments for our non-base edges
 		edge_t edges[3]; // non-base edge segments: start plus: 1 for rectangle, 2 for triangle, 3 for trapezoid
 		unsigned num_edges(0);
@@ -1541,7 +1537,7 @@ void building_room_geom_t::add_attic_woodwork(building_t const &b, float tscale)
 				if (roof_pos < E.p[0][!dim] || roof_pos >= E.p[1][!dim]) continue; // beam not contained in this edge
 				if (E.p[0].z == E.p[1].z) {beam.z2() = E.p[0].z;} // horizontal edge
 				else {beam.z2() = E.p[0].z + ((roof_pos - E.p[0][!dim])/(E.p[1][!dim] - E.p[0][!dim]))*(E.p[1].z - E.p[0].z);} // interpolate zval
-				beam.z2() += (height_scale - 1.0)*beam.dz(); // rescale to account for length post-rotate
+				beam.z2() += (height_scale - 1.0)*(beam.z2() - bcube.z1()); // rescale to account for length post-rotate
 				if (is_wall) {beam.z2() -= beam_hwidth*height/(0.5*base_width);} // shorten to avoid clipping through the roof at the top
 				assert(!found); // break instead?
 				found = 1;

@@ -1065,6 +1065,7 @@ void building_t::gen_and_draw_room_geom(brg_batch_draw_t *bbd, shader_t &s, occl
 		for (auto p = parts.begin(); p != parts.end(); ++p) {
 			if (camera_pdu.cube_visible(*p + xlate)) {any_part_visible = 1; break;}
 		}
+		if (!any_part_visible && point_in_attic(camera_pdu.pos - xlate)) {any_part_visible = 1;} // check the attic
 		if (!any_part_visible) return;
 	}
 	if (!has_room_geom()) {
