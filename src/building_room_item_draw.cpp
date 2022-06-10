@@ -724,7 +724,6 @@ void building_room_geom_t::create_small_static_vbos(building_t const &building) 
 	model_objs.clear(); // currently model_objs are only created for small objects in drawers, so we clear this here
 	add_small_static_objs_to_verts(expanded_objs);
 	add_small_static_objs_to_verts(objs);
-	add_attic_woodwork(building, 2.0/obj_scale); // only if there's an attic
 }
 
 void building_room_geom_t::add_nested_objs_to_verts(vect_room_object_t const &objs_to_add) {
@@ -828,6 +827,7 @@ void building_room_geom_t::create_detail_vbos(building_t const &building) {
 		assert(i.type == TYPE_WALL_TRIM);
 		add_wall_trim(i);
 	}
+	add_attic_woodwork(building, 2.0/obj_scale); // only if there's an attic
 	mats_detail.create_vbos(building);
 }
 

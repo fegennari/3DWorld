@@ -1477,34 +1477,133 @@ void building_room_geom_t::add_attic_door(room_object_t const &c, float tscale) 
 	}
 }
 
+struct edge_t {
+	point p[2];
+	edge_t() {}
+	edge_t(point const &A, point const &B, bool cmp_dim) {
+		p[0] = A; p[1] = B;
+		if (B[cmp_dim] < A[cmp_dim]) {swap(p[0], p[1]);} // make A less in cmp_dim
+	}
+};
 void building_room_geom_t::add_attic_woodwork(building_t const &b, float tscale) {
 	if (!b.has_attic()) return;
-	rgeom_mat_t &wood_mat(get_wood_material(tscale, 1, 0, 1)); // shadows + small
+	rgeom_mat_t &wood_mat(get_wood_material(tscale, 1, 0, 2)); // shadows + detail
 	float const attic_z1(b.interior->attic_access.z1()), delta_z(0.1*b.get_floor_thickness()); // matches value in get_all_drawn_verts()
 	float const floor_spacing(b.get_window_vspace());
 
 	// Note: there may be a chimney in the attic, but for now we ignore it
 	for (auto i = b.roof_tquads.begin(); i != b.roof_tquads.end(); ++i) {
 		if (i->get_bcube().z1() < attic_z1) continue; // not the top section that has the attic (porch roof, lower floor roof)
-
-		if (i->type == tquad_with_ix_t::TYPE_ROOF) { // roof tquad
-			tquad_with_ix_t tq(*i);
-			for (unsigned n = 0; n < tq.npts; ++n) {tq.pts[n].z -= delta_z;} // shift down slightly
-			cube_t const bcube(tq.get_bcube());
-			vector3d const normal(tq.get_norm());
-			bool const dim(fabs(normal.x) < fabs(normal.y));
-			float const base_width(bcube.get_sz_dim(!dim));
-			unsigned const num_beams(max(1, round_fp(4.0f*base_width/floor_spacing)));
-
-			for (unsigned n = 0; n < num_beams; ++n) {
-				// TODO
-			}
+		bool const is_roof(i->type == tquad_with_ix_t::TYPE_ROOF); // roof tquad
+		bool const is_wall(i->type == tquad_with_ix_t::TYPE_WALL); // triangular exterior wall section; brick or block, doesn't need wood support, but okay to add
+		if (!is_roof && !is_wall) continue;
+		// draw beams along inside of roof; start with a vertical cube and rotate to match roof angle
+		tquad_with_ix_t tq(*i);
+		for (unsigned n = 0; n < tq.npts; ++n) {tq.pts[n].z -= delta_z;} // shift down slightly
+		cube_t const bcube(tq.get_bcube());
+		vector3d const normal(tq.get_norm()); // points outside of the attic
+		bool const dim(fabs(normal.x) < fabs(normal.y)), dir(normal[dim] > 0); // dim this tquad is facing; beams run in the other dim
+		float const base_width(bcube.get_sz_dim(!dim)), run_len(bcube.get_sz_dim(dim)), height(bcube.dz()), height_scale(1.0/fabs(normal[dim]));
+		float const beam_width(0.04*floor_spacing), beam_hwidth(0.5*beam_width), beam_depth(3.0*beam_width);
+		float const epsilon(0.02*beam_hwidth), beam_edge_gap(beam_hwidth + epsilon), dir_sign(dir ? -1.0 : 1.0);
+		unsigned const num_beams(max(2, round_fp(3.0f*base_width/floor_spacing)));
+		float const beam_spacing((base_width - 2.0f*beam_edge_gap)/(num_beams - 1));
+		// shift slightly for opposing roof sides to prevent Z-fighting on center beam
+		float const beam_pos_start(bcube.d[!dim][0] + beam_edge_gap + dir_sign*0.5*epsilon);
+		unsigned const qv_start(wood_mat.quad_verts.size());
+		cube_t beam(bcube); // set the z1 base and exterior edge d[dim][dir]
+		
+		if (is_roof) {
+			assert(run_len > 0.0);
+			beam.z1() += beam_depth*height/run_len; // shift up to avoid clipping through the ceiling of the room below
 		}
-		else if (i->type != tquad_with_ix_t::TYPE_WALL) { // triangular exterior wall section
-			// TODO?
+		// determine segments for our non-base edges
+		edge_t edges[3]; // non-base edge segments: start plus: 1 for rectangle, 2 for triangle, 3 for trapezoid
+		unsigned num_edges(0);
+
+		for (unsigned n = 0; n < tq.npts; ++n) {
+			point const &A(tq.pts[n]), &B(tq.pts[(n+1)%tq.npts]);
+			if (A.z == bcube.z1() && B.z == bcube.z1()) continue; // base edge, skip
+			if (A[!dim] == B[!dim]) continue; // non-angled edge, skip
+			edges[num_edges++] = edge_t(A, B, !dim);
+		}
+		assert(num_edges > 0 && num_edges <= 3);
+
+		// add vertical beams
+		for (unsigned n = 0; n < num_beams; ++n) {
+			float const roof_pos(beam_pos_start + n*beam_spacing);
+			set_wall_width(beam, roof_pos, beam_hwidth, !dim);
+			beam.d[dim][!dir] = beam.d[dim][dir] + dir_sign*beam_depth;
+			bool found(0);
+
+			for (unsigned e = 0; e < num_edges; ++e) {
+				edge_t const &E(edges[e]);
+				if (roof_pos < E.p[0][!dim] || roof_pos >= E.p[1][!dim]) continue; // beam not contained in this edge
+				if (E.p[0].z == E.p[1].z) {beam.z2() = E.p[0].z;} // horizontal edge
+				else {beam.z2() = E.p[0].z + ((roof_pos - E.p[0][!dim])/(E.p[1][!dim] - E.p[0][!dim]))*(E.p[1].z - E.p[0].z);} // interpolate zval
+				beam.z2() += (height_scale - 1.0)*beam.dz(); // rescale to account for length post-rotate
+				if (is_wall) {beam.z2() -= beam_hwidth*height/(0.5*base_width);} // shorten to avoid clipping through the roof at the top
+				assert(!found); // break instead?
+				found = 1;
+			} // for e
+			assert(found);
+			if (beam.dz() < beam_depth) continue; // too short, skip
+			assert(beam.is_strictly_normalized());
+			// skip bottom and face against the roof (top may be partially visible when rotated)
+			wood_mat.add_cube_to_verts(beam, WHITE, beam.get_llc(), (~get_face_mask(dim, dir) | EF_Z1));
+		} // for n
+		if (is_wall) continue; // below is for sloped roof tquads only
+		// rotate to match slope of roof
+		point rot_pt; // point where roof meets attic floor
+		rot_pt[ dim] = bcube.d[dim][dir];
+		rot_pt[!dim] = bcube.get_center_dim(dim); // doesn't matter?
+		rot_pt.z     = bcube.z1(); // floor
+		vector3d const rot_axis(dim ? -plus_x : plus_y);
+		float const rot_angle((dir ? 1.0 : -1.0)*atan2(run_len, height));
+		rotate_verts(wood_mat.quad_verts, rot_axis, rot_angle, rot_pt, qv_start);
+		
+		if (num_edges == 3) { // trapezoid case: add diag beam along both angled edges
+			for (unsigned e = 0; e < num_edges; ++e) {
+				edge_t const &E(edges[e]);
+				if (E.p[0].z == E.p[1].z) continue; // not an angled edge
+				bool const low_ix(E.p[1].z == bcube.z1());
+				point const &lo(E.p[low_ix]), &hi(E.p[!low_ix]);
+				vector3d const edge_delta(hi - lo);
+				float const edge_len(edge_delta.mag());
+				vector3d const edge_dir(edge_delta/edge_len);
+				beam.set_from_point(lo);
+				beam.z2() += edge_len; // will be correct after rotation
+				beam.expand_in_dim(!dim, beam_hwidth);
+				beam.d[dim][!dir] = beam.d[dim][dir] + dir_sign*beam_depth;
+				unsigned const qv_start_angled(wood_mat.quad_verts.size());
+				wood_mat.add_cube_to_verts(beam, WHITE, beam.get_llc(), (~get_face_mask(dim, dir) | EF_Z1));
+				// rotate into place
+				// TODO: not quite correct - need to rotate about Z now, or draw as extruded polygon
+				vector3d const axis(cross_product(edge_dir, plus_z));
+				float const angle(get_angle(plus_z, edge_dir));
+				rotate_verts(wood_mat.quad_verts, axis, angle, lo, qv_start_angled);
+			} // for e
+		}
+		if (tq.npts == 4 && dir == 0) { // add beam along the roofline for this quad
+			beam = bcube;
+			beam.z2() -= beam_hwidth*height/run_len; // shift to just touching the roof at the top
+			beam.z1()  = beam.z2() - beam_depth;
+			set_wall_width(beam, bcube.d[dim][!dir], beam_hwidth, dim); // inside/middle edge
+
+			if (num_edges == 3) { // trapezoid case (optimization)
+				swap(beam.d[!dim][0], beam.d[!dim][1]); // start denormalized
+
+				for (unsigned n = 0; n < 4; ++n) { // find the span of the top of the roofline
+					if (tq.pts[n].z != bcube.z2()) continue; // point not at peak of roof
+					min_eq(beam.d[!dim][0], tq.pts[n][!dim]);
+					max_eq(beam.d[!dim][1], tq.pts[n][!dim]);
+				}
+			}
+			assert(beam.is_strictly_normalized());
+			beam.expand_in_dim(!dim, -epsilon); // prevent Z-fighting
+			if (beam.get_sz_dim(!dim) > beam_width) {wood_mat.add_cube_to_verts(beam, WHITE, beam.get_llc(), EF_Z2);} // skip top
 		}
 	} // for i
-	// TODO
 }
 
 // Note: there is a lot duplicated with building_room_geom_t::add_elevator(), but we need a separate function for adding interior elevator buttons
