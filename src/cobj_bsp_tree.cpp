@@ -23,15 +23,12 @@ extern platform_cont platforms;
 
 
 coll_tquad::coll_tquad(coll_obj const &c) : tquad_t(c.npoints), normal(c.norm), cid(c.id) {
-
 	assert(is_cobj_valid(c));
 	for (unsigned i = 0; i < npts; ++i) {pts[i] = c.points[i];}
 	if (npts == 3) pts[3] = pts[2]; // duplicate the last point so that it's valid
 }
 
-
 coll_tquad::coll_tquad(polygon_t const &p) : tquad_t((unsigned)p.size()) {
-
 	assert(npts == 3 || npts == 4);
 	color.set_c4(p.color);
 	for (unsigned i = 0; i < npts; ++i) {pts[i]  = p[i].v;}
@@ -39,36 +36,21 @@ coll_tquad::coll_tquad(polygon_t const &p) : tquad_t((unsigned)p.size()) {
 	update_normal();
 }
 
-
 coll_tquad::coll_tquad(triangle const &t, colorRGBA const &c) {
-
 	npts = 3;
 	UNROLL_3X(pts[i_] = t.pts[i_];);
 	update_normal();
 	color.set_c4(c);
 }
 
-
 bool tquad_t::is_valid() const {return (npts >= 3 && is_triangle_valid(pts[0], pts[1], pts[2]));}
 
-
-#define UPDATE_CUBE(i) {if (pts[i][i_] < c.d[i_][0]) {c.d[i_][0] = pts[i][i_];} if (pts[i][i_] > c.d[i_][1]) {c.d[i_][1] = pts[i][i_];}}
-
-
 void tquad_t::update_bcube(cube_t &c) const {
-
-	UNROLL_3X(UPDATE_CUBE(0));
-	UNROLL_3X(UPDATE_CUBE(1));
-	UNROLL_3X(UPDATE_CUBE(2));
-	if (npts == 4) {UNROLL_3X(UPDATE_CUBE(3));}
+	for (unsigned n = 0; n < npts; ++n) {c.union_with_pt(pts[n]);}
 }
-
-
 cube_t tquad_t::get_bcube() const {
-
 	cube_t c(pts[0], pts[1]);
-	UNROLL_3X(UPDATE_CUBE(2));
-	if (npts == 4) {UNROLL_3X(UPDATE_CUBE(3));}
+	for (unsigned n = 2; n < npts; ++n) {c.union_with_pt(pts[n]);}
 	return c;
 }
 
@@ -77,15 +59,12 @@ cube_t tquad_t::get_bcube() const {
 
 
 bool cobj_tree_base::get_root_bcube(cube_t &bc) const {
-	
 	if (nodes.empty()) return 0;
 	bc = nodes[0];
 	return 1;
 }
 
-
 bool cobj_tree_base::check_for_leaf(unsigned num, unsigned skip_dims) {
-
 	if (num <= MAX_LEAF_SIZE || skip_dims == 7) { // base case
 		register_leaf(num);
 		return 1;
