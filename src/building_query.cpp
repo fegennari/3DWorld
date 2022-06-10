@@ -1138,21 +1138,6 @@ bool building_t::check_point_or_cylin_contained(point const &pos, float xy_radiu
 	return 0;
 }
 
-bool building_t::point_in_attic(point const &pos, vector3d *const cnorm) const {
-	if (!has_attic() || pos.z < interior->attic_access.z1() || pos.z > interior_z2) return 0;
-
-	// check if pos is under the roof
-	for (auto const &tq : roof_tquads) {
-		if (tq.type != tquad_with_ix_t::TYPE_ROOF) continue;
-		if (!point_in_polygon_2d(pos.x, pos.y, tq.pts, tq.npts, 0, 1)) continue; // check 2D XY point containment
-		vector3d const normal(tq.get_norm());
-		if (normal.z == 0.0) continue; // skip vertical sides
-		if (cnorm) {*cnorm = -normal;} // we're looking at the underside of the roof, so reverse the normal; set whether or not we're inside the attic
-		if (dot_product_ptv(normal, pos, tq.pts[0]) < 0.0) return 1;
-	}
-	return 0;
-}
-
 bool building_t::check_point_xy_in_part(point const &pos) const { // simpler/faster version of check_point_or_cylin_contained() with no z check
 	if (!bcube.contains_pt_xy(pos)) return 0; // no intersection (bcube does not need to be rotated)
 	point pr(pos);

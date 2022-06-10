@@ -1731,34 +1731,6 @@ void building_t::add_pri_hall_objs(rand_gen_t rgen, room_t const &room, float zv
 	} // for dir
 }
 
-void building_t::add_attic_objects(rand_gen_t rgen) {
-	vect_room_object_t &objs(interior->room_geom->objs);
-	// add attic access door
-	cube_with_ix_t adoor(interior->attic_access);
-	assert(adoor.is_strictly_normalized());
-	adoor.expand_in_dim(2, -0.2*adoor.dz()); // shrink in z
-	int const room_id(get_room_containing_pt(point(adoor.xc(), adoor.yc(), adoor.z1()-get_floor_thickness()))); // should we cache this during floorplanning?
-	assert(room_id >= 0); // must be found
-	room_t const &room(get_room(room_id));
-	bool const dim(adoor.ix >> 1), dir(adoor.ix & 1);
-	// Note: not setting RO_FLAG_NOCOLL because we do want to collide with this when open
-	unsigned const acc_flags(room.is_hallway ? RO_FLAG_IN_HALLWAY : 0);
-	// is light_amount=1.0 correct? since this door can be viewed from both inside and outside the attic, a single number doesn't really work anyway
-	objs.emplace_back(adoor, TYPE_ATTIC_DOOR, room_id, dim, dir, acc_flags, 1.0, SHAPE_CUBE); // Note: player collides with open attic door
-
-	// add light
-	float const attic_height(interior_z2 - adoor.z2()), light_radius(0.06*attic_height);
-	cube_t const part(get_part_for_room(room)); // Note: assumes attic is a single part
-	point const light_center(part.xc(), part.yc(), (interior_z2 - 1.33*light_radius)); // center of the part near the ceiling
-	cube_t light; light.set_from_sphere(light_center, light_radius);
-	// start off lit for now; maybe should start off and auto turn on when the player enters the attic?
-	unsigned const light_flags(RO_FLAG_LIT | RO_FLAG_EMISSIVE | RO_FLAG_NOCOLL | RO_FLAG_INTERIOR | RO_FLAG_IN_ATTIC);
-	objs.emplace_back(light, TYPE_LIGHT, room_id, 0, 0, light_flags, 1.0, SHAPE_SPHERE, get_light_color_temp(0.45)); // yellow-shite
-
-	// add beams/joices/rafters
-	// TODO
-}
-
 colorRGBA choose_pot_color(rand_gen_t &rgen) {
 	unsigned const num_colors = 8;
 	colorRGBA const pot_colors[num_colors] = {LT_GRAY, GRAY, DK_GRAY, BKGRAY, WHITE, LT_BROWN, RED, colorRGBA(1.0, 0.35, 0.18)};
