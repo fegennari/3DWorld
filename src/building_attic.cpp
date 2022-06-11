@@ -93,14 +93,38 @@ void building_t::add_attic_objects(rand_gen_t rgen) {
 	// is light_amount=1.0 correct? since this door can be viewed from both inside and outside the attic, a single number doesn't really work anyway
 	objs.emplace_back(adoor, TYPE_ATTIC_DOOR, room_id, dim, dir, acc_flags, 1.0, SHAPE_CUBE); // Note: player collides with open attic door
 
-	// add light
-	float const attic_height(interior_z2 - adoor.z2()), light_radius(0.06*attic_height);
+	// add light(s)
 	cube_t const part(get_part_for_room(room)); // Note: assumes attic is a single part
-	point const light_center(part.xc(), part.yc(), (interior_z2 - 1.33*light_radius)); // center of the part near the ceiling
-	cube_t light; light.set_from_sphere(light_center, light_radius);
-	// start off lit for now; maybe should start off and auto turn on when the player enters the attic?
-	unsigned const light_flags(RO_FLAG_LIT | RO_FLAG_EMISSIVE | RO_FLAG_NOCOLL | RO_FLAG_INTERIOR | RO_FLAG_IN_ATTIC);
-	objs.emplace_back(light, TYPE_LIGHT, room_id, 0, 0, light_flags, 1.0, SHAPE_SPHERE, get_light_color_temp(0.45)); // yellow-shite
+	bool const long_dim(part.dx() < part.dy());
+	float const sep_dist(part.get_sz_dim(long_dim) - part.get_sz_dim(!long_dim)), attic_height(interior_z2 - adoor.z2()), light_radius(0.06*attic_height);
+	point const light_center(part.xc(), part.yc(), (interior_z2 - 1.2*light_radius - 0.08*get_window_vspace())); // center of the part near the ceiling
+	cube_t light;
+	point light_pos[2] = {light_center, light_center}; // start centered
+	unsigned num_lights(1);
+
+	if (sep_dist > 0.25*attic_height) { // consider adding two lights
+		float const move_dist(0.5*sep_dist);
+		bool valid(1);
+
+		for (unsigned d = 0; d < 2; ++d) {
+			point test_pt(light_center); // spread apart/up an extra radius so that light doesn't partially clip through roof
+			test_pt.z += light_radius;
+			test_pt[ long_dim] += (d ? -1.0 : 1.0)*(move_dist + light_radius);
+			test_pt[!long_dim] += 0.01*sep_dist; // move a tiny bit to the side to avoid incorrect results for queries lying exactly between two roof tquads
+			if (!point_in_attic(test_pt)) {valid = 0; break;} // light is outside attic; must be due to hipped roof
+		}
+		if (valid) {
+			light_pos[0][long_dim] -= move_dist;
+			light_pos[1][long_dim] += move_dist;
+			num_lights = 2;
+		}
+	}
+	for (unsigned n = 0; n < num_lights; ++n) {
+		light.set_from_sphere(light_pos[n], light_radius);
+		// start off lit for now; maybe should start off and auto turn on when the player enters the attic?
+		unsigned const light_flags(RO_FLAG_LIT | RO_FLAG_EMISSIVE | RO_FLAG_NOCOLL | RO_FLAG_INTERIOR | RO_FLAG_IN_ATTIC);
+		objs.emplace_back(light, TYPE_LIGHT, room_id, 0, 0, light_flags, 1.0, SHAPE_SPHERE, get_light_color_temp(0.45)); // yellow-shite
+	}
 }
 
 cube_t get_attic_access_door_cube(room_object_t const &c) {
