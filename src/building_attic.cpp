@@ -241,6 +241,7 @@ void building_room_geom_t::add_attic_woodwork(building_t const &b, float tscale)
 			edges[num_edges++] = edge_t(A, B, !dim);
 		}
 		assert(num_edges > 0 && num_edges <= 3);
+		float const beam_shorten(beam_hwidth*height/(0.5*base_width));
 
 		// add vertical beams
 		for (unsigned n = 0; n < num_beams; ++n) {
@@ -255,12 +256,12 @@ void building_room_geom_t::add_attic_woodwork(building_t const &b, float tscale)
 				if (E.p[0].z == E.p[1].z) {beam.z2() = E.p[0].z;} // horizontal edge
 				else {beam.z2() = E.p[0].z + ((roof_pos - E.p[0][!dim])/(E.p[1][!dim] - E.p[0][!dim]))*(E.p[1].z - E.p[0].z);} // interpolate zval
 				beam.z2() += (height_scale - 1.0)*(beam.z2() - bcube.z1()); // rescale to account for length post-rotate
-				if (is_wall) {beam.z2() -= beam_hwidth*height/(0.5*base_width);} // shorten to avoid clipping through the roof at the top
+				beam.z2() -= beam_shorten; // shorten to avoid clipping through the roof at the top
 				assert(!found); // break instead?
 				found = 1;
 			} // for e
 			assert(found);
-			if (beam.dz() < beam_depth) continue; // too short, skip
+			if (beam.dz() < 4.0f*beam_depth) continue; // too short, skip
 			assert(beam.is_strictly_normalized());
 			// skip bottom and face against the roof (top may be partially visible when rotated)
 			wood_mat.add_cube_to_verts(beam, WHITE, beam.get_llc(), (~get_face_mask(dim, dir) | EF_Z1));
@@ -291,13 +292,17 @@ void building_room_geom_t::add_attic_woodwork(building_t const &b, float tscale)
 				unsigned const qv_start_angled(wood_mat.quad_verts.size());
 				wood_mat.add_cube_to_verts(beam, WHITE, beam.get_llc(), (~get_face_mask(dim, dir) | EF_Z1));
 				// rotate into place
-				// TODO: not quite correct - need to rotate about Z now, or draw as extruded polygon
 				vector3d const axis(cross_product(edge_dir, plus_z));
 				float const angle(get_angle(plus_z, edge_dir));
 				rotate_verts(wood_mat.quad_verts, axis, angle, lo, qv_start_angled);
+				// rotate around edge_dir so that bottom surface is aligned with the average normal of the two meeting roof tquads; always 45 degrees
+				rotate_verts(wood_mat.quad_verts, edge_dir*((e>>1) ? 1.0 : -1.0), 0.25*PI, lo, qv_start_angled);
+				float const shift_down_val(beam_hwidth*height/run_len);
+				for (auto v = wood_mat.quad_verts.begin() + qv_start_angled; v != wood_mat.quad_verts.end(); ++v) {v->v.z -= shift_down_val;}
 			} // for e
 		}
-		if (tq.npts == 4 && dir == 0) { // add beam along the roofline for this quad
+		if (tq.npts == 4 && dir == 0) {
+			// add beam along the roofline for this quad
 			beam = bcube;
 			beam.z2() -= beam_hwidth*height/run_len; // shift to just touching the roof at the top
 			beam.z1()  = beam.z2() - beam_depth;
@@ -315,6 +320,8 @@ void building_room_geom_t::add_attic_woodwork(building_t const &b, float tscale)
 			assert(beam.is_strictly_normalized());
 			beam.expand_in_dim(!dim, -epsilon); // prevent Z-fighting
 			if (beam.get_sz_dim(!dim) > beam_width) {wood_mat.add_cube_to_verts(beam, WHITE, beam.get_llc(), EF_Z2);} // skip top
+
+			// TODO: add horizontal beams connecting each vertical beam to form an A-frame
 		}
 	} // for i
 }
