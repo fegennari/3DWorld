@@ -22,40 +22,40 @@ protected:
 
 	bool open_file(bool binary=0);
 	void close_file();
-	int get_next_char() {assert(fp); return get_char(fp);}
+	char get_next_char() {assert(fp); return get_char(fp);}
 	static bool fast_isspace(char c) {return (c == ' ' || c == '\t' || c == '\n' || c == '\v' || c == '\f' || c == '\r');}
 	static bool fast_isdigit(char c) {return (c >= '0' && c <= '9');}
 
-	void unget_last_char(int c) {
-		if (c == EOF) return; // can't unget EOF
+	void unget_last_char(char c) {
+		if (c == 0) return; // can't unget EOF
 		//if (FILE_BUF_SZ == 0) {assert(fp != nullptr); _ungetc_nolock(c, fp); return;}
 		assert(file_buf_pos > 0); // can't unget without previous get
 		--file_buf_pos;
 	}
-	int get_char(FILE *fp_) {
+	char get_char(FILE *fp_) {
 		//if (FILE_BUF_SZ == 0) {return _getc_nolock(fp_);}
 		if (file_buf_pos == file_buf_end) { // fill file buffer
 			file_buf_pos = 0;
 			file_buf_end = fread(file_buf, 1, FILE_BUF_SZ, fp);
-			if (file_buf_end == 0) return EOF; // end of file
+			if (file_buf_end == 0) return 0; // end of file
 		}
 		assert(file_buf_pos < file_buf_end);
 		return file_buf[file_buf_pos++];
 	}
-	int get_char(std::ifstream &in) const {return in.get();}
+	char get_char(std::ifstream &in) const {return in.get();}
 
 	void strip_trailing_ws(string &str) const {
 		while (!str.empty() && fast_isspace(str.back())) {str.pop_back();}
 	}
-	void add_char_to_str(int c, string &str) const {
+	void add_char_to_str(char c, string &str) const {
 		if (!fast_isspace(c) || !str.empty()) {str.push_back(c);}
 	}
 	template<typename T> void read_to_newline(T &stream, string *str=NULL, char comment_char='#') {
 		bool prev_was_escape(0), saw_comment_char(0);
 
 		while (1) {
-			int const c(get_char(stream));
-			if ((!prev_was_escape && c == '\n') || c == '\0' || c == EOF) {
+			char const c(get_char(stream));
+			if ((!prev_was_escape && c == '\n') || c == '\0' || c == 0) {
 				if (str) {strip_trailing_ws(*str);}
 				return;
 			}
@@ -71,8 +71,8 @@ protected:
 		str.resize(0);
 
 		while (1) {
-			int const c(get_char(stream));
-			if (c == '\n' || c == '\0' || c == EOF) break; // end of file or line
+			char const c(get_char(stream));
+			if (c == '\n' || c == '\0' || c == 0) break; // end of file or line
 			add_char_to_str(c, str);
 		}
 		strip_trailing_ws(str);
