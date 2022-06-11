@@ -1231,9 +1231,9 @@ int building_t::ai_room_update(rand_gen_t &rgen, float delta_dir, unsigned perso
 	handle_vert_cylin_tape_collision(new_pos, person.pos, person.get_z1(), person.get_z2(), person.radius, 0); // should be okay to use zvals from old pos; is_player=0
 	// logic to clip this person to correct room Z-bounds in case something went wrong; remove if/when this is fixed
 	// Note: we probably can't use the room Z bounds here becase the person may be on the stairs connecting two stacked parts
-	float const min_valid_zval(bcube.z1() + 0.5f*get_floor_thickness() + person.radius), max_valid_zval(bcube.z2() - person.radius);
+	float const min_valid_zval(bcube.z1() + get_fc_thickness() + person.radius), max_valid_zval(bcube.z2() - person.radius);
 
-	if (player_in_this_building && !person.on_stairs() && person.cur_room >= 0) { // movement in XY, not on stairs, room is valid: snap to nearest floor
+	if (/*player_in_this_building &&*/ !person.on_stairs() && person.cur_room >= 0) { // movement in XY, not on stairs, room is valid: snap to nearest floor
 		// this is optional and is done just in case something went wrong
 		room_t const &room(get_room(person.cur_room));
 		float const floor_spacing(get_window_vspace());
