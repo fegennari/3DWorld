@@ -1369,6 +1369,7 @@ private:
 	bool add_chimney(cube_t const &part, bool dim, bool dir, float chimney_dz, rand_gen_t &rgen);
 	void gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes);
 	void maybe_add_basement(rand_gen_t rgen);
+	bool add_attic_access_door(cube_t const &ceiling, unsigned part_ix, unsigned num_floors, unsigned rooms_start, rand_gen_t &rgen);
 	bool is_light_placement_valid(cube_t const &light, room_t const &room, float pad) const;
 	void try_place_light_on_ceiling(cube_t const &light, room_t const &room, bool room_dim, float pad, bool allow_rot, bool allow_mult, vect_cube_t &out, rand_gen_t &rgen) const;
 	bool clip_cube_to_parts(cube_t &c, vect_cube_t &cubes) const;
