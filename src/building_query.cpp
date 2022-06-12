@@ -1100,6 +1100,7 @@ bool building_t::check_point_or_cylin_contained(point const &pos, float xy_radiu
 	if (xy_radius == 0.0 && !bcube.contains_pt(pos)) return 0; // no intersection (bcube does not need to be rotated)
 	point pr(pos);
 	maybe_inv_rotate_point(pr);
+	if (inc_attic && point_in_attic(pr)) return 1;
 
 	for (auto i = parts.begin(); i != get_real_parts_end_inc_sec(); ++i) {
 		if (pr.z > i->z2() || pr.z < i->z1()) continue; // no overlap in z
@@ -1134,7 +1135,6 @@ bool building_t::check_point_or_cylin_contained(point const &pos, float xy_radiu
 			else if (i->contains_pt(pr)) return 1;
 		}
 	} // for i
-	if (inc_attic && point_in_attic(pos)) return 1;
 	return 0;
 }
 

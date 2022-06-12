@@ -1295,7 +1295,8 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, building_t c
 	if (frame_counter < 100 || frame_counter > last_frame) {num_geom_this_frame = 0; last_frame = frame_counter;} // unlimited for the first 100 frames
 	point const camera_bs(camera_pdu.pos - xlate);
 	bool const draw_lights(camera_bs.z < building.bcube.z2()); // don't draw ceiling lights when player is above the building
-	bool const draw_detail_objs(inc_small == 2 && (!shadow_only || building.has_parking_garage)); // only parking garages have detail objects that cast shadows
+	// only parking garages and attics have detail objects that cast shadows
+	bool const draw_detail_objs(inc_small == 2 && (!shadow_only || building.has_parking_garage || building.has_attic()));
 	if (player_in_building) {bbd = nullptr;} // use immediate drawing when player is in the building because draw order matters for alpha blending
 	if (bbd != nullptr) {bbd->set_camera_dir_mask(camera_bs, building.bcube);}
 
@@ -1339,8 +1340,9 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, building_t c
 		if (create_text) {mats_text.create_vbos(building);}
 		if (!shadow_only) {num_geom_this_frame += (unsigned(create_small) + unsigned(create_text));}
 
-		// Note: not created on the shadow pass, because trim_objs may not have been created yet and we would miss including it
-		if (draw_detail_objs && !shadow_only && !mats_detail.valid) { // create detail materials if needed
+		// Note: not created on the shadow pass unless trim_objs has been created so that we don't miss including it;
+		// the trim_objs test is needed to handle parking garage and attic objects, which are also drawn as details
+		if (draw_detail_objs && (!shadow_only || !trim_objs.empty()) && !mats_detail.valid) { // create detail materials if needed
 			create_detail_vbos(building);
 			if (!shadow_only) {++num_geom_this_frame;}
 		}
