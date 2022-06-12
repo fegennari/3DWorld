@@ -78,6 +78,16 @@ bool building_t::add_attic_access_door(cube_t const &ceiling, unsigned part_ix, 
 	return 1;
 }
 
+cube_t building_t::get_attic_access_door_avoid() const {
+	assert(has_attic());
+	float const floor_spacing(get_window_vspace());
+	cube_with_ix_t avoid(interior->attic_access);
+	bool const dim(avoid.ix >> 1), dir(avoid.ix & 1);
+	avoid.expand_by_xy(0.25*floor_spacing);
+	avoid.d[dim][dir] += (dir ? 1.0 : -1.0)*0.5*floor_spacing; // more spacing in front where the ladder is
+	return avoid;
+}
+
 void building_t::add_attic_objects(rand_gen_t rgen) {
 	vect_room_object_t &objs(interior->room_geom->objs);
 	// add attic access door
@@ -96,14 +106,15 @@ void building_t::add_attic_objects(rand_gen_t rgen) {
 	// add light(s)
 	cube_t const part(get_part_for_room(room)); // Note: assumes attic is a single part
 	bool const long_dim(part.dx() < part.dy());
+	float const floor_spacing(get_window_vspace());
 	float const sep_dist(part.get_sz_dim(long_dim) - part.get_sz_dim(!long_dim)), attic_height(interior_z2 - adoor.z2()), light_radius(0.06*attic_height);
-	point const light_center(part.xc(), part.yc(), (interior_z2 - 1.2*light_radius - 0.08*get_window_vspace())); // center of the part near the ceiling
+	point const light_center(part.xc(), part.yc(), (interior_z2 - 1.2*light_radius - 0.08*floor_spacing)); // center of the part near the ceiling
 	cube_t light;
 	point light_pos[2] = {light_center, light_center}; // start centered
 	unsigned num_lights(1);
 
 	if (sep_dist > 0.25*attic_height) { // consider adding two lights
-		float const move_dist(0.5*sep_dist);
+		float const move_dist(0.5*sep_dist - light_radius - 0.08*floor_spacing); // allow extra space for vertical beams
 		bool valid(1);
 
 		for (unsigned d = 0; d < 2; ++d) {
@@ -204,6 +215,7 @@ struct edge_t {
 
 void building_room_geom_t::add_attic_woodwork(building_t const &b, float tscale) {
 	if (!b.has_attic()) return;
+	cube_with_ix_t const &adoor(b.interior->attic_access);
 	rgeom_mat_t &wood_mat(get_wood_material(tscale, 1, 0, 2)); // shadows + detail
 	float const attic_z1(b.interior->attic_access.z1()), delta_z(0.1*b.get_floor_thickness()); // matches value in get_all_drawn_verts()
 	float const floor_spacing(b.get_window_vspace());
@@ -241,7 +253,7 @@ void building_room_geom_t::add_attic_woodwork(building_t const &b, float tscale)
 			edges[num_edges++] = edge_t(A, B, !dim);
 		}
 		assert(num_edges > 0 && num_edges <= 3);
-		float const beam_shorten(beam_hwidth*height/(0.5*base_width));
+		float const beam_shorten((is_roof ? 2.0 : 1.0)*beam_hwidth*height/(0.5*base_width)); // large for sloped roof to account for width of beams between tquads
 
 		// add vertical beams
 		for (unsigned n = 0; n < num_beams; ++n) {
@@ -276,7 +288,7 @@ void building_room_geom_t::add_attic_woodwork(building_t const &b, float tscale)
 		float const rot_angle((dir ? 1.0 : -1.0)*atan2(run_len, height));
 		rotate_verts(wood_mat.quad_verts, rot_axis, rot_angle, rot_pt, qv_start);
 
-		if (num_edges == 3) { // trapezoid case: add diag beam along both angled edges
+		if (num_edges == 3) { // trapezoid case: add diag beam along both angled edges; dim is long dim
 			for (unsigned e = 0; e < num_edges; ++e) {
 				edge_t const &E(edges[e]);
 				if (E.p[0].z == E.p[1].z) continue; // not an angled edge
@@ -302,7 +314,7 @@ void building_room_geom_t::add_attic_woodwork(building_t const &b, float tscale)
 			} // for e
 		}
 		if (tq.npts == 4 && dir == 0) {
-			// add beam along the roofline for this quad
+			// add beam along the roofline for this quad; dim is long dim
 			beam = bcube;
 			beam.z2() -= beam_hwidth*height/run_len; // shift to just touching the roof at the top
 			beam.z1()  = beam.z2() - beam_depth;
@@ -319,7 +331,21 @@ void building_room_geom_t::add_attic_woodwork(building_t const &b, float tscale)
 			}
 			assert(beam.is_strictly_normalized());
 			beam.expand_in_dim(!dim, -epsilon); // prevent Z-fighting
-			if (beam.get_sz_dim(!dim) > beam_width) {wood_mat.add_cube_to_verts(beam, WHITE, beam.get_llc(), EF_Z2);} // skip top
+			
+			if (beam.get_sz_dim(!dim) > beam_depth) { // if it's long enough
+				wood_mat.add_cube_to_verts(beam, WHITE, beam.get_llc(), EF_Z2); // skip top
+				// add vertical posts at each end if there's space
+				cube_t const avoid(b.get_attic_access_door_avoid());
+
+				for (unsigned d = 0; d < 2; ++d) {
+					cube_t post(beam);
+					set_cube_zvals(post, adoor.z2(), beam.z1()); // extends from attic floor to bottom of beam
+					post.d[!dim][!d] = post.d[!dim][d] + (d ? -1.0 : 1.0)*beam_depth;
+					if (post.intersects_xy(avoid)) continue; // too close to attic access door, skip
+					wood_mat.add_cube_to_verts(post, WHITE, post.get_llc(), EF_Z12); // skip top and bottom
+					// TODO: what about player collision detection with post?
+				} // for d
+			}
 
 			// TODO: add horizontal beams connecting each vertical beam to form an A-frame
 		}

@@ -1357,6 +1357,7 @@ public:
 		bool exterior, bool opened, bool opens_out, bool opens_up, bool swap_sides) const;
 	tquad_with_ix_t set_interior_door_from_cube(door_t const &door) const;
 	cube_t get_door_bounding_cube(door_t const &door) const;
+	cube_t get_attic_access_door_avoid() const;
 	void invalidate_nav_graph();
 	point local_to_camera_space(point const &pos) const;
 	void play_door_open_close_sound(point const &pos, bool open, float gain=1.0, float pitch=1.0) const;
