@@ -394,7 +394,8 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, flo
 	bool had_coll(0), on_stairs(0), on_attic_ladder(0);
 	float obj_z(max(pos.z, p_last.z)); // use p_last to get orig zval
 	cube_with_ix_t const &attic_access(interior->attic_access);
-	
+	unsigned reset_to_last_dims(0); // {x, y} bit flags
+
 	if (!xy_only && 2.2f*radius < (floor_spacing - floor_thickness)) { // diameter is smaller than space between floor and ceiling
 		if (is_in_attic) {
 			float const attic_floor_zval(attic_access.z2() + attic_door_z_gap + radius); // relative to pos.z
@@ -407,11 +408,12 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, flo
 			else {
 				max_eq(pos.z, attic_floor_zval); // place on attic floor
 				vector3d roof_normal;
+				float const beam_depth(0.08*floor_spacing);
 
-				// check player's head against the roof to avoid clipping through it
-				if (!point_in_attic(point(pos.x, pos.y, (pos.z + 1.1f*camera_zh)), &roof_normal)) {
+				// check player's head against the roof/overhead beams to avoid clipping through it
+				if (!point_in_attic(point(pos.x, pos.y, (pos.z + 1.1f*camera_zh + beam_depth)), &roof_normal)) {
 					for (unsigned d = 0; d < 2; ++d) { // reset pos X/Y if oriented toward the roof
-						if (roof_normal[d] != 0.0 && ((roof_normal[d] < 0.0) ^ (pos[d] < p_last[d]))) {pos[d] = p_last[d];}
+						if (roof_normal[d] != 0.0 && ((roof_normal[d] < 0.0) ^ (pos[d] < p_last[d]))) {reset_to_last_dims |= (1<<d);}
 					}
 					if (cnorm) {*cnorm = roof_normal;}
 				}
@@ -581,6 +583,9 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, flo
 		pos += normal*(r_sum - dist);
 		had_coll = 1;
 	} // for i
+	for (unsigned d = 0; d < 2; ++d) { // apply attic roof pos reset at the end, to override other collisions that may move pos
+		if (reset_to_last_dims & (1<<d)) {pos[d] = p_last[d];}
+	}
 	handle_vert_cylin_tape_collision(pos, p_last, pos.z-radius, pos.z+camera_zh, xy_radius, 1); // is_player=1
 	// not sure where this belongs, but the closet hiding logic is in this function, so I guess it goes here? player must be inside the building to see a windowless room anyway
 	player_in_unlit_room = check_pos_in_unlit_room(pos);
