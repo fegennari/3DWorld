@@ -345,8 +345,8 @@ void building_room_geom_t::add_attic_woodwork(building_t const &b, float tscale)
 			assert(found);
 			if (beam.dz() < 4.0f*beam_depth) continue; // too short, skip
 			assert(beam.is_strictly_normalized());
-			// skip bottom and face against the roof (top may be partially visible when rotated)
-			wood_mat.add_cube_to_verts(beam, WHITE, beam.get_llc(), (~get_face_mask(dim, dir) | EF_Z1));
+			// skip top, bottomb and face against the roof (top may be partially visible when rotated)
+			wood_mat.add_cube_to_verts(beam, WHITE, beam.get_llc(), (~get_face_mask(dim, dir) | EF_Z12));
 		} // for n
 		if (is_wall) continue; // below is for sloped roof tquads only
 		// rotate to match slope of roof
@@ -368,11 +368,12 @@ void building_room_geom_t::add_attic_woodwork(building_t const &b, float tscale)
 				float const edge_len(edge_delta.mag());
 				vector3d const edge_dir(edge_delta/edge_len);
 				beam.set_from_point(lo);
+				beam.z1() += beam_depth*run_len/height; // avoid clipping through the floor below
 				beam.z2() += edge_len; // will be correct after rotation
 				beam.expand_in_dim(!dim, beam_hwidth);
 				beam.d[dim][!dir] = beam.d[dim][dir] + dir_sign*beam_depth;
 				unsigned const qv_start_angled(wood_mat.quad_verts.size());
-				wood_mat.add_cube_to_verts(beam, WHITE, beam.get_llc(), (~get_face_mask(dim, dir) | EF_Z1));
+				wood_mat.add_cube_to_verts(beam, WHITE, beam.get_llc(), (~get_face_mask(dim, dir) | EF_Z12));
 				// rotate into place
 				vector3d const axis(cross_product(edge_dir, plus_z));
 				float const angle(get_angle(plus_z, edge_dir));
