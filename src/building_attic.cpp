@@ -9,6 +9,8 @@ colorRGBA get_light_color_temp(float t);
 unsigned get_face_mask(unsigned dim, bool dir);
 unsigned get_skip_mask_for_xy(bool dim);
 colorRGBA apply_light_color(room_object_t const &o, colorRGBA const &c);
+void add_boxes_to_space(room_object_t const &c, vect_room_object_t &objects, cube_t const &bounds, vect_cube_t &cubes, rand_gen_t &rgen,
+	unsigned num_boxes, float xy_scale, float hmin, float hmax, bool allow_crates, unsigned flags); // from building_room_obj_expand
 
 
 bool building_t::point_in_attic(point const &pos, vector3d *const cnorm) const {
@@ -85,7 +87,30 @@ cube_t building_t::get_attic_access_door_avoid() const {
 	bool const dim(avoid.ix >> 1), dir(avoid.ix & 1);
 	avoid.expand_by_xy(0.25*floor_spacing);
 	avoid.d[dim][dir] += (dir ? 1.0 : -1.0)*0.5*floor_spacing; // more spacing in front where the ladder is
+	avoid.z2() += 0.5*floor_spacing; // make it taller
 	return avoid;
+}
+
+void find_roofline_beam_span(cube_t &beam, float roof_z2, point const pts[4], bool dim) {
+	swap(beam.d[!dim][0], beam.d[!dim][1]); // start denormalized
+
+	for (unsigned n = 0; n < 4; ++n) { // find the span of the top of the roofline
+		if (pts[n].z != roof_z2) continue; // point not at peak of roof
+		min_eq(beam.d[!dim][0], pts[n][!dim]);
+		max_eq(beam.d[!dim][1], pts[n][!dim]);
+	}
+}
+void create_attic_posts(building_t const &b, cube_t const &beam, bool dim, cube_t posts[2]) {
+	assert(beam.is_strictly_normalized());
+	cube_t const avoid(b.get_attic_access_door_avoid());
+
+	for (unsigned d = 0; d < 2; ++d) {
+		cube_t post(beam);
+		set_cube_zvals(post, b.interior->attic_access.z2(), beam.z1()); // extends from attic floor to bottom of beam
+		post.d[!dim][!d] = post.d[!dim][d] + (d ? -1.0 : 1.0)*beam.dz();
+		assert(post.is_strictly_normalized());
+		if (!post.intersects_xy(avoid)) {posts[d] = post;} // skip if too close to attic access door
+	} // for d
 }
 
 void building_t::add_attic_objects(rand_gen_t rgen) {
@@ -100,8 +125,10 @@ void building_t::add_attic_objects(rand_gen_t rgen) {
 	bool const dim(adoor.ix >> 1), dir(adoor.ix & 1);
 	// Note: not setting RO_FLAG_NOCOLL because we do want to collide with this when open
 	unsigned const acc_flags(room.is_hallway ? RO_FLAG_IN_HALLWAY : 0);
+	unsigned const attic_door_ix(objs.size());
 	// is light_amount=1.0 correct? since this door can be viewed from both inside and outside the attic, a single number doesn't really work anyway
 	objs.emplace_back(adoor, TYPE_ATTIC_DOOR, room_id, dim, dir, acc_flags, 1.0, SHAPE_CUBE); // Note: player collides with open attic door
+	vect_cube_t avoid_cubes;
 
 	// add light(s)
 	cube_t const part(get_part_for_room(room)); // Note: assumes attic is a single part
@@ -136,6 +163,49 @@ void building_t::add_attic_objects(rand_gen_t rgen) {
 		unsigned const light_flags(RO_FLAG_LIT | RO_FLAG_EMISSIVE | RO_FLAG_NOCOLL | RO_FLAG_INTERIOR | RO_FLAG_IN_ATTIC);
 		objs.emplace_back(light, TYPE_LIGHT, room_id, 0, 0, light_flags, 1.0, SHAPE_SPHERE, get_light_color_temp(0.45)); // yellow-shite
 	}
+	if (has_chimney == 1) { // interior chimney; not drawn when player is in the attic because it's part of the exterior geometry
+		cube_t chimney(get_chimney());
+		max_eq(chimney.z1(), adoor.z2());
+		min_eq(chimney.z2(), interior_z2); // clip to attic interior range
+		assert(chimney.z1() < chimney.z2());
+		chimney.expand_by_xy(-0.05*min(chimney.dx(), chimney.dy())); // shrink to make it inside the exterior chimney so that it doesn't show through when outside the attic
+		// TODO: add some placeholder chimney and update avoid_cubes
+	}
+	// add posts as colliders; somewhat of a duplicate of the code in building_room_geom_t::add_attic_woodwork()
+	for (tquad_with_ix_t const &tq : roof_tquads) {
+		if (tq.type != tquad_with_ix_t::TYPE_ROOF || tq.npts == 3) continue; // not a roof tquad
+		vector3d const normal(tq.get_norm()); // points outside of the attic
+		bool const dim(fabs(normal.x) < fabs(normal.y)); // dim this tquad is facing; beams run in the other dim
+		if (normal[dim] > 0.0) continue; // only need to add for one side due to symmetry (FIXME: not correct)
+		float const beam_width(0.04*floor_spacing), beam_depth(2.0*beam_width);
+		cube_t const bcube(tq.get_bcube());
+		if (bcube.z1() < interior->attic_access.z1()) continue; // not at the peak
+		cube_t beam(bcube); // set the z1 base and exterior edge d[dim][dir]
+		beam.z1() = beam.z2() - beam_depth; // approximate
+		set_wall_width(beam, bcube.d[dim][!dir], 0.5*beam_width, dim); // inside/middle edge
+		find_roofline_beam_span(beam, bcube.z2(), tq.pts, dim);
+		if (beam.d[!dim][0] == bcube.d[!dim][0]) continue; // not a hipped roof
+		if (beam.get_sz_dim(!dim) <= beam_depth) continue; // if it's long enough
+		cube_t posts[2];
+		create_attic_posts(*this, beam, dim, posts);
+
+		for (unsigned d = 0; d < 2; ++d) {
+			if (posts[d].is_all_zeros()) continue;
+			objs.emplace_back(posts[d], TYPE_COLLIDER, room_id, dim, 0, RO_FLAG_INVIS, 1.0);
+			avoid_cubes.push_back(posts[d]);
+			avoid_cubes.back().expand_by_xy(beam_width); // add extra spacing
+		}
+	} // for i
+
+	// add boxes and other objects
+	cube_t place_area(part);
+	place_area.z1() = place_area.z2() = interior->attic_access.z2(); // bottom of attic floor
+	place_area.expand_by_xy(-0.5*floor_spacing); // keep away from corners; just a guess
+	cube_t const avoid(get_attic_access_door_avoid());
+	unsigned const num_boxes(rgen.rand() % 50);
+	float const box_sz(0.2*floor_spacing);
+	avoid_cubes.push_back(avoid);
+	add_boxes_to_space(objs[attic_door_ix], objs, place_area, avoid_cubes, rgen, num_boxes, box_sz, 0.5*box_sz, 1.5*box_sz, 1, RO_FLAG_INTERIOR); // allow_crates=1
 }
 
 cube_t get_attic_access_door_cube(room_object_t const &c) {
@@ -222,16 +292,16 @@ void building_room_geom_t::add_attic_woodwork(building_t const &b, float tscale)
 
 	// Note: there may be a chimney in the attic, but for now we ignore it
 	for (auto i = b.roof_tquads.begin(); i != b.roof_tquads.end(); ++i) {
-		if (i->get_bcube().z1() < attic_z1) continue; // not the top section that has the attic (porch roof, lower floor roof)
 		bool const is_roof(i->type == tquad_with_ix_t::TYPE_ROOF); // roof tquad
 		bool const is_wall(i->type == tquad_with_ix_t::TYPE_WALL); // triangular exterior wall section; brick or block, doesn't need wood support, but okay to add
 		if (!is_roof && !is_wall) continue;
+		if (i->get_bcube().z1() < attic_z1) continue; // not the top section that has the attic (porch roof, lower floor roof)
 		// draw beams along inside of roof; start with a vertical cube and rotate to match roof angle
 		tquad_with_ix_t tq(*i);
 		for (unsigned n = 0; n < tq.npts; ++n) {tq.pts[n].z -= delta_z;} // shift down slightly
 		cube_t const bcube(tq.get_bcube());
 		vector3d const normal(tq.get_norm()); // points outside of the attic
-		bool const dim(fabs(normal.x) < fabs(normal.y)), dir(normal[dim] > 0); // dim this tquad is facing; beams run in the other dim
+		bool const dim(fabs(normal.x) < fabs(normal.y)), dir(normal[dim] > 0.0); // dim this tquad is facing; beams run in the other dim
 		float const base_width(bcube.get_sz_dim(!dim)), run_len(bcube.get_sz_dim(dim)), height(bcube.dz()), height_scale(1.0/fabs(normal[dim]));
 		float const beam_width(0.04*floor_spacing), beam_hwidth(0.5*beam_width), beam_depth(2.0*beam_width);
 		float const epsilon(0.02*beam_hwidth), beam_edge_gap(beam_hwidth + epsilon), dir_sign(dir ? -1.0 : 1.0);
@@ -319,32 +389,19 @@ void building_room_geom_t::add_attic_woodwork(building_t const &b, float tscale)
 			beam.z2() -= beam_hwidth*height/run_len; // shift to just touching the roof at the top
 			beam.z1()  = beam.z2() - beam_depth;
 			set_wall_width(beam, bcube.d[dim][!dir], beam_hwidth, dim); // inside/middle edge
-
-			if (num_edges == 3) { // trapezoid case (optimization)
-				swap(beam.d[!dim][0], beam.d[!dim][1]); // start denormalized
-
-				for (unsigned n = 0; n < 4; ++n) { // find the span of the top of the roofline
-					if (tq.pts[n].z != bcube.z2()) continue; // point not at peak of roof
-					min_eq(beam.d[!dim][0], tq.pts[n][!dim]);
-					max_eq(beam.d[!dim][1], tq.pts[n][!dim]);
-				}
-			}
+			if (num_edges == 3) {find_roofline_beam_span(beam, bcube.z2(), tq.pts, dim);} // trapezoid case (optimization)
 			assert(beam.is_strictly_normalized());
 			beam.expand_in_dim(!dim, -epsilon); // prevent Z-fighting
 			
 			if (beam.get_sz_dim(!dim) > beam_depth) { // if it's long enough
 				wood_mat.add_cube_to_verts(beam, WHITE, beam.get_llc(), EF_Z2); // skip top
 				// add vertical posts at each end if there's space
-				cube_t const avoid(b.get_attic_access_door_avoid());
-
+				cube_t posts[2];
+				create_attic_posts(b, beam, dim, posts);
+				
 				for (unsigned d = 0; d < 2; ++d) {
-					cube_t post(beam);
-					set_cube_zvals(post, adoor.z2(), beam.z1()); // extends from attic floor to bottom of beam
-					post.d[!dim][!d] = post.d[!dim][d] + (d ? -1.0 : 1.0)*beam_depth;
-					if (post.intersects_xy(avoid)) continue; // too close to attic access door, skip
-					wood_mat.add_cube_to_verts(post, WHITE, post.get_llc(), EF_Z12); // skip top and bottom
-					// TODO: what about player collision detection with post?
-				} // for d
+					if (!posts[d].is_all_zeros()) {wood_mat.add_cube_to_verts(posts[d], WHITE, posts[d].get_llc(), EF_Z12);} // skip top and bottom
+				}
 			}
 
 			// TODO: add horizontal beams connecting each vertical beam to form an A-frame
