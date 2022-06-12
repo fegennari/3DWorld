@@ -14,7 +14,7 @@ void add_boxes_to_space(room_object_t const &c, vect_room_object_t &objects, cub
 
 
 bool building_t::point_in_attic(point const &pos, vector3d *const cnorm) const {
-	if (!has_attic() || pos.z < interior->attic_access.z1() || pos.z > interior_z2) return 0;
+	if (!has_attic() || pos.z < interior->attic_access.z2() || pos.z > interior_z2) return 0; // test attic floor zval
 
 	// check if pos is under the roof
 	for (auto const &tq : roof_tquads) {
