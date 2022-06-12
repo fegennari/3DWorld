@@ -1118,11 +1118,13 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		point lpos_rot(lpos);
 		if (is_rotated()) {do_xy_rotate(building_center, lpos_rot);}
 		if (!lights_bcube.contains_pt_xy(lpos_rot)) continue; // not contained within the light volume
-		// basement lights are only visible if the player is inside the building on the basement or ground floor
 		bool const light_in_basement(lpos.z < ground_floor_z1), is_in_elevator(i->flags & RO_FLAG_IN_ELEV);
 		bool const is_in_closet(i->flags & RO_FLAG_IN_CLOSET), is_in_attic(i->flags & RO_FLAG_IN_ATTIC);
+		// basement, attic, and elevator lights are only visible when player is in the building;
+		// elevator test is questionable because it can be open on the ground floor of a room with windows in a small office building, but should be good enough
+		if (!camera_in_building && (light_in_basement || is_in_attic || is_in_elevator)) continue;
 		if ((is_in_elevator || is_in_closet) && camera_z > lpos.z) continue; // elevator or closet light on the floor below the player
-		if (light_in_basement && (camera_z > (ground_floor_z1 + window_vspacing) || !bcube.contains_pt(camera_bs))) continue;
+		if (light_in_basement && camera_z > (ground_floor_z1 + window_vspacing)) continue; // basement lights only visible if player is on basement or ground floor
 		//if (is_light_occluded(lpos_rot, camera_bs))  continue; // too strong a test in general, but may be useful for selecting high importance lights
 		//if (!camera_in_building && i->is_interior()) continue; // skip interior lights when camera is outside the building: makes little difference, not worth the trouble
 		room_t const &room(get_room(i->room_id));
