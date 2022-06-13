@@ -114,6 +114,7 @@ void create_attic_posts(building_t const &b, cube_t const &beam, bool dim, cube_
 }
 
 void building_t::add_attic_objects(rand_gen_t rgen) {
+	unsigned const obj_flags(RO_FLAG_INTERIOR | RO_FLAG_IN_ATTIC);
 	vect_room_object_t &objs(interior->room_geom->objs);
 	// add attic access door
 	cube_with_ix_t adoor(interior->attic_access);
@@ -128,7 +129,9 @@ void building_t::add_attic_objects(rand_gen_t rgen) {
 	unsigned const attic_door_ix(objs.size());
 	// is light_amount=1.0 correct? since this door can be viewed from both inside and outside the attic, a single number doesn't really work anyway
 	objs.emplace_back(adoor, TYPE_ATTIC_DOOR, room_id, ddim, ddir, acc_flags, 1.0, SHAPE_CUBE); // Note: player collides with open attic door
+	cube_t const avoid(get_attic_access_door_avoid());
 	vect_cube_t avoid_cubes;
+	avoid_cubes.push_back(avoid);
 
 	// add light(s)
 	cube_t const part(get_part_for_room(room)); // Note: assumes attic is a single part
@@ -160,7 +163,7 @@ void building_t::add_attic_objects(rand_gen_t rgen) {
 	for (unsigned n = 0; n < num_lights; ++n) {
 		light.set_from_sphere(light_pos[n], light_radius);
 		// start off lit for now; maybe should start off and auto turn on when the player enters the attic?
-		unsigned const light_flags(RO_FLAG_LIT | RO_FLAG_EMISSIVE | RO_FLAG_NOCOLL | RO_FLAG_INTERIOR | RO_FLAG_IN_ATTIC);
+		unsigned const light_flags(RO_FLAG_LIT | RO_FLAG_EMISSIVE | RO_FLAG_NOCOLL | obj_flags);
 		objs.emplace_back(light, TYPE_LIGHT, room_id, 0, 0, light_flags, 1.0, SHAPE_SPHERE, get_light_color_temp(0.45)); // yellow-shite
 	}
 	if (has_chimney == 1) { // interior chimney; not drawn when player is in the attic because it's part of the exterior geometry
@@ -169,7 +172,11 @@ void building_t::add_attic_objects(rand_gen_t rgen) {
 		min_eq(chimney.z2(), interior_z2); // clip to attic interior range
 		assert(chimney.z1() < chimney.z2());
 		chimney.expand_by_xy(-0.05*min(chimney.dx(), chimney.dy())); // shrink to make it inside the exterior chimney so that it doesn't show through when outside the attic
-		// TODO: add some placeholder chimney and update avoid_cubes
+
+		if (!chimney.intersects(avoid)) { // don't block attic access door (probably won't/can't happen)
+			objs.emplace_back(chimney, TYPE_CHIMNEY, room_id, 0, 0, obj_flags, 1.0);
+			avoid_cubes.push_back(chimney);
+		}
 	}
 	// add posts as colliders; somewhat of a duplicate of the code in building_room_geom_t::add_attic_woodwork()
 	for (tquad_with_ix_t const &tq : roof_tquads) {
@@ -191,7 +198,7 @@ void building_t::add_attic_objects(rand_gen_t rgen) {
 
 		for (unsigned d = 0; d < 2; ++d) {
 			if (posts[d].is_all_zeros()) continue;
-			objs.emplace_back(posts[d], TYPE_COLLIDER, room_id, dim, 0, RO_FLAG_INVIS, 1.0);
+			objs.emplace_back(posts[d], TYPE_COLLIDER, room_id, dim, 0, (RO_FLAG_INVIS | obj_flags), 1.0);
 			avoid_cubes.push_back(posts[d]);
 			avoid_cubes.back().expand_by_xy(beam_width); // add extra spacing
 		}
@@ -201,11 +208,9 @@ void building_t::add_attic_objects(rand_gen_t rgen) {
 	cube_t place_area(part);
 	place_area.z1() = place_area.z2() = interior->attic_access.z2(); // bottom of attic floor
 	place_area.expand_by_xy(-0.75*floor_spacing); // keep away from corners; just a guess
-	cube_t const avoid(get_attic_access_door_avoid());
 	unsigned const num_boxes(rgen.rand() % 50);
 	float const box_sz(0.2*floor_spacing);
-	avoid_cubes.push_back(avoid);
-	add_boxes_to_space(objs[attic_door_ix], objs, place_area, avoid_cubes, rgen, num_boxes, box_sz, 0.5*box_sz, 1.5*box_sz, 1, RO_FLAG_INTERIOR); // allow_crates=1
+	add_boxes_to_space(objs[attic_door_ix], objs, place_area, avoid_cubes, rgen, num_boxes, box_sz, 0.5*box_sz, 1.5*box_sz, 1, obj_flags); // allow_crates=1
 }
 
 cube_t get_attic_access_door_cube(room_object_t const &c) {
@@ -408,5 +413,14 @@ void building_room_geom_t::add_attic_woodwork(building_t const &b, float tscale)
 			// TODO: add horizontal beams connecting each vertical beam to form an A-frame
 		}
 	} // for i
+}
+
+void building_room_geom_t::add_chimney(room_object_t const &c, tid_nm_pair_t const &tex) { // inside attic
+	tid_nm_pair_t tex2(tex);
+	tex2.shadowed = 1;
+	tex2.tscale_x *= 4.0; tex2.tscale_y *= 4.0;
+	rgeom_mat_t &mat(get_material(tex2, 1, 0, 2));
+	mat.add_cube_to_verts(c, c.color, c.get_llc(), (EF_Z12 | EF_Y12), 1); // X sides, swap_tex_st=1
+	mat.add_cube_to_verts(c, c.color, c.get_llc(), (EF_Z12 | EF_X12), 0); // Y sides, swap_tex_st=0
 }
 
