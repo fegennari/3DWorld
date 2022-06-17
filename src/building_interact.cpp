@@ -1038,7 +1038,7 @@ bool building_t::move_sphere_to_valid_part(point &pos, point const &p_last, floa
 		for (auto i = parts.begin(); i != get_real_parts_end(); ++i) {
 			if (!i->contains_pt_xy(p_last)) continue; // not the part containing the previous pos (assumes parts are not stacked)
 			cube_t bounds(*i);
-			bounds.expand_by_xy(-4.0*radius); // include extra space for attics (approximate)
+			bounds.expand_by_xy(-(4.0*radius + get_attic_beam_depth())); // include extra space for attics (approximate)
 			bounds.clamp_pt_xy(pos);
 			if (pos != init_pos) return 1;
 

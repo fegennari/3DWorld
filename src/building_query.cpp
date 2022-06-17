@@ -425,7 +425,7 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, flo
 		}
 		if (is_in_attic) {
 			vector3d roof_normal;
-			float const beam_depth(0.08*floor_spacing);
+			float const beam_depth(get_attic_beam_depth());
 
 			// check player's head against the roof/overhead beams to avoid clipping through it
 			if (!point_in_attic(point(pos.x, pos.y, (pos.z + 1.1f*camera_zh + beam_depth)), &roof_normal)) {

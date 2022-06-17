@@ -31,8 +31,9 @@ bool building_t::point_in_attic(point const &pos, vector3d *const cnorm) const {
 bool building_t::cube_in_attic(cube_t const &c) const {
 	if (!has_attic() || c.z2() < interior->attic_access.z2() || c.z1() > interior_z2) return 0; // test attic floor zval
 	// test the 4 top corners of the cube
-	return (point_under_attic_roof(point(c.x1(), c.y1(), c.z2())) || point_under_attic_roof(point(c.x1(), c.y2(), c.z2())) ||
-		    point_under_attic_roof(point(c.x2(), c.y2(), c.z2())) || point_under_attic_roof(point(c.x2(), c.y1(), c.z2())));
+	float const z2(c.z2() + 2.0*get_attic_beam_depth()); // account for attic beam depth, which reduces the ceiling height / increases our effective cube height (approximate)
+	return (point_under_attic_roof(point(c.x1(), c.y1(), z2)) || point_under_attic_roof(point(c.x1(), c.y2(), z2)) ||
+		    point_under_attic_roof(point(c.x2(), c.y2(), z2)) || point_under_attic_roof(point(c.x2(), c.y1(), z2)));
 }
 
 bool building_t::add_attic_access_door(cube_t const &ceiling, unsigned part_ix, unsigned num_floors, unsigned rooms_start, rand_gen_t &rgen) {
@@ -143,15 +144,15 @@ void building_t::add_attic_objects(rand_gen_t rgen) {
 	// add light(s)
 	cube_t const part(get_part_for_room(room)); // Note: assumes attic is a single part
 	bool const long_dim(part.dx() < part.dy());
-	float const floor_spacing(get_window_vspace());
+	float const floor_spacing(get_window_vspace()), beam_depth(get_attic_beam_depth());
 	float const sep_dist(part.get_sz_dim(long_dim) - part.get_sz_dim(!long_dim)), attic_height(interior_z2 - adoor.z2()), light_radius(0.06*attic_height);
-	point const light_center(part.xc(), part.yc(), (interior_z2 - 1.2*light_radius - 0.08*floor_spacing)); // center of the part near the ceiling
+	point const light_center(part.xc(), part.yc(), (interior_z2 - 1.2*light_radius - beam_depth)); // center of the part near the ceiling
 	cube_t light;
 	point light_pos[2] = {light_center, light_center}; // start centered
 	unsigned num_lights(1);
 
 	if (sep_dist > 0.25*attic_height) { // consider adding two lights
-		float const move_dist(0.5*sep_dist - light_radius - 0.08*floor_spacing); // allow extra space for vertical beams
+		float const move_dist(0.5*sep_dist - light_radius - beam_depth); // allow extra space for vertical beams
 		bool valid(1);
 
 		for (unsigned d = 0; d < 2; ++d) {
@@ -191,9 +192,9 @@ void building_t::add_attic_objects(rand_gen_t rgen) {
 		vector3d const normal(tq.get_norm()); // points outside of the attic
 		bool const dim(fabs(normal.x) < fabs(normal.y)), dir(normal[dim] > 0.0); // dim this tquad is facing; beams run in the other dim
 		if (dir == 1) continue; // only need to add for one side due to symmetry (FIXME: not correct)
-		float const beam_width(0.04*floor_spacing), beam_depth(2.0*beam_width);
 		cube_t const bcube(tq.get_bcube());
 		if (bcube.z1() < interior->attic_access.z1()) continue; // not at the peak
+		float const beam_width(0.5*beam_depth);
 		cube_t beam(bcube); // set the z1 base and exterior edge d[dim][dir]
 		beam.z1() = beam.z2() - beam_depth; // approximate
 		set_wall_width(beam, bcube.d[dim][!dir], 0.5*beam_width, dim); // inside/middle edge
