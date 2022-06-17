@@ -1043,10 +1043,11 @@ bool building_t::move_sphere_to_valid_part(point &pos, point const &p_last, floa
 		xy_area_contained += overlap.dx()*overlap.dy();
 	}
 	if (xy_area_contained > 0.99*sphere_bcube.dx()*sphere_bcube.dy()) return (pos != init_pos); // sphere contained in union of parts (not outside the building)
+	bool const pos_in_attic(point_in_attic(pos));
 
 	// find part containing p_last and clamp to that part
 	for (auto i = parts.begin(); i != get_real_parts_end(); ++i) {
-		if (!i->contains_pt(p_last)) continue; // not the part containing the previous pos
+		if (!(pos_in_attic ? i->contains_pt_xy(p_last) : i->contains_pt(p_last))) continue; // not the part containing the previous pos
 		cube_t bounds(*i);
 		bounds.expand_by_xy(-radius);
 		bounds.clamp_pt_xy(pos);

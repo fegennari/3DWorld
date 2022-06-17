@@ -407,14 +407,21 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, flo
 			if (pos.z < z1 + radius) {pos.z = z1 + radius; obj_z = max(pos.z, p_last.z); had_coll = 1;} // move up
 			break; // only change zval once
 		}
-		if (interior->attic_access_open && attic_access.contains_pt_xy(pos) && obj_z > (attic_access.z2() - floor_spacing)) { // attic ladder - handle like a ramp
-			float const speed_factor = 0.3; // slow down when climbing the ladder
-			for (unsigned d = 0; d < 2; ++d) {pos[d] = speed_factor*pos[d] + (1.0 - speed_factor)*p_last[d];}
-			bool const dim(attic_access.ix >> 1), dir(attic_access.ix & 1);
-			float const length(attic_access.get_sz_dim(dim)), t(CLIP_TO_01((pos[dim] - attic_access.d[dim][0])/length)), T(dir ? t : (1.0-t));
-			pos.z = (attic_access.z2() + attic_door_z_gap) - floor_spacing*(1.0 - T) + radius;
-			obj_z = max(pos.z, p_last.z);
-			had_coll = on_attic_ladder = 1;
+		if (has_attic() && attic_access.contains_pt_xy(pos)) {
+			if (interior->attic_access_open && obj_z > (attic_access.z2() - floor_spacing)) { // on attic ladder - handle like a ramp
+				float const speed_factor = 0.3; // slow down when climbing the ladder
+				for (unsigned d = 0; d < 2; ++d) {pos[d] = speed_factor*pos[d] + (1.0 - speed_factor)*p_last[d];}
+				bool const dim(attic_access.ix >> 1), dir(attic_access.ix & 1);
+				float const length(attic_access.get_sz_dim(dim)), t(CLIP_TO_01((pos[dim] - attic_access.d[dim][0])/length)), T(dir ? t : (1.0-t));
+				pos.z = (attic_access.z2() + attic_door_z_gap) - floor_spacing*(1.0 - T) + radius;
+				obj_z = max(pos.z, p_last.z);
+				had_coll = on_attic_ladder = 1;
+			}
+			else if (!interior->attic_access_open && obj_z > attic_access.z2()) { // standing on closed attic access door
+				pos.z = attic_access.z2() + radius; // move up
+				obj_z = max(pos.z, p_last.z);
+				had_coll = 1;
+			}
 		}
 		if (is_in_attic) {
 			vector3d roof_normal;
