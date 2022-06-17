@@ -397,57 +397,46 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, flo
 	unsigned reset_to_last_dims(0); // {x, y} bit flags
 
 	if (!xy_only && 2.2f*radius < (floor_spacing - floor_thickness)) { // diameter is smaller than space between floor and ceiling
-		if (is_in_attic) {
-			float const attic_floor_zval(attic_access.z2() + attic_door_z_gap + radius); // relative to pos.z
-			had_coll = 1;
+		// check Z collision with floors; no need to check ceilings; this will set pos.z correctly so that we can set skip_z=0 in later tests
+		float const floor_test_zval(obj_z + floor_thickness); // move up by floor thickness to better handle steep stairs
 
-			if (interior->attic_access_open && attic_access.contains_pt_xy(pos)) {
-				is_in_attic = 0; // standing over the open attic access door, fall down/no longer in the attic
-				max_eq(pos.z, (attic_floor_zval - floor_spacing)); // place on floor below attic level
-			}
-			else {
-				max_eq(pos.z, attic_floor_zval); // place on attic floor
-				vector3d roof_normal;
-				float const beam_depth(0.08*floor_spacing);
-
-				// check player's head against the roof/overhead beams to avoid clipping through it
-				if (!point_in_attic(point(pos.x, pos.y, (pos.z + 1.1f*camera_zh + beam_depth)), &roof_normal)) {
-					for (unsigned d = 0; d < 2; ++d) { // reset pos X/Y if oriented toward the roof
-						if (roof_normal[d] != 0.0 && ((roof_normal[d] < 0.0) ^ (pos[d] < p_last[d]))) {reset_to_last_dims |= (1<<d);}
-					}
-					if (cnorm) {*cnorm = roof_normal;}
-				}
-				// find the part the player is in and clamp our bsphere to it; currently attics are limited to a single part
-				for (auto i = parts.begin(); i != get_real_parts_end(); ++i) {
-					if (!i->contains_pt_xy(pos)) continue; // wrong part
-					cube_t valid_area(*i);
-					valid_area.expand_by_xy(-xy_radius);
-					valid_area.clamp_pt_xy(pos);
-					break;
-				} // for i
-				player_in_attic = 1;
-			}
-			obj_z = max(pos.z, p_last.z);
+		for (auto i = interior->floors.begin(); i != interior->floors.end(); ++i) { // Note: includes attic floor
+			if (!i->contains_pt_xy(pos)) continue; // sphere not in this floor
+			float const z1(i->z2());
+			if (floor_test_zval < z1 || floor_test_zval > z1 + floor_spacing) continue; // this is not the floor the sphere is on
+			if (pos.z < z1 + radius) {pos.z = z1 + radius; obj_z = max(pos.z, p_last.z); had_coll = 1;} // move up
+			break; // only change zval once
 		}
-		if (!is_in_attic) { // check Z collision with floors; no need to check ceilings; this will set pos.z correctly so that we can set skip_z=0 in later tests
-			float const floor_test_zval(obj_z + floor_thickness); // move up by floor thickness to better handle steep stairs
+		if (interior->attic_access_open && attic_access.contains_pt_xy(pos) && obj_z > (attic_access.z2() - floor_spacing)) { // attic ladder - handle like a ramp
+			float const speed_factor = 0.3; // slow down when climbing the ladder
+			for (unsigned d = 0; d < 2; ++d) {pos[d] = speed_factor*pos[d] + (1.0 - speed_factor)*p_last[d];}
+			bool const dim(attic_access.ix >> 1), dir(attic_access.ix & 1);
+			float const length(attic_access.get_sz_dim(dim)), t(CLIP_TO_01((pos[dim] - attic_access.d[dim][0])/length)), T(dir ? t : (1.0-t));
+			pos.z = (attic_access.z2() + attic_door_z_gap) - floor_spacing*(1.0 - T) + radius;
+			obj_z = max(pos.z, p_last.z);
+			had_coll = on_attic_ladder = 1;
+		}
+		if (is_in_attic) {
+			vector3d roof_normal;
+			float const beam_depth(0.08*floor_spacing);
 
-			for (auto i = interior->floors.begin(); i != interior->floors.end(); ++i) {
-				if (!i->contains_pt_xy(pos)) continue; // sphere not in this floor
-				float const z1(i->z2());
-				if (floor_test_zval < z1 || floor_test_zval > z1 + floor_spacing) continue; // this is not the floor the sphere is on
-				if (pos.z < z1 + radius) {pos.z = z1 + radius; obj_z = max(pos.z, p_last.z); had_coll = 1;} // move up
-				break; // only change zval once
+			// check player's head against the roof/overhead beams to avoid clipping through it
+			if (!point_in_attic(point(pos.x, pos.y, (pos.z + 1.1f*camera_zh + beam_depth)), &roof_normal)) {
+				for (unsigned d = 0; d < 2; ++d) { // reset pos X/Y if oriented toward the roof
+					if (roof_normal[d] != 0.0 && ((roof_normal[d] < 0.0) ^ (pos[d] < p_last[d]))) {reset_to_last_dims |= (1<<d);}
+				}
+				if (cnorm) {*cnorm = roof_normal;}
 			}
-			if (interior->attic_access_open && attic_access.contains_pt_xy(pos) && obj_z > (attic_access.z2() - floor_spacing)) { // attic ladder - handle like a ramp
-				float const speed_factor = 0.3; // slow down when climbing the ladder
-				for (unsigned d = 0; d < 2; ++d) {pos[d] = speed_factor*pos[d] + (1.0 - speed_factor)*p_last[d];}
-				bool const dim(attic_access.ix >> 1), dir(attic_access.ix & 1);
-				float const length(attic_access.get_sz_dim(dim)), t(CLIP_TO_01((pos[dim] - attic_access.d[dim][0])/length)), T(dir ? t : (1.0-t));
-				pos.z = (attic_access.z2() + attic_door_z_gap) - floor_spacing*(1.0 - T) + radius;
-				obj_z = max(pos.z, p_last.z);
-				had_coll = on_attic_ladder = 1;
-			}
+			// find the part the player is in and clamp our bsphere to it; currently attics are limited to a single part
+			for (auto i = parts.begin(); i != get_real_parts_end(); ++i) {
+				if (!i->contains_pt_xy(pos)) continue; // wrong part
+				cube_t valid_area(*i);
+				valid_area.expand_by_xy(-xy_radius);
+				valid_area.clamp_pt_xy(pos);
+				break;
+			} // for i
+			had_coll = player_in_attic = 1;
+			obj_z    = max(pos.z, p_last.z);
 		}
 	}
 	// *** Note ***: at this point pos.z is radius above the floors and *not* at the camera height, which is why we add camera_zh to pos.z below

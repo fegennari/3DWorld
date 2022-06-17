@@ -2014,9 +2014,7 @@ void building_interior_t::create_fc_occluders() {
 	
 	for (auto &c : fc_occluders) {
 		assert(c.is_strictly_normalized());
-		// double the thickness to include the floor as well, but not for the ceiling below the attic that doubles as the attic floor
-		bool const attic_floor(!attic_access.is_all_zeros() && c.z1() == attic_access.z1());
-		if (!attic_floor) {c.z2() += c.dz();}
+		c.z2() += c.dz(); // double the thickness to include the floor as well
 		bcube.union_with_cube(c);
 	}
 	// max merge across the ceilings of each floor (occluder fusion)

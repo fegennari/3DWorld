@@ -1312,10 +1312,17 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 		if (is_house && part_ix == 0 && add_attic_access_door(C, part_ix, num_floors, rooms_start, rgen)) { // first/primary house part only
 			cube_t ceiling_parts[4];
 			subtract_cube_xy(C, interior->attic_access, ceiling_parts);
+			float const fc_mid_z(C.zc()); // split between the ceiling and floor parts
 
 			for (unsigned i = 0; i < 4; ++i) {
-				if (!ceiling_parts[i].is_zero_area()) {interior->ceilings.push_back(ceiling_parts[i]);}
-			}
+				cube_t &c(ceiling_parts[i]);
+				if (c.is_zero_area()) continue;
+				c.z2() = fc_mid_z;
+				interior->ceilings.push_back(c);
+				c.z1() = fc_mid_z;
+				c.z2() = C.z2();
+				interior->floors.push_back(c);
+			} // for i
 		}
 		else {interior->ceilings.push_back(C);}
 	}

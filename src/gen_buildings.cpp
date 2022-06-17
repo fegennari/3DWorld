@@ -1313,7 +1313,12 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, 
 		for (auto i = interior->floors.begin(); i != interior->floors.end(); ++i) { // 600K T
 			bool const is_basement(i->z2() < ground_floor_z1);
 			tid_nm_pair_t floor_tex;
+			colorRGBA color(floor_color);
 
+			if (has_attic() && i->z2() > interior->attic_access.z1()) { // attic floor
+				floor_tex = attic_tex;
+				color     = WHITE;
+			}
 			if (is_house) {
 				if (has_sec_bldg() && get_sec_bldg().contains_cube(*i)) {floor_tex = tid_nm_pair_t(get_concrete_tid(), 16.0);} // garage or shed
 				else if (is_basement) {floor_tex = mat.basement_floor_tex;} // basement
@@ -1324,12 +1329,12 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, 
 				else {floor_tex = mat.floor_tex;} // office block
 			}
 			// expand_by_xy(-get_trim_thickness()) to prevent z-fighting when AA is disabled? but that will leave small gaps where floors from adjacent parts meet
-			bdraw.add_section(*this, 0, *i, floor_tex, floor_color, 4, 1, 0, 1, 0); // no AO; skip_bottom; Z dim only
+			bdraw.add_section(*this, 0, *i, floor_tex, color, 4, 1, 0, 1, 0); // no AO; skip_bottom; Z dim only
 		} // for i
 		for (auto i = interior->ceilings.begin(); i != interior->ceilings.end(); ++i) { // 600K T
 			// skip top surface of all but top floor ceilings if the roof is sloped;
 			// if this is an office building, the ceiling could be at a lower floor with a flat roof even if the highest floor has a sloped roof, so we must skip it
-			bool skip_top(roof_type == ROOF_TYPE_FLAT || !is_house);
+			bool skip_top(roof_type == ROOF_TYPE_FLAT || !is_house || has_attic());
 
 			if (!skip_top) { // check if this is a top ceiling; needed for light occlusion
 				float const toler(get_floor_thickness());
@@ -1350,15 +1355,6 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, 
 			else if (is_basement) { // use wall texture for basement/parking garage ceilings, not ceiling texture
 				tex   = mat.wall_tex;
 				color = basement_wall_color;
-			}
-			else if (!skip_top && has_attic()) { // attic floor
-				tex   = attic_tex;
-				color = WHITE;
-				bdraw.add_section(*this, 0, *i, tex, color, 4, 1, 0, 1, 0); // no AO; top Z only (skip_bottom=1)
-				// now draw the bottom surface as a normal ceiling
-				skip_top = 1;
-				tex   = ceil_tex;
-				color = ceil_color;
 			}
 			else { // normal ceiling texture
 				tex   = ceil_tex;
