@@ -1042,7 +1042,7 @@ bool building_t::move_sphere_to_valid_part(point &pos, point const &p_last, floa
 			if (pos.z > p_last.z) { // rising; check if above attic roof
 				float const move_zmin(max(p_last.z, interior->attic_access.z2()+radius));
 
-				while (pos.z > move_zmin && !point_in_attic(point(pos.x, pos.y, pos.z+radius))) {
+				while (pos.z > move_zmin && !point_under_attic_roof(point(pos.x, pos.y, pos.z+radius))) {
 					pos.z = min(pos.z-0.1f*radius, move_zmin); // shift down by 10% of radius until we hit the prev zval or attic floor, or we no longer collide with the roof
 				}
 			}

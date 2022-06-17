@@ -13,10 +13,7 @@ void add_boxes_to_space(room_object_t const &c, vect_room_object_t &objects, cub
 	unsigned num_boxes, float xy_scale, float hmin, float hmax, bool allow_crates, unsigned flags); // from building_room_obj_expand
 
 
-bool building_t::point_in_attic(point const &pos, vector3d *const cnorm) const {
-	if (!has_attic() || pos.z < interior->attic_access.z2() || pos.z > interior_z2) return 0; // test attic floor zval
-
-	// check if pos is under the roof
+bool building_t::point_under_attic_roof(point const &pos, vector3d *const cnorm) const {
 	for (auto const &tq : roof_tquads) {
 		if (tq.type != tquad_with_ix_t::TYPE_ROOF) continue;
 		if (!point_in_polygon_2d(pos.x, pos.y, tq.pts, tq.npts, 0, 1)) continue; // check 2D XY point containment
@@ -26,6 +23,16 @@ bool building_t::point_in_attic(point const &pos, vector3d *const cnorm) const {
 		if (dot_product_ptv(normal, pos, tq.pts[0]) < 0.0) return 1;
 	}
 	return 0;
+}
+bool building_t::point_in_attic(point const &pos, vector3d *const cnorm) const {
+	if (!has_attic() || pos.z < interior->attic_access.z2() || pos.z > interior_z2) return 0; // test attic floor zval
+	return point_under_attic_roof(pos, cnorm);
+}
+bool building_t::cube_in_attic(cube_t const &c) const {
+	if (!has_attic() || c.z2() < interior->attic_access.z2() || c.z1() > interior_z2) return 0; // test attic floor zval
+	// test the 4 top corners of the cube
+	return (point_under_attic_roof(point(c.x1(), c.y1(), c.z2())) || point_under_attic_roof(point(c.x1(), c.y2(), c.z2())) ||
+		    point_under_attic_roof(point(c.x2(), c.y2(), c.z2())) || point_under_attic_roof(point(c.x2(), c.y1(), c.z2())));
 }
 
 bool building_t::add_attic_access_door(cube_t const &ceiling, unsigned part_ix, unsigned num_floors, unsigned rooms_start, rand_gen_t &rgen) {

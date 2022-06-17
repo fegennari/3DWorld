@@ -90,12 +90,12 @@ point building_t::gen_animal_floor_pos(float radius, rand_gen_t &rgen) const {
 	return all_zeros; // failed
 }
 
-bool building_t::is_pos_inside_building(point const &pos, float xy_pad, float hheight) const {
+bool building_t::is_pos_inside_building(point const &pos, float xy_pad, float hheight, bool inc_attic) const {
 	if (!bcube.contains_pt_xy_exp(pos, -xy_pad)) return 0; // check for end point inside building bcube
 	cube_t req_area(pos, pos);
 	req_area.expand_by_xy(xy_pad);
 	req_area.z2() += hheight;
-	return is_cube_contained_in_parts(req_area);
+	return (is_cube_contained_in_parts(req_area) || (inc_attic && cube_in_attic(req_area)));
 }
 
 void update_dir_incremental(vector3d &dir, vector3d const &new_dir, float turn_rate, float timestep, rand_gen_t &rgen) {
