@@ -1030,28 +1030,48 @@ void building_t::register_button_event(room_object_t const &button) {
 
 bool building_t::move_sphere_to_valid_part(point &pos, point const &p_last, float radius) const { // Note: only moves in XY
 	point const init_pos(pos);
-	float xy_area_contained(0.0);
-	cube_t sphere_bcube; sphere_bcube.set_from_sphere(pos, radius);
-	cube_t valid_region(bcube);
-	valid_region.expand_by(-radius);
-	valid_region.clamp_pt(pos); // keep pos within the valid building bcube
 
-	for (auto i = parts.begin(); i != get_real_parts_end(); ++i) {
-		if (!i->intersects(sphere_bcube)) continue;
-		cube_t overlap(sphere_bcube);
-		overlap.intersect_with_cube(*i);
-		xy_area_contained += overlap.dx()*overlap.dy();
+	if (has_attic() && pos.z > interior->attic_access.z2()) { // special case handling for attic
+		for (auto i = parts.begin(); i != get_real_parts_end(); ++i) {
+			if (!i->contains_pt_xy(p_last)) continue; // not the part containing the previous pos (assumes parts are not stacked)
+			cube_t bounds(*i);
+			bounds.expand_by_xy(-4.0*radius); // include extra space for attics (approximate)
+			bounds.clamp_pt_xy(pos);
+			if (pos != init_pos) return 1;
+
+			if (pos.z > p_last.z) { // rising; check if above attic roof
+				float const move_zmin(max(p_last.z, interior->attic_access.z2()+radius));
+
+				while (pos.z > move_zmin && !point_in_attic(point(pos.x, pos.y, pos.z+radius))) {
+					pos.z = min(pos.z-0.1f*radius, move_zmin); // shift down by 10% of radius until we hit the prev zval or attic floor, or we no longer collide with the roof
+				}
+			}
+			return (pos != init_pos);
+		} // for i
 	}
-	if (xy_area_contained > 0.99*sphere_bcube.dx()*sphere_bcube.dy()) return (pos != init_pos); // sphere contained in union of parts (not outside the building)
-	bool const pos_in_attic(point_in_attic(pos));
+	else {
+		float xy_area_contained(0.0);
+		cube_t sphere_bcube; sphere_bcube.set_from_sphere(pos, radius);
+		cube_t valid_region(bcube);
+		valid_region.expand_by(-radius);
+		valid_region.clamp_pt(pos); // keep pos within the valid building bcube
 
-	// find part containing p_last and clamp to that part
-	for (auto i = parts.begin(); i != get_real_parts_end(); ++i) {
-		if (!(pos_in_attic ? i->contains_pt_xy(p_last) : i->contains_pt(p_last))) continue; // not the part containing the previous pos
-		cube_t bounds(*i);
-		bounds.expand_by_xy(-radius);
-		bounds.clamp_pt_xy(pos);
-		return 1;
+		for (auto i = parts.begin(); i != get_real_parts_end_inc_sec(); ++i) {
+			if (!i->intersects(sphere_bcube)) continue;
+			cube_t overlap(sphere_bcube);
+			overlap.intersect_with_cube(*i);
+			xy_area_contained += overlap.dx()*overlap.dy();
+		}
+		if (xy_area_contained > 0.99*sphere_bcube.dx()*sphere_bcube.dy()) return (pos != init_pos); // sphere contained in union of parts (not outside the building)
+
+		// find part containing p_last and clamp to that part
+		for (auto i = parts.begin(); i != get_real_parts_end_inc_sec(); ++i) {
+			if (!i->contains_pt(p_last)) continue; // not the part containing the previous pos
+			cube_t bounds(*i);
+			bounds.expand_by_xy(-radius); // include extra space for attics (approximate)
+			bounds.clamp_pt_xy(pos);
+			return 1;
+		}
 	}
 	//assert(0); // should never get here (except for FP error?)
 	pos = p_last; // restore original position
