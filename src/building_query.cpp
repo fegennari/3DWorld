@@ -1402,7 +1402,8 @@ bool building_t::check_line_coll_expand(point const &p1, point const &p2, float 
 	if (line_int_cubes_exp(p1, p2, interior->elevators, expand, line_bcube)) return 1;
 	
 	// check exterior walls
-	if (real_num_parts > 1) { // only need to do this for multi-part buildings because the caller is assumed to check the building bcube
+	if (point_in_attic(p1) && point_in_attic(p2)) {} // both points in attic, no need to check exterior walls
+	else if (real_num_parts > 1) { // only need to do this for multi-part buildings because the caller is assumed to check the building bcube
 		// ray_cast_exterior_walls() doesn't really work here; instead we create a test cube and step it for every radius interval, and check if it ever exits the building
 		unsigned const num_steps(min(100U, unsigned(ceil(p2p_dist(p1, p2)/radius))));
 
