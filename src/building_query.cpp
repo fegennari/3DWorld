@@ -1545,6 +1545,7 @@ bool building_t::check_line_of_sight_large_objs(point const &p1, point const &p2
 	if (line_int_cubes(p1, p2, interior->elevators, line_bcube)) return 0; // check elevators only because stairs aren't solid visual blockers
 
 	if (real_num_parts > 1) { // check exterior walls; this is simpler than ray_cast_exterior_walls()
+		if (point_in_attic(p1) && point_in_attic(p2)) return 1; // always visible in attic
 		float tot_len(0.0);
 		auto parts_end(get_real_parts_end_inc_sec());
 		bool contained(0);
