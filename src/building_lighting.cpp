@@ -985,7 +985,12 @@ bool building_t::is_rot_cube_visible(cube_t const &c, vector3d const &xlate) con
 	return camera_pdu.cube_visible((is_rotated() ? get_rotated_bcube(c) : c) + xlate);
 }
 
-float get_radius_for_room_light(room_object_t const &obj) {return 6.0f*(obj.dx() + obj.dy());}
+float get_radius_for_room_light(room_object_t const &obj) {
+	float radius(6.0f*(obj.dx() + obj.dy()));
+	//if (obj.type == TYPE_LAMP) {radius *= 1.0;}
+	if (obj.flags & RO_FLAG_IN_ATTIC) {radius *= 2.0;} // larger radius in attic, since space is larger
+	return radius;
+}
 
 bool check_for_shadow_caster(vect_cube_t const &cubes, cube_t const &light_bcube, point const &lpos,
 	float dmax, bool has_stairs, vector3d const &xlate, unsigned &shadow_caster_hash)
@@ -1215,7 +1220,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 				}
 			} // end camera on different floor case
 		} // end !player_in_elevator
-		float const light_radius(get_radius_for_room_light(*i)), cull_radius(0.95*light_radius); // what about light_radius for lamps?
+		float const light_radius(get_radius_for_room_light(*i)), cull_radius(0.95*light_radius);
 		float const dshadow_radius((is_in_attic ? 1.0 : 0.8)*light_radius); // use full light radius for attics since they're more open
 		if (!camera_pdu.sphere_visible_test((lpos_rot + xlate), cull_radius)) continue; // VFC
 		// check visibility of bcube of light sphere clipped to building bcube; this excludes lights behind the camera and improves shadow map assignment quality

@@ -145,7 +145,7 @@ void building_t::add_attic_objects(rand_gen_t rgen) {
 	cube_t const part(get_part_for_room(room)); // Note: assumes attic is a single part
 	bool const long_dim(part.dx() < part.dy());
 	float const floor_spacing(get_window_vspace()), beam_depth(get_attic_beam_depth());
-	float const sep_dist(part.get_sz_dim(long_dim) - part.get_sz_dim(!long_dim)), attic_height(interior_z2 - adoor.z2()), light_radius(0.06*attic_height);
+	float const sep_dist(part.get_sz_dim(long_dim) - part.get_sz_dim(!long_dim)), attic_height(interior_z2 - adoor.z2()), light_radius(0.03*attic_height);
 	point const light_center(part.xc(), part.yc(), (interior_z2 - 1.2*light_radius - beam_depth)); // center of the part near the ceiling
 	cube_t light;
 	point light_pos[2] = {light_center, light_center}; // start centered
