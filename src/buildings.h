@@ -560,7 +560,10 @@ struct room_object_t : public oriented_cube_t { // size=64
 	bool is_broken  () const {return  (flags & RO_FLAG_BROKEN);}
 	bool is_active  () const {return  (flags & RO_FLAG_IS_ACTIVE);}
 	bool is_used    () const {return  (flags & RO_FLAG_USED);}
-	bool is_light_type() const {return (type == TYPE_LIGHT || (type == TYPE_LAMP && !was_expanded()));} // light, or lamp not in closet
+	bool in_elevator() const {return  (flags & RO_FLAG_IN_ELEV);}
+	bool in_closet  () const {return  (flags & RO_FLAG_IN_CLOSET);}
+	bool in_attic   () const {return  (flags & RO_FLAG_IN_ATTIC);}
+	bool is_light_type() const {return (type == TYPE_LIGHT || (type == TYPE_LAMP && !was_expanded() && !in_attic()));} // light, or lamp not in closet
 	bool is_sink_type () const {return (type == TYPE_SINK || type == TYPE_KSINK || type == TYPE_BRSINK);}
 	bool is_obj_model_type() const {return (type >= TYPE_TOILET && type < NUM_ROBJ_TYPES);}
 	bool is_small_closet() const {return (get_width() < 1.2*dz());}

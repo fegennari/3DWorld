@@ -627,7 +627,7 @@ void building_room_geom_t::check_invalid_draw_data() {
 	invalidate_mats_mask = 0; // reset for next frame
 }
 void building_room_geom_t::invalidate_draw_data_for_obj(room_object_t const &obj, bool was_taken) {
-	if (obj.is_dynamic() || (obj.type == TYPE_BUTTON && (obj.flags & RO_FLAG_IN_ELEV))) { // elevator buttons are drawn as dynamic objects
+	if (obj.is_dynamic() || (obj.type == TYPE_BUTTON && obj.in_elevator())) { // elevator buttons are drawn as dynamic objects
 		update_dynamic_draw_data();
 		return;
 	}
@@ -774,7 +774,7 @@ void building_room_geom_t::add_small_static_objs_to_verts(vect_room_object_t con
 		case TYPE_BREAKER:   add_breaker (c); break;
 		case TYPE_PLATE:     add_plate   (c); break;
 		case TYPE_LAPTOP:    add_laptop  (c); break;
-		case TYPE_BUTTON:    if (!(c.flags & RO_FLAG_IN_ELEV)) {add_button(c);} break; // skip buttons inside elevators, which are drawn as dynamic objects
+		case TYPE_BUTTON:    if (!c.in_elevator()) {add_button(c);} break; // skip buttons inside elevators, which are drawn as dynamic objects
 		case TYPE_LBASKET:   add_laundry_basket(c); break;
 		case TYPE_TOASTER:   add_toaster_proxy (c); break;
 		case TYPE_WHEATER:   add_water_heater  (c); break;
@@ -894,7 +894,7 @@ void building_room_geom_t::create_dynamic_vbos(building_t const &building) {
 		for (auto j = objs.begin() + e->button_id_start; j != objs.begin() + e->button_id_end; ++j) {
 			if (j->type == TYPE_BLOCKER) continue; // button was removed?
 			assert(j->type == TYPE_BUTTON);
-			if (j->flags & RO_FLAG_IN_ELEV) {add_button(*j);} // add button as a dynamic object if it's inside the elevator
+			if (j->in_elevator()) {add_button(*j);} // add button as a dynamic object if it's inside the elevator
 		}
 	} // for e
 	mats_dynamic.create_vbos(building);

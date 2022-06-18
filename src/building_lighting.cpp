@@ -708,7 +708,7 @@ void building_t::get_lights_with_priorities(point const &target, cube_t const &v
 		if (INDIR_BASEMENT_ONLY && !light_in_basement) continue; // not a basement light
 		if (!valid_area.contains_cube(*i))             continue; // outside valid area
 
-		if (i->flags & RO_FLAG_IN_ELEV) { // elevator light
+		if (i->in_elevator()) { // elevator light
 			elevator_t const &e(interior->elevators[i->obj_id]);
 			if (e.was_called) continue; // moving elevator, don't update light yet
 		}
@@ -810,7 +810,7 @@ bool building_t::register_indir_lighting_state_change(unsigned light_ix, bool is
 	room_object_t const &obj(interior->room_geom->objs[light_ix]);
 	assert(obj.is_light_type());
 	if (is_door_change && !obj.is_light_on()) return 0; // light off, no state change
-	building_indir_light_mgr.register_light_state_change(light_ix, obj.is_light_on(), (obj.flags & RO_FLAG_IN_ELEV), is_door_change);
+	building_indir_light_mgr.register_light_state_change(light_ix, obj.is_light_on(), obj.in_elevator(), is_door_change);
 	return 1;
 }
 void building_t::register_indir_lighting_geom_change() const {
@@ -988,7 +988,7 @@ bool building_t::is_rot_cube_visible(cube_t const &c, vector3d const &xlate) con
 float get_radius_for_room_light(room_object_t const &obj) {
 	float radius(6.0f*(obj.dx() + obj.dy()));
 	//if (obj.type == TYPE_LAMP) {radius *= 1.0;}
-	if (obj.flags & RO_FLAG_IN_ATTIC) {radius *= 2.0;} // larger radius in attic, since space is larger
+	if (obj.in_attic()) {radius *= 2.0;} // larger radius in attic, since space is larger
 	return radius;
 }
 
@@ -1123,8 +1123,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		point lpos_rot(lpos);
 		if (is_rotated()) {do_xy_rotate(building_center, lpos_rot);}
 		if (!lights_bcube.contains_pt_xy(lpos_rot)) continue; // not contained within the light volume
-		bool const light_in_basement(lpos.z < ground_floor_z1), is_in_elevator(i->flags & RO_FLAG_IN_ELEV);
-		bool const is_in_closet(i->flags & RO_FLAG_IN_CLOSET), is_in_attic(i->flags & RO_FLAG_IN_ATTIC);
+		bool const light_in_basement(lpos.z < ground_floor_z1), is_in_elevator(i->in_elevator()), is_in_closet(i->in_closet()), is_in_attic(i->in_attic());
 		// basement, attic, and elevator lights are only visible when player is in the building;
 		// elevator test is questionable because it can be open on the ground floor of a room with windows in a small office building, but should be good enough
 		if (!camera_in_building && (light_in_basement || is_in_attic || is_in_elevator)) continue;

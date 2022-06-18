@@ -97,10 +97,10 @@ bool building_t::toggle_room_light(point const &closest_to, bool sound_from_clos
 
 	for (auto i = objs.begin(); i != objs_end; ++i) {
 		if (!i->is_light_type() || (!inc_lamps && i->type == TYPE_LAMP)) continue; // not a light
-		if ( in_attic && !(i->flags & RO_FLAG_IN_ATTIC)) continue;
+		if ( in_attic && !i->in_attic()) continue;
 		if (!in_attic && i->room_id != room_id) continue; // wrong room
-		if (bool(i->flags & RO_FLAG_IN_CLOSET) != in_closet) continue;
-		if (i->flags & RO_FLAG_IN_ELEV) continue; // can't toggle elevator light
+		if (i->in_closet() != in_closet) continue;
+		if (i->in_elevator()) continue; // can't toggle elevator light
 		if (!ignore_floor && get_floor_for_zval(i->z1()) != get_floor_for_zval(closest_to.z)) continue; // wrong floor (skip garages and sheds)
 		point center(i->get_cube_center());
 		if (is_rotated()) {do_xy_rotate(bcube.get_cube_center(), center);}
@@ -120,7 +120,7 @@ void building_t::toggle_light_object(room_object_t const &light, point const &so
 
 	for (auto i = interior->room_geom->objs.begin(); i != objs_end; ++i) { // toggle all lights on this floor of this room
 		if (!i->is_light_type() || i->room_id != light.room_id || !i->is_powered()) continue;
-		if ((light.flags & RO_FLAG_IN_CLOSET) != (i->flags & RO_FLAG_IN_CLOSET))    continue; // closet + room light are toggled independently
+		if (light.in_closet() != i->in_closet()) continue; // closet + room light are toggled independently
 		if (i->z2() != light.z2()) continue; // Note: uses light z2 rather than z1 so that thin lights near doors are handled correctly
 		i->toggle_lit_state(); // Note: doesn't update indir lighting
 		i->flags &= ~RO_FLAG_IS_ACTIVE; // disable motion detection feature if the player manually switches lights off
@@ -197,7 +197,7 @@ bool building_room_geom_t::closet_light_is_on(cube_t const &closet) const {
 	auto objs_end(get_placed_objs_end()); // skip buttons/stairs/elevators
 
 	for (auto i = objs.begin(); i != objs_end; ++i) {
-		if (i->type == TYPE_LIGHT && (i->flags & RO_FLAG_IN_CLOSET) && closet.contains_cube(*i)) {return i->is_light_on();}
+		if (i->type == TYPE_LIGHT && i->in_closet() && closet.contains_cube(*i)) {return i->is_light_on();}
 	}
 	return 0;
 }
@@ -217,7 +217,7 @@ void building_t::toggle_circuit_breaker(bool is_on, unsigned zone_id, unsigned n
 			auto objs_end(interior->room_geom->get_placed_objs_end()); // skip buttons/stairs/elevators
 
 			for (auto i = interior->room_geom->objs.begin(); i != objs_end; ++i) {
-				if (i->type != TYPE_LIGHT || !(i->flags & RO_FLAG_IN_ELEV) || i->is_lit() == is_on) continue;
+				if (i->type != TYPE_LIGHT || !i->in_elevator() || i->is_lit() == is_on) continue;
 				i->flags ^= RO_FLAG_LIT; // toggle elevator light lit state
 			}
 			return;
@@ -239,7 +239,7 @@ void building_t::toggle_circuit_breaker(bool is_on, unsigned zone_id, unsigned n
 		if ((i->is_powered() == is_on) || i->room_id < rooms_start || i->room_id >= rooms_end) continue;
 
 		if (i->is_light_type()) { // light
-			if (i->flags & RO_FLAG_IN_ELEV) continue; // handled above
+			if (i->in_elevator()) continue; // handled above
 			bool const was_on(i->is_light_on());
 			i->flags ^= RO_FLAG_NO_POWER; // need to disable this light and not allow the player/AI/motion detector to turn it back on
 			updated  |= (i->is_light_on() != was_on); // update if light on state changed
@@ -401,7 +401,7 @@ bool building_t::apply_player_action_key(point const &closest_to_in, vector3d co
 				if (!active_area.is_all_zeros() && !i->intersects(active_area)) continue; // out of reach for the player
 				// check for objects not in the attic when the player is in the attic;
 				// applies to lights only for now, since they're on the ceiling and the attic flag may not be set on dropped objects such as books
-				if (player_in_attic && !(i->flags & RO_FLAG_IN_ATTIC) && i->type == TYPE_LIGHT) continue;
+				if (player_in_attic && !i->in_attic() && i->type == TYPE_LIGHT) continue;
 				bool keep(0);
 				if (i->type == TYPE_BOX && !i->is_open()) {keep = 1;} // box can only be opened once; check first so that selection works for boxes in closets
 				else if (i->type == TYPE_CLOSET) {
@@ -580,7 +580,7 @@ bool building_t::interact_with_object(unsigned obj_ix, point const &int_pos, poi
 	}
 	else if (obj.type == TYPE_SWITCH) {
 		// should select the correct light(s) for the room containing the switch
-		toggle_room_light(obj.get_cube_center(), 1, obj.room_id, 0, (obj.flags & RO_FLAG_IN_CLOSET)); // exclude lamps; select closet lights if a closet light switch
+		toggle_room_light(obj.get_cube_center(), 1, obj.room_id, 0, obj.in_closet()); // exclude lamps; select closet lights if a closet light switch
 		gen_sound_thread_safe_at_player(SOUND_CLICK, 0.5);
 		obj.flags       ^= RO_FLAG_OPEN; // toggle on/off
 		sound_scale      = 0.1;
@@ -1007,7 +1007,7 @@ bool building_interior_t::update_elevators(building_t const &building, point con
 		for (auto j = objs.begin() + e->button_id_start; j != objs.begin() + e->button_id_end; ++j) {
 			if (j->type == TYPE_BLOCKER) continue; // button was removed?
 			assert(j->type == TYPE_BUTTON);
-			if (j->flags & RO_FLAG_IN_ELEV) {j->translate_dim(2, dist);} // interior panel button, translate in Z
+			if (j->in_elevator()) {j->translate_dim(2, dist);} // interior panel button, translate in Z
 		}
 		if ((int)move_dir != prev_move_dir && obj.contains_pt(player_pos)) { // moving, and player is in the elevator
 			gen_sound_thread_safe_at_player(SOUND_SLIDING, 0.75); // play this sound when the elevator starts moving or changes direction

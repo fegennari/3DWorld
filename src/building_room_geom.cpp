@@ -630,7 +630,7 @@ void building_room_geom_t::add_spraycan(room_object_t const &c) { // is_small=1
 }
 
 void building_room_geom_t::add_button(room_object_t const &c) {
-	bool const in_elevator(c.flags & RO_FLAG_IN_ELEV);
+	bool const in_elevator(c.in_elevator());
 	tid_nm_pair_t tp; // unshadowed
 	if (c.is_active()) {tp.emissive = 1.0;} // make it lit when active
 	colorRGBA const color(apply_light_color(c));
