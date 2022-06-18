@@ -69,22 +69,31 @@ template<typename T> void building_t::add_animals_on_floor(T &animals, unsigned 
 	for (unsigned n = 0; n < num; ++n) {
 		// there's no error check for min_sz <= max_sz, so just use min_sz in that case
 		float const sz_scale((sz_min >= sz_max) ? sz_min : rgen.rand_uniform(sz_min, sz_max)), radius(0.5f*floor_spacing*sz_scale);
-		point const pos(gen_animal_floor_pos(radius, rgen));
+		point const pos(gen_animal_floor_pos(radius, T::value_type::allow_in_attic(), rgen));
 		if (pos == all_zeros) continue; // bad pos? skip this animal
 		animals.add(typename T::value_type(pos, radius, rgen.signed_rand_vector_xy().get_norm(), n));
 	}
 }
 
-point building_t::gen_animal_floor_pos(float radius, rand_gen_t &rgen) const {
+point building_t::gen_animal_floor_pos(float radius, bool place_in_attic, rand_gen_t &rgen) const {
 	for (unsigned n = 0; n < 100; ++n) { // make up to 100 tries
-		unsigned const room_ix(rgen.rand() % interior->rooms.size());
-		room_t const &room(interior->rooms[room_ix]);
-		if (room.z1() > ground_floor_z1) continue; // not on the ground floor or basement
-		cube_t place_area(room); // will represent the usable floor area
+		cube_t place_area;
+
+		if (place_in_attic && has_attic() && (rgen.rand()%10) == 0) { // 10% of the time in the attic
+			place_area = parts[0]; // currently, the attic is always the first part
+			place_area.z1() = place_area.z2();
+		}
+		else {
+			unsigned const room_ix(rgen.rand() % interior->rooms.size());
+			room_t const &room(interior->rooms[room_ix]);
+			if (room.z1() > ground_floor_z1) continue; // not on the ground floor or basement
+			place_area = room; // will represent the usable floor area
+			place_area.z1() += get_fc_thickness(); // on top of the floor
+		}
 		place_area.expand_by_xy(-(radius + get_wall_thickness()));
 		if (min(place_area.dx(), place_area.dy()) < 4.0*radius) continue; // room too small (can happen for has_complex_floorplan office buildings)
 		point pos(gen_xy_pos_in_area(place_area, radius, rgen));
-		pos.z = place_area.z1() + get_fc_thickness(); // on top of the floor
+		pos.z = place_area.z1();
 		if (is_valid_ai_placement(pos, radius)) {return pos;} // check room objects; start in the open, not under something
 	} // for n
 	return all_zeros; // failed
