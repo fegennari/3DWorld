@@ -1319,7 +1319,7 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, 
 				floor_tex = attic_tex;
 				color     = WHITE;
 			}
-			if (is_house) {
+			else if (is_house) {
 				if (has_sec_bldg() && get_sec_bldg().contains_cube(*i)) {floor_tex = tid_nm_pair_t(get_concrete_tid(), 16.0);} // garage or shed
 				else if (is_basement) {floor_tex = mat.basement_floor_tex;} // basement
 				else {floor_tex = mat.house_floor_tex;}
