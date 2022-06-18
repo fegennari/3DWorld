@@ -1299,17 +1299,24 @@ bool building_t::add_kitchen_objs(rand_gen_t rgen, room_t const &room, float zva
 	float const wall_thickness(get_wall_thickness());
 	cube_t room_bounds(get_walkable_room_bounds(room)), place_area(room_bounds);
 	place_area.expand_by(-0.25*wall_thickness); // common spacing to wall for appliances
+	vect_room_object_t &objs(interior->room_geom->objs);
 	bool placed_obj(0);
 	placed_obj |= place_model_along_wall(OBJ_MODEL_FRIDGE, TYPE_FRIDGE, room, 0.75, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 1.2, 4, 0, WHITE, 1); // not at window
-	if (is_house) {placed_obj |= place_model_along_wall(OBJ_MODEL_STOVE, TYPE_STOVE, room, 0.46, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 1.0);}
+	
+	if (is_house) {
+		unsigned const stove_ix(objs.size());
 		
+		if (place_model_along_wall(OBJ_MODEL_STOVE, TYPE_STOVE, room, 0.46, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 1.0)) {
+			// TODO: add TYPE_HOOD above the stove
+			placed_obj = 1;
+		}
+	}	
 	if (is_house && placed_obj) { // if we have at least a fridge or stove, try to add countertops
 		float const vspace(get_window_vspace()), height(0.345*vspace), depth(0.74*height), min_hwidth(0.6*height), floor_thickness(get_floor_thickness());
 		float const min_clearance(get_min_front_clearance()), front_clearance(max(0.6f*height, min_clearance));
 		cube_t cabinet_area(room_bounds);
 		cabinet_area.expand_by(-0.05*wall_thickness); // smaller gap than place_area; this is needed to prevent z-fighting with exterior walls
 		if (min(cabinet_area.dx(), cabinet_area.dy()) < 4.0*min_hwidth) return placed_obj; // no space for cabinets, room is too small
-		vect_room_object_t &objs(interior->room_geom->objs);
 		unsigned const counters_start(objs.size());
 		cube_t c;
 		set_cube_zvals(c, zval, zval+height);

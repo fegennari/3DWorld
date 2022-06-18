@@ -142,6 +142,7 @@ city key_model    ../models/interiors/singlkey.model3d          0 0 0  0 -1 0  2
 city fire_escape_model ../models/fire_escape.model3d            1 0 0  0 -1 0  1 1.0 1.0
 city cup_model    ../models/interiors/cup/Cup.model3d           0 0 0  0 -1 0  1 1.0 1.0
 city toaster_model ../models/interiors/toaster/Toaster.model3d  0 0 0  2  2 0  1 1.0 1.0
+city hood_model   ../models/interiors/decorative_hood.model3d   1 0 0  0 -1 0  1 1.0 1.0
 
 # closet objects
 #city hanger_model  ../models/interiors/clothes_hanger.model3d                       0 0 0  0 0 0  1 1.0 1.0
