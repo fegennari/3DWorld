@@ -109,6 +109,25 @@ void add_obj_to_closet(room_object_t const &c, cube_t const &interior, vect_room
 	} // for n
 }
 
+void try_add_lamp(cube_t const &place_area, float floor_spacing, unsigned room_id, unsigned flags, float light_amt,
+	vect_cube_t &cubes, vect_room_object_t &objects, rand_gen_t &rgen)
+{
+	float const height(0.25*floor_spacing), width(height*get_lamp_width_scale()), radius(0.5*width);
+	if (width == 0.0 || width > 0.9*min(place_area.dx(), place_area.dy())) return; // check if lamp model is valid and lamp fits in closet
+		
+	for (unsigned n = 0; n < 4; ++n) { // make up to 4 attempts
+		point center(gen_xy_pos_in_area(place_area, radius, rgen));
+		center.z = place_area.z1();
+		cube_t lamp(get_cube_height_radius(center, radius, height));
+
+		if (!has_bcube_int(lamp, cubes)) { // check for intersection with other objects
+			objects.emplace_back(lamp, TYPE_LAMP, room_id, 0, 0, flags, light_amt, SHAPE_CYLIN, lamp_colors[rgen.rand()%NUM_LAMP_COLORS]);
+			cubes.push_back(lamp);
+			break;
+		}
+	} // for n
+}
+
 void building_room_geom_t::add_closet_objects(room_object_t const &c, vect_room_object_t &objects) {
 	cube_t ccubes[5]; // only used to get interior space
 	get_closet_cubes(c, ccubes);
@@ -125,22 +144,7 @@ void building_room_geom_t::add_closet_objects(room_object_t const &c, vect_room_
 		vector3d sz;
 
 		if (rgen.rand_bool()) { // maybe add a lamp in the closet
-			float const height(0.25*window_vspacing), width(height*get_lamp_width_scale()), radius(0.5*width);
-
-			if (width > 0.0 && width < 0.9*min(interior.dx(), interior.dy())) { // check if lamp model is valid and lamp fits in closet
-
-				for (unsigned n = 0; n < 4; ++n) { // make up to 4 attempts
-					point center(gen_xy_pos_in_area(interior, radius, rgen));
-					center.z = interior.z1();
-					cube_t lamp(get_cube_height_radius(center, radius, height));
-
-					if (!has_bcube_int(lamp, cubes)) { // check for intersection with boxes
-						objects.emplace_back(lamp, TYPE_LAMP, c.room_id, 0, 0, flags, c.light_amt, SHAPE_CYLIN, lamp_colors[rgen.rand()%NUM_LAMP_COLORS]);
-						cubes.push_back(lamp);
-						break;
-					}
-				} // for n
-			}
+			try_add_lamp(interior, window_vspacing, c.room_id, flags, c.light_amt, cubes, objects, rgen);
 		}
 		if (rgen.rand_bool()) { // maybe add a computer in the closet
 			float const height(0.21*window_vspacing*rgen.rand_uniform(1.0, 1.2)), cheight(0.75*height), cwidth(0.44*cheight), cdepth(0.9*cheight);

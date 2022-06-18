@@ -11,6 +11,8 @@ unsigned get_skip_mask_for_xy(bool dim);
 colorRGBA apply_light_color(room_object_t const &o, colorRGBA const &c);
 void add_boxes_to_space(room_object_t const &c, vect_room_object_t &objects, cube_t const &bounds, vect_cube_t &cubes, rand_gen_t &rgen,
 	unsigned num_boxes, float xy_scale, float hmin, float hmax, bool allow_crates, unsigned flags); // from building_room_obj_expand
+void try_add_lamp(cube_t const &place_area, float floor_spacing, unsigned room_id, unsigned flags, float light_amt,
+	vect_cube_t &cubes, vect_room_object_t &objects, rand_gen_t &rgen);
 
 
 bool building_t::point_under_attic_roof(point const &pos, vector3d *const cnorm) const {
@@ -135,8 +137,9 @@ void building_t::add_attic_objects(rand_gen_t rgen) {
 	// Note: not setting RO_FLAG_NOCOLL because we do want to collide with this when open
 	unsigned const acc_flags(room.is_hallway ? RO_FLAG_IN_HALLWAY : 0);
 	unsigned const attic_door_ix(objs.size());
+	float const light_amt(1.0); // always set to 1.0 here, since indir is special cased for attics
 	// is light_amount=1.0 correct? since this door can be viewed from both inside and outside the attic, a single number doesn't really work anyway
-	objs.emplace_back(adoor, TYPE_ATTIC_DOOR, room_id, ddim, ddir, acc_flags, 1.0, SHAPE_CUBE); // Note: player collides with open attic door
+	objs.emplace_back(adoor, TYPE_ATTIC_DOOR, room_id, ddim, ddir, acc_flags, light_amt, SHAPE_CUBE); // Note: player collides with open attic door
 	cube_t const avoid(get_attic_access_door_avoid());
 	vect_cube_t avoid_cubes;
 	avoid_cubes.push_back(avoid);
@@ -172,7 +175,7 @@ void building_t::add_attic_objects(rand_gen_t rgen) {
 		light.set_from_sphere(light_pos[n], light_radius);
 		// start off lit for now; maybe should start off and auto turn on when the player enters the attic?
 		unsigned const light_flags(RO_FLAG_LIT | RO_FLAG_EMISSIVE | RO_FLAG_NOCOLL | obj_flags);
-		objs.emplace_back(light, TYPE_LIGHT, room_id, 0, 0, light_flags, 1.0, SHAPE_SPHERE, get_light_color_temp(0.45)); // yellow-shite
+		objs.emplace_back(light, TYPE_LIGHT, room_id, 0, 0, light_flags, light_amt, SHAPE_SPHERE, get_light_color_temp(0.45)); // yellow-shite
 	}
 	if (has_chimney == 1) { // interior chimney; not drawn when player is in the attic because it's part of the exterior geometry
 		cube_t chimney(get_chimney());
@@ -182,7 +185,7 @@ void building_t::add_attic_objects(rand_gen_t rgen) {
 		chimney.expand_by_xy(-0.05*min(chimney.dx(), chimney.dy())); // shrink to make it inside the exterior chimney so that it doesn't show through when outside the attic
 
 		if (!chimney.intersects(avoid)) { // don't block attic access door (probably won't/can't happen)
-			objs.emplace_back(chimney, TYPE_CHIMNEY, room_id, 0, 0, obj_flags, 1.0);
+			objs.emplace_back(chimney, TYPE_CHIMNEY, room_id, 0, 0, obj_flags, light_amt);
 			avoid_cubes.push_back(chimney);
 		}
 	}
@@ -212,13 +215,22 @@ void building_t::add_attic_objects(rand_gen_t rgen) {
 		}
 	} // for i
 
-	// add boxes and other objects
+	// add boxes; currently not stacked - should they be?
 	cube_t place_area(part);
 	place_area.z1() = place_area.z2() = interior->attic_access.z2(); // bottom of attic floor
 	place_area.expand_by_xy(-0.75*floor_spacing); // keep away from corners; just a guess
-	unsigned const num_boxes(rgen.rand() % 50);
+	unsigned const num_boxes(rgen.rand() % 25); // 0-24
 	float const box_sz(0.2*floor_spacing);
 	add_boxes_to_space(objs[attic_door_ix], objs, place_area, avoid_cubes, rgen, num_boxes, box_sz, 0.5*box_sz, 1.5*box_sz, 1, obj_flags); // allow_crates=1
+
+	// add lamps
+	unsigned const num_lamps(rgen.rand() % 3); // 0-2
+
+	for (unsigned n = 0; n < num_lamps; ++n) {
+		try_add_lamp(place_area, floor_spacing, room_id, obj_flags, light_amt, avoid_cubes, objs, rgen);
+	}
+
+	// TODO: TYPE_RUG, TYPE_BOOK, TYPE_NIGHTSTAND, TYPE_BOTTLE, TYPE_PAPER, TYPE_PAINTCAN, TYPE_LG_BALL, TYPE_FURNACE, TYPE_PIPE, TYPE_RAT
 }
 
 cube_t get_attic_access_door_cube(room_object_t const &c) {
