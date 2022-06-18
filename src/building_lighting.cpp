@@ -400,6 +400,7 @@ class building_indir_light_mgr_t {
 		point const ray_scale(scene_bounds.get_size()/light_bounds.get_size()), llc_shift(scene_bounds.get_llc() - light_bounds.get_llc()*ray_scale);
 		float const tolerance(1.0E-5*valid_area.get_max_extent());
 		bool const is_window(cur_light & IS_WINDOW_BIT);
+		bool in_attic(0);
 		float weight(100.0);
 		cube_t light_cube;
 		colorRGBA lcolor;
@@ -426,8 +427,10 @@ class building_indir_light_mgr_t {
 			light_cube      = ro;
 			light_cube.z1() = light_cube.z2() = (ro.z1() - 0.01*ro.dz()); // set slightly below bottom of light
 			bool const light_in_basement(ro.z1() < b.ground_floor_z1), is_lamp(ro.type == TYPE_LAMP);
-			if (is_lamp) {base_num_rays /= 2;} // half the rays for lamps
-			if (is_lamp) {dir = 2;} // onmidirectional; dim stays at 2/Z
+			in_attic = ro.in_attic();
+			if (in_attic) {base_num_rays *= 2;} // twice the number of rays in attic, since light is large and there are only 1-2 of them
+			if (is_lamp ) {base_num_rays /= 2;} // half the rays for lamps
+			if (is_lamp ) {dir = 2;} // onmidirectional; dim stays at 2/Z
 			float const surface_area(ro.dx()*ro.dy() + 2.0f*(ro.dx() + ro.dy())*ro.dz()); // bottom + 4 sides (top is occluded), 0.0003 for houses
 			lcolor  = (is_lamp ? LAMP_COLOR : ro.get_color());
 			weight *= surface_area/0.0003f;
