@@ -2383,7 +2383,7 @@ void building_room_geom_t::add_water_heater(room_object_t const &c) {
 	set_wall_width(box, c.get_center_dim(!c.dim), 0.2*radius, !c.dim);
 	box.d[c.dim][!c.dir] = front_pos - front_dir*0.10*radius; // back  of box
 	box.d[c.dim][ c.dir] = front_pos + front_dir*0.12*radius; // front of box
-	rgeom_mat_t &metal_mat(get_metal_material(1, 0, 1)); // small=1
+	rgeom_mat_t &metal_mat(get_metal_material(1, 0, 1)); // shadowed=1, small=1
 	metal_mat.add_vcylin_to_verts(body, apply_light_color(c, GRAY   ), 0, 0, 0); // main body - draw sides only
 	metal_mat.add_vcylin_to_verts(pan,  apply_light_color(c, LT_GRAY), 1, 0, 1, 0, 1.0, 1.0, 1.0, 1.0, 0, 64); // bottom pan - two sided, with bottom; ndiv=64
 	metal_mat.add_vcylin_to_verts(top,  apply_light_color(c, DK_GRAY), 0, 1, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, 64); // top - draw top; ndiv=64
@@ -2430,6 +2430,11 @@ void building_room_geom_t::add_water_heater(room_object_t const &c) {
 		rgeom_mat_t &sticker_mat(get_material(tid_nm_pair_t(get_texture_by_name("interiors/water_heater_sticker.jpg")), 0, 0, 1)); // no shadows, small=1
 		sticker_mat.add_vcylin_to_verts(sticker, apply_light_color(c, LT_GRAY), 0, 0, 0, 0, 1.0, 1.0, 2.0); // sticker - draw sides only with scaled texture
 	}
+}
+
+void building_room_geom_t::add_furnace(room_object_t const &c) {
+	rgeom_mat_t &metal_mat(get_metal_material(1, 0, 1)); // shadowed=1, small=1
+	metal_mat.add_cube_to_verts_untextured(c, apply_light_color(c)); // placeholder: TODO: add texture for at least the front
 }
 
 void building_room_geom_t::add_toaster_proxy(room_object_t const &c) { // draw a simple untextured XY cube to show a lower LOD model of the toaster
@@ -3078,7 +3083,7 @@ colorRGBA room_object_t::get_color() const {
 	case TYPE_SPRAYCAN: return (DK_GRAY*0.5 + color*0.5);
 	case TYPE_CRACK:    return ALPHA0; // transparent
 	case TYPE_FPLACE:   return texture_color(BRICK2_TEX).modulate_with(color);
-	case TYPE_WHEATER:  return LT_GRAY;
+	case TYPE_WHEATER:  return GRAY;
 	case TYPE_ATTIC_DOOR:return get_textured_wood_color();
 	default: return color; // TYPE_LIGHT, TYPE_TCAN, TYPE_BOOK, TYPE_BOTTLE, TYPE_PEN_PENCIL, etc.
 	}

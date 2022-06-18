@@ -96,7 +96,8 @@ bool building_t::add_water_heaters(rand_gen_t &rgen, room_t const &room, float z
 		c_exp.d[dim][!dir] += (dir ? -1.0 : 1.0)*0.25*radius; // add more keepout in front where the controls are
 		c_exp.intersect_with_cube(room); // don't pick up objects on the other side of the wall
 		if (overlaps_other_room_obj(c_exp, objs_start)) continue; // check existing objects, in particular storage room boxes that will have already been placed
-		objs.emplace_back(c, TYPE_WHEATER, room_id, dim, !dir, (is_house ? RO_FLAG_IS_HOUSE : 0), tot_light_amt, SHAPE_CYLIN);
+		unsigned const flags((is_house ? RO_FLAG_IS_HOUSE : 0) | RO_FLAG_INTERIOR);
+		objs.emplace_back(c, TYPE_WHEATER, room_id, dim, !dir, flags, tot_light_amt, SHAPE_CYLIN);
 
 		if (!is_house && n < 4) { // office building, placed at corner; try to add additional water heaters along the wall
 			vector3d step;
@@ -108,24 +109,63 @@ bool building_t::add_water_heaters(rand_gen_t &rgen, room_t const &room, float z
 			tot_volume /= floor_spacing*floor_spacing*floor_spacing;
 			unsigned const max_wh(max(1, min(5, round_fp(tot_volume/1000.0))));
 
-			for (unsigned n = 1; n < max_wh; ++n) { // one has already been placed
+			for (unsigned m = 1; m < max_wh; ++m) { // one has already been placed
 				c.translate(step);
 				if (!room_bounds.contains_cube(c)) break; // went outside the room, done
 				if (is_cube_close_to_doorway(c, room, 0.0, 1) || interior->is_blocked_by_stairs_or_elevator(c)) continue; // bad placement, skip
 				c_exp.translate(step);
 				if (overlaps_other_room_obj(c_exp, objs_start)) continue; // check existing objects
-				objs.emplace_back(c, TYPE_WHEATER, room_id, dim, !dir, 0, tot_light_amt, SHAPE_CYLIN);
-			} // for n
+				objs.emplace_back(c, TYPE_WHEATER, room_id, dim, !dir, flags, tot_light_amt, SHAPE_CYLIN);
+			} // for m
 		}
 		return 1; // done
 	} // for n
 	return 0;
 }
 
+bool gen_furnace_cand(cube_t const &place_area, float floor_spacing, bool near_wall, rand_gen_t &rgen, cube_t &furnace, bool &dim, bool &dir) {
+	float const height(0.6*floor_spacing), hwidth(0.2*height), hdepth(0.25*height);
+	if (hdepth > 5.0*min(place_area.dx(), place_area.dy())) return 0; // place area is too small
+	dim = rgen.rand_bool();
+	point center;
+	float const lo(place_area.d[dim][0] + hdepth), hi(place_area.d[dim][1] - hdepth);
+
+	if (near_wall) {
+		dir = rgen.rand_bool();
+		center[dim] = (dir ? hi : lo);
+	}
+	else {
+		center[dim] = rgen.rand_uniform(lo, hi);
+		dir = (place_area.get_center_dim(dim) < center[dim]); // face the center of the room
+	}
+	center[!dim] = rgen.rand_uniform(place_area.d[!dim][0]+hwidth, place_area.d[!dim][1]-hwidth);
+	set_wall_width(furnace, center[ dim], hdepth,  dim);
+	set_wall_width(furnace, center[!dim], hwidth, !dim);
+	set_cube_zvals(furnace, place_area.z1(), place_area.z1()+height);
+	return 1;
+}
+
+// Note: for houses
 bool building_t::add_basement_utility_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
-	// for now, this is only the water heater; we may want to add a furnace, etc. later
+	if (!has_room_geom()) return 0;
+	// place water heater
 	bool was_added(add_water_heaters(rgen, room, zval, room_id, tot_light_amt, objs_start));
-	// TODO: add TYPE_FURNACE
+	
+	// place furnace
+	float const floor_spacing(get_window_vspace());
+	cube_t place_area(get_walkable_room_bounds(room));
+	place_area.expand_by(-get_trim_thickness());
+
+	for (unsigned n = 0; n < 100; ++n) { // 100 tries
+		cube_t furnace;
+		bool dim(0), dir(0);
+		if (!gen_furnace_cand(place_area, floor_spacing, 1, rgen, furnace, dim, dir)) break; // near_wall=1
+		if (is_cube_close_to_doorway(furnace, room, 0.0, 1) || interior->is_blocked_by_stairs_or_elevator(furnace) || overlaps_other_room_obj(furnace, objs_start)) continue;
+		unsigned const flags((is_house ? RO_FLAG_IS_HOUSE : 0) | RO_FLAG_INTERIOR);
+		interior->room_geom->objs.emplace_back(furnace, TYPE_FURNACE, room_id, dim, dir, flags, tot_light_amt, SHAPE_CUBE, GRAY);
+		was_added = 1;
+		break; // success/done
+	} // for n
 	return was_added;
 }
 

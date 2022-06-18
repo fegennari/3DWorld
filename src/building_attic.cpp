@@ -13,6 +13,7 @@ void add_boxes_to_space(room_object_t const &c, vect_room_object_t &objects, cub
 	unsigned num_boxes, float xy_scale, float hmin, float hmax, bool allow_crates, unsigned flags); // from building_room_obj_expand
 void try_add_lamp(cube_t const &place_area, float floor_spacing, unsigned room_id, unsigned flags, float light_amt,
 	vect_cube_t &cubes, vect_room_object_t &objects, rand_gen_t &rgen);
+bool gen_furnace_cand(cube_t const &place_area, float floor_spacing, bool near_wall, rand_gen_t &rgen, cube_t &furnace, bool &dim, bool &dir);
 
 
 bool building_t::point_under_attic_roof(point const &pos, vector3d *const cnorm) const {
@@ -134,9 +135,7 @@ void building_t::add_attic_objects(rand_gen_t rgen) {
 	assert(room_id >= 0); // must be found
 	room_t const &room(get_room(room_id));
 	bool const ddim(adoor.ix >> 1), ddir(adoor.ix & 1);
-	// Note: not setting RO_FLAG_NOCOLL because we do want to collide with this when open
-	unsigned const acc_flags(room.is_hallway ? RO_FLAG_IN_HALLWAY : 0);
-	unsigned const attic_door_ix(objs.size());
+	unsigned const acc_flags(room.is_hallway ? RO_FLAG_IN_HALLWAY : 0), attic_door_ix(objs.size());
 	float const light_amt(1.0); // always set to 1.0 here, since indir is special cased for attics
 	// is light_amount=1.0 correct? since this door can be viewed from both inside and outside the attic, a single number doesn't really work anyway
 	objs.emplace_back(adoor, TYPE_ATTIC_DOOR, room_id, ddim, ddir, acc_flags, light_amt, SHAPE_CUBE); // Note: player collides with open attic door
@@ -214,11 +213,23 @@ void building_t::add_attic_objects(rand_gen_t rgen) {
 			avoid_cubes.back().expand_by_xy(beam_width); // add extra spacing
 		}
 	} // for i
-
-	// add boxes; currently not stacked - should they be?
 	cube_t place_area(part);
 	place_area.z1() = place_area.z2() = interior->attic_access.z2(); // bottom of attic floor
-	place_area.expand_by_xy(-0.75*floor_spacing); // keep away from corners; just a guess
+	place_area.expand_by_xy(-0.75*floor_spacing); // keep away from corners; just a guess; applies to boxes and furnace
+
+	if (!has_basement()) { // add furnace if not already added in the basement
+		for (unsigned n = 0; n < 100; ++n) { // 100 tries
+			cube_t furnace;
+			bool dim(0), dir(0);
+			if (!gen_furnace_cand(place_area, floor_spacing, 0, rgen, furnace, dim, dir)) break; // near_wall=0
+			if (has_bcube_int(furnace, avoid_cubes) || !cube_in_attic(furnace)) continue;
+			unsigned const flags((is_house ? RO_FLAG_IS_HOUSE : 0) | RO_FLAG_INTERIOR);
+			interior->room_geom->objs.emplace_back(furnace, TYPE_FURNACE, room_id, dim, dir, flags, light_amt, SHAPE_CUBE, GRAY);
+			avoid_cubes.push_back(furnace);
+			break; // success/done
+		} // for n
+	}
+	// add boxes; currently not stacked - should they be?
 	unsigned const num_boxes(rgen.rand() % 25); // 0-24
 	float const box_sz(0.2*floor_spacing);
 	add_boxes_to_space(objs[attic_door_ix], objs, place_area, avoid_cubes, rgen, num_boxes, box_sz, 0.5*box_sz, 1.5*box_sz, 1, obj_flags); // allow_crates=1
@@ -230,7 +241,7 @@ void building_t::add_attic_objects(rand_gen_t rgen) {
 		try_add_lamp(place_area, floor_spacing, room_id, obj_flags, light_amt, avoid_cubes, objs, rgen);
 	}
 
-	// TODO: TYPE_RUG, TYPE_BOOK, TYPE_NIGHTSTAND, TYPE_BOTTLE, TYPE_PAPER, TYPE_PAINTCAN, TYPE_LG_BALL, TYPE_FURNACE, TYPE_PIPE, TYPE_RAT
+	// TODO: TYPE_RUG, TYPE_CHAIR, TYPE_NIGHTSTAND, TYPE_PAINTCAN, TYPE_LG_BALL, TYPE_BOOK, TYPE_BOTTLE, TYPE_PAPER, TYPE_PIPE
 }
 
 cube_t get_attic_access_door_cube(room_object_t const &c) {
