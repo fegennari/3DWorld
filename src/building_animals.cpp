@@ -80,7 +80,7 @@ point building_t::gen_animal_floor_pos(float radius, bool place_in_attic, rand_g
 		cube_t place_area;
 
 		if (place_in_attic && has_attic() && (rgen.rand()%10) == 0) { // 10% of the time in the attic
-			place_area = parts[0]; // currently, the attic is always the first part
+			place_area = get_attic_part();
 			place_area.z1() = place_area.z2();
 		}
 		else {
