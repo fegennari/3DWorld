@@ -101,9 +101,11 @@ bool building_t::add_attic_access_door(cube_t const &ceiling, unsigned part_ix, 
 	}
 	else {
 		cube_t const &part(get_part_for_room(best_room));
+		// if the room spans the entire part, make the attic access in the center so that the stairs have proper clearance
+		bool const span_x(best_room.x1() == part.x1() && best_room.x2() == part.x2()), span_y(best_room.y1() == part.y1() && best_room.y2() == part.y2());
 		bool const xd(best_room.xc() < part.xc()), yd(best_room.yc() < part.yc()); // closer to the center of the part to maximize head space
-		access_pos.x = 0.7*best_room.d[0][xd] + 0.3*best_room.d[0][!xd];
-		access_pos.y = 0.7*best_room.d[1][yd] + 0.3*best_room.d[1][!yd];
+		access_pos.x = (span_x ? best_room.xc() : (0.7*best_room.d[0][xd] + 0.3*best_room.d[0][!xd]));
+		access_pos.y = (span_y ? best_room.yc() : (0.7*best_room.d[1][yd] + 0.3*best_room.d[1][!yd]));
 	}
 	valid_area.clamp_pt_xy(access_pos);
 	interior->attic_access.set_from_point(access_pos);
