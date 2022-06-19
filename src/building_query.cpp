@@ -368,7 +368,7 @@ bool maybe_inside_room_object(room_object_t const &obj, point const &pos, float 
 	return ((obj.is_open() && sphere_cube_intersect(pos, radius, obj)) || obj.contains_pt(pos));
 }
 
-cube_t get_true_room_obj_bcube(room_object_t const &c) {
+cube_t get_true_room_obj_bcube(room_object_t const &c) { // for collisions, etc.
 	if (c.type == TYPE_CLOSET && c.is_open() && c.is_small_closet()) { // special case for open closets
 		cube_t bcube(c); // only applies to small closets with open doors
 		float const width(c.get_width()), wall_width(0.5*(width - 0.5*c.dz())); // see get_closet_cubes()
