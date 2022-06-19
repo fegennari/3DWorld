@@ -1349,6 +1349,7 @@ void building_t::get_room_obj_cubes(room_object_t const &c, point const &pos, ve
 		get_tc_leg_cubes(cubes[2], 0.15, leg_cubes); // width=0.15
 		sm_cubes.insert(sm_cubes.end(), leg_cubes, leg_cubes+4); // legs are small
 	}
+	else if (c.type == TYPE_ATTIC_DOOR) {lg_cubes.push_back(get_true_room_obj_bcube(c));}
 	// otherwise, treat as a large object; this includes: TYPE_BCASE, TYPE_KSINK (with dishwasher), TYPE_COUCH, TYPE_SHELVES, TYPE_COLLIDER (cars)
 	else {lg_cubes.push_back(c);}
 }
