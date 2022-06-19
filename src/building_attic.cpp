@@ -41,6 +41,15 @@ bool building_t::cube_in_attic(cube_t const &c) const {
 		    point_under_attic_roof(point(c.x2(), c.y2(), z2)) || point_under_attic_roof(point(c.x2(), c.y1(), z2)));
 }
 
+void building_t::get_attic_roof_tquads(vector<tquad_with_ix_t> &tquads) const {
+	tquads.clear();
+	if (!has_attic()) return;
+
+	for (auto const &tq : roof_tquads) {
+		if (is_attic_roof(tq, 1)) {tquads.push_back(tq);} // type_roof_only=1
+	}
+}
+
 bool building_t::has_L_shaped_roof_area() const {
 	if (real_num_parts == 1) return 0; // not L-shaped
 	cube_t const &A(parts[0]), &B(parts[1]);

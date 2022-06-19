@@ -1208,7 +1208,7 @@ struct building_t : public building_geom_t {
 	bool cube_in_attic(cube_t const &c) const;
 	bool check_point_xy_in_part(point const &pos) const;
 	bool ray_cast_exterior_walls(point const &p1, point const &p2, vector3d &cnorm, float &t) const;
-	bool ray_cast_interior(point const &pos, vector3d const &dir, cube_t const &valid_area, cube_bvh_t const &bvh,
+	bool ray_cast_interior(point const &pos, vector3d const &dir, cube_t const &valid_area, cube_bvh_t const &bvh, bool in_attic,
 		point &cpos, vector3d &cnorm, colorRGBA &ccolor, rand_gen_t *rgen=nullptr) const;
 	void create_building_volume_light_texture(unsigned bix, point const &target, unsigned &tid) const;
 	bool ray_cast_camera_dir(point const &camera_bs, point &cpos, colorRGBA &ccolor) const;
@@ -1384,6 +1384,7 @@ private:
 	void gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes);
 	void maybe_add_basement(rand_gen_t rgen);
 	bool has_L_shaped_roof_area() const;
+	void get_attic_roof_tquads(vector<tquad_with_ix_t> &tquads) const;
 	bool add_attic_access_door(cube_t const &ceiling, unsigned part_ix, unsigned num_floors, unsigned rooms_start, rand_gen_t &rgen);
 	bool is_light_placement_valid(cube_t const &light, room_t const &room, float pad) const;
 	void try_place_light_on_ceiling(cube_t const &light, room_t const &room, bool room_dim, float pad, bool allow_rot, bool allow_mult, vect_cube_t &out, rand_gen_t &rgen) const;

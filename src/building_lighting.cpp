@@ -9,9 +9,10 @@
 #include "profiler.h"
 #include <thread>
 
-bool const USE_BKG_THREAD      = 1;
-bool const INDIR_BASEMENT_ONLY = 0;
-bool const INDIR_VOL_PER_FLOOR = 0;
+bool  const USE_BKG_THREAD      = 1;
+bool  const INDIR_BASEMENT_ONLY = 0;
+bool  const INDIR_VOL_PER_FLOOR = 0;
+float const ATTIC_LIGHT_RADIUS_SCALE = 2.0; // larger radius in attic, since space is larger
 
 extern bool camera_in_building, player_in_attic;
 extern int MESH_Z_SIZE, display_mode, display_framerate, camera_surf_collide, animate2, frame_counter, building_action_key, player_in_basement, player_in_elevator;
@@ -52,8 +53,14 @@ class cube_bvh_t : public cobj_tree_simple_type_t<colored_cube_t> {
 		for (unsigned i = n.start; i < n.end; ++i) {n.assign_or_union_with_cube(objects[i]);} // bcube union
 	}
 public:
+	vector<tquad_with_ix_t> roof_tquads; // these aren't cubes, so they don't go into the BVH; should only be 2-4 of these
+
 	vect_colored_cube_t &get_objs() {return objects;}
 
+	void clear() {
+		cobj_tree_simple_type_t<colored_cube_t>::clear();
+		roof_tquads.clear();
+	}
 	bool ray_cast(point const &p1, point const &p2, vector3d &cnorm, colorRGBA &ccolor, float &t) const {
 		if (nodes.empty()) return 0;
 		bool ret(0);
@@ -94,7 +101,7 @@ bool building_t::ray_cast_exterior_walls(point const &p1, point const &p2, vecto
 	return follow_ray_through_cubes_recur(p1, p2, p1, parts, get_real_parts_end_inc_sec(), parts.end(), 0, cnorm, t);
 }
 // Note: static objects only; excludes people; pos in building space
-bool building_t::ray_cast_interior(point const &pos, vector3d const &dir, cube_t const &valid_area, cube_bvh_t const &bvh,
+bool building_t::ray_cast_interior(point const &pos, vector3d const &dir, cube_t const &valid_area, cube_bvh_t const &bvh, bool in_attic,
 	point &cpos, vector3d &cnorm, colorRGBA &ccolor, rand_gen_t *rgen) const
 {
 	if (!interior || is_rotated() || !is_simple_cube()) return 0; // these cases are not yet supported
@@ -108,8 +115,17 @@ bool building_t::ray_cast_interior(point const &pos, vector3d const &dir, cube_t
 	bool hit(0);
 	cpos = p2; // use far clip point for clip cube if there is no hit
 
+	if (in_attic) {
+		for (tquad_with_ix_t const &tq : bvh.roof_tquads) {
+			vector3d const normal(-tq.get_norm()); // negate because we're testing the inside of the roof
+			float t_tq(t);
+			if (!line_poly_intersect(p1, p2, tq.pts, tq.npts, normal, t_tq) || t_tq >= t) continue;
+			t = t_tq; cnorm = normal; hit = 1; ccolor = texture_color(FENCE_TEX);
+		}
+		if (hit) {p2  = p1 + (p2 - p1)*t; t = 1.0;} // clip p2 to t (minor optimization)
+	}
 	// check parts (exterior walls); should chimneys and porch roofs be included?
-	if (ray_cast_exterior_walls(p1, p2, cnorm, t)) { // interior ray (common case) - find furthest exit point
+	else if (ray_cast_exterior_walls(p1, p2, cnorm, t)) { // interior ray (common case) - find furthest exit point
 		p2  = p1 + (p2 - p1)*t; t = 1.0; // clip p2 to t (minor optimization)
 		hit = 1;
 		if (p2.z < ground_floor_z1) {ccolor = get_basement_wall_texture().get_avg_color();} // basement wall
@@ -428,7 +444,7 @@ class building_indir_light_mgr_t {
 			light_cube.z1() = light_cube.z2() = (ro.z1() - 0.01*ro.dz()); // set slightly below bottom of light
 			bool const light_in_basement(ro.z1() < b.ground_floor_z1), is_lamp(ro.type == TYPE_LAMP);
 			in_attic = ro.in_attic();
-			if (in_attic) {base_num_rays *= 2;} // twice the number of rays in attic, since light is large and there are only 1-2 of them
+			if (in_attic) {base_num_rays *= 4;} // more rays in attic, since light is large and there are only 1-2 of them
 			if (is_lamp ) {base_num_rays /= 2;} // half the rays for lamps
 			if (is_lamp ) {dir = 2;} // onmidirectional; dim stays at 2/Z
 			float const surface_area(ro.dx()*ro.dy() + 2.0f*(ro.dx() + ro.dy())*ro.dz()); // bottom + 4 sides (top is occluded), 0.0003 for houses
@@ -437,6 +453,7 @@ class building_indir_light_mgr_t {
 			if (b.has_pri_hall())     {weight *= 0.70;} // floorplan is open and well lit, indir lighting value seems too high
 			if (ro.type == TYPE_LAMP) {weight *= 0.33;} // lamps are less bright
 			if (light_in_basement)    {weight *= (b.has_parking_garage ? 0.25 : 0.5);} // basement is darker, parking garages are even darker
+			if (in_attic)             {weight *= ATTIC_LIGHT_RADIUS_SCALE;}
 		}
 		if (b.is_house) {weight *= 2.0 ;} // houses have dimmer lights and seem to work better with more indir
 		if (is_negative_light) {weight *= -1.0;}
@@ -463,7 +480,7 @@ class building_indir_light_mgr_t {
 				origin[d] = ((lo == hi) ? lo : rgen.rand_uniform(lo, hi));
 			}
 			init_cpos = origin; // init value
-			bool const hit(b.ray_cast_interior(origin, pri_dir, valid_area, bvh, init_cpos, init_cnorm, ccolor, &rgen));
+			bool const hit(b.ray_cast_interior(origin, pri_dir, valid_area, bvh, in_attic, init_cpos, init_cnorm, ccolor, &rgen));
 
 			// room lights lights already contribute direct lighting, so we skip this ray; however, windows don't, so we add their primary ray contribution
 			if (is_window && init_cpos != origin) {
@@ -483,7 +500,7 @@ class building_indir_light_mgr_t {
 
 				for (unsigned bounce = 1; bounce < MAX_RAY_BOUNCES; ++bounce) { // allow up to MAX_RAY_BOUNCES bounces
 					cpos = pos; // init value
-					bool const hit(b.ray_cast_interior(pos, dir, valid_area, bvh, cpos, cnorm, ccolor, &rgen));
+					bool const hit(b.ray_cast_interior(pos, dir, valid_area, bvh, in_attic, cpos, cnorm, ccolor, &rgen));
 
 					if (cpos != pos) { // accumulate light along the ray from pos to cpos (which is always valid) with color cur_color
 						point const p1(pos*ray_scale + llc_shift), p2(cpos*ray_scale + llc_shift); // transform building space to global scene space
@@ -657,9 +674,10 @@ public:
 		//highres_timer_t timer("Build BVH");
 		cur_floor  = b.get_floor_for_zval(target.z);
 		valid_area = b.bcube;
+		bool const in_attic(b.point_in_attic(target));
 		
 		// clip per light source to current floor; note that this will exclude stairs going up or down
-		if (b.point_in_attic(target)) {
+		if (in_attic) {
 			set_cube_zvals(valid_area, b.interior->attic_access.z1(), b.interior_z2);
 		}
 		else {
@@ -670,6 +688,7 @@ public:
 		light_bounds = (INDIR_VOL_PER_FLOOR ? valid_area : b.get_interior_bcube());
 		bvh.clear();
 		b.gather_interior_cubes(bvh.get_objs(), cur_floor);
+		if (in_attic) {b.get_attic_roof_tquads(bvh.roof_tquads);}
 		bvh.build_tree_top(0); // verbose=0
 		need_bvh_rebuild = 0;
 	}
@@ -689,11 +708,11 @@ void building_t::create_building_volume_light_texture(unsigned bix, point const 
 	building_indir_light_mgr.register_cur_building(*this, bix, target, tid);
 }
 
-bool building_t::ray_cast_camera_dir(point const &camera_bs, point &cpos, colorRGBA &ccolor) const {
+bool building_t::ray_cast_camera_dir(point const &camera_bs, point &cpos, colorRGBA &ccolor) const { // unused - for debugging
 	assert(!USE_BKG_THREAD); // not legal to call when running lighting in a background thread
 	building_indir_light_mgr.build_bvh(*this, camera_bs);
 	vector3d cnorm; // unused
-	return ray_cast_interior(camera_bs, cview_dir, bcube, building_indir_light_mgr.get_bvh(), cpos, cnorm, ccolor);
+	return ray_cast_interior(camera_bs, cview_dir, bcube, building_indir_light_mgr.get_bvh(), point_in_attic(camera_bs), cpos, cnorm, ccolor);
 }
 
 // Note: target is building space camera
@@ -991,7 +1010,7 @@ bool building_t::is_rot_cube_visible(cube_t const &c, vector3d const &xlate) con
 float get_radius_for_room_light(room_object_t const &obj) {
 	float radius(6.0f*(obj.dx() + obj.dy()));
 	//if (obj.type == TYPE_LAMP) {radius *= 1.0;}
-	if (obj.in_attic()) {radius *= 2.0;} // larger radius in attic, since space is larger
+	if (obj.in_attic()) {radius *= ATTIC_LIGHT_RADIUS_SCALE;}
 	return radius;
 }
 
