@@ -1410,7 +1410,7 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, 
 			// add inside surface of attic access hole; could be draw as room geom if needed
 			bdraw.add_section(*this, 0, interior->attic_access, mat.wall_tex, mat.wall_color, 3, 0, 0, 1, 0, 0.0, 0, 1.0, 1); // no AO; X/Y dims only, inverted normals
 			// add inside surfaces of roof tquads
-			float const attic_z1(interior->attic_access.z1()), delta_z(0.1*get_floor_thickness()); // enough to prevent Z-fighting
+			float const delta_z(0.1*get_floor_thickness()); // enough to prevent Z-fighting
 
 			for (auto i = roof_tquads.begin(); i != roof_tquads.end(); ++i) {
 				if (!is_attic_roof(*i, 0)) continue; // type_roof_only=0

@@ -354,7 +354,6 @@ struct edge_t {
 
 void building_room_geom_t::add_attic_woodwork(building_t const &b, float tscale) {
 	if (!b.has_attic()) return;
-	cube_with_ix_t const &adoor(b.interior->attic_access);
 	get_wood_material(tscale, 0, 0, 2); // ensure unshadowed material
 	rgeom_mat_t &wood_mat   (get_wood_material(tscale, 1, 0, 2)); // shadows + detail
 	rgeom_mat_t &wood_mat_us(get_wood_material(tscale, 0, 0, 2)); // no shadows + detail
