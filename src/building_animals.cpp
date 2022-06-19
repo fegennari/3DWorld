@@ -611,6 +611,7 @@ void spider_t::end_jump() {
 
 bool building_room_geom_t::maybe_spawn_spider_in_drawer(room_object_t const &c, cube_t const &drawer, unsigned drawer_id, float floor_spacing, bool is_door) {
 	if (global_building_params.spider_drawer_prob == 0.0) return 0; // no spiders
+	if (!spider_t::allow_in_attic() && c.in_attic()) return 0; // no spiders in the attic
 	rand_gen_t rgen;
 	rgen.set_state((unsigned(c.obj_id) << 8)+drawer_id+1, c.room_id+1);
 	if (rgen.rand_float() >= global_building_params.spider_drawer_prob) return 0; // no spider
