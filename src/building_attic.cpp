@@ -213,7 +213,7 @@ void building_t::add_attic_objects(rand_gen_t rgen) {
 				chimney.expand_by_xy(-0.05*min(chimney.dx(), chimney.dy())); // shrink to make it inside the exterior chimney so that it doesn't show through when outside the attic
 
 				if (!chimney.intersects(avoid)) { // don't block attic access door (probably won't/can't happen)
-					objs.emplace_back(chimney, TYPE_CHIMNEY, room_id, 0, 0, obj_flags, light_amt);
+					objs.emplace_back(chimney, TYPE_CHIMNEY, room_id, 0, 0, obj_flags, light_amt, SHAPE_CUBE, side_color);
 					avoid_cubes.push_back(chimney);
 				}
 			}

@@ -3087,6 +3087,7 @@ colorRGBA room_object_t::get_color() const {
 	case TYPE_WHEATER:  return GRAY;
 	case TYPE_FURNACE:  return get_furnace_color();
 	case TYPE_ATTIC_DOOR:return get_textured_wood_color();
+	//case TYPE_CHIMNEY:  return texture_color(get_material().side_tex); // should modulate with texture color, but we don't have it here
 	default: return color; // TYPE_LIGHT, TYPE_TCAN, TYPE_BOOK, TYPE_BOTTLE, TYPE_PEN_PENCIL, etc.
 	}
 	if (is_obj_model_type()) {return color.modulate_with(get_model_color());} // handle models
