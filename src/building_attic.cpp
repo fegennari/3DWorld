@@ -17,6 +17,8 @@ bool gen_furnace_cand(cube_t const &place_area, float floor_spacing, bool near_w
 
 
 bool building_t::point_under_attic_roof(point const &pos, vector3d *const cnorm) const {
+	if (!get_attic_part().contains_pt_xy(pos)) return 0;
+
 	for (auto const &tq : roof_tquads) {
 		if (tq.type != tquad_with_ix_t::TYPE_ROOF) continue;
 		if (!point_in_polygon_2d(pos.x, pos.y, tq.pts, tq.npts, 0, 1)) continue; // check 2D XY point containment
@@ -203,13 +205,12 @@ void building_t::add_attic_objects(rand_gen_t rgen) {
 	}
 	// add posts as colliders; somewhat of a duplicate of the code in building_room_geom_t::add_attic_woodwork()
 	for (tquad_with_ix_t const &tq : roof_tquads) {
-		if (tq.type != tquad_with_ix_t::TYPE_ROOF || tq.npts == 3) continue; // not a roof tquad
+		if (tq.npts == 3 || !is_attic_roof(tq, 1)) continue; // not a roof tquad; type_roof_only=1
 		vector3d const normal(tq.get_norm()); // points outside of the attic
 		bool const dim(fabs(normal.x) < fabs(normal.y)), dir(normal[dim] > 0.0); // dim this tquad is facing; beams run in the other dim
-		if (dir == 1) continue; // only need to add for one side due to symmetry (FIXME: not correct)
-		cube_t const bcube(tq.get_bcube());
-		if (bcube.z1() < interior->attic_access.z1()) continue; // not at the peak
+		if (dir == 1) continue; // only need to add for one side due to symmetry
 		float const beam_width(0.5*beam_depth);
+		cube_t const bcube(tq.get_bcube());
 		cube_t beam(bcube); // set the z1 base and exterior edge d[dim][dir]
 		beam.z1() = beam.z2() - beam_depth; // approximate
 		set_wall_width(beam, bcube.d[dim][!dir], 0.5*beam_width, dim); // inside/middle edge
@@ -323,9 +324,9 @@ void building_room_geom_t::add_attic_door(room_object_t const &c, float tscale) 
 	}
 }
 
-bool building_t::is_attic_roof(tquad_with_ix_t const &tq) const {
+bool building_t::is_attic_roof(tquad_with_ix_t const &tq, bool type_roof_only) const {
 	if (!has_attic()) return 0;
-	if (tq.type != tquad_with_ix_t::TYPE_ROOF && tq.type != tquad_with_ix_t::TYPE_WALL) return 0;
+	if (tq.type != tquad_with_ix_t::TYPE_ROOF && (type_roof_only || tq.type != tquad_with_ix_t::TYPE_WALL)) return 0;
 	cube_t const tq_bcube(tq.get_bcube());
 	if (tq_bcube.z1() < interior->attic_access.z1()) return 0; // not the top section that has the attic (porch roof, lower floor roof)
 	return get_attic_part().contains_pt_xy_inclusive(tq_bcube.get_cube_center()); // check for correct part
@@ -350,7 +351,7 @@ void building_room_geom_t::add_attic_woodwork(building_t const &b, float tscale)
 
 	// Note: there may be a chimney in the attic, but for now we ignore it
 	for (auto i = b.roof_tquads.begin(); i != b.roof_tquads.end(); ++i) {
-		if (!b.is_attic_roof(*i)) continue;
+		if (!b.is_attic_roof(*i, 0)) continue; // type_roof_only=0
 		bool const is_roof(i->type == tquad_with_ix_t::TYPE_ROOF); // roof tquad; not wall triangle
 		// draw beams along inside of roof; start with a vertical cube and rotate to match roof angle
 		tquad_with_ix_t tq(*i);

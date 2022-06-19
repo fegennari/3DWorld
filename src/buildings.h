@@ -1363,7 +1363,7 @@ public:
 	bool check_obj_occluded(cube_t const &c, point const &viewer, occlusion_checker_noncity_t &oc, bool reflection_pass, bool c_is_building_part=0) const;
 	bool is_entire_building_occluded(point const &viewer, occlusion_checker_noncity_t &oc) const;
 	bool register_indir_lighting_state_change(unsigned light_ix, bool is_door_change=0) const;
-	bool is_attic_roof(tquad_with_ix_t const &tq) const;
+	bool is_attic_roof(tquad_with_ix_t const &tq, bool type_roof_only) const;
 	template<typename T> void add_door_verts(cube_t const &D, T &drawer, uint8_t door_type,
 		bool dim, bool dir, bool opened, bool opens_out, bool exterior, bool on_stairs=0, bool hinge_side=0) const;
 	tquad_with_ix_t set_door_from_cube(cube_t const &c, bool dim, bool dir, unsigned type, float pos_adj,
