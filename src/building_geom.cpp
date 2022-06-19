@@ -1380,7 +1380,7 @@ unsigned extend_roof(cube_t &top, float extend_to, bool dim) {
 float building_t::gen_peaked_roof(cube_t const &top_, float peak_height, bool dim, float extend_to, float max_dz, unsigned skip_side_tri) {
 
 	cube_t top(top_); // deep copy
-	unsigned const extend_dir(extend_roof(top, extend_to, dim));
+	unsigned const extend_dir(extend_roof(top, extend_to, dim)), prev_num_roof_tquads(roof_tquads.size());
 	float const width(top.get_sz_dim(!dim)), roof_dz(min(max_dz, min(peak_height*width, top.dz())));
 	float const z1(top.z2()), z2(z1 + roof_dz), x1(top.x1()), y1(top.y1()), x2(top.x2()), y2(top.y2());
 	assert(roof_dz > 0.0);
@@ -1388,7 +1388,7 @@ float building_t::gen_peaked_roof(cube_t const &top_, float peak_height, bool di
 	if (dim == 0) {pts[4].y = pts[5].y = 0.5f*(y1 + y2);} // yc
 	else          {pts[4].x = pts[5].x = 0.5f*(x1 + x2);} // xc
 	unsigned const qixs[2][2][4] = {{{0,3,5,4}, {4,5,2,1}}, {{0,4,5,1}, {4,3,2,5}}}; // 2 quads
-	roof_tquads.reserve(roof_tquads.size() + (3 + (extend_dir == 2))); // 2 roof quads + 1-2 side triangles
+	roof_tquads.reserve(prev_num_roof_tquads + (3 + (extend_dir == 2))); // 2 roof quads + 1-2 side triangles
 	unsigned const tixs[2][2][3] = {{{1,0,4}, {3,2,5}}, {{0,3,4}, {2,1,5}}}; // 2 triangles
 
 	for (unsigned n = 0; n < 2; ++n) { // triangle section/wall from z1 up to roof
@@ -1420,8 +1420,32 @@ float building_t::gen_peaked_roof(cube_t const &top_, float peak_height, bool di
 	for (unsigned n = 0; n < 2; ++n) { // roof
 		tquad_t tquad(4); // quad
 		UNROLL_4X(tquad.pts[i_] = pts[qixs[dim][n][i_]];);
+
+		if (prev_num_roof_tquads > 0 && has_L_shaped_roof_area()) {
+			// clip to existing roof tquad from a previous part;
+			// the top and bottom edges may meet the other tquad at exactly the same zval, which may not count as intersection, so use the centerline instead
+			point const p1(0.5*(tquad.pts[0] + tquad.pts[dim ? 1 : 3])), p2(0.5*(tquad.pts[dim ? 3 : 1] + tquad.pts[2]));
+			
+			for (auto i = roof_tquads.begin(); i != roof_tquads.begin()+prev_num_roof_tquads; ++i) {
+				if (i->type != tquad_with_ix_t::TYPE_ROOF) continue;
+				vector3d const normal(i->get_norm());
+				point p_int; // used in the m loop below
+				if (!line_poly_intersect(p1, p2, i->pts, i->npts, normal, p_int)) continue;
+
+				// if any edge intersects this tquad, clip all horizontal edges to it; this handles the case where edges meet exactly
+				for (unsigned m = 0; m < 4; ++m) {
+					point &A(tquad.pts[m]), &B(tquad.pts[(m+1)&3]);
+					if (A.z != B.z) continue; // not a horizontal edge, skip
+					float t(0.0); // unused
+					if (!line_int_plane(A, B, i->pts[0], normal, p_int, t, 0)) continue; // should never fail
+					bool const clip_side(dot_product_ptv(normal, A, B) < 0.0);
+					(clip_side ? A : B) = p_int;
+				} // for m
+				break; // should only intersect once
+			} // for i
+		}
 		roof_tquads.emplace_back(tquad, (unsigned)tquad_with_ix_t::TYPE_ROOF); // tag as roof
-	}
+	} // for n
 	return roof_dz;
 }
 

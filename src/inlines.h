@@ -350,19 +350,21 @@ inline bool line_sphere_int_cont(point const &p1, point const &p2, point const &
 inline int line_int_cylinder(point const &p1, point const &p2, point const &cp1, point const &cp2, float r1, float r2, bool check_ends, float &t) {
 	return line_int_thick_cylinder(p1, p2, cp1, cp2, 0.0, 0.0, r1, r2, check_ends, t);
 }
-
 inline bool point_in_cylinder(point const &cp1, point const &cp2, point const &pos, float r1, float r2) {
 	return sphere_intersect_cylinder(pos, 0.0, cp1, cp2, r1, r2);
 }
 
 
 inline bool line_poly_intersect(point const &p1, point const &p2, point const *points, unsigned npts, vector3d const &norm, float &t) {
-	point pos;
-	return (line_int_plane(p1, p2, points[0], norm, pos, t, 0) && planar_contour_intersect(points, npts, pos, norm));
+	point p_int;
+	return (line_int_plane(p1, p2, points[0], norm, p_int, t, 0) && planar_contour_intersect(points, npts, p_int, norm));
 }
-
+inline bool line_poly_intersect(point const &p1, point const &p2, point const *points, unsigned npts, vector3d const &norm, point &p_int) {
+	float t(0.0);
+	return (line_int_plane(p1, p2, points[0], norm, p_int, t, 0) && planar_contour_intersect(points, npts, p_int, norm));
+}
 inline bool line_poly_intersect(vector3d const &v1, point const &p1, point const *points, unsigned npts, vector3d const &norm) {
-	float t;
+	float t(0.0);
 	return line_poly_intersect(p1, (p1 + v1), points, npts, norm, t);
 }
 
