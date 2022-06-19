@@ -237,7 +237,7 @@ void building_t::add_attic_objects(rand_gen_t rgen) {
 			if (!gen_furnace_cand(place_area, floor_spacing, 0, rgen, furnace, dim, dir)) break; // near_wall=0
 			if (has_bcube_int(furnace, avoid_cubes) || !cube_in_attic(furnace)) continue;
 			unsigned const flags((is_house ? RO_FLAG_IS_HOUSE : 0) | RO_FLAG_INTERIOR);
-			interior->room_geom->objs.emplace_back(furnace, TYPE_FURNACE, room_id, dim, dir, flags, light_amt, SHAPE_CUBE, GRAY);
+			interior->room_geom->objs.emplace_back(furnace, TYPE_FURNACE, room_id, dim, dir, flags, light_amt);
 			avoid_cubes.push_back(furnace);
 			break; // success/done
 		} // for n

@@ -132,11 +132,11 @@ bool gen_furnace_cand(cube_t const &place_area, float floor_spacing, bool near_w
 
 	if (near_wall) {
 		dir = rgen.rand_bool();
-		center[dim] = (dir ? hi : lo);
+		center[dim] = (dir ? lo : hi); // dir is which way it's facing, not which wall it's against
 	}
 	else {
 		center[dim] = rgen.rand_uniform(lo, hi);
-		dir = (place_area.get_center_dim(dim) < center[dim]); // face the center of the room
+		dir = (center[dim] < place_area.get_center_dim(dim)); // face the center of the room
 	}
 	center[!dim] = rgen.rand_uniform(place_area.d[!dim][0]+hwidth, place_area.d[!dim][1]-hwidth);
 	set_wall_width(furnace, center[ dim], hdepth,  dim);
@@ -162,7 +162,7 @@ bool building_t::add_basement_utility_objs(rand_gen_t rgen, room_t const &room, 
 		if (!gen_furnace_cand(place_area, floor_spacing, 1, rgen, furnace, dim, dir)) break; // near_wall=1
 		if (is_cube_close_to_doorway(furnace, room, 0.0, 1) || interior->is_blocked_by_stairs_or_elevator(furnace) || overlaps_other_room_obj(furnace, objs_start)) continue;
 		unsigned const flags((is_house ? RO_FLAG_IS_HOUSE : 0) | RO_FLAG_INTERIOR);
-		interior->room_geom->objs.emplace_back(furnace, TYPE_FURNACE, room_id, dim, dir, flags, tot_light_amt, SHAPE_CUBE, GRAY);
+		interior->room_geom->objs.emplace_back(furnace, TYPE_FURNACE, room_id, dim, dir, flags, tot_light_amt);
 		was_added = 1;
 		break; // success/done
 	} // for n

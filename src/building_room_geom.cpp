@@ -2432,9 +2432,10 @@ void building_room_geom_t::add_water_heater(room_object_t const &c) {
 	}
 }
 
+colorRGBA get_furnace_color() {return texture_color(get_texture_by_name("interiors/furnace.jpg"));}
+
 void building_room_geom_t::add_furnace(room_object_t const &c) {
-	rgeom_mat_t &metal_mat(get_metal_material(1, 0, 1)); // shadowed=1, small=1
-	metal_mat.add_cube_to_verts_untextured(c, apply_light_color(c)); // placeholder: TODO: add texture for at least the front
+	add_obj_with_front_texture(c, "interiors/furnace.jpg", get_furnace_color(), 1);
 }
 
 void building_room_geom_t::add_toaster_proxy(room_object_t const &c) { // draw a simple untextured XY cube to show a lower LOD model of the toaster
@@ -3084,6 +3085,7 @@ colorRGBA room_object_t::get_color() const {
 	case TYPE_CRACK:    return ALPHA0; // transparent
 	case TYPE_FPLACE:   return texture_color(BRICK2_TEX).modulate_with(color);
 	case TYPE_WHEATER:  return GRAY;
+	case TYPE_FURNACE:  return get_furnace_color();
 	case TYPE_ATTIC_DOOR:return get_textured_wood_color();
 	default: return color; // TYPE_LIGHT, TYPE_TCAN, TYPE_BOOK, TYPE_BOTTLE, TYPE_PEN_PENCIL, etc.
 	}
