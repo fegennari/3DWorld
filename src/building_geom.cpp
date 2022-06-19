@@ -631,8 +631,8 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 			shrink[side] = rgen.rand_uniform(0.2, 0.35)*(side ? -1.0 : 1.0)*sz[!dim];
 		}
 		for (unsigned d = 0; d < 2; ++d) {parts[1].d[!dim][d] += shrink[d]*sz[!dim];} // shrink this part in the other dim
-		if (type == 1 && rgen.rand_bool()) {force_dim[0] = !dim; force_dim[1] = dim;} // L-shape, half the time
-		else if (type == 2) {force_dim[0] = force_dim[1] = dim;} // two-part - force both parts to have roof along split dim
+		if (type == 1 && rgen.rand_bool()) {force_dim[0] = !dim; force_dim[1] = dim; roof_dims = 1;} // L-shape/perpendicular, half the time
+		else if (type == 2) {force_dim[0] = force_dim[1] = dim; roof_dims = 2;} // two-part/parallel - force both parts to have roof along split dim
 		detail_type = ((type == 1) ? (rgen.rand()%3) : 0); // 0=none, 1=porch, 2=detatched garage/shed
 		door_dir    = ((door_dim == dim) ? dir : dir2); // if we have a porch/shed/garage, put the door on that side
 		if (door_dim == dim && detail_type == 0) {door_dir ^= 1;} // put it on the opposite side so that the second part isn't in the way

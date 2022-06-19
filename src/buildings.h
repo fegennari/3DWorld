@@ -1113,6 +1113,7 @@ struct building_t : public building_geom_t {
 
 	unsigned mat_ix;
 	uint8_t hallway_dim, real_num_parts, roof_type; // main hallway dim: 0=x, 1=y, 2=none
+	uint8_t roof_dims; // for two-part/L-shaped house roofs: 0=auto based on aspect ratio, 1=perpendicular, 2=parallel
 	uint8_t street_dir; // encoded as 2*dim + dir + 1; 0 is unassigned
 	int8_t open_door_ix, basement_part_ix, has_chimney; // has_chimney: 0=none, 1=interior, 2=exterior with fireplace
 	bool is_house, has_garage, has_shed, has_int_garage, has_courtyard, has_complex_floorplan, has_helipad, has_ac;
@@ -1129,12 +1130,12 @@ struct building_t : public building_geom_t {
 
 	friend class building_indir_light_mgr_t;
 
-	building_t(unsigned mat_ix_=0) : mat_ix(mat_ix_), hallway_dim(2), real_num_parts(0), roof_type(ROOF_TYPE_FLAT), street_dir(0), open_door_ix(-1),
+	building_t(unsigned mat_ix_=0) : mat_ix(mat_ix_), hallway_dim(2), real_num_parts(0), roof_type(ROOF_TYPE_FLAT), roof_dims(0), street_dir(0), open_door_ix(-1),
 		basement_part_ix(-1), has_chimney(0), is_house(0), has_garage(0), has_shed(0), has_int_garage(0), has_courtyard(0), has_complex_floorplan(0),
 		has_helipad(0), has_ac(0), has_int_fplace(0), has_parking_garage(0), has_small_part(0), has_basement_door(0), has_basement_pipes(0),
 		side_color(WHITE), roof_color(WHITE), detail_color(BLACK), door_color(WHITE), wall_color(WHITE), ao_bcz2(0.0), ground_floor_z1(0.0), interior_z2(0.0) {}
-	building_t(building_geom_t const &bg) : building_geom_t(bg), mat_ix(0), hallway_dim(2), real_num_parts(0), roof_type(ROOF_TYPE_FLAT), street_dir(0),
-		open_door_ix(-1), basement_part_ix(-1), has_chimney(0), is_house(0), has_garage(0), has_shed(0), has_int_garage(0), has_courtyard(0),
+	building_t(building_geom_t const &bg) : building_geom_t(bg), mat_ix(0), hallway_dim(2), real_num_parts(0), roof_type(ROOF_TYPE_FLAT), roof_dims(0),
+		street_dir(0), open_door_ix(-1), basement_part_ix(-1), has_chimney(0), is_house(0), has_garage(0), has_shed(0), has_int_garage(0), has_courtyard(0),
 		has_complex_floorplan(0), has_helipad(0), has_ac(0), has_int_fplace(0), has_parking_garage(0), has_small_part(0), has_basement_door(0),
 		has_basement_pipes(0), side_color(WHITE), roof_color(WHITE), detail_color(BLACK), door_color(WHITE), wall_color(WHITE), ao_bcz2(0.0),
 		ground_floor_z1(0.0), interior_z2(0.0) {}
@@ -1362,6 +1363,7 @@ public:
 	bool check_obj_occluded(cube_t const &c, point const &viewer, occlusion_checker_noncity_t &oc, bool reflection_pass, bool c_is_building_part=0) const;
 	bool is_entire_building_occluded(point const &viewer, occlusion_checker_noncity_t &oc) const;
 	bool register_indir_lighting_state_change(unsigned light_ix, bool is_door_change=0) const;
+	bool is_attic_roof(tquad_with_ix_t const &tq) const;
 	template<typename T> void add_door_verts(cube_t const &D, T &drawer, uint8_t door_type,
 		bool dim, bool dir, bool opened, bool opens_out, bool exterior, bool on_stairs=0, bool hinge_side=0) const;
 	tquad_with_ix_t set_door_from_cube(cube_t const &c, bool dim, bool dir, unsigned type, float pos_adj,
@@ -1381,6 +1383,7 @@ private:
 	bool add_chimney(cube_t const &part, bool dim, bool dir, float chimney_dz, rand_gen_t &rgen);
 	void gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes);
 	void maybe_add_basement(rand_gen_t rgen);
+	bool has_L_shaped_roof_area() const;
 	bool add_attic_access_door(cube_t const &ceiling, unsigned part_ix, unsigned num_floors, unsigned rooms_start, rand_gen_t &rgen);
 	bool is_light_placement_valid(cube_t const &light, room_t const &room, float pad) const;
 	void try_place_light_on_ceiling(cube_t const &light, room_t const &room, bool room_dim, float pad, bool allow_rot, bool allow_mult, vect_cube_t &out, rand_gen_t &rgen) const;

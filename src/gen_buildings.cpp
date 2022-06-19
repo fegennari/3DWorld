@@ -1413,8 +1413,7 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, 
 			float const attic_z1(interior->attic_access.z1()), delta_z(0.1*get_floor_thickness()); // enough to prevent Z-fighting
 
 			for (auto i = roof_tquads.begin(); i != roof_tquads.end(); ++i) {
-				if (i->type != tquad_with_ix_t::TYPE_ROOF && i->type != tquad_with_ix_t::TYPE_WALL) continue; // not a roof or triangular wall section
-				if (i->get_bcube().z1() < attic_z1) continue; // not the top section that has the attic (porch roof, lower floor roof)
+				if (!is_attic_roof(*i)) continue;
 				tquad_with_ix_t tq(*i);
 				std::reverse(tq.pts, tq.pts+tq.npts); // reverse the normal and winding order
 				for (unsigned n = 0; n < tq.npts; ++n) {tq.pts[n].z -= delta_z;} // shift down slightly

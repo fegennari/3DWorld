@@ -39,11 +39,24 @@ bool building_t::cube_in_attic(cube_t const &c) const {
 		    point_under_attic_roof(point(c.x2(), c.y2(), z2)) || point_under_attic_roof(point(c.x2(), c.y1(), z2)));
 }
 
+bool building_t::has_L_shaped_roof_area() const {
+	if (real_num_parts == 1) return 0; // not L-shaped
+	cube_t const &A(parts[0]), &B(parts[1]);
+	if (A.z2() != B.z2())    return 0; // not at same level
+	if (roof_dims == 2)      return 0; // parallel roof
+	if (roof_dims == 1)      return 1; // perpendicular roof
+	// secondary part's roof is oriented in long dim; if this is the dim adjacent to the primary part,
+	// then the two attic areas are connected forming in L-shape; otherwise, there will be two parallel roof peaks with a valley in between
+	bool const adj_x(A.x1() == B.x2() || A.x2() == B.x1()), adj_y(A.y1() == B.y2() || A.y2() == B.y1());
+	assert(adj_x != adj_y); // must be adjacent in exactly one dim
+	return (B.get_sz_dim(!adj_y) < B.get_sz_dim(adj_y));
+}
+
 bool building_t::add_attic_access_door(cube_t const &ceiling, unsigned part_ix, unsigned num_floors, unsigned rooms_start, rand_gen_t &rgen) {
-	cube_t const &part(parts[part_ix]);
 	// roof tquads don't intersect correct on the interior for L-shaped house attics, so skip the attic in this case, for now
-	if (real_num_parts >= 2 && parts[0].z2() == parts[1].z2()) return 0;
+	if (has_L_shaped_roof_area()) return 0;
 	float const floor_spacing(get_window_vspace());
+	cube_t const &part(parts[part_ix]);
 	if (min(part.dx(), part.dy()) < 2.75*floor_spacing) return 0; // must be large enough
 	// add a ceiling cutout for attic access
 	float const half_len(0.24*floor_spacing), half_wid(0.16*floor_spacing);
@@ -310,6 +323,14 @@ void building_room_geom_t::add_attic_door(room_object_t const &c, float tscale) 
 	}
 }
 
+bool building_t::is_attic_roof(tquad_with_ix_t const &tq) const {
+	if (!has_attic()) return 0;
+	if (tq.type != tquad_with_ix_t::TYPE_ROOF && tq.type != tquad_with_ix_t::TYPE_WALL) return 0;
+	cube_t const tq_bcube(tq.get_bcube());
+	if (tq_bcube.z1() < interior->attic_access.z1()) return 0; // not the top section that has the attic (porch roof, lower floor roof)
+	return get_attic_part().contains_pt_xy_inclusive(tq_bcube.get_cube_center()); // check for correct part
+}
+
 struct edge_t {
 	point p[2];
 	edge_t() {}
@@ -325,15 +346,12 @@ void building_room_geom_t::add_attic_woodwork(building_t const &b, float tscale)
 	get_wood_material(tscale, 0, 0, 2); // ensure unshadowed material
 	rgeom_mat_t &wood_mat   (get_wood_material(tscale, 1, 0, 2)); // shadows + detail
 	rgeom_mat_t &wood_mat_us(get_wood_material(tscale, 0, 0, 2)); // no shadows + detail
-	float const attic_z1(b.interior->attic_access.z1()), delta_z(0.1*b.get_floor_thickness()); // matches value in get_all_drawn_verts()
-	float const floor_spacing(b.get_window_vspace());
+	float const floor_spacing(b.get_window_vspace()), delta_z(0.1*b.get_floor_thickness()); // matches value in get_all_drawn_verts()
 
 	// Note: there may be a chimney in the attic, but for now we ignore it
 	for (auto i = b.roof_tquads.begin(); i != b.roof_tquads.end(); ++i) {
-		bool const is_roof(i->type == tquad_with_ix_t::TYPE_ROOF); // roof tquad
-		bool const is_wall(i->type == tquad_with_ix_t::TYPE_WALL); // triangular exterior wall section; brick or block, doesn't need wood support, but okay to add
-		if (!is_roof && !is_wall) continue;
-		if (i->get_bcube().z1() < attic_z1) continue; // not the top section that has the attic (porch roof, lower floor roof)
+		if (!b.is_attic_roof(*i)) continue;
+		bool const is_roof(i->type == tquad_with_ix_t::TYPE_ROOF); // roof tquad; not wall triangle
 		// draw beams along inside of roof; start with a vertical cube and rotate to match roof angle
 		tquad_with_ix_t tq(*i);
 		for (unsigned n = 0; n < tq.npts; ++n) {tq.pts[n].z -= delta_z;} // shift down slightly
@@ -386,7 +404,7 @@ void building_room_geom_t::add_attic_woodwork(building_t const &b, float tscale)
 			// skip top, bottom and face against the roof (top may be partially visible when rotated)
 			wood_mat.add_cube_to_verts(beam, WHITE, beam.get_llc(), (~get_face_mask(dim, dir) | EF_Z12));
 		} // for n
-		if (is_wall) continue; // below is for sloped roof tquads only
+		if (!is_roof) continue; // below is for sloped roof tquads only
 		// rotate to match slope of roof
 		point rot_pt; // point where roof meets attic floor
 		rot_pt[ dim] = bcube.d[dim][dir];
