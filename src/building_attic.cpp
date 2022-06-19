@@ -204,14 +204,19 @@ void building_t::add_attic_objects(rand_gen_t rgen) {
 	}
 	if (has_chimney == 1) { // interior chimney; not drawn when player is in the attic because it's part of the exterior geometry
 		cube_t chimney(get_chimney());
-		max_eq(chimney.z1(), adoor.z2());
-		min_eq(chimney.z2(), interior_z2); // clip to attic interior range
-		assert(chimney.z1() < chimney.z2());
-		chimney.expand_by_xy(-0.05*min(chimney.dx(), chimney.dy())); // shrink to make it inside the exterior chimney so that it doesn't show through when outside the attic
 
-		if (!chimney.intersects(avoid)) { // don't block attic access door (probably won't/can't happen)
-			objs.emplace_back(chimney, TYPE_CHIMNEY, room_id, 0, 0, obj_flags, light_amt);
-			avoid_cubes.push_back(chimney);
+		if (part.intersects(chimney)) { // in the correct part
+			max_eq(chimney.z1(), adoor.z2());
+			min_eq(chimney.z2(), interior_z2); // clip to attic interior range
+		
+			if (chimney.z1() < chimney.z2()) { // skip if too short; shouldn't happen?
+				chimney.expand_by_xy(-0.05*min(chimney.dx(), chimney.dy())); // shrink to make it inside the exterior chimney so that it doesn't show through when outside the attic
+
+				if (!chimney.intersects(avoid)) { // don't block attic access door (probably won't/can't happen)
+					objs.emplace_back(chimney, TYPE_CHIMNEY, room_id, 0, 0, obj_flags, light_amt);
+					avoid_cubes.push_back(chimney);
+				}
+			}
 		}
 	}
 	// add posts as colliders; somewhat of a duplicate of the code in building_room_geom_t::add_attic_woodwork()
