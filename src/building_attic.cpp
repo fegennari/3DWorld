@@ -20,7 +20,7 @@ bool building_t::point_under_attic_roof(point const &pos, vector3d *const cnorm)
 	if (!get_attic_part().contains_pt_xy(pos)) return 0;
 
 	for (auto const &tq : roof_tquads) {
-		if (tq.type != tquad_with_ix_t::TYPE_ROOF) continue;
+		if (!is_attic_roof(tq, 1)) continue; // type_roof_only=1
 		if (!point_in_polygon_2d(pos.x, pos.y, tq.pts, tq.npts, 0, 1)) continue; // check 2D XY point containment
 		vector3d const normal(tq.get_norm());
 		if (normal.z == 0.0) continue; // skip vertical sides
@@ -65,7 +65,7 @@ bool building_t::has_L_shaped_roof_area() const {
 
 bool building_t::add_attic_access_door(cube_t const &ceiling, unsigned part_ix, unsigned num_floors, unsigned rooms_start, rand_gen_t &rgen) {
 	// roof tquads don't intersect correct on the interior for L-shaped house attics, so skip the attic in this case, for now
-	if (has_L_shaped_roof_area()) return 0;
+	//if (has_L_shaped_roof_area()) return 0;
 	float const floor_spacing(get_window_vspace());
 	cube_t const &part(parts[part_ix]);
 	if (min(part.dx(), part.dy()) < 2.75*floor_spacing) return 0; // must be large enough
