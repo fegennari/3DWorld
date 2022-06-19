@@ -853,6 +853,7 @@ void indir_light_tex_from_lmap(unsigned &tid, lmap_manager_t const &lmap, vector
 	unsigned xsize, unsigned ysize, unsigned zsize, float lighting_exponent, bool local_only)
 {
 	tex_data.resize(4*xsize*ysize*zsize, 0);
+	assert(!tex_data.empty()); // size must be nonzero
 	update_indir_light_tex_range(lmap, tex_data, xsize, 0, ysize, zsize, lighting_exponent, local_only, 1); // mt=1
 	if (tid == 0) {tid = create_3d_texture(zsize, xsize, ysize, 4, tex_data, GL_LINEAR, GL_CLAMP_TO_EDGE);} // see update_smoke_indir_tex_range
 	else {update_3d_texture(tid, 0, 0, 0, zsize, xsize, ysize, 4, tex_data.data());} // stored {Z,X,Y}

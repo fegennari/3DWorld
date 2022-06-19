@@ -2195,6 +2195,7 @@ openglCallbackFunction(GLenum source, GLenum type, GLuint id, GLenum severity, G
 	}
 	cout << endl;
 	//assert(type != GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR); // uncomment to break/exit on this type of error
+	//assert(severity != GL_DEBUG_SEVERITY_HIGH); // uncomment to break/exit on this type of error
 }
 
 void init_debug_callback() {

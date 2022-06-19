@@ -35,6 +35,7 @@ void get_water_heater_cubes(room_object_t const &wh, cube_t cubes[2]);
 bool enable_building_indir_lighting_no_cib() {
 	if (!(display_mode & 0x10)) return 0; // key 5
 	if (INDIR_BASEMENT_ONLY && !player_in_basement) return 0;
+	if (MESH_SIZE[2] == 0) return 0; // no volume texture allocated
 	return 1;
 }
 bool enable_building_indir_lighting() {return (camera_in_building && enable_building_indir_lighting_no_cib());}
