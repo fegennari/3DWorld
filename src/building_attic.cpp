@@ -34,7 +34,7 @@ bool building_t::point_in_attic(point const &pos, vector3d *const cnorm) const {
 bool building_t::cube_in_attic(cube_t const &c) const {
 	if (!has_attic() || c.z2() < interior->attic_access.z2() || c.z1() > interior_z2) return 0; // test attic floor zval
 	// test the 4 top corners of the cube
-	float const z2(c.z2() + 2.0*get_attic_beam_depth()); // account for attic beam depth, which reduces the ceiling height / increases our effective cube height (approximate)
+	float const z2(c.z2() + 2.5*get_attic_beam_depth()); // account for attic beam depth, which reduces the ceiling height / increases our effective cube height (approximate)
 	return (point_under_attic_roof(point(c.x1(), c.y1(), z2)) || point_under_attic_roof(point(c.x1(), c.y2(), z2)) ||
 		    point_under_attic_roof(point(c.x2(), c.y2(), z2)) || point_under_attic_roof(point(c.x2(), c.y1(), z2)));
 }
@@ -244,7 +244,7 @@ void building_t::add_attic_objects(rand_gen_t rgen) {
 	}
 	// add boxes; currently not stacked - should they be?
 	unsigned const num_boxes(rgen.rand() % 25); // 0-24
-	float const box_sz(0.2*floor_spacing);
+	float const box_sz(0.18*floor_spacing);
 	add_boxes_to_space(objs[attic_door_ix], objs, place_area, avoid_cubes, rgen, num_boxes, box_sz, 0.5*box_sz, 1.5*box_sz, 1, obj_flags); // allow_crates=1
 
 	// add lamps
