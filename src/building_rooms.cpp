@@ -1754,7 +1754,7 @@ colorRGBA choose_pot_color(rand_gen_t &rgen) {
 	return pot_colors[rgen.rand() % num_colors];
 }
 
-void building_t::place_book_on_obj(rand_gen_t &rgen, room_object_t const &place_on, unsigned room_id, float tot_light_amt, bool use_dim_dir) {
+void building_t::place_book_on_obj(rand_gen_t &rgen, room_object_t const &place_on, unsigned room_id, float tot_light_amt, unsigned objs_start, bool use_dim_dir) {
 	point center(place_on.get_cube_center());
 	for (unsigned d = 0; d < 2; ++d) {center[d] += 0.1*place_on.get_sz_dim(d)*rgen.rand_uniform(-1.0, 1.0);} // add a slight random shift
 	float const book_sz(0.07*get_window_vspace());
@@ -1762,12 +1762,20 @@ void building_t::place_book_on_obj(rand_gen_t &rgen, room_object_t const &place_
 	bool const dim(use_dim_dir ? !place_on.dim : rgen.rand_bool()), dir(use_dim_dir ? (place_on.dir^place_on.dim) : rgen.rand_bool());
 	cube_t book;
 	vector3d book_scale(book_sz*rgen.rand_uniform(0.8, 1.2), book_sz*rgen.rand_uniform(0.8, 1.2), 0.0);
+	float const thickness(book_sz*rgen.rand_uniform(0.1, 0.3));
 	book_scale[dim] *= 0.8; // slightly smaller in this dim
 	book.set_from_point(point(center.x, center.y, place_on.z2()));
 	book.expand_by(book_scale);
-	book.z2() += book_sz*rgen.rand_uniform(0.1, 0.3);
-	colorRGBA const color(book_colors[rgen.rand() % NUM_BOOK_COLORS]);
+	book.z2() += thickness;
 	vect_room_object_t &objs(interior->room_geom->objs);
+
+	// check if there's anything in the way; // only handling pens and pencils here; paper is ignored, and larger objects should already be handled
+	for (auto i = objs.begin()+objs_start; i != objs.end(); ++i) {
+		if (i->type != TYPE_PEN && i->type != TYPE_PENCIL) continue;
+		if (!i->intersects(book)) continue;
+		set_cube_zvals(book, i->z2(), i->z2()+thickness); // place book on top of object; maybe the book should be tilted?
+	}
+	colorRGBA const color(book_colors[rgen.rand() % NUM_BOOK_COLORS]);
 	objs.emplace_back(book, TYPE_BOOK, room_id, dim, dir, (RO_FLAG_NOCOLL | RO_FLAG_RAND_ROT), tot_light_amt, SHAPE_CUBE, color); // Note: invalidates place_on reference
 	set_obj_id(objs);
 }
@@ -2379,7 +2387,7 @@ void building_t::place_objects_onto_surfaces(rand_gen_t rgen, room_t const &room
 		}
 		if (avoid.is_all_zeros() && book_prob > 0.0 && rgen.rand_float() < book_prob) { // place book if it's the first item (no plate)
 			placed_book_on_counter |= (obj.type == TYPE_COUNTER);
-			place_book_on_obj(rgen, surface, room_id, tot_light_amt, (obj.type != TYPE_TABLE));
+			place_book_on_obj(rgen, surface, room_id, tot_light_amt, objs_start, (obj.type != TYPE_TABLE));
 			avoid = objs.back();
 		}
 		if (avoid.is_all_zeros() && obj.type == TYPE_DESK) {
