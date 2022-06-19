@@ -760,6 +760,14 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 				}
 			}
 		}
+		if (force_dim[1] == 2 && parts[0].z2() == parts[1].z2()) { // L-shaped house with both parts at the same height
+			bool const pref_dim((force_dim[0] < 2) ? (1-force_dim[0]) : (!get_largest_xy_dim(parts[0])));
+
+			if (parts[1].get_sz_dim(!pref_dim) < 1.2*parts[0].get_sz_dim(pref_dim)) { // not too high an aspect ratio between the widths of the two parts
+				force_dim[1] = pref_dim; // force roof orients to be perpendicular to avoid an odd crease in the middle
+				roof_dims    = 1; // mark as perpendicular
+			}
+		}
 	} // end type != 0  (multi-part house)
 	else if (gen_door) { // single cube house
 		maybe_add_basement(rgen);
