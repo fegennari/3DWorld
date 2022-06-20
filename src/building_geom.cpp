@@ -1105,10 +1105,11 @@ void try_expand_into_xy(cube_t &c1, cube_t const &c2) {
 	for (unsigned d = 0; d < 2; ++d) { // attempt to merge in this dim
 		if (c2.d[d][0] > c1.d[d][0] || c2.d[d][1] < c1.d[d][1]) continue; // edge not contained
 
-		for (unsigned e = 0; e < 2; ++e) {
-			if (c2.d[!d][!e] == c1.d[!d][e]) {c1.d[!d][e] = c2.d[!d][e];} // merge
+		if (c2.d[!d][0] <= c1.d[!d][1] && c1.d[!d][0] <= c2.d[!d][1]) { // overlap - take the union in this dim
+			min_eq(c1.d[!d][0], c2.d[!d][0]);
+			max_eq(c1.d[!d][1], c2.d[!d][1]);
 		}
-	}
+	} // for d
 }
 
 // for houses or office buildings
