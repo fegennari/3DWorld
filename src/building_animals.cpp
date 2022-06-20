@@ -25,6 +25,7 @@ sphere_t get_cur_frame_loudest_sound();
 bool in_building_gameplay_mode();
 bool player_take_damage(float damage_scale, bool poisoned=0, bool *has_key=nullptr);
 void apply_building_gravity(float &vz, float dt_ticks);
+void apply_fc_cube_max_merge_xy(vect_cube_t &cubes);
 
 
 void building_animal_t::sleep_for(float time_secs_min, float time_secs_max) {
@@ -668,6 +669,13 @@ public:
 	void register_cubes(vect_cube_t const &cubes, bool check_z_merge=0) {
 		for (cube_t const &c : cubes) {register_cube(c, check_z_merge);}
 	}
+	void clip_and_max_expand_cubes() {
+		if (colliders.size() <= 1) return; // not needed
+		for (cube_t &c : colliders) {c.intersect_with_cube_xy(check_cube);}
+		apply_fc_cube_max_merge_xy(colliders);
+		unsigned const sz(colliders.size());
+		sort_and_unique(colliders);
+	}
 	bool align_to_surfaces(spider_t &s, float delta_dir, point const &camera_bs, rand_gen_t &rgen) {
 		if (colliders.empty()) return 0; // floating in midair
 		// Note: assumes last_pos is valid and non-intersecting; may not hold for initial placement or when objects are moved
@@ -736,15 +744,19 @@ bool building_t::update_spider_pos_orient(spider_t &spider, point const &camera_
 	float const trim_thickness(get_trim_thickness()), coll_radius(spider.get_xy_radius());
 	vector3d const size(spider.get_size());
 	bool const in_attic(point_in_attic(spider.pos));
+	obj_avoid_t obj_avoid(spider.pos, spider.last_pos, coll_radius); // use xy_radius for all dims
 	surface_orienter.init(spider.pos, spider.last_pos, size);
 	// Note: we can almost use fc_occluders, except this doesn't contain the very bottom floor because it's not an occluder, and maybe the overlaps would cause problems
 	surface_orienter.register_cubes(interior->floors);
 	surface_orienter.register_cubes(interior->ceilings, 1); // check_z_merge=1
-	for (unsigned d = 0; d < 2; ++d) {surface_orienter.register_cubes(interior->walls[d]);} // XY walls
+	surface_orienter.clip_and_max_expand_cubes(); // required to remove false splits between ceilings and floors
+	
+	if (!in_attic) {
+		for (unsigned d = 0; d < 2; ++d) {surface_orienter.register_cubes(interior->walls[d]);} // XY walls
+	}
 	cube_t tc(spider.pos);
 	tc.expand_by_xy(size); // use xy_radius for all dims; okay to be convervative
 	tc.expand_in_dim(2, 1.5*spider.radius); // smaller expand in Z
-	obj_avoid_t obj_avoid(spider.pos, spider.last_pos, coll_radius); // use xy_radius for all dims
 
 	if (!in_attic) { // check doors
 		for (auto const &ds : interior->door_stacks) {
