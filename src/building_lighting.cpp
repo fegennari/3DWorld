@@ -454,7 +454,7 @@ class building_indir_light_mgr_t {
 			if (b.has_pri_hall())     {weight *= 0.70;} // floorplan is open and well lit, indir lighting value seems too high
 			if (ro.type == TYPE_LAMP) {weight *= 0.33;} // lamps are less bright
 			if (light_in_basement)    {weight *= (b.has_parking_garage ? 0.25 : 0.5);} // basement is darker, parking garages are even darker
-			if (in_attic)             {weight *= ATTIC_LIGHT_RADIUS_SCALE;}
+			if (in_attic)             {weight *= ATTIC_LIGHT_RADIUS_SCALE*ATTIC_LIGHT_RADIUS_SCALE;} // based on surface area rather than radius
 		}
 		if (b.is_house) {weight *= 2.0 ;} // houses have dimmer lights and seem to work better with more indir
 		if (is_negative_light) {weight *= -1.0;}
