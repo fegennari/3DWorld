@@ -655,11 +655,18 @@ public:
 		check_cube.expand_by(size.get_max_val()); // we could expand by size, but expanding by the max dim is more conservative and possibly better
 		colliders.clear();
 	}
-	void register_cube(cube_t const &c) {
-		if (c.intersects(check_cube)) {colliders.push_back(c);} // record for later processing in align_to_surfaces()
+	void register_cube(cube_t const &c, bool check_z_merge=0) {
+		if (!c.intersects(check_cube)) return;
+		
+		if (check_z_merge) { // attempt to merge ceilings into floors
+			for (cube_t &c2 : colliders) {
+				if (c2.z1() == c.z2()) {c2.z1() = c.z1();return;}
+			}
+		}
+		colliders.push_back(c); // record for later processing in align_to_surfaces()
 	}
-	void register_cubes(vect_cube_t const &cubes) {
-		for (cube_t const &c : cubes) {register_cube(c);}
+	void register_cubes(vect_cube_t const &cubes, bool check_z_merge=0) {
+		for (cube_t const &c : cubes) {register_cube(c, check_z_merge);}
 	}
 	bool align_to_surfaces(spider_t &s, float delta_dir, point const &camera_bs, rand_gen_t &rgen) {
 		if (colliders.empty()) return 0; // floating in midair
@@ -732,7 +739,7 @@ bool building_t::update_spider_pos_orient(spider_t &spider, point const &camera_
 	surface_orienter.init(spider.pos, spider.last_pos, size);
 	// Note: we can almost use fc_occluders, except this doesn't contain the very bottom floor because it's not an occluder, and maybe the overlaps would cause problems
 	surface_orienter.register_cubes(interior->floors);
-	surface_orienter.register_cubes(interior->ceilings);
+	surface_orienter.register_cubes(interior->ceilings, 1); // check_z_merge=1
 	for (unsigned d = 0; d < 2; ++d) {surface_orienter.register_cubes(interior->walls[d]);} // XY walls
 	cube_t tc(spider.pos);
 	tc.expand_by_xy(size); // use xy_radius for all dims; okay to be convervative
