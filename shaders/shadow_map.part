@@ -18,10 +18,10 @@ float calc_shadow_pcf(in sampler2DShadow sm_tex, in vec4 shadow_coord) {
 		0.7931406f, 0.4579287f,
 		0.3831475f, 0.8574728f,
 		0.6333998f, -0.05667673f};
-		for (int i = 0; i < 9; ++i) {ret += textureProj(sm_tex, shadow_coord+vec4(2.0*pcf_offset*poisson_table[2*i], 2.0*pcf_offset*poisson_table[2*i+1], 0, 0));}
+		for (int i = 0; i < 9; ++i) {ret += textureProj(sm_tex, (shadow_coord + 2.0*pcf_offset*vec4(poisson_table[2*i], poisson_table[2*i+1], 0, 0)));}
 #else
 	for (int x = -1; x <= 1; ++x) {
-		for (int y = -1; y <= 1; ++y) {ret += textureProj(sm_tex, shadow_coord+vec4(pcf_offset*x, pcf_offset*y, 0, 0));}
+		for (int y = -1; y <= 1; ++y) {ret += textureProj(sm_tex, (shadow_coord + pcf_offset*vec4(x, y, 0, 0)));}
 	}
 #endif
 	return ret/9.0; // 9-tap PCF
@@ -31,13 +31,13 @@ float calc_shadow_pcf(in sampler2DShadow sm_tex, in vec4 shadow_coord) {
 float get_shadow_map_weight(in vec4 pos, in vec3 normal, in float sm_scale, in mat4 matrix, in sampler2DShadow sm_tex, in vec3 lpos) {
 #ifndef NO_SMAP_NORMAL_OFFSET
 #ifdef DYNAMIC_SMAP_BIAS
-	float v  = clamp(dot(normal, normalize(lpos)), 0.05, 1.0);
+	float v  = clamp(dot(normal, normalize(lpos)), 0.05, 1.0); // NdotL
 	pos.xyz += norm_bias_scale*(sqrt(1.0 - v*v)/v)*z_bias*normal; // tan(acos(v))
 #else
 	pos.xyz += norm_bias_scale*z_bias*normal;
 	//pos.xyz += norm_bias_scale*z_bias*normalize(fg_ModelViewMatrixInverse[3].xyz - pos.xyz); // world space view vector
-#endif
-#endif
+#endif // DYNAMIC_SMAP_BIAS
+#endif // NO_SMAP_NORMAL_OFFSET
 	vec4 shadow_coord = matrix * pos;
 	shadow_coord.z += -z_bias*shadow_coord.w;
 	// sm_scale==1.0 => use smap; sm_scale==0.0 => return 0.0; sm_scale==-1.0 => return 1.0

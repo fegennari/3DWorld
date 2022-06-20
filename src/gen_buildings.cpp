@@ -2454,6 +2454,7 @@ public:
 		float const min_alpha        = 0.0; // 0.0 to avoid alpha test
 		city_dlight_pcf_offset_scale = 0.6; // reduced for building interiors; below 0.6 and shadow edges are blocky, but above 0.6 clothes hangers have double shadows
 		enable_dlight_bcubes         = 1; // using light bcubes is both faster and more correct when shadow maps are not enabled
+		if (player_in_attic) {city_dlight_pcf_offset_scale *= 2.0;} // larger PCF offset for attic lights due to their large radius
 		fgPushMatrix();
 		translate_to(xlate);
 		building_draw_t interior_wind_draw, ext_door_draw;

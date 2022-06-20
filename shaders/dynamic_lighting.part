@@ -28,7 +28,7 @@ uniform mat4 smap_matrix_dl[MAX_DLIGHT_SMAPS];
 // the lookup is clamped to the edge texel of the shadow map, which stretches the shadow to the sides;
 // it may make more sense to clip the shadower to the frustum so that all the area outside the shadow frustum is unshadowed,
 // but it's not clear how to do that cleanly/efficiently or if it would look any better
-float get_shadow_map_weight_dl(in vec4 pos, in vec3 normal, in mat4 matrix, in sampler2DArrayShadow sm_tex, in int layer) {
+float get_shadow_map_weight_dl(in vec4 pos, in vec3 normal, float n_dot_l, in mat4 matrix, in sampler2DArrayShadow sm_tex, in int layer) {
 	pos.xyz += norm_bias_scale*z_bias*normal; // world space
 	vec4 shadow_coord = matrix * pos;
 	shadow_coord.xyz /= shadow_coord.w;
@@ -45,9 +45,10 @@ float get_shadow_map_weight_dl(in vec4 pos, in vec3 normal, in mat4 matrix, in s
 		0.3831475f, 0.8574728f,
 		0.6333998f, -0.05667673f};
 	float ret = 0.0;
+	float pcf_offset = n_dot_l*dlight_pcf_offset; // scale by NdotL to avoid bands on surfaces nearly perpendicular to the light
 
 	for (int i = 0; i < 9; ++i) {
-		vec2 xy = shadow_coord.xy + dlight_pcf_offset*vec2(poisson_table[2*i], poisson_table[2*i+1])/shadow_coord.w;
+		vec2 xy = shadow_coord.xy + pcf_offset*vec2(poisson_table[2*i], poisson_table[2*i+1])/shadow_coord.w;
 		ret += texture(sm_tex, vec4(xy, layer, shadow_coord.z));
 	}
 	return mix(ret/9.0, 1.0, SHADOW_LEAKAGE); // 9-tap PCF; allow a small amount of transmitted light to simulate indirect lighting
@@ -209,7 +210,7 @@ void add_dlights_bm_scaled(inout vec3 color, in vec3 dlpos, in vec4 epos, in vec
 #endif
 			// Note: we can use either lnorm or normal for the smap offset, but normal seems to have less artifacts
 			smap_index = smap_index & 127; // mask off 7 LSB bits / strip off is_cube_face flag bit
-			if (smap_index > 0) {intensity *= get_shadow_map_weight_dl(vec4(dlpos, 1.0), normal, smap_matrix_dl[smap_index-1], smap_tex_arr_dl, smap_index-1);}
+			if (smap_index > 0) {intensity *= get_shadow_map_weight_dl(vec4(dlpos, 1.0), normal, n_dot_l, smap_matrix_dl[smap_index-1], smap_tex_arr_dl, smap_index-1);}
 		}
 #endif // HAS_DLIGHT_SMAP
 
