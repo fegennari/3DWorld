@@ -119,7 +119,7 @@ struct spider_t : public building_animal_t {
 	// this first constructor is for the lower_bound() call in vect_rat_t::get_first_rat_with_x2_gt()
 	spider_t(float xval) : building_animal_t(xval), update_time(0.0), web_start_zval(0.0), jump_vel_z(0.0), jump_dist(0.0), on_web(0) {}
 	spider_t(point const &pos_, float radius_, vector3d const &dir_, unsigned id_);
-	static bool allow_in_attic() {return 0;} // not for now, since the attic roof is not a cube we can walk on and the beams aren't real objects
+	static bool allow_in_attic() {return 1;}
 	float get_xy_radius() const {return 2.0*radius;}
 	float get_height   () const {return 2.0*radius;}
 	vector3d get_size  () const;

@@ -165,6 +165,7 @@ bool rat_t::is_facing_dest() const {
 }
 
 bool building_t::add_rat(point const &pos, float hlength, vector3d const &dir, point const &placed_from) {
+	if (!rat_t::allow_in_attic() && point_in_attic(pos)) return 0;
 	point rat_pos(pos);
 	if (!get_zval_of_floor(pos, hlength, rat_pos.z)) return 0; // place on the floor, skip if there's no floor here
 	rat_t rat(rat_pos, hlength, vector3d(dir.x, dir.y, 0.0).get_norm(), interior->room_geom->rats.size()); // dir in XY plane
@@ -727,44 +728,46 @@ bool building_t::update_spider_pos_orient(spider_t &spider, point const &camera_
 	assert(interior);
 	float const trim_thickness(get_trim_thickness()), coll_radius(spider.get_xy_radius());
 	vector3d const size(spider.get_size());
+	bool const in_attic(point_in_attic(spider.pos));
 	surface_orienter.init(spider.pos, spider.last_pos, size);
 	// Note: we can almost use fc_occluders, except this doesn't contain the very bottom floor because it's not an occluder, and maybe the overlaps would cause problems
 	surface_orienter.register_cubes(interior->floors);
 	surface_orienter.register_cubes(interior->ceilings);
 	for (unsigned d = 0; d < 2; ++d) {surface_orienter.register_cubes(interior->walls[d]);} // XY walls
-	// check doors
 	cube_t tc(spider.pos);
 	tc.expand_by_xy(size); // use xy_radius for all dims; okay to be convervative
 	tc.expand_in_dim(2, 1.5*spider.radius); // smaller expand in Z
 	obj_avoid_t obj_avoid(spider.pos, spider.last_pos, coll_radius); // use xy_radius for all dims
 
-	for (auto const &ds : interior->door_stacks) {
-		if (ds.z1() > tc.z2() || ds.z2() < tc.z1()) continue; // wrong floor for this stack/part
-		// calculate door bounds for bcube test, assuming it's open
-		cube_t door_bounds(ds);
-		door_bounds.expand_by_xy(ds.get_width());
-		if (!tc.intersects(door_bounds)) continue; // optimization
-		assert(ds.first_door_ix < interior->doors.size());
+	if (!in_attic) { // check doors
+		for (auto const &ds : interior->door_stacks) {
+			if (ds.z1() > tc.z2() || ds.z2() < tc.z1()) continue; // wrong floor for this stack/part
+			// calculate door bounds for bcube test, assuming it's open
+			cube_t door_bounds(ds);
+			door_bounds.expand_by_xy(ds.get_width());
+			if (!tc.intersects(door_bounds)) continue; // optimization
+			assert(ds.first_door_ix < interior->doors.size());
 
-		for (unsigned dix = ds.first_door_ix; dix < interior->doors.size(); ++dix) {
-			door_t const &door(interior->doors[dix]);
-			if (!ds.is_same_stack(door)) break; // moved to a different stack, done
-			if (door.z1() > tc.z2() || door.z2() < tc.z1()) continue; // wrong floor
+			for (unsigned dix = ds.first_door_ix; dix < interior->doors.size(); ++dix) {
+				door_t const &door(interior->doors[dix]);
+				if (!ds.is_same_stack(door)) break; // moved to a different stack, done
+				if (door.z1() > tc.z2() || door.z2() < tc.z1()) continue; // wrong floor
 
-			if (door.open) { // how to handle open doors? they're not cubes; avoid them entirely? use their bcubes?
-				cube_t door_bcube(get_door_bounding_cube(door));
-				bool const dir(door.get_check_dirs()); // side of the door frame the door opens to
-				door_bcube.d[!door.dim][!dir] += (dir ? 1.0 : -1.0)*spider.radius; // shift edge away from door frame to allow spider to walk on inside of the frame
+				if (door.open) { // how to handle open doors? they're not cubes; avoid them entirely? use their bcubes?
+					cube_t door_bcube(get_door_bounding_cube(door));
+					bool const dir(door.get_check_dirs()); // side of the door frame the door opens to
+					door_bcube.d[!door.dim][!dir] += (dir ? 1.0 : -1.0)*spider.radius; // shift edge away from door frame to allow spider to walk on inside of the frame
 				
-				if (tc.intersects(door_bcube)) {
-					obj_avoid.register_avoid_cube(door_bcube);
-					// while the extruded polygon collision check below is more accurate, it can result in spiders getting stuck behind open doors
-					//if (sphere_ext_poly_intersect(door_tq.pts, 4, normal, spider.pos, coll_radius, door.get_thickness(), 0.0)) {obj_avoid.had_coll = 1;}
+					if (tc.intersects(door_bcube)) {
+						obj_avoid.register_avoid_cube(door_bcube);
+						// while the extruded polygon collision check below is more accurate, it can result in spiders getting stuck behind open doors
+						//if (sphere_ext_poly_intersect(door_tq.pts, 4, normal, spider.pos, coll_radius, door.get_thickness(), 0.0)) {obj_avoid.had_coll = 1;}
+					}
 				}
+				else if (tc.intersects(door)) {surface_orienter.register_cube(door);} // closed door
 			}
-			else if (tc.intersects(door)) {surface_orienter.register_cube(door);} // closed door
-		}
-	} // for door_stacks
+		} // for door_stacks
+	}
 	// check interior objects
 	static vect_cube_t cubes, avoid;
 	vect_room_object_t::const_iterator b, e;
@@ -784,23 +787,29 @@ bool building_t::update_spider_pos_orient(spider_t &spider, point const &camera_
 	} // for i
 	// check elevators
 	for (elevator_t const &e : interior->elevators) {surface_orienter.register_cube(e);} // should we avoid open elevators?
-	// check exterior walls; exterior doors are ignored for now (meaning the spider can walk on them)
-	for (auto i = parts.begin(); i != get_real_parts_end_inc_sec(); ++i) {
-		for (unsigned dim = 0; dim < 2; ++dim) {
-			for (unsigned dir = 0; dir < 2; ++dir) {
-				cube_t cube(*i);
-				cube.d[dim][!dir] = i->d[dim][dir] + (dir ? -1.0 : 1.0)*trim_thickness; // shrink to trim thickness
-				cubes.clear();
-				cubes.push_back(cube); // start with entire length
+	
+	if (!in_attic) { // check exterior walls; exterior doors are ignored for now (meaning the spider can walk on them)
+		for (auto i = parts.begin(); i != get_real_parts_end_inc_sec(); ++i) {
+			for (unsigned dim = 0; dim < 2; ++dim) {
+				for (unsigned dir = 0; dir < 2; ++dir) {
+					cube_t cube(*i);
+					cube.d[dim][!dir] = i->d[dim][dir] + (dir ? -1.0 : 1.0)*trim_thickness; // shrink to trim thickness
+					cubes.clear();
+					cubes.push_back(cube); // start with entire length
 
-				for (auto j = parts.begin(); j != get_real_parts_end(); ++j) { // clip against other parts
-					if (j == i) continue; // skip self
-					subtract_cube_from_cubes(*j, cubes); // subtract this part from current cubes by clipping in XY
-				}
-				for (cube_t const &c : cubes) {surface_orienter.register_cube(c);}
-			} // for dir
-		} // for dim
-	} // for i
+					for (auto j = parts.begin(); j != get_real_parts_end(); ++j) { // clip against other parts
+						if (j == i) continue; // skip self
+						subtract_cube_from_cubes(*j, cubes); // subtract this part from current cubes by clipping in XY
+					}
+					for (cube_t const &c : cubes) {surface_orienter.register_cube(c);}
+				} // for dir
+			} // for dim
+		} // for i
+	}
+	else { // in_attic case
+		// the attic roof is not a cube we can walk on and the beams aren't real objects;
+		// also, it's not really possible to move from the attic floor to the roof without getting stuck in/on the corner
+	}
 	float const delta_dir(min(1.0f, 1.5f*(1.0f - pow(0.7f, timestep))));
 	if (obj_avoid.had_coll) {spider.end_jump();}
 
