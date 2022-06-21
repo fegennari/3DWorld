@@ -14,6 +14,11 @@ void add_boxes_to_space(room_object_t const &c, vect_room_object_t &objects, cub
 void try_add_lamp(cube_t const &place_area, float floor_spacing, unsigned room_id, unsigned flags, float light_amt,
 	vect_cube_t &cubes, vect_room_object_t &objects, rand_gen_t &rgen);
 bool gen_furnace_cand(cube_t const &place_area, float floor_spacing, bool near_wall, rand_gen_t &rgen, cube_t &furnace, bool &dim, bool &dir);
+//bool add_if_not_intersecting(room_object_t const &obj, vect_room_object_t &objects, vect_cube_t &cubes);
+//void gen_xy_pos_for_cube_obj(cube_t &C, cube_t const &S, vector3d const &sz, float height, rand_gen_t &rgen);
+//void gen_xy_pos_for_round_obj(cube_t &C, cube_t const &S, float radius, float height, float spacing, rand_gen_t &rgen, bool place_at_z1);
+void add_obj_to_closet(room_object_t const &c, cube_t const &interior, vect_room_object_t &objects, vect_cube_t &cubes,
+	rand_gen_t &rgen, vector3d const &sz, unsigned obj_type, unsigned flags, room_obj_shape shape=SHAPE_CUBE);
 
 
 bool building_t::point_under_attic_roof(point const &pos, vector3d *const cnorm) const {
@@ -172,8 +177,8 @@ void building_t::add_attic_objects(rand_gen_t rgen) {
 	// add light(s)
 	cube_t const part(get_part_for_room(room)); // Note: assumes attic is a single part
 	bool const long_dim(part.dx() < part.dy());
-	float const floor_spacing(get_window_vspace()), beam_depth(get_attic_beam_depth());
-	float const sep_dist(part.get_sz_dim(long_dim) - part.get_sz_dim(!long_dim)), attic_height(interior_z2 - adoor.z2()), light_radius(0.03*attic_height);
+	float const floor_spacing(get_window_vspace()), beam_depth(get_attic_beam_depth()), z_floor(interior->attic_access.z2());
+	float const sep_dist(part.get_sz_dim(long_dim) - part.get_sz_dim(!long_dim)), attic_height(interior_z2 - z_floor), light_radius(0.03*attic_height);
 	point const light_center(part.xc(), part.yc(), (interior_z2 - 1.2*light_radius - beam_depth)); // center of the part near the ceiling
 	cube_t light;
 	point light_pos[2] = {light_center, light_center}; // start centered
@@ -206,7 +211,7 @@ void building_t::add_attic_objects(rand_gen_t rgen) {
 		cube_t chimney(get_chimney());
 
 		if (part.intersects(chimney)) { // in the correct part
-			max_eq(chimney.z1(), adoor.z2());
+			max_eq(chimney.z1(), z_floor);
 			min_eq(chimney.z2(), interior_z2); // clip to attic interior range
 		
 			if (chimney.z1() < chimney.z2()) { // skip if too short; shouldn't happen?
@@ -244,7 +249,7 @@ void building_t::add_attic_objects(rand_gen_t rgen) {
 		}
 	} // for i
 	cube_t place_area(part);
-	place_area.z1() = place_area.z2() = interior->attic_access.z2(); // bottom of attic floor
+	place_area.z1() = place_area.z2() = z_floor; // bottom of attic floor
 	place_area.expand_by_xy(-0.75*floor_spacing); // keep away from corners; just a guess; applies to boxes and furnace
 
 	if (!has_basement()) { // add furnace if not already added in the basement
@@ -259,19 +264,62 @@ void building_t::add_attic_objects(rand_gen_t rgen) {
 			break; // success/done
 		} // for n
 	}
+	unsigned const rug_avoid_cubes_end(avoid_cubes.size());
 	// add boxes; currently not stacked - should they be?
 	unsigned const num_boxes(rgen.rand() % 25); // 0-24
 	float const box_sz(0.18*floor_spacing);
 	add_boxes_to_space(objs[attic_door_ix], objs, place_area, avoid_cubes, rgen, num_boxes, box_sz, 0.5*box_sz, 1.5*box_sz, 1, obj_flags); // allow_crates=1
 
-	// add lamps
+	// add lamp(s)
 	unsigned const num_lamps(rgen.rand() % 3); // 0-2
 
 	for (unsigned n = 0; n < num_lamps; ++n) {
 		try_add_lamp(place_area, floor_spacing, room_id, obj_flags, light_amt, avoid_cubes, objs, rgen);
 	}
 
-	// TODO: TYPE_RUG, TYPE_CHAIR, TYPE_NIGHTSTAND, TYPE_PAINTCAN, TYPE_LG_BALL, TYPE_BOOK, TYPE_BOTTLE, TYPE_PAPER, TYPE_PIPE
+	// add chair(s)
+	unsigned const num_chairs(rgen.rand() % 3); // 0-2
+	vector3d sz;
+	// TODO
+
+	// add nightstand(s)
+	unsigned const num_nightstands(rgen.rand() % 3); // 0-2
+	// TODO
+
+	// add paintcan(s)
+	unsigned const num_paintcans(rgen.rand() % 5); // 0-4
+	float const height(0.64*0.2*floor_spacing), radius(0.28*0.2*floor_spacing);
+	
+	for (unsigned n = 0; n < num_paintcans; ++n) {
+		sz.assign(radius, radius, height);
+		add_obj_to_closet(objs[attic_door_ix], place_area, objs, avoid_cubes, rgen, sz, TYPE_PAINTCAN, obj_flags, SHAPE_CYLIN);
+	}
+
+	// TYPE_BOOK, TYPE_BOTTLE, TYPE_PAPER, TYPE_PIPE?
+
+	// add rug last
+	point rug_center;
+	vector3d rug_hsz; // half length/width
+	rug_center.z = z_floor;
+
+	for (unsigned n = 0; n < 20; ++n) { // 20 tries
+		for (unsigned d = 0; d < 2; ++d) {
+			rug_hsz   [d] = rgen.rand_uniform(0.2, 0.4)*min(place_area.get_sz_dim(d), 2.0f*place_area.get_sz_dim(d)); // limit AR to 2.0
+			rug_center[d] = rgen.rand_uniform(place_area.d[d][0]+rug_hsz[d], place_area.d[d][1]-rug_hsz[d]);
+		}
+		cube_t rug(rug_center);
+		rug.expand_by_xy(rug_hsz);
+		rug.z2() += 0.001*floor_spacing; // set thickness/height
+		bool bad_place(0);
+
+		for (auto i = avoid_cubes.begin(); i != avoid_cubes.begin()+rug_avoid_cubes_end; ++i) { // skip objects that can be placed on rugs
+			if (i->intersects_xy(rug)) {bad_place = 1; break;}
+		}
+		if (bad_place) continue;
+		objs.emplace_back(rug, TYPE_RUG, room_id, 0, 0, (obj_flags | RO_FLAG_NOCOLL), light_amt);
+		objs.back().obj_id = uint16_t(objs.size()); // determines rug texture
+		break; // done
+	} // for n
 }
 
 cube_t get_attic_access_door_cube(room_object_t const &c, bool inc_ladder) {
