@@ -1249,8 +1249,10 @@ public:
 			s.set_uniform_float(anim_time_loc, S.anim_time);
 			fgPushMatrix();
 			translate_to(S.pos);
+			assert(S.dir != zero_vector && S.upv != zero_vector);
 			vector3d const dir(S.dir.get_norm()), upv(S.upv.get_norm()); // normalize, just in case
 			vector3d const right(cross_product(S.upv, S.dir).get_norm());
+			assert(right != zero_vector);
 			xform_matrix xm;
 			float *m(xm.get_ptr());
 			m[0] = dir.x; // x

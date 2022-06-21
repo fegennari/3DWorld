@@ -114,6 +114,7 @@ struct rat_t : public building_animal_t {
 
 struct spider_t : public building_animal_t {
 	vector3d upv;
+	point last_valid_pos;
 	float update_time, web_start_zval, jump_vel_z, jump_dist;
 	bool on_web;
 	// this first constructor is for the lower_bound() call in vect_rat_t::get_first_rat_with_x2_gt()

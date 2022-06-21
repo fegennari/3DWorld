@@ -831,8 +831,8 @@ bool building_t::update_spider_pos_orient(spider_t &spider, point const &camera_
 		// the attic roof is not a cube we can walk on and the beams aren't real objects;
 		// also, it's not really possible to move from the attic floor to the roof without getting stuck in/on the corner
 	}
-	float const delta_dir(min(1.0f, 1.5f*(1.0f - pow(0.7f, timestep))));
 	if (obj_avoid.had_coll) {spider.end_jump();}
+	float const delta_dir(min(1.0f, 1.5f*(1.0f - pow(0.7f, timestep))));
 
 	if (!surface_orienter.align_to_surfaces(spider, delta_dir, camera_bs, rgen)) { // not on a surface
 		if (!spider.is_jumping()) { // if jumping, we continue the jump; otherwise, drop to a surface below
@@ -873,9 +873,19 @@ void building_t::update_spider(spider_t &spider, point const &camera_bs, float t
 	if (!is_pos_inside_building(spider.pos, radius, radius)) {
 		spider.end_jump();
 		spider.pos = spider.last_pos; // restore previous pos before collision
-		spider.dir = zero_vector; // will be set to a valid value on the next frame
-		return;
+
+		if (!is_pos_inside_building(spider.pos, radius, radius)) { // still not valid
+			if (spider.last_valid_pos == all_zeros) { // bad spawn pos - retry
+				gen_animal_floor_pos(radius, spider_t::allow_in_attic(), rgen);
+				return;
+			}
+			spider.pos = spider.last_valid_pos; // restore to prev frame pos
+		}
+		assert(is_pos_inside_building(spider.pos, radius, radius));
+		spider.choose_new_dir(rgen);
+		return; // or could continue below?
 	}
+	spider.last_valid_pos = spider.pos;
 	bool const had_coll(update_spider_pos_orient(spider, camera_bs, timestep, rgen));
 	if (had_coll) {spider.end_jump();}
 
