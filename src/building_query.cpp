@@ -467,7 +467,8 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, flo
 			had_coll = on_stairs = 1;
 		} // for c
 		for (auto c = objs.begin(); c != objs.end(); ++c) { // check for other objects to collide with (including stairs)
-			if (c->no_coll() || !bldg_obj_types[c->type].player_coll) continue;
+			// Note: chairs in attics are player collidable
+			if (c->no_coll() || (!bldg_obj_types[c->type].player_coll && c->type != TYPE_CHAIR || !c->in_attic())) continue;
 			if (on_attic_ladder && c->type == TYPE_ATTIC_DOOR) continue; // collision with attic door/ladder is handled above
 
 			if (c->type == TYPE_ELEVATOR) { // special handling for elevators

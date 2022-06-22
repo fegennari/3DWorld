@@ -158,6 +158,7 @@ void create_attic_posts(building_t const &b, cube_t const &beam, bool dim, cube_
 void building_t::add_attic_objects(rand_gen_t rgen) {
 	unsigned const obj_flags(RO_FLAG_INTERIOR | RO_FLAG_IN_ATTIC);
 	vect_room_object_t &objs(interior->room_geom->objs);
+	unsigned const objs_start(objs.size());
 	// add attic access door
 	cube_with_ix_t adoor(interior->attic_access);
 	assert(adoor.is_strictly_normalized());
@@ -265,39 +266,61 @@ void building_t::add_attic_objects(rand_gen_t rgen) {
 		} // for n
 	}
 	unsigned const rug_avoid_cubes_end(avoid_cubes.size());
-	// add boxes; currently not stacked - should they be?
-	unsigned const num_boxes(rgen.rand() % 25); // 0-24
-	float const box_sz(0.18*floor_spacing);
-	add_boxes_to_space(objs[attic_door_ix], objs, place_area, avoid_cubes, rgen, num_boxes, box_sz, 0.5*box_sz, 1.5*box_sz, 1, obj_flags); // allow_crates=1
+	vector3d sz;
 
 	// add lamp(s)
 	unsigned const num_lamps(rgen.rand() % 3); // 0-2
-
-	for (unsigned n = 0; n < num_lamps; ++n) {
-		try_add_lamp(place_area, floor_spacing, room_id, obj_flags, light_amt, avoid_cubes, objs, rgen);
-	}
-
+	for (unsigned n = 0; n < num_lamps; ++n) {try_add_lamp(place_area, floor_spacing, room_id, obj_flags, light_amt, avoid_cubes, objs, rgen);}
 	// add chair(s)
 	unsigned const num_chairs(rgen.rand() % 3); // 0-2
-	vector3d sz;
-	// TODO
+	
+	if (num_chairs > 0) {
+		float const height(0.4*floor_spacing), hwidth(0.1*floor_spacing);
+		sz.assign(hwidth, hwidth, height);
+		colorRGBA chair_color(WHITE); // defaults to white
 
+		for (auto i = objs.begin(); i != objs.begin()+objs_start; ++i) {
+			if (i->type == TYPE_CHAIR) {chair_color = i->color; break;} // use the color of the first chair added to this building
+		}
+		for (unsigned n = 0; n < num_chairs; ++n) {
+			add_obj_to_closet(objs[attic_door_ix], place_area, objs, avoid_cubes, rgen, sz, TYPE_CHAIR, obj_flags);
+			objs.back().dim   = rgen.rand_bool(); // random orient
+			objs.back().dir   = rgen.rand_bool();
+			objs.back().color = chair_color;
+		}
+	}
 	// add nightstand(s)
 	unsigned const num_nightstands(rgen.rand() % 3); // 0-2
-	// TODO
-
+	
+	for (unsigned n = 0; n < num_nightstands; ++n) {
+		bool const dim(rgen.rand_bool());
+		float const height(rgen.rand_uniform(0.24, 0.26)*floor_spacing), depth(rgen.rand_uniform(0.15, 0.2)*floor_spacing), width(rgen.rand_uniform(1.0, 2.0)*depth);
+		sz[ dim] = 0.5*depth;
+		sz[!dim] = 0.5*width;
+		sz.z     = height;
+		add_obj_to_closet(objs[attic_door_ix], place_area, objs, avoid_cubes, rgen, sz, TYPE_NIGHTSTAND, obj_flags);
+		objs.back().dim = dim;
+		objs.back().dir = (objs.back().get_center_dim(dim) < place_area.get_center_dim(dim)); // face the center of the attic so that drawers can be opened
+	}
 	// add paintcan(s)
 	unsigned const num_paintcans(rgen.rand() % 5); // 0-4
-	float const height(0.64*0.2*floor_spacing), radius(0.28*0.2*floor_spacing);
 	
-	for (unsigned n = 0; n < num_paintcans; ++n) {
+	if (num_paintcans > 0) {
+		float const height(0.64*0.2*floor_spacing), radius(0.28*0.2*floor_spacing);
 		sz.assign(radius, radius, height);
-		add_obj_to_closet(objs[attic_door_ix], place_area, objs, avoid_cubes, rgen, sz, TYPE_PAINTCAN, obj_flags, SHAPE_CYLIN);
+
+		for (unsigned n = 0; n < num_paintcans; ++n) {
+			add_obj_to_closet(objs[attic_door_ix], place_area, objs, avoid_cubes, rgen, sz, TYPE_PAINTCAN, obj_flags, SHAPE_CYLIN);
+		}
 	}
+	// add boxes; currently not stacked - should they be?
+	unsigned const num_boxes(rgen.rand() % 41); // 0-40
+	float const box_sz(0.18*floor_spacing);
+	add_boxes_to_space(objs[attic_door_ix], objs, place_area, avoid_cubes, rgen, num_boxes, box_sz, 0.5*box_sz, 1.5*box_sz, 1, obj_flags); // allow_crates=1
 
 	// TYPE_BOOK, TYPE_BOTTLE, TYPE_PAPER, TYPE_PIPE?
 
-	// add rug last
+	// add rug last, under any previous movable items
 	point rug_center;
 	vector3d rug_hsz; // half length/width
 	rug_center.z = z_floor;

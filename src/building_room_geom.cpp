@@ -188,6 +188,7 @@ room_object_t get_dresser_middle(room_object_t const &c) {
 }
 void building_room_geom_t::add_dresser(room_object_t const &c, float tscale, bool inc_lg, bool inc_sm) { // or nightstand
 	if (inc_lg) {
+		assert(c.shape == SHAPE_CUBE); // cubes only for now
 		add_table(c, tscale, 0.06, 0.10); // Note: legs extend across middle to the top surface
 		get_wood_material(tscale).add_cube_to_verts(get_dresser_middle(c), apply_wood_light_color(c), c.get_llc()); // all faces drawn
 	}
