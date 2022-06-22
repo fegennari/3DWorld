@@ -303,10 +303,9 @@ void building_t::add_attic_objects(rand_gen_t rgen) {
 	rug_center.z = z_floor;
 
 	for (unsigned n = 0; n < 20; ++n) { // 20 tries
-		for (unsigned d = 0; d < 2; ++d) {
-			rug_hsz   [d] = rgen.rand_uniform(0.2, 0.4)*min(place_area.get_sz_dim(d), 2.0f*place_area.get_sz_dim(d)); // limit AR to 2.0
-			rug_center[d] = rgen.rand_uniform(place_area.d[d][0]+rug_hsz[d], place_area.d[d][1]-rug_hsz[d]);
-		}
+		for (unsigned d = 0; d < 2; ++d) {rug_hsz   [d] = rgen.rand_uniform(0.2, 0.4)*place_area.get_sz_dim(d);}
+		for (unsigned d = 0; d < 2; ++d) {min_eq(rug_hsz[d], 2.0f*rug_hsz[!d]);} // limit aspect ratio to 2.0
+		for (unsigned d = 0; d < 2; ++d) {rug_center[d] = rgen.rand_uniform(place_area.d[d][0]+rug_hsz[d], place_area.d[d][1]-rug_hsz[d]);}
 		cube_t rug(rug_center);
 		rug.expand_by_xy(rug_hsz);
 		rug.z2() += 0.001*floor_spacing; // set thickness/height
