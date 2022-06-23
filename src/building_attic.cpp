@@ -14,9 +14,6 @@ void add_boxes_to_space(room_object_t const &c, vect_room_object_t &objects, cub
 void try_add_lamp(cube_t const &place_area, float floor_spacing, unsigned room_id, unsigned flags, float light_amt,
 	vect_cube_t &cubes, vect_room_object_t &objects, rand_gen_t &rgen);
 bool gen_furnace_cand(cube_t const &place_area, float floor_spacing, bool near_wall, rand_gen_t &rgen, cube_t &furnace, bool &dim, bool &dir);
-//bool add_if_not_intersecting(room_object_t const &obj, vect_room_object_t &objects, vect_cube_t &cubes);
-//void gen_xy_pos_for_cube_obj(cube_t &C, cube_t const &S, vector3d const &sz, float height, rand_gen_t &rgen);
-//void gen_xy_pos_for_round_obj(cube_t &C, cube_t const &S, float radius, float height, float spacing, rand_gen_t &rgen, bool place_at_z1);
 void add_obj_to_closet(room_object_t const &c, cube_t const &interior, vect_room_object_t &objects, vect_cube_t &cubes,
 	rand_gen_t &rgen, vector3d const &sz, unsigned obj_type, unsigned flags, room_obj_shape shape=SHAPE_CUBE);
 
@@ -258,10 +255,12 @@ void building_t::add_attic_objects(rand_gen_t rgen) {
 			cube_t furnace;
 			bool dim(0), dir(0);
 			if (!gen_furnace_cand(place_area, floor_spacing, 0, rgen, furnace, dim, dir)) break; // near_wall=0
-			if (has_bcube_int(furnace, avoid_cubes) || !cube_in_attic(furnace)) continue;
+			cube_t test_cube(furnace);
+			test_cube.d[dim][dir] += (dir ? 1.0 : -1.0)*0.5*furnace.get_sz_dim(dim); // add clearance in front
+			if (has_bcube_int(test_cube, avoid_cubes) || !cube_in_attic(furnace)) continue;
 			unsigned const flags((is_house ? RO_FLAG_IS_HOUSE : 0) | RO_FLAG_INTERIOR);
 			interior->room_geom->objs.emplace_back(furnace, TYPE_FURNACE, room_id, dim, dir, flags, light_amt);
-			avoid_cubes.push_back(furnace);
+			avoid_cubes.push_back(test_cube);
 			break; // success/done
 		} // for n
 	}

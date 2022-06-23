@@ -160,7 +160,9 @@ bool building_t::add_basement_utility_objs(rand_gen_t rgen, room_t const &room, 
 		cube_t furnace;
 		bool dim(0), dir(0);
 		if (!gen_furnace_cand(place_area, floor_spacing, 1, rgen, furnace, dim, dir)) break; // near_wall=1
-		if (is_cube_close_to_doorway(furnace, room, 0.0, 1) || interior->is_blocked_by_stairs_or_elevator(furnace) || overlaps_other_room_obj(furnace, objs_start)) continue;
+		cube_t test_cube(furnace);
+		test_cube.d[dim][dir] += (dir ? 1.0 : -1.0)*0.5*furnace.get_sz_dim(dim); // add clearance in front
+		if (is_cube_close_to_doorway(test_cube, room, 0.0, 1) || interior->is_blocked_by_stairs_or_elevator(test_cube) || overlaps_other_room_obj(test_cube, objs_start)) continue;
 		unsigned const flags((is_house ? RO_FLAG_IS_HOUSE : 0) | RO_FLAG_INTERIOR);
 		interior->room_geom->objs.emplace_back(furnace, TYPE_FURNACE, room_id, dim, dir, flags, tot_light_amt);
 		was_added = 1;
