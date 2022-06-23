@@ -313,7 +313,7 @@ void building_t::add_attic_objects(rand_gen_t rgen) {
 		}
 	}
 	// add boxes; currently not stacked - should they be?
-	unsigned const num_boxes(rgen.rand() % 41); // 0-40
+	unsigned const num_boxes(rgen.rand() % 50); // 0-49
 	float const box_sz(0.18*floor_spacing);
 	add_boxes_to_space(objs[attic_door_ix], objs, place_area, avoid_cubes, rgen, num_boxes, box_sz, 0.5*box_sz, 1.5*box_sz, 1, obj_flags); // allow_crates=1
 
