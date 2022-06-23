@@ -1181,7 +1181,7 @@ bool building_t::is_obj_pos_valid(room_object_t const &obj, bool keep_in_room, b
 	assert(interior);
 	room_t const &room(get_room(obj.room_id));
 
-	if (keep_in_room) { // check room bounds
+	if (keep_in_room) { // check room bounds; should this apply to the attic as well?
 		cube_t place_area(room);
 		place_area.expand_by_xy(-0.99*get_trim_thickness()); // shrink to exclude wall trim
 		if (!place_area.contains_cube(obj)) return 0; // outside the room
@@ -1191,7 +1191,7 @@ bool building_t::is_obj_pos_valid(room_object_t const &obj, bool keep_in_room, b
 	for (auto p = parts.begin(); p != get_real_parts_end_inc_sec(); ++p) {
 		if (p->contains_cube(obj)) {contained_in_part = 1; break;}
 	}
-	if (!contained_in_part) return 0;
+	if (!contained_in_part && !cube_in_attic(obj)) return 0;
 
 	for (unsigned d = 0; d < 2; ++d) { // check for wall intersection
 		if (has_bcube_int_no_adj(obj, interior->walls[d])) return 0;
