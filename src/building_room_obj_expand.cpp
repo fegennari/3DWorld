@@ -572,9 +572,13 @@ void set_rand_pos_for_sz(cube_t &c, bool dim, float length, float width, rand_ge
 	vector3d const sz(drawer.get_size()); // Note: drawer is the interior area
 	rand_gen_t rgen;
 	rgen.set_state((123*drawer_ix + 1), (456*c.room_id + 777*c.obj_id + 1));
-	unsigned const type_ix(rgen.rand() % 11); // 0-10
 	room_object_t obj; // starts as no item
-
+	unsigned type_ix(rgen.rand() % 11); // 0-10
+	
+	if (c.in_attic()) { // custom object overrides for attic item drawers
+		if (type_ix == 7) {type_ix = 0;} // replace money with box
+		if (type_ix == 8) {type_ix = 4;} // replace cell phone with book
+	}
 	switch (type_ix) {
 	case 0: // box
 	{
