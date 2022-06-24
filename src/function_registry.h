@@ -41,6 +41,7 @@ void check_zoom();
 void reset_camera_pos();
 void move_camera_pos_xy(vector3d const &v, float dist);
 void move_camera_pos(vector3d const &v, float dist);
+double get_player_height();
 void update_cpos();
 void advance_camera(int dir);
 bool open_file(FILE *&fp, char const *const fn, std::string const &file_type, char const *const mode="r");

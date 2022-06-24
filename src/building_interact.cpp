@@ -18,7 +18,7 @@ float const OBJ_ELASTICITY = 0.8;
 extern bool tt_fire_button_down, flashlight_on, player_is_hiding, player_in_attic, use_last_pickup_object, city_action_key;
 extern int player_in_closet, camera_surf_collide, building_action_key, can_pickup_bldg_obj, animate2;
 extern float fticks, CAMERA_RADIUS, office_chair_rot_rate;
-extern double tfticks, camera_zh;
+extern double tfticks;
 extern building_dest_t cur_player_building_loc;
 
 
@@ -795,7 +795,7 @@ void building_t::update_player_interact_objects(point const &player_pos) {
 	assert(interior);
 	interior->update_elevators(*this, player_pos);
 	if (!has_room_geom()) return; // nothing else to do
-	float const player_radius(get_scaled_player_radius()), player_z1(player_pos.z - camera_zh - player_radius), player_z2(player_pos.z);
+	float const player_radius(get_scaled_player_radius()), player_z1(player_pos.z - get_player_height() - player_radius), player_z2(player_pos.z);
 	float const fc_thick(get_fc_thickness()), fticks_stable(min(fticks, 1.0f)); // cap to 1/40s to improve stability
 	static float last_sound_tfticks(0);
 	static point last_sound_pt(all_zeros), last_player_pos(all_zeros);

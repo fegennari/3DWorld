@@ -22,7 +22,7 @@ vector<sphere_t> cur_sounds; // radius = sound volume
 extern bool camera_in_building, player_is_hiding, player_in_unlit_room;
 extern int window_width, window_height, display_framerate, display_mode, game_mode, building_action_key, frame_counter;
 extern float fticks, CAMERA_RADIUS;
-extern double tfticks, camera_zh;
+extern double tfticks;
 extern building_params_t global_building_params;
 
 
@@ -1164,7 +1164,7 @@ bool building_t::move_nearest_object(point const &at_pos, vector3d const &in_dir
 	if (mode == 1) {delta.negate();} // changes push to pull ('r' key vs 'e' key)
 	cube_t player_bcube;
 	player_bcube.set_from_sphere(at_pos, get_scaled_player_radius());
-	player_bcube.z1() -= camera_zh;
+	player_bcube.z1() -= get_player_height();
 	// Note: setting this to 0 will allow objects to be pushed/pulled out of the room, but it may also allow doors to be closed on objects
 	bool const keep_in_room = 1;
 

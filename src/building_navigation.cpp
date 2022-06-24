@@ -18,7 +18,6 @@ building_dest_t cur_player_building_loc, prev_player_building_loc;
 extern bool player_is_hiding;
 extern int frame_counter, display_mode, animate2;
 extern float fticks;
-extern double camera_zh;
 extern building_params_t global_building_params;
 extern bldg_obj_type_t bldg_obj_types[];
 
@@ -653,7 +652,7 @@ bool building_t::choose_dest_goal(person_t &person, rand_gen_t &rgen, bool same_
 	if (global_building_params.ai_target_player) { // ensure target is a valid location in this building; this must be done *after* adjacent floor zval adjustment
 		// handle the case where the player is standing on the stairs on the same floor by moving zval to a different floor to force this person to use the stairs
 		if (person.goal_type == GOAL_TYPE_PLAYER && loc.floor_ix == goal.floor_ix && goal.stairs_ix >= 0) {
-			float const person_z1(person.get_z1()), player_z1(cur_player_building_loc.pos.z - CAMERA_RADIUS - camera_zh), fc_thick(get_fc_thickness());
+			float const person_z1(person.get_z1()), player_z1(cur_player_building_loc.pos.z - CAMERA_RADIUS - get_player_height()), fc_thick(get_fc_thickness());
 			// make destination exactly one floor above or below of where we currently are; some hysteresis is required to handle the case where the player is at the same zval
 			if      (player_z1 + fc_thick < person_z1) {person.target_pos.z -= floor_spacing;} // move down one floor
 			else if (player_z1 - fc_thick > person_z1) {person.target_pos.z += floor_spacing;} // move up   one floor
@@ -996,7 +995,7 @@ bool building_t::is_player_visible(person_t const &person, unsigned vis_test) co
 	if (vis_test == 0) return 1; // no visibility test
 	building_dest_t const &target(cur_player_building_loc);
 	float const player_radius(get_scaled_player_radius());
-	point const pp2(target.pos - vector3d(0.0, 0.0, camera_zh)); // player's bottom sphere
+	point const pp2(target.pos - vector3d(0.0, 0.0, get_player_height())); // player's bottom sphere
 	bool const same_room_and_floor(same_room_and_floor_as_player(person));
 
 	if (!same_room_and_floor) { // check visibility; assume LOS if in the same room
@@ -1100,7 +1099,7 @@ int building_t::ai_room_update(rand_gen_t &rgen, float delta_dir, unsigned perso
 
 	if (can_ai_follow_player(person)) {
 		// use zval of the feet to handle cases where the person and the player are different heights
-		point const feet_pos(person.pos.x, person.pos.y, person.get_z1()), player_feet_pos(cur_player_building_loc.pos - vector3d(0.0, 0.0, CAMERA_RADIUS+camera_zh));
+		point const feet_pos(person.pos.x, person.pos.y, person.get_z1()), player_feet_pos(cur_player_building_loc.pos - vector3d(0.0, 0.0, CAMERA_RADIUS+get_player_height()));
 
 		if (dist_less_than(feet_pos, player_feet_pos, 1.2f*(person.radius + get_scaled_player_radius()))) {
 			if (!check_for_wall_ceil_floor_int(person.pos, cur_player_building_loc.pos)) {

@@ -1074,7 +1074,7 @@ void vert_coll_detector::check_cobj(int index) {
 	check_cobj_intersect(index, 1, player_step);
 
 	if (type == CAMERA) {
-		if (camera_zh > 0.0) {
+		if (camera_zh > 0.0) { // independent of crouch
 			unsigned const nsteps((unsigned)ceil(camera_zh/o_radius));
 			float const step_sz(camera_zh/nsteps), pz(pos.z), opz(obj.pos.z), poz(pold.z);
 
@@ -1573,7 +1573,7 @@ void vert_coll_detector::init_reset_pos() {
 	pos  = obj.pos; // reset local state
 	z1   = pos.z - o_radius;
 	z2   = pos.z + o_radius;
-	if (type == CAMERA) z2 += camera_zh;
+	if (type == CAMERA) {z2 += get_player_height();}
 }
 
 
@@ -1801,7 +1801,8 @@ void force_onto_surface_mesh(point &pos) { // for camera
 	}
 	if (camera_coll_smooth) {collision_detect_large_sphere(pos, radius, (unsigned char)0);}
 	proc_player_city_sphere_coll(pos);
-	point const adj_pos(pos + vector3d(0.0, 0.0, camera_zh));
+	double const player_height(get_player_height());
+	point const adj_pos(pos + vector3d(0.0, 0.0, player_height));
 	if (temperature > W_FREEZE_POINT && is_underwater(adj_pos, 1) && (rand()&1)) {gen_bubble(adj_pos);}
 
 	if (!cflight && jump_time == 0 && camera_change == 0 && camera_last_pos.z != 0.0 && (pos.z - camera_last_pos.z) > CAMERA_MESH_DZ &&
@@ -1820,7 +1821,7 @@ void force_onto_surface_mesh(point &pos) { // for camera
 		camera_change = 0;
 	}
 	point pos2(pos);
-	pos2.z += 0.5*camera_zh;
+	pos2.z += 0.5*player_height;
 	if (world_mode == WMODE_GROUND) {add_camera_cobj(pos2);}
 }
 
@@ -1906,7 +1907,7 @@ int set_true_obj_height(point &pos, point const &lpos, float step_height, float 
 		jump_time = max(0, jump_time-iticks);
 	}
 	float zmu(mh), z1(pos.z - radius), z2(pos.z + radius);
-	if (is_camera /*|| type == WAYPOINT*/) {z2 += camera_zh;} // add camera height
+	if (is_camera /*|| type == WAYPOINT*/) {z2 += get_player_height();} // add camera height
 	coll_cell const &cell(v_collision_matrix[ypos][xpos]);
 	int any_coll(0), moved(0);
 	float zceil(0.0), zfloor(0.0);

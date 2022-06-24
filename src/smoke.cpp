@@ -34,7 +34,7 @@ extern bool no_smoke_over_mesh, no_sun_lpos_update;
 extern unsigned create_voxel_landscape;
 extern int animate2, display_mode, scrolling, game_mode, frame_counter, precip_mode;
 extern float czmin0, rain_wetness, fticks, dist_to_fire_sq;
-extern double sim_ticks, camera_zh;
+extern double sim_ticks;
 extern vector3d wind;
 extern colorRGB cur_ambient, cur_diffuse;
 extern lmap_manager_t lmap_manager;
@@ -459,7 +459,7 @@ void fire_drawer_t::draw(shader_t &s) {
 
 void update_dist_to_fire(point const &pos, float dist_mult) {
 	point camera_pos(get_camera_pos());
-	camera_pos.z -= 0.5*camera_zh; // average/center of camera
+	camera_pos.z -= 0.5*get_player_height(); // average/center of camera
 	float const dist_sq(dist_mult*p2p_dist_sq(camera_pos, pos)); // quarter distance for this type of fire, for a stronger effect
 	dist_to_fire_sq = ((dist_to_fire_sq == 0.0) ? dist_sq : min(dist_to_fire_sq, dist_sq));
 }

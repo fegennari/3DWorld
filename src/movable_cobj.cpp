@@ -14,7 +14,6 @@ set<unsigned> moving_cobjs;
 extern unsigned scene_smap_vbo_invalid;
 extern int num_groups, frame_counter;
 extern float base_gravity, tstep, temperature;
-extern double camera_zh;
 extern coll_obj_group coll_objects;
 extern cobj_groups_t cobj_groups;
 extern player_state *sstates;
@@ -1332,7 +1331,7 @@ bool proc_movable_cobj(point const &orig_pos, point &player_pos, unsigned index,
 	if (1) { // see if the player is standing on the cobj, or a cobj from the same group - if so, there is no traction, and the cobj can't be pushed
 		point bot_pos(player_pos);
 		bot_pos.z -= 1.1*CAMERA_RADIUS;
-		if (type == CAMERA) {bot_pos.z -= camera_zh;}
+		if (type == CAMERA) {bot_pos.z -= get_player_height();}
 		int cindex(-1);
 		point cpos; // unused
 		vector3d cnorm; // unused

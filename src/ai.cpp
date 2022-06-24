@@ -32,7 +32,7 @@ extern int iticks, num_smileys, free_for_all, teams, frame_counter, display_mode
 extern int DISABLE_WATER, xoff, yoff, world_mode, spectate, camera_reset, camera_mode, following, game_mode;
 extern int recreated, mesh_scale_change, UNLIMITED_WEAPONS, camera_coll_id, init_num_balls;
 extern float fticks, temperature, zmax, ztop, XY_SCENE_SIZE, TIMESTEP, self_damage, base_gravity, NEAR_CLIP, FAR_CLIP;
-extern double camera_zh, tfticks;
+extern double tfticks;
 extern point orig_camera, orig_cdir, surface_pos;
 extern int coll_id[];
 extern obj_group obj_groups[];
@@ -309,7 +309,7 @@ int player_state::find_nearest_enemy(point const &pos, pos_dir_up const &pdu, po
 	float const radius(object_types[SMILEY].radius);
 	int const cid(coll_id[SMILEY]);
 	point camera(get_camera_pos());
-	camera.z += 0.5*camera_zh;
+	camera.z += 0.5*get_player_height();
 	min_dist  = 0.0;
 
 	if (free_for_all) { // smileys attack each other, not only the player
@@ -426,7 +426,7 @@ int player_state::find_nearest_obj(point const &pos, pos_dir_up const &pdu, poin
 
 			// mode: 0: none, 1: user wpt, 2: placed item wpt, 3: goal wpt, 4: wpt index, 5: closest wpt, 6: closest visible wpt, 7: goal pos (new wpt)
 			if (smileys_chase_player) {
-				goal = wpt_goal(6, 0, get_camera_pos()-point(0.0, 0.0, camera_zh)); // closest wpt visible to camera
+				goal = wpt_goal(6, 0, get_camera_pos()-point(0.0, 0.0, get_player_height())); // closest wpt visible to camera
 			}
 			else {
 				goal = wpt_goal((has_wpt_goal ? 3 : 2), 0, all_zeros); // mode, wpt, goal_pos

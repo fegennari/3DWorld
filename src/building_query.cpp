@@ -6,7 +6,7 @@
 #include "buildings.h"
 
 
-extern bool draw_building_interiors, camera_in_building, player_near_toilet, player_is_hiding, player_in_unlit_room, player_in_attic;
+extern bool draw_building_interiors, camera_in_building, player_near_toilet, player_is_hiding, player_in_unlit_room, player_in_attic, ctrl_key_pressed;
 extern float CAMERA_RADIUS, C_STEP_HEIGHT, NEAR_CLIP;
 extern int player_in_closet, camera_surf_collide, frame_counter, player_in_elevator;
 extern double camera_zh;
@@ -395,6 +395,7 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, flo
 	assert(interior);
 	float const floor_spacing(get_window_vspace()), floor_thickness(get_floor_thickness()), attic_door_z_gap(0.2f*floor_thickness);
 	float const xy_radius(radius*global_building_params.player_coll_radius_scale); // XY radius can be smaller to allow player to fit between furniture
+	double const camera_height(get_player_height());
 	bool had_coll(0), on_stairs(0), on_attic_ladder(0);
 	float obj_z(max(pos.z, p_last.z)); // use p_last to get orig zval
 	cube_with_ix_t const &attic_access(interior->attic_access);
@@ -432,7 +433,7 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, flo
 			float const beam_depth(get_attic_beam_depth());
 
 			// check player's head against the roof/overhead beams to avoid clipping through it
-			if (!point_in_attic(point(pos.x, pos.y, (pos.z + 1.1f*camera_zh + beam_depth)), &roof_normal)) {
+			if (!point_in_attic(point(pos.x, pos.y, (pos.z + 1.1f*camera_height + beam_depth)), &roof_normal)) {
 				for (unsigned d = 0; d < 2; ++d) { // reset pos X/Y if oriented toward the roof
 					if (roof_normal[d] != 0.0 && ((roof_normal[d] < 0.0) ^ (pos[d] < p_last[d]))) {reset_to_last_dims |= (1<<d);}
 				}
@@ -450,7 +451,7 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, flo
 			obj_z    = max(pos.z, p_last.z);
 		}
 	}
-	// *** Note ***: at this point pos.z is radius above the floors and *not* at the camera height, which is why we add camera_zh to pos.z below
+	// *** Note ***: at this point pos.z is radius above the floors and *not* at the camera height, which is why we add camera_height to pos.z below
 	// Note: this check must be after pos.z is set from interior->floors
 	// pass in radius as wall_test_extra_z as a hack to allow player to step over a wall that's below the stairs connecting stacked parts
 	had_coll |= interior->check_sphere_coll_walls_elevators_doors(*this, pos, p_last, xy_radius, radius, 0, cnorm); // check_open_doors=0 (to avoid getting the player stuck)
@@ -490,14 +491,14 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, flo
 			}
 			if ((c->type == TYPE_STAIR || on_stairs) && (obj_z + radius) > c->z2()) continue; // above the stair - allow it to be walked on
 			cube_t c_extended(get_true_room_obj_bcube(*c));
-			if (c->type == TYPE_STAIR || c->type == TYPE_ATTIC_DOOR) {c_extended.z1() -= camera_zh;} // handle the player's head for stairs and attic doors
+			if (c->type == TYPE_STAIR || c->type == TYPE_ATTIC_DOOR) {c_extended.z1() -= camera_height;} // handle the player's head for stairs and attic doors
 
 			// Note: slight adjust so that player is above ramp when on the floor
 			if (c->type == TYPE_RAMP && (obj_z - 0.99f*radius) < c->z2()) { // ramp should be SHAPE_ANGLED
 				if (!sphere_cube_intersect_xy(pos, xy_radius, c_extended)) continue; // optimization
 				float const length(c->get_length()), height(c->dz()), t(CLIP_TO_01((pos[c->dim] - c->d[c->dim][0])/length)), T(c->dir ? t : (1.0-t));
 				float const ztop(c->z1() + height*T), zbot(ztop - FLOOR_THICK_VAL_OFFICE*height);
-				float const player_height(camera_zh + NEAR_CLIP); // include near clip for collisions with the bottom of ramps
+				float const player_height(camera_height + NEAR_CLIP); // include near clip for collisions with the bottom of ramps
 				float const player_bot_z(obj_z - radius), player_bot_z_step(player_bot_z + C_STEP_HEIGHT*radius), player_top_z(obj_z + player_height);
 					
 				if (ztop < player_bot_z_step) { // step onto or move along ramp top surface
@@ -536,7 +537,7 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, flo
 				cylinder_3dw const railing(get_railing_cylinder(*c));
 				float const t((pos[c->dim] - railing.p1[c->dim])/(railing.p2[c->dim] - railing.p1[c->dim]));
 				float const railing_zval(railing.p1.z + CLIP_TO_01(t)*(railing.p2.z - railing.p1.z));
-				if ((railing_zval - get_railing_height(*c)) > float(pos.z + camera_zh) || railing_zval < (pos.z - radius)) continue; // no Z collision
+				if ((railing_zval - get_railing_height(*c)) > float(pos.z + camera_height) || railing_zval < (pos.z - radius)) continue; // no Z collision
 			}
 			if (c->shape == SHAPE_CYLIN) { // vertical cylinder
 				cylinder_3dw cylin(c->get_cylinder());
@@ -585,7 +586,7 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, flo
 	for (unsigned d = 0; d < 2; ++d) { // apply attic roof pos reset at the end, to override other collisions that may move pos
 		if (reset_to_last_dims & (1<<d)) {pos[d] = p_last[d];}
 	}
-	handle_vert_cylin_tape_collision(pos, p_last, pos.z-radius, pos.z+camera_zh, xy_radius, 1); // is_player=1
+	handle_vert_cylin_tape_collision(pos, p_last, pos.z-radius, pos.z+camera_height, xy_radius, 1); // is_player=1
 	// not sure where this belongs, but the closet hiding logic is in this function, so I guess it goes here? player must be inside the building to see a windowless room anyway
 	player_in_unlit_room = check_pos_in_unlit_room(pos);
 	return had_coll; // will generally always be true due to floors
@@ -1608,7 +1609,7 @@ template<typename T> void vect_animal_t<T>::update_delta_sum_for_animal_coll(poi
 // only handles the first collision
 bool building_t::check_and_handle_dynamic_obj_coll(point &pos, float radius, float z1, float z2, point const &camera_bs, bool for_spider) const {
 	if (camera_surf_collide) { // check the player; unclear if this is really needed, or if it actually works
-		if (z1 < camera_bs.z && z2 > (camera_bs.z - CAMERA_RADIUS - camera_zh)) {
+		if (z1 < camera_bs.z && z2 > (camera_bs.z - CAMERA_RADIUS - get_player_height())) {
 			if (handle_vcylin_vcylin_int(pos, camera_bs, (radius + get_scaled_player_radius()))) return 1;
 		}
 	}
@@ -1650,7 +1651,7 @@ bool building_t::is_cube_contained_in_parts(cube_t const &c) const {
 int building_t::check_player_in_basement(point const &pos) const {
 	if (!is_pos_in_basement(pos)) return 0;
 	
-	if (interior && (pos.z - CAMERA_RADIUS - camera_zh) > (ground_floor_z1 - get_window_vspace())) { // only need to check if on the top floor of the basement
+	if (interior && (pos.z - CAMERA_RADIUS - get_player_height()) > (ground_floor_z1 - get_window_vspace())) { // only need to check if on the top floor of the basement
 		for (auto const &s : interior->stairwells) {
 			if (s.contains_pt(pos)) return 1; // player on stairs, upper floor and windows/outside may be visible
 		}

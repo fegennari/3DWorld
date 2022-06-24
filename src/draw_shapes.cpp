@@ -14,7 +14,6 @@ float const TOLER_ = 1.0E-6;
 extern bool begin_motion;
 extern int num_groups, camera_coll_id, spectate, display_mode, camera_mode, camera_view;
 extern float zmin, NEAR_CLIP;
-extern double camera_zh;
 extern vector_point_norm cylinder_vpn;
 extern vector<int> weap_cobjs;
 extern vector<unsigned> falling_cobjs;
@@ -500,7 +499,7 @@ void add_coll_shadow_objs() {
 		shadow_objs.push_back(shadow_sphere(camera_pos, CAMERA_RADIUS, camera_coll_id, 1));
 
 		// if camera_zh has been set, draw the player's shadow as multiple spheres like a capsule
-		for (float r = 0.0; r < camera_zh; r += 0.25*CAMERA_RADIUS) {
+		for (float r = 0.0; r < get_player_height(); r += 0.25*CAMERA_RADIUS) {
 			shadow_objs.push_back(shadow_sphere(camera_pos-point(0.0, 0.0, r), CAMERA_RADIUS, camera_coll_id, 1));
 		}
 	}

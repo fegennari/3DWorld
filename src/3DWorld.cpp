@@ -596,8 +596,12 @@ void resize(int x, int y) {
 }
 
 bool is_shift_key_pressed() {return ((glutGetModifiers() & GLUT_ACTIVE_SHIFT) != 0);}
-bool is_ctrl_key_pressed () {return ((glutGetModifiers() & GLUT_ACTIVE_CTRL ) != 0);}
+bool is_ctrl_key_pressed () {return ((glutGetModifiers() & GLUT_ACTIVE_CTRL ) != 0);} // used for universe mode query and building gample crouch
 bool is_alt_key_pressed  () {return ((glutGetModifiers() & GLUT_ACTIVE_ALT  ) != 0);}
+
+void update_ctrl_key_pressed() {ctrl_key_pressed = is_ctrl_key_pressed();}
+
+double get_player_height () {return (ctrl_key_pressed ? 0.0 : camera_zh);} // control key = crouch
 
 // This function is called whenever the mouse is pressed or released
 // button is a number 0 to 2 designating the button
@@ -608,7 +612,7 @@ void mouseButton(int button, int state, int x, int y) {
 	bool const fire_button(!map_mode && (button == GLUT_RIGHT_BUTTON || (enable_mouse_look && button == GLUT_LEFT_BUTTON)));
 	add_uevent_mbutton(button, state, x, y);
 	if (ui_intercept_mouse(button, state, x, y, 1)) return; // already handled
-	ctrl_key_pressed = is_ctrl_key_pressed();
+	update_ctrl_key_pressed();
 
 	if ((camera_mode == 1 || world_mode == WMODE_UNIVERSE) && fire_button) {
 		b2down = !state;
@@ -642,6 +646,7 @@ void clamp_and_scale_mouse_delta(int &delta, int dmax) {
 // x and y are the location of the mouse (in window-relative coordinates)
 void mouseMotion(int x, int y) {
 
+	update_ctrl_key_pressed();
 	int button(m_button);
 
 	if (screen_reset || start_maximized) {
@@ -1308,7 +1313,7 @@ void keyboard2(int key, int x, int y) { // handling of special keys
 	if (ui_intercept_keyboard(key, 1))   return; // already handled
 	if (!kbd_remap.remap_key(key, 1, 0)) return;
 	add_uevent_keyboard_special(key, x, y);
-	ctrl_key_pressed = is_ctrl_key_pressed();
+	update_ctrl_key_pressed();
 
 	switch (key) { // unused: F9
 	case GLUT_KEY_UP:
@@ -1477,7 +1482,7 @@ void keyboard(unsigned char key, int x, int y) {
 		cout << "Warning: Keyboard event for key " << key << " (" << int(key) << ") which has alredy been pressed." << endl;
 		return;
 	}
-	ctrl_key_pressed = is_ctrl_key_pressed();
+	update_ctrl_key_pressed();
 	keys.insert(key);
 	if (keyset.find(key) == keyset.end()) {keyboard_proc(key, x, y);}
 }

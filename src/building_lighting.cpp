@@ -18,7 +18,7 @@ extern bool camera_in_building, player_in_attic;
 extern int MESH_Z_SIZE, display_mode, display_framerate, camera_surf_collide, animate2, frame_counter, building_action_key, player_in_basement, player_in_elevator;
 extern unsigned LOCAL_RAYS, MAX_RAY_BOUNCES, NUM_THREADS;
 extern float indir_light_exp;
-extern double camera_zh, tfticks;
+extern double tfticks;
 extern colorRGB cur_ambient, cur_diffuse;
 extern std::string lighting_update_text;
 extern vector<light_source> dl_sources;
@@ -1102,7 +1102,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 				}
 			}
 			if (!camera_on_stairs && has_pg_ramp() && !interior->ignore_ramp_placement &&
-				interior->pg_ramp.contains_pt(camera_rot - vector3d(0.0, 0.0, (CAMERA_RADIUS + camera_zh)))) // what about on a ramp?
+				interior->pg_ramp.contains_pt(camera_rot - vector3d(0.0, 0.0, (CAMERA_RADIUS + get_player_height())))) // what about on a ramp?
 			{
 				camera_on_stairs = camera_by_stairs = camera_somewhat_by_stairs = 1; // ramp counts as stairs
 			}
@@ -1119,7 +1119,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			if (show_room_name) {lighting_update_text = room_names[RTYPE_ATTIC];}
 			register_player_in_building(camera_bs, building_id); // required for AI following logic (though part and room will be unset)
 		}
-		//lighting_update_text = ((is_sphere_lit(camera_rot, get_scaled_player_radius()) || is_sphere_lit((camera_rot - vector3d(0.0, 0.0, camera_zh)), get_scaled_player_radius())) ? "Lit" : "Unlit");
+		//lighting_update_text = ((is_sphere_lit(camera_rot, get_scaled_player_radius()) || is_sphere_lit((camera_rot - vector3d(0.0, 0.0, get_player_height())), get_scaled_player_radius())) ? "Lit" : "Unlit");
 	}
 	else {
 		cube_t bcube_exp(bcube);

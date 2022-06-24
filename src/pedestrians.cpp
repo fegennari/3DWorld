@@ -1512,7 +1512,7 @@ bool ped_manager_t::draw_ped(person_base_t const &ped, shader_t &s, pos_dir_up c
 void ped_manager_t::draw_player_model(shader_t &s, vector3d const &xlate, bool shadow_only) {
 	if (ped_model_loader.num_models() == 0) { // no model - draw as sphere
 		if (!shadow_only) return; // sphere is only used for shadows
-		point const player_pos(pre_smap_player_pos - vector3d(0.0, 0.0, 0.5f*camera_zh)); // shift to center of player height
+		point const player_pos(pre_smap_player_pos - vector3d(0.0, 0.0, 0.5f*camera_zh)); // shift to center of player height; ignore crouching for now
 		draw_sphere_vbo(player_pos, 0.5f*CAMERA_RADIUS, N_SPHERE_DIV, 0); // use a smaller radius
 		return;
 	}

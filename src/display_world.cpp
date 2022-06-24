@@ -52,7 +52,6 @@ extern int auto_time_adv, camera_flight, reset_timing, run_forward, window_width
 extern int advanced, b2down, dynamic_mesh_scroll, spectate, animate2, used_objs, disable_inf_terrain, DISABLE_WATER, can_pickup_bldg_obj;
 extern float TIMESTEP, NEAR_CLIP, FAR_CLIP, cloud_cover, univ_sun_rad, atmosphere, vegetation, zmin, zbottom, ztop, ocean_wave_height, brightness;
 extern float def_atmosphere, def_vegetation, clip_plane_z, ambient_scale, sunlight_brightness, moonlight_brightness;
-extern double camera_zh;
 extern point mesh_origin, surface_pos, univ_sun_pos, orig_cdir, sun_pos, moon_pos;
 extern vector3d total_wind;
 extern colorRGBA sun_color;
@@ -912,7 +911,7 @@ void display() {
 			if (c_radius >= C_RADIUS0) {temp_c_radius = c_radius;}
 			c_radius      = (double)CR_SCALE*C_RADIUS0;
 			camera_origin = cpos2;
-			if (camera_mode == 1 && !spectate) {camera_origin.z += camera_zh;}
+			if (camera_mode == 1 && !spectate) {camera_origin.z += get_player_height();}
 		}
 		else if (temp_c_radius >= C_RADIUS0) {
 			c_radius      = temp_c_radius;
@@ -1174,7 +1173,7 @@ void draw_scene_from_custom_frustum(pos_dir_up const &pdu, int cobj_id, int refl
 	draw_sun_flare(cobj_id);
 
 	if (camera_mode == 1 && camera_surf_collide && begin_motion) { // player is on the ground and collision in enabled, draw the player smiley
-		draw_player_model(surface_pos + vector3d(0.0, 0.0, camera_zh), calc_camera_direction(), int(tfticks));
+		draw_player_model(surface_pos + vector3d(0.0, 0.0, get_player_height()), calc_camera_direction(), int(tfticks));
 	}
 	// restore original values
 	if (disable_occ_cull) {display_mode |= 0x08;}

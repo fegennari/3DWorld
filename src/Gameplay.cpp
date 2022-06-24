@@ -58,7 +58,7 @@ extern int free_for_all, teams, show_scores, camera_view, xoff, yoff, display_mo
 extern unsigned create_voxel_landscape, spheres_mode, flashlight_color_id;
 extern float temperature, ball_velocity, water_plane_z, zmin, zmax, ztop, zbottom, czmax, fticks, crater_depth, crater_radius;
 extern float max_water_height, XY_SCENE_SIZE, TIMESTEP, FAR_CLIP, atmosphere, camera_shake, base_gravity, dist_to_fire_sq;
-extern double camera_zh, c_phi, tfticks;
+extern double c_phi, tfticks;
 extern point surface_pos, camera_last_pos;
 extern string coll_damage_name;
 extern int coll_id[];
@@ -74,11 +74,9 @@ void enter_building_gameplay_mode();
 point &get_sstate_pos(int id) {
 	return ((id == CAMERA_ID) ? camera_pos : obj_groups[coll_id[SMILEY]].get_obj(id).pos);
 }
-
 vector3d &get_sstate_dir(int id) {
 	return ((id == CAMERA_ID) ? cview_dir : obj_groups[coll_id[SMILEY]].get_obj(id).orientation);
 }
-
 float get_sstate_radius(int id) {
 	return ((id == CAMERA_ID) ? CAMERA_RADIUS : object_types[SMILEY].radius);
 }
@@ -1477,7 +1475,7 @@ void do_area_effect_damage(point const &pos, float effect_radius, float damage, 
 
 	float const radius(object_types[SMILEY].radius + effect_radius);
 	point camera_pos(get_camera_pos());
-	camera_pos.z -= 0.5*camera_zh; // average/center of camera
+	camera_pos.z -= 0.5*get_player_height(); // average/center of camera
 
 	if (type == FIRE) {
 		float const dist_sq(p2p_dist_sq(camera_pos, pos));
@@ -1543,7 +1541,7 @@ bool try_use_translocator(int player_id) {
 	obj_group &objg(obj_groups[coll_id[XLOCATOR]]);
 	if (!objg.enabled) return 0; // disabled, do nothing
 	bool const is_camera(player_id == CAMERA_ID);
-	float const delta_h(CAMERA_RADIUS - object_types[XLOCATOR].radius + (is_camera ? camera_zh : 0.0));
+	float const delta_h(CAMERA_RADIUS - object_types[XLOCATOR].radius + (is_camera ? get_player_height() : 0.0));
 	point &player_pos(get_sstate_pos(player_id)); // by reference - can modify
 	player_state &sstate(sstates[player_id]);
 	sstate.ticks_since_fired = tfticks; // update fire time to avoid spurious refire, whether or not this fails
@@ -1556,7 +1554,7 @@ bool try_use_translocator(int player_id) {
 		assert(sstate.p_ammo[W_XLOCATOR] == 0);
 		sstate.p_ammo[W_XLOCATOR] = 1; // add translocator back into player's inventory for reuse
 		teleport_object(player_pos, player_pos, (obj.pos + vector3d(0, 0, delta_h)), CAMERA_RADIUS, player_id); // teleport the player
-		if (is_camera) {camera_last_pos = surface_pos = (player_pos - vector3d(0, 0, camera_zh));} // update surface_pos and last_pos as well (actually moves the player/camera)
+		if (is_camera) {camera_last_pos = surface_pos = (player_pos - vector3d(0, 0, get_player_height()));} // update surface_pos and last_pos as well (actually moves the player/camera)
 		return 1; // success
 	} // for i
 	translocator_death(player_id); // no translocator = death
