@@ -222,7 +222,7 @@ void building_t::add_attic_objects(rand_gen_t rgen) {
 			}
 		}
 	}
-	// add posts as colliders; somewhat of a duplicate of the code in building_room_geom_t::add_attic_woodwork()
+	// add posts as colliders; somewhat of a duplicate of the code in building_room_geom_t::add_attic_rafters()
 	for (tquad_with_ix_t const &tq : roof_tquads) {
 		if (tq.npts == 3 || !is_attic_roof(tq, 1)) continue; // not a roof tquad; type_roof_only=1
 		vector3d const normal(tq.get_norm()); // points outside of the attic
@@ -317,7 +317,7 @@ void building_t::add_attic_objects(rand_gen_t rgen) {
 	float const box_sz(0.18*floor_spacing);
 	add_boxes_to_space(objs[attic_door_ix], objs, place_area, avoid_cubes, rgen, num_boxes, box_sz, 0.5*box_sz, 1.5*box_sz, 1, obj_flags); // allow_crates=1
 
-	// TYPE_BOOK, TYPE_BOTTLE, TYPE_PAPER, TYPE_PIPE?
+	// TYPE_BOOK, TYPE_BOTTLE, TYPE_PAPER
 
 	// add rug last, under any previous movable items
 	point rug_center;
@@ -426,7 +426,7 @@ struct edge_t {
 	}
 };
 
-void building_room_geom_t::add_attic_woodwork(building_t const &b, float tscale) {
+void building_room_geom_t::add_attic_rafters(building_t const &b, float tscale) {
 	if (!b.has_attic()) return;
 	get_wood_material(tscale, 0, 0, 2); // ensure unshadowed material
 	rgeom_mat_t &wood_mat   (get_wood_material(tscale, 1, 0, 2)); // shadows + detail

@@ -829,7 +829,7 @@ void building_room_geom_t::create_detail_vbos(building_t const &building) {
 		assert(i.type == TYPE_WALL_TRIM);
 		add_wall_trim(i);
 	}
-	add_attic_woodwork(building, 2.0/obj_scale); // only if there's an attic
+	add_attic_rafters(building, 2.0/obj_scale); // only if there's an attic
 	mats_detail.create_vbos(building);
 }
 
