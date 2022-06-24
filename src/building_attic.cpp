@@ -250,7 +250,7 @@ void building_t::add_attic_objects(rand_gen_t rgen) {
 	place_area.z1() = place_area.z2() = z_floor; // bottom of attic floor
 	place_area.expand_by_xy(-0.75*floor_spacing); // keep away from corners; just a guess; applies to boxes and furnace
 
-	if (!has_basement()) { // add furnace if not already added in the basement
+	if (interior->furnace_type == FTYPE_ATTIC) { // add furnace in the attic
 		for (unsigned n = 0; n < 100; ++n) { // 100 tries
 			cube_t furnace;
 			bool dim(0), dir(0);

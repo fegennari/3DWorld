@@ -905,6 +905,14 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 		for (auto p = parts.begin(); p != parts_end; ++p) {connect_stacked_parts_with_stairs(rgen, *p);}
 	}
 	if (has_parking_garage) {add_parking_garage_ramp(rgen);}
+
+	// furnace logic
+	if (has_attic()) {
+		if (has_basement()) {interior->furnace_type = (rgen.rand_bool() ? FTYPE_BASEMENT : FTYPE_ATTIC);} // both attic and basement: place furnace in one at random
+		else {interior->furnace_type = FTYPE_ATTIC;} // attic only: place furnace in attic
+	}
+	else if (has_basement()) {interior->furnace_type = FTYPE_BASEMENT;} // basement only: place furnace in basement (at least if it's a house)
+	// else no furnace
 } // end gen_interior_int()
 
 bool building_t::maybe_assign_interior_garage(bool &gdim, bool &gdir) {

@@ -1308,7 +1308,7 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, 
 		colorRGBA const &ceil_color  (is_house ? mat.house_ceil_color  : mat.ceil_color );
 		colorRGBA const &floor_color (is_house ? mat.house_floor_color : mat.floor_color);
 		colorRGBA const basement_wall_color(WHITE); // basement walls are always white
-		tid_nm_pair_t const attic_tex(FENCE_TEX, -1, 0.25*mat.house_floor_tex.tscale_x, 0.25*mat.house_floor_tex.tscale_y);
+		tid_nm_pair_t const attic_tex(FENCE_TEX, -1, 0.25*mat.house_floor_tex.tscale_x, 0.25*mat.house_floor_tex.tscale_y); // depends on interior->attic_type?
 
 		for (auto i = interior->floors.begin(); i != interior->floors.end(); ++i) { // 600K T
 			bool const is_basement(i->z2() < ground_floor_z1);

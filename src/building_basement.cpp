@@ -151,23 +151,25 @@ bool building_t::add_basement_utility_objs(rand_gen_t rgen, room_t const &room, 
 	// place water heater
 	bool was_added(add_water_heaters(rgen, room, zval, room_id, tot_light_amt, objs_start));
 	
-	// place furnace
-	float const floor_spacing(get_window_vspace());
-	cube_t place_area(get_walkable_room_bounds(room));
-	place_area.expand_by(-get_trim_thickness());
+	if (interior->furnace_type == FTYPE_BASEMENT) { // place furnace in the basement
+		float const floor_spacing(get_window_vspace());
+		cube_t place_area(get_walkable_room_bounds(room));
+		place_area.expand_by(-get_trim_thickness());
+		place_area.z1() = zval;
 
-	for (unsigned n = 0; n < 100; ++n) { // 100 tries
-		cube_t furnace;
-		bool dim(0), dir(0);
-		if (!gen_furnace_cand(place_area, floor_spacing, 1, rgen, furnace, dim, dir)) break; // near_wall=1
-		cube_t test_cube(furnace);
-		test_cube.d[dim][dir] += (dir ? 1.0 : -1.0)*0.5*furnace.get_sz_dim(dim); // add clearance in front
-		if (is_cube_close_to_doorway(test_cube, room, 0.0, 1) || interior->is_blocked_by_stairs_or_elevator(test_cube) || overlaps_other_room_obj(test_cube, objs_start)) continue;
-		unsigned const flags((is_house ? RO_FLAG_IS_HOUSE : 0) | RO_FLAG_INTERIOR);
-		interior->room_geom->objs.emplace_back(furnace, TYPE_FURNACE, room_id, dim, dir, flags, tot_light_amt);
-		was_added = 1;
-		break; // success/done
-	} // for n
+		for (unsigned n = 0; n < 100; ++n) { // 100 tries
+			cube_t furnace;
+			bool dim(0), dir(0);
+			if (!gen_furnace_cand(place_area, floor_spacing, 1, rgen, furnace, dim, dir)) break; // near_wall=1
+			cube_t test_cube(furnace);
+			test_cube.d[dim][dir] += (dir ? 1.0 : -1.0)*0.5*furnace.get_sz_dim(dim); // add clearance in front
+			if (is_cube_close_to_doorway(test_cube, room, 0.0, 1) || interior->is_blocked_by_stairs_or_elevator(test_cube) || overlaps_other_room_obj(test_cube, objs_start)) continue;
+			unsigned const flags((is_house ? RO_FLAG_IS_HOUSE : 0) | RO_FLAG_INTERIOR);
+			interior->room_geom->objs.emplace_back(furnace, TYPE_FURNACE, room_id, dim, dir, flags, tot_light_amt);
+			was_added = 1;
+			break; // success/done
+		} // for n
+	}
 	return was_added;
 }
 
