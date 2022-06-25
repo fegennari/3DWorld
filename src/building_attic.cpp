@@ -116,6 +116,7 @@ bool building_t::add_attic_access_door(cube_t const &ceiling, unsigned part_ix, 
 	set_cube_zvals(interior->attic_access, ceiling.z1(), ceiling.z2()); // same zvals as ceiling
 	bool const dir(best_room.get_center_dim(long_dim) < interior->attic_access.get_center_dim(long_dim));
 	interior->attic_access.ix = 2*long_dim + dir;
+	interior->attic_type = ATTIC_TYPE_RAFTERS; // rgen.rand()%NUM_ATTIC_TYPES // ATTIC_TYPE_RAFTERS, ATTIC_TYPE_WOOD, ATTIC_TYPE_PLASTER, ATTIC_TYPE_FIBERGLASS
 	return 1;
 }
 
@@ -428,6 +429,15 @@ struct edge_t {
 
 void building_room_geom_t::add_attic_rafters(building_t const &b, float tscale) {
 	if (!b.has_attic()) return;
+	unsigned const attic_type(b.interior->attic_type); // ATTIC_TYPE_RAFTERS, ATTIC_TYPE_WOOD, ATTIC_TYPE_PLASTER, ATTIC_TYPE_FIBERGLASS
+
+	if (attic_type == ATTIC_TYPE_WOOD || attic_type == ATTIC_TYPE_PLASTER) {
+		// TODO: material, no rafters
+		return; // done
+	}
+	if (attic_type == ATTIC_TYPE_FIBERGLASS) {
+		// TODO: add fiberglass
+	}
 	get_wood_material(tscale, 0, 0, 2); // ensure unshadowed material
 	rgeom_mat_t &wood_mat   (get_wood_material(tscale, 1, 0, 2)); // shadows + detail
 	rgeom_mat_t &wood_mat_us(get_wood_material(tscale, 0, 0, 2)); // no shadows + detail
