@@ -601,7 +601,34 @@ bool is_alt_key_pressed  () {return ((glutGetModifiers() & GLUT_ACTIVE_ALT  ) !=
 
 void update_ctrl_key_pressed() {ctrl_key_pressed = is_ctrl_key_pressed();}
 
-double get_player_height () {return (ctrl_key_pressed ? 0.0 : camera_zh);} // control key = crouch
+void update_key_ignore_ctrl(unsigned char &key) {
+	if (is_ctrl_key_pressed()) {key ^= 96;} // control key modifier changes key code
+}
+
+struct player_height_mgr_t {
+	double cur_height = 0.0;
+	bool inited = 0;
+
+	void next_frame() {
+		if (!inited) {cur_height = camera_zh; inited = 1;} // start at full height
+		float adj_val(0.0);
+
+		if (ctrl_key_pressed) { // crouch
+			if (cur_height == 0) return; // already fully down
+			adj_val = -1.0;
+		}
+		else { // uncrouch
+			if (cur_height == camera_zh) return; // already fully up
+			adj_val = 1.0;
+		}
+		cur_height += adj_val*camera_zh*10.0*(fticks/TICKS_PER_SECOND); // 100ms for complete transition
+		cur_height  = max(0.25*camera_zh, min(camera_zh, cur_height)); // clamp to valid range, 25% to 100% height
+	}
+};
+
+player_height_mgr_t player_height_mgr;
+
+double get_player_height() {return player_height_mgr.cur_height;} // control key = crouch
 
 // This function is called whenever the mouse is pressed or released
 // button is a number 0 to 2 designating the button
@@ -612,7 +639,6 @@ void mouseButton(int button, int state, int x, int y) {
 	bool const fire_button(!map_mode && (button == GLUT_RIGHT_BUTTON || (enable_mouse_look && button == GLUT_LEFT_BUTTON)));
 	add_uevent_mbutton(button, state, x, y);
 	if (ui_intercept_mouse(button, state, x, y, 1)) return; // already handled
-	update_ctrl_key_pressed();
 
 	if ((camera_mode == 1 || world_mode == WMODE_UNIVERSE) && fire_button) {
 		b2down = !state;
@@ -646,7 +672,6 @@ void clamp_and_scale_mouse_delta(int &delta, int dmax) {
 // x and y are the location of the mouse (in window-relative coordinates)
 void mouseMotion(int x, int y) {
 
-	update_ctrl_key_pressed();
 	int button(m_button);
 
 	if (screen_reset || start_maximized) {
@@ -1418,6 +1443,7 @@ unsigned char get_key_other_case(unsigned char key) {
 
 void keyboard_up(unsigned char key, int x, int y) {
 
+	update_key_ignore_ctrl(key);
 	if (kbd_text_mode || key == 13) return; // ignore text mode and enter key
 	if (!kbd_remap.remap_key(key, 0, 1)) return;
 	if (keyset.find(key) != keyset.end()) {add_uevent_keyboard_up(key, x, y);}
@@ -1425,7 +1451,7 @@ void keyboard_up(unsigned char key, int x, int y) {
 
 	if (it == keys.end()) {
 		unsigned char key2(get_key_other_case(key));
-		if (key2 != key) it = keys.find(key2);
+		if (key2 != key) {it = keys.find(key2);}
 
 		if (it == keys.end()) {
 			if (key == 9) return; // alt-tab
@@ -1441,7 +1467,8 @@ void keyboard_up(unsigned char key, int x, int y) {
 void keyboard2_up(int key, int x, int y) {
 
 	if (!kbd_remap.remap_key(key, 1, 1)) return;
-	// nothing
+	update_ctrl_key_pressed();
+	// nothing else to do here
 }
 
 
@@ -1458,6 +1485,7 @@ void exec_text(string const &text) {
 
 void keyboard(unsigned char key, int x, int y) {
 
+	update_key_ignore_ctrl(key);
 	if (ui_intercept_keyboard(key, 0)) return; // already handled (should this go into keyboard_proc()?)
 
 	if (key == 13) { // enter key - toggle text mode
@@ -1482,7 +1510,6 @@ void keyboard(unsigned char key, int x, int y) {
 		cout << "Warning: Keyboard event for key " << key << " (" << int(key) << ") which has alredy been pressed." << endl;
 		return;
 	}
-	update_ctrl_key_pressed();
 	keys.insert(key);
 	if (keyset.find(key) == keyset.end()) {keyboard_proc(key, x, y);}
 }
@@ -1493,6 +1520,7 @@ void proc_kbd_events() {
 	for (keyset_it it = keys.begin(); it != keys.end(); ++it) {
 		if (keyset.find(*it) != keyset.end()) {keyboard_proc(*it, 0, 0);} // x and y = ?
 	}
+	player_height_mgr.next_frame(); // updated based on control key and run once at the beginning of each frame
 }
 
 

@@ -438,6 +438,7 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, flo
 					if (roof_normal[d] != 0.0 && ((roof_normal[d] < 0.0) ^ (pos[d] < p_last[d]))) {reset_to_last_dims |= (1<<d);}
 				}
 				if (cnorm) {*cnorm = roof_normal;}
+				// TODO: if player is crouched, and releases the CTRL key, can we force the crouch? or move the player back?
 			}
 			// find the part the player is in and clamp our bsphere to it; currently attics are limited to a single part
 			for (auto i = parts.begin(); i != get_real_parts_end(); ++i) {
