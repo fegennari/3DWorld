@@ -102,7 +102,7 @@ point building_t::gen_animal_floor_pos(float radius, bool place_in_attic, rand_g
 
 bool building_t::is_pos_inside_building(point const &pos, float xy_pad, float hheight, bool inc_attic) const {
 	float bcube_pad(xy_pad);
-	if (inc_attic && has_attic() || pos.z >= interior->attic_access.z2()) {bcube_pad += get_attic_beam_depth();} // add extra spacing for attic beams (approximate)
+	if (inc_attic && has_attic() && pos.z >= interior->attic_access.z2()) {bcube_pad += get_attic_beam_depth();} // add extra spacing for attic beams (approximate)
 	if (!bcube.contains_pt_xy_exp(pos, -bcube_pad)) return 0; // check for end point inside building bcube
 	cube_t req_area(pos, pos);
 	req_area.expand_by_xy(xy_pad);
@@ -675,7 +675,6 @@ public:
 		if (colliders.size() <= 1) return; // not needed
 		for (cube_t &c : colliders) {c.intersect_with_cube_xy(check_cube);}
 		apply_fc_cube_max_merge_xy(colliders);
-		unsigned const sz(colliders.size());
 		sort_and_unique(colliders);
 	}
 	bool align_to_surfaces(spider_t &s, float delta_dir, point const &camera_bs, rand_gen_t &rgen) {
