@@ -20,6 +20,7 @@ cylinder_3dw get_railing_cylinder(room_object_t const &c);
 bool sphere_vert_cylin_intersect_with_ends(point &center, float radius, cylinder_3dw const &c, vector3d *cnorm);
 void register_in_closed_bathroom_stall();
 pair<cube_t, colorRGBA> car_bcube_color_from_parking_space(room_object_t const &o);
+void force_player_height(double height);
 
 
 bool building_t::check_bcube_overlap_xy(building_t const &b, float expand_rel, float expand_abs, vector<point> &points) const {
@@ -395,11 +396,12 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, flo
 	assert(interior);
 	float const floor_spacing(get_window_vspace()), floor_thickness(get_floor_thickness()), attic_door_z_gap(0.2f*floor_thickness);
 	float const xy_radius(radius*global_building_params.player_coll_radius_scale); // XY radius can be smaller to allow player to fit between furniture
-	double const camera_height(get_player_height());
 	bool had_coll(0), on_stairs(0), on_attic_ladder(0);
 	float obj_z(max(pos.z, p_last.z)); // use p_last to get orig zval
 	cube_with_ix_t const &attic_access(interior->attic_access);
-	unsigned reset_to_last_dims(0); // {x, y} bit flags
+	unsigned reset_to_last_dims(0); // {x, y} bit flags, for attic roof collision
+	double camera_height(get_player_height());
+	static double prev_camera_height(0.0);
 
 	if (!xy_only && 2.2f*radius < (floor_spacing - floor_thickness)) { // diameter is smaller than space between floor and ceiling
 		// check Z collision with floors; no need to check ceilings; this will set pos.z correctly so that we can set skip_z=0 in later tests
@@ -438,7 +440,11 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, flo
 					if (roof_normal[d] != 0.0 && ((roof_normal[d] < 0.0) ^ (pos[d] < p_last[d]))) {reset_to_last_dims |= (1<<d);}
 				}
 				if (cnorm) {*cnorm = roof_normal;}
-				// TODO: if player is crouched, and releases the CTRL key, can we force the crouch? or move the player back?
+
+				if (camera_height > prev_camera_height) { // less crouched than before
+					camera_height = prev_camera_height;
+					force_player_height(prev_camera_height); // force crouch
+				}
 			}
 			// find the part the player is in and clamp our bsphere to it; currently attics are limited to a single part
 			for (auto i = parts.begin(); i != get_real_parts_end(); ++i) {
@@ -590,6 +596,7 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, flo
 	handle_vert_cylin_tape_collision(pos, p_last, pos.z-radius, pos.z+camera_height, xy_radius, 1); // is_player=1
 	// not sure where this belongs, but the closet hiding logic is in this function, so I guess it goes here? player must be inside the building to see a windowless room anyway
 	player_in_unlit_room = check_pos_in_unlit_room(pos);
+	prev_camera_height = camera_height; // update for this frame
 	return had_coll; // will generally always be true due to floors
 }
 
