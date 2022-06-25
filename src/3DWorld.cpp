@@ -1338,7 +1338,11 @@ void keyboard2(int key, int x, int y) { // handling of special keys
 	if (ui_intercept_keyboard(key, 1))   return; // already handled
 	if (!kbd_remap.remap_key(key, 1, 0)) return;
 	add_uevent_keyboard_special(key, x, y);
+#ifdef _WIN32
 	update_ctrl_key_pressed();
+#else // linux
+	if (key == 114) {ctrl_key_pressed = 1;} // key code 114 appears to be the CTRL key
+#endif
 
 	switch (key) { // unused: F9
 	case GLUT_KEY_UP:
@@ -1467,7 +1471,11 @@ void keyboard_up(unsigned char key, int x, int y) {
 void keyboard2_up(int key, int x, int y) {
 
 	if (!kbd_remap.remap_key(key, 1, 1)) return;
+#ifdef _WIN32
 	update_ctrl_key_pressed();
+#else // linux
+	if (key == 114) {ctrl_key_pressed = 0;} // key code 114 appears to be the CTRL key
+#endif
 	// nothing else to do here
 }
 
