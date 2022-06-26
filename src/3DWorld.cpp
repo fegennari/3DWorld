@@ -399,9 +399,10 @@ void check_xy_offsets() {
 }
 
 
-float calc_speed() {
+float get_player_speed_mult() {return pow(3.0f, min(((world_mode == WMODE_INF_TERRAIN) ? 3 : 2), do_run));}
 
-	float speed(pow(3.0f, min(((world_mode == WMODE_INF_TERRAIN) ? 3 : 2), do_run)));
+float calc_speed() {
+	float speed(get_player_speed_mult());
 	if (camera_in_air) {speed *= CAMERA_AIR_CONT;} // what about smileys?
 	return speed;
 }
@@ -823,6 +824,11 @@ void update_precip_rate_verbose(float val) {
 void show_bool_option_change(string const &name, bool new_val) {
 	print_text_onscreen((name + (new_val ? " ON" : " OFF")), WHITE, 1.0, 1.0*TICKS_PER_SECOND);
 }
+void show_speed() {
+	ostringstream oss;
+	oss << "Player Speed " << get_player_speed_mult() << "x";
+	print_text_onscreen(oss.str(), WHITE, 1.0, 1.0*TICKS_PER_SECOND);
+}
 
 
 // This function is called whenever there is a keyboard input;
@@ -965,7 +971,7 @@ void keyboard_proc(unsigned char key, int x, int y) {
 		camera_change       = 1;
 		// reset last_pos so that the camera doesn't snap back to the old pos when clipping is re-enabled
 		if (camera_surf_collide) {camera_last_pos = surface_pos;}
-		//show_bool_option_change("Player Collision", camera_surf_collide);
+		if (world_mode == WMODE_INF_TERRAIN) {show_bool_option_change("Player Collision", camera_surf_collide);}
 		break;
 
 	case 'j': // smooth camera collision detection / hold fighters / teleport to screenshot
@@ -1040,9 +1046,10 @@ void keyboard_proc(unsigned char key, int x, int y) {
 
 	case 'R': // run mode
 		++do_run;
-		if (do_run > 3) do_run = 0;
-		if (world_mode == WMODE_UNIVERSE) change_speed_mode(do_run);
-		cout << "run mode = " << do_run << endl;
+		if (do_run > 3) {do_run = 0;}
+		if (world_mode == WMODE_UNIVERSE) {change_speed_mode(do_run);}
+		else {show_speed();} // onscreen printout
+		//cout << "run mode = " << do_run << endl;
 		break;
 
 	case 'K': // toggle overhead map mode / ship reflections

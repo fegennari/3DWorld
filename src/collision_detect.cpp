@@ -28,7 +28,7 @@ cobj_draw_groups cdraw_groups;
 
 extern bool lm_alloc, has_snow;
 extern int camera_coll_smooth, game_mode, world_mode, xoff, yoff, camera_change, display_mode, scrolling, animate2;
-extern int camera_in_air, mesh_scale_change, camera_invincible, camera_flight, do_run, num_smileys, iticks;
+extern int camera_in_air, mesh_scale_change, camera_invincible, camera_flight, num_smileys, iticks;
 extern unsigned snow_coverage_resolution;
 extern float TIMESTEP, temperature, zmin, base_gravity, ftick, tstep, zbottom, ztop, fticks, jump_height, NEAR_CLIP;
 extern double camera_zh, tfticks;
