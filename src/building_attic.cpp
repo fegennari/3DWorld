@@ -427,17 +427,46 @@ struct edge_t {
 	}
 };
 
+void add_attic_roof_geom(rgeom_mat_t &mat, colorRGBA const &color, float thickness, building_t const &b) {
+	thickness *= b.get_attic_beam_depth();
+
+	for (tquad_with_ix_t const &i : b.roof_tquads) {
+		if (!b.is_attic_roof(i, 0)) continue; // type_roof_only=0
+		tquad_with_ix_t tq(i);
+		std::reverse(tq.pts, tq.pts+tq.npts); // reverse the normal and winding order
+		vector3d const normal(tq.get_norm());
+		
+		for (unsigned n = 0; n < tq.npts; ++n) {
+			if (tq.type == tquad_with_ix_t::TYPE_ROOF) {assert(normal.z < 0.0); tq.pts[n].z += thickness/normal.z;} // roof: shift downward
+			else {tq.pts[n] += thickness*normal;} // wall: shift inward
+		}
+		float const tscale = 1.0;
+		if (tq.npts == 3) {mat.add_triangle_to_verts(tq.pts, color, 0, tscale);} // triangle
+		else { // quad; could also draw as two triangles, but they won't share vertices
+			norm_comp const nc(normal);
+			color_wrapper const cw(color);
+			for (unsigned n = 0; n < 4; ++n) {mat.quad_verts.emplace_back(tq.pts[n], nc, float(n>>1), float(n==0 || n==3), cw);}
+		}
+	} // for i
+}
+
 void building_room_geom_t::add_attic_rafters(building_t const &b, float tscale) {
 	if (!b.has_attic()) return;
 	unsigned const attic_type(b.interior->attic_type); // ATTIC_TYPE_RAFTERS, ATTIC_TYPE_WOOD, ATTIC_TYPE_PLASTER, ATTIC_TYPE_FIBERGLASS
 
-	if (attic_type == ATTIC_TYPE_WOOD || attic_type == ATTIC_TYPE_PLASTER) {
-		// TODO: material, no rafters
-		return; // done
+	if (attic_type == ATTIC_TYPE_WOOD) {
+		add_attic_roof_geom(get_wood_material(tscale, 0, 0, 2), WHITE, 1.0, b); // no shadows, detail
+		return; // done - rafters not visible
 	}
-	if (attic_type == ATTIC_TYPE_FIBERGLASS) {
-		// TODO: add fiberglass
+	else if (attic_type == ATTIC_TYPE_PLASTER) {
+		add_attic_roof_geom(get_material(b.get_material().wall_tex, 0, 0, 2), WHITE, 1.0, b); // no shadows, detail
+		return; // done - rafters not visible
 	}
+	else if (attic_type == ATTIC_TYPE_FIBERGLASS) {
+		add_attic_roof_geom(get_untextured_material(0, 0, 2), PINK, 0.5, b); // no shadows, detail
+	}
+	else {assert(attic_type == ATTIC_TYPE_RAFTERS);}
+
 	get_wood_material(tscale, 0, 0, 2); // ensure unshadowed material
 	rgeom_mat_t &wood_mat   (get_wood_material(tscale, 1, 0, 2)); // shadows + detail
 	rgeom_mat_t &wood_mat_us(get_wood_material(tscale, 0, 0, 2)); // no shadows + detail

@@ -1412,14 +1412,14 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, 
 			// add inside surfaces of roof tquads
 			float const delta_z(0.1*get_floor_thickness()); // enough to prevent Z-fighting
 
-			for (auto i = roof_tquads.begin(); i != roof_tquads.end(); ++i) {
-				if (!is_attic_roof(*i, 0)) continue; // type_roof_only=0
-				tquad_with_ix_t tq(*i);
+			for (tquad_with_ix_t const &i : roof_tquads) {
+				if (!is_attic_roof(i, 0)) continue; // type_roof_only=0
+				tquad_with_ix_t tq(i);
 				std::reverse(tq.pts, tq.pts+tq.npts); // reverse the normal and winding order
 				for (unsigned n = 0; n < tq.npts; ++n) {tq.pts[n].z -= delta_z;} // shift down slightly
 				bool swap_tc_xy(1); // horizontal by default
 
-				if (i->type == tquad_with_ix_t::TYPE_ROOF) { // make sure wood orient is horizontal
+				if (i.type == tquad_with_ix_t::TYPE_ROOF) { // make sure wood orient is horizontal
 					vector3d const normal(tq.get_norm());
 					swap_tc_xy = (fabs(normal.x) < fabs(normal.y));
 				}
