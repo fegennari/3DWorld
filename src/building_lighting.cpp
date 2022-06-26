@@ -101,6 +101,18 @@ bool follow_ray_through_cubes_recur(point const &p1, point const &p2, point cons
 bool building_t::ray_cast_exterior_walls(point const &p1, point const &p2, vector3d &cnorm, float &t) const {
 	return follow_ray_through_cubes_recur(p1, p2, p1, parts, get_real_parts_end_inc_sec(), parts.end(), 0, cnorm, t);
 }
+
+colorRGBA building_interior_t::get_attic_ceiling_color() const {
+	switch (attic_type) {
+	case ATTIC_TYPE_RAFTERS   : return texture_color(FENCE_TEX );
+	case ATTIC_TYPE_WOOD      : return texture_color(WOOD_TEX  );
+	case ATTIC_TYPE_PLASTER   : return texture_color(STUCCO_TEX);
+	case ATTIC_TYPE_FIBERGLASS: return PINK; // TODO
+	default: assert(0);
+	}
+	return WHITE; // never gets here
+}
+
 // Note: static objects only; excludes people; pos in building space
 bool building_t::ray_cast_interior(point const &pos, vector3d const &dir, cube_t const &valid_area, cube_bvh_t const &bvh, bool in_attic,
 	point &cpos, vector3d &cnorm, colorRGBA &ccolor, rand_gen_t *rgen) const
@@ -121,7 +133,7 @@ bool building_t::ray_cast_interior(point const &pos, vector3d const &dir, cube_t
 			vector3d const normal(-tq.get_norm()); // negate because we're testing the inside of the roof
 			float t_tq(t);
 			if (!line_poly_intersect(p1, p2, tq.pts, tq.npts, normal, t_tq) || t_tq >= t) continue;
-			t = t_tq; cnorm = normal; hit = 1; ccolor = texture_color(FENCE_TEX);
+			t = t_tq; cnorm = normal; hit = 1; ccolor = interior->get_attic_ceiling_color();
 		}
 		if (hit) {p2  = p1 + (p2 - p1)*t; t = 1.0;} // clip p2 to t (minor optimization)
 	}

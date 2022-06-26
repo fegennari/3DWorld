@@ -435,17 +435,35 @@ void add_attic_roof_geom(rgeom_mat_t &mat, colorRGBA const &color, float thickne
 		tquad_with_ix_t tq(i);
 		std::reverse(tq.pts, tq.pts+tq.npts); // reverse the normal and winding order
 		vector3d const normal(tq.get_norm());
+		bool const is_roof(tq.type == tquad_with_ix_t::TYPE_ROOF);
+		float const tscale = 8.0;
 		
 		for (unsigned n = 0; n < tq.npts; ++n) {
-			if (tq.type == tquad_with_ix_t::TYPE_ROOF) {assert(normal.z < 0.0); tq.pts[n].z += thickness/normal.z;} // roof: shift downward
+			if (is_roof) {assert(normal.z < 0.0); tq.pts[n].z += thickness/normal.z;} // roof: shift downward
 			else {tq.pts[n] += thickness*normal;} // wall: shift inward
 		}
-		float const tscale = 1.0;
-		if (tq.npts == 3) {mat.add_triangle_to_verts(tq.pts, color, 0, tscale);} // triangle
-		else { // quad; could also draw as two triangles, but they won't share vertices
-			norm_comp const nc(normal);
-			color_wrapper const cw(color);
-			for (unsigned n = 0; n < 4; ++n) {mat.quad_verts.emplace_back(tq.pts[n], nc, float(n>>1), float(n==0 || n==3), cw);}
+		vert_norm_comp_tc_color vert;
+		float const denom(0.5f*(b.bcube.dx() + b.bcube.dy())), tsx(tscale/denom), tsy(tscale/denom);
+		vert.set_c4(color);
+		vert.set_norm(normal);
+		unsigned const verts_start(mat.itri_verts.size());
+
+		for (unsigned i = 0; i < tq.npts; ++i) {
+			vert.v = tq.pts[i];
+
+			if (is_roof) { // roof
+				vert.t[0] = vert.v.x*tsx;
+				vert.t[1] = vert.v.y*tsy;
+			}
+			else { // side wall
+				bool const dim(tq.pts[0].x == tq.pts[1].x); // use nonzero width dim
+				vert.t[0] = vert.v[dim]*tsx;
+				vert.t[1] = vert.v.z*tsy;
+			}
+			mat.itri_verts.push_back(vert);
+		} // for i
+		for (unsigned i = 0; i < ((tq.npts == 4) ? 6 : 3); ++i) { // 3 indices for triangles, 6 indices (2 triangles) for quads
+			mat.indices.push_back(verts_start + quad_to_tris_ixs[i]);
 		}
 	} // for i
 }
