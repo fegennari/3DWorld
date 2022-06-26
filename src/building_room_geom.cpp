@@ -26,6 +26,7 @@ string gen_random_full_name (rand_gen_t &rgen);
 void gen_text_verts(vector<vert_tc_t> &verts, point const &pos, string const &text, float tsize, vector3d const &column_dir, vector3d const &line_dir, bool use_quads=0);
 string const &gen_book_title(unsigned rand_id, string *author, unsigned split_len);
 void add_floor_number(unsigned floor_ix, unsigned floor_offset, bool has_parking_garage, ostringstream &oss);
+unsigned get_rgeom_sphere_ndiv(bool low_detail);
 
 unsigned get_face_mask(unsigned dim, bool dir) {return ~(1 << (2*(2-dim) + dir));} // draw only these faces: 1=Z1, 2=Z2, 4=Y1, 8=Y2, 16=X1, 32=X2
 unsigned get_skip_mask_for_xy(bool dim) {return (dim ? EF_Y12 : EF_X12);} // skip these faces
@@ -2358,6 +2359,12 @@ void building_room_geom_t::add_trashcan(room_object_t const &c) {
 	}
 }
 
+void add_pipe_with_bend(rgeom_mat_t &mat, colorRGBA const &color, point const &bot_pt, point const &top_pt, point const &bend, unsigned ndiv, float radius, bool draw_ends) {
+	mat.add_sphere_to_verts(bend, vector3d(radius, radius, radius), color, (ndiv == 16)); // round part, low detail if ndiv==16
+	mat.add_cylin_to_verts (bot_pt, bend, radius, radius, color, draw_ends, 0, 0, 0, 1.0, 1.0, 0, ndiv); // vertical
+	mat.add_cylin_to_verts (top_pt, bend, radius, radius, color, draw_ends, 0, 0, 0, 1.0, 1.0, 0, ndiv); // horizontal
+}
+
 void building_room_geom_t::add_water_heater(room_object_t const &c) {
 	bool const is_house(c.flags & RO_FLAG_IS_HOUSE);
 	float const height(c.dz()), radius(c.get_radius()), pipe_radius(0.05*radius);
@@ -2394,7 +2401,7 @@ void building_room_geom_t::add_water_heater(room_object_t const &c) {
 	rgeom_mat_t &copper_mat(get_metal_material(1, 0, 1, COPPER_C)); // small=1
 	colorRGBA const copper_color(apply_light_color(c, COPPER_C));
 	bool const low_detail = 1;
-	unsigned const pipe_ndiv(low_detail ? 16 : 32);
+	unsigned const pipe_ndiv(get_rgeom_sphere_ndiv(low_detail));
 	
 	for (unsigned d = 0; d < 2; ++d) {
 		cube_t &pipe(pipes[d]);
@@ -2415,9 +2422,7 @@ void building_room_geom_t::add_water_heater(room_object_t const &c) {
 			vector3d const delta((bends[0] - bends[1])*(extend/pipe_len));
 
 			for (unsigned f = 0; f < 2; ++f) {
-				brass_mat.add_sphere_to_verts(bends[f], vector3d(fr, fr, fr), brass_color, low_detail); // round part
-				brass_mat.add_cylin_to_verts(bends[f]-vector3d(0.0, 0.0, extend), bends[f], fr, fr, brass_color, 1, 0, 0, 0, 1.0, 1.0, 0, pipe_ndiv); // vertical
-				brass_mat.add_cylin_to_verts(bends[f]+(f ? 1.0 : -1.0)*delta,     bends[f], fr, fr, brass_color, 1, 0, 0, 0, 1.0, 1.0, 0, pipe_ndiv); // horizontal
+				add_pipe_with_bend(brass_mat, brass_color, bends[f]-vector3d(0.0, 0.0, extend), bends[f]+(f ? 1.0 : -1.0)*delta, bends[f], pipe_ndiv, fr, 1); // draw_ends=1
 			}
 		}
 		copper_mat.add_vcylin_to_verts(pipe, copper_color, 0, 0, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, pipe_ndiv);
@@ -2435,8 +2440,39 @@ void building_room_geom_t::add_water_heater(room_object_t const &c) {
 
 colorRGBA get_furnace_color() {return texture_color(get_texture_by_name("interiors/furnace.jpg"));}
 
+void add_furnace_pipe_with_bend(room_object_t const &c, rgeom_mat_t &mat, colorRGBA const &color,
+	unsigned ndiv, float rscale, float lr_offset, float z_offset, float extend)
+{
+	bool const mirror_x(c.dim ^ c.dir ^ 1);
+	float const height(c.dz()), pipe_radius(rscale*height), ndim_pos(mirror_x ? lr_offset : (1.0 - lr_offset));
+	point entry_pos; // on the front bottom right side
+	entry_pos[ c.dim] = c.d[c.dim][c.dir];
+	entry_pos[!c.dim] = ndim_pos*c.d[!c.dim][0] + (1.0 - ndim_pos)*c.d[!c.dim][1];
+	entry_pos.z = c.z1() + z_offset*height;
+	point bend(entry_pos);
+	bend[c.dim] += (c.dir ? 1.0 : -1.0)*extend*pipe_radius; // move outward
+	point bot_pos(bend);
+	bot_pos.z = c.z1();
+	add_pipe_with_bend(mat, color, bot_pos, entry_pos, bend, ndiv, pipe_radius, 0); // draw_ends=0
+}
 void building_room_geom_t::add_furnace(room_object_t const &c) {
-	add_obj_with_front_texture(c, "interiors/furnace.jpg", get_furnace_color(), 1);
+	add_obj_with_front_texture(c, "interiors/furnace.jpg", get_furnace_color(), 1); // small=1
+
+	// add pipes
+	bool const low_detail = 1;
+	unsigned const pipe_ndiv(get_rgeom_sphere_ndiv(low_detail));
+	// insulated
+	rgeom_mat_t &insul_mat(get_metal_material(1, 0, 1, WHITE)); // black reflective tape (not actually metal); shadows=1, small=1
+	add_furnace_pipe_with_bend(c, insul_mat, apply_light_color(c, BLACK), pipe_ndiv, 0.02, 0.87, 0.38, 2.2);
+	// copper
+	rgeom_mat_t &copper_mat(get_metal_material(1, 0, 1, COPPER_C)); // shadows=1, small=1
+	add_furnace_pipe_with_bend(c, copper_mat, apply_light_color(c, COPPER_C), pipe_ndiv, 0.007, 0.88, 0.34, 1.6);
+	// drain (2x)
+	rgeom_mat_t &plastic_mat(get_untextured_material(1, 0, 1)); // shadows=1, small=1
+
+	for (unsigned d = 0; d < 2; ++d) {
+		add_furnace_pipe_with_bend(c, plastic_mat, apply_light_color(c, WHITE), pipe_ndiv, 0.016, (d ? 0.08 : 0.17), 0.04, 1.8);
+	}
 }
 
 void building_room_geom_t::add_toaster_proxy(room_object_t const &c) { // draw a simple untextured XY cube to show a lower LOD model of the toaster

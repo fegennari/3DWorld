@@ -222,6 +222,8 @@ void rgeom_mat_t::add_disk_to_verts(point const &pos, float radius, bool normal_
 	}
 }
 
+unsigned get_rgeom_sphere_ndiv(bool low_detail) {return (low_detail ? N_SPHERE_DIV/2 : N_SPHERE_DIV);}
+
 // Note: size can be nonuniform in X/Y/Z
 void rgeom_mat_t::add_sphere_to_verts(point const &center, vector3d const &size, colorRGBA const &color, bool low_detail,
 	vector3d const &skip_hemi_dir, xform_matrix const *const matrix)
@@ -235,7 +237,7 @@ void rgeom_mat_t::add_sphere_to_verts(point const &center, vector3d const &size,
 	bool const draw_hemisphere(skip_hemi_dir != zero_vector);
 
 	if (verts.empty()) { // not yet created, create and cache verts
-		sd_sphere_d sd(all_zeros, 1.0, (low_detail ? N_SPHERE_DIV/2 : N_SPHERE_DIV));
+		sd_sphere_d sd(all_zeros, 1.0, get_rgeom_sphere_ndiv(low_detail));
 		sphere_point_norm spn;
 		sd.gen_points_norms(spn);
 		sd.get_quad_points(verts, &ixs);
@@ -1138,7 +1140,7 @@ class spider_draw_t {
 
 		for (unsigned n = 0; n < 2; ++n) { // {high detail, low detail shadow pass}
 			bool const low_detail(n == 1);
-			unsigned const ndiv(low_detail ? N_SPHERE_DIV/4 : N_SPHERE_DIV/2);
+			unsigned const ndiv(get_rgeom_sphere_ndiv(low_detail)/2);
 			unsigned cur_vert_pos(0);
 			rgeom_mat_t &mat(mats[n]);
 			mat.add_sphere_to_verts(abdomen, color, low_detail);
