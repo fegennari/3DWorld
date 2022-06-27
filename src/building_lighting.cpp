@@ -105,7 +105,7 @@ bool building_t::ray_cast_exterior_walls(point const &p1, point const &p2, vecto
 colorRGBA building_interior_t::get_attic_ceiling_color() const {
 	switch (attic_type) {
 	case ATTIC_TYPE_RAFTERS   : return texture_color(FENCE_TEX );
-	case ATTIC_TYPE_WOOD      : return texture_color(WOOD_TEX  );
+	case ATTIC_TYPE_WOOD      : return texture_color(get_plywood_tid());
 	case ATTIC_TYPE_PLASTER   : return texture_color(STUCCO_TEX);
 	case ATTIC_TYPE_FIBERGLASS: return PINK; // TODO
 	default: assert(0);

@@ -203,6 +203,7 @@ public:
 		register_tid(building_texture_mgr.get_helipad_tid());
 		register_tid(building_texture_mgr.get_solarp_tid());
 		register_tid(building_texture_mgr.get_concrete_tid());
+		register_tid(get_plywood_tid()); // for attics
 		for (unsigned i = 0; i < num_special_tids; ++i) {register_tid(special_tids[i]);}
 
 		for (auto i = global_building_params.materials.begin(); i != global_building_params.materials.end(); ++i) {
@@ -1308,8 +1309,12 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, 
 		colorRGBA const &ceil_color  (is_house ? mat.house_ceil_color  : mat.ceil_color );
 		colorRGBA const &floor_color (is_house ? mat.house_floor_color : mat.floor_color);
 		colorRGBA const basement_wall_color(WHITE); // basement walls are always white
-		tid_nm_pair_t const attic_tex(FENCE_TEX, -1, 0.25*mat.house_floor_tex.tscale_x, 0.25*mat.house_floor_tex.tscale_y); // depends on interior->attic_type?
+		tid_nm_pair_t attic_tex;
 
+		if (has_attic()) { // plywood 50% of the time, boards 50% of the time
+			int const tid((interior->rooms.size() & 1) ? get_plywood_tid() : FENCE_TEX);
+			attic_tex = tid_nm_pair_t(tid, -1, 0.25*mat.house_floor_tex.tscale_x, 0.25*mat.house_floor_tex.tscale_y);
+		}
 		for (auto i = interior->floors.begin(); i != interior->floors.end(); ++i) { // 600K T
 			bool const is_basement(i->z2() < ground_floor_z1);
 			tid_nm_pair_t floor_tex;
@@ -1406,7 +1411,7 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, 
 			bdraw.add_section(*this, 0, inner_cube, wall_tex, WHITE, dim_mask, 0, 0, 1, 0, 0.0, 0, 1.0, 1);
 			// Note elevator doors are dynamic and are drawn as part of room_geom
 		} // for i
-		if (has_attic()) {
+		if (has_attic() && interior->attic_type == ATTIC_TYPE_RAFTERS) { // underside of roof is visible
 			// add inside surface of attic access hole; could be draw as room geom if needed
 			bdraw.add_section(*this, 0, interior->attic_access, mat.wall_tex, mat.wall_color, 3, 0, 0, 1, 0, 0.0, 0, 1.0, 1); // no AO; X/Y dims only, inverted normals
 			// add inside surfaces of roof tquads

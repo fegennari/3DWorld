@@ -427,7 +427,7 @@ struct edge_t {
 	}
 };
 
-void add_attic_roof_geom(rgeom_mat_t &mat, colorRGBA const &color, float thickness, building_t const &b) {
+void add_attic_roof_geom(rgeom_mat_t &mat, colorRGBA const &color, float thickness, float tscale, building_t const &b) {
 	thickness *= b.get_attic_beam_depth();
 
 	for (tquad_with_ix_t const &i : b.roof_tquads) {
@@ -436,7 +436,6 @@ void add_attic_roof_geom(rgeom_mat_t &mat, colorRGBA const &color, float thickne
 		std::reverse(tq.pts, tq.pts+tq.npts); // reverse the normal and winding order
 		vector3d const normal(tq.get_norm());
 		bool const is_roof(tq.type == tquad_with_ix_t::TYPE_ROOF);
-		float const tscale = 8.0;
 		
 		for (unsigned n = 0; n < tq.npts; ++n) {
 			if (is_roof) {assert(normal.z < 0.0); tq.pts[n].z += thickness/normal.z;} // roof: shift downward
@@ -452,8 +451,9 @@ void add_attic_roof_geom(rgeom_mat_t &mat, colorRGBA const &color, float thickne
 			vert.v = tq.pts[i];
 
 			if (is_roof) { // roof
-				vert.t[0] = vert.v.x*tsx;
-				vert.t[1] = vert.v.y*tsy;
+				bool const swap_tc_xy(fabs(normal.x) < fabs(normal.y));
+				vert.t[!swap_tc_xy] = vert.v.x*tsx;
+				vert.t[ swap_tc_xy] = vert.v.y*tsy;
 			}
 			else { // side wall
 				bool const dim(tq.pts[0].x == tq.pts[1].x); // use nonzero width dim
@@ -462,7 +462,7 @@ void add_attic_roof_geom(rgeom_mat_t &mat, colorRGBA const &color, float thickne
 			}
 			mat.itri_verts.push_back(vert);
 		} // for i
-		for (unsigned i = 0; i < ((tq.npts == 4) ? 6 : 3); ++i) { // 3 indices for triangles, 6 indices (2 triangles) for quads
+		for (unsigned i = 0; i < ((tq.npts == 4) ? 6U : 3U); ++i) { // 3 indices for triangles, 6 indices (2 triangles) for quads
 			mat.indices.push_back(verts_start + quad_to_tris_ixs[i]);
 		}
 	} // for i
@@ -470,18 +470,18 @@ void add_attic_roof_geom(rgeom_mat_t &mat, colorRGBA const &color, float thickne
 
 void building_room_geom_t::add_attic_rafters(building_t const &b, float tscale) {
 	if (!b.has_attic()) return;
-	unsigned const attic_type(b.interior->attic_type); // ATTIC_TYPE_RAFTERS, ATTIC_TYPE_WOOD, ATTIC_TYPE_PLASTER, ATTIC_TYPE_FIBERGLASS
+	unsigned const attic_type(b.interior->attic_type);
 
 	if (attic_type == ATTIC_TYPE_WOOD) {
-		add_attic_roof_geom(get_wood_material(tscale, 0, 0, 2), WHITE, 1.0, b); // no shadows, detail
+		add_attic_roof_geom(get_material(tid_nm_pair_t(get_plywood_tid()), 0, 0, 2), WHITE, 1.0, 16.0, b); // no shadows, detail
 		return; // done - rafters not visible
 	}
-	else if (attic_type == ATTIC_TYPE_PLASTER) {
-		add_attic_roof_geom(get_material(b.get_material().wall_tex, 0, 0, 2), WHITE, 1.0, b); // no shadows, detail
+	else if (attic_type == ATTIC_TYPE_PLASTER) { // or gypsum?
+		add_attic_roof_geom(get_material(b.get_material().wall_tex, 0, 0, 2), WHITE, 1.0, 16.0, b); // no shadows, detail
 		return; // done - rafters not visible
 	}
 	else if (attic_type == ATTIC_TYPE_FIBERGLASS) {
-		add_attic_roof_geom(get_untextured_material(0, 0, 2), PINK, 0.5, b); // no shadows, detail
+		add_attic_roof_geom(get_untextured_material(0, 0, 2), PINK, 0.5, 8.0, b); // no shadows, detail
 	}
 	else {assert(attic_type == ATTIC_TYPE_RAFTERS);}
 

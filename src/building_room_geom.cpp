@@ -38,6 +38,7 @@ int get_money_tid      () {return get_texture_by_name("interiors/dollar20.jpg");
 int get_crack_tid(room_object_t const &obj) {return get_texture_by_name(((5*obj.obj_id + 7*obj.room_id) & 1) ? "interiors/cracked_glass2.jpg" : "interiors/cracked_glass.jpg");}
 int get_box_tid() {return get_texture_by_name("interiors/box.jpg");}
 int get_crate_tid(room_object_t const &c) {return get_texture_by_name((c.obj_id & 1) ? "interiors/crate2.jpg" : "interiors/crate.jpg");}
+int get_plywood_tid() {return get_texture_by_name("interiors/plywood.jpg");}
 
 colorRGBA get_textured_wood_color() {return WOOD_COLOR.modulate_with(texture_color(WOOD2_TEX));} // Note: uses default WOOD_COLOR, not the per-building random variant
 colorRGBA get_counter_color      () {return (get_textured_wood_color()*0.75 + texture_color(get_counter_tid())*0.25);}
