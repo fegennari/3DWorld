@@ -34,17 +34,6 @@ uniform float spacialOffset = 0.0;
 // The normalized coordinates of the current pixel, range 0.0 .. 1.0
 in vec2 vTexCoord;
  
-vec3 Visualize_0_3(float x) {
-    const vec3 color0 = vec3(1.0, 0.0, 0.0);
-    const vec3 color1 = vec3(1.0, 1.0, 0.0);
-    const vec3 color2 = vec3(0.0, 1.0, 0.0);
-    const vec3 color3 = vec3(0.0, 1.0, 1.0);
-    vec3 color = mix(color0, color1, clamp(x - 0.0, 0.0, 1.0));
-    color = mix(color, color2, clamp(x - 1.0, 0.0, 1.0));
-    color = mix(color, color3, clamp(x - 2.0, 0.0, 1.0));
-    return color;
-}
- 
 vec3 GetCameraVec(vec2 uv) {  
     // Returns the vector from camera to the specified position on the camera plane (uv argument), located one unit away from the camera
     // This vector is not normalized.

@@ -963,7 +963,6 @@ void setup_cube_map_texture(unsigned &tid, unsigned tex_size, bool allocate, boo
 	check_gl_error(520);
 }
 
-
 void frame_buffer_to_texture(unsigned &tid, bool is_depth) {
 
 	if (tid) {bind_2d_texture(tid);} else {setup_texture(tid, 0, 0, 0);}

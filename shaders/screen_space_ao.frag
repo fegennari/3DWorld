@@ -14,13 +14,20 @@ void main() {
 	float denom    = NUM_DIRS;
 
 	// http://john-chapman-graphics.blogspot.ca/2013/01/ssao-tutorial.html
-	//vec3 normal = normalize(cross(dFdy(position), dFdx(position))); 
+	//vec3 normal = normalize(cross(dFdy(position), dFdx(position)));
+
+	// or for a slower but more accurate version: https://atyuwen.github.io/posts/normal-reconstruction/
+
+	// also see: https://mtnphil.wordpress.com/2013/06/26/know-your-ssao-artifacts/
 	
 	for (int d = 0; d < NUM_DIRS; d++) {
 		vec2 pos    = tc;
 		float theta = d*dir_mul;
 		vec2 dir    = vec2(sin(theta), cos(theta));
 		vec2 step   = step_len * xy_step * dir;
+		// Improvements:
+		// - Use a 3d vector with a per-pixel randomly rotated kernel
+		// - Invert step for samples where dot(step, normal) < 0.0
 
 		for (int s = 0; s < NUM_STEPS; s++) {
 			pos += step;
@@ -32,8 +39,8 @@ void main() {
 				weight += (1.0 - float(s)*step_mul);
 				break;
 			}
-		}
-	}
+		} // for s
+	} // for d
 	float darken = clamp(2.0*(weight/max(denom, 1.0)-0.5), 0.0, 1.0);
 #ifdef WRITE_COLOR
     fg_FragColor = vec4(1.0-darken, 1.0-darken, 1.0-darken, 1.0); // write grayscale values
