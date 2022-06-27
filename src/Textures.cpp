@@ -966,7 +966,7 @@ void setup_cube_map_texture(unsigned &tid, unsigned tex_size, bool allocate, boo
 void frame_buffer_to_texture(unsigned &tid, bool is_depth) {
 
 	if (tid) {bind_2d_texture(tid);} else {setup_texture(tid, 0, 0, 0);}
-	glTexImage2D(GL_TEXTURE_2D, 0, (is_depth ? GL_DEPTH_COMPONENT : GL_RGB8), window_width, window_height, 0,
+	glTexImage2D(GL_TEXTURE_2D, 0, (is_depth ? GL_DEPTH_COMPONENT32F : GL_RGB8), window_width, window_height, 0,
 		(is_depth ? GL_DEPTH_COMPONENT : GL_RGB), (is_depth ? GL_FLOAT : GL_UNSIGNED_BYTE), nullptr);
 	glReadBuffer(GL_BACK);
 	glCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 0, 0, window_width, window_height);
