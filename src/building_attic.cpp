@@ -116,7 +116,6 @@ bool building_t::add_attic_access_door(cube_t const &ceiling, unsigned part_ix, 
 	set_cube_zvals(interior->attic_access, ceiling.z1(), ceiling.z2()); // same zvals as ceiling
 	bool const dir(best_room.get_center_dim(long_dim) < interior->attic_access.get_center_dim(long_dim));
 	interior->attic_access.ix = 2*long_dim + dir;
-	interior->attic_type = ATTIC_TYPE_RAFTERS; // rgen.rand()%NUM_ATTIC_TYPES // ATTIC_TYPE_RAFTERS, ATTIC_TYPE_WOOD, ATTIC_TYPE_PLASTER, ATTIC_TYPE_FIBERGLASS
 	return 1;
 }
 
@@ -129,6 +128,19 @@ cube_t building_t::get_attic_access_door_avoid() const {
 	avoid.d[dim][dir] += (dir ? 1.0 : -1.0)*0.5*floor_spacing; // more spacing in front where the ladder is
 	avoid.z2() += 0.5*floor_spacing; // make it taller
 	return avoid;
+}
+
+void building_t::assign_attic_type(rand_gen_t rgen) {
+	if (rgen.rand_bool()) {interior->attic_type = ATTIC_TYPE_RAFTERS; return;} // rafters is the most common case
+	// wood and plaster don't look good with hipped roofs because they have vertical beams
+	bool is_hipped(0);
+
+	for (tquad_with_ix_t const &i : roof_tquads) {
+		if (is_attic_roof(i, 0) && i.type == tquad_with_ix_t::TYPE_ROOF && i.npts == 3) {is_hipped = 1; break;}
+	}
+	bool const allow_no_rafters(!is_hipped && (rgen.rand()&3) == 0); // make these cases rare
+	if (allow_no_rafters) {interior->attic_type = rgen.rand()%NUM_ATTIC_TYPES;} // ATTIC_TYPE_RAFTERS, ATTIC_TYPE_WOOD, ATTIC_TYPE_PLASTER, ATTIC_TYPE_FIBERGLASS
+	else                  {interior->attic_type = rgen.rand()%2;} // ATTIC_TYPE_RAFTERS, ATTIC_TYPE_WOOD
 }
 
 void find_roofline_beam_span(cube_t &beam, float roof_z2, point const pts[4], bool dim) {
@@ -154,6 +166,7 @@ void create_attic_posts(building_t const &b, cube_t const &beam, bool dim, cube_
 }
 
 void building_t::add_attic_objects(rand_gen_t rgen) {
+	assign_attic_type(rgen); // must be done after roof is added, not in add_attic_access_door()
 	unsigned const obj_flags(RO_FLAG_INTERIOR | RO_FLAG_IN_ATTIC);
 	vect_room_object_t &objs(interior->room_geom->objs);
 	unsigned const objs_start(objs.size());
