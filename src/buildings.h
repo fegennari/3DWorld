@@ -1669,6 +1669,7 @@ int get_bath_wind_tid ();
 int get_int_door_tid  ();
 int get_concrete_tid  ();
 int get_plywood_tid   ();
+int get_insulation_tid();
 int get_normal_map_for_bldg_tid(int tid);
 unsigned register_sign_text(std::string const &text);
 void setup_building_draw_shader(shader_t &s, float min_alpha, bool enable_indir, bool force_tsl, bool use_texgen);

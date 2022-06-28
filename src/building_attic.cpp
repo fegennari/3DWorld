@@ -494,7 +494,7 @@ void building_room_geom_t::add_attic_rafters(building_t const &b, float tscale) 
 		return; // done - rafters not visible
 	}
 	else if (attic_type == ATTIC_TYPE_FIBERGLASS) {
-		add_attic_roof_geom(get_untextured_material(0, 0, 2), PINK, 0.5, 8.0, b); // no shadows, detail
+		add_attic_roof_geom(get_material(tid_nm_pair_t(get_insulation_tid()), 0, 0, 2), colorRGBA(1.0, 0.7, 0.6), 0.5, 16.0, b); // no shadows, detail
 	}
 	else {assert(attic_type == ATTIC_TYPE_RAFTERS);}
 
