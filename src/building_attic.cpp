@@ -272,7 +272,7 @@ void building_t::add_attic_objects(rand_gen_t rgen) {
 			cube_t test_cube(furnace);
 			test_cube.d[dim][dir] += (dir ? 1.0 : -1.0)*0.5*furnace.get_sz_dim(dim); // add clearance in front
 			if (has_bcube_int(test_cube, avoid_cubes) || !cube_in_attic(furnace)) continue;
-			unsigned const flags((is_house ? RO_FLAG_IS_HOUSE : 0) | RO_FLAG_INTERIOR);
+			unsigned const flags((is_house ? RO_FLAG_IS_HOUSE : 0) | obj_flags);
 			interior->room_geom->objs.emplace_back(furnace, TYPE_FURNACE, room_id, dim, dir, flags, light_amt);
 			avoid_cubes.push_back(test_cube);
 			break; // success/done

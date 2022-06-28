@@ -2460,6 +2460,16 @@ void add_furnace_pipe_with_bend(room_object_t const &c, rgeom_mat_t &mat, colorR
 void building_room_geom_t::add_furnace(room_object_t const &c) {
 	add_obj_with_front_texture(c, "interiors/furnace.jpg", get_furnace_color(), 1); // small=1
 
+	if (c.in_attic()) {
+		// add ductwork ... somewhere?
+	}
+	else { // basement: add ductwork up into the ceiling; not a collision object
+		cube_t duct(c);
+		duct.d[c.dim][c.dir] -= (c.dir ? 1.0 : -1.0)*0.35*c.get_sz_dim(c.dim); // shift inward toward back
+		duct.expand_in_dim(!c.dim, -0.05*c.get_sz_dim(!c.dim)); // shrink slightly
+		set_cube_zvals(duct, c.z2(), c.z2()+0.5*c.dz());
+		get_metal_material(1, 0, 1).add_cube_to_verts(duct, apply_light_color(c, GRAY), tex_origin, EF_Z12); // skip top and bottom faces
+	}
 	// add pipes
 	bool const low_detail = 1;
 	unsigned const pipe_ndiv(get_rgeom_sphere_ndiv(low_detail));
