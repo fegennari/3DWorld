@@ -13,7 +13,7 @@ bool  const USE_BKG_THREAD      = 1;
 bool  const INDIR_BASEMENT_EN   = 1;
 bool  const INDIR_ATTIC_ENABLE  = 1;
 bool  const INDIR_BLDG_ENABLE   = 1;
-bool  const INDIR_VOL_PER_FLOOR = 0;
+unsigned INDIR_LIGHT_FLOOR_SPAN = 5; // in number of floors, generally an odd number to represent current floor and floors above/below; 0 is unlimited
 float const ATTIC_LIGHT_RADIUS_SCALE = 2.0; // larger radius in attic, since space is larger
 
 extern bool camera_in_building, player_in_attic;
@@ -612,7 +612,7 @@ public:
 	void free_indir_texture() {free_texture(cur_tid);}
 
 	void register_cur_building(building_t const &b, unsigned bix, point const &target, unsigned &tid) { // target is in building space
-		bool floor_change(0);
+		bool floor_change(0), need_rebuild(0);
 
 		if ((int)bix != cur_bix) { // change to a different building
 			clear();
@@ -623,9 +623,11 @@ public:
 		}
 		else {
 			if (update_windows) {get_windows(b);}
-			floor_change = (cur_floor >= 0 && cur_floor != (int)b.get_floor_for_zval(target.z));
+			unsigned const new_floor(b.get_floor_for_zval(target.z));
+			floor_change = (cur_floor >= 0 && cur_floor != (int)new_floor);
+			need_rebuild = (floor_change && !light_bounds.contains_cube(get_valid_area(b, target, new_floor)));
 		}
-		if (INDIR_VOL_PER_FLOOR && floor_change) { // handle floor change
+		if (need_rebuild) { // handle floor change
 			invalidate_lighting();
 			build_bvh(b, target);
 		}
@@ -652,7 +654,7 @@ public:
 			lighting_updated = 0;
 		}
 		// nothing is running and there is more work to do, find the nearest light to the target and process it
-		if (!INDIR_VOL_PER_FLOOR) {need_bvh_rebuild |= floor_change;} // rebuild on player floor change
+		if (!need_rebuild) {need_bvh_rebuild |= floor_change;} // rebuild on player floor change if not rebuilt above
 		if (need_bvh_rebuild) {build_bvh(b, target);}
 		
 		if (cur_light >= 0) {
@@ -690,25 +692,42 @@ public:
 		// Note: if door state changed since this light was turned on, removing it may leave some light
 		if ((geom_changed || !light_is_on || (in_elevator && num_erased)) && (num_erased || is_cur_light)) {add_to_remove_queue(light_ix);} // must remove the light instead
 	}
-	void build_bvh(building_t const &b, point const &target) {
-		//highres_timer_t timer("Build BVH");
-		cur_floor  = b.get_floor_for_zval(target.z);
-		valid_area = b.bcube;
-		bool const in_attic(b.point_in_attic(target));
-		
+	static cube_t get_valid_area(building_t const &b, point const &target, unsigned target_floor) {
+		cube_t VA(b.bcube);
+
 		// clip per light source to current floor; note that this will exclude stairs going up or down
-		if (in_attic) {
-			set_cube_zvals(valid_area, b.interior->attic_access.z1(), b.interior_z2);
+		if (b.point_in_attic(target)) {
+			set_cube_zvals(VA, b.interior->attic_access.z1(), b.interior_z2);
 		}
 		else {
 			float const floor_spacing(b.get_window_vspace());
-			valid_area.z1() += cur_floor*floor_spacing;
-			valid_area.z2()  = valid_area.z1() + floor_spacing;
+			VA.z1() = b.bcube.z1() + (target_floor  )*floor_spacing;
+			VA.z2() = b.bcube.z1() + (target_floor+1)*floor_spacing;
 		}
-		light_bounds = (INDIR_VOL_PER_FLOOR ? valid_area : b.get_interior_bcube());
+		return VA;
+	}
+	void build_bvh(building_t const &b, point const &target) {
+		//highres_timer_t timer("Build BVH");
+		cur_floor  = b.get_floor_for_zval(target.z);
+		valid_area = get_valid_area(b, target, cur_floor);
+		cube_t const interior_bcube(b.get_interior_bcube());
+		if      (INDIR_LIGHT_FLOOR_SPAN == 0) {light_bounds = interior_bcube;} // unlimited floor span/entire building
+		else if (INDIR_LIGHT_FLOOR_SPAN == 1) {light_bounds = valid_area;} // single floor only
+		else if (light_bounds.contains_cube(valid_area)) {} // valid area already contained, no update needed (will fail if light_bounds is not set)
+		else { // limited number of floors
+			float const dist_above_below(0.5f*(INDIR_LIGHT_FLOOR_SPAN - 1)*b.get_window_vspace());
+			light_bounds = valid_area;
+			light_bounds.expand_in_dim(2, dist_above_below); // expand in Z
+			// clamp Z range to interior_bcube and add any excess height to the other end of the range
+			if      (light_bounds.z1() < interior_bcube.z1()) {light_bounds.z2() += (interior_bcube.z1() - light_bounds.z1());}
+			else if (light_bounds.z2() > interior_bcube.z2()) {light_bounds.z1() -= (light_bounds.z2() - interior_bcube.z2());}
+			max_eq(light_bounds.z1(), interior_bcube.z1());
+			min_eq(light_bounds.z2(), interior_bcube.z2());
+			// Note: if we get here, we assume lighting has already been invalidated
+		}
 		bvh.clear();
 		b.gather_interior_cubes(bvh.get_objs(), cur_floor);
-		if (in_attic) {b.get_attic_roof_tquads(bvh.roof_tquads);}
+		if (b.point_in_attic(target)) {b.get_attic_roof_tquads(bvh.roof_tquads);}
 		bvh.build_tree_top(0); // verbose=0
 		need_bvh_rebuild = 0;
 	}
