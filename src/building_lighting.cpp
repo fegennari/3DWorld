@@ -10,7 +10,9 @@
 #include <thread>
 
 bool  const USE_BKG_THREAD      = 1;
-bool  const INDIR_BASEMENT_ONLY = 0;
+bool  const INDIR_BASEMENT_EN   = 1;
+bool  const INDIR_ATTIC_ENABLE  = 1;
+bool  const INDIR_BLDG_ENABLE   = 1;
 bool  const INDIR_VOL_PER_FLOOR = 0;
 float const ATTIC_LIGHT_RADIUS_SCALE = 2.0; // larger radius in attic, since space is larger
 
@@ -32,9 +34,14 @@ int get_canopy_texture();
 colorRGBA get_canopy_base_color(room_object_t const &c);
 void get_water_heater_cubes(room_object_t const &wh, cube_t cubes[2]);
 
+bool check_indir_enabled(bool in_basement, bool in_attic) {
+	if (in_basement) return INDIR_BASEMENT_EN;
+	if (in_attic   ) return INDIR_ATTIC_ENABLE;
+	return INDIR_BLDG_ENABLE; // not basement or attic
+}
 bool enable_building_indir_lighting_no_cib() {
 	if (!(display_mode & 0x10)) return 0; // key 5
-	if (INDIR_BASEMENT_ONLY && !player_in_basement) return 0;
+	if (!check_indir_enabled(player_in_basement, player_in_attic)) return 0;
 	if (MESH_SIZE[2] == 0) return 0; // no volume texture allocated
 	return 1;
 }
@@ -738,10 +745,10 @@ void building_t::get_lights_with_priorities(point const &target, cube_t const &v
 	int const target_room(get_room_containing_pt(target)); // generally always should be >= 0
 
 	for (auto i = objs.begin(); i != objs_end; ++i) {
-		if (!i->is_light_type() || !i->is_light_on())  continue; // not a light, or light not on
+		if (!i->is_light_type() || !i->is_light_on()) continue; // not a light, or light not on
 		bool const light_in_basement(i->z1() < ground_floor_z1);
-		if (INDIR_BASEMENT_ONLY && !light_in_basement) continue; // not a basement light
-		if (!valid_area.contains_cube(*i))             continue; // outside valid area
+		if (!check_indir_enabled(light_in_basement, i->in_attic())) continue;
+		if (!valid_area.contains_cube(*i)) continue; // outside valid area
 
 		if (i->in_elevator()) { // elevator light
 			elevator_t const &e(interior->elevators[i->obj_id]);
