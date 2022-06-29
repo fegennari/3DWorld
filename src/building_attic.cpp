@@ -98,8 +98,10 @@ bool building_t::add_attic_access_door(cube_t const &ceiling, unsigned part_ix, 
 
 	if (in_hallway) {
 		access_pos = best_room.get_cube_center();
-		access_pos[ long_dim] += (rgen2.rand_bool() ? -1.0 : 1.0)*0.1*best_room.get_sz_dim( long_dim); // place off center to avoid blocking center light
-		access_pos[!long_dim] += (rgen2.rand_bool() ? -1.0 : 1.0)*0.2*best_room.get_sz_dim(!long_dim); // place off center to allow player to walk past
+		// place off center to avoid blocking center light
+		access_pos[ long_dim] += (rgen2.rand_bool() ? -1.0 : 1.0)*0.1*best_room.get_sz_dim(long_dim);
+		// place on the side of the hallway to avoid blocking the player and people from walking by
+		access_pos[!long_dim]  = (rgen2.rand_bool() ? (best_room.d[!long_dim][0] + 1.1*half_wid) : (best_room.d[!long_dim][1] - 1.1*half_wid));
 	}
 	else {
 		cube_t const &part(get_part_for_room(best_room));
