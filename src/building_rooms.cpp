@@ -2233,7 +2233,7 @@ void building_t::add_outlets_to_room(rand_gen_t rgen, room_t const &room, float 
 	} // for wall
 }
 
-bool building_t::add_vent_to_room(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned objs_start) {
+bool building_t::add_wall_vent_to_room(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned objs_start) {
 	float const wall_thickness(get_wall_thickness()), ceiling_zval(zval + get_floor_ceil_gap());
 	float const thickness(0.1*wall_thickness), height(2.5*wall_thickness), hwidth(2.0*wall_thickness), min_wall_spacing(1.5*hwidth);
 	cube_t const room_bounds(get_walkable_room_bounds(room));
@@ -2270,6 +2270,33 @@ bool building_t::add_vent_to_room(rand_gen_t rgen, room_t const &room, float zva
 		if (bad_place) continue;
 		if (!check_if_placed_on_interior_wall(c, room, dim, dir)) continue; // ensure the vent is on a wall; is this really needed?
 		interior->room_geom->objs.emplace_back(c, TYPE_VENT, room_id, dim, dir, RO_FLAG_NOCOLL, 1.0); // dim/dir matches wall; fully lit
+		return 1; // done
+	} // for n
+	return 0; // failed
+}
+
+// what about floor vent?
+bool building_t::add_ceil_vent_to_room(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned objs_start) {
+	float const wall_thickness(get_wall_thickness()), ceiling_zval(zval + get_floor_ceil_gap());
+	float const thickness(0.1*wall_thickness), hlen(2.0*wall_thickness), hwid(1.25*wall_thickness);
+	cube_t const room_bounds(get_walkable_room_bounds(room));
+	if (min(room_bounds.dx(), room_bounds.dy()) < 4.0*hlen) return 0; // room is too small; shouldn't happen
+	cube_t c;
+	set_cube_zvals(c, ceiling_zval-thickness, ceiling_zval);
+
+	for (unsigned n = 0; n < 10; ++n) { // 10 tries
+		bool const dim(rgen.rand_bool());
+		point sz;
+		sz[ dim] = hlen;
+		sz[!dim] = hwid;
+		point const center(gen_xy_pos_in_area(room_bounds, sz, rgen));
+		set_wall_width(c, center[ dim], hlen,  dim);
+		set_wall_width(c, center[!dim], hwid, !dim);
+		cube_t c_exp(c);
+		c_exp.expand_by_xy(0.5*wall_thickness); // add a bit of padding
+		if (overlaps_other_room_obj(c_exp, objs_start, 1))     continue; // check for things like closets; check_all=1 to inc whiteboards; excludes picture frames
+		if (interior->is_blocked_by_stairs_or_elevator(c_exp)) continue; // check stairs and elevators
+		interior->room_geom->objs.emplace_back(c, TYPE_VENT, room_id, dim, 0, (RO_FLAG_NOCOLL | RO_FLAG_HANGING), 1.0); // dir=0; fully lit
 		return 1; // done
 	} // for n
 	return 0; // failed
@@ -2841,7 +2868,11 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			}
 			add_outlets_to_room(rgen, *r, room_center.z, room_id, objs_start, is_ground_floor, is_basement);
 			if (has_light) {add_light_switches_to_room(rgen, *r, room_center.z, room_id, objs_start, is_ground_floor, is_basement);} // add light switch if room has a light
-			if (!is_house && !r->is_hallway) {add_vent_to_room(rgen, *r, room_center.z, room_id, objs_start);} // office building vents
+			
+			if (!r->is_hallway) { // no vents in hallways
+				if (is_house) {add_ceil_vent_to_room(rgen, *r, room_center.z, room_id, objs_start);} // house vents
+				else          {add_wall_vent_to_room(rgen, *r, room_center.z, room_id, objs_start);} // office building vents
+			}
 			// pictures and whiteboards must not be placed behind anything, excluding trashcans; so we add them here
 			bool const can_hang((is_house || !(is_bathroom || is_kitchen || no_whiteboard)) && !is_storage); // no whiteboards in office bathrooms or kitchens
 			bool const was_hung(can_hang && hang_pictures_in_room(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, f, is_basement));

@@ -2986,7 +2986,14 @@ void building_room_geom_t::add_outlet(room_object_t const &c) {
 	add_flat_textured_detail_wall_object(c, get_outlet_or_switch_box_color(c), get_texture_by_name("interiors/outlet1.jpg"), 1); // draw_z1_face=1 (optimization)
 }
 void building_room_geom_t::add_vent(room_object_t const &c) {
-	add_flat_textured_detail_wall_object(c, c.color, get_texture_by_name("interiors/vent.jpg"), 0); // draw_z1_face=0
+	int const tid(get_texture_by_name("interiors/vent.jpg"));
+
+	if (c.flags & RO_FLAG_HANGING) { // vent on a ceiling
+		rgeom_mat_t &front_mat(get_material(tid_nm_pair_t(tid, 0.0, 0), 0, 0, 2)); // small=2/detail
+		front_mat.add_cube_to_verts(c, c.color, zero_vector, ~EF_Z1, !c.dim); // textured bottom face; always fully lit to match wall
+		get_untextured_material(0, 0, 2).add_cube_to_verts_untextured(c, c.color, EF_Z12); // sides: unshadowed, small; skip top and bottom face
+	}
+	else {add_flat_textured_detail_wall_object(c, c.color, tid, 0);} // vent on a wall; draw_z1_face=0
 }
 
 void building_room_geom_t::add_plate(room_object_t const &c) { // is_small=1
