@@ -399,9 +399,8 @@ bool building_t::apply_player_action_key(point const &closest_to_in, vector3d co
 			for (auto i = obj_vect.begin(); i != obj_vect_end; ++i) {
 				if (cur_player_building_loc.room_ix >= 0 && i->room_id != cur_player_building_loc.room_ix && i->type != TYPE_BUTTON) continue; // not in the same room as the player
 				if (!active_area.is_all_zeros() && !i->intersects(active_area)) continue; // out of reach for the player
-				// check for objects not in the attic when the player is in the attic;
-				// applies to lights only for now, since they're on the ceiling and the attic flag may not be set on dropped objects such as books
-				if (player_in_attic && !i->in_attic() && i->type == TYPE_LIGHT) continue;
+				// check for objects not in the attic when the player is in the attic and vice versa
+				if (player_in_attic != i->in_attic() && i->type != TYPE_ATTIC_DOOR) continue;
 				bool keep(0);
 				if (i->type == TYPE_BOX && !i->is_open()) {keep = 1;} // box can only be opened once; check first so that selection works for boxes in closets
 				else if (i->type == TYPE_CLOSET) {

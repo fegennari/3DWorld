@@ -1313,6 +1313,7 @@ bool building_t::maybe_use_last_pickup_room_object(point const &player_pos) {
 				obj.flags |= (RO_FLAG_TAKEN1 | RO_FLAG_WAS_EXP);
 				obj.translate(dest - point(obj.xc(), obj.yc(), obj.z1()));
 				assign_correct_room_to_object(obj); // set new room; required for opening books; room should be valid, but okay if not
+				if (point_in_attic(obj.get_cube_center())) {obj.flags |= RO_FLAG_IN_ATTIC;} else {obj.flags &= ~RO_FLAG_IN_ATTIC;} // set attic flag
 				if (!interior->room_geom->add_room_object(obj, *this)) return 0;
 			}
 			player_inventory.return_object_to_building(obj); // re-add this object's value
