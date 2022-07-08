@@ -1359,6 +1359,11 @@ void building_room_geom_t::add_pipe(room_object_t const &c) { // should be SHAPE
 	}
 }
 
+void building_room_geom_t::add_duct(room_object_t const &c) {
+	unsigned const skip_faces(c.is_hanging() ? EF_Z2 : EF_Z1);
+	get_untextured_material(1, 0, 2).add_cube_to_verts_untextured(c, c.color, skip_faces); // shadowed, detail, not using lit color
+}
+
 void building_room_geom_t::add_curb(room_object_t const &c) {
 	float const tscale(1.0/c.get_length());
 	rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_concrete_tid(), tscale, 1), 1, 0, 2)); // shadowed, detail object

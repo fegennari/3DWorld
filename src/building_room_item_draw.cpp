@@ -824,6 +824,7 @@ void building_room_geom_t::create_detail_vbos(building_t const &building) {
 		case TYPE_PIPE:       add_pipe(*i); break;
 		case TYPE_CURB:       add_curb(*i); break;
 		case TYPE_CHIMNEY:    add_chimney(*i, building.get_material().side_tex); break; // uses exterior wall texture
+		case TYPE_DUCT:       add_duct(*i);
 		default: break;
 		} // end switch
 	} // for i
@@ -831,7 +832,8 @@ void building_room_geom_t::create_detail_vbos(building_t const &building) {
 		assert(i.type == TYPE_WALL_TRIM);
 		add_wall_trim(i);
 	}
-	add_attic_rafters(building, 2.0/obj_scale); // only if there's an attic
+	add_attic_rafters (building, 2.0/obj_scale); // only if there's an attic
+	add_attic_ductwork(building); // only if there's an attic
 	mats_detail.create_vbos(building);
 }
 

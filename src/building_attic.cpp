@@ -637,6 +637,18 @@ void building_room_geom_t::add_attic_rafters(building_t const &b, float tscale) 
 	} // for i
 }
 
+// should there also be an add_basement_ductwork() for office buildings?
+void building_room_geom_t::add_attic_ductwork(building_t const &b) {
+	if (!b.has_attic()) return;
+	auto objs_end(get_placed_objs_end()); // skip buttons/stairs/elevators
+
+	for (auto i = objs.begin(); i != objs_end; ++i) {
+		if (i->type != TYPE_VENT) continue;
+		// TODO: check for attic floor/top ceiling
+		// TODO
+	} // for i
+}
+
 void building_room_geom_t::add_chimney(room_object_t const &c, tid_nm_pair_t const &tex) { // inside attic
 	tid_nm_pair_t tex2(tex);
 	tex2.shadowed = 1;
