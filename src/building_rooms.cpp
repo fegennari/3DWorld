@@ -524,7 +524,8 @@ float get_lamp_width_scale() {
 bool building_t::add_bedroom_objs(rand_gen_t rgen, room_t const &room, vect_cube_t const &blockers, float zval, unsigned room_id,
 	unsigned floor, float tot_light_amt, unsigned objs_start, bool room_is_lit, bool is_basement, light_ix_assign_t &light_ix_assign)
 {
-	if (room.interior) return 0; // bedrooms should have at least one window; if windowless/interior, it can't be a bedroom
+	// bedrooms should have at least one window; if windowless/interior, it can't be a bedroom; faster than checking count_ext_walls_for_room(room, zval) > 0
+	if (room.interior) return 0;
 	vect_room_object_t &objs(interior->room_geom->objs);
 	unsigned const bed_obj_ix(objs.size()); // if placed, it will be this index
 	if (!add_bed_to_room(rgen, room, blockers, zval, room_id, tot_light_amt, floor)) return 0; // it's only a bedroom if there's bed
@@ -2599,7 +2600,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 		if      (is_house)          {color = get_light_color_temp(0.4);} // house - yellowish
 		else if (is_parking_garage) {color = get_light_color_temp_range(0.2, 0.5, rgen);} // parking garage - yellow-white
 		else if (r->is_office)      {color = get_light_color_temp(0.6);} // office - blueish
-		else if (r->is_hallway)     {color = get_light_color_temp(0.6);} // hallway - blueish
+		else if (r->is_hallway)     {color = get_light_color_temp(0.6);} // office building hallway - blueish
 		else                        {color = get_light_color_temp(0.5);} // small office - white
 
 		// place objects on each floor for this room
@@ -2747,7 +2748,8 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			}
 			// bedroom or bathroom case; need to check first floor even if must_be_bathroom
 			if (!added_obj && allow_br && can_be_bedroom_or_bathroom(*r, f)) {
-				// place a bedroom 75% of the time unless this must be a bathroom; if we got to the second floor and haven't placed a bedroom, always place it; houses only
+				// place a bedroom 75% of the time unless this must be a bathroom; if we got to the second floor and haven't placed a bedroom, always place it;
+				// houses only, and must have a window (exterior wall)
 				if (is_house && !must_be_bathroom && !is_basement && ((f > 0 && !added_bedroom) || rgen.rand_float() < 0.75)) {
 					added_obj = added_bedroom = is_bedroom =
 						add_bedroom_objs(rgen, *r, blockers, room_center.z, room_id, f, tot_light_amt, objs_start, is_lit, is_basement, light_ix_assign);
