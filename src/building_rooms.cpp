@@ -493,7 +493,7 @@ bool building_t::can_be_bedroom_or_bathroom(room_t const &room, unsigned floor, 
 }
 bool building_t::can_be_bathroom(room_t const &room) const { // Note: assumes caller has checked can_be_bedroom_or_bathroom()
 	float const vspace(get_window_vspace());
-	return (min(room.dx(), room.dy()) < 2.0*vspace && max(room.dx(), room.dy()) < 3.0*vspace && count_num_int_doors(room) == 1);
+	return (min(room.dx(), room.dy()) < 2.4*vspace && max(room.dx(), room.dy()) < 3.2*vspace && count_num_int_doors(room) == 1);
 }
 
 unsigned building_t::count_num_int_doors(room_t const &room) const {
@@ -2516,7 +2516,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 	float const window_vspacing(get_window_vspace()), floor_thickness(get_floor_thickness()), fc_thick(0.5*floor_thickness);
 	float const light_thick(0.025*window_vspacing), def_light_size(0.1*window_vspacing);
 	interior->room_geom->obj_scale = window_vspacing; // used to scale room object textures
-	unsigned tot_num_rooms(0), num_bathrooms(0);
+	unsigned tot_num_rooms(0), num_bathrooms(0), num_bedrooms(0);
 	for (auto r = rooms.begin(); r != rooms.end(); ++r) {tot_num_rooms += calc_num_floors_room(*r, window_vspacing, floor_thickness);}
 	objs.reserve(tot_num_rooms); // placeholder - there will be more than this many
 	float const extra_bathroom_prob((is_house ? 2.0 : 1.0)*0.02*min((int(tot_num_rooms) - 4), 20));
@@ -2748,15 +2748,18 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			}
 			// bedroom or bathroom case; need to check first floor even if must_be_bathroom
 			if (!added_obj && allow_br && can_be_bedroom_or_bathroom(*r, f)) {
+				// Note: num_bedrooms is summed across all floors, while num_bathrooms is per-floor
+				bool const pref_sec_bath(is_house && num_bathrooms == 1 && num_bedrooms > 1 && rooms.size() >= 6 && !must_be_bathroom && !has_fireplace && can_be_bathroom(*r));
+				float const bedroom_prob(pref_sec_bath ? 0.25 : 0.75), bathroom_prob((pref_sec_bath ? 2.0 : 1.0)*extra_bathroom_prob);
 				// place a bedroom 75% of the time unless this must be a bathroom; if we got to the second floor and haven't placed a bedroom, always place it;
 				// houses only, and must have a window (exterior wall)
-				if (is_house && !must_be_bathroom && !is_basement && ((f > 0 && !added_bedroom) || rgen.rand_float() < 0.75)) {
+				if (is_house && !must_be_bathroom && !is_basement && ((f > 0 && !added_bedroom) || rgen.rand_float() < bedroom_prob)) {
 					added_obj = added_bedroom = is_bedroom =
 						add_bedroom_objs(rgen, *r, blockers, room_center.z, room_id, f, tot_light_amt, objs_start, is_lit, is_basement, light_ix_assign);
 					if (is_bedroom) {r->assign_to(RTYPE_BED, f);}
-					// Note: can't really mark room type as bedroom because it varies per floor; for example, there may be a bedroom over a living room connected to an exterior door
+					num_bedrooms += is_bedroom;
 				}
-				if (!added_obj && !has_fireplace && (must_be_bathroom || (can_be_bathroom(*r) && (num_bathrooms == 0 || rgen.rand_float() < extra_bathroom_prob)))) {
+				if (!added_obj && !has_fireplace && (must_be_bathroom || (can_be_bathroom(*r) && (num_bathrooms == 0 || rgen.rand_float() < bathroom_prob)))) {
 					// bathrooms can be in both houses and office buildings
 					added_obj = is_bathroom = added_bathroom =
 						add_bathroom_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, f, is_basement, added_bathroom_objs_mask); // add bathroom
