@@ -69,6 +69,10 @@ These files are too large to store in the git repo. I've attempted to have 3DWor
 Many of the larger models can be found at the McGuire Computer Graphics Archive:
 http://casual-effects.com/data/
 
+I've packaged up the 3D models that are too large for the GitHub repo and put them on Google Drive here:
+https://drive.google.com/file/d/1fQTrQpj8iCjDKIRl103ul9gRvZUB90TR/view?usp=sharing
+These models are stored in 3DWorld's internal format and should not be reused in other projects.
+
 System requirements:
 * Windows 7/8/10 (Runs on Windows 7, but I've only built on 8 and 10). Linux when using the makefile with gcc.
 * Microsoft Visual Studio 2019 or 2022. The professional or community version is needed for OpenMP support. You can also try to use gcc on linux.
