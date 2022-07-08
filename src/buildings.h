@@ -565,6 +565,7 @@ struct room_object_t : public oriented_cube_t { // size=64
 	bool is_broken  () const {return  (flags & RO_FLAG_BROKEN);}
 	bool is_active  () const {return  (flags & RO_FLAG_IS_ACTIVE);}
 	bool is_used    () const {return  (flags & RO_FLAG_USED);}
+	bool is_hanging () const {return  (flags & RO_FLAG_HANGING);}
 	bool in_elevator() const {return  (flags & RO_FLAG_IN_ELEV);}
 	bool in_closet  () const {return  (flags & RO_FLAG_IN_CLOSET);}
 	bool in_attic   () const {return  (flags & RO_FLAG_IN_ATTIC);}

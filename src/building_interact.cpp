@@ -499,7 +499,7 @@ bool building_t::interact_with_object(unsigned obj_ix, point const &int_pos, poi
 		sound_scale = 0.0; // sound has already been registered above
 	}
 	else if (obj.type == TYPE_TPROLL) {
-		if (!(obj.flags & (RO_FLAG_HANGING | RO_FLAG_WAS_EXP))) {
+		if (!obj.is_hanging() && !obj.was_expanded()) {
 			gen_sound_thread_safe(SOUND_FOOTSTEP, local_center, 0.5, 1.5); // could be better
 			obj.flags |= RO_FLAG_HANGING; // pull down the roll
 			update_draw_data = 1;
@@ -675,7 +675,7 @@ bool building_t::interact_with_object(unsigned obj_ix, point const &int_pos, poi
 bool building_t::adjust_blinds_state(unsigned obj_ix) {
 	auto &obj(interior->room_geom->get_room_object_by_index(obj_ix));
 
-	if (obj.flags & RO_FLAG_HANGING) { // hanging horizontal blinds
+	if (obj.is_hanging()) { // hanging horizontal blinds
 		float const floor_spacing(get_window_vspace()), window_v_border(0.94*get_window_v_border()); // border_mult=0.94 to account for the frame
 		float const window_height(floor_spacing*(1.0 - 2.0*window_v_border)), blinds_height(obj.dz());
 		assert(window_height > 0.0);

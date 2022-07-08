@@ -848,7 +848,7 @@ void building_t::get_all_windows(vect_cube_with_ix_t &windows) const { // Note: 
 				for (room_object_t const &b : blinds) {
 					if (!b.intersects(window)) continue;
 					
-					if (b.flags & RO_FLAG_HANGING) { // horizontal (comes from the top)
+					if (b.is_hanging()) { // horizontal (comes from the top)
 						min_eq(window.z2(), b.z1());
 					}
 					else { // vertical (comes from the sides)

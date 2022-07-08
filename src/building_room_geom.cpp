@@ -326,7 +326,7 @@ float get_closet_wall_thickness(room_object_t const &c) {
 // cubes: front left, left side, front right, right side, door
 void get_closet_cubes(room_object_t const &c, cube_t cubes[5], bool for_collision) {
 	float const width(c.get_width()), depth(c.get_depth()), height(c.dz());
-	bool const use_small_door(c.is_small_closet()), doors_fold(!use_small_door && (c.flags & RO_FLAG_HANGING));
+	bool const use_small_door(c.is_small_closet()), doors_fold(!use_small_door && c.is_hanging());
 	// small closets: door does not collide when open; large closets: edges of door still collide even when open
 	float const wall_width(use_small_door ? 0.5*(width - 0.5*height) : ((for_collision && c.is_open()) ? (doors_fold ? 0.2 : 0.25) : 0.05)*width);
 	float const wall_thick(get_closet_wall_thickness(c)), wall_shift(width - wall_width);
@@ -408,7 +408,7 @@ void building_room_geom_t::add_closet(room_object_t const &c, tid_nm_pair_t cons
 			if (!c.dim) {swap(tx, ty);} // swap so that ty is always in Z
 			tid_nm_pair_t const door_tex(tid, get_normal_map_for_bldg_tid(tid), tx, ty); // 4x1 panels
 			rgeom_mat_t &door_mat(get_material(door_tex, 1));
-			bool const doors_fold(c.flags & RO_FLAG_HANGING); // else doors slide
+			bool const doors_fold(c.is_hanging()); // else doors slide
 
 			if (doors_fold && open) { // draw open bifold doors open on both
 				// Note: this doesn't always look correct because doors can intersect other objects such as lights and dressers, and they have no edge quads
@@ -566,7 +566,7 @@ void add_tproll_to_material(room_object_t const &c, rgeom_mat_t &mat) {
 	mat.add_ortho_cylin_to_verts(roll, tp_color, !c.dim, 1, 1); // c.dim applies to the wall; the roll is oriented perpendicular
 	cube_t square(roll); // hanging square of TP
 	set_cube_zvals(square, c.z1(), c.zc()); // starts at the centerline (tangent) and extends to the bottom
-	if (c.flags & RO_FLAG_HANGING) {square.z1() -= 3.0*c.dz();} // player has pulled it down lower
+	if (c.is_hanging()) {square.z1() -= 3.0*c.dz();} // player has pulled it down lower
 	square.d[c.dim][c.dir] = square.d[c.dim][!c.dir]; // shrink to zero thickness at outer edge
 	mat.add_cube_to_verts_untextured(square, tp_color, ~get_skip_mask_for_xy(c.dim)); // only draw front/back faces
 }
@@ -1151,7 +1151,7 @@ void building_room_geom_t::add_wall_trim(room_object_t const &c, bool for_closet
 }
 
 void building_room_geom_t::add_blinds(room_object_t const &c) {
-	bool const vertical(!(c.flags & RO_FLAG_HANGING));
+	bool const vertical(!c.is_hanging());
 	colorRGBA const color(c.color); // room color not applied as it looks wrong when viewed from outside the building
 	// fit the texture to the cube; blinds have a fixed number of slats that compress when they are shortened
 	// should these be partially transparent/backlit like bathroom windows? I guess not, most blinds are plastic or wood rather than material
@@ -1338,7 +1338,7 @@ void building_room_geom_t::add_pipe(room_object_t const &c) { // should be SHAPE
 	//assert(0.5*c.get_sz_dim((dim+2)%3) == radius); // must be a square cross section, but too strong due to FP error
 	// only vertical pipes cast shadows; horizontal ceiling pipes are too high and outside the ceiling light shadow map,
 	// or otherwise don't look correct when an area light is treated as a point light
-	bool const flat_ends(c.flags & RO_FLAG_HANGING), shadowed(c.flags & RO_FLAG_LIT); // RO_FLAG_LIT flag is interpreted as "casts shadows"
+	bool const flat_ends(c.is_hanging()), shadowed(c.flags & RO_FLAG_LIT); // RO_FLAG_LIT flag is interpreted as "casts shadows"
 	// adj flags indicate adjacencies where we draw joints connecting to other pipe sections
 	bool const draw_joints[2] = {((c.flags & RO_FLAG_ADJ_LO) != 0), ((c.flags & RO_FLAG_ADJ_HI) != 0)};
 	colorRGBA const color(apply_light_color(c));
@@ -2655,7 +2655,7 @@ void add_sign_text_verts(string const &text, cube_t const &sign, bool dim, bool 
 
 void building_room_geom_t::add_sign(room_object_t const &c, bool inc_back, bool inc_text) {
 	if (inc_back) {
-		bool const hanging(c.flags & RO_FLAG_HANGING); // for exit sign
+		bool const hanging(c.is_hanging()); // for exit sign
 		unsigned const skip_faces(hanging ? EF_Z2 : ~get_face_mask(c.dim, !c.dir)); // skip back face, top face if hanging
 		// what about transparent plastic back for hanging signs?
 		get_untextured_material(0, 0, 1).add_cube_to_verts_untextured(c, apply_light_color(c, WHITE), skip_faces); // back of the sign, always white (for now); unshadowed, small
@@ -2935,10 +2935,10 @@ void building_room_geom_t::add_window(room_object_t const &c, float tscale) { //
 	get_material(tex, 0).add_cube_to_verts(window, c.color, c.get_llc(), skip_faces); // no apply_light_color()
 }
 
-colorRGBA const &get_outlet_or_switch_box_color(room_object_t const &c) {return ((c.flags & RO_FLAG_HANGING) ? GRAY : c.color);} // should be silver metal
+colorRGBA const &get_outlet_or_switch_box_color(room_object_t const &c) {return (c.is_hanging() ? GRAY : c.color);} // should be silver metal
 
 void building_room_geom_t::add_switch(room_object_t const &c, bool draw_detail_pass) { // light switch, etc.
-	float const scaled_depth(((c.flags & RO_FLAG_HANGING) ? 0.2 : 1.0)*c.get_sz_dim(c.dim)); // non-recessed switch has smaller face plate depth
+	float const scaled_depth((c.is_hanging() ? 0.2 : 1.0)*c.get_sz_dim(c.dim)); // non-recessed switch has smaller face plate depth
 	room_object_t plate(c);
 	plate.d[c.dim][!c.dir] -= (c.dir ? -1.0 : 1.0)*0.70*scaled_depth; // front face of plate
 
@@ -2988,7 +2988,7 @@ void building_room_geom_t::add_outlet(room_object_t const &c) {
 void building_room_geom_t::add_vent(room_object_t const &c) {
 	int const tid(get_texture_by_name("interiors/vent.jpg"));
 
-	if (c.flags & RO_FLAG_HANGING) { // vent on a ceiling
+	if (c.is_hanging()) { // vent on a ceiling
 		rgeom_mat_t &front_mat(get_material(tid_nm_pair_t(tid, 0.0, 0), 0, 0, 2)); // small=2/detail
 		front_mat.add_cube_to_verts(c, c.color, zero_vector, ~EF_Z1, !c.dim); // textured bottom face; always fully lit to match wall
 		get_untextured_material(0, 0, 2).add_cube_to_verts_untextured(c, c.color, EF_Z12); // sides: unshadowed, small; skip top and bottom face
