@@ -275,7 +275,8 @@ void building_t::add_attic_objects(rand_gen_t rgen) {
 			test_cube.d[dim][dir] += (dir ? 1.0 : -1.0)*0.5*furnace.get_sz_dim(dim); // add clearance in front
 			if (has_bcube_int(test_cube, avoid_cubes) || !cube_in_attic(furnace)) continue;
 			unsigned const flags((is_house ? RO_FLAG_IS_HOUSE : 0) | obj_flags);
-			interior->room_geom->objs.emplace_back(furnace, TYPE_FURNACE, room_id, dim, dir, flags, light_amt);
+			objs.emplace_back(furnace, TYPE_FURNACE, room_id, dim, dir, flags, light_amt);
+			add_attic_ductwork(rgen, furnace, dim, avoid_cubes);
 			avoid_cubes.push_back(test_cube);
 			break; // success/done
 		} // for n
@@ -637,16 +638,62 @@ void building_room_geom_t::add_attic_rafters(building_t const &b, float tscale) 
 	} // for i
 }
 
-// should there also be an add_basement_ductwork() for office buildings?
-void building_room_geom_t::add_attic_ductwork(building_t const &b) {
-	if (!b.has_attic()) return;
-	auto objs_end(get_placed_objs_end()); // skip buttons/stairs/elevators
+// 0=not in attic, 1=in attic with clearance, 2=in attic without clearance
+int building_t::vent_in_attic_test(cube_t const &vent, bool dim) const {
+	point test_pt(vent.xc(), vent.yc(), (vent.z2() + 1.1*get_fc_thickness()));
+	if (!point_in_attic(test_pt)) return 0; // not in attic
+	test_pt.z += vent.get_sz_dim(dim) + get_attic_beam_depth(); // check duct height + beam clearance
+	return (point_in_attic(test_pt) ? 1 : 2);
+}
 
-	for (auto i = objs.begin(); i != objs_end; ++i) {
+// should there also be an add_basement_ductwork() for office buildings?
+void building_t::add_attic_ductwork(rand_gen_t rgen, cube_t const &furnace, bool furnace_dim, vect_cube_t &avoid_cubes) {
+	assert(has_room_geom());
+	float const fc_thick(get_fc_thickness());
+	vect_room_object_t &objs(interior->room_geom->objs);
+	vect_room_object_t ducts;
+	unsigned const objs_start(objs.size());
+	bool const first_dim(furnace_dim); // make it consistent across vents to maximize sharing
+
+	// find all vents in the ceilings of upper floors just below the attic
+	for (auto i = objs.begin(); i != objs.end(); ++i) { // Note: can't use get_placed_objs_end() because buttons_start hasn't been set yet
 		if (i->type != TYPE_VENT) continue;
-		// TODO: check for attic floor/top ceiling
-		// TODO
+		if (vent_in_attic_test(*i, i->dim) != 1) continue; // check for attic floor/top ceiling and for roof clearance
+		cube_t duct(*i);
+		duct.z1() = i->z2() + fc_thick; // attic floor
+		duct.z2() = duct.z1() + i->get_sz_dim(!i->dim); // add duct height
+		// copy room_id from the vent, even though it's not in the same room as the vent; add to ducts rather than objs to avoid iterator invalidation
+		ducts.emplace_back(duct, TYPE_DUCT, i->room_id, 0, 0, (RO_FLAG_INTERIOR | RO_FLAG_IN_ATTIC), 1.0, SHAPE_CUBE, LT_GRAY);
 	} // for i
+	for (room_object_t &duct : ducts) {
+		bool const dirs[2] = {(duct.xc() < furnace.xc()), (duct.yc() < furnace.yc())};
+		float const duct_width(duct.get_sz_dim(duct.dim)), seg2_width_x(min(duct_width, 0.95f*furnace.dx())), seg2_width_y(min(duct_width, 0.95f*furnace.dy()));
+		cube_t port(furnace);
+		port.expand_by(vector3d(-0.5*(furnace.dx() - seg2_width_x), -0.5*(furnace.dy() - seg2_width_y), 0.0)); // shrink in X and Y
+
+		// extend horizontally to connect to the furnace while avoiding avoid_cubes
+		for (unsigned n = 0; n < 2; ++n) { // try both routing directions
+			bool const dim(first_dim ^ bool(n)), dir1(dirs[dim]), dir2(!dirs[!dim]);
+			room_object_t cand1(duct), cand2(duct);
+			cand2.x1() = port.x1(); cand2.y1() = port.y1(); cand2.x2() = port.x2(); cand2.y2() = port.y2();
+			cand1.d[ dim][dir1] = port.d[ dim][dir1]; // extend to the furnace port
+			cand2.d[!dim][dir2] = duct.d[!dim][dir2]; // extend to the duct
+			assert(cand1.is_strictly_normalized());
+			assert(cand2.is_strictly_normalized());
+			if (has_bcube_int(cand1, avoid_cubes) || has_bcube_int(cand2, avoid_cubes)) continue; // bad routing
+			cand1.dim = dim; cand2.dim = !dim; // set dim; dir is unused
+			// TODO: remove overlaps
+			// TODO: move furnace up so that ducts can go under it
+			
+			for (auto i = objs.begin()+objs_start; i != objs.end(); ++i) {
+				// TODO: merge to previously placed duct
+			}
+			objs.push_back(cand1);
+			objs.push_back(cand2);
+			break; // success
+		} // for n
+	} // for ducts
+	for (auto i = objs.begin()+objs_start; i != objs.end(); ++i) {avoid_cubes.push_back(*i);} // add ducts to avoid_cubes
 }
 
 void building_room_geom_t::add_chimney(room_object_t const &c, tid_nm_pair_t const &tex) { // inside attic

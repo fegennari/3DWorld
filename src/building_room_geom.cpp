@@ -1360,7 +1360,7 @@ void building_room_geom_t::add_pipe(room_object_t const &c) { // should be SHAPE
 }
 
 void building_room_geom_t::add_duct(room_object_t const &c) {
-	unsigned const skip_faces(c.is_hanging() ? EF_Z2 : EF_Z1);
+	unsigned const skip_faces(c.in_attic() ? EF_Z1 : EF_Z2);
 	get_untextured_material(1, 0, 2).add_cube_to_verts_untextured(c, c.color, skip_faces); // shadowed, detail, not using lit color
 }
 

@@ -814,7 +814,6 @@ struct building_room_geom_t {
 	void add_breaker_panel(room_object_t const &c);
 	void add_attic_door(room_object_t const &c, float tscale);
 	void add_attic_rafters(building_t const &b, float tscale);
-	void add_attic_ductwork(building_t const &b);
 	void add_elevator(room_object_t const &c, float tscale, float fc_thick_scale, unsigned floor_offset, bool has_parking_garage, bool is_powered);
 	void add_elevator_doors(elevator_t const &e, float fc_thick_scale);
 	void add_light(room_object_t const &c, float tscale);
@@ -1459,6 +1458,8 @@ private:
 	void add_pri_hall_objs   (rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt);
 	void assign_attic_type   (rand_gen_t rgen);
 	void add_attic_objects   (rand_gen_t rgen);
+	void add_attic_ductwork  (rand_gen_t rgen, cube_t const &furnace, bool furnace_dim, vect_cube_t &avoid_cubes);
+	int vent_in_attic_test(cube_t const &vent, bool dim) const;
 	vector3d get_parked_car_size() const;
 	void add_parking_garage_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned floor_ix,
 		unsigned num_floors, unsigned &nlights_x, unsigned &nlights_y, float &light_delta_z);
