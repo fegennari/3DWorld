@@ -1360,8 +1360,12 @@ void building_room_geom_t::add_pipe(room_object_t const &c) { // should be SHAPE
 }
 
 void building_room_geom_t::add_duct(room_object_t const &c) {
-	unsigned const skip_faces(c.in_attic() ? EF_Z1 : EF_Z2);
-	get_untextured_material(1, 0, 2).add_cube_to_verts_untextured(c, c.color, skip_faces); // shadowed, detail, not using lit color
+	if (c.shape == SHAPE_CUBE) {
+		unsigned const skip_faces(c.in_attic() ? EF_Z1 : EF_Z2);
+		get_metal_material(1, 0, 2).add_cube_to_verts_untextured(c, c.color, skip_faces); // shadowed, detail, not using lit color
+	}
+	else if (c.shape == SHAPE_CYLIN) {add_pipe(c);} // draw using pipe logic
+	else {assert(0);} // unsupported shape
 }
 
 void building_room_geom_t::add_curb(room_object_t const &c) {
@@ -2463,32 +2467,40 @@ void add_furnace_pipe_with_bend(room_object_t const &c, rgeom_mat_t &mat, colorR
 	add_pipe_with_bend(mat, color, bot_pos, entry_pos, bend, ndiv, pipe_radius, 0); // draw_ends=0
 }
 void building_room_geom_t::add_furnace(room_object_t const &c) {
-	add_obj_with_front_texture(c, "interiors/furnace.jpg", get_furnace_color(), 1); // small=1
+	colorRGBA const duct_color(apply_light_color(c, LT_GRAY));
+	room_object_t main_unit(c);
+	cube_t base(c); // base area below the furnace that connects to the ducts
+	main_unit.z1() = base.z2() = c.z1() + 0.167*c.dz();
+	float const expand_amt(0.01*c.get_sz_dim(!c.dim));
+	base.expand_in_dim(!c.dim, expand_amt); // expand slightly in width
+	base.d[c.dim][c.dir] += (c.dir ? 1.0 : -1.0)*expand_amt; // shift slightly outward in the front
+	add_obj_with_front_texture(main_unit, "interiors/furnace.jpg", get_furnace_color(), 1); // small=1
+	get_metal_material(1, 0, 1).add_cube_to_verts(base, duct_color, tex_origin, EF_Z1); // skip bottom face
 
 	if (c.in_attic()) {
-		// add ductwork ... somewhere?
+		// add ductwork on the top ... somewhere?
 	}
 	else { // basement: add ductwork up into the ceiling; not a collision object
 		cube_t duct(c);
 		duct.d[c.dim][c.dir] -= (c.dir ? 1.0 : -1.0)*0.35*c.get_sz_dim(c.dim); // shift inward toward back
 		duct.expand_in_dim(!c.dim, -0.05*c.get_sz_dim(!c.dim)); // shrink slightly
-		set_cube_zvals(duct, c.z2(), c.z2()+0.5*c.dz());
-		get_metal_material(1, 0, 1).add_cube_to_verts(duct, apply_light_color(c, GRAY), tex_origin, EF_Z12); // skip top and bottom faces
+		set_cube_zvals(duct, c.z2(), c.z2()+0.6*c.dz()); // extend to cover the remaining gap between the top of the furnace and the ceiling
+		get_metal_material(1, 0, 1).add_cube_to_verts(duct, duct_color, tex_origin, EF_Z12); // skip top and bottom faces
 	}
 	// add pipes
 	bool const low_detail = 1;
 	unsigned const pipe_ndiv(get_rgeom_sphere_ndiv(low_detail));
 	// insulated
 	rgeom_mat_t &insul_mat(get_metal_material(1, 0, 1, WHITE)); // black reflective tape (not actually metal); shadows=1, small=1
-	add_furnace_pipe_with_bend(c, insul_mat, apply_light_color(c, BLACK), pipe_ndiv, 0.02, 0.87, 0.38, 2.2);
+	add_furnace_pipe_with_bend(c, insul_mat, apply_light_color(c, BLACK), pipe_ndiv, 0.02, 0.87, 0.484, 2.2);
 	// copper
 	rgeom_mat_t &copper_mat(get_metal_material(1, 0, 1, COPPER_C)); // shadows=1, small=1
-	add_furnace_pipe_with_bend(c, copper_mat, apply_light_color(c, COPPER_C), pipe_ndiv, 0.007, 0.88, 0.34, 1.6);
+	add_furnace_pipe_with_bend(c, copper_mat, apply_light_color(c, COPPER_C), pipe_ndiv, 0.007, 0.88, 0.45, 1.6);
 	// drain (2x)
 	rgeom_mat_t &plastic_mat(get_untextured_material(1, 0, 1)); // shadows=1, small=1
 
 	for (unsigned d = 0; d < 2; ++d) {
-		add_furnace_pipe_with_bend(c, plastic_mat, apply_light_color(c, WHITE), pipe_ndiv, 0.016, (d ? 0.08 : 0.17), 0.04, 1.8);
+		add_furnace_pipe_with_bend(c, plastic_mat, apply_light_color(c, WHITE), pipe_ndiv, 0.016, (d ? 0.081 : 0.173), 0.2, 1.8);
 	}
 }
 

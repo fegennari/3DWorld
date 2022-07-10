@@ -659,9 +659,10 @@ void building_t::add_attic_ductwork(rand_gen_t rgen, cube_t const &furnace, bool
 	for (auto i = objs.begin(); i != objs.end(); ++i) { // Note: can't use get_placed_objs_end() because buttons_start hasn't been set yet
 		if (i->type != TYPE_VENT) continue;
 		if (vent_in_attic_test(*i, i->dim) != 1) continue; // check for attic floor/top ceiling and for roof clearance
+		float const duct_height(0.72*i->get_sz_dim(!i->dim)); // smaller than the opening; allows the player to walk over the duct more easily
 		cube_t duct(*i);
 		duct.z1() = i->z2() + fc_thick; // attic floor
-		duct.z2() = duct.z1() + i->get_sz_dim(!i->dim); // add duct height
+		duct.z2() = duct.z1() + duct_height;
 		// copy room_id from the vent, even though it's not in the same room as the vent; add to ducts rather than objs to avoid iterator invalidation
 		ducts.emplace_back(duct, TYPE_DUCT, i->room_id, 0, 0, (RO_FLAG_INTERIOR | RO_FLAG_IN_ATTIC), 1.0, SHAPE_CUBE, LT_GRAY);
 	} // for i
@@ -676,20 +677,17 @@ void building_t::add_attic_ductwork(rand_gen_t rgen, cube_t const &furnace, bool
 			bool const dim(first_dim ^ bool(n)), dir1(dirs[dim]), dir2(!dirs[!dim]);
 			room_object_t cand1(duct), cand2(duct);
 			cand2.x1() = port.x1(); cand2.y1() = port.y1(); cand2.x2() = port.x2(); cand2.y2() = port.y2();
-			cand1.d[ dim][dir1] = port.d[ dim][dir1]; // extend to the furnace port
-			cand2.d[!dim][dir2] = duct.d[!dim][dir2]; // extend to the duct
-			assert(cand1.is_strictly_normalized());
+			cand1.d[ dim][dir1] = port.d[ dim][!dir1]; // extend to the furnace port
+			cand2.d[!dim][dir2] = duct.d[!dim][ dir2]; // extend to the duct
 			assert(cand2.is_strictly_normalized());
 			if (has_bcube_int(cand1, avoid_cubes) || has_bcube_int(cand2, avoid_cubes)) continue; // bad routing
 			cand1.dim = dim; cand2.dim = !dim; // set dim; dir is unused
-			// TODO: remove overlaps
-			// TODO: move furnace up so that ducts can go under it
 			
 			for (auto i = objs.begin()+objs_start; i != objs.end(); ++i) {
 				// TODO: merge to previously placed duct
 			}
-			objs.push_back(cand1);
-			objs.push_back(cand2);
+			if (cand1.is_strictly_normalized()) {objs.push_back(cand1);} // add if not already inside the bounds of the furnace (stratight connection)
+			if (cand2.is_strictly_normalized()) {objs.push_back(cand2);} // add second segment to furnace
 			break; // success
 		} // for n
 	} // for ducts

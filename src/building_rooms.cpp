@@ -2606,7 +2606,8 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 
 		// place objects on each floor for this room
 		for (unsigned f = 0; f < num_floors; ++f, z += floor_height) {
-			room_center.z = z + fc_thick; // floor height
+			float const floor_zval(z + fc_thick);
+			room_center.z = floor_zval;
 			// top floor may have stairs connecting to upper stack
 			bool const top_floor(f+1 == num_floors);
 			bool const has_stairs_this_floor(r->has_stairs_on_floor(f));
@@ -2875,9 +2876,9 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			add_outlets_to_room(rgen, *r, room_center.z, room_id, objs_start, is_ground_floor, is_basement);
 			if (has_light) {add_light_switches_to_room(rgen, *r, room_center.z, room_id, objs_start, is_ground_floor, is_basement);} // add light switch if room has a light
 			
-			if (!r->is_hallway) { // no vents in hallways
-				if (is_house) {add_ceil_vent_to_room(rgen, *r, room_center.z, room_id, objs_start);} // house vents
-				else          {add_wall_vent_to_room(rgen, *r, room_center.z, room_id, objs_start);} // office building vents
+			if (!r->is_hallway) { // no vents in hallways; vents use orig floor zval, not adjusted for bathroom tile floor
+				if (is_house) {add_ceil_vent_to_room(rgen, *r, floor_zval, room_id, objs_start);} // house vents
+				else          {add_wall_vent_to_room(rgen, *r, floor_zval, room_id, objs_start);} // office building vents
 			}
 			// pictures and whiteboards must not be placed behind anything, excluding trashcans; so we add them here
 			bool const can_hang((is_house || !(is_bathroom || is_kitchen || no_whiteboard)) && !is_storage); // no whiteboards in office bathrooms or kitchens

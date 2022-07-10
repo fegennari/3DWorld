@@ -124,7 +124,8 @@ bool building_t::add_water_heaters(rand_gen_t &rgen, room_t const &room, float z
 }
 
 bool gen_furnace_cand(cube_t const &place_area, float floor_spacing, bool near_wall, rand_gen_t &rgen, cube_t &furnace, bool &dim, bool &dir) {
-	float const height(0.6*floor_spacing), hwidth(0.2*height), hdepth(0.25*height);
+	// my furnace is 45" tall, 17.5" wide, and 21" deep, with a 9" tall duct below (total height = 54"); assume floor spacing is 96"
+	float const height(0.563*floor_spacing), hwidth(0.182*height), hdepth(0.219*height);
 	if (hdepth > 5.0*min(place_area.dx(), place_area.dy())) return 0; // place area is too small
 	dim = rgen.rand_bool();
 	point center;
