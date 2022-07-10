@@ -2466,8 +2466,12 @@ void add_furnace_pipe_with_bend(room_object_t const &c, rgeom_mat_t &mat, colorR
 	bot_pos.z = c.z1();
 	add_pipe_with_bend(mat, color, bot_pos, entry_pos, bend, ndiv, pipe_radius, 0); // draw_ends=0
 }
+void narrow_furnace_intake(cube_t &duct, room_object_t const &c) {
+	duct.d[c.dim][c.dir] -= (c.dir ? 1.0 : -1.0)*0.35*c.get_sz_dim(c.dim); // shift inward toward back
+	duct.expand_in_dim(!c.dim, -0.05*c.get_sz_dim(!c.dim)); // shrink slightly
+}
 void building_room_geom_t::add_furnace(room_object_t const &c) {
-	colorRGBA const duct_color(apply_light_color(c, LT_GRAY));
+	colorRGBA const duct_color(apply_light_color(c, DUCT_COLOR));
 	room_object_t main_unit(c);
 	cube_t base(c); // base area below the furnace that connects to the ducts
 	main_unit.z1() = base.z2() = c.z1() + 0.167*c.dz();
@@ -2482,8 +2486,7 @@ void building_room_geom_t::add_furnace(room_object_t const &c) {
 	}
 	else { // basement: add ductwork up into the ceiling; not a collision object
 		cube_t duct(c);
-		duct.d[c.dim][c.dir] -= (c.dir ? 1.0 : -1.0)*0.35*c.get_sz_dim(c.dim); // shift inward toward back
-		duct.expand_in_dim(!c.dim, -0.05*c.get_sz_dim(!c.dim)); // shrink slightly
+		narrow_furnace_intake(duct, c);
 		set_cube_zvals(duct, c.z2(), c.z2()+0.6*c.dz()); // extend to cover the remaining gap between the top of the furnace and the ceiling
 		get_metal_material(1, 0, 1).add_cube_to_verts(duct, duct_color, tex_origin, EF_Z12); // skip top and bottom faces
 	}

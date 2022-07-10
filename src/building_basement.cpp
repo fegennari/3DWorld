@@ -139,7 +139,7 @@ bool gen_furnace_cand(cube_t const &place_area, float floor_spacing, bool near_w
 	}
 	else {
 		center[dim] = rgen.rand_uniform(lo, hi);
-		dir = (center[dim] < place_area.get_center_dim(dim)); // face the center of the room
+		dir = (center[dim] < place_area.get_center_dim(dim)); // face the center of the room (attic or above hallway/stairs)
 	}
 	center[!dim] = rgen.rand_uniform(place_area.d[!dim][0]+hwidth, place_area.d[!dim][1]-hwidth);
 	set_wall_width(furnace, center[ dim], hdepth,  dim);

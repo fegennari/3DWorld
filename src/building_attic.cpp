@@ -16,6 +16,7 @@ void try_add_lamp(cube_t const &place_area, float floor_spacing, unsigned room_i
 bool gen_furnace_cand(cube_t const &place_area, float floor_spacing, bool near_wall, rand_gen_t &rgen, cube_t &furnace, bool &dim, bool &dir);
 bool add_obj_to_closet(room_object_t const &c, cube_t const &interior, vect_room_object_t &objects, vect_cube_t &cubes,
 	rand_gen_t &rgen, vector3d const &sz, unsigned obj_type, unsigned flags, room_obj_shape shape=SHAPE_CUBE);
+void narrow_furnace_intake(cube_t &duct, room_object_t const &c);
 
 
 bool building_t::point_under_attic_roof(point const &pos, vector3d *const cnorm) const {
@@ -169,9 +170,8 @@ void create_attic_posts(building_t const &b, cube_t const &beam, bool dim, cube_
 
 void building_t::add_attic_objects(rand_gen_t rgen) {
 	assign_attic_type(rgen); // must be done after roof is added, not in add_attic_access_door()
-	unsigned const obj_flags(RO_FLAG_INTERIOR | RO_FLAG_IN_ATTIC);
 	vect_room_object_t &objs(interior->room_geom->objs);
-	unsigned const objs_start(objs.size());
+	unsigned const objs_start(objs.size()), obj_flags(RO_FLAG_INTERIOR | RO_FLAG_IN_ATTIC);
 	// add attic access door
 	cube_with_ix_t adoor(interior->attic_access);
 	assert(adoor.is_strictly_normalized());
@@ -267,17 +267,42 @@ void building_t::add_attic_objects(rand_gen_t rgen) {
 	place_area.expand_by_xy(-0.75*floor_spacing); // keep away from corners; just a guess; applies to boxes and furnace
 
 	if (interior->furnace_type == FTYPE_ATTIC) { // add furnace in the attic
+		// place the furnace above the room where the air intake should be (hallway or stairs room), if there is one
+		int const furnace_room(choose_air_intake_room());
+		cube_t furnace_place_area(place_area);
+
+		if (furnace_room >= 0) {
+			furnace_place_area = get_room(furnace_room);
+			furnace_place_area.z1() = place_area.z1();
+			furnace_place_area.intersect_with_cube_xy(place_area); // must also be contained within the full place area
+		}
 		for (unsigned n = 0; n < 100; ++n) { // 100 tries
+			if (n == 50) {furnace_place_area = place_area;} // revert to full place area if we haven't found a candidate after 50 iterations
 			cube_t furnace;
 			bool dim(0), dir(0);
-			if (!gen_furnace_cand(place_area, floor_spacing, 0, rgen, furnace, dim, dir)) break; // near_wall=0
+			if (!gen_furnace_cand(furnace_place_area, floor_spacing, 0, rgen, furnace, dim, dir)) break; // near_wall=0
 			cube_t test_cube(furnace);
 			test_cube.d[dim][dir] += (dir ? 1.0 : -1.0)*0.5*furnace.get_sz_dim(dim); // add clearance in front
 			if (has_bcube_int(test_cube, avoid_cubes) || !cube_in_attic(furnace)) continue;
 			unsigned const flags((is_house ? RO_FLAG_IS_HOUSE : 0) | obj_flags);
-			objs.emplace_back(furnace, TYPE_FURNACE, room_id, dim, dir, flags, light_amt);
-			add_attic_ductwork(rgen, furnace, dim, avoid_cubes);
+			room_object_t const furnace_obj(furnace, TYPE_FURNACE, room_id, dim, dir, flags, light_amt);
+			objs.push_back(furnace_obj);
+			add_attic_ductwork(rgen, furnace_obj, avoid_cubes);
 			avoid_cubes.push_back(test_cube);
+
+			if (furnace_room >= 0) { // place an intake vent in the ceiling of this room under the furnace
+				cube_t vent(furnace);
+				vent.expand_by_xy(-0.05*furnace.get_sz_dim(!dim)); // shrink slightly
+				vent.z2() = furnace.z1() - get_fc_thickness(); // ceiling of the room below
+				vent.z1() = vent.z2() - 0.1*get_wall_thickness();
+				bool place_ok(1);
+
+				// vent should be guaranteed to fit inside the room, but may intersect the light; skip it in this case
+				for (auto i = objs.begin(); i != objs.end(); ++i) {
+					if (i->type == TYPE_LIGHT && i->intersects(vent)) {place_ok = 0; break;}
+				}
+				if (place_ok) {objs.emplace_back(vent, TYPE_VENT, furnace_room, dim, 0, (RO_FLAG_NOCOLL | RO_FLAG_HANGING), 1.0);} // dir=0; fully lit
+			}
 			break; // success/done
 		} // for n
 	}
@@ -662,13 +687,30 @@ struct cmp_by_dist_ascending {
 };
 
 // should there also be an add_basement_ductwork() for office buildings?
-void building_t::add_attic_ductwork(rand_gen_t rgen, cube_t const &furnace, bool furnace_dim, vect_cube_t &avoid_cubes) {
+void building_t::add_attic_ductwork(rand_gen_t rgen, room_object_t const &furnace, vect_cube_t &avoid_cubes) {
 	assert(has_room_geom());
 	float const fc_thick(get_fc_thickness());
 	vect_room_object_t &objs(interior->room_geom->objs);
+	unsigned const duct_flags(RO_FLAG_INTERIOR | RO_FLAG_IN_ATTIC);
+
+	// attempt to add the intake vent to the top of the furnace if there's room under the roof
+	float const intake_depth(0.167*furnace.dz());
+	cube_t duct_top(furnace);
+	narrow_furnace_intake(duct_top, furnace);
+	duct_top.z2() += intake_depth; // make it taller
+	cube_t intake(duct_top);
+	duct_top.z1() = furnace.z2();
+	intake.d[furnace.dim][ furnace.dir]  = furnace.d[furnace.dim][!furnace.dir]; // back of furnace
+	intake.d[furnace.dim][!furnace.dir] -= (furnace.dir ? 1.0 : -1.0)*intake_depth; // back of intake
+
+	if (cube_in_attic(duct_top) && cube_in_attic(intake)) {
+		cube_t const cubes[2] = {duct_top, intake};
+		for (unsigned d = 0; d < 2; ++d) {objs.emplace_back(cubes[d], TYPE_DUCT, furnace.room_id, furnace.dim, 0, duct_flags, 1.0, SHAPE_CUBE, DUCT_COLOR);}
+	}
+	// add ducts on the attic floor
 	vect_room_object_t ducts;
 	unsigned const objs_start(objs.size());
-	bool const first_dim(furnace_dim); // make it consistent across vents to maximize sharing
+	bool const first_dim(furnace.dim); // make it consistent across vents to maximize sharing
 
 	// find all vents in the ceilings of upper floors just below the attic
 	for (auto i = objs.begin(); i != objs.end(); ++i) { // Note: can't use get_placed_objs_end() because buttons_start hasn't been set yet
@@ -679,7 +721,7 @@ void building_t::add_attic_ductwork(rand_gen_t rgen, cube_t const &furnace, bool
 		duct.z1() = i->z2() + fc_thick; // attic floor
 		duct.z2() = duct.z1() + duct_height;
 		// copy room_id from the vent, even though it's not in the same room as the vent; add to ducts rather than objs to avoid iterator invalidation
-		ducts.emplace_back(duct, TYPE_DUCT, i->room_id, 0, 0, (RO_FLAG_INTERIOR | RO_FLAG_IN_ATTIC), 1.0, SHAPE_CUBE, LT_GRAY);
+		ducts.emplace_back(duct, TYPE_DUCT, i->room_id, 0, 0, duct_flags, 1.0, SHAPE_CUBE, DUCT_COLOR);
 	} // for i
 	// sort ducts furthest to closest to the furnace so that shorter runs can be connected to existing longer runs
 	sort(ducts.begin(), ducts.end(), cmp_by_dist_ascending(furnace.get_cube_center()));
@@ -745,6 +787,17 @@ void building_t::add_attic_ductwork(rand_gen_t rgen, cube_t const &furnace, bool
 		if (use_extend) {objs.push_back(extend_duct);} // use straight extension
 	} // for ducts
 	for (auto i = objs.begin()+objs_start; i != objs.end(); ++i) {avoid_cubes.push_back(*i);} // add ducts to avoid_cubes
+}
+
+int building_t::choose_air_intake_room() const {
+	int best_room(-1); // start at not found
+
+	for (auto r = interior->rooms.begin(); r != interior->rooms.end(); ++r) {
+		if (has_attic() && !get_attic_part().contains_cube(*r)) continue; // if there's an attic, the room must be in the same part as it
+		if (r->is_hallway) {return (r - interior->rooms.begin());} // hallway is always the best room, return it now
+		if (r->has_stairs == 255) {best_room = (r - interior->rooms.begin());} // check for stairs on all floors; return this room unless a hallway is found later
+	}
+	return best_room;
 }
 
 void building_room_geom_t::add_chimney(room_object_t const &c, tid_nm_pair_t const &tex) { // inside attic
