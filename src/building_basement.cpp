@@ -48,7 +48,7 @@ void subtract_cubes_from_cube_split_in_dim(cube_t const &c, vect_cube_t const &s
 	} // for s
 }
 
-bool building_t::add_water_heaters(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
+unsigned building_t::add_water_heaters(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
 	float const floor_spacing(get_window_vspace()), height(get_floor_ceil_gap());
 	float const radius((is_house ? 0.18 : 0.20)*height); // larger radius for office buildings
 	cube_t const room_bounds(get_walkable_room_bounds(room));
@@ -98,6 +98,7 @@ bool building_t::add_water_heaters(rand_gen_t &rgen, room_t const &room, float z
 		if (overlaps_other_room_obj(c_exp, objs_start)) continue; // check existing objects, in particular storage room boxes that will have already been placed
 		unsigned const flags((is_house ? RO_FLAG_IS_HOUSE : 0) | RO_FLAG_INTERIOR);
 		objs.emplace_back(c, TYPE_WHEATER, room_id, dim, !dir, flags, tot_light_amt, SHAPE_CYLIN);
+		unsigned num_added(1);
 
 		if (!is_house && n < 4) { // office building, placed at corner; try to add additional water heaters along the wall
 			vector3d step;
@@ -116,9 +117,10 @@ bool building_t::add_water_heaters(rand_gen_t &rgen, room_t const &room, float z
 				c_exp.translate(step);
 				if (overlaps_other_room_obj(c_exp, objs_start)) continue; // check existing objects
 				objs.emplace_back(c, TYPE_WHEATER, room_id, dim, !dir, flags, tot_light_amt, SHAPE_CYLIN);
+				++num_added;
 			} // for m
 		}
-		return 1; // done
+		return num_added; // done
 	} // for n
 	return 0;
 }
@@ -151,26 +153,7 @@ bool building_t::add_basement_utility_objs(rand_gen_t rgen, room_t const &room, 
 	if (!has_room_geom()) return 0;
 	// place water heater
 	bool was_added(add_water_heaters(rgen, room, zval, room_id, tot_light_amt, objs_start));
-	
-	if (interior->furnace_type == FTYPE_BASEMENT) { // place furnace in the basement
-		float const floor_spacing(get_window_vspace());
-		cube_t place_area(get_walkable_room_bounds(room));
-		place_area.expand_by(-get_trim_thickness());
-		place_area.z1() = zval;
-
-		for (unsigned n = 0; n < 100; ++n) { // 100 tries
-			cube_t furnace;
-			bool dim(0), dir(0);
-			if (!gen_furnace_cand(place_area, floor_spacing, 1, rgen, furnace, dim, dir)) break; // near_wall=1
-			cube_t test_cube(furnace);
-			test_cube.d[dim][dir] += (dir ? 1.0 : -1.0)*0.5*furnace.get_sz_dim(dim); // add clearance in front
-			if (is_cube_close_to_doorway(test_cube, room, 0.0, 1) || interior->is_blocked_by_stairs_or_elevator(test_cube) || overlaps_other_room_obj(test_cube, objs_start)) continue;
-			unsigned const flags((is_house ? RO_FLAG_IS_HOUSE : 0) | RO_FLAG_INTERIOR);
-			interior->room_geom->objs.emplace_back(furnace, TYPE_FURNACE, room_id, dim, dir, flags, tot_light_amt);
-			was_added = 1;
-			break; // success/done
-		} // for n
-	}
+	if (interior->furnace_type == FTYPE_BASEMENT) {was_added |= add_furnace_to_room(rgen, room, zval, room_id, tot_light_amt, objs_start);} // place furnace in basement
 	return was_added;
 }
 
@@ -178,12 +161,34 @@ bool building_t::add_basement_utility_objs(rand_gen_t rgen, room_t const &room, 
 bool building_t::add_office_utility_objs(rand_gen_t rgen, room_t const &room, float &zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
 	zval       = add_flooring(room, zval, room_id, tot_light_amt, FLOORING_CONCRETE); // add concreate and move the effective floor up
 	objs_start = interior->room_geom->objs.size(); // exclude this from collision checks
-	// for now, this is only the water heater; we may want to add other objects later
-	if (!add_water_heaters(rgen, room, zval, room_id, tot_light_amt, objs_start)) return 0; // and TYPE_FURNACE?
+	unsigned const num_water_heaters(add_water_heaters(rgen, room, zval, room_id, tot_light_amt, objs_start));
+	if (num_water_heaters == 0) return 0;
+	// add one furnace per water heater
+	for (unsigned n = 0; n < num_water_heaters; ++n) {add_furnace_to_room(rgen, room, zval, room_id, tot_light_amt, objs_start);}
 	cube_t place_area(get_walkable_room_bounds(room));
 	place_model_along_wall(OBJ_MODEL_SINK, TYPE_SINK, room, 0.45, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 0.6); // place janitorial sink
 	add_door_sign("Utility", room, zval, room_id, tot_light_amt);
 	return 1;
+}
+
+bool building_t::add_furnace_to_room(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
+	float const floor_spacing(get_window_vspace());
+	cube_t place_area(get_walkable_room_bounds(room));
+	place_area.expand_by(-get_trim_thickness());
+	place_area.z1() = zval;
+
+	for (unsigned n = 0; n < 100; ++n) { // 100 tries
+		cube_t furnace;
+		bool dim(0), dir(0);
+		if (!gen_furnace_cand(place_area, floor_spacing, 1, rgen, furnace, dim, dir)) break; // near_wall=1
+		cube_t test_cube(furnace);
+		test_cube.d[dim][dir] += (dir ? 1.0 : -1.0)*0.5*furnace.get_sz_dim(dim); // add clearance in front
+		if (is_cube_close_to_doorway(test_cube, room, 0.0, 1) || interior->is_blocked_by_stairs_or_elevator(test_cube) || overlaps_other_room_obj(test_cube, objs_start)) continue;
+		unsigned const flags((is_house ? RO_FLAG_IS_HOUSE : 0) | RO_FLAG_INTERIOR);
+		interior->room_geom->objs.emplace_back(furnace, TYPE_FURNACE, room_id, dim, dir, flags, tot_light_amt);
+		return 1; // success/done
+	} // for n
+	return 0; // failed
 }
 
 vector3d building_t::get_parked_car_size() const {
