@@ -301,7 +301,7 @@ void building_t::add_attic_objects(rand_gen_t rgen) {
 				for (auto i = objs.begin(); i != objs.end(); ++i) {
 					if (i->type == TYPE_LIGHT && i->intersects(vent)) {place_ok = 0; break;}
 				}
-				if (place_ok) {objs.emplace_back(vent, TYPE_VENT, furnace_room, dim, 0, (RO_FLAG_NOCOLL | RO_FLAG_HANGING), 1.0);} // dir=0; fully lit
+				if (place_ok) {objs.emplace_back(vent, TYPE_VENT, furnace_room, dim, 0, (RO_FLAG_NOCOLL | RO_FLAG_HANGING), 1.0);} // dir=0/horizontal; fully lit
 			}
 			break; // success/done
 		} // for n
@@ -679,6 +679,19 @@ bool duct_merges_to_xy(cube_t const &from, cube_t const &to) { // Note: assumes 
 	return ((from.x1() >= to.x1() && from.x2() <= to.x2()) || (from.y1() >= to.y1() && from.y2() <= to.y2())); // check either X and Y dims for containment
 }
 
+bool maybe_clip_overlapping_duct(room_object_t &duct, vect_room_object_t const &objs, unsigned objs_start) {
+	static vect_cube_t parts;
+
+	for (auto i = objs.begin()+objs_start; i != objs.end(); ++i) {
+		if (!i->intersects(duct)) continue;
+		subtract_cube_from_cube(duct, *i, parts);
+		if (parts.empty()) return 0; // contained? shouldn't happen
+		if (parts.size() == 1) {duct.copy_from(parts[0]);} // single part - clip to shorter length to remove the overlap
+		parts.clear();
+	}
+	return 1;
+}
+
 struct cmp_by_dist_ascending {
 	point const ref_pt;
 	cmp_by_dist_ascending(point const &ref_pt_) : ref_pt(ref_pt_) {}
@@ -691,21 +704,21 @@ void building_t::add_attic_ductwork(rand_gen_t rgen, room_object_t const &furnac
 	assert(has_room_geom());
 	float const fc_thick(get_fc_thickness());
 	vect_room_object_t &objs(interior->room_geom->objs);
-	unsigned const duct_flags(RO_FLAG_INTERIOR | RO_FLAG_IN_ATTIC);
+	unsigned const duct_flags(RO_FLAG_INTERIOR | RO_FLAG_IN_ATTIC | RO_FLAG_ADJ_BOT);
 
 	// attempt to add the intake vent to the top of the furnace if there's room under the roof
-	float const intake_depth(0.167*furnace.dz());
+	float const intake_height(0.2*furnace.dz()); // slightly wider than vent ducts (0.167*dz)
 	cube_t duct_top(furnace);
 	narrow_furnace_intake(duct_top, furnace);
-	duct_top.z2() += intake_depth; // make it taller
+	duct_top.z2() += intake_height; // make it taller
 	cube_t intake(duct_top);
 	duct_top.z1() = furnace.z2();
 	intake.d[furnace.dim][ furnace.dir]  = furnace.d[furnace.dim][!furnace.dir]; // back of furnace
-	intake.d[furnace.dim][!furnace.dir] -= (furnace.dir ? 1.0 : -1.0)*intake_depth; // back of intake
+	intake.d[furnace.dim][!furnace.dir] -= (furnace.dir ? 1.0 : -1.0)*intake_height; // back of intake
 
 	if (cube_in_attic(duct_top) && cube_in_attic(intake)) {
 		cube_t const cubes[2] = {duct_top, intake};
-		for (unsigned d = 0; d < 2; ++d) {objs.emplace_back(cubes[d], TYPE_DUCT, furnace.room_id, furnace.dim, 0, duct_flags, 1.0, SHAPE_CUBE, DUCT_COLOR);}
+		for (unsigned d = 0; d < 2; ++d) {objs.emplace_back(cubes[d], TYPE_DUCT, furnace.room_id, furnace.dim, 1, duct_flags, 1.0, SHAPE_CUBE, DUCT_COLOR);} // dir=1; vertical
 	}
 	// add ducts on the attic floor
 	vect_room_object_t ducts;
@@ -774,6 +787,9 @@ void building_t::add_attic_ductwork(rand_gen_t rgen, room_object_t const &furnac
 				// in most cases, and that's the point of the sort, to avoid having to handle this case
 				if (i->contains_cube(cand2)) {use_cand2 = 0; break;} // cand2 can be skipped
 			}
+			if (use_cand1) {use_cand1 = maybe_clip_overlapping_duct(cand1, objs, objs_start);}
+			if (use_cand2) {use_cand2 = maybe_clip_overlapping_duct(cand2, objs, objs_start);}
+
 			if (use_extend) { // check if our route is shorter or longer than the extend length and use whichever is shorter
 				float tot_len(0.0);
 				if (use_cand1) {tot_len += cand1.get_sz_dim( dim);}
