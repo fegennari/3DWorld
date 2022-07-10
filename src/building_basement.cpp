@@ -476,7 +476,7 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 		}
 		add_basement_electrical(obstacles, walls, beams, room_id, pipe_light_amt, rgen);
 		// get pipe ends (risers) coming in through the ceiling
-		vect_riser_pos_t sewer, cold_water, hot_water;
+		vect_riser_pos_t sewer, cold_water, hot_water, gas_pipes;
 		get_pipe_basement_water_connections(sewer, cold_water, hot_water, rgen);
 		vect_cube_t pipe_cubes;
 		// hang sewer pipes under the ceiling beams; hang water pipes from the ceiling, above sewer pipes and through the beams
@@ -487,6 +487,9 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 		add_to_and_clear(pipe_cubes, obstacles); // add cold water pipes to obstacles
 		add_basement_pipes(obstacles, walls, beams, hot_water,  pipe_cubes, room_id, num_floors, pipe_light_amt, water_ceil_zval, rgen, PIPE_TYPE_HW  ); // hot water
 		add_to_and_clear(pipe_cubes, obstacles); // add hot water pipes to obstacles
+		get_pipe_basement_gas_connections(gas_pipes);
+		add_basement_pipes(obstacles, walls, beams, gas_pipes, pipe_cubes, room_id, num_floors, pipe_light_amt, water_ceil_zval, rgen, PIPE_TYPE_GAS, 1); // gas
+		add_to_and_clear(pipe_cubes, obstacles); // add gas pipes to obstacles
 		add_sprinkler_pipe(obstacles, walls, beams, pipe_cubes, room_id, num_floors, pipe_light_amt, rgen);
 	}
 }
