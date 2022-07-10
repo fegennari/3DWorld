@@ -747,6 +747,12 @@ bool building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 					if      (lo < range_min) {p1[d] = lo = 0.5*(lo + range_min); pipe.p1[d] = pipe.p2[d] = lo + pipe.radius;} // on the lo side
 					else if (hi > range_max) {p2[d] = hi = 0.5*(hi + range_max); pipe.p1[d] = pipe.p2[d] = hi - pipe.radius;} // on the hi side
 					skip = has_bcube_int(pipe_t(p1, p2, radius, d, PIPE_CONN, 3).get_bcube(), obstacles);
+
+					if (!skip) { // okay so far; now check that the new shortened pipe has a riser pos that's clear of walls and beams
+						point const new_riser_pos((lo < range_min) ? p1 : p2); // the end that was clipped
+						cube_t test_cube; test_cube.set_from_sphere(new_riser_pos, radius);
+						skip = (has_bcube_int(test_cube, walls) || has_bcube_int(test_cube, beams));
+					}
 				}
 				if (skip) {
 					unconn_radius = get_merged_pipe_radius(unconn_radius, pipe.radius, conn_pipe_merge_exp); // add this capacity for use in another riser
