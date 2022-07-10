@@ -92,7 +92,7 @@ cube_t get_closet_interior_space(room_object_t const &c, cube_t const cubes[5]) 
 	return interior;
 }
 
-void add_obj_to_closet(room_object_t const &c, cube_t const &interior, vect_room_object_t &objects, vect_cube_t &cubes,
+bool add_obj_to_closet(room_object_t const &c, cube_t const &interior, vect_room_object_t &objects, vect_cube_t &cubes,
 	rand_gen_t &rgen, vector3d const &sz, unsigned obj_type, unsigned flags, room_obj_shape shape=SHAPE_CUBE)
 {
 	for (unsigned n = 0; n < 4; ++n) { // make up to 4 attempts
@@ -104,9 +104,10 @@ void add_obj_to_closet(room_object_t const &c, cube_t const &interior, vect_room
 		if (!has_bcube_int(obj, cubes)) { // check for intersection with boxes
 			objects.emplace_back(obj, obj_type, c.room_id, c.dim, c.dir, flags, c.light_amt, shape);
 			cubes.push_back(obj);
-			break;
+			return 1; // success
 		}
 	} // for n
+	return 0; // failed
 }
 
 void try_add_lamp(cube_t const &place_area, float floor_spacing, unsigned room_id, unsigned flags, float light_amt,
