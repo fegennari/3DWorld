@@ -646,6 +646,18 @@ int building_t::vent_in_attic_test(cube_t const &vent, bool dim) const {
 	return (point_in_attic(test_pt) ? 1 : 2);
 }
 
+bool duct_merges_to_xy(cube_t const &from, cube_t const &to) { // Note: assumes <from> and <to> have the same z-ranges
+	if (!from.intersects_xy(to)) return 0;
+	return ((from.x1() >= to.x1() && from.x2() <= to.x2()) || (from.y1() >= to.y1() && from.y2() <= to.y2())); // check either X and Y dims for containment
+}
+
+struct cmp_by_dist_ascending {
+	point const ref_pt;
+	cmp_by_dist_ascending(point const &ref_pt_) : ref_pt(ref_pt_) {}
+	float get_dist(cube_t const &c) const {return (fabs(c.xc() - ref_pt.x) + fabs(c.yc() - ref_pt.y));} // Manhattan XY distance
+	bool operator()(cube_t const &a, cube_t const &b) const {return (get_dist(b) < get_dist(a));}
+};
+
 // should there also be an add_basement_ductwork() for office buildings?
 void building_t::add_attic_ductwork(rand_gen_t rgen, cube_t const &furnace, bool furnace_dim, vect_cube_t &avoid_cubes) {
 	assert(has_room_geom());
@@ -666,7 +678,17 @@ void building_t::add_attic_ductwork(rand_gen_t rgen, cube_t const &furnace, bool
 		// copy room_id from the vent, even though it's not in the same room as the vent; add to ducts rather than objs to avoid iterator invalidation
 		ducts.emplace_back(duct, TYPE_DUCT, i->room_id, 0, 0, (RO_FLAG_INTERIOR | RO_FLAG_IN_ATTIC), 1.0, SHAPE_CUBE, LT_GRAY);
 	} // for i
+	// sort ducts furthest to closest to the furnace so that shorter runs can be connected to existing longer runs
+	sort(ducts.begin(), ducts.end(), cmp_by_dist_ascending(furnace.get_cube_center()));
+
 	for (room_object_t &duct : ducts) {
+		bool added(0);
+
+		for (auto i = objs.begin()+objs_start; i != objs.end(); ++i) {
+			if (duct_merges_to_xy(duct, *i)) {objs.push_back(duct); added = 1; break;} // add vertical duct with no extension
+		}
+		if (added) continue; // done with this duct
+		// TODO: try straight line route to nearest existing duct, record length, and use if below path fails or has a longer length
 		bool const dirs[2] = {(duct.xc() < furnace.xc()), (duct.yc() < furnace.yc())};
 		float const duct_width(duct.get_sz_dim(duct.dim)), seg2_width_x(min(duct_width, 0.95f*furnace.dx())), seg2_width_y(min(duct_width, 0.95f*furnace.dy()));
 		cube_t port(furnace);
@@ -677,17 +699,22 @@ void building_t::add_attic_ductwork(rand_gen_t rgen, cube_t const &furnace, bool
 			bool const dim(first_dim ^ bool(n)), dir1(dirs[dim]), dir2(!dirs[!dim]);
 			room_object_t cand1(duct), cand2(duct);
 			cand2.x1() = port.x1(); cand2.y1() = port.y1(); cand2.x2() = port.x2(); cand2.y2() = port.y2();
-			cand1.d[ dim][dir1] = port.d[ dim][!dir1]; // extend to the furnace port
+			cand1.d[ dim][dir1] = port.d[ dim][!dir1]; // extend to the furnace port near side; may be denormalized and skipped below
 			cand2.d[!dim][dir2] = duct.d[!dim][ dir2]; // extend to the duct
 			assert(cand2.is_strictly_normalized());
 			if (has_bcube_int(cand1, avoid_cubes) || has_bcube_int(cand2, avoid_cubes)) continue; // bad routing
-			cand1.dim = dim; cand2.dim = !dim; // set dim; dir is unused
 			
-			for (auto i = objs.begin()+objs_start; i != objs.end(); ++i) {
-				// TODO: merge to previously placed duct
+			for (auto i = objs.begin()+objs_start; i != objs.end(); ++i) { // merge to previously placed ducts
+				// TODO: if duct overlaps *i on a full side then both cand1 and can2 can be skipped
+				if (0) {
+					cand1.set_to_zeros();
+					cand2.set_to_zeros();
+					break; // done
+				}
+				if (i->contains_cube(cand2)) {cand2.set_to_zeros();} // cand2 can be skipped
 			}
-			if (cand1.is_strictly_normalized()) {objs.push_back(cand1);} // add if not already inside the bounds of the furnace (stratight connection)
-			if (cand2.is_strictly_normalized()) {objs.push_back(cand2);} // add second segment to furnace
+			if (cand1.is_strictly_normalized()) {cand1.dim =  dim; objs.push_back(cand1);} // maybe add first  segment from vent
+			if (cand2.is_strictly_normalized()) {cand2.dim = !dim; objs.push_back(cand2);} // maybe add second segment to furnace
 			break; // success
 		} // for n
 	} // for ducts
