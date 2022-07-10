@@ -2688,6 +2688,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				if (!valid_lights.empty()) {light_obj_ix = objs.size();} // this will be the index of the light to be added later
 			}
 			rand_gen_t rgen_lights(rgen); // copy state so that we don't modify rgen
+			unsigned const objs_start_inc_lights(objs.size());
 
 			for (cube_t const &l : valid_lights) {
 				objs.emplace_back(l, TYPE_LIGHT, room_id, (light.dx() < light.dy()), 0, flags, light_amt, light_shape, color); // reclaculate dim; dir=0 (unused)
@@ -2877,7 +2878,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			if (has_light) {add_light_switches_to_room(rgen, *r, room_center.z, room_id, objs_start, is_ground_floor, is_basement);} // add light switch if room has a light
 			
 			if (!r->is_hallway) { // no vents in hallways; vents use orig floor zval, not adjusted for bathroom tile floor
-				if (is_house) {add_ceil_vent_to_room(rgen, *r, floor_zval, room_id, objs_start);} // house vents
+				if (is_house) {add_ceil_vent_to_room(rgen, *r, floor_zval, room_id, objs_start_inc_lights);} // house vents
 				else          {add_wall_vent_to_room(rgen, *r, floor_zval, room_id, objs_start);} // office building vents
 			}
 			// pictures and whiteboards must not be placed behind anything, excluding trashcans; so we add them here
