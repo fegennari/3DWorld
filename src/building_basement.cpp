@@ -726,6 +726,7 @@ bool building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 	mp[0][dim] = bcube.d[dim][1]; mp[1][dim] = bcube.d[dim][0]; // make dim range denormalized; will recalculate below with correct range
 	bool const d(!dim);
 	float const conn_pipe_merge_exp = 3.0; // cubic
+	unsigned const conn_pipes_start(pipes.size());
 
 	// connect drains to main pipe in !dim
 	for (auto const &v : xy_map) { // for each unique position along the main pipe
@@ -823,7 +824,17 @@ bool building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 					point ext[2] = {mp[dir], mp[dir]};
 					ext[side][!dim] = basement.d[!dim][side]; // shift this end to the basement wall
 					pipe_t const exit_pipe(ext[0], ext[1], r_main, !dim, PIPE_MEC, (side ? 1 : 2)); // add a bend in the side connecting to the main pipe
-					if (has_bcube_int(exit_pipe.get_bcube(), obstacles)) continue; // can't extend to the ext wall in this dim
+					cube_t const pipe_bcube(exit_pipe.get_bcube());
+					if (has_bcube_int(pipe_bcube, obstacles)) continue; // can't extend to the ext wall in this dim
+					bool bad_place(0);
+
+					// check if the pipe is too close to an existing conn pipe; allow it to contain the other pipe in dim
+					for (auto p = pipes.begin()+conn_pipes_start; p != pipes.end(); ++p) {
+						cube_t const other_bcube(p->get_bcube());
+						if (!pipe_bcube.intersects(other_bcube)) continue;
+						if (pipe_bcube.d[dim][0] > other_bcube.d[dim][0] || pipe_bcube.d[dim][1] < other_bcube.d[dim][1]) {bad_place = 1; break;}
+					}
+					if (bad_place) continue; // seems to usually fail
 					pipes.push_back(exit_pipe);
 					has_exit = 1;
 					main_pipe_end_flags = (dir ? 2 : 1); // connect the end going to the exit connector pipe
