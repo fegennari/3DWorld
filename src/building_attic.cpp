@@ -688,13 +688,31 @@ void building_t::add_attic_ductwork(rand_gen_t rgen, cube_t const &furnace, bool
 			if (duct_merges_to_xy(duct, *i)) {objs.push_back(duct); added = 1; break;} // add vertical duct with no extension
 		}
 		if (added) continue; // done with this duct
-		// TODO: try straight line route to nearest existing duct, record length, and use if below path fails or has a longer length
+		// find shortest straight line route to nearest existing duct, record length, and use if below path fails or has a longer length
+		room_object_t extend_duct;
+		float extend_len(0.0);
+		bool use_extend(0);
+
+		for (auto i = objs.begin()+objs_start; i != objs.end(); ++i) {
+			for (unsigned d = 0; d < 2; ++d) { // x,y
+				if (i->d[!d][0] > duct.d[!d][0] || i->d[!d][1] < duct.d[!d][1]) continue; // duct not contained in the other dim
+				bool const dir(duct.get_center_dim(d) < i->get_center_dim(d));
+				room_object_t cand(duct);
+				cand.d[d][dir] = i->d[d][!dir]; // extend to meet existing duct
+				assert(cand.is_strictly_normalized()); // is this too strong? continue in this case? or does the merge check above always set added=1 in this case?
+				float const len(cand.get_sz_dim(d));
+				if (extend_len > 0.0 && len > extend_len) continue; // longer than prev best connection
+				if (has_bcube_int(cand, avoid_cubes))     continue;
+				extend_duct = cand; extend_len = len; extend_duct.dim = d; use_extend = 1;
+			} // for d
+		} // for i
 		bool const dirs[2] = {(duct.xc() < furnace.xc()), (duct.yc() < furnace.yc())};
 		float const duct_width(duct.get_sz_dim(duct.dim)), seg2_width_x(min(duct_width, 0.95f*furnace.dx())), seg2_width_y(min(duct_width, 0.95f*furnace.dy()));
 		cube_t port(furnace);
 		port.expand_by(vector3d(-0.5*(furnace.dx() - seg2_width_x), -0.5*(furnace.dy() - seg2_width_y), 0.0)); // shrink in X and Y
 
-		// extend horizontally to connect to the furnace while avoiding avoid_cubes
+		// extend horizontally in X and Y to connect to the furnace with a right angle jog, while avoiding avoid_cubes
+		// Note that, since vents are non-square, we may get different duct widths in each dim depending on the vent orientation; I guess this is acceptable
 		for (unsigned n = 0; n < 2; ++n) { // try both routing directions
 			bool const dim(first_dim ^ bool(n)), dir1(dirs[dim]), dir2(!dirs[!dim]);
 			room_object_t cand1(duct), cand2(duct);
@@ -702,21 +720,26 @@ void building_t::add_attic_ductwork(rand_gen_t rgen, cube_t const &furnace, bool
 			cand1.d[ dim][dir1] = port.d[ dim][!dir1]; // extend to the furnace port near side; may be denormalized and skipped below
 			cand2.d[!dim][dir2] = duct.d[!dim][ dir2]; // extend to the duct
 			assert(cand2.is_strictly_normalized());
-			if (has_bcube_int(cand1, avoid_cubes) || has_bcube_int(cand2, avoid_cubes)) continue; // bad routing
+			bool use_cand1(cand1.is_strictly_normalized()), use_cand2(1);
+			if ((use_cand1 && has_bcube_int(cand1, avoid_cubes)) || has_bcube_int(cand2, avoid_cubes)) continue; // bad routing
 			
 			for (auto i = objs.begin()+objs_start; i != objs.end(); ++i) { // merge to previously placed ducts
-				// TODO: if duct overlaps *i on a full side then both cand1 and can2 can be skipped
-				if (0) {
-					cand1.set_to_zeros();
-					cand2.set_to_zeros();
-					break; // done
-				}
-				if (i->contains_cube(cand2)) {cand2.set_to_zeros();} // cand2 can be skipped
+				// Note: if our cand1 intersects an earlier and shorter cand1 duct, we want to either clip our cand1 to the existing cand1,
+				// or extend the existing cand1 to meet our duct; however, sorting from furthest to nearest above should prevent this from happening
+				// in most cases, and that's the point of the sort, to avoid having to handle this case
+				if (i->contains_cube(cand2)) {use_cand2 = 0; break;} // cand2 can be skipped
 			}
-			if (cand1.is_strictly_normalized()) {cand1.dim =  dim; objs.push_back(cand1);} // maybe add first  segment from vent
-			if (cand2.is_strictly_normalized()) {cand2.dim = !dim; objs.push_back(cand2);} // maybe add second segment to furnace
+			if (use_extend) { // check if our route is shorter or longer than the extend length and use whichever is shorter
+				float tot_len(0.0);
+				if (use_cand1) {tot_len += cand1.get_sz_dim( dim);}
+				if (use_cand2) {tot_len += cand2.get_sz_dim(!dim);}
+				if (tot_len < extend_len) {use_extend = 0;} else {break;}
+			}
+			if (use_cand1) {cand1.dim =  dim; objs.push_back(cand1);} // maybe add first  segment from vent
+			if (use_cand2) {cand2.dim = !dim; objs.push_back(cand2);} // maybe add second segment to furnace
 			break; // success
 		} // for n
+		if (use_extend) {objs.push_back(extend_duct);} // use straight extension
 	} // for ducts
 	for (auto i = objs.begin()+objs_start; i != objs.end(); ++i) {avoid_cubes.push_back(*i);} // add ducts to avoid_cubes
 }
