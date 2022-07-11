@@ -806,7 +806,7 @@ void building_room_geom_t::add_laptop  (room_object_t const &c) {add_obj_with_to
 void building_room_geom_t::add_computer(room_object_t const &c) {add_obj_with_front_texture(c, "interiors/computer.jpg",  BKGRAY, 1);} // is_small=1
 void building_room_geom_t::add_mwave   (room_object_t const &c) {add_obj_with_front_texture(c, "interiors/microwave.jpg", GRAY,   0);} // is_small=0
 
-float get_med_cab_wall_thickness(room_object_t const &c) {return 0.15*c.get_sz_dim(c.dim);}
+float get_med_cab_wall_thickness(room_object_t const &c) {return 0.15*c.get_length();}
 
 cube_t get_mirror_surface(room_object_t const &c) {
 	if (!c.is_open()) return c;
@@ -815,7 +815,7 @@ cube_t get_mirror_surface(room_object_t const &c) {
 	mirror.d[!c.dim][0]       = mirror.d[!c.dim][1]; // shrink to zero area
 	mirror.d[!c.dim][1]      += thickness; // shift outward by thickness
 	mirror.d[ c.dim][!c.dir] -= (c.dir ? 1.0 : -1.0)*thickness; // move to front
-	mirror.d[ c.dim][ c.dir] += (c.dir ? 1.0 : -1.0)*(c.get_sz_dim(!c.dim) - thickness); // expand outward
+	mirror.d[ c.dim][ c.dir] += (c.dir ? 1.0 : -1.0)*(c.get_width() - thickness); // expand outward
 	return mirror;
 }
 void building_room_geom_t::add_mirror(room_object_t const &c) {
@@ -1126,8 +1126,8 @@ void building_room_geom_t::add_wall_trim(room_object_t const &c, bool for_closet
 				mat.itri_verts.push_back(v);
 			}
 		} // for d
-		if (c.flags & RO_FLAG_ADJ_LO) {pts[0][!c.dim] += c.get_sz_dim(c.dim);} // add closet outside corner bevel/miter
-		if (c.flags & RO_FLAG_ADJ_HI) {pts[3][!c.dim] -= c.get_sz_dim(c.dim);} // add closet outside corner bevel/miter
+		if (c.flags & RO_FLAG_ADJ_LO) {pts[0][!c.dim] += c.get_length();} // add closet outside corner bevel/miter
+		if (c.flags & RO_FLAG_ADJ_HI) {pts[3][!c.dim] -= c.get_length();} // add closet outside corner bevel/miter
 		if (c.dir ^ c.dim) {swap(pts[0], pts[3]); swap(pts[1], pts[2]);} // change winding order/normal sign
 		v.set_norm(get_poly_norm(pts));
 		float const tcs[2][4] = {{0,0,1,1}, {0,1,1,0}};
@@ -1438,7 +1438,7 @@ void building_room_geom_t::add_breaker_panel(room_object_t const &c) {
 
 	if (c.is_open()) {
 		// draw inside face and inside edges of open box
-		float const box_width(c.get_sz_dim(!c.dim)), box_depth(c.get_sz_dim(c.dim)), thickness(0.25*box_depth), dir_sign(c.dir ? -1.0 : 1.0);
+		float const box_width(c.get_width()), box_depth(c.get_length()), thickness(0.25*box_depth), dir_sign(c.dir ? -1.0 : 1.0);
 		unsigned const front_face_mask(get_face_mask(c.dim, !c.dir));
 		cube_t box(c);
 		box.d[c.dim][!c.dir] -= dir_sign*thickness; // expand in to recess
@@ -2498,8 +2498,8 @@ void add_furnace_pipe_with_bend(room_object_t const &c, rgeom_mat_t &mat, colorR
 	add_pipe_with_bend(mat, color, bot_pos, entry_pos, bend, ndiv, pipe_radius, 0); // draw_ends=0
 }
 void narrow_furnace_intake(cube_t &duct, room_object_t const &c) {
-	duct.d[c.dim][c.dir] -= (c.dir ? 1.0 : -1.0)*0.35*c.get_sz_dim(c.dim); // shift inward toward back
-	duct.expand_in_dim(!c.dim, -0.05*c.get_sz_dim(!c.dim)); // shrink slightly
+	duct.d[c.dim][c.dir] -= (c.dir ? 1.0 : -1.0)*0.35*c.get_length(); // shift inward toward back
+	duct.expand_in_dim(!c.dim, -0.05*c.get_width()); // shrink slightly
 }
 void building_room_geom_t::add_furnace(room_object_t const &c) {
 	colorRGBA const duct_color(apply_light_color(c, DUCT_COLOR));
@@ -2507,7 +2507,7 @@ void building_room_geom_t::add_furnace(room_object_t const &c) {
 	room_object_t base(c); // base area below the furnace that connects to the ducts
 	main_unit.z1() = base.z2() = c.z1() + 0.167*c.dz();
 	add_obj_with_front_texture(main_unit, "interiors/furnace.jpg", get_furnace_color(), 1); // small=1
-	float const expand_amt(0.01*c.get_sz_dim(!c.dim));
+	float const expand_amt(0.01*c.get_width());
 	base.expand_in_dim(!c.dim, expand_amt); // expand slightly in width
 	base.d[c.dim][c.dir] += (c.dir ? 1.0 : -1.0)*expand_amt; // shift slightly outward in the front
 	base.dir    = 1; // encoding for vertical
@@ -2993,7 +2993,7 @@ void building_room_geom_t::add_window(room_object_t const &c, float tscale) { //
 colorRGBA const &get_outlet_or_switch_box_color(room_object_t const &c) {return (c.is_hanging() ? GRAY : c.color);} // should be silver metal
 
 void building_room_geom_t::add_switch(room_object_t const &c, bool draw_detail_pass) { // light switch, etc.
-	float const scaled_depth((c.is_hanging() ? 0.2 : 1.0)*c.get_sz_dim(c.dim)); // non-recessed switch has smaller face plate depth
+	float const scaled_depth((c.is_hanging() ? 0.2 : 1.0)*c.get_length()); // non-recessed switch has smaller face plate depth
 	room_object_t plate(c);
 	plate.d[c.dim][!c.dir] -= (c.dir ? -1.0 : 1.0)*0.70*scaled_depth; // front face of plate
 
@@ -3001,7 +3001,7 @@ void building_room_geom_t::add_switch(room_object_t const &c, bool draw_detail_p
 		add_flat_textured_detail_wall_object(plate, get_outlet_or_switch_box_color(c), get_texture_by_name("interiors/light_switch.jpg"), 0); // draw_z1_face=0
 	}
 	else { // draw rocker (small object that can move/change state)
-		float const width(c.get_sz_dim(!c.dim));
+		float const width(c.get_width());
 		cube_t rocker(c);
 		set_wall_width(rocker, plate.d[c.dim][!c.dir], 0.15*scaled_depth, c.dim);
 		rocker.expand_in_dim(!c.dim, -0.27*width); // shrink horizontally

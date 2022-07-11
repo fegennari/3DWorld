@@ -390,7 +390,7 @@ void building_t::add_attic_objects(rand_gen_t rgen) {
 
 cube_t get_attic_access_door_cube(room_object_t const &c, bool inc_ladder) {
 	if (!c.is_open()) return c;
-	float const len(c.get_sz_dim(c.dim)), thickness(c.dz()), delta(len - thickness);
+	float const len(c.get_length()), thickness(c.dz()), delta(len - thickness);
 	cube_t door(c);
 	door.z1() -= delta; // open downward
 	door.d[c.dim][!c.dir] -= (c.dir ? -1.0 : 1.0)*delta; // shorten to expose the opening
@@ -398,7 +398,7 @@ cube_t get_attic_access_door_cube(room_object_t const &c, bool inc_ladder) {
 	return door;
 }
 cube_t get_ladder_bcube_from_open_attic_door(room_object_t const &c, cube_t const &door) {
-	float const door_len(c.get_sz_dim(c.dim)), door_width(c.get_sz_dim(!c.dim)), door_inside_edge(door.d[c.dim][!c.dir]);
+	float const door_len(c.get_length()), door_width(c.get_width()), door_inside_edge(door.d[c.dim][!c.dir]);
 	cube_t ladder(door); // sets ladder step depth
 	ladder.expand_in_dim(!c.dim, -0.05*door_width); // a bit narrower
 	ladder.d[c.dim][ c.dir] = door_inside_edge; // flush with open side of door
