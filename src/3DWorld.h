@@ -474,6 +474,7 @@ struct cube_t { // size = 24
 	void translate(point const &p) {UNROLL_3X(d[i_][0] += p[i_]; d[i_][1] += p[i_];)}
 	void translate_dim(unsigned dim, float v) {assert(dim < 3); d[dim][0] += v; d[dim][1] += v;}
 	void set_from_points(point const *const pts, unsigned npts);
+	void set_from_points(vector<point> const &pts) {set_from_points(pts.data(), pts.size());}
 	std::string str() const;
 	std::string raw_str() const;
 	bool is_near_zero_area() const;
