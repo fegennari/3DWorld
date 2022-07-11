@@ -949,3 +949,86 @@ void building_t::update_spider(spider_t &spider, point const &camera_bs, float t
 	}
 }
 
+
+// *** Snakes ***
+
+snake_t::snake_t(point const &pos_, float radius_, vector3d const &dir_, unsigned id_) :
+	building_animal_t(pos_, radius_, dir_, id_), cur_move_amt(0.0)
+{
+	length  = 2.0*radius; // input radius is half length
+	radius *= 0.025;
+	unsigned const NUM_SEGS = 20; // head + 18 segments + tail
+	float const seg_length(length/NUM_SEGS);
+	vector3d const seg_step(-seg_length*dir); // head -> tail
+	segments.resize(NUM_SEGS, pos);
+	for (unsigned n = 0; n < NUM_SEGS; ++n) {segments[n] += seg_step*(n - NUM_SEGS/2.0 + 0.5);} // set segment centers
+}
+float snake_t::get_xy_radius() const {
+	float xy_radius_sq(0.0);
+	for (point const &p : segments) {max_eq(xy_radius_sq, p2p_dist_xy_sq(pos, p));}
+	return (sqrt(xy_radius_sq) + radius); // don't forget to add the body radius
+}
+cube_t snake_t::get_bcube() const {
+	cube_t bcube;
+	bcube.set_from_points(segments);
+	bcube.expand_by_xy(radius);
+	bcube.z2() += radius;
+	return bcube;
+}
+void snake_t::move_segments(float dist) {
+	if (dist == 0.0) return;
+	assert(dist > 0.0);
+	assert(segments.size() >= 2);
+	float const seg_len(get_seg_length()), move_left(seg_len - cur_move_amt); // the amount of movement left before we create a new movement point
+	float const seg_move(min(move_left, dist)); // the amount we can move segments
+	// move all segments forward incrementally
+	segments[0] += seg_move*dir; // move the head
+
+	for (unsigned n = 1; n < segments.size(); ++n) {
+		vector3d const seg_delta(segments[n-1] - segments[n]);
+		segments[n] += seg_delta*(seg_move/seg_delta.mag()); // mag should be seg_len?
+	}
+	cur_move_amt += seg_move; // record this movement amount
+
+	if (dist > seg_move) { // we have additional movement
+		dist -= seg_move; // this amount of movement has already been applied
+		// at this point the segments should all have moved seg_len from their original positions; add a new point to the front and remove the point from the back
+		segments[0] += dist*dir; // move the head
+
+		// work backwards toward the tail and apply the new segment directions
+		for (unsigned n = 1; n < segments.size(); ++n) {
+			vector3d const seg_delta(segments[n-1] - segments[n]);
+			segments[n] = segments[n-1] - seg_delta*(seg_len/seg_delta.mag());
+		}
+		cur_move_amt = 0.0; // reset for next phase
+	}
+	// update pos as new bcube center; pos.z remains unchanged
+	cube_t const bcube(get_bcube());
+	pos.x = bcube.xc();
+	pos.y = bcube.yc();
+}
+
+void building_t::update_snakes(point const &camera_bs, unsigned building_ix) {
+	vect_snake_t &snakes(interior->room_geom->snakes);
+	if (snakes.placed && snakes.empty()) return; // no snakes placed in this building
+	//timer_t timer("Update Snakes");
+	add_animals_on_floor(snakes, building_ix, global_building_params.num_snakes_min, global_building_params.num_snakes_max,
+		global_building_params.snake_size_min, global_building_params.snake_size_max);
+	// update snakes
+	float const timestep(min(fticks, 4.0f)); // clamp fticks to 100ms
+	
+	for (snake_t &snake : snakes) {
+		float const move_dist(snake.move(timestep));
+		snake.move_segments(move_dist);
+	}
+	//snakes.do_sort();
+	rand_gen_t rgen;
+	rgen.set_state(building_ix+1, frame_counter+1); // unique per building and per frame
+	for (snake_t &snake : snakes) {update_snake(snake, camera_bs, timestep, snakes.max_xmove, rgen);}
+}
+
+void building_t::update_snake(snake_t &snake, point const &camera_bs, float timestep, float &max_xmove, rand_gen_t &rgen) const {
+	// TODO
+	//if (snake.speed == 0.0) {snake.speed = global_building_params.snake_speed*rgen.rand_uniform(0.5, 1.0);} // random speed
+}
+

@@ -1216,9 +1216,9 @@ public:
 		if (spiders.empty()) return; // nothing to draw
 		int anim_time_loc(-1);
 		point const camera_bs(camera_pdu.pos - xlate);
-		bool const check_occlusion(display_mode & 0x08);
+		bool const check_occlusion(display_mode & 0x08), low_detail(shadow_only || reflection_pass);
 		bool any_drawn(0);
-		rgeom_mat_t &mat(mats[shadow_only]);
+		rgeom_mat_t &mat(mats[low_detail]);
 
 		for (spider_t const &S : spiders) { // future work: use instancing
 			if (!shadow_only && S.on_web) { // draw spider webs
@@ -1290,6 +1290,52 @@ public:
 	}
 };
 spider_draw_t spider_draw;
+
+class snake_draw_t {
+	rgeom_mat_t mat;
+
+	void draw_snake(snake_t const &S, bool shadow_only, bool reflection_pass) {
+		colorRGBA const color(BROWN);
+		bool const low_detail(shadow_only || reflection_pass);
+		mat.add_sphere_to_verts(S.get_bcube(), color, low_detail); // TODO: this is a placeholder
+
+		for (auto s = S.segments.begin(); s != S.segments.end(); ++s) {
+			if (s == S.segments.begin()) {
+				// TODO: draw head
+			}
+			else if (s+1 == S.segments.end()) {
+				// TODO: draw tail
+			}
+			else {
+				// TODO: draw segment
+			}
+		}
+	}
+public:
+	void draw(vect_snake_t const &snakes, shader_t &s, building_t const &building, occlusion_checker_noncity_t &oc,
+		vector3d const &xlate, bool shadow_only, bool reflection_pass, bool check_clip_cube)
+	{
+		if (snakes.empty()) return; // nothing to draw
+		point const camera_bs(camera_pdu.pos - xlate);
+		bool const check_occlusion(display_mode & 0x08);
+
+		for (snake_t const &S : snakes) { // future work: use instancing
+			cube_t const bcube(S.get_bcube());
+			if (check_clip_cube && !smap_light_clip_cube.intersects(bcube + xlate)) continue; // shadow map clip cube test: fast and high rejection ratio, do this first
+			if (!camera_pdu.cube_visible(bcube + xlate)) continue; // VFC
+			if (check_occlusion && building.check_obj_occluded(bcube, camera_bs, oc, reflection_pass)) continue;
+			draw_snake(S, shadow_only, reflection_pass);
+		} // for S
+		if (mat.empty()) return; // nothing to draw
+		s.set_specular(0.25, 50.0);
+		select_texture(WHITE_TEX); // TODO: snake texture
+		s.add_uniform_float("bump_map_mag", 0.0);
+		mat.upload_draw_and_clear(tid_nm_pair_dstate_t(s));
+		s.add_uniform_float("bump_map_mag",   1.0);
+		s.clear_specular();
+	}
+};
+snake_draw_t snake_draw;
 
 // Note: non-const because it creates the VBO; inc_small: 0=large only, 1=large+small, 2=large+small+detail
 void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, building_t const &building, occlusion_checker_noncity_t &oc, vector3d const &xlate,
@@ -1485,6 +1531,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, building_t c
 			model3d::bind_default_flat_normal_map();
 		} // end rats drawing
 		spider_draw.draw(spiders, s, building, oc, xlate, shadow_only, reflection_pass, check_clip_cube);
+		snake_draw .draw(snakes,  s, building, oc, xlate, shadow_only, reflection_pass, check_clip_cube);
 	}
 	if (disable_cull_face) {glEnable(GL_CULL_FACE);}
 	if (obj_drawn) {check_mvm_update();} // needed after popping model transform matrix

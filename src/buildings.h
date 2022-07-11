@@ -133,6 +133,20 @@ struct spider_t : public building_animal_t {
 	void end_jump  ();
 };
 
+struct snake_t : public building_animal_t {
+	// for snakes, pos is (xc, yc, z1), radius is the max body radius, and dir is the head direction and direction of movement
+	float length, cur_move_amt;
+	vector<point> segments; // segment centers: first = head, last = tail
+
+	snake_t(point const &pos_, float radius_, vector3d const &dir_, unsigned id_);
+	static bool allow_in_attic() {return 0;}
+	float get_xy_radius () const;
+	float get_height    () const {return radius;}
+	float get_seg_length() const {return length/segments.size();}
+	cube_t get_bcube    () const;
+	void move_segments(float dist);
+};
+
 template<typename T> struct vect_animal_t : public vector<T> {
 	bool placed;
 	float max_radius, max_xmove;
@@ -152,6 +166,7 @@ template<typename T> struct vect_animal_t : public vector<T> {
 };
 typedef vect_animal_t<rat_t   > vect_rat_t;
 typedef vect_animal_t<spider_t> vect_spider_t;
+typedef vect_animal_t<snake_t > vect_snake_t;
 
 
 struct building_occlusion_state_t {
@@ -319,6 +334,7 @@ struct building_params_t {
 	unsigned num_rats_min=0, num_rats_max=0, min_attack_rats=0, num_spiders_min=0, num_spiders_max=0, num_snakes_min=0, num_snakes_max=0;
 	float rat_speed=0.0, rat_size_min=0.5, rat_size_max=1.0; // rats
 	float spider_speed=0.0, spider_size_min=0.5, spider_size_max=1.0, spider_drawer_prob=0.0; // spiders
+	float snake_speed=0.0, snake_size_min=0.5, snake_size_max=1.0; // snakes
 	// gameplay state
 	float player_weight_limit=100.0;
 	// materials
@@ -761,6 +777,7 @@ struct building_room_geom_t {
 	vector<unsigned> moved_obj_ids;
 	vect_rat_t rats;
 	vect_spider_t spiders;
+	vect_snake_t  snakes;
 	// {large static, small static, dynamic, lights, alpha mask, transparent, door} materials
 	building_materials_t mats_static, mats_small, mats_text, mats_detail, mats_dynamic, mats_lights, mats_amask, mats_alpha, mats_doors;
 	vect_cube_t light_bcubes;
@@ -1329,8 +1346,9 @@ private:
 public:
 	template<typename T> void add_animals_on_floor(T &animals, unsigned building_ix, unsigned num_min, unsigned num_max, float sz_min, float sz_max) const;
 	void update_animals(point const &camera_bs, unsigned building_ix);
-	void update_rats(point const &camera_bs, unsigned building_ix);
+	void update_rats   (point const &camera_bs, unsigned building_ix);
 	void update_spiders(point const &camera_bs, unsigned building_ix);
+	void update_snakes (point const &camera_bs, unsigned building_ix);
 	void get_objs_at_or_below_ground_floor(vect_room_object_t &ret, bool for_spider) const;
 private:
 	point gen_animal_floor_pos(float radius, bool place_in_attic, rand_gen_t &rgen) const;
@@ -1341,6 +1359,7 @@ private:
 	void scare_rat_at_pos(rat_t &rat, point const &scare_pos, float amount, bool by_sight) const;
 	bool update_spider_pos_orient(spider_t &spider, point const &camera_bs, float timestep, rand_gen_t &rgen) const;
 	void update_spider(spider_t &spider, point const &camera_bs, float timestep, float &max_xmove, rand_gen_t &rgen) const;
+	void update_snake (snake_t  &snake,  point const &camera_bs, float timestep, float &max_xmove, rand_gen_t &rgen) const;
 	void get_room_obj_cubes(room_object_t const &c, point const &pos, vect_cube_t &lg_cubes, vect_cube_t &sm_cubes, vect_cube_t &non_cubes) const;
 	bool check_line_coll_expand(point const &p1, point const &p2, float radius, float height) const;
 	bool check_line_of_sight_large_objs(point const &p1, point const &p2) const;
