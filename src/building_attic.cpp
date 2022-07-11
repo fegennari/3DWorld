@@ -265,6 +265,7 @@ void building_t::add_attic_objects(rand_gen_t rgen) {
 	cube_t place_area(part);
 	place_area.z1() = place_area.z2() = z_floor; // bottom of attic floor
 	place_area.expand_by_xy(-0.75*floor_spacing); // keep away from corners; just a guess; applies to boxes and furnace
+	bool has_furnace(0);
 
 	if (interior->furnace_type == FTYPE_ATTIC) { // add furnace in the attic
 		// place the furnace above the room where the air intake should be (hallway or stairs room), if there is one
@@ -303,6 +304,7 @@ void building_t::add_attic_objects(rand_gen_t rgen) {
 				}
 				if (place_ok) {objs.emplace_back(vent, TYPE_VENT, furnace_room, dim, 0, (RO_FLAG_NOCOLL | RO_FLAG_HANGING), 1.0);} // dir=0/horizontal; fully lit
 			}
+			has_furnace = 1;
 			break; // success/done
 		} // for n
 	}
@@ -310,10 +312,10 @@ void building_t::add_attic_objects(rand_gen_t rgen) {
 	vector3d sz;
 
 	// add lamp(s)
-	unsigned const num_lamps(rgen.rand() % 3); // 0-2
+	unsigned const num_lamps(rgen.rand() % (has_furnace ? 5 : 3)); // 0-4/2
 	for (unsigned n = 0; n < num_lamps; ++n) {try_add_lamp(place_area, floor_spacing, room_id, obj_flags, light_amt, avoid_cubes, objs, rgen);}
 	// add chair(s)
-	unsigned const num_chairs(rgen.rand() % 3); // 0-2
+	unsigned const num_chairs(rgen.rand() % (has_furnace ? 4 : 3)); // 0-3/2
 	
 	if (num_chairs > 0) {
 		float const height(0.4*floor_spacing), hwidth(0.1*floor_spacing);
@@ -332,7 +334,7 @@ void building_t::add_attic_objects(rand_gen_t rgen) {
 		}
 	}
 	// add nightstand(s)
-	unsigned const num_nightstands(rgen.rand() % 3); // 0-2
+	unsigned const num_nightstands(rgen.rand() % (has_furnace ? 4 : 3)); // 0-3/2
 	
 	for (unsigned n = 0; n < num_nightstands; ++n) {
 		bool const dim(rgen.rand_bool());
@@ -347,7 +349,7 @@ void building_t::add_attic_objects(rand_gen_t rgen) {
 		}
 	}
 	// add paintcan(s)
-	unsigned const num_paintcans(rgen.rand() % 5); // 0-4
+	unsigned const num_paintcans(rgen.rand() % (has_furnace ? 6 : 4)); // 0-5/3
 	
 	if (num_paintcans > 0) {
 		float const height(0.64*0.2*floor_spacing), radius(0.28*0.2*floor_spacing);
@@ -358,11 +360,11 @@ void building_t::add_attic_objects(rand_gen_t rgen) {
 		}
 	}
 	// add boxes; currently not stacked - should they be?
-	unsigned const num_boxes(rgen.rand() % 50); // 0-49
+	unsigned const num_boxes(rgen.rand() % (has_furnace ? 100 : 60)); // 0-99/59
 	float const box_sz(0.18*floor_spacing);
 	add_boxes_to_space(objs[attic_door_ix], objs, place_area, avoid_cubes, rgen, num_boxes, box_sz, 0.5*box_sz, 1.5*box_sz, 1, obj_flags); // allow_crates=1
 
-	// TYPE_BOOK, TYPE_BOTTLE, TYPE_PAPER
+	// TYPE_BOOK, TYPE_BOTTLE, TYPE_PAPER?
 
 	// add rug last, under any previous movable items
 	point rug_center;
