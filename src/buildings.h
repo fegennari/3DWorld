@@ -92,7 +92,7 @@ struct building_animal_t {
 	bool is_moving  () const {return (speed     > 0.0);}
 	bool is_sleeping() const {return (wake_time > 0.0);}
 	void sleep_for(float time_secs_min, float time_secs_max);
-	void move(float timestep, bool can_move_forward=1);
+	float move(float timestep, bool can_move_forward=1);
 };
 
 struct rat_t : public building_animal_t {

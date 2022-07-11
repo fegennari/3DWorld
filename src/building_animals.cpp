@@ -32,11 +32,12 @@ void building_animal_t::sleep_for(float time_secs_min, float time_secs_max) {
 	wake_time = (float)tfticks + rand_uniform(time_secs_min, time_secs_max)*TICKS_PER_SECOND;
 	dist_since_sleep = 0.0; // reset the counter
 }
-void building_animal_t::move(float timestep, bool can_move_forward) {
+float building_animal_t::move(float timestep, bool can_move_forward) { // returns movement distance
 	// update animation time using position change; note that we can't just do the update in the rat movement code below because pos may be reset in case of collision
 	anim_time += p2p_dist(pos, last_pos)/radius; // scale with size so that small rat/spider legs move faster
 	last_pos   = pos;
 	if (anim_time > 100000.0) {anim_time = 0.0;} // reset animation after awhile to avoid precision problems; should this be done when the player isn't looking?
+	float move_dist(0.0);
 
 	if (is_sleeping()) {
 		if ((float)tfticks > wake_time) {wake_time = speed = 0.0;} // time to wake up
@@ -45,16 +46,18 @@ void building_animal_t::move(float timestep, bool can_move_forward) {
 		anim_time = 0.0; // reset animation to rest pos
 	}
 	else if (can_move_forward) { // apply movement
-		float const move_dist(timestep*speed);
+		move_dist = timestep*speed;
 		pos = pos + move_dist*dir;
 		dist_since_sleep += move_dist;
 	}
+	return move_dist;
 }
 
 void building_t::update_animals(point const &camera_bs, unsigned building_ix) {
 	if (!animate2 || is_rotated() || !has_room_geom() || interior->rooms.empty()) return;
 	update_rats   (camera_bs, building_ix);
 	update_spiders(camera_bs, building_ix);
+	update_snakes (camera_bs, building_ix);
 }
 
 template<typename T> void building_t::add_animals_on_floor(T &animals, unsigned building_ix, unsigned num_min, unsigned num_max, float sz_min, float sz_max) const {
