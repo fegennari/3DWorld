@@ -48,7 +48,7 @@ colorRGBA const tape_colors [NUM_TAPE_COLORS ] = {GRAY, GRAY, GRAY, GRAY, BKGRAY
 colorRGBA const shirt_colors[NUM_SHIRT_COLORS] = {WHITE, WHITE, WHITE, BKGRAY, BKGRAY, GRAY, GRAY, RED, BLUE, DK_BLUE, DK_GREEN, DK_BROWN, BROWN, ORANGE};
 colorRGBA const LAMP_COLOR(1.0, 0.8, 0.6); // soft white
 colorRGBA const WOOD_COLOR(0.9, 0.7, 0.5); // light brown, multiplies wood texture color; typical value to use
-colorRGBA const DUCT_COLOR(LT_GRAY);
+colorRGBA const DUCT_COLOR(WHITE);
 
 inline colorRGBA gen_box_color(rand_gen_t &rgen) {return colorRGBA(rgen.rand_uniform(0.9, 1.0), rgen.rand_uniform(0.9, 1.0), rgen.rand_uniform(0.9, 1.0));} // add minor color variation
 

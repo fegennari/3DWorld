@@ -40,6 +40,7 @@ int get_box_tid() {return get_texture_by_name("interiors/box.jpg");}
 int get_crate_tid(room_object_t const &c) {return get_texture_by_name((c.obj_id & 1) ? "interiors/crate2.jpg" : "interiors/crate.jpg");}
 int get_plywood_tid   () {return get_texture_by_name("interiors/plywood.jpg");}
 int get_insulation_tid() {return get_texture_by_name("interiors/insulation.jpg");}
+int get_duct_tid      () {return get_texture_by_name("interiors/duct.jpg");}
 
 colorRGBA get_textured_wood_color() {return WOOD_COLOR.modulate_with(texture_color(WOOD2_TEX));} // Note: uses default WOOD_COLOR, not the per-building random variant
 colorRGBA get_counter_color      () {return (get_textured_wood_color()*0.75 + texture_color(get_counter_tid())*0.25);}
@@ -1360,9 +1361,39 @@ void building_room_geom_t::add_pipe(room_object_t const &c) { // should be SHAPE
 }
 
 void building_room_geom_t::add_duct(room_object_t const &c) {
+	unsigned const dim(c.dir ? 2 : unsigned(c.dim)); // encoded as: X:dim=0,dir=0 Y:dim=1,dir=0, Z:dim=x,dir=1 (same as pipes)
+
 	if (c.shape == SHAPE_CUBE) {
-		unsigned const skip_faces(c.in_attic() ? EF_Z1 : EF_Z2);
-		get_metal_material(1, 0, 2).add_cube_to_verts_untextured(c, c.color, skip_faces); // shadowed, detail, not using lit color
+		unsigned skip_faces(0);
+		if (c.flags & RO_FLAG_ADJ_BOT) {skip_faces |= EF_Z1;}
+		if (c.flags & RO_FLAG_ADJ_TOP) {skip_faces |= EF_Z2;}
+		if (c.flags & RO_FLAG_ADJ_LO ) {skip_faces |= ~get_face_mask(dim, 0);}
+		if (c.flags & RO_FLAG_ADJ_HI ) {skip_faces |= ~get_face_mask(dim, 1);}
+		// texture is 2 panels wide x 1 panel tall; for mapping of tiles duct sides we need tscale_x to be a multiple of 0.5 and tscale_y to be a multiple of 1.0
+		unsigned const w1((dim+1)%3), w2((dim+2)%3); // the two width dimensions
+		float const width1(c.get_sz_dim(w1)), width2(c.get_sz_dim(w2)), avg_width(0.5*(width1 + width2)); // maps to texture y
+		// each panel should be approximately square, so one tile should be half the length in x (since texture is 2x tiles wide)
+		float const tile_len(4.0*0.5*avg_width), length(c.get_sz_dim(dim)); // multiply by 4.0 for a 4:1 aspect ratio
+		float const num_tiles(max(1, round_fp(length/tile_len))), tile_len_mod(length/num_tiles); // number of tiles must be a nonzero whole number
+		unsigned const dim_masks[3] = {EF_X12, EF_Y12, EF_Z12};
+		float tscales[3] = {}; // {X,Y,Z}
+		tscales[dim] = 1.0/tile_len_mod;
+		tscales[w1 ] = 1.0/width1;
+		tscales[w2 ] = 1.0/width2;
+		tid_nm_pair_t tex(get_duct_tid(), -1, 0.0, 0.0, 1); // shadowed
+		tex.set_specular_color(WHITE, 0.8, 60.0); // set metal specular
+
+		// each face must be drawn with a different texture scale, so three cubes drawn
+		for (unsigned d = 0; d < 3; ++d) { // d is the face dim
+			unsigned const face_sf(skip_faces | ~dim_masks[d]); // skip faces in the wrong dims
+			if ((face_sf & EF_ALL) == EF_ALL) continue; // all faces skipped for this dim
+			unsigned const d1((d+1)%3), d2((d+2)%3);
+			tex.tscale_x = tscales[d2];
+			tex.tscale_y = tscales[d1];
+			bool const swap_st(d2 != dim);
+			(swap_st ? tex.tscale_y : tex.tscale_x) *= 0.5; // account for the 2x texture repetition in X
+			get_material(tex, 1, 0, 2).add_cube_to_verts(c, c.color, c.get_llc(), face_sf, swap_st); // shadowed, detail, not using lit color
+		} // for d
 	}
 	else if (c.shape == SHAPE_CYLIN) {add_pipe(c);} // draw using pipe logic
 	else {assert(0);} // unsupported shape
@@ -2473,22 +2504,26 @@ void narrow_furnace_intake(cube_t &duct, room_object_t const &c) {
 void building_room_geom_t::add_furnace(room_object_t const &c) {
 	colorRGBA const duct_color(apply_light_color(c, DUCT_COLOR));
 	room_object_t main_unit(c);
-	cube_t base(c); // base area below the furnace that connects to the ducts
+	room_object_t base(c); // base area below the furnace that connects to the ducts
 	main_unit.z1() = base.z2() = c.z1() + 0.167*c.dz();
+	add_obj_with_front_texture(main_unit, "interiors/furnace.jpg", get_furnace_color(), 1); // small=1
 	float const expand_amt(0.01*c.get_sz_dim(!c.dim));
 	base.expand_in_dim(!c.dim, expand_amt); // expand slightly in width
 	base.d[c.dim][c.dir] += (c.dir ? 1.0 : -1.0)*expand_amt; // shift slightly outward in the front
-	add_obj_with_front_texture(main_unit, "interiors/furnace.jpg", get_furnace_color(), 1); // small=1
-	get_metal_material(1, 0, 1).add_cube_to_verts(base, duct_color, tex_origin, EF_Z1); // skip bottom face
+	base.dir    = 1; // encoding for vertical
+	base.flags |= RO_FLAG_ADJ_BOT; // skip bottom face; top face is slightly visible through expanded edges
+	add_duct(base);
 
 	if (c.in_attic()) {
 		// add ductwork on the top ... somewhere?
 	}
-	else { // basement: add ductwork up into the ceiling; not a collision object
-		cube_t duct(c);
+	else { // basement: add duct up into the ceiling; not a collision object
+		room_object_t duct(c);
 		narrow_furnace_intake(duct, c);
 		set_cube_zvals(duct, c.z2(), c.z2()+0.6*c.dz()); // extend to cover the remaining gap between the top of the furnace and the ceiling
-		get_metal_material(1, 0, 1).add_cube_to_verts(duct, duct_color, tex_origin, EF_Z12); // skip top and bottom faces
+		duct.dir    = 1; // encoding for vertical
+		duct.flags |= (RO_FLAG_ADJ_BOT | RO_FLAG_ADJ_TOP); // skip top and bottom face
+		add_duct(duct);
 	}
 	// add pipes
 	bool const low_detail = 1;
@@ -3163,6 +3198,7 @@ colorRGBA room_object_t::get_color() const {
 	case TYPE_WHEATER:  return GRAY;
 	case TYPE_FURNACE:  return get_furnace_color();
 	case TYPE_ATTIC_DOOR:return get_textured_wood_color();
+	case TYPE_DUCT:     return texture_color(get_duct_tid()).modulate_with(color);
 	//case TYPE_CHIMNEY:  return texture_color(get_material().side_tex); // should modulate with texture color, but we don't have it here
 	default: return color; // TYPE_LIGHT, TYPE_TCAN, TYPE_BOOK, TYPE_BOTTLE, TYPE_PEN_PENCIL, etc.
 	}
