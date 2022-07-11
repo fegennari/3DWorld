@@ -497,6 +497,13 @@ void add_attic_roof_geom(rgeom_mat_t &mat, colorRGBA const &color, float thickne
 			vert.v = tq.pts[i];
 
 			if (is_roof) { // roof
+				// shrink bottom edge by thickness to avoid clipping through the floor below;
+				// since the quad is a loop, we can check both the previous and next points to see if they're above us, and use the vector delta for the shift
+				vector3d shift_dir;
+				point const &prev(tq.pts[(i+tq.npts-1)%tq.npts]), &next(tq.pts[(i+1)%tq.npts]);
+				if      (vert.v.z < prev.z) {shift_dir = prev - vert.v;}
+				else if (vert.v.z < next.z) {shift_dir = next - vert.v;}
+				if (shift_dir.z > 0.0) {vert.v += shift_dir*(thickness/shift_dir.z);}
 				bool const swap_tc_xy(fabs(normal.x) < fabs(normal.y));
 				vert.t[!swap_tc_xy] = vert.v.x*tsx;
 				vert.t[ swap_tc_xy] = vert.v.y*tsy;
