@@ -679,23 +679,62 @@ bool duct_merges_to_xy(cube_t const &from, cube_t const &to) { // Note: assumes 
 	return ((from.x1() >= to.x1() && from.x2() <= to.x2()) || (from.y1() >= to.y1() && from.y2() <= to.y2())); // check either X and Y dims for containment
 }
 
-bool maybe_clip_overlapping_duct(room_object_t &duct, vect_room_object_t const &objs, unsigned objs_start) {
-	static vect_cube_t parts;
-
+bool maybe_clip_overlapping_duct(room_object_t &duct, vect_room_object_t const &objs, unsigned objs_start, vect_cube_t &sub_cubes) {
 	for (auto i = objs.begin()+objs_start; i != objs.end(); ++i) {
 		if (!i->intersects(duct)) continue;
-		subtract_cube_from_cube(duct, *i, parts);
-		if (parts.empty()) return 0; // contained? shouldn't happen
-		if (parts.size() == 1) {duct.copy_from(parts[0]);} // single part - clip to shorter length to remove the overlap
-		parts.clear();
+		sub_cubes.clear();
+		subtract_cube_from_cube(duct, *i, sub_cubes);
+		if (sub_cubes.empty()) return 0; // contained? shouldn't happen
+		if (sub_cubes.size() == 1) {duct.copy_from(sub_cubes[0]);} // single part - clip to shorter length to remove the overlap
 	}
 	return 1;
 }
 
-struct cmp_by_dist_ascending {
-	point const ref_pt;
-	cmp_by_dist_ascending(point const &ref_pt_) : ref_pt(ref_pt_) {}
-	float get_dist(cube_t const &c) const {return (fabs(c.xc() - ref_pt.x) + fabs(c.yc() - ref_pt.y));} // Manhattan XY distance
+bool try_route_duct_with_jog(room_object_t &duct, cube_t const &dest, bool first_dim, vect_room_object_t &objs, unsigned objs_start,
+	vect_cube_t const &avoid_cubes, vect_cube_t &sub_cubes, float extend_len, bool &use_extend)
+{
+	bool const dirs[2] = {(duct.xc() < dest.xc()), (duct.yc() < dest.yc())};
+
+	for (unsigned n = 0; n < 2; ++n) { // try both routing directions
+		bool const dim(first_dim ^ bool(n)), dir1(dirs[dim]), dir2(!dirs[!dim]);
+		room_object_t cand1(duct), cand2(duct);
+		cand2.x1() = dest.x1(); cand2.y1() = dest.y1(); cand2.x2() = dest.x2(); cand2.y2() = dest.y2();
+		cand1.d[ dim][dir1] = dest.d[ dim][!dir1]; // extend to the destination near side; may be denormalized and skipped below
+		cand2.d[!dim][dir2] = duct.d[!dim][ dir2]; // extend to the duct
+		assert(cand2.is_strictly_normalized());
+		bool use_cand1(cand1.is_strictly_normalized()), use_cand2(1);
+		if ((use_cand1 && has_bcube_int(cand1, avoid_cubes)) || has_bcube_int(cand2, avoid_cubes)) continue; // bad routing
+
+		for (auto i = objs.begin()+objs_start; i != objs.end(); ++i) { // merge to previously placed ducts
+			// Note: if our cand1 intersects an earlier and shorter cand1 duct, we want to either clip our cand1 to the existing cand1,
+			// or extend the existing cand1 to meet our duct; however, sorting from furthest to nearest above should prevent this from happening
+			// in most cases, and that's the point of the sort, to avoid having to handle this case
+			if (i->contains_cube(cand2)) {use_cand2 = 0; break;} // cand2 can be skipped
+		}
+		if (use_cand1) {use_cand1 = maybe_clip_overlapping_duct(cand1, objs, objs_start, sub_cubes);}
+		if (use_cand2) {use_cand2 = maybe_clip_overlapping_duct(cand2, objs, objs_start, sub_cubes);}
+
+		if (use_extend) { // check if our route is shorter or longer than the extend length and use whichever is shorter
+			float tot_len(0.0);
+			if (use_cand1) {tot_len += cand1.get_sz_dim( dim);}
+			if (use_cand2) {tot_len += cand2.get_sz_dim(!dim);}
+			if (tot_len < extend_len) {use_extend = 0;} else {break;}
+		}
+		if (use_cand1) {cand1.dim =  dim; objs.push_back(cand1);} // maybe add first  segment from vent
+		if (use_cand2) {cand2.dim = !dim; objs.push_back(cand2);} // maybe add second segment to furnace
+		return 1; // success
+	} // for n
+	return 0; // failed
+}
+
+struct cmp_by_dist_decending { // furthest to closest
+	cube_t const ref;
+	cmp_by_dist_decending(cube_t const &ref_) : ref(ref_) {}
+	
+	float get_dist(cube_t const &c) const {
+		point const closest_pt(ref.closest_pt(c.get_cube_center()));
+		return (fabs(c.xc() - closest_pt.x) + fabs(c.yc() - closest_pt.y)); // Manhattan XY distance
+	}
 	bool operator()(cube_t const &a, cube_t const &b) const {return (get_dist(b) < get_dist(a));}
 };
 
@@ -723,13 +762,12 @@ void building_t::add_attic_ductwork(rand_gen_t rgen, room_object_t const &furnac
 	// add ducts on the attic floor
 	vect_room_object_t ducts;
 	unsigned const objs_start(objs.size());
-	bool const first_dim(furnace.dim); // make it consistent across vents to maximize sharing
 
 	// find all vents in the ceilings of upper floors just below the attic
 	for (auto i = objs.begin(); i != objs.end(); ++i) { // Note: can't use get_placed_objs_end() because buttons_start hasn't been set yet
 		if (i->type != TYPE_VENT) continue;
 		if (vent_in_attic_test(*i, i->dim) != 1) continue; // check for attic floor/top ceiling and for roof clearance
-		float const duct_height(0.72*i->get_sz_dim(!i->dim)); // smaller than the opening; allows the player to walk over the duct more easily
+		float const duct_height(0.72*i->get_width()); // smaller than the opening; allows the player to walk over the duct more easily
 		cube_t duct(*i);
 		duct.z1() = i->z2() + fc_thick; // attic floor
 		duct.z2() = duct.z1() + duct_height;
@@ -737,19 +775,27 @@ void building_t::add_attic_ductwork(rand_gen_t rgen, room_object_t const &furnac
 		ducts.emplace_back(duct, TYPE_DUCT, i->room_id, 0, 0, duct_flags, 1.0, SHAPE_CUBE, DUCT_COLOR);
 	} // for i
 	// sort ducts furthest to closest to the furnace so that shorter runs can be connected to existing longer runs
-	sort(ducts.begin(), ducts.end(), cmp_by_dist_ascending(furnace.get_cube_center()));
+	sort(ducts.begin(), ducts.end(), cmp_by_dist_decending(furnace));
+	vect_cube_t sub_cubes; // reused
+	vect_room_object_t ducts_to_reroute;
 
 	for (room_object_t &duct : ducts) {
 		bool added(0);
 
 		for (auto i = objs.begin()+objs_start; i != objs.end(); ++i) {
-			if (duct_merges_to_xy(duct, *i)) {objs.push_back(duct); added = 1; break;} // add vertical duct with no extension
+			if (!duct_merges_to_xy(duct, *i)) continue;
+			sub_cubes.clear();
+			subtract_cube_from_cube(duct, *i, sub_cubes);
+			if (sub_cubes.size() == 1) {duct.copy_from(sub_cubes[0]);} // clip to premove overlaps; should generally (always?) be true
+			objs.push_back(duct); // add vertical duct with no extension
+			added = 1;
+			break;
 		}
 		if (added) continue; // done with this duct
 		// find shortest straight line route to nearest existing duct, record length, and use if below path fails or has a longer length
 		room_object_t extend_duct;
 		float extend_len(0.0);
-		bool use_extend(0);
+		bool use_extend(0), was_connected(0);
 
 		for (auto i = objs.begin()+objs_start; i != objs.end(); ++i) {
 			for (unsigned d = 0; d < 2; ++d) { // x,y
@@ -764,48 +810,44 @@ void building_t::add_attic_ductwork(rand_gen_t rgen, room_object_t const &furnac
 				extend_duct = cand; extend_len = len; extend_duct.dim = d; use_extend = 1;
 			} // for d
 		} // for i
-		bool const dirs[2] = {(duct.xc() < furnace.xc()), (duct.yc() < furnace.yc())};
-		float const duct_width(duct.get_sz_dim(duct.dim)), seg2_width_x(min(duct_width, 0.95f*furnace.dx())), seg2_width_y(min(duct_width, 0.95f*furnace.dy()));
+		float const duct_width(duct.get_length()), seg2_width_x(min(duct_width, 0.95f*furnace.dx())), seg2_width_y(min(duct_width, 0.95f*furnace.dy()));
 		cube_t port(furnace);
 		port.expand_by(vector3d(-0.5*(furnace.dx() - seg2_width_x), -0.5*(furnace.dy() - seg2_width_y), 0.0)); // shrink in X and Y
-
-		// extend horizontally in X and Y to connect to the furnace with a right angle jog, while avoiding avoid_cubes
-		// Note that, since vents are non-square, we may get different duct widths in each dim depending on the vent orientation; I guess this is acceptable
-		for (unsigned n = 0; n < 2; ++n) { // try both routing directions
-			bool const dim(first_dim ^ bool(n)), dir1(dirs[dim]), dir2(!dirs[!dim]);
-			room_object_t cand1(duct), cand2(duct);
-			cand2.x1() = port.x1(); cand2.y1() = port.y1(); cand2.x2() = port.x2(); cand2.y2() = port.y2();
-			cand1.d[ dim][dir1] = port.d[ dim][!dir1]; // extend to the furnace port near side; may be denormalized and skipped below
-			cand2.d[!dim][dir2] = duct.d[!dim][ dir2]; // extend to the duct
-			assert(cand2.is_strictly_normalized());
-			bool use_cand1(cand1.is_strictly_normalized()), use_cand2(1);
-			if ((use_cand1 && has_bcube_int(cand1, avoid_cubes)) || has_bcube_int(cand2, avoid_cubes)) continue; // bad routing
-			
-			for (auto i = objs.begin()+objs_start; i != objs.end(); ++i) { // merge to previously placed ducts
-				// Note: if our cand1 intersects an earlier and shorter cand1 duct, we want to either clip our cand1 to the existing cand1,
-				// or extend the existing cand1 to meet our duct; however, sorting from furthest to nearest above should prevent this from happening
-				// in most cases, and that's the point of the sort, to avoid having to handle this case
-				if (i->contains_cube(cand2)) {use_cand2 = 0; break;} // cand2 can be skipped
-			}
-			if (use_cand1) {use_cand1 = maybe_clip_overlapping_duct(cand1, objs, objs_start);}
-			if (use_cand2) {use_cand2 = maybe_clip_overlapping_duct(cand2, objs, objs_start);}
-
-			if (use_extend) { // check if our route is shorter or longer than the extend length and use whichever is shorter
-				float tot_len(0.0);
-				if (use_cand1) {tot_len += cand1.get_sz_dim( dim);}
-				if (use_cand2) {tot_len += cand2.get_sz_dim(!dim);}
-				if (tot_len < extend_len) {use_extend = 0;} else {break;}
-			}
-			if (use_cand1) {cand1.dim =  dim; objs.push_back(cand1);} // maybe add first  segment from vent
-			if (use_cand2) {cand2.dim = !dim; objs.push_back(cand2);} // maybe add second segment to furnace
-			break; // success
-		} // for n
+		bool const first_dim(furnace.dim); // make it consistent across vents to maximize sharing
+		was_connected = try_route_duct_with_jog(duct, port, first_dim, objs, objs_start, avoid_cubes, sub_cubes, extend_len, use_extend);
 		if (use_extend) {objs.push_back(extend_duct);} // use straight extension
+		else if (!was_connected) {ducts_to_reroute.push_back(duct);} // likely blocked by the attic door between the vent and the furnace
 	} // for ducts
+	for (room_object_t &duct : ducts_to_reroute) {
+		// try one jog to an existing duct
+		vect_room_object_t conns;
+
+		for (auto i = objs.begin()+objs_start; i != objs.end(); ++i) {
+			// split into a number of candidate connection points along the length of this duct segment
+			float const length(i->get_length()), width(i->get_width());
+			unsigned const num_steps(round_fp(0.25f*length/width));
+			if (num_steps == 0) continue; // too short, skip
+			float const step((length - width)/num_steps);
+
+			for (unsigned n = 0; n < num_steps; ++n) {
+				room_object_t conn(*i);
+				conn.d[i->dim][0] += n*step; // left edge
+				conn.d[i->dim][1]  = conn.d[i->dim][0] + width; // right edge
+				conns.push_back(conn);
+			}
+		} // for i
+		sort(conns.begin(), conns.end(), cmp_by_dist_decending(duct)); // reuse our convenient sort function
+		reverse(conns.begin(), conns.end()); // here we want closest first
+
+		for (room_object_t const &conn : conns) {
+			bool use_extend(0); // will remain at 0
+			if (try_route_duct_with_jog(duct, conn, conn.dim, objs, objs_start, avoid_cubes, sub_cubes, 0.0, use_extend)) {break;}
+		}
+	} // for ducts_to_reroute
 	for (auto i = objs.begin()+objs_start; i != objs.end(); ++i) {avoid_cubes.push_back(*i);} // add ducts to avoid_cubes
 }
 
-int building_t::choose_air_intake_room() const {
+int building_t::choose_air_intake_room() const { // for the air return
 	int best_room(-1); // start at not found
 
 	for (auto r = interior->rooms.begin(); r != interior->rooms.end(); ++r) {
