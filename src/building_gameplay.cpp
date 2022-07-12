@@ -30,6 +30,7 @@ void place_player_at_xy(float xval, float yval);
 void show_key_icon();
 bool is_shirt_model(room_object_t const &obj);
 bool is_pants_model(room_object_t const &obj);
+bool player_at_full_health();
 
 bool in_building_gameplay_mode() {return (game_mode == 2);} // replaces dodgeball mode
 
@@ -228,7 +229,13 @@ float get_obj_weight(room_object_t const &obj) {
 	return get_taken_obj_type(obj).weight; // constant per object type, for now, but really should depend on object size/volume
 }
 bool is_consumable(room_object_t const &obj) {
-	return (in_building_gameplay_mode() && obj.type == TYPE_BOTTLE && !obj.is_bottle_empty() && !(obj.flags & RO_FLAG_NO_CONS));
+	if (!in_building_gameplay_mode() || obj.type != TYPE_BOTTLE || obj.is_bottle_empty() || (obj.flags & RO_FLAG_NO_CONS)) return 0; // not consumable
+	unsigned const bottle_type(obj.get_bottle_type());
+
+	if (bottle_type == 0 || bottle_type == 1 || bottle_type == 5) { // healing items: water, coke, or medicine
+		if (player_at_full_health()) return 0; // if player is at full health, heal is not needed, so add this item to inventory rather than comsume it
+	}
+	return 1;
 }
 
 void show_weight_limit_message() {
@@ -390,6 +397,7 @@ public:
 	float get_drunkenness() const {return drunkenness;}
 	bool  player_is_dead () const {return (player_health <= 0.0);}
 	bool  player_has_key () const {return has_key;}
+	bool  player_at_full_health() const {return (player_health == 1.0 && !is_poisoned);}
 
 	bool can_open_door(door_t const &door) { // non-const because num_doors_unlocked is modified
 		if (door.is_closed_and_locked() && !has_key) {
@@ -707,6 +715,7 @@ float get_player_drunkenness() {return player_inventory.get_drunkenness();}
 float get_player_building_speed_mult() {return player_inventory.get_speed_mult();}
 bool player_can_open_door(door_t const &door) {return player_inventory.can_open_door(door);}
 void register_in_closed_bathroom_stall() {player_inventory.register_in_closed_bathroom_stall();}
+bool player_at_full_health() {return player_inventory.player_at_full_health();}
 
 void register_building_sound_for_obj(room_object_t const &obj, point const &pos) {
 	float const weight(get_obj_weight(obj)), volume((weight <= 1.0) ? 0.0 : min(1.0f, 0.01f*weight)); // heavier objects make more sound
