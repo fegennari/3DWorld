@@ -969,7 +969,8 @@ bool building_t::maybe_squish_spider(room_object_t const &obj) {
 
 snake_t::snake_t(point const &pos_, float radius_, vector3d const &dir_, unsigned id_) : building_animal_t(pos_, radius_, dir_, id_) {
 	length  = 2.0*radius; // input radius is half length
-	radius *= 0.025;
+	radius *= 0.05;
+	color   = BLACK; // TODO: make this randomly black or a shade of brown
 	unsigned const NUM_SEGS = 20; // head + 18 segments + tail
 	float const seg_length(length/NUM_SEGS);
 	vector3d const seg_step(-seg_length*dir); // head -> tail
@@ -987,6 +988,12 @@ cube_t snake_t::get_bcube() const {
 	bcube.expand_by_xy(radius);
 	bcube.z2() += radius;
 	return bcube;
+}
+// Note: seg_ix is a float so that we can specify fractional segments; actual segment index is offset by 0.5 for the segment center
+float snake_t::get_seg_radius(float seg_ix) const {
+	assert(!segments.empty());
+	float const t(seg_ix/segments.size()); // varies from 0.0 at tip of nose to 1.0 at tip of tail
+	return (1.0 - fabs(t - 0.5))*radius; // 0.5 => 1.0 => 0.5
 }
 void snake_t::move_segments(float dist) {
 	if (dist == 0.0) return;

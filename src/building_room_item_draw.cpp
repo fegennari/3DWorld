@@ -1301,21 +1301,33 @@ class snake_draw_t {
 	rgeom_mat_t mat;
 
 	void draw_snake(snake_t const &S, bool shadow_only, bool reflection_pass) {
-		colorRGBA const color(BROWN);
 		bool const low_detail(shadow_only || reflection_pass);
-		mat.add_sphere_to_verts(S.get_bcube(), color, low_detail); // TODO: this is a placeholder
+		unsigned const ndiv(get_rgeom_sphere_ndiv(low_detail)/2);
 
 		for (auto s = S.segments.begin(); s != S.segments.end(); ++s) {
-			if (s == S.segments.begin()) {
-				// TODO: draw head
+			unsigned const seg_ix(s - S.segments.begin());
+
+			if (s == S.segments.begin()) { // head
+				float const head_height(0.6*S.radius);
+				vector3d const head_size(S.radius, S.radius, head_height); // max radius; flattened in Z; TODO: should be longer in S.dir
+				mat.add_sphere_to_verts((*s + vector3d(0,0,head_height)), head_size, S.color, low_detail);
 			}
-			else if (s+1 == S.segments.end()) {
-				// TODO: draw tail
+			else if (s+1 == S.segments.end()) { // tail
+				float const radius(S.get_seg_radius(seg_ix));
+				point const &prev(*(s-1));
+				point const tail_start(0.5*(*s + prev)); // midpoint between this segment and the last
+				point const tail_end  (*s + (*s - tail_start)); // extend the same delta in the other direction
+				mat.add_cylin_to_verts(tail_end, (tail_start + vector3d(0,0,radius)), 0.0, radius, S.color, 0, 0, 0, 0, 1.0, 1.0, 0, ndiv); // cone
 			}
-			else {
-				// TODO: draw segment
+			else { // interior segment
+				float const radius1(S.get_seg_radius(seg_ix)), radius2(S.get_seg_radius(seg_ix+1));
+				point const &prev(*(s-1)), &next(*(s+1));
+				point const seg_start(0.5*(*s + prev)); // midpoint between this segment and the last
+				point const seg_end  (0.5*(*s + next)); // midpoint between this segment and the next
+				// TODO: share verts with prev/next segments, like with tree branches
+				mat.add_cylin_to_verts((seg_end + vector3d(0,0,radius2)), (seg_start + vector3d(0,0,radius1)), radius2, radius1, S.color, 0, 0, 0, 0, 1.0, 1.0, 0, ndiv);
 			}
-		}
+		} // for s
 	}
 public:
 	void draw(vect_snake_t const &snakes, shader_t &s, building_t const &building, occlusion_checker_noncity_t &oc,

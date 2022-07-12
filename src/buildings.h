@@ -137,6 +137,7 @@ struct spider_t : public building_animal_t {
 struct snake_t : public building_animal_t {
 	// for snakes, pos is (xc, yc, z1), radius is the max body radius, and dir is the head direction and direction of movement
 	float length=0.0, cur_move_amt=0.0;
+	colorRGBA color;
 	vector<point> segments; // segment centers: first = head, last = tail
 
 	snake_t(point const &pos_, float radius_, vector3d const &dir_, unsigned id_);
@@ -144,6 +145,7 @@ struct snake_t : public building_animal_t {
 	float get_xy_radius () const;
 	float get_height    () const {return radius;}
 	float get_seg_length() const {return length/segments.size();}
+	float get_seg_radius(float seg_ix) const;
 	cube_t get_bcube    () const;
 	void move_segments(float dist);
 };
