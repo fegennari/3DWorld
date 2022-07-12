@@ -78,6 +78,7 @@ bottle_params_t const bottle_params[NUM_BOTTLE_TYPES] = {
 	bottle_params_t("bottle of poison",   "yuck.png",                     BLACK,                     5.0, 2.0),
 	bottle_params_t("bottle of medicine", "interiors/red_cross.png",      LT_BLUE,                  20.0, 1.0),
 };
+enum {BOTTLE_TYPE_WATER=0, BOTTLE_TYPE_COKE, BOTTLE_TYPE_BEER, BOTTLE_TYPE_WINE, BOTTLE_TYPE_POISON, BOTTLE_TYPE_MEDS};
 
 struct building_animal_t {
 	point pos, last_pos;
@@ -590,6 +591,7 @@ struct room_object_t : public oriented_cube_t { // size=64
 	bool is_player_collidable() const;
 	bool can_use        () const;
 	bool is_interactive () const {return (has_dstate() || can_use());}
+	bool is_medicine    () const {return (type == TYPE_BOTTLE && get_bottle_type() == BOTTLE_TYPE_MEDS);}
 	bool can_place_onto () const;
 	bool is_floor_collidable () const;
 	bool is_spider_collidable() const;

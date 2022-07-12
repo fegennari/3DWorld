@@ -84,7 +84,7 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_KEYBOARD  ] = bldg_obj_type_t(0, 0, 1, 1, 0, 0, 2, 15.0,  2.0,   "keyboard");
 	bldg_obj_types[TYPE_SHOWER    ] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 1, 0.0,   0.0,   "shower");
 	bldg_obj_types[TYPE_RDESK     ] = bldg_obj_type_t(1, 1, 1, 0, 0, 0, 1, 800.0, 300.0, "reception desk");
-	bldg_obj_types[TYPE_BOTTLE    ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 1.0,   1.0,   "bottle");
+	bldg_obj_types[TYPE_BOTTLE    ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 1.0,   1.0,   "bottle", 1); // single use
 	bldg_obj_types[TYPE_WINE_RACK ] = bldg_obj_type_t(1, 1, 1, 1, 0, 0, 3, 75.0,  40.0,  "wine rack");
 	bldg_obj_types[TYPE_COMPUTER  ] = bldg_obj_type_t(0, 1, 1, 1, 0, 0, 2, 500.0, 20.0,  "computer"); // rats can collide with computers
 	bldg_obj_types[TYPE_MWAVE     ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 1, 100.0, 50.0,  "microwave oven");
@@ -232,7 +232,7 @@ bool is_consumable(room_object_t const &obj) {
 	if (!in_building_gameplay_mode() || obj.type != TYPE_BOTTLE || obj.is_bottle_empty() || (obj.flags & RO_FLAG_NO_CONS)) return 0; // not consumable
 	unsigned const bottle_type(obj.get_bottle_type());
 
-	if (bottle_type == 0 || bottle_type == 1 || bottle_type == 5) { // healing items: water, coke, or medicine
+	if (bottle_type == BOTTLE_TYPE_WATER || bottle_type == BOTTLE_TYPE_COKE || bottle_type == BOTTLE_TYPE_MEDS) { // healing items
 		if (player_at_full_health()) return 0; // if player is at full health, heal is not needed, so add this item to inventory rather than comsume it
 	}
 	return 1;
@@ -420,6 +420,12 @@ public:
 	void register_in_closed_bathroom_stall() const {
 		if (!carried.empty() && carried.back().type == TYPE_BOOK) {register_achievement("Bathroom Reader");}
 	}
+	void use_medicine() {
+		player_health = 1.0;
+		is_poisoned   = 0;
+		print_text_onscreen("Used Medicine", CYAN, 0.8, 1.5*TICKS_PER_SECOND, 0);
+		gen_sound_thread_safe_at_player(SOUND_GULP, 1.0);
+	}
 	void switch_item(bool dir) { // Note: current item is always carried.back()
 		if (carried.size() <= 1) return; // no other item to switch to
 		if (dir) {std::rotate(carried.begin(), carried.begin()+1, carried.end());}
@@ -439,12 +445,12 @@ public:
 
 		if (is_consumable(obj)) { // nonempty bottle, consumable
 			switch (obj.get_bottle_type()) {
-			case 0: health =  0.25; break; // water
-			case 1: health =  0.50; break; // Coke
-			case 2: drunk  =  0.25; break; // beer
-			case 3: drunk  =  0.50; break; // wine (entire bottle)
-			case 4: health = -0.50; break; // poison - take damage
-			case 5: health =  1.00; is_poisoned = 0; break; // medicine, restore full health and cure poisoning
+			case BOTTLE_TYPE_WATER : health =  0.25; break; // water
+			case BOTTLE_TYPE_COKE  : health =  0.50; break; // Coke
+			case BOTTLE_TYPE_BEER  : drunk  =  0.25; break; // beer
+			case BOTTLE_TYPE_WINE  : drunk  =  0.50; break; // wine (entire bottle)
+			case BOTTLE_TYPE_POISON: health = -0.50; break; // poison - take damage
+			case BOTTLE_TYPE_MEDS  : health =  1.00; is_poisoned = 0; break; // medicine, restore full health and cure poisoning
 			default: assert(0);
 			}
 		}
@@ -542,7 +548,6 @@ public:
 		if (val == 0) return 1; // no change
 		assert(!carried.empty());
 		carried_item_t &obj(carried.back());
-		obj.flags |= RO_FLAG_USED;
 		unsigned const capacity(get_room_obj_type(obj).capacity);
 
 		if (capacity > 0) {
@@ -555,6 +560,9 @@ public:
 				return 0;
 			}
 		}
+		// mark used last so that medicine doesn't leave us with half it's value because the amount subtracted if half if it's used;
+		// do other consumables with multiple uses still have this problem?
+		obj.flags |= RO_FLAG_USED;
 		return 1;
 	}
 	bool mark_last_item_used() {
@@ -1336,6 +1344,12 @@ bool building_t::maybe_use_last_pickup_room_object(point const &player_pos) {
 		else if (obj.type == TYPE_PHONE) {
 			phone_manager.player_action();
 		}
+		else if (obj.is_medicine()) {
+			if (!player_at_full_health()) { // don't use if not needed
+				player_inventory.use_medicine();
+				player_inventory.mark_last_item_used(); // will remove it
+			}
+		}
 		else {assert(0);}
 	}
 	else {assert(0);}
@@ -1653,6 +1667,7 @@ bool building_t::apply_paint(point const &pos, vector3d const &dir, colorRGBA co
 }
 
 bool room_object_t::can_use() const { // excludes dynamic objects
+	if (is_medicine()) return 1; // medicine can be carried in the inventory and used later
 	return (type == TYPE_SPRAYCAN || type == TYPE_MARKER || type == TYPE_TPROLL || type == TYPE_BOOK || type == TYPE_PHONE || type == TYPE_TAPE || type == TYPE_RAT);
 }
 bool room_object_t::can_place_onto() const {

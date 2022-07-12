@@ -988,6 +988,11 @@ void apply_room_obj_rotate(room_object_t &obj, obj_model_inst_t &inst) {
 		check_mvm_update();
 		return; // don't need to run the code below
 	}
+	else if (c.is_medicine()) {
+		static building_room_geom_t tmp_rgeom;
+		tmp_rgeom.add_bottle(c);
+		tmp_rgeom.mats_small.upload_draw_and_clear(s);
+	}
 	else {assert(0);}
 	if (needs_blend) {enable_blend();}
 	tid_nm_pair_dstate_t state(s);
