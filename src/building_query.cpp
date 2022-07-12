@@ -1635,7 +1635,7 @@ bool building_t::check_and_handle_dynamic_obj_coll(point &pos, float radius, flo
 	float const rat_radius_scale    = 0.7; // allow them to get a bit closer together, since radius is conservative
 	float const spider_radius_scale = 1.5; // legs go outside radius, use a larger scale
 	interior->room_geom->rats   .update_delta_sum_for_animal_coll(pos, radius, z1, z2, rat_radius_scale,    max_overlap, delta_sum);
-	interior->room_geom->spiders.update_delta_sum_for_animal_coll(pos, radius, z1, z2, spider_radius_scale, max_overlap, delta_sum);
+	interior->room_geom->spiders.update_delta_sum_for_animal_coll(pos, radius, z1, z2, spider_radius_scale, max_overlap, delta_sum); // should we avoid squished spiders?
 	
 	if (max_overlap > 0.0) { // we have at least one collision
 		float const delta_mag(delta_sum.mag());

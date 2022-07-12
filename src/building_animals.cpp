@@ -638,7 +638,10 @@ void building_t::update_spiders(point const &camera_bs, unsigned building_ix) {
 		global_building_params.spider_size_min, global_building_params.spider_size_max);
 	// update spiders
 	float const timestep(min(fticks, 4.0f)); // clamp fticks to 100ms
-	for (spider_t &spider : spiders) {spider.move(timestep);}
+	
+	for (spider_t &spider : spiders) {
+		if (!spider.squished) {spider.move(timestep);}
+	}
 	spiders.do_sort();
 	rand_gen_t rgen;
 	rgen.set_state(building_ix+1, frame_counter+1); // unique per building and per frame
@@ -853,7 +856,7 @@ bool building_t::update_spider_pos_orient(spider_t &spider, point const &camera_
 
 void building_t::update_spider(spider_t &spider, point const &camera_bs, float timestep, float &max_xmove, rand_gen_t &rgen) const {
 	
-	if (spider.is_sleeping()) return; // peacefully sleeping
+	if (spider.squished || spider.is_sleeping()) return; // horribly squished or peacefully sleeping
 	float const radius(spider.radius), height(2.0*radius), coll_radius(2.0f*radius);
 	float const spider_z1(spider.pos.z - height), spider_z2(spider.pos.z + height);
 
@@ -943,6 +946,22 @@ void building_t::update_spider(spider_t &spider, point const &camera_bs, float t
 		bool const played_sound(play_attack_sound(local_to_camera_space(spider.pos), 0.5, 1.5, rgen)); // quieter and higher pitch than rats
 		if (played_sound) {player_take_damage(0.1, 1);} // poisoned every so often
 	}
+}
+
+bool building_t::maybe_squish_spider(room_object_t const &obj) {
+	assert(has_room_geom());
+	bool any_squished(0);
+
+	for (spider_t &spider : interior->room_geom->spiders) {
+		if (spider.squished) continue; // already squished
+		if (!!obj.contains_pt_xy(spider.pos) || !obj.intersects(spider.get_bcube())) continue;
+		if (obj.get_size().get_max_val() < spider.get_xy_radius()) continue; // object is too small to squish this spider
+		add_blood_decal(spider.pos, 1.5*spider.get_xy_radius());
+		spider.pos.z -= 0.4*spider.get_height(); // move it near the ground since it will be drawn flattened
+		any_squished  = spider.squished = 1;
+		register_achievement("Splat the Spider");
+	} // for spider
+	return any_squished;
 }
 
 

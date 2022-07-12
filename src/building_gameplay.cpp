@@ -321,10 +321,11 @@ struct tape_manager_t {
 
 tape_manager_t tape_manager;
 
-unsigned const NUM_ACHIEVEMENTS = 12;
+unsigned const NUM_ACHIEVEMENTS = 13;
 
 class achievement_tracker_t {
-	// Rat Food, Top Secret Documents, Mr. Yuck, Zombie Hunter, Royal Flush, Zombie Bashing, One More Drink, Bathroom Reader, TP Artist, Master Lockpick, Squeaky Clean, Sleep with the Fishes
+	// Rat Food, Top Secret Documents, Mr. Yuck, Zombie Hunter, Royal Flush, Zombie Bashing, One More Drink, Bathroom Reader, TP Artist,
+	// Master Lockpick, Squeaky Clean, Sleep with the Fishes, Splat the Spider
 	set<string> achievements;
 	// some way to make this persistent, print these out somewhere, or add small screen icons?
 public:
@@ -1316,6 +1317,7 @@ bool building_t::maybe_use_last_pickup_room_object(point const &player_pos) {
 				assign_correct_room_to_object(obj); // set new room; required for opening books; room should be valid, but okay if not
 				if (point_in_attic(obj.get_cube_center())) {obj.flags |= RO_FLAG_IN_ATTIC;} else {obj.flags &= ~RO_FLAG_IN_ATTIC;} // set attic flag
 				if (!interior->room_geom->add_room_object(obj, *this)) return 0;
+				if (maybe_squish_spider(obj)) {gen_sound_thread_safe(SOUND_SQUISH, (get_camera_pos() + (obj.get_cube_center() - player_pos)));}
 			}
 			player_inventory.return_object_to_building(obj); // re-add this object's value
 			player_inventory.remove_last_item(); // used
@@ -1667,9 +1669,8 @@ bool building_t::apply_toilet_paper(point const &pos, vector3d const &dir, float
 	return 1;
 }
 
-void building_t::add_blood_decal(point const &pos) {
+void building_t::add_blood_decal(point const &pos, float radius) {
 	assert(has_room_geom());
-	float const radius(get_scaled_player_radius());
 	float zval(pos.z);
 	if (!get_zval_of_floor(pos, radius, zval)) return; // no suitable floor found
 	tex_range_t const tex_range(tex_range_t::from_atlas((rand()&1), (rand()&1), 2, 2)); // 2x2 texture atlas

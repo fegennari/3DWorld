@@ -117,7 +117,7 @@ struct spider_t : public building_animal_t {
 	vector3d upv;
 	point last_valid_pos;
 	float update_time=0.0, web_start_zval=0.0, jump_vel_z=0.0, jump_dist=0.0;
-	bool on_web=0;
+	bool on_web=0, squished=0;
 	// this first constructor is for the lower_bound() call in vect_rat_t::get_first_rat_with_x2_gt()
 	spider_t(float xval) : building_animal_t(xval) {}
 	spider_t(point const &pos_, float radius_, vector3d const &dir_, unsigned id_);
@@ -1359,6 +1359,7 @@ private:
 	void scare_rat_at_pos(rat_t &rat, point const &scare_pos, float amount, bool by_sight) const;
 	bool update_spider_pos_orient(spider_t &spider, point const &camera_bs, float timestep, rand_gen_t &rgen) const;
 	void update_spider(spider_t &spider, point const &camera_bs, float timestep, float &max_xmove, rand_gen_t &rgen) const;
+	bool maybe_squish_spider(room_object_t const &obj);
 	void update_snake (snake_t  &snake,  point const &camera_bs, float timestep, float &max_xmove, rand_gen_t &rgen) const;
 	void get_room_obj_cubes(room_object_t const &c, point const &pos, vect_cube_t &lg_cubes, vect_cube_t &sm_cubes, vect_cube_t &non_cubes) const;
 	bool check_line_coll_expand(point const &p1, point const &p2, float radius, float height) const;
@@ -1551,7 +1552,7 @@ private:
 	void register_button_event(room_object_t const &button);
 	bool get_zval_of_floor(point const &pos, float radius, float &zval) const;
 	bool get_zval_for_obj_placement(point const &pos, float radius, float &zval, bool add_z_bias) const;
-	void add_blood_decal(point const &pos);
+	void add_blood_decal(point const &pos, float radius);
 	void play_tape_sound(point const &sound_pos, float sound_gain) const;
 	bool is_obj_above_ramp(cube_t const &c) const;
 	bool is_room_above_ramp(cube_t const &room, float zval) const;

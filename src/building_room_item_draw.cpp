@@ -1269,6 +1269,7 @@ public:
 			m[10]= upv.z;
 			fgMultMatrix(xm);
 			uniform_scale(S.radius);
+			if (S.squished) {fgScale(1.0, 1.0, 0.2);} // flatten it if squished
 			check_mvm_update();
 			// Note: we could use hardware instancing here if the MVM is used as a uniform in the shader, but we also need to set per-instance anim_time
 			mat.draw_geom();
