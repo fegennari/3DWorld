@@ -1339,7 +1339,8 @@ void building_room_geom_t::add_pipe(room_object_t const &c) { // should be SHAPE
 	//assert(0.5*c.get_sz_dim((dim+2)%3) == radius); // must be a square cross section, but too strong due to FP error
 	// only vertical pipes cast shadows; horizontal ceiling pipes are too high and outside the ceiling light shadow map,
 	// or otherwise don't look correct when an area light is treated as a point light
-	bool const flat_ends(c.is_hanging()), shadowed(c.flags & RO_FLAG_LIT); // RO_FLAG_LIT flag is interpreted as "casts shadows"
+	// Note: attic ducts have the attic flag set, which is aliased as the hanging flag, so we have to disable flat ends for ducts
+	bool const flat_ends(c.is_hanging() && c.type != TYPE_DUCT), shadowed(c.flags & RO_FLAG_LIT); // RO_FLAG_LIT flag is interpreted as "casts shadows"
 	// adj flags indicate adjacencies where we draw joints connecting to other pipe sections
 	bool const draw_joints[2] = {((c.flags & RO_FLAG_ADJ_LO) != 0), ((c.flags & RO_FLAG_ADJ_HI) != 0)};
 	colorRGBA const color(apply_light_color(c));
