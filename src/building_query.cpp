@@ -546,7 +546,8 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, flo
 				float const railing_zval(railing.p1.z + CLIP_TO_01(t)*(railing.p2.z - railing.p1.z));
 				if ((railing_zval - get_railing_height(*c)) > float(pos.z + camera_height) || railing_zval < (pos.z - radius)) continue; // no Z collision
 			}
-			if (c->shape == SHAPE_CYLIN) { // vertical cylinder
+			// Note: only vert pipes have player coll; ducts are not vert and are treated as cubes
+			if (c->shape == SHAPE_CYLIN && c->type != TYPE_DUCT) { // vertical cylinder
 				cylinder_3dw cylin(c->get_cylinder());
 				cylin.p2.z += radius; // extend upward by radius
 				had_coll |= sphere_vert_cylin_intersect_with_ends(pos, xy_radius, cylin, cnorm);
