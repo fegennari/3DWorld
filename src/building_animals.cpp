@@ -144,9 +144,7 @@ bool play_attack_sound(point const &pos, float gain, float pitch, rand_gen_t &rg
 
 // *** Rats ***
 
-rat_t::rat_t(point const &pos_, float radius_, vector3d const &dir_, unsigned id_) : building_animal_t(pos_, radius_, dir_, id_),
-dest(pos), fear(0.0), is_hiding(0), near_player(0), attacking(0)
-{
+rat_t::rat_t(point const &pos_, float radius_, vector3d const &dir_, unsigned id_) : building_animal_t(pos_, radius_, dir_, id_), dest(pos) {
 	vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_RAT)); // L=3878, W=861, H=801
 	hwidth = radius*sz.y/sz.x; // scale radius by ratio of width to length
 	height = 2.0*radius*sz.z/max(sz.x, sz.y); // use max of x/y size; the x/y size represents the bcube across rotations
@@ -587,9 +585,7 @@ void building_t::scare_rat_at_pos(rat_t &rat, point const &scare_pos, float amou
 // *** Spiders ***
 
 // Note: radius is really used for height and body size; legs can extend out to ~2x radius, so we decrease radius to half the user-specified value to account for this
-spider_t::spider_t(point const &pos_, float radius_, vector3d const &dir_, unsigned id_) :
-	building_animal_t(pos_, 0.5*radius_, dir_, id_), upv(plus_z), update_time(0.0), web_start_zval(0.0), jump_vel_z(0.0), jump_dist(0.0), on_web(0)
-{
+spider_t::spider_t(point const &pos_, float radius_, vector3d const &dir_, unsigned id_) : building_animal_t(pos_, 0.5*radius_, dir_, id_), upv(plus_z) {
 	pos.z += radius; // shift upward so that the center is off the ground
 }
 cube_t spider_t::get_bcube() const {
@@ -952,9 +948,7 @@ void building_t::update_spider(spider_t &spider, point const &camera_bs, float t
 
 // *** Snakes ***
 
-snake_t::snake_t(point const &pos_, float radius_, vector3d const &dir_, unsigned id_) :
-	building_animal_t(pos_, radius_, dir_, id_), cur_move_amt(0.0)
-{
+snake_t::snake_t(point const &pos_, float radius_, vector3d const &dir_, unsigned id_) : building_animal_t(pos_, radius_, dir_, id_) {
 	length  = 2.0*radius; // input radius is half length
 	radius *= 0.025;
 	unsigned const NUM_SEGS = 20; // head + 18 segments + tail

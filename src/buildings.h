@@ -97,11 +97,11 @@ struct building_animal_t {
 
 struct rat_t : public building_animal_t {
 	point dest, fear_pos;
-	float height, hwidth, fear;
-	bool is_hiding, near_player, attacking;
+	float height=0.0, hwidth=0.0, fear=0.0;
+	bool is_hiding=0, near_player=0, attacking=0;
 
 	// this first constructor is for the lower_bound() call in vect_rat_t::get_first_rat_with_x2_gt()
-	rat_t(float xval) : building_animal_t(xval), height(0), hwidth(0), fear(0), is_hiding(0), near_player(0), attacking(0) {}
+	rat_t(float xval) : building_animal_t(xval) {}
 	rat_t(point const &pos_, float radius_, vector3d const &dir_, unsigned id_);
 	bool operator<(rat_t const &r) const {return (pos.x < r.pos.x);} // compare only xvals
 	static bool allow_in_attic() {return 1;}
@@ -116,10 +116,10 @@ struct rat_t : public building_animal_t {
 struct spider_t : public building_animal_t {
 	vector3d upv;
 	point last_valid_pos;
-	float update_time, web_start_zval, jump_vel_z, jump_dist;
-	bool on_web;
+	float update_time=0.0, web_start_zval=0.0, jump_vel_z=0.0, jump_dist=0.0;
+	bool on_web=0;
 	// this first constructor is for the lower_bound() call in vect_rat_t::get_first_rat_with_x2_gt()
-	spider_t(float xval) : building_animal_t(xval), update_time(0.0), web_start_zval(0.0), jump_vel_z(0.0), jump_dist(0.0), on_web(0) {}
+	spider_t(float xval) : building_animal_t(xval) {}
 	spider_t(point const &pos_, float radius_, vector3d const &dir_, unsigned id_);
 	static bool allow_in_attic() {return 1;}
 	float get_xy_radius() const {return 2.0*radius;}
@@ -135,7 +135,7 @@ struct spider_t : public building_animal_t {
 
 struct snake_t : public building_animal_t {
 	// for snakes, pos is (xc, yc, z1), radius is the max body radius, and dir is the head direction and direction of movement
-	float length, cur_move_amt;
+	float length=0.0, cur_move_amt=0.0;
 	vector<point> segments; // segment centers: first = head, last = tail
 
 	snake_t(point const &pos_, float radius_, vector3d const &dir_, unsigned id_);
