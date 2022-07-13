@@ -1297,12 +1297,26 @@ public:
 };
 spider_draw_t spider_draw;
 
+unsigned const quad_to_tris_ixs_rev[6] = {2,1,0, 3,2,0};
+
 class snake_draw_t {
 	rgeom_mat_t mat;
 
+	// Note: similar to the function in Tree.cpp, but pushes back rather than assigning, and step is hard-coded to 1
+	void add_cylin_indices_tris(vector<unsigned> &idata, unsigned ndiv, unsigned ix_start) {
+		for (unsigned S = 0; S < ndiv; ++S) {
+			bool const last_edge(S == ndiv-1);
+			unsigned const ix0(ix_start + S), ixs[4] = {0, ndiv, (last_edge ? 1 : 1+ndiv), (last_edge ? 1-ndiv : 1)};
+			for (unsigned i = 0; i < 6; ++i) {idata.push_back(ix0 + ixs[quad_to_tris_ixs_rev[i]]);}
+		}
+	}
 	void draw_snake(snake_t const &S, bool shadow_only, bool reflection_pass) {
 		bool const low_detail(shadow_only || reflection_pass);
 		unsigned const ndiv(get_rgeom_sphere_ndiv(low_detail)/2);
+		float const tscale = 10.0; // must tune this once our sname is textured
+		float const ndiv_inv(1.0/ndiv);
+		color_wrapper const cw(S.color);
+		unsigned data_pos(0), quad_id(0);
 
 		for (auto s = S.segments.begin(); s != S.segments.end(); ++s) {
 			unsigned const seg_ix(s - S.segments.begin());
@@ -1312,20 +1326,27 @@ class snake_draw_t {
 				vector3d const head_size(S.radius, S.radius, head_height); // max radius; flattened in Z; TODO: should be longer in S.dir
 				mat.add_sphere_to_verts((*s + vector3d(0,0,head_height)), head_size, S.color, low_detail);
 			}
-			else if (s+1 == S.segments.end()) { // tail
-				float const radius(S.get_seg_radius(seg_ix));
-				point const &prev(*(s-1));
-				point const tail_start(0.5*(*s + prev)); // midpoint between this segment and the last
-				point const tail_end  (*s + (*s - tail_start)); // extend the same delta in the other direction
-				mat.add_cylin_to_verts(tail_end, (tail_start + vector3d(0,0,radius)), 0.0, radius, S.color, 0, 0, 0, 0, 1.0, 1.0, 0, ndiv); // cone
-			}
-			else { // interior segment
-				float const radius1(S.get_seg_radius(seg_ix)), radius2(S.get_seg_radius(seg_ix+1));
-				point const &prev(*(s-1)), &next(*(s+1));
-				point const seg_start(0.5*(*s + prev)); // midpoint between this segment and the last
-				point const seg_end  (0.5*(*s + next)); // midpoint between this segment and the next
-				// TODO: share verts with prev/next segments, like with tree branches
-				mat.add_cylin_to_verts((seg_end + vector3d(0,0,radius2)), (seg_start + vector3d(0,0,radius1)), radius2, radius1, S.color, 0, 0, 0, 0, 1.0, 1.0, 0, ndiv);
+			else { // interior segment or tail
+				bool const is_first(s == S.segments.begin()+1), is_tail(s+1 == S.segments.end());
+				float const radius1(S.get_seg_radius(seg_ix)), radius2(is_tail ? 0.0 : S.get_seg_radius(seg_ix+1));
+				point const seg_start(0.5*(*s + *(s-1))); // midpoint between this segment and the last
+				point const seg_end  (is_tail ? (*s + (*s - seg_start)) : 0.5*(*s + *(s+1))); // midpoint between this segment and the next
+				point const ce[2] = {(seg_end + vector3d(0,0,radius2)), (seg_start + vector3d(0,0,radius1))};
+				vector3d v12; // (ce[1] - ce[0]).get_norm()
+				vector_point_norm const &vpn(gen_cylinder_data(ce, radius2, radius1, ndiv, v12, NULL, 0.0, 1.0, 0));
+				if (is_first) {data_pos = mat.itri_verts.size();}
+
+				for (unsigned j = !is_first; j < 2; ++j) {
+					float const ty(tscale*(seg_ix + j));
+
+					for (unsigned S = 0; S < ndiv; ++S) { // first cylin: 0,1 ; other cylins: 1
+						float const tx(2.0f*fabs(S*ndiv_inv - 0.5f));
+						vector3d const n(0.5f*(vpn.n[S] + vpn.n[(S+ndiv-1)%ndiv])); // average face normals to get vert normals, don't need to normalize
+						mat.itri_verts.emplace_back(vpn.p[(S<<1)+j], n, tx, ty, cw);
+					}
+				}
+				add_cylin_indices_tris(mat.indices, ndiv, (data_pos + quad_id)); // create index data
+				quad_id += ndiv;
 			}
 		} // for s
 	}
