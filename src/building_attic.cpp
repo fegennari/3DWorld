@@ -791,6 +791,7 @@ void building_t::add_attic_ductwork(rand_gen_t rgen, room_object_t const &furnac
 		}
 	}
 	// add ducts on the attic floor
+	unsigned const ducts_start(objs.size()); // includes cubes above vents in cylindrical ducts case
 	vect_room_object_t ducts, objs_to_add;
 
 	// find all vents in the ceilings of upper floors just below the attic
@@ -819,12 +820,12 @@ void building_t::add_attic_ductwork(rand_gen_t rgen, room_object_t const &furnac
 	sort(ducts.begin(), ducts.end(), cmp_by_dist_decending(furnace));
 	vect_cube_t sub_cubes; // reused
 	vect_room_object_t ducts_to_reroute;
-	unsigned const objs_start(objs.size());
+	unsigned const horiz_ducts_start(objs.size());
 
 	for (room_object_t &duct : ducts) {
 		bool added(0);
 
-		for (auto i = objs.begin()+objs_start; i != objs.end(); ++i) {
+		for (auto i = objs.begin()+horiz_ducts_start; i != objs.end(); ++i) {
 			if (!duct_merges_to_xy(duct, *i)) continue;
 			sub_cubes.clear();
 			subtract_cube_from_cube(duct, *i, sub_cubes);
@@ -839,7 +840,7 @@ void building_t::add_attic_ductwork(rand_gen_t rgen, room_object_t const &furnac
 		float extend_len(0.0);
 		bool use_extend(0), was_connected(0);
 
-		for (auto i = objs.begin()+objs_start; i != objs.end(); ++i) {
+		for (auto i = objs.begin()+horiz_ducts_start; i != objs.end(); ++i) {
 			for (unsigned d = 0; d < 2; ++d) { // x,y
 				if (i->d[!d][0] > duct.d[!d][0] || i->d[!d][1] < duct.d[!d][1]) continue; // duct not contained in the other dim
 				bool const dir(duct.get_center_dim(d) < i->get_center_dim(d));
@@ -857,7 +858,7 @@ void building_t::add_attic_ductwork(rand_gen_t rgen, room_object_t const &furnac
 		cube_t port(furnace);
 		port.expand_by(vector3d(-0.5*(furnace.dx() - seg2_width_x), -0.5*(furnace.dy() - seg2_width_y), 0.0)); // shrink in X and Y
 		bool const first_dim(furnace.dim); // make it consistent across vents to maximize sharing
-		was_connected = try_route_duct_with_jog(duct, port, first_dim, objs, objs_start, avoid_cubes, sub_cubes, extend_len, use_extend, is_cylin);
+		was_connected = try_route_duct_with_jog(duct, port, first_dim, objs, horiz_ducts_start, avoid_cubes, sub_cubes, extend_len, use_extend, is_cylin);
 		if (use_extend) {objs.push_back(extend_duct);} // use straight extension
 		else if (!was_connected) {ducts_to_reroute.push_back(duct);} // likely blocked by the attic door between the vent and the furnace
 	} // for ducts
@@ -865,7 +866,7 @@ void building_t::add_attic_ductwork(rand_gen_t rgen, room_object_t const &furnac
 		// try one jog to an existing duct
 		vect_room_object_t conns;
 
-		for (auto i = objs.begin()+objs_start; i != objs.end(); ++i) {
+		for (auto i = objs.begin()+horiz_ducts_start; i != objs.end(); ++i) {
 			// split into a number of candidate connection points along the length of this duct segment
 			float const length(i->get_length()), width(i->get_width());
 			unsigned const num_steps(round_fp(0.25f*length/width));
@@ -884,10 +885,10 @@ void building_t::add_attic_ductwork(rand_gen_t rgen, room_object_t const &furnac
 
 		for (room_object_t const &conn : conns) {
 			bool use_extend(0); // will remain at 0
-			if (try_route_duct_with_jog(duct, conn, conn.dim, objs, objs_start, avoid_cubes, sub_cubes, 0.0, use_extend, is_cylin)) {break;}
+			if (try_route_duct_with_jog(duct, conn, conn.dim, objs, horiz_ducts_start, avoid_cubes, sub_cubes, 0.0, use_extend, is_cylin)) {break;}
 		}
 	} // for ducts_to_reroute
-	for (auto i = objs.begin()+objs_start; i != objs.end(); ++i) {avoid_cubes.push_back(*i);} // add ducts to avoid_cubes
+	for (auto i = objs.begin()+ducts_start; i != objs.end(); ++i) {avoid_cubes.push_back(*i);} // add *all* ducts to avoid_cubes
 }
 
 int building_t::choose_air_intake_room() const { // for the air return
