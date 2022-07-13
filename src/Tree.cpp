@@ -1061,7 +1061,7 @@ template<typename branch_index_t> void tree_data_t::create_branch_vbo() {
 
 	for (unsigned i = 0; i < numcylin; i++) {
 		draw_cylin const &cylin(all_cylins[i]);
-		unsigned const ndiv(cylin.get_num_div());//, ndiv2(ndiv/2);
+		unsigned const ndiv(cylin.get_num_div());
 		point const ce[2] = {cylin.p1, cylin.p2};
 		float const ndiv_inv(1.0/ndiv);
 		vector3d v12; // (ce[1] - ce[0]).get_norm()
@@ -1845,7 +1845,7 @@ void tree_builder_t::create_1_order_branch(int base_cylin_num, float rotate_star
 		}
 		else {
 			int const denom(((num_2_branches_created+1)*branch.num_cylins));
-			temp_num2 = (j+1)*int(branch.num_branches)/denom + int(branch.num_branches)/denom;
+			temp_num2 = int((j+1)*int(branch.num_branches)/denom) + int(branch.num_branches)/denom;
 		}
 		if (temp_num2*branch_1_distribution >= 1.0f && num_2_branches_created < branch.num_branches) branch_just_created = true;
 		int const deg_added(generate_next_cylin(j, branch.num_cylins, branch_just_created, branch_deflected));
