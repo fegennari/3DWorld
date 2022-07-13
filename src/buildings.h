@@ -598,6 +598,7 @@ struct room_object_t : public oriented_cube_t { // size=64
 	bool is_floor_collidable () const;
 	bool is_spider_collidable() const;
 	bool is_collidable(bool for_spider) const {return (for_spider ? is_spider_collidable() : is_floor_collidable());}
+	bool is_vert_cylinder() const;
 	unsigned get_bottle_type() const {return ((obj_id&63) % NUM_BOTTLE_TYPES);} // first 6 bits are bottle type
 	unsigned get_orient () const {return (2*dim + dir);}
 	unsigned get_num_shelves() const {assert(type == TYPE_SHELVES); return (2 + (room_id % 3));} // 2-4 shelves

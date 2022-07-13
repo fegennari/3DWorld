@@ -297,7 +297,7 @@ bool building_t::check_sphere_coll(point &pos, point const &p_last, vector3d con
 }
 
 float room_object_t::get_radius() const {
-	if (shape == SHAPE_CYLIN ) {return 0.25f*(dx() + dy());} // vertical cylinder: return average of x/y diameter
+	if (shape == SHAPE_CYLIN ) {return 0.25f*(dx() + dy());} // cylinder: return average of x/y diameter
 	if (shape == SHAPE_SPHERE) {return 0.5*dx();} // sphere, should be the same dx()/dy()/dz() value (but can't assert due to FP precision errors)
 	assert(0); // cubes don't have a radius
 	return 0.0; // never gets here
@@ -547,7 +547,7 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, flo
 				if ((railing_zval - get_railing_height(*c)) > float(pos.z + camera_height) || railing_zval < (pos.z - radius)) continue; // no Z collision
 			}
 			// Note: only vert pipes have player coll; ducts are not vert and are treated as cubes
-			if (c->shape == SHAPE_CYLIN && c->type != TYPE_DUCT) { // vertical cylinder
+			if (c->is_vert_cylinder()) { // vertical cylinder
 				cylinder_3dw cylin(c->get_cylinder());
 				cylin.p2.z += radius; // extend upward by radius
 				had_coll |= sphere_vert_cylin_intersect_with_ends(pos, xy_radius, cylin, cnorm);
@@ -692,7 +692,7 @@ bool building_interior_t::check_sphere_coll(building_t const &building, point &p
 		unsigned coll_ret(0);
 		// add special handling for things like elevators and cubicles? right now these are only in office buildings, where there are no dynamic objects
 
-		if (c->shape == SHAPE_CYLIN) { // vertical cylinder (including table)
+		if (c->is_vert_cylinder()) { // vertical cylinder (including table)
 			cylinder_3dw const cylin(c->get_cylinder());
 
 			if (c->type == TYPE_TABLE) {
@@ -840,7 +840,7 @@ bool building_interior_t::line_coll(building_t const &building, point const &p1,
 				unsigned const n_end((c->is_open() && !c->is_small_closet()) ? 4U : 5U); // skip open doors for large closets since this case is more complex
 				for (unsigned n = 0; n < n_end; ++n) {had_coll |= get_line_clip_update_t(p1, p2, cubes[n], t);}
 			}
-			else if (c->shape == SHAPE_CYLIN) { // vertical cylinder
+			else if (c->is_vert_cylinder()) { // vertical cylinder
 				if (line_intersect_cylinder_with_t(p1, p2, c->get_cylinder(), 1, tmin) && tmin < t) {t = tmin; had_coll = 1;}
 			}
 			else if (c->shape == SHAPE_SPHERE) { // sphere
@@ -891,7 +891,7 @@ point building_interior_t::find_closest_pt_on_obj_to_pos(building_t const &build
 				unsigned const n_end((c->is_open() && !c->is_small_closet()) ? 4U : 5U); // skip open doors for large closets since this case is more complex
 				for (unsigned n = 0; n < n_end; ++n) {update_closest_pt(cubes[n], pos, closest, pad_dist, dmin_sq);}
 			}
-			if (c->shape == SHAPE_CYLIN) { // vertical cylinder
+			if (c->is_vert_cylinder()) { // vertical cylinder
 				point const center(c->get_cube_center());
 				float const radius(c->get_radius() + pad_dist), dsq_xy(max(0.0f, (p2p_dist_xy_sq(pos, center) - radius*radius)));
 				float const zval(max(c->z1()-pad_dist, min(c->z2()+pad_dist, pos.z))), dz(pos.z - zval), dsq(dsq_xy + dz*dz);
@@ -1281,6 +1281,11 @@ bool room_object_t::is_spider_collidable() const { // include objects on the flo
 	if (type == TYPE_BOOK) return 0; // I guess books don't count, since they're too small to walk on?
 	return 1;
 }
+bool room_object_t::is_vert_cylinder() const {
+	if (shape != SHAPE_CYLIN) return 0; // not a cylinder
+	if (type != TYPE_DUCT && type != TYPE_PIPE) return 1; // only ducts and pipes can be horizontal cylinders
+	return dir; // duct/pipe encoding for vertical is dim=x, dir=1
+}
 float building_t::get_ground_floor_z_thresh(bool for_spider) const {
 	return (ground_floor_z1 + (for_spider ? 1.0f : 0.25f)*get_window_vspace()); // rats are on the ground, while spiders can climb walls
 }
@@ -1461,7 +1466,7 @@ bool building_t::check_line_coll_expand(point const &p1, point const &p2, float 
 			if (!c->is_floor_collidable()) continue;
 			if (!line_bcube.intersects(*c) || !line_int_cube_exp(p1, p2, get_true_room_obj_bcube(*c), expand)) continue;
 
-			if (c->shape == SHAPE_CYLIN) { // vertical cylinder
+			if (c->is_vert_cylinder()) { // vertical cylinder
 				if (!is_house && c->type == TYPE_WHEATER) return 1; // office building water heaters have pipes into the floor, more than a cylinder, so use their bcubes
 				cylinder_3dw cylin(c->get_cylinder());
 				cylin.p1.z -= hheight; cylin.p2.z += hheight; // extend top and bottom
