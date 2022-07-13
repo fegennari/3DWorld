@@ -767,7 +767,7 @@ struct cmp_by_dist_decending { // furthest to closest
 // should there also be an add_basement_ductwork() for office buildings?
 void building_t::add_attic_ductwork(rand_gen_t rgen, room_object_t const &furnace, vect_cube_t &avoid_cubes) {
 	assert(has_room_geom());
-	bool const is_cylin = 0; // TODO: add texturing before we can enable this mode
+	bool const is_cylin((rgen.rand()%3) == 0); // 33% of the time
 	room_obj_shape const duct_shape(is_cylin ? SHAPE_CYLIN : SHAPE_CUBE);
 	float const fc_thick(get_fc_thickness());
 	vect_room_object_t &objs(interior->room_geom->objs);
