@@ -689,15 +689,20 @@ bool duct_merges_to_xy(cube_t const &from, cube_t const &to) { // Note: assumes 
 }
 
 bool maybe_clip_overlapping_duct(room_object_t &duct, vect_room_object_t const &objs, unsigned objs_start, bool is_cylin, vect_cube_t &sub_cubes) {
-	if (is_cylin) return 1; // not yet supported
-
 	for (auto i = objs.begin()+objs_start; i != objs.end(); ++i) {
 		if (!i->intersects(duct)) continue;
 		sub_cubes.clear();
 		subtract_cube_from_cube(duct, *i, sub_cubes);
-		if (sub_cubes.empty()) return 0; // contained? shouldn't happen
-		if (sub_cubes.size() == 1) {duct.copy_from(sub_cubes[0]);} // single part - clip to shorter length to remove the overlap
-	}
+		if (sub_cubes.empty())    return 0; // contained? shouldn't happen
+		if (sub_cubes.size() > 1) continue; // multiple parts, skip because this case is too complex; should be rare
+		duct.copy_from(sub_cubes[0]); // single part - clip to shorter length to remove the overlap
+
+		if (is_cylin && duct.dim != i->dim) { // right angle cylinder intersection, need to extend to merge cylinders
+			float const extend(0.5*duct.get_width());
+			if      (duct.d[duct.dim][0] == i->d[duct.dim][1]) {duct.d[duct.dim][0] -= extend;} // lo side
+			else if (duct.d[duct.dim][1] == i->d[duct.dim][0]) {duct.d[duct.dim][1] += extend;} // hi side
+		}
+	} // for i
 	return 1;
 }
 
@@ -709,12 +714,13 @@ bool try_route_duct_with_jog(room_object_t &duct, cube_t const &dest, bool first
 	for (unsigned n = 0; n < 2; ++n) { // try both routing directions
 		bool const dim(first_dim ^ bool(n)), dir1(dirs[dim]), dir2(!dirs[!dim]);
 		room_object_t cand1(duct), cand2(duct);
+		cand1.dim  =  dim;
+		cand2.dim  = !dim;
 		cand2.x1() = dest.x1(); cand2.y1() = dest.y1(); cand2.x2() = dest.x2(); cand2.y2() = dest.y2();
 
 		if (is_cylin) { // segments meet at their centerlines with a bend in between
 			cand1.d[ dim][ dir1] = dest.get_center_dim( dim); // extend to the destination centerline
 			cand2.d[!dim][ dir2] = duct.get_center_dim(!dim); // extend to the duct centerline
-			cand2.d[!dim][!dir2] = dest.get_center_dim(!dim); // shorten to the dest centerline; must do this here because clip is disabled below
 		}
 		else { // cand2 ends flush with cand1; cand2 may overlap with dest, but it will be clipped later
 			cand1.d[ dim][ dir1] = dest.d[ dim][!dir1]; // extend to the destination near side; may be denormalized and skipped below
@@ -740,8 +746,8 @@ bool try_route_duct_with_jog(room_object_t &duct, cube_t const &dest, bool first
 			if (tot_len < extend_len) {use_extend = 0;} else {break;}
 		}
 		if (is_cylin && use_cand1 && use_cand2) {cand1.flags |= (dir1 ? RO_FLAG_ADJ_HI : RO_FLAG_ADJ_LO);} // place a bend at this location
-		if (use_cand1) {cand1.dim =  dim; objs.push_back(cand1);} // maybe add first  segment from vent
-		if (use_cand2) {cand2.dim = !dim; objs.push_back(cand2);} // maybe add second segment to furnace
+		if (use_cand1) {objs.push_back(cand1);} // maybe add first  segment from vent
+		if (use_cand2) {objs.push_back(cand2);} // maybe add second segment to furnace
 		return 1; // success
 	} // for n
 	return 0; // failed
