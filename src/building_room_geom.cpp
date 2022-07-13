@@ -40,7 +40,8 @@ int get_box_tid() {return get_texture_by_name("interiors/box.jpg");}
 int get_crate_tid(room_object_t const &c) {return get_texture_by_name((c.obj_id & 1) ? "interiors/crate2.jpg" : "interiors/crate.jpg");}
 int get_plywood_tid   () {return get_texture_by_name("interiors/plywood.jpg");}
 int get_insulation_tid() {return get_texture_by_name("interiors/insulation.jpg");}
-int get_duct_tid      () {return get_texture_by_name("interiors/duct.jpg");}
+int get_cube_duct_tid () {return get_texture_by_name("interiors/duct.jpg");}
+int get_cylin_duct_tid() {return get_texture_by_name("buildings/metal_roof.jpg");} // metal roof is close enough
 
 colorRGBA get_textured_wood_color() {return WOOD_COLOR.modulate_with(texture_color(WOOD2_TEX));} // Note: uses default WOOD_COLOR, not the per-building random variant
 colorRGBA get_counter_color      () {return (get_textured_wood_color()*0.75 + texture_color(get_counter_tid())*0.25);}
@@ -1339,18 +1340,24 @@ void building_room_geom_t::add_pipe(room_object_t const &c) { // should be SHAPE
 	//assert(0.5*c.get_sz_dim((dim+2)%3) == radius); // must be a square cross section, but too strong due to FP error
 	// only vertical pipes cast shadows; horizontal ceiling pipes are too high and outside the ceiling light shadow map,
 	// or otherwise don't look correct when an area light is treated as a point light
+	bool const is_duct(c.type == TYPE_DUCT);
 	// Note: attic ducts have the attic flag set, which is aliased as the hanging flag, so we have to disable flat ends for ducts
-	bool const flat_ends(c.is_hanging() && c.type != TYPE_DUCT), shadowed(c.flags & RO_FLAG_LIT); // RO_FLAG_LIT flag is interpreted as "casts shadows"
+	bool const flat_ends(c.is_hanging() && !is_duct), shadowed(c.flags & RO_FLAG_LIT); // RO_FLAG_LIT flag is interpreted as "casts shadows"
 	// adj flags indicate adjacencies where we draw joints connecting to other pipe sections
 	bool const draw_joints[2] = {((c.flags & RO_FLAG_ADJ_LO) != 0), ((c.flags & RO_FLAG_ADJ_HI) != 0)};
 	colorRGBA const color(apply_light_color(c));
 	colorRGBA const spec_color(is_known_metal_color(c.color) ? c.color : WHITE); // special case metals
-	rgeom_mat_t &mat(get_metal_material(shadowed, 0, 2, spec_color)); // detail object with custom specular color
 	bool const is_bolt(c.flags & RO_FLAG_RAND_ROT); // use RO_FLAG_RAND_ROT to indicate this is a bolt on the pipe rather than a pipe section
 	unsigned const ndiv(is_bolt ? 6 : N_CYL_SIDES);
 	float const side_tscale(is_bolt ? 0.0 : 1.0); // bolts are untextured
+	float const len_tscale(is_duct ? 0.1*c.get_length()/radius : 1.0);
 	// draw sides and possibly one or both ends
-	mat.add_ortho_cylin_to_verts(c, color, dim, (flat_ends && draw_joints[0]), (flat_ends && draw_joints[1]), 0, 0, 1.0, 1.0, side_tscale, 1.0, 0, ndiv);
+	tid_nm_pair_t tex((is_duct ? get_cylin_duct_tid() : -1), 1.0, shadowed); // custom specular color
+	tex.set_specular_color(spec_color, 0.8, 60.0);
+	rgeom_mat_t &mat(get_material(tex, shadowed, 0, 2)); // detail object
+	// swap texture XY for ducts
+	mat.add_ortho_cylin_to_verts(c, color, dim, (flat_ends && draw_joints[0]), (flat_ends && draw_joints[1]),
+		0, 0, 1.0, 1.0, side_tscale, 1.0, 0, ndiv, 0.0, is_duct, len_tscale);
 	if (flat_ends) return; // done
 
 	for (unsigned d = 0; d < 2; ++d) {
@@ -1381,7 +1388,7 @@ void building_room_geom_t::add_duct(room_object_t const &c) {
 		tscales[dim] = 1.0/tile_len_mod;
 		tscales[w1 ] = 1.0/width1;
 		tscales[w2 ] = 1.0/width2;
-		tid_nm_pair_t tex(get_duct_tid(), -1, 0.0, 0.0, 1); // shadowed
+		tid_nm_pair_t tex(get_cube_duct_tid(), -1, 0.0, 0.0, 1); // shadowed
 		tex.set_specular_color(WHITE, 0.8, 60.0); // set metal specular
 
 		// each face must be drawn with a different texture scale, so three cubes drawn
@@ -3199,7 +3206,7 @@ colorRGBA room_object_t::get_color() const {
 	case TYPE_WHEATER:  return GRAY;
 	case TYPE_FURNACE:  return get_furnace_color();
 	case TYPE_ATTIC_DOOR:return get_textured_wood_color();
-	case TYPE_DUCT:     return texture_color(get_duct_tid()).modulate_with(color);
+	case TYPE_DUCT:     return texture_color((shape == SHAPE_CYLIN) ? get_cylin_duct_tid() : get_cube_duct_tid()).modulate_with(color);
 	//case TYPE_CHIMNEY:  return texture_color(get_material().side_tex); // should modulate with texture color, but we don't have it here
 	default: return color; // TYPE_LIGHT, TYPE_TCAN, TYPE_BOOK, TYPE_BOTTLE, TYPE_PEN_PENCIL, etc.
 	}
