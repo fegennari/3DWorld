@@ -1367,7 +1367,8 @@ public:
 		s.set_specular(0.25, 50.0);
 		select_texture(WHITE_TEX); // TODO: snake texture
 		s.add_uniform_float("bump_map_mag", 0.0);
-		mat.upload_draw_and_clear(tid_nm_pair_dstate_t(s));
+		tid_nm_pair_dstate_t state(s);
+		mat.upload_draw_and_clear(state);
 		s.add_uniform_float("bump_map_mag",   1.0);
 		s.clear_specular();
 	}
