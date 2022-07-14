@@ -1297,8 +1297,6 @@ public:
 };
 spider_draw_t spider_draw;
 
-unsigned const quad_to_tris_ixs_rev[6] = {2,1,0, 3,2,0};
-
 class snake_draw_t {
 	rgeom_mat_t mat;
 
@@ -1307,7 +1305,7 @@ class snake_draw_t {
 		for (unsigned S = 0; S < ndiv; ++S) {
 			bool const last_edge(S == ndiv-1);
 			unsigned const ix0(ix_start + S), ixs[4] = {0, ndiv, (last_edge ? 1 : 1+ndiv), (last_edge ? 1-ndiv : 1)};
-			for (unsigned i = 0; i < 6; ++i) {idata.push_back(ix0 + ixs[quad_to_tris_ixs_rev[i]]);}
+			for (unsigned i = 0; i < 6; ++i) {idata.push_back(ix0 + ixs[quad_to_tris_ixs[i]]);}
 		}
 	}
 	void draw_snake(snake_t const &S, bool shadow_only, bool reflection_pass) {
@@ -1328,18 +1326,18 @@ class snake_draw_t {
 			}
 			else { // interior segment or tail
 				bool const is_first(s == S.segments.begin()+1), is_tail(s+1 == S.segments.end());
-				float const radius1(S.get_seg_radius(seg_ix)), radius2(is_tail ? 0.0 : S.get_seg_radius(seg_ix+1));
+				float const radius1(S.get_seg_radius(seg_ix)), radius2(S.get_seg_radius(seg_ix+1));
 				point const seg_start(0.5*(*s + *(s-1))); // midpoint between this segment and the last
 				point const seg_end  (is_tail ? (*s + (*s - seg_start)) : 0.5*(*s + *(s+1))); // midpoint between this segment and the next
-				point const ce[2] = {(seg_end + vector3d(0,0,radius2)), (seg_start + vector3d(0,0,radius1))};
-				vector3d v12; // (ce[1] - ce[0]).get_norm()
-				vector_point_norm const &vpn(gen_cylinder_data(ce, radius2, radius1, ndiv, v12, NULL, 0.0, 1.0, 0));
+				point const ce[2] = {(seg_start + vector3d(0,0,radius1)), (seg_end + vector3d(0,0,radius2))};
+				vector3d v12;
+				vector_point_norm const &vpn(gen_cylinder_data(ce, radius1, radius2, ndiv, v12, NULL, 0.0, 1.0, 0));
 				if (is_first) {data_pos = mat.itri_verts.size();}
 
 				for (unsigned j = !is_first; j < 2; ++j) {
 					float const ty(tscale*(seg_ix + j));
 
-					for (unsigned S = 0; S < ndiv; ++S) { // first cylin: 0,1 ; other cylins: 1
+					for (unsigned S = 0; S < ndiv; ++S) {
 						float const tx(2.0f*fabs(S*ndiv_inv - 0.5f));
 						vector3d const n(0.5f*(vpn.n[S] + vpn.n[(S+ndiv-1)%ndiv])); // average face normals to get vert normals, don't need to normalize
 						mat.itri_verts.emplace_back(vpn.p[(S<<1)+j], n, tx, ty, cw);

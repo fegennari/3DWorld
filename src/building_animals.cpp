@@ -993,7 +993,16 @@ cube_t snake_t::get_bcube() const {
 float snake_t::get_seg_radius(float seg_ix) const {
 	assert(!segments.empty());
 	float const t(seg_ix/segments.size()); // varies from 0.0 at tip of nose to 1.0 at tip of tail
-	return (1.0 - fabs(t - 0.5))*radius; // 0.5 => 1.0 => 0.5
+	
+	if (t < 0.4) { // head
+		float const v(t/0.4); // 0-1
+		return 0.5*(1.0 + v*v)*radius; // 0.5 => 1.0
+	}
+	if (t > 0.6) { // tail
+		float const v((t - 0.6)/0.4); // 0-1
+		return sqrt(1.0 - v)*radius; // 1.0 => 0.0
+	}
+	return radius; // middle of body
 }
 void snake_t::move_segments(float dist) {
 	if (dist == 0.0) return;
