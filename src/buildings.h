@@ -146,6 +146,8 @@ struct snake_t : public building_animal_t {
 	float get_height    () const {return radius;}
 	float get_seg_length() const {return length/segments.size();}
 	float get_seg_radius(float seg_ix) const;
+	point const &get_head_pos() const {assert(!segments.empty()); return segments.front();}
+	point       &get_head_pos()       {assert(!segments.empty()); return segments.front();}
 	cube_t get_bcube    () const;
 	void move_segments(float dist);
 };
