@@ -1084,7 +1084,8 @@ void building_t::update_snake(snake_t &snake, point const &camera_bs, float time
 		max_eq(max_xmove, fabs(head_pos.x - prev_pos.x));
 	}
 	if (change_dir) {
-		snake.dir = rgen.signed_rand_vector_xy().get_norm();
+		vector3d const new_dir(rgen.signed_rand_vector_xy().get_norm());
+		snake.dir = ((dot_product(new_dir, snake.dir) < 0.0) ? -1.0 : 1.0)*new_dir; // keep turn angle < 180 degrees
 	}
 }
 
