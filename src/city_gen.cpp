@@ -1503,7 +1503,7 @@ public:
 			assert(get_car_rn(car, road_networks, global_rn).get_road_bcube_for_car(car).intersects_xy(car.bcube)); // sanity check
 			return; // always within same city, no city update
 		}
-		if (car.cur_road_type == TYPE_DRIVEWAY) { // is this reachable?
+		if (car.cur_road_type == TYPE_DRIVEWAY) { // is this reachable? yes, on rare occasions
 			find_and_set_car_road_and_seg(car);
 			return;
 		}
@@ -1605,6 +1605,18 @@ private:
 			car.cur_road_type = TYPE_RSEG;
 			return;
 		} // for i
+		cout << "Warning: Car exiting driveway not centered on a road segment: " << TXT(car.str()) << endl;
+
+		// cars exiting a driveway by backing up and turning right may end in the intersection rather than the road segment;
+		// find the road segment the car overlaps - there should be only one; technically we should only need to check the front of the car, but this is safer
+		for (auto i = segs.begin(); i != segs.end(); ++i) {
+			if (!i->intersects_xy(car.bcube)) continue;
+			car.cur_seg       = (i - segs.begin());
+			car.cur_road      = i->road_ix;
+			car.cur_road_type = TYPE_RSEG;
+			return;
+		} // for i
+		cout << "Error: Car not overlapping a road segment" << endl;
 		assert(0); // should never get here
 	}
 	int find_road_for_car(car_t const &car, bool dim) const {
