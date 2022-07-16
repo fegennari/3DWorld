@@ -885,11 +885,11 @@ void keyboard_proc(unsigned char key, int x, int y) {
 		camera_change = 1;
 		break;
 
-	case 'x': // toggle animation
+	case 'x': // toggle auto framerate updates
 		animate = !animate;
 		if (animate) {reset_timing = 1;}
 		break;
-	case 't': // animation - movement (freeze frame on objects), show star streams in universe mode
+	case 't': // animation/physics timesteps - movement (freeze frame on objects), show star streams in universe mode
 		animate2 = !animate2;
 		show_bool_option_change("Timestep Update", animate2);
 		if (animate2) {reset_timing = 1;}
