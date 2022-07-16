@@ -1087,6 +1087,9 @@ bool building_t::maybe_add_house_driveway(cube_t const &plot, cube_t &ret, unsig
 			set_wall_width(dw, (bcube.d[!dim][s] + (s ? 1.0 : -1.0)*hwidth), hwidth, !dim);
 			if (!sub_plot.contains_cube_xy(dw)) continue; // extends outside the plot
 			if (!is_valid_driveway_pos(dw, bcube, bcubes)) continue; // blocked (don't need to check parts or chimney/fireplace here)
+			float const min_plot_edge_spacing(0.5*get_nom_car_size().x); // half a car length
+			// check if too close to edge of plot/too close to intersection
+			if (dw.d[!dim][0] < plot.d[!dim][0]+min_plot_edge_spacing || dw.d[!dim][1] > plot.d[!dim][1]-min_plot_edge_spacing) continue;
 			if (has_ac && dw.intersects_xy(ac_unit)) continue;
 			if (s) {dw.translate_dim(2, 0.001*hwidth);} // hack to prevent z-fighting when driveways overlap on the left and right of adjacent houses
 			assert(dw.dx() > 0 && dw.dy() > 0); // strictly normalized in XY
