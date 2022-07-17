@@ -1981,16 +1981,17 @@ public:
 		float t(1.0); // unused
 		unsigned hit_bix(0);
 		unsigned const ret(check_line_coll(p1, p2, t, hit_bix, 0, 1)); // no_coll_pt=1; returns: 0=no hit, 1=hit side, 2=hit roof
-		if (ret == 0) return 0;
+		if (ret == BLDG_COLL_NONE) return 0;
 		building_t const &b(get_building(hit_bix));
 
 		if (p1.x == p2.x && p1.y == p2.y && b.get_interior_color_at_xy(p1, color)) {
 			return 1; // vertical line (from map mode) hit the roof of a building with an interior
 		}
 		switch (ret) {
-		case 1: color = b.get_avg_side_color  (); break;
-		case 2: color = b.get_avg_roof_color  (); break;
-		case 3: color = b.get_avg_detail_color(); break;
+		case BLDG_COLL_SIDE    : color = b.get_avg_side_color  (); break;
+		case BLDG_COLL_ROOF    : color = b.get_avg_roof_color  (); break;
+		case BLDG_COLL_DETAIL  : color = b.get_avg_detail_color(); break;
+		case BLDG_COLL_DRIVEWAY: color = LT_GRAY; break;
 		default: assert(0);
 		}
 		return 1;
@@ -3052,7 +3053,7 @@ public:
 		} // for y
 	}
 
-	// Note: p1 and p2 are in building space
+	// Note: p1 and p2 are in building space; returns BLDG_COLL_NONE=0, BLDG_COLL_SIDE, BLDG_COLL_ROOF, BLDG_COLL_DETAIL, BLDG_COLL_DRIVEWAY
 	unsigned check_line_coll(point const &p1, point const &p2, float &t, unsigned &hit_bix, bool ret_any_pt, bool no_coll_pt) const {
 		if (empty()) return 0;
 		vector<point> points; // reused across calls
@@ -3069,12 +3070,15 @@ public:
 				unsigned const ret(get_building(b->ix).check_line_coll(p1, p2, t, points, 0, ret_any_pt, no_coll_pt));
 				if (ret) {hit_bix = b->ix; return ret;} // can only intersect one building
 			} // for b
+			for (cube_t const &seg : ge.road_segs) { // check driveways; not guaranteed to be correct if driveway is in another grid than building?
+				if (seg.contains_pt_xy(p1)) return BLDG_COLL_DRIVEWAY;
+			}
 			return 0; // no coll
 		}
 		cube_t bcube(p1, p2);
 		unsigned ixr[2][2];
 		get_grid_range(bcube, ixr);
-		unsigned coll(0); // 0=none, 1=side, 2=roof
+		unsigned coll(BLDG_COLL_NONE);
 		point end_pos(p2);
 
 		// for now, just do a slow iteration over every grid element within the line's bbox in XY
@@ -3098,7 +3102,7 @@ public:
 				} // for b
 			} // for x
 		} // for y
-		return coll; // 0=none, 1=side, 2=roof, 3=details
+		return coll;
 	}
 
 	// Note: p1 and p2 are in building space
@@ -3389,7 +3393,7 @@ public:
 	unsigned check_line_coll(point const &p1, point const &p2, float &t, bool ret_any_pt, bool no_coll_pt) const {
 		if (empty()) return 0;
 		cube_t const line_bcube(p1, p2);
-		unsigned ret(0), hit_bix(0); // internal tile index, can't return
+		unsigned ret(BLDG_COLL_NONE), hit_bix(0); // internal tile index, can't return
 
 		for (auto i = tiles.begin(); i != tiles.end(); ++i) { // no vertical line test
 			if (!i->second.get_bcube().intersects(line_bcube)) continue; // optimization
