@@ -1045,11 +1045,6 @@ void building_t::update_snakes(point const &camera_bs, unsigned building_ix) {
 		global_building_params.snake_size_min, global_building_params.snake_size_max);
 	// update snakes
 	float const timestep(min(fticks, 4.0f)); // clamp fticks to 100ms
-	
-	for (snake_t &snake : snakes) {
-		float const move_dist(snake.move(timestep));
-		snake.move_segments(move_dist);
-	}
 	//snakes.do_sort();
 	rand_gen_t rgen;
 	rgen.set_state(building_ix+1, frame_counter+1); // unique per building and per frame
@@ -1059,33 +1054,36 @@ void building_t::update_snakes(point const &camera_bs, unsigned building_ix) {
 void building_t::update_snake(snake_t &snake, point const &camera_bs, float timestep, float &max_xmove, rand_gen_t &rgen) const {
 	if (snake.speed == 0.0) {snake.speed = global_building_params.snake_speed*rgen.rand_uniform(0.5, 1.0);} // random speed
 	float const radius(snake.radius), height(snake.get_height()), hheight(0.5*height);
-	point &head_pos(snake.get_head_pos()); // only the head moves
-	point const prev_pos(head_pos);
+	point const &old_head_pos(snake.get_head_pos()); // only the head moves
+	point head_pos(old_head_pos + snake.dir*(timestep*snake.speed)); // move the head one timestep
+	point const pre_head_pos(head_pos);
 	vector3d const center_dz(0.0, 0.0, hheight);
 	bool change_dir(0);
 	
 	if (snake.is_sleeping()) {} // peacefully sleeping, no collision needed
 	else if (check_and_handle_dynamic_obj_coll(head_pos, radius, head_pos.z, (head_pos.z + height), camera_bs, 0)) { // check for collisions; for_spider=0
-		point const coll_dir((prev_pos - head_pos).get_norm()); // points toward the collider in the XY plane
+		point const coll_dir((pre_head_pos - head_pos).get_norm()); // points toward the collider in the XY plane
 		// TODO
 		change_dir = 1;
 	}
 	// check if pos is valid
 	if (!is_pos_inside_building(head_pos, radius, hheight)) {
-		head_pos = prev_pos; // restore previous pos before collision
 		//snake.sleep_for(0.1, 0.2); // wait 0.1-0.2s so that we don't immediately collide and get pushed out again
 		change_dir = 1;
 	}
 	else if (check_line_coll_expand((head_pos + center_dz), (snake.segments[1] + center_dz), radius, hheight)) {
-		head_pos = prev_pos; // restore previous pos before collision
 		change_dir = 1;
 	}
 	else {
-		max_eq(max_xmove, fabs(head_pos.x - prev_pos.x));
+		max_eq(max_xmove, fabs(head_pos.x - old_head_pos.x));
 	}
-	if (change_dir) {
+	if (change_dir) { // collision, change direction
 		vector3d const new_dir(rgen.signed_rand_vector_xy().get_norm());
 		snake.dir = ((dot_product(new_dir, snake.dir) < 0.0) ? -1.0 : 1.0)*new_dir; // keep turn angle < 180 degrees
+	}
+	else { // move forward
+		float const move_dist(snake.move(timestep));
+		snake.move_segments(move_dist);
 	}
 }
 
