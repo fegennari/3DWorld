@@ -452,8 +452,16 @@ void set_shadow_tex_params(unsigned &tid, bool is_array) {
 	bool const nearest(0); // nearest filter: sharper shadow edges, but needs more biasing
 	setup_texture(tid, 0, 0, 0, 0, 0, nearest, 1.0, is_array);
 	// This is to allow usage of textureProj function in the shader
-	glTexParameteri(get_2d_texture_target(is_array), GL_TEXTURE_COMPARE_MODE, GL_COMPARE_R_TO_TEXTURE);
-	glTexParameteri(get_2d_texture_target(is_array), GL_TEXTURE_COMPARE_FUNC, GL_LEQUAL);
+	int const target(get_2d_texture_target(is_array));
+	glTexParameteri(target, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_R_TO_TEXTURE);
+	glTexParameteri(target, GL_TEXTURE_COMPARE_FUNC, GL_LEQUAL);
+#if 0
+	// clamps area outside the shadow volume to unshadowed rather than extending the value at the border;
+	// for buildings, this removes the incorrect shadow that extends above the player's head when near a wall, but causes some light leaking above walls
+	glTexParameteri (target, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+	glTexParameteri (target, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+	glTexParameterfv(target, GL_TEXTURE_BORDER_COLOR, &WHITE.R);
+#endif
 }
 
 
