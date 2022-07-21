@@ -292,6 +292,32 @@ float get_framerate(int &timer_b) {
 }
 
 
+// Nvidia specific defines
+#define GPU_MEMORY_INFO_DEDICATED_VIDMEM_NVX          0x9047
+#define GPU_MEMORY_INFO_TOTAL_AVAILABLE_MEMORY_NVX    0x9048
+#define GPU_MEMORY_INFO_CURRENT_AVAILABLE_VIDMEM_NVX  0x9049
+#define GPU_MEMORY_INFO_EVICTION_COUNT_NVX            0x904A
+#define GPU_MEMORY_INFO_EVICTED_MEMORY_NVX            0x904B
+// AMD/ATI specific defines
+#define VBO_FREE_MEMORY_ATI                           0x87FB
+#define TEXTURE_FREE_MEMORY_ATI                       0x87FC
+#define RENDERBUFFER_FREE_MEMORY_ATI                  0x87FD
+
+void show_gpu_mem_info() {
+	check_gl_error(10111); // in case there was an incoming error
+	int ded_vmem(0), tot_vmem(0), avail_vmem(0), vbo_free_mem(0), texture_free_mem(0), rbuf_free_mem(0);
+	glGetIntegerv(GPU_MEMORY_INFO_DEDICATED_VIDMEM_NVX,         &ded_vmem);
+	glGetIntegerv(GPU_MEMORY_INFO_TOTAL_AVAILABLE_MEMORY_NVX,   &tot_vmem);
+	glGetIntegerv(GPU_MEMORY_INFO_CURRENT_AVAILABLE_VIDMEM_NVX, &avail_vmem);
+	glGetIntegerv(VBO_FREE_MEMORY_ATI,                          &vbo_free_mem);
+	glGetIntegerv(TEXTURE_FREE_MEMORY_ATI,                      &texture_free_mem);
+	glGetIntegerv(RENDERBUFFER_FREE_MEMORY_ATI,                 &rbuf_free_mem);
+	glGetError(); // clear the error state
+	if (ded_vmem    ) {cout << TXT(ded_vmem) << TXT(tot_vmem) << TXT(avail_vmem) << endl;} // Nvidia
+	if (vbo_free_mem) {cout << TXT(vbo_free_mem) << TXT(texture_free_mem) << TXT(rbuf_free_mem) << endl;} // ATI
+}
+
+
 void final_draw(float framerate) {
 
 	fog_enabled = 0;
@@ -302,6 +328,7 @@ void final_draw(float framerate) {
 	draw_frame_rate(framerate);
 	show_other_messages();
 	user_action_key = 0;
+	//show_gpu_mem_info(); // TESTING
 }
 
 
