@@ -2234,13 +2234,14 @@ void building_t::add_outlets_to_room(rand_gen_t rgen, room_t const &room, float 
 	} // for wall
 }
 
-bool building_t::add_wall_vent_to_room(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned objs_start) {
+bool building_t::add_wall_vent_to_room(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned objs_start, bool check_for_ducts) {
 	float const wall_thickness(get_wall_thickness()), ceiling_zval(zval + get_floor_ceil_gap());
 	float const thickness(0.1*wall_thickness), height(2.5*wall_thickness), hwidth(2.0*wall_thickness), min_wall_spacing(1.5*hwidth);
 	cube_t const room_bounds(get_walkable_room_bounds(room));
 	if (min(room_bounds.dx(), room_bounds.dy()) < 3.0*min_wall_spacing) return 0; // room is too small; shouldn't happen
 	bool const pref_dim(room.dx() < room.dy()); // shorter dir, to make it less likely to conflict with whiteboards
 	vect_door_stack_t const &doorways(get_doorways_for_room(room, zval));
+	vect_room_object_t &objs(interior->room_geom->objs);
 	cube_t c;
 	c.z2() = ceiling_zval - 0.1*height;
 	c.z1() = c.z2() - height;
@@ -2256,7 +2257,7 @@ bool building_t::add_wall_vent_to_room(rand_gen_t rgen, room_t const &room, floa
 		cube_t c_exp(c);
 		c_exp.expand_by_xy(0.5*wall_thickness);
 		c_exp.d[dim][!dir] += (dir ? -1.0 : 1.0)*hwidth; // add some clearance in front
-		if (overlaps_other_room_obj(c_exp, objs_start, 1))     continue; // check for things like closets; check_all=1 to inc whiteboards; excludes picture frames
+		if (overlaps_other_room_obj(c_exp, objs_start, 1))     continue; // check for objects; check_all=1 to inc whiteboards; excludes picture frames
 		if (interior->is_blocked_by_stairs_or_elevator(c_exp)) continue; // check stairs and elevators
 		cube_t door_test_cube(c_exp);
 		door_test_cube.expand_in_dim(!dim, 0.25*hwidth); // not too close to doors
@@ -2270,7 +2271,31 @@ bool building_t::add_wall_vent_to_room(rand_gen_t rgen, room_t const &room, floa
 		}
 		if (bad_place) continue;
 		if (!check_if_placed_on_interior_wall(c, room, dim, dir)) continue; // ensure the vent is on a wall; is this really needed?
-		interior->room_geom->objs.emplace_back(c, TYPE_VENT, room_id, dim, dir, RO_FLAG_NOCOLL, 1.0); // dim/dir matches wall; fully lit
+
+		if (check_for_ducts) { // if this is a utility room, check to see if we can connect the vent to a furnace with a duct
+			assert(objs_start <= objs.size());
+
+			for (auto i = objs.begin()+objs_start; i != objs.end(); ++i) {
+				//if (i->type == TYPE_DUCT) {} // maybe this can be implemented once we add ducts to rooms (rather than only attics)
+				if (i->type != TYPE_FURNACE) continue;
+				if (i->dim != dim || i->dir == dir) continue; // wrong wall
+				bool const side(i->get_center_dim(!dim) < c.get_center_dim(!dim));
+				float const duct_wall_shift((dir ? -1.0 : 1.0)*0.6*height), duct_end_shift((side ? -1.0 : 1.0)*wall_thickness);
+				cube_t duct(c);
+				duct.d[ dim][!dir ] = wall_face + duct_wall_shift; // expand outward
+				duct.d[!dim][!side] = i->d[!dim][side]; // flush with the side of the furnace
+				cube_t test_cube(duct);
+				test_cube.d[!dim][!side] -= duct_end_shift; // shrink slightly so as not to overlap the furnace
+				duct     .d[!dim][!side] += duct_end_shift; // extend duct into furnace duct (since there's a gap on the edge of the furnace)
+				if (overlaps_other_room_obj(test_cube, objs_start, 1)) continue; // check for objects
+				if (is_cube_close_to_doorway(duct, room, 0.0, 1))      continue; // too close to a doorway; inc_open=1
+				if (interior->is_blocked_by_stairs_or_elevator(duct))  continue; // check stairs and elevators
+				objs.emplace_back(duct, TYPE_DUCT, room_id, !dim, 0, RO_FLAG_NOCOLL, 1.0, SHAPE_CUBE, DUCT_COLOR);
+				c.translate_dim(dim, duct_wall_shift); // place vent on the duct
+				break; // only connect to one furnace
+			} // for i
+		}
+		objs.emplace_back(c, TYPE_VENT, room_id, dim, dir, RO_FLAG_NOCOLL, 1.0); // dim/dir matches wall; fully lit
 		return 1; // done
 	} // for n
 	return 0; // failed
@@ -2878,8 +2903,8 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			if (has_light) {add_light_switches_to_room(rgen, *r, room_center.z, room_id, objs_start, is_ground_floor, is_basement);} // add light switch if room has a light
 			
 			if (!r->is_hallway) { // no vents in hallways; vents use orig floor zval, not adjusted for bathroom tile floor
-				if (is_house) {add_ceil_vent_to_room(rgen, *r, floor_zval, room_id, objs_start_inc_lights);} // house vents
-				else          {add_wall_vent_to_room(rgen, *r, floor_zval, room_id, objs_start);} // office building vents
+				if (is_house) {add_ceil_vent_to_room(rgen, *r, floor_zval, room_id, objs_start_inc_lights );} // house vents
+				else          {add_wall_vent_to_room(rgen, *r, floor_zval, room_id, objs_start, is_utility);} // office building vents
 			}
 			// pictures and whiteboards must not be placed behind anything, excluding trashcans; so we add them here
 			bool const can_hang((is_house || !(is_bathroom || is_kitchen || no_whiteboard)) && !is_storage); // no whiteboards in office bathrooms or kitchens

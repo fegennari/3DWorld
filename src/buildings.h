@@ -1509,7 +1509,7 @@ private:
 	void add_boxes_to_room   (rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, unsigned max_num);
 	void add_light_switches_to_room(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned objs_start, bool is_ground_floor, bool is_basement);
 	void add_outlets_to_room(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned objs_start, bool is_ground_floor, bool is_basement);
-	bool add_wall_vent_to_room(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned objs_start);
+	bool add_wall_vent_to_room(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned objs_start, bool check_for_ducts);
 	bool add_ceil_vent_to_room(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned objs_start);
 	bool check_if_placed_on_interior_wall(cube_t const &c, room_t const &room, bool dim, bool dir) const;
 	bool place_eating_items_on_table(rand_gen_t &rgen, unsigned table_obj_id);
