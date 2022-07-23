@@ -538,6 +538,7 @@ void building_room_geom_t::add_attic_rafters(building_t const &b, float tscale) 
 	}
 	else {assert(attic_type == ATTIC_TYPE_RAFTERS);}
 
+	// build the roof trusses
 	get_wood_material(tscale, 0, 0, 2); // ensure unshadowed material
 	rgeom_mat_t &wood_mat   (get_wood_material(tscale, 1, 0, 2)); // shadows + detail
 	rgeom_mat_t &wood_mat_us(get_wood_material(tscale, 0, 0, 2)); // no shadows + detail
@@ -576,7 +577,7 @@ void building_room_geom_t::add_attic_rafters(building_t const &b, float tscale) 
 		assert(num_edges > 0 && num_edges <= 3);
 		float const beam_shorten((is_roof ? 2.0 : 1.0)*beam_hwidth*height/(0.5*base_width)); // large for sloped roof to account for width of beams between tquads
 
-		// add vertical beams, which will be rotated to follow the slope of the roof
+		// add vertical beams, which will be rotated to follow the slope of the roof to form rafters
 		for (unsigned n = 0; n < num_beams; ++n) {
 			float const roof_pos(beam_pos_start + n*beam_spacing);
 			set_wall_width(beam, roof_pos, beam_hwidth, !dim);
@@ -609,7 +610,7 @@ void building_room_geom_t::add_attic_rafters(building_t const &b, float tscale) 
 		float const rot_angle((dir ? 1.0 : -1.0)*atan2(run_len, height));
 		rotate_verts(wood_mat.quad_verts, rot_axis, rot_angle, rot_pt, qv_start);
 
-		if (num_edges == 3) { // trapezoid case: add diag beam along both angled edges; dim is long dim
+		if (num_edges == 3) { // trapezoid case: add diag beam along both angled edges (hip truss); dim is long dim
 			for (unsigned e = 0; e < num_edges; ++e) {
 				edge_t const &E(edges[e]);
 				if (E.p[0].z == E.p[1].z) continue; // not an angled edge
@@ -636,7 +637,7 @@ void building_room_geom_t::add_attic_rafters(building_t const &b, float tscale) 
 			} // for e
 		}
 		if (tq.npts == 4 && dir == 0) {
-			// add beam along the roofline for this quad; dim is long dim
+			// add rafter along the roofline for this quad; dim is long dim
 			float const centerline(bcube.d[dim][!dir]); // inside/middle edge
 			beam = bcube;
 			beam.z2() -= beam_hwidth*height/run_len; // shift to just touching the roof at the top
@@ -649,7 +650,7 @@ void building_room_geom_t::add_attic_rafters(building_t const &b, float tscale) 
 			if (beam.get_sz_dim(!dim) > beam_depth) { // if it's long enough
 				wood_mat_us.add_cube_to_verts(beam, WHITE, beam.get_llc(), EF_Z2); // skip top; shadows not needed
 				
-				if (num_edges == 3) { // trapezoid: add vertical posts at each end if there's space
+				if (num_edges == 3) { // trapezoid: add vertical posts (king posts) at each end if there's space
 					cube_t posts[2];
 					create_attic_posts(b, beam, dim, posts);
 				
@@ -659,7 +660,7 @@ void building_room_geom_t::add_attic_rafters(building_t const &b, float tscale) 
 				}
 			}
 			if (num_edges == 1) { // tilted rectangle (not trapezoid)
-				// add horizontal beams connecting each vertical beam to form an A-frame; make them unshadowed because shadows look bad when too close to the light
+				// add horizontal straining beams connecting each vertical beam to form an A-frame; make them unshadowed because shadows look bad when too close to the light
 				beam.z2() -= 3.0*beam_depth; // below roofline beam
 				beam.z1()  = beam.z2() - 0.8*beam_depth; // slightly smaller
 				float const beam_hlen(((bcube.z2() - beam.z2())/bcube.dz())*run_len); // width of roof tquad at top of beam
