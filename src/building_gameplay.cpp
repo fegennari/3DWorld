@@ -143,6 +143,8 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_CUP       ] = bldg_obj_type_t(0, 0, 0, 1, 0, 1, 0, 5.0,   0.2,   "cup");
 	bldg_obj_types[TYPE_TOASTER   ] = bldg_obj_type_t(0, 0, 0, 1, 0, 1, 2, 20.0,  2.5,   "Toaster");
 	bldg_obj_types[TYPE_HOOD      ] = bldg_obj_type_t(0, 0, 1, 0, 1, 1, 0, 200.0, 40.0,  "Ventilation Hood");
+	bldg_obj_types[TYPE_RCHAIR    ] = bldg_obj_type_t(1, 1, 1, 1, 0, 1, 0, 120.0, 45.0,  "rocking chair");
+	bldg_obj_types[TYPE_TOY       ] = bldg_obj_type_t(0, 0, 1, 1, 0, 1, 0, 4.0,   0.1,   "toy"); // plastic ring stack
 	bldg_obj_types[TYPE_RAT       ] = bldg_obj_type_t(0, 0, 1, 1, 0, 1, 0, 8.99,  1.0,   "rat"); // not a room object, but can be picked up
 	//                                                pc ac rc pu at im ls value  weight  name [capacity]
 }

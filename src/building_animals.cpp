@@ -279,6 +279,9 @@ bool can_hide_under(room_object_t const &c, cube_t &hide_area) {
 		hide_area.z1() += 0.06*c.dz(); // there's space under the couch
 		return 1;
 	}
+	else if (c.type == TYPE_RCHAIR) {
+		return 0; // not a hiding spot - yet
+	}
 	else if (c.type == TYPE_BRSINK) { // office building bathroom sink
 		// not a very good hiding spot, but there aren't many in office buildings;
 		// this is just a placeholder anyway, since sinks don't extend down to the floor and won't pass the rat zval test
