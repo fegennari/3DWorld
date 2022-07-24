@@ -1075,7 +1075,8 @@ void building_t::update_snake(snake_t &snake, point const &camera_bs, float time
 	else {max_eq(max_xmove, fabs(head_pos.x - old_head_pos.x));} // is this necessary?
 	
 	if (change_dir) { // collision, change direction rather than moving
-		vector3d const new_dir_hemisphere((coll_dir == zero_vector) ? snake.dir : -coll_dir); // use coll_dir if available
+		//vector3d const new_dir_hemisphere((coll_dir == zero_vector) ? snake.dir : -coll_dir); // use coll_dir if available
+		vector3d const new_dir_hemisphere(snake.dir);
 		snake.dir = rgen.signed_rand_vector_xy().get_norm();
 		// keep turn angle less than a bit more than 180 degrees
 		if (dot_product(snake.dir, new_dir_hemisphere) < -0.1 && (rgen.rand() & 63)) {snake.dir.negate();}

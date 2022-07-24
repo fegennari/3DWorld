@@ -1330,7 +1330,7 @@ class snake_draw_t {
 			point const seg_end  (is_tail  ? (*s + (*s - seg_start)) : 0.5*(*s + *(s+1))); // midpoint between this segment and the next
 			point const ce[2] = {(seg_start + vector3d(0,0,radius1)), (seg_end + vector3d(0,0,radius2))};
 			vector3d v12;
-			vector_point_norm const &vpn(gen_cylinder_data(ce, radius1, radius2, ndiv, v12, NULL, 0.0, 1.0, 0));
+			vector_point_norm const &vpn(gen_cylinder_data(ce, radius1, radius2, ndiv, v12, NULL, 0.0, 1.0, 2)); // force_dim=2
 
 			for (unsigned j = !is_first; j < 2; ++j) {
 				float const ty(tscale*(seg_ix + j));
