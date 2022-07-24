@@ -1254,7 +1254,7 @@ unsigned get_ksink_cubes(room_object_t const &sink, cube_t cubes[3]) {
 }
 
 class cached_room_objs_t {
-	vect_room_object_t rat_objs, spi_objs;
+	vect_room_object_t rat_snake_objs, spider_objs; // Note: snakes use the same objs as rats because they're on the floor
 	building_t const *building;
 	int cur_frame;
 public:
@@ -1264,12 +1264,12 @@ public:
 		if (building == &b && cur_frame == frame_counter) return; // already cached
 		building  = &b;
 		cur_frame = frame_counter;
-		rat_objs.clear();
-		spi_objs.clear();
-		if (global_building_params.num_rats_max    > 0) {b.get_objs_at_or_below_ground_floor(rat_objs, 0);}
-		if (global_building_params.num_spiders_max > 0) {b.get_objs_at_or_below_ground_floor(spi_objs, 1);}
+		rat_snake_objs.clear();
+		spider_objs   .clear();
+		if (global_building_params.num_rats_max    > 0 || global_building_params.num_snakes_max > 0) {b.get_objs_at_or_below_ground_floor(rat_snake_objs, 0);}
+		if (global_building_params.num_spiders_max > 0) {b.get_objs_at_or_below_ground_floor(spider_objs, 1);}
 	}
-	vect_room_object_t const &get_objs(bool for_spider) const {return (for_spider ? spi_objs : rat_objs);}
+	vect_room_object_t const &get_objs(bool for_spider) const {return (for_spider ? spider_objs : rat_snake_objs);}
 };
 cached_room_objs_t cached_room_objs;
 
@@ -1600,16 +1600,17 @@ bool handle_dynamic_room_objs_coll(vect_room_object_t::const_iterator begin, vec
 	return 0;
 }
 
-template<typename T> void vect_animal_t<T>::update_delta_sum_for_animal_coll(point const &pos, float radius, float z1, float z2,
-	float radius_scale, float &max_overlap, vector3d &delta_sum) const
+// Note: cur_obj_pos is the center of the snake while pos is the center of its head
+template<typename T> void vect_animal_t<T>::update_delta_sum_for_animal_coll(point const &pos, point const &cur_obj_pos,
+	float radius, float z1, float z2, float radius_scale, float &max_overlap, vector3d &delta_sum) const
 {
 	float const rsum_max(radius_scale*(radius + max_radius) + max_xmove), coll_x1(pos.x - rsum_max), coll_x2(pos.x + rsum_max);
 	auto start(get_first_with_xv_gt(coll_x1)); // use a binary search to speed up iteration
 
 	for (auto r = start; r != this->end(); ++r) {
 		if (r->pos.x > coll_x2) break; // none after this can overlap - done
-		if (r->pos == pos) continue; // skip ourself
-		float const rsum(radius_scale*(radius + r->radius));
+		if (r->pos == cur_obj_pos) continue; // skip ourself
+		float const rsum(radius_scale*(radius + r->get_xy_radius()));
 		if (!dist_xy_less_than(pos, r->pos, rsum)) continue; // no collision
 		if (z2 < r->pos.z || z1 > (r->pos.z + r->get_height())) continue; // different floors; less likely to reject, so done last
 		float const overlap(rsum - p2p_dist_xy(pos, r->pos));
@@ -1621,9 +1622,9 @@ template<typename T> void vect_animal_t<T>::update_delta_sum_for_animal_coll(poi
 
 // vertical cylinder collision detection with dynamic objects: balls, the player? people? other rats?
 // only handles the first collision
-bool building_t::check_and_handle_dynamic_obj_coll(point &pos, float radius, float z1, float z2, point const &camera_bs, bool for_spider) const {
-	if (camera_surf_collide) { // check the player; unclear if this is really needed, or if it actually works
-		if (z1 < camera_bs.z && z2 > (camera_bs.z - CAMERA_RADIUS - get_player_height())) {
+bool building_t::check_and_handle_dynamic_obj_coll(point &pos, point const &cur_obj_pos, float radius, float z1, float z2, point const &camera_bs, bool for_spider) const {
+	if (camera_surf_collide) { // check the player
+		if (z1 < camera_bs.z && z2 > (camera_bs.z - 1.1*CAMERA_RADIUS - get_player_height())) { // slighly below the player's feet
 			if (handle_vcylin_vcylin_int(pos, camera_bs, (radius + get_scaled_player_radius()))) return 1;
 		}
 	}
@@ -1639,9 +1640,11 @@ bool building_t::check_and_handle_dynamic_obj_coll(point &pos, float radius, flo
 	float max_overlap(0.0);
 	vector3d delta_sum;
 	float const rat_radius_scale    = 0.7; // allow them to get a bit closer together, since radius is conservative
-	float const spider_radius_scale = 1.5; // legs go outside radius, use a larger scale
-	interior->room_geom->rats   .update_delta_sum_for_animal_coll(pos, radius, z1, z2, rat_radius_scale,    max_overlap, delta_sum);
-	interior->room_geom->spiders.update_delta_sum_for_animal_coll(pos, radius, z1, z2, spider_radius_scale, max_overlap, delta_sum); // should we avoid squished spiders?
+	float const spider_radius_scale = 0.75;
+	float const snake_radius_scale  = 1.0;
+	interior->room_geom->rats   .update_delta_sum_for_animal_coll(pos, cur_obj_pos, radius, z1, z2, rat_radius_scale,    max_overlap, delta_sum);
+	interior->room_geom->spiders.update_delta_sum_for_animal_coll(pos, cur_obj_pos, radius, z1, z2, spider_radius_scale, max_overlap, delta_sum); // should we avoid squished spiders?
+	interior->room_geom->snakes .update_delta_sum_for_animal_coll(pos, cur_obj_pos, radius, z1, z2, snake_radius_scale,  max_overlap, delta_sum);
 	
 	if (max_overlap > 0.0) { // we have at least one collision
 		float const delta_mag(delta_sum.mag());

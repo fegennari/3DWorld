@@ -108,6 +108,7 @@ struct rat_t : public building_animal_t {
 	static bool allow_in_attic() {return 1;}
 	float get_hlength() const {return radius;} // this is the bounding radius, so it represents the longest dim (half length)
 	float get_height () const {return height;}
+	float get_xy_radius() const {return radius;}
 	point get_center () const {return point(pos.x, pos.y, (pos.z + 0.5f*height));}
 	cube_t get_bcube () const; // used for collision detection and VFC; bounding cube across rotations
 	cube_t get_bcube_with_dir() const; // used for model drawing; must be correct aspect ratio
@@ -140,6 +141,7 @@ struct snake_t : public building_animal_t {
 	colorRGBA color;
 	vector<point> segments; // segment centers: first = head, last = tail
 
+	snake_t(float xval) : building_animal_t(xval) {}
 	snake_t(point const &pos_, float radius_, vector3d const &dir_, unsigned id_);
 	static bool allow_in_attic() {return 0;}
 	float get_xy_radius () const;
@@ -167,7 +169,8 @@ template<typename T> struct vect_animal_t : public vector<T> {
 		max_xmove = 0.0; // reset for this frame
 	}
 	typename vector<T>::const_iterator get_first_with_xv_gt(float x) const {return std::lower_bound(this->begin(), this->end(), T(x));}
-	void update_delta_sum_for_animal_coll(point const &pos, float radius, float z1, float z2, float radius_scale, float &max_overlap, vector3d &delta_sum) const;
+	void update_delta_sum_for_animal_coll(point const &pos, point const &cur_obj_pos, float radius,
+		float z1, float z2, float radius_scale, float &max_overlap, vector3d &delta_sum) const;
 };
 typedef vect_animal_t<rat_t   > vect_rat_t;
 typedef vect_animal_t<spider_t> vect_spider_t;
@@ -1370,9 +1373,9 @@ private:
 	bool maybe_squish_spider(room_object_t const &obj);
 	void update_snake (snake_t  &snake,  point const &camera_bs, float timestep, float &max_xmove, rand_gen_t &rgen) const;
 	void get_room_obj_cubes(room_object_t const &c, point const &pos, vect_cube_t &lg_cubes, vect_cube_t &sm_cubes, vect_cube_t &non_cubes) const;
-	bool check_line_coll_expand(point const &p1, point const &p2, float radius, float height) const;
+	bool check_line_coll_expand(point const &p1, point const &p2, float radius, float hheight) const;
 	bool check_line_of_sight_large_objs(point const &p1, point const &p2) const;
-	bool check_and_handle_dynamic_obj_coll(point &pos, float radius, float z1, float z2, point const &camera_bs, bool for_spider) const;
+	bool check_and_handle_dynamic_obj_coll(point &pos, point const &cur_obj_pos, float radius, float z1, float z2, point const &camera_bs, bool for_spider) const;
 	bool get_begin_end_room_objs_on_ground_floor(float zval, bool for_spider, vect_room_object_t::const_iterator &b, vect_room_object_t::const_iterator &e) const;
 
 public:
