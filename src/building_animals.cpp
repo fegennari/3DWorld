@@ -973,7 +973,7 @@ bool building_t::maybe_squish_spider(room_object_t const &obj) {
 snake_t::snake_t(point const &pos_, float radius_, vector3d const &dir_, unsigned id_) : building_animal_t(pos_, radius_, dir_, id_) {
 	length  = 2.0*radius; // input radius is half length
 	radius *= 0.04;
-	color   = BLACK; // TODO: make this randomly black or a shade of brown
+	color   = WHITE; // TODO: make this randomly black or a shade of brown; also, add rattles and other variations
 	unsigned const NUM_SEGS = 20; // head + 18 segments + tail
 	float const seg_length(length/NUM_SEGS);
 	vector3d const seg_step(-seg_length*dir); // head -> tail

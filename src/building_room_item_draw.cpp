@@ -1311,7 +1311,7 @@ class snake_draw_t {
 	void draw_snake(snake_t const &S, bool shadow_only, bool reflection_pass) {
 		bool const low_detail(shadow_only || reflection_pass);
 		unsigned const ndiv(get_rgeom_sphere_ndiv(low_detail)/2);
-		float const tscale = 10.0; // must tune this once our snake is textured
+		float const tscale = 1.0; // must tune this once our snake is textured
 		// draw head
 		float const head_height(0.6*S.radius);
 		vector3d const head_size(S.radius, S.radius, head_height); // max radius; flattened in Z; TODO: should be longer in S.dir
@@ -1361,8 +1361,8 @@ public:
 			draw_snake(S, shadow_only, reflection_pass);
 		} // for S
 		if (mat.empty()) return; // nothing to draw
+		mat.tex = tid_nm_pair_t(get_texture_by_name("interiors/snakeskin.jpg"), 0.0, 1);
 		s.set_specular(0.25, 50.0);
-		select_texture(WHITE_TEX); // TODO: snake texture
 		s.add_uniform_float("bump_map_mag", 0.0);
 		tid_nm_pair_dstate_t state(s);
 		mat.upload_draw_and_clear(state);
