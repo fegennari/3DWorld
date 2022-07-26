@@ -32,8 +32,8 @@ bool add_if_not_intersecting(room_object_t const &obj, vect_room_object_t &objec
 	cubes.push_back(obj);
 	return 1;
 }
-point gen_xy_pos_in_area(cube_t const &S, vector3d const &sz, rand_gen_t &rgen) {
-	point center;
+point gen_xy_pos_in_area(cube_t const &S, vector3d const &sz, rand_gen_t &rgen, float zval) {
+	point center(0.0, 0.0, zval);
 	
 	for (unsigned d = 0; d < 2; ++d) {
 		float const lo(S.d[d][0]+sz[d]), hi(S.d[d][1]-sz[d]);
@@ -42,8 +42,8 @@ point gen_xy_pos_in_area(cube_t const &S, vector3d const &sz, rand_gen_t &rgen) 
 	}
 	return center;
 }
-point gen_xy_pos_in_area(cube_t const &S, float radius, rand_gen_t &rgen) {
-	return gen_xy_pos_in_area(S, vector3d(radius, radius, 0.0), rgen);
+point gen_xy_pos_in_area(cube_t const &S, float radius, rand_gen_t &rgen, float zval) {
+	return gen_xy_pos_in_area(S, vector3d(radius, radius, 0.0), rgen, zval);
 }
 void gen_xy_pos_for_cube_obj(cube_t &C, cube_t const &S, vector3d const &sz, float height, rand_gen_t &rgen) {
 	C.set_from_point(gen_xy_pos_in_area(S, sz, rgen));
@@ -117,8 +117,7 @@ void try_add_lamp(cube_t const &place_area, float floor_spacing, unsigned room_i
 	if (width == 0.0 || width > 0.9*min(place_area.dx(), place_area.dy())) return; // check if lamp model is valid and lamp fits in closet
 		
 	for (unsigned n = 0; n < 4; ++n) { // make up to 4 attempts
-		point center(gen_xy_pos_in_area(place_area, radius, rgen));
-		center.z = place_area.z1();
+		point const center(gen_xy_pos_in_area(place_area, radius, rgen, place_area.z1()));
 		cube_t lamp(get_cube_height_radius(center, radius, height));
 
 		if (!has_bcube_int(lamp, cubes)) { // check for intersection with other objects

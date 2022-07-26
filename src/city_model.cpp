@@ -155,8 +155,8 @@ void city_model_loader_t::draw_model(shader_t &s, vector3d const &pos, cube_t co
 	point center(bcube_center);
 	UNROLL_3X(if (model_file.centered & (1<<i_)) {center[i_] = 0.0;}); // use centered bit mask to control which component is centered vs. translated
 	translate_to(-center); // cancel out model local translate
-	bool const disable_cull_face_ths_obj(/*!is_shadow_pass &&*/ model_file.two_sided && glIsEnabled(GL_CULL_FACE));
-	if (disable_cull_face_ths_obj) {glDisable(GL_CULL_FACE);}
+	bool const disable_cull_face_this_obj(/*!is_shadow_pass &&*/ model_file.two_sided && glIsEnabled(GL_CULL_FACE));
+	if (disable_cull_face_this_obj) {glDisable(GL_CULL_FACE);}
 
 	if (skip_mat_mask > 0) { // draw select materials
 		for (unsigned i = 0; i < model.num_materials(); ++i) {
@@ -175,7 +175,7 @@ void city_model_loader_t::draw_model(shader_t &s, vector3d const &pos, cube_t co
 		model.render_materials(s, is_shadow_pass, 0, 0, 2, 3, 3, model.get_unbound_material(), rotation_t(),
 			nullptr, nullptr, is_shadow_pass, lod_mult, (is_shadow_pass ? 10.0 : 0.0), 0, 1); // enable_alpha_mask=2 (both); scaled
 	}
-	if (disable_cull_face_ths_obj) {glEnable(GL_CULL_FACE);} // restore previous value
+	if (disable_cull_face_this_obj) {glEnable(GL_CULL_FACE);} // restore previous value
 	fgPopMatrix();
 	camera_pdu.valid = camera_pdu_valid;
 	camera_pdu.pos   = orig_camera_pos;

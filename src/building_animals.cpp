@@ -96,8 +96,7 @@ point building_t::gen_animal_floor_pos(float radius, bool place_in_attic, rand_g
 		}
 		place_area.expand_by_xy(-(radius + get_wall_thickness()));
 		if (min(place_area.dx(), place_area.dy()) < 4.0*radius) continue; // room too small (can happen for has_complex_floorplan office buildings)
-		point pos(gen_xy_pos_in_area(place_area, radius, rgen));
-		pos.z = place_area.z1();
+		point const pos(gen_xy_pos_in_area(place_area, radius, rgen, place_area.z1()));
 		if (is_valid_ai_placement(pos, radius)) {return pos;} // check room objects; start in the open, not under something
 	} // for n
 	return all_zeros; // failed
@@ -1079,6 +1078,7 @@ void building_t::update_snake(snake_t &snake, point const &camera_bs, float time
 		vector3d const new_dir_hemisphere(snake.dir);
 		snake.dir = rgen.signed_rand_vector_xy().get_norm();
 		// keep turn angle less than a bit more than 180 degrees
+		// add a stuck counter that allows a sharp turn if snake has been stuck for too many frames? or just allow any angle every 64 frames?
 		if (dot_product(snake.dir, new_dir_hemisphere) < -0.1 && (rgen.rand() & 63)) {snake.dir.negate();}
 	}
 	else { // move forward

@@ -965,8 +965,7 @@ bool building_t::place_person(point &ppos, float radius, rand_gen_t &rgen) const
 		unsigned const floor_ix(rgen.rand() % num_floors); // place person on a random floor
 		// Note: people are placed before lights are assigned to rooms, so this may not work and must be handled during light placement
 		if (room.lit_by_floor && !room.is_lit_on_floor(floor_ix)) continue; // don't place person in an unlit room
-		point pos(gen_xy_pos_in_area(room, radius, rgen)); // random XY point inside this room
-		pos.z = room.z1() + fc_thick + window_vspacing*floor_ix;
+		point const pos(gen_xy_pos_in_area(room, radius, rgen, (room.z1() + fc_thick + window_vspacing*floor_ix))); // random XY point inside this room
 		if (!is_valid_ai_placement(pos, radius)) continue;
 		ppos = pos;
 		return 1;
