@@ -705,6 +705,7 @@ public:
 	void add_sphere_to_verts(cube_t const &c, colorRGBA const &color, bool low_detail=0, vector3d const &skip_hemi_dir=zero_vector, xform_matrix const *const matrix=nullptr) {
 		add_sphere_to_verts(c.get_cube_center(), 0.5*c.get_size(), color, low_detail, skip_hemi_dir, matrix);
 	}
+	void add_vert_torus_to_verts(point const &center, float r_inner, float r_outer, colorRGBA const &color, float tscale=1.0, bool low_detail=0);
 	void add_triangle_to_verts(point const v[3], colorRGBA const &color, bool two_sided, float tscale=1.0);
 	void create_vbo(building_t const &building);
 	void create_vbo_inner();
