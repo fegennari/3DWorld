@@ -1657,6 +1657,28 @@ void building_t::add_garage_objs(rand_gen_t rgen, room_t const &room, float zval
 	interior->room_geom->has_garage_car = 1;
 }
 
+void building_t::add_floor_clutter_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
+	if (!is_house) return; // houses only for now
+
+	if (building_obj_model_loader.is_model_valid(OBJ_MODEL_TOY) && rgen.rand_float() < 0.30) { // maybe add a toy 30% of the time
+		float const window_vspacing(get_window_vspace()), wall_thickness(get_wall_thickness());
+		cube_t place_area(get_walkable_room_bounds(room));
+		place_area.expand_by(-1.0*wall_thickness); // add some extra padding
+		vect_room_object_t &objs(interior->room_geom->objs);
+		float const height(0.1*window_vspacing), radius(0.5f*height*get_radius_for_square_model(OBJ_MODEL_TOY));
+
+		if (radius < 0.1*min(place_area.dx(), place_area.dy())) {
+			point const pos(gen_xy_pos_in_area(place_area, radius, rgen, zval));
+			cube_t c(get_cube_height_radius(pos, radius, height));
+
+			// for now, just make one random attempt; if it fails then there's no chair in this room
+			if (!overlaps_other_room_obj(c, objs_start) && !is_cube_close_to_doorway(c, room, 0.0, 1) && !interior->is_blocked_by_stairs_or_elevator(c)) {
+				objs.emplace_back(c, TYPE_TOY, room_id, 0, 0, (RO_FLAG_RAND_ROT | RO_FLAG_NOCOLL), tot_light_amt); // symmetric, no dim or dir, but random rotation
+			}
+		}
+	}
+}
+
 bool building_t::add_laundry_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, unsigned &added_bathroom_objs_mask) {
 	float const front_clearance(get_min_front_clearance());
 	cube_t place_area(get_walkable_room_bounds(room));
@@ -2752,7 +2774,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			//if (has_stairs && !pri_hall.is_all_zeros()) continue; // no other geometry in office building base part rooms that have stairs
 			unsigned const floor_mask(1<<f);
 			bool added_tc(0), added_desk(0), added_obj(0), can_place_onto(0), no_whiteboard(0);
-			bool is_bathroom(0), is_bedroom(0), is_kitchen(0), is_living(0), is_dining(0), is_storage(0), is_utility(0);
+			bool is_bathroom(0), is_bedroom(0), is_kitchen(0), is_living(0), is_dining(0), is_storage(0), is_utility(0), is_play_art(0);
 			unsigned num_chairs(0);
 			// unset room type if not locked on this floor during floorplanning; required to generate determinstic room geom
 			if (!r->is_rtype_locked(f)) {r->assign_to(RTYPE_NOTSET, f);}
@@ -2885,6 +2907,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				else { // unassigned room of house on upper floor with added object/table
 					// this case is relatively rare, and we've already added a table, so it's too late to make this a bedroom/bathroom if can_be_bedroom_or_bathroom(*r, f)
 					r->assign_to((rgen.rand_bool() ? (room_type)RTYPE_PLAY : (room_type)RTYPE_ART), f); // play room or art room
+					is_play_art = 1;
 				}
 			}
 			if (is_house && is_basement && !added_basement_utility && !has_stairs && (is_storage || room_type_was_not_set) && rgen.rand_bool()) {
@@ -2910,6 +2933,9 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 
 			if (is_bathroom || is_kitchen || rgen.rand_float() < 0.8) { // 80% of the time, always in bathrooms and kitchens
 				add_trashcan_to_room(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, (was_hung && !is_house)); // no trashcans on same wall as office whiteboard
+			}
+			if (is_bedroom || is_living || is_dining || is_play_art) {
+				add_floor_clutter_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);
 			}
 			if (is_house && !(is_bathroom || is_kitchen || is_storage) && rgen.rand_float() < ((f > 0) ? 0.15 : 0.25)) {
 				unsigned const max_num(is_bedroom ? 1 : 2);
