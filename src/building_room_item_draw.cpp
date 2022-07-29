@@ -271,7 +271,7 @@ void rgeom_mat_t::add_sphere_to_verts(point const &center, vector3d const &size,
 }
 
 void rgeom_mat_t::add_vert_torus_to_verts(point const &center, float r_inner, float r_outer, colorRGBA const &color, float tscale, bool low_detail) {
-	unsigned const ndiv(get_rgeom_sphere_ndiv(low_detail)), ioff(itri_verts.size());
+	unsigned const ndiv(get_rgeom_sphere_ndiv(low_detail));
 	float const ts_tt(tscale/ndiv), ds(TWO_PI/ndiv), cds(cos(ds)), sds(sin(ds));
 	vector<float> const &sin_cos(gen_torus_sin_cos_vals(ndiv));
 	color_wrapper const cw(color);
@@ -280,6 +280,7 @@ void rgeom_mat_t::add_vert_torus_to_verts(point const &center, float r_inner, fl
 		float const theta(s*ds), ct(cos(theta)), st(sin(theta)), ct2(ct*cds - st*sds), st2(st*cds + ct*sds);
 		point const pos [2] = {point(ct, st, 0.0), point(ct2, st2, 0.0)};
 		point const vpos[2] = {(center + pos[0]*r_outer), (center + pos[1]*r_outer)};
+		unsigned const tri_ix_start(itri_verts.size()), ixs_start(indices.size());
 
 		// Note: drawn as one triangle strip
 		for (unsigned t = 0; t <= ndiv; ++t) { // inner
@@ -289,10 +290,24 @@ void rgeom_mat_t::add_vert_torus_to_verts(point const &center, float r_inner, fl
 			for (unsigned i = 0; i < 2; ++i) {
 				vector3d const delta(pos[1-i]*sp + vector3d(0.0, 0.0, cp));
 				itri_verts.emplace_back((vpos[1-i] + delta*r_inner), delta, ts_tt*(s+1-i), ts_tt*t, cw);
-				// TODO: add indices starting from ioff
 			}
 		} // for t
+		for (unsigned n = 0; n < 3; ++n) {indices.push_back(tri_ix_start + n);} // first triangle
+
+		for (unsigned n = tri_ix_start+3; n < itri_verts.size(); ++n) { // each vertex after this creates a new triangle
+			unsigned const ix1(indices[indices.size()-2]), ix2(indices.back()); // two previous indices
+			indices.push_back(ix1);
+			indices.push_back(ix2);
+			indices.push_back(n); // new triangle index
+		}
+		// swap the winding order of every other triangle, stepping in triangle pairs
+		for (unsigned i = ixs_start; i < indices.size(); i += 6) {std::swap(indices[i+4], indices[i+5]);}
 	} // for s
+}
+void rgeom_mat_t::add_contained_vert_torus_to_verts(cube_t const &c, colorRGBA const &color, float tscale, bool low_detail) {
+	float const r_inner(0.5*c.dz()), r_outer(0.25*(c.dx() + c.dy()) - r_inner);
+	assert(r_inner > 0.0 && r_outer > 0.0); // cube must be wider than it is tall
+	add_vert_torus_to_verts(c.get_cube_center(), r_inner, r_outer, color, tscale, low_detail);
 }
 
 void rgeom_mat_t::add_triangle_to_verts(point const v[3], colorRGBA const &color, bool two_sided, float tscale) {
