@@ -3160,6 +3160,34 @@ void building_room_geom_t::add_lg_ball(room_object_t const &c) { // is_small=1
 	mat.upload_draw_and_clear(state);
 }
 
+void building_room_geom_t::add_toy(room_object_t const &c) { // is_small=1
+	tid_nm_pair_t tex(-1, 1.0, 1); // shadowed
+	tex.set_specular(0.5, 80.0);
+	rgeom_mat_t &mat(get_material(tex, 1, 0, 1)); // shadowed, small
+	point const center(c.get_cube_center());
+	float const height(c.dz()), radius(c.get_radius()), post_top_srcale(0.6), post_rb(0.45*radius);
+	float zval(c.z1() + 0.10*height); // top of base/bottom of post
+	// draw the center post as a truncated cone
+	colorRGBA const base_color(apply_light_color(c));
+	cube_t post(center);
+	post.expand_by_xy(post_rb);
+	set_cube_zvals(post, zval, c.z2());
+	mat.add_vcylin_to_verts(post, base_color, 0, 1, 0, 0, 1.0, post_top_srcale);
+	// draw the base as a cube
+	cube_t base(c);
+	base.z2() = zval;
+	mat.add_cube_to_verts(base, base_color, all_zeros, EF_Z1); // skip bottom face
+	// draw the rings
+	unsigned const num_rings = 4;
+	colorRGBA const ring_colors[num_rings] = {RED, BLUE, YELLOW, PURPLE};
+
+	for (unsigned n = 0; n < num_rings; ++n) {
+		float const ro(0.8*(1.0 - 0.07*n)*radius), ri(0.42*ro);
+		mat.add_vert_torus_to_verts(point(center.x, center.y, zval+ri), ri, ro, apply_light_color(c, ring_colors[n]), 1.0, 0); // tscale=1.0, low_detail=0
+		zval += 2.0*ri; // move up
+	}
+}
+
 colorRGBA room_object_t::get_color() const {
 	switch (type) {
 	case TYPE_TABLE:    return get_table_color(*this);

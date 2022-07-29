@@ -1675,12 +1675,13 @@ void building_t::add_garage_objs(rand_gen_t rgen, room_t const &room, float zval
 void building_t::add_floor_clutter_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
 	if (!is_house) return; // houses only for now
 
-	if (building_obj_model_loader.is_model_valid(OBJ_MODEL_TOY) && rgen.rand_float() < 0.30) { // maybe add a toy 30% of the time
+	if (rgen.rand_float() < 0.30) { // maybe add a toy 30% of the time
+		bool const use_model(building_obj_model_loader.is_model_valid(OBJ_MODEL_TOY));
 		float const window_vspacing(get_window_vspace()), wall_thickness(get_wall_thickness());
 		cube_t place_area(get_walkable_room_bounds(room));
 		place_area.expand_by(-1.0*wall_thickness); // add some extra padding
 		vect_room_object_t &objs(interior->room_geom->objs);
-		float const height(0.1*window_vspacing), radius(0.5f*height*get_radius_for_square_model(OBJ_MODEL_TOY));
+		float const height(0.12*window_vspacing), radius(0.5f*height*(use_model ? get_radius_for_square_model(OBJ_MODEL_TOY) : 0.67f));
 
 		if (radius < 0.1*min(place_area.dx(), place_area.dy())) {
 			point const pos(gen_xy_pos_in_area(place_area, radius, rgen, zval));
@@ -1688,7 +1689,12 @@ void building_t::add_floor_clutter_objs(rand_gen_t rgen, room_t const &room, flo
 
 			// for now, just make one random attempt; if it fails then there's no chair in this room
 			if (!overlaps_other_room_obj(c, objs_start) && !is_cube_close_to_doorway(c, room, 0.0, 1) && !interior->is_blocked_by_stairs_or_elevator(c)) {
-				objs.emplace_back(c, TYPE_TOY, room_id, 0, 0, (RO_FLAG_RAND_ROT | RO_FLAG_NOCOLL), tot_light_amt); // symmetric, no dim or dir, but random rotation
+				if (use_model) { // symmetric, no dim or dir, but random rotation
+					objs.emplace_back(c, TYPE_TOY_MODEL, room_id, 0, 0, (RO_FLAG_RAND_ROT | RO_FLAG_NOCOLL), tot_light_amt);
+				}
+				else { // random dim/dir
+					objs.emplace_back(c, TYPE_TOY, room_id, rgen.rand_bool(), rgen.rand_bool(), RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CYLIN);
+				}
 			}
 		}
 	}
