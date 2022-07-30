@@ -3178,14 +3178,26 @@ void building_room_geom_t::add_toy(room_object_t const &c) { // is_small=1
 	base.z2() = zval;
 	mat.add_cube_to_verts(base, base_color, all_zeros, EF_Z1); // skip bottom face
 	// draw the rings
-	unsigned const num_rings = 4;
-	colorRGBA const ring_colors[num_rings] = {RED, BLUE, YELLOW, PURPLE};
+	unsigned const num_rings(4), num_ring_colors(6);
+	colorRGBA const ring_colors[num_ring_colors] = {RED, GREEN, BLUE, YELLOW, ORANGE, PURPLE};
+	unsigned colors_used(0);
+	rand_gen_t rgen;
+	rgen.set_state(c.obj_id, c.obj_id);
+	rgen.rand_mix();
 
 	for (unsigned n = 0; n < num_rings; ++n) {
+		unsigned color_id(0);
+
+		for (unsigned m = 0; m < 100; ++m) {
+			color_id = rgen.rand() % num_ring_colors;
+			if (colors_used & (1<<color_id)) continue; // color already used, try again
+			colors_used |= (1<<color_id);
+			break;
+		}
 		float const ro(0.8*(1.0 - 0.07*n)*radius), ri(0.42*ro);
-		mat.add_vert_torus_to_verts(point(center.x, center.y, zval+ri), ri, ro, apply_light_color(c, ring_colors[n]), 1.0, 0); // tscale=1.0, low_detail=0
+		mat.add_vert_torus_to_verts(point(center.x, center.y, zval+ri), ri, ro, apply_light_color(c, ring_colors[color_id]), 1.0, 0); // tscale=1.0, low_detail=0
 		zval += 2.0*ri; // move up
-	}
+	} // for n
 }
 
 colorRGBA room_object_t::get_color() const {

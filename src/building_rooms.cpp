@@ -1694,6 +1694,7 @@ void building_t::add_floor_clutter_objs(rand_gen_t rgen, room_t const &room, flo
 				}
 				else { // random dim/dir
 					objs.emplace_back(c, TYPE_TOY, room_id, rgen.rand_bool(), rgen.rand_bool(), RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CYLIN);
+					set_obj_id(objs); // used for color selection
 				}
 			}
 		}
