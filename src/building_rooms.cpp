@@ -657,7 +657,7 @@ bool building_t::add_bedroom_objs(rand_gen_t rgen, room_t const &room, vect_cube
 			if (dmin_sq == 0.0 || dist_sq < dmin_sq) {obj_id = (i - objs.begin()); dmin_sq = dist_sq;}
 		}
 		if (obj_id >= 0) { // found a valid object to place this on
-			room_object_t const &obj(objs[obj_id]);
+			room_object_t &obj(objs[obj_id]);
 			point center(obj.get_cube_center());
 			center.z = obj.z2();
 			cube_t lamp(get_cube_height_radius(center, 0.5*width, height));
@@ -672,6 +672,7 @@ bool building_t::add_bedroom_objs(rand_gen_t rgen, room_t const &room, vect_cube
 			lamp.translate_dim(!obj.dim, shift_val);
 			unsigned flags(RO_FLAG_NOCOLL); // no collisions, as an optimization since the player and AI can't get onto the dresser/nightstand anyway
 			if (rgen.rand_bool() && !room_is_lit) {flags |= RO_FLAG_LIT;} // 50% chance of being lit if the room is dark (Note: don't let room_is_lit affect rgen)
+			obj.flags |= RO_FLAG_ADJ_TOP; // flag this object as having something on it
 			objs.emplace_back(lamp, TYPE_LAMP, room_id, obj.dim, obj.dir, flags, tot_light_amt, SHAPE_CYLIN, lamp_colors[rgen.rand()%NUM_LAMP_COLORS]); // Note: invalidates obj ref
 		}
 	}
@@ -2478,6 +2479,14 @@ void building_t::place_objects_onto_surfaces(rand_gen_t rgen, room_t const &room
 			plant_prob  = 0.10*place_plant_prob;
 			laptop_prob = 0.05*place_laptop_prob;
 		}
+		else if ((obj.type == TYPE_DRESSER || obj.type == TYPE_NIGHTSTAND) && !(obj.flags & RO_FLAG_ADJ_TOP)) { // dresser or nightstand with nothing on it yet
+			book_prob   = 0.25*place_book_prob;
+			bottle_prob = 0.15*place_bottle_prob;
+			cup_prob    = 0.15*place_cup_prob;
+			plant_prob  = 0.1*place_plant_prob;
+			laptop_prob = 0.1*place_laptop_prob;
+			toy_prob    = 0.15;
+		}
 		else {
 			continue;
 		}
@@ -2835,7 +2844,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				// place a bedroom 75% of the time unless this must be a bathroom; if we got to the second floor and haven't placed a bedroom, always place it;
 				// houses only, and must have a window (exterior wall)
 				if (is_house && !must_be_bathroom && !is_basement && ((f > 0 && !added_bedroom) || rgen.rand_float() < bedroom_prob)) {
-					added_obj = added_bedroom = is_bedroom =
+					added_obj = can_place_onto = added_bedroom = is_bedroom =
 						add_bedroom_objs(rgen, *r, blockers, room_center.z, room_id, f, tot_light_amt, objs_start, is_lit, is_basement, light_ix_assign);
 					if (is_bedroom) {r->assign_to(RTYPE_BED, f);}
 					num_bedrooms += is_bedroom;
