@@ -1675,13 +1675,13 @@ void building_t::add_garage_objs(rand_gen_t rgen, room_t const &room, float zval
 void building_t::add_floor_clutter_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
 	if (!is_house) return; // houses only for now
 
-	if (rgen.rand_float() < 0.30) { // maybe add a toy 30% of the time
+	if (rgen.rand_float() < 0.10) { // maybe add a toy 10% of the time
 		bool const use_model(building_obj_model_loader.is_model_valid(OBJ_MODEL_TOY));
 		float const window_vspacing(get_window_vspace()), wall_thickness(get_wall_thickness());
 		cube_t place_area(get_walkable_room_bounds(room));
 		place_area.expand_by(-1.0*wall_thickness); // add some extra padding
 		vect_room_object_t &objs(interior->room_geom->objs);
-		float const height(0.12*window_vspacing), radius(0.5f*height*(use_model ? get_radius_for_square_model(OBJ_MODEL_TOY) : 0.67f));
+		float const height(0.11*window_vspacing), radius(0.5f*height*(use_model ? get_radius_for_square_model(OBJ_MODEL_TOY) : 0.67f));
 
 		if (radius < 0.1*min(place_area.dx(), place_area.dy())) {
 			point const pos(gen_xy_pos_in_area(place_area, radius, rgen, zval));
@@ -1884,11 +1884,20 @@ bool building_t::place_plate_on_obj(rand_gen_t &rgen, room_object_t const &place
 
 bool building_t::place_cup_on_obj(rand_gen_t &rgen, room_object_t const &place_on, unsigned room_id, float tot_light_amt, cube_t const &avoid) {
 	if (!building_obj_model_loader.is_model_valid(OBJ_MODEL_CUP)) return 0;
-	float const window_vspacing(get_window_vspace()), height(0.06*window_vspacing), radius(0.5f*height*get_radius_for_square_model(OBJ_MODEL_CUP)); // almost square
+	float const height(0.06*get_window_vspace()), radius(0.5f*height*get_radius_for_square_model(OBJ_MODEL_CUP)); // almost square
 	cube_t const cup(place_cylin_object(rgen, place_on, radius, height, 1.2*radius));
 	if (!avoid.is_all_zeros() && cup.intersects(avoid)) return 0; // only make one attempt
 	// random dim/dir, plus more randomness on top
 	interior->room_geom->objs.emplace_back(cup, TYPE_CUP, room_id, rgen.rand_bool(), rgen.rand_bool(), (RO_FLAG_NOCOLL | RO_FLAG_RAND_ROT), tot_light_amt, SHAPE_CYLIN);
+	return 1;
+}
+
+bool building_t::place_toy_on_obj(rand_gen_t &rgen, room_object_t const &place_on, unsigned room_id, float tot_light_amt, cube_t const &avoid) {
+	float const height(0.11*get_window_vspace()), radius(0.5f*height*0.67f);
+	cube_t const toy(place_cylin_object(rgen, place_on, radius, height, 1.1*radius));
+	if (!avoid.is_all_zeros() && toy.intersects(avoid)) return 0; // only make one attempt
+	interior->room_geom->objs.emplace_back(toy, TYPE_TOY, room_id, rgen.rand_bool(), rgen.rand_bool(), RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CYLIN);
+	set_obj_id(interior->room_geom->objs); // used for color selection
 	return 1;
 }
 
@@ -2444,7 +2453,7 @@ void building_t::place_objects_onto_surfaces(rand_gen_t rgen, room_t const &room
 		// add place settings to kitchen and dining room tables 50% of the time
 		bool const is_eating_table(obj.type == TYPE_TABLE && (room.get_room_type(floor) == RTYPE_KITCHEN || room.get_room_type(floor) == RTYPE_DINING) && rgen.rand_bool());
 		if (is_eating_table && place_eating_items_on_table(rgen, i)) continue; // no other items to place
-		float book_prob(0.0), bottle_prob(0.0), cup_prob(0.0), plant_prob(0.0), laptop_prob(0.0);
+		float book_prob(0.0), bottle_prob(0.0), cup_prob(0.0), plant_prob(0.0), laptop_prob(0.0), toy_prob(0.0);
 		cube_t avoid;
 
 		if (obj.type == TYPE_TABLE && i == objs_start) { // only first table (not TV table)
@@ -2453,6 +2462,7 @@ void building_t::place_objects_onto_surfaces(rand_gen_t rgen, room_t const &room
 			cup_prob    = 0.5*place_cup_prob;
 			plant_prob  = 0.6*place_plant_prob;
 			laptop_prob = 0.3*place_laptop_prob;
+			if (is_house) {toy_prob = 0.5;} // toys are in houses only
 		}
 		else if (obj.type == TYPE_DESK && (i+1 == objs_end || objs[i+1].type != TYPE_MONITOR)) { // desk with no computer monitor
 			book_prob   = 0.8*place_book_prob;
@@ -2498,6 +2508,7 @@ void building_t::place_objects_onto_surfaces(rand_gen_t rgen, room_t const &room
 		else if (laptop_prob > 0.0 && rgen.rand_float() < laptop_prob && place_laptop_on_obj(rgen, surface, room_id, tot_light_amt, avoid, (obj.type != TYPE_TABLE))) {}
 		// don't add both a plant and a bottle; don't add plants in the basement
 		else if (!is_basement && plant_prob > 0.0 && rgen.rand_float() < plant_prob && place_plant_on_obj(rgen, surface, room_id, tot_light_amt, avoid)) {}
+		else if (toy_prob    > 0.0 && rgen.rand_float() < toy_prob    && place_toy_on_obj   (rgen, surface, room_id, tot_light_amt, avoid)) {}
 	} // for i
 }
 
