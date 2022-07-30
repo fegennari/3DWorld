@@ -138,6 +138,7 @@ struct spider_t : public building_animal_t {
 struct snake_t : public building_animal_t {
 	// for snakes, pos is (xc, yc, z1), radius is the max body radius, and dir is the head direction and direction of movement
 	float length=0.0, cur_move_amt=0.0;
+	bool has_rattle=0;
 	colorRGBA color;
 	vector<point> segments; // segment centers: first = head, last = tail
 
@@ -702,6 +703,9 @@ public:
 	void add_disk_to_verts(point const &pos, float radius, bool normal_z_neg, colorRGBA const &color);
 	void add_sphere_to_verts(point const &center, vector3d const &size, colorRGBA const &color, bool low_detail=0,
 		vector3d const &skip_hemi_dir=zero_vector, xform_matrix const *const matrix=nullptr);
+	void add_sphere_to_verts(point const &center, float radius, colorRGBA const &color, bool low_detail=0) {
+		add_sphere_to_verts(center, vector3d(radius, radius, radius), color, low_detail);
+	}
 	void add_sphere_to_verts(cube_t const &c, colorRGBA const &color, bool low_detail=0, vector3d const &skip_hemi_dir=zero_vector, xform_matrix const *const matrix=nullptr) {
 		add_sphere_to_verts(c.get_cube_center(), 0.5*c.get_size(), color, low_detail, skip_hemi_dir, matrix);
 	}

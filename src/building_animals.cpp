@@ -970,9 +970,13 @@ bool building_t::maybe_squish_spider(room_object_t const &obj) {
 // *** Snakes ***
 
 snake_t::snake_t(point const &pos_, float radius_, vector3d const &dir_, unsigned id_) : building_animal_t(pos_, radius_, dir_, id_) {
+	rand_gen_t rgen;
+	rgen.set_state(id+1, 3*id+7);
+	rgen.rand_mix();
 	length  = 2.0*radius; // input radius is half length
 	radius *= 0.04;
-	color   = WHITE; // TODO: make this randomly black or a shade of brown; also, add rattles and other variations
+	color   = WHITE*rgen.rand_uniform(0.2, 1.0); // random color shade
+	has_rattle = rgen.rand_bool();
 	unsigned const NUM_SEGS = 20; // head + 18 segments + tail
 	float const seg_length(length/NUM_SEGS);
 	vector3d const seg_step(-seg_length*dir); // head -> tail
@@ -1084,6 +1088,7 @@ void building_t::update_snake(snake_t &snake, point const &camera_bs, float time
 	else { // move forward
 		float const move_dist(snake.move(timestep));
 		snake.move_segments(move_dist);
+		// TODO: move head in a winding motion based on sin(snake.anim_time)
 	}
 }
 

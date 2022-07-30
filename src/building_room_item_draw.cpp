@@ -1356,8 +1356,8 @@ class snake_draw_t {
 		// draw head
 		float const head_height(0.6*S.radius);
 		vector3d const head_size(S.radius, S.radius, head_height); // max radius; flattened in Z; TODO: should be longer in S.dir
-		point const head_pos(S.get_head_pos());
-		mat.add_sphere_to_verts((head_pos + vector3d(0,0,head_height)), head_size, S.color, low_detail);
+		point const head_pos(S.get_head_pos()), head_center(head_pos + vector3d(0,0,head_height));
+		mat.add_sphere_to_verts(head_center, head_size, S.color, low_detail);
 		// draw segments
 		float const ndiv_inv(1.0/ndiv);
 		color_wrapper const cw(S.color);
@@ -1385,6 +1385,19 @@ class snake_draw_t {
 			add_cylin_indices_tris(mat.indices, ndiv, (data_pos + quad_id)); // create index data
 			quad_id += ndiv;
 		} // for s
+		// add eyes to head
+		vector3d const side_dir(cross_product(S.dir, plus_z));
+		float const eye_extend(S.radius/SQRT2);
+
+		for (unsigned d = 0; d < 2; ++d) {
+			point eye_pos(head_center);
+			eye_pos += eye_extend*S.dir; // move forward
+			eye_pos += ((d ? -1.0 : 1.0)*0.9*eye_extend)*side_dir; // move to the side
+			mat.add_sphere_to_verts(eye_pos, 0.25*S.radius, BLACK, 1); // low_detail=1
+		}
+		if (S.has_rattle) {
+			// TODO: draw rattle
+		}
 	}
 public:
 	void draw(vect_snake_t const &snakes, shader_t &s, building_t const &building, occlusion_checker_noncity_t &oc,
