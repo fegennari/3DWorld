@@ -1092,7 +1092,13 @@ void building_t::update_snake(snake_t &snake, point const &camera_bs, float time
 		maybe_bite_and_poison_player((head_pos + center_dz), camera_bs, snake.dir, 2.0*snake.radius, 0.5, snake.has_rattle, rgen); // 0.5 damage, poison if has a rattle
 		float const move_dist(snake.move(timestep));
 		snake.move_segments(move_dist);
-		// TODO: move head in a winding motion based on sin(snake.anim_time)
+		
+		if (move_dist > 0.0) { // move head in a winding motion if moving
+			vector3d const side_dir(cross_product(snake.dir, plus_z));
+			float const rot_amt(sin(0.1*snake.anim_time));
+			rotate_vector3d(plus_z, 0.015*fticks*PI*rot_amt, snake.dir);
+			snake.dir.normalize(); // is this needed?
+		}
 	}
 }
 
