@@ -164,7 +164,7 @@ template<typename T> struct vect_animal_t : public vector<T> {
 	void add(T const &animal) {
 		this->push_back(animal);
 		this->back().id = this->size(); // rat_id starts at 1
-		max_eq(max_radius, animal.radius);
+		max_eq(max_radius, animal.get_xy_radius());
 	}
 	void do_sort() {
 		sort(this->begin(), this->end()); // sort by xval
