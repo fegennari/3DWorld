@@ -1355,7 +1355,8 @@ class snake_draw_t {
 		float const tscale = 1.0; // must tune this once our snake is textured
 		// draw head
 		float const head_height(0.6*S.radius);
-		vector3d const head_size(S.radius, S.radius, head_height); // max radius; flattened in Z; TODO: should be longer in S.dir
+		vector3d const &dir(S.last_valid_dir);
+		vector3d const head_size(S.radius, S.radius, head_height); // max radius; flattened in Z; TODO: should be longer in dir
 		point const head_pos(S.get_head_pos()), head_center(head_pos + vector3d(0,0,head_height));
 		skin_mat.add_sphere_to_verts(head_center, head_size, S.color, low_detail);
 		// draw segments
@@ -1400,12 +1401,12 @@ class snake_draw_t {
 			}
 		} // for s
 		// add eyes to head
-		vector3d const side_dir(cross_product(S.dir, plus_z));
+		vector3d const side_dir(cross_product(dir, plus_z));
 		float const eye_extend(0.9*S.radius/SQRT2);
 
 		for (unsigned d = 0; d < 2; ++d) {
 			point eye_pos(head_center);
-			eye_pos += eye_extend*S.dir; // move forward
+			eye_pos += eye_extend*dir; // move forward
 			eye_pos += ((d ? -1.0 : 1.0)*0.9*eye_extend)*side_dir; // move to the side
 			untex_mat.add_sphere_to_verts(eye_pos, 0.25*S.radius, BLACK, 1); // low_detail=1
 		}

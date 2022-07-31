@@ -1088,6 +1088,7 @@ void building_t::update_snake(snake_t &snake, point const &camera_bs, float time
 		if (dot_product(snake.dir, new_dir_hemisphere) < -0.1 && (rgen.rand() & 63)) {snake.dir.negate();}
 	}
 	else { // move forward
+		snake.last_valid_dir = snake.dir;
 		maybe_bite_and_poison_player((head_pos + center_dz), camera_bs, snake.dir, 2.0*snake.radius, 0.5, snake.has_rattle, rgen); // 0.5 damage, poison if has a rattle
 		float const move_dist(snake.move(timestep));
 		snake.move_segments(move_dist);
