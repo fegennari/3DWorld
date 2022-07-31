@@ -120,7 +120,7 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_ATTIC_DOOR] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 2, 100.0, 50.0,  "Attic Door"); // door/ladder
 	bldg_obj_types[TYPE_CHIMNEY   ] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 2, 1000.0,1000.0,"Chimney"); // interior chimney in attic
 	bldg_obj_types[TYPE_DUCT      ] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 0, 0.0,   0.0,   "Duct"); // detail object
-	bldg_obj_types[TYPE_TOY       ] = bldg_obj_type_t(0, 0, 1, 1, 0, 0, 2, 4.0,   0.1,   "toy"); // plastic ring stack
+	bldg_obj_types[TYPE_TOY       ] = bldg_obj_type_t(0, 0, 1, 1, 0, 0, 2, 2.0,   0.1,   "toy"); // plastic ring stack
 	// player_coll, ai_coll, rat_coll, pickup, attached, is_model, lg_sm, value, weight, name [capacity]
 	// 3D models
 	bldg_obj_types[TYPE_TOILET    ] = bldg_obj_type_t(1, 1, 1, 1, 1, 1, 0, 120.0, 88.0,  "toilet");
@@ -175,6 +175,13 @@ bldg_obj_type_t get_taken_obj_type(room_object_t const &obj) {
 		if (obj.flags & RO_FLAG_TAKEN2) {return bldg_obj_type_t(0, 0, 1, 1, 0, 0, 1, 10.0, 10.0, "plant pot");} // third item to take
 		if (obj.flags & RO_FLAG_TAKEN1) {return bldg_obj_type_t(0, 0, 1, 1, 0, 0, 1, 1.0,  10.0, "dirt"     );} // second item to take
 		return bldg_obj_type_t(0, 0, 1, 1, 0, 0, 2, 25.0, 5.0, "plant"); // first item to take
+	}
+	if (obj.type == TYPE_TOY) { // take one ring at a time then the base (5 parts)
+		for (unsigned n = 0; n < 4; ++n) {
+			if (obj.flags & taken_flags[n]) continue; // find lowest taken flag that's not set
+			return bldg_obj_type_t(0, 0, 1, 1, 0, 0, 2, 0.5, 0.025, "toy ring");
+		}
+		// else take the toy base
 	}
 	if (obj.type == TYPE_COMPUTER && obj.was_expanded()) {return bldg_obj_type_t(0, 0, 1, 1, 0, 0, 2, 100.0, 20.0, "old computer");}
 	if (obj.type == TYPE_BOX      && obj.is_open     ()) {return bldg_obj_type_t(1, 1, 1, 1, 0, 0, 2,   0.0, 0.05, "opened box"  );}
@@ -1107,6 +1114,17 @@ void building_room_geom_t::remove_object(unsigned obj_id, building_t &building) 
 		drain.z2() += 0.02*obj.dz();
 		obj = room_object_t(drain, TYPE_DRAIN, obj.room_id, 0, 0, RO_FLAG_NOCOLL, obj.light_amt, SHAPE_CYLIN, DK_GRAY);
 		invalidate_draw_data_for_obj(obj);
+	}
+	else if (obj.type == TYPE_TOY) { // take one ring at a time then the base (5 parts)
+		bool is_all_taken(1);
+
+		for (unsigned n = 0; n < 4; ++n) {
+			if (obj.flags & taken_flags[n]) continue; // find lowest taken flag that's not set
+			obj.flags |= taken_flags[n]; // mark this ring as taken
+			is_all_taken = 0;
+			break;
+		}
+		if (is_all_taken) {obj.type = TYPE_BLOCKER;} // else take the toy base
 	}
 	else { // replace it with an invisible blocker that won't collide with anything
 		obj.type  = TYPE_BLOCKER;

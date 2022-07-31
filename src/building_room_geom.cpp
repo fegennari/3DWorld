@@ -3180,12 +3180,16 @@ void building_room_geom_t::add_toy(room_object_t const &c) { // is_small=1
 	// draw the rings
 	unsigned const num_rings(4), num_ring_colors(6);
 	colorRGBA const ring_colors[num_ring_colors] = {RED, GREEN, BLUE, YELLOW, ORANGE, PURPLE};
-	unsigned colors_used(0);
+	unsigned rings_to_draw(num_rings), colors_used(0);
+
+	for (unsigned n = 0; n < 4; ++n) { // remove rings from the top if they're taken by the player
+		if (rings_to_draw > 0 && (c.flags & taken_flags[n])) {--rings_to_draw;}
+	}
 	rand_gen_t rgen;
 	rgen.set_state(c.obj_id, c.obj_id);
 	rgen.rand_mix();
 
-	for (unsigned n = 0; n < num_rings; ++n) {
+	for (unsigned n = 0; n < rings_to_draw; ++n) {
 		unsigned color_id(0);
 
 		for (unsigned m = 0; m < 100; ++m) {

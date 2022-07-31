@@ -515,7 +515,7 @@ unsigned const RO_FLAG_IN_ATTIC   = 0x0200; // aliased with RO_FLAG_HANGING/RO_F
 unsigned const RO_FLAG_TAKEN1  = 0x010000; // no picture / no bed pillows
 unsigned const RO_FLAG_TAKEN2  = 0x020000; // no bed sheets
 unsigned const RO_FLAG_TAKEN3  = 0x040000; // no bed mattress
-unsigned const RO_FLAG_TAKEN4  = 0x080000; // for future use
+unsigned const RO_FLAG_TAKEN4  = 0x080000; // for ring stack toy
 unsigned const RO_FLAG_EXPANDED= 0x100000; // for shelves, closets, boxes, and mirrors
 unsigned const RO_FLAG_WAS_EXP = 0x200000; // for objects in/on shelves, closets, and drawers, cabinets, and books
 unsigned const RO_FLAG_ROTATING= 0x400000; // for office chairs
@@ -530,6 +530,8 @@ unsigned const RO_FLAG_USED     = 0x10000000; // used by the player (spraypaint,
 unsigned const RO_FLAG_IN_ELEV  = 0x20000000; // for elevator lights and buttons
 unsigned const RO_FLAG_BROKEN   = 0x40000000; // for TVs and monitors, maybe can use for windows
 unsigned const RO_FLAG_MOVED    = 0x80000000; // for player push/pull
+
+unsigned const taken_flags[4] = {RO_FLAG_TAKEN1, RO_FLAG_TAKEN2, RO_FLAG_TAKEN3, RO_FLAG_TAKEN4};
 
 struct bldg_obj_type_t {
 	bool player_coll=0, ai_coll=0, rat_coll=0, pickup=0, attached=0, is_model=0;
