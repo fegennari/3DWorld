@@ -1677,11 +1677,15 @@ void building_t::add_floor_clutter_objs(rand_gen_t rgen, room_t const &room, flo
 	if (!is_house) return; // houses only for now
 
 	if (rgen.rand_float() < 0.10) { // maybe add a toy 10% of the time
+		vect_room_object_t &objs(interior->room_geom->objs);
+
+		for (auto i = objs.begin()+objs_start; i != objs.end(); ++i) {
+			if (i->type == TYPE_TOY) return; // don't place a toy on both a room object and on the floor
+		}
 		bool const use_model(building_obj_model_loader.is_model_valid(OBJ_MODEL_TOY));
 		float const window_vspacing(get_window_vspace()), wall_thickness(get_wall_thickness());
 		cube_t place_area(get_walkable_room_bounds(room));
 		place_area.expand_by(-1.0*wall_thickness); // add some extra padding
-		vect_room_object_t &objs(interior->room_geom->objs);
 		float const height(0.11*window_vspacing), radius(0.5f*height*(use_model ? get_radius_for_square_model(OBJ_MODEL_TOY) : 0.67f));
 
 		if (radius < 0.1*min(place_area.dx(), place_area.dy())) {
