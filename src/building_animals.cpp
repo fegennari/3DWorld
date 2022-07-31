@@ -856,6 +856,17 @@ bool building_t::update_spider_pos_orient(spider_t &spider, point const &camera_
 	return obj_avoid.had_coll;
 }
 
+void building_t::maybe_bite_and_poison_player(point const &pos, point const &camera_bs, vector3d const &dir, float coll_radius, float damage, bool poison, rand_gen_t &rgen) const {
+	if (!in_building_gameplay_mode()) return;
+	if (dot_product_ptv(dir, camera_bs, pos) < 0.0) return; // facing the wrong direction
+	if (get_floor_for_zval(camera_bs.z) != get_floor_for_zval(pos.z)) return; // wrong floor
+
+	if (dist_xy_less_than(pos, camera_bs, (get_scaled_player_radius() + coll_radius))) { // do damage when nearly colliding with the player
+		bool const played_sound(play_attack_sound(local_to_camera_space(pos), 0.5, 1.5, rgen)); // quieter and higher pitch than rats
+		if (played_sound) {player_take_damage(damage, poison);} // bite and maybe poisoned every so often
+	}
+}
+
 void building_t::update_spider(spider_t &spider, point const &camera_bs, float timestep, float &max_xmove, rand_gen_t &rgen) const {
 	
 	if (spider.squished || spider.is_sleeping()) return; // horribly squished or peacefully sleeping
@@ -938,16 +949,7 @@ void building_t::update_spider(spider_t &spider, point const &camera_bs, float t
 			}
 		}
 	}
-	// handle biting the player
-	if (!in_building_gameplay_mode()) return;
-	if (dot_product_ptv(spider.dir, camera_bs, spider.pos) < 0.0) return; // facing the wrong direction
-	if (get_floor_for_zval(camera_bs.z) != get_floor_for_zval(spider.pos.z)) return; // wrong floor
-	float const player_radius(get_scaled_player_radius());
-
-	if (dist_xy_less_than(spider.pos, camera_bs, (player_radius + coll_radius))) { // do damage when nearly colliding with the player
-		bool const played_sound(play_attack_sound(local_to_camera_space(spider.pos), 0.5, 1.5, rgen)); // quieter and higher pitch than rats
-		if (played_sound) {player_take_damage(0.1, 1);} // poisoned every so often
-	}
+	maybe_bite_and_poison_player(spider.pos, camera_bs, spider.dir, coll_radius, 0.1, 1, rgen); // handle biting the player: 0.1 damage with poison
 }
 
 bool building_t::maybe_squish_spider(room_object_t const &obj) {
@@ -1086,6 +1088,7 @@ void building_t::update_snake(snake_t &snake, point const &camera_bs, float time
 		if (dot_product(snake.dir, new_dir_hemisphere) < -0.1 && (rgen.rand() & 63)) {snake.dir.negate();}
 	}
 	else { // move forward
+		maybe_bite_and_poison_player((head_pos + center_dz), camera_bs, snake.dir, 2.0*snake.radius, 0.5, snake.has_rattle, rgen); // 0.5 damage, poison if has a rattle
 		float const move_dist(snake.move(timestep));
 		snake.move_segments(move_dist);
 		// TODO: move head in a winding motion based on sin(snake.anim_time)
