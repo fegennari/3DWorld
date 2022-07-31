@@ -1339,7 +1339,7 @@ public:
 spider_draw_t spider_draw;
 
 class snake_draw_t {
-	rgeom_mat_t mat;
+	rgeom_mat_t skin_mat, untex_mat;
 
 	// Note: similar to the function in Tree.cpp, but pushes back rather than assigning, and step is hard-coded to 1
 	void add_cylin_indices_tris(vector<unsigned> &idata, unsigned ndiv, unsigned ix_start) {
@@ -1357,18 +1357,18 @@ class snake_draw_t {
 		float const head_height(0.6*S.radius);
 		vector3d const head_size(S.radius, S.radius, head_height); // max radius; flattened in Z; TODO: should be longer in S.dir
 		point const head_pos(S.get_head_pos()), head_center(head_pos + vector3d(0,0,head_height));
-		mat.add_sphere_to_verts(head_center, head_size, S.color, low_detail);
+		skin_mat.add_sphere_to_verts(head_center, head_size, S.color, low_detail);
 		// draw segments
 		float const ndiv_inv(1.0/ndiv);
 		color_wrapper const cw(S.color);
-		unsigned data_pos(mat.itri_verts.size()), quad_id(0);
+		unsigned data_pos(skin_mat.itri_verts.size()), quad_id(0);
 
 		for (auto s = S.segments.begin(); s != S.segments.end(); ++s) {
 			unsigned const seg_ix(s - S.segments.begin());
 			bool const is_first(seg_ix == 0), is_tail(s+1 == S.segments.end());
 			float const radius1(S.get_seg_radius(seg_ix)), radius2(S.get_seg_radius(seg_ix+1));
 			point const seg_start(is_first ? *s : 0.5*(*s + *(s-1))); // midpoint between this segment and the last
-			point const seg_end  (is_tail  ? (*s + (*s - seg_start)) : 0.5*(*s + *(s+1))); // midpoint between this segment and the next
+			point const seg_end  (is_tail  ? (*s + 2.0*(*s - seg_start)) : 0.5*(*s + *(s+1))); // midpoint between this segment and the next; tail extends further back
 			point const ce[2] = {(seg_start + vector3d(0,0,radius1)), (seg_end + vector3d(0,0,radius2))};
 			vector3d v12;
 			vector_point_norm const &vpn(gen_cylinder_data(ce, radius1, radius2, ndiv, v12, NULL, 0.0, 1.0, 2)); // force_dim=2
@@ -1379,24 +1379,35 @@ class snake_draw_t {
 				for (unsigned S = 0; S < ndiv; ++S) {
 					float const tx(2.0f*fabs(S*ndiv_inv - 0.5f));
 					vector3d const n(0.5f*(vpn.n[S] + vpn.n[(S+ndiv-1)%ndiv])); // average face normals to get vert normals, don't need to normalize
-					mat.itri_verts.emplace_back(vpn.p[(S<<1)+j], n, tx, ty, cw);
+					skin_mat.itri_verts.emplace_back(vpn.p[(S<<1)+j], n, tx, ty, cw);
 				}
 			}
-			add_cylin_indices_tris(mat.indices, ndiv, (data_pos + quad_id)); // create index data
+			add_cylin_indices_tris(skin_mat.indices, ndiv, (data_pos + quad_id)); // create index data
 			quad_id += ndiv;
+
+			if (S.has_rattle && s+1 == S.segments.end()) { // add a rattle on the last tail segment
+				unsigned const num_segs(3 + (S.id % 6)); // 3-8
+				vector3d const seg_delta(ce[1] - ce[0]);
+				colorRGBA const rattle_color(1.0, 0.8, 0.6); // yellow-ish
+				vector3d const step(seg_delta/num_segs);
+				float const rattle_radius(0.9*step.mag()); // add some overlap between segments
+				
+				for (unsigned i = 0; i < num_segs; ++i) {
+					point const rattle_pos(ce[0] + (i+0.5)*step);
+					float const seg_radius(rattle_radius*(1.0 - 0.5*i/float(num_segs)));
+					untex_mat.add_sphere_to_verts(rattle_pos, seg_radius, rattle_color, 1); // low_detail=1
+				}
+			}
 		} // for s
 		// add eyes to head
 		vector3d const side_dir(cross_product(S.dir, plus_z));
-		float const eye_extend(S.radius/SQRT2);
+		float const eye_extend(0.9*S.radius/SQRT2);
 
 		for (unsigned d = 0; d < 2; ++d) {
 			point eye_pos(head_center);
 			eye_pos += eye_extend*S.dir; // move forward
 			eye_pos += ((d ? -1.0 : 1.0)*0.9*eye_extend)*side_dir; // move to the side
-			mat.add_sphere_to_verts(eye_pos, 0.25*S.radius, BLACK, 1); // low_detail=1
-		}
-		if (S.has_rattle) {
-			// TODO: draw rattle
+			untex_mat.add_sphere_to_verts(eye_pos, 0.25*S.radius, BLACK, 1); // low_detail=1
 		}
 	}
 public:
@@ -1414,13 +1425,16 @@ public:
 			if (check_occlusion && building.check_obj_occluded(bcube, camera_bs, oc, reflection_pass)) continue;
 			draw_snake(S, shadow_only, reflection_pass);
 		} // for S
-		if (mat.empty()) return; // nothing to draw
-		mat.tex = tid_nm_pair_t(get_texture_by_name("interiors/snakeskin.jpg"), 0.0, 1);
-		s.set_specular(0.25, 50.0);
-		s.add_uniform_float("bump_map_mag", 0.0);
 		tid_nm_pair_dstate_t state(s);
-		mat.upload_draw_and_clear(state);
-		s.add_uniform_float("bump_map_mag",   1.0);
+		s.add_uniform_float("bump_map_mag", 0.0);
+		// draw the skin material
+		if (skin_mat.tex.tid < 0) {skin_mat.tex = tid_nm_pair_t(get_texture_by_name("interiors/snakeskin.jpg"), 0.0, 1);}
+		s.set_specular(0.25, 50.0);
+		skin_mat.upload_draw_and_clear(state);
+		// draw the eyes and rattle
+		s.set_specular(0.75, 80.0);
+		untex_mat.upload_draw_and_clear(state);
+		s.add_uniform_float("bump_map_mag", 1.0);
 		s.clear_specular();
 	}
 };

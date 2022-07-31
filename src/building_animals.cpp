@@ -975,7 +975,7 @@ snake_t::snake_t(point const &pos_, float radius_, vector3d const &dir_, unsigne
 	rgen.rand_mix();
 	length  = 2.0*radius; // input radius is half length
 	radius *= 0.04;
-	color   = WHITE*rgen.rand_uniform(0.2, 1.0); // random color shade
+	color   = WHITE*(1.0 - rgen.rand_float()*rgen.rand_float()); // random color shade, weighted toward lighter
 	has_rattle = rgen.rand_bool();
 	unsigned const NUM_SEGS = 20; // head + 18 segments + tail
 	float const seg_length(length/NUM_SEGS);
