@@ -1060,6 +1060,8 @@ void building_t::update_snake(snake_t &snake, point const &camera_bs, float time
 		change_dir = 1;
 	}
 	// check if pos is valid
+	// TODO: should look ahead and avoid obstacles
+	// TODO: return coll normal and use that to select a mew direction away from the object
 	else if (!is_pos_inside_building(head_pos, radius, hheight)) {change_dir = 1;}
 	else if (check_line_coll_expand((old_head_pos + center_dz), (head_pos + center_dz), radius, hheight)) {change_dir = 1;}
 	else {max_eq(max_xmove, fabs(head_pos.x - old_head_pos.x));}

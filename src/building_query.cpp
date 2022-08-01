@@ -1628,7 +1628,11 @@ bool building_t::check_and_handle_dynamic_obj_coll(point &pos, point const &cur_
 			if (handle_vcylin_vcylin_int(pos, camera_bs, (radius + get_scaled_player_radius()))) return 1;
 		}
 	}
-	// what about people in the building? maybe since rats are scared of them, they won't collide with people?
+	// check for collisions of people, at least for snakes (since rats will generally avoid people)
+	for (person_t const &p : interior->people) {
+		float const pz1(p.get_z1()), pz2(p.get_z2());
+		if (z1 < pz2 && z2 > pz1 && handle_vcylin_vcylin_int(pos, p.pos, (radius + p.get_width()))) return 1;
+	}
 	assert(has_room_geom());
 	// check dynamic objects such as balls; currently, we only check this for houses because they have balls on the floor;
 	// in theory, the player can put a ball in an office building, but we don't handle that case because office buildings have tons of objects and this is too slow
