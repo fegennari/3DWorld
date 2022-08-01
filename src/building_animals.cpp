@@ -1016,28 +1016,13 @@ void snake_t::move_segments(float dist) {
 	if (dist == 0.0) return;
 	assert(dist > 0.0);
 	assert(segments.size() >= 2);
-	float const seg_len(get_seg_length()), move_left(seg_len - cur_move_amt); // the amount of movement left before we create a new movement point
-	float const seg_move(min(move_left, dist)); // the amount we can move segments
-	// move all segments forward incrementally
-	segments[0] += seg_move*dir; // move the head
+	float const seg_len(get_seg_length());
+	segments[0] += dist*dir; // move the head forward incrementally
 
+	// work backwards toward the tail and apply the new segment directions
 	for (unsigned n = 1; n < segments.size(); ++n) {
 		vector3d const seg_delta(segments[n-1] - segments[n]);
-		segments[n] += seg_delta*(seg_move/seg_delta.mag()); // mag should be seg_len?
-	}
-	cur_move_amt += seg_move; // record this movement amount
-
-	if (dist > seg_move) { // we have additional movement
-		dist -= seg_move; // this amount of movement has already been applied
-		// at this point the segments should all have moved seg_len from their original positions; add a new point to the front and remove the point from the back
-		segments[0] += dist*dir; // move the head
-
-		// work backwards toward the tail and apply the new segment directions
-		for (unsigned n = 1; n < segments.size(); ++n) {
-			vector3d const seg_delta(segments[n-1] - segments[n]);
-			segments[n] = segments[n-1] - seg_delta*(seg_len/seg_delta.mag());
-		}
-		cur_move_amt = 0.0; // reset for next phase
+		segments[n] = segments[n-1] - seg_delta*(seg_len/seg_delta.mag());
 	}
 	// update pos as new bcube center; pos.z remains unchanged
 	cube_t const bcube(get_bcube());
@@ -1095,8 +1080,9 @@ void building_t::update_snake(snake_t &snake, point const &camera_bs, float time
 		
 		if (move_dist > 0.0) { // move head in a winding motion if moving
 			vector3d const side_dir(cross_product(snake.dir, plus_z));
-			float const rot_amt(sin(0.1*snake.anim_time));
-			rotate_vector3d(plus_z, 0.015*fticks*PI*rot_amt, snake.dir);
+			float const speed_factor(snake.speed/global_building_params.snake_speed); // [0.5, 1.0]
+			float const rot_amt(sin(0.1*snake.anim_time)); // rotation amount should be independent of speed
+			rotate_vector3d(plus_z, 0.02*fticks*PI*rot_amt*speed_factor, snake.dir);
 			snake.dir.normalize(); // is this needed?
 		}
 	}
