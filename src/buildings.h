@@ -139,6 +139,7 @@ struct snake_t : public building_animal_t {
 	// for snakes, pos is (xc, yc, z1), radius is the max body radius, and dir is the head direction and direction of movement
 	float length=0.0;
 	bool has_rattle=0;
+	unsigned stuck_counter=0;
 	vector3d last_valid_dir;
 	colorRGBA color;
 	vector<point> segments; // segment centers: first = head, last = tail

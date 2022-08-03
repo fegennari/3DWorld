@@ -1051,30 +1051,44 @@ void building_t::update_snake(snake_t &snake, point const &camera_bs, float time
 	point const &old_head_pos(snake.get_head_pos()); // only the head moves
 	point head_pos(old_head_pos + snake.dir*(timestep*snake.speed)); // move the head one timestep
 	point const pre_head_pos(head_pos);
-	vector3d coll_dir;
+	vector3d coll_dir; // collision normal; points from the collider in the XY plane
 	bool change_dir(0);
 	
-	if (snake.is_sleeping()) {} // peacefully sleeping, no collision needed
+	if (snake.is_sleeping()) {
+		// peacefully sleeping, no collision needed
+	}
+	// TODO: should look ahead and avoid obstacles
 	else if (check_and_handle_dynamic_obj_coll(head_pos, snake.pos, radius, head_pos.z, (head_pos.z + height), camera_bs, 0)) { // check for collisions; for_spider=0
-		coll_dir   = (pre_head_pos - head_pos).get_norm(); // points toward the collider in the XY plane
+		coll_dir   = (head_pos - pre_head_pos).get_norm();
 		change_dir = 1;
 	}
 	// check if pos is valid
-	// TODO: should look ahead and avoid obstacles
-	// TODO: return coll normal and use that to select a mew direction away from the object
-	else if (!is_pos_inside_building(head_pos, radius, hheight)) {change_dir = 1;}
-	else if (check_line_coll_expand((old_head_pos + center_dz), (head_pos + center_dz), radius, hheight)) {change_dir = 1;}
+	else if (!is_pos_inside_building(head_pos, radius, hheight, 0)) { // inc_attic=0
+		// most likely case is outside the house bcube; find closest bcube edge to head_pos
+		float const dx1(fabs(bcube.x1() - head_pos.x)), dx2(fabs(bcube.x2() - head_pos.x)), dy1(fabs(bcube.y1() - head_pos.y)), dy2(fabs(bcube.y2() - head_pos.y));
+		float dmin(0.0);
+		if (1         ) {dmin = dx1; coll_dir = -plus_x;}
+		if (dx2 < dmin) {dmin = dx2; coll_dir =  plus_x;}
+		if (dy1 < dmin) {dmin = dy1; coll_dir = -plus_y;}
+		if (dy2 < dmin) {dmin = dy2; coll_dir =  plus_y;}
+		change_dir = 1;
+	}
+	else if (check_line_coll_expand((old_head_pos + center_dz), (head_pos + center_dz), radius, hheight)) {
+		// TODO: set coll_dir
+		change_dir = 1;
+	}
 	else {max_eq(max_xmove, fabs(head_pos.x - old_head_pos.x));}
 	
 	if (change_dir) { // collision, change direction rather than moving
-		//vector3d const new_dir_hemisphere((coll_dir == zero_vector) ? snake.dir : -coll_dir); // use coll_dir if available
 		vector3d const new_dir_hemisphere(snake.dir);
 		snake.dir = rgen.signed_rand_vector_xy().get_norm();
-		// keep turn angle less than a bit more than 180 degrees
-		// add a stuck counter that allows a sharp turn if snake has been stuck for too many frames? or just allow any angle every 64 frames?
-		if (dot_product(snake.dir, new_dir_hemisphere) < -0.1 && (rgen.rand() & 63)) {snake.dir.negate();}
+		if (coll_dir != zero_vector && dot_product(snake.dir, coll_dir) > 0.0) {snake.dir.negate();} // don't move toward the collider
+		// keep turn angle less than a bit more than 180 degrees unless stuck
+		if (snake.stuck_counter < 60 && dot_product(snake.dir, new_dir_hemisphere) < -0.1) {snake.dir.negate();}
+		++snake.stuck_counter;
 	}
 	else { // move forward
+		snake.stuck_counter  = 0;
 		snake.last_valid_dir = snake.dir;
 		maybe_bite_and_poison_player((head_pos + center_dz), camera_bs, snake.dir, 2.0*snake.radius, 0.5, snake.has_rattle, rgen); // 0.5 damage, poison if has a rattle
 		float const move_dist(snake.move(timestep));
