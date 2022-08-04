@@ -1092,17 +1092,29 @@ void building_t::update_snake(snake_t &snake, point const &camera_bs, float time
 	else {max_eq(max_xmove, fabs(head_pos.x - old_head_pos.x));}
 	
 	if (change_dir) { // collision, change direction rather than moving
+		bool const use_coll_dir(coll_dir != zero_vector);
 		vector3d const new_dir_hemisphere(snake.dir);
-		snake.dir = rgen.signed_rand_vector_xy().get_norm();
-		if (coll_dir != zero_vector && dot_product(snake.dir, coll_dir) > 0.0) {snake.dir.negate();} // don't move toward the collider
-		// keep turn angle less than a bit more than 180 degrees unless stuck
-		if (snake.stuck_counter < 60 && dot_product(snake.dir, new_dir_hemisphere) < -0.1) {snake.dir.negate();}
+
+		for (unsigned n = 0; n < 100; ++n) { // make up to 100 attempts to generate a new direction
+			snake.dir = rgen.signed_rand_vector_xy().get_norm();
+			// if dir is too close to the X or Y axis, choose a new dir; this prevents head-on collisions with common axis aligned cubes such as walls;
+			// maybe initial dir should follow this logic as well?
+			if (max(fabs(snake.dir.x), fabs(snake.dir.y)) > 0.95) continue;
+			if (use_coll_dir && dot_product(snake.dir, coll_dir) > 0.0) {snake.dir.negate();} // don't move toward the collider
+
+			// keep turn angle less than a bit more than 180 degrees unless stuck
+			if (snake.stuck_counter < 60 && dot_product(snake.dir, new_dir_hemisphere) < -0.1) {
+				if (use_coll_dir) continue; // dir must be opposite coll_dir, can't negate again
+				snake.dir.negate();
+			}
+			break; // done/success
+		} // for n
 		++snake.stuck_counter;
 	}
 	else { // move forward
 		snake.stuck_counter  = 0;
 		snake.last_valid_dir = snake.dir;
-		maybe_bite_and_poison_player((head_pos + center_dz), camera_bs, snake.dir, 2.0*snake.radius, 0.5, snake.has_rattle, rgen); // 0.5 damage, poison if has a rattle
+		maybe_bite_and_poison_player((head_pos + center_dz), camera_bs, snake.dir, 2.0*radius, 0.5, snake.has_rattle, rgen); // 0.5 damage, poison if has a rattle
 		float const move_dist(snake.move(timestep));
 		snake.move_segments(move_dist);
 		
