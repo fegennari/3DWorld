@@ -1354,12 +1354,15 @@ class snake_draw_t {
 		unsigned const ndiv(get_rgeom_sphere_ndiv(low_detail)/2);
 		float const tscale = 1.0; // must tune this once our snake is textured
 		// draw head
-		float const head_height(0.6*S.radius);
+		float const head_height(0.6*S.radius), head_len(2.0*S.radius), head_width(S.radius);
 		vector3d const &dir(S.last_valid_dir);
-		vector3d const head_size(S.radius, S.radius, head_height); // max radius; flattened in Z; TODO: should be longer in dir
+		vector3d const head_size(head_len, head_width, head_height); // length in X, max radius in Y, flattened in Z
 		point const head_pos(S.get_head_pos()), head_center(head_pos + vector3d(0,0,head_height));
 		rgeom_mat_t &skin_mat(skin_mats[S.id & 1]); // use the ID's LSB to select which of the two skin textures will be used
+		unsigned const head_verts_start(skin_mat.itri_verts.size());
 		skin_mat.add_sphere_to_verts(head_center, head_size, S.color, low_detail);
+		float const rot_angle(-atan2(S.dir.y, S.dir.x)); // rotate dir into +X
+		rotate_verts(skin_mat.itri_verts, plus_z, rot_angle, head_pos, head_verts_start);
 		// draw segments
 		float const ndiv_inv(1.0/ndiv);
 		color_wrapper const cw(S.color);
@@ -1403,13 +1406,16 @@ class snake_draw_t {
 		} // for s
 		// add eyes to head
 		vector3d const side_dir(cross_product(dir, plus_z));
-		float const eye_extend(0.9*S.radius/SQRT2);
+		float const eye_extend_fwd(0.9*head_len/SQRT2), eye_extend_side(0.9*head_width/SQRT2);
 
 		for (unsigned d = 0; d < 2; ++d) {
 			point eye_pos(head_center);
-			eye_pos += eye_extend*dir; // move forward
-			eye_pos += ((d ? -1.0 : 1.0)*0.9*eye_extend)*side_dir; // move to the side
+			eye_pos += eye_extend_fwd*dir; // move forward
+			eye_pos += ((d ? -1.0 : 1.0)*eye_extend_side)*side_dir; // move to the side
 			untex_mat.add_sphere_to_verts(eye_pos, 0.25*S.radius, BLACK, 1); // low_detail=1
+		}
+		if (fract(S.anim_time) > 0.01) {
+			// TODO: stick a tongue out
 		}
 	}
 public:
