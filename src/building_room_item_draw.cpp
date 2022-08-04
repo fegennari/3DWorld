@@ -1339,7 +1339,7 @@ public:
 spider_draw_t spider_draw;
 
 class snake_draw_t {
-	rgeom_mat_t skin_mat, untex_mat;
+	rgeom_mat_t skin_mats[2], untex_mat;
 
 	// Note: similar to the function in Tree.cpp, but pushes back rather than assigning, and step is hard-coded to 1
 	void add_cylin_indices_tris(vector<unsigned> &idata, unsigned ndiv, unsigned ix_start) {
@@ -1358,6 +1358,7 @@ class snake_draw_t {
 		vector3d const &dir(S.last_valid_dir);
 		vector3d const head_size(S.radius, S.radius, head_height); // max radius; flattened in Z; TODO: should be longer in dir
 		point const head_pos(S.get_head_pos()), head_center(head_pos + vector3d(0,0,head_height));
+		rgeom_mat_t &skin_mat(skin_mats[S.id & 1]); // use the ID's LSB to select which of the two skin textures will be used
 		skin_mat.add_sphere_to_verts(head_center, head_size, S.color, low_detail);
 		// draw segments
 		float const ndiv_inv(1.0/ndiv);
@@ -1429,9 +1430,13 @@ public:
 		tid_nm_pair_dstate_t state(s);
 		s.add_uniform_float("bump_map_mag", 0.0);
 		// draw the skin material
-		if (skin_mat.tex.tid < 0) {skin_mat.tex = tid_nm_pair_t(get_texture_by_name("interiors/snakeskin.jpg"), 0.0, 1);}
 		s.set_specular(0.25, 50.0);
-		skin_mat.upload_draw_and_clear(state);
+
+		for (unsigned d = 0; d < 2; ++d) {
+			rgeom_mat_t &skin_mat(skin_mats[d]);
+			if (skin_mat.tex.tid < 0) {skin_mat.tex = tid_nm_pair_t(get_texture_by_name(d ? "interiors/snakeskin2.jpg" : "interiors/snakeskin.jpg"), 0.0, 1);}
+			skin_mat.upload_draw_and_clear(state);
+		}
 		// draw the eyes and rattle
 		s.set_specular(0.75, 80.0);
 		untex_mat.upload_draw_and_clear(state);
