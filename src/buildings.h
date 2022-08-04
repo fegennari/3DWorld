@@ -155,6 +155,7 @@ struct snake_t : public building_animal_t {
 	point       &get_head_pos()       {assert(!segments.empty()); return segments.front();}
 	cube_t get_bcube    () const;
 	void move_segments(float dist);
+	bool check_line_int_xy(point const &p1, point const &p2, bool skip_head) const;
 };
 
 template<typename T> struct vect_animal_t : public vector<T> {

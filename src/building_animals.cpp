@@ -1029,6 +1029,14 @@ void snake_t::move_segments(float dist) {
 	pos.x = bcube.xc();
 	pos.y = bcube.yc();
 }
+vector2d v2_from_v3_xy(vector3d const &v) {return vector2d(v.x, v.y);}
+
+bool snake_t::check_line_int_xy(point const &p1, point const &p2, bool skip_head) const { // Note: ignores radius
+	for (unsigned n = (skip_head ? 2 : 1); n < segments.size(); ++n) {
+		if (line_segs_intersect_2d(v2_from_v3_xy(p1), v2_from_v3_xy(p2), v2_from_v3_xy(segments[n-1]), v2_from_v3_xy(segments[n]))) return 1;
+	}
+	return 0;
+}
 
 void building_t::update_snakes(point const &camera_bs, unsigned building_ix) {
 	vect_snake_t &snakes(interior->room_geom->snakes);
@@ -1074,7 +1082,11 @@ void building_t::update_snake(snake_t &snake, point const &camera_bs, float time
 		change_dir = 1;
 	}
 	else if (check_line_coll_expand((old_head_pos + center_dz), (head_pos + center_dz), radius, hheight)) {
-		// TODO: set coll_dir
+		// TODO: set coll_dir?
+		change_dir = 1;
+	}
+	else if (snake.check_line_int_xy(pre_head_pos, (head_pos + snake.dir*radius), 1)) { // skip_head=1
+		// TODO: set coll_dir?
 		change_dir = 1;
 	}
 	else {max_eq(max_xmove, fabs(head_pos.x - old_head_pos.x));}
