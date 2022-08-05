@@ -682,7 +682,8 @@ bool building_t::adjust_blinds_state(unsigned obj_ix) {
 		bool const mostly_open(blinds_height < 0.5*window_height);
 		if (mostly_open) {obj.z1() = obj.z2() - floor_spacing*(1.0 - window_v_border) + 0.05*floor_spacing;} // close the blinds fully
 		else             {obj.z1() = obj.z2() - (1.8*get_wall_thickness() + 0.05*floor_spacing);} // open the blinds
-		obj.d[obj.dim][!obj.dir] = obj.d[obj.dim][obj.dir] + (mostly_open ? 0.0927 : 0.227)*get_wall_thickness(); // set new thickness (matches building_t::add_window_blinds())
+		// set new thickness (matches building_t::add_window_blinds())
+		obj.d[obj.dim][!obj.dir] = obj.d[obj.dim][obj.dir] + (mostly_open ? 0.0927 : 0.227)*get_wall_thickness()*(obj.dir ? -1.0 : 1.0);
 	}
 	else { // vertical blinds - in pairs
 		assert(obj.flags & (RO_FLAG_ADJ_LO | RO_FLAG_ADJ_HI)); // should have had one of these flags set
