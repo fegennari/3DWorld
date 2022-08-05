@@ -507,33 +507,36 @@ unsigned const RO_FLAG_ADJ_BOT = 0x1000; // for door trim/railings
 unsigned const RO_FLAG_ADJ_TOP = 0x2000; // for door trim/railings
 unsigned const RO_FLAG_IS_HOUSE= 0x4000; // used for mirror reflections, shelves, and tables
 unsigned const RO_FLAG_RAND_ROT= 0x8000; // random rotation; used for office chairs, papers, pictures, and cups
-unsigned const RO_FLAG_UNTEXTURED = 0x1000; // for shirts, aliased with RO_FLAG_ADJ_BOT
-unsigned const RO_FLAG_FROM_SET   = 0x1000; // for books, aliased with RO_FLAG_ADJ_BOT
-unsigned const RO_FLAG_HAS_VOL_IX = 0x2000; // for books, aliased with RO_FLAG_ADJ_TOP
-unsigned const RO_FLAG_FOR_CAR    = 0x1000; // for car blockers, aliased with RO_FLAG_ADJ_BOT
-unsigned const RO_FLAG_IN_HALLWAY = 0x0200; // aliased with RO_FLAG_HANGING/RO_FLAG_IN_ATTIC
-unsigned const RO_FLAG_IN_ATTIC   = 0x0200; // aliased with RO_FLAG_HANGING/RO_FLAG_IN_HALLWAY
+unsigned const RO_FLAG_UNTEXTURED= 0x1000; // for shirts, aliased with RO_FLAG_ADJ_BOT
+unsigned const RO_FLAG_FROM_SET  = 0x1000; // for books, aliased with RO_FLAG_ADJ_BOT
+unsigned const RO_FLAG_HAS_VOL_IX= 0x2000; // for books, aliased with RO_FLAG_ADJ_TOP
+unsigned const RO_FLAG_FOR_CAR   = 0x1000; // for car blockers, aliased with RO_FLAG_ADJ_BOT
 // object flags, third byte, for pickup/interact state
-unsigned const RO_FLAG_TAKEN1  = 0x010000; // no picture / no bed pillows
-unsigned const RO_FLAG_TAKEN2  = 0x020000; // no bed sheets
-unsigned const RO_FLAG_TAKEN3  = 0x040000; // no bed mattress
-unsigned const RO_FLAG_TAKEN4  = 0x080000; // for ring stack toy
+unsigned const RO_FLAG_IN_HALLWAY= 0x010000;
+unsigned const RO_FLAG_IN_ATTIC  = 0x020000;
+//unsigned const x = 0x040000; // currently unused
+//unsigned const x = 0x080000; // currently unused
 unsigned const RO_FLAG_EXPANDED= 0x100000; // for shelves, closets, boxes, and mirrors
 unsigned const RO_FLAG_WAS_EXP = 0x200000; // for objects in/on shelves, closets, and drawers, cabinets, and books
-unsigned const RO_FLAG_ROTATING= 0x400000; // for office chairs
+unsigned const RO_FLAG_ROTATING= 0x400000; // for office chairs and clothes on hangers
 unsigned const RO_FLAG_IN_CLOSET=0x800000; // for closet lights
 // object flags, fourth byte
 unsigned const RO_FLAG_DYNAMIC  = 0x01000000; // dynamic object (balls, elevators, etc.)
 unsigned const RO_FLAG_DSTATE   = 0x02000000; // this object has dynamic state
 unsigned const RO_FLAG_NO_CONS  = 0x04000000; // this object is not consumable (bottles)
-unsigned const RO_FLAG_NO_POWER = 0x04000000; // unpowered; related to circuit breakers; aliased with RO_FLAG_NO_CONS
+unsigned const RO_FLAG_NO_POWER = 0x04000000; // unpowered; related to circuit breakers
 unsigned const RO_FLAG_IS_ACTIVE= 0x08000000; // active, for sinks, tubs, buttons, etc.
 unsigned const RO_FLAG_USED     = 0x10000000; // used by the player (spraypaint, marker, etc.); used by parking spaces to indicate cars
 unsigned const RO_FLAG_IN_ELEV  = 0x20000000; // for elevator lights and buttons
 unsigned const RO_FLAG_BROKEN   = 0x40000000; // for TVs and monitors, maybe can use for windows
 unsigned const RO_FLAG_MOVED    = 0x80000000; // for player push/pull
 
-unsigned const taken_flags[4] = {RO_FLAG_TAKEN1, RO_FLAG_TAKEN2, RO_FLAG_TAKEN3, RO_FLAG_TAKEN4};
+// taken flags
+unsigned const TFLAG_TAKEN1  = 0x01; // no picture / no bed pillows
+unsigned const TFLAG_TAKEN2  = 0x02; // no bed sheets
+unsigned const TFLAG_TAKEN3  = 0x04; // no bed mattress
+unsigned const TFLAG_TAKEN4  = 0x08; // for ring stack toy
+unsigned const obj_taken_flags[4] = {TFLAG_TAKEN1, TFLAG_TAKEN2, TFLAG_TAKEN3, TFLAG_TAKEN4};
 
 struct bldg_obj_type_t {
 	bool player_coll=0, ai_coll=0, rat_coll=0, pickup=0, attached=0, is_model=0;
@@ -559,6 +562,7 @@ struct oriented_cube_t : public cube_t {
 
 struct room_object_t : public oriented_cube_t { // size=64
 	uint8_t room_id; // for at most 256 rooms per floor
+	uint8_t taken_flags;
 	uint16_t obj_id, drawer_flags, item_flags, state_flags; // Note: state_flags is used for drawer was_opened state
 	room_object type; // 8-bit
 	room_obj_shape shape; // 8-bit
@@ -566,10 +570,10 @@ struct room_object_t : public oriented_cube_t { // size=64
 	float light_amt;
 	colorRGBA color;
 
-	room_object_t() : room_id(0), obj_id(0), drawer_flags(0), item_flags(0), state_flags(0), type(TYPE_NONE), shape(SHAPE_CUBE), flags(0), light_amt(1.0) {}
+	room_object_t() : room_id(0), taken_flags(0), obj_id(0), drawer_flags(0), item_flags(0), state_flags(0), type(TYPE_NONE), shape(SHAPE_CUBE), flags(0), light_amt(1.0) {}
 	room_object_t(cube_t const &c, room_object type_, uint8_t rid, bool dim_=0, bool dir_=0, unsigned f=0, float light=1.0,
 		room_obj_shape shape_=SHAPE_CUBE, colorRGBA const color_=WHITE, uint16_t iflags=0) :
-		oriented_cube_t(c, dim_, dir_), room_id(rid), obj_id(0), drawer_flags(0), item_flags(iflags),
+		oriented_cube_t(c, dim_, dir_), room_id(rid), taken_flags(0), obj_id(0), drawer_flags(0), item_flags(iflags),
 		state_flags(0), type(type_), shape(shape_), flags(f), light_amt(light), color(color_)
 	{check_normalized();}
 	void check_normalized() const;
@@ -614,6 +618,8 @@ struct room_object_t : public oriented_cube_t { // size=64
 	bool is_spider_collidable() const;
 	bool is_collidable(bool for_spider) const {return (for_spider ? is_spider_collidable() : is_floor_collidable());}
 	bool is_vert_cylinder() const;
+	bool is_taken (unsigned level) const {assert(level <= 3); return (taken_flags & obj_taken_flags[level]);}
+	void set_taken(unsigned level) {assert(level <= 3); (taken_flags |= obj_taken_flags[level]);}
 	unsigned get_bottle_type() const {return ((obj_id&63) % NUM_BOTTLE_TYPES);} // first 6 bits are bottle type
 	unsigned get_orient () const {return (2*dim + dir);}
 	unsigned get_num_shelves() const {assert(type == TYPE_SHELVES); return (2 + (room_id % 3));} // 2-4 shelves

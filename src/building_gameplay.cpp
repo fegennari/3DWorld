@@ -163,22 +163,22 @@ float carried_item_t::get_remaining_capacity_ratio() const {
 }
 
 bldg_obj_type_t get_taken_obj_type(room_object_t const &obj) {
-	if (obj.type == TYPE_PICTURE && (obj.flags & RO_FLAG_TAKEN1)) {return bldg_obj_type_t(0, 0, 0, 1, 0, 0, 1, 20.0, 6.0, "picture frame");} // second item to take from picture
-	if (obj.type == TYPE_TPROLL  && (obj.flags & RO_FLAG_TAKEN1)) {return bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 6.0,  0.5, "toilet paper holder");} // second item to take from tproll
+	if (obj.type == TYPE_PICTURE && obj.is_taken(0)) {return bldg_obj_type_t(0, 0, 0, 1, 0, 0, 1, 20.0, 6.0, "picture frame");} // second item to take from picture
+	if (obj.type == TYPE_TPROLL  && obj.is_taken(0)) {return bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 6.0,  0.5, "toilet paper holder");} // second item to take from tproll
 
 	if (obj.type == TYPE_BED) { // player_coll, ai_coll, pickup, attached, is_model, lg_sm, value, weight, name
-		if (obj.flags & RO_FLAG_TAKEN2) {return bldg_obj_type_t(0, 0, 0, 1, 0, 0, 1, 250.0, 80.0, "mattress"  );} // third item to take from bed
-		if (obj.flags & RO_FLAG_TAKEN1) {return bldg_obj_type_t(0, 0, 0, 1, 0, 0, 1, 80.0,  4.0,  "bed sheets");} // second item to take from bed
+		if (obj.is_taken(1)) {return bldg_obj_type_t(0, 0, 0, 1, 0, 0, 1, 250.0, 80.0, "mattress"  );} // third item to take from bed
+		if (obj.is_taken(0)) {return bldg_obj_type_t(0, 0, 0, 1, 0, 0, 1, 80.0,  4.0,  "bed sheets");} // second item to take from bed
 		return bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 20.0, 1.0, "pillow"); // first item to take from bed
 	}
 	if (obj.type == TYPE_PLANT && !(obj.flags & RO_FLAG_ADJ_BOT)) { // plant not on a table/desk
-		if (obj.flags & RO_FLAG_TAKEN2) {return bldg_obj_type_t(0, 0, 1, 1, 0, 0, 1, 10.0, 10.0, "plant pot");} // third item to take
-		if (obj.flags & RO_FLAG_TAKEN1) {return bldg_obj_type_t(0, 0, 1, 1, 0, 0, 1, 1.0,  10.0, "dirt"     );} // second item to take
+		if (obj.is_taken(1)) {return bldg_obj_type_t(0, 0, 1, 1, 0, 0, 1, 10.0, 10.0, "plant pot");} // third item to take
+		if (obj.is_taken(0)) {return bldg_obj_type_t(0, 0, 1, 1, 0, 0, 1, 1.0,  10.0, "dirt"     );} // second item to take
 		return bldg_obj_type_t(0, 0, 1, 1, 0, 0, 2, 25.0, 5.0, "plant"); // first item to take
 	}
 	if (obj.type == TYPE_TOY) { // take one ring at a time then the base (5 parts)
 		for (unsigned n = 0; n < 4; ++n) {
-			if (obj.flags & taken_flags[n]) continue; // find lowest taken flag that's not set
+			if (obj.is_taken(n)) continue; // find lowest taken flag that's not set
 			return bldg_obj_type_t(0, 0, 1, 1, 0, 0, 2, 0.5, 0.025, "toy ring");
 		}
 		// else take the toy base
@@ -941,7 +941,7 @@ int building_room_geom_t::find_nearest_pickup_object(building_t const &building,
 			if (i->type == TYPE_HANGER  && i->is_hanging() && (i+1) != objs_end && (i+1)->type == TYPE_CLOTHES) continue; // hanger with clothes - must take clothes first
 			if (i->type == TYPE_MIRROR  && !i->is_house())                continue; // can only pick up mirrors from houses, not office buildings
 			if (i->type == TYPE_TABLE   && i->shape == SHAPE_CUBE)        continue; // can only pick up short (TV) tables and cylindrical tables
-			if (i->type == TYPE_BED     && (i->flags & RO_FLAG_TAKEN3))   continue; // can only take pillow, sheets, and mattress - not the frame
+			if (i->type == TYPE_BED     && i->is_taken(2))                continue; // can only take pillow, sheets, and mattress - not the frame
 			if (i->type == TYPE_SHELVES && i->obj_expanded())             continue; // shelves are already expanded, can no longer select this object
 			if (i->type == TYPE_MIRROR  && i->is_open())                  continue; // can't take mirror/medicine cabinet until it's closed
 			if (obj_has_open_drawers(*i))                                 continue; // can't take if any drawers are open
@@ -1095,17 +1095,17 @@ void building_room_geom_t::remove_object(unsigned obj_id, building_t &building) 
 	bldg_obj_type_t const type(get_taken_obj_type(obj)); // capture type before updating obj
 	bool const is_light(obj.type == TYPE_LIGHT);
 
-	if (obj.type == TYPE_PICTURE && !(obj.flags & RO_FLAG_TAKEN1)) {obj.flags |= RO_FLAG_TAKEN1;} // take picture, leave frame
-	else if (obj.type == TYPE_TPROLL && !(obj.flags & (RO_FLAG_TAKEN1 | RO_FLAG_WAS_EXP))) {obj.flags |= RO_FLAG_TAKEN1;} // take toilet paper roll, leave holder; not for expanded TP rolls
+	if (obj.type == TYPE_PICTURE && !obj.is_taken(0)) {obj.set_taken(0);} // take picture, leave frame
+	else if (obj.type == TYPE_TPROLL && !(obj.is_taken(0) || (obj.flags & RO_FLAG_WAS_EXP))) {obj.set_taken(0);} // take toilet paper roll, leave holder; not for expanded TP rolls
 	else if (obj.type == TYPE_BED) {
-		if      (obj.flags & RO_FLAG_TAKEN2) {obj.flags |= RO_FLAG_TAKEN3;} // take mattress
-		else if (obj.flags & RO_FLAG_TAKEN1) {obj.flags |= RO_FLAG_TAKEN2;} // take sheets
-		else {obj.flags |= RO_FLAG_TAKEN1;} // take pillow(s)
+		if      (obj.is_taken(1)) {obj.set_taken(2);} // take mattress
+		else if (obj.is_taken(0)) {obj.set_taken(1);} // take sheets
+		else {obj.set_taken(0);} // take pillow(s)
 	}
 	else if (obj.type == TYPE_PLANT && !(obj.flags & RO_FLAG_ADJ_BOT)) { // plant not on a table/desk
-		if      (obj.flags & RO_FLAG_TAKEN2) {obj.type = TYPE_BLOCKER;} // take pot - gone
-		else if (obj.flags & RO_FLAG_TAKEN1) {obj.flags |= RO_FLAG_TAKEN2;} // take dirt
-		else {obj.flags |= RO_FLAG_TAKEN1;} // take plant
+		if      (obj.is_taken(1)) {obj.type = TYPE_BLOCKER;} // take pot - gone
+		else if (obj.is_taken(0)) {obj.set_taken(1);} // take dirt
+		else {obj.set_taken(0);} // take plant
 	}
 	else if (obj.type == TYPE_TOILET || obj.type == TYPE_SINK) { // leave a drain in the floor
 		cube_t drain;
@@ -1119,8 +1119,8 @@ void building_room_geom_t::remove_object(unsigned obj_id, building_t &building) 
 		bool is_all_taken(1);
 
 		for (unsigned n = 0; n < 4; ++n) {
-			if (obj.flags & taken_flags[n]) continue; // find lowest taken flag that's not set
-			obj.flags |= taken_flags[n]; // mark this ring as taken
+			if (obj.is_taken(n)) continue; // find lowest taken flag that's not set
+			obj.set_taken(n); // mark this ring as taken
 			is_all_taken = 0;
 			break;
 		}
@@ -1355,7 +1355,8 @@ bool building_t::maybe_use_last_pickup_room_object(point const &player_pos) {
 				}
 				obj.dim    = place_dim;
 				obj.dir    = ((cview_dir[!place_dim] > 0) ^ place_dim);
-				obj.flags |= (RO_FLAG_TAKEN1 | RO_FLAG_WAS_EXP);
+				obj.flags |= RO_FLAG_WAS_EXP;
+				obj.set_taken(0);
 				obj.translate(dest - point(obj.xc(), obj.yc(), obj.z1()));
 				assign_correct_room_to_object(obj); // set new room; required for opening books; room should be valid, but okay if not
 				if (point_in_attic(obj.get_cube_center())) {obj.flags |= RO_FLAG_IN_ATTIC;} else {obj.flags &= ~RO_FLAG_IN_ATTIC;} // set attic flag
