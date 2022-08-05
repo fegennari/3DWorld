@@ -1354,10 +1354,10 @@ class snake_draw_t {
 		unsigned const ndiv(get_rgeom_sphere_ndiv(low_detail)/2);
 		float const tscale = 1.0; // must tune this once our snake is textured
 		// draw head
-		float const head_height(0.6*S.radius), head_len(1.6*S.radius), head_width(S.radius);
+		float const head_hheight(0.6*S.radius), head_hlen(1.6*S.radius), head_hwidth(S.radius);
 		vector3d const &dir(S.last_valid_dir);
-		vector3d const head_size(head_len, head_width, head_height); // length in X, max radius in Y, flattened in Z
-		point const head_pos(S.get_head_pos()), head_center(head_pos + vector3d(0,0,head_height));
+		vector3d const head_size(head_hlen, head_hwidth, head_hheight); // length in X, max radius in Y, flattened in Z
+		point const head_pos(S.get_head_pos()), head_center(head_pos + vector3d(0,0,head_hheight));
 		rgeom_mat_t &skin_mat(skin_mats[S.id & 1]); // use the ID's LSB to select which of the two skin textures will be used
 		unsigned const head_verts_start(skin_mat.itri_verts.size());
 		skin_mat.add_sphere_to_verts(head_center, head_size, S.color, low_detail);
@@ -1390,7 +1390,7 @@ class snake_draw_t {
 			add_cylin_indices_tris(skin_mat.indices, ndiv, (data_pos + quad_id)); // create index data
 			quad_id += ndiv;
 
-			if (S.has_rattle && s+1 == S.segments.end()) { // add a rattle on the last tail segment
+			if (S.has_rattle && s+1 == S.segments.end() && !shadow_only) { // add a rattle on the last tail segment if not the shadow pass
 				unsigned const num_segs(3 + (S.id % 6)); // 3-8
 				vector3d const seg_delta(ce[1] - ce[0]);
 				colorRGBA const rattle_color(1.0, 0.8, 0.6); // yellow-ish
@@ -1404,9 +1404,10 @@ class snake_draw_t {
 				}
 			}
 		} // for s
+		if (shadow_only || reflection_pass) return; // no eyes or tongue
 		// add eyes to head
 		vector3d const side_dir(cross_product(dir, plus_z));
-		float const eye_extend_fwd(0.9*head_len/SQRT2), eye_extend_side(0.86*head_width/SQRT2);
+		float const eye_extend_fwd(0.9*head_hlen/SQRT2), eye_extend_side(0.86*head_hwidth/SQRT2);
 
 		for (unsigned d = 0; d < 2; ++d) {
 			point eye_pos(head_center);
@@ -1414,8 +1415,24 @@ class snake_draw_t {
 			eye_pos += ((d ? -1.0 : 1.0)*eye_extend_side)*side_dir; // move to the side
 			untex_mat.add_sphere_to_verts(eye_pos, 0.25*S.radius, BLACK, 1); // low_detail=1
 		}
-		if (fract(S.anim_time) > 0.01) {
-			// TODO: stick a tongue out
+		if (fract(0.015f*S.anim_time) < 0.2) { // occasionally stick tongue out
+			colorRGBA const tongue_color((S.id & 2) ? BLACK : colorRGBA(1.0, 0.7, 0.5)); // black or pink
+			color_wrapper const tip_color(BLACK);
+			float const radius(0.04*head_hlen), fwd_dist(0.9*head_hlen), split_len(0.6*head_hlen), tip_len(0.5*head_hlen);
+			
+			for (unsigned d = 0; d < 2; ++d) { // draw each half as a cylinder + cone
+				point const start(head_center + fwd_dist*dir + (d ? -1.0 : 1.0)*0.75*radius*side_dir);
+				point const split(start + split_len*dir);
+				point const tip(split + tip_len*(dir + (d ? -1.0 : 1.0)*0.67*side_dir));
+				untex_mat.add_cylin_to_verts(start, split, radius, radius, tongue_color, 0, 0, 0, 0, 1.0, 1.0, 0, ndiv);
+				unsigned const tip_verts_start(untex_mat.itri_verts.size());
+				untex_mat.add_cylin_to_verts(split, tip,   radius,    0.0, tongue_color, 0, 0, 0, 0, 1.0, 1.0, 0, ndiv);
+
+				if (tongue_color != BLACK) { // recolor the tip, every second vertex
+					for (unsigned i = tip_verts_start+1; i < untex_mat.itri_verts.size(); i += 2) {untex_mat.itri_verts[i].copy_color(tip_color);}
+				}
+				untex_mat.add_sphere_to_verts(split, radius, tongue_color, 1);
+			} // for d
 		}
 	}
 public:
