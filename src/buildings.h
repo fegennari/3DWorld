@@ -1544,6 +1544,7 @@ private:
 	void add_extra_obj_slots();
 	void add_wall_and_door_trim_if_needed();
 	void add_wall_and_door_trim();
+	void add_window_trim_and_coverings(bool add_trim, bool add_blinds);
 	unsigned count_num_int_doors(room_t const &room) const;
 	bool check_bcube_overlap_xy_one_dir(building_t const &b, float expand_rel, float expand_abs, vector<point> &points) const;
 	void split_in_xy(cube_t const &seed_cube, rand_gen_t &rgen);

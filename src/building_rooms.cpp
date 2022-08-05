@@ -3005,6 +3005,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 		if (!(added_bathroom_objs_mask & PLACED_SINK  )) {cout << "no sink in building "   << bcube.xc() << " " << bcube.yc() << endl;}
 		//if (is_house && !(added_bathroom_objs_mask & (PLACED_TUB | PLACED_SHOWER))) {cout << "no bathtub or shower in building " << bcube.xc() << " " << bcube.yc() << endl;} // common
 	}
+	add_window_trim_and_coverings(0, 1); // add_trim=0, add_coverings=1; must be done after room assignment
 	if (is_house && has_basement()) {add_basement_electrical_house(rgen);}
 	if (is_house && has_basement_pipes) {add_house_basement_pipes (rgen);}
 	if (has_attic()) {add_attic_objects(rgen);}
@@ -3241,14 +3242,22 @@ void building_t::add_wall_and_door_trim() { // and window trim
 			} // for dir
 		} // for dim
 	} // for i
-	// add window trim
-	if (is_rotated())   return; // not yet working for rotated buildings
+	if (is_rotated()) return; // window trim is not yet working for rotated buildings
+	add_window_trim_and_coverings(1, 0); // add_trim=1, add_coverings=0
+}
+
+void building_t::add_window_trim_and_coverings(bool add_trim, bool add_coverings) {
+	assert(add_trim || add_coverings);
 	if (!has_windows()) return; // no windows
 	float const border_mult(0.94); // account for the frame part of the window texture, which is included in the interior cutout of the window
+	float const floor_thickness(get_floor_thickness()), trim_thickness(get_trim_thickness());
+	float const ext_wall_toler(0.01*trim_thickness); // required to prevent z-fighting when AA is disabled
 	float const window_h_border(border_mult*get_window_h_border()), window_v_border(border_mult*get_window_v_border()); // (0, 1) range
 	// Note: depth must be small to avoid object intersections; this applies to the windowsill as well
-	float const window_trim_width(0.75*wall_thickness), window_trim_depth(1.0*trim_thickness), windowsill_depth(1.0*trim_thickness);
-	float const window_offset(0.01*window_vspacing); // must match building_draw_t::add_section()
+	float const window_trim_width(0.75*get_wall_thickness()), window_trim_depth(1.0*trim_thickness), windowsill_depth(1.0*trim_thickness);
+	float const window_offset(0.01*get_window_vspace()); // must match building_draw_t::add_section()
+	colorRGBA const &trim_color(is_house ? WHITE : DK_GRAY);
+	vect_room_object_t &objs(interior->room_geom->trim_objs);
 	static vect_vnctcc_t wall_quad_verts;
 	wall_quad_verts.clear();
 	get_all_drawn_window_verts_as_quads(wall_quad_verts);
@@ -3266,7 +3275,7 @@ void building_t::add_wall_and_door_trim() { // and window trim
 		window.translate_dim(dim, dscale*window_offset);
 		window.d[dim][!dir] += dscale*window_trim_depth; // add thickness on interior of building
 		window.d[dim][ dir] += dscale*ext_wall_toler; // slight bias away from the exterior wall
-		unsigned ext_flags(flags | (dir ? RO_FLAG_ADJ_HI : RO_FLAG_ADJ_LO));
+		unsigned ext_flags(RO_FLAG_NOCOLL | (dir ? RO_FLAG_ADJ_HI : RO_FLAG_ADJ_LO));
 
 		for (float z = tz1; z < tz2; z += 1.0) { // each floor
 			float const bot_edge(c.z1() + (z - tz1)*window_height);
@@ -3276,25 +3285,28 @@ void building_t::add_wall_and_door_trim() { // and window trim
 				float const low_edge(c.d[!dim][0] + (xy - tx1)*window_width);
 				window.d[!dim][0] = low_edge + border_xy;
 				window.d[!dim][1] = low_edge + window_width - border_xy;
-				float const window_ar(window.get_sz_dim(!dim)/window.dz());
-				float const side_trim_width(window_trim_width*((window_ar > 1.5) ? (window_ar - 0.5) : 1.0)); // widen for very wide windows to cover any holes at stretched edges
-				cube_t top(window), bot(window), side(window);
-				top.z1()  = window.z2();
-				top.z2() += window_trim_width;
-				bot.z2()  = window.z1();
-				bot.z1() -= window_trim_width;
-				bot.d[dim][!dir] += dscale*(windowsill_depth - window_trim_depth); // shift out further for windowsill
-				top.expand_in_dim(!dim, side_trim_width);
-				bot.expand_in_dim(!dim, side_trim_width);
-				objs.emplace_back(top, TYPE_WALL_TRIM, 0, dim, dir, ext_flags, 1.0, SHAPE_TALL, trim_color);
-				objs.emplace_back(bot, TYPE_WALL_TRIM, 0, dim, dir, ext_flags, 1.0, SHAPE_TALL, trim_color);
 
-				for (unsigned s = 0; s < 2; ++s) { // left/right sides
-					side.d[!dim][ s] = window.d[!dim][s] - (s ? -1.0 : 1.0)*side_trim_width;
-					side.d[!dim][!s] = window.d[!dim][s];
-					objs.emplace_back(side, TYPE_WALL_TRIM, 0, dim, dir, ext_flags, 1.0, SHAPE_TALL, trim_color);
+				if (add_trim) {
+					float const window_ar(window.get_sz_dim(!dim)/window.dz());
+					float const side_trim_width(window_trim_width*((window_ar > 1.5) ? (window_ar - 0.5) : 1.0)); // widen for very wide windows to cover holes at stretched edges
+					cube_t top(window), bot(window), side(window);
+					top.z1()  = window.z2();
+					top.z2() += window_trim_width;
+					bot.z2()  = window.z1();
+					bot.z1() -= window_trim_width;
+					bot.d[dim][!dir] += dscale*(windowsill_depth - window_trim_depth); // shift out further for windowsill
+					top.expand_in_dim(!dim, side_trim_width);
+					bot.expand_in_dim(!dim, side_trim_width);
+					objs.emplace_back(top, TYPE_WALL_TRIM, 0, dim, dir, ext_flags, 1.0, SHAPE_TALL, trim_color);
+					objs.emplace_back(bot, TYPE_WALL_TRIM, 0, dim, dir, ext_flags, 1.0, SHAPE_TALL, trim_color);
+
+					for (unsigned s = 0; s < 2; ++s) { // left/right sides
+						side.d[!dim][ s] = window.d[!dim][s] - (s ? -1.0 : 1.0)*side_trim_width;
+						side.d[!dim][!s] = window.d[!dim][s];
+						objs.emplace_back(side, TYPE_WALL_TRIM, 0, dim, dir, ext_flags, 1.0, SHAPE_TALL, trim_color);
+					}
 				}
-				add_window_coverings(window, dim, dir);
+				if (add_coverings) {add_window_coverings(window, dim, dir);}
 			} // for xy
 		} // for z
 	} // for i
@@ -3354,9 +3366,9 @@ void building_t::add_window_blinds(cube_t const &window, bool dim, bool dir, uns
 	}
 }
 
-void building_t::add_bathroom_window(cube_t const &window, bool dim, bool dir, unsigned room_id, unsigned floor) { // frosted window blocks
+void building_t::add_bathroom_window(cube_t const &window, bool dim, bool dir, unsigned room_id, unsigned floor) { // frosted window blocks, for houses or office buildings
 	room_t const &room(get_room(room_id));
-	if (count_ext_walls_for_room(room, window.z1()) != 1) return; // it looks odd to have window block walls at the corner of a building, so only enable this for single exterior walls
+	if (count_ext_walls_for_room(room, window.z1()) != 1) return; // looks odd to have window block walls at the corner of a building, so only enable this for single exterior walls
 	vect_room_object_t &objs(interior->room_geom->objs);
 	cube_t c(window);
 	c.translate_dim(dim, (dir ? 1.0 : -1.0)*get_trim_thickness());
