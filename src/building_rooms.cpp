@@ -3250,8 +3250,7 @@ void building_t::add_window_trim_and_coverings(bool add_trim, bool add_coverings
 	assert(add_trim || add_coverings);
 	if (!has_windows()) return; // no windows
 	float const border_mult(0.94); // account for the frame part of the window texture, which is included in the interior cutout of the window
-	float const floor_thickness(get_floor_thickness()), trim_thickness(get_trim_thickness());
-	float const ext_wall_toler(0.01*trim_thickness); // required to prevent z-fighting when AA is disabled
+	float const trim_thickness(get_trim_thickness()), ext_wall_toler(0.01*trim_thickness); // required to prevent z-fighting when AA is disabled
 	float const window_h_border(border_mult*get_window_h_border()), window_v_border(border_mult*get_window_v_border()); // (0, 1) range
 	// Note: depth must be small to avoid object intersections; this applies to the windowsill as well
 	float const window_trim_width(0.75*get_wall_thickness()), window_trim_depth(1.0*trim_thickness), windowsill_depth(1.0*trim_thickness);
