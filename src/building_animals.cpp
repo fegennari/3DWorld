@@ -1056,49 +1056,52 @@ void building_t::update_snake(snake_t &snake, point const &camera_bs, float time
 	if (snake.is_sleeping()) return; // peacefully sleeping, no collision or movement needed
 	if (snake.speed == 0.0) {snake.speed = global_building_params.snake_speed*rgen.rand_uniform(0.5, 1.0);} // random speed
 	float const lookahead_amt = 1.0; // in units of radius
-	point const &old_head_pos(snake.get_head_pos()); // only the head moves
-	point const head_pos(old_head_pos + snake.dir*(timestep*snake.speed)); // move the head one timestep
-	point query_pos(head_pos + snake.dir*(lookahead_amt*snake.radius)); // apply lookahead
-	vector3d coll_dir; // collision normal; points from the collider in the XY plane
-	bool const change_dir(check_for_snake_coll(snake, camera_bs, timestep, old_head_pos, query_pos, coll_dir));
-	
-	if (change_dir) { // collision, change direction rather than moving
-		bool const use_coll_dir(coll_dir != zero_vector);
-		vector3d const new_dir_hemisphere(snake.dir);
+	point const &head_pos(snake.get_head_pos()); // only the head moves
+	vector3d const center_dz(0.0, 0.0, 0.5*snake.get_height());
+	vector3d dir(snake.dir); // this will be the new snake direction
 
-		for (unsigned n = 0; n < 100; ++n) { // make up to 100 attempts to generate a new direction
-			snake.dir = rgen.signed_rand_vector_xy().get_norm();
+	for (unsigned n = 0; n < 100; ++n) { // 100 attempts to select a new direction to resolve a collision
+		point const new_head_pos(head_pos + dir*(timestep*snake.speed)); // move the head one timestep
+		point query_pos(new_head_pos + dir*(lookahead_amt*snake.radius)); // apply lookahead
+		vector3d coll_dir; // collision normal; points from the collider in the XY plane
+		
+		if (!check_for_snake_coll(snake, camera_bs, timestep, head_pos, query_pos, coll_dir)) { // no collision
+			// update direction
+			snake.dir = dir;
+			update_dir_incremental(snake.last_valid_dir, snake.dir, 1.0, timestep, rgen);
+			// move snake forward
+			max_eq(max_xmove, fabs(new_head_pos.x - head_pos.x));
+			float const move_dist(snake.move(timestep));
+			snake.move_segments(move_dist);
+
+			if (move_dist > 0.0) { // move head in a winding motion if moving
+				vector3d const side_dir(cross_product(snake.dir, plus_z));
+				float const speed_factor(snake.speed/global_building_params.snake_speed); // [0.5, 1.0]
+				float const rot_amt(sin(0.1*snake.anim_time)); // rotation amount should be independent of speed
+				rotate_vector3d(plus_z, 0.02*fticks*PI*rot_amt*speed_factor, snake.dir);
+				snake.dir.normalize(); // is this needed?
+			}
+			break; // done
+		}
+		// collision, try a new direction
+		bool const use_coll_dir(coll_dir != zero_vector);
+
+		for (unsigned m = 0; m < 100; ++m) { // 100 attempts to chose a valid dir; should amost always be successful
+			dir = rgen.signed_rand_vector_xy().get_norm();
 			// if dir is too close to the X or Y axis, choose a new dir; this prevents head-on collisions with common axis aligned cubes such as walls;
 			// maybe initial dir should follow this logic as well?
-			if (max(fabs(snake.dir.x), fabs(snake.dir.y)) > 0.95) continue;
-			if (use_coll_dir && dot_product(snake.dir, coll_dir) > 0.0) {snake.dir.negate();} // don't move toward the collider
+			if (max(fabs(dir.x), fabs(dir.y)) > 0.95) continue;
+			if (use_coll_dir && dot_product(dir, coll_dir) > 0.0) {dir.negate();} // don't move toward the collider
 
 			// keep turn angle less than a bit more than 180 degrees unless stuck
-			if (snake.stuck_counter < 60 && dot_product(snake.dir, new_dir_hemisphere) < -0.1) {
+			if (n < 60 && dot_product(dir, snake.dir) < -0.1) {
 				if (use_coll_dir) continue; // dir must be opposite coll_dir, can't negate again
-				snake.dir.negate();
+				dir.negate();
 			}
-			break; // done/success
-		} // for n
-		++snake.stuck_counter;
-	}
-	else { // move forward
-		vector3d const center_dz(0.0, 0.0, 0.5*snake.get_height());
-		snake.stuck_counter  = 0;
-		max_eq(max_xmove, fabs(head_pos.x - old_head_pos.x));
-		update_dir_incremental(snake.last_valid_dir, snake.dir, 1.0, timestep, rgen);
-		maybe_bite_and_poison_player((head_pos + center_dz), camera_bs, snake.dir, 2.0*snake.radius, 0.5, snake.has_rattle, rgen); // 0.5 damage, poison if has a rattle
-		float const move_dist(snake.move(timestep));
-		snake.move_segments(move_dist);
-		
-		if (move_dist > 0.0) { // move head in a winding motion if moving
-			vector3d const side_dir(cross_product(snake.dir, plus_z));
-			float const speed_factor(snake.speed/global_building_params.snake_speed); // [0.5, 1.0]
-			float const rot_amt(sin(0.1*snake.anim_time)); // rotation amount should be independent of speed
-			rotate_vector3d(plus_z, 0.02*fticks*PI*rot_amt*speed_factor, snake.dir);
-			snake.dir.normalize(); // is this needed?
-		}
-	}
+			break; // done
+		} // for m
+	} // for n
+	maybe_bite_and_poison_player((head_pos + center_dz), camera_bs, snake.dir, 2.0*snake.radius, 0.5, snake.has_rattle, rgen); // 0.5 damage, poison if has a rattle
 }
 
 bool building_t::check_for_snake_coll(snake_t const &snake, point const &camera_bs, float timestep, point const &old_pos, point &query_pos, vector3d &coll_dir) const {
