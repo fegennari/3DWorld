@@ -43,7 +43,7 @@ buildings spider_size_max 0.15 # length relative to floor spacing
 
 # building snakes
 buildings num_snakes_min 0
-buildings num_snakes_max 0
+buildings num_snakes_max 2
 buildings snake_speed 0.0005
 buildings snake_size_min 0.30 # length relative to floor spacing
 buildings snake_size_max 0.60 # length relative to floor spacing

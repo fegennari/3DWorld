@@ -1085,6 +1085,7 @@ void building_t::update_snake(snake_t &snake, point const &camera_bs, float time
 		}
 		// collision, try a new direction
 		bool const use_coll_dir(coll_dir != zero_vector);
+		float const min_allowed_dp(0.8 - 0.01*n); // 0.8 => -0.2; prefer a slight turn
 
 		for (unsigned m = 0; m < 100; ++m) { // 100 attempts to chose a valid dir; should amost always be successful
 			dir = rgen.signed_rand_vector_xy().get_norm();
@@ -1093,8 +1094,7 @@ void building_t::update_snake(snake_t &snake, point const &camera_bs, float time
 			if (max(fabs(dir.x), fabs(dir.y)) > 0.95) continue;
 			if (use_coll_dir && dot_product(dir, coll_dir) > 0.0) {dir.negate();} // don't move toward the collider
 
-			// keep turn angle less than a bit more than 180 degrees unless stuck
-			if (n < 60 && dot_product(dir, snake.dir) < -0.1) {
+			if (dot_product(dir, snake.dir) < min_allowed_dp) {
 				if (use_coll_dir) continue; // dir must be opposite coll_dir, can't negate again
 				dir.negate();
 			}
