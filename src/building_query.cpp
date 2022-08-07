@@ -327,8 +327,8 @@ unsigned check_bed_collision(room_object_t const &c, point &pos, point const &p_
 	cube_t cubes[6]; // frame, head, foot, mattress, pillow, legs_bcube
 	get_bed_cubes(c, cubes);
 	unsigned num_to_check(5); // skip legs_bcube
-	if (c.is_taken(0)) {--num_to_check;} // skip pillows
-	if (c.is_taken(2)) {--num_to_check;} // skip mattress
+	if (c.taken_level > 0) {--num_to_check;} // skip pillows
+	if (c.taken_level > 2) {--num_to_check;} // skip mattress
 	unsigned coll_ret(check_cubes_collision(cubes, num_to_check, pos, p_last, radius, cnorm));
 	get_tc_leg_cubes(cubes[5], 0.04, cubes); // head_width=0.04; cubes[5] is not overwritten
 	coll_ret |= (check_cubes_collision(cubes, 4, pos, p_last, radius, cnorm) << 5); // check legs

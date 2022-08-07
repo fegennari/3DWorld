@@ -592,7 +592,7 @@ void building_room_geom_t::add_tproll(room_object_t const &c) { // is_small=1
 		add_vert_roll_to_material(c, get_untextured_material(1, 0, 1)); // shadowed, small
 		return;
 	}
-	if (!c.is_taken(0)) {add_tproll_to_material(c, get_untextured_material(1, 0, 1));} // draw the roll if not taken
+	if (c.taken_level == 0) {add_tproll_to_material(c, get_untextured_material(1, 0, 1));} // draw the roll if not taken
 	float const radius(0.5*c.dz()), rod_shrink(-0.7*radius), length(c.get_width());
 	// draw the holder attached to the wall
 	rgeom_mat_t &holder_mat(get_metal_material(1, 0, 1)); // untextured, shadowed, small=1
@@ -1604,7 +1604,7 @@ void building_room_geom_t::add_picture(room_object_t const &c) { // also whitebo
 	bool const whiteboard(c.type == TYPE_WBOARD);
 	int picture_tid(WHITE_TEX);
 
-	if (!whiteboard && !c.is_taken(0)) { // picture, not taken/frame only
+	if (!whiteboard && c.taken_level == 0) { // picture, not taken/frame only
 		int const user_tid(get_rand_screenshot_texture(c.obj_id));
 		picture_tid  = ((user_tid >= 0) ? (unsigned)user_tid : c.get_picture_tid()); // if user texture is valid, use that instead
 		num_pic_tids = get_num_screenshot_tids();
@@ -1685,7 +1685,7 @@ void building_room_geom_t::add_book(room_object_t const &c, bool inc_lg, bool in
 	bool const from_book_set(c.flags & RO_FLAG_FROM_SET);
 	bool const tdir((upright && !from_book_set) ? (c.dim ^ c.dir ^ bool(c.obj_id%7)) : 1); // sometimes upside down when upright and not from a set
 	bool const ldir(!tdir), cdir(c.dim ^ c.dir ^ upright ^ ldir); // colum and line directions (left/right/top/bot) + mirror flags for front cover
-	bool const was_dropped(c.is_taken(0)); // or held
+	bool const was_dropped(c.taken_level > 0); // or held
 	bool const shadowed(was_dropped && !is_held); // only shadowed if dropped by the player, since otherwise shadows are too small to have much effect; skip held objects (don't work)
 	unsigned const tdim(upright ? !c.dim : 2), hdim(upright ? 2 : !c.dim); // thickness dim, height dim (c.dim is width dim)
 	float const thickness(c.get_sz_dim(tdim)), width(c.get_length()), cov_thickness(0.125*thickness), indent(0.02*width); // Note: length/width are sort of backwards here
@@ -2253,7 +2253,7 @@ void building_room_geom_t::add_bed(room_object_t const &c, bool inc_lg, bool inc
 	point const tex_origin(c.get_llc());
 
 	if (inc_lg) {
-		bool const no_mattress(c.is_taken(2));
+		bool const no_mattress(c.taken_level > 2);
 		colorRGBA const color(apply_wood_light_color(c));
 		add_tc_legs(legs_bcube, color, max(head_width, foot_width), tscale);
 		if (no_mattress) {get_wood_material(4.0*tscale);} // pre-allocate slats material if needed
@@ -2348,11 +2348,11 @@ void building_room_geom_t::add_bed(room_object_t const &c, bool inc_lg, bool inc
 		}
 		if (!no_mattress) {
 			unsigned const mattress_skip_faces(EF_Z1 | get_skip_mask_for_xy(c.dim));
-			if (c.is_taken(1)) {get_untextured_material(1).add_cube_to_verts_untextured(mattress, sheet_color, mattress_skip_faces);} // sheets taken, bare mattress
+			if (c.taken_level > 1) {get_untextured_material(1).add_cube_to_verts_untextured(mattress, sheet_color, mattress_skip_faces);} // sheets taken, bare mattress
 			else {get_material(sheet_tex, 1).add_cube_to_verts(mattress, sheet_color, tex_origin, mattress_skip_faces);} // draw matterss with sheets
 		}
 	}
-	if (inc_sm && !c.is_taken(0)) { // draw pillows if not taken
+	if (inc_sm && c.taken_level == 0) { // draw pillows if not taken
 		rgeom_mat_t &pillow_mat(get_material(sheet_tex, 1, 0, 1)); // small=1
 
 		if (bed_is_wide(c)) { // two pillows
@@ -3109,7 +3109,7 @@ void building_room_geom_t::add_potted_plant(room_object_t const &c, bool inc_pot
 
 	if (inc_pot) {
 		// draw the pot, tapered with narrower bottom; draw the bottom of the pot if there's no dirt
-		bool const no_dirt(c.is_taken(1));
+		bool const no_dirt(c.taken_level > 1);
 		float const pot_radius(0.4*plant_diameter);
 		get_untextured_material(1).add_cylin_to_verts(point(cx, cy, c.z1()), point(cx, cy, pot_top), 0.65*pot_radius, pot_radius, apply_light_color(c), no_dirt, 0, 1, 0);
 		
@@ -3118,7 +3118,7 @@ void building_room_geom_t::add_potted_plant(room_object_t const &c, bool inc_pot
 			dirt_mat.add_disk_to_verts(base_pos, 0.947*pot_radius, 0, apply_light_color(c, WHITE));
 		}
 	}
-	if (inc_plant && !c.is_taken(0)) { // plant not taken
+	if (inc_plant && c.taken_level == 0) { // plant not taken
 		// draw plant leaves
 		s_plant plant;
 		plant.create_no_verts(base_pos, (c.z2() - base_pos.z), stem_radius, c.obj_id, 0, 1); // land_plants_only=1
@@ -3180,11 +3180,9 @@ void building_room_geom_t::add_toy(room_object_t const &c) { // is_small=1
 	// draw the rings
 	unsigned const num_rings(4), num_ring_colors(6);
 	colorRGBA const ring_colors[num_ring_colors] = {RED, GREEN, BLUE, YELLOW, ORANGE, PURPLE};
-	unsigned rings_to_draw(num_rings), colors_used(0);
-
-	for (unsigned n = 0; n < 4; ++n) { // remove rings from the top if they're taken by the player
-		if (rings_to_draw > 0 && c.is_taken(n)) {--rings_to_draw;}
-	}
+	assert(c.taken_level <= 4);
+	unsigned const rings_to_draw(num_rings - c.taken_level); // remove rings from the top if they're taken by the player
+	unsigned colors_used(0);
 	rand_gen_t rgen;
 	rgen.set_state(c.obj_id, c.obj_id);
 	rgen.rand_mix();
