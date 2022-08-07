@@ -1392,7 +1392,7 @@ private:
 	void update_spider(spider_t &spider, point const &camera_bs, float timestep, float &max_xmove, rand_gen_t &rgen) const;
 	bool maybe_squish_spider(room_object_t const &obj);
 	void update_snake (snake_t  &snake,  point const &camera_bs, float timestep, float &max_xmove, rand_gen_t &rgen) const;
-	bool check_for_snake_coll(snake_t const &snake, point const &camera_bs, float timestep, point const &old_pos, point &query_pos, vector3d &coll_dir) const;
+	bool check_for_snake_coll(snake_t const &snake, point const &camera_bs, float timestep, point const &old_pos, point const &query_pos, vector3d &coll_dir) const;
 	void maybe_bite_and_poison_player(point const &pos, point const &camera_bs, vector3d const &dir, float coll_radius, float damage, bool poison, rand_gen_t &rgen) const;
 	void get_room_obj_cubes(room_object_t const &c, point const &pos, vect_cube_t &lg_cubes, vect_cube_t &sm_cubes, vect_cube_t &non_cubes) const;
 	bool check_line_coll_expand(point const &p1, point const &p2, float radius, float hheight) const;
