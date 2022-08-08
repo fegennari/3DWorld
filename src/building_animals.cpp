@@ -1067,8 +1067,10 @@ void building_t::update_snake(snake_t &snake, point const &camera_bs, float time
 		vector3d const lookahead(dir*lookahead_amt);
 		point const query_pos(new_head_pos + lookahead); // apply lookahead
 		vector3d coll_dir; // collision normal; points from the collider in the XY plane
+		// coll_type: 0=no coll, 1=dynamic object, 2=outside building, 3=static object, 4=snake itself
+		int const coll_type(check_for_snake_coll(snake, camera_bs, timestep, head_pos, query_pos, coll_dir));
 		
-		if (!check_for_snake_coll(snake, camera_bs, timestep, head_pos, query_pos, coll_dir)) { // no collision
+		if (coll_type == 0) { // no collision
 			// dir is valid; check for coll ahead of us
 			if (check_for_snake_coll(snake, camera_bs, timestep, head_pos, (query_pos + 2.0*lookahead), coll_dir)) {
 				vector3d const side_dir(cross_product(dir, plus_z));
@@ -1114,38 +1116,44 @@ void building_t::update_snake(snake_t &snake, point const &camera_bs, float time
 		}
 	}
 	else { // stuck; can happen when two snakes collide with each other or when a snake forms an inner spiral with itself
-		// TODO
+		// TODO: revert to prev valid pos, move away from coll dir, ignore coll and proceed (if coll with dynamic object or self), allow hard turn
 	}
 	maybe_bite_and_poison_player((head_pos + center_dz), camera_bs, snake.dir, 2.0*snake.radius, 0.5, snake.has_rattle, rgen); // 0.5 damage, poison if has a rattle
 }
 
-bool building_t::check_for_snake_coll(snake_t const &snake, point const &camera_bs, float timestep, point const &old_pos, point const &query_pos, vector3d &coll_dir) const {
+// return values: 0=no coll, 1=dynamic object, 2=outside building, 3=static object, 4=snake itself
+int building_t::check_for_snake_coll(snake_t const &snake, point const &camera_bs, float timestep, point const &old_pos, point const &query_pos, vector3d &coll_dir) const {
 	float const radius(snake.radius), height(snake.get_height()), hheight(0.5*height);
 	vector3d const center_dz(0.0, 0.0, hheight);
 	point query_pos_coll(query_pos);
 
 	if (check_and_handle_dynamic_obj_coll(query_pos_coll, snake.pos, radius, query_pos.z, (query_pos.z + height), camera_bs, 0)) { // check for collisions; for_spider=0
 		coll_dir = (query_pos_coll - query_pos).get_norm();
-		return 1;
+		return 1; // collision with dynamic object
 	}
 	// check if pos is valid
-	if (!is_pos_inside_building(query_pos, radius, hheight, 0)) { // inc_attic=0
-		// most likely case is outside the house bcube; find closest bcube edge to head_pos
+	if (!bcube.contains_pt_xy_exp(query_pos, -radius)) { // outside the building bcube
+		// find closest bcube edge to head_pos
 		float const dx1(fabs(bcube.x1() - query_pos.x)), dx2(fabs(bcube.x2() - query_pos.x)), dy1(fabs(bcube.y1() - query_pos.y)), dy2(fabs(bcube.y2() - query_pos.y));
 		float dmin(0.0);
 		if (1         ) {dmin = dx1; coll_dir = -plus_x;}
 		if (dx2 < dmin) {dmin = dx2; coll_dir =  plus_x;}
 		if (dy1 < dmin) {dmin = dy1; coll_dir = -plus_y;}
 		if (dy2 < dmin) {dmin = dy2; coll_dir =  plus_y;}
-		return 1;
+		return 2; // outside building bcube
+	}
+	if (!is_pos_inside_building(query_pos, radius, hheight, 0)) { // inc_attic=0
+		move_sphere_to_valid_part(query_pos_coll, old_pos, radius);
+		coll_dir = (query_pos_coll - query_pos).get_norm();
+		return 2; // outside building
 	}
 	if (check_line_coll_expand((old_pos + center_dz), (query_pos + center_dz), radius, hheight)) {
 		// set coll_dir?
-		return 1;
+		return 3; // collision with static room object
 	}
 	if (snake.check_line_int_xy(old_pos, (query_pos + snake.dir*radius), 1)) { // check for self intersection; skip_head=1
 		// set coll_dir?
-		return 1;
+		return 4; // collision with ourself
 	}
 	return 0;
 }
