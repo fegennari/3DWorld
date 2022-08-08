@@ -1,4 +1,4 @@
-// 3D World - Shared shadow map related classes
+// 3D World - Performance Timing Profiler
 // by Frank Gennari
 // 5/23/14
 #pragma once
