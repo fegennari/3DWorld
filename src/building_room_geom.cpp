@@ -3165,18 +3165,24 @@ void building_room_geom_t::add_toy(room_object_t const &c) { // is_small=1
 	tex.set_specular(0.5, 80.0);
 	rgeom_mat_t &mat(get_material(tex, 1, 0, 1)); // shadowed, small
 	point const center(c.get_cube_center());
-	float const height(c.dz()), radius(c.get_radius()), post_top_srcale(0.6), post_rb(0.45*radius);
-	float zval(c.z1() + 0.10*height); // top of base/bottom of post
+	float const height(c.dz()), radius(c.get_radius()), post_top_srcale(0.6), post_rb(0.45*radius), base_height(0.10*height);
+	float zval(c.z1() + base_height); // top of base/bottom of post
 	// draw the center post as a truncated cone
 	colorRGBA const base_color(apply_light_color(c));
 	cube_t post(center);
 	post.expand_by_xy(post_rb);
 	set_cube_zvals(post, zval, c.z2());
 	mat.add_vcylin_to_verts(post, base_color, 0, 1, 0, 0, 1.0, post_top_srcale);
-	// draw the base as a cube
+	// use squished cylinder on the bottom and a cube on the top for the base
 	cube_t base(c);
-	base.z2() = zval;
-	mat.add_cube_to_verts(base, base_color, all_zeros, EF_Z1); // skip bottom face
+	base.z2() = base.z1() + 2.0*radius;
+	unsigned const base_start(mat.itri_verts.size());
+	mat.add_ortho_cylin_to_verts(base, base_color, c.dim, 1, 1);
+	// squish in Z
+	float const z_squish_factor(base_height/(2.0*radius));
+	for (auto i = mat.itri_verts.begin()+base_start; i != mat.itri_verts.end(); ++i) {i->v.z = z_squish_factor*(i->v.z - c.z1()) + c.z1();}
+	set_cube_zvals(base, (c.z1() + 0.5*base_height), zval); // top half
+	mat.add_cube_to_verts_untextured(base, base_color, EF_Z1); // skip bottom face
 	// draw the rings
 	unsigned const num_rings(4), num_ring_colors(6);
 	colorRGBA const ring_colors[num_ring_colors] = {RED, GREEN, BLUE, YELLOW, ORANGE, PURPLE};
