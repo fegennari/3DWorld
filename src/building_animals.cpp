@@ -1037,6 +1037,15 @@ bool snake_t::check_line_int_xy(point const &p1, point const &p2, bool skip_head
 	}
 	return 0;
 }
+bool snake_t::check_sphere_int(point const &sc, float sr, bool skip_head) const {
+	float const r_sum(sr + radius), r_sum_sq(r_sum*r_sum);
+
+	for (unsigned n = (skip_head ? 2 : 1); n < segments.size(); ++n) {
+		point const &p1(segments[n-1]);
+		if (sphere_test_comp(p1, sc, (p1 - segments[n]), r_sum_sq)) return 1;
+	}
+	return 0;
+}
 
 void building_t::update_snakes(point const &camera_bs, unsigned building_ix) {
 	vect_snake_t &snakes(interior->room_geom->snakes);
