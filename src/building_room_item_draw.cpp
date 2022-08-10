@@ -1353,6 +1353,8 @@ class snake_draw_t {
 		bool const low_detail(shadow_only || reflection_pass);
 		unsigned const ndiv(get_rgeom_sphere_ndiv(low_detail)/2);
 		float const tscale = 1.0; // must tune this once our snake is textured
+		colorRGBA color(S.color);
+		//if (S.stuck_counter > 0.0) {color = blend_color(RED, S.color, min(1.0, 0.0025*S.stuck_counter), 0);} // debugging: turn red over time when stuck
 		// draw head
 		float const head_hheight(0.6*S.radius), head_hlen(1.6*S.radius), head_hwidth(S.radius);
 		vector3d const &dir(S.last_valid_dir);
@@ -1360,13 +1362,15 @@ class snake_draw_t {
 		point const head_pos(S.get_head_pos()), head_center(head_pos + vector3d(0,0,head_hheight));
 		rgeom_mat_t &skin_mat(skin_mats[S.id & 1]); // use the ID's LSB to select which of the two skin textures will be used
 		unsigned const head_verts_start(skin_mat.itri_verts.size());
-		skin_mat.add_sphere_to_verts(head_center, head_size, S.color, low_detail);
+		skin_mat.add_sphere_to_verts(head_center, head_size, color, low_detail);
 		float const rot_angle(-atan2(dir.y, dir.x)); // rotate dir into +X
 		rotate_verts(skin_mat.itri_verts, plus_z, rot_angle, head_pos, head_verts_start);
 		// draw segments
+		float const zscale = 0.85;
 		float const ndiv_inv(1.0/ndiv);
-		color_wrapper const cw(S.color);
-		unsigned data_pos(skin_mat.itri_verts.size()), quad_id(0);
+		color_wrapper const cw(color);
+		unsigned const body_verts_start(skin_mat.itri_verts.size()), rattle_verts_start(untex_mat.itri_verts.size());
+		unsigned data_pos(body_verts_start), quad_id(0);
 
 		for (auto s = S.segments.begin(); s != S.segments.end(); ++s) {
 			unsigned const seg_ix(s - S.segments.begin());
@@ -1374,23 +1378,26 @@ class snake_draw_t {
 			float const radius1(S.get_seg_radius(seg_ix)), radius2(S.get_seg_radius(seg_ix+1));
 			point const seg_start(is_first ? *s : 0.5*(*s + *(s-1))); // midpoint between this segment and the last
 			point const seg_end  (is_tail  ? (*s + 2.0*(*s - seg_start)) : 0.5*(*s + *(s+1))); // midpoint between this segment and the next; tail extends further back
+			bool const add_rattle(S.has_rattle && s+1 == S.segments.end() && !shadow_only);
 			point const ce[2] = {(seg_start + vector3d(0,0,radius1)), (seg_end + vector3d(0,0,radius2))};
-			vector3d v12;
-			vector_point_norm const &vpn(gen_cylinder_data(ce, radius1, radius2, ndiv, v12, NULL, 0.0, 1.0, 2)); // force_dim=2
 
-			for (unsigned j = !is_first; j < 2; ++j) {
-				float const ty(tscale*(seg_ix + j));
+			if (!add_rattle) { // skip tail if adding a rattle
+				vector3d v12;
+				vector_point_norm const &vpn(gen_cylinder_data(ce, radius1, radius2, ndiv, v12, NULL, 0.0, 1.0, 2)); // force_dim=2
 
-				for (unsigned S = 0; S < ndiv; ++S) {
-					float const tx(2.0f*fabs(S*ndiv_inv - 0.5f));
-					vector3d const n(0.5f*(vpn.n[S] + vpn.n[(S+ndiv-1)%ndiv])); // average face normals to get vert normals, don't need to normalize
-					skin_mat.itri_verts.emplace_back(vpn.p[(S<<1)+j], n, tx, ty, cw);
+				for (unsigned j = !is_first; j < 2; ++j) {
+					float const ty(tscale*(seg_ix + j));
+
+					for (unsigned S = 0; S < ndiv; ++S) {
+						float const tx(2.0f*fabs(S*ndiv_inv - 0.5f));
+						vector3d const n(0.5f*(vpn.n[S] + vpn.n[(S+ndiv-1)%ndiv])); // average face normals to get vert normals, don't need to normalize
+						skin_mat.itri_verts.emplace_back(vpn.p[(S<<1)+j], n, tx, ty, cw);
+					}
 				}
+				add_cylin_indices_tris(skin_mat.indices, ndiv, (data_pos + quad_id)); // create index data
+				quad_id += ndiv;
 			}
-			add_cylin_indices_tris(skin_mat.indices, ndiv, (data_pos + quad_id)); // create index data
-			quad_id += ndiv;
-
-			if (S.has_rattle && s+1 == S.segments.end() && !shadow_only) { // add a rattle on the last tail segment if not the shadow pass
+			if (add_rattle) { // add a rattle on the last tail segment if not the shadow pass
 				unsigned const num_segs(3 + (S.id % 6)); // 3-8
 				vector3d const seg_delta(ce[1] - ce[0]);
 				colorRGBA const rattle_color(1.0, 0.8, 0.6); // yellow-ish
@@ -1398,12 +1405,17 @@ class snake_draw_t {
 				float const rattle_radius(0.9*step.mag()); // add some overlap between segments
 				
 				for (unsigned i = 0; i < num_segs; ++i) {
-					point const rattle_pos(ce[0] + (i+0.5)*step);
+					point rattle_pos(ce[0] + (i+0.5)*step);
 					float const seg_radius(rattle_radius*(1.0 - 0.5*i/float(num_segs)));
+					rattle_pos.z = head_pos.z + seg_radius; // place exactly on the floor
 					untex_mat.add_sphere_to_verts(rattle_pos, seg_radius, rattle_color, 1); // low_detail=1
 				}
 			}
 		} // for s
+		if (zscale != 1.0) { // flatten a bit in Z
+			for (auto i = skin_mat .itri_verts.begin()+body_verts_start  ; i != skin_mat.itri_verts .end(); ++i) {i->v.z =      zscale*(i->v.z - head_pos.z) + head_pos.z;}
+			for (auto i = untex_mat.itri_verts.begin()+rattle_verts_start; i != untex_mat.itri_verts.end(); ++i) {i->v.z = 0.7f*zscale*(i->v.z - head_pos.z) + head_pos.z;}
+		}
 		if (shadow_only || reflection_pass) return; // no eyes or tongue
 		// add eyes to head
 		vector3d const side_dir(cross_product(dir, plus_z));
