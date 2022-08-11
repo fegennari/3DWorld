@@ -1145,29 +1145,34 @@ void get_xy_dir_to_closest_cube_edge(point const &pos, cube_t const &c, vector3d
 }
 
 // return values: 0=no coll, 1=outside building, 2=static object, 3=dynamic object, 4=snake itself
-// coll_dir points in the direction of the collision
+// coll_dir points in the direction of the collision, opposite the collision normal
 int building_t::check_for_snake_coll(snake_t const &snake, point const &camera_bs, float timestep, point const &old_pos, point const &query_pos, vector3d &coll_dir) const {
 	float const radius(snake.radius), height(snake.get_height()), hheight(0.5*height);
-	vector3d const center_dz(0.0, 0.0, hheight);
-	point const query_center_z(query_pos + center_dz);
-	point query_pos_coll(query_pos);
 
 	if (!bcube.contains_pt_xy_exp(query_pos, -radius)) { // outside the building bcube
 		get_xy_dir_to_closest_cube_edge(query_pos, bcube, coll_dir); // find closest bcube edge to head_pos
 		return 1; // outside building bcube
 	}
+	vector3d const center_dz(0.0, 0.0, hheight);
+	point const query_center_z(query_pos + center_dz);
+
 	if (!is_pos_inside_building(query_pos, radius, hheight, 0)) { // inc_attic=0
 		for (auto p = parts.begin(); p != get_real_parts_end_inc_sec(); ++p) {
 			if (p->contains_pt(query_center_z)) {get_xy_dir_to_closest_cube_edge(query_pos, *p, coll_dir);}
 		}
 		return 1; // outside building
 	}
-	if (check_line_coll_expand((old_pos + center_dz), query_center_z, radius, hheight)) {
-		// set coll_dir?
+	int const coll_ret(check_line_coll_expand((old_pos + center_dz), query_center_z, radius, hheight));
+
+	if (coll_ret) {
+		if (coll_ret == 1) {coll_dir.x = ((query_pos.x < old_pos.x) ? -1.0 : 1.0);} // dim=0 wall, separates in X
+		if (coll_ret == 2) {coll_dir.y = ((query_pos.y < old_pos.y) ? -1.0 : 1.0);} // dim=1 wall, separates in Y
 		return 2; // collision with static room object
 	}
+	point query_pos_coll(query_pos); // may be updated below on collision
+
 	if (check_and_handle_dynamic_obj_coll(query_pos_coll, snake.pos, radius, query_pos.z, (query_pos.z + height), camera_bs, 0)) { // check for collisions; for_spider=0
-		coll_dir = (query_pos_coll - query_pos).get_norm();
+		coll_dir = (query_pos - query_pos_coll).get_norm();
 		return 3; // collision with dynamic object
 	}
 	if (snake.check_line_int_xy(old_pos, (query_pos + snake.dir*radius), 1)) { // check for self intersection; skip_head=1
