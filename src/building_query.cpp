@@ -1374,7 +1374,8 @@ void building_t::get_room_obj_cubes(room_object_t const &c, point const &pos, ve
 }
 
 // collision query used for rats: p1 and p2 are line end points; radius applies in X and Y, hheight is half height and applies in +/- z
-bool building_t::check_line_coll_expand(point const &p1, point const &p2, float radius, float hheight) const {
+// return value: 0=no coll, 1=dim0 wall, 2=dim1 wall, 3=open door, 4=closed door, 5=stairs, 6=elevator, 7=exterior wall, 8=room object
+int building_t::check_line_coll_expand(point const &p1, point const &p2, float radius, float hheight) const {
 	assert(interior != nullptr);
 	float const trim_thickness(get_trim_thickness()), zmin(min(p1.z, p2.z));
 	float const obj_z1(min(p1.z, p2.z) - hheight), obj_z2(max(p1.z, p2.z) + hheight);
@@ -1385,7 +1386,7 @@ bool building_t::check_line_coll_expand(point const &p1, point const &p2, float 
 
 	// check interior walls, doors, stairwells, and elevators
 	for (unsigned d = 0; d < 2; ++d) {
-		if (line_int_cubes_exp(p1, p2, interior->walls[d], expand_walls, line_bcube)) return 1;
+		if (line_int_cubes_exp(p1, p2, interior->walls[d], expand_walls, line_bcube)) return d+1;
 	}
 	for (auto const &ds : interior->door_stacks) {
 		if (ds.z1() > obj_z2 || ds.z2() < obj_z1) continue; // wrong floor for this stack/part
@@ -1401,25 +1402,25 @@ bool building_t::check_line_coll_expand(point const &p1, point const &p2, float 
 			if (door.z1() > obj_z2 || door.z2() < obj_z1) continue; // wrong floor
 
 			if (door.open) {
-				if (line_int_cube_exp(p1, p2, get_door_bounding_cube(door), expand)) return 1;
+				if (line_int_cube_exp(p1, p2, get_door_bounding_cube(door), expand)) return 3;
 			}
-			else if (line_int_cube_exp(p1, p2, door, expand)) return 1;
+			else if (line_int_cube_exp(p1, p2, door, expand)) return 4;
 		} // for dix
 	} // for door_stacks
 	for (auto const &s : interior->stairwells) {
 		if (!line_int_cube_exp(p1, p2, s, expand)) continue;
 		bool walled_sides(s.shape == SHAPE_WALLED_SIDES);
-		if (s.shape != SHAPE_STRAIGHT && !walled_sides) return 1; // fully walled and U-shaped stairs always collide
-		if (s.z1() < zmin - 0.5f*get_window_vspace())   return 1; // not the ground floor - definitely a collision
+		if (s.shape != SHAPE_STRAIGHT && !walled_sides) return 5; // fully walled and U-shaped stairs always collide
+		if (s.z1() < zmin - 0.5f*get_window_vspace())   return 5; // not the ground floor - definitely a collision
 
 		if (has_room_geom()) { // maybe we're under the stairs; check for individual stairs collisions
 			for (auto c = interior->room_geom->get_stairs_start(); c != interior->room_geom->objs.end(); ++c) {
 				if (c->no_coll()) continue;
-				if ((c->type == TYPE_STAIR || (walled_sides && c->type == TYPE_STAIR_WALL)) && line_int_cube_exp(p1, p2, *c, expand)) return 1;
+				if ((c->type == TYPE_STAIR || (walled_sides && c->type == TYPE_STAIR_WALL)) && line_int_cube_exp(p1, p2, *c, expand)) return 5;
 			}
 		}
 	} // for s
-	if (line_int_cubes_exp(p1, p2, interior->elevators, expand, line_bcube)) return 1;
+	if (line_int_cubes_exp(p1, p2, interior->elevators, expand, line_bcube)) return 6;
 	
 	// check exterior walls
 	if (point_in_attic(p1) && point_in_attic(p2)) {} // both points in attic, no need to check exterior walls
@@ -1444,7 +1445,7 @@ bool building_t::check_line_coll_expand(point const &p1, point const &p2, float 
 
 				for (unsigned step = 0; step < num_steps-1; ++step) { // take one less step (skip p2)
 					test_cube += delta; // take one step first (skip p1)
-					if (!is_cube_contained_in_parts(test_cube)) return 1; // extends outside the building walls
+					if (!is_cube_contained_in_parts(test_cube)) return 7; // extends outside the building walls
 				}
 			}
 		}
@@ -1467,75 +1468,75 @@ bool building_t::check_line_coll_expand(point const &p1, point const &p2, float 
 			if (!line_bcube.intersects(*c) || !line_int_cube_exp(p1, p2, get_true_room_obj_bcube(*c), expand)) continue;
 
 			if (c->is_vert_cylinder()) { // vertical cylinder
-				if (!is_house && c->type == TYPE_WHEATER) return 1; // office building water heaters have pipes into the floor, more than a cylinder, so use their bcubes
+				if (!is_house && c->type == TYPE_WHEATER) return 8; // office building water heaters have pipes into the floor, more than a cylinder, so use their bcubes
 				cylinder_3dw cylin(c->get_cylinder());
 				cylin.p1.z -= hheight; cylin.p2.z += hheight; // extend top and bottom
 				cylin.r1   += radius ; cylin.r2   += radius;
-				if (line_intersect_cylinder_with_t(p1, p2, cylin, (p1.z != p2.z), t)) return 1; // check ends if zvals differ (such as when dropping a rat)
+				if (line_intersect_cylinder_with_t(p1, p2, cylin, (p1.z != p2.z), t)) return 8; // check ends if zvals differ (such as when dropping a rat)
 			}
 			else if (c->shape == SHAPE_SPHERE) { // sphere (ball)
 				float const rsum(radius + c->get_radius());
-				if (sphere_test_comp(p1, c->get_cube_center(), (p1 - p2), rsum*rsum, t)) return 1; // approx; uses radius rather than height in z
+				if (sphere_test_comp(p1, c->get_cube_center(), (p1 - p2), rsum*rsum, t)) return 8; // approx; uses radius rather than height in z
 			}
 			else if (c->type == TYPE_CLOSET) {
 				cube_t cubes[5];
 				get_closet_cubes(*c, cubes, 1); // get cubes for walls and door; for_collision=1
 				// skip check of open doors for large closets since this case is more complex
-				if (line_int_cubes_exp(p1, p2, cubes, ((c->is_open() && !c->is_small_closet()) ? 4U : 5U), expand)) return 1;
+				if (line_int_cubes_exp(p1, p2, cubes, ((c->is_open() && !c->is_small_closet()) ? 4U : 5U), expand)) return 8;
 			}
 			else if (c->type == TYPE_BED) {
 				cube_t cubes[6]; // frame, head, foot, mattress, pillow, legs_bcube
 				get_bed_cubes(*c, cubes);
-				if (line_int_cube_exp(p1, p2, cubes[0], expand)) return 1; // check bed frame (in case p1.z is high enough)
+				if (line_int_cube_exp(p1, p2, cubes[0], expand)) return 8; // check bed frame (in case p1.z is high enough)
 				get_tc_leg_cubes(cubes[5], 0.04, cubes); // head_width=0.04; cubes[5] is not overwritten
-				if (line_int_cubes_exp(p1, p2, cubes, 4, expand)) return 1; // check legs
+				if (line_int_cubes_exp(p1, p2, cubes, 4, expand)) return 8; // check legs
 			}
 			else if (c->type == TYPE_DESK || c->type == TYPE_DRESSER || c->type == TYPE_NIGHTSTAND || c->type == TYPE_TABLE) { // objects with legs
 				cube_t cubes[5];
 				get_table_cubes(*c, cubes); // top and 4 legs
-				if (line_int_cubes_exp(p1, p2, cubes, 5, expand)) return 1;
+				if (line_int_cubes_exp(p1, p2, cubes, 5, expand)) return 8;
 
 				if (c->type == TYPE_DRESSER || c->type == TYPE_NIGHTSTAND) {
-					if (line_int_cube_exp(p1, p2, get_dresser_middle(*c), expand)) return 1;
+					if (line_int_cube_exp(p1, p2, get_dresser_middle(*c), expand)) return 8;
 				}
 				else if (c->type == TYPE_DESK && c->desk_has_drawers()) {
-					if (line_int_cube_exp(p1, p2, get_desk_drawers_part(*c), expand)) return 1;
+					if (line_int_cube_exp(p1, p2, get_desk_drawers_part(*c), expand)) return 8;
 				}
 			}
 			else if (c->type == TYPE_CHAIR) {
 				cube_t cubes[3], leg_cubes[4]; // seat, back, legs_bcube
 				get_chair_cubes(*c, cubes);
-				if (line_int_cube_exp(p1, p2, cubes[0], expand)) return 1; // check seat
+				if (line_int_cube_exp(p1, p2, cubes[0], expand)) return 8; // check seat
 				get_tc_leg_cubes(cubes[2], 0.15, leg_cubes); // width=0.15
-				if (line_int_cubes_exp(p1, p2, leg_cubes, 4, expand)) return 1; // check legs
+				if (line_int_cubes_exp(p1, p2, leg_cubes, 4, expand)) return 8; // check legs
 			}
 			else if (c->type == TYPE_BCASE) {
 				cube_t top, middle, back, lr[2];
 				get_bookcase_cubes(*c, top, middle, back, lr);
 				cube_t const all_cubes[5] = {top, middle, back, lr[0], lr[1]}; // probably don't need to check the top and back, but okay to do so
-				if (line_int_cubes_exp(p1, p2, all_cubes, 5, expand)) return 1;
+				if (line_int_cubes_exp(p1, p2, all_cubes, 5, expand)) return 8;
 			}
 			else if (c->type == TYPE_KSINK) {
 				cube_t cubes[3];
-				if (line_int_cubes_exp(p1, p2, cubes, get_ksink_cubes(*c, cubes), expand)) return 1; // 1 or 3 sink parts
+				if (line_int_cubes_exp(p1, p2, cubes, get_ksink_cubes(*c, cubes), expand)) return 8; // 1 or 3 sink parts
 			}
 			else if (c->type == TYPE_COUCH) {
 				cube_t couch_body(*c);
 				couch_body.z1() += 0.06*c->dz(); // there's space under the couch
-				if (line_int_cube_exp(p1, p2, couch_body, expand)) return 1;
+				if (line_int_cube_exp(p1, p2, couch_body, expand)) return 8;
 			}
 			else if (c->type == TYPE_SHELVES) {
 				cube_t c_coll(*c);
 				c_coll.z1() += 0.05*c->dz(); // there's space under the shelves
-				if (line_int_cube_exp(p1, p2, c_coll, expand)) return 1;
+				if (line_int_cube_exp(p1, p2, c_coll, expand)) return 8;
 			}
 			else if (c->type == TYPE_COLLIDER && (c->flags & RO_FLAG_FOR_CAR)) { // parked car
 				cube_t cubes[5];
 				get_approx_car_cubes(*c, cubes);
-				if (line_int_cubes_exp(p1, p2, cubes, 5, expand)) return 1;
+				if (line_int_cubes_exp(p1, p2, cubes, 5, expand)) return 8;
 			}
 			//else if (c->type == TYPE_STALL && maybe_inside_room_object(*c, p2, radius)) {} // is this useful? inside test only applied to end point
-			else return 1; // intersection
+			else return 8; // intersection
 		} // for c
 	} // for vect_id
 	return 0;
