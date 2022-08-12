@@ -1611,12 +1611,13 @@ template<typename T> void vect_animal_t<T>::update_delta_sum_for_animal_coll(poi
 	for (auto r = start; r != this->end(); ++r) {
 		if (r->pos.x > coll_x2) break; // none after this can overlap - done
 		if (r->pos == cur_obj_pos) continue; // skip ourself
-		float const rsum(radius_scale*(radius + r->get_xy_radius()));
-		if (!dist_xy_less_than(pos, r->pos, rsum)) continue; // no collision
+		float coll_radius(r->get_xy_radius());
+		if (!dist_xy_less_than(pos, r->pos, radius_scale*(radius + coll_radius))) continue; // no collision
 		if (z2 < r->pos.z || z1 > (r->pos.z + r->get_height())) continue; // different floors; less likely to reject, so done last
-		if (!r->detailed_sphere_coll(pos, radius)) continue; // check detailed collision for snakes
-		float const overlap(rsum - p2p_dist_xy(pos, r->pos));
-		vector3d const delta((pos - point(r->pos.x, r->pos.y, pos.z)).get_norm()*overlap);
+		point r_hit_pos(r->pos);
+		if (!r->detailed_sphere_coll(pos, radius, r_hit_pos, coll_radius)) continue; // check detailed collision for snakes
+		float const overlap(radius_scale*(radius + coll_radius) - p2p_dist_xy(pos, r_hit_pos));
+		vector3d const delta((pos - point(r_hit_pos.x, r_hit_pos.y, pos.z)).get_norm()*overlap);
 		delta_sum += delta; // accumulate weighted delta across collisions
 		max_eq(max_overlap, overlap);
 	} // for r

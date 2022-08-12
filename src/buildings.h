@@ -94,7 +94,7 @@ struct building_animal_t {
 	bool is_sleeping() const {return (wake_time > 0.0);}
 	void sleep_for(float time_secs_min, float time_secs_max);
 	float move(float timestep, bool can_move_forward=1);
-	bool detailed_sphere_coll(point const &sc, float sr) const {return 1;} // defaults to true
+	bool detailed_sphere_coll(point const &sc, float sr, point &coll_pos, float &coll_radius) const {return 1;} // defaults to true
 };
 
 struct rat_t : public building_animal_t {
@@ -157,8 +157,8 @@ struct snake_t : public building_animal_t {
 	cube_t get_bcube    () const;
 	void move_segments(float dist);
 	bool check_line_int_xy(point const &p1, point const &p2, bool skip_head, vector3d *seg_dir=nullptr) const;
-	bool check_sphere_int    (point const &sc, float sr, bool skip_head, vector3d *seg_dir=nullptr) const;
-	bool detailed_sphere_coll(point const &sc, float sr) const {return check_sphere_int(sc, sr, 0);} // skip_head=0
+	bool check_sphere_int    (point const &sc, float sr, bool skip_head, vector3d *seg_dir=nullptr, point *closest_pos=nullptr) const;
+	bool detailed_sphere_coll(point const &sc, float sr, point &coll_pos, float &coll_radius) const;
 	float get_curve_factor() const;
 };
 

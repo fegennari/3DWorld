@@ -1041,16 +1041,22 @@ bool snake_t::check_line_int_xy(point const &p1, point const &p2, bool skip_head
 	}
 	return 0;
 }
-bool snake_t::check_sphere_int(point const &sc, float sr, bool skip_head, vector3d *seg_dir) const {
+bool snake_t::check_sphere_int(point const &sc, float sr, bool skip_head, vector3d *seg_dir, point *closest_pos) const {
 	float const r_sum(sr + radius), r_sum_sq(r_sum*r_sum);
 
 	for (unsigned n = (skip_head ? 2 : 1); n < segments.size(); ++n) {
 		point const &s1(segments[n-1]), &s2(segments[n]);
 		if (!sphere_test_comp(s1, sc, (s1 - s2), r_sum_sq)) continue;
-		if (seg_dir) {*seg_dir = (s1 - s2).get_norm();}
+		if (seg_dir    ) {*seg_dir = (s1 - s2).get_norm();}
+		if (closest_pos) {*closest_pos = get_closest_pt_on_line(sc, s1, s2);}
 		return 1;
 	}
 	return 0;
+}
+bool snake_t::detailed_sphere_coll(point const &sc, float sr, point &coll_pos, float &coll_radius) const {
+	if (!check_sphere_int(sc, sr, 0, nullptr, &coll_pos)) return 0; // skip_head=0
+	coll_radius = radius;
+	return 1;
 }
 float snake_t::get_curve_factor() const {
 	float curve_factor(0.0);
