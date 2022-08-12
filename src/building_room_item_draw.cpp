@@ -1280,7 +1280,11 @@ public:
 			if (check_clip_cube && !smap_light_clip_cube.intersects(bcube + xlate)) continue; // shadow map clip cube test: fast and high rejection ratio, do this first
 			if (!camera_pdu.cube_visible(bcube + xlate)) continue; // VFC
 			if (check_occlusion && building.check_obj_occluded(bcube, camera_bs, oc, reflection_pass)) continue;
-
+			
+			if (S.dir == zero_vector || S.upv == zero_vector) {
+				cout << "Error: Invalid spider: " << TXT(S.pos.str()) << TXT(S.dir.str()) << TXT(S.upv.str()) << endl;
+				continue; // seems like this can occasionally happen with too many objects and low framerate; maybe FP error; make it nonfatal
+			}
 			if (!any_drawn) { // setup shaders
 				if (!is_setup) {init();}
 				mat.vao_setup(shadow_only);
@@ -1298,7 +1302,6 @@ public:
 			s.set_uniform_float(anim_time_loc, S.anim_time);
 			fgPushMatrix();
 			translate_to(S.pos);
-			assert(S.dir != zero_vector && S.upv != zero_vector);
 			vector3d const dir(S.dir.get_norm()), upv(S.upv.get_norm()); // normalize, just in case
 			vector3d const right(cross_product(S.upv, S.dir).get_norm());
 			assert(right != zero_vector);
