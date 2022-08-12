@@ -946,6 +946,7 @@ struct building_room_geom_t {
 	bool player_pickup_object(building_t &building, point const &at_pos, vector3d const &in_dir);
 	void update_draw_state_for_room_object(room_object_t const &obj, building_t &building, bool was_taken);
 	room_object_t &get_room_object_by_index(unsigned obj_id);
+	float get_combined_obj_weight(room_object_t const &obj) const;
 	int find_avail_obj_slot() const;
 	void add_expanded_object(room_object_t const &obj);
 	bool add_room_object(room_object_t const &obj, building_t &building, bool set_obj_id=0, vector3d const &velocity=zero_vector);

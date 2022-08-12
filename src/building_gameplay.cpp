@@ -163,14 +163,16 @@ float carried_item_t::get_remaining_capacity_ratio() const {
 	return ((capacity == 0) ? 1.0 : (1.0 - float(use_count)/float(capacity))); // Note: zero capacity is unlimited and ratio returned is always 1.0
 }
 
+float const mattress_weight(80.0), sheets_weight(4.0), pillow_weight(1.0);
+
 bldg_obj_type_t get_taken_obj_type(room_object_t const &obj) {
 	if (obj.type == TYPE_PICTURE && obj.taken_level > 0) {return bldg_obj_type_t(0, 0, 0, 1, 0, 0, 1, 20.0, 6.0, "picture frame");} // second item to take from picture
 	if (obj.type == TYPE_TPROLL  && obj.taken_level > 0) {return bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 6.0,  0.5, "toilet paper holder");} // second item to take from tproll
 
 	if (obj.type == TYPE_BED) { // player_coll, ai_coll, pickup, attached, is_model, lg_sm, value, weight, name
-		if (obj.taken_level > 1) {return bldg_obj_type_t(0, 0, 0, 1, 0, 0, 1, 250.0, 80.0, "mattress"  );} // third item to take from bed
-		if (obj.taken_level > 0) {return bldg_obj_type_t(0, 0, 0, 1, 0, 0, 1, 80.0,  4.0,  "bed sheets");} // second item to take from bed
-		return bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 20.0, 1.0, "pillow"); // first item to take from bed
+		if (obj.taken_level > 1) {return bldg_obj_type_t(0, 0, 0, 1, 0, 0, 1, 250.0, mattress_weight, "mattress"  );} // third item to take from bed
+		if (obj.taken_level > 0) {return bldg_obj_type_t(0, 0, 0, 1, 0, 0, 1, 80.0,  sheets_weight,   "bed sheets");} // second item to take from bed
+		return bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 20.0, pillow_weight, "pillow"); // first item to take from bed
 	}
 	if (obj.type == TYPE_PLANT && !(obj.flags & RO_FLAG_ADJ_BOT)) { // plant not on a table/desk
 		if (obj.taken_level > 1) {return bldg_obj_type_t(0, 0, 1, 1, 0, 0, 1, 10.0, 10.0, "plant pot");} // third item to take
@@ -859,10 +861,13 @@ bool is_obj_in_or_on_obj(room_object_t const &parent, room_object_t const &child
 	if (parent.type == TYPE_BED && child.z1() <= parent.z2() && child.z1() > parent.zc() && child.intersects_xy(parent)) return 1; // object on the mattress of a bed
 	return 0;
 }
-bool object_has_something_on_it(room_object_t const &obj, vect_room_object_t const &objs, vect_room_object_t::const_iterator objs_end) {
+bool object_can_have_something_on_it(room_object_t const &obj) {
 	// only these types can have objects placed on them (what about TYPE_SHELF? what about TYPE_BED with a ball or book placed on it?)
-	if (obj.type != TYPE_TABLE && obj.type != TYPE_DESK && obj.type != TYPE_COUNTER && obj.type != TYPE_DRESSER && obj.type != TYPE_NIGHTSTAND &&
-		obj.type != TYPE_BOX && obj.type != TYPE_CRATE && obj.type != TYPE_WINE_RACK && obj.type != TYPE_BOOK) return 0;
+	return (obj.type == TYPE_TABLE || obj.type == TYPE_DESK || obj.type == TYPE_COUNTER || obj.type == TYPE_DRESSER || obj.type == TYPE_NIGHTSTAND ||
+		obj.type == TYPE_BOX || obj.type == TYPE_CRATE || obj.type == TYPE_WINE_RACK || obj.type == TYPE_BOOK /*|| obj.type == TYPE_SHELF*/ /*|| obj.type == TYPE_BED*/);
+}
+bool object_has_something_on_it(room_object_t const &obj, vect_room_object_t const &objs, vect_room_object_t::const_iterator objs_end) {
+	if (!object_can_have_something_on_it(obj)) return 0;
 
 	for (auto i = objs.begin(); i != objs_end; ++i) {
 		if (i->type == TYPE_BLOCKER)      continue; // ignore blockers (from removed objects)
@@ -870,6 +875,16 @@ bool object_has_something_on_it(room_object_t const &obj, vect_room_object_t con
 		if (is_obj_in_or_on_obj(obj, *i)) return 1;
 	}
 	return 0;
+}
+float get_combined_stacked_obj_weights(room_object_t const &obj, vect_room_object_t const &objs, vect_room_object_t::const_iterator objs_end) {
+	float weight(0.0);
+
+	for (auto i = objs.begin(); i != objs_end; ++i) {
+		if (i->type == TYPE_BLOCKER) continue; // ignore blockers (from removed objects)
+		if (*i == obj)               continue; // skip self (bcube check)
+		if (is_obj_in_or_on_obj(obj, *i)) {weight += get_room_obj_type(*i).weight;}
+	}
+	return weight;
 }
 
 cube_t get_true_obj_bcube(room_object_t const &obj) {
@@ -1156,6 +1171,20 @@ bool building_room_geom_t::add_room_object(room_object_t const &obj, building_t 
 	return 1;
 }
 
+float building_room_geom_t::get_combined_obj_weight(room_object_t const &obj) const {
+	float weight(get_room_obj_type(obj).weight);
+
+	if (obj.type == TYPE_BED) { // beds are special because they're composed of heavy items that can be removed
+		if (obj.taken_level < 3) {weight += mattress_weight;}
+		if (obj.taken_level < 2) {weight += sheets_weight  ;}
+		if (obj.taken_level < 1) {weight += pillow_weight  ;}
+	}
+	if (!object_can_have_something_on_it(obj)) return weight; // not stackable
+	weight += get_combined_stacked_obj_weights(obj, objs, get_stairs_start());
+	weight += get_combined_stacked_obj_weights(obj, expanded_objs, expanded_objs.end());
+	return weight;
+}
+
 bool is_movable(room_object_t const &obj) {
 	if (obj.no_coll() || obj.type == TYPE_BLOCKER) return 0; // no blockers
 	bldg_obj_type_t const &bot(get_room_obj_type(obj));
@@ -1188,7 +1217,8 @@ bool building_t::move_nearest_object(point const &at_pos, vector3d const &in_dir
 	room_object_t &obj(objs[closest_obj_id]);
 	if (!is_movable(obj))        return 0; // closest object isn't movable
 	if (obj.contains_pt(at_pos)) return 0; // player is inside this object?
-	float const move_dist(rand_uniform(0.5, 1.0)*CAMERA_RADIUS*(100.0f/max(75.0f, get_room_obj_type(obj).weight))); // heavier objects move less; add some global randomness
+	float const obj_weight(interior->room_geom->get_combined_obj_weight(obj));
+	float const move_dist(rand_uniform(0.5, 1.0)*CAMERA_RADIUS*(100.0f/max(75.0f, obj_weight))); // heavier objects move less; add some global randomness
 	vector3d delta(obj.closest_pt(at_pos) - at_pos);
 	delta.z = 0.0; // XY only
 	delta.normalize();
