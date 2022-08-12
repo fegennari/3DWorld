@@ -456,7 +456,7 @@ enum {
 	TYPE_WINE_RACK, TYPE_COMPUTER, TYPE_MWAVE, TYPE_PAPER, TYPE_BLINDS, TYPE_PEN, TYPE_PENCIL, TYPE_PAINTCAN, TYPE_LG_BALL, TYPE_HANGER_ROD,
 	TYPE_DRAIN, TYPE_MONEY, TYPE_PHONE, TYPE_TPROLL, TYPE_SPRAYCAN, TYPE_MARKER, TYPE_BUTTON, TYPE_CRACK, TYPE_SWITCH, TYPE_PLATE,
 	TYPE_LAPTOP, TYPE_FPLACE, TYPE_LBASKET, TYPE_WHEATER, TYPE_TAPE, TYPE_OUTLET, TYPE_PG_WALL, TYPE_PARK_SPACE, TYPE_RAMP, TYPE_PIPE,
-	TYPE_CURB, TYPE_BRK_PANEL, TYPE_VENT, TYPE_BREAKER, TYPE_FURNACE, TYPE_ATTIC_DOOR, TYPE_CHIMNEY, TYPE_DUCT, TYPE_TOY,
+	TYPE_CURB, TYPE_BRK_PANEL, TYPE_VENT, TYPE_BREAKER, TYPE_FURNACE, TYPE_ATTIC_DOOR, TYPE_CHIMNEY, TYPE_DUCT, TYPE_TOY, TYPE_DRESS_MIR,
 	/* these next ones are all 3D models - see logic in room_object_t::is_obj_model_type() */
 	TYPE_TOILET, TYPE_SINK, TYPE_TUB, TYPE_FRIDGE, TYPE_STOVE, TYPE_TV, TYPE_MONITOR, TYPE_COUCH, TYPE_OFF_CHAIR, TYPE_URINAL,
 	TYPE_LAMP, TYPE_WASHER, TYPE_DRYER, TYPE_KEY, TYPE_HANGER, TYPE_CLOTHES, TYPE_FESCAPE, TYPE_CUP, TYPE_TOASTER, TYPE_HOOD,
@@ -841,6 +841,7 @@ struct building_room_geom_t {
 	void add_table(room_object_t const &c, float tscale, float top_dz, float leg_width);
 	void add_chair(room_object_t const &c, float tscale);
 	void add_dresser(room_object_t const &c, float tscale, bool inc_lg, bool inc_sm);
+	void add_dresser_mirror(room_object_t const &c, float tscale);
 	void add_dresser_drawers(room_object_t const &c, float tscale);
 	void add_stair(room_object_t const &c, float tscale, vector3d const &tex_origin);
 	void add_stairs_wall(room_object_t const &c, vector3d const &tex_origin, tid_nm_pair_t const &wall_tex);

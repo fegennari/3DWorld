@@ -314,6 +314,10 @@ void building_room_geom_t::add_dresser_drawers(room_object_t const &c, float tsc
 	add_nested_objs_to_verts(objects); // add any objects that were found in open drawers; must be small static objects
 }
 
+void building_room_geom_t::add_dresser_mirror(room_object_t const &c, float tscale) {
+	// TODO
+}
+
 tid_nm_pair_t get_scaled_wall_tex(tid_nm_pair_t const &wall_tex) {
 	tid_nm_pair_t wall_tex_scaled(wall_tex);
 	wall_tex_scaled.tscale_x *= 2.0;

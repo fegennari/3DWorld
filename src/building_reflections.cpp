@@ -16,6 +16,8 @@ extern vector4d clip_plane;
 
 cube_t get_mirror_surface(room_object_t const &c);
 
+bool is_mirror(room_object_t const &obj) {return (obj.type == TYPE_MIRROR || obj.type == TYPE_DRESS_MIR);}
+
 
 void draw_mirror_to_stencil_buffer(vector3d const &xlate) {
 	setup_stencil_buffer_write();
@@ -29,7 +31,7 @@ void draw_mirror_to_stencil_buffer(vector3d const &xlate) {
 }
 
 void create_mirror_reflection_if_needed() {
-	if (cur_room_mirror.type != TYPE_MIRROR) return; // not enabled
+	if (!is_mirror(cur_room_mirror)) return; // not enabled
 	bool const interior_room(cur_room_mirror.is_interior()), is_house(cur_room_mirror.is_house()), is_open(cur_room_mirror.is_open());
 	bool const dim(cur_room_mirror.dim ^ is_open), dir(is_open ? 1 : cur_room_mirror.dir); // always opens in +dir
 	int const reflection_pass(is_house ? 3 : (interior_room ? 2 : 1));
@@ -110,8 +112,8 @@ bool building_t::find_mirror_in_room(unsigned room_id, vector3d const &xlate, bo
 	float const camera_z1(camera_bs.z - CAMERA_RADIUS), camera_z2(camera_bs.z + CAMERA_RADIUS);
 
 	for (auto i = interior->room_geom->objs.begin(); i != objs_end; ++i) { // see if that room contains a mirror
-		if (i->room_id != room_id || i->type != TYPE_MIRROR) continue; // wrong room, or not a mirror
-		if (i->z1() > camera_z2   || i->z2() < camera_z1)    continue; // wrong floor
+		if (i->room_id != room_id || !is_mirror(*i))      continue; // wrong room, or not a mirror
+		if (i->z1() > camera_z2   || i->z2() < camera_z1) continue; // wrong floor
 		// Note: we could probably return 0 rather than continuing after this point, but that may change if rooms with multiple mirrors are enabled
 		if (((camera_bs[i->dim] - i->get_center_dim(i->dim)) < 0.0f) ^ i->dir ^ 1) continue; // back facing
 		if (!camera_pdu.cube_visible(*i + xlate)) continue; // VFC

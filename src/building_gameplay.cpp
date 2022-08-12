@@ -121,6 +121,7 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_CHIMNEY   ] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 2, 1000.0,1000.0,"Chimney"); // interior chimney in attic
 	bldg_obj_types[TYPE_DUCT      ] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 0, 0.0,   0.0,   "Duct"); // detail object
 	bldg_obj_types[TYPE_TOY       ] = bldg_obj_type_t(0, 0, 1, 1, 0, 0, 2, 2.0,   0.1,   "toy"); // plastic ring stack
+	bldg_obj_types[TYPE_DRESS_MIR ] = bldg_obj_type_t(0, 0, 1, 1, 0, 0, 1, 100.0, 30.0,  "mirror");
 	// player_coll, ai_coll, rat_coll, pickup, attached, is_model, lg_sm, value, weight, name [capacity]
 	// 3D models
 	bldg_obj_types[TYPE_TOILET    ] = bldg_obj_type_t(1, 1, 1, 1, 1, 1, 0, 120.0, 88.0,  "toilet");
@@ -1345,6 +1346,7 @@ bool building_t::maybe_use_last_pickup_room_object(point const &player_pos) {
 				obj.translate(dest - point(obj.xc(), obj.yc(), obj.z1()));
 				assign_correct_room_to_object(obj); // set new room; required for opening books; room should be valid, but okay if not
 				if (point_in_attic(obj.get_cube_center())) {obj.flags |= RO_FLAG_IN_ATTIC;} else {obj.flags &= ~RO_FLAG_IN_ATTIC;} // set attic flag
+				//obj.flags |= RO_FLAG_RAND_ROT; // maybe set this for some random books to have them misaligned? or does that cause problems with clipping through objects?
 				if (!interior->room_geom->add_room_object(obj, *this)) return 0;
 				if (maybe_squish_spider(obj)) {gen_sound_thread_safe(SOUND_SQUISH, (get_camera_pos() + (obj.get_cube_center() - player_pos)));}
 			}
