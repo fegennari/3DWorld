@@ -1392,7 +1392,6 @@ class snake_draw_t {
 		rotate_verts(skin_mat.itri_verts, plus_z, rot_angle, head_pos, head_verts_start);
 		// draw segments
 		float const zscale = 0.85;
-		float const ndiv_inv(1.0/ndiv);
 		color_wrapper const cw(color);
 		unsigned const body_verts_start(skin_mat.itri_verts.size()), rattle_verts_start(untex_mat.itri_verts.size());
 		unsigned data_pos(body_verts_start);
