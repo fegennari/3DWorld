@@ -1171,11 +1171,12 @@ int building_t::check_for_snake_coll(snake_t const &snake, point const &camera_b
 		}
 		return 1; // outside building
 	}
+	// return value: 0=no coll, 1=dim0 wall, 2=dim1 wall, 3=closed door dim0, 4=closed door dim1, 5=open door, 6=stairs, 7=elevator, 8=exterior wall, 9=room object
 	int const coll_ret(check_line_coll_expand((old_pos + center_dz), query_center_z, radius, hheight));
 
 	if (coll_ret) {
-		if (coll_ret == 1) {coll_dir.x = ((query_pos.x < old_pos.x) ? -1.0 : 1.0);} // dim=0 wall, separates in X
-		if (coll_ret == 2) {coll_dir.y = ((query_pos.y < old_pos.y) ? -1.0 : 1.0);} // dim=1 wall, separates in Y
+		if (coll_ret == 1 || coll_ret == 3) {coll_dir.x = ((query_pos.x < old_pos.x) ? -1.0 : 1.0);} // dim=0 wall/door, separates in X
+		if (coll_ret == 2 || coll_ret == 4) {coll_dir.y = ((query_pos.y < old_pos.y) ? -1.0 : 1.0);} // dim=1 wall/door, separates in Y
 		return 2; // collision with static room object
 	}
 	point query_pos_coll(query_pos); // may be updated below on collision
