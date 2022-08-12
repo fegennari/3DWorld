@@ -1046,6 +1046,15 @@ bool snake_t::check_sphere_int(point const &sc, float sr, bool skip_head) const 
 	}
 	return 0;
 }
+float snake_t::get_curve_factor() const {
+	float curve_factor(0.0);
+
+	for (auto i = segments.begin()+1; i+1 != segments.end(); ++i) {
+		curve_factor += cross_product((*i - *(i-1)), (*(i+1) - *i)).z; // Warning: doesn't handle acute angles
+	}
+	float const seg_len(get_seg_length());
+	return curve_factor / (seg_len*seg_len); // normalize based on segment length
+}
 
 void building_t::update_snakes(point const &camera_bs, unsigned building_ix) {
 	vect_snake_t &snakes(interior->room_geom->snakes);

@@ -159,6 +159,7 @@ struct snake_t : public building_animal_t {
 	bool check_line_int_xy(point const &p1, point const &p2, bool skip_head) const;
 	bool check_sphere_int    (point const &sc, float sr, bool skip_head) const;
 	bool detailed_sphere_coll(point const &sc, float sr) const {return check_sphere_int(sc, sr, 0);} // skip_head=0
+	float get_curve_factor() const;
 };
 
 template<typename T> struct vect_animal_t : public vector<T> {
