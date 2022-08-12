@@ -1032,21 +1032,23 @@ void snake_t::move_segments(float dist) {
 vector2d v2_from_v3_xy(vector3d const &v) {return vector2d(v.x, v.y);}
 
 // Note: ignores radius; seg_dir points toward the head
-bool snake_t::check_line_int_xy(point const &p1, point const &p2, bool skip_head, vector3d &seg_dir) const {
+bool snake_t::check_line_int_xy(point const &p1, point const &p2, bool skip_head, vector3d *seg_dir) const {
 	for (unsigned n = (skip_head ? 2 : 1); n < segments.size(); ++n) {
-		if (line_segs_intersect_2d(v2_from_v3_xy(p1), v2_from_v3_xy(p2), v2_from_v3_xy(segments[n-1]), v2_from_v3_xy(segments[n]))) {
-			seg_dir = (segments[n-1] - segments[n]).get_norm();
-			return 1;
-		}
+		point const &s1(segments[n-1]), &s2(segments[n]);
+		if (!line_segs_intersect_2d(v2_from_v3_xy(p1), v2_from_v3_xy(p2), v2_from_v3_xy(s1), v2_from_v3_xy(s2))) continue;
+		if (seg_dir) {*seg_dir = (s1 - s2).get_norm();}
+		return 1;
 	}
 	return 0;
 }
-bool snake_t::check_sphere_int(point const &sc, float sr, bool skip_head) const {
+bool snake_t::check_sphere_int(point const &sc, float sr, bool skip_head, vector3d *seg_dir) const {
 	float const r_sum(sr + radius), r_sum_sq(r_sum*r_sum);
 
 	for (unsigned n = (skip_head ? 2 : 1); n < segments.size(); ++n) {
-		point const &p1(segments[n-1]);
-		if (sphere_test_comp(p1, sc, (p1 - segments[n]), r_sum_sq)) return 1;
+		point const &s1(segments[n-1]), &s2(segments[n]);
+		if (!sphere_test_comp(s1, sc, (s1 - s2), r_sum_sq)) continue;
+		if (seg_dir) {*seg_dir = (s1 - s2).get_norm();}
+		return 1;
 	}
 	return 0;
 }
@@ -1191,7 +1193,10 @@ int building_t::check_for_snake_coll(snake_t const &snake, point const &camera_b
 	}
 	vector3d seg_dir;
 
-	if (snake.check_line_int_xy(old_pos, (query_pos + snake.dir*radius), 1, seg_dir)) { // check for self intersection; skip_head=1
+	// check for self intersection in a line in front and a sphere for the side; skip_head=1
+	if (snake.check_line_int_xy(old_pos, (query_pos + snake.dir*radius), 1, &seg_dir) ||
+		snake.check_sphere_int(query_pos, radius, 1, &seg_dir))
+	{
 		// set coll_dir to the direction of the segment pointing toward the head - we don't want to go that way and get stuck in a spiral
 		coll_dir = seg_dir;
 		return 4; // collision with ourself

@@ -156,8 +156,8 @@ struct snake_t : public building_animal_t {
 	point       &get_head_pos()       {assert(!segments.empty()); return segments.front();}
 	cube_t get_bcube    () const;
 	void move_segments(float dist);
-	bool check_line_int_xy(point const &p1, point const &p2, bool skip_head, vector3d &seg_dir) const;
-	bool check_sphere_int    (point const &sc, float sr, bool skip_head) const;
+	bool check_line_int_xy(point const &p1, point const &p2, bool skip_head, vector3d *seg_dir=nullptr) const;
+	bool check_sphere_int    (point const &sc, float sr, bool skip_head, vector3d *seg_dir=nullptr) const;
 	bool detailed_sphere_coll(point const &sc, float sr) const {return check_sphere_int(sc, sr, 0);} // skip_head=0
 	float get_curve_factor() const;
 };
