@@ -1342,12 +1342,33 @@ class snake_draw_t {
 	rgeom_mat_t skin_mats[2], untex_mat;
 
 	// Note: similar to the function in Tree.cpp, but pushes back rather than assigning, and step is hard-coded to 1
-	void add_cylin_indices_tris(vector<unsigned> &idata, unsigned ndiv, unsigned ix_start) {
+	static void add_cylin_indices_tris(vector<unsigned> &idata, unsigned ndiv, unsigned ix_start) {
 		for (unsigned S = 0; S < ndiv; ++S) {
 			bool const last_edge(S == ndiv-1);
 			unsigned const ix0(ix_start + S), ixs[4] = {0, ndiv, (last_edge ? 1 : 1+ndiv), (last_edge ? 1-ndiv : 1)};
 			for (unsigned i = 0; i < 6; ++i) {idata.push_back(ix0 + ixs[quad_to_tris_ixs[i]]);}
 		}
+	}
+	static void draw_segment(rgeom_mat_t &skin_mat, point const &p1, point const &p2, float radius1, float radius2,
+		float seg_ix, float tscale, color_wrapper const &cw, unsigned ndiv, unsigned &data_pos)
+	{
+		point const ce[2] = {p1, p2};
+		vector3d v12;
+		vector_point_norm const &vpn(gen_cylinder_data(ce, radius1, radius2, ndiv, v12, NULL, 0.0, 1.0, 2)); // force_dim=2
+		float const ndiv_inv(1.0/ndiv);
+		bool const is_first(seg_ix == 0.0);
+
+		for (unsigned j = !is_first; j < 2; ++j) {
+			float const ty(tscale*(seg_ix + j));
+
+			for (unsigned S = 0; S < ndiv; ++S) {
+				float const tx(2.0f*fabs(S*ndiv_inv - 0.5f));
+				vector3d const n(0.5f*(vpn.n[S] + vpn.n[(S+ndiv-1)%ndiv])); // average face normals to get vert normals, don't need to normalize
+				skin_mat.itri_verts.emplace_back(vpn.p[(S<<1)+j], n, tx, ty, cw);
+			}
+		}
+		add_cylin_indices_tris(skin_mat.indices, ndiv, data_pos); // create index data
+		data_pos += ndiv;
 	}
 	void draw_snake(snake_t const &S, bool shadow_only, bool reflection_pass) {
 		bool const low_detail(shadow_only || reflection_pass);
@@ -1370,7 +1391,8 @@ class snake_draw_t {
 		float const ndiv_inv(1.0/ndiv);
 		color_wrapper const cw(color);
 		unsigned const body_verts_start(skin_mat.itri_verts.size()), rattle_verts_start(untex_mat.itri_verts.size());
-		unsigned data_pos(body_verts_start), quad_id(0);
+		unsigned data_pos(body_verts_start);
+		vector3d prev_v12;
 
 		for (auto s = S.segments.begin(); s != S.segments.end(); ++s) {
 			unsigned const seg_ix(s - S.segments.begin());
@@ -1381,24 +1403,8 @@ class snake_draw_t {
 			bool const add_rattle(S.has_rattle && s+1 == S.segments.end() && !shadow_only);
 			point const ce[2] = {(seg_start + vector3d(0,0,radius1)), (seg_end + vector3d(0,0,radius2))};
 
-			if (!add_rattle) { // skip tail if adding a rattle
-				vector3d v12;
-				vector_point_norm const &vpn(gen_cylinder_data(ce, radius1, radius2, ndiv, v12, NULL, 0.0, 1.0, 2)); // force_dim=2
-
-				for (unsigned j = !is_first; j < 2; ++j) {
-					float const ty(tscale*(seg_ix + j));
-
-					for (unsigned S = 0; S < ndiv; ++S) {
-						float const tx(2.0f*fabs(S*ndiv_inv - 0.5f));
-						vector3d const n(0.5f*(vpn.n[S] + vpn.n[(S+ndiv-1)%ndiv])); // average face normals to get vert normals, don't need to normalize
-						skin_mat.itri_verts.emplace_back(vpn.p[(S<<1)+j], n, tx, ty, cw);
-					}
-				}
-				add_cylin_indices_tris(skin_mat.indices, ndiv, (data_pos + quad_id)); // create index data
-				quad_id += ndiv;
-			}
 			if (add_rattle) { // add a rattle on the last tail segment if not the shadow pass
-				unsigned const num_segs(3 + (S.id % 6)); // 3-8
+				unsigned const num_segs(5 + (S.id % 4)); // 5-8
 				vector3d const seg_delta(ce[1] - ce[0]);
 				colorRGBA const rattle_color(1.0, 0.8, 0.6); // yellow-ish
 				vector3d const step(seg_delta/num_segs);
@@ -1410,6 +1416,21 @@ class snake_draw_t {
 					rattle_pos.z = head_pos.z + seg_radius; // place exactly on the floor
 					untex_mat.add_sphere_to_verts(rattle_pos, seg_radius, rattle_color, 1); // low_detail=1
 				}
+			}
+			else { // skip tail if adding a rattle
+				vector3d const delta(ce[1] - ce[0]), v12(delta.get_norm());
+
+				if (!is_first && !is_tail && dot_product(v12, prev_v12) < 0.75) { // sharp bend, draw as two cylinders
+					vector3d const v12_avg(0.5f*(v12 + prev_v12)); // use the average vector for a more gradual transition
+					float const r_mid(0.5*(radius1 + radius2));
+					point const seg_center(ce[0] + v12_avg*(0.5*delta.mag()));
+					draw_segment(skin_mat, ce[0], seg_center, radius1, r_mid, seg_ix+0.0, tscale, cw, ndiv, data_pos);
+					draw_segment(skin_mat, seg_center, ce[1], r_mid, radius2, seg_ix+0.5, tscale, cw, ndiv, data_pos);
+				}
+				else {
+					draw_segment(skin_mat, ce[0], ce[1], radius1, radius2, seg_ix, tscale, cw, ndiv, data_pos);
+				}
+				prev_v12 = v12;
 			}
 		} // for s
 		if (zscale != 1.0) { // flatten a bit in Z
