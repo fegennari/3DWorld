@@ -1373,8 +1373,8 @@ class snake_draw_t {
 		add_cylin_indices_tris(skin_mat.indices, ndiv, data_pos); // create index data
 		data_pos += ndiv;
 	}
-	void draw_snake(snake_t const &S, bool shadow_only, bool reflection_pass) {
-		bool const low_detail(shadow_only || reflection_pass);
+	void draw_snake(snake_t const &S, bool shadow_only, bool reflection_pass, bool is_distant) {
+		bool const low_detail(shadow_only || reflection_pass || is_distant);
 		unsigned const ndiv(get_rgeom_sphere_ndiv(low_detail)/2);
 		float const tscale = 1.0; // must tune this once our snake is textured
 		colorRGBA color(S.color);
@@ -1440,7 +1440,7 @@ class snake_draw_t {
 			for (auto i = skin_mat .itri_verts.begin()+body_verts_start  ; i != skin_mat.itri_verts .end(); ++i) {i->v.z =      zscale*(i->v.z - head_pos.z) + head_pos.z;}
 			for (auto i = untex_mat.itri_verts.begin()+rattle_verts_start; i != untex_mat.itri_verts.end(); ++i) {i->v.z = 0.7f*zscale*(i->v.z - head_pos.z) + head_pos.z;}
 		}
-		if (shadow_only || reflection_pass) return; // no eyes or tongue
+		if (low_detail) return; // no eyes or tongue in low detail mode
 		// add eyes to head
 		vector3d const side_dir(cross_product(dir, plus_z));
 		float const eye_extend_fwd(0.9*head_hlen/SQRT2), eye_extend_side(0.86*head_hwidth/SQRT2);
@@ -1476,6 +1476,7 @@ public:
 		vector3d const &xlate, bool shadow_only, bool reflection_pass, bool check_clip_cube)
 	{
 		if (snakes.empty()) return; // nothing to draw
+		//highres_timer_t timer("Draw Snakes");
 		point const camera_bs(camera_pdu.pos - xlate);
 		bool const check_occlusion(display_mode & 0x08);
 
@@ -1484,7 +1485,8 @@ public:
 			if (check_clip_cube && !smap_light_clip_cube.intersects(bcube + xlate)) continue; // shadow map clip cube test: fast and high rejection ratio, do this first
 			if (!camera_pdu.cube_visible(bcube + xlate)) continue; // VFC
 			if (check_occlusion && building.check_obj_occluded(bcube, camera_bs, oc, reflection_pass)) continue;
-			draw_snake(S, shadow_only, reflection_pass);
+			bool const is_distant(!dist_less_than(camera_bs, S.pos, 6.0*S.length));
+			draw_snake(S, shadow_only, reflection_pass, is_distant);
 		} // for S
 		tid_nm_pair_dstate_t state(s);
 		s.add_uniform_float("bump_map_mag", 0.0);
