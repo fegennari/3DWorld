@@ -366,7 +366,7 @@ class player_inventory_t { // manages player inventory, health, and other stats
 	vector<carried_item_t> carried; // interactive items the player is currently carrying
 	float cur_value, cur_weight, tot_value, tot_weight, damage_done, best_value, player_health, drunkenness, bladder, bladder_time, prev_player_zval;
 	unsigned num_doors_unlocked;
-	bool prev_in_building, has_key, is_poisoned;
+	bool prev_in_building, has_key, is_poisoned, poison_from_spider;
 
 	void register_player_death(unsigned sound_id, string const &why) {
 		point const xlate(get_camera_coord_space_xlate());
@@ -384,7 +384,7 @@ public:
 		drunkenness   = bladder = bladder_time = prev_player_zval = 0.0;
 		player_health = 1.0; // full health
 		num_doors_unlocked = 0; // not saved on death, but maybe should be?
-		prev_in_building = has_key = is_poisoned = 0;
+		prev_in_building = has_key = is_poisoned = poison_from_spider = 0;
 		phone_manager.disable();
 		carried.clear();
 		tape_manager.clear();
@@ -393,12 +393,15 @@ public:
 		tot_value = best_value = 0.0;
 		clear();
 	}
-	void take_damage(float amt, bool poisoned=0) {
+	void take_damage(float amt, int poison_type=0) { // poison_type: 0=none, 1=spider, 2=snake
 		player_health -= amt*(1.0f - 0.75f*min(drunkenness, 1.0f)); // up to 75% damage reduction when drunk
 
-		if (poisoned && !is_poisoned) { // first poisoning (by spider)
-			print_text_onscreen("You have been poisoned", DK_RED, 1.0, 2.5*TICKS_PER_SECOND, 0);
-			is_poisoned = 1;
+		if (poison_type > 0) {
+			if (!is_poisoned) { // first poisoning (by spider)
+				print_text_onscreen("You have been poisoned", DK_RED, 1.0, 2.5*TICKS_PER_SECOND, 0);
+				is_poisoned = 1;
+			}
+			poison_from_spider = (poison_type == 1);
 		}
 	}
 	void record_damage_done(float amt) {damage_done += amt;}
@@ -701,7 +704,8 @@ public:
 			player_health -= 0.0004*fticks;
 
 			if (player_is_dead()) {
-				register_player_death(SOUND_DEATH, " of spider poison");
+				string const poison_type(poison_from_spider ? " of spider venom" : " of snake venom");
+				register_player_death(SOUND_DEATH, poison_type);
 				return;
 			}
 		}
@@ -1846,7 +1850,7 @@ bool player_has_room_key() {return player_inventory.player_has_key();}
 // returns player_dead
 // should we include falling damage? currently the player can't fall down elevator shafts or stairwells,
 // and falling off building roofs doesn't count because gameplay isn't enabled because the player isn't in the building
-bool player_take_damage(float damage_scale, bool poisoned, bool *has_key) {
+bool player_take_damage(float damage_scale, int  poison_type, bool *has_key) {
 	static double last_scream_time(0.0), last_hurt_time(0.0);
 
 	if (damage_scale < 0.01) { // hurt for rats, scream for zombies and spiders
@@ -1862,7 +1866,7 @@ bool player_take_damage(float damage_scale, bool poisoned, bool *has_key) {
 		}
 	}
 	add_camera_filter(colorRGBA(RED, (0.13 + 3.0*damage_scale)), 1, -1, CAM_FILT_DAMAGE); // 1 tick of red damage
-	player_inventory.take_damage(damage_scale*fticks, poisoned); // take damage over time
+	player_inventory.take_damage(damage_scale*fticks, poison_type); // take damage over time
 
 	if (player_inventory.player_is_dead()) {
 		if (has_key && player_has_room_key()) {*has_key = 1;}

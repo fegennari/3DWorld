@@ -23,7 +23,7 @@ extern object_model_loader_t building_obj_model_loader;
 float get_closest_building_sound(point const &at_pos, point &sound_pos, float floor_spacing);
 sphere_t get_cur_frame_loudest_sound();
 bool in_building_gameplay_mode();
-bool player_take_damage(float damage_scale, bool poisoned=0, bool *has_key=nullptr);
+bool player_take_damage(float damage_scale, int poison_type=0, bool *has_key=nullptr);
 void apply_building_gravity(float &vz, float dt_ticks);
 void apply_fc_cube_max_merge_xy(vect_cube_t &cubes);
 
@@ -856,14 +856,16 @@ bool building_t::update_spider_pos_orient(spider_t &spider, point const &camera_
 	return obj_avoid.had_coll;
 }
 
-void building_t::maybe_bite_and_poison_player(point const &pos, point const &camera_bs, vector3d const &dir, float coll_radius, float damage, bool poison, rand_gen_t &rgen) const {
+void building_t::maybe_bite_and_poison_player(point const &pos, point const &camera_bs, vector3d const &dir,
+	float coll_radius, float damage, int poison_type, rand_gen_t &rgen) const
+{
 	if (!in_building_gameplay_mode()) return;
 	if (dot_product_ptv(dir, camera_bs, pos) < 0.0) return; // facing the wrong direction
 	if (get_floor_for_zval(camera_bs.z) != get_floor_for_zval(pos.z)) return; // wrong floor
 
 	if (dist_xy_less_than(pos, camera_bs, (get_scaled_player_radius() + coll_radius))) { // do damage when nearly colliding with the player
 		bool const played_sound(play_attack_sound(local_to_camera_space(pos), 0.5, 1.5, rgen)); // quieter and higher pitch than rats
-		if (played_sound) {player_take_damage(damage, poison);} // bite and maybe poisoned every so often
+		if (played_sound) {player_take_damage(damage, poison_type);} // bite and maybe poisoned every so often
 	}
 }
 
@@ -1156,7 +1158,7 @@ void building_t::update_snake(snake_t &snake, point const &camera_bs, float time
 		// ignore coll and proceed (if coll with dynamic object or self)?
 		// allow hard turn?
 	}
-	maybe_bite_and_poison_player((head_pos + center_dz), camera_bs, snake.dir, 2.0*snake.radius, 0.5, snake.has_rattle, rgen); // 0.5 damage, poison if has a rattle
+	maybe_bite_and_poison_player((head_pos + center_dz), camera_bs, snake.dir, 2.0*snake.radius, 0.5, (snake.has_rattle ? 2 : 1), rgen); // 0.5 damage, poison if has a rattle
 }
 
 void get_xy_dir_to_closest_cube_edge(point const &pos, cube_t const &c, vector3d &dir) {
