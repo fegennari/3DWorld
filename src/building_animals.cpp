@@ -976,6 +976,7 @@ snake_t::snake_t(point const &pos_, float radius_, vector3d const &dir_, unsigne
 	rgen.set_state(id+1, 3*id+7);
 	rgen.rand_mix();
 	length  = 2.0*radius; // input radius is half length
+	xy_radius = radius; // will be updated later
 	radius *= 0.04;
 	color   = WHITE*(1.0 - rgen.rand_float()*rgen.rand_float()); // random color shade, weighted toward lighter
 	has_rattle = rgen.rand_bool();
@@ -985,10 +986,10 @@ snake_t::snake_t(point const &pos_, float radius_, vector3d const &dir_, unsigne
 	segments.resize(NUM_SEGS, pos);
 	for (unsigned n = 0; n < NUM_SEGS; ++n) {segments[n] += seg_step*(n - NUM_SEGS/2.0 + 0.5);} // set segment centers
 }
-float snake_t::get_xy_radius() const {
+void snake_t::calc_xy_radius() {
 	float xy_radius_sq(0.0);
 	for (point const &p : segments) {max_eq(xy_radius_sq, p2p_dist_xy_sq(pos, p));}
-	return (sqrt(xy_radius_sq) + radius); // don't forget to add the body radius
+	xy_radius = sqrt(xy_radius_sq) + radius; // don't forget to add the body radius
 }
 cube_t snake_t::get_bcube() const {
 	cube_t bcube;
@@ -1028,6 +1029,7 @@ void snake_t::move_segments(float dist) {
 	cube_t const bcube(get_bcube());
 	pos.x = bcube.xc();
 	pos.y = bcube.yc();
+	calc_xy_radius();
 }
 vector2d v2_from_v3_xy(vector3d const &v) {return vector2d(v.x, v.y);}
 
@@ -1042,10 +1044,11 @@ bool snake_t::check_line_int_xy(point const &p1, point const &p2, bool skip_head
 	return 0;
 }
 bool snake_t::check_sphere_int(point const &sc, float sr, bool skip_head, vector3d *seg_dir, point *closest_pos) const {
-	float const r_sum(sr + radius), r_sum_sq(r_sum*r_sum);
+	float const r_sum(sr + radius), r_sum_sq(r_sum*r_sum), r_ext(r_sum + get_seg_length()), r_ext_sq(r_ext*r_ext);
 
 	for (unsigned n = (skip_head ? 2 : 1); n < segments.size(); ++n) {
 		point const &s1(segments[n-1]), &s2(segments[n]);
+		if (p2p_dist_sq(s1, sc) > r_ext_sq)                 continue; // optimization
 		if (!sphere_test_comp(s1, sc, (s1 - s2), r_sum_sq)) continue;
 		if (seg_dir    ) {*seg_dir = (s1 - s2).get_norm();}
 		if (closest_pos) {*closest_pos = get_closest_pt_on_line(sc, s1, s2);}

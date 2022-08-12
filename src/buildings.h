@@ -138,7 +138,7 @@ struct spider_t : public building_animal_t {
 
 struct snake_t : public building_animal_t {
 	// for snakes, pos is (xc, yc, z1), radius is the max body radius, and dir is the head direction and direction of movement
-	float length=0.0;
+	float length=0.0, xy_radius=0.0;
 	unsigned stuck_counter=0;
 	bool has_rattle=0;
 	vector3d last_valid_dir;
@@ -148,7 +148,8 @@ struct snake_t : public building_animal_t {
 	snake_t(float xval) : building_animal_t(xval) {}
 	snake_t(point const &pos_, float radius_, vector3d const &dir_, unsigned id_);
 	static bool allow_in_attic() {return 0;}
-	float get_xy_radius () const;
+	void  calc_xy_radius();
+	float get_xy_radius () const {return xy_radius;} // must be fast
 	float get_height    () const {return radius;}
 	float get_seg_length() const {return length/segments.size();}
 	float get_seg_radius(float seg_ix) const;
