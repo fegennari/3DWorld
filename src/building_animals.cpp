@@ -1095,6 +1095,7 @@ void building_t::update_snake(snake_t &snake, point const &camera_bs, float time
 				vector3d cand_dir((dir + 0.2*rgen.rand_uniform(-1.0, 1.0)*side_dir).get_norm()); // minor rotation
 				if (!check_for_snake_coll(snake, camera_bs, timestep, head_pos, (head_pos + cand_dir*(dist + 3.0*lookahead_amt)), coll_dir)) {dir = cand_dir;}
 			}
+			if (coll_type == 0) {snake.stuck_counter = 0;} // only reset stuck_counter if there was no coll
 			dir_valid = 1;
 			break; // done
 		}
@@ -1124,7 +1125,6 @@ void building_t::update_snake(snake_t &snake, point const &camera_bs, float time
 		float const prev_pos_x(snake.pos.x), move_dist(snake.move(timestep)); // snake moves here
 		snake.move_segments(move_dist);
 		max_eq(max_xmove, fabs(prev_pos_x - snake.pos.x));
-		snake.stuck_counter = 0;
 
 		if (move_dist > 0.0) { // move head in a winding motion if moving
 			vector3d const side_dir(cross_product(snake.dir, plus_z));
