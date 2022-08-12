@@ -1031,9 +1031,13 @@ void snake_t::move_segments(float dist) {
 }
 vector2d v2_from_v3_xy(vector3d const &v) {return vector2d(v.x, v.y);}
 
-bool snake_t::check_line_int_xy(point const &p1, point const &p2, bool skip_head) const { // Note: ignores radius
+// Note: ignores radius; seg_dir points toward the head
+bool snake_t::check_line_int_xy(point const &p1, point const &p2, bool skip_head, vector3d &seg_dir) const {
 	for (unsigned n = (skip_head ? 2 : 1); n < segments.size(); ++n) {
-		if (line_segs_intersect_2d(v2_from_v3_xy(p1), v2_from_v3_xy(p2), v2_from_v3_xy(segments[n-1]), v2_from_v3_xy(segments[n]))) return 1;
+		if (line_segs_intersect_2d(v2_from_v3_xy(p1), v2_from_v3_xy(p2), v2_from_v3_xy(segments[n-1]), v2_from_v3_xy(segments[n]))) {
+			seg_dir = (segments[n-1] - segments[n]).get_norm();
+			return 1;
+		}
 	}
 	return 0;
 }
@@ -1185,8 +1189,11 @@ int building_t::check_for_snake_coll(snake_t const &snake, point const &camera_b
 		coll_dir = (query_pos - query_pos_coll).get_norm();
 		return 3; // collision with dynamic object
 	}
-	if (snake.check_line_int_xy(old_pos, (query_pos + snake.dir*radius), 1)) { // check for self intersection; skip_head=1
-		// set coll_dir?
+	vector3d seg_dir;
+
+	if (snake.check_line_int_xy(old_pos, (query_pos + snake.dir*radius), 1, seg_dir)) { // check for self intersection; skip_head=1
+		// set coll_dir to the direction of the segment pointing toward the head - we don't want to go that way and get stuck in a spiral
+		coll_dir = seg_dir;
 		return 4; // collision with ourself
 	}
 	return 0;
