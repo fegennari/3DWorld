@@ -67,80 +67,74 @@ int shader_t::get_uniform_loc(char const *const name) const {
 	return loc;
 }
 
-
+// this block is all static member functions
 bool shader_t::set_uniform_float_array(int loc, float const *const val, unsigned num) {
 	if (loc >= 0) {glUniform1fv(loc, num, val); return 1;} else {return 0;}
 }
-
 bool shader_t::set_uniform_float(int loc, float val) {
 	if (loc >= 0) {glUniform1f(loc, val); return 1;} else {return 0;}
 }
-
 bool shader_t::set_uniform_int(int loc, int val) {
 	if (loc >= 0) {glUniform1i(loc, val); return 1;} else {return 0;}
 }
-
+bool shader_t::set_uniform_uint(int loc, unsigned val) {
+	if (loc >= 0) {glUniform1ui(loc, val); return 1;} else {return 0;}
+}
+bool shader_t::set_uniform_handle(int loc, GLuint64 val) {
+	if (loc >= 0) {glUniformHandleui64ARB(loc, val); return 1;} else {return 0;}
+}
 bool shader_t::set_uniform_vector2d(int loc, vector2d const &val) {
 	if (loc >= 0) {glUniform2fv(loc, 1, &val.x); return 1;} else {return 0;}
 }
-
 bool shader_t::set_uniform_vector3d(int loc, vector3d const &val) { // same as colorRGB
 	if (loc >= 0) {glUniform3fv(loc, 1, &val.x); return 1;} else {return 0;}
 }
-
 bool shader_t::set_uniform_vector4d(int loc, vector4d const &val) { // same as colorRGBA
 	if (loc >= 0) {glUniform4fv(loc, 1, &val.x); return 1;} else {return 0;}
 }
-
 bool shader_t::set_uniform_color(int loc, colorRGBA const &val) { // same as vector3d
 	if (loc >= 0) {glUniform4fv(loc, 1, &val.R); return 1;} else {return 0;}
 }
-
 bool shader_t::set_uniform_color(int loc, colorRGB  const &val) { // same as vector3d
 	if (loc >= 0) {glUniform3fv(loc, 1, &val.R); return 1;} else {return 0;}
 }
-
 bool shader_t::set_uniform_matrix_3x3(int loc, float const *const m, bool transpose) {
 	if (loc >= 0) {glUniformMatrix3fv(loc, 1, transpose, m); return 1;} else {return 0;}
 }
-
 bool shader_t::set_uniform_matrix_4x4(int loc, float const *const m, bool transpose) {
 	if (loc >= 0) {glUniformMatrix4fv(loc, 1, transpose, m); return 1;} else {return 0;}
 }
 
-
 bool shader_t::add_uniform_float_array(char const *const name, float const *const val, unsigned num) const {
 	return set_uniform_float_array(get_uniform_loc(name), val, num);
 }
-
 bool shader_t::add_uniform_float(char const *const name, float val) const {
 	return set_uniform_float(get_uniform_loc(name), val);
 }
-
 bool shader_t::add_uniform_int(char const *const name, int val) const {
 	return set_uniform_int(get_uniform_loc(name), val);
 }
-
+bool shader_t::add_uniform_uint(char const *const name, unsigned val) const {
+	return set_uniform_uint(get_uniform_loc(name), val);
+}
+bool shader_t::add_uniform_handle(char const *const name, GLuint64 val) const {
+	return set_uniform_handle(get_uniform_loc(name), val);
+}
 bool shader_t::add_uniform_vector2d(char const *const name, vector2d const &val) const {
 	return set_uniform_vector2d(get_uniform_loc(name), val);
 }
-
 bool shader_t::add_uniform_vector3d(char const *const name, vector3d const &val) const {
 	return set_uniform_vector3d(get_uniform_loc(name), val);
 }
-
 bool shader_t::add_uniform_vector4d(char const *const name, vector4d const &val) const {
 	return set_uniform_vector4d(get_uniform_loc(name), val);
 }
-
 bool shader_t::add_uniform_color(char const *const name, colorRGBA const &val) const {
 	return set_uniform_color(get_uniform_loc(name), val);
 }
-
 bool shader_t::add_uniform_color(char const *const name, colorRGB  const &val) const {
 	return set_uniform_color(get_uniform_loc(name), val);
 }
-
 bool shader_t::add_uniform_matrix_4x4(char const *const name, float const *m, bool transpose) const {
 	return set_uniform_matrix_4x4(get_uniform_loc(name), m, transpose);
 }

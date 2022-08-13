@@ -477,17 +477,21 @@ void texture_t::bind_gl() const {
 	assert(tid > 0);
 	bind_2d_texture(tid);
 }
+GLuint64 texture_t::get_bindless_handle(bool make_resident) const {
+	assert(tid > 0);
+	GLuint64 const handle(glGetTextureHandleARB(tid));
+	if (make_resident) {glMakeTextureHandleResidentARB(handle);}
+	return handle;
+}
+void texture_t::gl_delete() {
+	free_texture(tid);
+}
 
 void texture_t::free_client_mem() {
-
 	if (orig_data    != data) {delete [] orig_data;}
 	if (colored_data != data) {delete [] colored_data;}
 	delete [] data;
 	data = orig_data = colored_data = NULL;
-}
-
-void texture_t::gl_delete() {
-	free_texture(tid);
 }
 
 bool texture_t::is_texture_compressed() const {

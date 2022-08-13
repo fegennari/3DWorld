@@ -135,6 +135,8 @@ public:
 	static bool set_uniform_float_array(int loc, float const *const val, unsigned num);
 	static bool set_uniform_float      (int loc, float val);
 	static bool set_uniform_int        (int loc, int val);
+	static bool set_uniform_uint       (int loc, unsigned val);
+	static bool set_uniform_handle     (int loc, GLuint64 val);
 	static bool set_uniform_vector2d   (int loc, vector2d const &val);
 	static bool set_uniform_vector3d   (int loc, vector3d const &val);
 	static bool set_uniform_vector4d   (int loc, vector4d const &val);
@@ -146,6 +148,8 @@ public:
 	bool add_uniform_float_array (char const *const name, float const *const val, unsigned num) const;
 	bool add_uniform_float       (char const *const name, float val) const;
 	bool add_uniform_int         (char const *const name, int val) const;
+	bool add_uniform_uint        (char const *const name, unsigned val) const;
+	bool add_uniform_handle      (char const *const name, GLuint64 val) const;
 	bool add_uniform_vector2d    (char const *const name, vector2d  const &val) const;
 	bool add_uniform_vector3d    (char const *const name, vector3d  const &val) const;
 	bool add_uniform_vector4d    (char const *const name, vector4d  const &val) const;
