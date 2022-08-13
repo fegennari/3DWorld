@@ -3778,13 +3778,13 @@ void room_t::assign_all_to(room_type rt, bool locked) {
 }
 void room_t::assign_to(room_type rt, unsigned floor, bool locked) {
 	min_eq(floor, NUM_RTYPE_SLOTS-1U); // room types are only tracked up to the 4th floor, and every floor above that has the same type as the 4th floor; good enough for houses at least
-	if (rtype[floor] == RTYPE_BATH) return; // assign unless already set to a bathroom, since we need that for has_bathroom()
+	if (rtype[floor] == RTYPE_BATH) return; // assign unless already set to a bathroom, since we need that for has_room_of_type(RTYPE_BATH)
 	rtype[floor] = rt;
 	if (locked) {rtype_locked |= (1 << floor);} // lock this floor
 }
-bool room_t::has_bathroom() const {
+bool room_t::has_room_of_type(room_type type) const {
 	for (unsigned n = 0; n < NUM_RTYPE_SLOTS; ++n) {
-		if (rtype[n] == RTYPE_BATH) return 1;
+		if (rtype[n] == type) return 1;
 	}
 	return 0;
 }
