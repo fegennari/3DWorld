@@ -619,7 +619,7 @@ bool building_t::add_bedroom_objs(rand_gen_t rgen, room_t const &room, vect_cube
 	unsigned const dresser_obj_id(objs.size());
 	
 	if (place_obj_along_wall(TYPE_DRESSER, room, ds_height, ds_sz_scale, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 1.0)) {
-		room_object_t const &dresser(objs[dresser_obj_id]);
+		room_object_t &dresser(objs[dresser_obj_id]);
 
 		// maybe place a mirror on the dresser; skip if against an exterior wall to avoid blocking a window
 		if (classify_room_wall(room, zval, dresser.dim, !dresser.dir, 0) != ROOM_WALL_EXT) {
@@ -628,9 +628,9 @@ bool building_t::add_bedroom_objs(rand_gen_t rgen, room_t const &room, vect_cube
 			set_cube_zvals(mirror, dresser.z2(), (dresser.z2() + 1.4*dresser.get_height()));
 			mirror.d[mirror.dim][mirror.dir] -= (mirror.dir ? 1.0 : -1.0)*0.9*dresser.get_length(); // push it toward the back
 			mirror.expand_in_dim(!mirror.dim, -0.02*mirror.get_width()); // shrink slightly
-			mirror.flags |= RO_FLAG_NOCOLL;
+			mirror .flags |= RO_FLAG_NOCOLL;
+			dresser.flags |= RO_FLAG_ADJ_TOP; // flag the dresser as having an item on it so that we don't add something else that blocks or intersects the mirror
 			objs.push_back(mirror);
-			// TODO: what about items placed on the dresser that block the mirror?
 			// FIXME: enable reflections in bedrooms
 		}
 	}
