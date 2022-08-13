@@ -670,6 +670,7 @@ bool building_t::add_bedroom_objs(rand_gen_t rgen, room_t const &room, vect_cube
 
 		for (auto i = objs.begin()+objs_start; i != objs.end(); ++i) { // choose the dresser or nightstand closest to be bed
 			if (i->type != TYPE_DRESSER && i->type != TYPE_NIGHTSTAND) continue; // not a dresser or nightstand
+			if (min(i->dx(), i->dy()) < width) continue; // too small to place a lamp on
 			float const dist_sq(p2p_dist_xy_sq(i->get_cube_center(), pillow_center));
 			if (dmin_sq == 0.0 || dist_sq < dmin_sq) {obj_id = (i - objs.begin()); dmin_sq = dist_sq;}
 		}
@@ -1907,6 +1908,7 @@ bool building_t::place_plate_on_obj(rand_gen_t &rgen, room_object_t const &place
 bool building_t::place_cup_on_obj(rand_gen_t &rgen, room_object_t const &place_on, unsigned room_id, float tot_light_amt, cube_t const &avoid) {
 	if (!building_obj_model_loader.is_model_valid(OBJ_MODEL_CUP)) return 0;
 	float const height(0.06*get_window_vspace()), radius(0.5f*height*get_radius_for_square_model(OBJ_MODEL_CUP)); // almost square
+	if (min(place_on.dx(), place_on.dy()) < 2.5*radius) return 0; // surface is too small to place this cup
 	cube_t const cup(place_cylin_object(rgen, place_on, radius, height, 1.2*radius));
 	if (!avoid.is_all_zeros() && cup.intersects(avoid)) return 0; // only make one attempt
 	// random dim/dir, plus more randomness on top
@@ -1916,6 +1918,7 @@ bool building_t::place_cup_on_obj(rand_gen_t &rgen, room_object_t const &place_o
 
 bool building_t::place_toy_on_obj(rand_gen_t &rgen, room_object_t const &place_on, unsigned room_id, float tot_light_amt, cube_t const &avoid) {
 	float const height(0.11*get_window_vspace()), radius(0.5f*height*0.67f);
+	if (min(place_on.dx(), place_on.dy()) < 2.5*radius) return 0; // surface is too small to place this toy
 	cube_t const toy(place_cylin_object(rgen, place_on, radius, height, 1.1*radius));
 	if (!avoid.is_all_zeros() && toy.intersects(avoid)) return 0; // only make one attempt
 	interior->room_geom->objs.emplace_back(toy, TYPE_TOY, room_id, rgen.rand_bool(), rgen.rand_bool(), RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CYLIN);
