@@ -616,9 +616,23 @@ bool building_t::add_bedroom_objs(rand_gen_t rgen, room_t const &room, vect_cube
 	// dresser
 	float const ds_height(rgen.rand_uniform(0.26, 0.32)*window_vspacing), ds_depth(rgen.rand_uniform(0.20, 0.25)*window_vspacing), ds_width(rgen.rand_uniform(0.6, 0.9)*window_vspacing);
 	vector3d const ds_sz_scale(ds_depth/ds_height, ds_width/ds_height, 1.0);
+	unsigned const dresser_obj_id(objs.size());
 	
 	if (place_obj_along_wall(TYPE_DRESSER, room, ds_height, ds_sz_scale, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 1.0)) {
-		// TODO: sometimes place a mirror on the dresser
+		room_object_t const &dresser(objs[dresser_obj_id]);
+
+		// maybe place a mirror on the dresser; skip if against an exterior wall to avoid blocking a window
+		if (classify_room_wall(room, zval, dresser.dim, !dresser.dir, 0) != ROOM_WALL_EXT) {
+			room_object_t mirror(dresser);
+			mirror.type = TYPE_DRESS_MIR; // TODO: fix assert that fails when this isn't set
+			set_cube_zvals(mirror, dresser.z2(), (dresser.z2() + 1.4*dresser.get_height()));
+			mirror.d[mirror.dim][mirror.dir] -= (mirror.dir ? 1.0 : -1.0)*0.9*dresser.get_length(); // push it toward the back
+			mirror.expand_in_dim(!mirror.dim, -0.02*mirror.get_width()); // shrink slightly
+			mirror.flags |= RO_FLAG_NOCOLL;
+			objs.push_back(mirror);
+			// TODO: what about items placed on the dresser that block the mirror?
+			// FIXME: enable reflections in bedrooms
+		}
 	}
 	// nightstand
 	unsigned const pref_orient(2*bed.dim + (!bed.dir)); // prefer the same orient as the bed so that it's placed on the same wall next to the bed

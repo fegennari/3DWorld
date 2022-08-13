@@ -314,8 +314,34 @@ void building_room_geom_t::add_dresser_drawers(room_object_t const &c, float tsc
 	add_nested_objs_to_verts(objects); // add any objects that were found in open drawers; must be small static objects
 }
 
+tid_nm_pair_t get_mirror_tex() {
+	tid_nm_pair_t tp(REFLECTION_TEXTURE_ID, 0.0);
+	if (ENABLE_MIRROR_REFLECTIONS) {tp.emissive = 1.0;}
+	return tp;
+}
 void building_room_geom_t::add_dresser_mirror(room_object_t const &c, float tscale) {
-	// TODO
+	float const frame_thick(0.04*min(c.get_width(), c.get_height()));
+	// draw the mirror
+	cube_t mirror(c);
+	mirror.d[c.dim][c.dir] -= (c.dir ? 1.0 : -1.0)*0.6*c.get_length();
+	mirror.expand_in_dim(!c.dim, -frame_thick);
+	mirror.expand_in_dim(2,      -frame_thick); // z
+	get_material(get_mirror_tex(), 1).add_cube_to_verts(mirror, c.color, zero_vector, get_face_mask(c.dim, c.dir), !c.dim); // draw only the front face
+	// what about the back of the mirror?
+	
+	// draw the wood frame
+	rgeom_mat_t &frame_mat(get_wood_material(tscale));
+	colorRGBA const frame_color(apply_wood_light_color(c));
+	unsigned const skip_back_face(~get_face_mask(c.dim, !c.dir));
+	point const llc(c.get_llc());
+
+	for (unsigned d = 0; d < 2; ++d) { // {bottom, top} and {left, right}
+		cube_t tb(c), lr(c);
+		tb.d[     2][!d] = mirror.d[     2][d];
+		lr.d[!c.dim][!d] = mirror.d[!c.dim][d];
+		frame_mat.add_cube_to_verts(tb, frame_color, llc, (skip_back_face | (d ? 0 : EF_Z1))); // top/bot
+		frame_mat.add_cube_to_verts(lr, frame_color, llc, (skip_back_face | EF_Z12)); // left/right
+	}
 }
 
 tid_nm_pair_t get_scaled_wall_tex(tid_nm_pair_t const &wall_tex) {
@@ -824,9 +850,9 @@ cube_t get_mirror_surface(room_object_t const &c) {
 	return mirror;
 }
 void building_room_geom_t::add_mirror(room_object_t const &c) {
-	tid_nm_pair_t tp(REFLECTION_TEXTURE_ID, 0.0);
-	if (ENABLE_MIRROR_REFLECTIONS) {tp.emissive = 1.0;}
+	bool const shadowed(c.is_house()); // medicine cabinets in houses cast shadows
 	colorRGBA const side_color(apply_light_color(c));
+	rgeom_mat_t &mirror_mat(get_material(get_mirror_tex(), shadowed));
 
 	if (c.is_open()) { // open medicine cabinet
 		cube_t const mirror(get_mirror_surface(c));
@@ -835,7 +861,7 @@ void building_room_geom_t::add_mirror(room_object_t const &c) {
 		inside.expand_by(-wall_thickness); // shrink sides by wall thickness
 		outside.d[c.dim][c.dir] = inside.d[c.dim][c.dir]; // shift front side in slightly
 		unsigned const mirror_face_mask(get_face_mask(!c.dim, 1)); // always +dir
-		get_material(tp, 0).add_cube_to_verts(mirror, c.color, zero_vector, mirror_face_mask, c.dim);
+		mirror_mat.add_cube_to_verts(mirror, c.color, zero_vector, mirror_face_mask, c.dim);
 		vect_cube_t &cubes(get_temp_cubes());
 		subtract_cube_from_cube(outside, inside, cubes); // should always be 3 cubes (sides + back) since this subtract is XY only
 		cubes.push_back(inside);
@@ -844,7 +870,7 @@ void building_room_geom_t::add_mirror(room_object_t const &c) {
 		set_cube_zvals(cubes.back(), inside.z2(), outside.z2()); // top
 		cubes.push_back(inside);
 		set_wall_width(cubes.back(), inside.zc(), 0.5*wall_thickness, 2); // middle shelf
-		rgeom_mat_t &mat(get_untextured_material(0));
+		rgeom_mat_t &mat(get_untextured_material(shadowed));
 		mat.add_cube_to_verts(mirror, side_color, zero_vector, ~mirror_face_mask); // non-front sides of mirror
 		
 		for (auto i = cubes.begin(); i != cubes.end(); ++i) {
@@ -854,8 +880,8 @@ void building_room_geom_t::add_mirror(room_object_t const &c) {
 		}
 	}
 	else { // closed
-		get_material(tp, 0).add_cube_to_verts(c, c.color, zero_vector, get_face_mask(c.dim, c.dir), !c.dim); // draw only the front face
-		get_untextured_material(0).add_cube_to_verts_untextured(c, side_color, get_skip_mask_for_xy(c.dim)); // draw only the exterior sides, untextured
+		mirror_mat.add_cube_to_verts(c, c.color, zero_vector, get_face_mask(c.dim, c.dir), !c.dim); // draw only the front face
+		get_untextured_material(shadowed).add_cube_to_verts_untextured(c, side_color, get_skip_mask_for_xy(c.dim)); // draw only the exterior sides, untextured
 	}
 }
 
