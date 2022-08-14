@@ -521,7 +521,7 @@ float get_lamp_width_scale() {
 	return ((sz == zero_vector) ? 0.0 : 0.5f*(sz.x + sz.y)/sz.z);
 }
 
-bool building_t::add_bedroom_objs(rand_gen_t rgen, room_t const &room, vect_cube_t const &blockers, float zval, unsigned room_id,
+bool building_t::add_bedroom_objs(rand_gen_t rgen, room_t &room, vect_cube_t const &blockers, float zval, unsigned room_id,
 	unsigned floor, float tot_light_amt, unsigned objs_start, bool room_is_lit, bool is_basement, light_ix_assign_t &light_ix_assign)
 {
 	// bedrooms should have at least one window; if windowless/interior, it can't be a bedroom; faster than checking count_ext_walls_for_room(room, zval) > 0
@@ -631,7 +631,7 @@ bool building_t::add_bedroom_objs(rand_gen_t rgen, room_t const &room, vect_cube
 			mirror .flags |= RO_FLAG_NOCOLL;
 			dresser.flags |= RO_FLAG_ADJ_TOP; // flag the dresser as having an item on it so that we don't add something else that blocks or intersects the mirror
 			objs.push_back(mirror);
-			// FIXME: enable reflections in bedrooms
+			room.has_mirror = 1;
 		}
 	}
 	// nightstand
@@ -879,7 +879,7 @@ float building_t::add_flooring(room_t const &room, float &zval, unsigned room_id
 	return new_zval;
 }
 
-bool building_t::add_bathroom_objs(rand_gen_t rgen, room_t const &room, float &zval, unsigned room_id, float tot_light_amt,
+bool building_t::add_bathroom_objs(rand_gen_t rgen, room_t &room, float &zval, unsigned room_id, float tot_light_amt,
 	unsigned objs_start, unsigned floor, bool is_basement, unsigned &added_bathroom_objs_mask)
 {
 	// Note: zval passed by reference
@@ -1039,6 +1039,7 @@ bool building_t::add_bathroom_objs(rand_gen_t rgen, room_t const &room, float &z
 			mirror.d[sink.dim][ sink.dir] = mirror.d[sink.dim][!sink.dir] + (sink.dir ? 1.0 : -1.0)*1.0*wall_thickness; // thickness
 			// this mirror is actually 3D, so we enable collision detection; treat as a house even if it's in an office building
 			objs.emplace_back(mirror, TYPE_MIRROR, room_id, sink.dim, sink.dir, RO_FLAG_IS_HOUSE, tot_light_amt);
+			room.has_mirror = 1;
 		}
 	}
 	return placed_obj;
@@ -1065,7 +1066,7 @@ void add_hallway_sign(vect_room_object_t &objs, cube_t const &sign, string const
 	objs.back().obj_id = register_sign_text(text);
 }
 
-bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned floor) {
+bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t &room, float zval, unsigned room_id, float tot_light_amt, unsigned floor) {
 	// Note: assumes no prior placed objects
 	bool const use_sink_model(0 && building_obj_model_loader.is_model_valid(OBJ_MODEL_SINK)); // not using sink models
 	float const floor_spacing(get_window_vspace()), wall_thickness(get_wall_thickness());
@@ -1223,7 +1224,11 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t const &roo
 				mirror.d[br_dim][!dir] = wall_pos + dir_sign*0.1*wall_thickness;
 				mirror.z1() = sinks_bcube.z2() + 0.25*floor_thickness;
 				mirror.z2() = zval + 0.9*floor_spacing - floor_thickness;
-				if (mirror.is_strictly_normalized()) {objs.emplace_back(mirror, TYPE_MIRROR, room_id, br_dim, !dir, RO_FLAG_NOCOLL, tot_light_amt);}
+
+				if (mirror.is_strictly_normalized()) {
+					objs.emplace_back(mirror, TYPE_MIRROR, room_id, br_dim, !dir, RO_FLAG_NOCOLL, tot_light_amt);
+					room.has_mirror = 1;
+				}
 			}
 		}
 	} // for dir
@@ -3764,7 +3769,7 @@ void building_t::add_exterior_door_signs(rand_gen_t &rgen) {
 
 room_t::room_t(cube_t const &c, unsigned p, unsigned nl, bool is_hallway_, bool is_office_, bool is_sec_bldg_) :
 	cube_t(c), has_stairs(0), has_elevator(0), has_center_stairs(0), no_geom(is_hallway_), is_hallway(is_hallway_), is_office(is_office_), // no geom in hallways
-	is_sec_bldg(is_sec_bldg_), interior(0), unpowered(0), ext_sides(0), part_id(p), num_lights(nl), rtype_locked(0), lit_by_floor(0), light_intensity(0.0)
+	is_sec_bldg(is_sec_bldg_), interior(0), unpowered(0), has_mirror(0), ext_sides(0), part_id(p), num_lights(nl), rtype_locked(0), lit_by_floor(0), light_intensity(0.0)
 {
 	if      (is_sec_bldg) {assign_all_to(RTYPE_GARAGE);} // or RTYPE_SHED - will be set later
 	else if (is_hallway)  {assign_all_to(RTYPE_HALL  );}
