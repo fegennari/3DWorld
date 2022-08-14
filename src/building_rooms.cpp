@@ -621,13 +621,14 @@ bool building_t::add_bedroom_objs(rand_gen_t rgen, room_t &room, vect_cube_t con
 	if (place_obj_along_wall(TYPE_DRESSER, room, ds_height, ds_sz_scale, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 1.0)) {
 		room_object_t &dresser(objs[dresser_obj_id]);
 
-		// maybe place a mirror on the dresser; skip if against an exterior wall to avoid blocking a window
-		if (classify_room_wall(room, zval, dresser.dim, !dresser.dir, 0) != ROOM_WALL_EXT) {
+		// place a mirror on the dresser 25% of the time; skip if against an exterior wall to avoid blocking a window
+		if (rgen.rand_float() < 0.25 && classify_room_wall(room, zval, dresser.dim, !dresser.dir, 0) != ROOM_WALL_EXT) {
 			room_object_t mirror(dresser);
 			mirror.type = TYPE_DRESS_MIR;
 			set_cube_zvals(mirror, dresser.z2(), (dresser.z2() + 1.4*dresser.get_height()));
 			mirror.d[mirror.dim][mirror.dir] -= (mirror.dir ? 1.0 : -1.0)*0.9*dresser.get_length(); // push it toward the back
 			mirror.expand_in_dim(!mirror.dim, -0.02*mirror.get_width()); // shrink slightly
+			if (is_house) {mirror.flags |= RO_FLAG_IS_HOUSE;} // flag as in a house for reflections logic
 			mirror .flags |= RO_FLAG_NOCOLL;
 			dresser.flags |= RO_FLAG_ADJ_TOP; // flag the dresser as having an item on it so that we don't add something else that blocks or intersects the mirror
 			objs.push_back(mirror);
@@ -670,6 +671,7 @@ bool building_t::add_bedroom_objs(rand_gen_t rgen, room_t &room, vect_cube_t con
 
 		for (auto i = objs.begin()+objs_start; i != objs.end(); ++i) { // choose the dresser or nightstand closest to be bed
 			if (i->type != TYPE_DRESSER && i->type != TYPE_NIGHTSTAND) continue; // not a dresser or nightstand
+			if (i->flags & RO_FLAG_ADJ_TOP)    continue; // don't add a lamp if there's a mirror on it
 			if (min(i->dx(), i->dy()) < width) continue; // too small to place a lamp on
 			float const dist_sq(p2p_dist_xy_sq(i->get_cube_center(), pillow_center));
 			if (dmin_sq == 0.0 || dist_sq < dmin_sq) {obj_id = (i - objs.begin()); dmin_sq = dist_sq;}
