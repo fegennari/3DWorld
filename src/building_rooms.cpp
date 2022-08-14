@@ -624,7 +624,7 @@ bool building_t::add_bedroom_objs(rand_gen_t rgen, room_t &room, vect_cube_t con
 		// maybe place a mirror on the dresser; skip if against an exterior wall to avoid blocking a window
 		if (classify_room_wall(room, zval, dresser.dim, !dresser.dir, 0) != ROOM_WALL_EXT) {
 			room_object_t mirror(dresser);
-			mirror.type = TYPE_DRESS_MIR; // TODO: fix assert that fails when this isn't set
+			mirror.type = TYPE_DRESS_MIR;
 			set_cube_zvals(mirror, dresser.z2(), (dresser.z2() + 1.4*dresser.get_height()));
 			mirror.d[mirror.dim][mirror.dir] -= (mirror.dir ? 1.0 : -1.0)*0.9*dresser.get_length(); // push it toward the back
 			mirror.expand_in_dim(!mirror.dim, -0.02*mirror.get_width()); // shrink slightly

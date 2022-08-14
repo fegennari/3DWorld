@@ -569,6 +569,7 @@ void set_rand_pos_for_sz(cube_t &c, bool dim, float length, float width, rand_ge
 /*static*/ room_object_t building_room_geom_t::get_item_in_drawer(room_object_t const &c, cube_t const &drawer, unsigned drawer_ix) {
 	assert(drawer_ix < 16);
 	if (c.item_flags & (1U << drawer_ix)) {return room_object_t();} // item has been taken
+	assert(drawer.is_strictly_normalized());
 	vector3d const sz(drawer.get_size()); // Note: drawer is the interior area
 	rand_gen_t rgen;
 	rgen.set_state((123*drawer_ix + 1), (456*c.room_id + 777*c.obj_id + 1));

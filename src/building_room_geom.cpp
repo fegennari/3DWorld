@@ -185,10 +185,12 @@ void building_room_geom_t::add_chair(room_object_t const &c, float tscale) { // 
 }
 
 room_object_t get_dresser_middle(room_object_t const &c) {
+	float const shrink_val(min(0.25*min(c.dx(), c.dy()), 0.5*get_tc_leg_width(c, 0.10))); // shrink by half leg width, clamped to ensure strictly normalized
 	room_object_t middle(c);
 	middle.z1() += 0.14*c.dz(); // bottom of drawers section
 	middle.z2() -= 0.06*c.dz(); // at bottom of top surface
-	middle.expand_by_xy(-0.5*get_tc_leg_width(c, 0.10)); // shrink by half leg width
+	middle.expand_by_xy(-shrink_val);
+	assert(middle.is_strictly_normalized());
 	return middle;
 }
 void building_room_geom_t::add_dresser(room_object_t const &c, float tscale, bool inc_lg, bool inc_sm) { // or nightstand
@@ -206,6 +208,7 @@ void building_room_geom_t::add_dresser(room_object_t const &c, float tscale, boo
 
 float get_drawer_cubes(room_object_t const &c, vect_cube_t &drawers, bool front_only, bool inside_only) {
 	assert(!(front_only && inside_only)); // these options only apply to open drawers
+	assert(c.is_strictly_normalized());
 	drawers.clear();
 	rand_gen_t rgen;
 	c.set_rand_gen_state(rgen);
@@ -213,8 +216,8 @@ float get_drawer_cubes(room_object_t const &c, vect_cube_t &drawers, bool front_
 	float const width(c.get_width()), depth(c.get_depth()), height(c.dz());
 	bool is_lg(width > 2.0*height);
 	unsigned const num_rows(2 + (rgen.rand() & 1)); // 2-3
-	float const row_spacing(height/num_rows), drawer_thick(0.05*height), border(0.1*row_spacing), dir_sign(c.dir ? 1.0 : -1.0), sd_thick(dir_sign*drawer_thick);
-	float const drawer_extend(((c.type == TYPE_DESK) ? 0.5 : 0.8)*dir_sign*depth);
+	float const row_spacing(height/num_rows), drawer_thick(min(0.05f*height, 0.25f*depth)), border(0.1*row_spacing), dir_sign(c.dir ? 1.0 : -1.0);
+	float const sd_thick(dir_sign*drawer_thick), drawer_extend(((c.type == TYPE_DESK) ? 0.5 : 0.8)*dir_sign*depth);
 	cube_t d_row(c);
 	d_row.d[c.dim][!c.dir]  = c.d[c.dim][c.dir];
 	d_row.d[c.dim][ c.dir] += sd_thick; // expand out a bit
@@ -242,6 +245,7 @@ float get_drawer_cubes(room_object_t const &c, vect_cube_t &drawers, bool front_
 					drawer.z1() += 0.2*drawer.dz();
 				}
 			}
+			assert(drawer.is_strictly_normalized());
 			drawers.push_back(drawer);
 			hpos += col_spacing;
 		} // for m
