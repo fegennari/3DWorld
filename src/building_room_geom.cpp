@@ -318,10 +318,19 @@ void building_room_geom_t::add_dresser_drawers(room_object_t const &c, float tsc
 	add_nested_objs_to_verts(objects); // add any objects that were found in open drawers; must be small static objects
 }
 
-tid_nm_pair_t get_mirror_tex() {
-	tid_nm_pair_t tp(REFLECTION_TEXTURE_ID, 0.0);
+void building_room_geom_t::draw_mirror_surface(room_object_t const &c, cube_t const &mirror, bool dim, bool dir, bool shadowed) {
+	tid_nm_pair_t tp(REFLECTION_TEXTURE_ID, 0.0, shadowed);
 	if (ENABLE_MIRROR_REFLECTIONS) {tp.emissive = 1.0;}
-	return tp;
+	unsigned const skip_faces(get_face_mask(dim, dir));
+	get_material(tp, shadowed).add_cube_to_verts(mirror, WHITE, zero_vector, skip_faces, !dim); // draw only the front face; use dim/dir rather than from c
+
+	if (c.is_broken()) {
+		// TODO: incorrect, need to make crack transparent and blend
+		cube_t crack(mirror);
+		crack.d[dim][dir] += (dir ? 1.0 : -1.0)*0.01*mirror.get_sz_dim(dim); // move out to prevent z-fighting
+		rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_crack_tid(c), 0.0, 0), 0)); // unshadowed
+		mat.add_cube_to_verts(crack, apply_light_color(c, WHITE), all_zeros, skip_faces, !dim, (c.obj_id&1), (c.obj_id&2)); // X/Y mirror based on obj_id (though may not be set)
+	}
 }
 void building_room_geom_t::add_dresser_mirror(room_object_t const &c, float tscale) {
 	float const frame_thick(0.04*min(c.get_width(), c.get_height()));
@@ -330,9 +339,8 @@ void building_room_geom_t::add_dresser_mirror(room_object_t const &c, float tsca
 	mirror.d[c.dim][c.dir] -= (c.dir ? 1.0 : -1.0)*0.6*c.get_length();
 	mirror.expand_in_dim(!c.dim, -frame_thick);
 	mirror.expand_in_dim(2,      -frame_thick); // z
-	get_material(get_mirror_tex(), 1).add_cube_to_verts(mirror, c.color, zero_vector, get_face_mask(c.dim, c.dir), !c.dim); // draw only the front face
-	// what about the back of the mirror?
-	
+	draw_mirror_surface(c, mirror, c.dim, c.dir, 1); // shadowed=1
+
 	// draw the wood frame
 	rgeom_mat_t &frame_mat(get_wood_material(tscale));
 	colorRGBA const frame_color(apply_wood_light_color(c));
@@ -856,7 +864,6 @@ cube_t get_mirror_surface(room_object_t const &c) {
 void building_room_geom_t::add_mirror(room_object_t const &c) {
 	bool const shadowed(c.is_house()); // medicine cabinets in houses cast shadows
 	colorRGBA const side_color(apply_light_color(c));
-	rgeom_mat_t &mirror_mat(get_material(get_mirror_tex(), shadowed));
 
 	if (c.is_open()) { // open medicine cabinet
 		cube_t const mirror(get_mirror_surface(c));
@@ -865,7 +872,7 @@ void building_room_geom_t::add_mirror(room_object_t const &c) {
 		inside.expand_by(-wall_thickness); // shrink sides by wall thickness
 		outside.d[c.dim][c.dir] = inside.d[c.dim][c.dir]; // shift front side in slightly
 		unsigned const mirror_face_mask(get_face_mask(!c.dim, 1)); // always +dir
-		mirror_mat.add_cube_to_verts(mirror, c.color, zero_vector, mirror_face_mask, c.dim);
+		draw_mirror_surface(c, mirror, !c.dim, 1, shadowed); // always +dir
 		vect_cube_t &cubes(get_temp_cubes());
 		subtract_cube_from_cube(outside, inside, cubes); // should always be 3 cubes (sides + back) since this subtract is XY only
 		cubes.push_back(inside);
@@ -884,7 +891,7 @@ void building_room_geom_t::add_mirror(room_object_t const &c) {
 		}
 	}
 	else { // closed
-		mirror_mat.add_cube_to_verts(c, c.color, zero_vector, get_face_mask(c.dim, c.dir), !c.dim); // draw only the front face
+		draw_mirror_surface(c, c, c.dim, c.dir, shadowed);
 		get_untextured_material(shadowed).add_cube_to_verts_untextured(c, side_color, get_skip_mask_for_xy(c.dim)); // draw only the exterior sides, untextured
 	}
 }

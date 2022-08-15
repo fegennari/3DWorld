@@ -841,6 +841,7 @@ struct building_room_geom_t {
 	void add_table(room_object_t const &c, float tscale, float top_dz, float leg_width);
 	void add_chair(room_object_t const &c, float tscale);
 	void add_dresser(room_object_t const &c, float tscale, bool inc_lg, bool inc_sm);
+	void draw_mirror_surface(room_object_t const &c, cube_t const &mirror, bool dim, bool dir, bool shadowed);
 	void add_dresser_mirror(room_object_t const &c, float tscale);
 	void add_dresser_drawers(room_object_t const &c, float tscale);
 	void add_stair(room_object_t const &c, float tscale, vector3d const &tex_origin);

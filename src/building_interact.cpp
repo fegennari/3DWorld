@@ -884,7 +884,9 @@ void building_t::update_player_interact_objects(point const &player_pos) {
 					bool handled(0);
 
 					// break the glass if not already broken
-					if ((obj.type == TYPE_TV || obj.type == TYPE_MONITOR) && velocity.mag() > 2.0*MIN_VELOCITY && !obj.is_broken()) {
+					if ((obj.type == TYPE_TV || obj.type == TYPE_MONITOR || obj.type == TYPE_DRESS_MIR || (obj.type == TYPE_MIRROR && !obj.is_open())) &&
+						velocity.mag() > 2.0*MIN_VELOCITY && !obj.is_broken())
+					{
 						vector3d front_dir(all_zeros);
 						front_dir[obj.dim] = (obj.dir ? 1.0 : -1.0);
 						
@@ -897,6 +899,7 @@ void building_t::update_player_interact_objects(point const &player_pos) {
 								gen_sound_thread_safe(SOUND_GLASS, local_to_camera_space(sound_origin), 0.7);
 								register_building_sound(sound_origin, 0.7);
 								interior->room_geom->update_draw_state_for_room_object(obj, *this, 0);
+								if (obj.type == TYPE_DRESS_MIR || obj.type == TYPE_MIRROR) {register_achievement("7 Years of Bad Luck");}
 								handled = 1;
 							}
 						}
