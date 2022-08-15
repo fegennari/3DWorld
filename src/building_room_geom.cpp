@@ -344,16 +344,16 @@ void building_room_geom_t::add_dresser_mirror(room_object_t const &c, float tsca
 	// draw the wood frame
 	rgeom_mat_t &frame_mat(get_wood_material(tscale));
 	colorRGBA const frame_color(apply_wood_light_color(c));
-	unsigned const skip_back_face(~get_face_mask(c.dim, !c.dir));
 	point const llc(c.get_llc());
 
 	for (unsigned d = 0; d < 2; ++d) { // {bottom, top} and {left, right}
 		cube_t tb(c), lr(c);
 		tb.d[     2][!d] = mirror.d[     2][d];
 		lr.d[!c.dim][!d] = mirror.d[!c.dim][d];
-		frame_mat.add_cube_to_verts(tb, frame_color, llc, (skip_back_face | (d ? 0 : EF_Z1))); // top/bot
-		frame_mat.add_cube_to_verts(lr, frame_color, llc, (skip_back_face | EF_Z12)); // left/right
+		frame_mat.add_cube_to_verts(tb, frame_color, llc, (d ? 0 : EF_Z1)); // top/bot; draw back face in case player pulls it from the wall
+		frame_mat.add_cube_to_verts(lr, frame_color, llc, EF_Z12); // left/right
 	}
+	frame_mat.add_cube_to_verts(mirror, frame_color, llc, get_face_mask(c.dim, !c.dir), !c.dim); // draw back of mirror in case dresser is pushed away from the wall
 }
 
 tid_nm_pair_t get_scaled_wall_tex(tid_nm_pair_t const &wall_tex) {
