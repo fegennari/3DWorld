@@ -143,7 +143,7 @@ bool play_attack_sound(point const &pos, float gain, float pitch, rand_gen_t &rg
 
 // *** Rats ***
 
-rat_t::rat_t(point const &pos_, float radius_, vector3d const &dir_, unsigned id_) : building_animal_t(pos_, radius_, dir_, id_), dest(pos) {
+rat_t::rat_t(point const &pos_, float radius_, vector3d const &dir_, unsigned id_, bool dead_) : building_animal_t(pos_, radius_, dir_, id_), dest(pos), dead(dead_) {
 	vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_RAT)); // L=3878, W=861, H=801
 	hwidth = radius*sz.y/sz.x; // scale radius by ratio of width to length
 	height = 2.0*radius*sz.z/max(sz.x, sz.y); // use max of x/y size; the x/y size represents the bcube across rotations
@@ -167,25 +167,37 @@ bool rat_t::is_facing_dest() const {
 	return (dot_product((dest - pos).get_norm(), dir) > 0.75); // only move if we're facing our dest, to avoid walking through an object
 }
 
-bool building_t::add_rat(point const &pos, float hlength, vector3d const &dir, point const &placed_from) {
+// Note: rat_obj is used for dead/broken flag logic
+bool building_t::add_rat(point const &pos, float hlength, vector3d const &dir, point const &placed_from, bool &dead) {
 	if (!rat_t::allow_in_attic() && point_in_attic(pos)) return 0;
 	point rat_pos(pos);
 	if (!get_zval_of_floor(pos, hlength, rat_pos.z)) return 0; // place on the floor, skip if there's no floor here
-	rat_t rat(rat_pos, hlength, vector3d(dir.x, dir.y, 0.0).get_norm(), interior->room_geom->rats.size()); // dir in XY plane
+	rat_t rat(rat_pos, hlength, vector3d(dir.x, dir.y, 0.0).get_norm(), interior->room_geom->rats.size(), dead); // dir in XY plane
 	
 	if (check_line_coll_expand(pos, rat_pos, hlength, rat.height)) { // something is in the way
 		point const test_pos(rat_pos + vector3d(0.0, 0.0, rat.height));
 		auto objs_end(interior->room_geom->get_placed_objs_end()); // skip buttons/stairs/elevators
 
 		for (auto i = interior->room_geom->objs.begin(); i != objs_end; ++i) { // check for a toilet that we can drop the rat into
-			if (i->type == TYPE_TOILET && i->contains_pt(test_pos) && i->room_id == get_room_containing_pt(placed_from)) {
+			if (i->room_id != get_room_containing_pt(placed_from)) continue; // wrong room
+
+			if (i->type == TYPE_TOILET && i->contains_pt(test_pos)) {
 				point const sound_origin(i->get_cube_center());
 				gen_sound_thread_safe(SOUND_FLUSH, local_to_camera_space(sound_origin));
 				register_building_sound(sound_origin, 0.5);
 				register_achievement("Sleep with the Fishes");
 				return 1;
 			}
-		}
+			if (i->type == TYPE_MWAVE && check_line_clip(pos, rat_pos, i->d)) { // Note: not on the floor, so can't check test_pos
+				gen_sound_thread_safe(SOUND_BEEP, local_to_camera_space(i->get_cube_center()), 0.25);
+				dead = 1; // cook/kill
+				return 0; // rat is not dropped
+			}
+			if (i->type == TYPE_STOVE && i->item_flags != 0 && i->contains_pt(test_pos)) { // at least one burner is on
+				dead = 1; // cook/kill
+				return 0; // rat is not dropped
+			}
+		} // for i
 		return 0; // can't place the rat here
 	}
 	rat.fear_pos = placed_from;
@@ -326,6 +338,7 @@ dir_gen_t<0> dir_gen_xyz;
 
 void building_t::update_rat(rat_t &rat, point const &camera_bs, float timestep, float &max_xmove, bool can_attack_player, rand_gen_t &rgen) const {
 
+	if (rat.dead) return; // nothing to do
 	float const floor_spacing(get_window_vspace()), trim_thickness(get_trim_thickness()), view_dist(RAT_VIEW_FLOORS*floor_spacing);
 	float const hlength(rat.get_hlength()), hwidth(rat.hwidth), height(rat.height), hheight(0.5*height);
 	float const squish_hheight(0.75*hheight); // rats can squish to get under low objects and walk onto small steps

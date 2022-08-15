@@ -189,6 +189,7 @@ bldg_obj_type_t get_taken_obj_type(room_object_t const &obj) {
 	if (obj.type == TYPE_TV       && obj.is_broken   ()) {return bldg_obj_type_t(1, 1, 1, 1, 0, 1, 1,  20.0, 70.0, "broken TV"   );}
 	if (obj.type == TYPE_MONITOR  && obj.is_broken   ()) {return bldg_obj_type_t(1, 1, 1, 1, 0, 1, 1,  10.0, 15.0, "broken computer monitor");}
 	if (obj.type == TYPE_LIGHT    && obj.is_broken   ()) {return bldg_obj_type_t(0, 0, 0, 1, 0, 0, 0,  20.0,  5.0, "broken light");}
+	if (obj.type == TYPE_RAT      && obj.is_broken   ()) {return bldg_obj_type_t(0, 0, 1, 1, 0, 1, 0,   0.0,  1.0, "cooked/dead rat");}
 
 	if (obj.type == TYPE_BOTTLE) {
 		bottle_params_t const &bparams(bottle_params[obj.get_bottle_type()]);
@@ -584,6 +585,10 @@ public:
 	bool mark_last_item_used() {
 		return update_last_item_use_count(1);
 	}
+	void mark_last_item_broken() {
+		assert(!carried.empty());
+		carried.back().flags |= RO_FLAG_BROKEN;
+	}
 	void remove_last_item() {
 		assert(!carried.empty());
 		room_object_t const &obj(carried.back());
@@ -800,11 +805,15 @@ bool building_room_geom_t::player_pickup_object(building_t &building, point cons
 	
 	if (obj_id < 0) { // no room object to pick up
 		if (rat_ix >= 0) { // can pick up a rat
-			room_object_t rat(rats[rat_ix].get_bcube_with_dir(), TYPE_RAT, 0); // no room
+			rat_t const &r(rats[rat_ix]);
+			room_object_t rat(r.get_bcube_with_dir(), TYPE_RAT, 0, 0, 0, (r.dead ? RO_FLAG_BROKEN : 0)); // no room, flag as broken if dead
 			if (!register_player_object_pickup(rat, at_pos)) return 0;
 			player_inventory.add_item(rat);
-			gen_sound_thread_safe(SOUND_RAT_SQUEAK, building.local_to_camera_space(rats[rat_ix].pos));
-			register_building_sound(rats[rat_ix].pos, 0.8);
+
+			if (!rat.is_broken()) { // squeak if alive
+				gen_sound_thread_safe(SOUND_RAT_SQUEAK, building.local_to_camera_space(rats[rat_ix].pos));
+				register_building_sound(rats[rat_ix].pos, 0.8);
+			}
 			rats.erase(rats.begin() + rat_ix); // remove the rat from the building
 			modified_by_player = 1;
 			return 1;
@@ -1360,9 +1369,16 @@ bool building_t::maybe_use_last_pickup_room_object(point const &player_pos) {
 			point dest(player_pos + (1.2f*(get_scaled_player_radius() + half_width))*cview_dir);
 
 			if (is_rat) {
-				gen_sound_thread_safe_at_player(SOUND_RAT_SQUEAK); // play the sound whether or not we can drop the rat
-				register_building_sound(player_pos, 0.8);
-				if (!add_rat(dest, half_width, cview_dir, player_pos)) return 0; // facing away from the player
+				bool const was_dead(obj.is_broken());
+				bool is_dead(was_dead);
+				bool const dropped(add_rat(dest, half_width, cview_dir, player_pos, is_dead));// facing away from the player
+				if (is_dead && !was_dead) player_inventory.mark_last_item_broken();
+				
+				if (!was_dead) { // squeak if alive
+					gen_sound_thread_safe_at_player(SOUND_RAT_SQUEAK); // play the sound whether or not we can drop the rat
+					register_building_sound(player_pos, 0.8);
+				}
+				if (!dropped) return 0;
 			}
 			else { // book; orient based on the player's primary direction
 				if (!get_zval_for_obj_placement(dest, half_width, dest.z, 0)) return 0; // no suitable placement found; add_z_bias=0

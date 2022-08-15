@@ -100,11 +100,11 @@ struct building_animal_t {
 struct rat_t : public building_animal_t {
 	point dest, fear_pos;
 	float height=0.0, hwidth=0.0, fear=0.0;
-	bool is_hiding=0, near_player=0, attacking=0;
+	bool is_hiding=0, near_player=0, attacking=0, dead=0;
 
 	// this first constructor is for the lower_bound() call in vect_rat_t::get_first_rat_with_x2_gt()
 	rat_t(float xval) : building_animal_t(xval) {}
-	rat_t(point const &pos_, float radius_, vector3d const &dir_, unsigned id_);
+	rat_t(point const &pos_, float radius_, vector3d const &dir_, unsigned id_, bool dead_=0);
 	bool operator<(rat_t const &r) const {return (pos.x < r.pos.x);} // compare only xvals
 	static bool allow_in_attic() {return 1;}
 	float get_hlength() const {return radius;} // this is the bounding radius, so it represents the longest dim (half length)
@@ -1383,7 +1383,7 @@ public:
 	void get_objs_at_or_below_ground_floor(vect_room_object_t &ret, bool for_spider) const;
 private:
 	point gen_animal_floor_pos(float radius, bool place_in_attic, rand_gen_t &rgen) const;
-	bool add_rat(point const &pos, float hlength, vector3d const &dir, point const &placed_from);
+	bool add_rat(point const &pos, float hlength, vector3d const &dir, point const &placed_from, bool &dead);
 	bool is_pos_inside_building(point const &pos, float xy_pad, float hheight, bool inc_attic=1) const;
 	void update_rat(rat_t &rat, point const &camera_bs, float timestep, float &max_xmove, bool can_attack_player, rand_gen_t &rgen) const;
 	void scare_rat(rat_t &rat, point const &camera_bs) const;

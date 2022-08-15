@@ -116,7 +116,7 @@ bool object_model_loader_t::can_skip_model(unsigned id) const {
 }
 
 void city_model_loader_t::draw_model(shader_t &s, vector3d const &pos, cube_t const &obj_bcube, vector3d const &dir, colorRGBA const &color, vector3d const &xlate,
-	unsigned model_id, bool is_shadow_pass, bool low_detail, bool enable_animations, unsigned skip_mat_mask, bool untextured, bool force_high_detail)
+	unsigned model_id, bool is_shadow_pass, bool low_detail, bool enable_animations, unsigned skip_mat_mask, bool untextured, bool force_high_detail, bool upside_down)
 {
 	assert(!(low_detail && force_high_detail));
 	bool const is_valid(is_model_valid(model_id));
@@ -151,6 +151,7 @@ void city_model_loader_t::draw_model(shader_t &s, vector3d const &pos, cube_t co
 	if (model_file.xy_rot != 0.0) {fgRotate(model_file.xy_rot, 0.0, 0.0, 1.0);} // apply model rotation about z/up axis (in degrees)
 	if (model_file.swap_xz) {fgRotate(90.0, 0.0, 1.0, 0.0);} // swap X and Z dirs; models have up=X, but we want up=Z
 	if (model_file.swap_yz) {fgRotate(90.0, 1.0, 0.0, 0.0);} // swap Y and Z dirs; models have up=Y, but we want up=Z
+	if (upside_down) {fgRotate(180.0, 1.0, 0.0, 0.0);} // R180 about X to flip over
 	uniform_scale(sz_scale); // scale from model space to the world space size of our target cube, using a uniform scale based on the averages of the x,y,z sizes
 	point center(bcube_center);
 	UNROLL_3X(if (model_file.centered & (1<<i_)) {center[i_] = 0.0;}); // use centered bit mask to control which component is centered vs. translated
