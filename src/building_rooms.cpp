@@ -629,7 +629,7 @@ bool building_t::add_bedroom_objs(rand_gen_t rgen, room_t &room, vect_cube_t con
 			mirror.d[mirror.dim][mirror.dir] -= (mirror.dir ? 1.0 : -1.0)*0.9*dresser.get_length(); // push it toward the back
 			mirror.expand_in_dim(!mirror.dim, -0.02*mirror.get_width()); // shrink slightly
 			if (is_house) {mirror.flags |= RO_FLAG_IS_HOUSE;} // flag as in a house for reflections logic
-			mirror .flags |= RO_FLAG_NOCOLL;
+			//mirror .flags |= RO_FLAG_NOCOLL; // leave this unset so that light switches aren't blocked, etc.
 			dresser.flags |= RO_FLAG_ADJ_TOP; // flag the dresser as having an item on it so that we don't add something else that blocks or intersects the mirror
 			objs.push_back(mirror);
 			room.has_mirror = 1;
@@ -3402,16 +3402,6 @@ void building_t::add_bathroom_window(cube_t const &window, bool dim, bool dir, u
 	c.translate_dim(dim, (dir ? 1.0 : -1.0)*get_trim_thickness());
 	unsigned const flags(RO_FLAG_NOCOLL | (room.is_lit_on_floor(floor) ? RO_FLAG_LIT : 0));
 	objs.emplace_back(c, TYPE_WINDOW, room_id, dim, dir, flags, 1.0, SHAPE_CUBE, WHITE); // always lit
-
-	/*if (!room.interior && floor == 0) { // not yet flagged as interior; check if we can set the interior flag on the first floor bathroom
-		unsigned const num_floors(calc_num_floors(room, get_window_vspace(), get_floor_thickness()));
-		bool has_non_bathroom(0);
-
-		for (unsigned f = 0; f < num_floors; ++f) {
-			if (room.get_room_type(f) != RTYPE_BATH) {has_non_bathroom = 1; break;}
-		}
-		if (!has_non_bathroom) {interior->rooms[room_id].interior = 1;} // only correct when all floors are a bathroom with glass block windows
-	}*/
 }
 
 int building_t::get_room_id_for_window(cube_t const &window, bool dim, bool dir, bool &is_split) const {
