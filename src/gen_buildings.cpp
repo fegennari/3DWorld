@@ -2410,7 +2410,8 @@ public:
 		} // for g
 	}
 
-	// reflection_pass: 0 = not reflection pass, 1 = reflection for room with exterior wall, 2 = reflection for room with interior wall, 3 = reflection from mirror in a house
+	// reflection_pass: 0 = not reflection pass, 1 = reflection for room with exterior wall,
+	// 2 = reflection for room no exterior wall (can't see outside windows), 3 = reflection from mirror in a house (windows and doors need to be drawn)
 	static void multi_draw(int shadow_only, int reflection_pass, vector3d const &xlate, vector<building_creator_t *> const &bcs) {
 		if (bcs.empty()) return;
 

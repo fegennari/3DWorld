@@ -33,6 +33,7 @@ void draw_mirror_to_stencil_buffer(vector3d const &xlate) {
 void create_mirror_reflection_if_needed() {
 	if (!is_mirror(cur_room_mirror)) return; // not enabled
 	bool const interior_room(cur_room_mirror.is_interior()), is_house(cur_room_mirror.is_house()), is_open(cur_room_mirror.is_open());
+	bool const can_see_out_windows(is_house && !interior_room); // assumes mirror is not facing the doorway to a room with a window
 	bool const dim(cur_room_mirror.dim ^ is_open), dir(is_open ? 1 : cur_room_mirror.dir); // always opens in +dir
 	int const reflection_pass(is_house ? 3 : (interior_room ? 2 : 1));
 	vector3d const xlate(get_tiled_terrain_model_xlate());
@@ -62,7 +63,7 @@ void create_mirror_reflection_if_needed() {
 	draw_buildings(0, reflection_pass, xlate); // reflection_pass=1/2/3
 	glDisable(GL_CLIP_DISTANCE0);
 
-	if (is_house) {
+	if (can_see_out_windows) {
 		disable_city_shadow_maps = 1; // shadows don't work due to the mirror transform and are disabled for both the terrain and the city roads/objects
 		if (world_mode == WMODE_INF_TERRAIN) {draw_city_roads(1, xlate);} // opaque only
 		draw_tiled_terrain(2); // reflection_pass=2

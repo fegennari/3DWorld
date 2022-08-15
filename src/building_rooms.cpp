@@ -1040,7 +1040,9 @@ bool building_t::add_bathroom_objs(rand_gen_t rgen, room_t &room, float &zval, u
 			mirror.d[sink.dim][!sink.dir] = room_bounds.d[sink.dim][!sink.dir];
 			mirror.d[sink.dim][ sink.dir] = mirror.d[sink.dim][!sink.dir] + (sink.dir ? 1.0 : -1.0)*1.0*wall_thickness; // thickness
 			// this mirror is actually 3D, so we enable collision detection; treat as a house even if it's in an office building
-			objs.emplace_back(mirror, TYPE_MIRROR, room_id, sink.dim, sink.dir, RO_FLAG_IS_HOUSE, tot_light_amt);
+			unsigned flags(RO_FLAG_IS_HOUSE);
+			if (count_ext_walls_for_room(room, mirror.z1()) == 1) {flags |= RO_FLAG_INTERIOR;} // flag as interior if windows are opaque glass blocks
+			objs.emplace_back(mirror, TYPE_MIRROR, room_id, sink.dim, sink.dir, flags, tot_light_amt);
 			room.has_mirror = 1;
 		}
 	}
@@ -3400,6 +3402,16 @@ void building_t::add_bathroom_window(cube_t const &window, bool dim, bool dir, u
 	c.translate_dim(dim, (dir ? 1.0 : -1.0)*get_trim_thickness());
 	unsigned const flags(RO_FLAG_NOCOLL | (room.is_lit_on_floor(floor) ? RO_FLAG_LIT : 0));
 	objs.emplace_back(c, TYPE_WINDOW, room_id, dim, dir, flags, 1.0, SHAPE_CUBE, WHITE); // always lit
+
+	/*if (!room.interior && floor == 0) { // not yet flagged as interior; check if we can set the interior flag on the first floor bathroom
+		unsigned const num_floors(calc_num_floors(room, get_window_vspace(), get_floor_thickness()));
+		bool has_non_bathroom(0);
+
+		for (unsigned f = 0; f < num_floors; ++f) {
+			if (room.get_room_type(f) != RTYPE_BATH) {has_non_bathroom = 1; break;}
+		}
+		if (!has_non_bathroom) {interior->rooms[room_id].interior = 1;} // only correct when all floors are a bathroom with glass block windows
+	}*/
 }
 
 int building_t::get_room_id_for_window(cube_t const &window, bool dim, bool dir, bool &is_split) const {
