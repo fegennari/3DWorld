@@ -3038,10 +3038,10 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 	if (is_house && has_basement()) {add_basement_electrical_house(rgen);}
 	if (is_house && has_basement_pipes) {add_house_basement_pipes (rgen);}
 	if (has_attic()) {add_attic_objects(rgen);}
-	maybe_add_fire_escape(rgen);
+	maybe_add_fire_escape  (rgen);
+	add_exterior_door_items(rgen);
 	add_extra_obj_slots(); // needed to handle balls taken from one building and brought to another
 	add_stairs_and_elevators(rgen); // the room objects - stairs and elevators have already been placed within a room
-	add_exterior_door_signs (rgen);
 	objs.shrink_to_fit(); // Note: currently up to around 15K objs max for large office buildings
 	interior->room_geom->light_bcubes.resize(light_ix_assign.get_next_ix()); // allocate but don't fill un until needed
 	// randomly vary wood color for this building
@@ -3735,11 +3735,11 @@ void building_t::add_sign_by_door(tquad_with_ix_t const &door, bool outside, std
 	objs.back().obj_id = register_sign_text(text);
 }
 
-void building_t::add_doorbell(tquad_with_ix_t const &door) {
+void building_t::add_doorbell_and_lamp(tquad_with_ix_t const &door) {
 	cube_t const door_bcube(door.get_bcube());
 	bool const dim(door_bcube.dy() < door_bcube.dx());
 	int const dir_ret(get_ext_door_dir(door_bcube, dim));
-	if (dir_ret > 1) return; // not found, skip doorbell
+	if (dir_ret > 1) return; // not found, skip doorbell and lamp
 	bool dir(dir_ret != 0);
 	bool const side(dir ^ dim); // currently always to the right, which matches the door handle side
 	float const door_width(door_bcube.get_sz_dim(!dim)), half_width(0.016*door_width), half_height(1.8*half_width);
@@ -3751,14 +3751,28 @@ void building_t::add_doorbell(tquad_with_ix_t const &door) {
 	set_cube_zvals(c, (zval - half_height), (zval + half_height));
 	set_wall_width(c, pos, half_width, !dim);
 	interior->room_geom->objs.emplace_back(c, TYPE_BUTTON, 0, dim, dir, (RO_FLAG_LIT | RO_FLAG_NOCOLL), 1.0, SHAPE_CYLIN); // always lit; room_id is not valid
+
+	// add a wall lamp above the button if there's a porch, garage, or shed (L-shaped house)
+	if ((!porch.is_all_zeros() || has_garage || has_shed) && building_obj_model_loader.is_model_valid(OBJ_MODEL_WALL_LAMP)) {
+		vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_WALL_LAMP)); // D, W, H
+		float const width(0.3*door_width), height(width*sz.z/sz.y), depth(width*sz.x/sz.y); // scale to the width of the wall lamp
+		float const z1(door_bcube.z1() + 0.7*door_bcube.dz());
+		float const lamp_pos(door_bcube.d[!dim][side] + (side ? 1.0 : -1.0)*0.6*width);
+		cube_t lamp(c);
+		lamp.d[dim][dir] = c.d[dim][!dir] + (dir ? 1.0 : -1.0)*depth;
+		set_cube_zvals(lamp, z1, (z1 + height));
+		set_wall_width(lamp, lamp_pos, 0.5*width, !dim);
+		interior->room_geom->objs.emplace_back(lamp, TYPE_WALL_LAMP, 0, dim, dir, (RO_FLAG_LIT | RO_FLAG_NOCOLL), 1.0); // always lit; room_id is not valid
+	}
 }
 
-void building_t::add_exterior_door_signs(rand_gen_t &rgen) {
+void building_t::add_exterior_door_items(rand_gen_t &rgen) {
 	if (is_house) { // maybe add welcome sign and add doorbell
 		assert(!doors.empty());
-		add_doorbell(doors.front());
+		tquad_with_ix_t const &front_door(doors.front());
+		add_doorbell_and_lamp(front_door);
 		if (rgen.rand() & 3) return; // only 25% of houses have a welcome sign
-		add_sign_by_door(doors.front(), 1, "Welcome", DK_BROWN, 0); // front door only, outside
+		add_sign_by_door(front_door, 1, "Welcome", DK_BROWN, 0); // front door only, outside
 	}
 	else { // add exit signs
 		if (pri_hall.is_all_zeros() && rgen.rand_bool()) return; // place exit signs on buildings with primary hallways and 50% of other buildings
