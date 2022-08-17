@@ -35,7 +35,12 @@ int get_counter_tid    () {return get_texture_by_name("marble2.jpg");}
 int get_paneling_nm_tid() {return get_texture_by_name("normal_maps/paneling_NRM.jpg", 1);}
 int get_blinds_tid     () {return get_texture_by_name("interiors/blinds.jpg", 1, 0, 1, 8.0);} // use high aniso
 int get_money_tid      () {return get_texture_by_name("interiors/dollar20.jpg");}
-int get_crack_tid(room_object_t const &obj) {return get_texture_by_name(((5*obj.obj_id + 7*obj.room_id) & 1) ? "interiors/cracked_glass2.jpg" : "interiors/cracked_glass.jpg");}
+
+int get_crack_tid(room_object_t const &obj, bool alpha=0) {
+	return get_texture_by_name(((5*obj.obj_id + 7*obj.room_id) & 1) ?
+		(alpha ? "interiors/cracked_glass2_alpha.jpg" : "interiors/cracked_glass2.jpg") :
+		(alpha ? "interiors/cracked_glass_alpha.jpg" : "interiors/cracked_glass.jpg"), 0, 0, 1, 0.0, 1, 1, (alpha ? 4 : 3));
+}
 int get_box_tid() {return get_texture_by_name("interiors/box.jpg");}
 int get_crate_tid(room_object_t const &c) {return get_texture_by_name((c.obj_id & 1) ? "interiors/crate2.jpg" : "interiors/crate.jpg");}
 int get_plywood_tid   () {return get_texture_by_name("interiors/plywood.jpg");}
@@ -325,11 +330,10 @@ void building_room_geom_t::draw_mirror_surface(room_object_t const &c, cube_t co
 	get_material(tp, shadowed).add_cube_to_verts(mirror, WHITE, zero_vector, skip_faces, !dim); // draw only the front face; use dim/dir rather than from c
 
 	if (c.is_broken()) {
-		// TODO: incorrect, need to make crack transparent and blend
 		cube_t crack(mirror);
 		crack.d[dim][dir] += (dir ? 1.0 : -1.0)*0.01*mirror.get_sz_dim(dim); // move out to prevent z-fighting
-		rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_crack_tid(c), 0.0, 0), 0)); // unshadowed
-		mat.add_cube_to_verts(crack, apply_light_color(c, WHITE), all_zeros, skip_faces, !dim, (c.obj_id&1), (c.obj_id&2)); // X/Y mirror based on obj_id (though may not be set)
+		rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_crack_tid(c, 1), 0.0, 0, true), 0, 0, 0, 1)); // alpha=1, unshadowed, transparent=1
+		mat.add_cube_to_verts(crack, apply_light_color(c, WHITE), all_zeros, skip_faces, !dim, (c.obj_id&1), (c.obj_id&2)); // X/Y mirror based on obj_id
 	}
 }
 void building_room_geom_t::add_dresser_mirror(room_object_t const &c, float tscale) {

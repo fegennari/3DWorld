@@ -632,6 +632,7 @@ bool building_t::add_bedroom_objs(rand_gen_t rgen, room_t &room, vect_cube_t con
 			//mirror .flags |= RO_FLAG_NOCOLL; // leave this unset so that light switches aren't blocked, etc.
 			dresser.flags |= RO_FLAG_ADJ_TOP; // flag the dresser as having an item on it so that we don't add something else that blocks or intersects the mirror
 			objs.push_back(mirror);
+			set_obj_id(objs); // for crack texture selection/orient
 			room.has_mirror = 1;
 		}
 	}
@@ -1043,6 +1044,7 @@ bool building_t::add_bathroom_objs(rand_gen_t rgen, room_t &room, float &zval, u
 			unsigned flags(RO_FLAG_IS_HOUSE);
 			if (count_ext_walls_for_room(room, mirror.z1()) == 1) {flags |= RO_FLAG_INTERIOR;} // flag as interior if windows are opaque glass blocks
 			objs.emplace_back(mirror, TYPE_MIRROR, room_id, sink.dim, sink.dir, flags, tot_light_amt);
+			set_obj_id(objs); // for crack texture selection/orient
 			room.has_mirror = 1;
 		}
 	}
@@ -1231,6 +1233,7 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t &room, flo
 
 				if (mirror.is_strictly_normalized()) {
 					objs.emplace_back(mirror, TYPE_MIRROR, room_id, br_dim, !dir, RO_FLAG_NOCOLL, tot_light_amt);
+					set_obj_id(objs); // for crack texture selection/orient
 					room.has_mirror = 1;
 				}
 			}
