@@ -30,6 +30,7 @@ extern vector<light_source> dl_sources;
 
 
 void add_dynamic_lights_city(cube_t const &scene_bcube, float &dlight_add_thresh);
+void add_buildings_exterior_lights(vector3d const &xlate, cube_t &lights_bcube);
 void disable_shadow_maps(shader_t &s);
 vector3d get_tt_xlate_val();
 float get_max_house_size();
@@ -3030,6 +3031,7 @@ public:
 		if (!begin_lights_setup(xlate, light_radius, dl_sources)) return;
 		car_manager.add_car_headlights(xlate, lights_bcube);
 		road_gen.add_city_lights(xlate, lights_bcube);
+		add_buildings_exterior_lights(xlate, lights_bcube);
 		if (flashlight_on && !camera_in_building) {add_player_flashlight(0.25);} // add player flashlight
 		clamp_to_max_lights(xlate, dl_sources);
 		setup_shadow_maps(dl_sources, (camera_pdu.pos - xlate), city_params.max_shadow_maps);

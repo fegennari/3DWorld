@@ -12,6 +12,7 @@
 #include "tree_3dw.h" // for tree_placer_t
 #include "profiler.h"
 #include "shadow_map.h" // for get_empty_smap_tid
+#include "lightmap.h" // for light_source
 
 using std::string;
 
@@ -2410,6 +2411,27 @@ public:
 		} // for g
 	}
 
+	void add_exterior_lights(vector3d const &xlate, cube_t &lights_bcube) const {
+		for (auto g = grid_by_tile.begin(); g != grid_by_tile.end(); ++g) { // Note: all grids should be nonempty
+			if (!lights_bcube.intersects_xy(g->bcube)) continue; // not within light volume (too far from camera)
+			if (!camera_pdu.sphere_and_cube_visible_test((g->bcube.get_cube_center() + xlate), g->bcube.get_bsphere_radius(), (g->bcube + xlate))) continue; // VFC
+
+			for (auto bi = g->bc_ixs.begin(); bi != g->bc_ixs.end(); ++bi) {
+				building_t const &b(get_building(bi->ix));
+				if (b.ext_lights.empty()) continue;
+				if (!lights_bcube.intersects_xy(b.bcube)) continue; // not within light volume (too far from camera)
+				
+				for (colored_sphere_t const &light : b.ext_lights) {
+					if (!lights_bcube.contains_pt_xy(light.pos)) continue; // not within light volume (too far from camera)
+					if (!camera_pdu.sphere_visible_test((light.pos + xlate), light.radius)) continue; // VFC
+					min_eq(lights_bcube.z1(), light.pos.z - light.radius);
+					max_eq(lights_bcube.z2(), light.pos.z + light.radius);
+					dl_sources.push_back(light_source(light.radius, light.pos, light.pos, light.color));
+				}
+			} // for bi
+		} // for g
+	}
+
 	// reflection_pass: 0 = not reflection pass, 1 = reflection for room with exterior wall,
 	// 2 = reflection for room no exterior wall (can't see outside windows), 3 = reflection from mirror in a house (windows and doors need to be drawn)
 	static void multi_draw(int shadow_only, int reflection_pass, vector3d const &xlate, vector<building_creator_t *> const &bcs) {
@@ -3587,10 +3609,11 @@ void clear_building_vbos() {
 // city interface
 void set_buildings_pos_range(cube_t const &pos_range) {global_building_params.set_pos_range(pos_range);}
 // Note: no xlate applied for any of these four queries below
-void get_building_bcubes(cube_t const &xy_range, vect_cube_with_ix_t &bcubes) {building_creator_city.get_overlapping_bcubes(xy_range, bcubes);}
-void get_building_bcubes(cube_t const &xy_range, vect_cube_t         &bcubes) {building_creator_city.get_overlapping_bcubes(xy_range, bcubes);}
-void get_building_power_points(cube_t const &xy_range, vector<point> &ppts  ) {building_creator_city.get_power_points(xy_range, ppts);}
-void add_house_driveways_for_plot(cube_t const &plot, vect_cube_t &driveways) {building_creator_city.add_house_driveways_for_plot(plot, driveways);}
+void get_building_bcubes(cube_t const &xy_range, vect_cube_with_ix_t &bcubes ) {building_creator_city.get_overlapping_bcubes(xy_range, bcubes);}
+void get_building_bcubes(cube_t const &xy_range, vect_cube_t         &bcubes  ) {building_creator_city.get_overlapping_bcubes(xy_range, bcubes);}
+void get_building_power_points(cube_t const &xy_range, vector<point> &ppts    ) {building_creator_city.get_power_points(xy_range, ppts);}
+void add_house_driveways_for_plot(cube_t const &plot, vect_cube_t &driveways  ) {building_creator_city.add_house_driveways_for_plot(plot, driveways);}
+void add_buildings_exterior_lights(vector3d const &xlate, cube_t &lights_bcube) {building_creator_city.add_exterior_lights(xlate, lights_bcube);}
 float get_max_house_size() {return global_building_params.get_max_house_size();}
 
 void add_building_interior_lights(point const &xlate, cube_t &lights_bcube) {
