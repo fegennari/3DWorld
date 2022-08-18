@@ -1243,7 +1243,7 @@ void material_t::render(shader_t &shader, texture_manager const &tmgr, int defau
 		shader.set_cur_color(get_ad_color());
 		geom    .render(shader, 0, xlate);
 		geom_tan.render(shader, 0, xlate);
-		shader.clear_color_e();
+		shader.clear_color_e(); // Note: caller can cheat and override the emissive of the first material because it won't be set above but will be cleared here
 		if (ns > 0.0)    {shader.clear_specular();}
 		if (need_blend)  {disable_blend();}
 		if (set_ref_ix)       {shader.add_uniform_float("refract_ix",   1.0);}

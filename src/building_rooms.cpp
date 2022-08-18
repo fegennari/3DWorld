@@ -3753,7 +3753,8 @@ void building_t::add_doorbell_and_lamp(tquad_with_ix_t const &door) {
 	c.d[dim][dir] += (dir ? 1.0 : -1.0)*0.1*half_width;
 	set_cube_zvals(c, (zval - half_height), (zval + half_height));
 	set_wall_width(c, pos, half_width, !dim);
-	interior->room_geom->objs.emplace_back(c, TYPE_BUTTON, 0, dim, dir, (RO_FLAG_LIT | RO_FLAG_NOCOLL), 1.0, SHAPE_CYLIN); // always lit; room_id is not valid
+	vect_room_object_t &objs(interior->room_geom->objs);
+	objs.emplace_back(c, TYPE_BUTTON, 0, dim, dir, (RO_FLAG_LIT | RO_FLAG_NOCOLL), 1.0, SHAPE_CYLIN); // always lit; room_id is not valid
 
 	// add a wall lamp above the button if there's a porch, garage, or shed (L-shaped house)
 	if ((!porch.is_all_zeros() || has_garage || has_shed) && building_obj_model_loader.is_model_valid(OBJ_MODEL_WALL_LAMP)) {
@@ -3765,7 +3766,7 @@ void building_t::add_doorbell_and_lamp(tquad_with_ix_t const &door) {
 		lamp.d[dim][dir] = c.d[dim][!dir] + (dir ? 1.0 : -1.0)*depth;
 		set_cube_zvals(lamp, z1, (z1 + height));
 		set_wall_width(lamp, lamp_pos, 0.5*width, !dim);
-		interior->room_geom->objs.emplace_back(lamp, TYPE_WALL_LAMP, 0, dim, dir, (RO_FLAG_LIT | RO_FLAG_NOCOLL), 1.0); // always lit; room_id is not valid
+		objs.emplace_back(lamp, TYPE_WALL_LAMP, 0, dim, dir, (RO_FLAG_LIT | RO_FLAG_NOCOLL), 1.0); // always lit; room_id is not valid
 	}
 }
 
