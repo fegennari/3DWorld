@@ -3738,7 +3738,7 @@ void building_t::add_sign_by_door(tquad_with_ix_t const &door, bool outside, std
 	objs.back().obj_id = register_sign_text(text);
 }
 
-void building_t::add_doorbell_and_lamp(tquad_with_ix_t const &door) {
+void building_t::add_doorbell_and_lamp(tquad_with_ix_t const &door, rand_gen_t &rgen) {
 	cube_t const door_bcube(door.get_bcube());
 	bool const dim(door_bcube.dy() < door_bcube.dx());
 	int const dir_ret(get_ext_door_dir(door_bcube, dim));
@@ -3766,7 +3766,10 @@ void building_t::add_doorbell_and_lamp(tquad_with_ix_t const &door) {
 		lamp.d[dim][dir] = c.d[dim][!dir] + (dir ? 1.0 : -1.0)*depth;
 		set_cube_zvals(lamp, z1, (z1 + height));
 		set_wall_width(lamp, lamp_pos, 0.5*width, !dim);
-		objs.emplace_back(lamp, TYPE_WALL_LAMP, 0, dim, dir, (RO_FLAG_LIT | RO_FLAG_NOCOLL), 1.0); // always lit; room_id is not valid
+		unsigned flags(RO_FLAG_NOCOLL);
+		if (rgen.rand_bool()) {flags |= RO_FLAG_LIT;} // light is on 50% of the time
+		objs.emplace_back(lamp, TYPE_WALL_LAMP, 0, dim, dir, flags, 1.0); // room_id is not valid
+		if (objs.back().is_lit()) {ext_lights.emplace_back(lamp.get_cube_center(), 20.0*width, LAMP_COLOR);}
 	}
 }
 
@@ -3774,7 +3777,7 @@ void building_t::add_exterior_door_items(rand_gen_t &rgen) {
 	if (is_house) { // maybe add welcome sign and add doorbell
 		assert(!doors.empty());
 		tquad_with_ix_t const &front_door(doors.front());
-		add_doorbell_and_lamp(front_door);
+		add_doorbell_and_lamp(front_door, rgen);
 		if (rgen.rand() & 3) return; // only 25% of houses have a welcome sign
 		add_sign_by_door(front_door, 1, "Welcome", DK_BROWN, 0); // front door only, outside
 	}

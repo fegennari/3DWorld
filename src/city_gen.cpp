@@ -3031,7 +3031,7 @@ public:
 		if (!begin_lights_setup(xlate, light_radius, dl_sources)) return;
 		car_manager.add_car_headlights(xlate, lights_bcube);
 		road_gen.add_city_lights(xlate, lights_bcube);
-		add_buildings_exterior_lights(xlate, lights_bcube);
+		if (is_night()) {add_buildings_exterior_lights(xlate, lights_bcube);} // currently building lights are only on at night
 		if (flashlight_on && !camera_in_building) {add_player_flashlight(0.25);} // add player flashlight
 		clamp_to_max_lights(xlate, dl_sources);
 		setup_shadow_maps(dl_sources, (camera_pdu.pos - xlate), city_params.max_shadow_maps);
