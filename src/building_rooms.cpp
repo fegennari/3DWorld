@@ -3769,7 +3769,7 @@ void building_t::add_doorbell_and_lamp(tquad_with_ix_t const &door, rand_gen_t &
 		unsigned flags(RO_FLAG_NOCOLL);
 		if (rgen.rand_bool()) {flags |= RO_FLAG_LIT;} // light is on 50% of the time
 		objs.emplace_back(lamp, TYPE_WALL_LAMP, 0, dim, dir, flags, 1.0); // room_id is not valid
-		if (objs.back().is_lit()) {ext_lights.emplace_back(lamp.get_cube_center(), 20.0*width, LAMP_COLOR);}
+		if (objs.back().is_lit()) {ext_lights.emplace_back(lamp.get_cube_center(), 20.0*width, WALL_LAMP_COLOR);}
 	}
 }
 

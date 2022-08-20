@@ -47,6 +47,7 @@ colorRGBA const tcan_colors [NUM_TCAN_COLORS ] = {BLUE, DK_GRAY, LT_GRAY, GRAY, 
 colorRGBA const tape_colors [NUM_TAPE_COLORS ] = {GRAY, GRAY, GRAY, GRAY, BKGRAY, BKGRAY, colorRGBA(0.2, 0.2, 1.0)}; // gray duct tape is the most common
 colorRGBA const shirt_colors[NUM_SHIRT_COLORS] = {WHITE, WHITE, WHITE, BKGRAY, BKGRAY, GRAY, GRAY, RED, BLUE, DK_BLUE, DK_GREEN, DK_BROWN, BROWN, ORANGE};
 colorRGBA const LAMP_COLOR(1.0, 0.8, 0.6); // soft white
+colorRGBA const WALL_LAMP_COLOR(1.0, 0.9, 0.8);
 colorRGBA const WOOD_COLOR(0.9, 0.7, 0.5); // light brown, multiplies wood texture color; typical value to use
 colorRGBA const DUCT_COLOR(WHITE);
 

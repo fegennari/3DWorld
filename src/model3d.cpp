@@ -1855,6 +1855,10 @@ int model3d::set_texture_for_material(unsigned mat_id, int tid) { // returns the
 	return orig_tid;
 }
 
+void model3d::set_material_emissive_color(unsigned mat_id, colorRGBA const &color) {
+	get_material(mat_id).ke = color; // Note: mat_id cannot map to unbound_mat
+}
+
 
 bool geom_xform_t::operator==(geom_xform_t const &x) const {
 	if (tv != x.tv || scale != x.scale) return 0;

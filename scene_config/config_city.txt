@@ -147,7 +147,7 @@ city washer_model ../models/interiors/washer/Washing_machine_MODEL_obj.model3d  
 city dryer_model  ../models/interiors/dryer/Dryer.model3d       0 1 0  0 -1 0   0 1.0 1.0 # two sided
 city key_model    ../models/interiors/singlkey.model3d          0 0 0  0 -1 0   2 1.0 1.0 # swap X and Z
 city fire_escape_model ../models/fire_escape.model3d            1 0 0  0 -1 0   1 1.0 1.0
-city wall_lamp_model ../models/wall_lamp/wall_lamp.model3d      1 0 0  0 -1 0   1 1.0 1.0
+city wall_lamp_model ../models/wall_lamp/wall_lamp.model3d      1 0 0  0 -1 0   1 1.0 5.0
 city cup_model    ../models/interiors/cup/Cup.model3d           0 0 0  0 -1 0   1 1.0 1.0
 city toaster_model ../models/interiors/toaster/Toaster.model3d  0 0 0  2  2 0   1 1.0 1.0
 city hood_model   ../models/interiors/decorative_hood.model3d   1 1 0  0 -1 90  1 1.0 1.0 # two sided
