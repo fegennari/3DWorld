@@ -87,7 +87,7 @@ int cylin_cube_int_aa_via_circle_rect(coll_obj const &cube, cylinder_3dw const &
 		float const rz2(cylin.r1 + rz_val*(z2 - cylin.p1.z)); // radius at bottom of shared range
 		return (cline_dist < max(rz1, rz2)); // min cube xy distance to cylinder center line is less than max radius of shared range 
 	}
-	return 2; // FIXME: finish
+	return 2; // TODO: finish
 }
 int cylin_cube_int_aa_via_circle_rect(coll_obj const &cube, coll_obj const &cylin) {
 	return cylin_cube_int_aa_via_circle_rect(cube, cylin.get_bounding_cylinder());
@@ -108,7 +108,7 @@ int cylin_cylin_int(coll_obj const &c1, coll_obj const &c2) {
 	if (!cylin_cube_int_aa_via_circle_rect(c2, c1))    return 0;
 	if (!vert_cylin_cylin_SAT_test(c1, c2) || !vert_cylin_cylin_SAT_test(c2, c1)) return 0;
 	// see http://www.geometrictools.com/Documentation/IntersectionOfCylinders.pdf
-	return 2; // FIXME: finish
+	return 2; // TODO: finish
 }
 
 int poly_cylin_int(coll_obj const &p, coll_obj const &c) {
@@ -125,7 +125,7 @@ int poly_cylin_int(coll_obj const &p, coll_obj const &c) {
 	if (p.thickness > MIN_POLY_THICK) { // test extruded (3D) polygon
 		// WRITE
 	}
-	return 2; // FIXME: finish
+	return 2; // TODO: finish
 }
 
 int poly_poly_int_test(coll_obj const &p1, coll_obj const &p2) {
@@ -178,7 +178,7 @@ int torus_cylinder_int(coll_obj const &t, coll_obj const &c) {
 	coll_obj cylin;
 	copy_torus_bounding_cylin(t, cylin);
 	if (!cylin_cylin_int(cylin, c)) return 0;
-	return 2; // FIXME: unclear how to accurately handle this case
+	return 2; // TODO: unclear how to accurately handle this case
 }
 
 
@@ -323,7 +323,7 @@ int coll_obj::intersects_cobj(coll_obj const &c, float toler) const {
 					if (cdist > (radius2 + c.radius2)) return 0; // no intersection
 				}
 			}
-			return 2; // FIXME: unclear how to accurately handle this case (torus vs. torus)
+			return 2; // TODO: unclear how to accurately handle this case (torus vs. torus)
 		}
 	default: assert(0);
 	} // end switch
@@ -431,16 +431,16 @@ void coll_obj::get_contact_points(coll_obj const &c, vector<point> &contact_pts,
 				vector3d const norm_j(j->get_norm());
 
 				if (dot_product(norm_i, norm_j) > 0.99) {
-					// FIXME: WRITE plane case
+					// WRITE: plane case - clip polygon to polygon
 				}
 				else {
-					// FIXME: WRITE point/edge case
+					// WRITE: point/edge case
 				}
-			}
-		}
+			} // for j
+		} // for i
 	}
 	else {
-		// FIXME: WRITE
+		// WRITE
 	}
 }
 
