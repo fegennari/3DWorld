@@ -745,6 +745,16 @@ struct building_materials_t : public vector<rgeom_mat_t> {
 	void upload_draw_and_clear(shader_t &s);
 };
 
+struct obj_model_inst_t {
+	unsigned obj_id;
+	vector3d dir;
+	obj_model_inst_t(unsigned oid, vector3d const &d) : obj_id(oid), dir(d) {}
+};
+struct obj_model_inst_with_obj_t : obj_model_inst_t {
+	obj_model_inst_with_obj_t(obj_model_inst_t const &i, room_object_t const &obj_) : obj_model_inst_t(i), obj(obj_) {}
+	room_object_t obj;
+};
+
 class brg_batch_draw_t {
 	struct mat_entry_t {
 		tid_nm_pair_t tex;
@@ -756,18 +766,15 @@ class brg_batch_draw_t {
 	vector<int> tid_to_first_mat_map; // -1 is unset
 public:
 	uint8_t camera_dir_mask;
+	vector<obj_model_inst_with_obj_t> models_to_draw; // models on building exteriors to draw after buildings
 
 	brg_batch_draw_t() : camera_dir_mask(0) {}
 	void clear() {to_draw.clear(); tid_to_first_mat_map.clear();}
 	void set_camera_dir_mask(point const &camera_bs, cube_t const &bcube);
 	void add_material(rgeom_mat_t const &m);
 	void draw_and_clear(shader_t &s);
-};
-
-struct obj_model_inst_t {
-	unsigned obj_id;
-	vector3d dir;
-	obj_model_inst_t(unsigned oid, vector3d const &d) : obj_id(oid), dir(d) {}
+	void clear_obj_models() {models_to_draw.clear();}
+	void draw_obj_models(shader_t &s, vector3d const &xlate, bool shadow_only) const;
 };
 
 struct tape_quad_batch_draw : public quad_batch_draw {

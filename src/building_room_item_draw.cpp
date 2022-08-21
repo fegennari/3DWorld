@@ -1508,6 +1508,37 @@ public:
 };
 snake_draw_t snake_draw;
 
+void draw_obj_model(obj_model_inst_t const &i, room_object_t const &obj, shader_t &s, vector3d const &xlate, point const &obj_center, bool shadow_only) {
+	bool const is_emissive_first_mat(!shadow_only && obj.type == TYPE_LAMP      && obj.is_light_on());
+	bool const is_emissive_body_mat (!shadow_only && obj.type == TYPE_WALL_LAMP && obj.is_light_on());
+	bool const use_low_z_bias(obj.type == TYPE_CUP && !shadow_only);
+	bool const untextured(obj.flags & RO_FLAG_UNTEXTURED);
+	if (is_emissive_first_mat) {s.set_color_e(LAMP_COLOR*0.4);}
+
+	if (use_low_z_bias) {
+		s.add_uniform_float("norm_bias_scale",   5.0); // half the default value
+		s.add_uniform_float("dlight_pcf_offset", 0.5*cur_dlight_pcf_offset);
+	}
+	// Note: lamps are the most common and therefore most expensive models to draw
+	building_obj_model_loader.draw_model(s, obj_center, obj, i.dir, obj.color, xlate, obj.get_model_id(), shadow_only, 0, 0, 0, untextured, 0, 0, is_emissive_body_mat);
+	if (!shadow_only && obj.type == TYPE_STOVE) {draw_stove_flames(obj, (camera_pdu.pos - xlate), s);} // draw blue burner flame
+
+	if (use_low_z_bias) { // restore to the defaults
+		s.add_uniform_float("norm_bias_scale",   10.0);
+		s.add_uniform_float("dlight_pcf_offset", cur_dlight_pcf_offset);
+	}
+	if (is_emissive_first_mat) {s.set_color_e(BLACK);}
+}
+
+void brg_batch_draw_t::draw_obj_models(shader_t &s, vector3d const &xlate, bool shadow_only) const {
+	for (obj_model_inst_with_obj_t const &i : models_to_draw) {
+		point const obj_center(i.obj.get_cube_center());
+		try_bind_tile_smap_at_point(obj_center, s);
+		draw_obj_model(i, i.obj, s, xlate, obj_center, shadow_only);
+	}
+	if (!models_to_draw.empty()) {check_mvm_update();}
+}
+
 // Note: non-const because it creates the VBO; inc_small: 0=large only, 1=large+small, 2=large+small+detail
 void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, building_t const &building, occlusion_checker_noncity_t &oc, vector3d const &xlate,
 	unsigned building_ix, bool shadow_only, bool reflection_pass, unsigned inc_small, bool player_in_building)
@@ -1521,6 +1552,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, building_t c
 	bool const draw_lights(camera_bs.z < building.bcube.z2()); // don't draw ceiling lights when player is above the building
 	// only parking garages and attics have detail objects that cast shadows
 	bool const draw_detail_objs(inc_small == 2 && (!shadow_only || building.has_parking_garage || building.has_attic()));
+	brg_batch_draw_t *const bbd_in(bbd); // capture bbd for instance drawing before setting to null if player_in_building
 	if (player_in_building) {bbd = nullptr;} // use immediate drawing when player is in the building because draw order matters for alpha blending
 	if (bbd != nullptr) {bbd->set_camera_dir_mask(camera_bs, building.bcube);}
 
@@ -1624,32 +1656,22 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, building_t c
 		point obj_center(obj.get_cube_center());
 		if (is_rotated) {building.do_xy_rotate(building_center, obj_center);}
 		if (!shadow_only && !dist_less_than(camera_bs, obj_center, 100.0*obj.dz())) continue; // too far away (obj.max_len()?)
-		bool const is_sink(player_in_building && !shadow_only && obj.type == TYPE_SINK);
-		if (is_sink) {water_sound_manager.register_running_water(obj, building);}
 		if (!(is_rotated ? building.is_rot_cube_visible(obj, xlate) : camera_pdu.cube_visible(obj + xlate))) continue; // VFC
 		if (check_occlusion && building.check_obj_occluded(obj, camera_bs, oc, reflection_pass)) continue;
-		bool const is_emissive_first_mat(!shadow_only && obj.type == TYPE_LAMP      && obj.is_light_on());
-		bool const is_emissive_body_mat (!shadow_only && obj.type == TYPE_WALL_LAMP && obj.is_light_on());
-		if (is_emissive_first_mat) {s.set_color_e(LAMP_COLOR*0.4);}
-		apply_room_obj_rotate(obj, *i); // Note: may modify obj by clearing flags
-		bool const use_low_z_bias(obj.type == TYPE_CUP && !shadow_only);
-		bool const untextured(obj.flags & RO_FLAG_UNTEXTURED);
+		apply_room_obj_rotate(obj, *i); // Note: may modify obj by clearing flags and inst by updating dir
 		
-		if (use_low_z_bias) {
-			s.add_uniform_float("norm_bias_scale",   5.0); // half the default value
-			s.add_uniform_float("dlight_pcf_offset", 0.5*cur_dlight_pcf_offset);
+		if (bbd_in && !shadow_only && !is_rotated && (obj.type == TYPE_WALL_LAMP || obj.type == TYPE_FESCAPE)) { // not for rotated buildings
+			// wall lamp has transparent glass and must be drawn last; fire escape and wall lamp use outdoor lighting
+			bbd_in->models_to_draw.emplace_back(*i, obj);
 		}
-		// Note: lamps are the most common and therefore most expensive models to draw
-		building_obj_model_loader.draw_model(s, obj_center, obj, i->dir, obj.color, xlate, obj.get_model_id(), shadow_only, 0, 0, 0, untextured, 0, 0, is_emissive_body_mat);
-		if (!shadow_only && obj.type == TYPE_STOVE) {draw_stove_flames(obj, camera_bs, s);} // draw blue burner flame
-		
-		if (use_low_z_bias) { // restore to the defaults
-			s.add_uniform_float("norm_bias_scale",   10.0);
-			s.add_uniform_float("dlight_pcf_offset", cur_dlight_pcf_offset);
+		else {
+			draw_obj_model(*i, obj, s, xlate, obj_center, shadow_only); // draw now
+			obj_drawn = 1;
 		}
-		if (is_emissive_first_mat) {s.set_color_e(BLACK);}
-		if (is_sink) {water_draw.add_water_for_sink(obj);}
-		obj_drawn = 1;
+		if (player_in_building && !shadow_only && obj.type == TYPE_SINK) { // sink
+			water_sound_manager.register_running_water(obj, building);
+			water_draw.add_water_for_sink(obj);
+		}
 	} // for i
 	if (player_in_building) { // only drawn for the player building
 		if (!shadow_only && !reflection_pass) { // these models aren't drawn in the shadow or reflection passes; no emissive or rotated objects

@@ -2491,6 +2491,7 @@ public:
 		vector<vertex_range_t> per_bcs_exclude;
 		building_t const *building_cont_player(nullptr);
 		vector<building_t *> buildings_with_cars;
+		static brg_batch_draw_t bbd; // allocated memory is reused across building interiors
 
 		// draw building interiors with standard shader and no shadow maps; must be drawn first before windows depth pass
 		if (have_interior) {
@@ -2529,7 +2530,7 @@ public:
 			if (enable_animations) {s.add_uniform_int("animation_id", 0);}
 			if (reflection_pass) {draw_player_model(s, xlate, 0);} // shadow_only=0
 			vector<point> points; // reused temporary
-			static brg_batch_draw_t bbd; // allocated memory is reused across calls
+			bbd.clear_obj_models();
 			int indir_bcs_ix(-1), indir_bix(-1);
 
 			if (draw_interior) {
@@ -2773,11 +2774,13 @@ public:
 			disable_blend();
 		}
 		glDisable(GL_CULL_FACE);
+		bool const use_smap_pass(use_tt_smap && !reflection_pass);
+		if (!use_smap_pass) {bbd.draw_obj_models(s, xlate, 0);} // draw models here if the code below won't be run; shadow_only=0
 		if (building_cont_player) {building_cont_player->write_basement_entrance_depth_pass(s);} // drawn last
 		s.end_shader();
 
 		// post-pass to render building exteriors in nearby tiles that have shadow maps; shadow maps don't work right when using reflections
-		if (use_tt_smap && !reflection_pass) {
+		if (use_smap_pass) {
 			//timer_t timer2("Draw Buildings Smap"); // 0.3
 			bool const use_city_dlights(!reflection_pass);
 			city_shader_setup(s, get_city_lights_bcube(), use_city_dlights, 1, use_bmap, min_alpha); // use_smap=1
@@ -2812,6 +2815,7 @@ public:
 				if (no_depth_write) {glDepthMask(GL_TRUE);} // re-enable depth writing
 			} // for i
 			glDisable(GL_CULL_FACE);
+			bbd.draw_obj_models(s, xlate, 0); // shadow_only=0
 			s.end_shader();
 		}
 		if (night && have_wind_lights) { // add night time random lights in windows
