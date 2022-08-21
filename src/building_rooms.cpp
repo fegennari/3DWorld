@@ -1350,6 +1350,7 @@ bool building_t::add_kitchen_objs(rand_gen_t rgen, room_t const &room, float zva
 				hood.d[stove.dim][stove.dir] = stove.d[stove.dim][!stove.dir] + (stove.dir ? 1.0 : -1.0)*depth;
 				objs.emplace_back(hood, TYPE_HOOD, room_id, stove.dim, stove.dir, stove.flags, tot_light_amt, SHAPE_CUBE, LT_GRAY);
 			}
+			// TODO: maybe add TYPE_PAN on one of the stove burners
 			placed_obj = 1;
 		}
 	}	

@@ -3253,6 +3253,10 @@ void building_room_geom_t::add_toy(room_object_t const &c) { // is_small=1
 	} // for n
 }
 
+void building_room_geom_t::add_pan(room_object_t const &c) { // is_small=1
+	// TODO: WRITE
+}
+
 colorRGBA room_object_t::get_color() const {
 	switch (type) {
 	case TYPE_TABLE:    return get_table_color(*this);

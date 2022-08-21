@@ -825,6 +825,7 @@ void building_room_geom_t::add_small_static_objs_to_verts(vect_room_object_t con
 		case TYPE_BRK_PANEL: add_breaker_panel (c); break; // only added to basements
 		case TYPE_ATTIC_DOOR:add_attic_door(c, tscale); break;
 		case TYPE_TOY:       add_toy(c); break;
+		case TYPE_PAN:       add_pan(c); break;
 		default: break;
 		} // end switch
 	} // for i
