@@ -38,6 +38,10 @@ void delete_vbo(unsigned vbo);
 void upload_vbo_data(void const *const data, size_t size, bool is_index=0, int dynamic_level=0);
 void upload_vbo_sub_data(void const *const data, int offset, size_t size, bool is_index=0);
 void upload_vbo_sub_data_no_sync(void const *data, unsigned start_byte, unsigned size_bytes, bool is_index=0);
+void bind_ubo(unsigned ubo);
+void bind_ubo_base(unsigned ubo, unsigned index);
+void upload_ubo_data(void const *const data, size_t size, int dynamic_level=0);
+void upload_ubo_sub_data(void const *const data, int offset, size_t size);
 unsigned create_vao();
 void bind_vao(unsigned vao);
 void delete_vao(unsigned vao);
@@ -56,6 +60,7 @@ void disable_instancing_for_shader_loc(int loc);
 inline void delete_and_zero_vbo(unsigned &vbo) {delete_vbo(vbo); vbo = 0;}
 inline void delete_and_zero_vao(unsigned &vao) {delete_vao(vao); vao = 0;}
 inline void check_bind_vbo(unsigned vbo, bool is_index=0) {assert(vbo); bind_vbo(vbo, is_index);}
+inline void check_bind_ubo(unsigned ubo) {assert(ubo); bind_ubo(ubo);}
 inline void check_bind_vao(unsigned vao) {assert(vao); bind_vao(vao);}
 
 void setup_stencil_buffer_write();
@@ -73,10 +78,25 @@ template<typename T> void upload_vector_to_vbo(vector<T> const &data, bool is_in
 	upload_vbo_sub_data(data.data(), 0, data.size()*sizeof(T), is_index); // offset=0
 }
 
+template<typename T> void upload_to_ubo(unsigned &vbo, vector<T> const &data, bool end_with_bind0=0, int dynamic_level=0) {
+	check_bind_ubo(vbo);
+	upload_ubo_data(data.data(), data.size()*sizeof(T), dynamic_level);
+	if (end_with_bind0) {bind_ubo(0);}
+}
+template<typename T> void upload_vector_to_ubo(vector<T> const &data) {
+	upload_ubo_sub_data(data.data(), 0, data.size()*sizeof(T)); // offset=0
+}
+
 template<typename T> bool create_vbo_and_upload(unsigned &vbo, vector<T> const &data, bool is_index=0, bool end_with_bind0=0, int dynamic_level=0) {
 	if (vbo) return 0; // already uploaded
 	vbo = create_vbo();
 	upload_to_vbo(vbo, data, is_index, end_with_bind0, dynamic_level);
+	return 1;
+}
+template<typename T> bool create_ubo_and_upload(unsigned &ubo, vector<T> const &data, bool end_with_bind0=0, int dynamic_level=0) {
+	if (vbo) return 0; // already uploaded
+	vbo = create_vbo(); // same as VBO
+	upload_to_ubo(vbo, data, end_with_bind0, dynamic_level);
 	return 1;
 }
 
@@ -111,6 +131,22 @@ struct vbo_wrap_t { // Note: not for use with index vbo
 	}
 	void pre_render() const {check_bind_vbo(vbo);}
 	static void post_render() {bind_vbo(0);}
+};
+
+struct ubo_wrap_t { // uniform buffer object
+
+	unsigned ubo;
+
+	ubo_wrap_t() : ubo(0) {}
+	bool ubo_valid() const {return (ubo > 0);}
+	void clear() {delete_and_zero_vbo(ubo);} // same as VBO
+	template<typename vert_type_t>
+	void create_and_upload(vector<vert_type_t> const &data, int dynamic_level=0, bool end_with_bind0=0) {
+		if (!ubo) {create_ubo_and_upload(ubo, data, end_with_bind0, dynamic_level);}
+	}
+	void bind_base(unsigned index) {bind_ubo_base(ubo, index);}
+	void pre_render() const {check_bind_ubo(ubo);}
+	static void post_render() {bind_ubo(0);}
 };
 
 struct vao_wrap_t {

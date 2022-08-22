@@ -142,15 +142,13 @@ void delete_vbo(unsigned vbo) {
 	if (vbo != 0) {glDeleteBuffers(1, &vbo);}
 }
 
+unsigned mode_from_dynamic_level(int dynamic_level) {
+	assert(dynamic_level <= 2);
+	unsigned const modes[3] = {GL_STATIC_DRAW, GL_DYNAMIC_DRAW, GL_STREAM_DRAW};
+	return modes[dynamic_level];
+}
 void upload_vbo_data(void const *const data, size_t size, bool is_index, int dynamic_level) {
-	int mode(0);
-	switch (dynamic_level) {
-	case 0: mode = GL_STATIC_DRAW;  break;
-	case 1: mode = GL_DYNAMIC_DRAW; break;
-	case 2: mode = GL_STREAM_DRAW;  break;
-	default: assert(0);
-	}
-	glBufferData(get_buffer_target(is_index), size, data, mode);
+	glBufferData(get_buffer_target(is_index), size, data, mode_from_dynamic_level(dynamic_level));
 }
 
 void upload_vbo_sub_data(void const *const data, int offset, size_t size, bool is_index) {
@@ -166,6 +164,19 @@ void upload_vbo_sub_data_no_sync(void const *data, unsigned start_byte, unsigned
 	assert(buffer != nullptr);
 	memcpy(buffer, data, size_bytes);
 	glUnmapBuffer(target);
+}
+
+void bind_ubo(unsigned ubo) {
+	glBindBuffer(GL_UNIFORM_BUFFER, ubo);
+}
+void bind_ubo_base(unsigned ubo, unsigned index) {
+	glBindBufferBase(GL_UNIFORM_BUFFER, index, ubo);
+}
+void upload_ubo_sub_data(void const *const data, int offset, size_t size) {
+	glBufferSubData(GL_UNIFORM_BUFFER, offset, size, data);
+}
+void upload_ubo_data(void const *const data, size_t size, int dynamic_level) {
+	glBufferData(GL_UNIFORM_BUFFER, size, data, mode_from_dynamic_level(dynamic_level));
 }
 
 
