@@ -3254,7 +3254,20 @@ void building_room_geom_t::add_toy(room_object_t const &c) { // is_small=1
 }
 
 void building_room_geom_t::add_pan(room_object_t const &c) { // is_small=1
-	// TODO: WRITE
+	colorRGBA const color(apply_light_color(c));
+	rgeom_mat_t &mat(get_metal_material(1, 0, 1)); // shadowed, small
+	mat.add_vcylin_to_verts(c, color, 1, 0, 1, 1, 0.8, 1.0);
+	// add handle
+	float const diameter(c.get_sz_dim(!c.dim)), handle_radius(0.08*diameter), edge_pos(c.d[!c.dim][c.dir]);
+	cube_t handle;
+	handle.d[!c.dim][!c.dir] = edge_pos;
+	handle.d[!c.dim][ c.dir] = edge_pos + (c.dir ? 1.0 : -1.0)*0.6*diameter;
+	set_wall_width(handle, c.get_center_dim(c.dim), handle_radius, c.dim);
+	set_cube_zvals(handle, (c.z2() - 2.0*handle_radius), c.z2());
+	unsigned const base_start(mat.itri_verts.size());
+	mat.add_ortho_cylin_to_verts(handle, color, !c.dim, 1, 1);
+	// squish in Z by 50% from z2
+	for (auto i = mat.itri_verts.begin()+base_start; i != mat.itri_verts.end(); ++i) {i->v.z = c.z2() - 0.5*(c.z2() - i->v.z);}
 }
 
 colorRGBA room_object_t::get_color() const {

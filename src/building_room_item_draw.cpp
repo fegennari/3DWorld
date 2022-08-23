@@ -1138,23 +1138,37 @@ void building_t::clear_room_geom() {
 	interior->room_geom.reset();
 }
 
+void get_stove_burner_locs(room_object_t const &stove, point locs[4]) {
+	vector3d const sz(stove.get_size());
+	bool const dim(stove.dim), dir(stove.dir);
+	float const zval(stove.z2() - 0.23*sz.z), dsign(dir ? -1.0 : 1.0);
+
+	for (unsigned w = 0; w < 2; ++w) { // width dim
+		float const wval(stove.d[!dim][0] + ((bool(w) ^ dim ^ dir ^ 1) ? 0.72 : 0.28)*sz[!dim]); // left/right burners
+
+		for (unsigned d = 0; d < 2; ++d) { // depth dim
+			float const dval(stove.d[dim][dir] + dsign*(d ? 0.66 : 0.375)*sz[dim]); // front/back burners
+			point pos(dval, wval, zval);
+			if (dim) {swap(pos.x, pos.y);}
+			locs[2*w + d] = pos;
+		} // for d
+	} // for w
+}
 void draw_stove_flames(room_object_t const &stove, point const &camera_bs, shader_t &s) {
 	if (stove.item_flags == 0) return; // no burners on
 	static quad_batch_draw flame_qbd; // reused across frames
 	vector3d const sz(stove.get_size());
-	bool const dim(stove.dim), dir(stove.dir);
-	float const zval(stove.z2() - 0.23*sz.z), dsign(dir ? -1.0 : 1.0);
-	
+	point locs[4];
+	get_stove_burner_locs(stove, locs);
+	float const dsign(stove.dir ? -1.0 : 1.0);
+
 	for (unsigned w = 0; w < 2; ++w) { // width dim
-		float const radius((w ? 0.09 : 0.07)*sz.z), wval(stove.d[!dim][0] + ((bool(w) ^ dim ^ dir ^ 1) ? 0.72 : 0.28)*sz[!dim]); // left/right burners
+		float const radius((w ? 0.09 : 0.07)*sz.z);
 
 		for (unsigned d = 0; d < 2; ++d) { // depth dim
 			if (!(stove.item_flags & (1U<<(2U*w + d)))) continue; // burner not on
-			float const dval(stove.d[dim][dir] + dsign*(d ? 0.66 : 0.375)*sz[dim]); // front/back burners
-			point pos(dval, wval, zval);
-			if (dim) {swap(pos.x, pos.y);}
-			flame_qbd.add_quad_dirs(pos, dsign*radius*plus_x, -dsign*radius*plus_y, WHITE); // use a negative Y to get the proper CW order; flip with dsign for symmetry
-		} // for d
+			flame_qbd.add_quad_dirs(locs[2*w + d], dsign*radius*plus_x, -dsign*radius*plus_y, WHITE); // use a negative Y to get the proper CW order; flip with dsign for symmetry
+		}
 	} // for w
 	if (flame_qbd.empty()) return;
 	select_texture(get_texture_by_name("interiors/gas_burner.png"));

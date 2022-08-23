@@ -19,6 +19,7 @@ void setup_bldg_obj_types();
 bool enable_parked_cars();
 car_t car_from_parking_space(room_object_t const &o);
 bool get_wall_quad_window_area(vect_vnctcc_t const &wall_quad_verts, unsigned i, cube_t &c, float &tx1, float &tx2, float &tz1, float &tz2);
+void get_stove_burner_locs(room_object_t const &stove, point locs[4]);
 
 
 class light_ix_assign_t {
@@ -1335,12 +1336,13 @@ bool building_t::add_kitchen_objs(rand_gen_t rgen, room_t const &room, float zva
 	bool placed_obj(0);
 	placed_obj |= place_model_along_wall(OBJ_MODEL_FRIDGE, TYPE_FRIDGE, room, 0.75, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 1.2, 4, 0, WHITE, 1); // not at window
 	
-	if (is_house) {
+	if (is_house) { // try to place a stove
 		unsigned const stove_ix(objs.size()); // can't use objs.back() because there's a blocker
 		
 		if (place_model_along_wall(OBJ_MODEL_STOVE, TYPE_STOVE, room, 0.46, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 1.0)) {
+			assert(stove_ix < objs.size());
+
 			if (building_obj_model_loader.is_model_valid(OBJ_MODEL_HOOD)) { // add hood above the stove
-				assert(stove_ix < objs.size());
 				room_object_t const &stove(objs[stove_ix]);
 				vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_HOOD)); // D, W, H
 				float const width(stove.get_sz_dim(!stove.dim)), height(width*sz.z/sz.y), depth(width*sz.x/sz.y); // scale to the width of the stove
@@ -1348,9 +1350,22 @@ bool building_t::add_kitchen_objs(rand_gen_t rgen, room_t const &room, float zva
 				cube_t hood(stove);
 				set_cube_zvals(hood, z_top-height, z_top);
 				hood.d[stove.dim][stove.dir] = stove.d[stove.dim][!stove.dir] + (stove.dir ? 1.0 : -1.0)*depth;
-				objs.emplace_back(hood, TYPE_HOOD, room_id, stove.dim, stove.dir, stove.flags, tot_light_amt, SHAPE_CUBE, LT_GRAY);
+				objs.emplace_back(hood, TYPE_HOOD, room_id, stove.dim, stove.dir, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CUBE, LT_GRAY);
 			}
-			// TODO: maybe add TYPE_PAN on one of the stove burners
+			if (!rgen.rand_bool()) { // maybe add a pan on one of the stove burners
+				room_object_t const &stove(objs[stove_ix]);
+				float const stove_height(stove.dz()), delta_z(0.018*stove_height);
+				float const pan_radius(rgen.rand_uniform(0.075, 0.09)*stove_height), pan_height(rgen.rand_uniform(0.035, 0.045)*stove_height);
+				point locs[4];
+				get_stove_burner_locs(stove, locs);
+				unsigned const burner_ix(rgen.rand() & 3); // 0-3
+				point &loc(locs[burner_ix]);
+				loc.z += delta_z;
+				cube_t burner(loc, loc);
+				burner.expand_by_xy(pan_radius);
+				burner.z2() += pan_height;
+				objs.emplace_back(burner, TYPE_PAN, room_id, stove.dim, stove.dir, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CYLIN, GRAY_BLACK);
+			}
 			placed_obj = 1;
 		}
 	}	
