@@ -488,8 +488,15 @@ void building_t::build_nav_graph() const { // Note: does not depend on room geom
 	ng.set_num_rooms(num_rooms, num_stairs);
 	for (unsigned s = 0; s < num_stairs; ++s) {ng.set_stairs_bcube(s, interior->stairwells[s]);}
 
-	if (has_pg_ramp()) {
-		// TODO: what about parking garage ramps with RO_FLAG_OPEN set? these are similar to stairs
+	if (has_pg_ramp() && has_room_geom()) {
+#if 0
+		auto objs_end(interior->room_geom->get_placed_objs_end()); // skip buttons/stairs/elevators
+
+		for (auto c = interior->room_geom->objs.begin(); c != objs_end; ++c) {
+			if (c->type != TYPE_RAMP || !c->is_open()) continue;
+			// TODO: similar to stairs
+		}
+#endif
 	}
 	for (unsigned r = 0; r < num_rooms; ++r) {
 		room_t const &room(interior->rooms[r]);

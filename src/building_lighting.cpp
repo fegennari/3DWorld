@@ -428,7 +428,6 @@ class building_indir_light_mgr_t {
 		pos = cpos + tolerance*dir; // move slightly away from the surface
 	}
 	void cast_light_rays(building_t const &b) {
-		// TODO: Some type of blur to remove noise that doesn't blur across walls
 		// Note: modifies lmgr, but otherwise thread safe
 		unsigned const num_rt_threads(max(1U, (NUM_THREADS - (USE_BKG_THREAD ? 1 : 0)))); // reserve a thread for the main thread if running in the background
 		unsigned base_num_rays(LOCAL_RAYS), dim(2), dir(0); // default dim is z; dir=2 is omnidirectional
