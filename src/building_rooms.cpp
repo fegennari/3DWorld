@@ -261,7 +261,7 @@ bool building_t::is_room_office_bathroom(room_t const &room, float zval, unsigne
 
 // Note: must be first placed object
 bool building_t::add_desk_to_room(rand_gen_t rgen, room_t const &room, vect_cube_t const &blockers, colorRGBA const &chair_color,
-	float zval, unsigned room_id, unsigned floor, float tot_light_amt, bool is_basement)
+	float zval, unsigned room_id, unsigned floor, float tot_light_amt, unsigned objs_start, bool is_basement)
 {
 	cube_t const room_bounds(get_walkable_room_bounds(room));
 	float const vspace(get_window_vspace());
@@ -282,8 +282,9 @@ bool building_t::add_desk_to_room(rand_gen_t rgen, room_t const &room, vect_cube
 		set_wall_width(c, pos, 0.5*width, !dim);
 		cube_t desk_pad(c);
 		desk_pad.d[dim][!dir] += dsign*clearance; // ensure clearance in front of the desk so that a chair can be placed
-		if (num_placed > 0 && desk_pad.intersects(placed_desk)) continue; // intersects previously placed desk
+		if (num_placed > 0 && desk_pad.intersects(placed_desk))        continue; // intersects previously placed desk
 		if (!is_valid_placement_for_room(desk_pad, room, blockers, 1)) continue; // check proximity to doors and collision with blockers
+		if (overlaps_other_room_obj(desk_pad, objs_start))             continue; // check other objects (for bedroom desks)
 		// make short if against an exterior wall or in an office
 		bool const is_tall(!room.is_office && rgen.rand_float() < 0.5 && (is_basement || classify_room_wall(room, zval, dim, dir, 0) != ROOM_WALL_EXT));
 		unsigned const desk_obj_ix(objs.size());
@@ -522,7 +523,7 @@ float get_lamp_width_scale() {
 	return ((sz == zero_vector) ? 0.0 : 0.5f*(sz.x + sz.y)/sz.z);
 }
 
-bool building_t::add_bedroom_objs(rand_gen_t rgen, room_t &room, vect_cube_t const &blockers, float zval, unsigned room_id,
+bool building_t::add_bedroom_objs(rand_gen_t rgen, room_t &room, vect_cube_t const &blockers, colorRGBA const &chair_color, float zval, unsigned room_id,
 	unsigned floor, float tot_light_amt, unsigned objs_start, bool room_is_lit, bool is_basement, light_ix_assign_t &light_ix_assign)
 {
 	// bedrooms should have at least one window; if windowless/interior, it can't be a bedroom; faster than checking count_ext_walls_for_room(room, zval) > 0
@@ -697,6 +698,10 @@ bool building_t::add_bedroom_objs(rand_gen_t rgen, room_t &room, vect_cube_t con
 			obj.flags |= RO_FLAG_ADJ_TOP; // flag this object as having something on it
 			objs.emplace_back(lamp, TYPE_LAMP, room_id, obj.dim, obj.dir, flags, tot_light_amt, SHAPE_CYLIN, lamp_colors[rgen.rand()%NUM_LAMP_COLORS]); // Note: invalidates obj ref
 		}
+	}
+	if (min(room_bounds.dx(), room_bounds.dy()) > 2.5*window_vspacing && max(room_bounds.dx(), room_bounds.dy()) > 3.0*window_vspacing) {
+		// large room, try to add a desk and chair as well
+		add_desk_to_room(rgen, room, blockers, chair_color, zval, room_id, floor, tot_light_amt, objs_start, is_basement);
 	}
 	if (rgen.rand_float() < global_building_params.ball_prob) { // maybe add a ball to the room
 		float const radius(0.048*window_vspacing); // 4.7 inches
@@ -2897,7 +2902,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				// houses only, and must have a window (exterior wall)
 				if (is_house && !must_be_bathroom && !is_basement && ((f > 0 && !added_bedroom) || rgen.rand_float() < bedroom_prob)) {
 					added_obj = can_place_onto = added_bedroom = is_bedroom =
-						add_bedroom_objs(rgen, *r, blockers, room_center.z, room_id, f, tot_light_amt, objs_start, is_lit, is_basement, light_ix_assign);
+						add_bedroom_objs(rgen, *r, blockers, chair_color, room_center.z, room_id, f, tot_light_amt, objs_start, is_lit, is_basement, light_ix_assign);
 					if (is_bedroom) {r->assign_to(RTYPE_BED, f);}
 					num_bedrooms += is_bedroom;
 				}
@@ -2933,7 +2938,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				if (added_obj) {r->assign_to(RTYPE_STORAGE, f);}
 			}
 			if (!added_obj && (!is_basement || rgen.rand_bool())) { // try to place a desk if there's no table, bed, etc.
-				added_obj = can_place_onto = added_desk = add_desk_to_room(rgen, *r, blockers, chair_color, room_center.z, room_id, f, tot_light_amt, is_basement);
+				added_obj = can_place_onto = added_desk = add_desk_to_room(rgen, *r, blockers, chair_color, room_center.z, room_id, f, tot_light_amt, objs_start, is_basement);
 				if (added_obj && !has_stairs_this_floor) {r->assign_to((is_house ? (room_type)RTYPE_STUDY : (room_type)RTYPE_OFFICE), f);} // or other room type - may overwrite below
 			}
 			if (is_house && (added_tc || added_desk) && !is_kitchen && f == 0) { // don't add second living room unless we added a kitchen and have enough rooms
