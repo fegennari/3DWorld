@@ -27,7 +27,7 @@ protected:
 	static bool fast_isdigit(char c) {return (c >= '0' && c <= '9');}
 
 	void unget_last_char(char c) {
-		if (c == 0) return; // can't unget EOF
+		if (c == EOF) return; // can't unget EOF
 		//if (FILE_BUF_SZ == 0) {assert(fp != nullptr); _ungetc_nolock(c, fp); return;}
 		assert(file_buf_pos > 0); // can't unget without previous get
 		--file_buf_pos;
@@ -37,7 +37,7 @@ protected:
 		if (file_buf_pos == file_buf_end) { // fill file buffer
 			file_buf_pos = 0;
 			file_buf_end = fread(file_buf, 1, FILE_BUF_SZ, fp);
-			if (file_buf_end == 0) return 0; // end of file
+			if (file_buf_end == 0) return EOF; // end of file
 		}
 		assert(file_buf_pos < file_buf_end);
 		return file_buf[file_buf_pos++];
@@ -55,7 +55,7 @@ protected:
 
 		while (1) {
 			char const c(get_char(stream));
-			if ((!prev_was_escape && c == '\n') || c == '\0' || c == 0) {
+			if ((!prev_was_escape && c == '\n') || c == '\0' || c == EOF) {
 				if (str) {strip_trailing_ws(*str);}
 				return;
 			}
@@ -72,7 +72,7 @@ protected:
 
 		while (1) {
 			char const c(get_char(stream));
-			if (c == '\n' || c == '\0' || c == 0) break; // end of file or line
+			if (c == '\n' || c == '\0' || c == EOF) break; // end of file or line
 			add_char_to_str(c, str);
 		}
 		strip_trailing_ws(str);

@@ -64,7 +64,7 @@ bool base_file_reader::read_string(char *s, unsigned max_len) {
 	while (1) {
 		if (ix+1 >= max_len) return 0; // buffer overrun
 		char const c(get_char(fp));
-		if (c == 0) break;
+		if (c == EOF) break;
 		if (fast_isspace(c)) {
 			if (ix == 0) continue; // leading whitespace
 			if (c == '\n') {unget_last_char(c);} // preserve the newline
@@ -111,7 +111,7 @@ protected:
 		while (1) {
 			if (ix+1 >= MAX_CHARS) return 0; // buffer overrun
 			char const c(get_char(fp));
-			if (c == 0) break;
+			if (c == EOF) break;
 			if (fast_isspace(c)) {if (ix == 0) continue; else break;} // leading/trailing whitespace
 
 			if (ix == 0 && !fast_isdigit(c) && c != '.' && c != '-') { // not a fp number
