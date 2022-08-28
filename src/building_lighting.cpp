@@ -945,7 +945,8 @@ void building_t::refine_light_bcube(point const &lpos, float light_radius, cube_
 			if (p->contains_pt(lpos)) {part = *p;} else {other_parts.push_back(*p);}
 		} // for p
 	}
-	assert(!part.is_all_zeros());
+	//assert(!part.is_all_zeros());
+	if (part.is_all_zeros()) return; // exterior basement hallway, skip this step
 	tight_bcube.z1() = light_bcube.z1();
 	tight_bcube.z2() = light_bcube.z2();
 	// next cast a number of horizontal rays in a circle around the light to see how far they reach; any walls hit occlude the light and reduce the bcube;
@@ -1286,7 +1287,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		cube_t sphere_bc; // in building space
 		sphere_bc.set_from_sphere(lpos, cull_radius);
 		cube_t clipped_bc(sphere_bc);
-		clipped_bc.intersect_with_cube(bcube);
+		if (bcube.contains_pt(lpos)) {clipped_bc.intersect_with_cube(bcube);} // skip this step for building exterior basement lights
 
 		if (!stairs_light && !is_in_elevator) { // clip zval to current floor if light not in a room with stairs or elevator
 			max_eq(clipped_bc.z1(), (floor_z - fc_thick));
