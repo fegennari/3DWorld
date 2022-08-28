@@ -5,7 +5,8 @@
 #include "function_registry.h"
 #include "buildings.h"
 
-float const DOOR_WIDTH_SCALE = 0.5;
+bool const ADD_UNDERGROUND_ROOMS = 0; // incomplete - currently only adds basement doors to houses
+float const DOOR_WIDTH_SCALE     = 0.5;
 
 cube_t grass_exclude1, grass_exclude2;
 
@@ -846,7 +847,7 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 				} // for d
 			} // for p
 		} // end back door
-		if (0 && has_basement()) { // add door inside basement
+		if (ADD_UNDERGROUND_ROOMS && has_basement()) { // add door inside basement
 			cube_t const &basement(get_basement());
 			bool dim(rgen.rand_bool()), dir(rgen.rand_bool());
 			if (basement.d[dim][dir] != bcube.d[dim][dir]) {dir ^= 1;} // find a wall on the building bcube

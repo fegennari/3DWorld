@@ -1179,14 +1179,15 @@ struct colored_sphere_t : public sphere_t {
 
 struct building_t : public building_geom_t {
 
-	unsigned mat_ix;
-	uint8_t hallway_dim, real_num_parts, roof_type; // main hallway dim: 0=x, 1=y, 2=none
-	uint8_t roof_dims; // for two-part/L-shaped house roofs: 0=auto based on aspect ratio, 1=perpendicular, 2=parallel
-	uint8_t street_dir; // encoded as 2*dim + dir + 1; 0 is unassigned
-	int8_t open_door_ix, basement_part_ix, has_chimney; // has_chimney: 0=none, 1=interior, 2=exterior with fireplace
-	bool is_house, has_garage, has_shed, has_int_garage, has_courtyard, has_complex_floorplan, has_helipad, has_ac;
-	bool has_int_fplace, has_parking_garage, has_small_part, has_basement_door, has_basement_pipes;
-	colorRGBA side_color, roof_color, detail_color, door_color, wall_color;
+	unsigned mat_ix=0;
+	uint8_t hallway_dim=2, real_num_parts=0, roof_type=ROOF_TYPE_FLAT; // main hallway dim: 0=x, 1=y, 2=none
+	uint8_t roof_dims=0; // for two-part/L-shaped house roofs: 0=auto based on aspect ratio, 1=perpendicular, 2=parallel
+	uint8_t street_dir=0; // encoded as 2*dim + dir + 1; 0 is unassigned
+	int8_t open_door_ix=-1, basement_part_ix=-1;
+	uint8_t has_chimney=0; // 0=none, 1=interior, 2=exterior with fireplace
+	bool is_house=0, has_garage=0, has_shed=0, has_int_garage=0, has_courtyard=0, has_complex_floorplan=0, has_helipad=0, has_ac=0;
+	bool has_int_fplace=0, has_parking_garage=0, has_small_part=0, has_basement_door=0, has_basement_pipes=0;
+	colorRGBA side_color=WHITE, roof_color=WHITE, detail_color=BLACK, door_color=WHITE, wall_color=WHITE;
 	cube_t bcube, pri_hall, driveway, porch, assigned_plot;
 	vect_cube_t parts, fences;
 	vect_roof_obj_t details; // cubes on the roof - antennas, AC units, etc.
@@ -1195,19 +1196,12 @@ struct building_t : public building_geom_t {
 	std::shared_ptr<building_interior_t> interior;
 	vertex_range_t ext_side_qv_range;
 	point tree_pos; // (0,0,0) is unplaced/no tree
-	float ao_bcz2, ground_floor_z1, interior_z2;
+	float ao_bcz2=0.0, ground_floor_z1=0.0, interior_z2=0.0;
 
 	friend class building_indir_light_mgr_t;
 
-	building_t(unsigned mat_ix_=0) : mat_ix(mat_ix_), hallway_dim(2), real_num_parts(0), roof_type(ROOF_TYPE_FLAT), roof_dims(0), street_dir(0), open_door_ix(-1),
-		basement_part_ix(-1), has_chimney(0), is_house(0), has_garage(0), has_shed(0), has_int_garage(0), has_courtyard(0), has_complex_floorplan(0),
-		has_helipad(0), has_ac(0), has_int_fplace(0), has_parking_garage(0), has_small_part(0), has_basement_door(0), has_basement_pipes(0),
-		side_color(WHITE), roof_color(WHITE), detail_color(BLACK), door_color(WHITE), wall_color(WHITE), ao_bcz2(0.0), ground_floor_z1(0.0), interior_z2(0.0) {}
-	building_t(building_geom_t const &bg) : building_geom_t(bg), mat_ix(0), hallway_dim(2), real_num_parts(0), roof_type(ROOF_TYPE_FLAT), roof_dims(0),
-		street_dir(0), open_door_ix(-1), basement_part_ix(-1), has_chimney(0), is_house(0), has_garage(0), has_shed(0), has_int_garage(0), has_courtyard(0),
-		has_complex_floorplan(0), has_helipad(0), has_ac(0), has_int_fplace(0), has_parking_garage(0), has_small_part(0), has_basement_door(0),
-		has_basement_pipes(0), side_color(WHITE), roof_color(WHITE), detail_color(BLACK), door_color(WHITE), wall_color(WHITE), ao_bcz2(0.0),
-		ground_floor_z1(0.0), interior_z2(0.0) {}
+	building_t(unsigned mat_ix_=0) : mat_ix(mat_ix_) {}
+	building_t(building_geom_t const &bg) : building_geom_t(bg) {}
 	static float get_scaled_player_radius();
 	static float get_min_front_clearance() {return 2.05f*get_scaled_player_radius();} // slightly larger than the player diameter
 	bool is_valid() const {return !bcube.is_all_zeros();}
