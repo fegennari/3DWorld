@@ -191,7 +191,8 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 		gen_interior_int(rgen, has_overlapping_cubes);
 		if (!interior->is_unconnected) break; // done
 	}
-	interior->finalize();
+	interior->sort_for_optimal_culling();
+	interior->remove_excess_capacity();
 	// calculate and cache interior_z2
 	interior_z2 = ground_floor_z1;
 	for (auto i = parts.begin(); i != get_real_parts_end_inc_sec(); ++i) {max_eq(interior_z2, i->z2());}
@@ -1338,6 +1339,8 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 }
 
 bool building_t::check_cube_intersect_walls(cube_t const &c) const {
+	assert(interior);
+
 	for (unsigned d = 0; d < 2; ++d) {
 		if (has_bcube_int(c, interior->walls[d])) return 1;
 	}

@@ -406,6 +406,7 @@ bool building_t::is_valid_door_pos(cube_t const &door, float door_width, bool di
 		cube_t test_cube(door);
 		test_cube.expand_in_dim(dim, door_width);
 		if (interior->is_cube_close_to_doorway(test_cube, cube_t(), 0.0, 1, 1)) return 0; // check interior doors: null room, inc_open=1, check_open_dir=1
+		if (check_cube_intersect_walls(test_cube)) return 0; // required for basement doors
 	}
 	cube_t test_cube(door);
 	test_cube.expand_by_xy(2.0*door_width); // must have at least two door widths of space
@@ -425,6 +426,7 @@ cube_t building_t::place_door(cube_t const &base, bool dim, bool dir, float door
 	float const door_shift(0.01*get_window_vspace()), base_lo(base.d[!dim][0]), base_hi(base.d[!dim][1]);
 	bool const calc_center(door_center == 0.0); // door not yet calculated
 	bool const centered(door_center_shift == 0.0 || hallway_dim == (uint8_t)dim); // center doors connected to primary hallways
+	bool const is_basement(base.zc() < ground_floor_z1);
 	cube_t door;
 	door.z1() = base.z1(); // same bottom as house
 	door.z2() = door.z1() + door_height;
@@ -435,7 +437,7 @@ cube_t building_t::place_door(cube_t const &base, bool dim, bool dir, float door
 			door_center = offset*base_lo + (1.0 - offset)*base_hi;
 			door_pos    = base.d[dim][dir];
 		}
-		if (interior && !has_pri_hall() && !opens_up) { // not on a hallway - check distance to interior walls to make sure the door has space to open
+		if (interior && (!has_pri_hall() || is_basement) && !opens_up) { // not on a hallway - check distance to interior walls to make sure the door has space to open
 			vect_cube_t const &walls(interior->walls[!dim]); // perpendicular to door
 			float const door_lo(door_center - 1.2*door_half_width), door_hi(door_center + 1.2*door_half_width); // pos along wall with a small expand
 			float const dpos_lo(door_pos    -     door_half_width), dpos_hi(door_pos    +     door_half_width); // expand width of the door
@@ -847,12 +849,13 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 				} // for d
 			} // for p
 		} // end back door
-		if (ADD_UNDERGROUND_ROOMS && has_basement()) { // add door inside basement
+		if (ADD_UNDERGROUND_ROOMS && has_basement() && interior) { // add door inside basement
 			cube_t const &basement(get_basement());
 			bool dim(rgen.rand_bool()), dir(rgen.rand_bool());
 			if (basement.d[dim][dir] != bcube.d[dim][dir]) {dir ^= 1;} // find a wall on the building bcube
 			float const height(floor_spacing - get_fc_thickness()); // full height of floor to avoid a gap at the top
 			has_basement_door = add_door(place_door(basement, dim, dir, height, 0.0, 0.0, 0.25, DOOR_WIDTH_SCALE, 1, 0, rgen), basement_part_ix, dim, dir, 0);
+			if (has_basement_door) {add_underground_exterior_rooms(rgen, doors.back().get_bcube(), dim, dir);}
 		}
 	} // end gen_door
 	// add roof tquads
@@ -2029,10 +2032,12 @@ struct cube_b_z2_ascending {
 	bool operator()(cube_t const &a, cube_t const &b) const {return (a.z2() < b.z2());}
 };
 
-void building_interior_t::finalize() {
+void building_interior_t::sort_for_optimal_culling() {
 	for (unsigned d = 0; d < 2; ++d) {sort(walls[d].begin(), walls[d].end(), cube_by_sz(!d));} // sort walls longest to shortest to improve occlusion culling time
 	sort(floors  .begin(), floors  .end(), cube_b_z1_descending()); // top down,  for early z culling and improved occluder fusion
 	sort(ceilings.begin(), ceilings.end(), cube_b_z2_ascending ()); // bottom up, for early z culling and improved occluder fusion
+}
+void building_interior_t::remove_excess_capacity() {
 	remove_excess_cap(floors);
 	remove_excess_cap(ceilings);
 	remove_excess_cap(rooms);

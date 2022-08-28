@@ -1145,7 +1145,8 @@ struct building_interior_t {
 	bool is_cube_close_to_doorway(cube_t const &c, cube_t const &room, float dmin=0.0f, bool inc_open=0, bool check_open_dir=0) const;
 	bool is_blocked_by_stairs_or_elevator(cube_t const &c, float dmin=0.0f, bool elevators_only=0) const;
 	void get_stairs_and_elevators_bcubes_intersecting_cube(cube_t const &c, vect_cube_t &bcubes, float ends_clearance=0.0, float sides_clearance=0.0) const;
-	void finalize();
+	void sort_for_optimal_culling();
+	void remove_excess_capacity();
 	bool update_elevators(building_t const &building, point const &player_pos);
 	bool check_sphere_coll(building_t const &building, point &pos, point const &p_last, float radius,
 		vect_room_object_t::const_iterator self, vector3d &cnorm, float &hardness, int &obj_ix) const;
@@ -1156,6 +1157,7 @@ struct building_interior_t {
 	void update_dynamic_draw_data() {assert(room_geom); room_geom->update_dynamic_draw_data();}
 	void get_avoid_cubes(vect_cube_t &avoid, float z1, float z2, float floor_thickness, bool same_as_player, bool skip_stairs=0) const;
 	void create_fc_occluders();
+	void place_exterior_room(cube_t const &room, float fc_thick, float wall_thick, vect_cube_t const &doorways, unsigned part_id, unsigned num_lights, bool is_hallway);
 	colorRGBA get_attic_ceiling_color() const;
 	room_t const &get_garage_room() const {assert((unsigned)garage_room < rooms.size()); return rooms[garage_room];}
 };
@@ -1450,6 +1452,7 @@ private:
 	bool add_chimney(cube_t const &part, bool dim, bool dir, float chimney_dz, rand_gen_t &rgen);
 	void gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes);
 	void maybe_add_basement(rand_gen_t rgen);
+	void add_underground_exterior_rooms(rand_gen_t rgen, cube_t const &door_bcube, bool wall_dim, bool wall_dir);
 	bool has_L_shaped_roof_area() const;
 	void get_attic_roof_tquads(vector<tquad_with_ix_t> &tquads) const;
 	bool add_attic_access_door(cube_t const &ceiling, unsigned part_ix, unsigned num_floors, unsigned rooms_start, rand_gen_t &rgen);

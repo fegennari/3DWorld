@@ -1305,3 +1305,50 @@ void building_t::add_parking_garage_ramp(rand_gen_t &rgen) {
 	// make rooms over the ramp of type RTYPE_RAMP_EXIT
 }
 
+// add rooms to the basement that may extend outside the building's bcube
+void building_t::add_underground_exterior_rooms(rand_gen_t rgen, cube_t const &door_bcube, bool wall_dim, bool wall_dir) {
+	// start by placing a hallway in ext_wall_dim/dir using interior walls;
+	assert(interior);
+	cube_t const &basement(get_basement());
+	float const ext_wall_pos(basement.d[wall_dim][wall_dir]), hallway_len(1.0*basement.get_sz_dim(wall_dim));
+	cube_t hallway(basement);
+	set_wall_width(hallway, door_bcube.get_center_dim(!wall_dim), 0.75*door_bcube.get_sz_dim(!wall_dim), !wall_dim);
+	hallway.d[wall_dim][!wall_dir] = ext_wall_pos; // flush with the exterior wall/door
+	hallway.d[wall_dim][ wall_dir] = ext_wall_pos + (wall_dir ? 1.0 : -1.0)*hallway_len;
+	// TODO: check for terrain clipping through ceiling and for other buildings (and trees?)
+	float const fc_thick(get_fc_thickness()), wall_thickness(get_wall_thickness());
+	vect_cube_t doorways;
+	doorways.push_back(door_bcube);
+	doorways.back().expand_in_dim(wall_dim, 2.0*wall_thickness); // make sure the doorway covers the entire wall thickness
+	interior->place_exterior_room(hallway, fc_thick, wall_thickness, doorways, basement_part_ix, 3, 1); // use basement part_ix; num_lights=3, is_hallway=1
+	// TODO: add doors and other rooms along hallway
+	interior->remove_excess_capacity(); // FIXME: remove/move the call in building_t::gen_interior()
+}
+
+void building_interior_t::place_exterior_room(cube_t const &room, float fc_thick, float wall_thick, vect_cube_t const &doorways,
+	unsigned part_id, unsigned num_lights, bool is_hallway)
+{
+	rooms.emplace_back(room, part_id, num_lights, is_hallway);
+	cube_t ceiling(room), floor(room);
+	ceiling.z1() = room.z2() - fc_thick;
+	floor  .z2() = room.z1() + fc_thick;
+	ceilings.push_back(ceiling);
+	floors.push_back(floor);
+
+	// add walls
+	bool const long_dim(room.dx() < room.dy());
+	float const wall_half_thick(0.5*wall_thick);
+	vect_cube_t wall_segs, temp_cubes;
+
+	for (unsigned dim = 0; dim < 2; ++dim) {
+		for (unsigned dir = 0; dir < 2; ++dir) {
+			cube_t wall(room);
+			set_wall_width(wall, room.d[dim][dir], wall_half_thick, dim);
+			//set_cube_zvals(wall, floor.z2(), ceiling.z1()); // ???
+			if (dim != long_dim) {wall.expand_in_dim(!dim, -wall_half_thick);} // remove the overlaps at corners in the long time (house exterior wall dim)
+			subtract_cubes_from_cube(wall, doorways, wall_segs, temp_cubes, 1); // cut out doorways; ignore_zvals=1
+			vector_add_to(wall_segs, walls[dim]);
+		} // for dir
+	} // for dim
+}
+
