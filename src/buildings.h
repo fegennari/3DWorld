@@ -23,6 +23,7 @@ float const FLOOR_THICK_VAL_WINDOWLESS = 0.12; // even thicker for windowless of
 float const WALL_THICK_VAL         = 0.05; // 5% of floor spacing
 float const DOOR_THICK_TO_WIDTH    = 0.04; // ratio of door thickness to width for doors opening to the side
 float const DEF_CITY_MIN_ALPHA     = 0.01;
+float const DOOR_WIDTH_SCALE       = 0.5;
 
 unsigned const NUM_BOTTLE_TYPES = 6;
 unsigned const NUM_BOOK_COLORS  = 16;
@@ -1159,7 +1160,7 @@ struct building_interior_t {
 	void update_dynamic_draw_data() {assert(room_geom); room_geom->update_dynamic_draw_data();}
 	void get_avoid_cubes(vect_cube_t &avoid, float z1, float z2, float floor_thickness, bool same_as_player, bool skip_stairs=0) const;
 	void create_fc_occluders();
-	void place_exterior_room(cube_t const &room, float fc_thick, float wall_thick, vect_cube_t const &doorways, unsigned part_id, unsigned num_lights, bool is_hallway);
+	void place_exterior_room(cube_t const &room, float fc_thick, float wall_thick, vect_cube_t const &wall_exclude, unsigned part_id, unsigned num_lights, bool is_hallway);
 	colorRGBA get_attic_ceiling_color() const;
 	room_t const &get_garage_room() const {assert((unsigned)garage_room < rooms.size()); return rooms[garage_room];}
 };
@@ -1454,7 +1455,8 @@ private:
 	bool add_chimney(cube_t const &part, bool dim, bool dir, float chimney_dz, rand_gen_t &rgen);
 	void gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes);
 	void maybe_add_basement(rand_gen_t rgen);
-	void add_underground_exterior_rooms(rand_gen_t rgen, cube_t const &door_bcube, bool wall_dim, bool wall_dir);
+	bool extend_underground_basement(rand_gen_t rgen);
+	bool add_underground_exterior_rooms(rand_gen_t &rgen, cube_t const &door_bcube, bool wall_dim, bool wall_dir);
 	bool has_L_shaped_roof_area() const;
 	void get_attic_roof_tquads(vector<tquad_with_ix_t> &tquads) const;
 	bool add_attic_access_door(cube_t const &ceiling, unsigned part_ix, unsigned num_floors, unsigned rooms_start, rand_gen_t &rgen);

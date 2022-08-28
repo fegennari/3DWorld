@@ -5,8 +5,7 @@
 #include "function_registry.h"
 #include "buildings.h"
 
-bool const ADD_UNDERGROUND_ROOMS = 0; // incomplete - currently only adds basement doors to houses
-float const DOOR_WIDTH_SCALE     = 0.5;
+bool const ADD_UNDERGROUND_ROOMS = 0; // incomplete/experimental
 
 cube_t grass_exclude1, grass_exclude2;
 
@@ -406,8 +405,8 @@ bool building_t::is_valid_door_pos(cube_t const &door, float door_width, bool di
 		if (interior->is_blocked_by_stairs_or_elevator(door, door_width)) return 0;
 		cube_t test_cube(door);
 		test_cube.expand_in_dim(dim, door_width);
-		if (interior->is_cube_close_to_doorway(test_cube, cube_t(), 0.0, 1, 1)) return 0; // check interior doors: null room, inc_open=1, check_open_dir=1
-		if (check_cube_intersect_walls(test_cube)) return 0; // required for basement doors
+		if (interior->is_cube_close_to_doorway(test_cube, cube_t(), 0.0, 1, 1))   return 0; // check interior doors: null room, inc_open=1, check_open_dir=1
+		if (door.zc() < ground_floor_z1 && check_cube_intersect_walls(test_cube)) return 0; // required for basement doors
 	}
 	cube_t test_cube(door);
 	test_cube.expand_by_xy(2.0*door_width); // must have at least two door widths of space
@@ -850,14 +849,7 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 				} // for d
 			} // for p
 		} // end back door
-		if (ADD_UNDERGROUND_ROOMS && has_basement() && interior) { // add door inside basement
-			cube_t const &basement(get_basement());
-			bool dim(rgen.rand_bool()), dir(rgen.rand_bool());
-			if (basement.d[dim][dir] != bcube.d[dim][dir]) {dir ^= 1;} // find a wall on the building bcube
-			float const height(floor_spacing - get_fc_thickness()); // full height of floor to avoid a gap at the top
-			has_basement_door = add_door(place_door(basement, dim, dir, height, 0.0, 0.0, 0.25, DOOR_WIDTH_SCALE, 1, 0, rgen), basement_part_ix, dim, dir, 0);
-			if (has_basement_door) {add_underground_exterior_rooms(rgen, doors.back().get_bcube(), dim, dir);}
-		}
+		if (ADD_UNDERGROUND_ROOMS && has_basement() && interior) {extend_underground_basement(rgen);} // add door inside basement; rgen is copied, not modified
 	} // end gen_door
 	// add roof tquads
 	float peak_height(rgen.rand_uniform(0.15, 0.5)); // same for all parts
