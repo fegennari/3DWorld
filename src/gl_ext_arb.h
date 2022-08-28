@@ -94,9 +94,9 @@ template<typename T> bool create_vbo_and_upload(unsigned &vbo, vector<T> const &
 	return 1;
 }
 template<typename T> bool create_ubo_and_upload(unsigned &ubo, vector<T> const &data, bool end_with_bind0=0, int dynamic_level=0) {
-	if (vbo) return 0; // already uploaded
-	vbo = create_vbo(); // same as VBO
-	upload_to_ubo(vbo, data, end_with_bind0, dynamic_level);
+	if (ubo) return 0; // already uploaded
+	ubo = create_vbo(); // same as VBO
+	upload_to_ubo(ubo, data, end_with_bind0, dynamic_level);
 	return 1;
 }
 
