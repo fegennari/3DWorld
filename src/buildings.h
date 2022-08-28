@@ -1005,18 +1005,17 @@ struct elevator_t : public oriented_cube_t {
 unsigned const NUM_RTYPE_SLOTS = 6; // enough for houses; hard max is 8
 
 struct room_t : public cube_t { // size=64
-	uint8_t has_stairs; // per-floor bit mask; always set to 255 for stairs that span the entire room
-	uint8_t has_elevator; // number of elevators, usually either 0 or 1
-	bool has_center_stairs, no_geom, is_hallway, is_office, is_sec_bldg, interior, unpowered, has_mirror;
-	uint8_t ext_sides; // sides that have exteriors, and likely windows (bits for x1, x2, y1, y2)
-	uint8_t part_id, num_lights, rtype_locked;
+	uint8_t has_stairs=0; // per-floor bit mask; always set to 255 for stairs that span the entire room
+	uint8_t has_elevator=0; // number of elevators, usually either 0 or 1
+	bool has_center_stairs=0, no_geom=0, is_hallway=0, is_office=0, is_sec_bldg=0, interior=0, unpowered=0, has_mirror=0;
+	uint8_t ext_sides=0; // sides that have exteriors, and likely windows (bits for x1, x2, y1, y2)
+	uint8_t part_id=0, num_lights=0, rtype_locked=0;
 	room_type rtype[NUM_RTYPE_SLOTS]; // this applies to the first few floors because some rooms can have variable per-floor assignment
-	uint64_t lit_by_floor;
-	float light_intensity; // due to room lights, if turned on
+	uint64_t lit_by_floor=0;
+	float light_intensity=0.0; // due to room lights, if turned on
 
-	room_t() : has_stairs(0), has_elevator(0), has_center_stairs(0), no_geom(0), is_hallway(0), is_office(0), is_sec_bldg(0), interior(0), unpowered(0),
-		has_mirror(0), ext_sides(0), part_id(0), num_lights(0), rtype_locked(0), lit_by_floor(0), light_intensity(0.0) {assign_all_to(RTYPE_NOTSET, 0);} // locked=0
-	room_t(cube_t const &c, unsigned p, unsigned nl, bool is_hallway_, bool is_office_, bool is_sec_bldg_);
+	room_t() {assign_all_to(RTYPE_NOTSET, 0);} // locked=0
+	room_t(cube_t const &c, unsigned p, unsigned nl=0, bool is_hallway_=0, bool is_office_=0, bool is_sec_bldg_=0);
 	void assign_all_to(room_type rt, bool locked=1); // locked by default
 	void assign_to(room_type rt, unsigned floor, bool locked=0); // unlocked by default
 	room_type get_room_type (unsigned floor) const {return rtype[min(floor, NUM_RTYPE_SLOTS-1U)];}

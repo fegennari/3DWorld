@@ -3819,8 +3819,7 @@ void building_t::add_exterior_door_items(rand_gen_t &rgen) {
 }
 
 room_t::room_t(cube_t const &c, unsigned p, unsigned nl, bool is_hallway_, bool is_office_, bool is_sec_bldg_) :
-	cube_t(c), has_stairs(0), has_elevator(0), has_center_stairs(0), no_geom(is_hallway_), is_hallway(is_hallway_), is_office(is_office_), // no geom in hallways
-	is_sec_bldg(is_sec_bldg_), interior(0), unpowered(0), has_mirror(0), ext_sides(0), part_id(p), num_lights(nl), rtype_locked(0), lit_by_floor(0), light_intensity(0.0)
+	cube_t(c), no_geom(is_hallway_), is_hallway(is_hallway_), is_office(is_office_), is_sec_bldg(is_sec_bldg_), part_id(p), num_lights(nl) // no geom in hallways
 {
 	if      (is_sec_bldg) {assign_all_to(RTYPE_GARAGE);} // or RTYPE_SHED - will be set later
 	else if (is_hallway)  {assign_all_to(RTYPE_HALL  );}
