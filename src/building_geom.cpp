@@ -333,6 +333,7 @@ void building_t::finish_gen_geometry(rand_gen_t &rgen, bool has_overlapping_cube
 	if (global_building_params.add_office_basements) {maybe_add_basement(rgen);}
 	end_add_parts();
 	gen_interior(rgen, has_overlapping_cubes);
+	if (interior) {interior->finalize();}
 	gen_building_doors_if_needed(rgen);
 }
 
@@ -939,6 +940,7 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 	if (rgen.rand_bool()) {add_solar_panels(rgen);} // maybe add solar panels
 	if (rgen.rand_bool()) {add_outdoor_ac_unit(rgen);} // place an outdoor AC unit against an exterior wall 50% of the time, not actually on the roof
 	if (has_basement()) {has_basement_pipes = rgen.rand_bool();}
+	if (interior) {interior->finalize();}
 }
 
 bool building_t::add_outdoor_ac_unit(rand_gen_t &rgen) {
@@ -2047,6 +2049,10 @@ void building_interior_t::remove_excess_capacity() {
 	remove_excess_cap(stairwells);
 	remove_excess_cap(elevators);
 	for (unsigned d = 0; d < 2; ++d) {remove_excess_cap(walls[d]);}
+}
+void building_interior_t::finalize() {
+	sort_for_optimal_culling();
+	remove_excess_capacity();
 }
 
 void apply_fc_cube_max_merge_xy(vect_cube_t &cubes) {

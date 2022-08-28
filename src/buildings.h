@@ -1148,6 +1148,7 @@ struct building_interior_t {
 	void get_stairs_and_elevators_bcubes_intersecting_cube(cube_t const &c, vect_cube_t &bcubes, float ends_clearance=0.0, float sides_clearance=0.0) const;
 	void sort_for_optimal_culling();
 	void remove_excess_capacity();
+	void finalize();
 	bool update_elevators(building_t const &building, point const &player_pos);
 	bool check_sphere_coll(building_t const &building, point &pos, point const &p_last, float radius,
 		vect_room_object_t::const_iterator self, vector3d &cnorm, float &hardness, int &obj_ix) const;
