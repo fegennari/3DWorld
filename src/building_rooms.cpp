@@ -703,6 +703,8 @@ bool building_t::add_bedroom_objs(rand_gen_t rgen, room_t &room, vect_cube_t con
 		// large room, try to add a desk and chair as well
 		add_desk_to_room(rgen, room, blockers, chair_color, zval, room_id, floor, tot_light_amt, objs_start, is_basement);
 	}
+	if (rgen.rand_float() < 0.3) {add_laundry_basket(rgen, room, zval, room_id, tot_light_amt, objs_start, place_area);} // try to place a laundry basket 25% of the time
+
 	if (rgen.rand_float() < global_building_params.ball_prob) { // maybe add a ball to the room
 		float const radius(0.048*window_vspacing); // 4.7 inches
 		cube_t ball_area(place_area);
@@ -1757,6 +1759,28 @@ void building_t::add_floor_clutter_objs(rand_gen_t rgen, room_t const &room, flo
 	}
 }
 
+void building_t::add_laundry_basket(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, cube_t place_area) {
+	float const floor_spacing(get_window_vspace()), radius(rgen.rand_uniform(0.1, 0.12)*floor_spacing), height(rgen.rand_uniform(1.5, 2.2)*radius);
+	place_area.expand_by_xy(-radius); // leave a slight gap between laundry basket and wall
+	if (!place_area.is_strictly_normalized()) return; // no space for laundry basket (likely can't happen)
+	cube_t legal_area(get_part_for_room(room));
+	legal_area.expand_by_xy(-(1.0*floor_spacing + radius)); // keep away from part edge/exterior walls to avoid alpha mask drawing problems (unless we use mats_amask)
+	point center;
+	center.z = zval + 0.002*floor_spacing; // slightly above the floor to avoid z-fighting
+
+	for (unsigned n = 0; n < 20; ++n) { // make 20 attempts to place a laundry basket
+		bool const dim(rgen.rand_bool()), dir(rgen.rand_bool()); // choose a random wall
+		center[ dim] = place_area.d[dim][dir]; // against this wall
+		center[!dim] = rgen.rand_uniform(place_area.d[!dim][0], place_area.d[!dim][1]);
+		if (!legal_area.contains_pt_xy(center)) continue; // too close to part edge
+		cube_t const c(get_cube_height_radius(center, radius, height));
+		if (is_cube_close_to_doorway(c, room, 0.0, !room.is_hallway) || interior->is_blocked_by_stairs_or_elevator(c) || overlaps_other_room_obj(c, objs_start)) continue; // bad placement
+		colorRGBA const colors[4] = {WHITE, LT_BLUE, LT_GREEN, LT_BROWN};
+		interior->room_geom->objs.emplace_back(c, TYPE_LBASKET, room_id, dim, dir, 0, tot_light_amt, SHAPE_CYLIN, colors[rgen.rand()%4]);
+		break; // done
+	} // for n
+}
+
 bool building_t::add_laundry_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, unsigned &added_bathroom_objs_mask) {
 	float const front_clearance(get_min_front_clearance());
 	cube_t place_area(get_walkable_room_bounds(room));
@@ -1785,26 +1809,7 @@ bool building_t::add_laundry_objs(rand_gen_t rgen, room_t const &room, float zva
 			if (place_model_along_wall(OBJ_MODEL_SINK, TYPE_SINK, room, 0.45, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 0.6)) {
 				added_bathroom_objs_mask |= PLACED_SINK;
 			}
-			// try to place a laundry basket
-			float const floor_spacing(get_window_vspace()), radius(rgen.rand_uniform(0.1, 0.12)*floor_spacing), height(rgen.rand_uniform(1.5, 2.2)*radius);
-			place_area.expand_by_xy(-radius); // leave a slight gap between laundry basket and wall
-			if (!place_area.is_strictly_normalized()) return 1; // no space for laundry basket (likely can't happen)
-			cube_t legal_area(get_part_for_room(room));
-			legal_area.expand_by_xy(-(1.0*floor_spacing + radius)); // keep away from part edge/exterior walls to avoid alpha mask drawing problems (unless we use mats_amask)
-			point center;
-			center.z = zval + 0.002*floor_spacing; // slightly above the floor to avoid z-fighting
-
-			for (unsigned n = 0; n < 20; ++n) { // make 20 attempts to place a laundry basket
-				bool const dim(rgen.rand_bool()), dir(rgen.rand_bool()); // choose a random wall
-				center[ dim] = place_area.d[dim][dir]; // against this wall
-				center[!dim] = rgen.rand_uniform(place_area.d[!dim][0], place_area.d[!dim][1]);
-				if (!legal_area.contains_pt_xy(center)) continue; // too close to part edge
-				cube_t const c(get_cube_height_radius(center, radius, height));
-				if (is_cube_close_to_doorway(c, room, 0.0, !room.is_hallway) || interior->is_blocked_by_stairs_or_elevator(c) || overlaps_other_room_obj(c, objs_start)) continue; // bad placement
-				colorRGBA const colors[4] = {WHITE, LT_BLUE, LT_GREEN, LT_BROWN};
-				objs.emplace_back(c, TYPE_LBASKET, room_id, dim, dir, 0, tot_light_amt, SHAPE_CYLIN, colors[rgen.rand()%4]);
-				break; // done
-			} // for n
+			add_laundry_basket(rgen, room, zval, room_id, tot_light_amt, objs_start, place_area); // try to place a laundry basket
 			return 1; // done
 		}
 		objs.resize(objs_start); // remove washer and dryer and try again
