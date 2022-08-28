@@ -935,6 +935,12 @@ void building_t::refine_light_bcube(point const &lpos, float light_radius, cube_
 
 	// first determine the union of all intersections with parts; ignore zvals here so that we get the same result for every floor
 	if (is_parking_garage) {tight_bcube = part = room;} // parking garage is the entire room; other_parts remains empty
+	else if (interior->basement_ext_bcube.contains_pt(lpos)) { // extended basement
+		cube_t const basement(get_basement());
+		tight_bcube = part = interior->basement_ext_bcube;
+		if (light_bcube.intersects_xy(basement)) {tight_bcube.union_with_cube(basement);}
+		other_parts.push_back(basement); // include the basement itself
+	}
 	else {
 		for (auto p = parts.begin(); p != get_real_parts_end(); ++p) { // secondary buildings aren't handled here
 			//if (lpos.z < p->z1() || lpos.z > p->z2()) continue; // light zval not included (doesn't seem to work)
@@ -945,8 +951,7 @@ void building_t::refine_light_bcube(point const &lpos, float light_radius, cube_
 			if (p->contains_pt(lpos)) {part = *p;} else {other_parts.push_back(*p);}
 		} // for p
 	}
-	//assert(!part.is_all_zeros());
-	if (part.is_all_zeros()) return; // exterior basement hallway, skip this step
+	assert(!part.is_all_zeros());
 	tight_bcube.z1() = light_bcube.z1();
 	tight_bcube.z2() = light_bcube.z2();
 	// next cast a number of horizontal rays in a circle around the light to see how far they reach; any walls hit occlude the light and reduce the bcube;
@@ -1287,8 +1292,14 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		cube_t sphere_bc; // in building space
 		sphere_bc.set_from_sphere(lpos, cull_radius);
 		cube_t clipped_bc(sphere_bc);
-		if (bcube.contains_pt(lpos)) {clipped_bc.intersect_with_cube(bcube);} // skip this step for building exterior basement lights
 
+		if (interior->basement_ext_bcube.contains_pt(lpos)) { // extended basement light; use basement_ext_bcube rather than building bcube
+			clipped_bc.intersect_with_cube(interior->basement_ext_bcube);
+		}
+		else {
+			assert(bcube.contains_pt(lpos));
+			clipped_bc.intersect_with_cube(bcube);
+		}
 		if (!stairs_light && !is_in_elevator) { // clip zval to current floor if light not in a room with stairs or elevator
 			max_eq(clipped_bc.z1(), (floor_z - fc_thick));
 		}

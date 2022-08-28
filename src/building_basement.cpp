@@ -1334,6 +1334,7 @@ void building_interior_t::place_exterior_room(cube_t const &room, float fc_thick
 	floor  .z2() = room.z1() + fc_thick;
 	ceilings.push_back(ceiling);
 	floors.push_back(floor);
+	basement_ext_bcube.assign_or_union_with_cube(room);
 
 	// add walls
 	bool const long_dim(room.dx() < room.dy());

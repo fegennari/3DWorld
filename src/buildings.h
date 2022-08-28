@@ -1134,6 +1134,7 @@ struct building_interior_t {
 	std::unique_ptr<building_room_geom_t> room_geom;
 	std::unique_ptr<building_nav_graph_t> nav_graph;
 	cube_with_ix_t pg_ramp, attic_access; // ix stores {dim, dir}
+	cube_t basement_ext_bcube;
 	draw_range_t draw_range;
 	int garage_room;
 	uint8_t furnace_type, attic_type;
