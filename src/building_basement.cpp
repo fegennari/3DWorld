@@ -4,6 +4,7 @@
 #include "3DWorld.h"
 #include "function_registry.h"
 #include "buildings.h"
+//#include "profiler.h"
 #include "city.h" // for car_t
 #include <cfloat> // for FLT_MAX
 
@@ -1125,6 +1126,7 @@ void building_t::add_basement_electrical(vect_cube_t &obstacles, vect_cube_t con
 			cube_t test_cube(c);
 			test_cube.d[dim][!dir] += (dir ? -1.0 : 1.0)*2.0*bp_hwidth; // add a width worth of clearance in the front so that the door can be opened
 			if (has_bcube_int(test_cube, obstacles) || has_bcube_int(test_cube, walls)) continue; // bad breaker box position
+			if (is_cube_close_to_exterior_doorway(test_cube, 0.0, 1)) continue; // inc_open=1
 			point top_center(c.xc(), c.yc(), c.z2());
 			cube_t conduit(top_center);
 			conduit.z2() = ceil_zval;
@@ -1306,38 +1308,65 @@ void building_t::add_parking_garage_ramp(rand_gen_t &rgen) {
 }
 
 bool building_t::extend_underground_basement(rand_gen_t rgen) {
+	//highres_timer_t timer("Extend Underground Basement");
 	float const height(get_window_vspace() - get_fc_thickness()); // full height of floor to avoid a gap at the top
 	cube_t const &basement(get_basement());
 	bool dim(rgen.rand_bool()), dir(rgen.rand_bool());
 
-	for (unsigned d = 0; d < 2; ++d, dim ^= 1) { // try both dims
-		for (unsigned e = 0; e < 2; ++e, dir ^= 1) { // try both dirs
-			if (basement.d[dim][dir] != bcube.d[dim][dir]) continue; // wall not on the building bcube
-			cube_t const cand_door(place_door(basement, dim, dir, height, 0.0, 0.0, 0.25, DOOR_WIDTH_SCALE, 1, 0, rgen));
-			if (cand_door.is_all_zeros()) continue; // can't place a door on this wall
-			if (!add_underground_exterior_rooms(rgen, cand_door, dim, dir)) continue;
-			has_basement_door = add_door(cand_door, basement_part_ix, dim, dir, 0);
-			assert(has_basement_door); // must succeed
-			return 1;
-		} // for e
-	} // for d
+	for (unsigned len = 4; len >= 2; --len) { // 100%, 75%, 50% of basement length
+		for (unsigned d = 0; d < 2; ++d, dim ^= 1) { // try both dims
+			for (unsigned e = 0; e < 2; ++e, dir ^= 1) { // try both dirs
+				if (basement.d[dim][dir] != bcube.d[dim][dir]) continue; // wall not on the building bcube
+				cube_t const cand_door(place_door(basement, dim, dir, height, 0.0, 0.0, 0.25, DOOR_WIDTH_SCALE, 1, 0, rgen));
+				if (cand_door.is_all_zeros()) continue; // can't place a door on this wall
+				bool const ret(add_underground_exterior_rooms(rgen, cand_door, dim, dir, 0.25*len));
+				if (!ret) continue;
+				has_basement_door = add_door(cand_door, basement_part_ix, dim, dir, 0);
+				assert(has_basement_door); // must succeed
+				return 1;
+			} // for e
+		} // for d
+	} // for len
 	return 0;
 }
 
+float query_min_height(cube_t const &c, float stop_at) {
+	// we don't have the float heightmap here, so we have to do an expensive get_exact_zval() for each grid point
+	float hmin(FLT_MAX);
+
+	for (float y = c.y1(); y < c.y2()+DY_VAL; y += DY_VAL) {
+		for (float x = c.x1(); x < c.x2()+DX_VAL; x += DX_VAL) {
+			min_eq(hmin, get_exact_zval(min(x, c.x2()), min(y, c.y2()))); // check every grid point with the X/Y range
+			if (hmin < stop_at) return hmin;
+		}
+	}
+	return hmin;
+}
+
 // add rooms to the basement that may extend outside the building's bcube
-bool building_t::add_underground_exterior_rooms(rand_gen_t &rgen, cube_t const &door_bcube, bool wall_dim, bool wall_dir) {
+bool building_t::add_underground_exterior_rooms(rand_gen_t &rgen, cube_t const &door_bcube, bool wall_dim, bool wall_dir, float length_mult) {
 	// start by placing a hallway in ext_wall_dim/dir using interior walls;
 	assert(interior);
 	cube_t const &basement(get_basement());
 	float const ext_wall_pos(basement.d[wall_dim][wall_dir]);
-	float const hallway_len(1.0*basement.get_sz_dim(wall_dim)), hallway_width(1.5*door_bcube.get_sz_dim(!wall_dim));
+	float const hallway_len(length_mult*basement.get_sz_dim(wall_dim)), hallway_width(1.5*door_bcube.get_sz_dim(!wall_dim));
 	cube_t hallway(basement);
 	set_wall_width(hallway, door_bcube.get_center_dim(!wall_dim), 0.5*hallway_width, !wall_dim);
 	hallway.d[wall_dim][!wall_dir] = ext_wall_pos; // flush with the exterior wall/door
 	hallway.d[wall_dim][ wall_dir] = ext_wall_pos + (wall_dir ? 1.0 : -1.0)*hallway_len;
-	// TODO: check for terrain clipping through ceiling and for other buildings (and trees?)
+	float const fc_thick(get_fc_thickness()), wall_thickness(get_wall_thickness()), ceiling_zval(hallway.z2() - fc_thick);
+	if (query_min_height(hallway, ceiling_zval) < ceiling_zval) return 0; // // check for terrain clipping through ceiling
+	
+	// check for other buildings; probably not necessary because of spacing between houses
+	// TODO: including basement extensions? (and trees?)
+	for (unsigned d = 0; d < 2; ++d) {
+		point far_corner;
+		far_corner[ wall_dim] = hallway.d[ wall_dim][wall_dir];
+		far_corner[!wall_dim] = hallway.d[!wall_dim][d];
+		far_corner.z = ceiling_zval;
+		if (check_buildings_point_coll(far_corner, 0, 0, 0)) return 0; // apply_tt_xlate=0, xy_only=0, check_interior=0
+	}
 	unsigned const num_lights(max(1U, min(8U, (unsigned)round_fp(0.33*hallway_len/hallway_width))));
-	float const fc_thick(get_fc_thickness()), wall_thickness(get_wall_thickness());
 	vect_cube_t wall_exclude;
 	wall_exclude.push_back(basement);
 	wall_exclude.back().expand_in_dim(wall_dim, 1.1*get_trim_thickness()); // add slightly expanded basement to keep interior wall trim from intersecting exterior walls
@@ -1368,7 +1397,7 @@ void building_interior_t::place_exterior_room(cube_t const &room, float fc_thick
 		for (unsigned dir = 0; dir < 2; ++dir) {
 			cube_t wall(room);
 			set_wall_width(wall, room.d[dim][dir], wall_half_thick, dim);
-			//set_cube_zvals(wall, floor.z2(), ceiling.z1()); // ???
+			set_cube_zvals(wall, floor.z2(), ceiling.z1());
 			if (bool(dim) != long_dim) {wall.expand_in_dim(!dim, -wall_half_thick);} // remove the overlaps at corners in the long time (house exterior wall dim)
 			subtract_cubes_from_cube(wall, wall_exclude, wall_segs, temp_cubes, 1); // cut out doorways, etc.; ignore_zvals=1
 			vector_add_to(wall_segs, walls[dim]);
