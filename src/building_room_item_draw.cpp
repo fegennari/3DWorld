@@ -1112,11 +1112,11 @@ void building_t::gen_and_draw_room_geom(brg_batch_draw_t *bbd, shader_t &s, occl
 	if (!interior) return;
 	if (!global_building_params.enable_rotated_room_geom && is_rotated()) return; // rotated buildings: need to fix texture coords, room object collisions, mirrors, etc.
 
-	if (!shadow_only && !camera_pdu.point_visible_test(bcube.get_cube_center() + xlate)) {
+	if (!shadow_only && !player_in_building && !camera_pdu.point_visible_test(bcube.get_cube_center() + xlate)) {
 		// skip if none of the building parts are visible to the camera; this is rare, so it may not help
 		bool any_part_visible(0);
 
-		for (auto p = parts.begin(); p != parts.end(); ++p) {
+		for (auto p = parts.begin(); p != get_real_parts_end_inc_sec(); ++p) {
 			if (camera_pdu.cube_visible(*p + xlate)) {any_part_visible = 1; break;}
 		}
 		if (!any_part_visible && point_in_attic(camera_pdu.pos - xlate)) {any_part_visible = 1;} // check the attic
