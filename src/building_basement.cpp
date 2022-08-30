@@ -1405,3 +1405,9 @@ void building_interior_t::place_exterior_room(cube_t const &room, float fc_thick
 	} // for dim
 }
 
+cube_t building_t::get_bcube_inc_extensions() const {
+	cube_t ret(bcube);
+	if (interior && !interior->basement_ext_bcube.is_all_zeros()) {ret.union_with_cube(interior->basement_ext_bcube);}
+	return ret;
+}
+

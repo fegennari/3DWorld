@@ -1109,8 +1109,9 @@ bool building_t::get_interior_color_at_xy(point const &pos_in, colorRGBA &color)
 	return 1;
 }
 
-// Note: if xy_radius == 0.0, this is a point test; otherwise, it's an approximate vertical cylinder test
-bool building_t::check_point_or_cylin_contained(point const &pos, float xy_radius, vector<point> &points, bool inc_attic) const {
+// Note: if xy_radius == 0.0, this is a point test; otherwise, it's an approximate vertical cylinder test; attic and basement queries only work with points
+bool building_t::check_point_or_cylin_contained(point const &pos, float xy_radius, vector<point> &points, bool inc_attic, bool inc_ext_basement) const {
+	if (inc_ext_basement && point_in_extended_basement(pos)) return 1; // extended basement is not rotated
 	if (xy_radius == 0.0 && !bcube.contains_pt(pos)) return 0; // no intersection (bcube does not need to be rotated)
 	point pr(pos);
 	maybe_inv_rotate_point(pr);

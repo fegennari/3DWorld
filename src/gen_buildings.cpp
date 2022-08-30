@@ -2335,7 +2335,7 @@ public:
 						(*i)->building_draw_interior.draw_quads_for_draw_range(s, b.interior->draw_range, 1); // shadow_only=1
 						b.add_split_roof_shadow_quads(ext_parts_draw);
 						// no batch draw for shadow pass since textures aren't used; draw everything, since shadow may be cached
-						bool const camera_in_this_building(b.check_point_or_cylin_contained(pre_smap_player_pos, 0.0, points, 1)); // inc_attic=1
+						bool const camera_in_this_building(b.check_point_or_cylin_contained(pre_smap_player_pos, 0.0, points, 1, 1)); // inc_attic=1, inc_ext_basement=1
 						// generate detail objects during the shadow pass when the player is in the building so that it can be done in parallel with small static geom gen
 						int const inc_small(camera_in_this_building ? 2 : 1);
 						b.draw_room_geom(nullptr, s, oc, xlate, bi->ix, 1, 0, inc_small, 1); // shadow_only=1, player_in_building=1
@@ -2400,9 +2400,9 @@ public:
 				building_t &b(get_building(bi->ix));
 				if (!b.has_room_geom()) continue; // no interior room geom, skip
 				if (!lights_bcube.intersects_xy(b.bcube)) continue; // not within light volume (too far from camera)
-				bool const camera_in_this_building(b.check_point_or_cylin_contained(camera_xlated, 0.0, points, 1)); // inc_attic=1
+				bool const camera_in_this_building(b.check_point_or_cylin_contained(camera_xlated, 0.0, points, 1, 1)); // inc_attic=1, inc_ext_basement=1
 				// limit room lights to when the player is in a building because we can restrict them to a single floor, otherwise it's too slow
-				if (!camera_pdu.cube_visible(b.bcube + xlate)) continue; // VFC
+				if (!camera_in_this_building && !camera_pdu.cube_visible(b.bcube + xlate)) continue; // VFC
 				if (is_first_building) {oc.set_camera(camera_pdu);} // setup occlusion culling on the first visible building
 				is_first_building = 0;
 				oc.set_exclude_bix(bi->ix);
@@ -2461,7 +2461,7 @@ public:
 		bool const night(is_night(WIND_LIGHT_ON_RAND));
 		// check for sun or moon; also need the smap pass for drawing with dynamic lights at night, so basically it's always enabled
 		bool const use_tt_smap(check_tile_smap(0)); // && (night || light_valid_and_enabled(0) || light_valid_and_enabled(1)));
-		bool have_windows(0), have_wind_lights(0), have_interior(0), this_frame_camera_in_building(0), this_frame_player_in_attic(0);
+		bool have_windows(0), have_wind_lights(0), have_interior(0), this_frame_camera_in_building(0), this_frame_player_in_attic(0), player_in_ext_basement(0);
 		int this_frame_player_in_basement(0);
 		unsigned max_draw_ix(0);
 		shader_t s;
@@ -2572,15 +2572,17 @@ public:
 					for (auto bi = g->bc_ixs.begin(); bi != g->bc_ixs.end(); ++bi) {
 						building_t &b((*i)->get_building(bi->ix));
 						if (!b.interior) continue; // no interior, skip
-						if (reflection_pass && !b.bcube.contains_pt_xy(camera_xlated)) continue; // not the correct building
+						bool const in_ext_basement(b.point_in_extended_basement(camera_xlated));
+						player_in_ext_basement |= in_ext_basement;
+						bool const player_in_building_bcube(b.bcube.contains_pt_xy(camera_xlated) || in_ext_basement); // player within building's bcube
+						if (reflection_pass && !player_in_building_bcube) continue; // not the correct building
 						float const bdist_sq(p2p_dist_sq(camera_xlated, b.bcube.closest_pt(camera_xlated)));
 						//if (bdist_sq > rgeom_clear_dist_sq) {b.clear_room_geom(); continue;} // too far away - is this useful?
 						if (bdist_sq > rgeom_draw_dist_sq) continue; // too far away
-						if (!camera_pdu.cube_visible(b.bcube + xlate)) continue; // VFC
+						if (!player_in_building_bcube && !camera_pdu.cube_visible(b.bcube + xlate)) continue; // VFC
 						b.maybe_gen_chimney_smoke();
-						bool const camera_near_building(b.bcube.contains_pt_xy_exp(camera_xlated, door_open_dist));
+						bool const camera_near_building(player_in_building_bcube || b.bcube.contains_pt_xy_exp(camera_xlated, door_open_dist));
 						if (!camera_near_building && !b.has_windows()) continue; // player is outside a windowless building (city office building)
-						bool const player_in_building_bcube(b.bcube.contains_pt_xy(camera_xlated)); // player is within the building's bcube
 						if ((display_mode & 0x08) && !player_in_building_bcube && b.is_entire_building_occluded(camera_xlated, oc)) continue; // check occlusion
 						unsigned inc_small(bdist_sq < rgeom_sm_draw_dist_sq);
 						if (inc_small && bdist_sq < rgeom_detail_dist_sq) {inc_small = 2;} // include detail objects
@@ -2593,7 +2595,7 @@ public:
 						if (!camera_near_building) {b.player_not_near_building(); continue;} // camera not near building
 						if (reflection_pass == 2) continue; // interior room, don't need to draw windows and exterior doors
 						b.get_nearby_ext_door_verts(ext_door_draw, s, camera_xlated, door_open_dist); // and draw opened door
-						bool const camera_in_building(b.check_point_or_cylin_contained(camera_xlated, 0.0, points, 1)); // inc_attic=1
+						bool const camera_in_building(b.check_point_or_cylin_contained(camera_xlated, 0.0, points, 1, 1)); // inc_attic=1, inc_ext_basement=1
 						if (!reflection_pass) {b.update_grass_exclude_at_pos(camera_xlated, xlate, camera_in_building);} // disable any grass inside the building part(s) containing the player
 						if (!reflection_pass && player_in_building_bcube) {b.update_animals(camera_xlated, bi->ix);}
 						// Note: if we skip this check and treat all walls/windows as front/containing part, this almost works, but will skip front faces of other buildings
@@ -2726,8 +2728,9 @@ public:
 			}
 		} // end draw_interior
 
-		// everything after this point is part of the building exteriors and uses city lights rather than building room lights
-		if (player_in_basement == 2 || player_in_attic || (reflection_pass && (!DRAW_EXT_REFLECTIONS || reflection_pass != 3))) {
+		// everything after this point is part of the building exteriors and uses city lights rather than building room lights;
+		// when the player is in the extended basement we still need to draw the exterior wall and door
+		if ((player_in_basement == 2 && !player_in_ext_basement) || player_in_attic || (reflection_pass && (!DRAW_EXT_REFLECTIONS || reflection_pass != 3))) {
 			// early exit for player fully in basement or attic, or house reflections, if enabled
 			fgPopMatrix();
 			enable_dlight_bcubes = 0;

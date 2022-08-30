@@ -1221,7 +1221,7 @@ struct building_t : public building_geom_t {
 	bool has_pg_ramp() const {return (interior && !interior->pg_ramp.is_all_zeros());}
 	bool can_extend_pri_hall_stairs_to_pg() const {return (has_parking_garage && has_pri_hall() && pri_hall.z1() == ground_floor_z1);}
 	bool is_basement(vect_cube_t::const_iterator it) const {return (int(it - parts.begin()) == basement_part_ix);}
-	bool is_pos_in_basement(point const &pos) const {return (has_basement() && parts[basement_part_ix].contains_pt(pos));};
+	bool is_pos_in_basement(point const &pos) const {return ((has_basement() && parts[basement_part_ix].contains_pt(pos)) || point_in_extended_basement(pos));}
 	cube_t const &get_basement  () const {assert(has_basement()); return parts[basement_part_ix];}
 	cube_t const &get_attic_part() const {assert(has_attic()); assert(!parts.empty()); return parts[0];} // currently, the attic is always the first part
 	int check_player_in_basement(point const &pos) const;
@@ -1269,7 +1269,7 @@ struct building_t : public building_geom_t {
 	bool check_pos_in_unlit_room_recur(point const &pos, std::set<unsigned> &rooms_visited) const;
 	unsigned check_line_coll(point const &p1, point const &p2, float &t, vector<point> &points, bool occlusion_only=0, bool ret_any_pt=0, bool no_coll_pt=0) const;
 	bool get_interior_color_at_xy(point const &pos, colorRGBA &color) const;
-	bool check_point_or_cylin_contained(point const &pos, float xy_radius, vector<point> &points, bool inc_attic=0) const;
+	bool check_point_or_cylin_contained(point const &pos, float xy_radius, vector<point> &points, bool inc_attic=0, bool inc_ext_basement=0) const;
 	bool point_under_attic_roof(point const &pos, vector3d *const cnorm=nullptr) const;
 	bool point_in_attic(point const &pos, vector3d *const cnorm=nullptr) const;
 	bool cube_in_attic(cube_t const &c) const;
@@ -1436,6 +1436,8 @@ public:
 	bool is_entire_building_occluded(point const &viewer, occlusion_checker_noncity_t &oc) const;
 	bool register_indir_lighting_state_change(unsigned light_ix, bool is_door_change=0) const;
 	bool is_attic_roof(tquad_with_ix_t const &tq, bool type_roof_only) const;
+	bool point_in_extended_basement(point const &pos) const {return (interior && interior->basement_ext_bcube.contains_pt(pos));}
+	cube_t get_bcube_inc_extensions() const;
 	template<typename T> void add_door_verts(cube_t const &D, T &drawer, uint8_t door_type,
 		bool dim, bool dir, bool opened, bool opens_out, bool exterior, bool on_stairs=0, bool hinge_side=0) const;
 	tquad_with_ix_t set_door_from_cube(cube_t const &c, bool dim, bool dir, unsigned type, float pos_adj,
