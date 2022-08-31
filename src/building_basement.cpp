@@ -1349,7 +1349,7 @@ bool building_t::add_underground_exterior_rooms(rand_gen_t &rgen, cube_t const &
 	assert(interior);
 	cube_t const &basement(get_basement());
 	float const ext_wall_pos(basement.d[wall_dim][wall_dir]);
-	float const hallway_len(length_mult*basement.get_sz_dim(wall_dim)), hallway_width(1.5*door_bcube.get_sz_dim(!wall_dim));
+	float const hallway_len(length_mult*basement.get_sz_dim(wall_dim)), hallway_width(1.6*door_bcube.get_sz_dim(!wall_dim));
 	cube_t hallway(basement);
 	set_wall_width(hallway, door_bcube.get_center_dim(!wall_dim), 0.5*hallway_width, !wall_dim);
 	hallway.d[wall_dim][!wall_dir] = ext_wall_pos; // flush with the exterior wall/door

@@ -116,16 +116,20 @@ bool building_t::test_coll_with_sides(point &pos, point const &p_last, float rad
 }
 
 cube_t building_t::get_coll_bcube() const {
-	if (!is_house || (!has_ac && !has_driveway())) return bcube;
-	cube_t cc(bcube);
+	cube_t cc(get_bcube_inc_extensions());
+	if (!is_house || (!has_ac && !has_driveway())) return cc;
 	if (has_ac) {cc.expand_by_xy(0.35*get_window_vspace());} // conservative
 	if (has_driveway()) {cc.union_with_cube(driveway);}
 	return cc;
 }
 cube_t building_t::get_interior_bcube() const { // Note: called for indir lighting; could cache z2
-	cube_t int_bcube(bcube);
+	cube_t int_bcube(get_bcube_inc_extensions());
 	int_bcube.z2() = interior_z2;
 	return int_bcube;
+}
+
+void accumulate_shared_xy_area(cube_t const &c, cube_t const &sc, float &area) {
+	if (c.intersects_xy(sc)) {area += (min(c.x2(), sc.x2()) - max(c.x1(), sc.x1()))*(min(c.y2(), sc.y2()) - max(c.y1(), sc.y1()));}
 }
 
 // Note: used for the player
@@ -166,12 +170,20 @@ bool building_t::check_sphere_coll(point &pos, point const &p_last, vector3d con
 			}
 		}
 		for (auto i = parts.begin(); i != get_real_parts_end_inc_sec(); ++i) { // include garages and sheds
-			if (!i->contains_pt(query_pt)) continue; // not interior to this part
 			float cont_area(0.0);
 
-			for (auto p = parts.begin(); p != get_real_parts_end(); ++p) {
-				if (zval < p->z1() || zval > p->z2()) continue; // wrong floor/part in stack
-				if (p->intersects_xy(sc)) {cont_area += (min(p->x2(), sc.x2()) - max(p->x1(), sc.x1()))*(min(p->y2(), sc.y2()) - max(p->y1(), sc.y1()));} // accumulate shared XY area
+			if (is_basement(i)) {
+				if (!i->contains_pt(query_pt) && !interior->basement_ext_bcube.contains_pt(query_pt)) continue; // not in basement
+				accumulate_shared_xy_area(*i, sc, cont_area);
+				accumulate_shared_xy_area(interior->basement_ext_bcube, sc, cont_area);
+			}
+			else {
+				if (!i->contains_pt(query_pt)) continue; // not interior to this part
+
+				for (auto p = parts.begin(); p != get_real_parts_end(); ++p) {
+					if (zval < p->z1() || zval > p->z2()) continue; // wrong floor/part in stack
+					accumulate_shared_xy_area(*p, sc, cont_area);
+				}
 			}
 			if (cont_area < 0.99*sc.get_area_xy()) { // sphere bounding cube not contained in union of parts - sphere is partially outside the building
 				cube_t c(*i + xlate); // convert to camera space
@@ -407,7 +419,7 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, flo
 		// check Z collision with floors; no need to check ceilings; this will set pos.z correctly so that we can set skip_z=0 in later tests
 		float const floor_test_zval(obj_z + floor_thickness); // move up by floor thickness to better handle steep stairs
 
-		for (auto i = interior->floors.begin(); i != interior->floors.end(); ++i) { // Note: includes attic floor
+		for (auto i = interior->floors.begin(); i != interior->floors.end(); ++i) { // Note: includes attic and basement floors
 			if (!i->contains_pt_xy(pos)) continue; // sphere not in this floor
 			float const z1(i->z2());
 			if (floor_test_zval < z1 || floor_test_zval > z1 + floor_spacing) continue; // this is not the floor the sphere is on
