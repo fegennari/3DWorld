@@ -131,6 +131,9 @@ cube_t building_t::get_interior_bcube() const { // Note: called for indir lighti
 void accumulate_shared_xy_area(cube_t const &c, cube_t const &sc, float &area) {
 	if (c.intersects_xy(sc)) {area += (min(c.x2(), sc.x2()) - max(c.x1(), sc.x1()))*(min(c.y2(), sc.y2()) - max(c.y1(), sc.y1()));}
 }
+float get_coll_zval(point const &pos, point const &p_last, float ground_floor_z1) {
+	return ((pos.z < ground_floor_z1) ? max(pos.z, p_last.z) : min(pos.z, p_last.z)); // min/max away from the ground floor/terrain zval
+}
 
 // Note: used for the player
 bool building_t::check_sphere_coll(point &pos, point const &p_last, vector3d const &xlate,
@@ -153,7 +156,8 @@ bool building_t::check_sphere_coll(point &pos, point const &p_last, vector3d con
 		do_xy_rotate_inv(center, p_last2);
 	}
 	if (check_interior && draw_building_interiors && interior != nullptr) { // check for interior case first
-		float const zval(max(pos2.z, p_last2.z) - xlate.z); // this is the real zval for use in collsion detection, in building space
+		// this is the real zval for use in collsion detection, in building space
+		float const zval(get_coll_zval(pos2, p_last2, ground_floor_z1) - xlate.z);
 		point const pos2_bs(pos2 - xlate), query_pt(pos2_bs.x, pos2_bs.y, zval);
 		cube_t sc; sc.set_from_sphere(pos2_bs, radius); // sphere bounding cube
 
@@ -409,7 +413,7 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, flo
 	float const floor_spacing(get_window_vspace()), floor_thickness(get_floor_thickness()), attic_door_z_gap(0.2f*floor_thickness);
 	float const xy_radius(radius*global_building_params.player_coll_radius_scale); // XY radius can be smaller to allow player to fit between furniture
 	bool had_coll(0), on_stairs(0), on_attic_ladder(0);
-	float obj_z(max(pos.z, p_last.z)); // use p_last to get orig zval
+	float obj_z(get_coll_zval(pos, p_last, ground_floor_z1)); // use p_last to get orig zval
 	cube_with_ix_t const &attic_access(interior->attic_access);
 	unsigned reset_to_last_dims(0); // {x, y} bit flags, for attic roof collision
 	double camera_height(get_player_height());
@@ -423,7 +427,7 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, flo
 			if (!i->contains_pt_xy(pos)) continue; // sphere not in this floor
 			float const z1(i->z2());
 			if (floor_test_zval < z1 || floor_test_zval > z1 + floor_spacing) continue; // this is not the floor the sphere is on
-			if (pos.z < z1 + radius) {pos.z = z1 + radius; obj_z = max(pos.z, p_last.z); had_coll = 1;} // move up
+			if (pos.z < z1 + radius) {pos.z = z1 + radius; obj_z = get_coll_zval(pos, p_last, ground_floor_z1); had_coll = 1;} // move up
 			break; // only change zval once
 		}
 		if (has_attic() && attic_access.contains_pt_xy(pos)) {
@@ -433,12 +437,12 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, flo
 				bool const dim(attic_access.ix >> 1), dir(attic_access.ix & 1);
 				float const length(attic_access.get_sz_dim(dim)), t(CLIP_TO_01((pos[dim] - attic_access.d[dim][0])/length)), T(dir ? t : (1.0-t));
 				pos.z = (attic_access.z2() + attic_door_z_gap) - floor_spacing*(1.0 - T) + radius;
-				obj_z = max(pos.z, p_last.z);
+				obj_z = get_coll_zval(pos, p_last, ground_floor_z1);
 				had_coll = on_attic_ladder = 1;
 			}
 			else if (!interior->attic_access_open && obj_z > attic_access.z2()) { // standing on closed attic access door
 				pos.z = attic_access.z2() + radius; // move up
-				obj_z = max(pos.z, p_last.z);
+				obj_z = get_coll_zval(pos, p_last, ground_floor_z1);
 				had_coll = 1;
 			}
 		}
@@ -467,7 +471,7 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, flo
 				break;
 			} // for i
 			had_coll = player_in_attic = 1;
-			obj_z    = max(pos.z, p_last.z);
+			obj_z    = get_coll_zval(pos, p_last, ground_floor_z1);
 		}
 	}
 	// *** Note ***: at this point pos.z is radius above the floors and *not* at the camera height, which is why we add camera_height to pos.z below
@@ -484,7 +488,7 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, flo
 			if (obj_z < c->z1())          continue; // below the stair
 			if (pos.z - radius > c->z1()) continue; // above the stair
 			pos.z = c->z1() + radius; // stand on the stair - this can happen for multiple stairs
-			obj_z = max(pos.z, p_last.z);
+			obj_z = get_coll_zval(pos, p_last, ground_floor_z1);
 			bool const is_u(c->shape == SHAPE_STAIRS_U);
 			if (!is_u || c->dir == 1) {max_eq(pos[!c->dim], (c->d[!c->dim][0] + xy_radius));} // force the sphere onto the stairs
 			if (!is_u || c->dir == 0) {min_eq(pos[!c->dim], (c->d[!c->dim][1] - xy_radius));}
@@ -523,7 +527,7 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, flo
 				if (ztop < player_bot_z_step) { // step onto or move along ramp top surface
 					if (!sphere_cube_intersect_xy(pos, xy_radius, *c)) continue; // not actually on the ramp
 					pos.z = ztop + radius;
-					obj_z = max(pos.z, p_last.z);
+					obj_z = get_coll_zval(pos, p_last, ground_floor_z1);
 					had_coll = 1;
 
 					if (!(c->flags & RO_FLAG_OPEN)) { // top floor ramp can't be walked on if blocked by a ceiling
@@ -749,7 +753,7 @@ bool building_interior_t::check_sphere_coll(building_t const &building, point &p
 bool building_interior_t::check_sphere_coll_walls_elevators_doors(building_t const &building, point &pos, point const &p_last, float radius,
 	float wall_test_extra_z, bool check_open_doors, vector3d *cnorm) const
 {
-	float const obj_z(max(pos.z, p_last.z)), wall_test_z(obj_z + wall_test_extra_z); // use p_last to get orig zval
+	float const obj_z(get_coll_zval(pos, p_last, building.ground_floor_z1)), wall_test_z(obj_z + wall_test_extra_z); // use p_last to get orig zval
 	bool had_coll(0);
 
 	// Note: pos.z may be too small here and we should really use obj_z, so skip_z must be set to 1 in cube tests and obj_z tested explicitly instead
