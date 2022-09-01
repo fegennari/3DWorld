@@ -1726,7 +1726,7 @@ bool get_dishwasher_for_ksink(room_object_t const &c, cube_t &dishwasher);
 room_object_t split_cabinet_at_dishwasher(room_object_t &cabinet, cube_t const &dishwasher);
 room_object_t get_dresser_middle(room_object_t const &c);
 room_object_t get_desk_drawers_part(room_object_t const &c);
-room_object_t get_desk_top_back(room_object_t const &c, cube_t const &top);
+room_object_t get_desk_top_back(room_object_t const &c);
 cube_t get_attic_access_door_cube(room_object_t const &c, bool inc_ladder=0);
 cube_t get_ladder_bcube_from_open_attic_door(room_object_t const &c, cube_t const &door);
 cube_t get_elevator_car_panel(room_object_t const &c, float fc_thick_scale);

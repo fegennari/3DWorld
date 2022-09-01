@@ -307,7 +307,7 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc, int only_this_fl
 			if      (c->type == TYPE_DRESSER || c->type == TYPE_NIGHTSTAND) {cc.emplace_back(get_dresser_middle(*c), color);}
 			else if (c->type == TYPE_DESK) {
 				if (c->desk_has_drawers() ) {cc.emplace_back(get_desk_drawers_part(*c), color);}
-				if (c->shape == SHAPE_TALL) {cc.emplace_back(get_desk_top_back(*c, cubes[0]), color);} // tall desk
+				if (c->shape == SHAPE_TALL) {cc.emplace_back(get_desk_top_back(*c), color);} // tall desk
 			}
 		}
 		else if (c->type == TYPE_CHAIR) {
