@@ -3043,7 +3043,8 @@ public:
 
 				// Note: assumes buildings are separated so that only one sphere collision can occur
 				for (auto b = ge.bc_ixs.begin(); b != ge.bc_ixs.end(); ++b) {
-					if (!b->intersects_xy(bcube)) continue;
+					// if check_interior=1, this may be the player and we have to handle the extended basement, which is outside the building bcube
+					if (!(check_interior ? get_building(b->ix).get_coll_bcube() : *b).intersects_xy(bcube)) continue;
 					if (get_building(b->ix).check_sphere_coll(pos, p_last, xlate, radius, xy_only, points, cnorm, check_interior)) return 1;
 				} // for b
 				if (check_road_seg_sphere_coll(ge, pos, p_last, xlate, radius, xy_only, cnorm)) return 1;

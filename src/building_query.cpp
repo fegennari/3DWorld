@@ -175,9 +175,11 @@ bool building_t::check_sphere_coll(point &pos, point const &p_last, vector3d con
 		}
 		for (auto i = parts.begin(); i != get_real_parts_end_inc_sec(); ++i) { // include garages and sheds
 			float cont_area(0.0);
+			cube_t clamp_part(*i);
 
 			if (is_basement(i)) {
-				if (!i->contains_pt(query_pt) && !interior->basement_ext_bcube.contains_pt(query_pt)) continue; // not in basement
+				if (interior->basement_ext_bcube.contains_pt(query_pt)) {clamp_part = interior->basement_ext_bcube;}
+				else if (!i->contains_pt(query_pt)) continue; // not in basement
 				accumulate_shared_xy_area(*i, sc, cont_area);
 				accumulate_shared_xy_area(interior->basement_ext_bcube, sc, cont_area);
 			}
@@ -190,7 +192,7 @@ bool building_t::check_sphere_coll(point &pos, point const &p_last, vector3d con
 				}
 			}
 			if (cont_area < 0.99*sc.get_area_xy()) { // sphere bounding cube not contained in union of parts - sphere is partially outside the building
-				cube_t c(*i + xlate); // convert to camera space
+				cube_t c(clamp_part + xlate); // convert to camera space
 				c.expand_by_xy(-radius); // shrink part by sphere radius
 				c.clamp_pt_xy(pos2); // force pos2 into interior of the cube to prevent the sphere from intersecting the part
 				had_coll = 1;
