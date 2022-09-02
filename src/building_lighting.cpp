@@ -935,13 +935,24 @@ void building_t::refine_light_bcube(point const &lpos, float light_radius, cube_
 
 	// first determine the union of all intersections with parts; ignore zvals here so that we get the same result for every floor
 	if (is_parking_garage) {tight_bcube = part = room;} // parking garage is the entire room; other_parts remains empty
-	else if (interior->basement_ext_bcube.contains_pt(lpos)) { // extended basement
+	else if (lpos.z < ground_floor_z1) { // light in basement
 		cube_t const basement(get_basement());
-		tight_bcube = part = interior->basement_ext_bcube;
-		if (light_bcube.intersects_xy(basement)) {tight_bcube.union_with_cube(basement);}
-		other_parts.push_back(basement); // include the basement itself
+
+		if (interior->basement_ext_bcube.contains_pt(lpos)) { // light in extended basement
+			tight_bcube = part = interior->basement_ext_bcube;
+			if (light_bcube.intersects_xy(basement)) {tight_bcube.union_with_cube(basement);}
+			other_parts.push_back(basement); // include the basement itself
+		}
+		else {
+			tight_bcube = part = basement;
+
+			if (!interior->basement_ext_bcube.is_all_zeros()) { // include extended basement
+				if (light_bcube.intersects_xy(interior->basement_ext_bcube)) {tight_bcube.union_with_cube(interior->basement_ext_bcube);}
+				other_parts.push_back(interior->basement_ext_bcube);
+			}
+		}
 	}
-	else {
+	else { // light above ground
 		for (auto p = parts.begin(); p != get_real_parts_end(); ++p) { // secondary buildings aren't handled here
 			//if (lpos.z < p->z1() || lpos.z > p->z2()) continue; // light zval not included (doesn't seem to work)
 			if (!light_bcube.intersects_xy(*p)) continue;
@@ -1293,10 +1304,13 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		sphere_bc.set_from_sphere(lpos, cull_radius);
 		cube_t clipped_bc(sphere_bc);
 
-		if (interior->basement_ext_bcube.contains_pt(lpos)) { // extended basement light; use basement_ext_bcube rather than building bcube
-			clipped_bc.intersect_with_cube(interior->basement_ext_bcube);
+		if (light_in_basement) { // clip to basement + ext basement
+			cube_t basement_bcube(get_basement());
+			if (!interior->basement_ext_bcube.is_all_zeros()) {basement_bcube.union_with_cube(interior->basement_ext_bcube);}
+			assert(basement_bcube.contains_pt(lpos));
+			clipped_bc.intersect_with_cube(basement_bcube);
 		}
-		else {
+		else { // clip to bcube
 			assert(bcube.contains_pt(lpos));
 			clipped_bc.intersect_with_cube(bcube);
 		}
