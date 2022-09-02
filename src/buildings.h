@@ -1070,7 +1070,7 @@ struct door_base_t : public cube_t {
 	//uint8_t room1, room2;
 	door_base_t() : dim(0), open_dir(0), hinge_side(0), on_stairs(0) {}
 	door_base_t(cube_t const &c, bool dim_, bool dir, bool os=0, bool hs=0) :
-		cube_t(c), dim(dim_), open_dir(dir), hinge_side(hs), on_stairs(os) {assert(is_strictly_normalized());}
+		cube_t(c), dim(dim_), open_dir(dir), hinge_side(hs), on_stairs(os) {assert(is_normalized());}
 	bool get_check_dirs  () const {return (dim ^ open_dir ^ hinge_side ^ 1);}
 	float get_width      () const {return get_sz_dim(!dim);}
 	float get_thickness  () const {return DOOR_THICK_TO_WIDTH*get_width();}
@@ -1160,7 +1160,8 @@ struct building_interior_t {
 	void update_dynamic_draw_data() {assert(room_geom); room_geom->update_dynamic_draw_data();}
 	void get_avoid_cubes(vect_cube_t &avoid, float z1, float z2, float floor_thickness, bool same_as_player, bool skip_stairs=0) const;
 	void create_fc_occluders();
-	void place_exterior_room(cube_t const &room, float fc_thick, float wall_thick, vect_cube_t const &wall_exclude, unsigned part_id, unsigned num_lights, bool is_hallway);
+	void place_exterior_room(cube_t const &room, cube_t const &wall_area, float fc_thick, float wall_thick, vect_cube_t const &wall_exclude,
+		unsigned part_id, unsigned num_lights=0, bool is_hallway=0);
 	colorRGBA get_attic_ceiling_color() const;
 	room_t const &get_garage_room() const {assert((unsigned)garage_room < rooms.size()); return rooms[garage_room];}
 };
