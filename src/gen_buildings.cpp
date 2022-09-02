@@ -2328,11 +2328,11 @@ public:
 
 				// draw interior for the building containing the light
 				for (auto g = (*i)->grid_by_tile.begin(); g != (*i)->grid_by_tile.end(); ++g) {
-					if (!g->bcube.contains_pt(lpos)) continue; // wrong tile
+					if (!g->bcube.contains_pt(lpos)) continue; // wrong tile (Note: may be wrong for ext basement light extending outside tile)
 					
 					for (auto bi = g->bc_ixs.begin(); bi != g->bc_ixs.end(); ++bi) {
 						building_t &b((*i)->get_building(bi->ix));
-						if (!b.interior || !b.bcube.contains_pt(lpos)) continue; // no interior or wrong building
+						if (!b.interior || !b.point_in_building_or_basement_bcube(lpos)) continue; // no interior or wrong building
 						(*i)->building_draw_interior.draw_quads_for_draw_range(s, b.interior->draw_range, 1); // shadow_only=1
 						b.add_split_roof_shadow_quads(ext_parts_draw);
 						// no batch draw for shadow pass since textures aren't used; draw everything, since shadow may be cached

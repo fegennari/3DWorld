@@ -1363,9 +1363,6 @@ bool building_t::add_underground_exterior_rooms(rand_gen_t &rgen, cube_t const &
 	float const fc_thick(get_fc_thickness()), wall_thickness(get_wall_thickness()), ceiling_zval(hallway.z2() - fc_thick);
 	if (query_min_height(hallway, ceiling_zval) < ceiling_zval) return 0; // // check for terrain clipping through ceiling
 	
-	// TODO: player shadow doesn't work
-	// TODO: door/wall shadow doesn't work
-
 	// check for other buildings; probably not necessary because of spacing between houses
 	// TODO: including basement extensions?
 	for (unsigned d = 0; d < 2; ++d) {

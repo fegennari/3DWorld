@@ -1911,7 +1911,7 @@ bool building_t::check_obj_occluded(cube_t const &c, point const &viewer_in, occ
 	//highres_timer_t timer("Check Object Occlusion"); // 0.001ms
 	point viewer(viewer_in);
 	maybe_inv_rotate_point(viewer); // rotate viewer pos into building space
-	bool const player_in_building(bcube.contains_pt(viewer) || interior->basement_ext_bcube.contains_pt(viewer));
+	bool const player_in_building(point_in_building_or_basement_bcube(viewer));
 	// if fully inside basement, and viewer outside building or not on first floor, will be occluded
 	if (c.z2() < ground_floor_z1 && (viewer.z > (ground_floor_z1 + get_window_vspace()) || !player_in_building)) return 1;
 	point pts[8];

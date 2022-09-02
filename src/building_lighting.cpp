@@ -938,7 +938,7 @@ void building_t::refine_light_bcube(point const &lpos, float light_radius, cube_
 	else if (lpos.z < ground_floor_z1) { // light in basement
 		cube_t const basement(get_basement());
 
-		if (interior->basement_ext_bcube.contains_pt(lpos)) { // light in extended basement
+		if (point_in_extended_basement(lpos)) { // light in extended basement
 			tight_bcube = part = interior->basement_ext_bcube;
 			if (light_bcube.intersects_xy(basement)) {tight_bcube.union_with_cube(basement);}
 			other_parts.push_back(basement); // include the basement itself

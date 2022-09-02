@@ -178,7 +178,7 @@ bool building_t::check_sphere_coll(point &pos, point const &p_last, vector3d con
 			cube_t clamp_part(*i);
 
 			if (is_basement(i)) {
-				if (interior->basement_ext_bcube.contains_pt(query_pt)) {clamp_part = interior->basement_ext_bcube;}
+				if (point_in_extended_basement(query_pt)) {clamp_part = interior->basement_ext_bcube;}
 				else if (!i->contains_pt(query_pt)) continue; // not in basement
 				accumulate_shared_xy_area(*i, sc, cont_area);
 				accumulate_shared_xy_area(interior->basement_ext_bcube, sc, cont_area);
