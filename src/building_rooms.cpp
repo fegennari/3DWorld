@@ -2789,8 +2789,8 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				flags |= RO_FLAG_IS_ACTIVE; // leave unlit and enable motion detection for lights
 			}
 			else {
-				// 50% of lights are on, 75% for top of stairs, 100% for hallways, 100% for parking garages
-				is_lit = (r->is_hallway || is_parking_garage || ((rgen.rand() & (top_of_stairs ? 3 : 1)) != 0));
+				// 50% of lights are on, 75% for top of stairs, 100% for non-basement hallways, 100% for parking garages
+				is_lit = ((r->is_hallway && !is_basement) || is_parking_garage || ((rgen.rand() & (top_of_stairs ? 3 : 1)) != 0));
 
 				if (!is_lit) { // check people and set is_lit if anyone is in this floor of this room
 					for (person_t const &p : interior->people) {
