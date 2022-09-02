@@ -1911,8 +1911,9 @@ bool building_t::check_obj_occluded(cube_t const &c, point const &viewer_in, occ
 	//highres_timer_t timer("Check Object Occlusion"); // 0.001ms
 	point viewer(viewer_in);
 	maybe_inv_rotate_point(viewer); // rotate viewer pos into building space
+	bool const player_in_building(bcube.contains_pt(viewer) || interior->basement_ext_bcube.contains_pt(viewer));
 	// if fully inside basement, and viewer outside building or not on first floor, will be occluded
-	if (c.z2() < ground_floor_z1 && (viewer.z > (ground_floor_z1 + get_window_vspace()) || !bcube.contains_pt(viewer))) return 1;
+	if (c.z2() < ground_floor_z1 && (viewer.z > (ground_floor_z1 + get_window_vspace()) || !player_in_building)) return 1;
 	point pts[8];
 	unsigned const npts(get_cube_corners(c.d, pts, viewer, 0)); // should return only the 6 visible corners
 	
@@ -1922,7 +1923,7 @@ bool building_t::check_obj_occluded(cube_t const &c, point const &viewer_in, occ
 			if (are_pts_occluded_by_any_cubes<1>(viewer, pts, npts, interior->walls[d], d, c.get_sz_dim(!d))) return 1; // with size check (helps with light bcubes)
 		}
 	}
-	if (!c_is_building_part && (reflection_pass || bcube.contains_pt(viewer))) {
+	if (!c_is_building_part && (reflection_pass || player_in_building)) {
 		// viewer inside this building; includes shadow_only case and reflection_pass (even if reflected camera is outside the building);
 		// check floors/ceilings of this building
 		if (fabs(viewer.z - c.zc()) > (reflection_pass ? 1.0 : 0.5)*get_window_vspace()) { // on different floors

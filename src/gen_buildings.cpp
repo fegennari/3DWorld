@@ -1287,9 +1287,10 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, 
 			if (has_basement_door) {
 				// find basement door and remove a section of wall around it; can't use stencil test associated with ext_side_qv_range
 				assert(interior);
-				
+
 				for (auto const &door : interior->doors) { // check all exterior doors
-					if (!door.intersects(interior->basement_ext_bcube)) continue; // not the door separating the basement from the exterior basement
+					if (door.z1() >= ground_floor_z1)    continue; // not a basement door
+					if (basement.contains_cube_xy(door)) continue; // not the door separating the basement from the exterior basement
 					unsigned const this_face(1 << (2*door.dim + door.open_dir + 3));
 					dim_mask |= this_face; // skip this face for the full basement call below
 
@@ -2461,7 +2462,7 @@ public:
 		bool const night(is_night(WIND_LIGHT_ON_RAND));
 		// check for sun or moon; also need the smap pass for drawing with dynamic lights at night, so basically it's always enabled
 		bool const use_tt_smap(check_tile_smap(0)); // && (night || light_valid_and_enabled(0) || light_valid_and_enabled(1)));
-		bool have_windows(0), have_wind_lights(0), have_interior(0), this_frame_camera_in_building(0), this_frame_player_in_attic(0), player_in_ext_basement(0);
+		bool have_windows(0), have_wind_lights(0), have_interior(0), this_frame_camera_in_building(0), this_frame_player_in_attic(0);
 		int this_frame_player_in_basement(0);
 		unsigned max_draw_ix(0);
 		shader_t s;
@@ -2572,9 +2573,7 @@ public:
 					for (auto bi = g->bc_ixs.begin(); bi != g->bc_ixs.end(); ++bi) {
 						building_t &b((*i)->get_building(bi->ix));
 						if (!b.interior) continue; // no interior, skip
-						bool const in_ext_basement(b.point_in_extended_basement(camera_xlated));
-						player_in_ext_basement |= in_ext_basement;
-						bool const player_in_building_bcube(b.bcube.contains_pt_xy(camera_xlated) || in_ext_basement); // player within building's bcube
+						bool const player_in_building_bcube(b.bcube.contains_pt_xy(camera_xlated) || b.point_in_extended_basement(camera_xlated)); // player within building's bcube
 						if (reflection_pass && !player_in_building_bcube) continue; // not the correct building
 						float const bdist_sq(p2p_dist_sq(camera_xlated, b.bcube.closest_pt(camera_xlated)));
 						//if (bdist_sq > rgeom_clear_dist_sq) {b.clear_room_geom(); continue;} // too far away - is this useful?
@@ -2730,7 +2729,7 @@ public:
 
 		// everything after this point is part of the building exteriors and uses city lights rather than building room lights;
 		// when the player is in the extended basement we still need to draw the exterior wall and door
-		if ((player_in_basement == 2 && !player_in_ext_basement) || player_in_attic || (reflection_pass && (!DRAW_EXT_REFLECTIONS || reflection_pass != 3))) {
+		if ((player_in_basement == 2) || player_in_attic || (reflection_pass && (!DRAW_EXT_REFLECTIONS || reflection_pass != 3))) {
 			// early exit for player fully in basement or attic, or house reflections, if enabled
 			fgPopMatrix();
 			enable_dlight_bcubes = 0;
