@@ -3033,6 +3033,7 @@ public:
 		unsigned ixr[2][2];
 		get_grid_range(bcube, ixr);
 		float const dist(p2p_dist(pos, p_last));
+		bool saw_player_building(0);
 
 		for (unsigned y = ixr[0][1]; y <= ixr[1][1]; ++y) {
 			for (unsigned x = ixr[0][0]; x <= ixr[1][0]; ++x) {
@@ -3043,13 +3044,21 @@ public:
 
 				// Note: assumes buildings are separated so that only one sphere collision can occur
 				for (auto b = ge.bc_ixs.begin(); b != ge.bc_ixs.end(); ++b) {
-					// if check_interior=1, this may be the player and we have to handle the extended basement, which is outside the building bcube
-					if (!(check_interior ? get_building(b->ix).get_coll_bcube() : *b).intersects_xy(bcube)) continue;
-					if (get_building(b->ix).check_sphere_coll(pos, p_last, xlate, radius, xy_only, points, cnorm, check_interior)) return 1;
+					if (!b->intersects_xy(bcube)) continue;
+					building_t const &building(get_building(b->ix));
+					if (building.check_sphere_coll(pos, p_last, xlate, radius, xy_only, points, cnorm, check_interior)) return 1;
+					saw_player_building |= (check_interior && &building == player_building);
 				} // for b
 				if (check_road_seg_sphere_coll(ge, pos, p_last, xlate, radius, xy_only, cnorm)) return 1;
 			} // for x
 		} // for y
+		// hack to handle player in extended basement, which may be outside the building or even grid bbox:
+		// if player is in the basement, and we haven't checked the player's building, and the player's building is in our range of buildings, check it now
+		if (check_interior && !saw_player_building && player_in_basement && player_building >= buildings.data() && player_building < buildings.data()+buildings.size()) {
+			if (dist_xy_less_than(get_camera_pos(), pos, CAMERA_RADIUS)) { // if this is the player
+				if (player_building->check_sphere_coll(pos, p_last, xlate, radius, xy_only, points, cnorm, check_interior)) return 1;
+			}
+		}
 		return 0;
 	}
 	bool check_road_seg_sphere_coll(grid_elem_t const &ge, point &pos, point const &p_last, vector3d const &xlate, float radius, bool xy_only, vector3d *cnorm) const {
