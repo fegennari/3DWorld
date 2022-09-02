@@ -2720,11 +2720,13 @@ void tile_draw_t::draw(int reflection_pass) { // reflection_pass: 0=none, 1=wate
 			 << ", smap MB: " << in_mb(smap_mem) << ", smap free list MB: " << in_mb(smap_free_list_mem) << ", frame buf MB: " << in_mb(frame_buf_mem)
 			 << ", texture MB: " << in_mb(texture_mem) << ", building MB: " << in_mb(building_mem) << ", model MB: " << in_mb(models_mem) << endl;
 	}
-	if (pine_trees_enabled ()) {draw_pine_trees (reflection_pass);}
-	if (decid_trees_enabled()) {draw_decid_trees(reflection_pass);}
-	if (scenery_enabled    ()) {draw_scenery    (reflection_pass);}
-	if (is_grass_enabled   ()) {draw_grass      (reflection_pass);}
-	if (ENABLE_ANIMALS)        {draw_animals    (reflection_pass);}
+	if (player_in_basement != 2 && !player_in_attic) { // vegetation/scenery not visible when player is fully inside the basement or attic
+		if (pine_trees_enabled ()) {draw_pine_trees (reflection_pass);}
+		if (decid_trees_enabled()) {draw_decid_trees(reflection_pass);}
+		if (scenery_enabled    ()) {draw_scenery    (reflection_pass);}
+		if (is_grass_enabled   ()) {draw_grass      (reflection_pass);}
+		if (ENABLE_ANIMALS)        {draw_animals    (reflection_pass);}
+	}
 	//if ((GET_TIME_MS() - timer1) > 100) {PRINT_TIME("Draw Tiled Terrain");}
 }
 
@@ -3166,7 +3168,6 @@ void tile_draw_t::draw_grass(bool reflection_pass) {
 
 	if (reflection_pass)    return; // no grass reflections (yet)
 	if (player_in_basement) return; // grass can sometimes appear in a building basement, so disable it when the player is in the basement
-	if (player_in_attic)    return; // grass not visible from attic - optimization
 	bool const use_cloud_shadows(GRASS_CLOUD_SHADOWS && cloud_shadows_enabled());
 	vector<vector<vector2d> > insts[NUM_GRASS_LODS];
 	unsigned num_grass_drawn(0), num_flowers_drawn(0);
