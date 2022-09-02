@@ -1308,6 +1308,7 @@ void building_t::add_parking_garage_ramp(rand_gen_t &rgen) {
 }
 
 bool building_t::extend_underground_basement(rand_gen_t rgen) {
+	if (!interior) return 0;
 	//highres_timer_t timer("Extend Underground Basement");
 	float const height(get_window_vspace() - get_fc_thickness()); // full height of floor to avoid a gap at the top
 	cube_t const &basement(get_basement());
@@ -1317,12 +1318,18 @@ bool building_t::extend_underground_basement(rand_gen_t rgen) {
 		for (unsigned d = 0; d < 2; ++d, dim ^= 1) { // try both dims
 			for (unsigned e = 0; e < 2; ++e, dir ^= 1) { // try both dirs
 				if (basement.d[dim][dir] != bcube.d[dim][dir]) continue; // wall not on the building bcube
-				cube_t const cand_door(place_door(basement, dim, dir, height, 0.0, 0.0, 0.25, DOOR_WIDTH_SCALE, 1, 0, rgen));
+				cube_t cand_door(place_door(basement, dim, dir, height, 0.0, 0.0, 0.25, DOOR_WIDTH_SCALE, 1, 0, rgen));
 				if (cand_door.is_all_zeros()) continue; // can't place a door on this wall
 				bool const ret(add_underground_exterior_rooms(rgen, cand_door, dim, dir, 0.25*len));
 				if (!ret) continue;
-				has_basement_door = add_door(cand_door, basement_part_ix, dim, dir, 0);
-				assert(has_basement_door); // must succeed
+				float const fc_thick(get_fc_thickness());
+				set_cube_zvals(cand_door, basement.z1()+fc_thick, basement.z2()-fc_thick); // change z to span floor to ceiling for interior door
+				cand_door.d[dim][dir] += (dir ? 1.0 : -1.0)*get_wall_thickness();
+				assert(cand_door.is_strictly_normalized());
+				bool const is_open(rgen.rand_bool()); // 50% of the time
+				door_t door(cand_door, dim, dir, is_open);
+				add_interior_door(door);
+				has_basement_door = 1;
 				return 1;
 			} // for e
 		} // for d
@@ -1359,6 +1366,9 @@ bool building_t::add_underground_exterior_rooms(rand_gen_t &rgen, cube_t const &
 	
 	// check for other buildings; probably not necessary because of spacing between houses
 	// TODO: including basement extensions? (and trees?)
+	// TODO: player shadow doesn't work
+	// TODO: door/wall shadow doesn't work
+	// TODO: occlusion culling is wrong
 	for (unsigned d = 0; d < 2; ++d) {
 		point far_corner;
 		far_corner[ wall_dim] = hallway.d[ wall_dim][wall_dir];

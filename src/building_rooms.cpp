@@ -1628,7 +1628,7 @@ bool building_t::add_storage_objs(rand_gen_t rgen, room_t const &room, float zva
 		for (unsigned dir = 0; dir < 2; ++dir) {
 			if (is_int_garage ? ((rgen.rand()%3) == 0) : rgen.rand_bool()) continue; // only add shelves to 50% of the walls, 67% for interior garages
 			
-			if (is_garage_or_shed || (is_basement && has_basement_door)) {
+			if (is_garage_or_shed) {
 				// garage or shed - don't place shelves in front of door, but allow them against windows; basement - don't place against basement door
 				cube_t wall(room);
 				wall.d[dim][!dir] = wall.d[dim][dir]; // shrink room to zero width along this wall
@@ -2849,7 +2849,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			if (is_parking_garage) continue; // generated above, done; no outlets or light switches
 			float tot_light_amt(light_amt); // unitless, somewhere around 1.0
 			if (is_lit) {tot_light_amt += r->light_intensity;}
-			bool const is_ground_floor(f == 0 && (!is_basement || has_basement_door) && r->z1() <= ground_floor_z1);
+			bool const is_ground_floor(f == 0 && (!is_basement /*|| has_basement_door*/) && r->z1() <= ground_floor_z1);
 			bool const is_garage_or_shed(r->is_garage_or_shed(f));
 			unsigned const objs_start(objs.size());
 			rgen.rand_mix();

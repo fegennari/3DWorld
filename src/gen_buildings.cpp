@@ -1286,16 +1286,16 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, 
 
 			if (has_basement_door) {
 				// find basement door and remove a section of wall around it; can't use stencil test associated with ext_side_qv_range
-				for (auto const &door : doors) { // check all exterior doors
-					cube_t const c(door.get_bcube());
-					if (c.z2() > basement.z2()) continue; // not a basement door
-					bool const dim(c.dy() < c.dx()), dir(basement.get_center_dim(dim) < c.get_center_dim(dim));
-					unsigned const this_face(1 << (2*dim + dir + 3));
+				assert(interior);
+				
+				for (auto const &door : interior->doors) { // check all exterior doors
+					if (!door.intersects(interior->basement_ext_bcube)) continue; // not the door separating the basement from the exterior basement
+					unsigned const this_face(1 << (2*door.dim + door.open_dir + 3));
 					dim_mask |= this_face; // skip this face for the full basement call below
 
 					for (unsigned d = 0; d < 2; ++d) {
 						cube_t side(basement);
-						side.d[!dim][!d] = c.d[!dim][d];
+						side.d[!door.dim][!d] = door.d[!door.dim][d];
 						bdraw.add_section(*this, 0, side, tp, WHITE, ~(this_face | 4), 0, 0, 1, 0); // single face, always white
 					}
 					break; // there should be only one basement door
