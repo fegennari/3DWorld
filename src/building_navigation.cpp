@@ -665,6 +665,9 @@ bool building_t::choose_dest_goal(person_t &person, rand_gen_t &rgen, bool same_
 			else if (player_z1 - fc_thick > person_z1) {person.target_pos.z += floor_spacing;} // move up   one floor
 		}
 		float const z2_add(person.get_height() - person.radius), coll_dist(COLL_RADIUS_SCALE*person.radius);
+		cube_t ai_bcube;
+		if (has_basement() && person.target_pos.z < ground_floor_z1) {ai_bcube = get_full_basement_bcube();} // in the basement
+		else {ai_bcube = bcube;} // above ground
 		cube_t legal_area(bcube);
 		legal_area.expand_by_xy(-coll_dist);
 		legal_area.z1() += person.radius;
@@ -678,6 +681,10 @@ bool building_t::choose_dest_goal(person_t &person, rand_gen_t &rgen, bool same_
 			if (p->contains_pt(person.target_pos)) {dmin_sq = 0; break;} // done
 			float const dsq(p2p_dist_sq(person.target_pos, p->closest_pt(person.target_pos)));
 			if (dsq < dmin_sq) {closest_part = *p;}
+		}
+		if (!interior->basement_ext_bcube.is_all_zeros()) {
+			float const dsq(p2p_dist_sq(person.target_pos, interior->basement_ext_bcube.closest_pt(person.target_pos)));
+			if (dsq < dmin_sq) {closest_part = interior->basement_ext_bcube;}
 		}
 		if (dmin_sq > 0.0 && !closest_part.is_all_zeros()) {closest_part.clamp_pt(person.target_pos);} // clamp to closest part
 		static vect_cube_t avoid; // reuse across frames/people
@@ -1100,7 +1107,7 @@ int building_t::ai_room_update(rand_gen_t &rgen, float delta_dir, unsigned perso
 		person.target_pos = all_zeros; // force choose_dest=1 below
 	}
 	assert(interior);
-	assert(bcube.contains_pt(person.pos)); // person must be inside the building
+	assert(point_in_building_or_basement_bcube(person.pos)); // person must be inside the building
 	build_nav_graph();
 
 	if (can_ai_follow_player(person)) {
@@ -1167,7 +1174,7 @@ int building_t::ai_room_update(rand_gen_t &rgen, float delta_dir, unsigned perso
 	//person.following_player = can_target_player(person); // for debugging visualization
 
 	if (dist_less_than(person.pos, person.target_pos, 1.1f*max_dist)) { // at dest
-		assert(bcube.contains_pt(person.target_pos));
+		assert(point_in_building_or_basement_bcube(person.target_pos));
 		person.pos = person.target_pos;
 		if (!person.path.empty()) {person.next_path_pt(stay_on_one_floor, 0); return AI_NEXT_PT;} // move to next path point
 		// don't wait if we can follow the player
@@ -1189,7 +1196,9 @@ int building_t::ai_room_update(rand_gen_t &rgen, float delta_dir, unsigned perso
 		if (person.on_stairs()) {person.dir.z = new_dir.z/new_dir_mag;} // dir.z tracks exactly
 		person.dir.normalize();
 		new_pos = person.pos + (max_dist*step_scale)*person.dir;
-		cube_t clip_cube(bcube);
+		cube_t clip_cube;
+		if (new_pos.z < ground_floor_z1) {clip_cube = get_full_basement_bcube();}
+		else {clip_cube = bcube;} // above ground
 		clip_cube.expand_by_xy(-coll_dist); // shrink
 		clip_cube.clamp_pt_xy(new_pos); // make sure person stays within building bcube; can't clip to room because person may be exiting it
 	}
@@ -1284,13 +1293,13 @@ void building_t::move_person_to_not_collide(person_t &person, person_t const &ot
 	if (sep_dist > 0.01*coll_dist) {person.pos += (move_dist/sep_dist)*(person.pos - other_pos);}
 	else {person.pos.x += rsum;} // avoid divide-by-zero, choose +X direction arbitrarily
 	int const room_ix(get_building_loc_for_pt(orig_pos).room_ix);
-	cube_t clip_bounds((room_ix >= 0 && (unsigned)room_ix < interior->rooms.size()) ? get_room(room_ix) : bcube);
+	cube_t clip_bounds((room_ix >= 0 && (unsigned)room_ix < interior->rooms.size()) ? get_room(room_ix) : bcube); // TODO: doesn't handle ext basement?
 	clip_bounds.expand_by_xy(-coll_dist); // shrink
 	clip_bounds.union_with_pt(orig_pos); // we know this point was valid
 	clip_bounds.union_with_pt(new_pos);  // we know this point is valid
 	clip_bounds.clamp_pt_xy(person.pos); // force player into the room
 
-	if (!bcube.contains_pt(person.pos)) { // this can happen on rare occasions, due to fp inaccuracy or multiple collisions
+	if (!point_in_building_or_basement_bcube(person.pos)) { // this can happen on rare occasions, due to fp inaccuracy or multiple collisions
 		//cout << TXT(rsum) << TXT(sep_dist) << TXT(move_dist) << TXT(room_ix) << TXT(other.pos.str()) << TXT(person.pos.str()) << TXT(bcube.str()) << endl;
 		bcube.clamp_pt_xy(person.pos); // just clamp pos so that it doesn't assert later
 	}
@@ -1320,7 +1329,7 @@ int building_t::get_room_containing_pt(point const &pt) const {
 building_loc_t building_t::get_building_loc_for_pt(point const &pt) const {
 	building_loc_t loc;
 
-	for (auto p = parts.begin(); p != get_real_parts_end_inc_sec(); ++p) {
+	for (auto p = parts.begin(); p != get_real_parts_end_inc_sec(); ++p) { // TODO: what about ext basement?
 		if (p->contains_pt(pt)) {loc.part_ix = (p - parts.begin()); break;}
 	}
 	if (interior) { // rooms and stairwells, no elevators yet
