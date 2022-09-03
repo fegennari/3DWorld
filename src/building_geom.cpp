@@ -5,7 +5,7 @@
 #include "function_registry.h"
 #include "buildings.h"
 
-bool const ADD_UNDERGROUND_ROOMS = 0; // incomplete/experimental
+bool const ADD_EXTENDED_BASEMENT = 1;
 
 cube_t grass_exclude1, grass_exclude2;
 
@@ -849,7 +849,7 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 				} // for d
 			} // for p
 		} // end back door
-		if (ADD_UNDERGROUND_ROOMS && has_basement() && !is_rotated() && interior) {extend_underground_basement(rgen);} // add door inside basement; rgen is copied, not modified
+		if (ADD_EXTENDED_BASEMENT && has_basement() && !is_rotated() && interior) {extend_underground_basement(rgen);} // add door inside basement; rgen is copied, not modified
 	} // end gen_door
 	// add roof tquads
 	float peak_height(rgen.rand_uniform(0.15, 0.5)); // same for all parts
