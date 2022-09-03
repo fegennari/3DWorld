@@ -1682,13 +1682,13 @@ bool building_t::check_and_handle_dynamic_obj_coll(point &pos, point const &cur_
 	return 0;
 }
 
+void add_cube_int_volume(cube_t const &a, cube_t const &b, float &cont_vol) {
+	if (a.intersects(b)) {cont_vol += (min(a.x2(), b.x2()) - max(a.x1(), b.x1()))*(min(a.y2(), b.y2()) - max(a.y1(), b.y1()))*(min(a.z2(), b.z2()) - max(a.z1(), b.z1()));}
+}
 bool building_t::is_cube_contained_in_parts(cube_t const &c) const {
 	float cont_vol(0); // total shared volume
-
-	for (auto p = parts.begin(); p != get_real_parts_end_inc_sec(); ++p) {
-		if (!p->intersects(c)) continue;
-		cont_vol += (min(c.x2(), p->x2()) - max(c.x1(), p->x1()))*(min(c.y2(), p->y2()) - max(c.y1(), p->y1()))*(min(c.z2(), p->z2()) - max(c.z1(), p->z1()));
-	}
+	for (auto p = parts.begin(); p != get_real_parts_end_inc_sec(); ++p) {add_cube_int_volume(c, *p, cont_vol);}
+	if (has_ext_basement()) {add_cube_int_volume(c, interior->basement_ext_bcube, cont_vol);} // extended basement counts, even though it's not a part
 	return (cont_vol > 0.99*c.get_volume()); // add a bit of tolerance
 }
 
