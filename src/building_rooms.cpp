@@ -3064,7 +3064,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 		if (!(added_bathroom_objs_mask & PLACED_SINK  )) {cout << "no sink in building "   << bcube.xc() << " " << bcube.yc() << endl;}
 		//if (is_house && !(added_bathroom_objs_mask & (PLACED_TUB | PLACED_SHOWER))) {cout << "no bathtub or shower in building " << bcube.xc() << " " << bcube.yc() << endl;} // common
 	}
-	add_window_trim_and_coverings(0, 1); // add_trim=0, add_coverings=1; must be done after room assignment
+	if (!is_rotated()) {add_window_trim_and_coverings(0, 1);} // add_trim=0, add_coverings=1; must be done after room assignment; not implemented for rotated buildings
 	if (is_house && has_basement()) {add_basement_electrical_house(rgen);}
 	if (is_house && has_basement_pipes) {add_house_basement_pipes (rgen);}
 	if (has_attic()) {add_attic_objects(rgen);}
@@ -3301,7 +3301,7 @@ void building_t::add_wall_and_door_trim() { // and window trim
 			} // for dir
 		} // for dim
 	} // for i
-	if (is_rotated()) return; // window trim is not yet working for rotated buildings
+	if (!is_cube() || is_rotated()) return; // window trim is not yet working for non-cube and rotated buildings
 	add_window_trim_and_coverings(1, 0); // add_trim=1, add_coverings=0
 }
 
