@@ -692,7 +692,7 @@ public:
 		if ((geom_changed || !light_is_on || (in_elevator && num_erased)) && (num_erased || is_cur_light)) {add_to_remove_queue(light_ix);} // must remove the light instead
 	}
 	static cube_t get_valid_area(building_t const &b, point const &target, unsigned target_floor) {
-		cube_t VA(b.bcube);
+		cube_t VA(b.bcube); // TODO: what about extended basement?
 
 		// clip per light source to current floor; note that this will exclude stairs going up or down
 		if (b.point_in_attic(target)) {
@@ -1185,7 +1185,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			if (i->is_visible() && i->is_moving()) {moving_objs.push_back(*i);}
 		}
 	}
-	if (bcube.contains_pt(camera_bs)) { // camera in building bcube; matches rat update logic
+	if (point_in_building_or_basement_bcube(camera_bs)) { // camera in building interior; matches rat update logic
 		for (rat_t const &rat : interior->room_geom->rats) {
 			if (rat.is_moving()) {moving_objs.push_back(rat.get_bcube());}
 		}

@@ -1188,7 +1188,7 @@ void get_xy_dir_to_closest_cube_edge(point const &pos, cube_t const &c, vector3d
 int building_t::check_for_snake_coll(snake_t const &snake, point const &camera_bs, float timestep, point const &old_pos, point const &query_pos, vector3d &coll_dir) const {
 	float const radius(snake.radius), height(snake.get_height()), hheight(0.5*height);
 
-	if (!bcube.contains_pt_xy_exp(query_pos, -radius)) { // outside the building bcube
+	if (!bcube.contains_pt_xy_exp(query_pos, -radius) && !interior->basement_ext_bcube.contains_pt_xy_exp(query_pos, -radius)) { // outside the building interior
 		get_xy_dir_to_closest_cube_edge(query_pos, bcube, coll_dir); // find closest bcube edge to head_pos
 		return 1; // outside building bcube
 	}
