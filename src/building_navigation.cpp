@@ -668,7 +668,7 @@ bool building_t::choose_dest_goal(person_t &person, rand_gen_t &rgen, bool same_
 		cube_t ai_bcube;
 		if (has_basement() && person.target_pos.z < ground_floor_z1) {ai_bcube = get_full_basement_bcube();} // in the basement
 		else {ai_bcube = bcube;} // above ground
-		cube_t legal_area(bcube);
+		cube_t legal_area(ai_bcube);
 		legal_area.expand_by_xy(-coll_dist);
 		legal_area.z1() += person.radius;
 		legal_area.z2() -= z2_add;
@@ -1079,7 +1079,7 @@ int building_t::ai_room_update(rand_gen_t &rgen, float delta_dir, unsigned perso
 	float &wait_time(person.waiting_start); // reuse this field
 	float speed_mult(1.0);
 	person.following_player = 0; // reset for this frame
-	
+
 	if (person.retreat_time > 0.0) {
 		if (person.retreat_time == RETREAT_TIME) { // first retreating frame - clear path
 			person.path.clear();
@@ -1293,7 +1293,7 @@ void building_t::move_person_to_not_collide(person_t &person, person_t const &ot
 	if (sep_dist > 0.01*coll_dist) {person.pos += (move_dist/sep_dist)*(person.pos - other_pos);}
 	else {person.pos.x += rsum;} // avoid divide-by-zero, choose +X direction arbitrarily
 	int const room_ix(get_building_loc_for_pt(orig_pos).room_ix);
-	cube_t clip_bounds((room_ix >= 0 && (unsigned)room_ix < interior->rooms.size()) ? get_room(room_ix) : bcube); // TODO: doesn't handle ext basement?
+	cube_t clip_bounds((room_ix >= 0 && (unsigned)room_ix < interior->rooms.size()) ? get_room(room_ix) : bcube);
 	clip_bounds.expand_by_xy(-coll_dist); // shrink
 	clip_bounds.union_with_pt(orig_pos); // we know this point was valid
 	clip_bounds.union_with_pt(new_pos);  // we know this point is valid
@@ -1332,6 +1332,8 @@ building_loc_t building_t::get_building_loc_for_pt(point const &pt) const {
 	for (auto p = parts.begin(); p != get_real_parts_end_inc_sec(); ++p) { // TODO: what about ext basement?
 		if (p->contains_pt(pt)) {loc.part_ix = (p - parts.begin()); break;}
 	}
+	if (loc.part_ix < 0 && point_in_extended_basement(pt)) {loc.part_ix = basement_part_ix;} // use basement part if in extended basement, even though point is outside the cube
+
 	if (interior) { // rooms and stairwells, no elevators yet
 		loc.room_ix = get_room_containing_pt(pt);
 		if (loc.room_ix >= 0) {loc.floor_ix = get_floor_for_zval(pt.z);}
