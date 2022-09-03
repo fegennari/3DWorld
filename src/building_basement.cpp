@@ -1428,4 +1428,9 @@ cube_t building_t::get_bcube_inc_extensions() const {
 	if (interior && !interior->basement_ext_bcube.is_all_zeros()) {ret.union_with_cube(interior->basement_ext_bcube);}
 	return ret;
 }
+cube_t building_t::get_full_basement_bcube() const {
+	cube_t ret(get_basement());
+	if (interior && !interior->basement_ext_bcube.is_all_zeros()) {ret.union_with_cube(interior->basement_ext_bcube);}
+	return ret;
+}
 

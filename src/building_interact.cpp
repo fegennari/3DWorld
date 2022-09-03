@@ -1034,15 +1034,18 @@ void building_t::register_button_event(room_object_t const &button) {
 	elevator.call_elevator(elevator.z1() + max(get_window_vspace()*floor_ix, 0.05f*get_floor_thickness())); // bottom of elevator car for this floor
 }
 
+void clamp_sphere_xy(point &pos, cube_t const &c, float radius) {
+	cube_t bounds(c);
+	bounds.expand_by_xy(-radius); // must fit entire sphere
+	bounds.clamp_pt_xy(pos);
+}
 bool building_t::move_sphere_to_valid_part(point &pos, point const &p_last, float radius) const { // Note: only moves in XY
 	point const init_pos(pos);
 
 	if (has_attic() && pos.z > interior->attic_access.z2()) { // special case handling for attic
 		for (auto i = parts.begin(); i != get_real_parts_end(); ++i) {
 			if (!i->contains_pt_xy(p_last)) continue; // not the part containing the previous pos (assumes parts are not stacked)
-			cube_t bounds(*i);
-			bounds.expand_by_xy(-(4.0*radius + get_attic_beam_depth())); // include extra space for attics (approximate)
-			bounds.clamp_pt_xy(pos);
+			clamp_sphere_xy(pos, *i, (4.0*radius + get_attic_beam_depth())); // include extra space for attics (approximate)
 			if (pos != init_pos) return 1;
 
 			if (pos.z > p_last.z) { // rising; check if above attic roof
@@ -1058,24 +1061,20 @@ bool building_t::move_sphere_to_valid_part(point &pos, point const &p_last, floa
 	else {
 		float xy_area_contained(0.0);
 		cube_t sphere_bcube; sphere_bcube.set_from_sphere(pos, radius);
-		cube_t valid_region(bcube);
-		valid_region.expand_by(-radius);
-		valid_region.clamp_pt(pos); // keep pos within the valid building bcube
-
-		for (auto i = parts.begin(); i != get_real_parts_end_inc_sec(); ++i) {
-			if (!i->intersects(sphere_bcube)) continue;
-			cube_t overlap(sphere_bcube);
-			overlap.intersect_with_cube(*i);
-			xy_area_contained += overlap.dx()*overlap.dy();
-		}
+		cube_t const clamp_cube((pos.z < ground_floor_z1) ? get_full_basement_bcube() : bcube);
+		clamp_sphere_xy(pos, clamp_cube, radius); // keep pos within the valid building bcube
+		for (auto i = parts.begin(); i != get_real_parts_end_inc_sec(); ++i) {accumulate_shared_xy_area(*i, sphere_bcube, xy_area_contained);}
+		if (!interior->basement_ext_bcube.is_all_zeros()) {accumulate_shared_xy_area(interior->basement_ext_bcube, sphere_bcube, xy_area_contained);}
 		if (xy_area_contained > 0.99*sphere_bcube.dx()*sphere_bcube.dy()) return (pos != init_pos); // sphere contained in union of parts (not outside the building)
 
 		// find part containing p_last and clamp to that part
 		for (auto i = parts.begin(); i != get_real_parts_end_inc_sec(); ++i) {
 			if (!i->contains_pt(p_last)) continue; // not the part containing the previous pos
-			cube_t bounds(*i);
-			bounds.expand_by_xy(-radius); // include extra space for attics (approximate)
-			bounds.clamp_pt_xy(pos);
+			clamp_sphere_xy(pos, *i, radius);
+			return 1;
+		}
+		if (point_in_extended_basement(p_last)) {
+			clamp_sphere_xy(pos, interior->basement_ext_bcube, radius);
 			return 1;
 		}
 	}
@@ -1194,7 +1193,7 @@ bool building_t::is_obj_pos_valid(room_object_t const &obj, bool keep_in_room, b
 	for (auto p = parts.begin(); p != get_real_parts_end_inc_sec(); ++p) {
 		if (p->contains_cube(obj)) {contained_in_part = 1; break;}
 	}
-	if (!contained_in_part && !cube_in_attic(obj)) return 0;
+	if (!contained_in_part && !cube_in_attic(obj) && !interior->basement_ext_bcube.contains_cube(obj)) return 0;
 
 	for (unsigned d = 0; d < 2; ++d) { // check for wall intersection
 		if (has_bcube_int_no_adj(obj, interior->walls[d])) return 0;
@@ -1244,7 +1243,7 @@ bool building_t::get_zval_of_floor(point const &pos, float radius, float &zval) 
 	if (!interior) return 0; // error?
 	cube_t cur_bcube;
 	cur_bcube.set_from_sphere(pos, radius);
-	if (!bcube.contains_cube_xy(cur_bcube)) return 0; // not contained/too close to walls
+	if (!bcube.contains_cube_xy(cur_bcube) && !interior->basement_ext_bcube.contains_cube(cur_bcube)) return 0; // not contained/too close to walls
 	float const floor_spacing(get_window_vspace());
 
 	for (auto i = interior->floors.begin(); i != interior->floors.end(); ++i) { // blood can only be placed on floors
@@ -1258,7 +1257,6 @@ bool building_t::get_zval_for_obj_placement(point const &pos, float radius, floa
 	if (!has_room_geom()) return 0; // error?
 	float const start_zval(pos.z);
 	if (!get_zval_of_floor(pos, radius, zval)) return 0; // if there's no floor, then there's probably no object to place on either
-	if (!has_room_geom()) return 1; // probably can't get here
 
 	for (unsigned d = 0; d < 2; ++d) { // check walls
 		for (cube_t const &wall : interior->walls[d]) {
