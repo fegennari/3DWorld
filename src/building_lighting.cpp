@@ -946,7 +946,7 @@ void building_t::refine_light_bcube(point const &lpos, float light_radius, cube_
 		else {
 			tight_bcube = part = basement;
 
-			if (!interior->basement_ext_bcube.is_all_zeros()) { // include extended basement
+			if (has_ext_basement()) { // include extended basement
 				if (light_bcube.intersects_xy(interior->basement_ext_bcube)) {tight_bcube.union_with_cube(interior->basement_ext_bcube);}
 				other_parts.push_back(interior->basement_ext_bcube);
 			}
@@ -1306,7 +1306,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 
 		if (light_in_basement) { // clip to basement + ext basement
 			cube_t basement_bcube(get_basement());
-			if (!interior->basement_ext_bcube.is_all_zeros()) {basement_bcube.union_with_cube(interior->basement_ext_bcube);}
+			if (has_ext_basement()) {basement_bcube.union_with_cube(interior->basement_ext_bcube);}
 			assert(basement_bcube.contains_pt(lpos));
 			clipped_bc.intersect_with_cube(basement_bcube);
 		}

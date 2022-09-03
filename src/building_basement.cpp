@@ -1425,12 +1425,12 @@ void building_interior_t::place_exterior_room(cube_t const &room, cube_t const &
 
 cube_t building_t::get_bcube_inc_extensions() const {
 	cube_t ret(bcube);
-	if (interior && !interior->basement_ext_bcube.is_all_zeros()) {ret.union_with_cube(interior->basement_ext_bcube);}
+	if (has_ext_basement()) {ret.union_with_cube(interior->basement_ext_bcube);}
 	return ret;
 }
 cube_t building_t::get_full_basement_bcube() const {
 	cube_t ret(get_basement());
-	if (interior && !interior->basement_ext_bcube.is_all_zeros()) {ret.union_with_cube(interior->basement_ext_bcube);}
+	if (has_ext_basement()) {ret.union_with_cube(interior->basement_ext_bcube);}
 	return ret;
 }
 

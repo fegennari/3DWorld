@@ -1437,6 +1437,7 @@ public:
 	bool is_entire_building_occluded(point const &viewer, occlusion_checker_noncity_t &oc) const;
 	bool register_indir_lighting_state_change(unsigned light_ix, bool is_door_change=0) const;
 	bool is_attic_roof(tquad_with_ix_t const &tq, bool type_roof_only) const;
+	bool has_ext_basement() const {return (interior && !interior->basement_ext_bcube.is_all_zeros());}
 	bool point_in_extended_basement(point const &pos) const {return (interior && interior->basement_ext_bcube.contains_pt(pos));}
 	cube_t get_bcube_inc_extensions() const;
 	cube_t get_full_basement_bcube () const;

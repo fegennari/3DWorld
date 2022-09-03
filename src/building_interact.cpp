@@ -1064,7 +1064,7 @@ bool building_t::move_sphere_to_valid_part(point &pos, point const &p_last, floa
 		cube_t const clamp_cube((pos.z < ground_floor_z1) ? get_full_basement_bcube() : bcube);
 		clamp_sphere_xy(pos, clamp_cube, radius); // keep pos within the valid building bcube
 		for (auto i = parts.begin(); i != get_real_parts_end_inc_sec(); ++i) {accumulate_shared_xy_area(*i, sphere_bcube, xy_area_contained);}
-		if (!interior->basement_ext_bcube.is_all_zeros()) {accumulate_shared_xy_area(interior->basement_ext_bcube, sphere_bcube, xy_area_contained);}
+		if (has_ext_basement()) {accumulate_shared_xy_area(interior->basement_ext_bcube, sphere_bcube, xy_area_contained);}
 		if (xy_area_contained > 0.99*sphere_bcube.dx()*sphere_bcube.dy()) return (pos != init_pos); // sphere contained in union of parts (not outside the building)
 
 		// find part containing p_last and clamp to that part

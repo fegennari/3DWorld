@@ -682,7 +682,7 @@ bool building_t::choose_dest_goal(person_t &person, rand_gen_t &rgen, bool same_
 			float const dsq(p2p_dist_sq(person.target_pos, p->closest_pt(person.target_pos)));
 			if (dsq < dmin_sq) {closest_part = *p;}
 		}
-		if (!interior->basement_ext_bcube.is_all_zeros()) {
+		if (has_ext_basement()) {
 			float const dsq(p2p_dist_sq(person.target_pos, interior->basement_ext_bcube.closest_pt(person.target_pos)));
 			if (dsq < dmin_sq) {closest_part = interior->basement_ext_bcube;}
 		}
