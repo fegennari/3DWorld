@@ -1386,6 +1386,7 @@ bool building_t::add_underground_exterior_rooms(rand_gen_t &rgen, cube_t const &
 	wall_exclude.back().expand_in_dim(wall_dim, 2.0*wall_thickness); // make sure the doorway covers the entire wall thickness
 	cube_t wall_area(hallway);
 	wall_area.d[wall_dim][!wall_dir] += (wall_dir ? 1.0 : -1.0)*0.5*wall_thickness; // move separator wall inside the hallway to avoid clipping exterior wall
+	interior->ext_basement_hallway_room_id = interior->rooms.size();
 	interior->place_exterior_room(hallway, wall_area, fc_thick, wall_thickness, wall_exclude, basement_part_ix, num_lights, 1); // use basement part_ix; is_hallway=1
 	
 	// add doors and other rooms along hallway
@@ -1432,5 +1433,10 @@ cube_t building_t::get_full_basement_bcube() const {
 	cube_t ret(get_basement());
 	if (has_ext_basement()) {ret.union_with_cube(interior->basement_ext_bcube);}
 	return ret;
+}
+room_t const &building_t::get_ext_basement_hallway() const {
+	assert(interior);
+	assert(interior->ext_basement_hallway_room_id >= 0 && (unsigned)interior->ext_basement_hallway_room_id < interior->rooms.size());
+	return interior->rooms[interior->ext_basement_hallway_room_id];
 }
 

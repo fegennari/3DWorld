@@ -1064,7 +1064,11 @@ bool building_t::move_sphere_to_valid_part(point &pos, point const &p_last, floa
 		cube_t const clamp_cube((pos.z < ground_floor_z1) ? get_full_basement_bcube() : bcube);
 		clamp_sphere_xy(pos, clamp_cube, radius); // keep pos within the valid building bcube
 		for (auto i = parts.begin(); i != get_real_parts_end_inc_sec(); ++i) {accumulate_shared_xy_area(*i, sphere_bcube, xy_area_contained);}
-		if (has_ext_basement()) {accumulate_shared_xy_area(interior->basement_ext_bcube, sphere_bcube, xy_area_contained);}
+		
+		if (has_ext_basement()) { // use the ext basement hallway if pos is in the basement, otherwise use the entire ext basement
+			cube_t const &basement_cube(point_in_extended_basement(pos) ? interior->basement_ext_bcube : get_ext_basement_hallway());
+			accumulate_shared_xy_area(basement_cube, sphere_bcube, xy_area_contained);
+		}
 		if (xy_area_contained > 0.99*sphere_bcube.dx()*sphere_bcube.dy()) return (pos != init_pos); // sphere contained in union of parts (not outside the building)
 
 		// find part containing p_last and clamp to that part
@@ -1073,7 +1077,7 @@ bool building_t::move_sphere_to_valid_part(point &pos, point const &p_last, floa
 			clamp_sphere_xy(pos, *i, radius);
 			return 1;
 		}
-		if (point_in_extended_basement(p_last)) {
+		if (point_in_extended_basement(p_last)) { // Note: no need to check for individual ext basement rooms, as interior wall collisions should handle this
 			clamp_sphere_xy(pos, interior->basement_ext_bcube, radius);
 			return 1;
 		}

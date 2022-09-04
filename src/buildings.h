@@ -1137,7 +1137,7 @@ struct building_interior_t {
 	cube_with_ix_t pg_ramp, attic_access; // ix stores {dim, dir}
 	cube_t basement_ext_bcube;
 	draw_range_t draw_range;
-	int garage_room;
+	int garage_room, ext_basement_hallway_room_id;
 	uint8_t furnace_type, attic_type;
 	bool door_state_updated, is_unconnected, ignore_ramp_placement, placed_people, elevators_disabled, attic_access_open;
 
@@ -1441,6 +1441,7 @@ public:
 	bool point_in_extended_basement(point const &pos) const {return (interior && interior->basement_ext_bcube.contains_pt(pos));}
 	cube_t get_bcube_inc_extensions() const;
 	cube_t get_full_basement_bcube () const;
+	room_t const &get_ext_basement_hallway() const;
 	bool point_in_building_or_basement_bcube(point const &pos) const {return (bcube.contains_pt(pos) || point_in_extended_basement(pos));}
 	template<typename T> void add_door_verts(cube_t const &D, T &drawer, uint8_t door_type,
 		bool dim, bool dir, bool opened, bool opens_out, bool exterior, bool on_stairs=0, bool hinge_side=0) const;
