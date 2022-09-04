@@ -131,6 +131,13 @@ struct hcap_space_t : public oriented_city_obj_t { // handicap space
 	void draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_draw &untex_qbd, float dist_scale, bool shadow_only) const;
 };
 
+struct manhole_t : public city_obj_t {
+	manhole_t(point const &pos_, float radius_);
+	float get_height() const {return 0.01*radius;}
+	static void pre_draw(draw_state_t &dstate, bool shadow_only);
+	void draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_draw &untex_qbd, float dist_scale, bool shadow_only) const;
+};
+
 class city_obj_groups_t : public vector<cube_with_ix_t> {
 	map<uint64_t, vector<unsigned> > by_tile;
 public:
@@ -152,7 +159,9 @@ private:
 	vector<swimming_pool_t> pools;
 	vector<power_pole_t> ppoles;
 	vector<hcap_space_t> hcaps; // handicap signs painted on parking lots
-	city_obj_groups_t bench_groups, planter_groups, trashcan_groups, fhydrant_groups, sstation_groups, divider_groups, pool_groups, ppole_groups, hcap_groups; // index is last obj in group
+	vector<manhole_t> manholes;
+	// index is last obj in group
+	city_obj_groups_t bench_groups, planter_groups, trashcan_groups, fhydrant_groups, sstation_groups, divider_groups, pool_groups, ppole_groups, hcap_groups, manhole_groups;
 	quad_batch_draw qbd, untex_qbd;
 	vector<city_zone_t> sub_plots; // reused across calls
 	cube_t all_objs_bcube;

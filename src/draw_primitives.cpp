@@ -280,7 +280,7 @@ void sphere_point_norm::free_data() {
 // ******************** CYLINDER ********************
 
 
-void draw_circle_normal(float r_inner, float r_outer, int ndiv, int invert_normals, point const &pos) {
+void draw_circle_normal(float r_inner, float r_outer, int ndiv, int invert_normals, point const &pos, float tscale_s, float tscale_t) {
 
 	assert(r_outer > 0.0);
 	bool const disk(r_inner > 0.0);
@@ -289,12 +289,13 @@ void draw_circle_normal(float r_inner, float r_outer, int ndiv, int invert_norma
 	float const inner_tscale(r_inner/r_outer);
 	float sin_s(0.0), cos_s(1.0);
 	static vector<vert_norm_tc> verts;
-	if (!disk) {verts.emplace_back(pos, n, 0.5, 0.5);}
+	if (!disk) {verts.emplace_back(pos, n, 0.5*tscale_s, 0.5*tscale_t);}
 
 	for (unsigned S = 0; S <= (unsigned)ndiv; ++S) {
 		float const s(sin_s), c(cos_s);
 		if (disk) {verts.emplace_back((pos + point(r_inner*s, r_inner*c, 0.0)), n, 0.5f*(1.0f + inner_tscale*s), (0.5f*(1.0f + inner_tscale*c)));}
-		verts.emplace_back((pos + point(r_outer*s, r_outer*c, 0.0)), n, 0.5*(1.0 + s), 0.5*(1.0 + c));
+		float const ts(0.5*(1.0 + s)*tscale_s), tt(0.5*(1.0 + c)*tscale_t);
+		verts.emplace_back((pos + point(r_outer*s, r_outer*c, 0.0)), n, ts, tt);
 		sin_s = s*cos_ds + c*sin_ds;
 		cos_s = c*cos_ds - s*sin_ds;
 	}

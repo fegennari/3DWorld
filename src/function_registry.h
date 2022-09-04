@@ -195,7 +195,7 @@ vector_point_norm const &gen_cylinder_data(point const ce[2], float radius1, flo
 										   float const *const perturb_map=NULL, float s_beg=0.0, float s_end=1.0, int force_dim=-1);
 void draw_cylinder(float length, float radius1, float radius2, int ndiv, bool draw_ends=0, bool first_end_only=0, bool last_end_only=0, float z_offset=0.0, float tscale_len=1.0);
 void draw_cylinder_at(point const &p1, float length, float radius1, float radius2, int ndiv, bool draw_ends=0, bool first_end_only=0, bool last_end_only=0, float tscale_len=1.0);
-void draw_circle_normal(float r_inner, float r_outer, int ndiv, int invert_normals, point const &pos);
+void draw_circle_normal(float r_inner, float r_outer, int ndiv, int invert_normals, point const &pos, float tscale_s=1.0, float tscale_t=1.0);
 void draw_circle_normal(float r_inner, float r_outer, int ndiv, int invert_normals, float zval=0.0);
 void begin_cylin_vertex_buffering();
 void flush_cylin_vertex_buffer();
