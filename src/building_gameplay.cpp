@@ -166,6 +166,17 @@ float carried_item_t::get_remaining_capacity_ratio() const {
 
 float const mattress_weight(80.0), sheets_weight(4.0), pillow_weight(1.0);
 
+rand_gen_t rgen_from_obj(room_object_t const &obj) {
+	rand_gen_t rgen;
+	rgen.set_state(12345*abs(obj.x1()), 67890*abs(obj.y1()));
+	return rgen;
+}
+float get_paper_value(room_object_t const &obj) {
+	rand_gen_t rgen(rgen_from_obj(obj));
+	if (rgen.rand_float() >= 0.25) return 0.0; // only 25% of papers have some value
+	float const val_mult((rgen.rand_float() < 0.25) ? 10.0 : 1.0); // 25% of papers have higher value
+	return val_mult*(2 + (rgen.rand()%10))*(1 + (rgen.rand()%10));
+}
 bldg_obj_type_t get_taken_obj_type(room_object_t const &obj) {
 	if (obj.type == TYPE_PICTURE && obj.taken_level > 0) {return bldg_obj_type_t(0, 0, 0, 1, 0, 0, 1, 20.0, 6.0, "picture frame");} // second item to take from picture
 	if (obj.type == TYPE_TPROLL  && obj.taken_level > 0) {return bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 6.0,  0.5, "toilet paper holder");} // second item to take from tproll
@@ -216,23 +227,18 @@ bldg_obj_type_t get_taken_obj_type(room_object_t const &obj) {
 	else if (obj.type == TYPE_MIRROR && (obj.flags & RO_FLAG_IS_HOUSE)) {
 		type.name = "medicine cabinet";
 	}
+	else if (obj.type == TYPE_PAPER) {
+		float const value(get_paper_value(obj));
+		if      (value >= 500.0) {type.name = "top secret document";}
+		else if (value >= 100.0) {type.name = "confidential document";}
+		else if (value >    0.0) {type.name = "valuable document";}
+	}
 	return type;
-}
-rand_gen_t rgen_from_obj(room_object_t const &obj) {
-	rand_gen_t rgen;
-	rgen.set_state(12345*abs(obj.x1()), 67890*abs(obj.y1()));
-	return rgen;
 }
 float get_obj_value(room_object_t const &obj) {
 	float value(get_taken_obj_type(obj).value);
 	if (obj.type == TYPE_CRATE || obj.type == TYPE_BOX) {value *= (1 + (rgen_from_obj(obj).rand() % 20));}
-	else if (obj.type == TYPE_PAPER) {
-		rand_gen_t rgen(rgen_from_obj(obj));
-		if (rgen.rand_float() < 0.25) { // 25% of papers have some value
-			float const val_mult((rgen.rand_float() < 0.25) ? 10.0 : 1.0); // 25% of papers have higher value
-			value = val_mult*(2 + (rgen.rand()%10))*(1 + (rgen.rand()%10));
-		}
-	}
+	else if (obj.type == TYPE_PAPER) {value = get_paper_value(obj);}
 	else if (obj.type == TYPE_MONEY) {
 		unsigned const num_bills(round_fp(obj.dz()/(0.01*obj.get_length())));
 		value *= num_bills;
@@ -346,7 +352,7 @@ tape_manager_t tape_manager;
 unsigned const NUM_ACHIEVEMENTS = 14;
 
 class achievement_tracker_t {
-	// Rat Food, Top Secret Documents, Mr. Yuck, Zombie Hunter, Royal Flush, Zombie Bashing, One More Drink, Bathroom Reader, TP Artist,
+	// Rat Food, Top Secret Document, Mr. Yuck, Zombie Hunter, Royal Flush, Zombie Bashing, One More Drink, Bathroom Reader, TP Artist,
 	// Master Lockpick, Squeaky Clean, Sleep with the Fishes, Splat the Spider, 7 years of bad luck
 	set<string> achievements;
 	// some way to make this persistent, print these out somewhere, or add small screen icons?
@@ -455,7 +461,7 @@ public:
 		float health(0.0), drunk(0.0); // add these fields to bldg_obj_type_t?
 		bool const bladder_was_full(bladder >= 0.9);
 		float const value(get_obj_value(obj));
-		if (obj.type == TYPE_PAPER && value >= 500.0) {register_achievement("Top Secret Documents");}
+		if (obj.type == TYPE_PAPER && value >= 500.0) {register_achievement("Top Secret Document");}
 		damage_done += value;
 		colorRGBA text_color(GREEN);
 		std::ostringstream oss;
