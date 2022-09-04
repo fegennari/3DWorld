@@ -1299,7 +1299,7 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, 
 						side.d[!door.dim][!d] = door.d[!door.dim][d];
 						bdraw.add_section(*this, 0, side, tp, WHITE, ~(this_face | 4), 0, 0, 1, 0); // single face, always white
 					}
-					break; // there should be only one basement door
+					break; // the first door should be the one connecting the basement to the extended basement
 				} // for doors
 			}
 			bdraw.add_section(*this, 0, basement, tp, WHITE, dim_mask, 0, 0, 1, 0); // XY, always white
