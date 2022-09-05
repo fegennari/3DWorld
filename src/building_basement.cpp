@@ -1331,10 +1331,10 @@ bool building_t::extend_underground_basement(rand_gen_t rgen) {
 }
 
 float query_min_height(cube_t const &c, float stop_at) {
-	// we don't have the float heightmap here, so we have to do an expensive get_exact_zval() for each grid point
-	float hmin(FLT_MAX);
 	float const x_step(0.5*DX_VAL), y_step(0.5*DY_VAL);
+	float hmin(FLT_MAX);
 
+	// we don't have the float heightmap here, so we have to do an expensive get_exact_zval() for each grid point
 	for (float y = c.y1()-y_step; y < c.y2()+y_step; y += y_step) {
 		for (float x = c.x1()-x_step; x < c.x2()+x_step; x += x_step) {
 			min_eq(hmin, get_exact_zval(min(x, c.x2()), min(y, c.y2()))); // check every grid point with the X/Y range
@@ -1345,18 +1345,16 @@ float query_min_height(cube_t const &c, float stop_at) {
 }
 
 bool building_t::is_basement_room_placement_valid(cube_t const &room, vect_cube_t const &other_rooms) const {
-	float const ceiling_zval(room.z2() - get_fc_thickness());
-	if (query_min_height(room, ceiling_zval) < ceiling_zval) return 0; // // check for terrain clipping through ceiling
 	cube_t test_cube(room);
 	test_cube.expand_by_xy(-0.1*get_wall_thickness()); // shrink slightly to avoid intersections with our own basement cube(s)
-
-	// check for other buildings; may not be necessary because of spacing between houses
-	// TODO: including basement extensions of other buildings?
-	for (unsigned d = 0; d < 4; ++d) { // check all 4 corners
-		point const corner(test_cube.d[0][d&1], test_cube.d[1][d>>1], ceiling_zval);
-		if (check_buildings_point_coll(corner, 0, 0, 0)) return 0; // apply_tt_xlate=0, xy_only=0, check_interior=0
-	}
-	return !has_bcube_int(test_cube, other_rooms);
+	if (has_bcube_int(test_cube, other_rooms))                     return 0; // do the cheapest test first
+	float const ceiling_zval(room.z2() - get_fc_thickness());
+	if (query_min_height(room, ceiling_zval) < ceiling_zval)       return 0; // check for terrain clipping through ceiling
+	// check for other buildings, including their extended basements
+	if (check_buildings_cube_coll(room, 1, 1, this))               return 0; // xy_only=1, inc_basement=1, exclude ourself
+	// check that the room is in the same tile as the building, as this can cause a missed collision due to grid bboxes not containing ext basements
+	if (get_tile_id_for_cube(bcube) != get_tile_id_for_cube(room)) return 0;
+	return 1;
 }
 
 // add rooms to the basement that may extend outside the building's bcube

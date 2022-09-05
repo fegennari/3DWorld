@@ -199,5 +199,3 @@ public:
 	void get_occluders(pos_dir_up const &pdu, vect_cube_t &occluders) const;
 	void move_to_not_intersect_driveway(point &pos, float radius, bool dim) const;
 };
-
-inline uint64_t get_tile_id_for_cube(cube_t const &c) {return get_tile_id_containing_point_no_xyoff(c.get_cube_center());}

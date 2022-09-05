@@ -1766,6 +1766,7 @@ void rotate_verts(vector<rgeom_mat_t::vertex_t> &verts, building_t const &buildi
 void add_tquad_to_verts(building_geom_t const &bg, tquad_with_ix_t const &tquad, cube_t const &bcube, tid_nm_pair_t const &tex,
 	colorRGBA const &color, vect_vnctcc_t &verts, bool invert_tc_x=0, bool exclude_frame=0, bool no_tc=0, bool no_rotate=0, bool swap_tc_xy=0);
 void get_driveway_sphere_coll_cubes(point const &pos, float radius, bool xy_only, vect_cube_t &out);
+bool check_buildings_cube_coll(cube_t const &c, bool xy_only=0, bool inc_basement=1, building_t const *exclude=nullptr);
 bool have_buildings_ext_paint();
 void draw_buildings_ext_paint(shader_t &s);
 void subtract_cube_xy(cube_t const &c, cube_t const &r, cube_t *out);
@@ -1798,4 +1799,5 @@ void create_mirror_reflection_if_needed();
 void draw_city_roads(int trans_op_mask, vector3d const &xlate);
 void get_closest_dim_dir_xy(cube_t const &inner, cube_t const &outer, bool &dim, bool &dir);
 bool check_city_tline_cube_intersect_xy(cube_t const &c);
+inline uint64_t get_tile_id_for_cube(cube_t const &c) {return get_tile_id_containing_point_no_xyoff(c.get_cube_center());}
 
