@@ -617,7 +617,7 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, flo
 	handle_vert_cylin_tape_collision(pos, p_last, pos.z-radius, pos.z+camera_height, xy_radius, 1); // is_player=1
 	// not sure where this belongs, but the closet hiding logic is in this function, so I guess it goes here? player must be inside the building to see a windowless room anyway
 	player_in_unlit_room = check_pos_in_unlit_room(pos);
-	prev_camera_height = camera_height; // update for this frame
+	prev_camera_height   = camera_height; // update for this frame
 	return had_coll; // will generally always be true due to floors
 }
 
@@ -648,7 +648,7 @@ bool building_t::check_pos_in_unlit_room_recur(point const &pos, set<unsigned> &
 	// check if all doors are closed
 	float const floor_thickness(get_floor_thickness()), wall_thickness(get_wall_thickness()), floor_zval(room.z1() + floor_ix*floor_spacing);
 	cube_t room_exp(room);
-	room_exp.expand_by_xy(wall_thickness);
+	room_exp.expand_by_xy(1.01*wall_thickness);
 	set_cube_zvals(room_exp, (floor_zval + floor_thickness), (floor_zval + floor_spacing - floor_thickness)); // clip to z-range of this floor
 
 	for (auto i = interior->door_stacks.begin(); i != interior->door_stacks.end(); ++i) {

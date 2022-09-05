@@ -1466,9 +1466,9 @@ private:
 	void gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes);
 	void maybe_add_basement(rand_gen_t rgen);
 	bool extend_underground_basement(rand_gen_t rgen);
-	bool is_basement_room_placement_valid(cube_t const &room, vect_cube_t const &other_rooms) const;
+	bool is_basement_room_placement_valid(cube_t const &room, vect_cube_with_ix_t const &rooms) const;
 	bool add_underground_exterior_rooms(rand_gen_t &rgen, cube_t const &door_bcube, bool wall_dim, bool wall_dir, float length_mult);
-	bool add_ext_basement_rooms_recur(cube_t const &parent_room, vect_cube_t &wall_exclude, vect_cube_t &other_rooms, float door_width, bool dim, unsigned depth, rand_gen_t &rgen);
+	bool add_ext_basement_rooms_recur(cube_t const &parent_room, vect_cube_t &wall_exclude, vect_cube_with_ix_t &rooms, float door_width, bool dim, unsigned depth, rand_gen_t &rgen);
 	bool has_L_shaped_roof_area() const;
 	void get_attic_roof_tquads(vector<tquad_with_ix_t> &tquads) const;
 	bool add_attic_access_door(cube_t const &ceiling, unsigned part_ix, unsigned num_floors, unsigned rooms_start, rand_gen_t &rgen);
