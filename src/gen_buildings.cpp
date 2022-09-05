@@ -1355,7 +1355,7 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, 
 			tid_nm_pair_t tex;
 			colorRGBA color;
 
-			if (is_house && is_basement && has_basement_pipes) { // draw wood flooring for basement ceiling
+			if (is_house && is_basement && has_basement_pipes && bcube.contains_cube_xy(*i)) { // draw wood flooring for basement ceiling (not ext basement)
 				tex   = mat.house_floor_tex;
 				color = floor_color;
 			}
