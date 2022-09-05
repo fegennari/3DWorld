@@ -1692,8 +1692,10 @@ bool building_t::is_cube_contained_in_parts(cube_t const &c) const {
 	return (cont_vol > 0.99*c.get_volume()); // add a bit of tolerance
 }
 
+// returns: 0=not in basement, 1=on basement stairs, 2=fully in basement, 3=in extended basement
 int building_t::check_player_in_basement(point const &pos) const {
-	if (!is_pos_in_basement(pos)) return 0;
+	if (!is_pos_in_basement(pos))                     return 0;
+	if (point_in_extended_basement_not_basement(pos)) return 3;
 	
 	if (interior && (pos.z - CAMERA_RADIUS - get_player_height()) > (ground_floor_z1 - get_window_vspace())) { // only need to check if on the top floor of the basement
 		for (auto const &s : interior->stairwells) {

@@ -24,7 +24,7 @@ float const WIND_LIGHT_ON_RAND      = 0.08;
 float const BASEMENT_ENTRANCE_SCALE = 0.33;
 
 bool camera_in_building(0), interior_shadow_maps(0), player_is_hiding(0), player_in_unlit_room(0), player_in_attic(0);
-int player_in_basement(0); // 0=no, 1=below ground level, 2=in basement and not on stairs
+int player_in_basement(0); // 0=no, 1=below ground level, 2=in basement and not on stairs, 3=in extended basement
 int player_in_closet(0); // uses flags RO_FLAG_IN_CLOSET (player in closet), RO_FLAG_LIT (closet light is on), RO_FLAG_OPEN (closet door is open)
 building_params_t global_building_params;
 building_t const *player_building(nullptr);
@@ -2611,7 +2611,7 @@ public:
 						per_bcs_exclude[bcs_ix] = b.ext_side_qv_range;
 						if (reflection_pass) continue; // don't execute the code below
 						this_frame_camera_in_building  = 1;
-						this_frame_player_in_basement |= b.check_player_in_basement(camera_xlated - vector3d(0.0, 0.0, BASEMENT_ENTRANCE_SCALE*b.get_floor_thickness()));
+						this_frame_player_in_basement |= b.check_player_in_basement(camera_xlated - vector3d(0.0, 0.0, BASEMENT_ENTRANCE_SCALE*b.get_floor_thickness())); // only set once
 						this_frame_player_in_attic    |= b.point_in_attic(camera_xlated);
 						player_building = &b;
 						if (enable_building_indir_lighting()) {indir_bcs_ix = bcs_ix; indir_bix = bi->ix;} // compute indirect lighting for this building
@@ -2623,9 +2623,9 @@ public:
 						if (teleport_to_screenshot) {b.maybe_teleport_to_screenshot();}
 						if (animate2) {b.update_player_interact_objects(camera_xlated);} // update dynamic objects if the player is in the building
 					} // for bi
-					if (this_frame_player_in_basement == 2 || this_frame_player_in_attic) break; // player can only be in one basement or attic - done
+					if (this_frame_player_in_basement >= 2 || this_frame_player_in_attic) break; // player can only be in one basement or attic - done
 				} // for g
-				if (this_frame_player_in_basement == 2 || this_frame_player_in_attic) break; // player can only be in one basement or attic - done
+				if (this_frame_player_in_basement >= 2 || this_frame_player_in_attic) break; // player can only be in one basement or attic - done
 			} // for i
 			bbd.draw_and_clear(s);
 			if (ADD_ROOM_LIGHTS) {set_std_depth_func();} // restore
@@ -2729,7 +2729,7 @@ public:
 
 		// everything after this point is part of the building exteriors and uses city lights rather than building room lights;
 		// when the player is in the extended basement we still need to draw the exterior wall and door
-		if ((player_in_basement == 2) || player_in_attic || (reflection_pass && (!DRAW_EXT_REFLECTIONS || reflection_pass != 3))) {
+		if ((player_in_basement >= 2) || player_in_attic || (reflection_pass && (!DRAW_EXT_REFLECTIONS || reflection_pass != 3))) {
 			// early exit for player fully in basement or attic, or house reflections, if enabled
 			fgPopMatrix();
 			enable_dlight_bcubes = 0;

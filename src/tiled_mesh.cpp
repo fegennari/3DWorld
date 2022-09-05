@@ -2720,9 +2720,11 @@ void tile_draw_t::draw(int reflection_pass) { // reflection_pass: 0=none, 1=wate
 			 << ", smap MB: " << in_mb(smap_mem) << ", smap free list MB: " << in_mb(smap_free_list_mem) << ", frame buf MB: " << in_mb(frame_buf_mem)
 			 << ", texture MB: " << in_mb(texture_mem) << ", building MB: " << in_mb(building_mem) << ", model MB: " << in_mb(models_mem) << endl;
 	}
-	if (player_in_basement != 2 && !player_in_attic) { // vegetation/scenery not visible when player is fully inside the basement or attic
+	if (player_in_basement < 3 && !player_in_attic) { // trees not visible when player is in the extended basement or attic
 		if (pine_trees_enabled ()) {draw_pine_trees (reflection_pass);}
 		if (decid_trees_enabled()) {draw_decid_trees(reflection_pass);}
+	}
+	if (player_in_basement < 2 && !player_in_attic) { // vegetation/scenery/animals not visible when player is fully inside the basement or attic
 		if (scenery_enabled    ()) {draw_scenery    (reflection_pass);}
 		if (is_grass_enabled   ()) {draw_grass      (reflection_pass);}
 		if (ENABLE_ANIMALS)        {draw_animals    (reflection_pass);}

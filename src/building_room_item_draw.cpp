@@ -1847,7 +1847,7 @@ void building_t::draw_cars_in_building(shader_t &s, vector3d const &xlate, bool 
 	static vector<car_t> cars_to_draw; // reused across frames
 	cars_to_draw.clear();
 
-	if (interior->room_geom->has_garage_car && player_in_basement != 2) { // car in a house garage
+	if (interior->room_geom->has_garage_car && player_in_basement < 2) { // car in a house garage
 		room_object_t const &obj(objs[pg_wall_start]);
 		assert(obj.type == TYPE_PARK_SPACE); // must be a parking space
 

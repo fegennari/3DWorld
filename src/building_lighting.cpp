@@ -1233,7 +1233,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			// if the light is in the basement and the camera isn't, it's not visible unless the player is by the stairs
 			if ( light_in_basement && player_in_basement == 0 && !camera_somewhat_by_stairs) continue;
 			
-			if (!light_in_basement && player_in_basement == 2) { // the player is fully in the basement but the light isn't
+			if (!light_in_basement && player_in_basement >= 2) { // the player is fully in the basement but the light isn't
 				if (!light_room_has_stairs_or_ramp) continue; // it's not visible unless the room with the light has stairs or a ramp up to it (parking garages)
 
 				if (!has_ramp) { // no ramp, but we know there are stairs - check for basement connector stairs

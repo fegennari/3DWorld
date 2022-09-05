@@ -3007,7 +3007,7 @@ public:
 		if (!use_threads_2_3 || omp_get_thread_num_3dw() == 2) {ped_manager.next_frame();} // thread=2
 	}
 	void draw(int shadow_only, int reflection_pass, int trans_op_mask, vector3d const &xlate) { // shadow_only: 0=non-shadow pass, 1=sun/moon shadow, 2=dynamic shadow
-		if (player_in_basement == 2) return; // player is fully in the basement, not on stairs - don't draw anything
+		if (player_in_basement >= 2) return; // player is fully in the basement, not on stairs - don't draw anything
 		if (!shadow_only && !reflection_pass && (trans_op_mask & 1)) {setup_city_lights(xlate);} // setup lights on first (opaque) non-shadow pass
 		bool const use_dlights(enable_lights()), is_dlight_shadows(shadow_only == 2);
 		if (reflection_pass == 0) {road_gen.draw(trans_op_mask, xlate, use_dlights, (shadow_only != 0));} // roads don't cast shadows/aren't reflected in water, but stoplights cast shadows
