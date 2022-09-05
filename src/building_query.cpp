@@ -140,7 +140,7 @@ bool building_t::check_sphere_coll(point &pos, point const &p_last, vector3d con
 	
 	if (radius > 0.0) {
 		// player can't be in multiple buildings at once; if they were in some other building last frame, they can't be in this building this frame
-		//if (check_interior && camera_in_building && player_building != this) return 0;
+		if (check_interior && camera_in_building && player_building != this) return 0;
 		cube_t const cc(get_coll_bcube());
 		if (!(xy_only ? sphere_cube_intersect_xy((pos - xlate), radius, cc) : sphere_cube_intersect((pos - xlate), radius, cc))) return 0;
 	}
