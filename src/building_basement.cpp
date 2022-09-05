@@ -1333,9 +1333,10 @@ bool building_t::extend_underground_basement(rand_gen_t rgen) {
 float query_min_height(cube_t const &c, float stop_at) {
 	// we don't have the float heightmap here, so we have to do an expensive get_exact_zval() for each grid point
 	float hmin(FLT_MAX);
+	float const x_step(0.5*DX_VAL), y_step(0.5*DY_VAL);
 
-	for (float y = c.y1(); y < c.y2()+DY_VAL; y += DY_VAL) {
-		for (float x = c.x1(); x < c.x2()+DX_VAL; x += DX_VAL) {
+	for (float y = c.y1()-y_step; y < c.y2()+y_step; y += y_step) {
+		for (float x = c.x1()-x_step; x < c.x2()+x_step; x += x_step) {
 			min_eq(hmin, get_exact_zval(min(x, c.x2()), min(y, c.y2()))); // check every grid point with the X/Y range
 			if (hmin < stop_at) return hmin;
 		}
