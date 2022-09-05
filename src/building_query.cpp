@@ -132,13 +132,15 @@ void accumulate_shared_xy_area(cube_t const &c, cube_t const &sc, float &area) {
 	if (c.intersects_xy(sc)) {area += (min(c.x2(), sc.x2()) - max(c.x1(), sc.x1()))*(min(c.y2(), sc.y2()) - max(c.y1(), sc.y1()));}
 }
 
-// Note: used for the player
+// Note: used for the player when check_interior=1
 bool building_t::check_sphere_coll(point &pos, point const &p_last, vector3d const &xlate,
 	float radius, bool xy_only, vector<point> &points, vector3d *cnorm_ptr, bool check_interior) const
 {
 	if (!is_valid()) return 0; // invalid building
 	
 	if (radius > 0.0) {
+		// player can't be in multiple buildings at once; if they were in some other building last frame, they can't be in this building this frame
+		//if (check_interior && camera_in_building && player_building != this) return 0;
 		cube_t const cc(get_coll_bcube());
 		if (!(xy_only ? sphere_cube_intersect_xy((pos - xlate), radius, cc) : sphere_cube_intersect((pos - xlate), radius, cc))) return 0;
 	}
@@ -1129,7 +1131,10 @@ bool building_t::get_interior_color_at_xy(point const &pos_in, colorRGBA &color)
 
 // Note: if xy_radius == 0.0, this is a point test; otherwise, it's an approximate vertical cylinder test; attic and basement queries only work with points
 bool building_t::check_point_or_cylin_contained(point const &pos, float xy_radius, vector<point> &points, bool inc_attic, bool inc_ext_basement) const {
-	if (inc_ext_basement && point_in_extended_basement(pos)) return 1; // extended basement is not rotated
+	if (inc_ext_basement && point_in_extended_basement_not_basement(pos)) { // extended basement is not rotated
+		// this check must be accurate; since the extended basement is sparse, we need to check every extended basement room
+		return interior->point_in_ext_basement_room(pos);
+	}
 	if (xy_radius == 0.0 && !bcube.contains_pt(pos)) return 0; // no intersection (bcube does not need to be rotated)
 	point pr(pos);
 	maybe_inv_rotate_point(pr);

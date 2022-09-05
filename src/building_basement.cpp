@@ -1482,3 +1482,13 @@ room_t const &building_t::get_ext_basement_hallway() const {
 	return interior->rooms[interior->ext_basement_hallway_room_id];
 }
 
+bool building_interior_t::point_in_ext_basement_room(point const &pos) const {
+	if (ext_basement_hallway_room_id < 0) return 0; // no ext basement rooms
+	assert((unsigned)ext_basement_hallway_room_id < rooms.size());
+
+	for (auto r = rooms.begin()+ext_basement_hallway_room_id; r != rooms.end(); ++r) {
+		if (r->contains_pt(pos)) return 1;
+	}
+	return 0;
+}
+

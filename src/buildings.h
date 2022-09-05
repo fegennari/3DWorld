@@ -1164,6 +1164,7 @@ struct building_interior_t {
 		unsigned part_id, unsigned num_lights=0, bool is_hallway=0);
 	colorRGBA get_attic_ceiling_color() const;
 	room_t const &get_garage_room() const {assert((unsigned)garage_room < rooms.size()); return rooms[garage_room];}
+	bool point_in_ext_basement_room(point const &pos) const;
 };
 
 struct building_stats_t {
