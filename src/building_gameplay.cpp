@@ -23,6 +23,7 @@ extern bool camera_in_building, player_is_hiding, player_in_unlit_room;
 extern int window_width, window_height, display_framerate, display_mode, game_mode, building_action_key, frame_counter;
 extern float fticks, CAMERA_RADIUS;
 extern double tfticks;
+extern colorRGBA vignette_color;
 extern building_params_t global_building_params;
 
 
@@ -743,6 +744,12 @@ public:
 			}
 		}
 		player_near_toilet = 0;
+	}
+	colorRGBA get_vignette_color() const {
+		if (player_health < 0.25) return colorRGBA(1.0, 0.0, 0.0, 4.0*(0.25 - player_health)); // red
+		if (is_poisoned)          return colorRGBA(0.0, 1.0, 0.0, 0.5); // green
+		if (bladder > 0.75)       return colorRGBA(1.0, 1.0, 0.0, 2.0*(bladder - 0.75)); // yellow
+		return ALPHA0;
 	}
 }; // end player_inventory_t
 
@@ -1934,6 +1941,7 @@ void attenuate_rate(float &v, float rate) {
 
 void building_gameplay_next_frame() {
 	attenuate_rate(office_chair_rot_rate, 0.05); // update office chair rotation
+	vignette_color = ALPHA0; // reset, may be set below
 
 	if (in_building_gameplay_mode()) { // run gameplay update logic
 		show_bldg_pickup_crosshair = 1;
@@ -1946,6 +1954,7 @@ void building_gameplay_next_frame() {
 		}
 		cur_sounds.erase(o, cur_sounds.end());
 		cur_building_sound_level = min(1.2f, max(0.0f, (cur_building_sound_level - 0.01f*fticks))); // gradual decrease
+		vignette_color = player_inventory.get_vignette_color();
 	}
 	player_held_object = carried_item_t();
 	player_inventory.next_frame();

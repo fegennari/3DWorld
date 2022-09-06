@@ -1243,6 +1243,7 @@
     <None Include="shaders\vert_plus_normal.vert" />
     <None Include="shaders\vert_xform_only.vert" />
     <None Include="shaders\vert_xform_vpos.vert" />
+    <None Include="shaders\vignette.frag" />
     <None Include="shaders\voxel_asteroid.frag" />
     <None Include="shaders\voxel_texture.part.frag" />
     <None Include="shaders\water_fog.part" />
