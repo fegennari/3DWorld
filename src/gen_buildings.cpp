@@ -3240,7 +3240,8 @@ public:
 			building_t const &building(get_building(*b));
 			if (building.bcube.x1() > bcube.x2()) break; // no further buildings can intersect (sorted by x1)
 			if (!building.bcube.intersects_xy(bcube)) continue;
-			if (building.check_point_or_cylin_contained(pos, 2.0*radius, points)) {building_id = *b; return 1;} // double the radius value to add padding to account for inaccuracy
+			// double the radius value to add padding to account for inaccuracy
+			if (building.check_point_or_cylin_contained(pos, 2.0*radius, points, 0, 0)) {building_id = *b; return 1;} // inc_attic=0, inc_ext_basement=0
 		}
 		return 0;
 	}
