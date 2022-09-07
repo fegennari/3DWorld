@@ -1403,7 +1403,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		bool force_smap_update(0);
 
 		// check for dynamic shadows
-		if (camera_surf_collide && camera_in_building && dist_less_than(lpos_rot, camera_bs, dshadow_radius)) {
+		if (camera_surf_collide && camera_in_building && dist_less_than(lpos_rot, camera_bs, /*dshadow_radius*/light_radius)) { // use full light radius
 			bool player_on_ladder_this_room(player_on_attic_stairs && (is_in_attic || room.intersects_xy(interior->attic_access)));
 
 			if (clipped_bc.contains_pt(camera_rot) || player_on_ladder_this_room) {
