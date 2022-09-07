@@ -646,9 +646,9 @@ bool building_t::check_pos_in_unlit_room_recur(point const &pos, set<unsigned> &
 	}
 	rooms_visited.insert(room_id); // mark this room as visited before making recursive calls
 	// check if all doors are closed
-	float const floor_thickness(get_floor_thickness()), wall_thickness(get_wall_thickness()), floor_zval(room.z1() + floor_ix*floor_spacing);
+	float const floor_thickness(get_floor_thickness()), expand_val(1.1*get_wall_thickness()), floor_zval(room.z1() + floor_ix*floor_spacing);
 	cube_t room_exp(room);
-	room_exp.expand_by_xy(1.01*wall_thickness);
+	room_exp.expand_by_xy(expand_val);
 	set_cube_zvals(room_exp, (floor_zval + floor_thickness), (floor_zval + floor_spacing - floor_thickness)); // clip to z-range of this floor
 
 	for (auto i = interior->door_stacks.begin(); i != interior->door_stacks.end(); ++i) {
@@ -664,7 +664,7 @@ bool building_t::check_pos_in_unlit_room_recur(point const &pos, set<unsigned> &
 			// check adjacent room; Note: usually windowless rooms are connected to office building hallways
 			point pos2(door.get_cube_center());
 			bool const dir(pos2[door.dim] < room.get_center_dim(door.dim));
-			pos2[door.dim] += (dir ? -1.0 : 1.0)*wall_thickness; // move point into adjacen room
+			pos2[door.dim] += (dir ? -1.0 : 1.0)*expand_val; // move point into adjacent room
 			if (!check_pos_in_unlit_room_recur(pos2, rooms_visited)) return 0; // if adjacent room is lit, return false
 		} // for dix
 	} // for i
