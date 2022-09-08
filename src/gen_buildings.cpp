@@ -3071,7 +3071,7 @@ public:
 			for (unsigned x = ixr[0][0]; x <= ixr[1][0]; ++x) {
 				grid_elem_t const &ge(get_grid_elem(x, y));
 				if (ge.empty()) continue; // skip empty grid
-				if (!(xy_only ? bcube.intersects_xy(ge.bcube) : bcube.intersects(ge.bcube))) continue;
+				if (!bcube.intersects_xy(ge.bcube)) continue; // Note: no need to check z-range
 
 				for (auto b = ge.bc_ixs.begin(); b != ge.bc_ixs.end(); ++b) {
 					building_t const &building(get_building(b->ix));

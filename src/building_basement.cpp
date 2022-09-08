@@ -1351,7 +1351,7 @@ bool building_t::is_basement_room_placement_valid(cube_t const &room, vect_cube_
 	float const ceiling_zval(room.z2() - get_fc_thickness());
 	if (query_min_height(room, ceiling_zval) < ceiling_zval)       return 0; // check for terrain clipping through ceiling
 	// check for other buildings, including their extended basements
-	if (check_buildings_cube_coll(room, 0, 1, this))               return 0; // xy_only=0, inc_basement=1, exclude ourself
+	if (check_buildings_cube_coll(room, 1, 1, this))               return 0; // xy_only=1 (other building basement may not have been placed yet), inc_basement=1, exclude ourself
 	// check that the room is in the same tile as the building, as this can cause a missed collision due to grid bboxes not containing ext basements
 	if (get_tile_id_for_cube(bcube) != get_tile_id_for_cube(room)) return 0;
 	return 1;
