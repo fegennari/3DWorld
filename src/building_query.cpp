@@ -1460,9 +1460,10 @@ int building_t::check_line_coll_expand(point const &p1, point const &p2, float r
 			p2_cube.expand_by_xy(radius);
 
 			for (auto i = parts.begin(); i != parts_end; ++i) { // includes garage/shed
-				if (!i->contains_pt(p1)) continue;
-				same_part = (i->contains_cube_xy(p2_cube));
+				if (i->contains_pt(p1)) {same_part = i->contains_cube_xy(p2_cube);}
 			}
+			if (!same_part && point_in_extended_basement(p1)) {same_part = interior->cube_in_ext_basement_room(p2_cube, 1);} // xy_only=1
+
 			if (!same_part) { // only need to check for going outside the part if p1 and p2 are in different parts (optimization)
 				vector3d delta((p2 - p1)/num_steps);
 				cube_t test_cube(p1, p1);
@@ -1693,7 +1694,10 @@ void add_cube_int_volume(cube_t const &a, cube_t const &b, float &cont_vol) {
 bool building_t::is_cube_contained_in_parts(cube_t const &c) const {
 	float cont_vol(0); // total shared volume
 	for (auto p = parts.begin(); p != get_real_parts_end_inc_sec(); ++p) {add_cube_int_volume(c, *p, cont_vol);}
-	if (has_ext_basement()) {add_cube_int_volume(c, interior->basement_ext_bcube, cont_vol);} // extended basement counts, even though it's not a part
+	
+	if (has_ext_basement() && interior->basement_ext_bcube.intersects(c)) { // extended basement counts, even though it's not a part
+		for (auto r = interior->basement_rooms_start(); r != interior->rooms.end(); ++r) {add_cube_int_volume(c, *r, cont_vol);}
+	}
 	return (cont_vol > 0.99*c.get_volume()); // add a bit of tolerance
 }
 

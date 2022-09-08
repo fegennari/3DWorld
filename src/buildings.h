@@ -1164,7 +1164,9 @@ struct building_interior_t {
 		unsigned part_id, unsigned num_lights=0, bool is_hallway=0);
 	colorRGBA get_attic_ceiling_color() const;
 	room_t const &get_garage_room() const {assert((unsigned)garage_room < rooms.size()); return rooms[garage_room];}
+	vector<room_t>::const_iterator basement_rooms_start() const;
 	bool point_in_ext_basement_room(point const &pos) const;
+	bool cube_in_ext_basement_room(cube_t const &c, bool xy_only) const;
 };
 
 struct building_stats_t {
@@ -1440,7 +1442,7 @@ public:
 	bool is_attic_roof(tquad_with_ix_t const &tq, bool type_roof_only) const;
 	bool has_ext_basement() const {return (interior && !interior->basement_ext_bcube.is_all_zeros());}
 	bool point_in_extended_basement(point const &pos) const {return (interior && interior->basement_ext_bcube.contains_pt(pos));}
-	bool point_in_extended_basement_not_basement(point const &pos) const {return (point_in_extended_basement(pos) && !parts[basement_part_ix].contains_pt(pos));}
+	bool point_in_extended_basement_not_basement(point const &pos) const {return (point_in_extended_basement(pos) && !get_basement().contains_pt(pos));}
 	bool cube_int_ext_basement(cube_t const &c) const {return (interior && interior->basement_ext_bcube.intersects(c));}
 	bool point_in_building_or_basement_bcube(point const &pos) const {return (bcube.contains_pt(pos) || point_in_extended_basement(pos));}
 	cube_t get_bcube_inc_extensions() const;

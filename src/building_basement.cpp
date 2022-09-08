@@ -1486,16 +1486,29 @@ cube_t building_t::get_full_basement_bcube() const {
 }
 room_t const &building_t::get_ext_basement_hallway() const {
 	assert(interior);
-	assert(interior->ext_basement_hallway_room_id >= 0 && (unsigned)interior->ext_basement_hallway_room_id < interior->rooms.size());
-	return interior->rooms[interior->ext_basement_hallway_room_id];
+	return *interior->basement_rooms_start();
 }
 
+vector<room_t>::const_iterator building_interior_t::basement_rooms_start() const {
+	assert(ext_basement_hallway_room_id >= 0 && (unsigned)ext_basement_hallway_room_id < rooms.size());
+	return rooms.begin() + ext_basement_hallway_room_id;
+}
 bool building_interior_t::point_in_ext_basement_room(point const &pos) const {
-	if (ext_basement_hallway_room_id < 0) return 0; // no ext basement rooms
-	assert((unsigned)ext_basement_hallway_room_id < rooms.size());
+	if (ext_basement_hallway_room_id < 0)     return 0; // no ext basement rooms
+	if (!basement_ext_bcube.contains_pt(pos)) return 0;
 
-	for (auto r = rooms.begin()+ext_basement_hallway_room_id; r != rooms.end(); ++r) {
+	for (auto r = basement_rooms_start(); r != rooms.end(); ++r) {
 		if (r->contains_pt(pos)) return 1;
+	}
+	return 0;
+}
+// returns true if cube is completely contained in any single room
+bool building_interior_t::cube_in_ext_basement_room(cube_t const &c, bool xy_only) const {
+	if (ext_basement_hallway_room_id < 0)        return 0; // no ext basement rooms
+	if (!basement_ext_bcube.contains_cube_xy(c)) return 0;
+
+	for (auto r = basement_rooms_start(); r != rooms.end(); ++r) {
+		if (xy_only ? r->contains_cube_xy(c) : r->contains_cube(c)) return 1;
 	}
 	return 0;
 }
