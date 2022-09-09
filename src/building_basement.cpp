@@ -1490,7 +1490,8 @@ room_t const &building_t::get_ext_basement_hallway() const {
 }
 
 vector<room_t>::const_iterator building_interior_t::basement_rooms_start() const {
-	assert(ext_basement_hallway_room_id >= 0 && (unsigned)ext_basement_hallway_room_id < rooms.size());
+	assert(ext_basement_hallway_room_id >= 0);
+	assert((unsigned)ext_basement_hallway_room_id < rooms.size());
 	return rooms.begin() + ext_basement_hallway_room_id;
 }
 bool building_interior_t::point_in_ext_basement_room(point const &pos) const {
