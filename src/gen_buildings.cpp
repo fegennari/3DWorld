@@ -3076,9 +3076,20 @@ public:
 				for (auto b = ge.bc_ixs.begin(); b != ge.bc_ixs.end(); ++b) {
 					building_t const &building(get_building(b->ix));
 					if (&building == exclude) continue;
-					if (xy_only ? bcube.intersects_xy(*b) : bcube.intersects(*b)) return 1; // bcube intersection
-					if (inc_basement && building.cube_int_ext_basement(bcube))    return 1; // extended basement intersection
-				}
+					if (inc_basement && building.cube_int_ext_basement(bcube)) return 1; // extended basement intersection
+					if (!bcube.intersects_xy(*b)) continue; // no intersection
+						
+					if (!xy_only) {
+						if (bcube.z1() >= b->z2()) continue; // above the building, doesn't intersect (I guess attics are skipped?)
+						// if parts has been allocated, the basement should be known, and the building's z1 should be valid
+						if (!building.parts.empty() && bcube.z2() <= building.bcube.z1()) continue;
+					}
+					if (building.parts.empty()) return 1; // parts not yet allocated, assume it intersects
+
+					for (auto p = building.parts.begin(); p != building.get_real_parts_end_inc_sec(); ++p) {
+						if (xy_only ? p->intersects_xy(bcube) : p->intersects(bcube)) return 1; // intersects this part
+					}
+				} // for b
 			} // for x
 		} // for y
 		return 0;
