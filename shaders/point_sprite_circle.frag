@@ -1,4 +1,5 @@
 void main() {
-	if (length(gl_PointCoord - vec2(0.5)) > 0.5) discard; // clip to a circle
+	vec2 pos = gl_PointCoord - vec2(0.5);
+	if (dot(pos, pos) > 0.25) discard; // clip to a circle
 	fg_FragColor = gl_Color;
 }

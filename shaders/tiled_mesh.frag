@@ -37,7 +37,7 @@ vec4 get_light_specular_comp(in vec3 normal, in vec3 light_dir, in vec3 eye_pos,
 
 vec3 get_raw_nm_normal(in vec4 weights, in float weights4, in float tscale) {
 	vec2 nm_tc = tscale*detail_normal_tex_scale*tc;
-	//if (length(epos.xyz) < 1.0) {nm_tc *= 4.0;}
+	//if (dot(epos.xyz, epos.xyz) < 1.0) {nm_tc *= 4.0;}
 	vec3 normal = vec3(0.0);
 	if (weights.r > 0) {normal += weights.r*texture(nm_tex2,      nm_tc).rgb;} // sand
 	if (weights.g > 0) {normal += weights.g*texture(nm_tex3,      nm_tc).rgb;} // dirt
