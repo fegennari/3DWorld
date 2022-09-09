@@ -24,6 +24,7 @@ float const WALL_THICK_VAL         = 0.05; // 5% of floor spacing
 float const DOOR_THICK_TO_WIDTH    = 0.04; // ratio of door thickness to width for doors opening to the side
 float const DEF_CITY_MIN_ALPHA     = 0.01;
 float const DOOR_WIDTH_SCALE       = 0.5;
+float const STAIRS_WALL_WIDTH_MULT = 0.15; // relative to the depth of a stair
 
 unsigned const NUM_BOTTLE_TYPES = 6;
 unsigned const NUM_BOOK_COLORS  = 16;

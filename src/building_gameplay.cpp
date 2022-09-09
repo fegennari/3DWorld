@@ -1688,7 +1688,7 @@ bool building_t::apply_paint(point const &pos, vector3d const &dir, colorRGBA co
 		// expand by wall half-width; see building_t::add_stairs_and_elevators()
 		float const step_len_pos(i->get_sz_dim(i->dim)/i->get_num_stairs());
 		cube_t c(*i);
-		c.expand_by_xy(0.15*step_len_pos); // wall half width
+		c.expand_by_xy(STAIRS_WALL_WIDTH_MULT*step_len_pos); // wall half width
 		float tmin0(tmin);
 		if (!line_int_cube_get_t(pos, pos2, c, tmin0)) continue;
 		if (c.contains_pt(pos)) {walls_blocked = 1; continue;} // can't spraypaint the outside of the stairs when standing inside them
