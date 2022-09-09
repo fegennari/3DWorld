@@ -1390,7 +1390,7 @@ bool building_t::add_underground_exterior_rooms(rand_gen_t &rgen, cube_t const &
 	interior->place_exterior_room(hallway, wall_area, fc_thick, wall_thickness, wall_exclude, basement_part_ix, 0, 1); // use basement part_ix; num_lights=0, is_hallway=1
 
 	for (auto r = rooms.begin()+2; r != rooms.end(); ++r) { // skip basement and hallway
-		bool const is_hallway(r->ix == 1); // else the room is usually a storage room
+		bool const is_hallway(r->ix == 1); // else the room is storage, bathroom, etc.
 		interior->place_exterior_room(*r, *r, fc_thick, wall_thickness, wall_exclude, basement_part_ix, 0, is_hallway);
 	}
 	return 1;
@@ -1448,7 +1448,7 @@ void building_interior_t::place_exterior_room(cube_t const &room, cube_t const &
 	bool const long_dim(room.dx() < room.dy());
 	if (num_lights == 0) {num_lights = max(1U, min(8U, (unsigned)round_fp(0.33*room.get_sz_dim(long_dim)/room.get_sz_dim(!long_dim))));} // auto calculate num_lights
 	room_t Room(room, part_id, num_lights, is_hallway);
-	Room.interior = 1;
+	Room.interior = 2; // mark as extended basement
 	if (is_hallway) {Room.assign_all_to(RTYPE_HALL, 0);} // initially all hallways; locked=0
 	rooms.push_back(Room);
 	cube_t ceiling(room), floor(room);

@@ -2135,7 +2135,7 @@ bool building_t::hang_pictures_in_room(rand_gen_t rgen, room_t const &room, floa
 				c.expand_in_dim(2, 0.5*height);
 				c.d[dim][!dir] += 0.2*base_shift; // move out to prevent z-fighting
 				// add an additional half wall thickness for interior hallway walls
-				if (room.is_hallway && classify_room_wall(room, zval, dim, dir, 0) != ROOM_WALL_EXT) {c.translate_dim(dim, base_shift);}
+				if (room.inc_half_walls() && classify_room_wall(room, zval, dim, dir, 0) != ROOM_WALL_EXT) {c.translate_dim(dim, base_shift);}
 				c.expand_in_dim(!dim, 0.5*width);
 				int const ret(check_valid_picture_placement(room, c, width, zval, dim, dir, objs_start));
 				if (ret == 0) continue; // invalid, retry
@@ -2741,7 +2741,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 		set_light_xy(light, room_center, light_size, room_dim, light_shape);
 		bool added_bathroom(0);
 		float z(r->z1());
-		r->interior = (is_basement || get_part_for_room(*r).contains_cube_xy_no_adj(*r)); // AKA windowless
+		if (!r->interior) {r->interior = (is_basement || get_part_for_room(*r).contains_cube_xy_no_adj(*r));} // AKA windowless; calculate if not already set
 		// make chair colors consistent for each part by using a few variables for a hash
 		colorRGBA chair_colors[12] = {WHITE, WHITE, GRAY, DK_GRAY, LT_GRAY, BLUE, DK_BLUE, LT_BLUE, YELLOW, RED, DK_GREEN, LT_BROWN};
 		colorRGBA chair_color(chair_colors[(13*r->part_id + 123*tot_num_rooms + 617*mat_ix + 1367*num_floors) % 12]);

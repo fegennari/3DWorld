@@ -145,6 +145,7 @@ bool building_t::interior_enabled() const {
 }
 
 int building_t::classify_room_wall(room_t const &room, float zval, bool dim, bool dir, bool ret_sep_if_part_int_part_ext) const { // Note: zval is for the floor
+	if (room.is_ext_basement()) return ROOM_WALL_INT; // treated as interior wall (optimization)
 	//if (has_basement() && zval < ground_floor_z1) return ROOM_WALL_BASEMENT; // callers don't expect this, but we may want to add/handle this case in the future
 	if (room.d[dim][dir] == bcube.d[dim][dir]) return ROOM_WALL_EXT; // at bcube border
 	if (!ret_sep_if_part_int_part_ext && (room.ext_sides & (1 << (2*dim + dir)))) return ROOM_WALL_EXT; // use ext_sides (optimization, but may conservatively return ext)
