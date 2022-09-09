@@ -320,7 +320,7 @@ template<class vert_type_t> void point_sprite_drawer_t<vert_type_t>::draw(int ti
 
 	if (empty()) return;
 	shader_t s;
-	bool const textured(tid >= 0), indir_lighting(using_lightmap && have_indir_smoke_tex);
+	bool const textured(tid >= 0 && tid != WHITE_TEX), indir_lighting(using_lightmap && have_indir_smoke_tex);
 
 	if (!use_geom_shader) { // point sprite variant
 		if (const_point_size) {s.set_prefix("#define CONSTANT_PT_SIZE", 0);} // VS
