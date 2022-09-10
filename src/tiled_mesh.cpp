@@ -2618,6 +2618,7 @@ tile_draw_t::occluder_cubes_t::occluder_cubes_t(tile_t const *const tile_) : til
 
 void tile_draw_t::draw(int reflection_pass) { // reflection_pass: 0=none, 1=water plane Z, 2=building mirror
 
+	if (player_in_basement >= 3) return; // no need to draw tiles if player in extended basement
 	//timer_t timer("TT Draw");
 	unsigned num_trees(0), num_smaps(0);
 	unsigned long long mem(0), tree_mem(0), smap_mem(0);
