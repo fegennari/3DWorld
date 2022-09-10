@@ -330,6 +330,7 @@ void building_t::gen_geometry(int rseed1, int rseed2) {
 void building_t::finish_gen_geometry(rand_gen_t &rgen, bool has_overlapping_cubes) { // for office buildings
 	if (global_building_params.add_office_basements) {maybe_add_basement(rgen);}
 	end_add_parts();
+	parts_generated = 1;
 	gen_interior(rgen, has_overlapping_cubes);
 	if (interior) {interior->finalize();}
 	gen_building_doors_if_needed(rgen);
@@ -923,6 +924,7 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 		float const chimney_dz((hipped_roof[part_ix] ? 0.5 : 1.0)*roof_dz[part_ix]); // lower for hipped roof
 		add_chimney(part, dim, dir, chimney_dz, rgen); // Note: return value is ignored
 	}
+	parts_generated = 1; // must be after adding chimney
 	roof_type = ROOF_TYPE_PEAK; // peaked and hipped roofs are both this type
 	add_roof_to_bcube();
 	gen_grayscale_detail_color(rgen, 0.4, 0.8); // for roof
