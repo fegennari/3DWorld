@@ -1124,8 +1124,9 @@ struct building_dest_t : public building_loc_t {
 	bool is_valid() const {return (building_ix >= 0 && part_ix >= 0 && room_ix >= 0);}
 };
 
+struct ext_basement_room_params_t;
 
-// may as well make this its own class, since it could get large and it won't be used for every building
+
 struct building_interior_t {
 	vect_cube_t floors, ceilings, walls[2], fc_occluders; // walls are split by dim, which is the separating dimension of the wall
 	vect_stairwell_t stairwells;
@@ -1164,7 +1165,7 @@ struct building_interior_t {
 	void update_dynamic_draw_data() {assert(room_geom); room_geom->update_dynamic_draw_data();}
 	void get_avoid_cubes(vect_cube_t &avoid, float z1, float z2, float floor_thickness, bool same_as_player, bool skip_stairs=0) const;
 	void create_fc_occluders();
-	void place_exterior_room(cube_t const &room, cube_t const &wall_area, float fc_thick, float wall_thick, vect_cube_t const &wall_exclude,
+	void place_exterior_room(cube_t const &room, cube_t const &wall_area, float fc_thick, float wall_thick, ext_basement_room_params_t &P,
 		unsigned part_id, unsigned num_lights=0, bool is_hallway=0);
 	colorRGBA get_attic_ceiling_color() const;
 	room_t const &get_garage_room() const {assert((unsigned)garage_room < rooms.size()); return rooms[garage_room];}
@@ -1474,7 +1475,7 @@ private:
 	bool extend_underground_basement(rand_gen_t rgen);
 	bool is_basement_room_placement_valid(cube_t const &room, vect_cube_with_ix_t const &rooms) const;
 	bool add_underground_exterior_rooms(rand_gen_t &rgen, cube_t const &door_bcube, bool wall_dim, bool wall_dir, float length_mult);
-	bool add_ext_basement_rooms_recur(cube_t const &parent_room, vect_cube_t &wall_exclude, vect_cube_with_ix_t &rooms, float door_width, bool dim, unsigned depth, rand_gen_t &rgen);
+	bool add_ext_basement_rooms_recur(cube_t const &parent_room, ext_basement_room_params_t &P, float door_width, bool dim, unsigned depth, rand_gen_t &rgen);
 	bool has_L_shaped_roof_area() const;
 	void get_attic_roof_tquads(vector<tquad_with_ix_t> &tquads) const;
 	bool add_attic_access_door(cube_t const &ceiling, unsigned part_ix, unsigned num_floors, unsigned rooms_start, rand_gen_t &rgen);
