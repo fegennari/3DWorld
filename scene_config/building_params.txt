@@ -16,6 +16,8 @@ buildings basement_prob_house  0.5
 buildings basement_prob_office 0.75
 buildings ball_prob 0.6 # set to 1.0 for testing of balls
 buildings add_office_basements 1
+buildings max_ext_basement_hall_branches 4
+buildings max_ext_basement_room_depth 4
 
 buildings min_altitude 0.05 # slightly above sea level
 buildings max_altitude 4.00 # same for all buildings

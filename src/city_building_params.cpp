@@ -161,6 +161,8 @@ void building_params_t::init_kw_maps() {
 	kwmu.add("num_tries", num_tries);
 	kwmu.add("rand_seed", buildings_rand_seed);
 	kwmu.add("max_shadow_maps", max_shadow_maps);
+	kwmu.add("max_ext_basement_hall_branches", max_ext_basement_hall_branches);
+	kwmu.add("max_ext_basement_room_depth", max_ext_basement_room_depth);
 	kwmf.add("ao_factor", ao_factor);
 	kwmf.add("sec_extra_spacing", sec_extra_spacing);
 	kwmf.add("player_coll_radius_scale", player_coll_radius_scale);

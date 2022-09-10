@@ -4,12 +4,13 @@
 #include "3DWorld.h"
 #include "function_registry.h"
 #include "buildings.h"
-//#include "profiler.h"
+#include "profiler.h"
 #include "city.h" // for car_t
 #include <cfloat> // for FLT_MAX
 
 enum {PIPE_TYPE_SEWER=0, PIPE_TYPE_CW, PIPE_TYPE_HW, PIPE_TYPE_GAS, NUM_PIPE_TYPES};
 
+extern building_params_t global_building_params;
 extern city_params_t city_params; // for num_cars
 
 car_t car_from_parking_space(room_object_t const &o);
@@ -1309,7 +1310,7 @@ void building_t::add_parking_garage_ramp(rand_gen_t &rgen) {
 
 bool building_t::extend_underground_basement(rand_gen_t rgen) {
 	if (!interior) return 0;
-	//highres_timer_t timer("Extend Underground Basement");
+	//highres_timer_t timer("Extend Underground Basement"); // 600ms total
 	float const height(get_window_vspace() - get_fc_thickness()); // full height of floor to avoid a gap at the top
 	cube_t const &basement(get_basement());
 	bool dim(rgen.rand_bool()), dir(rgen.rand_bool());
@@ -1385,7 +1386,7 @@ bool building_t::add_underground_exterior_rooms(rand_gen_t &rgen, cube_t const &
 	rooms.push_back(basement);
 	rooms.push_back(hallway);
 	// recursively add rooms connected to this hallway in alternating dimensions
-	add_ext_basement_rooms_recur(hallway, wall_exclude, rooms, door_width, !wall_dim, 0, rgen);
+	add_ext_basement_rooms_recur(hallway, wall_exclude, rooms, door_width, !wall_dim, 1, rgen); // dept=1, since we already added a hallway
 	// place rooms, now that wall_exclude has been calculated, starting with the hallway
 	interior->place_exterior_room(hallway, wall_area, fc_thick, wall_thickness, wall_exclude, basement_part_ix, 0, 1); // use basement part_ix; num_lights=0, is_hallway=1
 
@@ -1405,12 +1406,11 @@ bool building_t::add_ext_basement_rooms_recur(cube_t const &parent_room, vect_cu
 	float const end_spacing(0.75*door_width), min_length(max(4.0f*door_width, 0.5f*parent_len)), max_length(max(parent_len, 2.0f*min_length));
 	float const pos_lo(parent_room.d[!dim][0] + end_spacing), pos_hi(parent_room.d[!dim][1] - end_spacing);
 	if (pos_lo >= pos_hi) return 0; // not enough space to add a door
-	unsigned const max_branching_rooms(4);
-	bool const is_end_room(depth >= 3);
+	bool const is_end_room(depth >= global_building_params.max_ext_basement_room_depth);
 	float const min_width_scale(is_end_room ? 1.0 : 0.9), max_width_scale(is_end_room ? 3.0 : 1.5);
 	bool was_added(0);
 
-	for (unsigned n = 0; n < max_branching_rooms; ++n) {
+	for (unsigned n = 0; n < global_building_params.max_ext_basement_hall_branches; ++n) {
 		for (unsigned N = 0; N < 2; ++N) { // make up to 2 tries to place this room
 			bool const dir(rgen.rand_bool());
 			float const conn_edge(parent_room.d[dim][dir]), room_pos(rgen.rand_uniform(pos_lo, pos_hi));
