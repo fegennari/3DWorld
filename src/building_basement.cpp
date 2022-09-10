@@ -1384,6 +1384,7 @@ bool building_t::add_underground_exterior_rooms(rand_gen_t &rgen, cube_t const &
 	wall_area.d[wall_dim][!wall_dir] += (wall_dir ? 1.0 : -1.0)*0.5*wall_thickness; // move separator wall inside the hallway to avoid clipping exterior wall
 	interior->ext_basement_hallway_room_id = interior->rooms.size();
 	add_interior_door(door_t(door_bcube, wall_dim, wall_dir, rgen.rand_bool())); // open 50% of the time
+	interior->doors.back().locked = 0; // unlocked
 	rooms.push_back(basement);
 	rooms.push_back(hallway);
 	// recursively add rooms connected to this hallway in alternating dimensions
@@ -1430,6 +1431,7 @@ bool building_t::add_ext_basement_rooms_recur(cube_t const &parent_room, vect_cu
 			door.d[dim][0] = door.d[dim][1] = conn_edge;
 			set_wall_width(door, room_pos, 0.5*door_width, !dim);
 			add_interior_door(door_t(door, dim, dir, rgen.rand_bool())); // open 50% of the time
+			if (!is_end_room) {interior->doors.back().locked = 0;} // hallway doors are always unlocked, but end rooms doors can be locked
 			wall_exclude.push_back(door);
 			wall_exclude.back().expand_in_dim(dim, door_expand);
 			was_added = 1;
