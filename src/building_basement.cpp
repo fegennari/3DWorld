@@ -1312,7 +1312,7 @@ void building_t::add_parking_garage_ramp(rand_gen_t &rgen) {
 
 bool building_t::extend_underground_basement(rand_gen_t rgen) {
 	if (!interior) return 0;
-	//highres_timer_t timer("Extend Underground Basement"); // 348ms total
+	//highres_timer_t timer("Extend Underground Basement"); // 382ms total
 	float const height(get_window_vspace() - get_fc_thickness()); // full height of floor to avoid a gap at the top
 	cube_t const &basement(get_basement());
 	bool dim(rgen.rand_bool()), dir(rgen.rand_bool());
@@ -1360,10 +1360,22 @@ float query_min_height(cube_t const &c, float stop_at) {
 	return hmin;
 }
 
-bool building_t::is_basement_room_placement_valid(cube_t const &room, vect_cube_with_ix_t const &rooms) const {
+bool building_t::is_basement_room_placement_valid(cube_t &room, vect_cube_with_ix_t const &rooms, bool dim, bool dir, bool &add_end_door) const {
 	cube_t test_cube(room);
-	test_cube.expand_by_xy(-0.1*get_wall_thickness()); // shrink slightly to avoid intersections with our own basement cube(s)
-	if (has_bcube_int(test_cube, rooms))                           return 0; // do the cheapest test first
+	test_cube.expand_in_dim(dim, -0.1*get_wall_thickness()); // shrink slightly to avoid intersections with our parent room
+	float const room_len(room.get_sz_dim(dim)), room_width(room.get_sz_dim(!dim));
+
+	for (auto r = rooms.begin(); r != rooms.end(); ++r) {
+		if (!r->intersects(test_cube)) continue;
+		if (r == rooms.begin()) return 0; // basement is first room - can't reconnect to it
+		if (r->d[!dim][0] > room.d[!dim][0] || r->d[!dim][1] < room.d[!dim][1]) return 0; // doesn't span entire room/clips off corner - invalid
+		float const edge_pos(r->d[dim][!dir]); // intersection edge pos on other room
+		float const clip_len(fabs(room.d[dim][!dir] - edge_pos));
+		if (clip_len < max(room_width, 0.5f*room_len)) return 0; // clipped room length is less than room width or half unclipped room length
+		room.d[dim][dir] = test_cube.d[dim][dir] = edge_pos; // clip room to this shorter length and add an end door; may be clipped smaller for another room
+		assert(room.is_strictly_normalized());
+		add_end_door = 1;
+	} // for r
 	float const ceiling_zval(room.z2() - get_fc_thickness());
 	if (query_min_height(room, ceiling_zval) < ceiling_zval)       return 0; // check for terrain clipping through ceiling
 	// check for other buildings, including their extended basements;
@@ -1391,7 +1403,9 @@ bool building_t::add_underground_exterior_rooms(rand_gen_t &rgen, cube_t const &
 	hallway.d[wall_dim][!wall_dir] = ext_wall_pos; // flush with the exterior wall/door
 	hallway.d[wall_dim][ wall_dir] = ext_wall_pos + (wall_dir ? 1.0 : -1.0)*hallway_len;
 	ext_basement_room_params_t P;
-	if (!is_basement_room_placement_valid(hallway, P.rooms)) return 0; // can't place the hallway
+	bool add_end_door(0);
+	if (!is_basement_room_placement_valid(hallway, P.rooms, wall_dim, wall_dir, add_end_door)) return 0; // can't place the hallway
+	assert(!add_end_door); // shouldn't be possible
 	// valid placement; now add the door, hallway, and connected rooms
 	has_basement_door = 1;
 	float const fc_thick(get_fc_thickness()), wall_thickness(get_wall_thickness());
@@ -1402,8 +1416,7 @@ bool building_t::add_underground_exterior_rooms(rand_gen_t &rgen, cube_t const &
 	cube_t wall_area(hallway);
 	wall_area.d[wall_dim][!wall_dir] += (wall_dir ? 1.0 : -1.0)*0.5*wall_thickness; // move separator wall inside the hallway to avoid clipping exterior wall
 	interior->ext_basement_hallway_room_id = interior->rooms.size();
-	add_interior_door(door_t(door_bcube, wall_dim, wall_dir, rgen.rand_bool())); // open 50% of the time
-	interior->doors.back().locked = 0; // unlocked
+	add_interior_door(door_t(door_bcube, wall_dim, wall_dir, rgen.rand_bool()), 0, 1); // open 50% of the time; is_bathroom=0, make_unlocked=1
 	P.rooms.push_back(basement);
 	P.rooms.push_back(hallway);
 	// recursively add rooms connected to this hallway in alternating dimensions
@@ -1439,18 +1452,23 @@ bool building_t::add_ext_basement_rooms_recur(cube_t const &parent_room, ext_bas
 			room.d[dim][!dir] = conn_edge;
 			room.d[dim][ dir] = conn_edge + (dir ? 1.0 : -1.0)*room_length;
 			set_wall_width(room, room_pos, 0.5*room_width, !dim);
-			if (!is_basement_room_placement_valid(room, P.rooms)) continue; // can't place the room here
+			bool add_end_door(0);
+			if (!is_basement_room_placement_valid(room, P.rooms, dim, dir, add_end_door)) continue; // can't place the room here
 			unsigned const cur_room_ix(P.rooms.size());
 			P.rooms.emplace_back(room, 0);
-			// add a connecting door
+			// add a connecting door at one or both ends
 			cube_t door;
 			set_cube_zvals(door, room.z1()+fc_thick, room.z2()-fc_thick);
-			door.d[dim][0] = door.d[dim][1] = conn_edge;
 			set_wall_width(door, room_pos, 0.5*door_width, !dim);
-			add_interior_door(door_t(door, dim, dir, rgen.rand_bool())); // open 50% of the time
-			if (!is_end_room) {interior->doors.back().locked = 0;} // hallway doors are always unlocked, but end rooms doors can be locked
-			P.wall_exclude.push_back(door);
-			P.wall_exclude.back().expand_in_dim(dim, door_expand);
+			cube_t doors[2] = {door, door};
+			doors[0].d[dim][0] = doors[0].d[dim][1] = conn_edge;
+			if (add_end_door) {doors[1].d[dim][0] = doors[1].d[dim][1] = room.d[dim][dir];} // opposite end of the room
+
+			for (unsigned d = 0; d < (add_end_door ? 2 : 1); ++d) {
+				add_interior_door(door_t(doors[d], dim, (dir ^ d), rgen.rand_bool()), 0, !is_end_room); // open 50% of the time; is_bathroom=0, make_unlocked=!is_end_room
+				P.wall_exclude.push_back(doors[d]);
+				P.wall_exclude.back().expand_in_dim(dim, door_expand);
+			}
 			was_added = 1;
 			// recursively add rooms connecting to this one
 			bool is_hallway(0);

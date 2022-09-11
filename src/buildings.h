@@ -1473,7 +1473,7 @@ private:
 	void gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes);
 	void maybe_add_basement(rand_gen_t rgen);
 	bool extend_underground_basement(rand_gen_t rgen);
-	bool is_basement_room_placement_valid(cube_t const &room, vect_cube_with_ix_t const &rooms) const;
+	bool is_basement_room_placement_valid(cube_t &room, vect_cube_with_ix_t const &rooms, bool dim, bool dir, bool &add_end_door) const;
 	bool add_underground_exterior_rooms(rand_gen_t &rgen, cube_t const &door_bcube, bool wall_dim, bool wall_dir, float length_mult);
 	bool add_ext_basement_rooms_recur(cube_t const &parent_room, ext_basement_room_params_t &P, float door_width, bool dim, unsigned depth, rand_gen_t &rgen);
 	bool has_L_shaped_roof_area() const;
@@ -1609,8 +1609,8 @@ private:
 	void add_bathroom_window(cube_t const &window, bool dim, bool dir, unsigned room_id, unsigned floor);
 	int get_room_id_for_window(cube_t const &window, bool dim, bool dir, bool &is_split) const;
 	void register_open_ext_door_state(int door_ix);
-	void add_interior_door(door_t &door, bool is_bathroom=0);
-	void add_interior_door_for_floor(door_t &door, bool is_bathroom);
+	void add_interior_door(door_t &door, bool is_bathroom=0, bool make_unlocked=0);
+	void add_interior_door_for_floor(door_t &door, bool is_bathroom, bool make_unlocked);
 	void remove_section_from_cube_and_add_door(cube_t &c, cube_t &c2, float v1, float v2, bool xy, bool open_dir, bool is_bathroom=0);
 	void insert_door_in_wall_and_add_seg(cube_t &wall, float v1, float v2, bool dim, bool open_dir, bool keep_high_side, bool is_bathroom=0);
 	unsigned get_floor_for_zval(float zval) const {return unsigned((zval - bcube.z1())/get_window_vspace());}

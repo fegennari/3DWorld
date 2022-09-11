@@ -11,24 +11,24 @@ unsigned const MAX_OFFICE_UTILITY_ROOMS = 1;
 extern building_params_t global_building_params;
 
 
-void building_t::add_interior_door(door_t &door, bool is_bathroom) {
+void building_t::add_interior_door(door_t &door, bool is_bathroom, bool make_unlocked) {
 	assert(interior);
 	interior->door_stacks.emplace_back(door, interior->doors.size());
-	if (!SPLIT_DOOR_PER_FLOOR || door.on_stairs) {add_interior_door_for_floor(door, is_bathroom); return;} // add a single door across all floors
+	if (!SPLIT_DOOR_PER_FLOOR || door.on_stairs) {add_interior_door_for_floor(door, is_bathroom, make_unlocked); return;} // add a single door across all floors
 	float const floor_spacing(get_window_vspace()), door_height(get_floor_ceil_gap());
 
 	// Note: door.dz() should be an exact multiple of floor_spacing except for an extra floor thickness at the bottom
 	for (float zval = door.z1(); zval + 0.5f*floor_spacing < door.z2(); zval += floor_spacing) { // continue until we don't have enough space left to add a door
 		door_t door_seg(door);
 		set_cube_zvals(door_seg, zval, zval+door_height); // clip to ceiling
-		add_interior_door_for_floor(door_seg, is_bathroom);
+		add_interior_door_for_floor(door_seg, is_bathroom, make_unlocked);
 	}
 }
-void building_t::add_interior_door_for_floor(door_t &door, bool is_bathroom) {
+void building_t::add_interior_door_for_floor(door_t &door, bool is_bathroom, bool make_unlocked) {
 	if (is_bathroom) {door.open = door.locked = 0;} // bathroom doors are always closed but unlocked
 	else if (!door.on_stairs) { // don't set open/locked state for stairs doors
-		door.open   = (              fract(interior->doors.size()*1.61803) < global_building_params.open_door_prob  ); // use the golden ratio
-		door.locked = (!door.open && fract(interior->doors.size()*3.14159) < global_building_params.locked_door_prob); // use pi
+		door.open   = (                                fract(interior->doors.size()*1.61803) < global_building_params.open_door_prob  ); // use the golden ratio
+		door.locked = (!make_unlocked && !door.open && fract(interior->doors.size()*3.14159) < global_building_params.locked_door_prob); // use pi
 	}
 	interior->doors.push_back(door);
 }
