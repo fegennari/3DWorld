@@ -1943,6 +1943,7 @@ class building_creator_t {
 		}
 		return 1;
 	}
+	bool own_this_building(building_t const *building) const {return (building >= buildings.data() && building < buildings.data()+buildings.size());}
 
 	struct building_cand_t : public building_t {
 		vect_cube_t &temp_parts;
@@ -3056,7 +3057,7 @@ public:
 		}
 		// hack to handle player in extended basement, which may be outside the building or even grid bbox:
 		// if player is in the basement, and we haven't checked the player's building, and the player's building is in our range of buildings, check it now
-		if (check_interior && !saw_player_building && player_in_basement && player_building >= buildings.data() && player_building < buildings.data()+buildings.size()) {
+		if (check_interior && !saw_player_building && player_in_basement && own_this_building(player_building)) {
 			if (dist_xy_less_than(get_camera_pos(), pos, CAMERA_RADIUS)) { // if this is the player
 				if (player_building->check_sphere_coll(pos, p_last, xlate, radius, xy_only, points, cnorm, check_interior)) return 1;
 			}
@@ -3239,6 +3240,10 @@ public:
 			if (b->contains_pt(pos)) {return b->ix;} // found
 		}
 		return -1;
+	}
+	cube_t get_grid_bcube_for_building(building_t const &b) const {
+		if (empty() || !own_this_building(&b)) return cube_t();
+		return grid[get_grid_ix(b.bcube.get_cube_center())].bcube;
 	}
 
 	bool check_ped_coll(point const &pos, float radius, unsigned plot_id, unsigned &building_id) const { // Note: not thread safe due to static points
@@ -3491,6 +3496,10 @@ public:
 			i->second.update_zmax_for_line(p1, p2, radius, house_extra_zval, cur_zmax);
 		}
 	}
+	cube_t get_grid_bcube_for_building(building_t const &b) const {
+		auto it(get_tile_by_pos_bs(b.bcube.get_cube_center()));
+		return ((it == tiles.end()) ? cube_t() : it->second.get_grid_bcube_for_building(b));
+	}
 	void add_drawn(vector3d const &xlate, vector<building_creator_t *> &bcs) {
 		float const draw_dist(get_draw_tile_dist());
 		point const camera(get_camera_pos() - xlate);
@@ -3664,6 +3673,14 @@ unsigned get_buildings_gpu_mem_usage() {return (building_creator.get_gpu_mem_usa
 
 vector3d get_buildings_max_extent() { // used for TT shadow bounds + map mode
 	return building_creator.get_max_extent().max(building_creator_city.get_max_extent()).max(building_tiles.get_max_extent());
+}
+cube_t get_grid_bcube_for_building(building_t const &b) {
+	cube_t ret(building_creator_city.get_grid_bcube_for_building(b));
+	if (!ret.is_all_zeros()) return ret; // city building
+	ret = building_creator.get_grid_bcube_for_building(b);
+	if (!ret.is_all_zeros()) return ret; // secondary building
+	ret = building_tiles.get_grid_bcube_for_building(b);
+	return ret;
 }
 void clear_building_vbos() {
 	building_creator.clear_vbos();

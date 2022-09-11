@@ -1377,14 +1377,14 @@ bool building_t::is_basement_room_placement_valid(cube_t &room, vect_cube_with_i
 		add_end_door = 1;
 	} // for r
 	float const ceiling_zval(room.z2() - get_fc_thickness());
-	if (query_min_height(room, ceiling_zval) < ceiling_zval)       return 0; // check for terrain clipping through ceiling
+	if (query_min_height(room, ceiling_zval) < ceiling_zval) return 0; // check for terrain clipping through ceiling
 	// check for other buildings, including their extended basements;
 	// Warning: technically not thread safe, since we can be adding basements to another building at the same time, but seems to be okay in practice
-	if (check_buildings_cube_coll(room, 0, 1, this))               return 0; // xy_only=0, inc_basement=1, exclude ourself
-	// check that the room is in the same tile as the building, as this can cause a missed collision due to grid bboxes not containing ext basements
-	if (get_tile_id_for_cube(bcube) != get_tile_id_for_cube(room)) return 0;
-	cube_t const city_bcube(get_city_bcube_at_pt(bcube.get_cube_center()));
-	if (!city_bcube.is_all_zeros() && !city_bcube.contains_cube_xy(room)) return 0; // outside the city bcube
+	if (check_buildings_cube_coll(room, 0, 1, this))         return 0; // xy_only=0, inc_basement=1, exclude ourself
+	cube_t const grid_bcube(get_grid_bcube_for_building(*this));
+	assert(!grid_bcube.is_all_zeros()); // must be found
+	assert(grid_bcube.contains_cube_xy(bcube)); // must contain our building
+	if (!grid_bcube.contains_cube_xy(room)) return 0; // outside the grid (tile or city) bcube
 	return 1;
 }
 
