@@ -1887,11 +1887,11 @@ class building_creator_t {
 		map<uint64_t, unsigned> tile_to_gbt;
 
 		for(unsigned bix = 0; bix < buildings.size(); ++bix) {
-			unsigned gix;
 			building_t const &b(buildings[bix]);
 			if (b.bcube.is_all_zeros()) continue; // skip invalid buildings
-			uint64_t const tile_id(get_tile_id_containing_point_no_xyoff(b.bcube.get_cube_center()));
+			uint64_t const tile_id(get_tile_id_for_cube(b.bcube));
 			auto it(tile_to_gbt.find(tile_id));
+			unsigned gix;
 
 			if (it == tile_to_gbt.end()) { // new element
 				gix = grid_by_tile.size();
