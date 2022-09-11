@@ -1312,7 +1312,7 @@ void building_t::add_parking_garage_ramp(rand_gen_t &rgen) {
 
 bool building_t::extend_underground_basement(rand_gen_t rgen) {
 	if (!interior) return 0;
-	//highres_timer_t timer("Extend Underground Basement"); // 382ms total
+	//highres_timer_t timer("Extend Underground Basement"); // 357ms total
 	float const height(get_window_vspace() - get_fc_thickness()); // full height of floor to avoid a gap at the top
 	cube_t const &basement(get_basement());
 	bool dim(rgen.rand_bool()), dir(rgen.rand_bool());
@@ -1383,6 +1383,8 @@ bool building_t::is_basement_room_placement_valid(cube_t &room, vect_cube_with_i
 	if (check_buildings_cube_coll(room, 0, 1, this))               return 0; // xy_only=0, inc_basement=1, exclude ourself
 	// check that the room is in the same tile as the building, as this can cause a missed collision due to grid bboxes not containing ext basements
 	if (get_tile_id_for_cube(bcube) != get_tile_id_for_cube(room)) return 0;
+	cube_t const city_bcube(get_city_bcube_at_pt(bcube.get_cube_center()));
+	if (!city_bcube.is_all_zeros() && !city_bcube.contains_cube_xy(room)) return 0; // outside the city bcube
 	return 1;
 }
 
@@ -1464,8 +1466,8 @@ bool building_t::add_ext_basement_rooms_recur(cube_t const &parent_room, ext_bas
 			doors[0].d[dim][0] = doors[0].d[dim][1] = conn_edge;
 			if (add_end_door) {doors[1].d[dim][0] = doors[1].d[dim][1] = room.d[dim][dir];} // opposite end of the room
 
-			for (unsigned d = 0; d < (add_end_door ? 2 : 1); ++d) {
-				add_interior_door(door_t(doors[d], dim, (dir ^ d), rgen.rand_bool()), 0, !is_end_room); // open 50% of the time; is_bathroom=0, make_unlocked=!is_end_room
+			for (unsigned d = 0; d < (add_end_door ? 2U : 1U); ++d) {
+				add_interior_door(door_t(doors[d], dim, (dir ^ bool(d)), rgen.rand_bool()), 0, !is_end_room); // open 50% of the time; is_bathroom=0, make_unlocked=!is_end_room
 				P.wall_exclude.push_back(doors[d]);
 				P.wall_exclude.back().expand_in_dim(dim, door_expand);
 			}

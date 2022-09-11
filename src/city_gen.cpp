@@ -2054,6 +2054,12 @@ public:
 		bcube.expand_by_xy(city_params.get_max_car_size().x); // expand by car length to fully include cars that are partially inside connector road intersections
 		return bcube;
 	}
+	cube_t get_city_bcube_at_pt(point const &pos) const {
+		for (road_network_t const &rn : road_networks) {
+			if (rn.get_bcube().contains_pt_xy(pos)) return rn.get_bcube();
+		}
+		return cube_t(); // not found
+	}
 	bool cube_overlaps_road_xy    (cube_t const &c, unsigned city_ix) const {return get_city(city_ix).cube_overlaps_road_xy    (c);}
 	bool cube_overlaps_pl_or_dw_xy(cube_t const &c, unsigned city_ix) const {return get_city(city_ix).cube_overlaps_pl_or_dw_xy(c);}
 
@@ -2950,6 +2956,7 @@ public:
 		ped_manager.init(city_params.num_peds); // must be after buildings are placed
 	}
 	cube_t get_city_bcube(unsigned city_id) const {return road_gen.get_city_bcube(city_id);}
+	cube_t get_city_bcube_at_pt(point const &pos) {return road_gen.get_city_bcube_at_pt(pos);}
 	void get_city_bcubes(vect_cube_t &bcubes) const {road_gen.get_city_bcubes(bcubes);}
 	void get_all_road_bcubes(vect_cube_t &bcubes, bool connector_only) const {road_gen.get_all_road_bcubes(bcubes, connector_only);}
 	void get_all_plot_zones(vect_city_zone_t &zones) {road_gen.get_all_plot_zones(zones);} // caches plot_id_offset, so non-const
@@ -3065,6 +3072,7 @@ void gen_cities(float *heightmap, unsigned xsize, unsigned ysize) {
 }
 void gen_city_details() {city_gen.gen_details();} // called after gen_buildings()
 cube_t get_city_bcube(unsigned city_id) {return city_gen.get_city_bcube(city_id);}
+cube_t get_city_bcube_at_pt(point const &pos) {return city_gen.get_city_bcube_at_pt(pos);}
 void get_city_bcubes(vect_cube_t &bcubes) {city_gen.get_city_bcubes(bcubes);}
 void get_city_road_bcubes(vect_cube_t &bcubes, bool connector_only) {city_gen.get_all_road_bcubes(bcubes, connector_only);}
 void get_city_plot_zones(vect_city_zone_t &zones) {city_gen.get_all_plot_zones(zones);}

@@ -912,6 +912,7 @@ bool check_line_clip_update_t(point const &p1, point const &p2, float &t, cube_t
 point rand_xy_pt_in_cube(cube_t const &c, float radius, rand_gen_t &rgen);
 bool sphere_in_light_cone_approx(pos_dir_up const &pdu, point const &center, float radius);
 cube_t get_city_bcube(unsigned city_id);
+cube_t get_city_bcube_at_pt(point const &pos);
 float get_sidewalk_width();
 float get_inner_sidewalk_width();
 

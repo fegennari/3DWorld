@@ -3028,30 +3028,32 @@ public:
 		}
 		float const expand_val(3.0*radius); // use a larger value to handle things outside the building bcube such as AC units
 		cube_t bcube; bcube.set_from_sphere((pos - xlate), expand_val);
-		if (!range.intersects_xy(bcube)) return 0; // outside buildings bcube
-		unsigned ixr[2][2];
-		get_grid_range(bcube, ixr);
-		float const dist(p2p_dist(pos, p_last));
 		bool saw_player_building(0);
+		
+		if (range.intersects_xy(bcube)) { // inside buildings bcube
+			unsigned ixr[2][2];
+			get_grid_range(bcube, ixr);
+			float const dist(p2p_dist(pos, p_last));
 
-		for (unsigned y = ixr[0][1]; y <= ixr[1][1]; ++y) {
-			for (unsigned x = ixr[0][0]; x <= ixr[1][0]; ++x) {
-				grid_elem_t const &ge(get_grid_elem(x, y));
-				if (ge.empty()) continue; // skip empty grid
-				if (!(xy_only ? sphere_cube_intersect_xy(pos, (radius + dist), (ge.bcube + xlate)) :
-					sphere_cube_intersect(pos, (radius + dist), (ge.bcube + xlate)))) continue; // Note: makes little difference
+			for (unsigned y = ixr[0][1]; y <= ixr[1][1]; ++y) {
+				for (unsigned x = ixr[0][0]; x <= ixr[1][0]; ++x) {
+					grid_elem_t const &ge(get_grid_elem(x, y));
+					if (ge.empty()) continue; // skip empty grid
+					if (!(xy_only ? sphere_cube_intersect_xy(pos, (radius + dist), (ge.bcube + xlate)) :
+						sphere_cube_intersect(pos, (radius + dist), (ge.bcube + xlate)))) continue; // Note: makes little difference
 
-				// Note: assumes buildings are separated so that only one sphere collision can occur
-				for (auto b = ge.bc_ixs.begin(); b != ge.bc_ixs.end(); ++b) {
-					if (!b->intersects_xy(bcube)) continue;
-					building_t const &building(get_building(b->ix));
-					if (building.check_sphere_coll(pos, p_last, xlate, radius, xy_only, points, cnorm, check_interior)) return 1;
-					saw_player_building |= (check_interior && &building == player_building);
-				} // for b
-				if (check_interior && player_in_basement == 3) continue; // hack to keep player from popping from extended basement to top of driveway
-				if (check_road_seg_sphere_coll(ge, pos, p_last, xlate, radius, xy_only, cnorm)) return 1;
-			} // for x
-		} // for y
+					// Note: assumes buildings are separated so that only one sphere collision can occur
+					for (auto b = ge.bc_ixs.begin(); b != ge.bc_ixs.end(); ++b) {
+						if (!b->intersects_xy(bcube)) continue;
+						building_t const &building(get_building(b->ix));
+						if (building.check_sphere_coll(pos, p_last, xlate, radius, xy_only, points, cnorm, check_interior)) return 1;
+						saw_player_building |= (check_interior && &building == player_building);
+					} // for b
+					if (check_interior && player_in_basement == 3) continue; // hack to keep player from popping from extended basement to top of driveway
+					//if (check_road_seg_sphere_coll(ge, pos, p_last, xlate, radius, xy_only, cnorm)) return 1;
+				} // for x
+			} // for y
+		}
 		// hack to handle player in extended basement, which may be outside the building or even grid bbox:
 		// if player is in the basement, and we haven't checked the player's building, and the player's building is in our range of buildings, check it now
 		if (check_interior && !saw_player_building && player_in_basement && player_building >= buildings.data() && player_building < buildings.data()+buildings.size()) {
