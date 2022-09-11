@@ -1311,7 +1311,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			clipped_bc.intersect_with_cube(basement_bcube);
 		}
 		else { // clip to bcube
-			assert(bcube.contains_pt(lpos));
+			assert(bcube.contains_pt(lpos_rot));
 			clipped_bc.intersect_with_cube(bcube);
 		}
 		if (!stairs_light && !is_in_elevator) { // clip zval to current floor if light not in a room with stairs or elevator
