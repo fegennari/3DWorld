@@ -122,8 +122,8 @@ cube_t building_t::get_coll_bcube() const {
 	if (has_driveway()) {cc.union_with_cube(driveway);}
 	return cc;
 }
-cube_t building_t::get_interior_bcube() const { // Note: called for indir lighting; could cache z2
-	cube_t int_bcube(get_bcube_inc_extensions());
+cube_t building_t::get_interior_bcube(bool inc_ext_basement) const { // Note: called for indir lighting; could cache z2
+	cube_t int_bcube(inc_ext_basement ? get_bcube_inc_extensions() : bcube);
 	int_bcube.z2() = interior_z2;
 	return int_bcube;
 }

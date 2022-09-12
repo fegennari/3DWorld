@@ -377,7 +377,7 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc, int only_this_fl
 unsigned const IS_WINDOW_BIT = (1<<24); // if this bit is set, the light is from a window; if not, it's from a light room object
 
 class building_indir_light_mgr_t {
-	bool is_running, kill_thread, lighting_updated, needs_to_join, need_bvh_rebuild, update_windows, is_negative_light;
+	bool is_running, kill_thread, lighting_updated, needs_to_join, need_bvh_rebuild, update_windows, is_negative_light, in_ext_basement;
 	int cur_bix, cur_light, cur_floor;
 	unsigned cur_tid;
 	colorRGBA outdoor_color;
@@ -579,13 +579,13 @@ class building_indir_light_mgr_t {
 		lights_to_sort.clear();
 	}
 public:
-	building_indir_light_mgr_t() : is_running(0), kill_thread(0), lighting_updated(0), needs_to_join(0),
-		need_bvh_rebuild(0), update_windows(0), is_negative_light(0), cur_bix(-1), cur_light(-1), cur_floor(-1), cur_tid(0) {}
+	building_indir_light_mgr_t() : is_running(0), kill_thread(0), lighting_updated(0), needs_to_join(0), need_bvh_rebuild(0),
+		update_windows(0), is_negative_light(0), in_ext_basement(0), cur_bix(-1), cur_light(-1), cur_floor(-1), cur_tid(0) {}
 
 	cube_t get_light_bounds() const {return light_bounds;}
 
 	void invalidate_lighting() {
-		is_negative_light = 0;
+		is_negative_light = in_ext_basement = 0;
 		cur_light = -1;
 		remove_queue.clear();
 		lights_complete.clear();
@@ -623,8 +623,10 @@ public:
 		else {
 			if (update_windows) {get_windows(b);}
 			unsigned const new_floor(b.get_floor_for_zval(target.z));
-			floor_change = (cur_floor >= 0 && cur_floor != (int)new_floor);
-			need_rebuild = (floor_change && !light_bounds.contains_cube(get_valid_area(b, target, new_floor)));
+			bool const new_in_ext_basement(b.point_in_extended_basement_not_basement(target));
+			floor_change  = (cur_floor >= 0 && cur_floor != (int)new_floor);
+			floor_change |= (new_in_ext_basement != in_ext_basement); // treat extended basement threshold cross as a floor change
+			need_rebuild  = (floor_change && !light_bounds.contains_cube(get_valid_area(b, target, new_floor)));
 		}
 		if (need_rebuild) { // handle floor change
 			invalidate_lighting();
@@ -692,14 +694,19 @@ public:
 		if ((geom_changed || !light_is_on || (in_elevator && num_erased)) && (num_erased || is_cur_light)) {add_to_remove_queue(light_ix);} // must remove the light instead
 	}
 	static cube_t get_valid_area(building_t const &b, point const &target, unsigned target_floor) {
-		cube_t VA(b.bcube); // TODO: what about extended basement?
+		cube_t VA;
 
 		// clip per light source to current floor; note that this will exclude stairs going up or down
 		if (b.point_in_attic(target)) {
+			VA = b.get_attic_part();
 			set_cube_zvals(VA, b.interior->attic_access.z1(), b.interior_z2);
+		}
+		else if (b.point_in_extended_basement_not_basement(target)) {
+			VA = b.interior->basement_ext_bcube;
 		}
 		else {
 			float const floor_spacing(b.get_window_vspace());
+			VA = b.bcube;
 			VA.z1() = b.bcube.z1() + (target_floor  )*floor_spacing;
 			VA.z2() = b.bcube.z1() + (target_floor+1)*floor_spacing;
 		}
@@ -709,12 +716,15 @@ public:
 		//highres_timer_t timer("Build BVH");
 		cur_floor  = b.get_floor_for_zval(target.z);
 		valid_area = get_valid_area(b, target, cur_floor);
-		cube_t const interior_bcube(b.get_interior_bcube());
-		if      (INDIR_LIGHT_FLOOR_SPAN == 0) {light_bounds = interior_bcube;} // unlimited floor span/entire building
+		in_ext_basement = b.point_in_extended_basement_not_basement(target);
+
+		if (in_ext_basement) {light_bounds = valid_area;} // extended basement
+		else if (INDIR_LIGHT_FLOOR_SPAN == 0) {light_bounds = b.get_interior_bcube(0);} // unlimited floor span/entire building; inc_ext_basement=0
 		else if (INDIR_LIGHT_FLOOR_SPAN == 1) {light_bounds = valid_area;} // single floor only
 		else if (light_bounds.contains_cube(valid_area)) {} // valid area already contained, no update needed (will fail if light_bounds is not set)
 		else { // limited number of floors
 			float const dist_above_below(0.5f*(INDIR_LIGHT_FLOOR_SPAN - 1)*b.get_window_vspace());
+			cube_t const interior_bcube(b.get_interior_bcube(0)); // inc_ext_basement=0
 			light_bounds = valid_area;
 			light_bounds.expand_in_dim(2, dist_above_below); // expand in Z
 			// clamp Z range to interior_bcube and add any excess height to the other end of the range
@@ -746,7 +756,7 @@ void building_t::create_building_volume_light_texture(unsigned bix, point const 
 	building_indir_light_mgr.register_cur_building(*this, bix, target, tid);
 }
 
-bool building_t::ray_cast_camera_dir(point const &camera_bs, point &cpos, colorRGBA &ccolor) const { // unused - for debugging
+bool building_t::ray_cast_camera_dir(point const &camera_bs, point &cpos, colorRGBA &ccolor) const { // unused - for debugging; excludes attic and extended basement
 	assert(!USE_BKG_THREAD); // not legal to call when running lighting in a background thread
 	building_indir_light_mgr.build_bvh(*this, camera_bs);
 	vector3d cnorm; // unused
