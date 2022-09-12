@@ -436,7 +436,8 @@ class building_indir_light_mgr_t {
 		float const tolerance(1.0E-5*valid_area.get_max_extent());
 		bool const is_window(cur_light & IS_WINDOW_BIT);
 		bool in_attic(0);
-		float weight(100.0);
+		float weight(100.0), light_radius(0.0);
+		point light_center;
 		cube_t light_cube;
 		colorRGBA lcolor;
 		assert(cur_light >= 0);
@@ -461,6 +462,7 @@ class building_indir_light_mgr_t {
 			room_object_t const &ro(objs[cur_light]);
 			light_cube      = ro;
 			light_cube.z1() = light_cube.z2() = (ro.z1() - 0.01*ro.dz()); // set slightly below bottom of light
+			light_center    = light_cube.get_cube_center();
 			bool const light_in_basement(ro.z1() < b.ground_floor_z1), is_lamp(ro.type == TYPE_LAMP);
 			in_attic = ro.in_attic();
 			if (in_attic) {base_num_rays *= 4;} // more rays in attic, since light is large and there are only 1-2 of them
@@ -473,8 +475,9 @@ class building_indir_light_mgr_t {
 			if (ro.type == TYPE_LAMP) {weight *= 0.33;} // lamps are less bright
 			if (light_in_basement)    {weight *= (b.has_parking_garage ? 0.25 : 0.5);} // basement is darker, parking garages are even darker
 			if (in_attic)             {weight *= ATTIC_LIGHT_RADIUS_SCALE*ATTIC_LIGHT_RADIUS_SCALE;} // based on surface area rather than radius
+			if (ro.shape == SHAPE_CYLIN || ro.shape == SHAPE_SPHERE) {light_radius = ro.get_radius();}
 		}
-		if (b.is_house) {weight *= 2.0 ;} // houses have dimmer lights and seem to work better with more indir
+		if (b.is_house)        {weight *= 2.0 ;} // houses have dimmer lights and seem to work better with more indir
 		if (is_negative_light) {weight *= -1.0;}
 		weight /= base_num_rays; // normalize to the number of rays
 		unsigned NUM_PRI_SPLITS(is_window ? 4 : 16); // we're counting primary rays for windows, use fewer primary splits to reduce noise at the cost of increased time
@@ -493,11 +496,14 @@ class building_indir_light_mgr_t {
 			vector3d init_cnorm, cnorm;
 			colorRGBA ccolor(WHITE);
 
-			// select a random point on the light cube (close enough for (ro.shape == SHAPE_CYLIN))
-			for (unsigned d = 0; d < 3; ++d) {
-				float const lo(light_cube.d[d][0]), hi(light_cube.d[d][1]);
-				origin[d] = ((lo == hi) ? lo : rgen.rand_uniform(lo, hi));
-			}
+			// select a random point on the light cube
+			for (unsigned N = 0; N < 10; ++N) { // 10 attempts to find a point within the light shape
+				for (unsigned d = 0; d < 3; ++d) {
+					float const lo(light_cube.d[d][0]), hi(light_cube.d[d][1]);
+					origin[d] = ((lo == hi) ? lo : rgen.rand_uniform(lo, hi));
+				}
+				if (light_radius == 0.0 || dist_xy_less_than(origin, light_center, light_radius)) break; // done/success
+			} // for N
 			init_cpos = origin; // init value
 			bool const hit(b.ray_cast_interior(origin, pri_dir, valid_area, bvh, in_attic, init_cpos, init_cnorm, ccolor, &rgen));
 
