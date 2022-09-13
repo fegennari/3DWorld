@@ -1037,7 +1037,7 @@ struct extb_room_t : public cube_t { // extended basement room candidate
 	cube_t conn_bcube;
 	bool is_hallway;
 	extb_room_t(cube_t const &c, bool is_hallway_) : cube_t(c), is_hallway(is_hallway_) {}
-	void clip_hallway_to_conn_bcube();
+	void clip_hallway_to_conn_bcube(bool dim);
 };
 typedef vector<extb_room_t> vect_extb_room_t;
 
@@ -1481,9 +1481,13 @@ private:
 	void gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes);
 	void maybe_add_basement(rand_gen_t rgen);
 	bool extend_underground_basement(rand_gen_t rgen);
-	bool is_basement_room_placement_valid(cube_t &room, vect_extb_room_t &rooms, bool dim, bool dir, bool &add_end_door) const;
+	bool is_basement_room_placement_valid(cube_t &room, vect_extb_room_t &rooms, bool dim, bool dir, bool *add_end_door) const;
 	bool add_underground_exterior_rooms(rand_gen_t &rgen, cube_t const &door_bcube, bool wall_dim, bool wall_dir, float length_mult);
 	bool add_ext_basement_rooms_recur(extb_room_t &parent_room, ext_basement_room_params_t &P, float door_width, bool dim, unsigned depth, rand_gen_t &rgen);
+	cube_t add_and_connect_ext_basement_room(extb_room_t &room, ext_basement_room_params_t &P,
+		float door_width, bool dim, bool dir, bool is_end_room, unsigned depth, bool const add_doors[2], rand_gen_t &rgen);
+	void end_ext_basement_hallway(extb_room_t &room, cube_t const &conn_bcube, ext_basement_room_params_t &P,
+		float door_width, bool dim, bool dir, unsigned depth, rand_gen_t &rgen);
 	bool has_L_shaped_roof_area() const;
 	void get_attic_roof_tquads(vector<tquad_with_ix_t> &tquads) const;
 	bool add_attic_access_door(cube_t const &ceiling, unsigned part_ix, unsigned num_floors, unsigned rooms_start, rand_gen_t &rgen);
