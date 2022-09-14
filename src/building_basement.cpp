@@ -1368,13 +1368,13 @@ bool building_t::is_basement_room_placement_valid(cube_t &room, vect_extb_room_t
 
 	for (auto r = rooms.begin(); r != rooms.end(); ++r) {
 		if (!r->intersects(test_cube)) continue;
-		if (add_end_door == nullptr) return 0; // no end door enabled
-		if (r == rooms.begin()) return 0; // basement is first room - can't reconnect to it
+		if (add_end_door == nullptr)   return 0; // no end door enabled
+		if (r == rooms.begin())        return 0; // basement is first room - can't reconnect to it
 		if (r->d[!dim][0] > room.d[!dim][0] || r->d[!dim][1] < room.d[!dim][1]) return 0; // doesn't span entire room/clips off corner - invalid
 		if (r->z1() != room.z1() || r->z2() != room.z2()) return 0; // floor or ceiling zval not shared
 		float const edge_pos(r->d[dim][!dir]); // intersection edge pos on other room
-		float const clip_len(fabs(room.d[dim][!dir] - edge_pos));
-		if (clip_len < max(room_width, 0.5f*room_len)) return 0; // clipped room length is less than room width or half unclipped room length
+		float const clip_len((edge_pos - room.d[dim][!dir])*(dir ? 1.0 : -1.0));
+		if (clip_len < max(room_width, 0.5f*room_len)) return 0; // clipped room length is less than room width or half unclipped room length; handles negative size
 		room.d[dim][dir] = test_cube.d[dim][dir] = edge_pos; // clip room to this shorter length and add an end door; may be clipped smaller for another room
 		assert(room.is_strictly_normalized());
 		end_conn_room = &(*r);
@@ -1409,6 +1409,7 @@ bool building_t::add_underground_exterior_rooms(rand_gen_t &rgen, cube_t const &
 	set_wall_width(hallway, door_bcube.get_center_dim(!wall_dim), 0.5*hallway_width, !wall_dim);
 	hallway.d[wall_dim][!wall_dir] = ext_wall_pos; // flush with the exterior wall/door
 	hallway.d[wall_dim][ wall_dir] = ext_wall_pos + (wall_dir ? 1.0 : -1.0)*hallway_len;
+	assert(hallway.is_strictly_normalized());
 	ext_basement_room_params_t P;
 	if (!is_basement_room_placement_valid(hallway, P.rooms, wall_dim, wall_dir, nullptr)) return 0; // try to place the hallway; add_end_door=nullptr
 	// valid placement; now add the door, hallway, and connected rooms
@@ -1474,6 +1475,7 @@ bool building_t::add_ext_basement_rooms_recur(extb_room_t &parent_room, ext_base
 cube_t building_t::add_and_connect_ext_basement_room(extb_room_t &room, ext_basement_room_params_t &P,
 	float door_width, bool dim, bool dir, bool is_end_room, unsigned depth, bool const add_doors[2], rand_gen_t &rgen)
 {
+	assert(room.is_strictly_normalized());
 	unsigned const cur_room_ix(P.rooms.size());
 	P.rooms.emplace_back(room, 0); // Note: is_hallway not yet known, pass in 0 for now
 	// add a connecting door at one or both ends
@@ -1496,8 +1498,8 @@ cube_t building_t::add_and_connect_ext_basement_room(extb_room_t &room, ext_base
 	extb_room_t &cur_room(P.rooms[cur_room_ix]);
 	cur_room.is_hallway = is_hallway; // all non-end rooms are hallways
 	// for hallway with no door at the end: clip off the extra
-	if (is_hallway) {end_ext_basement_hallway(cur_room, room.conn_bcube, P, door_width, dim, dir, depth+1, rgen);}
-	return cur_room;
+	if (is_hallway) {end_ext_basement_hallway(cur_room, room.conn_bcube, P, door_width, dim, dir, depth+1, rgen);} // Note: may invalidate cur_room reference
+	return P.rooms[cur_room_ix];
 }
 
 void building_t::end_ext_basement_hallway(extb_room_t &room, cube_t const &conn_bcube, ext_basement_room_params_t &P,
@@ -1512,21 +1514,25 @@ void building_t::end_ext_basement_hallway(extb_room_t &room, cube_t const &conn_
 		float const ceil_below(room.z1() - 0.1*fc_thick), floor_below(ceil_below - room.dz()); // shift slightly down so as not to intersect
 		float const stairs_end(room.d[dim][dir]), stairs_start(stairs_end - dsign*stairs_len);
 		float const hall_below_len(max(4.0f*door_width, rgen.rand_uniform(0.5, 1.5)*room.get_sz_dim(dim)));
-		extb_room_t hall_below(room, 1); // copy !dim values; is_hallway=1
+		extb_room_t hall_below(room, 0); // copy !dim values; is_hallway will be set later
 		set_cube_zvals(hall_below, floor_below, ceil_below);
 		hall_below.d[dim][!dir] = stairs_start;
-		hall_below.d[dim][!dir] = stairs_end + dsign*hall_below_len;
+		hall_below.d[dim][ dir] = stairs_end + dsign*hall_below_len;
+		assert(hall_below.is_strictly_normalized());
 		bool add_end_door(0);
 
 		if (is_basement_room_placement_valid(hall_below, P.rooms, dim, dir, &add_end_door)) {
-			bool const add_doors[2] = {(dir == 0 && add_end_door), (dir == 1 && add_end_door)}; // at most one at the end
-			add_and_connect_ext_basement_room(room, P, door_width, dim, dir, 0, depth, add_doors, rgen); // is_end_room=0
-			// add stairs
+			// create stairs
 			cube_t stairs(room); // copy room.d[dim][dir] (far end/bottom of stairs)
 			set_cube_zvals(stairs, floor_below, (room.z1() + fc_thick));
 			stairs.d[dim][!dir] = stairs_start; // near end/top of stairs
 			//stairs.expand_in_dim(!dim, -0.5*(room.get_sz_dim(!dim) - door_width)); // shrink width to match the door (optional)
-			// TODO
+			hall_below.conn_bcube = stairs; // must include the stairs
+			// add the room
+			// TODO: cut out stairs in ceiling/floor
+			bool const add_doors[2] = {(dir == 0 && add_end_door), (dir == 1 && add_end_door)}; // at most one at the end
+			add_and_connect_ext_basement_room(hall_below, P, door_width, dim, dir, 0, depth, add_doors, rgen); // is_end_room=0
+			// TODO: stairs
 			return; // done
 		}
 	}
@@ -1539,11 +1545,13 @@ void extb_room_t::clip_hallway_to_conn_bcube(bool dim) { // clip off the unconne
 	assert(conn_bcube.intersects(*this));
 	max_eq(d[dim][0], conn_bcube.d[dim][0]);
 	min_eq(d[dim][1], conn_bcube.d[dim][1]);
+	assert(is_strictly_normalized());
 }
 
 void building_interior_t::place_exterior_room(cube_t const &room, cube_t const &wall_area, float fc_thick, float wall_thick, ext_basement_room_params_t &P,
 	unsigned part_id, unsigned num_lights, bool is_hallway)
 {
+	assert(room.is_strictly_normalized());
 	bool const long_dim(room.dx() < room.dy());
 	if (num_lights == 0) {num_lights = max(1U, min(8U, (unsigned)round_fp(0.33*room.get_sz_dim(long_dim)/room.get_sz_dim(!long_dim))));} // auto calculate num_lights
 	room_t Room(room, part_id, num_lights, is_hallway);
@@ -1554,7 +1562,7 @@ void building_interior_t::place_exterior_room(cube_t const &room, cube_t const &
 	ceiling.z1() = room.z2() - fc_thick;
 	floor  .z2() = room.z1() + fc_thick;
 	ceilings.push_back(ceiling);
-	floors.push_back(floor);
+	floors  .push_back(floor  );
 	basement_ext_bcube.assign_or_union_with_cube(room);
 	// add walls
 	float const wall_half_thick(0.5*wall_thick);
