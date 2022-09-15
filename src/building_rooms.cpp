@@ -2806,7 +2806,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			set_cube_zvals(light, (light_z2 - light_thick), light_z2);
 			valid_lights.clear();
 
-			if (r->is_hallway && num_lights > 1) {
+			if (num_lights > 1) { // r->is_hallway or ext basement
 				// hallway: place a light on each side (of the stairs if they exist), and also between stairs and elevator if there are both
 				if (r->has_elevator && r->has_stairs == 255) {max_eq(num_lights, (2U + r->has_elevator));} // main hallway with elevator + stairs on all floors; 3+ lights
 				min_eq(num_lights, 6U);
@@ -3585,13 +3585,14 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 		// Note: stairs always start at floor_thickness above the landing z1, ignoring landing z2/height
 		float const tot_len(i->get_sz_dim(dim)), floor_z(i->z1() + floor_thickness - window_vspacing), step_len_pos(tot_len/num_stairs);
 		float const wall_hw(min(max(0.15*step_len_pos, 0.15*stair_dz), 0.25*stair_dz));
+		float const stairs_zmin(i->in_ext_basement ? interior->basement_ext_bcube.z1() : bcube.z1());
 		float step_len((dir ? 1.0 : -1.0)*step_len_pos), z(floor_z - floor_thickness), pos(i->d[dim][!dir]);
 		cube_t stair(*i);
 
 		if (i->shape != SHAPE_U) { // straight stairs
 			for (unsigned n = 0; n < num_stairs; ++n, z += stair_dz, pos += step_len) {
 				stair.d[dim][!dir] = pos; stair.d[dim][dir] = pos + step_len;
-				set_cube_zvals(stair, max(bcube.z1(), (z + 0.5f*half_thick)), z+stair_height); // don't go below the floor
+				set_cube_zvals(stair, max(stairs_zmin, (z + 0.5f*half_thick)), z+stair_height); // don't go below the floor
 				assert(stair.z1() < stair.z2());
 				objs.emplace_back(stair, TYPE_STAIR, 0, dim, dir); // Note: room_id=0, not tracked, unused
 			}
@@ -3622,7 +3623,7 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 		cube_t wall(*i);
 		if (extend_walls_up) {wall.z2() += window_vspacing - floor_thickness;}
 		else {wall.z2() -= 0.5*floor_thickness;} // prevent z-fighting on top floor
-		wall.z1() = max(bcube.z1()+half_thick, wall_bottom); // full height
+		wall.z1() = max((stairs_zmin + half_thick), wall_bottom); // full height
 		set_wall_width(wall, i->d[dim][dir], wall_hw, dim);
 
 		if ((i->shape == SHAPE_WALLED && !(i->against_wall[0] || i->against_wall[1]) && (!i->stack_conn || !i->is_at_top)) || i->shape == SHAPE_U) {

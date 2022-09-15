@@ -1385,24 +1385,27 @@ void subtract_cube_from_cube_inplace(cube_t const &s, vect_cube_t &cubes, unsign
 	cubes[ix] = cubes.back(); cubes.pop_back(); // reuse this slot for one of the output cubes (or move the last cube here if there are no output cubes)
 	if (cubes.size() <= prev_sz) {--ix; --iter_end;} // no cubes added, last cube was swapped into this slot and needs to be reprocessed
 }
-template<typename T> void subtract_cubes_from_cube(cube_t const &c, T const &sub, vect_cube_t &out, vect_cube_t &out2, bool ignore_zval) { // XY only
+// subtracts in X and Y only; zval_mode: 0=check floor/building ext walls, 1=ignore zvals, 2=check zval overlap
+template<typename T> void subtract_cubes_from_cube(cube_t const &c, T const &sub, vect_cube_t &out, vect_cube_t &out2, int zval_mode) {
 	out.clear();
 	out.push_back(c);
 
 	for (auto s = sub.begin(); s != sub.end(); ++s) {
-		if (!ignore_zval && (s->z1() <= c.z1() || s->z1() >= c.z2() || s->z2() <= c.z2())) continue; // not correct floor
-		if (!c.intersects_xy(c)) continue; // no overlap with orig cube (optimization)
+		if (zval_mode == 0 && (s->z1() <= c.z1() || s->z1() >= c.z2() || s->z2() <= c.z2())) continue; // not correct floor
+		if (zval_mode == 2 && (s->z1() >= c.z2() || s->z2() <= c.z1())) continue; // no zval overlap
+		if (!c.intersects_xy_no_adj(c)) continue; // no overlap with orig cube (optimization)
 		out2.clear();
 
 		// clip all of out against *s, write results to out2, then swap with out
 		for (auto i = out.begin(); i != out.end(); ++i) {
-			if (!i->intersects_xy(*s)) {out2.push_back(*i); continue;} // no overlap, keep entire cube
+			if (!i->intersects_xy_no_adj(*s)) {out2.push_back(*i); continue;} // no overlap, keep entire cube
 			subtract_cube_from_cube(*i, *s, out2);
 		}
 		out.swap(out2);
 	} // for s
 }
-template void subtract_cubes_from_cube(cube_t const &c, vect_cube_t const &sub, vect_cube_t &out, vect_cube_t &out2, bool ignore_zval); // explicit instantiation
+template void subtract_cubes_from_cube(cube_t const &c, vect_cube_t            const &sub, vect_cube_t &out, vect_cube_t &out2, int zval_mode); // explicit instantiation
+template void subtract_cubes_from_cube(cube_t const &c, vector<stairs_place_t> const &sub, vect_cube_t &out, vect_cube_t &out2, int zval_mode); // explicit instantiation
 
 bool subtract_cube_from_cubes(cube_t const &s, vect_cube_t &cubes, vect_cube_t *holes, bool clip_in_z, bool include_adj) {
 	unsigned iter_end(cubes.size()); // capture size before splitting

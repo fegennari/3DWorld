@@ -1042,12 +1042,12 @@ struct extb_room_t : public cube_t { // extended basement room candidate
 typedef vector<extb_room_t> vect_extb_room_t;
 
 struct stairs_landing_base_t {
-	bool dim, dir, roof_access, stack_conn, against_wall[2];
+	bool dim, dir, roof_access, stack_conn, in_ext_basement, against_wall[2];
 	stairs_shape shape;
 
-	stairs_landing_base_t() : dim(0), dir(0), roof_access(0), stack_conn(0), shape(SHAPE_STRAIGHT) {against_wall[0] = against_wall[1] = 0;}
-	stairs_landing_base_t(bool dim_, bool dir_, bool roof_access_, stairs_shape shape_, bool sc=0) :
-		dim(dim_), dir(dir_), roof_access(roof_access_), stack_conn(sc), shape(shape_) {against_wall[0] = against_wall[1] = 0;}
+	stairs_landing_base_t() : dim(0), dir(0), roof_access(0), stack_conn(0), in_ext_basement(0), shape(SHAPE_STRAIGHT) {against_wall[0] = against_wall[1] = 0;}
+	stairs_landing_base_t(bool dim_, bool dir_, bool roof_access_, stairs_shape shape_, bool sc=0, bool ieb=0) :
+		dim(dim_), dir(dir_), roof_access(roof_access_), stack_conn(sc), in_ext_basement(ieb), shape(shape_) {against_wall[0] = against_wall[1] = 0;}
 	void set_against_wall(bool val[2]) {against_wall[0] = val[0]; against_wall[1] = val[1];}
 	unsigned get_face_id   () const {return (2*dim + dir);}
 	unsigned get_num_stairs() const {return ((shape == SHAPE_U) ? NUM_STAIRS_PER_FLOOR_U : NUM_STAIRS_PER_FLOOR);}
@@ -1059,8 +1059,8 @@ struct landing_t : public cube_t, public stairs_landing_base_t {
 
 	landing_t() : for_elevator(0), for_ramp(0), has_railing(0), is_at_top(0), floor(0) {}
 	landing_t(cube_t const &c, bool e, uint8_t f, bool dim_, bool dir_,
-		bool railing=0, stairs_shape shape_=SHAPE_STRAIGHT, bool roof_access_=0, bool at_top=0, bool sc=0, bool fr=0) :
-		cube_t(c), stairs_landing_base_t(dim_, dir_, roof_access_, shape_, sc), for_elevator(e), for_ramp(fr), has_railing(railing), is_at_top(at_top), floor(f)
+		bool railing=0, stairs_shape shape_=SHAPE_STRAIGHT, bool roof_access_=0, bool at_top=0, bool sc=0, bool fr=0, bool ieb=0) :
+		cube_t(c), stairs_landing_base_t(dim_, dir_, roof_access_, shape_, sc, ieb), for_elevator(e), for_ramp(fr), has_railing(railing), is_at_top(at_top), floor(f)
 	{assert(is_strictly_normalized());}
 };
 
@@ -1069,10 +1069,15 @@ struct stairwell_t : public cube_t, public stairs_landing_base_t {
 	int16_t stairs_door_ix;
 
 	stairwell_t() : num_floors(0), stairs_door_ix(-1) {}
-	stairwell_t(cube_t const &c, unsigned n, bool dim_, bool dir_, stairs_shape s=SHAPE_STRAIGHT, bool r=0, bool sc=0) :
-		cube_t(c), stairs_landing_base_t(dim_, dir_, r, s, sc), num_floors(n), stairs_door_ix(-1) {}
+	stairwell_t(cube_t const &c, unsigned n, bool dim_, bool dir_, stairs_shape s=SHAPE_STRAIGHT, bool r=0, bool sc=0, bool ieb=0) :
+		cube_t(c), stairs_landing_base_t(dim_, dir_, r, s, sc, ieb), num_floors(n), stairs_door_ix(-1) {}
 };
 typedef vector<stairwell_t> vect_stairwell_t;
+
+struct stairs_place_t : public cube_t { // for extended basements
+	bool dim, dir;
+	stairs_place_t(cube_t const &c, bool dim_, bool dir_) : cube_t(c), dim(dim_), dir(dir_) {}
+};
 
 struct door_base_t : public cube_t {
 	bool dim, open_dir, hinge_side, on_stairs;
@@ -1771,7 +1776,7 @@ void set_wall_width(cube_t &wall, float pos, float half_thick, unsigned dim);
 bool is_val_inside_window(cube_t const &c, bool dim, float val, float window_spacing, float window_border);
 void subtract_cube_from_cube(cube_t const &c, cube_t const &s, vect_cube_t &out);
 void subtract_cube_from_cube_inplace(cube_t const &s, vect_cube_t &cubes, unsigned &ix, unsigned &iter_end);
-template<typename T> void subtract_cubes_from_cube(cube_t const &c, T const &sub, vect_cube_t &out, vect_cube_t &out2, bool ignore_zval=0);
+template<typename T> void subtract_cubes_from_cube(cube_t const &c, T const &sub, vect_cube_t &out, vect_cube_t &out2, int zval_mode=0);
 bool subtract_cube_from_cubes(cube_t const &s, vect_cube_t &cubes, vect_cube_t *holes=nullptr, bool clip_in_z=0, bool include_adj=0);
 int get_rect_panel_tid();
 int get_bath_wind_tid ();
