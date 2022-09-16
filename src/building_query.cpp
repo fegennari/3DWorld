@@ -414,7 +414,7 @@ bool room_object_t::is_player_collidable() const { // Note: chairs are player co
 // default player is actually too large to fit through doors and too tall to fit between the floor and celing,
 // so player size/height must be reduced in the config file
 bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, float radius, bool is_in_attic, bool xy_only, vector3d *cnorm) const {
-	pos.z = bcube.z1(); // start at building z1 rather than the terrain height in case we're at the foot of a steep hill
+	pos.z = get_bcube_z1_inc_ext_basement(); // start at building z1 rather than the terrain height in case we're at the foot of a steep hill
 	assert(interior);
 	float const floor_spacing(get_window_vspace()), floor_thickness(get_floor_thickness()), attic_door_z_gap(0.2f*floor_thickness);
 	float const xy_radius(radius*global_building_params.player_coll_radius_scale); // XY radius can be smaller to allow player to fit between furniture
@@ -647,7 +647,7 @@ bool building_t::check_pos_in_unlit_room_recur(point const &pos, set<unsigned> &
 		return 0; // lit by a room light, including one in a closet (Note that closets are only in house bedrooms, which should always have windows anyway)
 	}
 	rooms_visited.insert(room_id); // mark this room as visited before making recursive calls
-	// check if all doors are closed
+	// check for a light path through a series of open doors
 	float const floor_thickness(get_floor_thickness()), expand_val(1.1*get_wall_thickness()), floor_zval(room.z1() + floor_ix*floor_spacing);
 	cube_t room_exp(room);
 	room_exp.expand_by_xy(expand_val);

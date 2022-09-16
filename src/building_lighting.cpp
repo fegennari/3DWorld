@@ -213,7 +213,7 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc, int only_this_fl
 	if (!interior) return; // nothing to do
 	building_mat_t const &mat(get_material());
 	colorRGBA const wall_color(wall_color.modulate_with(mat.wall_tex.get_avg_color()));
-	float z1(bcube.z1()), z2(bcube.z2()), stairs_z1(z1), stairs_z2(z2); // start with full bcube Z range
+	float z1(get_bcube_z1_inc_ext_basement()), z2(bcube.z2()), stairs_z1(z1), stairs_z2(z2); // start with full bcube Z range
 
 	if (only_this_floor >= 0) { // clip per light source to current floor
 		float const floor_spacing(get_window_vspace());

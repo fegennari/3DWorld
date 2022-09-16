@@ -1035,8 +1035,8 @@ struct room_t : public cube_t { // size=64
 
 struct extb_room_t : public cube_t { // extended basement room candidate
 	cube_t conn_bcube;
-	bool is_hallway;
-	extb_room_t(cube_t const &c, bool is_hallway_) : cube_t(c), is_hallway(is_hallway_) {}
+	bool is_hallway, has_stairs;
+	extb_room_t(cube_t const &c, bool is_hallway_, bool has_stairs_=0) : cube_t(c), is_hallway(is_hallway_), has_stairs(has_stairs_) {}
 	void clip_hallway_to_conn_bcube(bool dim);
 };
 typedef vector<extb_room_t> vect_extb_room_t;
@@ -1178,7 +1178,7 @@ struct building_interior_t {
 	void update_dynamic_draw_data() {assert(room_geom); room_geom->update_dynamic_draw_data();}
 	void get_avoid_cubes(vect_cube_t &avoid, float z1, float z2, float floor_thickness, bool same_as_player, bool skip_stairs=0) const;
 	void create_fc_occluders();
-	void place_exterior_room(cube_t const &room, cube_t const &wall_area, float fc_thick, float wall_thick, ext_basement_room_params_t &P,
+	void place_exterior_room(extb_room_t const &room, cube_t const &wall_area, float fc_thick, float wall_thick, ext_basement_room_params_t &P,
 		unsigned part_id, unsigned num_lights=0, bool is_hallway=0);
 	colorRGBA get_attic_ceiling_color() const;
 	room_t const &get_garage_room() const {assert((unsigned)garage_room < rooms.size()); return rooms[garage_room];}
@@ -1463,6 +1463,7 @@ public:
 	bool point_in_extended_basement_not_basement(point const &pos) const {return (point_in_extended_basement(pos) && !get_basement().contains_pt(pos));}
 	bool cube_int_ext_basement(cube_t const &c) const {return (interior && interior->basement_ext_bcube.intersects(c));}
 	bool point_in_building_or_basement_bcube(point const &pos) const {return (bcube.contains_pt(pos) || point_in_extended_basement(pos));}
+	float get_bcube_z1_inc_ext_basement() const {return (has_ext_basement() ? min(bcube.z1(), interior->basement_ext_bcube.z1()) : bcube.z1());}
 	cube_t get_bcube_inc_extensions() const;
 	cube_t get_full_basement_bcube () const;
 	room_t const &get_ext_basement_hallway() const;
@@ -1486,7 +1487,7 @@ private:
 	void gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes);
 	void maybe_add_basement(rand_gen_t rgen);
 	bool extend_underground_basement(rand_gen_t rgen);
-	bool is_basement_room_placement_valid(cube_t &room, vect_extb_room_t &rooms, bool dim, bool dir, bool *add_end_door) const;
+	bool is_basement_room_placement_valid(cube_t &room, ext_basement_room_params_t &P, bool dim, bool dir, bool *add_end_door) const;
 	bool add_underground_exterior_rooms(rand_gen_t &rgen, cube_t const &door_bcube, bool wall_dim, bool wall_dir, float length_mult);
 	bool add_ext_basement_rooms_recur(extb_room_t &parent_room, ext_basement_room_params_t &P, float door_width, bool dim, unsigned depth, rand_gen_t &rgen);
 	cube_t add_and_connect_ext_basement_room(extb_room_t &room, ext_basement_room_params_t &P,
