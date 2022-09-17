@@ -267,6 +267,7 @@ float get_tt_fog_based_far_clip(float min_camera_dist);
 // function prototypes - tiled mesh
 vector3d get_tiled_terrain_model_xlate();
 vector3d get_camera_coord_space_xlate();
+float get_max_sea_level();
 bool using_tiled_terrain_hmap_tex();
 float get_tiled_terrain_height_tex(float xval, float yval, bool nearest_texel=0);
 vector3d get_tiled_terrain_height_tex_norm(int x, int y);

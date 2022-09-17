@@ -114,6 +114,7 @@ float get_tt_fog_bot      () {return (nonunif_fog_enabled() ? zmax : (zmax + FAR
 float get_tt_cloud_level  () {return 0.5f*(get_tt_fog_bot() + get_tt_fog_top());}
 float get_smap_atten_val  () {return SMAP_FADE_THRESH*smap_thresh_scale*get_tile_width();}
 float get_tile_smap_dist  () {return get_smap_atten_val();}
+float get_max_sea_level   () {return (get_water_z_height() + ocean_wave_height);}
 unsigned get_tile_size    () {return MESH_X_SIZE;}
 
 bool use_water_plane_tess () {
@@ -456,7 +457,7 @@ bool tile_t::create_zvals(mesh_xy_grid_cache_t &height_gen, bool no_wait) {
 		bool results_ready(setup_height_gen(height_gen, get_xval(x1), get_yval(y1), deltax, deltay, zvsize, zvsize, 0, no_wait)); // cache_values=0
 		if (!results_ready) {assert(no_wait); return 0;} // cached heights are not yet ready
 	}
-	float const xy_mult(1.0/float(size)), wpz_max(get_water_z_height() + ocean_wave_height);
+	float const xy_mult(1.0/float(size)), wpz_max(get_max_sea_level());
 
 #pragma omp parallel for schedule(static,1)
 	for (int y = 0; y < (int)zvsize; ++y) {

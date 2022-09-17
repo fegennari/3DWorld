@@ -1524,36 +1524,39 @@ void building_t::end_ext_basement_hallway(extb_room_t &room, cube_t const &conn_
 	float const stairs_len(3.0*door_width), stairs_end(room.d[dim][dir]), dsign(dir ? 1.0 : -1.0);
 	
 	if (depth < global_building_params.max_ext_basement_room_depth && dsign*(room.d[dim][dir] - room.conn_bcube.d[dim][dir]) > stairs_len /*&& rgen.rand_bool()*/) {
-		// connect downward with stairs; we know that there aren't any other rooms/doors coming off the end that could be blocked
-		float const fc_thick(get_fc_thickness()), stairs_start(stairs_end - dsign*stairs_len);
 		float const ceil_below(room.z1()), floor_below(ceil_below - room.dz());
-		float const hall_below_len(max(4.0f*door_width, rgen.rand_uniform(0.5, 1.5)*room.get_sz_dim(dim)));
-		extb_room_t hall_below(room, 0, 1); // copy !dim values; is_hallway will be set later; has_stairs=1
-		set_cube_zvals(hall_below, floor_below, ceil_below);
-		hall_below.d[dim][!dir] = stairs_start;
-		hall_below.d[dim][ dir] = stairs_end + dsign*hall_below_len;
-		assert(hall_below.is_strictly_normalized());
-		bool add_end_door(0);
 
-		if (is_basement_room_placement_valid(hall_below, P, dim, dir, &add_end_door)) {
-			// create stairs
-			// FIXME: missing shadows, light bcube, flickering lights
-			cube_t stairs(room); // copy room.d[dim][dir] (far end/bottom of stairs)
-			set_cube_zvals(stairs, (floor_below + fc_thick), (room.z1() + fc_thick));
-			stairs.d[dim][!dir] = stairs_start; // near end/top of stairs
-			//float const shrink(0.5*(room.get_sz_dim(!dim) - door_width)); // shrink width to match the door (optional)
-			float const wall_half_thick(0.5*get_wall_thickness());
-			stairs.expand_in_dim(!dim, -wall_half_thick); // shrink on the sides
-			stairs.expand_in_dim( dim, -(wall_half_thick + get_trim_thickness())); // shrink on the ends
-			assert(!stairs.intersects_xy(room.conn_bcube));
-			bool const add_railing = 0; // FIXME
-			P.stairs.emplace_back(stairs, dim, !dir, add_railing);
-			hall_below.conn_bcube = stairs; // must include the stairs
-			room.has_stairs = 1;
-			// add the room
-			bool const add_doors[2] = {(dir == 0 && add_end_door), (dir == 1 && add_end_door)}; // at most one at the end
-			add_and_connect_ext_basement_room(hall_below, P, door_width, dim, dir, 0, depth, add_doors, rgen); // is_end_room=0
-			return; // done
+		if (floor_below > get_max_sea_level()) {
+			// connect downward with stairs; we know that there aren't any other rooms/doors coming off the end that could be blocked
+			float const fc_thick(get_fc_thickness()), stairs_start(stairs_end - dsign*stairs_len);
+			float const hall_below_len(max(4.0f*door_width, rgen.rand_uniform(0.5, 1.5)*room.get_sz_dim(dim)));
+			extb_room_t hall_below(room, 0, 1); // copy !dim values; is_hallway will be set later; has_stairs=1
+			set_cube_zvals(hall_below, floor_below, ceil_below);
+			hall_below.d[dim][!dir] = stairs_start;
+			hall_below.d[dim][ dir] = stairs_end + dsign*hall_below_len;
+			assert(hall_below.is_strictly_normalized());
+			bool add_end_door(0);
+
+			if (is_basement_room_placement_valid(hall_below, P, dim, dir, &add_end_door)) {
+				// create stairs
+				// FIXME: missing shadows, light bcube, flickering lights
+				cube_t stairs(room); // copy room.d[dim][dir] (far end/bottom of stairs)
+				set_cube_zvals(stairs, (floor_below + fc_thick), (room.z1() + fc_thick));
+				stairs.d[dim][!dir] = stairs_start; // near end/top of stairs
+				//float const shrink(0.5*(room.get_sz_dim(!dim) - door_width)); // shrink width to match the door (optional)
+				float const wall_half_thick(0.5*get_wall_thickness());
+				stairs.expand_in_dim(!dim, -wall_half_thick); // shrink on the sides
+				stairs.expand_in_dim( dim, -(wall_half_thick + get_trim_thickness())); // shrink on the ends
+				assert(!stairs.intersects_xy(room.conn_bcube));
+				bool const add_railing = 0; // FIXME
+				P.stairs.emplace_back(stairs, dim, !dir, add_railing);
+				hall_below.conn_bcube = stairs; // must include the stairs
+				room.has_stairs = 1;
+				// add the room
+				bool const add_doors[2] = {(dir == 0 && add_end_door), (dir == 1 && add_end_door)}; // at most one at the end
+				add_and_connect_ext_basement_room(hall_below, P, door_width, dim, dir, 0, depth, add_doors, rgen); // is_end_room=0
+				return; // done
+			}
 		}
 	}
 	room.clip_hallway_to_conn_bcube(dim); // else clip

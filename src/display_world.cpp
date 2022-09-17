@@ -1264,7 +1264,7 @@ void display_inf_terrain() { // infinite terrain mode (Note: uses light params f
 
 	// drawing
 	bool const water_enabled((display_mode & 0x04) && !DISABLE_WATER);
-	water_plane_z = (water_enabled ? (get_water_z_height() + get_ocean_wave_height()) : -10*FAR_DISTANCE);
+	water_plane_z = (water_enabled ? get_max_sea_level() : -10*FAR_DISTANCE);
 	camera_mode   = 1; // walking on ground
 	float min_camera_dist(0.0);
 	float const terrain_zmin(update_tiled_terrain(min_camera_dist));
