@@ -1427,7 +1427,8 @@ bool building_t::add_underground_exterior_rooms(rand_gen_t &rgen, cube_t const &
 	P.wall_exclude.push_back(door_bcube);
 	P.wall_exclude.back().expand_in_dim(wall_dim, 2.0*wall_thickness); // make sure the doorway covers the entire wall thickness
 	interior->ext_basement_hallway_room_id = interior->rooms.size();
-	add_interior_door(door_t(door_bcube, wall_dim, wall_dir, rgen.rand_bool()), 0, 1); // open 50% of the time; is_bathroom=0, make_unlocked=1
+	door_t Door(door_bcube, wall_dim, wall_dir, rgen.rand_bool());
+	add_interior_door(Door, 0, 1); // open 50% of the time; is_bathroom=0, make_unlocked=1
 	P.rooms.emplace_back(basement, 0);
 	P.rooms.push_back(hallway);
 	hallway.conn_bcube = basement; // make sure the basement is included
@@ -1504,7 +1505,8 @@ cube_t building_t::add_and_connect_ext_basement_room(extb_room_t &room, ext_base
 		set_cube_zvals(door, room.z1()+fc_thick, room.z2()-fc_thick);
 		set_wall_width(door, room.get_center_dim(!dim), 0.5*door_width, !dim);
 		door.d[dim][0] = door.d[dim][1] = room.d[dim][d]; // one end of the room
-		add_interior_door(door_t(door, dim, !d, rgen.rand_bool()), 0, !is_end_room); // open 50% of the time; is_bathroom=0, make_unlocked=!is_end_room
+		door_t Door(door, dim, !d, rgen.rand_bool());
+		add_interior_door(Door, 0, !is_end_room); // open 50% of the time; is_bathroom=0, make_unlocked=!is_end_room
 		door.expand_in_dim(dim, 2.0*get_wall_thickness());
 		P.wall_exclude.push_back(door);
 		room.conn_bcube.assign_or_union_with_cube(door);

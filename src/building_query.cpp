@@ -187,7 +187,7 @@ bool building_t::check_sphere_coll(point &pos, point const &p_last, vector3d con
 				accumulate_shared_xy_area(*i, sc, cont_area);
 				
 				if (has_ext_basement()) { // use the ext basement hallway if pos is in the basement, otherwise use the entire ext basement
-					cube_t const &basement_cube(in_ext_basement ? interior->basement_ext_bcube : get_ext_basement_hallway());
+				  cube_t const &basement_cube(in_ext_basement ? interior->basement_ext_bcube : (cube_t)get_ext_basement_hallway());
 					accumulate_shared_xy_area(basement_cube, sc, cont_area);
 				}
 			}
