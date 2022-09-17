@@ -1131,6 +1131,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 	float const window_vspacing(get_window_vspace()), wall_thickness(get_wall_thickness()), fc_thick(get_fc_thickness());
 	float const camera_z(camera_bs.z), room_xy_expand(0.75*wall_thickness);
 	bool const check_building_people(enable_building_people_ai()), check_attic(camera_in_building && has_attic() && interior->attic_access_open);
+	bool const camera_in_ext_basement(camera_in_building && point_in_extended_basement_not_basement(camera_bs));
 	bool const show_room_name(display_mode & 0x20); // debugging, key '6'
 	cube_t const &attic_access(interior->attic_access);
 	vect_cube_t &light_bcubes(interior->room_geom->light_bcubes);
@@ -1280,7 +1281,10 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			}
 			else if (floor_is_above || floor_is_below) { // light is on a different floor from the camera
 				// the basement is a different part, but it's still the same vertical stack; consider this the same effective part if the camera is in the basement above the room's part
-				if (camera_in_building && (camera_room_same_part || ((player_in_basement || light_in_basement) && parts[room.part_id].contains_pt_xy(camera_rot)) ||
+				if (camera_in_ext_basement && point_in_extended_basement_not_basement(lpos) && camera_by_stairs && has_stairs_this_floor) {
+					// camera and light are on different floors of the extended basement in two rooms connected by stairs
+				}
+				else if (camera_in_building && (camera_room_same_part || ((player_in_basement || light_in_basement) && parts[room.part_id].contains_pt_xy(camera_rot)) ||
 					(room.contains_pt_xy(camera_rot) && camera_z < ceil_above_zval && camera_z > floor_below_zval)))
 				{
 					// player is on a different floor of the same building part, or more than one floor away in a part stack, and can't see a light from the floor above/below
