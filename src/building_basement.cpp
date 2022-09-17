@@ -1446,11 +1446,13 @@ bool building_t::add_underground_exterior_rooms(rand_gen_t &rgen, cube_t const &
 	}
 	for (stairs_place_t const &stairs : P.stairs) {
 		landing_t landing(stairs, 0, 0, stairs.dim, stairs.dir, stairs.add_railing, SHAPE_STRAIGHT, 0, 1, 1, 0, 1); // roof_access=0, is_at_top=1, stack_conn=1, for_ramp=0, ieb=1
-		landing.z1() = stairs.z2() - 2.0*fc_thick;
-		cube_t stairwell(stairs);
+		bool const against_wall[2] = {1, 1};
+		landing.set_against_wall(against_wall);
+		stairs_landing_base_t stairwell(landing);
+		landing  .z1() = stairs.z2() - 2.0*fc_thick;
 		stairwell.z2() += 0.99*get_floor_ceil_gap(); // bottom of ceiling of upper part; must cover z-range of upper floor for AIs and room object collisions
 		interior->landings.push_back(landing);
-		interior->stairwells.emplace_back(stairwell, 1, stairs.dim, stairs.dir, SHAPE_STRAIGHT, stairs.add_railing, 1, 1); // num_floors=1, stack_conn=1, ieb=1
+		interior->stairwells.emplace_back(stairwell, 1); // num_floors=1
 	} // for stairs
 	return 1;
 }
@@ -1539,11 +1541,11 @@ void building_t::end_ext_basement_hallway(extb_room_t &room, cube_t const &conn_
 
 			if (is_basement_room_placement_valid(hall_below, P, dim, dir, &add_end_door)) {
 				// create stairs
-				// FIXME: missing shadows, light bcube, building AI
+				// FIXME: missing shadows, light bcube, building AI, player pop out of basement
 				cube_t stairs(room); // copy room.d[dim][dir] (far end/bottom of stairs)
 				set_cube_zvals(stairs, (floor_below + fc_thick), (room.z1() + fc_thick));
 				stairs.d[dim][!dir] = stairs_start; // near end/top of stairs
-				bool const add_railing = 0; // FIXME
+				bool const add_railing(rgen.rand_bool()); // 50% of the time
 				float const wall_half_thick(0.5*get_wall_thickness());
 				stairs.expand_in_dim(!dim, -(add_railing ? 2.0 : 1.0)*wall_half_thick); // shrink on the sides; more if there are railings
 				stairs.expand_in_dim( dim, -(wall_half_thick + get_trim_thickness()));  // shrink on the ends

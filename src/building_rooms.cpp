@@ -3585,6 +3585,7 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 		unsigned const num_stairs(i->get_num_stairs());
 		float const stair_dz(window_vspacing/(num_stairs+1)), stair_height(stair_dz + floor_thickness);
 		bool const dim(i->dim), dir(i->dir), has_side_walls(i->shape == SHAPE_WALLED || i->shape == SHAPE_WALLED_SIDES || i->shape == SHAPE_U);
+		bool const has_wall_both_sides(i->against_wall[0] && i->against_wall[1]); // ext basement stairs
 		bool const side(dir); // for U-shaped stairs; for now this needs to be consistent for the entire stairwell, can't use rgen.rand_bool()
 		// Note: stairs always start at floor_thickness above the landing z1, ignoring landing z2/height
 		float const tot_len(i->get_sz_dim(dim)), floor_z(i->z1() + floor_thickness - window_vspacing), step_len_pos(tot_len/num_stairs);
@@ -3657,7 +3658,7 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 				bool railing_dir(dir);
 				cube_t railing(wall);
 				unsigned flags(add_wall ? RO_FLAG_NOCOLL : 0);
-				if (!has_side_walls) {flags |= RO_FLAG_OPEN;} // use this flag to indicate no walls, need balusters
+				if (!has_side_walls && !has_wall_both_sides/*!i->against_wall[d]*/) {flags |= RO_FLAG_OPEN;} // use this flag to indicate no walls, need balusters
 				railing.z2() = railing_z2;
 
 				if (add_wall || i->roof_access) {
@@ -3679,7 +3680,7 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 			set_wall_width(railing, railing_zc, 1.4*railing_side_dz, 2); // set zvals
 			objs.emplace_back(railing, TYPE_RAILING, 0, !dim, dir, (RO_FLAG_NOCOLL | RO_FLAG_ADJ_HI | RO_FLAG_ADJ_LO | RO_FLAG_ADJ_BOT), 1.0, SHAPE_CUBE, railing_color); // no ends
 		}
-		else if (i->has_railing && (i->stack_conn || (extend_walls_up && i->shape == SHAPE_STRAIGHT))) {
+		else if (i->has_railing && !has_wall_both_sides && (i->stack_conn || (extend_walls_up && i->shape == SHAPE_STRAIGHT))) {
 			// add railings around the top if: straight + top floor with no roof access, connector stairs, or basement stairs
 			room_object_t railing(*i, TYPE_RAILING, 0, !dim, dir, (RO_FLAG_TOS | RO_FLAG_ADJ_BOT), 1.0, SHAPE_CUBE, railing_color); // flag to skip drawing ends
 			railing.z1()  = railing.z2(); // starts at the floor

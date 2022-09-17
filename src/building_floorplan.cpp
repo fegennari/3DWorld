@@ -1583,11 +1583,11 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 			} // for n
 			if (!cand_is_valid) continue; // no valid candidate found
 			landing_t landing(cand, 0, 0, dim, stairs_dir, add_railing, sshape, 0, is_at_top, stack_conn); // roof_access=0
-			landing.z1() = part.z2() - fc_thick; // only include the ceiling of this part and the floor of *p
-			cube_t stairwell(cand);
+			stairs_landing_base_t stairwell(landing);
+			landing  .z1() = part.z2() - fc_thick; // only include the ceiling of this part and the floor of *p
 			stairwell.z2() = part.z2() + window_vspacing - fc_thick; // bottom of ceiling of upper part; must cover z-range of upper floor for AIs and room object collisions
 			interior->landings.push_back(landing);
-			interior->stairwells.emplace_back(stairwell, 1, dim, stairs_dir, sshape, 0, stack_conn); // num_floors=1, roof_access=0
+			interior->stairwells.emplace_back(stairwell, 1); // num_floors=1
 			// attempt to cut holes in ceiling of this part and floor of above part
 			cube_t cut_cube(cand);
 			cut_cube.z1() += fc_thick; // shrink to avoid clipping floors exactly at the base of the stairs
