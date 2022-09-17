@@ -141,8 +141,12 @@ bool building_t::check_sphere_coll(point &pos, point const &p_last, vector3d con
 	if (radius > 0.0) {
 		// player can't be in multiple buildings at once; if they were in some other building last frame, they can't be in this building this frame
 		if (check_interior && camera_in_building && player_building != this) return 0;
+		// skip zval check when the player is in the building because pos.z may be placed on the mesh,
+		// which could be above the top of the building when the player is in the extended basement;
+		// this should be legal because the player can't exit the building in the Z direction; maybe better to use p_last.z?
+		bool const sc_xy_only(xy_only || (camera_in_building && player_building == this));
 		cube_t const cc(get_coll_bcube());
-		if (!(xy_only ? sphere_cube_intersect_xy((pos - xlate), radius, cc) : sphere_cube_intersect((pos - xlate), radius, cc))) return 0;
+		if (!(sc_xy_only ? sphere_cube_intersect_xy((pos - xlate), radius, cc) : sphere_cube_intersect((pos - xlate), radius, cc))) return 0;
 	}
 	float const xy_radius(radius*global_building_params.player_coll_radius_scale);
 	point pos2(pos), p_last2(p_last), center;
