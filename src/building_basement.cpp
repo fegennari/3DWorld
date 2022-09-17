@@ -1412,7 +1412,7 @@ bool building_t::add_underground_exterior_rooms(rand_gen_t &rgen, cube_t const &
 	cube_t const &basement(get_basement());
 	float const ext_wall_pos(basement.d[wall_dim][wall_dir]);
 	float const hallway_len(length_mult*basement.get_sz_dim(wall_dim)), door_width(door_bcube.get_sz_dim(!wall_dim)), hallway_width(1.6*door_width);
-	extb_room_t hallway(basement, 1); // is_hallway=1
+	extb_room_t hallway(basement, 0); // is_hallway=0; will likely be set below
 	set_wall_width(hallway, door_bcube.get_center_dim(!wall_dim), 0.5*hallway_width, !wall_dim);
 	hallway.d[wall_dim][!wall_dir] = ext_wall_pos; // flush with the exterior wall/door
 	hallway.d[wall_dim][ wall_dir] = ext_wall_pos + (wall_dir ? 1.0 : -1.0)*hallway_len;
@@ -1537,7 +1537,7 @@ void building_t::end_ext_basement_hallway(extb_room_t &room, cube_t const &conn_
 
 		if (is_basement_room_placement_valid(hall_below, P, dim, dir, &add_end_door)) {
 			// create stairs
-			// FIXME: missing shadows, rug int stairs
+			// FIXME: missing shadows, light bcube, flickering lights, rug int stairs
 			cube_t stairs(room); // copy room.d[dim][dir] (far end/bottom of stairs)
 			set_cube_zvals(stairs, (floor_below + fc_thick), (room.z1() + fc_thick));
 			stairs.d[dim][!dir] = stairs_start; // near end/top of stairs

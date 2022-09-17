@@ -2009,6 +2009,8 @@ bool building_t::add_rug_to_room(rand_gen_t rgen, cube_t const &room, float zval
 				// maybe beds should be included as well, but then rugs are unlikely to be placed in bedrooms
 			}
 		} // for i
+		if (valid_placement && interior->is_blocked_by_stairs_or_elevator(rug)) {valid_placement = 0;} // check stairs (required for ext basement rooms)
+
 		if (valid_placement) {
 			rug.intersect_with_cube(room); // make sure the rug stays within the room bounds
 			objs.emplace_back(rug, TYPE_RUG, room_id, 0, 0, RO_FLAG_NOCOLL, tot_light_amt);
