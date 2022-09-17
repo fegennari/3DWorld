@@ -1075,8 +1075,8 @@ struct stairwell_t : public cube_t, public stairs_landing_base_t {
 typedef vector<stairwell_t> vect_stairwell_t;
 
 struct stairs_place_t : public cube_t { // for extended basements
-	bool dim, dir;
-	stairs_place_t(cube_t const &c, bool dim_, bool dir_) : cube_t(c), dim(dim_), dir(dir_) {}
+	bool dim, dir, add_railing;
+	stairs_place_t(cube_t const &c, bool dim_, bool dir_, bool add_railing_) : cube_t(c), dim(dim_), dir(dir_), add_railing(add_railing_) {}
 };
 
 struct door_base_t : public cube_t {

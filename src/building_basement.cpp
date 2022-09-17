@@ -1445,12 +1445,12 @@ bool building_t::add_underground_exterior_rooms(rand_gen_t &rgen, cube_t const &
 		interior->place_exterior_room(*r, *r, fc_thick, wall_thickness, P, basement_part_ix, 0, r->is_hallway);
 	}
 	for (stairs_place_t const &stairs : P.stairs) {
-		landing_t landing(stairs, 0, 0, stairs.dim, stairs.dir, 0, SHAPE_STRAIGHT, 0, 1, 1, 0, 1); // add_railing=0, roof_access=0, is_at_top=1, stack_conn=1, for_ramp=0, ieb=1
+		landing_t landing(stairs, 0, 0, stairs.dim, stairs.dir, stairs.add_railing, SHAPE_STRAIGHT, 0, 1, 1, 0, 1); // roof_access=0, is_at_top=1, stack_conn=1, for_ramp=0, ieb=1
 		landing.z1() = stairs.z2() - 2.0*fc_thick;
 		cube_t stairwell(stairs);
 		stairwell.z2() += 0.99*get_floor_ceil_gap(); // bottom of ceiling of upper part; must cover z-range of upper floor for AIs and room object collisions
 		interior->landings.push_back(landing);
-		interior->stairwells.emplace_back(stairwell, 1, stairs.dim, stairs.dir, SHAPE_STRAIGHT, 0, 1, 1); // num_floors=1, roof_access=0, stack_conn=1, ieb=1
+		interior->stairwells.emplace_back(stairwell, 1, stairs.dim, stairs.dir, SHAPE_STRAIGHT, stairs.add_railing, 1, 1); // num_floors=1, stack_conn=1, ieb=1
 	} // for stairs
 	return 1;
 }
@@ -1537,7 +1537,7 @@ void building_t::end_ext_basement_hallway(extb_room_t &room, cube_t const &conn_
 
 		if (is_basement_room_placement_valid(hall_below, P, dim, dir, &add_end_door)) {
 			// create stairs
-			// FIXME: missing shadows, light bcube, flickering lights, rug int stairs
+			// FIXME: missing shadows, light bcube, flickering lights
 			cube_t stairs(room); // copy room.d[dim][dir] (far end/bottom of stairs)
 			set_cube_zvals(stairs, (floor_below + fc_thick), (room.z1() + fc_thick));
 			stairs.d[dim][!dir] = stairs_start; // near end/top of stairs
@@ -1546,7 +1546,8 @@ void building_t::end_ext_basement_hallway(extb_room_t &room, cube_t const &conn_
 			stairs.expand_in_dim(!dim, -wall_half_thick); // shrink on the sides
 			stairs.expand_in_dim( dim, -(wall_half_thick + get_trim_thickness())); // shrink on the ends
 			assert(!stairs.intersects_xy(room.conn_bcube));
-			P.stairs.emplace_back(stairs, dim, !dir);
+			bool const add_railing = 0; // FIXME
+			P.stairs.emplace_back(stairs, dim, !dir, add_railing);
 			hall_below.conn_bcube = stairs; // must include the stairs
 			room.has_stairs = 1;
 			// add the room
