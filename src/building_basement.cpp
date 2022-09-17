@@ -1369,6 +1369,7 @@ struct ext_basement_room_params_t {
 bool building_t::is_basement_room_placement_valid(cube_t &room, ext_basement_room_params_t &P, bool dim, bool dir, bool *add_end_door) const {
 	cube_t test_cube(room);
 	test_cube.expand_in_dim(dim, -0.1*get_wall_thickness()); // shrink slightly to avoid intersections with our parent room
+	test_cube.expand_in_dim(2, -0.01*test_cube.dz()); // shrink slightly so that rooms on different floors can cross over each other
 	float const room_len(room.get_sz_dim(dim)), room_width(room.get_sz_dim(!dim));
 	extb_room_t *end_conn_room(nullptr);
 
@@ -1525,7 +1526,7 @@ void building_t::end_ext_basement_hallway(extb_room_t &room, cube_t const &conn_
 	if (depth < global_building_params.max_ext_basement_room_depth && dsign*(room.d[dim][dir] - room.conn_bcube.d[dim][dir]) > stairs_len /*&& rgen.rand_bool()*/) {
 		// connect downward with stairs; we know that there aren't any other rooms/doors coming off the end that could be blocked
 		float const fc_thick(get_fc_thickness()), stairs_start(stairs_end - dsign*stairs_len);
-		float const ceil_below(room.z1() - 0.001*fc_thick), floor_below(ceil_below - room.dz()); // shift slightly down so as not to intersect
+		float const ceil_below(room.z1()), floor_below(ceil_below - room.dz());
 		float const hall_below_len(max(4.0f*door_width, rgen.rand_uniform(0.5, 1.5)*room.get_sz_dim(dim)));
 		extb_room_t hall_below(room, 0, 1); // copy !dim values; is_hallway will be set later; has_stairs=1
 		set_cube_zvals(hall_below, floor_below, ceil_below);
@@ -1536,7 +1537,7 @@ void building_t::end_ext_basement_hallway(extb_room_t &room, cube_t const &conn_
 
 		if (is_basement_room_placement_valid(hall_below, P, dim, dir, &add_end_door)) {
 			// create stairs
-			// FIXME: missing shadows, missing lighting, fix sliver, rug int stairs
+			// FIXME: missing shadows, missing lighting, rug int stairs
 			cube_t stairs(room); // copy room.d[dim][dir] (far end/bottom of stairs)
 			set_cube_zvals(stairs, (floor_below + fc_thick), (room.z1() + fc_thick));
 			stairs.d[dim][!dir] = stairs_start; // near end/top of stairs
