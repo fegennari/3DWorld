@@ -2329,7 +2329,7 @@ public:
 
 				// draw interior for the building containing the light
 				for (auto g = (*i)->grid_by_tile.begin(); g != (*i)->grid_by_tile.end(); ++g) {
-					if (!g->bcube.contains_pt(lpos)) continue; // wrong tile (Note: may be wrong for ext basement light extending outside tile)
+					if (!g->bcube.contains_pt_xy(lpos)) continue; // wrong tile; don't check zval because ext basement may be lower
 					
 					for (auto bi = g->bc_ixs.begin(); bi != g->bc_ixs.end(); ++bi) {
 						building_t &b((*i)->get_building(bi->ix));
