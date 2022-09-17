@@ -1439,7 +1439,7 @@ bool building_t::add_underground_exterior_rooms(rand_gen_t &rgen, cube_t const &
 	// place rooms, now that wall_exclude has been calculated, starting with the hallway
 	cube_t wall_area(hallway);
 	wall_area.d[wall_dim][!wall_dir] += (wall_dir ? 1.0 : -1.0)*0.5*wall_thickness; // move separator wall inside the hallway to avoid clipping exterior wall
-	interior->place_exterior_room(hallway, wall_area, fc_thick, wall_thickness, P, basement_part_ix, 0, 1); // use basement part_ix; num_lights=0, is_hallway=1
+	interior->place_exterior_room(hallway, wall_area, fc_thick, wall_thickness, P, basement_part_ix, 0, hallway.is_hallway); // use basement part_ix; num_lights=0
 
 	for (auto r = P.rooms.begin()+2; r != P.rooms.end(); ++r) { // skip basement and primary hallway
 		interior->place_exterior_room(*r, *r, fc_thick, wall_thickness, P, basement_part_ix, 0, r->is_hallway);
@@ -1539,16 +1539,15 @@ void building_t::end_ext_basement_hallway(extb_room_t &room, cube_t const &conn_
 
 			if (is_basement_room_placement_valid(hall_below, P, dim, dir, &add_end_door)) {
 				// create stairs
-				// FIXME: missing shadows, light bcube, flickering lights
+				// FIXME: missing shadows, light bcube, building AI
 				cube_t stairs(room); // copy room.d[dim][dir] (far end/bottom of stairs)
 				set_cube_zvals(stairs, (floor_below + fc_thick), (room.z1() + fc_thick));
 				stairs.d[dim][!dir] = stairs_start; // near end/top of stairs
-				//float const shrink(0.5*(room.get_sz_dim(!dim) - door_width)); // shrink width to match the door (optional)
-				float const wall_half_thick(0.5*get_wall_thickness());
-				stairs.expand_in_dim(!dim, -wall_half_thick); // shrink on the sides
-				stairs.expand_in_dim( dim, -(wall_half_thick + get_trim_thickness())); // shrink on the ends
-				assert(!stairs.intersects_xy(room.conn_bcube));
 				bool const add_railing = 0; // FIXME
+				float const wall_half_thick(0.5*get_wall_thickness());
+				stairs.expand_in_dim(!dim, -(add_railing ? 2.0 : 1.0)*wall_half_thick); // shrink on the sides; more if there are railings
+				stairs.expand_in_dim( dim, -(wall_half_thick + get_trim_thickness()));  // shrink on the ends
+				assert(!stairs.intersects_xy(room.conn_bcube));
 				P.stairs.emplace_back(stairs, dim, !dir, add_railing);
 				hall_below.conn_bcube = stairs; // must include the stairs
 				room.has_stairs = 1;

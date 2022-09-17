@@ -2717,6 +2717,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 		bool const room_dim(r->dx() < r->dy()); // longer room dim
 		bool const must_be_bathroom(room_id == cand_bathroom && num_bathrooms == 0); // cand bathroom, and bathroom not already placed
 		bool const is_parking_garage(r->get_room_type(0) == RTYPE_PARKING); // all floors should be parking garage
+		bool const is_ext_basement(r->is_ext_basement());
 		float light_size(def_light_size); // default size for houses
 		unsigned const room_objs_start(objs.size());
 		unsigned nx(1), ny(1); // number of lights in X and Y for this room
@@ -2845,7 +2846,8 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			for (cube_t const &l : valid_lights) {
 				objs.emplace_back(l, TYPE_LIGHT, room_id, (light.dx() < light.dy()), 0, flags, light_amt, light_shape, color); // reclaculate dim; dir=0 (unused)
 				objs.back().obj_id = light_ix_assign.get_ix_for_light(l);
-				if (is_parking_garage && (rgen_lights.rand()%50 == 13)) {objs.back().flags |= RO_FLAG_BROKEN;} // 2% chance of a flickering light
+				unsigned const flicker_mod(is_parking_garage ? 50 : (is_ext_basement ? 20 : 0)); // 2% chance for parking garage, 5% chance for ext basement
+				if (flicker_mod > 0 && ((rgen_lights.rand()%flicker_mod) == 13)) {objs.back().flags |= RO_FLAG_BROKEN;} // maybe make this a flickering light
 			}
 			if (is_lit) {r->lit_by_floor |= (1ULL << (f&63));} // flag this floor as being lit (for up to 64 floors)
 			if (is_parking_garage) continue; // generated above, done; no outlets or light switches
