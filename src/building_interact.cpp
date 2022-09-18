@@ -1142,7 +1142,7 @@ bool building_t::is_pt_visible(point const &p1, point const &p2) const {
 	if (is_light_occluded(p1, p2)) return 0; // okay to call for non-light point; checks walls, ceilings, and floors
 	
 	if (parts.size() == 1) {} // single part, no check necessary
-	else if (point_in_building_or_basement_bcube(p1)) {
+	else if (p1.z < ground_floor_z1) { // in the basement
 		if (has_ext_basement()) {
 			vect_cube_t cubes; // static?
 			cubes.push_back(get_basement());
@@ -1150,9 +1150,11 @@ bool building_t::is_pt_visible(point const &p1, point const &p2) const {
 			if (!trace_ray_through_cubes(cubes, p1, p2, 0.01*get_wall_thickness())) return 0;
 		} // else only basement, not need to trace exterior walls
 	}
-	else if (!trace_ray_through_cubes(parts, p1, p2, 0.01*get_wall_thickness())) return 0; // view blocked by exterior wall (ignores windows)
-	
-	return !check_line_intersect_doors(p1, p2);
+	else {
+		if (!trace_ray_through_cubes(parts, p1, p2, 0.01*get_wall_thickness())) return 0; // view blocked by exterior wall (ignores windows)
+	}
+	if (check_line_intersect_doors(p1, p2)) return 0;
+	return 1;
 }
 bool building_t::is_sphere_visible(point const &center, float radius, point const &pt) const {
 	if (!interior) return 1;

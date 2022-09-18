@@ -1034,7 +1034,6 @@ bool building_t::is_player_visible(person_t const &person, unsigned vis_test) co
 		assert(room_floor_start <= cur_player_building_loc.floor_ix && room_floor_start <= person_floor_ix);
 		unsigned const f1(cur_player_building_loc.floor_ix - room_floor_start), f2(person_floor_ix - room_floor_start);
 		has_los = (room.has_stairs_on_floor(f1) && room.has_stairs_on_floor(f2));
-
 	}
 	if (!has_los) { // check visibility; assume LOS if in the same room
 		point const eye_pos(person.get_eye_pos());
