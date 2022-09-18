@@ -1275,10 +1275,16 @@ int building_t::ai_room_update(rand_gen_t &rgen, float delta_dir, unsigned perso
 
 	if (/*player_in_this_building &&*/ !person.on_stairs() && person.cur_room >= 0) { // movement in XY, not on stairs, room is valid: snap to nearest floor
 		// this is optional and is done just in case something went wrong
-		room_t const &room(get_room(person.cur_room));
+		room_t room(get_room(person.cur_room));
+
+		if (!room.contains_pt(new_pos)) { // maybe we just exited the stairs into a different part and cur_room hasn't been updated yet
+			int const new_room_ix(get_room_containing_pt(new_pos));
+			if (new_room_ix >= 0) {room = get_room(new_room_ix);}
+		}
 		float const floor_spacing(get_window_vspace());
 		int cur_floor(max(0, round_fp((new_pos.z - min_valid_zval)/floor_spacing)));
-		min_eq(cur_floor, (round_fp((room.z2() - true_z1)/floor_spacing) - 1)); // clip to the valid floors for this room relative to lowest building floor
+		int const max_floor(round_fp((room.z2() - true_z1)/floor_spacing) - 1);
+		min_eq(cur_floor, max_floor); // clip to the valid floors for this room relative to lowest building floor
 		float const adj_zval(cur_floor*floor_spacing + min_valid_zval);
 		if (fabs(adj_zval - new_pos.z) > 0.1*person.radius) {person.target_pos = all_zeros; person.path.clear();} // if we snap to the floor, reset the target and path
 		new_pos.z = adj_zval;
