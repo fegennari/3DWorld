@@ -1177,7 +1177,7 @@ struct building_interior_t {
 	bool line_coll(building_t const &building, point const &p1, point const &p2, point &p_int) const;
 	point find_closest_pt_on_obj_to_pos(building_t const &building, point const &pos, float pad_dist, bool no_ceil_floor) const;
 	void update_dynamic_draw_data() {assert(room_geom); room_geom->update_dynamic_draw_data();}
-	void get_avoid_cubes(vect_cube_t &avoid, float z1, float z2, float floor_thickness, bool same_as_player, bool skip_stairs=0) const;
+	void get_avoid_cubes(vect_cube_t &avoid, float z1, float z2, float r_shrink_if_low, float floor_thickness, bool same_as_player, bool skip_stairs=0) const;
 	void create_fc_occluders();
 	void place_exterior_room(extb_room_t const &room, cube_t const &wall_area, float fc_thick, float wall_thick, ext_basement_room_params_t &P,
 		unsigned part_id, unsigned num_lights=0, bool is_hallway=0);
