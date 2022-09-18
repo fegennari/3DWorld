@@ -1632,7 +1632,7 @@ private:
 	void add_interior_door_for_floor(door_t &door, bool is_bathroom, bool make_unlocked);
 	void remove_section_from_cube_and_add_door(cube_t &c, cube_t &c2, float v1, float v2, bool xy, bool open_dir, bool is_bathroom=0);
 	void insert_door_in_wall_and_add_seg(cube_t &wall, float v1, float v2, bool dim, bool open_dir, bool keep_high_side, bool is_bathroom=0);
-	unsigned get_floor_for_zval(float zval) const {return unsigned((zval - bcube.z1())/get_window_vspace());}
+	unsigned get_floor_for_zval(float zval) const {return unsigned((zval - get_bcube_z1_inc_ext_basement())/get_window_vspace());}
 	building_loc_t get_building_loc_for_pt(point const &pt) const;
 	void register_player_in_building(point const &camera_bs, unsigned building_id) const;
 	bool same_room_and_floor_as_player(person_t const &person) const;

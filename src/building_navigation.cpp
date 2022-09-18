@@ -874,7 +874,7 @@ bool building_t::find_route_to_point(person_t const &person, float radius, bool 
 	if (loc1.floor_ix != loc2.floor_ix) { // different floors: find path from <from> to nearest stairs, then find path from stairs to <to>
 		vector<unsigned> nearest_stairs;
 		find_nearest_stairs(from, to, nearest_stairs); // pass in loc1.part_ix if both loc part_ix values are equal?
-		bool const up_or_down(loc1.floor_ix > loc2.floor_ix); // 0=up, 1=down; Note: floor_ix is relative to bcube.z1(), so is consistent across parts
+		bool const up_or_down(loc1.floor_ix > loc2.floor_ix); // 0=up, 1=down; Note: floor_ix is relative to bcube.z1() (or ext_basement z1), so is consistent across parts
 
 		for (auto s = nearest_stairs.begin(); s != nearest_stairs.end(); ++s) { // try using stairs, closest to furthest
 			assert(*s < interior->stairwells.size());
@@ -1334,7 +1334,7 @@ int building_t::get_room_containing_pt(point const &pt) const {
 building_loc_t building_t::get_building_loc_for_pt(point const &pt) const {
 	building_loc_t loc;
 
-	for (auto p = parts.begin(); p != get_real_parts_end_inc_sec(); ++p) { // TODO: what about ext basement?
+	for (auto p = parts.begin(); p != get_real_parts_end_inc_sec(); ++p) {
 		if (p->contains_pt(pt)) {loc.part_ix = (p - parts.begin()); break;}
 	}
 	if (loc.part_ix < 0 && point_in_extended_basement(pt)) {loc.part_ix = basement_part_ix;} // use basement part if in extended basement, even though point is outside the cube
