@@ -1543,7 +1543,6 @@ void building_t::end_ext_basement_hallway(extb_room_t &room, cube_t const &conn_
 
 			if (is_basement_room_placement_valid(hall_below, P, dim, dir, &add_end_door)) {
 				// create stairs
-				// FIXME: building AI
 				cube_t stairs(room); // copy room.d[dim][dir] (far end/bottom of stairs)
 				set_cube_zvals(stairs, (floor_below + fc_thick), (room.z1() + fc_thick));
 				stairs.d[dim][!dir] = stairs_start; // near end/top of stairs

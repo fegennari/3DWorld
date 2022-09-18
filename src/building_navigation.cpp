@@ -1021,9 +1021,22 @@ bool building_t::is_player_visible(person_t const &person, unsigned vis_test) co
 	building_dest_t const &target(cur_player_building_loc);
 	float const player_radius(get_scaled_player_radius());
 	point const pp2(target.pos - vector3d(0.0, 0.0, get_player_height())); // player's bottom sphere
-	bool const same_room_and_floor(same_room_and_floor_as_player(person));
+	bool const same_room(person.cur_room >= 0 && cur_player_building_loc.room_ix == person.cur_room);
+	unsigned const person_floor_ix(get_floor_for_zval(person.pos.z));
+	unsigned const floor_delta(abs((int)cur_player_building_loc.floor_ix - (int)person_floor_ix));
+	bool const same_room_and_floor(same_room && floor_delta == 0); // Note: doesn't check cur_player_building_loc.stairs_ix
+	bool has_los(same_room_and_floor);
 
-	if (!same_room_and_floor) { // check visibility; assume LOS if in the same room
+	if (!has_los && same_room && floor_delta == 1) {
+		// if the person and the player are on adjacent floors of the same room connected by stairs, cheat and say they have a line of sight
+		room_t const &room(get_room(person.cur_room));
+		unsigned const room_floor_start(get_floor_for_zval(room.z1()));
+		assert(room_floor_start <= cur_player_building_loc.floor_ix && room_floor_start <= person_floor_ix);
+		unsigned const f1(cur_player_building_loc.floor_ix - room_floor_start), f2(person_floor_ix - room_floor_start);
+		has_los = (room.has_stairs_on_floor(f1) && room.has_stairs_on_floor(f2));
+
+	}
+	if (!has_los) { // check visibility; assume LOS if in the same room
 		point const eye_pos(person.get_eye_pos());
 		if (!is_sphere_visible(target.pos, player_radius, eye_pos) && !is_sphere_visible(pp2, player_radius, eye_pos)) return 0; // check both the bottom and top of player
 	}
