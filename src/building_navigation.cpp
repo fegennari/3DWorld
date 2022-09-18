@@ -202,11 +202,13 @@ public:
 		pos = orig_pos; // use orig value as failed point
 		return 0;
 	}
-	point find_valid_room_dest(vect_cube_t const &avoid, float radius, float height, float zval, unsigned node_ix, bool up_or_down, bool &not_room_center, rand_gen_t &rgen) const {
+	point find_valid_room_dest(vect_cube_t const &avoid, float radius, float height, float zval, unsigned node_ix,
+		bool up_or_down, bool &not_room_center, rand_gen_t &rgen, bool no_use_init) const
+	{
 		node_t const &node(get_node(node_ix));
 		if (node.is_stairs) {return get_stairs_entrance_pt(zval, node_ix, up_or_down);}
 		point pos(get_cube_center_zval(node.bcube, zval)); // first candidate is the center of the room
-		if (find_valid_pt_in_room(avoid, radius, height, zval, node.bcube, rgen, pos)) {not_room_center = 1;} // success
+		if (find_valid_pt_in_room(avoid, radius, height, zval, node.bcube, rgen, pos, no_use_init)) {not_room_center = 1;} // success
 		return pos;
 	}
 
@@ -335,8 +337,9 @@ public:
 				bool success(0);
 
 				for (unsigned n = 0; n < 10; ++n) { // keep retrying until we find a point that is reachable from the doorway
+					bool const no_use_init(n > 0); // choose a random new point on iterations after the first one
 					bool not_room_center(0);
-					point const end_point(find_valid_room_dest(avoid, radius, height, cur_pt.z, start_ix, up_or_down, not_room_center, rgen));
+					point const end_point(find_valid_room_dest(avoid, radius, height, cur_pt.z, start_ix, up_or_down, not_room_center, rgen, no_use_init));
 					path.push_back(end_point);
 					if (node.is_stairs) {success = 1; break;} // done, don't need to run code below
 					point const room_exit(closest_room_pt(walk_area, next)); // first doorway
@@ -538,7 +541,7 @@ void building_t::build_nav_graph() const { // Note: does not depend on room geom
 		}
 		//for (unsigned e = 0; e < interior->elevators.size(); ++e) {} // elevators are not yet used by AIs so are ignored here; should check interior->elevators_disabled
 	} // for r
-	//if (is_house && has_basement()) {cout << TXT(ng.is_fully_connected()) << endl;}
+	//if (is_house && !has_sec_bldg() && has_basement() && !ng.is_fully_connected()) {cout << "bcube " << bcube.str() << endl;}
 }
 
 void building_t::invalidate_nav_graph() { // Note: this is safe to call in one thread while using in another
