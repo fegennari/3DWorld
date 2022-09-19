@@ -121,7 +121,7 @@ colorRGBA building_interior_t::get_attic_ceiling_color() const {
 }
 
 // Note: static objects only; excludes people; pos in building space
-bool building_t::ray_cast_interior(point const &pos, vector3d const &dir, cube_t const &valid_area, cube_bvh_t const &bvh, bool in_attic,
+bool building_t::ray_cast_interior(point const &pos, vector3d const &dir, cube_t const &valid_area, cube_bvh_t const &bvh, bool in_attic, bool in_ext_basement,
 	point &cpos, vector3d &cnorm, colorRGBA &ccolor, rand_gen_t *rgen) const
 {
 	if (!interior || is_rotated() || !is_simple_cube()) return 0; // these cases are not yet supported
@@ -144,6 +144,7 @@ bool building_t::ray_cast_interior(point const &pos, vector3d const &dir, cube_t
 		}
 		if (hit) {p2  = p1 + (p2 - p1)*t; t = 1.0;} // clip p2 to t (minor optimization)
 	}
+	else if (in_ext_basement) {} // no exterior walls to check
 	// check parts (exterior walls); should chimneys and porch roofs be included?
 	else if (ray_cast_exterior_walls(p1, p2, cnorm, t)) { // interior ray (common case) - find furthest exit point
 		p2  = p1 + (p2 - p1)*t; t = 1.0; // clip p2 to t (minor optimization)
@@ -440,7 +441,7 @@ class building_indir_light_mgr_t {
 		point const ray_scale(scene_bounds.get_size()/light_bounds.get_size()), llc_shift(scene_bounds.get_llc() - light_bounds.get_llc()*ray_scale);
 		float const tolerance(1.0E-5*valid_area.get_max_extent());
 		bool const is_window(cur_light & IS_WINDOW_BIT);
-		bool in_attic(0);
+		bool in_attic(0), in_ext_basement(0);
 		float weight(100.0), light_radius(0.0);
 		point light_center;
 		cube_t light_cube;
@@ -469,7 +470,8 @@ class building_indir_light_mgr_t {
 			light_cube.z1() = light_cube.z2() = (ro.z1() - 0.01*ro.dz()); // set slightly below bottom of light
 			light_center    = light_cube.get_cube_center();
 			bool const light_in_basement(ro.z1() < b.ground_floor_z1), is_lamp(ro.type == TYPE_LAMP);
-			in_attic = ro.in_attic();
+			in_attic        = ro.in_attic();
+			in_ext_basement = (light_in_basement && b.point_in_extended_basement_not_basement(light_center));
 			if (in_attic) {base_num_rays *= 4;} // more rays in attic, since light is large and there are only 1-2 of them
 			if (is_lamp ) {base_num_rays /= 2;} // half the rays for lamps
 			if (is_lamp ) {dir = 2;} // onmidirectional; dim stays at 2/Z
@@ -510,7 +512,7 @@ class building_indir_light_mgr_t {
 				if (light_radius == 0.0 || dist_xy_less_than(origin, light_center, light_radius)) break; // done/success
 			} // for N
 			init_cpos = origin; // init value
-			bool const hit(b.ray_cast_interior(origin, pri_dir, valid_area, bvh, in_attic, init_cpos, init_cnorm, ccolor, &rgen));
+			bool const hit(b.ray_cast_interior(origin, pri_dir, valid_area, bvh, in_attic, in_ext_basement, init_cpos, init_cnorm, ccolor, &rgen));
 
 			// room lights lights already contribute direct lighting, so we skip this ray; however, windows don't, so we add their primary ray contribution
 			if (is_window && init_cpos != origin) {
@@ -530,7 +532,7 @@ class building_indir_light_mgr_t {
 
 				for (unsigned bounce = 1; bounce < MAX_RAY_BOUNCES; ++bounce) { // allow up to MAX_RAY_BOUNCES bounces
 					cpos = pos; // init value
-					bool const hit(b.ray_cast_interior(pos, dir, valid_area, bvh, in_attic, cpos, cnorm, ccolor, &rgen));
+					bool const hit(b.ray_cast_interior(pos, dir, valid_area, bvh, in_attic, in_ext_basement, cpos, cnorm, ccolor, &rgen));
 
 					if (cpos != pos) { // accumulate light along the ray from pos to cpos (which is always valid) with color cur_color
 						point const p1(pos*ray_scale + llc_shift), p2(cpos*ray_scale + llc_shift); // transform building space to global scene space
@@ -712,14 +714,11 @@ public:
 			VA = b.get_attic_part();
 			set_cube_zvals(VA, b.interior->attic_access.z1(), b.interior_z2);
 		}
-		else if (b.point_in_extended_basement_not_basement(target)) {
-			VA = b.interior->basement_ext_bcube;
-		}
 		else {
-			float const floor_spacing(b.get_window_vspace());
-			VA = b.bcube;
-			VA.z1() = b.bcube.z1() + (target_floor  )*floor_spacing;
-			VA.z2() = b.bcube.z1() + (target_floor+1)*floor_spacing;
+			float const floor_spacing(b.get_window_vspace()), building_z1(b.get_bcube_z1_inc_ext_basement());
+			VA = (b.point_in_extended_basement_not_basement(target) ? b.interior->basement_ext_bcube : b.bcube);
+			VA.z1() = building_z1 + (target_floor  )*floor_spacing;
+			VA.z2() = VA.z1() + floor_spacing;
 		}
 		return VA;
 	}
@@ -771,7 +770,8 @@ bool building_t::ray_cast_camera_dir(point const &camera_bs, point &cpos, colorR
 	assert(!USE_BKG_THREAD); // not legal to call when running lighting in a background thread
 	building_indir_light_mgr.build_bvh(*this, camera_bs);
 	vector3d cnorm; // unused
-	return ray_cast_interior(camera_bs, cview_dir, bcube, building_indir_light_mgr.get_bvh(), point_in_attic(camera_bs), cpos, cnorm, ccolor);
+	return ray_cast_interior(camera_bs, cview_dir, bcube, building_indir_light_mgr.get_bvh(), point_in_attic(camera_bs),
+		point_in_extended_basement_not_basement(camera_bs), cpos, cnorm, ccolor);
 }
 
 // Note: target is building space camera
