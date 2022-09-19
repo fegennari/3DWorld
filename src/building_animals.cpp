@@ -97,7 +97,7 @@ point building_t::gen_animal_floor_pos(float radius, bool place_in_attic, rand_g
 		place_area.expand_by_xy(-(radius + get_wall_thickness()));
 		if (min(place_area.dx(), place_area.dy()) < 4.0*radius) continue; // room too small (can happen for has_complex_floorplan office buildings)
 		point const pos(gen_xy_pos_in_area(place_area, radius, rgen, place_area.z1()));
-		if (is_valid_ai_placement(pos, radius)) {return pos;} // check room objects; start in the open, not under something
+		if (is_valid_ai_placement(pos, radius, 0)) {return pos;} // check room objects; start in the open, not under something; skip_nocoll=0
 	} // for n
 	return all_zeros; // failed
 }

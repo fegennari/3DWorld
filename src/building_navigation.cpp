@@ -939,7 +939,7 @@ void person_t::next_path_pt(bool same_floor, bool starting_path) {
 	path.pop_back();
 }
 
-bool building_t::is_valid_ai_placement(point const &pos, float radius) const { // for people and animals
+bool building_t::is_valid_ai_placement(point const &pos, float radius, bool skip_nocoll) const { // for people and animals
 	if (!is_pos_inside_building(pos, radius, radius)) return 0; // required for attic
 	cube_t ai_bcube(pos);
 	ai_bcube.expand_by(radius); // expand more in Z?
@@ -950,12 +950,18 @@ bool building_t::is_valid_ai_placement(point const &pos, float radius) const { /
 		auto objs_end(interior->room_geom->get_placed_objs_end()); // skip buttons/stairs/elevators
 
 		for (auto i = interior->room_geom->objs.begin(); i != objs_end; ++i) {
-			if (i->type == TYPE_FLOORING || i->type == TYPE_BLOCKER) continue; // okay to place on flooring; ignore blockers, which are used for placement clearance
+			if (skip_nocoll && i->no_coll()) continue;
+			if (i->type == TYPE_FLOORING || i->type == TYPE_BLOCKER) continue; // okay to place on flooring; ignore blockers (used for placement clearance)
 			if (i->intersects(ai_bcube)) return 0;
 		}
 	}
 	return 1;
 }
+
+struct room_cand_t {
+	unsigned room_ix, floor_ix;
+	room_cand_t(unsigned r, unsigned f) : room_ix(r), floor_ix(f) {}
+};
 
 bool building_t::place_people_if_needed(unsigned building_ix, float radius, vector<point> &locs) const {
 	if (!interior || interior->rooms.empty() || is_rotated()) return 0; // no people in these cases
@@ -969,34 +975,51 @@ bool building_t::place_people_if_needed(unsigned building_ix, float radius, vect
 	rand_gen_t rgen;
 	rgen.set_state(building_ix+1, mat_ix); // should be canonical per building
 	unsigned const num_people(num_min + (rgen.rand()%(num_max - num_min + 1)));
-
-	for (unsigned n = 0; n < num_people; ++n) {
-		point ppos;
-		if (place_person(ppos, radius, rgen)) {locs.push_back(ppos);}
-	}
-	return 1;
-}
-
-bool building_t::place_person(point &ppos, float radius, rand_gen_t &rgen) const {
-
-	if (!interior || interior->rooms.empty()) return 0; // should be error case
+	if (num_people == 0) return 0;
 	float const window_vspacing(get_window_vspace()), floor_thickness(get_floor_thickness()), fc_thick(0.5*floor_thickness);
+	// weight rooms by number of floors to avoid placing too many people in basements
+	static vector<room_cand_t> room_cands;
+	room_cands.clear();
+	unsigned first_basement_room(0);
 
-	for (unsigned n = 0; n < 100; ++n) { // make 100 attempts
-		room_t const &room(interior->rooms[rgen.rand() % interior->rooms.size()]); // select a random room
-		if (room.is_sec_bldg) continue; // don't place people in garages and sheds
-		if (min(room.dx(), room.dy()) < 4.0*radius) continue; // room to small to place a person
-		unsigned const num_floors(calc_num_floors(room, window_vspacing, floor_thickness));
+	for (auto r = interior->rooms.begin(); r != interior->rooms.end(); ++r) { // add room_cands
+		if (r->is_sec_bldg) continue; // don't place people in garages and sheds
+		if (min(r->dx(), r->dy()) < 3.0*radius) continue; // room to small to place a person
+		unsigned const num_floors(calc_num_floors(*r, window_vspacing, floor_thickness));
 		assert(num_floors > 0);
-		unsigned const floor_ix(rgen.rand() % num_floors); // place person on a random floor
-		// Note: people are placed before lights are assigned to rooms, so this may not work and must be handled during light placement
-		if (room.lit_by_floor && !room.is_lit_on_floor(floor_ix)) continue; // don't place person in an unlit room
-		point const pos(gen_xy_pos_in_area(room, radius, rgen, (room.z1() + fc_thick + window_vspacing*floor_ix))); // random XY point inside this room
-		if (!is_valid_ai_placement(pos, radius)) continue;
-		ppos = pos;
-		return 1;
-	} // for n
-	return 0;
+		if (first_basement_room == 0 && r->z1() < ground_floor_z1) {first_basement_room = room_cands.size();}
+		unsigned const room_ix(r - interior->rooms.begin());
+
+		for (unsigned f = 0; f < num_floors; ++f) {
+			if (r->lit_by_floor && !r->is_lit_on_floor(f)) continue; // don't place person in an unlit room; only applies if room lighting has been calculated
+			room_cands.emplace_back(room_ix, f);
+		}
+	} // for r
+	for (unsigned N = 0; N < num_people && !room_cands.empty(); ++N) {
+		unsigned const max_cand_ix((N == 0 && first_basement_room > 0) ? first_basement_room : room_cands.size()); // place the first person in a non-basement room
+
+		for (unsigned n = 0; n < 10; ++n) { // make 10 attempts at choosing a room
+			unsigned const cand_ix(rgen.rand() % max_cand_ix);
+			room_cand_t const &cand(room_cands[cand_ix]);
+			room_t const &room(get_room(cand.room_ix));
+			float const zval(room.z1() + fc_thick + window_vspacing*cand.floor_ix);
+			bool success(0);
+
+			for (unsigned m = 0; m < 100; ++m) { // make 100 attempts at choosing a position in this room
+				point const pos(gen_xy_pos_in_area(room, radius, rgen, zval)); // random XY point inside this room
+				if (!is_valid_ai_placement(pos, radius, 1)) continue; // skip_nocoll=1
+				locs.push_back(pos);
+				success = 1;
+				break; // done/success
+			} // for n
+			if (success) {
+				// don't place another person on this floor of this room unless there aren't enough rooms for everyone
+				if (room_cands.size() >= (num_people - N)) {room_cands.erase(room_cands.begin() + cand_ix);}
+				break;
+			}
+		} // for n
+	} // for N
+	return 1;
 }
 
 bool can_ai_follow_player(person_t const &person) {

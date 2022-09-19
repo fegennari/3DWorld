@@ -1395,13 +1395,12 @@ struct building_t : public building_geom_t {
 	// building AI people
 	unsigned count_connected_room_components();
 	bool place_people_if_needed(unsigned building_ix, float radius, vector<point> &locs) const;
-	bool place_person(point &ppos, float radius, rand_gen_t &rgen) const;
 	void all_ai_room_update(rand_gen_t &rgen, float delta_dir, bool stay_on_one_floor);
 	int ai_room_update(rand_gen_t &rgen, float delta_dir, unsigned person_ix, bool stay_on_one_floor);
 	void register_person_hit(unsigned person_ix, room_object_t const &obj, vector3d const &velocity);
 private:
 	void build_nav_graph() const;
-	bool is_valid_ai_placement(point const &pos, float radius) const;
+	bool is_valid_ai_placement(point const &pos, float radius, bool skip_nocoll) const;
 	bool choose_dest_goal(person_t &person, rand_gen_t &rgen, bool same_floor) const;
 	int  choose_dest_room(person_t &person, rand_gen_t &rgen, bool same_floor) const;
 	bool select_person_dest_in_room(person_t &person, rand_gen_t &rgen, room_t const &room) const;
