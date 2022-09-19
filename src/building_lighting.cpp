@@ -236,12 +236,17 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc, int only_this_fl
 		if (i->z1() > z2 || i->z2() < z1) continue;
 		cc.emplace_back(i->get_true_bcube(), WHITE);
 	}
-	colorRGBA const ccolor(is_house ? mat.house_ceil_color .modulate_with(mat.house_ceil_tex .get_avg_color()) : mat.ceil_color .modulate_with(mat.ceil_tex .get_avg_color()));
-	colorRGBA const fcolor(is_house ? mat.house_floor_color.modulate_with(mat.house_floor_tex.get_avg_color()) : mat.floor_color.modulate_with(mat.floor_tex.get_avg_color()));
-	colorRGBA const dcolor(detail_color.modulate_with(mat.roof_tex. get_avg_color()));
-	add_colored_cubes(interior->ceilings, ccolor, z1, z2, cc);
-	add_colored_cubes(interior->floors,   fcolor, z1, z2, cc);
-	add_colored_cubes(details,            dcolor, z1, z2, cc); // should this be included?
+	for (auto i = interior->floors.begin(); i != interior->floors.end(); ++i) {
+		if (i->z1() > z2 || i->z2() < z1) continue;
+		tid_nm_pair_t tex;
+		cc.emplace_back(*i, get_floor_tex_and_color(*i, tex).modulate_with(tex.get_avg_color()));
+	}
+	for (auto i = interior->ceilings.begin(); i != interior->ceilings.end(); ++i) {
+		if (i->z1() > z2 || i->z2() < z1) continue;
+		tid_nm_pair_t tex;
+		cc.emplace_back(*i, get_ceil_tex_and_color(*i, tex).modulate_with(tex.get_avg_color()));
+	}
+	add_colored_cubes(details, detail_color.modulate_with(mat.roof_tex.get_avg_color()), z1, z2, cc); // should this be included?
 	if (!has_room_geom()) return; // nothing else to add
 	vect_room_object_t const &objs(interior->room_geom->objs);
 	static vect_cube_t temp; // used across calls for subtracting holes
@@ -477,7 +482,7 @@ class building_indir_light_mgr_t {
 			if (in_attic)             {weight *= ATTIC_LIGHT_RADIUS_SCALE*ATTIC_LIGHT_RADIUS_SCALE;} // based on surface area rather than radius
 			if (ro.shape == SHAPE_CYLIN || ro.shape == SHAPE_SPHERE) {light_radius = ro.get_radius();}
 		}
-		if (b.is_house)        {weight *= 2.0 ;} // houses have dimmer lights and seem to work better with more indir
+		if (b.is_house)        {weight *=  2.0;} // houses have dimmer lights and seem to work better with more indir
 		if (is_negative_light) {weight *= -1.0;}
 		weight /= base_num_rays; // normalize to the number of rays
 		unsigned NUM_PRI_SPLITS(is_window ? 4 : 16); // we're counting primary rays for windows, use fewer primary splits to reduce noise at the cost of increased time

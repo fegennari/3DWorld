@@ -1153,6 +1153,50 @@ tid_nm_pair_t building_t::get_basement_wall_texture() const { // okay to call if
 	}
 }
 
+tid_nm_pair_t building_t::get_attic_texture() const {
+	if (!has_attic()) return tid_nm_pair_t();
+	// plywood 50% of the time, boards 50% of the time
+	int const tid((interior->rooms.size() & 1) ? get_plywood_tid() : FENCE_TEX);
+	building_mat_t const &mat(get_material());
+	return tid_nm_pair_t(tid, -1, 0.25*mat.house_floor_tex.tscale_x, 0.25*mat.house_floor_tex.tscale_y);
+}
+colorRGBA building_t::get_floor_tex_and_color(cube_t const &floor_cube, tid_nm_pair_t &tex) const {
+	if (has_attic() && floor_cube.z2() > interior->attic_access.z1()) { // attic floor
+		tex = get_attic_texture();
+		return WHITE; // always white
+	}
+	bool const in_basement(floor_cube.z2() < ground_floor_z1);
+	building_mat_t const &mat(get_material());
+
+	if (is_house) {
+		if (has_sec_bldg() && get_sec_bldg().contains_cube(floor_cube)) {tex = tid_nm_pair_t(get_concrete_tid(), 16.0);} // garage or shed
+		else if (in_basement) {tex = mat.basement_floor_tex;} // basement
+		else {tex = mat.house_floor_tex;}
+	}
+	else { // office building
+		if (has_parking_garage && in_basement) {tex = tid_nm_pair_t(get_concrete_tid(), 16.0);} // parking garage
+		else {tex = mat.floor_tex;} // office block
+	}
+	return (is_house ? mat.house_floor_color : mat.floor_color);
+}
+colorRGBA building_t::get_ceil_tex_and_color(cube_t const &ceil_cube, tid_nm_pair_t &tex) const {
+	bool const in_basement((is_house || has_parking_garage) && ceil_cube.z1() < ground_floor_z1);
+	building_mat_t const &mat(get_material());
+	colorRGBA color;
+
+	if (is_house && in_basement && has_basement_pipes && bcube.contains_cube_xy(ceil_cube)) { // draw wood flooring for basement ceiling (not ext basement)
+		tex = mat.house_floor_tex;
+		return (is_house ? mat.house_floor_color : mat.floor_color);
+	}
+	else if (in_basement) { // use wall texture for basement/parking garage ceilings, not ceiling texture
+		tex = mat.wall_tex;
+		return WHITE; // basement walls are always white
+	}
+	// normal ceiling texture
+	tex =  (is_house ? mat.house_ceil_tex   : mat.ceil_tex  );
+	return (is_house ? mat.house_ceil_color : mat.ceil_color);
+}
+
 void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, bool get_interior, bool get_int_ext_walls) {
 
 	assert(get_exterior || get_interior || get_int_ext_walls); // must be at least one of these
@@ -1307,37 +1351,13 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, 
 	}
 	if (get_interior && interior != nullptr) { // interior building parts
 		bdraw.begin_draw_range_capture();
-		tid_nm_pair_t const &ceil_tex(is_house ? mat.house_ceil_tex    : mat.ceil_tex   );
-		colorRGBA const &ceil_color  (is_house ? mat.house_ceil_color  : mat.ceil_color );
-		colorRGBA const &floor_color (is_house ? mat.house_floor_color : mat.floor_color);
-		colorRGBA const basement_wall_color(WHITE); // basement walls are always white
-		tid_nm_pair_t attic_tex;
 
-		if (has_attic()) { // plywood 50% of the time, boards 50% of the time
-			int const tid((interior->rooms.size() & 1) ? get_plywood_tid() : FENCE_TEX);
-			attic_tex = tid_nm_pair_t(tid, -1, 0.25*mat.house_floor_tex.tscale_x, 0.25*mat.house_floor_tex.tscale_y);
-		}
 		for (auto i = interior->floors.begin(); i != interior->floors.end(); ++i) { // 600K T
-			bool const is_basement(i->z2() < ground_floor_z1);
-			tid_nm_pair_t floor_tex;
-			colorRGBA color(floor_color);
-
-			if (has_attic() && i->z2() > interior->attic_access.z1()) { // attic floor
-				floor_tex = attic_tex;
-				color     = WHITE;
-			}
-			else if (is_house) {
-				if (has_sec_bldg() && get_sec_bldg().contains_cube(*i)) {floor_tex = tid_nm_pair_t(get_concrete_tid(), 16.0);} // garage or shed
-				else if (is_basement) {floor_tex = mat.basement_floor_tex;} // basement
-				else {floor_tex = mat.house_floor_tex;}
-			}
-			else { // office building
-				if (has_parking_garage && is_basement) {floor_tex = tid_nm_pair_t(get_concrete_tid(), 16.0);} // parking garage
-				else {floor_tex = mat.floor_tex;} // office block
-			}
+			tid_nm_pair_t tex;
+			colorRGBA const color(get_floor_tex_and_color(*i, tex));
 			// expand_by_xy(-get_trim_thickness()) to prevent z-fighting when AA is disabled? but that will leave small gaps where floors from adjacent parts meet
-			bdraw.add_section(*this, 0, *i, floor_tex, color, 4, 1, 0, 1, 0); // no AO; skip_bottom; Z dim only
-		} // for i
+			bdraw.add_section(*this, 0, *i, tex, color, 4, 1, 0, 1, 0); // no AO; skip_bottom; Z dim only
+		}
 		for (auto i = interior->ceilings.begin(); i != interior->ceilings.end(); ++i) { // 600K T
 			// skip top surface of all but top floor ceilings if the roof is sloped;
 			// if this is an office building, the ceiling could be at a lower floor with a flat roof even if the highest floor has a sloped roof, so we must skip it
@@ -1351,22 +1371,8 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, 
 					if (!is_basement(p) && p->contains_cube_xy(*i) && fabs(i->z2() - p->z2()) < toler) {skip_top = 0; break;}
 				}
 			}
-			bool const is_basement((is_house || has_parking_garage) && i->z1() < ground_floor_z1);
 			tid_nm_pair_t tex;
-			colorRGBA color;
-
-			if (is_house && is_basement && has_basement_pipes && bcube.contains_cube_xy(*i)) { // draw wood flooring for basement ceiling (not ext basement)
-				tex   = mat.house_floor_tex;
-				color = floor_color;
-			}
-			else if (is_basement) { // use wall texture for basement/parking garage ceilings, not ceiling texture
-				tex   = mat.wall_tex;
-				color = basement_wall_color;
-			}
-			else { // normal ceiling texture
-				tex   = ceil_tex;
-				color = ceil_color;
-			}
+			colorRGBA const color(get_ceil_tex_and_color(*i, tex));
 			bdraw.add_section(*this, 0, *i, tex, color, 4, 0, skip_top, 1, 0); // no AO; Z dim only
 		} // for i
 		// minor optimization: don't need shadows for ceilings because lights only point down; assumes ceil_tex is only used for ceilings; not true for all houses
@@ -1374,7 +1380,7 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, 
 
 		for (unsigned dim = 0; dim < 2; ++dim) { // Note: can almost pass in (1U << dim) as dim_filt, if it wasn't for door cutouts (2.2M T)
 			for (auto i = interior->walls[dim].begin(); i != interior->walls[dim].end(); ++i) {
-				colorRGBA const &color((i->z1() < ground_floor_z1) ? basement_wall_color : wall_color);
+				colorRGBA const &color((i->z1() < ground_floor_z1) ? WHITE : wall_color); // basement walls are always white
 				bdraw.add_section(*this, 0, *i, mat.wall_tex, color, 3, 0, 0, 1, 0); // no AO; X/Y dims only
 			}
 		}
@@ -1418,6 +1424,7 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, 
 			bdraw.add_section(*this, 0, interior->attic_access, mat.wall_tex, mat.wall_color, 3, 0, 0, 1, 0, 0.0, 0, 1.0, 1); // no AO; X/Y dims only, inverted normals
 			// add inside surfaces of roof tquads
 			float const delta_z(0.1*get_floor_thickness()); // enough to prevent Z-fighting
+			tid_nm_pair_t const attic_tex(get_attic_texture());
 
 			for (tquad_with_ix_t const &i : roof_tquads) {
 				if (!is_attic_roof(i, 0)) continue; // type_roof_only=0
