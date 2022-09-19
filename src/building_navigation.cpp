@@ -1154,7 +1154,11 @@ int building_t::ai_room_update(rand_gen_t &rgen, float delta_dir, unsigned perso
 		person.target_pos = all_zeros; // force choose_dest=1 below
 	}
 	assert(interior);
-	assert(point_in_building_or_basement_bcube(person.pos)); // person must be inside the building
+	
+	if (!point_in_building_or_basement_bcube(person.pos)) { // person must be inside the building
+		cout << TXT(person.pos.str()) << TXT(bcube.str()) << TXT(interior->basement_ext_bcube.str()) << endl;
+		assert(0);
+	}
 	build_nav_graph();
 
 	if (can_ai_follow_player(person)) {
