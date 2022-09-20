@@ -391,12 +391,25 @@ public:
 		rgen.set_state((ped_ix + 13*room + 1), (ped_rseed + 1));
 		vect_cube_t keepout;
 		path.push_back(to); // Note: path is constructed backwards, so "to" is added first and connect_room_endpoints takes swapped arguments
+		
 		// ignore starting collisions, for example collisions with stairwell when exiting stairs?
 		// ignore initial coll with "from", and coll with "to" when following the player
-		if (!connect_room_endpoints(avoid, walk_area, to, from, radius, path, keepout, rgen, 1, following_player)) {
-			if (!is_first_path) {path.clear(); return 0;} // ignore failure on first path to allow person to get out from an object they spawn in
+		if (!connect_room_endpoints(avoid, walk_area, to, from, radius, path, keepout, rgen, 1, following_player)) { // ignore_p1_coll (to) = 1
+			if (!is_first_path) { // ignore failure on first path to allow person to get out from an object they spawn in
+				bool success(0);
+
+				if (following_player) {
+					// try to find a partial path, starting at "to" and working toward "from"; since rooms are rectangular, all points on the line will be contained
+					for (unsigned n = 1; n <= 9; ++n) { // {10% ... 90%}
+						point const new_to(to + (float(n)/10)*(from - to));
+						assert(walk_area.contains_pt(new_to));
+						if (connect_room_endpoints(avoid, walk_area, new_to, from, radius, path, keepout, rgen, 0, following_player)) {success = 1; break;} // ignore_p1_coll = 0
+					} // for n
+				}
+				if (!success) {path.clear(); return 0;}
+			}
 		}
-		// maybe add an extra path point to prevent clipping through walls when walking throug a doorway
+		// maybe add an extra path point to prevent clipping through walls when walking through a doorway
 		point const from_extend_pt(closest_room_pt(walk_area, from));
 		if (from_extend_pt != from) {path.push_back(from_extend_pt);} // add if p1 was clamped
 		return 1;
