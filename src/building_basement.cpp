@@ -1312,7 +1312,7 @@ void building_t::add_parking_garage_ramp(rand_gen_t &rgen) {
 
 bool building_t::extend_underground_basement(rand_gen_t rgen) {
 	if (!interior) return 0;
-	//highres_timer_t timer("Extend Underground Basement"); // 357ms total
+	//highres_timer_t timer("Extend Underground Basement"); // 540ms total
 	float const height(get_window_vspace() - get_fc_thickness()); // full height of floor to avoid a gap at the top
 	cube_t const &basement(get_basement());
 	bool dim(rgen.rand_bool()), dir(rgen.rand_bool());

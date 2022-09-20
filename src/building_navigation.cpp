@@ -1248,7 +1248,23 @@ int building_t::ai_room_update(rand_gen_t &rgen, float delta_dir, unsigned perso
 		person.dir.normalize();
 		new_pos = person.pos + (max_dist*step_scale)*person.dir;
 		cube_t clip_cube;
-		if (new_pos.z < ground_floor_z1) {clip_cube = get_full_basement_bcube();}
+		
+		if (new_pos.z < ground_floor_z1) { // in the basement
+			cube_t const &basement(get_basement());
+
+			if (has_ext_basement()) {
+				cube_t sc; sc.set_from_sphere(new_pos, coll_dist); // sphere bounding cube
+				float cont_area(0.0);
+				accumulate_shared_xy_area(basement, sc, cont_area);
+				accumulate_shared_xy_area(interior->basement_ext_bcube, sc, cont_area);
+
+				if (cont_area < 0.99*sc.get_area_xy()) { // not contained - force into whichever cube contains the center
+					clip_cube = (basement.contains_pt(new_pos) ? basement : interior->basement_ext_bcube);
+				}
+				else {clip_cube = get_full_basement_bcube();}
+			}
+			else {clip_cube = basement;} // basement only
+		}
 		else {clip_cube = bcube;} // above ground
 		clip_cube.expand_by_xy(-coll_dist); // shrink
 		clip_cube.clamp_pt_xy(new_pos); // make sure person stays within building bcube; can't clip to room because person may be exiting it
