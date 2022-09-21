@@ -664,8 +664,14 @@ public:
 	bool empty() const {return to_draw.empty();}
 	void reserve_verts(tid_nm_pair_t const &tex, size_t num, bool quads_or_tris=0) {get_verts(tex, quads_or_tris).reserve(num);}
 	unsigned get_to_draw_ix(tid_nm_pair_t const &tex) const {return tid_mapper.get_slot_ix(tex.tid);}
-	unsigned get_num_verts (tid_nm_pair_t const &tex, bool quads_or_tris=0) {return get_verts(tex, quads_or_tris).size();}
+	unsigned get_num_verts (tid_nm_pair_t const &tex, bool quads_or_tris=0) {return get_verts(tex, quads_or_tris).size    ();}
+	unsigned get_cap_verts (tid_nm_pair_t const &tex, bool quads_or_tris=0) {return get_verts(tex, quads_or_tris).capacity();}
 
+	void print_stats() const {
+		for (draw_block_t const &b : to_draw) {
+			if (!b.empty()) {cout << "S=" << b.num_verts() << " " << get_texture_by_id(b.tex.tid).name << endl;}
+		}
+	}
 	void get_all_mat_verts(vect_vnctcc_t &verts, bool triangles) const {
 		for (auto i = to_draw.begin(); i != to_draw.end(); ++i) {vector_add_to((triangles ? i->tri_verts : i->quad_verts), verts);}
 	}
@@ -2917,15 +2923,13 @@ public:
 		for (auto b = buildings.begin(); b != buildings.end(); ++b) {
 			if (!b->interior) continue; // no interior
 			building_mat_t const &mat(b->get_material());
-			unsigned const nv_wall(16*(b->interior->walls[0].size() + b->interior->walls[1].size() + b->interior->landings.size()) + 36*b->interior->elevators.size());
+			unsigned const nv_wall(16*(b->interior->walls[0].size() + b->interior->walls[1].size() + b->interior->landings.size() + b->has_attic()) + 36*b->interior->elevators.size());
 			unsigned const nfloors(b->interior->floors.size());
 			vert_counter.update_count(mat.house_floor_tex.tid, 4*((b->is_house && nfloors > 0) ? (nfloors - b->has_sec_bldg()) : 0));
 			vert_counter.update_count(mat.floor_tex.tid, 4*(b->is_house ? b->has_sec_bldg() : nfloors));
 			vert_counter.update_count((b->is_house ? mat.house_ceil_tex.tid : mat.ceil_tex.tid ), 4*b->interior->ceilings.size());
 			vert_counter.update_count(mat.wall_tex.tid, nv_wall);
 			vert_counter.update_count(FENCE_TEX, 12*b->interior->elevators.size());
-			vert_counter.update_count(building_texture_mgr.get_hdoor_tid(), 8*b->interior->doors.size());
-			vert_counter.update_count(WHITE_TEX, 8*b->interior->doors.size());
 		}
 		for (unsigned i = 0; i < tid_mapper.get_num_slots(); ++i) {
 			unsigned const count(vert_counter.get_count(i));
@@ -2943,6 +2947,14 @@ public:
 				get_building(i->ix).get_all_drawn_verts(building_draw_int_ext_walls, 0, 0, 1); // interior of exterior walls
 			}
 		}
+#if 0
+		for (unsigned i = 0; i < tid_mapper.get_num_slots(); ++i) {
+			unsigned const count(vert_counter.get_count(i));
+			if (count == 0) continue;
+			cout << i << ": R=" << count << " S=" << building_draw_interior.get_num_verts(tid_nm_pair_t(i)) << " C="
+				 << building_draw_interior.get_cap_verts(tid_nm_pair_t(i)) << " " << get_texture_by_id(i).name << endl;
+		}
+#endif
 		building_draw_interior.finalize(grid_by_tile.size());
 		building_draw_int_ext_walls.finalize(grid_by_tile.size());
 	}
