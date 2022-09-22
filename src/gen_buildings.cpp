@@ -1203,252 +1203,254 @@ colorRGBA building_t::get_ceil_tex_and_color(cube_t const &ceil_cube, tid_nm_pai
 	return (is_house ? mat.house_ceil_color : mat.ceil_color);
 }
 
-void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, bool get_interior, bool get_int_ext_walls) {
-
-	assert(get_exterior || get_interior || get_int_ext_walls); // must be at least one of these
+void building_t::get_all_drawn_exterior_verts(building_draw_t &bdraw) { // exterior building parts
 	if (!is_valid()) return; // invalid building
 	building_mat_t const &mat(get_material());
+	bool const need_top_roof(roof_type == ROOF_TYPE_FLAT || roof_type == ROOF_TYPE_DOME || roof_type == ROOF_TYPE_ONION);
 	if (detail_color == BLACK) {detail_color = roof_color;} // use roof color if not set
-
-	if (get_exterior) { // exterior building parts
-		bool const need_top_roof(roof_type == ROOF_TYPE_FLAT || roof_type == ROOF_TYPE_DOME || roof_type == ROOF_TYPE_ONION);
 		
-		for (auto i = parts.begin(); i != parts.end(); ++i) { // multiple cubes/parts/levels - no AO for houses
-			if (is_basement(i)) continue; // don't need to draw the basement exterior walls since they should be underground
+	for (auto i = parts.begin(); i != parts.end(); ++i) { // multiple cubes/parts/levels - no AO for houses
+		if (is_basement(i)) continue; // don't need to draw the basement exterior walls since they should be underground
 			
-			if (has_chimney == 2 && (i+2 == parts.end())) { // fireplace; skip inside face (optimization); needs to be draw as part of the interior instead
-				unsigned dim_mask(3); // disable faces: 8=x1, 16=x2, 32=y1, 64=y2
-				if      (i->x1() <= bcube.x1()) {dim_mask |= 16;} // Note: may not work on rotated buildings
-				else if (i->x2() >= bcube.x2()) {dim_mask |=  8;}
-				else if (i->y1() <= bcube.y1()) {dim_mask |= 64;}
-				else if (i->y2() >= bcube.y2()) {dim_mask |= 32;}
-				tid_nm_pair_t const tp(mat.side_tex.get_scaled_version(2.0)); // smaller bricks
-				bdraw.add_section(*this, 0, *i, tp, side_color, dim_mask, 0, 0, is_house, 0); // XY exterior walls
-				bdraw.add_section(*this, 0, *i, tp, side_color, 4, 1, 0, 1, 0); // draw top of fireplace exterior, even if not wider than the chimney - should it be sloped?
-				continue;
-			}
-			else if (has_chimney && (i+1 == parts.end())) { // chimney
-				tid_nm_pair_t const tp(mat.side_tex.get_scaled_version(2.0)); // smaller bricks
-				bdraw.add_section(*this, 0, *i, tp, side_color, 3, 0, 0, is_house, 0); // XY exterior walls
-				float const wall_width(0.25*min(i->dx(), i->dy()));
-				cube_t hole(*i);
-				hole.expand_by_xy(-wall_width);
-				cube_t sides[4]; // {-y, +y, -x, +x}
-				subtract_cube_xy(*i, hole, sides);
-				unsigned const face_masks[4] = {127-64, 127-32, 127-16, 127-8}; // enable XYZ but skip all but {+y, -y, +x, -x} in XY
-				for (unsigned n = 0; n < 4; ++n) {bdraw.add_section(*this, 0, sides[n], tp, side_color, face_masks[n], 1, 0, 1, 0);} // skip bottom
-				continue;
-			}
-			bdraw.add_section(*this, 1, *i, mat.side_tex, side_color, 3, 0, 0, is_house, 0); // XY exterior walls
-			bool skip_top((!need_top_roof && (is_house || i+1 == parts.end())) || is_basement(i)); // don't add the flat roof for the top part in this case
-			// skip the bottom of stacked cubes (not using ground_floor_z1); need to draw the porch roof, so test i->dz()
-			bool const is_stacked(num_sides == 4 && i->z1() > bcube.z1() && i->dz() > 0.5f*get_window_vspace());
-			if (is_stacked && skip_top) continue; // no top/bottom to draw
-
-			if (!is_house && !skip_top && interior && clip_part_ceiling_for_stairs(*i, bdraw.temp_cubes, bdraw.temp_cubes2)) { // add roof quads
-				for (auto c = bdraw.temp_cubes.begin(); c != bdraw.temp_cubes.end(); ++c) { // add floors after removing stairwells
-					bdraw.add_section(*this, 0, *c, mat.roof_tex, roof_color, 4, 1, 0, is_house, 0); // only Z dim
-				}
-				skip_top = 1;
-				if (is_stacked) continue; // no top/bottom to draw
-			}
-			bdraw.add_section(*this, 1, *i, mat.roof_tex, roof_color, 4, is_stacked, skip_top, is_house, 0); // only Z dim
-		} // for i
-		for (auto i = roof_tquads.begin(); i != roof_tquads.end(); ++i) {
-			if (i->type == tquad_with_ix_t::TYPE_HELIPAD) {
-				bdraw.add_tquad(*this, *i, bcube, building_texture_mgr.get_helipad_tid(), WHITE);
-			}
-			else if (i->type == tquad_with_ix_t::TYPE_SOLAR) {
-				bdraw.add_tquad(*this, *i, bcube, building_texture_mgr.get_solarp_tid(), colorRGBA(0.6, 0.6, 0.6)); // panel is too bright compared to the roof, use a darker color
-			}
-			else if (i->type == tquad_with_ix_t::TYPE_TRIM) {
-				bdraw.add_tquad(*this, *i, bcube, tid_nm_pair_t(), LT_GRAY); // untextured
-			}
-			else if (i->type == tquad_with_ix_t::TYPE_ROOF || i->type == tquad_with_ix_t::TYPE_ROOF_ACC) { // use roof texture
-				bdraw.add_tquad(*this, *i, bcube, mat.roof_tex.get_scaled_version(2.0), roof_color);
-			}
-			else if (i->type == tquad_with_ix_t::TYPE_BDOOR2 || i->type == tquad_with_ix_t::TYPE_RDOOR2) {
-				bdraw.add_tquad(*this, *i, bcube, building_texture_mgr.get_bdoor2_tid(), WHITE);
-			}
-			else { // use wall texture
-				bdraw.add_tquad(*this, *i, bcube, mat.side_tex, side_color);
-			}
-		} // for i
-		for (auto i = details.begin(); i != details.end(); ++i) { // draw roof details
-			if (i->type == ROOF_OBJ_AC) {
-				bool const swap_st(i->dx() > i->dy());
-				bool const tex_id((details.size() + parts.size() + mat_ix) & 1); // somewhat of a hash of various things; deterministic
-				int const ac_tid(tex_id ? building_texture_mgr.get_ac_unit_tid1() : building_texture_mgr.get_ac_unit_tid2());
-				bdraw.add_cube(*this, *i, tid_nm_pair_t(ac_tid, -1, (swap_st ? 1.0 : -1.0), 1.0), WHITE, swap_st, 4, 1, 0, 0); // Z, skip bottom, ws_texture=0
-				bdraw.add_cube(*this, *i, tid_nm_pair_t(ac_tid, -1, 0.3, 1.0), WHITE, 0, 3, 1, 0, 0); // XY with stretched texture, ws_texture=0
-				continue;
-			}
-			bool const skip_bot(i->type != ROOF_OBJ_SCAP), pointed(i->type == ROOF_OBJ_ANT); // draw antenna as a point
-			building_t b(building_geom_t(4, rot_sin, rot_cos, pointed)); // cube
-			b.bcube = bcube;
-			tid_nm_pair_t tex;
-			colorRGBA color;
-
-			if (i->type == ROOF_OBJ_WALL && mat.add_windows) { // wall of brick/block building, use side color
-				tex   = mat.side_tex;
-				color = side_color;
-			}
-			else { // otherwise use roof color
-				tex   = mat.roof_tex.get_scaled_version(1.5);
-				color = detail_color*(pointed ? 0.5 : 1.0);
-			}
-			bdraw.add_section(b, 0, *i, tex, color, 7, skip_bot, 0, 1, 0); // all dims, no AO
-		} // for i
-		for (auto i = doors.begin(); i != doors.end(); ++i) { // these are the exterior doors
-			colorRGBA const &dcolor((i->type == tquad_with_ix_t::TYPE_GDOOR) ? WHITE : door_color); // garage doors are always white
-			bdraw.add_tquad(*this, *i, bcube, tid_nm_pair_t(get_building_door_tid(i->type), -1, 1.0, 1.0), dcolor);
-		}
-		for (auto i = fences.begin(); i != fences.end(); ++i) {
-			bdraw.add_fence(*this, *i, tid_nm_pair_t(WOOD_TEX, 0.4f/min(i->dx(), i->dy())), WHITE, (fences.size() > 1));
-		}
-		add_driveway_or_porch(bdraw, *this, driveway, LT_GRAY);
-		add_driveway_or_porch(bdraw, *this, porch,    LT_GRAY);
-
-		if (roof_type == ROOF_TYPE_DOME || roof_type == ROOF_TYPE_ONION) {
-			cube_t const &top(parts.back()); // top/last part
-			point const center(top.get_cube_center());
-			float const dx(top.dx()), dy(top.dy()), tscale(4.0f/(dx + dy));
-			tid_nm_pair_t tex(mat.roof_tex); // use a different dome texture?
-			tex.tscale_x *= tscale; tex.tscale_y *= tscale;
-			bdraw.add_roof_dome(point(center.x, center.y, top.z2()), 0.5*dx, 0.5*dy, tex, roof_color*1.5, (roof_type == ROOF_TYPE_ONION));
-		}
-	}
-	if (get_int_ext_walls /*&& interior*/) { // only needed if building has an interior?
-		ext_side_qv_range.draw_ix = bdraw.get_to_draw_ix(mat.wall_tex);
-		ext_side_qv_range.start   = bdraw.get_num_verts (mat.wall_tex);
-
-		for (auto i = parts.begin(); i != get_real_parts_end_inc_sec(); ++i) { // multiple cubes/parts/levels, room parts only, no AO
-			if (!is_basement(i)) {bdraw.add_section(*this, 1, *i, mat.wall_tex, wall_color, 3, 0, 0, 1, 0);} // XY
-		}
-		ext_side_qv_range.end = bdraw.get_num_verts(mat.wall_tex);
-
-		if (has_basement()) {
-			tid_nm_pair_t const tp(get_basement_wall_texture());
-			// find basement door and exclude it
-			// dim_mask bits: enable dims: 1=x, 2=y, 4=z | disable cube faces: 8=x1, 16=x2, 32=y1, 64=y2, 128=z1, 256=z2
-			unsigned dim_mask(3); // XY
-			cube_t const &basement(get_basement());
-
-			if (has_basement_door) {
-				// find basement door and remove a section of wall around it; can't use stencil test associated with ext_side_qv_range
-				assert(interior);
-
-				for (auto const &door : interior->doors) { // check all exterior doors
-					if (door.z1() >= ground_floor_z1)    continue; // not a basement door
-					if (basement.contains_cube_xy(door)) continue; // not the door separating the basement from the exterior basement
-					unsigned const this_face(1 << (2*door.dim + door.open_dir + 3));
-					dim_mask |= this_face; // skip this face for the full basement call below
-
-					for (unsigned d = 0; d < 2; ++d) {
-						cube_t side(basement);
-						side.d[!door.dim][!d] = door.d[!door.dim][d];
-						bdraw.add_section(*this, 0, side, tp, WHITE, ~(this_face | 4), 0, 0, 1, 0); // single face, always white
-					}
-					break; // the first door should be the one connecting the basement to the extended basement
-				} // for doors
-			}
-			bdraw.add_section(*this, 0, basement, tp, WHITE, dim_mask, 0, 0, 1, 0); // XY, always white
-		}
-	}
-	if (get_interior && interior != nullptr) { // interior building parts
-		bdraw.begin_draw_range_capture();
-
-		for (auto i = interior->floors.begin(); i != interior->floors.end(); ++i) { // 600K T
-			tid_nm_pair_t tex;
-			colorRGBA const color(get_floor_tex_and_color(*i, tex));
-			// expand_by_xy(-get_trim_thickness()) to prevent z-fighting when AA is disabled? but that will leave small gaps where floors from adjacent parts meet
-			bdraw.add_section(*this, 0, *i, tex, color, 4, 1, 0, 1, 0); // no AO; skip_bottom; Z dim only
-		}
-		for (auto i = interior->ceilings.begin(); i != interior->ceilings.end(); ++i) { // 600K T
-			// skip top surface of all but top floor ceilings if the roof is sloped;
-			// if this is an office building, the ceiling could be at a lower floor with a flat roof even if the highest floor has a sloped roof, so we must skip it
-			bool skip_top(roof_type == ROOF_TYPE_FLAT || !is_house || has_attic());
-
-			if (!skip_top) { // check if this is a top ceiling; needed for light occlusion
-				float const toler(get_floor_thickness());
-				skip_top = 1; // assume it's not
-
-				for (auto p = parts.begin(); p != get_real_parts_end(); ++p) { // Note: excludes garages and sheds
-					if (!is_basement(p) && p->contains_cube_xy(*i) && fabs(i->z2() - p->z2()) < toler) {skip_top = 0; break;}
-				}
-			}
-			tid_nm_pair_t tex;
-			colorRGBA const color(get_ceil_tex_and_color(*i, tex));
-			bdraw.add_section(*this, 0, *i, tex, color, 4, 0, skip_top, 1, 0); // no AO; Z dim only
-		} // for i
-		// minor optimization: don't need shadows for ceilings because lights only point down; assumes ceil_tex is only used for ceilings; not true for all houses
-		if (!is_house) {bdraw.set_no_shadows_for_tex(mat.ceil_tex);}
-
-		for (unsigned dim = 0; dim < 2; ++dim) { // Note: can almost pass in (1U << dim) as dim_filt, if it wasn't for door cutouts (2.2M T)
-			for (auto i = interior->walls[dim].begin(); i != interior->walls[dim].end(); ++i) {
-				colorRGBA const &color((i->z1() < ground_floor_z1) ? WHITE : wall_color); // basement walls are always white
-				bdraw.add_section(*this, 0, *i, mat.wall_tex, color, 3, 0, 0, 1, 0); // no AO; X/Y dims only
-			}
-		}
-		// Note: stair/elevator landings can probably be drawn in room_geom along with stairs, though I don't think there would be much benefit in doing so
-		for (auto i = interior->landings.begin(); i != interior->landings.end(); ++i) { // added per-floor (530K T)
+		if (has_chimney == 2 && (i+2 == parts.end())) { // fireplace; skip inside face (optimization); needs to be draw as part of the interior instead
 			unsigned dim_mask(3); // disable faces: 8=x1, 16=x2, 32=y1, 64=y2
-			if (i->for_elevator) {dim_mask |= (120 - (1 << (i->get_face_id() + 3)));} // disable all but the open side of the elevator
-			else if (i->for_ramp) {
-				cube_t const &basement(get_basement());
-				if (i->dim == 0) {dim_mask |= ((i->yc() < basement.yc()) ? 32 : 64);} // X, skip Y face closest to building wall
-				else             {dim_mask |= ((i->xc() < basement.xc()) ?  8 : 16);} // Y, skip X face closest to building wall
-			}
-			bdraw.add_section(*this, 0, *i, mat.wall_tex, mat.wall_color, dim_mask, 0, 0, 1, 0, 0.0, 0, 1.0, 1); // no AO; X/Y dims only, inverted normals
+			if      (i->x1() <= bcube.x1()) {dim_mask |= 16;} // Note: may not work on rotated buildings
+			else if (i->x2() >= bcube.x2()) {dim_mask |=  8;}
+			else if (i->y1() <= bcube.y1()) {dim_mask |= 64;}
+			else if (i->y2() >= bcube.y2()) {dim_mask |= 32;}
+			tid_nm_pair_t const tp(mat.side_tex.get_scaled_version(2.0)); // smaller bricks
+			bdraw.add_section(*this, 0, *i, tp, side_color, dim_mask, 0, 0, is_house, 0); // XY exterior walls
+			bdraw.add_section(*this, 0, *i, tp, side_color, 4, 1, 0, 1, 0); // draw top of fireplace exterior, even if not wider than the chimney - should it be sloped?
+			continue;
 		}
-		for (auto i = interior->elevators.begin(); i != interior->elevators.end(); ++i) {
-			bool const dim(i->dim), dir(i->dir);
-			float const spacing(i->get_wall_thickness()), frame_width(i->get_frame_width()); // space between inner/outer walls + frame around door
-			unsigned dim_mask(3); // x and y dims enabled
-			dim_mask |= (1 << (i->get_door_face_id() + 3)); // disable the face for the door opening
-			bdraw.add_section(*this, 0, *i, mat.wall_tex, mat.wall_color, dim_mask, 0, 0, 1, 0); // outer elevator is textured like the walls
-			cube_t entrance(*i);
-			entrance.d[dim][!dir] = entrance.d[dim][dir] + (dir ? -1.0f : 1.0f)*spacing; // set correct thickness
+		else if (has_chimney && (i+1 == parts.end())) { // chimney
+			tid_nm_pair_t const tp(mat.side_tex.get_scaled_version(2.0)); // smaller bricks
+			bdraw.add_section(*this, 0, *i, tp, side_color, 3, 0, 0, is_house, 0); // XY exterior walls
+			float const wall_width(0.25*min(i->dx(), i->dy()));
+			cube_t hole(*i);
+			hole.expand_by_xy(-wall_width);
+			cube_t sides[4]; // {-y, +y, -x, +x}
+			subtract_cube_xy(*i, hole, sides);
+			unsigned const face_masks[4] = {127-64, 127-32, 127-16, 127-8}; // enable XYZ but skip all but {+y, -y, +x, -x} in XY
+			for (unsigned n = 0; n < 4; ++n) {bdraw.add_section(*this, 0, sides[n], tp, side_color, face_masks[n], 1, 0, 1, 0);} // skip bottom
+			continue;
+		}
+		bdraw.add_section(*this, 1, *i, mat.side_tex, side_color, 3, 0, 0, is_house, 0); // XY exterior walls
+		bool skip_top((!need_top_roof && (is_house || i+1 == parts.end())) || is_basement(i)); // don't add the flat roof for the top part in this case
+		// skip the bottom of stacked cubes (not using ground_floor_z1); need to draw the porch roof, so test i->dz()
+		bool const is_stacked(num_sides == 4 && i->z1() > bcube.z1() && i->dz() > 0.5f*get_window_vspace());
+		if (is_stacked && skip_top) continue; // no top/bottom to draw
 
-			for (unsigned d = 0; d < 2; ++d) { // add frame on both sides of the door opening
-				cube_t frame(entrance); // one side
-				frame.d[!dim][d] = frame.d[!dim][!d] + (d ? 1.0f : -1.0f)*frame_width; // set position
-				unsigned dim_mask2(3); // x and y dims enabled
-				dim_mask2 |= (1 << (2*(!dim) + (!d) + 3)); // 3 faces drawn
-				bdraw.add_section(*this, 0, frame, mat.wall_tex, mat.wall_color, dim_mask2, 0, 0, 1, 0);
+		if (!is_house && !skip_top && interior && clip_part_ceiling_for_stairs(*i, bdraw.temp_cubes, bdraw.temp_cubes2)) { // add roof quads
+			for (auto c = bdraw.temp_cubes.begin(); c != bdraw.temp_cubes.end(); ++c) { // add floors after removing stairwells
+				bdraw.add_section(*this, 0, *c, mat.roof_tex, roof_color, 4, 1, 0, is_house, 0); // only Z dim
 			}
-			cube_t inner_cube(*i);
-			inner_cube.expand_by_xy(-spacing);
-			// add interior of elevator by drawing the inside of the cube with a slightly smaller size, with invert_normals=1; normal mapped?
-			tid_nm_pair_t wall_tex(FENCE_TEX, -1, 16.0, 16.0);
-			wall_tex.set_specular(0.5, 20.0);
-			bdraw.add_section(*this, 0, inner_cube, wall_tex, WHITE, dim_mask, 0, 0, 1, 0, 0.0, 0, 1.0, 1);
-			// Note elevator doors are dynamic and are drawn as part of room_geom
-		} // for i
-		if (has_attic() && interior->attic_type == ATTIC_TYPE_RAFTERS) { // underside of roof is visible
-			// add inside surface of attic access hole; could be draw as room geom if needed
-			bdraw.add_section(*this, 0, interior->attic_access, mat.wall_tex, mat.wall_color, 3, 0, 0, 1, 0, 0.0, 0, 1.0, 1); // no AO; X/Y dims only, inverted normals
-			// add inside surfaces of roof tquads
-			float const delta_z(0.1*get_floor_thickness()); // enough to prevent Z-fighting
-			tid_nm_pair_t const attic_tex(get_attic_texture());
+			skip_top = 1;
+			if (is_stacked) continue; // no top/bottom to draw
+		}
+		bdraw.add_section(*this, 1, *i, mat.roof_tex, roof_color, 4, is_stacked, skip_top, is_house, 0); // only Z dim
+	} // for i
+	for (auto i = roof_tquads.begin(); i != roof_tquads.end(); ++i) {
+		if (i->type == tquad_with_ix_t::TYPE_HELIPAD) {
+			bdraw.add_tquad(*this, *i, bcube, building_texture_mgr.get_helipad_tid(), WHITE);
+		}
+		else if (i->type == tquad_with_ix_t::TYPE_SOLAR) {
+			bdraw.add_tquad(*this, *i, bcube, building_texture_mgr.get_solarp_tid(), colorRGBA(0.6, 0.6, 0.6)); // panel is too bright compared to the roof, use a darker color
+		}
+		else if (i->type == tquad_with_ix_t::TYPE_TRIM) {
+			bdraw.add_tquad(*this, *i, bcube, tid_nm_pair_t(), LT_GRAY); // untextured
+		}
+		else if (i->type == tquad_with_ix_t::TYPE_ROOF || i->type == tquad_with_ix_t::TYPE_ROOF_ACC) { // use roof texture
+			bdraw.add_tquad(*this, *i, bcube, mat.roof_tex.get_scaled_version(2.0), roof_color);
+		}
+		else if (i->type == tquad_with_ix_t::TYPE_BDOOR2 || i->type == tquad_with_ix_t::TYPE_RDOOR2) {
+			bdraw.add_tquad(*this, *i, bcube, building_texture_mgr.get_bdoor2_tid(), WHITE);
+		}
+		else { // use wall texture
+			bdraw.add_tquad(*this, *i, bcube, mat.side_tex, side_color);
+		}
+	} // for i
+	for (auto i = details.begin(); i != details.end(); ++i) { // draw roof details
+		if (i->type == ROOF_OBJ_AC) {
+			bool const swap_st(i->dx() > i->dy());
+			bool const tex_id((details.size() + parts.size() + mat_ix) & 1); // somewhat of a hash of various things; deterministic
+			int const ac_tid(tex_id ? building_texture_mgr.get_ac_unit_tid1() : building_texture_mgr.get_ac_unit_tid2());
+			bdraw.add_cube(*this, *i, tid_nm_pair_t(ac_tid, -1, (swap_st ? 1.0 : -1.0), 1.0), WHITE, swap_st, 4, 1, 0, 0); // Z, skip bottom, ws_texture=0
+			bdraw.add_cube(*this, *i, tid_nm_pair_t(ac_tid, -1, 0.3, 1.0), WHITE, 0, 3, 1, 0, 0); // XY with stretched texture, ws_texture=0
+			continue;
+		}
+		bool const skip_bot(i->type != ROOF_OBJ_SCAP), pointed(i->type == ROOF_OBJ_ANT); // draw antenna as a point
+		building_t b(building_geom_t(4, rot_sin, rot_cos, pointed)); // cube
+		b.bcube = bcube;
+		tid_nm_pair_t tex;
+		colorRGBA color;
 
-			for (tquad_with_ix_t const &i : roof_tquads) {
-				if (!is_attic_roof(i, 0)) continue; // type_roof_only=0
-				tquad_with_ix_t tq(i);
-				std::reverse(tq.pts, tq.pts+tq.npts); // reverse the normal and winding order
-				for (unsigned n = 0; n < tq.npts; ++n) {tq.pts[n].z -= delta_z;} // shift down slightly
-				bool swap_tc_xy(1); // horizontal by default
+		if (i->type == ROOF_OBJ_WALL && mat.add_windows) { // wall of brick/block building, use side color
+			tex   = mat.side_tex;
+			color = side_color;
+		}
+		else { // otherwise use roof color
+			tex   = mat.roof_tex.get_scaled_version(1.5);
+			color = detail_color*(pointed ? 0.5 : 1.0);
+		}
+		bdraw.add_section(b, 0, *i, tex, color, 7, skip_bot, 0, 1, 0); // all dims, no AO
+	} // for i
+	for (auto i = doors.begin(); i != doors.end(); ++i) { // these are the exterior doors
+		colorRGBA const &dcolor((i->type == tquad_with_ix_t::TYPE_GDOOR) ? WHITE : door_color); // garage doors are always white
+		bdraw.add_tquad(*this, *i, bcube, tid_nm_pair_t(get_building_door_tid(i->type), -1, 1.0, 1.0), dcolor);
+	}
+	for (auto i = fences.begin(); i != fences.end(); ++i) {
+		bdraw.add_fence(*this, *i, tid_nm_pair_t(WOOD_TEX, 0.4f/min(i->dx(), i->dy())), WHITE, (fences.size() > 1));
+	}
+	add_driveway_or_porch(bdraw, *this, driveway, LT_GRAY);
+	add_driveway_or_porch(bdraw, *this, porch,    LT_GRAY);
 
-				if (i.type == tquad_with_ix_t::TYPE_ROOF) { // make sure wood orient is horizontal
-					vector3d const normal(tq.get_norm());
-					swap_tc_xy = (fabs(normal.x) < fabs(normal.y));
+	if (roof_type == ROOF_TYPE_DOME || roof_type == ROOF_TYPE_ONION) {
+		cube_t const &top(parts.back()); // top/last part
+		point const center(top.get_cube_center());
+		float const dx(top.dx()), dy(top.dy()), tscale(4.0f/(dx + dy));
+		tid_nm_pair_t tex(mat.roof_tex); // use a different dome texture?
+		tex.tscale_x *= tscale; tex.tscale_y *= tscale;
+		bdraw.add_roof_dome(point(center.x, center.y, top.z2()), 0.5*dx, 0.5*dy, tex, roof_color*1.5, (roof_type == ROOF_TYPE_ONION));
+	}
+}
+
+void building_t::get_all_drawn_ext_wall_verts(building_draw_t &bdraw) {
+	//if (interior == nullptr) return; // only needed if building has an interior?
+	if (!is_valid()) return; // invalid building
+	building_mat_t const &mat(get_material());
+	ext_side_qv_range.draw_ix = bdraw.get_to_draw_ix(mat.wall_tex);
+	ext_side_qv_range.start   = bdraw.get_num_verts (mat.wall_tex);
+
+	for (auto i = parts.begin(); i != get_real_parts_end_inc_sec(); ++i) { // multiple cubes/parts/levels, room parts only, no AO
+		if (!is_basement(i)) {bdraw.add_section(*this, 1, *i, mat.wall_tex, wall_color, 3, 0, 0, 1, 0);} // XY
+	}
+	ext_side_qv_range.end = bdraw.get_num_verts(mat.wall_tex);
+
+	if (has_basement()) {
+		tid_nm_pair_t const tp(get_basement_wall_texture());
+		// find basement door and exclude it
+		// dim_mask bits: enable dims: 1=x, 2=y, 4=z | disable cube faces: 8=x1, 16=x2, 32=y1, 64=y2, 128=z1, 256=z2
+		unsigned dim_mask(3); // XY
+		cube_t const &basement(get_basement());
+
+		if (has_basement_door) {
+			// find basement door and remove a section of wall around it; can't use stencil test associated with ext_side_qv_range
+			assert(interior);
+
+			for (auto const &door : interior->doors) { // check all exterior doors
+				if (door.z1() >= ground_floor_z1)    continue; // not a basement door
+				if (basement.contains_cube_xy(door)) continue; // not the door separating the basement from the exterior basement
+				unsigned const this_face(1 << (2*door.dim + door.open_dir + 3));
+				dim_mask |= this_face; // skip this face for the full basement call below
+
+				for (unsigned d = 0; d < 2; ++d) {
+					cube_t side(basement);
+					side.d[!door.dim][!d] = door.d[!door.dim][d];
+					bdraw.add_section(*this, 0, side, tp, WHITE, ~(this_face | 4), 0, 0, 1, 0); // single face, always white
 				}
-				bdraw.add_tquad(*this, tq, bcube, attic_tex, WHITE, 0, 0, 0, swap_tc_xy);
-			} // for i
+				break; // the first door should be the one connecting the basement to the extended basement
+			} // for doors
 		}
-		// Note: interior doors are drawn as part of room_geom
-		bdraw.end_draw_range_capture(interior->draw_range); // 80MB, 394MB, 836ms
-	} // end interior case
+		bdraw.add_section(*this, 0, basement, tp, WHITE, dim_mask, 0, 0, 1, 0); // XY, always white
+	}
+}
+
+void building_t::get_all_drawn_interior_verts(building_draw_t &bdraw) {
+	if (!is_valid() || interior == nullptr) return; // invalid building or no interior
+	building_mat_t const &mat(get_material());
+	bdraw.begin_draw_range_capture();
+
+	for (auto i = interior->floors.begin(); i != interior->floors.end(); ++i) { // 600K T
+		tid_nm_pair_t tex;
+		colorRGBA const color(get_floor_tex_and_color(*i, tex));
+		// expand_by_xy(-get_trim_thickness()) to prevent z-fighting when AA is disabled? but that will leave small gaps where floors from adjacent parts meet
+		bdraw.add_section(*this, 0, *i, tex, color, 4, 1, 0, 1, 0); // no AO; skip_bottom; Z dim only
+	}
+	for (auto i = interior->ceilings.begin(); i != interior->ceilings.end(); ++i) { // 600K T
+		// skip top surface of all but top floor ceilings if the roof is sloped;
+		// if this is an office building, the ceiling could be at a lower floor with a flat roof even if the highest floor has a sloped roof, so we must skip it
+		bool skip_top(roof_type == ROOF_TYPE_FLAT || !is_house || has_attic());
+
+		if (!skip_top) { // check if this is a top ceiling; needed for light occlusion
+			float const toler(get_floor_thickness());
+			skip_top = 1; // assume it's not
+
+			for (auto p = parts.begin(); p != get_real_parts_end(); ++p) { // Note: excludes garages and sheds
+				if (!is_basement(p) && p->contains_cube_xy(*i) && fabs(i->z2() - p->z2()) < toler) {skip_top = 0; break;}
+			}
+		}
+		tid_nm_pair_t tex;
+		colorRGBA const color(get_ceil_tex_and_color(*i, tex));
+		bdraw.add_section(*this, 0, *i, tex, color, 4, 0, skip_top, 1, 0); // no AO; Z dim only
+	} // for i
+	// minor optimization: don't need shadows for ceilings because lights only point down; assumes ceil_tex is only used for ceilings; not true for all houses
+	if (!is_house) {bdraw.set_no_shadows_for_tex(mat.ceil_tex);}
+
+	for (unsigned dim = 0; dim < 2; ++dim) { // Note: can almost pass in (1U << dim) as dim_filt, if it wasn't for door cutouts (2.2M T)
+		for (auto i = interior->walls[dim].begin(); i != interior->walls[dim].end(); ++i) {
+			colorRGBA const &color((i->z1() < ground_floor_z1) ? WHITE : wall_color); // basement walls are always white
+			bdraw.add_section(*this, 0, *i, mat.wall_tex, color, 3, 0, 0, 1, 0); // no AO; X/Y dims only
+		}
+	}
+	// Note: stair/elevator landings can probably be drawn in room_geom along with stairs, though I don't think there would be much benefit in doing so
+	for (auto i = interior->landings.begin(); i != interior->landings.end(); ++i) { // added per-floor (530K T)
+		unsigned dim_mask(3); // disable faces: 8=x1, 16=x2, 32=y1, 64=y2
+		if (i->for_elevator) {dim_mask |= (120 - (1 << (i->get_face_id() + 3)));} // disable all but the open side of the elevator
+		else if (i->for_ramp) {
+			cube_t const &basement(get_basement());
+			if (i->dim == 0) {dim_mask |= ((i->yc() < basement.yc()) ? 32 : 64);} // X, skip Y face closest to building wall
+			else             {dim_mask |= ((i->xc() < basement.xc()) ?  8 : 16);} // Y, skip X face closest to building wall
+		}
+		bdraw.add_section(*this, 0, *i, mat.wall_tex, mat.wall_color, dim_mask, 0, 0, 1, 0, 0.0, 0, 1.0, 1); // no AO; X/Y dims only, inverted normals
+	}
+	for (auto i = interior->elevators.begin(); i != interior->elevators.end(); ++i) {
+		bool const dim(i->dim), dir(i->dir);
+		float const spacing(i->get_wall_thickness()), frame_width(i->get_frame_width()); // space between inner/outer walls + frame around door
+		unsigned dim_mask(3); // x and y dims enabled
+		dim_mask |= (1 << (i->get_door_face_id() + 3)); // disable the face for the door opening
+		bdraw.add_section(*this, 0, *i, mat.wall_tex, mat.wall_color, dim_mask, 0, 0, 1, 0); // outer elevator is textured like the walls
+		cube_t entrance(*i);
+		entrance.d[dim][!dir] = entrance.d[dim][dir] + (dir ? -1.0f : 1.0f)*spacing; // set correct thickness
+
+		for (unsigned d = 0; d < 2; ++d) { // add frame on both sides of the door opening
+			cube_t frame(entrance); // one side
+			frame.d[!dim][d] = frame.d[!dim][!d] + (d ? 1.0f : -1.0f)*frame_width; // set position
+			unsigned dim_mask2(3); // x and y dims enabled
+			dim_mask2 |= (1 << (2*(!dim) + (!d) + 3)); // 3 faces drawn
+			bdraw.add_section(*this, 0, frame, mat.wall_tex, mat.wall_color, dim_mask2, 0, 0, 1, 0);
+		}
+		cube_t inner_cube(*i);
+		inner_cube.expand_by_xy(-spacing);
+		// add interior of elevator by drawing the inside of the cube with a slightly smaller size, with invert_normals=1; normal mapped?
+		tid_nm_pair_t wall_tex(FENCE_TEX, -1, 16.0, 16.0);
+		wall_tex.set_specular(0.5, 20.0);
+		bdraw.add_section(*this, 0, inner_cube, wall_tex, WHITE, dim_mask, 0, 0, 1, 0, 0.0, 0, 1.0, 1);
+		// Note elevator doors are dynamic and are drawn as part of room_geom
+	} // for i
+	if (has_attic() && interior->attic_type == ATTIC_TYPE_RAFTERS) { // underside of roof is visible
+		// add inside surface of attic access hole; could be draw as room geom if needed
+		bdraw.add_section(*this, 0, interior->attic_access, mat.wall_tex, mat.wall_color, 3, 0, 0, 1, 0, 0.0, 0, 1.0, 1); // no AO; X/Y dims only, inverted normals
+		// add inside surfaces of roof tquads
+		float const delta_z(0.1*get_floor_thickness()); // enough to prevent Z-fighting
+		tid_nm_pair_t const attic_tex(get_attic_texture());
+
+		for (tquad_with_ix_t const &i : roof_tquads) {
+			if (!is_attic_roof(i, 0)) continue; // type_roof_only=0
+			tquad_with_ix_t tq(i);
+			std::reverse(tq.pts, tq.pts+tq.npts); // reverse the normal and winding order
+			for (unsigned n = 0; n < tq.npts; ++n) {tq.pts[n].z -= delta_z;} // shift down slightly
+			bool swap_tc_xy(1); // horizontal by default
+
+			if (i.type == tquad_with_ix_t::TYPE_ROOF) { // make sure wood orient is horizontal
+				vector3d const normal(tq.get_norm());
+				swap_tc_xy = (fabs(normal.x) < fabs(normal.y));
+			}
+			bdraw.add_tquad(*this, tq, bcube, attic_tex, WHITE, 0, 0, 0, swap_tc_xy);
+		} // for i
+	}
+	// Note: interior doors are drawn as part of room_geom
+	bdraw.end_draw_range_capture(interior->draw_range); // 80MB, 394MB, 836ms
 }
 
 template<typename T> void building_t::add_door_verts(cube_t const &D, T &drawer, uint8_t door_type,
@@ -2943,8 +2945,8 @@ public:
 			building_draw_interior.cur_tile_id = (g - grid_by_tile.begin());
 
 			for (auto i = g->bc_ixs.begin(); i != g->bc_ixs.end(); ++i) {
-				get_building(i->ix).get_all_drawn_verts(building_draw_interior,      0, 1, 0); // interior
-				get_building(i->ix).get_all_drawn_verts(building_draw_int_ext_walls, 0, 0, 1); // interior of exterior walls
+				get_building(i->ix).get_all_drawn_interior_verts(building_draw_interior); // interior
+				get_building(i->ix).get_all_drawn_ext_wall_verts(building_draw_int_ext_walls); // interior of exterior walls
 			}
 		}
 #if 0
@@ -2955,7 +2957,7 @@ public:
 				 << building_draw_interior.get_cap_verts(tid_nm_pair_t(i)) << " " << get_texture_by_id(i).name << endl;
 		}
 #endif
-		building_draw_interior.finalize(grid_by_tile.size());
+		building_draw_interior     .finalize(grid_by_tile.size());
 		building_draw_int_ext_walls.finalize(grid_by_tile.size());
 	}
 	void get_all_drawn_verts(bool is_tile) { // Note: non-const; building_draw is modified
@@ -2970,7 +2972,7 @@ public:
 
 				for (auto g = grid_by_tile.begin(); g != grid_by_tile.end(); ++g) { // Note: all grids should be nonempty
 					building_draw_vbo.cur_tile_id = (g - grid_by_tile.begin());
-					for (auto i = g->bc_ixs.begin(); i != g->bc_ixs.end(); ++i) {get_building(i->ix).get_all_drawn_verts(building_draw_vbo, 1, 0, 0);} // exterior
+					for (auto i = g->bc_ixs.begin(); i != g->bc_ixs.end(); ++i) {get_building(i->ix).get_all_drawn_exterior_verts(building_draw_vbo);} // exterior
 				}
 				building_draw_vbo.finalize(grid_by_tile.size());
 			}
