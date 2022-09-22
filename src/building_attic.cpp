@@ -693,7 +693,7 @@ bool maybe_clip_overlapping_duct(room_object_t &duct, vect_room_object_t const &
 	for (auto i = objs.begin()+objs_start; i != objs.end(); ++i) {
 		if (!i->intersects(duct)) continue;
 		sub_cubes.clear();
-		subtract_cube_from_cube(duct, *i, sub_cubes);
+		subtract_cube_from_cube((cube_t)duct, *i, sub_cubes);
 		if (sub_cubes.empty())    return 0; // contained? shouldn't happen
 		if (sub_cubes.size() > 1) continue; // multiple parts, skip because this case is too complex; should be rare
 		duct.copy_from(sub_cubes[0]); // single part - clip to shorter length to remove the overlap
@@ -829,7 +829,7 @@ void building_t::add_attic_ductwork(rand_gen_t rgen, room_object_t const &furnac
 		for (auto i = objs.begin()+horiz_ducts_start; i != objs.end(); ++i) {
 			if (!duct_merges_to_xy(duct, *i)) continue;
 			sub_cubes.clear();
-			subtract_cube_from_cube(duct, *i, sub_cubes);
+			subtract_cube_from_cube((cube_t)duct, *i, sub_cubes);
 			if (sub_cubes.size() == 1) {duct.copy_from(sub_cubes[0]);} // clip to premove overlaps; should generally (always?) be true
 			objs.push_back(duct); // add vertical duct with no extension
 			added = 1;

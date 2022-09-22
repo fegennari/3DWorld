@@ -1370,23 +1370,22 @@ bool building_t::is_valid_stairs_elevator_placement(cube_t const &c, float pad, 
 	return 1;
 }
 
-void subtract_cube_from_cube(cube_t const &c, cube_t const &s, vect_cube_t &out) { // XY only
-	cube_t C;
-	if (c.y1() < s.y1()) {C = c; C.y2() = s.y1(); out.push_back(C);} // bottom
-	if (c.y2() > s.y2()) {C = c; C.y1() = s.y2(); out.push_back(C);} // top
-	if (c.x1() < s.x1()) {C = c; max_eq(C.y1(), s.y1()); min_eq(C.y2(), s.y2()); C.x2() = s.x1(); out.push_back(C);} // left center
-	if (c.x2() > s.x2()) {C = c; max_eq(C.y1(), s.y1()); min_eq(C.y2(), s.y2()); C.x1() = s.x2(); out.push_back(C);} // right center
+template<typename T> void subtract_cube_from_cube(T const &c, cube_t const &s, vector<T> &out) { // XY only
+	if (c.y1() < s.y1()) {T C(c); C.y2() = s.y1(); out.push_back(C);} // bottom
+	if (c.y2() > s.y2()) {T C(c); C.y1() = s.y2(); out.push_back(C);} // top
+	if (c.x1() < s.x1()) {T C(c); max_eq(C.y1(), s.y1()); min_eq(C.y2(), s.y2()); C.x2() = s.x1(); out.push_back(C);} // left center
+	if (c.x2() > s.x2()) {T C(c); max_eq(C.y1(), s.y1()); min_eq(C.y2(), s.y2()); C.x1() = s.x2(); out.push_back(C);} // right center
 }
-void subtract_cube_from_cube_inplace(cube_t const &s, vect_cube_t &cubes, unsigned &ix, unsigned &iter_end) { // Note: ix is an index to cubes
+template<typename T> void subtract_cube_from_cube_inplace(cube_t const &s, vector<T> &cubes, unsigned &ix, unsigned &iter_end) { // Note: ix is an index to cubes
 	unsigned const prev_sz(cubes.size());
 	assert(ix < prev_sz);
-	cube_t const c(cubes[ix]); // deep copy - reference will become invalid
+	T const c(cubes[ix]); // deep copy - reference will become invalid
 	subtract_cube_from_cube(c, s, cubes);
 	cubes[ix] = cubes.back(); cubes.pop_back(); // reuse this slot for one of the output cubes (or move the last cube here if there are no output cubes)
 	if (cubes.size() <= prev_sz) {--ix; --iter_end;} // no cubes added, last cube was swapped into this slot and needs to be reprocessed
 }
 // subtracts in X and Y only; zval_mode: 0=check floor/building ext walls, 1=ignore zvals, 2=check zval overlap
-template<typename T> void subtract_cubes_from_cube(cube_t const &c, T const &sub, vect_cube_t &out, vect_cube_t &out2, int zval_mode) {
+template<typename T> void subtract_cubes_from_cube(cube_t const &c, vector<T> const &sub, vect_cube_t &out, vect_cube_t &out2, int zval_mode) {
 	out.clear();
 	out.push_back(c);
 
@@ -1404,19 +1403,19 @@ template<typename T> void subtract_cubes_from_cube(cube_t const &c, T const &sub
 		out.swap(out2);
 	} // for s
 }
-template void subtract_cubes_from_cube(cube_t const &c, vect_cube_t            const &sub, vect_cube_t &out, vect_cube_t &out2, int zval_mode); // explicit instantiation
+template void subtract_cubes_from_cube(cube_t const &c, vector<cube_t>         const &sub, vect_cube_t &out, vect_cube_t &out2, int zval_mode); // explicit instantiation
 template void subtract_cubes_from_cube(cube_t const &c, vector<stairs_place_t> const &sub, vect_cube_t &out, vect_cube_t &out2, int zval_mode); // explicit instantiation
 
-bool subtract_cube_from_cubes(cube_t const &s, vect_cube_t &cubes, vect_cube_t *holes, bool clip_in_z, bool include_adj) {
+template<typename T> bool subtract_cube_from_cubes(cube_t const &s, vector<T> &cubes, vect_cube_t *holes, bool clip_in_z, bool include_adj) {
 	unsigned iter_end(cubes.size()); // capture size before splitting
 	bool was_clipped(0);
 
 	for (unsigned i = 0; i < iter_end; ++i) {
-		cube_t const &c(cubes[i]);
+		T const &c(cubes[i]);
 		if (!(include_adj ? c.intersects(s) : c.intersects_no_adj(s))) continue; // keep it
 		
 		if (holes) {
-			cube_t hole(c);
+			cube_t hole(c); // always a cube
 			hole.intersect_with_cube(s);
 			bool merged(0);
 
@@ -1435,16 +1434,19 @@ bool subtract_cube_from_cubes(cube_t const &s, vect_cube_t &cubes, vect_cube_t *
 			if (!merged) {holes->push_back(hole);}
 		} // end holes handling
 		if (clip_in_z) { // Note: remember that c reference will be invalidated below
-			cube_t shared(c);
+			T shared(c);
 			shared.intersect_with_cube_xy(s);
-			if (shared.z1() < s.z1()) {cube_t bot(shared); bot.z2() = s.z1(); cubes.push_back(bot);} // bottom part
-			if (shared.z2() > s.z2()) {cube_t top(shared); top.z1() = s.z2(); cubes.push_back(top);} // top part
+			if (shared.z1() < s.z1()) {T bot(shared); bot.z2() = s.z1(); cubes.push_back(bot);} // bottom part
+			if (shared.z2() > s.z2()) {T top(shared); top.z1() = s.z2(); cubes.push_back(top);} // top part
 		}
 		subtract_cube_from_cube_inplace(s, cubes, i, iter_end); // Note: invalidates c reference
 		was_clipped = 1;
 	} // for i
 	return was_clipped;
 }
+template bool subtract_cube_from_cubes(cube_t const &s, vector<cube_t>         &cubes, vect_cube_t *holes, bool clip_in_z, bool include_adj);
+template bool subtract_cube_from_cubes(cube_t const &s, vector<cube_with_ix_t> &cubes, vect_cube_t *holes, bool clip_in_z, bool include_adj);
+
 template<typename T> void subtract_cubes_from_cubes(T const &sub, vect_cube_t &cubes) {
 	for (auto i = sub.begin(); i != sub.end(); ++i) {subtract_cube_from_cubes(*i, cubes);}
 }
