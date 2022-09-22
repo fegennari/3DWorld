@@ -1386,11 +1386,18 @@ void building_t::get_all_drawn_interior_verts(building_draw_t &bdraw) {
 	} // for i
 	// minor optimization: don't need shadows for ceilings because lights only point down; assumes ceil_tex is only used for ceilings; not true for all houses
 	if (!is_house) {bdraw.set_no_shadows_for_tex(mat.ceil_tex);}
+	float const wall_thickness(get_wall_thickness());
 
 	for (unsigned dim = 0; dim < 2; ++dim) { // Note: can almost pass in (1U << dim) as dim_filt, if it wasn't for door cutouts (2.2M T)
 		for (auto i = interior->walls[dim].begin(); i != interior->walls[dim].end(); ++i) {
+			//unsigned const dim_mask(1 << dim); // doesn't work with office building hallway intersection corners and door frame shadows
+			unsigned dim_mask(3);
+
+			for (unsigned dir = 0; dir < 2; ++dir) { // easy case: skip faces along the edges of the building bcube
+				if (fabs(i->d[!dim][dir] - bcube.d[!dim][dir]) < wall_thickness) {dim_mask |= (1<<(2*(!dim)+dir+3));}
+			}
 			colorRGBA const &color((i->z1() < ground_floor_z1) ? WHITE : wall_color); // basement walls are always white
-			bdraw.add_section(*this, 0, *i, mat.wall_tex, color, 3, 0, 0, 1, 0); // no AO; X/Y dims only
+			bdraw.add_section(*this, 0, *i, mat.wall_tex, color, dim_mask, 0, 0, 1, 0); // no AO; X and/or Y dims only
 		}
 	}
 	// Note: stair/elevator landings can probably be drawn in room_geom along with stairs, though I don't think there would be much benefit in doing so
