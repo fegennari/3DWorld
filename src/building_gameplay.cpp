@@ -1568,7 +1568,7 @@ bool line_int_cube_get_t(point const &p1, point const &p2, cube_t const &cube, f
 	if (get_line_clip(p1, p2, cube.d, tmin0, tmax0) && tmin0 < tmin) {tmin = tmin0; return 1;}
 	return 0;
 }
-bool line_int_cubes_get_t(point const &p1, point const &p2, vect_cube_t const &cubes, float &tmin, cube_t &target) {
+template<typename T> bool line_int_cubes_get_t(point const &p1, point const &p2, vector<T> const &cubes, float &tmin, cube_t &target) { // cube_t, cube_with_ix_t, etc.
 	bool had_int(0);
 
 	for (auto c = cubes.begin(); c != cubes.end(); ++c) {

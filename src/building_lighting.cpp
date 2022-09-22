@@ -902,7 +902,7 @@ void building_t::register_blinds_state_change() const {
 	register_indir_lighting_geom_change();
 }
 
-bool line_int_cubes(point const &p1, point const &p2, vect_cube_t const &cubes) {
+template<typename T> bool line_int_cubes(point const &p1, point const &p2, vector<T> const &cubes) { // cube_t, cube_with_ix_t, etc.
 	for (auto c = cubes.begin(); c != cubes.end(); ++c) {
 		if (c->line_intersects(p1, p2)) return 1;
 	}

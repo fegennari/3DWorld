@@ -829,7 +829,7 @@ bool get_line_clip_update_t(point const &p1, point const &p2, cube_t const &c, f
 	if (get_line_clip(p1, p2, c.d, tmin, tmax) && tmin < t) {t = tmin; return 1;}
 	return 0;
 }
-bool get_line_clip_update_t(point const &p1, point const &p2, vect_cube_t const &cubes, float &t) {
+template<typename T> bool get_line_clip_update_t(point const &p1, point const &p2, vector<T> const &cubes, float &t) { // cube_t, cube_with_ix_t, etc.
 	bool had_coll(0);
 	for (auto i = cubes.begin(); i != cubes.end(); ++i) {had_coll |= get_line_clip_update_t(p1, p2, *i, t);}
 	return had_coll;
@@ -898,7 +898,7 @@ void update_closest_pt(cube_t const &cube, point const &pos, point &closest, flo
 	float const dsq(p2p_dist_sq(pos, cand));
 	if (dmin_sq < 0.0 || dsq < dmin_sq) {closest = cand; dmin_sq = dsq;}
 }
-void update_closest_pt(vect_cube_t const &cubes, point const &pos, point &closest, float pad_dist, float &dmin_sq) {
+template<typename T> void update_closest_pt(vector<T> const &cubes, point const &pos, point &closest, float pad_dist, float &dmin_sq) { // cube_t, cube_with_ix_t, etc.
 	for (auto c = cubes.begin(); c != cubes.end(); ++c) {update_closest_pt(*c, pos, closest, pad_dist, dmin_sq);}
 }
 point building_interior_t::find_closest_pt_on_obj_to_pos(building_t const &building, point const &pos, float pad_dist, bool no_ceil_floor) const { // for tape

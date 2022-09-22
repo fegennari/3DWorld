@@ -1778,7 +1778,9 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, building_t c
 	}
 }
 
-template<bool check_sz> bool are_pts_occluded_by_any_cubes(point const &pt, point const *const pts, unsigned npts, vect_cube_t const &cubes, unsigned dim, float min_sz=0.0) {
+template<bool check_sz, typename T> bool are_pts_occluded_by_any_cubes(point const &pt, point const *const pts, unsigned npts,
+	vector<T> const &cubes, unsigned dim, float min_sz=0.0)
+{
 	assert(npts > 0);
 
 	for (auto c = cubes.begin(); c != cubes.end(); ++c) {

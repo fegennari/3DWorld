@@ -1142,14 +1142,14 @@ struct ext_basement_room_params_t;
 
 
 struct building_interior_t {
-	vect_cube_t floors, ceilings, walls[2], fc_occluders; // walls are split by dim, which is the separating dimension of the wall
+	vect_cube_t floors, ceilings, fc_occluders, exclusion;
+	vect_cube_t walls[2]; // walls are split by dim, which is the separating dimension of the wall
 	vect_stairwell_t stairwells;
 	vector<door_t> doors;
 	vector<door_stack_t> door_stacks;
 	vector<landing_t> landings; // for stairs and elevators
 	vector<room_t> rooms;
 	vector<elevator_t> elevators;
-	vect_cube_t exclusion;
 	vector<person_t> people;
 	std::unique_ptr<building_room_geom_t> room_geom;
 	std::unique_ptr<building_nav_graph_t> nav_graph;

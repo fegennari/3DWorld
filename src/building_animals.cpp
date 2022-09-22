@@ -685,7 +685,7 @@ public:
 		}
 		colliders.push_back(c); // record for later processing in align_to_surfaces()
 	}
-	void register_cubes(vect_cube_t const &cubes, bool check_z_merge=0) {
+	template<typename T> void register_cubes(vector<T> const &cubes, bool check_z_merge=0) { // cube, cube_with_ix_t, etc.
 		for (cube_t const &c : cubes) {register_cube(c, check_z_merge);}
 	}
 	void clip_and_max_expand_cubes() {

@@ -438,7 +438,7 @@ cube_t building_t::place_door(cube_t const &base, bool dim, bool dir, float door
 			door_pos    = base.d[dim][dir];
 		}
 		if (interior && (!has_pri_hall() || is_basement) && !opens_up) { // not on a hallway - check distance to interior walls to make sure the door has space to open
-			vect_cube_t const &walls(interior->walls[!dim]); // perpendicular to door
+			auto const &walls(interior->walls[!dim]); // perpendicular to door
 			float const door_lo(door_center - 1.2*door_half_width), door_hi(door_center + 1.2*door_half_width); // pos along wall with a small expand
 			float const dpos_lo(door_pos    -     door_half_width), dpos_hi(door_pos    +     door_half_width); // expand width of the door
 

@@ -286,7 +286,7 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 			float const wall_pos(p->d[!min_dim][0] + room_len); // pos of first wall separating first from second rooms
 			float const hall_wall_pos[2] = {(p->d[min_dim][0] + room_width), (p->d[min_dim][1] - room_width)};
 			if (hallway_dim == 2) {hallway_dim = !min_dim;} // cache in building for later use, only for first part (ground floor)
-			vect_cube_t &room_walls(interior->walls[!min_dim]), &hall_walls(interior->walls[min_dim]);
+			auto &room_walls(interior->walls[!min_dim]), &hall_walls(interior->walls[min_dim]);
 			hall = *p;
 			for (unsigned e = 0; e < 2; ++e) {hall.d[min_dim][e] = hall_wall_pos[e];}
 			vector<unsigned> utility_room_cands;
@@ -477,7 +477,7 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 					assert(sh_spacing > min_wall_len); // I'm not sure if this can fail or what we should do in that case - use fewer secondary hallways?
 					float room_start(p->d[!min_dim][0]), wall_pos(room_start + end_spacing); // first sec hall wall pos
 					int const num_offices(4*rooms_per_side*num_sec_halls);
-					vect_cube_t &split_walls(hall_walls);
+					auto &split_walls(hall_walls);
 					room_walls.reserve(4*(rooms_per_side+1)*num_sec_halls + 2*(num_sec_halls-1)); // walls with doors + room dividers
 					split_walls.reserve(2*rooms_per_side*(num_sec_halls+1));
 					rooms.reserve(num_offices + 2*num_sec_halls + 1); // offices + sec hallways + pri hallway
@@ -720,7 +720,7 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 				float const lo_pos(doorway_pos - doorway_hwidth), hi_pos(doorway_pos + doorway_hwidth);
 				bool const open_dir(wall_pos > part_door_open_dir_tp[wall_dim]); // doors open away from the building center
 				remove_section_from_cube_and_add_door(wall, wall2, lo_pos, hi_pos, !wall_dim, open_dir);
-				vect_cube_t &walls(interior->walls[wall_dim]);
+				auto &walls(interior->walls[wall_dim]);
 				walls.push_back(wall);
 				walls.push_back(wall2);
 				float door_lo[2] = {lo_pos, lo_pos}, door_hi[2] = {hi_pos, hi_pos}; // passed to next split step to avoid placing a wall that intersects this doorway
@@ -838,8 +838,8 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 	}
 	// attempt to cut extra doorways into long walls if there's space to produce a more connected floorplan
 	for (unsigned d = 0; d < 2; ++d) { // x,y: dim in which the wall partitions the room (wall runs in dim !d)
-		vect_cube_t &walls(interior->walls[d]);
-		vect_cube_t const &perp_walls(interior->walls[!d]);
+		auto &walls(interior->walls[d]);
+		auto const &perp_walls(interior->walls[!d]);
 
 		// Note: iteration will include newly added all segments to recursively split long walls
 		for (unsigned w = first_wall_to_split[d]; w < walls.size(); ++w) { // skip hallway walls
