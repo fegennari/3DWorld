@@ -1241,6 +1241,7 @@ struct building_t : public building_geom_t {
 	bool has_driveway () const {return !driveway.is_all_zeros();}
 	bool has_a_garage () const {return (has_garage || has_int_garage);} // external or internal
 	bool has_attic    () const {return (interior && !interior->attic_access.is_all_zeros());}
+	bool skip_top_of_ceilings() const {return (roof_type == ROOF_TYPE_FLAT || !is_house || has_attic());}
 	bool enable_driveway_coll() const {return !is_rotated();} // no collision with rotated driveways/porches for now
 	bool has_pg_ramp() const {return (interior && !interior->pg_ramp.is_all_zeros());}
 	bool can_extend_pri_hall_stairs_to_pg() const {return (has_parking_garage && has_pri_hall() && pri_hall.z1() == ground_floor_z1);}
@@ -1342,12 +1343,10 @@ struct building_t : public building_geom_t {
 	void gen_sloped_roof(rand_gen_t &rgen, cube_t const &top);
 	void add_roof_to_bcube();
 	void gen_grayscale_detail_color(rand_gen_t &rgen, float imin, float imax);
-private:
 	tid_nm_pair_t get_basement_wall_texture() const;
 	tid_nm_pair_t get_attic_texture() const;
 	colorRGBA get_floor_tex_and_color(cube_t const &floor_cube, tid_nm_pair_t &tex) const;
 	colorRGBA get_ceil_tex_and_color (cube_t const &ceil_cube,  tid_nm_pair_t &tex) const;
-public:
 	void get_all_drawn_exterior_verts(building_draw_t &bdraw);
 	void get_all_drawn_ext_wall_verts(building_draw_t &bdraw);
 	void get_all_drawn_interior_verts(building_draw_t &bdraw);
@@ -1472,6 +1471,7 @@ public:
 	bool cube_int_ext_basement(cube_t const &c) const {return (interior && interior->basement_ext_bcube.intersects(c));}
 	bool point_in_building_or_basement_bcube(point const &pos) const {return (bcube.contains_pt(pos) || point_in_extended_basement(pos));}
 	float get_bcube_z1_inc_ext_basement() const {return (has_ext_basement() ? min(bcube.z1(), interior->basement_ext_bcube.z1()) : bcube.z1());}
+	unsigned get_num_ext_basement_rooms() const {return (has_ext_basement() ? (interior->rooms.size() - interior->ext_basement_hallway_room_id) : 0);}
 	cube_t get_bcube_inc_extensions() const;
 	cube_t get_full_basement_bcube () const;
 	room_t const &get_ext_basement_hallway() const;

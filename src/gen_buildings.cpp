@@ -1370,7 +1370,7 @@ void building_t::get_all_drawn_interior_verts(building_draw_t &bdraw) {
 	for (auto i = interior->ceilings.begin(); i != interior->ceilings.end(); ++i) { // 600K T
 		// skip top surface of all but top floor ceilings if the roof is sloped;
 		// if this is an office building, the ceiling could be at a lower floor with a flat roof even if the highest floor has a sloped roof, so we must skip it
-		bool skip_top(roof_type == ROOF_TYPE_FLAT || !is_house || has_attic());
+		bool skip_top(skip_top_of_ceilings());
 
 		if (!skip_top) { // check if this is a top ceiling; needed for light occlusion
 			float const toler(get_floor_thickness());
@@ -2931,14 +2931,28 @@ public:
 
 		for (auto b = buildings.begin(); b != buildings.end(); ++b) {
 			if (!b->interior) continue; // no interior
-			building_mat_t const &mat(b->get_material());
-			unsigned const nv_wall(16*(b->interior->walls[0].size() + b->interior->walls[1].size() + b->interior->landings.size() + b->has_attic()) + 36*b->interior->elevators.size());
-			unsigned const nfloors(b->interior->floors.size());
-			vert_counter.update_count(mat.house_floor_tex.tid, 4*((b->is_house && nfloors > 0) ? (nfloors - b->has_sec_bldg()) : 0));
-			vert_counter.update_count(mat.floor_tex.tid, 4*(b->is_house ? b->has_sec_bldg() : nfloors));
-			vert_counter.update_count((b->is_house ? mat.house_ceil_tex.tid : mat.ceil_tex.tid ), 4*b->interior->ceilings.size());
-			vert_counter.update_count(mat.wall_tex.tid, nv_wall);
-			vert_counter.update_count(FENCE_TEX, 12*b->interior->elevators.size());
+			unsigned const num_elevators(b->interior->elevators.size()), ceil_nverts(b->skip_top_of_ceilings() ? 4 : 8);
+			unsigned const nv_wall(16*(b->interior->walls[0].size() + b->interior->walls[1].size() + b->interior->landings.size() + b->has_attic()) + 36*num_elevators);
+			vert_counter.update_count(b->get_material().wall_tex.tid, nv_wall);
+			vert_counter.update_count(FENCE_TEX, 12*num_elevators);
+
+			for (cube_t const &f : b->interior->floors) { // TODO: garage_door and fence textures
+				tid_nm_pair_t tex;
+				b->get_floor_tex_and_color(f, tex);
+				vert_counter.update_count(tex.tid, 4);
+			}
+			for (cube_t const &c : b->interior->ceilings) {
+				tid_nm_pair_t tex;
+				b->get_ceil_tex_and_color(c, tex);
+				vert_counter.update_count(tex.tid, ceil_nverts);
+			}
+			if (b->has_attic()) {
+				tid_nm_pair_t const attic_tex(b->get_attic_texture());
+
+				for (tquad_with_ix_t const &i : b->roof_tquads) {
+					if (b->is_attic_roof(i, 0)) {vert_counter.update_count(attic_tex.tid, i.npts);}
+				}
+			}
 		}
 		for (unsigned i = 0; i < tid_mapper.get_num_slots(); ++i) {
 			unsigned const count(vert_counter.get_count(i));
