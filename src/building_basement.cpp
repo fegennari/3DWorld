@@ -1592,7 +1592,7 @@ void building_interior_t::place_exterior_room(extb_room_t const &room, cube_t co
 	subtract_cubes_from_cube(floor,   P.stairs, P.wall_segs, P.temp_cubes, 2); // cut out stairs; zval_mode=2 (check for zval overlap)
 	vector_add_to(P.wall_segs, floors);
 	basement_ext_bcube.assign_or_union_with_cube(room);
-	// add walls
+	// add walls; Note: two adjoining rooms may share overlapping walls
 	float const wall_half_thick(0.5*wall_thick);
 
 	for (unsigned dim = 0; dim < 2; ++dim) {

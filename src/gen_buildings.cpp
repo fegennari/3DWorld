@@ -1356,6 +1356,11 @@ void building_t::get_all_drawn_ext_wall_verts(building_draw_t &bdraw) {
 	}
 }
 
+void set_skip_faces_for_nearby_cube_edge(cube_t const &c, cube_t const &C, float dist, bool dim, unsigned &dim_mask) {
+	for (unsigned dir = 0; dir < 2; ++dir) { // easy case: skip faces along the edges of the building bcube
+		if (fabs(c.d[dim][dir] - C.d[dim][dir]) < dist) {dim_mask |= (1<<(2*(dim)+dir+3));}
+	}
+}
 void building_t::get_all_drawn_interior_verts(building_draw_t &bdraw) {
 	if (!is_valid() || interior == nullptr) return; // invalid building or no interior
 	building_mat_t const &mat(get_material());
@@ -1392,10 +1397,22 @@ void building_t::get_all_drawn_interior_verts(building_draw_t &bdraw) {
 		for (auto i = interior->walls[dim].begin(); i != interior->walls[dim].end(); ++i) {
 			//unsigned const dim_mask(1 << dim); // doesn't work with office building hallway intersection corners and door frame shadows
 			unsigned dim_mask(3);
-
-			for (unsigned dir = 0; dir < 2; ++dir) { // easy case: skip faces along the edges of the building bcube
-				if (fabs(i->d[!dim][dir] - bcube.d[!dim][dir]) < wall_thickness) {dim_mask |= (1<<(2*(!dim)+dir+3));}
-			}
+			set_skip_faces_for_nearby_cube_edge(*i, bcube, wall_thickness, !dim, dim_mask); // easy case: skip faces along the edges of the building bcube
+			// check rooms
+			bool const in_ext_basement(i >= interior->walls[dim].begin() + interior->extb_walls_start[dim]);
+			unsigned const extb_room_start((interior->ext_basement_hallway_room_id >= 0) ? interior->ext_basement_hallway_room_id : interior->rooms.size());
+			unsigned const rooms_start(in_ext_basement ? extb_room_start : 0);
+			unsigned const rooms_end  (in_ext_basement ? interior->rooms.size() : extb_room_start);
+			
+			for (auto r = interior->rooms.begin()+rooms_start; r != interior->rooms.begin()+rooms_end; ++r) {
+				if (!r->intersects(*i)) continue; // wall doesn't intersect this room
+				// office hallways can have outside corners, and we need to draw the walls there
+				if (!is_house && has_pri_hall() && r->is_hallway) {dim_mask = 3; break;} // force all 4 sides
+				set_skip_faces_for_nearby_cube_edge(*i, *r, wall_thickness, !dim, dim_mask);
+				// non-hallway ext basement rooms don't need to have their exterior wall surfaces drawn; hallways do, because they may share a wall with a connected room;
+				// but unfortunately we still have to draw these walls in the shadow pass to block lights from nearby rooms
+				//if (in_ext_basement && !r->is_hallway) {set_skip_faces_for_nearby_cube_edge(*i, *r, wall_thickness, dim, dim_mask);}
+			} // for r
 			colorRGBA const &color((i->z1() < ground_floor_z1) ? WHITE : wall_color); // basement walls are always white
 			bdraw.add_section(*this, 0, *i, mat.wall_tex, color, dim_mask, 0, 0, 1, 0); // no AO; X and/or Y dims only
 		}
@@ -2971,7 +2988,7 @@ public:
 			}
 		}
 #if 0
-		for (unsigned i = 0; i < tid_mapper.get_num_slots(); ++i) {
+		for (unsigned i = 0; i < tid_mapper.get_num_slots(); ++i) { // walls: 16893984 / 16553020 => 15887564 => 12822128
 			unsigned const count(vert_counter.get_count(i));
 			if (count == 0) continue;
 			cout << i << ": R=" << count << " S=" << building_draw_interior.get_num_verts(tid_nm_pair_t(i)) << " C="
