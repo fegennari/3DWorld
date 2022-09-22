@@ -2030,7 +2030,10 @@ struct cube_b_z2_ascending {
 };
 
 void building_interior_t::sort_for_optimal_culling() {
-	for (unsigned d = 0; d < 2; ++d) {sort(walls[d].begin(), walls[d].end(), cube_by_sz(!d));} // sort walls longest to shortest to improve occlusion culling time
+	for (unsigned d = 0; d < 2; ++d) { // sort walls longest to shortest to improve occlusion culling time
+		assert(extb_walls_start[d] <= walls[d].size());
+		sort(walls[d].begin(), walls[d].begin()+extb_walls_start[d], cube_by_sz(!d)); // skip exterior basement walls
+	}
 	sort(floors  .begin(), floors  .end(), cube_b_z1_descending()); // top down,  for early z culling and improved occluder fusion
 	sort(ceilings.begin(), ceilings.end(), cube_b_z2_ascending ()); // bottom up, for early z culling and improved occluder fusion
 }

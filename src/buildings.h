@@ -1156,6 +1156,7 @@ struct building_interior_t {
 	cube_with_ix_t pg_ramp, attic_access; // ix stores {dim, dir}
 	cube_t basement_ext_bcube;
 	draw_range_t draw_range;
+	unsigned extb_walls_start[2] = {0,0};
 	int garage_room, ext_basement_hallway_room_id;
 	uint8_t furnace_type, attic_type;
 	bool door_state_updated, is_unconnected, ignore_ramp_placement, placed_people, elevators_disabled, attic_access_open;
