@@ -1260,31 +1260,44 @@ int building_t::ai_room_update(rand_gen_t &rgen, float delta_dir, unsigned perso
 		if (person.on_stairs()) {person.dir.z = new_dir.z/new_dir_mag;} // dir.z tracks exactly
 		person.dir.normalize();
 		new_pos = person.pos + (max_dist*step_scale)*person.dir;
-		cube_t clip_cube;
-		
-		if (new_pos.z < ground_floor_z1) { // in the basement
-			cube_t const &basement(get_basement());
-
-			if (has_ext_basement()) {
-				cube_t sc; sc.set_from_sphere(new_pos, coll_dist); // sphere bounding cube
-				float cont_area(0.0);
-				accumulate_shared_xy_area(basement, sc, cont_area);
-				accumulate_shared_xy_area(interior->basement_ext_bcube, sc, cont_area);
-
-				if (cont_area < 0.99*sc.get_area_xy()) { // not contained - force into whichever cube contains the center
-					clip_cube = (basement.contains_pt(new_pos) ? basement : interior->basement_ext_bcube);
-				}
-				else {clip_cube = get_full_basement_bcube();}
-			}
-			else {clip_cube = basement;} // basement only
-		}
-		else {clip_cube = bcube;} // above ground
-		clip_cube.expand_by_xy(-coll_dist); // shrink
-		clip_cube.clamp_pt_xy(new_pos); // make sure person stays within building bcube; can't clip to room because person may be exiting it
 	}
 	else { // optimization for aligned dir
 		new_pos = person.pos + max_dist*person.dir;
 	}
+	// make sure the person is inside the building, in case they were pushed by another person
+	cube_t clip_cube;
+		
+	if (new_pos.z < ground_floor_z1) { // in the basement
+		cube_t const &basement(get_basement());
+
+		if (has_ext_basement()) {
+			cube_t sc; sc.set_from_sphere(new_pos, coll_dist); // sphere bounding cube
+			float cont_area(0.0);
+			accumulate_shared_xy_area(basement, sc, cont_area);
+			clip_cube = get_full_basement_bcube(); // start with full union bcube for basement
+
+			if (basement.contains_pt(new_pos)) { // primarily in the basement
+				accumulate_shared_xy_area(interior->basement_ext_bcube, sc, cont_area);
+				if (cont_area < 0.99*sc.get_area_xy()) {clip_cube = basement;} // not contained - force into the basement
+			}
+			else { // primarily in the extended basement
+				cube_t cur_room_bcube(basement); // start at the basement in case we're not even in a room, so we can at least snap here as a fallback
+
+				for (auto r = interior->basement_rooms_start(); r != interior->rooms.end(); ++r) {
+					if (new_pos.z < r->z1() || new_pos.z > r->z2()) continue; // wrong level
+					if (r->contains_pt(new_pos)) {cur_room_bcube = *r;} // this is the room we'll be pushed into if needed
+					accumulate_shared_xy_area(*r, sc, cont_area);
+				}
+				if (cont_area < 0.99*sc.get_area_xy()) {clip_cube = cur_room_bcube;} // not contained - force into containing room
+			}
+		}
+		else {clip_cube = basement;} // basement only
+	}
+	else {clip_cube = bcube;} // above ground
+	clip_cube.expand_by_xy(-coll_dist); // shrink
+	clip_cube.clamp_pt_xy(new_pos); // make sure person stays within building bcube; can't clip to room because person may be exiting it
+	assert(point_in_building_or_basement_bcube(new_pos));
+
 	// don't do collision detection while on stairs because it doesn't work properly; just let people walk through each other
 	if (!person.on_stairs()) {
 		for (auto p = interior->people.begin()+person_ix+1; p < interior->people.end(); ++p) { // check all other people in the same building after this one and attempt to avoid them
