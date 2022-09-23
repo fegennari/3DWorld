@@ -1096,12 +1096,12 @@ bool check_for_shadow_caster(vect_cube_t const &cubes, cube_t const &light_bcube
 	bool ret(0);
 
 	for (auto c = cubes.begin(); c != cubes.end(); ++c) {
-		if (lpos.z < c->z2()) continue; // light is below the object; assumes lights are spotlights pointed downward
+		if (lpos.z < c->z1()) continue; // light is below the object's bottom; assumes lights are spotlights pointed downward
 		if (!c->intersects(light_bcube)) continue; // object not within light area of effect
 		point const center(c->get_cube_center());
 		if (!dist_less_than(lpos, center, dmax)) continue; // too far from light to cast a visible shadow
 		
-		if (!has_stairs) { // the below check is inaccurate, skip and just return 1
+		if (!has_stairs) {
 			// check for camera visibility of the union of the cube and the intersection points of the light rays
 			// projected through the top 4 corners of the cube to the floor (cube z1 value)
 			float const z(c->z2()); // top edge of the cube
