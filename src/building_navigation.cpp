@@ -751,24 +751,35 @@ int building_t::choose_dest_room(person_t &person, rand_gen_t &rgen) const {
 		if (cand_room == (unsigned)loc.room_ix) continue;
 		room_t const &room(interior->rooms[cand_room]);
 		if (room.is_hallway) continue; // don't select a hallway
-		// for now, always do this so that we don't have to handle walking between stacked parts
-		if (person.pos.z < room.z1() || person.pos.z > room.z2()) continue; // room above or below the current pos (won't walk between stacks)
+		if ((person.pos.z + floor_spacing) < room.z1() || (person.pos.z - floor_spacing) > room.z2()) continue; // room more than one floor above/below current pos
+		if ((person.pos.z < room.z1() || person.pos.z > room.z2()) && (rgen.rand()&3) == 0) continue; // allow move to a different stacked part 25% of the time
 		if (!interior->nav_graph->is_room_connected_to(loc.room_ix, cand_room, interior->doors, person.pos.z, person.has_key)) continue;
 		person.dest_room    = cand_room; // set but not yet used
 		person.target_pos   = get_center_of_room(cand_room);
 		person.target_pos.z = person.pos.z; // keep orig zval to stay on the same floor
 
-		// allow moving to a different floor, currently only one floor at a time
-		cube_t const &part(get_part_for_room(room));
-		unsigned const rand_val(rgen.rand() & 3); // 0-3
-
-		if (rand_val == 0) { // try one floor below
+		if (person.pos.z > room.z2()) { // room is below the person
 			float const new_z(person.target_pos.z - floor_spacing);
-			if (new_z > part.z1()) {person.target_pos.z = new_z;} // change if there is a floor below
+			assert(new_z > room.z1() && new_z < room.z2());
+			person.target_pos.z = new_z; // target the floor below
 		}
-		else if (rand_val == 1) { // try one floor above
+		else if (person.pos.z < room.z1()) { // room is above the person
 			float const new_z(person.target_pos.z + floor_spacing);
-			if (new_z < part.z2()) {person.target_pos.z = new_z;} // change if there is a floor above
+			assert(new_z > room.z1() && new_z < room.z2());
+			person.target_pos.z = new_z; // target the floor above
+		}
+		else { // room covers floor this person is on; allow moving to a different floor, currently only one floor at a time
+			cube_t const &part(get_part_for_room(room));
+			unsigned const rand_val(rgen.rand() & 3); // 0-3
+
+			if (rand_val == 0) { // try one floor below
+				float const new_z(person.target_pos.z - floor_spacing);
+				if (new_z > part.z1()) {person.target_pos.z = new_z;} // change if there is a floor below
+			}
+			else if (rand_val == 1) { // try one floor above
+				float const new_z(person.target_pos.z + floor_spacing);
+				if (new_z < part.z2()) {person.target_pos.z = new_z;} // change if there is a floor above
+			}
 		}
 		person.goal_type = GOAL_TYPE_ROOM;
 		return 1;
