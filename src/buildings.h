@@ -1157,7 +1157,7 @@ struct building_interior_t {
 	cube_t basement_ext_bcube;
 	draw_range_t draw_range;
 	unsigned extb_walls_start[2] = {0,0};
-	int garage_room, ext_basement_hallway_room_id;
+	int garage_room, ext_basement_hallway_room_id, ext_basement_door_ix;
 	uint8_t furnace_type, attic_type;
 	bool door_state_updated, is_unconnected, ignore_ramp_placement, placed_people, elevators_disabled, attic_access_open;
 
@@ -1187,6 +1187,7 @@ struct building_interior_t {
 	vector<room_t>::const_iterator basement_rooms_start() const;
 	bool point_in_ext_basement_room(point const &pos) const;
 	bool cube_in_ext_basement_room(cube_t const &c, bool xy_only) const;
+	door_t const &get_ext_basement_door() const {assert(ext_basement_door_ix >= 0 && (unsigned)ext_basement_door_ix < doors.size()); return doors[ext_basement_door_ix];}
 };
 
 struct building_stats_t {

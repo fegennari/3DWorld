@@ -1421,6 +1421,7 @@ bool building_t::add_underground_exterior_rooms(rand_gen_t &rgen, cube_t const &
 	if (!is_basement_room_placement_valid(hallway, P, wall_dim, wall_dir, nullptr)) return 0; // try to place the hallway; add_end_door=nullptr
 	// valid placement; now add the door, hallway, and connected rooms
 	has_basement_door = 1;
+	interior->ext_basement_door_ix = interior->doors.size();
 	float const fc_thick(get_fc_thickness()), wall_thickness(get_wall_thickness());
 	P.wall_exclude.push_back(basement);
 	P.wall_exclude.back().expand_in_dim(wall_dim, 1.1*get_trim_thickness()); // add slightly expanded basement to keep interior wall trim from intersecting exterior walls

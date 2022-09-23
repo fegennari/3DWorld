@@ -838,6 +838,15 @@ bool building_t::update_spider_pos_orient(spider_t &spider, point const &camera_
 						if (j == i) continue; // skip self
 						subtract_cube_from_cubes(*j, cubes); // subtract this part from current cubes by clipping in XY
 					}
+					if (is_basement(i) && has_ext_basement()) { // check for extended basement door and exclude it if open
+						door_t const &door(interior->get_ext_basement_door());
+						
+						if (door.open) {
+							cube_t wall_cut(door);
+							wall_cut.expand_in_dim(door.dim, get_wall_thickness());
+							subtract_cube_from_cubes(wall_cut, cubes);
+						}
+					}
 					for (cube_t const &c : cubes) {surface_orienter.register_cube(c);}
 				} // for dir
 			} // for dim
