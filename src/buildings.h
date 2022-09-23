@@ -1402,14 +1402,14 @@ struct building_t : public building_geom_t {
 	// building AI people
 	unsigned count_connected_room_components();
 	bool place_people_if_needed(unsigned building_ix, float radius, vector<point> &locs) const;
-	void all_ai_room_update(rand_gen_t &rgen, float delta_dir, bool stay_on_one_floor);
-	int ai_room_update(rand_gen_t &rgen, float delta_dir, unsigned person_ix, bool stay_on_one_floor);
+	void all_ai_room_update(rand_gen_t &rgen, float delta_dir);
+	int ai_room_update(rand_gen_t &rgen, float delta_dir, unsigned person_ix);
 	void register_person_hit(unsigned person_ix, room_object_t const &obj, vector3d const &velocity);
 private:
 	void build_nav_graph() const;
 	bool is_valid_ai_placement(point const &pos, float radius, bool skip_nocoll) const;
-	bool choose_dest_goal(person_t &person, rand_gen_t &rgen, bool same_floor) const;
-	int  choose_dest_room(person_t &person, rand_gen_t &rgen, bool same_floor) const;
+	bool choose_dest_goal(person_t &person, rand_gen_t &rgen) const;
+	int  choose_dest_room(person_t &person, rand_gen_t &rgen) const;
 	bool select_person_dest_in_room(person_t &person, rand_gen_t &rgen, room_t const &room) const;
 	void get_avoid_cubes(float zval, float height, float radius, vect_cube_t &avoid, bool following_player) const;
 	bool find_route_to_point(person_t const &person, float radius, bool is_first_path, bool following_player, vector<point> &path) const;
