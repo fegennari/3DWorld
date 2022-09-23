@@ -1601,8 +1601,18 @@ void building_interior_t::place_exterior_room(extb_room_t const &room, cube_t co
 			set_wall_width(wall, wall_area.d[dim][dir], wall_half_thick, dim);
 			set_cube_zvals(wall, floor.z2(), ceiling.z1());
 			if (bool(dim) != long_dim) {wall.expand_in_dim(!dim, -wall_half_thick);} // remove the overlaps at corners in the long time (house exterior wall dim)
+			// remove overlapping walls from shared rooms
+			unsigned const wall_exclude_sz(P.wall_exclude.size());
+			assert(extb_walls_start[dim] <= walls[dim].size());
+
+			for (auto w = walls[dim].begin()+extb_walls_start[dim]; w != walls[dim].end(); ++w) { // check all prev added ext basement walls in this dim
+				if (w->d[ dim][0] == wall.d[ dim][0] && w->d[ dim][1] == wall.d[dim][1] &&
+					w->d[!dim][0] <  wall.d[!dim][1] && w->d[!dim][1] >  wall.d[dim][0] &&
+					w->z1() == wall.z1() && w->z2() == wall.z2()) {P.wall_exclude.push_back(*w);} // same width and height, overlap in length
+			}
 			subtract_cubes_from_cube(wall, P.wall_exclude, P.wall_segs, P.temp_cubes, 2); // cut out doorways, etc.; zval_mode=2 (check for zval overlap)
 			vector_add_to(P.wall_segs, walls[dim]);
+			P.wall_exclude.resize(wall_exclude_sz); // remove the wall_exclude cubes we just added
 		} // for dir
 	} // for dim
 }

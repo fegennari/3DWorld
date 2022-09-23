@@ -2994,7 +2994,7 @@ public:
 			}
 		}
 #if 0
-		for (unsigned i = 0; i < tid_mapper.get_num_slots(); ++i) { // walls: 16893984 / 16553020 => 15887564 => 12822128
+		for (unsigned i = 0; i < tid_mapper.get_num_slots(); ++i) { // walls: 14269482 / 16553020 => 15887564 => 12184164 => 11461212
 			unsigned const count(vert_counter.get_count(i));
 			if (count == 0) continue;
 			cout << i << ": R=" << count << " S=" << building_draw_interior.get_num_verts(tid_nm_pair_t(i)) << " C="
