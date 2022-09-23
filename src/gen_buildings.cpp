@@ -1391,28 +1391,33 @@ void building_t::get_all_drawn_interior_verts(building_draw_t &bdraw) {
 	} // for i
 	// minor optimization: don't need shadows for ceilings because lights only point down; assumes ceil_tex is only used for ceilings; not true for all houses
 	if (!is_house) {bdraw.set_no_shadows_for_tex(mat.ceil_tex);}
-	float const wall_thickness(get_wall_thickness());
+	float const wall_thickness(get_wall_thickness()), extb_wall_thresh(1.1*wall_thickness); // extb_wall_thresh uses wall thickness + tolerance
 
 	for (unsigned dim = 0; dim < 2; ++dim) { // Note: can almost pass in (1U << dim) as dim_filt, if it wasn't for door cutouts (2.2M T)
 		for (auto i = interior->walls[dim].begin(); i != interior->walls[dim].end(); ++i) {
 			//unsigned const dim_mask(1 << dim); // doesn't work with office building hallway intersection corners and door frame shadows
 			unsigned dim_mask(3);
 			set_skip_faces_for_nearby_cube_edge(*i, bcube, wall_thickness, !dim, dim_mask); // easy case: skip faces along the edges of the building bcube
-			// check rooms
-			bool const in_ext_basement(i >= interior->walls[dim].begin() + interior->extb_walls_start[dim]);
-			unsigned const extb_room_start((interior->ext_basement_hallway_room_id >= 0) ? interior->ext_basement_hallway_room_id : interior->rooms.size());
-			unsigned const rooms_start(in_ext_basement ? extb_room_start : 0);
-			unsigned const rooms_end  (in_ext_basement ? interior->rooms.size() : extb_room_start);
 			
-			for (auto r = interior->rooms.begin()+rooms_start; r != interior->rooms.begin()+rooms_end; ++r) {
-				if (!r->intersects(*i)) continue; // wall doesn't intersect this room
-				// office hallways can have outside corners, and we need to draw the walls there
-				if (!is_house && has_pri_hall() && r->is_hallway) {dim_mask = 3; break;} // force all 4 sides
-				set_skip_faces_for_nearby_cube_edge(*i, *r, wall_thickness, !dim, dim_mask);
-				// non-hallway ext basement rooms don't need to have their exterior wall surfaces drawn; hallways do, because they may share a wall with a connected room;
-				// but unfortunately we still have to draw these walls in the shadow pass to block lights from nearby rooms
-				//if (in_ext_basement && !r->is_hallway) {set_skip_faces_for_nearby_cube_edge(*i, *r, wall_thickness, dim, dim_mask);}
-			} // for r
+			// check rooms; skip this for above ground complex floorplans because they may have unexpected wall ends visible at non-rectangular rooms
+			if (!has_complex_floorplan || i->z1() < ground_floor_z1) {
+				bool const in_ext_basement(i >= interior->walls[dim].begin() + interior->extb_walls_start[dim]);
+				unsigned const extb_room_start((interior->ext_basement_hallway_room_id >= 0) ? interior->ext_basement_hallway_room_id : interior->rooms.size());
+				unsigned const rooms_start(in_ext_basement ? extb_room_start : 0);
+				unsigned const rooms_end  (in_ext_basement ? interior->rooms.size() : extb_room_start);
+			
+				for (auto r = interior->rooms.begin()+rooms_start; r != interior->rooms.begin()+rooms_end; ++r) {
+					if (!r->intersects(*i)) continue; // wall doesn't intersect this room
+					// office hallways can have outside corners, and we need to draw the walls there
+					if (!is_house && has_pri_hall() && r->is_hallway) {dim_mask = 3; break;} // force all 4 sides
+					set_skip_faces_for_nearby_cube_edge(*i, *r, wall_thickness, !dim, dim_mask);
+
+					// ext basement rooms don't need to have their exterior wall surfaces drawn, but only valid for walls not shared between hallways and connected rooms
+					if (in_ext_basement && fabs(i->d[!dim][0] - r->d[!dim][0]) < extb_wall_thresh && fabs(i->d[!dim][1] - r->d[!dim][1]) < extb_wall_thresh) {
+						set_skip_faces_for_nearby_cube_edge(*i, *r, wall_thickness, dim, dim_mask);
+					}
+				} // for r
+			}
 			colorRGBA const &color((i->z1() < ground_floor_z1) ? WHITE : wall_color); // basement walls are always white
 			bdraw.add_section(*this, 0, *i, mat.wall_tex, color, dim_mask, 0, 0, 1, 0); // no AO; X and/or Y dims only
 		}
@@ -2949,7 +2954,8 @@ public:
 		for (auto b = buildings.begin(); b != buildings.end(); ++b) {
 			if (!b->interior) continue; // no interior
 			unsigned const num_elevators(b->interior->elevators.size()), ceil_nverts(b->skip_top_of_ceilings() ? 4 : 8);
-			unsigned const nv_wall(16*(b->interior->walls[0].size() + b->interior->walls[1].size() + b->interior->landings.size() + b->has_attic()) + 36*num_elevators);
+			// Note: here we use 14 verts per wall rather than the expected 16 due to estimated hidden surface culling
+			unsigned const nv_wall(14*(b->interior->walls[0].size() + b->interior->walls[1].size()) + 16*b->interior->landings.size() + 16*b->has_attic() + 36*num_elevators);
 			vert_counter.update_count(b->get_material().wall_tex.tid, nv_wall);
 			vert_counter.update_count(FENCE_TEX, 12*num_elevators);
 
