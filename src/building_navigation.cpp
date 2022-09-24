@@ -752,7 +752,8 @@ int building_t::choose_dest_room(person_t &person, rand_gen_t &rgen) const {
 		room_t const &room(interior->rooms[cand_room]);
 		if (room.is_hallway) continue; // don't select a hallway
 		if ((person.pos.z + floor_spacing) < room.z1() || (person.pos.z - floor_spacing) > room.z2()) continue; // room more than one floor above/below current pos
-		if ((person.pos.z < room.z1() || person.pos.z > room.z2()) && (rgen.rand()&3) == 0) continue; // allow move to a different stacked part 25% of the time
+		// allow move to a different stacked part 25% of the time; 100% of the time for parking garages, since they're more rare
+		if ((person.pos.z < room.z1() || person.pos.z > room.z2()) && !(has_parking_garage && room.z1() < ground_floor_z1) && (rgen.rand()&3) != 0) continue;
 		if (!interior->nav_graph->is_room_connected_to(loc.room_ix, cand_room, interior->doors, person.pos.z, person.has_key)) continue;
 		person.dest_room    = cand_room; // set but not yet used
 		person.target_pos   = get_center_of_room(cand_room);
@@ -768,8 +769,9 @@ int building_t::choose_dest_room(person_t &person, rand_gen_t &rgen) const {
 			assert(new_z > room.z1() && new_z < room.z2());
 			person.target_pos.z = new_z; // target the floor above
 		}
-		else { // room covers floor this person is on; allow moving to a different floor, currently only one floor at a time
-			cube_t const &part(get_part_for_room(room));
+		else if (interior->ext_basement_hallway_room_id < 0 || cand_room < (unsigned)interior->ext_basement_hallway_room_id) { // skip for ext basement rooms
+			// room covers floor this person is on; allow moving to a different floor, currently only one floor at a time
+			cube_t const &part(get_part_for_room(room)); // or just use the room?
 			unsigned const rand_val(rgen.rand() & 3); // 0-3
 
 			if (rand_val == 0) { // try one floor below
@@ -780,6 +782,7 @@ int building_t::choose_dest_room(person_t &person, rand_gen_t &rgen) const {
 				float const new_z(person.target_pos.z + floor_spacing);
 				if (new_z < part.z2()) {person.target_pos.z = new_z;} // change if there is a floor above
 			}
+			assert(person.target_pos.z > room.z1() && person.target_pos.z < room.z2());
 		}
 		person.goal_type = GOAL_TYPE_ROOM;
 		return 1;
@@ -1068,8 +1071,8 @@ bool building_t::is_player_visible(person_t const &person, unsigned vis_test) co
 	bool const same_room_and_floor(same_room && floor_delta == 0); // Note: doesn't check cur_player_building_loc.stairs_ix
 	bool has_los(same_room_and_floor);
 
-	if (!has_los && same_room && floor_delta == 1) {
-		// if the person and the player are on adjacent floors of the same room connected by stairs, cheat and say they have a line of sight
+	if (!has_los && same_room && floor_delta == 1 && person.pos.z > ground_floor_z1) {
+		// if the person and the player are on adjacent floors of the same room connected by stairs (and not in a parking garage), cheat and say they have a line of sight
 		room_t const &room(get_room(person.cur_room));
 		unsigned const room_floor_start(get_floor_for_zval(room.z1()));
 		assert(room_floor_start <= cur_player_building_loc.floor_ix && room_floor_start <= person_floor_ix);
@@ -1272,7 +1275,7 @@ int building_t::ai_room_update(rand_gen_t &rgen, float delta_dir, unsigned perso
 	// make sure the person is inside the building, in case they were pushed by another person
 	cube_t clip_cube;
 		
-	if (new_pos.z < ground_floor_z1) { // in the basement
+	if (has_basement() && new_pos.z < ground_floor_z1) { // in the basement
 		cube_t const &basement(get_basement());
 
 		if (has_ext_basement()) {
