@@ -105,7 +105,20 @@ point building_t::gen_animal_floor_pos(float radius, bool place_in_attic, rand_g
 bool building_t::is_pos_inside_building(point const &pos, float xy_pad, float hheight, bool inc_attic) const {
 	float bcube_pad(xy_pad);
 	if (inc_attic && has_attic() && pos.z >= interior->attic_access.z2()) {bcube_pad += get_attic_beam_depth();} // add extra spacing for attic beams (approximate)
-	if (!bcube.contains_pt_xy_exp(pos, -bcube_pad) && !point_in_extended_basement(pos)) return 0; // check for end point inside building bcube
+	
+	if (has_basement() && pos.z < ground_floor_z1) { // in the basement
+		cube_t const &basement(get_basement());
+
+		if (has_ext_basement()) { // check union of basement + extended basement
+			cube_t sc; sc.set_from_sphere(pos, bcube_pad); // sphere bounding cube
+			float cont_area(0.0);
+			accumulate_shared_xy_area(basement, sc, cont_area);
+			accumulate_shared_xy_area(interior->basement_ext_bcube, sc, cont_area);
+			if (cont_area < 0.99*sc.get_area_xy()) return 0; // not contained
+		}
+		else if (!basement.contains_pt_xy_exp(pos, -bcube_pad)) return 0; // check the basement
+	}
+	else if (!bcube.contains_pt_xy_exp(pos, -bcube_pad)) return 0; // check for end point inside building bcube
 	cube_t req_area(pos, pos);
 	req_area.expand_by_xy(xy_pad);
 	req_area.z2() += hheight;
