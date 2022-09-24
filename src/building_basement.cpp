@@ -1421,7 +1421,8 @@ bool building_t::add_underground_exterior_rooms(rand_gen_t &rgen, cube_t const &
 	if (!is_basement_room_placement_valid(hallway, P, wall_dim, wall_dir, nullptr)) return 0; // try to place the hallway; add_end_door=nullptr
 	// valid placement; now add the door, hallway, and connected rooms
 	has_basement_door = 1;
-	interior->ext_basement_door_ix = interior->doors.size();
+	// Note: recording the door_stack index rather than the door index allows us to get either the first door or the first stack
+	interior->ext_basement_door_stack_ix = interior->door_stacks.size();
 	float const fc_thick(get_fc_thickness()), wall_thickness(get_wall_thickness());
 	P.wall_exclude.push_back(basement);
 	P.wall_exclude.back().expand_in_dim(wall_dim, 1.1*get_trim_thickness()); // add slightly expanded basement to keep interior wall trim from intersecting exterior walls
@@ -1656,5 +1657,11 @@ bool building_interior_t::cube_in_ext_basement_room(cube_t const &c, bool xy_onl
 		if (xy_only ? r->contains_cube_xy(c) : r->contains_cube(c)) return 1;
 	}
 	return 0;
+}
+door_t const &building_interior_t::get_ext_basement_door() const {
+	assert(ext_basement_door_stack_ix >= 0 && (unsigned)ext_basement_door_stack_ix < door_stacks.size());
+	unsigned const door_ix(door_stacks[ext_basement_door_stack_ix].first_door_ix);
+	assert(door_ix < doors.size());
+	return doors[door_ix];
 }
 
