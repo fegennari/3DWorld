@@ -3141,6 +3141,7 @@ void building_t::add_wall_and_door_trim_if_needed() {
 
 void building_t::add_wall_and_door_trim() { // and window trim
 	//highres_timer_t timer("Add Wall And Door Trim");
+	assert(has_room_geom());
 	float const window_vspacing(get_window_vspace()), floor_thickness(get_floor_thickness()), fc_thick(0.5*floor_thickness), wall_thickness(get_wall_thickness());
 	float const trim_height(get_trim_height()), trim_thickness(get_trim_thickness()), expand_val(2.0*trim_thickness);
 	float const door_trim_exp(2.0*trim_thickness + 0.5*wall_thickness), door_trim_width(0.5*wall_thickness), floor_to_ceil_height(window_vspacing - floor_thickness);
@@ -3240,12 +3241,24 @@ void building_t::add_wall_and_door_trim() { // and window trim
 
 			for (unsigned f = 0; f < num_floors; ++f, z += window_vspacing) {
 				set_cube_zvals(trim, z, z+trim_height); // starts at floor height
-				objs.emplace_back(trim, TYPE_WALL_TRIM, 0, dim, 0, flags, 1.0, SHAPE_CUBE, trim_color); // floor trim
+				bool ext_dirs[2] = {0,0};
+
+				if (z < ground_floor_z1 && has_ext_basement() && !get_basement().intersects(trim)) { // check for exterior wall of extended basement
+					for (unsigned dir = 0; dir < 2; ++dir) { // for each side of wall
+						cube_t test_cube(trim);
+						test_cube.d[dim][!dir] = w->d[dim][dir];
+						point const center(test_cube.get_cube_center());
+						ext_dirs[dir] = !interior->point_in_ext_basement_room(center);
+					}
+				}
+				unsigned const trim_flags(flags | (ext_dirs[0] ? RO_FLAG_ADJ_LO : 0) | (ext_dirs[1] ? RO_FLAG_ADJ_HI : 0)); // disable exterior faces
+				objs.emplace_back(trim, TYPE_WALL_TRIM, 0, dim, 0, trim_flags, 1.0, SHAPE_CUBE, trim_color); // floor trim
 				if (!has_ceil_trim) continue;
 				trim.z2() = z + floor_to_ceil_height; // ceil height
 				trim.z1() = trim.z2() - trim_height;
 
 				for (unsigned dir = 0; dir < 2; ++dir) { // for each side of wall
+					if (ext_dirs[dir]) continue; // skip
 					cube_t ceil_trim(trim);
 					ceil_trim.d[dim][!dir] = w->d[dim][dir];
 					objs.emplace_back(ceil_trim, TYPE_WALL_TRIM, 0, dim, dir, flags, 1.0, SHAPE_ANGLED, trim_color); // ceiling trim

@@ -1472,7 +1472,6 @@ public:
 	bool cube_int_ext_basement(cube_t const &c) const {return (interior && interior->basement_ext_bcube.intersects(c));}
 	bool point_in_building_or_basement_bcube(point const &pos) const {return (bcube.contains_pt(pos) || point_in_extended_basement(pos));}
 	float get_bcube_z1_inc_ext_basement() const {return (has_ext_basement() ? min(bcube.z1(), interior->basement_ext_bcube.z1()) : bcube.z1());}
-	unsigned get_num_ext_basement_rooms() const {return (has_ext_basement() ? (interior->rooms.size() - interior->ext_basement_hallway_room_id) : 0);}
 	cube_t get_bcube_inc_extensions() const;
 	cube_t get_full_basement_bcube () const;
 	room_t const &get_ext_basement_hallway() const;
