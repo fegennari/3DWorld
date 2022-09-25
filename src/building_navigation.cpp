@@ -1291,7 +1291,7 @@ int building_t::ai_room_update(rand_gen_t &rgen, float delta_dir, unsigned perso
 			else { // primarily in the extended basement
 				cube_t cur_room_bcube(basement); // start at the basement in case we're not even in a room, so we can at least snap here as a fallback
 
-				for (auto r = interior->basement_rooms_start(); r != interior->rooms.end(); ++r) {
+				for (auto r = interior->ext_basement_rooms_start(); r != interior->rooms.end(); ++r) {
 					if (new_pos.z < r->z1() || new_pos.z > r->z2()) continue; // wrong level
 					if (r->contains_pt(new_pos)) {cur_room_bcube = *r;} // this is the room we'll be pushed into if needed
 					accumulate_shared_xy_area(*r, sc, cont_area);
@@ -1304,8 +1304,11 @@ int building_t::ai_room_update(rand_gen_t &rgen, float delta_dir, unsigned perso
 	else {clip_cube = bcube;} // above ground
 	clip_cube.expand_by_xy(-coll_dist); // shrink
 	clip_cube.clamp_pt_xy(new_pos); // make sure person stays within building bcube; can't clip to room because person may be exiting it
-	assert(point_in_building_or_basement_bcube(new_pos));
-
+	
+	if (!point_in_building_or_basement_bcube(new_pos)) { // person must be inside the building
+		cout << TXT(new_pos.str()) << TXT(bcube.str()) << TXT(interior->basement_ext_bcube.str()) << endl;
+		assert(0);
+	}
 	// don't do collision detection while on stairs because it doesn't work properly; just let people walk through each other
 	if (!person.on_stairs()) {
 		for (auto p = interior->people.begin()+person_ix+1; p < interior->people.end(); ++p) { // check all other people in the same building after this one and attempt to avoid them
@@ -1322,9 +1325,11 @@ int building_t::ai_room_update(rand_gen_t &rgen, float delta_dir, unsigned perso
 	bool const might_have_closed_door(global_building_params.open_door_prob < 1.0 || (player_in_this_building && is_house && has_basement()));
 
 	if (interior->door_state_updated || (global_building_params.ai_opens_doors == 2 && might_have_closed_door)) {
+		cube_t sc; sc.set_from_sphere(new_pos, person.radius); // sphere bounding cube
+
 		for (auto i = interior->door_stacks.begin(); i != interior->door_stacks.end(); ++i) { // can be slow, but not as slow as iterating over doors
 			if (new_pos.z < i->z1() || new_pos.z > i->z2())         continue; // wrong part/floor
-			if (!sphere_cube_intersect(new_pos, person.radius, *i)) continue; // no intersection with door
+			if (!i->intersects(sc)) continue; // no intersection with door
 			if (!i->get_true_bcube().line_intersects(person.pos, person.target_pos)) continue; // check if path goes through door, to allow for "glancing blows" when pushed or turning
 			assert(i->first_door_ix < interior->doors.size());
 
@@ -1426,11 +1431,12 @@ void vect_building_t::ai_room_update(float delta_dir, float dmax, point const &c
 int building_t::get_room_containing_pt(point const &pt) const {
 	assert(interior);
 	float const wall_thickness(get_wall_thickness());
+	bool const in_ext_basement(point_in_extended_basement_not_basement(pt));
+	auto rooms_start(in_ext_basement ? interior->ext_basement_rooms_start() : interior->rooms.begin());
+	auto rooms_end  (in_ext_basement ? interior->rooms.end() : interior->ext_basement_rooms_start());
 
-	for (auto r = interior->rooms.begin(); r != interior->rooms.end(); ++r) {
-		cube_t tc(*r);
-		tc.expand_by_xy(wall_thickness); // to include point in doorway
-		if (tc.contains_pt(pt)) {return (r - interior->rooms.begin());}
+	for (auto r = rooms_start; r != rooms_end; ++r) {
+		if (r->contains_pt_exp_xy_only(pt, wall_thickness)) {return (r - interior->rooms.begin());} // expand to include point in doorway
 	}
 	return -1; // room not found
 }

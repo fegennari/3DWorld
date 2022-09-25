@@ -564,6 +564,7 @@ struct cube_t { // size = 24
 	bool contains_pt_xy_inclusive   (point const &pt) const {return (pt.x >= x1() && pt.x <= x2() && pt.y >= y1() && pt.y <= y2());} // includes points on the edge
 	bool contains_pt_xy_exp         (point const &pt, float exp) const {return (pt.x > x1()-exp && pt.x < x2()+exp && pt.y > y1()-exp && pt.y < y2()+exp);}
 	bool contains_pt_exp            (point const &pt, float exp) const {return (pt.x > x1()-exp && pt.x < x2()+exp && pt.y > y1()-exp && pt.y < y2()+exp && pt.z > z1()-exp && pt.z < z2()+exp);}
+	bool contains_pt_exp_xy_only    (point const &pt, float exp) const {return (pt.x > x1()-exp && pt.x < x2()+exp && pt.y > y1()-exp && pt.y < y2()+exp && pt.z > z1() && pt.z < z2());}
 
 	bool quick_intersect_test(const cube_t &cube) const {
 		UNROLL_3X(if (cube.d[i_][0] >= d[i_][1] || cube.d[i_][1] <= d[i_][0]) return 0;)

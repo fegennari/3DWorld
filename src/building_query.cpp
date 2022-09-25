@@ -1711,7 +1711,7 @@ bool building_t::is_cube_contained_in_parts(cube_t const &c) const {
 	for (auto p = parts.begin(); p != get_real_parts_end_inc_sec(); ++p) {add_cube_int_volume(c, *p, cont_vol);}
 	
 	if (has_ext_basement() && interior->basement_ext_bcube.intersects(c)) { // extended basement counts, even though it's not a part
-		for (auto r = interior->basement_rooms_start(); r != interior->rooms.end(); ++r) {add_cube_int_volume(c, *r, cont_vol);}
+		for (auto r = interior->ext_basement_rooms_start(); r != interior->rooms.end(); ++r) {add_cube_int_volume(c, *r, cont_vol);}
 	}
 	return (cont_vol > 0.99*c.get_volume()); // add a bit of tolerance
 }
