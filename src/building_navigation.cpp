@@ -504,16 +504,6 @@ void building_t::build_nav_graph() const { // Note: does not depend on room geom
 	ng.set_num_rooms(num_rooms, num_stairs);
 	for (unsigned s = 0; s < num_stairs; ++s) {ng.set_stairs_bcube(s, interior->stairwells[s]);}
 
-	if (has_pg_ramp() && has_room_geom()) {
-#if 0
-		auto objs_end(interior->room_geom->get_placed_objs_end()); // skip buttons/stairs/elevators
-
-		for (auto c = interior->room_geom->objs.begin(); c != objs_end; ++c) {
-			if (c->type != TYPE_RAMP || !c->is_open()) continue;
-			// TODO: similar to stairs
-		}
-#endif
-	}
 	for (unsigned r = 0; r < num_rooms; ++r) {
 		room_t const &room(interior->rooms[r]);
 		cube_t c(get_walkable_room_bounds(room));
@@ -551,6 +541,16 @@ void building_t::build_nav_graph() const { // Note: does not depend on room geom
 				ng.connect_rooms(r, r2, -1, conn_cube);
 			} // for r2
 		}
+#if 0
+		if (room.get_room_type(0) == RTYPE_PARKING && has_pg_ramp() && has_room_geom()) { // handle parking garage ramp
+			auto objs_end(interior->room_geom->get_placed_objs_end()); // skip buttons/stairs/elevators
+
+			for (auto c = interior->room_geom->objs.begin(); c != objs_end; ++c) {
+				if (c->type != TYPE_RAMP || !c->is_open()) continue;
+				ng.connect_stairs(r, stairs_ix, c->dim, c->dir, 0); // is_u=0 TODO: make this work
+			}
+		}
+#endif
 		//for (unsigned e = 0; e < interior->elevators.size(); ++e) {} // elevators are not yet used by AIs so are ignored here; should check interior->elevators_disabled
 	} // for r
 	//if (is_house && !has_sec_bldg() && has_basement() && !ng.is_fully_connected()) {cout << "bcube " << bcube.str() << endl;}

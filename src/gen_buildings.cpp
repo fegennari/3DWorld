@@ -2385,16 +2385,17 @@ public:
 						// generate detail objects during the shadow pass when the player is in the building so that it can be done in parallel with small static geom gen
 						int const inc_small(camera_in_this_building ? 2 : 1);
 						b.draw_room_geom(nullptr, s, oc, xlate, bi->ix, 1, 0, inc_small, 1); // shadow_only=1, player_in_building=1
-						bool const player_close(dist_less_than(lpos, pre_smap_player_pos, camera_pdu.far_)); // Note: pre_smap_player_pos already in building space
 						b.get_ext_wall_verts_no_sec(ext_parts_draw); // add exterior walls to prevent light leaking between adjacent parts
-						bool const add_player_shadow(camera_surf_collide ? player_close : 0);
 						b.draw_cars_in_building(s, xlate, 1, 1); // player_in_building=1, shadow_only=1
+						bool const player_close(dist_less_than(lpos, pre_smap_player_pos, camera_pdu.far_)); // Note: pre_smap_player_pos already in building space
+						bool const add_player_shadow(camera_surf_collide ? player_close : 0);
+						bool shader_was_changed(0);
 
-						if (camera_in_this_building || player_close) { // draw people in this building
+						if ((camera_in_this_building || player_close) && !b.interior->people.empty()) { // draw people in this building
 							if (global_building_params.enable_people_ai) { // handle animations
 								select_person_shadow_shader(person_shader);
 								gen_and_draw_people_in_building(b, ped_draw_vars_t(b, oc, person_shader, xlate, bi->ix, 1, 0)); // draw people in this building
-								s.make_current(); // switch back to normal building shader
+								shader_was_changed = 1;
 							}
 							else {gen_and_draw_people_in_building(b, ped_draw_vars_t(b, oc, s, xlate, bi->ix, 1, 0));} // no animations
 						}
@@ -2402,10 +2403,11 @@ public:
 							if (global_building_params.enable_people_ai) { // handle animations
 								select_person_shadow_shader(person_shader);
 								draw_player_model(person_shader, xlate, 1); // shadow_only=1
-								s.make_current(); // switch back to normal building shader
+								shader_was_changed = 1;
 							}
 							else {draw_player_model(s, xlate, 1);} // shadow_only=1
 						}
+						if (shader_was_changed) {s.make_current();} // switch back to normal building shader
 					} // for bi
 				} // for g
 			}
@@ -2959,7 +2961,7 @@ public:
 			vert_counter.update_count(b->get_material().wall_tex.tid, nv_wall);
 			vert_counter.update_count(FENCE_TEX, 12*num_elevators);
 
-			for (cube_t const &f : b->interior->floors) { // TODO: garage_door and fence textures
+			for (cube_t const &f : b->interior->floors) {
 				tid_nm_pair_t tex;
 				b->get_floor_tex_and_color(f, tex);
 				vert_counter.update_count(tex.tid, 4);
