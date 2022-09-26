@@ -38,11 +38,12 @@ class building_nav_graph_t {
 		conn_room_t(unsigned ix_, int dix, vector2d const &ptu, vector2d const &ptd) : ix(ix_), door_ix(dix) {pt[0] = ptu; pt[1] = ptd;}
 	};
 	struct node_t { // represents one room or one stairwell
-		bool has_exit, is_hallway, is_stairs; // has_exit and is_stairs are not yet used
+		bool has_exit=0, is_hallway=0, is_stairs=0, is_ramp=0; // has_exit is not yet used
 		cube_t bcube;
 		vector<conn_room_t> conn_rooms;
-		node_t() : has_exit(0), is_hallway(0), is_stairs(0) {}
+
 		point get_center(float zval) const {return get_cube_center_zval(bcube, zval);}
+		bool is_vert_conn() const {return (is_stairs || is_ramp);} // or is_elevator if added later
 
 		void add_conn_room(unsigned room, int door_ix, cube_t const &cu, cube_t const &cd) {
 			for (auto i = conn_rooms.begin(); i != conn_rooms.end(); ++i) {if (i->ix == room) return;} // ignore duplicates
@@ -58,6 +59,7 @@ class building_nav_graph_t {
 
 	unsigned num_rooms, num_stairs;
 	float stairs_extend;
+	bool has_pg_ramp;
 	vector<node_t> nodes;
 	node_t       &get_node(unsigned room)       {assert(room < nodes.size()); return nodes[room];}
 	node_t const &get_node(unsigned room) const {assert(room < nodes.size()); return nodes[room];}
@@ -74,20 +76,23 @@ public:
 	bool invalid;
 	building_nav_graph_t(float stairs_extend_) : num_rooms(0), num_stairs(0), stairs_extend(stairs_extend_), invalid(0) {}
 
-	void set_num_rooms(unsigned num_rooms_, unsigned num_stairs_) {
-		num_rooms  = num_rooms_;
-		num_stairs = num_stairs_;
-		nodes.resize(num_rooms + num_stairs);
-		for (unsigned n = num_rooms; n < nodes.size(); ++n) {nodes[n].is_stairs = 1;}
+	void set_num_rooms(unsigned num_rooms_, unsigned num_stairs_, bool has_pg_ramp_) {
+		num_rooms   = num_rooms_;
+		num_stairs  = num_stairs_;
+		has_pg_ramp = has_pg_ramp_;
+		nodes.resize(num_rooms + num_stairs + has_pg_ramp);
+		for (unsigned n = num_rooms; n < (num_rooms + num_stairs); ++n) {nodes[n].is_stairs = 1;}
+		if (has_pg_ramp) {nodes.back().is_ramp = 1;}
 	}
 	void set_room_bcube  (unsigned room,   cube_t const &c) {get_node(room).bcube = c;}
 	void set_stairs_bcube(unsigned stairs, cube_t const &c) {get_node(stairs + num_rooms).bcube = c;}
+	void set_ramp_bcube                   (cube_t const &c) {get_node(num_stairs + num_rooms).bcube = c;}
 	void mark_hallway(unsigned room) {get_node(room).is_hallway = 1;}
 	void mark_exit   (unsigned room) {get_node(room).has_exit   = 1;}
 
-	void connect_stairs(unsigned room, unsigned stairs, bool dim, bool dir, bool is_u) {
-		assert(room < num_rooms && stairs < num_stairs);
-		unsigned const node_ix2(num_rooms + stairs);
+	void connect_stairs(unsigned room, unsigned stairs, bool dim, bool dir, bool is_u, bool is_ramp) {
+		assert(room < num_rooms && (is_ramp || stairs < num_stairs));
+		unsigned const node_ix2(num_rooms + (is_ramp ? num_stairs : stairs)); // pg_ramp comes after all stairs
 		node_t &n2(get_node(node_ix2));
 		cube_t entry_u(n2.bcube), entry_d(n2.bcube);
 		float const extend((dir ? -1.0 : 1.0)*stairs_extend); // extend away from stairs for entrance/exit area; will be denormalized in this dim
@@ -205,7 +210,7 @@ public:
 		bool up_or_down, bool &not_room_center, rand_gen_t &rgen, bool no_use_init) const
 	{
 		node_t const &node(get_node(node_ix));
-		if (node.is_stairs) {return get_stairs_entrance_pt(zval, node_ix, up_or_down);}
+		if (node.is_vert_conn()) {return get_stairs_entrance_pt(zval, node_ix, up_or_down);}
 		point pos(get_cube_center_zval(node.bcube, zval)); // first candidate is the center of the room
 		if (find_valid_pt_in_room(avoid, radius, height, zval, node.bcube, rgen, pos, no_use_init)) {not_room_center = 1;} // success
 		return pos;
@@ -307,7 +312,7 @@ public:
 	}
 	static cube_t calc_walkable_room_area(node_t const &node, float radius) {
 		cube_t walk_area(node.bcube);
-		if (!node.is_stairs) {walk_area.expand_by_xy(-radius);} // shrink by radius
+		if (!node.is_vert_conn()) {walk_area.expand_by_xy(-radius);} // shrink by radius if not stairs or a ramp
 
 		if (node.is_hallway) {
 			bool const min_dim(walk_area.dy() < walk_area.dx());
@@ -340,7 +345,7 @@ public:
 					bool not_room_center(0);
 					point const end_point(find_valid_room_dest(avoid, radius, height, cur_pt.z, start_ix, up_or_down, not_room_center, rgen, no_use_init));
 					path.push_back(end_point);
-					if (node.is_stairs) {success = 1; break;} // done, don't need to run code below
+					if (node.is_vert_conn()) {success = 1; break;} // done, don't need to run code below
 					point const room_exit(closest_room_pt(walk_area, next)); // first doorway
 					if (connect_room_endpoints(avoid, walk_area, end_point, room_exit, radius, path, keepout, rgen)) {path.push_back(room_exit); success = 1; break;}
 					path.clear(); // failed, reset for next iteration
@@ -350,7 +355,7 @@ public:
 			}
 			else if (came_from < 0) { // done (next is not valid here)
 				assert(n == end_ix);
-				if (node.is_stairs) return 1; // success
+				if (node.is_vert_conn()) return 1; // success
 				point const final_pt(closest_room_pt(walk_area, path.back())); // walk from room into last doorway
 				path.push_back(final_pt);
 
@@ -361,7 +366,7 @@ public:
 				}
 				return 1; // success
 			}
-			else if (!node.is_stairs) { // adjust the path through a room
+			else if (!node.is_vert_conn()) { // adjust the path through a room
 				assert(!path.empty());
 				point const &prev(path.back());
 				assert(prev.z == next.z);
@@ -461,7 +466,7 @@ public:
 				assert(i->ix < nodes.size());
 				if (closed[i->ix]) continue; // already closed (duplicate)
 				node_t const &conn_node(get_node(i->ix));
-				if (conn_node.is_stairs && !use_stairs && i->ix != room2) continue; // skip stairs in this mode
+				if (conn_node.is_vert_conn() && !use_stairs && i->ix != room2) continue; // skip stairs/ramp in this mode
 				point const conn_center(conn_node.get_center(cur_pt.z));
 				a_star_node_state_t &sn(state[i->ix]);
 				vector2d const &pt(i->pt[up_or_down]);
@@ -501,8 +506,10 @@ void building_t::build_nav_graph() const { // Note: does not depend on room geom
 	building_nav_graph_t &ng(*interior->nav_graph);
 	float const wall_width(get_wall_thickness());
 	unsigned const num_rooms(interior->rooms.size()), num_stairs(interior->stairwells.size());
-	ng.set_num_rooms(num_rooms, num_stairs);
+	bool const has_ramp(has_pg_ramp());
+	ng.set_num_rooms(num_rooms, num_stairs, has_ramp);
 	for (unsigned s = 0; s < num_stairs; ++s) {ng.set_stairs_bcube(s, interior->stairwells[s]);}
+	if (has_ramp) {ng.set_ramp_bcube(interior->pg_ramp);}
 
 	for (unsigned r = 0; r < num_rooms; ++r) {
 		room_t const &room(interior->rooms[r]);
@@ -530,7 +537,7 @@ void building_t::build_nav_graph() const { // Note: does not depend on room geom
 			if (stairwell.stairs_door_ix >= 0 && global_building_params.ai_opens_doors < 2) { // check for open doors; doors on stairs can't be locked
 				if (!get_door(stairwell.stairs_door_ix).open) continue; // stairs blocked by closed door, don't connect (even if unlocked)
 			}
-			if (room.intersects_no_adj(stairwell)) {ng.connect_stairs(r, s, stairwell.dim, stairwell.dir, (stairwell.shape == SHAPE_U));}
+			if (room.intersects_no_adj(stairwell)) {ng.connect_stairs(r, s, stairwell.dim, stairwell.dir, (stairwell.shape == SHAPE_U), 0);} // is_ramp=0
 		}
 		if (room.is_hallway) { // check for connected hallways
 			for (unsigned r2 = r+1; r2 < num_rooms; ++r2) { // check rooms with higher index (since graph is bidirectional)
@@ -541,16 +548,10 @@ void building_t::build_nav_graph() const { // Note: does not depend on room geom
 				ng.connect_rooms(r, r2, -1, conn_cube);
 			} // for r2
 		}
-#if 0
-		if (room.get_room_type(0) == RTYPE_PARKING && has_pg_ramp() && has_room_geom()) { // handle parking garage ramp
-			auto objs_end(interior->room_geom->get_placed_objs_end()); // skip buttons/stairs/elevators
-
-			for (auto c = interior->room_geom->objs.begin(); c != objs_end; ++c) {
-				if (c->type != TYPE_RAMP || !c->is_open()) continue;
-				ng.connect_stairs(r, stairs_ix, c->dim, c->dir, 0); // is_u=0 TODO: make this work
-			}
+		if (room.get_room_type(0) == RTYPE_PARKING && has_ramp && room.intersects_no_adj(interior->pg_ramp)) { // include parking garage ramp
+			bool const dim(interior->pg_ramp.ix >> 1), dir(interior->pg_ramp.ix & 1);
+			ng.connect_stairs(r, 0, dim, dir, 0, 1); // stairs_ix=0, is_u=0, is_ramp=1
 		}
-#endif
 		//for (unsigned e = 0; e < interior->elevators.size(); ++e) {} // elevators are not yet used by AIs so are ignored here; should check interior->elevators_disabled
 	} // for r
 	//if (is_house && !has_sec_bldg() && has_basement() && !ng.is_fully_connected()) {cout << "bcube " << bcube.str() << endl;}
@@ -672,7 +673,7 @@ bool building_t::choose_dest_goal(person_t &person, rand_gen_t &rgen) const {
 	// else if floors differ by more than 1, we'll end up visiting the room on the wrong floor
 	
 	if (global_building_params.ai_target_player) { // ensure target is a valid location in this building; this must be done *after* adjacent floor zval adjustment
-		// handle the case where the player is standing on the stairs on the same floor by moving zval to a different floor to force this person to use the stairs
+		// handle the case where the player is standing on the stairs on the same floor by moving zval to a different floor to force this person to use the stairs; what about pg_ramp?
 		if (person.goal_type == GOAL_TYPE_PLAYER && loc.floor_ix == goal.floor_ix && goal.stairs_ix >= 0) {
 			float const person_z1(person.get_z1()), player_z1(cur_player_building_loc.pos.z - CAMERA_RADIUS - get_player_height()), fc_thick(get_fc_thickness());
 			// make destination exactly one floor above or below of where we currently are; some hysteresis is required to handle the case where the player is at the same zval
@@ -826,6 +827,7 @@ void building_interior_t::get_avoid_cubes(vect_cube_t &avoid, float z1, float z2
 		// these object types are not collided with by people and can be skipped
 		if (c->no_coll() || c->is_dynamic() || c->type == TYPE_LG_BALL) continue; // skip dynamic objects (balls, etc.)
 		if (!(same_as_player ? c->is_player_collidable() : bldg_obj_types[c->type].ai_coll)) continue;
+		if (skip_stairs && c->type == TYPE_RAMP) continue; // skip_stairs also skips ramps
 		//if (c->type == TYPE_ATTIC_DOOR && (c->flags & RO_FLAG_IN_HALLWAY)) continue; // skip open attic doors in hallways because they block the path too much
 		cube_t bc(get_true_room_obj_bcube(*c)); // needed for open attic door
 		if (bc.z1() > z2 || bc.z2() < z1) continue;
@@ -853,10 +855,9 @@ bool building_t::stairs_contained_in_part(stairwell_t const &s, cube_t const &p)
 	if (s.roof_access) {sc.z2() -= get_window_vspace();} // clip off top floor roof access
 	return p.contains_cube(sc);
 }
-void building_t::find_nearest_stairs(point const &p1, point const &p2, vector<unsigned> &nearest_stairs, int part_ix) const {
+void building_t::find_nearest_stairs_or_ramp(point const &p1, point const &p2, vector<unsigned> &nearest_stairs, int part_ix) const {
 	nearest_stairs.clear();
 	assert(interior);
-	if (interior->stairwells.empty()) return; // no stairs
 	assert(part_ix < 0 || (unsigned)part_ix < parts.size());
 	float const zmin(min(p1.z, p2.z)), zmax(max(p1.z, p2.z));
 	vector<pair<float, unsigned>> sorted;
@@ -866,9 +867,12 @@ void building_t::find_nearest_stairs(point const &p1, point const &p2, vector<un
 		if (zmin < stairs.z1() || zmax > stairs.z2()) continue; // stairs don't span the correct floors
 		if (part_ix >= 0 && !stairs_contained_in_part(stairs, parts[part_ix])) continue; // stairs don't belong to this part (Note: this option is currently unused)
 		point const center(stairs.get_cube_center());
-		float const dist(p2p_dist(p1, center) + p2p_dist(center, p2));
-		sorted.emplace_back(dist, s);
+		sorted.emplace_back((p2p_dist(p1, center) + p2p_dist(center, p2)), s);
 	} // for s
+	if ((part_ix < 0 || part_ix == basement_part_ix) && has_pg_ramp() && zmax < ground_floor_z1) { // parking garage ramp
+		point const center(interior->pg_ramp.get_cube_center());
+		sorted.emplace_back((p2p_dist(p1, center) + p2p_dist(center, p2)), interior->stairwells.size());
+	}
 	sort(sorted.begin(), sorted.end()); // sort by distance, min first
 	for (auto s = sorted.begin(); s != sorted.end(); ++s) {nearest_stairs.push_back(s->second);}
 }
@@ -901,44 +905,55 @@ bool building_t::find_route_to_point(person_t const &person, float radius, bool 
 		return interior->nav_graph->complete_path_within_room(from, to, loc1.room_ix, person.ssn, radius, person.cur_rseed, is_first_path, following_player, avoid, path);
 	}
 	if (loc1.floor_ix != loc2.floor_ix) { // different floors: find path from <from> to nearest stairs, then find path from stairs to <to>
-		vector<unsigned> nearest_stairs;
-		find_nearest_stairs(from, to, nearest_stairs); // pass in loc1.part_ix if both loc part_ix values are equal?
+		vector<unsigned> nearest_stairs_or_ramp;
+		find_nearest_stairs_or_ramp(from, to, nearest_stairs_or_ramp); // pass in loc1.part_ix if both loc part_ix values are equal?
 		bool const up_or_down(loc1.floor_ix > loc2.floor_ix); // 0=up, 1=down; Note: floor_ix is relative to bcube.z1() (or ext_basement z1), so is consistent across parts
 
-		for (auto s = nearest_stairs.begin(); s != nearest_stairs.end(); ++s) { // try using stairs, closest to furthest
-			assert(*s < interior->stairwells.size());
-			stairwell_t const &stairs(interior->stairwells[*s]);
-			unsigned const stairs_room_ix(*s + interior->rooms.size()); // map to graph space
+		for (unsigned s : nearest_stairs_or_ramp) { // try using stairs or ramp, closest to furthest
+			bool const is_ramp(s == interior->stairwells.size());
+			assert(is_ramp || s < interior->stairwells.size());
+			unsigned const stairs_room_ix(s + interior->rooms.size()); // map to graph space (should work for stairs or ramp)
 			path.clear();
 			vector<point> from_path;
 			// Note: passing use_stairs=0 here because it's unclear if we want to go through stairs nodes in our A* algorithm
-			// from => stairs
+			// from => stairs/ramp
 			if (!interior->nav_graph->find_path_points(loc1.room_ix, stairs_room_ix, person.ssn, radius, height, 0, is_first_path,
 				up_or_down, person.cur_rseed, avoid, from, interior->doors, person.has_key, from_path)) continue;
 			point const seg2_start(interior->nav_graph->get_stairs_entrance_pt(to.z, stairs_room_ix, !up_or_down)); // other end
 			// new floor, new zval, new avoid cubes
 			interior->get_avoid_cubes(avoid, (seg2_start.z - radius), (seg2_start.z + z2_add), 0.5*radius, get_floor_thickness(), following_player);
-			// stairs => to
+			// stairs/ramp => to
 			if (!interior->nav_graph->find_path_points(stairs_room_ix, loc2.room_ix, person.ssn, radius, height, 0, is_first_path,
 				!up_or_down, person.cur_rseed, avoid, seg2_start, interior->doors, person.has_key, path)) continue;
 			assert(!path.empty() && !from_path.empty());
 			path.push_back(seg2_start); // other end of the stairs
 			// add two more points to straighten the entrance and exit paths; this segment doesn't check for intersection with stairs
-			cube_t const stairs_ext(get_stairs_plus_step_up(stairs));
-			point const stairs_enter(stairs_ext.closest_pt(from_path.front())), stairs_exit(stairs_ext.closest_pt(path.back()));
-			path.push_back(stairs_exit);
+			point enter_pt;
 
-			if (stairs.shape == SHAPE_U) { // add 2 extra points on mid-level landing; entrance and exit will be on the same side
-				bool const dim(stairs.dim), dir(stairs.dir); // Note: see code in add_stairs_and_elevators()
-				float const turn_pt(stairs.d[dim][dir] - 0.1*(dir ? 1.0 : -1.0)*stairs.get_sz_dim(dim)), seg_delta_z(0.45f*(to.z - from.z));
-				point exit_turn(stairs_exit.x, stairs_exit.y, (to.z - seg_delta_z));
-				exit_turn[dim] = turn_pt;
-				path.push_back(exit_turn); // turning point for exit side of stairs
-				point enter_turn(stairs_enter.x, stairs_enter.y, (from.z + seg_delta_z));
-				enter_turn[dim] = turn_pt;
-				path.push_back(enter_turn); // turning point for entrance side of stairs
+			if (is_ramp) {
+				cube_t const walk_area(interior->pg_ramp);
+				enter_pt = walk_area.closest_pt(from_path.front());
+				path.push_back(walk_area.closest_pt(path.back())); // exit point
 			}
-			path.push_back(stairs_enter);
+			else { // stairs
+				stairwell_t const &stairs(interior->stairwells[s]);
+				cube_t const stairs_ext(get_stairs_plus_step_up(stairs));
+				enter_pt = stairs_ext.closest_pt(from_path.front());
+				point const exit_pt(stairs_ext.closest_pt(path.back()));
+				path.push_back(exit_pt);
+
+				if (stairs.shape == SHAPE_U) { // add 2 extra points on mid-level landing; entrance and exit will be on the same side
+					bool const dim(stairs.dim), dir(stairs.dir); // Note: see code in add_stairs_and_elevators()
+					float const turn_pt(stairs.d[dim][dir] - 0.1*(dir ? 1.0 : -1.0)*stairs.get_sz_dim(dim)), seg_delta_z(0.45f*(to.z - from.z));
+					point exit_turn(exit_pt.x, exit_pt.y, (to.z - seg_delta_z));
+					exit_turn[dim] = turn_pt;
+					path.push_back(exit_turn); // turning point for exit side of stairs
+					point enter_turn(enter_pt.x, enter_pt.y, (from.z + seg_delta_z));
+					enter_turn[dim] = turn_pt;
+					path.push_back(enter_turn); // turning point for entrance side of stairs
+				}
+			}
+			path.push_back(enter_pt);
 			vector_add_to(from_path, path); // concatenate the two path segments in reverse order
 			assert(!path.empty());
 			return 1; // done/success
@@ -955,7 +970,7 @@ bool building_t::find_route_to_point(person_t const &person, float radius, bool 
 
 void person_t::next_path_pt(bool starting_path) {
 	assert(!path.empty());
-	is_on_stairs = (!starting_path && target_pos.z != path.back().z);
+	is_on_stairs = (!starting_path && target_pos.z != path.back().z); // or ramp
 	target_pos   = path.back();
 	path.pop_back();
 }
@@ -1455,10 +1470,11 @@ building_loc_t building_t::get_building_loc_for_pt(point const &pt) const {
 		for (auto s = interior->stairwells.begin(); s != interior->stairwells.end(); ++s) {
 			if (s->contains_pt(pt)) {loc.stairs_ix = (s - interior->stairwells.begin()); break;} // Note: stairs_ix is not currently used, except for >= 0 test
 		}
+		// what about interior->pg_ramp? should that set stairs_ix to stairwells.size()-1?
 	}
 	return loc;
 }
-bool building_t::room_containing_pt_has_stairs(point const &pt) const {
+bool building_t::room_containing_pt_has_stairs(point const &pt) const { // Note: only used in building_t::get_all_drawn_window_verts()
 	int const room_ix(get_room_containing_pt(pt));
 	if (room_ix < 0) return 0; // no room contains this point
 	return get_room(room_ix).has_stairs; // Note: used for drawing, can be conservative and return true if any floor of this room has stairs
