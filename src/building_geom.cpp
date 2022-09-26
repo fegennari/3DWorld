@@ -857,7 +857,7 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 	float peak_height(rgen.rand_uniform(0.15, 0.5)); // same for all parts
 	if (has_attic()) {max_eq(peak_height, 0.3f);} // set larger min size if there's an attic
 	float roof_dz[4] = {0.0f};
-	bool hipped_roof[4] = {0};
+	bool any_hipped(0), hipped_roof[4] = {0};
 	int last_hipped(2); // starts at <unset>
 
 	for (auto i = parts.begin(); (i + skip_last_roof) != parts.end(); ++i) {
@@ -905,6 +905,7 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 		}
 		assert(roof_dz[ix] > 0.0);
 		hipped_roof[ix] = hipped;
+		any_hipped     |= hipped;
 	} // for i
 	if ((rgen.rand()%3) != 0) { // add a chimney 67% of the time
 		unsigned part_ix(0);
@@ -925,7 +926,7 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 		add_chimney(part, dim, dir, chimney_dz, rgen); // Note: return value is ignored
 	}
 	parts_generated = 1; // must be after adding chimney
-	roof_type = ROOF_TYPE_PEAK; // peaked and hipped roofs are both this type
+	roof_type = (any_hipped ? ROOF_TYPE_HIPPED : ROOF_TYPE_PEAK);
 	add_roof_to_bcube();
 	gen_grayscale_detail_color(rgen, 0.4, 0.8); // for roof
 	door_color = (rgen.rand_bool() ? LT_BROWN : WHITE);

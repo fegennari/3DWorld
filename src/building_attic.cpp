@@ -136,12 +136,7 @@ cube_t building_t::get_attic_access_door_avoid() const {
 void building_t::assign_attic_type(rand_gen_t rgen) {
 	if (rgen.rand_bool()) {interior->attic_type = ATTIC_TYPE_RAFTERS; return;} // rafters is the most common case
 	// wood and plaster don't look good with hipped roofs because they have vertical beams
-	bool is_hipped(0);
-
-	for (tquad_with_ix_t const &i : roof_tquads) {
-		if (is_attic_roof(i, 0) && i.type == tquad_with_ix_t::TYPE_ROOF && i.npts == 3) {is_hipped = 1; break;}
-	}
-	bool const allow_no_rafters(!is_hipped && (rgen.rand()&3) == 0); // make these cases rare
+	bool const allow_no_rafters(roof_type != ROOF_TYPE_HIPPED && (rgen.rand()&3) == 0); // make these cases rare
 	if (allow_no_rafters) {interior->attic_type = rgen.rand()%NUM_ATTIC_TYPES;} // ATTIC_TYPE_RAFTERS, ATTIC_TYPE_WOOD, ATTIC_TYPE_PLASTER, ATTIC_TYPE_FIBERGLASS
 	else                  {interior->attic_type = rgen.rand()%2;} // ATTIC_TYPE_RAFTERS, ATTIC_TYPE_WOOD
 }
