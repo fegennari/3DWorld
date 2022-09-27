@@ -24,7 +24,6 @@ void force_player_height(double height);
 
 
 bool building_t::check_bcube_overlap_xy(building_t const &b, float expand_rel, float expand_abs, vector<point> &points) const {
-
 	if (expand_rel == 0.0 && expand_abs == 0.0 && !bcube.intersects(b.bcube)) return 0;
 	if (!is_rotated() && !b.is_rotated()) return 1; // above check is exact, top-level bcube check up to the caller
 	if (b.bcube.contains_pt_xy(bcube.get_cube_center()) || bcube.contains_pt_xy(b.bcube.get_cube_center())) return 1; // slightly faster to include this check
@@ -33,11 +32,17 @@ bool building_t::check_bcube_overlap_xy(building_t const &b, float expand_rel, f
 
 // Note: only checks for point (x,y) value contained in one cube/N-gon/cylinder; assumes pt has already been rotated into local coordinate frame
 bool building_t::check_part_contains_pt_xy(cube_t const &part, point const &pt, vector<point> &points) const {
-
 	if (!part.contains_pt_xy(pt)) return 0; // check bounding cube
 	if (is_simple_cube()) return 1; // that's it
 	building_draw_utils::calc_poly_pts(*this, bcube, part, points);
 	return point_in_polygon_2d(pt.x, pt.y, points.data(), points.size(), 0, 1); // 2D x/y containment
+}
+
+bool building_t::cube_int_parts_no_sec(cube_t const &c) const {
+	for (auto p = parts.begin(); p != get_real_parts_end(); ++p) {
+		if (p->intersects_no_adj(c)) return 1;
+	}
+	return 0;
 }
 
 bool building_t::check_bcube_overlap_xy_one_dir(building_t const &b, float expand_rel, float expand_abs, vector<point> &points) const { // can be called before levels/splits are created

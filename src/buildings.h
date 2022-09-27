@@ -1274,6 +1274,7 @@ struct building_t : public building_geom_t {
 	void maybe_inv_rotate_pos_dir(point &pos, vector3d &dir) const;
 	void set_z_range(float z1, float z2);
 	bool check_part_contains_pt_xy(cube_t const &part, point const &pt, vector<point> &points) const;
+	bool cube_int_parts_no_sec(cube_t const &c) const;
 	bool check_bcube_overlap_xy(building_t const &b, float expand_rel, float expand_abs, vector<point> &points) const;
 	vect_cube_t::const_iterator get_real_parts_end() const {return (parts.begin() + real_num_parts);}
 	vect_cube_t::const_iterator get_real_parts_end_inc_sec() const {return (get_real_parts_end() + has_sec_bldg());}
