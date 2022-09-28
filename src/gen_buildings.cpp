@@ -1260,8 +1260,64 @@ void building_t::get_all_drawn_exterior_verts(building_draw_t &bdraw) { // exter
 		else if (i->type == tquad_with_ix_t::TYPE_TRIM) {
 			bdraw.add_tquad(*this, *i, bcube, tid_nm_pair_t(), LT_GRAY); // untextured
 		}
-		else if (i->type == tquad_with_ix_t::TYPE_ROOF || i->type == tquad_with_ix_t::TYPE_ROOF_ACC) { // use roof texture
-			bdraw.add_tquad(*this, *i, bcube, mat.roof_tex.get_scaled_version(2.0), roof_color);
+		else if (is_house && i->type == tquad_with_ix_t::TYPE_ROOF && i->npts == 4) {
+			// house sloped trapezoid roof: extend lower zvals out a bit if peaked/non-hipped
+			// TODO: no porch roofs
+			// TODO: add quad under extensions
+			tquad_with_ix_t tq(*i);
+			float const extend(0.25*get_doorway_width());
+			unsigned top_dim(2), bot_dim(2); // start at invalid values
+			float top_lo(0.0), top_hi(0.0), bot_lo(0.0), bot_hi(0.0);
+			
+			// find the horizontal top and bottom edges
+			for (unsigned n = 0; n < tq.npts; ++n) {
+				point const &cur(i->pts[n]), &prev(i->pts[n ? n-1 : tq.npts-1]), &next(i->pts[(n == tq.npts-1) ? 0 : n+1]);
+				if (cur.z < prev.z && cur.z == next.z) {bot_dim = (cur.x == next.x); bot_lo = min(cur[bot_dim], next[bot_dim]); bot_hi = max(cur[bot_dim], next[bot_dim]);}
+				if (cur.z > prev.z && cur.z == next.z) {top_dim = (cur.x == next.x); top_lo = min(cur[top_dim], next[top_dim]); top_hi = max(cur[top_dim], next[top_dim]);}
+			}
+			assert(top_dim < 2 && top_dim == bot_dim);
+
+			if (top_lo == bot_lo || top_hi == bot_hi) { // peaked, maybe clipped at one end, not hipped
+				cube_t const tq_bcube(i->get_bcube());
+				cube_t tq_bcube_lower(tq_bcube);
+				tq_bcube_lower.z1() -= tq_bcube_lower.dz(); // extend downward so that it intersects the part below
+
+				for (unsigned n = 0; n < tq.npts; ++n) {
+					point &cur(tq.pts[n]);
+					float const top_lh[2] = {top_lo, top_hi}, bot_lh[2] = {bot_lo, bot_hi};
+
+					for (unsigned d = 0; d < 2; ++d) {
+						float const edge(top_lh[d]);
+						if (edge != bot_lh[d] || cur[top_dim] != edge) continue; // vert not at end of roof
+						float const extend_signed((d ? 1.0 : -1.0)*extend);
+						
+						if (edge != bcube.d[top_dim][d]) {
+							cube_t test_cube(tq_bcube);
+							test_cube.d[top_dim][ d] = edge + extend_signed;
+							test_cube.d[top_dim][!d] = edge + 0.1*extend_signed; // minor shift to avoid intersecting the part this roof is placed on
+							if (cube_int_parts_no_sec(test_cube)) continue;
+						}
+						cur[top_dim] += extend_signed; // extend out away from house
+					} // for d
+					point const other[2] = {i->pts[n ? n-1 : tq.npts-1], i->pts[(n == tq.npts-1) ? 0 : n+1]}; // prev and next; compare to unmodified points
+
+					for (unsigned d = 0; d < 2; ++d) {
+						if (cur.z >= other[d].z) continue; // not along the bottom edge
+						vector3d const delta(extend*(cur - other[d]).get_norm()); // extend downward
+						cur += delta;
+						cube_t const new_bcube(tq.get_bcube());
+
+						// if extended bcube intersects a part that the orig bcube didn't, undo the movement to avoid the roof clipping through another part
+						for (auto p = parts.begin(); p != get_real_parts_end(); ++p) {
+							if (!p->intersects_no_adj(tq_bcube_lower) && p->intersects_no_adj(new_bcube)) {cur -= delta; break;}
+						}
+					} // for d
+				} // for n
+			}
+			bdraw.add_tquad(*this, tq, bcube, mat.roof_tex.get_scaled_version(2.0), roof_color); // use roof texture
+		}
+		else if (i->type == tquad_with_ix_t::TYPE_ROOF || i->type == tquad_with_ix_t::TYPE_ROOF_ACC) {
+			bdraw.add_tquad(*this, *i, bcube, mat.roof_tex.get_scaled_version(2.0), roof_color); // use roof texture
 		}
 		else if (i->type == tquad_with_ix_t::TYPE_BDOOR2 || i->type == tquad_with_ix_t::TYPE_RDOOR2) {
 			bdraw.add_tquad(*this, *i, bcube, building_texture_mgr.get_bdoor2_tid(), WHITE);
