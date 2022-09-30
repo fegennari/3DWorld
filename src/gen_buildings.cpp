@@ -1299,7 +1299,6 @@ void building_t::get_all_drawn_exterior_verts(building_draw_t &bdraw) { // exter
 							for (auto p = parts.begin(); p != get_real_parts_end(); ++p) {
 								if (!p->intersects_no_adj(tq_bcube_lower) && p->intersects_no_adj(new_bcube)) {cur -= delta; break;}
 							}
-							// TODO: add quad under extensions
 						} // for d
 					} // for n
 					for (unsigned n = 0; n < tq.npts; ++n) { // extend ends outward second
@@ -1320,10 +1319,24 @@ void building_t::get_all_drawn_exterior_verts(building_draw_t &bdraw) { // exter
 							cur[top_dim] += extend_signed; // extend out away from house
 						} // for d
 					} // for n
-				}
-			}
+					cube_t const new_bcube(tq.get_bcube());
+
+					for (unsigned d = 0; d < 2; ++d) {
+						float const old_edge(tq_bcube.d[!top_dim][d]), new_edge(new_bcube.d[!top_dim][d]);
+						if (old_edge == new_edge) continue; // not extended in this dir (can only extend in one dir per tquad)
+						tquad_with_ix_t bot_surf(4, tq.type);
+						UNROLL_4X(bot_surf.pts[i_].z = new_bcube.z1(););
+						bot_surf.pts[0][!top_dim] = bot_surf.pts[1][!top_dim] = old_edge;
+						bot_surf.pts[2][!top_dim] = bot_surf.pts[3][!top_dim] = new_edge;
+						bot_surf.pts[0][ top_dim] = bot_surf.pts[3][ top_dim] = new_bcube.d[top_dim][0];
+						bot_surf.pts[1][ top_dim] = bot_surf.pts[2][ top_dim] = new_bcube.d[top_dim][1];
+						tid_nm_pair_t const bot_tex(-1); // untextured, for now
+						bdraw.add_tquad(*this, bot_surf, bcube, bot_tex, WHITE);
+					} // for d
+				} // end is_above_part
+			} // end peaked roof
 			bdraw.add_tquad(*this, tq, bcube, mat.roof_tex.get_scaled_version(2.0), roof_color); // use roof texture
-		}
+		} // end house roof quad
 		else if (i->type == tquad_with_ix_t::TYPE_ROOF || i->type == tquad_with_ix_t::TYPE_ROOF_ACC) {
 			bdraw.add_tquad(*this, *i, bcube, mat.roof_tex.get_scaled_version(2.0), roof_color); // use roof texture
 		}
