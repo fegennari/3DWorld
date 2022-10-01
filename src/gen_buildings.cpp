@@ -1291,7 +1291,7 @@ void building_t::get_all_drawn_exterior_verts(building_draw_t &bdraw) { // exter
 
 						for (unsigned d = 0; d < 2; ++d) {
 							if (cur.z >= other[d].z) continue; // not along the bottom edge
-							vector3d const delta(extend*(cur - other[d]).get_norm()); // extend downward
+							vector3d const delta(extend*(i->pts[n] - other[d]).get_norm()); // extend downward
 							cur += delta;
 							cube_t const new_bcube(tq.get_bcube());
 
@@ -1330,8 +1330,20 @@ void building_t::get_all_drawn_exterior_verts(building_draw_t &bdraw) { // exter
 						bot_surf.pts[2][!top_dim] = bot_surf.pts[3][!top_dim] = new_edge;
 						bot_surf.pts[0][ top_dim] = bot_surf.pts[3][ top_dim] = new_bcube.d[top_dim][0];
 						bot_surf.pts[1][ top_dim] = bot_surf.pts[2][ top_dim] = new_bcube.d[top_dim][1];
+						if (d ^ top_dim ^ 1) {std::reverse(bot_surf.pts, bot_surf.pts+4);} // reverse to get the correct winding order
 						tid_nm_pair_t const bot_tex(-1); // untextured, for now
 						bdraw.add_tquad(*this, bot_surf, bcube, bot_tex, WHITE);
+
+						for (unsigned e = 0; e < 2; ++e) { // add triangle end caps
+							tquad_with_ix_t end_cap(3, tq.type);
+							UNROLL_3X(end_cap.pts[i_][top_dim] = new_bcube.d[top_dim][e];); // end
+							end_cap.pts[0][!top_dim] = new_edge;
+							end_cap.pts[1][!top_dim] = end_cap.pts[2][!top_dim] = old_edge;
+							end_cap.pts[0].z = end_cap.pts[1].z = new_bcube.z1(); // bottom
+							end_cap.pts[2].z = tq_bcube.z1(); // top
+							if (d ^ e ^ top_dim ^ 1) {swap(end_cap.pts[0], end_cap.pts[1]);} // swap to get the correct winding order
+							bdraw.add_tquad(*this, end_cap, bcube, bot_tex, WHITE);
+						} // for e
 					} // for d
 				} // end is_above_part
 			} // end peaked roof
