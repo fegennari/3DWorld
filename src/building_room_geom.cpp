@@ -1205,13 +1205,14 @@ void building_room_geom_t::add_blinds(room_object_t const &c) {
 	int const nm_tid(get_texture_by_name("interiors/blinds_hn.jpg", 1, 0, 1, 8.0)); // use high aniso
 	float tx(vertical ? 1.0/c.dz() : 0.0), ty(vertical ? 0.5/c.get_width() : 0.0);
 	if (c.dim) {swap(tx, ty);}
-	rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_blinds_tid(), nm_tid, tx, ty), 1));
+	int const blinds_tid(get_blinds_tid());
+	rgeom_mat_t &mat(get_material(tid_nm_pair_t(blinds_tid, nm_tid, tx, ty), 1));
 	unsigned df1(~get_skip_mask_for_xy(!c.dim)), df2(~EF_Z12);
 	if (vertical) {swap(df1, df2);} // swap sides vs. top/bottom
 	vector3d const llc(c.get_llc());
 	mat.add_cube_to_verts(c, color, llc, ~get_skip_mask_for_xy(c.dim), (c.dim ^ vertical ^ 1)); // draw front and back faces
 	mat.add_cube_to_verts(c, color, llc, df1, (c.dim ^ vertical)); // draw sides / top and bottom
-	get_untextured_material(1).add_cube_to_verts_untextured(c, texture_color(get_blinds_tid()).modulate_with(color), df2); // draw top and bottom / front and back untextured
+	get_untextured_material(1).add_cube_to_verts_untextured(c, texture_color(blinds_tid).modulate_with(color), df2); // draw top and bottom / front and back untextured
 }
 
 void building_room_geom_t::add_fireplace(room_object_t const &c, float tscale) {

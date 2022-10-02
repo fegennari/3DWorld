@@ -543,10 +543,11 @@ void texture_t::upload_cube_map_face(unsigned ix) {
 	glTexImage2D((GL_TEXTURE_CUBE_MAP_POSITIVE_X + ix), 0, calc_internal_format(), width, height, 0, calc_format(), get_data_format(), data);
 }
 
-
 void texture_t::calc_color() { // incorrect in is_16_bit_gray mode
 
+	if (normal_map) return; // color not used for normal maps
 	if (defer_load() && !is_allocated()) {color = WHITE; return;} // texture not loaded - this is the best we can do
+	//highres_timer_t timer("Texture Color"); // 519ms
 	assert(is_allocated());
 	float colors[4] = {0.0}, weight(0.0);
 	unsigned const size(num_pixels());

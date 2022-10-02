@@ -40,15 +40,16 @@ void dxt_texture_compress(uint8_t const *const data, vector<uint8_t> &comp_data,
 }
 
 void texture_t::compress_and_send_texture() {
-	vector<uint8_t> comp_data;
+	//highres_timer_t timer("compress_and_send_texture", 1, 1); // enabled, no loading screen; 2676ms
+	vector<uint8_t> comp_data; // reuse across calls doesn't seem to help much
 	dxt_texture_compress(data, comp_data, width, height, ncolors);
 	GL_CHECK(glCompressedTexImage2D(GL_TEXTURE_2D, 0, calc_internal_format(), width, height, 0, comp_data.size(), comp_data.data());)
 }
 
 void texture_t::create_compressed_mipmaps() {
-	//timer_t timer("create_compressed_mipmaps", 1, 1); // enabled, no loading screen; 1448ms total for city + cars + people
+	//highres_timer_t timer("create_compressed_mipmaps", 1, 1); // enabled, no loading screen; 1623ms total for city + cars + people
 	assert(is_allocated());
-	vector<uint8_t> idatav, odata, comp_data;
+	vector<uint8_t> idatav, odata, comp_data; // reuse across calls doesn't seem to help much
 
 	for (unsigned w = width, h = height, level = 1; w > 1 || h > 1; w >>= 1, h >>= 1, ++level) {
 		unsigned const w1(max(w, 1U)), h1(max(h, 1U)), w2(max(w>>1, 1U)), h2(max(h>>1, 1U));
