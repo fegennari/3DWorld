@@ -16,10 +16,8 @@
 
 using std::string;
 
-bool const DRAW_WINDOWS_AS_HOLES    = 1;
-bool const ADD_ROOM_SHADOWS         = 1;
-bool const ADD_ROOM_LIGHTS          = 1;
-bool const DRAW_EXT_REFLECTIONS     = 1;
+bool const ADD_ROOM_SHADOWS         = 1; // for room lights
+bool const DRAW_EXT_REFLECTIONS     = 1; // draw building exteriors in mirror reflections; slower, but looks better; not shadowed
 float const WIND_LIGHT_ON_RAND      = 0.08;
 float const BASEMENT_ENTRANCE_SCALE = 0.33;
 
@@ -297,14 +295,14 @@ struct building_lights_manager_t : public city_lights_manager_t {
 		if (ADD_ROOM_SHADOWS) {setup_shadow_maps(dl_sources, (camera_pdu.pos - xlate), global_building_params.max_shadow_maps);}
 		finalize_lights(dl_sources);
 	}
-	virtual bool enable_lights() const {return ((draw_building_interiors && ADD_ROOM_LIGHTS) || flashlight_on);}
+	virtual bool enable_lights() const {return (draw_building_interiors || flashlight_on);}
 };
 
 building_lights_manager_t building_lights_manager;
 
 
 void set_interior_lighting(shader_t &s, bool have_indir) {
-	float const light_scale(ADD_ROOM_LIGHTS ? 0.5 : 1.0); // lower for basement, lower when using room lights
+	float const light_scale(0.5);
 	float const light_change_amt(fticks/(2.0f*TICKS_PER_SECOND));
 	static float blscale(1.0); // indir/ambient lighting slowly transitions when entering or leaving the basement
 	if (player_in_basement || player_in_attic) {blscale = max(0.0f, (blscale - light_change_amt));} // decrease
@@ -344,11 +342,11 @@ void setup_building_draw_shader(shader_t &s, float min_alpha, bool enable_indir,
 	float const pcf_scale = 0.2;
 	// disable indir if the player is in a closed closet
 	bool const have_indir(enable_indir && indir_tex_mgr.enabled() && enable_building_indir_lighting() && !(player_in_closet && !(player_in_closet & RO_FLAG_OPEN)));
-	int const use_bmap(global_building_params.has_normal_map), interior_use_smaps((ADD_ROOM_SHADOWS && ADD_ROOM_LIGHTS) ? 2 : 1); // dynamic light smaps only
+	int const use_bmap(global_building_params.has_normal_map), interior_use_smaps(ADD_ROOM_SHADOWS ? 2 : 1); // dynamic light smaps only
 	cube_t const lights_bcube(building_lights_manager.get_lights_bcube());
 	if (enable_indir) {s.set_prefix("#define ENABLE_OUTSIDE_INDIR_RANGE", 1);} // FS
 	s.set_prefix("#define LINEAR_DLIGHT_ATTEN", 1); // FS; improves room lighting (better light distribution vs. framerate trade-off)
-	city_shader_setup(s, lights_bcube, ADD_ROOM_LIGHTS, interior_use_smaps, use_bmap, min_alpha, force_tsl, pcf_scale, use_texgen, have_indir, 0); // is_outside=0
+	city_shader_setup(s, lights_bcube, 1, interior_use_smaps, use_bmap, min_alpha, force_tsl, pcf_scale, use_texgen, have_indir, 0); // use_dlights=1, is_outside=0
 	set_interior_lighting(s, have_indir);
 	if (have_indir) {indir_tex_mgr.setup_for_building(s);}
 }
@@ -965,7 +963,7 @@ public:
 							if (delta > 0.0) {v.t[1] += tscale[1]*delta;} // recalculate tex coord
 						}
 					}
-					else if (clip_windows && DRAW_WINDOWS_AS_HOLES) { // move slightly away from the building wall to avoid z-fighting
+					else if (clip_windows) { // move slightly away from the building wall to avoid z-fighting
 						for (unsigned k = ix; k < ix+4; ++k) {
 							if (is_rotated) {verts[k].v += offset*norm;} else {verts[k].v[n] += offset;}
 						}
@@ -2328,7 +2326,7 @@ public:
 					flatten_hmap_region(b.bcube);
 				}
 				else { // extend building bottom downward to min mesh height
-					bool const shift_top(DRAW_WINDOWS_AS_HOLES); // shift is required to preserve height for floor alignment of building interiors
+					bool const shift_top(1); // shift is required to preserve height for floor alignment of building interiors
 					float &zmin(b.bcube.z1()); // Note: grid bcube z0 value won't be correct, but will be fixed conservatively below
 					float const orig_zmin(zmin);
 					unsigned num_below(0);
@@ -2529,8 +2527,7 @@ public:
 	}
 
 	void add_interior_lights(vector3d const &xlate, cube_t &lights_bcube) { // Note: non const because this caches light bcubes
-		if (!ADD_ROOM_LIGHTS) return;
-		if (!DRAW_WINDOWS_AS_HOLES || !draw_building_interiors || !has_interior_geom) return; // no interior
+		if (!draw_building_interiors || !has_interior_geom) return; // no interior
 		point const camera(get_camera_pos()), camera_xlated(camera - xlate);
 		vector<point> points; // reused temporary
 		vect_cube_t ped_bcubes; // reused temporary
@@ -2624,7 +2621,7 @@ public:
 				(*i)->use_smap_this_frame = (use_tt_smap && try_bind_tile_smap_at_point(((*i)->grid_by_tile[0].bcube.get_cube_center() + xlate), s, 1)); // check_only=1
 			}
 		}
-		bool const draw_interior(DRAW_WINDOWS_AS_HOLES && (have_windows || global_building_params.add_city_interiors) && draw_building_interiors);
+		bool const draw_interior((have_windows || global_building_params.add_city_interiors) && draw_building_interiors);
 		bool const v(world_mode == WMODE_GROUND), indir(v), dlights(v), use_smap(v);
 		float const min_alpha        = 0.0; // 0.0 to avoid alpha test
 		city_dlight_pcf_offset_scale = 0.6; // reduced for building interiors; below 0.6 and shadow edges are blocky, but above 0.6 clothes hangers have double shadows
@@ -2648,26 +2645,26 @@ public:
 			glEnable(GL_CULL_FACE); // back face culling optimization, helps with expensive lighting shaders
 			glCullFace(reflection_pass ? GL_FRONT : GL_BACK);
 
-			if (ADD_ROOM_LIGHTS) { // use z-prepass to reduce time taken for shading
-				setup_smoke_shaders(s, 0.0, 0, 0, 0, 0, 0, 0); // everything disabled, but same shader so that vertex transforms are identical
-				glPolygonOffset(1.0, 1.0);
-				if (reflection_pass) {glEnable(GL_POLYGON_OFFSET_FILL);} // not sure why, but a polygon offset is required for the reflection pass
-				glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE); // Disable color rendering, we only want to write to the Z-Buffer
+			// draw lit interiors; use z-prepass to reduce time taken for shading
+			setup_smoke_shaders(s, 0.0, 0, 0, 0, 0, 0, 0); // everything disabled, but same shader so that vertex transforms are identical
+			glPolygonOffset(1.0, 1.0);
+			if (reflection_pass) {glEnable(GL_POLYGON_OFFSET_FILL);} // not sure why, but a polygon offset is required for the reflection pass
+			glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE); // Disable color rendering, we only want to write to the Z-Buffer
 				
-				for (auto i = bcs.begin(); i != bcs.end(); ++i) { // draw interior for the tile containing the camera
-					float const ddist_scale((*i)->building_draw_windows.empty() ? 0.1 : 1.0);
+			for (auto i = bcs.begin(); i != bcs.end(); ++i) { // draw interior for the tile containing the camera
+				float const ddist_scale((*i)->building_draw_windows.empty() ? 0.1 : 1.0);
 
-					for (auto g = (*i)->grid_by_tile.begin(); g != (*i)->grid_by_tile.end(); ++g) {
-						if (reflection_pass ? g->bcube.contains_pt_xy(camera_xlated) : g->bcube.closest_dist_xy_less_than(camera_xlated, ddist_scale*z_prepass_dist)) {
-							(*i)->building_draw_interior.draw_tile(s, (g - (*i)->grid_by_tile.begin()));
-						}
+				for (auto g = (*i)->grid_by_tile.begin(); g != (*i)->grid_by_tile.end(); ++g) {
+					if (reflection_pass ? g->bcube.contains_pt_xy(camera_xlated) : g->bcube.closest_dist_xy_less_than(camera_xlated, ddist_scale*z_prepass_dist)) {
+						(*i)->building_draw_interior.draw_tile(s, (g - (*i)->grid_by_tile.begin()));
 					}
 				}
-				if (reflection_pass) {glDisable(GL_POLYGON_OFFSET_FILL);}
-				glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
-				s.end_shader();
-				set_std_depth_func_with_eq();
 			}
+			if (reflection_pass) {glDisable(GL_POLYGON_OFFSET_FILL);}
+			glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+			s.end_shader();
+			set_std_depth_func_with_eq();
+			
 			// Note: the best I can come up with is applying animations to both buildings and people, making sure to set animation_time to 0.0 for buildings;
 			// otherwise, we would need to switch between two different shaders every time we come across a building with people in it; not very clean, but seems to work
 			bool const enable_animations(global_building_params.enable_people_ai && draw_interior);
@@ -2774,7 +2771,7 @@ public:
 				if (this_frame_player_in_basement >= 2 || this_frame_player_in_attic) break; // player can only be in one basement or attic - done
 			} // for i
 			bbd.draw_and_clear(s);
-			if (ADD_ROOM_LIGHTS) {set_std_depth_func();} // restore
+			set_std_depth_func(); // restore
 			glDisable(GL_CULL_FACE);
 
 			if (!reflection_pass) { // update once; non-interior buildings (such as city buildings) won't update this
@@ -2946,6 +2943,7 @@ public:
 					if (!camera_pdu.sphere_and_cube_visible_test(pos, g->bcube.get_bsphere_radius(), (g->bcube + xlate))) continue; // VFC
 					if (!try_bind_tile_smap_at_point(pos, s)) continue; // no shadow maps - not drawn in this pass
 					unsigned const tile_id(g - (*i)->grid_by_tile.begin());
+					// Note: we could skip detail materials like trim for tiles that are further, but it's unclear if that would make much difference
 					(*i)->building_draw_vbo.draw_tile(s, tile_id);
 
 					if (!(*i)->building_draw_windows.empty()) {
