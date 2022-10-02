@@ -225,6 +225,12 @@ public:
 		assert(tid_to_slot_ix[tid] > 0);
 		return tid_to_slot_ix[tid];
 	}
+	int get_slot_ix_if_exists(int tid) const { // returns -1 if tid is not found
+		if (tid < 0) return 0; // untextured - slot 0
+		if (tid >= (int)get_num_slots()) return -1; // not found
+		if (tid_to_slot_ix[tid] == 0)    return -1; // empty slot
+		return tid_to_slot_ix[tid];
+	}
 	int get_normal_map_for_tid(int tid) const {
 		if (tid < 0 || (unsigned)tid >= tid_to_nm_tid.size()) return -1; // no normal map
 		return tid_to_nm_tid[tid];
@@ -664,6 +670,7 @@ public:
 	bool empty() const {return to_draw.empty();}
 	void reserve_verts(tid_nm_pair_t const &tex, size_t num, bool quads_or_tris=0) {get_verts(tex, quads_or_tris).reserve(num);}
 	unsigned get_to_draw_ix(tid_nm_pair_t const &tex) const {return tid_mapper.get_slot_ix(tex.tid);}
+	int      get_to_draw_ix_if_exists(tid_nm_pair_t const &tex) const {return tid_mapper.get_slot_ix_if_exists(tex.tid);} // returns -1 if not found
 	unsigned get_num_verts (tid_nm_pair_t const &tex, bool quads_or_tris=0) {return get_verts(tex, quads_or_tris).size    ();}
 	unsigned get_cap_verts (tid_nm_pair_t const &tex, bool quads_or_tris=0) {return get_verts(tex, quads_or_tris).capacity();}
 
@@ -690,9 +697,10 @@ public:
 	void toggle_transparent_windows_mode() {
 		for (auto i = to_draw.begin(); i != to_draw.end(); ++i) {i->tex.toggle_transparent_windows_mode();}
 	}
-	void set_no_shadows_for_tex(tid_nm_pair_t const &tex) {
-		unsigned const ix(get_to_draw_ix(tex));
-		assert(ix < to_draw.size()); // must call get_verts() on this tex first
+	void set_no_shadows_for_tex(tid_nm_pair_t const &tex) { // must call get_verts() on this tex first
+		int const ix(get_to_draw_ix_if_exists(tex));
+		if (ix < 0) return; // tex doesn't exist - ignore it
+		assert((unsigned)ix < to_draw.size());
 		to_draw[ix].no_shadows = 1;
 	}
 	void add_cylinder(building_t const &bg, point const &pos, float height, float rx, float ry, tid_nm_pair_t const &tex,
@@ -1321,10 +1329,11 @@ void building_t::get_all_drawn_exterior_verts(building_draw_t &bdraw) { // exter
 					} // for n
 					cube_t const new_bcube(tq.get_bcube());
 
+					// add trim along the underside and edges of the roof
 					for (unsigned d = 0; d < 2; ++d) {
 						float const old_edge(tq_bcube.d[!top_dim][d]), new_edge(new_bcube.d[!top_dim][d]);
 						if (old_edge == new_edge) continue; // not extended in this dir (can only extend in one dir per tquad)
-						tquad_with_ix_t bot_surf(4, tq.type);
+						tquad_with_ix_t bot_surf(4, tquad_with_ix_t::TYPE_TRIM);
 						UNROLL_4X(bot_surf.pts[i_].z = new_bcube.z1(););
 						bot_surf.pts[0][!top_dim] = bot_surf.pts[1][!top_dim] = old_edge;
 						bot_surf.pts[2][!top_dim] = bot_surf.pts[3][!top_dim] = new_edge;
@@ -1335,7 +1344,7 @@ void building_t::get_all_drawn_exterior_verts(building_draw_t &bdraw) { // exter
 						bdraw.add_tquad(*this, bot_surf, bcube, bot_tex, WHITE);
 
 						for (unsigned e = 0; e < 2; ++e) { // add triangle end caps
-							tquad_with_ix_t end_cap(3, tq.type);
+							tquad_with_ix_t end_cap(3, tquad_with_ix_t::TYPE_TRIM);
 							UNROLL_3X(end_cap.pts[i_][top_dim] = new_bcube.d[top_dim][e];); // end
 							end_cap.pts[0][!top_dim] = new_edge;
 							end_cap.pts[1][!top_dim] = end_cap.pts[2][!top_dim] = old_edge;
@@ -3109,6 +3118,11 @@ public:
 					building_draw_vbo.cur_tile_id = (g - grid_by_tile.begin());
 					for (auto i = g->bc_ixs.begin(); i != g->bc_ixs.end(); ++i) {get_building(i->ix).get_all_drawn_exterior_verts(building_draw_vbo);} // exterior
 				}
+				// disable shadows for materials that don't need them
+				building_draw_vbo.set_no_shadows_for_tex(tid_nm_pair_t()); // for roof and solar panel trim
+				building_draw_vbo.set_no_shadows_for_tex(building_texture_mgr.get_helipad_tid());
+				//building_draw_vbo.set_no_shadows_for_tex(building_texture_mgr.get_solarp_tid()); // should solar panels cast shadows? they're pretty thin for shadow casters
+				building_draw_vbo.set_no_shadows_for_tex(building_texture_mgr.get_bdoor2_tid());
 				building_draw_vbo.finalize(grid_by_tile.size());
 			}
 			else if (pass == 1) { // windows pass
