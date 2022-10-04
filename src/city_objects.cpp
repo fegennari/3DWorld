@@ -988,17 +988,19 @@ void manhole_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_draw
 
 // mailboxes
 
-mailbox_t::mailbox_t(point const &pos_, float height) : city_obj_t(pos_, 0.5*height) { // radius = 0.5*height
+mailbox_t::mailbox_t(point const &pos_, float height, bool dim_, bool dir_) : oriented_city_obj_t(pos_, 0.5*height, dim_, dir_) { // radius = 0.5*height
 	pos.z += radius; // pos is on the ground, while we want the bsphere to be at the center
 	bcube.set_from_point(pos);
 	bcube.expand_by(radius);
 }
 /*static*/ void mailbox_t::pre_draw(draw_state_t &dstate, bool shadow_only) {
-	//select_texture(MANHOLE_TEX);
-	//dstate.s.set_cur_color(colorRGBA(0.5, 0.35, 0.25, 1.0)); // gray-brown
+	// anything to do?
 }
 void mailbox_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_draw &untex_qbd, float dist_scale, bool shadow_only) const {
-	//
+	if (!dstate.check_cube_visible(bcube, dist_scale)) return;
+	vector3d orient(zero_vector);
+	orient[dim] = (dir ? 1.0 : -1.0);
+	building_obj_model_loader.draw_model(dstate.s, pos, bcube, orient, WHITE, dstate.xlate, OBJ_MODEL_MAILBOX, shadow_only);
 }
 
 
@@ -1640,11 +1642,13 @@ void city_obj_placer_t::place_residential_plot_objects(road_plot_t const &plot, 
 			break; // success
 		} // for n
 	} // for i
-	// place mailboxes on residential streets
-	assert(driveways_start <= driveways.size());
+	if (building_obj_model_loader.is_model_valid(OBJ_MODEL_MAILBOX)) {
+		// place mailboxes on residential streets
+		assert(driveways_start <= driveways.size());
 
-	for (auto dw = driveways.begin()+driveways_start; dw != driveways.end(); ++dw) {
-		// TODO
+		for (auto dw = driveways.begin()+driveways_start; dw != driveways.end(); ++dw) {
+			// TODO
+		}
 	}
 }
 
@@ -1861,6 +1865,7 @@ void city_obj_placer_t::draw_detail_objects(draw_state_t &dstate, bool shadow_on
 	draw_objects(benches,   bench_groups,    dstate, 0.16, shadow_only, 0); // dist_scale=0.16
 	draw_objects(fhydrants, fhydrant_groups, dstate, 0.07, shadow_only, 1); // dist_scale=0.07, has_immediate_draw=1
 	draw_objects(sstations, sstation_groups, dstate, 0.15, shadow_only, 1); // dist_scale=0.15, has_immediate_draw=1
+	draw_objects(mboxes,    mbox_groups,     dstate, 0.10, shadow_only, 1); // dist_scale=0.10, has_immediate_draw=1
 	draw_objects(ppoles,    ppole_groups,    dstate, 0.20, shadow_only, 0); // dist_scale=0.20
 	if (!shadow_only) {draw_objects(hcaps,    hcap_groups,    dstate, 0.12, shadow_only, 0);} // dist_scale=0.12, no shadows
 	if (!shadow_only) {draw_objects(manholes, manhole_groups, dstate, 0.08, shadow_only, 1);} // dist_scale=0.07, no shadows, immediate draw
@@ -1884,9 +1889,6 @@ void city_obj_placer_t::draw_detail_objects(draw_state_t &dstate, bool shadow_on
 	for (dstate.pass_ix = 0; dstate.pass_ix <= DIV_NUM_TYPES; ++dstate.pass_ix) { // {wall, fence, hedge, chainlink fence, chainlink fence posts}
 		if (dstate.pass_ix == DIV_CHAINLINK && shadow_only) continue; // chainlink fence not drawn in the shadow pass
 		draw_objects(dividers, divider_groups, dstate, 0.2, shadow_only, 0); // dist_scale=0.2
-	}
-	for (dstate.pass_ix = 0; dstate.pass_ix < 2; ++dstate.pass_ix) { // {wood post, metal box}
-		draw_objects(mboxes, mbox_groups, dstate, 0.1, shadow_only, 0);
 	}
 	dstate.pass_ix = 0; // reset back to 0
 }

@@ -13,7 +13,7 @@ bool parse_buildings_option(FILE *fp) {return global_building_params.parse_build
 string const model_opt_names[NUM_OBJ_MODELS] =
 {"toilet_model", "sink_model", "tub_model", "fridge_model", "stove_model", "tv_model", ""/*monitor*/, "couch_model", "office_chair_model", "urinal_model",
 "lamp_model", "washer_model", "dryer_model", "key_model", "hanger_model", "clothing_model", "fire_escape_model", "wall_lamp_model", "cup_model", "toaster_model",
-"hood_model", "rocking_chair_model", "toy_model", "rat_model", "fire_hydrant_model", "substation_model", "umbrella_model"};
+"hood_model", "rocking_chair_model", "toy_model", "rat_model", "fire_hydrant_model", "substation_model", "mailbox_model", "umbrella_model"};
 
 void city_params_t::init_kw_maps() {
 	kwmu.add("num_cities",     num_cities);

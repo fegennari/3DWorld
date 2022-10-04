@@ -138,8 +138,8 @@ struct manhole_t : public city_obj_t {
 	void draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_draw &untex_qbd, float dist_scale, bool shadow_only) const;
 };
 
-struct mailbox_t : public city_obj_t {
-	mailbox_t(point const &pos_, float height);
+struct mailbox_t : public oriented_city_obj_t {
+	mailbox_t(point const &pos_, float height, bool dim_, bool dir_);
 	float get_height() const {return 2.0*radius;}
 	static void pre_draw(draw_state_t &dstate, bool shadow_only);
 	void draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_draw &untex_qbd, float dist_scale, bool shadow_only) const;
