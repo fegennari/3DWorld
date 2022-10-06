@@ -168,7 +168,7 @@ city clothing_model "../models/interiors/closet_items/Pants.model3d"            
 # city objects
 city fire_hydrant_model ../models/fire_hydrant/Fire_Hydrant.model3d  1 0 0   0 -1 0    1 1.0 1.0 # uses custom color
 city substation_model   ../models/substation/SubstationBig.model3d   0 0 0  -1 -1 0    1 1.0 1.0
-city mailbox_model      ../models/mailbox/mailbox.3ds                0 0 0  -1 -1 0    1 1.0 1.0
+city mailbox_model      ../models/mailbox/mailbox.3ds                0 0 0  -1 -1 90   0 1.0 1.0
 city umbrella_model     ../models/umbrella/UmbrellaOpen.model3d      0 0 0   0 -1 270  0 1.0 1.0
 
 # building animal models

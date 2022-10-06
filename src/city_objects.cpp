@@ -1645,10 +1645,31 @@ void city_obj_placer_t::place_residential_plot_objects(road_plot_t const &plot, 
 	if (building_obj_model_loader.is_model_valid(OBJ_MODEL_MAILBOX)) {
 		// place mailboxes on residential streets
 		assert(driveways_start <= driveways.size());
+		float const mbox_height(0.7*sz_scale);
 
 		for (auto dw = driveways.begin()+driveways_start; dw != driveways.end(); ++dw) {
-			// TODO
-		}
+			bool const dim(dw->dim), dir(dw->dir);
+			unsigned pref_side(2); // starts invalid
+			point pos(dw->get_cube_center()); // start at the driveway center
+
+			for (auto i = sub_plots.begin(); i != sub_plots.end(); ++i) { // find subplot for this driveway
+				if (!i->contains_pt_xy(pos)) continue; // wrong subplot
+				pref_side = (pos[!dim] < i->get_center_dim(!dim)); // place mailbox on the side of the driveway closer to the center of the plot
+				break; // done
+			}
+			if (pref_side == 2) continue; // no subplot found? error, or just skip the mailbox?
+			pos[dim] = dw->d[dim][dir] - (dir ? 1.0 : -1.0)*2.0*mbox_height; // at end of driveway at the road
+
+			for (unsigned n = 0; n < 2; ++n) {
+				unsigned const side(pref_side ^ n);
+				pos[!dim] = dw->d[!dim][side] + (side ? 1.0 : -1.0)*0.5*mbox_height; // off to the side of the driveway
+				mailbox_t const mbox(pos, mbox_height, dim, dir);
+				if (is_placement_blocked(mbox.bcube, blockers, *dw, prev_blockers_end, 0.0, 0)) continue; // try the other side
+				mbox_groups.add_obj(mbox, mboxes);
+				add_cube_to_colliders_and_blockers(mbox.bcube, colliders, blockers);
+				break; // done
+			} // for n
+		} // for dw
 	}
 }
 
