@@ -1286,7 +1286,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			}
 			else if (floor_is_above || floor_is_below) { // light is on a different floor from the camera
 				// the basement is a different part, but it's still the same vertical stack; consider this the same effective part if the camera is in the basement above the room's part
-				if (camera_in_ext_basement && camera_by_stairs && has_stairs_this_floor && room.is_ext_basement()) {
+				if (camera_in_ext_basement && (camera_by_stairs || (light_room_has_stairs_or_ramp && camera_somewhat_by_stairs)) && has_stairs_this_floor && room.is_ext_basement()) {
 					// camera and light are on different floors of the extended basement in two rooms connected by stairs
 				}
 				else if (camera_in_building && (camera_room_same_part || ((player_in_basement || light_in_basement) && parts[room.part_id].contains_pt_xy(camera_rot)) ||
