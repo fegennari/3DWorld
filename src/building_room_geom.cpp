@@ -33,7 +33,7 @@ unsigned get_skip_mask_for_xy(bool dim) {return (dim ? EF_Y12 : EF_X12);} // ski
 tid_nm_pair_t get_tex_auto_nm(int tid, float tscale=1.0, bool shadowed=1) {return tid_nm_pair_t(tid, get_normal_map_for_bldg_tid(tid), tscale, tscale, 0.0, 0.0, shadowed);}
 int get_counter_tid    () {return get_texture_by_name("marble2.jpg");}
 int get_paneling_nm_tid() {return get_texture_by_name("normal_maps/paneling_NRM.jpg", 1);}
-int get_blinds_tid     () {return get_texture_by_name("interiors/blinds.jpg", 1, 0, 1, 8.0);} // use high aniso
+int get_blinds_tid     () {return get_texture_by_name("interiors/blinds.jpg", 0, 0, 1, 8.0);} // use high aniso
 int get_money_tid      () {return get_texture_by_name("interiors/dollar20.jpg");}
 
 int get_crack_tid(room_object_t const &obj, bool alpha=0) {
