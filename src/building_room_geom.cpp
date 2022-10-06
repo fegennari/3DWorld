@@ -851,7 +851,55 @@ void building_room_geom_t::add_obj_with_front_texture(room_object_t const &c, st
 void building_room_geom_t::add_keyboard(room_object_t const &c) {add_obj_with_top_texture  (c, "interiors/keyboard.jpg",  BKGRAY, 1);} // is_small=1
 void building_room_geom_t::add_laptop  (room_object_t const &c) {add_obj_with_top_texture  (c, "interiors/laptop.jpg",    BKGRAY, 1);} // is_small=1
 void building_room_geom_t::add_computer(room_object_t const &c) {add_obj_with_front_texture(c, "interiors/computer.jpg",  BKGRAY, 1);} // is_small=1
-void building_room_geom_t::add_mwave   (room_object_t const &c) {add_obj_with_front_texture(c, "interiors/microwave.jpg", GRAY,   0);} // is_small=0
+
+cube_t get_mwave_panel_bcube(room_object_t const &c) {
+	cube_t panel(c);
+	panel.d[!c.dim][c.dir] -= (c.dir ? 1.0 : -1.0)*0.8*c.get_width(); // right 25%
+	return panel;
+}
+void building_room_geom_t::add_mwave(room_object_t const &c) {
+	if (c.is_open()) { // door is open
+		cube_t const panel(get_mwave_panel_bcube(c));
+		cube_t body(c);
+		body.d[!c.dim][!c.dir] = panel.d[!c.dim][c.dir]; // the other half
+		// draw the sides/top/back
+		unsigned const front_mask(get_face_mask(c.dim, c.dir));
+		get_untextured_material(1).add_cube_to_verts_untextured(c, apply_light_color(c, GRAY), ~front_mask); // sides, shadows, is_small=0
+		// draw the interior
+		colorRGBA const interior_color(apply_light_color(c, WHITE));
+		float const wall_width(0.25*panel.get_sz_dim(!c.dim));
+		cube_t interior(body);
+		interior.expand_by(-wall_width);
+		// make interior flush with body; there should be a door width gap, but then the front won't line up with the panel
+		interior.d[c.dim][c.dir] = body.d[c.dim][c.dir];
+		rgeom_mat_t &untex_mat(get_untextured_material(1)); // shadowed
+		untex_mat.add_cube_to_verts(interior, interior_color, all_zeros, ~front_mask, 0, 0, 0, 1); // skip the front face, inverted=1
+
+		for (unsigned d = 0; d < 2; ++d) { // left/right, bottom/top
+			cube_t side(body), tb(body);
+			side.d[!c.dim][d] = interior.d[!c.dim][!d];
+			tb.d[2][d] = interior.d[2][!d];
+			untex_mat.add_cube_to_verts_untextured(side, interior_color, front_mask); // only the front face
+			untex_mat.add_cube_to_verts_untextured(tb,   interior_color, front_mask); // only the front face
+		} // for d
+		// draw the open door
+		unsigned const door_front_mask(get_face_mask(!c.dim, c.dir));
+		colorRGBA const color(apply_light_color(c));
+		float const length(body.get_sz_dim(!c.dim));
+		cube_t door(body);
+		door.d[ c.dim][!c.dir]  = door.d[ c.dim][c.dir]; // shrink to zero area at front face
+		door.d[ c.dim][ c.dir] += (c.dir ? 1.0 : -1.0)*length;
+		door.d[!c.dim][!c.dir]  = door.d[!c.dim][c.dir] + (c.dir ? -1.0 : 1.0)*0.8*wall_width; // set door width = 80% of wall width
+		untex_mat.add_cube_to_verts_untextured(door, BLACK, ~door_front_mask); // interior and sides drawn in black; shadowed
+		rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_texture_by_name("interiors/microwave.jpg"), 0.0), 1, 0, 0)); // shadows, is_small=0
+		mat.add_cube_to_verts(door, color, zero_vector, door_front_mask, c.dim, (c.dim ^ c.dir), 0);
+		// draw the front panel
+		mat.add_cube_to_verts(panel, color, zero_vector, front_mask, !c.dim, (c.dim ^ c.dir ^ 1), 0); // front face only
+	}
+	else { // closed
+		add_obj_with_front_texture(c, "interiors/microwave.jpg", GRAY, 0); // is_small=0
+	}
+}
 
 float get_med_cab_wall_thickness(room_object_t const &c) {return 0.15*c.get_length();}
 

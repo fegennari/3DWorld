@@ -23,6 +23,7 @@ extern building_dest_t cur_player_building_loc;
 
 
 cube_t get_sink_cube(room_object_t const &c);
+cube_t get_mwave_panel_bcube(room_object_t const &c);
 bool player_can_open_door(door_t const &door);
 bool player_has_room_key();
 void register_broken_object(room_object_t const &obj);
@@ -520,7 +521,15 @@ bool building_t::interact_with_object(unsigned obj_ix, point const &int_pos, poi
 		sound_scale = 0.2;
 	}
 	else if (obj.type == TYPE_MWAVE) { // beeps
-		if (obj.is_powered()) {
+		cube_t const panel(get_mwave_panel_bcube(obj));
+		float cur_tmin(0.0), cur_tmax(1.0);
+
+		if (!get_line_clip(int_pos, query_ray_end, panel.d, cur_tmin, cur_tmax)) { // not pointing at the panel - open and close the door
+			obj.flags       ^= RO_FLAG_OPEN; // toggle on/off
+			update_draw_data = 1;
+			gen_sound_thread_safe((obj.is_open() ? (unsigned)SOUND_DOOR_OPEN : (unsigned)SOUND_DOOR_CLOSE), local_center, 0.5, 1.6);
+		}
+		else if (obj.is_powered()) { // pointing at the panel - make it beep
 			gen_sound_thread_safe(SOUND_BEEP, local_center, 0.25);
 			sound_scale = 0.6;
 		}
