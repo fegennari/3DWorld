@@ -545,7 +545,7 @@ void texture_t::upload_cube_map_face(unsigned ix) {
 
 void texture_t::calc_color() { // incorrect in is_16_bit_gray mode
 
-	if (normal_map) return; // color not used for normal maps
+	if (normal_map) {color = WHITE; return;} // color not used for normal maps, set to white
 	if (defer_load() && !is_allocated()) {color = WHITE; return;} // texture not loaded - this is the best we can do
 	//highres_timer_t timer("Texture Color"); // 519ms
 	assert(is_allocated());
