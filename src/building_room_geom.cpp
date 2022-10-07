@@ -854,14 +854,16 @@ void building_room_geom_t::add_computer(room_object_t const &c) {add_obj_with_fr
 
 cube_t get_mwave_panel_bcube(room_object_t const &c) {
 	cube_t panel(c);
-	panel.d[!c.dim][c.dir] -= (c.dir ? 1.0 : -1.0)*0.8*c.get_width(); // right 25%
+	bool const open_dir(c.dim ^ c.dir ^ 1);
+	panel.d[!c.dim][open_dir] -= (open_dir ? 1.0 : -1.0)*0.8*c.get_width(); // right 25%
 	return panel;
 }
 void building_room_geom_t::add_mwave(room_object_t const &c) {
 	if (c.is_open()) { // door is open
+		bool const open_dir(c.dim ^ c.dir ^ 1);
 		cube_t const panel(get_mwave_panel_bcube(c));
 		cube_t body(c);
-		body.d[!c.dim][!c.dir] = panel.d[!c.dim][c.dir]; // the other half
+		body.d[!c.dim][!open_dir] = panel.d[!c.dim][open_dir]; // the other half
 		// draw the sides/top/back
 		unsigned const front_mask(get_face_mask(c.dim, c.dir));
 		get_untextured_material(1).add_cube_to_verts_untextured(c, apply_light_color(c, GRAY), ~front_mask); // sides, shadows, is_small=0
@@ -882,19 +884,22 @@ void building_room_geom_t::add_mwave(room_object_t const &c) {
 			untex_mat.add_cube_to_verts_untextured(side, interior_color, front_mask); // only the front face
 			untex_mat.add_cube_to_verts_untextured(tb,   interior_color, front_mask); // only the front face
 		} // for d
-		// draw the open door
-		unsigned const door_front_mask(get_face_mask(!c.dim, c.dir));
+		unsigned const door_front_mask(get_face_mask(!c.dim, open_dir));
 		colorRGBA const color(apply_light_color(c));
-		float const length(body.get_sz_dim(!c.dim));
+		float const door_length(body.get_sz_dim(!c.dim)), tscale(1.0/c.get_width());
 		cube_t door(body);
-		door.d[ c.dim][!c.dir]  = door.d[ c.dim][c.dir]; // shrink to zero area at front face
-		door.d[ c.dim][ c.dir] += (c.dir ? 1.0 : -1.0)*length;
-		door.d[!c.dim][!c.dir]  = door.d[!c.dim][c.dir] + (c.dir ? -1.0 : 1.0)*0.8*wall_width; // set door width = 80% of wall width
+		door.d[ c.dim][!c.dir]    = door.d[ c.dim][c.dir]; // shrink to zero area at front face
+		door.d[ c.dim][ c.dir]   += (c.dir ? 1.0 : -1.0)*door_length; // extend outward to door length
+		door.d[!c.dim][!open_dir] = door.d[!c.dim][open_dir] + (open_dir ? -1.0 : 1.0)*0.8*wall_width; // set door width = 80% of wall width
 		untex_mat.add_cube_to_verts_untextured(door, BLACK, ~door_front_mask); // interior and sides drawn in black; shadowed
-		rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_texture_by_name("interiors/microwave.jpg"), 0.0), 1, 0, 0)); // shadows, is_small=0
-		mat.add_cube_to_verts(door, color, zero_vector, door_front_mask, c.dim, (c.dim ^ c.dir), 0);
-		// draw the front panel
-		mat.add_cube_to_verts(panel, color, zero_vector, front_mask, !c.dim, (c.dim ^ c.dir ^ 1), 0); // front face only
+		int const tid(get_texture_by_name("interiors/microwave.jpg"));
+		// draw the open door
+		bool const panel_mx(open_dir), door_mx(panel_mx ^ c.dim);
+		tid_nm_pair_t tex(tid, -1, (c.dim ? 0.0 : tscale), (c.dim ? tscale : 0.0));
+		get_material(tex, 1, 0, 0).add_cube_to_verts(door, color, (door_mx ? door.get_urc() : door.get_llc()), door_front_mask, c.dim, door_mx, 0); // shadows, is_small=0
+		// draw the front panel, front face only
+		swap(tex.tscale_x, tex.tscale_y); // clipped in other dim
+		get_material(tex, 1, 0, 0).add_cube_to_verts(panel, color, (panel_mx ? c.get_urc() : c.get_llc()), front_mask, !c.dim, panel_mx, 0); // shadows, is_small=0
 	}
 	else { // closed
 		add_obj_with_front_texture(c, "interiors/microwave.jpg", GRAY, 0); // is_small=0
