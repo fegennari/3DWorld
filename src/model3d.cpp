@@ -2383,7 +2383,7 @@ void model3d::proc_model_normals(vector<counted_normal> &cn, int recalc_normals,
 
 	for (vector<counted_normal>::iterator i = cn.begin(); i != cn.end(); ++i) {
 		if (!i->is_valid()) continue; // invalid, remains invalid
-		*i /= (float)i->count;
+		//*i /= (float)i->count;
 		float const mag(i->mag());
 		if (mag < TOLERANCE) {i->count = 0; continue;} // make invalid
 		*i /= mag; // normalize
