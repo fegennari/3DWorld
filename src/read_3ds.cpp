@@ -324,6 +324,14 @@ class file_reader_3ds_model : public file_reader_3ds, public model_from_file_t {
 		return 2; // skip
 	}
 
+	void get_triangle_pts(face_t const &face, vector<vert_tc_t> const &verts, point pts[3]) {
+		for (unsigned n = 0; n < 3; ++n) {
+			unsigned const ix(face.ix[n]);
+			assert(ix < verts.size());
+			pts[n] = verts[ix].v;
+		}
+	}
+
 	bool read_mesh(unsigned read_len) {
 		unsigned short chunk_id;
 		unsigned chunk_len;
@@ -386,28 +394,8 @@ class file_reader_3ds_model : public file_reader_3ds, public model_from_file_t {
 			} // end switch
 		} // end while
 		assert(ftell(fp) == end_pos);
-		vector<counted_normal> normals; // weighted_normal can also be used, but doesn't work well
-		if (use_vertex_normals) {normals.resize(verts.size());}
 		transform_vertices(verts, matrix);
-
-		// build vertex lists and compute face normals
-		// FIXME: use sgroups
-		for (vector<face_t>::const_iterator i = faces.begin(); i != faces.end(); ++i) {
-			point pts[3];
-			
-			for (unsigned n = 0; n < 3; ++n) {
-				unsigned const ix(i->ix[n]);
-				assert(ix < verts.size());
-				pts[n] = verts[n].v;
-			}
-			if (use_vertex_normals) {
-				vector3d normal(-get_poly_norm(pts)); // Note: it seems like the calculated normal is backwards and needs to be negated, at least for the rat model
-				if (use_vertex_normals > 1) {normal *= polygon_area(pts, 3);} // weight normal by face area
-				UNROLL_3X(normals[i->ix[i_]].add_normal(normal);)
-			}
-		}
-		model3d::proc_model_normals(normals, use_vertex_normals); // if use_vertex_normals
-
+		
 		// assign materials to faces
 		for (face_mat_map_t::const_iterator i = face_materials.begin(); i != face_materials.end(); ++i) {
 			for (vector<unsigned short>::const_iterator f = i->second.begin(); f != i->second.end(); ++f) {
@@ -421,7 +409,22 @@ class file_reader_3ds_model : public file_reader_3ds, public model_from_file_t {
 		for (unsigned i = 0; i < faces.size(); ++i) {
 			if (faces[i].mat == -1) {def_mat.push_back(i);} // faces not assigned to a material get the default material
 		}
+		vector<counted_normal> normals; // weighted_normal can also be used, but doesn't work well
 
+		if (use_vertex_normals) {
+			// build vertex lists and compute face normals
+			// TODO: use sgroups
+			normals.resize(verts.size());
+
+			for (vector<face_t>::const_iterator i = faces.begin(); i != faces.end(); ++i) {
+				point pts[3];
+				get_triangle_pts(*i, verts, pts);
+				vector3d normal(get_poly_norm(pts));
+				if (use_vertex_normals > 1) {normal *= polygon_area(pts, 3);} // weight normal by face area
+				UNROLL_3X(normals[i->ix[i_]].add_normal(normal);)
+			} // for i
+			model3d::proc_model_normals(normals, use_vertex_normals); // use_vertex_normals = 1 or 2 here
+		}
 		// add triangles to model for each material
 		polygon_t tri;
 		tri.resize(3);
@@ -431,10 +434,10 @@ class file_reader_3ds_model : public file_reader_3ds, public model_from_file_t {
 			vntct_map_t vmap_tan[2]; // average_normals=0
 
 			for (vector<unsigned short>::const_iterator f = i->second.begin(); f != i->second.end(); ++f) {
-				unsigned short *ixs(faces[*f].ix);
 				point pts[3];
-				UNROLL_3X(pts[i_] = verts[ixs[i_]].v;)
+				get_triangle_pts(faces[*f], verts, pts);
 				vector3d const face_n(get_poly_norm(pts));
+				unsigned short const *const ixs(faces[*f].ix);
 
 				for (unsigned j = 0; j < 3; ++j) {
 					unsigned const ix(ixs[j]);
@@ -442,7 +445,7 @@ class file_reader_3ds_model : public file_reader_3ds, public model_from_file_t {
 					tri[j] = vert_norm_tc(pts[j], normal, verts[ix].t[0], verts[ix].t[1]);
 				}
 				model.add_polygon(tri, vmap, vmap_tan, i->first, obj_id);
-			}
+			} // for f
 		} // for i
 		++obj_id;
 		return 1;
