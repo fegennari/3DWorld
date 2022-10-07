@@ -989,9 +989,14 @@ void manhole_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_draw
 // mailboxes
 
 mailbox_t::mailbox_t(point const &pos_, float height, bool dim_, bool dir_) : oriented_city_obj_t(pos_, 0.5*height, dim_, dir_) { // radius = 0.5*height
-	pos.z += radius; // pos is on the ground, while we want the bsphere to be at the center
+	vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_MAILBOX)); // D, W, H
+	vector3d expand;
+	expand[ dim] = height*sz.x/sz.z; // depth
+	expand[!dim] = height*sz.y/sz.z; // width
+	expand.z = height;
+	pos.z += 0.5*height; // pos is on the ground, while we want the bsphere to be at the center
 	bcube.set_from_point(pos);
-	bcube.expand_by(radius);
+	bcube.expand_by(0.5*expand);
 }
 /*static*/ void mailbox_t::pre_draw(draw_state_t &dstate, bool shadow_only) {
 	// anything to do?
@@ -1645,9 +1650,10 @@ void city_obj_placer_t::place_residential_plot_objects(road_plot_t const &plot, 
 	if (building_obj_model_loader.is_model_valid(OBJ_MODEL_MAILBOX)) {
 		// place mailboxes on residential streets
 		assert(driveways_start <= driveways.size());
-		float const mbox_height(0.7*sz_scale);
+		float const mbox_height(1.1*sz_scale);
 
 		for (auto dw = driveways.begin()+driveways_start; dw != driveways.end(); ++dw) {
+			if (rgen.rand_bool()) continue; // only 50% of houses have mailboxes along the road
 			bool const dim(dw->dim), dir(dw->dir);
 			unsigned pref_side(2); // starts invalid
 			point pos(dw->get_cube_center()); // start at the driveway center
@@ -1658,7 +1664,7 @@ void city_obj_placer_t::place_residential_plot_objects(road_plot_t const &plot, 
 				break; // done
 			}
 			if (pref_side == 2) continue; // no subplot found? error, or just skip the mailbox?
-			pos[dim] = dw->d[dim][dir] - (dir ? 1.0 : -1.0)*2.0*mbox_height; // at end of driveway at the road
+			pos[dim] = dw->d[dim][dir] - (dir ? 1.0 : -1.0)*1.25*mbox_height; // at end of driveway at the road, but far enough back to leave space for peds
 
 			for (unsigned n = 0; n < 2; ++n) {
 				unsigned const side(pref_side ^ n);
@@ -1884,12 +1890,12 @@ void city_obj_placer_t::move_and_connect_streetlights(streetlights_t &sl) {
 void city_obj_placer_t::draw_detail_objects(draw_state_t &dstate, bool shadow_only) {
 	if (!dstate.check_cube_visible(all_objs_bcube, 1.0)) return; // check bcube, dist_scale=1.0
 	draw_objects(benches,   bench_groups,    dstate, 0.16, shadow_only, 0); // dist_scale=0.16
-	draw_objects(fhydrants, fhydrant_groups, dstate, 0.07, shadow_only, 1); // dist_scale=0.07, has_immediate_draw=1
+	draw_objects(fhydrants, fhydrant_groups, dstate, 0.06, shadow_only, 1); // dist_scale=0.07, has_immediate_draw=1
 	draw_objects(sstations, sstation_groups, dstate, 0.15, shadow_only, 1); // dist_scale=0.15, has_immediate_draw=1
-	draw_objects(mboxes,    mbox_groups,     dstate, 0.10, shadow_only, 1); // dist_scale=0.10, has_immediate_draw=1
+	draw_objects(mboxes,    mbox_groups,     dstate, 0.04, shadow_only, 1); // dist_scale=0.10, has_immediate_draw=1
 	draw_objects(ppoles,    ppole_groups,    dstate, 0.20, shadow_only, 0); // dist_scale=0.20
 	if (!shadow_only) {draw_objects(hcaps,    hcap_groups,    dstate, 0.12, shadow_only, 0);} // dist_scale=0.12, no shadows
-	if (!shadow_only) {draw_objects(manholes, manhole_groups, dstate, 0.08, shadow_only, 1);} // dist_scale=0.07, no shadows, immediate draw
+	if (!shadow_only) {draw_objects(manholes, manhole_groups, dstate, 0.07, shadow_only, 1);} // dist_scale=0.07, no shadows, immediate draw
 	dstate.s.add_uniform_float("min_alpha", DEF_CITY_MIN_ALPHA); // reset back to default after drawing fire hydrant and substation models
 			
 	for (dstate.pass_ix = 0; dstate.pass_ix < 2; ++dstate.pass_ix) { // {cube/city, cylinder/residential}
