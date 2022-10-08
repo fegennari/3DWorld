@@ -413,10 +413,17 @@ class file_reader_3ds_model : public file_reader_3ds, public model_from_file_t {
 
 		if (use_vertex_normals) {
 			// build vertex lists and compute face normals
-			// TODO: use sgroups
 			normals.resize(verts.size());
 
 			for (vector<face_t>::const_iterator i = faces.begin(); i != faces.end(); ++i) {
+				unsigned sgroup(0); // smooth group; represents a bit mask; defaults to 0 if there's no smooth group chunk
+
+				if (!sgroups.empty()) {
+					unsigned const face_id(i - faces.begin());
+					assert(face_id < sgroups.size());
+					sgroup = sgroups[face_id];
+				}
+				// TODO: use sgroup
 				point pts[3];
 				get_triangle_pts(*i, verts, pts);
 				vector3d normal(get_poly_norm(pts));
