@@ -411,7 +411,7 @@ struct material_t : public material_params_t {
 
 	bool might_have_alpha_comp, tcs_checked;
 	int a_tid, d_tid, s_tid, ns_tid, alpha_tid, bump_tid, refl_tid;
-	float draw_order_score, avg_area_per_tri;
+	float draw_order_score, avg_area_per_tri, tot_tri_area;
 	float metalness; // < 0 disables; should go into material_params_t, but that would invalidate the model3d file format
 	string name, filename;
 
@@ -420,7 +420,7 @@ struct material_t : public material_params_t {
 
 	material_t(string const &name_=string(), string const &fn=string())
 		: might_have_alpha_comp(0), tcs_checked(0), a_tid(-1), d_tid(-1), s_tid(-1), ns_tid(-1), alpha_tid(-1), bump_tid(-1), refl_tid(-1),
-		draw_order_score(0.0), avg_area_per_tri(0.0), metalness(-1.0), name(name_), filename(fn) {}
+		draw_order_score(0.0), avg_area_per_tri(0.0), tot_tri_area(0.0), metalness(-1.0), name(name_), filename(fn) {}
 	bool add_poly(polygon_t const &poly, vntc_map_t vmap[2], vntct_map_t vmap_tan[2], unsigned obj_id=0);
 	void mark_as_used() {is_used = 1;}
 	bool mat_is_used () const {return is_used;}
@@ -473,6 +473,7 @@ class model3d {
 	string_map_t mat_map; // maps material names to materials indexes
 	set<string> undef_materials; // to reduce warning messages
 	cobj_tree_tquads_t coll_tree;
+	colorRGBA cached_avg_color=ALPHA0; // used by get_and_cache_avg_color()
 	bool textures_loaded;
 
 	// transforms
@@ -530,6 +531,8 @@ public:
 	void get_transformed_bcubes(vector<cube_t> &bcubes) const;
 	void get_cubes(vector<cube_t> &cubes, model3d_xform_t const &xf) const;
 	colorRGBA get_avg_color() const;
+	colorRGBA get_area_weighted_avg_color();
+	colorRGBA get_and_cache_avg_color(bool area_weighted=0);
 	unsigned get_gpu_mem() const;
 	int get_material_ix(string const &material_name, string const &fn, bool okay_if_exists=0);
 	int find_material(string const &material_name);

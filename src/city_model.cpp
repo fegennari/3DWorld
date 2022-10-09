@@ -61,9 +61,9 @@ vector3d city_model_loader_t::get_model_world_space_size(unsigned id) { // Note:
 	if (round_fp(model_file.xy_rot/90.0) & 1) {std::swap(sz.x, sz.y);} // swap x/y for 90 and 270 degree rotations
 	return sz;
 }
-colorRGBA city_model_loader_t::get_avg_color(unsigned id) {
+colorRGBA city_model_loader_t::get_avg_color(unsigned id, bool area_weighted) {
 	if (!is_model_valid(id)) return BLACK; // error?
-	return get_model3d(id).get_avg_color();
+	return get_model3d(id).get_and_cache_avg_color(area_weighted);
 }
 bool city_model_loader_t::model_filename_contains(unsigned id, string const &str, string const &str2) const {
 	string const &fn(get_model(id).fn);

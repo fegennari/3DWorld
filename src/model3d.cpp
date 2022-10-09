@@ -1097,11 +1097,11 @@ void material_t::compute_area_per_tri() {
 
 	if (avg_area_per_tri > 0) return; // already computed
 	unsigned tris(0);
-	float area(0.0);
-	geom.calc_area(area, tris);
-	geom_tan.calc_area(area, tris);
-	avg_area_per_tri = alpha*area/tris;
-	//cout << "name: " << name << " " << TXT(tris) << TXT(area) << TXT(alpha) << "value: " << (1.0E6*avg_area_per_tri) << endl;
+	tot_tri_area = 0;
+	geom.calc_area(tot_tri_area, tris);
+	geom_tan.calc_area(tot_tri_area, tris);
+	if (tris > 0) {avg_area_per_tri = alpha*tot_tri_area/tris;}
+	//cout << "name: " << name << " " << TXT(tris) << TXT(tot_tri_area) << TXT(alpha) << "value: " << (1.0E6*avg_area_per_tri) << endl;
 }
 
 void material_t::simplify_indices(float reduce_target) {
@@ -1588,10 +1588,33 @@ void model3d::get_cubes(vector<cube_t> &cubes, model3d_xform_t const &xf) const 
 
 colorRGBA model3d::get_avg_color() const {
 	colorRGBA avg_color(BLACK);
-	for (auto m = materials.begin(); m != materials.end(); ++m) {avg_color += m->get_avg_color(tmgr, unbound_mat.tid);} // Note: should be weighted by area?
+	for (auto m = materials.begin(); m != materials.end(); ++m) {avg_color += m->get_avg_color(tmgr, unbound_mat.tid);}
 	if (!unbound_geom.empty()) {avg_color += unbound_mat.color.modulate_with(texture_color(unbound_mat.tid));}
 	if (avg_color.alpha > 0.0) {avg_color = avg_color/avg_color.alpha; avg_color.alpha = 1.0;} // normalize to alpha of 1.0
 	return avg_color;
+}
+colorRGBA color_mult_inc_alpha(colorRGBA const &c, float v) {return colorRGBA(c.R*v, c.G*v, c.B*v, c.A*v);}
+
+colorRGBA model3d::get_area_weighted_avg_color() {
+	colorRGBA avg_color(BLACK);
+
+	for (auto m = materials.begin(); m != materials.end(); ++m) {
+		m->compute_area_per_tri(); // Note: will cache, which is why this function isn't const
+		avg_color += color_mult_inc_alpha(m->get_avg_color(tmgr, unbound_mat.tid), m->tot_tri_area);
+	}
+	if (!unbound_geom.empty()) {
+		float area(0.0);
+		unsigned ntris(0); // unused
+		unbound_geom.calc_area(area, ntris);
+		avg_color += color_mult_inc_alpha(unbound_mat.color.modulate_with(texture_color(unbound_mat.tid)), area);
+	}
+	float const orig_alpha(avg_color.alpha);
+	if (avg_color.alpha > 0.0) {avg_color = avg_color/avg_color.alpha; avg_color.alpha = 1.0;} // normalize to alpha of 1.0
+	return avg_color;
+}
+colorRGBA model3d::get_and_cache_avg_color(bool area_weighted) {
+	if (cached_avg_color.A == 0.0) {cached_avg_color = (area_weighted ? get_area_weighted_avg_color() : get_avg_color());}
+	return cached_avg_color;
 }
 
 unsigned model3d::get_gpu_mem() const {

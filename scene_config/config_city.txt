@@ -95,6 +95,7 @@ city cars_use_driveways 1 # cars can enter (and eventually leave) driveways
 city convert_model_files 1
 # car_model: filename recalc_normals two_sided centered body_material_id fixed_color_id xy_rot swap_xyz scale lod_mult [shadow_mat_ids]
 # body_material_id: -1=all; fixed_color_id: -1=none, -2=specified RGBA, -3=auto-from-model
+# fixed_color_id  : -1=random, -2=model file custom color, -3=calculate from model file
 city car_model ../models/cars/sports_car/sportsCar.model3d        1 0 0  22 -1 90  1 1.0 1.0  20 22
 city car_model ../models/cars/natla_car/natla_car.model3d         1 0 0  -1  2 90  1 1.0 0.5  0 1 # always GRAY (writing to model3d file inverts DDS textures)
 city car_model ../models/cars/speedCar/speedCar.model3d           1 0 0  -1 -2 0.15 0.3 0.35 1.0  0   1 1.0 0.5  4 5 # custom color (writing to model3d file inverts DDS textures)
