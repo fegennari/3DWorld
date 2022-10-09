@@ -746,6 +746,8 @@ int building_t::choose_dest_room(person_t &person, rand_gen_t &rgen) const {
 	if (interior->rooms.size() == 1) return 0; // no other room to move to
 	float const floor_spacing(get_window_vspace());
 
+	// TODO: find_nearest_elevator_this_floor(person.pos)
+
 	// make 100 attempts at finding a valid room
 	for (unsigned n = 0; n < 100; ++n) {
 		unsigned const cand_room(rgen.rand() % interior->rooms.size());
@@ -879,6 +881,18 @@ void building_t::find_nearest_stairs_or_ramp(point const &p1, point const &p2, v
 	}
 	sort(sorted.begin(), sorted.end()); // sort by distance, min first
 	for (auto s = sorted.begin(); s != sorted.end(); ++s) {nearest_stairs.push_back(s->second);}
+}
+int building_t::find_nearest_elevator_this_floor(point const &pos) const {
+	int nearest(-1); // -1 => none found
+	float dmin_sq(0.0);
+
+	for (auto e = interior->elevators.begin(); e != interior->elevators.end(); ++e) {
+		if (e->z1() > pos.z || e->z2() < pos.z) continue; // doesn't span the correct floor
+		// skip if elevator is currently in use?
+		float const dsq(p2p_dist_xy_sq(pos, e->get_cube_center()));
+		if (nearest < 0 || dsq < dmin_sq) {nearest = (e - interior->elevators.begin()); dmin_sq = dsq;}
+	}
+	return nearest;
 }
 
 cube_t get_stairs_plus_step_up(stairwell_t const &stairs) {
