@@ -59,24 +59,20 @@ float get_fresnel_reflection(vector3d const &v_inc, vector3d const &norm, float 
 float get_reflected_weight(float fresnel_ref, float alpha) {
 	return (alpha + (1.0 - alpha)*CLIP_TO_01(fresnel_ref));
 }
-
 float get_coll_energy(vector3d const &v1, vector3d const &v2, float mass) {
 
 	if (v1 == v2) return 0.0;
 	float const t(orig_timestep/DEF_TIMESTEP), vsq(fabs(v1.mag_sq() - v2.mag_sq()));
 	return ((vsq < TOLERANCE) ? 0.0 : 0.5*mass*vsq*t*t); // 0.5*M*V^2 (should t be squared?)
 }
-
 point triangle_centroid(point const &p1, point const &p2, point const &p3) {return (p1 + p2 + p3)/3.0;}
 
 float triangle_area(point const &p1, point const &p2, point const &p3) {
-
 	float const a(p2p_dist(p1, p2)), b(p2p_dist(p2, p3)), c(p2p_dist(p3, p1));
-	return 0.25*sqrt((a+b+c)*(b+c-a)*(c+a-b)*(a+b-c));
+	float const val((a+b+c)*(b+c-a)*(c+a-b)*(a+b-c));
+	return 0.25*sqrt(max(val, 0.0f)); // handle negative area from degenerate triangles
 }
-
 float polygon_area(point const *const points, unsigned npoints) {
-
 	assert(npoints && (npoints == 3 || npoints == 4));
 	float area(triangle_area(points[0], points[1], points[2]));
 	if (npoints == 4) {area += triangle_area(points[2], points[3], points[0]);} // other triangle

@@ -701,8 +701,10 @@ template<typename T> float indexed_vntc_vect_t<T>::get_prim_area(unsigned i, uns
 
 template<typename T> float indexed_vntc_vect_t<T>::calc_area(unsigned npts) {
 	
-	float area(0.0);
+	assert(npts > 0);
 	unsigned const nv(num_verts());
+	if (nv == 0) return 0.0;
+	float area(0.0);
 	for (unsigned i = 0; i < nv; i += npts) {area += get_prim_area(i, npts);}
 	avg_area_per_tri = area/float(nv/npts);
 	return area;
