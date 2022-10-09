@@ -203,11 +203,13 @@ bool building_t::add_rat(point const &pos, float hlength, vector3d const &dir, p
 			}
 			if (i->type == TYPE_MWAVE && check_line_clip(pos, rat_pos, i->d)) { // Note: not on the floor, so can't check test_pos
 				gen_sound_thread_safe(SOUND_BEEP, local_to_camera_space(i->get_cube_center()), 0.25);
-				dead = 1; // cook/kill
-				return 0; // rat is not dropped
+				dead = 1;
 			}
-			if (i->type == TYPE_STOVE && i->item_flags != 0 && i->contains_pt(test_pos)) { // at least one burner is on
-				dead = 1; // cook/kill
+			else if (i->type == TYPE_STOVE && i->item_flags != 0 && i->contains_pt(test_pos)) { // at least one burner is on
+				dead = 1;
+			}
+			if (dead) { // cook/kill
+				register_achievement("Tastes Like Chicken");
 				return 0; // rat is not dropped
 			}
 		} // for i
