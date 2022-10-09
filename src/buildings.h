@@ -1215,7 +1215,7 @@ struct building_t : public building_geom_t {
 	int8_t open_door_ix=-1, basement_part_ix=-1;
 	uint8_t has_chimney=0; // 0=none, 1=interior, 2=exterior with fireplace
 	bool is_house=0, has_garage=0, has_shed=0, has_int_garage=0, has_courtyard=0, has_complex_floorplan=0, has_helipad=0, has_ac=0;
-	bool has_int_fplace=0, has_parking_garage=0, has_small_part=0, has_basement_door=0, has_basement_pipes=0, parts_generated=0;
+	bool has_int_fplace=0, has_parking_garage=0, has_small_part=0, has_basement_door=0, has_basement_pipes=0, parts_generated=0, is_in_city=0;
 	colorRGBA side_color=WHITE, roof_color=WHITE, detail_color=BLACK, door_color=WHITE, wall_color=WHITE;
 	cube_t bcube, pri_hall, driveway, porch, assigned_plot;
 	vect_cube_t parts, fences;
