@@ -494,7 +494,7 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 		get_pipe_basement_gas_connections(gas_pipes);
 		add_basement_pipes(obstacles, walls, beams, gas_pipes, pipe_cubes, room_id, num_floors, pipe_light_amt, water_ceil_zval, rgen, PIPE_TYPE_GAS, 1); // gas
 		add_to_and_clear(pipe_cubes, obstacles); // add gas pipes to obstacles
-		add_sprinkler_pipe(obstacles, walls, beams, pipe_cubes, room_id, num_floors, pipe_light_amt, rgen);
+		add_sprinkler_pipes(obstacles, walls, beams, pipe_cubes, room_id, num_floors, pipe_light_amt, rgen);
 	}
 }
 
@@ -976,7 +976,7 @@ bool building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 	return 1;
 }
 
-void building_t::add_sprinkler_pipe(vect_cube_t const &obstacles, vect_cube_t const &walls, vect_cube_t const &beams, vect_cube_t const &pipe_cubes,
+void building_t::add_sprinkler_pipes(vect_cube_t const &obstacles, vect_cube_t const &walls, vect_cube_t const &beams, vect_cube_t const &pipe_cubes,
 		unsigned room_id, unsigned num_floors, float tot_light_amt, rand_gen_t &rgen)
 {
 	// add red sprinkler system pipe
@@ -1017,6 +1017,33 @@ void building_t::add_sprinkler_pipe(vect_cube_t const &obstacles, vect_cube_t co
 				objs.emplace_back(bolt, TYPE_PIPE, room_id, 0, 1, (flags | RO_FLAG_RAND_ROT), tot_light_amt, SHAPE_CYLIN, RED);
 			} // for m
 		} // for f
+
+		// attempt to run horizontal pipes across the basement ceiling
+		float const h_pipe_radius(0.5*sp_radius), conn_thickness(0.2*h_pipe_radius);
+		float const ceil_gap(fc_thickness + max(0.25f*fc_thickness, 0.05f*get_floor_ceil_gap())); // make enough room for both flange + bolts and ceiling beams
+
+		for (unsigned f = 0; f < num_floors; ++f) {
+			point p1(center); // vertical pipe center
+			p1.z = basement.z1() + (f+1)*floor_spacing - ceil_gap - h_pipe_radius;
+			point p2(p1);
+			p2[dim] = basement.d[dim][!dir]; // extend to the opposite wall
+			cube_t h_pipe(p1, p2);
+			h_pipe.expand_in_dim(!dim, h_pipe_radius);
+			h_pipe.expand_in_dim(2,    h_pipe_radius); // set zvals
+			if (has_bcube_int(h_pipe, obstacles) || has_bcube_int(h_pipe, walls) || has_bcube_int(h_pipe, beams) || has_bcube_int(h_pipe, pipe_cubes)) continue;
+			if (h_pipe.intersects(interior->pg_ramp)) continue; // check ramps as well, since they won't be included for lower floors
+			unsigned flags(RO_FLAG_NOCOLL | RO_FLAG_HANGING);
+			// encoded as: X:dim=0,dir=0 Y:dim=1,dir=0, Z:dim=x,dir=1
+			objs.emplace_back(h_pipe, TYPE_PIPE, room_id, dim, 0, flags, tot_light_amt, SHAPE_CYLIN, RED); // add to pipe_cubes?
+
+			for (unsigned d = 0; d < 2; ++d) { // add connector segments
+				cube_t conn(h_pipe);
+				conn.d[dim][!d] = conn.d[dim][d] + (d ? -1.0 : 1.0)*1.6*sp_radius; // set length
+				conn.expand_in_dim(!dim, conn_thickness);
+				conn.expand_in_dim(2,    conn_thickness);
+				objs.emplace_back(conn, TYPE_PIPE, room_id, dim, 0, (flags | (d ? RO_FLAG_ADJ_LO : RO_FLAG_ADJ_HI)), tot_light_amt, SHAPE_CYLIN, RED);
+			}
+		} // f
 		break; // done
 	} // for n
 	//cout << TXT(pipe_ends.size()) << TXT(num_valid) << TXT(num_connected) << TXT(pipes.size()) << TXT(xy_map.size()) << endl;

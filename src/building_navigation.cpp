@@ -825,6 +825,7 @@ void building_interior_t::get_avoid_cubes(vect_cube_t &avoid, float z1, float z2
 
 	for (auto c = room_geom->objs.begin(); c != objs_end; ++c) {
 		// these object types are not collided with by people and can be skipped
+		// what about TYPE_CURB? should people step on/over these, or generally avoid them?
 		if (c->no_coll() || c->is_dynamic() || c->type == TYPE_LG_BALL) continue; // skip dynamic objects (balls, etc.)
 		if (!(same_as_player ? c->is_player_collidable() : bldg_obj_types[c->type].ai_coll)) continue;
 		// skip_stairs also skips ramps? no, this seems to result in zombies walking in midair as if the ramp was a solid floor when approaching from above;
