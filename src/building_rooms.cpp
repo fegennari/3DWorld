@@ -2847,7 +2847,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				objs.emplace_back(l, TYPE_LIGHT, room_id, (light.dx() < light.dy()), 0, flags, light_amt, light_shape, color); // reclaculate dim; dir=0 (unused)
 				objs.back().obj_id = light_ix_assign.get_ix_for_light(l);
 				unsigned const flicker_mod(is_parking_garage ? 50 : (is_ext_basement ? 20 : 0)); // 2% chance for parking garage, 5% chance for ext basement
-				if (flicker_mod > 0 && ((rgen_lights.rand()%flicker_mod) == 13)) {objs.back().flags |= RO_FLAG_BROKEN;} // maybe make this a flickering light
+				if (flicker_mod > 0 && (((rgen_lights.rand() + 3*f)%flicker_mod) == 13)) {objs.back().flags |= RO_FLAG_BROKEN;} // maybe make this a flickering light
 			}
 			if (is_lit) {r->lit_by_floor |= (1ULL << (f&63));} // flag this floor as being lit (for up to 64 floors)
 			if (is_parking_garage) continue; // generated above, done; no outlets or light switches
