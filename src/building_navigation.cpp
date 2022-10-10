@@ -207,11 +207,11 @@ public:
 		return 0;
 	}
 	point find_valid_room_dest(vect_cube_t const &avoid, float radius, float height, float zval, unsigned node_ix,
-		bool up_or_down, bool &not_room_center, rand_gen_t &rgen, bool no_use_init) const
+		bool up_or_down, bool &not_room_center, rand_gen_t &rgen, bool no_use_init, point const *const custom_dest) const
 	{
 		node_t const &node(get_node(node_ix));
 		if (node.is_vert_conn()) {return get_stairs_entrance_pt(zval, node_ix, up_or_down);}
-		point pos(get_cube_center_zval(node.bcube, zval)); // first candidate is the center of the room
+		point pos((custom_dest != nullptr) ? *custom_dest : get_cube_center_zval(node.bcube, zval)); // first candidate is the center of the room, if not custom
 		if (find_valid_pt_in_room(avoid, radius, height, zval, node.bcube, rgen, pos, no_use_init)) {not_room_center = 1;} // success
 		return pos;
 	}
@@ -322,7 +322,8 @@ public:
 		return walk_area;
 	}
 	bool reconstruct_path(vector<a_star_node_state_t> const &state, vect_cube_t const &avoid, point const &cur_pt, float radius,
-		float height, unsigned start_ix, unsigned end_ix, unsigned ped_ix, bool is_first_path, bool up_or_down, unsigned ped_rseed, vector<point> &path) const
+		float height, unsigned start_ix, unsigned end_ix, unsigned ped_ix, bool is_first_path, bool up_or_down, unsigned ped_rseed,
+		point const *const custom_dest, vector<point> &path) const
 	{
 		unsigned n(start_ix);
 		rand_gen_t rgen;
@@ -343,7 +344,7 @@ public:
 				for (unsigned n = 0; n < 10; ++n) { // keep retrying until we find a point that is reachable from the doorway
 					bool const no_use_init(n > 0); // choose a random new point on iterations after the first one
 					bool not_room_center(0);
-					point const end_point(find_valid_room_dest(avoid, radius, height, cur_pt.z, start_ix, up_or_down, not_room_center, rgen, no_use_init));
+					point const end_point(find_valid_room_dest(avoid, radius, height, cur_pt.z, start_ix, up_or_down, not_room_center, rgen, no_use_init, custom_dest));
 					path.push_back(end_point);
 					if (node.is_vert_conn()) {success = 1; break;} // done, don't need to run code below
 					point const room_exit(closest_room_pt(walk_area, next)); // first doorway
@@ -436,7 +437,8 @@ public:
 	
 	// A* algorithm; Note: path is stored backwards
 	bool find_path_points(unsigned room1, unsigned room2, unsigned ped_ix, float radius, float height, bool use_stairs, bool is_first_path,
-		bool up_or_down, unsigned ped_rseed, vect_cube_t const &avoid, point const &cur_pt, vect_door_t const &doors, bool has_key, vector<point> &path) const
+		bool up_or_down, unsigned ped_rseed, vect_cube_t const &avoid, point const &cur_pt, vect_door_t const &doors, bool has_key,
+		point const *const custom_dest, vector<point> &path) const
 	{
 		// Note: opening and closing doors updates the nav graph; an AI encountering a closed door after choosing a path can either open it or stop and wait
 		assert(room1 < nodes.size() && room2 < nodes.size());
@@ -478,7 +480,7 @@ public:
 				sn.path_pt.assign(pt.x, pt.y, cur_pt.z);
 				
 				if (i->ix == room2) { // done, reconstruct path (in reverse)
-					return reconstruct_path(state, avoid, cur_pt, radius, height, i->ix, room1, ped_ix, is_first_path, up_or_down, ped_rseed, path);
+					return reconstruct_path(state, avoid, cur_pt, radius, height, i->ix, room1, ped_ix, is_first_path, up_or_down, ped_rseed, custom_dest, path);
 				}
 				sn.g_score = new_g_score;
 				sn.h_score = p2p_dist_xy(conn_center, dest_pos);
@@ -634,7 +636,7 @@ void end_register_player_in_building() {
 	if (cpbl_update_frame != frame_counter) {prev_player_building_loc = cur_player_building_loc = building_dest_t();} // player not in building, reset
 }
 
-bool building_t::choose_dest_goal(person_t &person, rand_gen_t &rgen) const {
+bool building_t::choose_dest_goal(person_t &person, rand_gen_t &rgen) const { // used for following the player in gameplay mode
 
 	assert(interior && interior->nav_graph);
 	building_loc_t const loc(get_building_loc_for_pt(person.pos));
@@ -730,12 +732,13 @@ bool building_t::select_person_dest_in_room(person_t &person, rand_gen_t &rgen, 
 	get_avoid_cubes(person.target_pos.z, height, radius, avoid, 0); // following_player=0
 	bool const no_use_init(room.get_room_type(0) == RTYPE_PARKING); // don't use the room center for a parking garage
 	if (!interior->nav_graph->find_valid_pt_in_room(avoid, radius, height, person.target_pos.z, room, rgen, dest_pos, no_use_init)) return 0;
-	person.target_pos.x = dest_pos.x; person.target_pos.y = dest_pos.y;
-	person.goal_type = GOAL_TYPE_ROOM;
+	person.target_pos.x = dest_pos.x;
+	person.target_pos.y = dest_pos.y;
+	person.goal_type    = GOAL_TYPE_ROOM;
 	return 1;
 }
 
-int building_t::choose_dest_room(person_t &person, rand_gen_t &rgen) const {
+int building_t::choose_dest_room(person_t &person, rand_gen_t &rgen) const { // used for randomly walking around the building
 
 	assert(interior && interior->nav_graph);
 	building_loc_t const loc(get_building_loc_for_pt(person.pos));
@@ -746,7 +749,24 @@ int building_t::choose_dest_room(person_t &person, rand_gen_t &rgen) const {
 	if (interior->rooms.size() == 1) return 0; // no other room to move to
 	float const floor_spacing(get_window_vspace());
 
-	// TODO: find_nearest_elevator_this_floor(person.pos)
+	if (0 && !is_house) { // choose a destination elevator (for office buildings)
+		int const nearest_elevator(find_nearest_elevator_this_floor(person.pos));
+
+		if (nearest_elevator >= 0) {
+			assert((unsigned)nearest_elevator < interior->elevators.size());
+			elevator_t const &e(interior->elevators[nearest_elevator]);
+			int const elevator_room(get_room_containing_pt(point(e.xc(), e.yc(), person.pos.z))); // room containing elevator center at person zval
+			assert(elevator_room >= 0); // elevator must be in a valid room
+
+			if (interior->nav_graph->is_room_connected_to(loc.room_ix, elevator_room, interior->doors, person.pos.z, person.has_key)) { // check if reachable
+				person.target_pos[!e.dim] = e.get_center_dim(!e.dim); // centered on the elevator
+				person.target_pos[ e.dim] = e.d[e.dim][e.dir] + (e.dir ? 1.0 : -1.0)*0.3*floor_spacing; // stand in front of the elevator door
+				person.dest_room = elevator_room;
+				person.goal_type = GOAL_TYPE_ELEVATOR;
+				return 1;
+			}
+		}
+	}
 
 	// make 100 attempts at finding a valid room
 	for (unsigned n = 0; n < 100; ++n) {
@@ -936,13 +956,13 @@ bool building_t::find_route_to_point(person_t const &person, float radius, bool 
 			// Note: passing use_stairs=0 here because it's unclear if we want to go through stairs nodes in our A* algorithm
 			// from => stairs/ramp
 			if (!interior->nav_graph->find_path_points(loc1.room_ix, stairs_room_ix, person.ssn, radius, height, 0, is_first_path,
-				up_or_down, person.cur_rseed, avoid, from, interior->doors, person.has_key, from_path)) continue;
+				up_or_down, person.cur_rseed, avoid, from, interior->doors, person.has_key, nullptr, from_path)) continue; // no custom_dest
 			point const seg2_start(interior->nav_graph->get_stairs_entrance_pt(to.z, stairs_room_ix, !up_or_down)); // other end
 			// new floor, new zval, new avoid cubes
 			interior->get_avoid_cubes(avoid, (seg2_start.z - radius), (seg2_start.z + z2_add), 0.5*radius, get_floor_thickness(), following_player);
 			// stairs/ramp => to
 			if (!interior->nav_graph->find_path_points(stairs_room_ix, loc2.room_ix, person.ssn, radius, height, 0, is_first_path,
-				!up_or_down, person.cur_rseed, avoid, seg2_start, interior->doors, person.has_key, path)) continue;
+				!up_or_down, person.cur_rseed, avoid, seg2_start, interior->doors, person.has_key, nullptr, path)) continue; // no custom_dest
 			assert(!path.empty() && !from_path.empty());
 			path.push_back(seg2_start); // other end of the stairs
 			// add two more points to straighten the entrance and exit paths; this segment doesn't check for intersection with stairs
@@ -980,8 +1000,10 @@ bool building_t::find_route_to_point(person_t const &person, float radius, bool 
 		return 0; // failed
 	}
 	assert(loc1.room_ix != loc2.room_ix);
+	// if the target is an elevator, use that as the preferred destination rather than the center of the room
+	point const *const custom_dest((person.goal_type == GOAL_TYPE_ELEVATOR) ? &person.target_pos : nullptr);
 	if (!interior->nav_graph->find_path_points(loc1.room_ix, loc2.room_ix, person.ssn, radius, height, 0, is_first_path,
-		0, person.cur_rseed, avoid, from, interior->doors, person.has_key, path)) return 0;
+		0, person.cur_rseed, avoid, from, interior->doors, person.has_key, custom_dest, path)) return 0;
 	assert(!path.empty());
 	return 1;
 }
@@ -1282,6 +1304,22 @@ int building_t::ai_room_update(rand_gen_t &rgen, float delta_dir, unsigned perso
 		assert(point_in_building_or_basement_bcube(person.target_pos));
 		person.pos = person.target_pos;
 		if (!person.path.empty()) {person.next_path_pt(0); return AI_NEXT_PT;} // move to next path point
+
+		if (person.goal_type == GOAL_TYPE_ELEVATOR) {
+			// we could cache the elevator index in the person, but it should be okay to use the nearest elevator again since there should be one nearby
+			int const nearest_elevator(find_nearest_elevator_this_floor(person.pos));
+			assert(nearest_elevator >= 0);
+			assert((unsigned)nearest_elevator < interior->elevators.size());
+			elevator_t &e(interior->elevators[nearest_elevator]);
+			unsigned const floor_ix((person.pos.z - e.z1())/get_window_vspace()); // floor index relative to this elevator, not the room or building
+			call_elevator_to_floor(e, floor_ix);
+			vector3d const dir_to_elevator(e.get_cube_center() - person.pos);
+			// snap to face the elevator; would be better to gradually turn, but it's not clear how to do that; at least we should be facing in that general direction
+			person.dir.assign(dir_to_elevator.x, dir_to_elevator.y, 0.0);
+			person.dir.normalize();
+			person.wait_for(1000.0); // TODO: wait there for the elevator to arrive
+			return AI_WAITING;
+		}
 		// don't wait if we can follow the player
 		bool const no_wait(global_building_params.ai_target_player && (can_target_player(person) || has_nearby_sound(person, get_window_vspace())));
 		if (!no_wait) {person.wait_for(rgen.rand_uniform(1.0, (can_ai_follow_player(person) ? 2.0 : 10.0)));} // stop for 1-10s, 1-2s if player is in this building in gameplay mode

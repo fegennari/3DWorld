@@ -46,7 +46,7 @@ struct person_base_t : public waiting_obj_t {
 };
 
 enum {AI_STOP=0, AI_WAITING, AI_NEXT_PT, AI_BEGIN_PATH, AI_AT_DEST, AI_MOVING, AI_TO_REMOVE};
-enum {GOAL_TYPE_NONE=0, GOAL_TYPE_ROOM, GOAL_TYPE_PLAYER, GOAL_TYPE_SOUND};
+enum {GOAL_TYPE_NONE=0, GOAL_TYPE_ROOM, GOAL_TYPE_ELEVATOR, GOAL_TYPE_PLAYER, GOAL_TYPE_SOUND};
 
 struct person_t : public person_base_t { // building person
 	float retreat_time;
