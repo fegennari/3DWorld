@@ -1251,11 +1251,15 @@ void building_t::add_house_basement_pipes(rand_gen_t &rgen) {
 	for (room_object_t const &i : interior->room_geom->objs) {
 		bool no_blocking(i.type == TYPE_PICTURE || i.type == TYPE_WBOARD);
 		// Note: TYPE_PIPE (vertical electrical conduits from outlets) may block pipes from running horizontally along walls
-		if (i.no_coll() && !no_blocking && i.type != TYPE_LIGHT && i.type != TYPE_PIPE) continue; // no collisions
+		if (i.no_coll() && !no_blocking && i.type != TYPE_LIGHT && i.type != TYPE_PIPE && i.type != TYPE_VENT) continue; // no collisions
 		if (i.z1() >= ground_floor_z1) continue; // not in the basement
 		// Note: we could maybe skip if i.z2() < sewer_zval-pipe_radius, but we still need to handle collisions with vertical exit pipe segments
 
-		if (i.type == TYPE_WHEATER) {
+		if (i.type == TYPE_VENT) {
+			obstacles.push_back(i);
+			obstacles.back().z1() -= fc_thick; // add some clearance under the vent
+		}
+		else if (i.type == TYPE_WHEATER) {
 			cube_t cubes[2];
 			get_water_heater_cubes(i, cubes);
 			UNROLL_2X(obstacles.push_back(cubes[i_]);)
