@@ -667,7 +667,7 @@ bool building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 	// use the center of the pipes bcube to minimize run length, but clamp to the interior of the basement;
 	// in the case where all risers are outside of the basement perimeter, this will make pipes run against the exterior basement wall
 	float const pipes_bcube_center(max(basement.d[!dim][0]+r_main, min(basement.d[!dim][1]-r_main, pipe_end_bcube.get_center_dim(!dim))));
-	float centerline(pipes_bcube_center), exit_dmin(0.0);
+	float centerline(pipes_bcube_center);
 	point mp[2]; // {lo, hi} ends
 	bool exit_dir(0);
 	point exit_pos;
@@ -850,9 +850,12 @@ bool building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 		}
 	}
 	if (add_exit_pipe && !has_exit) { // create exit segment and vertical pipe into the floor
+		float exit_dmin(0.0);
+
 		for (unsigned d = 0; d < 2; ++d) { // dim
 			point const cand_exit_pos(get_closest_wall_pos(mp[d], r_main_spacing, basement, walls, obstacles, 1)); // vertical=1
-			float const dist(p2p_dist(mp[d], cand_exit_pos));
+			float dist(p2p_dist(mp[d], cand_exit_pos));
+			if (dist == 0.0) {dist = FLT_MAX;} // dist will be 0 if we fail to find a wall, so don't prefer it in that case
 			if (exit_dmin == 0.0 || dist < exit_dmin) {exit_pos = cand_exit_pos; exit_dir = d; exit_dmin = dist;}
 		}
 		point &exit_conn(mp[exit_dir]);
