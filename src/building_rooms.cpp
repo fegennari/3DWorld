@@ -3058,6 +3058,8 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			for (auto i = objs.begin() + room_objs_start; i != objs.end(); ++i) {i->flags |= RO_FLAG_INTERIOR;}
 		}
 	} // for r (room)
+	if (is_house) {interior->assign_master_bedroom(window_vspacing, floor_thickness);}
+
 	if (is_rotated()) {} // skip for rotated buildings, since toilets, etc. may not be placed
 	else if (num_bathrooms == 0) { // can happen, but very rare
 		cout << "no bathroom in building " << bcube.xc() << " " << bcube.yc() << endl;
@@ -3084,6 +3086,22 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 	for (unsigned i = 0; i < 3; ++i) {wood_color[i] = luminance*WOOD_COLOR[i]*rgen.rand_uniform(0.9, 1.1);}
 	wood_color.set_valid_color();
 	max_eq(wood_color.R, max(wood_color.G, wood_color.B)); // make sure wood isn't blue or green tinted
+}
+
+void building_interior_t::assign_master_bedroom(float window_vspacing, float floor_thickness) {
+	float best_area(0.0);
+	unsigned master_br(0), mbr_floor(0);
+
+	for (auto r = rooms.begin(); r != rooms.end(); ++r) {
+		unsigned const num_floors(calc_num_floors_room(*r, window_vspacing, floor_thickness));
+		
+		for (unsigned f = 0; f < num_floors; ++f) {
+			if (r->get_room_type(f) != RTYPE_BED) continue;
+			float const area(r->get_area_xy());
+			if (area > best_area) {master_br = (r - rooms.begin()); mbr_floor = f; best_area = area;} // Note: prioritizes lower floors
+		}
+	} // for r
+	if (best_area > 0) {rooms[master_br].assign_to(RTYPE_MASTER_BED, mbr_floor);}
 }
 
 void building_t::maybe_add_fire_escape(rand_gen_t &rgen) {
@@ -3398,7 +3416,7 @@ void building_t::add_window_coverings(cube_t const &window, bool dim, bool dir) 
 	room_type const rtype(room.get_room_type(floor));
 
 	switch (rtype) {
-	case RTYPE_BED:  add_window_blinds  (window, dim, dir, room_id, floor); break; // bedroom
+	case RTYPE_BED: case RTYPE_MASTER_BED: add_window_blinds(window, dim, dir, room_id, floor); break; // bedroom
 	case RTYPE_BATH: add_bathroom_window(window, dim, dir, room_id, floor); break; // bathroom
 	} // end switch
 }

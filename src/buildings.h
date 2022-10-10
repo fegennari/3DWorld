@@ -475,13 +475,13 @@ typedef uint8_t room_obj_shape;
 
 enum {RTYPE_NOTSET=0, RTYPE_HALL, RTYPE_STAIRS, RTYPE_OFFICE, RTYPE_BATH, RTYPE_BED, RTYPE_KITCHEN, RTYPE_LIVING, RTYPE_DINING, RTYPE_STUDY,
 	  RTYPE_ENTRY, RTYPE_LIBRARY, RTYPE_STORAGE, RTYPE_GARAGE, RTYPE_SHED, RTYPE_LOBBY, RTYPE_LAUNDRY, RTYPE_CARD, RTYPE_PLAY, RTYPE_ART,
-	  RTYPE_UTILITY, RTYPE_PARKING, RTYPE_RAMP_EXIT, RTYPE_ATTIC, NUM_RTYPES};
+	  RTYPE_UTILITY, RTYPE_PARKING, RTYPE_RAMP_EXIT, RTYPE_ATTIC, RTYPE_MASTER_BED, NUM_RTYPES};
 typedef uint8_t room_type;
 
 std::string const room_names[NUM_RTYPES] =
 	{"Unset", "Hallway", "Stairs", "Office", "Bathroom", "Bedroom", "Kitchen", "Living Room", "Dining Room", "Study",
 	 "Entryway", "Library", "Storage Room", "Garage", "Shed", "Lobby", "Laundry Room", "Card Room", "Play Room", "Art Room",
-	 "Utility Room", "Parking Garage", "Ramp Exit", "Attic"};
+	 "Utility Room", "Parking Garage", "Ramp Exit", "Attic", "Master Bedroom"};
 
 enum {SHAPE_STRAIGHT=0, SHAPE_U, SHAPE_WALLED, SHAPE_WALLED_SIDES, SHAPE_RAMP};
 typedef uint8_t stairs_shape;
@@ -1188,6 +1188,7 @@ struct building_interior_t {
 	bool point_in_ext_basement_room(point const &pos) const;
 	bool cube_in_ext_basement_room(cube_t const &c, bool xy_only) const;
 	door_t const &get_ext_basement_door() const;
+	void assign_master_bedroom(float window_vspacing, float floor_thickness);
 };
 
 struct building_stats_t {
