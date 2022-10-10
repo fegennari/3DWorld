@@ -749,7 +749,7 @@ int building_t::choose_dest_room(person_t &person, rand_gen_t &rgen) const { // 
 	if (interior->rooms.size() == 1) return 0; // no other room to move to
 	float const floor_spacing(get_window_vspace());
 
-	if (0 && !is_house) { // choose a destination elevator (for office buildings)
+	if (0 && !is_house && person.goal_type != GOAL_TYPE_ELEVATOR) { // choose a destination elevator (for office buildings) if our prev dest wasn't an elevator
 		int const nearest_elevator(find_nearest_elevator_this_floor(person.pos));
 
 		if (nearest_elevator >= 0) {
@@ -1223,7 +1223,11 @@ int building_t::ai_room_update(rand_gen_t &rgen, float delta_dir, unsigned perso
 			} // for p
 			wait_time -= fticks;
 			person.anim_time = 0.0; // reset just in case (though should already be at 0.0)
-			person.goal_type = GOAL_TYPE_NONE;
+
+			if (person.goal_type == GOAL_TYPE_ELEVATOR) { // waiting for the elevator to arrive
+				// TODO
+			}
+			else {person.goal_type = GOAL_TYPE_NONE;} // our orig goal is invalid
 			return AI_WAITING;
 		}
 		wait_time = 0.0;
@@ -1317,7 +1321,7 @@ int building_t::ai_room_update(rand_gen_t &rgen, float delta_dir, unsigned perso
 			// snap to face the elevator; would be better to gradually turn, but it's not clear how to do that; at least we should be facing in that general direction
 			person.dir.assign(dir_to_elevator.x, dir_to_elevator.y, 0.0);
 			person.dir.normalize();
-			person.wait_for(1000.0); // TODO: wait there for the elevator to arrive
+			person.wait_for(60.0); // wait there for the elevator to arrive; if we're waiting for more than 60s, give up and choose another dest
 			return AI_WAITING;
 		}
 		// don't wait if we can follow the player
