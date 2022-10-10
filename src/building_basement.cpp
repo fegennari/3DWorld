@@ -388,6 +388,7 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 	bool const add_cars(enable_parked_cars() && !is_rotated()); // skip cars for rotated buildings
 	unsigned const max_handicap_spots(capacity/20 + 1);
 	unsigned num_handicap_spots(0);
+	rand_gen_t rgen2(rgen); // make a copy to use with cars so that enabling cars doesn't change the parking garage layout
 
 	for (unsigned n = 0; n < num_strips; ++n) {
 		assert(space_length > 0.0);
@@ -427,7 +428,7 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 					unsigned flags(RO_FLAG_NOCOLL);
 					if (last_was_space          ) {flags |= RO_FLAG_ADJ_LO;} // adjacent space to the left
 					if (s+1 < num_spaces_per_row) {flags |= RO_FLAG_ADJ_HI;} // not the last space - assume there will be a space to the right
-					bool const add_car(add_cars && rgen.rand_float() < 0.5); // 50% populated with cars
+					bool const add_car(add_cars && rgen2.rand_float() < 0.5); // 50% populated with cars
 
 					// make it a handicap spot if near an elevator and there aren't already too many
 					if (num_handicap_spots < max_handicap_spots) {
@@ -445,7 +446,7 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 					if (add_car) { // add a collider to block this area from the player, people, and rats; add first so that objs.back() is correct for the next iter
 						car_t car(car_from_parking_space(pspace));
 						objs.emplace_back(car.bcube, TYPE_COLLIDER, room_id, !dim, d, (RO_FLAG_INVIS | RO_FLAG_FOR_CAR));
-						pspace.obj_id = (uint16_t)(objs.size() + rgen.rand()); // will be used for the car model and color
+						pspace.obj_id = (uint16_t)(objs.size() + rgen2.rand()); // will be used for the car model and color
 						pspace.flags |= RO_FLAG_USED;
 					}
 					if (no_sep_wall && !at_either_ext_wall) { // add small yellow curbs to block cars
