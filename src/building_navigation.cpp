@@ -753,16 +753,16 @@ int building_t::choose_dest_room(person_t &person, rand_gen_t &rgen) const { // 
 		int const nearest_elevator(find_nearest_elevator_this_floor(person.pos));
 
 		if (nearest_elevator >= 0) {
-			assert((unsigned)nearest_elevator < interior->elevators.size());
-			elevator_t const &e(interior->elevators[nearest_elevator]);
+			elevator_t const &e(get_elevator(nearest_elevator));
 			int const elevator_room(get_room_containing_pt(point(e.xc(), e.yc(), person.pos.z))); // room containing elevator center at person zval
 			assert(elevator_room >= 0); // elevator must be in a valid room
 
 			if (interior->nav_graph->is_room_connected_to(loc.room_ix, elevator_room, interior->doors, person.pos.z, person.has_key)) { // check if reachable
 				person.target_pos[!e.dim] = e.get_center_dim(!e.dim); // centered on the elevator
 				person.target_pos[ e.dim] = e.d[e.dim][e.dir] + (e.dir ? 1.0 : -1.0)*0.3*floor_spacing; // stand in front of the elevator door
-				person.dest_room = elevator_room;
-				person.goal_type = GOAL_TYPE_ELEVATOR;
+				person.dest_room    = elevator_room;
+				person.goal_type    = GOAL_TYPE_ELEVATOR;
+				person.cur_elevator = (uint8_t)nearest_elevator;
 				return 1;
 			}
 		}
@@ -1310,11 +1310,7 @@ int building_t::ai_room_update(rand_gen_t &rgen, float delta_dir, unsigned perso
 		if (!person.path.empty()) {person.next_path_pt(0); return AI_NEXT_PT;} // move to next path point
 
 		if (person.goal_type == GOAL_TYPE_ELEVATOR) {
-			// we could cache the elevator index in the person, but it should be okay to use the nearest elevator again since there should be one nearby
-			int const nearest_elevator(find_nearest_elevator_this_floor(person.pos));
-			assert(nearest_elevator >= 0);
-			assert((unsigned)nearest_elevator < interior->elevators.size());
-			elevator_t &e(interior->elevators[nearest_elevator]);
+			elevator_t &e(get_elevator(person.cur_elevator));
 			unsigned const floor_ix((person.pos.z - e.z1())/get_window_vspace()); // floor index relative to this elevator, not the room or building
 			call_elevator_to_floor(e, floor_ix);
 			vector3d const dir_to_elevator(e.get_cube_center() - person.pos);

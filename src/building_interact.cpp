@@ -1035,9 +1035,8 @@ bool building_interior_t::update_elevators(building_t const &building, point con
 }
 
 void building_t::register_button_event(room_object_t const &button) {
-	assert(interior);
-	assert(button.room_id < interior->elevators.size()); // here room_id is elevator_id (buttons are only used with elevators)
-	call_elevator_to_floor(interior->elevators[button.room_id], button.obj_id); // floor_ix=button.obj_id
+	// here room_id is elevator_id (buttons are only used with elevators)
+	call_elevator_to_floor(get_elevator(button.room_id), button.obj_id); // floor_ix=button.obj_id
 }
 void building_t::call_elevator_to_floor(elevator_t &elevator, unsigned floor_ix) {
 	if (interior->elevators_disabled) return; // nope

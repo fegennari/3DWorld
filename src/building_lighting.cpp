@@ -790,8 +790,7 @@ void building_t::get_lights_with_priorities(point const &target, cube_t const &v
 		if (!valid_area.contains_cube(*i)) continue; // outside valid area
 
 		if (i->in_elevator()) { // elevator light
-			elevator_t const &e(interior->elevators[i->obj_id]);
-			if (e.was_called) continue; // moving elevator, don't update light yet
+			if (get_elevator(i->obj_id).was_called) continue; // moving elevator, don't update light yet
 		}
 		point const center(i->get_cube_center());
 		float dist_sq(p2p_dist_sq(center, target));
@@ -1244,8 +1243,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		bool stairs_light(0), player_in_elevator(0);
 
 		if (is_in_elevator) {
-			assert(i->obj_id < interior->elevators.size());
-			elevator_t const &e(interior->elevators[i->obj_id]);
+			elevator_t const &e(get_elevator(i->obj_id));
 			assert(e.car_obj_id < objs.size());
 			room_object_t const &car(objs[e.car_obj_id]); // elevator car for this elevator
 			if (car.contains_pt(camera_rot)) {player_in_elevator = 1;} // player inside elevator
@@ -1387,7 +1385,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			color = i->get_color()*1.1; // make it extra bright
 		}
 		if (is_in_elevator) {
-			elevator_t const &e(interior->elevators[i->obj_id]);
+			elevator_t const &e(get_elevator(i->obj_id));
 			room_object_t const &car(objs[e.car_obj_id]); // elevator car for this elevator
 			assert(car.contains_pt(lpos));
 			cube_t clip_cube(car); // light is constrained to the elevator car
@@ -1465,7 +1463,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			cube_t light_bc2(clipped_bc);
 
 			if (is_in_elevator) {
-				light_bc2.intersect_with_cube(interior->elevators[i->obj_id]); // clip to elevator to avoid light leaking onto walls outside but near the elevator
+				light_bc2.intersect_with_cube(get_elevator(i->obj_id)); // clip to elevator to avoid light leaking onto walls outside but near the elevator
 			}
 			else if (!is_in_attic) {
 				cube_t room_exp(room);

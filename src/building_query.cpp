@@ -520,9 +520,8 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, flo
 				else if (obj_z >= c->z1()) {max_eq(pos.z, (c->z1() + radius)); ecoll = 1;} // inside the elevator
 				
 				if (ecoll) {
-					assert(c->obj_id < interior->elevators.size());
 					// 2 if doors are closed, otherwise 1; this is used to avoid drawing terrain as we pass through it when the elevator enters or leaves the basement
-					player_in_elevator = ((interior->elevators[c->obj_id].open_amt == 0.0) ? 2 : 1);
+					player_in_elevator = ((get_elevator(c->obj_id).open_amt == 0.0) ? 2 : 1);
 					had_coll = 1;
 				}
 				continue;

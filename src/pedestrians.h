@@ -52,12 +52,12 @@ struct person_t : public person_base_t { // building person
 	float retreat_time;
 	int cur_bldg, cur_room, dest_room; // Note: -1 is unassigned
 	unsigned short cur_rseed;
-	uint8_t goal_type;
+	uint8_t goal_type, cur_elevator;
 	bool following_player, is_on_stairs, has_key, is_first_path, on_new_path_seg;
 	vector<point> path; // stored backwards, next point on path is path.back()
 
 	person_t(float radius_) : person_base_t(radius_), retreat_time(0.0), cur_bldg(-1), cur_room(-1), dest_room(-1), cur_rseed(1), goal_type(GOAL_TYPE_NONE),
-		following_player(0), is_on_stairs(0), has_key(0), is_first_path(1), on_new_path_seg(0) {in_building = 1;}
+		cur_elevator(0), following_player(0), is_on_stairs(0), has_key(0), is_first_path(1), on_new_path_seg(0) {in_building = 1;}
 	bool on_stairs() const {return is_on_stairs;}
 	void next_path_pt(bool starting_path);
 };
