@@ -1407,7 +1407,8 @@ struct building_t : public building_geom_t {
 	unsigned count_connected_room_components();
 	bool place_people_if_needed(unsigned building_ix, float radius, vector<point> &locs) const;
 	void all_ai_room_update(rand_gen_t &rgen, float delta_dir);
-	int ai_room_update(rand_gen_t &rgen, float delta_dir, unsigned person_ix);
+	int ai_room_update(person_t &person, float delta_dir, unsigned person_ix, rand_gen_t &rgen);
+	int run_ai_elevator_logic(person_t &person, float delta_dir, rand_gen_t &rgen);
 	void register_person_hit(unsigned person_ix, room_object_t const &obj, vector3d const &velocity);
 private:
 	void build_nav_graph() const;

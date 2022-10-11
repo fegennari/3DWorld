@@ -8,8 +8,9 @@
 #include <queue>
 
 
-float const COLL_RADIUS_SCALE = 0.75; // somewhat smaller than radius, but larger than PED_WIDTH_SCALE
-float const RETREAT_TIME      = 4.0f*TICKS_PER_SECOND; // 4s
+bool  const ENABLE_AI_ELEVATORS = 0;
+float const COLL_RADIUS_SCALE   = 0.75; // somewhat smaller than radius, but larger than PED_WIDTH_SCALE
+float const RETREAT_TIME        = 4.0f*TICKS_PER_SECOND; // 4s
 
 int cpbl_update_frame(0);
 building_dest_t cur_player_building_loc, prev_player_building_loc;
@@ -738,6 +739,13 @@ bool building_t::select_person_dest_in_room(person_t &person, rand_gen_t &rgen, 
 	return 1;
 }
 
+point get_pos_to_stand_for_elevator(person_t const &person, elevator_t const &e, float floor_spacing) {
+	point pos(person.pos);
+	pos[!e.dim] = e.get_center_dim(!e.dim); // centered on the elevator
+	pos[ e.dim] = e.d[e.dim][e.dir] + (e.dir ? 1.0 : -1.0)*0.3*floor_spacing; // stand in front of the elevator door
+	return pos;
+}
+
 int building_t::choose_dest_room(person_t &person, rand_gen_t &rgen) const { // used for randomly walking around the building
 
 	assert(interior && interior->nav_graph);
@@ -749,7 +757,8 @@ int building_t::choose_dest_room(person_t &person, rand_gen_t &rgen) const { // 
 	if (interior->rooms.size() == 1) return 0; // no other room to move to
 	float const floor_spacing(get_window_vspace());
 
-	if (0 && !is_house && person.goal_type != GOAL_TYPE_ELEVATOR) { // choose a destination elevator (for office buildings) if our prev dest wasn't an elevator
+	// maybe choose a destination elevator (for office buildings) if our prev dest wasn't an elevator
+	if (ENABLE_AI_ELEVATORS && !is_house && !person.last_used_elevator && person.goal_type != GOAL_TYPE_ELEVATOR /*&& rgen.rand_float() < 0.25*/) {
 		int const nearest_elevator(find_nearest_elevator_this_floor(person.pos));
 
 		if (nearest_elevator >= 0) {
@@ -758,11 +767,12 @@ int building_t::choose_dest_room(person_t &person, rand_gen_t &rgen) const { // 
 			assert(elevator_room >= 0); // elevator must be in a valid room
 
 			if (interior->nav_graph->is_room_connected_to(loc.room_ix, elevator_room, interior->doors, person.pos.z, person.has_key)) { // check if reachable
-				person.target_pos[!e.dim] = e.get_center_dim(!e.dim); // centered on the elevator
-				person.target_pos[ e.dim] = e.d[e.dim][e.dir] + (e.dir ? 1.0 : -1.0)*0.3*floor_spacing; // stand in front of the elevator door
+				person.target_pos   = get_pos_to_stand_for_elevator(person, e, floor_spacing);
 				person.dest_room    = elevator_room;
 				person.goal_type    = GOAL_TYPE_ELEVATOR;
 				person.cur_elevator = (uint8_t)nearest_elevator;
+				person.last_used_elevator = 1;
+				// TODO: future work for multiple AIs: lock the elevator so that no one else can use it, as a temporary solution
 				return 1;
 			}
 		}
@@ -1184,19 +1194,114 @@ void building_t::all_ai_room_update(rand_gen_t &rgen, float delta_dir) {
 	assert(interior);
 
 	for (unsigned i = 0; i < interior->people.size(); ) { // Note: no increment
-		if (ai_room_update(rgen, delta_dir, i) == AI_TO_REMOVE) {
-			interior->people.erase(interior->people.begin() + i); // remove this person
-		}
+		person_t &person(interior->people[i]);
+		person.ai_state = ai_room_update(person, delta_dir, i, rgen);
+		if (person.ai_state == AI_TO_REMOVE) {interior->people.erase(interior->people.begin() + i);} // remove this person
 		else {++i;}
 	}
 }
 
-// Note: non-const because this updates room light and door state
-int building_t::ai_room_update(rand_gen_t &rgen, float delta_dir, unsigned person_ix) {
+unsigned get_elevator_floor(float zval, elevator_t const &e, float floor_spacing) { // floor index relative to this elevator
+	return max(0.0f, (zval - e.z1()))/floor_spacing;
+}
+float get_person_max_move_dist(person_t const &person, float speed_mult=1.0) {
+	return person.speed*speed_mult*min(fticks, 4.0f); // clamp fticks to 100ms
+}
+float move_person_forward_to_target(person_t &person) { // Note: expected that person.target_pos.z == person.pos.z
+	float const move_dist(get_person_max_move_dist(person));
+	vector3d const delta(person.target_pos - person.pos);
+	person.pos       += (move_dist/delta.mag())*delta;
+	person.anim_time += move_dist;
+	return move_dist;
+}
+bool person_slow_turn(person_t &person, point const &target, float delta_dir) {
+	vector3d dir_to_target((target.x - person.pos.x), (target.y - person.pos.y), 0.0); // zval is always 0
+	dir_to_target.normalize();
+	if (dot_product(person.dir, dir_to_target) > 0.99) return 0; // turn is complete
+	// if directions are nearly opposite, pick a side to turn using the cross product to get an orthogonal vector
+	if (dot_product(dir_to_target, person.dir) < -0.9) {dir_to_target = cross_product(person.dir, plus_z);}
+	person.dir = delta_dir*dir_to_target + (1.0 - delta_dir)*person.dir; // merge new_dir into dir gradually for smooth turning
+	person.dir.normalize();
+	return 1;
+}
 
-	assert(person_ix < interior->people.size());
-	person_t &person(interior->people[person_ix]);
+int building_t::run_ai_elevator_logic(person_t &person, float delta_dir, rand_gen_t &rgen) {
+	assert(interior);
+	assert(person.goal_type == GOAL_TYPE_ELEVATOR);
+	float const floor_spacing(get_window_vspace());
+	elevator_t &e(get_elevator(person.cur_elevator));
+	room_object_t const &ecar(interior->get_elevator_car(e));
+
+	if (person.ai_state == AI_WAIT_ELEVATOR) {
+		// waiting for the elevator to arrive; we allow the AI to be pushed and to give up if waiting too long	
+		if (e.open_amt == 1.0) { // doors are fully open
+			if (get_elevator_floor(ecar.zc(), e, floor_spacing) == get_elevator_floor(person.pos.z, e, floor_spacing)) { // wait for elevator to reach our current floor
+				//cout << "State: Enter Elevator" << endl; // TESTING
+				person.waiting_start = 0.0; // no longer waiting for elevator
+				return AI_ENTER_ELEVATOR;
+			}
+		}
+		person_slow_turn(person, point(e.xc(), e.yc(), person.pos.z), delta_dir); // slow turn to face the elevator
+	}
+	else if (person.ai_state == AI_ENTER_ELEVATOR) {
+		person.target_pos.assign(e.xc(), e.yc(), person.pos.z);
+		float const move_dist(move_person_forward_to_target(person)); // walk into elevator
+
+		if (dist_xy_less_than(person.pos, person.target_pos, move_dist)) {
+			//cout << "State: Activate Elevator" << endl; // TESTING
+			person.anim_time = 0.0; // stop and turn
+			return AI_ACTIVATE_ELEVATOR;
+		}
+	}
+	else if (person.ai_state == AI_ACTIVATE_ELEVATOR) {
+		vector3d const prev_dir(person.dir);
+		bool const is_turning(person_slow_turn(person, get_pos_to_stand_for_elevator(person, e, floor_spacing), delta_dir)); // slow turn to face the elevator door
+
+		if (!is_turning) { // turn completed
+			unsigned const cur_floor(get_elevator_floor(person.pos.z, e, floor_spacing)), num_floors(round_fp(e.dz()/floor_spacing));
+			assert(num_floors > 1);
+			assert(cur_floor  < num_floors);
+
+			while (1) { // select the destination floor, different from the current floor
+				person.dest_elevator_floor = rgen.rand() % num_floors;
+				if (person.dest_elevator_floor != cur_floor) break; // floor is valid
+			}
+			call_elevator_to_floor(e, person.dest_elevator_floor);
+			//cout << "State: Ride Elevator" << endl; // TESTING
+			person.anim_time = 0.0; // stop and wait
+			return AI_RIDE_ELEVATOR;
+		}
+	}
+	else if (person.ai_state == AI_RIDE_ELEVATOR) {
+		person.pos.z = ecar.z1() + person.radius + get_fc_thickness(); // move with the elevator
+
+		if (e.open_amt == 1.0) { // doors are fully open
+			if (get_elevator_floor(ecar.zc(), e, floor_spacing) == person.dest_elevator_floor) { // at destination floor
+				//cout << "State: Exit Elevator" << endl; // TESTING
+				return AI_EXIT_ELEVATOR;
+			}
+		}
+	}
+	else if (person.ai_state == AI_EXIT_ELEVATOR) {
+		person.target_pos = get_pos_to_stand_for_elevator(person, e, floor_spacing);
+		float const move_dist(move_person_forward_to_target(person)); // exit elevator to a point in front, then select a new non-elevator destination
+
+		if (dist_xy_less_than(person.pos, person.target_pos, move_dist)) {
+			//cout << "State: At Dest" << endl; // TESTING
+			//person.on_new_path_seg = 1;
+			person.target_pos      = all_zeros;
+			return AI_AT_DEST;
+		}
+	}
+	else {assert(0);} // invalid state
+	return person.ai_state; // fallthrough case, no change to ai_state
+}
+
+// Note: non-const because this updates room light and door state
+int building_t::ai_room_update(person_t &person, float delta_dir, unsigned person_ix, rand_gen_t &rgen) {
+
 	if (person.speed == 0.0) {person.anim_time = 0.0; return AI_STOP;} // stopped
+	assert(interior);
 	if (!interior->room_geom && frame_counter < 60) {person.anim_time = 0.0; return AI_WAITING;} // wait until room geom is generated for this building
 	float const coll_dist(COLL_RADIUS_SCALE*person.radius);
 	float &wait_time(person.waiting_start); // reuse this field
@@ -1215,7 +1320,8 @@ int building_t::ai_room_update(rand_gen_t &rgen, float delta_dir, unsigned perso
 	}
 	if (wait_time > 0) {
 		if (wait_time > fticks && !can_ai_follow_player(person)) { // waiting; don't wait if there's a player to follow
-			for (auto p = interior->people.begin()+person_ix+1; p < interior->people.end(); ++p) { // check for other people colliding with this person and handle it
+			// check for other people colliding with this person and handle it; should this apply when waiting for the elevator?
+			for (auto p = interior->people.begin()+person_ix+1; p < interior->people.end(); ++p) {
 				if (fabs(person.pos.z - p->pos.z) > coll_dist) continue; // different floors
 				float const rsum(coll_dist + COLL_RADIUS_SCALE*p->radius);
 				if (!dist_xy_less_than(person.pos, p->pos, rsum)) continue; // not intersecting
@@ -1224,21 +1330,22 @@ int building_t::ai_room_update(rand_gen_t &rgen, float delta_dir, unsigned perso
 			wait_time -= fticks;
 			person.anim_time = 0.0; // reset just in case (though should already be at 0.0)
 
-			if (person.goal_type == GOAL_TYPE_ELEVATOR) { // waiting for the elevator to arrive
-				// TODO
+			if (person.ai_state != AI_WAIT_ELEVATOR) { // don't reset goal and return here if waiting at an elevator
+				person.goal_type = GOAL_TYPE_NONE; // our orig goal is invalid
+				return AI_WAITING;
 			}
-			else {person.goal_type = GOAL_TYPE_NONE;} // our orig goal is invalid
-			return AI_WAITING;
 		}
-		wait_time = 0.0;
-		person.target_pos = all_zeros; // force choose_dest=1 below
+		else { // wait is up
+			wait_time = 0.0;
+			person.target_pos = all_zeros; // force choose_dest=1 below
+			person.ai_state   = AI_WAITING; // waiting, but no longer for an elevator
+		}
 	}
-	assert(interior);
-	
 	if (!point_in_building_or_basement_bcube(person.pos)) { // person must be inside the building
 		cout << TXT(person.pos.str()) << TXT(bcube.str()) << TXT(interior->basement_ext_bcube.str()) << endl;
 		assert(0);
 	}
+	if (person.ai_state >= AI_WAIT_ELEVATOR) {return run_ai_elevator_logic(person, delta_dir, rgen);} // handle elevator case
 	build_nav_graph();
 
 	if (can_ai_follow_player(person)) {
@@ -1300,7 +1407,7 @@ int building_t::ai_room_update(rand_gen_t &rgen, float delta_dir, unsigned perso
 		person.next_path_pt(1);
 		return AI_BEGIN_PATH;
 	}
-	float const max_dist(person.speed*speed_mult*min(fticks, 4.0f)); // clamp fticks to 100ms
+	float const max_dist(get_person_max_move_dist(person, speed_mult));
 	person.on_new_path_seg = 0; // clear flag for this frame
 	//person.following_player = can_target_player(person); // for debugging visualization
 
@@ -1311,19 +1418,20 @@ int building_t::ai_room_update(rand_gen_t &rgen, float delta_dir, unsigned perso
 
 		if (person.goal_type == GOAL_TYPE_ELEVATOR) {
 			elevator_t &e(get_elevator(person.cur_elevator));
-			unsigned const floor_ix((person.pos.z - e.z1())/get_window_vspace()); // floor index relative to this elevator, not the room or building
+			unsigned const floor_ix(get_elevator_floor(person.pos.z, e, get_window_vspace())); // floor index relative to this elevator, not the room or building
 			call_elevator_to_floor(e, floor_ix);
 			vector3d const dir_to_elevator(e.get_cube_center() - person.pos);
 			// snap to face the elevator; would be better to gradually turn, but it's not clear how to do that; at least we should be facing in that general direction
 			person.dir.assign(dir_to_elevator.x, dir_to_elevator.y, 0.0);
 			person.dir.normalize();
 			person.wait_for(60.0); // wait there for the elevator to arrive; if we're waiting for more than 60s, give up and choose another dest
-			return AI_WAITING;
+			return AI_WAIT_ELEVATOR;
 		}
 		// don't wait if we can follow the player
 		bool const no_wait(global_building_params.ai_target_player && (can_target_player(person) || has_nearby_sound(person, get_window_vspace())));
 		if (!no_wait) {person.wait_for(rgen.rand_uniform(1.0, (can_ai_follow_player(person) ? 2.0 : 10.0)));} // stop for 1-10s, 1-2s if player is in this building in gameplay mode
-		person.on_new_path_seg = 1; // allow player following AI update logic to rerun this frame
+		person.on_new_path_seg    = 1; // allow player following AI update logic to rerun this frame
+		person.last_used_elevator = 0;
 		return AI_AT_DEST;
 	}
 	// this person is walking to a destination point
