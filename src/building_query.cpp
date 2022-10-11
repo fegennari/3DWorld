@@ -772,6 +772,14 @@ bool building_interior_t::check_sphere_coll(building_t const &building, point &p
 	return had_coll;
 }
 
+room_object_t const &building_interior_t::get_elevator_car(elevator_t const &e) const {
+	assert(room_geom);
+	assert(e.car_obj_id < room_geom->objs.size());
+	room_object_t const &obj(room_geom->objs[e.car_obj_id]); // elevator car for this elevator
+	assert(obj.type == TYPE_ELEVATOR);
+	return obj;
+}
+
 // Note: should be valid for players and other spherical objects
 bool building_interior_t::check_sphere_coll_walls_elevators_doors(building_t const &building, point &pos, point const &p_last, float radius,
 	float wall_test_extra_z, bool check_open_doors, vector3d *cnorm) const
@@ -790,8 +798,7 @@ bool building_interior_t::check_sphere_coll_walls_elevators_doors(building_t con
 		if (obj_z < e->z1() || obj_z > e->z2()) continue; // wrong part/floor
 
 		if (room_geom && (e->open_amt > 0.75 || e->contains_pt(point(pos.x, pos.y, obj_z)))) { // elevator is mostly open, can enter || already inside elevator
-			assert(e->car_obj_id < room_geom->objs.size());
-			room_object_t &obj(room_geom->objs[e->car_obj_id]); // elevator car for this elevator
+			room_object_t const &obj(get_elevator_car(*e)); // elevator car for this elevator
 
 			if (obj_z > obj.z1() && obj_z < obj.z2()) { // same floor as elevator car - can enter it; otherwise can't enter elevator shaft
 				cube_t cubes[5];

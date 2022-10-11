@@ -1244,8 +1244,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 
 		if (is_in_elevator) {
 			elevator_t const &e(get_elevator(i->obj_id));
-			assert(e.car_obj_id < objs.size());
-			room_object_t const &car(objs[e.car_obj_id]); // elevator car for this elevator
+			room_object_t const &car(interior->get_elevator_car(e)); // elevator car for this elevator
 			if (car.contains_pt(camera_rot)) {player_in_elevator = 1;} // player inside elevator
 			else if (e.open_amt == 0.0 && (floor_is_above || floor_is_below)) continue; // closed elevator viewed from a different floor
 		}
@@ -1386,7 +1385,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		}
 		if (is_in_elevator) {
 			elevator_t const &e(get_elevator(i->obj_id));
-			room_object_t const &car(objs[e.car_obj_id]); // elevator car for this elevator
+			room_object_t const &car(interior->get_elevator_car(e)); // elevator car for this elevator
 			assert(car.contains_pt(lpos));
 			cube_t clip_cube(car); // light is constrained to the elevator car
 			clip_cube.expand_in_dim(!e.dim, 0.1*room_xy_expand); // expand sides to include walls adjacent to elevator (enough to account for FP error)
