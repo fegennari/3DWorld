@@ -9,6 +9,7 @@
 
 
 bool  const ENABLE_AI_ELEVATORS = 0;
+bool  const AI_LOCKS_ELEVATOR   = 1; // one at a time
 float const COLL_RADIUS_SCALE   = 0.75; // somewhat smaller than radius, but larger than PED_WIDTH_SCALE
 float const RETREAT_TIME        = 4.0f*TICKS_PER_SECOND; // 4s
 
@@ -742,7 +743,7 @@ bool building_t::select_person_dest_in_room(person_t &person, rand_gen_t &rgen, 
 point get_pos_to_stand_for_elevator(person_t const &person, elevator_t const &e, float floor_spacing) {
 	point pos(person.pos);
 	pos[!e.dim] = e.get_center_dim(!e.dim); // centered on the elevator
-	pos[ e.dim] = e.d[e.dim][e.dir] + (e.dir ? 1.0 : -1.0)*0.3*floor_spacing; // stand in front of the elevator door
+	pos[ e.dim] = e.d[e.dim][e.dir] + (e.dir ? 1.0 : -1.0)*0.4*floor_spacing; // stand in front of the elevator door
 	return pos;
 }
 
@@ -766,13 +767,13 @@ int building_t::choose_dest_room(person_t &person, rand_gen_t &rgen) const { // 
 			int const elevator_room(get_room_containing_pt(point(e.xc(), e.yc(), person.pos.z))); // room containing elevator center at person zval
 			assert(elevator_room >= 0); // elevator must be in a valid room
 
+			// Note: to simplify multiple AI logic, we could check e.in_use here and not even go to the elevator if someone else is using it
 			if (interior->nav_graph->is_room_connected_to(loc.room_ix, elevator_room, interior->doors, person.pos.z, person.has_key)) { // check if reachable
 				person.target_pos   = get_pos_to_stand_for_elevator(person, e, floor_spacing);
 				person.dest_room    = elevator_room;
 				person.goal_type    = GOAL_TYPE_ELEVATOR;
 				person.cur_elevator = (uint8_t)nearest_elevator;
 				person.last_used_elevator = 1;
-				// TODO: future work for multiple AIs: lock the elevator so that no one else can use it, as a temporary solution
 				return 1;
 			}
 		}
@@ -1232,30 +1233,35 @@ int building_t::run_ai_elevator_logic(person_t &person, float delta_dir, rand_ge
 	elevator_t &e(get_elevator(person.cur_elevator));
 	room_object_t const &ecar(interior->get_elevator_car(e));
 
+	// Note: when AI_LOCKS_ELEVATOR==1, only one person can be in the elevator at once, including walking into and out of the elevator
 	if (person.ai_state == AI_WAIT_ELEVATOR) {
-		// waiting for the elevator to arrive; we allow the AI to be pushed and to give up if waiting too long	
-		if (e.open_amt == 1.0) { // doors are fully open
+		// waiting for the elevator to arrive; we allow the AI to be pushed and to give up if waiting too long;
+		// when the elevator opens, we could check e.going_up to see if it's headed in the correct direction;
+		// however, since we haven't decided on a dest floor yet, it makes sense to just go with it and select a floor in the direction the elevator is headed
+		point const elevator_center(e.xc(), e.yc(), person.pos.z);
+
+		if (e.open_amt == 1.0 && !e.in_use) { // doors are fully open, and no one else is in the elevator
 			if (get_elevator_floor(ecar.zc(), e, floor_spacing) == get_elevator_floor(person.pos.z, e, floor_spacing)) { // wait for elevator to reach our current floor
-				//cout << "State: Enter Elevator" << endl; // TESTING
+				person.dir = (elevator_center - person.pos).get_norm(); // snap our direction to forward, in the rare case the elevator arrives before we've completed our turn
 				person.waiting_start = 0.0; // no longer waiting for elevator
+				if (AI_LOCKS_ELEVATOR) {e.in_use = 1;} // mark elevator as in use to prevent other people from entering it, since there's no collision check
 				return AI_ENTER_ELEVATOR;
 			}
 		}
-		person_slow_turn(person, point(e.xc(), e.yc(), person.pos.z), delta_dir); // slow turn to face the elevator
+		person_slow_turn(person, elevator_center, 0.5*delta_dir); // slow turn to face the elevator
 	}
 	else if (person.ai_state == AI_ENTER_ELEVATOR) {
 		person.target_pos.assign(e.xc(), e.yc(), person.pos.z);
 		float const move_dist(move_person_forward_to_target(person)); // walk into elevator
 
 		if (dist_xy_less_than(person.pos, person.target_pos, move_dist)) {
-			//cout << "State: Activate Elevator" << endl; // TESTING
 			person.anim_time = 0.0; // stop and turn
 			return AI_ACTIVATE_ELEVATOR;
 		}
 	}
 	else if (person.ai_state == AI_ACTIVATE_ELEVATOR) {
 		vector3d const prev_dir(person.dir);
-		bool const is_turning(person_slow_turn(person, get_pos_to_stand_for_elevator(person, e, floor_spacing), delta_dir)); // slow turn to face the elevator door
+		bool const is_turning(person_slow_turn(person, get_pos_to_stand_for_elevator(person, e, floor_spacing), 0.5*delta_dir)); // slow turn to face the elevator door
 
 		if (!is_turning) { // turn completed
 			unsigned const cur_floor(get_elevator_floor(person.pos.z, e, floor_spacing)), num_floors(round_fp(e.dz()/floor_spacing));
@@ -1267,7 +1273,6 @@ int building_t::run_ai_elevator_logic(person_t &person, float delta_dir, rand_ge
 				if (person.dest_elevator_floor != cur_floor) break; // floor is valid
 			}
 			call_elevator_to_floor(e, person.dest_elevator_floor);
-			//cout << "State: Ride Elevator" << endl; // TESTING
 			person.anim_time = 0.0; // stop and wait
 			return AI_RIDE_ELEVATOR;
 		}
@@ -1277,7 +1282,6 @@ int building_t::run_ai_elevator_logic(person_t &person, float delta_dir, rand_ge
 
 		if (e.open_amt == 1.0) { // doors are fully open
 			if (get_elevator_floor(ecar.zc(), e, floor_spacing) == person.dest_elevator_floor) { // at destination floor
-				//cout << "State: Exit Elevator" << endl; // TESTING
 				return AI_EXIT_ELEVATOR;
 			}
 		}
@@ -1287,9 +1291,10 @@ int building_t::run_ai_elevator_logic(person_t &person, float delta_dir, rand_ge
 		float const move_dist(move_person_forward_to_target(person)); // exit elevator to a point in front, then select a new non-elevator destination
 
 		if (dist_xy_less_than(person.pos, person.target_pos, move_dist)) {
-			//cout << "State: At Dest" << endl; // TESTING
 			//person.on_new_path_seg = 1;
-			person.target_pos      = all_zeros;
+			person.target_pos = all_zeros;
+			//if (AI_LOCKS_ELEVATOR) {assert(e.in_use);} // invalid if people are despawned/respawned when the player is far away?
+			e.in_use = 0; // mark as available; if AI_LOCKS_ELEVATOR==1, we know that this person can be the only occupant; otherwise, in_use will already be 0
 			return AI_AT_DEST;
 		}
 	}

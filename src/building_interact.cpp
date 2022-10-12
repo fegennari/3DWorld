@@ -981,6 +981,7 @@ bool building_interior_t::update_elevators(building_t const &building, point con
 			continue;
 		}
 		bool const move_dir(e->target_zval > obj.z1()); // 0=down, 1=up
+		e->going_up = move_dir;
 		assert(e->button_id_start < e->button_id_end && e->button_id_end <= objs.size());
 		float dist(min(0.5f*CAMERA_RADIUS, 0.04f*obj.dz()*fticks)*(move_dir ? 1.0 : -1.0)); // clamp to half camera radius to avoid falling through the floor for low framerates
 		if (e->was_called && fabs(e->target_zval - obj.z1()) < fabs(dist)) {dist = (e->target_zval - obj.z1());} // move to position

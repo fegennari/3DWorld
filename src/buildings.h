@@ -988,13 +988,13 @@ private:
 	void remove_objs_contained_in(cube_t const &c, vect_room_object_t &obj_vect, building_t &building);
 }; // building_room_geom_t
 
-struct elevator_t : public oriented_cube_t {
-	bool at_edge, was_called; // dim/dir applies to the door
+struct elevator_t : public oriented_cube_t { // dim/dir applies to the door
+	bool at_edge, was_called, going_up, in_use;
 	unsigned room_id, car_obj_id, light_obj_id, button_id_start, button_id_end;
 	float target_zval, open_amt;
 
 	elevator_t(cube_t const &c, unsigned rid, bool dim_, bool dir_, bool at_edge_) :
-		oriented_cube_t(c, dim_, dir_), at_edge(at_edge_), was_called(0), room_id(rid), car_obj_id(0),
+		oriented_cube_t(c, dim_, dir_), at_edge(at_edge_), was_called(0), going_up(0), in_use(0), room_id(rid), car_obj_id(0),
 		light_obj_id(0), button_id_start(0), button_id_end(0), target_zval(0.0), open_amt(0.0)
 	{assert(is_strictly_normalized());}
 	float get_wall_thickness () const {return 0.02*get_width();}
