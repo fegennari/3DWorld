@@ -1226,6 +1226,21 @@ bool person_slow_turn(person_t &person, point const &target, float delta_dir) {
 	return 1;
 }
 
+void building_t::call_elevator_to_floor_and_light_nearest_button(elevator_t &elevator, unsigned floor_ix, bool is_inside_elevator) {
+	call_elevator_to_floor(elevator, floor_ix);
+
+	// light the button that was pressed
+	for (auto i = interior->room_geom->objs.begin() + elevator.button_id_start; i != interior->room_geom->objs.begin() + elevator.button_id_end; ++i) {
+		if (i->type == TYPE_BLOCKER) continue; // button was removed?
+		assert(i->type == TYPE_BUTTON);
+		if (i->obj_id != floor_ix) continue; // wrong floor
+		if (bool(i->flags & RO_FLAG_IN_ELEV) != is_inside_elevator) continue; // wrong inside/outside
+		i->flags |= RO_FLAG_IS_ACTIVE; // set active/lit state
+		interior->room_geom->invalidate_small_geom(); // need to regen object data due to lit state change; should be thread safe
+		break; // only one button
+	} // for i
+}
+
 int building_t::run_ai_elevator_logic(person_t &person, float delta_dir, rand_gen_t &rgen) {
 	assert(interior);
 	assert(person.goal_type == GOAL_TYPE_ELEVATOR);
@@ -1272,7 +1287,7 @@ int building_t::run_ai_elevator_logic(person_t &person, float delta_dir, rand_ge
 				person.dest_elevator_floor = rgen.rand() % num_floors;
 				if (person.dest_elevator_floor != cur_floor) break; // floor is valid
 			}
-			call_elevator_to_floor(e, person.dest_elevator_floor);
+			call_elevator_to_floor_and_light_nearest_button(e, person.dest_elevator_floor, 1); // is_inside_elevator=1
 			person.anim_time = 0.0; // stop and wait
 			return AI_RIDE_ELEVATOR;
 		}
@@ -1423,7 +1438,7 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 		if (person.goal_type == GOAL_TYPE_ELEVATOR) {
 			elevator_t &e(get_elevator(person.cur_elevator));
 			unsigned const floor_ix(get_elevator_floor(person.pos.z, e, get_window_vspace())); // floor index relative to this elevator, not the room or building
-			call_elevator_to_floor(e, floor_ix);
+			call_elevator_to_floor_and_light_nearest_button(e, floor_ix, 0); // is_inside_elevator=0
 			vector3d const dir_to_elevator(e.get_cube_center() - person.pos);
 			// snap to face the elevator; would be better to gradually turn, but it's not clear how to do that; at least we should be facing in that general direction
 			person.dir.assign(dir_to_elevator.x, dir_to_elevator.y, 0.0);
