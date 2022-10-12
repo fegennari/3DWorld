@@ -8,10 +8,10 @@
 #include <queue>
 
 
-bool  const ENABLE_AI_ELEVATORS = 0;
-bool  const AI_LOCKS_ELEVATOR   = 1; // one at a time
-float const COLL_RADIUS_SCALE   = 0.75; // somewhat smaller than radius, but larger than PED_WIDTH_SCALE
-float const RETREAT_TIME        = 4.0f*TICKS_PER_SECOND; // 4s
+bool  const ENABLE_AI_ELEVATORS  = 0;
+unsigned const ELEVATOR_CAPACITY = 1; // number of people that can use the elevator at once; nonzero
+float const COLL_RADIUS_SCALE    = 0.75; // somewhat smaller than radius, but larger than PED_WIDTH_SCALE
+float const RETREAT_TIME         = 4.0f*TICKS_PER_SECOND; // 4s
 
 int cpbl_update_frame(0);
 building_dest_t cur_player_building_loc, prev_player_building_loc;
@@ -1240,11 +1240,11 @@ int building_t::run_ai_elevator_logic(person_t &person, float delta_dir, rand_ge
 		// however, since we haven't decided on a dest floor yet, it makes sense to just go with it and select a floor in the direction the elevator is headed
 		point const elevator_center(e.xc(), e.yc(), person.pos.z);
 
-		if (e.open_amt == 1.0 && !e.in_use) { // doors are fully open, and no one else is in the elevator
+		if (e.open_amt == 1.0 && e.num_occupants < ELEVATOR_CAPACITY) { // doors are fully open, we can fit
 			if (get_elevator_floor(ecar.zc(), e, floor_spacing) == get_elevator_floor(person.pos.z, e, floor_spacing)) { // wait for elevator to reach our current floor
 				person.dir = (elevator_center - person.pos).get_norm(); // snap our direction to forward, in the rare case the elevator arrives before we've completed our turn
 				person.waiting_start = 0.0; // no longer waiting for elevator
-				if (AI_LOCKS_ELEVATOR) {e.in_use = 1;} // mark elevator as in use to prevent other people from entering it, since there's no collision check
+				++e.num_occupants; // make space for ourselves in the elevator
 				return AI_ENTER_ELEVATOR;
 			}
 		}
@@ -1291,10 +1291,9 @@ int building_t::run_ai_elevator_logic(person_t &person, float delta_dir, rand_ge
 		float const move_dist(move_person_forward_to_target(person)); // exit elevator to a point in front, then select a new non-elevator destination
 
 		if (dist_xy_less_than(person.pos, person.target_pos, move_dist)) {
-			//person.on_new_path_seg = 1;
 			person.target_pos = all_zeros;
-			//if (AI_LOCKS_ELEVATOR) {assert(e.in_use);} // invalid if people are despawned/respawned when the player is far away?
-			e.in_use = 0; // mark as available; if AI_LOCKS_ELEVATOR==1, we know that this person can be the only occupant; otherwise, in_use will already be 0
+			//assert(e.num_occupants > 0); // invalid if people are despawned/respawned when the player is far away?
+			if (e.num_occupants > 0) {--e.num_occupants;} // we're no longer in this elevator
 			return AI_AT_DEST;
 		}
 	}
