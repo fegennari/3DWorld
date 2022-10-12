@@ -1228,8 +1228,10 @@ bool person_slow_turn(person_t &person, point const &target, float delta_dir) {
 
 void building_t::call_elevator_to_floor_and_light_nearest_button(elevator_t &elevator, unsigned floor_ix, bool is_inside_elevator) {
 	call_elevator_to_floor(elevator, floor_ix);
-
 	// light the button that was pressed
+	if (!has_room_geom()) return; // can't light the button
+	assert(elevator.button_id_start <= elevator.button_id_end && elevator.button_id_end <= interior->room_geom->objs.size());
+
 	for (auto i = interior->room_geom->objs.begin() + elevator.button_id_start; i != interior->room_geom->objs.begin() + elevator.button_id_end; ++i) {
 		if (i->type == TYPE_BLOCKER) continue; // button was removed?
 		assert(i->type == TYPE_BUTTON);
@@ -1242,8 +1244,8 @@ void building_t::call_elevator_to_floor_and_light_nearest_button(elevator_t &ele
 }
 
 int building_t::run_ai_elevator_logic(person_t &person, float delta_dir, rand_gen_t &rgen) {
-	assert(interior);
 	assert(person.goal_type == GOAL_TYPE_ELEVATOR);
+	if (!has_room_geom()) return person.ai_state; // if player has moved away and room_geom was deleted, remain in the current state
 	float const floor_spacing(get_window_vspace());
 	elevator_t &e(get_elevator(person.cur_elevator));
 	room_object_t const &ecar(interior->get_elevator_car(e));
