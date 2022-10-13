@@ -87,7 +87,7 @@ void grass_manager_t::add_grass_blade_int(point const &pos, float cscale, bool o
 	float const mod_color [3] = {0.3,  0.3, 0.12};
 	float const lbc_mult  [3] = {0.2,  0.4, 0.0 };
 	float const dead_color[3] = {0.75, 0.6, 0.0 };
-	unsigned char color[3];
+	unsigned char color[3] = {};
 
 	for (unsigned i = 0; i < 3; ++i) {
 		float const ccomp(CLIP_TO_01(cscale*(base_color[i] + grass_color_var*lbc_mult[i]*leaf_base_color[i] + ilch*mod_color[i]*rgen_.rand_float())));
