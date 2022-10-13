@@ -966,18 +966,26 @@ bool building_interior_t::update_elevators(building_t const &building, point con
 	// Note: the player can only be in one elevator at a time, but they can push the call button for one elevator and get into another, so we have to check all elevators
 	for (auto e = elevators.begin(); e != elevators.end(); ++e) { // find containing elevator (optimization + need to know z-range of elevator shaft)
 		if (e->at_dest || !e->was_called()) { // stopped on a floor (either in between stops or at the end of the call requests)
-			if (e->open_amt == 1.0) { // doors are fully open
+			bool const time_for_doors_to_close(e->at_dest_frame > 0 && frame_counter > (e->at_dest_frame + elevator_wait_time));
+
+			if (!e->was_called() && e->open_amt > 0.0 && time_for_doors_to_close) { // inactive, close the doors
+				e->open_amt = max((e->open_amt - delta_open_amt), 0.0f);
+				if (e->open_amt == 0.0) {e->at_dest_frame = 0;} // done waiting/closing
+				e->at_dest  = 0; // reset for next cycle
+				update_ddd  = 1; // regen verts for door
+			}
+			else if (e->open_amt == 1.0) { // doors are fully open
 				if (e->at_dest_frame == 0) { // not yet waiting
 					e->at_dest_frame = frame_counter; // record the time when the doors are first fully open
 				}
-				else if (e->was_called() && frame_counter > (e->at_dest_frame + elevator_wait_time)) { // called to another floor, and we've waited long enough
+				else if (e->was_called() && time_for_doors_to_close) { // called to another floor, and we've waited long enough
 					e->at_dest_frame = 0; // done waiting
 					e->at_dest = 0; // should no longer get into this case on the next frame and should instead get into the movement logic below
 				}
 			}
 			else if (e->open_amt > 0.0) { // doors are partially open - continue to open fully
 				e->open_amt = min((e->open_amt + delta_open_amt), 1.0f);
-				update_ddd  = 1; // regen verts for open door
+				update_ddd  = 1; // regen verts for door
 			}
 			continue;
 		}
@@ -987,10 +995,9 @@ bool building_interior_t::update_elevators(building_t const &building, point con
 		room_object_t &obj(objs[e->car_obj_id]); // elevator car for this elevator
 		assert(obj.type == TYPE_ELEVATOR && obj.room_id == (e - elevators.begin())); // sanity check
 
-		// TODO: also close doors when wait time has expired
 		if (e->open_amt > 0.0 && target_zval != obj.z1()) { // doors not yet closed, and not at target zval
 			e->open_amt = max((e->open_amt - delta_open_amt), 0.0f); // close the doors
-			update_ddd  = 1; // regen verts for open door
+			update_ddd  = 1; // regen verts for door
 			continue;
 		}
 		bool const move_dir(target_zval > obj.z1()); // 0=down, 1=up
@@ -1004,14 +1011,14 @@ bool building_interior_t::update_elevators(building_t const &building, point con
 
 		if (fabs(dist) < 0.001*z_space) { // no movement, at target_zval or top/bottom of elevator shaft (check with a tolerance)
 			max_eq(e->open_amt, delta_open_amt); // begin to open if not already open
-			e->register_at_dest();
+			e->register_at_dest(); // will remove the current call request
 			obj.flags |= RO_FLAG_OPEN;
 
-			// disable all call buttons for this elevator
+			// disable all call buttons for this elevator that are no longer called
 			for (auto j = objs.begin() + e->button_id_start; j != objs.begin() + e->button_id_end; ++j) {
 				if (j->type == TYPE_BLOCKER) continue; // button was removed?
 				assert(j->type == TYPE_BUTTON);
-				if (!j->is_active()) continue; // already unlit
+				if (!j->is_active() || e->was_floor_called(j->obj_id)) continue; // already unlit, or this floor has also been called
 				j->flags &= ~RO_FLAG_IS_ACTIVE; // clear active/lit state
 				room_geom->invalidate_small_geom(); // need to regen object data due to lit state change
 			}
