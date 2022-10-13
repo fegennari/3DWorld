@@ -790,7 +790,7 @@ void building_t::get_lights_with_priorities(point const &target, cube_t const &v
 		if (!valid_area.contains_cube(*i)) continue; // outside valid area
 
 		if (i->in_elevator()) { // elevator light
-			if (get_elevator(i->obj_id).was_called) continue; // moving elevator, don't update light yet
+			if (get_elevator(i->obj_id).is_moving()) continue; // possibly moving elevator or elevator doors, don't update light yet
 		}
 		point const center(i->get_cube_center());
 		float dist_sq(p2p_dist_sq(center, target));
@@ -1391,7 +1391,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			clip_cube.expand_in_dim(!e.dim, 0.1*room_xy_expand); // expand sides to include walls adjacent to elevator (enough to account for FP error)
 			if (e.open_amt > 0.0) {clip_cube.d[e.dim][e.dir] += (e.dir ? 1.0 : -1.0)*light_radius;} // allow light to extend outside open elevator door
 			clipped_bc.intersect_with_cube(clip_cube); // Note: clipped_bc is likely contained in clip_cube and could be replaced with it
-			if (e.was_called) {shadow_caster_hash += hash_point(e.get_llc());} // make sure to update shadows if elevator is moving
+			if (e.is_moving()) {shadow_caster_hash += hash_point(e.get_llc());} // make sure to update shadows if elevator or its doors are potentially moving
 			if (e.open_amt > 0.0 && e.open_amt < 1.0) {shadow_caster_hash += hash_by_bytes<float>()(e.open_amt);} // update shadows if door is opening or closing
 		}
 		else {

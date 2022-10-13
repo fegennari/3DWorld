@@ -16,7 +16,7 @@ float const TERM_VELOCITY  = 1.0;
 float const OBJ_ELASTICITY = 0.8;
 
 extern bool tt_fire_button_down, flashlight_on, player_is_hiding, player_in_attic, use_last_pickup_object, city_action_key;
-extern int player_in_closet, camera_surf_collide, building_action_key, can_pickup_bldg_obj, animate2;
+extern int player_in_closet, camera_surf_collide, building_action_key, can_pickup_bldg_obj, animate2, frame_counter;
 extern float fticks, CAMERA_RADIUS, office_chair_rot_rate;
 extern double tfticks;
 extern building_dest_t cur_player_building_loc;
@@ -958,43 +958,57 @@ bool building_interior_t::update_elevators(building_t const &building, point con
 	if (elevators_disabled) return 0;
 	float const z_space(0.05*building.get_floor_thickness()); // to prevent z-fighting
 	float const delta_open_amt(min(1.0f, 2.0f*fticks/TICKS_PER_SECOND)); // 0.5s for full open
+	float const elevator_wait_time(5.0*TICKS_PER_SECOND); // 5s
 	static int prev_move_dir(2); // starts at not-moving
 	vect_room_object_t &objs(room_geom->objs);
 	bool was_updated(0), update_ddd(0);
 
 	// Note: the player can only be in one elevator at a time, but they can push the call button for one elevator and get into another, so we have to check all elevators
 	for (auto e = elevators.begin(); e != elevators.end(); ++e) { // find containing elevator (optimization + need to know z-range of elevator shaft)
-		if (!e->was_called) { // stopped on a floor
-			if (e->open_amt > 0.0 && e->open_amt < 1.0) { // partially open - continue to open fully
+		if (e->at_dest || !e->was_called()) { // stopped on a floor (either in between stops or at the end of the call requests)
+			if (e->open_amt == 1.0) { // doors are fully open
+				if (e->at_dest_frame == 0) { // not yet waiting
+					e->at_dest_frame = frame_counter; // record the time when the doors are first fully open
+				}
+				else if (e->was_called() && frame_counter > (e->at_dest_frame + elevator_wait_time)) { // called to another floor, and we've waited long enough
+					e->at_dest_frame = 0; // done waiting
+					e->at_dest = 0; // should no longer get into this case on the next frame and should instead get into the movement logic below
+				}
+			}
+			else if (e->open_amt > 0.0) { // doors are partially open - continue to open fully
 				e->open_amt = min((e->open_amt + delta_open_amt), 1.0f);
 				update_ddd  = 1; // regen verts for open door
 			}
 			continue;
 		}
+		e->at_dest_frame = 0; // reset just in case, since we're not in a waiting state
+		float const target_zval(e->get_target_zval());
 		assert(e->car_obj_id < objs.size());
 		room_object_t &obj(objs[e->car_obj_id]); // elevator car for this elevator
 		assert(obj.type == TYPE_ELEVATOR && obj.room_id == (e - elevators.begin())); // sanity check
 
-		if (e->open_amt > 0.0 && e->target_zval != obj.z1()) { // doors not yet closed, and not at target zval
-			e->open_amt = max((e->open_amt - delta_open_amt), 0.0f);
+		// TODO: also close doors when wait time has expired
+		if (e->open_amt > 0.0 && target_zval != obj.z1()) { // doors not yet closed, and not at target zval
+			e->open_amt = max((e->open_amt - delta_open_amt), 0.0f); // close the doors
 			update_ddd  = 1; // regen verts for open door
 			continue;
 		}
-		bool const move_dir(e->target_zval > obj.z1()); // 0=down, 1=up
+		bool const move_dir(target_zval > obj.z1()); // 0=down, 1=up
 		e->going_up = move_dir;
 		assert(e->button_id_start < e->button_id_end && e->button_id_end <= objs.size());
 		float dist(min(0.5f*CAMERA_RADIUS, 0.04f*obj.dz()*fticks)*(move_dir ? 1.0 : -1.0)); // clamp to half camera radius to avoid falling through the floor for low framerates
-		if (e->was_called && fabs(e->target_zval - obj.z1()) < fabs(dist)) {dist = (e->target_zval - obj.z1());} // move to position
+		if (e->was_called() && fabs(target_zval - obj.z1()) < fabs(dist)) {dist = (target_zval - obj.z1());} // move to position
 		else if (move_dir) {min_eq(dist, (e->z2() - obj.z2() - z_space));} // going up
 		else               {max_eq(dist, (e->z1() - obj.z1() + z_space));} // going down
 		update_ddd = 1;
 
 		if (fabs(dist) < 0.001*z_space) { // no movement, at target_zval or top/bottom of elevator shaft (check with a tolerance)
 			max_eq(e->open_amt, delta_open_amt); // begin to open if not already open
-			e->was_called = 0;
-			obj.flags    |= RO_FLAG_OPEN;
+			e->register_at_dest();
+			obj.flags |= RO_FLAG_OPEN;
 
-			for (auto j = objs.begin() + e->button_id_start; j != objs.begin() + e->button_id_end; ++j) { // disable all call buttons for this elevator
+			// disable all call buttons for this elevator
+			for (auto j = objs.begin() + e->button_id_start; j != objs.begin() + e->button_id_end; ++j) {
 				if (j->type == TYPE_BLOCKER) continue; // button was removed?
 				assert(j->type == TYPE_BUTTON);
 				if (!j->is_active()) continue; // already unlit
@@ -1035,13 +1049,31 @@ bool building_interior_t::update_elevators(building_t const &building, point con
 	return 0;
 }
 
+bool elevator_t::was_floor_called(unsigned floor_ix) const {
+	for (call_request_t const &cr : call_requests) {
+		if (cr.floor_ix == floor_ix) return 1;
+	}
+	return 0;
+}
+void elevator_t::call_elevator(unsigned floor_ix, float targ_z) { // Note: adds to the end to make this this last floor visited
+	if (was_floor_called(floor_ix)) return; // duplicate press for this floor, ignore
+	call_requests.emplace_back(floor_ix, targ_z); // place the request
+}
+void elevator_t::register_at_dest() {
+	//assert(!call_requests.empty()); // too strong?
+	if (!call_requests.empty()) {call_requests.pop_front();}
+	at_dest = 1;
+}
+
 void building_t::register_button_event(room_object_t const &button) {
 	// here room_id is elevator_id (buttons are only used with elevators)
 	call_elevator_to_floor(get_elevator(button.room_id), button.obj_id); // floor_ix=button.obj_id
 }
 void building_t::call_elevator_to_floor(elevator_t &elevator, unsigned floor_ix) {
 	if (interior->elevators_disabled) return; // nope
-	elevator.call_elevator(elevator.z1() + max(get_window_vspace()*floor_ix, 0.05f*get_floor_thickness())); // bottom of elevator car for this floor
+	float const targ_z(elevator.z1() + max(get_window_vspace()*floor_ix, 0.05f*get_floor_thickness())); // bottom of elevator car for this floor
+	assert(targ_z <= bcube.z2()); // sanity check
+	elevator.call_elevator(floor_ix, targ_z);
 }
 
 void clamp_sphere_xy(point &pos, cube_t const &c, float radius) {

@@ -1298,6 +1298,7 @@ int building_t::run_ai_elevator_logic(person_t &person, float delta_dir, rand_ge
 		person.pos.z = ecar.z1() + person.radius + get_fc_thickness(); // move with the elevator
 
 		if (e.open_amt == 1.0) { // doors are fully open
+			// Note: we could probably query e.get_target_floor() for this
 			if (get_elevator_floor(ecar.zc(), e, floor_spacing) == person.dest_elevator_floor) { // at destination floor
 				return AI_EXIT_ELEVATOR;
 			}
