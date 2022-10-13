@@ -1015,6 +1015,7 @@ struct elevator_t : public oriented_cube_t { // dim/dir applies to the door
 	unsigned get_coll_cubes(cube_t cubes[5]) const; // returns 1 or 5 cubes
 	void call_elevator(unsigned floor_ix, float targ_z);
 	void register_at_dest();
+	void move_closest_in_dir_to_front(float zval, bool dir);
 };
 
 unsigned const NUM_RTYPE_SLOTS = 6; // enough for houses; hard max is 8

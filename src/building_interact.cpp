@@ -990,21 +990,23 @@ bool building_interior_t::update_elevators(building_t const &building, point con
 			continue;
 		}
 		e->at_dest_frame = 0; // reset just in case, since we're not in a waiting state
-		float const target_zval(e->get_target_zval());
 		assert(e->car_obj_id < objs.size());
 		room_object_t &obj(objs[e->car_obj_id]); // elevator car for this elevator
 		assert(obj.type == TYPE_ELEVATOR && obj.room_id == (e - elevators.begin())); // sanity check
+		float const target_zval(e->get_target_zval()), ez1(obj.z1());
 
-		if (e->open_amt > 0.0 && target_zval != obj.z1()) { // doors not yet closed, and not at target zval
+		if (e->open_amt > 0.0 && target_zval != ez1) { // doors not yet closed, and not at target zval
 			e->open_amt = max((e->open_amt - delta_open_amt), 0.0f); // close the doors
 			update_ddd  = 1; // regen verts for door
 			continue;
 		}
-		bool const move_dir(target_zval > obj.z1()); // 0=down, 1=up
+		bool const move_dir(target_zval > ez1); // 0=down, 1=up
 		e->going_up = move_dir;
 		assert(e->button_id_start < e->button_id_end && e->button_id_end <= objs.size());
 		float dist(min(0.5f*CAMERA_RADIUS, 0.04f*obj.dz()*fticks)*(move_dir ? 1.0 : -1.0)); // clamp to half camera radius to avoid falling through the floor for low framerates
-		if (e->was_called() && fabs(target_zval - obj.z1()) < fabs(dist)) {dist = (target_zval - obj.z1());} // move to position
+		// check if any called floors are closer than the current one and in the correct direction; if so, move them to the front of the queue
+		e->move_closest_in_dir_to_front(ez1, move_dir);
+		if (e->was_called() && fabs(target_zval - ez1) < fabs(dist)) {dist = (target_zval - ez1);} // move to position
 		else if (move_dir) {min_eq(dist, (e->z2() - obj.z2() - z_space));} // going up
 		else               {max_eq(dist, (e->z1() - obj.z1() + z_space));} // going down
 		update_ddd = 1;
@@ -1070,6 +1072,23 @@ void elevator_t::register_at_dest() {
 	//assert(!call_requests.empty()); // too strong?
 	if (!call_requests.empty()) {call_requests.pop_front();}
 	at_dest = 1;
+}
+void elevator_t::move_closest_in_dir_to_front(float zval, bool dir) {
+	auto new_front(call_requests.end());
+	float dzmin(dz()); // start at a large value
+
+	for (auto cr = call_requests.begin(); cr != call_requests.end(); ++cr) {
+		if ((cr->zval > zval) != dir) continue; // wrong direction
+		float const dz(fabs(cr->zval - zval));
+		if (dz < dzmin) {new_front = cr; dzmin = dz;}
+	}
+	assert(new_front != call_requests.end()); // a dest floor must have been found
+
+	if (new_front != call_requests.begin()) { // closest is not the front; swap with the front
+		call_request_t const v(*new_front); // deep copy
+		call_requests.erase(new_front);
+		call_requests.push_front(v);
+	}
 }
 
 void building_t::register_button_event(room_object_t const &button) {
