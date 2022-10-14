@@ -201,11 +201,11 @@ bool building_t::add_rat(point const &pos, float hlength, vector3d const &dir, p
 				register_achievement("Sleep with the Fishes");
 				return 1;
 			}
-			if (i->type == TYPE_MWAVE && check_line_clip(pos, rat_pos, i->d)) { // Note: not on the floor, so can't check test_pos
+			if (i->type == TYPE_MWAVE && i->is_powered() && check_line_clip(pos, rat_pos, i->d)) { // Note: not on the floor, so can't check test_pos
 				gen_sound_thread_safe(SOUND_BEEP, local_to_camera_space(i->get_cube_center()), 0.25);
 				dead = 1;
 			}
-			else if (i->type == TYPE_STOVE && i->item_flags != 0 && i->contains_pt(test_pos)) { // at least one burner is on
+			else if (i->type == TYPE_STOVE && i->item_flags != 0 && i->contains_pt(test_pos)) { // at least one burner is on (gas, not electric - always powered)
 				dead = 1;
 			}
 			if (dead) { // cook/kill

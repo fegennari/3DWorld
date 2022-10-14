@@ -250,7 +250,7 @@ void building_t::toggle_circuit_breaker(bool is_on, unsigned zone_id, unsigned n
 			i->obj_id = 1; // turn it off
 			i->flags ^= RO_FLAG_NO_POWER;
 		}
-		else if (i->type == TYPE_MWAVE) { // interactive powered devices
+		else if (i->type == TYPE_MWAVE) { // interactive powered devices; stove is gas and not electric powered
 			i->flags ^= RO_FLAG_NO_POWER;
 		}
 		// Note: stoves use gas rather than electricity and don't need power; lit exit signs are always on
@@ -520,7 +520,7 @@ bool building_t::interact_with_object(unsigned obj_ix, point const &int_pos, poi
 		gen_sound_thread_safe(SOUND_SQUEAK, local_center, 0.25, 0.5); // lower pitch
 		sound_scale = 0.2;
 	}
-	else if (obj.type == TYPE_MWAVE) { // beeps
+	else if (obj.type == TYPE_MWAVE) {
 		cube_t const panel(get_mwave_panel_bcube(obj));
 		float cur_tmin(0.0), cur_tmax(1.0);
 

@@ -7,6 +7,8 @@
 #include "scenery.h" // for s_plant
 #include "shaders.h"
 
+using std::swap;
+
 bool const ADD_BOOK_COVERS = 1; // cover pictures
 bool const ADD_BOOK_TITLES = 1;
 colorRGBA const STAIRS_COLOR_TOP(0.7, 0.7, 0.7);
@@ -859,6 +861,8 @@ cube_t get_mwave_panel_bcube(room_object_t const &c) {
 	return panel;
 }
 void building_room_geom_t::add_mwave(room_object_t const &c) {
+	string const texture_name(c.is_powered() ? "interiors/microwave.jpg" : "interiors/microwave_off.jpg");
+
 	if (c.is_open()) { // door is open
 		bool const open_dir(c.dim ^ c.dir ^ 1);
 		cube_t const panel(get_mwave_panel_bcube(c));
@@ -892,7 +896,7 @@ void building_room_geom_t::add_mwave(room_object_t const &c) {
 		door.d[ c.dim][ c.dir]   += (c.dir ? 1.0 : -1.0)*door_length; // extend outward to door length
 		door.d[!c.dim][!open_dir] = door.d[!c.dim][open_dir] + (open_dir ? -1.0 : 1.0)*0.8*wall_width; // set door width = 80% of wall width
 		untex_mat.add_cube_to_verts_untextured(door, BLACK, ~door_front_mask); // interior and sides drawn in black; shadowed
-		int const tid(get_texture_by_name("interiors/microwave.jpg"));
+		int const tid(get_texture_by_name(texture_name));
 		// draw the open door
 		bool const panel_mx(open_dir), door_mx(panel_mx ^ c.dim);
 		tid_nm_pair_t tex(tid, -1, (c.dim ? 0.0 : tscale), (c.dim ? tscale : 0.0));
@@ -902,7 +906,7 @@ void building_room_geom_t::add_mwave(room_object_t const &c) {
 		get_material(tex, 1, 0, 0).add_cube_to_verts(panel, color, (panel_mx ? c.get_urc() : c.get_llc()), front_mask, !c.dim, panel_mx, 0); // shadows, is_small=0
 	}
 	else { // closed
-		add_obj_with_front_texture(c, "interiors/microwave.jpg", GRAY, 0); // is_small=0
+		add_obj_with_front_texture(c, texture_name, GRAY, 0); // is_small=0
 	}
 }
 
