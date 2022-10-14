@@ -1227,7 +1227,7 @@ bool person_slow_turn(person_t &person, point const &target, float delta_dir) {
 }
 
 void building_t::call_elevator_to_floor_and_light_nearest_button(elevator_t &elevator, unsigned floor_ix, bool is_inside_elevator, bool is_up) {
-	call_elevator_to_floor(elevator, floor_ix);
+	call_elevator_to_floor(elevator, floor_ix, is_inside_elevator, is_up);
 	// light the button that was pressed
 	if (!has_room_geom()) return; // can't light the button
 	assert(elevator.button_id_start <= elevator.button_id_end && elevator.button_id_end <= interior->room_geom->objs.size());
@@ -1236,7 +1236,7 @@ void building_t::call_elevator_to_floor_and_light_nearest_button(elevator_t &ele
 		if (i->type == TYPE_BLOCKER) continue; // button was removed?
 		assert(i->type == TYPE_BUTTON);
 		if (i->obj_id != floor_ix) continue; // wrong floor
-		if (bool(i->flags & RO_FLAG_IN_ELEV) != is_inside_elevator) continue; // wrong inside/outside
+		if (i->in_elevator() != is_inside_elevator) continue; // wrong inside/outside
 		if (!is_inside_elevator && (i->flags & (is_up ? RO_FLAG_ADJ_BOT : RO_FLAG_ADJ_TOP))) continue; // wrong up/down button
 		i->flags |= RO_FLAG_IS_ACTIVE; // set active/lit state
 		interior->room_geom->invalidate_small_geom(); // need to regen object data due to lit state change; should be thread safe

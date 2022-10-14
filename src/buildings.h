@@ -990,9 +990,9 @@ private:
 
 struct elevator_t : public oriented_cube_t { // dim/dir applies to the door
 	struct call_request_t {
-		unsigned floor_ix;
+		unsigned floor_ix, req_dirs; // req_dirs: 1 bit is down, 2 bit is up
 		float zval;
-		call_request_t(unsigned f, float z) : floor_ix(f), zval(z) {}
+		call_request_t(unsigned f, float z, unsigned d) : floor_ix(f), req_dirs(d), zval(z) {}
 	};
 	bool at_edge, going_up, at_dest;
 	unsigned room_id, car_obj_id, light_obj_id, button_id_start, button_id_end, num_occupants;
@@ -1013,7 +1013,7 @@ struct elevator_t : public oriented_cube_t { // dim/dir applies to the door
 	float    get_target_zval () const {assert(was_called()); return call_requests.front().zval;}
 	bool was_floor_called(unsigned floor_ix) const;
 	unsigned get_coll_cubes(cube_t cubes[5]) const; // returns 1 or 5 cubes
-	void call_elevator(unsigned floor_ix, float targ_z);
+	void call_elevator(unsigned floor_ix, float targ_z, unsigned req_dirs);
 	void register_at_dest();
 	void move_closest_in_dir_to_front(float zval, bool dir);
 };
@@ -1671,7 +1671,7 @@ private:
 	bool apply_paint(point const &pos, vector3d const &dir, colorRGBA const &color, unsigned emissive_color_id, room_object const obj_type) const;
 	bool apply_toilet_paper(point const &pos, vector3d const &dir, float half_width);
 	void register_button_event(room_object_t const &button);
-	void call_elevator_to_floor(elevator_t &elevator, unsigned floor_ix);
+	void call_elevator_to_floor(elevator_t &elevator, unsigned floor_ix, bool is_inside_elevator, bool is_up);
 	void call_elevator_to_floor_and_light_nearest_button(elevator_t &elevator, unsigned floor_ix, bool is_inside_elevator, bool is_up);
 	bool get_zval_of_floor(point const &pos, float radius, float &zval) const;
 	bool get_zval_for_obj_placement(point const &pos, float radius, float &zval, bool add_z_bias) const;

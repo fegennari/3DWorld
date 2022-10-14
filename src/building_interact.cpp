@@ -1064,9 +1064,14 @@ bool elevator_t::was_floor_called(unsigned floor_ix) const {
 	}
 	return 0;
 }
-void elevator_t::call_elevator(unsigned floor_ix, float targ_z) { // Note: adds to the end to make this this last floor visited
-	if (was_floor_called(floor_ix)) return; // duplicate press for this floor, ignore
-	call_requests.emplace_back(floor_ix, targ_z); // place the request
+void elevator_t::call_elevator(unsigned floor_ix, float targ_z, unsigned req_dirs) {
+	// Note: the only case I'm not sure about is if someone on floor 2 pushes the down call button and someone on floor 3 pushes the down call button
+	// before the other person gets into the elevator; I think the elevator should go to floor 2 and then down;
+	// but what if the person getting in on floor 2 actually presses the button for floor 3? does it go up in that case even though they pressed the down call button?
+	for (call_request_t &cr : call_requests) {
+		if (cr.floor_ix == floor_ix) {cr.req_dirs |= req_dirs; return;} // duplicate press for this floor; combine up/down flags and return
+	}
+	call_requests.emplace_back(floor_ix, targ_z, req_dirs); // place the request at the end to make this this last floor visited
 }
 void elevator_t::register_at_dest() {
 	//assert(!call_requests.empty()); // too strong?
@@ -1074,11 +1079,13 @@ void elevator_t::register_at_dest() {
 	at_dest = 1;
 }
 void elevator_t::move_closest_in_dir_to_front(float zval, bool dir) {
+	assert(was_called());
 	auto new_front(call_requests.end());
 	float dzmin(dz()); // start at a large value
 
 	for (auto cr = call_requests.begin(); cr != call_requests.end(); ++cr) {
-		if ((cr->zval > zval) != dir) continue; // wrong direction
+		if ((cr->zval > zval) != dir) continue; // floor in the wrong direction compared to elevator movement
+		if (cr != call_requests.begin() && !(cr->req_dirs & (1<<unsigned(dir)))) continue; // call in the wrong direction compared to elevator movement (okay if the front)
 		float const dz(fabs(cr->zval - zval));
 		if (dz < dzmin) {new_front = cr; dzmin = dz;}
 	}
@@ -1093,13 +1100,15 @@ void elevator_t::move_closest_in_dir_to_front(float zval, bool dir) {
 
 void building_t::register_button_event(room_object_t const &button) {
 	// here room_id is elevator_id (buttons are only used with elevators)
-	call_elevator_to_floor(get_elevator(button.room_id), button.obj_id); // floor_ix=button.obj_id
+	bool const is_up(button.flags & RO_FLAG_ADJ_TOP);
+	call_elevator_to_floor(get_elevator(button.room_id), button.obj_id, button.in_elevator(), is_up); // floor_ix=button.obj_id
 }
-void building_t::call_elevator_to_floor(elevator_t &elevator, unsigned floor_ix) {
+void building_t::call_elevator_to_floor(elevator_t &elevator, unsigned floor_ix, bool is_inside_elevator, bool is_up) {
 	if (interior->elevators_disabled) return; // nope
 	float const targ_z(elevator.z1() + max(get_window_vspace()*floor_ix, 0.05f*get_floor_thickness())); // bottom of elevator car for this floor
 	assert(targ_z <= bcube.z2()); // sanity check
-	elevator.call_elevator(floor_ix, targ_z);
+	unsigned const req_dirs(is_inside_elevator ? 3 : (is_up ? 2 : 1)); // inside: both up and down, otherwise depends on the call button pressed
+	elevator.call_elevator(floor_ix, targ_z, req_dirs);
 }
 
 void clamp_sphere_xy(point &pos, cube_t const &c, float radius) {
