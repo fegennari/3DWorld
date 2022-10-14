@@ -3484,12 +3484,15 @@ int building_t::get_room_id_for_window(cube_t const &window, bool dim, bool dir,
 	return -1; // not found
 }
 
-void add_elevator_button(point const &pos, float button_radius, bool dim, bool dir, unsigned elevator_id, unsigned floor_id, bool inside, vect_room_object_t &objs) {
+void add_elevator_button(point const &pos, float button_radius, bool dim, bool dir, unsigned elevator_id, unsigned floor_id, bool inside, bool is_up, vect_room_object_t &objs) {
 	cube_t c; c.set_from_point(pos);
 	c.expand_in_dim(!dim, button_radius);
 	c.expand_in_dim(2, button_radius); // Z
 	c.d[dim][dir] += (dir ? 1.0 : -1.0)*0.25*button_radius;
-	objs.emplace_back(c, TYPE_BUTTON, elevator_id, dim, dir, (RO_FLAG_NOCOLL | (inside ? RO_FLAG_IN_ELEV : 0)), 1.0, SHAPE_CYLIN, colorRGBA(1.0, 0.9, 0.5)); // room_id=elevator_id
+	unsigned flags(RO_FLAG_NOCOLL);
+	if (inside) {flags |= RO_FLAG_IN_ELEV;}
+	else        {flags |= (is_up ? RO_FLAG_ADJ_TOP : RO_FLAG_ADJ_BOT);}
+	objs.emplace_back(c, TYPE_BUTTON, elevator_id, dim, dir, flags, 1.0, SHAPE_CYLIN, colorRGBA(1.0, 0.9, 0.5)); // room_id=elevator_id
 	objs.back().obj_id = floor_id; // encode floor index as obj_id
 }
 void add_floor_number(unsigned floor_ix, unsigned floor_offset, bool has_parking_garage, ostringstream &oss) { // Note: floor_ix=1 is ground floor
@@ -3585,9 +3588,12 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 			point pos;
 			pos[ i->dim] = i->d[i->dim][i->dir]; // front of the elevator
 			pos[!i->dim] = i->d[!i->dim][0] + 0.1*ewidth; // to the low side
-			pos.z = i->z1() + (f + 0.45)*window_vspacing;
-			add_elevator_button(pos, button_radius, i->dim, i->dir, elevator_id, f, 0, objs);
-		}
+
+			for (unsigned d = 0; d < 2; ++d) { // {down, up} call buttons
+				pos.z = i->z1() + (f + 0.05*d + 0.45)*window_vspacing;
+				add_elevator_button(pos, button_radius, i->dim, i->dir, elevator_id, f, 0, d, objs); // inside=0, is_up=d
+			}
+		} // for f
 		// call buttons for each floor inside the elevator car; first find the panel location for the starting elevator car position
 		cube_t elevator_car(*i);
 		max_eq(elevator_car.z1(), ground_floor_z1); // always starts on the ground floor, not the bottom of the basement
@@ -3602,7 +3608,7 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 		
 		for (unsigned f = 0; f < num_floors; ++f) {
 			pos.z = panel.z1() + (f + 1)*button_spacing;
-			add_elevator_button(pos, inner_button_radius, i->dim, !i->dir, elevator_id, f, 1, objs); // inside, pointing in opposite dir
+			add_elevator_button(pos, inner_button_radius, i->dim, !i->dir, elevator_id, f, 1, 0, objs); // inside=1, is_up=0, pointing in opposite dir
 		}
 		i->button_id_end = objs.size();
 	} // for e
