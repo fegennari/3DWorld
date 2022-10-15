@@ -1277,6 +1277,7 @@ int building_t::run_ai_elevator_logic(person_t &person, float delta_dir, rand_ge
 			person.anim_time = 0.0; // stop and turn
 			return AI_ACTIVATE_ELEVATOR;
 		}
+		e.hold_doors = e.hold_movement = 1; // keep the doors from closing on this person as they enter
 	}
 	else if (person.ai_state == AI_ACTIVATE_ELEVATOR) {
 		vector3d const prev_dir(person.dir);
@@ -1287,6 +1288,7 @@ int building_t::run_ai_elevator_logic(person_t &person, float delta_dir, rand_ge
 			person.anim_time = 0.0; // stop and wait
 			return AI_RIDE_ELEVATOR;
 		}
+		e.hold_movement = 1; // keep the elevator from moving until we press the button and are ready to ride it, otherwise it may reverse direction due to press
 	}
 	else if (person.ai_state == AI_RIDE_ELEVATOR) {
 		person.pos.z = ecar.z1() + person.radius + get_fc_thickness(); // move with the elevator
@@ -1302,12 +1304,13 @@ int building_t::run_ai_elevator_logic(person_t &person, float delta_dir, rand_ge
 		person.target_pos = get_pos_to_stand_for_elevator(person, e, floor_spacing);
 		float const move_dist(move_person_forward_to_target(person)); // exit elevator to a point in front, then select a new non-elevator destination
 
-		if (dist_xy_less_than(person.pos, person.target_pos, move_dist)) {
+		if (dist_xy_less_than(person.pos, person.target_pos, move_dist)) { // out of the elevator - done
 			person.target_pos = all_zeros;
 			//assert(e.num_occupants > 0); // invalid if people are despawned/respawned when the player is far away?
 			if (e.num_occupants > 0) {--e.num_occupants;} // we're no longer in this elevator
 			return AI_AT_DEST;
 		}
+		e.hold_doors = e.hold_movement = 1; // keep the doors from closing on this person as they exit
 	}
 	else {assert(0);} // invalid state
 	return person.ai_state; // fallthrough case, no change to ai_state

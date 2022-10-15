@@ -996,16 +996,14 @@ struct elevator_t : public oriented_cube_t { // dim/dir applies to the door
 		call_request_t(unsigned f, float z, unsigned d, bool ip) : floor_ix(f), req_dirs(d), zval(z), inside_press(ip) {}
 		bool operator<(call_request_t const &cr) const {return (cr.inside_press < inside_press);} // sort so that CRs with inside_press=1 are first
 	};
-	bool at_edge, going_up, at_dest;
-	unsigned room_id, car_obj_id, light_obj_id, button_id_start, button_id_end, num_occupants;
-	int at_dest_frame;
-	float open_amt;
+	bool at_edge=0, going_up=0, at_dest=0, hold_doors=0, hold_movement=0;
+	unsigned room_id=0, car_obj_id=0, light_obj_id=0, button_id_start=0, button_id_end=0, num_occupants=0;
+	int at_dest_frame=0;
+	float open_amt=0;
 	deque<call_request_t> call_requests; // used as a queue
 
 	elevator_t(cube_t const &c, unsigned rid, bool dim_, bool dir_, bool at_edge_) :
-		oriented_cube_t(c, dim_, dir_), at_edge(at_edge_), going_up(0), at_dest(0), room_id(rid), car_obj_id(0),
-		light_obj_id(0), button_id_start(0), button_id_end(0), num_occupants(0), at_dest_frame(0), open_amt(0.0)
-	{assert(is_strictly_normalized());}
+		oriented_cube_t(c, dim_, dir_), at_edge(at_edge_), room_id(rid) {assert(is_strictly_normalized());}
 	float get_wall_thickness () const {return 0.02*get_width();}
 	float get_frame_width    () const {return 0.20*get_width();}
 	unsigned get_door_face_id() const {return (2*dim + dir);}
