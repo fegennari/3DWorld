@@ -176,8 +176,9 @@ void city_model_loader_t::draw_model(shader_t &s, vector3d const &pos, cube_t co
 	else { // draw all materials
 		float lod_mult(model_file.lod_mult); // should model_file.lod_mult always be multiplied by sz_scale?
 		if (!is_shadow_pass && model_file.lod_mult == 0.0) {lod_mult = 400.0*sz_scale;} // auto select lod_mult
+		float const fixed_lod_dist((is_shadow_pass && !force_high_detail) ? 10.0 : 0.0);
 		model.render_materials(s, is_shadow_pass, 0, 0, 2, 3, 3, model.get_unbound_material(), rotation_t(),
-			nullptr, nullptr, is_shadow_pass, lod_mult, (is_shadow_pass ? 10.0 : 0.0), 0, 1); // enable_alpha_mask=2 (both); scaled
+			nullptr, nullptr, is_shadow_pass, lod_mult, fixed_lod_dist, 0, 1); // enable_alpha_mask=2 (both); scaled
 	}
 	if (disable_cull_face_this_obj) {glEnable(GL_CULL_FACE);} // restore previous value
 	fgPopMatrix();

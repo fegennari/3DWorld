@@ -1905,6 +1905,7 @@ void building_t::draw_cars_in_building(shader_t &s, vector3d const &xlate, bool 
 		else {setup_building_draw_shader(s, 0.0, 1, 0, 0);} // min_alpha=0.0, enable_indir=1, force_tsl=0, use_texgen=0
 	}
 	for (auto &car : cars_to_draw) {draw_car_in_pspace(car, s, xlate, shadow_only);}
+	check_mvm_update(); // needed after popping model transform matrix
 }
 
 // Note: c is in local building space and viewer_in is in non-rotated building space

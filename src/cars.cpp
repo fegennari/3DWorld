@@ -1381,7 +1381,7 @@ void car_manager_t::draw_car_in_pspace(car_t &car, shader_t &s, vector3d const &
 	if (car_model_loader.is_model_valid(car.model_id)) { // else error?
 		vector3d dir(zero_vector);
 		dir[car.dim] = (car.dir ? 1.0 : -1.0);
-		car_model_loader.draw_model(s, car.get_center(), car.bcube, dir, car.get_color(), xlate, car.model_id, shadow_only, 0, 0, 0, 0, 1); // force_high_detail=1
+		car_model_loader.draw_model(s, car.get_center(), car.bcube, dir, car.get_color(), xlate, car.model_id, shadow_only, 0, 0, 0, 0, 1); // force_high_detail=1 (even for shadows)
 	}
 }
 
