@@ -8,8 +8,8 @@
 #include <queue>
 
 
-bool  const ENABLE_AI_ELEVATORS  = 0;
 unsigned const ELEVATOR_CAPACITY = 1; // number of people that can use the elevator at once; nonzero
+float const AI_ELEVATOR_PROB     = 0.25; // probability of using an elevator
 float const COLL_RADIUS_SCALE    = 0.75; // somewhat smaller than radius, but larger than PED_WIDTH_SCALE
 float const RETREAT_TIME         = 4.0f*TICKS_PER_SECOND; // 4s
 
@@ -759,22 +759,24 @@ int building_t::choose_dest_room(person_t &person, rand_gen_t &rgen) const { // 
 	float const floor_spacing(get_window_vspace());
 
 	// maybe choose a destination elevator (for office buildings) if our prev dest wasn't an elevator
-	if (ENABLE_AI_ELEVATORS && !is_house && !interior->elevators_disabled && !person.last_used_elevator && person.goal_type != GOAL_TYPE_ELEVATOR /*&& rgen.rand_float() < 0.25*/) {
-		int const nearest_elevator(find_nearest_elevator_this_floor(person.pos));
+	if (!is_house && !interior->elevators_disabled && !person.last_used_elevator && person.goal_type != GOAL_TYPE_ELEVATOR) {
+		if (AI_ELEVATOR_PROB >= 1.0 || (AI_ELEVATOR_PROB > 0.0 && rgen.rand_float() < AI_ELEVATOR_PROB)) {
+			int const nearest_elevator(find_nearest_elevator_this_floor(person.pos));
 
-		if (nearest_elevator >= 0) {
-			elevator_t const &e(get_elevator(nearest_elevator));
-			int const elevator_room(get_room_containing_pt(point(e.xc(), e.yc(), person.pos.z))); // room containing elevator center at person zval
-			assert(elevator_room >= 0); // elevator must be in a valid room
+			if (nearest_elevator >= 0) {
+				elevator_t const &e(get_elevator(nearest_elevator));
+				int const elevator_room(get_room_containing_pt(point(e.xc(), e.yc(), person.pos.z))); // room containing elevator center at person zval
+				assert(elevator_room >= 0); // elevator must be in a valid room
 
-			// Note: to simplify multiple AI logic, we could check e.in_use here and not even go to the elevator if someone else is using it
-			if (interior->nav_graph->is_room_connected_to(loc.room_ix, elevator_room, interior->doors, person.pos.z, person.has_key)) { // check if reachable
-				person.target_pos   = get_pos_to_stand_for_elevator(person, e, floor_spacing);
-				person.dest_room    = elevator_room;
-				person.goal_type    = GOAL_TYPE_ELEVATOR;
-				person.cur_elevator = (uint8_t)nearest_elevator;
-				person.last_used_elevator = 1;
-				return 1;
+				// Note: to simplify multiple AI logic, we could check e.in_use here and not even go to the elevator if someone else is using it
+				if (interior->nav_graph->is_room_connected_to(loc.room_ix, elevator_room, interior->doors, person.pos.z, person.has_key)) { // check if reachable
+					person.target_pos   = get_pos_to_stand_for_elevator(person, e, floor_spacing);
+					person.dest_room    = elevator_room;
+					person.goal_type    = GOAL_TYPE_ELEVATOR;
+					person.cur_elevator = (uint8_t)nearest_elevator;
+					person.last_used_elevator = 1;
+					return 1;
+				}
 			}
 		}
 	}
@@ -1259,12 +1261,21 @@ int building_t::run_ai_elevator_logic(person_t &person, float delta_dir, rand_ge
 		// however, since we haven't decided on a dest floor yet, it makes sense to just go with it and select a floor in the direction the elevator is headed
 		point const elevator_center(e.xc(), e.yc(), person.pos.z);
 
-		if (e.open_amt == 1.0 && e.num_occupants < ELEVATOR_CAPACITY) { // doors are fully open, we can fit
+		if (e.open_amt == 1.0) { // doors are fully open
 			if (get_elevator_floor(ecar.zc(), e, floor_spacing) == get_elevator_floor(person.pos.z, e, floor_spacing)) { // wait for elevator to reach our current floor
-				person.dir = (elevator_center - person.pos).get_norm(); // snap our direction to forward, in the rare case the elevator arrives before we've completed our turn
-				person.waiting_start = 0.0; // no longer waiting for elevator
-				++e.num_occupants; // make space for ourselves in the elevator
-				return AI_ENTER_ELEVATOR;
+				if (e.num_occupants < ELEVATOR_CAPACITY) { // we can fit
+					person.dir = (elevator_center - person.pos).get_norm(); // snap our direction to forward, in the rare case the elevator arrives before we've completed our turn
+					person.waiting_start = 0.0; // no longer waiting for elevator
+					++e.num_occupants; // make space for ourselves in the elevator
+					return AI_ENTER_ELEVATOR;
+				}
+				// we can't fit; our options are to wait and press the button again, or give up and walk away;
+				// giving up is probably best because it's simpler, and chances are we'll exceed our wait time before the elevator gets back here;
+				// wait ... but what about the case where the other person is getting off on our floor?
+				// well, then we would have to walk through them, so maybe we're better giving up and walking off anyway
+				person.waiting_start = 0;
+				person.target_pos    = all_zeros;
+				return AI_WAITING;
 			}
 		}
 		// check for other people who were waiting for the elevator first, and move on if the spot is taken to avoid accumulating a line of people that get in each other's ways;
