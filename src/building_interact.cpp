@@ -1064,14 +1064,20 @@ bool elevator_t::was_floor_called(unsigned floor_ix) const {
 	}
 	return 0;
 }
-void elevator_t::call_elevator(unsigned floor_ix, float targ_z, unsigned req_dirs) {
+void elevator_t::call_elevator(unsigned floor_ix, float targ_z, unsigned req_dirs, bool inside_press) {
 	// Note: the only case I'm not sure about is if someone on floor 2 pushes the down call button and someone on floor 3 pushes the down call button
 	// before the other person gets into the elevator; I think the elevator should go to floor 2 and then down;
 	// but what if the person getting in on floor 2 actually presses the button for floor 3? does it go up in that case even though they pressed the down call button?
 	for (call_request_t &cr : call_requests) {
-		if (cr.floor_ix == floor_ix) {cr.req_dirs |= req_dirs; return;} // duplicate press for this floor; combine up/down flags and return
-	}
-	call_requests.emplace_back(floor_ix, targ_z, req_dirs); // place the request at the end to make this this last floor visited
+		if (cr.floor_ix != floor_ix) continue; // duplicate press for this floor
+		bool const prev_ip(cr.inside_press);
+		cr.req_dirs     |= req_dirs; // combine up/down flags
+		cr.inside_press |= inside_press;
+		if (inside_press && !prev_ip) {stable_sort(call_requests.begin(), call_requests.end());} // prioritize inside press if changed
+		return;
+	} // for cr
+	call_requests.emplace_back(floor_ix, targ_z, req_dirs, inside_press); // place the request at the end to make this this last floor visited
+	if (inside_press) {stable_sort(call_requests.begin(), call_requests.end());} // prioritize inside press
 }
 void elevator_t::register_at_dest() {
 	//assert(!call_requests.empty()); // too strong?
@@ -1108,7 +1114,7 @@ void building_t::call_elevator_to_floor(elevator_t &elevator, unsigned floor_ix,
 	float const targ_z(elevator.z1() + max(get_window_vspace()*floor_ix, 0.05f*get_floor_thickness())); // bottom of elevator car for this floor
 	assert(targ_z <= bcube.z2()); // sanity check
 	unsigned const req_dirs(is_inside_elevator ? 3 : (is_up ? 2 : 1)); // inside: both up and down, otherwise depends on the call button pressed
-	elevator.call_elevator(floor_ix, targ_z, req_dirs);
+	elevator.call_elevator(floor_ix, targ_z, req_dirs, is_inside_elevator);
 }
 
 void clamp_sphere_xy(point &pos, cube_t const &c, float radius) {

@@ -992,7 +992,9 @@ struct elevator_t : public oriented_cube_t { // dim/dir applies to the door
 	struct call_request_t {
 		unsigned floor_ix, req_dirs; // req_dirs: 1 bit is down, 2 bit is up
 		float zval;
-		call_request_t(unsigned f, float z, unsigned d) : floor_ix(f), req_dirs(d), zval(z) {}
+		bool inside_press;
+		call_request_t(unsigned f, float z, unsigned d, bool ip) : floor_ix(f), req_dirs(d), zval(z), inside_press(ip) {}
+		bool operator<(call_request_t const &cr) const {return (cr.inside_press < inside_press);} // sort so that CRs with inside_press=1 are first
 	};
 	bool at_edge, going_up, at_dest;
 	unsigned room_id, car_obj_id, light_obj_id, button_id_start, button_id_end, num_occupants;
@@ -1013,7 +1015,7 @@ struct elevator_t : public oriented_cube_t { // dim/dir applies to the door
 	float    get_target_zval () const {assert(was_called()); return call_requests.front().zval;}
 	bool was_floor_called(unsigned floor_ix) const;
 	unsigned get_coll_cubes(cube_t cubes[5]) const; // returns 1 or 5 cubes
-	void call_elevator(unsigned floor_ix, float targ_z, unsigned req_dirs);
+	void call_elevator(unsigned floor_ix, float targ_z, unsigned req_dirs, bool inside_press);
 	void register_at_dest();
 	void move_closest_in_dir_to_front(float zval, bool dir);
 };
