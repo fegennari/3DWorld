@@ -1267,9 +1267,24 @@ int building_t::run_ai_elevator_logic(person_t &person, float delta_dir, rand_ge
 				return AI_ENTER_ELEVATOR;
 			}
 		}
+		// check for other people who were waiting for the elevator first, and move on if the spot is taken to avoid accumulating a line of people that get in each other's ways;
+		// note that it would be better to do this check before reaching the elevator to avoid bumping another person or getting stuck on them
+		for (person_t const &other : interior->people) {
+			if (&other == &person) continue; // skip ourself
+			if (other.ai_state != AI_WAIT_ELEVATOR) continue; // other person is not also waiting for the elevator
+			if (other.cur_elevator != person.cur_elevator || fabs(other.pos.z - person.pos.z) > floor_spacing) continue; // different elevators or floors
+			
+			if (other.waiting_start < person.waiting_start) { // other person was there first, stop waiting and do something else
+				person.waiting_start = 0;
+				person.target_pos    = all_zeros;
+				return AI_WAITING;
+			}
+		} // for person
 		person_slow_turn(person, elevator_center, 0.5*delta_dir); // slow turn to face the elevator
 	}
 	else if (person.ai_state == AI_ENTER_ELEVATOR) {
+		// move to the elevator center; maybe if capacity > 1 and someone else is in the elevator, we should pick a side and have them move to the other side?
+		// this seems difficult to coordinate without some more detailed collision checks
 		person.target_pos.assign(e.xc(), e.yc(), person.pos.z);
 		float const move_dist(move_person_forward_to_target(person)); // walk into elevator
 
