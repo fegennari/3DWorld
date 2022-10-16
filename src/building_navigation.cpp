@@ -8,6 +8,8 @@
 #include <queue>
 
 
+bool const ALLOW_ELEVATOR_LINE   = 1;
+bool const NO_COLL_ENTER_EXIT_EL = 1;
 unsigned const ELEVATOR_CAPACITY = 1; // number of people that can use the elevator at once; nonzero
 float const AI_ELEVATOR_PROB     = 0.25; // probability of using an elevator
 float const COLL_RADIUS_SCALE    = 0.75; // somewhat smaller than radius, but larger than PED_WIDTH_SCALE
@@ -1021,6 +1023,11 @@ bool building_t::find_route_to_point(person_t const &person, float radius, bool 
 	return 1;
 }
 
+bool person_t::waiting_for_same_elevator_as(person_t const &other, float floor_spacing) const {
+	if (&other == this) return 0; // skip ourself
+	if (other.ai_state != AI_WAIT_ELEVATOR) return 0; // other person is not also waiting for the elevator
+	return (other.cur_elevator == cur_elevator && fabs(other.pos.z - pos.z) < 0.5f*floor_spacing); // check for same elevator and floor
+}
 void person_t::next_path_pt(bool starting_path) {
 	assert(!path.empty());
 	is_on_stairs = (!starting_path && target_pos.z != path.back().z); // or ramp
@@ -1262,35 +1269,57 @@ int building_t::run_ai_elevator_logic(person_t &person, float delta_dir, rand_ge
 		point const elevator_center(e.xc(), e.yc(), person.pos.z);
 
 		if (e.open_amt == 1.0) { // doors are fully open
-			if (get_elevator_floor(ecar.zc(), e, floor_spacing) == get_elevator_floor(person.pos.z, e, floor_spacing)) { // wait for elevator to reach our current floor
+			unsigned const cur_elevator_floor(get_elevator_floor(person.pos.z, e, floor_spacing));
+
+			if (get_elevator_floor(ecar.zc(), e, floor_spacing) == cur_elevator_floor) { // wait for elevator to reach our current floor
 				if (e.num_occupants < ELEVATOR_CAPACITY) { // we can fit
 					person.dir = (elevator_center - person.pos).get_norm(); // snap our direction to forward, in the rare case the elevator arrives before we've completed our turn
 					person.waiting_start = 0.0; // no longer waiting for elevator
 					++e.num_occupants; // make space for ourselves in the elevator
 					return AI_ENTER_ELEVATOR;
 				}
-				// we can't fit; our options are to wait and press the button again, or give up and walk away;
-				// giving up is probably best because it's simpler, and chances are we'll exceed our wait time before the elevator gets back here;
-				// wait ... but what about the case where the other person is getting off on our floor?
-				// well, then we would have to walk through them, so maybe we're better giving up and walking off anyway
-				person.waiting_start = 0;
-				person.target_pos    = all_zeros;
-				return AI_WAITING;
+				// check if someone is exiting the elevator on this floor
+				bool has_space(0);
+
+				for (person_t const &other : interior->people) {
+					if (&other == &person) continue; // skip ourself
+					if (other.cur_elevator != person.cur_elevator || other.dest_elevator_floor != cur_elevator_floor) continue; // different elevator or floor
+					if (other.ai_state != AI_RIDE_ELEVATOR && other.ai_state != AI_EXIT_ELEVATOR) continue; // not ready to exit
+					has_space = 1;
+					break;
+				}
+				if (!has_space) {
+					// we can't fit; our options are to wait and press the button again, or give up and walk away;
+					// giving up is probably best because it's simpler, and chances are we'll exceed our wait time before the elevator gets back here
+					//call_elevator_to_floor_and_light_nearest_button(e, cur_elevator_floor, 0, (person.dest_elevator_floor > cur_elevator_floor));
+					person.waiting_start = 0;
+					person.abort_dest();
+					return AI_WAITING;
+				}
+				else {
+					// in this case we currently walk through the other person who is exiting the elevator
+				}
 			}
 		}
-		// check for other people who were waiting for the elevator first, and move on if the spot is taken to avoid accumulating a line of people that get in each other's ways;
-		// note that it would be better to do this check before reaching the elevator to avoid bumping another person or getting stuck on them
-		for (person_t const &other : interior->people) {
-			if (&other == &person) continue; // skip ourself
-			if (other.ai_state != AI_WAIT_ELEVATOR) continue; // other person is not also waiting for the elevator
-			if (other.cur_elevator != person.cur_elevator || fabs(other.pos.z - person.pos.z) > floor_spacing) continue; // different elevators or floors
-			
-			if (other.waiting_start < person.waiting_start) { // other person was there first, stop waiting and do something else
+		if (!ALLOW_ELEVATOR_LINE /*|| ELEVATOR_CAPACITY = 1*/) {
+			// check for other people who were waiting for the elevator first, and move on if the spot is taken to avoid forming a line of people that get in each other's ways;
+			// note that it would be better to do this check before reaching the elevator to avoid bumping another person or getting stuck on them
+			for (person_t const &other : interior->people) {
+				if (other.waiting_start > person.waiting_start) continue; // we were here first
+				if (!person.waiting_for_same_elevator_as(other, floor_spacing)) continue;
+				// other person was there first, stop waiting and do something else
 				person.waiting_start = 0;
-				person.target_pos    = all_zeros;
+				person.abort_dest();
 				return AI_WAITING;
-			}
-		} // for person
+			} // for person
+		}
+		if (person.get_bcube().intersects(e)) { // check if we've been pushed to intersect the elevator
+			// try to get back to our waiting pos by moving back to the non-elevator waiting state and clearing our last_used_elevator flag;
+			// this will make the person either choose the same elevator again, or give up and choose a non-elevator dest
+			person.last_used_elevator = 0;
+			person.waiting_start      = 0;
+			return AI_WAITING;
+		}
 		person_slow_turn(person, elevator_center, 0.5*delta_dir); // slow turn to face the elevator
 	}
 	else if (person.ai_state == AI_ENTER_ELEVATOR) {
@@ -1331,7 +1360,7 @@ int building_t::run_ai_elevator_logic(person_t &person, float delta_dir, rand_ge
 		float const move_dist(move_person_forward_to_target(person)); // exit elevator to a point in front, then select a new non-elevator destination
 
 		if (dist_xy_less_than(person.pos, person.target_pos, move_dist)) { // out of the elevator - done
-			person.target_pos = all_zeros;
+			person.abort_dest();
 			//assert(e.num_occupants > 0); // invalid if people are despawned/respawned when the player is far away?
 			if (e.num_occupants > 0) {--e.num_occupants;} // we're no longer in this elevator
 			return AI_AT_DEST;
@@ -1355,19 +1384,19 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 
 	if (person.retreat_time > 0.0) {
 		if (person.retreat_time == RETREAT_TIME) { // first retreating frame - clear path
-			person.path.clear();
-			person.target_pos = all_zeros;
+			person.abort_dest();
 			//person.is_first_path = 1; // probably not needed
 		}
 		wait_time = 0.0; // no waiting while retreating
 		person.retreat_time -= fticks;
 		max_eq(person.retreat_time, 0.0f);
 	}
-	if (wait_time > 0) {
+	if (wait_time > 0) { // waiting, possibly for an elevator
 		if (wait_time > fticks && !can_ai_follow_player(person)) { // waiting; don't wait if there's a player to follow
-			// check for other people colliding with this person and handle it; should this apply when waiting for the elevator?
+			// check for other people colliding with this person and handle it
 			for (auto p = interior->people.begin()+person_ix+1; p < interior->people.end(); ++p) {
 				if (fabs(person.pos.z - p->pos.z) > coll_dist) continue; // different floors
+				if (NO_COLL_ENTER_EXIT_EL && person.ai_state == AI_WAIT_ELEVATOR && p->ai_state == AI_EXIT_ELEVATOR) continue;
 				float const rsum(coll_dist + COLL_RADIUS_SCALE*p->radius);
 				if (!dist_xy_less_than(person.pos, p->pos, rsum)) continue; // not intersecting
 				move_person_to_not_collide(person, *p, person.pos, rsum, coll_dist); // if we get here, we have to actively move out of the way
@@ -1382,8 +1411,8 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 		}
 		else { // wait is up
 			wait_time = 0.0;
-			person.target_pos = all_zeros; // force choose_dest=1 below
-			person.ai_state   = AI_WAITING; // waiting, but no longer for an elevator
+			person.abort_dest(); // force choose_dest=1 below
+			person.ai_state = AI_WAITING; // waiting, but no longer for an elevator
 		}
 	}
 	if (!point_in_building_or_basement_bcube(person.pos)) { // person must be inside the building
@@ -1546,8 +1575,26 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 	}
 	// don't do collision detection while on stairs because it doesn't work properly; just let people walk through each other
 	if (!person.on_stairs()) {
-		for (auto p = interior->people.begin()+person_ix+1; p < interior->people.end(); ++p) { // check all other people in the same building after this one and attempt to avoid them
+		if (person.goal_type == GOAL_TYPE_ELEVATOR) { // heading for the elevator
+			// check for collisions with someone else waiting for the elevator
+			for (auto p = interior->people.begin(); p < interior->people.end(); ++p) {
+				if (!person.waiting_for_same_elevator_as(*p, get_window_vspace())) continue;
+				float const rsum(coll_dist + COLL_RADIUS_SCALE*p->radius);
+				if (!dist_xy_less_than(new_pos, p->pos, rsum)) continue; // new pos not close
+
+				if (ALLOW_ELEVATOR_LINE /*&& ELEVATOR_CAPACITY > 1*/) {
+					person.anim_time  = 0.0; // pause animation in case this person is mid-step
+					person.target_pos = person.pos; // stop here and wait on the next frame; will form a line behind/beside this person
+				}
+				else {person.abort_dest();} // choose another dest
+				return AI_MOVING; // return here with current person.pos
+			} // for p
+		}
+		// check all other people in the same building after this one and attempt to avoid them
+		for (auto p = interior->people.begin()+person_ix+1; p < interior->people.end(); ++p) {
 			if (fabs(person.pos.z - p->pos.z) > coll_dist) continue; // different floors
+			// don't let us be pushed by someone entering or exiting the elevator as that causes problems; instead, let these people walk through each other
+			if (NO_COLL_ENTER_EXIT_EL && p->ai_state >= AI_ENTER_ELEVATOR) continue;
 			float const rsum(coll_dist + COLL_RADIUS_SCALE*p->radius);
 			if (!dist_xy_less_than(new_pos, p->pos, rsum)) continue; // new pos not close
 			if (!dist_xy_less_than(person.pos, p->pos, rsum)) return AI_STOP; // old pos not intersecting, stop
@@ -1603,7 +1650,7 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 		int const max_floor(round_fp((room.z2() - true_z1)/floor_spacing) - 1);
 		min_eq(cur_floor, max_floor); // clip to the valid floors for this room relative to lowest building floor
 		float const adj_zval(cur_floor*floor_spacing + min_valid_zval);
-		if (fabs(adj_zval - new_pos.z) > 0.1*person.radius) {person.target_pos = all_zeros; person.path.clear();} // if we snap to the floor, reset the target and path
+		if (fabs(adj_zval - new_pos.z) > 0.1*person.radius) {person.abort_dest();} // if we snap to the floor, reset the target and path
 		new_pos.z = adj_zval;
 	}
 	max_eq(new_pos.z, min_valid_zval); // don't let the person go below the ground floor

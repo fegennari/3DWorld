@@ -61,6 +61,8 @@ struct person_t : public person_base_t { // building person
 		cur_elevator(0), dest_elevator_floor(0), ai_state(AI_STOP), following_player(0), is_on_stairs(0), has_key(0), is_first_path(1), on_new_path_seg(0),
 		last_used_elevator(0) {in_building = 1;}
 	bool on_stairs() const {return is_on_stairs;}
+	bool waiting_for_same_elevator_as(person_t const &other, float floor_spacing) const;
 	void next_path_pt(bool starting_path);
+	void abort_dest() {target_pos = all_zeros; path.clear();}
 };
 
