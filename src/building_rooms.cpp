@@ -3590,6 +3590,7 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 			pos[!i->dim] = i->d[!i->dim][0] + 0.1*ewidth; // to the low side
 
 			for (unsigned d = 0; d < 2; ++d) { // {down, up} call buttons
+				if ((d == 0 && f == 0) || (d == 1 && f == num_floors-1)) continue; // no floor above/below
 				pos.z = i->z1() + (f + 0.05*d + 0.45)*window_vspacing;
 				add_elevator_button(pos, button_radius, i->dim, i->dir, elevator_id, f, 0, d, objs); // inside=0, is_up=d
 			}
