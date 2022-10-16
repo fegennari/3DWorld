@@ -1267,11 +1267,10 @@ int building_t::run_ai_elevator_logic(person_t &person, float delta_dir, rand_ge
 		// when the elevator opens, we could check e.going_up to see if it's headed in the correct direction;
 		// however, since we haven't decided on a dest floor yet, it makes sense to just go with it and select a floor in the direction the elevator is headed
 		point const elevator_center(e.xc(), e.yc(), person.pos.z);
+		unsigned const cur_person_floor(get_elevator_floor(person.pos.z, e, floor_spacing));
 
 		if (e.open_amt == 1.0) { // doors are fully open
-			unsigned const cur_elevator_floor(get_elevator_floor(person.pos.z, e, floor_spacing));
-
-			if (get_elevator_floor(ecar.zc(), e, floor_spacing) == cur_elevator_floor) { // wait for elevator to reach our current floor
+			if (get_elevator_floor(ecar.zc(), e, floor_spacing) == cur_person_floor) { // wait for elevator to reach our current floor
 				if (e.num_occupants < ELEVATOR_CAPACITY) { // we can fit
 					person.dir = (elevator_center - person.pos).get_norm(); // snap our direction to forward, in the rare case the elevator arrives before we've completed our turn
 					person.waiting_start = 0.0; // no longer waiting for elevator
@@ -1283,18 +1282,23 @@ int building_t::run_ai_elevator_logic(person_t &person, float delta_dir, rand_ge
 
 				for (person_t const &other : interior->people) {
 					if (&other == &person) continue; // skip ourself
-					if (other.cur_elevator != person.cur_elevator || other.dest_elevator_floor != cur_elevator_floor) continue; // different elevator or floor
+					if (other.cur_elevator != person.cur_elevator || other.dest_elevator_floor != cur_person_floor) continue; // different elevator or floor
 					if (other.ai_state != AI_RIDE_ELEVATOR && other.ai_state != AI_EXIT_ELEVATOR) continue; // not ready to exit
 					has_space = 1;
 					break;
 				}
-				if (!has_space) {
-					// we can't fit; our options are to wait and press the button again, or give up and walk away;
-					// giving up is probably best because it's simpler, and chances are we'll exceed our wait time before the elevator gets back here
-					//call_elevator_to_floor_and_light_nearest_button(e, cur_elevator_floor, 0, (person.dest_elevator_floor > cur_elevator_floor));
-					person.waiting_start = 0;
-					person.abort_dest();
-					return AI_WAITING;
+				if (!has_space) { // we can't fit
+					if (person.must_re_call_elevator) {
+						// waiting has already been decided
+					}
+					else if (rgen.rand_bool()) { // wait and press the button again 50% of the time
+						person.must_re_call_elevator = 1; // schedule this for later, to avoid causing the doors to re-open
+					}
+					else { // give up and walk away 50% of the time
+						person.waiting_start = 0;
+						person.abort_dest();
+						return AI_WAITING;
+					}
 				}
 				else {
 					// in this case we currently walk through the other person who is exiting the elevator
@@ -1319,6 +1323,11 @@ int building_t::run_ai_elevator_logic(person_t &person, float delta_dir, rand_ge
 			person.last_used_elevator = 0;
 			person.waiting_start      = 0;
 			return AI_WAITING;
+		}
+		// re-press the call button when the elevator has moved from this floor
+		if (person.must_re_call_elevator && get_elevator_floor(ecar.zc(), e, floor_spacing) != cur_person_floor) {
+			call_elevator_to_floor_and_light_nearest_button(e, cur_person_floor, 0, (person.dest_elevator_floor > cur_person_floor));
+			person.must_re_call_elevator = 0;
 		}
 		person_slow_turn(person, elevator_center, 0.5*delta_dir); // slow turn to face the elevator
 	}
@@ -1420,6 +1429,7 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 		assert(0);
 	}
 	if (person.ai_state >= AI_WAIT_ELEVATOR) {return run_ai_elevator_logic(person, delta_dir, rgen);} // handle elevator case
+	person.must_re_call_elevator = 0; // reset if we got out of the elevator logic with this set
 	build_nav_graph();
 
 	if (can_ai_follow_player(person)) {
