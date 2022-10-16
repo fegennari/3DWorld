@@ -3573,6 +3573,12 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 			objs.emplace_back(sign, TYPE_SIGN, i->room_id, i->dim, i->dir, RO_FLAG_NOCOLL, 1.0, SHAPE_CUBE, DK_BLUE);
 			set_floor_text_for_sign(objs.back(), f+1, floor_offset, has_parking_garage, oss);
 		}
+		// add concrete flooring at the base of the elevator, over the carpet
+		cube_t efloor(*i);
+		efloor.expand_by_xy(-0.25*half_thick); // less than the width of the elevator walls, to prevent z-fighting
+		efloor.z1() += half_thick; // on top of the carpet
+		efloor.z2()  = efloor.z1() + 0.01*half_thick; // set thickness (very thin)
+		objs.emplace_back(efloor, TYPE_FLOORING, i->room_id, i->dim, i->dir, (RO_FLAG_NOCOLL | RO_FLAG_IN_ELEV), 1.0, SHAPE_CUBE, WHITE, FLOORING_CONCRETE);
 	} // for e
 	interior->room_geom->buttons_start = objs.size();
 
