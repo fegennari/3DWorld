@@ -966,9 +966,9 @@ bool building_interior_t::update_elevators(building_t const &building, point con
 	// Note: the player can only be in one elevator at a time, but they can push the call button for one elevator and get into another, so we have to check all elevators
 	for (auto e = elevators.begin(); e != elevators.end(); ++e) { // find containing elevator (optimization + need to know z-range of elevator shaft)
 		if (e->at_dest || !e->was_called()) { // stopped on a floor (either in between stops or at the end of the call requests)
-			bool const time_for_doors_to_close(e->at_dest_frame > 0 && frame_counter > (e->at_dest_frame + elevator_wait_time));
+			bool const time_for_doors_to_close(e->at_dest_frame > 0 && frame_counter > (e->at_dest_frame + elevator_wait_time) && !e->hold_doors);
 
-			if (!e->was_called() && e->open_amt > 0.0 && time_for_doors_to_close && !e->hold_doors) { // inactive, close the doors
+			if (!e->was_called() && e->open_amt > 0.0 && time_for_doors_to_close) { // inactive, close the doors
 				e->open_amt = max((e->open_amt - delta_open_amt), 0.0f);
 				if (e->open_amt == 0.0) {e->at_dest_frame = 0;} // done waiting/closing
 				e->at_dest  = 0; // reset for next cycle
@@ -987,10 +987,15 @@ bool building_interior_t::update_elevators(building_t const &building, point con
 				e->open_amt = min((e->open_amt + delta_open_amt), 1.0f);
 				update_ddd  = 1; // regen verts for door
 			}
-			e->hold_doors = 0; // reset for next frame
 			continue;
 		}
-		e->hold_doors    = 0; // reset for next frame
+		if (e->hold_doors) {
+			if (e->open_amt < 1.0) { // open doors
+				e->open_amt = min((e->open_amt + delta_open_amt), 1.0f);
+				update_ddd  = 1; // regen verts for door
+			}
+			continue;
+		}
 		e->at_dest_frame = 0; // reset just in case, since we're not in a waiting state
 		assert(e->car_obj_id < objs.size());
 		room_object_t &obj(objs[e->car_obj_id]); // elevator car for this elevator
@@ -1002,7 +1007,7 @@ bool building_interior_t::update_elevators(building_t const &building, point con
 			update_ddd  = 1; // regen verts for door
 			continue;
 		}
-		if (e->hold_movement) {e->hold_movement = 0; continue;} // hold for this frame only
+		if (e->hold_movement) continue; // hold for this frame only
 		bool const move_dir(target_zval > ez1); // 0=down, 1=up
 		e->going_up = move_dir;
 		assert(e->button_id_start < e->button_id_end && e->button_id_end <= objs.size());
@@ -1055,6 +1060,7 @@ bool building_interior_t::update_elevators(building_t const &building, point con
 		prev_move_dir = move_dir;
 		was_updated   = 1;
 	} // for e
+	for (auto &e : elevators) {e.hold_doors = e.hold_movement = 0;} // reset frame state
 	if (update_ddd) {update_dynamic_draw_data();} // clear dynamic material vertex data (for all elevators) and recreate their VBOs
 	if (was_updated) return 1;
 	prev_move_dir = 2;
