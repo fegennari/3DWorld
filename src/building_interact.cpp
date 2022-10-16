@@ -1028,7 +1028,8 @@ bool building_interior_t::update_elevators(building_t const &building, point con
 			for (auto j = objs.begin() + e->button_id_start; j != objs.begin() + e->button_id_end; ++j) {
 				if (j->type == TYPE_BLOCKER) continue; // button was removed?
 				assert(j->type == TYPE_BUTTON);
-				if (!j->is_active() || e->was_floor_called(j->obj_id)) continue; // already unlit, or this floor has also been called
+				unsigned const up_down_mask((j->flags & RO_FLAG_ADJ_TOP) ? 2 : ((j->flags & RO_FLAG_ADJ_BOT) ? 1 : 3)); // top=up, bot=down, neither=both
+				if (!j->is_active() || e->was_floor_called(j->obj_id, up_down_mask)) continue; // already unlit, or this floor has also been called
 				j->flags &= ~RO_FLAG_IS_ACTIVE; // clear active/lit state
 				room_geom->invalidate_small_geom(); // need to regen object data due to lit state change
 			}
@@ -1067,9 +1068,9 @@ bool building_interior_t::update_elevators(building_t const &building, point con
 	return 0;
 }
 
-bool elevator_t::was_floor_called(unsigned floor_ix) const {
+bool elevator_t::was_floor_called(unsigned floor_ix, unsigned up_down_mask) const {
 	for (call_request_t const &cr : call_requests) {
-		if (cr.floor_ix == floor_ix) return 1;
+		if (cr.floor_ix == floor_ix && (cr.req_dirs & up_down_mask) != 0) return 1;
 	}
 	return 0;
 }
@@ -1090,7 +1091,18 @@ void elevator_t::call_elevator(unsigned floor_ix, float targ_z, unsigned req_dir
 }
 void elevator_t::register_at_dest() {
 	//assert(!call_requests.empty()); // too strong?
-	if (!call_requests.empty()) {call_requests.pop_front();}
+	if (!call_requests.empty()) {
+		uint8_t &req_dirs(call_requests.front().req_dirs);
+
+		if (req_dirs == 3) {
+			// if both up and down buttons were pressed, we should unset one dir but leave the other;
+			// if this is a stop along the way, we should unset the one in the current elevator dir;
+			// TODO: but if this is the end stop of the elevator, we don't know which dir because we're not tracking which of the up/down button was pressed first;
+			// furthermore, even setting req_dirs in this case can cause the elevator to deadlock if the occupant presses a button that causes it to move in the wrong direction
+			//req_dirs = (going_up ? 1 : 2); at_dest = 1; return;
+		}
+		call_requests.pop_front();
+	}
 	at_dest = 1;
 }
 void elevator_t::move_closest_in_dir_to_front(float zval, bool dir) {

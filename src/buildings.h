@@ -990,10 +990,11 @@ private:
 
 struct elevator_t : public oriented_cube_t { // dim/dir applies to the door
 	struct call_request_t {
-		unsigned floor_ix, req_dirs; // req_dirs: 1 bit is down, 2 bit is up
+		unsigned floor_ix;
 		float zval;
+		uint8_t req_dirs; // 1 bit is down, 2 bit is up
 		bool inside_press;
-		call_request_t(unsigned f, float z, unsigned d, bool ip) : floor_ix(f), req_dirs(d), zval(z), inside_press(ip) {}
+		call_request_t(unsigned f, float z, unsigned d, bool ip) : floor_ix(f), zval(z), req_dirs(d), inside_press(ip) {}
 		bool operator<(call_request_t const &cr) const {return (cr.inside_press < inside_press);} // sort so that CRs with inside_press=1 are first
 	};
 	bool at_edge=0, going_up=0, at_dest=0, hold_doors=0, hold_movement=0;
@@ -1011,7 +1012,7 @@ struct elevator_t : public oriented_cube_t { // dim/dir applies to the door
 	bool is_moving           () const {return was_called();} // Note: conservative, could track this more accurately
 	unsigned get_target_floor() const {assert(was_called()); return call_requests.front().floor_ix;}
 	float    get_target_zval () const {assert(was_called()); return call_requests.front().zval;}
-	bool was_floor_called(unsigned floor_ix) const;
+	bool was_floor_called(unsigned floor_ix, unsigned up_down_mask) const;
 	unsigned get_coll_cubes(cube_t cubes[5]) const; // returns 1 or 5 cubes
 	void call_elevator(unsigned floor_ix, float targ_z, unsigned req_dirs, bool inside_press);
 	void register_at_dest();
