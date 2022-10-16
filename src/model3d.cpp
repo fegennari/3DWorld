@@ -1608,7 +1608,6 @@ colorRGBA model3d::get_area_weighted_avg_color() {
 		unbound_geom.calc_area(area, ntris);
 		avg_color += color_mult_inc_alpha(unbound_mat.color.modulate_with(texture_color(unbound_mat.tid)), area);
 	}
-	float const orig_alpha(avg_color.alpha);
 	if (avg_color.alpha > 0.0) {avg_color = avg_color/avg_color.alpha; avg_color.alpha = 1.0;} // normalize to alpha of 1.0
 	return avg_color;
 }
