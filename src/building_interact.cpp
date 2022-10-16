@@ -1009,7 +1009,7 @@ bool building_interior_t::update_elevators(building_t const &building, point con
 		}
 		if (e->hold_movement) continue; // hold for this frame only
 		bool const move_dir(target_zval > ez1); // 0=down, 1=up
-		e->going_up = move_dir;
+		if (target_zval != ez1) {e->going_up = move_dir;} // only update if the elevator is moving/not stopped at the dest
 		assert(e->button_id_start < e->button_id_end && e->button_id_end <= objs.size());
 		float dist(min(0.5f*CAMERA_RADIUS, 0.04f*obj.dz()*fticks)*(move_dir ? 1.0 : -1.0)); // clamp to half camera radius to avoid falling through the floor for low framerates
 		// check if any called floors are closer than the current one and in the correct direction; if so, move them to the front of the queue
@@ -1090,20 +1090,27 @@ void elevator_t::call_elevator(unsigned floor_ix, float targ_z, unsigned req_dir
 	if (inside_press) {stable_sort(call_requests.begin(), call_requests.end());} // prioritize inside press
 }
 void elevator_t::register_at_dest() {
+	if (at_dest) return; // duplicate call; can this happen?
 	//assert(!call_requests.empty()); // too strong?
+
 	if (!call_requests.empty()) {
 		uint8_t &req_dirs(call_requests.front().req_dirs);
 
-		if (req_dirs == 3) {
-			// if both up and down buttons were pressed, we should unset one dir but leave the other;
-			// if this is a stop along the way, we should unset the one in the current elevator dir;
+		if (stop_on_passing_floor && call_requests.size() > 1) { // only valid if there's another call request
+			// Note: seems like we can still infinte loop here, not sure how, but it's rare
+			//cout << TXTi(req_dirs) << TXT(stop_on_passing_floor) << TXT(going_up) << TXT(call_requests.size()) << TXT(call_requests[0].floor_ix) << TXT(call_requests[1].floor_ix) << endl; // TESTING
+			// if both up and down buttons were pressed (req_dirs == 3), we should unset one dir but leave the other;
+			// if this is a stop along the way (stop_on_passing_floor==1), we should unset the one in the current elevator dir;
 			// TODO: but if this is the end stop of the elevator, we don't know which dir because we're not tracking which of the up/down button was pressed first;
 			// furthermore, even setting req_dirs in this case can cause the elevator to deadlock if the occupant presses a button that causes it to move in the wrong direction
-			//req_dirs = (going_up ? 1 : 2); at_dest = 1; return;
+			req_dirs &= (going_up ? 1 : 2);
+			// if we still have a call, move this CR to the back so that it's picked up after we reverse direction; will be popped below
+			if (req_dirs != 0) {call_requests.push_back(call_requests.front());}
 		}
 		call_requests.pop_front();
 	}
 	at_dest = 1;
+	stop_on_passing_floor = 0; // reset for next cycle
 }
 void elevator_t::move_closest_in_dir_to_front(float zval, bool dir) {
 	assert(was_called());
@@ -1122,6 +1129,7 @@ void elevator_t::move_closest_in_dir_to_front(float zval, bool dir) {
 		call_request_t const v(*new_front); // deep copy
 		call_requests.erase(new_front);
 		call_requests.push_front(v);
+		stop_on_passing_floor = 1; // flag so that we can set the up/down call button state correctly
 	}
 }
 
