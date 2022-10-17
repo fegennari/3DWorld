@@ -1645,16 +1645,24 @@ void building_room_geom_t::add_elevator(room_object_t const &c, elevator_t const
 	norm_comp const nc(normal);
 	if (use_small_text) {text_height *= 0.67;} // shrink text if there are two wide digits, but leave text alignment unchanged
 	// setup for exterior floor display
-	float const ext_text_height(0.5f*panel_width);
+	float const ext_text_height(0.5f*panel_width), center_panel_height(0.7*panel_width), up_down_height(0.4f*panel_width), up_down_text_height(0.6f*panel_width);
 	cube_t display(panel);
 	display.expand_in_dim(!c.dim, -0.2*panel_width);
 	display.d[c.dim][0] = display.d[c.dim][1] = c.d[c.dim][c.dir]; // front face of elevator ext wall
 	display.d[c.dim][c.dir] += (c.dir ? 1.0 : -1.0)*0.01*panel_width;
-	bool const two_digits(num_floors > 9 || floor_offset > 0); // double digits or basement/parking garage
 	point ext_text_pos;
 	ext_text_pos[ c.dim] = display.d[ c.dim][c.dir] + 0.01*signed_thickness; // slightly in front of the display
-	ext_text_pos[!c.dim] = display.d[!c.dim][0] + 0.1*panel_width + (two_digits ? 0.77f : 0.6f)*(!ldir)*ext_text_height;
-
+	ext_text_pos[!c.dim] = display.d[!c.dim][0] + 0.1*panel_width; // starting point of the text
+	point up_down_pos(ext_text_pos);
+	
+	if (!ldir) { // mirror pos to the other side if needed
+		bool const two_digits(num_floors > 9 || floor_offset > 0); // double digits or basement/parking garage
+		ext_text_pos[!c.dim] += (two_digits ? 0.77f : 0.6f)*ext_text_height;
+		up_down_pos [!c.dim] -= 0.15f*up_down_text_height;
+	}
+	else {
+		up_down_pos [!c.dim] += 0.8f*up_down_text_height;
+	}
 	for (unsigned f = 0; f < num_floors; ++f) { // Note: floor number starts at 1 even if the elevator doesn't extend to the ground floor
 		bool const is_lit(is_powered && f == cur_floor);
 		text_pos.z = panel.z1() + (f + 1)*button_spacing - 0.5*text_height;
@@ -1668,7 +1676,7 @@ void building_room_geom_t::add_elevator(room_object_t const &c, elevator_t const
 		for (auto i = verts.begin(); i != verts.end(); ++i) {cur_mat.quad_verts.emplace_back(i->v, nc, i->t[0], i->t[1], (is_lit ? lit_cw : cw));}
 		// add floor indicator lights and up/down lights outside elevators on each floor
 		float const zval(e.z1() + (f + 0.7)*floor_spacing);
-		set_cube_zvals(display, zval, (zval + 0.7*panel_width));
+		set_cube_zvals(display, (zval - up_down_height), (zval + up_down_height + center_panel_height));
 		get_untextured_material(0, 1).add_cube_to_verts_untextured(display, DK_GRAY, ~back_face_mask); // exterior display panel
 		// add floor text
 		ext_text_pos.z = zval + 0.1*panel_width;
@@ -1678,8 +1686,17 @@ void building_room_geom_t::add_elevator(room_object_t const &c, elevator_t const
 		if (need_swap) {std::reverse(verts.begin(), verts.end());} // swap vertex winding order
 		rgeom_mat_t &cur_ext_mat(is_powered ? get_material(lit_tp, 0, 1) : mat); // lit, as long as the elevator is powered
 		for (auto i = verts.begin(); i != verts.end(); ++i) {cur_ext_mat.quad_verts.emplace_back(i->v, nc, i->t[0], i->t[1], (is_powered ? lit_cw : cw));}
+		
 		// add up/down indicators
-		// TODO
+		for (unsigned d = 0; d < 2; ++d) { // {down, up}
+			up_down_pos.z = zval + (d ? center_panel_height : -0.75*up_down_height);
+			verts.clear();
+			gen_text_verts(verts, up_down_pos, (d ? ">" : "<"), 1000.0*up_down_text_height, plus_z, col_dir, 1); // R90, use_quads=1
+			if (need_swap) {std::reverse(verts.begin(), verts.end());} // swap vertex winding order
+			bool const is_lit(bool(d) == e.going_up && e.is_moving());
+			rgeom_mat_t &cur_ud_mat(is_lit ? get_material(lit_tp, 0, 1) : mat); // lit, as long as the elevator is powered
+			for (auto i = verts.begin(); i != verts.end(); ++i) {cur_ud_mat.quad_verts.emplace_back(i->v, nc, i->t[0], i->t[1], (is_lit ? lit_cw : cw));}
+		} // for d
 	} // for f
 }
 
