@@ -1324,18 +1324,19 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		// check visibility of bcube of light sphere clipped to building bcube; this excludes lights behind the camera and improves shadow map assignment quality
 		cube_t sphere_bc; // in building space
 		sphere_bc.set_from_sphere(lpos, cull_radius);
-		cube_t clipped_bc(sphere_bc);
+		cube_t clipped_bc(sphere_bc), light_clip_cube;
 
 		if (light_in_basement) { // clip to basement + ext basement
-			cube_t basement_bcube(get_basement());
-			if (has_ext_basement()) {basement_bcube.union_with_cube(interior->basement_ext_bcube);}
-			assert(basement_bcube.contains_pt(lpos));
-			clipped_bc.intersect_with_cube(basement_bcube);
+			light_clip_cube = get_basement();
+			if (has_ext_basement()) {light_clip_cube.union_with_cube(interior->basement_ext_bcube);}
+			if (is_in_elevator) {light_clip_cube.z2() = bcube.z2();} // extends up the elevator shaft into floors above the basement
 		}
 		else { // clip to bcube
-			assert(bcube.contains_pt(lpos_rot));
-			clipped_bc.intersect_with_cube(bcube);
+			light_clip_cube = bcube;
 		}
+		assert(light_clip_cube.contains_pt(lpos_rot));
+		clipped_bc.intersect_with_cube(light_clip_cube);
+
 		if (!stairs_light && !is_in_elevator) { // clip zval to current floor if light not in a room with stairs or elevator
 			max_eq(clipped_bc.z1(), (floor_z - fc_thick));
 		}
