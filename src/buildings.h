@@ -867,7 +867,8 @@ struct building_room_geom_t {
 	void add_breaker_panel(room_object_t const &c);
 	void add_attic_door(room_object_t const &c, float tscale);
 	void add_attic_rafters(building_t const &b, float tscale);
-	void add_elevator(room_object_t const &c, float tscale, float fc_thick_scale, unsigned floor_offset, bool has_parking_garage, bool is_powered);
+	void add_elevator(room_object_t const &c, elevator_t const &e, float tscale, float fc_thick_scale,
+		unsigned floor_offset, float floor_spacing, bool has_parking_garage, bool is_powered);
 	void add_elevator_doors(elevator_t const &e, float fc_thick_scale);
 	void add_light(room_object_t const &c, float tscale);
 	void add_rug(room_object_t const &c);

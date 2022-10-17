@@ -935,8 +935,8 @@ void building_room_geom_t::create_dynamic_vbos(building_t const &building) {
 		float const fc_thick_scale(building.get_elevator_fc_thick_scale());
 		add_elevator_doors(*e, fc_thick_scale); // add dynamic elevator doors
 		// draw elevator car for this elevator
-		add_elevator(objs[e->car_obj_id], 2.0/obj_scale, fc_thick_scale, building.calc_floor_offset(e->z1()),
-			building.has_parking_garage, !building.interior->elevators_disabled);
+		add_elevator(objs[e->car_obj_id], *e, 2.0/obj_scale, fc_thick_scale, building.calc_floor_offset(e->z1()),
+			building.get_window_vspace(), building.has_parking_garage, !building.interior->elevators_disabled);
 
 		for (auto j = objs.begin() + e->button_id_start; j != objs.begin() + e->button_id_end; ++j) {
 			if (j->type == TYPE_BLOCKER) continue; // button was removed?

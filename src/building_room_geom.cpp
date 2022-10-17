@@ -1580,7 +1580,9 @@ cube_t get_elevator_car_panel(room_object_t const &c, float fc_thick_scale) {
 	panel.z1() += 0.28*dz; panel.z2() -= 0.28*dz;
 	return panel;
 }
-void building_room_geom_t::add_elevator(room_object_t const &c, float tscale, float fc_thick_scale, unsigned floor_offset, bool has_parking_garage, bool is_powered) { // dynamic=1
+void building_room_geom_t::add_elevator(room_object_t const &c, elevator_t const &e, float tscale, float fc_thick_scale,
+	unsigned floor_offset, float floor_spacing, bool has_parking_garage, bool is_powered) // dynamic=1
+{
 	// elevator car, all materials are dynamic; no lighting scale
 	float const dz(c.dz()), thickness(fc_thick_scale*dz), dir_sign(c.dir ? 1.0 : -1.0), signed_thickness(dir_sign*thickness);
 	cube_t floor(c), ceil(c), back(c);
@@ -1590,7 +1592,8 @@ void building_room_geom_t::add_elevator(room_object_t const &c, float tscale, fl
 	ceil .expand_by_xy(-0.5f*thickness);
 	back.d[c.dim][c.dir] = c.d[c.dim][!c.dir] + signed_thickness;
 	point const tex_origin(c.get_llc());
-	unsigned const front_face_mask(get_face_mask(c.dim, c.dir)), floor_ceil_face_mask(front_face_mask & (EF_X12 | EF_Y12)); // +Z faces
+	unsigned const front_face_mask(get_face_mask(c.dim, c.dir)), back_face_mask(get_face_mask(c.dim, !c.dir));
+	unsigned const floor_ceil_face_mask(front_face_mask & (EF_X12 | EF_Y12)); // +Z faces
 	tid_nm_pair_t const paneling(get_tex_auto_nm(PANELING_TEX, 2.0f*tscale));
 	get_material(get_tex_auto_nm(TILE_TEX, tscale), 1, 1).add_cube_to_verts(floor, WHITE, tex_origin, floor_ceil_face_mask);
 	get_material(get_tex_auto_nm(get_rect_panel_tid(), tscale), 1, 1).add_cube_to_verts(ceil, WHITE, tex_origin, floor_ceil_face_mask);
@@ -1610,11 +1613,11 @@ void building_room_geom_t::add_elevator(room_object_t const &c, float tscale, fl
 		// front sides of doors
 		front.d[!c.dim][ d] = side.d[!c.dim][!d];
 		front.d[!c.dim][!d] = c   .d[!c.dim][ d] + (d ? -1.0 : 1.0)*frame_width;
-		paneling_mat.add_cube_to_verts(front, WHITE, tex_origin, (get_face_mask(c.dim, !c.dir) & side_skip_faces), !c.dim); // draw front and inside side
+		paneling_mat.add_cube_to_verts(front, WHITE, tex_origin, (back_face_mask & side_skip_faces), !c.dim); // draw front and inside side
 	}
 	// add button panel
 	cube_t const panel(get_elevator_car_panel(c, fc_thick_scale));
-	get_untextured_material(0, 1).add_cube_to_verts_untextured(panel, DK_GRAY, ~get_face_mask(c.dim, c.dir));
+	get_untextured_material(0, 1).add_cube_to_verts_untextured(panel, DK_GRAY, ~front_face_mask);
 	// add floor numbers to either the panel (or the buttons themselves?)
 	unsigned const num_floors(c.drawer_flags), cur_floor(c.item_flags);
 	assert(num_floors > 1);
@@ -1641,6 +1644,16 @@ void building_room_geom_t::add_elevator(room_object_t const &c, float tscale, fl
 	color_wrapper const cw(BLACK), lit_cw(colorRGBA(1.0, 0.9, 0.5));
 	norm_comp const nc(normal);
 	if (use_small_text) {text_height *= 0.67;} // shrink text if there are two wide digits, but leave text alignment unchanged
+	// setup for exterior floor display
+	float const ext_text_height(0.5f*panel_width);
+	cube_t display(panel);
+	display.expand_in_dim(!c.dim, -0.2*panel_width);
+	display.d[c.dim][0] = display.d[c.dim][1] = c.d[c.dim][c.dir]; // front face of elevator ext wall
+	display.d[c.dim][c.dir] += (c.dir ? 1.0 : -1.0)*0.01*panel_width;
+	bool const two_digits(num_floors > 9 || floor_offset > 0); // double digits or basement/parking garage
+	point ext_text_pos;
+	ext_text_pos[ c.dim] = display.d[ c.dim][c.dir] + 0.01*signed_thickness; // slightly in front of the display
+	ext_text_pos[!c.dim] = display.d[!c.dim][0] + 0.1*panel_width + (two_digits ? 0.77f : 0.6f)*(!ldir)*ext_text_height;
 
 	for (unsigned f = 0; f < num_floors; ++f) { // Note: floor number starts at 1 even if the elevator doesn't extend to the ground floor
 		bool const is_lit(is_powered && f == cur_floor);
@@ -1649,9 +1662,24 @@ void building_room_geom_t::add_elevator(room_object_t const &c, float tscale, fl
 		add_floor_number((f+1), floor_offset, has_parking_garage, oss);
 		gen_text_verts(verts, text_pos, oss.str(), 1000.0*text_height, col_dir, plus_z, 1); // use_quads=1
 		assert(!verts.empty());
-		if (dot_product(normal, cross_product((verts[1].v - verts[0].v), (verts[2].v - verts[1].v))) < 0.0) {std::reverse(verts.begin(), verts.end());} // swap vertex winding order
+		bool const need_swap(dot_product(normal, cross_product((verts[1].v - verts[0].v), (verts[2].v - verts[1].v))) < 0.0);
+		if (need_swap) {std::reverse(verts.begin(), verts.end());} // swap vertex winding order
 		rgeom_mat_t &cur_mat(is_lit ? get_material(lit_tp, 0, 1) : mat);
 		for (auto i = verts.begin(); i != verts.end(); ++i) {cur_mat.quad_verts.emplace_back(i->v, nc, i->t[0], i->t[1], (is_lit ? lit_cw : cw));}
+		// add floor indicator lights and up/down lights outside elevators on each floor
+		float const zval(e.z1() + (f + 0.7)*floor_spacing);
+		set_cube_zvals(display, zval, (zval + 0.7*panel_width));
+		get_untextured_material(0, 1).add_cube_to_verts_untextured(display, DK_GRAY, ~back_face_mask); // exterior display panel
+		// add floor text
+		ext_text_pos.z = zval + 0.1*panel_width;
+		verts.clear();
+		add_floor_number((cur_floor+1), floor_offset, has_parking_garage, oss);
+		gen_text_verts(verts, ext_text_pos, oss.str(), 1000.0*ext_text_height, -col_dir, plus_z, 1); // use_quads=1
+		if (need_swap) {std::reverse(verts.begin(), verts.end());} // swap vertex winding order
+		rgeom_mat_t &cur_ext_mat(is_powered ? get_material(lit_tp, 0, 1) : mat); // lit, as long as the elevator is powered
+		for (auto i = verts.begin(); i != verts.end(); ++i) {cur_ext_mat.quad_verts.emplace_back(i->v, nc, i->t[0], i->t[1], (is_powered ? lit_cw : cw));}
+		// add up/down indicators
+		// TODO
 	} // for f
 }
 
