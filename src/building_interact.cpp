@@ -1095,15 +1095,16 @@ void elevator_t::register_at_dest() {
 
 	if (!call_requests.empty()) {
 		uint8_t &req_dirs(call_requests.front().req_dirs);
+		//cout << TXTi(req_dirs) << TXT(stop_on_passing_floor) << TXT(going_up) << TXT(call_requests.size()) << TXT(call_requests[0].floor_ix) << endl; // TESTING
 
 		if (stop_on_passing_floor && call_requests.size() > 1) { // only valid if there's another call request
-			// Note: seems like we can still infinte loop here, not sure how, but it's rare
-			//cout << TXTi(req_dirs) << TXT(stop_on_passing_floor) << TXT(going_up) << TXT(call_requests.size()) << TXT(call_requests[0].floor_ix) << TXT(call_requests[1].floor_ix) << endl; // TESTING
 			// if both up and down buttons were pressed (req_dirs == 3), we should unset one dir but leave the other;
 			// if this is a stop along the way (stop_on_passing_floor==1), we should unset the one in the current elevator dir;
 			// TODO: but if this is the end stop of the elevator, we don't know which dir because we're not tracking which of the up/down button was pressed first;
 			// furthermore, even setting req_dirs in this case can cause the elevator to deadlock if the occupant presses a button that causes it to move in the wrong direction
-			req_dirs &= (going_up ? 1 : 2);
+			// Note: we can't rely on going_up because we may be at a stop where the elevator reverses direction, and going_up hasn't yet been updated
+			bool const real_going_up(call_requests[0].floor_ix < call_requests[1].floor_ix); // call_requests[0].floor_ix should be our current floor
+			req_dirs &= (real_going_up ? 1 : 2);
 			// if we still have a call, move this CR to the back so that it's picked up after we reverse direction; will be popped below
 			if (req_dirs != 0) {call_requests.push_back(call_requests.front());}
 		}
