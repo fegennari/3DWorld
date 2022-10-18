@@ -60,6 +60,7 @@ void building_t::run_light_motion_detect_logic(point const &camera_bs) {
 
 		for (auto p = interior->people.begin(); p != interior->people.end() && !activated; ++p) {
 			if (p->is_waiting_or_stopped()) continue; // skip if stopped/waiting
+			if (fabs(p->pos.z - camera_bs.z) > 0.75*floor_spacing) continue; // player is on a different floor, skip (too many clicking sounds)
 			activated |= is_motion_detected(p->pos, *i, room, floor_spacing);
 		}
 		if (activated) {
