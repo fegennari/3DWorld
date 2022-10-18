@@ -233,6 +233,14 @@ void building_params_t::init_kw_maps() {
 	kwmu.add("people_per_office_max", people_per_office_max);
 	kwmu.add("people_per_house_min",  people_per_house_min);
 	kwmu.add("people_per_house_max",  people_per_house_max);
+	kwmf.add("ai_retreat_time",       ai_retreat_time);
+	// AI elevators
+	kwmb.add("allow_elevator_line",         allow_elevator_line);
+	kwmb.add("no_coll_enter_exit_elevator", no_coll_enter_exit_elevator);
+	kwmu.add("elevator_capacity",           elevator_capacity);
+	kwmf.add("elevator_wait_time",          elevator_wait_time);
+	kwmr.add("use_elevator_prob",           use_elevator_prob,         FP_CHECK_01);
+	kwmr.add("elevator_wait_recall_prob",   elevator_wait_recall_prob, FP_CHECK_01);
 	// rats
 	kwmu.add("num_rats_min",    num_rats_min);
 	kwmu.add("num_rats_max",    num_rats_max);

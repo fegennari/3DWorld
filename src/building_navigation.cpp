@@ -8,12 +8,7 @@
 #include <queue>
 
 
-bool const ALLOW_ELEVATOR_LINE   = 1;
-bool const NO_COLL_ENTER_EXIT_EL = 1;
-unsigned const ELEVATOR_CAPACITY = 1; // number of people that can use the elevator at once; nonzero
-float const AI_ELEVATOR_PROB     = 0.25; // probability of using an elevator
-float const COLL_RADIUS_SCALE    = 0.75; // somewhat smaller than radius, but larger than PED_WIDTH_SCALE
-float const RETREAT_TIME         = 4.0f*TICKS_PER_SECOND; // 4s
+float const COLL_RADIUS_SCALE = 0.75; // somewhat smaller than radius, but larger than PED_WIDTH_SCALE
 
 int cpbl_update_frame(0);
 building_dest_t cur_player_building_loc, prev_player_building_loc;
@@ -761,8 +756,8 @@ int building_t::choose_dest_room(person_t &person, rand_gen_t &rgen) const { // 
 	float const floor_spacing(get_window_vspace());
 
 	// maybe choose a destination elevator (for office buildings) if our prev dest wasn't an elevator
-	if (!is_house && !interior->elevators_disabled && !person.last_used_elevator && person.goal_type != GOAL_TYPE_ELEVATOR) {
-		if (AI_ELEVATOR_PROB >= 1.0 || (AI_ELEVATOR_PROB > 0.0 && rgen.rand_float() < AI_ELEVATOR_PROB)) {
+	if (!is_house && !interior->elevators_disabled && !person.last_used_elevator && person.goal_type != GOAL_TYPE_ELEVATOR && global_building_params.elevator_capacity > 0) {
+		if (global_building_params.use_elevator_prob >= 1.0 || (global_building_params.use_elevator_prob > 0.0 && rgen.rand_float() < global_building_params.use_elevator_prob)) {
 			int const nearest_elevator(find_nearest_elevator_this_floor(person.pos));
 
 			if (nearest_elevator >= 0) {
@@ -1271,7 +1266,7 @@ int building_t::run_ai_elevator_logic(person_t &person, float delta_dir, rand_ge
 
 		if (e.open_amt == 1.0) { // doors are fully open
 			if (get_elevator_floor(ecar.zc(), e, floor_spacing) == cur_person_floor) { // wait for elevator to reach our current floor
-				if (e.num_occupants < ELEVATOR_CAPACITY) { // we can fit
+				if (e.num_occupants < global_building_params.elevator_capacity) { // we can fit
 					person.dir = (elevator_center - person.pos).get_norm(); // snap our direction to forward, in the rare case the elevator arrives before we've completed our turn
 					person.waiting_start = 0.0; // no longer waiting for elevator
 					++e.num_occupants; // make space for ourselves in the elevator
@@ -1291,7 +1286,7 @@ int building_t::run_ai_elevator_logic(person_t &person, float delta_dir, rand_ge
 					if (person.must_re_call_elevator) {
 						// waiting has already been decided
 					}
-					else if (rgen.rand_bool()) { // wait and press the button again 50% of the time
+					else if (rgen.rand_float() < global_building_params.elevator_wait_recall_prob) { // wait and press the button again some of the time
 						person.must_re_call_elevator = 1; // schedule this for later, to avoid causing the doors to re-open
 					}
 					else { // give up and walk away 50% of the time
@@ -1305,7 +1300,7 @@ int building_t::run_ai_elevator_logic(person_t &person, float delta_dir, rand_ge
 				}
 			}
 		}
-		if (!ALLOW_ELEVATOR_LINE /*|| ELEVATOR_CAPACITY = 1*/) {
+		if (!global_building_params.allow_elevator_line /*|| global_building_params.elevator_capacity = 1*/) {
 			// check for other people who were waiting for the elevator first, and move on if the spot is taken to avoid forming a line of people that get in each other's ways;
 			// note that it would be better to do this check before reaching the elevator to avoid bumping another person or getting stuck on them
 			for (person_t const &other : interior->people) {
@@ -1392,7 +1387,7 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 	person.following_player = 0; // reset for this frame
 
 	if (person.retreat_time > 0.0) {
-		if (person.retreat_time == RETREAT_TIME) { // first retreating frame - clear path
+		if (person.retreat_time == global_building_params.ai_retreat_time*TICKS_PER_SECOND) { // first retreating frame - clear path
 			person.abort_dest();
 			//person.is_first_path = 1; // probably not needed
 		}
@@ -1405,7 +1400,7 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 			// check for other people colliding with this person and handle it
 			for (auto p = interior->people.begin()+person_ix+1; p < interior->people.end(); ++p) {
 				if (fabs(person.pos.z - p->pos.z) > coll_dist) continue; // different floors
-				if (NO_COLL_ENTER_EXIT_EL && person.ai_state == AI_WAIT_ELEVATOR && p->ai_state == AI_EXIT_ELEVATOR) continue;
+				if (global_building_params.no_coll_enter_exit_elevator && person.ai_state == AI_WAIT_ELEVATOR && p->ai_state == AI_EXIT_ELEVATOR) continue;
 				float const rsum(coll_dist + COLL_RADIUS_SCALE*p->radius);
 				if (!dist_xy_less_than(person.pos, p->pos, rsum)) continue; // not intersecting
 				move_person_to_not_collide(person, *p, person.pos, rsum, coll_dist); // if we get here, we have to actively move out of the way
@@ -1519,7 +1514,7 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 			// snap to face the elevator; would be better to gradually turn, but it's not clear how to do that; at least we should be facing in that general direction
 			person.dir.assign(dir_to_elevator.x, dir_to_elevator.y, 0.0);
 			person.dir.normalize();
-			person.wait_for(60.0); // wait there for the elevator to arrive; if we're waiting for more than 60s, give up and choose another dest
+			person.wait_for(global_building_params.elevator_wait_time); // wait there for the elevator to arrive; if we're waiting too long, give up and choose another dest
 			return AI_WAIT_ELEVATOR;
 		}
 		// don't wait if we can follow the player
@@ -1592,7 +1587,7 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 				float const rsum(coll_dist + COLL_RADIUS_SCALE*p->radius);
 				if (!dist_xy_less_than(new_pos, p->pos, rsum)) continue; // new pos not close
 
-				if (ALLOW_ELEVATOR_LINE /*&& ELEVATOR_CAPACITY > 1*/) {
+				if (global_building_params.allow_elevator_line /*&& global_building_params.elevator_capacity > 1*/) {
 					person.anim_time  = 0.0; // pause animation in case this person is mid-step
 					person.target_pos = person.pos; // stop here and wait on the next frame; will form a line behind/beside this person
 				}
@@ -1604,7 +1599,7 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 		for (auto p = interior->people.begin()+person_ix+1; p < interior->people.end(); ++p) {
 			if (fabs(person.pos.z - p->pos.z) > coll_dist) continue; // different floors
 			// don't let us be pushed by someone entering or exiting the elevator as that causes problems; instead, let these people walk through each other
-			if (NO_COLL_ENTER_EXIT_EL && p->ai_state >= AI_ENTER_ELEVATOR) continue;
+			if (global_building_params.no_coll_enter_exit_elevator && p->ai_state >= AI_ENTER_ELEVATOR) continue;
 			float const rsum(coll_dist + COLL_RADIUS_SCALE*p->radius);
 			if (!dist_xy_less_than(new_pos, p->pos, rsum)) continue; // new pos not close
 			if (!dist_xy_less_than(person.pos, p->pos, rsum)) return AI_STOP; // old pos not intersecting, stop
@@ -1767,7 +1762,7 @@ void building_t::register_person_hit(unsigned person_ix, room_object_t const &ob
 		if (obj.zc() < (person.get_z1() + 0.25*person.get_height())) return; // less than 25% up, coll with legs, assume this is kicking a ball that's on the floor
 		if (person.retreat_time == 0.0) {maybe_play_zombie_sound(person.pos, person_ix, 1, 1);} // player sound on first retreat: alert_other_zombies=1, high_priority=1
 		// Note: this isn't really thread safe, but it should be okay to modify this state while the AI thread is running
-		person.retreat_time = RETREAT_TIME; // retreat
+		person.retreat_time = global_building_params.ai_retreat_time*TICKS_PER_SECOND; // retreat
 		register_achievement("Zombie Bashing");
 	}
 }
