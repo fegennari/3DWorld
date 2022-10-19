@@ -1224,7 +1224,9 @@ bool person_slow_turn(person_t &person, point const &target, float delta_dir) {
 	dir_to_target.normalize();
 	if (dot_product(person.dir, dir_to_target) > 0.99) return 0; // turn is complete
 	// if directions are nearly opposite, pick a side to turn using the cross product to get an orthogonal vector
-	if (dot_product(dir_to_target, person.dir) < -0.9) {dir_to_target = cross_product(person.dir, plus_z);}
+	if (dot_product(dir_to_target, person.dir) < -0.9) {
+		dir_to_target = cross_product(person.dir, plus_z)*((person.ssn & 1) ? -1.0 : 1.0); // use SSN to select a turn direction (CW/CCW)
+	}
 	person.dir = delta_dir*dir_to_target + (1.0 - delta_dir)*person.dir; // merge new_dir into dir gradually for smooth turning
 	person.dir.normalize();
 	return 1;
