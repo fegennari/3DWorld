@@ -711,7 +711,7 @@ void power_pole_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_d
 	if (!camera_pdu.cube_visible((shadow_only ? bcube : bcube_with_wires) + dstate.xlate)) return;
 	color_wrapper const black(BLACK), white(colorRGBA(0.7, 0.7, 0.7)), gray(colorRGBA(0.4, 0.4, 0.4)), cw(LT_BROWN); // darken the wood color
 	bool const pole_visible(camera_pdu.cube_visible(bcube + dstate.xlate));
-	float const wire_radius(get_wire_radius());
+	float const wire_radius(get_wire_radius()), pole_height(bcube.dz());
 	cube_t tf_bcube;
 	point conduit_top(all_zeros);
 
@@ -724,7 +724,7 @@ void power_pole_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_d
 		add_cylin_as_tris(qbd.verts, ce, pole_radius, pole_radius, cw, pole_ndiv, (draw_top ? 2 : 0), vert_tscale, 1.0/pole_ndiv, 1); // swap_ts_tt=1
 
 		if (dims == 3 && (shadow_only || bcube.closest_dist_less_than(camera_bs, 0.7*dmax))) { // draw transformer, untextured
-			float const tf_radius(2.0*pole_radius), pole_height(bcube.dz()), tf_height(0.1*pole_height), y_sign(at_line_end[1] ? 1.0 : -1.0);
+			float const tf_radius(2.0*pole_radius), tf_height(0.1*pole_height), y_sign(at_line_end[1] ? 1.0 : -1.0);
 			ce[0].z = base.z  + 0.77*pole_height;
 			ce[1].z = ce[0].z + tf_height;
 			ce[0].x = ce[1].x = base.x;
@@ -749,7 +749,7 @@ void power_pole_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_d
 	unsigned wire_mask(0);
 	bool drew_wires(0);
 
-	for (unsigned d = 0; d < 2; ++d) {
+	for (unsigned d = 0; d < 2; ++d) { // {x, y}
 		if (!has_dim_set(d)) continue; // no wires in this dim
 		float const offsets[3] = {-wire_spacing, -0.3f*wire_spacing, wire_spacing}; // offset from the center to avoid intersecting the pole
 		cube_t const cbar(calc_cbar(d));
@@ -800,11 +800,11 @@ void power_pole_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_d
 		if (shadow_only) continue; // skip wires for shadow pass since they don't show up reliably
 		bool const is_offset(center[!d] != base[!d]);
 		float const sep_dist(0.5*get_power_pole_offset()), offset_sign(is_offset ? -1.0 : 1.0);
-		float const bot_wire_zval(base.z + 0.75*bcube.dz()), bot_wire_pos(base[!d] + offset_sign*sep_dist);
+		float const bot_wire_zval(base.z + 0.75*pole_height), bot_wire_pos(base[!d] + offset_sign*sep_dist), thick_wire_delta_z(0.07*pole_height);
 
 		if (!at_line_end[d]) { // no wires at end pole
 			cube_t wires_bcube(cbar);
-			min_eq(wires_bcube.z1(), bot_wire_zval); // include lower wires
+			min_eq(wires_bcube.z1(), (bot_wire_zval - 3.0f*vwire_spacing - thick_wire_delta_z)); // include lower wires
 			UNROLL_2X(wires_bcube.d[d][i_] = bcube_with_wires.d[d][i_];)
 			if (!wires_bcube.closest_dist_less_than(camera_bs, 0.45*dmax) || !camera_pdu.cube_visible(wires_bcube + dstate.xlate)) continue; // wires distance/VFC
 			// draw the three top wires and one bottom wire in this dim
@@ -819,12 +819,13 @@ void power_pole_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_d
 			float const wire_extend(sep_dist - pole_radius - 0.5*cbar.get_sz_dim(d)); // extend to fill gap between outer wire at standoffs and wire ending at cbar
 			point pw;
 			pw[!d] = bot_wire_pos; // on the side of the pole
-			pw.z   = bot_wire_zval;
 			pw[d]  = p1[d] + wire_extend; // extend slightly to meet the crossing wire
+			pw.z   = bot_wire_zval;
 			float const bot_wire_extend(pole_spacing[d] + sep_dist + wire_radius); // overlap with next wire if there is one, extend past standoff at last pole
 
-			for (unsigned n = 0; n < 3; ++n) { // 3 bottom wires as well
-				draw_ortho_wire(pw, wire_radius, bot_wire_extend, d, black, dstate, untex_qbd);
+			for (unsigned n = 0; n < 4; ++n) { // 3 bottom wires + thicker cable TV wire bundle as well
+				if (n == 3) {pw.z -= thick_wire_delta_z;}
+				draw_ortho_wire(pw, ((n == 3) ? 2.0 : 1.0)*wire_radius, bot_wire_extend, d, black, dstate, untex_qbd);
 				pw.z -= vwire_spacing;
 			}
 			drew_wires = 1;
@@ -840,7 +841,7 @@ void power_pole_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_d
 			ce[0][!d]  = base[!d] + 0.96*offset_sign*pole_radius; // end attached to the pole, slightly offset into the pole
 			unsigned verts_start(untex_qbd.verts.size()), verts_end(0);
 
-			for (unsigned n = 0; n < 3; ++n) {
+			for (unsigned n = 0; n < 4; ++n) { // 3 bottom wires + thicker cable TV wire bundle as well
 				if (n == 0) { // first standoff, draw a truncated cone
 					draw_standoff_geom(ce, standoff_radius, dmax, camera_bs, white, untex_qbd);
 					verts_end = untex_qbd.verts.size();
@@ -849,9 +850,10 @@ void power_pole_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_d
 					for (unsigned v = verts_start; v < verts_end; ++v) {
 						untex_qbd.verts.push_back(untex_qbd.verts[v]);
 						untex_qbd.verts.back().v.z -= n*vwire_spacing;
+						if (n == 3) {untex_qbd.verts.back().v.z -= thick_wire_delta_z;}
 					}
 				}
-			}
+			} // for n
 			if (d == 1 && !tf_bcube.is_all_zeros()) { // vertical wire up to transformer
 				point const tf_conn_pt(pb.x, (tf_bcube.yc() - 0.5f*tf_bcube.dy()), (tf_bcube.z1() + 0.9*tf_bcube.dz())); // along the side near the top
 				cube_t wire(tf_conn_pt, tf_conn_pt);
