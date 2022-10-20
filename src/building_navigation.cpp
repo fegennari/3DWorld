@@ -1362,7 +1362,29 @@ int building_t::run_ai_elevator_logic(person_t &person, float delta_dir, rand_ge
 		}
 	}
 	else if (person.ai_state == AI_EXIT_ELEVATOR) {
-		person.target_pos = get_pos_to_stand_for_elevator(person, e, floor_spacing);
+		point const target_dest(get_pos_to_stand_for_elevator(person, e, floor_spacing));
+		bool const is_inside_elevator(e.contains_pt_xy(person.pos));
+
+		// as long as we're inside the elevator, plan to exit to the designated point in front of the elevator
+		if (is_inside_elevator) {person.target_pos = target_dest;}
+		// once we no longer intersect the elevator, we're free to turn to avoid people
+		else {
+			if (person.target_pos == target_dest) { // if we already chose a new target_pos, stick with that and don't udpate it
+				for (person_t const &other : interior->people) {
+					if (!person.waiting_for_same_elevator_as(other, floor_spacing)) continue;
+					float const r_sum(COLL_RADIUS_SCALE*(person.radius + other.radius));
+					// check if someone else is waiting here and choose another spot nearby that's free; note that this doesn't check for intersecting paths
+					if (!dist_xy_less_than(person.target_pos, other.pos, r_sum)) continue; // target pos is not intersecting
+					vector3d const delta(person.target_pos - person.pos), tangent(cross_product(delta, plus_z).get_norm());
+					point new_cands[2]; // candidate points to the left and right of the other person
+					for (unsigned d = 0; d < 2; ++d) {new_cands[d] = other.pos + ((d ? -1.0 : 1.0)*1.1*r_sum)*tangent;} // move a bit further than radius away
+					bool const best_ix(p2p_dist_xy_sq(person.target_pos, new_cands[1]) < p2p_dist_xy_sq(person.target_pos, new_cands[0]));
+					person.target_pos.x = new_cands[best_ix].x; person.target_pos.y = new_cands[best_ix].y; // choose the candidate point closer to our target pos
+					break; // only handle one person, since iterating may cause us to intersect an earlier person
+				} // for person
+			}
+			if (person.target_pos != target_dest) {person_slow_turn(person, person.target_pos, 0.5*delta_dir);} // update direction; should already be facing close to this way
+		}
 		float const move_dist(move_person_forward_to_target(person)); // exit elevator to a point in front, then select a new non-elevator destination
 
 		if (dist_xy_less_than(person.pos, person.target_pos, move_dist)) { // out of the elevator - done
