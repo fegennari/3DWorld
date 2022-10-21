@@ -822,12 +822,21 @@ void power_pole_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_d
 			pw[d]  = p1[d] + wire_extend; // extend slightly to meet the crossing wire
 			pw.z   = bot_wire_zval;
 			float const bot_wire_extend(pole_spacing[d] + sep_dist + wire_radius); // overlap with next wire if there is one, extend past standoff at last pole
+			float const cable_wire_radius(2.0*wire_radius);
 
 			for (unsigned n = 0; n < 4; ++n) { // 3 bottom wires + thicker cable TV wire bundle as well
 				if (n == 3) {pw.z -= thick_wire_delta_z;}
-				draw_ortho_wire(pw, ((n == 3) ? 2.0 : 1.0)*wire_radius, bot_wire_extend, d, black, dstate, untex_qbd);
-				pw.z -= vwire_spacing;
+				draw_ortho_wire(pw, ((n == 3) ? cable_wire_radius : wire_radius), bot_wire_extend, d, black, dstate, untex_qbd);
+				if (n < 3) {pw.z -= vwire_spacing;}
 			}
+			// draw cable TV repeater/junction box
+			float const box_hlen(2.0*vwire_spacing), box_radius(0.6*vwire_spacing);
+			pw.z  -= (box_radius + cable_wire_radius); // just touching the bottom of the wire
+			pw[d] -= (0.2 + 0.6*fract(12345*bcube.x1() + 54321*bcube.y1()))*pole_spacing[d]; // random spacing
+			point epts[2] = {pw, pw};
+			epts[0][d] -= box_hlen; epts[1][d] += box_hlen;
+			unsigned const ndiv(16); // TODO
+			add_cylin_as_tris(untex_qbd.verts, epts, box_radius, box_radius, black, ndiv, 3); // draw both ends
 			drew_wires = 1;
 		}
 		if (pole_visible && bcube.closest_dist_less_than(camera_bs, 0.15*dmax)) {
