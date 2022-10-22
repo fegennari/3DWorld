@@ -730,7 +730,7 @@ void power_pole_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_d
 			ce[0].x = ce[1].x = base.x;
 			ce[0].y = ce[1].y = base.y + y_sign*(tf_radius + pole_radius); // offset in -y, +y at end (so that wires across above it)
 			bool const draw_top_bot(camera_bs.z > 0.5f*(ce[0].z + ce[1].z));
-			add_cylin_as_tris(untex_qbd.verts, ce, tf_radius, tf_radius, gray, ndiv, (draw_top_bot ? 2 : 1));
+			add_cylin_as_tris(untex_qbd.verts, ce, tf_radius, tf_radius, gray, ndiv, (draw_top_bot ? 2 : 1)); // should this have specular?
 			tf_bcube.set_from_points(ce, 2);
 			tf_bcube.expand_by_xy(tf_radius);
 
@@ -835,8 +835,13 @@ void power_pole_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_d
 			pw[d] -= (0.2 + 0.6*fract(12345*bcube.x1() + 54321*bcube.y1()))*pole_spacing[d]; // random spacing
 			point epts[2] = {pw, pw};
 			epts[0][d] -= box_hlen; epts[1][d] += box_hlen;
-			unsigned const ndiv(16); // TODO
-			add_cylin_as_tris(untex_qbd.verts, epts, box_radius, box_radius, black, ndiv, 3); // draw both ends
+			cube_t rbcube(epts[0], epts[1]);
+			rbcube.expand_by(box_radius);
+			
+			if (camera_pdu.cube_visible(rbcube + dstate.xlate)) {
+				unsigned const ndiv(shadow_only ? 8 : max(4U, min(24U, unsigned(0.75f*dmax/p2p_dist(camera_bs, pw)))));
+				add_cylin_as_tris(untex_qbd.verts, epts, box_radius, box_radius, color_wrapper(BKGRAY), ndiv, 3); // draw both ends; should this have specular?
+			}
 			drew_wires = 1;
 		}
 		if (pole_visible && bcube.closest_dist_less_than(camera_bs, 0.15*dmax)) {
