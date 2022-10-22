@@ -27,13 +27,13 @@ struct oriented_city_obj_t : public city_obj_t {
 struct bench_t : public oriented_city_obj_t {
 	void calc_bcube();
 	static void pre_draw(draw_state_t &dstate, bool shadow_only);
-	void draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_draw &untex_qbd, float dist_scale, bool shadow_only) const;
+	void draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_draw untex_qbd[2], float dist_scale, bool shadow_only) const;
 };
 
 struct tree_planter_t : public city_obj_t {
 	tree_planter_t(point const &pos_, float radius_, float height);
 	static void pre_draw(draw_state_t &dstate, bool shadow_only);
-	void draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_draw &untex_qbd, float dist_scale, bool shadow_only) const;
+	void draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_draw untex_qbd[2], float dist_scale, bool shadow_only) const;
 };
 
 struct trashcan_t : public city_obj_t {
@@ -42,7 +42,7 @@ struct trashcan_t : public city_obj_t {
 	float get_cylin_radius() const {assert(is_cylin); return 0.5*bcube.dx();}
 	static void pre_draw(draw_state_t &dstate, bool shadow_only);
 	static void post_draw(draw_state_t &dstate, bool shadow_only);
-	void draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_draw &untex_qbd, float dist_scale, bool shadow_only) const;
+	void draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_draw untex_qbd[2], float dist_scale, bool shadow_only) const;
 	bool proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const;
 };
 
@@ -52,7 +52,7 @@ struct fire_hydrant_t : public city_obj_t {
 	fire_hydrant_t(point const &pos_, float radius_, float height, vector3d const &orient_);
 	static void pre_draw (draw_state_t &dstate, bool shadow_only);
 	static void post_draw(draw_state_t &dstate, bool shadow_only);
-	void draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_draw &untex_qbd, float dist_scale, bool shadow_only) const;
+	void draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_draw untex_qbd[2], float dist_scale, bool shadow_only) const;
 	bool proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const;
 };
 
@@ -60,7 +60,7 @@ struct substation_t : public oriented_city_obj_t {
 	substation_t(cube_t const &bcube_, bool dim_, bool dir_);
 	static void pre_draw (draw_state_t &dstate, bool shadow_only);
 	static void post_draw(draw_state_t &dstate, bool shadow_only);
-	void draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_draw &untex_qbd, float dist_scale, bool shadow_only) const;
+	void draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_draw untex_qbd[2], float dist_scale, bool shadow_only) const;
 };
 
 struct divider_t : public oriented_city_obj_t {
@@ -71,7 +71,7 @@ struct divider_t : public oriented_city_obj_t {
 		oriented_city_obj_t(c.get_cube_center(), c.get_bsphere_radius(), dim_, dir_), type(type_), skip_dims(sd) {bcube = c;}
 	static void pre_draw (draw_state_t &dstate, bool shadow_only);
 	static void post_draw(draw_state_t &dstate, bool shadow_only);
-	void draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_draw &untex_qbd, float dist_scale, bool shadow_only) const;
+	void draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_draw untex_qbd[2], float dist_scale, bool shadow_only) const;
 	bool proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const;
 };
 
@@ -84,7 +84,7 @@ struct swimming_pool_t : public oriented_city_obj_t { // Note: dim and dir are u
 	float get_radius() const {assert(above_ground); return 0.25f*(bcube.dx() + bcube.dy());}
 	static void pre_draw (draw_state_t &dstate, bool shadow_only);
 	static void post_draw(draw_state_t &dstate, bool shadow_only);
-	void draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_draw &untex_qbd, float dist_scale, bool shadow_only) const;
+	void draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_draw untex_qbd[2], float dist_scale, bool shadow_only) const;
 	bool proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const;
 };
 
@@ -121,28 +121,28 @@ public:
 	bool add_wire(point const &p1, point const &p2, bool add_pole);
 	static void pre_draw (draw_state_t &dstate, bool shadow_only);
 	static void post_draw(draw_state_t &dstate, bool shadow_only);
-	void draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_draw &untex_qbd, float dist_scale, bool shadow_only) const;
+	void draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_draw untex_qbd[2], float dist_scale, bool shadow_only) const;
 	bool proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const;
 };
 
 struct hcap_space_t : public oriented_city_obj_t { // handicap space
 	hcap_space_t(point const &pos_, float radius_, bool dim_, bool dir_);
 	static void pre_draw(draw_state_t &dstate, bool shadow_only);
-	void draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_draw &untex_qbd, float dist_scale, bool shadow_only) const;
+	void draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_draw untex_qbd[2], float dist_scale, bool shadow_only) const;
 };
 
 struct manhole_t : public city_obj_t {
 	manhole_t(point const &pos_, float radius_);
 	float get_height() const {return 0.01*radius;}
 	static void pre_draw(draw_state_t &dstate, bool shadow_only);
-	void draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_draw &untex_qbd, float dist_scale, bool shadow_only) const;
+	void draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_draw untex_qbd[2], float dist_scale, bool shadow_only) const;
 };
 
 struct mailbox_t : public oriented_city_obj_t {
 	mailbox_t(point const &pos_, float height, bool dim_, bool dir_);
 	float get_height() const {return 2.0*radius;}
 	static void pre_draw(draw_state_t &dstate, bool shadow_only);
-	void draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_draw &untex_qbd, float dist_scale, bool shadow_only) const;
+	void draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_draw untex_qbd[2], float dist_scale, bool shadow_only) const;
 };
 
 class city_obj_groups_t : public vector<cube_with_ix_t> {
@@ -170,7 +170,7 @@ private:
 	vector<mailbox_t> mboxes;
 	// index is last obj in group
 	city_obj_groups_t bench_groups, planter_groups, trashcan_groups, fhydrant_groups, sstation_groups, divider_groups, pool_groups, ppole_groups, hcap_groups, manhole_groups, mbox_groups;
-	quad_batch_draw qbd, untex_qbd;
+	quad_batch_draw qbd, untex_qbd[2]; // untex_qbd: {matte, shiny/specular}
 	vector<city_zone_t> sub_plots; // reused across calls
 	cube_t all_objs_bcube;
 	unsigned num_spaces, filled_spaces, num_x_plots, num_y_plots;
@@ -193,6 +193,7 @@ private:
 public:
 	city_obj_placer_t() : num_spaces(0), filled_spaces(0), num_x_plots(0), num_y_plots(0), plot_subdiv_sz(0.0) {}
 	bool has_plot_dividers() const {return !dividers.empty();}
+	bool has_untex_verts  () const {return (!untex_qbd[0].empty() || !untex_qbd[1].empty());}
 	vector<power_pole_t> const &get_power_poles() const {return ppoles;} // used for city connectivity
 	void clear();
 	void set_plot_subdiv_sz(float sz) {plot_subdiv_sz = sz;}
