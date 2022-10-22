@@ -616,7 +616,7 @@ void add_cylin_as_tris(vector<vert_norm_tc_color> &verts, point const ce[2], flo
 	unsigned ndiv, unsigned draw_top_bot, float tst=1.0, float tss=1.0, bool swap_ts_tt=0)
 {
 	// added as individual triangles; would be more efficient to use indexed triangles
-	vector3d v12; // will be plus_z
+	vector3d v12;
 	vector_point_norm const &vpn(gen_cylinder_data(ce, r1, r2, ndiv, v12));
 	vert_norm_tc_color quad_pts[4];
 
@@ -633,7 +633,7 @@ void add_cylin_as_tris(vector<vert_norm_tc_color> &verts, point const ce[2], flo
 		for (unsigned d = 0; d < 2; ++d) { // draw bottom and top triangle(s)
 			if (!(draw_top_bot & (1<<d))) continue;
 			unsigned const I((i+1)%ndiv);
-			vector3d const normal(d ? plus_z : -plus_z);
+			vector3d const normal(d ? v12 : -v12);
 			verts.emplace_back(ce[d], normal, 0.5, 0.5, cw);
 			verts.emplace_back(vpn.p[(i<<1)+d], normal, 0.5*(1.0 + vpn.n[i].x), 0.5*(1.0 + vpn.n[i].y), cw);
 			verts.emplace_back(vpn.p[(I<<1)+d], normal, 0.5*(1.0 + vpn.n[I].x), 0.5*(1.0 + vpn.n[I].y), cw);
