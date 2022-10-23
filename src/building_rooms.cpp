@@ -73,23 +73,24 @@ bool building_t::add_chair(rand_gen_t &rgen, cube_t const &room, vect_cube_t con
 {
 	if (!building_obj_model_loader.is_model_valid(OBJ_MODEL_OFFICE_CHAIR)) {office_chair_model = 0;}
 	float const window_vspacing(get_window_vspace()), room_pad(4.0f*get_wall_thickness()), chair_height(0.4*window_vspacing);
-	float chair_hwidth(0.0), push_out(0.0);
+	float chair_hwidth(0.0), push_out(0.0), min_push_out(0.0);
 	point chair_pos(place_pos); // same starting center and z1
 
 	if (office_chair_model) {
 		chair_hwidth = 0.5f*chair_height*get_radius_for_square_model(OBJ_MODEL_OFFICE_CHAIR);
-		push_out     = 0.5; // pushed out a bit so that the arms don't intersect the table top
+		min_push_out = 0.5;
+		push_out     = min_push_out + rgen.rand_uniform(0.0, 0.6); // pushed out a bit so that the arms don't intersect the table top, but can push out more
 	}
 	else {
 		chair_hwidth = 0.1*window_vspacing; // half width
-		push_out     = rgen.rand_uniform(-0.5, 1.2); // varible amount of pushed in/out
+		min_push_out = -0.5;
+		push_out     = min_push_out + rgen.rand_uniform(0.0, 1.7); // varible amount of pushed in/out
 	}
 	chair_pos[dim] += (dir ? -1.0f : 1.0f)*push_out*chair_hwidth;
 	cube_t chair(get_cube_height_radius(chair_pos, chair_hwidth, chair_height));
 	
 	if (!is_valid_placement_for_room(chair, room, blockers, 0, room_pad)) { // check proximity to doors
-		if (office_chair_model) return 0; // can't push office chair in any more
-		float const max_push_in((dir ? -1.0f : 1.0f)*(-0.5 - push_out)*chair_hwidth);
+		float const max_push_in((dir ? -1.0f : 1.0f)*(min_push_out - push_out)*chair_hwidth);
 		chair.translate_dim(dim, max_push_in*rgen.rand_uniform(0.5, 1.0)); // push the chair mostly in and try again
 		if (!is_valid_placement_for_room(chair, room, blockers, 0, room_pad)) return 0;
 	}

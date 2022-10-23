@@ -349,6 +349,18 @@ bool can_open_bathroom_stall_or_shower(room_object_t const &stall, point const &
 	return (dot_product_ptv(from_dir, door_center, pos) > 0.0); // facing the stall door
 }
 
+bool building_t::chair_can_be_rotated(room_object_t const &chair) const {
+	if (chair.flags & RO_FLAG_RAND_ROT) return 1;
+	// check if blocked by another object such as a desk
+	auto objs_end(interior->room_geom->get_placed_objs_end()); // skip buttons/stairs/elevators
+
+	for (auto i = interior->room_geom->objs.begin(); i != objs_end; ++i) {
+		if (i->type != TYPE_DESK && i->type != TYPE_TABLE) continue; // these should be the only objects a chair can be pushed under
+		if (i->intersects(chair)) return 0;
+	}
+	return 1;
+}
+
 // called for the player; mode: 0=normal, 1=pull
 bool building_t::apply_player_action_key(point const &closest_to_in, vector3d const &in_dir_in, int mode, bool check_only) {
 	if (!interior) return 0; // error?
@@ -421,13 +433,12 @@ bool building_t::apply_player_action_key(point const &closest_to_in, vector3d co
 				else if (!player_in_closet) {
 					if      (i->type == TYPE_TOILET || i->type == TYPE_URINAL) {keep = 1;} // toilet/urinal can be flushed
 					else if (i->type == TYPE_STALL && i->shape == SHAPE_CUBE && can_open_bathroom_stall_or_shower(*i, closest_to, in_dir)) {keep = 1;} // bathroom stall can be opened
-					else if (i->type == TYPE_OFF_CHAIR && (i->flags & RO_FLAG_RAND_ROT)) {keep = 1;} // office chair can be rotated
 					else if (i->type == TYPE_MIRROR && i->is_house())  {keep = 1;} // medicine cabinet
 					else if (i->is_sink_type() || i->type == TYPE_TUB) {keep = 1;} // sink/tub
 					else if (i->is_light_type()) {keep = 1;} // room light or lamp
 					else if (i->type == TYPE_PICTURE || i->type == TYPE_TPROLL || i->type == TYPE_BUTTON || i->type == TYPE_MWAVE || i->type == TYPE_STOVE ||
 						i->type == TYPE_TV || i->type == TYPE_MONITOR || i->type == TYPE_BLINDS || i->type == TYPE_SHOWER || i->type == TYPE_SWITCH ||
-						i->type == TYPE_BOOK || i->type == TYPE_BRK_PANEL || i->type == TYPE_BREAKER || i->type == TYPE_ATTIC_DOOR) {keep = 1;}
+						i->type == TYPE_BOOK || i->type == TYPE_BRK_PANEL || i->type == TYPE_BREAKER || i->type == TYPE_ATTIC_DOOR || i->type == TYPE_OFF_CHAIR) {keep = 1;}
 				}
 				else if (i->type == TYPE_LIGHT) {keep = 1;} // closet light
 				if (!keep) continue;
@@ -450,6 +461,8 @@ bool building_t::apply_player_action_key(point const &closest_to_in, vector3d co
 				if (found_item && dist_sq >= closest_dist_sq)          continue; // not the closest
 				if (!obj_bc.closest_dist_less_than(closest_to, dmax))  continue; // too far
 				if (in_dir != zero_vector && !obj_bc.line_intersects(closest_to, query_ray_end)) continue; // player is not pointing at this object
+				// checking for office chair rotation is expensive, so it's done last, just before updating closest
+				if (i->type == TYPE_OFF_CHAIR && !chair_can_be_rotated(*i)) continue;
 				closest_dist_sq = dist_sq;
 				obj_ix = (i - obj_vect.begin()) + obj_id_offset;
 				is_obj = found_item = 1;
