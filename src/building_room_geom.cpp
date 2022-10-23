@@ -2966,6 +2966,7 @@ void building_room_geom_t::add_counter(room_object_t const &c, float tscale) { /
 		else if (c.type == TYPE_KSINK && get_dishwasher_for_ksink(c, dishwasher)) { // kitchen sink - add dishwasher if wide enough
 			unsigned const dw_skip_faces(~get_face_mask(c.dim, !c.dir));
 			colorRGBA const dw_color(apply_light_color(c, LT_GRAY));
+			if (c.is_open()) {} // TODO: draw dishwasher as open? does it need to be a separate object for this?
 			metal_mat.add_cube_to_verts_untextured(dishwasher, dw_color, dw_skip_faces);
 			cube_t dishwasher_back(dishwasher), handle(dishwasher);
 			dishwasher_back.d[c.dim][!c.dir] = c.d[c.dim][!c.dir]; // flush with the cabinet

@@ -309,13 +309,13 @@ void building_t::register_open_ext_door_state(int door_ix) {
 	unsigned const dix(is_open ? (unsigned)door_ix : (unsigned)open_door_ix);
 	assert(dix < doors.size());
 	auto const &door(doors[dix]);
-	point const door_center(door.get_bcube().get_cube_center()), sound_pos(local_to_camera_space(door_center)); // convert to camera space
+	point const door_center(door.get_bcube().get_cube_center());
 
 	if (ring_doorbell) {
-		gen_sound_thread_safe(SOUND_DOORBELL, sound_pos);
+		gen_sound_thread_safe(SOUND_DOORBELL, local_to_camera_space(door_center)); // convert to camera space
 		return;
 	}
-	gen_sound_thread_safe((is_open ? (unsigned)SOUND_DOOR_OPEN : (unsigned)SOUND_DOOR_CLOSE), sound_pos);
+	play_door_open_close_sound(door_center, is_open);
 	vector3d const normal(door.get_norm());
 	bool const dim(fabs(normal.x) < fabs(normal.y)), dir(normal[dim] < 0.0);
 	point pos_interior(door_center);
@@ -437,7 +437,7 @@ bool building_t::apply_player_action_key(point const &closest_to_in, vector3d co
 					else if (i->is_sink_type() || i->type == TYPE_TUB) {keep = 1;} // sink/tub
 					else if (i->is_light_type()) {keep = 1;} // room light or lamp
 					else if (i->type == TYPE_PICTURE || i->type == TYPE_TPROLL || i->type == TYPE_BUTTON || i->type == TYPE_MWAVE || i->type == TYPE_STOVE ||
-						i->type == TYPE_TV || i->type == TYPE_MONITOR || i->type == TYPE_BLINDS || i->type == TYPE_SHOWER || i->type == TYPE_SWITCH ||
+						/*i->type == TYPE_FRIDGE ||*/ i->type == TYPE_TV || i->type == TYPE_MONITOR || i->type == TYPE_BLINDS || i->type == TYPE_SHOWER || i->type == TYPE_SWITCH ||
 						i->type == TYPE_BOOK || i->type == TYPE_BRK_PANEL || i->type == TYPE_BREAKER || i->type == TYPE_ATTIC_DOOR || i->type == TYPE_OFF_CHAIR) {keep = 1;}
 				}
 				else if (i->type == TYPE_LIGHT) {keep = 1;} // closet light
@@ -539,7 +539,7 @@ bool building_t::interact_with_object(unsigned obj_ix, point const &int_pos, poi
 		float cur_tmin(0.0), cur_tmax(1.0);
 
 		if (!get_line_clip(int_pos, query_ray_end, panel.d, cur_tmin, cur_tmax)) { // not pointing at the panel - open and close the door
-			obj.flags       ^= RO_FLAG_OPEN; // toggle on/off
+			obj.flags       ^= RO_FLAG_OPEN; // toggle open/closed
 			update_draw_data = 1;
 			gen_sound_thread_safe((obj.is_open() ? (unsigned)SOUND_DOOR_OPEN : (unsigned)SOUND_DOOR_CLOSE), local_center, 0.5, 1.6);
 		}
@@ -582,6 +582,11 @@ bool building_t::interact_with_object(unsigned obj_ix, point const &int_pos, poi
 				sound_scale = 0.3;
 			}
 		}
+	}
+	else if (obj.type == TYPE_FRIDGE) {
+		obj.flags       ^= RO_FLAG_OPEN; // toggle open/closed
+		update_draw_data = 1;
+		gen_sound_thread_safe((obj.is_open() ? (unsigned)SOUND_DOOR_OPEN : (unsigned)SOUND_DOOR_CLOSE), local_center, 0.4, 0.67);
 	}
 	else if (obj.type == TYPE_TV || obj.type == TYPE_MONITOR) {
 		if (obj.is_powered()) {
