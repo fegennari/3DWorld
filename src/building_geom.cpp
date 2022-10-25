@@ -1172,8 +1172,8 @@ tquad_with_ix_t const &building_t::find_main_roof_tquad(rand_gen_t &rgen, bool s
 	float best_zmax(0.0), best_area(0.0);
 
 	for (auto r = roof_tquads.begin(); r != roof_tquads.end(); ++r) { // find highest roof, otherwise largest area if tied
-		if (r->type != tquad_with_ix_t::TYPE_ROOF) continue; // only include roofs
-		if (r->npts != 4) continue; // only quads, skip triangles
+		if (!r->is_roof()) continue; // only include roofs
+		if (r->npts != 4)  continue; // only quads, skip triangles
 		float const zmax(max(max(r->pts[0].z, r->pts[1].z), max(r->pts[2].z, r->pts[3].z))), area(polygon_area(r->pts, r->npts));
 
 		// determine the best candidate so far; use a random value to break ties
@@ -1185,7 +1185,7 @@ tquad_with_ix_t const &building_t::find_main_roof_tquad(rand_gen_t &rgen, bool s
 
 				for (auto r2 = roof_tquads.begin(); r2 != roof_tquads.end(); ++r2) { // check other objects, including anything on the roof that's not part of the roof
 					if (r2 == r) continue; // skip self
-					if (r2->type == tquad_with_ix_t::TYPE_ROOF && r2->npts == 3) continue; // skip roof triangles as they won't intersect the adjacent quad
+					if (r2->type == tquad_with_ix_t::TYPE_ROOF_HIP && r2->npts == 3) continue; // skip hipped roof triangles as they won't intersect the adjacent quad
 					if (r2->get_bcube().intersects(bcube)) {valid = 0; break;}
 				}
 				if (!valid) continue; // intersects another roof section, skip
@@ -1434,7 +1434,7 @@ float building_t::gen_peaked_roof(cube_t const &top_, float peak_height, bool di
 			point const p1(0.5*(tquad.pts[0] + tquad.pts[dim ? 1 : 3])), p2(0.5*(tquad.pts[dim ? 3 : 1] + tquad.pts[2]));
 			
 			for (auto i = roof_tquads.begin(); i != roof_tquads.begin()+prev_num_roof_tquads; ++i) {
-				if (i->type != tquad_with_ix_t::TYPE_ROOF) continue;
+				if (!i->is_roof()) continue;
 				vector3d const normal(i->get_norm());
 				point p_int; // used in the m loop below
 				if (!line_poly_intersect(p1, p2, i->pts, i->npts, normal, p_int)) continue;
@@ -1451,7 +1451,7 @@ float building_t::gen_peaked_roof(cube_t const &top_, float peak_height, bool di
 				break; // should only intersect once
 			} // for i
 		}
-		roof_tquads.emplace_back(tquad, (unsigned)tquad_with_ix_t::TYPE_ROOF); // tag as roof
+		roof_tquads.emplace_back(tquad, (unsigned)tquad_with_ix_t::TYPE_ROOF_PEAK); // tag as peaked roof
 	} // for n
 	return roof_dz;
 }
@@ -1472,14 +1472,14 @@ float building_t::gen_hipped_roof(cube_t const &top_, float peak_height, float e
 	unsigned const qixs[2][4] = {{0,3,5,4}, {2,1,4,5}};
 	unsigned const tixs[2][3] = {{1,0,4}, {3,2,5}};
 	unsigned const start_ix(roof_tquads.size());
-	roof_tquads.resize(start_ix + 4); // defaults to TYPE_ROOF
+	roof_tquads.reserve(start_ix + 4);
 
 	for (unsigned n = 0; n < 2; ++n) {
 		unsigned const ix(start_ix + n);
-		roof_tquads[ix+0].npts = 4; // quads
-		UNROLL_4X(roof_tquads[ix+0].pts[i_] = pts[qixs[n][i_]];)
-		roof_tquads[ix+2].npts = 3; // triangles
-		UNROLL_3X(roof_tquads[ix+2].pts[i_] = pts[tixs[n][i_]];)
+		roof_tquads.emplace_back(4, tquad_with_ix_t::TYPE_ROOF_HIP); // quad
+		UNROLL_4X(roof_tquads.back().pts[i_] = pts[qixs[n][i_]];)
+		roof_tquads.emplace_back(3, tquad_with_ix_t::TYPE_ROOF_HIP); // triangle
+		UNROLL_3X(roof_tquads.back().pts[i_] = pts[tixs[n][i_]];)
 	}
 	return roof_dz;
 }
@@ -1797,13 +1797,13 @@ void building_t::gen_sloped_roof(rand_gen_t &rgen, cube_t const &top) { // Note:
 	point const pts[5] = {point(x1, y1, z1), point(x1, y2, z1), point(x2, y2, z1), point(x2, y1, z1), point(0.5f*(x1 + x2), 0.5f*(y1 + y2), z2)};
 	float const d1(rgen.rand_uniform(0.0, 0.8));
 
-	if (d1 < 0.2) { // pointed roof with 4 sloped triangles
+	if (d1 < 0.2) { // pointed roof with 4 sloped triangles (hipped)
 		unsigned const ixs[4][3] = {{1,0,4}, {3,2,4}, {0,3,4}, {2,1,4}};
-		roof_tquads.resize(4); // defaults to TYPE_ROOF
+		roof_tquads.reserve(4);
 
 		for (unsigned n = 0; n < 4; ++n) {
-			roof_tquads[n].npts = 3; // triangles
-			UNROLL_3X(roof_tquads[n].pts[i_] = pts[ixs[n][i_]];)
+			roof_tquads.emplace_back(3, tquad_with_ix_t::TYPE_ROOF_OFFICE); // triangle
+			UNROLL_3X(roof_tquads.back().pts[i_] = pts[ixs[n][i_]];)
 		}
 	}
 	else { // flat roof with center quad and 4 surrounding sloped quads
@@ -1811,11 +1811,11 @@ void building_t::gen_sloped_roof(rand_gen_t &rgen, cube_t const &top) { // Note:
 		point pts2[8];
 		for (unsigned n = 0; n < 4; ++n) {pts2[n] = pts[n]; pts2[n+4] = d1*pts[n] + center;}
 		unsigned const ixs[5][4] = {{4,7,6,5}, {0,4,5,1}, {3,2,6,7}, {0,3,7,4}, {2,1,5,6}}; // add the flat quad first, which works better for sphere intersections
-		roof_tquads.resize(5); // defaults to TYPE_ROOF
+		roof_tquads.reserve(5);
 
 		for (unsigned n = 0; n < 5; ++n) {
-			roof_tquads[n].npts = 4; // quads
-			UNROLL_4X(roof_tquads[n].pts[i_] = pts2[ixs[n][i_]];)
+			roof_tquads.emplace_back(4, tquad_with_ix_t::TYPE_ROOF_OFFICE); // quad
+			UNROLL_4X(roof_tquads.back().pts[i_] = pts2[ixs[n][i_]];)
 		}
 	}
 	roof_type = ROOF_TYPE_SLOPE;
@@ -1828,7 +1828,7 @@ void building_t::add_roof_to_bcube() {
 		tq.update_bcube(bcube); // technically should only need to update z2
 		
 		if (has_attic()) { // use roof tquads to include the attic space
-			if (tq.type != tquad_with_ix_t::TYPE_ROOF) continue;
+			if (!tq.is_roof()) continue;
 			for (unsigned n = 0; n < tq.npts; ++n) {max_eq(interior_z2, tq.pts[n].z);}
 		}
 	} // for tq

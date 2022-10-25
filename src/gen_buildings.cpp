@@ -421,7 +421,7 @@ void add_tquad_to_verts(building_geom_t const &bg, tquad_with_ix_t const &tquad,
 		dim = (tquad.pts[0].x == tquad.pts[1].x);
 		if (world_mode != WMODE_INF_TERRAIN) {tex_off = (dim ? yoff2*DY_VAL : xoff2*DX_VAL);}
 	}
-	else if (tquad.type == tquad_with_ix_t::TYPE_ROOF || tquad.type == tquad_with_ix_t::TYPE_ROOF_ACC) { // roof cap
+	else if (tquad.is_roof() || tquad.type == tquad_with_ix_t::TYPE_ROOF_ACC) { // roof cap
 		float const denom(0.5f*(bcube.dx() + bcube.dy()));
 		tsx = tex.tscale_x/denom; tsy = tex.tscale_y/denom;
 	}
@@ -441,7 +441,7 @@ void add_tquad_to_verts(building_geom_t const &bg, tquad_with_ix_t const &tquad,
 			vert.t[0] = (vert.v[dim] + tex_off)*tsx; // use nonzero width dim
 			vert.t[1] = (vert.v.z - bcube.z1())*tsy;
 		}
-		else if (tquad.type == tquad_with_ix_t::TYPE_ROOF) { // roof cap
+		else if (tquad.is_roof()) { // roof cap
 			vert.t[0] = (vert.v.x - bcube.x1())*tsx; // varies from 0.0 and bcube x1 to 1.0 and bcube x2
 			vert.t[1] = (vert.v.y - bcube.y1())*tsy; // varies from 0.0 and bcube y1 to 1.0 and bcube y2
 		}
@@ -1266,8 +1266,8 @@ void building_t::get_all_drawn_exterior_verts(building_draw_t &bdraw) { // exter
 		else if (i->type == tquad_with_ix_t::TYPE_TRIM) {
 			bdraw.add_tquad(*this, *i, bcube, tid_nm_pair_t(), LT_GRAY); // untextured
 		}
-		else if (is_house && i->type == tquad_with_ix_t::TYPE_ROOF && i->npts == 4) {
-			// house sloped trapezoid roof: extend lower zvals out a bit if peaked/non-hipped
+		else if (is_house && i->type == tquad_with_ix_t::TYPE_ROOF_PEAK && i->npts == 4) {
+			// house peaked/sloped trapezoid roof: extend lower zvals out a bit
 			tquad_with_ix_t tq(*i);
 			float const extend(0.3*get_doorway_width());
 			unsigned top_dim(2), bot_dim(2); // start at invalid values
@@ -1279,8 +1279,10 @@ void building_t::get_all_drawn_exterior_verts(building_draw_t &bdraw) { // exter
 				if (cur.z < prev.z && cur.z == next.z) {bot_dim = (cur.x == next.x); bot_lo = min(cur[bot_dim], next[bot_dim]); bot_hi = max(cur[bot_dim], next[bot_dim]);}
 				if (cur.z > prev.z && cur.z == next.z) {top_dim = (cur.x == next.x); top_lo = min(cur[top_dim], next[top_dim]); top_hi = max(cur[top_dim], next[top_dim]);}
 			}
-			assert(top_dim < 2 && top_dim == bot_dim);
-
+			if (top_dim == 2 || top_dim != bot_dim) {
+				cout << "Bad house roof: " << TXT(top_dim) << TXT(bot_dim) << TXT(bcube.str()) << endl; // -464, -28 | -446, -13
+				assert(0);
+			}
 			if (top_lo == bot_lo || top_hi == bot_hi) { // peaked, maybe clipped at one end, not hipped
 				cube_t const tq_bcube(i->get_bcube());
 				cube_t tq_bcube_lower(tq_bcube);
@@ -1356,7 +1358,7 @@ void building_t::get_all_drawn_exterior_verts(building_draw_t &bdraw) { // exter
 			} // end peaked roof
 			bdraw.add_tquad(*this, tq, bcube, mat.roof_tex.get_scaled_version(2.0), roof_color); // use roof texture
 		} // end house roof quad
-		else if (i->type == tquad_with_ix_t::TYPE_ROOF || i->type == tquad_with_ix_t::TYPE_ROOF_ACC) {
+		else if (i->is_roof() || i->type == tquad_with_ix_t::TYPE_ROOF_ACC) {
 			bdraw.add_tquad(*this, *i, bcube, mat.roof_tex.get_scaled_version(2.0), roof_color); // use roof texture
 		}
 		else if (i->type == tquad_with_ix_t::TYPE_BDOOR2 || i->type == tquad_with_ix_t::TYPE_RDOOR2) {
@@ -1567,7 +1569,7 @@ void building_t::get_all_drawn_interior_verts(building_draw_t &bdraw) {
 			for (unsigned n = 0; n < tq.npts; ++n) {tq.pts[n].z -= delta_z;} // shift down slightly
 			bool swap_tc_xy(1); // horizontal by default
 
-			if (i.type == tquad_with_ix_t::TYPE_ROOF) { // make sure wood orient is horizontal
+			if (i.is_roof()) { // make sure wood orient is horizontal
 				vector3d const normal(tq.get_norm());
 				swap_tc_xy = (fabs(normal.x) < fabs(normal.y));
 			}

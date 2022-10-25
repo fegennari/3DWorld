@@ -453,7 +453,7 @@ void building_room_geom_t::add_attic_door(room_object_t const &c, float tscale) 
 
 bool building_t::is_attic_roof(tquad_with_ix_t const &tq, bool type_roof_only) const {
 	if (!has_attic()) return 0;
-	if (tq.type != tquad_with_ix_t::TYPE_ROOF && (type_roof_only || tq.type != tquad_with_ix_t::TYPE_WALL)) return 0;
+	if (!tq.is_roof() && (type_roof_only || tq.type != tquad_with_ix_t::TYPE_WALL)) return 0;
 	cube_t const tq_bcube(tq.get_bcube());
 	if (tq_bcube.z1() < interior->attic_access.z1()) return 0; // not the top section that has the attic (porch roof, lower floor roof)
 	return get_attic_part().contains_pt_xy_inclusive(tq_bcube.get_cube_center()); // check for correct part
@@ -476,7 +476,7 @@ void add_attic_roof_geom(rgeom_mat_t &mat, colorRGBA const &color, float thickne
 		tquad_with_ix_t tq(i);
 		std::reverse(tq.pts, tq.pts+tq.npts); // reverse the normal and winding order
 		vector3d const normal(tq.get_norm());
-		bool const is_roof(tq.type == tquad_with_ix_t::TYPE_ROOF);
+		bool const is_roof(tq.is_roof());
 		
 		for (unsigned n = 0; n < tq.npts; ++n) {
 			if (is_roof) {assert(normal.z < 0.0); tq.pts[n].z += thickness/normal.z;} // roof: shift downward
@@ -542,7 +542,7 @@ void building_room_geom_t::add_attic_rafters(building_t const &b, float tscale) 
 	// Note: there may be a chimney in the attic, but for now we ignore it
 	for (auto i = b.roof_tquads.begin(); i != b.roof_tquads.end(); ++i) {
 		if (!b.is_attic_roof(*i, 0)) continue; // type_roof_only=0
-		bool const is_roof(i->type == tquad_with_ix_t::TYPE_ROOF); // roof tquad; not wall triangle
+		bool const is_roof(i->is_roof()); // roof tquad; not wall triangle
 		// draw beams along inside of roof; start with a vertical cube and rotate to match roof angle
 		tquad_with_ix_t tq(*i);
 		for (unsigned n = 0; n < tq.npts; ++n) {tq.pts[n].z -= delta_z;} // shift down slightly
@@ -570,6 +570,8 @@ void building_room_geom_t::add_attic_rafters(building_t const &b, float tscale) 
 			edges[num_edges++] = edge_t(A, B, !dim);
 		}
 		assert(num_edges > 0 && num_edges <= 3);
+		bool const is_hipped_side(num_edges == 3 || (num_edges == 2 && tq.npts == 4)); // inc hipped roof for square house with two degenerate quads that should be triangles
+		if (is_hipped_side) {assert(i->type == tquad_with_ix_t::TYPE_ROOF_HIP);}
 		float const beam_shorten((is_roof ? 2.0 : 1.0)*beam_hwidth*height/(0.5*base_width)); // large for sloped roof to account for width of beams between tquads
 
 		// add vertical beams, which will be rotated to follow the slope of the roof to form rafters
@@ -605,7 +607,7 @@ void building_room_geom_t::add_attic_rafters(building_t const &b, float tscale) 
 		float const rot_angle((dir ? 1.0 : -1.0)*atan2(run_len, height));
 		rotate_verts(wood_mat.quad_verts, rot_axis, rot_angle, rot_pt, qv_start);
 
-		if (num_edges == 3) { // trapezoid case: add diag beam along both angled edges (hip truss); dim is long dim
+		if (is_hipped_side) { // trapezoid case: add diag beam along both angled edges (hip truss); dim is long dim
 			for (unsigned e = 0; e < num_edges; ++e) {
 				edge_t const &E(edges[e]);
 				if (E.p[0].z == E.p[1].z) continue; // not an angled edge
@@ -626,7 +628,7 @@ void building_room_geom_t::add_attic_rafters(building_t const &b, float tscale) 
 				float const angle(get_angle(plus_z, edge_dir));
 				rotate_verts(wood_mat.quad_verts, axis, angle, lo, qv_start_angled);
 				// rotate around edge_dir so that bottom surface is aligned with the average normal of the two meeting roof tquads; always 45 degrees
-				rotate_verts(wood_mat.quad_verts, edge_dir*((e>>1) ? 1.0 : -1.0), 0.25*PI, lo, qv_start_angled);
+				rotate_verts(wood_mat.quad_verts, edge_dir*((e == num_edges-1) ? 1.0 : -1.0), 0.25*PI, lo, qv_start_angled);
 				float const shift_down_val(beam_hwidth*height/run_len);
 				for (auto v = wood_mat.quad_verts.begin() + qv_start_angled; v != wood_mat.quad_verts.end(); ++v) {v->v.z -= shift_down_val;}
 			} // for e
@@ -638,14 +640,15 @@ void building_room_geom_t::add_attic_rafters(building_t const &b, float tscale) 
 			beam.z2() -= beam_hwidth*height/run_len; // shift to just touching the roof at the top
 			beam.z1()  = beam.z2() - beam_depth;
 			set_wall_width(beam, centerline, beam_hwidth, dim);
-			if (num_edges == 3) {find_roofline_beam_span(beam, bcube.z2(), tq.pts, dim);} // trapezoid case (optimization)
 			assert(beam.is_strictly_normalized());
+			// determine span of beam along roofline for the trapezoid case/hipped roof; can be zero length for square houses with four triangle roof sections
+			if (is_hipped_side) {find_roofline_beam_span(beam, bcube.z2(), tq.pts, dim);}
 			beam.expand_in_dim(!dim, -epsilon); // prevent Z-fighting
 			
 			if (beam.get_sz_dim(!dim) > beam_depth) { // if it's long enough
 				wood_mat_us.add_cube_to_verts(beam, WHITE, beam.get_llc(), EF_Z2); // skip top; shadows not needed
 				
-				if (num_edges == 3) { // trapezoid: add vertical posts (king posts) at each end if there's space
+				if (is_hipped_side) { // trapezoid: add vertical posts (king posts) at each end if there's space
 					cube_t posts[2];
 					create_attic_posts(b, beam, dim, posts);
 				
