@@ -582,7 +582,7 @@ bool building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 	unsigned room_id, unsigned num_floors, unsigned objs_start, float tot_light_amt, float ceil_zval, rand_gen_t &rgen, unsigned pipe_type, bool allow_place_fail)
 {
 	assert(pipe_type < NUM_PIPE_TYPES);
-	if (risers.empty()) return 0; // can this happen?
+	if (risers.empty()) return 0; // can happen for hot water pipes when there are no hot water fixtures
 	float const FITTING_LEN(1.2), FITTING_RADIUS(1.1); // relative to radius
 	bool const is_hot_water(pipe_type == PIPE_TYPE_HW), is_closed_loop(is_hot_water), add_insul(is_hot_water);
 	vect_room_object_t &objs(interior->room_geom->objs);
@@ -905,7 +905,11 @@ bool building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 	// add main pipe
 	assert(mp[0] != mp[1]);
 	pipe_t main_pipe(mp[0], mp[1], r_main, dim, PIPE_MAIN, main_pipe_end_flags);
-	assert(main_pipe.get_bcube().is_strictly_normalized());
+	
+	if (!main_pipe.get_bcube().is_strictly_normalized()) {
+		cout << "Error: Invalid main pipe: " << TXT(r_main) << TXT(mp[0].str()) << TXT(mp[1].str()) << TXT(main_pipe.get_bcube().str()) << endl;
+		assert(0);
+	}
 	pipes.push_back(main_pipe);
 
 	// add pipe objects: sewer: dark gray pipes / gray-brown fittings; water: copper pipes / brass fittings; hot water: white insulation
