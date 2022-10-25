@@ -360,6 +360,7 @@ bool building_t::add_desk_to_room(rand_gen_t rgen, room_t const &room, vect_cube
 					set_wall_width(pp_bcube, rgen.rand_uniform(c.d[!dim][0]+edge_space, c.d[!dim][1]-edge_space), 0.5*pp_dia, !dim);
 					// Note: no check for overlap with books and potted plants, but that would be complex to add and this case is rare;
 					//       computer monitors/keyboards aren't added in this case, and pencils should float above papers, so we don't need to check those
+					if (!pp_bcube.is_strictly_normalized()) continue; // too small, likely due to FP error when far from the origin
 					objs.emplace_back(pp_bcube, (is_pen ? TYPE_PEN : TYPE_PENCIL), room_id, dim, dir, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CYLIN, color);
 				} // for n
 			}
@@ -2183,6 +2184,13 @@ void building_t::add_boxes_to_room(rand_gen_t rgen, room_t const &room, float zv
 	} // for n
 }
 
+void expand_to_nonzero_area(cube_t &c, float exp_amt, bool dim) {
+	while (c.get_sz_dim(dim) == 0.0) {
+		c.expand_in_dim(dim, exp_amt);
+		exp_amt *= 2.0;
+	}
+}
+
 room_object_t get_conduit(bool dim, bool dir, float radius, float wall_pos_dim, float wall_pos_not_dim, float z1, float z2, unsigned room_id) {
 	cube_t conduit;
 	set_wall_width(conduit, wall_pos_not_dim, radius, !dim);
@@ -2256,6 +2264,7 @@ void building_t::add_light_switches_to_room(rand_gen_t rgen, room_t const &room,
 						c.d[dim][!dir] += dir_sign*1.0*switch_hwidth; // shift front outward more
 						flags |= RO_FLAG_HANGING;
 					}
+					expand_to_nonzero_area(c, switch_thickness, dim);
 					objs.emplace_back(c, TYPE_SWITCH, room_id, dim, dir, flags, 1.0); // dim/dir matches wall; fully lit
 					done = 1; // done, only need to add one for this door
 					++num_ls;
@@ -2283,6 +2292,7 @@ void building_t::add_light_switches_to_room(rand_gen_t rgen, room_t const &room,
 		c.d[dim][ dir] = target_wall.d[dim][!dir]; // flush with wall
 		c.d[dim][!dir] = c.d[dim][dir] + (dir ? -1.0 : 1.0)*switch_thickness; // expand out a bit
 		set_wall_width(c, target_wall.get_center_dim(!dim), switch_hwidth, !dim);
+		expand_to_nonzero_area(c, switch_thickness, dim);
 		// since nothing is placed against the exterior wall of the closet near the door (to avoid blocking it), we don't need to check for collisions with room objects
 		objs.emplace_back(c, TYPE_SWITCH, room_id, dim, dir, (RO_FLAG_NOCOLL | RO_FLAG_IN_CLOSET), 1.0); // dim/dir matches wall; fully lit; flag for closet
 		//break; // there can be only one closet per room; done (unless I add multiple closets later?)
@@ -2348,6 +2358,7 @@ void building_t::add_outlets_to_room(rand_gen_t rgen, room_t const &room, float 
 			c.d[dim][!dir] += dir_sign*1.2*plate_hwidth; // shift front outward more
 			flags |= RO_FLAG_HANGING;
 		}
+		expand_to_nonzero_area(c, plate_thickness, dim);
 		objs.emplace_back(c, TYPE_OUTLET, room_id, dim, dir, flags, 1.0); // dim/dir matches wall; fully lit
 	} // for wall
 }
@@ -3486,13 +3497,15 @@ int building_t::get_room_id_for_window(cube_t const &window, bool dim, bool dir,
 }
 
 void add_elevator_button(point const &pos, float button_radius, bool dim, bool dir, unsigned elevator_id, unsigned floor_id, bool inside, bool is_up, vect_room_object_t &objs) {
+	float const button_thickness(0.25*button_radius);
 	cube_t c; c.set_from_point(pos);
 	c.expand_in_dim(!dim, button_radius);
 	c.expand_in_dim(2, button_radius); // Z
-	c.d[dim][dir] += (dir ? 1.0 : -1.0)*0.25*button_radius;
+	c.d[dim][dir] += (dir ? 1.0 : -1.0)*button_thickness;
 	unsigned flags(RO_FLAG_NOCOLL);
 	if (inside) {flags |= RO_FLAG_IN_ELEV;}
 	else        {flags |= (is_up ? RO_FLAG_ADJ_TOP : RO_FLAG_ADJ_BOT);}
+	expand_to_nonzero_area(c, button_thickness, dim);
 	objs.emplace_back(c, TYPE_BUTTON, elevator_id, dim, dir, flags, 1.0, SHAPE_CYLIN, colorRGBA(1.0, 0.9, 0.5)); // room_id=elevator_id
 	objs.back().obj_id = floor_id; // encode floor index as obj_id
 }
@@ -3823,14 +3836,15 @@ void building_t::add_doorbell_and_lamp(tquad_with_ix_t const &door, rand_gen_t &
 	if (dir_ret > 1) return; // not found, skip doorbell and lamp
 	bool dir(dir_ret != 0);
 	bool const side(dir ^ dim); // currently always to the right, which matches the door handle side
-	float const door_width(door_bcube.get_sz_dim(!dim)), half_width(0.016*door_width), half_height(1.8*half_width);
+	float const door_width(door_bcube.get_sz_dim(!dim)), half_width(0.016*door_width), half_height(1.8*half_width), button_thickness(0.1*half_width);
 	float const zval(door_bcube.z1() + 0.55*door_bcube.dz());
 	float const pos(door_bcube.d[!dim][side] + (side ? 1.0 : -1.0)*5.0*half_width);
 	cube_t c;
 	c.d[dim][0  ]  = c.d[dim][1] = door_bcube.d[dim][dir] - 0.02*(dir ? 1.0 : -1.0)*get_window_vspace(); // slightly in front of exterior wall
-	c.d[dim][dir] += (dir ? 1.0 : -1.0)*0.1*half_width;
+	c.d[dim][dir] += (dir ? 1.0 : -1.0)*button_thickness;
 	set_cube_zvals(c, (zval - half_height), (zval + half_height));
 	set_wall_width(c, pos, half_width, !dim);
+	expand_to_nonzero_area(c, button_thickness, dim);
 	vect_room_object_t &objs(interior->room_geom->objs);
 	objs.emplace_back(c, TYPE_BUTTON, 0, dim, dir, (RO_FLAG_LIT | RO_FLAG_NOCOLL), 1.0, SHAPE_CYLIN); // always lit; room_id is not valid
 
