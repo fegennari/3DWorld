@@ -420,6 +420,7 @@ void add_tquad_to_verts(building_geom_t const &bg, tquad_with_ix_t const &tquad,
 		tsx = 2.0f*tex.tscale_x; tsy = 2.0f*tex.tscale_y; // adjust for local vs. global space change
 		dim = (tquad.pts[0].x == tquad.pts[1].x);
 		if (world_mode != WMODE_INF_TERRAIN) {tex_off = (dim ? yoff2*DY_VAL : xoff2*DX_VAL);}
+		tex_off -= (dim ? bcube.y1() : bcube.x1()); // normalize to building LLC to keep tex coords small
 	}
 	else if (tquad.is_roof() || tquad.type == tquad_with_ix_t::TYPE_ROOF_ACC) { // roof cap
 		float const denom(0.5f*(bcube.dx() + bcube.dy()));
@@ -826,7 +827,8 @@ public:
 		color_wrapper cw[2];
 		setup_ao_color(color, bg.bcube.z1(), bg.ao_bcz2, cube.z1(), cube.z2(), cw, vert, no_ao);
 		vector3d tex_vert_off(((world_mode == WMODE_INF_TERRAIN) ? zero_vector : vector3d(xoff2*DX_VAL, yoff2*DY_VAL, 0.0)));
-		if (clip_windows) {tex_vert_off.z -= bg.bcube.get_llc().z;} // don't adjust X/Y pos for windows, because other code needs to know where windows are placed
+		// don't adjust X/Y pos for windows, because other code needs to know where windows are placed; however, this can cause fuzzy window frames when far from the origin
+		if (clip_windows) {tex_vert_off.z -= bg.bcube.get_llc().z;}
 		else {tex_vert_off -= bg.bcube.get_llc();} // normalize to building LLC to keep tex coords small
 		if (is_city && cube.z1() == bg.bcube.z1()) {skip_bottom = 1;} // skip bottoms of first floor parts drawn in cities
 		float const window_vspacing(bg.get_window_vspace()), window_h_border(0.75*bg.get_window_h_border()), offset_val(0.01*offset_scale*window_vspacing);
