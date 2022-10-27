@@ -3447,9 +3447,19 @@ void building_t::add_window_blinds(cube_t const &window, bool dim, bool dir, uns
 	// open_amt is a mix of 50% room-based and 50% window-based to get somewhat consistent levels per room
 	bool const full_open(rgen.rand_float() < 0.75);
 	float const open_amt(0.9*(full_open ? 1.0 : 0.5*(rgen.rand_float() + fract(1123.7*objs.size())))); // 0-90% 25% the time, 90% for the rest
+	float const thickness(0.15*wall_thickness*(vertical ? 0.05 : (open_amt + 0.025))); // vertical blinds have no furniture clearance and can't bunch up
+	float window_gap(0.02*wall_thickness);
 	cube_t c(window);
-	c.d[dim][ dir] += (dir ? -1.0 : 1.0)*0.01*wall_thickness; // slight gap for wall trim
-	c.d[dim][!dir] += (dir ? -1.0 : 1.0)*0.15*wall_thickness*(vertical ? 0.05 : (open_amt + 0.025)); // vertical blinds have no furniture clearance and can't bunch up
+	float &window_edge(c.d[dim][dir]);
+
+	// add a slight gap for the wall trim; increase until it's different from the wall to avoid z-fighting when very far from the origin
+	while (1) {
+		window_edge += (dir ? -1.0 : 1.0)*window_gap;
+		if (window_edge != window.d[dim][dir]) break;
+		window_gap *= 2.0;
+	}
+	c.d[dim][!dir] += (dir ? -1.0 : 1.0)*thickness;
+	expand_to_nonzero_area(c, thickness, dim);
 	c.expand_in_dim(2, extend); // extend in Z to cover window trim
 
 	if (vertical) { // vertical, moves horizontally
