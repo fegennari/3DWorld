@@ -1327,6 +1327,12 @@ void building_t::get_all_drawn_exterior_verts(building_draw_t &bdraw) { // exter
 								test_cube.d[top_dim][ d] = edge + extend_signed;
 								test_cube.d[top_dim][!d] = edge + 0.1*extend_signed; // minor shift to avoid intersecting the part this roof is placed on
 								if (cube_int_parts_no_sec(test_cube)) continue;
+								
+								if (has_attic()) { // test the attic
+									cube_t attic(get_attic_part());
+									attic.z2() = bcube.z2();
+									if (attic.intersects_no_adj(test_cube)) continue;
+								}
 							}
 							cur[top_dim] += extend_signed; // extend out away from house
 						} // for d
