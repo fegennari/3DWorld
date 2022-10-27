@@ -1311,6 +1311,8 @@ void building_t::get_all_drawn_exterior_verts(building_draw_t &bdraw) { // exter
 							}
 						} // for d
 					} // for n
+					cube_t bot_edge_bcube;
+
 					for (unsigned n = 0; n < tq.npts; ++n) { // extend ends outward second
 						point &cur(tq.pts[n]);
 						float const top_lh[2] = {top_lo, top_hi}, bot_lh[2] = {bot_lo, bot_hi};
@@ -1328,7 +1330,10 @@ void building_t::get_all_drawn_exterior_verts(building_draw_t &bdraw) { // exter
 							}
 							cur[top_dim] += extend_signed; // extend out away from house
 						} // for d
+						// calculate bcube of points along bottom edge of roof section; required for intersecting/clipped roofs where bottom edge is shorter than top edge
+						if (tq.pts[n].z < tq_bcube.zc()) {bot_edge_bcube.assign_or_union_with_pt(cur);}
 					} // for n
+					assert(!bot_edge_bcube.is_all_zeros()); // must have at least one point
 					cube_t const new_bcube(tq.get_bcube());
 
 					// add trim along the underside and edges of the roof
@@ -1339,15 +1344,15 @@ void building_t::get_all_drawn_exterior_verts(building_draw_t &bdraw) { // exter
 						UNROLL_4X(bot_surf.pts[i_].z = new_bcube.z1(););
 						bot_surf.pts[0][!top_dim] = bot_surf.pts[1][!top_dim] = old_edge;
 						bot_surf.pts[2][!top_dim] = bot_surf.pts[3][!top_dim] = new_edge;
-						bot_surf.pts[0][ top_dim] = bot_surf.pts[3][ top_dim] = new_bcube.d[top_dim][0];
-						bot_surf.pts[1][ top_dim] = bot_surf.pts[2][ top_dim] = new_bcube.d[top_dim][1];
+						bot_surf.pts[0][ top_dim] = bot_surf.pts[3][ top_dim] = bot_edge_bcube.d[top_dim][0];
+						bot_surf.pts[1][ top_dim] = bot_surf.pts[2][ top_dim] = bot_edge_bcube.d[top_dim][1];
 						if (d ^ top_dim ^ 1) {std::reverse(bot_surf.pts, bot_surf.pts+4);} // reverse to get the correct winding order
 						tid_nm_pair_t const bot_tex(-1); // untextured, for now
 						bdraw.add_tquad(*this, bot_surf, bcube, bot_tex, WHITE);
 
 						for (unsigned e = 0; e < 2; ++e) { // add triangle end caps
 							tquad_with_ix_t end_cap(3, tquad_with_ix_t::TYPE_TRIM);
-							UNROLL_3X(end_cap.pts[i_][top_dim] = new_bcube.d[top_dim][e];); // end
+							UNROLL_3X(end_cap.pts[i_][top_dim] = bot_edge_bcube.d[top_dim][e];); // end
 							end_cap.pts[0][!top_dim] = new_edge;
 							end_cap.pts[1][!top_dim] = end_cap.pts[2][!top_dim] = old_edge;
 							end_cap.pts[0].z = end_cap.pts[1].z = new_bcube.z1(); // bottom
