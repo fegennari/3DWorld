@@ -15,6 +15,7 @@ vect_cube_t &get_temp_cubes();
 bool get_dishwasher_for_ksink(room_object_t const &c, cube_t &dishwasher);
 void set_wall_width(cube_t &wall, float pos, float half_thick, unsigned dim);
 float get_med_cab_wall_thickness(room_object_t const &c);
+void expand_to_nonzero_area(cube_t &c, float exp_amt, bool dim);
 
 void resize_model_cube_xy(cube_t &cube, float dim_pos, float not_dim_pos, unsigned id, bool dim) {
 	vector3d const sz(building_obj_model_loader.get_model_world_space_size(id)); // L, W, H
@@ -202,6 +203,7 @@ void building_room_geom_t::add_closet_objects(room_object_t const &c, vect_room_
 			}
 			if (!found_slot) continue; // skip this hanger
 			resize_model_cube_xy(hanger, hanger.get_center_dim(c.dim), (pos_min + slot_ix*slot_spacing), hid, c.dim);
+			expand_to_nonzero_area(hanger, 0.1*hr_radius, !c.dim);
 			objects.push_back(hanger);
 			
 			if (use_model && rgen.rand_float() < 0.8) { // maybe add clothing to the hanger
