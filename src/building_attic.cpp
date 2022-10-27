@@ -595,7 +595,13 @@ void building_room_geom_t::add_attic_rafters(building_t const &b, float tscale) 
 			if (beam.dz() < 4.0f*beam_depth) continue; // too short, skip
 			assert(beam.is_strictly_normalized());
 			// skip top, bottom and face against the roof (top may be partially visible when rotated)
-			wood_mat.add_cube_to_verts(beam, WHITE, beam.get_llc(), (~get_face_mask(dim, dir) | EF_Z12));
+			unsigned skip_faces(~get_face_mask(dim, dir) | EF_Z12);
+			
+			if (tq.type == tquad_with_ix_t::TYPE_ROOF_PEAK) { // peaked roof has end rafters against the triangle walls; those faces can be skipped
+				if (n == 0          ) {skip_faces |= ~get_face_mask(!dim, 0);}
+				if (n == num_beams-1) {skip_faces |= ~get_face_mask(!dim, 1);}
+			}
+			wood_mat.add_cube_to_verts(beam, WHITE, beam.get_llc(), skip_faces);
 		} // for n
 		if (!is_roof) continue; // below is for sloped roof tquads only
 		// rotate to match slope of roof
@@ -646,7 +652,9 @@ void building_room_geom_t::add_attic_rafters(building_t const &b, float tscale) 
 			beam.expand_in_dim(!dim, -epsilon); // prevent Z-fighting
 			
 			if (beam.get_sz_dim(!dim) > beam_depth) { // if it's long enough
-				wood_mat_us.add_cube_to_verts(beam, WHITE, beam.get_llc(), EF_Z2); // skip top; shadows not needed
+				unsigned skip_faces(EF_Z2); // skip top
+				if (tq.type == tquad_with_ix_t::TYPE_ROOF_PEAK) {skip_faces |= get_skip_mask_for_xy(!dim);} // don't draw ends for peaked roofs as they abut triangle walls
+				wood_mat_us.add_cube_to_verts(beam, WHITE, beam.get_llc(), skip_faces); // shadows not needed
 				
 				if (is_hipped_side) { // trapezoid: add vertical posts (king posts) at each end if there's space
 					cube_t posts[2];
