@@ -1475,7 +1475,6 @@ float building_t::gen_hipped_roof(cube_t const &top_, float peak_height, float e
 	roof_tquads.reserve(start_ix + 4);
 
 	for (unsigned n = 0; n < 2; ++n) {
-		unsigned const ix(start_ix + n);
 		roof_tquads.emplace_back(4, tquad_with_ix_t::TYPE_ROOF_HIP); // quad
 		UNROLL_4X(roof_tquads.back().pts[i_] = pts[qixs[n][i_]];)
 		roof_tquads.emplace_back(3, tquad_with_ix_t::TYPE_ROOF_HIP); // triangle
