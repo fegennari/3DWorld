@@ -1297,11 +1297,16 @@ void building_t::get_all_drawn_exterior_verts(building_draw_t &bdraw) { // exter
 				if (is_above_part) { // only extend if above a part (exclude porch roof)
 					for (unsigned n = 0; n < tq.npts; ++n) { // extend edges downward and out first
 						point &cur(tq.pts[n]);
+						point const &orig_pt(i->pts[n]);
 						point const other[2] = {i->pts[n ? n-1 : tq.npts-1], i->pts[(n == tq.npts-1) ? 0 : n+1]}; // prev and next; compare to unmodified points
 
 						for (unsigned d = 0; d < 2; ++d) {
-							if (cur.z >= other[d].z) continue; // not along the bottom edge
-							vector3d const delta(extend*(i->pts[n] - other[d]).get_norm()); // extend downward
+							if (cur.z     >= other[d].z) continue; // not along the bottom edge
+							if (orig_pt.z == other[d].z) continue; // skip edge parallel to roofline
+							vector3d ext_down_out; // extend down and out, but not along edge because it may be clipped diagonally to another roof tquad
+							ext_down_out.z         = orig_pt.z         - other[d].z;
+							ext_down_out[!top_dim] = orig_pt[!top_dim] - other[d][!top_dim];
+							vector3d const delta((extend/ext_down_out.mag())*(orig_pt - other[d])); // use down + out dist for normalization, but move diagonally
 							cur += delta;
 							cube_t const new_bcube(tq.get_bcube());
 
