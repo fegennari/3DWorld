@@ -1259,14 +1259,12 @@ bool material_t::use_bump_map() const {return (enable_bump_map() && bump_tid >= 
 bool material_t::use_spec_map() const {return (enable_spec_map() && (s_tid >= 0 || ns_tid >= 0));}
 
 colorRGBA material_t::get_ad_color() const {
-
 	colorRGBA c(kd, alpha);
 	c.set_valid_color();
 	return c;
 }
 
 colorRGBA material_t::get_avg_color(texture_manager const &tmgr, int default_tid) const {
-
 	colorRGBA avg_color(get_ad_color());
 	int tex_id(get_render_texture());
 	if (tex_id >= 0) {return avg_color.modulate_with(tmgr.get_tex_avg_color(tex_id));}
@@ -1286,7 +1284,6 @@ void material_t::add_triangles(vector<vert_norm_tc> const &verts, vector<unsigne
 }
 
 bool material_t::add_poly(polygon_t const &poly, vntc_map_t vmap[2], vntct_map_t vmap_tan[2], unsigned obj_id) {
-	
 	if (skip) return 0;
 	if (model_calc_tan_vect && use_bump_map()) {geom_tan.add_poly(poly, vmap_tan, obj_id);}
 	else {geom.add_poly(poly, vmap, obj_id);}
@@ -1354,7 +1351,6 @@ void coll_tquads_from_triangles(vector<triangle> const &triangles, vector<coll_t
 	for (unsigned i = 0; i < triangles.size(); ++i) ppts.push_back(coll_tquad(triangles[i], color));
 }
 
-
 unsigned model3d::add_triangles(vector<triangle> const &triangles, colorRGBA const &color, int mat_id, unsigned obj_id) {
 
 	// average_normals=1 should turn most of these face normals into vertex normals
@@ -1369,7 +1365,6 @@ unsigned model3d::add_triangles(vector<triangle> const &triangles, colorRGBA con
 	}
 	return tot_added;
 }
-
 
 unsigned model3d::add_polygon(polygon_t const &poly, vntc_map_t vmap[2], vntct_map_t vmap_tan[2], int mat_id, unsigned obj_id) {
 	
@@ -1392,7 +1387,6 @@ unsigned model3d::add_polygon(polygon_t const &poly, vntc_map_t vmap[2], vntct_m
 	if (mat_id < 0 || !materials[mat_id].skip) {update_bbox(poly);} // don't include skipped materials in the bbox
 	return (unsigned)split_polygons_buffer.size();
 }
-
 
 void model3d::add_triangle(polygon_t const &tri, vntc_map_t &vmap, int mat_id, unsigned obj_id) {
 
