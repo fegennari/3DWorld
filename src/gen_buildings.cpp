@@ -827,9 +827,10 @@ public:
 		color_wrapper cw[2];
 		setup_ao_color(color, bg.bcube.z1(), bg.ao_bcz2, cube.z1(), cube.z2(), cw, vert, no_ao);
 		vector3d tex_vert_off(((world_mode == WMODE_INF_TERRAIN) ? zero_vector : vector3d(xoff2*DX_VAL, yoff2*DY_VAL, 0.0)));
-		// don't adjust X/Y pos for windows, because other code needs to know where windows are placed; however, this can cause fuzzy window frames when far from the origin
-		if (clip_windows) {tex_vert_off.z -= bg.bcube.get_llc().z;}
-		else {tex_vert_off -= bg.bcube.get_llc();} // normalize to building LLC to keep tex coords small
+		point const bcube_llc(bg.bcube.get_llc());
+		// don't adjust X/Y pos for windows, because other code needs to know where windows are placed; see tc_xlate code below
+		if (clip_windows) {tex_vert_off.z -= bcube_llc.z;}
+		else {tex_vert_off -= bcube_llc;} // normalize to building LLC to keep tex coords small
 		if (is_city && cube.z1() == bg.bcube.z1()) {skip_bottom = 1;} // skip bottoms of first floor parts drawn in cities
 		float const window_vspacing(bg.get_window_vspace()), window_h_border(0.75*bg.get_window_h_border()), offset_val(0.01*offset_scale*window_vspacing);
 		vector3d norm; // used for rotated buildings
@@ -975,6 +976,12 @@ public:
 						clip_low_high_tc(verts[ix+2].t[!st], verts[ix+3].t[!st]);
 						clip_low_high_tc(verts[ix+0].t[ st], verts[ix+3].t[ st]);
 						clip_low_high_tc(verts[ix+1].t[ st], verts[ix+2].t[ st]);
+						// shift texture coords tp a local reference point near the building origin to prevent noise in shader texture sampling for large numbers
+						float const tc_xlate[2] = {floor(verts[ix].t[0]), floor(verts[ix].t[1])}; // use first point for local origin
+
+						for (unsigned n = 0; n < 4; ++n) {
+							for (unsigned d = 0; d < 2; ++d) {verts[ix+n].t[d] -= tc_xlate[d];}
+						}
 						// Note: if we're drawing windows, and either of the texture coords have zero ranges, we can drop this quad; but this is uncommon and maybe not worth the trouble
 					}
 					if (clamp_cube != nullptr && *clamp_cube != cube && n < 2 && !is_rotated) { // x/y dims only; can't apply to rotated building
