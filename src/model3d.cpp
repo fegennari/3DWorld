@@ -49,7 +49,7 @@ bool use_model3d_bump_maps() {return enable_bump_map();} // global function expo
 
 // ************ texture_manager ************
 
-unsigned texture_manager::create_texture(string const &fn, bool is_alpha_mask, bool verbose, bool invert_alpha, bool wrap, bool mirror, bool force_grayscale) {
+unsigned texture_manager::create_texture(string const &fn, bool is_alpha_mask, bool verbose, bool invert_alpha, bool wrap, bool mirror, bool force_grayscale, bool is_nm) {
 
 	assert(!(wrap && mirror)); // can't both be set
 	string_map_t::const_iterator it(tex_map.find(fn));
@@ -67,7 +67,7 @@ unsigned texture_manager::create_texture(string const &fn, bool is_alpha_mask, b
 	unsigned ncolors((is_alpha_mask || force_grayscale) ? 1 : 3);
 	// type=read_from_file format=auto width height wrap_mir ncolors use_mipmaps name [do_compress]
 	// always RGB wrapped+mipmap (normal map flag set later)
-	textures.push_back(texture_t(0, 7, 0, 0, (mirror ? 2 : (wrap ? 1 : 0)), ncolors, use_mipmaps, fn, invert_y, compress, model3d_texture_anisotropy));
+	textures.push_back(texture_t(0, 7, 0, 0, (mirror ? 2 : (wrap ? 1 : 0)), ncolors, use_mipmaps, fn, invert_y, compress, model3d_texture_anisotropy, 1.0, is_nm));
 	textures.back().invert_alpha = invert_alpha;
 	return tid; // can't fail
 }
@@ -1176,7 +1176,7 @@ void bind_texture_tu_or_white_tex(texture_manager const &tmgr, int tid, unsigned
 void material_t::render(shader_t &shader, texture_manager const &tmgr, int default_tid,
 	bool is_shadow_pass, bool is_z_prepass, int enable_alpha_mask, bool is_bmap_pass, point const *const xlate)
 {
-	if ((geom.empty() && geom_tan.empty()) || skip || alpha == 0.0) return; // empty or transparent
+	if (empty() || skip || alpha == 0.0) return; // empty or transparent
 	if (is_shadow_pass && alpha < MIN_SHADOW_ALPHA) return;
 
 	if (draw_order_score == 0) {
@@ -1274,6 +1274,17 @@ colorRGBA material_t::get_avg_color(texture_manager const &tmgr, int default_tid
 	return avg_color;
 }
 
+// Note: no quads or tangents; indices are optional
+void material_t::add_triangles(vector<vert_norm_tc> const &verts, vector<unsigned> const &indices, bool add_new_block) {
+	if (verts.empty()) {assert(indices.empty()); return;} // no triangles?
+	if (add_new_block || geom.triangles.empty()) {geom.triangles.push_back(indexed_vntc_vect_t<vert_norm_tc>());}
+	auto &dest(geom.triangles.back());
+	if (!dest.empty()) {assert(indices.empty() == dest.indices.empty());} // can't mix indexed with non-indexed triangles
+	unsigned const ixs_off(dest.size());
+	vector_add_to(verts, dest);
+	for (unsigned ix : indices) {dest.indices.push_back(ix + ixs_off);} // adjust indices based on existing vertices
+}
+
 bool material_t::add_poly(polygon_t const &poly, vntc_map_t vmap[2], vntct_map_t vmap_tan[2], unsigned obj_id) {
 	
 	if (skip) return 0;
@@ -1332,8 +1343,13 @@ void material_t::write_mtllib_entry(ostream &out, texture_manager const &tmgr) c
 // ************ model3d ************
 
 
-void coll_tquads_from_triangles(vector<triangle> const &triangles, vector<coll_tquad> &ppts, colorRGBA const &color) {
+material_t &model3d::get_material(int mat_id, bool alloc_if_needed) {
+	if (alloc_if_needed && mat_id >= (int)materials.size()) {materials.resize(mat_id+1);} // allocate additional material(s) if needed
+	assert(mat_id >= 0 && mat_id < (int)materials.size());
+	return materials[mat_id];
+}
 
+void coll_tquads_from_triangles(vector<triangle> const &triangles, vector<coll_tquad> &ppts, colorRGBA const &color) {
 	ppts.reserve(ppts.capacity() + triangles.size());
 	for (unsigned i = 0; i < triangles.size(); ++i) ppts.push_back(coll_tquad(triangles[i], color));
 }

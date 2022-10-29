@@ -372,7 +372,7 @@ protected:
 	string_map_t tex_map; // maps texture filenames to texture indexes
 	vector<tex_work_item_t> to_load;
 public:
-	unsigned create_texture(string const &fn, bool is_alpha_mask, bool verbose, bool invert_alpha=0, bool wrap=1, bool mirror=0, bool force_grayscale=0);
+	unsigned create_texture(string const &fn, bool is_alpha_mask, bool verbose, bool invert_alpha=0, bool wrap=1, bool mirror=0, bool force_grayscale=0, bool is_nm=0);
 	bool empty() const {return textures.empty();}
 	void clear();
 	void free_tids();
@@ -410,7 +410,7 @@ struct material_params_t { // Warning: changing this struct will invalidate the 
 struct material_t : public material_params_t {
 
 	bool might_have_alpha_comp, tcs_checked;
-	int a_tid, d_tid, s_tid, ns_tid, alpha_tid, bump_tid, refl_tid;
+	int a_tid, d_tid, s_tid, ns_tid, alpha_tid, bump_tid, refl_tid; // ambient, diffuse, specular, shininess, transparency, normal, reflection (unused)
 	float draw_order_score, avg_area_per_tri, tot_tri_area;
 	float metalness; // < 0 disables; should go into material_params_t, but that would invalidate the model3d file format
 	string name, filename;
@@ -421,6 +421,8 @@ struct material_t : public material_params_t {
 	material_t(string const &name_=string(), string const &fn=string())
 		: might_have_alpha_comp(0), tcs_checked(0), a_tid(-1), d_tid(-1), s_tid(-1), ns_tid(-1), alpha_tid(-1), bump_tid(-1), refl_tid(-1),
 		draw_order_score(0.0), avg_area_per_tri(0.0), tot_tri_area(0.0), metalness(-1.0), name(name_), filename(fn) {}
+	bool empty() const {return (geom.empty() && geom_tan.empty());}
+	void add_triangles(vector<vert_norm_tc> const &verts, vector<unsigned> const &indices, bool add_new_block); // Note: no quads or tangents
 	bool add_poly(polygon_t const &poly, vntc_map_t vmap[2], vntct_map_t vmap_tan[2], unsigned obj_id=0);
 	void mark_as_used() {is_used = 1;}
 	bool mat_is_used () const {return is_used;}
@@ -513,11 +515,7 @@ public:
 	{UNROLL_3X(sky_lighting_sz[i_] = 0;)}
 	~model3d() {clear();}
 	size_t num_materials() const {return materials.size();}
-
-	material_t &get_material(int mat_id) {
-		assert(mat_id >= 0 && (unsigned)mat_id < materials.size());
-		return materials[mat_id];
-	}
+	material_t &get_material(int mat_id, bool alloc_if_needed=0);
 	base_mat_t const &get_unbound_material() const {return unbound_mat;}
 
 	// creation and query
