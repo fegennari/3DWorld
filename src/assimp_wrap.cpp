@@ -19,6 +19,7 @@ vector3d aiVector3D_to_vector3d(aiVector3D const &v) {return vector3d(v.x, v.y, 
 // For reference, see: https://learnopengl.com/Model-Loading/Model
 class file_reader_assimp {
 	model3d &model;
+	geom_xform_t cur_xf;
 
 	int load_texture(aiMaterial const* const mat, aiTextureType const type, bool is_normal_map=0) {
 		unsigned const count(mat->GetTextureCount(type));
@@ -38,6 +39,8 @@ class file_reader_assimp {
 			vert_norm_tc &v(verts[i]);
 			v.v = aiVector3D_to_vector3d(mesh->mVertices[i]); // position
 			v.n = aiVector3D_to_vector3d(mesh->mNormals [i]); // normals
+			cur_xf.xform_pos   (v.v);
+			cur_xf.xform_pos_rm(v.n);
 
 			if (mesh->mTextureCoords[0]) { // texture coordinates are optional and default to (0,0); we only use the first of 8
 				v.t[0] = mesh->mTextureCoords[0][i].x; 
@@ -73,7 +76,9 @@ class file_reader_assimp {
 public:
 	file_reader_assimp(model3d &model_) : model(model_) {}
 
-	bool read(string const &fn, geom_xform_t const &xf, bool verbose) {
+	bool read(string const &fn, geom_xform_t const &xf, bool recalc_normals, bool verbose) {
+		// Note: recalc_normals is currently not supported and is ignored
+		cur_xf = xf;
 		Assimp::Importer importer;
 		// aiProcess_OptimizeMeshes
 		aiScene const* const scene(importer.ReadFile(fn, (aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_GenNormals)));
@@ -91,7 +96,7 @@ public:
 bool read_assimp_model(string const &filename, model3d &model, geom_xform_t const &xf, int recalc_normals, bool verbose) {
 	timer_t timer("Read AssImp Model");
 	file_reader_assimp reader(model);
-	return reader.read(filename, xf, verbose);
+	return reader.read(filename, xf, recalc_normals, verbose);
 }
 
 #else // ENABLE_ASSIMP
