@@ -13,7 +13,7 @@ CXXFLAGS=-g -Wall -O3 -fopenmp $(INCLUDES) $(DEFINES) -Wextra -Wno-unused-parame
 OBJS=$(shell cat obj_list)
 
 LINK=$(CPP) -fopenmp $(INCLUDES)
-LDFLAGS=-lpthread `pkg-config --libs zlib libpng libjpeg libtiff-4 xrender glew freealut` -lglut -fopenmp
+LDFLAGS=-lpthread `pkg-config --libs zlib libpng libjpeg libtiff-4 xrender glew freealut` -lglut -fopenmp -lassimp
 
 # For creating dependencies files
 DEPFLAGS = -MT $@ -MMD -MP -MF $(BUILD)/$*.Td
