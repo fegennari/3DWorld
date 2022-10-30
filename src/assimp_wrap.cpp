@@ -14,7 +14,9 @@
 #include <assimp/scene.h>
 #include <assimp/postprocess.h>
 
-vector3d aiVector3D_to_vector3d(aiVector3D const &v) {return vector3d(v.x, v.y, v.z);}
+vector3d  aiVector3D_to_vector3d(aiVector3D const &v) {return vector3d (v.x, v.y, v.z);}
+colorRGBA aiColor4D_to_colorRGBA(aiColor4D  const &c) {return colorRGBA(c.r, c.g, c.b, c.a);}
+
 
 // For reference, see: https://learnopengl.com/Model-Loading/Model
 class file_reader_assimp {
@@ -27,7 +29,7 @@ class file_reader_assimp {
 		if (count == 0) return -1; // no texture
 		// load only the first texture, as that's all we support
 		aiString fn; // TODO: is this absolute, or relative to the model file?
-		mat->GetTexture(type, 0, &fn);
+		if (mat->GetTexture(type, 0, &fn) != AI_SUCCESS) return -1;
 		// is_alpha_mask=0, verbose=1, invert_alpha=0, wrap=1, mirror=0, force_grayscale=0
 		return model.tmgr.create_texture((model_dir + fn.C_Str()), 0, 1, 0, 1, 0, 0, is_normal_map);
 	}
@@ -63,12 +65,26 @@ class file_reader_assimp {
 		
 		if (is_new_mat) { // process material if this is the first mesh using it
 			aiMaterial const* const material(scene->mMaterials[mesh->mMaterialIndex]);
+			// setup and load textures
 			mat.a_tid    = load_texture(material, aiTextureType_AMBIENT);
 			mat.d_tid    = load_texture(material, aiTextureType_DIFFUSE);
 			mat.s_tid    = load_texture(material, aiTextureType_SPECULAR);
 			mat.bump_tid = load_texture(material, aiTextureType_NORMALS, 1); // is_normal_map=1; or aiTextureType_HEIGHT?
 			//mat.refl_tid = load_texture(material, aiTextureType_REFLECTION); // unused
-			// I guess the colors remain at the defaults?
+			// setup colors
+			aiColor4D color;
+			if (aiGetMaterialColor(material, AI_MATKEY_COLOR_AMBIENT,  &color) == AI_SUCCESS) {mat.ka = aiColor4D_to_colorRGBA(color);}
+			if (aiGetMaterialColor(material, AI_MATKEY_COLOR_DIFFUSE,  &color) == AI_SUCCESS) {mat.kd = aiColor4D_to_colorRGBA(color);}
+			if (aiGetMaterialColor(material, AI_MATKEY_COLOR_SPECULAR, &color) == AI_SUCCESS) {mat.ks = aiColor4D_to_colorRGBA(color);}
+			if (aiGetMaterialColor(material, AI_MATKEY_COLOR_EMISSIVE, &color) == AI_SUCCESS) {mat.ke = aiColor4D_to_colorRGBA(color);}
+			unsigned max1(1), max2(1);
+			float shininess(0.0), strength(0.0);
+			
+			if (aiGetMaterialFloatArray(material, AI_MATKEY_SHININESS,          &shininess, &max1) == AI_SUCCESS &&
+				aiGetMaterialFloatArray(material, AI_MATKEY_SHININESS_STRENGTH, &strength,  &max2) == AI_SUCCESS)
+			{
+				mat.ns = shininess * strength;
+			}
 		}
 	}  
 	void process_node_recur(aiNode *node, const aiScene *scene) {
@@ -80,12 +96,18 @@ class file_reader_assimp {
 public:
 	file_reader_assimp(model3d &model_) : model(model_) {}
 
-	bool read(string const &fn, geom_xform_t const &xf, bool recalc_normals, bool verbose) {
-		// Note: recalc_normals is currently not supported and is ignored
+	bool read(string const &fn, geom_xform_t const &xf, bool recalc_normals, bool load_animations, bool verbose) {
 		cur_xf = xf;
 		Assimp::Importer importer;
 		// aiProcess_OptimizeMeshes
-		aiScene const* const scene(importer.ReadFile(fn, (aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_GenNormals)));
+		// aiProcess_ValidateDataStructure - for debugging
+		// aiProcess_ImproveCacheLocality - optional, but already supported by the model3d class
+		// aiProcess_FindDegenerates, aiProcess_FindInvalidData - optional
+		unsigned flags(aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_JoinIdenticalVertices | aiProcess_FixInfacingNormals | aiProcess_GenUVCoords | aiProcess_OptimizeMeshes);
+		// Note: here we treat the recalc_normals flag as using smooth normals; if the model already contains normals, they're always used
+		flags |= (recalc_normals ? aiProcess_GenSmoothNormals : aiProcess_GenNormals);
+		if (!load_animations) {flags |= aiProcess_PreTransformVertices | aiProcess_RemoveRedundantMaterials;}
+		aiScene const* const scene(importer.ReadFile(fn, flags));
 		
 		if (!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode) {
 			cerr << "AssImp Import Error: " << importer.GetErrorString() << endl;
@@ -94,6 +116,7 @@ public:
 		model_dir = fn;
 		while (!model_dir.empty() && model_dir.back() != '/' && model_dir.back() != '\\') {model_dir.pop_back();} // remove filename from end, but leave the slash
 		process_node_recur(scene->mRootNode, scene);
+		if (load_animations) {} // TODO
 		model.finalize(); // optimize vertices, remove excess capacity, compute bounding sphere, subdivide, compute LOD blocks
 		model.load_all_used_tids();
 		if (verbose) {cout << "bcube: " << model.get_bcube().str() << endl << "model stats: "; model.show_stats();}
@@ -103,8 +126,9 @@ public:
 
 bool read_assimp_model(string const &filename, model3d &model, geom_xform_t const &xf, int recalc_normals, bool verbose) {
 	timer_t timer("Read AssImp Model");
+	bool const load_animations = 0; // not yet implemented
 	file_reader_assimp reader(model);
-	return reader.read(filename, xf, recalc_normals, verbose);
+	return reader.read(filename, xf, recalc_normals, load_animations, verbose);
 }
 
 #else // ENABLE_ASSIMP
