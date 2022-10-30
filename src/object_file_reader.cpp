@@ -798,19 +798,15 @@ bool load_model_file(string const &filename, model3ds &models, geom_xform_t cons
 		if (!read_3ds_file_model(filename, cur_model, xf, recalc_normals, verbose)) {models.pop_back(); return 0;} // recalc_normals is always true
 		//if (write_file && !write_model3d_file(filename, cur_model)) return 0; // Note: doesn't work because there's no mtllib file
 	}
-	else if (ext == "model3d" || ext == "obj") { // object/model3d file
-		object_file_reader_model reader(filename, cur_model);
-
-		if (ext == "model3d") {
-			//assert(xf == geom_xform_t()); // xf is ignored, assumed to be already applied; use transforms with loaded model3d files
-			if (!reader.load_from_model3d_file(verbose)) {models.pop_back(); return 0;}
-		}
-		else {
-			check_obj_file_ext(filename, ext);
-			//test_other_obj_loader(filename); // placeholder for testing other object file loaders (tinyobjloader, assimp, etc.)
-			if (!reader.read(xf, recalc_normals, verbose)) {models.pop_back(); return 0;}
-			if (write_file && !write_model3d_file(filename, cur_model)) return 0; // don't need to pop the model
-		}
+	else if (ext == "model3d") {
+		//assert(xf == geom_xform_t()); // xf is ignored, assumed to be already applied; use transforms with loaded model3d files
+		if (!object_file_reader_model(filename, cur_model).load_from_model3d_file(verbose)) {models.pop_back(); return 0;}
+	}
+	else if (ext == "obj") {
+		check_obj_file_ext(filename, ext);
+		//test_other_obj_loader(filename); // placeholder for testing other object file loaders (tinyobjloader, assimp, etc.)
+		if (!object_file_reader_model(filename, cur_model).read(xf, recalc_normals, verbose)) {models.pop_back(); return 0;}
+		if (write_file && !write_model3d_file(filename, cur_model)) return 0; // don't need to pop the model
 	}
 	else { // not a built-in supported format, try using assimp if compiled in
 		if (!read_assimp_model(filename, cur_model, xf, recalc_normals, verbose)) return 0;
