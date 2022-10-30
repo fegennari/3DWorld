@@ -6,6 +6,10 @@
 #include "3DWorld.h"
 #include "model3d.h"
 
+//#define ENABLE_ASSIMP
+
+#ifdef ENABLE_ASSIMP
+
 #include <assimp/Importer.hpp>
 #include <assimp/scene.h>
 #include <assimp/postprocess.h>
@@ -84,8 +88,17 @@ public:
 	}
 };
 
-bool read_assimp_model(string const &filename, model3d &model, geom_xform_t const &xf, int use_vertex_normals, bool verbose) {
+bool read_assimp_model(string const &filename, model3d &model, geom_xform_t const &xf, int recalc_normals, bool verbose) {
 	timer_t timer("Read AssImp Model");
 	file_reader_assimp reader(model);
 	return reader.read(filename, xf, verbose);
 }
+
+#else // ENABLE_ASSIMP
+
+bool read_assimp_model(string const &filename, model3d &model, geom_xform_t const &xf, int recalc_normals, bool verbose) {
+	cerr << "Error: Assimp model import has not been enabled at compile time" << endl;
+	return 0;
+}
+
+#endif

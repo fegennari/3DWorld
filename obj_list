@@ -96,6 +96,7 @@ Water.o
 waypoints.o
 weapon_draw.o
 targa.o
+assimp_wrap.o
 roads.o
 cars.o
 pedestrians.o
