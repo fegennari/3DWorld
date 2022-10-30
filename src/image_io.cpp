@@ -183,6 +183,18 @@ void texture_t::load(int index, bool allow_diff_width_height, bool allow_two_byt
 #endif
 }
 
+void texture_t::set_image_size(int w, int h, bool allow_diff_width_height) {
+	if (allow_diff_width_height || (width == 0 && height == 0)) {
+		width  = w;
+		height = h;
+		assert(width > 0 && height > 0);
+	}
+	else if (w != width || h != height) {
+		cerr << "Incorrect image size for " << name << ": expected " << width << "x" << height << ", got " << w << "x" << h << endl;
+		exit(1);
+	}
+}
+
 
 // http://paulbourke.net/dataformats/bmp/
 struct bmp_header { // 14 bytes (may be padded to 16, but we only read 14)
@@ -395,15 +407,7 @@ void texture_t::load_targa(int index, bool allow_diff_width_height) {
 			exit(1);
 		}
 	}
-	if (allow_diff_width_height || (width == 0 && height == 0)) {
-		width  = img.width;
-		height = img.height;
-		assert(width > 0 && height > 0);
-	}
-	if (img.width != width || img.height != height) {
-		cerr << "Incorrect image size for " << name << ": expected " << width << "x" << height << ", got " << img.width << "x" << img.height << endl;
-		exit(1);
-	}
+	set_image_size(img.width, img.height, allow_diff_width_height);
 	// overwrite ncolors; if caller set ncolors=4 then assume it has an alpha channel
 	if      (img.image_type == TGA_IMAGE_TYPE_BGR  || img.image_type == TGA_IMAGE_TYPE_BGR_RLE ) {ncolors = ((ncolors == 4) ? 4 : 3);} // RGB/RGBA
 	else if (img.image_type == TGA_IMAGE_TYPE_MONO || img.image_type == TGA_IMAGE_TYPE_MONO_RLE) {ncolors = 1;} // Red
@@ -440,16 +444,7 @@ void texture_t::load_jpeg(int index, bool allow_diff_width_height) {
 	jpeg_stdio_src(&cinfo, fp);
 	jpeg_read_header(&cinfo, TRUE);
 	jpeg_start_decompress(&cinfo);
-
-	if (allow_diff_width_height || (width == 0 && height == 0)) {
-		width  = cinfo.output_width;
-		height = cinfo.output_height;
-		assert(width > 0 && height > 0);
-	}
-	if ((int)cinfo.output_width != width || (int)cinfo.output_height != height) {
-		cerr << "Incorrect image size for " << name << ": expected " << width << "x" << height << ", got " << cinfo.output_width << "x" << cinfo.output_height << endl;
-		exit(1);
-	}
+	set_image_size(cinfo.output_width, cinfo.output_height, allow_diff_width_height);
 	bool const want_alpha_channel(ncolors == 4 && cinfo.output_components == 3);
 	ncolors = cinfo.output_components; // Note: can never be 4
 	unsigned const scanline_size(ncolors*width);
@@ -546,16 +541,7 @@ void texture_t::load_png(int index, bool allow_diff_width_height, bool allow_two
 	unsigned const h(png_get_image_height(png_ptr, info_ptr));
 	int const bit_depth(png_get_bit_depth(png_ptr, info_ptr));
 	unsigned const png_ncolors(png_get_channels(png_ptr, info_ptr));
-
-	if (allow_diff_width_height || (width == 0 && height == 0)) {
-		width  = w;
-		height = h;
-		assert(width > 0 && height > 0);
-	}
-	if ((int)w != width || (int)h != height) {
-		cerr << "Incorrect image size for " << name << ": expected " << width << "x" << height << ", got " << w << "x" << h << endl;
-		exit(1);
-	}
+	set_image_size(w, h, allow_diff_width_height);
 	bool const want_alpha_channel(ncolors == 4 && png_ncolors == 3);
 	ncolors = png_ncolors;
 
@@ -570,10 +556,7 @@ void texture_t::load_png(int index, bool allow_diff_width_height, bool allow_two
 	vector<unsigned char *> rows(height);
 	unsigned const scanline_size(ncolors*width);
 	alloc();
-	
-	for (int i = 0; i < height; ++i) {
-		rows[i] = data + (height - i - 1)*scanline_size;
-	}
+	for (int i = 0; i < height; ++i) {rows[i] = data + (height - i - 1)*scanline_size;}
 	png_read_image(png_ptr, &rows.front());
 	png_read_end(png_ptr, end_info);
 	png_destroy_read_struct(&png_ptr, &info_ptr, &end_info);
@@ -661,13 +644,7 @@ void texture_t::load_tiff(int index, bool allow_diff_width_height, bool allow_tw
 	TIFFGetField(tif, TIFFTAG_IMAGELENGTH,   &h);
 	TIFFGetField(tif, TIFFTAG_BITSPERSAMPLE, &bit_depth);
 	TIFFGetField(tif, TIFFTAG_PLANARCONFIG,  &config);
-
-	if (allow_diff_width_height || (width == 0 && height == 0)) {
-		width  = w;
-		height = h;
-		assert(width > 0 && height > 0);
-	}
-	assert((int)w == width && (int)h == height);
+	set_image_size(w, h, allow_diff_width_height);
 	
 	if (allow_two_byte_grayscale && (ncolors == 0 || ncolors == 1) && bit_depth == 16) { // 16-bit grayscale
 		set_16_bit_grayscale();
@@ -805,17 +782,10 @@ void texture_t::load_ppm(int index, bool allow_diff_width_height) {
 		cerr << "Error: PPM file's magic number needs to be P6 in file " << name << endl;
 		exit(1);
 	}
-
 	// Read width and height
 	int const w(stoi(read_string_ignore_comment_line(in)));
 	int const h(stoi(read_string_ignore_comment_line(in)));
-
-	if (allow_diff_width_height || (width == 0 && height == 0)) {
-		width  = w;
-		height = h;
-		assert(width > 0 && height > 0);
-	}
-	assert((int)w == width && (int)h == height);
+	set_image_size(w, h, allow_diff_width_height);
 
 	if (read_string_ignore_comment_line(in) != string("255")) { // Read max value
 		cerr << "Error: PPM file's max value needs to be 255 in file " << name << endl;

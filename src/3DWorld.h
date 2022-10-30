@@ -1056,6 +1056,7 @@ public:
 	void free_data() {gl_delete(); free_client_mem();}
 	void gl_delete();
 	void load(int index, bool allow_diff_width_height=0, bool allow_two_byte_grayscale=0, bool ignore_word_alignment=0);
+	void set_image_size(int w, int h, bool allow_diff_width_height);
 	void load_raw_bmp(int index, bool allow_diff_width_height, bool allow_two_byte_grayscale);
 	void load_targa(int index, bool allow_diff_width_height);
 	void load_jpeg(int index, bool allow_diff_width_height);
