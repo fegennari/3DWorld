@@ -8,6 +8,7 @@
 
 using namespace std;
 
+// Note: stb_image generally works as a replacement for ligpng/ligjpeg/libtiff, but it doesn't support 16-bit formats, so it can't fully replace libpng; similar runtime
 //#define ENABLE_STB_IMAGE
 #ifdef ENABLE_STB_IMAGE
 #define STB_IMAGE_IMPLEMENTATION
@@ -128,11 +129,12 @@ void texture_t::load(int index, bool allow_diff_width_height, bool allow_two_byt
 			}
 		}
 		unsigned const want_alpha_channel(ncolors == 4), want_luminance(ncolors == 1);
+		bool need_to_invert_y(invert_y);
 		//highres_timer_t timer("Load " + get_file_extension(name, 0, 1)); // 0.1s bmp, 6.3s jpeg, 4.4s png, 0.3s tga, 0.2s tiff
 
-		// attempt to load image with STB if it's enabled; applies to BMP, TGA, JPEG, and PNG
-		if ((format == 1 || format == 4 || format == 5 || format == 6) && load_stb_image(index, allow_diff_width_height, allow_two_byte_grayscale)) {
-			// loaded with STB, done
+		// attempt to load image with STB if it's enabled; applies to BMP, TGA, JPEG, and PNG; 2-byte grayscale images are not supported
+		if ((format == 1 || format == 4 || format == 5 || format == 6) && !allow_two_byte_grayscale && load_stb_image(index, allow_diff_width_height, 0)) {
+			need_to_invert_y ^= 1; // loaded with STB; must invert Y because stb loads differently
 		}
 		else {
 			switch (format) {
@@ -152,7 +154,7 @@ void texture_t::load(int index, bool allow_diff_width_height, bool allow_two_byt
 		// defer this check until we actually need to access the data, in case we want to actually do the load on the fly later
 		//assert(is_allocated());
 		assert(is_loaded());
-		if (invert_y && format != 10) {do_invert_y();} // upside down (not DDS)
+		if (need_to_invert_y && format != 10) {do_invert_y();} // upside down (not DDS)
 		if (want_alpha_channel && ncolors < 4) {add_alpha_channel();}
 		else if (want_luminance && ncolors == 3) {try_compact_to_lum();}
 		//if (want_alpha_channel) {fill_transparent_with_avg_color();}
@@ -318,13 +320,9 @@ void texture_t::load_raw_bmp(int index, bool allow_diff_width_height, bool allow
 
 
 void maybe_swap_rb(unsigned char *ptr, unsigned num_pixels, unsigned ncolors) {
-
 	assert(ptr != NULL);
 	if (ncolors != 3 && ncolors != 4) return;
-
-	for(unsigned i = 0; i < num_pixels; ++i) {
-		swap(ptr[ncolors*i+0], ptr[ncolors*i+2]); // BGR[A] => RGB[A]
-	}
+	for(unsigned i = 0; i < num_pixels; ++i) {swap(ptr[ncolors*i+0], ptr[ncolors*i+2]);} // BGR[A] => RGB[A]
 }
 
 
@@ -803,23 +801,28 @@ void texture_t::load_ppm(int index, bool allow_diff_width_height) {
 bool texture_t::load_stb_image(int index, bool allow_diff_width_height, bool allow_two_byte_grayscale) {
 
 #ifdef ENABLE_STB_IMAGE
-	timer_t timer("Load STB Image");
-	// TODO
+	assert(!allow_two_byte_grayscale); // not supported
+	int w(0), h(0), nc(0);
+	string filename(append_texture_dir(name)); // first, try looking in the texture directory
+	FILE *fp(fopen(filename.c_str(), "rb")); // see if we can open the file
+	if (fp == nullptr) {filename = name;} // if not in the texture directory, look in the current directory
+	else {checked_fclose(fp);}
+	unsigned char *const file_data(stbi_load(filename.c_str(), &w, &h, &nc, 0));
 
-	if (allow_diff_width_height || (width == 0 && height == 0)) {
-		// TODO
+	if (file_data == nullptr) { // still not found, or there was an error
+		cerr << "Error: stbi_load() returned error: \"" << stbi_failure_reason() << "\" for file " << name << endl;
+		return 0; // default to some other image reader
 	}
-	//if ((int)w != width || (int)h != height) {}
-	//bool const want_alpha_channel(ncolors == 4 && png_ncolors == 3);
-	//ncolors = png_ncolors;
-
-	if (allow_two_byte_grayscale && ncolors == 1) {
-		set_16_bit_grayscale();
-		// TODO
-	}
+	//cout << TXT(name) << TXT(width) << TXT(height) << TXT(w) << TXT(h) << TXT(ncolors) << TXT(nc) << endl;
+	set_image_size(w, h, allow_diff_width_height);
+	bool const want_alpha_channel(ncolors == 4 && nc == 3);
+	ncolors = nc;
+	//if (allow_two_byte_grayscale && ncolors == 1 && bit_width == 16) {set_16_bit_grayscale();}
 	alloc();
+	std::memcpy(data, file_data, num_bytes());
+	stbi_image_free(file_data);
 
-	if (0) {
+	if (want_alpha_channel) {
 		add_alpha_channel();
 		auto_insert_alpha_channel(index);
 	}
