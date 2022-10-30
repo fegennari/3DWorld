@@ -1043,6 +1043,7 @@ void update_player_bbb_texture(float extra_blood, bool recreate) {
 
 	texture_t const &wood_tex(textures[WOOD_TEX]);
 	texture_t &bbb_tex(textures[PLAYER_BBB_TEX]);
+	if (!bbb_tex.is_allocated()) return; // not yet loaded/allocated, or texture not found; skip this update
 	assert(wood_tex.width == bbb_tex.width && wood_tex.height == bbb_tex.height && wood_tex.ncolors == bbb_tex.ncolors);
 	unsigned char const *const wood_data(wood_tex.get_data());
 	unsigned char *const bbb_data(bbb_tex.get_data());
