@@ -20,6 +20,7 @@ vector3d aiVector3D_to_vector3d(aiVector3D const &v) {return vector3d(v.x, v.y, 
 class file_reader_assimp {
 	model3d &model;
 	geom_xform_t cur_xf;
+	string model_dir;
 
 	int load_texture(aiMaterial const* const mat, aiTextureType const type, bool is_normal_map=0) {
 		unsigned const count(mat->GetTextureCount(type));
@@ -28,12 +29,13 @@ class file_reader_assimp {
 		aiString fn; // TODO: is this absolute, or relative to the model file?
 		mat->GetTexture(type, 0, &fn);
 		// is_alpha_mask=0, verbose=1, invert_alpha=0, wrap=1, mirror=0, force_grayscale=0
-		return model.tmgr.create_texture(fn.C_Str(), 0, 1, 0, 1, 0, 0, is_normal_map);
+		return model.tmgr.create_texture((model_dir + fn.C_Str()), 0, 1, 0, 1, 0, 0, is_normal_map);
 	}
 	void process_mesh(aiMesh *mesh, const aiScene *scene) {
 		vector<vert_norm_tc> verts(mesh->mNumVertices);
 		vector<unsigned> indices;
 		indices.reserve(3*mesh->mNumFaces);
+		cube_t mesh_bcube;
 
 		for (unsigned i = 0; i < mesh->mNumVertices; i++) { // process vertices
 			vert_norm_tc &v(verts[i]);
@@ -46,12 +48,14 @@ class file_reader_assimp {
 				v.t[0] = mesh->mTextureCoords[0][i].x; 
 				v.t[1] = mesh->mTextureCoords[0][i].y;
 			}
+			if (i == 0) {mesh_bcube.set_from_point(v.v);} else {mesh_bcube.union_with_pt(v.v);}
 		} // for i
 		for (unsigned i = 0; i < mesh->mNumFaces; i++) { // process faces/indices
 			aiFace const& face(mesh->mFaces[i]);
 			assert(face.mNumIndices == 3); // must be triangles
 			for (unsigned j = 0; j < face.mNumIndices; j++) {indices.push_back(face.mIndices[j]);}
 		}
+		model.union_bcube_with(mesh_bcube);
 		//if (mesh->mMaterialIndex >= 0) {} // according to the tutorial, this check should be done; but mMaterialIndex is unsigned, so it can't fail?
 		material_t &mat(model.get_material(mesh->mMaterialIndex, 1)); // alloc_if_needed=1
 		bool const is_new_mat(mat.empty());
@@ -87,8 +91,12 @@ public:
 			cerr << "AssImp Import Error: " << importer.GetErrorString() << endl;
 			return 0;
 		}
-		//directory = fn.substr(0, fn.find_last_of('/'));
+		model_dir = fn;
+		while (!model_dir.empty() && model_dir.back() != '/' && model_dir.back() != '\\') {model_dir.pop_back();} // remove filename from end, but leave the slash
 		process_node_recur(scene->mRootNode, scene);
+		model.finalize(); // optimize vertices, remove excess capacity, compute bounding sphere, subdivide, compute LOD blocks
+		model.load_all_used_tids();
+		if (verbose) {cout << "bcube: " << model.get_bcube().str() << endl << "model stats: "; model.show_stats();}
 		return 1;
 	}
 };

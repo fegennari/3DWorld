@@ -1281,6 +1281,7 @@ void material_t::add_triangles(vector<vert_norm_tc> const &verts, vector<unsigne
 	unsigned const ixs_off(dest.size());
 	vector_add_to(verts, dest);
 	for (unsigned ix : indices) {dest.indices.push_back(ix + ixs_off);} // adjust indices based on existing vertices
+	mark_as_used();
 }
 
 bool material_t::add_poly(polygon_t const &poly, vntc_map_t vmap[2], vntct_map_t vmap_tan[2], unsigned obj_id) {
