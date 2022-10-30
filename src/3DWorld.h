@@ -1061,6 +1061,7 @@ public:
 	void load_jpeg(int index, bool allow_diff_width_height);
 	void load_png(int index, bool allow_diff_width_height, bool allow_two_byte_grayscale);
 	void load_tiff(int index, bool allow_diff_width_height, bool allow_two_byte_grayscale);
+	bool load_stb_image(int index, bool allow_diff_width_height, bool allow_two_byte_grayscale);
 	void load_dds(int index);
 	void deferred_load_dds();
 	void load_ppm(int index, bool allow_diff_width_height);

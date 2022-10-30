@@ -8,6 +8,12 @@
 
 using namespace std;
 
+//#define ENABLE_STB_IMAGE
+#ifdef ENABLE_STB_IMAGE
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb_image.h"
+#endif
+
 #ifdef ENABLE_JPEG
 #define INT32 prev_INT32 // fix conflicting typedef used in freeglut
 #include "jpeglib.h"
@@ -124,17 +130,23 @@ void texture_t::load(int index, bool allow_diff_width_height, bool allow_two_byt
 		unsigned const want_alpha_channel(ncolors == 4), want_luminance(ncolors == 1);
 		//highres_timer_t timer("Load " + get_file_extension(name, 0, 1)); // 0.1s bmp, 6.3s jpeg, 4.4s png, 0.3s tga, 0.2s tiff
 
-		switch (format) {
-		case 0: case 1: case 2: case 3: load_raw_bmp(index, allow_diff_width_height, allow_two_byte_grayscale); break; // raw
-		case 4: load_targa(index, allow_diff_width_height); break;
-		case 5: load_jpeg (index, allow_diff_width_height); break;
-		case 6: load_png  (index, allow_diff_width_height, allow_two_byte_grayscale); break;
-		case 8: load_tiff (index, allow_diff_width_height, allow_two_byte_grayscale); break;
-		case 10: load_dds (index); break;
-		case 11: load_ppm (index, allow_diff_width_height); break;
-		default:
-			cerr << "Unsupported image format: " << format << endl;
-			exit(1);
+		// attempt to load image with STB if it's enabled; applies to BMP, TGA, JPEG, and PNG
+		if ((format == 1 || format == 4 || format == 5 || format == 6) && load_stb_image(index, allow_diff_width_height, allow_two_byte_grayscale)) {
+			// loaded with STB, done
+		}
+		else {
+			switch (format) {
+			case 0: case 1: case 2: case 3: load_raw_bmp(index, allow_diff_width_height, allow_two_byte_grayscale); break; // raw or BMP
+			case 4: load_targa(index, allow_diff_width_height); break;
+			case 5: load_jpeg (index, allow_diff_width_height); break;
+			case 6: load_png  (index, allow_diff_width_height, allow_two_byte_grayscale); break;
+			case 8: load_tiff (index, allow_diff_width_height, allow_two_byte_grayscale); break;
+			case 10: load_dds (index); break;
+			case 11: load_ppm (index, allow_diff_width_height); break;
+			default:
+				cerr << "Unsupported image format: " << format << endl;
+				exit(1);
+			}
 		}
 		//timer.end();
 		// defer this check until we actually need to access the data, in case we want to actually do the load on the fly later
@@ -816,5 +828,34 @@ void texture_t::load_ppm(int index, bool allow_diff_width_height) {
 		cerr << "Error reading PPM file" << endl;
 		exit(1);
 	}
+}
+
+bool texture_t::load_stb_image(int index, bool allow_diff_width_height, bool allow_two_byte_grayscale) {
+
+#ifdef ENABLE_STB_IMAGE
+	timer_t timer("Load STB Image");
+	// TODO
+
+	if (allow_diff_width_height || (width == 0 && height == 0)) {
+		// TODO
+	}
+	//if ((int)w != width || (int)h != height) {}
+	//bool const want_alpha_channel(ncolors == 4 && png_ncolors == 3);
+	//ncolors = png_ncolors;
+
+	if (allow_two_byte_grayscale && ncolors == 1) {
+		set_16_bit_grayscale();
+		// TODO
+	}
+	alloc();
+
+	if (0) {
+		add_alpha_channel();
+		auto_insert_alpha_channel(index);
+	}
+	return 1;
+#else
+	return 0; // disabled
+#endif
 }
 
