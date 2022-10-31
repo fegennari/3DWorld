@@ -1343,7 +1343,8 @@ void material_t::write_mtllib_entry(ostream &out, texture_manager const &tmgr) c
 
 material_t &model3d::get_material(int mat_id, bool alloc_if_needed) {
 	if (alloc_if_needed && mat_id >= (int)materials.size()) {materials.resize(mat_id+1);} // allocate additional material(s) if needed
-	assert(mat_id >= 0 && mat_id < (int)materials.size());
+	assert(mat_id >= 0);
+	assert(mat_id < (int)materials.size());
 	return materials[mat_id];
 }
 

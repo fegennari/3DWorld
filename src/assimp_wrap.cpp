@@ -34,6 +34,8 @@ class file_reader_assimp {
 		return model.tmgr.create_texture((model_dir + fn.C_Str()), 0, 1, 0, 1, 0, 0, is_normal_map);
 	}
 	void process_mesh(aiMesh *mesh, const aiScene *scene) {
+		assert(mesh != nullptr);
+		if (!(mesh->mPrimitiveTypes & aiPrimitiveType_TRIANGLE)) return; // not a triangle mesh - skip for now (can be removed using options)
 		vector<vert_norm_tc> verts(mesh->mNumVertices);
 		vector<unsigned> indices;
 		indices.reserve(3*mesh->mNumFaces);
@@ -41,17 +43,22 @@ class file_reader_assimp {
 
 		for (unsigned i = 0; i < mesh->mNumVertices; i++) { // process vertices
 			vert_norm_tc &v(verts[i]);
+			assert(mesh->mVertices != nullptr); // vertices are required
+			assert(mesh->mNormals  != nullptr); // we specified normal creation, so these shouldbe non-null
 			v.v = aiVector3D_to_vector3d(mesh->mVertices[i]); // position
 			v.n = aiVector3D_to_vector3d(mesh->mNormals [i]); // normals
 			cur_xf.xform_pos   (v.v);
 			cur_xf.xform_pos_rm(v.n);
 
-			if (mesh->mTextureCoords[0]) { // texture coordinates are optional and default to (0,0); we only use the first of 8
+			if (mesh->mTextureCoords != nullptr && mesh->mTextureCoords[0] != nullptr) { // TCs are optional and default to (0,0); we only use the first of 8
 				v.t[0] = mesh->mTextureCoords[0][i].x; 
 				v.t[1] = mesh->mTextureCoords[0][i].y;
 			}
 			if (i == 0) {mesh_bcube.set_from_point(v.v);} else {mesh_bcube.union_with_pt(v.v);}
 		} // for i
+		assert(mesh->mFaces != nullptr);
+		assert(mesh->mNumFaces > 0); // if there were verts, there must be faces
+
 		for (unsigned i = 0; i < mesh->mNumFaces; i++) { // process faces/indices
 			aiFace const& face(mesh->mFaces[i]);
 			assert(face.mNumIndices == 3); // must be triangles
@@ -64,7 +71,9 @@ class file_reader_assimp {
 		mat.add_triangles(verts, indices, 1); // add_new_block=1
 		
 		if (is_new_mat) { // process material if this is the first mesh using it
+			assert(scene->mMaterials != nullptr);
 			aiMaterial const* const material(scene->mMaterials[mesh->mMaterialIndex]);
+			assert(material != nullptr);
 			// setup and load textures
 			mat.a_tid    = load_texture(material, aiTextureType_AMBIENT);
 			mat.d_tid    = load_texture(material, aiTextureType_DIFFUSE);
@@ -88,6 +97,7 @@ class file_reader_assimp {
 		}
 	}  
 	void process_node_recur(aiNode *node, const aiScene *scene) {
+		assert(node != nullptr);
 		// process all the node's meshes (if any), in tree order rather than simply iterating over mMeshes
 		for (unsigned i = 0; i < node->mNumMeshes; i++) {process_mesh(scene->mMeshes[node->mMeshes[i]], scene);}
 		// then do the same for each of its children
@@ -103,13 +113,14 @@ public:
 		// aiProcess_ValidateDataStructure - for debugging
 		// aiProcess_ImproveCacheLocality - optional, but already supported by the model3d class
 		// aiProcess_FindDegenerates, aiProcess_FindInvalidData - optional
-		unsigned flags(aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_JoinIdenticalVertices | aiProcess_FixInfacingNormals | aiProcess_GenUVCoords | aiProcess_OptimizeMeshes);
+		unsigned flags(aiProcess_Triangulate | aiProcess_SortByPType | aiProcess_FlipUVs | aiProcess_JoinIdenticalVertices |
+			           aiProcess_FixInfacingNormals | aiProcess_GenUVCoords | aiProcess_OptimizeMeshes);
 		// Note: here we treat the recalc_normals flag as using smooth normals; if the model already contains normals, they're always used
 		flags |= (recalc_normals ? aiProcess_GenSmoothNormals : aiProcess_GenNormals);
 		if (!load_animations) {flags |= aiProcess_PreTransformVertices | aiProcess_RemoveRedundantMaterials;}
 		aiScene const* const scene(importer.ReadFile(fn, flags));
 		
-		if (!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode) {
+		if (scene == nullptr || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode) {
 			cerr << "AssImp Import Error: " << importer.GetErrorString() << endl;
 			return 0;
 		}
@@ -125,7 +136,7 @@ public:
 };
 
 bool read_assimp_model(string const &filename, model3d &model, geom_xform_t const &xf, int recalc_normals, bool verbose) {
-	timer_t timer("Read AssImp Model");
+	//timer_t timer("Read AssImp Model");
 	bool const load_animations = 0; // not yet implemented
 	file_reader_assimp reader(model);
 	return reader.read(filename, xf, recalc_normals, load_animations, verbose);
