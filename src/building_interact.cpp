@@ -16,7 +16,7 @@ float const TERM_VELOCITY  = 1.0;
 float const OBJ_ELASTICITY = 0.8;
 
 extern bool tt_fire_button_down, flashlight_on, player_is_hiding, player_in_attic, use_last_pickup_object, city_action_key;
-extern int player_in_closet, camera_surf_collide, building_action_key, can_pickup_bldg_obj, animate2, frame_counter;
+extern int player_in_closet, camera_surf_collide, building_action_key, can_pickup_bldg_obj, animate2, frame_counter, player_in_elevator;
 extern float fticks, CAMERA_RADIUS, office_chair_rot_rate;
 extern double tfticks;
 extern building_dest_t cur_player_building_loc;
@@ -47,6 +47,7 @@ bool is_motion_detected(point const &activator, cube_t const &light, cube_t cons
 
 void building_t::run_light_motion_detect_logic(point const &camera_bs) {
 	if (is_house || !interior) return; // office buildings only
+	if (player_in_elevator)    return; // skip so that we don't have a lot of clicking when lights switch on due to AIs while passing floors
 	float const floor_spacing(get_window_vspace());
 	auto objs_end(interior->room_geom->get_placed_objs_end()); // skip buttons/stairs/elevators
 
