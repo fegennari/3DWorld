@@ -1417,7 +1417,12 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			clipped_bc.intersect_with_cube(sphere_bc); // clip to original light sphere, which still applies (only need to expand at building exterior)
 		}
 		if (!clipped_bc.contains_pt(lpos)) {
-			cout << "Error: Invalid light bcube: " << TXT(clipped_bc.str()) << TXT(lpos.str()) << TXT(room.str()) << TXT(bcube.str()) << TXT(is_lamp) << endl;
+			static bool had_invalid_light_bcube_warning = 0;
+
+			if (!had_invalid_light_bcube_warning) { // only print once
+				cout << "Error: Invalid light bcube: " << TXT(clipped_bc.str()) << TXT(lpos.str()) << TXT(room.str()) << TXT(bcube.str()) << TXT(is_lamp) << TXT(is_in_elevator) << endl;
+				had_invalid_light_bcube_warning = 1;
+			}
 			continue; // can fail in rare cases when very far from the origin, likely due to FP error, so skip light in this case
 		}
 		if (!is_rot_cube_visible(clipped_bc, xlate)) continue; // VFC - post clip
