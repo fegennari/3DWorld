@@ -1232,8 +1232,12 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		room_t const &room(get_room(i->room_id));
 		bool const is_lamp(i->type == TYPE_LAMP), is_single_floor(room.is_sec_bldg || is_in_elevator);
 		int const cur_floor(is_single_floor ? 0 : (i->z1() - room.z1())/window_vspacing); // garages and sheds are all one floor
-		float const level_z(is_in_attic ? interior->attic_access.z1() : (room.z1() + cur_floor*window_vspacing));
-		float const floor_z(level_z + fc_thick), ceil_z(is_in_attic ? interior_z2 : (is_single_floor ? room.z2() : (level_z + window_vspacing - fc_thick)));
+		float const level_z(is_in_attic ? interior->attic_access.z1() : (room.z1() + cur_floor*window_vspacing)), floor_z(level_z + fc_thick);
+		float ceil_z(0.0);
+		if      (is_in_attic     ) {ceil_z = interior_z2;} // top of interior/attic
+		else if (is_in_elevator  ) {ceil_z = get_elevator(i->obj_id).z2();} // top of elevator shaft
+		else if (room.is_sec_bldg) {ceil_z = room.z2();} // top of current room/part (garage or shed)
+		else                       {ceil_z = (level_z + window_vspacing - fc_thick);} // normal room light
 		float const floor_below_zval(floor_z - window_vspacing), ceil_above_zval(ceil_z + window_vspacing);
 		// Note: we use level_z rather than floor_z for floor_is_above test so that it agrees with the threshold logic for player_in_basement
 		bool const floor_is_above((camera_z < level_z) && !is_single_floor), floor_is_below(camera_z > ceil_z);
@@ -1324,7 +1328,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		// check visibility of bcube of light sphere clipped to building bcube; this excludes lights behind the camera and improves shadow map assignment quality
 		cube_t sphere_bc; // in building space
 		sphere_bc.set_from_sphere(lpos, cull_radius);
-		cube_t clipped_bc(sphere_bc), light_clip_cube;
+		cube_t light_clip_cube;
 
 		if (light_in_basement) { // clip to basement + ext basement
 			light_clip_cube = get_basement();
@@ -1335,13 +1339,16 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			light_clip_cube = bcube;
 		}
 		assert(light_clip_cube.contains_pt(lpos_rot));
+		cube_t clipped_bc(sphere_bc);
 		clipped_bc.intersect_with_cube(light_clip_cube);
-
-		if (!stairs_light && !is_in_elevator) { // clip zval to current floor if light not in a room with stairs or elevator
-			max_eq(clipped_bc.z1(), (floor_z - fc_thick));
-		}
+		// clip zval to current floor if light not in a room with stairs or elevator
+		if (!stairs_light && !is_in_elevator) {max_eq(clipped_bc.z1(), (floor_z - fc_thick));}
 		min_eq(clipped_bc.z2(), (ceil_z + fc_thick)); // ceiling is always valid, since lights point downward
-		assert(clipped_bc.is_strictly_normalized());
+
+		if (!clipped_bc.is_strictly_normalized()) {
+			cout << "Error: Invalid light bcube: " << TXT(clipped_bc.str()) << TXT(lpos.str()) << TXT(floor_z) << TXT(ceil_z) << TXT(is_lamp) << TXT(is_in_elevator) << endl;
+			assert(0);
+		}
 		if (!is_rot_cube_visible(clipped_bc, xlate)) continue; // VFC
 		//if (line_intersect_walls(lpos, camera_rot)) continue; // straight line visibility test - for debugging, or maybe future use in assigning priorities
 		//if (check_cube_occluded(clipped_bc, interior->fc_occluders, camera_rot)) continue; // legal, but may not help much
