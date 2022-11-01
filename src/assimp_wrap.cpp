@@ -6,7 +6,7 @@
 #include "3DWorld.h"
 #include "model3d.h"
 
-//#define ENABLE_ASSIMP
+#define ENABLE_ASSIMP
 
 #ifdef ENABLE_ASSIMP
 
