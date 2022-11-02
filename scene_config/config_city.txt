@@ -144,7 +144,7 @@ city ped_model ../models/people/makehuman/Katie/Katie.model3d 1 0 0  0 -1 90  1 
 # filename recalc_normals two_sided centered body_material_id fixed_color_id xy_rot swap_xyz scale lod_mult [shadow_mat_ids]
 city toilet_model ../models/interiors/toilet/toilet.model3d     1 0 0  -1 -1 0  1 1.0 1.0  0
 city urinal_model ../models/interiors/urinal/urinal4.model3d    1 0 0  -1 -1 0  1 1.0 1.0  0
-city sink_model   ../models/interiors/simple_sink.model3d       1 0 0  -1 -1 90  0 1.0 1.0
+city sink_model   ../models/interiors/simple_sink.model3d       1 0 0   0  0 90  0 1.0 1.0 # always white
 city tub_model    ../models/interiors/bathtub.model3d           1 0 0  -1 -1 90  1 1.0 1.0  2
 city fridge_model ../models/interiors/fridge/Fridge.model3d     1 0 0  -1 -1 90  1 1.0 1.0  0 1 2 3 4 5
 city stove_model  ../models/interiors/stove/DB_Apps&Tech_04_13.model3d  1 1 0  0 -1 90  1 1.0 4.0 # two sided
