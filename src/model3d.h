@@ -573,7 +573,7 @@ public:
 	bool has_any_transforms() const {return !transforms.empty();}
 	cube_t const &get_bcube() const {return bcube;}
 	cube_t calc_bcube_including_transforms();
-	void union_bcube_with(cube_t const &c) {bcube.union_with_cube(c);}
+	void union_bcube_with(cube_t const &c) {bcube.assign_or_union_with_cube(c);}
 	void build_cobj_tree(bool verbose);
 	bool check_coll_line_cur_xf(point const &p1, point const &p2, point &cpos, vector3d &cnorm, colorRGBA &color, bool exact);
 	bool check_coll_line(point const &p1, point const &p2, point &cpos, vector3d &cnorm, colorRGBA &color, bool exact, bool build_bvh_if_needed=0);

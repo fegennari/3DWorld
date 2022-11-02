@@ -65,7 +65,7 @@ class file_reader_assimp {
 			assert(face.mNumIndices == 3); // must be triangles
 			for (unsigned j = 0; j < face.mNumIndices; j++) {indices.push_back(face.mIndices[j]);}
 		}
-		model.union_bcube_with(mesh_bcube);
+		if (!mesh_bcube.is_all_zeros()) {model.union_bcube_with(mesh_bcube);}
 		//if (mesh->mMaterialIndex >= 0) {} // according to the tutorial, this check should be done; but mMaterialIndex is unsigned, so it can't fail?
 		material_t &mat(model.get_material(mesh->mMaterialIndex, 1)); // alloc_if_needed=1
 		bool const is_new_mat(mat.empty());
