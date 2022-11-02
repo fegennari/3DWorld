@@ -31,8 +31,8 @@ class file_reader_assimp {
 		aiString fn; // absolute path, not relative to the model file
 		if (mat->GetTexture(type, 0, &fn) != AI_SUCCESS) return -1;
 		bool const invert_y = 1;
-		// is_alpha_mask=0, verbose=1, invert_alpha=0, wrap=1, mirror=0, force_grayscale=0
-		return model.tmgr.create_texture((model_dir + fn.C_Str()), 0, 1, 0, 1, 0, 0, is_normal_map, invert_y);
+		// is_alpha_mask=0, verbose=0, invert_alpha=0, wrap=1, mirror=0, force_grayscale=0
+		return model.tmgr.create_texture((model_dir + fn.C_Str()), 0, 0, 0, 1, 0, 0, is_normal_map, invert_y);
 	}
 	void process_mesh(aiMesh *mesh, const aiScene *scene) {
 		assert(mesh != nullptr);
@@ -87,15 +87,18 @@ class file_reader_assimp {
 			if (aiGetMaterialColor(material, AI_MATKEY_COLOR_DIFFUSE,  &color) == AI_SUCCESS) {mat.kd = aiColor4D_to_colorRGBA(color);}
 			if (aiGetMaterialColor(material, AI_MATKEY_COLOR_SPECULAR, &color) == AI_SUCCESS) {mat.ks = aiColor4D_to_colorRGBA(color);}
 			if (aiGetMaterialColor(material, AI_MATKEY_COLOR_EMISSIVE, &color) == AI_SUCCESS) {mat.ke = aiColor4D_to_colorRGBA(color);}
-			unsigned max1(1), max2(1), max3(1);
-			float shininess(0.0), strength(0.0), transparent(0.0);
+			unsigned max1(1), max2(1), max3(1), max4(1);
+			float shininess(0.0), strength(0.0), alpha(1.0);
 			
 			if (aiGetMaterialFloatArray(material, AI_MATKEY_SHININESS,          &shininess, &max1) == AI_SUCCESS &&
 				aiGetMaterialFloatArray(material, AI_MATKEY_SHININESS_STRENGTH, &strength,  &max2) == AI_SUCCESS)
 			{
 				mat.ns = shininess * strength;
 			}
-			if (aiGetMaterialFloatArray(material, AI_MATKEY_COLOR_TRANSPARENT, &transparent, &max1) == AI_SUCCESS) {mat.alpha = transparent;}
+			// check for dissolve, but skip if it's 0; might also want to look at AI_MATKEY_COLOR_TRANSPARENT
+			if (aiGetMaterialFloatArray(material, AI_MATKEY_OPACITY, &alpha, &max3) == AI_SUCCESS && alpha > 0.0) {mat.alpha = alpha;}
+			aiGetMaterialFloatArray(material, AI_MATKEY_TRANSMISSION_FACTOR, &mat.tr, &max4);
+			// illum? tf?
 		}
 	}  
 	void process_node_recur(aiNode *node, const aiScene *scene) {

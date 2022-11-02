@@ -281,6 +281,7 @@ class object_file_reader_model : public object_file_reader, public model_from_fi
 			in.clear(); // clear error bits
 			color.G = color.B = color.R; // grayscale
 		}
+		//color.set_valid_color(); // colors should be in the [0.0, 1.0] range?
 		return 1;
 	}
 
@@ -785,6 +786,8 @@ bool read_3ds_file_model(string const &filename, model3d &model, geom_xform_t co
 bool read_3ds_file_pts(string const &filename, vector<coll_tquad> *ppts, geom_xform_t const &xf, colorRGBA const &def_c, bool verbose);
 bool read_assimp_model(string const &filename, model3d &model, geom_xform_t const &xf, int recalc_normals, bool verbose);
 
+bool const ALWAYS_USE_ASSIMP = 0;
+
 // recalc_normals: 0=no, 1=yes, 2=face_weight_avg
 bool load_model_file(string const &filename, model3ds &models, geom_xform_t const &xf, int def_tid, colorRGBA const &def_c,
 	int reflective, float metalness, int recalc_normals, int group_cobjs_level, bool write_file, bool verbose)
@@ -794,7 +797,7 @@ bool load_model_file(string const &filename, model3ds &models, geom_xform_t cons
 	models.push_back(model3d(filename, models.tmgr, def_tid, def_c, reflective, metalness, recalc_normals, group_cobjs_level));
 	model3d &cur_model(models.back());
 
-	if (ext == "3ds") {
+	if (!ALWAYS_USE_ASSIMP && ext == "3ds") {
 		if (!read_3ds_file_model(filename, cur_model, xf, recalc_normals, verbose)) {models.pop_back(); return 0;} // recalc_normals is always true
 		//if (write_file && !write_model3d_file(filename, cur_model)) return 0; // Note: doesn't work because there's no mtllib file
 	}
@@ -802,7 +805,7 @@ bool load_model_file(string const &filename, model3ds &models, geom_xform_t cons
 		//assert(xf == geom_xform_t()); // xf is ignored, assumed to be already applied; use transforms with loaded model3d files
 		if (!object_file_reader_model(filename, cur_model).load_from_model3d_file(verbose)) {models.pop_back(); return 0;}
 	}
-	else if (ext == "obj") {
+	else if (!ALWAYS_USE_ASSIMP && ext == "obj") {
 		check_obj_file_ext(filename, ext);
 		//test_other_obj_loader(filename); // placeholder for testing other object file loaders (tinyobjloader, assimp, etc.)
 		if (!object_file_reader_model(filename, cur_model).read(xf, recalc_normals, verbose)) {models.pop_back(); return 0;}
