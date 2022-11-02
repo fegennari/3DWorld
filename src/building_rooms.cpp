@@ -2436,9 +2436,13 @@ bool building_t::add_ceil_vent_to_room(rand_gen_t rgen, room_t const &room, floa
 	float const thickness(0.1*wall_thickness), hlen(2.0*wall_thickness), hwid(1.25*wall_thickness);
 	cube_t const room_bounds(get_walkable_room_bounds(room));
 	if (min(room_bounds.dx(), room_bounds.dy()) < 4.0*hlen) return 0; // room is too small; shouldn't happen
-	cube_t c;
+	cube_t c, attic_access;
 	set_cube_zvals(c, ceiling_zval-thickness, ceiling_zval);
 
+	if (has_attic()) {
+		attic_access = interior->attic_access;
+		attic_access.z1() -= get_floor_thickness(); // expand downward a bit do that it would intersect a vent below
+	}
 	for (unsigned n = 0; n < 10; ++n) { // 10 tries
 		bool const dim(rgen.rand_bool());
 		point sz;
@@ -2452,6 +2456,7 @@ bool building_t::add_ceil_vent_to_room(rand_gen_t rgen, room_t const &room, floa
 		if (overlaps_other_room_obj(c_exp, objs_start, 1))     continue; // check for things like closets; check_all=1 to inc whiteboards; excludes picture frames
 		if (interior->is_blocked_by_stairs_or_elevator(c_exp)) continue; // check stairs and elevators
 		if (vent_in_attic_test(c, dim) == 2)                   continue; // not enough clearance in attic for duct
+		if (has_attic() && c.intersects(attic_access))         continue; // check attic access door
 		interior->room_geom->objs.emplace_back(c, TYPE_VENT, room_id, dim, 0, (RO_FLAG_NOCOLL | RO_FLAG_HANGING), 1.0); // dir=0; fully lit
 		return 1; // done
 	} // for n
