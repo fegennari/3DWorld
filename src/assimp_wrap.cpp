@@ -34,6 +34,19 @@ class file_reader_assimp {
 		// is_alpha_mask=0, verbose=0, invert_alpha=0, wrap=1, mirror=0, force_grayscale=0
 		return model.tmgr.create_texture((model_dir + fn.C_Str()), 0, 0, 0, 1, 0, 0, is_normal_map, invert_y);
 	}
+	void parse_single_bone(int bone_index, const aiBone* pBone, material_t &mat) {
+		printf("      Bone %d: '%s' num vertices affected by this bone: %d\n", bone_index, pBone->mName.C_Str(), pBone->mNumWeights);
+
+		for (unsigned int i = 0 ; i < pBone->mNumWeights ; i++) {
+			if (i == 0) printf("\n");
+			const aiVertexWeight& vw = pBone->mWeights[i];
+			printf("       %d: vertex id %d weight %.2f\n", i, vw.mVertexId, vw.mWeight);
+		}
+		printf("\n");
+	}
+	void parse_mesh_bones(const aiMesh* pMesh, material_t &mat) {
+		for (unsigned int i = 0 ; i < pMesh->mNumBones ; i++) {parse_single_bone(i, pMesh->mBones[i], mat);}
+	}
 	void process_mesh(aiMesh *mesh, const aiScene *scene) {
 		assert(mesh != nullptr);
 		if (!(mesh->mPrimitiveTypes & aiPrimitiveType_TRIANGLE)) return; // not a triangle mesh - skip for now (can be removed using options)
@@ -70,6 +83,7 @@ class file_reader_assimp {
 		material_t &mat(model.get_material(mesh->mMaterialIndex, 1)); // alloc_if_needed=1
 		bool const is_new_mat(mat.empty());
 		mat.add_triangles(verts, indices, 1); // add_new_block=1
+		if (mesh->HasBones()) {parse_mesh_bones(mesh, mat);}
 		
 		if (is_new_mat) { // process material if this is the first mesh using it
 			assert(scene->mMaterials != nullptr);
@@ -98,6 +112,8 @@ class file_reader_assimp {
 			// check for dissolve, but skip if it's 0; might also want to look at AI_MATKEY_COLOR_TRANSPARENT
 			if (aiGetMaterialFloatArray(material, AI_MATKEY_OPACITY, &alpha, &max3) == AI_SUCCESS && alpha > 0.0) {mat.alpha = alpha;}
 			aiGetMaterialFloatArray(material, AI_MATKEY_TRANSMISSION_FACTOR, &mat.tr, &max4);
+			//if (aiGetMaterialIntegerArray(mtl, AI_MATKEY_ENABLE_WIREFRAME, &wireframe, &max) == AI_SUCCESS) {}
+			//if (aiGetMaterialIntegerArray(mtl, AI_MATKEY_TWOSIDED,         &two_sided, &max) == AI_SUCCESS) {}
 			// illum? tf?
 		}
 	}  
