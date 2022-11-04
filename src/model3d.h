@@ -234,10 +234,22 @@ public:
 };
 
 
+struct bone_weight_t {
+	unsigned vix;
+	float weight;
+	bone_weight_t(unsigned v=0, float w=0.0) : vix(v), weight(w) {}
+	void assign(unsigned v, float w) {vix = v; weight = w;}
+};
+struct model_bone_t {
+	string name;
+	vector<bone_weight_t> weights;
+};
+
 template<typename T> class indexed_vntc_vect_t : public vntc_vect_t<T> {
 
 public:
 	vector<unsigned> indices; // needs to be public for merging operation
+	vector<model_bone_t> bones;
 private:
 	bool need_normalize, optimized, prev_ucc;
 	float avg_area_per_tri, amin, amax;
@@ -273,6 +285,7 @@ public:
 	
 	indexed_vntc_vect_t(unsigned obj_id_=0) : vntc_vect_t<T>(obj_id_), need_normalize(0), optimized(0), prev_ucc(0), avg_area_per_tri(0.0), amin(0.0), amax(0.0) {}
 	void calc_tangents(unsigned npts) {assert(0);}
+	void setup_bones(shader_t &shader) const;
 	void render(shader_t &shader, bool is_shadow_pass, point const *const xlate, unsigned npts, bool no_vfc=0);
 	void reserve_for_num_verts(unsigned num_verts);
 	void add_poly(polygon_t const &poly, vertex_map_t<T> &vmap);
@@ -423,6 +436,7 @@ struct material_t : public material_params_t {
 		: might_have_alpha_comp(0), tcs_checked(0), a_tid(-1), d_tid(-1), s_tid(-1), ns_tid(-1), alpha_tid(-1), bump_tid(-1), refl_tid(-1),
 		draw_order_score(0.0), avg_area_per_tri(0.0), tot_tri_area(0.0), metalness(-1.0), name(name_), filename(fn) {}
 	bool empty() const {return (geom.empty() && geom_tan.empty());}
+	vector<model_bone_t> &get_bones_for_last_added_tri_mesh();
 	void add_triangles(vector<vert_norm_tc> const &verts, vector<unsigned> const &indices, bool add_new_block); // Note: no quads or tangents
 	bool add_poly(polygon_t const &poly, vntc_map_t vmap[2], vntct_map_t vmap_tan[2], unsigned obj_id=0);
 	void mark_as_used() {is_used = 1;}

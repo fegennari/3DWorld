@@ -578,6 +578,13 @@ template<typename T> void vntc_vect_t<T>::read(istream &in) {
 	calc_bounding_volumes();
 }
 
+template<typename T> void indexed_vntc_vect_t<T>::setup_bones(shader_t &shader) const {
+	if (bones.empty()) return;
+
+	for (model_bone_t const &bone : bones) {
+		// TODO
+	}
+}
 
 // Note: non-const due to VBO caching
 template<typename T> void indexed_vntc_vect_t<T>::render(shader_t &shader, bool is_shadow_pass, point const *const xlate, unsigned npts, bool no_vfc) {
@@ -618,6 +625,8 @@ template<typename T> void indexed_vntc_vect_t<T>::render(shader_t &shader, bool 
 		this->clear_vbos();
 		prev_ucc = use_core_context;
 	}
+	//if (!this->ivbo) {setup_bones(shader);}
+
 	if (use_core_context && npts == 4) {
 		if (!this->ivbo || !this->is_vao_setup(is_shadow_pass)) { // have to setup IVBO once (okay to redo for shadow pass), and VAO for both passes
 			vector<unsigned> tixs;
@@ -1270,6 +1279,11 @@ colorRGBA material_t::get_avg_color(texture_manager const &tmgr, int default_tid
 	if (tex_id >= 0) {return avg_color.modulate_with(tmgr.get_tex_avg_color(tex_id));}
 	else if (default_tid >= 0) {return avg_color.modulate_with(texture_color(default_tid));}
 	return avg_color;
+}
+
+vector<model_bone_t> &material_t::get_bones_for_last_added_tri_mesh() {
+	assert(!geom.triangles.empty());
+	return geom.triangles.back().bones;
 }
 
 // Note: no quads or tangents; indices are optional

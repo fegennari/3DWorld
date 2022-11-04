@@ -23,6 +23,7 @@ class file_reader_assimp {
 	model3d &model;
 	geom_xform_t cur_xf;
 	string model_dir;
+	bool load_animations = 0;
 
 	int load_texture(aiMaterial const* const mat, aiTextureType const type, bool is_normal_map=0) {
 		unsigned const count(mat->GetTextureCount(type));
@@ -34,18 +35,23 @@ class file_reader_assimp {
 		// is_alpha_mask=0, verbose=0, invert_alpha=0, wrap=1, mirror=0, force_grayscale=0
 		return model.tmgr.create_texture((model_dir + fn.C_Str()), 0, 0, 0, 1, 0, 0, is_normal_map, invert_y);
 	}
-	void parse_single_bone(int bone_index, const aiBone* pBone, material_t &mat) {
-		printf("      Bone %d: '%s' num vertices affected by this bone: %d\n", bone_index, pBone->mName.C_Str(), pBone->mNumWeights);
+	void parse_single_bone(int bone_index, const aiBone* pBone, model_bone_t &bone) {
+		//printf("      Bone %d: '%s' num vertices affected by this bone: %d\n", bone_index, pBone->mName.C_Str(), pBone->mNumWeights);
+		bone.name = pBone->mName.C_Str();
+		bone.weights.resize(pBone->mNumWeights);
 
-		for (unsigned int i = 0 ; i < pBone->mNumWeights ; i++) {
-			if (i == 0) printf("\n");
+		for (unsigned int i = 0; i < pBone->mNumWeights; i++) {
+			//if (i == 0) {printf("\n");}
 			const aiVertexWeight& vw = pBone->mWeights[i];
-			printf("       %d: vertex id %d weight %.2f\n", i, vw.mVertexId, vw.mWeight);
+			//printf("       %d: vertex id %d weight %.2f\n", i, vw.mVertexId, vw.mWeight);
+			bone.weights[i].assign(vw.mVertexId, vw.mWeight);
+			// TODO: use pBone->mOffsetMatrix
 		}
-		printf("\n");
+		//printf("\n");
 	}
-	void parse_mesh_bones(const aiMesh* pMesh, material_t &mat) {
-		for (unsigned int i = 0 ; i < pMesh->mNumBones ; i++) {parse_single_bone(i, pMesh->mBones[i], mat);}
+	void parse_mesh_bones(const aiMesh* mesh, vector<model_bone_t> &bones) {
+		bones.resize(mesh->mNumBones);
+		for (unsigned int i = 0; i < mesh->mNumBones; i++) {parse_single_bone(i, mesh->mBones[i], bones[i]);}
 	}
 	void process_mesh(aiMesh *mesh, const aiScene *scene) {
 		assert(mesh != nullptr);
@@ -83,7 +89,8 @@ class file_reader_assimp {
 		material_t &mat(model.get_material(mesh->mMaterialIndex, 1)); // alloc_if_needed=1
 		bool const is_new_mat(mat.empty());
 		mat.add_triangles(verts, indices, 1); // add_new_block=1
-		if (mesh->HasBones()) {parse_mesh_bones(mesh, mat);}
+		//cout << TXT(mesh->mName.C_Str()) << TXT(mesh->mNumVertices) << TXT(mesh->mNumFaces) << TXT(mesh->mNumBones) << endl;
+		if (load_animations && mesh->HasBones()) {parse_mesh_bones(mesh, mat.get_bones_for_last_added_tri_mesh());}
 		
 		if (is_new_mat) { // process material if this is the first mesh using it
 			assert(scene->mMaterials != nullptr);
@@ -125,9 +132,9 @@ class file_reader_assimp {
 		for (unsigned i = 0; i < node->mNumChildren; i++) {process_node_recur(node->mChildren[i], scene);}
 	} 
 public:
-	file_reader_assimp(model3d &model_) : model(model_) {}
+	file_reader_assimp(model3d &model_, bool load_animations_=0) : model(model_), load_animations(load_animations_) {}
 
-	bool read(string const &fn, geom_xform_t const &xf, bool recalc_normals, bool load_animations, bool verbose) {
+	bool read(string const &fn, geom_xform_t const &xf, bool recalc_normals, bool verbose) {
 		cur_xf = xf;
 		Assimp::Importer importer;
 		// aiProcess_OptimizeMeshes
@@ -148,7 +155,6 @@ public:
 		model_dir = fn;
 		while (!model_dir.empty() && model_dir.back() != '/' && model_dir.back() != '\\') {model_dir.pop_back();} // remove filename from end, but leave the slash
 		process_node_recur(scene->mRootNode, scene);
-		if (load_animations) {} // TODO
 		model.finalize(); // optimize vertices, remove excess capacity, compute bounding sphere, subdivide, compute LOD blocks
 		model.load_all_used_tids();
 		if (verbose) {cout << "bcube: " << model.get_bcube().str() << endl << "model stats: "; model.show_stats();}
@@ -158,9 +164,9 @@ public:
 
 bool read_assimp_model(string const &filename, model3d &model, geom_xform_t const &xf, int recalc_normals, bool verbose) {
 	//timer_t timer("Read AssImp Model");
-	bool const load_animations = 0; // not yet implemented
-	file_reader_assimp reader(model);
-	return reader.read(filename, xf, recalc_normals, load_animations, verbose);
+	bool const load_animations = 1; // Note: incomplete
+	file_reader_assimp reader(model, load_animations);
+	return reader.read(filename, xf, recalc_normals, verbose);
 }
 
 #else // ENABLE_ASSIMP
