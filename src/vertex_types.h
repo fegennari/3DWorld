@@ -307,3 +307,6 @@ struct vert_norm_texp : public vert_norm, public texgen_params_t { // size = 76
 	static void set_vbo_arrays(bool set_state=1, void const *vbo_ptr_offset=NULL);
 	static void unset_attrs();
 };
+
+void const *ptr_add(void const *p, unsigned off);
+void set_vn_ptrs(unsigned stride, bool comp, void const *vbo_ptr_offset);

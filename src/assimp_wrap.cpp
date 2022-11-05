@@ -17,6 +17,15 @@
 vector3d  aiVector3D_to_vector3d(aiVector3D const &v) {return vector3d (v.x, v.y, v.z);}
 colorRGBA aiColor4D_to_colorRGBA(aiColor4D  const &c) {return colorRGBA(c.r, c.g, c.b, c.a);}
 
+xform_matrix aiMatrix4x4_to_xform_matrix(aiMatrix4x4 const &m) {
+	xform_matrix M;
+	M[0][0] = m.a1; M[0][1] = m.b1; M[0][2] = m.c1; M[0][3] = m.d1;
+	M[1][0] = m.a2; M[1][1] = m.b2; M[1][2] = m.c2; M[1][3] = m.d2;
+	M[2][0] = m.a3; M[2][1] = m.b3; M[2][2] = m.c3; M[2][3] = m.d3;
+	M[3][0] = m.a4; M[3][1] = m.b4; M[3][2] = m.c4; M[3][3] = m.d4;
+	return M;
+}
+
 
 // For reference, see: https://learnopengl.com/Model-Loading/Model
 class file_reader_assimp {
@@ -27,6 +36,7 @@ class file_reader_assimp {
 	bool load_animations=0;
 	// internal loader state
 	bool had_vertex_error=0;
+	int space_count=0;
 	map<string, unsigned> bone_name_to_index_map;
 
 	int load_texture(aiMaterial const* const mat, aiTextureType const type, bool is_normal_map=0) {
@@ -39,6 +49,19 @@ class file_reader_assimp {
 		// is_alpha_mask=0, verbose=0, invert_alpha=0, wrap=1, mirror=0, force_grayscale=0
 		return model.tmgr.create_texture((model_dir + fn.C_Str()), 0, 0, 0, 1, 0, 0, is_normal_map, invert_y);
 	}
+
+	void print_space() {
+		for (int i = 0 ; i < space_count ; i++) {printf(" ");}
+	}
+	void print_assimp_matrix(aiMatrix4x4 const &m) {
+		//xform_matrix const M(aiMatrix4x4_to_xform_matrix(m));
+		//M.print();
+		print_space(); printf("%f %f %f %f\n", m.a1, m.a2, m.a3, m.a4);
+		print_space(); printf("%f %f %f %f\n", m.b1, m.b2, m.b3, m.b4);
+		print_space(); printf("%f %f %f %f\n", m.c1, m.c2, m.c3, m.c4);
+		print_space(); printf("%f %f %f %f\n", m.d1, m.d2, m.d3, m.d4);
+	}
+
 	unsigned get_bone_id(const aiBone* bone) {
 		string const bone_name(bone->mName.C_Str());
 		auto it(bone_name_to_index_map.find(bone_name));
@@ -48,9 +71,10 @@ class file_reader_assimp {
 		return bone_id;
 	}
 	void parse_single_bone(int bone_index, const aiBone* pBone, mesh_bone_data_t &bone_data, unsigned first_vertex_offset) {
-		//printf("      Bone %d: '%s' num vertices affected by this bone: %d\n", bone_index, pBone->mName.C_Str(), pBone->mNumWeights);
+		printf("      Bone %d: '%s' num vertices affected by this bone: %d\n", bone_index, pBone->mName.C_Str(), pBone->mNumWeights);
 		unsigned const bone_id(get_bone_id(pBone));
 		//printf("bone id %d\n", bone_id);
+		print_assimp_matrix(pBone->mOffsetMatrix);
 
 		for (unsigned i = 0; i < pBone->mNumWeights; i++) {
 			//if (i == 0) {printf("\n");}

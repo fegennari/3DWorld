@@ -191,7 +191,6 @@ void vert_norm_tc::set_vbo_arrays_shadow(bool include_tcs) {
 void vert_norm_tc_tan::set_vbo_arrays_shadow(bool include_tcs) {
 	set_array_client_state(1, include_tcs, 0, 0);
 	unsigned const stride(sizeof(vert_norm_tc_tan));
-	assert(cur_shader);
 	cur_shader->set_vertex_ptr(stride, nullptr);
 	if (include_tcs) {cur_shader->set_tcoord_ptr(stride, ptr_add(nullptr, sizeof(vert_norm)), 0);}
 }
