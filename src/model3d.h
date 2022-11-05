@@ -16,6 +16,7 @@ typedef map<string, unsigned> string_map_t;
 
 unsigned const MAX_VMAP_SIZE     = (1 << 18); // 256K
 unsigned const BUILTIN_TID_START = (1 << 16); // 65K
+unsigned const MAX_NUM_BONES_PER_VERTEX = 4;
 float const POLY_COPLANAR_THRESH = 0.98;
 
 
@@ -206,6 +207,17 @@ template<typename T> cube_t get_polygon_bbox(vector<T> const &p) {
 }
 
 
+struct vertex_bone_data_t {
+	unsigned ids    [MAX_NUM_BONES_PER_VERTEX] = {};
+	float    weights[MAX_NUM_BONES_PER_VERTEX] = {};
+	void add(unsigned id, float weight, bool &had_vertex_error);
+	void normalize();
+};
+struct mesh_bone_data_t {
+	vector<vertex_bone_data_t> vertex_to_bones;
+};
+
+
 template<typename T> class vntc_vect_t : public vector<T>, public indexed_vao_manager_with_shadow_t {
 
 protected:
@@ -234,22 +246,11 @@ public:
 };
 
 
-struct bone_weight_t {
-	unsigned vix;
-	float weight;
-	bone_weight_t(unsigned v=0, float w=0.0) : vix(v), weight(w) {}
-	void assign(unsigned v, float w) {vix = v; weight = w;}
-};
-struct model_bone_t {
-	string name;
-	vector<bone_weight_t> weights;
-};
-
 template<typename T> class indexed_vntc_vect_t : public vntc_vect_t<T> {
 
 public:
 	vector<unsigned> indices; // needs to be public for merging operation
-	vector<model_bone_t> bones;
+	mesh_bone_data_t bone_data;
 private:
 	bool need_normalize, optimized, prev_ucc;
 	float avg_area_per_tri, amin, amax;
@@ -436,8 +437,8 @@ struct material_t : public material_params_t {
 		: might_have_alpha_comp(0), tcs_checked(0), a_tid(-1), d_tid(-1), s_tid(-1), ns_tid(-1), alpha_tid(-1), bump_tid(-1), refl_tid(-1),
 		draw_order_score(0.0), avg_area_per_tri(0.0), tot_tri_area(0.0), metalness(-1.0), name(name_), filename(fn) {}
 	bool empty() const {return (geom.empty() && geom_tan.empty());}
-	vector<model_bone_t> &get_bones_for_last_added_tri_mesh();
-	void add_triangles(vector<vert_norm_tc> const &verts, vector<unsigned> const &indices, bool add_new_block); // Note: no quads or tangents
+	mesh_bone_data_t &get_bone_data_for_last_added_tri_mesh();
+	unsigned add_triangles(vector<vert_norm_tc> const &verts, vector<unsigned> const &indices, bool add_new_block); // Note: no quads or tangents
 	bool add_poly(polygon_t const &poly, vntc_map_t vmap[2], vntct_map_t vmap_tan[2], unsigned obj_id=0);
 	void mark_as_used() {is_used = 1;}
 	bool mat_is_used () const {return is_used;}

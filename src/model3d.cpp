@@ -578,12 +578,37 @@ template<typename T> void vntc_vect_t<T>::read(istream &in) {
 	calc_bounding_volumes();
 }
 
-template<typename T> void indexed_vntc_vect_t<T>::setup_bones(shader_t &shader) const {
-	if (bones.empty()) return;
+void vertex_bone_data_t::add(unsigned id, float weight, bool &had_vertex_error) {
+	assert(weight > 0.0);
+	float min_weight(weight);
+	unsigned min_weight_ix(0);
 
-	for (model_bone_t const &bone : bones) {
-		// TODO
+	for (unsigned i = 0; i < MAX_NUM_BONES_PER_VERTEX; ++i) {
+		if (weights[i] < min_weight) {
+			min_weight    = weights[i];
+			min_weight_ix = i;
+			if (min_weight == 0.0) break; // zero weight is the min - done
+		}
 	}
+	if (min_weight > 0.0 && !had_vertex_error) {
+		cerr << "Error: too many weights/bones for a single vertex; using the " << MAX_NUM_BONES_PER_VERTEX << " largest weights" << endl;
+		had_vertex_error = 1;
+	}
+	if (min_weight == weight) return; // no slot for this weight
+	ids    [min_weight_ix] = id;
+	weights[min_weight_ix] = weight;
+	//printf("bone %d weight %f index %i\n", id, weight, min_weight_ix);
+}
+void vertex_bone_data_t::normalize() { // make sure all weights sum to 1.0
+	float w_sum(0.0);
+	for (unsigned i = 0; i < MAX_NUM_BONES_PER_VERTEX; ++i) {w_sum += weights[i];}
+	assert(w_sum > 0.0); // or just skip in this case?
+	for (unsigned i = 0; i < MAX_NUM_BONES_PER_VERTEX; ++i) {weights[i] /= w_sum;}
+}
+
+template<typename T> void indexed_vntc_vect_t<T>::setup_bones(shader_t &shader) const {
+	if (bone_data.vertex_to_bones.empty()) return; // no bones
+	// TODO: use bone_data
 }
 
 // Note: non-const due to VBO caching
@@ -625,7 +650,7 @@ template<typename T> void indexed_vntc_vect_t<T>::render(shader_t &shader, bool 
 		this->clear_vbos();
 		prev_ucc = use_core_context;
 	}
-	//if (!this->ivbo) {setup_bones(shader);}
+	if (!this->ivbo) {setup_bones(shader);}
 
 	if (use_core_context && npts == 4) {
 		if (!this->ivbo || !this->is_vao_setup(is_shadow_pass)) { // have to setup IVBO once (okay to redo for shadow pass), and VAO for both passes
@@ -1281,14 +1306,14 @@ colorRGBA material_t::get_avg_color(texture_manager const &tmgr, int default_tid
 	return avg_color;
 }
 
-vector<model_bone_t> &material_t::get_bones_for_last_added_tri_mesh() {
+mesh_bone_data_t &material_t::get_bone_data_for_last_added_tri_mesh() {
 	assert(!geom.triangles.empty());
-	return geom.triangles.back().bones;
+	return geom.triangles.back().bone_data;
 }
 
-// Note: no quads or tangents; indices are optional
-void material_t::add_triangles(vector<vert_norm_tc> const &verts, vector<unsigned> const &indices, bool add_new_block) {
-	if (verts.empty()) {assert(indices.empty()); return;} // no triangles?
+// Note: no quads or tangents; indices are optional; returns the index offset of the first vertex
+unsigned material_t::add_triangles(vector<vert_norm_tc> const &verts, vector<unsigned> const &indices, bool add_new_block) {
+	if (verts.empty()) {assert(indices.empty()); return 0;} // no triangles? error?
 	if (add_new_block || geom.triangles.empty()) {geom.triangles.push_back(indexed_vntc_vect_t<vert_norm_tc>());}
 	auto &dest(geom.triangles.back());
 	if (!dest.empty()) {assert(indices.empty() == dest.indices.empty());} // can't mix indexed with non-indexed triangles
@@ -1296,6 +1321,7 @@ void material_t::add_triangles(vector<vert_norm_tc> const &verts, vector<unsigne
 	vector_add_to(verts, dest);
 	for (unsigned ix : indices) {dest.indices.push_back(ix + ixs_off);} // adjust indices based on existing vertices
 	mark_as_used();
+	return ixs_off;
 }
 
 bool material_t::add_poly(polygon_t const &poly, vntc_map_t vmap[2], vntct_map_t vmap_tan[2], unsigned obj_id) {

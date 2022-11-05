@@ -20,10 +20,14 @@ colorRGBA aiColor4D_to_colorRGBA(aiColor4D  const &c) {return colorRGBA(c.r, c.g
 
 // For reference, see: https://learnopengl.com/Model-Loading/Model
 class file_reader_assimp {
+	// input/output variables
 	model3d &model;
 	geom_xform_t cur_xf;
 	string model_dir;
-	bool load_animations = 0;
+	bool load_animations=0;
+	// internal loader state
+	bool had_vertex_error=0;
+	map<string, unsigned> bone_name_to_index_map;
 
 	int load_texture(aiMaterial const* const mat, aiTextureType const type, bool is_normal_map=0) {
 		unsigned const count(mat->GetTextureCount(type));
@@ -35,23 +39,32 @@ class file_reader_assimp {
 		// is_alpha_mask=0, verbose=0, invert_alpha=0, wrap=1, mirror=0, force_grayscale=0
 		return model.tmgr.create_texture((model_dir + fn.C_Str()), 0, 0, 0, 1, 0, 0, is_normal_map, invert_y);
 	}
-	void parse_single_bone(int bone_index, const aiBone* pBone, model_bone_t &bone) {
+	unsigned get_bone_id(const aiBone* bone) {
+		string const bone_name(bone->mName.C_Str());
+		auto it(bone_name_to_index_map.find(bone_name));
+		if (it != bone_name_to_index_map.end()) {return it->second;}
+		unsigned const bone_id(bone_name_to_index_map.size()); // allocate an index for a new bone
+		bone_name_to_index_map[bone_name] = bone_id;
+		return bone_id;
+	}
+	void parse_single_bone(int bone_index, const aiBone* pBone, mesh_bone_data_t &bone_data, unsigned first_vertex_offset) {
 		//printf("      Bone %d: '%s' num vertices affected by this bone: %d\n", bone_index, pBone->mName.C_Str(), pBone->mNumWeights);
-		bone.name = pBone->mName.C_Str();
-		bone.weights.resize(pBone->mNumWeights);
+		unsigned const bone_id(get_bone_id(pBone));
+		//printf("bone id %d\n", bone_id);
 
-		for (unsigned int i = 0; i < pBone->mNumWeights; i++) {
+		for (unsigned i = 0; i < pBone->mNumWeights; i++) {
 			//if (i == 0) {printf("\n");}
 			const aiVertexWeight& vw = pBone->mWeights[i];
 			//printf("       %d: vertex id %d weight %.2f\n", i, vw.mVertexId, vw.mWeight);
-			bone.weights[i].assign(vw.mVertexId, vw.mWeight);
-			// TODO: use pBone->mOffsetMatrix
+			unsigned const vertex_id(first_vertex_offset + vw.mVertexId);
+			//printf("Vertex id %d ", vertex_id);
+			assert(vertex_id < bone_data.vertex_to_bones.size());
+			bone_data.vertex_to_bones[vertex_id].add(bone_id, vw.mWeight, had_vertex_error);
 		}
 		//printf("\n");
 	}
-	void parse_mesh_bones(const aiMesh* mesh, vector<model_bone_t> &bones) {
-		bones.resize(mesh->mNumBones);
-		for (unsigned int i = 0; i < mesh->mNumBones; i++) {parse_single_bone(i, mesh->mBones[i], bones[i]);}
+	void parse_mesh_bones(const aiMesh* mesh, mesh_bone_data_t &bone_data, unsigned first_vertex_offset) {
+		for (unsigned int i = 0; i < mesh->mNumBones; i++) {parse_single_bone(i, mesh->mBones[i], bone_data, first_vertex_offset);}
 	}
 	void process_mesh(aiMesh *mesh, const aiScene *scene) {
 		assert(mesh != nullptr);
@@ -88,10 +101,14 @@ class file_reader_assimp {
 		//if (mesh->mMaterialIndex >= 0) {} // according to the tutorial, this check should be done; but mMaterialIndex is unsigned, so it can't fail?
 		material_t &mat(model.get_material(mesh->mMaterialIndex, 1)); // alloc_if_needed=1
 		bool const is_new_mat(mat.empty());
-		mat.add_triangles(verts, indices, 1); // add_new_block=1
+		unsigned const first_vertex_offset(mat.add_triangles(verts, indices, 1)); // add_new_block=1; should return 0
 		//cout << TXT(mesh->mName.C_Str()) << TXT(mesh->mNumVertices) << TXT(mesh->mNumFaces) << TXT(mesh->mNumBones) << endl;
-		if (load_animations && mesh->HasBones()) {parse_mesh_bones(mesh, mat.get_bones_for_last_added_tri_mesh());}
 		
+		if (load_animations && mesh->HasBones()) { // handle bones
+			mesh_bone_data_t &bone_data(mat.get_bone_data_for_last_added_tri_mesh());
+			bone_data.vertex_to_bones.resize(first_vertex_offset + mesh->mNumVertices);
+			parse_mesh_bones(mesh, bone_data, first_vertex_offset);
+		}
 		if (is_new_mat) { // process material if this is the first mesh using it
 			assert(scene->mMaterials != nullptr);
 			aiMaterial const* const material(scene->mMaterials[mesh->mMaterialIndex]);
