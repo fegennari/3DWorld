@@ -41,8 +41,9 @@ class property_map_t { // for storing user-defined shader properties
 	map<string, string> prop_map;
 	static string empty_str;
 public:
-	void add_property(string const &key, string const &value) {prop_map[key] = value;}
-	bool has_property(string const &key) const {return (prop_map.find(key) != prop_map.end());}
+	void add_property   (string const &key, string const &value) {prop_map[key] = value;}
+	bool has_property   (string const &key) const {return (prop_map.find(key) != prop_map.end());}
+	bool remove_property(string const &key)       {return (prop_map.erase(key) > 0);}
 	
 	string const &get_property(string const &key) const {
 		auto it(prop_map.find(key));
