@@ -666,6 +666,7 @@ template<typename T> void indexed_vntc_vect_t<T>::render(shader_t &shader, bool 
 	if (empty()) return;
 	assert(npts == 3 || npts == 4);
 	//if (is_shadow_pass && this->vbo == 0 && world_mode == WMODE_GROUND) return; // don't create the vbo on the shadow pass (voxel terrain problems - works now?)
+	no_vfc |= has_bones(); // disable VFC if animated because animations may move verts outside of the original bcube (should we use a conservative bcube?)
 
 	if (no_vfc) {
 		// do nothing
@@ -2056,7 +2057,8 @@ struct camera_pdu_transform_wrapper {
 };
 
 
-bool is_cube_visible_to_camera(cube_t const &cube, bool is_shadow_pass) {
+bool is_cube_visible_to_camera(cube_t const &cube, bool is_shadow_pass, bool has_bones) {
+	if (has_bones) return 1; // TODO: or use a conservative bcube that includes all animations?
 	if (!camera_pdu.cube_visible(cube)) return 0;
 	if (!(display_mode & 0x08) && !is_shadow_pass) return 1; // check occlusion culling, but allow occlusion culling during the shadow pass
 	return !cube_cobj_occluded(camera_pdu.pos, cube);
@@ -2071,7 +2073,7 @@ void model3d::set_target_translate_scale(point const &target_pos, float target_r
 void model3d::render_with_xform(shader_t &shader, model3d_xform_t &xf, xform_matrix const &mvm, bool is_shadow_pass,
 	int reflection_pass, bool is_z_prepass, int enable_alpha_mask, unsigned bmap_pass_mask, int reflect_mode, int trans_op_mask)
 {
-	if (!is_cube_visible_to_camera(xf.get_xformed_bcube(bcube), is_shadow_pass)) return; // Note: xlate has already been applied to camera_pdu
+	if (!is_cube_visible_to_camera(xf.get_xformed_bcube(bcube), is_shadow_pass, has_bones())) return; // Note: xlate has already been applied to camera_pdu
 	// Note: it's simpler and more efficient to inverse transfrom the camera frustum rather than transforming the geom/bcubes
 	// Note: currently, only translate is supported (and somewhat scale)
 	camera_pdu_transform_wrapper cptw2(xf);
@@ -2088,7 +2090,7 @@ void model3d::render(shader_t &shader, bool is_shadow_pass, int reflection_pass,
 {
 	assert(trans_op_mask > 0 && trans_op_mask <= 3); // 1 bit = draw opaque, 2 bit = draw transparent
 	if (!needs_trans_pass && !(trans_op_mask & 1)) return; // transparent only pass, but no transparent materials
-	if (transforms.empty() && !is_cube_visible_to_camera(bcube+xlate, is_shadow_pass)) return;
+	if (transforms.empty() && !is_cube_visible_to_camera(bcube+xlate, is_shadow_pass, has_bones())) return;
 	
 	if (enable_tt_model_indir && world_mode == WMODE_INF_TERRAIN && !is_shadow_pass) {
 		if (model_indir_tid == 0) {create_indir_texture();}
@@ -2122,7 +2124,7 @@ void model3d::render(shader_t &shader, bool is_shadow_pass, int reflection_pass,
 #endif
 		}
 	}
-	if (get_has_bones()) {setup_bone_transforms(shader);}
+	if (has_bones()) {setup_bone_transforms(shader);}
 	xform_matrix const mvm(fgGetMVM());
 	model3d_xform_t const xlate_xf(xlate);
 	camera_pdu_transform_wrapper cptw(xlate_xf);
@@ -2581,7 +2583,7 @@ void model3ds::render(bool is_shadow_pass, int reflection_pass, int trans_op_mas
 		needs_trans_pass |= m->get_needs_trans_pass();
 		use_spec_map     |= (enable_spec_map() && m->uses_spec_map());
 		use_gloss_map    |= (enable_spec_map() && m->uses_gloss_map());
-		num_models_with_bones += m->get_has_bones();
+		num_models_with_bones += m->has_bones();
 		if      (enable_planar_reflections   && m->is_planar_reflective  ()) {any_planar_reflective   = 1;}
 		else if (enable_cube_map_reflections && m->is_cube_map_reflective()) {any_cube_map_reflective = 1;}
 		else                                                                 {any_non_reflective      = 1;}
