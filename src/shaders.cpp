@@ -980,9 +980,10 @@ void shader_t::cache_matrix_locs() {
 }
 
 void shader_t::upload_pjm() { // projection matrix
-
 	if (pm_loc >= 0) {set_uniform_matrix_4x4(pm_loc, fgGetPJM().get_ptr(), 0);} // transpose = 0
 }
+
+xform_matrix xform_matrix::inverse() const {return glm::affineInverse((glm::mat4)*this);}
 
 void shader_t::upload_mvm() { // and everything that depends on the mvm
 
@@ -991,8 +992,7 @@ void shader_t::upload_mvm() { // and everything that depends on the mvm
 	if (mvm_loc >= 0) {set_uniform_matrix_4x4(mvm_loc, mvm.get_ptr(), 0);} // modelview matrix
 
 	if (mvmi_loc >= 0) { // inverse modelview matrix
-		xform_matrix mvmi(glm::affineInverse((glm::mat4)mvm));
-		set_uniform_matrix_4x4(mvmi_loc, mvmi.get_ptr(), 0);
+		set_uniform_matrix_4x4(mvmi_loc, mvm.inverse().get_ptr(), 0);
 	}
 	if (mvpm_loc >= 0) { // modelview-projection matrix
 		xform_matrix const mvp(fgGetPJM() * mvm);
@@ -1011,10 +1011,7 @@ void shader_t::cache_vnct_locs() { // Note: program need not be enabled
 	assert(is_setup());
 	// Note: locations will generally be {0,1,2,3} as assigned in the vertex shader, but if unused they can be -1
 	const char *loc_strs[4] = {"fg_Vertex", "fg_Normal", "fg_Color", "fg_TexCoord"};
-
-	for (unsigned i = 0; i < 4; ++i) {
-		vnct_locs[i] = get_attrib_loc(loc_strs[i], 1); // okay if fails
-	}
+	for (unsigned i = 0; i < 4; ++i) {vnct_locs[i] = get_attrib_loc(loc_strs[i], 1);} // okay if fails
 }
 
 void shader_t::enable_vnct_atribs(bool va, bool tca, bool na, bool ca) const { // Note: program must be enabled

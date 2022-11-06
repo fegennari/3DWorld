@@ -1297,7 +1297,7 @@ void shadowed_uobject::upload_shadow_casters(shader_t &s) const {
 	s.add_uniform_int("num_shadow_casters", shadow_casters.size());
 	s.add_uniform_vector3d("sun_pos", make_pt_global(sun_pos_radius.pos));
 	s.add_uniform_float("sun_radius", sun_pos_radius.radius);
-	s.add_uniform_matrix_4x4("fg_ViewMatrixInv", xform_matrix(glm::affineInverse((glm::mat4)fgGetMVM())).get_ptr(), 0);
+	s.add_uniform_matrix_4x4("fg_ViewMatrixInv", fgGetMVM().inverse().get_ptr(), 0);
 }
 
 

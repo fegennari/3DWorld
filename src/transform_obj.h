@@ -23,6 +23,7 @@ struct xform_matrix : public glm::mat4 { // Note: maybe better to use glm::gtx::
 
 	xform_matrix() : glm::mat4(1.0) {} // identity
 	xform_matrix(glm::mat4 const &m) : glm::mat4(m) {}
+	xform_matrix inverse() const; // defined in shaders.cpp
 	float *get_ptr();
 	float const *get_ptr() const;
 	void get_as_doubles(double md[16]) const;
