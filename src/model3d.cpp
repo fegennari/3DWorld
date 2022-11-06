@@ -20,6 +20,8 @@ bool const ENABLE_INTER_REFLECTIONS = 1;
 bool const SHOW_MODEL_BCUBE_CENTER  = 0;
 unsigned const MAGIC_NUMBER  = 42987143; // arbitrary file signature
 unsigned const BLOCK_SIZE    = 32768; // in vertex indices
+unsigned const BONE_IDS_LOC     = 4;
+unsigned const BONE_WEIGHTS_LOC = 5;
 
 bool model_calc_tan_vect(1); // slower and more memory but sometimes better quality/smoother transitions
 
@@ -606,9 +608,39 @@ void vertex_bone_data_t::normalize() { // make sure all weights sum to 1.0
 	for (unsigned i = 0; i < MAX_NUM_BONES_PER_VERTEX; ++i) {weights[i] /= w_sum;}
 }
 
-template<typename T> void indexed_vntc_vect_t<T>::setup_bones(shader_t &shader) const {
-	if (bone_data.vertex_to_bones.empty()) return; // no bones
-	// TODO: use bone_data
+template<typename T> void indexed_vntc_vect_t<T>::setup_bones(shader_t &shader, bool is_shadow_pass) {
+
+	if (vaos[is_shadow_pass].vao) return; // already set
+	vaos[is_shadow_pass].ensure_vao_bound();
+	vector<T> const &data(*this);
+	unsigned const vert_mem(data.size()*sizeof(T));
+
+	if (vbo) {indexed_vbo_manager_t::pre_render(!indices.empty());}
+	else {
+		vbo = create_vbo();
+		check_bind_vbo(vbo);
+		unsigned const bone_mem(bone_data.vertex_to_bones.size()*sizeof(vertex_bone_data_t)), tot_mem(vert_mem + bone_mem);
+		upload_vbo_data(nullptr, tot_mem); // allocate space
+		upload_vbo_sub_data(data.data(), 0, vert_mem); // vertex data
+		upload_vbo_sub_data(bone_data.vertex_to_bones.data(), vert_mem, bone_mem); // bone data
+		gpu_mem += tot_mem;
+
+		if (!ivbo && !indices.empty()) {
+			create_vbo_and_upload(ivbo, indices, 1); // is_index=1
+			gpu_mem += indices.size()*sizeof(index_type_t);
+		}
+	}
+	T::set_vbo_arrays();
+	//cout << TXT(shader.get_attrib_loc("bone_ids", 1)) << TXT(shader.get_attrib_loc("bone_weights", 1)) << endl;
+	unsigned const stride(sizeof(vertex_bone_data_t));
+	glEnableVertexAttribArray(BONE_IDS_LOC);
+	glEnableVertexAttribArray(BONE_WEIGHTS_LOC);
+	glVertexAttribIPointer(BONE_IDS_LOC,     MAX_NUM_BONES_PER_VERTEX, GL_UNSIGNED_INT, stride, (void *)vert_mem); // bone_ids
+	glVertexAttribPointer (BONE_WEIGHTS_LOC, MAX_NUM_BONES_PER_VERTEX, GL_FLOAT, 0, stride, (void *)(vert_mem + MAX_NUM_BONES_PER_VERTEX*sizeof(unsigned))); // bone_weights
+}
+template<typename T> void indexed_vntc_vect_t<T>::unset_bone_attrs() {
+	glDisableVertexAttribArray(BONE_IDS_LOC);
+	glDisableVertexAttribArray(BONE_WEIGHTS_LOC);
 }
 
 // Note: non-const due to VBO caching
@@ -650,7 +682,7 @@ template<typename T> void indexed_vntc_vect_t<T>::render(shader_t &shader, bool 
 		this->clear_vbos();
 		prev_ucc = use_core_context;
 	}
-	if (!this->ivbo) {setup_bones(shader);}
+	assert(!has_bones() || npts == 3); // bones only supported for triangle data
 
 	if (use_core_context && npts == 4) {
 		if (!this->ivbo || !this->is_vao_setup(is_shadow_pass)) { // have to setup IVBO once (okay to redo for shadow pass), and VAO for both passes
@@ -662,7 +694,8 @@ template<typename T> void indexed_vntc_vect_t<T>::render(shader_t &shader, bool 
 	}
 	else {
 		if (npts == 4) {prim_type = GL_QUADS;}
-		this->create_and_upload(*this, indices, is_shadow_pass, 0, 1); // dynamic_level=0, setup_pointers=1
+		if (has_bones()) {setup_bones(shader, is_shadow_pass);}
+		else {this->create_and_upload(*this, indices, is_shadow_pass, 0, 1);} // dynamic_level=0, setup_pointers=1
 	}
 	this->pre_render(is_shadow_pass);
 	check_mvm_update();
@@ -680,6 +713,7 @@ template<typename T> void indexed_vntc_vect_t<T>::render(shader_t &shader, bool 
 	}
 	this->post_render();
 	T::unset_attrs();
+	if (has_bones()) {unset_bone_attrs();}
 }
 
 

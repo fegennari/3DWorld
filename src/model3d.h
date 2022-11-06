@@ -207,7 +207,7 @@ template<typename T> cube_t get_polygon_bbox(vector<T> const &p) {
 }
 
 
-struct vertex_bone_data_t {
+struct vertex_bone_data_t { // Note: must be packed
 	unsigned ids    [MAX_NUM_BONES_PER_VERTEX] = {};
 	float    weights[MAX_NUM_BONES_PER_VERTEX] = {};
 	void add(unsigned id, float weight, bool &had_vertex_error);
@@ -249,8 +249,10 @@ public:
 template<typename T> class indexed_vntc_vect_t : public vntc_vect_t<T> {
 
 public:
+	typedef unsigned index_type_t;
 	vector<unsigned> indices; // needs to be public for merging operation
 	mesh_bone_data_t bone_data;
+	bool has_bones() const {return !bone_data.vertex_to_bones.empty();}
 private:
 	bool need_normalize, optimized, prev_ucc;
 	float avg_area_per_tri, amin, amax;
@@ -286,7 +288,8 @@ public:
 	
 	indexed_vntc_vect_t(unsigned obj_id_=0) : vntc_vect_t<T>(obj_id_), need_normalize(0), optimized(0), prev_ucc(0), avg_area_per_tri(0.0), amin(0.0), amax(0.0) {}
 	void calc_tangents(unsigned npts) {assert(0);}
-	void setup_bones(shader_t &shader) const;
+	void setup_bones(shader_t &shader, bool is_shadow_pass);
+	void unset_bone_attrs();
 	void render(shader_t &shader, bool is_shadow_pass, point const *const xlate, unsigned npts, bool no_vfc=0);
 	void reserve_for_num_verts(unsigned num_verts);
 	void add_poly(polygon_t const &poly, vertex_map_t<T> &vmap);

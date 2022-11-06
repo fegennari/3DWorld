@@ -239,7 +239,7 @@ struct indexed_vao_manager_t : public indexed_vbo_manager_t, public vao_wrap_t {
 };
 
 struct indexed_vao_manager_with_shadow_t : public indexed_vbo_manager_t {
-private:
+protected:
 	vao_wrap_t vaos[2]; // {regular, shadow}
 public:
 	bool is_vao_setup(bool shadow) const {return vaos[shadow].is_valid();}
