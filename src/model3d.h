@@ -224,7 +224,6 @@ protected:
 	bool has_tangents, finalized;
 	sphere_t bsphere;
 	cube_t bcube;
-
 public:
 	using vector<T>::empty;
 	using vector<T>::size;
@@ -486,7 +485,7 @@ class model3d {
 	unsigned model_refl_tid, model_refl_tsize, model_refl_last_tsize, model_indir_tid;
 	int reflective; // reflective: 0=none, 1=planar, 2=cube map
 	int indoors; // 0=no/outdoors, 1=yes/indoors, 2=unknown
-	bool from_model3d_file, has_cobjs, needs_alpha_test, needs_bump_maps, has_spec_maps, has_gloss_maps, xform_zvals_set, needs_trans_pass, has_bones;
+	bool from_model3d_file, has_cobjs, needs_alpha_test, needs_bump_maps, has_spec_maps, has_gloss_maps, xform_zvals_set, needs_trans_pass;
 	float metalness; // should be per-material, but not part of the material file and specified per-object instead
 
 	// materials
@@ -522,15 +521,17 @@ class model3d {
 
 	void update_bbox(polygon_t const &poly);
 	void create_indir_texture();
+	void setup_bone_transforms(shader_t &shader) const;
 
 public:
 	texture_manager &tmgr; // stores all textures
+	vector<xform_matrix> bone_transforms; // used directly by assimp reader
 
 	model3d(string const &filename_, texture_manager &tmgr_, int def_tid=-1, colorRGBA const &def_c=WHITE, int reflective_=0, float metalness_=0.0, int recalc_normals_=0, int group_cobjs_level_=0)
 		: filename(filename_), recalc_normals(recalc_normals_), group_cobjs_level(group_cobjs_level_), unbound_mat(((def_tid >= 0) ? def_tid : WHITE_TEX), def_c),
 		bcube(all_zeros_cube), bcube_all_xf(all_zeros), occlusion_cube(all_zeros), model_refl_tid(0), model_refl_tsize(0), model_refl_last_tsize(0), model_indir_tid(0),
 		reflective(reflective_), indoors(2), from_model3d_file(0), has_cobjs(0), needs_alpha_test(0), needs_bump_maps(0), has_spec_maps(0), has_gloss_maps(0),
-		xform_zvals_set(0), needs_trans_pass(0), has_bones(0), metalness(metalness_), textures_loaded(0), sky_lighting_weight(0.0), tmgr(tmgr_)
+		xform_zvals_set(0), needs_trans_pass(0), metalness(metalness_), textures_loaded(0), sky_lighting_weight(0.0), tmgr(tmgr_)
 	{UNROLL_3X(sky_lighting_sz[i_] = 0;)}
 	~model3d() {clear();}
 	size_t num_materials() const {return materials.size();}
@@ -539,9 +540,8 @@ public:
 
 	// creation and query
 	bool are_textures_loaded() const {return textures_loaded;}
-	bool get_has_bones() const {return has_bones;}
+	bool get_has_bones() const {return !bone_transforms.empty();}
 	void set_has_cobjs() {has_cobjs = 1;}
-	void set_has_bones() {has_bones = 1;}
 	void add_transform(model3d_xform_t const &xf) {transforms.push_back(xf);}
 	unsigned add_triangles(vector<triangle> const &triangles, colorRGBA const &color, int mat_id=-1, unsigned obj_id=0);
 	unsigned add_polygon(polygon_t const &poly, vntc_map_t vmap[2], vntct_map_t vmap_tan[2], int mat_id=-1, unsigned obj_id=0);

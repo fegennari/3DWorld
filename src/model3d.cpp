@@ -608,6 +608,23 @@ void vertex_bone_data_t::normalize() { // make sure all weights sum to 1.0
 	for (unsigned i = 0; i < MAX_NUM_BONES_PER_VERTEX; ++i) {weights[i] /= w_sum;}
 }
 
+void model3d::setup_bone_transforms(shader_t &shader) const {
+	unsigned const MAX_MODEL_BONES = 200; // must agree with shader code
+	unsigned const num_bones(bone_transforms.size());
+
+	if (num_bones > MAX_MODEL_BONES) {
+		cerr << "Error: Too many bones for model: " << num_bones << "; Max is " << MAX_MODEL_BONES << endl;
+		assert(0); // or return? or ignore some bones?
+	}
+	ostringstream oss;
+
+	for (unsigned i = 0; i < num_bones; ++i) {
+		oss.str("");
+		oss << "bones[" << i << "]";
+		shader.add_uniform_matrix_4x4(oss.str().c_str(), bone_transforms[i].get_ptr(), 0); // transpose=0
+	}
+}
+
 template<typename T> void indexed_vntc_vect_t<T>::setup_bones(shader_t &shader, bool is_shadow_pass) {
 
 	if (vaos[is_shadow_pass].vao) return; // already set
@@ -2105,6 +2122,7 @@ void model3d::render(shader_t &shader, bool is_shadow_pass, int reflection_pass,
 #endif
 		}
 	}
+	if (get_has_bones()) {setup_bone_transforms(shader);}
 	xform_matrix const mvm(fgGetMVM());
 	model3d_xform_t const xlate_xf(xlate);
 	camera_pdu_transform_wrapper cptw(xlate_xf);

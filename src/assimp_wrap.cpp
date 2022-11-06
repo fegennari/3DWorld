@@ -17,7 +17,7 @@
 vector3d  aiVector3D_to_vector3d(aiVector3D const &v) {return vector3d (v.x, v.y, v.z);}
 colorRGBA aiColor4D_to_colorRGBA(aiColor4D  const &c) {return colorRGBA(c.r, c.g, c.b, c.a);}
 
-xform_matrix aiMatrix4x4_to_xform_matrix(aiMatrix4x4 const &m) {
+xform_matrix aiMatrix4x4_to_xform_matrix(aiMatrix4x4 const &m) { // Note: one is row major, while the other is column major
 	xform_matrix M;
 	M[0][0] = m.a1; M[0][1] = m.b1; M[0][2] = m.c1; M[0][3] = m.d1;
 	M[1][0] = m.a2; M[1][1] = m.b2; M[1][2] = m.c2; M[1][3] = m.d2;
@@ -28,6 +28,7 @@ xform_matrix aiMatrix4x4_to_xform_matrix(aiMatrix4x4 const &m) {
 
 
 // For reference, see: https://learnopengl.com/Model-Loading/Model
+// Also: https://github.com/emeiri/ogldev
 class file_reader_assimp {
 	// input/output variables
 	model3d &model;
@@ -36,8 +37,13 @@ class file_reader_assimp {
 	bool load_animations=0;
 	// internal loader state
 	bool had_vertex_error=0;
-	int space_count=0;
 	map<string, unsigned> bone_name_to_index_map;
+
+	struct bone_info_t {
+		xform_matrix offset_matrix, final_transform;
+		bone_info_t(xform_matrix const &offset) : offset_matrix(offset), final_transform(glm::mat4()) {} // final_transform starts as all zeros
+	};
+	vector<bone_info_t> bone_info;
 
 	int load_texture(aiMaterial const* const mat, aiTextureType const type, bool is_normal_map=0) {
 		unsigned const count(mat->GetTextureCount(type));
@@ -49,17 +55,25 @@ class file_reader_assimp {
 		// is_alpha_mask=0, verbose=0, invert_alpha=0, wrap=1, mirror=0, force_grayscale=0
 		return model.tmgr.create_texture((model_dir + fn.C_Str()), 0, 0, 0, 1, 0, 0, is_normal_map, invert_y);
 	}
+	void print_assimp_matrix(aiMatrix4x4 const &m) {aiMatrix4x4_to_xform_matrix(m).print();}
 
-	void print_space() {
-		for (int i = 0 ; i < space_count ; i++) {printf(" ");}
+	void read_node_hierarchy_recur(aiNode const *const pNode, xform_matrix const &parent_transform) {
+		string const node_name(pNode->mName.C_Str());
+		xform_matrix global_transform(parent_transform * aiMatrix4x4_to_xform_matrix(pNode->mTransformation));
+		auto it(bone_name_to_index_map.find(node_name));
+
+		if (it != bone_name_to_index_map.end()) {
+			unsigned const bone_index(it->second);
+			assert(bone_index < bone_info.size());
+			bone_info[bone_index].final_transform = global_transform * bone_info[bone_index].offset_matrix;
+		}
+		for (unsigned i = 0; i < pNode->mNumChildren; i++) {read_node_hierarchy_recur(pNode->mChildren[i], global_transform);}
 	}
-	void print_assimp_matrix(aiMatrix4x4 const &m) {
-		//xform_matrix const M(aiMatrix4x4_to_xform_matrix(m));
-		//M.print();
-		print_space(); printf("%f %f %f %f\n", m.a1, m.a2, m.a3, m.a4);
-		print_space(); printf("%f %f %f %f\n", m.b1, m.b2, m.b3, m.b4);
-		print_space(); printf("%f %f %f %f\n", m.c1, m.c2, m.c3, m.c4);
-		print_space(); printf("%f %f %f %f\n", m.d1, m.d2, m.d3, m.d4);
+	void get_bone_transforms(aiScene const *const scene) {
+		model.bone_transforms.resize(bone_info.size());
+		xform_matrix identity;
+		read_node_hierarchy_recur(scene->mRootNode, identity);
+		for (unsigned i = 0; i < bone_info.size(); i++) {model.bone_transforms[i] = bone_info[i].final_transform;}
 	}
 
 	unsigned get_bone_id(const aiBone* bone) {
@@ -70,27 +84,22 @@ class file_reader_assimp {
 		bone_name_to_index_map[bone_name] = bone_id;
 		return bone_id;
 	}
-	void parse_single_bone(int bone_index, const aiBone* pBone, mesh_bone_data_t &bone_data, unsigned first_vertex_offset) {
+	void parse_single_bone(int bone_index, aiBone const *const pBone, mesh_bone_data_t &bone_data, unsigned first_vertex_offset) {
 		unsigned const bone_id(get_bone_id(pBone));
-		//printf("      Bone %d: '%s' num vertices affected by this bone: %d\n", bone_index, pBone->mName.C_Str(), pBone->mNumWeights);
-		//printf("bone id %d\n", bone_id);
+		if (bone_id == bone_info.size()) {bone_info.emplace_back(aiMatrix4x4_to_xform_matrix(pBone->mOffsetMatrix));} // maybe add a new bone
 		//print_assimp_matrix(pBone->mOffsetMatrix);
 
 		for (unsigned i = 0; i < pBone->mNumWeights; i++) {
-			//if (i == 0) {printf("\n");}
-			const aiVertexWeight& vw = pBone->mWeights[i];
-			//printf("       %d: vertex id %d weight %.2f\n", i, vw.mVertexId, vw.mWeight);
+			aiVertexWeight const &vw(pBone->mWeights[i]);
 			unsigned const vertex_id(first_vertex_offset + vw.mVertexId);
-			//printf("Vertex id %d ", vertex_id);
 			assert(vertex_id < bone_data.vertex_to_bones.size());
 			bone_data.vertex_to_bones[vertex_id].add(bone_id, vw.mWeight, had_vertex_error);
 		}
-		//printf("\n");
 	}
-	void parse_mesh_bones(const aiMesh* mesh, mesh_bone_data_t &bone_data, unsigned first_vertex_offset) {
+	void parse_mesh_bones(aiMesh const *const mesh, mesh_bone_data_t &bone_data, unsigned first_vertex_offset) {
 		for (unsigned int i = 0; i < mesh->mNumBones; i++) {parse_single_bone(i, mesh->mBones[i], bone_data, first_vertex_offset);}
 	}
-	void process_mesh(aiMesh *mesh, const aiScene *scene) {
+	void process_mesh(aiMesh const *const mesh, aiScene const *const scene) {
 		assert(mesh != nullptr);
 		if (!(mesh->mPrimitiveTypes & aiPrimitiveType_TRIANGLE)) return; // not a triangle mesh - skip for now (can be removed using options)
 		vector<vert_norm_tc> verts(mesh->mNumVertices);
@@ -121,22 +130,21 @@ class file_reader_assimp {
 			assert(face.mNumIndices == 3); // must be triangles
 			for (unsigned j = 0; j < face.mNumIndices; j++) {indices.push_back(face.mIndices[j]);}
 		}
-		if (!mesh_bcube.is_all_zeros()) {model.union_bcube_with(mesh_bcube);}
+		if (!mesh_bcube.is_all_zeros()) {
+			if (load_animations) {} // TODO: need to apply model transform to mesh_bcube
+			model.union_bcube_with(mesh_bcube);
+		}
 		//if (mesh->mMaterialIndex >= 0) {} // according to the tutorial, this check should be done; but mMaterialIndex is unsigned, so it can't fail?
 		material_t &mat(model.get_material(mesh->mMaterialIndex, 1)); // alloc_if_needed=1
 		bool const is_new_mat(mat.empty());
 		unsigned const first_vertex_offset(mat.add_triangles(verts, indices, 1)); // add_new_block=1; should return 0
 		//cout << TXT(mesh->mName.C_Str()) << TXT(mesh->mNumVertices) << TXT(mesh->mNumFaces) << TXT(mesh->mNumBones) << endl;
-		//printf("  Mesh '%s': vertices %d indices %d bones %d\n\n", mesh->mName.C_Str(), mesh->mNumVertices, 2*mesh->mNumFaces, mesh->mNumBones);
 		
 		if (load_animations && mesh->HasBones()) { // handle bones
 			mesh_bone_data_t &bone_data(mat.get_bone_data_for_last_added_tri_mesh());
 			bone_data.vertex_to_bones.resize(first_vertex_offset + mesh->mNumVertices);
 			parse_mesh_bones(mesh, bone_data, first_vertex_offset);
-			model.set_has_bones(); // required for enabling animations
 		}
-		//printf("\n");
-
 		if (is_new_mat) { // process material if this is the first mesh using it
 			assert(scene->mMaterials != nullptr);
 			aiMaterial const* const material(scene->mMaterials[mesh->mMaterialIndex]);
@@ -170,23 +178,13 @@ class file_reader_assimp {
 			// illum? tf?
 		}
 	}  
-	void process_node_recur(aiNode *node, const aiScene *scene) {
+	void process_node_recur(aiNode const *const node, aiScene const *const scene) {
 		assert(node != nullptr);
-		//print_space(); printf("Node name: '%s' num children %d num meshes %d\n", node->mName.C_Str(), node->mNumChildren, node->mNumMeshes);
-		//print_space(); printf("Node transformation:\n");
 		//print_assimp_matrix(node->mTransformation);
-		space_count += 4;
-
 		// process all the node's meshes (if any), in tree order rather than simply iterating over mMeshes
-		for (unsigned i = 0; i < node->mNumMeshes; i++) {
-			process_mesh(scene->mMeshes[node->mMeshes[i]], scene);
-		}
+		for (unsigned i = 0; i < node->mNumMeshes; i++) {process_mesh(scene->mMeshes[node->mMeshes[i]], scene);}
 		// then do the same for each of its children
-		for (unsigned i = 0; i < node->mNumChildren; i++) {
-			//printf("\n"); print_space(); printf("--- %d ---\n", i);
-			process_node_recur(node->mChildren[i], scene);
-		}
-		space_count -= 4;
+		for (unsigned i = 0; i < node->mNumChildren; i++) {process_node_recur(node->mChildren[i], scene);}
 	} 
 public:
 	file_reader_assimp(model3d &model_, bool load_animations_=0) : model(model_), load_animations(load_animations_) {}
@@ -212,6 +210,7 @@ public:
 		model_dir = fn;
 		while (!model_dir.empty() && model_dir.back() != '/' && model_dir.back() != '\\') {model_dir.pop_back();} // remove filename from end, but leave the slash
 		process_node_recur(scene->mRootNode, scene);
+		if (load_animations) {get_bone_transforms(scene);}
 		model.finalize(); // optimize vertices, remove excess capacity, compute bounding sphere, subdivide, compute LOD blocks
 		model.load_all_used_tids();
 		if (verbose) {cout << "bcube: " << model.get_bcube().str() << endl << "model stats: "; model.show_stats();}
