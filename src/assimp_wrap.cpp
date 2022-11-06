@@ -71,10 +71,10 @@ class file_reader_assimp {
 		return bone_id;
 	}
 	void parse_single_bone(int bone_index, const aiBone* pBone, mesh_bone_data_t &bone_data, unsigned first_vertex_offset) {
-		printf("      Bone %d: '%s' num vertices affected by this bone: %d\n", bone_index, pBone->mName.C_Str(), pBone->mNumWeights);
 		unsigned const bone_id(get_bone_id(pBone));
+		//printf("      Bone %d: '%s' num vertices affected by this bone: %d\n", bone_index, pBone->mName.C_Str(), pBone->mNumWeights);
 		//printf("bone id %d\n", bone_id);
-		print_assimp_matrix(pBone->mOffsetMatrix);
+		//print_assimp_matrix(pBone->mOffsetMatrix);
 
 		for (unsigned i = 0; i < pBone->mNumWeights; i++) {
 			//if (i == 0) {printf("\n");}
@@ -127,12 +127,16 @@ class file_reader_assimp {
 		bool const is_new_mat(mat.empty());
 		unsigned const first_vertex_offset(mat.add_triangles(verts, indices, 1)); // add_new_block=1; should return 0
 		//cout << TXT(mesh->mName.C_Str()) << TXT(mesh->mNumVertices) << TXT(mesh->mNumFaces) << TXT(mesh->mNumBones) << endl;
+		//printf("  Mesh '%s': vertices %d indices %d bones %d\n\n", mesh->mName.C_Str(), mesh->mNumVertices, 2*mesh->mNumFaces, mesh->mNumBones);
 		
 		if (load_animations && mesh->HasBones()) { // handle bones
 			mesh_bone_data_t &bone_data(mat.get_bone_data_for_last_added_tri_mesh());
 			bone_data.vertex_to_bones.resize(first_vertex_offset + mesh->mNumVertices);
 			parse_mesh_bones(mesh, bone_data, first_vertex_offset);
+			model.set_has_bones(); // required for enabling animations
 		}
+		//printf("\n");
+
 		if (is_new_mat) { // process material if this is the first mesh using it
 			assert(scene->mMaterials != nullptr);
 			aiMaterial const* const material(scene->mMaterials[mesh->mMaterialIndex]);
@@ -168,10 +172,21 @@ class file_reader_assimp {
 	}  
 	void process_node_recur(aiNode *node, const aiScene *scene) {
 		assert(node != nullptr);
+		//print_space(); printf("Node name: '%s' num children %d num meshes %d\n", node->mName.C_Str(), node->mNumChildren, node->mNumMeshes);
+		//print_space(); printf("Node transformation:\n");
+		//print_assimp_matrix(node->mTransformation);
+		space_count += 4;
+
 		// process all the node's meshes (if any), in tree order rather than simply iterating over mMeshes
-		for (unsigned i = 0; i < node->mNumMeshes; i++) {process_mesh(scene->mMeshes[node->mMeshes[i]], scene);}
+		for (unsigned i = 0; i < node->mNumMeshes; i++) {
+			process_mesh(scene->mMeshes[node->mMeshes[i]], scene);
+		}
 		// then do the same for each of its children
-		for (unsigned i = 0; i < node->mNumChildren; i++) {process_node_recur(node->mChildren[i], scene);}
+		for (unsigned i = 0; i < node->mNumChildren; i++) {
+			//printf("\n"); print_space(); printf("--- %d ---\n", i);
+			process_node_recur(node->mChildren[i], scene);
+		}
+		space_count -= 4;
 	} 
 public:
 	file_reader_assimp(model3d &model_, bool load_animations_=0) : model(model_), load_animations(load_animations_) {}
