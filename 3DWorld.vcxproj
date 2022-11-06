@@ -1148,6 +1148,7 @@
     <None Include="shaders\line_draw_halo.frag" />
     <None Include="shaders\mirror_reflection.frag" />
     <None Include="shaders\mirror_reflection.vert" />
+    <None Include="shaders\model_animation.part.vert" />
     <None Include="shaders\moon_draw.frag" />
     <None Include="shaders\moon_draw.vert" />
     <None Include="shaders\multitex_2.vert" />

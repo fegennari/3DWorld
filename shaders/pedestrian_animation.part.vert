@@ -32,8 +32,8 @@ void rotate_about(inout vec3 vertex, inout vec3 normal, in float yval, in vec3 a
 	vertex.y += yval;
 }
 
-// Note: this is no longer just for pedestrians, it now has cases for rats and spiders
-void apply_vertex_animation(inout vec4 vertex, inout vec3 normal, in vec2 tc) {
+// Note: this is no longer just for pedestrians, it now has cases for rats and spiders; color is used for debugging
+void apply_vertex_animation(inout vec4 vertex, inout vec3 normal, inout vec4 color, in vec2 tc) {
 	if (animation_id == 0 || animation_time == 0.0) return; // animation disabled
 	float anim_scale = 0.01*animation_scale;
 	float anim_val   = 150.0*animation_time;

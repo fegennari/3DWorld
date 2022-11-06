@@ -2522,12 +2522,14 @@ void model3ds::render(bool is_shadow_pass, int reflection_pass, int trans_op_mas
 	// Note: in ground mode, lighting is global, so transforms are included in vpos with use_mvm=1; in TT mode, lighting is relative to each model instance
 	bool const use_mvm(!tt_mode && has_any_transforms()), v(!tt_mode), use_smap(1 || v);
 	bool needs_alpha_test(0), needs_bump_maps(0), any_planar_reflective(0), any_cube_map_reflective(0), any_non_reflective(0), use_spec_map(0), use_gloss_map(0), needs_trans_pass(0);
+	unsigned num_models_with_bones(0);
 
 	for (iterator m = begin(); m != end(); ++m) {
 		needs_alpha_test |= m->get_needs_alpha_test();
 		needs_trans_pass |= m->get_needs_trans_pass();
 		use_spec_map     |= (enable_spec_map() && m->uses_spec_map());
 		use_gloss_map    |= (enable_spec_map() && m->uses_gloss_map());
+		num_models_with_bones += m->get_has_bones();
 		if      (enable_planar_reflections   && m->is_planar_reflective  ()) {any_planar_reflective   = 1;}
 		else if (enable_cube_map_reflections && m->is_cube_map_reflective()) {any_cube_map_reflective = 1;}
 		else                                                                 {any_non_reflective      = 1;}
@@ -2560,7 +2562,7 @@ void model3ds::render(bool is_shadow_pass, int reflection_pass, int trans_op_mas
 		for (unsigned sam_pass = 0; sam_pass < (is_shadow_pass ? 2U : 1U); ++sam_pass) {
 			for (unsigned ref_pass = (any_non_reflective ? 0U : 1U); ref_pass < (reflect_mode ? 2U : 1U); ++ref_pass) {
 				int const cur_reflect_mode(ref_pass ? reflect_mode : 0);
-				bool reset_bscale(0);
+				bool reset_bscale(0), enable_animations(0);
 
 				if (is_shadow_pass) {
 					setup_smap_shader(s, (sam_pass != 0));
@@ -2569,6 +2571,9 @@ void model3ds::render(bool is_shadow_pass, int reflection_pass, int trans_op_mas
 					int const use_bmap((bmap_pass == 0) ? 0 : (model_calc_tan_vect ? 2 : 1));
 					float const min_alpha(needs_alpha_test ? 0.5 : 0.0); // will be reset per-material, but this variable is used to enable alpha testing
 					int const is_outside((is_shadow_pass || reflection_pass == 1) ? 0 : 2); // enable wet effect coverage mask
+					// TODO: doesn't work if only some models have bones; must split into two passes if (num_models_with_bones > 0 && num_models_with_bones < size())
+					enable_animations = (num_models_with_bones > 0);
+					if (enable_animations) {s.add_property("animation_shader", "model_animation.part+");} // including shadow_pass?
 					if (model3d_wn_normal) {s.set_prefix("#define USE_WINDING_RULE_FOR_NORMAL", 1);} // FS
 					setup_smoke_shaders(s, min_alpha, 0, 0, (enable_tt_model_indir || v), 1, v, v, 0, (use_smap ? 2 : 1), use_bmap, use_spec_map, use_mvm, two_sided_lighting,
 						0.0, model_triplanar_tc_scale, 0, cur_reflect_mode, is_outside, 1, 0, use_gloss_map);
@@ -2587,6 +2592,7 @@ void model3ds::render(bool is_shadow_pass, int reflection_pass, int trans_op_mas
 					m->render(s, is_shadow_pass, reflection_pass, 0, (sam_pass == 1), (shader_effects ? (1 << bmap_pass) : 3), cur_reflect_mode, trans_op_mask, xlate);
 				}
 				if (reset_bscale) {s.add_uniform_float("bump_b_scale", -1.0);} // may be unnecessary
+				if (enable_animations) {s.remove_property("animation_shader");}
 				s.clear_specular(); // may be unnecessary
 				s.end_shader();
 			} // ref_pass

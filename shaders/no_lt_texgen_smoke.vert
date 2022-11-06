@@ -28,15 +28,16 @@ void main() {
 	else if (use_texgen == 5) {setup_texgen_st(); tc = mix(tc, fg_TexCoord, tc_texgen_mix);}
 	else                      {tc = fg_TexCoord * vec2(tex_scale_s, tex_scale_t);}
 
-	fg_Color_vf = fg_Color;
+	vec4 color     = fg_Color;
 	vec4 vertex    = vec4((vertex_offset_scale*vertex_offset), 0.0) + fg_Vertex;
 	vec3 normal_in = fg_Normal;
 #ifdef ENABLE_VERTEX_ANIMATION
-	apply_vertex_animation(vertex, normal_in, tc);
+	apply_vertex_animation(vertex, normal_in, color, tc);
 #endif
 	add_leaf_wind(vertex);
 	epos        = fg_ModelViewMatrix * vertex;
 	gl_Position = fg_ProjectionMatrix * epos;
+	fg_Color_vf = color;
 
 	if (use_fg_ViewMatrix) {
 		eye_norm = normalize(fg_NormalMatrix * normal_in);
