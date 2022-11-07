@@ -14,17 +14,15 @@
 #include <assimp/scene.h>
 #include <assimp/postprocess.h>
 
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
+
 vector3d  aiVector3D_to_vector3d(aiVector3D const &v) {return vector3d (v.x, v.y, v.z);}
 colorRGBA aiColor4D_to_colorRGBA(aiColor4D  const &c) {return colorRGBA(c.r, c.g, c.b, c.a);}
-
-xform_matrix aiMatrix4x4_to_xform_matrix(aiMatrix4x4 const &m) { // Note: one is row major, while the other is column major
-	xform_matrix M;
-	M[0][0] = m.a1; M[0][1] = m.b1; M[0][2] = m.c1; M[0][3] = m.d1;
-	M[1][0] = m.a2; M[1][1] = m.b2; M[1][2] = m.c2; M[1][3] = m.d2;
-	M[2][0] = m.a3; M[2][1] = m.b3; M[2][2] = m.c3; M[2][3] = m.d3;
-	M[3][0] = m.a4; M[3][1] = m.b4; M[3][2] = m.c4; M[3][3] = m.d4;
-	return M;
-}
+glm::vec3 aiVector3D_to_glm_vec3(aiVector3D const &v) {return glm::vec3(v.x, v.y, v.z);}
+xform_matrix aiMatrix4x4_to_xform_matrix(aiMatrix4x4  const &m) {return xform_matrix(glm::transpose(glm::make_mat4(&m.a1)));}
+glm::mat3    aiMatrix4x4_to_glm_mat3    (aiMatrix3x3  const &m) {return xform_matrix(glm::transpose(glm::make_mat3(&m.a1)));}
+glm::quat    aiQuaternion_to_glm_quat   (aiQuaternion const &q) {return glm::quat(q.w, q.x, q.y, q.z);}
 
 
 // For reference, see: https://learnopengl.com/Model-Loading/Model
@@ -144,6 +142,7 @@ class file_reader_assimp {
 			mesh_bone_data_t &bone_data(mat.get_bone_data_for_last_added_tri_mesh());
 			bone_data.vertex_to_bones.resize(first_vertex_offset + mesh->mNumVertices);
 			parse_mesh_bones(mesh, bone_data, first_vertex_offset);
+			for (unsigned i = first_vertex_offset; i < bone_data.vertex_to_bones.size(); ++i) {bone_data.vertex_to_bones[i].normalize();} // normalize weights to 1.0
 		}
 		if (is_new_mat) { // process material if this is the first mesh using it
 			assert(scene->mMaterials != nullptr);
