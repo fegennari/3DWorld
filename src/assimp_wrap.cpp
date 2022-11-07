@@ -49,9 +49,8 @@ class file_reader_assimp {
 		// load only the first texture, as that's all we support
 		aiString fn; // absolute path, not relative to the model file
 		if (mat->GetTexture(type, 0, &fn) != AI_SUCCESS) return -1;
-		bool const invert_y = 1;
 		// is_alpha_mask=0, verbose=0, invert_alpha=0, wrap=1, mirror=0, force_grayscale=0
-		return model.tmgr.create_texture((model_dir + fn.C_Str()), 0, 0, 0, 1, 0, 0, is_normal_map, invert_y);
+		return model.tmgr.create_texture((model_dir + fn.C_Str()), 0, 0, 0, 1, 0, 0, is_normal_map);
 	}
 	void print_assimp_matrix(aiMatrix4x4 const &m) {aiMatrix4x4_to_xform_matrix(m).print();}
 
@@ -195,7 +194,7 @@ public:
 		// aiProcess_ValidateDataStructure - for debugging
 		// aiProcess_ImproveCacheLocality - optional, but already supported by the model3d class
 		// aiProcess_FindDegenerates, aiProcess_FindInvalidData - optional
-		unsigned flags(aiProcess_Triangulate | aiProcess_SortByPType | aiProcess_FlipUVs | aiProcess_JoinIdenticalVertices |
+		unsigned flags(aiProcess_Triangulate | aiProcess_SortByPType | aiProcess_JoinIdenticalVertices |
 			           aiProcess_FixInfacingNormals | aiProcess_GenUVCoords | aiProcess_OptimizeMeshes);
 		// Note: here we treat the recalc_normals flag as using smooth normals; if the model already contains normals, they're always used
 		flags |= (recalc_normals ? aiProcess_GenSmoothNormals : aiProcess_GenNormals);
