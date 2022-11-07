@@ -98,11 +98,13 @@ bool shader_t::set_uniform_color(int loc, colorRGBA const &val) { // same as vec
 bool shader_t::set_uniform_color(int loc, colorRGB  const &val) { // same as vector3d
 	if (loc >= 0) {glUniform3fv(loc, 1, &val.R); return 1;} else {return 0;}
 }
-bool shader_t::set_uniform_matrix_3x3(int loc, float const *const m, bool transpose) {
-	if (loc >= 0) {glUniformMatrix3fv(loc, 1, transpose, m); return 1;} else {return 0;}
+bool shader_t::set_uniform_matrix_3x3(int loc, float const *const m, bool transpose, unsigned num) {
+	assert(num > 0);
+	if (loc >= 0) {glUniformMatrix3fv(loc, num, transpose, m); return 1;} else {return 0;}
 }
-bool shader_t::set_uniform_matrix_4x4(int loc, float const *const m, bool transpose) {
-	if (loc >= 0) {glUniformMatrix4fv(loc, 1, transpose, m); return 1;} else {return 0;}
+bool shader_t::set_uniform_matrix_4x4(int loc, float const *const m, bool transpose, unsigned num) {
+	assert(num > 0);
+	if (loc >= 0) {glUniformMatrix4fv(loc, num, transpose, m); return 1;} else {return 0;}
 }
 
 bool shader_t::add_uniform_float_array(char const *const name, float const *const val, unsigned num) const {
@@ -135,8 +137,8 @@ bool shader_t::add_uniform_color(char const *const name, colorRGBA const &val) c
 bool shader_t::add_uniform_color(char const *const name, colorRGB  const &val) const {
 	return set_uniform_color(get_uniform_loc(name), val);
 }
-bool shader_t::add_uniform_matrix_4x4(char const *const name, float const *m, bool transpose) const {
-	return set_uniform_matrix_4x4(get_uniform_loc(name), m, transpose);
+bool shader_t::add_uniform_matrix_4x4(char const *const name, float const *m, bool transpose, unsigned num) const {
+	return set_uniform_matrix_4x4(get_uniform_loc(name), m, transpose, num);
 }
 
 

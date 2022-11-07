@@ -143,8 +143,8 @@ public:
 	static bool set_uniform_vector4d   (int loc, vector4d const &val);
 	static bool set_uniform_color      (int loc, colorRGBA const &val);
 	static bool set_uniform_color      (int loc, colorRGB  const &val);
-	static bool set_uniform_matrix_3x3 (int loc, float const *const m, bool transpose);
-	static bool set_uniform_matrix_4x4 (int loc, float const *const m, bool transpose);
+	static bool set_uniform_matrix_3x3 (int loc, float const *const m, bool transpose, unsigned num=1);
+	static bool set_uniform_matrix_4x4 (int loc, float const *const m, bool transpose, unsigned num=1);
 
 	bool add_uniform_float_array (char const *const name, float const *const val, unsigned num) const;
 	bool add_uniform_float       (char const *const name, float val) const;
@@ -156,7 +156,7 @@ public:
 	bool add_uniform_vector4d    (char const *const name, vector4d  const &val) const;
 	bool add_uniform_color       (char const *const name, colorRGBA const &val) const;
 	bool add_uniform_color       (char const *const name, colorRGB  const &val) const;
-	bool add_uniform_matrix_4x4  (char const *const name, float const *m, bool transpose) const;
+	bool add_uniform_matrix_4x4  (char const *const name, float const *m, bool transpose, unsigned num=1) const;
 
 	unsigned get_subroutine_index(int shader_type, char const *const name) const;
 	unsigned get_subroutine_uniform_loc(int shader_type, char const *const name) const;

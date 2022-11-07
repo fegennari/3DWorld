@@ -616,13 +616,8 @@ void model3d::setup_bone_transforms(shader_t &shader) const {
 		cerr << "Error: Too many bones for model: " << num_bones << "; Max is " << MAX_MODEL_BONES << endl;
 		assert(0); // or return? or ignore some bones?
 	}
-	ostringstream oss;
-
-	for (unsigned i = 0; i < num_bones; ++i) {
-		oss.str("");
-		oss << "bones[" << i << "]";
-		shader.add_uniform_matrix_4x4(oss.str().c_str(), bone_transforms[i].get_ptr(), 0); // transpose=0
-	}
+	assert(num_bones > 0);
+	shader.add_uniform_matrix_4x4("bones", bone_transforms[0].get_ptr(), 0, num_bones); // transpose=0
 }
 
 template<typename T> void indexed_vntc_vect_t<T>::setup_bones(shader_t &shader, bool is_shadow_pass) {
