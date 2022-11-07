@@ -16,6 +16,8 @@
 
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
+#define GLM_ENABLE_EXPERIMENTAL
+#include <glm/gtx/quaternion.hpp>
 
 vector3d  aiVector3D_to_vector3d(aiVector3D const &v) {return vector3d (v.x, v.y, v.z);}
 colorRGBA aiColor4D_to_colorRGBA(aiColor4D  const &c) {return colorRGBA(c.r, c.g, c.b, c.a);}
@@ -27,6 +29,8 @@ glm::quat    aiQuaternion_to_glm_quat   (aiQuaternion const &q) {return glm::qua
 
 // For reference, see: https://learnopengl.com/Model-Loading/Model
 // Also: https://github.com/emeiri/ogldev
+// Also: http://www.xphere.me/2019/05/bones-animation-with-openglassimpglm/
+
 class file_reader_assimp {
 	// input/output variables
 	model3d &model;
@@ -54,6 +58,130 @@ class file_reader_assimp {
 	}
 	void print_assimp_matrix(aiMatrix4x4 const &m) {aiMatrix4x4_to_xform_matrix(m).print();}
 
+#if 1 // incomplete
+	unsigned find_position(float AnimationTimeTicks, const aiNodeAnim* pNodeAnim) {
+		for (unsigned i = 0; i < pNodeAnim->mNumPositionKeys - 1; i++) {
+			if (AnimationTimeTicks < (float)pNodeAnim->mPositionKeys[i + 1].mTime) return i;
+		}
+		return 0;
+	}
+	void calc_interpolated_position(aiVector3D& Out, float AnimationTimeTicks, const aiNodeAnim* pNodeAnim) {
+		if (pNodeAnim->mNumPositionKeys == 1) { // we need at least two values to interpolate...
+			Out = pNodeAnim->mPositionKeys[0].mValue;
+			return;
+		}
+		unsigned PositionIndex = find_position(AnimationTimeTicks, pNodeAnim);
+		unsigned NextPositionIndex = PositionIndex + 1;
+		assert(NextPositionIndex < pNodeAnim->mNumPositionKeys);
+		float t1 = (float)pNodeAnim->mPositionKeys[PositionIndex].mTime;
+		float t2 = (float)pNodeAnim->mPositionKeys[NextPositionIndex].mTime;
+		float DeltaTime = t2 - t1;
+		float Factor = (AnimationTimeTicks - t1) / DeltaTime;
+		assert(Factor >= 0.0f && Factor <= 1.0f);
+		const aiVector3D& Start = pNodeAnim->mPositionKeys[PositionIndex].mValue;
+		const aiVector3D& End = pNodeAnim->mPositionKeys[NextPositionIndex].mValue;
+		aiVector3D Delta = End - Start;
+		Out = Start + Factor * Delta;
+	}
+
+	unsigned find_rotation(float anim_time, const aiNodeAnim* pNodeAnim) {
+		assert(pNodeAnim->mNumRotationKeys > 0);
+
+		for (unsigned i = 0; i < pNodeAnim->mNumRotationKeys - 1; i++) {
+			if (anim_time < (float)pNodeAnim->mRotationKeys[i + 1].mTime) return i;
+		}
+		assert(0);
+	}
+	void calc_interpolated_rotation(aiQuaternion &out, float anim_time, aiNodeAnim const *const pNodeAnim) {
+		if (pNodeAnim->mNumRotationKeys == 1) { // we need at least two values to interpolate...
+			out = pNodeAnim->mRotationKeys[0].mValue;
+			return;
+		}
+		unsigned const rotation_index(find_rotation(anim_time, pNodeAnim)), next_rotation_index(rotation_index + 1);
+		assert(next_rotation_index < pNodeAnim->mNumRotationKeys);
+		float const cur_time(pNodeAnim->mRotationKeys[rotation_index].mTime), delta_time(pNodeAnim->mRotationKeys[next_rotation_index].mTime - cur_time);
+		float const factor((anim_time - cur_time) / delta_time);
+		assert(factor >= 0.0f && factor <= 1.0f);
+		aiQuaternion const &start_rot(pNodeAnim->mRotationKeys[rotation_index     ].mValue);
+		aiQuaternion const &end_rot  (pNodeAnim->mRotationKeys[next_rotation_index].mValue);
+		aiQuaternion::Interpolate(out, start_rot, end_rot, factor);
+		out = out.Normalize();
+	}
+
+	unsigned find_scaling(float AnimationTimeTicks, const aiNodeAnim* pNodeAnim) {
+		assert(pNodeAnim->mNumScalingKeys > 0);
+
+		for (unsigned i = 0; i < pNodeAnim->mNumScalingKeys - 1; i++) {
+			if (AnimationTimeTicks < (float)pNodeAnim->mScalingKeys[i + 1].mTime) return i;
+		}
+		return 0;
+	}
+	void calc_interpolated_scaling(aiVector3D& Out, float AnimationTimeTicks, const aiNodeAnim* pNodeAnim) {
+		if (pNodeAnim->mNumScalingKeys == 1) { // we need at least two values to interpolate...
+			Out = pNodeAnim->mScalingKeys[0].mValue;
+			return;
+		}
+		unsigned ScalingIndex = find_scaling(AnimationTimeTicks, pNodeAnim);
+		unsigned NextScalingIndex = ScalingIndex + 1;
+		assert(NextScalingIndex < pNodeAnim->mNumScalingKeys);
+		float t1 = (float)pNodeAnim->mScalingKeys[ScalingIndex].mTime;
+		float t2 = (float)pNodeAnim->mScalingKeys[NextScalingIndex].mTime;
+		float DeltaTime = t2 - t1;
+		float Factor = (AnimationTimeTicks - (float)t1) / DeltaTime;
+		assert(Factor >= 0.0f && Factor <= 1.0f);
+		const aiVector3D& Start = pNodeAnim->mScalingKeys[ScalingIndex].mValue;
+		const aiVector3D& End   = pNodeAnim->mScalingKeys[NextScalingIndex].mValue;
+		aiVector3D Delta = End - Start;
+		Out = Start + Factor * Delta;
+	}
+
+	const aiNodeAnim* find_node_anim(const aiAnimation* pAnimation, const string& NodeName) {
+		for (unsigned i = 0; i < pAnimation->mNumChannels; i++) {
+			const aiNodeAnim* pNodeAnim = pAnimation->mChannels[i];
+			if (string(pNodeAnim->mNodeName.data) == NodeName) return pNodeAnim;
+		}
+		return NULL;
+	}
+	void read_node_hierarchy_with_anim_recur(float anim_time, aiScene const *const scene, aiNode const *const node,
+		xform_matrix const &parent_transform, xform_matrix const &global_inverse_transform)
+	{
+		string const node_name(node->mName.data);
+		const aiAnimation* animation(scene->mAnimations[0]);
+		xform_matrix node_transform;
+		aiNodeAnim const *const node_anim(find_node_anim(animation, node_name));
+
+		if (node_anim) {
+			// Interpolate scaling and generate scaling transformation matrix
+			aiVector3D scaling_v;
+			calc_interpolated_scaling(scaling_v, anim_time, node_anim);
+			glm::mat4 const scaling(glm::scale(glm::mat4(1.0), aiVector3D_to_glm_vec3(scaling_v)));
+			// Interpolate rotation and generate rotation transformation matrix
+			aiQuaternion rotation_q;
+			calc_interpolated_rotation(rotation_q, anim_time, node_anim);
+			glm::mat4 const rotation(glm::toMat4(aiQuaternion_to_glm_quat(rotation_q)));
+			// Interpolate translation and generate translation transformation matrix
+			aiVector3D translation_v;
+			calc_interpolated_position(translation_v, anim_time, node_anim);
+			glm::mat4 const translation(glm::translate(glm::mat4(1.0), aiVector3D_to_glm_vec3(translation_v)));
+			// Combine the above transformations
+			node_transform = translation * rotation * scaling;
+		}
+		else {
+			node_transform = aiMatrix4x4_to_xform_matrix(node->mTransformation);
+		}
+		xform_matrix const global_transform(parent_transform * node_transform);
+		auto it(bone_name_to_index_map.find(node_name));
+
+		if (it != bone_name_to_index_map.end()) {
+			unsigned const bone_index(it->second);
+			assert(bone_index < bone_info.size());
+			bone_info[bone_index].final_transform = global_inverse_transform * global_transform * bone_info[bone_index].offset_matrix;
+		}
+		for (unsigned i = 0; i < node->mNumChildren; i++) {
+			read_node_hierarchy_with_anim_recur(anim_time, scene, node->mChildren[i], global_transform, global_inverse_transform);
+		}
+	}
+#endif
 	void read_node_hierarchy_recur(aiNode const *const pNode, xform_matrix const &parent_transform) {
 		string const node_name(pNode->mName.C_Str());
 		xform_matrix global_transform(parent_transform * aiMatrix4x4_to_xform_matrix(pNode->mTransformation));
