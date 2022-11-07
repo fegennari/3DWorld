@@ -19,11 +19,13 @@
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/quaternion.hpp>
 
+extern double tfticks;
+
 vector3d  aiVector3D_to_vector3d(aiVector3D const &v) {return vector3d (v.x, v.y, v.z);}
 colorRGBA aiColor4D_to_colorRGBA(aiColor4D  const &c) {return colorRGBA(c.r, c.g, c.b, c.a);}
 glm::vec3 aiVector3D_to_glm_vec3(aiVector3D const &v) {return glm::vec3(v.x, v.y, v.z);}
 xform_matrix aiMatrix4x4_to_xform_matrix(aiMatrix4x4  const &m) {return xform_matrix(glm::transpose(glm::make_mat4(&m.a1)));}
-glm::mat3    aiMatrix4x4_to_glm_mat3    (aiMatrix3x3  const &m) {return xform_matrix(glm::transpose(glm::make_mat3(&m.a1)));}
+glm::mat3    aiMatrix3x3_to_glm_mat3    (aiMatrix3x3  const &m) {return glm::transpose(glm::make_mat3(&m.a1));}
 glm::quat    aiQuaternion_to_glm_quat   (aiQuaternion const &q) {return glm::quat(q.w, q.x, q.y, q.z);}
 
 
@@ -58,39 +60,37 @@ class file_reader_assimp {
 	}
 	void print_assimp_matrix(aiMatrix4x4 const &m) {aiMatrix4x4_to_xform_matrix(m).print();}
 
-#if 1 // incomplete
-	unsigned find_position(float AnimationTimeTicks, const aiNodeAnim* pNodeAnim) {
+	// TODO: extract this data and move the matrix functionality into model3d so that we can run it after the model has been deleted
+	unsigned find_position(float anim_time_ticks, aiNodeAnim const *const pNodeAnim) {
 		for (unsigned i = 0; i < pNodeAnim->mNumPositionKeys - 1; i++) {
-			if (AnimationTimeTicks < (float)pNodeAnim->mPositionKeys[i + 1].mTime) return i;
+			if (anim_time_ticks < pNodeAnim->mPositionKeys[i + 1].mTime) return i;
 		}
-		return 0;
+		assert(0);
+		return 0; // never gets here
 	}
-	void calc_interpolated_position(aiVector3D& Out, float AnimationTimeTicks, const aiNodeAnim* pNodeAnim) {
+	void calc_interpolated_position(aiVector3D &out, float anim_time_ticks, aiNodeAnim const *const pNodeAnim) {
 		if (pNodeAnim->mNumPositionKeys == 1) { // we need at least two values to interpolate...
-			Out = pNodeAnim->mPositionKeys[0].mValue;
+			out = pNodeAnim->mPositionKeys[0].mValue;
 			return;
 		}
-		unsigned PositionIndex = find_position(AnimationTimeTicks, pNodeAnim);
-		unsigned NextPositionIndex = PositionIndex + 1;
-		assert(NextPositionIndex < pNodeAnim->mNumPositionKeys);
-		float t1 = (float)pNodeAnim->mPositionKeys[PositionIndex].mTime;
-		float t2 = (float)pNodeAnim->mPositionKeys[NextPositionIndex].mTime;
-		float DeltaTime = t2 - t1;
-		float Factor = (AnimationTimeTicks - t1) / DeltaTime;
-		assert(Factor >= 0.0f && Factor <= 1.0f);
-		const aiVector3D& Start = pNodeAnim->mPositionKeys[PositionIndex].mValue;
-		const aiVector3D& End = pNodeAnim->mPositionKeys[NextPositionIndex].mValue;
-		aiVector3D Delta = End - Start;
-		Out = Start + Factor * Delta;
+		unsigned const pos_index(find_position(anim_time_ticks, pNodeAnim)), next_pos_index(pos_index + 1);
+		assert(next_pos_index < pNodeAnim->mNumPositionKeys);
+		float const t1(pNodeAnim->mPositionKeys[pos_index].mTime), t2(pNodeAnim->mPositionKeys[next_pos_index].mTime);
+		float const factor((anim_time_ticks - t1) / (t2 - t1));
+		assert(factor >= 0.0f && factor <= 1.0f);
+		aiVector3D const &start(pNodeAnim->mPositionKeys[pos_index     ].mValue);
+		aiVector3D const &end  (pNodeAnim->mPositionKeys[next_pos_index].mValue);
+		out = start + factor * (end - start);
 	}
 
-	unsigned find_rotation(float anim_time, const aiNodeAnim* pNodeAnim) {
+	unsigned find_rotation(float anim_time_ticks, aiNodeAnim const *const pNodeAnim) {
 		assert(pNodeAnim->mNumRotationKeys > 0);
 
 		for (unsigned i = 0; i < pNodeAnim->mNumRotationKeys - 1; i++) {
-			if (anim_time < (float)pNodeAnim->mRotationKeys[i + 1].mTime) return i;
+			if (anim_time_ticks < (float)pNodeAnim->mRotationKeys[i + 1].mTime) return i;
 		}
 		assert(0);
+		return 0; // never gets here
 	}
 	void calc_interpolated_rotation(aiQuaternion &out, float anim_time, aiNodeAnim const *const pNodeAnim) {
 		if (pNodeAnim->mNumRotationKeys == 1) { // we need at least two values to interpolate...
@@ -108,47 +108,44 @@ class file_reader_assimp {
 		out = out.Normalize();
 	}
 
-	unsigned find_scaling(float AnimationTimeTicks, const aiNodeAnim* pNodeAnim) {
+	unsigned find_scaling(float anim_time_ticks, aiNodeAnim const *const pNodeAnim) {
 		assert(pNodeAnim->mNumScalingKeys > 0);
 
 		for (unsigned i = 0; i < pNodeAnim->mNumScalingKeys - 1; i++) {
-			if (AnimationTimeTicks < (float)pNodeAnim->mScalingKeys[i + 1].mTime) return i;
+			if (anim_time_ticks < pNodeAnim->mScalingKeys[i + 1].mTime) return i;
 		}
-		return 0;
+		assert(0);
+		return 0; // never gets here
 	}
-	void calc_interpolated_scaling(aiVector3D& Out, float AnimationTimeTicks, const aiNodeAnim* pNodeAnim) {
+	void calc_interpolated_scaling(aiVector3D &out, float anim_time_ticks, aiNodeAnim const *const pNodeAnim) {
 		if (pNodeAnim->mNumScalingKeys == 1) { // we need at least two values to interpolate...
-			Out = pNodeAnim->mScalingKeys[0].mValue;
+			out = pNodeAnim->mScalingKeys[0].mValue;
 			return;
 		}
-		unsigned ScalingIndex = find_scaling(AnimationTimeTicks, pNodeAnim);
-		unsigned NextScalingIndex = ScalingIndex + 1;
-		assert(NextScalingIndex < pNodeAnim->mNumScalingKeys);
-		float t1 = (float)pNodeAnim->mScalingKeys[ScalingIndex].mTime;
-		float t2 = (float)pNodeAnim->mScalingKeys[NextScalingIndex].mTime;
-		float DeltaTime = t2 - t1;
-		float Factor = (AnimationTimeTicks - (float)t1) / DeltaTime;
-		assert(Factor >= 0.0f && Factor <= 1.0f);
-		const aiVector3D& Start = pNodeAnim->mScalingKeys[ScalingIndex].mValue;
-		const aiVector3D& End   = pNodeAnim->mScalingKeys[NextScalingIndex].mValue;
-		aiVector3D Delta = End - Start;
-		Out = Start + Factor * Delta;
+		unsigned const scale_index(find_scaling(anim_time_ticks, pNodeAnim)), next_scale_index(scale_index + 1);
+		assert(next_scale_index < pNodeAnim->mNumScalingKeys);
+		float const t1(pNodeAnim->mScalingKeys[scale_index].mTime), t2(pNodeAnim->mScalingKeys[next_scale_index].mTime);
+		float const factor((anim_time_ticks - t1) / (t2 - t1));
+		assert(factor >= 0.0f && factor <= 1.0f);
+		aiVector3D const &start(pNodeAnim->mScalingKeys[scale_index     ].mValue);
+		aiVector3D const &end  (pNodeAnim->mScalingKeys[next_scale_index].mValue);
+		out = start + factor * (end - start);
 	}
 
-	const aiNodeAnim* find_node_anim(const aiAnimation* pAnimation, const string& NodeName) {
+	aiNodeAnim const *find_node_anim(aiAnimation const *const pAnimation, string const &node_name) {
 		for (unsigned i = 0; i < pAnimation->mNumChannels; i++) {
-			const aiNodeAnim* pNodeAnim = pAnimation->mChannels[i];
-			if (string(pNodeAnim->mNodeName.data) == NodeName) return pNodeAnim;
+			aiNodeAnim const *const anim(pAnimation->mChannels[i]);
+			if (string(anim->mNodeName.data) == node_name) return anim;
 		}
 		return NULL;
 	}
-	void read_node_hierarchy_with_anim_recur(float anim_time, aiScene const *const scene, aiNode const *const node,
+	void read_node_hierarchy_recur(float anim_time, aiScene const *const scene, aiNode const *const node,
 		xform_matrix const &parent_transform, xform_matrix const &global_inverse_transform)
 	{
 		string const node_name(node->mName.data);
-		const aiAnimation* animation(scene->mAnimations[0]);
+		aiAnimation const *const animation(scene->mAnimations[0]);
+		aiNodeAnim  const *const node_anim(find_node_anim(animation, node_name));
 		xform_matrix node_transform;
-		aiNodeAnim const *const node_anim(find_node_anim(animation, node_name));
 
 		if (node_anim) {
 			// Interpolate scaling and generate scaling transformation matrix
@@ -164,7 +161,12 @@ class file_reader_assimp {
 			calc_interpolated_position(translation_v, anim_time, node_anim);
 			glm::mat4 const translation(glm::translate(glm::mat4(1.0), aiVector3D_to_glm_vec3(translation_v)));
 			// Combine the above transformations
+			//xform_matrix(translation).print("translation");
+			//xform_matrix(rotation   ).print("rotation");
+			//xform_matrix(scaling    ).print("scaling");
 			node_transform = translation * rotation * scaling;
+			//node_transform.print("node_transform");
+			//aiMatrix4x4_to_xform_matrix(node->mTransformation).print("mTransformation");
 		}
 		else {
 			node_transform = aiMatrix4x4_to_xform_matrix(node->mTransformation);
@@ -178,26 +180,21 @@ class file_reader_assimp {
 			bone_info[bone_index].final_transform = global_inverse_transform * global_transform * bone_info[bone_index].offset_matrix;
 		}
 		for (unsigned i = 0; i < node->mNumChildren; i++) {
-			read_node_hierarchy_with_anim_recur(anim_time, scene, node->mChildren[i], global_transform, global_inverse_transform);
+			read_node_hierarchy_recur(anim_time, scene, node->mChildren[i], global_transform, global_inverse_transform);
 		}
-	}
-#endif
-	void read_node_hierarchy_recur(aiNode const *const pNode, xform_matrix const &parent_transform) {
-		string const node_name(pNode->mName.C_Str());
-		xform_matrix global_transform(parent_transform * aiMatrix4x4_to_xform_matrix(pNode->mTransformation));
-		auto it(bone_name_to_index_map.find(node_name));
-
-		if (it != bone_name_to_index_map.end()) {
-			unsigned const bone_index(it->second);
-			assert(bone_index < bone_info.size());
-			bone_info[bone_index].final_transform = global_transform * bone_info[bone_index].offset_matrix;
-		}
-		for (unsigned i = 0; i < pNode->mNumChildren; i++) {read_node_hierarchy_recur(pNode->mChildren[i], global_transform);}
 	}
 	void get_bone_transforms(aiScene const *const scene) {
+		assert(scene && scene->mRootNode);
+
+		// TODO: this goes somewhere in model3d
+		float const ticks_per_sec(scene->mAnimations[0]->mTicksPerSecond ? scene->mAnimations[0]->mTicksPerSecond : 25.0f); // defaults to 25
+		float const time_in_ticks(/*(tfticks/TICKS_PER_SECOND)*/0.0 * ticks_per_sec);
+		float const animation_time(fmod(time_in_ticks, scene->mAnimations[0]->mDuration));
+		xform_matrix const global_inverse_transform(aiMatrix4x4_to_xform_matrix(scene->mRootNode->mTransformation).inverse());
+
 		model.bone_transforms.resize(bone_info.size());
 		xform_matrix identity;
-		read_node_hierarchy_recur(scene->mRootNode, identity);
+		read_node_hierarchy_recur(animation_time, scene, scene->mRootNode, identity, global_inverse_transform);
 		for (unsigned i = 0; i < bone_info.size(); i++) {model.bone_transforms[i] = bone_info[i].final_transform;}
 	}
 

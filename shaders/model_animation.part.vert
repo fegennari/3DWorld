@@ -1,4 +1,4 @@
-layout(location = 4) in ivec4 bone_ids;
+layout(location = 4) in uvec4 bone_ids;
 layout(location = 5) in vec4 bone_weights;
 
 uniform float animation_time = 0.0;
@@ -14,5 +14,6 @@ void apply_vertex_animation(inout vec4 vertex, inout vec3 normal, inout vec4 col
     bone_transform     += bones[bone_ids[2]] * bone_weights[2];
     bone_transform     += bones[bone_ids[3]] * bone_weights[3];
     vertex = bone_transform * vertex;
-    normal = inverse(transpose(mat3(bone_transform))) * normal;
+    //normal = inverse(transpose(mat3(bone_transform))) * normal;
+    normal = (bone_transform * vec4(normal, 1.0)).xyz; // is this faster?
 }
