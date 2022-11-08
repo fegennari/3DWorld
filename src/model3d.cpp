@@ -608,7 +608,8 @@ void vertex_bone_data_t::normalize() { // make sure all weights sum to 1.0
 	for (unsigned i = 0; i < MAX_NUM_BONES_PER_VERTEX; ++i) {weights[i] /= w_sum;}
 }
 
-void model3d::setup_bone_transforms(shader_t &shader) const {
+void model3d::setup_bone_transforms(shader_t &shader, bool is_shadow_pass) const {
+	if (is_shadow_pass) return; // not yet supported in the shadow pass
 	unsigned const MAX_MODEL_BONES = 200; // must agree with shader code
 	unsigned const num_bones(bone_transforms.size());
 
@@ -617,7 +618,8 @@ void model3d::setup_bone_transforms(shader_t &shader) const {
 		assert(0); // or return? or ignore some bones?
 	}
 	assert(num_bones > 0);
-	shader.add_uniform_matrix_4x4("bones", bone_transforms[0].get_ptr(), 0, num_bones); // transpose=0
+	bool const ret(shader.add_uniform_matrix_4x4("bones", bone_transforms[0].get_ptr(), 0, num_bones)); // transpose=0
+	assert(ret);
 }
 
 template<typename T> void indexed_vntc_vect_t<T>::setup_bones(shader_t &shader, bool is_shadow_pass) {
@@ -643,7 +645,7 @@ template<typename T> void indexed_vntc_vect_t<T>::setup_bones(shader_t &shader, 
 		}
 	}
 	T::set_vbo_arrays();
-	//cout << TXT(shader.get_attrib_loc("bone_ids", 1)) << TXT(shader.get_attrib_loc("bone_weights", 1)) << endl;
+	if (is_shadow_pass) return; // bones not used in the shadow pass
 	unsigned const stride(sizeof(vertex_bone_data_t));
 	glEnableVertexAttribArray(BONE_IDS_LOC);
 	glEnableVertexAttribArray(BONE_WEIGHTS_LOC);
@@ -2119,7 +2121,7 @@ void model3d::render(shader_t &shader, bool is_shadow_pass, int reflection_pass,
 #endif
 		}
 	}
-	if (has_bones()) {setup_bone_transforms(shader);}
+	if (has_bones()) {setup_bone_transforms(shader, is_shadow_pass);}
 	xform_matrix const mvm(fgGetMVM());
 	model3d_xform_t const xlate_xf(xlate);
 	camera_pdu_transform_wrapper cptw(xlate_xf);
