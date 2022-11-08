@@ -1997,10 +1997,16 @@ bool geom_xform_t::operator==(geom_xform_t const &x) const {
 	return 1;
 }
 
-xform_matrix geom_xform_t::create_xform_matrix() const { // rotate - mirror - scale - translate
-	// TODO: rotate
-	// TODO: mirror
-	glm::mat4 const scale(glm::scale(glm::mat4(1.0), glm::vec3(scale, scale, scale))); // uniform scale
+xform_matrix geom_xform_t::create_xform_matrix() const { // mirror - swap - scale - translate
+	for (unsigned i = 0; i < 3; ++i) {
+		for (unsigned j = 0; j < 3; ++j) {
+			if (swap_dim[i][j]) {
+				cerr << "Error: Model swap_dim is not supported for create_xform_matrix()" << endl;
+				assert(0);
+			}
+		}
+	}
+	glm::mat4 const scale(glm::scale(glm::mat4(1.0), glm::vec3((mirror[0] ? -1.0 : 1.0)*scale, (mirror[1] ? -1.0 : 1.0)*scale, (mirror[2] ? -1.0 : 1.0)*scale)));
 	glm::mat4 const translate(glm::translate(glm::mat4(1.0), glm::vec3(tv.x, tv.y, tv.z)));
 	return scale * translate;
 }

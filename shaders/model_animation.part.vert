@@ -14,6 +14,5 @@ void apply_vertex_animation(inout vec4 vertex, inout vec3 normal, inout vec4 col
     bone_transform     += bones[bone_ids[2]] * bone_weights[2];
     bone_transform     += bones[bone_ids[3]] * bone_weights[3];
     vertex = bone_transform * vertex;
-    //normal = inverse(transpose(mat3(bone_transform))) * normal;
-    normal = (bone_transform * vec4(normal, 1.0)).xyz; // is this faster?
+    normal = (bone_transform * vec4(normal, 1.0)).xyz;
 }

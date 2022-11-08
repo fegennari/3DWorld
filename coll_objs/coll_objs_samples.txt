@@ -64,7 +64,7 @@ l 0.8 1.0 1.0 1.0 1.0 68 1 # 27 = cblock texture, 102 = spaceship texture, 68 = 
 #t 0 0 0 s 1 2 m 0.25  O ..\models\sprite_fight\Blender-3.0.model3d 4 0 0
 #t 0 0 0  m 0.1  O "..\models\Bedroom\iscv2.obj" 4 1 0
 #t 0 0 1  m 0.005  O ..\models/mailbox\mailbox.3ds 4 1 0
-t 0 0 0  s 1 2  m 0.05 M 2  O ..\..\git_work\ogldev\Content\boblampclean.md5mesh 4 0 0
+t 0 0 0  m 0.05  O ..\..\git_work\ogldev\Content\boblampclean.md5mesh 4 0 0
 
 cube_map_ref 0
 metalness 0.0
