@@ -69,6 +69,7 @@ struct geom_xform_t { // should be packed, can read/write as POD
 	void xform_vect(vector<point> &v) const {
 		for (vector<point>::iterator i = v.begin(); i != v.end(); ++i) {xform_pos(*i);}
 	}
+	xform_matrix create_xform_matrix() const;
 	bool operator==(geom_xform_t const &x) const;
 	bool operator!=(geom_xform_t const &x) const {return !operator==(x);}
 };

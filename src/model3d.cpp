@@ -14,6 +14,8 @@
 #include <queue>
 #include "meshoptimizer.h"
 
+#include <glm/gtc/matrix_transform.hpp>
+
 bool const ENABLE_BUMP_MAPS  = 1;
 bool const ENABLE_SPEC_MAPS  = 1;
 bool const ENABLE_INTER_REFLECTIONS = 1;
@@ -1993,6 +1995,14 @@ bool geom_xform_t::operator==(geom_xform_t const &x) const {
 		UNROLL_3X(if (swap_dim[i][i_] != x.swap_dim[i][i_]) return 0;)
 	}
 	return 1;
+}
+
+xform_matrix geom_xform_t::create_xform_matrix() const { // rotate - mirror - scale - translate
+	// TODO: rotate
+	// TODO: mirror
+	glm::mat4 const scale(glm::scale(glm::mat4(1.0), glm::vec3(scale, scale, scale))); // uniform scale
+	glm::mat4 const translate(glm::translate(glm::mat4(1.0), glm::vec3(tv.x, tv.y, tv.z)));
+	return scale * translate;
 }
 
 void model3d_xform_t::apply_inv_xform_to_pdu(pos_dir_up &pdu) const { // Note: RM ignored

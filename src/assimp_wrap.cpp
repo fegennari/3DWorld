@@ -19,6 +19,8 @@
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/quaternion.hpp>
 
+#include <fstream>
+
 extern double tfticks;
 
 vector3d  aiVector3D_to_vector3d(aiVector3D const &v) {return vector3d (v.x, v.y, v.z);}
@@ -42,6 +44,7 @@ class file_reader_assimp {
 	// internal loader state
 	bool had_vertex_error=0;
 	map<string, unsigned> bone_name_to_index_map;
+	//ofstream out;
 
 	struct bone_info_t {
 		xform_matrix offset_matrix, final_transform;
@@ -156,17 +159,13 @@ class file_reader_assimp {
 			aiQuaternion rotation_q;
 			calc_interpolated_rotation(rotation_q, anim_time, node_anim);
 			glm::mat4 const rotation(glm::toMat4(aiQuaternion_to_glm_quat(rotation_q)));
+			//glm::mat4 const rotation(aiMatrix3x3_to_glm_mat3(rotation_q.GetMatrix())); // equivalent
 			// Interpolate translation and generate translation transformation matrix
 			aiVector3D translation_v;
 			calc_interpolated_position(translation_v, anim_time, node_anim);
 			glm::mat4 const translation(glm::translate(glm::mat4(1.0), aiVector3D_to_glm_vec3(translation_v)));
 			// Combine the above transformations
-			//xform_matrix(translation).print("translation");
-			//xform_matrix(rotation   ).print("rotation");
-			//xform_matrix(scaling    ).print("scaling");
 			node_transform = translation * rotation * scaling;
-			//node_transform.print("node_transform");
-			//aiMatrix4x4_to_xform_matrix(node->mTransformation).print("mTransformation");
 		}
 		else {
 			node_transform = aiMatrix4x4_to_xform_matrix(node->mTransformation);
@@ -184,17 +183,18 @@ class file_reader_assimp {
 		}
 	}
 	void get_bone_transforms(aiScene const *const scene) {
+		//out.open("debug.txt");
 		assert(scene && scene->mRootNode);
 
 		// TODO: this goes somewhere in model3d
 		float const ticks_per_sec(scene->mAnimations[0]->mTicksPerSecond ? scene->mAnimations[0]->mTicksPerSecond : 25.0f); // defaults to 25
-		float const time_in_ticks(/*(tfticks/TICKS_PER_SECOND)*/0.0 * ticks_per_sec);
+		float const time_in_ticks((tfticks/TICKS_PER_SECOND) * ticks_per_sec);
 		float const animation_time(fmod(time_in_ticks, scene->mAnimations[0]->mDuration));
-		xform_matrix const global_inverse_transform(aiMatrix4x4_to_xform_matrix(scene->mRootNode->mTransformation).inverse());
+		xform_matrix global_inverse_transform(aiMatrix4x4_to_xform_matrix(scene->mRootNode->mTransformation).inverse());
 
 		model.bone_transforms.resize(bone_info.size());
-		xform_matrix identity;
-		read_node_hierarchy_recur(animation_time, scene, scene->mRootNode, identity, global_inverse_transform);
+		xform_matrix const root_transform(cur_xf.create_xform_matrix());
+		read_node_hierarchy_recur(animation_time, scene, scene->mRootNode, root_transform, global_inverse_transform);
 		for (unsigned i = 0; i < bone_info.size(); i++) {model.bone_transforms[i] = bone_info[i].final_transform;}
 	}
 
@@ -235,9 +235,11 @@ class file_reader_assimp {
 			assert(mesh->mNormals  != nullptr); // we specified normal creation, so these shouldbe non-null
 			v.v = aiVector3D_to_vector3d(mesh->mVertices[i]); // position
 			v.n = aiVector3D_to_vector3d(mesh->mNormals [i]); // normals
-			cur_xf.xform_pos   (v.v);
-			cur_xf.xform_pos_rm(v.n);
 
+			if (!load_animations) {
+				cur_xf.xform_pos   (v.v);
+				cur_xf.xform_pos_rm(v.n);
+			}
 			if (mesh->mTextureCoords != nullptr && mesh->mTextureCoords[0] != nullptr) { // TCs are optional and default to (0,0); we only use the first of 8
 				v.t[0] = mesh->mTextureCoords[0][i].x; 
 				v.t[1] = mesh->mTextureCoords[0][i].y;
