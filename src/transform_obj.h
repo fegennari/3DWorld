@@ -28,6 +28,7 @@ struct xform_matrix : public glm::mat4 { // Note: maybe better to use glm::gtx::
 	float const *get_ptr() const;
 	void get_as_doubles(double md[16]) const;
 	void normalize();
+	void check_valid(const char *msg_str) const;
 	void apply_to_vector3d(vector3d &v) const;
 	void print(std::string const &prefix=std::string()) const {print_matrix(get_ptr(), prefix);}
 };

@@ -21,12 +21,10 @@ extern obj_type object_types[];
 float       *xform_matrix::get_ptr()       {glm::mat4       &m(*this); return glm::value_ptr(m);}
 float const *xform_matrix::get_ptr() const {glm::mat4 const &m(*this); return glm::value_ptr(m);}
 
-
 void xform_matrix::get_as_doubles(double md[16]) const {
 	float const *const ptr(get_ptr());
 	for (unsigned i = 0; i < 16; ++i) {md[i] = ptr[i];}
 }
-
 
 void xform_matrix::normalize() {
 
@@ -37,6 +35,17 @@ void xform_matrix::normalize() {
 		m[i+0] /= dist;
 		m[i+4] /= dist;
 		m[i+8] /= dist;
+	}
+}
+
+void xform_matrix::check_valid(const char *msg_str) const {
+	float const *const m(get_ptr());
+
+	for (unsigned i = 0; i < 16; ++i) {
+		if (!isnan(m[i])) continue;
+		cout << msg_str << " NaN element:" << endl;
+		print();
+		assert(0);
 	}
 }
 
