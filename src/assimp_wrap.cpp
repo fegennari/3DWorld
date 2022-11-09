@@ -35,6 +35,123 @@ glm::quat    aiQuaternion_to_glm_quat   (aiQuaternion const &q) {return glm::qua
 // Also: https://github.com/emeiri/ogldev
 // Also: http://www.xphere.me/2019/05/bones-animation-with-openglassimpglm/
 
+class model_anim_t {
+	map<string, unsigned> bone_name_to_index_map;
+public:
+	struct bone_info_t {
+		xform_matrix offset_matrix, final_transform;
+		bone_info_t(xform_matrix const &offset) : offset_matrix(offset), final_transform(glm::mat4()) {} // final_transform starts as all zeros
+	};
+	vector<bone_info_t> bone_info;
+	xform_matrix global_inverse_transform;
+
+	struct anim_node_t {
+		string name;
+		xform_matrix transform;
+		vector<unsigned> children; // indexes into anim_nodes
+	};
+	vector<anim_node_t> anim_nodes;
+	struct anim_base_val_t {float time=0.0;};
+	struct anim_vec3_val_t : public anim_base_val_t {vector3d v;};
+	struct anim_quat_val_t : public anim_base_val_t {glm::quat q;};
+
+	struct anim_data_t {
+		vector<anim_vec3_val_t> pos, scale;
+		vector<anim_quat_val_t> rot;
+	};
+	struct animation_t {
+		float ticks_per_sec=25.0, duration=1.0;
+		map<string, anim_data_t> anim_data; // per bone
+	};
+	vector<animation_t> animations;
+
+	unsigned get_bone_id(string const &bone_name) {
+		auto it(bone_name_to_index_map.find(bone_name));
+		if (it != bone_name_to_index_map.end()) {return it->second;}
+		unsigned const bone_id(bone_name_to_index_map.size()); // allocate an index for a new bone
+		bone_name_to_index_map[bone_name] = bone_id;
+		return bone_id;
+	}
+	bool update_bone_transform(string const &node_name, xform_matrix const &global_transform) {
+		auto it(bone_name_to_index_map.find(node_name));
+		if (it == bone_name_to_index_map.end()) return 0; // not found
+		unsigned const bone_index(it->second);
+		assert(bone_index < bone_info.size());
+		bone_info[bone_index].final_transform = global_inverse_transform * global_transform * bone_info[bone_index].offset_matrix;
+		return 1;
+	}
+	vector3d calc_interpolated_position(float anim_time, anim_data_t const &A) const {
+		assert(!A.pos.empty());
+		if (A.pos.size() == 1) {return A.pos[0].v;} // single value, no interpolation
+
+		for (unsigned i = 0; i+1 < A.pos.size(); ++i) {
+			anim_vec3_val_t const &cur(A.pos[i]), &next(A.pos[i+1]);
+			if (anim_time >= next.time) continue; // not yet
+			float const t((anim_time - cur.time) / (next.time - cur.time));
+			assert(t >= 0.0f && t <= 1.0f);
+			return cur.v + t*(next.v - cur.v);
+		} // for i
+		assert(0);
+		return zero_vector; // never gets here
+	}
+	glm::quat calc_interpolated_rotation(float anim_time, anim_data_t const &A) const {
+		assert(!A.rot.empty());
+		if (A.rot.size() == 1) {return A.rot[0].q;} // single value, no interpolation
+
+		for (unsigned i = 0; i+1 < A.rot.size(); ++i) {
+			anim_quat_val_t const &cur(A.rot[i]), &next(A.rot[i+1]);
+			if (anim_time >= next.time) continue; // not yet
+			float const t((anim_time - cur.time) / (next.time - cur.time));
+			assert(t >= 0.0f && t <= 1.0f);
+			//return glm::normalize(cur.q + t*(next.q - cur.q));
+			return glm::normalize(glm::slerp(cur.q, next.q, t));
+		} // for i
+		assert(0);
+		return glm::quat(); // never gets here
+	}
+	vector3d calc_interpolated_scale(float anim_time, anim_data_t const &A) const {
+		assert(!A.scale.empty());
+		if (A.scale.size() == 1) {return A.scale[0].v;} // single value, no interpolation
+
+		for (unsigned i = 0; i+1 < A.scale.size(); ++i) {
+			anim_vec3_val_t const &cur(A.scale[i]), &next(A.scale[i+1]);
+			if (anim_time >= next.time) continue; // not yet
+			float const t((anim_time - cur.time) / (next.time - cur.time));
+			assert(t >= 0.0f && t <= 1.0f);
+			return cur.v + t*(next.v - cur.v);
+		} // for i
+		assert(0);
+		return zero_vector; // never gets here
+	}
+	void transform_node_hierarchy_recur(float anim_time, animation_t const &animation, unsigned node_ix, xform_matrix const &parent_transform) {
+		assert(node_ix < anim_nodes.size());
+		anim_node_t const &node(anim_nodes[node_ix]);
+		xform_matrix node_transform(node.transform); // defaults to node transform; may be overwritten below
+		auto it(animation.anim_data.find(node.name));
+
+		if (it != animation.anim_data.end()) { // found
+			anim_data_t const &A(it->second);
+			glm::mat4 const translation(glm::translate(glm::mat4(1.0), vec3_from_vector3d(calc_interpolated_position(anim_time, A))));
+			glm::mat4 const rotation(glm::toMat4(calc_interpolated_rotation(anim_time, A)));
+			glm::mat4 const scaling(glm::scale(glm::mat4(1.0), vec3_from_vector3d(calc_interpolated_scale(anim_time, A))));
+			node_transform = translation * rotation * scaling;
+		}
+		xform_matrix const global_transform(parent_transform * node_transform);
+		update_bone_transform(node.name, global_transform);
+		for (unsigned i : node.children) {transform_node_hierarchy_recur(anim_time, animation, i, global_transform);}
+	}
+	void get_bone_transforms(unsigned anim_id, geom_xform_t const &pre_xform, model3d &model) {
+		assert(anim_id < animations.size());
+		animation_t const &animation(animations[anim_id]);
+		float const time_in_ticks((tfticks/TICKS_PER_SECOND) * animation.ticks_per_sec);
+		float const anim_time(fmod(time_in_ticks, animation.duration));
+		model.bone_transforms.resize(bone_info.size());
+		xform_matrix const root_transform(pre_xform.create_xform_matrix());
+		transform_node_hierarchy_recur(anim_time, animation, 0, root_transform); // root node is 0
+		for (unsigned i = 0; i < bone_info.size(); i++) {model.bone_transforms[i] = bone_info[i].final_transform;} // copy to model
+	}
+};
+
 class file_reader_assimp {
 	// input/output variables
 	model3d &model;
@@ -43,14 +160,7 @@ class file_reader_assimp {
 	bool load_animations=0;
 	// internal loader state
 	bool had_vertex_error=0;
-	map<string, unsigned> bone_name_to_index_map;
 	//ofstream out;
-
-	struct bone_info_t {
-		xform_matrix offset_matrix, final_transform;
-		bone_info_t(xform_matrix const &offset) : offset_matrix(offset), final_transform(glm::mat4()) {} // final_transform starts as all zeros
-	};
-	vector<bone_info_t> bone_info;
 
 	int load_texture(aiMaterial const* const mat, aiTextureType const type, bool is_normal_map=0) {
 		unsigned const count(mat->GetTextureCount(type));
@@ -142,9 +252,8 @@ class file_reader_assimp {
 		}
 		return NULL;
 	}
-	void read_node_hierarchy_recur(float anim_time, aiScene const *const scene, aiNode const *const node,
-		xform_matrix const &parent_transform, xform_matrix const &global_inverse_transform)
-	{
+	void read_node_hierarchy_recur(float anim_time, aiScene const *const scene, aiNode const *const node, xform_matrix const &parent_transform, model_anim_t &model_anim) {
+		// TODO: fill in model_anim instead
 		string const node_name(node->mName.data);
 		aiAnimation const *const animation(scene->mAnimations[0]);
 		aiNodeAnim  const *const node_anim(find_node_anim(animation, node_name));
@@ -171,45 +280,28 @@ class file_reader_assimp {
 			node_transform = aiMatrix4x4_to_xform_matrix(node->mTransformation);
 		}
 		xform_matrix const global_transform(parent_transform * node_transform);
-		auto it(bone_name_to_index_map.find(node_name));
+		model_anim.update_bone_transform(node_name, global_transform);
 
-		if (it != bone_name_to_index_map.end()) {
-			unsigned const bone_index(it->second);
-			assert(bone_index < bone_info.size());
-			bone_info[bone_index].final_transform = global_inverse_transform * global_transform * bone_info[bone_index].offset_matrix;
-		}
 		for (unsigned i = 0; i < node->mNumChildren; i++) {
-			read_node_hierarchy_recur(anim_time, scene, node->mChildren[i], global_transform, global_inverse_transform);
+			read_node_hierarchy_recur(anim_time, scene, node->mChildren[i], global_transform, model_anim);
 		}
 	}
-	void get_bone_transforms(aiScene const *const scene) {
+	void get_bone_transforms(aiScene const *const scene, model_anim_t &model_anim) {
 		//out.open("debug.txt");
 		assert(scene && scene->mRootNode);
-
-		// TODO: this goes somewhere in model3d
 		float const ticks_per_sec(scene->mAnimations[0]->mTicksPerSecond ? scene->mAnimations[0]->mTicksPerSecond : 25.0f); // defaults to 25
 		float const time_in_ticks((tfticks/TICKS_PER_SECOND) * ticks_per_sec);
 		float const animation_time(fmod(time_in_ticks, scene->mAnimations[0]->mDuration));
-		xform_matrix global_inverse_transform(aiMatrix4x4_to_xform_matrix(scene->mRootNode->mTransformation).inverse());
-
-		model.bone_transforms.resize(bone_info.size());
+		model_anim.global_inverse_transform = aiMatrix4x4_to_xform_matrix(scene->mRootNode->mTransformation).inverse();
+		model.bone_transforms.resize(model_anim.bone_info.size());
 		xform_matrix const root_transform(cur_xf.create_xform_matrix());
-		read_node_hierarchy_recur(animation_time, scene, scene->mRootNode, root_transform, global_inverse_transform);
-		for (unsigned i = 0; i < bone_info.size(); i++) {model.bone_transforms[i] = bone_info[i].final_transform;}
+		read_node_hierarchy_recur(animation_time, scene, scene->mRootNode, root_transform, model_anim);
+		for (unsigned i = 0; i < model_anim.bone_info.size(); i++) {model.bone_transforms[i] = model_anim.bone_info[i].final_transform;}
 	}
 
-	unsigned get_bone_id(const aiBone* bone) {
-		string const bone_name(bone->mName.C_Str());
-		auto it(bone_name_to_index_map.find(bone_name));
-		if (it != bone_name_to_index_map.end()) {return it->second;}
-		unsigned const bone_id(bone_name_to_index_map.size()); // allocate an index for a new bone
-		bone_name_to_index_map[bone_name] = bone_id;
-		return bone_id;
-	}
-	void parse_single_bone(int bone_index, aiBone const *const pBone, mesh_bone_data_t &bone_data, unsigned first_vertex_offset) {
-		unsigned const bone_id(get_bone_id(pBone));
-		if (bone_id == bone_info.size()) {bone_info.emplace_back(aiMatrix4x4_to_xform_matrix(pBone->mOffsetMatrix));} // maybe add a new bone
-		//print_assimp_matrix(pBone->mOffsetMatrix);
+	void parse_single_bone(int bone_index, aiBone const *const pBone, mesh_bone_data_t &bone_data, model_anim_t &model_anim, unsigned first_vertex_offset) {
+		unsigned const bone_id(model_anim.get_bone_id(pBone->mName.C_Str()));
+		if (bone_id == model_anim.bone_info.size()) {model_anim.bone_info.emplace_back(aiMatrix4x4_to_xform_matrix(pBone->mOffsetMatrix));} // maybe add a new bone
 
 		for (unsigned i = 0; i < pBone->mNumWeights; i++) {
 			aiVertexWeight const &vw(pBone->mWeights[i]);
@@ -218,10 +310,10 @@ class file_reader_assimp {
 			bone_data.vertex_to_bones[vertex_id].add(bone_id, vw.mWeight, had_vertex_error);
 		}
 	}
-	void parse_mesh_bones(aiMesh const *const mesh, mesh_bone_data_t &bone_data, unsigned first_vertex_offset) {
-		for (unsigned int i = 0; i < mesh->mNumBones; i++) {parse_single_bone(i, mesh->mBones[i], bone_data, first_vertex_offset);}
+	void parse_mesh_bones(aiMesh const *const mesh, mesh_bone_data_t &bone_data, model_anim_t &model_anim, unsigned first_vertex_offset) {
+		for (unsigned int i = 0; i < mesh->mNumBones; i++) {parse_single_bone(i, mesh->mBones[i], bone_data, model_anim, first_vertex_offset);}
 	}
-	void process_mesh(aiMesh const *const mesh, aiScene const *const scene) {
+	void process_mesh(aiMesh const *const mesh, aiScene const *const scene, model_anim_t &model_anim) {
 		assert(mesh != nullptr);
 		if (!(mesh->mPrimitiveTypes & aiPrimitiveType_TRIANGLE)) return; // not a triangle mesh - skip for now (can be removed using options)
 		vector<vert_norm_tc> verts(mesh->mNumVertices);
@@ -267,7 +359,7 @@ class file_reader_assimp {
 		if (load_animations && mesh->HasBones()) { // handle bones
 			mesh_bone_data_t &bone_data(mat.get_bone_data_for_last_added_tri_mesh());
 			bone_data.vertex_to_bones.resize(first_vertex_offset + mesh->mNumVertices);
-			parse_mesh_bones(mesh, bone_data, first_vertex_offset);
+			parse_mesh_bones(mesh, bone_data, model_anim, first_vertex_offset);
 			for (unsigned i = first_vertex_offset; i < bone_data.vertex_to_bones.size(); ++i) {bone_data.vertex_to_bones[i].normalize();} // normalize weights to 1.0
 		}
 		if (is_new_mat) { // process material if this is the first mesh using it
@@ -303,13 +395,13 @@ class file_reader_assimp {
 			// illum? tf?
 		}
 	}  
-	void process_node_recur(aiNode const *const node, aiScene const *const scene) {
+	void process_node_recur(aiNode const *const node, aiScene const *const scene, model_anim_t &model_anim) {
 		assert(node != nullptr);
 		//print_assimp_matrix(node->mTransformation);
 		// process all the node's meshes (if any), in tree order rather than simply iterating over mMeshes
-		for (unsigned i = 0; i < node->mNumMeshes; i++) {process_mesh(scene->mMeshes[node->mMeshes[i]], scene);}
+		for (unsigned i = 0; i < node->mNumMeshes; i++) {process_mesh(scene->mMeshes[node->mMeshes[i]], scene, model_anim);}
 		// then do the same for each of its children
-		for (unsigned i = 0; i < node->mNumChildren; i++) {process_node_recur(node->mChildren[i], scene);}
+		for (unsigned i = 0; i < node->mNumChildren; i++) {process_node_recur(node->mChildren[i], scene, model_anim);}
 	} 
 public:
 	file_reader_assimp(model3d &model_, bool load_animations_=0) : model(model_), load_animations(load_animations_) {}
@@ -334,8 +426,9 @@ public:
 		}
 		model_dir = fn;
 		while (!model_dir.empty() && model_dir.back() != '/' && model_dir.back() != '\\') {model_dir.pop_back();} // remove filename from end, but leave the slash
-		process_node_recur(scene->mRootNode, scene);
-		if (load_animations) {get_bone_transforms(scene);}
+		model_anim_t model_anim;
+		process_node_recur(scene->mRootNode, scene, model_anim);
+		if (load_animations) {get_bone_transforms(scene, model_anim);}
 		model.finalize(); // optimize vertices, remove excess capacity, compute bounding sphere, subdivide, compute LOD blocks
 		model.load_all_used_tids();
 		if (verbose) {cout << "bcube: " << model.get_bcube().str() << endl << "model stats: "; model.show_stats();}
