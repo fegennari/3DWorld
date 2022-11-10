@@ -16,8 +16,6 @@
 
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
-#define GLM_ENABLE_EXPERIMENTAL
-#include <glm/gtx/quaternion.hpp>
 
 #include <fstream>
 
@@ -36,143 +34,103 @@ void print_assimp_matrix(aiMatrix4x4 const &m) {aiMatrix4x4_to_xform_matrix(m).p
 // Also: https://github.com/emeiri/ogldev
 // Also: http://www.xphere.me/2019/05/bones-animation-with-openglassimpglm/
 
-class model_anim_t {
-	map<string, unsigned> bone_name_to_index_map;
-public:
-	struct bone_info_t {
-		xform_matrix offset_matrix, final_transform;
-		bone_info_t(xform_matrix const &offset) : offset_matrix(offset), final_transform(glm::mat4()) {} // final_transform starts as all zeros
-	};
-	vector<bone_info_t> bone_info;
-	xform_matrix global_inverse_transform, root_transform;
+void model_anim_t::anim_data_t::init(unsigned np, unsigned nr, unsigned ns) {
+	assert(pos.empty() && scale.empty() && rot.empty()); // can only call init() once
+	assert(np > 0);
+	assert(nr > 0);
+	assert(ns > 0);
+	pos.reserve(np);
+	rot.reserve(nr);
+	scale.reserve(ns);
+}
 
-	struct anim_node_t {
-		string name;
-		xform_matrix transform;
-		vector<unsigned> children; // indexes into anim_nodes
-		anim_node_t(string const &name_, xform_matrix const &transform_) : name(name_), transform(transform_) {}
-	};
-	vector<anim_node_t> anim_nodes;
+unsigned model_anim_t::get_bone_id(string const &bone_name) {
+	auto it(bone_name_to_index_map.find(bone_name));
+	if (it != bone_name_to_index_map.end()) {return it->second;}
+	unsigned const bone_id(bone_name_to_index_map.size()); // allocate an index for a new bone
+	bone_name_to_index_map[bone_name] = bone_id;
+	return bone_id;
+}
+bool model_anim_t::update_bone_transform(string const &node_name, xform_matrix const &global_transform) {
+	auto it(bone_name_to_index_map.find(node_name));
+	if (it == bone_name_to_index_map.end()) return 0; // not found
+	unsigned const bone_index(it->second);
+	assert(bone_index < bone_info.size());
+	bone_info[bone_index].final_transform = global_inverse_transform * global_transform * bone_info[bone_index].offset_matrix;
+	return 1;
+}
+vector3d model_anim_t::calc_interpolated_position(float anim_time, anim_data_t const &A) const {
+	assert(!A.pos.empty());
+	if (A.pos.size() == 1) {return A.pos[0].v;} // single value, no interpolation
 
-	struct anim_base_val_t {
-		float time;
-		anim_base_val_t(float time_=0.0) : time(time_) {}
-	};
-	struct anim_vec3_val_t : public anim_base_val_t {
-		vector3d v;
-		anim_vec3_val_t(float time_, vector3d const &v_) : anim_base_val_t(time_), v(v_) {}
-	};
-	struct anim_quat_val_t : public anim_base_val_t {
-		glm::quat q;
-		anim_quat_val_t(float time_, glm::quat const &q_) : anim_base_val_t(time_), q(q_) {}
-	};
-	struct anim_data_t {
-		vector<anim_vec3_val_t> pos, scale;
-		vector<anim_quat_val_t> rot;
-		
-		void init(unsigned np, unsigned nr, unsigned ns) {
-			assert(pos.empty() && scale.empty() && rot.empty()); // can only call init() once
-			assert(np > 0);
-			assert(nr > 0);
-			assert(ns > 0);
-			pos.reserve(np);
-			rot.reserve(nr);
-			scale.reserve(ns);
-		}
-	};
-	struct animation_t {
-		float ticks_per_sec=25.0, duration=1.0;
-		map<string, anim_data_t> anim_data; // per bone
-	};
-	vector<animation_t> animations;
+	for (unsigned i = 0; i+1 < A.pos.size(); ++i) {
+		anim_vec3_val_t const &cur(A.pos[i]), &next(A.pos[i+1]);
+		if (anim_time >= next.time) continue; // not yet
+		float const t((anim_time - cur.time) / (next.time - cur.time));
+		assert(t >= 0.0f && t <= 1.0f);
+		return cur.v + t*(next.v - cur.v);
+	} // for i
+	assert(0);
+	return zero_vector; // never gets here
+}
+glm::quat model_anim_t::calc_interpolated_rotation(float anim_time, anim_data_t const &A) const {
+	assert(!A.rot.empty());
+	if (A.rot.size() == 1) {return A.rot[0].q;} // single value, no interpolation
 
-	unsigned get_bone_id(string const &bone_name) {
-		auto it(bone_name_to_index_map.find(bone_name));
-		if (it != bone_name_to_index_map.end()) {return it->second;}
-		unsigned const bone_id(bone_name_to_index_map.size()); // allocate an index for a new bone
-		bone_name_to_index_map[bone_name] = bone_id;
-		return bone_id;
-	}
-	bool update_bone_transform(string const &node_name, xform_matrix const &global_transform) {
-		auto it(bone_name_to_index_map.find(node_name));
-		if (it == bone_name_to_index_map.end()) return 0; // not found
-		unsigned const bone_index(it->second);
-		assert(bone_index < bone_info.size());
-		bone_info[bone_index].final_transform = global_inverse_transform * global_transform * bone_info[bone_index].offset_matrix;
-		return 1;
-	}
-	vector3d calc_interpolated_position(float anim_time, anim_data_t const &A) const {
-		assert(!A.pos.empty());
-		if (A.pos.size() == 1) {return A.pos[0].v;} // single value, no interpolation
+	for (unsigned i = 0; i+1 < A.rot.size(); ++i) {
+		anim_quat_val_t const &cur(A.rot[i]), &next(A.rot[i+1]);
+		if (anim_time >= next.time) continue; // not yet
+		float const t((anim_time - cur.time) / (next.time - cur.time));
+		assert(t >= 0.0f && t <= 1.0f);
+		//aiQuaternion::Interpolate(out, start_rot, end_rot, factor);
+		//out = out.Normalize();
+		//return glm::normalize(cur.q + t*(next.q - cur.q));
+		return glm::normalize(glm::slerp(cur.q, next.q, t));
+	} // for i
+	assert(0);
+	return glm::quat(); // never gets here
+}
+vector3d model_anim_t::calc_interpolated_scale(float anim_time, anim_data_t const &A) const {
+	assert(!A.scale.empty());
+	if (A.scale.size() == 1) {return A.scale[0].v;} // single value, no interpolation
 
-		for (unsigned i = 0; i+1 < A.pos.size(); ++i) {
-			anim_vec3_val_t const &cur(A.pos[i]), &next(A.pos[i+1]);
-			if (anim_time >= next.time) continue; // not yet
-			float const t((anim_time - cur.time) / (next.time - cur.time));
-			assert(t >= 0.0f && t <= 1.0f);
-			return cur.v + t*(next.v - cur.v);
-		} // for i
-		assert(0);
-		return zero_vector; // never gets here
-	}
-	glm::quat calc_interpolated_rotation(float anim_time, anim_data_t const &A) const {
-		assert(!A.rot.empty());
-		if (A.rot.size() == 1) {return A.rot[0].q;} // single value, no interpolation
+	for (unsigned i = 0; i+1 < A.scale.size(); ++i) {
+		anim_vec3_val_t const &cur(A.scale[i]), &next(A.scale[i+1]);
+		if (anim_time >= next.time) continue; // not yet
+		float const t((anim_time - cur.time) / (next.time - cur.time));
+		assert(t >= 0.0f && t <= 1.0f);
+		return cur.v + t*(next.v - cur.v);
+	} // for i
+	assert(0);
+	return zero_vector; // never gets here
+}
+void model_anim_t::transform_node_hierarchy_recur(float anim_time, animation_t const &animation, unsigned node_ix, xform_matrix const &parent_transform) {
+	assert(node_ix < anim_nodes.size());
+	anim_node_t const &node(anim_nodes[node_ix]);
+	xform_matrix node_transform(node.transform); // defaults to node transform; may be overwritten below
+	auto it(animation.anim_data.find(node.name));
 
-		for (unsigned i = 0; i+1 < A.rot.size(); ++i) {
-			anim_quat_val_t const &cur(A.rot[i]), &next(A.rot[i+1]);
-			if (anim_time >= next.time) continue; // not yet
-			float const t((anim_time - cur.time) / (next.time - cur.time));
-			assert(t >= 0.0f && t <= 1.0f);
-			//aiQuaternion::Interpolate(out, start_rot, end_rot, factor);
-			//out = out.Normalize();
-			//return glm::normalize(cur.q + t*(next.q - cur.q));
-			return glm::normalize(glm::slerp(cur.q, next.q, t));
-		} // for i
-		assert(0);
-		return glm::quat(); // never gets here
+	if (it != animation.anim_data.end()) { // found
+		anim_data_t const &A(it->second);
+		glm::mat4 const translation(glm::translate(glm::mat4(1.0), vec3_from_vector3d(calc_interpolated_position(anim_time, A))));
+		glm::mat4 const rotation(glm::toMat4(calc_interpolated_rotation(anim_time, A)));
+		glm::mat4 const scaling(glm::scale(glm::mat4(1.0), vec3_from_vector3d(calc_interpolated_scale(anim_time, A))));
+		node_transform = translation * rotation * scaling;
 	}
-	vector3d calc_interpolated_scale(float anim_time, anim_data_t const &A) const {
-		assert(!A.scale.empty());
-		if (A.scale.size() == 1) {return A.scale[0].v;} // single value, no interpolation
-
-		for (unsigned i = 0; i+1 < A.scale.size(); ++i) {
-			anim_vec3_val_t const &cur(A.scale[i]), &next(A.scale[i+1]);
-			if (anim_time >= next.time) continue; // not yet
-			float const t((anim_time - cur.time) / (next.time - cur.time));
-			assert(t >= 0.0f && t <= 1.0f);
-			return cur.v + t*(next.v - cur.v);
-		} // for i
-		assert(0);
-		return zero_vector; // never gets here
-	}
-	void transform_node_hierarchy_recur(float anim_time, animation_t const &animation, unsigned node_ix, xform_matrix const &parent_transform) {
-		assert(node_ix < anim_nodes.size());
-		anim_node_t const &node(anim_nodes[node_ix]);
-		xform_matrix node_transform(node.transform); // defaults to node transform; may be overwritten below
-		auto it(animation.anim_data.find(node.name));
-
-		if (it != animation.anim_data.end()) { // found
-			anim_data_t const &A(it->second);
-			glm::mat4 const translation(glm::translate(glm::mat4(1.0), vec3_from_vector3d(calc_interpolated_position(anim_time, A))));
-			glm::mat4 const rotation(glm::toMat4(calc_interpolated_rotation(anim_time, A)));
-			glm::mat4 const scaling(glm::scale(glm::mat4(1.0), vec3_from_vector3d(calc_interpolated_scale(anim_time, A))));
-			node_transform = translation * rotation * scaling;
-		}
-		xform_matrix const global_transform(parent_transform * node_transform);
-		update_bone_transform(node.name, global_transform);
-		for (unsigned i : node.children) {transform_node_hierarchy_recur(anim_time, animation, i, global_transform);}
-	}
-	void get_bone_transforms(unsigned anim_id, float cur_time, model3d &model) {
-		assert(anim_id < animations.size());
-		animation_t const &animation(animations[anim_id]);
-		float const time_in_ticks(cur_time * animation.ticks_per_sec);
-		float const anim_time(fmod(time_in_ticks, animation.duration));
-		model.bone_transforms.resize(bone_info.size());
-		transform_node_hierarchy_recur(anim_time, animation, 0, root_transform); // root node is 0
-		for (unsigned i = 0; i < bone_info.size(); i++) {model.bone_transforms[i] = bone_info[i].final_transform;} // copy to model
-	}
-};
+	xform_matrix const global_transform(parent_transform * node_transform);
+	update_bone_transform(node.name, global_transform);
+	for (unsigned i : node.children) {transform_node_hierarchy_recur(anim_time, animation, i, global_transform);}
+}
+void model_anim_t::get_bone_transforms(unsigned anim_id, float cur_time) {
+	assert(anim_id < animations.size());
+	animation_t const &animation(animations[anim_id]);
+	float const time_in_ticks(cur_time * animation.ticks_per_sec);
+	float const anim_time(fmod(time_in_ticks, animation.duration));
+	bone_transforms.resize(bone_info.size());
+	transform_node_hierarchy_recur(anim_time, animation, 0, root_transform); // root node is 0
+	// TODO: replace {bone_info, bone_transforms} with {bone_transforms, offset_matrices}
+	for (unsigned i = 0; i < bone_info.size(); i++) {bone_transforms[i] = bone_info[i].final_transform;} // copy to a compact vector
+}
 
 class file_reader_assimp {
 	// input/output variables
@@ -248,7 +206,7 @@ class file_reader_assimp {
 		float const cur_time(tfticks/TICKS_PER_SECOND);
 		extract_animation_data(scene, model_anim);
 		unsigned const anim_id = 0;
-		model_anim.get_bone_transforms(anim_id, cur_time, model);
+		model_anim.get_bone_transforms(anim_id, cur_time);
 	}
 
 	void parse_single_bone(int bone_index, aiBone const *const pBone, mesh_bone_data_t &bone_data, model_anim_t &model_anim, unsigned first_vertex_offset) {
@@ -378,9 +336,8 @@ public:
 		}
 		model_dir = fn;
 		while (!model_dir.empty() && model_dir.back() != '/' && model_dir.back() != '\\') {model_dir.pop_back();} // remove filename from end, but leave the slash
-		model_anim_t model_anim;
-		process_node_recur(scene->mRootNode, scene, model_anim);
-		if (load_animations) {get_bone_transforms(scene, model_anim);}
+		process_node_recur(scene->mRootNode, scene, model.model_anim_data);
+		if (load_animations) {get_bone_transforms(scene, model.model_anim_data);}
 		model.finalize(); // optimize vertices, remove excess capacity, compute bounding sphere, subdivide, compute LOD blocks
 		model.load_all_used_tids();
 		if (verbose) {cout << "bcube: " << model.get_bcube().str() << endl << "model stats: "; model.show_stats();}

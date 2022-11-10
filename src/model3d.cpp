@@ -613,14 +613,14 @@ void vertex_bone_data_t::normalize() { // make sure all weights sum to 1.0
 void model3d::setup_bone_transforms(shader_t &shader, bool is_shadow_pass) const {
 	if (is_shadow_pass) return; // not yet supported in the shadow pass
 	unsigned const MAX_MODEL_BONES = 200; // must agree with shader code
-	unsigned const num_bones(bone_transforms.size());
+	unsigned const num_bones(model_anim_data.bone_transforms.size());
 
 	if (num_bones > MAX_MODEL_BONES) {
 		cerr << "Error: Too many bones for model: " << num_bones << "; Max is " << MAX_MODEL_BONES << endl;
 		assert(0); // or return? or ignore some bones?
 	}
 	assert(num_bones > 0);
-	bool const ret(shader.add_uniform_matrix_4x4("bones", bone_transforms[0].get_ptr(), 0, num_bones)); // transpose=0
+	bool const ret(shader.add_uniform_matrix_4x4("bones", model_anim_data.bone_transforms[0].get_ptr(), 0, num_bones)); // transpose=0
 	assert(ret);
 }
 

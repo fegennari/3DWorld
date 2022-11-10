@@ -8,7 +8,9 @@
 #include "cobj_bsp_tree.h" // for cobj_tree_tquads_t
 #include "shadow_map.h" // for smap_data_t and rotation_t
 #include "gl_ext_arb.h"
-//#include <unordered_map>
+
+#define GLM_ENABLE_EXPERIMENTAL
+#include <glm/gtx/quaternion.hpp>
 
 using namespace std;
 
@@ -120,7 +122,6 @@ struct vntc_ix_t {
 	vntc_ix_t(unsigned vix_=0, unsigned nix_=0, unsigned tix_=0) : vix(vix_), nix(nix_), tix(tix_) {}
 };
 
-
 struct poly_header_t {
 	unsigned npts, obj_id;
 	int mat_id;
@@ -129,19 +130,16 @@ struct poly_header_t {
 	poly_header_t(int mat_id_=-1, unsigned obj_id_=0) : npts(0), obj_id(obj_id_), mat_id(mat_id_), n(zero_vector) {}
 };
 
-
 struct poly_data_block {
 	vector<poly_header_t> polys;
 	vector<vntc_ix_t> pts;
 };
-
 
 struct model3d_stats_t {
 	unsigned verts, quads, tris, blocks, mats, transforms;
 	model3d_stats_t() : verts(0), quads(0), tris(0), blocks(0), mats(0), transforms(0) {}
 	void print() const;
 };
-
 
 // for computing vertex normals from face normals
 struct counted_normal : public vector3d { // size = 16
@@ -216,6 +214,57 @@ struct vertex_bone_data_t { // Note: must be packed
 };
 struct mesh_bone_data_t {
 	vector<vertex_bone_data_t> vertex_to_bones;
+};
+
+class model_anim_t {
+	map<string, unsigned> bone_name_to_index_map;
+public:
+	struct bone_info_t {
+		xform_matrix offset_matrix, final_transform;
+		bone_info_t(xform_matrix const &offset) : offset_matrix(offset), final_transform(glm::mat4()) {} // final_transform starts as all zeros
+	};
+	vector<bone_info_t> bone_info;
+	vector<xform_matrix> bone_transforms;
+	xform_matrix global_inverse_transform, root_transform;
+
+	struct anim_node_t {
+		string name;
+		xform_matrix transform;
+		vector<unsigned> children; // indexes into anim_nodes
+		anim_node_t(string const &name_, xform_matrix const &transform_) : name(name_), transform(transform_) {}
+	};
+	vector<anim_node_t> anim_nodes;
+
+	struct anim_base_val_t {
+		float time;
+		anim_base_val_t(float time_=0.0) : time(time_) {}
+	};
+	struct anim_vec3_val_t : public anim_base_val_t {
+		vector3d v;
+		anim_vec3_val_t(float time_, vector3d const &v_) : anim_base_val_t(time_), v(v_) {}
+	};
+	struct anim_quat_val_t : public anim_base_val_t {
+		glm::quat q;
+		anim_quat_val_t(float time_, glm::quat const &q_) : anim_base_val_t(time_), q(q_) {}
+	};
+	struct anim_data_t {
+		vector<anim_vec3_val_t> pos, scale;
+		vector<anim_quat_val_t> rot;
+		void init(unsigned np, unsigned nr, unsigned ns);
+	};
+	struct animation_t {
+		float ticks_per_sec=25.0, duration=1.0;
+		map<string, anim_data_t> anim_data; // per bone
+	};
+	vector<animation_t> animations;
+
+	unsigned get_bone_id(string const &bone_name);
+	bool update_bone_transform(string const &node_name, xform_matrix const &global_transform);
+	vector3d  calc_interpolated_position(float anim_time, anim_data_t const &A) const;
+	glm::quat calc_interpolated_rotation(float anim_time, anim_data_t const &A) const;
+	vector3d  calc_interpolated_scale   (float anim_time, anim_data_t const &A) const;
+	void transform_node_hierarchy_recur(float anim_time, animation_t const &animation, unsigned node_ix, xform_matrix const &parent_transform);
+	void get_bone_transforms(unsigned anim_id, float cur_time);
 };
 
 
@@ -526,7 +575,7 @@ class model3d {
 
 public:
 	texture_manager &tmgr; // stores all textures
-	vector<xform_matrix> bone_transforms; // used directly by assimp reader
+	model_anim_t model_anim_data;
 
 	model3d(string const &filename_, texture_manager &tmgr_, int def_tid=-1, colorRGBA const &def_c=WHITE, int reflective_=0, float metalness_=0.0, int recalc_normals_=0, int group_cobjs_level_=0)
 		: filename(filename_), recalc_normals(recalc_normals_), group_cobjs_level(group_cobjs_level_), unbound_mat(((def_tid >= 0) ? def_tid : WHITE_TEX), def_c),
@@ -541,7 +590,7 @@ public:
 
 	// creation and query
 	bool are_textures_loaded() const {return textures_loaded;}
-	bool has_bones() const {return !bone_transforms.empty();}
+	bool has_bones() const {return !model_anim_data.bone_transforms.empty();}
 	void set_has_cobjs() {has_cobjs = 1;}
 	void add_transform(model3d_xform_t const &xf) {transforms.push_back(xf);}
 	unsigned add_triangles(vector<triangle> const &triangles, colorRGBA const &color, int mat_id=-1, unsigned obj_id=0);
