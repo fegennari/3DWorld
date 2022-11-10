@@ -53,8 +53,8 @@ bool model_anim_t::update_bone_transform(string const &node_name, xform_matrix c
 	auto it(bone_name_to_index_map.find(node_name));
 	if (it == bone_name_to_index_map.end()) return 0; // not found
 	unsigned const bone_index(it->second);
-	assert(bone_index < bone_info.size());
-	bone_info[bone_index].final_transform = global_inverse_transform * global_transform * bone_info[bone_index].offset_matrix;
+	assert(bone_index < bone_transforms.size() && bone_index < bone_offset_matrices.size());
+	bone_transforms[bone_index] = global_inverse_transform * global_transform * bone_offset_matrices[bone_index];
 	return 1;
 }
 vector3d model_anim_t::calc_interpolated_position(float anim_time, anim_data_t const &A) const {
@@ -124,10 +124,7 @@ void model_anim_t::get_bone_transforms(unsigned anim_id, float cur_time) {
 	animation_t const &animation(animations[anim_id]);
 	float const time_in_ticks(cur_time * animation.ticks_per_sec);
 	float const anim_time(fmod(time_in_ticks, animation.duration));
-	bone_transforms.resize(bone_info.size());
 	transform_node_hierarchy_recur(anim_time, animation, 0, root_transform); // root node is 0
-	// TODO: replace {bone_info, bone_transforms} with {bone_transforms, offset_matrices}
-	for (unsigned i = 0; i < bone_info.size(); i++) {bone_transforms[i] = bone_info[i].final_transform;} // copy to a compact vector
 }
 
 class file_reader_assimp {
@@ -198,8 +195,11 @@ class file_reader_assimp {
 
 	void parse_single_bone(int bone_index, aiBone const *const pBone, mesh_bone_data_t &bone_data, model_anim_t &model_anim, unsigned first_vertex_offset) {
 		unsigned const bone_id(model_anim.get_bone_id(pBone->mName.C_Str()));
-		if (bone_id == model_anim.bone_info.size()) {model_anim.bone_info.emplace_back(aiMatrix4x4_to_xform_matrix(pBone->mOffsetMatrix));} // maybe add a new bone
 
+		if (bone_id == model_anim.bone_transforms.size()) { // maybe add a new bone
+			model_anim.bone_transforms.push_back(xform_matrix());
+			model_anim.bone_offset_matrices.push_back(aiMatrix4x4_to_xform_matrix(pBone->mOffsetMatrix));
+		}
 		for (unsigned i = 0; i < pBone->mNumWeights; i++) {
 			aiVertexWeight const &vw(pBone->mWeights[i]);
 			unsigned const vertex_id(first_vertex_offset + vw.mVertexId);

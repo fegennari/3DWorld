@@ -219,12 +219,7 @@ struct mesh_bone_data_t {
 class model_anim_t {
 	map<string, unsigned> bone_name_to_index_map;
 public:
-	struct bone_info_t {
-		xform_matrix offset_matrix, final_transform;
-		bone_info_t(xform_matrix const &offset) : offset_matrix(offset), final_transform(glm::mat4()) {} // final_transform starts as all zeros
-	};
-	vector<bone_info_t> bone_info;
-	vector<xform_matrix> bone_transforms;
+	vector<xform_matrix> bone_transforms, bone_offset_matrices;
 	xform_matrix global_inverse_transform, root_transform;
 
 	struct anim_node_t {
