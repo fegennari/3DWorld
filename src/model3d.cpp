@@ -20,6 +20,7 @@ bool const ENABLE_BUMP_MAPS  = 1;
 bool const ENABLE_SPEC_MAPS  = 1;
 bool const ENABLE_INTER_REFLECTIONS = 1;
 bool const SHOW_MODEL_BCUBE_CENTER  = 0;
+bool const ENABLE_ANIMATION_SHADOWS = 1;
 unsigned const MAGIC_NUMBER  = 42987143; // arbitrary file signature
 unsigned const BLOCK_SIZE    = 32768; // in vertex indices
 unsigned const BONE_IDS_LOC     = 4;
@@ -611,8 +612,7 @@ void vertex_bone_data_t::normalize() { // make sure all weights sum to 1.0
 	for (unsigned i = 0; i < MAX_NUM_BONES_PER_VERTEX; ++i) {weights[i] /= w_sum;}
 }
 
-void model3d::setup_bone_transforms(shader_t &shader, bool is_shadow_pass) {
-	if (is_shadow_pass) return; // not yet supported in the shadow pass
+void model3d::setup_bone_transforms(shader_t &shader) {
 	unsigned const MAX_MODEL_BONES = 200; // must agree with shader code
 	unsigned const anim_id = 0;
 	float const cur_time(tfticks/TICKS_PER_SECOND);
@@ -651,7 +651,6 @@ template<typename T> void indexed_vntc_vect_t<T>::setup_bones(shader_t &shader, 
 		}
 	}
 	T::set_vbo_arrays();
-	if (is_shadow_pass) return; // bones not used in the shadow pass
 	unsigned const stride(sizeof(vertex_bone_data_t));
 	glEnableVertexAttribArray(BONE_IDS_LOC);
 	glEnableVertexAttribArray(BONE_WEIGHTS_LOC);
@@ -2107,6 +2106,7 @@ void model3d::render(shader_t &shader, bool is_shadow_pass, int reflection_pass,
 {
 	assert(trans_op_mask > 0 && trans_op_mask <= 3); // 1 bit = draw opaque, 2 bit = draw transparent
 	if (!needs_trans_pass && !(trans_op_mask & 1)) return; // transparent only pass, but no transparent materials
+	if (is_shadow_pass && num_animations() > 0 && !ENABLE_ANIMATION_SHADOWS) return; // if animated, and no shadow animations, then don't draw the shadow map at all
 	if (transforms.empty() && !is_cube_visible_to_camera(bcube+xlate, is_shadow_pass, num_animations())) return;
 	
 	if (enable_tt_model_indir && world_mode == WMODE_INF_TERRAIN && !is_shadow_pass) {
@@ -2141,7 +2141,7 @@ void model3d::render(shader_t &shader, bool is_shadow_pass, int reflection_pass,
 #endif
 		}
 	}
-	if (num_animations() > 0) {setup_bone_transforms(shader, is_shadow_pass);}
+	if (num_animations() > 0) {setup_bone_transforms(shader);}
 	xform_matrix const mvm(fgGetMVM());
 	model3d_xform_t const xlate_xf(xlate);
 	camera_pdu_transform_wrapper cptw(xlate_xf);
@@ -2627,6 +2627,7 @@ void model3ds::render(bool is_shadow_pass, int reflection_pass, int trans_op_mas
 	}
 	int const reflect_mode(any_planar_reflective ? 1 : (any_cube_map_reflective ? 2 : 0));
 	assert(!reflect_mode || xlate == all_zeros); // xlate not supported for reflections (and not used anyway)
+	float const min_alpha(needs_alpha_test ? 0.5 : 0.0); // will be reset per-material, but this variable is used to enable alpha testing
 
 	// the bump map pass is first and the regular pass is second; this way, transparent objects such as glass that don't have bump maps are drawn last
 	for (int bmap_pass = (needs_bump_maps ? 1 : 0); bmap_pass >= 0; --bmap_pass) {
@@ -2634,17 +2635,19 @@ void model3ds::render(bool is_shadow_pass, int reflection_pass, int trans_op_mas
 			for (unsigned ref_pass = (any_non_reflective ? 0U : 1U); ref_pass < (reflect_mode ? 2U : 1U); ++ref_pass) {
 				int const cur_reflect_mode(ref_pass ? reflect_mode : 0);
 				bool reset_bscale(0), enable_animations(0);
+				enable_animations = (!disable_shader_effects && num_models_with_animations > 0);
+				if (enable_animations) {s.add_property("animation_shader", "model_animation.part+");}
 
 				if (is_shadow_pass) {
-					setup_smap_shader(s, (sam_pass != 0));
+					if (ENABLE_ANIMATION_SHADOWS && enable_animations) { // need to use smoke shader for animations, but disable all shading options
+						setup_smoke_shaders(s, min_alpha, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, use_mvm);
+					}
+					else {setup_smap_shader(s, (sam_pass != 0));}
 				}
 				else if (shader_effects) {
 					int const use_bmap((bmap_pass == 0) ? 0 : (model_calc_tan_vect ? 2 : 1));
-					float const min_alpha(needs_alpha_test ? 0.5 : 0.0); // will be reset per-material, but this variable is used to enable alpha testing
 					int const is_outside((is_shadow_pass || reflection_pass == 1) ? 0 : 2); // enable wet effect coverage mask
 					// TODO: doesn't work if only some models have bones; must split into two passes if (num_models_with_bones > 0 && num_models_with_bones < size())
-					enable_animations = (num_models_with_animations > 0);
-					if (enable_animations) {s.add_property("animation_shader", "model_animation.part+");} // including shadow_pass?
 					if (model3d_wn_normal) {s.set_prefix("#define USE_WINDING_RULE_FOR_NORMAL", 1);} // FS
 					setup_smoke_shaders(s, min_alpha, 0, 0, (enable_tt_model_indir || v), 1, v, v, 0, (use_smap ? 2 : 1), use_bmap, use_spec_map, use_mvm, two_sided_lighting,
 						0.0, model_triplanar_tc_scale, 0, cur_reflect_mode, is_outside, 1, 0, use_gloss_map);

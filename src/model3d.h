@@ -566,7 +566,7 @@ class model3d {
 
 	void update_bbox(polygon_t const &poly);
 	void create_indir_texture();
-	void setup_bone_transforms(shader_t &shader, bool is_shadow_pass);
+	void setup_bone_transforms(shader_t &shader);
 
 public:
 	texture_manager &tmgr; // stores all textures
