@@ -34,6 +34,7 @@ extern bool flatten_tt_mesh_under_models, no_store_model_textures_in_memory, dis
 extern unsigned shadow_map_sz, reflection_tid;
 extern int display_mode;
 extern float model3d_alpha_thresh, model3d_texture_anisotropy, model_triplanar_tc_scale, model_mat_lod_thresh, cobj_z_bias, model_hemi_lighting_scale, light_int_scale[];
+extern double tfticks;
 extern pos_dir_up orig_camera_pdu;
 extern bool vert_opt_flags[3];
 extern vector<texture_t> textures;
@@ -610,9 +611,12 @@ void vertex_bone_data_t::normalize() { // make sure all weights sum to 1.0
 	for (unsigned i = 0; i < MAX_NUM_BONES_PER_VERTEX; ++i) {weights[i] /= w_sum;}
 }
 
-void model3d::setup_bone_transforms(shader_t &shader, bool is_shadow_pass) const {
+void model3d::setup_bone_transforms(shader_t &shader, bool is_shadow_pass) {
 	if (is_shadow_pass) return; // not yet supported in the shadow pass
 	unsigned const MAX_MODEL_BONES = 200; // must agree with shader code
+	unsigned const anim_id = 0;
+	float const cur_time(tfticks/TICKS_PER_SECOND);
+	model_anim_data.get_bone_transforms(anim_id, cur_time);
 	unsigned const num_bones(model_anim_data.bone_transforms.size());
 
 	if (num_bones > MAX_MODEL_BONES) {
@@ -2070,8 +2074,8 @@ struct camera_pdu_transform_wrapper {
 };
 
 
-bool is_cube_visible_to_camera(cube_t const &cube, bool is_shadow_pass, bool has_bones) {
-	if (has_bones) return 1; // TODO: or use a conservative bcube that includes all animations?
+bool is_cube_visible_to_camera(cube_t const &cube, bool is_shadow_pass, bool animation_enabled) {
+	if (animation_enabled) return 1; // TODO: or use a conservative bcube that includes all animations?
 	if (!camera_pdu.cube_visible(cube)) return 0;
 	if (!(display_mode & 0x08) && !is_shadow_pass) return 1; // check occlusion culling, but allow occlusion culling during the shadow pass
 	return !cube_cobj_occluded(camera_pdu.pos, cube);
@@ -2086,7 +2090,7 @@ void model3d::set_target_translate_scale(point const &target_pos, float target_r
 void model3d::render_with_xform(shader_t &shader, model3d_xform_t &xf, xform_matrix const &mvm, bool is_shadow_pass,
 	int reflection_pass, bool is_z_prepass, int enable_alpha_mask, unsigned bmap_pass_mask, int reflect_mode, int trans_op_mask)
 {
-	if (!is_cube_visible_to_camera(xf.get_xformed_bcube(bcube), is_shadow_pass, has_bones())) return; // Note: xlate has already been applied to camera_pdu
+	if (!is_cube_visible_to_camera(xf.get_xformed_bcube(bcube), is_shadow_pass, num_animations())) return; // Note: xlate has already been applied to camera_pdu
 	// Note: it's simpler and more efficient to inverse transfrom the camera frustum rather than transforming the geom/bcubes
 	// Note: currently, only translate is supported (and somewhat scale)
 	camera_pdu_transform_wrapper cptw2(xf);
@@ -2103,7 +2107,7 @@ void model3d::render(shader_t &shader, bool is_shadow_pass, int reflection_pass,
 {
 	assert(trans_op_mask > 0 && trans_op_mask <= 3); // 1 bit = draw opaque, 2 bit = draw transparent
 	if (!needs_trans_pass && !(trans_op_mask & 1)) return; // transparent only pass, but no transparent materials
-	if (transforms.empty() && !is_cube_visible_to_camera(bcube+xlate, is_shadow_pass, has_bones())) return;
+	if (transforms.empty() && !is_cube_visible_to_camera(bcube+xlate, is_shadow_pass, num_animations())) return;
 	
 	if (enable_tt_model_indir && world_mode == WMODE_INF_TERRAIN && !is_shadow_pass) {
 		if (model_indir_tid == 0) {create_indir_texture();}
@@ -2137,7 +2141,7 @@ void model3d::render(shader_t &shader, bool is_shadow_pass, int reflection_pass,
 #endif
 		}
 	}
-	if (has_bones()) {setup_bone_transforms(shader, is_shadow_pass);}
+	if (num_animations() > 0) {setup_bone_transforms(shader, is_shadow_pass);}
 	xform_matrix const mvm(fgGetMVM());
 	model3d_xform_t const xlate_xf(xlate);
 	camera_pdu_transform_wrapper cptw(xlate_xf);
@@ -2589,14 +2593,14 @@ void model3ds::render(bool is_shadow_pass, int reflection_pass, int trans_op_mas
 	// Note: in ground mode, lighting is global, so transforms are included in vpos with use_mvm=1; in TT mode, lighting is relative to each model instance
 	bool const use_mvm(!tt_mode && has_any_transforms()), v(!tt_mode), use_smap(1 || v);
 	bool needs_alpha_test(0), needs_bump_maps(0), any_planar_reflective(0), any_cube_map_reflective(0), any_non_reflective(0), use_spec_map(0), use_gloss_map(0), needs_trans_pass(0);
-	unsigned num_models_with_bones(0);
+	unsigned num_models_with_animations(0);
 
 	for (iterator m = begin(); m != end(); ++m) {
 		needs_alpha_test |= m->get_needs_alpha_test();
 		needs_trans_pass |= m->get_needs_trans_pass();
 		use_spec_map     |= (enable_spec_map() && m->uses_spec_map());
 		use_gloss_map    |= (enable_spec_map() && m->uses_gloss_map());
-		num_models_with_bones += m->has_bones();
+		num_models_with_animations += (m->num_animations() > 0);
 		if      (enable_planar_reflections   && m->is_planar_reflective  ()) {any_planar_reflective   = 1;}
 		else if (enable_cube_map_reflections && m->is_cube_map_reflective()) {any_cube_map_reflective = 1;}
 		else                                                                 {any_non_reflective      = 1;}
@@ -2639,7 +2643,7 @@ void model3ds::render(bool is_shadow_pass, int reflection_pass, int trans_op_mas
 					float const min_alpha(needs_alpha_test ? 0.5 : 0.0); // will be reset per-material, but this variable is used to enable alpha testing
 					int const is_outside((is_shadow_pass || reflection_pass == 1) ? 0 : 2); // enable wet effect coverage mask
 					// TODO: doesn't work if only some models have bones; must split into two passes if (num_models_with_bones > 0 && num_models_with_bones < size())
-					enable_animations = (num_models_with_bones > 0);
+					enable_animations = (num_models_with_animations > 0);
 					if (enable_animations) {s.add_property("animation_shader", "model_animation.part+");} // including shadow_pass?
 					if (model3d_wn_normal) {s.set_prefix("#define USE_WINDING_RULE_FOR_NORMAL", 1);} // FS
 					setup_smoke_shaders(s, min_alpha, 0, 0, (enable_tt_model_indir || v), 1, v, v, 0, (use_smap ? 2 : 1), use_bmap, use_spec_map, use_mvm, two_sided_lighting,

@@ -19,8 +19,6 @@
 
 #include <fstream>
 
-extern double tfticks;
-
 vector3d  aiVector3D_to_vector3d(aiVector3D const &v) {return vector3d (v.x, v.y, v.z);}
 colorRGBA aiColor4D_to_colorRGBA(aiColor4D  const &c) {return colorRGBA(c.r, c.g, c.b, c.a);}
 glm::vec3 aiVector3D_to_glm_vec3(aiVector3D const &v) {return glm::vec3(v.x, v.y, v.z);}
@@ -133,14 +131,10 @@ void model_anim_t::get_bone_transforms(unsigned anim_id, float cur_time) {
 }
 
 class file_reader_assimp {
-	// input/output variables
 	model3d &model;
 	geom_xform_t cur_xf;
 	string model_dir;
-	bool load_animations=0;
-	// internal loader state
-	bool had_vertex_error=0;
-	//ofstream out;
+	bool load_animations=0, had_vertex_error=0;
 
 	int load_texture(aiMaterial const* const mat, aiTextureType const type, bool is_normal_map=0) {
 		unsigned const count(mat->GetTextureCount(type));
@@ -190,6 +184,7 @@ class file_reader_assimp {
 		return node_ix;
 	}
 	void extract_animation_data(aiScene const *const scene, model_anim_t &model_anim) {
+		assert(scene && scene->mRootNode);
 		model_anim.root_transform = cur_xf.create_xform_matrix();
 		model_anim.global_inverse_transform = aiMatrix4x4_to_xform_matrix(scene->mRootNode->mTransformation).inverse();
 		model_anim.animations.resize(scene->mNumAnimations);
@@ -199,14 +194,6 @@ class file_reader_assimp {
 			model_anim.animations[a].duration = scene->mAnimations[a]->mDuration;
 		}
 		extract_animation_data_recur(scene, scene->mRootNode, model_anim);
-	}
-	void get_bone_transforms(aiScene const *const scene, model_anim_t &model_anim) {
-		//out.open("debug.txt");
-		assert(scene && scene->mRootNode);
-		float const cur_time(tfticks/TICKS_PER_SECOND);
-		extract_animation_data(scene, model_anim);
-		unsigned const anim_id = 0;
-		model_anim.get_bone_transforms(anim_id, cur_time);
 	}
 
 	void parse_single_bone(int bone_index, aiBone const *const pBone, mesh_bone_data_t &bone_data, model_anim_t &model_anim, unsigned first_vertex_offset) {
@@ -337,7 +324,7 @@ public:
 		model_dir = fn;
 		while (!model_dir.empty() && model_dir.back() != '/' && model_dir.back() != '\\') {model_dir.pop_back();} // remove filename from end, but leave the slash
 		process_node_recur(scene->mRootNode, scene, model.model_anim_data);
-		if (load_animations) {get_bone_transforms(scene, model.model_anim_data);}
+		if (load_animations) {extract_animation_data(scene, model.model_anim_data);}
 		model.finalize(); // optimize vertices, remove excess capacity, compute bounding sphere, subdivide, compute LOD blocks
 		model.load_all_used_tids();
 		if (verbose) {cout << "bcube: " << model.get_bcube().str() << endl << "model stats: "; model.show_stats();}

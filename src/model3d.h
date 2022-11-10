@@ -571,7 +571,7 @@ class model3d {
 
 	void update_bbox(polygon_t const &poly);
 	void create_indir_texture();
-	void setup_bone_transforms(shader_t &shader, bool is_shadow_pass) const;
+	void setup_bone_transforms(shader_t &shader, bool is_shadow_pass);
 
 public:
 	texture_manager &tmgr; // stores all textures
@@ -590,7 +590,7 @@ public:
 
 	// creation and query
 	bool are_textures_loaded() const {return textures_loaded;}
-	bool has_bones() const {return !model_anim_data.bone_transforms.empty();}
+	unsigned num_animations() const {return model_anim_data.animations.size();}
 	void set_has_cobjs() {has_cobjs = 1;}
 	void add_transform(model3d_xform_t const &xf) {transforms.push_back(xf);}
 	unsigned add_triangles(vector<triangle> const &triangles, colorRGBA const &color, int mat_id=-1, unsigned obj_id=0);
