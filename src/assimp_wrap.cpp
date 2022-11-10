@@ -29,6 +29,7 @@ glm::vec3 aiVector3D_to_glm_vec3(aiVector3D const &v) {return glm::vec3(v.x, v.y
 xform_matrix aiMatrix4x4_to_xform_matrix(aiMatrix4x4  const &m) {return xform_matrix(glm::transpose(glm::make_mat4(&m.a1)));}
 glm::mat3    aiMatrix3x3_to_glm_mat3    (aiMatrix3x3  const &m) {return glm::transpose(glm::make_mat3(&m.a1));}
 glm::quat    aiQuaternion_to_glm_quat   (aiQuaternion const &q) {return glm::quat(q.w, q.x, q.y, q.z);}
+void print_assimp_matrix(aiMatrix4x4 const &m) {aiMatrix4x4_to_xform_matrix(m).print();}
 
 
 // For reference, see: https://learnopengl.com/Model-Loading/Model
@@ -43,21 +44,41 @@ public:
 		bone_info_t(xform_matrix const &offset) : offset_matrix(offset), final_transform(glm::mat4()) {} // final_transform starts as all zeros
 	};
 	vector<bone_info_t> bone_info;
-	xform_matrix global_inverse_transform;
+	xform_matrix global_inverse_transform, root_transform;
 
 	struct anim_node_t {
 		string name;
 		xform_matrix transform;
 		vector<unsigned> children; // indexes into anim_nodes
+		anim_node_t(string const &name_, xform_matrix const &transform_) : name(name_), transform(transform_) {}
 	};
 	vector<anim_node_t> anim_nodes;
-	struct anim_base_val_t {float time=0.0;};
-	struct anim_vec3_val_t : public anim_base_val_t {vector3d v;};
-	struct anim_quat_val_t : public anim_base_val_t {glm::quat q;};
 
+	struct anim_base_val_t {
+		float time;
+		anim_base_val_t(float time_=0.0) : time(time_) {}
+	};
+	struct anim_vec3_val_t : public anim_base_val_t {
+		vector3d v;
+		anim_vec3_val_t(float time_, vector3d const &v_) : anim_base_val_t(time_), v(v_) {}
+	};
+	struct anim_quat_val_t : public anim_base_val_t {
+		glm::quat q;
+		anim_quat_val_t(float time_, glm::quat const &q_) : anim_base_val_t(time_), q(q_) {}
+	};
 	struct anim_data_t {
 		vector<anim_vec3_val_t> pos, scale;
 		vector<anim_quat_val_t> rot;
+		
+		void init(unsigned np, unsigned nr, unsigned ns) {
+			assert(pos.empty() && scale.empty() && rot.empty()); // can only call init() once
+			assert(np > 0);
+			assert(nr > 0);
+			assert(ns > 0);
+			pos.reserve(np);
+			rot.reserve(nr);
+			scale.reserve(ns);
+		}
 	};
 	struct animation_t {
 		float ticks_per_sec=25.0, duration=1.0;
@@ -103,6 +124,8 @@ public:
 			if (anim_time >= next.time) continue; // not yet
 			float const t((anim_time - cur.time) / (next.time - cur.time));
 			assert(t >= 0.0f && t <= 1.0f);
+			//aiQuaternion::Interpolate(out, start_rot, end_rot, factor);
+			//out = out.Normalize();
 			//return glm::normalize(cur.q + t*(next.q - cur.q));
 			return glm::normalize(glm::slerp(cur.q, next.q, t));
 		} // for i
@@ -140,13 +163,12 @@ public:
 		update_bone_transform(node.name, global_transform);
 		for (unsigned i : node.children) {transform_node_hierarchy_recur(anim_time, animation, i, global_transform);}
 	}
-	void get_bone_transforms(unsigned anim_id, geom_xform_t const &pre_xform, model3d &model) {
+	void get_bone_transforms(unsigned anim_id, float cur_time, model3d &model) {
 		assert(anim_id < animations.size());
 		animation_t const &animation(animations[anim_id]);
-		float const time_in_ticks((tfticks/TICKS_PER_SECOND) * animation.ticks_per_sec);
+		float const time_in_ticks(cur_time * animation.ticks_per_sec);
 		float const anim_time(fmod(time_in_ticks, animation.duration));
 		model.bone_transforms.resize(bone_info.size());
-		xform_matrix const root_transform(pre_xform.create_xform_matrix());
 		transform_node_hierarchy_recur(anim_time, animation, 0, root_transform); // root node is 0
 		for (unsigned i = 0; i < bone_info.size(); i++) {model.bone_transforms[i] = bone_info[i].final_transform;} // copy to model
 	}
@@ -171,79 +193,6 @@ class file_reader_assimp {
 		// is_alpha_mask=0, verbose=0, invert_alpha=0, wrap=1, mirror=0, force_grayscale=0
 		return model.tmgr.create_texture((model_dir + fn.C_Str()), 0, 0, 0, 1, 0, 0, is_normal_map);
 	}
-	void print_assimp_matrix(aiMatrix4x4 const &m) {aiMatrix4x4_to_xform_matrix(m).print();}
-
-	// TODO: extract this data and move the matrix functionality into model3d so that we can run it after the model has been deleted
-	unsigned find_position(float anim_time_ticks, aiNodeAnim const *const pNodeAnim) {
-		for (unsigned i = 0; i < pNodeAnim->mNumPositionKeys - 1; i++) {
-			if (anim_time_ticks < pNodeAnim->mPositionKeys[i + 1].mTime) return i;
-		}
-		assert(0);
-		return 0; // never gets here
-	}
-	void calc_interpolated_position(aiVector3D &out, float anim_time_ticks, aiNodeAnim const *const pNodeAnim) {
-		if (pNodeAnim->mNumPositionKeys == 1) { // we need at least two values to interpolate...
-			out = pNodeAnim->mPositionKeys[0].mValue;
-			return;
-		}
-		unsigned const pos_index(find_position(anim_time_ticks, pNodeAnim)), next_pos_index(pos_index + 1);
-		assert(next_pos_index < pNodeAnim->mNumPositionKeys);
-		float const t1(pNodeAnim->mPositionKeys[pos_index].mTime), t2(pNodeAnim->mPositionKeys[next_pos_index].mTime);
-		float const factor((anim_time_ticks - t1) / (t2 - t1));
-		assert(factor >= 0.0f && factor <= 1.0f);
-		aiVector3D const &start(pNodeAnim->mPositionKeys[pos_index     ].mValue);
-		aiVector3D const &end  (pNodeAnim->mPositionKeys[next_pos_index].mValue);
-		out = start + factor * (end - start);
-	}
-
-	unsigned find_rotation(float anim_time_ticks, aiNodeAnim const *const pNodeAnim) {
-		assert(pNodeAnim->mNumRotationKeys > 0);
-
-		for (unsigned i = 0; i < pNodeAnim->mNumRotationKeys - 1; i++) {
-			if (anim_time_ticks < (float)pNodeAnim->mRotationKeys[i + 1].mTime) return i;
-		}
-		assert(0);
-		return 0; // never gets here
-	}
-	void calc_interpolated_rotation(aiQuaternion &out, float anim_time, aiNodeAnim const *const pNodeAnim) {
-		if (pNodeAnim->mNumRotationKeys == 1) { // we need at least two values to interpolate...
-			out = pNodeAnim->mRotationKeys[0].mValue;
-			return;
-		}
-		unsigned const rotation_index(find_rotation(anim_time, pNodeAnim)), next_rotation_index(rotation_index + 1);
-		assert(next_rotation_index < pNodeAnim->mNumRotationKeys);
-		float const cur_time(pNodeAnim->mRotationKeys[rotation_index].mTime), delta_time(pNodeAnim->mRotationKeys[next_rotation_index].mTime - cur_time);
-		float const factor((anim_time - cur_time) / delta_time);
-		assert(factor >= 0.0f && factor <= 1.0f);
-		aiQuaternion const &start_rot(pNodeAnim->mRotationKeys[rotation_index     ].mValue);
-		aiQuaternion const &end_rot  (pNodeAnim->mRotationKeys[next_rotation_index].mValue);
-		aiQuaternion::Interpolate(out, start_rot, end_rot, factor);
-		out = out.Normalize();
-	}
-
-	unsigned find_scaling(float anim_time_ticks, aiNodeAnim const *const pNodeAnim) {
-		assert(pNodeAnim->mNumScalingKeys > 0);
-
-		for (unsigned i = 0; i < pNodeAnim->mNumScalingKeys - 1; i++) {
-			if (anim_time_ticks < pNodeAnim->mScalingKeys[i + 1].mTime) return i;
-		}
-		assert(0);
-		return 0; // never gets here
-	}
-	void calc_interpolated_scaling(aiVector3D &out, float anim_time_ticks, aiNodeAnim const *const pNodeAnim) {
-		if (pNodeAnim->mNumScalingKeys == 1) { // we need at least two values to interpolate...
-			out = pNodeAnim->mScalingKeys[0].mValue;
-			return;
-		}
-		unsigned const scale_index(find_scaling(anim_time_ticks, pNodeAnim)), next_scale_index(scale_index + 1);
-		assert(next_scale_index < pNodeAnim->mNumScalingKeys);
-		float const t1(pNodeAnim->mScalingKeys[scale_index].mTime), t2(pNodeAnim->mScalingKeys[next_scale_index].mTime);
-		float const factor((anim_time_ticks - t1) / (t2 - t1));
-		assert(factor >= 0.0f && factor <= 1.0f);
-		aiVector3D const &start(pNodeAnim->mScalingKeys[scale_index     ].mValue);
-		aiVector3D const &end  (pNodeAnim->mScalingKeys[next_scale_index].mValue);
-		out = start + factor * (end - start);
-	}
 
 	aiNodeAnim const *find_node_anim(aiAnimation const *const pAnimation, string const &node_name) {
 		for (unsigned i = 0; i < pAnimation->mNumChannels; i++) {
@@ -252,51 +201,54 @@ class file_reader_assimp {
 		}
 		return NULL;
 	}
-	void read_node_hierarchy_recur(float anim_time, aiScene const *const scene, aiNode const *const node, xform_matrix const &parent_transform, model_anim_t &model_anim) {
-		// TODO: fill in model_anim instead
+	unsigned extract_animation_data_recur(aiScene const *const scene, aiNode const *const node, model_anim_t &model_anim) {
 		string const node_name(node->mName.data);
-		aiAnimation const *const animation(scene->mAnimations[0]);
-		aiNodeAnim  const *const node_anim(find_node_anim(animation, node_name));
-		xform_matrix node_transform;
+		unsigned const node_ix(model_anim.anim_nodes.size());
+		model_anim.anim_nodes.emplace_back(node_name, aiMatrix4x4_to_xform_matrix(node->mTransformation));
 
-		if (node_anim) {
-			// Interpolate scaling and generate scaling transformation matrix
-			aiVector3D scaling_v;
-			calc_interpolated_scaling(scaling_v, anim_time, node_anim);
-			glm::mat4 const scaling(glm::scale(glm::mat4(1.0), aiVector3D_to_glm_vec3(scaling_v)));
-			// Interpolate rotation and generate rotation transformation matrix
-			aiQuaternion rotation_q;
-			calc_interpolated_rotation(rotation_q, anim_time, node_anim);
-			glm::mat4 const rotation(glm::toMat4(aiQuaternion_to_glm_quat(rotation_q)));
-			//glm::mat4 const rotation(aiMatrix3x3_to_glm_mat3(rotation_q.GetMatrix())); // equivalent
-			// Interpolate translation and generate translation transformation matrix
-			aiVector3D translation_v;
-			calc_interpolated_position(translation_v, anim_time, node_anim);
-			glm::mat4 const translation(glm::translate(glm::mat4(1.0), aiVector3D_to_glm_vec3(translation_v)));
-			// Combine the above transformations
-			node_transform = translation * rotation * scaling;
-		}
-		else {
-			node_transform = aiMatrix4x4_to_xform_matrix(node->mTransformation);
-		}
-		xform_matrix const global_transform(parent_transform * node_transform);
-		model_anim.update_bone_transform(node_name, global_transform);
-
+		for (unsigned a = 0; a < scene->mNumAnimations; ++a) {
+			aiAnimation const *const animation(scene->mAnimations[a]);
+			aiNodeAnim  const *const node_anim(find_node_anim(animation, node_name));
+			if (!node_anim) continue; // no animation for this node
+			model_anim_t::anim_data_t& A(model_anim.animations[a].anim_data[node_name]);
+			A.init(node_anim->mNumPositionKeys, node_anim->mNumRotationKeys, node_anim->mNumScalingKeys);
+			// position
+			for (unsigned i = 0; i < node_anim->mNumPositionKeys; i++) {
+				A.pos.emplace_back(node_anim->mPositionKeys[i].mTime, aiVector3D_to_vector3d(node_anim->mPositionKeys[i].mValue));
+			}
+			// rotation
+			for (unsigned i = 0; i < node_anim->mNumRotationKeys; i++) {
+				A.rot.emplace_back(node_anim->mRotationKeys[i].mTime, aiQuaternion_to_glm_quat(node_anim->mRotationKeys[i].mValue));
+			}
+			// scaling
+			for (unsigned i = 0; i < node_anim->mNumScalingKeys; i++) {
+				A.scale.emplace_back(node_anim->mScalingKeys[i].mTime, aiVector3D_to_vector3d(node_anim->mScalingKeys[i].mValue));
+			}
+		} // for a
 		for (unsigned i = 0; i < node->mNumChildren; i++) {
-			read_node_hierarchy_recur(anim_time, scene, node->mChildren[i], global_transform, model_anim);
+			unsigned const child_ix(extract_animation_data_recur(scene, node->mChildren[i], model_anim));
+			model_anim.anim_nodes[node_ix].children.push_back(child_ix);
 		}
+		return node_ix;
+	}
+	void extract_animation_data(aiScene const *const scene, model_anim_t &model_anim) {
+		model_anim.root_transform = cur_xf.create_xform_matrix();
+		model_anim.global_inverse_transform = aiMatrix4x4_to_xform_matrix(scene->mRootNode->mTransformation).inverse();
+		model_anim.animations.resize(scene->mNumAnimations);
+
+		for (unsigned a = 0; a < scene->mNumAnimations; ++a) {
+			if (scene->mAnimations[a]->mTicksPerSecond) {model_anim.animations[a].ticks_per_sec = scene->mAnimations[a]->mTicksPerSecond;} // defaults to 25
+			model_anim.animations[a].duration = scene->mAnimations[a]->mDuration;
+		}
+		extract_animation_data_recur(scene, scene->mRootNode, model_anim);
 	}
 	void get_bone_transforms(aiScene const *const scene, model_anim_t &model_anim) {
 		//out.open("debug.txt");
 		assert(scene && scene->mRootNode);
-		float const ticks_per_sec(scene->mAnimations[0]->mTicksPerSecond ? scene->mAnimations[0]->mTicksPerSecond : 25.0f); // defaults to 25
-		float const time_in_ticks((tfticks/TICKS_PER_SECOND) * ticks_per_sec);
-		float const animation_time(fmod(time_in_ticks, scene->mAnimations[0]->mDuration));
-		model_anim.global_inverse_transform = aiMatrix4x4_to_xform_matrix(scene->mRootNode->mTransformation).inverse();
-		model.bone_transforms.resize(model_anim.bone_info.size());
-		xform_matrix const root_transform(cur_xf.create_xform_matrix());
-		read_node_hierarchy_recur(animation_time, scene, scene->mRootNode, root_transform, model_anim);
-		for (unsigned i = 0; i < model_anim.bone_info.size(); i++) {model.bone_transforms[i] = model_anim.bone_info[i].final_transform;}
+		float const cur_time(tfticks/TICKS_PER_SECOND);
+		extract_animation_data(scene, model_anim);
+		unsigned const anim_id = 0;
+		model_anim.get_bone_transforms(anim_id, cur_time, model);
 	}
 
 	void parse_single_bone(int bone_index, aiBone const *const pBone, mesh_bone_data_t &bone_data, model_anim_t &model_anim, unsigned first_vertex_offset) {
