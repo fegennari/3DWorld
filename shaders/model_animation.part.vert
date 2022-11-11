@@ -7,8 +7,7 @@ const int MAX_MODEL_BONES = 200;
 uniform mat4 bones[MAX_MODEL_BONES];
 
 // Note: color is used for debugging
-void apply_vertex_animation(inout vec4 vertex, inout vec3 normal, inout vec4 color, in vec2 tc) {
-	//color.rgb = bone_weights.xyz;
+void apply_vertex_animation(inout vec4 vertex, inout vec3 normal, in vec2 tc) {
 	mat4 bone_transform = bones[bone_ids[0]] * bone_weights[0];
     bone_transform     += bones[bone_ids[1]] * bone_weights[1];
     bone_transform     += bones[bone_ids[2]] * bone_weights[2];

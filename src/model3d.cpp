@@ -33,7 +33,7 @@ extern bool two_sided_lighting, have_indir_smoke_tex, use_core_context, model3d_
 extern bool use_interior_cube_map_refl, enable_model3d_custom_mipmaps, enable_tt_model_indir, no_subdiv_model, auto_calc_tt_model_zvals, use_model_lod_blocks;
 extern bool flatten_tt_mesh_under_models, no_store_model_textures_in_memory, disable_model_textures, allow_model3d_quads, merge_model_objects;
 extern unsigned shadow_map_sz, reflection_tid;
-extern int display_mode;
+extern int display_mode, animate2;
 extern float model3d_alpha_thresh, model3d_texture_anisotropy, model_triplanar_tc_scale, model_mat_lod_thresh, cobj_z_bias, model_hemi_lighting_scale, light_int_scale[];
 extern double tfticks;
 extern pos_dir_up orig_camera_pdu;
@@ -615,7 +615,9 @@ void vertex_bone_data_t::normalize() { // make sure all weights sum to 1.0
 void model3d::setup_bone_transforms(shader_t &shader) {
 	unsigned const MAX_MODEL_BONES = 200; // must agree with shader code
 	unsigned const anim_id = 0;
-	float const cur_time(tfticks/TICKS_PER_SECOND);
+	static float cur_tfticks(0.0);
+	if (animate2) {cur_tfticks = tfticks;}
+	float const cur_time(cur_tfticks/TICKS_PER_SECOND);
 	model_anim_data.get_bone_transforms(anim_id, cur_time);
 	unsigned const num_bones(model_anim_data.bone_transforms.size());
 

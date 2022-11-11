@@ -17,8 +17,6 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
-#include <fstream>
-
 vector3d  aiVector3D_to_vector3d(aiVector3D const &v) {return vector3d (v.x, v.y, v.z);}
 colorRGBA aiColor4D_to_colorRGBA(aiColor4D  const &c) {return colorRGBA(c.r, c.g, c.b, c.a);}
 glm::vec3 aiVector3D_to_glm_vec3(aiVector3D const &v) {return glm::vec3(v.x, v.y, v.z);}
@@ -80,9 +78,6 @@ glm::quat model_anim_t::calc_interpolated_rotation(float anim_time, anim_data_t 
 		if (anim_time >= next.time) continue; // not yet
 		float const t((anim_time - cur.time) / (next.time - cur.time));
 		assert(t >= 0.0f && t <= 1.0f);
-		//aiQuaternion::Interpolate(out, start_rot, end_rot, factor);
-		//out = out.Normalize();
-		//return glm::normalize(cur.q + t*(next.q - cur.q));
 		return glm::normalize(glm::slerp(cur.q, next.q, t));
 	} // for i
 	assert(0);
@@ -249,11 +244,9 @@ class file_reader_assimp {
 			if (load_animations) {} // TODO: need to apply model transform to mesh_bcube
 			model.union_bcube_with(mesh_bcube);
 		}
-		//if (mesh->mMaterialIndex >= 0) {} // according to the tutorial, this check should be done; but mMaterialIndex is unsigned, so it can't fail?
 		material_t &mat(model.get_material(mesh->mMaterialIndex, 1)); // alloc_if_needed=1
 		bool const is_new_mat(mat.empty());
 		unsigned const first_vertex_offset(mat.add_triangles(verts, indices, 1)); // add_new_block=1; should return 0
-		//cout << TXT(mesh->mName.C_Str()) << TXT(mesh->mNumVertices) << TXT(mesh->mNumFaces) << TXT(mesh->mNumBones) << endl;
 		
 		if (load_animations && mesh->HasBones()) { // handle bones
 			mesh_bone_data_t &bone_data(mat.get_bone_data_for_last_added_tri_mesh());
