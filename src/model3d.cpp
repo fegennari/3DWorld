@@ -2617,12 +2617,16 @@ void model3ds::render(bool is_shadow_pass, int reflection_pass, int trans_op_mas
 	shader_t s;
 	set_fill_mode();
 
-	if (use_z_prepass && !is_shadow_pass && reflection_pass == 0 && (trans_op_mask & 1)) { // check use_mvm?
+	if (use_z_prepass && !is_shadow_pass && reflection_pass == 0 && (trans_op_mask & 1) && !all_animated) { // check use_mvm?
 		// faster for scenes with high depth complexity and slow fragment shaders; slower when vertex/transform limited
 		s.set_prefix("#define POS_FROM_EPOS_MULT", 0); // VS - needed to make transformed vertices agree with the normal rendering flow
 		s.begin_color_only_shader(BLACK); // don't even need colors, only need depth
 		glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE); // Disable color rendering, we only want to write to the Z-Buffer
-		for (iterator m = begin(); m != end(); ++m) {m->render(s, 0, 0, 1, 0, 3, 0, trans_op_mask, xlate);}
+		
+		for (iterator m = begin(); m != end(); ++m) {
+			if (m->num_animations() > 0) continue; // not supported in z-prepass
+			m->render(s, 0, 0, 1, 0, 3, 0, trans_op_mask, xlate);
+		}
 		glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
 		s.end_shader();
 		set_std_depth_func_with_eq();
@@ -2643,7 +2647,8 @@ void model3ds::render(bool is_shadow_pass, int reflection_pass, int trans_op_mas
 					if (anim_pass) {s.add_property("animation_shader", "model_animation.part+");}
 
 					if (is_shadow_pass) {
-						if (ENABLE_ANIMATION_SHADOWS && anim_pass) { // need to use smoke shader for animations, but disable all shading options
+						if (ENABLE_ANIMATION_SHADOWS && anim_pass) { // Note: should count as a dynamic object for shadow update, but currently does not
+							// need to use smoke shader for animations, but disable all shading options
 							setup_smoke_shaders(s, min_alpha, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, use_mvm);
 						}
 						else {setup_smap_shader(s, (sam_pass != 0));}

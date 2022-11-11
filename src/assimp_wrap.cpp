@@ -225,7 +225,7 @@ class file_reader_assimp {
 			v.v = aiVector3D_to_vector3d(mesh->mVertices[i]); // position
 			v.n = aiVector3D_to_vector3d(mesh->mNormals [i]); // normals
 
-			if (!load_animations) {
+			if (!load_animations) { // not legal to apply model transform here; must be applied after bone transforms
 				cur_xf.xform_pos   (v.v);
 				cur_xf.xform_pos_rm(v.n);
 			}
@@ -233,7 +233,9 @@ class file_reader_assimp {
 				v.t[0] = mesh->mTextureCoords[0][i].x; 
 				v.t[1] = mesh->mTextureCoords[0][i].y;
 			}
-			if (i == 0) {mesh_bcube.set_from_point(v.v);} else {mesh_bcube.union_with_pt(v.v);}
+			point bcube_pt(v.v);
+			if (load_animations) {cur_xf.xform_pos(bcube_pt);} // if we didn't transform the point above, transform it now to compute a (hopefully more accurate) bcube
+			if (i == 0) {mesh_bcube.set_from_point(bcube_pt);} else {mesh_bcube.union_with_pt(bcube_pt);}
 		} // for i
 		assert(mesh->mFaces != nullptr);
 		assert(mesh->mNumFaces > 0); // if there were verts, there must be faces
