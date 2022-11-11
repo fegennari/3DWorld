@@ -334,7 +334,7 @@ public:
 
 bool read_assimp_model(string const &filename, model3d &model, geom_xform_t const &xf, int recalc_normals, bool verbose) {
 	//timer_t timer("Read AssImp Model");
-	bool const load_animations = 1; // Note: incomplete
+	bool const load_animations = 1;
 	file_reader_assimp reader(model, load_animations);
 	return reader.read(filename, xf, recalc_normals, verbose);
 }

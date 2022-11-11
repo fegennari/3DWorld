@@ -2590,6 +2590,7 @@ void model3ds::render(bool is_shadow_pass, int reflection_pass, int trans_op_mas
 	// Note: planar reflections are disabled during the cube map reflection creation pass because they don't work (wrong point is reflected)
 	bool const enable_planar_reflections(reflection_pass != 2 && enable_any_reflections && reflection_tid > 0 && use_reflection_plane());
 	bool const enable_cube_map_reflections(enable_any_reflections && enable_all_reflections());
+	bool const allow_animations(!disable_shader_effects && (!is_shadow_pass || ENABLE_ANIMATION_SHADOWS));
 	// Note: in ground mode, lighting is global, so transforms are included in vpos with use_mvm=1; in TT mode, lighting is relative to each model instance
 	bool const use_mvm(!tt_mode && has_any_transforms()), v(!tt_mode), use_smap(1 || v);
 	bool needs_alpha_test(0), needs_bump_maps(0), any_planar_reflective(0), any_cube_map_reflective(0), any_non_reflective(0), use_spec_map(0), use_gloss_map(0), needs_trans_pass(0);
@@ -2600,7 +2601,7 @@ void model3ds::render(bool is_shadow_pass, int reflection_pass, int trans_op_mas
 		needs_trans_pass |= m->get_needs_trans_pass();
 		use_spec_map     |= (enable_spec_map() && m->uses_spec_map());
 		use_gloss_map    |= (enable_spec_map() && m->uses_gloss_map());
-		num_models_with_animations += (m->num_animations() > 0);
+		if (allow_animations) {num_models_with_animations += (m->num_animations() > 0);}
 		if      (enable_planar_reflections   && m->is_planar_reflective  ()) {any_planar_reflective   = 1;}
 		else if (enable_cube_map_reflections && m->is_cube_map_reflective()) {any_cube_map_reflective = 1;}
 		else                                                                 {any_non_reflective      = 1;}
@@ -2612,6 +2613,7 @@ void model3ds::render(bool is_shadow_pass, int reflection_pass, int trans_op_mas
 		exit(1); // FIXME: better/earlier error? make this work?
 	}
 	if (!needs_trans_pass && !(trans_op_mask & 1)) return; // transparent only pass, but no transparent materials
+	bool const any_animated(num_models_with_animations > 0), all_animated(num_models_with_animations == size());
 	shader_t s;
 	set_fill_mode();
 
@@ -2633,42 +2635,45 @@ void model3ds::render(bool is_shadow_pass, int reflection_pass, int trans_op_mas
 	for (int bmap_pass = (needs_bump_maps ? 1 : 0); bmap_pass >= 0; --bmap_pass) {
 		for (unsigned sam_pass = 0; sam_pass < (is_shadow_pass ? 2U : 1U); ++sam_pass) {
 			for (unsigned ref_pass = (any_non_reflective ? 0U : 1U); ref_pass < (reflect_mode ? 2U : 1U); ++ref_pass) {
-				int const cur_reflect_mode(ref_pass ? reflect_mode : 0);
-				bool reset_bscale(0), enable_animations(0);
-				enable_animations = (!disable_shader_effects && num_models_with_animations > 0);
-				if (enable_animations) {s.add_property("animation_shader", "model_animation.part+");}
+				for (unsigned anim_pass = 0; anim_pass < 2; ++anim_pass) {
+					if ( anim_pass && !any_animated) continue;
+					if (!anim_pass &&  all_animated) continue;
+					int const cur_reflect_mode(ref_pass ? reflect_mode : 0);
+					bool reset_bscale(0);
+					if (anim_pass) {s.add_property("animation_shader", "model_animation.part+");}
 
-				if (is_shadow_pass) {
-					if (ENABLE_ANIMATION_SHADOWS && enable_animations) { // need to use smoke shader for animations, but disable all shading options
-						setup_smoke_shaders(s, min_alpha, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, use_mvm);
+					if (is_shadow_pass) {
+						if (ENABLE_ANIMATION_SHADOWS && anim_pass) { // need to use smoke shader for animations, but disable all shading options
+							setup_smoke_shaders(s, min_alpha, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, use_mvm);
+						}
+						else {setup_smap_shader(s, (sam_pass != 0));}
 					}
-					else {setup_smap_shader(s, (sam_pass != 0));}
-				}
-				else if (shader_effects) {
-					int const use_bmap((bmap_pass == 0) ? 0 : (model_calc_tan_vect ? 2 : 1));
-					int const is_outside((is_shadow_pass || reflection_pass == 1) ? 0 : 2); // enable wet effect coverage mask
-					// TODO: doesn't work if only some models have bones; must split into two passes if (num_models_with_bones > 0 && num_models_with_bones < size())
-					if (model3d_wn_normal) {s.set_prefix("#define USE_WINDING_RULE_FOR_NORMAL", 1);} // FS
-					setup_smoke_shaders(s, min_alpha, 0, 0, (enable_tt_model_indir || v), 1, v, v, 0, (use_smap ? 2 : 1), use_bmap, use_spec_map, use_mvm, two_sided_lighting,
-						0.0, model_triplanar_tc_scale, 0, cur_reflect_mode, is_outside, 1, 0, use_gloss_map);
-					if (use_custom_smaps) {s.add_uniform_float("z_bias", cobj_z_bias);} // unnecessary?
-					if (use_bmap && invert_model_nmap_bscale) {s.add_uniform_float("bump_b_scale", 1.0); reset_bscale = 1;}
-					if (ref_pass && any_planar_reflective) {bind_texture_tu(reflection_tid, 14);}
-					if (model3d_wn_normal) {s.add_uniform_float("winding_normal_sign", ((reflection_pass == 1) ? -1.0 : 1.0));}
-					s.add_uniform_float("hemi_lighting_scale", model_hemi_lighting_scale);
-				}
-				else {
-					s.begin_simple_textured_shader(0.0, 1); // with lighting
-					s.clear_specular();
-				}
-				for (iterator m = begin(); m != end(); ++m) { // non-const
-					if (any_non_reflective && (reflect_mode != 0) && (ref_pass != 0) != m->is_reflective()) continue; // wrong reflection pass for this object
-					m->render(s, is_shadow_pass, reflection_pass, 0, (sam_pass == 1), (shader_effects ? (1 << bmap_pass) : 3), cur_reflect_mode, trans_op_mask, xlate);
-				}
-				if (reset_bscale) {s.add_uniform_float("bump_b_scale", -1.0);} // may be unnecessary
-				if (enable_animations) {s.remove_property("animation_shader");}
-				s.clear_specular(); // may be unnecessary
-				s.end_shader();
+					else if (shader_effects) {
+						int const use_bmap((bmap_pass == 0) ? 0 : (model_calc_tan_vect ? 2 : 1));
+						int const is_outside((is_shadow_pass || reflection_pass == 1) ? 0 : 2); // enable wet effect coverage mask
+						if (model3d_wn_normal) {s.set_prefix("#define USE_WINDING_RULE_FOR_NORMAL", 1);} // FS
+						setup_smoke_shaders(s, min_alpha, 0, 0, (enable_tt_model_indir || v), 1, v, v, 0, (use_smap ? 2 : 1), use_bmap, use_spec_map, use_mvm,
+							two_sided_lighting, 0.0, model_triplanar_tc_scale, 0, cur_reflect_mode, is_outside, 1, 0, use_gloss_map);
+						if (use_custom_smaps) {s.add_uniform_float("z_bias", cobj_z_bias);} // unnecessary?
+						if (use_bmap && invert_model_nmap_bscale) {s.add_uniform_float("bump_b_scale", 1.0); reset_bscale = 1;}
+						if (ref_pass && any_planar_reflective) {bind_texture_tu(reflection_tid, 14);}
+						if (model3d_wn_normal) {s.add_uniform_float("winding_normal_sign", ((reflection_pass == 1) ? -1.0 : 1.0));}
+						s.add_uniform_float("hemi_lighting_scale", model_hemi_lighting_scale);
+					}
+					else {
+						s.begin_simple_textured_shader(0.0, 1); // with lighting
+						s.clear_specular();
+					}
+					for (iterator m = begin(); m != end(); ++m) { // non-const
+						if (any_non_reflective && (reflect_mode != 0) && (ref_pass != 0) != m->is_reflective()) continue; // wrong reflection pass for this object
+						if (allow_animations && (m->num_animations() > 0) != anim_pass) continue; // wrong animation pass
+						m->render(s, is_shadow_pass, reflection_pass, 0, (sam_pass == 1), (shader_effects ? (1 << bmap_pass) : 3), cur_reflect_mode, trans_op_mask, xlate);
+					}
+					if (reset_bscale) {s.add_uniform_float("bump_b_scale", -1.0);} // may be unnecessary
+					if (anim_pass   ) {s.remove_property("animation_shader");}
+					s.clear_specular(); // may be unnecessary
+					s.end_shader();
+				} // anim_pass
 			} // ref_pass
 		} // sam_pass
 	} // bmap_pass
