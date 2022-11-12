@@ -56,17 +56,20 @@ bool use_model3d_bump_maps() {return enable_bump_map();} // global function expo
 // ************ texture_manager ************
 
 unsigned texture_manager::create_texture(string const &fn, bool is_alpha_mask, bool verbose,
-	bool invert_alpha, bool wrap, bool mirror, bool force_grayscale, bool is_nm, bool invert_y)
+	bool invert_alpha, bool wrap, bool mirror, bool force_grayscale, bool is_nm, bool invert_y, bool is_temp_image)
 {
 	assert(!(wrap && mirror)); // can't both be set
-	string_map_t::const_iterator it(tex_map.find(fn));
 
-	if (it != tex_map.end()) { // found (already loaded)
-		assert(it->second < textures.size());
-		return it->second; // check invert_alpha?
+	if (!is_temp_image) { // temp images aren't in the texture cache
+		string_map_t::const_iterator it(tex_map.find(fn));
+
+		if (it != tex_map.end()) { // found (already loaded)
+			assert(it->second < textures.size());
+			return it->second; // check invert_alpha?
+		}
 	}
 	unsigned const tid((unsigned)textures.size());
-	tex_map[fn] = tid;
+	if (!is_temp_image) {tex_map[fn] = tid;}
 	if (verbose) cout << "creating texture " << fn << endl;
 	bool const compress(!is_alpha_mask && enable_model3d_tex_comp);
 	bool const use_mipmaps(use_model2d_tex_mipmaps && !is_alpha_mask);
@@ -75,6 +78,7 @@ unsigned texture_manager::create_texture(string const &fn, bool is_alpha_mask, b
 	// always RGB wrapped+mipmap (normal map flag set later)
 	textures.push_back(texture_t(0, 7, 0, 0, (mirror ? 2 : (wrap ? 1 : 0)), ncolors, use_mipmaps, fn, invert_y, compress, model3d_texture_anisotropy, 1.0, is_nm));
 	textures.back().invert_alpha = invert_alpha;
+	if (is_temp_image) {ensure_texture_loaded(tid, is_nm);} // must load temp images now
 	return tid; // can't fail
 }
 
