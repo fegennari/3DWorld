@@ -27,5 +27,6 @@ dependencies/meshoptimizer/src/*.o
 dependencies/tracy*
 dependencies/libjpeg-turbo-32
 house/snow.wind.map
+temp_assimp_embedded_image.*
 TAGS
 *~

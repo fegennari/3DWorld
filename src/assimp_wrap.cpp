@@ -17,6 +17,10 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
+#include <fstream>
+
+int const WRITE_TEMP_IMAGE = 1; // 0=no, 1=reuse filename, 2=unique filename
+
 string fix_path_slashes(string const &filename) {
   string ret(filename);
 #ifdef _WIN32
@@ -136,16 +140,60 @@ class file_reader_assimp {
 	model3d &model;
 	geom_xform_t cur_xf;
 	string model_dir;
-	bool load_animations=0, had_vertex_error=0;
+	bool load_animations=0, had_vertex_error=0, had_tex_error=0, had_comp_tex_error=0;
+	unsigned temp_image_ix=0;
 
-	int load_texture(aiMaterial const* const mat, aiTextureType const type, bool is_normal_map=0) {
+	int load_texture(aiScene const *const scene, aiMaterial const* const mat, aiTextureType const type, bool is_normal_map=0) {
 		unsigned const count(mat->GetTextureCount(type));
 		if (count == 0) return -1; // no texture
 		// load only the first texture, as that's all we support
 		aiString fn; // absolute path, not relative to the model file
 		if (mat->GetTexture(type, 0, &fn) != AI_SUCCESS) return -1;
-		// is_alpha_mask=0, verbose=0, invert_alpha=0, wrap=1, mirror=0, force_grayscale=0
-		return model.tmgr.create_texture((model_dir + fn.C_Str()), 0, 0, 0, 1, 0, 0, is_normal_map);
+		char const *const filename(fn.C_Str());
+		aiTexture const *const texture(scene->GetEmbeddedTexture(filename));
+		string full_path(model_dir + filename);
+		bool is_temp_image(0);
+
+		if (texture) {
+			unsigned const width(texture->mWidth), height(texture->mHeight);
+			aiTexel const *const data(texture->pcData);
+			assert(data);
+			
+			if (height > 0) { // texture stored uncompressed, size is {width, height}
+				// TODO: write this; first, I need a test case that has these images
+				if (!had_comp_tex_error) {cerr << "Error: Assimp embedded compressed texture loading is not yet supported" << endl;} // only print once
+				had_comp_tex_error = 1;
+				return -1;
+			}
+			else { // texture stored compressed, width is number of bytes
+				if (WRITE_TEMP_IMAGE) {
+					// most of the image readers don't support reading from memory, so as a hack we can write to a temp file and read that
+					if (WRITE_TEMP_IMAGE == 2) { // per-image unique filename
+						ostringstream oss;
+						oss << "temp_assimp_embedded_image_" << temp_image_ix++ << "." << get_file_extension(filename);
+						full_path = oss.str();
+					}
+					else { // reuse filename
+						full_path = "temp_assimp_embedded_image." + get_file_extension(filename);
+					}
+					//cout << "writing temp image " << full_path << endl;
+					ofstream out(full_path, ios::binary);
+					out.write((const char *)data, width);
+					is_temp_image = 1;
+				}
+				else {
+					if (!had_tex_error) {cerr << "Error: Assimp embedded texture loading is not yet supported" << endl;} // only print once
+					had_tex_error = 1;
+					return -1;
+				}
+			}
+		}
+		else if (!check_texture_file_exists(full_path)) {
+			cerr << "Error: Can't find texture file for assimp model: " << full_path << endl;
+			return -1;
+		}
+		// is_alpha_mask=0, verbose=0, invert_alpha=0, wrap=1, mirror=0, force_grayscale=0, invert_y=0
+		return model.tmgr.create_texture(full_path, 0, 0, 0, 1, 0, 0, is_normal_map, 0, is_temp_image);
 	}
 
 	aiNodeAnim const *find_node_anim(aiAnimation const *const pAnimation, string const &node_name) {
@@ -269,10 +317,10 @@ class file_reader_assimp {
 			aiMaterial const* const material(scene->mMaterials[mesh->mMaterialIndex]);
 			assert(material != nullptr);
 			// setup and load textures
-			mat.a_tid    = load_texture(material, aiTextureType_AMBIENT);
-			mat.d_tid    = load_texture(material, aiTextureType_DIFFUSE);
-			mat.s_tid    = load_texture(material, aiTextureType_SPECULAR);
-			mat.bump_tid = load_texture(material, aiTextureType_NORMALS, 1); // is_normal_map=1; or aiTextureType_HEIGHT?
+			mat.a_tid    = load_texture(scene, material, aiTextureType_AMBIENT);
+			mat.d_tid    = load_texture(scene, material, aiTextureType_DIFFUSE);
+			mat.s_tid    = load_texture(scene, material, aiTextureType_SPECULAR);
+			mat.bump_tid = load_texture(scene, material, aiTextureType_NORMALS, 1); // is_normal_map=1; or aiTextureType_HEIGHT?
 			//mat.refl_tid = load_texture(material, aiTextureType_REFLECTION); // unused
 			// setup colors
 			aiColor4D color;
