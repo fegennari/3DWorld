@@ -632,24 +632,24 @@ void model3d::setup_bone_transforms(shader_t &shader) {
 
 template<typename T> void indexed_vntc_vect_t<T>::setup_bones(shader_t &shader, bool is_shadow_pass) {
 
-	if (vaos[is_shadow_pass].vao) return; // already set
-	vaos[is_shadow_pass].ensure_vao_bound();
+	if (this->vaos[is_shadow_pass].vao) return; // already set
+	this->vaos[is_shadow_pass].ensure_vao_bound();
 	vector<T> const &data(*this);
-	unsigned const vert_mem(data.size()*sizeof(T));
+	size_t const vert_mem(data.size()*sizeof(T));
 
-	if (vbo) {indexed_vbo_manager_t::pre_render(!indices.empty());}
+	if (this->vbo) {indexed_vbo_manager_t::pre_render(!indices.empty());}
 	else {
-		vbo = create_vbo();
-		check_bind_vbo(vbo);
+		this->vbo = create_vbo();
+		check_bind_vbo(this->vbo);
 		unsigned const bone_mem(bone_data.vertex_to_bones.size()*sizeof(vertex_bone_data_t)), tot_mem(vert_mem + bone_mem);
 		upload_vbo_data(nullptr, tot_mem); // allocate space
 		upload_vbo_sub_data(data.data(), 0, vert_mem); // vertex data
 		upload_vbo_sub_data(bone_data.vertex_to_bones.data(), vert_mem, bone_mem); // bone data
-		gpu_mem += tot_mem;
+		this->gpu_mem += tot_mem;
 
-		if (!ivbo && !indices.empty()) {
-			create_vbo_and_upload(ivbo, indices, 1); // is_index=1
-			gpu_mem += indices.size()*sizeof(index_type_t);
+		if (!this->ivbo && !indices.empty()) {
+			create_vbo_and_upload(this->ivbo, indices, 1); // is_index=1
+			this->gpu_mem += indices.size()*sizeof(index_type_t);
 		}
 	}
 	T::set_vbo_arrays();
@@ -2011,9 +2011,9 @@ xform_matrix geom_xform_t::create_xform_matrix() const { // mirror - swap - scal
 			}
 		}
 	}
-	glm::mat4 const scale(glm::scale(glm::mat4(1.0), glm::vec3((mirror[0] ? -1.0 : 1.0)*scale, (mirror[1] ? -1.0 : 1.0)*scale, (mirror[2] ? -1.0 : 1.0)*scale)));
-	glm::mat4 const translate(glm::translate(glm::mat4(1.0), glm::vec3(tv.x, tv.y, tv.z)));
-	return scale * translate;
+	glm::mat4 const M_scale(glm::scale(glm::mat4(1.0), glm::vec3((mirror[0] ? -1.0 : 1.0)*scale, (mirror[1] ? -1.0 : 1.0)*scale, (mirror[2] ? -1.0 : 1.0)*scale)));
+	glm::mat4 const M_translate(glm::translate(glm::mat4(1.0), glm::vec3(tv.x, tv.y, tv.z)));
+	return M_scale * M_translate;
 }
 
 void model3d_xform_t::apply_inv_xform_to_pdu(pos_dir_up &pdu) const { // Note: RM ignored
