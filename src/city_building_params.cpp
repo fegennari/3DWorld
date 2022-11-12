@@ -126,8 +126,6 @@ void buildings_file_err(string const &str, int &error) {
 	error = 1;
 }
 
-bool check_texture_file_exists(string const &filename);
-
 int building_params_t::read_building_texture(FILE *fp, string const &str, bool is_normal_map, int &error, bool check_filename) {
 	char strc[MAX_CHARS] = {0};
 	if (!read_str(fp, strc)) {buildings_file_err(str, error);}
