@@ -2007,17 +2007,25 @@ bool geom_xform_t::operator==(geom_xform_t const &x) const {
 }
 
 xform_matrix geom_xform_t::create_xform_matrix() const { // mirror - swap - scale - translate
+	glm::mat4 const M_mirror(glm::scale(glm::mat4(1.0), glm::vec3((mirror[0] ? -1.0 : 1.0), (mirror[1] ? -1.0 : 1.0), (mirror[2] ? -1.0 : 1.0))));
+	glm::mat4 M_rotate(1.0); // starts as identity
+
 	for (unsigned i = 0; i < 3; ++i) {
 		for (unsigned j = 0; j < 3; ++j) {
-			if (swap_dim[i][j]) {
-				cerr << "Error: Model swap_dim is not supported for create_xform_matrix()" << endl;
-				assert(0);
+			if (swap_dim[i][j] && i != j) {
+				//cerr << "Error: Model swap_dim is not supported for create_xform_matrix()" << endl;
+				//assert(0);
+				// TODO: need to mirror here as well
+				vector3d A, B;
+				A[i] = 1.0;
+				B[j] = 1.0;
+				M_rotate = glm::rotate(M_rotate, PI_TWO, vec3_from_vector3d(cross_product(A, B)));
 			}
 		}
 	}
-	glm::mat4 const M_scale(glm::scale(glm::mat4(1.0), glm::vec3((mirror[0] ? -1.0 : 1.0)*scale, (mirror[1] ? -1.0 : 1.0)*scale, (mirror[2] ? -1.0 : 1.0)*scale)));
+	glm::mat4 const M_scale(glm::scale(glm::mat4(1.0), glm::vec3(scale, scale, scale)));
 	glm::mat4 const M_translate(glm::translate(glm::mat4(1.0), glm::vec3(tv.x, tv.y, tv.z)));
-	return M_scale * M_translate;
+	return M_mirror * M_rotate * M_scale * M_translate;
 }
 
 void model3d_xform_t::apply_inv_xform_to_pdu(pos_dir_up &pdu) const { // Note: RM ignored
