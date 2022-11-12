@@ -17,6 +17,16 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
+string fix_path_slashes(string const &filename) {
+  string ret(filename);
+#ifdef _WIN32
+  std::replace(ret.begin(), ret.end(), '/', '\\');
+#else // linux
+  std::replace(ret.begin(), ret.end(), '\\', '/');
+#endif
+  return ret;
+}
+
 vector3d  aiVector3D_to_vector3d(aiVector3D const &v) {return vector3d (v.x, v.y, v.z);}
 colorRGBA aiColor4D_to_colorRGBA(aiColor4D  const &c) {return colorRGBA(c.r, c.g, c.b, c.a);}
 glm::vec3 aiVector3D_to_glm_vec3(aiVector3D const &v) {return glm::vec3(v.x, v.y, v.z);}
@@ -331,7 +341,7 @@ bool read_assimp_model(string const &filename, model3d &model, geom_xform_t cons
 	//timer_t timer("Read AssImp Model");
 	bool const load_animations = 1;
 	file_reader_assimp reader(model, load_animations);
-	return reader.read(filename, xf, recalc_normals, verbose);
+	return reader.read(fix_path_slashes(filename), xf, recalc_normals, verbose);
 }
 
 #else // ENABLE_ASSIMP
