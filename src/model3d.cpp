@@ -114,7 +114,7 @@ bool texture_manager::ensure_texture_loaded(int tid, bool is_bump) {
 		ensure_tid_loaded(t.alpha_tid, 0);
 		t.copy_alpha_from_texture(get_texture(t.alpha_tid), texture_alpha_in_red_comp);
 	}
-	if (is_bump) {t.make_normal_map();}
+	if (is_bump && t.ncolors == 1) {t.make_normal_map();} // make RGB normal map from grayscale bump map
 	t.init(); // must be after alpha copy
 	assert(t.is_loaded());
 	return 1;
