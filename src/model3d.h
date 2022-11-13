@@ -566,8 +566,6 @@ class model3d {
 
 	void update_bbox(polygon_t const &poly);
 	void create_indir_texture();
-	void setup_bone_transforms(shader_t &shader);
-
 public:
 	texture_manager &tmgr; // stores all textures
 	model_anim_t model_anim_data;
@@ -614,6 +612,7 @@ public:
 	void set_sky_lighting_file(string const &fn, float weight, unsigned sz[3]);
 	void set_occlusion_cube(cube_t const &cube) {occlusion_cube = cube;}
 	void set_target_translate_scale(point const &target_pos, float target_radius, geom_xform_t &xf) const;
+	void setup_bone_transforms(shader_t &shader, float anim_time, unsigned anim_id=0);
 	void render_materials_def(shader_t &shader, bool is_shadow_pass, int reflection_pass, bool is_z_prepass, int enable_alpha_mask,
 		unsigned bmap_pass_mask, int trans_op_mask, point const *const xlate, xform_matrix const *const mvm=nullptr)
 	{

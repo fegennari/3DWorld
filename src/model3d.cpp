@@ -616,13 +616,10 @@ void vertex_bone_data_t::normalize() { // make sure all weights sum to 1.0
 	for (unsigned i = 0; i < MAX_NUM_BONES_PER_VERTEX; ++i) {weights[i] /= w_sum;}
 }
 
-void model3d::setup_bone_transforms(shader_t &shader) {
+void model3d::setup_bone_transforms(shader_t &shader, float anim_time, unsigned anim_id) {
+	if (num_animations() == 0) return;
 	unsigned const MAX_MODEL_BONES = 200; // must agree with shader code
-	unsigned const anim_id = 0;
-	static float cur_tfticks(0.0);
-	if (animate2) {cur_tfticks = tfticks;}
-	float const cur_time(cur_tfticks/TICKS_PER_SECOND);
-	model_anim_data.get_bone_transforms(anim_id, cur_time);
+	model_anim_data.get_bone_transforms(anim_id, anim_time);
 	unsigned const num_bones(model_anim_data.bone_transforms.size());
 
 	if (num_bones > MAX_MODEL_BONES) {
@@ -2167,7 +2164,11 @@ void model3d::render(shader_t &shader, bool is_shadow_pass, int reflection_pass,
 #endif
 		}
 	}
-	if (num_animations() > 0) {setup_bone_transforms(shader);}
+	if (num_animations() > 0) {
+		static float cur_tfticks(0.0);
+		if (animate2) {cur_tfticks = tfticks;}
+		setup_bone_transforms(shader, cur_tfticks/TICKS_PER_SECOND, 0); // anim_id=0
+	}
 	xform_matrix const mvm(fgGetMVM());
 	model3d_xform_t const xlate_xf(xlate);
 	camera_pdu_transform_wrapper cptw(xlate_xf);
