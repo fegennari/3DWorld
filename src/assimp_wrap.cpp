@@ -363,7 +363,7 @@ class file_reader_assimp {
 			//if (aiGetMaterialIntegerArray(mtl, AI_MATKEY_TWOSIDED,         &two_sided, &max) == AI_SUCCESS) {}
 			// illum? tf?
 		}
-	}  
+	}
 	void process_node_recur(aiNode const *const node, aiScene const *const scene, model_anim_t &model_anim) {
 		assert(node != nullptr);
 		//print_assimp_matrix(node->mTransformation);
@@ -371,13 +371,14 @@ class file_reader_assimp {
 		for (unsigned i = 0; i < node->mNumMeshes; i++) {process_mesh(scene->mMeshes[node->mMeshes[i]], scene, model_anim);}
 		// then do the same for each of its children
 		for (unsigned i = 0; i < node->mNumChildren; i++) {process_node_recur(node->mChildren[i], scene, model_anim);}
-	} 
+	}
 public:
 	file_reader_assimp(model3d &model_, bool load_animations_=0) : model(model_), load_animations(load_animations_) {}
 
 	bool read(string const &fn, geom_xform_t const &xf, bool recalc_normals, bool verbose) {
 		cur_xf = xf;
 		Assimp::Importer importer;
+		importer.SetPropertyBool(AI_CONFIG_IMPORT_FBX_PRESERVE_PIVOTS, false); // required for correct FBX model import
 		// aiProcess_OptimizeMeshes
 		// aiProcess_ValidateDataStructure - for debugging
 		// aiProcess_ImproveCacheLocality - optional, but already supported by the model3d class
