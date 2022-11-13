@@ -576,6 +576,9 @@ template<typename T> inline void global_translate(pointT<T> const &pos) {
 inline void rotate_about(float angle, vector3d const &v) { // Note: angle is in degrees
 	fgRotate(angle, v.x, v.y, v.z);
 }
+inline void rotate_about_radians(float angle, vector3d const &v) { // Note: angle is in degrees
+	fgRotateRadians(angle, v.x, v.y, v.z);
+}
 
 inline void rotate_by_vector(vector3d const &dir, float vadd=0.0) {
 	fgRotate((-TO_DEG*safe_acosf(-dir.z) + vadd), -dir.y, dir.x, 0.0);

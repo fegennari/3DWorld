@@ -2009,13 +2009,14 @@ bool geom_xform_t::operator==(geom_xform_t const &x) const {
 xform_matrix geom_xform_t::create_xform_matrix() const { // mirror - swap - scale - translate
 	glm::mat4 const M_mirror(glm::scale(glm::mat4(1.0), glm::vec3((mirror[0] ? -1.0 : 1.0), (mirror[1] ? -1.0 : 1.0), (mirror[2] ? -1.0 : 1.0))));
 	glm::mat4 M_rotate(1.0); // starts as identity
-
+	
+	// Warning: the behavior of swap_dim is different from the other functions such as xform_pos_rm();
+	// this is intentional, because this function is applied as a pre-transform for animated models rather than for instancing static models,
+	// and the rotation behavior makes more sense in that context since the caller will be responsible for object placement and orientation;
+	// also, the order of i vs. j matters here as it determines the rotation direction
 	for (unsigned i = 0; i < 3; ++i) {
 		for (unsigned j = 0; j < 3; ++j) {
-			if (swap_dim[i][j] && i != j) {
-				//cerr << "Error: Model swap_dim is not supported for create_xform_matrix()" << endl;
-				//assert(0);
-				// TODO: need to mirror here as well
+			if (swap_dim[i][j] && i != j) { // skip identity swap
 				vector3d A, B;
 				A[i] = 1.0;
 				B[j] = 1.0;
@@ -2058,7 +2059,18 @@ void model3d_xform_t::apply_gl() const {
 	assert(scale != 0.0);
 	translate_to(tv);
 	rotation_t::apply_gl();
-	for (unsigned i = 0; i < 3; ++i) {UNROLL_3X(assert(!swap_dim[i][i_]);)} // swap not supported
+	
+	// Note: unused/untested, but has the same rotation semantics as in create_xform_matrix(); maybe we should just call create_xform_matrix() here?
+	for (unsigned i = 0; i < 3; ++i) {
+		for (unsigned j = 0; j < 3; ++j) {
+			if (swap_dim[i][j] && i != j) { // skip identity swap; the order of i vs. j doesn't matter
+				vector3d A, B;
+				A[i] = 1.0;
+				B[j] = 1.0;
+				rotate_about_radians(PI_TWO, cross_product(A, B));
+			}
+		}
+	}
 	vector3d scale_xyz(scale, scale, scale);
 	UNROLL_3X(if (mirror[i_]) {scale_xyz[i_] = -scale_xyz[i_];}) // Note: untested
 	scale_by(scale_xyz);
