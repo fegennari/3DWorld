@@ -434,7 +434,7 @@ protected:
 	vector<tex_work_item_t> to_load;
 public:
 	unsigned create_texture(string const &fn, bool is_alpha_mask, bool verbose,
-		bool invert_alpha=0, bool wrap=1, bool mirror=0, bool force_grayscale=0, bool is_nm=0, bool invert_y=0, bool is_temp_image=0);
+		bool invert_alpha=0, bool wrap=1, bool mirror=0, bool force_grayscale=0, bool is_nm=0, bool invert_y=0, bool no_cache=0, bool load_now=0);
 	bool empty() const {return textures.empty();}
 	void clear();
 	void free_tids();

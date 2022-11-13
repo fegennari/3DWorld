@@ -21,6 +21,9 @@
 
 int const WRITE_TEMP_IMAGE = 1; // 0=no, 1=reuse filename, 2=unique filename
 
+extern vector<texture_t> textures;
+
+
 string fix_path_slashes(string const &filename) {
   string ret(filename);
 #ifdef _WIN32
@@ -160,10 +163,26 @@ class file_reader_assimp {
 			assert(data);
 			
 			if (height > 0) { // texture stored uncompressed, size is {width, height}
-				// TODO: write this; first, I need a test case that has these images
-				if (!had_comp_tex_error) {cerr << "Error: Assimp embedded compressed texture loading is not yet supported" << endl;} // only print once
-				had_comp_tex_error = 1;
-				return -1;
+				// Note: I don't have a test case for this, so it's untested
+				// is_alpha_mask=0, verbose=0, invert_alpha=0, wrap=1, mirror=0, force_grayscale=0
+				unsigned const tid(model.tmgr.create_texture(full_path, 0, 0, 0, 1, 0, 0, is_normal_map));
+				assert(tid < textures.size());
+				texture_t &t(textures[tid]);
+				if (t.is_allocated()) return tid; // duplicate
+				// manually allocate and copy texture data; stored as BGRA, but we want RGBA, so can't directly memcpy() it
+				t.width = width; t.height = height; t.ncolors = 4;
+				t.alloc();
+				unsigned char *tdata(t.get_data());
+				unsigned const num_pixels(t.num_pixels());
+
+				for (unsigned i = 0; i < num_pixels; ++i) {
+					tdata[4*i+0] = data[i].r;
+					tdata[4*i+1] = data[i].g;
+					tdata[4*i+2] = data[i].b;
+					tdata[4*i+3] = data[i].a;
+				}
+				t.init();
+				return tid;
 			}
 			else { // texture stored compressed, width is number of bytes
 				if (WRITE_TEMP_IMAGE) {
@@ -192,8 +211,8 @@ class file_reader_assimp {
 			cerr << "Error: Can't find texture file for assimp model: " << full_path << endl;
 			return -1;
 		}
-		// is_alpha_mask=0, verbose=0, invert_alpha=0, wrap=1, mirror=0, force_grayscale=0, invert_y=0
-		return model.tmgr.create_texture(full_path, 0, 0, 0, 1, 0, 0, is_normal_map, 0, is_temp_image);
+		// is_alpha_mask=0, verbose=0, invert_alpha=0, wrap=1, mirror=0, force_grayscale=0, invert_y=0, no_cache=is_temp_image, load_now=is_temp_image
+		return model.tmgr.create_texture(full_path, 0, 0, 0, 1, 0, 0, is_normal_map, 0, is_temp_image, is_temp_image);
 	}
 
 	aiNodeAnim const *find_node_anim(aiAnimation const *const pAnimation, string const &node_name) {
