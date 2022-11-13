@@ -1332,6 +1332,16 @@ void ped_manager_t::next_animation() {
 	print_text_onscreen(animation_names[animation_id], WHITE, 1.5, 2*TICKS_PER_SECOND, 1);
 }
 
+void enable_animations_for_shader(shader_t &s) {
+	s.add_property("animation_shader", (city_params.use_animated_people ? "model_animation.part+" : "pedestrian_animation.part+"));
+}
+void set_animation_time(shader_t &s, bool enable_animations, float anim_time) {
+	if (enable_animations && !city_params.use_animated_people) {s.add_uniform_float("animation_time", 0.0);} // only for custom animations
+}
+void set_animation_id(shader_t &s, bool enable_animations, int animation_id) {
+	if (enable_animations && !city_params.use_animated_people) {s.add_uniform_int("animation_id", animation_id);} // only for custom animations
+}
+
 void ped_manager_t::draw(vector3d const &xlate, bool use_dlights, bool shadow_only, bool is_dlight_shadows) {
 	if (peds.empty()) return;
 	if (is_dlight_shadows && !city_params.car_shadows) return; // use car_shadows as ped_shadows
@@ -1349,7 +1359,7 @@ void ped_manager_t::draw(vector3d const &xlate, bool use_dlights, bool shadow_on
 	translate_to(xlate);
 	if (enable_animations) {enable_animations_for_shader(dstate.s);}
 	dstate.pre_draw(xlate, use_dlights, shadow_only);
-	if (enable_animations) {dstate.s.add_uniform_int("animation_id", animation_id);}
+	set_animation_id(dstate.s, enable_animations, animation_id);
 	if (!shadow_only) {dstate.s.add_uniform_float("hemi_lighting_normal_scale", 0.0);} // disable hemispherical lighting normal because the transforms make it incorrect
 	bool in_sphere_draw(0);
 
@@ -1442,7 +1452,7 @@ void ped_manager_t::draw_people_in_building(vector<person_t> const &people, ped_
 	pdu.pos -= pdv.xlate; // adjust for local translate
 	bool const enable_animations(enable_building_people_ai());
 	bool in_sphere_draw(0);
-	if (enable_animations) {pdv.s.add_uniform_int("animation_id", animation_id);}
+	set_animation_id(pdv.s, enable_animations, animation_id);
 
 	// Note: no far clip adjustment or draw dist scale
 	for (person_t const &p : people) {
@@ -1455,7 +1465,7 @@ void ped_manager_t::draw_people_in_building(vector<person_t> const &people, ped_
 	} // for p
 	end_sphere_draw(in_sphere_draw);
 	pdv.s.upload_mvm(); // seems to be needed after applying model transforms, not sure why
-	if (enable_animations) {pdv.s.add_uniform_int("animation_id", 0);} // make sure to leave animations disabled so that they don't apply to buildings
+	set_animation_id(pdv.s, enable_animations, 0); // make sure to leave animations disabled so that they don't apply to buildings
 }
 
 bool ped_manager_t::draw_ped(person_base_t const &ped, shader_t &s, pos_dir_up const &pdu, vector3d const &xlate, float def_draw_dist, float draw_dist_sq,
@@ -1468,7 +1478,7 @@ bool ped_manager_t::draw_ped(person_base_t const &ped, shader_t &s, pos_dir_up c
 
 	if (ped_model_loader.num_models() == 0 || !ped_model_loader.is_model_valid(ped.model_id)) {
 		if (!pdu.sphere_visible_test(ped.pos, ped.radius)) return 0; // not visible - skip
-		if (enable_animations) {s.add_uniform_float("animation_time", 0.0);}
+		set_animation_time(s, enable_animations, 0.0);
 		begin_ped_sphere_draw(s, YELLOW, in_sphere_draw, 0);
 		int const ndiv = 16; // currently hard-coded
 		draw_sphere_vbo(ped.pos, ped.radius, ndiv, 0);
@@ -1479,7 +1489,7 @@ bool ped_manager_t::draw_ped(person_base_t const &ped, shader_t &s, pos_dir_up c
 		if (!ped.in_building && dstate.is_occluded(bcube)) return 0; // only check occlusion for expensive ped models, and for peds outside buildings
 		end_sphere_draw(in_sphere_draw);
 		bool const low_detail(!shadow_only && dist_sq > 0.25*draw_dist_sq); // low detail for non-shadow pass at half draw dist
-		if (enable_animations) {s.add_uniform_float("animation_time", ped.anim_time);}
+		set_animation_time(s, enable_animations, ped.anim_time); // not animated
 		vector3d dir_horiz(ped.dir);
 		dir_horiz.z = 0.0; // always face a horizontal direction, even if walking on a slope
 		dir_horiz.normalize();
@@ -1501,7 +1511,7 @@ bool ped_manager_t::draw_ped(person_base_t const &ped, shader_t &s, pos_dir_up c
 			u_bcube.expand_by_xy(radius);
 			u_bcube.z1() -= 0.35*radius;
 			u_bcube.z2() += 0.85*radius;
-			if (enable_animations) {s.add_uniform_float("animation_time", 0.0);} // not animated
+			set_animation_time(s, enable_animations, 0.0); // not animated
 			// the handle direction is always in -x and doesn't rotate with the ped because there's no option to do this transform
 			building_obj_model_loader.draw_model(s, u_bcube.get_cube_center(), u_bcube, plus_z, WHITE, xlate, OBJ_MODEL_UMBRELLA, shadow_only);
 		}
@@ -1528,7 +1538,7 @@ void ped_manager_t::draw_player_model(shader_t &s, vector3d const &xlate, bool s
 	pdu.pos -= xlate; // adjust for local translate
 	unsigned const model_id = 0; // player is always the first model specified/loaded
 	if (city_params.num_peds == 0 && !global_building_params.building_people_enabled()) {ped_model_loader.load_model_id(model_id);} // only need to load this particular model
-	if (enable_animations) {s.add_uniform_int("animation_id", animation_id);}
+	set_animation_id(s, enable_animations, animation_id);
 	float const player_eye_height(CAMERA_RADIUS + camera_zh), player_height(1.1*player_eye_height), player_radius(player_height/PED_HEIGHT_SCALE);
 	point const pos(pre_smap_player_pos + vector3d(0.0, 0.0, (player_radius - player_eye_height)));
 	vector3d const dir_horiz(vector3d(cview_dir.x, cview_dir.y, 0.0).get_norm()); // always face a horizontal direction, even if walking on a slope
@@ -1539,6 +1549,6 @@ void ped_manager_t::draw_player_model(shader_t &s, vector3d const &xlate, bool s
 	if (enable_animations) {s.add_uniform_float("animation_time", player_anim_time);}
 	ped_model_loader.draw_model(s, pos, bcube, dir_horiz, ALPHA0, xlate, model_id, shadow_only, 0, enable_animations);
 	s.upload_mvm(); // not sure if this is needed
-	if (enable_animations) {s.add_uniform_int("animation_id", 0);} // make sure to leave animations disabled so that they don't apply to buildings
+	set_animation_id(s, enable_animations, 0); // make sure to leave animations disabled so that they don't apply to buildings
 }
 

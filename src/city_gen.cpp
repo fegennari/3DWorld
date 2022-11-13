@@ -78,8 +78,6 @@ void city_shader_setup(shader_t &s, cube_t const &lights_bcube, bool use_dlights
 	//if (use_smap) {bind_default_sun_moon_smap_textures();} // bind default sun/moon smap textures
 }
 
-void enable_animations_for_shader(shader_t &s) {s.add_property("animation_shader", "pedestrian_animation.part+");}
-
 void draw_state_t::begin_tile(point const &pos, bool will_emit_now, bool ensure_active) {
 	if (ensure_active) {ensure_shader_active();} // needed for use_smap=0 case
 	emit_now = (use_smap && try_bind_tile_smap_at_point((pos + xlate), s));

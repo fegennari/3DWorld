@@ -45,6 +45,7 @@ void city_params_t::init_kw_maps() {
 	// pedestrians
 	kwmu.add("num_peds", num_peds);
 	kwmb.add("ped_respawn_at_dest", ped_respawn_at_dest);
+	kwmb.add("use_animated_people", use_animated_people);
 	kwmr.add("ped_speed",           ped_speed, FP_CHECK_NONNEG);
 	// parking lots / trees / detail objects
 	kwmu.add("min_park_spaces", min_park_spaces); // with default road parameters, can be up to 28

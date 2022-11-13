@@ -79,7 +79,7 @@ struct city_params_t {
 	// pedestrians
 	unsigned num_peds;
 	float ped_speed;
-	bool ped_respawn_at_dest;
+	bool ped_respawn_at_dest, use_animated_people;
 	// buildings; maybe should be building params, but we have the model loading code here
 	vector<city_model_t> building_models[NUM_OBJ_MODELS]; // multiple model files per type
 	// use for option reading
@@ -93,7 +93,7 @@ struct city_params_t {
 		max_road_slope(1.0), max_track_slope(1.0), residential_probability(0.0), make_4_way_ints(0), add_tlines(2), assign_house_plots(0), new_city_conn_road_alg(0), num_cars(0),
 		car_speed(0.0), traffic_balance_val(0.5), new_city_prob(1.0), max_car_scale(1.0), enable_car_path_finding(0), convert_model_files(0), cars_use_driveways(0),
 		min_park_spaces(12), min_park_rows(1), min_park_density(0.0), max_park_density(1.0), car_shadows(0), max_lights(1024), max_shadow_maps(0), smap_size(0),
-		max_trees_per_plot(0), tree_spacing(1.0), max_benches_per_plot(0), num_peds(0), ped_speed(0.0), ped_respawn_at_dest(0), read_error_flag(0),
+		max_trees_per_plot(0), tree_spacing(1.0), max_benches_per_plot(0), num_peds(0), ped_speed(0.0), ped_respawn_at_dest(0), use_animated_people(0), read_error_flag(0),
 		kwmb(read_error_flag, "city"), kwmu(read_error_flag, "city"), kwmr(read_error_flag, "city") {init_kw_maps();}
 	bool enabled() const {return (num_cities > 0 && city_size_min > 0);}
 	bool roads_enabled() const {return (road_width > 0.0 && road_spacing > 0.0);}
