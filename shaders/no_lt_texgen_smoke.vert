@@ -45,7 +45,7 @@ void main() {
 		vpos     = (inverse(fg_ViewMatrix) * epos).xyz; // world space
 	}
 	else {
-		eye_norm = normalize(mat3(fg_ModelViewMatrix) * fg_Normal); // Note: avoids the fg_NormalMatrix upload; not using animated normal_in
+		eye_norm = normalize(mat3(fg_ModelViewMatrix) * normal_in); // Note: avoids the fg_NormalMatrix upload
 		vpos     = vertex.xyz + world_space_offset;
 		normal   = normalize(normal_in);
 	}
