@@ -2554,6 +2554,13 @@ public:
 		return (!shadow_only && world_mode == WMODE_INF_TERRAIN && shadow_map_enabled());
 	}
 
+	static bool building_grid_visible(vector3d const &xlate, cube_t const &grid_bcube, building_t const *const cur_player_building) {
+		if (camera_pdu.sphere_and_cube_visible_test((grid_bcube.get_cube_center() + xlate), grid_bcube.get_bsphere_radius(), (grid_bcube + xlate))) return 1;
+		// if the player is in the extended basement of a building that goes outside the grid where the grid bcube isn't visible, we can't cull this building
+		if (player_in_basement == 3 && cur_player_building && grid_bcube.contains_cube(cur_player_building->bcube)) return 1; // skip culling
+		return 0; // not visible
+	}
+
 	void add_interior_lights(vector3d const &xlate, cube_t &lights_bcube) { // Note: non const because this caches light bcubes
 		if (!draw_building_interiors || !has_interior_geom) return; // no interior
 		point const camera(get_camera_pos()), camera_xlated(camera - xlate);
@@ -2565,8 +2572,8 @@ public:
 
 		for (auto g = grid_by_tile.begin(); g != grid_by_tile.end(); ++g) { // Note: all grids should be nonempty
 			if (!lights_bcube.intersects_xy(g->bcube)) continue; // not within light volume (too far from camera)
-			if (!camera_pdu.sphere_and_cube_visible_test((g->bcube.get_cube_center() + xlate), g->bcube.get_bsphere_radius(), (g->bcube + xlate))) continue; // VFC
-
+			if (!building_grid_visible(xlate, g->bcube, player_building)) continue; // VFC
+			
 			for (auto bi = g->bc_ixs.begin(); bi != g->bc_ixs.end(); ++bi) {
 				building_t &b(get_building(bi->ix));
 				if (!b.has_room_geom()) continue; // no interior room geom, skip
@@ -2731,7 +2738,7 @@ public:
 						g->has_room_geom = 0;
 					}
 					if (gdist_sq > int_draw_dist_sq) continue; // too far
-					if (!camera_pdu.sphere_and_cube_visible_test((g->bcube.get_cube_center() + xlate), g->bcube.get_bsphere_radius(), (g->bcube + xlate))) continue; // VFC
+					if (!building_grid_visible(xlate, g->bcube, prev_player_building)) continue; // VFC
 					if (is_first_tile) {(*i)->ensure_interior_geom_vbos();} // we need the interior geom at this point
 					(*i)->building_draw_interior.draw_tile(s, (g - (*i)->grid_by_tile.begin()));
 					// iterate over nearby buildings in this tile and draw interior room geom, generating it if needed
