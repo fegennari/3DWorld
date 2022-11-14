@@ -1552,7 +1552,7 @@ void ped_manager_t::draw_player_model(shader_t &s, vector3d const &xlate, bool s
 	cube_t bcube;
 	bcube.set_from_sphere(pos, PED_WIDTH_SCALE*player_radius);
 	bcube.z1() = pos.z - player_radius;
-	bcube.z2() = bcube.z1() + player_height;
+	bcube.z2() = bcube.z1() + player_height*ped_model_loader.get_model(model_id).scale; // respect the model's scale
 	anim_state.set_animation_time(player_anim_time);
 	ped_model_loader.draw_model(s, pos, bcube, dir_horiz, ALPHA0, xlate, model_id, shadow_only, 0, anim_state);
 	s.upload_mvm(); // not sure if this is needed
