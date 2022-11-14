@@ -21,6 +21,7 @@ bool const ENABLE_SPEC_MAPS  = 1;
 bool const ENABLE_INTER_REFLECTIONS = 1;
 bool const SHOW_MODEL_BCUBE_CENTER  = 0;
 bool const ENABLE_ANIMATION_SHADOWS = 1;
+bool const USE_ANIM_MODEL_TANGENTS  = 1;
 unsigned const MAGIC_NUMBER  = 42987143; // arbitrary file signature
 unsigned const BLOCK_SIZE    = 32768; // in vertex indices
 unsigned const BONE_IDS_LOC     = 4;
@@ -543,7 +544,6 @@ template<typename T> void indexed_vntc_vect_t<T>::clear() {
 	clear_blocks();
 	need_normalize = 0;
 }
-
 
 void ensure_valid_tangent(vector4d &tangent) {
 	if ((vector3d)tangent == zero_vector) {tangent.assign(0.0, 0.0, 1.0, tangent.w);}
@@ -1366,21 +1366,30 @@ colorRGBA material_t::get_avg_color(texture_manager const &tmgr, int default_tid
 }
 
 mesh_bone_data_t &material_t::get_bone_data_for_last_added_tri_mesh() {
+	if (USE_ANIM_MODEL_TANGENTS && model_calc_tan_vect && use_bump_map()) {
+		assert(!geom_tan.triangles.empty());
+		return geom_tan.triangles.back().bone_data;
+	}
 	assert(!geom.triangles.empty());
 	return geom.triangles.back().bone_data;
 }
 
-// Note: no quads or tangents; indices are optional; returns the index offset of the first vertex
-unsigned material_t::add_triangles(vector<vert_norm_tc> const &verts, vector<unsigned> const &indices, bool add_new_block) {
-	if (verts.empty()) {assert(indices.empty()); return 0;} // no triangles? error?
-	if (add_new_block || geom.triangles.empty()) {geom.triangles.push_back(indexed_vntc_vect_t<vert_norm_tc>());}
-	auto &dest(geom.triangles.back());
+template<typename T> unsigned geometry_t<T>::add_triangles(vector<vert_norm_tc> const &verts, vector<unsigned> const &indices, bool add_new_block) {
+	if (add_new_block || triangles.empty()) {triangles.push_back(indexed_vntc_vect_t<T>());}
+	auto &dest(triangles.back());
 	if (!dest.empty()) {assert(indices.empty() == dest.indices.empty());} // can't mix indexed with non-indexed triangles
 	unsigned const ixs_off(dest.size());
 	vector_add_to(verts, dest);
 	for (unsigned ix : indices) {dest.indices.push_back(ix + ixs_off);} // adjust indices based on existing vertices
-	mark_as_used();
 	return ixs_off;
+}
+
+// Note: no quads; indices are optional; returns the index offset of the first vertex
+unsigned material_t::add_triangles(vector<vert_norm_tc> const &verts, vector<unsigned> const &indices, bool add_new_block) {
+	if (verts.empty()) {assert(indices.empty()); return 0;} // no triangles? error?
+	mark_as_used();
+	if (USE_ANIM_MODEL_TANGENTS && model_calc_tan_vect && use_bump_map()) {return geom_tan.add_triangles(verts, indices, add_new_block);} // with tangents for normal maps
+	return geom.add_triangles(verts, indices, add_new_block); // without tangents
 }
 
 bool material_t::add_poly(polygon_t const &poly, vntc_map_t vmap[2], vntct_map_t vmap_tan[2], unsigned obj_id) {

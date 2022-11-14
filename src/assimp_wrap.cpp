@@ -323,14 +323,7 @@ class file_reader_assimp {
 		}
 		material_t &mat(model.get_material(mesh->mMaterialIndex, 1)); // alloc_if_needed=1
 		bool const is_new_mat(mat.empty());
-		unsigned const first_vertex_offset(mat.add_triangles(verts, indices, 1)); // add_new_block=1; should return 0
 		
-		if (load_animations && mesh->HasBones()) { // handle bones
-			mesh_bone_data_t &bone_data(mat.get_bone_data_for_last_added_tri_mesh());
-			bone_data.vertex_to_bones.resize(first_vertex_offset + mesh->mNumVertices);
-			parse_mesh_bones(mesh, bone_data, model_anim, first_vertex_offset);
-			for (unsigned i = first_vertex_offset; i < bone_data.vertex_to_bones.size(); ++i) {bone_data.vertex_to_bones[i].normalize();} // normalize weights to 1.0
-		}
 		if (is_new_mat) { // process material if this is the first mesh using it
 			assert(scene->mMaterials != nullptr);
 			aiMaterial const* const material(scene->mMaterials[mesh->mMaterialIndex]);
@@ -362,6 +355,14 @@ class file_reader_assimp {
 			//if (aiGetMaterialIntegerArray(mtl, AI_MATKEY_ENABLE_WIREFRAME, &wireframe, &max) == AI_SUCCESS) {}
 			//if (aiGetMaterialIntegerArray(mtl, AI_MATKEY_TWOSIDED,         &two_sided, &max) == AI_SUCCESS) {}
 			// illum? tf?
+		}
+		unsigned const first_vertex_offset(mat.add_triangles(verts, indices, 1)); // add_new_block=1; should return 0
+
+		if (load_animations && mesh->HasBones()) { // handle bones
+			mesh_bone_data_t &bone_data(mat.get_bone_data_for_last_added_tri_mesh());
+			bone_data.vertex_to_bones.resize(first_vertex_offset + mesh->mNumVertices);
+			parse_mesh_bones(mesh, bone_data, model_anim, first_vertex_offset);
+			for (unsigned i = first_vertex_offset; i < bone_data.vertex_to_bones.size(); ++i) {bone_data.vertex_to_bones[i].normalize();} // normalize weights to 1.0
 		}
 	}
 	void process_node_recur(aiNode const *const node, aiScene const *const scene, model_anim_t &model_anim) {

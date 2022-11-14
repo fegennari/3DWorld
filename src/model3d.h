@@ -402,6 +402,7 @@ template<typename T> struct geometry_t {
 	void render(shader_t &shader, bool is_shadow_pass, point const *const xlate);
 	bool empty() const {return (triangles.empty() && quads.empty());}
 	unsigned get_gpu_mem() const {return (triangles.get_gpu_mem() + quads.get_gpu_mem());}
+	unsigned add_triangles(vector<vert_norm_tc> const &verts, vector<unsigned> const &indices, bool add_new_block);
 	void add_poly_to_polys(polygon_t const &poly, vntc_vect_block_t<T> &v, vertex_map_t<T> &vmap, unsigned obj_id=0) const;
 	void add_poly(polygon_t const &poly, vertex_map_t<T> vmap[2], unsigned obj_id=0);
 	void get_polygons(get_polygon_args_t &args) const;
