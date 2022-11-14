@@ -627,8 +627,10 @@ void model3d::setup_bone_transforms(shader_t &shader, float anim_time, unsigned 
 		assert(0); // or return? or ignore some bones?
 	}
 	assert(num_bones > 0);
-	bool const ret(shader.add_uniform_matrix_4x4("bones", model_anim_data.bone_transforms[0].get_ptr(), 0, num_bones)); // transpose=0
-	assert(ret);
+	
+	if (!shader.add_uniform_matrix_4x4("bones", model_anim_data.bone_transforms[0].get_ptr(), 0, num_bones)) { // transpose=0
+		//assert(0); // too strong, as this can trigger when debugging and when using a shader that was setup before the model was loaded
+	}
 }
 
 template<typename T> void indexed_vntc_vect_t<T>::setup_bones(shader_t &shader, bool is_shadow_pass) {
@@ -2724,6 +2726,10 @@ void model3ds::set_xform_zval_from_tt_height(bool flatten_mesh) {
 
 bool model3ds::has_any_transforms() const {
 	for (const_iterator m = begin(); m != end(); ++m) {if (m->has_any_transforms()) return 1;}
+	return 0;
+}
+bool model3ds::has_any_animations() const {
+	for (const_iterator m = begin(); m != end(); ++m) {if (m->has_animations()) return 1;}
 	return 0;
 }
 

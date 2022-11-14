@@ -101,6 +101,7 @@ void city_model_loader_t::load_model_id(unsigned id) {
 			unsigned const num_materials(max(m.num_materials(), size_t(1))); // max with 1 for unbound material
 			for (unsigned j = 0; j < num_materials; ++j) {model.shadow_mat_ids.push_back(j);} // add them all
 		}
+		city_params.any_model_has_animations |= back().has_animations();
 	} // for sm
 }
 

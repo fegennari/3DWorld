@@ -1333,8 +1333,7 @@ void ped_manager_t::next_animation() {
 }
 
 void enable_animations_for_shader(shader_t &s) {
-	// TODO: can we actually track if any animated models were loaded before setting this?
-	if (city_params.use_animated_people) {s.set_prefix("#define USE_BONE_ANIMATIONS", 0);} // VS
+	if (city_params.use_animated_people && city_params.any_model_has_animations) {s.set_prefix("#define USE_BONE_ANIMATIONS", 0);} // VS
 	s.add_property("animation_shader", "pedestrian_animation.part+"); // this shader part now contains model bone animations as well
 }
 void set_anim_id(shader_t &s, bool enable_animations, int animation_id, bool has_bone_animations=0) {

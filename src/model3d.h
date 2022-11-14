@@ -673,6 +673,7 @@ struct model3ds : public deque<model3d> {
 	void ensure_reflection_cube_maps();
 	void set_xform_zval_from_tt_height(bool flatten_mesh);
 	bool has_any_transforms() const;
+	bool has_any_animations() const;
 	cube_t calc_and_return_bcube(bool only_reflective);
 	void get_all_model_bcubes(vector<cube_t> &bcubes) const;
 	unsigned get_gpu_mem() const;
