@@ -648,10 +648,10 @@ void car_draw_state_t::draw_helicopter(helicopter_t const &h, bool shadow_only) 
 		blade_mat_mask = ~(1 << model.blade_mat_id); // skip prop blades material
 		vector3d dir(h.dir);
 		rotate_vector3d(plus_z, h.blade_rot, dir);
-		helicopter_model_loader.draw_model(s, center, h.bcube, dir, WHITE, xlate, h.model_id, shadow_only, 0, 0, blade_mat_mask); // draw prop blades only
+		helicopter_model_loader.draw_model(s, center, h.bcube, dir, WHITE, xlate, h.model_id, shadow_only, 0, animation_state_t(), blade_mat_mask); // draw prop blades only
 		blade_mat_mask = ~blade_mat_mask;
 	}
-	helicopter_model_loader.draw_model(s, center, h.bcube, h.dir, WHITE, xlate, h.model_id, shadow_only, 0, 0, blade_mat_mask); // low_detail=0, enable_animations=0
+	helicopter_model_loader.draw_model(s, center, h.bcube, h.dir, WHITE, xlate, h.model_id, shadow_only, 0, animation_state_t(), blade_mat_mask); // low_detail=0, enable_animations=0
 }
 
 void car_draw_state_t::add_car_headlights(car_t const &car, cube_t &lights_bcube) {
@@ -1381,7 +1381,8 @@ void car_manager_t::draw_car_in_pspace(car_t &car, shader_t &s, vector3d const &
 	if (car_model_loader.is_model_valid(car.model_id)) { // else error?
 		vector3d dir(zero_vector);
 		dir[car.dim] = (car.dir ? 1.0 : -1.0);
-		car_model_loader.draw_model(s, car.get_center(), car.bcube, dir, car.get_color(), xlate, car.model_id, shadow_only, 0, 0, 0, 0, 1); // force_high_detail=1 (even for shadows)
+		// force_high_detail=1 (even for shadows); not animated
+		car_model_loader.draw_model(s, car.get_center(), car.bcube, dir, car.get_color(), xlate, car.model_id, shadow_only, 0, animation_state_t(), 0, 0, 1);
 	}
 }
 

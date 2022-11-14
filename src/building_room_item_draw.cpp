@@ -1028,8 +1028,8 @@ void apply_room_obj_rotate(room_object_t &obj, obj_model_inst_t &inst) {
 		rotate_verts(mat.quad_verts, plus_z, z_rot_angle, c.get_cube_center(), 0); // rotate all quad verts about Z axis
 	}
 	else if (c.type == TYPE_RAT) { // draw the rat facing away from the player
-		bool const is_dead(c.is_broken()); // upside down if dead
-		building_obj_model_loader.draw_model(s, c.get_cube_center(), c, cview_dir, rat_color, xlate, OBJ_MODEL_RAT, 0, 0, 0, 0, 0, 0, is_dead); // shadow_pass=0
+		bool const is_dead(c.is_broken()); // upside down if dead; shadow_pass=0; not animated
+		building_obj_model_loader.draw_model(s, c.get_cube_center(), c, cview_dir, rat_color, xlate, OBJ_MODEL_RAT, 0, 0, animation_state_t(), 0, 0, 0, is_dead);
 		check_mvm_update();
 		return; // don't need to run the code below
 	}
@@ -1308,7 +1308,7 @@ public:
 				mat.vao_setup(shadow_only);
 				s.set_specular(0.5, 80.0);
 				select_texture(WHITE_TEX);
-				int const animation_id = 8; // custom spider animation
+				int const animation_id = 8; // custom spider animation; not using animation_state_t here
 				s.add_uniform_int("animation_id", animation_id);
 				s.add_uniform_float("animation_scale",    1.0); // not using a model, nominal size is 1.0
 				s.add_uniform_float("model_delta_height", 1.0); // not using a model, nominal size is 1.0
@@ -1536,7 +1536,8 @@ void draw_obj_model(obj_model_inst_t const &i, room_object_t const &obj, shader_
 		s.add_uniform_float("dlight_pcf_offset", 0.5*cur_dlight_pcf_offset);
 	}
 	// Note: lamps are the most common and therefore most expensive models to draw
-	building_obj_model_loader.draw_model(s, obj_center, obj, i.dir, obj.color, xlate, obj.get_model_id(), shadow_only, 0, 0, 0, untextured, 0, 0, is_emissive_body_mat);
+	building_obj_model_loader.draw_model(s, obj_center, obj, i.dir, obj.color, xlate, obj.get_model_id(), shadow_only,
+		0, animation_state_t(), 0, untextured, 0, 0, is_emissive_body_mat);
 	if (!shadow_only && obj.type == TYPE_STOVE) {draw_stove_flames(obj, (camera_pdu.pos - xlate), s);} // draw blue burner flame
 
 	if (use_low_z_bias) { // restore to the defaults
@@ -1699,34 +1700,32 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, building_t c
 				if (check_occlusion && building.check_obj_occluded(*i, camera_bs, oc, reflection_pass)) continue;
 				vector3d dir(i->get_dir());
 				if (is_rotated) {building.do_xy_rotate_normal(dir);}
-				building_obj_model_loader.draw_model(s, obj_center, *i, dir, i->color, xlate, i->get_model_id(), shadow_only, 0, 0);
+				building_obj_model_loader.draw_model(s, obj_center, *i, dir, i->color, xlate, i->get_model_id(), shadow_only, 0); // animations disabled
 				obj_drawn = 1;
 			} // for model_objs
 		}
 		if (!rats.empty()) {
-			if (!shadow_only) {
-				int const animation_id = 7; // custom rat animation
-				s.add_uniform_int("animation_id", animation_id);
-			}
+			bool const enable_animations(!shadow_only); // can't see the animation in the shadow pass
+			animation_state_t anim_state(enable_animations, 7); // rat animation_id=7
+
 			for (rat_t &rat : rats) {
 				cube_t const bcube(rat.get_bcube());
 				if (check_clip_cube && !smap_light_clip_cube.intersects(bcube + xlate)) continue; // shadow map clip cube test: fast and high rejection ratio, do this first
 				if (!camera_pdu.cube_visible(bcube + xlate)) continue; // VFC
 				if (check_occlusion && building.check_obj_occluded(bcube, camera_bs, oc, reflection_pass)) continue;
 				point const pos(bcube.get_cube_center());
-				bool const animate(rat.anim_time > 0.0 && !shadow_only); // can't see the animation in the shadow pass anyway
-				if (!shadow_only) {s.add_uniform_float("animation_time", rat.anim_time);}
+				anim_state.set_animation_time(rat.anim_time);
 				colorRGBA const color(rat_color); // make the rat's fur darker
 				//colorRGBA const color(blend_color(RED, WHITE, rat.fear, 0)); // used for debugging fear
 				//colorRGBA const color(blend_color(RED, WHITE, rat.attacking, 0));
 				cube_t const rat_bcube(rat.get_bcube_with_dir());
-				building_obj_model_loader.draw_model(s, pos, rat_bcube, rat.dir, color, xlate, OBJ_MODEL_RAT, shadow_only, 0, animate, 0, 0, 0, rat.dead); // upside down if dead
+				building_obj_model_loader.draw_model(s, pos, rat_bcube, rat.dir, color, xlate, OBJ_MODEL_RAT, shadow_only, 0, anim_state, 0, 0, 0, rat.dead); // upside down if dead
 
 				if (rat.attacking) { // draw red glowing eyes
 					s.set_color_e(colorRGBA(0.5, 0.0, 0.0, 1.0)); // light emissive red
 					s.set_cur_color(RED);
 					select_texture(WHITE_TEX);
-					s.add_uniform_float("animation_time", 0.0); // clear animations
+					anim_state.clear_animation_id(s); // clear animations
 					point eyes_center(pos + vector3d(0.0, 0.0, 0.09*rat.height) + 0.85*rat.get_hlength()*rat.dir);
 					vector3d const eye_sep_dir(0.21*rat.hwidth*cross_product(rat.dir, plus_z).get_norm());
 
@@ -1737,7 +1736,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, building_t c
 				}
 				obj_drawn = 1;
 			} // for rat
-			if (!shadow_only) {s.add_uniform_int("animation_id", 0);} // reset
+			anim_state.clear_animation_id(s); // clear animations
 			model3d::bind_default_flat_normal_map();
 		} // end rats drawing
 		spider_draw.draw(spiders, s, building, oc, xlate, shadow_only, reflection_pass, check_clip_cube);

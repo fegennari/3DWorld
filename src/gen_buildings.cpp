@@ -42,7 +42,6 @@ extern shader_t reflection_shader;
 void get_all_model_bcubes(vector<cube_t> &bcubes); // from model3d.h
 cube_t get_building_indir_light_bounds(); // from building_lighting.cpp
 void end_register_player_in_building();
-void set_animation_id(shader_t &s, bool enable_animations, int animation_id);
 
 float get_door_open_dist() {return 3.5*CAMERA_RADIUS;}
 
@@ -2699,7 +2698,6 @@ public:
 			bool const enable_animations(global_building_params.enable_people_ai && draw_interior);
 			if (enable_animations) {enable_animations_for_shader(s);}
 			setup_building_draw_shader(s, min_alpha, 1, 0, 0); // enable_indir=1, force_tsl=0, use_texgen=0
-			set_animation_id(s, enable_animations, 0);
 			if (reflection_pass) {draw_player_model(s, xlate, 0);} // shadow_only=0
 			vector<point> points; // reused temporary
 			bbd.clear_obj_models();

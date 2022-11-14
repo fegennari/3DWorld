@@ -8,6 +8,19 @@
 #include "model3d.h"
 
 
+struct animation_state_t {
+	bool enabled;
+	unsigned anim_id, model_anim_id;
+	float anim_time;
+
+	animation_state_t(bool enabled_=0, unsigned anim_id_=0, float anim_time_=0.0, unsigned model_anim_id_=0) :
+		enabled(enabled_), anim_id(anim_id_), model_anim_id(model_anim_id_), anim_time(anim_time_) {}
+	void set_animation_time(float anim_time_) {anim_time = anim_time_;}
+	void set_animation_id_and_time(shader_t &s, bool has_bone_animations=0) const;
+	void clear_animation_id(shader_t &s) const;
+};
+
+
 struct city_model_t {
 
 	string fn;
@@ -49,8 +62,9 @@ public:
 	bool is_model_valid(unsigned id);
 	void load_models();
 	void load_model_id(unsigned id);
-	void draw_model(shader_t &s, vector3d const &pos, cube_t const &obj_bcube, vector3d const &dir, colorRGBA const &color, vector3d const &xlate, unsigned model_id,
-		bool is_shadow_pass, bool low_detail=0, bool enable_animations=0, unsigned skip_mat_mask=0, bool untextured=0, bool force_high_detail=0, bool upside_down=0, bool emissive=0);
+	void draw_model(shader_t &s, vector3d const &pos, cube_t const &obj_bcube, vector3d const &dir, colorRGBA const &color,
+		vector3d const &xlate, unsigned model_id, bool is_shadow_pass, bool low_detail=0, animation_state_t &anim_state=animation_state_t(),
+		unsigned skip_mat_mask=0, bool untextured=0, bool force_high_detail=0, bool upside_down=0, bool emissive=0);
 	static void rotate_model_from_plus_x_to_dir(vector3d const &dir);
 };
 

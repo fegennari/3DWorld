@@ -115,8 +115,9 @@ bool object_model_loader_t::can_skip_model(unsigned id) const {
 	else if (dir.x < 0.0) {fgRotate(180.0, 0.0, 0.0, 1.0);}
 }
 
-void city_model_loader_t::draw_model(shader_t &s, vector3d const &pos, cube_t const &obj_bcube, vector3d const &dir, colorRGBA const &color, vector3d const &xlate,
-	unsigned model_id, bool is_shadow_pass, bool low_detail, bool enable_animations, unsigned skip_mat_mask, bool untextured, bool force_high_detail, bool upside_down, bool emissive)
+void city_model_loader_t::draw_model(shader_t &s, vector3d const &pos, cube_t const &obj_bcube, vector3d const &dir, colorRGBA const &color,
+	vector3d const &xlate, unsigned model_id, bool is_shadow_pass, bool low_detail, animation_state_t &anim_state, unsigned skip_mat_mask,
+	bool untextured, bool force_high_detail, bool upside_down, bool emissive)
 {
 	assert(!(low_detail && force_high_detail));
 	bool const is_valid(is_model_valid(model_id));
@@ -143,10 +144,13 @@ void city_model_loader_t::draw_model(shader_t &s, vector3d const &pos, cube_t co
 	float const height(model_file.swap_xz ? bcube.dx() : (model_file.swap_yz ? bcube.dy() : bcube.dz()));
 	float const z_offset(0.5*height - (pos.z - obj_bcube.z1())/sz_scale); // translate required to map bottom of model to bottom of obj_bcube post transform
 	
-	if (enable_animations) {
-		if (city_params.use_animated_people) {
-			float const anim_time(tfticks/TICKS_PER_SECOND); // TODO: caller should pass this in
-			model.setup_bone_transforms(s, anim_time, 0); // anim_id=0
+	if (anim_state.enabled) {
+		bool const has_bone_animations(city_params.use_animated_people && model.has_animations());
+		anim_state.set_animation_id_and_time(s, has_bone_animations);
+
+		if (has_bone_animations) {
+			float const anim_time(tfticks/TICKS_PER_SECOND); // TODO: use anim_state.anim_time
+			model.setup_bone_transforms(s, anim_time, anim_state.model_anim_id);
 		}
 		else {
 			s.add_uniform_float("animation_scale",    model_file.scale/sz_scale); // Note: determined somewhat experimentally

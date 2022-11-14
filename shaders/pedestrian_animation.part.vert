@@ -3,7 +3,15 @@ const float PI = 3.14159;
 uniform float animation_time     = 0.0;
 uniform float animation_scale    = 1.0;
 uniform float model_delta_height = 0.0;
-uniform int animation_id = 0;
+uniform int animation_id         = 0;
+// 0=none, 1=walk, 2=bunny hop, 3=flip, 4=twirl, 5=march, 6=alien walk, 7=rat, 8=spider, 9=bones animation
+
+#ifdef USE_BONE_ANIMATIONS
+layout(location = 4) in uvec4 bone_ids;
+layout(location = 5) in vec4 bone_weights;
+const int MAX_MODEL_BONES = 200; // must agree with the value used in model3d::setup_bone_transforms()
+uniform mat4 bones[MAX_MODEL_BONES];
+#endif // USE_BONE_ANIMATIONS
 
 mat3 do_rotation(vec3 a, float angle) { // Note: axis does not need to be normalized
 	float s = sin(angle);
@@ -34,6 +42,18 @@ void rotate_about(inout vec3 vertex, inout vec3 normal, in float yval, in vec3 a
 
 // Note: this is no longer just for pedestrians, it now has cases for rats and spiders
 void apply_vertex_animation(inout vec4 vertex, inout vec3 normal, in vec2 tc) {
+
+#ifdef USE_BONE_ANIMATIONS
+	if (animation_id == 9) { // bone animation
+		mat4 bone_transform = bones[bone_ids[0]] * bone_weights[0];
+		bone_transform     += bones[bone_ids[1]] * bone_weights[1];
+		bone_transform     += bones[bone_ids[2]] * bone_weights[2];
+		bone_transform     += bones[bone_ids[3]] * bone_weights[3];
+		vertex  = bone_transform * vertex;
+		normal *= inverse(transpose(mat3(bone_transform)));
+		return;
+	}
+#endif // USE_BONE_ANIMATIONS
 	if (animation_id == 0 || animation_time == 0.0) return; // animation disabled
 	float anim_scale = 0.01*animation_scale;
 	float anim_val   = 150.0*animation_time;
