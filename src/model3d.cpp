@@ -2129,7 +2129,7 @@ void model3d::render(shader_t &shader, bool is_shadow_pass, int reflection_pass,
 {
 	assert(trans_op_mask > 0 && trans_op_mask <= 3); // 1 bit = draw opaque, 2 bit = draw transparent
 	if (!needs_trans_pass && !(trans_op_mask & 1)) return; // transparent only pass, but no transparent materials
-	if (is_shadow_pass && num_animations() > 0 && !ENABLE_ANIMATION_SHADOWS) return; // if animated, and no shadow animations, then don't draw the shadow map at all
+	if (is_shadow_pass && has_animations() && !ENABLE_ANIMATION_SHADOWS) return; // if animated, and no shadow animations, then don't draw the shadow map at all
 	if (transforms.empty() && !is_cube_visible_to_camera(bcube+xlate, is_shadow_pass, num_animations())) return;
 	
 	if (enable_tt_model_indir && world_mode == WMODE_INF_TERRAIN && !is_shadow_pass) {
@@ -2164,7 +2164,7 @@ void model3d::render(shader_t &shader, bool is_shadow_pass, int reflection_pass,
 #endif
 		}
 	}
-	if (num_animations() > 0) {
+	if (has_animations()) {
 		static float cur_tfticks(0.0);
 		if (animate2) {cur_tfticks = tfticks;}
 		setup_bone_transforms(shader, cur_tfticks/TICKS_PER_SECOND, 0); // anim_id=0
@@ -2628,7 +2628,7 @@ void model3ds::render(bool is_shadow_pass, int reflection_pass, int trans_op_mas
 		needs_trans_pass |= m->get_needs_trans_pass();
 		use_spec_map     |= (enable_spec_map() && m->uses_spec_map());
 		use_gloss_map    |= (enable_spec_map() && m->uses_gloss_map());
-		if (allow_animations) {num_models_with_animations += (m->num_animations() > 0);}
+		if (allow_animations) {num_models_with_animations += m->has_animations();}
 		if      (enable_planar_reflections   && m->is_planar_reflective  ()) {any_planar_reflective   = 1;}
 		else if (enable_cube_map_reflections && m->is_cube_map_reflective()) {any_cube_map_reflective = 1;}
 		else                                                                 {any_non_reflective      = 1;}
@@ -2651,7 +2651,7 @@ void model3ds::render(bool is_shadow_pass, int reflection_pass, int trans_op_mas
 		glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE); // Disable color rendering, we only want to write to the Z-Buffer
 		
 		for (iterator m = begin(); m != end(); ++m) {
-			if (m->num_animations() > 0) continue; // not supported in z-prepass
+			if (m->has_animations()) continue; // not supported in z-prepass
 			m->render(s, 0, 0, 1, 0, 3, 0, trans_op_mask, xlate);
 		}
 		glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
@@ -2698,7 +2698,7 @@ void model3ds::render(bool is_shadow_pass, int reflection_pass, int trans_op_mas
 					}
 					for (iterator m = begin(); m != end(); ++m) { // non-const
 						if (any_non_reflective && (reflect_mode != 0) && (ref_pass != 0) != m->is_reflective()) continue; // wrong reflection pass for this object
-						if (allow_animations && (m->num_animations() > 0) != anim_pass) continue; // wrong animation pass
+						if (allow_animations && m->has_animations() != (anim_pass != 0)) continue; // wrong animation pass
 						m->render(s, is_shadow_pass, reflection_pass, 0, (sam_pass == 1), (shader_effects ? (1 << bmap_pass) : 3), cur_reflect_mode, trans_op_mask, xlate);
 					}
 					if (reset_bscale) {s.add_uniform_float("bump_b_scale", -1.0);} // may be unnecessary
