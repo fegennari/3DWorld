@@ -21,8 +21,6 @@
 
 int const WRITE_TEMP_IMAGE = 1; // 0=no, 1=reuse filename, 2=unique filename
 
-extern vector<texture_t> textures;
-
 
 string fix_path_slashes(string const &filename) {
   string ret(filename);
@@ -143,7 +141,7 @@ class file_reader_assimp {
 	model3d &model;
 	geom_xform_t cur_xf;
 	string model_dir;
-	bool load_animations=0, had_vertex_error=0, had_tex_error=0, had_comp_tex_error=0;
+	bool load_animations=0, had_vertex_error=0, had_comp_tex_error=0;
 	unsigned temp_image_ix=0;
 
 	int load_texture(aiScene const *const scene, aiMaterial const* const mat, aiTextureType const type, bool is_normal_map=0) {
@@ -161,14 +159,15 @@ class file_reader_assimp {
 			unsigned const width(texture->mWidth), height(texture->mHeight);
 			aiTexel const *const data(texture->pcData);
 			assert(data);
-			
+			// try to read from memory
+			// is_alpha_mask=0, verbose=0, invert_alpha=0, wrap=1, mirror=0, force_grayscale=0
+			unsigned const tid(model.tmgr.create_texture(full_path, 0, 0, 0, 1, 0, 0, is_normal_map, 1));
+			texture_t &t(model.tmgr.get_texture(tid));
+			//cout << TXT(width) << TXT(height) << TXT(tid) << TXT(t.is_allocated()) << endl;
+			if (t.is_allocated()) return tid; // duplicate
+
 			if (height > 0) { // texture stored uncompressed, size is {width, height}
-				// Note: I don't have a test case for this, so it's untested
-				// is_alpha_mask=0, verbose=0, invert_alpha=0, wrap=1, mirror=0, force_grayscale=0
-				unsigned const tid(model.tmgr.create_texture(full_path, 0, 0, 0, 1, 0, 0, is_normal_map));
-				assert(tid < textures.size());
-				texture_t &t(textures[tid]);
-				if (t.is_allocated()) return tid; // duplicate
+				// Note: I don't have a test case for this, so it's untested; maybe we need to invert Y?
 				// manually allocate and copy texture data; stored as BGRA, but we want RGBA, so can't directly memcpy() it
 				t.width = width; t.height = height; t.ncolors = 4;
 				t.alloc();
@@ -182,29 +181,32 @@ class file_reader_assimp {
 					tdata[4*i+3] = data[i].a;
 				}
 				t.init();
-				return tid;
+				return tid; // done
 			}
-			else { // texture stored compressed, width is number of bytes
-				if (WRITE_TEMP_IMAGE) {
-					// most of the image readers don't support reading from memory, so as a hack we can write to a temp file and read that
-					if (WRITE_TEMP_IMAGE == 2) { // per-image unique filename
-						ostringstream oss;
-						oss << "temp_assimp_embedded_image_" << temp_image_ix++ << "." << get_file_extension(filename);
-						full_path = oss.str();
-					}
-					else { // reuse filename
-						full_path = "temp_assimp_embedded_image." + get_file_extension(filename);
-					}
-					//cout << "writing temp image " << full_path << endl;
-					ofstream out(full_path, ios::binary);
-					out.write((const char *)data, width);
-					is_temp_image = 1;
+			// else texture stored compressed
+			if (t.load_stb_image(tid, 1, 0, (unsigned char const *)data, width)) { // width is number of bytes
+				t.do_invert_y();
+				t.init();
+				return tid; // done
+			}
+			model.tmgr.remove_last_texture(); // not using this texture
+
+			if (WRITE_TEMP_IMAGE) { // write as a temporary image file that we can read back in
+				if (WRITE_TEMP_IMAGE == 2) { // per-image unique filename
+					ostringstream oss;
+					oss << "temp_assimp_embedded_image_" << temp_image_ix++ << "." << get_file_extension(filename);
+					full_path = oss.str();
 				}
-				else {
-					if (!had_tex_error) {cerr << "Error: Assimp embedded texture loading is not yet supported" << endl;} // only print once
-					had_tex_error = 1;
-					return -1;
+				else { // reuse filename
+					full_path = "temp_assimp_embedded_image." + get_file_extension(filename);
 				}
+				ofstream out(full_path, ios::binary);
+				out.write((const char *)data, width);
+				is_temp_image = 1;
+			}
+			else { // failed to load
+				cerr << "Error: Assimp embedded texture loading failed; skipping texture '" << filename << "'" << endl;
+				return -1;
 			}
 		}
 		else if (!check_texture_file_exists(full_path)) {

@@ -441,6 +441,7 @@ public:
 	void free_tids();
 	void free_textures();
 	void free_client_mem();
+	void remove_last_texture();
 	bool ensure_texture_loaded(int tid, bool is_bump);
 	void bind_alpha_channel_to_texture(int tid, int alpha_tid);
 	bool ensure_tid_loaded(int tid, bool is_bump) {return ((tid >= 0) ? ensure_texture_loaded(tid, is_bump) : 0);}

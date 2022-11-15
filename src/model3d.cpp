@@ -100,6 +100,12 @@ void texture_manager::free_client_mem() { // Note: should not be called if model
 	for (auto &t : textures) {t.free_client_mem();}
 }
 
+void texture_manager::remove_last_texture() {
+	assert(!textures.empty());
+	tex_map.erase(textures.back().name);
+	textures.pop_back();
+}
+
 bool texture_manager::ensure_texture_loaded(int tid, bool is_bump) {
 
 	texture_t &t(get_texture(tid));

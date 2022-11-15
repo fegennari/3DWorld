@@ -8,8 +8,11 @@
 
 using namespace std;
 
+// requires ENABLE_STB_IMAGE; no support for 16-bit PNG heightmaps, TIFF, or DDS (will default to other readers in those cases)
+bool const USE_STB_IMAGE_LOAD = 0;
+
 // Note: stb_image generally works as a replacement for ligpng/ligjpeg/libtiff, but it doesn't support 16-bit formats, so it can't fully replace libpng; similar runtime
-//#define ENABLE_STB_IMAGE
+#define ENABLE_STB_IMAGE
 #ifdef ENABLE_STB_IMAGE
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
@@ -133,7 +136,7 @@ void texture_t::load(int index, bool allow_diff_width_height, bool allow_two_byt
 		//highres_timer_t timer("Load " + get_file_extension(name, 0, 1)); // 0.1s bmp, 6.3s jpeg, 4.4s png, 0.3s tga, 0.2s tiff
 
 		// attempt to load image with STB if it's enabled; applies to BMP, TGA, JPEG, and PNG; 2-byte grayscale images are not supported
-		if ((format == 1 || format == 4 || format == 5 || format == 6) && !allow_two_byte_grayscale && load_stb_image(index, allow_diff_width_height, 0)) {
+		if (USE_STB_IMAGE_LOAD && (format == 1 || format == 4 || format == 5 || format == 6) && !allow_two_byte_grayscale && load_stb_image(index, allow_diff_width_height, 0)) {
 			need_to_invert_y ^= 1; // loaded with STB; must invert Y because stb loads differently
 		}
 		else {
@@ -798,17 +801,23 @@ void texture_t::load_ppm(int index, bool allow_diff_width_height) {
 	}
 }
 
-bool texture_t::load_stb_image(int index, bool allow_diff_width_height, bool allow_two_byte_grayscale) {
+bool texture_t::load_stb_image(int index, bool allow_diff_width_height, bool allow_two_byte_grayscale, unsigned char const *const load_from_data, unsigned load_from_size) {
 
 #ifdef ENABLE_STB_IMAGE
 	assert(!allow_two_byte_grayscale); // not supported
 	int w(0), h(0), nc(0);
-	string filename(append_texture_dir(name)); // first, try looking in the texture directory
-	FILE *fp(fopen(filename.c_str(), "rb")); // see if we can open the file
-	if (fp == nullptr) {filename = name;} // if not in the texture directory, look in the current directory
-	else {checked_fclose(fp);}
-	unsigned char *const file_data(stbi_load(filename.c_str(), &w, &h, &nc, 0));
+	unsigned char *file_data(nullptr);
 
+	if (load_from_data != nullptr) { // load from memory
+		file_data = stbi_load_from_memory(load_from_data, load_from_size, &w, &h, &nc, 0);
+	}
+	else { // load from file on disk
+		string filename(append_texture_dir(name)); // first, try looking in the texture directory
+		FILE *const fp(fopen(filename.c_str(), "rb")); // see if we can open the file
+		if (fp == nullptr) {filename = name;} // if not in the texture directory, look in the current directory
+		else {checked_fclose(fp);}
+		file_data = stbi_load(filename.c_str(), &w, &h, &nc, 0);
+	}
 	if (file_data == nullptr) { // still not found, or there was an error
 		cerr << "Error: stbi_load() returned error: \"" << stbi_failure_reason() << "\" for file " << name << endl;
 		return 0; // default to some other image reader
