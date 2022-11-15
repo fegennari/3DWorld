@@ -9,6 +9,8 @@
 #include "shadow_map.h" // for smap_data_t and rotation_t
 #include "gl_ext_arb.h"
 
+#include <unordered_map>
+
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/quaternion.hpp>
 
@@ -217,7 +219,7 @@ struct mesh_bone_data_t {
 };
 
 class model_anim_t {
-	map<string, unsigned> bone_name_to_index_map;
+	unordered_map<string, unsigned> bone_name_to_index_map;
 public:
 	vector<xform_matrix> bone_transforms, bone_offset_matrices;
 	xform_matrix global_inverse_transform, root_transform;
@@ -249,7 +251,7 @@ public:
 	};
 	struct animation_t {
 		float ticks_per_sec=25.0, duration=1.0;
-		map<string, anim_data_t> anim_data; // per bone
+		unordered_map<string, anim_data_t> anim_data; // per bone
 	};
 	vector<animation_t> animations;
 
