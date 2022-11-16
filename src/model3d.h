@@ -218,17 +218,17 @@ struct mesh_bone_data_t {
 	vector<vertex_bone_data_t> vertex_to_bones;
 };
 
-class model_anim_t {
+struct model_anim_t {
 	unordered_map<string, unsigned> bone_name_to_index_map;
-public:
 	vector<xform_matrix> bone_transforms, bone_offset_matrices;
 	xform_matrix global_inverse_transform, root_transform;
 
 	struct anim_node_t {
+		int bone_index; // cached to avoid bone_name_to_index_map lookup; -1 is no bone
 		string name;
 		xform_matrix transform;
 		vector<unsigned> children; // indexes into anim_nodes
-		anim_node_t(string const &name_, xform_matrix const &transform_) : name(name_), transform(transform_) {}
+		anim_node_t(string const &name_, xform_matrix const &transform_, unsigned bone_index_) : bone_index(bone_index_), name(name_), transform(transform_) {}
 	};
 	vector<anim_node_t> anim_nodes;
 
@@ -256,7 +256,6 @@ public:
 	vector<animation_t> animations;
 
 	unsigned get_bone_id(string const &bone_name);
-	bool update_bone_transform(string const &node_name, xform_matrix const &global_transform);
 	vector3d  calc_interpolated_position(float anim_time, anim_data_t const &A) const;
 	glm::quat calc_interpolated_rotation(float anim_time, anim_data_t const &A) const;
 	vector3d  calc_interpolated_scale   (float anim_time, anim_data_t const &A) const;

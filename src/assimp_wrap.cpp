@@ -62,14 +62,6 @@ unsigned model_anim_t::get_bone_id(string const &bone_name) {
 	bone_name_to_index_map[bone_name] = bone_id;
 	return bone_id;
 }
-bool model_anim_t::update_bone_transform(string const &node_name, xform_matrix const &global_transform) {
-	auto it(bone_name_to_index_map.find(node_name));
-	if (it == bone_name_to_index_map.end()) return 0; // not found
-	unsigned const bone_index(it->second);
-	assert(bone_index < bone_transforms.size() && bone_index < bone_offset_matrices.size());
-	bone_transforms[bone_index] = global_inverse_transform * global_transform * bone_offset_matrices[bone_index];
-	return 1;
-}
 vector3d model_anim_t::calc_interpolated_position(float anim_time, anim_data_t const &A) const {
 	assert(!A.pos.empty());
 	if (A.pos.size() == 1) {return A.pos[0].v;} // single value, no interpolation
@@ -118,15 +110,19 @@ void model_anim_t::transform_node_hierarchy_recur(float anim_time, animation_t c
 	xform_matrix node_transform(node.transform); // defaults to node transform; may be overwritten below
 	auto it(animation.anim_data.find(node.name));
 
-	if (it != animation.anim_data.end()) { // found
+	if (it != animation.anim_data.end()) { // found (about half the time)
 		anim_data_t const &A(it->second);
 		glm::mat4 const translation(glm::translate(glm::mat4(1.0), vec3_from_vector3d(calc_interpolated_position(anim_time, A))));
 		glm::mat4 const rotation(glm::toMat4(calc_interpolated_rotation(anim_time, A)));
-		glm::mat4 const scaling(glm::scale(glm::mat4(1.0), vec3_from_vector3d(calc_interpolated_scale(anim_time, A))));
+		glm::mat4 const scaling(glm::scale(glm::mat4(1.0), vec3_from_vector3d(calc_interpolated_scale(anim_time, A)))); // often (1,1,1), but doesn't help much to special case it
 		node_transform = translation * rotation * scaling;
 	}
 	xform_matrix const global_transform(parent_transform * node_transform);
-	update_bone_transform(node.name, global_transform);
+
+	if (node.bone_index >= 0) {
+		assert((size_t)node.bone_index < bone_transforms.size() && (size_t)node.bone_index < bone_offset_matrices.size());
+		bone_transforms[node.bone_index] = global_inverse_transform * global_transform * bone_offset_matrices[node.bone_index];
+	}
 	for (unsigned i : node.children) {transform_node_hierarchy_recur(anim_time, animation, i, global_transform);}
 }
 void model_anim_t::get_bone_transforms(unsigned anim_id, float cur_time) {
@@ -227,7 +223,10 @@ class file_reader_assimp {
 	unsigned extract_animation_data_recur(aiScene const *const scene, aiNode const *const node, model_anim_t &model_anim) {
 		string const node_name(node->mName.data);
 		unsigned const node_ix(model_anim.anim_nodes.size());
-		model_anim.anim_nodes.emplace_back(node_name, aiMatrix4x4_to_xform_matrix(node->mTransformation));
+		int bone_index(-1); // starts unset
+		auto it(model_anim.bone_name_to_index_map.find(node_name));
+		if (it != model_anim.bone_name_to_index_map.end()) {bone_index = it->second;} // found
+		model_anim.anim_nodes.emplace_back(node_name, aiMatrix4x4_to_xform_matrix(node->mTransformation), bone_index);
 
 		for (unsigned a = 0; a < scene->mNumAnimations; ++a) {
 			aiAnimation const *const animation(scene->mAnimations[a]);

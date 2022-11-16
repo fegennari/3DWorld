@@ -13,6 +13,7 @@
 #include <fstream>
 #include <queue>
 #include "meshoptimizer.h"
+#include "profiler.h"
 
 #include <glm/gtc/matrix_transform.hpp>
 
@@ -624,6 +625,7 @@ void vertex_bone_data_t::normalize() { // make sure all weights sum to 1.0
 
 void model3d::setup_bone_transforms(shader_t &shader, float anim_time, unsigned anim_id) {
 	if (num_animations() == 0) return;
+	//highres_timer_t timer("Setup Bone Transforms"); // 0.0225ms
 	unsigned const MAX_MODEL_BONES = 200; // must agree with shader code
 	model_anim_data.get_bone_transforms(anim_id, anim_time);
 	unsigned const num_bones(model_anim_data.bone_transforms.size());
