@@ -17,6 +17,7 @@ unsigned const MAX_DECALS      = 5000;
 
 
 // Global Variables
+bool has_decals(0);
 vector<star> stars;
 obj_vector_t<bubble> bubbles(MAX_BUBBLES);
 obj_vector_t<particle_cloud> part_clouds(MAX_PART_CLOUDS);
@@ -293,6 +294,7 @@ void gen_decal(point const &pos, float radius, vector3d const &orient, int tid, 
 	decal_obj decal;
 	decal.gen(pos, radius, rot_angle, orient, lifetime, tid, cid, color, is_glass, tr);
 	if (decal.is_on_cobj(cid)) {last_element = decals.choose_element(); decals[last_element] = decal; last_pos = pos;}
+	has_decals = 1;
 }
 
 

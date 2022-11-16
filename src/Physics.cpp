@@ -37,7 +37,7 @@ vector3d wind(0.4, 0.2, 0.0), total_wind(0.0, 0.0, 0.0);
 point flow_source(0.0, 0.0, -2.0);
 obj_type object_types[NUM_TOT_OBJS];
 
-extern bool begin_motion, disable_fire_delay;
+extern bool begin_motion, disable_fire_delay, has_decals;
 extern int num_groups, display_mode, frame_counter, camera_coll_id, precip_mode, is_cloudy;
 extern int s_ball_id, world_mode, has_accumulation, has_snow_accum, iticks, auto_time_adv, DISABLE_WATER, enable_fsource, animate2;
 extern float max_water_height, zmin, zmax, ztop, zbottom, zmax_est, base_gravity, tstep, fticks, water_plane_z;
@@ -1666,9 +1666,12 @@ void advance_physics_objects() {
 
 	if (world_mode == WMODE_GROUND) { // these don't apply to tiled terrain mode
 		apply_obj_physics(bubbles);
-		apply_obj_physics(decals);
+		if (has_decals) {apply_obj_physics(decals);}
 		water_part_man.apply_physics();
-		for (unsigned i = 0; i < decals.size(); ++i) {decals[i].check_cobj();}
+
+		if (has_decals) {
+			for (unsigned i = 0; i < decals.size(); ++i) {decals[i].check_cobj();}
+		}
 	}
 }
 
