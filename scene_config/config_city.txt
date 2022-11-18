@@ -141,6 +141,8 @@ city ped_model ../models/people/Patrick/Patrick.model3d   1 0 0  0 -1 90  1 1.0 
 city ped_model ../models/people/RUST/RUST_3d_Low1.model3d 1 0 0  0 -1 90  1 1.0  1.0  0 # all one material
 # MakeHuman models
 city ped_model ../models/people/makehuman/Katie/Katie.model3d 1 0 0  0 -1 90  1 0.7 1.0  0 3
+# Animated models loaded by Assimp
+city ped_model ../models/people/remy_walking.fbx 0 0 0  0 -1 90  1 1.0  1.0
 
 # filename recalc_normals two_sided centered body_material_id fixed_color_id xy_rot swap_xyz scale lod_mult [shadow_mat_ids]
 city toilet_model ../models/interiors/toilet/toilet.model3d     1 0 0  -1 -1 0  1 1.0 1.0  0
