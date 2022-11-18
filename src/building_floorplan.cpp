@@ -1142,6 +1142,8 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 						}
 					} // for dim
 					bool const against_wall(stairs_against_wall[0] || stairs_against_wall[1]);
+					// skip if we can't push against a wall and the room is too narrow for space around the stairs to allow doors to open and people to walk
+					if (!against_wall && room.get_sz_dim(!stairs_dim) < (1.1*2.0*doorway_width + stairs_sz)) continue;
 					if (!is_house && against_wall) {sshape = SHAPE_WALLED_SIDES;} // add wall between room and office stairs if against a room wall
 					if (interior->landings.empty()) {interior->landings.reserve(num_floors-1);}
 					assert(cutout.is_strictly_normalized());
