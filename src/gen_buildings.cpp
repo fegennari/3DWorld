@@ -2497,7 +2497,8 @@ public:
 
 				// draw interior for the building containing the light
 				for (auto g = (*i)->grid_by_tile.begin(); g != (*i)->grid_by_tile.end(); ++g) {
-					if (!g->bcube.contains_pt_xy(lpos)) continue; // wrong tile; don't check zval because ext basement may be lower
+					if (player_in_basement == 3 && player_building && g->bcube.contains_cube_xy(player_building->bcube)) {} // skip culling
+					else if (!g->bcube.contains_pt(lpos)) continue; // wrong tile
 					
 					for (auto bi = g->bc_ixs.begin(); bi != g->bc_ixs.end(); ++bi) {
 						building_t &b((*i)->get_building(bi->ix));
@@ -2557,7 +2558,7 @@ public:
 	static bool building_grid_visible(vector3d const &xlate, cube_t const &grid_bcube, building_t const *const cur_player_building) {
 		if (camera_pdu.sphere_and_cube_visible_test((grid_bcube.get_cube_center() + xlate), grid_bcube.get_bsphere_radius(), (grid_bcube + xlate))) return 1;
 		// if the player is in the extended basement of a building that goes outside the grid where the grid bcube isn't visible, we can't cull this building
-		if (player_in_basement == 3 && cur_player_building && grid_bcube.contains_cube(cur_player_building->bcube)) return 1; // skip culling
+		if (player_in_basement == 3 && cur_player_building && grid_bcube.contains_cube_xy(cur_player_building->bcube)) return 1; // skip culling
 		return 0; // not visible
 	}
 
