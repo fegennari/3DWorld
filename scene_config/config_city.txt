@@ -138,7 +138,7 @@ city use_animated_people 1 # requires loading rigged/animated models of people
 # ped_model: filename recalc_normals two_sided centered body_material_id fixed_color_id xy_rot swap_xyz scale lod_mult [shadow_mat_ids]
 city ped_model ../models/people/muro/muro.model3d         1 0 0  0 -1 90  1 1.0  1.0  0 1 # 0=body, 1=head; head can be omitted for faster shadows
 city ped_model ../models/people/Patrick/Patrick.model3d   1 0 0  0 -1 90  1 1.0  1.0  0
-city ped_model ../models/people/RUST/RUST_3d_Low1.model3d 1 0 0  0 -1 90  1 0.8  1.0  0 # all one material
+city ped_model ../models/people/RUST/RUST_3d_Low1.model3d 1 0 0  0 -1 90  1 1.0  1.0  0 # all one material
 # MakeHuman models
 city ped_model ../models/people/makehuman/Katie/Katie.model3d 1 0 0  0 -1 90  1 0.7 1.0  0 3
 
