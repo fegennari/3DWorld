@@ -146,7 +146,8 @@ void city_model_loader_t::draw_model(shader_t &s, vector3d const &pos, cube_t co
 	float const z_offset(0.5*height - (pos.z - obj_bcube.z1())/sz_scale); // translate required to map bottom of model to bottom of obj_bcube post transform
 	
 	if (anim_state.enabled) {
-		bool const has_bone_animations(city_params.use_animated_people && model.has_animations());
+		// skip expensive animations if low detail; may cause the model to T-pose, but it should be far enough that the user can't tell
+		bool const has_bone_animations(city_params.use_animated_people && model.has_animations() && !low_detail);
 		anim_state.set_animation_id_and_time(s, has_bone_animations);
 
 		if (has_bone_animations) {
