@@ -292,12 +292,17 @@ void building_t::add_attic_objects(rand_gen_t rgen) {
 				vent.z2() = furnace.z1() - get_fc_thickness(); // ceiling of the room below
 				vent.z1() = vent.z2() - 0.1*get_wall_thickness();
 				bool place_ok(1);
+				auto use_this_slot(objs.end());
 
 				// vent should be guaranteed to fit inside the room, but may intersect the light; skip it in this case
 				for (auto i = objs.begin(); i != objs.end(); ++i) {
 					if (i->type == TYPE_LIGHT && i->intersects(vent)) {place_ok = 0; break;}
+					if (i->type == TYPE_VENT  && i->intersects(vent)) {use_this_slot = i;} // intersects another room vent
 				}
-				if (place_ok) {objs.emplace_back(vent, TYPE_VENT, furnace_room, dim, 0, (RO_FLAG_NOCOLL | RO_FLAG_HANGING), 1.0);} // dir=0/horizontal; fully lit
+				if (place_ok) {
+					if (use_this_slot != objs.end()) {use_this_slot->copy_from(vent); use_this_slot->dim = dim;} // replace ceiling vent with air return vent
+					else {objs.emplace_back(vent, TYPE_VENT, furnace_room, dim, 0, (RO_FLAG_NOCOLL | RO_FLAG_HANGING), 1.0);} // dir=0/horizontal; fully lit
+				}
 			}
 			has_furnace = 1;
 			break; // success/done
