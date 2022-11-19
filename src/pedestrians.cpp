@@ -435,7 +435,7 @@ unsigned path_finder_t::run(point const &pos_, point const &dest_, cube_t const 
 	else { // if there are any other cubes containing pos, move away from this cube; could be initial ped positions, ped pushed by a collision, or some other problem
 		for (auto i = avoid.begin(); i != avoid.end(); ++i) {
 			if (!i->contains_pt_xy(pos)) continue;
-			int const building_id(get_building_bcube_contains_pos(pos));
+			int const building_id(get_building_bcube_contains_pos(pos)); // check if this avoid cube is a building; does it make sense to cache this across iterations?
 			point new_pos;
 			float dmin(0.0);
 
