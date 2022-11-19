@@ -1681,7 +1681,7 @@ void city_obj_placer_t::place_residential_plot_objects(road_plot_t const &plot, 
 				break; // done
 			}
 			if (pref_side == 2) continue; // no subplot found? error, or just skip the mailbox?
-			pos[dim] = dw->d[dim][dir] - (dir ? 1.0 : -1.0)*1.25*mbox_height; // at end of driveway at the road, but far enough back to leave space for peds
+			pos[dim] = dw->d[dim][dir] - (dir ? 1.0 : -1.0)*1.5*mbox_height; // at end of driveway at the road, but far enough back to leave space for peds
 
 			for (unsigned n = 0; n < 2; ++n) {
 				unsigned const side(pref_side ^ n);
