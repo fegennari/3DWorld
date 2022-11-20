@@ -895,7 +895,8 @@ void ped_manager_t::assign_ped_model(person_base_t &ped) { // Note: non-const, m
 	ped.model_id  = rgen.rand()%num_models;
 	float const scale(ped_model_loader.get_model(ped.model_id).scale);
 	ped.radius   *= scale;
-	ped.is_female = (scale <= 0.75); // somewhat of a hack, but works with current set of models because Katie kid model is the only female with a scale of 0.7
+	// somewhat of a hack, but works with current set of models because Katie kid model is the only female with a scale of 0.7, men have a scale of 1.0, and women have a scale of 0.9
+	ped.is_female = (scale <= 0.95);
 	assert(ped.radius > 0.0); // no zero/negative model scales
 }
 
