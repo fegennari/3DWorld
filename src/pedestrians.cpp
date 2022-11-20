@@ -553,6 +553,7 @@ void pedestrian_t::get_avoid_cubes(ped_manager_t const &ped_mgr, vect_cube_t con
 	road_plot_t const &cur_plot(ped_mgr.get_city_plot_for_peds(city, plot));
 	bool const is_home_plot(plot == dest_plot); // plot contains our destination
 	if (is_home_plot) {assert(plot_bcube == next_plot_bcube);}
+	bool keep_cur_dest(0);
 
 	if (cur_plot.is_residential && !cur_plot.is_park) { // apply special restrictions when walking through a residential block
 		cube_t const avoid_area(get_avoid_area_for_plot(plot_bcube, radius));
@@ -571,10 +572,15 @@ void pedestrian_t::get_avoid_cubes(ped_manager_t const &ped_mgr, vect_cube_t con
 				approach_area.expand_by_xy(radius); // add a small fudge factor
 				bool use_proxy_pt(0);
 
-				if (!approach_area.contains_pt(pos)) { // not in approach area - walk around the plot
-					use_proxy_pt = 1;
-					if (avoid_area.contains_pt_xy(pos)) {} // we're already in the avoid area, get out of it/don't avoid this plot
-					else {avoid_entire_plot = 1;}
+				if (!approach_area.contains_pt(pos)) { // not in approach area
+					if (avoid_area.contains_pt_xy(pos)) { // we're already in the avoid area, get out of it/don't avoid this plot
+						// find closest edge of plot_bcube, and use that as our dest;
+						// hopefully this works better than using our original destination, which may require us to walk through someone else's yard
+						get_closest_dim_dir_xy(get_bcube(), plot_bcube, dim, dir);
+						dest_pos[dim] = plot_bcube.d[dim][dir];
+						keep_cur_dest = 1;
+					}
+					else {avoid_entire_plot = use_proxy_pt = 1;} // walk around the plot
 				}
 				else if (has_dest_bldg && !dist_xy_less_than(pos, dest_pos, radius) && ped_mgr.has_parked_car_on_path(pos, dest_pos, city)) {
 					use_proxy_pt = 1; // we're in front of the building, but there's a car in the way, and we're not quite across from the door, so keep walking
@@ -582,6 +588,7 @@ void pedestrian_t::get_avoid_cubes(ped_manager_t const &ped_mgr, vect_cube_t con
 				if (use_proxy_pt) { // update dest_pos to use the proxy point along the sidewalk across from our destination as the next path point
 					dest_pos[ dim] = plot_bcube.d[dim][dir];
 					dest_pos[!dim] = dest_cube.get_center_dim(!dim);
+					keep_cur_dest  = 1; // don't select a door below
 				}
 			} // else we can walk through this plot
 		}
@@ -607,7 +614,7 @@ void pedestrian_t::get_avoid_cubes(ped_manager_t const &ped_mgr, vect_cube_t con
 			return; // done
 		}
 	} // else we can walk through this plot
-	if (is_home_plot && has_dest_bldg) {
+	if (is_home_plot && has_dest_bldg && !keep_cur_dest) {
 		// target a building door; if it's on the wrong side of the building we'll still collide with the building when walking to it
 		point door_pos;
 		if (get_building_door_pos_closest_to(dest_bldg, pos, door_pos)) {dest_pos.x = door_pos.x; dest_pos.y = door_pos.y;}
