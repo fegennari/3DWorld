@@ -572,7 +572,9 @@ void pedestrian_t::get_avoid_cubes(ped_manager_t const &ped_mgr, vect_cube_t con
 				bool use_proxy_pt(0);
 
 				if (!approach_area.contains_pt(pos)) { // not in approach area - walk around the plot
-					avoid_entire_plot = use_proxy_pt = 1;
+					use_proxy_pt = 1;
+					if (avoid_area.contains_pt_xy(pos)) {} // we're already in the avoid area, get out of it/don't avoid this plot
+					else {avoid_entire_plot = 1;}
 				}
 				else if (has_dest_bldg && !dist_xy_less_than(pos, dest_pos, radius) && ped_mgr.has_parked_car_on_path(pos, dest_pos, city)) {
 					use_proxy_pt = 1; // we're in front of the building, but there's a car in the way, and we're not quite across from the door, so keep walking
