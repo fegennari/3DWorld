@@ -85,7 +85,9 @@ string pedestrian_t::str() const { // Note: no label_str()
 	return oss.str();
 }
 
-float pedestrian_t::get_speed_mult() const {return (in_the_road ? CROSS_SPEED_MULT : 1.0);}
+float pedestrian_t::get_speed_mult() const { // run across the street if there are cars
+	return ((in_the_road && city_params.num_cars > 0) ? CROSS_SPEED_MULT : 1.0);
+}
 
 void person_base_t::stop() {
 	//dir = vel.get_norm(); // ???
