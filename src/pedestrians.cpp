@@ -1256,7 +1256,6 @@ void pedestrian_t::debug_draw(ped_manager_t &ped_mgr) const {
 	union_plot_bcube.union_with_cube(next_plot_bcube);
 	vector<point> path;
 	unsigned const ret(path_finder.run(pos, dest_pos, union_plot_bcube, 0.05*radius, dest_pos)); // 0=failed, 1=valid path, 2=init contained, 3=straight path (no collisions)
-	if (ret == 0) return; // no path found
 	bool const at_dest_plot(plot == dest_plot), complete(path_finder.found_complete_path());
 	colorRGBA line_color(at_dest_plot ? RED : YELLOW); // paths
 	colorRGBA node_color(complete ? YELLOW : ORANGE);
@@ -1266,20 +1265,26 @@ void pedestrian_t::debug_draw(ped_manager_t &ped_mgr) const {
 		path.push_back(dest_pos);
 		if (!at_dest_plot) {line_color = ORANGE; node_color = (safe_to_cross ? GREEN : RED);} // straight line
 	}
-	else {path = path_finder.get_best_path();} // found a path
+	else if (ret != 0) {path = path_finder.get_best_path();} // found a path
 	vector<vert_color> line_pts;
 	shader_t s;
 	s.begin_color_only_shader();
 	bool in_sphere_draw(0);
 	begin_ped_sphere_draw(s, node_color, in_sphere_draw, 0);
 
-	if (ret == 2) { // show segment from current pos to edge of building/car
+	if (ret == 0) { // no path found, show line to dest
+		s.set_cur_color(RED);
+		draw_simple_cube(union_plot_bcube);
+		line_pts.emplace_back(pos,      BROWN);
+		line_pts.emplace_back(dest_pos, BROWN);
+	}
+	else if (ret == 2) { // show segment from current pos to edge of building/car
 		assert(!path.empty());
 		draw_sphere_vbo(path[0], radius, 16, 0);
 		line_pts.emplace_back(pos,     BLUE);
 		line_pts.emplace_back(path[0], BLUE);
 	}
-	for (auto p = path.begin(); p+1 != path.end(); ++p) { // iterate over line segments, skip last point
+	for (auto p = path.begin(); p+1 < path.end(); ++p) { // iterate over line segments, skip last point
 		point const &n(*(p+1));
 		draw_sphere_vbo(n, radius, 16, 0);
 		line_pts.emplace_back(*p, line_color);
