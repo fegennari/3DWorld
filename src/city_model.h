@@ -24,19 +24,17 @@ struct animation_state_t {
 struct city_model_t {
 
 	string fn;
-	bool valid, swap_xz, swap_yz, two_sided;
-	int body_mat_id, fixed_color_id, recalc_normals, centered; // recalc_normals: 0=no, 1=yes, 2=face_weight_avg
-	int blade_mat_id; // for helicopters
-	int model3d_id; // index into model3ds vector; -1 is not set
-	float xy_rot, lod_mult, scale; // xy_rot in degrees
+	bool valid=0, swap_xz=0, swap_yz=1, two_sided=0;
+	int body_mat_id=-1, fixed_color_id=-1, recalc_normals=1, centered=0; // recalc_normals: 0=no, 1=yes, 2=face_weight_avg
+	int blade_mat_id=-1; // for helicopters
+	int model3d_id=-1; // index into model3ds vector; -1 is not set
+	float xy_rot=0.0, lod_mult=1.0, scale=1.0, anim_speed=1.0; // xy_rot in degrees
 	colorRGBA custom_color;
 	vector<unsigned> shadow_mat_ids;
 
-	city_model_t() : valid(0), swap_xz(0), swap_yz(1), two_sided(0), body_mat_id(-1), fixed_color_id(-1), recalc_normals(1),
-		centered(0), blade_mat_id(-1), model3d_id(-1), xy_rot(0.0), lod_mult(1.0), scale(1.0) {}
+	city_model_t() {}
 	city_model_t(string const &fn_, int bmid, int fcid, float rot, float dz_, float lm, vector<unsigned> const &smids) :
-		fn(fn_), valid(0), swap_xz(0), swap_yz(1), two_sided(0), body_mat_id(bmid), fixed_color_id(fcid), recalc_normals(1),
-		centered(0), blade_mat_id(-1), model3d_id(-1), xy_rot(rot), lod_mult(lm), scale(1.0), shadow_mat_ids(smids) {}
+		fn(fn_), body_mat_id(bmid), fixed_color_id(fcid), xy_rot(rot), lod_mult(lm), shadow_mat_ids(smids) {}
 	bool is_loaded() const {return (model3d_id >= 0);}
 	bool read(FILE *fp, bool is_helicopter=0);
 	bool check_filename();
