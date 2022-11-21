@@ -842,9 +842,10 @@ class ped_manager_t { // pedestrians
 	ao_draw_state_t dstate;
 	int selected_ped_ssn;
 	unsigned animation_id;
-	bool ped_destroyed, need_to_sort_peds;
+	bool ped_destroyed, need_to_sort_peds, prev_choose_zombie;
 
 	void assign_ped_model(person_base_t &ped);
+	void maybe_reassign_ped_model(person_base_t &ped);
 	bool gen_ped_pos(pedestrian_t &ped);
 	void expand_cube_for_ped(cube_t &cube) const;
 	void remove_destroyed_peds();
@@ -882,12 +883,14 @@ public:
 	bool choose_dest_parked_car(unsigned city_id, unsigned &plot_id, unsigned &car_ix, point &car_center);
 public:
 	ped_manager_t(city_road_gen_t const &road_gen_, car_manager_t const &car_manager_) :
-		road_gen(road_gen_), car_manager(car_manager_), selected_ped_ssn(-1), animation_id(1), ped_destroyed(0), need_to_sort_peds(0) {}
+		road_gen(road_gen_), car_manager(car_manager_), selected_ped_ssn(-1), animation_id(1), ped_destroyed(0), need_to_sort_peds(0), prev_choose_zombie(0) {}
 	void next_animation();
 	static float get_ped_radius();
 	void clear() {peds.clear(); by_city.clear();}
 	unsigned get_model_gpu_mem() const {return ped_model_loader.get_gpu_mem();}
 	void init(unsigned num_city);
+	void maybe_reassign_models();
+	void maybe_reassign_building_models(building_t &building);
 	person_t add_person_to_building(point const &pos, unsigned bix, unsigned ssn);
 	bool proc_sphere_coll(point &pos, float radius, vector3d *cnorm) const;
 	bool line_intersect_peds(point const &p1, point const &p2, float &t) const;

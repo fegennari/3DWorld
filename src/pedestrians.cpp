@@ -851,6 +851,26 @@ city_model_t &ped_model_loader_t::get_model(unsigned id) {
 	assert(id < num_models());
 	return city_params.ped_model_files[id];
 }
+int ped_model_loader_t::select_random_model(int rand_val, bool choose_zombie) {
+	if (num_models() > 0 && zombie_models.empty() && people_models.empty()) { // first call - not setup
+		for (unsigned i = 0; i < num_models(); ++i) {
+			(city_params.ped_model_files[i].is_zombie ? zombie_models : people_models).push_back(i);
+		}
+	}
+	vector<unsigned> const &pool(choose_zombie ? zombie_models : people_models);
+	unsigned ret(0);
+	
+	if (pool.empty()) { // no candidate found, try selecting from the other set
+		vector<unsigned> const &alt(choose_zombie ? people_models : zombie_models);
+		if (alt.empty()) return 0; // no models found
+		ret = alt[rand_val % alt.size()];
+	}
+	else {
+		ret = pool[rand_val % pool.size()];
+	}
+	assert(ret < num_models());
+	return ret;
+}
 
 void ped_city_vect_t::add_ped(pedestrian_t const &ped, unsigned road_ix) {
 	if (ped.city >= peds.size()) {peds.resize(ped.city+1);} // allocate city if needed
@@ -899,14 +919,29 @@ void ped_manager_t::init(unsigned num_city) {
 }
 
 void ped_manager_t::assign_ped_model(person_base_t &ped) { // Note: non-const, modifies rgen
-	unsigned const num_models(ped_model_loader.num_models());
-	if (num_models == 0) {ped.model_id = 0; return;} // will be unused
-	ped.model_id  = rgen.rand()%num_models;
+	if (ped_model_loader.num_models() == 0) {ped.model_id = 0; return;} // will be unused
+	bool const choose_zombie(in_building_gameplay_mode());
+	ped.model_id  = ped_model_loader.select_random_model(rgen.rand(), choose_zombie);
 	float const scale(ped_model_loader.get_model(ped.model_id).scale);
 	ped.radius   *= scale;
 	// somewhat of a hack, but works with current set of models because Katie kid model is the only female with a scale of 0.7, men have a scale of 1.0, and women have a scale of 0.9
 	ped.is_female = (scale <= 0.95);
 	assert(ped.radius > 0.0); // no zero/negative model scales
+}
+void ped_manager_t::maybe_reassign_ped_model(person_base_t &ped) {
+	bool const choose_zombie(in_building_gameplay_mode());
+	if (ped_model_loader.get_model(ped.model_id).is_zombie != choose_zombie) {assign_ped_model(ped);}
+}
+void ped_manager_t::maybe_reassign_models() { // called when switching between normal/people and gameplay/zombies modes
+	if (!ped_model_loader.has_mix_of_model_types()) return;
+	bool const choose_zombie(in_building_gameplay_mode());
+	if (prev_choose_zombie == choose_zombie) return; // no state change (optimization)
+	prev_choose_zombie = choose_zombie;
+	for (pedestrian_t &ped : peds) {maybe_reassign_ped_model(ped);}
+}
+void ped_manager_t::maybe_reassign_building_models(building_t &building) {
+	if (!ped_model_loader.has_mix_of_model_types()) return;
+	for (person_t &person : building.interior->people) {maybe_reassign_ped_model(person);}
 }
 
 struct ped_by_plot {
@@ -1046,6 +1081,7 @@ void ped_manager_t::next_frame() {
 		car_manager.extract_car_data(cars_by_city);
 
 		if (ped_destroyed) {remove_destroyed_peds();} // at least one ped was destroyed in the previous frame - remove it/them
+		maybe_reassign_models();
 		static bool first_frame(1);
 		float const enable_ai_dist(1.0f*(X_SCENE_SIZE + Y_SCENE_SIZE));
 		point const camera_bs(get_camera_building_space());
@@ -1465,6 +1501,7 @@ void ped_manager_t::gen_and_draw_people_in_building(building_t &building, ped_dr
 	auto &people(building.interior->people);
 	vector<point> locs;
 	building.place_people_if_needed(pdv.bix, get_ped_radius(), locs);
+	maybe_reassign_building_models(building);
 	for (point const &p : locs) {people.push_back(add_person_to_building(p, pdv.bix, people.size()));}
 	draw_people_in_building(people, pdv);
 }
