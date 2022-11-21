@@ -1407,7 +1407,7 @@ void ped_manager_t::draw(vector3d const &xlate, bool use_dlights, bool shadow_on
 				pedestrian_t const &ped(peds[i]);
 				assert(ped.city == city && ped.plot == plot);
 				if (ped.destroyed || skip_ped_draw(ped)) continue;
-				if (!draw_ped(ped, dstate.s, pdu, xlate, def_draw_dist, draw_dist_sq, in_sphere_draw, shadow_only, is_dlight_shadows, anim_state, 0)) continue;
+				if (!draw_ped(ped, dstate.s, pdu, xlate, def_draw_dist, draw_dist_sq, in_sphere_draw, shadow_only, is_dlight_shadows, &anim_state, 0)) continue;
 
 				if (dist_less_than(pdu.pos, ped.pos, 0.5*draw_dist)) { // fake AO shadow at below half draw distance
 					float const ao_radius(0.6*ped.radius);
@@ -1485,7 +1485,7 @@ void ped_manager_t::draw_people_in_building(vector<person_t> const &people, ped_
 		if ((display_mode & 0x08) && !city_params.ped_model_files.empty()) { // occlusion culling, if using models
 			if (pdv.building.check_obj_occluded(p.get_bcube(), pdu.pos, pdv.oc, pdv.reflection_pass)) continue;
 		}
-		draw_ped(p, pdv.s, pdu, pdv.xlate, def_draw_dist, draw_dist_sq, in_sphere_draw, pdv.shadow_only, pdv.shadow_only, anim_state, 1);
+		draw_ped(p, pdv.s, pdu, pdv.xlate, def_draw_dist, draw_dist_sq, in_sphere_draw, pdv.shadow_only, pdv.shadow_only, &anim_state, 1);
 	} // for p
 	end_sphere_draw(in_sphere_draw);
 	pdv.s.upload_mvm(); // seems to be needed after applying model transforms, not sure why
@@ -1493,7 +1493,7 @@ void ped_manager_t::draw_people_in_building(vector<person_t> const &people, ped_
 }
 
 bool ped_manager_t::draw_ped(person_base_t const &ped, shader_t &s, pos_dir_up const &pdu, vector3d const &xlate, float def_draw_dist, float draw_dist_sq,
-	bool &in_sphere_draw, bool shadow_only, bool is_dlight_shadows, animation_state_t &anim_state, bool is_in_building)
+	bool &in_sphere_draw, bool shadow_only, bool is_dlight_shadows, animation_state_t *anim_state, bool is_in_building)
 {
 	float const dist_sq(p2p_dist_sq(pdu.pos, ped.pos));
 	if (dist_sq > draw_dist_sq) return 0; // too far - skip
@@ -1502,7 +1502,7 @@ bool ped_manager_t::draw_ped(person_base_t const &ped, shader_t &s, pos_dir_up c
 
 	if (ped_model_loader.num_models() == 0 || !ped_model_loader.is_model_valid(ped.model_id)) {
 		if (!pdu.sphere_visible_test(ped.pos, ped.radius)) return 0; // not visible - skip
-		anim_state.clear_animation_id(s); // no animations for a sphere
+		if (anim_state) {anim_state->clear_animation_id(s);} // no animations for a sphere
 		begin_ped_sphere_draw(s, YELLOW, in_sphere_draw, 0);
 		int const ndiv = 16; // currently hard-coded
 		draw_sphere_vbo(ped.pos, ped.radius, ndiv, 0);
@@ -1513,7 +1513,7 @@ bool ped_manager_t::draw_ped(person_base_t const &ped, shader_t &s, pos_dir_up c
 		if (!ped.in_building && dstate.is_occluded(bcube)) return 0; // only check occlusion for expensive ped models, and for peds outside buildings
 		end_sphere_draw(in_sphere_draw);
 		bool const low_detail(!shadow_only && dist_sq > 0.25*draw_dist_sq); // low detail for non-shadow pass at half draw dist
-		anim_state.set_animation_time(ped.anim_time);
+		if (anim_state) {anim_state->set_animation_time(ped.anim_time);}
 		vector3d dir_horiz(ped.dir);
 		dir_horiz.z = 0.0; // always face a horizontal direction, even if walking on a slope
 		dir_horiz.normalize();
@@ -1535,7 +1535,7 @@ bool ped_manager_t::draw_ped(person_base_t const &ped, shader_t &s, pos_dir_up c
 			u_bcube.expand_by_xy(radius);
 			u_bcube.z1() -= 0.35*radius;
 			u_bcube.z2() += 0.85*radius;
-			anim_state.clear_animation_id(s); // not animated
+			if (anim_state) {anim_state->clear_animation_id(s);} // not animated
 			// the handle direction is always in -x and doesn't rotate with the ped because there's no option to do this transform
 			building_obj_model_loader.draw_model(s, u_bcube.get_cube_center(), u_bcube, plus_z, WHITE, xlate, OBJ_MODEL_UMBRELLA, shadow_only);
 		}
@@ -1571,7 +1571,7 @@ void ped_manager_t::draw_player_model(shader_t &s, vector3d const &xlate, bool s
 	bcube.z1() = pos.z - player_radius;
 	bcube.z2() = bcube.z1() + player_height*ped_model_loader.get_model(model_id).scale; // respect the model's scale
 	anim_state.set_animation_time(player_anim_time);
-	ped_model_loader.draw_model(s, pos, bcube, dir_horiz, ALPHA0, xlate, model_id, shadow_only, 0, anim_state);
+	ped_model_loader.draw_model(s, pos, bcube, dir_horiz, ALPHA0, xlate, model_id, shadow_only, 0, &anim_state);
 	s.upload_mvm(); // not sure if this is needed
 	anim_state.clear_animation_id(s); // make sure to leave animations disabled so that they don't apply to buildings
 }

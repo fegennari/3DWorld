@@ -117,7 +117,7 @@ bool object_model_loader_t::can_skip_model(unsigned id) const {
 }
 
 void city_model_loader_t::draw_model(shader_t &s, vector3d const &pos, cube_t const &obj_bcube, vector3d const &dir, colorRGBA const &color,
-	vector3d const &xlate, unsigned model_id, bool is_shadow_pass, bool low_detail, animation_state_t &anim_state, unsigned skip_mat_mask,
+	vector3d const &xlate, unsigned model_id, bool is_shadow_pass, bool low_detail, animation_state_t *anim_state, unsigned skip_mat_mask,
 	bool untextured, bool force_high_detail, bool upside_down, bool emissive)
 {
 	assert(!(low_detail && force_high_detail));
@@ -144,17 +144,17 @@ void city_model_loader_t::draw_model(shader_t &s, vector3d const &pos, cube_t co
 	float const height(model_file.swap_xz ? bcube.dx() : (model_file.swap_yz ? bcube.dy() : bcube.dz()));
 	// animated models of people don't have valid bcubes because they sometimes start in a T-pose, so use the height as the size scale since it's more likely to be accurate
 	float sz_scale(0.0);
-	if (anim_state.enabled) {sz_scale = (obj_bcube.dz() / height);} // use zsize only for scale
+	if (anim_state && anim_state->enabled) {sz_scale = (obj_bcube.dz() / height);} // use zsize only for scale
 	else {sz_scale = (obj_bcube.get_size().sum() / bcube.get_size().sum());} // use average XYZ size for scale
 	float const z_offset(0.5*height - (pos.z - obj_bcube.z1())/sz_scale); // translate required to map bottom of model to bottom of obj_bcube post transform
 	
-	if (anim_state.enabled) {
+	if (anim_state && anim_state->enabled) {
 		// skip expensive animations if low detail; may cause the model to T-pose, but it should be far enough that the user can't tell
 		bool const has_bone_animations(city_params.use_animated_people && model.has_animations() && !low_detail);
-		anim_state.set_animation_id_and_time(s, has_bone_animations);
+		anim_state->set_animation_id_and_time(s, has_bone_animations);
 
 		if (has_bone_animations) {
-			model.setup_bone_transforms(s, 32.0*anim_state.anim_time, anim_state.model_anim_id);
+			model.setup_bone_transforms(s, 32.0*anim_state->anim_time, anim_state->model_anim_id);
 		}
 		else {
 			s.add_uniform_float("animation_scale",    model_file.scale/sz_scale); // Note: determined somewhat experimentally
