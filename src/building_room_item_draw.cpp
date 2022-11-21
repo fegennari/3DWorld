@@ -1029,7 +1029,7 @@ void apply_room_obj_rotate(room_object_t &obj, obj_model_inst_t &inst) {
 	}
 	else if (c.type == TYPE_RAT) { // draw the rat facing away from the player
 		bool const is_dead(c.is_broken()); // upside down if dead; shadow_pass=0; not animated
-		building_obj_model_loader.draw_model(s, c.get_cube_center(), c, cview_dir, rat_color, xlate, OBJ_MODEL_RAT, 0, 0, animation_state_t(), 0, 0, 0, is_dead);
+		building_obj_model_loader.draw_model(s, c.get_cube_center(), c, cview_dir, rat_color, xlate, OBJ_MODEL_RAT, 0, 0, nullptr, 0, 0, 0, is_dead);
 		check_mvm_update();
 		return; // don't need to run the code below
 	}
@@ -1537,7 +1537,7 @@ void draw_obj_model(obj_model_inst_t const &i, room_object_t const &obj, shader_
 	}
 	// Note: lamps are the most common and therefore most expensive models to draw
 	building_obj_model_loader.draw_model(s, obj_center, obj, i.dir, obj.color, xlate, obj.get_model_id(), shadow_only,
-		0, animation_state_t(), 0, untextured, 0, 0, is_emissive_body_mat);
+		0, nullptr, 0, untextured, 0, 0, is_emissive_body_mat);
 	if (!shadow_only && obj.type == TYPE_STOVE) {draw_stove_flames(obj, (camera_pdu.pos - xlate), s);} // draw blue burner flame
 
 	if (use_low_z_bias) { // restore to the defaults
@@ -1719,7 +1719,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, building_t c
 				//colorRGBA const color(blend_color(RED, WHITE, rat.fear, 0)); // used for debugging fear
 				//colorRGBA const color(blend_color(RED, WHITE, rat.attacking, 0));
 				cube_t const rat_bcube(rat.get_bcube_with_dir());
-				building_obj_model_loader.draw_model(s, pos, rat_bcube, rat.dir, color, xlate, OBJ_MODEL_RAT, shadow_only, 0, anim_state, 0, 0, 0, rat.dead); // upside down if dead
+				building_obj_model_loader.draw_model(s, pos, rat_bcube, rat.dir, color, xlate, OBJ_MODEL_RAT, shadow_only, 0, &anim_state, 0, 0, 0, rat.dead); // upside down if dead
 
 				if (rat.attacking) { // draw red glowing eyes
 					s.set_color_e(colorRGBA(0.5, 0.0, 0.0, 1.0)); // light emissive red
