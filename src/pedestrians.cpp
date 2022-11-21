@@ -1359,9 +1359,9 @@ void set_anim_id(shader_t &s, bool enable_animations, int animation_id, bool has
 	s.add_uniform_int("animation_id", animation_id);
 }
 
-void animation_state_t::set_animation_id_and_time(shader_t &s, bool has_bone_animations) const {
+void animation_state_t::set_animation_id_and_time(shader_t &s, bool has_bone_animations, float anim_speed) const {
 	set_anim_id(s, enabled, anim_id, has_bone_animations);
-	if (enabled && !(city_params.use_animated_people && has_bone_animations)) {s.add_uniform_float("animation_time", anim_time);} // only for custom animations
+	if (enabled && !(city_params.use_animated_people && has_bone_animations)) {s.add_uniform_float("animation_time", anim_speed*anim_time);} // only for custom animations
 }
 void animation_state_t::clear_animation_id(shader_t &s) const {set_anim_id(s, enabled, 0);} // has_bone_animations not needed here
 

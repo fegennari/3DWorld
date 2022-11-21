@@ -16,7 +16,7 @@ struct animation_state_t {
 	animation_state_t(bool enabled_=0, unsigned anim_id_=0, float anim_time_=0.0, unsigned model_anim_id_=0) :
 		enabled(enabled_), anim_id(anim_id_), model_anim_id(model_anim_id_), anim_time(anim_time_) {}
 	void set_animation_time(float anim_time_) {anim_time = anim_time_;}
-	void set_animation_id_and_time(shader_t &s, bool has_bone_animations=0) const;
+	void set_animation_id_and_time(shader_t &s, bool has_bone_animations=0, float anim_speed=1.0) const;
 	void clear_animation_id(shader_t &s) const;
 };
 
@@ -24,7 +24,7 @@ struct animation_state_t {
 struct city_model_t {
 
 	string fn;
-	bool valid=0, swap_xz=0, swap_yz=1, two_sided=0;
+	bool valid=0, swap_xz=0, swap_yz=1, two_sided=0, is_zombie=0;
 	int body_mat_id=-1, fixed_color_id=-1, recalc_normals=1, centered=0; // recalc_normals: 0=no, 1=yes, 2=face_weight_avg
 	int blade_mat_id=-1; // for helicopters
 	int model3d_id=-1; // index into model3ds vector; -1 is not set
@@ -36,7 +36,7 @@ struct city_model_t {
 	city_model_t(string const &fn_, int bmid, int fcid, float rot, float dz_, float lm, vector<unsigned> const &smids) :
 		fn(fn_), body_mat_id(bmid), fixed_color_id(fcid), xy_rot(rot), lod_mult(lm), shadow_mat_ids(smids) {}
 	bool is_loaded() const {return (model3d_id >= 0);}
-	bool read(FILE *fp, bool is_helicopter=0);
+	bool read(FILE *fp, bool is_helicopter=0, bool is_person=0);
 	bool check_filename();
 };
 

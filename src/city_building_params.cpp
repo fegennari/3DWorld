@@ -101,7 +101,7 @@ bool city_params_t::read_option(FILE *fp) {
 	}
 	else if (str == "ped_model") {
 		city_model_t ped_model;
-		if (!ped_model.read(fp)) {return read_error(str);}
+		if (!ped_model.read(fp, 0, 1)) {return read_error(str);} // is_helicopter=0, is_person=1
 		if (!ped_model.check_filename()) {cerr << "Error: ped_model file '" << ped_model.fn << "' does not exist; skipping" << endl; return 1;} // nonfatal
 		ped_model_files.push_back(ped_model); // Note: no ped_model_scale
 	}

@@ -135,14 +135,24 @@ buildings people_per_house_max 4
 city ped_speed 0.001
 city ped_respawn_at_dest 1
 city use_animated_people 1 # requires loading rigged/animated models of people
-# ped_model: filename recalc_normals two_sided centered body_material_id fixed_color_id xy_rot swap_xyz scale lod_mult [shadow_mat_ids]
-city ped_model ../models/people/muro/muro.model3d         1 0 0  0 -1 90  1 1.0  1.0  0 1 # 0=body, 1=head; head can be omitted for faster shadows
-city ped_model ../models/people/Patrick/Patrick.model3d   1 0 0  0 -1 90  1 1.0  1.0  0
-city ped_model ../models/people/RUST/RUST_3d_Low1.model3d 1 0 0  0 -1 90  1 1.0  1.0  0 # all one material
+# ped_model: filename recalc_normals two_sided centered body_material_id fixed_color_id xy_rot swap_xyz scale lod_mult anim_speed is_zombie [shadow_mat_ids]
+city ped_model ../models/people/muro/muro.model3d         1 0 0  0 -1 90  1 1.0  1.0  1.0 0  0 1 # 0=body, 1=head; head can be omitted for faster shadows
+city ped_model ../models/people/Patrick/Patrick.model3d   1 0 0  0 -1 90  1 1.0  1.0  1.0 0  0 # arms sticking out to the side look odd
+city ped_model ../models/people/RUST/RUST_3d_Low1.model3d 1 0 0  0 -1 90  1 1.0  1.0  1.0 0  0 # all one material
 # MakeHuman models
-city ped_model ../models/people/makehuman/Katie/Katie.model3d 1 0 0  0 -1 90  1 0.7 1.0  0 3
+city ped_model ../models/people/makehuman/Katie/Katie.model3d 1 0 0  0 -1 90  1 0.7 1.0  1.0 0  0 3
 # Animated models loaded by Assimp
-city ped_model ../models/people/remy_walking.fbx 0 0 0  0 -1 90  1 1.0  1.0
+city ped_model ../models/people/animated/remy_walking.fbx    0 0 0  0 -1 90  1 1.0  1.0  1.0 0
+#city ped_model ../models/people/animated/james_walking.fbx   0 0 0  0 -1 90  1 1.0  1.0  1.0 0
+#city ped_model ../models/people/animated/leonard_walking.fbx 0 0 0  0 -1 90  1 1.0  1.0  1.0 0
+#city ped_model ../models/people/animated/louise_walking.fbx  0 0 0  0 -1 90  1 0.9  1.0  1.2 0 # hair looks odd
+#city ped_model ../models/people/animated/kate_walking.fbx    0 0 0  0 -1 90  1 0.9  1.0  1.2 0 # hair looks odd
+# Zombies
+#city ped_model ../models/people/animated/zombies/zombie_walk.fbx    0 0 0  0 -1 90  1 1.0  1.0  4.8 1 # fast animation speed
+#city ped_model ../models/people/animated/zombies/zombie_soldier.fbx 0 0 0  0 -1 90  1 1.0  1.0  5.7 1 # fast animation speed
+#city ped_model ../models/people/animated/zombies/zombie_clown.fbx   0 0 0  0 -1 90  1 1.0  1.0  0.7 1
+#city ped_model ../models/people/animated/zombies/zombie_run.fbx     0 0 0  0 -1 90  1 1.0  1.0  0.7 1
+#city ped_model ../models/people/animated/zombies/zombie_woman.fbx   0 0 0  0 -1 90  1 0.9  1.0  1.0 1
 
 # filename recalc_normals two_sided centered body_material_id fixed_color_id xy_rot swap_xyz scale lod_mult [shadow_mat_ids]
 city toilet_model ../models/interiors/toilet/toilet.model3d     1 0 0  -1 -1 0  1 1.0 1.0  0

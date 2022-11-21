@@ -7,7 +7,7 @@
 extern city_params_t city_params;
 
 
-bool city_model_t::read(FILE *fp, bool is_helicopter) {
+bool city_model_t::read(FILE *fp, bool is_helicopter, bool is_person) {
 
 	// filename recalc_normals two_sided centered body_material_id fixed_color_id xy_rot swap_xy scale lod_mult <blade_mat_id for helicopter> [shadow_mat_ids]
 	assert(fp);
@@ -19,15 +19,17 @@ bool city_model_t::read(FILE *fp, bool is_helicopter) {
 	if (!read_int  (fp, centered))       return 0; // bit mask for {X, Y, Z}
 	if (!read_int  (fp, body_mat_id))    return 0; // -1=all
 	if (!read_int  (fp, fixed_color_id)) return 0; // -1=none, -2=specified RGBA, -3=auto-from-model
-	
-	if (fixed_color_id == -2) { // read RGBA color
-		if (!read_color(fp, custom_color)) return 0;
-	}
+	if (fixed_color_id == -2 && !read_color(fp, custom_color)) return 0; // read RGBA color
 	if (!read_float(fp, xy_rot))         return 0;
 	if (!read_uint(fp, swap_xyz))        return 0; // {swap none, swap Y with Z, swap X with Z}
 	if (!read_float(fp, scale))          return 0;
 	if (!read_float(fp, lod_mult) || lod_mult < 0.0)  return 0;
-	if (is_helicopter && !read_int(fp, blade_mat_id)) return 0;
+	if (is_helicopter && !read_int(fp, blade_mat_id)) return 0; // helicopter model is special because it has a blade material
+
+	if (is_person) { // read animation data, etc.
+		if (!read_float(fp, anim_speed)) return 0;
+		if (!read_bool (fp, is_zombie))  return 0;
+	}
 	shadow_mat_ids.clear();
 	while (read_uint(fp, shadow_mat_id)) {shadow_mat_ids.push_back(shadow_mat_id);}
 	swap_xz = bool(swap_xyz & 2);
@@ -151,10 +153,10 @@ void city_model_loader_t::draw_model(shader_t &s, vector3d const &pos, cube_t co
 	if (anim_state && anim_state->enabled) {
 		// skip expensive animations if low detail; may cause the model to T-pose, but it should be far enough that the user can't tell
 		bool const has_bone_animations(city_params.use_animated_people && model.has_animations() && !low_detail);
-		anim_state->set_animation_id_and_time(s, has_bone_animations);
+		anim_state->set_animation_id_and_time(s, has_bone_animations, model_file.anim_speed);
 
 		if (has_bone_animations) {
-			model.setup_bone_transforms(s, 32.0*anim_state->anim_time, anim_state->model_anim_id);
+			model.setup_bone_transforms(s, 32.0*model_file.anim_speed*anim_state->anim_time, anim_state->model_anim_id);
 		}
 		else {
 			s.add_uniform_float("animation_scale",    model_file.scale/sz_scale); // Note: determined somewhat experimentally
