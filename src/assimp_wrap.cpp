@@ -402,13 +402,14 @@ public:
 		if (load_animations) {extract_animation_data(scene, model.model_anim_data);}
 		model.finalize(); // optimize vertices, remove excess capacity, compute bounding sphere, subdivide, compute LOD blocks
 		model.load_all_used_tids();
-		if (verbose) {cout << "bcube: " << model.get_bcube().str() << endl << "model stats: "; model.show_stats();}
+		if (verbose) {cout << "bcube: " << model.get_bcube().str() << endl; model.show_stats();}
 		return 1;
 	}
 };
 
 bool read_assimp_model(string const &filename, model3d &model, geom_xform_t const &xf, int recalc_normals, bool verbose) {
-	//timer_t timer("Read AssImp Model");
+	cout << "Reading model file " << filename << endl;
+	timer_t timer("Read AssImp Model");
 	bool const load_animations = 1;
 	file_reader_assimp reader(model, load_animations);
 	return reader.read(fix_path_slashes(filename), xf, recalc_normals, verbose);

@@ -561,7 +561,7 @@ public:
 		if (!file_reader_3ds::read(xf, verbose)) return 0;
 		model.finalize(); // optimize vertices, remove excess capacity, compute bounding sphere, subdivide, compute LOD blocks
 		model.load_all_used_tids();
-		if (verbose) {cout << "bcube: " << model.get_bcube().str() << endl << "model stats: "; model.show_stats();}
+		if (verbose) {cout << "bcube: " << model.get_bcube().str() << endl; model.show_stats();}
 		return 1;
 	}
 };

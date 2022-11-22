@@ -73,13 +73,12 @@ bool city_model_loader_t::model_filename_contains(unsigned id, string const &str
 	return (!str2.empty() && fn.find(str2) != string::npos);
 }
 bool city_model_loader_t::is_model_valid(unsigned id) {
-	ensure_models_loaded(); // I guess we have to load the models here to determine if they're valid
+	if (empty()) { // I guess we have to load the models here to determine if they're valid
+		for (unsigned i = 0; i < num_models(); ++i) {load_model_id(i);}
+	}
 	return get_model(id).is_loaded();
 }
 
-void city_model_loader_t::load_models() {
-	for (unsigned i = 0; i < num_models(); ++i) {load_model_id(i);}
-}
 void city_model_loader_t::load_model_id(unsigned id) {
 	unsigned const num_sub_models(get_num_sub_models(id));
 

@@ -493,9 +493,9 @@ public:
 	}
 
 	bool read(geom_xform_t const &xf, int recalc_normals, bool verbose) {
-		RESET_TIME;
 		if (!open_file(1)) return 0; // binary mode is faster
 		cout << "Reading object file " << filename << endl;
+		RESET_TIME;
 		unsigned const block_size = (1 << 18); // 256K
 		int cur_mat_id(-1);
 		unsigned smoothing_group(0), prev_smoothing_group(0), num_faces(0), num_objects(0), num_groups(0), obj_group_id(0);

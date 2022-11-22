@@ -43,7 +43,6 @@ struct city_model_t {
 
 class city_model_loader_t : public model3ds {
 protected:
-	void ensure_models_loaded() {if (empty()) {load_models();}}
 	model3d &get_model3d(unsigned id);
 public:
 	virtual ~city_model_loader_t() {}
@@ -58,7 +57,6 @@ public:
 	colorRGBA get_avg_color(unsigned id, bool area_weighted=1);
 	bool model_filename_contains(unsigned id, string const &str, string const &str2="") const;
 	bool is_model_valid(unsigned id);
-	void load_models();
 	void load_model_id(unsigned id);
 	void draw_model(shader_t &s, vector3d const &pos, cube_t const &obj_bcube, vector3d const &dir, colorRGBA const &color,
 		vector3d const &xlate, unsigned model_id, bool is_shadow_pass, bool low_detail=0, animation_state_t *anim_state=nullptr,
