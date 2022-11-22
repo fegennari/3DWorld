@@ -424,6 +424,7 @@ public:
 			else if (s == "pcr"   ) {unhandled(s, mat_in);} // clearcoat roughness
 			else if (s == "aniso" ) {unhandled(s, mat_in);} // anisotropy
 			else if (s == "anisor") {unhandled(s, mat_in);} // anisotropy rotation
+			else if (s == "refl"  ) {unhandled(s, mat_in);} // reflection?
 			// PBR maps
 			else if (s == "map_pr") {unhandled(s, mat_in);} // metallic
 			else if (s == "map_pm") {unhandled(s, mat_in);} // roughness
