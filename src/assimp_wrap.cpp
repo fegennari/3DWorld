@@ -19,7 +19,6 @@
 
 #include <fstream>
 
-int const WRITE_TEMP_IMAGE = 1; // 0=no, 1=reuse filename, 2=unique filename
 
 
 string fix_path_slashes(string const &filename) {
@@ -152,9 +151,7 @@ class file_reader_assimp {
 		bool is_temp_image(0);
 
 		if (texture) {
-			unsigned const width(texture->mWidth), height(texture->mHeight);
-			aiTexel const *const data(texture->pcData);
-			assert(data);
+			assert(texture->pcData);
 			// try to read from memory
 			// is_alpha_mask=0, verbose=0, invert_alpha=0, wrap=1, mirror=0, force_grayscale=0
 			unsigned const tid(model.tmgr.create_texture(full_path, 0, 0, 0, 1, 0, 0, is_normal_map, 1));
@@ -162,48 +159,35 @@ class file_reader_assimp {
 			//cout << TXT(width) << TXT(height) << TXT(tid) << TXT(t.is_allocated()) << endl;
 			if (t.is_allocated()) return tid; // duplicate
 
-			if (height > 0) { // texture stored uncompressed, size is {width, height}
+			if (texture->mHeight > 0) { // texture stored uncompressed, size is {width, height}
 				// Note: I don't have a test case for this, so it's untested; maybe we need to invert Y?
 				// manually allocate and copy texture data; stored as BGRA, but we want RGBA, so can't directly memcpy() it
-				t.width = width; t.height = height; t.ncolors = 4;
+				t.width = texture->mWidth; t.height = texture->mHeight; t.ncolors = 4;
 				t.alloc();
 				unsigned char *tdata(t.get_data());
 				unsigned const num_pixels(t.num_pixels());
 
 				for (unsigned i = 0; i < num_pixels; ++i) {
-					tdata[4*i+0] = data[i].r;
-					tdata[4*i+1] = data[i].g;
-					tdata[4*i+2] = data[i].b;
-					tdata[4*i+3] = data[i].a;
+					tdata[4*i+0] = texture->pcData[i].r;
+					tdata[4*i+1] = texture->pcData[i].g;
+					tdata[4*i+2] = texture->pcData[i].b;
+					tdata[4*i+3] = texture->pcData[i].a;
 				}
-				t.init();
+				t.init(); // calls calc_color()
 				return tid; // done
 			}
 			// else texture stored compressed
-			if (t.load_stb_image(tid, 1, 0, (unsigned char const *)data, width)) { // width is number of bytes
+			if (t.load_stb_image(tid, 1, 0, (unsigned char const *)texture->pcData, texture->mWidth)) { // width is number of bytes
 				t.do_invert_y();
-				t.init();
+				t.init(); // calls calc_color()
 				return tid; // done
 			}
 			model.tmgr.remove_last_texture(); // not using this texture
-
-			if (WRITE_TEMP_IMAGE) { // write as a temporary image file that we can read back in
-				if (WRITE_TEMP_IMAGE == 2) { // per-image unique filename
-					ostringstream oss;
-					oss << "temp_assimp_embedded_image_" << temp_image_ix++ << "." << get_file_extension(filename);
-					full_path = oss.str();
-				}
-				else { // reuse filename
-					full_path = "temp_assimp_embedded_image." + get_file_extension(filename);
-				}
-				ofstream out(full_path, ios::binary);
-				out.write((const char *)data, width);
-				is_temp_image = 1;
-			}
-			else { // failed to load
-				cerr << "Error: Assimp embedded texture loading failed; skipping texture '" << filename << "'" << endl;
-				return -1;
-			}
+			// write as a temporary image file that we can read back in; reuse filename across images
+			full_path = "temp_assimp_embedded_image." + get_file_extension(filename);
+			ofstream out(full_path, ios::binary);
+			out.write((const char *)texture->pcData, texture->mWidth);
+			is_temp_image = 1;
 		}
 		else if (!check_texture_file_exists(full_path)) {
 			cerr << "Error: Can't find texture file for assimp model: " << full_path << endl;
