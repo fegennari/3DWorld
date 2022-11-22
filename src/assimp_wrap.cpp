@@ -20,6 +20,7 @@
 #include <fstream>
 
 
+bool stb_image_enabled(); // from image_io.cpp
 
 string fix_path_slashes(string const &filename) {
   string ret(filename);
@@ -139,6 +140,32 @@ class file_reader_assimp {
 	bool load_animations=0, had_vertex_error=0, had_comp_tex_error=0;
 	unsigned temp_image_ix=0;
 
+	// texture loading
+	struct texture_load_work_item_t {
+		aiTexture const *texture;
+		unsigned tid;
+		texture_load_work_item_t(aiTexture const *const texture_, unsigned tid_) : texture(texture_), tid(tid_) {}
+	};
+	vector<texture_load_work_item_t> to_load;
+	set<unsigned> unique_tids;
+
+	void load_embedded_textures() {
+		timer_t timer("Load Embedded Textures"); // 1.57s (0.55s) avg across 5 people and 5 zombie models
+
+#pragma omp parallel for schedule(dynamic)
+		for (int i = 0; i < (int)to_load.size(); ++i) {
+			texture_load_work_item_t const &wi(to_load[i]);
+			texture_t &t(model.tmgr.get_texture(wi.tid));
+
+			if (!t.load_stb_image(wi.tid, 1, 0, (unsigned char const *)wi.texture->pcData, wi.texture->mWidth)) { // width is number of bytes
+				cerr << "Error: Failed to load embedded texture with stb_image" << endl;
+				exit(1); // fatal
+			}
+			t.do_invert_y();
+			t.init(); // calls calc_color()
+		} // for i
+		to_load.clear();
+	}
 	int load_texture(aiScene const *const scene, aiMaterial const* const mat, aiTextureType const type, bool is_normal_map=0) {
 		unsigned const count(mat->GetTextureCount(type));
 		if (count == 0) return -1; // no texture
@@ -177,9 +204,9 @@ class file_reader_assimp {
 				return tid; // done
 			}
 			// else texture stored compressed
-			if (t.load_stb_image(tid, 1, 0, (unsigned char const *)texture->pcData, texture->mWidth)) { // width is number of bytes
-				t.do_invert_y();
-				t.init(); // calls calc_color()
+			if (stb_image_enabled()) {
+				// defer load until later so that it can be done in parallel; will exit if loading fails
+				if (unique_tids.insert(tid).second) {to_load.emplace_back(texture, tid);} // only add once per unique tid
 				return tid; // done
 			}
 			model.tmgr.remove_last_texture(); // not using this texture
@@ -383,6 +410,7 @@ public:
 		model_dir = fn;
 		while (!model_dir.empty() && model_dir.back() != '/' && model_dir.back() != '\\') {model_dir.pop_back();} // remove filename from end, but leave the slash
 		process_node_recur(scene->mRootNode, scene, model.model_anim_data);
+		load_embedded_textures();
 		if (load_animations) {extract_animation_data(scene, model.model_anim_data);}
 		model.finalize(); // optimize vertices, remove excess capacity, compute bounding sphere, subdivide, compute LOD blocks
 		model.load_all_used_tids();
@@ -393,7 +421,7 @@ public:
 
 bool read_assimp_model(string const &filename, model3d &model, geom_xform_t const &xf, int recalc_normals, bool verbose) {
 	cout << "Reading model file " << filename << endl;
-	timer_t timer("Read AssImp Model");
+	timer_t timer("Read AssImp Model"); // 2.37s (1.32s MT) avg across 5 people and 5 zombie models
 	bool const load_animations = 1;
 	file_reader_assimp reader(model, load_animations);
 	return reader.read(fix_path_slashes(filename), xf, recalc_normals, verbose);
