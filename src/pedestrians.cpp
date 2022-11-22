@@ -922,10 +922,11 @@ void ped_manager_t::assign_ped_model(person_base_t &ped) { // Note: non-const, m
 	if (ped_model_loader.num_models() == 0) {ped.model_id = 0; return;} // will be unused
 	bool const choose_zombie(in_building_gameplay_mode());
 	ped.model_id  = ped_model_loader.select_random_model(rgen.rand(), choose_zombie);
-	float const scale(ped_model_loader.get_model(ped.model_id).scale);
-	ped.radius   *= scale;
+	city_model_t const &model(ped_model_loader.get_model(ped.model_id));
+	ped.radius   *= model.scale;
 	// somewhat of a hack, but works with current set of models because Katie kid model is the only female with a scale of 0.7, men have a scale of 1.0, and women have a scale of 0.9
-	ped.is_female = (scale <= 0.95);
+	ped.is_female = (model.scale <= 0.95);
+	ped.is_zombie = model.is_zombie;
 	assert(ped.radius > 0.0); // no zero/negative model scales
 }
 void ped_manager_t::maybe_reassign_ped_model(person_base_t &ped) {
@@ -1564,7 +1565,7 @@ bool ped_manager_t::draw_ped(person_base_t const &ped, shader_t &s, pos_dir_up c
 		ped_model_loader.draw_model(s, ped.pos, bcube, dir_horiz, color, xlate, ped.model_id, shadow_only, low_detail, anim_state);
 
 		// draw umbrella 75% of the time if pedestrian is outside and in the rain
-		if (!ped.in_building && is_rain_enabled() && !shadow_only && (ped.ssn & 3) != 0 && building_obj_model_loader.is_model_valid(OBJ_MODEL_UMBRELLA)) {
+		if (!ped.in_building && !ped.is_zombie && is_rain_enabled() && !shadow_only && (ped.ssn & 3) != 0 && building_obj_model_loader.is_model_valid(OBJ_MODEL_UMBRELLA)) {
 			vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_UMBRELLA));
 			float const ped_sz_scale(ped_model_loader.get_model(ped.model_id).scale), radius(0.5*bcube.dz()/ped_sz_scale);
 			point const center(bcube.get_cube_center() + 0.25*radius*dir_horiz);
