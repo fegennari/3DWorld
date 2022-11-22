@@ -73,10 +73,9 @@ bool city_model_loader_t::model_filename_contains(unsigned id, string const &str
 	return (!str2.empty() && fn.find(str2) != string::npos);
 }
 bool city_model_loader_t::is_model_valid(unsigned id) {
-	if (empty()) { // I guess we have to load the models here to determine if they're valid
-		for (unsigned i = 0; i < num_models(); ++i) {load_model_id(i);}
-	}
-	return get_model(id).is_loaded();
+	city_model_t &model(get_model(id));
+	if (!model.tried_to_load) {load_model_id(id);} // load the model if needed
+	return model.is_loaded();
 }
 
 void city_model_loader_t::load_model_id(unsigned id) {
@@ -84,11 +83,12 @@ void city_model_loader_t::load_model_id(unsigned id) {
 
 	for (unsigned sm = 0; sm < num_sub_models; ++sm) { // load all sub-models
 		city_model_t &model(get_model(id + (sm << 8)));
-		if (model.is_loaded()) continue; // already loaded (should never get here?)
+		if (model.tried_to_load) continue; // already tried to load (should never get here?)
 		if (can_skip_model(id) || model.fn.empty()) continue;
 		int const def_tid(-1); // should this be a model parameter?
 		colorRGBA const def_color(WHITE); // should this be a model parameter?
-		model.model3d_id = size(); // set before adding the model
+		model.tried_to_load = 1; // flag, even if load fails
+		model.model3d_id    = size(); // set before adding the model
 
 		if (!load_model_file(model.fn, *this, geom_xform_t(), def_tid, def_color, 0, 0.0, model.recalc_normals, 0, city_params.convert_model_files, 1)) {
 			cerr << "Error: Failed to read model file '" << model.fn << "'; Skipping this model";

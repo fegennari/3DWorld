@@ -24,7 +24,7 @@ struct animation_state_t {
 struct city_model_t {
 
 	string fn;
-	bool valid=0, swap_xz=0, swap_yz=1, two_sided=0, is_zombie=0;
+	bool valid=0, swap_xz=0, swap_yz=1, two_sided=0, is_zombie=0, tried_to_load=0;
 	int body_mat_id=-1, fixed_color_id=-1, recalc_normals=1, centered=0; // recalc_normals: 0=no, 1=yes, 2=face_weight_avg
 	int blade_mat_id=-1; // for helicopters
 	int model3d_id=-1; // index into model3ds vector; -1 is not set
