@@ -330,7 +330,9 @@ class file_reader_assimp {
 			for (unsigned j = 0; j < face.mNumIndices; j++) {indices.push_back(face.mIndices[j]);}
 		}
 		if (!mesh_bcube.is_all_zeros()) {
-			if (load_animations) {} // TODO: need to apply model transform to mesh_bcube
+			// if load_animations, the computed bcube will be in the default pose (T-pose for people models), and therefore it won't be usable for VFC
+			// can we transform the bcube or individual vertices by the animated bone transforms efficiently?
+			if (load_animations) {}
 			model.union_bcube_with(mesh_bcube);
 		}
 		material_t &mat(model.get_material(mesh->mMaterialIndex, 1)); // alloc_if_needed=1

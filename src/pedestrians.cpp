@@ -1547,6 +1547,8 @@ bool ped_manager_t::draw_ped(person_base_t const &ped, shader_t &s, pos_dir_up c
 	}
 	else {
 		cube_t const bcube(ped.get_bcube());
+		// Note: the below test uses the bsphere, not the bcube directly, so it will be more accurate even if the model bcube doesn't include the animations;
+		// however, it doesn't use the model bcube itself but rather the height/radius-based person bcube, so it may result in people clipping through objects
 		if (!pdu.sphere_visible_test(bcube.get_cube_center(), 0.5*ped.get_height())) return 0; // not visible - skip
 		if (!ped.in_building && dstate.is_occluded(bcube)) return 0; // only check occlusion for expensive ped models, and for peds outside buildings
 		end_sphere_draw(in_sphere_draw);
