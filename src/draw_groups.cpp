@@ -25,7 +25,7 @@ quad_batch_draw puddle_qbd;
 pt_line_drawer obj_pld, snow_pld;
 
 
-extern bool underwater, smoke_exists, reflect_dodgeballs, begin_motion;
+extern bool underwater, smoke_exists, reflect_dodgeballs, begin_motion, disable_blood;
 extern int display_mode, num_groups, teams, UNLIMITED_WEAPONS;
 extern int window_width, window_height, game_mode, draw_model, animate2;
 extern float fticks, TIMESTEP, base_gravity, temperature, brightness, indir_vert_offset, cobj_z_bias, camera_health;
@@ -1449,7 +1449,7 @@ void draw_sawblade(point const &pos, vector3d const &orient, vector3d const &ini
 		rotate_by_vector(init_dir, -90.0);
 		rotate_about(angle, orient);
 	}
-	select_texture(bloody ? (int)SAW_B_TEX : (int)SAW_TEX);
+	select_texture((bloody && !disable_blood) ? (int)SAW_B_TEX : (int)SAW_TEX);
 	draw_circle_normal(0.0, radius, ndiv, 0);
 	fgPopMatrix();
 }

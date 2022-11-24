@@ -50,7 +50,7 @@ vector<team_info> teaminfo;
 vector<bbox> team_starts;
 
 
-extern bool vsync_enabled, spraypaint_mode, smoke_visible, begin_motion, flashlight_on, disable_fire_delay, disable_recoil, enable_translocator;
+extern bool vsync_enabled, spraypaint_mode, smoke_visible, begin_motion, flashlight_on, disable_fire_delay, disable_recoil, enable_translocator, disable_blood;
 extern int game_mode, window_width, window_height, world_mode, fire_key, spectate, animate2;
 extern int camera_reset, frame_counter, camera_mode, camera_coll_id, camera_surf_collide, b2down;
 extern int num_groups, num_smileys, left_handed, iticks, DISABLE_WATER, voxel_editing, player_dodgeball_id;
@@ -253,25 +253,25 @@ void gen_dead_smiley(int source, int target, float energy, point const &pos, vec
 		if (part_ids[i] == SF_TONGUE) {obj.orientation = orient;} // tongue
 	}
 
-	// chunks
-	int const chunk_start(NUM_CHUNK_BLOCKS*(SMILEY_NCHUNKS*(target+1) + sstate.chunk_index));
-	int const ccid(coll_id[CHUNK]), end_c_loop(chunk_start + SMILEY_NCHUNKS);
-	assert(unsigned(end_c_loop) <= obj_groups[ccid].max_objs);
-	if (burned) chunk_v *= 0.4;
+	if (!disable_blood) { // chunks
+		int const chunk_start(NUM_CHUNK_BLOCKS*(SMILEY_NCHUNKS*(target+1) + sstate.chunk_index));
+		int const ccid(coll_id[CHUNK]), end_c_loop(chunk_start + SMILEY_NCHUNKS);
+		assert(unsigned(end_c_loop) <= obj_groups[ccid].max_objs);
+		if (burned) chunk_v *= 0.4;
 
-	for (int i = chunk_start; i < end_c_loop; ++i) { // chunks
-		obj_groups[ccid].create_object_at(i, pos);
-		dwobject &obj(obj_groups[ccid].get_obj(i));
-		obj.pos       += gen_rand_vector(radius*rand_uniform(0.7, 1.3), 1.0, PI);
-		obj.init_dir   = signed_rand_vector_norm();
-		obj.init_dir.z = fabs(obj.init_dir.z);
-		gen_blood_velocity(obj.velocity, velocity, coll_dir, chunk_v, 0.25, 0.22, damage_type, health);
-		float const vmag(obj.velocity.mag());
-		if (vmag > TOLERANCE) obj.pos += obj.velocity*(radius/vmag);
-		if (burned) {obj.flags |= TYPE_FLAG;} // use TYPE_FLAG to encode burned state
-		else if (frozen) {obj.flags |= FROZEN_FLAG;}
+		for (int i = chunk_start; i < end_c_loop; ++i) { // chunks
+			obj_groups[ccid].create_object_at(i, pos);
+			dwobject &obj(obj_groups[ccid].get_obj(i));
+			obj.pos       += gen_rand_vector(radius*rand_uniform(0.7, 1.3), 1.0, PI);
+			obj.init_dir   = signed_rand_vector_norm();
+			obj.init_dir.z = fabs(obj.init_dir.z);
+			gen_blood_velocity(obj.velocity, velocity, coll_dir, chunk_v, 0.25, 0.22, damage_type, health);
+			float const vmag(obj.velocity.mag());
+			if (vmag > TOLERANCE) obj.pos += obj.velocity*(radius/vmag);
+			if (burned) {obj.flags |= TYPE_FLAG;} // use TYPE_FLAG to encode burned state
+			else if (frozen) {obj.flags |= FROZEN_FLAG;}
+		}
 	}
-
 	// skull
 	if (burned || energy < 250.0) { // frozen?
 		obj_groups[coll_id[SKULL]].create_object_at(target+1, pos);
@@ -285,7 +285,7 @@ void gen_dead_smiley(int source, int target, float energy, point const &pos, vec
 		gen_smoke(pos);
 	}
 	else if (frozen) {} // nothing?
-	else { // add blood
+	else if (!disable_blood) { // add blood
 		add_color_to_landscape_texture(BLOOD_C, pos.x, pos.y, min(1.5, 0.4*double(sqrt(blood_v)))*radius);
 		modify_grass_at((pos - vector3d(0.0, 0.0, radius)), 1.8*radius, 0, 0, 0, 1, 1, 0, BLOOD_C); // check_uw?
 	}
@@ -528,7 +528,10 @@ bool camera_collision(int index, int obj_index, vector3d const &velocity, point 
 	vector3d const coll_dir(get_norm_rand(vector3d(position, camera)));
 	bool const burned(is_burned(type, br_source)), alive(camera_health >= 0.0);
 	float const blood_v((energy > 0.0) ? (6.0 + 0.6*sqrt(energy)) : 0.0);
-	if (is_blood) {create_blood(0, (alive ? 30 : 1), camera, CAMERA_RADIUS, velocity, coll_dir, blood_v, damage_type, camera_health, burned, (sstate.freeze_time > 0));}
+	
+	if (is_blood && !disable_blood) {
+		create_blood(0, (alive ? 30 : 1), camera, CAMERA_RADIUS, velocity, coll_dir, blood_v, damage_type, camera_health, burned, (sstate.freeze_time > 0));
+	}
 	if (burned) {sstate.freeze_time = 0;} // thaw
 	else if (type == FREEZE_BOMB) {
 		freeze_player(sstate, energy);
@@ -603,7 +606,7 @@ bool camera_collision(int index, int obj_index, vector3d const &velocity, point 
 		if (!same_team(CAMERA_ID, source) && obj_groups[coll_id[SMILEY]].is_enabled()) {
 			update_kill_health(obj_groups[coll_id[SMILEY]].get_obj(source).health);
 		}
-		if (is_blood && !burned) {blood_on_camera(rand()%10);}
+		if (is_blood && !burned && !disable_blood) {blood_on_camera(rand()%10);}
 		sstate.drop_pack(camera);
 		remove_reset_coll_obj(camera_coll_id);
 		init_sstate(CAMERA_ID, 0);
@@ -723,7 +726,7 @@ bool smiley_collision(int index, int obj_index, vector3d const &velocity, point 
 		coll_dir *= -4.0;
 		if (type == FELL) {gen_sound(SOUND_SQUISH, obj_pos, 0.2);}
 	}
-	if (!burned && type != FREEZE_BOMB && !is_area_damage(type)) {
+	if (!burned && type != FREEZE_BOMB && !is_area_damage(type) && !disable_blood) {
 		unsigned const blood_amt(create_blood(index+1, (alive ? 30 : 1), obj_pos, radius,
 			velocity, coll_dir, blood_v, damage_type, obji.health, burned, (sstate.freeze_time > 0)));
 		float const cdist(distance_to_camera(obj_pos));

@@ -64,6 +64,7 @@ unlimited_weapons 1
 enable_translocator 1
 enable_grass_fire 0
 keep_keycards_on_death 0
+disable_blood 0
 
 num_dynam_parts 200 # normal
 #num_dynam_parts 8 # test shadow maps

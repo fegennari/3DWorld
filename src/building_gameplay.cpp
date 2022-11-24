@@ -19,7 +19,7 @@ carried_item_t player_held_object;
 bldg_obj_type_t bldg_obj_types[NUM_ROBJ_TYPES];
 vector<sphere_t> cur_sounds; // radius = sound volume
 
-extern bool camera_in_building, player_is_hiding, player_in_unlit_room;
+extern bool camera_in_building, player_is_hiding, player_in_unlit_room, disable_blood;
 extern int window_width, window_height, display_framerate, display_mode, game_mode, building_action_key, frame_counter;
 extern float fticks, CAMERA_RADIUS;
 extern double tfticks;
@@ -1777,6 +1777,7 @@ bool building_t::apply_toilet_paper(point const &pos, vector3d const &dir, float
 }
 
 void building_t::add_blood_decal(point const &pos, float radius) {
+	if (disable_blood) return;
 	assert(has_room_geom());
 	float zval(pos.z);
 	if (!get_zval_of_floor(pos, radius, zval)) return; // no suitable floor found
