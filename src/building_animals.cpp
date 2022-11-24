@@ -261,7 +261,7 @@ void building_t::update_rats(point const &camera_bs, unsigned building_ix) {
 bool can_hide_under(room_object_t const &c, cube_t &hide_area) {
 	cube_t dishwasher; // used below
 
-	if (c.type == TYPE_CLOSET && c.is_open() && c.is_small_closet()) { // open small closet
+	if (c.is_open() && c.is_small_closet()) { // open small closet
 		hide_area = c;
 		hide_area.expand_by(-get_closet_wall_thickness(c)); // we want the inside of the closet, excluding the walls
 		hide_area.z1() += 0.5*hide_area.dz(); // use the halfway point; somewhat arbitrary, but will affect the score

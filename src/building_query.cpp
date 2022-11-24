@@ -401,7 +401,7 @@ bool maybe_inside_room_object(room_object_t const &obj, point const &pos, float 
 }
 
 cube_t get_true_room_obj_bcube(room_object_t const &c) { // for collisions, etc.
-	if (c.type == TYPE_CLOSET && c.is_open() && c.is_small_closet()) { // special case for open closets
+	if (c.is_open() && c.is_small_closet()) { // special case for open closets
 		cube_t bcube(c); // only applies to small closets with open doors
 		float const width(c.get_width()), wall_width(0.5*(width - 0.5*c.dz())); // see get_closet_cubes()
 		bcube.d[c.dim][c.dir] += (c.dir ? 1.0f : -1.0f)*(width - 2.0f*wall_width); // extend outward
