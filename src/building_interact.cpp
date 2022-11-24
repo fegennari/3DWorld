@@ -15,7 +15,7 @@ float const OBJ_GRAVITY    = 0.0003;
 float const TERM_VELOCITY  = 1.0;
 float const OBJ_ELASTICITY = 0.8;
 
-extern bool tt_fire_button_down, flashlight_on, player_is_hiding, player_in_attic, use_last_pickup_object, city_action_key;
+extern bool tt_fire_button_down, flashlight_on, player_in_attic, use_last_pickup_object, city_action_key;
 extern int player_in_closet, camera_surf_collide, building_action_key, can_pickup_bldg_obj, animate2, frame_counter, player_in_elevator;
 extern float fticks, CAMERA_RADIUS, office_chair_rot_rate;
 extern double tfticks;

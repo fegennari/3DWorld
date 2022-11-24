@@ -10,8 +10,9 @@
 
 float const COLL_RADIUS_SCALE = 0.75; // somewhat smaller than radius, but larger than PED_WIDTH_SCALE
 
-int cpbl_update_frame(0);
+int player_hiding_frame(0);
 building_dest_t cur_player_building_loc, prev_player_building_loc;
+room_object_t player_hiding_obj;
 
 extern bool player_is_hiding;
 extern int frame_counter, display_mode, animate2;
@@ -1116,7 +1117,7 @@ bool can_ai_follow_player(person_t const &person) {
 	if (!ai_follow_player()) return 0; // disabled
 	if (!cur_player_building_loc.is_valid()) return 0; // no target
 	if (cur_player_building_loc.building_ix != person.cur_bldg) return 0; // wrong building
-	if (player_is_hiding) return 0; // ignore player if in the closet, bathroom stall, or shower with the door closed
+	if (player_is_hiding && !person.saw_player_hide) return 0; // ignore player in closet, bathroom stall, or shower with door closed, and we didn't see them hide
 	if (person.retreat_time > 0.0) return 0; // ignore the player if retreating
 	return 1;
 }
@@ -1192,6 +1193,25 @@ bool building_t::need_to_update_ai_path(person_t const &person) const {
 	}
 	if (has_nearby_sound(person, floor_spacing)) return 1; // new sound source
 	return 0; // continue on the previously chosen path
+}
+
+// technically, this isn't const because it modifies the saw_player_hide of people, but it doesn't actually modify the building itself
+void building_t::register_player_hiding(room_object_t const &hiding_obj) const {
+	player_is_hiding  = 1;
+	player_hiding_obj = hiding_obj; // cache this object for later use, for example so that we can open a closet door to find the player
+	bool const repeat(frame_counter <= player_hiding_frame+1); // player was hiding in prev frame - not a new hiding spot
+	player_hiding_frame = frame_counter;
+	if (repeat)    return;
+	if (!interior) return; // error?
+	if (!ai_follow_player()) return; // no AI update
+	assert(cur_player_building_loc.is_valid());
+	if (!cur_player_building_loc.is_valid()) return; // no target
+
+	for (person_t &person : interior->people) {
+		assert(cur_player_building_loc.building_ix == person.cur_bldg);
+		if (person.retreat_time > 0.0) continue; // ignore the player if retreating
+		person.saw_player_hide = is_player_visible(person, max(global_building_params.ai_player_vis_test, 1U)); // at least LOS test
+	}
 }
 
 void building_t::all_ai_room_update(rand_gen_t &rgen, float delta_dir) {

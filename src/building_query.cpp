@@ -6,7 +6,7 @@
 #include "buildings.h"
 
 
-extern bool draw_building_interiors, camera_in_building, player_near_toilet, player_is_hiding, player_in_unlit_room, player_in_attic, ctrl_key_pressed;
+extern bool draw_building_interiors, camera_in_building, player_near_toilet, player_in_unlit_room, player_in_attic, ctrl_key_pressed;
 extern float CAMERA_RADIUS, C_STEP_HEIGHT, NEAR_CLIP;
 extern int player_in_closet, camera_surf_collide, frame_counter, player_in_elevator;
 extern double camera_zh;
@@ -594,7 +594,7 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, flo
 				if (c->contains_pt(pos)) {
 					player_in_closet |= RO_FLAG_IN_CLOSET;
 					if (interior->room_geom->closet_light_is_on(*c)) {player_in_closet |= RO_FLAG_LIT;}
-					if (c->is_open()) {player_in_closet |= RO_FLAG_OPEN;} else {player_is_hiding = 1;} // player is hiding if the closet door is closed
+					if (c->is_open()) {player_in_closet |= RO_FLAG_OPEN;} else {register_player_hiding(*c);} // player is hiding if the closet door is closed
 				}
 			}
 			else if (c->type == TYPE_STALL && maybe_inside_room_object(*c, pos, xy_radius)) {
@@ -610,7 +610,7 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, flo
 				if (c->type == TYPE_TOILET || c->type == TYPE_URINAL) {player_near_toilet = 1;}
 				had_coll = 1;
 			}
-			if ((c->type == TYPE_STALL || c->type == TYPE_SHOWER) && !c->is_open() && c->contains_pt(pos)) {player_is_hiding = 1;} // player is hiding in the stall/shower
+			if ((c->type == TYPE_STALL || c->type == TYPE_SHOWER) && !c->is_open() && c->contains_pt(pos)) {register_player_hiding(*c);} // player is hiding in the stall/shower
 		} // for c
 	}
 	for (person_t const &p : interior->people) {
