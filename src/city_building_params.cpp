@@ -224,10 +224,11 @@ void building_params_t::init_kw_maps() {
 	kwmc.add("house_ceil_color",  cur_mat.house_ceil_color);
 	kwmc.add("house_floor_color", cur_mat.house_floor_color);
 	// AI logic
-	kwmu.add("ai_opens_doors",     ai_opens_doors); // 0=don't open doors, 1=only open if player closed door after path selection; 2=always open doors
-	kwmb.add("ai_target_player",   ai_target_player);
-	kwmb.add("ai_follow_player",   ai_follow_player);
-	kwmu.add("ai_player_vis_test", ai_player_vis_test); // 0=no test, 1=LOS, 2=LOS+FOV, 3=LOS+FOV+lit
+	kwmu.add("ai_opens_doors",      ai_opens_doors); // 0=don't open doors, 1=only open if player closed door after path selection; 2=always open doors
+	kwmb.add("ai_target_player",    ai_target_player);
+	kwmb.add("ai_follow_player",    ai_follow_player);
+	kwmu.add("ai_player_vis_test",  ai_player_vis_test); // 0=no test, 1=LOS, 2=LOS+FOV, 3=LOS+FOV+lit
+	kwmu.add("ai_sees_player_hide", ai_sees_player_hide); // 0=doesn't see the player, 1=sees the player and waits outside the hiding spot, 2=opens the door and comes in
 	kwmu.add("people_per_office_min", people_per_office_min);
 	kwmu.add("people_per_office_max", people_per_office_max);
 	kwmu.add("people_per_house_min",  people_per_house_min);

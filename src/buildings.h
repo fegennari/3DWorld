@@ -349,6 +349,7 @@ struct building_params_t {
 	bool ai_target_player=1, ai_follow_player=0, allow_elevator_line=1, no_coll_enter_exit_elevator=1;
 	unsigned ai_opens_doors=1; // 0=don't open doors, 1=only open if player closed door after path selection; 2=always open doors
 	unsigned ai_player_vis_test=0; // 0=no test, 1=LOS, 2=LOS+FOV, 3=LOS+FOV+lit
+	unsigned ai_sees_player_hide=2; // 0=doesn't see the player, 1=sees the player and waits outside the hiding spot, 2=opens the door and comes in
 	unsigned people_per_office_min=0, people_per_office_max=0, people_per_house_min=0, people_per_house_max=0, elevator_capacity=1;
 	float ai_retreat_time=4.0, elevator_wait_time=60.0, use_elevator_prob=0.25, elevator_wait_recall_prob=0.5;
 	// building animal params

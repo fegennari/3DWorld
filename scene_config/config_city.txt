@@ -20,10 +20,11 @@ include building_materials.txt
 buildings tt_only 1
 
 # building AI logic
-buildings ai_opens_doors 2 # AI can open closed building doors rather than stopping at them: 0=don't open doors, 1=only open if player closed door after path selection; 2=always open doors
-buildings ai_target_player 1 # AI follows the player position (rather than just the room) in gameplay mode
-buildings ai_follow_player 0 # enable player following in gameplay mode by default
-buildings ai_player_vis_test 1 # 0=no test, 1=LOS, 2=LOS+FOV, 3=LOS+FOV+lit
+buildings ai_opens_doors      2 # AI can open closed building doors rather than stopping at them: 0=don't open doors, 1=only open if player closed door after path selection; 2=always open doors
+buildings ai_target_player    1 # AI follows the player position (rather than just the room) in gameplay mode
+buildings ai_follow_player    0 # enable player following in gameplay mode by default
+buildings ai_player_vis_test  1 # 0=no test, 1=LOS, 2=LOS+FOV, 3=LOS+FOV+lit
+buildings ai_sees_player_hide 2 # 0=doesn't see the player, 1=sees the player and waits outside the hiding spot, 2=opens the door and comes in
 buildings ai_retreat_time 4.0 # in seconds
 # elevators
 buildings allow_elevator_line  1 # allow people to form lines waiting for an elevator

@@ -868,7 +868,7 @@ void building_interior_t::get_avoid_cubes(vect_cube_t &avoid, float z1, float z2
 		//if (skip_stairs && c->type == TYPE_RAMP) continue;
 		//if (c->type == TYPE_ATTIC_DOOR && (c->flags & RO_FLAG_IN_HALLWAY)) continue; // skip open attic doors in hallways because they block the path too much
 		
-		if (c->is_open()) { // open hiding spot
+		if (global_building_params.ai_sees_player_hide >= 2 && c->is_open()) { // open hiding spot that we can enter
 			// in the unlikely event the player closes the door on a zombie, I guess they're stuck in here; good job to the player
 			if (c->type == TYPE_CLOSET) {
 				cube_t cubes[5];
@@ -1223,6 +1223,7 @@ bool building_t::need_to_update_ai_path(person_t const &person) const {
 void building_t::register_player_hiding(room_object_t const &hiding_obj) const {
 	player_is_hiding  = 1;
 	player_hiding_obj = hiding_obj; // cache this object for later use, for example so that we can open a closet door to find the player
+	if (!global_building_params.ai_sees_player_hide) return; // no setting of saw_player_hide
 	bool const repeat(frame_counter <= player_hiding_frame+1); // player was hiding in prev frame - not a new hiding spot
 	player_hiding_frame = frame_counter;
 	if (repeat)    return;
@@ -1506,7 +1507,7 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 				else if (ret_status == 2) {return AI_TO_REMOVE;} // player defeats zombie, remove it
 			}
 		}
-		if (player_is_hiding && person.saw_player_hide && global_building_params.ai_opens_doors &&
+		if (player_is_hiding && person.saw_player_hide && global_building_params.ai_opens_doors && global_building_params.ai_sees_player_hide >= 2 &&
 			player_hiding_obj.type != TYPE_NONE && same_room_and_floor_as_player(person))
 		{
 			// open the closet, stall, or shower door
