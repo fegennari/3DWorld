@@ -1475,6 +1475,7 @@ private:
 public:
 	int get_room_containing_pt(point const &pt) const;
 	bool room_containing_pt_has_stairs(point const &pt) const;
+	void register_player_in_building(point const &camera_bs, unsigned building_id) const;
 	bool maybe_teleport_to_screenshot() const;
 	bool place_obj_along_wall(room_object type, room_t const &room, float height, vector3d const &sz_scale, rand_gen_t &rgen,
 		float zval, unsigned room_id, float tot_light_amt, cube_t const &place_area, unsigned objs_start, float front_clearance=0.0,
@@ -1667,7 +1668,6 @@ private:
 	void insert_door_in_wall_and_add_seg(cube_t &wall, float v1, float v2, bool dim, bool open_dir, bool keep_high_side, bool is_bathroom=0);
 	unsigned get_floor_for_zval(float zval) const {return unsigned((zval - get_bcube_z1_inc_ext_basement())/get_window_vspace());}
 	building_loc_t get_building_loc_for_pt(point const &pt) const;
-	void register_player_in_building(point const &camera_bs, unsigned building_id) const;
 	bool same_room_and_floor_as_player(person_t const &person) const;
 	bool is_player_visible(person_t const &person, unsigned vis_test) const;
 	bool can_target_player(person_t const &person) const;

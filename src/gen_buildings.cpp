@@ -41,7 +41,7 @@ extern shader_t reflection_shader;
 
 void get_all_model_bcubes(vector<cube_t> &bcubes); // from model3d.h
 cube_t get_building_indir_light_bounds(); // from building_lighting.cpp
-void end_register_player_in_building();
+void register_player_not_in_building();
 
 float get_door_open_dist() {return 3.5*CAMERA_RADIUS;}
 
@@ -2631,7 +2631,6 @@ public:
 			enable_dlight_bcubes = 0; // disable when creating the reflection image (will be set when we re-enter multi_draw())
 			interior_shadow_maps = 0;
 			create_mirror_reflection_if_needed();
-			end_register_player_in_building(); // required for AI player following
 			player_building = nullptr; // reset, may be set below
 		}
 		//timer_t timer("Draw Buildings"); // 0.57ms (2.6ms with glFinish(), 6.3ms with building interiors)
@@ -2792,6 +2791,7 @@ public:
 						this_frame_player_in_basement |= b.check_player_in_basement(camera_xlated - vector3d(0.0, 0.0, BASEMENT_ENTRANCE_SCALE*b.get_floor_thickness())); // only set once
 						this_frame_player_in_attic    |= b.point_in_attic(camera_xlated);
 						player_building = &b;
+						b.register_player_in_building(camera_xlated, bi->ix); // required for AI following logic
 						if (enable_building_indir_lighting()) {indir_bcs_ix = bcs_ix; indir_bix = bi->ix;} // compute indirect lighting for this building
 						// run any player interaction logic here
 						if (toggle_room_light  ) {b.toggle_room_light(camera_xlated);}
@@ -2831,8 +2831,10 @@ public:
 				end_stencil_write();
 			}
 		} // end have_interior
-		if (!reflection_pass) {toggle_room_light = teleport_to_screenshot = 0; building_action_key = 0;} // reset these even if the player wasn't in a building
-
+		if (!reflection_pass) {
+			if (player_building == nullptr) {register_player_not_in_building();}
+			toggle_room_light = teleport_to_screenshot = 0; building_action_key = 0; // reset these even if the player wasn't in a building
+		}
 		if (draw_interior && reflection_pass != 2) { // skip for interior room reflections (but what about looking out through the bathroom door?)
 			// draw back faces of buildings, which will be interior walls
 			setup_building_draw_shader(s, min_alpha, 1, 1, 1); // enable_indir=1, force_tsl=1, use_texgen=1

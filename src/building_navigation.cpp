@@ -629,10 +629,9 @@ bool building_t::are_rooms_connected_without_using_room(unsigned room1, unsigned
 void building_t::register_player_in_building(point const &camera_bs, unsigned building_id) const {
 	if (animate2) {prev_player_building_loc = cur_player_building_loc;} // only update previous pos when AI is running so that it doesn's miss a floor or room change
 	cur_player_building_loc = building_dest_t(get_building_loc_for_pt(camera_bs), camera_bs, building_id);
-	cpbl_update_frame       = frame_counter;
 }
-void end_register_player_in_building() {
-	if (cpbl_update_frame != frame_counter) {prev_player_building_loc = cur_player_building_loc = building_dest_t();} // player not in building, reset
+void register_player_not_in_building() {
+	prev_player_building_loc = cur_player_building_loc = building_dest_t();
 }
 
 bool building_t::choose_dest_goal(person_t &person, rand_gen_t &rgen) const { // used for following the player in gameplay mode

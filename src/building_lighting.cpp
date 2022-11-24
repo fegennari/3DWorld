@@ -1169,7 +1169,6 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			unsigned const room_type(room.get_room_type(camera_floor));
 			assert(room_type < NUM_RTYPES);
 			if (show_room_name) {lighting_update_text = room_names[room_type];}
-			register_player_in_building(camera_bs, building_id); // required for AI following logic
 
 			if (camera_by_stairs) { // by stairs - check if we're actually on the stairs
 				for (auto i = interior->stairwells.begin(); i != interior->stairwells.end(); ++i) {
@@ -1192,7 +1191,6 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		}
 		else if (point_in_attic(camera_rot)) {
 			if (show_room_name) {lighting_update_text = room_names[RTYPE_ATTIC];}
-			register_player_in_building(camera_bs, building_id); // required for AI following logic (though part and room will be unset)
 		}
 		//lighting_update_text = ((is_sphere_lit(camera_rot, get_scaled_player_radius()) || is_sphere_lit((camera_rot - vector3d(0.0, 0.0, get_player_height())), get_scaled_player_radius())) ? "Lit" : "Unlit");
 	}
