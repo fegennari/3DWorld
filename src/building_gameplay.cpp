@@ -1058,7 +1058,7 @@ bool building_room_geom_t::open_nearest_drawer(building_t &building, point const
 	
 	if (pickup_item && !has_doors) { // pick up item in drawer rather than opening drawer; no pickup items behind doors yet
 		if (!(obj.drawer_flags & (1U << closest_drawer_id))) return 0; // drawer is not open
-		room_object_t const item(get_item_in_drawer(obj, drawer, closest_drawer_id));
+		room_object_t const item(get_item_in_drawer(drawers_part, drawer, closest_drawer_id));
 		if (item.type == TYPE_NONE) return 0; // no item
 		if (check_only) return 1;
 		if (!register_player_object_pickup(item, at_pos)) return 0;

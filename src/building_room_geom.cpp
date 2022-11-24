@@ -214,7 +214,7 @@ void building_room_geom_t::add_dresser(room_object_t const &c, float tscale, boo
 }
 
 float get_drawer_cubes(room_object_t const &c, vect_cube_t &drawers, bool front_only, bool inside_only) {
-	assert(!(front_only && inside_only)); // these options only apply to open drawers
+	assert(!(front_only && inside_only)); // these options only apply to open drawers and are mutually exclusive
 	assert(c.is_strictly_normalized());
 	drawers.clear();
 	rand_gen_t rgen;
@@ -245,7 +245,7 @@ float get_drawer_cubes(room_object_t const &c, vect_cube_t &drawers, bool front_
 			if (c.drawer_flags & (1 << drawers.size())) { // make a drawer open
 				drawer.d[c.dim][c.dir] += drawer_extend;
 				if (front_only) {drawer.d[c.dim][!c.dir] += drawer_extend;} // translate the other side as well
-				else if (inside_only) { // adjust to return interior part of the door for interaction
+				else if (inside_only) { // adjust to return interior part of the drawer for interaction
 					drawer.d[c.dim][ c.dir] -= sd_thick; // flush with object
 					drawer.d[c.dim][!c.dir] += 0.25f*sd_thick;
 					drawer.expand_in_dim(!c.dim, -0.08*drawer.get_sz_dim(!c.dim)); // subtract off width of sides
