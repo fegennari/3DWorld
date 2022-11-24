@@ -1474,13 +1474,28 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 		// use zval of the feet to handle cases where the person and the player are different heights
 		point const feet_pos(person.pos.x, person.pos.y, person.get_z1()), player_feet_pos(cur_player_building_loc.pos - vector3d(0.0, 0.0, CAMERA_RADIUS+get_player_height()));
 
-		if (dist_less_than(feet_pos, player_feet_pos, 1.2f*(person.radius + get_scaled_player_radius()))) {
+		if (dist_less_than(feet_pos, player_feet_pos, 1.2f*(person.radius + get_scaled_player_radius()))) { // intersecting the player
 			if (!check_for_wall_ceil_floor_int(person.pos, cur_player_building_loc.pos)) {
 				int const ret_status(register_ai_player_coll(person.has_key, person.get_height())); // return value: 0=no effect, 1=player is killed, 2=this person is killed
 				// player is killed, we could track kills here
 				if (ret_status == 1) {add_blood_decal(cur_player_building_loc.pos, get_scaled_player_radius());}
 				else if (ret_status == 2) {return AI_TO_REMOVE;} // player defeats zombie, remove it
 			}
+		}
+		if (player_is_hiding && person.saw_player_hide && global_building_params.ai_opens_doors &&
+			player_hiding_obj.type != TYPE_NONE && same_room_and_floor_as_player(person))
+		{
+			// open the closet, stall, or shower door
+			// it may not be safe to use an object iterator or even an index since we're in a different thread, so do a linear search for the target object
+			auto objs_end(interior->room_geom->get_placed_objs_end()); // skip buttons/stairs/elevators
+
+			for (auto i = interior->room_geom->objs.begin(); i != objs_end; ++i) {
+				if (*i != player_hiding_obj) continue;
+				if (i->is_open()) break; // already open
+				// TODO: some other check that we're close enough
+				i->flags |= RO_FLAG_OPEN; // open the door
+				interior->room_geom->update_draw_state_for_room_object(*i, *this, 0);
+			} // for i
 		}
 	}
 	bool choose_dest(!person.target_valid());
