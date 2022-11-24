@@ -312,6 +312,7 @@ public:
 			is_ringing     = is_on = 0;
 			stop_ring_time = tfticks; // now
 			schedule_next_ring();
+			register_achievement("Spam Risk");
 		}
 		else {
 			is_on ^= 1;
@@ -350,11 +351,11 @@ struct tape_manager_t {
 
 tape_manager_t tape_manager;
 
-unsigned const NUM_ACHIEVEMENTS = 15;
+unsigned const NUM_ACHIEVEMENTS = 16;
 
 class achievement_tracker_t {
 	// Rat Food, Top Secret Document, Mr. Yuck, Zombie Hunter, Royal Flush, Zombie Bashing, One More Drink, Bathroom Reader, TP Artist,
-	// Master Lockpick, Squeaky Clean, Sleep with the Fishes, Splat the Spider, 7 years of bad luck, Tastes Like Chicken
+	// Master Lockpick, Squeaky Clean, Sleep with the Fishes, Splat the Spider, 7 years of bad luck, Tastes Like Chicken, Spam Risk
 	set<string> achievements;
 	// some way to make this persistent, print these out somewhere, or add small screen icons?
 public:
