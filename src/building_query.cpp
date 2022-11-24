@@ -376,24 +376,36 @@ unsigned check_chair_collision(room_object_t const &c, point &pos, point const &
 	get_chair_cubes(c, cubes);
 	return check_cubes_collision(cubes, 3, pos, p_last, radius, cnorm);
 }
-// Note: these next two are intended to be called when maybe_inside_room_object() returns true
-bool check_stall_collision(room_object_t const &c, point &pos, point const &p_last, float radius, vector3d *cnorm) {
+
+unsigned get_stall_cubes(room_object_t const &c, cube_t sides[3]) {
+	sides[0] = sides[1] = sides[2] = c;
 	float const width(c.get_width());
-	cube_t sides[3] = {c, c, c};
 	sides[0].d[!c.dim][1] -= 0.95*width;
 	sides[1].d[!c.dim][0] += 0.95*width;
-	if (!c.is_open()) {sides[2].d[c.dim][c.dir] += (c.dir ? -1.0 : 1.0)*0.975*c.get_length();} // check collision with closed door
+	if (!c.is_open()) {sides[2].d[c.dim][c.dir] += (c.dir ? -1.0 : 1.0)*0.975*c.get_length();} // include closed door
+	return (c.is_open() ? 2U : 3U);
+}
+// Note: these next two are intended to be called when maybe_inside_room_object() returns true
+bool check_stall_collision(room_object_t const &c, point &pos, point const &p_last, float radius, vector3d *cnorm) {
+	cube_t sides[3];
+	unsigned const num_cubes(get_stall_cubes(c, sides));
 	bool had_coll(0);
-	for (unsigned d = 0; d < (c.is_open() ? 2U : 3U); ++d) {had_coll |= sphere_cube_int_update_pos(pos, radius, sides[d], p_last, 1, 0, cnorm);}
+	for (unsigned d = 0; d < num_cubes; ++d) {had_coll |= sphere_cube_int_update_pos(pos, radius, sides[d], p_last, 1, 0, cnorm);}
 	return had_coll;
 }
-bool check_shower_collision(room_object_t const &c, point &pos, point const &p_last, float radius, vector3d *cnorm) {
+
+unsigned get_shower_cubes(room_object_t const &c, cube_t sides[2]) {
+	sides[0] = sides[1] = c;
 	bool const door_dim(c.dx() < c.dy()), door_dir(door_dim ? c.dir : c.dim), side_dir(door_dim ? c.dim : c.dir); // {c.dim, c.dir} => {dir_x, dir_y}
-	cube_t sides[2] = {c, c};
 	sides[0].d[!door_dim][side_dir] -= (side_dir ? 1.0 : -1.0)*0.95*c.get_sz_dim(!door_dim); // shrink to just the outer glass wall of the shower
 	if (!c.is_open()) {sides[1].d[door_dim][door_dir] += (door_dir ? -1.0 : 1.0)*0.95*c.get_sz_dim(door_dim);} // check collision with closed door
+	return (c.is_open() ? 1U : 2U);
+}
+bool check_shower_collision(room_object_t const &c, point &pos, point const &p_last, float radius, vector3d *cnorm) {
+	cube_t sides[2];
+	unsigned const num_cubes(get_shower_cubes(c, sides));
 	bool had_coll(0);
-	for (unsigned d = 0; d < (c.is_open() ? 1U : 2U); ++d) {had_coll |= sphere_cube_int_update_pos(pos, radius, sides[d], p_last, 1, 0, cnorm);}
+	for (unsigned d = 0; d < num_cubes; ++d) {had_coll |= sphere_cube_int_update_pos(pos, radius, sides[d], p_last, 1, 0, cnorm);}
 	return had_coll;
 }
 bool maybe_inside_room_object(room_object_t const &obj, point const &pos, float radius) {
@@ -404,7 +416,7 @@ cube_t get_true_room_obj_bcube(room_object_t const &c) { // for collisions, etc.
 	if (c.is_open() && c.is_small_closet()) { // special case for open closets
 		cube_t bcube(c); // only applies to small closets with open doors
 		float const width(c.get_width()), wall_width(0.5*(width - 0.5*c.dz())); // see get_closet_cubes()
-		bcube.d[c.dim][c.dir] += (c.dir ? 1.0f : -1.0f)*(width - 2.0f*wall_width); // extend outward
+		bcube.d[c.dim][c.dir] += (c.dir ? 1.0f : -1.0f)*(width - 2.0f*wall_width); // extend outward to include the door
 		return bcube;
 	}
 	if (c.type == TYPE_ATTIC_DOOR) {

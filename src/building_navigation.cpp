@@ -26,6 +26,8 @@ bool can_ai_follow_player(person_t const &person);
 float get_closest_building_sound(point const &at_pos, point &sound_pos, float floor_spacing);
 void maybe_play_zombie_sound(point const &sound_pos_bs, unsigned zombie_ix, bool alert_other_zombies, bool high_priority=0);
 int register_ai_player_coll(bool &has_key, float height);
+unsigned get_stall_cubes(room_object_t const &c, cube_t sides[3]);
+unsigned get_shower_cubes(room_object_t const &c, cube_t sides[2]);
 
 point get_cube_center_zval(cube_t const &c, float zval) {return point(c.xc(), c.yc(), zval);}
 
@@ -865,6 +867,28 @@ void building_interior_t::get_avoid_cubes(vect_cube_t &avoid, float z1, float z2
 		// so that means we need navigation to the side while on a ramp? this seems quite difficult for the current system to support
 		//if (skip_stairs && c->type == TYPE_RAMP) continue;
 		//if (c->type == TYPE_ATTIC_DOOR && (c->flags & RO_FLAG_IN_HALLWAY)) continue; // skip open attic doors in hallways because they block the path too much
+		
+		if (c->is_open()) { // open hiding spot
+			// in the unlikely event the player closes the door on a zombie, I guess they're stuck in here; good job to the player
+			if (c->type == TYPE_CLOSET) {
+				cube_t cubes[5];
+				get_closet_cubes(*c, cubes, 1); // for_collision=1
+				for (unsigned i = 0; i < 4; ++i) {avoid.push_back(cubes[i]);} // skip the open door
+				continue;
+			}
+			else if (c->type == TYPE_STALL) {
+				cube_t sides[3];
+				unsigned const num_cubes(get_stall_cubes(*c, sides));
+				for (unsigned i = 0; i < num_cubes; ++i) {avoid.push_back(sides[i]);}
+				continue;
+			}
+			else if (c->type == TYPE_SHOWER) {
+				cube_t sides[2];
+				unsigned const num_cubes(get_shower_cubes(*c, sides));
+				for (unsigned i = 0; i < num_cubes; ++i) {avoid.push_back(sides[i]);}
+				continue;
+			}
+		}
 		cube_t bc(get_true_room_obj_bcube(*c)); // needed for open attic door
 		if (bc.z1() > z2 || bc.z2() < z1) continue;
 
