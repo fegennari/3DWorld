@@ -35,15 +35,15 @@ buildings elevator_wait_recall_prob 0.5 # probability of waiting and re-calling 
 
 # building rats
 buildings num_rats_min 5
-buildings num_rats_max 8
+buildings num_rats_max 10
 buildings min_attack_rats 3 # 0 disables rat attacks
 buildings rat_speed 0.0005
 buildings rat_size_min 0.10 # length relative to floor spacing
 buildings rat_size_max 0.20 # length relative to floor spacing
 
 # building spiders
-buildings num_spiders_min 5
-buildings num_spiders_max 10
+buildings num_spiders_min 3
+buildings num_spiders_max 5
 buildings spider_drawer_prob 0.05
 buildings spider_speed 0.0003
 buildings spider_size_min 0.08 # length relative to floor spacing
