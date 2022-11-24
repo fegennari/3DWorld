@@ -610,7 +610,7 @@ struct room_object_t : public oriented_cube_t { // size=64
 	bool is_light_type() const {return (type == TYPE_LIGHT || (type == TYPE_LAMP && !was_expanded() && !in_attic()));} // light, or lamp not in closet
 	bool is_sink_type () const {return (type == TYPE_SINK || type == TYPE_KSINK || type == TYPE_BRSINK);}
 	bool is_obj_model_type() const {return (type >= TYPE_TOILET && type < NUM_ROBJ_TYPES);}
-	bool is_small_closet() const {return (get_width() < 1.2*dz());}
+	bool is_small_closet() const {return (type == TYPE_CLOSET && get_width() < 1.2*dz());}
 	bool is_bottle_empty() const {return ((obj_id & 192) == 192);} // empty if both bits 6 and 7 are set
 	bool desk_has_drawers()const {return bool(room_id & 3);} // 75% of the time
 	bool is_glass_table () const {return (type == TYPE_TABLE && (flags & RO_FLAG_IS_HOUSE) && (obj_id & 1));} // 50% chance if in a house
@@ -1513,6 +1513,7 @@ public:
 	void invalidate_nav_graph();
 	point local_to_camera_space(point const &pos) const;
 	void play_door_open_close_sound(point const &pos, bool open, float gain=1.0, float pitch=1.0) const;
+	void play_open_close_sound(room_object_t const &obj, point const &sound_origin) const;
 	void maybe_gen_chimney_smoke() const;
 	cube_t get_part_containing_pt(point const &pt) const;
 	void print_building_manifest() const;

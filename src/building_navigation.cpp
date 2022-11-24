@@ -1494,7 +1494,9 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 				if (i->is_open()) break; // already open
 				// TODO: some other check that we're close enough
 				i->flags |= RO_FLAG_OPEN; // open the door
+				play_open_close_sound(*i, person.pos);
 				interior->room_geom->update_draw_state_for_room_object(*i, *this, 0);
+				break; // done
 			} // for i
 		}
 	}

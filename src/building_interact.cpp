@@ -496,7 +496,6 @@ bool building_t::apply_player_action_key(point const &closest_to_in, vector3d co
 
 bool building_t::interact_with_object(unsigned obj_ix, point const &int_pos, point const &query_ray_end, vector3d const &int_dir) {
 	auto &obj(interior->room_geom->get_room_object_by_index(obj_ix));
-	float const pitch((obj.type == TYPE_STALL) ? 2.0 : 1.0); // higher pitch for stalls
 	point const sound_origin(obj.xc(), obj.yc(), int_pos.z), local_center(local_to_camera_space(sound_origin)); // generate sound from the player height
 	float sound_scale(0.5); // for building sound level
 	bool update_draw_data(0);
@@ -643,10 +642,10 @@ bool building_t::interact_with_object(unsigned obj_ix, point const &int_pos, poi
 	else if (obj.type == TYPE_SHOWER) { // shower
 		// if (interior->room_geom->cube_intersects_moved_obj(c_test)) continue; // not yet needed
 		if (can_open_bathroom_stall_or_shower(obj, int_pos, int_dir)) { // open/close shower door
-			gen_sound_thread_safe_at_player((obj.is_open() ? (unsigned)SOUND_DOOR_OPEN : (unsigned)SOUND_METAL_DOOR));
 			obj.flags       ^= RO_FLAG_OPEN; // toggle open/close
 			sound_scale      = 0.35;
 			update_draw_data = 1;
+			play_open_close_sound(obj, sound_origin);
 		}
 		else { // turn on shower water
 			gen_sound_thread_safe_at_player(SOUND_SINK);
@@ -668,22 +667,21 @@ bool building_t::interact_with_object(unsigned obj_ix, point const &int_pos, poi
 			if (was_expanded) {interior->room_geom->maybe_spawn_spider_in_drawer(obj, obj, 0, get_window_vspace(), 1);} // spawn spider when first opened
 			sound_scale = 0.25; // closets are quieter, to allow players to more easily hide
 		}
-		if (obj.is_small_closet()) {play_door_open_close_sound(sound_origin, obj.is_open(), 1.0, pitch);}
-		else {gen_sound_thread_safe_at_player(SOUND_SLIDING);}
+		play_open_close_sound(obj, sound_origin);
 		register_indir_lighting_geom_change();
 		update_draw_data = 1;
 	}
 	else if (obj.type == TYPE_MIRROR && obj.is_house()) { // medicine cabinet
 		obj.flags ^= RO_FLAG_OPEN; // toggle open/close
 		interior->room_geom->expand_object(obj, *this);
-		play_door_open_close_sound(sound_origin, obj.is_open(), 0.4, 1.6);
+		play_open_close_sound(obj, sound_origin);
 		sound_scale      = 0.4;
 		update_draw_data = 1;
 	}
 	else if (obj.type == TYPE_BRK_PANEL) { // breaker panel
 		obj.flags ^= RO_FLAG_OPEN; // toggle open/close
 		interior->room_geom->expand_object(obj, *this);
-		play_door_open_close_sound(sound_origin, obj.is_open(), 0.6, 1.8);
+		play_open_close_sound(obj, sound_origin);
 		sound_scale      = 0.6;
 		update_draw_data = 1;
 	}
@@ -785,6 +783,17 @@ point building_t::local_to_camera_space(point const &pos) const {
 
 void building_t::play_door_open_close_sound(point const &pos, bool open, float gain, float pitch) const {
 	gen_sound_thread_safe((open ? (unsigned)SOUND_DOOR_OPEN : (unsigned)SOUND_DOOR_CLOSE), local_to_camera_space(pos), gain, pitch);
+}
+// called for both player and AI actions
+void building_t::play_open_close_sound(room_object_t const &obj, point const &sound_origin) const {
+	if (obj.is_small_closet() || obj.type == TYPE_STALL) {
+		play_door_open_close_sound(sound_origin, obj.is_open(), 1.0, ((obj.type == TYPE_STALL) ? 2.0 : 1.0)); // higher pitch for stalls
+	}
+	else if (obj.type == TYPE_CLOSET   ) {gen_sound_thread_safe_at_player(SOUND_SLIDING);}
+	else if (obj.type == TYPE_SHOWER   ) {gen_sound_thread_safe_at_player((obj.is_open() ? (unsigned)SOUND_DOOR_OPEN : (unsigned)SOUND_METAL_DOOR));}
+	else if (obj.type == TYPE_MIRROR   ) {play_door_open_close_sound(sound_origin, obj.is_open(), 0.4, 1.6);} // medicine cabinet
+	else if (obj.type == TYPE_BRK_PANEL) {play_door_open_close_sound(sound_origin, obj.is_open(), 0.6, 1.8);} // breaker panel
+	else {assert(0);} // not implemented
 }
 
 // dynamic objects: elevators and balls
