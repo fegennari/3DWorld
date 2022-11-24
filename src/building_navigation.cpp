@@ -409,7 +409,7 @@ public:
 					// try to find a partial path, starting at "to" and working toward "from"; since rooms are rectangular, all points on the line will be contained
 					for (unsigned n = 1; n <= 9; ++n) { // {10% ... 90%}
 						point const new_to(to + (float(n)/10)*(from - to));
-						assert(walk_area.contains_pt(new_to));
+						if (!walk_area.contains_pt(new_to)) continue; // can fail for player hiding in a closet
 						if (connect_room_endpoints(avoid, walk_area, new_to, from, radius, path, keepout, rgen, 0, following_player)) {success = 1; break;} // ignore_p1_coll = 0
 					} // for n
 				}
@@ -1513,7 +1513,7 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 			// it may not be safe to use an object iterator or even an index since we're in a different thread, so do a linear search for the target object
 			auto objs_end(interior->room_geom->get_placed_objs_end()); // skip buttons/stairs/elevators
 			cube_t coll_cube(person.get_bcube());
-			coll_cube.expand_by_xy(2.0*person.radius);
+			coll_cube.expand_by_xy(1.5*person.radius);
 
 			for (auto i = interior->room_geom->objs.begin(); i != objs_end; ++i) {
 				if (*i != player_hiding_obj) continue;
