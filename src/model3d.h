@@ -245,6 +245,7 @@ struct model_anim_t {
 		anim_quat_val_t(float time_, glm::quat const &q_) : anim_base_val_t(time_), q(q_) {}
 	};
 	struct anim_data_t {
+		bool uses_scale=0;
 		vector<anim_vec3_val_t> pos, scale;
 		vector<anim_quat_val_t> rot;
 		void init(unsigned np, unsigned nr, unsigned ns);

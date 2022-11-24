@@ -112,10 +112,9 @@ void model_anim_t::transform_node_hierarchy_recur(float anim_time, animation_t c
 
 	if (it != animation.anim_data.end()) { // found (about half the time)
 		anim_data_t const &A(it->second);
-		glm::mat4 const translation(glm::translate(glm::mat4(1.0), vec3_from_vector3d(calc_interpolated_position(anim_time, A))));
-		glm::mat4 const rotation(glm::toMat4(calc_interpolated_rotation(anim_time, A)));
-		glm::mat4 const scaling(glm::scale(glm::mat4(1.0), vec3_from_vector3d(calc_interpolated_scale(anim_time, A)))); // often (1,1,1), but doesn't help much to special case it
-		node_transform = translation * rotation * scaling;
+		node_transform  = glm::translate(glm::mat4(1.0), vec3_from_vector3d(calc_interpolated_position(anim_time, A)));
+		node_transform *= glm::toMat4(calc_interpolated_rotation(anim_time, A));
+		if (A.uses_scale) {node_transform *= glm::scale(glm::mat4(1.0), vec3_from_vector3d(calc_interpolated_scale(anim_time, A)));} // only scale when needed (rarely)
 	}
 	xform_matrix const global_transform(parent_transform * node_transform);
 
@@ -245,17 +244,18 @@ class file_reader_assimp {
 			if (!node_anim) continue; // no animation for this node
 			model_anim_t::anim_data_t& A(model_anim.animations[a].anim_data[node_name]);
 			A.init(node_anim->mNumPositionKeys, node_anim->mNumRotationKeys, node_anim->mNumScalingKeys);
-			// position
-			for (unsigned i = 0; i < node_anim->mNumPositionKeys; i++) {
+			
+			for (unsigned i = 0; i < node_anim->mNumPositionKeys; i++) { // position
 				A.pos.emplace_back(node_anim->mPositionKeys[i].mTime, aiVector3D_to_vector3d(node_anim->mPositionKeys[i].mValue));
 			}
-			// rotation
-			for (unsigned i = 0; i < node_anim->mNumRotationKeys; i++) {
+			for (unsigned i = 0; i < node_anim->mNumRotationKeys; i++) { // rotation
 				A.rot.emplace_back(node_anim->mRotationKeys[i].mTime, aiQuaternion_to_glm_quat(node_anim->mRotationKeys[i].mValue));
 			}
-			// scaling
-			for (unsigned i = 0; i < node_anim->mNumScalingKeys; i++) {
-				A.scale.emplace_back(node_anim->mScalingKeys[i].mTime, aiVector3D_to_vector3d(node_anim->mScalingKeys[i].mValue));
+			for (unsigned i = 0; i < node_anim->mNumScalingKeys; i++) { // scaling
+				vector3d const scale(aiVector3D_to_vector3d(node_anim->mScalingKeys[i].mValue));
+				A.scale.emplace_back(node_anim->mScalingKeys[i].mTime, scale);
+				// scale is used if any component is more than a small tolerance from 1.0
+				A.uses_scale |= (fabs(scale.x - 1.0) > 0.0001 || fabs(scale.y - 1.0) > 0.0001 || fabs(scale.z - 1.0) > 0.0001);
 			}
 		} // for a
 		for (unsigned i = 0; i < node->mNumChildren; i++) {
