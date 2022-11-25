@@ -408,8 +408,9 @@ public:
 				if (following_player) {
 					// try to find a partial path, starting at "to" and working toward "from"; since rooms are rectangular, all points on the line will be contained
 					for (unsigned n = 1; n <= 9; ++n) { // {10% ... 90%}
-						point const new_to(to + (float(n)/10)*(from - to));
-						if (!walk_area.contains_pt(new_to)) continue; // can fail for player hiding in a closet
+						point new_to(to + (float(n)/10)*(from - to));
+						//if (!walk_area.contains_pt(new_to)) continue; // can fail for player hiding in a closet
+						walk_area.clamp_pt_xy(new_to);
 						if (connect_room_endpoints(avoid, walk_area, new_to, from, radius, path, keepout, rgen, 0, following_player)) {success = 1; break;} // ignore_p1_coll = 0
 					} // for n
 				}
@@ -1182,7 +1183,7 @@ bool building_t::is_player_visible(person_t const &person, unsigned vis_test) co
 	unsigned const person_floor_ix(get_floor_for_zval(person.pos.z));
 	unsigned const floor_delta(abs((int)cur_player_building_loc.floor_ix - (int)person_floor_ix));
 	bool const same_room_and_floor(same_room && floor_delta == 0); // Note: doesn't check cur_player_building_loc.stairs_ix
-	bool has_los(same_room_and_floor);
+	bool has_los(same_room_and_floor); // assume that we have a line of sight if we're in the same room and floor as the player (optimization)
 
 	if (!has_los && same_room && floor_delta == 1 && person.pos.z > ground_floor_z1) {
 		// if the person and the player are on adjacent floors of the same room connected by stairs (and not in a parking garage), cheat and say they have a line of sight
