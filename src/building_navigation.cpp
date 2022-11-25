@@ -637,6 +637,13 @@ void register_player_not_in_building() {
 	prev_player_building_loc = cur_player_building_loc = building_dest_t();
 }
 
+bool is_ai_coll_obj(room_object_t const &c, bool same_as_player) {
+	// these object types are not collided with by people and can be skipped
+	if (c.no_coll() || c.is_dynamic() || c.type == TYPE_LG_BALL) return 0; // skip dynamic objects (balls, etc.)
+	if (!(same_as_player ? c.is_player_collidable() : bldg_obj_types[c.type].ai_coll)) return 0;
+	return 1;
+}
+
 bool building_t::choose_dest_goal(person_t &person, rand_gen_t &rgen) const { // used for following the player in gameplay mode
 
 	assert(interior && interior->nav_graph);
@@ -651,6 +658,20 @@ bool building_t::choose_dest_goal(person_t &person, rand_gen_t &rgen) const { //
 		person.goal_type = GOAL_TYPE_PLAYER;
 	}
 	else if (can_ai_follow_player(person) && get_closest_building_sound(person.pos, sound_pos, floor_spacing)) { // target the loudest sound
+		// check if the sound is coming from somewhere unreachable such as a closet the player is hiding inside, then move it out into the center of the room;
+		// maybe this location is also unreachable, but at least it will get the zombie into the correct room instead of have them wait at the wall in an adjacent room
+		assert(has_room_geom());
+		auto objs_end(interior->room_geom->get_placed_objs_end()); // skip buttons/stairs/elevators
+
+		for (auto c = interior->room_geom->objs.begin(); c != objs_end; ++c) {
+			if (!is_ai_coll_obj(*c, 1))     continue; // same_as_player=1
+			if (!c->contains_pt(sound_pos)) continue;
+			int const room_ix(get_room_containing_pt(sound_pos));
+			if (room_ix < 0) continue; // error?
+			cube_t const &room(get_room(room_ix));
+			sound_pos.x = room.xc();
+			sound_pos.y = room.yc();
+		} // for c
 		goal = building_dest_t(get_building_loc_for_pt(sound_pos), sound_pos, cur_player_building_loc.building_ix); // same building as player (current building)
 		person.goal_type = GOAL_TYPE_SOUND;
 	}
@@ -858,10 +879,8 @@ void building_interior_t::get_avoid_cubes(vect_cube_t &avoid, float z1, float z2
 	float const z_thresh(z1 + 0.35*(z2 - z1)); // used with r_shrink_if_low
 
 	for (auto c = room_geom->objs.begin(); c != objs_end; ++c) {
-		// these object types are not collided with by people and can be skipped
+		if (!is_ai_coll_obj(*c, same_as_player)) continue;
 		// what about TYPE_CURB? should people step on/over these, or generally avoid them?
-		if (c->no_coll() || c->is_dynamic() || c->type == TYPE_LG_BALL) continue; // skip dynamic objects (balls, etc.)
-		if (!(same_as_player ? c->is_player_collidable() : bldg_obj_types[c->type].ai_coll)) continue;
 		// skip_stairs also skips ramps? no, this seems to result in zombies walking in midair as if the ramp was a solid floor when approaching from above;
 		// maybe zombies should walk down the ramp instead? but ramps are wider than stairs, if the player stands to the side then the zombie may walk right by;
 		// so that means we need navigation to the side while on a ramp? this seems quite difficult for the current system to support
