@@ -24,7 +24,7 @@ bool in_building_gameplay_mode();
 bool ai_follow_player() {return (global_building_params.ai_follow_player || in_building_gameplay_mode());}
 bool can_ai_follow_player(person_t const &person);
 float get_closest_building_sound(point const &at_pos, point &sound_pos, float floor_spacing);
-void maybe_play_zombie_sound(point const &sound_pos_bs, unsigned zombie_ix, bool alert_other_zombies, bool high_priority=0);
+void maybe_play_zombie_sound(point const &sound_pos_bs, unsigned zombie_ix, bool alert_other_zombies, bool high_priority=0, float gain=1.0, float pitch=1.0);
 int register_ai_player_coll(bool &has_key, float height);
 unsigned get_stall_cubes(room_object_t const &c, cube_t sides[3]);
 unsigned get_shower_cubes(room_object_t const &c, cube_t sides[2]);
@@ -1865,8 +1865,10 @@ void building_t::register_person_hit(unsigned person_ix, room_object_t const &ob
 	person_t &person(interior->people[person_ix]);
 
 	if (obj.type == TYPE_LG_BALL) { // currently this is the only throwable/dynamic object
+		if (person.is_on_stairs) return; // ignore when on stairs as this doesn't work correctly
 		if (obj.zc() < (person.get_z1() + 0.25*person.get_height())) return; // less than 25% up, coll with legs, assume this is kicking a ball that's on the floor
-		if (person.retreat_time == 0.0) {maybe_play_zombie_sound(person.pos, person_ix, 1, 1);} // player sound on first retreat: alert_other_zombies=1, high_priority=1
+		// play sound on first retreat: alert_other_zombies=1, high_priority=1, gain=1.0, pitch=1.25
+		if (person.retreat_time == 0.0) {maybe_play_zombie_sound(person.pos, person_ix, 1, 1, 1.0, 1.25);}
 		// Note: this isn't really thread safe, but it should be okay to modify this state while the AI thread is running
 		person.retreat_time = global_building_params.ai_retreat_time*TICKS_PER_SECOND; // retreat
 		register_achievement("Zombie Bashing");
