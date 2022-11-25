@@ -306,7 +306,8 @@ void building_room_geom_t::expand_cabinet(room_object_t const &c) { // called on
 		cube_t bottle;
 		gen_xy_pos_for_round_obj(bottle, interior, bottle_radius, bottle_height, 1.5*bottle_radius, rgen, 1); // place_at_z1=1
 		room_object_t obj(bottle, TYPE_BOTTLE, c.room_id, 0, 0, flags, light_amt, SHAPE_CYLIN); // vertical
-		obj.set_as_bottle(rgen.rand(), NUM_BOTTLE_TYPES-2, 1); // all bottle types except for medicine, no_empty=1
+		bool const allow_medicine(rgen.rand_bool()); // medicine is half as common
+		obj.set_as_bottle(rgen.rand(), (allow_medicine ? NUM_BOTTLE_TYPES : BOTTLE_TYPE_MEDS)-1, 1); // all bottle types, no_empty=1
 		add_if_not_intersecting(obj, expanded_objs, cubes);
 	}
 	if (cubes.size() > start_num_cubes) {invalidate_small_geom();} // some object was added
@@ -325,7 +326,7 @@ void building_room_geom_t::expand_med_cab(room_object_t const &c) { // aka house
 	if (rgen.rand_bool()) {interior.z1() += 0.5*(interior.dz() + wall_thickness);} // place on middle shelf half the time
 	gen_xy_pos_for_round_obj(bottle, interior, radius, height, 0.1*radius, rgen, 1); // place_at_z1=1
 	room_object_t obj(bottle, TYPE_BOTTLE, c.room_id, 0, 0, flags, c.light_amt, SHAPE_CYLIN); // vertical
-	obj.set_as_bottle(NUM_BOTTLE_TYPES-1, NUM_BOTTLE_TYPES-1, 1); // medicine, no_empty=1
+	obj.set_as_bottle(BOTTLE_TYPE_MEDS, BOTTLE_TYPE_MEDS, 1); // medicine, no_empty=1
 	expanded_objs.push_back(obj);
 	invalidate_small_geom();
 }
@@ -458,7 +459,7 @@ void building_room_geom_t::get_shelf_objects(room_object_t const &c_in, cube_t c
 			float const bottle_height(z_step*rgen.rand_uniform(0.4, 0.7)), bottle_radius(z_step*rgen.rand_uniform(0.07, 0.11));
 			if (min(c_sz.x, c_sz.y) < 5.0*bottle_radius) continue; // shelf not wide/deep enough to add this bottle
 			gen_xy_pos_for_round_obj(C, S, bottle_radius, bottle_height, 2.0*bottle_radius, rgen);
-			C.set_as_bottle(rgen.rand(), NUM_BOTTLE_TYPES-2, 1); // all bottle types except for medicine, no_empty=1
+			C.set_as_bottle(rgen.rand(), BOTTLE_TYPE_MEDS-1, 1); // all bottle types except for medicine, no_empty=1
 			add_if_not_intersecting(C, objects, cubes);
 		}
 		// add paint cans
