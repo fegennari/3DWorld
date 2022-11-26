@@ -1594,7 +1594,7 @@ int building_t::check_line_coll_expand(point const &p1, point const &p2, float r
 				c_coll.z1() += 0.05*c->dz(); // there's space under the shelves
 				if (line_int_cube_exp(p1, p2, c_coll, expand)) return 9;
 			}
-			else if (c->type == TYPE_COLLIDER && (c->flags & RO_FLAG_FOR_CAR)) { // parked car
+			else if (c->is_parked_car()) { // parked car
 				cube_t cubes[5];
 				get_approx_car_cubes(*c, cubes);
 				if (line_int_cubes_exp(p1, p2, cubes, 5, expand)) return 9;

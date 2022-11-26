@@ -320,7 +320,7 @@ bool can_hide_under(room_object_t const &c, cube_t &hide_area) {
 		hide_area.z1() += 0.05*c.dz();
 		return 1;
 	}
-	else if (c.type == TYPE_COLLIDER && (c.flags & RO_FLAG_FOR_CAR)) { // parked car
+	else if (c.is_parked_car()) { // parked car
 		hide_area = c;
 		hide_area.z1() += 0.12*c.dz(); // there's space under the car
 		return 1;
