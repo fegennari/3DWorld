@@ -931,7 +931,14 @@ void ped_manager_t::assign_ped_model(person_base_t &ped) { // Note: non-const, m
 }
 void ped_manager_t::maybe_reassign_ped_model(person_base_t &ped) {
 	bool const choose_zombie(in_building_gameplay_mode());
-	if (ped_model_loader.get_model(ped.model_id).is_zombie != choose_zombie) {assign_ped_model(ped);}
+	city_model_t const &cur_model(ped_model_loader.get_model(ped.model_id));
+	
+	if (cur_model.is_zombie != choose_zombie) {
+		float const old_radius(ped.radius);
+		ped.radius /= cur_model.scale; // undo the previous model's scale
+		assign_ped_model(ped);
+		ped.pos.z += (ped.radius - old_radius); // adjust height based on new radius
+	}
 }
 void ped_manager_t::maybe_reassign_models() { // called when switching between normal/people and gameplay/zombies modes
 	if (!ped_model_loader.has_mix_of_model_types()) return;
