@@ -641,7 +641,7 @@ struct room_object_t : public oriented_cube_t { // size=64
 	int get_sheet_tid() const;
 	int get_paper_tid() const;
 	int get_model_id () const;
-	void set_as_bottle(unsigned rand_id, unsigned max_type=NUM_BOTTLE_TYPES-1, bool no_empty=0);
+	void set_as_bottle(unsigned rand_id, unsigned max_type=NUM_BOTTLE_TYPES-1, bool no_empty=0, unsigned exclude_mask=0);
 	colorRGBA get_color() const;
 	colorRGBA get_model_color() const;
 	vector3d get_dir() const {vector3d v(zero_vector); v[dim] = (dir ? 1.0 : -1.0); return v;}
@@ -656,6 +656,18 @@ struct carried_item_t : public room_object_t {
 	carried_item_t() : use_count(0) {}
 	carried_item_t(room_object_t const &o) : room_object_t(o), use_count(0) {}
 	float get_remaining_capacity_ratio() const;
+};
+
+struct custom_item_t {
+	std::string name;
+	float value, weight;
+	custom_item_t() : value(0.0), weight(0.0) {}
+	custom_item_t(std::string const &n, float v, float w) : name(n), value(v), weight(w) {}
+	bool valid() const {return !name.empty();}
+};
+struct room_obj_or_custom_item_t {
+	room_object_t obj;
+	custom_item_t item;
 };
 
 struct room_obj_dstate_t { // state used for dynamic room objects

@@ -32,7 +32,7 @@ void show_key_icon();
 bool is_shirt_model(room_object_t const &obj);
 bool is_pants_model(room_object_t const &obj);
 bool player_at_full_health();
-room_object_t steal_from_car(room_object_t const &car, float floor_spacing, bool do_pickup);
+room_obj_or_custom_item_t steal_from_car(room_object_t const &car, float floor_spacing, bool do_pickup);
 
 bool in_building_gameplay_mode() {return (game_mode == 2);} // replaces dodgeball mode
 
@@ -387,6 +387,12 @@ class player_inventory_t { // manages player inventory, health, and other stats
 		print_text_onscreen(("You Have Died" + why), RED, 2.0, 2*TICKS_PER_SECOND, 10);
 		clear(); // respawn
 	}
+	static void print_value_and_weight(std::ostringstream &oss, float value, float weight) {
+		oss << ": value $";
+		if (value < 1.0 && value > 0.0) {oss << ((value < 0.1) ? "0.0" : "0.") << round_fp(100.0*value);} // make sure to print the leading/trailing zero for cents
+		else {oss << value;}
+		oss << " weight " << weight << " lbs";
+	}
 public:
 	player_inventory_t() {clear_all();}
 
@@ -533,10 +539,7 @@ public:
 				}
 				tape_manager.clear();
 			}
-			oss << ": value $";
-			if (value < 1.0 && value > 0.0) {oss << ((value < 0.1) ? "0.0" : "0.") << round_fp(100.0*value);} // make sure to print the leading/trailing zero for cents
-			else {oss << value;}
-			oss << " weight " << get_obj_weight(obj) << " lbs";
+			print_value_and_weight(oss, value, get_obj_weight(obj));
 		}
 		else { // add one drink to the bladder, 25% of capacity
 			bladder = min(1.0f, (bladder + 0.25f));
@@ -548,6 +551,15 @@ public:
 		}
 		if (!bladder_was_full && bladder >= 0.9f) {oss << "\nYou need to use the bathroom"; text_color = YELLOW;}
 		print_text_onscreen(oss.str(), text_color, 1.0, 3*TICKS_PER_SECOND, 0);
+	}
+	void add_custom_item(custom_item_t const &item) { // Note: no support for consumables, health, drunk, or interactive items
+		cur_value   += item.value;
+		cur_weight  += item.weight;
+		damage_done += item.value;
+		std::ostringstream oss;
+		oss << item.name;
+		print_value_and_weight(oss, item.value, item.weight);
+		print_text_onscreen(oss.str(), GREEN, 1.0, 3*TICKS_PER_SECOND, 0);
 	}
 	bool take_person(bool &person_has_key, float person_height) {
 		if (drunkenness < 1.5) { // not drunk enough
@@ -876,12 +888,27 @@ bool building_room_geom_t::player_pickup_object(building_t &building, point cons
 		return 1;
 	}
 	if (obj.is_parked_car()) {
-		room_object_t const loot(steal_from_car(obj, building.get_window_vspace(), do_room_obj_pickup));
-		if (loot.type == TYPE_NONE) return 0;
-		if (!register_player_object_pickup(loot, at_pos)) return 0;
-		player_inventory.add_item(loot);
-		++obj.taken_level; // onto next item
-		return 1;
+		// returns either a standard room object or a custom item; in general, we won't return both, but in any case we're successful if either type of item is taken
+		room_obj_or_custom_item_t const loot(steal_from_car(obj, building.get_window_vspace(), do_room_obj_pickup));
+		bool ret(0);
+		
+		if (loot.obj.type != TYPE_NONE && register_player_object_pickup(loot.obj, at_pos)) {
+			player_inventory.add_item(loot.obj);
+			ret = 1;
+		}
+		if (loot.item.valid()) {
+			bool const can_pick_up(player_inventory.check_weight_limit(loot.item.weight));
+			if (!do_room_obj_pickup) {can_pickup_bldg_obj = (can_pick_up ? 1 : 2);} // notify the player of an object to pick up
+			else if (!can_pick_up) {show_weight_limit_message();}
+			else {
+				do_room_obj_pickup = 0; // no more object pickups
+				gen_sound_thread_safe_at_player(SOUND_ITEM, 0.25);
+				player_inventory.add_custom_item(loot.item);
+				ret = 1;
+			}
+		}
+		if (ret) {++obj.taken_level;} // onto next item
+		return ret;
 	}
 	if (!register_player_object_pickup(obj, at_pos)) return 0;
 	remove_object(obj_id, building);

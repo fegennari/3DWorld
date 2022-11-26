@@ -765,7 +765,7 @@ void building_t::add_box_contents(room_object_t const &box) {
 
 			for (auto i = obj_bcubes.begin(); i != obj_bcubes.end(); ++i) {
 				objs.emplace_back(*i, TYPE_BOTTLE, room_id, 0, 0, (flags | RO_FLAG_NO_CONS), light_amt, SHAPE_CYLIN);
-				objs.back().set_as_bottle(bottle_id, 3, 1); // 0-3; excludes poison and medicine; no_empty=1
+				objs.back().set_as_bottle(bottle_id, BOTTLE_TYPE_WINE, 1); // 0-3; excludes poison and medicine; no_empty=1
 			}
 		}
 		else if (obj_type == 2) { // ball - only 1
@@ -831,51 +831,68 @@ void building_t::add_box_contents(room_object_t const &box) {
 	} // for n
 }
 
-room_object_t steal_from_car(room_object_t const &car, float floor_spacing, bool do_pickup) {
+room_obj_or_custom_item_t steal_from_car(room_object_t const &car, float floor_spacing, bool do_pickup) {
 	rand_gen_t rgen;
 	rgen.set_state(car.obj_id+1, car.get_orient()+1);
 	rgen.rand_mix();
 	bool const is_locked(rgen.rand_bool()); // or was locked
+	room_obj_or_custom_item_t ret; // starts off unassigned
 
 	if (is_locked && !car.is_broken()) { // can't open the door
 		if (do_pickup) {print_text_onscreen("Door is locked", RED, 1.0, 2.0*TICKS_PER_SECOND, 0);}
-		return room_object_t();
+		return ret;
 	}
-	unsigned const item_counts[10] = {0, 0, 0, 1, 1, 1, 1, 2, 2, 3}; // 0-3
-	unsigned const num_items(item_counts[rgen.rand()%10]);
+	unsigned const item_counts[16] = {0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 4, 4, 5}; // 0-4
+	unsigned const num_items(item_counts[rgen.rand()%16]);
 
 	if (car.taken_level >= num_items) { // already looted, nothing left
 		if (do_pickup) {print_text_onscreen("You found nothing of value", RED, 0.75, 2.0*TICKS_PER_SECOND, 0);}
-		return room_object_t();
+		return ret;
 	}
 	for (unsigned n = 0; n < car.taken_level; ++n) {rgen.rand_mix();} // mix up the state so that each item is different
-	room_object_t obj; // starts off unassigned; cube is unused/irrelevant for some object types
-	float const v(rgen.rand_float()); // 0.0-1.0
 
-	if (v < 0.15) { // 15% chance for money
-		float const length(0.025*floor_spacing); // doesn't really matter
-		place_money(obj, car, length, 2.35*length, car.room_id, car.dim, car.dir, rgen);
+	if (rgen.rand_bool()) { // select a custom item; most of these are of little value and added for humor
+		switch (rgen.rand()%10) {
+		case 0: ret.item = custom_item_t("bag of chips",              0.5,  0.1); break;
+		case 1: ret.item = custom_item_t("sweaty gym clothes",        2.0,  0.4); break;
+		case 2: ret.item = custom_item_t("day old pizza",             0.0,  0.6); break;
+		case 3: ret.item = custom_item_t("case of CDs",               5.0,  0.2); break;
+		case 4: ret.item = custom_item_t("handgun (with no ammo)",  150.0,  1.0); break;
+		case 5: ret.item = custom_item_t("locked briefcase",        200.0, 10.0); break;
+		case 6: ret.item = custom_item_t("stuffed animal",            5.0,  0.3); break;
+		case 7: ret.item = custom_item_t("pair of shoes",            40.0,  2.0); break;
+		case 8: ret.item = custom_item_t("cooler full of beer",      60.0, 20.0); break;
+		case 9: ret.item = custom_item_t("box of Girl Scout cookies", 8.0,  1.0); break;
+		}
 	}
-	else if (v < 0.30) { // 15% chance for cell phone
-		float const length(0.06*floor_spacing), width(0.45*length);
-		place_phone(obj, car, length, width, car.room_id, car.dim, car.dir, rgen);
+	else { // select a standard room item
+		float const v(rgen.rand_float()); // 0.0-1.0
+
+		if (v < 0.15) { // 15% chance for money
+			float const length(0.025*floor_spacing); // doesn't really matter, cube is unused/irrelevant
+			place_money(ret.obj, car, length, 2.35*length, car.room_id, car.dim, car.dir, rgen);
+		}
+		else if (v < 0.30) { // 15% chance for cell phone
+			float const length(0.06*floor_spacing), width(0.45*length);
+			place_phone(ret.obj, car, length, width, car.room_id, car.dim, car.dir, rgen);
+		}
+		else if (v < 0.40) { // 10% chance for laptop, cube is unused/irrelevant
+			ret.obj.type = TYPE_LAPTOP;
+		}
+		else if (v < 0.65) { // 25% chance for bottle, cube is unused/irrelevant
+			ret.obj.type = TYPE_BOTTLE;
+			ret.obj.set_as_bottle(rgen.rand(), NUM_BOTTLE_TYPES-1, 0, (1 << BOTTLE_TYPE_POISON)); // all bottle types except for poison, no_empty=0
+		}
+		else if (v < 0.85) { // 20% chance for book
+			float const length(rgen.rand_uniform(0.06, 0.09)*floor_spacing);
+			place_book(ret.obj, car, length, 0.2*length, car.room_id, car.dim, car.dir, rgen);
+		}
+		else { // 15% chance for box, cube is unused/irrelevant
+			ret.obj.type   = TYPE_BOX;
+			ret.obj.obj_id = rgen.rand();
+		}
 	}
-	else if (v < 0.40) { // 10% chance for laptop
-		obj.type = TYPE_LAPTOP;
-	}
-	else if (v < 0.65) { // 25% chance for bottle
-		obj.type = TYPE_BOTTLE;
-		obj.set_as_bottle(rgen.rand(), NUM_BOTTLE_TYPES-1, 0); // all bottle types, no_empty=0
-	}
-	else if (v < 0.85) { // 20% chance for book
-		float const length(rgen.rand_uniform(0.06, 0.09)*floor_spacing);
-		place_book(obj, car, length, 0.2*length, obj.room_id, car.dim, car.dir, rgen);
-	}
-	else { // 15% chance for box
-		obj.type   = TYPE_BOX;
-		obj.obj_id = rgen.rand();
-	}
-	return obj;
+	return ret;
 }
 
 bool building_room_geom_t::expand_object(room_object_t &c, building_t const &building) {
