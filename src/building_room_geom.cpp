@@ -385,7 +385,7 @@ void get_closet_cubes(room_object_t const &c, cube_t cubes[5], bool for_collisio
 	walls[0].d[!c.dim][1] -= wall_shift;
 	walls[1].d[!c.dim][0] += wall_shift;
 
-	for (unsigned d = 0; d < 2; ++d) {
+	for (unsigned d = 0; d < 2; ++d) { // left, right
 		cube_t front(walls[d]), side(walls[d]);
 		front.d[c.dim][!c.dir] = side.d[c.dim][c.dir] = front.d[c.dim][c.dir] - (c.dir ? 1.0 : -1.0)*wall_thick; // set front wall/door thickness
 
