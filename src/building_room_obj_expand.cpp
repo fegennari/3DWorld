@@ -568,6 +568,30 @@ void set_rand_pos_for_sz(cube_t &c, bool dim, float length, float width, rand_ge
 	c.d[!dim][0] = rgen.rand_uniform(c.d[!dim][0], (c.d[!dim][1] - width));
 	c.d[!dim][1] = c.d[!dim][0] + width;
 }
+void place_money(room_object_t &obj, cube_t const &parent, float length, float width, unsigned room_id, bool dim, bool dir, rand_gen_t &rgen, unsigned max_bills=20) {
+	obj = room_object_t(parent, TYPE_MONEY, room_id, dim, dir);
+	obj.z2() = obj.z1() + 0.01f*length*((rgen.rand()%max_bills) + 1); // 1-20 bills
+	set_rand_pos_for_sz(obj, dim, length, width, rgen);
+}
+void place_phone(room_object_t &obj, cube_t const &parent, float length, float width, unsigned room_id, bool dim, bool dir, rand_gen_t &rgen) {
+	unsigned const NUM_PHONE_COLORS = 7; // for the case
+	colorRGBA const phone_colors[NUM_PHONE_COLORS] = {WHITE, GRAY, DK_GRAY, GRAY_BLACK, BLUE, RED, PINK};
+	obj = room_object_t(parent, TYPE_PHONE, room_id, dim, dir);
+	obj.color = phone_colors[rgen.rand() % NUM_PHONE_COLORS];
+	obj.z2()  = obj.z1() + 0.045*length;
+	set_rand_pos_for_sz(obj, dim, length, width, rgen);
+}
+void set_book_id_and_color(room_object_t &obj, rand_gen_t &rgen) {
+	obj.obj_id = rgen.rand();
+	obj.color  = book_colors[rgen.rand() % NUM_BOOK_COLORS];
+}
+void place_book(room_object_t &obj, cube_t const &parent, float length, float max_height, unsigned room_id, bool dim, bool dir, rand_gen_t &rgen) {
+	float const width(rgen.rand_uniform(0.6, 1.0)*length);
+	obj = room_object_t(parent, TYPE_BOOK, room_id, dim, dir);
+	set_book_id_and_color(obj, rgen);
+	obj.z2() = obj.z1() + min(0.3f*width, rgen.rand_uniform(0.3, 1.0)*max_height);
+	set_rand_pos_for_sz(obj, !dim, length, width, rgen);
+}
 
 /*static*/ room_object_t building_room_geom_t::get_item_in_drawer(room_object_t const &c, cube_t const &drawer, unsigned drawer_ix) {
 	assert(drawer_ix < 16);
@@ -620,12 +644,8 @@ void set_rand_pos_for_sz(cube_t &c, bool dim, float length, float width, rand_ge
 	}
 	case 4: // book
 	{
-		float const length(rgen.rand_uniform(0.6, 0.9)*min(sz.x, sz.y)), width(rgen.rand_uniform(0.6, 1.0)*length);
-		obj = room_object_t(drawer, TYPE_BOOK, c.room_id, !c.dim, (c.dir ^ c.dim));
-		obj.obj_id = rgen.rand();
-		obj.color  = book_colors[rgen.rand() % NUM_BOOK_COLORS];
-		obj.z2()   = obj.z1() + min(0.3f*width, rgen.rand_uniform(0.1, 0.35)*sz.z);
-		set_rand_pos_for_sz(obj, c.dim, length, width, rgen);
+		float const length(rgen.rand_uniform(0.6, 0.9)*min(sz.x, sz.y));
+		place_book(obj, drawer, length, 0.35*sz.z, c.room_id, !c.dim, (c.dir ^ c.dim), rgen);
 		break;
 	}
 	case 5: // key (Note: aspect ratio of key depends on aspect ratio of door, but key model is always a constant aspect ratio)
@@ -650,27 +670,14 @@ void set_rand_pos_for_sz(cube_t &c, bool dim, float length, float width, rand_ge
 	case 7: // money
 	{
 		float const length(0.135*c.dz()), width(2.35*length);
-
-		if (length < 0.9*sz[c.dim] && width < 0.9*sz[!c.dim]) { // if it can fit
-			obj = room_object_t(drawer, TYPE_MONEY, c.room_id, c.dim, c.dir);
-			obj.z2() = obj.z1() + 0.01f*length*((rgen.rand()%20) + 1); // 1-20 bills
-			set_rand_pos_for_sz(obj, c.dim, length, width, rgen);
-		}
+		if (length < 0.9*sz[c.dim] && width < 0.9*sz[!c.dim]) {place_money(obj, drawer, length, width, c.room_id, c.dim, c.dir, rgen);} // if it can fit
 		break;
 	}
 	case 8: // phone
 	{
 		bool const dim(c.dim ^ rgen.rand_bool()); // random orient
 		float const length(0.3*c.dz()), width(0.45*length);
-
-		if (length < 0.9*sz[dim] && width < 0.9*sz[!dim]) { // if it can fit
-			unsigned const NUM_PHONE_COLORS = 7; // for the case
-			colorRGBA const phone_colors[NUM_PHONE_COLORS] = {WHITE, GRAY, DK_GRAY, GRAY_BLACK, BLUE, RED, PINK};
-			obj = room_object_t(drawer, TYPE_PHONE, c.room_id, dim, c.dir);
-			obj.color = phone_colors[rgen.rand() % NUM_PHONE_COLORS];
-			obj.z2()  = obj.z1() + 0.045*length;
-			set_rand_pos_for_sz(obj, dim, length, width, rgen);
-		}
+		if (length < 0.9*sz[dim] && width < 0.9*sz[!dim]) {place_phone(obj, drawer, length, width, c.room_id, dim, c.dir, rgen);} // if it can fit
 		break;
 	}
 	case 9: // spray paint can
@@ -743,8 +750,7 @@ void building_t::add_box_contents(room_object_t const &box) {
 			for (unsigned n = 0; n < num_books; ++n) {
 				float const length(rgen.rand_uniform(0.7, 0.95)*min(sz[dim], 2.0f*sz[!dim])), width(min(rgen.rand_uniform(0.6, 1.0)*length, 0.95f*sz[!dim]));
 				room_object_t obj(c, TYPE_BOOK, room_id, !dim, rgen.rand_bool(), flags, light_amt);
-				obj.obj_id = rgen.rand();
-				obj.color  = book_colors[rgen.rand() % NUM_BOOK_COLORS];
+				set_book_id_and_color(obj, rgen);
 				set_cube_zvals(obj, cur_zval, (cur_zval + min(0.3f*width, rgen.rand_uniform(0.1, 0.2)*sz.z)));
 				if (obj.z2() > c.z2()) break; // book doesn't fit - the stack is too tall; can't fail on the first book
 				set_rand_pos_for_sz(obj, dim, length, width, rgen);
@@ -823,6 +829,53 @@ void building_t::add_box_contents(room_object_t const &box) {
 		interior->room_geom->invalidate_small_geom();
 		break; // if we got here, something was placed in the box
 	} // for n
+}
+
+room_object_t steal_from_car(room_object_t const &car, float floor_spacing, bool do_pickup) {
+	rand_gen_t rgen;
+	rgen.set_state(car.obj_id+1, car.get_orient()+1);
+	rgen.rand_mix();
+	bool const is_locked(rgen.rand_bool()); // or was locked
+
+	if (is_locked && !car.is_broken()) { // can't open the door
+		if (do_pickup) {print_text_onscreen("Door is locked", RED, 1.0, 2.0*TICKS_PER_SECOND, 0);}
+		return room_object_t();
+	}
+	unsigned const item_counts[10] = {0, 0, 0, 1, 1, 1, 1, 2, 2, 3}; // 0-3
+	unsigned const num_items(item_counts[rgen.rand()%10]);
+
+	if (car.taken_level >= num_items) { // already looted, nothing left
+		if (do_pickup) {print_text_onscreen("You found nothing of value", RED, 0.75, 2.0*TICKS_PER_SECOND, 0);}
+		return room_object_t();
+	}
+	for (unsigned n = 0; n < car.taken_level; ++n) {rgen.rand_mix();} // mix up the state so that each item is different
+	room_object_t obj; // starts off unassigned; cube is unused/irrelevant for some object types
+	float const v(rgen.rand_float()); // 0.0-1.0
+
+	if (v < 0.15) { // 15% chance for money
+		float const length(0.025*floor_spacing); // doesn't really matter
+		place_money(obj, car, length, 2.35*length, car.room_id, car.dim, car.dir, rgen);
+	}
+	else if (v < 0.30) { // 15% chance for cell phone
+		float const length(0.06*floor_spacing), width(0.45*length);
+		place_phone(obj, car, length, width, car.room_id, car.dim, car.dir, rgen);
+	}
+	else if (v < 0.40) { // 10% chance for laptop
+		obj.type = TYPE_LAPTOP;
+	}
+	else if (v < 0.65) { // 25% chance for bottle
+		obj.type = TYPE_BOTTLE;
+		obj.set_as_bottle(rgen.rand(), NUM_BOTTLE_TYPES-1, 0); // all bottle types, no_empty=0
+	}
+	else if (v < 0.85) { // 20% chance for book
+		float const length(rgen.rand_uniform(0.06, 0.09)*floor_spacing);
+		place_book(obj, car, length, 0.2*length, obj.room_id, car.dim, car.dir, rgen);
+	}
+	else { // 15% chance for box
+		obj.type   = TYPE_BOX;
+		obj.obj_id = rgen.rand();
+	}
+	return obj;
 }
 
 bool building_room_geom_t::expand_object(room_object_t &c, building_t const &building) {

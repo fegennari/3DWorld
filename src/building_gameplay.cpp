@@ -32,6 +32,7 @@ void show_key_icon();
 bool is_shirt_model(room_object_t const &obj);
 bool is_pants_model(room_object_t const &obj);
 bool player_at_full_health();
+room_object_t steal_from_car(room_object_t const &car, float floor_spacing, bool do_pickup);
 
 bool in_building_gameplay_mode() {return (game_mode == 2);} // replaces dodgeball mode
 
@@ -169,7 +170,7 @@ float const mattress_weight(80.0), sheets_weight(4.0), pillow_weight(1.0);
 
 rand_gen_t rgen_from_obj(room_object_t const &obj) {
 	rand_gen_t rgen;
-	rgen.set_state(12345*abs(obj.x1()), 67890*abs(obj.y1()));
+	rgen.set_state((12345*abs(obj.x1()) + obj.obj_id), 67890*abs(obj.y1()));
 	return rgen;
 }
 float get_paper_value(room_object_t const &obj) {
@@ -255,6 +256,7 @@ bool is_consumable(room_object_t const &obj) {
 	unsigned const bottle_type(obj.get_bottle_type());
 
 	if (bottle_type == BOTTLE_TYPE_WATER || bottle_type == BOTTLE_TYPE_COKE || bottle_type == BOTTLE_TYPE_MEDS) { // healing items
+		if (obj.is_all_zeros())      return 1; // unsized item taken from a car, always consume
 		if (player_at_full_health()) return 0; // if player is at full health, heal is not needed, so add this item to inventory rather than comsume it
 	}
 	return 1;
@@ -768,7 +770,10 @@ void register_building_sound_for_obj(room_object_t const &obj, point const &pos)
 	register_building_sound(pos, volume);
 }
 
-void register_broken_object(room_object_t const &obj) {player_inventory.record_damage_done(get_obj_value(obj));}
+void register_broken_object(room_object_t const &obj) {
+	float const damage(obj.is_parked_car() ? 250.0 : get_obj_value(obj)); // broken car window is $250
+	player_inventory.record_damage_done(damage);
+}
 
 bool register_player_object_pickup(room_object_t const &obj, point const &at_pos) {
 	bool const can_pick_up(player_inventory.can_pick_up_item(obj));
@@ -870,6 +875,14 @@ bool building_room_geom_t::player_pickup_object(building_t &building, point cons
 		update_draw_state_for_room_object(book, building, 1);
 		return 1;
 	}
+	if (obj.is_parked_car()) {
+		room_object_t const loot(steal_from_car(obj, building.get_window_vspace(), do_room_obj_pickup));
+		if (loot.type == TYPE_NONE) return 0;
+		if (!register_player_object_pickup(loot, at_pos)) return 0;
+		player_inventory.add_item(loot);
+		++obj.taken_level; // onto next item
+		return 1;
+	}
 	if (!register_player_object_pickup(obj, at_pos)) return 0;
 	remove_object(obj_id, building);
 	return 1;
@@ -951,7 +964,7 @@ int building_room_geom_t::find_nearest_pickup_object(building_t const &building,
 		auto other_objs_end((vect_id == 1) ? get_stairs_start() : expanded_objs.end());
 
 		for (auto i = obj_vect.begin(); i != objs_end; ++i) {
-			if (!get_room_obj_type(*i).pickup) continue; // this object type can't be picked up
+			if (!get_room_obj_type(*i).pickup && !i->is_parked_car()) continue; // this object type can't be picked up
 			cube_t const obj_bcube(get_true_obj_bcube(*i));
 			point p1c(at_pos), p2c(p2);
 			if (!do_line_clip(p1c, p2c, obj_bcube.d)) continue; // test ray intersection vs. bcube

@@ -448,6 +448,7 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 						objs.emplace_back(car.bcube, TYPE_COLLIDER, room_id, !dim, d, (RO_FLAG_INVIS | RO_FLAG_FOR_CAR));
 						pspace.obj_id = (uint16_t)(objs.size() + rgen2.rand()); // will be used for the car model and color
 						pspace.flags |= RO_FLAG_USED;
+						objs.back().obj_id = pspace.obj_id; // will be used for loot collected from the car
 					}
 					if (no_sep_wall && !at_either_ext_wall) { // add small yellow curbs to block cars
 						float const curb_height(0.04*window_vspacing), curb_width(1.5*curb_height);
