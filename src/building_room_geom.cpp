@@ -3035,9 +3035,8 @@ float get_cabinet_doors(room_object_t const &c, vect_cube_t &doors) {
 	for (unsigned n = 0; n < num_doors; ++n) {
 		cube_t door(door0);
 		float const hi(lo + door_spacing);
-		door.d[!c.dim][0] = lo;
-		door.d[!c.dim][1] = hi;
-		door.expand_in_dim(!c.dim, -side_border); // shrink in XY
+		door.d[!c.dim][0] = lo + side_border;
+		door.d[!c.dim][1] = hi - side_border;
 		doors.push_back(door);
 		lo = hi; // advance to next door
 	} // for n
@@ -3063,9 +3062,9 @@ void building_room_geom_t::add_cabinet(room_object_t const &c, float tscale) { /
 	doors.clear();
 	float const door_width(get_cabinet_doors(c, doors)), dir_sign(c.dir ? 1.0 : -1.0);
 	rgeom_mat_t &wood_mat(get_wood_material(tscale));
-	bool const any_doors_open(c.drawer_flags > 0);
+	bool const any_doors_open(c.drawer_flags > 0), is_counter(c.type == TYPE_COUNTER); // Note: counter does not include the section with the sink
 	colorRGBA const cabinet_color(apply_wood_light_color(c));
-	unsigned skip_faces((c.type == TYPE_COUNTER) ? EF_Z12 : EF_Z2); // skip top face (can't skip back in case it's against a window)
+	unsigned skip_faces(is_counter ? EF_Z12 : EF_Z2); // skip top face (can't skip back in case it's against a window)
 
 	if (any_doors_open) {
 		unsigned const skip_front_face(~get_face_mask(c.dim, c.dir));
