@@ -1075,6 +1075,7 @@ bool building_room_geom_t::open_nearest_drawer(building_t &building, point const
 	// Note: this is a messy solution and must match the drawing code, but it's unclear how else we can get the location of the drawers
 	if (has_doors) {
 		get_cabinet_or_counter_doors(obj, drawers, drawers); // combine doors and drawers together; will sort them out later
+		drawers_part  = obj; // need to at least copy the IDs and flags
 		drawer_extend = (obj.dir ? 1.0 : -1.0)*0.8*obj.get_depth(); // used for cabinet drawers
 	}
 	else {

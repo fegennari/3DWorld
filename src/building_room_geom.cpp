@@ -266,7 +266,7 @@ void building_room_geom_t::add_dresser_drawers(room_object_t const &c, float tsc
 	get_drawer_cubes(c, drawers, 1, 0); // front_only=1, inside_only=0
 	add_drawers(c, tscale, drawers);
 }
-void building_room_geom_t::add_drawers(room_object_t const &c, float tscale, vect_cube_t const &drawers) {
+void building_room_geom_t::add_drawers(room_object_t const &c, float tscale, vect_cube_t const &drawers, unsigned drawer_index_offset) {
 	if (drawers.empty()) return;
 	assert(drawers.size() <= 16); // we only have 16 bits to store drawer flags
 	float const height(c.dz()), drawer_thick(0.05*height), handle_thick(0.75*drawer_thick), dir_sign(c.dir ? 1.0 : -1.0), handle_width(0.07*height);
@@ -312,7 +312,7 @@ void building_room_geom_t::add_drawers(room_object_t const &c, float tscale, vec
 			interior.d[!c.dim][0] = left .d[!c.dim][1];
 			interior.d[!c.dim][1] = right.d[!c.dim][0];
 			interior.d[ c.dim][!c.dir] = back.d[c.dim][c.dir];
-			room_object_t const obj(get_item_in_drawer(c, interior, (i - drawers.begin())));
+			room_object_t const obj(get_item_in_drawer(c, interior, (drawer_index_offset + (i - drawers.begin()))));
 			if (obj.type != TYPE_NONE) {objects.push_back(obj);}
 		}
 		drawer_mat.add_cube_to_verts(*i, drawer_color, tex_orig, door_skip_faces_mod, 1); // swap the texture orientation of drawers to make them stand out more
@@ -3175,7 +3175,7 @@ void building_room_geom_t::add_cabinet(room_object_t const &c, float tscale, boo
 		}
 		handle_mat.add_cube_to_verts_untextured(handle, handle_color, door_skip_faces); // same skip_faces
 	} // for n
-	add_drawers(c, tscale, drawers);
+	add_drawers(c, tscale, drawers, doors.size()); // offset the index by the number of doors
 }
 
 void building_room_geom_t::add_window(room_object_t const &c, float tscale) { // frosted window blocks

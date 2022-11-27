@@ -871,7 +871,7 @@ struct building_room_geom_t {
 	void draw_mirror_surface(room_object_t const &c, cube_t const &mirror, bool dim, bool dir, bool shadowed);
 	void add_dresser_mirror(room_object_t const &c, float tscale);
 	void add_dresser_drawers(room_object_t const &c, float tscale);
-	void add_drawers(room_object_t const &c, float tscale, vect_cube_t const &drawers);
+	void add_drawers(room_object_t const &c, float tscale, vect_cube_t const &drawers, unsigned drawer_index_offset=0);
 	void add_stair(room_object_t const &c, float tscale, vector3d const &tex_origin);
 	void add_stairs_wall(room_object_t const &c, vector3d const &tex_origin, tid_nm_pair_t const &wall_tex);
 	void add_parking_garage_wall(room_object_t const &c, vector3d const &tex_origin, tid_nm_pair_t const &wall_tex);
