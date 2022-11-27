@@ -739,7 +739,7 @@ public:
 			// squared movement distance, with higher weight for moving in the correct direction, and a preference for moving orthogonal in upv
 			float const dir_dp(dot_product(dir, s.dir)), up_dp(fabs(dot_product(dir, s.upv)));
 			float const score(p2p_dist_sq(cand, s.last_pos)*(dir_dp + 0.25*up_dp));
-			if (score > best_score) {best_dir = dir; best_up = coll_norm; best_pos = cand; best_score = score;}
+			if (score > best_score && coll_norm != zero_vector) {best_dir = dir; best_up = coll_norm; best_pos = cand; best_score = score;}
 			if (n == 0 && !had_coll) break; // forward direction is still valid, done (early termination optimization)
 		} // for n
 		if (best_score == 0.0) { // no valid directions, must be floating in space
@@ -988,7 +988,9 @@ void building_t::update_spider(spider_t &spider, point const &camera_bs, float t
 			}
 		}
 	}
-	maybe_bite_and_poison_player(spider.pos, camera_bs, spider.dir, coll_radius, 0.1, 1, rgen); // handle biting the player: 0.1 damage with poison
+	if (spider.upv.z > 0.5) { // handle biting the player, but not if upside down on the ceiling
+		maybe_bite_and_poison_player(spider.pos, camera_bs, spider.dir, coll_radius, 0.1, 1, rgen); // 0.1 damage with poison
+	}
 }
 
 bool building_t::maybe_squish_spider(room_object_t const &obj) {

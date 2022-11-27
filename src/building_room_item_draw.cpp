@@ -1191,7 +1191,7 @@ void draw_stove_flames(room_object_t const &stove, point const &camera_bs, shade
 class spider_draw_t {
 	// could make mats[1] a subset of mats[0], but index logic is more complex
 	rgeom_mat_t mats[2], web_mat; // mats: {high detail/67K verts, low detail shadow pass/4.2K verts}
-	bool is_setup;
+	bool is_setup=0, had_inval_spider_warn=0;
 
 	void add_eye(rgeom_mat_t &mat, point const &pos, float radius) {
 		cube_t eye_bc(pos);
@@ -1275,7 +1275,6 @@ class spider_draw_t {
 		cur_vert_pos = mat.itri_verts.size();
 	}
 public:
-	spider_draw_t() : is_setup(0) {}
 	void clear() {mats[0].clear(); mats[1].clear(); is_setup = 0;}
 
 	void draw(vect_spider_t const &spiders, shader_t &s, building_t const &building, occlusion_checker_noncity_t &oc,
@@ -1304,7 +1303,8 @@ public:
 			if (check_occlusion && building.check_obj_occluded(bcube, camera_bs, oc, reflection_pass)) continue;
 			
 			if (S.dir == zero_vector || S.upv == zero_vector) {
-				cout << "Error: Invalid spider: " << TXT(S.pos.str()) << TXT(S.dir.str()) << TXT(S.upv.str()) << endl;
+				if (!had_inval_spider_warn) {cout << "Error: Invalid spider: " << TXT(S.pos.str()) << TXT(S.dir.str()) << TXT(S.upv.str()) << endl;} // print only once
+				had_inval_spider_warn = 1;
 				continue; // seems like this can occasionally happen with too many objects and low framerate; maybe FP error; make it nonfatal
 			}
 			if (!any_drawn) { // setup shaders
