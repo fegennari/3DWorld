@@ -1050,12 +1050,13 @@ bool building_room_geom_t::open_nearest_drawer(building_t &building, point const
 
 	for (auto i = objs.begin(); i != objs_end; ++i) {
 		bool const is_counter_type(is_counter(*i) || i->type == TYPE_CABINET);
-		if (!(i->type == TYPE_DRESSER || i->type == TYPE_NIGHTSTAND || i->type == TYPE_DESK || // drawers that can be opened or items picked up from
-			(!pickup_item && is_counter_type))) continue; // doors that can be opened (no item pickup)
+		bool const has_drawers(i->type == TYPE_DRESSER || i->type == TYPE_NIGHTSTAND || i->type == TYPE_DESK || i->type == TYPE_COUNTER); // drawers that can be opened or picked from
+		if (!(has_drawers || (!pickup_item && is_counter_type))) continue; // || doors that can be opened (no item pickup)
 		cube_t bcube(*i);
 		float &front_face(bcube.d[i->dim][i->dir]);
 		if ((front_face < at_pos[i->dim]) ^ i->dir) continue; // can't open from behind
-		if (!is_counter_type) {front_face += 0.75*(i->dir ? 1.0 : -1.0)*i->get_length();} // expand outward to include open drawers
+		// expand outward to include open drawers; not that this can make it difficult to select a drawer at the inside corner of the kitchen counter
+		if (has_drawers && i->drawer_flags > 0) {front_face += 0.75*(i->dir ? 1.0 : -1.0)*i->get_length();}
 		point p1c(at_pos), p2c(p2);
 		if (!do_line_clip(p1c, p2c, bcube.d)) continue; // test ray intersection vs. bcube
 		float const dsq(p2p_dist_sq(at_pos, p1c)); // use closest intersection point
@@ -1102,6 +1103,7 @@ bool building_room_geom_t::open_nearest_drawer(building_t &building, point const
 	cube_t const &drawer(drawers[closest_drawer_id]); // Note: drawer cube is the interior part
 	// since we're mixing doors and drawers for kitchen cabinets, check the height to width ration to determine if it's a drawer or a door
 	bool const is_door(has_doors && drawer.dz() > 0.5*drawer.get_sz_dim(!obj.dim));
+	if (is_door && pickup_item) return 0; // nothing to do for door when picking up items
 	
 	if (pickup_item && !is_door) { // pick up item in drawer rather than opening drawer; doesn't apply to doors because items aren't in the doors themselves
 		if (!(obj.drawer_flags & (1U << closest_drawer_id))) return 0; // drawer is not open

@@ -3032,14 +3032,14 @@ float get_cabinet_doors(room_object_t const &c, vect_cube_t &doors, vect_cube_t 
 	if (num_doors == 0) return 0.0; // is this possible?
 	door_spacing = cab_width/num_doors;
 	bool const add_drawers(c.type == TYPE_COUNTER && num_doors <= 8); // limit to 16 total doors + drawers; counter does not include the section with the sink
-	float const tb_border(0.5f*(c.dz() - door_height)), side_border(0.16*door_width), dir_sign(c.dir ? 1.0 : -1.0);
+	float const tb_border(0.5f*(c.dz() - door_height)), side_border(0.10*door_width), dir_sign(c.dir ? 1.0 : -1.0);
 	door_width = (door_spacing - 2.0*side_border); // recalculate actual value
 	float lo(front.d[!c.dim][0]);
 	cube_t door0(c);
 	door0.d[ c.dim][!c.dir]  = door0.d[c.dim][c.dir];
 	door0.d[ c.dim][ c.dir] += dir_sign*door_thick; // expand out a bit
 	door0.expand_in_dim(2, -tb_border); // shrink in Z
-	float const drawer_height(0.15*door0.dz()), drawer_gap(0.4*drawer_height);
+	float const drawer_height(0.18*door0.dz()), drawer_gap(0.25*drawer_height);
 	if (add_drawers) {door0.z2() -= (drawer_height + drawer_gap);} // shorten to make space for drawers above
 	unsigned const doors_start(doors.size()); // always 0?
 
@@ -3052,7 +3052,7 @@ float get_cabinet_doors(room_object_t const &c, vect_cube_t &doors, vect_cube_t 
 		lo = hi; // advance to next door
 	}
 	if (add_drawers) { // add the drawers along the top, one per door
-		float const drawer_extend(0.8*cab_depth*(c.dir ? 1.0 : -1.0));
+		float const drawer_extend(0.8*cab_depth*dir_sign);
 
 		for (unsigned n = 0; n < num_doors; ++n) {
 			cube_t drawer(doors[doors_start + n]); // start with the door, since it has the correct width and depth
@@ -3063,18 +3063,18 @@ float get_cabinet_doors(room_object_t const &c, vect_cube_t &doors, vect_cube_t 
 			if (is_open) {
 				drawer.d[c.dim][c.dir] += drawer_extend;
 				if (front_only) {drawer.d[c.dim][!c.dir] += drawer_extend;} // translate the other side as well
-				/*else if (inside_only) { // adjust to return interior part of the drawer for interaction
-					drawer.d[c.dim][ c.dir] -= sd_thick; // flush with object
-					drawer.d[c.dim][!c.dir] += 0.25f*sd_thick;
+				else { // adjust to return interior part of the drawer for interaction
+					drawer.d[c.dim][c.dir] -= dir_sign*door_thick; // subtract off the end wood
 					drawer.expand_in_dim(!c.dim, -0.08*drawer.get_sz_dim(!c.dim)); // subtract off width of sides
 					drawer.z1() += 0.2*drawer.dz();
-				}*/
+				}
 			}
 			drawers.push_back(drawer);
 		}
 	}
 	return door_width;
 }
+// called for opening/closing drawers and taking items
 void get_cabinet_or_counter_doors(room_object_t const &c, vect_cube_t &doors, vect_cube_t &drawers) {
 	doors  .clear();
 	drawers.clear();
