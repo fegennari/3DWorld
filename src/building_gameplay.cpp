@@ -1123,10 +1123,9 @@ bool building_room_geom_t::open_nearest_drawer(building_t &building, point const
 		obj.drawer_flags ^= flag_bit; // toggle flag bit for selected drawer
 
 		if ((obj.drawer_flags & flag_bit) && !(obj.state_flags & flag_bit)) { // first opening of this drawer
-			if (!has_doors || is_door) { // no spiders in kitchen counter drawers, only in doors
-				maybe_spawn_spider_in_drawer(obj, c_test, closest_drawer_id, building.get_window_vspace(), is_door);
-				obj.state_flags |= flag_bit; // mark as having been opened so that we don't try to spawn another spider next time
-			}
+			//if (!has_doors || is_door) {} // no spiders in kitchen counter drawers, only in doors?
+			maybe_spawn_spider_in_drawer(obj, c_test, closest_drawer_id, building.get_window_vspace(), is_door);
+			obj.state_flags |= flag_bit; // mark as having been opened so that we don't try to spawn another spider next time
 		}
 		point const drawer_center(drawer.get_cube_center());
 		if (is_door) {building.play_door_open_close_sound(drawer_center, obj.is_open(), 0.5, 1.5);}
