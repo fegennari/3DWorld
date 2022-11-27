@@ -871,6 +871,7 @@ struct building_room_geom_t {
 	void draw_mirror_surface(room_object_t const &c, cube_t const &mirror, bool dim, bool dir, bool shadowed);
 	void add_dresser_mirror(room_object_t const &c, float tscale);
 	void add_dresser_drawers(room_object_t const &c, float tscale);
+	void add_drawers(room_object_t const &c, float tscale, vect_cube_t const &drawers);
 	void add_stair(room_object_t const &c, float tscale, vector3d const &tex_origin);
 	void add_stairs_wall(room_object_t const &c, vector3d const &tex_origin, tid_nm_pair_t const &wall_tex);
 	void add_parking_garage_wall(room_object_t const &c, vector3d const &tex_origin, tid_nm_pair_t const &wall_tex);
@@ -1809,7 +1810,7 @@ void get_chair_cubes (room_object_t const &c, cube_t cubes[3]);
 void get_tc_leg_cubes(cube_t const &c, float width, cube_t cubes[4]);
 void get_bookcase_cubes(room_object_t const &c, cube_t &top, cube_t &middle, cube_t &back, cube_t lr[2], bool no_shelves=0, float sides_scale=1.0);
 float get_drawer_cubes(room_object_t const &c, vect_cube_t &drawers, bool front_only, bool inside_only);
-void get_cabinet_or_counter_doors(room_object_t const &c, vect_cube_t &doors);
+void get_cabinet_or_counter_doors(room_object_t const &c, vect_cube_t &doors, vect_cube_t &drawers);
 bool get_dishwasher_for_ksink(room_object_t const &c, cube_t &dishwasher);
 room_object_t split_cabinet_at_dishwasher(room_object_t &cabinet, cube_t const &dishwasher);
 room_object_t get_dresser_middle(room_object_t const &c);

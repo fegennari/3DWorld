@@ -1072,7 +1072,7 @@ bool building_room_geom_t::open_nearest_drawer(building_t &building, point const
 	float drawer_extend(0.0); // signed, for drawers only
 
 	// Note: this is a messy solution and must match the drawing code, but it's unclear how else we can get the location of the drawers
-	if (has_doors) {get_cabinet_or_counter_doors(obj, drawers);}
+	if (has_doors) {get_cabinet_or_counter_doors(obj, drawers, drawers);} // combine doors and drawers together; will sort them out later
 	else {
 		if (obj.type == TYPE_DESK) {
 			if (!obj.desk_has_drawers()) return 0; // no drawers for this desk
@@ -1097,8 +1097,10 @@ bool building_room_geom_t::open_nearest_drawer(building_t &building, point const
 	}
 	if (closest_drawer_id < 0) return 0; // no drawer
 	cube_t const &drawer(drawers[closest_drawer_id]); // Note: drawer cube is the interior part
+	// since we're mixing doors and drawers for kitchen cabinets, check the height to width ration to determine if it's a drawer or a door
+	bool const is_door(has_doors && drawer.dz() > 0.5*drawer.get_sz_dim(!obj.dim));
 	
-	if (pickup_item && !has_doors) { // pick up item in drawer rather than opening drawer; no pickup items behind doors yet
+	if (pickup_item && !is_door) { // pick up item in drawer rather than opening drawer; doesn't apply to doors because items aren't in the doors themselves
 		if (!(obj.drawer_flags & (1U << closest_drawer_id))) return 0; // drawer is not open
 		room_object_t const item(get_item_in_drawer(drawers_part, drawer, closest_drawer_id));
 		if (item.type == TYPE_NONE) return 0; // no item
@@ -1110,7 +1112,7 @@ bool building_room_geom_t::open_nearest_drawer(building_t &building, point const
 	}
 	else { // open or close the drawer/door
 		cube_t c_test(drawer);
-		if (has_doors) {c_test.d[obj.dim][obj.dir] += (obj.dir ? 1.0 : -1.0)*drawer.get_sz_dim(!obj.dim);} // expand outward by the width of the door
+		if (is_door) {c_test.d[obj.dim][obj.dir] += (obj.dir ? 1.0 : -1.0)*drawer.get_sz_dim(!obj.dim);} // expand outward by the width of the door
 		else {c_test.d[obj.dim][obj.dir] += drawer_extend;} // drawer
 		if (cube_intersects_moved_obj(c_test, closest_obj_id)) return 0; // blocked, can't open; ignore this object
 		if (check_only) return 1;
@@ -1118,15 +1120,21 @@ bool building_room_geom_t::open_nearest_drawer(building_t &building, point const
 		obj.drawer_flags ^= flag_bit; // toggle flag bit for selected drawer
 
 		if ((obj.drawer_flags & flag_bit) && !(obj.state_flags & flag_bit)) { // first opening of this drawer
-			maybe_spawn_spider_in_drawer(obj, c_test, closest_drawer_id, building.get_window_vspace(), has_doors);
-			obj.state_flags |= flag_bit; // mark as having been opened so that we don't try to spawn another spider next time
+			if (!has_doors || is_door) { // no spiders in kitchen counter drawers, only in doors
+				maybe_spawn_spider_in_drawer(obj, c_test, closest_drawer_id, building.get_window_vspace(), is_door);
+				obj.state_flags |= flag_bit; // mark as having been opened so that we don't try to spawn another spider next time
+			}
 		}
 		point const drawer_center(drawer.get_cube_center());
-		if (has_doors) {building.play_door_open_close_sound(drawer_center, obj.is_open(), 0.5, 1.5);}
+		if (is_door) {building.play_door_open_close_sound(drawer_center, obj.is_open(), 0.5, 1.5);}
 		else {gen_sound_thread_safe(SOUND_SLIDING, building.local_to_camera_space(drawer_center), 0.5);}
 		register_building_sound(drawer_center, 0.4);
-		
-		if (has_doors) { // expand any items in the cabinet so that the player can pick them up
+
+		if (is_door) { // expand any items in the cabinet so that the player can pick them up
+			// Note: expanding cabinets by opening a single door will allow the player to take items from anywhere in the cabinet, even if behind a closed door
+			expand_object(obj, building);
+		}
+		if (has_doors) { // applies to both doors and cabinet drawers
 			// find any cabinets adjacent to this one in the other dim (inside corner) and ensure the opposing door is closed so that they don't intersect
 			for (auto i = objs.begin(); i != objs_end; ++i) {
 				if ((is_counter(obj) && !is_counter(*i)) || (obj.type == TYPE_CABINET && i->type != TYPE_CABINET)) continue; // wrong object type
@@ -1135,7 +1143,7 @@ bool building_room_geom_t::open_nearest_drawer(building_t &building, point const
 				cube_t i_exp(*i);
 				i_exp.d[i->dim][i->dir] += dir_sign*i->get_length(); // expand other counter/cabinet to account for open doors
 				if (!i_exp.intersects(c_test)) continue;
-				get_cabinet_or_counter_doors(*i, drawers);
+				get_cabinet_or_counter_doors(*i, drawers, drawers); // combine doors and drawers together again
 
 				for (auto j = drawers.begin(); j != drawers.end(); ++j) {
 					cube_t drawer_exp(*j);
@@ -1143,11 +1151,9 @@ bool building_room_geom_t::open_nearest_drawer(building_t &building, point const
 					if (drawer_exp.intersects(c_test)) {i->drawer_flags &= ~(1U << (j - drawers.begin()));} // make sure any intersecting doors are closed
 				}
 			} // for i
-			// Note: expanding cabinets by opening a single door will allow the player to take items from anywhere in the cabinet, even if behind a closed door
-			expand_object(obj, building);
 			update_draw_state_for_room_object(obj, building, 0);
 		}
-		else {
+		else { // drawer
 			invalidate_small_geom(); // only need to update small objects for drawers
 		}
 	}
