@@ -307,7 +307,7 @@ void building_room_geom_t::expand_cabinet(room_object_t const &c) { // called on
 		gen_xy_pos_for_round_obj(bottle, interior, bottle_radius, bottle_height, 1.5*bottle_radius, rgen, 1); // place_at_z1=1
 		room_object_t obj(bottle, TYPE_BOTTLE, c.room_id, 0, 0, flags, light_amt, SHAPE_CYLIN); // vertical
 		bool const allow_medicine(rgen.rand_bool()); // medicine is half as common
-		obj.set_as_bottle(rgen.rand(), (allow_medicine ? NUM_BOTTLE_TYPES : BOTTLE_TYPE_MEDS)-1, 1); // all bottle types, no_empty=1
+		obj.set_as_bottle(rgen.rand(), (allow_medicine ? (unsigned)NUM_BOTTLE_TYPES : (unsigned)BOTTLE_TYPE_MEDS)-1, 1); // all bottle types, no_empty=1
 		add_if_not_intersecting(obj, expanded_objs, cubes);
 	}
 	if (cubes.size() > start_num_cubes) {invalidate_small_geom();} // some object was added
