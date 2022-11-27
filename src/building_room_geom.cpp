@@ -3064,13 +3064,14 @@ float get_cabinet_doors(room_object_t const &c, vect_cube_t &doors, vect_cube_t 
 				drawer.d[c.dim][c.dir] += drawer_extend;
 				if (front_only) {drawer.d[c.dim][!c.dir] += drawer_extend;} // translate the other side as well
 				else { // adjust to return interior part of the drawer for interaction
-					drawer.d[c.dim][c.dir] -= dir_sign*door_thick; // subtract off the end wood
+					drawer.d[c.dim][ c.dir] -= dir_sign*door_thick; // subtract off the end wood
+					drawer.d[c.dim][!c.dir] += 0.25*dir_sign*door_thick; // must match interior size logic - but still not exactly the same
 					drawer.expand_in_dim(!c.dim, -0.08*drawer.get_sz_dim(!c.dim)); // subtract off width of sides
 					drawer.z1() += 0.2*drawer.dz();
 				}
 			}
 			drawers.push_back(drawer);
-		}
+		} // for n
 	}
 	return door_width;
 }
