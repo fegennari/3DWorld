@@ -2041,11 +2041,18 @@ void building_decal_manager_t::draw_building_interior_decals(shader_t &s, bool p
 		tape_qbd.draw();
 		pend_tape_qbd.draw();
 	}
-	if (!blood_qbd.empty()) {
-		select_texture(BLOOD_SPLAT_TEX);
+	if (!blood_qbd.empty() || !glass_qbd.empty()) {
 		glDepthMask(GL_FALSE); // disable depth write
 		enable_blend();
-		blood_qbd.draw();
+
+		if (!blood_qbd.empty()) {
+			select_texture(BLOOD_SPLAT_TEX);
+			blood_qbd.draw();
+		}
+		if (!glass_qbd.empty()) {
+			select_texture(get_texture_by_name("interiors/broken_glass.png"));
+			glass_qbd.draw();
+		}
 		disable_blend();
 		glDepthMask(GL_TRUE);
 	}

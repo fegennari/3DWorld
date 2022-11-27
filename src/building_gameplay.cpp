@@ -1827,6 +1827,16 @@ void building_t::add_blood_decal(point const &pos, float radius) {
 	player_inventory.record_damage_done(100.0); // blood is a mess to clean up (though damage will be reset on player death anyway)
 }
 
+void building_t::add_broken_glass_to_floor(point const &pos, float radius) {
+	assert(has_room_geom());
+	float zval(pos.z);
+	if (!get_zval_of_floor(pos, radius, zval)) return; // no suitable floor found
+	static rand_gen_t rgen;
+	float const angle(TWO_PI*rgen.rand_float()); // use a random rotation
+	vector3d const v1(sin(angle), cos(angle), 0.0), v2(cross_product(v1, plus_z));
+	interior->room_geom->decal_manager.glass_qbd.add_quad_dirs(point(pos.x, pos.y, zval), v1*radius, v2*radius, WHITE, plus_z); // Note: never cleared
+}
+
 // sound/audio tracking
 
 class sound_tracker_t {

@@ -810,7 +810,7 @@ struct paint_draw_t {
 };
 struct building_decal_manager_t {
 	paint_draw_t paint_draw[2]; // {interior, exterior}
-	quad_batch_draw blood_qbd, tp_qbd, pend_tape_qbd;
+	quad_batch_draw blood_qbd, tp_qbd, pend_tape_qbd, glass_qbd;
 	tape_quad_batch_draw tape_qbd; // for tape, but not pend_tape because it hasn't been placed yet
 
 	void commit_pend_tape_qbd();
@@ -1697,6 +1697,7 @@ private:
 	bool get_zval_of_floor(point const &pos, float radius, float &zval) const;
 	bool get_zval_for_obj_placement(point const &pos, float radius, float &zval, bool add_z_bias) const;
 	void add_blood_decal(point const &pos, float radius);
+	void add_broken_glass_to_floor(point const &pos, float radius);
 	void play_tape_sound(point const &sound_pos, float sound_gain) const;
 	bool is_obj_above_ramp(cube_t const &c) const;
 	bool is_room_above_ramp(cube_t const &room, float zval) const;

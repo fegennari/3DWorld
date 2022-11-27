@@ -696,6 +696,7 @@ bool building_t::interact_with_object(unsigned obj_ix, point const &int_pos, poi
 	else if (obj.is_parked_car()) {
 		gen_sound_thread_safe_at_player(SOUND_GLASS);
 		register_broken_object(obj);
+		add_broken_glass_to_floor(int_pos, 0.8*CAMERA_RADIUS);
 		assert(!obj.is_broken());
 		obj.flags  |= RO_FLAG_BROKEN;
 		sound_scale = 1.0; // loud sound, but no update of draw data
