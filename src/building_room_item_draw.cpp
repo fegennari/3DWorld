@@ -735,10 +735,10 @@ void building_room_geom_t::create_static_vbos(building_t const &building) {
 		case TYPE_TV: case TYPE_MONITOR: add_tv_picture(*i); break;
 		case TYPE_CUBICLE: add_cubicle (*i, tscale); break;
 		case TYPE_STALL:   add_br_stall(*i); break;
-		case TYPE_COUNTER: add_counter (*i, tscale); break;
-		case TYPE_KSINK:   add_counter (*i, tscale); break; // counter with kitchen sink
-		case TYPE_BRSINK:  add_counter (*i, tscale); break; // counter with bathroom sink
-		case TYPE_CABINET: add_cabinet (*i, tscale); break;
+		case TYPE_COUNTER: add_counter (*i, tscale, 1, 0); break; // lg
+		case TYPE_KSINK:   add_counter (*i, tscale, 1, 0); break; // counter with kitchen  sink; lg
+		case TYPE_BRSINK:  add_counter (*i, tscale, 1, 0); break; // counter with bathroom sink; lg
+		case TYPE_CABINET: add_cabinet (*i, tscale, 1, 0); break; // lg
 		case TYPE_PLANT:   add_potted_plant(*i, 1, 0); break; // pot only
 		case TYPE_DRESSER: case TYPE_NIGHTSTAND: add_dresser(*i, tscale, 1, 0); break;
 		case TYPE_DRESS_MIR: add_dresser_mirror(*i, tscale); break;
@@ -828,6 +828,9 @@ void building_room_geom_t::add_small_static_objs_to_verts(vect_room_object_t con
 		case TYPE_ATTIC_DOOR:add_attic_door(c, tscale); break;
 		case TYPE_TOY:       add_toy(c); break;
 		case TYPE_PAN:       add_pan(c); break;
+		case TYPE_COUNTER: add_counter (c, tscale, 0, 1); break; // sm
+		case TYPE_KSINK:   add_counter (c, tscale, 0, 1); break; // sm
+		case TYPE_CABINET: add_cabinet (c, tscale, 0, 1); break; // sm
 		default: break;
 		} // end switch
 	} // for i

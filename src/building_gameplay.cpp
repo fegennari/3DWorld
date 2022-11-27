@@ -67,9 +67,9 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_CUBICLE   ] = bldg_obj_type_t(0, 0, 1, 0, 1, 0, 1, 500.0, 250.0, "cubicle"); // skip collisions because they have their own colliders, but include rat coll
 	bldg_obj_types[TYPE_STALL     ] = bldg_obj_type_t(1, 1, 1, 1, 1, 0, 1, 40.0,  20.0,  "bathroom divider"); // can pick up short sections of bathroom stalls (urinal dividers)
 	bldg_obj_types[TYPE_SIGN      ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 3, 10.0,  1.0,   "sign");
-	bldg_obj_types[TYPE_COUNTER   ] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 1, 0.0,   0.0,   "kitchen counter");
-	bldg_obj_types[TYPE_CABINET   ] = bldg_obj_type_t(0, 0, 0, 0, 1, 0, 1, 0.0,   0.0,   "kitchen cabinet");
-	bldg_obj_types[TYPE_KSINK     ] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 1, 0.0,   0.0,   "kitchen sink");
+	bldg_obj_types[TYPE_COUNTER   ] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 3, 0.0,   0.0,   "kitchen counter");
+	bldg_obj_types[TYPE_CABINET   ] = bldg_obj_type_t(0, 0, 0, 0, 1, 0, 3, 0.0,   0.0,   "kitchen cabinet");
+	bldg_obj_types[TYPE_KSINK     ] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 3, 0.0,   0.0,   "kitchen sink");
 	bldg_obj_types[TYPE_BRSINK    ] = bldg_obj_type_t(1, 1, 0, 0, 1, 0, 1, 0.0,   0.0,   "bathroom sink"); // for office building bathrooms
 	bldg_obj_types[TYPE_PLANT     ] = bldg_obj_type_t(0, 1, 1, 1, 0, 0, 3, 18.0,  8.0,   "potted plant"); // AI collides with plants on the floor
 	bldg_obj_types[TYPE_DRESSER   ] = bldg_obj_type_t(1, 1, 1, 0, 0, 0, 3, 120.0, 110.0, "dresser"); // Note: can't pick up until drawers can be opened and items removed from them
@@ -1072,7 +1072,10 @@ bool building_room_geom_t::open_nearest_drawer(building_t &building, point const
 	float drawer_extend(0.0); // signed, for drawers only
 
 	// Note: this is a messy solution and must match the drawing code, but it's unclear how else we can get the location of the drawers
-	if (has_doors) {get_cabinet_or_counter_doors(obj, drawers, drawers);} // combine doors and drawers together; will sort them out later
+	if (has_doors) {
+		get_cabinet_or_counter_doors(obj, drawers, drawers); // combine doors and drawers together; will sort them out later
+		drawer_extend = (obj.dir ? 1.0 : -1.0)*0.8*obj.get_depth(); // used for cabinet drawers
+	}
 	else {
 		if (obj.type == TYPE_DESK) {
 			if (!obj.desk_has_drawers()) return 0; // no drawers for this desk
@@ -1113,7 +1116,7 @@ bool building_room_geom_t::open_nearest_drawer(building_t &building, point const
 	else { // open or close the drawer/door
 		cube_t c_test(drawer);
 		if (is_door) {c_test.d[obj.dim][obj.dir] += (obj.dir ? 1.0 : -1.0)*drawer.get_sz_dim(!obj.dim);} // expand outward by the width of the door
-		else {c_test.d[obj.dim][obj.dir] += drawer_extend;} // drawer
+		else         {c_test.d[obj.dim][obj.dir] += drawer_extend;} // drawer
 		if (cube_intersects_moved_obj(c_test, closest_obj_id)) return 0; // blocked, can't open; ignore this object
 		if (check_only) return 1;
 		unsigned const flag_bit(1U << (unsigned)closest_drawer_id);
@@ -1141,9 +1144,9 @@ bool building_room_geom_t::open_nearest_drawer(building_t &building, point const
 				if (i->dim == obj.dim) continue; // not opposing dim (also skips obj itself)
 				float const dir_sign(i->dir ? 1.0 : -1.0);
 				cube_t i_exp(*i);
-				i_exp.d[i->dim][i->dir] += dir_sign*i->get_length(); // expand other counter/cabinet to account for open doors
+				i_exp.d[i->dim][i->dir] += dir_sign*i->get_depth(); // expand other counter/cabinet to account for open doors
 				if (!i_exp.intersects(c_test)) continue;
-				get_cabinet_or_counter_doors(*i, drawers, drawers); // combine doors and drawers together again
+				get_cabinet_or_counter_doors(*i, drawers, drawers); // combine doors and drawers together again; invalidates <drawer>
 
 				for (auto j = drawers.begin(); j != drawers.end(); ++j) {
 					cube_t drawer_exp(*j);
@@ -1151,7 +1154,7 @@ bool building_room_geom_t::open_nearest_drawer(building_t &building, point const
 					if (drawer_exp.intersects(c_test)) {i->drawer_flags &= ~(1U << (j - drawers.begin()));} // make sure any intersecting doors are closed
 				}
 			} // for i
-			update_draw_state_for_room_object(obj, building, 0);
+			update_draw_state_for_room_object(obj, building, 0); // need to update both static (for door openings) and small objects
 		}
 		else { // drawer
 			invalidate_small_geom(); // only need to update small objects for drawers

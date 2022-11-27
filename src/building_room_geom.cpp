@@ -2916,10 +2916,22 @@ cube_t get_sink_cube(room_object_t const &c) {
 	return sink;
 }
 
-void building_room_geom_t::add_counter(room_object_t const &c, float tscale) { // for kitchens
+void building_room_geom_t::add_counter(room_object_t const &c, float tscale, bool inc_lg, bool inc_sm) { // for kitchens
 	float const dz(c.dz()), depth(c.get_depth()), dir_sign(c.dir ? 1.0 : -1.0);
 	cube_t top(c), dishwasher;
 	top.z1() += 0.95*dz;
+	bool const hash_dishwasher(c.type == TYPE_KSINK && get_dishwasher_for_ksink(c, dishwasher)); // kitchen sink - add dishwasher if wide enough
+
+	if (c.type != TYPE_BRSINK) { // add wood sides of counter/cabinet
+		float const overhang(0.05*depth);
+		room_object_t cabinet(c);
+		cabinet.z2() = top.z1();
+		//cabinet.expand_in_dim(!c.dim, -overhang); // add side overhang: disable to allow cabinets to be flush with objects
+		cabinet.d[c.dim][c.dir] -= dir_sign*overhang; // add front overhang
+		if (hash_dishwasher) {add_cabinet(split_cabinet_at_dishwasher(cabinet, dishwasher), tscale, inc_lg, inc_sm);}
+		add_cabinet(cabinet, tscale, inc_lg, inc_sm); // draw the wood part
+	}
+	if (!inc_lg) return; // everything below this point is large static
 	tid_nm_pair_t const marble_tex(get_counter_tid(), 2.5*tscale);
 	rgeom_mat_t &top_mat(get_material(marble_tex, 1));
 	colorRGBA const top_color(apply_light_color(c, WHITE));
@@ -2967,7 +2979,7 @@ void building_room_geom_t::add_counter(room_object_t const &c, float tscale) { /
 			front.d[c.dim][!c.dir] += dir_sign*0.94*depth;
 			get_material(marble_tex, 1).add_cube_to_verts(front, top_color, tex_origin, EF_Z2); // front surface, no top face; same as top_mat
 		}
-		else if (c.type == TYPE_KSINK && get_dishwasher_for_ksink(c, dishwasher)) { // kitchen sink - add dishwasher if wide enough
+		else if (hash_dishwasher) { // add dishwasher
 			unsigned const dw_skip_faces(~get_face_mask(c.dim, !c.dir));
 			colorRGBA const dw_color(apply_light_color(c, LT_GRAY));
 			if (c.is_open()) {} // TODO: draw dishwasher as open? does it need to be a separate object for this?
@@ -2985,15 +2997,6 @@ void building_room_geom_t::add_counter(room_object_t const &c, float tscale) { /
 	}
 	else { // regular counter top
 		top_mat.add_cube_to_verts(top, top_color, tex_origin); // top surface, all faces
-	}
-	if (c.type != TYPE_BRSINK) { // add wood sides of counter/cabinet
-		float const overhang(0.05*depth);
-		room_object_t cabinet(c);
-		cabinet.z2() = top.z1();
-		//cabinet.expand_in_dim(!c.dim, -overhang); // add side overhang: disable to allow cabinets to be flush with objects
-		cabinet.d[c.dim][c.dir] -= dir_sign*overhang; // add front overhang
-		if (!dishwasher.is_all_zeros()) {add_cabinet(split_cabinet_at_dishwasher(cabinet, dishwasher), tscale);}
-		add_cabinet(cabinet, tscale); // draw the wood part
 	}
 	if (c.item_flags) { // add backsplash, 50% chance of tile vs. matching marble
 		tid_nm_pair_t const bs_tex((c.room_id & 1) ? marble_tex : tid_nm_pair_t(get_texture_by_name("bathroom_tile.jpg"), 2.5*tscale));
@@ -3088,46 +3091,58 @@ void get_cabinet_or_counter_doors(room_object_t const &c, vect_cube_t &doors, ve
 	get_cabinet_doors(cabinet, doors, drawers, 0); // front_only=0
 }
 
-void building_room_geom_t::add_cabinet(room_object_t const &c, float tscale) { // for kitchens
+void building_room_geom_t::add_cabinet(room_object_t const &c, float tscale, bool inc_lg, bool inc_sm) { // for kitchens
 	assert(c.is_strictly_normalized());
+	bool const any_doors_open(c.drawer_flags > 0), is_counter(c.type == TYPE_COUNTER); // Note: counter does not include the section with the sink
+	unsigned const skip_front_face(~get_face_mask(c.dim, c.dir)); // used in the any_doors_open=1 case
+	colorRGBA const cabinet_color(apply_wood_light_color(c));
 	static vect_cube_t doors, drawers;
 	doors  .clear();
 	drawers.clear();
-	float const door_width(get_cabinet_doors(c, doors, drawers, 1)), dir_sign(c.dir ? 1.0 : -1.0); // front_only=1
-	rgeom_mat_t &wood_mat(get_wood_material(tscale));
-	bool const any_doors_open(c.drawer_flags > 0), is_counter(c.type == TYPE_COUNTER); // Note: counter does not include the section with the sink
-	colorRGBA const cabinet_color(apply_wood_light_color(c));
-	unsigned skip_faces(is_counter ? EF_Z12 : EF_Z2); // skip top face (can't skip back in case it's against a window)
+	float const door_width(get_cabinet_doors(c, doors, drawers, 1)); // front_only=1
+
+	if (inc_lg) {
+		unsigned skip_faces(is_counter ? EF_Z12 : EF_Z2); // skip top face (can't skip back in case it's against a window)
+		rgeom_mat_t &wood_mat(get_wood_material(tscale));
+		
+		if (any_doors_open) { // draw front faces with holes cut in them for open doors
+			vect_cube_t &cubes(get_temp_cubes());
+			cubes.push_back(c); // start with entire cabinet
+
+			for (unsigned n = 0; n < doors.size(); ++n) { // draw open doors as holes
+				if (!(c.drawer_flags & (1 << n))) continue; // not open
+				cube_t hole(doors[n]);
+				hole.expand_in_dim(c.dim, c.get_depth()); // expand so that it cuts entirely through the cabinet
+				subtract_cube_from_cubes(hole, cubes, nullptr, 1); // clip_in_z=1
+			}
+			for (auto i = cubes.begin(); i != cubes.end(); ++i) {wood_mat.add_cube_to_verts(*i, cabinet_color, tex_origin, ~skip_front_face);}
+			skip_faces |= skip_front_face; // front face drawn above, don't draw it again below
+		}
+		wood_mat.add_cube_to_verts(c, cabinet_color, tex_origin, skip_faces); // draw wood exterior
+	}
+	if (!inc_sm) return; // everything below this point is small
+	float const dir_sign(c.dir ? 1.0 : -1.0);
+	rgeom_mat_t &wood_mat(get_wood_material(tscale, 1, 0, 1)); // shadows=1, small=1
 
 	if (any_doors_open) {
-		unsigned const skip_front_face(~get_face_mask(c.dim, c.dir));
 		float const wall_thickness(0.04*c.dz());
-		vect_cube_t &cubes(get_temp_cubes());
-		cubes.push_back(c); // start with entire cabinet
 		cube_t interior(c);
 		interior.expand_by(-wall_thickness);
 		wood_mat.add_cube_to_verts(interior, cabinet_color*0.5, tex_origin, skip_front_face, 0, 0, 0, 1); // darker interior; skip front face; inverted
 
 		for (unsigned n = 0; n < doors.size(); ++n) { // draw open doors as holes
 			if (!(c.drawer_flags & (1 << n))) continue; // not open
-			cube_t hole(doors[n]), frame(hole);
-			hole.expand_in_dim(c.dim, c.get_depth()); // expand so that it cuts entirely through the cabinet
+			cube_t frame(doors[n]);
 			frame.d[c.dim][ c.dir]  = frame.d[c.dim][!c.dir];
 			frame.d[c.dim][!c.dir] -= dir_sign*wall_thickness; // move inward by door thickness
 			wood_mat.add_cube_to_verts(frame, cabinet_color, tex_origin, get_skip_mask_for_xy(c.dim), 0, 0, 0, 1); // skip front/back face; inverted
-			subtract_cube_from_cubes(hole, cubes, nullptr, 1); // clip_in_z=1
 		} // for n
-		// draw front faces with holes cut in them for open doors
-		for (auto i = cubes.begin(); i != cubes.end(); ++i) {wood_mat.add_cube_to_verts(*i, cabinet_color, tex_origin, ~skip_front_face);}
-		skip_faces |= skip_front_face; // front face drawn above, don't draw it again below
 	}
-	wood_mat.add_cube_to_verts(c, cabinet_color, tex_origin, skip_faces); // draw wood exterior
-
 	// add cabinet doors; maybe these should be small objects, but there are at most a few cabinets per house and none in office buildings
 	if (doors.empty() && drawers.empty()) return; // no doors or drawers
-	get_metal_material(0); // ensure material exists so that door_mat reference is not invalidated
-	rgeom_mat_t &door_mat(get_wood_material(1.5*tscale, any_doors_open)); // only shadowed if a door is open
-	rgeom_mat_t &handle_mat(get_metal_material(0)); // untextured, unshadowed
+	get_metal_material(0, 0, 1); // ensure material exists so that door_mat reference is not invalidated
+	rgeom_mat_t &door_mat(get_wood_material(1.5*tscale, any_doors_open, 0, 1)); // only shadowed if a door is open; small=1
+	rgeom_mat_t &handle_mat(get_metal_material(0, 0, 1)); // untextured, unshadowed, small
 	colorRGBA const door_color(apply_light_color(c, WHITE)); // lighter color than cabinet
 	colorRGBA const handle_color(apply_light_color(c, GRAY_BLACK));
 	unsigned const door_skip_faces(~get_face_mask(c.dim, !c.dir));
