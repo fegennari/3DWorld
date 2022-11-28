@@ -213,6 +213,14 @@ void building_room_geom_t::add_dresser(room_object_t const &c, float tscale, boo
 	}
 }
 
+void clip_drawer_to_interior(room_object_t const &c, cube_t &drawer, float inside_end_clip, float end_thickness) {
+	float const drawer_height(drawer.dz());
+	drawer.d[c.dim][ c.dir] -= inside_end_clip; // flush with object; is this correct when limited by depth rather than height?
+	drawer.d[c.dim][!c.dir] += 0.25f*end_thickness;
+	drawer.expand_in_dim(!c.dim, -0.08*drawer.get_sz_dim(!c.dim)); // subtract off width of sides
+	drawer.z1() += 0.15*drawer_height;
+	drawer.z2() -= 0.05*drawer_height;
+}
 float get_drawer_cubes(room_object_t const &c, vect_cube_t &drawers, bool front_only, bool inside_only) {
 	assert(!(front_only && inside_only)); // these options only apply to open drawers and are mutually exclusive
 	assert(c.is_strictly_normalized());
@@ -245,12 +253,7 @@ float get_drawer_cubes(room_object_t const &c, vect_cube_t &drawers, bool front_
 			if (c.drawer_flags & (1 << drawers.size())) { // make a drawer open
 				drawer.d[c.dim][c.dir] += drawer_extend;
 				if (front_only) {drawer.d[c.dim][!c.dir] += drawer_extend;} // translate the other side as well
-				else if (inside_only) { // adjust to return interior part of the drawer for interaction
-					drawer.d[c.dim][ c.dir] -= sd_thick; // flush with object
-					drawer.d[c.dim][!c.dir] += 0.25f*sd_thick;
-					drawer.expand_in_dim(!c.dim, -0.08*drawer.get_sz_dim(!c.dim)); // subtract off width of sides
-					drawer.z1() += 0.2*drawer.dz();
-				}
+				else if (inside_only) {clip_drawer_to_interior(c, drawer, sd_thick, sd_thick);} // interior part of the drawer for interaction; matches interior drawn size
 			}
 			assert(drawer.is_strictly_normalized());
 			drawers.push_back(drawer);
@@ -309,9 +312,9 @@ void building_room_geom_t::add_drawers(room_object_t const &c, float tscale, vec
 			door_skip_faces_mod = 0; // need to draw interior face
 			cube_t interior(drawer_body);
 			interior.z1() = bottom.z2();
-			interior.d[!c.dim][0] = left .d[!c.dim][1];
-			interior.d[!c.dim][1] = right.d[!c.dim][0];
-			interior.d[ c.dim][!c.dir] = back.d[c.dim][c.dir];
+			interior.d[!c.dim][0]      = left .d[!c.dim][1];
+			interior.d[!c.dim][1]      = right.d[!c.dim][0];
+			interior.d[ c.dim][!c.dir] = back .d[ c.dim][c.dir];
 			room_object_t const obj(get_item_in_drawer(c, interior, (drawer_index_offset + (i - drawers.begin()))));
 			if (obj.type != TYPE_NONE) {objects.push_back(obj);}
 		}
@@ -3021,7 +3024,7 @@ void building_room_geom_t::add_counter(room_object_t const &c, float tscale, boo
 
 // Note: returns both doors and drawers
 float get_cabinet_doors(room_object_t const &c, vect_cube_t &doors, vect_cube_t &drawers, bool front_only) {
-	float const cab_depth(c.get_depth()), door_height(0.8*c.dz()), door_thick(0.05*door_height);
+	float const cab_depth(c.get_depth()), door_height(0.8*c.dz());
 	cube_t front(c);
 	if (c.flags & RO_FLAG_ADJ_LO) {front.d[!c.dim][0] += cab_depth;} // exclude L-joins of cabinets from having doors; assumes all cabinets are the same depth
 	if (c.flags & RO_FLAG_ADJ_HI) {front.d[!c.dim][1] -= cab_depth;}
@@ -3032,12 +3035,12 @@ float get_cabinet_doors(room_object_t const &c, vect_cube_t &doors, vect_cube_t 
 	if (num_doors == 0) return 0.0; // is this possible?
 	door_spacing = cab_width/num_doors;
 	bool const add_drawers(c.type == TYPE_COUNTER && num_doors <= 8); // limit to 16 total doors + drawers; counter does not include the section with the sink
-	float const tb_border(0.5f*(c.dz() - door_height)), side_border(0.10*door_width), dir_sign(c.dir ? 1.0 : -1.0);
+	float const tb_border(0.5f*(c.dz() - door_height)), side_border(0.10*door_width), dir_sign(c.dir ? 1.0 : -1.0), signed_thick(0.05*dir_sign*door_height);
 	door_width = (door_spacing - 2.0*side_border); // recalculate actual value
 	float lo(front.d[!c.dim][0]);
 	cube_t door0(c);
 	door0.d[ c.dim][!c.dir]  = door0.d[c.dim][c.dir];
-	door0.d[ c.dim][ c.dir] += dir_sign*door_thick; // expand out a bit
+	door0.d[ c.dim][ c.dir] += signed_thick; // expand out a bit
 	door0.expand_in_dim(2, -tb_border); // shrink in Z
 	float const drawer_height(0.18*door0.dz()), drawer_gap(0.25*drawer_height);
 	if (add_drawers) {door0.z2() -= (drawer_height + drawer_gap);} // shorten to make space for drawers above
@@ -3063,12 +3066,7 @@ float get_cabinet_doors(room_object_t const &c, vect_cube_t &doors, vect_cube_t 
 			if (is_open) {
 				drawer.d[c.dim][c.dir] += drawer_extend;
 				if (front_only) {drawer.d[c.dim][!c.dir] += drawer_extend;} // translate the other side as well
-				else { // adjust to return interior part of the drawer for interaction
-					drawer.d[c.dim][ c.dir] -= dir_sign*door_thick; // subtract off the end wood
-					drawer.d[c.dim][!c.dir] += 0.25*dir_sign*door_thick; // must match interior size logic - but still not exactly the same
-					drawer.expand_in_dim(!c.dim, -0.08*drawer.get_sz_dim(!c.dim)); // subtract off width of sides
-					drawer.z1() += 0.2*drawer.dz();
-				}
+				else {clip_drawer_to_interior(c, drawer, signed_thick, signed_thick/0.8);} // interior part of the drawer for interaction; matches interior drawn size
 			}
 			drawers.push_back(drawer);
 		} // for n
