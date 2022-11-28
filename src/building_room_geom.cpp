@@ -213,9 +213,11 @@ void building_room_geom_t::add_dresser(room_object_t const &c, float tscale, boo
 	}
 }
 
+float get_drawer_wall_thick(float height, float depth) {return min(0.05f*height, 0.25f*depth);}
+
 void clip_drawer_to_interior(room_object_t const &c, cube_t &drawer, float inside_end_clip, float end_thickness) {
 	float const drawer_height(drawer.dz());
-	drawer.d[c.dim][ c.dir] -= inside_end_clip; // flush with object; is this correct when limited by depth rather than height?
+	drawer.d[c.dim][ c.dir] -= inside_end_clip; // flush with object
 	drawer.d[c.dim][!c.dir] += 0.25f*end_thickness;
 	drawer.expand_in_dim(!c.dim, -0.08*drawer.get_sz_dim(!c.dim)); // subtract off width of sides
 	drawer.z1() += 0.15*drawer_height;
@@ -231,7 +233,7 @@ float get_drawer_cubes(room_object_t const &c, vect_cube_t &drawers, bool front_
 	float const width(c.get_width()), depth(c.get_depth()), height(c.dz());
 	bool is_lg(width > 2.0*height);
 	unsigned const num_rows(2 + (rgen.rand() & 1)); // 2-3
-	float const row_spacing(height/num_rows), drawer_thick(min(0.05f*height, 0.25f*depth)), border(0.1*row_spacing), dir_sign(c.dir ? 1.0 : -1.0);
+	float const row_spacing(height/num_rows), drawer_thick(get_drawer_wall_thick(height, depth)), border(0.1*row_spacing), dir_sign(c.dir ? 1.0 : -1.0);
 	float const sd_thick(dir_sign*drawer_thick), drawer_extend(((c.type == TYPE_DESK) ? 0.5 : 0.8)*dir_sign*depth);
 	cube_t d_row(c);
 	d_row.d[c.dim][!c.dir]  = c.d[c.dim][c.dir];
@@ -272,7 +274,8 @@ void building_room_geom_t::add_dresser_drawers(room_object_t const &c, float tsc
 void building_room_geom_t::add_drawers(room_object_t const &c, float tscale, vect_cube_t const &drawers, unsigned drawer_index_offset) {
 	if (drawers.empty()) return;
 	assert(drawers.size() <= 16); // we only have 16 bits to store drawer flags
-	float const height(c.dz()), drawer_thick(0.05*height), handle_thick(0.75*drawer_thick), dir_sign(c.dir ? 1.0 : -1.0), handle_width(0.07*height);
+	float const height(c.dz()), drawer_thick(get_drawer_wall_thick(height, c.get_depth()));
+	float const handle_thick(0.75*drawer_thick), dir_sign(c.dir ? 1.0 : -1.0), handle_width(0.07*height);
 	get_metal_material(0, 0, 1); // ensure material exists so that door_mat reference is not invalidated
 	rgeom_mat_t &drawer_mat(get_wood_material(1.5*tscale, 1, 0, 1)); // shadowed, small=1
 	rgeom_mat_t &handle_mat(get_metal_material(0, 0, 1)); // untextured, unshadowed, small=1
@@ -3035,7 +3038,8 @@ float get_cabinet_doors(room_object_t const &c, vect_cube_t &doors, vect_cube_t 
 	if (num_doors == 0) return 0.0; // is this possible?
 	door_spacing = cab_width/num_doors;
 	bool const add_drawers(c.type == TYPE_COUNTER && num_doors <= 8); // limit to 16 total doors + drawers; counter does not include the section with the sink
-	float const tb_border(0.5f*(c.dz() - door_height)), side_border(0.10*door_width), dir_sign(c.dir ? 1.0 : -1.0), signed_thick(0.05*dir_sign*door_height);
+	float const tb_border(0.5f*(c.dz() - door_height)), side_border(0.10*door_width), dir_sign(c.dir ? 1.0 : -1.0);
+	float const signed_thick(dir_sign*get_drawer_wall_thick(door_height, cab_depth));
 	door_width = (door_spacing - 2.0*side_border); // recalculate actual value
 	float lo(front.d[!c.dim][0]);
 	cube_t door0(c);
