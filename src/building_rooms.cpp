@@ -2486,13 +2486,14 @@ bool building_t::check_if_placed_on_interior_wall(cube_t const &c, room_t const 
 bool building_t::place_eating_items_on_table(rand_gen_t &rgen, unsigned table_obj_id) {
 	vect_room_object_t &objs(interior->room_geom->objs);
 	assert(table_obj_id < objs.size());
-	room_object_t const &table(objs[table_obj_id]);
-	float const radius(get_plate_radius(rgen, table, get_window_vspace())), height(0.1*radius), spacing(1.33*radius);
+	room_object_t const table(objs[table_obj_id]); // deep copy to avoid invalidating the reference
+	float const plate_radius(get_plate_radius(rgen, table, get_window_vspace())), plate_height(0.1*plate_radius), spacing(1.33*plate_radius);
+	unsigned const objs_size(objs.size());
 	bool added_obj(0);
 
-	for (auto i = (objs.begin() + table_obj_id + 1); i != objs.end(); ++i) {
-		if (i->type != TYPE_CHAIR) break; // done with chairs for this table
-		point const chair_center(i->get_cube_center());
+	for (unsigned i = (table_obj_id + 1); i < objs_size; ++i) { // iterate over chairs (by index, since we're adding to objs)
+		if (objs[i].type != TYPE_CHAIR) break; // done with chairs for this table
+		point const chair_center(objs[i].get_cube_center());
 		point pos;
 
 		if (table.shape == SHAPE_CYLIN) { // circular
@@ -2506,8 +2507,8 @@ bool building_t::place_eating_items_on_table(rand_gen_t &rgen, unsigned table_ob
 			pos = place_bounds.closest_pt(chair_center);
 		}
 		cube_t plate;
-		plate.set_from_sphere(pos, radius);
-		set_cube_zvals(plate, table.z2(), table.z2()+height); // place on the table
+		plate.set_from_sphere(pos, plate_radius);
+		set_cube_zvals(plate, table.z2(), table.z2()+plate_height); // place on the table
 		objs.emplace_back(plate, TYPE_PLATE, table.room_id, 0, 0, RO_FLAG_NOCOLL, table.light_amt, SHAPE_CYLIN);
 		set_obj_id(objs);
 		added_obj = 1;
