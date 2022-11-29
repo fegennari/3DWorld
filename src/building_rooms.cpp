@@ -2513,6 +2513,14 @@ bool building_t::place_eating_items_on_table(rand_gen_t &rgen, unsigned table_ob
 		set_obj_id(objs);
 		added_obj = 1;
 	} // for i
+	if (added_obj) { // place a vase in the center of the table
+		float const vase_radius(0.5*plate_radius), vase_height(4.0*vase_radius);
+		cube_t vase;
+		vase.set_from_sphere(table.get_cube_center(), vase_radius);
+		set_cube_zvals(vase, table.z2(), table.z2()+vase_height); // place on the table
+		objs.emplace_back(vase, TYPE_VASE, table.room_id, 0, 0, RO_FLAG_NOCOLL, table.light_amt, SHAPE_CYLIN);
+		set_obj_id(objs);
+	}
 	return added_obj;
 }
 

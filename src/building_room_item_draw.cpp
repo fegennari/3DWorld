@@ -802,6 +802,7 @@ void building_room_geom_t::add_small_static_objs_to_verts(vect_room_object_t con
 		case TYPE_KEYBOARD:  add_keyboard (c); break;
 		case TYPE_WINE_RACK: add_wine_rack(c, 0, 1, tscale); break;
 		case TYPE_BOTTLE:    add_bottle   (c); break;
+		case TYPE_VASE:      add_vase     (c); break;
 		case TYPE_PAPER:     add_paper    (c); break;
 		case TYPE_PAINTCAN:  add_paint_can(c); break;
 		case TYPE_PEN: case TYPE_PENCIL: case TYPE_MARKER: add_pen_pencil_marker(c); break;

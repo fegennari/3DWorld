@@ -1149,6 +1149,11 @@ void building_room_geom_t::add_bottle(room_object_t const &c) {
 	label_mat.add_ortho_cylin_to_verts(body, apply_light_color(c, WHITE), dim, 0, 0, 0, 0, 1.0, 1.0, tscale, 1.0, 0, bottle_ndiv, tscale_add); // draw label
 }
 
+void building_room_geom_t::add_vase(room_object_t const &c) {
+	// TODO: some parametric curve rotated around the Z-axis
+	add_plate(c); // for now, draw as a plate
+}
+
 void building_room_geom_t::add_paper(room_object_t const &c) {
 	rgeom_mat_t &mat(get_material(tid_nm_pair_t(c.get_paper_tid(), 0.0), 0, 0, 1)); // map texture to quad
 	unsigned const qv_start(mat.quad_verts.size());
