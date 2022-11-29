@@ -615,7 +615,6 @@ void place_book(room_object_t &obj, cube_t const &parent, float length, float ma
 	rgen.set_state((123*drawer_ix + 1), (456*c.room_id + 777*c.obj_id + 1));
 	room_object_t obj; // starts as no item
 	unsigned type_ix(rgen.rand() % 11); // 0-10
-	//if (c.type == TYPE_COUNTER) {} // different items in kitchen cabinet drawer?
 	
 	if (c.in_attic()) { // custom object overrides for attic item drawers
 		if (type_ix == 7) {type_ix = 0;} // replace money with box
@@ -662,8 +661,16 @@ void place_book(room_object_t &obj, cube_t const &parent, float length, float ma
 		place_book(obj, drawer, length, 0.35*sz.z, c.room_id, !c.dim, (c.dir ^ c.dim), rgen);
 		break;
 	}
-	case 5: // key (Note: aspect ratio of key depends on aspect ratio of door, but key model is always a constant aspect ratio)
-	{
+	case 5: // key / plate
+	if (c.type == TYPE_COUNTER) { // plate
+		float const diameter(rgen.rand_uniform(0.5, 0.9)*min(sz.x, sz.y));
+		obj = room_object_t(drawer, TYPE_PLATE, c.room_id, 0, 0, 0, 1.0, SHAPE_CYLIN);
+		obj.obj_id = rgen.rand();
+		obj.z2()   = obj.z1() + rgen.rand_uniform(0.5, 1.0)*min(0.2f*diameter, 0.4f*sz.z); // set height
+		set_rand_pos_for_sz(obj, 0, diameter, diameter, rgen);
+		break;
+	}
+	else { // key; Note: aspect ratio of key depends on aspect ratio of door, but key model is always a constant aspect ratio
 		obj = room_object_t(drawer, TYPE_KEY, c.room_id, rgen.rand_bool(), rgen.rand_bool());
 		obj.expand_in_dim( obj.dim, -0.40*sz[ obj.dim]); // long  dim
 		obj.expand_in_dim(!obj.dim, -0.46*sz[!obj.dim]); // short dim
