@@ -297,6 +297,19 @@ void building_room_geom_t::expand_cabinet(room_object_t const &c) { // called on
 			expanded_objs.push_back(obj);
 		}
 	} // for n
+	// add pans
+	unsigned const num_pans(rgen.rand()%3); // 0-2
+	float const pan_radius(min(sz_scale*rgen.rand_uniform(0.40, 0.45), 0.45f*min(c_sz.x, c_sz.y))), pan_height(rgen.rand_uniform(0.4, 0.5)*pan_radius);
+
+	for (unsigned n = 0; n < num_pans; ++n) {
+		cube_t pan;
+		gen_xy_pos_for_round_obj(pan, interior, pan_radius, pan_height, 1.1*pan_radius, rgen, 1); // place_at_z1=1
+		pan.translate_dim(2, 0.01*pan_height); // shift in +z to prevent z-fighting with the bottom of the pan
+		bool const dir(pan.get_center_dim(!c.dim) < c.get_center_dim(!c.dim)); // point toward the cabinet center to avoid the handle clipping through the side/end
+		room_object_t obj(pan, TYPE_PAN, c.room_id, c.dim, dir, flags, light_amt, SHAPE_CYLIN, GRAY_BLACK);
+		// Note: the pan's handle extends outside its bcube and may clip through other objects, but this isn't very noticeable when viewed from normal head height
+		add_if_not_intersecting(obj, expanded_objs, cubes);
+	} // for n
 	// add bottles
 	unsigned const max_bottles(3 + 2*sz_ratio), num_bottles(rgen.rand() % max_bottles); // wider cabinet has more bottles
 
@@ -602,6 +615,7 @@ void place_book(room_object_t &obj, cube_t const &parent, float length, float ma
 	rgen.set_state((123*drawer_ix + 1), (456*c.room_id + 777*c.obj_id + 1));
 	room_object_t obj; // starts as no item
 	unsigned type_ix(rgen.rand() % 11); // 0-10
+	//if (c.type == TYPE_COUNTER) {} // different items in kitchen cabinet drawer?
 	
 	if (c.in_attic()) { // custom object overrides for attic item drawers
 		if (type_ix == 7) {type_ix = 0;} // replace money with box
