@@ -2511,6 +2511,7 @@ bool building_t::place_eating_items_on_table(rand_gen_t &rgen, unsigned table_ob
 		set_cube_zvals(plate, table.z2(), table.z2()+plate_height); // place on the table
 		objs.emplace_back(plate, TYPE_PLATE, table.room_id, 0, 0, RO_FLAG_NOCOLL, table.light_amt, SHAPE_CYLIN);
 		set_obj_id(objs);
+		// TODO: TYPE_SILVERWARE/OBJ_MODEL_SILVERWARE
 		added_obj = 1;
 	} // for i
 	if (added_obj) { // place a vase in the center of the table

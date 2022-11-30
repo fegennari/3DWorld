@@ -250,6 +250,7 @@ city_model_t &object_model_loader_t::get_model(unsigned id) {
 }
 
 bool city_params_t::add_model(unsigned id, FILE *fp) {
+	if (id >= NUM_OBJ_MODELS) {cout << TXT(id) << TXT(NUM_OBJ_MODELS) << endl;}
 	assert(id < NUM_OBJ_MODELS);
 	city_model_t model;
 	if (!model.read(fp)) return 0;
