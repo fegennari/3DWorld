@@ -2487,18 +2487,17 @@ bool building_t::place_eating_items_on_table(rand_gen_t &rgen, unsigned table_ob
 	vect_room_object_t &objs(interior->room_geom->objs);
 	assert(table_obj_id < objs.size());
 	room_object_t const table(objs[table_obj_id]); // deep copy to avoid invalidating the reference
-	float const plate_radius(get_plate_radius(rgen, table, get_window_vspace())), plate_height(0.1*plate_radius), spacing(1.33*plate_radius);
+	float const floor_spacing(get_window_vspace()), plate_radius(get_plate_radius(rgen, table, floor_spacing)), plate_height(0.1*plate_radius), spacing(1.33*plate_radius);
 	unsigned const objs_size(objs.size());
 	bool added_obj(0);
 
 	for (unsigned i = (table_obj_id + 1); i < objs_size; ++i) { // iterate over chairs (by index, since we're adding to objs)
 		if (objs[i].type != TYPE_CHAIR) break; // done with chairs for this table
-		point const chair_center(objs[i].get_cube_center());
+		point const chair_center(objs[i].get_cube_center()), table_center(table.get_cube_center());
 		point pos;
 
 		if (table.shape == SHAPE_CYLIN) { // circular
 			float const dist(table.get_radius() - spacing);
-			point const table_center(table.get_cube_center());
 			pos = table_center + dist*(chair_center - table_center).get_norm();
 		}
 		else { // rectangular
@@ -2511,7 +2510,18 @@ bool building_t::place_eating_items_on_table(rand_gen_t &rgen, unsigned table_ob
 		set_cube_zvals(plate, table.z2(), table.z2()+plate_height); // place on the table
 		objs.emplace_back(plate, TYPE_PLATE, table.room_id, 0, 0, RO_FLAG_NOCOLL, table.light_amt, SHAPE_CYLIN);
 		set_obj_id(objs);
-		// TODO: TYPE_SILVERWARE/OBJ_MODEL_SILVERWARE
+
+		if (building_obj_model_loader.is_model_valid(OBJ_MODEL_SILVERWARE)) {
+			vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_SILVERWARE)); // D, W, H
+			float const sw_height(0.0065*floor_spacing), sw_hwidth(0.5*sw_height*sz.y/sz.z), sw_hdepth(sw_height*sz.x/sz.z);
+			vector3d const offset(pos - table_center);
+			bool const dim(fabs(offset.y) < fabs(offset.x)), dir(offset[dim] > 0.0);
+			cube_t sw_bc;
+			set_cube_zvals(sw_bc, table.z2()+0.1*sw_height, table.z2()+sw_height);
+			set_wall_width(sw_bc, pos[ dim] + (dir ? -1.0 : 1.0)*1.05*(plate_radius + sw_hwidth), sw_hdepth,  dim);
+			set_wall_width(sw_bc, pos[!dim], sw_hwidth, !dim);
+			objs.emplace_back(sw_bc, TYPE_SILVERWARE, table.room_id, dim, dir, RO_FLAG_NOCOLL, table.light_amt, SHAPE_CUBE, GRAY);
+		}
 		added_obj = 1;
 	} // for i
 	if (added_obj) { // place a vase in the center of the table
