@@ -1149,9 +1149,22 @@ void building_room_geom_t::add_bottle(room_object_t const &c) {
 	label_mat.add_ortho_cylin_to_verts(body, apply_light_color(c, WHITE), dim, 0, 0, 0, 0, 1.0, 1.0, tscale, 1.0, 0, bottle_ndiv, tscale_add); // draw label
 }
 
+int select_plate_texture(unsigned rand_val) {
+	unsigned const NUM_PLATE_TEXTURES = 6;
+	string const plate_textures[NUM_PLATE_TEXTURES] = {"plates/plate1.png", "plates/plate2.jpg", "plates/plate3.jpg", "plates/plate4.jpg", "plates/plate5.jpg", "plates/plate6.jpg"};
+	return get_texture_by_name(plate_textures[rand_val % NUM_PLATE_TEXTURES]);
+}
+
 void building_room_geom_t::add_vase(room_object_t const &c) {
 	// TODO: some parametric curve rotated around the Z-axis
-	add_plate(c); // for now, draw as a plate
+	int const tid(select_plate_texture(c.room_id + stairs_start));
+	rgeom_mat_t &side_mat(get_material(tid_nm_pair_t(tid, 0.0, 1), 1, 0, 1)); // shadowed, small
+	colorRGBA color(apply_light_color(c));
+	UNROLL_3X(min_eq(color[i_], 0.9f);); // clamp color to 90% max to avoid over saturation
+	side_mat.add_vcylin_to_verts(c, color, 0, 0, 1, 0, 0.8, 1.0); // 2-sided
+	cube_t bot(c);
+	bot.z1() += 0.01*c.dz(); // prevent z-fighting
+	get_untextured_material(0, 0, 1).add_vcylin_to_verts(bot, color, 1, 0, 0, 0, 1.0, 1.0, 1.0, 1.0, 1); // bottom surface, skip sides
 }
 
 void building_room_geom_t::add_paper(room_object_t const &c) {
@@ -3264,9 +3277,7 @@ void building_room_geom_t::add_vent(room_object_t const &c) {
 
 void building_room_geom_t::add_plate(room_object_t const &c) { // is_small=1
 	// select plate texture based on room and a property of this building; plates in the same room will match
-	unsigned const NUM_PLATE_TEXTURES = 6;
-	string const plate_textures[NUM_PLATE_TEXTURES] = {"plates/plate1.png", "plates/plate2.jpg", "plates/plate3.jpg", "plates/plate4.jpg", "plates/plate5.jpg", "plates/plate6.jpg"};
-	int const tid(get_texture_by_name(plate_textures[(c.room_id + stairs_start) % NUM_PLATE_TEXTURES]));
+	int const tid(select_plate_texture(c.room_id + stairs_start));
 	rgeom_mat_t &top_mat(get_material(tid_nm_pair_t(tid, 0.0, 0), 0, 0, 1)); // unshadowed, small
 	colorRGBA color(apply_light_color(c));
 	UNROLL_3X(min_eq(color[i_], 0.9f);); // clamp color to 90% max to avoid over saturation
