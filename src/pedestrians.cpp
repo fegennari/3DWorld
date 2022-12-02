@@ -1590,11 +1590,21 @@ bool ped_manager_t::draw_ped(person_base_t const &ped, shader_t &s, pos_dir_up c
 	return 1;
 }
 
+void draw_player_as_sphere() {
+	point const player_pos(pre_smap_player_pos - vector3d(0.0, 0.0, 0.5f*camera_zh)); // shift to center of player height; ignore crouching for now
+	draw_sphere_vbo(player_pos, 0.5f*CAMERA_RADIUS, N_SPHERE_DIV, 0); // use a smaller radius
+}
 void ped_manager_t::draw_player_model(shader_t &s, vector3d const &xlate, bool shadow_only) {
 	if (ped_model_loader.num_models() == 0) { // no model - draw as sphere
-		if (!shadow_only) return; // sphere is only used for shadows
-		point const player_pos(pre_smap_player_pos - vector3d(0.0, 0.0, 0.5f*camera_zh)); // shift to center of player height; ignore crouching for now
-		draw_sphere_vbo(player_pos, 0.5f*CAMERA_RADIUS, N_SPHERE_DIV, 0); // use a smaller radius
+		if (shadow_only) {draw_player_as_sphere();} // sphere is only used for shadows
+		return;
+	}
+	unsigned const model_id = 0; // player is always the first model specified/loaded
+	if (city_params.num_peds == 0 && !global_building_params.building_people_enabled()) {ped_model_loader.load_model_id(model_id);} // only need to load this particular model
+	city_model_t const &model(ped_model_loader.get_model(model_id));
+	
+	if (!model.is_loaded()) {
+		if (shadow_only) {draw_player_as_sphere();} // sphere is only used for shadows
 		return;
 	}
 	bool const enable_animations(camera_surf_collide); // animate when walking but not when flying
@@ -1607,8 +1617,6 @@ void ped_manager_t::draw_player_model(shader_t &s, vector3d const &xlate, bool s
 	}
 	pos_dir_up pdu(camera_pdu);
 	pdu.pos -= xlate; // adjust for local translate
-	unsigned const model_id = 0; // player is always the first model specified/loaded
-	if (city_params.num_peds == 0 && !global_building_params.building_people_enabled()) {ped_model_loader.load_model_id(model_id);} // only need to load this particular model
 	animation_state_t anim_state(enable_animations, animation_id);
 	float const player_eye_height(CAMERA_RADIUS + camera_zh), player_height(1.1*player_eye_height), player_radius(player_height/PED_HEIGHT_SCALE);
 	point const pos(pre_smap_player_pos + vector3d(0.0, 0.0, (player_radius - player_eye_height)));
@@ -1616,7 +1624,7 @@ void ped_manager_t::draw_player_model(shader_t &s, vector3d const &xlate, bool s
 	cube_t bcube;
 	bcube.set_from_sphere(pos, PED_WIDTH_SCALE*player_radius);
 	bcube.z1() = pos.z - player_radius;
-	bcube.z2() = bcube.z1() + player_height*ped_model_loader.get_model(model_id).scale; // respect the model's scale
+	bcube.z2() = bcube.z1() + player_height*model.scale; // respect the model's scale
 	anim_state.set_animation_time(player_anim_time);
 	ped_model_loader.draw_model(s, pos, bcube, dir_horiz, ALPHA0, xlate, model_id, shadow_only, 0, &anim_state);
 	s.upload_mvm(); // not sure if this is needed
