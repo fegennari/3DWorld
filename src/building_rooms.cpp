@@ -2513,13 +2513,13 @@ bool building_t::place_eating_items_on_table(rand_gen_t &rgen, unsigned table_ob
 
 		if (building_obj_model_loader.is_model_valid(OBJ_MODEL_SILVERWARE)) {
 			vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_SILVERWARE)); // D, W, H
-			float const sw_height(0.0065*floor_spacing), sw_hwidth(0.5*sw_height*sz.y/sz.z), sw_hdepth(sw_height*sz.x/sz.z);
+			float const sw_height(0.005*floor_spacing), sw_hwidth(0.5*sw_height*sz.y/sz.z), sw_hdepth(sw_height*sz.x/sz.z);
 			vector3d const offset(pos - table_center);
-			bool const dim(fabs(offset.y) < fabs(offset.x)), dir(offset[dim] > 0.0);
+			bool const dim(fabs(offset.x) < fabs(offset.y)), dir(offset[dim] > 0.0);
 			cube_t sw_bc;
 			set_cube_zvals(sw_bc, table.z2()+0.1*sw_height, table.z2()+sw_height);
-			set_wall_width(sw_bc, pos[ dim] + (dir ? -1.0 : 1.0)*1.05*(plate_radius + sw_hwidth), sw_hdepth,  dim);
-			set_wall_width(sw_bc, pos[!dim], sw_hwidth, !dim);
+			set_wall_width(sw_bc, pos[!dim] + ((dim ^ dir) ? 1.0 : -1.0)*1.2*(plate_radius + sw_hwidth), sw_hdepth, !dim);
+			set_wall_width(sw_bc, pos[ dim], sw_hwidth, dim);
 			objs.emplace_back(sw_bc, TYPE_SILVERWARE, table.room_id, dim, dir, RO_FLAG_NOCOLL, table.light_amt, SHAPE_CUBE, GRAY);
 		}
 		added_obj = 1;

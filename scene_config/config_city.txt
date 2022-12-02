@@ -175,7 +175,7 @@ city cup_model    ../models/interiors/cup/Cup.model3d           0 0 0  0 -1 0   
 city toaster_model ../models/interiors/toaster/Toaster.model3d  0 0 0  2  2 0   1 1.0 1.0
 city hood_model   ../models/interiors/decorative_hood.model3d   1 1 0  0 -1 90  1 1.0 1.0 # two sided
 city rocking_chair_model ../models/interiors/rocker/Glider_Rocker.model3d 0 0 0  0 -1 0   1 1.0 1.0
-city silverware_model ../models/interiors/S3_cutlery_gold_Obj.model3d 1 0 0  0 -1 0   1 1.0 1.0
+city silverware_model ../models/interiors/S3_cutlery_gold_Obj.model3d 1 0 0  0 -1 90   1 1.0 1.0
 #city toy_model    ../models/interiors/toys/Stacking_Toy.model3d 0 1 0  0 -1 90   1 1.0 1.0 # two sided; center white part has wrong winding order
 
 # closet objects
