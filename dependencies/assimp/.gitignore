@@ -24,7 +24,8 @@ CMakeSettings.json
 
 # Output
 bin/
-lib/
+#lib/
+#lib64
 x64/
 # QtCreator
 CMakeLists.txt.user
