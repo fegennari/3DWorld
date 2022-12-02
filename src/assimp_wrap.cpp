@@ -8,43 +8,6 @@
 
 #define ENABLE_ASSIMP
 
-#ifdef ENABLE_ASSIMP
-
-#include <assimp/Importer.hpp>
-#include <assimp/scene.h>
-#include <assimp/postprocess.h>
-
-#include <glm/gtc/matrix_transform.hpp>
-#include <glm/gtc/type_ptr.hpp>
-
-#include <fstream>
-
-
-bool stb_image_enabled(); // from image_io.cpp
-
-string fix_path_slashes(string const &filename) {
-  string ret(filename);
-#ifdef _WIN32
-  std::replace(ret.begin(), ret.end(), '/', '\\');
-#else // linux
-  std::replace(ret.begin(), ret.end(), '\\', '/');
-#endif
-  return ret;
-}
-
-vector3d  aiVector3D_to_vector3d(aiVector3D const &v) {return vector3d (v.x, v.y, v.z);}
-colorRGBA aiColor4D_to_colorRGBA(aiColor4D  const &c) {return colorRGBA(c.r, c.g, c.b, c.a);}
-glm::vec3 aiVector3D_to_glm_vec3(aiVector3D const &v) {return glm::vec3(v.x, v.y, v.z);}
-xform_matrix aiMatrix4x4_to_xform_matrix(aiMatrix4x4  const &m) {return xform_matrix(glm::transpose(glm::make_mat4(&m.a1)));}
-glm::mat3    aiMatrix3x3_to_glm_mat3    (aiMatrix3x3  const &m) {return glm::transpose(glm::make_mat3(&m.a1));}
-glm::quat    aiQuaternion_to_glm_quat   (aiQuaternion const &q) {return glm::quat(q.w, q.x, q.y, q.z);}
-void print_assimp_matrix(aiMatrix4x4 const &m) {aiMatrix4x4_to_xform_matrix(m).print();}
-
-
-// For reference, see: https://learnopengl.com/Model-Loading/Model
-// Also: https://github.com/emeiri/ogldev
-// Also: http://www.xphere.me/2019/05/bones-animation-with-openglassimpglm/
-
 void model_anim_t::anim_data_t::init(unsigned np, unsigned nr, unsigned ns) {
 	assert(pos.empty() && scale.empty() && rot.empty()); // can only call init() once
 	assert(np > 0);
@@ -131,6 +94,43 @@ void model_anim_t::get_bone_transforms(unsigned anim_id, float cur_time) {
 	float const anim_time(fmod(time_in_ticks, animation.duration));
 	transform_node_hierarchy_recur(anim_time, animation, 0, root_transform); // root node is 0
 }
+
+#ifdef ENABLE_ASSIMP
+
+#include <assimp/Importer.hpp>
+#include <assimp/scene.h>
+#include <assimp/postprocess.h>
+
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
+
+#include <fstream>
+
+
+bool stb_image_enabled(); // from image_io.cpp
+
+string fix_path_slashes(string const &filename) {
+  string ret(filename);
+#ifdef _WIN32
+  std::replace(ret.begin(), ret.end(), '/', '\\');
+#else // linux
+  std::replace(ret.begin(), ret.end(), '\\', '/');
+#endif
+  return ret;
+}
+
+vector3d  aiVector3D_to_vector3d(aiVector3D const &v) {return vector3d (v.x, v.y, v.z);}
+colorRGBA aiColor4D_to_colorRGBA(aiColor4D  const &c) {return colorRGBA(c.r, c.g, c.b, c.a);}
+glm::vec3 aiVector3D_to_glm_vec3(aiVector3D const &v) {return glm::vec3(v.x, v.y, v.z);}
+xform_matrix aiMatrix4x4_to_xform_matrix(aiMatrix4x4  const &m) {return xform_matrix(glm::transpose(glm::make_mat4(&m.a1)));}
+glm::mat3    aiMatrix3x3_to_glm_mat3    (aiMatrix3x3  const &m) {return glm::transpose(glm::make_mat3(&m.a1));}
+glm::quat    aiQuaternion_to_glm_quat   (aiQuaternion const &q) {return glm::quat(q.w, q.x, q.y, q.z);}
+void print_assimp_matrix(aiMatrix4x4 const &m) {aiMatrix4x4_to_xform_matrix(m).print();}
+
+
+// For reference, see: https://learnopengl.com/Model-Loading/Model
+// Also: https://github.com/emeiri/ogldev
+// Also: http://www.xphere.me/2019/05/bones-animation-with-openglassimpglm/
 
 class file_reader_assimp {
 	model3d &model;
