@@ -33,9 +33,9 @@ CMakeLists.txt.user
 assimp.pc
 assimp.aps
 revision.h
-contrib/zlib/zconf.h
-contrib/zlib/zlib.pc
-include/assimp/config.h
+#contrib/zlib/zconf.h
+#contrib/zlib/zlib.pc
+#include/assimp/config.h
 unit.vcxproj.user
 
 # CMake
@@ -77,7 +77,7 @@ test/gtest/src/gtest-stamp/Debug/gtest-patch
 *.cache
 test/gtest/src/gtest-stamp/Debug/gtest-build
 *.suo
-*.lib
+#*.lib
 test/gtest/src/gtest-stamp/Debug/
 tools/assimp_view/assimp_viewer.vcxproj.user
 *.pyc
