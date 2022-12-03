@@ -434,6 +434,7 @@ void texture_t::load_targa(int index, bool allow_diff_width_height) {
 
 void texture_t::load_jpeg(int index, bool allow_diff_width_height) {
 
+	//timer_t timer("Load Jpeg"); // 187 calls, 7063ms total
 #ifdef ENABLE_JPEG
 	jpeg_decompress_struct cinfo = {};
 	jpeg_error_mgr jerr = {};
@@ -467,6 +468,7 @@ void texture_t::load_jpeg(int index, bool allow_diff_width_height) {
 		auto_insert_alpha_channel(index);
 	}
 #else
+	if (load_stb_image(index, allow_diff_width_height, 0)) return; // allow_two_byte_grayscale=0
 	cerr << "Error loading texture image file " << name << ": jpeg support has not been enabled." << endl;
 	exit(1);
 #endif
@@ -501,8 +503,9 @@ int write_jpeg_data(unsigned width, unsigned height, FILE *fp, unsigned char con
 	checked_fclose(fp);
 	return 1;
 #else
-  cerr << "Error: JPEG writing support is not enabled." << endl;
-  return 0;
+	// TODO: use stbi_write_jpg(filename, width, height, 3, data, quality); // ncomp=3 - but we need filename rather than fp
+	cerr << "Error: JPEG writing support is not enabled." << endl;
+	return 0;
 #endif
 }
 
@@ -571,6 +574,7 @@ void texture_t::load_png(int index, bool allow_diff_width_height, bool allow_two
 		auto_insert_alpha_channel(index);
 	}
 #else
+	if (load_stb_image(index, allow_diff_width_height, allow_two_byte_grayscale)) return;
 	cerr << "Error loading texture image file " << name << ": png support has not been enabled." << endl;
 	exit(1);
 #endif
@@ -807,7 +811,10 @@ void texture_t::load_ppm(int index, bool allow_diff_width_height) {
 bool texture_t::load_stb_image(int index, bool allow_diff_width_height, bool allow_two_byte_grayscale, unsigned char const *const load_from_data, unsigned load_from_size) {
 
 #ifdef ENABLE_STB_IMAGE
-	assert(!allow_two_byte_grayscale); // not supported
+	if (allow_two_byte_grayscale) {
+		cerr << "Error: stb_image loader doesn't support 2-byte grayscale PNG images" << endl;
+		return 0;
+	}
 	int w(0), h(0), nc(0);
 	unsigned char *file_data(nullptr);
 	stbi_set_flip_vertically_on_load(1);
