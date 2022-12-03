@@ -611,6 +611,7 @@ void place_book(room_object_t &obj, cube_t const &parent, float length, float ma
 	if (c.item_flags & (1U << drawer_ix)) {return room_object_t();} // item has been taken
 	assert(drawer.is_strictly_normalized());
 	vector3d const sz(drawer.get_size()); // Note: drawer is the interior area
+	bool const is_cabinet(c.type == TYPE_COUNTER);
 	rand_gen_t rgen;
 	rgen.set_state((123*drawer_ix + 1), (456*c.room_id + 777*c.obj_id + 1));
 	room_object_t obj; // starts as no item
@@ -662,26 +663,25 @@ void place_book(room_object_t &obj, cube_t const &parent, float length, float ma
 		break;
 	}
 	case 5: // key / plate
-	if (c.type == TYPE_COUNTER) { // plate
-		float const diameter(rgen.rand_uniform(0.5, 0.9)*min(sz.x, sz.y));
-		obj = room_object_t(drawer, TYPE_PLATE, c.room_id, 0, 0, 0, 1.0, SHAPE_CYLIN);
-		obj.obj_id = rgen.rand();
-		obj.z2()   = obj.z1() + rgen.rand_uniform(0.5, 1.0)*min(0.2f*diameter, 0.4f*sz.z); // set height
-		set_rand_pos_for_sz(obj, 0, diameter, diameter, rgen);
+		if (is_cabinet) { // plate
+			float const diameter(rgen.rand_uniform(0.5, 0.9)*min(sz.x, sz.y));
+			obj = room_object_t(drawer, TYPE_PLATE, c.room_id, 0, 0, 0, 1.0, SHAPE_CYLIN);
+			obj.obj_id = rgen.rand();
+			obj.z2()   = obj.z1() + rgen.rand_uniform(0.5, 1.0)*min(0.2f*diameter, 0.4f*sz.z); // set height
+			set_rand_pos_for_sz(obj, 0, diameter, diameter, rgen);
+		}
+		else { // key; Note: aspect ratio of key depends on aspect ratio of door, but key model is always a constant aspect ratio
+			obj = room_object_t(drawer, TYPE_KEY, c.room_id, rgen.rand_bool(), rgen.rand_bool());
+			obj.expand_in_dim( obj.dim, -0.40*sz[ obj.dim]); // long  dim
+			obj.expand_in_dim(!obj.dim, -0.46*sz[!obj.dim]); // short dim
+			for (unsigned d = 0; d < 2; ++d) {obj.translate_dim(d, 0.35*sz[d]*rgen.rand_uniform(-1.0, 1.0));}
+			obj.z2() = obj.z1() + 0.05*sz.z;
+		}
 		break;
-	}
-	else { // key; Note: aspect ratio of key depends on aspect ratio of door, but key model is always a constant aspect ratio
-		obj = room_object_t(drawer, TYPE_KEY, c.room_id, rgen.rand_bool(), rgen.rand_bool());
-		obj.expand_in_dim( obj.dim, -0.40*sz[ obj.dim]); // long  dim
-		obj.expand_in_dim(!obj.dim, -0.46*sz[!obj.dim]); // short dim
-		for (unsigned d = 0; d < 2; ++d) {obj.translate_dim(d, 0.35*sz[d]*rgen.rand_uniform(-1.0, 1.0));}
-		obj.z2() = obj.z1() + 0.05*sz.z;
-		break;
-	}
 	case 6: // bottle
 	{
 		bool const dim(c.dim ^ rgen.rand_bool() ^ 1); // random orient
-		float const length(rgen.rand_uniform(0.7, 0.9)*min(1.8f*sz.z, min(sz.x, sz.y))), diameter(length*rgen.rand_uniform(0.26, 0.34));
+		float const length(rgen.rand_uniform(0.7, 0.9)*min((is_cabinet ? 2.7f : 1.8f)*sz.z, min(sz.x, sz.y))), diameter(length*rgen.rand_uniform(0.26, 0.34));
 		obj = room_object_t(drawer, TYPE_BOTTLE, c.room_id, dim, rgen.rand_bool(), 0, 1.0, SHAPE_CYLIN);
 		obj.set_as_bottle(rgen.rand()); // can be empty
 		obj.z2() = obj.z1() + diameter;
@@ -694,13 +694,20 @@ void place_book(room_object_t &obj, cube_t const &parent, float length, float ma
 		if (length < 0.9*sz[c.dim] && width < 0.9*sz[!c.dim]) {place_money(obj, drawer, length, width, c.room_id, c.dim, c.dir, rgen);} // if it can fit
 		break;
 	}
-	case 8: // phone
-	{
-		bool const dim(c.dim ^ rgen.rand_bool()); // random orient
-		float const length(0.3*c.dz()), width(0.45*length);
-		if (length < 0.9*sz[dim] && width < 0.9*sz[!dim]) {place_phone(obj, drawer, length, width, c.room_id, dim, c.dir, rgen);} // if it can fit
+	case 8: // phone, or silverware if a cabinet drawer
+		if (is_cabinet && building_obj_model_loader.is_model_valid(OBJ_MODEL_SILVERWARE)) { // silverware
+			vector3d const ssz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_SILVERWARE)); // D, W, H
+			float const sw_width(0.5*min(sz[!c.dim], (ssz.y/ssz.x)*sz[c.dim])), sw_length(sw_width*ssz.x/ssz.y), sw_height(sw_width*ssz.z/ssz.y);
+			obj = room_object_t(drawer, TYPE_SILVERWARE, c.room_id, c.dim, c.dir);
+			obj.z2() = obj.z1() + sw_height; // set height
+			set_rand_pos_for_sz(obj, c.dim, sw_length, sw_width, rgen);
+		}
+		else { // phone
+			bool const dim(c.dim ^ rgen.rand_bool()); // random orient
+			float const length(0.3*c.dz()), width(0.45*length);
+			if (length < 0.9*sz[dim] && width < 0.9*sz[!dim]) {place_phone(obj, drawer, length, width, c.room_id, dim, c.dir, rgen);} // if it can fit
+		}
 		break;
-	}
 	case 9: // spray paint can
 	{
 		bool const dim(c.dim ^ rgen.rand_bool() ^ 1); // random orient
