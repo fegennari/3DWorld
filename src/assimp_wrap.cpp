@@ -160,7 +160,6 @@ class file_reader_assimp {
 				cerr << "Error: Failed to load embedded texture with stb_image" << endl;
 				exit(1); // fatal
 			}
-			t.do_invert_y();
 			t.init(); // calls calc_color()
 		} // for i
 		to_load.clear();

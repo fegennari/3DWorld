@@ -136,12 +136,11 @@ void texture_t::load(int index, bool allow_diff_width_height, bool allow_two_byt
 			}
 		}
 		unsigned const want_alpha_channel(ncolors == 4), want_luminance(ncolors == 1);
-		bool need_to_invert_y(invert_y);
 		//highres_timer_t timer("Load " + get_file_extension(name, 0, 1)); // 0.1s bmp, 6.3s jpeg, 4.4s png, 0.3s tga, 0.2s tiff
 
 		// attempt to load image with STB if it's enabled; applies to BMP, TGA, JPEG, and PNG; 2-byte grayscale images are not supported
 		if (USE_STB_IMAGE_LOAD && (format == 1 || format == 4 || format == 5 || format == 6) && !allow_two_byte_grayscale && load_stb_image(index, allow_diff_width_height, 0)) {
-			need_to_invert_y ^= 1; // loaded with STB; must invert Y because stb loads differently
+			// loaded with stb_image
 		}
 		else {
 			switch (format) {
@@ -161,7 +160,7 @@ void texture_t::load(int index, bool allow_diff_width_height, bool allow_two_byt
 		// defer this check until we actually need to access the data, in case we want to actually do the load on the fly later
 		//assert(is_allocated());
 		assert(is_loaded());
-		if (need_to_invert_y && format != 10) {do_invert_y();} // upside down (not DDS)
+		if (invert_y && format != 10) {do_invert_y();} // upside down (not DDS)
 		if (want_alpha_channel && ncolors < 4) {add_alpha_channel();}
 		else if (want_luminance && ncolors == 3) {try_compact_to_lum();}
 		//if (want_alpha_channel) {fill_transparent_with_avg_color();}
@@ -811,6 +810,7 @@ bool texture_t::load_stb_image(int index, bool allow_diff_width_height, bool all
 	assert(!allow_two_byte_grayscale); // not supported
 	int w(0), h(0), nc(0);
 	unsigned char *file_data(nullptr);
+	stbi_set_flip_vertically_on_load(1);
 
 	if (load_from_data != nullptr) { // load from memory
 		file_data = stbi_load_from_memory(load_from_data, load_from_size, &w, &h, &nc, 0);
