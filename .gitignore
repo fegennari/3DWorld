@@ -11,7 +11,6 @@ Samples/
 obj/
 lib/
 noback/
-ffmpeg.exe.lnk
 deps_build/
 screenshot*.jpg
 screenshot*.bmp
