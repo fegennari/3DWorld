@@ -1011,11 +1011,11 @@ int player_state::smiley_motion(dwobject &obj, int smiley_id) {
 
 	// set orientation
 	if (in_ice) {
-		obj.orientation = all_zeros; // nothing
+		// nothing - leave unchanged
 	}
 	else if (SMILEYS_LOOK_AT_TARGET && target_type != 0) {
 		vector3d new_orient((target_pos - obj.pos).get_norm()); // target dir
-		if (new_orient != zero_vector) obj.orientation = new_orient;
+		if (new_orient != zero_vector) {obj.orientation = new_orient;}
 	}
 	else {
 		vector3d const new_orient((obj.pos - opos).get_norm()); // actual movement dir
@@ -1033,8 +1033,8 @@ int player_state::smiley_motion(dwobject &obj, int smiley_id) {
 		}
 		obj.orientation.normalize();
 	}
-	if (obj.orientation == zero_vector) {
-		obj.orientation = vector3d(1,0,0);
+	if (obj.orientation.mag() < TOLERANCE) {
+		obj.orientation = plus_x;
 	}
 	else if ((stuck || ohval == 3) && !in_ice && target_type != 3 && !dist_less_than(obj.pos, target_pos, 2.1*radius)) { // not on a waypoint
 		jump(obj.pos); // try jumping
@@ -1241,6 +1241,7 @@ void init_smiley(int smiley_id) {
 	obj.orientation   = signed_rand_vector(); // this is likely reset later
 	obj.orientation.z = 0.0;
 	obj.orientation.normalize();
+	if (obj.orientation.mag() < TOLERANCE) {obj.orientation = plus_x;}
 	objg.get_td()->reset_perturb_if_set(smiley_id);
 
 	/*if (SMILEY_BUTT) {

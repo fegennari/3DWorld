@@ -114,7 +114,8 @@ float get_bbbat_angle(float fire_val) {
 void add_weapon_cobj(point const &pos, vector3d const &dir, float cradius, float dpos, float fire_val, int wid, int wmode) {
 
 	if (wid == W_UNARMED) return;
-	assert(dir.mag() > TOLERANCE);
+	if (dir.mag() < TOLERANCE) {cout << TXT(dir.str()) << TXT(pos.str()) << TXT(wid) << TXT(wmode) << endl;}
+	assert(dir != zero_vector);
 	bool const DRAW_WEAP_COBJ(0); // for debugging
 	int const surfs((wid == W_BLADE || wid == W_M16 || wid == W_SHOTGUN || wid == W_LASER) ? 1 : 0); // no cylinder ends
 	cobj_params cp(0.8, BLACK, DRAW_WEAP_COBJ, 1, NULL, 0, -1, 1.0, surfs, 0.0, 0.0, 1); // special mode - shadow but no coll
