@@ -16,7 +16,9 @@ bool const USE_STB_IMAGE_LOAD = 0;
 
 #ifdef ENABLE_STB_IMAGE
 #define STB_IMAGE_IMPLEMENTATION
+#define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "stb_image.h"
+#include "stb_image_write.h"
 bool stb_image_enabled() {return 1;}
 #else
 bool stb_image_enabled() {return 0;}
@@ -511,9 +513,13 @@ int write_jpeg_data(string const &fn, unsigned char const *const data, unsigned 
 	checked_fclose(fp);
 	return 1;
 #else
-	// TODO: use stbi_write_jpg(filename, width, height, 3, data, quality); // ncomp=3 - but we need filename rather than fp
+#ifdef ENABLE_STB_IMAGE
+	stbi_flip_vertically_on_write(1);
+	return stbi_write_jpg(fn.c_str(), width, height, 3, data, 95); // ncomp=3, quality=95
+#else
 	cerr << "Error: JPEG writing support is not enabled." << endl;
 	return 0;
+#endif
 #endif
 }
 
