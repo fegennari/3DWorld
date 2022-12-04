@@ -1156,15 +1156,35 @@ int select_plate_texture(unsigned rand_val) {
 }
 
 void building_room_geom_t::add_vase(room_object_t const &c) {
-	// TODO: some parametric curve rotated around the Z-axis
 	int const tid(select_plate_texture(c.room_id + stairs_start));
 	rgeom_mat_t &side_mat(get_material(tid_nm_pair_t(tid, 0.0, 1), 1, 0, 1)); // shadowed, small
 	colorRGBA color(apply_light_color(c));
 	UNROLL_3X(min_eq(color[i_], 0.9f);); // clamp color to 90% max to avoid over saturation
-	side_mat.add_vcylin_to_verts(c, color, 0, 0, 1, 0, 0.8, 1.0); // 2-sided
+	// parametric curve rotated around the Z-axis
+	unsigned const num_stacks = 32;
+	rand_gen_t rgen;
+	c.set_rand_gen_state(rgen);
+	rgen.rand_mix();
+	float const tex_scale_v(rgen.rand_uniform(1.0, 8.0)), tex_scale_h(1 + (rgen.rand()%3)); // tex_scale_h must be an integer
+	float const tscale(tex_scale_v/num_stacks), zstep(c.dz()/num_stacks);
+	float const rbase(c.get_radius()), rmin(rgen.rand_uniform(0.5, 0.8)*rbase), rmax(rgen.rand_uniform(1.25, 2.0)*rbase);
+	float const freq_mult((TWO_PI/num_stacks)*rgen.rand_uniform(0.5, 2.0));
+	float radius(rbase), tadd(0.0);
+	cube_t seg(c);
+	seg.z2() = c.z1() + zstep;
+
+	for (unsigned n = 0; n < num_stacks; ++n) {
+		float const rnext(rmin + (rmax - rmin)*0.5*(1.0 + sin(freq_mult*n)));
+		// TODO: need len_tstart=tadd
+		side_mat.add_vcylin_to_verts(seg, color, 0, 0, 1, 0, radius/rbase, rnext/rbase, tex_scale_h, 1.0, 0, 32, 0.0, 0, tscale); // 2-sided
+		seg.z1()  = seg.z2();
+		seg.z2() += zstep;
+		radius    = rnext;
+		tadd     += tscale;
+	} // for n
 	cube_t bot(c);
 	bot.z1() += 0.01*c.dz(); // prevent z-fighting
-	get_untextured_material(0, 0, 1).add_vcylin_to_verts(bot, color, 1, 0, 0, 0, 1.0, 1.0, 1.0, 1.0, 1); // bottom surface, skip sides
+	get_untextured_material(1, 0, 1).add_vcylin_to_verts(bot, color, 1, 0, 0, 0, 1.0, 1.0, 1.0, 1.0, 1); // bottom surface, skip sides
 }
 
 void building_room_geom_t::add_paper(room_object_t const &c) {
