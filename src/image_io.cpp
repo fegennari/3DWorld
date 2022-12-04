@@ -337,8 +337,14 @@ void texture_t::maybe_swap_rb(unsigned char *ptr) const { // ptr is assumed to b
 }
 
 
-bool write_rgb_bmp_image(FILE *fp, string const &fn, unsigned char *data, unsigned width, unsigned height, unsigned ncolors) {
+bool write_rgb_bmp_image(string const &fn, unsigned char *data, unsigned width, unsigned height, unsigned ncolors) {
 
+	FILE *fp(fopen(fn.c_str(), "wb"));
+
+	if (fp == NULL) {
+		cerr << "Error opening BMP file " << fn << " for write." << endl;
+		return 0;
+	}
 	maybe_swap_rb(data, width*height, ncolors); // Note: data not const because of this line
 	unsigned char pad[4] = {0};
 	unsigned const row_sz(width*ncolors), row_sz_mod(row_sz&3), row_pad(row_sz_mod ? 4-row_sz_mod : 0);
@@ -355,7 +361,8 @@ bool write_rgb_bmp_image(FILE *fp, string const &fn, unsigned char *data, unsign
 	infoheader.xresolution = infoheader.yresolution = 1200; // arbitrary nonzero
 
 	if (fwrite(&header, 14, 1, fp) != 1 || fwrite(&infoheader, 40, 1, fp) != 1) {
-		cerr << "Error writing bitmap header/infoheader for file " << fn << endl;
+		cerr << "Error writing BMP header/infoheader for file " << fn << endl;
+		checked_fclose(fp);
 		return 0;
 	}
 	if (ncolors == 1) { // add color index table
@@ -363,37 +370,32 @@ bool write_rgb_bmp_image(FILE *fp, string const &fn, unsigned char *data, unsign
 		for (unsigned i = 0; i < 256; ++i) {UNROLL_3X(color_table[(i<<2)+i_] = i;)}
 
 		if (fwrite(color_table, 1024, 1, fp) != 1) {
-			cerr << "Error writing bitmap color table for file " << fn << endl;
+			cerr << "Error writing BMP color table for file " << fn << endl;
+			checked_fclose(fp);
 			return 0;
 		}
 	}
 	for (unsigned i = 0; i < height; ++i) { // write one scanline at a time (could invert y if needed)
 		if (fwrite(data, 1, row_sz, fp) != row_sz) { // row image data
-			cerr << "Error writing bitmap data for file " << fn << endl;
+			cerr << "Error writing BMP data for file " << fn << endl;
+			checked_fclose(fp);
 			return 0;
 		}
 		if (row_pad > 0 && fwrite(pad, 1, row_pad, fp) != row_pad) { // maybe add padding
-			cerr << "Error writing bitmap row padding for file " << fn << endl;
+			cerr << "Error writing BMP row padding for file " << fn << endl;
+			checked_fclose(fp);
 			return 0;
 		}
 		data += row_sz;
 	}
+	checked_fclose(fp);
 	return 1;
 }
 
 
 int texture_t::write_to_bmp(string const &fn) const {
-
-	FILE *fp(fopen(fn.c_str(), "wb"));
-
-	if (fp == NULL) {
-		cerr << "Error opening bmp file " << fn << " for write." << endl;
-		return 0;
-	}
 	vector<unsigned char> data_swap_rb(data, data+num_bytes());
-	bool const ret(write_rgb_bmp_image(fp, fn, &data_swap_rb.front(), width, height, ncolors));
-	checked_fclose(fp);
-	return ret;
+	return write_rgb_bmp_image(fn, &data_swap_rb.front(), width, height, ncolors);
 }
 
 
@@ -475,9 +477,15 @@ void texture_t::load_jpeg(int index, bool allow_diff_width_height) {
 }
 
 
-int write_jpeg_data(unsigned width, unsigned height, FILE *fp, unsigned char const *const data, bool invert_y) {
+int write_jpeg_data(string const &fn, unsigned char const *const data, unsigned width, unsigned height, bool invert_y) {
 
 #ifdef ENABLE_JPEG
+	FILE *fp(fopen(fn.c_str(), "wb"));
+
+	if (fp == NULL) {
+		cerr << "Error opening jpg file " << fn << " for write." << endl;
+		return 0;
+	}
 	struct jpeg_compress_struct cinfo = {};
 	struct jpeg_error_mgr jerr = {};
 	unsigned const step_size(3*width);
@@ -500,6 +508,7 @@ int write_jpeg_data(unsigned width, unsigned height, FILE *fp, unsigned char con
 	}
 	jpeg_finish_compress(&cinfo);
 	jpeg_destroy_compress(&cinfo);
+	checked_fclose(fp);
 	return 1;
 #else
 	// TODO: use stbi_write_jpg(filename, width, height, 3, data, quality); // ncomp=3 - but we need filename rather than fp
@@ -510,17 +519,8 @@ int write_jpeg_data(unsigned width, unsigned height, FILE *fp, unsigned char con
 
 
 int texture_t::write_to_jpg(string const &fn) const {
-
 	assert(ncolors == 3); // only supports RGB for now
-	FILE *fp(fopen(fn.c_str(), "wb"));
-
-	if (fp == NULL) {
-		cerr << "Error opening jpg file " << fn << " for write." << endl;
-		return 0;
-	}
-	int const ret(write_jpeg_data(width, height, fp, data, 0)); // no invert
-	checked_fclose(fp);
-	return ret;
+	return write_jpeg_data(fn, data, width, height, 0); // no invert
 }
 
 

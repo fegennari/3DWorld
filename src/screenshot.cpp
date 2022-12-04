@@ -16,9 +16,8 @@
 
 using namespace std;
 
-int write_jpeg_data(unsigned width, unsigned height, FILE *fp, unsigned char const *const data, bool invert_y);
-bool write_rgb_bmp_image(FILE *fp, string const &fn, unsigned char *data, unsigned width, unsigned height, unsigned ncolors);
-void checked_fclose(FILE *fp);
+int write_jpeg_data(string const &fn, unsigned char const *const data, unsigned width, unsigned height, bool invert_y);
+bool write_rgb_bmp_image(string const &fn, unsigned char *data, unsigned width, unsigned height, unsigned ncolors);
 
 void print_text_onscreen_default(string const &text);
 
@@ -51,33 +50,18 @@ void read_pixels(unsigned window_width, unsigned window_height, vector<unsigned 
 #endif
 }
 
-
-string get_screenshot_filename(char const *const file_path, string const &extension, unsigned &id) {
-	ostringstream oss;
-	if (file_path != nullptr) {oss << file_path;}
-	oss << "screenshot" << id++ << "." << extension;
-	string const fn(oss.str());
-	cout << "Writing screenshot image " << fn << endl;
-	print_text_onscreen_default("Writing screenshot " + fn);
-	return fn;
-}
-
 int screenshot(unsigned window_width, unsigned window_height, char const *const file_path, bool write_bmp) {
 
 	static unsigned ss_id(0);
-	string const fn(get_screenshot_filename(file_path, (write_bmp ? "bmp" : "jpg"), ss_id));
-	FILE* fp(fopen(fn.c_str(), "wb"));
-
-	if (fp == nullptr) {
-		printf("Error writing screenshot '%s'.\n", fn.c_str());
-		return 0;
-	}	
+	ostringstream oss;
+	if (file_path != nullptr) {oss << file_path;}
+	oss << "screenshot" << ss_id++ << "." << (write_bmp ? "bmp" : "jpg");
+	string const fn(oss.str());
+	cout << "Writing screenshot image " << fn << endl;
+	print_text_onscreen_default("Writing screenshot " + fn);
 	vector<unsigned char> buf((window_width+1)*(window_height+1)*3); // allocate extra size for alignment purposes - is this really needed?
 	read_pixels(window_width, window_height, buf);
-	int ret(0);
-	if (write_bmp) {ret = write_rgb_bmp_image(fp, "<screenshot>", &buf.front(), window_width, window_height, 3);} // RGB BMP (40ms)
-	else           {ret = write_jpeg_data(window_width, window_height, fp, &buf.front(), 1);} // JPEG (110ms)
-	checked_fclose(fp);
-	return ret;
+	if (write_bmp) {return write_rgb_bmp_image(fn, &buf.front(), window_width, window_height, 3);} // BMP, RGB (ncolors=3) (40ms)
+	else           {return write_jpeg_data    (fn, &buf.front(), window_width, window_height, 1);} // JPEG, invert_y=1 (110ms libjpeg, 226ms stb)
 }
 
