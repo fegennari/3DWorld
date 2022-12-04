@@ -434,11 +434,42 @@ void texture_t::load_jpeg(int index, bool allow_diff_width_height) {
 	}
 }
 
+class stb_buffered_writer {
+	FILE *fp=nullptr;
+	vector<unsigned char> buffer;
+public:
+	~stb_buffered_writer() {fclose(fp);}
+
+	bool init(string const &fn) {
+		fp = fopen(fn.c_str(), "wb");
+		if (fp == NULL) {cerr << "Error opening image file " << fn << " for write." << endl; return 0;}
+		return 1;
+	}
+	void add_data(void *data, int size) {buffer.insert(buffer.end(), (char *)data, (char *)data+size);}
+	
+	void flush() {
+		assert(fp);
+		if (buffer.empty()) return;
+		fwrite(buffer.data(), 1, buffer.size(), fp);
+		buffer.clear();
+	}
+};
+void stb_buffered_writer_func(void *context, void *data, int size) {
+	assert(context);
+	((stb_buffered_writer *)context)->add_data(data, size);
+}
 
 int write_jpeg_data(string const &fn, unsigned char const *const data, unsigned width, unsigned height, bool invert_y) {
 #ifdef ENABLE_STB_IMAGE
 	stbi_flip_vertically_on_write(1);
-	return stbi_write_jpg(fn.c_str(), width, height, 3, data, 95); // ncomp=3, quality=95
+	//timer_t timer("JPEG Write");
+	// use a buffered writer because it's > 2x faster (100ms vs. 225ms for 1920x1080 image)
+	//return stbi_write_jpg(fn.c_str(), width, height, 3, data, 95); // ncomp=3, quality=95
+	stb_buffered_writer writer;
+	if (!writer.init(fn)) return 0;
+	if (!stbi_write_jpg_to_func(stb_buffered_writer_func, (void *)&writer, width, height, 3, data, 95)) return 0; // ncomp=3, quality=95
+	writer.flush(); // flush once at the end, which writes the entire image as one fwrite() call
+	return 1;
 #else
 	cerr << "Error: JPEG writing support is not enabled." << endl;
 	return 0;
