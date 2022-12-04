@@ -14,6 +14,7 @@ noback/
 ffmpeg.exe.lnk
 deps_build/
 screenshot*.jpg
+screenshot*.bmp
 video_out*.mp4
 positions.log.txt
 state.txt
