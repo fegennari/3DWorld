@@ -139,7 +139,7 @@ void texture_t::load(int index, bool allow_diff_width_height, bool allow_two_byt
 		//highres_timer_t timer("Load " + get_file_extension(name, 0, 1)); // 0.1s bmp, 6.3s jpeg, 4.4s png, 0.3s tga, 0.2s tiff
 
 		// attempt to load image with STB if it's enabled; applies to BMP, TGA, JPEG, and PNG; 2-byte grayscale images are not supported
-		if (USE_STB_IMAGE_LOAD && (format == 1 || format == 4 || format == 5 || format == 6) && !allow_two_byte_grayscale && load_stb_image(index, allow_diff_width_height, 0)) {
+		if (USE_STB_IMAGE_LOAD && (format == 1 || format == 4 || format == 5 || format == 6) && !allow_two_byte_grayscale && load_stb_image(index, allow_diff_width_height)) {
 			// loaded with stb_image
 		}
 		else {
@@ -468,7 +468,7 @@ void texture_t::load_jpeg(int index, bool allow_diff_width_height) {
 		auto_insert_alpha_channel(index);
 	}
 #else
-	if (load_stb_image(index, allow_diff_width_height, 0)) return; // allow_two_byte_grayscale=0
+	if (load_stb_image(index, allow_diff_width_height)) return; // allow_two_byte_grayscale=0
 	cerr << "Error loading texture image file " << name << ": jpeg support has not been enabled." << endl;
 	exit(1);
 #endif
@@ -500,7 +500,6 @@ int write_jpeg_data(unsigned width, unsigned height, FILE *fp, unsigned char con
 	}
 	jpeg_finish_compress(&cinfo);
 	jpeg_destroy_compress(&cinfo);
-	checked_fclose(fp);
 	return 1;
 #else
 	// TODO: use stbi_write_jpg(filename, width, height, 3, data, quality); // ncomp=3 - but we need filename rather than fp
@@ -519,7 +518,9 @@ int texture_t::write_to_jpg(string const &fn) const {
 		cerr << "Error opening jpg file " << fn << " for write." << endl;
 		return 0;
 	}
-	return write_jpeg_data(width, height, fp, data, 0); // no invert, fclose(fp) is called within this function
+	int const ret(write_jpeg_data(width, height, fp, data, 0)); // no invert
+	checked_fclose(fp);
+	return ret;
 }
 
 

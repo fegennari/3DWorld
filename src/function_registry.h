@@ -924,7 +924,6 @@ void modify_voxels();
 void read_depth_buffer(unsigned window_width, unsigned window_height, vector<float> &depth, bool normalize=0);
 void read_pixels(unsigned window_width, unsigned window_height, vector<unsigned char> &buf);
 int screenshot(unsigned window_width, unsigned window_height, char const *const file_path, bool write_bmp);
-int write_jpeg(unsigned window_width, unsigned window_height, char const *const file_path);
 
 // function prototypes - spray paint
 void toggle_spraypaint_mode();

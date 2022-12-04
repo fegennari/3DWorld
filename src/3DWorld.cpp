@@ -1170,7 +1170,7 @@ void keyboard_proc(unsigned char key, int x, int y) {
 		screenshot(window_width, window_height, "./", 1);
 		break;
 	case 'F': // .jpg
-		write_jpeg(window_width, window_height, "./");
+		screenshot(window_width, window_height, "./", 0);
 		break;
 
 	// rotate sun/moon
