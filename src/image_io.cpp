@@ -22,18 +22,10 @@ bool stb_image_enabled() {return 1;}
 bool stb_image_enabled() {return 0;}
 #endif
 
-#ifdef ENABLE_JPEG
-#define INT32 prev_INT32 // fix conflicting typedef used in freeglut
-#include "jpeglib.h"
-#undef prev_INT32
-#endif
-
 #ifdef ENABLE_PNG
 #include "png.h"
 
-void wrap_png_error(png_structp, png_const_charp) {	
-	cerr << "Error reading PNG image file." << endl;
-}
+void wrap_png_error(png_structp, png_const_charp) {cerr << "Error reading PNG image file." << endl;}
 #endif
 
 #ifdef ENABLE_DDS
@@ -435,82 +427,15 @@ void texture_t::load_targa(int index, bool allow_diff_width_height) {
 
 
 void texture_t::load_jpeg(int index, bool allow_diff_width_height) {
-
 	//timer_t timer("Load Jpeg"); // 187 calls, 7063ms total
-#ifdef ENABLE_JPEG
-	jpeg_decompress_struct cinfo = {};
-	jpeg_error_mgr jerr = {};
-	cinfo.err = jpeg_std_error(&jerr);
-	jpeg_create_decompress(&cinfo);
-	FILE *fp(open_texture_file(name));
-
-	if (fp == NULL) {
-		cerr << "Error opening jpeg file " << name << " for read." << endl;
+	if (!load_stb_image(index, allow_diff_width_height)) { // allow_two_byte_grayscale=0
+		cerr << "Error loading JPEG texture image file " << name << endl;
 		exit(1);
 	}
-	jpeg_stdio_src(&cinfo, fp);
-	jpeg_read_header(&cinfo, TRUE);
-	jpeg_start_decompress(&cinfo);
-	set_image_size(cinfo.output_width, cinfo.output_height, allow_diff_width_height);
-	bool const want_alpha_channel(ncolors == 4 && cinfo.output_components == 3);
-	ncolors = cinfo.output_components; // Note: can never be 4
-	unsigned const scanline_size(ncolors*width);
-	alloc();
-
-	while (cinfo.output_scanline < cinfo.output_height) {
-		JSAMPROW row_pointer[1] = {data + scanline_size*(cinfo.output_height - cinfo.output_scanline - 1)};
-		jpeg_read_scanlines(&cinfo, row_pointer, 1);
-	}
-	jpeg_finish_decompress(&cinfo);
-	jpeg_destroy_decompress(&cinfo);
-	checked_fclose(fp);
-
-	if (want_alpha_channel) {
-		add_alpha_channel();
-		auto_insert_alpha_channel(index);
-	}
-#else
-	if (load_stb_image(index, allow_diff_width_height)) return; // allow_two_byte_grayscale=0
-	cerr << "Error loading texture image file " << name << ": jpeg support has not been enabled." << endl;
-	exit(1);
-#endif
 }
 
 
 int write_jpeg_data(string const &fn, unsigned char const *const data, unsigned width, unsigned height, bool invert_y) {
-
-#ifdef ENABLE_JPEG
-	FILE *fp(fopen(fn.c_str(), "wb"));
-
-	if (fp == NULL) {
-		cerr << "Error opening jpg file " << fn << " for write." << endl;
-		return 0;
-	}
-	struct jpeg_compress_struct cinfo = {};
-	struct jpeg_error_mgr jerr = {};
-	unsigned const step_size(3*width);
-	cinfo.err = jpeg_std_error(&jerr);
-	jpeg_create_compress(&cinfo);
-	jpeg_stdio_dest(&cinfo, fp);
-	cinfo.image_width      = width;
-	cinfo.image_height     = height;
-	cinfo.input_components = 3;
-	cinfo.in_color_space   = JCS_RGB;
-	jpeg_set_defaults(&cinfo);
-	jpeg_set_quality (&cinfo, 100, 0); // set highest quality
-	jpeg_start_compress(&cinfo, TRUE);
-
-	while (cinfo.next_scanline < cinfo.image_height) {
-		JSAMPROW row_pointer[1] = {};
-		unsigned const yval(invert_y ? (height-cinfo.next_scanline-1) : cinfo.next_scanline);
-		row_pointer[0] = const_cast<unsigned char *>(&data[yval*step_size]); // cast away the const (we know the data won't be modified)
-		jpeg_write_scanlines(&cinfo, row_pointer, 1);
-	}
-	jpeg_finish_compress(&cinfo);
-	jpeg_destroy_compress(&cinfo);
-	checked_fclose(fp);
-	return 1;
-#else
 #ifdef ENABLE_STB_IMAGE
 	stbi_flip_vertically_on_write(1);
 	return stbi_write_jpg(fn.c_str(), width, height, 3, data, 95); // ncomp=3, quality=95
@@ -518,10 +443,7 @@ int write_jpeg_data(string const &fn, unsigned char const *const data, unsigned 
 	cerr << "Error: JPEG writing support is not enabled." << endl;
 	return 0;
 #endif
-#endif
 }
-
-
 int texture_t::write_to_jpg(string const &fn) const {
 	assert(ncolors == 3); // only supports RGB for now
 	return write_jpeg_data(fn, data, width, height, 0); // no invert
@@ -853,6 +775,7 @@ bool texture_t::load_stb_image(int index, bool allow_diff_width_height, bool all
 	}
 	return 1;
 #else
+	cerr << "Error: stb_image support has not been enabled" << endl;
 	return 0; // disabled
 #endif
 }
