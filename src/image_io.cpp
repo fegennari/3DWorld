@@ -12,8 +12,6 @@ using namespace std;
 bool const USE_STB_IMAGE_LOAD = 0;
 
 // Note: stb_image generally works as a replacement for ligpng/ligjpeg/libtiff, but it doesn't support 16-bit formats, so it can't fully replace libpng; similar runtime
-#define ENABLE_STB_IMAGE
-
 #ifdef ENABLE_STB_IMAGE
 #define STB_IMAGE_IMPLEMENTATION
 #define STB_IMAGE_WRITE_IMPLEMENTATION

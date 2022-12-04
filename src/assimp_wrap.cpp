@@ -6,8 +6,6 @@
 #include "3DWorld.h"
 #include "model3d.h"
 
-#define ENABLE_ASSIMP
-
 void model_anim_t::anim_data_t::init(unsigned np, unsigned nr, unsigned ns) {
 	assert(pos.empty() && scale.empty() && rot.empty()); // can only call init() once
 	assert(np > 0);
