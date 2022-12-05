@@ -1170,13 +1170,31 @@ void building_room_geom_t::add_vase(room_object_t const &c) {
 	float const rbase(c.get_radius()), rmin(rgen.rand_uniform(0.5, 0.8)*rbase), rmax(rgen.rand_uniform(1.25, 2.0)*rbase);
 	float const freq_mult((TWO_PI/num_stacks)*rgen.rand_uniform(0.5, 2.0));
 	float radius(rbase), tadd(0.0);
+	unsigned vix1(side_mat.itri_verts.size());
 	cube_t seg(c);
 	seg.z2() = c.z1() + zstep;
 
 	for (unsigned n = 0; n < num_stacks; ++n) {
+		unsigned const vix2(side_mat.itri_verts.size());
 		float const rnext(rmin + (rmax - rmin)*0.5*(1.0 + sin(freq_mult*n)));
-		// TODO: need len_tstart=tadd
-		side_mat.add_vcylin_to_verts(seg, color, 0, 0, 1, 0, radius/rbase, rnext/rbase, tex_scale_h, 1.0, 0, 32, 0.0, 0, tscale); // 2-sided
+		side_mat.add_vcylin_to_verts(seg, color, 0, 0, 1, 0, radius/rbase, rnext/rbase, tex_scale_h, 1.0, 0, 32, 0.0, 0, tadd+tscale, tadd); // 2-sided
+		unsigned const vix3(side_mat.itri_verts.size());
+
+		if (n > 0) {
+			// recompute normals to blend between top and bottom cylindiers; first cylin has indices vix1-vix2, second has vix2-vix3
+			// optimization: share indices - add_cylin_indices_tris()
+			unsigned const npts(vix2 - vix1);
+			assert(vix3 - vix2 == npts);
+
+			for (unsigned i = vix1; i < vix2; i += 2) { // iterate in {Z1, Z2} pairs
+				norm_comp &n1(side_mat.itri_verts[i+1   ]); // top vert of bottom cylinder
+				norm_comp &n2(side_mat.itri_verts[i+npts]); // bottom vert of top cylinder
+				vector3d const normal((n1.get_norm() + n2.get_norm()).get_norm()); // averaged normal to share across verts
+				n1.set_norm(normal);
+				n2.set_norm(normal);
+			}
+		}
+		vix1      = vix2;
 		seg.z1()  = seg.z2();
 		seg.z2() += zstep;
 		radius    = rnext;

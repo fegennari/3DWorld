@@ -109,16 +109,16 @@ void swap_cube_z_xy(cube_t &c, bool dim) {
 }
 
 void rgeom_mat_t::add_ortho_cylin_to_verts(cube_t const &c, colorRGBA const &color, int dim, bool draw_bot, bool draw_top, bool two_sided, bool inv_tb,
-	float rs_bot, float rs_top, float side_tscale, float end_tscale, bool skip_sides, unsigned ndiv, float side_tscale_add, bool swap_txy, float len_tscale)
+	float rs_bot, float rs_top, float side_tscale, float end_tscale, bool skip_sides, unsigned ndiv, float side_tscale_add, bool swap_txy, float len_tc2, float len_tc1)
 {
 	if (dim == 2) { // Z: this is our standard v_cylinder
-		add_vcylin_to_verts(c, color, draw_bot, draw_top, two_sided, inv_tb, rs_bot, rs_top, side_tscale, end_tscale, skip_sides, ndiv, side_tscale_add, swap_txy, len_tscale);
+		add_vcylin_to_verts(c, color, draw_bot, draw_top, two_sided, inv_tb, rs_bot, rs_top, side_tscale, end_tscale, skip_sides, ndiv, side_tscale_add, swap_txy, len_tc2, len_tc1);
 		return;
 	}
 	cube_t c_rot(c);
 	swap_cube_z_xy(c_rot, dim);
 	unsigned const itri_verts_start_ix(itri_verts.size()), ixs_start_ix(indices.size());
-	add_vcylin_to_verts(c_rot, color, draw_bot, draw_top, two_sided, inv_tb, rs_bot, rs_top, side_tscale, end_tscale, skip_sides, ndiv, side_tscale_add, swap_txy, len_tscale);
+	add_vcylin_to_verts(c_rot, color, draw_bot, draw_top, two_sided, inv_tb, rs_bot, rs_top, side_tscale, end_tscale, skip_sides, ndiv, side_tscale_add, swap_txy, len_tc2, len_tc1);
 	
 	for (auto v = itri_verts.begin()+itri_verts_start_ix; v != itri_verts.end(); ++v) { // swap triangle vertices and normals
 		std::swap(v->v[2], v->v[dim]);
@@ -127,15 +127,15 @@ void rgeom_mat_t::add_ortho_cylin_to_verts(cube_t const &c, colorRGBA const &col
 	std::reverse(indices.begin()+ixs_start_ix, indices.end()); // fix winding order
 }
 void rgeom_mat_t::add_vcylin_to_verts(cube_t const &c, colorRGBA const &color, bool draw_bot, bool draw_top, bool two_sided, bool inv_tb, float rs_bot,
-	float rs_top, float side_tscale, float end_tscale, bool skip_sides, unsigned ndiv, float side_tscale_add, bool swap_txy, float len_tscale)
+	float rs_top, float side_tscale, float end_tscale, bool skip_sides, unsigned ndiv, float side_tscale_add, bool swap_txy, float len_tc2, float len_tc1)
 {
 	point const center(c.get_cube_center());
 	float const radius(0.5*min(c.dx(), c.dy())); // cube X/Y size should be equal/square
 	add_cylin_to_verts(point(center.x, center.y, c.z1()), point(center.x, center.y, c.z2()), radius*rs_bot, radius*rs_top,
-		color, draw_bot, draw_top, two_sided, inv_tb, side_tscale, end_tscale, skip_sides, ndiv, side_tscale_add, swap_txy, len_tscale);
+		color, draw_bot, draw_top, two_sided, inv_tb, side_tscale, end_tscale, skip_sides, ndiv, side_tscale_add, swap_txy, len_tc2, len_tc1);
 }
 void rgeom_mat_t::add_cylin_to_verts(point const &bot, point const &top, float bot_radius, float top_radius, colorRGBA const &color, bool draw_bot, bool draw_top,
-	bool two_sided, bool inv_tb, float side_tscale, float end_tscale, bool skip_sides, unsigned ndiv, float side_tscale_add, bool swap_txy, float len_tscale)
+	bool two_sided, bool inv_tb, float side_tscale, float end_tscale, bool skip_sides, unsigned ndiv, float side_tscale_add, bool swap_txy, float len_tc2, float len_tc1)
 {
 	assert((!skip_sides) || draw_bot || draw_top); // must draw something
 	point const ce[2] = {bot, top};
@@ -165,8 +165,8 @@ void rgeom_mat_t::add_cylin_to_verts(point const &bot, point const &top, float b
 				unsigned const s(i%ndiv);
 				float const ts(side_tscale*(1.0f - i*ndiv_inv) + side_tscale_add);
 				norm_comp const normal(0.5*(vpn.n[s] + vpn.n[(i+ndiv-1)%ndiv])); // normalize?
-				itri_verts[itix++].assign(vpn.p[(s<<1)+0], normal, (swap_txy ? 0.0        : ts), (swap_txy ? ts : 0.0       ), cw);
-				itri_verts[itix++].assign(vpn.p[(s<<1)+1], normal, (swap_txy ? len_tscale : ts), (swap_txy ? ts : len_tscale), cw);
+				itri_verts[itix++].assign(vpn.p[(s<<1)+0], normal, (swap_txy ? len_tc1 : ts), (swap_txy ? ts : len_tc1), cw);
+				itri_verts[itix++].assign(vpn.p[(s<<1)+1], normal, (swap_txy ? len_tc2 : ts), (swap_txy ? ts : len_tc2), cw);
 			}
 		}
 		for (unsigned i = 0; i < ndiv; ++i) { // index data
