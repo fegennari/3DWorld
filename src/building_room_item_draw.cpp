@@ -1366,38 +1366,39 @@ public:
 };
 spider_draw_t spider_draw;
 
+// Note: similar to the functions in Tree.cpp, but pushes back rather than assigning, and step is hard-coded to 1
+void add_cylin_indices_tris(vector<unsigned> &idata, unsigned ndiv, unsigned ix_start) {
+	for (unsigned S = 0; S < ndiv; ++S) {
+		bool const last_edge(S == ndiv-1);
+		unsigned const ix0(ix_start + S), ixs[4] = {0, ndiv, (last_edge ? 1 : 1+ndiv), (last_edge ? 1-ndiv : 1)};
+		for (unsigned i = 0; i < 6; ++i) {idata.push_back(ix0 + ixs[quad_to_tris_ixs[i]]);}
+	}
+}
+void draw_segment(rgeom_mat_t &mat, point const &p1, point const &p2, float radius1, float radius2,
+	float seg_ix, float tscale_x, float tscale_y, color_wrapper const &cw, unsigned ndiv, unsigned &data_pos)
+{
+	point const ce[2] = {p1, p2};
+	vector3d v12;
+	vector_point_norm const &vpn(gen_cylinder_data(ce, radius1, radius2, ndiv, v12, NULL, 0.0, 1.0, 2)); // force_dim=2
+	float const ndiv_inv(1.0/ndiv);
+	bool const is_first(seg_ix == 0.0);
+
+	for (unsigned j = !is_first; j < 2; ++j) {
+		float const ty(tscale_y*(seg_ix + j));
+
+		for (unsigned S = 0; S < ndiv; ++S) {
+			float const tx(tscale_x*fabs(S*ndiv_inv - 0.5f));
+			vector3d const n(0.5f*(vpn.n[S] + vpn.n[(S+ndiv-1)%ndiv])); // average face normals to get vert normals, don't need to normalize
+			mat.itri_verts.emplace_back(vpn.p[(S<<1)+j], n, tx, ty, cw);
+		}
+	}
+	add_cylin_indices_tris(mat.indices, ndiv, data_pos); // create index data
+	data_pos += ndiv;
+}
+
 class snake_draw_t {
 	rgeom_mat_t skin_mats[2], untex_mat;
 
-	// Note: similar to the function in Tree.cpp, but pushes back rather than assigning, and step is hard-coded to 1
-	static void add_cylin_indices_tris(vector<unsigned> &idata, unsigned ndiv, unsigned ix_start) {
-		for (unsigned S = 0; S < ndiv; ++S) {
-			bool const last_edge(S == ndiv-1);
-			unsigned const ix0(ix_start + S), ixs[4] = {0, ndiv, (last_edge ? 1 : 1+ndiv), (last_edge ? 1-ndiv : 1)};
-			for (unsigned i = 0; i < 6; ++i) {idata.push_back(ix0 + ixs[quad_to_tris_ixs[i]]);}
-		}
-	}
-	static void draw_segment(rgeom_mat_t &skin_mat, point const &p1, point const &p2, float radius1, float radius2,
-		float seg_ix, float tscale, color_wrapper const &cw, unsigned ndiv, unsigned &data_pos)
-	{
-		point const ce[2] = {p1, p2};
-		vector3d v12;
-		vector_point_norm const &vpn(gen_cylinder_data(ce, radius1, radius2, ndiv, v12, NULL, 0.0, 1.0, 2)); // force_dim=2
-		float const ndiv_inv(1.0/ndiv);
-		bool const is_first(seg_ix == 0.0);
-
-		for (unsigned j = !is_first; j < 2; ++j) {
-			float const ty(tscale*(seg_ix + j));
-
-			for (unsigned S = 0; S < ndiv; ++S) {
-				float const tx(2.0f*fabs(S*ndiv_inv - 0.5f));
-				vector3d const n(0.5f*(vpn.n[S] + vpn.n[(S+ndiv-1)%ndiv])); // average face normals to get vert normals, don't need to normalize
-				skin_mat.itri_verts.emplace_back(vpn.p[(S<<1)+j], n, tx, ty, cw);
-			}
-		}
-		add_cylin_indices_tris(skin_mat.indices, ndiv, data_pos); // create index data
-		data_pos += ndiv;
-	}
 	void draw_snake(snake_t const &S, bool shadow_only, bool reflection_pass, bool is_distant) {
 		bool const low_detail(shadow_only || reflection_pass || is_distant);
 		unsigned const ndiv(get_rgeom_sphere_ndiv(low_detail)/2);
@@ -1451,11 +1452,11 @@ class snake_draw_t {
 					vector3d const v12_avg(0.5f*(v12 + prev_v12)); // use the average vector for a more gradual transition
 					float const r_mid(0.5*(radius1 + radius2));
 					point const seg_center(ce[0] + v12_avg*(0.5*delta.mag()));
-					draw_segment(skin_mat, ce[0], seg_center, radius1, r_mid, seg_ix+0.0, tscale, cw, ndiv, data_pos);
-					draw_segment(skin_mat, seg_center, ce[1], r_mid, radius2, seg_ix+0.5, tscale, cw, ndiv, data_pos);
+					draw_segment(skin_mat, ce[0], seg_center, radius1, r_mid, seg_ix+0.0, 2.0, tscale, cw, ndiv, data_pos);
+					draw_segment(skin_mat, seg_center, ce[1], r_mid, radius2, seg_ix+0.5, 2.0, tscale, cw, ndiv, data_pos);
 				}
 				else {
-					draw_segment(skin_mat, ce[0], ce[1], radius1, radius2, seg_ix, tscale, cw, ndiv, data_pos);
+					draw_segment(skin_mat, ce[0], ce[1], radius1, radius2, seg_ix, 2.0, tscale, cw, ndiv, data_pos);
 				}
 				prev_v12 = v12;
 			}

@@ -1155,6 +1155,11 @@ int select_plate_texture(unsigned rand_val) {
 	return get_texture_by_name(plate_textures[rand_val % NUM_PLATE_TEXTURES]);
 }
 
+// functions reused from snake drawing
+template<typename T> void add_inverted_triangles(T &verts, vector<unsigned> &indices, unsigned verts_start, unsigned ixs_start);
+void draw_segment(rgeom_mat_t &mat, point const &p1, point const &p2, float radius1, float radius2,
+	float seg_ix, float tscale_x, float tscale_y, color_wrapper const &cw, unsigned ndiv, unsigned &data_pos);
+
 void building_room_geom_t::add_vase(room_object_t const &c) {
 	int const tid(select_plate_texture(c.room_id + stairs_start));
 	rgeom_mat_t &side_mat(get_material(tid_nm_pair_t(tid, 0.0, 1), 1, 0, 1)); // shadowed, small
@@ -1171,37 +1176,21 @@ void building_room_geom_t::add_vase(room_object_t const &c) {
 	float const rbase(c.get_radius()), rmin(rgen.rand_uniform(0.25, 0.75)*rbase), rmax(rbase);
 	float const freq_mult((TWO_PI/num_stacks)*rgen.rand_uniform(0.5, 2.0)), freq_start(TWO_PI*rgen.rand_float());
 	float const start_radius(rmin + (rmax - rmin)*0.5*(1.0 + sin(freq_start)));
-	float radius(start_radius), tadd(0.0);
-	unsigned vix1(side_mat.itri_verts.size());
-	cube_t seg(c);
-	seg.z2() = c.z1() + zstep;
+	float radius(start_radius);
+	point p1(c.xc(), c.yc(), c.z1()), p2(p1 + vector3d(0.0, 0.0, zstep));
+	unsigned const ndiv(N_CYL_SIDES), itris_start(side_mat.itri_verts.size()), ixs_start(side_mat.indices.size());
+	float const ndiv_inv(1.0/ndiv);
+	unsigned data_pos(itris_start);
+	color_wrapper cw(color);
 
 	for (unsigned n = 0; n < num_stacks; ++n) {
-		unsigned const vix2(side_mat.itri_verts.size());
 		float const rnext(rmin + (rmax - rmin)*0.5*(1.0 + sin(freq_start + freq_mult*(n+1))));
-		side_mat.add_vcylin_to_verts(seg, color, 0, 0, 1, 0, radius/rbase, rnext/rbase, tex_scale_h, 1.0, 0, N_CYL_SIDES, 0.0, 0, tadd+tscale, tadd); // 2-sided
-		unsigned const vix3(side_mat.itri_verts.size());
-
-		if (n > 0) {
-			// recompute normals to blend between top and bottom cylindiers; first cylin has indices vix1-vix2, second has vix2-vix3
-			// optimization: share indices - add_cylin_indices_tris()
-			unsigned const npts(vix2 - vix1);
-			assert(vix3 - vix2 == npts);
-
-			for (unsigned i = vix1; i < vix2; i += 2) { // iterate in {Z1, Z2} pairs
-				norm_comp &n1(side_mat.itri_verts[i+1   ]); // top vert of bottom cylinder
-				norm_comp &n2(side_mat.itri_verts[i+npts]); // bottom vert of top cylinder
-				vector3d const normal((n1.get_norm() + n2.get_norm()).get_norm()); // averaged normal to share across verts
-				n1.set_norm(normal);
-				n2.set_norm(normal);
-			}
-		}
-		vix1      = vix2;
-		seg.z1()  = seg.z2();
-		seg.z2() += zstep;
-		radius    = rnext;
-		tadd     += tscale;
+		draw_segment(side_mat, p1, p2, radius, rnext, n, tex_scale_h, tscale, cw, ndiv, data_pos);
+		p1.z   = p2.z;
+		p2.z  += zstep;
+		radius = rnext;
 	} // for n
+	add_inverted_triangles(side_mat.itri_verts, side_mat.indices, itris_start, ixs_start); // add inner surfaces
 	// draw the bottom surface
 	cube_t bot;
 	bot.set_from_point(c.get_cube_center());
