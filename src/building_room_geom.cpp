@@ -1165,19 +1165,21 @@ void building_room_geom_t::add_vase(room_object_t const &c) {
 	rand_gen_t rgen;
 	c.set_rand_gen_state(rgen);
 	rgen.rand_mix();
-	float const tex_scale_v(rgen.rand_uniform(1.0, 8.0)), tex_scale_h(1 + (rgen.rand()%3)); // tex_scale_h must be an integer
+	float const tex_scale_v((1+(rgen.rand()%7))*(1+(rgen.rand()%7))); // must be an integer, 1-36
+	float const tex_scale_h(2 + (rgen.rand()%7)); // must be an integer, 2-8
 	float const tscale(tex_scale_v/num_stacks), zstep(c.dz()/num_stacks);
-	float const rbase(c.get_radius()), rmin(rgen.rand_uniform(0.5, 0.8)*rbase), rmax(rgen.rand_uniform(1.25, 2.0)*rbase);
-	float const freq_mult((TWO_PI/num_stacks)*rgen.rand_uniform(0.5, 2.0));
-	float radius(rbase), tadd(0.0);
+	float const rbase(c.get_radius()), rmin(rgen.rand_uniform(0.25, 0.75)*rbase), rmax(rbase);
+	float const freq_mult((TWO_PI/num_stacks)*rgen.rand_uniform(0.5, 2.0)), freq_start(TWO_PI*rgen.rand_float());
+	float const start_radius(rmin + (rmax - rmin)*0.5*(1.0 + sin(freq_start)));
+	float radius(start_radius), tadd(0.0);
 	unsigned vix1(side_mat.itri_verts.size());
 	cube_t seg(c);
 	seg.z2() = c.z1() + zstep;
 
 	for (unsigned n = 0; n < num_stacks; ++n) {
 		unsigned const vix2(side_mat.itri_verts.size());
-		float const rnext(rmin + (rmax - rmin)*0.5*(1.0 + sin(freq_mult*n)));
-		side_mat.add_vcylin_to_verts(seg, color, 0, 0, 1, 0, radius/rbase, rnext/rbase, tex_scale_h, 1.0, 0, 32, 0.0, 0, tadd+tscale, tadd); // 2-sided
+		float const rnext(rmin + (rmax - rmin)*0.5*(1.0 + sin(freq_start + freq_mult*(n+1))));
+		side_mat.add_vcylin_to_verts(seg, color, 0, 0, 1, 0, radius/rbase, rnext/rbase, tex_scale_h, 1.0, 0, N_CYL_SIDES, 0.0, 0, tadd+tscale, tadd); // 2-sided
 		unsigned const vix3(side_mat.itri_verts.size());
 
 		if (n > 0) {
@@ -1200,9 +1202,12 @@ void building_room_geom_t::add_vase(room_object_t const &c) {
 		radius    = rnext;
 		tadd     += tscale;
 	} // for n
-	cube_t bot(c);
-	bot.z1() += 0.01*c.dz(); // prevent z-fighting
-	get_untextured_material(1, 0, 1).add_vcylin_to_verts(bot, color, 1, 0, 0, 0, 1.0, 1.0, 1.0, 1.0, 1); // bottom surface, skip sides
+	// draw the bottom surface
+	cube_t bot;
+	bot.set_from_point(c.get_cube_center());
+	bot.expand_by_xy(start_radius);
+	bot.z1() = c.z1() + 0.01*c.dz(); // prevent z-fighting
+	get_untextured_material(1, 0, 1).add_vcylin_to_verts(bot, color, 1, 0, 0, 1, 1.0, 1.0, 1.0, 1.0, 1); // inverted, skip sides
 }
 
 void building_room_geom_t::add_paper(room_object_t const &c) {
