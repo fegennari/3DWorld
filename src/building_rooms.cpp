@@ -2483,6 +2483,10 @@ bool building_t::check_if_placed_on_interior_wall(cube_t const &c, room_t const 
 	return 0;
 }
 
+colorRGBA gen_vase_color(rand_gen_t &rgen) {
+	if (rgen.rand_bool()) return WHITE; // will be textured
+	return colorRGBA(rgen.rand_float(), rgen.rand_float(), rgen.rand_float(), 1.0); // solid pastel color
+}
 bool building_t::place_eating_items_on_table(rand_gen_t &rgen, unsigned table_obj_id) {
 	vect_room_object_t &objs(interior->room_geom->objs);
 	assert(table_obj_id < objs.size());
@@ -2525,12 +2529,21 @@ bool building_t::place_eating_items_on_table(rand_gen_t &rgen, unsigned table_ob
 		added_obj = 1;
 	} // for i
 	if (added_obj) { // place a vase in the center of the table
-		float const vase_radius(0.5*plate_radius), vase_height(4.0*vase_radius);
+		float const vase_radius(rgen.rand_uniform(0.35, 0.6)*plate_radius), vase_height(rgen.rand_uniform(2.0, 6.0)*vase_radius);
 		cube_t vase;
 		vase.set_from_sphere(table.get_cube_center(), vase_radius);
 		set_cube_zvals(vase, table.z2(), table.z2()+vase_height); // place on the table
-		objs.emplace_back(vase, TYPE_VASE, table.room_id, 0, 0, RO_FLAG_NOCOLL, table.light_amt, SHAPE_CYLIN);
+		objs.emplace_back(vase, TYPE_VASE, table.room_id, 0, 0, RO_FLAG_NOCOLL, table.light_amt, SHAPE_CYLIN, gen_vase_color(rgen));
 		set_obj_id(objs);
+#if 0 // TESTING: add more vases
+		vector3d const xlates[4] = {vector3d(-1.0,0.0,0.0), vector3d(1.0,0.0,0.0), vector3d(0.0,-1.0,0.0), vector3d(0.0,1.0,0.0)};
+		for (unsigned n = 0; n < 4; ++n) {
+			cube_t vase2(vase);
+			vase2.translate(5.0*vase_radius*xlates[n]);
+			objs.emplace_back(vase2, TYPE_VASE, table.room_id+n, 0, 0, RO_FLAG_NOCOLL, table.light_amt, SHAPE_CYLIN, gen_vase_color(rgen));
+			set_obj_id(objs);
+		}
+#endif
 	}
 	return added_obj;
 }

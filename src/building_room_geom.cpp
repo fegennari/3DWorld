@@ -1149,20 +1149,12 @@ void building_room_geom_t::add_bottle(room_object_t const &c) {
 	label_mat.add_ortho_cylin_to_verts(body, apply_light_color(c, WHITE), dim, 0, 0, 0, 0, 1.0, 1.0, tscale, 1.0, 0, bottle_ndiv, tscale_add); // draw label
 }
 
-int select_plate_texture(unsigned rand_val) {
-	unsigned const NUM_PLATE_TEXTURES = 6;
-	string const plate_textures[NUM_PLATE_TEXTURES] = {"plates/plate1.png", "plates/plate2.jpg", "plates/plate3.jpg", "plates/plate4.jpg", "plates/plate5.jpg", "plates/plate6.jpg"};
-	return get_texture_by_name(plate_textures[rand_val % NUM_PLATE_TEXTURES]);
-}
-
 // functions reused from snake drawing
 template<typename T> void add_inverted_triangles(T &verts, vector<unsigned> &indices, unsigned verts_start, unsigned ixs_start);
 void draw_segment(rgeom_mat_t &mat, point const &p1, point const &p2, float radius1, float radius2,
 	float seg_ix, float tscale_x, float tscale_y, color_wrapper const &cw, unsigned ndiv, unsigned &data_pos);
 
 void building_room_geom_t::add_vase(room_object_t const &c) {
-	int const tid(select_plate_texture(c.room_id + stairs_start));
-	rgeom_mat_t &side_mat(get_material(tid_nm_pair_t(tid, 0.0, 1), 1, 0, 1)); // shadowed, small
 	colorRGBA color(apply_light_color(c));
 	UNROLL_3X(min_eq(color[i_], 0.9f);); // clamp color to 90% max to avoid over saturation
 	// parametric curve rotated around the Z-axis
@@ -1170,21 +1162,40 @@ void building_room_geom_t::add_vase(room_object_t const &c) {
 	rand_gen_t rgen;
 	c.set_rand_gen_state(rgen);
 	rgen.rand_mix();
-	float const tex_scale_v((1+(rgen.rand()%7))*(1+(rgen.rand()%7))); // must be an integer, 1-36
-	float const tex_scale_h(2 + (rgen.rand()%7)); // must be an integer, 2-8
-	float const tscale(tex_scale_v/num_stacks), zstep(c.dz()/num_stacks);
-	float const rbase(c.get_radius()), rmin(rgen.rand_uniform(0.25, 0.75)*rbase), rmax(rbase);
-	float const freq_mult((TWO_PI/num_stacks)*rgen.rand_uniform(0.5, 2.0)), freq_start(TWO_PI*rgen.rand_float());
-	float const start_radius(rmin + (rmax - rmin)*0.5*(1.0 + sin(freq_start)));
-	float radius(start_radius);
-	point p1(c.xc(), c.yc(), c.z1()), p2(p1 + vector3d(0.0, 0.0, zstep));
+	float tex_scale_v(1.0), tex_scale_h(1.0);
+	int tid(WHITE_TEX);
+
+	if (c.color == WHITE) { // while color, apply a texture
+		if (rgen.rand_bool()) { // marble
+			tid = get_texture_by_name(rgen.rand_bool() ? "marble2.jpg" : "marble.jpg");
+			tex_scale_v = tex_scale_h = (1 + (rgen.rand()&3)); // must be an integer, 1-4
+		}
+		else { // blue patterned (uses one of the plate textures)
+			tid = get_texture_by_name("plates/plate2.jpg");
+			tex_scale_v = (1+(rgen.rand()%7)) * (1+(rgen.rand()%7)); // must be an integer, 1-36
+			tex_scale_h = 2 + (rgen.rand()%7); // must be an integer, 2-8
+		}
+	}
+	rgeom_mat_t &side_mat(get_material(tid_nm_pair_t(tid, 0.0, 1), 1, 0, 1)); // shadowed, small
 	unsigned const ndiv(N_CYL_SIDES), itris_start(side_mat.itri_verts.size()), ixs_start(side_mat.indices.size());
-	float const ndiv_inv(1.0/ndiv);
+	float const tscale(tex_scale_v/num_stacks), zstep(c.dz()/num_stacks), ndiv_inv(1.0/ndiv);
+	float const rbase(c.get_radius()), rmax(rbase);
+	float rmin(rgen.rand_uniform(0.25, 0.75)*rbase);
+	float const freq_mult((TWO_PI/num_stacks)*rgen.rand_uniform(0.5, 2.0)), freq_start(TWO_PI*rgen.rand_float());
+	float taper(0.25*rgen.signed_rand_float()); // negative = narrow at top, positive = narrow at bottom
+	if (taper > 0.0 && rmin < 0.5*rbase) {taper = -taper;} // don't make the bottom too narrow
+	float const taper_scale(1.0/num_stacks), taper_bot(1.0 - max(taper, 0.0f)), taper_top(1.0 - min(taper, 0.0f));
+	float const sin_term(0.5*(1.0 + sin(freq_start)));
+	float start_radius(taper_bot*(rmin + (rmax - rmin)*sin_term));
+	if (start_radius < 0.45*rbase) {rmin = min(2.0*rmin, 0.75*rmax); start_radius = taper_bot*(rmin + (rmax - rmin)*sin_term);} // base is too narrow, widen it
+	float radius(start_radius);
 	unsigned data_pos(itris_start);
-	color_wrapper cw(color);
+	color_wrapper const cw(color);
+	point p1(c.xc(), c.yc(), c.z1()), p2(p1 + vector3d(0.0, 0.0, zstep));
 
 	for (unsigned n = 0; n < num_stacks; ++n) {
-		float const rnext(rmin + (rmax - rmin)*0.5*(1.0 + sin(freq_start + freq_mult*(n+1))));
+		float const taper_pos(taper_scale*(n+1));
+		float const rnext((taper_pos*taper_top + (1.0 - taper_pos)*taper_bot)*(rmin + (rmax - rmin)*0.5*(1.0 + sin(freq_start + freq_mult*(n+1)))));
 		draw_segment(side_mat, p1, p2, radius, rnext, n, tex_scale_h, tscale, cw, ndiv, data_pos);
 		p1.z   = p2.z;
 		p2.z  += zstep;
@@ -3307,6 +3318,11 @@ void building_room_geom_t::add_vent(room_object_t const &c) {
 	else {add_flat_textured_detail_wall_object(c, c.color, tid, 0);} // vent on a wall; draw_z1_face=0
 }
 
+int select_plate_texture(unsigned rand_val) {
+	unsigned const NUM_PLATE_TEXTURES = 6;
+	string const plate_textures[NUM_PLATE_TEXTURES] = {"plates/plate1.png", "plates/plate2.jpg", "plates/plate3.jpg", "plates/plate4.jpg", "plates/plate5.jpg", "plates/plate6.jpg"};
+	return get_texture_by_name(plate_textures[rand_val % NUM_PLATE_TEXTURES]);
+}
 void building_room_geom_t::add_plate(room_object_t const &c) { // is_small=1
 	// select plate texture based on room and a property of this building; plates in the same room will match
 	int const tid(select_plate_texture(c.room_id + stairs_start));
