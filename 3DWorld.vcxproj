@@ -190,7 +190,7 @@
       <SubSystem>Console</SubSystem>
       <TargetMachine>MachineX86</TargetMachine>
       <LargeAddressAware>true</LargeAddressAware>
-      <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
+      <LinkTimeCodeGeneration>Default</LinkTimeCodeGeneration>
     </Link>
     <Bscmake>
       <PreserveSBR>true</PreserveSBR>
@@ -247,7 +247,7 @@
       <SubSystem>Console</SubSystem>
       <TargetMachine>MachineX86</TargetMachine>
       <LargeAddressAware>true</LargeAddressAware>
-      <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
+      <LinkTimeCodeGeneration>Default</LinkTimeCodeGeneration>
     </Link>
     <Bscmake>
       <PreserveSBR>true</PreserveSBR>
@@ -301,7 +301,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <ProgramDatabaseFile>.\Debug/3DWorld.pdb</ProgramDatabaseFile>
       <SubSystem>Console</SubSystem>
-      <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
+      <LinkTimeCodeGeneration>Default</LinkTimeCodeGeneration>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Tracy|x64'">
@@ -351,6 +351,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <ProgramDatabaseFile>.\Debug/3DWorld.pdb</ProgramDatabaseFile>
       <SubSystem>Console</SubSystem>
+      <LinkTimeCodeGeneration>Default</LinkTimeCodeGeneration>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -399,7 +400,7 @@
       <AdditionalLibraryDirectories>dependencies\glew-2.0.0\lib\Release\Win32;C:\Program Files %28x86%29\OpenAL 1.1 SDK\libs\Win32;dependencies\freealut\admin\VisualStudioDotNET\alut\Debug;dependencies\libpng-1.2.20\projects\visualc71\Win32_LIB_Release;dependencies\zlib-1.2.1;dependencies\tiff-4.0.3\libtiff;dependencies\freeglut-2.8.1\lib\x86;dependencies\assimp\lib\RelWithDebInfo</AdditionalLibraryDirectories>
       <IgnoreSpecificDefaultLibraries>MSVCRT;LIBCMT;LIBCMTD;%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
       <SubSystem>Console</SubSystem>
-      <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
+      <LinkTimeCodeGeneration>Default</LinkTimeCodeGeneration>
       <TargetMachine>MachineX86</TargetMachine>
       <LargeAddressAware>true</LargeAddressAware>
       <Profile>false</Profile>
@@ -450,7 +451,7 @@
       <AdditionalLibraryDirectories>dependencies\glew-2.0.0\lib\Release\x64;dependencies\openal-soft\Release;dependencies\freealut\admin\VisualStudioDotNET\x64\Debug;dependencies\libpng-1.2.20\projects\visualc71\Win64_LIB_Release;dependencies\zlib-1.2.11\contrib\vstudio\vc14\x64\ZlibStatRelease;dependencies\tiff-4.3.0\libtiff\RelWithDebInfo;dependencies\freeglut-2.8.1\lib\x64\Debug;dependencies\assimp\lib64\RelWithDebInfo</AdditionalLibraryDirectories>
       <IgnoreSpecificDefaultLibraries>MSVCRT;%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
       <SubSystem>Console</SubSystem>
-      <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
+      <LinkTimeCodeGeneration>Default</LinkTimeCodeGeneration>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
