@@ -1428,6 +1428,7 @@ struct building_t : public building_geom_t {
 		unsigned building_ix, bool shadow_only, bool reflection_pass, unsigned inc_small, bool player_in_building);
 	bool has_cars_to_draw(bool player_in_building) const;
 	void draw_cars_in_building(shader_t &s, vector3d const &xlate, bool player_in_building, bool shadow_only) const;
+	void debug_people_in_building(shader_t &s) const;
 	void add_split_roof_shadow_quads(building_draw_t &bdraw) const;
 	void clear_room_geom();
 	void update_grass_exclude_at_pos(point const &pos, vector3d const &xlate, bool camera_in_building) const;

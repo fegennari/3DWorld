@@ -1917,6 +1917,30 @@ void building_t::draw_cars_in_building(shader_t &s, vector3d const &xlate, bool 
 	check_mvm_update(); // needed after popping model transform matrix
 }
 
+void building_t::debug_people_in_building(shader_t &s) const {
+	if (!interior || interior->people.empty()) return;
+	shader_t color_shader;
+	color_shader.begin_color_only_shader(YELLOW);
+	vector<vert_wrap_t> line_pts;
+
+	for (person_t const &p : interior->people) {
+		for (point const &v : p.path) {
+			draw_sphere_vbo(v, 0.25*p.radius, 16, 0);
+			if (line_pts.size() > 1) {line_pts.emplace_back(line_pts.back());} // duplicate point to create a line segment
+			line_pts.emplace_back(v);
+		}
+		if (p.target_valid()) {
+			draw_sphere_vbo(p.target_pos, 0.25*p.radius, 16, 0);
+			if (line_pts.size() > 1) {line_pts.emplace_back(line_pts.back());} // duplicate point to create a line segment
+			line_pts.emplace_back(p.target_pos);
+		}
+		if (line_pts.size() > 1) {draw_verts(line_pts, GL_LINES);}
+		line_pts.clear();
+	} // for p
+	color_shader.end_shader();
+	s.make_current();
+}
+
 // Note: c is in local building space and viewer_in is in non-rotated building space
 bool building_t::check_obj_occluded(cube_t const &c, point const &viewer_in, occlusion_checker_noncity_t &oc, bool reflection_pass, bool c_is_building_part) const {
 	if (!interior) return 0; // could probably make this an assert

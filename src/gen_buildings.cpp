@@ -2787,6 +2787,7 @@ public:
 						building_cont_player    = &b; // there can be only one
 						per_bcs_exclude[bcs_ix] = b.ext_side_qv_range;
 						if (reflection_pass) continue; // don't execute the code below
+						if (display_mode & 0x20) {b.debug_people_in_building(s);} // debug visualization
 						this_frame_camera_in_building  = 1;
 						this_frame_player_in_basement |= b.check_player_in_basement(camera_xlated - vector3d(0.0, 0.0, BASEMENT_ENTRANCE_SCALE*b.get_floor_thickness())); // only set once
 						this_frame_player_in_attic    |= b.point_in_attic(camera_xlated);
