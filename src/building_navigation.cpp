@@ -1739,7 +1739,7 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 				if (door.open) continue; // doors tend to block the AI, don't collide with them unless they're closed
 
 				if (global_building_params.ai_opens_doors && !door.is_locked_or_blocked(person.has_key)) { // can open the door
-					toggle_door_state(dix, player_in_this_building, 0, person.pos.z); // by_player=0
+					toggle_door_state(dix, player_in_this_building, 0, person.pos); // by_player=0
 				}
 				else { // can't open the door
 					person.wait_for(5.0); // wait for 5s and then choose a new desination

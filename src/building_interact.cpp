@@ -490,7 +490,7 @@ bool building_t::apply_player_action_key(point const &closest_to_in, vector3d co
 		door_t &door(interior->doors[door_ix]);
 		if (!player_can_open_door(door)) return 0; // locked/blocked
 		if (door.locked && !player_has_room_key()) {door.locked = 0;} // don't lock door when closing, to prevent the player from locking themselves in a room
-		toggle_door_state(door_ix, 1, 1, closest_to.z); // toggle state if interior door; player_in_this_building=1, by_player=1, at player height
+		toggle_door_state(door_ix, 1, 1, closest_to); // toggle state if interior door; player_in_this_building=1, by_player=1, at player pos
 		//interior->room_geom->modified_by_player = 1; // should door state always be preserved?
 	}
 	return 1;
@@ -748,7 +748,7 @@ bool building_t::adjust_blinds_state(unsigned obj_ix) {
 	return 1;
 }
 
-void building_t::toggle_door_state(unsigned door_ix, bool player_in_this_building, bool by_player, float zval) { // called by the player or AI
+void building_t::toggle_door_state(unsigned door_ix, bool player_in_this_building, bool by_player, point const &actor_pos) { // called by the player or AI
 	assert(interior && door_ix < interior->doors.size());
 	door_t &door(interior->doors[door_ix]);
 	door.open ^= 1; // toggle open state
@@ -758,10 +758,15 @@ void building_t::toggle_door_state(unsigned door_ix, bool player_in_this_buildin
 	if (has_room_geom()) {interior->room_geom->invalidate_mats_mask |= (1 << MAT_TYPE_DOORS);} // need to recreate doors VBO
 
 	if (player_in_this_building) { // is it really safe to call this from the AI thread?
-		point const door_center(door.xc(), door.yc(), zval);
+		point door_center(door.xc(), door.yc(), actor_pos.z);
 		play_door_open_close_sound(door_center, door.open);
-		if (by_player) {register_building_sound(door_center, 0.5);}
 		
+		if (by_player) {
+			// bias the sound slightly toward the side of the door the player is on to force a zombie to go through the doorway to get there,
+			// rather than targeting the exact center of the doorway and possibly clipping through the wall (for example, if in a hallway)
+			door_center[door.dim] += get_wall_thickness()*((door_center[door.dim] < actor_pos[door.dim]) ? 1.0 : -1.0);
+			register_building_sound(door_center, 0.5);
+		}
 		// update indir lighting state if needed; for now this is only for player actions to avoid thread safety issues and too many updates
 		if (by_player && enable_building_indir_lighting()) {
 			// Note: only have to register geom change if the light is on the same floor as the player, but this should always be true if the player just closed this door

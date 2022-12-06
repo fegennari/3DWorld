@@ -1411,7 +1411,7 @@ struct building_t : public building_geom_t {
 	bool interact_with_object(unsigned obj_ix, point const &int_pos, point const &query_ray_end, vector3d const &int_dir);
 	bool adjust_blinds_state(unsigned obj_ix);
 	void add_box_contents(room_object_t const &box);
-	void toggle_door_state(unsigned door_ix, bool player_in_this_building, bool by_player, float zval);
+	void toggle_door_state(unsigned door_ix, bool player_in_this_building, bool by_player, point const &actor_pos);
 	bool set_room_light_state_to(room_t const &room, float zval, bool make_on);
 	void set_obj_lit_state_to(unsigned room_id, float light_z2, bool lit_state);
 	bool player_pickup_object(point const &at_pos, vector3d const &in_dir);
