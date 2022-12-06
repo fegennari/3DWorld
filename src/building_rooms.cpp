@@ -793,8 +793,13 @@ bool building_t::add_bed_to_room(rand_gen_t &rgen, room_t const &room, vect_cube
 	return 0;
 }
 
+colorRGBA gen_vase_color(rand_gen_t &rgen) {
+	if (rgen.rand_bool()) return WHITE; // will be textured
+	return colorRGBA(rgen.rand_float(), rgen.rand_float(), rgen.rand_float(), 1.0); // solid pastel color
+}
+
 // Note: modified blockers rather than using it; fireplace must be the first placed object
-bool building_t::maybe_add_fireplace_to_room(room_t const &room, vect_cube_t &blockers, float zval, unsigned room_id, float tot_light_amt) {
+bool building_t::maybe_add_fireplace_to_room(rand_gen_t &rgen, room_t const &room, vect_cube_t &blockers, float zval, unsigned room_id, float tot_light_amt) {
 	// Note: the first part of the code below is run on every first floor room and will duplicate work, so it may be better to factor it out somehow
 	cube_t fireplace(get_fireplace()); // make a copy of the exterior fireplace that will be converted to an interior fireplace
 	bool dim(0), dir(0);
@@ -803,10 +808,10 @@ bool building_t::maybe_add_fireplace_to_room(room_t const &room, vect_cube_t &bl
 	else if (fireplace.y1() <= bcube.y1()) {dim = 1; dir = 0;}
 	else if (fireplace.y2() >= bcube.y2()) {dim = 1; dir = 1;}
 	else {assert(is_rotated()); return 0;} // can fail on rotated buildings?
-	float const depth_signed((dir ? -1.0 : 1.0)*1.0*fireplace.get_sz_dim(dim)), wall_pos(fireplace.d[dim][!dir]);
+	float const depth_signed((dir ? -1.0 : 1.0)*1.0*fireplace.get_sz_dim(dim)), wall_pos(fireplace.d[dim][!dir]), top_gap(0.15*fireplace.dz());
 	fireplace.d[dim][ dir] = wall_pos; // flush with the house wall
 	fireplace.d[dim][!dir] = wall_pos + depth_signed; // extend out into the room
-	fireplace.z2() -= 0.15*fireplace.dz(); // shorten slightly
+	fireplace.z2() -= top_gap; // shorten slightly
 	cube_t room_exp(room);
 	room_exp.expand_by_xy(0.5*get_wall_thickness()); // allow fireplace to extend slightly into room walls
 	if (!room_exp.contains_cube_xy(fireplace)) return 0; // fireplace not in this room
@@ -821,6 +826,17 @@ bool building_t::maybe_add_fireplace_to_room(room_t const &room, vect_cube_t &bl
 	blocker.d[dim][ dir] = fireplace.d[dim][!dir]; // flush with the front of the fireplace
 	objs.emplace_back(blocker, TYPE_BLOCKER, room_id, dim, dir, RO_FLAG_INVIS);
 	blockers.push_back(fireplace_ext); // add as a blocker if it's not already there
+
+	if (rgen.rand_bool()) { // add vase (urn?) on fireplace
+		float const urn_height(rgen.rand_uniform(0.65, 0.95)*top_gap), urn_radius(rgen.rand_uniform(0.35, 0.5)*min(urn_height, fabs(depth_signed)));
+		point center(fireplace.get_cube_center());
+		center[!dim] += 0.45*fireplace.get_sz_dim(!dim)*rgen.signed_rand_float(); // random placement to the left and right of center
+		cube_t urn;
+		urn.set_from_sphere(center, urn_radius);
+		set_cube_zvals(urn, fireplace.z2(), fireplace.z2()+urn_height); // place on the top of the fireplace
+		objs.emplace_back(urn, TYPE_VASE, room_id, 0, 0, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CYLIN, gen_vase_color(rgen));
+		set_obj_id(objs);
+	}
 	has_int_fplace = 1;
 	return 1;
 }
@@ -2483,10 +2499,6 @@ bool building_t::check_if_placed_on_interior_wall(cube_t const &c, room_t const 
 	return 0;
 }
 
-colorRGBA gen_vase_color(rand_gen_t &rgen) {
-	if (rgen.rand_bool()) return WHITE; // will be textured
-	return colorRGBA(rgen.rand_float(), rgen.rand_float(), rgen.rand_float(), 1.0); // solid pastel color
-}
 bool building_t::place_eating_items_on_table(rand_gen_t &rgen, unsigned table_obj_id) {
 	vect_room_object_t &objs(interior->room_geom->objs);
 	assert(table_obj_id < objs.size());
@@ -2944,7 +2956,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			blockers.clear(); // clear for this new room
 			
 			if (has_chimney == 2 && !is_basement && f == 0 && !added_fireplace) { // handle fireplaces on the first floor
-				has_fireplace = added_fireplace = maybe_add_fireplace_to_room(*r, blockers, room_center.z, room_id, tot_light_amt);
+				has_fireplace = added_fireplace = maybe_add_fireplace_to_room(rgen, *r, blockers, room_center.z, room_id, tot_light_amt);
 			}
 			if (is_office_bathroom) { // bathroom is already assigned
 				added_obj = is_bathroom = added_bathroom = no_whiteboard =
