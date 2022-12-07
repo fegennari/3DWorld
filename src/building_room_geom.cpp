@@ -1154,7 +1154,7 @@ template<typename T> void add_inverted_triangles(T &verts, vector<unsigned> &ind
 void draw_segment(rgeom_mat_t &mat, point const &p1, point const &p2, float radius1, float radius2,
 	float seg_ix, float tscale_x, float tscale_y, color_wrapper const &cw, unsigned ndiv, unsigned &data_pos);
 
-void building_room_geom_t::add_vase(room_object_t const &c) {
+void building_room_geom_t::add_vase(room_object_t const &c) { // or urn
 	colorRGBA color(apply_light_color(c));
 	UNROLL_3X(min_eq(color[i_], 0.9f);); // clamp color to 90% max to avoid over saturation
 	// parametric curve rotated around the Z-axis

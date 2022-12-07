@@ -827,14 +827,14 @@ bool building_t::maybe_add_fireplace_to_room(rand_gen_t &rgen, room_t const &roo
 	objs.emplace_back(blocker, TYPE_BLOCKER, room_id, dim, dir, RO_FLAG_INVIS);
 	blockers.push_back(fireplace_ext); // add as a blocker if it's not already there
 
-	if (rgen.rand_bool()) { // add vase (urn?) on fireplace
-		float const urn_height(rgen.rand_uniform(0.65, 0.95)*top_gap), urn_radius(rgen.rand_uniform(0.35, 0.5)*min(urn_height, fabs(depth_signed)));
+	if (rgen.rand_bool()) { // add urn on fireplace
+		float const urn_height(rgen.rand_uniform(0.65, 0.95)*top_gap), urn_radius(rgen.rand_uniform(0.35, 0.45)*min(urn_height, fabs(depth_signed)));
 		point center(fireplace.get_cube_center());
 		center[!dim] += 0.45*fireplace.get_sz_dim(!dim)*rgen.signed_rand_float(); // random placement to the left and right of center
 		cube_t urn;
 		urn.set_from_sphere(center, urn_radius);
 		set_cube_zvals(urn, fireplace.z2(), fireplace.z2()+urn_height); // place on the top of the fireplace
-		objs.emplace_back(urn, TYPE_VASE, room_id, 0, 0, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CYLIN, gen_vase_color(rgen));
+		objs.emplace_back(urn, TYPE_URN, room_id, 0, 0, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CYLIN, gen_vase_color(rgen));
 		set_obj_id(objs);
 	}
 	has_int_fplace = 1;
