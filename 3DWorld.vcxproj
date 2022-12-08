@@ -1346,7 +1346,6 @@
     <Text Include="scene_config\config_grand_canyon_tt.txt" />
     <Text Include="scene_config\config_gym.txt" />
     <Text Include="scene_config\config_heightmap.txt" />
-    <Text Include="scene_config\config_hetch.txt" />
     <Text Include="scene_config\config_ice_caves.txt" />
     <Text Include="scene_config\config_landscape.txt" />
     <Text Include="scene_config\config_lava_moon.txt" />

@@ -1555,9 +1555,6 @@
     <Text Include="scene_config\config_heightmap.txt">
       <Filter>Input Files\config</Filter>
     </Text>
-    <Text Include="scene_config\config_hetch.txt">
-      <Filter>Input Files\config</Filter>
-    </Text>
     <Text Include="scene_config\config_ice_caves.txt">
       <Filter>Input Files\config</Filter>
     </Text>
