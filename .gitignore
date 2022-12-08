@@ -15,6 +15,7 @@ deps_build/
 screenshot*.jpg
 screenshot*.bmp
 video_out*.mp4
+heightmap.png
 positions.log.txt
 state.txt
 shaders/generated/*
