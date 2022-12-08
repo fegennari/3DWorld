@@ -487,6 +487,7 @@ void texture_t::set_16_bit_grayscale() {
 }
 void texture_t::load_png(int index, bool allow_diff_width_height, bool allow_two_byte_grayscale) {
 
+	//timer_t timer("Load PNG", allow_two_byte_grayscale);
 #ifdef ENABLE_PNG
 	FILE *fp(open_texture_file(name));
 
@@ -551,12 +552,10 @@ int texture_t::write_to_png(string const &fn) const {
 	// Initialize write structure
 	png_structp png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
 	assert(png_ptr != NULL);
-
 	// Initialize info structure
 	png_infop info_ptr = png_create_info_struct(png_ptr);
 	assert(info_ptr != NULL);
 	png_init_io(png_ptr, fp);
-
 	// Write header
 	int color_type(0), bit_depth;
 
@@ -577,10 +576,8 @@ int texture_t::write_to_png(string const &fn) const {
 	png_set_IHDR(png_ptr, info_ptr, width, height, bit_depth, color_type, PNG_INTERLACE_NONE, PNG_COMPRESSION_TYPE_BASE, PNG_FILTER_TYPE_BASE);
 	png_write_info(png_ptr, info_ptr);
 	if (is_16_bit_gray) {png_set_swap(png_ptr);} // change big endian to little endian
-
 	// Write image data
 	for (int y = 0; y < height; y++) {png_write_row(png_ptr, (data + y*width*ncolors));}
-
 	// End write
 	png_write_end(png_ptr, NULL);
 	png_free_data(png_ptr, info_ptr, PNG_FREE_ALL, -1);
@@ -588,6 +585,15 @@ int texture_t::write_to_png(string const &fn) const {
 	checked_fclose(fp);
 	return 1;
 #else
+#ifdef ENABLE_STB_IMAGE
+	if (!is_16_bit_gray) { // 16-bit grayscale is not yet supported
+		stb_buffered_writer writer;
+		if (!writer.init(fn)) return 0;
+		if (!stbi_write_png_to_func(stb_buffered_writer_func, (void *)&writer, width, height, 3, data, 95)) return 0; // ncomp=3, quality=95
+		writer.flush(); // flush once at the end, which writes the entire image as one fwrite() call
+		return 1;
+	}
+#endif
 	cerr << "Error: PNG writing support is not enabled." << endl;
 	return 0;
 #endif
@@ -769,10 +775,6 @@ void texture_t::load_ppm(int index, bool allow_diff_width_height) {
 bool texture_t::load_stb_image(int index, bool allow_diff_width_height, bool allow_two_byte_grayscale, unsigned char const *const load_from_data, unsigned load_from_size) {
 
 #ifdef ENABLE_STB_IMAGE
-	if (allow_two_byte_grayscale) {
-		cerr << "Error: stb_image loader doesn't support 2-byte grayscale PNG images" << endl;
-		return 0;
-	}
 	int w(0), h(0), nc(0);
 	unsigned char *file_data(nullptr);
 	stbi_set_flip_vertically_on_load(1);
@@ -785,7 +787,19 @@ bool texture_t::load_stb_image(int index, bool allow_diff_width_height, bool all
 		FILE *const fp(fopen(filename.c_str(), "rb")); // see if we can open the file
 		if (fp == nullptr) {filename = name;} // if not in the texture directory, look in the current directory
 		else {checked_fclose(fp);}
-		file_data = stbi_load(filename.c_str(), &w, &h, &nc, 0);
+		
+		if (allow_two_byte_grayscale) {
+			// Note: ~10% faster than libpng, but not 100% the same results for some reason
+			file_data = (unsigned char *)stbi_load_16(filename.c_str(), &w, &h, &nc, 0);
+			if (nc == 1) {set_16_bit_grayscale();}
+			else { // shouldn't be reachable, unless a RGB/RGBA image is specified as a heightmap
+				cerr << "Error: Expecting grayscale PNG image, but got " << nc << " color image: " << filename << endl;
+				return 0;
+			}
+		}
+		else {
+			file_data = stbi_load(filename.c_str(), &w, &h, &nc, 0); // or stbi_load_from_file(fp, &w, &h, &nc, 0);
+		}
 	}
 	if (file_data == nullptr) { // still not found, or there was an error
 		cerr << "Error: stbi_load() returned error: \"" << stbi_failure_reason() << "\" for file " << name << endl;
@@ -794,10 +808,9 @@ bool texture_t::load_stb_image(int index, bool allow_diff_width_height, bool all
 	//cout << TXT(name) << TXT(width) << TXT(height) << TXT(w) << TXT(h) << TXT(ncolors) << TXT(nc) << endl;
 	set_image_size(w, h, allow_diff_width_height);
 	bool const want_alpha_channel(ncolors == 4 && nc == 3);
-	ncolors = nc;
-	//if (allow_two_byte_grayscale && ncolors == 1 && bit_width == 16) {set_16_bit_grayscale();}
+	if (!is_16_bit_gray) {ncolors = nc;}
 	alloc();
-	std::memcpy(data, file_data, num_bytes());
+	std::memcpy(data, file_data, num_bytes()); // Note: stb uses malloc()/free(), but we use new[]/delete[], so need to copy the data
 	stbi_image_free(file_data);
 
 	if (want_alpha_channel) {
