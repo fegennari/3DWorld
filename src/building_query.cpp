@@ -233,8 +233,12 @@ bool building_t::check_sphere_coll(point &pos, point const &p_last, vector3d con
 	}
 	else {
 		for (auto i = parts.begin(); i != parts.end(); ++i) {
-			if (xy_only && i->z1() > ground_floor_z1) { // only need to check first level in this mode
-				if (has_complex_floorplan) {continue;} else {break;}
+			if (xy_only) {
+				if (i->z1() < ground_floor_z1) continue; // skip basements, since they should be contained in the union of the ground floor (optimization)
+				
+				if (i->z1() > ground_floor_z1) { // only check ground floor
+					if (has_complex_floorplan) {continue;} else {break;}
+				}
 			}
 			if (!xy_only && ((pos2.z + radius < i->z1() + xlate.z) || (pos2.z - radius > i->z2() + xlate.z))) continue; // test z overlap
 			if (radius == 0.0 && !(xy_only ? i->contains_pt_xy(pos2) : i->contains_pt(pos2))) continue; // no intersection; ignores p_last
@@ -316,6 +320,7 @@ bool building_t::check_sphere_coll(point &pos, point const &p_last, vector3d con
 				}
 			} // for i
 		}
+		if (is_house && porch.is_strictly_normalized() && sphere_cube_int_update_pos(pos2, radius, (porch + xlate), p_last2, 1, xy_only, cnorm_ptr)) {had_coll = 1;} // porch
 	} // end !is_interior case
 	if (!had_coll) return 0; // Note: no collisions with windows or doors, since they're colinear with walls
 
