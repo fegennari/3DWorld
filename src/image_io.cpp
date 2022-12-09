@@ -533,9 +533,10 @@ void texture_t::load_png(int index, bool allow_diff_width_height, bool allow_two
 		auto_insert_alpha_channel(index);
 	}
 #else
-	if (load_stb_image(index, allow_diff_width_height, allow_two_byte_grayscale)) return;
-	cerr << "Error loading texture image file " << name << ": png support has not been enabled." << endl;
-	exit(1);
+	if (!load_stb_image(index, allow_diff_width_height, allow_two_byte_grayscale)) {
+		cerr << "Error loading texture image file " << name << ": png support has not been enabled." << endl;
+		exit(1);
+	}
 #endif
 }
 
@@ -772,6 +773,28 @@ void texture_t::load_ppm(int index, bool allow_diff_width_height) {
 	}
 }
 
+#ifdef ENABLE_STB_IMAGE
+// custom implementation for returning 8 or 16 bit data
+stbi_uc *stbi_load_8_or_16(char const *filename, int *x, int *y, int *comp, bool *is_16bit, int req_comp=0) {
+	FILE *f = stbi__fopen(filename, "rb");
+	if (!f) {return stbi__errpuc("can't fopen", "Unable to open file");}
+	stbi__context s;
+	stbi__start_file(&s,f);
+	stbi__result_info ri;
+	void *result = stbi__load_main(&s, x, y, comp, req_comp, &ri, 16);
+	if (result == NULL) return NULL;
+	STBI_ASSERT(ri.bits_per_channel == 8 || ri.bits_per_channel == 16);
+	*is_16bit = (ri.bits_per_channel == 16);
+
+	if (stbi__vertically_flip_on_load) {
+		int channels = req_comp ? req_comp : *comp;
+		stbi__vertical_flip(result, *x, *y, channels * (ri.bits_per_channel >> 3));
+	}
+	fclose(f);
+	return (stbi_uc *)result;
+}
+#endif
+
 bool texture_t::load_stb_image(int index, bool allow_diff_width_height, bool allow_two_byte_grayscale, unsigned char const *const load_from_data, unsigned load_from_size) {
 
 #ifdef ENABLE_STB_IMAGE
@@ -789,13 +812,14 @@ bool texture_t::load_stb_image(int index, bool allow_diff_width_height, bool all
 		else {checked_fclose(fp);}
 		
 		if (allow_two_byte_grayscale) {
-			// Note: ~10% faster than libpng, but not 100% the same results for some reason
-			file_data = (unsigned char *)stbi_load_16(filename.c_str(), &w, &h, &nc, 0);
-			if (nc == 1) {set_16_bit_grayscale();}
-			else { // shouldn't be reachable, unless a RGB/RGBA image is specified as a heightmap
-				cerr << "Error: Expecting grayscale PNG image, but got " << nc << " color image: " << filename << endl;
+			bool is_16bit(0);
+			file_data = stbi_load_8_or_16(filename.c_str(), &w, &h, &nc, &is_16bit); // Note: ~10% faster than libpng
+			
+			if (nc != 1) { // shouldn't be reachable, unless a RGB/RGBA image is specified as a heightmap
+				cerr << "Error: Expecting grayscale PNG image, but got " << nc << " color component image: " << filename << endl;
 				return 0;
 			}
+			if (is_16bit) {set_16_bit_grayscale();}
 		}
 		else {
 			file_data = stbi_load(filename.c_str(), &w, &h, &nc, 0); // or stbi_load_from_file(fp, &w, &h, &nc, 0);
