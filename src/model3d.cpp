@@ -1334,7 +1334,7 @@ void material_t::render(shader_t &shader, texture_manager const &tmgr, int defau
 		bool const set_ref_ix(!disable_shader_effects /*&& alpha < 1.0*/ && ni != 1.0);
 		if (set_ref_ix) {shader.add_uniform_float("refract_ix", ni);} // set index of refraction - may not actually be used
 		bool const need_blend(is_partial_transparent()); // conservative, but should be okay
-		if (need_blend) {enable_blend(); /*glDepthMask(GL_FALSE);*/}
+		if (need_blend) {enable_blend(); /*glDepthMask(GL_FALSE);*/ /*glEnable(GL_SAMPLE_ALPHA_TO_COVERAGE);*/}
 		float const min_alpha(min(0.99*alpha, (get_needs_alpha_test() ? (has_binary_alpha ? 0.9 : model3d_alpha_thresh) : 0.0)));
 		shader.add_uniform_float("min_alpha", min_alpha);
 		if (ns > 0.0)    {shader.set_specular_color(ks, ns);} // ns<=0 is undefined?
@@ -1347,7 +1347,7 @@ void material_t::render(shader_t &shader, texture_manager const &tmgr, int defau
 		geom_tan.render(shader, 0, xlate);
 		shader.clear_color_e(); // Note: caller can cheat and override the emissive of the first material because it won't be set above but will be cleared here
 		if (ns > 0.0)    {shader.clear_specular();}
-		if (need_blend)  {disable_blend(); /*glDepthMask(GL_TRUE);*/}
+		if (need_blend)  {disable_blend(); /*glDepthMask(GL_TRUE);*/ /*glDisable(GL_SAMPLE_ALPHA_TO_COVERAGE);*/}
 		if (set_ref_ix)       {shader.add_uniform_float("refract_ix",   1.0);}
 		if (metalness >= 0.0) {shader.add_uniform_float("metalness",    0.0);} // if metalness was specified, reset to the default of 0.0 for the next material
 		if (bmap_disabled)    {shader.add_uniform_float("bump_map_mag", 1.0);} // reset back to default

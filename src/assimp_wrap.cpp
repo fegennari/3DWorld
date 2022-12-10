@@ -6,6 +6,8 @@
 #include "3DWorld.h"
 #include "model3d.h"
 
+extern string assimp_alpha_exclude_str;
+
 void model_anim_t::anim_data_t::init(unsigned np, unsigned nr, unsigned ns) {
 	assert(pos.empty() && scale.empty() && rot.empty()); // can only call init() once
 	assert(np > 0);
@@ -366,6 +368,8 @@ class file_reader_assimp {
 			//if (aiGetMaterialIntegerArray(mtl, AI_MATKEY_ENABLE_WIREFRAME, &wireframe, &max) == AI_SUCCESS) {}
 			//if (aiGetMaterialIntegerArray(mtl, AI_MATKEY_TWOSIDED,         &two_sided, &max) == AI_SUCCESS) {}
 			// illum? tf?
+			// apply special case string match for forcing alpha to 1.0 (for hair, etc.)
+			if (!assimp_alpha_exclude_str.empty() && string(material->GetName().C_Str()).find(assimp_alpha_exclude_str) != string::npos) {mat.no_blend = 1;}
 		}
 		unsigned const first_vertex_offset(mat.add_triangles(verts, indices, 1)); // add_new_block=1; should return 0
 

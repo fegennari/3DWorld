@@ -466,10 +466,10 @@ struct material_params_t { // Warning: changing this struct will invalidate the 
 	colorRGB ka, kd, ks, ke, tf;
 	float ns, ni, alpha, tr;
 	unsigned illum;
-	bool skip, is_used, unused1, unused2; // unused bools to pad the struct
+	bool skip, is_used, no_blend, unused_field; // unused bool to pad the struct
 
 	material_params_t() : ka(WHITE), kd(WHITE), ks(BLACK), ke(BLACK), tf(WHITE), ns(1.0), ni(1.0),
-		alpha(1.0), tr(0.0), illum(2), skip(0), is_used(0), unused1(0), unused2(0) {}
+		alpha(1.0), tr(0.0), illum(2), skip(0), is_used(0), no_blend(0), unused_field(0) {}
 }; // must be padded
 
 
@@ -498,8 +498,8 @@ struct material_t : public material_params_t {
 	unsigned get_gpu_mem() const {return (geom.get_gpu_mem() + geom_tan.get_gpu_mem());}
 	void finalize() {geom.finalize(); geom_tan.finalize();}
 	int get_render_texture() const {return ((d_tid >= 0 || a_tid < 0) ? d_tid : a_tid);} // return diffuse texture unless ambient texture is specified but diffuse texture is not
-	bool get_needs_alpha_test() const {return (alpha_tid >= 0 || might_have_alpha_comp);}
-	bool is_partial_transparent() const {return (alpha < 1.0 || get_needs_alpha_test());}
+	bool get_needs_alpha_test  () const {return (alpha_tid >= 0 || might_have_alpha_comp);}
+	bool is_partial_transparent() const {return ((alpha < 1.0 || get_needs_alpha_test()) && !no_blend);}
 	void compute_area_per_tri();
 	void simplify_indices(float reduce_target);
 	void ensure_textures_loaded(texture_manager &tmgr);

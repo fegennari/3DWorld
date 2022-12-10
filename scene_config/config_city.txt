@@ -136,6 +136,8 @@ buildings people_per_house_max 4
 city ped_speed 0.001
 city ped_respawn_at_dest 1
 city use_animated_people 1 # requires loading rigged/animated models of people
+# force alpha to 1.0 for people's hair because hair isn't properly sorted back to front for transparency; but this also applies to eyebrows, which looks bad
+#assimp_alpha_exclude_str _hair
 # ped_model: filename recalc_normals two_sided centered body_material_id fixed_color_id xy_rot swap_xyz scale lod_mult anim_speed is_zombie [shadow_mat_ids]
 #city ped_model ../models/people/muro/muro.model3d         1 0 0  0 -1 90  1 1.0  1.0  1.0 0  0 1 # 0=body, 1=head; head can be omitted for faster shadows
 #city ped_model ../models/people/Patrick/Patrick.model3d   1 0 0  0 -1 90  1 1.0  1.0  1.0 0  0 # arms sticking out to the side look odd
