@@ -1278,6 +1278,7 @@ struct building_t : public building_geom_t {
 	bool has_driveway () const {return !driveway.is_all_zeros();}
 	bool has_a_garage () const {return (has_garage || has_int_garage);} // external or internal
 	bool has_attic    () const {return (interior && !interior->attic_access.is_all_zeros());}
+	bool has_people   () const {return (interior && !interior->people.empty());}
 	bool skip_top_of_ceilings() const {return (roof_type == ROOF_TYPE_FLAT || !is_house || has_attic());}
 	bool enable_driveway_coll() const {return !is_rotated();} // no collision with rotated driveways/porches for now
 	bool has_pg_ramp() const {return (interior && !interior->pg_ramp.is_all_zeros());}

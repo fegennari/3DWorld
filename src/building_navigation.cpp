@@ -1822,7 +1822,7 @@ void vect_building_t::ai_room_update(float delta_dir, float dmax, point const &c
 	//timer_t timer("Building People Update"); // 0.25ms, mostly iteration overhead, for sparse update with 2-6 people per building (avg for 2 calls city + secondary)
 
 	for (iterator b = begin(); b != end(); ++b) {
-		if (!b->interior || b->interior->people.empty() || !b->bcube.closest_dist_less_than(camera_bs, dmax)) continue; // no people or too far away, no updates
+		if (!b->has_people() || !b->bcube.closest_dist_less_than(camera_bs, dmax)) continue; // no people or too far away, no updates
 		b->all_ai_room_update(rgen, delta_dir);
 	}
 }

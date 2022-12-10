@@ -1919,7 +1919,7 @@ void building_t::draw_cars_in_building(shader_t &s, vector3d const &xlate, bool 
 }
 
 void building_t::debug_people_in_building(shader_t &s) const {
-	if (!interior || interior->people.empty()) return;
+	if (!has_people()) return;
 	shader_t color_shader;
 	color_shader.begin_color_only_shader(YELLOW);
 	vector<vert_wrap_t> line_pts;

@@ -2516,7 +2516,7 @@ public:
 						bool const add_player_shadow(camera_surf_collide ? player_close : 0);
 						bool shader_was_changed(0);
 
-						if ((camera_in_this_building || player_close) && !b.interior->people.empty()) { // draw people in this building
+						if ((camera_in_this_building || player_close) && b.has_people()) { // draw people in this building
 							if (global_building_params.enable_people_ai) { // handle animations
 								select_person_shadow_shader(person_shader);
 								gen_and_draw_people_in_building(b, ped_draw_vars_t(b, oc, person_shader, xlate, bi->ix, 1, 0)); // draw people in this building
@@ -2771,11 +2771,11 @@ public:
 						if (!camera_near_building) {b.player_not_near_building(); continue;} // camera not near building
 						if (reflection_pass == 2) continue; // interior room, don't need to draw windows and exterior doors
 						b.get_nearby_ext_door_verts(ext_door_draw, s, camera_xlated, door_open_dist); // and draw opened door
-						bool const camera_in_building(b.check_point_or_cylin_contained(camera_xlated, 0.0, points, 1, 1)); // inc_attic=1, inc_ext_basement=1
-						if (!reflection_pass) {b.update_grass_exclude_at_pos(camera_xlated, xlate, camera_in_building);} // disable any grass inside the building part(s) containing the player
+						bool const camera_in_this_building(b.check_point_or_cylin_contained(camera_xlated, 0.0, points, 1, 1)); // inc_attic=1, inc_ext_basement=1
+						if (!reflection_pass) {b.update_grass_exclude_at_pos(camera_xlated, xlate, camera_in_this_building);} // disable grass in building part(s) containing the player
 						if (!reflection_pass && player_in_building_bcube) {b.update_animals(camera_xlated, bi->ix);}
 						// Note: if we skip this check and treat all walls/windows as front/containing part, this almost works, but will skip front faces of other buildings
-						if (!camera_in_building) continue; // camera not in building
+						if (!camera_in_this_building) continue; // camera not in building
 						// pass in camera pos to only include the part that contains the camera to avoid drawing artifacts when looking into another part of the building
 						// neg offset to move windows on the inside of the building's exterior wall;
 						// since there are no basement windows, we should treat the player as being in the part above so that windows are drawn correctly through the basement stairs
