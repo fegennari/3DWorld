@@ -1178,7 +1178,7 @@ void building_room_geom_t::add_vase(room_object_t const &c) { // or urn
 	}
 	rgeom_mat_t &side_mat(get_material(tid_nm_pair_t(tid, 0.0, 1), 1, 0, 1)); // shadowed, small
 	unsigned const ndiv(N_CYL_SIDES), itris_start(side_mat.itri_verts.size()), ixs_start(side_mat.indices.size());
-	float const tscale(tex_scale_v/num_stacks), zstep(c.dz()/num_stacks), ndiv_inv(1.0/ndiv);
+	float const tscale(tex_scale_v/num_stacks), zstep(c.dz()/num_stacks);
 	float const rbase(c.get_radius()), rmax(rbase);
 	float rmin(rgen.rand_uniform(0.25, 0.75)*rbase);
 	float const freq_mult((TWO_PI/num_stacks)*rgen.rand_uniform(0.5, 2.0)), freq_start(TWO_PI*rgen.rand_float());
