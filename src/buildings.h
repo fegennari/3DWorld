@@ -338,20 +338,21 @@ struct building_mat_t : public building_tex_params_t {
 
 struct building_params_t {
 
-	bool flatten_mesh=0, has_normal_map=0, tex_mirror=0, tex_inv_y=0, tt_only=0, infinite_buildings=0, dome_roof=0, onion_roof=0, enable_people_ai=0;
+	bool flatten_mesh=0, has_normal_map=0, tex_mirror=0, tex_inv_y=0, tt_only=0, infinite_buildings=0, dome_roof=0, onion_roof=0;
 	bool gen_building_interiors=1, add_city_interiors=0, enable_rotated_room_geom=0, add_secondary_buildings=0, add_office_basements=0;
 	unsigned num_place=0, num_tries=10, cur_prob=1, max_shadow_maps=32, buildings_rand_seed=0, max_ext_basement_hall_branches=4, max_ext_basement_room_depth=4;
 	float ao_factor=0.0, sec_extra_spacing=0.0, player_coll_radius_scale=1.0, interior_view_dist_scale=1.0;
 	float window_width=0.0, window_height=0.0, window_xspace=0.0, window_yspace=0.0; // windows
 	float wall_split_thresh=4.0, max_fp_wind_xscale=0.0, max_fp_wind_yscale=0.0; // interiors
 	float open_door_prob=1.0, locked_door_prob=0.0, basement_prob_house=0.5, basement_prob_office=0.5, ball_prob=0.3; // interior probabilities
-	// building AI params
-	bool ai_target_player=1, ai_follow_player=0, allow_elevator_line=1, no_coll_enter_exit_elevator=1;
+	// building people/AI params
+	bool enable_people_ai=0, ai_target_player=1, ai_follow_player=0, allow_elevator_line=1, no_coll_enter_exit_elevator=1;
 	unsigned ai_opens_doors=1; // 0=don't open doors, 1=only open if player closed door after path selection; 2=always open doors
 	unsigned ai_player_vis_test=0; // 0=no test, 1=LOS, 2=LOS+FOV, 3=LOS+FOV+lit
 	unsigned ai_sees_player_hide=2; // 0=doesn't see the player, 1=sees the player and waits outside the hiding spot, 2=opens the door and comes in
 	unsigned people_per_office_min=0, people_per_office_max=0, people_per_house_min=0, people_per_house_max=0, elevator_capacity=1;
 	float ai_retreat_time=4.0, elevator_wait_time=60.0, use_elevator_prob=0.25, elevator_wait_recall_prob=0.5;
+	float people_min_alpha=0.0;
 	// building animal params
 	unsigned num_rats_min=0, num_rats_max=0, min_attack_rats=0, num_spiders_min=0, num_spiders_max=0, num_snakes_min=0, num_snakes_max=0;
 	float rat_speed=0.0, rat_size_min=0.5, rat_size_max=1.0; // rats

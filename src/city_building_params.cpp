@@ -172,7 +172,6 @@ void building_params_t::init_kw_maps() {
 	kwmb.add("infinite_buildings", infinite_buildings);
 	kwmb.add("add_secondary_buildings", add_secondary_buildings);
 	kwmb.add("add_office_basements", add_office_basements);
-	kwmb.add("enable_people_ai", enable_people_ai);
 	kwmr.add("split_prob", cur_mat.split_prob, FP_CHECK_01);
 	kwmr.add("cube_prob",  cur_mat.cube_prob,  FP_CHECK_01);
 	kwmr.add("round_prob", cur_mat.round_prob, FP_CHECK_01);
@@ -223,7 +222,8 @@ void building_params_t::init_kw_maps() {
 	kwmc.add("floor_color",  cur_mat.floor_color);
 	kwmc.add("house_ceil_color",  cur_mat.house_ceil_color);
 	kwmc.add("house_floor_color", cur_mat.house_floor_color);
-	// AI logic
+	// people/AI logic
+	kwmb.add("enable_people_ai", enable_people_ai);
 	kwmu.add("ai_opens_doors",      ai_opens_doors); // 0=don't open doors, 1=only open if player closed door after path selection; 2=always open doors
 	kwmb.add("ai_target_player",    ai_target_player);
 	kwmb.add("ai_follow_player",    ai_follow_player);
@@ -234,6 +234,7 @@ void building_params_t::init_kw_maps() {
 	kwmu.add("people_per_house_min",  people_per_house_min);
 	kwmu.add("people_per_house_max",  people_per_house_max);
 	kwmf.add("ai_retreat_time",       ai_retreat_time);
+	kwmr.add("people_min_alpha",      people_min_alpha, FP_CHECK_01);
 	// AI elevators
 	kwmb.add("allow_elevator_line",         allow_elevator_line);
 	kwmb.add("no_coll_enter_exit_elevator", no_coll_enter_exit_elevator);
