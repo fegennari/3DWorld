@@ -52,6 +52,8 @@ public:
 	void clear_properties() {prop_map.clear();}
 };
 
+// shader user flags
+enum {SHADER_FLAG_NO_ALPHA_TEST=0};
 
 class shader_t : public property_map_t {
 
@@ -210,7 +212,7 @@ public:
 	unsigned get_user_flags() const {return user_flags;}
 	bool get_user_flag(unsigned fbit) const {assert(fbit < 32); return (user_flags & (1<<fbit));}
 	void set_user_flags(unsigned f) {user_flags = f;}
-	void set_user_flag(unsigned fbit, bool val) {assert(fbit < 32); if (val) {user_flags |= (1<<fbit);} else {user_flags &= ~(1<<fbit);}}
+	void set_user_flag(unsigned fbit, bool val=1) {assert(fbit < 32); if (val) {user_flags |= (1<<fbit);} else {user_flags &= ~(1<<fbit);}}
 };
 
 

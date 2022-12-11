@@ -1304,14 +1304,13 @@ void material_t::render(shader_t &shader, texture_manager const &tmgr, int defau
 		if (has_alpha_mask) {select_texture(WHITE_TEX);} // back to a default white texture
 	}
 	else {
-		bool has_binary_alpha(1), bmap_disabled(0);
+		bool bmap_disabled(0);
 		
 		if (disable_model_textures) {
 			select_texture(WHITE_TEX);
 		}
 		else if (tex_id >= 0) {
 			tmgr.bind_texture(tex_id);
-			has_binary_alpha = tmgr.has_binary_alpha(tex_id);
 		}
 		else if (tex_id != -2) { // Note: the special tid of -2 is used to indicate the caller has already bound the correct texture, so we should not bind a texture here
 			select_texture((default_tid >= 0) ? default_tid : WHITE_TEX); // no texture specified - use white texture
@@ -1335,8 +1334,12 @@ void material_t::render(shader_t &shader, texture_manager const &tmgr, int defau
 		if (set_ref_ix) {shader.add_uniform_float("refract_ix", ni);} // set index of refraction - may not actually be used
 		bool const need_blend(is_partial_transparent()); // conservative, but should be okay
 		if (need_blend) {enable_blend(); /*glDepthMask(GL_FALSE);*/ /*glEnable(GL_SAMPLE_ALPHA_TO_COVERAGE);*/}
-		float const min_alpha(min(0.99*alpha, (get_needs_alpha_test() ? (has_binary_alpha ? 0.9 : model3d_alpha_thresh) : 0.0)));
-		shader.add_uniform_float("min_alpha", min_alpha);
+
+		if (!shader.get_user_flag(SHADER_FLAG_NO_ALPHA_TEST)) { // only set min_alpha if alpha test is enabled
+			bool const has_binary_alpha(!disable_model_textures && tex_id >= 0 && tmgr.has_binary_alpha(tex_id));
+			float const min_alpha(min(0.99*alpha, (get_needs_alpha_test() ? (has_binary_alpha ? 0.9 : model3d_alpha_thresh) : 0.0)));
+			shader.add_uniform_float("min_alpha", min_alpha);
+		}
 		if (ns > 0.0)    {shader.set_specular_color(ks, ns);} // ns<=0 is undefined?
 		if (ke != BLACK) {shader.set_color_e(colorRGBA(ke, alpha));}
 		// Note: ka is ignored here because it represents a "fake" lighting model;
@@ -1921,7 +1924,7 @@ void model3d::render_materials(shader_t &shader, bool is_shadow_pass, int reflec
 			assert(unbound_mat.tid >= 0);
 			select_texture(unbound_mat.tid);
 			shader.set_material(unbound_mat);
-			shader.add_uniform_float("min_alpha", 0.0);
+			if (!shader.get_user_flag(SHADER_FLAG_NO_ALPHA_TEST)) {shader.add_uniform_float("min_alpha", 0.0);}
 			set_def_spec_map();
 		}
 		if (is_normal_pass || enable_alpha_mask != 1) {unbound_geom.render(shader, is_shadow_pass, xlate);} // skip shadow + alpha mask only pass

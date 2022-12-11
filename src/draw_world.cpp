@@ -228,7 +228,7 @@ void common_shader_block_pre(shader_t &s, bool &dlights, bool &use_shadow_map, b
 	dlights        &= (dl_tid > 0 && has_dl_sources);
 	s.check_for_fog_disabled();
 	if (enable_gamma_correct) {s.set_prefix("#define ENABLE_GAMMA_CORRECTION", 1);} // FS
-	if (min_alpha == 0.0    ) {s.set_prefix("#define NO_ALPHA_TEST", 1);} // FS
+	if (min_alpha == 0.0    ) {s.set_prefix("#define NO_ALPHA_TEST", 1); s.set_user_flag(SHADER_FLAG_NO_ALPHA_TEST);} // FS
 	if (use_shadow_map && dynamic_smap_bias) {s.set_prefix("#define DYNAMIC_SMAP_BIAS", 1);} // FS
 	s.set_prefix(make_shader_bool_prefix("indir_lighting", indir_lighting), 1); // FS
 	s.set_prefix(make_shader_bool_prefix("hemi_lighting",  hemi_lighting),  1); // FS
