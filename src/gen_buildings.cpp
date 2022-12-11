@@ -2611,6 +2611,14 @@ public:
 		} // for g
 	}
 
+	struct defer_ped_draw_vars_t {
+		building_t *building=nullptr;
+		building_creator_t const *bc=nullptr;
+		unsigned bix=0;
+		void assign(building_t *b, building_creator_t const *c, unsigned ix) {assert(b); assert(c); building = b; bc = c; bix = ix;}
+		bool valid() const {return (building != nullptr);}
+	};
+
 	// reflection_pass: 0 = not reflection pass, 1 = reflection for room with exterior wall,
 	// 2 = reflection for room no exterior wall (can't see outside windows), 3 = reflection from mirror in a house (windows and doors need to be drawn)
 	static void multi_draw(int shadow_only, int reflection_pass, vector3d const &xlate, vector<building_creator_t *> const &bcs) {
@@ -2668,8 +2676,10 @@ public:
 		vector<building_draw_t> int_wall_draw_front, int_wall_draw_back;
 		vector<vertex_range_t> per_bcs_exclude;
 		building_t const *building_cont_player(nullptr);
+		defer_ped_draw_vars_t defer_ped_draw_vars;
 		vector<building_t *> buildings_with_cars;
 		static brg_batch_draw_t bbd; // allocated memory is reused across building interiors
+		bool const defer_people_draw_for_player_building(global_building_params.people_min_alpha > 0.0);
 
 		// draw building interiors with standard shader and no shadow maps; must be drawn first before windows depth pass
 		if (have_interior) {
@@ -2765,7 +2775,11 @@ public:
 						b.gen_and_draw_room_geom(&bbd, s, oc, xlate, bi->ix, 0, reflection_pass, inc_small, player_in_building_bcube); // shadow_only=0
 						g->has_room_geom = 1;
 						if (!draw_interior) continue;
-						gen_and_draw_people_in_building(b, ped_draw_vars_t(b, oc, s, xlate, bi->ix, 0, reflection_pass)); // draw people in this building
+						// when player is in the building (not attic or ext basement), draw people later so that alpha blending of hair against ext walls and windows works properly
+						if (defer_people_draw_for_player_building && player_in_building_bcube && b.has_people() && b.check_point_or_cylin_contained(camera_xlated, 0.0, points, 0, 0)) {
+							defer_ped_draw_vars.assign(&b, *i, bi->ix);
+						}
+						else {gen_and_draw_people_in_building(b, ped_draw_vars_t(b, oc, s, xlate, bi->ix, 0, reflection_pass));} // draw people in this building
 						if (b.has_cars_to_draw(player_in_building_bcube)) {buildings_with_cars.push_back(&b);}
 						// check the bcube rather than check_point_or_cylin_contained() so that it works with roof doors that are outside any part?
 						if (!camera_near_building) {b.player_not_near_building(); continue;} // camera not near building
@@ -2887,6 +2901,17 @@ public:
 			}
 			glCullFace(reflection_pass ? GL_FRONT : GL_BACK); // draw front faces
 
+			// draw people in the player's building here with alpha mask enabled
+			if (defer_ped_draw_vars.valid()) {
+				if (global_building_params.enable_people_ai) {enable_animations_for_shader(s);}
+				s.set_user_flag(SHADER_FLAG_NO_ALPHA_TEST); // set this flag so that model3d material won't try to override min_alpha
+				setup_building_draw_shader(s, global_building_params.people_min_alpha, 1, 0, 0); // enable_indir=1, force_tsl=0, use_texgen=0
+				occlusion_checker_noncity_t oc(*defer_ped_draw_vars.bc);
+				if (!reflection_pass) {oc.set_camera(camera_pdu);} // setup occlusion culling
+				gen_and_draw_people_in_building(*defer_ped_draw_vars.building,
+					ped_draw_vars_t(*defer_ped_draw_vars.building, oc, s, xlate, defer_ped_draw_vars.bix, 0, reflection_pass));
+				reset_interior_lighting_and_end_shader(s);
+			}
 			if (!reflection_pass) { // draw windows and doors in depth pass to create holes
 				shader_t holes_shader;
 				setup_smoke_shaders(holes_shader, 0.9, 0, 0, 0, 0, 0, 0); // min_alpha=0.9 for depth test - need same shader to avoid z-fighting
