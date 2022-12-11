@@ -899,9 +899,13 @@ void building_interior_t::get_avoid_cubes(vect_cube_t &avoid, float z1, float z2
 					if (small_closet && (i == 0 || i == 2)) continue; // skip front sides next to door to allow larger zombies space to enter the closet
 					avoid.push_back(cubes[i]);
 				}
+				// should we skip items inside the closet? I guess they should have RO_FLAG_NOCOLL set anyway, so it may not matter
 				continue;
 			}
 			else if (c->type == TYPE_STALL) {
+				// I've seen one person push another into a toilet in a bathroom stall and that person got stuck;
+				// maybe the problem is that they're inside two objects at once? in any case, skipping the toilet should be okay; or only if stall is closed?
+				if (!avoid.empty() && c->contains_cube(avoid.back())) {avoid.pop_back();}
 				cube_t sides[3];
 				unsigned const num_cubes(get_stall_cubes(*c, sides));
 				for (unsigned i = 0; i < num_cubes; ++i) {avoid.push_back(sides[i]);}
