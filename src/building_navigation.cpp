@@ -1606,7 +1606,8 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 	person.on_new_path_seg = 0; // clear flag for this frame
 	//person.following_player = can_target_player(person); // for debugging visualization
 
-	if (dist_less_than(person.pos, person.target_pos, 1.1f*max_dist)) { // at dest
+	// check if at dest; note that we use a different distance check for Z to account for model height changes when switching between people and zombie models
+	if (dist_xy_less_than(person.pos, person.target_pos, 1.1f*max_dist) && fabs(person.pos.z - person.target_pos.z) < 0.5*person.get_height()) {
 		assert(point_in_building_or_basement_bcube(person.target_pos));
 		person.pos = person.target_pos;
 		if (!person.path.empty()) {person.next_path_pt(0); return AI_NEXT_PT;} // move to next path point
