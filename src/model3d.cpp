@@ -1273,8 +1273,8 @@ void bind_texture_tu_or_white_tex(texture_manager const &tmgr, int tid, unsigned
 }
 
 // enable_alpha_mask: 0=non-alpha mask only, 1=alpha mask only, 2=both
-void material_t::render(shader_t &shader, texture_manager const &tmgr, int default_tid,
-	bool is_shadow_pass, bool is_z_prepass, int enable_alpha_mask, bool is_bmap_pass, point const *const xlate)
+void material_t::render(shader_t &shader, texture_manager const &tmgr, int default_tid, bool is_shadow_pass,
+	bool is_z_prepass, int enable_alpha_mask, bool is_bmap_pass, point const *const xlate, bool no_set_min_alpha)
 {
 	if (empty() || skip || alpha == 0.0) return; // empty or transparent
 	if (is_shadow_pass && alpha < MIN_SHADOW_ALPHA) return;
@@ -1335,7 +1335,7 @@ void material_t::render(shader_t &shader, texture_manager const &tmgr, int defau
 		bool const need_blend(is_partial_transparent()); // conservative, but should be okay
 		if (need_blend) {enable_blend(); /*glDepthMask(GL_FALSE);*/ /*glEnable(GL_SAMPLE_ALPHA_TO_COVERAGE);*/}
 
-		if (!shader.get_user_flag(SHADER_FLAG_NO_ALPHA_TEST)) { // only set min_alpha if alpha test is enabled
+		if (!no_set_min_alpha && !shader.get_user_flag(SHADER_FLAG_NO_ALPHA_TEST)) { // only set min_alpha if alpha test is enabled
 			bool const has_binary_alpha(!disable_model_textures && tex_id >= 0 && tmgr.has_binary_alpha(tex_id));
 			float const min_alpha(min(0.99*alpha, (get_needs_alpha_test() ? (has_binary_alpha ? 0.9 : model3d_alpha_thresh) : 0.0)));
 			shader.add_uniform_float("min_alpha", min_alpha);
@@ -1908,7 +1908,7 @@ void set_def_spec_map() {
 
 void model3d::render_materials(shader_t &shader, bool is_shadow_pass, int reflection_pass, bool is_z_prepass, int enable_alpha_mask,
 	unsigned bmap_pass_mask, int trans_op_mask, base_mat_t const &unbound_mat, rotation_t const &rot, point const *const xlate,
-	xform_matrix const *const mvm, bool force_lod, float model_lod_mult, float fixed_lod_dist, bool skip_cull_face, bool is_scaled)
+	xform_matrix const *const mvm, bool force_lod, float model_lod_mult, float fixed_lod_dist, bool skip_cull_face, bool is_scaled, bool no_set_min_alpha)
 {
 	bool const is_normal_pass(!is_shadow_pass && !is_z_prepass), is_bmap_pass((bmap_pass_mask & 2) != 0);
 	if (is_normal_pass) {smap_data[rot].set_for_all_lights(shader, mvm);} // choose correct shadow map based on rotation
@@ -1965,7 +1965,7 @@ void model3d::render_materials(shader_t &shader, bool is_shadow_pass, int reflec
 		sort(to_draw.begin(), to_draw.end());
 
 		for (unsigned i = 0; i < to_draw.size(); ++i) {
-			materials[to_draw[i].second].render(shader, tmgr, unbound_mat.tid, is_shadow_pass, is_z_prepass, enable_alpha_mask, is_bmap_pass, xlate);
+			materials[to_draw[i].second].render(shader, tmgr, unbound_mat.tid, is_shadow_pass, is_z_prepass, enable_alpha_mask, is_bmap_pass, xlate, no_set_min_alpha);
 		}
 		to_draw.clear();
 	}
@@ -1976,10 +1976,10 @@ void model3d::render_materials(shader_t &shader, bool is_shadow_pass, int reflec
 }
 
 void model3d::render_material(shader_t &shader, unsigned mat_id, bool is_shadow_pass, bool is_z_prepass,
-	int enable_alpha_mask, bool is_bmap_pass, point const *const xlate)
+	int enable_alpha_mask, bool is_bmap_pass, point const *const xlate, bool no_set_min_alpha)
 {
 	if (mat_id == materials.size()) {unbound_geom.render(shader, is_shadow_pass, xlate);} // unbound geom is material ID materials.size() (one past the end)
-	else {get_material(mat_id).render(shader, tmgr, unbound_mat.tid, is_shadow_pass, is_z_prepass, enable_alpha_mask, is_bmap_pass, xlate);}
+	else {get_material(mat_id).render(shader, tmgr, unbound_mat.tid, is_shadow_pass, is_z_prepass, enable_alpha_mask, is_bmap_pass, xlate, no_set_min_alpha);}
 }
 
 material_t *model3d::get_material_by_name(string const &name) {

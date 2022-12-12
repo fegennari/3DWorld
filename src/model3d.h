@@ -507,7 +507,7 @@ struct material_t : public material_params_t {
 	void queue_textures_to_load(texture_manager &tmgr);
 	void check_for_tc_invert_y(texture_manager &tmgr);
 	void render(shader_t &shader, texture_manager const &tmgr, int default_tid, bool is_shadow_pass, bool is_z_prepass,
-		int enable_alpha_mask, bool is_bmap_pass, point const *const xlate);
+		int enable_alpha_mask, bool is_bmap_pass, point const *const xlate, bool no_set_min_alpha=0);
 	colorRGBA get_ad_color() const;
 	colorRGBA get_avg_color(texture_manager const &tmgr, int default_tid=-1) const;
 	bool write(ostream &out) const;
@@ -625,8 +625,9 @@ public:
 	}
 	void render_materials(shader_t &shader, bool is_shadow_pass, int reflection_pass, bool is_z_prepass, int enable_alpha_mask, unsigned bmap_pass_mask,
 		int trans_op_mask, base_mat_t const &unbound_mat, rotation_t const &rot, point const *const xlate=nullptr, xform_matrix const *const mvm=nullptr,
-		bool force_lod=0, float model_lod_mult=1.0, float fixed_lod_dist=0.0, bool skip_cull_face=0, bool is_scaled=0);
-	void render_material(shader_t &shader, unsigned mat_id, bool is_shadow_pass, bool is_z_prepass=0, int enable_alpha_mask=0, bool is_bmap_pass=0, point const *const xlate=nullptr);
+		bool force_lod=0, float model_lod_mult=1.0, float fixed_lod_dist=0.0, bool skip_cull_face=0, bool is_scaled=0, bool no_set_min_alpha=0);
+	void render_material(shader_t &shader, unsigned mat_id, bool is_shadow_pass, bool is_z_prepass=0, int enable_alpha_mask=0, bool is_bmap_pass=0,
+		point const *const xlate=nullptr, bool no_set_min_alpha=0);
 	void render_with_xform(shader_t &shader, model3d_xform_t &xf, xform_matrix const &mvm, bool is_shadow_pass,
 		int reflection_pass, bool is_z_prepass, int enable_alpha_mask, unsigned bmap_pass_mask, int reflect_mode, int trans_op_mask);
 	void render(shader_t &shader, bool is_shadow_pass, int reflection_pass, bool is_z_prepass, int enable_alpha_mask,

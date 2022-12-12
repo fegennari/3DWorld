@@ -2904,7 +2904,6 @@ public:
 			// draw people in the player's building here with alpha mask enabled
 			if (defer_ped_draw_vars.valid()) {
 				if (global_building_params.enable_people_ai) {enable_animations_for_shader(s);}
-				s.set_user_flag(SHADER_FLAG_NO_ALPHA_TEST); // set this flag so that model3d material won't try to override min_alpha
 				setup_building_draw_shader(s, global_building_params.people_min_alpha, 1, 0, 0); // enable_indir=1, force_tsl=0, use_texgen=0
 				occlusion_checker_noncity_t oc(*defer_ped_draw_vars.bc);
 				if (!reflection_pass) {oc.set_camera(camera_pdu);} // setup occlusion culling

@@ -1426,6 +1426,7 @@ void ped_manager_t::draw(vector3d const &xlate, bool use_dlights, bool shadow_on
 	translate_to(xlate);
 	if (enable_animations) {enable_animations_for_shader(dstate.s);}
 	dstate.pre_draw(xlate, use_dlights, shadow_only);
+	dstate.s.add_uniform_float("min_alpha", global_building_params.people_min_alpha); // set in case alpha test is enabled
 	animation_state_t anim_state(enable_animations, animation_id);
 	if (!shadow_only) {dstate.s.add_uniform_float("hemi_lighting_normal_scale", 0.0);} // disable hemispherical lighting normal because the transforms make it incorrect
 	bool in_sphere_draw(0);
