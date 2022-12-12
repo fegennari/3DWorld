@@ -1515,6 +1515,12 @@ void ped_manager_t::gen_and_draw_people_in_building(ped_draw_vars_t const &pdv) 
 	draw_people_in_building(people, pdv);
 }
 
+struct cmp_ped_dist_to_pos {
+	point const &pos;
+	cmp_ped_dist_to_pos(point const &pos_) : pos(pos_) {}
+	bool operator()(person_t const *a, person_t const *b) const {return (p2p_dist_sq(pos, a->pos) > p2p_dist_sq(pos, b->pos));} // sorts furthest to nearest
+};
+
 void ped_manager_t::draw_people_in_building(vector<person_t> const &people, ped_draw_vars_t const &pdv) {
 	float const def_draw_dist(120.0*get_ped_radius()); // smaller than city peds
 	float const draw_dist(pdv.shadow_only ? camera_pdu.far_ : def_draw_dist), draw_dist_sq(draw_dist*draw_dist);
@@ -1523,6 +1529,7 @@ void ped_manager_t::draw_people_in_building(vector<person_t> const &people, ped_
 	bool const enable_animations(enable_building_people_ai());
 	bool in_sphere_draw(0);
 	animation_state_t anim_state(enable_animations, animation_id);
+	to_draw.clear();
 
 	// Note: no far clip adjustment or draw dist scale
 	for (person_t const &p : people) {
@@ -1531,8 +1538,12 @@ void ped_manager_t::draw_people_in_building(vector<person_t> const &people, ped_
 		if ((display_mode & 0x08) && !city_params.ped_model_files.empty()) { // occlusion culling, if using models
 			if (pdv.building.check_obj_occluded(p.get_bcube(), pdu.pos, pdv.oc, pdv.reflection_pass)) continue;
 		}
-		draw_ped(p, pdv.s, pdu, pdv.xlate, def_draw_dist, draw_dist_sq, in_sphere_draw, pdv.shadow_only, pdv.shadow_only, &anim_state, 1);
+		to_draw.push_back(&p);
+		//draw_ped(p, pdv.s, pdu, pdv.xlate, def_draw_dist, draw_dist_sq, in_sphere_draw, pdv.shadow_only, pdv.shadow_only, &anim_state, 1);
 	} // for p
+	// sort back to front for proper alpha blending when player is in the building bcube, including the extended basement
+	if (pdv.building.get_bcube_inc_extensions().contains_pt(pdu.pos)) {sort(to_draw.begin(), to_draw.end(), cmp_ped_dist_to_pos(pdu.pos));}
+	for (person_t const *p : to_draw) {draw_ped(*p, pdv.s, pdu, pdv.xlate, def_draw_dist, draw_dist_sq, in_sphere_draw, pdv.shadow_only, pdv.shadow_only, &anim_state, 1);}
 	end_sphere_draw(in_sphere_draw);
 	pdv.s.upload_mvm(); // seems to be needed after applying model transforms, not sure why
 	anim_state.clear_animation_id(pdv.s); // make sure to leave animations disabled so that they don't apply to buildings

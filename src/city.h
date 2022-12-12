@@ -838,6 +838,7 @@ class ped_manager_t { // pedestrians
 	car_city_vect_t empty_cars_vect;
 	vector<car_city_vect_t> cars_by_city;
 	vector<point> bldg_ppl_pos;
+	vector<person_t const *> to_draw;
 	rand_gen_t rgen;
 	ao_draw_state_t dstate;
 	int selected_ped_ssn;
