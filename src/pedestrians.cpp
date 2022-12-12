@@ -1576,13 +1576,14 @@ bool ped_manager_t::draw_ped(person_base_t const &ped, shader_t &s, pos_dir_up c
 		vector3d dir_horiz(ped.dir);
 		dir_horiz.z = 0.0; // always face a horizontal direction, even if walking on a slope
 		dir_horiz.normalize();
-		// A=0.0, leave unchanged; color applies to the skin of the Katie model (ID 3), but all of the other models since they're only one material
-		bool const has_sep_skin_mat(ped.model_id == 3);
+		// A=0.0, leave unchanged
+		bool const has_sep_skin_mat(!ped.is_zombie && ped.model_id == 3);
 		//colorRGBA const &color(ped.following_player ? RED : WHITE); // force red when following player, for debugging purposes
 		//colorRGBA const &color(ped.on_stairs() ? RED : ALPHA0);
 		//colorRGBA const &color((ped.retreat_time > 0.0) ? RED : ALPHA0);
-		colorRGBA const &color((has_sep_skin_mat && is_in_building && in_building_gameplay_mode()) ? OLIVE : ALPHA0); // gray for zombies in buildings
-		//colorRGBA const &color(ALPHA0);
+		// color applies to the skin of the Katie model (ID 3), but all of the other models since they're only one material; disable this since we now have separate zombie models
+		//colorRGBA const &color(((!ped.is_zombie && ped.model_id == 3) && is_in_building && in_building_gameplay_mode()) ? OLIVE : ALPHA0);
+		colorRGBA const &color(ALPHA0);
 		ped_model_loader.draw_model(s, ped.pos, bcube, dir_horiz, color, xlate, ped.model_id, shadow_only, low_detail, anim_state);
 
 		// draw umbrella 75% of the time if pedestrian is outside and in the rain
