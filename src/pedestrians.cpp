@@ -1631,13 +1631,13 @@ void ped_manager_t::draw_player_model(shader_t &s, vector3d const &xlate, bool s
 	pos_dir_up pdu(camera_pdu);
 	pdu.pos -= xlate; // adjust for local translate
 	animation_state_t anim_state(enable_animations, animation_id);
-	float const player_eye_height(CAMERA_RADIUS + camera_zh), player_height(1.1*player_eye_height), player_radius(player_height/PED_HEIGHT_SCALE);
+	float const player_eye_height(CAMERA_RADIUS + camera_zh), player_height(player_eye_height/EYE_HEIGHT_RATIO), player_radius(player_height/PED_HEIGHT_SCALE);
 	point const pos(pre_smap_player_pos + vector3d(0.0, 0.0, (player_radius - player_eye_height)));
 	vector3d const dir_horiz(vector3d(cview_dir.x, cview_dir.y, 0.0).get_norm()); // always face a horizontal direction, even if walking on a slope
 	cube_t bcube;
 	bcube.set_from_sphere(pos, PED_WIDTH_SCALE*player_radius);
 	bcube.z1() = pos.z - player_radius;
-	bcube.z2() = bcube.z1() + player_height*model.scale; // respect the model's scale
+	bcube.z2() = bcube.z1() + player_height*model.scale; // respect the model's scale; however, the player does seem a bit shorter than other people with the same model
 	anim_state.set_animation_time(player_anim_time);
 	ped_model_loader.draw_model(s, pos, bcube, dir_horiz, ALPHA0, xlate, model_id, shadow_only, 0, &anim_state);
 	s.upload_mvm(); // not sure if this is needed
