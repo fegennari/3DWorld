@@ -1746,14 +1746,14 @@ public:
 };
 
 struct ped_draw_vars_t {
-	building_t const &building;
+	building_t &building; // Note: building ref is non-const because we may update rendering data for the people inside it
 	occlusion_checker_noncity_t &oc;
 	shader_t &s;
 	vector3d const &xlate;
 	unsigned bix;
 	bool shadow_only, reflection_pass;
 
-	ped_draw_vars_t(building_t const &b, occlusion_checker_noncity_t &oc_, shader_t &s_, vector3d const &x, unsigned bix_, bool so, bool rp)
+	ped_draw_vars_t(building_t &b, occlusion_checker_noncity_t &oc_, shader_t &s_, vector3d const &x, unsigned bix_, bool so, bool rp)
 		: building(b), oc(oc_), s(s_), xlate(x), bix(bix_), shadow_only(so), reflection_pass(rp) {}
 };
 
@@ -1875,7 +1875,7 @@ void city_shader_setup(shader_t &s, cube_t const &lights_bcube, bool use_dlights
 void enable_animations_for_shader(shader_t &s);
 void setup_city_lights(vector3d const &xlate);
 void draw_player_model(shader_t &s, vector3d const &xlate, bool shadow_only);
-void gen_and_draw_people_in_building(building_t &building, ped_draw_vars_t const &pdv);
+void gen_and_draw_people_in_building(ped_draw_vars_t const &pdv);
 vector3d get_nom_car_size();
 bool car_can_fit(cube_t const &c);
 void create_mirror_reflection_if_needed();

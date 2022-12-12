@@ -2519,10 +2519,10 @@ public:
 						if ((camera_in_this_building || player_close) && b.has_people()) { // draw people in this building
 							if (global_building_params.enable_people_ai) { // handle animations
 								select_person_shadow_shader(person_shader);
-								gen_and_draw_people_in_building(b, ped_draw_vars_t(b, oc, person_shader, xlate, bi->ix, 1, 0)); // draw people in this building
+								gen_and_draw_people_in_building(ped_draw_vars_t(b, oc, person_shader, xlate, bi->ix, 1, 0)); // draw people in this building
 								shader_was_changed = 1;
 							}
-							else {gen_and_draw_people_in_building(b, ped_draw_vars_t(b, oc, s, xlate, bi->ix, 1, 0));} // no animations
+							else {gen_and_draw_people_in_building(ped_draw_vars_t(b, oc, s, xlate, bi->ix, 1, 0));} // no animations
 						}
 						if (add_player_shadow && camera_in_this_building) {
 							if (global_building_params.enable_people_ai) { // handle animations
@@ -2778,7 +2778,7 @@ public:
 						if (defer_people_draw_for_player_building && player_in_building_bcube && b.has_people() && b.check_point_or_cylin_contained(camera_xlated, 0.0, points, 0, 0)) {
 							defer_ped_draw_vars.assign(&b, *i, bi->ix);
 						}
-						else {gen_and_draw_people_in_building(b, ped_draw_vars_t(b, oc, s, xlate, bi->ix, 0, reflection_pass));} // draw people in this building
+						else {gen_and_draw_people_in_building(ped_draw_vars_t(b, oc, s, xlate, bi->ix, 0, reflection_pass));} // draw people in this building
 						if (b.has_cars_to_draw(player_in_building_bcube)) {buildings_with_cars.push_back(&b);}
 						// check the bcube rather than check_point_or_cylin_contained() so that it works with roof doors that are outside any part?
 						if (!camera_near_building) {b.player_not_near_building(); continue;} // camera not near building
@@ -2906,8 +2906,7 @@ public:
 				setup_building_draw_shader(s, global_building_params.people_min_alpha, 1, 0, 0); // enable_indir=1, force_tsl=0, use_texgen=0
 				occlusion_checker_noncity_t oc(*defer_ped_draw_vars.bc);
 				if (!reflection_pass) {oc.set_camera(camera_pdu);} // setup occlusion culling
-				gen_and_draw_people_in_building(*defer_ped_draw_vars.building,
-					ped_draw_vars_t(*defer_ped_draw_vars.building, oc, s, xlate, defer_ped_draw_vars.bix, 0, reflection_pass));
+				gen_and_draw_people_in_building(ped_draw_vars_t(*defer_ped_draw_vars.building, oc, s, xlate, defer_ped_draw_vars.bix, 0, reflection_pass));
 				reset_interior_lighting_and_end_shader(s);
 			}
 			if (reflection_pass) { // draw last so that alpha blending of hair works properly

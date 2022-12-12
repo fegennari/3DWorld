@@ -3024,7 +3024,7 @@ public:
 	void draw_roads(int trans_op_mask, vector3d const &xlate) {road_gen.draw(trans_op_mask, xlate, enable_lights(), 0);} // shadow_only=0
 	void draw_car_in_pspace(car_t &car, shader_t &s, vector3d const &xlate, bool shadow_only) {car_manager.draw_car_in_pspace(car, s, xlate, shadow_only);}
 	void set_car_model_color(car_t &car) {car_manager.set_car_model_color(car);}
-	void gen_and_draw_people_in_building(building_t &building, ped_draw_vars_t const &pdv) {ped_manager.gen_and_draw_people_in_building(building, pdv);}
+	void gen_and_draw_people_in_building(ped_draw_vars_t const &pdv) {ped_manager.gen_and_draw_people_in_building(pdv);}
 	void draw_player_model(shader_t &s, vector3d const &xlate, bool shadow_only) {ped_manager.draw_player_model(s, xlate, shadow_only);}
 
 	void setup_city_lights(vector3d const &xlate) {
@@ -3079,7 +3079,7 @@ void draw_cities(int shadow_only, int reflection_pass, int trans_op_mask, vector
 void draw_city_roads(int trans_op_mask, vector3d const &xlate) {city_gen.draw_roads(trans_op_mask, xlate);}
 void setup_city_lights(vector3d const &xlate) {city_gen.setup_city_lights(xlate);}
 
-void gen_and_draw_people_in_building(building_t &building, ped_draw_vars_t const &pdv) {city_gen.gen_and_draw_people_in_building(building, pdv);}
+void gen_and_draw_people_in_building(ped_draw_vars_t const &pdv) {city_gen.gen_and_draw_people_in_building(pdv);}
 void draw_player_model(shader_t &s, vector3d const &xlate, bool shadow_only) {city_gen.draw_player_model(s, xlate, shadow_only);}
 
 // Note: pos is in global space for these next two calls
