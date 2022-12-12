@@ -85,7 +85,7 @@ public:
 	virtual unsigned num_models() const;
 	virtual city_model_t const &get_model(unsigned id) const;
 	virtual city_model_t       &get_model(unsigned id);
-	int select_random_model(int rand_val, bool choose_zombie);
+	int select_random_model(int rand_val, bool choose_zombie, unsigned pref_gender);
 	bool has_mix_of_model_types() const {return (!people_models.empty() && !zombie_models.empty());} // Note: must call select_random_model() first
 };
 

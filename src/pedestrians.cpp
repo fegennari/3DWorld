@@ -841,6 +841,9 @@ bool person_base_t::is_close_to_player() const { // for debug printouts, etc.
 }
 
 
+// somewhat of a hack, but works with current set of models because Katie kid model is the only female with a scale of 0.7, men have a scale of 1.0, and women have a scale of 0.9
+bool is_female_model(city_model_t const &model) {return (model.scale <= 0.95);}
+
 unsigned ped_model_loader_t::num_models() const {return city_params.ped_model_files.size();}
 
 city_model_t const &ped_model_loader_t::get_model(unsigned id) const {
@@ -851,22 +854,27 @@ city_model_t &ped_model_loader_t::get_model(unsigned id) {
 	assert(id < num_models());
 	return city_params.ped_model_files[id];
 }
-int ped_model_loader_t::select_random_model(int rand_val, bool choose_zombie) {
+// pref_gender: 0=male, 1=female, 2=no preference
+int ped_model_loader_t::select_random_model(int rand_val, bool choose_zombie, unsigned pref_gender) {
 	if (num_models() > 0 && zombie_models.empty() && people_models.empty()) { // first call - not setup
-		for (unsigned i = 0; i < num_models(); ++i) {
-			(city_params.ped_model_files[i].is_zombie ? zombie_models : people_models).push_back(i);
-		}
+		for (unsigned i = 0; i < num_models(); ++i) {(city_params.ped_model_files[i].is_zombie ? zombie_models : people_models).push_back(i);}
 	}
 	vector<unsigned> const &pool(choose_zombie ? zombie_models : people_models);
 	unsigned ret(0);
-	
+
 	if (pool.empty()) { // no candidate found, try selecting from the other set
 		vector<unsigned> const &alt(choose_zombie ? people_models : zombie_models);
 		if (alt.empty()) return 0; // no models found
 		ret = alt[rand_val % alt.size()];
 	}
 	else {
-		ret = pool[rand_val % pool.size()];
+		if (choose_zombie) {rand_val ^= 0xdeadbeef;} // mix up the random value to decorrelate models when the people and zombie sets are the same size
+		// start with our randomly selected model and try to find a model of the correct gender;
+		// will loop around to the first model again and select the original model if no matching gender is found
+		for (unsigned n = 0; n < pool.size(); ++n) {
+			ret = pool[(rand_val + n) % pool.size()];
+			if (pref_gender >= 2 || (unsigned)is_female_model(get_model(ret)) == pref_gender) break;
+		}
 	}
 	assert(ret < num_models());
 	return ret;
@@ -921,11 +929,13 @@ void ped_manager_t::init(unsigned num_city) {
 void ped_manager_t::assign_ped_model(person_base_t &ped) { // Note: non-const, modifies rgen
 	if (ped_model_loader.num_models() == 0) {ped.model_id = 0; return;} // will be unused
 	bool const choose_zombie(in_building_gameplay_mode());
-	ped.model_id  = ped_model_loader.select_random_model(rgen.rand(), choose_zombie);
+	bool const is_new(ped.model_rand_seed == 0);
+	unsigned const pref_gender(is_new ? 2 : ped.is_female); // 0=male, 1=female, 2=no preference
+	if (is_new) {ped.model_rand_seed = rgen.rand();} // choose once and be consistent when switching between people and zombies
+	ped.model_id  = ped_model_loader.select_random_model(ped.model_rand_seed, choose_zombie, pref_gender);
 	city_model_t const &model(ped_model_loader.get_model(ped.model_id));
 	ped.radius   *= model.scale;
-	// somewhat of a hack, but works with current set of models because Katie kid model is the only female with a scale of 0.7, men have a scale of 1.0, and women have a scale of 0.9
-	ped.is_female = (model.scale <= 0.95);
+	ped.is_female = is_female_model(model);
 	ped.is_zombie = model.is_zombie;
 	assert(ped.radius > 0.0); // no zero/negative model scales
 }
