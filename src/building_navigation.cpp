@@ -1886,6 +1886,12 @@ void building_t::register_person_hit(unsigned person_ix, room_object_t const &ob
 	}
 }
 
+/*static*/ float building_t::get_min_front_clearance_inc_people() {
+	float clearance(get_min_front_clearance());
+	if (enable_building_people_ai() && global_building_params.building_people_enabled()) {max_eq(clearance, 2.0f*ped_manager_t::get_ped_radius());}
+	return clearance;
+}
+
 // these must be here to handle deletion of building_nav_graph_t, which is only defined in this file
 building_interior_t::building_interior_t() :
 	garage_room(-1), ext_basement_hallway_room_id(-1), ext_basement_door_stack_ix(-1), furnace_type(FTYPE_NONE), attic_type(ATTIC_TYPE_RAFTERS),

@@ -1530,8 +1530,10 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 					stairs_width -= 0.025*doorway_width; // 1.2*DW => 0.9*DW
 					stairs_pad   -= 0.030*doorway_width; // 1.0*WD => 0.64*DW
 					len_with_pad -= 0.230*doorway_width*(use_basement_stairs ? 1.2 : 1.0); // 6.0*DW => 3.24*DW / 2.689*DW ; basement can have steeper stairs
-					max_eq(stairs_width, get_min_front_clearance()); // ensure the player can fit
-					max_eq(stairs_pad,   get_min_front_clearance()); // ensure the player can fit
+					// should this be get_min_front_clearance_inc_people()? that makes more sense, but using this value creates very steep stairs
+					float const min_clearance(get_min_front_clearance()); // ensure the player can fit
+					max_eq(stairs_width, min_clearance);
+					max_eq(stairs_pad,   min_clearance);
 				}
 				bool too_small(0);
 				if (min(place_region.dx(), place_region.dy()) < 1.5*len_with_pad) {dim = (place_region.dx() < place_region.dy());} // use larger dim

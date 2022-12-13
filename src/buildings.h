@@ -1269,7 +1269,8 @@ struct building_t : public building_geom_t {
 	building_t(unsigned mat_ix_=0) : mat_ix(mat_ix_) {}
 	building_t(building_geom_t const &bg) : building_geom_t(bg) {}
 	static float get_scaled_player_radius();
-	static float get_min_front_clearance() {return 2.05f*get_scaled_player_radius();} // slightly larger than the player diameter
+	static float get_min_front_clearance () {return 2.05f*get_scaled_player_radius();} // slightly larger than the player diameter
+	static float get_min_front_clearance_inc_people();
 	bool is_valid() const {return !bcube.is_all_zeros();}
 	bool has_interior () const {return bool(interior);}
 	bool has_room_geom() const {return (has_interior() && interior->room_geom);}

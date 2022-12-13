@@ -110,7 +110,7 @@ bool building_t::add_chair(rand_gen_t &rgen, cube_t const &room, vect_cube_t con
 unsigned building_t::add_table_and_chairs(rand_gen_t rgen, cube_t const &room, vect_cube_t const &blockers, unsigned room_id,
 	point const &place_pos, colorRGBA const &chair_color, float rand_place_off, float tot_light_amt)
 {
-	float const window_vspacing(get_window_vspace()), room_pad(max(4.0f*get_wall_thickness(), get_min_front_clearance()));
+	float const window_vspacing(get_window_vspace()), room_pad(max(4.0f*get_wall_thickness(), get_min_front_clearance_inc_people()));
 	vector3d const room_sz(room.get_size());
 	vect_room_object_t &objs(interior->room_geom->objs);
 	point table_pos(place_pos);
@@ -178,9 +178,9 @@ void building_t::add_trashcan_to_room(rand_gen_t rgen, room_t const &room, float
 	vect_room_object_t &objs(interior->room_geom->objs);
 	cube_t avoid;
 
-	if (!objs.empty() && objs[objs_start].type == TYPE_TABLE) { // make sure there's enough space for the player to walk around the table
+	if (!objs.empty() && objs[objs_start].type == TYPE_TABLE) { // make sure there's enough space for the playerand AIs to walk around the table
 		avoid = objs[objs_start];
-		avoid.expand_by_xy(get_min_front_clearance());
+		avoid.expand_by_xy(get_min_front_clearance_inc_people());
 	}
 	if (check_last_obj) {
 		assert(!objs.empty());
@@ -221,7 +221,7 @@ bool building_t::add_bookcase_to_room(rand_gen_t &rgen, room_t const &room, floa
 	rand_gen_t rgen2;
 	rgen2.set_state((room_id + 1), (13*mat_ix + interior->rooms.size() + 1)); // local rgen that's per-building/room; ensures bookcases are all the same size in a library
 	float const width(0.4*vspace*rgen2.rand_uniform(1.0, 1.2)), depth(0.12*vspace*rgen2.rand_uniform(1.0, 1.2)), height(0.7*vspace*rgen2.rand_uniform(1.0, 1.2));
-	float const clearance(max(0.2f*vspace, get_min_front_clearance()));
+	float const clearance(max(0.2f*vspace, get_min_front_clearance_inc_people()));
 	vect_room_object_t &objs(interior->room_geom->objs);
 	cube_t c;
 	set_cube_zvals(c, zval, zval+height);
@@ -268,7 +268,7 @@ bool building_t::add_desk_to_room(rand_gen_t rgen, room_t const &room, vect_cube
 	float const vspace(get_window_vspace());
 	if (min(room_bounds.dx(), room_bounds.dy()) < 1.0*vspace) return 0; // room is too small
 	float const width(0.8*vspace*rgen.rand_uniform(1.0, 1.2)), depth(0.38*vspace*rgen.rand_uniform(1.0, 1.2)), height(0.21*vspace*rgen.rand_uniform(1.0, 1.2));
-	float const clearance(max(0.5f*depth, get_min_front_clearance()));
+	float const clearance(max(0.5f*depth, get_min_front_clearance_inc_people()));
 	vect_room_object_t &objs(interior->room_geom->objs);
 	unsigned num_placed(0);
 	cube_t c, placed_desk;
@@ -539,7 +539,7 @@ bool building_t::add_bedroom_objs(rand_gen_t rgen, room_t &room, vect_cube_t con
 	cube_t room_bounds(get_walkable_room_bounds(room)), place_area(room_bounds);
 	place_area.expand_by(-get_trim_thickness()); // shrink to leave a small gap
 	// closet
-	float const doorway_width(get_doorway_width()), floor_thickness(get_floor_thickness()), front_clearance(max(0.6f*doorway_width, get_min_front_clearance()));
+	float const doorway_width(get_doorway_width()), floor_thickness(get_floor_thickness()), front_clearance(max(0.6f*doorway_width, get_min_front_clearance_inc_people()));
 	float const closet_min_depth(0.65*doorway_width), closet_min_width(1.5*doorway_width), min_dist_to_wall(1.0*doorway_width), min_bed_space(front_clearance);
 	unsigned const first_corner(rgen.rand() & 3);
 	bool const first_dim(rgen.rand_bool());
@@ -848,7 +848,7 @@ bool building_t::place_obj_along_wall(room_object type, room_t const &room, floa
 	vector3d const place_area_sz(place_area.get_size());
 	if (max(place_area_sz.x, place_area_sz.y) <= min_space) return 0; // can't fit in either dim
 	unsigned const force_dim((place_area_sz.x <= min_space) ? 0 : ((place_area_sz.y <= min_space) ? 1 : 2)); // *other* dim; 2=neither
-	float const obj_clearance(depth*front_clearance), clearance(max(obj_clearance, get_min_front_clearance()));
+	float const obj_clearance(depth*front_clearance), clearance(max(obj_clearance, get_min_front_clearance_inc_people()));
 	vect_room_object_t &objs(interior->room_geom->objs);
 	cube_t c;
 	set_cube_zvals(c, zval, zval+height);
@@ -1396,7 +1396,7 @@ bool building_t::add_kitchen_objs(rand_gen_t rgen, room_t const &room, float zva
 	}	
 	if (is_house && placed_obj) { // if we have at least a fridge or stove, try to add countertops
 		float const vspace(get_window_vspace()), height(0.345*vspace), depth(0.74*height), min_hwidth(0.6*height), floor_thickness(get_floor_thickness());
-		float const min_clearance(get_min_front_clearance()), front_clearance(max(0.6f*height, min_clearance));
+		float const min_clearance(get_min_front_clearance_inc_people()), front_clearance(max(0.6f*height, min_clearance));
 		cube_t cabinet_area(room_bounds);
 		cabinet_area.expand_by(-0.05*wall_thickness); // smaller gap than place_area; this is needed to prevent z-fighting with exterior walls
 		if (min(cabinet_area.dx(), cabinet_area.dy()) < 4.0*min_hwidth) return placed_obj; // no space for cabinets, room is too small
@@ -1573,7 +1573,7 @@ void building_t::add_diningroom_objs(rand_gen_t rgen, room_t const &room, float 
 	if ((rgen.rand()&3) == 0) return; // no additional objects 25% of the time
 	cube_t room_bounds(get_walkable_room_bounds(room));
 	room_bounds.expand_by_xy(-get_trim_thickness());
-	float const vspace(get_window_vspace()), clearance(max(0.2f*vspace, get_min_front_clearance()));
+	float const vspace(get_window_vspace()), clearance(max(0.2f*vspace, get_min_front_clearance_inc_people()));
 	vect_room_object_t &objs(interior->room_geom->objs);
 	// add a wine rack
 	float const width(0.3*vspace*rgen.rand_uniform(1.0, 1.5)), depth(0.16*vspace), height(0.4*vspace*rgen.rand_uniform(1.0, 1.5)); // depth is based on bottle length, which is constant
@@ -1801,7 +1801,7 @@ void building_t::add_laundry_basket(rand_gen_t &rgen, room_t const &room, float 
 }
 
 bool building_t::add_laundry_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, unsigned &added_bathroom_objs_mask) {
-	float const front_clearance(get_min_front_clearance());
+	float const front_clearance(get_min_front_clearance_inc_people());
 	cube_t place_area(get_walkable_room_bounds(room));
 	place_area.expand_by(-0.25*get_wall_thickness()); // common spacing to wall for appliances
 	vector3d const place_area_sz(place_area.get_size());
