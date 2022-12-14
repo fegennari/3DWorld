@@ -270,12 +270,28 @@ class file_reader_assimp {
 		model_anim.animations.resize(scene->mNumAnimations);
 
 		for (unsigned a = 0; a < scene->mNumAnimations; ++a) {
-			if (scene->mAnimations[a]->mTicksPerSecond) {model_anim.animations[a].ticks_per_sec = scene->mAnimations[a]->mTicksPerSecond;} // defaults to 25
-			model_anim.animations[a].duration = scene->mAnimations[a]->mDuration;
+			aiAnimation const *const anim(scene->mAnimations[a]);
+			assert(anim);
+			read_missing_bones(anim, model_anim);
+			if (anim->mTicksPerSecond) {model_anim.animations[a].ticks_per_sec = anim->mTicksPerSecond;} // defaults to 25
+			model_anim.animations[a].duration = anim->mDuration;
 		}
 		extract_animation_data_recur(scene, scene->mRootNode, model_anim);
 	}
 
+	// Note: unclear if this is actually needed; at least it seems to do nothing for the models I've tested this on
+	void read_missing_bones(aiAnimation const *const anim, model_anim_t &model_anim) {
+		// https://learnopengl.com/Guest-Articles/2020/Skeletal-Animation
+		// reading channels (bones engaged in an animation and their keyframes)
+		for (int i = 0; i < anim->mNumChannels; i++) {
+			unsigned const bone_id(model_anim.get_bone_id(anim->mChannels[i]->mNodeName.C_Str()));
+
+			if (bone_id == model_anim.bone_transforms.size()) { // maybe add a new bone with identity transforms
+				model_anim.bone_transforms.push_back(xform_matrix());
+				model_anim.bone_offset_matrices.push_back(xform_matrix());
+			}
+		}
+	}
 	void parse_single_bone(int bone_index, aiBone const *const pBone, mesh_bone_data_t &bone_data, model_anim_t &model_anim, unsigned first_vertex_offset) {
 		unsigned const bone_id(model_anim.get_bone_id(pBone->mName.C_Str()));
 
