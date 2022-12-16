@@ -262,6 +262,14 @@ struct model_anim_t {
 	vector3d  calc_interpolated_scale   (float anim_time, anim_data_t const &A) const;
 	void transform_node_hierarchy_recur(float anim_time, animation_t const &animation, unsigned node_ix, xform_matrix const &parent_transform);
 	void get_bone_transforms(unsigned anim_id, float cur_time);
+private:
+	xform_matrix apply_anim_transform(float anim_time, animation_t const &animation, anim_node_t const &node) const;
+	// animation blending
+	float cur_time1=0.0, cur_time2=0.0;
+public:
+	void blend_animations(unsigned anim_id1, unsigned anim_id2, float blend_factor, float delta_time);
+	void get_blended_bone_transforms(float anim_time1, float anim_time2, animation_t const &animation1, animation_t const &animation2,
+		unsigned node_ix, xform_matrix const &parent_transform, float blend_factor);
 };
 
 

@@ -67,18 +67,19 @@ vector3d model_anim_t::calc_interpolated_scale(float anim_time, anim_data_t cons
 	assert(0);
 	return zero_vector; // never gets here
 }
+xform_matrix model_anim_t::apply_anim_transform(float anim_time, animation_t const &animation, anim_node_t const &node) const {
+	auto it(animation.anim_data.find(node.name)); // found about half the time
+	if (it == animation.anim_data.end()) {return node.transform;} // defaults to node transform
+	anim_data_t const &A(it->second);
+	xform_matrix node_transform(glm::translate(glm::mat4(1.0), vec3_from_vector3d(calc_interpolated_position(anim_time, A))));
+	node_transform *= glm::toMat4(calc_interpolated_rotation(anim_time, A));
+	if (A.uses_scale) {node_transform *= glm::scale(glm::mat4(1.0), vec3_from_vector3d(calc_interpolated_scale(anim_time, A)));} // only scale when needed (rarely)
+	return node_transform;
+}
 void model_anim_t::transform_node_hierarchy_recur(float anim_time, animation_t const &animation, unsigned node_ix, xform_matrix const &parent_transform) {
 	assert(node_ix < anim_nodes.size());
 	anim_node_t const &node(anim_nodes[node_ix]);
-	xform_matrix node_transform(node.transform); // defaults to node transform; may be overwritten below
-	auto it(animation.anim_data.find(node.name));
-
-	if (it != animation.anim_data.end()) { // found (about half the time)
-		anim_data_t const &A(it->second);
-		node_transform  = glm::translate(glm::mat4(1.0), vec3_from_vector3d(calc_interpolated_position(anim_time, A)));
-		node_transform *= glm::toMat4(calc_interpolated_rotation(anim_time, A));
-		if (A.uses_scale) {node_transform *= glm::scale(glm::mat4(1.0), vec3_from_vector3d(calc_interpolated_scale(anim_time, A)));} // only scale when needed (rarely)
-	}
+	xform_matrix const node_transform(apply_anim_transform(anim_time, animation, node));
 	xform_matrix const global_transform(parent_transform * node_transform);
 
 	if (node.bone_index >= 0) {
@@ -93,6 +94,41 @@ void model_anim_t::get_bone_transforms(unsigned anim_id, float cur_time) {
 	float const time_in_ticks(cur_time * animation.ticks_per_sec);
 	float const anim_time(fmod(time_in_ticks, animation.duration));
 	transform_node_hierarchy_recur(anim_time, animation, 0, root_transform); // root node is 0
+}
+
+// https://stackoverflow.com/questions/69860756/how-do-i-correctly-blend-between-skeletal-animations-in-opengl-from-a-walk-anima/69917701#69917701
+void model_anim_t::blend_animations(unsigned anim_id1, unsigned anim_id2, float blend_factor, float delta_time) {
+	animation_t const &animation1(animations[anim_id1]);
+	animation_t const &animation2(animations[anim_id2]);
+	// speed multipliers to correctly transition from one animation to another
+	float const anim_speed_mult_up  ((1.0f - blend_factor) + (animation1.duration/animation2.duration) * blend_factor); // lerp
+	float const anim_speed_mult_down((1.0f - blend_factor) * (animation2.duration/animation1.duration) + blend_factor); // lerp
+	// current time of each animation, "scaled" by the above speed multiplier variables
+	cur_time1 += animation1.ticks_per_sec*delta_time*anim_speed_mult_up;
+	cur_time1  = fmod(cur_time1, animation1.duration);
+	cur_time2 += animation2.ticks_per_sec*delta_time*anim_speed_mult_down;
+	cur_time2  = fmod(cur_time2, animation2.duration);
+	get_blended_bone_transforms(cur_time1, cur_time2, animation1, animation2, 0, root_transform, blend_factor); // root node is 0
+}
+void model_anim_t::get_blended_bone_transforms(float anim_time1, float anim_time2, animation_t const &animation1, animation_t const &animation2,
+	unsigned node_ix, xform_matrix const &parent_transform, float blend_factor)
+{
+	assert(node_ix < anim_nodes.size());
+	anim_node_t const &node(anim_nodes[node_ix]);
+	xform_matrix const node_transform1(apply_anim_transform(anim_time1, animation1, node));
+	xform_matrix const node_transform2(apply_anim_transform(anim_time2, animation2, node));
+	// blend two matrices
+	glm::quat const rot0(glm::quat_cast(node_transform1)), rot1(glm::quat_cast(node_transform2));
+	glm::quat const final_rot(glm::slerp(rot0, rot1, blend_factor));
+	glm::mat4 blended_matrix(glm::mat4_cast(final_rot));
+	blended_matrix[3] = (1.0f - blend_factor) * node_transform1[3] + node_transform2[3] * blend_factor;
+	xform_matrix const global_transform(parent_transform * blended_matrix);
+
+	if (node.bone_index >= 0) {
+		assert((size_t)node.bone_index < bone_transforms.size() && (size_t)node.bone_index < bone_offset_matrices.size());
+		bone_transforms[node.bone_index] = global_inverse_transform * global_transform * bone_offset_matrices[node.bone_index];
+	}
+	for (unsigned i : node.children) {get_blended_bone_transforms(anim_time1, anim_time2, animation1, animation2, i, global_transform, blend_factor);}
 }
 
 #ifdef ENABLE_ASSIMP
@@ -283,7 +319,7 @@ class file_reader_assimp {
 	void read_missing_bones(aiAnimation const *const anim, model_anim_t &model_anim) {
 		// https://learnopengl.com/Guest-Articles/2020/Skeletal-Animation
 		// reading channels (bones engaged in an animation and their keyframes)
-		for (int i = 0; i < anim->mNumChannels; i++) {
+		for (unsigned i = 0; i < anim->mNumChannels; i++) {
 			unsigned const bone_id(model_anim.get_bone_id(anim->mChannels[i]->mNodeName.C_Str()));
 
 			if (bone_id == model_anim.bone_transforms.size()) { // maybe add a new bone with identity transforms
