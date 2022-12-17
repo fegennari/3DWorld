@@ -5,6 +5,8 @@
 #include "function_registry.h"
 #include "buildings.h"
 
+using std::string;
+
 
 cube_t grass_exclude1, grass_exclude2;
 
@@ -153,6 +155,16 @@ void split_cubes_recur(cube_t c, vect_cube_t &cubes, unsigned search_start, unsi
 	cubes.push_back(c);
 }
 
+string gen_random_name(rand_gen_t &rgen); // from Universe_name.cpp
+
+string choose_family_name(rand_gen_t rgen) { // Note: deep copying so as not to update the state of the rgen that was passed in
+	return gen_random_name(rgen); // use a generic random name to start with
+}
+string choose_business_name(rand_gen_t rgen) {
+	// TODO: choose from a random template such as "Co", "Inc", "Ltd", with random parts mized in
+	return "<none>";
+}
+
 void building_t::gen_geometry(int rseed1, int rseed2) {
 
 	if (!is_valid()) return; // invalid building
@@ -170,7 +182,13 @@ void building_t::gen_geometry(int rseed1, int rseed2) {
 	ao_bcz2         = bcube.z2(); // capture z2 before union with roof and detail geometry (which increases building height)
 	ground_floor_z1 = bcube.z1(); // record before adding basement
 	wall_color      = mat.wall_color; // start with default wall color
-	if (is_house) {gen_house(base, rgen); return;}
+	
+	if (is_house) {
+		name = choose_family_name(rgen);
+		gen_house(base, rgen);
+		return;
+	}
+	name = choose_business_name(rgen);
 
 	// determine building shape (cube, cylinder, other)
 	if (rgen.rand_probability(mat.round_prob)) {num_sides = MAX_CYLIN_SIDES;} // max number of sides for drawing rounded (cylinder) buildings

@@ -1260,6 +1260,7 @@ struct building_t : public building_geom_t {
 	vector<tquad_with_ix_t> roof_tquads, doors;
 	vector<colored_sphere_t> ext_lights;
 	std::shared_ptr<building_interior_t> interior;
+	std::string name; // company name for office building; family name for house
 	vertex_range_t ext_side_qv_range;
 	point tree_pos; // (0,0,0) is unplaced/no tree
 	float ao_bcz2=0.0, ground_floor_z1=0.0, interior_z2=0.0;
