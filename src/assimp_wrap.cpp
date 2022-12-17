@@ -391,7 +391,7 @@ class file_reader_assimp {
 		
 		if (is_new_mat) { // process material if this is the first mesh using it
 			assert(scene->mMaterials != nullptr);
-			aiMaterial const* const material(scene->mMaterials[mesh->mMaterialIndex]);
+			aiMaterial *const material(scene->mMaterials[mesh->mMaterialIndex]); // non-const because older assimp's GetName() is non-const
 			assert(material != nullptr);
 			// setup and load textures
 			mat.a_tid    = load_texture(scene, material, aiTextureType_AMBIENT);

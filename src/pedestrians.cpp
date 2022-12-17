@@ -1587,7 +1587,6 @@ bool ped_manager_t::draw_ped(person_base_t const &ped, shader_t &s, pos_dir_up c
 		dir_horiz.z = 0.0; // always face a horizontal direction, even if walking on a slope
 		dir_horiz.normalize();
 		// A=0.0, leave unchanged
-		bool const has_sep_skin_mat(!ped.is_zombie && ped.model_id == 3);
 		//colorRGBA const &color(ped.following_player ? RED : WHITE); // force red when following player, for debugging purposes
 		//colorRGBA const &color(ped.on_stairs() ? RED : ALPHA0);
 		//colorRGBA const &color((ped.retreat_time > 0.0) ? RED : ALPHA0);
