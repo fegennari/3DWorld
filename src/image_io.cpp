@@ -590,7 +590,7 @@ int texture_t::write_to_png(string const &fn) const {
 	if (!is_16_bit_gray) { // 16-bit grayscale is not yet supported
 		stb_buffered_writer writer;
 		if (!writer.init(fn)) return 0;
-		if (!stbi_write_png_to_func(stb_buffered_writer_func, (void *)&writer, width, height, 3, data, 95)) return 0; // ncomp=3, quality=95
+		if (!stbi_write_png_to_func(stb_buffered_writer_func, (void *)&writer, width, height, 3, data, 0)) return 0; // ncomp=3, stride_bytes=0 (packed)
 		writer.flush(); // flush once at the end, which writes the entire image as one fwrite() call
 		return 1;
 	}
