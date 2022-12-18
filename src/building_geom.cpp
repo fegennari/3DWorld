@@ -162,7 +162,7 @@ string choose_family_name(rand_gen_t rgen) { // Note: deep copying so as not to 
 }
 string choose_business_name(rand_gen_t rgen) {
 	// TODO: choose from a random template such as "Co", "Inc", "Ltd", with random parts mized in
-	return "<none>";
+	return "";
 }
 
 void building_t::gen_geometry(int rseed1, int rseed2) {

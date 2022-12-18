@@ -42,6 +42,7 @@ extern shader_t reflection_shader;
 void get_all_model_bcubes(vector<cube_t> &bcubes); // from model3d.h
 cube_t get_building_indir_light_bounds(); // from building_lighting.cpp
 void register_player_not_in_building();
+void parse_universe_name_str_tables();
 
 float get_door_open_dist() {return 3.5*CAMERA_RADIUS;}
 
@@ -2340,6 +2341,7 @@ public:
 		bix_by_x1 cmp_x1(buildings);
 		for (auto i = bix_by_plot.begin(); i != bix_by_plot.end(); ++i) {sort(i->begin(), i->end(), cmp_x1);}
 		if (!is_tile) {timer.end();} // use a single timer for tile mode
+		parse_universe_name_str_tables(); // must do this here because it's not legal to call in MT code below
 
 		if (params.flatten_mesh && !use_city_plots) { // not needed for city plots, which are already flat
 			timer_t timer("Gen Building Zvals", !is_tile);

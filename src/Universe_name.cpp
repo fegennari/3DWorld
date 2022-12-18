@@ -44,7 +44,7 @@ void parse_str_list(string const &str, vector<string> &vs) { // str must end wit
 }
 
 
-void parse_str_tables() {
+void parse_universe_name_str_tables() {
 
 	static bool parsed(0);
 	if (parsed) return;
@@ -60,7 +60,7 @@ void parse_str_tables() {
 
 string gen_random_name(rand_gen_t &rgen) {
 
-	parse_str_tables();
+	parse_universe_name_str_tables();
 	bool at_end(0), vc((rgen.rand() % 100) < 90); // 0 = vowel, 1 = consonant
 	string name;
 

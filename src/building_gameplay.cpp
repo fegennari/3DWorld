@@ -918,8 +918,16 @@ bool building_room_geom_t::player_pickup_object(building_t &building, point cons
 	return 1;
 }
 
+void print_entering_building(string const &str) {
+	print_text_onscreen(str, WHITE, 1.0, 2.0*TICKS_PER_SECOND, 0);
+}
 void building_t::register_player_enter_building() const {
 	//print_building_manifest(); // for debugging
+
+	if (!name.empty()) {
+		if (is_house) {print_entering_building("Entering " + name + " Residence");}
+		else          {print_entering_building("Entering " + name);}
+	}
 }
 void building_t::register_player_exit_building() const {
 	// only collect items in gameplay mode where there's a risk the player can lose them; otherwise, let the player carry items between buildings
