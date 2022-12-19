@@ -10,16 +10,18 @@ It has the following features:
 * Procedural universe generator with galaxies, stars, planets, moons, etc.
 * Procedural voxel 3D terrain generation with realtime user editing
 * Terrain generator including various noise functions, erosion, realtime user editing, heightmap read/write
-* Procedural building, road, and city generation
+* Procedural building (interior and exterior), road, and city generation
 * Physics simulation for primitive object types and others (> 10K dynamic objects)
 * Realtime day/night cycle with weather (rain, snow, hail, wind, lightning)
 * Physically based materials with reflection and refraction
 * Dynamic shadows, ambient occlusion, up to 1024 dynamic light sources, postprocessing effects
+* Skeletal animation and procedural animation
 * Built-in first person shooter game "smiley killer"
 * Build-in spaceship + planet colonization game
-* Computer AI for players in the FPS game and ships in the universe game
-* Importer for Lightwave object file and 3DS formats
-* Reading support for textures: JPEG, PNG, BMP, TIFF, TGA, RAW, DDS
+* Building item collection and zombie gameplay mode
+* Computer AI for players in the FPS game, building gameplay, and ships in the universe game
+* Importer for Lightwave object file, 3DS formats, and Assimp for other file formats
+* Reading support for textures: JPEG, PNG, BMP, TIFF, TGA, DDS
 * Optimized for fast load and realtime rendering of large models (> 1GB of vertex/texture data)
 
 I converted the project from svn to git at commit 6607.
@@ -30,12 +32,12 @@ A linux/gcc makefile is also included, but is more experimental. See README.linu
 The project should build under gcc on linux with some work, but it's been a while since I tried this.
 I have an old makefile that is out of date, but may not take too much work to fixup and make it usable.
 
-Be warned, this is a large repository, currently 955MB.
+Be warned, this is a large repository, currently about 1GB.
 I've included source code, config files, textures, sounds, small models, lighting files, scene data, heightmaps, and project files.
 This repo does not contain the large model files used in some scenes, you'll have to download these separately.
 This means that some of the scene config files won't work because they can't find their referenced data.
 The current list of dependencies is:
-* OpenGL 4.4 (Should come with Windows 7/8/10 latest graphics drivers)
+* OpenGL 4.5 (Should come with Windows 7/8/10 latest graphics drivers)
 * OpenAL 1.1 (System Install: https://www.openal.org/downloads/ or you can try the newer openal-soft: https://github.com/kcat/openal-soft)
 * freeglut-2.8.1 (Current 3.0 version probably works: https://sourceforge.net/projects/freeglut/)
 * freealut-1.1.0 (One version is here: https://github.com/vancegroup/freealut)
@@ -43,18 +45,19 @@ The current list of dependencies is:
 * glew-2.0.0 (2.1.0 probably works as well: http://glew.sourceforge.net/)
 * gli (Latest version: https://github.com/g-truc/gli / header only, included in dependencies directory)
 * glm-0.9.9.0 (Latest version: https://glm.g-truc.net/0.9.9/index.html or https://github.com/g-truc/glm / header only, included in dependencies directory)
-* libjpeg-9a (My version is old; Latest version: http://www.ijg.org/)
-* libpng-1.2.20 (My version is very old; Latest version: https://libpng.sourceforge.io/index.html)
+* libpng-1.2.20 (My version is very old; Latest version: https://libpng.sourceforge.io/index.html); can be replaced with stb_image in most cases, except for map image export.
 * libtiff-4.0.3 (Latest version: http://www.simplesystems.org/libtiff/)
+* Assimp (optional)
 * libtarga (source included)
+* STB headers: stb_image, stb_image_write, stb_dxt (source included)
 
 I've included stripped down versions of most of these libraries in the dependencies directory.
 I removed all large files that aren't required by 3DWorld, in some cases even examples/tests/documentation.
-These have been built with MS Visual Studio 2015 Professional on Windows 10.
+These have been built with MS Visual Studio 2022 Community on Windows 10.
 If you want to use these, you'll need to copy the directories to the root directory and rebuild any libraries needed for other versions of Visual Studio.
 
 Note that many of these dependencies are old and could be replaced with newer libraries. I've been concentrating on adding content and I'm not too interested in this.
-Freeglut should probably be replaced with SDL, the last 4 image libraries with DevIL, and maybe assimp can be used for model loading.
+Freeglut should probably be replaced with SDL, and the last 4 image libraries with STB or DevIL.
 
 If you want to build 3DWorld, you can use the projects in the dependencies/ folder, or download and build them yourself and change the project settings to use them.
 I currently use a 32-bit MS Visual Studio 2022 Community build target for 3DWorld, but it should work with MSVS 2019 as well if you use 3DWorld_msvs2019.vcxproj.
@@ -77,7 +80,7 @@ System requirements:
 * Windows 7/8/10 (Runs on Windows 7, but I've only built on 8 and 10). Linux when using the makefile with gcc.
 * Microsoft Visual Studio 2019 or 2022. The professional or community version is needed for OpenMP support. You can also try to use gcc on linux.
 * A relatively new generation of Nvidia or ATI GPU (Runs on my laptop with Intel graphics, but at 12-20 FPS)
-* At least 4GB system memory for the larger scenes
+* At least 4GB system memory for the larger scenes; My GPU has 8GB of memory
 * At least 4GB GPU memory for the larger scenes
 
 Troubleshooting:
@@ -114,6 +117,10 @@ However, I do have a blog that includes descriptions of the algorithms and lots 
 https://3dworldgen.blogspot.com/
 
 Here are some screenshots linked from my blog:
+
+![alt text](https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEgbKNuwYqJV9LSFC7hg18_yb76dG9JecG74WqLQs7ZMiS0sXTyJO6k7RbDpoQWH09-gh3eJrN4jabU64DvspqLeZvT1Uvfp87dbF2CKsK-KRDtsE4skVYHW2dcWC1POaIsy3ANCZj-BONgOFuIJtqCP1GcFCLSjt827q8OUnAnbKu_KTN4_iaBlEGQuWA/s1920/basement_indir_pipes.jpg)
+
+Procedural building basement with people, indirect lighting, and pipes routed along the ceiling. (config_heightmap.txt)
 
 ![alt text](https://1.bp.blogspot.com/-ZbJUmGiha84/YTRRfRWTE4I/AAAAAAAADEs/yB9tPZcllnM40FOsh8nkut3HtDjm0MLqQCLcBGAsYHQ/s1920/residential_grid.jpg)
 
