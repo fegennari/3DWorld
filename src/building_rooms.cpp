@@ -286,8 +286,8 @@ bool building_t::add_desk_to_room(rand_gen_t rgen, room_t const &room, vect_cube
 		if (num_placed > 0 && desk_pad.intersects(placed_desk))        continue; // intersects previously placed desk
 		if (!is_valid_placement_for_room(desk_pad, room, blockers, 1)) continue; // check proximity to doors and collision with blockers
 		if (overlaps_other_room_obj(desk_pad, objs_start))             continue; // check other objects (for bedroom desks)
-		// make short if against an exterior wall or in an office
-		bool const is_tall(!room.is_office && rgen.rand_float() < 0.5 && (is_basement || classify_room_wall(room, zval, dim, dir, 0) != ROOM_WALL_EXT));
+		// make short if against an exterior wall, in an office, or if there's a complex floorplan (in case there's no back wall)
+		bool const is_tall(!room.is_office && !has_complex_floorplan && rgen.rand_float() < 0.5 && (is_basement || classify_room_wall(room, zval, dim, dir, 0) != ROOM_WALL_EXT));
 		unsigned const desk_obj_ix(objs.size());
 		objs.emplace_back(c, TYPE_DESK, room_id, dim, !dir, 0, tot_light_amt, (is_tall ? SHAPE_TALL : SHAPE_CUBE));
 		set_obj_id(objs);
