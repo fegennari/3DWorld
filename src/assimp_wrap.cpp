@@ -405,20 +405,22 @@ class file_reader_assimp {
 			if (aiGetMaterialColor(material, AI_MATKEY_COLOR_DIFFUSE,  &color) == AI_SUCCESS) {mat.kd = aiColor4D_to_colorRGBA(color);}
 			if (aiGetMaterialColor(material, AI_MATKEY_COLOR_SPECULAR, &color) == AI_SUCCESS) {mat.ks = aiColor4D_to_colorRGBA(color);}
 			if (aiGetMaterialColor(material, AI_MATKEY_COLOR_EMISSIVE, &color) == AI_SUCCESS) {mat.ke = aiColor4D_to_colorRGBA(color);}
-			unsigned max1(1), max2(1), max3(1), max4(1);
-			float shininess(0.0), strength(0.0), alpha(1.0);
+			float shininess(0.0), strength(0.0), metalness(0.0), alpha(1.0);
 			
-			if (aiGetMaterialFloatArray(material, AI_MATKEY_SHININESS,          &shininess, &max1) == AI_SUCCESS &&
-				aiGetMaterialFloatArray(material, AI_MATKEY_SHININESS_STRENGTH, &strength,  &max2) == AI_SUCCESS)
+			if (aiGetMaterialFloat(material, AI_MATKEY_SHININESS,          &shininess) == AI_SUCCESS &&
+				aiGetMaterialFloat(material, AI_MATKEY_SHININESS_STRENGTH, &strength) == AI_SUCCESS)
 			{
 				mat.ns = shininess * strength;
 			}
 			// check for dissolve, but skip if it's 0; might also want to look at AI_MATKEY_COLOR_TRANSPARENT
-			if (aiGetMaterialFloatArray(material, AI_MATKEY_OPACITY, &alpha, &max3) == AI_SUCCESS && alpha > 0.0) {mat.alpha = alpha;}
+			if (aiGetMaterialFloat(material, AI_MATKEY_OPACITY, &alpha) == AI_SUCCESS && alpha > 0.0) {mat.alpha = alpha;}
+			// Note: can also use aiGetMaterialFloatArray(material, AI_MATKEY_OPACITY, &alpha, &num), where num is int(1)
 			// Note: The version of assimp I have installed in Ubuntu doesn't have AI_MATKEY_TRANSMISSION_FACTOR
-			aiGetMaterialFloatArray(material, AI_MATKEY_TRANSPARENCYFACTOR, &mat.tr, &max4);
-			//if (aiGetMaterialIntegerArray(mtl, AI_MATKEY_ENABLE_WIREFRAME, &wireframe, &max) == AI_SUCCESS) {}
-			//if (aiGetMaterialIntegerArray(mtl, AI_MATKEY_TWOSIDED,         &two_sided, &max) == AI_SUCCESS) {}
+			aiGetMaterialFloat(material, AI_MATKEY_TRANSPARENCYFACTOR, &mat.tr       );
+			aiGetMaterialFloat(material, AI_MATKEY_METALLIC_FACTOR,    &mat.metalness);
+			//if (aiGetMaterialInteger(mtl, AI_MATKEY_ENABLE_WIREFRAME, &wireframe) == AI_SUCCESS) {}
+			//if (aiGetMaterialInteger(mtl, AI_MATKEY_TWOSIDED,         &two_sided) == AI_SUCCESS) {}
+			// AI_MATKEY_ROUGHNESS_FACTOR?
 			// illum? tf?
 			// apply special case string match for forcing alpha to 1.0 (for hair, etc.)
 			if (!assimp_alpha_exclude_str.empty() && string(material->GetName().C_Str()).find(assimp_alpha_exclude_str) != string::npos) {mat.no_blend = 1;}
