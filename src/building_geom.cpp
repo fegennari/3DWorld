@@ -160,8 +160,29 @@ string gen_random_name(rand_gen_t &rgen); // from Universe_name.cpp
 string choose_family_name(rand_gen_t rgen) { // Note: deep copying so as not to update the state of the rgen that was passed in
 	return gen_random_name(rgen); // use a generic random name to start with
 }
+
+namespace pixel_city {
+// borrowed from Pixel City, by Shamus Young
+// https://github.com/skeeto/pixelcity/blob/master/Texture.cpp
+	static string const prefix[] = {"i", "Green ", "Mega", "Super ", "Omni", "e", "Hyper", "Global ", "Vital", "Next ", "Pacific ", "Metro", "Unity ", "G-",
+							        "Trans", "Infinity ", "Superior ", "Monolith ", "Best ", "Atlantic ", "First ", "Union ", "National "};
+
+	static string const name[] = {"Biotic", "Info", "Data", "Solar", "Aerospace", "Motors", "Nano", "Online", "Circuits", "Energy", "Med", "Robotic", "Exports", "Security",
+		                          "Systems", "Financial", "Industrial", "Media", "Materials", "Foods", "Networks", "Shipping", "Tools", "Medical", "Publishing", "Enterprises",
+		                          "Audio", "Health", "Bank", "Imports", "Apparel", "Petroleum", "Studios"};
+
+	static string const suffix[] = {"Corp", " Inc.", "Co", "World", ".Com", " USA", " Ltd.", "Net", " Tech", " Labs", " Mfg.", " UK", " Unlimited", " One", " LLC"};
+
+	string gen_company_name(rand_gen_t rgen) {
+		string const cname(name[rgen.rand() % (sizeof(name) / sizeof(string))]);
+		// randomly use a prefix OR suffix, but not both. Too verbose.
+		if (rgen.rand_bool()) {return prefix[rgen.rand() % (sizeof(prefix) / sizeof(string))] + cname;}
+		else                  {return cname + suffix[rgen.rand() % (sizeof(suffix) / sizeof(string))];}
+	}
+}
+
 string choose_business_name(rand_gen_t rgen) {
-	// TODO: choose from a random template such as "Co", "Inc", "Ltd", with random parts mized in
+	if (rgen.rand_bool()) {return pixel_city::gen_company_name(rgen);}
 	string const base(gen_random_name(rgen));
 	switch (rgen.rand()%10) {
 	case 0: return base;
@@ -202,6 +223,8 @@ void building_t::gen_geometry(int rseed1, int rseed2) {
 		return;
 	}
 	name = choose_business_name(rgen);
+//#pragma omp critical(printout)
+//	cout << name << endl; // TESTING
 
 	// determine building shape (cube, cylinder, other)
 	if (rgen.rand_probability(mat.round_prob)) {num_sides = MAX_CYLIN_SIDES;} // max number of sides for drawing rounded (cylinder) buildings
