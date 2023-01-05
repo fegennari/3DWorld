@@ -28,11 +28,13 @@ class road_name_gen_t {
 		if ((num%10) == 0) {return decade_names[num/10] + "ieth";}
 		return decade_names[num/10] + "y " + names_1_to_20[num%10];
 	}
-	static string get_dir_name(bool dim, bool dir) { // for future use, but likely requires knowing the position on the road (so that it can have S/E vs. S/W ends)
+	static string get_dir_name(bool dim, bool dir) {
 		return (dim ? (dir ? "North" : "South") : (dir ? "East" : "West"));
 	}
 	static string select_road_name(rand_gen_t &rgen) { // use either a randomly generated name or a person's first name
-		return (rgen.rand_bool() ? gen_random_name(rgen) : gen_random_first_name(rgen));
+		if (rgen.rand_bool()) {return gen_random_name(rgen);}
+		string const name(gen_random_first_name(rgen));
+		return ((name.size() < 4) ? gen_random_name(rgen) : name); // 2-3 letter names look bad on signs (too stretched)
 	}
 public:
 	string gen_name(road_t const &road, unsigned city_ix) const {
@@ -50,8 +52,16 @@ public:
 		rand_gen_t rgen;
 		rgen.set_state(road.road_ix+1, city_ix+1); // should be unique per road
 		rgen.rand_mix();
+		string prefix;
+
+		if ((rgen.rand() & 3) == 0) { // consider adding a direction 25% of the time; would make more sense if this name applies to half a road
+			bool const dim(!road.dim);
+			cube_t const city_bcube(get_city_bcube(city_ix));
+			float const t_not_dim((road.get_center_dim(dim) - city_bcube.d[dim][0])/city_bcube.get_sz_dim(dim));
+			if (t_not_dim > 0.7 || t_not_dim < 0.3) {prefix = get_dir_name(dim, (t_not_dim > 0.5)) + " ";} // use dir name if far from center
+		}
 		string const suffix[13] = {"St", "St", "St", "Ave", "Ave", "Rd", "Rd", "Rd", "Dr", "Blvd", "Ln", "Way", "Ct"}; // more common suffixes are duplicated
-		return select_road_name(rgen) + " " + suffix[rgen.rand()%13];
+		return prefix + select_road_name(rgen) + " " + suffix[rgen.rand()%13];
 	}
 };
 road_name_gen_t road_name_gen;
