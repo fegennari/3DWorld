@@ -20,6 +20,7 @@ bool enable_parked_cars();
 car_t car_from_parking_space(room_object_t const &o);
 bool get_wall_quad_window_area(vect_vnctcc_t const &wall_quad_verts, unsigned i, cube_t &c, float &tx1, float &tx2, float &tz1, float &tz2);
 void get_stove_burner_locs(room_object_t const &stove, point locs[4]);
+string gen_random_full_name(rand_gen_t &rgen);
 
 
 class light_ix_assign_t {
@@ -1301,6 +1302,10 @@ void building_t::add_door_sign(string const &text, room_t const &room, float zva
 		sign.d[i->dim][side] += side_sign*0.1*wall_thickness; // make nonzero area
 		add_hallway_sign(interior->room_geom->objs, sign, text, room_id, i->dim, side);
 	} // for i
+}
+void building_t::add_office_door_sign(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt) {
+	string const name(gen_random_full_name(rgen));
+	add_door_sign(name, room, zval, room_id, tot_light_amt); // will cache the name; maybe it shouldn't?
 }
 
 void add_door_if_blocker(cube_t const &door, cube_t const &room, bool inc_open, bool dir, bool hinge_side, vect_cube_t &blockers) {
@@ -3056,6 +3061,9 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				if (!has_stairs && (rgen.rand()&3) <= (added_tc ? 0 : 2) && !is_kitchen) { // maybe add a rug, 25% of the time if there's a table and 75% of the time otherwise
 					add_rug_to_room(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);
 				}
+			}
+			else if (has_pri_hall() && r->part_id == 0 && f == 0 && added_desk) { // office building part with primary hallway, first floor
+				add_office_door_sign(rgen, *r, room_center.z, room_id, tot_light_amt);
 			}
 			bool const room_type_was_not_set(r->get_room_type(f) == RTYPE_NOTSET);
 
