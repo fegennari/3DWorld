@@ -728,6 +728,9 @@ bool building_t::add_bedroom_objs(rand_gen_t rgen, room_t &room, vect_cube_t con
 			} // for n
 		}
 	}
+	if (!building_obj_model_loader.is_model_valid(OBJ_MODEL_CEIL_FAN)) {
+		// maybe add TYPE_CEIL_FAN
+	}
 	return 1; // success
 }
 
