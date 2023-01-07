@@ -747,6 +747,7 @@ void draw_weapon_in_hand_real(int shooter, bool draw_pass, shader_t &shader, int
 	if (wid == W_UNARMED) return;
 	float alpha(1.0);
 	float const cradius(object_types[SMILEY].radius);
+	vector3d dir(get_sstate_dir(shooter));
 	bool cull_face(0);
 
 	if (shooter == CAMERA_ID) { // camera/player
@@ -762,6 +763,13 @@ void draw_weapon_in_hand_real(int shooter, bool draw_pass, shader_t &shader, int
 				glCullFace(GL_BACK);
 			}
 		}
+		if (reflection_pass) {dir = pre_ref_cview_dir;} // use player dir, not reflection camera dir
+		else if (0) { // add weapon sway (disabled)
+			static vector3d prev_dir;
+			float const delta_dir(2.5*(1.0 - pow(0.7f, fticks)));
+			dir = delta_dir*dir + (1.0 - delta_dir)*prev_dir;
+			if (draw_pass == 1) {prev_dir = dir;} // update on second draw pass so that it's consistent across Z-prepass, transparent, and opaque passes
+		}
 	}
 	else { // smiley - out of sync by a frame?
 		assert(shooter >= 0 && shooter < num_smileys);
@@ -770,7 +778,6 @@ void draw_weapon_in_hand_real(int shooter, bool draw_pass, shader_t &shader, int
 		reflection_pass = 0; // irrelevant for smileys
 	}
 	int const cid(get_shooter_coll_id(shooter));
-	vector3d const dir((shooter == CAMERA_ID && reflection_pass) ? pre_ref_cview_dir : get_sstate_dir(shooter));
 	unsigned const delay(max(1u, weapons[wid].fire_delay));
 	float const fire_val((float)sstate.fire_frame/(float)delay);
 	point const pos((draw_pass == 0 && wid == W_BLADE) ? sstate.cb_pos : (reflection_pass ? pre_ref_camera_pos : get_sstate_draw_pos(shooter)));
