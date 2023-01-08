@@ -335,7 +335,7 @@ int get_texture_by_name(string const &name, bool is_normal_map, bool invert_y, i
 	tid = textures.size();
 	bool const do_compress(allow_compress && def_tex_compress && !is_normal_map);
 	// type format width height wrap_mir ncolors use_mipmaps name [invert_y=0 [do_compress=1 [anisotropy=1.0 [mipmap_alpha_weight=1.0 [normal_map=0]]]]]
-	texture_t new_tex(0, 7, 0, 0, wrap_mir, ncolors, use_mipmaps, name, invert_y, do_compress, ((aniso > 0.0) ? aniso : def_tex_aniso), 1.0, is_normal_map);
+	texture_t new_tex(0, IMG_FMT_AUTO, 0, 0, wrap_mir, ncolors, use_mipmaps, name, invert_y, do_compress, ((aniso > 0.0) ? aniso : def_tex_aniso), 1.0, is_normal_map);
 
 	if (textures_inited) {
 		new_tex.load(tid);
@@ -375,7 +375,7 @@ unsigned load_cube_map_texture(string const &name) {
 	unsigned tid(0), tex_size(0);
 	bool const allocate(0), use_mipmaps(0), do_compress(1);
 	setup_cube_map_texture(tid, tex_size, allocate, use_mipmaps, 1.0);
-	texture_t texture(0, 7, 0, 0, 0, 3, use_mipmaps, "skybox", 0, do_compress); // type format width height wrap_mir ncolors use_mipmaps name [invert_y=0 [do_compress=1]]
+	texture_t texture(0, IMG_FMT_AUTO, 0, 0, 0, 3, use_mipmaps, "skybox", 0, do_compress); // type format width height wrap_mir ncolors use_mipmaps name [invert_y=0 [do_compress=1]]
 
 	for (unsigned n = 0; n < 6; ++n) {
 		texture.name = names[n];

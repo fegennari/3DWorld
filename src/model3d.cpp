@@ -78,7 +78,7 @@ unsigned texture_manager::create_texture(string const &fn, bool is_alpha_mask, b
 	unsigned ncolors((is_alpha_mask || force_grayscale) ? 1 : 3);
 	// type=read_from_file format=auto width height wrap_mir ncolors use_mipmaps name [do_compress]
 	// always RGB wrapped+mipmap (normal map flag set later)
-	textures.push_back(texture_t(0, 7, 0, 0, (mirror ? 2 : (wrap ? 1 : 0)), ncolors, use_mipmaps, fn, invert_y, compress, model3d_texture_anisotropy, 1.0, is_nm));
+	textures.push_back(texture_t(0, IMG_FMT_AUTO, 0, 0, (mirror ? 2 : (wrap ? 1 : 0)), ncolors, use_mipmaps, fn, invert_y, compress, model3d_texture_anisotropy, 1.0, is_nm));
 	textures.back().invert_alpha = invert_alpha;
 	if (load_now) {ensure_texture_loaded(tid, is_nm);} // must load temp images now
 	return tid; // can't fail

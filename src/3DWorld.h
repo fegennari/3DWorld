@@ -1004,6 +1004,10 @@ public:
 
 colorRGBA const DEF_TEX_COLOR(0.0, 0.0, 0.0, 0.0); // black with alpha of 0.0
 
+// format: 0: RAW, 1: BMP, 2: RAW (upside down), 3: RAW (alpha channel), 4: targa (*tga), 5: jpeg, 6: png, 7: auto, 8: tiff, 10: DDS, 11:ppm
+enum {IMG_FMT_RAW_RGB=0, IMG_FMT_BMP, IMG_FMT_RAW_INVY, IMG_FMT_RAW_RGBA, IMG_FMT_TGA, IMG_FMT_JPG, IMG_FMT_PNG, IMG_FMT_AUTO,
+	IMG_FMT_TIFF, IMG_FMT_GEN, IMG_FMT_DDS, IMG_FMT_PPM, IMG_FMT_OTHER};
+
 
 class texture_t { // size >= 116
 

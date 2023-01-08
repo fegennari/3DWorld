@@ -95,7 +95,6 @@ string get_file_extension(string const &filename, unsigned level, bool make_lowe
 	return ext;
 }
 
-
 void texture_t::load(int index, bool allow_diff_width_height, bool allow_two_byte_grayscale, bool ignore_word_alignment) {
 
 	//timer_t timer("Load Texture " + name);
@@ -105,19 +104,18 @@ void texture_t::load(int index, bool allow_diff_width_height, bool allow_two_byt
 		memset(data, 0, num_bytes()); // zero the values to make sure we don't accidentally use it uninitialized before the texture is generated
 	}
 	else {
-		if (format == 7) { // auto
-			// format: 0: RAW, 1: BMP, 2: RAW (upside down), 3: RAW (alpha channel), 4: targa (*tga), 5: jpeg, 6: png, 7: auto, 8: tiff, 10: DDS, 11:ppm
+		if (format == IMG_FMT_AUTO) { // auto
 			string const ext(get_file_extension(name, 0, 1));
 		
 			if (0) {}
-			else if (ext == "raw") {format = ((ncolors == 4) ? 3 : 0);}
-			else if (ext == "bmp") {format = 1;}
-			else if (ext == "tga" || ext == "targa") {format = 4;}
-			else if (ext == "jpg" || ext == "jpeg" ) {format = 5;}
-			else if (ext == "png") {format = 6;}
-			else if (ext == "tif" || ext == "tiff") {format = 8;}
-			else if (ext == "dds") {format = 10;}
-			else if (ext == "ppm") {format = 11;}
+			else if (ext == "raw") {format = ((ncolors == 4) ? IMG_FMT_RAW_RGBA : IMG_FMT_RAW_RGB);}
+			else if (ext == "bmp") {format = IMG_FMT_BMP;}
+			else if (ext == "tga" || ext == "targa") {format = IMG_FMT_TGA;}
+			else if (ext == "jpg" || ext == "jpeg" ) {format = IMG_FMT_JPG;}
+			else if (ext == "png") {format = IMG_FMT_PNG;}
+			else if (ext == "tif" || ext == "tiff") {format = IMG_FMT_TIFF;}
+			else if (ext == "dds") {format = IMG_FMT_DDS;}
+			else if (ext == "ppm") {format = IMG_FMT_PPM;}
 			else if (ext == "hdr") {
 				cerr << "Error: HDR texture format is not yet supported: " << name << endl;
 				exit(1);
@@ -131,20 +129,23 @@ void texture_t::load(int index, bool allow_diff_width_height, bool allow_two_byt
 		//highres_timer_t timer("Load " + get_file_extension(name, 0, 1)); // 0.1s bmp, 6.3s jpeg, 4.4s png, 0.3s tga, 0.2s tiff
 
 		// attempt to load image with STB if it's enabled; applies to BMP, TGA, JPEG, and PNG; 2-byte grayscale images are not supported
-		if (USE_STB_IMAGE_LOAD && (format == 1 || format == 4 || format == 5 || format == 6) && !allow_two_byte_grayscale && load_stb_image(index, allow_diff_width_height)) {
+		if (USE_STB_IMAGE_LOAD && (format == IMG_FMT_BMP || format == IMG_FMT_TGA || format == IMG_FMT_JPG || format == IMG_FMT_PNG || format == IMG_FMT_OTHER) &&
+			!allow_two_byte_grayscale && load_stb_image(index, allow_diff_width_height))
+		{
 			// loaded with stb_image
 		}
 		else {
 			switch (format) {
-			case 0: case 1: case 2: case 3: load_raw_bmp(index, allow_diff_width_height, allow_two_byte_grayscale); break; // raw or BMP
-			case 4: load_targa(index, allow_diff_width_height); break;
-			case 5: load_jpeg (index, allow_diff_width_height); break;
-			case 6: load_png  (index, allow_diff_width_height, allow_two_byte_grayscale); break;
-			case 8: load_tiff (index, allow_diff_width_height, allow_two_byte_grayscale); break;
-			case 10: load_dds (index); break;
-			case 11: load_ppm (index, allow_diff_width_height); break;
+			case IMG_FMT_RAW_RGB: case IMG_FMT_BMP: case IMG_FMT_RAW_INVY: case IMG_FMT_RAW_RGBA: load_raw_bmp(index, allow_diff_width_height, allow_two_byte_grayscale); break; // raw or BMP
+			case IMG_FMT_TGA: load_targa(index, allow_diff_width_height); break;
+			case IMG_FMT_JPG: load_jpeg (index, allow_diff_width_height); break;
+			case IMG_FMT_PNG: load_png  (index, allow_diff_width_height, allow_two_byte_grayscale); break;
+			case IMG_FMT_TIFF: load_tiff (index, allow_diff_width_height, allow_two_byte_grayscale); break;
+			case IMG_FMT_DDS: load_dds (index); break;
+			case IMG_FMT_PPM: load_ppm (index, allow_diff_width_height); break;
+			case IMG_FMT_OTHER: break; // already loaded by stb_image
 			default:
-				cerr << "Unsupported image format: " << format << endl;
+				cerr << "Unsupported image format: " << int(format) << endl;
 				exit(1);
 			}
 		}
@@ -152,7 +153,7 @@ void texture_t::load(int index, bool allow_diff_width_height, bool allow_two_byt
 		// defer this check until we actually need to access the data, in case we want to actually do the load on the fly later
 		//assert(is_allocated());
 		assert(is_loaded());
-		if (invert_y && format != 10) {do_invert_y();} // upside down (not DDS)
+		if (invert_y && format != IMG_FMT_DDS) {do_invert_y();} // upside down (not DDS)
 		if (want_alpha_channel && ncolors < 4) {add_alpha_channel();}
 		else if (want_luminance && ncolors == 3) {try_compact_to_lum();}
 		//if (want_alpha_channel) {fill_transparent_with_avg_color();}
