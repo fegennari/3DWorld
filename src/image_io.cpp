@@ -120,9 +120,15 @@ void texture_t::load(int index, bool allow_diff_width_height, bool allow_two_byt
 				cerr << "Error: HDR texture format is not yet supported: " << name << endl;
 				exit(1);
 			}
-			else {
-				cerr << "Error: Unidentified image file format for autodetect: " << ext << " in filename " << name << endl;
-				exit(1);
+			else { // unsupported native image format
+#ifdef ENABLE_STB_IMAGE // try loading with stb_image; should work for GIF, etc.
+				if (load_stb_image(index, allow_diff_width_height)) {format = IMG_FMT_OTHER;}
+				else
+#endif
+				{
+					cerr << "Error: Unidentified image file format for autodetect: " << ext << " in filename " << name << endl;
+					exit(1);
+				}
 			}
 		}
 		unsigned const want_alpha_channel(ncolors == 4), want_luminance(ncolors == 1);
