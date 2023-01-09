@@ -732,9 +732,9 @@ bool building_t::add_bedroom_objs(rand_gen_t rgen, room_t &room, vect_cube_t con
 	if (building_obj_model_loader.is_model_valid(OBJ_MODEL_CEIL_FAN)) { // maybe add ceiling fan
 		vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_CEIL_FAN)); // D, W, H
 		float const diameter(min(0.5*min(room.dx(), room.dy()), 0.6*window_vspacing)), height(diameter*sz.z/sz.y); // assumes width = depth = diameter
-		point const top_center(room.xc(), room.yc(), (zval + floor_thickness)); // on the ceiling
+		point const top_center(room.xc(), room.yc(), (zval + window_vspacing - floor_thickness)); // on the ceiling
 		cube_t fan(top_center, top_center);
-		fan.expand_by_xy(diameter);
+		fan.expand_by_xy(0.5*diameter);
 		fan.z1() -= height;
 		objs.emplace_back(fan, TYPE_CEIL_FAN, room_id, 0, 0, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CYLIN, WHITE);
 	}
