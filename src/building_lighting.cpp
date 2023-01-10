@@ -1469,7 +1469,8 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		cube_t const clipped_bc_rot(is_rotated() ? get_rotated_bcube(clipped_bc) : clipped_bc);
 		setup_light_for_building_interior(dl_sources.back(), *i, clipped_bc_rot, force_smap_update, shadow_caster_hash);
 		
-		if (camera_near_building && (is_lamp || lpos_rot.z > camera_bs.z)) { // only when the player is near/inside a building (optimization)
+		// add upward pointing light; only when the player is near/inside a building (optimization); not for lights hanging on ceiling fans
+		if (camera_near_building && (is_lamp || lpos_rot.z > camera_bs.z) && !i->is_hanging()) {
 			cube_t light_bc2(clipped_bc);
 
 			if (is_in_elevator) {

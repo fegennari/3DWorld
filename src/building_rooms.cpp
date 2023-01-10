@@ -729,14 +729,21 @@ bool building_t::add_bedroom_objs(rand_gen_t rgen, room_t &room, vect_cube_t con
 			} // for n
 		}
 	}
-	if (building_obj_model_loader.is_model_valid(OBJ_MODEL_CEIL_FAN)) { // maybe add ceiling fan
-		vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_CEIL_FAN)); // D, W, H
-		float const diameter(min(0.5*min(room.dx(), room.dy()), 0.6*window_vspacing)), height(diameter*sz.z/sz.y); // assumes width = depth = diameter
-		point const top_center(room.xc(), room.yc(), (zval + window_vspacing - floor_thickness)); // on the ceiling
-		cube_t fan(top_center, top_center);
-		fan.expand_by_xy(0.5*diameter);
-		fan.z1() -= height;
-		objs.emplace_back(fan, TYPE_CEIL_FAN, room_id, 0, 0, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CYLIN, WHITE);
+	if (building_obj_model_loader.is_model_valid(OBJ_MODEL_CEIL_FAN) && rgen.rand_float() < 0.25) { // maybe add ceiling fan
+		// find the ceiling light, which should be the last object placed, and center the fan on it
+		if (objs_start > 0 && objs[objs_start-1].type == TYPE_LIGHT) {
+			vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_CEIL_FAN)); // D, W, H
+			float const diameter(min(0.4*min(room.dx(), room.dy()), 0.5*window_vspacing)), height(diameter*sz.z/sz.y); // assumes width = depth = diameter
+			room_object_t &light(objs[objs_start-1]);
+			point const top_center(light.xc(), light.yc(), (zval + window_vspacing - floor_thickness)); // on the ceiling
+			light.translate_dim(2, -height); // move to the bottom of the ceiling fan (before invalidating with objs.emplace_back())
+			light.flags |= RO_FLAG_INVIS;    // don't draw the light itself; assume the light is part of the bottom of the fan instead
+			light.flags |= RO_FLAG_HANGING;  // don't draw upward facing light
+			cube_t fan(top_center, top_center);
+			fan.expand_by_xy(0.5*diameter);
+			fan.z1() -= height;
+			objs.emplace_back(fan, TYPE_CEIL_FAN, room_id, 0, 0, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CYLIN, WHITE);
+		}
 	}
 	return 1; // success
 }
