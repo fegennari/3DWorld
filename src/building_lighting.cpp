@@ -264,7 +264,8 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc, int only_this_fl
 			c->type == TYPE_SWITCH || c->type == TYPE_TAPE || c->type == TYPE_OUTLET || c->type == TYPE_PARK_SPACE || c->type == TYPE_RAMP || c->type == TYPE_PIPE ||
 			c->type == TYPE_VENT || c->type == TYPE_BREAKER || c->type == TYPE_KEY || c->type == TYPE_HANGER || c->type == TYPE_FESCAPE || c->type == TYPE_CUP ||
 			c->type == TYPE_CLOTHES || c->type == TYPE_LAMP || c->type == TYPE_OFF_CHAIR || c->type == TYPE_LIGHT || c->type == TYPE_SIGN || c->type == TYPE_PAPER ||
-			c->type == TYPE_PLANT || c->type == TYPE_WALL_LAMP) continue;
+			c->type == TYPE_PLANT || c->type == TYPE_WALL_LAMP || c->type == TYPE_HOOD || c->type == TYPE_RCHAIR || c->type == TYPE_SILVERWARE ||
+			c->type == TYPE_TOY_MODEL || c->type == TYPE_CEIL_FAN) continue;
 		bool const is_stairs(c->type == TYPE_STAIR || c->type == TYPE_STAIR_WALL);
 		if (c->z1() > (is_stairs ? stairs_z2 : z2) || c->z2() < (is_stairs ? stairs_z1 : z1)) continue;
 		colorRGBA const color(c->get_color());
