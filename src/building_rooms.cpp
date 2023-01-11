@@ -3950,6 +3950,11 @@ void building_t::add_doorbell_and_lamp(tquad_with_ix_t const &door, rand_gen_t &
 	}
 }
 
+colorRGBA choose_sign_color(rand_gen_t &rgen) {
+	colorRGBA const sign_colors[8] = {DK_RED, DK_BLUE, DK_BLUE, DK_BROWN, DK_GRAY, BLACK, BLACK, BLACK};
+	return sign_colors[rgen.rand() % 8];
+}
+
 void building_t::add_exterior_door_items(rand_gen_t &rgen) {
 	// Note: these are interior items drawn on the exterior and expect interior lights, so they won't get sunlight;
 	// but we want to generate these dynamically rather than statically because each sign text character is a separate quad
@@ -3957,14 +3962,18 @@ void building_t::add_exterior_door_items(rand_gen_t &rgen) {
 		assert(!doors.empty());
 		tquad_with_ix_t const &front_door(doors.front());
 		add_doorbell_and_lamp(front_door, rgen);
-		if (rgen.rand() & 3) return; // only 25% of houses have a welcome sign
-		add_sign_by_door(front_door, 1, "Welcome", DK_BROWN, 0); // front door only, outside
+		
+		if ((rgen.rand() & 3) == 0) { // add a welcome sign to 25% of houses
+			add_sign_by_door(front_door, 1, "Welcome", choose_sign_color(rgen), 0); // front door only, outside
+		}
+		else if (!name.empty() && name.back() != 's' && (rgen.rand() & 3) == 0) { // add a name sign to 25% of remaining houses
+			add_sign_by_door(front_door, 1, ("The " + name + "s"), choose_sign_color(rgen), 0); // front door only, outside
+		}
 	}
 	else { // office building; add signs
 		if (!name.empty()) {
 			// Note: these will only appear when the player is very close to city office buildings, and about to walk through a door
-			colorRGBA const sign_colors[8] = {DK_RED, DK_BLUE, DK_BLUE, DK_BROWN, DK_GRAY, BLACK, BLACK, BLACK};
-			colorRGBA const &sign_color(sign_colors[rgen.rand() % 8]);
+			colorRGBA const &sign_color(choose_sign_color(rgen));
 
 			for (auto d = doors.begin(); d != doors.end(); ++d) {
 				if (has_courtyard && (d+1) == doors.end()) break; // courtyard door is not an exit
