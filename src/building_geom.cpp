@@ -183,18 +183,25 @@ namespace pixel_city {
 
 string choose_business_name(rand_gen_t rgen) {
 	if (rgen.rand_bool()) {return pixel_city::gen_company_name(rgen);}
+	int const v(rgen.rand()%10);
+
+	if (v == 0) { // 3 letter acronym
+		string name;
+		for (unsigned n = 0; n < 3; ++n) {name.push_back('A' + rand()%26);}
+		return name;
+	}
 	string const base(gen_random_name(rgen));
-	switch (rgen.rand()%10) {
-	case 0: return base;
-	case 1: return base + (rgen.rand_bool() ? " Co" : " Company");
-	case 2: return base + " Inc";
-	case 3: return base + (rgen.rand_bool() ? " Ltd" : " Corp");
-	case 4: return base + " & " + gen_random_name(rgen);
-	case 5: return base + ", " + gen_random_name(rgen) + ", & " + gen_random_name(rgen);
-	case 6: return (rgen.rand_bool() ? (rgen.rand_bool() ? "National " : "Global ") : (rgen.rand_bool() ? "United " : "American ")) + base;
-	case 7: return "" + base[0] + gen_random_name(rgen)[0] + gen_random_name(rgen)[0]; // 3 letter acronym
+	switch (v) {
+	case 1: return base;
+	case 2: return base + (rgen.rand_bool() ? " Co" : " Company");
+	case 3: return base + " Inc";
+	case 4: return base + (rgen.rand_bool() ? " Ltd" : " Corp");
+	case 5: return base + " & " + gen_random_name(rgen);
+	case 6: return base + ", " + gen_random_name(rgen) + ", & " + gen_random_name(rgen);
+	case 7: return (rgen.rand_bool() ? (rgen.rand_bool() ? "National " : "Global ") : (rgen.rand_bool() ? "United " : "American ")) + base;
 	case 8: return base + (rgen.rand_bool() ? (rgen.rand_bool() ? " Bank" : " Trust") : (rgen.rand_bool() ? " Holdings" : " Industries"));
 	case 9: return base + " " + gen_random_name(rgen);
+	default: assert(0);
 	}
 	return ""; // never gets here
 }
