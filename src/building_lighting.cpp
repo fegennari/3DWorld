@@ -264,7 +264,7 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc, int only_this_fl
 			c->type == TYPE_SWITCH || c->type == TYPE_TAPE || c->type == TYPE_OUTLET || c->type == TYPE_PARK_SPACE || c->type == TYPE_RAMP || c->type == TYPE_PIPE ||
 			c->type == TYPE_VENT || c->type == TYPE_BREAKER || c->type == TYPE_KEY || c->type == TYPE_HANGER || c->type == TYPE_FESCAPE || c->type == TYPE_CUP ||
 			c->type == TYPE_CLOTHES || c->type == TYPE_LAMP || c->type == TYPE_OFF_CHAIR || c->type == TYPE_LIGHT || c->type == TYPE_SIGN || c->type == TYPE_PAPER ||
-			c->type == TYPE_PLANT || c->type == TYPE_WALL_LAMP || c->type == TYPE_HOOD || c->type == TYPE_RCHAIR || c->type == TYPE_SILVERWARE ||
+			c->type == TYPE_PLANT || c->type == TYPE_WALL_LAMP || c->type == TYPE_RCHAIR || c->type == TYPE_SILVERWARE ||
 			c->type == TYPE_TOY_MODEL || c->type == TYPE_CEIL_FAN) continue;
 		bool const is_stairs(c->type == TYPE_STAIR || c->type == TYPE_STAIR_WALL);
 		if (c->z1() > (is_stairs ? stairs_z2 : z2) || c->z2() < (is_stairs ? stairs_z1 : z1)) continue;
@@ -349,13 +349,14 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc, int only_this_fl
 		}
 		else { // single cube
 			cube_t bc(*c); // handle 3D models that don't fill the entire cube
+			bool const dim(c->dim), dir(c->dir);
 
 			if (c->type == TYPE_COUCH) {
 				bc.z2() -= 0.5*bc.dz(); // bottom
 				cube_t top(*c);
 				top.z1() = bc.z2();
-				top.d[c->dim][c->dir] += (c->dir ? -1.0 : 1.0)*0.6*bc.get_sz_dim(c->dim); // reduce thickness
-				top.expand_in_dim(!c->dim, -0.1*c->get_sz_dim(!c->dim));
+				top.d[dim][dir] += (dir ? -1.0 : 1.0)*0.6*bc.get_sz_dim(dim); // reduce thickness
+				top.expand_in_dim(!dim, -0.1*c->get_sz_dim(!dim));
 				cc.emplace_back(top, color);
 			}
 			else if (c->type == TYPE_TUB) {
@@ -363,16 +364,21 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc, int only_this_fl
 				cube_t top(*c);
 				top.z1() = bc.z2();
 				cube_t inside(top);
-				inside.expand_by_xy(-0.1*c->get_sz_dim(c->dim)); // shrink
+				inside.expand_by_xy(-0.1*c->get_sz_dim(dim)); // shrink
 				temp.clear();
 				subtract_cube_from_cube(top, inside, temp);
 				assert(temp.size() == 4); // -y, +y, -x, +x
 				add_colored_cubes(temp, color, z1, z2, cc);
 			}
+			else if (c->type == TYPE_HOOD) {
+				bc.expand_in_dim(!dim, 0.25*c->get_sz_dim(!dim)); // shrink width
+				bc.d[dim][dir] -= (dir ? 1.0 : -1.0)*0.25*c->get_sz_dim(dim); // shift front in
+				bc.z2() += 0.25*bc.dz(); // shift bottom up
+			}
 			else if (c->type == TYPE_STOVE ) {bc.z2() -= 0.20*bc.dz();}
 			else if (c->type == TYPE_TOILET) {bc.z2() -= 0.33*bc.dz();}
 			else if (c->type == TYPE_SINK  ) {bc.z2() -= 0.20*bc.dz(); bc.z1() += 0.65*bc.dz();}
-			else if (c->type == TYPE_MONITOR || c->type == TYPE_TV) {bc.expand_in_dim(c->dim, -0.3*bc.get_sz_dim(c->dim));} // reduce thickness
+			else if (c->type == TYPE_MONITOR || c->type == TYPE_TV) {bc.expand_in_dim(dim, -0.3*bc.get_sz_dim(dim));} // reduce thickness
 			else if (c->type == TYPE_BRSINK) {bc.z1() += 0.60*bc.dz();}
 			else if (c->type == TYPE_ATTIC_DOOR) {bc = get_attic_access_door_cube(*c, 0);} // inc_ladder=0: includes door but not ladder
 			cc.emplace_back(bc, color);
