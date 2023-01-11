@@ -1678,12 +1678,13 @@ void merge_cubes_xy(vect_cube_t &cubes) {
 	} // for i
 }
 
-void building_t::gen_details(rand_gen_t &rgen, bool is_rectangle) { // for the roof
+void building_t::gen_details(rand_gen_t &rgen, bool is_rectangle) { // for the roof; office buildings, not houses
 
 	bool const flat_roof(roof_type == ROOF_TYPE_FLAT), add_walls(is_simple_cube() && flat_roof); // simple cube buildings with flat roofs
 	unsigned const num_ac_units((flat_roof && is_cube()) ? (rgen.rand() % 7) : 0); // cube buildings only for now
 	float const window_vspacing(get_window_vspace()), wall_width(0.049*window_vspacing); // slightly narrower than interior wall width to avoid z-fighting with roof access
 	assert(!parts.empty());
+	add_company_sign(rgen);
 
 	if (!is_rectangle) { // polygon roof, can only add AC units
 		if (add_walls && rgen.rand_bool()) { // 50% of the time
@@ -1823,6 +1824,11 @@ void building_t::gen_details(rand_gen_t &rgen, bool is_rectangle) { // for the r
 	}
 	for (auto i = details.begin(); i != details.end(); ++i) {assert(i->is_strictly_normalized()); max_eq(bcube.z2(), i->z2());} // extend bcube z2 to contain details
 	if (roof_type == ROOF_TYPE_FLAT) {gen_grayscale_detail_color(rgen, 0.2, 0.6);} // for antenna and roof
+}
+
+void building_t::add_company_sign(rand_gen_t &rgen) {
+	if (is_house) return; // shouldn't be called?
+	// TODO: add details object of type ROOF_OBJ_SIGN
 }
 
 cube_t building_t::get_helipad_bcube() const {

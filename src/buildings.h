@@ -1145,7 +1145,7 @@ struct door_t : public door_base_t {
 typedef vector<door_stack_t> vect_door_stack_t;
 typedef vector<door_t> vect_door_t;
 
-enum {ROOF_OBJ_BLOCK=0, ROOF_OBJ_ANT, ROOF_OBJ_WALL, ROOF_OBJ_ECAP, ROOF_OBJ_AC, ROOF_OBJ_SCAP};
+enum {ROOF_OBJ_BLOCK=0, ROOF_OBJ_ANT, ROOF_OBJ_WALL, ROOF_OBJ_ECAP, ROOF_OBJ_AC, ROOF_OBJ_SCAP, ROOF_OBJ_SIGN};
 enum {ROOF_TYPE_FLAT=0, ROOF_TYPE_SLOPE, ROOF_TYPE_PEAK, ROOF_TYPE_HIPPED, ROOF_TYPE_DOME, ROOF_TYPE_ONION};
 
 struct roof_obj_t : public cube_t {
@@ -1361,6 +1361,7 @@ struct building_t : public building_geom_t {
 	void place_roof_ac_units(unsigned num, float sz_scale, cube_t const &bounds, vect_cube_t const &avoid, bool avoid_center, rand_gen_t &rgen);
 	void add_roof_walls(cube_t const &c, float wall_width, bool overlap_corners, cube_t out[4]);
 	void gen_details(rand_gen_t &rgen, bool is_rectangle);
+	void add_company_sign(rand_gen_t &rgen);
 	cube_t get_helipad_bcube() const;
 	int get_num_windows_on_side(float xy1, float xy2) const;
 	float get_window_h_border() const;
