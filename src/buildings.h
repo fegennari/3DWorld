@@ -430,7 +430,7 @@ struct building_geom_t { // describes the physical shape of a building
 };
 
 struct tquad_with_ix_t : public tquad_t {
-	// roof, roof access cover, wall, chimney cap, house door, building front door, building back door, garage door, interior door back face, office door, roof door
+	// roof {office, peak, hip}, roof access cover, wall, house door, building front door, building back door, garage door, interior doors back face, office doors, roof doors
 	enum {TYPE_ROOF_OFFICE=0, TYPE_ROOF_PEAK, TYPE_ROOF_HIP, TYPE_ROOF_ACC, TYPE_WALL, TYPE_HDOOR, TYPE_BDOOR, TYPE_BDOOR2, TYPE_GDOOR,
 		TYPE_IDOOR, TYPE_IDOOR2, TYPE_ODOOR, TYPE_ODOOR2, TYPE_RDOOR, TYPE_RDOOR2, TYPE_HELIPAD, TYPE_SOLAR, TYPE_TRIM};
 	bool is_roof         () const {return (type == TYPE_ROOF_OFFICE || type == TYPE_ROOF_PEAK || type == TYPE_ROOF_HIP);}
