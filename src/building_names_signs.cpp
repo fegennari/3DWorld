@@ -3,6 +3,7 @@
 
 #include "function_registry.h"
 #include "buildings.h"
+#include "city_objects.h" // for sign_t
 
 using std::string;
 
@@ -62,6 +63,7 @@ string choose_business_name(rand_gen_t rgen) {
 // signs
 
 void gen_text_verts(vector<vert_tc_t> &verts, point const &pos, string const &text, float tsize, vector3d const &column_dir, vector3d const &line_dir, bool use_quads=0);
+void add_city_building_signs(cube_t const &city_bcube, vector<sign_t> &signs);
 
 class sign_helper_t {
 	map<string, unsigned> txt_to_id;
@@ -83,6 +85,11 @@ public:
 };
 
 sign_helper_t sign_helper;
+
+colorRGBA choose_sign_color(rand_gen_t &rgen) {
+	colorRGBA const sign_colors[8] = {DK_RED, DK_BLUE, DK_BLUE, DK_BROWN, DK_GRAY, BLACK, BLACK, BLACK};
+	return sign_colors[rgen.rand() % 8];
+}
 
 unsigned register_sign_text(string const &text) {return sign_helper.register_text(text);}
 
@@ -119,6 +126,30 @@ template void add_sign_text_verts(string const &text, cube_t const &sign, bool d
 
 void add_room_obj_sign_text_verts(room_object_t const &c, colorRGBA const &color, vector<vert_norm_comp_tc_color> &verts_out) {
 	add_sign_text_verts(sign_helper.get_text(c.obj_id), c, c.dim, c.dir, color, verts_out);
+}
+
+// Note: this is messy because city bcube comes from city_gen.cpp, but city buildings come from gen_buildings.cpp, neither of which has the struct definition of sign_t;
+// so we need several layers of function wrappers to gather together all the pieces of data needed to add signs in this file, which includes the various required headers
+void add_signs_for_city(unsigned city_id, vector<sign_t> &signs) {
+	add_city_building_signs(get_city_bcube(city_id), signs);
+}
+
+void building_t::add_signs(vector<sign_t> &signs) const {
+	// house welcome and other door signs are currently part of the interior - should they be? I guess at least for secondary buildings, which aren't in a city
+	if (is_house) return; // no sign, for now
+	if (name.empty()) return; // no company name; shouldn't get here
+	rand_gen_t rgen;
+	rgen.set_state(mat_ix+1, name[0]+1);
+	bool const dim(rgen.rand_bool()), dir(rgen.rand_bool()); // TODO: face front
+	float const width(bcube.get_sz_dim(!dim)), sign_hwidth(0.25*width), sign_height(0.5*sign_hwidth), sign_depth(0.01*sign_height);
+	cube_t sign;
+	sign.z1() = bcube.z2(); // FIXME: top of uppermost roof
+	sign.z2() = sign.z1() + sign_height;
+	set_wall_width(sign, bcube.get_center_dim(!dim), sign_hwidth, !dim);
+	sign.d[dim][ dir] = bcube.d[dim][dir];
+	sign.d[dim][!dir] = sign.d[dim][dir] + (dir ? -1.0 : 1.0)*sign_depth;
+	bool const emissive = 0;
+	signs.emplace_back(sign, dim, dir, name, WHITE, choose_sign_color(rgen), emissive);
 }
 
 

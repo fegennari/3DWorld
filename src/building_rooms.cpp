@@ -21,6 +21,7 @@ car_t car_from_parking_space(room_object_t const &o);
 bool get_wall_quad_window_area(vect_vnctcc_t const &wall_quad_verts, unsigned i, cube_t &c, float &tx1, float &tx2, float &tz1, float &tz2);
 void get_stove_burner_locs(room_object_t const &stove, point locs[4]);
 string gen_random_full_name(rand_gen_t &rgen);
+colorRGBA choose_sign_color(rand_gen_t &rgen);
 
 
 class light_ix_assign_t {
@@ -3948,11 +3949,6 @@ void building_t::add_doorbell_and_lamp(tquad_with_ix_t const &door, rand_gen_t &
 		objs.emplace_back(lamp, TYPE_WALL_LAMP, 0, dim, dir, flags, 1.0); // room_id is not valid
 		if (objs.back().is_lit()) {ext_lights.emplace_back(lamp.get_cube_center(), 20.0*width, WALL_LAMP_COLOR);}
 	}
-}
-
-colorRGBA choose_sign_color(rand_gen_t &rgen) {
-	colorRGBA const sign_colors[8] = {DK_RED, DK_BLUE, DK_BLUE, DK_BROWN, DK_GRAY, BLACK, BLACK, BLACK};
-	return sign_colors[rgen.rand() % 8];
 }
 
 void building_t::add_exterior_door_items(rand_gen_t &rgen) {

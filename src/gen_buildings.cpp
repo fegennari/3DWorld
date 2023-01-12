@@ -2467,6 +2467,14 @@ public:
 			if (b->has_helipad) {helipads.push_back(b->get_helipad_bcube());}
 		}
 	}
+	void add_building_signs(cube_t const &region_bcube, vector<sign_t> &signs) const {
+		// Note: region_bcube is currently only used to select the buildings within a city, and there are a small number of cities,
+		// so it should be okay to iterate rather than using a grid query
+		for (building_t const &b : buildings) {
+			if (!region_bcube.intersects_xy(b.bcube)) continue; // wrong region/city
+			b.add_signs(signs);
+		}
+	}
 	void update_ai_state(float delta_dir) { // called once per frame
 		if (!global_building_params.building_people_enabled()) return;
 		point const camera_bs(get_camera_building_space());
@@ -3907,6 +3915,7 @@ bool have_secondary_buildings() {return (global_building_params.add_secondary_bu
 bool have_buildings() {return (!building_creator.empty() || !building_creator_city.empty() || !building_tiles.empty());} // for postproc effects
 bool no_grass_under_buildings() {return (world_mode == WMODE_INF_TERRAIN && !(building_creator.empty() && building_tiles.empty()) && global_building_params.flatten_mesh);}
 unsigned get_buildings_gpu_mem_usage() {return (building_creator.get_gpu_mem_usage() + building_creator_city.get_gpu_mem_usage() + building_tiles.get_gpu_mem_usage());}
+void add_city_building_signs(cube_t const &city_bcube, vector<sign_t> &signs) {building_creator_city.add_building_signs(city_bcube, signs);}
 
 vector3d get_buildings_max_extent() { // used for TT shadow bounds + map mode
 	return building_creator.get_max_extent().max(building_creator_city.get_max_extent()).max(building_tiles.get_max_extent());

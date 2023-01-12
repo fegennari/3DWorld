@@ -15,6 +15,7 @@ extern object_model_loader_t building_obj_model_loader;
 unsigned const q2t_ixs[6] = {0,2,1,0,3,2}; // quad => 2 tris
 
 bool check_city_building_line_coll_bs_any(point const &p1, point const &p2);
+void add_signs_for_city(unsigned city_id, vector<sign_t> &signs);
 
 float get_power_pole_offset() {return 0.045*city_params.road_width;}
 
@@ -1828,6 +1829,7 @@ void city_obj_placer_t::gen_parking_and_place_objects(vector<road_plot_t> &plots
 	} // for i
 	connect_power_to_buildings(plots);
 	if (have_cars) {add_cars_to_driveways(cars, plots, plot_colliders, city_id, rgen);}
+	add_signs_for_city(city_id, signs);
 	for (auto i = plot_colliders.begin(); i != plot_colliders.end(); ++i) {sort(i->begin(), i->end(), cube_by_x1());}
 	bench_groups   .create_groups(benches,   all_objs_bcube);
 	planter_groups .create_groups(planters,  all_objs_bcube);
