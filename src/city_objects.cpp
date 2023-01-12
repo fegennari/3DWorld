@@ -1025,6 +1025,30 @@ void mailbox_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_draw
 	building_obj_model_loader.draw_model(dstate.s, pos, bcube, orient, WHITE, dstate.xlate, OBJ_MODEL_MAILBOX, shadow_only);
 }
 
+// signs (for buildings)
+
+template<typename T> void add_sign_text_verts(string const &text, cube_t const &sign, bool dim, bool dir, colorRGBA const &color, vector<T> &verts_out);
+
+sign_t::sign_t(cube_t const &bcube_, bool dim_, bool dir_, string const &text_, colorRGBA const &bc, colorRGBA const &tc, bool emissive_) :
+	oriented_city_obj_t(dim_, dir_), emissive(emissive_), bkg_color(bc), text_color(tc)
+{
+	bcube  = bcube_;
+	pos    = bcube.get_cube_center();
+	radius = bcube.get_bsphere_radius();
+}
+/*static*/ void sign_t::pre_draw(draw_state_t &dstate, bool shadow_only) {
+	if (!shadow_only) {select_texture(FONT_TEXTURE_ID);}
+}
+///*static*/ void sign_t::post_draw(draw_state_t &dstate, bool shadow_only) {}
+
+void sign_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_draw untex_qbd[2], float dist_scale, bool shadow_only) const {
+	dstate.draw_cube(untex_qbd[0], bcube, bkg_color); // untextured, matte back
+	// text; if emissive, we must flush the quad verts before changing the emissive color through a uniform
+	if (emissive) {qbd.draw_and_clear_quads(); dstate.s.set_color_e(text_color);}
+	add_sign_text_verts(text, bcube, dim, dir, text_color, qbd.verts);
+	if (emissive) {qbd.draw_and_clear_quads(); dstate.s.clear_color_e();}
+}
+
 
 bool city_obj_placer_t::gen_parking_lots_for_plot(cube_t plot, vector<car_t> &cars, unsigned city_id, unsigned plot_ix,
 	vect_cube_t &bcubes, vect_cube_t &colliders, rand_gen_t &rgen)
@@ -1710,7 +1734,7 @@ void city_obj_placer_t::add_house_driveways(road_plot_t const &plot, vect_cube_t
 }
 
 template<typename T> void city_obj_placer_t::draw_objects(vector<T> const &objs, city_obj_groups_t const &groups,
-	draw_state_t &dstate, float dist_scale, bool shadow_only, bool has_immediate_draw)
+	draw_state_t &dstate, float dist_scale, bool shadow_only, bool has_immediate_draw, bool draw_qbd_as_quads)
 {
 	if (objs.empty()) return;
 	T::pre_draw(dstate, shadow_only);
@@ -1728,7 +1752,7 @@ template<typename T> void city_obj_placer_t::draw_objects(vector<T> const &objs,
 		}
 		if (!qbd.empty() || has_untex_verts() || !dstate.hedge_draw.empty()) { // we have something to draw
 			if (!has_immediate_draw) {dstate.begin_tile(g->get_cube_center(), 1, 1);} // will_emit_now=1, ensure_active=1
-			qbd.draw_and_clear(); // draw this group with current smap
+			if (draw_qbd_as_quads) {qbd.draw_and_clear_quads();} else {qbd.draw_and_clear();} // draw this group with current smap
 			bool must_restore_state(!dstate.hedge_draw.empty());
 			dstate.hedge_draw.draw_and_clear(dstate.s);
 
@@ -1752,9 +1776,9 @@ template<typename T> void city_obj_placer_t::draw_objects(vector<T> const &objs,
 
 void city_obj_placer_t::clear() {
 	parking_lots.clear(); benches.clear(); planters.clear(); trashcans.clear(); fhydrants.clear(); sstations.clear();
-	driveways.clear(); dividers.clear(); pools.clear(); ppoles.clear(); hcaps.clear(); manholes.clear(); mboxes.clear();
+	driveways.clear(); dividers.clear(); pools.clear(); ppoles.clear(); hcaps.clear(); manholes.clear(); mboxes.clear(); signs.clear();
 	bench_groups.clear(); planter_groups.clear(); trashcan_groups.clear(); fhydrant_groups.clear(); sstation_groups.clear();
-	divider_groups.clear(); pool_groups.clear(); ppole_groups.clear(); hcap_groups.clear(); manhole_groups.clear(); mbox_groups.clear();
+	divider_groups.clear(); pool_groups.clear(); ppole_groups.clear(); hcap_groups.clear(); manhole_groups.clear(); mbox_groups.clear(); sign_groups.clear();
 	all_objs_bcube.set_to_zeros();
 	num_spaces = filled_spaces = 0;
 }
@@ -1816,10 +1840,11 @@ void city_obj_placer_t::gen_parking_and_place_objects(vector<road_plot_t> &plots
 	hcap_groups    .create_groups(hcaps,     all_objs_bcube);
 	manhole_groups .create_groups(manholes,  all_objs_bcube);
 	mbox_groups    .create_groups(mboxes,    all_objs_bcube);
+	sign_groups    .create_groups(signs,     all_objs_bcube);
 
 	if (0) { // debug info printing
 		cout << TXT(benches.size()) << TXT(planters.size()) << TXT(trashcans.size()) << TXT(fhydrants.size()) << TXT(sstations.size()) << TXT(dividers.size())
-			 << TXT(pools.size()) << TXT(ppoles.size()) << TXT(hcaps.size()) << TXT(manholes.size()) << TXT(mboxes.size()) << endl;
+			 << TXT(pools.size()) << TXT(ppoles.size()) << TXT(hcaps.size()) << TXT(manholes.size()) << TXT(mboxes.size()) << TXT(signs.size()) << endl;
 	}
 	if (add_parking_lots) {
 		cout << "parking lots: " << parking_lots.size() << ", spaces: " << num_spaces << ", filled: " << filled_spaces << ", benches: " << benches.size() << endl;
@@ -1917,6 +1942,7 @@ void city_obj_placer_t::draw_detail_objects(draw_state_t &dstate, bool shadow_on
 	draw_objects(sstations, sstation_groups, dstate, 0.15, shadow_only, 1); // dist_scale=0.15, has_immediate_draw=1
 	draw_objects(mboxes,    mbox_groups,     dstate, 0.04, shadow_only, 1); // dist_scale=0.10, has_immediate_draw=1
 	draw_objects(ppoles,    ppole_groups,    dstate, 0.20, shadow_only, 0); // dist_scale=0.20
+	draw_objects(signs,     sign_groups,     dstate, 0.20, shadow_only, 0, 1); // dist_scale=0.20, draw_qbd_as_quads=1
 	if (!shadow_only) {draw_objects(hcaps,    hcap_groups,    dstate, 0.12, shadow_only, 0);} // dist_scale=0.12, no shadows
 	if (!shadow_only) {draw_objects(manholes, manhole_groups, dstate, 0.07, shadow_only, 1);} // dist_scale=0.07, no shadows, immediate draw
 	dstate.s.add_uniform_float("min_alpha", DEF_CITY_MIN_ALPHA); // reset back to default after drawing fire hydrant and substation models
@@ -1969,6 +1995,7 @@ bool city_obj_placer_t::proc_sphere_coll(point &pos, point const &p_last, vector
 	if (proc_vector_sphere_coll(pools,     pool_groups,     pos, p_last, radius, xlate, cnorm)) return 1;
 	if (proc_vector_sphere_coll(ppoles,    ppole_groups,    pos, p_last, radius, xlate, cnorm)) return 1;
 	if (proc_vector_sphere_coll(mboxes,    mbox_groups,     pos, p_last, radius, xlate, cnorm)) return 1;
+	if (proc_vector_sphere_coll(signs,     sign_groups,     pos, p_last, radius, xlate, cnorm)) return 1;
 	// Note: no coll with tree_planters because the tree coll should take care of it; no coll with hcaps or manholes
 	return 0;
 }
@@ -1992,6 +2019,7 @@ bool city_obj_placer_t::line_intersect(point const &p1, point const &p2, float &
 	check_vector_line_intersect(dividers,  divider_groups,  p1, p2, t, ret);
 	check_vector_line_intersect(pools,     pool_groups,     p1, p2, t, ret);
 	check_vector_line_intersect(ppoles,    ppole_groups,    p1, p2, t, ret); // inaccurate, could be customized if needed
+	check_vector_line_intersect(signs,     sign_groups,     p1, p2, t, ret);
 	// Note: nothing to do for parking lots, tree_planters, hcaps, or manholes; mboxes are ignored because they're not simple shapes
 	return ret;
 }
@@ -2060,7 +2088,7 @@ bool city_obj_placer_t::get_color_at_xy(point const &pos, colorRGBA &color, bool
 	start_ix = 0;
 	if (check_city_obj_bcube_pt_xy_contain(sstation_groups, sstations, pos, obj_ix)) {color = colorRGBA(0.6, 0.8, 0.4, 1.0); return 1;} // light olive
 	if (check_city_obj_bcube_pt_xy_contain(trashcan_groups, trashcans, pos, obj_ix)) {color = colorRGBA(0.8, 0.6, 0.3, 1.0); return 1;} // tan
-	// Note: ppoles, hcaps, manholes, and mboxes are skipped for now
+	// Note: ppoles, hcaps, manholes, mboxes, and signs are skipped for now
 	return 0;
 }
 

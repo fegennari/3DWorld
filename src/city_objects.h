@@ -145,6 +145,17 @@ struct mailbox_t : public oriented_city_obj_t {
 	void draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_draw untex_qbd[2], float dist_scale, bool shadow_only) const;
 };
 
+struct sign_t : public oriented_city_obj_t {
+	bool emissive;
+	colorRGBA bkg_color, text_color;
+	string text;
+
+	sign_t(cube_t const &bcube_, bool dim_, bool dir_, string const &text_, colorRGBA const &bc, colorRGBA const &tc, bool emissive_=0);
+	static void pre_draw(draw_state_t &dstate, bool shadow_only);
+	//static void post_draw(draw_state_t &dstate, bool shadow_only);
+	void draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_draw untex_qbd[2], float dist_scale, bool shadow_only) const;
+};
+
 class city_obj_groups_t : public vector<cube_with_ix_t> {
 	map<uint64_t, vector<unsigned> > by_tile;
 public:
@@ -168,8 +179,10 @@ private:
 	vector<hcap_space_t> hcaps; // handicap signs painted on parking lots
 	vector<manhole_t> manholes;
 	vector<mailbox_t> mboxes;
+	vector<sign_t> signs;
 	// index is last obj in group
-	city_obj_groups_t bench_groups, planter_groups, trashcan_groups, fhydrant_groups, sstation_groups, divider_groups, pool_groups, ppole_groups, hcap_groups, manhole_groups, mbox_groups;
+	city_obj_groups_t bench_groups, planter_groups, trashcan_groups, fhydrant_groups, sstation_groups, divider_groups, pool_groups, ppole_groups,
+		hcap_groups, manhole_groups, mbox_groups, sign_groups;
 	quad_batch_draw qbd, untex_qbd[2]; // untex_qbd: {matte, shiny/specular}
 	vector<city_zone_t> sub_plots; // reused across calls
 	cube_t all_objs_bcube;
@@ -187,7 +200,7 @@ private:
 	void place_residential_plot_objects(road_plot_t const &plot, vect_cube_t &blockers, vect_cube_t &colliders, unsigned driveways_start, rand_gen_t &rgen);
 	void add_house_driveways(road_plot_t const &plot, vect_cube_t &temp_cubes, rand_gen_t &rgen, unsigned plot_ix);
 	template<typename T> void draw_objects(vector<T> const &objs, city_obj_groups_t const &groups,
-		draw_state_t &dstate, float dist_scale, bool shadow_only, bool has_immediate_draw=0);
+		draw_state_t &dstate, float dist_scale, bool shadow_only, bool has_immediate_draw=0, bool draw_qbd_as_quads=0);
 	bool connect_power_to_point(point const &at_pos, bool near_power_pole);
 	void connect_power_to_buildings(vector<road_plot_t> const &plots);
 public:
