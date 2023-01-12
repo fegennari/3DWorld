@@ -1,7 +1,6 @@
 // 3D World - Building Interior Generation
 // by Frank Gennari 11/15/19
 
-#include "3DWorld.h"
 #include "function_registry.h"
 #include "buildings.h"
 
@@ -15,6 +14,9 @@ extern int animate2;
 extern float grass_width, CAMERA_RADIUS, fticks;
 extern building_params_t global_building_params;
 
+
+string choose_family_name(rand_gen_t rgen);
+string choose_business_name(rand_gen_t rgen);
 
 /*static*/ float building_t::get_scaled_player_radius() {return CAMERA_RADIUS*global_building_params.player_coll_radius_scale;}
 
@@ -153,57 +155,6 @@ void split_cubes_recur(cube_t c, vect_cube_t &cubes, unsigned search_start, unsi
 		} // for d
 	} // for i
 	cubes.push_back(c);
-}
-
-string gen_random_name(rand_gen_t &rgen); // from Universe_name.cpp
-
-string choose_family_name(rand_gen_t rgen) { // Note: deep copying so as not to update the state of the rgen that was passed in
-	return gen_random_name(rgen); // use a generic random name to start with
-}
-
-namespace pixel_city {
-// borrowed from Pixel City, by Shamus Young
-// https://github.com/skeeto/pixelcity/blob/master/Texture.cpp
-	static string const prefix[] = {"i", "Green ", "Mega", "Super ", "Omni", "e", "Hyper", "Global ", "Vital", "Next ", "Pacific ", "Metro", "Unity ", "G-",
-							        "Trans", "Infinity ", "Superior ", "Monolith ", "Best ", "Atlantic ", "First ", "Union ", "National "};
-
-	static string const name[] = {"Biotic", "Info", "Data", "Solar", "Aerospace", "Motors", "Nano", "Online", "Circuits", "Energy", "Med", "Robotic", "Exports", "Security",
-		                          "Systems", "Financial", "Industrial", "Media", "Materials", "Foods", "Networks", "Shipping", "Tools", "Medical", "Publishing", "Enterprises",
-		                          "Audio", "Health", "Bank", "Imports", "Apparel", "Petroleum", "Studios"};
-
-	static string const suffix[] = {"Corp", " Inc.", "Co", "World", ".Com", " USA", " Ltd.", "Net", " Tech", " Labs", " Mfg.", " UK", " Unlimited", " One", " LLC"};
-
-	string gen_company_name(rand_gen_t rgen) {
-		string const cname(name[rgen.rand() % (sizeof(name) / sizeof(string))]);
-		// randomly use a prefix OR suffix, but not both. Too verbose.
-		if (rgen.rand_bool()) {return prefix[rgen.rand() % (sizeof(prefix) / sizeof(string))] + cname;}
-		else                  {return cname + suffix[rgen.rand() % (sizeof(suffix) / sizeof(string))];}
-	}
-}
-
-string choose_business_name(rand_gen_t rgen) {
-	if (rgen.rand_bool()) {return pixel_city::gen_company_name(rgen);}
-	int const v(rgen.rand()%10);
-
-	if (v == 0) { // 3 letter acronym
-		string name;
-		for (unsigned n = 0; n < 3; ++n) {name.push_back('A' + rand()%26);}
-		return name;
-	}
-	string const base(gen_random_name(rgen));
-	switch (v) {
-	case 1: return base;
-	case 2: return base + (rgen.rand_bool() ? " Co" : " Company");
-	case 3: return base + " Inc";
-	case 4: return base + (rgen.rand_bool() ? " Ltd" : " Corp");
-	case 5: return base + " & " + gen_random_name(rgen);
-	case 6: return base + ", " + gen_random_name(rgen) + ", & " + gen_random_name(rgen);
-	case 7: return (rgen.rand_bool() ? (rgen.rand_bool() ? "National " : "Global ") : (rgen.rand_bool() ? "United " : "American ")) + base;
-	case 8: return base + (rgen.rand_bool() ? (rgen.rand_bool() ? " Bank" : " Trust") : (rgen.rand_bool() ? " Holdings" : " Industries"));
-	case 9: return base + " " + gen_random_name(rgen);
-	default: assert(0);
-	}
-	return ""; // never gets here
 }
 
 void building_t::gen_geometry(int rseed1, int rseed2) {

@@ -5,6 +5,7 @@
 struct vert_norm { // size = 24
 	point v;
 	vector3d n;
+	typedef vector3d normal_type;
 	vert_norm() {}
 	vert_norm(point const &v_, vector3d const &n_) : v(v_), n(n_) {}
 	void assign(point const &v_, vector3d const &n_) {v = v_; n = n_;}
@@ -67,6 +68,7 @@ struct vert_tc_t : public vert_wrap_t { // size = 20
 
 
 struct vert_norm_comp : public vert_wrap_t, public norm_comp { // size = 16
+	typedef norm_comp normal_type;
 	vert_norm_comp() {}
 	vert_norm_comp(vert_norm const &vn) : vert_wrap_t(vn.v), norm_comp(vn.n) {}
 	vert_norm_comp(point const &v_, vector3d  const &n_) : vert_wrap_t(v_), norm_comp(n_) {}

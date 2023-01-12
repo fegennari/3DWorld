@@ -117,6 +117,7 @@ building_interact.o
 building_gameplay.o
 building_query.o
 building_animals.o
+building_names_signs.o
 simplifier.o
 city_model.o
 city_building_params.o

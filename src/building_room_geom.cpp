@@ -2882,57 +2882,7 @@ void building_room_geom_t::add_cubicle(room_object_t const &c, float tscale) {
 	surf_mat.add_cube_to_verts(surf3, surf_color, tex_origin, get_skip_mask_for_xy(!c.dim));
 }
 
-class sign_helper_t {
-	map<string, unsigned> txt_to_id;
-	vector<string> text;
-public:
-	unsigned register_text(string const &t) {
-		auto it(txt_to_id.find(t));
-		if (it != txt_to_id.end()) return it->second; // found
-		unsigned const id(text.size());
-		txt_to_id[t] = id; // new text, insert it
-		text.push_back(t);
-		assert(text.size() == txt_to_id.size());
-		return id;
-	}
-	string const &get_text(unsigned id) const {
-		assert(id < text.size());
-		return text[id];
-	}
-};
-
-sign_helper_t sign_helper;
-
-unsigned register_sign_text(string const &text) {return sign_helper.register_text(text);}
-
-void add_sign_text_verts(string const &text, cube_t const &sign, bool dim, bool dir, colorRGBA const &color, vector<vert_norm_comp_tc_color> &verts_out) {
-	assert(!text.empty());
-	cube_t ct(sign); // text area is slightly smaller than full cube
-	ct.expand_in_dim(!dim, -0.1*ct.get_sz_dim(!dim));
-	ct.expand_in_dim(2, -0.05*ct.dz());
-	vector3d col_dir(zero_vector), normal(zero_vector);
-	bool const ldir(dim ^ dir);
-	col_dir[!dim] = (ldir  ? 1.0 : -1.0);
-	normal [ dim] = (dir ? 1.0 : -1.0);
-	static vector<vert_tc_t> verts;
-	verts.clear();
-	point pos;
-	pos[dim] = ct.d[dim][dir] + (dir ? 1.0 : -1.0)*0.1*ct.get_sz_dim(dim); // normal
-	gen_text_verts(verts, pos, text, 1.0, col_dir, plus_z, 1); // use_quads=1
-	assert(!verts.empty());
-	cube_t text_bcube(verts[0].v);
-	for (auto i = verts.begin()+2; i != verts.end(); i += 2) {text_bcube.union_with_pt(i->v);} // only need to include opposite corners
-	float const width_scale(ct.get_sz_dim(!dim)/text_bcube.get_sz_dim(!dim)), height_scale(ct.dz()/text_bcube.dz());
-	if (dot_product(normal, cross_product((verts[1].v - verts[0].v), (verts[2].v - verts[1].v))) < 0.0) {std::reverse(verts.begin(), verts.end());} // swap vertex winding order
-	color_wrapper const cw(color);
-	norm_comp const nc(normal);
-
-	for (auto i = verts.begin(); i != verts.end(); ++i) {
-		i->v[!dim] = i->v[!dim]*width_scale + ct.d[!dim][!ldir]; // line
-		i->v.z     = i->v.z*height_scale + ct.z1(); // column
-		verts_out.emplace_back(i->v, nc, i->t[0], i->t[1], cw);
-	}
-}
+void add_room_obj_sign_text_verts(room_object_t const &c, colorRGBA const &color, vector<vert_norm_comp_tc_color> &verts_out);
 
 void building_room_geom_t::add_sign(room_object_t const &c, bool inc_back, bool inc_text) {
 	if (inc_back) {
@@ -2945,8 +2895,7 @@ void building_room_geom_t::add_sign(room_object_t const &c, bool inc_back, bool 
 	// add sign text
 	tid_nm_pair_t tex(FONT_TEXTURE_ID);
 	if (c.flags & RO_FLAG_EMISSIVE) {tex.emissive = 1.0;}
-	rgeom_mat_t &mat(get_material(tex, 0, 0, 1)); // unshadowed, small=1
-	add_sign_text_verts(sign_helper.get_text(c.obj_id), c, c.dim, c.dir, apply_light_color(c), mat.quad_verts);
+	add_room_obj_sign_text_verts(c, apply_light_color(c), get_material(tex, 0, 0, 1).quad_verts); // unshadowed, small=1
 }
 
 bool get_dishwasher_for_ksink(room_object_t const &c, cube_t &dishwasher) {
