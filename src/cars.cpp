@@ -1363,7 +1363,10 @@ void car_manager_t::draw(int trans_op_mask, vector3d const &xlate, bool use_dlig
 }
 
 void car_manager_t::draw_helicopters(bool shadow_only) {
+	if (helicopters.empty()) return;
+	dstate.s.add_uniform_float("min_alpha", 0.9); // use a larger min_alpha for better alpha test of prop blade texture
 	for (auto i = helicopters.begin(); i != helicopters.end(); ++i) {dstate.draw_helicopter(*i, shadow_only);}
+	dstate.s.add_uniform_float("min_alpha", DEF_CITY_MIN_ALPHA);
 }
 
 // for house garages and building parking garages
