@@ -1030,23 +1030,30 @@ void mailbox_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_draw
 
 template<typename T> void add_sign_text_verts(string const &text, cube_t const &sign, bool dim, bool dir, colorRGBA const &color, vector<T> &verts_out);
 
-sign_t::sign_t(cube_t const &bcube_, bool dim_, bool dir_, string const &text_, colorRGBA const &bc, colorRGBA const &tc, bool emissive_) :
-	oriented_city_obj_t(dim_, dir_), emissive(emissive_), bkg_color(bc), text_color(tc)
+sign_t::sign_t(cube_t const &bcube_, bool dim_, bool dir_, string const &text_, colorRGBA const &bc, colorRGBA const &tc, bool two_sided_, bool emissive_) :
+	oriented_city_obj_t(dim_, dir_), two_sided(two_sided_), emissive(emissive_), bkg_color(bc), text_color(tc)
 {
 	bcube  = bcube_;
 	pos    = bcube.get_cube_center();
 	radius = bcube.get_bsphere_radius();
+	text   = text_;
 }
 /*static*/ void sign_t::pre_draw(draw_state_t &dstate, bool shadow_only) {
-	if (!shadow_only) {select_texture(FONT_TEXTURE_ID);}
+	if (!shadow_only) {text_drawer::bind_font_texture();}
+	if (!shadow_only) {enable_blend();}
 }
-///*static*/ void sign_t::post_draw(draw_state_t &dstate, bool shadow_only) {}
+/*static*/ void sign_t::post_draw(draw_state_t &dstate, bool shadow_only) {
+	if (!shadow_only) {disable_blend();}
+}
 
 void sign_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_draw untex_qbd[2], float dist_scale, bool shadow_only) const {
 	dstate.draw_cube(untex_qbd[0], bcube, bkg_color); // untextured, matte back
+	if (shadow_only) return; // no text in shadow pass
 	// text; if emissive, we must flush the quad verts before changing the emissive color through a uniform
 	if (emissive) {qbd.draw_and_clear_quads(); dstate.s.set_color_e(text_color);}
-	add_sign_text_verts(text, bcube, dim, dir, text_color, qbd.verts);
+	bool const front_facing(((camera_pdu.pos[dim] - dstate.xlate[dim]) < bcube.d[dim][dir]) ^ dir);
+	if (front_facing  ) {add_sign_text_verts(text, bcube, dim,  dir, text_color, qbd.verts);} // draw the front side text
+	else if (two_sided) {add_sign_text_verts(text, bcube, dim, !dir, text_color, qbd.verts);} // draw the back side text
 	if (emissive) {qbd.draw_and_clear_quads(); dstate.s.clear_color_e();}
 }
 
@@ -1753,23 +1760,23 @@ template<typename T> void city_obj_placer_t::draw_objects(vector<T> const &objs,
 		}
 		if (!qbd.empty() || has_untex_verts() || !dstate.hedge_draw.empty()) { // we have something to draw
 			if (!has_immediate_draw) {dstate.begin_tile(g->get_cube_center(), 1, 1);} // will_emit_now=1, ensure_active=1
-			if (draw_qbd_as_quads) {qbd.draw_and_clear_quads();} else {qbd.draw_and_clear();} // draw this group with current smap
 			bool must_restore_state(!dstate.hedge_draw.empty());
 			dstate.hedge_draw.draw_and_clear(dstate.s);
 
-			if (has_untex_verts()) {
+			if (has_untex_verts()) { // draw untextured verts before qbd so that textures such as text can alpha blend on top
 				dstate.set_untextured_material();
 				untex_qbd[0].draw_and_clear(); // matte
 
 				if (!untex_qbd[1].empty()) { // specular
-					dstate.s.set_specular(0.75, 50.0); // shuny
+					dstate.s.set_specular(0.75, 50.0); // shiny
 					untex_qbd[1].draw_and_clear();
 					dstate.s.clear_specular();
 				}
 				dstate.unset_untextured_material();
 				must_restore_state = 1;
 			}
-			if (!shadow_only && must_restore_state) {T::pre_draw(dstate, shadow_only);} // re-setup for next tile
+			if (!shadow_only && must_restore_state) {T::pre_draw(dstate, shadow_only);} // re-setup for below draw call and/or next tile
+			if (draw_qbd_as_quads) {qbd.draw_and_clear_quads();} else {qbd.draw_and_clear();} // draw this group with current smap
 		}
 	} // for g
 	T::post_draw(dstate, shadow_only);
@@ -1829,7 +1836,10 @@ void city_obj_placer_t::gen_parking_and_place_objects(vector<road_plot_t> &plots
 	} // for i
 	connect_power_to_buildings(plots);
 	if (have_cars) {add_cars_to_driveways(cars, plots, plot_colliders, city_id, rgen);}
-	add_signs_for_city(city_id, signs);
+	vector<sign_t> signs_to_add;
+	add_signs_for_city(city_id, signs_to_add);
+	signs.reserve(signs_to_add.size());
+	for (sign_t const &sign : signs_to_add) {sign_groups.add_obj(sign, signs);}
 	for (auto i = plot_colliders.begin(); i != plot_colliders.end(); ++i) {sort(i->begin(), i->end(), cube_by_x1());}
 	bench_groups   .create_groups(benches,   all_objs_bcube);
 	planter_groups .create_groups(planters,  all_objs_bcube);

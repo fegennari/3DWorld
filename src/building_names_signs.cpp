@@ -105,7 +105,7 @@ template<typename T> void add_sign_text_verts(string const &text, cube_t const &
 	static vector<vert_tc_t> verts;
 	verts.clear();
 	point pos;
-	pos[dim] = ct.d[dim][dir] + (dir ? 1.0 : -1.0)*0.1*ct.get_sz_dim(dim); // normal
+	pos[dim] = ct.d[dim][dir] + (dir ? 1.0 : -1.0)*0.2*ct.get_sz_dim(dim); // shift away from the front face to prevent z-fighting
 	gen_text_verts(verts, pos, text, 1.0, col_dir, plus_z, 1); // use_quads=1
 	assert(!verts.empty());
 	cube_t text_bcube(verts[0].v);
@@ -139,17 +139,18 @@ void building_t::add_signs(vector<sign_t> &signs) const {
 	if (is_house) return; // no sign, for now
 	if (name.empty()) return; // no company name; shouldn't get here
 	rand_gen_t rgen;
-	rgen.set_state(mat_ix+1, name[0]+1);
+	rgen.set_state((mat_ix + parts.size()*12345 + 1), (name[0] - 'A' + 1));
+	rgen.rand_mix();
 	bool const dim(rgen.rand_bool()), dir(rgen.rand_bool()); // TODO: face front
-	float const width(bcube.get_sz_dim(!dim)), sign_hwidth(0.25*width), sign_height(0.5*sign_hwidth), sign_depth(0.01*sign_height);
+	float const width(bcube.get_sz_dim(!dim)), sign_hwidth(0.25*width), sign_height(0.5*sign_hwidth), sign_depth(0.025*sign_height);
 	cube_t sign;
 	sign.z1() = bcube.z2(); // FIXME: top of uppermost roof
 	sign.z2() = sign.z1() + sign_height;
 	set_wall_width(sign, bcube.get_center_dim(!dim), sign_hwidth, !dim);
-	sign.d[dim][ dir] = bcube.d[dim][dir];
-	sign.d[dim][!dir] = sign.d[dim][dir] + (dir ? -1.0 : 1.0)*sign_depth;
-	bool const emissive = 0;
-	signs.emplace_back(sign, dim, dir, name, WHITE, choose_sign_color(rgen), emissive);
+	sign.d[dim][!dir] = bcube.d[dim][ dir];
+	sign.d[dim][ dir] = sign .d[dim][!dir] + (dir ? 1.0 : -1.0)*sign_depth;
+	bool const two_sided(1), emissive(0);
+	signs.emplace_back(sign, dim, dir, name, WHITE, choose_sign_color(rgen), two_sided, emissive);
 }
 
 
