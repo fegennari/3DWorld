@@ -608,7 +608,7 @@ void vertex_bone_data_t::add(unsigned id, float weight, bool &had_vertex_error) 
 		}
 	}
 	if (min_weight > 0.0 && !had_vertex_error) {
-		cerr << "Error: too many weights/bones for a single vertex; using the " << MAX_NUM_BONES_PER_VERTEX << " largest weights" << endl;
+		cerr << "Warning: too many weights/bones for a single vertex; using the " << MAX_NUM_BONES_PER_VERTEX << " largest weights" << endl;
 		had_vertex_error = 1;
 	}
 	if (min_weight == weight) return; // no slot for this weight

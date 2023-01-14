@@ -594,6 +594,7 @@ public:
 	base_mat_t const &get_unbound_material() const {return unbound_mat;}
 
 	// creation and query
+	bool empty              () const {return (materials.empty() && unbound_geom.empty());}
 	bool are_textures_loaded() const {return textures_loaded;}
 	unsigned num_animations () const {return model_anim_data.animations.size();}
 	bool has_animations     () const {return (num_animations() > 0);}

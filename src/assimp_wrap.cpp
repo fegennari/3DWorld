@@ -462,21 +462,40 @@ public:
 		if (!load_animations) {flags |= aiProcess_PreTransformVertices | aiProcess_RemoveRedundantMaterials;}
 		aiScene const* const scene(importer.ReadFile(fn, flags));
 		
-		if (scene == nullptr || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode) {
-			cerr << "AssImp Import Error: " << importer.GetErrorString() << endl;
-			return 0;
+		if (scene == nullptr) {
+			cerr << "AssImp Import Error (null scene): " << importer.GetErrorString() << endl;
+			return 0; // always fatal, even if there's no error string
 		}
+		if (scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE) {
+			string const error_str(importer.GetErrorString());
+
+			if (!error_str.empty()) { // we have an error message
+				cerr << "AssImp Import Error (incomplete scene): " << importer.GetErrorString() << endl;
+				return 0; // nonfatal?
+			}
+			cerr << "Warning: AssImp flagged incomplete scene" << endl; // nonfatal
+		}
+		if (scene->mRootNode == nullptr) {cout << "Warning: No root node for model" << endl;}
 		model_dir = fn;
 		while (!model_dir.empty() && model_dir.back() != '/' && model_dir.back() != '\\') {model_dir.pop_back();} // remove filename from end, but leave the slash
-		process_node_recur(scene->mRootNode, scene, model.model_anim_data);
+		if (scene->mRootNode) {process_node_recur(scene->mRootNode, scene, model.model_anim_data);}
+		unsigned const num_textures(to_load.size());
 		load_embedded_textures();
 		if (load_animations) {extract_animation_data(scene, model.model_anim_data);}
 		model.finalize(); // optimize vertices, remove excess capacity, compute bounding sphere, subdivide, compute LOD blocks
 		model.load_all_used_tids();
-		if (verbose) {cout << "bcube: " << model.get_bcube().str() << endl; model.show_stats();}
+		
+		if (verbose) {
+			if (!model.empty()) { // don't print these stats if empty (animations only)
+				cout << "bcube: " << model.get_bcube().str() << endl;
+				model.show_stats();
+			}
+			if (num_textures > 0) {cout << "embedded_textures: " << num_textures << endl;}
+			if (load_animations ) {cout << "animations: " << model.model_anim_data.animations.size() << ", anim_nodes: " << model.model_anim_data.anim_nodes.size() << endl;}
+		}
 		return 1;
 	}
-};
+}; // end file_reader_assimp
 
 bool read_assimp_model(string const &filename, model3d &model, geom_xform_t const &xf, int recalc_normals, bool verbose) {
 	cout << "Reading model file " << filename << endl;
