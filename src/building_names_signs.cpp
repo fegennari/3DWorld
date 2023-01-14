@@ -113,7 +113,7 @@ template<typename T> void add_sign_text_verts(string const &text, cube_t const &
 	float const width_scale(ct.get_sz_dim(!dim)/text_bcube.get_sz_dim(!dim)), height_scale(ct.dz()/text_bcube.dz());
 	if (dot_product(normal, cross_product((verts[1].v - verts[0].v), (verts[2].v - verts[1].v))) < 0.0) {std::reverse(verts.begin(), verts.end());} // swap vertex winding order
 	color_wrapper const cw(color);
-	T::normal_type const nc(normal); // vector3d or norm_comp
+	typename T::normal_type const nc(normal); // vector3d or norm_comp
 
 	for (auto i = verts.begin(); i != verts.end(); ++i) {
 		i->v[!dim] = i->v[!dim]*width_scale + ct.d[!dim][!ldir]; // line
