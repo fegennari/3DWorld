@@ -86,9 +86,10 @@ public:
 
 sign_helper_t sign_helper;
 
-colorRGBA choose_sign_color(rand_gen_t &rgen) {
-	colorRGBA const sign_colors[8] = {DK_RED, DK_BLUE, DK_BLUE, DK_BROWN, DK_GRAY, BLACK, BLACK, BLACK};
-	return sign_colors[rgen.rand() % 8];
+colorRGBA choose_sign_color(rand_gen_t &rgen, bool emissive) {
+	colorRGBA const sign_colors    [8] = {DK_RED, DK_BLUE, DK_BLUE, DK_BROWN, BLACK, BLACK, BLACK, BLACK};
+	colorRGBA const emissive_colors[5] = {RED, GREEN, BLUE, RED, BLUE};
+	return (emissive ? emissive_colors[rgen.rand() % 5] : sign_colors[rgen.rand() % 8]);
 }
 
 unsigned register_sign_text(string const &text) {return sign_helper.register_text(text);}
@@ -168,8 +169,8 @@ void building_t::add_signs(vector<sign_t> &signs) const {
 	sign.z2() = sign.z1() + sign_height;
 	set_wall_width(sign, center_pos, sign_hwidth, !dim);
 	bool sign_both_sides(rgen.rand_bool());
-	bool const two_sided(!sign_both_sides && 0), emissive(0/*rgen.rand_bool()*/);
-	colorRGBA const color(choose_sign_color(rgen));
+	bool const two_sided(!sign_both_sides && 0), emissive(rgen.rand_bool());
+	colorRGBA const color(choose_sign_color(rgen, emissive));
 
 	for (unsigned d = 0; d < 2; ++d) {
 		bool const dir(pri_dir ^ bool(d));

@@ -21,7 +21,7 @@ car_t car_from_parking_space(room_object_t const &o);
 bool get_wall_quad_window_area(vect_vnctcc_t const &wall_quad_verts, unsigned i, cube_t &c, float &tx1, float &tx2, float &tz1, float &tz2);
 void get_stove_burner_locs(room_object_t const &stove, point locs[4]);
 string gen_random_full_name(rand_gen_t &rgen);
-colorRGBA choose_sign_color(rand_gen_t &rgen);
+colorRGBA choose_sign_color(rand_gen_t &rgen, bool emissive=0);
 
 
 class light_ix_assign_t {
