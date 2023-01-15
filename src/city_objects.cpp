@@ -73,7 +73,7 @@ void bench_t::calc_bcube() {
 /*static*/ void bench_t::pre_draw(draw_state_t &dstate, bool shadow_only) {
 	if (!shadow_only) {select_texture(FENCE_TEX);} // normal map?
 }
-void bench_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_draw untex_qbd[2], float dist_scale, bool shadow_only) const {
+void bench_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
 	if (!dstate.check_cube_visible(bcube, dist_scale)) return;
 
 	cube_t cubes[] = { // Note: taken from mapx/bench.txt
@@ -103,7 +103,7 @@ void bench_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_draw u
 	vector3d const scale(bcube.dx()/bc.dx(), bcube.dy()/bc.dy(), bcube.dz()/bc.dz()); // scale to fit to target cube
 	color_wrapper const cw(WHITE);
 	unsigned const num(shadow_only ? 6U : max(1U, min(6U, unsigned(0.2/dist_val)))); // simple distance-based LOD, in pairs
-	for (unsigned i = 1; i < 2*num; ++i) {dstate.draw_cube(qbd, ((cubes[i] - c2)*scale + c1), cw, 1);} // skip back
+	for (unsigned i = 1; i < 2*num; ++i) {dstate.draw_cube(qbds.qbd, ((cubes[i] - c2)*scale + c1), cw, 1);} // skip back
 	point pts[4] = {point(-1.0, -5.0, 5.0), point(-1.0, 5.0, 5.0), point(0.2, 5.0, 1.6), point(0.2, -5.0, 1.6)}; // Note: back not drawn
 	point f[4], b[4];
 
@@ -114,14 +114,14 @@ void bench_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_draw u
 	}
 	vector3d const normal(get_poly_norm(pts, 1)), delta((0.2f*scale.x)*normal); // thickness = 0.4
 	UNROLL_4X(f[i_] = pts[i_] + delta;);
-	qbd.add_quad_pts(f, WHITE,  normal);
+	qbds.qbd.add_quad_pts(f, WHITE,  normal);
 	UNROLL_4X(b[i_] = pts[i_] - delta;);
-	qbd.add_quad_pts(b, WHITE, -normal);
+	qbds.qbd.add_quad_pts(b, WHITE, -normal);
 
 	for (unsigned i = 0; i < 4; ++i) { // draw sides
 		unsigned const j((i+1)&3); // next i
 		point const s[4] = {f[i], b[i], b[j], f[j]};
-		qbd.add_quad_pts(s, WHITE, get_poly_norm(s, 1));
+		qbds.qbd.add_quad_pts(s, WHITE, get_poly_norm(s, 1));
 	}
 }
 
@@ -147,7 +147,7 @@ void draw_xy_walls(cube_t const &bcube, cube_t const &hole, color_wrapper const 
 		dstate.draw_cube(qbd, walls[d+2], cw, 1, tscale, 1); // Y, skip X dims
 	}
 }
-void tree_planter_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_draw untex_qbd[2], float dist_scale, bool shadow_only) const {
+void tree_planter_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
 	if (!dstate.check_cube_visible(bcube, dist_scale)) return;
 	color_wrapper const cw(LT_GRAY);
 	cube_t dirt(bcube);
@@ -155,10 +155,10 @@ void tree_planter_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch
 
 	if (dstate.pass_ix == 0) { // draw dirt
 		dirt.z2() -= 0.25*bcube.dz(); // move down 25%
-		dstate.draw_cube(qbd, dirt, cw, 1, 0.0, 3); // top only (skip X, Y, and bottom)
+		dstate.draw_cube(qbds.qbd, dirt, cw, 1, 0.0, 3); // top only (skip X, Y, and bottom)
 	}
 	else { // draw stone
-		draw_xy_walls(bcube, dirt, cw, 40.0, dstate, qbd);
+		draw_xy_walls(bcube, dirt, cw, 40.0, dstate, qbds.qbd);
 	}
 }
 
@@ -183,7 +183,7 @@ trashcan_t::trashcan_t(point const &pos_, float radius_, float height, bool is_c
 	if (!shadow_only && dstate.pass_ix > 0) {select_multitex(FLAT_NMAP_TEX, 5);} // restore to default for cylindrical trashcan
 	city_obj_t::post_draw(dstate, shadow_only);
 }
-void trashcan_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_draw untex_qbd[2], float dist_scale, bool shadow_only) const {
+void trashcan_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
 	if (is_cylin != (dstate.pass_ix == 1)) return; // wrong pass
 	if (!dstate.check_cube_visible(bcube, dist_scale)) return;
 	point const camera_bs(camera_pdu.pos - dstate.xlate);
@@ -209,34 +209,34 @@ void trashcan_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_dra
 				side.z1() = bcube.z2() - 0.03*height;
 				side.z2() = top.z1() = bcube.z2() + 0.02*height;
 				top .z2() = top.z1() + thickness;
-				dstate.draw_cube(qbd, top, gray, 0, 0.001); // set tscale to map to a single texel
+				dstate.draw_cube(qbds.qbd, top, gray, 0, 0.001); // set tscale to map to a single texel
 
 				for (unsigned s = 0; s < 2; ++s) {
 					side.y1() = side.y2() = top.d[1][s];
 					side.d[1][!s] += (s ? -1.0 : 1.0)*thickness;
-					dstate.draw_cube(qbd, side, gray, 1, 0.001, 4); // set tscale to map to a single texel, skip top and bottom
+					dstate.draw_cube(qbds.qbd, side, gray, 1, 0.001, 4); // set tscale to map to a single texel, skip top and bottom
 				}
 			}
 		}
 	}
 	else { // cube city/park trashcan
-		if (shadow_only) {dstate.draw_cube(qbd, bcube, WHITE, 1); return;} // draw a cube for the shadow
+		if (shadow_only) {dstate.draw_cube(qbds.qbd, bcube, WHITE, 1); return;} // draw a cube for the shadow
 		color_wrapper const tan(colorRGBA(0.8, 0.6, 0.3, 1.0));
 		cube_t hole(bcube);
 		hole.expand_by_xy(-0.08*bcube.get_size()); // shrink on all XY sides
-		draw_xy_walls(bcube, hole, tan, 25.0, dstate, qbd); // sides
+		draw_xy_walls(bcube, hole, tan, 25.0, dstate, qbds.qbd); // sides
 
 		if (bcube.closest_dist_less_than(camera_bs, 0.4*dist_scale*dstate.draw_tile_dist)) {
 			float const height(bcube.dz());
 			cube_t bottom(hole);
 			bottom.z2() -= 0.95*height;
-			dstate.draw_cube(qbd, bottom, tan, 1, 30.0, 3); // inside bottom, top surface only
+			dstate.draw_cube(qbds.qbd, bottom, tan, 1, 30.0, 3); // inside bottom, top surface only
 			cube_t top(hole);
 			top.z1() += 0.92*height;
 			top.z2() -= 0.02*height;
 			cube_t top_hole(top);
 			top_hole.expand_by_xy(-0.22*bcube.get_size()); // shrink on all XY sides
-			draw_xy_walls(top, top_hole, color_wrapper(BROWN), 200.0, dstate, qbd); // brown top; technically don't need to draw some of the interior surfaces
+			draw_xy_walls(top, top_hole, color_wrapper(BROWN), 200.0, dstate, qbds.qbd); // brown top; technically don't need to draw some of the interior surfaces
 		}
 	}
 }
@@ -273,7 +273,7 @@ fire_hydrant_t::fire_hydrant_t(point const &pos_, float radius_, float height, v
 	if (!shadow_only) {dstate.s.add_uniform_float("hemi_lighting_scale", 0.5);} // set hemispherical lighting back to the default
 	city_obj_t::post_draw(dstate, shadow_only);
 }
-void fire_hydrant_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_draw untex_qbd[2], float dist_scale, bool shadow_only) const { // Note: qbds are unused
+void fire_hydrant_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const { // Note: qbds are unused
 	if (!dstate.check_cube_visible(bcube, dist_scale)) return;
 
 	if (!shadow_only) {
@@ -299,7 +299,7 @@ substation_t::substation_t(cube_t const &bcube_, bool dim_, bool dir_) : oriente
 /*static*/ void substation_t::post_draw(draw_state_t &dstate, bool shadow_only) {
 	if (!shadow_only) {dstate.s.add_uniform_float("hemi_lighting_scale", 0.5);} // set hemispherical lighting back to the default
 }
-void substation_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_draw untex_qbd[2], float dist_scale, bool shadow_only) const {
+void substation_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
 	if (!dstate.check_cube_visible(bcube, dist_scale)) return;
 	vector3d orient(zero_vector);
 	orient[dim] = (dir ? 1.0 : -1.0);
@@ -325,7 +325,7 @@ void substation_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_d
 	}
 	else {plot_divider_types[dstate.pass_ix].post_draw(shadow_only);}
 }
-void divider_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_draw untex_qbd[2], float dist_scale, bool shadow_only) const {
+void divider_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
 	if (dstate.pass_ix == DIV_NUM_TYPES && type == DIV_CHAINLINK) { // add chainlink fence posts
 		if (!dstate.check_cube_visible(bcube, 1.5*dist_scale)) return;
 		float const length(bcube.get_sz_dim(!dim)), height(bcube.dz()), thickness(bcube.get_sz_dim(dim));
@@ -342,9 +342,9 @@ void divider_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_draw
 		// for now we draw posts as cubes rather than cylinders since it's faster and easier, because we can use the existing qbd
 		for (unsigned i = 0; i < num_posts; ++i) { // add posts
 			set_wall_width(post, (bcube.d[!dim][0] + post_hwidth + i*post_spacing), post_hwidth, !dim);
-			dstate.draw_cube(qbd, post, cw, 1);
+			dstate.draw_cube(qbds.qbd, post, cw, 1);
 		}
-		dstate.draw_cube(qbd, top, cw, 1);
+		dstate.draw_cube(qbds.qbd, top, cw, 1);
 		return;
 	}
 	if (type != dstate.pass_ix) return; // this type not enabled in this pass
@@ -352,7 +352,7 @@ void divider_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_draw
 	if (!dstate.check_cube_visible(bcube, dist_scale)) return;
 	assert(dstate.pass_ix < DIV_NUM_TYPES);
 	plot_divider_type_t const &pdt(plot_divider_types[dstate.pass_ix]);
-	dstate.draw_cube(qbd, bcube, color_wrapper(pdt.color), 1, pdt.tscale/bcube.dz(), skip_dims); // skip bottom, scale texture to match the height
+	dstate.draw_cube(qbds.qbd, bcube, color_wrapper(pdt.color), 1, pdt.tscale/bcube.dz(), skip_dims); // skip bottom, scale texture to match the height
 
 	if (!shadow_only && type == DIV_HEDGE && bcube.closest_dist_less_than((camera_pdu.pos - dstate.xlate), 0.25f*(X_SCENE_SIZE + Y_SCENE_SIZE))) {
 		dstate.hedge_draw.add(bcube); // draw detailed leaves for nearby hedges
@@ -433,7 +433,7 @@ void hedge_draw_t::draw_and_clear(shader_t &s) {
 		else {assert(0);}
 	}
 }
-void swimming_pool_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_draw untex_qbd[2], float dist_scale, bool shadow_only) const {
+void swimming_pool_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
 	if ((dstate.pass_ix > 1) ^ above_ground) return; // not drawn in this pass
 	if (!dstate.check_cube_visible(bcube, dist_scale)) return;
 
@@ -462,7 +462,7 @@ void swimming_pool_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batc
 				for (unsigned n = 0; n < num_steps; ++n) { // draw steps
 					ladder.z1() = bcube .z1() + n*step_delta + step_offset;
 					ladder.z2() = ladder.z1() + step_height;
-					dstate.draw_cube(qbd, ladder, step_color, !is_very_close); // skip bottom if not close
+					dstate.draw_cube(qbds.qbd, ladder, step_color, !is_very_close); // skip bottom if not close
 				}
 				if (is_close) { // draw bars
 					float const bars_top(bcube.z1() + height), bar_radius(0.012*radius);
@@ -497,11 +497,11 @@ void swimming_pool_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batc
 			sides[1].y1() = sides[2].y2() = sides[3].y2() = inner.y2();
 			sides[2].x2() = inner.x1();
 			sides[3].x1() = inner.x2();
-			for (unsigned d = 0; d < 4; ++d) {dstate.draw_cube(qbd, sides[d], cw, 1, tscale, ((d > 2) ? 2 : 0));}
+			for (unsigned d = 0; d < 4; ++d) {dstate.draw_cube(qbds.qbd, sides[d], cw, 1, tscale, ((d > 2) ? 2 : 0));}
 		}
 		else if (dstate.pass_ix == 1) { // draw water surface
 			inner.z2() -= 0.5*dz; // reduce water height by 50%; can't make water below the mesh though
-			dstate.draw_cube(qbd, inner, color_wrapper(wcolor), 1, 0.5*tscale, 3); // draw top water
+			dstate.draw_cube(qbds.qbd, inner, color_wrapper(wcolor), 1, 0.5*tscale, 3); // draw top water
 		}
 	}
 }
@@ -705,7 +705,7 @@ void draw_vert_standoff(point const &p1, point const &camera_bs, float height, f
 // Note: power line connectivity is all handled here in draw();
 // the current grid is fully connected, forming loops on both the upper three high voltage lines and lower three low voltage lines;
 // maybe this isn't realistic, but it does have a nice symmetry and higher apparent wiring complexity; the user will likely not notice
-void power_pole_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_draw untex_qbd[2], float dist_scale, bool shadow_only) const {
+void power_pole_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
 	point const camera_bs(camera_pdu.pos - dstate.xlate);
 	float const dmax(shadow_only ? camera_pdu.far_ : dist_scale*dstate.draw_tile_dist);
 	if (!bcube.closest_dist_less_than(camera_bs, dmax)) return;
@@ -715,7 +715,7 @@ void power_pole_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_d
 	float const wire_radius(get_wire_radius()), pole_height(bcube.dz());
 	cube_t tf_bcube;
 	point conduit_top(all_zeros);
-	quad_batch_draw &m_qbd(untex_qbd[0]), &s_qbd(untex_qbd[1]); // {matte, specular}
+	quad_batch_draw &m_qbd(qbds.untex_qbd), &s_qbd(qbds.untex_spec_qbd); // {matte, specular}
 
 	if (pole_visible) {
 		unsigned const ndiv(shadow_only ? 16 : max(4U, min(32U, unsigned(1.5f*dmax/p2p_dist(camera_bs, pos)))));
@@ -723,7 +723,7 @@ void power_pole_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_d
 		float const vert_tscale = 10.0;
 		point ce[2] = {base, get_top()};
 		bool const draw_top(ce[1].z < camera_bs.z);
-		add_cylin_as_tris(qbd.verts, ce, pole_radius, pole_radius, cw, pole_ndiv, (draw_top ? 2 : 0), vert_tscale, 1.0/pole_ndiv, 1); // swap_ts_tt=1
+		add_cylin_as_tris(qbds.qbd.verts, ce, pole_radius, pole_radius, cw, pole_ndiv, (draw_top ? 2 : 0), vert_tscale, 1.0/pole_ndiv, 1); // swap_ts_tt=1
 
 		if (dims == 3 && (shadow_only || bcube.closest_dist_less_than(camera_bs, 0.7*dmax))) { // draw transformer, untextured
 			float const tf_radius(2.0*pole_radius), tf_height(0.1*pole_height), y_sign(at_line_end[1] ? 1.0 : -1.0);
@@ -760,7 +760,7 @@ void power_pole_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_d
 		p1.z  = cbar.z2(); // resting on top of the bar
 		
 		if (pole_visible && (shadow_only || cbar.closest_dist_less_than(camera_bs, 0.5*dmax))) { // could test cbar cube visible, but unclear if that's faster
-			dstate.draw_cube(qbd, cbar, cw, 0, 0.8/cbar.dz()); // draw all sides
+			dstate.draw_cube(qbds.qbd, cbar, cw, 0, 0.8/cbar.dz()); // draw all sides
 
 			if (!shadow_only && cbar.closest_dist_less_than(camera_bs, 0.15*dmax)) { // draw insulator standoffs
 				unsigned verts_start(s_qbd.verts.size()), verts_end(0);
@@ -967,11 +967,11 @@ hcap_space_t::hcap_space_t(point const &pos_, float radius_, bool dim_, bool dir
 	assert(!shadow_only); // not drawn in the shadow pass
 	select_texture(get_texture_by_name("roads/handicap_parking.jpg"));
 }
-void hcap_space_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_draw untex_qbd[2], float dist_scale, bool shadow_only) const {
+void hcap_space_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
 	if (!dstate.check_cube_visible(bcube, dist_scale)) return;
 	float const x1(bcube.x1()), y1(bcube.y1()), x2(bcube.x2()), y2(bcube.y2()), z(bcube.z2());
 	point const pts[4] = {point(x1, y1, z), point(x2, y1, z), point(x2, y2, z), point(x1, y2, z)};
-	qbd.add_quad_pts(pts, WHITE, plus_z, tex_range_t(0.0, float(dir^dim), 1.0, float(dir^dim^1), 0, !dim));
+	qbds.qbd.add_quad_pts(pts, WHITE, plus_z, tex_range_t(0.0, float(dir^dim), 1.0, float(dir^dim^1), 0, !dim));
 }
 struct hcap_with_dist_t : public hcap_space_t {
 	float dmin_sq;
@@ -999,7 +999,7 @@ manhole_t::manhole_t(point const &pos_, float radius_) : city_obj_t(pos_, radius
 	select_texture(MANHOLE_TEX);
 	dstate.s.set_cur_color(colorRGBA(0.5, 0.35, 0.25, 1.0)); // gray-brown
 }
-void manhole_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_draw untex_qbd[2], float dist_scale, bool shadow_only) const {
+void manhole_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
 	unsigned const ndiv(max(4U, min(32U, unsigned(1.0f*dist_scale*dstate.draw_tile_dist/p2p_dist((camera_pdu.pos - dstate.xlate), pos)))));
 	draw_circle_normal(0.0, radius, ndiv, 0, point(pos.x, pos.y, pos.z+get_height()), -1.0); // draw top surface, invert texture coords
 }
@@ -1019,7 +1019,7 @@ mailbox_t::mailbox_t(point const &pos_, float height, bool dim_, bool dir_) : or
 /*static*/ void mailbox_t::pre_draw(draw_state_t &dstate, bool shadow_only) {
 	// anything to do?
 }
-void mailbox_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_draw untex_qbd[2], float dist_scale, bool shadow_only) const {
+void mailbox_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
 	if (!dstate.check_cube_visible(bcube, dist_scale)) return;
 	vector3d orient(zero_vector);
 	orient[dim] = (dir ? 1.0 : -1.0);
@@ -1046,15 +1046,13 @@ sign_t::sign_t(cube_t const &bcube_, bool dim_, bool dir_, string const &text_, 
 	if (!shadow_only) {disable_blend();}
 }
 
-void sign_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_draw untex_qbd[2], float dist_scale, bool shadow_only) const {
-	dstate.draw_cube(untex_qbd[0], bcube, bkg_color); // untextured, matte back
+void sign_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
+	dstate.draw_cube(qbds.untex_qbd, bcube, bkg_color); // untextured, matte back
 	if (shadow_only) return; // no text in shadow pass
-	// text; if emissive, we must flush the quad verts before changing the emissive color through a uniform
-	if (emissive) {qbd.draw_and_clear_quads(); dstate.s.set_color_e(text_color);}
+	quad_batch_draw &qbd(emissive ? qbds.emissive_qbd : qbds.qbd);
 	bool const front_facing(((camera_pdu.pos[dim] - dstate.xlate[dim]) < bcube.d[dim][dir]) ^ dir);
 	if (front_facing  ) {add_sign_text_verts(text, bcube, dim,  dir, text_color, qbd.verts);} // draw the front side text
 	else if (two_sided) {add_sign_text_verts(text, bcube, dim, !dir, text_color, qbd.verts);} // draw the back side text
-	if (emissive) {qbd.draw_and_clear_quads(); dstate.s.clear_color_e();}
 }
 
 
@@ -1741,13 +1739,13 @@ void city_obj_placer_t::add_house_driveways(road_plot_t const &plot, vect_cube_t
 	}
 }
 
-template<typename T> void city_obj_placer_t::draw_objects(vector<T> const &objs, city_obj_groups_t const &groups,
-	draw_state_t &dstate, float dist_scale, bool shadow_only, bool has_immediate_draw, bool draw_qbd_as_quads)
+template<typename T> void city_obj_placer_t::draw_objects(vector<T> const &objs, city_obj_groups_t const &groups, draw_state_t &dstate,
+	float dist_scale, bool shadow_only, bool has_immediate_draw, bool draw_qbd_as_quads, float specular, float shininess)
 {
 	if (objs.empty()) return;
 	T::pre_draw(dstate, shadow_only);
 	unsigned start_ix(0);
-	assert(qbd.empty() && !has_untex_verts());
+	assert(city_draw_qbds_t::empty());
 
 	for (auto g = groups.begin(); g != groups.end(); start_ix = g->ix, ++g) {
 		if (!dstate.check_cube_visible(*g, dist_scale)) continue; // VFC/distance culling for group
@@ -1756,20 +1754,20 @@ template<typename T> void city_obj_placer_t::draw_objects(vector<T> const &objs,
 
 		for (unsigned i = start_ix; i < g->ix; ++i) {
 			T const &obj(objs[i]);
-			if (dstate.check_sphere_visible(obj.pos, obj.get_bsphere_radius(shadow_only))) {obj.draw(dstate, qbd, untex_qbd, dist_scale, shadow_only);}
+			if (dstate.check_sphere_visible(obj.pos, obj.get_bsphere_radius(shadow_only))) {obj.draw(dstate, *this, dist_scale, shadow_only);}
 		}
-		if (!qbd.empty() || has_untex_verts() || !dstate.hedge_draw.empty()) { // we have something to draw
+		if (!city_draw_qbds_t::empty() || !dstate.hedge_draw.empty()) { // we have something to draw
 			if (!has_immediate_draw) {dstate.begin_tile(g->get_cube_center(), 1, 1);} // will_emit_now=1, ensure_active=1
 			bool must_restore_state(!dstate.hedge_draw.empty());
 			dstate.hedge_draw.draw_and_clear(dstate.s);
 
 			if (has_untex_verts()) { // draw untextured verts before qbd so that textures such as text can alpha blend on top
 				dstate.set_untextured_material();
-				untex_qbd[0].draw_and_clear(); // matte
+				untex_qbd.draw_and_clear(); // matte
 
-				if (!untex_qbd[1].empty()) { // specular
-					dstate.s.set_specular(0.75, 50.0); // shiny
-					untex_qbd[1].draw_and_clear();
+				if (!untex_spec_qbd.empty()) { // specular
+					dstate.s.set_specular(specular, shininess); // shiny; values are per-object type
+					untex_spec_qbd.draw_and_clear();
 					dstate.s.clear_specular();
 				}
 				dstate.unset_untextured_material();
@@ -1777,6 +1775,12 @@ template<typename T> void city_obj_placer_t::draw_objects(vector<T> const &objs,
 			}
 			if (!shadow_only && must_restore_state) {T::pre_draw(dstate, shadow_only);} // re-setup for below draw call and/or next tile
 			if (draw_qbd_as_quads) {qbd.draw_and_clear_quads();} else {qbd.draw_and_clear();} // draw this group with current smap
+
+			if (!emissive_qbd.empty()) { // draw emissive materials
+				dstate.s.add_uniform_float("emissive_scale", 1.0); // 100% emissive
+				if (draw_qbd_as_quads) {emissive_qbd.draw_and_clear_quads();} else {emissive_qbd.draw_and_clear();}
+				dstate.s.add_uniform_float("emissive_scale", 0.0); // reset
+			}
 		}
 	} // for g
 	T::post_draw(dstate, shadow_only);
