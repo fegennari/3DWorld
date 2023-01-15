@@ -136,21 +136,54 @@ void add_signs_for_city(unsigned city_id, vector<sign_t> &signs) {
 
 void building_t::add_signs(vector<sign_t> &signs) const {
 	// house welcome and other door signs are currently part of the interior - should they be? I guess at least for secondary buildings, which aren't in a city
-	if (is_house) return; // no sign, for now
-	if (name.empty()) return; // no company name; shouldn't get here
+	if (is_house)      return; // no sign, for now
+	if (name.empty())  return; // no company name; shouldn't get here
+	if (num_sides & 1) return; // odd number of sides, may not be able to place a sign correctly
+	if (half_offset || flat_side_amt != 0.0 || start_angle != 0.0) return; // not a shape that's guanrateed to reach the bcube edge
 	rand_gen_t rgen;
 	rgen.set_state((mat_ix + parts.size()*12345 + 1), (name[0] - 'A' + 1));
 	rgen.rand_mix();
-	bool const dim(rgen.rand_bool()), dir(rgen.rand_bool()); // TODO: face front
-	float const width(bcube.get_sz_dim(!dim)), sign_hwidth(0.25*width), sign_height(0.5*sign_hwidth), sign_depth(0.025*sign_height);
+	bool pri_dir(rgen.rand_bool()); // TODO: face front, or side closest to the street
+	// find the highest part, largest area if tied, and place the sign on top of it
+	assert(!parts.empty());
+	float part_zmax(bcube.z1()), best_width(0.0), wall_pos[2] = {}, center_pos(0.0);
+	bool dim(0);
+
+	for (auto i = parts.begin(); i != get_real_parts_end(); ++i) {
+		bool const dmax(i->dx() < i->dy());
+		float const width(i->get_sz_dim(dmax));
+		
+		if (i->z2() > part_zmax || (i->z2() == part_zmax && width > best_width)) {
+			dim        = !dmax; // points in smaller dim
+			part_zmax  = i->z2();
+			best_width = width;
+			center_pos = i->get_center_dim(!dim);
+			UNROLL_2X(wall_pos[i_] = i->d[dim][i_];);
+		}
+	} // for i
+	float const width(bcube.get_sz_dim(!dim)), sign_hwidth(0.5*min(0.8*best_width, 0.5*width));
+	float const sign_height(4.0*sign_hwidth/(name.size() + 2)), sign_depth(0.025*sign_height);
 	cube_t sign;
-	sign.z1() = bcube.z2(); // FIXME: top of uppermost roof
+	sign.z1() = part_zmax;
 	sign.z2() = sign.z1() + sign_height;
-	set_wall_width(sign, bcube.get_center_dim(!dim), sign_hwidth, !dim);
-	sign.d[dim][!dir] = bcube.d[dim][ dir];
-	sign.d[dim][ dir] = sign .d[dim][!dir] + (dir ? 1.0 : -1.0)*sign_depth;
-	bool const two_sided(1), emissive(0);
-	signs.emplace_back(sign, dim, dir, name, WHITE, choose_sign_color(rgen), two_sided, emissive);
+	set_wall_width(sign, center_pos, sign_hwidth, !dim);
+	bool sign_both_sides(rgen.rand_bool());
+	bool const two_sided(!sign_both_sides && 0), emissive(0/*rgen.rand_bool()*/);
+	colorRGBA const color(choose_sign_color(rgen));
+
+	for (unsigned d = 0; d < 2; ++d) {
+		bool const dir(pri_dir ^ bool(d));
+		sign.d[dim][!dir] = wall_pos[dir];
+		sign.d[dim][ dir] = wall_pos[dir] + (dir ? 1.0 : -1.0)*sign_depth;
+		bool bad_place(0);
+
+		for (auto i = parts.begin(); i != get_real_parts_end(); ++i) { // check for interior split edges
+			if (i->z2() == part_zmax && i->intersects_xy_no_adj(sign)) {bad_place = 1; break;}
+		}
+		if (bad_place) continue; // Note: intentionally skips the break below
+		signs.emplace_back(sign, dim, dir, name, WHITE, color, two_sided, emissive);
+		if (sign_both_sides) break; // one side only - done
+	} // for d
 }
 
 
