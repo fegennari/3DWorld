@@ -270,6 +270,7 @@ public:
 	void blend_animations(unsigned anim_id1, unsigned anim_id2, float blend_factor, float delta_time);
 	void get_blended_bone_transforms(float anim_time1, float anim_time2, animation_t const &animation1, animation_t const &animation2,
 		unsigned node_ix, xform_matrix const &parent_transform, float blend_factor);
+	void merge_from(model_anim_t const &anim, string const &anim_name);
 };
 
 
@@ -674,6 +675,7 @@ public:
 	static void proc_model_normals(vector<counted_normal> &cn, int recalc_normals, float nmag_thresh=0.7);
 	static void proc_model_normals(vector<weighted_normal> &wn, int recalc_normals, float nmag_thresh=0.7);
 	void write_to_cobj_file(std::ostream &out) const;
+	void merge_animation_from(model3d const &anim_model, string const &anim_name) {model_anim_data.merge_from(anim_model.model_anim_data, anim_name);}
 };
 
 

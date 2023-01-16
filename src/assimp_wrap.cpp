@@ -131,6 +131,17 @@ void model_anim_t::get_blended_bone_transforms(float anim_time1, float anim_time
 	for (unsigned i : node.children) {get_blended_bone_transforms(anim_time1, anim_time2, animation1, animation2, i, global_transform, blend_factor);}
 }
 
+void model_anim_t::merge_from(model_anim_t const &anim, string const &anim_name) {
+	// TODO: store anim_name in animation_t
+	if (animations.empty()) { // first animation added - copy from the incoming class
+		assert(anim_nodes.empty());
+		*this = anim;
+		return;
+	}
+	// TODO: check that all the various bone transforms, mappings, and anim_nodes are compatible somehow?
+	vector_add_to(anim.animations, animations); // just combine the animations, and we're done, right?
+}
+
 #ifdef ENABLE_ASSIMP
 
 #include <assimp/Importer.hpp>

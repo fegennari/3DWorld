@@ -32,6 +32,13 @@ struct city_model_t {
 	colorRGBA custom_color;
 	vector<unsigned> shadow_mat_ids;
 
+	struct model_anim_t {
+		string fn, anim_name;
+		model_anim_t() {}
+		model_anim_t(string const &fn_, string const &name) : fn(fn_), anim_name(name) {}
+	};
+	vector<model_anim_t> anim_fns; // for ped models, etc.
+
 	city_model_t() {}
 	city_model_t(string const &fn_, int bmid, int fcid, float rot, float dz_, float lm, vector<unsigned> const &smids) :
 		fn(fn_), body_mat_id(bmid), fixed_color_id(fcid), xy_rot(rot), lod_mult(lm), shadow_mat_ids(smids) {}
