@@ -154,6 +154,7 @@ struct mailbox_t : public oriented_city_obj_t {
 struct sign_t : public oriented_city_obj_t {
 	bool two_sided, emissive;
 	colorRGBA bkg_color, text_color;
+	cube_t connector;
 	string text;
 
 	sign_t(cube_t const &bcube_, bool dim_, bool dir_, string const &text_, colorRGBA const &bc, colorRGBA const &tc, bool two_sided_=0, bool emissive_=0);

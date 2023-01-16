@@ -53,7 +53,7 @@ string choose_business_name(rand_gen_t rgen) {
 	case 5: return base + " & " + gen_random_name(rgen);
 	case 6: return base + ", " + gen_random_name(rgen) + ", & " + gen_random_name(rgen);
 	case 7: return (rgen.rand_bool() ? (rgen.rand_bool() ? "National " : "Global ") : (rgen.rand_bool() ? "United " : "American ")) + base;
-	case 8: return base + (rgen.rand_bool() ? (rgen.rand_bool() ? " Bank" : " Trust") : (rgen.rand_bool() ? " Holdings" : " Industries"));
+	case 8: return base + (rgen.rand_bool() ? (rgen.rand_bool() ? " Bank" : " Trust") : (rgen.rand_bool() ? " Holdings" : " Industries")); // tower, if tall?
 	case 9: return base + " " + gen_random_name(rgen);
 	default: assert(0);
 	}
@@ -87,6 +87,7 @@ public:
 sign_helper_t sign_helper;
 
 colorRGBA choose_sign_color(rand_gen_t &rgen, bool emissive) {
+	// regular sign text colors must be dark for good contrast with the white background; emissive colors must be bright to contrast with the dark sky and buildings
 	colorRGBA const sign_colors    [8] = {DK_RED, DK_BLUE, DK_BLUE, DK_BROWN, BLACK, BLACK, BLACK, BLACK};
 	colorRGBA const emissive_colors[5] = {RED, GREEN, BLUE, RED, BLUE};
 	return (emissive ? emissive_colors[rgen.rand() % 5] : sign_colors[rgen.rand() % 8]);
@@ -139,18 +140,18 @@ void building_t::add_signs(vector<sign_t> &signs) const {
 	// house welcome and other door signs are currently part of the interior - should they be? I guess at least for secondary buildings, which aren't in a city
 	if (is_house)      return; // no sign, for now
 	if (name.empty())  return; // no company name; shouldn't get here
-	if (num_sides & 1) return; // odd number of sides, may not be able to place a sign correctly
-	if (half_offset || flat_side_amt != 0.0 || start_angle != 0.0) return; // not a shape that's guanrateed to reach the bcube edge
+	if (num_sides & 1) return; // odd number of sides, may not be able to place a sign correctly (but maybe we can check this with a collision test with conn?)
+	if (half_offset || flat_side_amt != 0.0 || alt_step_factor != 0.0 || start_angle != 0.0) return; // not a shape that's guanrateed to reach the bcube edge
 	rand_gen_t rgen;
 	rgen.set_state((mat_ix + parts.size()*12345 + 1), (name[0] - 'A' + 1));
 	rgen.rand_mix();
-	bool pri_dir(rgen.rand_bool()); // TODO: face front, or side closest to the street
 	// find the highest part, largest area if tied, and place the sign on top of it
 	assert(!parts.empty());
 	float part_zmax(bcube.z1()), best_width(0.0), wall_pos[2] = {}, center_pos(0.0);
-	bool dim(0);
+	bool dim(0), pri_dir(rgen.rand_bool());
 
 	for (auto i = parts.begin(); i != get_real_parts_end(); ++i) {
+		// choose max dim; or should we use dim from street_dir if set? but that would limit us for corner buildings
 		bool const dmax(i->dx() < i->dy());
 		float const width(i->get_sz_dim(dmax));
 		
@@ -162,15 +163,22 @@ void building_t::add_signs(vector<sign_t> &signs) const {
 			UNROLL_2X(wall_pos[i_] = i->d[dim][i_];);
 		}
 	} // for i
-	float const width(bcube.get_sz_dim(!dim)), sign_hwidth(0.5*min(0.8*best_width, 0.5*width));
-	float const sign_height(4.0*sign_hwidth/(name.size() + 2)), sign_depth(0.025*sign_height);
-	cube_t sign;
-	sign.z1() = part_zmax;
-	sign.z2() = sign.z1() + sign_height;
-	set_wall_width(sign, center_pos, sign_hwidth, !dim);
+	if (street_dir > 0) { // encoded as 2*dim + dir + 1; 0 is unassigned
+		bool const sdim((street_dir - 1) >> 1), sdir((street_dir - 1) & 1);
+		if (dim == sdim) {pri_dir = sdir;} // face the street if possible
+	}
 	bool sign_both_sides(rgen.rand_bool());
 	bool const two_sided(!sign_both_sides && 0), emissive(rgen.rand_bool());
+	// non-cube buildings can have signs tangent to a point or curve and need proper connectors; also, only cube buildings have roof walls that connectors may clip through
+	bool const add_connector(!is_cube());
+	float const width(bcube.get_sz_dim(!dim)), sign_hwidth(0.5*min(0.8*best_width, 0.5*width));
+	float const sign_height(4.0*sign_hwidth/(name.size() + 2)), sign_depth(0.025*sign_height);
 	colorRGBA const color(choose_sign_color(rgen, emissive));
+	float sign_z1(part_zmax);
+	if (!add_connector) {sign_z1 -= 1.2*sign_depth;} // shift down slightly to ensure some ext wall adjacency in case there's no roof wall
+	cube_t sign;
+	set_cube_zvals(sign, sign_z1, (sign_z1 + sign_height));
+	set_wall_width(sign, center_pos, sign_hwidth, !dim);
 
 	for (unsigned d = 0; d < 2; ++d) {
 		bool const dir(pri_dir ^ bool(d));
@@ -183,6 +191,15 @@ void building_t::add_signs(vector<sign_t> &signs) const {
 		}
 		if (bad_place) continue; // Note: intentionally skips the break below
 		signs.emplace_back(sign, dim, dir, name, WHITE, color, two_sided, emissive);
+
+		if (add_connector) {
+			cube_t conn(sign);
+			conn.z2() = sign.z1() + 0.01*sign_height;
+			conn.expand_in_dim(!dim, -0.94*sign_hwidth);
+			conn.d[dim][!dir] = wall_pos[dir] - (dir ? 1.0 : -1.0)*(4.0*sign_depth + get_wall_thickness());
+			conn.d[dim][ dir] = wall_pos[dir];
+			signs.back().connector = conn;
+		}
 		if (sign_both_sides) break; // one side only - done
 	} // for d
 }

@@ -1048,8 +1048,12 @@ sign_t::sign_t(cube_t const &bcube_, bool dim_, bool dir_, string const &text_, 
 
 void sign_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
 	dstate.draw_cube(qbds.untex_qbd, bcube, bkg_color); // untextured, matte back
+
+	if (!connector.is_all_zeros()) { // draw connector; is this needed for the shadow pass?
+		dstate.draw_cube(qbds.untex_qbd, connector, LT_GRAY); // untextured, matte
+	}
 	if (shadow_only) return; // no text in shadow pass
-	quad_batch_draw &qbd(emissive ? qbds.emissive_qbd : qbds.qbd);
+	quad_batch_draw &qbd((emissive /*&& is_night()*/) ? qbds.emissive_qbd : qbds.qbd);
 	bool const front_facing(((camera_pdu.pos[dim] - dstate.xlate[dim]) < bcube.d[dim][dir]) ^ dir);
 	if (front_facing  ) {add_sign_text_verts(text, bcube, dim,  dir, text_color, qbd.verts);} // draw the front side text
 	else if (two_sided) {add_sign_text_verts(text, bcube, dim, !dir, text_color, qbd.verts);} // draw the back side text
