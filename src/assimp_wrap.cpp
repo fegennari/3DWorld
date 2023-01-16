@@ -196,7 +196,7 @@ class file_reader_assimp {
 	set<unsigned> unique_tids;
 
 	void load_embedded_textures() {
-		timer_t timer("Load Embedded Textures"); // 1.57s (0.55s) avg across 5 people and 5 zombie models
+		timer_t timer("Load Embedded Textures", !to_load.empty()); // 1.57s (0.55s) avg across 5 people and 5 zombie models
 
 #pragma omp parallel for schedule(dynamic)
 		for (int i = 0; i < (int)to_load.size(); ++i) {
