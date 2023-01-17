@@ -78,6 +78,7 @@ inline bool read_type_t(FILE *fp, cube_t    &val) {return read_cube  (fp, val);}
 bool read_float_reset_pos_on_fail(FILE *fp, float &v);
 bool read_int_reset_pos_on_fail  (FILE *fp, int &v);
 std::string read_quoted_string   (FILE *fp, unsigned &line_num);
+inline std::string read_quoted_string   (FILE *fp) {unsigned line_num(0); return read_quoted_string(fp, line_num);} // no line number variant
 
 struct geom_xform_t;
 unsigned read_cube(FILE *fp, geom_xform_t const &xf, cube_t &c);

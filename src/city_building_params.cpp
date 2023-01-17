@@ -108,8 +108,7 @@ bool city_params_t::read_option(FILE *fp) {
 	}
 	else if (str == "ped_model_add_anim") { // city ped_model_add_anim <filename> <animation name>
 		if (ped_model_files.empty()) {cerr << "Error: Can't use ped_model_add_anim without first declaring a ped_model" << endl; return 0;}
-		unsigned line_num(0); // unused
-		string const fn(read_quoted_string(fp, line_num)), anim_name(read_quoted_string(fp, line_num));
+		string const fn(read_quoted_string(fp)), anim_name(read_quoted_string(fp));
 		if (!fn.empty()) {ped_model_files.back().anim_fns.emplace_back(fn, anim_name);} // ignore if empty filename, but I guess an empty anim_name is valid?
 	}
 	// other

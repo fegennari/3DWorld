@@ -13,8 +13,8 @@ bool city_model_t::read(FILE *fp, bool is_helicopter, bool is_person) {
 
 	// filename recalc_normals two_sided centered body_material_id fixed_color_id xy_rot swap_xy scale lod_mult <blade_mat_id for helicopter> [shadow_mat_ids]
 	assert(fp);
-	unsigned line_num(0), swap_xyz(0), shadow_mat_id(0); // Note: line_num is unused
-	fn = read_quoted_string(fp, line_num);
+	unsigned swap_xyz(0), shadow_mat_id(0);
+	fn = read_quoted_string(fp);
 	if (fn.empty()) return 0;
 	if (!read_int  (fp, recalc_normals)) return 0; // 0,1,2
 	if (!read_bool (fp, two_sided))      return 0;
