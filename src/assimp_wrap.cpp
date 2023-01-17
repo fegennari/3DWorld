@@ -131,15 +131,23 @@ void model_anim_t::get_blended_bone_transforms(float anim_time1, float anim_time
 	for (unsigned i : node.children) {get_blended_bone_transforms(anim_time1, anim_time2, animation1, animation2, i, global_transform, blend_factor);}
 }
 
-void model_anim_t::merge_from(model_anim_t const &anim, string const &anim_name) {
-	// TODO: store anim_name in animation_t
+void model_anim_t::merge_from(model_anim_t const &anim) {
+	unsigned const anim_start(animations.size());
+
 	if (animations.empty()) { // first animation added - copy from the incoming class
 		assert(anim_nodes.empty());
 		*this = anim;
-		return;
 	}
-	// TODO: check that all the various bone transforms, mappings, and anim_nodes are compatible somehow?
-	vector_add_to(anim.animations, animations); // just combine the animations, and we're done, right?
+	else {
+		// TODO: check that all the various bone transforms, mappings, and anim_nodes are compatible somehow?
+		vector_add_to(anim.animations, animations); // just combine the animations, and we're done, right?
+	}
+}
+int model_anim_t::get_animation_id_by_name(string const &anim_name) const {
+	for (auto a = animations.begin(); a != animations.end(); ++a) {
+		if (a->name == anim_name) {return (a - animations.begin());}
+	}
+	return -1; // not found
 }
 
 #ifdef ENABLE_ASSIMP
@@ -182,7 +190,7 @@ void print_assimp_matrix(aiMatrix4x4 const &m) {aiMatrix4x4_to_xform_matrix(m).p
 class file_reader_assimp {
 	model3d &model;
 	geom_xform_t cur_xf;
-	string model_dir;
+	string model_dir, anim_name;
 	bool load_animations=0, had_vertex_error=0, had_comp_tex_error=0;
 	unsigned temp_image_ix=0;
 
@@ -314,9 +322,11 @@ class file_reader_assimp {
 		assert(scene && scene->mRootNode);
 		model_anim.root_transform = cur_xf.create_xform_matrix();
 		model_anim.global_inverse_transform = aiMatrix4x4_to_xform_matrix(scene->mRootNode->mTransformation).inverse();
-		model_anim.animations.resize(scene->mNumAnimations);
+		model_anim.animations.reserve(scene->mNumAnimations);
 
 		for (unsigned a = 0; a < scene->mNumAnimations; ++a) {
+			//cout << "adding animation '" << anim_name << "'" << endl; // TESTING
+			model_anim.animations.emplace_back(anim_name);
 			aiAnimation const *const anim(scene->mAnimations[a]);
 			assert(anim);
 			read_missing_bones(anim, model_anim);
@@ -456,7 +466,8 @@ class file_reader_assimp {
 		for (unsigned i = 0; i < node->mNumChildren; i++) {process_node_recur(node->mChildren[i], scene, model_anim);}
 	}
 public:
-	file_reader_assimp(model3d &model_, bool load_animations_=0) : model(model_), load_animations(load_animations_) {}
+	file_reader_assimp(model3d &model_, bool load_animations_=0, string const &anim_name_="") :
+		model(model_), anim_name(anim_name_), load_animations(load_animations_) {}
 
 	bool read(string const &fn, geom_xform_t const &xf, bool recalc_normals, bool verbose) {
 		cur_xf = xf;
@@ -508,11 +519,11 @@ public:
 	}
 }; // end file_reader_assimp
 
-bool read_assimp_model(string const &filename, model3d &model, geom_xform_t const &xf, int recalc_normals, bool verbose) {
+bool read_assimp_model(string const &filename, model3d &model, geom_xform_t const &xf, string const &anim_name, int recalc_normals, bool verbose) {
 	cout << "Reading model file " << filename << endl;
 	timer_t timer("Read AssImp Model"); // 2.37s (1.32s MT) avg across 5 people and 5 zombie models
-	bool const load_animations = 1;
-	file_reader_assimp reader(model, load_animations);
+	bool const load_animations(!anim_name.empty());
+	file_reader_assimp reader(model, load_animations, anim_name);
 	return reader.read(fix_path_slashes(filename), xf, recalc_normals, verbose);
 }
 

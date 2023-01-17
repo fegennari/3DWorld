@@ -81,6 +81,7 @@ struct city_params_t {
 	float ped_speed;
 	bool ped_respawn_at_dest, use_animated_people;
 	bool any_model_has_animations; // calculated, not specified in the config file
+	string default_anim_name;
 	// buildings; maybe should be building params, but we have the model loading code here
 	vector<city_model_t> building_models[NUM_OBJ_MODELS]; // multiple model files per type
 	// use for option reading

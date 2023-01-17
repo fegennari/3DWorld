@@ -623,10 +623,21 @@ void vertex_bone_data_t::normalize() { // make sure all weights sum to 1.0
 	for (unsigned i = 0; i < MAX_NUM_BONES_PER_VERTEX; ++i) {weights[i] /= w_sum;}
 }
 
-void model3d::setup_bone_transforms(shader_t &shader, float anim_time, unsigned anim_id) {
+void model3d::setup_bone_transforms(shader_t &shader, float anim_time, int anim_id) {
 	if (num_animations() == 0) return;
 	//highres_timer_t timer("Setup Bone Transforms"); // 0.021ms
 	unsigned const MAX_MODEL_BONES = 200; // must agree with shader code
+
+	if (anim_id < 0) { // animation not selected by ID, try using the name stored in the shader property instead
+		string const anim_name(shader.get_property("animation_name"));
+
+		if (anim_name.empty()) {anim_id = 0;} // no named animation, use the first one; could also use "default" for the name as that matches the default name
+		else {
+			anim_id = model_anim_data.get_animation_id_by_name(anim_name);
+			if (anim_id < 0) {cerr << "Error: Animation '" << anim_name << "' not found in model " << filename << endl; exit(1);}
+		}
+	}
+	if (anim_id < 0) {anim_id = 0;} // default to animation 0
 	model_anim_data.get_bone_transforms(anim_id, anim_time);
 	//blend_animations(anim_id, anim_id2, blend_factor, delta_time);
 	unsigned const num_bones(model_anim_data.bone_transforms.size());
@@ -2189,7 +2200,7 @@ void model3d::render(shader_t &shader, bool is_shadow_pass, int reflection_pass,
 	if (has_animations()) {
 		static float cur_tfticks(0.0);
 		if (animate2) {cur_tfticks = tfticks;}
-		setup_bone_transforms(shader, cur_tfticks/TICKS_PER_SECOND, 0); // anim_id=0
+		setup_bone_transforms(shader, cur_tfticks/TICKS_PER_SECOND, -1); // anim_id=-1
 	}
 	xform_matrix const mvm(fgGetMVM());
 	model3d_xform_t const xlate_xf(xlate);

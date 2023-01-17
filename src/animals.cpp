@@ -50,7 +50,7 @@ class animal_model_loader_t : public model3ds { // currently for fish only
 		bool const write_file    = 0;
 		int const recalc_normals = 0; // okay for loading model3d
 
-		if (!load_model_file(fn, *this, geom_xform_t(), def_tid, def_color, 0, 0.0, recalc_normals, 0, write_file, 1)) {
+		if (!load_model_file(fn, *this, geom_xform_t(), "", def_tid, def_color, 0, 0.0, recalc_normals, 0, write_file, 1)) { // no animations in this model
 			cerr << "Error: Failed to read model file '" << fn << "'" << endl;
 			return 0;
 		}

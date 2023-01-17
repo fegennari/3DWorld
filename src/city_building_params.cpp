@@ -104,6 +104,7 @@ bool city_params_t::read_option(FILE *fp) {
 		city_model_t ped_model;
 		if (!ped_model.read(fp, 0, 1)) {return read_error(str);} // is_helicopter=0, is_person=1
 		if (!ped_model.check_filename()) {cerr << "Error: ped_model file '" << ped_model.fn << "' does not exist; skipping" << endl; return 1;} // nonfatal
+		ped_model.default_anim_name = default_anim_name;
 		ped_model_files.push_back(ped_model); // Note: no ped_model_scale
 	}
 	else if (str == "ped_model_add_anim") { // city ped_model_add_anim <filename> <animation name>
@@ -111,6 +112,7 @@ bool city_params_t::read_option(FILE *fp) {
 		string const fn(read_quoted_string(fp)), anim_name(read_quoted_string(fp));
 		if (!fn.empty()) {ped_model_files.back().anim_fns.emplace_back(fn, anim_name);} // ignore if empty filename, but I guess an empty anim_name is valid?
 	}
+	else if (str == "default_anim_name") {default_anim_name = read_quoted_string(fp);} // applies to all models loaded after this point
 	// other
 	else if (str == "smap_size") {
 		if (!read_uint(fp, smap_size) || smap_size > 4096) {return read_error(str);}

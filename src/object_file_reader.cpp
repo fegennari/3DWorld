@@ -785,12 +785,12 @@ bool write_model3d_file(string const &base_fn, model3d &cur_model) {
 
 bool read_3ds_file_model(string const &filename, model3d &model, geom_xform_t const &xf, int use_vertex_normals, bool verbose);
 bool read_3ds_file_pts(string const &filename, vector<coll_tquad> *ppts, geom_xform_t const &xf, colorRGBA const &def_c, bool verbose);
-bool read_assimp_model(string const &filename, model3d &model, geom_xform_t const &xf, int recalc_normals, bool verbose);
+bool read_assimp_model(string const &filename, model3d &model, geom_xform_t const &xf, string const &anim_name, int recalc_normals, bool verbose);
 
 bool const ALWAYS_USE_ASSIMP = 0;
 
 // recalc_normals: 0=no, 1=yes, 2=face_weight_avg
-bool load_model_file(string const &filename, model3ds &models, geom_xform_t const &xf, int def_tid, colorRGBA const &def_c,
+bool load_model_file(string const &filename, model3ds &models, geom_xform_t const &xf, string const &anim_name, int def_tid, colorRGBA const &def_c,
 	int reflective, float metalness, int recalc_normals, int group_cobjs_level, bool write_file, bool verbose)
 {
 	if (filename.empty()) return 0; // can't be loaded
@@ -813,7 +813,7 @@ bool load_model_file(string const &filename, model3ds &models, geom_xform_t cons
 		if (write_file && !write_model3d_file(filename, cur_model)) return 0; // don't need to pop the model
 	}
 	else { // not a built-in supported format, try using assimp if compiled in
-		if (!read_assimp_model(filename, cur_model, xf, recalc_normals, verbose)) return 0;
+		if (!read_assimp_model(filename, cur_model, xf, anim_name, recalc_normals, verbose)) return 0;
 	}
 	if (model_mat_lod_thresh > 0.0) {cur_model.compute_area_per_tri();} // used for TT LOD/distance culling
 	return 1;
@@ -826,7 +826,8 @@ bool read_model_file(string const &filename, vector<coll_tquad> *ppts, geom_xfor
 	setlocale(LC_ALL, "C"); // optimization for obj file reading?
 
 	if (load_models) {
-		if (!load_model_file(filename, all_models, xf, def_tid, def_c, reflective, metalness, recalc_normals, group_cobjs_level, write_file, verbose)) return 0;
+		string const anim_name("default"); // used for debugging and general model loading; loaders that expect custom named animations don't call this function
+		if (!load_model_file(filename, all_models, xf, anim_name, def_tid, def_c, reflective, metalness, recalc_normals, group_cobjs_level, write_file, verbose)) return 0;
 		if (ppts) {get_cur_model_polygons(*ppts);}
 		return 1;
 	}

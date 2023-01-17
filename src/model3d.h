@@ -252,7 +252,9 @@ struct model_anim_t {
 	};
 	struct animation_t {
 		float ticks_per_sec=25.0, duration=1.0;
+		string name;
 		unordered_map<string, anim_data_t> anim_data; // per bone
+		animation_t(string const &name_="") : name(name_) {}
 	};
 	vector<animation_t> animations;
 
@@ -270,7 +272,8 @@ public:
 	void blend_animations(unsigned anim_id1, unsigned anim_id2, float blend_factor, float delta_time);
 	void get_blended_bone_transforms(float anim_time1, float anim_time2, animation_t const &animation1, animation_t const &animation2,
 		unsigned node_ix, xform_matrix const &parent_transform, float blend_factor);
-	void merge_from(model_anim_t const &anim, string const &anim_name);
+	void merge_from(model_anim_t const &anim);
+	int get_animation_id_by_name(string const &anim_name) const;
 };
 
 
@@ -627,7 +630,7 @@ public:
 	void set_sky_lighting_file(string const &fn, float weight, unsigned sz[3]);
 	void set_occlusion_cube(cube_t const &cube) {occlusion_cube = cube;}
 	void set_target_translate_scale(point const &target_pos, float target_radius, geom_xform_t &xf) const;
-	void setup_bone_transforms(shader_t &shader, float anim_time, unsigned anim_id=0);
+	void setup_bone_transforms(shader_t &shader, float anim_time, int anim_id=-1);
 	void render_materials_def(shader_t &shader, bool is_shadow_pass, int reflection_pass, bool is_z_prepass, int enable_alpha_mask,
 		unsigned bmap_pass_mask, int trans_op_mask, point const *const xlate, xform_matrix const *const mvm=nullptr)
 	{
@@ -675,7 +678,7 @@ public:
 	static void proc_model_normals(vector<counted_normal> &cn, int recalc_normals, float nmag_thresh=0.7);
 	static void proc_model_normals(vector<weighted_normal> &wn, int recalc_normals, float nmag_thresh=0.7);
 	void write_to_cobj_file(std::ostream &out) const;
-	void merge_animation_from(model3d const &anim_model, string const &anim_name) {model_anim_data.merge_from(anim_model.model_anim_data, anim_name);}
+	void merge_animation_from(model3d const &anim_model) {model_anim_data.merge_from(anim_model.model_anim_data);}
 };
 
 
@@ -736,8 +739,8 @@ void write_models_to_cobj_file(std::ostream &out);
 void adjust_zval_for_model_coll(point &pos, float radius, float mesh_zval, float step_height=0.0);
 void check_legal_movement_using_model_coll(point const &prev, point &cur, float radius=0.0);
 
-bool load_model_file(string const &filename, model3ds &models, geom_xform_t const &xf, int def_tid, colorRGBA const &def_c,
-	int reflective, float metalness, int recalc_normals, int group_cobjs_level, bool write_file, bool verbose);
+bool load_model_file(string const &filename, model3ds &models, geom_xform_t const &xf, string const &anim_name, int def_tid,
+	colorRGBA const &def_c, int reflective, float metalness, int recalc_normals, int group_cobjs_level, bool write_file, bool verbose);
 bool read_model_file(string const &filename, vector<coll_tquad> *ppts, geom_xform_t const &xf, int def_tid, colorRGBA const &def_c,
 	int reflective, float metalness, bool load_model_file, int recalc_normals, int group_cobjs_level, bool write_file, bool verbose);
 

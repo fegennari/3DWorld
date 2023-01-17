@@ -8,6 +8,9 @@
 #include "model3d.h"
 
 
+enum {ANIM_ID_WALK=0, ANIM_ID_IDLE, ANIM_ID_ATTACK, NUM_ANIM_IDS};
+string const animation_names[NUM_ANIM_IDS] = {"walking", "idle", "attack"};
+
 struct animation_state_t {
 	bool enabled;
 	unsigned anim_id, model_anim_id;
@@ -30,6 +33,7 @@ struct city_model_t {
 	int model3d_id=-1; // index into model3ds vector; -1 is not set
 	float xy_rot=0.0, lod_mult=1.0, scale=1.0, anim_speed=1.0; // xy_rot in degrees
 	colorRGBA custom_color;
+	string default_anim_name;
 	vector<unsigned> shadow_mat_ids;
 
 	struct model_anim_t {
