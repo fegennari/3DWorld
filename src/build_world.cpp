@@ -1046,14 +1046,17 @@ string read_quoted_string(FILE *fp, unsigned &line_num) {
 	while (1) {
 		int const c(getc(fp));
 		if (is_EOF(c)) {return str;} // end of file
-		else if (c == '"') {in_quote ^= 1;} // quote
+		else if (c == '"') { // quote
+			if (in_quote) {return str;} // end of quote ends the string, even if it's empty
+			in_quote ^= 1;
+		}
 		else if (isspace(c)) { // whitespace character
 			if (c == '\n') {++line_num;}
 			if (in_quote) {str.push_back(c);} // part of quoted string
 			else if (!str.empty()) {return str;} // not leading whitespace
 		}
 		else {str.push_back(c);}
-	}
+	} // while
 	assert(0); // never gets here
 	return str;
 }
