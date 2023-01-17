@@ -101,22 +101,21 @@ void city_model_loader_t::load_model_id(unsigned id) {
 			continue;
 		}
 		assert(!empty()); // must have loaded a model
+		model3d &cur_model(back());
 
 		if (model.shadow_mat_ids.empty()) { // empty shadow_mat_ids, create the list from all materials
-			model3d const &m(back());
-			unsigned const num_materials(max(m.num_materials(), size_t(1))); // max with 1 for unbound material
+			unsigned const num_materials(max(cur_model.num_materials(), size_t(1))); // max with 1 for unbound material
 			for (unsigned j = 0; j < num_materials; ++j) {model.shadow_mat_ids.push_back(j);} // add them all
 		}
 		for (city_model_t::model_anim_t const &anim : model.anim_fns) {
-			model3d &m(back());
 			model3d anim_data(anim.fn, tmgr); // Note: texture manager is passed in, even though there should be no loaded textures; however, this isn't checked
 			
 			if (!read_assimp_model(anim.fn, anim_data, geom_xform_t(), model.recalc_normals, verbose)) {
 				cerr << "Error: Failed to read model animation file '" << anim.fn << "'; Skipping this animation" << endl;
 			}
-			else {m.merge_animation_from(anim_data, anim.anim_name);}
+			else {cur_model.merge_animation_from(anim_data);}
 		} // for anim
-		city_params.any_model_has_animations |= back().has_animations();
+		city_params.any_model_has_animations |= cur_model.has_animations();
 	} // for sm
 }
 

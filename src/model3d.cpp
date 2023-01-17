@@ -628,7 +628,7 @@ void model3d::setup_bone_transforms(shader_t &shader, float anim_time, unsigned 
 	//highres_timer_t timer("Setup Bone Transforms"); // 0.021ms
 	unsigned const MAX_MODEL_BONES = 200; // must agree with shader code
 	model_anim_data.get_bone_transforms(anim_id, anim_time);
-	//blend_animations(anim_id1, anim_id2, blend_factor, delta_time);
+	//blend_animations(anim_id, anim_id2, blend_factor, delta_time);
 	unsigned const num_bones(model_anim_data.bone_transforms.size());
 	assert(num_bones > 0);
 

@@ -823,7 +823,7 @@ bool load_model_file(string const &filename, model3ds &models, geom_xform_t cons
 bool read_model_file(string const &filename, vector<coll_tquad> *ppts, geom_xform_t const &xf, int def_tid, colorRGBA const &def_c,
 	int reflective, float metalness, bool load_models, int recalc_normals, int group_cobjs_level, bool write_file, bool verbose)
 {
-	setlocale(LC_ALL, "C");
+	setlocale(LC_ALL, "C"); // optimization for obj file reading?
 
 	if (load_models) {
 		if (!load_model_file(filename, all_models, xf, def_tid, def_c, reflective, metalness, recalc_normals, group_cobjs_level, write_file, verbose)) return 0;

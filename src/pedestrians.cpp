@@ -1428,8 +1428,8 @@ void ped_manager_t::draw(vector3d const &xlate, bool use_dlights, bool shadow_on
 	float const def_draw_dist((use_models ? 500.0 : 2000.0)*get_ped_radius());
 	float const draw_dist(is_dlight_shadows ? 0.8*camera_pdu.far_ : def_draw_dist), draw_dist_sq(draw_dist*draw_dist); // smaller view dist for models
 	pos_dir_up pdu(camera_pdu); // decrease the far clipping plane for pedestrians
-	pdu.far_ = draw_dist;
-	pdu.pos -= xlate; // adjust for local translate
+	pdu.far_     = draw_dist;
+	pdu.pos     -= xlate; // adjust for local translate
 	dstate.xlate = xlate;
 	dstate.set_enable_normal_map(use_models && use_model3d_bump_maps());
 	fgPushMatrix();
@@ -1567,14 +1567,14 @@ bool ped_manager_t::draw_ped(person_base_t const &ped, shader_t &s, pos_dir_up c
 	if (is_dlight_shadows && !dist_less_than(pre_smap_player_pos, ped.pos, 0.4*def_draw_dist)) return 0; // too far from the player
 	if (is_dlight_shadows && !sphere_in_light_cone_approx(pdu, ped.pos, 0.5*ped.get_height())) return 0;
 
-	if (ped_model_loader.num_models() == 0 || !ped_model_loader.is_model_valid(ped.model_id)) {
+	if (ped_model_loader.num_models() == 0 || !ped_model_loader.is_model_valid(ped.model_id)) { // no model - draw as sphere
 		if (!pdu.sphere_visible_test(ped.pos, ped.radius)) return 0; // not visible - skip
 		if (anim_state) {anim_state->clear_animation_id(s);} // no animations for a sphere
 		begin_ped_sphere_draw(s, YELLOW, in_sphere_draw, 0);
 		int const ndiv = 16; // currently hard-coded
 		draw_sphere_vbo(ped.pos, ped.radius, ndiv, 0);
 	}
-	else {
+	else { // draw as 3D model
 		cube_t const bcube(ped.get_bcube());
 		// Note: the below test uses the bsphere, not the bcube directly, so it will be more accurate even if the model bcube doesn't include the animations;
 		// however, it doesn't use the model bcube itself but rather the height/radius-based person bcube, so it may result in people clipping through objects
