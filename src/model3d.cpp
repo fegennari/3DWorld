@@ -623,6 +623,15 @@ void vertex_bone_data_t::normalize() { // make sure all weights sum to 1.0
 	for (unsigned i = 0; i < MAX_NUM_BONES_PER_VERTEX; ++i) {weights[i] /= w_sum;}
 }
 
+class model_error_logger_t {
+	set<string> errors_printed;
+public:
+	void log_error(string const &error_str) {
+		if (errors_printed.insert(error_str).second) {cerr << error_str << endl;} // print if unique
+	}
+};
+model_error_logger_t model_error_logger;
+
 void model3d::setup_bone_transforms(shader_t &shader, float anim_time, int anim_id) {
 	if (num_animations() == 0) return;
 	//highres_timer_t timer("Setup Bone Transforms"); // 0.021ms
@@ -631,13 +640,19 @@ void model3d::setup_bone_transforms(shader_t &shader, float anim_time, int anim_
 	if (anim_id < 0) { // animation not selected by ID, try using the name stored in the shader property instead
 		string const anim_name(shader.get_property("animation_name"));
 
-		if (anim_name.empty()) {anim_id = 0;} // no named animation, use the first one; could also use "default" for the name as that matches the default name
+		if (anim_name.empty()) { // no named animation, use the first one; could also use "default" for the name as that matches the default name
+			model_error_logger.log_error("Error: No animation name or ID specified for model '" + filename + "'; Using the first animation");
+			anim_id = 0;
+		}
 		else {
 			anim_id = model_anim_data.get_animation_id_by_name(anim_name);
-			if (anim_id < 0) {cerr << "Error: Animation '" << anim_name << "' not found in model " << filename << endl; exit(1);}
+			
+			if (anim_id < 0) {
+				model_error_logger.log_error("Error: Animation '" + anim_name + "' not found in model '" + filename + "'; Using the first animation");
+				anim_id = 0;
+			}
 		}
 	}
-	if (anim_id < 0) {anim_id = 0;} // default to animation 0
 	model_anim_data.get_bone_transforms(anim_id, anim_time);
 	//blend_animations(anim_id, anim_id2, blend_factor, delta_time);
 	unsigned const num_bones(model_anim_data.bone_transforms.size());

@@ -1587,7 +1587,13 @@ bool ped_manager_t::draw_ped(person_base_t const &ped, shader_t &s, pos_dir_up c
 		if (!ped.in_building && dstate.is_occluded(bcube)) return 0; // only check occlusion for expensive ped models, and for peds outside buildings
 		end_sphere_draw(in_sphere_draw);
 		bool const low_detail(!shadow_only && dist_sq > 0.25*draw_dist_sq); // low detail for non-shadow pass at half draw dist
-		if (anim_state) {anim_state->set_animation_time(ped.anim_time);}
+		
+		if (anim_state) {
+			bool const is_idle(ped.is_waiting_or_stopped());
+			// TODO: if is_idle, we still need to advance the animation time
+			anim_state->set_animation_time(ped.anim_time);
+			anim_state->model_anim_id = (is_idle ? ANIM_ID_IDLE : ANIM_ID_WALK);
+		}
 		vector3d dir_horiz(ped.dir);
 		dir_horiz.z = 0.0; // always face a horizontal direction, even if walking on a slope
 		dir_horiz.normalize();

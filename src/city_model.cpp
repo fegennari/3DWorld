@@ -169,7 +169,7 @@ void city_model_loader_t::draw_model(shader_t &s, vector3d const &pos, cube_t co
 		anim_state->set_animation_id_and_time(s, has_bone_animations, model_file.anim_speed);
 
 		if (has_bone_animations) {
-			model.setup_bone_transforms(s, 32.0*model_file.anim_speed*anim_state->anim_time, anim_state->model_anim_id);
+			model.setup_bone_transforms(s, 32.0*model_file.anim_speed*anim_state->anim_time); // Note: anim_id is specified through the animation name property
 		}
 		else {
 			s.add_uniform_float("animation_scale",    model_file.scale/sz_scale); // Note: determined somewhat experimentally
