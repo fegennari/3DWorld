@@ -15,7 +15,8 @@ struct waiting_obj_t {
 	float waiting_start;
 	waiting_obj_t() : waiting_start(0.0) {}
 	void reset_waiting() {waiting_start = tfticks;}
-	float get_wait_time_secs() const {return (float(tfticks) - waiting_start)/TICKS_PER_SECOND;} // Note: only meaningful for cars stopped at lights or peds stopped at roads
+	float get_wait_time_ticks() const {return (float(tfticks) - waiting_start);} // Note: only meaningful for cars stopped at lights or peds stopped at roads
+	float get_wait_time_secs () const {return get_wait_time_ticks()/TICKS_PER_SECOND;}
 };
 
 struct person_base_t : public waiting_obj_t {
@@ -42,8 +43,9 @@ struct person_base_t : public waiting_obj_t {
 	void set_velocity(vector3d const &v) {vel = v*(speed/v.mag());} // normalize to original velocity
 	void stop();
 	void go();
-	void wait_for(float seconds);
-	bool is_close_to_player() const;
+	void wait_for(float seconds); // for building people
+	float get_idle_anim_time() const; // in animation units
+	bool is_close_to_player () const;
 };
 
 enum {AI_STOP=0, AI_WAITING, AI_NEXT_PT, AI_BEGIN_PATH, AI_AT_DEST, AI_MOVING, AI_TO_REMOVE,

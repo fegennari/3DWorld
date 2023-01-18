@@ -104,6 +104,9 @@ void person_base_t::wait_for(float seconds) {
 	waiting_start = seconds*TICKS_PER_SECOND; // stop for N seconds
 	target_pos    = all_zeros; // clear any previous target
 }
+float person_base_t::get_idle_anim_time() const { // in animation units
+	return (in_building ? waiting_start : get_wait_time_ticks())*speed; // will count up for city pedestrians and count down for building people
+}
 cube_t person_base_t::get_bcube() const {
 	cube_t c;
 	c.set_from_sphere(pos, get_width());
@@ -1590,8 +1593,7 @@ bool ped_manager_t::draw_ped(person_base_t const &ped, shader_t &s, pos_dir_up c
 		
 		if (anim_state) {
 			bool const is_idle(ped.is_waiting_or_stopped());
-			// TODO: if is_idle, we still need to advance the animation time
-			anim_state->set_animation_time(ped.anim_time);
+			anim_state->set_animation_time(is_idle ? ped.get_idle_anim_time() : ped.anim_time); // if is_idle, we still need to advance the animation time
 			anim_state->model_anim_id = (is_idle ? ANIM_ID_IDLE : ANIM_ID_WALK);
 		}
 		vector3d dir_horiz(ped.dir);
