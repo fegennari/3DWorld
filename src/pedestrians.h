@@ -28,6 +28,9 @@ struct person_base_t : public waiting_obj_t {
 	unsigned short model_id=0, ssn=0;
 	int model_rand_seed=0;
 	bool in_building=0, is_stopped=0, is_female=0, is_zombie=0;
+	// temp state used for animations/drawing
+	mutable float last_anim_state_change_time=0.0;
+	mutable bool prev_was_idle=0;
 
 	person_base_t(float radius_) : radius(radius_) {}
 	std::string get_name() const;

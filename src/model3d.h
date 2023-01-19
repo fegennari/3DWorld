@@ -266,10 +266,9 @@ struct model_anim_t {
 	void get_bone_transforms(unsigned anim_id, float cur_time);
 private:
 	xform_matrix apply_anim_transform(float anim_time, animation_t const &animation, anim_node_t const &node) const;
-	// animation blending
-	float cur_time1=0.0, cur_time2=0.0;
 public:
-	void blend_animations(unsigned anim_id1, unsigned anim_id2, float blend_factor, float delta_time);
+	void blend_animations_simple(unsigned anim_id1, unsigned anim_id2, float blend_factor, float cur_time1, float cur_time2);
+	void blend_animations(unsigned anim_id1, unsigned anim_id2, float blend_factor, float delta_time, float &cur_time1, float &cur_time2);
 	void get_blended_bone_transforms(float anim_time1, float anim_time2, animation_t const &animation1, animation_t const &animation2,
 		unsigned node_ix, xform_matrix const &parent_transform, float blend_factor);
 	void merge_from(model_anim_t const &anim);
@@ -600,8 +599,6 @@ public:
 	// creation and query
 	bool empty              () const {return (materials.empty() && unbound_geom.empty());}
 	bool are_textures_loaded() const {return textures_loaded;}
-	unsigned num_animations () const {return model_anim_data.animations.size();}
-	bool has_animations     () const {return (num_animations() > 0);}
 	void set_has_cobjs() {has_cobjs = 1;}
 	void add_transform(model3d_xform_t const &xf) {transforms.push_back(xf);}
 	unsigned add_triangles(vector<triangle> const &triangles, colorRGBA const &color, int mat_id=-1, unsigned obj_id=0);
@@ -630,7 +627,6 @@ public:
 	void set_sky_lighting_file(string const &fn, float weight, unsigned sz[3]);
 	void set_occlusion_cube(cube_t const &cube) {occlusion_cube = cube;}
 	void set_target_translate_scale(point const &target_pos, float target_radius, geom_xform_t &xf) const;
-	void setup_bone_transforms(shader_t &shader, float anim_time, int anim_id=-1);
 	void render_materials_def(shader_t &shader, bool is_shadow_pass, int reflection_pass, bool is_z_prepass, int enable_alpha_mask,
 		unsigned bmap_pass_mask, int trans_op_mask, point const *const xlate, xform_matrix const *const mvm=nullptr)
 	{
@@ -678,7 +674,16 @@ public:
 	static void proc_model_normals(vector<counted_normal> &cn, int recalc_normals, float nmag_thresh=0.7);
 	static void proc_model_normals(vector<weighted_normal> &wn, int recalc_normals, float nmag_thresh=0.7);
 	void write_to_cobj_file(std::ostream &out) const;
+
+	// animations
+	unsigned num_animations() const {return model_anim_data.animations.size();}
+	bool has_animations    () const {return (num_animations() > 0);}
+	void setup_bone_transforms(shader_t &shader, float anim_time, int anim_id=-1);
+	void setup_bone_transforms_blended(shader_t &shader, float anim_time1, float anim_time2, float blend_factor, int anim_id1=-1, int anim_id2=-1);
 	void merge_animation_from(model3d const &anim_model) {model_anim_data.merge_from(anim_model.model_anim_data);}
+protected:
+	unsigned get_anim_id(shader_t &shader, string const &prop_name, int anim_id=-1) const;
+	void add_bone_transforms_to_shader(shader_t &shader) const;
 };
 
 

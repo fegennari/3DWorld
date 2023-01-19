@@ -13,12 +13,11 @@ string const animation_names[NUM_ANIM_IDS] = {"walking", "idle", "attack"};
 
 struct animation_state_t {
 	bool enabled;
-	unsigned anim_id, model_anim_id;
-	float anim_time;
+	unsigned anim_id, model_anim_id, model_anim_id2;
+	float anim_time, anim_time2, blend_factor;
 
 	animation_state_t(bool enabled_=0, unsigned anim_id_=0, float anim_time_=0.0, unsigned model_anim_id_=0) :
-		enabled(enabled_), anim_id(anim_id_), model_anim_id(model_anim_id_), anim_time(anim_time_) {}
-	void set_animation_time(float anim_time_) {anim_time = anim_time_;}
+		enabled(enabled_), anim_id(anim_id_), model_anim_id(model_anim_id_), model_anim_id2(model_anim_id_), anim_time(anim_time_), anim_time2(0.0), blend_factor(0.0) {}
 	void set_animation_id_and_time(shader_t &s, bool has_bone_animations=0, float anim_speed=1.0) const;
 	void clear_animation_id(shader_t &s) const;
 };

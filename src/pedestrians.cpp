@@ -1410,22 +1410,27 @@ void enable_animations_for_shader(shader_t &s) {
 	if (city_params.use_animated_people && city_params.any_model_has_animations) {s.set_prefix("#define USE_BONE_ANIMATIONS", 0);} // VS
 	s.add_property("animation_shader", "pedestrian_animation.part+"); // this shader part now contains model bone animations as well
 }
-void set_anim_id(shader_t &s, bool enable_animations, int animation_id, unsigned model_anim_id, bool has_bone_animations) {
+void set_anim_id(shader_t &s, bool enable_animations, int animation_id, unsigned model_anim_id, unsigned model_anim_id2, bool has_bone_animations) {
 	if (!enable_animations) return;
 
 	if (city_params.use_animated_people && has_bone_animations && animation_id == 1) { // select bone animation rather than walking
 		animation_id = 9; // used in the shader to select skeletal animation
 		assert(model_anim_id < NUM_ANIM_IDS);
 		s.add_property("animation_name", animation_names[model_anim_id]);
+
+		if (model_anim_id2 != model_anim_id) { // blended animation
+			assert(model_anim_id2 < NUM_ANIM_IDS);
+			s.add_property("animation_name2", animation_names[model_anim_id2]);
+		}
 	}
 	s.add_uniform_int("animation_id", animation_id);
 }
 
 void animation_state_t::set_animation_id_and_time(shader_t &s, bool has_bone_animations, float anim_speed) const {
-	set_anim_id(s, enabled, anim_id, model_anim_id, has_bone_animations);
+	set_anim_id(s, enabled, anim_id, model_anim_id, model_anim_id2, has_bone_animations);
 	if (enabled && !(city_params.use_animated_people && has_bone_animations)) {s.add_uniform_float("animation_time", anim_speed*anim_time);} // only for custom animations
 }
-void animation_state_t::clear_animation_id(shader_t &s) const {set_anim_id(s, enabled, 0, 0, 0);} // has_bone_animations not needed here
+void animation_state_t::clear_animation_id(shader_t &s) const {set_anim_id(s, enabled, 0, 0, 0, 0);} // has_bone_animations not needed here
 
 void ped_manager_t::draw(vector3d const &xlate, bool use_dlights, bool shadow_only, bool is_dlight_shadows) {
 	if (peds.empty()) return;
@@ -1591,10 +1596,27 @@ bool ped_manager_t::draw_ped(person_base_t const &ped, shader_t &s, pos_dir_up c
 		end_sphere_draw(in_sphere_draw);
 		bool const low_detail(!shadow_only && dist_sq > 0.25*draw_dist_sq); // low detail for non-shadow pass at half draw dist
 		
-		if (anim_state) {
+		if (anim_state) { // calculate/update animation data
 			bool const is_idle(ped.is_waiting_or_stopped());
-			anim_state->set_animation_time(is_idle ? ped.get_idle_anim_time() : ped.anim_time); // if is_idle, we still need to advance the animation time
+			float blend_factor(0.0); // [0.0, 1.0] where 0.0 => anim1 and 1.0 => anim2
+
+			if (ped.last_anim_state_change_time > 0.0) { // if there was an animation state change
+				float const blend_time_ticks(1.0*TICKS_PER_SECOND), state_change_elapsed(tfticks - ped.last_anim_state_change_time);
+				// just after a state change we have state_change_elapsed == 0 and want blend_factor = 1.0 to select the previous animation
+				if (state_change_elapsed < blend_time_ticks) {blend_factor = 1.0 - state_change_elapsed/blend_time_ticks;}
+			}
+			anim_state->anim_time     = (is_idle ? ped.get_idle_anim_time() : ped.anim_time); // if is_idle, we still need to advance the animation time
 			anim_state->model_anim_id = (is_idle ? ANIM_ID_IDLE : ANIM_ID_WALK);
+			anim_state->blend_factor  = blend_factor;
+			
+			if (blend_factor > 0.0) { // blend animations between walking and idle states using opposite is_idle logic
+				anim_state->anim_time2     = ((!is_idle) ? ped.get_idle_anim_time() : ped.anim_time);
+				anim_state->model_anim_id2 = ((!is_idle) ? ANIM_ID_IDLE : ANIM_ID_WALK);
+			}
+			if (is_idle != ped.prev_was_idle) { // update mutable temp state for animations
+				ped.prev_was_idle = is_idle;
+				ped.last_anim_state_change_time = tfticks;
+			}
 		}
 		vector3d dir_horiz(ped.dir);
 		dir_horiz.z = 0.0; // always face a horizontal direction, even if walking on a slope
@@ -1660,7 +1682,7 @@ void ped_manager_t::draw_player_model(shader_t &s, vector3d const &xlate, bool s
 	bcube.set_from_sphere(pos, PED_WIDTH_SCALE*player_radius);
 	bcube.z1() = pos.z - player_radius;
 	bcube.z2() = bcube.z1() + player_height*model.scale; // respect the model's scale; however, the player does seem a bit shorter than other people with the same model
-	anim_state.set_animation_time(player_anim_time);
+	anim_state.anim_time = player_anim_time;
 	ped_model_loader.draw_model(s, pos, bcube, dir_horiz, ALPHA0, xlate, model_id, shadow_only, 0, &anim_state);
 	s.upload_mvm(); // not sure if this is needed
 	anim_state.clear_animation_id(s); // make sure to leave animations disabled so that they don't apply to buildings

@@ -632,29 +632,46 @@ public:
 };
 model_error_logger_t model_error_logger;
 
-void model3d::setup_bone_transforms(shader_t &shader, float anim_time, int anim_id) {
-	if (num_animations() == 0) return;
-	//highres_timer_t timer("Setup Bone Transforms"); // 0.021ms
-	unsigned const MAX_MODEL_BONES = 200; // must agree with shader code
+unsigned model3d::get_anim_id(shader_t &shader, string const &prop_name, int anim_id) const {
+	assert(has_animations());
+	if (anim_id >= 0) return anim_id; // already specified
+	string const anim_name(shader.get_property(prop_name));
 
-	if (anim_id < 0) { // animation not selected by ID, try using the name stored in the shader property instead
-		string const anim_name(shader.get_property("animation_name"));
-
-		if (anim_name.empty()) { // no named animation, use the first one; could also use "default" for the name as that matches the default name
-			model_error_logger.log_error("Error: No animation name or ID specified for model '" + filename + "'; Using the first animation");
-			anim_id = 0;
-		}
-		else {
-			anim_id = model_anim_data.get_animation_id_by_name(anim_name);
-			
-			if (anim_id < 0) {
-				model_error_logger.log_error("Error: Animation '" + anim_name + "' not found in model '" + filename + "'; Using the first animation");
-				anim_id = 0;
-			}
-		}
+	if (anim_name.empty()) { // no named animation, use the first one; could also use "default" for the name as that matches the default name
+		model_error_logger.log_error("Error: No animation name or ID specified for model '" + filename + "'; Using the first animation");
+		return 0; // use first animation
 	}
-	model_anim_data.get_bone_transforms(anim_id, anim_time);
-	//blend_animations(anim_id, anim_id2, blend_factor, delta_time);
+	anim_id = model_anim_data.get_animation_id_by_name(anim_name);
+
+	if (anim_id < 0) {
+		model_error_logger.log_error("Error: Animation '" + anim_name + "' not found in model '" + filename + "'; Using the first animation");
+		return 0;
+	}
+	return anim_id;
+}
+void model3d::setup_bone_transforms(shader_t &shader, float anim_time, int anim_id) {
+	if (!has_animations()) return;
+	//highres_timer_t timer("Setup Bone Transforms"); // 0.021ms
+	model_anim_data.get_bone_transforms(get_anim_id(shader, "animation_name", anim_id), anim_time);
+	add_bone_transforms_to_shader(shader);
+}
+void model3d::setup_bone_transforms_blended(shader_t &shader, float anim_time1, float anim_time2, float blend_factor, int anim_id1, int anim_id2) {
+	if (!has_animations()) return;
+	//highres_timer_t timer("Setup Bone Transforms Blend");
+	unsigned const id1(get_anim_id(shader, "animation_name" , anim_id1));
+	unsigned const id2(get_anim_id(shader, "animation_name2", anim_id2));
+	
+	if (id1 == id2) { // same animations (maybe there's only one loaded?)
+		model_anim_data.get_bone_transforms(id1, anim_time1); // unclear which time to use, so arbitrarily choose time1
+	}
+	else { // two different animations
+		//model_anim_data.blend_animations(id1, id2, blend_factor, delta_time, anim_time1, anim_time2); // requires passing in delta_time (which we don't have), and modifying anim_time1/2
+		model_anim_data.blend_animations_simple(id1, id2, blend_factor, anim_time1, anim_time2);
+	}
+	add_bone_transforms_to_shader(shader);
+}
+void model3d::add_bone_transforms_to_shader(shader_t &shader) const {
+	unsigned const MAX_MODEL_BONES = 200; // must agree with shader code
 	unsigned const num_bones(model_anim_data.bone_transforms.size());
 	assert(num_bones > 0);
 

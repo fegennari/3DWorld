@@ -1724,7 +1724,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, building_t c
 				if (!camera_pdu.cube_visible(bcube + xlate)) continue; // VFC
 				if (check_occlusion && building.check_obj_occluded(bcube, camera_bs, oc, reflection_pass)) continue;
 				point const pos(bcube.get_cube_center());
-				anim_state.set_animation_time(rat.anim_time);
+				anim_state.anim_time = rat.anim_time;
 				colorRGBA const color(rat_color); // make the rat's fur darker
 				//colorRGBA const color(blend_color(RED, WHITE, rat.fear, 0)); // used for debugging fear
 				//colorRGBA const color(blend_color(RED, WHITE, rat.attacking, 0));

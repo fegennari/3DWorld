@@ -96,8 +96,12 @@ void model_anim_t::get_bone_transforms(unsigned anim_id, float cur_time) {
 	transform_node_hierarchy_recur(anim_time, animation, 0, root_transform); // root node is 0
 }
 
+void model_anim_t::blend_animations_simple(unsigned anim_id1, unsigned anim_id2, float blend_factor, float cur_time1, float cur_time2) {
+	get_blended_bone_transforms(cur_time1, cur_time2, animations[anim_id1], animations[anim_id2], 0, root_transform, blend_factor); // root node is 0
+}
 // https://stackoverflow.com/questions/69860756/how-do-i-correctly-blend-between-skeletal-animations-in-opengl-from-a-walk-anima/69917701#69917701
-void model_anim_t::blend_animations(unsigned anim_id1, unsigned anim_id2, float blend_factor, float delta_time) {
+void model_anim_t::blend_animations(unsigned anim_id1, unsigned anim_id2, float blend_factor, float delta_time, float &cur_time1, float &cur_time2) {
+	assert(anim_id1 != anim_id1); // this would work, but it doesn't make sense and is inefficient
 	animation_t const &animation1(animations[anim_id1]);
 	animation_t const &animation2(animations[anim_id2]);
 	// speed multipliers to correctly transition from one animation to another
