@@ -48,6 +48,14 @@ bool city_model_t::check_filename() {
 	}
 	return check_file_exists(fn); // try to open model file for reading, but don't actually read anything; also, let the caller handle error printing
 }
+bool city_model_t::has_animation(string const &anim_name) const {
+	if (anim_name == default_anim_name) return 1;
+
+	for (model_anim_t const &a : anim_fns) {
+		if (a.anim_name == anim_name) return 1;
+	}
+	return 0;
+}
 
 
 model3d &city_model_loader_t::get_model3d(unsigned id) {

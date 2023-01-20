@@ -48,6 +48,7 @@ struct city_model_t {
 	bool is_loaded() const {return (model3d_id >= 0);}
 	bool read(FILE *fp, bool is_helicopter=0, bool is_person=0);
 	bool check_filename();
+	bool has_animation(string const &anim_name) const;
 };
 
 

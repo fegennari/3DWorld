@@ -1598,10 +1598,12 @@ bool ped_manager_t::draw_ped(person_base_t const &ped, shader_t &s, pos_dir_up c
 		
 		if (anim_state) { // calculate/update animation data
 			bool const is_idle(ped.is_waiting_or_stopped());
-			float blend_factor(0.0); // [0.0, 1.0] where 0.0 => anim1 and 1.0 => anim2
+			// should we check if the model has "walking" or "idle" animations by calling model_file.has_animation(name)?
+			float state_change_elapsed(0.0), blend_factor(0.0); // [0.0, 1.0] where 0.0 => anim1 and 1.0 => anim2
 
 			if (ped.last_anim_state_change_time > 0.0) { // if there was an animation state change
-				float const blend_time_ticks(1.0*TICKS_PER_SECOND), state_change_elapsed(tfticks - ped.last_anim_state_change_time);
+				float const blend_time_ticks(0.25*TICKS_PER_SECOND);
+				state_change_elapsed = tfticks - ped.last_anim_state_change_time;
 				// just after a state change we have state_change_elapsed == 0 and want blend_factor = 1.0 to select the previous animation
 				if (state_change_elapsed < blend_time_ticks) {blend_factor = 1.0 - state_change_elapsed/blend_time_ticks;}
 			}
@@ -1609,8 +1611,10 @@ bool ped_manager_t::draw_ped(person_base_t const &ped, shader_t &s, pos_dir_up c
 			anim_state->model_anim_id = (is_idle ? ANIM_ID_IDLE : ANIM_ID_WALK);
 			anim_state->blend_factor  = blend_factor;
 			
-			if (blend_factor > 0.0) { // blend animations between walking and idle states using opposite is_idle logic
-				anim_state->anim_time2     = ((!is_idle) ? ped.get_idle_anim_time() : ped.anim_time);
+			if (blend_factor > 0.0) {
+				// blend animations between walking and idle states using opposite is_idle logic;
+				// since anim_time won't increase in this state, add the elapsed time to it
+				anim_state->anim_time2     = ((!is_idle) ? ped.get_idle_anim_time() : ped.anim_time) + state_change_elapsed*ped.speed;
 				anim_state->model_anim_id2 = ((!is_idle) ? ANIM_ID_IDLE : ANIM_ID_WALK);
 			}
 			if (is_idle != ped.prev_was_idle) { // update mutable temp state for animations
