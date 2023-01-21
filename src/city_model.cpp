@@ -174,10 +174,11 @@ void city_model_loader_t::draw_model(shader_t &s, vector3d const &pos, cube_t co
 	if (anim_state && anim_state->enabled) {
 		// skip expensive animations if low detail; may cause the model to T-pose, but it should be far enough that the user can't tell
 		bool const has_bone_animations(city_params.use_animated_people && is_animated && !low_detail);
-		anim_state->set_animation_id_and_time(s, has_bone_animations, model_file.anim_speed);
+		float const anim_speed(anim_state->fixed_anim_speed ? 1.0 : model_file.anim_speed);
+		anim_state->set_animation_id_and_time(s, has_bone_animations, anim_speed);
 
 		if (has_bone_animations) {
-			float const speed_mult(32.0*model_file.anim_speed);
+			float const speed_mult(32.0*anim_speed);
 
 			if (anim_state->blend_factor > 0.0) { // enable animation blending
 				model.setup_bone_transforms_blended(s, speed_mult*anim_state->anim_time, speed_mult*anim_state->anim_time2, anim_state->blend_factor);

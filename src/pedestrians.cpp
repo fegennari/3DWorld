@@ -1597,8 +1597,9 @@ bool ped_manager_t::draw_ped(person_base_t const &ped, shader_t &s, pos_dir_up c
 		bool const low_detail(!shadow_only && dist_sq > 0.25*draw_dist_sq); // low detail for non-shadow pass at half draw dist
 		
 		if (anim_state) { // calculate/update animation data
-			bool const is_idle(ped.is_waiting_or_stopped());
-			// should we check if the model has "walking" or "idle" animations by calling model_file.has_animation(name)?
+			// only consider the person as idle if there's an idle animation;
+			// otherwise will always use walk animation, which is assumed to exist, but anim_time won't be updated while idle
+			bool const is_idle(ped.is_waiting_or_stopped() && ped_model_loader.get_model(ped.model_id).has_animation("idle"));
 			float state_change_elapsed(0.0), blend_factor(0.0); // [0.0, 1.0] where 0.0 => anim1 and 1.0 => anim2
 
 			if (ped.last_anim_state_change_time > 0.0) { // if there was an animation state change
@@ -1610,6 +1611,7 @@ bool ped_manager_t::draw_ped(person_base_t const &ped, shader_t &s, pos_dir_up c
 			anim_state->anim_time     = (is_idle ? ped.get_idle_anim_time() : ped.anim_time); // if is_idle, we still need to advance the animation time
 			anim_state->model_anim_id = (is_idle ? ANIM_ID_IDLE : ANIM_ID_WALK);
 			anim_state->blend_factor  = blend_factor;
+			anim_state->fixed_anim_speed = is_idle; // idle anim plays at normal speed, not zombie walking speed
 			
 			if (blend_factor > 0.0) {
 				// blend animations between walking and idle states using opposite is_idle logic;
