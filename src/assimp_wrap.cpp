@@ -141,8 +141,6 @@ void model_anim_t::get_blended_bone_transforms(float anim_time1, float anim_time
 }
 
 void model_anim_t::merge_from(model_anim_t const &anim) {
-	unsigned const anim_start(animations.size());
-
 	if (animations.empty()) { // first animation added - copy from the incoming class
 		assert(anim_nodes.empty());
 		*this = anim;
