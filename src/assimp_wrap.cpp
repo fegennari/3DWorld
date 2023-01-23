@@ -146,7 +146,18 @@ void model_anim_t::merge_from(model_anim_t const &anim) {
 		*this = anim;
 	}
 	else {
-		// TODO: check that all the various bone transforms, mappings, and anim_nodes are compatible somehow?
+		// check that all the various bone transforms, mappings, and anim_nodes are compatible; or at least do the easy checks here
+		if (anim.global_inverse_transform != global_inverse_transform) {
+			cout << "Warning: Mismatching global_inverse_transform values for animation source vs. destination model" << endl;
+		}
+		if (anim.root_transform != root_transform) {
+			cout << "Warning: Mismatching root_transform values for animation source vs. destination model" << endl;
+		}
+		// anim.bone_name_to_index_map can have fewer entries than bone_name_to_index_map, but the names must match
+		for (auto const &kv : anim.bone_name_to_index_map) {
+			if (bone_name_to_index_map.find(kv.first) == bone_name_to_index_map.end()) {cout << "Warning: Merging animation with unknown bone name '" << kv.first << "'";}
+		}
+		// what about bone_transforms, bone_offset_matrices, and bone_name_to_index_map values? they're different in my test models but still work, so maybe they don't need to agree
 		vector_add_to(anim.animations, animations); // just combine the animations, and we're done, right?
 	}
 }
