@@ -1778,8 +1778,8 @@ void building_t::gen_details(rand_gen_t &rgen, bool is_rectangle) { // for the r
 }
 
 void building_t::add_company_sign(rand_gen_t &rgen) {
-	if (is_house) return; // shouldn't be called?
-	// TODO: add details object of type ROOF_OBJ_SIGN
+	if (is_house || name.empty()) return; // shouldn't be called?
+	// TODO: add details object of type ROOF_OBJ_SIGN; note that city office buildings already have signs on their roofs that's part of the city object system
 }
 
 cube_t building_t::get_helipad_bcube() const {
