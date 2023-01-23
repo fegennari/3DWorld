@@ -30,7 +30,7 @@ unsigned const BONE_WEIGHTS_LOC = 5;
 
 bool model_calc_tan_vect(1); // slower and more memory but sometimes better quality/smoother transitions
 
-extern bool group_back_face_cull, enable_model3d_tex_comp, disable_shader_effects, texture_alpha_in_red_comp, use_model2d_tex_mipmaps, enable_model3d_bump_maps;
+extern bool group_back_face_cull, enable_model3d_tex_comp, disable_shader_effects, texture_alpha_in_red_comp, use_model3d_tex_mipmaps, enable_model3d_bump_maps;
 extern bool two_sided_lighting, have_indir_smoke_tex, use_core_context, model3d_wn_normal, invert_model_nmap_bscale, use_z_prepass, all_model3d_ref_update;
 extern bool use_interior_cube_map_refl, enable_model3d_custom_mipmaps, enable_tt_model_indir, no_subdiv_model, auto_calc_tt_model_zvals, use_model_lod_blocks;
 extern bool flatten_tt_mesh_under_models, no_store_model_textures_in_memory, disable_model_textures, allow_model3d_quads, merge_model_objects;
@@ -74,7 +74,7 @@ unsigned texture_manager::create_texture(string const &fn, bool is_alpha_mask, b
 	if (!no_cache) {tex_map[fn] = tid;}
 	if (verbose) cout << "creating texture " << fn << endl;
 	bool const compress(!is_alpha_mask && enable_model3d_tex_comp);
-	bool const use_mipmaps(use_model2d_tex_mipmaps && !is_alpha_mask);
+	bool const use_mipmaps(use_model3d_tex_mipmaps && !is_alpha_mask);
 	unsigned ncolors((is_alpha_mask || force_grayscale) ? 1 : 3);
 	// type=read_from_file format=auto width height wrap_mir ncolors use_mipmaps name [do_compress]
 	// always RGB wrapped+mipmap (normal map flag set later)
@@ -115,7 +115,7 @@ bool texture_manager::ensure_texture_loaded(int tid, bool is_bump) {
 	//if (is_bump) {t.do_compress = 0;} // don't compress normal maps
 	// Note: it's incorrect to call t.has_alpha() here because that uses color, which hasn't been computed yet (t.init() is called later);
 	// but that's okay, do_gl_init() will disable custom mipmaps for textures with color.A == 1.0
-	if (use_model2d_tex_mipmaps && enable_model3d_custom_mipmaps /*&& t.has_alpha()*/) {t.use_mipmaps = 4;}
+	if (use_model3d_tex_mipmaps && enable_model3d_custom_mipmaps /*&& t.has_alpha()*/) {t.use_mipmaps = 4;}
 	t.load(-1);
 		
 	if (t.alpha_tid >= 0 && t.alpha_tid != tid) { // if alpha is the same texture then the alpha channel should already be set
