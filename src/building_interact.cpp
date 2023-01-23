@@ -444,9 +444,10 @@ bool building_t::apply_player_action_key(point const &closest_to_in, vector3d co
 				}
 				else if (i->type == TYPE_LIGHT) {keep = 1;} // closet light
 				if (!keep) continue;
-				cube_t obj_bc(*i);
-				//if (i->type == TYPE_KSINK && get_dishwasher_for_ksink(*i, obj_bc)) {} else
-				if (i->type == TYPE_KSINK || i->type == TYPE_BRSINK) {obj_bc = get_sink_cube(*i);} // the sink itself is actually smaller
+				cube_t obj_bc(*i), dishwasher;
+				if (i->type == TYPE_KSINK && i->taken_level == 0 && get_dishwasher_for_ksink(*i, dishwasher) &&
+					dishwasher.line_intersects(closest_to, query_ray_end)) {obj_bc = dishwasher;}
+				else if (i->type == TYPE_KSINK || i->type == TYPE_BRSINK) {obj_bc = get_sink_cube(*i);} // the sink itself is actually smaller
 				// shrink lamps in XY to a cube interior to their building cylinder to make drawers under lamps easier to select
 				else if (i->type == TYPE_LAMP      ) {obj_bc.expand_by(vector3d(-i->dx(), -i->dy(), 0.0)*(0.5*(1.0 - 1.0/SQRT2)));}
 				else if (i->type == TYPE_ATTIC_DOOR) {obj_bc = get_attic_access_door_cube(*i, 1);} // inc_ladder=1, to make it easier to select when in the attic
@@ -501,10 +502,18 @@ bool building_t::interact_with_object(unsigned obj_ix, point const &int_pos, poi
 	point const sound_origin(obj.xc(), obj.yc(), int_pos.z), local_center(local_to_camera_space(sound_origin)); // generate sound from the player height
 	float sound_scale(0.5); // for building sound level
 	bool update_draw_data(0);
+	cube_t dishwasher;
 
 	if (obj.type == TYPE_TOILET || obj.type == TYPE_URINAL) { // toilet/urinal can be flushed, but otherwise is not modified
 		gen_sound_thread_safe(SOUND_FLUSH, local_center);
 		sound_scale = 0.5;
+	}
+	else if (obj.type == TYPE_KSINK && get_dishwasher_for_ksink(obj, dishwasher) && dishwasher.line_intersects(int_pos, query_ray_end)) { // dishwasher
+		gen_sound_thread_safe_at_player(SOUND_METAL_DOOR, 0.2, 0.75);
+		obj.flags       ^= RO_FLAG_OPEN; // toggle open/closed
+		sound_scale      = 0.5;
+		update_draw_data = 1;
+		//if (obj.is_open()) {} // TODO: add forks, spoons, and knives that the player can take? but they would have to disappear if the door is closed again
 	}
 	else if (obj.is_sink_type() || obj.type == TYPE_TUB) { // sink or tub
 		if (!obj.is_active() && obj.type == TYPE_TUB) {gen_sound_thread_safe(SOUND_SINK, local_center);} // play sound when turning the tub on

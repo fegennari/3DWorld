@@ -864,6 +864,23 @@ void building_room_geom_t::add_keyboard(room_object_t const &c) {add_obj_with_to
 void building_room_geom_t::add_laptop  (room_object_t const &c) {add_obj_with_top_texture  (c, "interiors/laptop.jpg",    BKGRAY, 1);} // is_small=1
 void building_room_geom_t::add_computer(room_object_t const &c) {add_obj_with_front_texture(c, "interiors/computer.jpg",  BKGRAY, 1);} // is_small=1
 
+// used for drawing open microwave and dishwasher
+void add_interior_and_front_face(room_object_t const &c, cube_t const &body, rgeom_mat_t &mat, float wall_width, unsigned front_mask, colorRGBA const &color) {
+	cube_t interior(body);
+	interior.expand_by(-wall_width);
+	// make interior flush with body; there should be a door width gap for microwaves, but then the front won't line up with the panel
+	interior.d[c.dim][c.dir] = body.d[c.dim][c.dir];
+	mat.add_cube_to_verts(interior, color, all_zeros, ~front_mask, 0, 0, 0, 1); // skip the front face, inverted=1
+
+	for (unsigned d = 0; d < 2; ++d) { // left/right, bottom/top
+		cube_t side(body), tb(body);
+		side.d[!c.dim][d] = interior.d[!c.dim][!d];
+		tb.d[2][d] = interior.d[2][!d];
+		mat.add_cube_to_verts_untextured(side, color, front_mask); // only the front face
+		mat.add_cube_to_verts_untextured(tb,   color, front_mask); // only the front face
+	} // for d
+}
+
 cube_t get_mwave_panel_bcube(room_object_t const &c) {
 	cube_t panel(c);
 	bool const open_dir(c.dim ^ c.dir ^ 1);
@@ -884,20 +901,8 @@ void building_room_geom_t::add_mwave(room_object_t const &c) {
 		// draw the interior
 		colorRGBA const interior_color(apply_light_color(c, WHITE));
 		float const wall_width(0.25*panel.get_sz_dim(!c.dim));
-		cube_t interior(body);
-		interior.expand_by(-wall_width);
-		// make interior flush with body; there should be a door width gap, but then the front won't line up with the panel
-		interior.d[c.dim][c.dir] = body.d[c.dim][c.dir];
 		rgeom_mat_t &untex_mat(get_untextured_material(1)); // shadowed
-		untex_mat.add_cube_to_verts(interior, interior_color, all_zeros, ~front_mask, 0, 0, 0, 1); // skip the front face, inverted=1
-
-		for (unsigned d = 0; d < 2; ++d) { // left/right, bottom/top
-			cube_t side(body), tb(body);
-			side.d[!c.dim][d] = interior.d[!c.dim][!d];
-			tb.d[2][d] = interior.d[2][!d];
-			untex_mat.add_cube_to_verts_untextured(side, interior_color, front_mask); // only the front face
-			untex_mat.add_cube_to_verts_untextured(tb,   interior_color, front_mask); // only the front face
-		} // for d
+		add_interior_and_front_face(c, body, untex_mat, wall_width, front_mask, interior_color);
 		unsigned const door_front_mask(get_face_mask(!c.dim, open_dir));
 		colorRGBA const color(apply_light_color(c));
 		float const door_length(body.get_sz_dim(!c.dim)), tscale(1.0/c.get_width());
@@ -2998,16 +3003,41 @@ void building_room_geom_t::add_counter(room_object_t const &c, float tscale, boo
 		else if (hash_dishwasher) { // add dishwasher
 			unsigned const dw_skip_faces(~get_face_mask(c.dim, !c.dir));
 			colorRGBA const dw_color(apply_light_color(c, LT_GRAY));
-			if (c.is_open()) {} // TODO: draw dishwasher as open? does it need to be a separate object for this?
-			metal_mat.add_cube_to_verts_untextured(dishwasher, dw_color, dw_skip_faces);
+			float const front_pos(dishwasher.d[c.dim][c.dir]), handle_diameter(0.04*depth), handle_height(0.82*dz);
 			cube_t dishwasher_back(dishwasher), handle(dishwasher);
 			dishwasher_back.d[c.dim][!c.dir] = c.d[c.dim][!c.dir]; // flush with the cabinet
 			metal_mat.add_cube_to_verts_untextured(dishwasher_back, dw_color, ~dw_skip_faces); // draw only the back face, in case it's visible through a window
-			handle.z1() += 0.77*dz;
-			handle.z2() -= 0.10*dz;
-			handle.expand_in_dim(!c.dim, -0.1*depth);
-			handle.d[c.dim][ c.dir]  = handle.d[c.dim][!c.dir] = dishwasher.d[c.dim][c.dir];
-			handle.d[c.dim][ c.dir] += dir_sign*0.04*depth; // front
+			handle.expand_in_dim(!c.dim, -0.1*depth); // set width
+			
+			if (c.is_open()) { // draw open; does it need to be a separate object for this?
+				unsigned const front_mask(get_face_mask(c.dim, c.dir));
+				float const wall_width(0.1*dz), door_thickness(0.035*depth), front_without_door(front_pos - dir_sign*door_thickness);
+				cube_t body(dishwasher), door(dishwasher);
+				body.d[c.dim][c.dir] = door.d[c.dim][!c.dir] = front_without_door;
+				metal_mat.add_cube_to_verts_untextured(body, dw_color, (dw_skip_faces | ~front_mask)); // no front face
+				colorRGBA const interior_color(apply_light_color(c, colorRGBA(0.8, 0.9, 1.0))); // slightly blue-green
+				body.d[c.dim][!c.dir] = c.d[c.dim][!c.dir]; // extend back toward the wall so that interior is correct
+				add_interior_and_front_face(c, body, metal_mat, wall_width, front_mask, interior_color);
+				// door
+				door.z2() = door.z1() + door_thickness;
+				door.d[c.dim][c.dir] = front_pos + dir_sign*dz;
+				metal_mat.add_cube_to_verts_untextured(door, dw_color, dw_skip_faces);
+				cube_t door_inner(door);
+				set_cube_zvals(door_inner, door.z2(), (door.z2() + wall_width));
+				door_inner.expand_by_xy(-wall_width); // shrink
+				metal_mat.add_cube_to_verts_untextured(door_inner, interior_color, EF_Z1);
+				// handle
+				set_wall_width(handle, (front_pos + dir_sign*handle_height), 0.5*handle_diameter, c.dim);
+				handle.z1()  = handle.z2() = dishwasher.z1();
+				handle.z1() -= handle_diameter; // bottom
+			}
+			else { // draw closed
+				metal_mat.add_cube_to_verts_untextured(dishwasher, dw_color, dw_skip_faces); // front face
+				// handle
+				set_wall_width(handle, (handle.z1() + handle_height), 0.5*handle_diameter, 2);
+				handle.d[c.dim][ c.dir]  = handle.d[c.dim][!c.dir] = front_pos;
+				handle.d[c.dim][ c.dir] += dir_sign*handle_diameter; // move to front
+			}
 			metal_mat.add_ortho_cylin_to_verts(handle, sink_color, !c.dim, 1, 1); // add handle as a cylinder in the proper dim with both ends
 		}
 	}
