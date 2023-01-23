@@ -921,6 +921,9 @@ void setup_texture(unsigned &tid, bool mipmap, bool wrap_s, bool wrap_t, bool mi
 	glTexParameteri(target, GL_TEXTURE_MAG_FILTER, (nearest ? GL_NEAREST : GL_LINEAR));
 	// enable anisotropic filtering (slower but higher quality)
 	if (anisotropy > 1.0) {glTexParameterf(target, GL_TEXTURE_MAX_ANISOTROPY_EXT, anisotropy);}
+	// this may be useful for model textures such as the Mineways texture atlas;
+	// however, we can't use a global config here and would need to store an option per texture and pass it down through all of the function calls
+	//if (mipmap) {glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LOD, max_mipmap_levels);}
 
 	// if wrap is true,  the texture wraps over at the edges (repeat) or is mirrored
 	// if wrap is false, the texture ends at the edges (clamp)
