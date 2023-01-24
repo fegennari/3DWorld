@@ -870,11 +870,11 @@ bool building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 
 					for (auto i = start; i != objs.end(); ++i) {
 						if (i->type != TYPE_PARK_SPACE || !i->contains_pt_xy(exit_pos)) continue;
-						i->type = TYPE_BLOCKER; // remove this parking space
+						i->remove(); // remove this parking space
 						// now remove any car collider and curb associated with this parking space (placed before it, optional collider then optional curb)
 						auto cur(i);
-						if (cur > start && (cur-1)->type == TYPE_CURB    ) {(cur-1)->type = TYPE_BLOCKER; --cur;}
-						if (cur > start && (cur-1)->type == TYPE_COLLIDER) {(cur-1)->type = TYPE_BLOCKER;}
+						if (cur > start && (cur-1)->type == TYPE_CURB    ) {(cur-1)->remove(); --cur;}
+						if (cur > start && (cur-1)->type == TYPE_COLLIDER) {(cur-1)->remove();}
 						//break; // maybe can't break here because there may be a parking space to remove on another level?
 					} // for i
 				}

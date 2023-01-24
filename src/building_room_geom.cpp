@@ -227,9 +227,7 @@ float get_drawer_cubes(room_object_t const &c, vect_cube_t &drawers, bool front_
 	assert(!(front_only && inside_only)); // these options only apply to open drawers and are mutually exclusive
 	assert(c.is_strictly_normalized());
 	drawers.clear();
-	rand_gen_t rgen;
-	c.set_rand_gen_state(rgen);
-	rgen.rand_mix();
+	rand_gen_t rgen(c.create_rgen());
 	float const width(c.get_width()), depth(c.get_depth()), height(c.dz());
 	bool is_lg(width > 2.0*height);
 	unsigned const num_rows(2 + (rgen.rand() & 1)); // 2-3
@@ -1164,9 +1162,7 @@ void building_room_geom_t::add_vase(room_object_t const &c) { // or urn
 	UNROLL_3X(min_eq(color[i_], 0.9f);); // clamp color to 90% max to avoid over saturation
 	// parametric curve rotated around the Z-axis
 	unsigned const num_stacks = 32;
-	rand_gen_t rgen;
-	c.set_rand_gen_state(rgen);
-	rgen.rand_mix();
+	rand_gen_t rgen(c.create_rgen());
 	float tex_scale_v(1.0), tex_scale_h(1.0);
 	int tid(WHITE_TEX);
 
@@ -2135,9 +2131,7 @@ void building_room_geom_t::add_bookcase(room_object_t const &c, bool inc_lg, boo
 	}
 	if (no_shelves) return;
 	// add shelves
-	rand_gen_t rgen;
-	c.set_rand_gen_state(rgen);
-	rgen.rand_mix();
+	rand_gen_t rgen(c.create_rgen());
 	unsigned const num_shelves(3 + ((17*c.room_id + int(1000.0*fabs(c.z1())))%3)); // 3-5, randomly selected by room ID and floor
 	float const shelf_dz(middle.dz()/num_shelves), shelf_thick(0.12*shelf_dz);
 	// 40% of the time lower shelves are higher than upper shelves

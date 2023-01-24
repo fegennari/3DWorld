@@ -644,10 +644,11 @@ struct room_object_t : public oriented_cube_t { // size=64
 	int get_paper_tid() const;
 	int get_model_id () const;
 	void set_as_bottle(unsigned rand_id, unsigned max_type=NUM_BOTTLE_TYPES-1, bool no_empty=0, unsigned exclude_mask=0);
+	void remove() {type = TYPE_BLOCKER; flags = (RO_FLAG_NOCOLL | RO_FLAG_INVIS);} // replace it with an invisible blocker that won't collide with anything
 	colorRGBA get_color() const;
 	colorRGBA get_model_color() const;
 	vector3d get_dir() const {vector3d v(zero_vector); v[dim] = (dir ? 1.0 : -1.0); return v;}
-	void set_rand_gen_state(rand_gen_t &rgen) const {rgen.set_state(obj_id+1, room_id+1);}
+	rand_gen_t create_rgen() const;
 };
 typedef vector<room_object_t> vect_room_object_t;
 

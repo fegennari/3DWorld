@@ -129,14 +129,20 @@ void try_add_lamp(cube_t const &place_area, float floor_spacing, unsigned room_i
 	} // for n
 }
 
+rand_gen_t room_object_t::create_rgen() const {
+	rand_gen_t rgen;
+	rgen.set_state(obj_id+1, room_id+1);
+	rgen.rand_mix(); // optional, but improves randomness
+	return rgen;
+}
+
 void building_room_geom_t::add_closet_objects(room_object_t const &c, vect_room_object_t &objects) {
+	rand_gen_t rgen(c.create_rgen());
 	cube_t ccubes[5]; // only used to get interior space
 	get_closet_cubes(c, ccubes);
 	cube_t const interior(get_closet_interior_space(c, ccubes));
 	float const depth(interior.get_sz_dim(c.dim)), box_sz(0.25*depth), window_vspacing(c.dz()*(1.0 + FLOOR_THICK_VAL_HOUSE));
 	unsigned const flags(RO_FLAG_NOCOLL | RO_FLAG_INTERIOR | RO_FLAG_WAS_EXP);
-	rand_gen_t rgen;
-	c.set_rand_gen_state(rgen);
 	unsigned const num_boxes((rgen.rand()%3) + (rgen.rand()%4)); // 0-5
 	vect_cube_t &cubes(get_temp_cubes());
 	add_boxes_to_space(c, objects, interior, cubes, rgen, num_boxes, box_sz, 0.8*box_sz, 1.5*box_sz, 0, flags); // allow_crates=0
@@ -237,9 +243,7 @@ void building_room_geom_t::add_closet_objects(room_object_t const &c, vect_room_
 }
 
 void building_room_geom_t::expand_cabinet(room_object_t const &c) { // called on cabinets, counters, and kitchen sinks
-	rand_gen_t rgen;
-	c.set_rand_gen_state(rgen);
-	rgen.rand_mix();
+	rand_gen_t rgen(c.create_rgen());
 	vect_cube_t &cubes(get_temp_cubes());
 	float const wall_thickness(0.04*c.dz()), light_amt(0.25*c.light_amt);
 	cube_t interior(c), dishwasher;
@@ -327,9 +331,7 @@ void building_room_geom_t::expand_cabinet(room_object_t const &c) { // called on
 }
 
 void building_room_geom_t::expand_med_cab(room_object_t const &c) { // aka house "mirrors"
-	rand_gen_t rgen;
-	c.set_rand_gen_state(rgen);
-	rgen.rand_mix();
+	rand_gen_t rgen(c.create_rgen());
 	// add medicine bottle
 	unsigned const flags(RO_FLAG_NOCOLL | RO_FLAG_INTERIOR | RO_FLAG_WAS_EXP);
 	float const wall_thickness(get_med_cab_wall_thickness(c));
@@ -418,8 +420,7 @@ void building_room_geom_t::get_shelf_objects(room_object_t const &c_in, cube_t c
 	vector3d const c_sz(c.get_size());
 	float const dz(c_sz.z), width(c_sz[c.dim]), thickness(0.02*dz), bracket_thickness(0.75*thickness);
 	float const z_step(dz/(num_shelves + 1)), shelf_clearance(z_step - thickness - bracket_thickness), sz_scale(is_house ? 0.7 : 1.0), box_zscale(shelf_clearance*sz_scale);
-	rand_gen_t rgen;
-	c.set_rand_gen_state(rgen);
+	rand_gen_t rgen(c.create_rgen());
 
 	for (unsigned s = 0; s < num_shelves; ++s) {
 		cube_t const &S(shelves[s]);
@@ -550,8 +551,7 @@ void building_room_geom_t::add_wine_rack_bottles(room_object_t const &c, vect_ro
 	unsigned const num_rows(max(1, round_fp(2.0*height/depth))), num_cols(max(1, round_fp(2.0*width/depth)));
 	float const row_step((height - shelf_thick)/num_rows), col_step((width - shelf_thick)/num_cols);
 	float const space_w(col_step - shelf_thick), space_h(row_step - shelf_thick), diameter(min(space_w, space_h) - shelf_thick);
-	rand_gen_t rgen;
-	c.set_rand_gen_state(rgen);
+	rand_gen_t rgen(c.create_rgen());
 	room_object_t bottle(c);
 	bottle.type   = TYPE_BOTTLE;
 	bottle.dir   ^= 1;
@@ -754,9 +754,7 @@ bool place_objects_in_box(cube_t const &box, vect_cube_t &obj_bcubes, float radi
 }
 
 void building_t::add_box_contents(room_object_t const &box) {
-	rand_gen_t rgen;
-	box.set_rand_gen_state(rgen);
-	rgen.rand_mix();
+	rand_gen_t rgen(box.create_rgen());
 	cube_t c(box);
 	c.expand_by(-0.01*box.get_size()); // shrink to interior area
 	vector3d const sz(c.get_size());

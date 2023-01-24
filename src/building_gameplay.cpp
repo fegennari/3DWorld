@@ -1189,10 +1189,9 @@ void building_room_geom_t::remove_objs_contained_in(cube_t const &c, vect_room_o
 	for (room_object_t &obj : obj_vect) {
 		if (obj.type == TYPE_BLOCKER || !c.contains_pt(obj.get_cube_center())) continue;
 		room_object_t const old_obj(obj); // deep copy
-		obj.type  = TYPE_BLOCKER; // replace with a blocker
-		obj.flags = (RO_FLAG_NOCOLL | RO_FLAG_INVIS);
+		obj.remove();
 		update_draw_state_for_room_object(old_obj, building, 1);
-	} // for obj
+	}
 }
 void building_room_geom_t::remove_object(unsigned obj_id, building_t &building) {
 	room_object_t &obj(get_room_object_by_index(obj_id));
@@ -1206,7 +1205,7 @@ void building_room_geom_t::remove_object(unsigned obj_id, building_t &building) 
 	else if (obj.type == TYPE_TPROLL && !(obj.taken_level > 0 || (obj.flags & RO_FLAG_WAS_EXP))) {++obj.taken_level;} // take TP roll, leave holder; not for expanded TP rolls
 	else if (obj.type == TYPE_BED) {++obj.taken_level;} // take pillow(s), then sheets, then mattress
 	else if (obj.type == TYPE_PLANT && !(obj.flags & RO_FLAG_ADJ_BOT)) { // plant not on a table/desk
-		if (obj.taken_level > 1) {obj.type = TYPE_BLOCKER;} // take pot - gone
+		if (obj.taken_level > 1) {obj.remove();} // take pot - gone
 		else {++obj.taken_level;} // take plant then dirt
 	}
 	else if (obj.type == TYPE_TOILET || obj.type == TYPE_SINK) { // leave a drain in the floor
@@ -1218,12 +1217,11 @@ void building_room_geom_t::remove_object(unsigned obj_id, building_t &building) 
 		invalidate_draw_data_for_obj(obj);
 	}
 	else if (obj.type == TYPE_TOY) { // take one ring at a time then the base (5 parts)
-		if (obj.taken_level >= 4) {obj.type = TYPE_BLOCKER;} // take the toy base
+		if (obj.taken_level >= 4) {obj.remove();} // take the toy base
 		else {++obj.taken_level;} // take a ring
 	}
 	else { // replace it with an invisible blocker that won't collide with anything
-		obj.type  = TYPE_BLOCKER;
-		obj.flags = (RO_FLAG_NOCOLL | RO_FLAG_INVIS);
+		obj.remove();
 	}
 	if (old_obj.type == TYPE_MIRROR && old_obj.obj_expanded()) {
 		remove_objs_contained_in(old_obj, expanded_objs, building); // search for and remove any contained medicine or other objects
