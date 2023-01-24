@@ -513,7 +513,17 @@ bool building_t::interact_with_object(unsigned obj_ix, point const &int_pos, poi
 		obj.flags       ^= RO_FLAG_OPEN; // toggle open/closed
 		sound_scale      = 0.5;
 		update_draw_data = 1;
-		//if (obj.is_open()) {} // TODO: add forks, spoons, and knives that the player can take? but they would have to disappear if the door is closed again
+
+		// since TYPE_KSINK already uses the RO_FLAG_EXPANDED flag for cabinet doors, we have to use the RO_FLAG_USED for dishwasher expansion
+		if (obj.is_open() && !obj.is_used()) { // newly opened
+			interior->room_geom->expand_dishwasher(obj, dishwasher);
+			obj.flags |= RO_FLAG_USED;
+		}
+		else if (!obj.is_open() && obj.is_used()) { // closed
+			unsigned const num_rem(interior->room_geom->unexpand_dishwasher(obj, dishwasher));
+			// if an object was removed, we can re-expand this dishwasher again when opening; note that this is only correct when it contains a single object
+			if (num_rem > 0) {obj.flags &= ~RO_FLAG_USED;}
+		}
 	}
 	else if (obj.is_sink_type() || obj.type == TYPE_TUB) { // sink or tub
 		if (!obj.is_active() && obj.type == TYPE_TUB) {gen_sound_thread_safe(SOUND_SINK, local_center);} // play sound when turning the tub on

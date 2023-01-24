@@ -399,6 +399,49 @@ void building_room_geom_t::expand_breaker_panel(room_object_t const &c, bool has
 	invalidate_small_geom();
 }
 
+void building_room_geom_t::expand_dishwasher(room_object_t const &c, cube_t const &dishwasher) {
+	//rand_gen_t rgen(c.create_rgen());
+	// add TYPE_PLATE, and TYPE_CUP, and TYPE_SILVERWARE
+	unsigned const flags(RO_FLAG_NOCOLL | RO_FLAG_INTERIOR | RO_FLAG_WAS_EXP);
+	// see dishwasher drawing code in building_room_geom_t::add_counter()
+	float const dz(c.dz()), width(dishwasher.get_sz_dim(!c.dim)), depth(c.get_depth());
+	float const wall_width(0.1*dz), door_thickness(0.03*depth), tray_sz(min(dz, width)), dir_sign(c.dir ? 1.0 : -1.0);
+	float const plate_radius(0.35*tray_sz);
+	point tray_center;
+	tray_center[ c.dim] = dishwasher.d[c.dim][c.dir] + 0.5*dir_sign*dz;
+	tray_center[!c.dim] = dishwasher.get_center_dim(!c.dim);
+	tray_center.z       = dishwasher.z1() + door_thickness + wall_width; // top of tray
+	cube_t plate;
+	// TODO: place it vertically
+	plate.set_from_point(tray_center);
+	plate.z2() += 0.1*plate_radius;
+	plate.expand_by_xy(plate_radius);
+	expanded_objs.emplace_back(plate, TYPE_PLATE, c.room_id, 0, 0, flags, c.light_amt, SHAPE_CUBE, GRAY);
+	set_obj_id(expanded_objs);
+	invalidate_small_geom();
+}
+bool is_in_dishwasher(room_object_t const &c, cube_t const &door_region) {
+	return (/*c.type != TYPE_BLOCKER*/(c.type == TYPE_PLATE || c.type == TYPE_CUP || c.type == TYPE_SILVERWARE) && door_region.contains_pt(c.get_cube_center()));
+}
+unsigned building_room_geom_t::unexpand_dishwasher(room_object_t const &c, cube_t const &dishwasher) {
+	cube_t door_region(dishwasher);
+	door_region.d[c.dim][c.dir] += (c.dir ? 1.0 : -1.0)*c.dz();
+	unsigned num_rem(0);
+
+	// handle removing most recently added objects first, in case the player repeatedly opens and closes the same dishwasher
+	while (!expanded_objs.empty() && is_in_dishwasher(expanded_objs.back(), door_region)) {
+		expanded_objs.pop_back();
+		++num_rem;
+	}
+	if (num_rem == 0) { // not at the end? try removing from the middle
+		for (room_object_t &o : expanded_objs) {
+			if (is_in_dishwasher(o, door_region)) {o.remove(); ++num_rem;}
+		}
+	}
+	if (num_rem > 0) {invalidate_small_geom();}
+	return num_rem;
+}
+
 unsigned building_room_geom_t::get_shelves_for_object(room_object_t const &c, cube_t shelves[4]) {
 	unsigned const num_shelves(c.get_num_shelves()); // 2-4 shelves
 	float const thickness(0.02*c.dz()), bracket_thickness(0.8*thickness), z_step(c.dz()/(num_shelves + 1)); // include a space at the bottom
