@@ -399,10 +399,13 @@ void building_room_geom_t::expand_breaker_panel(room_object_t const &c, bool has
 	invalidate_small_geom();
 }
 
-void building_room_geom_t::expand_dishwasher(room_object_t const &c, cube_t const &dishwasher) {
+void building_room_geom_t::expand_dishwasher(room_object_t &c, cube_t const &dishwasher) {
+	unsigned const expanded_objs_start(expanded_objs.size());
+	c.item_flags = expanded_objs_start; // record the location where we'll add our objects
 	//rand_gen_t rgen(c.create_rgen());
 	// add TYPE_PLATE, and TYPE_CUP, and TYPE_SILVERWARE
 	unsigned const flags(RO_FLAG_NOCOLL | RO_FLAG_INTERIOR | RO_FLAG_WAS_EXP);
+	uint16_t obj_place_index(0);
 	// see dishwasher drawing code in building_room_geom_t::add_counter()
 	float const dz(c.dz()), width(dishwasher.get_sz_dim(!c.dim)), depth(c.get_depth());
 	float const wall_width(0.1*dz), door_thickness(0.035*depth), tray_sz(min(dz, width)), dir_sign(c.dir ? 1.0 : -1.0);
@@ -411,36 +414,38 @@ void building_room_geom_t::expand_dishwasher(room_object_t const &c, cube_t cons
 	tray_center[ c.dim] = dishwasher.d[c.dim][c.dir] + 0.5*dir_sign*dz;
 	tray_center[!c.dim] = dishwasher.get_center_dim(!c.dim);
 	tray_center.z       = dishwasher.z1() + door_thickness + wall_width + 0.85*plate_radius; // top of tray
-	cube_t plate;
-	bool const plate_dim(!c.dim);
-	plate.set_from_point(tray_center);
-	plate.expand_in_dim( plate_dim, 0.05*plate_radius); // set thickness
-	plate.expand_in_dim(!plate_dim, plate_radius);
-	plate.expand_in_dim(2,          plate_radius); // expand in Z
-	expanded_objs.emplace_back(plate, TYPE_PLATE, c.room_id, plate_dim, (c.dir ^ c.dim), flags, c.light_amt, SHAPE_CYLIN, WHITE);
-	set_obj_id(expanded_objs);
-	invalidate_small_geom();
+
+	if (!(c.taken_level & (1<<obj_place_index))) {
+		cube_t plate;
+		bool const plate_dim(!c.dim);
+		plate.set_from_point(tray_center);
+		plate.expand_in_dim( plate_dim, 0.05*plate_radius); // set thickness
+		plate.expand_in_dim(!plate_dim, plate_radius);
+		plate.expand_in_dim(2,          plate_radius); // expand in Z
+		expanded_objs.emplace_back(plate, TYPE_PLATE, c.room_id, plate_dim, (c.dir ^ c.dim), flags, c.light_amt, SHAPE_CYLIN, WHITE);
+		expanded_objs.back().obj_id = obj_place_index++;
+	}
+	if (expanded_objs.size() > expanded_objs_start) {invalidate_small_geom();} // if something was added
 }
 bool is_in_dishwasher(room_object_t const &c, cube_t const &door_region) {
 	return (/*c.type != TYPE_BLOCKER*/(c.type == TYPE_PLATE || c.type == TYPE_CUP || c.type == TYPE_SILVERWARE) && door_region.contains_pt(c.get_cube_center()));
 }
-unsigned building_room_geom_t::unexpand_dishwasher(room_object_t const &c, cube_t const &dishwasher) {
+void building_room_geom_t::unexpand_dishwasher(room_object_t &c, cube_t const &dishwasher) {
 	cube_t door_region(dishwasher);
 	door_region.d[c.dim][c.dir] += (c.dir ? 1.0 : -1.0)*c.dz();
 	unsigned num_rem(0);
+	c.taken_level = 0xFF; // assume everything has been taken unless we find objects to reclaim
 
-	// handle removing most recently added objects first, in case the player repeatedly opens and closes the same dishwasher
-	while (!expanded_objs.empty() && is_in_dishwasher(expanded_objs.back(), door_region)) {
-		expanded_objs.pop_back();
+	for (unsigned i = c.item_flags; i < expanded_objs.size(); ++i) { // search starting at our expanded_objs insertion point
+		if (!is_in_dishwasher(expanded_objs[i], door_region)) break; // break when outside our object range
+		expanded_objs[i].remove();
+		c.taken_level &= ~(1 << (i - c.item_flags)); // mark this object as untaken
 		++num_rem;
 	}
-	if (num_rem == 0) { // not at the end? try removing from the middle
-		for (room_object_t &o : expanded_objs) {
-			if (is_in_dishwasher(o, door_region)) {o.remove(); ++num_rem;}
-		}
-	}
+	// pop removed objects from the end, in case the player repeatedly opens and closes the same dishwasher
+	while (!expanded_objs.empty() && expanded_objs.back().type == TYPE_BLOCKER) {expanded_objs.pop_back();}
+	c.item_flags = 0xFFFF; // set to some illegal value
 	if (num_rem > 0) {invalidate_small_geom();}
-	return num_rem;
 }
 
 unsigned building_room_geom_t::get_shelves_for_object(room_object_t const &c, cube_t shelves[4]) {

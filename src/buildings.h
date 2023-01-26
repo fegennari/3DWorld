@@ -969,8 +969,8 @@ struct building_room_geom_t {
 	void expand_wine_rack(room_object_t const &c) {add_wine_rack_bottles(c, expanded_objs);}
 	void expand_med_cab(room_object_t const &c);
 	void expand_breaker_panel(room_object_t const &c, bool has_elevator, bool has_parking_garage);
-	void expand_dishwasher(room_object_t const &c, cube_t const &dishwasher);
-	unsigned unexpand_dishwasher(room_object_t const &c, cube_t const &dishwasher);
+	void expand_dishwasher(room_object_t &c, cube_t const &dishwasher);
+	void unexpand_dishwasher(room_object_t &c, cube_t const &dishwasher);
 	bool expand_object(room_object_t &c, building_t const &building);
 	static room_object_t get_item_in_drawer(room_object_t const &c, cube_t const &drawer, unsigned drawer_ix);
 	bool maybe_spawn_spider_in_drawer(room_object_t const &c, cube_t const &drawer, unsigned drawer_id, float floor_spacing, bool is_door);

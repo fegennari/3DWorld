@@ -445,8 +445,7 @@ bool building_t::apply_player_action_key(point const &closest_to_in, vector3d co
 				else if (i->type == TYPE_LIGHT) {keep = 1;} // closet light
 				if (!keep) continue;
 				cube_t obj_bc(*i), dishwasher;
-				if (i->type == TYPE_KSINK && i->taken_level == 0 && get_dishwasher_for_ksink(*i, dishwasher) &&
-					dishwasher.line_intersects(closest_to, query_ray_end)) {obj_bc = dishwasher;}
+				if (i->type == TYPE_KSINK && get_dishwasher_for_ksink(*i, dishwasher) && dishwasher.line_intersects(closest_to, query_ray_end)) {obj_bc = dishwasher;}
 				else if (i->type == TYPE_KSINK || i->type == TYPE_BRSINK) {obj_bc = get_sink_cube(*i);} // the sink itself is actually smaller
 				// shrink lamps in XY to a cube interior to their building cylinder to make drawers under lamps easier to select
 				else if (i->type == TYPE_LAMP      ) {obj_bc.expand_by(vector3d(-i->dx(), -i->dy(), 0.0)*(0.5*(1.0 - 1.0/SQRT2)));}
@@ -517,12 +516,11 @@ bool building_t::interact_with_object(unsigned obj_ix, point const &int_pos, poi
 		// since TYPE_KSINK already uses the RO_FLAG_EXPANDED flag for cabinet doors, we have to use the RO_FLAG_USED for dishwasher expansion
 		if (obj.is_open() && !obj.is_used()) { // newly opened
 			interior->room_geom->expand_dishwasher(obj, dishwasher);
-			obj.flags |= RO_FLAG_USED;
+			obj.flags |= RO_FLAG_USED; // can't expand again
 		}
 		else if (!obj.is_open() && obj.is_used()) { // closed
-			unsigned const num_rem(interior->room_geom->unexpand_dishwasher(obj, dishwasher));
-			// if an object was removed, we can re-expand this dishwasher again when opening; note that this is only correct when it contains a single object
-			if (num_rem > 0) {obj.flags &= ~RO_FLAG_USED;}
+			interior->room_geom->unexpand_dishwasher(obj, dishwasher);
+			obj.flags &= ~RO_FLAG_USED; // can now expand again
 		}
 	}
 	else if (obj.is_sink_type() || obj.type == TYPE_TUB) { // sink or tub
