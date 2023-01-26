@@ -528,7 +528,7 @@ unsigned const RO_FLAG_FOR_CAR   = 0x1000; // for car blockers, aliased with RO_
 // object flags, third byte, for pickup/interact state
 unsigned const RO_FLAG_IN_HALLWAY= 0x010000;
 unsigned const RO_FLAG_IN_ATTIC  = 0x020000;
-//unsigned const x = 0x040000; // currently unused
+unsigned const RO_FLAG_HAS_EXTRA = 0x040000; // used for counter backsplash
 //unsigned const x = 0x080000; // currently unused
 unsigned const RO_FLAG_EXPANDED= 0x100000; // for shelves, closets, boxes, and mirrors
 unsigned const RO_FLAG_WAS_EXP = 0x200000; // for objects in/on shelves, closets, and drawers, cabinets, and books

@@ -3038,20 +3038,20 @@ void building_room_geom_t::add_counter(room_object_t const &c, float tscale, boo
 	else { // regular counter top
 		top_mat.add_cube_to_verts(top, top_color, tex_origin); // top surface, all faces
 	}
-	if (c.item_flags) { // add backsplash, 50% chance of tile vs. matching marble
+	if (c.flags & RO_FLAG_HAS_EXTRA) { // add backsplash, 50% chance of tile vs. matching marble
 		tid_nm_pair_t const bs_tex((c.room_id & 1) ? marble_tex : tid_nm_pair_t(get_texture_by_name("bathroom_tile.jpg"), 2.5*tscale));
 		rgeom_mat_t &bs_mat(get_material(bs_tex, 0)); // no shadows
 		cube_t bsz(c);
 		bsz.z1()  = c.z2();
 		bsz.z2() += 0.33*c.dz();
 
-		if (c.item_flags & 1) { // back
+		if (c.flags & RO_FLAG_ADJ_BOT) { // back
 			cube_t bs(bsz);
 			bs.d[c.dim][c.dir] -= (c.dir ? 1.0 : -1.0)*0.99*depth;
 			bs_mat.add_cube_to_verts(bs, top_color, zero_vector, (EF_Z1 | ~get_face_mask(c.dim, !c.dir)));
 		}
 		for (unsigned d = 0; d < 2; ++d) { // handle the other dim
-			if (!(c.item_flags & (1<<(d+1)))) continue; // not adjacent in this dir
+			if (!(c.flags & (d ? RO_FLAG_ADJ_HI : RO_FLAG_ADJ_LO))) continue; // not adjacent in this dir
 			cube_t bs(bsz);
 			bs.d[!c.dim][!d] -= (d ? -1.0 : 1.0)*(c.get_width() - 0.01*depth);
 			bs_mat.add_cube_to_verts(bs, top_color, zero_vector, (EF_Z1 | ~get_face_mask(!c.dim, d)));
