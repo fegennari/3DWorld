@@ -3299,11 +3299,15 @@ int select_plate_texture(unsigned rand_val) {
 void building_room_geom_t::add_plate(room_object_t const &c) { // is_small=1
 	// select plate texture based on room and a property of this building; plates in the same room will match
 	int const tid(select_plate_texture(c.room_id + stairs_start));
-	rgeom_mat_t &top_mat(get_material(tid_nm_pair_t(tid, 0.0, 0), 0, 0, 1)); // unshadowed, small
+	bool const vertical(c.get_length() < c.dz()), shadowed(vertical), top_dir(vertical ? c.dir : 1);
+	unsigned const cylin_dim(vertical ? c.dim : 2);
+	rgeom_mat_t &top_mat(get_material(tid_nm_pair_t(tid, 0.0, shadowed), shadowed, 0, 1)); // small
 	colorRGBA color(apply_light_color(c));
 	UNROLL_3X(min_eq(color[i_], 0.9f);); // clamp color to 90% max to avoid over saturation
-	top_mat.add_vcylin_to_verts(c, color, 0, 1, 0, 0, 1.0, 1.0, 1.0, 1.0, 1); // top surface, skip sides
-	get_untextured_material(0, 0, 1).add_vcylin_to_verts(c, color, 0, 0, 0, 0, 0.8, 1.0); // bottom: truncated cone, untextured, unshadowed, sloped sides only
+	top_mat.add_ortho_cylin_to_verts(c, color, cylin_dim, !top_dir, top_dir, 0, 0, 1.0, 1.0, 1.0, 1.0, 1); // top surface, skip sides
+	rgeom_mat_t &untex_mat(get_untextured_material(shadowed, 0, 1)); // untextured, small
+	// truncated cone, sloped sides, bottom if vertical
+	untex_mat.add_ortho_cylin_to_verts(c, color, cylin_dim, (vertical && top_dir), (vertical && !top_dir), 0, 0, (top_dir ? 0.8 : 1.0), (top_dir ? 1.0 : 0.8));
 }
 
 void building_room_geom_t::add_tub_outer(room_object_t const &c) {

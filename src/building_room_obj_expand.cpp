@@ -405,18 +405,19 @@ void building_room_geom_t::expand_dishwasher(room_object_t const &c, cube_t cons
 	unsigned const flags(RO_FLAG_NOCOLL | RO_FLAG_INTERIOR | RO_FLAG_WAS_EXP);
 	// see dishwasher drawing code in building_room_geom_t::add_counter()
 	float const dz(c.dz()), width(dishwasher.get_sz_dim(!c.dim)), depth(c.get_depth());
-	float const wall_width(0.1*dz), door_thickness(0.03*depth), tray_sz(min(dz, width)), dir_sign(c.dir ? 1.0 : -1.0);
-	float const plate_radius(0.35*tray_sz);
+	float const wall_width(0.1*dz), door_thickness(0.035*depth), tray_sz(min(dz, width)), dir_sign(c.dir ? 1.0 : -1.0);
+	float const plate_radius(0.3*tray_sz);
 	point tray_center;
 	tray_center[ c.dim] = dishwasher.d[c.dim][c.dir] + 0.5*dir_sign*dz;
 	tray_center[!c.dim] = dishwasher.get_center_dim(!c.dim);
-	tray_center.z       = dishwasher.z1() + door_thickness + wall_width; // top of tray
+	tray_center.z       = dishwasher.z1() + door_thickness + wall_width + 0.85*plate_radius; // top of tray
 	cube_t plate;
-	// TODO: place it vertically
+	bool const plate_dim(!c.dim);
 	plate.set_from_point(tray_center);
-	plate.z2() += 0.1*plate_radius;
-	plate.expand_by_xy(plate_radius);
-	expanded_objs.emplace_back(plate, TYPE_PLATE, c.room_id, 0, 0, flags, c.light_amt, SHAPE_CUBE, GRAY);
+	plate.expand_in_dim( plate_dim, 0.05*plate_radius); // set thickness
+	plate.expand_in_dim(!plate_dim, plate_radius);
+	plate.expand_in_dim(2,          plate_radius); // expand in Z
+	expanded_objs.emplace_back(plate, TYPE_PLATE, c.room_id, plate_dim, (c.dir ^ c.dim), flags, c.light_amt, SHAPE_CYLIN, WHITE);
 	set_obj_id(expanded_objs);
 	invalidate_small_geom();
 }
