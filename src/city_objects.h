@@ -163,6 +163,15 @@ struct sign_t : public oriented_city_obj_t {
 	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const;
 };
 
+struct city_flag_t : public oriented_city_obj_t {
+	float pole_z1, pole_radius;
+
+	city_flag_t(cube_t const &bcube_, bool dim_, bool dir_, float pz1, float pradius);
+	static void pre_draw(draw_state_t &dstate, bool shadow_only);
+	static void post_draw(draw_state_t &dstate, bool shadow_only);
+	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const;
+};
+
 class city_obj_groups_t : public vector<cube_with_ix_t> {
 	map<uint64_t, vector<unsigned> > by_tile;
 public:

@@ -1045,7 +1045,6 @@ sign_t::sign_t(cube_t const &bcube_, bool dim_, bool dir_, string const &text_, 
 /*static*/ void sign_t::post_draw(draw_state_t &dstate, bool shadow_only) {
 	if (!shadow_only) {disable_blend();}
 }
-
 void sign_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
 	dstate.draw_cube(qbds.untex_qbd, bcube, bkg_color); // untextured, matte back
 
@@ -1057,6 +1056,26 @@ void sign_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale
 	bool const front_facing(((camera_pdu.pos[dim] - dstate.xlate[dim]) < bcube.d[dim][dir]) ^ dir);
 	if (front_facing  ) {add_sign_text_verts(text, bcube, dim,  dir, text_color, qbd.verts);} // draw the front side text
 	else if (two_sided) {add_sign_text_verts(text, bcube, dim, !dir, text_color, qbd.verts);} // draw the back side text
+}
+
+// city flags
+
+city_flag_t::city_flag_t(cube_t const &bcube_, bool dim_, bool dir_, float pz1, float pradius) : pole_z1(pz1), pole_radius(pradius) {
+	bcube  = bcube_;
+	// TODO: these should include the pole z1 and radius
+	pos    = bcube.get_cube_center();
+	radius = bcube.get_bsphere_radius();
+}
+/*static*/ void city_flag_t::pre_draw(draw_state_t &dstate, bool shadow_only) {
+	if (!shadow_only) {select_texture(get_texture_by_name("american_flag.png"));}
+}
+/*static*/ void city_flag_t::post_draw(draw_state_t &dstate, bool shadow_only) {} // anything?
+
+void city_flag_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
+	if (dstate.pass_ix == 0) {dstate.draw_cube(qbds.qbd, bcube, WHITE);}
+	else {
+		// TODO: draw the pole
+	}
 }
 
 
