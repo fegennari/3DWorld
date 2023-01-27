@@ -404,31 +404,33 @@ void building_room_geom_t::expand_dishwasher(room_object_t &c, cube_t const &dis
 	c.item_flags = expanded_objs_start; // record the location where we'll add our objects
 	//rand_gen_t rgen(c.create_rgen());
 	// add TYPE_PLATE, and TYPE_CUP, and TYPE_SILVERWARE
+	unsigned const num_plates = 4; // random?
 	unsigned const flags(RO_FLAG_NOCOLL | RO_FLAG_INTERIOR | RO_FLAG_WAS_EXP);
 	uint16_t obj_place_index(0);
 	// see dishwasher drawing code in building_room_geom_t::add_counter()
 	float const dz(c.dz()), width(dishwasher.get_sz_dim(!c.dim)), depth(c.get_depth());
 	float const wall_width(0.1*dz), door_thickness(0.035*depth), tray_sz(min(dz, width)), dir_sign(c.dir ? 1.0 : -1.0);
-	float const plate_radius(0.3*tray_sz);
+	float const plate_radius(0.3*tray_sz), plate_thickness(0.1*plate_radius), plate_spacing(2.0*plate_thickness), plate_dim_offset(-0.5*num_plates*plate_spacing);
 	point tray_center;
 	tray_center[ c.dim] = dishwasher.d[c.dim][c.dir] + 0.5*dir_sign*dz;
 	tray_center[!c.dim] = dishwasher.get_center_dim(!c.dim);
 	tray_center.z       = dishwasher.z1() + door_thickness + wall_width + 0.85*plate_radius; // top of tray
+	cube_t plate;
+	bool const plate_dim(!c.dim);
+	plate.set_from_point(tray_center);
+	plate.expand_in_dim( plate_dim, 0.5*plate_thickness); // set thickness
+	plate.expand_in_dim(!plate_dim, plate_radius);
+	plate.expand_in_dim(2,          plate_radius); // expand in Z
+	plate.translate_dim(plate_dim, plate_dim_offset);
 
-	if (!(c.taken_level & (1<<obj_place_index))) {
-		cube_t plate;
-		bool const plate_dim(!c.dim);
-		plate.set_from_point(tray_center);
-		plate.expand_in_dim( plate_dim, 0.05*plate_radius); // set thickness
-		plate.expand_in_dim(!plate_dim, plate_radius);
-		plate.expand_in_dim(2,          plate_radius); // expand in Z
-		expanded_objs.emplace_back(plate, TYPE_PLATE, c.room_id, plate_dim, (c.dir ^ c.dim), flags, c.light_amt, SHAPE_CYLIN, WHITE);
-		expanded_objs.back().obj_id = obj_place_index++;
+	for (unsigned n = 0; n < num_plates; ++n, ++obj_place_index) {
+		if (!(c.taken_level & (1<<obj_place_index))) { // plate not yet taken
+			expanded_objs.emplace_back(plate, TYPE_PLATE, c.room_id, plate_dim, (c.dir ^ c.dim), flags, c.light_amt, SHAPE_CYLIN, WHITE);
+			expanded_objs.back().obj_id = obj_place_index;
+		}
+		plate.translate_dim(plate_dim, plate_spacing);
 	}
 	if (expanded_objs.size() > expanded_objs_start) {invalidate_small_geom();} // if something was added
-}
-bool is_in_dishwasher(room_object_t const &c, cube_t const &door_region) {
-	return (/*c.type != TYPE_BLOCKER*/(c.type == TYPE_PLATE || c.type == TYPE_CUP || c.type == TYPE_SILVERWARE) && door_region.contains_pt(c.get_cube_center()));
 }
 void building_room_geom_t::unexpand_dishwasher(room_object_t &c, cube_t const &dishwasher) {
 	cube_t door_region(dishwasher);
@@ -437,8 +439,10 @@ void building_room_geom_t::unexpand_dishwasher(room_object_t &c, cube_t const &d
 	c.taken_level = 0xFF; // assume everything has been taken unless we find objects to reclaim
 
 	for (unsigned i = c.item_flags; i < expanded_objs.size(); ++i) { // search starting at our expanded_objs insertion point
-		if (!is_in_dishwasher(expanded_objs[i], door_region)) break; // break when outside our object range
-		expanded_objs[i].remove();
+		room_object_t &obj(expanded_objs[i]);
+		if (!door_region.contains_pt(obj.get_cube_center())) break; // break when outside our object range
+		if (/*obj.type == TYPE_BLOCKER*/obj.type != TYPE_PLATE && obj.type != TYPE_CUP && obj.type != TYPE_SILVERWARE) continue; // not a dishwasher item
+		obj.remove();
 		c.taken_level &= ~(1 << (i - c.item_flags)); // mark this object as untaken
 		++num_rem;
 	}
