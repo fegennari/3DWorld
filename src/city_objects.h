@@ -196,9 +196,10 @@ private:
 	vector<manhole_t> manholes;
 	vector<mailbox_t> mboxes;
 	vector<sign_t> signs;
+	vector<city_flag_t> flags;
 	// index is last obj in group
 	city_obj_groups_t bench_groups, planter_groups, trashcan_groups, fhydrant_groups, sstation_groups, divider_groups, pool_groups, ppole_groups,
-		hcap_groups, manhole_groups, mbox_groups, sign_groups;
+		hcap_groups, manhole_groups, mbox_groups, sign_groups, flag_groups;
 	vector<city_zone_t> sub_plots; // reused across calls
 	cube_t all_objs_bcube;
 	unsigned num_spaces, filled_spaces, num_x_plots, num_y_plots;
