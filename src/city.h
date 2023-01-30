@@ -433,6 +433,7 @@ struct draw_state_t {
 	unsigned pass_ix;
 	float draw_tile_dist;
 	hedge_draw_t hedge_draw;
+	vector<vert_wrap_t> temp_verts; // used for sphere drawing
 protected:
 	bool use_smap, use_bmap, shadow_only, use_dlights, emit_now;
 	point_sprite_drawer_sized light_psd; // for car/traffic lights
@@ -460,7 +461,7 @@ public:
 	static void rotate_pts(point const &center, float sine_val, float cos_val, int d, int e, point p[8]);
 	void draw_cube(quad_batch_draw &qbd, color_wrapper const &cw, point const &center, point const p[8], bool skip_bottom,
 		bool invert_normals=0, float tscale=0.0, unsigned skip_dims=0) const;
-	void draw_cube(quad_batch_draw &qbd, cube_t const &c, color_wrapper const &cw, bool skip_bottom=0, float tscale=0.0, unsigned skip_dims=0) const;
+	void draw_cube(quad_batch_draw &qbd, cube_t const &c, color_wrapper const &cw, bool skip_bottom=0, float tscale=0.0, unsigned skip_dims=0, bool mirror_x=0, bool mirror_y=0) const;
 	bool add_light_flare(point const &flare_pos, vector3d const &n, colorRGBA const &color, float alpha, float radius);
 	void set_label_text(string const &str, point const &pos) {label_str = str; label_pos = pos;}
 	void show_label_text();

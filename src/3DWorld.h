@@ -864,6 +864,8 @@ struct tex_range_t {
 
 	tex_range_t() : x1(0.0), y1(0.0), x2(1.0), y2(1.0), clip_quad(0), swap_xy(0) {}
 	tex_range_t(float x1_, float y1_, float x2_, float y2_, bool clip_quad_=0, bool swap_xy_=0) : x1(x1_), y1(y1_), x2(x2_), y2(y2_), clip_quad(clip_quad_), swap_xy(swap_xy_) {}
+	void mirror_x() {swap(x1, x2);}
+	void mirror_y() {swap(y1, y2);}
 
 	static tex_range_t from_atlas(unsigned xv, unsigned yv, unsigned nx, unsigned ny) {
 		assert(nx > 0 && ny > 0 && xv < nx && yv < ny);

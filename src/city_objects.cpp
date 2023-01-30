@@ -1059,10 +1059,12 @@ void sign_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale
 // city flags
 
 city_flag_t::city_flag_t(cube_t const &flag_bcube_, bool dim_, bool dir_, point const &pole_base_, float pradius) :
-	flag_bcube(flag_bcube_), pole_base(pole_base_), pole_radius(pradius)
+	oriented_city_obj_t(dim_, dir_), flag_bcube(flag_bcube_), pole_base(pole_base_), pole_radius(pradius)
 {
-	bcube      = flag_bcube;
-	bcube.z1() = pole_base.z; // include pole Z-range
+	bcube       = flag_bcube;
+	bcube.z1()  = pole_base.z; // include pole Z-range
+	bcube.z2() += 2.0*pole_radius; // account for the ball at the top
+	bcube.union_with_pt(pole_base); // make sure to include the pole
 	bcube.expand_by_xy(pradius); // include pole thickness
 	pos    = bcube.get_cube_center();
 	radius = bcube.get_bsphere_radius();
@@ -1072,15 +1074,30 @@ city_flag_t::city_flag_t(cube_t const &flag_bcube_, bool dim_, bool dir_, point 
 }
 void city_flag_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
 	// draw the flag
-	unsigned const skip_dims(4 + (1<<(!dim))); // top, bottom, and edges
-	dstate.draw_cube(qbds.qbd, flag_bcube, WHITE, 1, 0.0, skip_dims); // TODO: mirror texture in X for one side
+	unsigned const skip_dims(4 + (1<<unsigned(!dim))); // top, bottom, and edges
+	float const cview_dir((camera_pdu.pos[dim] - dstate.xlate[dim]) - pole_base[dim]);
+	bool const mirror_x((cview_dir < 0) ^ dir ^ dim ^ 1);
+	dstate.draw_cube(qbds.qbd, flag_bcube, WHITE, 1, 0.0, skip_dims, mirror_x, 0); // mirror_y=0
+	if (pole_radius == 0.0) return; // no pole to draw
 	// draw the pole
-	point const ce[2] = {pole_base, vector3d(pole_base.x, pole_base.y, bcube.z2())};
-	add_cylin_as_tris(qbds.untex_qbd.verts, ce, pole_radius, 0.5*pole_radius, WHITE, 16, 2); // truncated cone with top
-	// TODO: gold sphere at the top at ce[1]
+	float const dmax(dist_scale*dstate.draw_tile_dist);
+	if (!shadow_only && !bcube.closest_dist_less_than(dstate.camera_bs, 0.75*dmax)) return;
+	unsigned const ndiv = 16;
+	float const sphere_radius(1.0*pole_radius);
+	point const ce[2] = {pole_base, vector3d(pole_base.x, pole_base.y, bcube.z2()-sphere_radius)};
+	add_cylin_as_tris(qbds.untex_qbd.verts, ce, pole_radius, 0.5*pole_radius, WHITE, ndiv, 0); // truncated cone, sides only
+	// draw the gold sphere at the top
+	//if (shadow_only) return; // too small to cast a shadow?
+	if (!shadow_only && !bcube.closest_dist_less_than(dstate.camera_bs, 0.4*dmax)) return;
+	color_wrapper const cw(GOLD);
+	dstate.temp_verts.clear();
+	get_sphere_triangles(dstate.temp_verts, ce[1], sphere_radius, ndiv);
+	for (vert_wrap_t const &v : dstate.temp_verts) {qbds.untex_qbd.verts.emplace_back(v.v, (v.v - ce[1]).get_norm(), 0.0, 0.0, cw);}
 }
 bool city_flag_t::proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const {
-	return sphere_city_obj_cylin_coll(pole_base, pole_radius, pos_, p_last, radius_, xlate, cnorm);
+	if (sphere_cube_int_update_pos(pos_, radius_, (flag_bcube + xlate), p_last, 1, 0, cnorm)) return 1; // flag coll
+	if (pole_radius == 0.0) return 0; // no pole, skip
+	return sphere_city_obj_cylin_coll(pole_base, pole_radius, pos_, p_last, radius_, xlate, cnorm); // pole coll
 }
 
 
@@ -1504,26 +1521,27 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 			manhole_groups.add_obj(manhole_t(pos, radius), manholes); // Note: colliders not needed
 		}
 	}
-	// place flags in city parks
-	if (plot.is_park) {
-		unsigned const num_flags(1); // exactly 1, for now
-		float const length(0.25*city_params.road_width), width(0.5*length), height(0.8*city_params.road_width), pradius(0.05*length), spacing(2.0*pradius), thickness(0.1*pradius);
+	// maybe place a flag in a city park
+	if (plot.is_park && rgen.rand_float() < 0.75) { // 75% of the time
+		float const length(0.25*city_params.road_width*rgen.rand_uniform(0.8, 1.25)), height(0.8*city_params.road_width*rgen.rand_uniform(0.8, 1.25));
+		float const width(0.5*length), pradius(0.05*length), spacing(2.0*pradius), thickness(0.1*pradius);
 		point base_pt;
 		base_pt.z = plot.z2();
 		cube_t flag, pole;
 		set_cube_zvals(pole, base_pt.z, (base_pt.z + height));
 		set_cube_zvals(flag, (pole.z2() - width), pole.z2());
 
-		for (unsigned n = 0; n < 1; ++n) {
+		for (unsigned n = 0; n < 10; ++n) { // make up to 10 tries
 			if (!try_place_obj(plot, blockers, rgen, spacing, 0.0, 1, base_pt)) continue; // 1 try
 			for (unsigned d = 0; d < 2; ++d) {set_wall_width(pole, base_pt[d], pradius, d);}
 			bool dim(0), dir(0); // facing dir
 			get_closest_dim_dir_xy(pole, plot, dim, dir); // face the closest plot edge
 			set_wall_width(flag, base_pt[dim], thickness, dim); // flag thickness
-			flag.d[!dim][!dir] = base_pt[!dim]; // starts flush with the pole center
+			flag.d[!dim][!dir] = base_pt[!dim] + (dir ? 1.0 : -1.0)*0.5*pradius; // starts flush with the pole inside edge
 			flag.d[!dim][ dir] = base_pt[!dim] + (dir ? 1.0 : -1.0)*length; // end extends in dir
 			flag_groups.add_obj(city_flag_t(flag, dim, dir, base_pt, pradius), flags);
 			colliders.push_back(pole); // only the pole itself is a collider
+			break;
 		} // for n
 	}
 }
@@ -2020,7 +2038,7 @@ void city_obj_placer_t::draw_detail_objects(draw_state_t &dstate, bool shadow_on
 	draw_objects(mboxes,    mbox_groups,     dstate, 0.04, shadow_only, 1); // dist_scale=0.10, has_immediate_draw=1
 	draw_objects(ppoles,    ppole_groups,    dstate, 0.20, shadow_only, 0); // dist_scale=0.20
 	draw_objects(signs,     sign_groups,     dstate, 0.20, shadow_only, 0, 1); // dist_scale=0.20, draw_qbd_as_quads=1
-	draw_objects(flags,     flag_groups,     dstate, 0.16, shadow_only, 0); // dist_scale=0.16
+	draw_objects(flags,     flag_groups,     dstate, 0.18, shadow_only, 0); // dist_scale=0.16
 	if (!shadow_only) {draw_objects(hcaps,    hcap_groups,    dstate, 0.12, shadow_only, 0);} // dist_scale=0.12, no shadows
 	if (!shadow_only) {draw_objects(manholes, manhole_groups, dstate, 0.07, shadow_only, 1);} // dist_scale=0.07, no shadows, immediate draw
 	dstate.s.add_uniform_float("min_alpha", DEF_CITY_MIN_ALPHA); // reset back to default after drawing fire hydrant and substation models
