@@ -1,4 +1,4 @@
-// 3D World - Building/Company Names and Signs
+// 3D World - Building/Company Names Signs, and Flags
 // by Frank Gennari 01/11/23
 
 #include "function_registry.h"
@@ -64,6 +64,7 @@ string choose_business_name(rand_gen_t rgen) {
 
 void gen_text_verts(vector<vert_tc_t> &verts, point const &pos, string const &text, float tsize, vector3d const &column_dir, vector3d const &line_dir, bool use_quads=0);
 void add_city_building_signs(cube_t const &city_bcube, vector<sign_t> &signs);
+void add_city_building_flags(cube_t const &city_bcube, vector<city_flag_t> &flags);
 
 class sign_helper_t {
 	map<string, unsigned> txt_to_id;
@@ -135,6 +136,9 @@ void add_room_obj_sign_text_verts(room_object_t const &c, colorRGBA const &color
 void add_signs_for_city(unsigned city_id, vector<sign_t> &signs) {
 	add_city_building_signs(get_city_bcube(city_id), signs);
 }
+void add_flags_for_city(unsigned city_id, vector<city_flag_t> &flags) {
+	add_city_building_flags(get_city_bcube(city_id), flags);
+}
 
 void building_t::add_signs(vector<sign_t> &signs) const {
 	// house welcome and other door signs are currently part of the interior - should they be? I guess at least for secondary buildings, which aren't in a city
@@ -202,6 +206,12 @@ void building_t::add_signs(vector<sign_t> &signs) const {
 		}
 		if (sign_both_sides) break; // one side only - done
 	} // for d
+}
+
+void building_t::add_flags(vector<city_flag_t> &flags) const {
+	if (is_house) return; // no flags added to houses yet
+	// we can either place signs on top of the tallest part, or on the ground next to the building
+	// TODO
 }
 
 

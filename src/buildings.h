@@ -65,6 +65,7 @@ struct elevator_t;
 class brg_batch_draw_t;
 typedef vector<vert_norm_comp_tc_color> vect_vnctcc_t;
 struct sign_t;
+struct city_flag_t;
 
 struct bottle_params_t {
 	std::string name, texture_fn;
@@ -1442,6 +1443,7 @@ struct building_t : public building_geom_t {
 	void clear_room_geom();
 	void update_grass_exclude_at_pos(point const &pos, vector3d const &xlate, bool camera_in_building) const;
 	void add_signs(vector<sign_t> &signs) const;
+	void add_flags(vector<city_flag_t> &flags) const;
 	void update_stats(building_stats_t &s) const;
 	bool are_rooms_connected_without_using_room(unsigned room1, unsigned room2, unsigned room_exclude) const;
 	bool is_room_adjacent_to_ext_door(cube_t const &room, bool front_door_only=0) const;

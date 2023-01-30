@@ -164,12 +164,14 @@ struct sign_t : public oriented_city_obj_t {
 };
 
 struct city_flag_t : public oriented_city_obj_t {
-	float pole_z1, pole_radius;
+	cube_t flag_bcube;
+	point pole_base;
+	float pole_radius;
 
-	city_flag_t(cube_t const &bcube_, bool dim_, bool dir_, float pz1, float pradius);
+	city_flag_t(cube_t const &flag_bcube_, bool dim_, bool dir_, point const &pole_base_, float pradius);
 	static void pre_draw(draw_state_t &dstate, bool shadow_only);
-	static void post_draw(draw_state_t &dstate, bool shadow_only);
 	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const;
+	bool proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const;
 };
 
 class city_obj_groups_t : public vector<cube_with_ix_t> {
@@ -215,6 +217,7 @@ private:
 		rand_gen_t &rgen, bool is_residential, bool have_streetlights);
 	void place_residential_plot_objects(road_plot_t const &plot, vect_cube_t &blockers, vect_cube_t &colliders, unsigned driveways_start, rand_gen_t &rgen);
 	void add_house_driveways(road_plot_t const &plot, vect_cube_t &temp_cubes, rand_gen_t &rgen, unsigned plot_ix);
+	void add_objs_on_buildings(unsigned city_id);
 	template<typename T> void draw_objects(vector<T> const &objs, city_obj_groups_t const &groups, draw_state_t &dstate,
 		float dist_scale, bool shadow_only, bool has_immediate_draw=0, bool draw_qbd_as_quads=0, float specular=0.75, float shininess=50.0);
 	bool connect_power_to_point(point const &at_pos, bool near_power_pole);

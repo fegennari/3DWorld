@@ -16,6 +16,7 @@ unsigned const q2t_ixs[6] = {0,2,1,0,3,2}; // quad => 2 tris
 
 bool check_city_building_line_coll_bs_any(point const &p1, point const &p2);
 void add_signs_for_city(unsigned city_id, vector<sign_t> &signs);
+void add_flags_for_city(unsigned city_id, vector<city_flag_t> &flags);
 
 float get_power_pole_offset() {return 0.045*city_params.road_width;}
 
@@ -1060,22 +1061,29 @@ void sign_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale
 
 // city flags
 
-city_flag_t::city_flag_t(cube_t const &bcube_, bool dim_, bool dir_, float pz1, float pradius) : pole_z1(pz1), pole_radius(pradius) {
-	bcube  = bcube_;
-	// TODO: these should include the pole z1 and radius
+city_flag_t::city_flag_t(cube_t const &flag_bcube_, bool dim_, bool dir_, point const &pole_base_, float pradius) :
+	flag_bcube(flag_bcube_), pole_base(pole_base_), pole_radius(pradius)
+{
+	bcube      = flag_bcube;
+	bcube.z1() = pole_base.z; // include pole Z-range
+	bcube.expand_by_xy(pradius); // include pole thickness
 	pos    = bcube.get_cube_center();
 	radius = bcube.get_bsphere_radius();
 }
 /*static*/ void city_flag_t::pre_draw(draw_state_t &dstate, bool shadow_only) {
 	if (!shadow_only) {select_texture(get_texture_by_name("american_flag.png"));}
 }
-/*static*/ void city_flag_t::post_draw(draw_state_t &dstate, bool shadow_only) {} // anything?
-
 void city_flag_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
-	if (dstate.pass_ix == 0) {dstate.draw_cube(qbds.qbd, bcube, WHITE);}
-	else {
-		// TODO: draw the pole
-	}
+	// draw the flag
+	unsigned const skip_dims(4 + (1<<(!dim))); // top, bottom, and edges
+	dstate.draw_cube(qbds.qbd, flag_bcube, WHITE, 1, 0.0, skip_dims); // TODO: mirror texture in X for one side
+	// draw the pole
+	point const ce[2] = {pole_base, vector3d(pole_base.x, pole_base.y, bcube.z2())};
+	add_cylin_as_tris(qbds.untex_qbd.verts, ce, pole_radius, 0.5*pole_radius, WHITE, 16, 2); // truncated cone with top
+	// TODO: gold sphere at the top at ce[1]
+}
+bool city_flag_t::proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const {
+	return sphere_city_obj_cylin_coll(pole_base, pole_radius, pos_, p_last, radius_, xlate, cnorm);
 }
 
 
@@ -1499,9 +1507,27 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 			manhole_groups.add_obj(manhole_t(pos, radius), manholes); // Note: colliders not needed
 		}
 	}
-	// place flags in city blocks and parks
-	if (!is_residential || plot.is_park) {
-		// TODO
+	// place flags in city parks
+	if (plot.is_park) {
+		unsigned const num_flags(1); // exactly 1, for now
+		float const length(0.25*city_params.road_width), width(0.5*length), height(0.8*city_params.road_width), pradius(0.05*length), spacing(2.0*pradius), thickness(0.1*pradius);
+		point base_pt;
+		base_pt.z = plot.z2();
+		cube_t flag, pole;
+		set_cube_zvals(pole, base_pt.z, (base_pt.z + height));
+		set_cube_zvals(flag, (pole.z2() - width), pole.z2());
+
+		for (unsigned n = 0; n < 1; ++n) {
+			if (!try_place_obj(plot, blockers, rgen, spacing, 0.0, 1, base_pt)) continue; // 1 try
+			for (unsigned d = 0; d < 2; ++d) {set_wall_width(pole, base_pt[d], pradius, d);}
+			bool dim(0), dir(0); // facing dir
+			get_closest_dim_dir_xy(pole, plot, dim, dir); // face the closest plot edge
+			set_wall_width(flag, base_pt[dim], thickness, dim); // flag thickness
+			flag.d[!dim][!dir] = base_pt[!dim]; // starts flush with the pole center
+			flag.d[!dim][ dir] = base_pt[!dim] + (dir ? 1.0 : -1.0)*length; // end extends in dir
+			flag_groups.add_obj(city_flag_t(flag, dim, dir, base_pt, pradius), flags);
+			colliders.push_back(pole); // only the pole itself is a collider
+		} // for n
 	}
 }
 
@@ -1868,10 +1894,7 @@ void city_obj_placer_t::gen_parking_and_place_objects(vector<road_plot_t> &plots
 	} // for i
 	connect_power_to_buildings(plots);
 	if (have_cars) {add_cars_to_driveways(cars, plots, plot_colliders, city_id, rgen);}
-	vector<sign_t> signs_to_add;
-	add_signs_for_city(city_id, signs_to_add);
-	signs.reserve(signs_to_add.size());
-	for (sign_t const &sign : signs_to_add) {sign_groups.add_obj(sign, signs);}
+	add_objs_on_buildings(city_id);
 	for (auto i = plot_colliders.begin(); i != plot_colliders.end(); ++i) {sort(i->begin(), i->end(), cube_by_x1());}
 	bench_groups   .create_groups(benches,   all_objs_bcube);
 	planter_groups .create_groups(planters,  all_objs_bcube);
@@ -1894,6 +1917,18 @@ void city_obj_placer_t::gen_parking_and_place_objects(vector<road_plot_t> &plots
 	if (add_parking_lots) {
 		cout << "parking lots: " << parking_lots.size() << ", spaces: " << num_spaces << ", filled: " << filled_spaces << ", benches: " << benches.size() << endl;
 	}
+}
+
+void city_obj_placer_t::add_objs_on_buildings(unsigned city_id) {
+	// add signs and flags attached to buildings; note that some signs and flags may have already been added at this point
+	vector<sign_t> signs_to_add;
+	vector<city_flag_t> flags_to_add;
+	add_signs_for_city(city_id, signs_to_add);
+	add_flags_for_city(city_id, flags_to_add);
+	signs.reserve(signs.size() + signs_to_add.size());
+	flags.reserve(flags.size() + flags_to_add.size());
+	for (sign_t      const &sign : signs_to_add) {sign_groups.add_obj(sign, signs);}
+	for (city_flag_t const &flag : flags_to_add) {flag_groups.add_obj(flag, flags);}
 }
 
 /*static*/ bool city_obj_placer_t::subdivide_plot_for_residential(cube_t const &plot, float plot_subdiv_sz, unsigned parent_plot_ix, vect_city_zone_t &sub_plots) {
@@ -1988,7 +2023,7 @@ void city_obj_placer_t::draw_detail_objects(draw_state_t &dstate, bool shadow_on
 	draw_objects(mboxes,    mbox_groups,     dstate, 0.04, shadow_only, 1); // dist_scale=0.10, has_immediate_draw=1
 	draw_objects(ppoles,    ppole_groups,    dstate, 0.20, shadow_only, 0); // dist_scale=0.20
 	draw_objects(signs,     sign_groups,     dstate, 0.20, shadow_only, 0, 1); // dist_scale=0.20, draw_qbd_as_quads=1
-	draw_objects(flags,     flag_groups,     dstate, 0.16, shadow_only, 0); // dist_scale=0.16; TODO: need two passes for flag vs. flag pole?
+	draw_objects(flags,     flag_groups,     dstate, 0.16, shadow_only, 0); // dist_scale=0.16
 	if (!shadow_only) {draw_objects(hcaps,    hcap_groups,    dstate, 0.12, shadow_only, 0);} // dist_scale=0.12, no shadows
 	if (!shadow_only) {draw_objects(manholes, manhole_groups, dstate, 0.07, shadow_only, 1);} // dist_scale=0.07, no shadows, immediate draw
 	dstate.s.add_uniform_float("min_alpha", DEF_CITY_MIN_ALPHA); // reset back to default after drawing fire hydrant and substation models

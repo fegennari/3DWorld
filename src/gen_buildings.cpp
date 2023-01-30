@@ -2475,6 +2475,12 @@ public:
 			b.add_signs(signs);
 		}
 	}
+	void add_building_flags(cube_t const &region_bcube, vector<city_flag_t> &flags) const {
+		for (building_t const &b : buildings) { // same note as in add_building_signs
+			if (!region_bcube.intersects_xy(b.bcube)) continue; // wrong region/city
+			b.add_flags(flags);
+		}
+	}
 	void update_ai_state(float delta_dir) { // called once per frame
 		if (!global_building_params.building_people_enabled()) return;
 		point const camera_bs(get_camera_building_space());
@@ -3916,6 +3922,7 @@ bool have_buildings() {return (!building_creator.empty() || !building_creator_ci
 bool no_grass_under_buildings() {return (world_mode == WMODE_INF_TERRAIN && !(building_creator.empty() && building_tiles.empty()) && global_building_params.flatten_mesh);}
 unsigned get_buildings_gpu_mem_usage() {return (building_creator.get_gpu_mem_usage() + building_creator_city.get_gpu_mem_usage() + building_tiles.get_gpu_mem_usage());}
 void add_city_building_signs(cube_t const &city_bcube, vector<sign_t> &signs) {building_creator_city.add_building_signs(city_bcube, signs);}
+void add_city_building_flags(cube_t const &city_bcube, vector<city_flag_t> &flags) {building_creator_city.add_building_flags(city_bcube, flags);}
 
 vector3d get_buildings_max_extent() { // used for TT shadow bounds + map mode
 	return building_creator.get_max_extent().max(building_creator_city.get_max_extent()).max(building_tiles.get_max_extent());
