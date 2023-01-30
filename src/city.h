@@ -428,6 +428,7 @@ public:
 struct draw_state_t {
 	shader_t s;
 	vector3d xlate;
+	point camera_bs;
 	bool use_building_lights;
 	unsigned pass_ix;
 	float draw_tile_dist;

@@ -187,20 +187,18 @@ trashcan_t::trashcan_t(point const &pos_, float radius_, float height, bool is_c
 void trashcan_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
 	if (is_cylin != (dstate.pass_ix == 1)) return; // wrong pass
 	if (!dstate.check_cube_visible(bcube, dist_scale)) return;
-	point const camera_bs(camera_pdu.pos - dstate.xlate);
 
 	if (is_cylin) { // cylindrical residential trashcan
-		point const camera_bs(camera_pdu.pos - dstate.xlate);
-		unsigned const ndiv(shadow_only ? 16 : max(4U, min(32U, unsigned(2.0f*dist_scale*dstate.draw_tile_dist/p2p_dist(camera_bs, pos)))));
+		unsigned const ndiv(shadow_only ? 16 : max(4U, min(32U, unsigned(2.0f*dist_scale*dstate.draw_tile_dist/p2p_dist(dstate.camera_bs, pos)))));
 		float const cylin_radius(get_cylin_radius()), lid_radius(1.08*cylin_radius), height(bcube.dz());
 		point const rim_center(pos.x, pos.y, (bcube.z1() + 0.88*height)), lid_center(pos.x, pos.y, (bcube.z1() + 0.96*bcube.dz()));
 		draw_fast_cylinder(point(pos.x, pos.y, bcube.z1()), rim_center, cylin_radius, cylin_radius, ndiv, 1, 0); // draw sides only
 
-		if (!shadow_only && bcube.closest_dist_less_than(camera_bs, 0.4*dist_scale*dstate.draw_tile_dist)) { // draw the lid
+		if (!shadow_only && bcube.closest_dist_less_than(dstate.camera_bs, 0.4*dist_scale*dstate.draw_tile_dist)) { // draw the lid
 			draw_fast_cylinder(rim_center, lid_center, lid_radius, lid_radius, ndiv, 1, 0, 0, nullptr, 0.1); // draw sides only with partial texture
 			draw_fast_cylinder(lid_center, point(pos.x, pos.y, bcube.z2()), lid_radius, 0.001*lid_radius, ndiv, 1, 0); // draw sides only; not quite a cone
 
-			if (bcube.closest_dist_less_than(camera_bs, 0.1*dist_scale*dstate.draw_tile_dist)) { // draw the handle
+			if (bcube.closest_dist_less_than(dstate.camera_bs, 0.1*dist_scale*dstate.draw_tile_dist)) { // draw the handle
 				color_wrapper const gray(GRAY);
 				float const hlen(0.1*height), hwidth(0.02*height), thickness(0.005*height);
 				cube_t top;
@@ -227,7 +225,7 @@ void trashcan_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_s
 		hole.expand_by_xy(-0.08*bcube.get_size()); // shrink on all XY sides
 		draw_xy_walls(bcube, hole, tan, 25.0, dstate, qbds.qbd); // sides
 
-		if (bcube.closest_dist_less_than(camera_bs, 0.4*dist_scale*dstate.draw_tile_dist)) {
+		if (bcube.closest_dist_less_than(dstate.camera_bs, 0.4*dist_scale*dstate.draw_tile_dist)) {
 			float const height(bcube.dz());
 			cube_t bottom(hole);
 			bottom.z2() -= 0.95*height;
@@ -355,7 +353,7 @@ void divider_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_sc
 	plot_divider_type_t const &pdt(plot_divider_types[dstate.pass_ix]);
 	dstate.draw_cube(qbds.qbd, bcube, color_wrapper(pdt.color), 1, pdt.tscale/bcube.dz(), skip_dims); // skip bottom, scale texture to match the height
 
-	if (!shadow_only && type == DIV_HEDGE && bcube.closest_dist_less_than((camera_pdu.pos - dstate.xlate), 0.25f*(X_SCENE_SIZE + Y_SCENE_SIZE))) {
+	if (!shadow_only && type == DIV_HEDGE && bcube.closest_dist_less_than(dstate.camera_bs, 0.25f*(X_SCENE_SIZE + Y_SCENE_SIZE))) {
 		dstate.hedge_draw.add(bcube); // draw detailed leaves for nearby hedges
 	}
 }
@@ -439,14 +437,13 @@ void swimming_pool_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float d
 	if (!dstate.check_cube_visible(bcube, dist_scale)) return;
 
 	if (above_ground) { // cylindrical; bcube should be square in XY
-		point const camera_bs(camera_pdu.pos - dstate.xlate);
+		point const camera_bs(dstate.camera_bs);
 		float const radius(get_radius()), xc(bcube.xc()), yc(bcube.yc()), dscale(dist_scale*dstate.draw_tile_dist);
 		unsigned const ndiv(shadow_only ? 24 : max(4U, min(64U, unsigned(6.0f*dscale/p2p_dist(camera_bs, pos)))));
 
 		if (dstate.pass_ix == 2) { // draw sides, and maybe ladder
 			dstate.s.set_cur_color(color);
 			draw_fast_cylinder(point(xc, yc, bcube.z1()), point(xc, yc, bcube.z2()), radius, radius, ndiv, 0, 0); // untextured, no ends
-			point const camera_bs(camera_pdu.pos - dstate.xlate);
 
 			if (bcube.closest_dist_less_than(camera_bs, 0.5*dscale)) { // draw ladder
 				unsigned const num_steps = 5;
@@ -707,7 +704,7 @@ void draw_vert_standoff(point const &p1, point const &camera_bs, float height, f
 // the current grid is fully connected, forming loops on both the upper three high voltage lines and lower three low voltage lines;
 // maybe this isn't realistic, but it does have a nice symmetry and higher apparent wiring complexity; the user will likely not notice
 void power_pole_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
-	point const camera_bs(camera_pdu.pos - dstate.xlate);
+	point const camera_bs(dstate.camera_bs);
 	float const dmax(shadow_only ? camera_pdu.far_ : dist_scale*dstate.draw_tile_dist);
 	if (!bcube.closest_dist_less_than(camera_bs, dmax)) return;
 	if (!camera_pdu.cube_visible((shadow_only ? bcube : bcube_with_wires) + dstate.xlate)) return;
@@ -1001,7 +998,7 @@ manhole_t::manhole_t(point const &pos_, float radius_) : city_obj_t(pos_, radius
 	dstate.s.set_cur_color(colorRGBA(0.5, 0.35, 0.25, 1.0)); // gray-brown
 }
 void manhole_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
-	unsigned const ndiv(max(4U, min(32U, unsigned(1.0f*dist_scale*dstate.draw_tile_dist/p2p_dist((camera_pdu.pos - dstate.xlate), pos)))));
+	unsigned const ndiv(max(4U, min(32U, unsigned(1.0f*dist_scale*dstate.draw_tile_dist/p2p_dist(dstate.camera_bs, pos)))));
 	draw_circle_normal(0.0, radius, ndiv, 0, point(pos.x, pos.y, pos.z+get_height()), -1.0); // draw top surface, invert texture coords
 }
 

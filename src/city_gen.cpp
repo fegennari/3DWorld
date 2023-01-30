@@ -85,6 +85,7 @@ void draw_state_t::begin_tile(point const &pos, bool will_emit_now, bool ensure_
 }
 void draw_state_t::pre_draw(vector3d const &xlate_, bool use_dlights_, bool shadow_only_, bool always_setup_shader) {
 	xlate       = xlate_;
+	camera_bs   = camera_pdu.pos - xlate;
 	shadow_only = shadow_only_;
 	use_dlights = (use_dlights_ && !shadow_only);
 	use_smap    = (shadow_map_enabled() && !shadow_only && !disable_city_shadow_maps);
@@ -157,7 +158,7 @@ bool draw_state_t::check_cube_visible(cube_t const &bc, float dist_scale) const 
 void draw_state_t::draw_cube(quad_batch_draw &qbd, color_wrapper const &cw, point const &center, point const p[8],
 	bool skip_bottom, bool invert_normals, float tscale, unsigned skip_dims) const
 {
-	vector3d const cview_dir((camera_pdu.pos - xlate) - center);
+	vector3d const cview_dir(camera_bs - center);
 	float const sign(invert_normals ? -1.0 : 1.0);
 	vector3d const top_n  (cross_product((p[2] - p[1]), (p[0] - p[1]))*sign); // Note: normalization not needed
 	vector3d const front_n(cross_product((p[5] - p[1]), (p[0] - p[1]))*sign);
@@ -187,7 +188,7 @@ void draw_state_t::draw_cube(quad_batch_draw &qbd, cube_t const &c, color_wrappe
 	point p[8];
 	set_cube_pts(c, 0, 0, p);
 	//draw_cube(qbd, cw, c.get_cube_center(), p, skip_bottom, 0, tscale, skip_dims); // customized for axis aligned cube below
-	vector3d const cview_dir((camera_pdu.pos - xlate) - c.get_cube_center());
+	vector3d const cview_dir(camera_bs - c.get_cube_center());
 	tex_range_t tr_top, tr_front, tr_right;
 
 	if (tscale > 0.0) { // compute texture s/t parameters from cube side lengths to get a 1:1 AR
