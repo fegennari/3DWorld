@@ -1522,17 +1522,19 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 		}
 	}
 	// maybe place a flag in a city park
-	if (plot.is_park && rgen.rand_float() < 0.75) { // 75% of the time
-		float const length(0.25*city_params.road_width*rgen.rand_uniform(0.8, 1.25)), height(0.8*city_params.road_width*rgen.rand_uniform(0.8, 1.25));
-		float const width(0.5*length), pradius(0.05*length), spacing(2.0*pradius), thickness(0.1*pradius);
+	if ((!is_residential && rgen.rand_float() < 0.25) || (plot.is_park && rgen.rand_float() < 0.75)) { // 25% of the time for commerical plots, 75% of the time for parks
+		float const length(0.25*city_params.road_width*rgen.rand_uniform(0.8, 1.25)), height((plot.is_park ? 0.8 : 1.0)*city_params.road_width*rgen.rand_uniform(0.8, 1.25));
+		float const width(0.5*length), pradius(0.05*length), thickness(0.1*pradius);
+		float const spacing(plot.is_park ? 2.0*pradius : 1.25*length); // parks have low items, so we only need to avoid colliding with the pole; otherwise need to check tall buildings
+		cube_t place_area(plot);
+		place_area.expand_by_xy(-0.5*city_params.road_width); // shrink slightly to keep flags away from power lines
 		point base_pt;
-		base_pt.z = plot.z2();
-		cube_t flag, pole;
-		set_cube_zvals(pole, base_pt.z, (base_pt.z + height));
-		set_cube_zvals(flag, (pole.z2() - width), pole.z2());
 
-		for (unsigned n = 0; n < 10; ++n) { // make up to 10 tries
-			if (!try_place_obj(plot, blockers, rgen, spacing, 0.0, 1, base_pt)) continue; // 1 try
+		if (try_place_obj(place_area, blockers, rgen, spacing, 0.0, (plot.is_park ? 5 : 20), base_pt)) { // make up to 5/20 tries
+			base_pt.z = plot.z2();
+			cube_t flag, pole;
+			set_cube_zvals(pole, base_pt.z, (base_pt.z + height));
+			set_cube_zvals(flag, (pole.z2() - width), pole.z2());
 			for (unsigned d = 0; d < 2; ++d) {set_wall_width(pole, base_pt[d], pradius, d);}
 			bool dim(0), dir(0); // facing dir
 			get_closest_dim_dir_xy(pole, plot, dim, dir); // face the closest plot edge
@@ -1541,8 +1543,7 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 			flag.d[!dim][ dir] = base_pt[!dim] + (dir ? 1.0 : -1.0)*length; // end extends in dir
 			flag_groups.add_obj(city_flag_t(flag, dim, dir, base_pt, pradius), flags);
 			colliders.push_back(pole); // only the pole itself is a collider
-			break;
-		} // for n
+		}
 	}
 }
 

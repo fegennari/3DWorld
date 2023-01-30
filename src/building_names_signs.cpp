@@ -140,6 +140,11 @@ void add_flags_for_city(unsigned city_id, vector<city_flag_t> &flags) {
 	add_city_building_flags(get_city_bcube(city_id), flags);
 }
 
+void building_t::set_rgen_state_for_building(rand_gen_t &rgen) const {
+	rgen.set_state((mat_ix + parts.size()*12345 + 1), (name[0] - 'A' + 1));
+	rgen.rand_mix();
+}
+
 void building_t::add_signs(vector<sign_t> &signs) const {
 	// house welcome and other door signs are currently part of the interior - should they be? I guess at least for secondary buildings, which aren't in a city
 	if (is_house)      return; // no sign, for now
@@ -147,8 +152,7 @@ void building_t::add_signs(vector<sign_t> &signs) const {
 	if (num_sides & 1) return; // odd number of sides, may not be able to place a sign correctly (but maybe we can check this with a collision test with conn?)
 	if (half_offset || flat_side_amt != 0.0 || alt_step_factor != 0.0 || start_angle != 0.0) return; // not a shape that's guanrateed to reach the bcube edge
 	rand_gen_t rgen;
-	rgen.set_state((mat_ix + parts.size()*12345 + 1), (name[0] - 'A' + 1));
-	rgen.rand_mix();
+	set_rgen_state_for_building(rgen);
 	// find the highest part, largest area if tied, and place the sign on top of it
 	assert(!parts.empty());
 	float part_zmax(bcube.z1()), best_width(0.0), wall_pos[2] = {}, center_pos(0.0);
@@ -210,8 +214,9 @@ void building_t::add_signs(vector<sign_t> &signs) const {
 
 void building_t::add_flags(vector<city_flag_t> &flags) const {
 	if (is_house) return; // no flags added to houses yet
-	// we can either place signs on top of the tallest part, or on the ground next to the building
+	// we can place signs on roof of the tallest part, or on the ground next to the building, on on the building wall
 	// TODO
+	//flags.emplace_back(flag, dim, dir, base_pt, pradius);
 }
 
 
