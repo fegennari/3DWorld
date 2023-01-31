@@ -510,6 +510,12 @@ void texture_t::load_png(int index, bool allow_diff_width_height, bool allow_two
 	assert(end_info);
 	png_init_io(png_ptr, fp);
 	png_read_info(png_ptr, info_ptr);
+	int const color_type(png_get_color_type(png_ptr, info_ptr));
+	
+	if (color_type == PNG_COLOR_TYPE_PALETTE) {
+		png_set_expand(png_ptr); // expand to RGB
+		png_read_update_info(png_ptr, info_ptr);
+	}
 	unsigned const w(png_get_image_width(png_ptr, info_ptr));
 	unsigned const h(png_get_image_height(png_ptr, info_ptr));
 	int const bit_depth(png_get_bit_depth(png_ptr, info_ptr));
