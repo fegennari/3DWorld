@@ -6,7 +6,7 @@ T 0.0 0.0 -0.29
 #v 1 # enable voxel mode
 
 # testing
-#l 0.9 0.7 0.6 0.55 1.0 27 1 # concrete block (red/brown)
+#l 0.9 0.7 0.6 0.55 1.0 cblock.png 1 # concrete block (red/brown)
 #y 6.0
 #B 6.0 8.0 6.0 8.0 1.0 2.0
 #n 1
@@ -90,7 +90,7 @@ B -6.0  -5.9   4.5   5.9  -0.4  -0.05 # stairs east
 B -6.75 -5.8   6.4   6.5  -0.4  -0.05 # back wall
 
 # main walls of basement
-l 0.9 0.7 0.6 0.55 1.0 27 1 # concrete block (red/brown)
+l 0.9 0.7 0.6 0.55 1.0 cblock.png 1 # concrete block (red/brown)
 y 6.0
 a 0 # non-destroyable
 e 0
@@ -160,7 +160,7 @@ destroy_prob 0 # reset to default
 
 y 6.0
 X normal_maps/cblock_NRM.jpg 0 1 # normal map (swap binorm sign)
-l 0.9 0.7 0.6 0.55 1.0 27 1 # concrete block (red/brown)
+l 0.9 0.7 0.6 0.55 1.0 cblock.png 1 # concrete block (red/brown)
 e 1
 B -8.0  -7.4   5.0   5.2  -0.4  -0.34 # emergency exit stairs
 B -7.6  -7.0   5.0   5.2  -0.4  -0.37 # emergency exit stairs
