@@ -1070,7 +1070,7 @@ city_flag_t::city_flag_t(cube_t const &flag_bcube_, bool dim_, bool dir_, point 
 	radius = bcube.get_bsphere_radius();
 }
 /*static*/ void city_flag_t::pre_draw(draw_state_t &dstate, bool shadow_only) {
-	if (!shadow_only) {select_texture(get_texture_by_name("american_flag.png"));}
+	if (!shadow_only) {select_texture(get_texture_by_name("american_flag_indexed.png"));}
 }
 void city_flag_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
 	// draw the flag
