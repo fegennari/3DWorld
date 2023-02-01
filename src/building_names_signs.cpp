@@ -153,7 +153,7 @@ void building_t::add_signs(vector<sign_t> &signs) const {
 	if (half_offset || flat_side_amt != 0.0 || alt_step_factor != 0.0 || start_angle != 0.0) return; // not a shape that's guanrateed to reach the bcube edge
 	rand_gen_t rgen;
 	set_rgen_state_for_building(rgen);
-	// find the highest part, largest area if tied, and place the sign on top of it
+	// find the highest part, widest if tied, and place the sign on top of it
 	assert(!parts.empty());
 	float part_zmax(bcube.z1()), best_width(0.0), wall_pos[2] = {}, center_pos(0.0);
 	bool dim(0), pri_dir(rgen.rand_bool());
@@ -212,11 +212,46 @@ void building_t::add_signs(vector<sign_t> &signs) const {
 	} // for d
 }
 
+city_flag_t create_flag(bool dim, bool dir, point const &base_pt, float height, float length) {
+	float const width(0.5*length), pradius(0.05*length), thickness(0.1*pradius), pole_top(base_pt.z + height);
+	cube_t flag;
+	set_cube_zvals(flag, (pole_top - width), pole_top);
+	set_wall_width(flag, base_pt[dim], thickness, dim); // flag thickness
+	flag.d[!dim][!dir] = base_pt[!dim] + (dir ? 1.0 : -1.0)*0.5*pradius; // starts flush with the pole inside edge
+	flag.d[!dim][ dir] = base_pt[!dim] + (dir ? 1.0 : -1.0)*length; // end extends in dir
+	return city_flag_t(flag, dim, dir, base_pt, pradius);
+}
 void building_t::add_flags(vector<city_flag_t> &flags) const {
-	if (is_house) return; // no flags added to houses yet
-	// we can place signs on roof of the tallest part, or on the ground next to the building, on on the building wall
-	// TODO
-	//flags.emplace_back(flag, dim, dir, base_pt, pradius);
+	if (is_house   ) return; // no flags added to houses yet
+	if (has_helipad) return; // flag may block the helipad
+	if (roof_type != ROOF_TYPE_SLOPE) return; // only sloped roofs, since the flag is more visible
+	rand_gen_t rgen;
+	set_rgen_state_for_building(rgen);
+	if (rgen.rand_bool()) return; // place a flag 50% of the time
+	// we can place signs on roof of the tallest part, or on the ground next to the building, on on the building wall; here we add them to the roof
+	// find the highest part, largest area if tied, and place the sign on top of it
+	assert(!parts.empty());
+	float best_area(0.0);
+	bool dim(0);
+	point base_pt(0.0, 0.0, bcube.z1());
+
+	for (auto i = parts.begin(); i != get_real_parts_end(); ++i) {
+		float const area(i->get_area_xy());
+		if (i->z2() <= base_pt.z && !(i->z2() == base_pt.z && area > best_area)) continue; // not better
+		dim       = (i->dy() < i->dx()); // points in smaller dim
+		best_area = area;
+		base_pt.assign(i->xc(), i->yc(), i->z2());
+	} // for i
+	if (best_area == 0.0) return; // no valid placement
+
+	for (roof_obj_t const &ro : details) {
+		if (ro.contains_pt_xy(base_pt)) return;
+	}
+	bool const dir(rgen.rand_bool());
+	float const window_spacing(get_window_vspace()), length(1.0*window_spacing*rgen.rand_uniform(0.8, 1.25));
+	// assume the tallest part has the roof that sets the bcube and place the flag with that height_add
+	float const height_add(bcube.z2() - base_pt.z), height( 2.0*window_spacing*rgen.rand_uniform(0.8, 1.25) + height_add);
+	flags.push_back(create_flag(dim, dir, base_pt, height, length));
 }
 
 
