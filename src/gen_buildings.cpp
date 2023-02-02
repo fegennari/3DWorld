@@ -2582,7 +2582,7 @@ public:
 		if (!draw_building_interiors || !has_interior_geom) return; // no interior
 		point const camera(get_camera_pos()), camera_xlated(camera - xlate);
 		vector<point> points; // reused temporary
-		vect_cube_t ped_bcubes; // reused temporary
+		vect_cube_with_ix_t ped_bcubes; // reused temporary
 		occlusion_checker_noncity_t oc(*this);
 		bool is_first_building(1);
 		//highres_timer_t timer("Add Interior Lights");

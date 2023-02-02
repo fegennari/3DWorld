@@ -10,6 +10,8 @@ float const CROSS_WAIT_TIME  = 60.0; // in seconds
 float const LOOKAHEAD_TICKS  = 2.0*TICKS_PER_SECOND; // 2s
 bool const FORCE_USE_CROSSWALKS = 0; // more realistic and safe, but causes problems with pedestian collisions
 
+bool some_person_has_idle_animation(0);
+
 extern bool tt_fire_button_down;
 extern int display_mode, game_mode, animate2, frame_counter, camera_surf_collide;
 extern float FAR_CLIP;
@@ -1600,6 +1602,9 @@ bool ped_manager_t::draw_ped(person_base_t const &ped, shader_t &s, pos_dir_up c
 			// only consider the person as idle if there's an idle animation;
 			// otherwise will always use walk animation, which is assumed to exist, but anim_time won't be updated while idle
 			bool const is_idle(ped.is_waiting_or_stopped() && ped_model_loader.get_model(ped.model_id).has_animation("idle"));
+			// we need to know if there are idle animations for light/shadow updates in building_t::add_room_lights(),
+			// where we don't have access to ped_model_loader, so the only solution I can come up with is using a global variable
+			some_person_has_idle_animation |= is_idle;
 			float state_change_elapsed(0.0), blend_factor(0.0); // [0.0, 1.0] where 0.0 => anim1 and 1.0 => anim2
 
 			if (ped.last_anim_state_change_time > 0.0) { // if there was an animation state change

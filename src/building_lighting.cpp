@@ -16,7 +16,7 @@ bool  const INDIR_BLDG_ENABLE   = 1;
 unsigned INDIR_LIGHT_FLOOR_SPAN = 5; // in number of floors, generally an odd number to represent current floor and floors above/below; 0 is unlimited
 float const ATTIC_LIGHT_RADIUS_SCALE = 2.0; // larger radius in attic, since space is larger
 
-extern bool camera_in_building, player_in_attic;
+extern bool camera_in_building, player_in_attic, some_person_has_idle_animation;
 extern int MESH_Z_SIZE, display_mode, display_framerate, camera_surf_collide, animate2, frame_counter, building_action_key, player_in_basement, player_in_elevator;
 extern unsigned LOCAL_RAYS, MAX_RAY_BOUNCES, NUM_THREADS;
 extern float indir_light_exp;
@@ -1096,7 +1096,7 @@ float get_radius_for_room_light(room_object_t const &obj) {
 	return radius;
 }
 
-bool check_for_shadow_caster(vect_cube_t const &cubes, cube_t const &light_bcube, point const &lpos,
+bool check_for_shadow_caster(vect_cube_with_ix_t const &cubes, cube_t const &light_bcube, point const &lpos,
 	float dmax, bool has_stairs, vector3d const &xlate, unsigned &shadow_caster_hash)
 {
 	bool ret(0);
@@ -1126,7 +1126,9 @@ bool check_for_shadow_caster(vect_cube_t const &cubes, cube_t const &light_bcube
 				continue;
 			}
 		}
-		shadow_caster_hash += hash_point(center);
+		shadow_caster_hash += hash_point(center) + c->ix;
+		shadow_caster_hash += shadow_caster_hash << 10;
+		shadow_caster_hash ^= shadow_caster_hash >> 6;
 		ret = 1;
 	} // for c
 	return ret;
@@ -1134,7 +1136,7 @@ bool check_for_shadow_caster(vect_cube_t const &cubes, cube_t const &light_bcube
 
 // Note: non const because this caches light_bcubes
 void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bool camera_in_building,
-	occlusion_checker_noncity_t &oc, vect_cube_t &ped_bcubes, cube_t &lights_bcube)
+	occlusion_checker_noncity_t &oc, vect_cube_with_ix_t &ped_bcubes, cube_t &lights_bcube)
 {
 	if (!has_room_geom()) return; // error?
 	point const camera_bs(camera_pdu.pos - xlate), building_center(bcube.get_cube_center()); // camera in building space
@@ -1155,7 +1157,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 	unsigned camera_floor(0);
 	bool camera_by_stairs(0), camera_on_stairs(0), camera_somewhat_by_stairs(0), camera_in_hallway(0), camera_near_building(camera_in_building);
 	int camera_room(-1);
-	vect_cube_t moving_objs;
+	vect_cube_with_ix_t moving_objs;
 	ped_bcubes.clear();
 
 	if (camera_in_building) {
@@ -1465,7 +1467,12 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			}
 			if (check_building_people && !is_lamp) { // update shadow_caster_hash for moving people, but not for lamps, because their light points toward the floor
 				if (ped_bcubes.empty()) { // get all cubes on first light
-					for (person_t const &p : interior->people) {ped_bcubes.push_back(p.get_bcube());}
+					for (person_t const &p : interior->people) {
+						// if this person is waiting and their location isn't changing,
+						// assume they have an idle animation playing and use the frame counter to make sure their shadows are updated each frame
+						unsigned const ix((some_person_has_idle_animation && p.waiting_start > 0) ? frame_counter : 0);
+						ped_bcubes.emplace_back(p.get_bcube(), ix);
+					}
 				}
 				check_for_shadow_caster(ped_bcubes, clipped_bc, lpos_rot, dshadow_radius, stairs_light, xlate, shadow_caster_hash);
 			}

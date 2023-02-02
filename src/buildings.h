@@ -1408,7 +1408,8 @@ struct building_t : public building_geom_t {
 	void get_split_int_window_wall_verts(building_draw_t &bdraw_front, building_draw_t &bdraw_back, point const &only_cont_pt_in, bool make_all_front=0) const;
 	void get_ext_wall_verts_no_sec(building_draw_t &bdraw) const;
 	void write_basement_entrance_depth_pass(shader_t &s) const;
-	void add_room_lights(vector3d const &xlate, unsigned building_id, bool camera_in_building, occlusion_checker_noncity_t &oc, vect_cube_t &ped_bcubes, cube_t &lights_bcube);
+	void add_room_lights(vector3d const &xlate, unsigned building_id, bool camera_in_building,
+		occlusion_checker_noncity_t &oc, vect_cube_with_ix_t &ped_bcubes, cube_t &lights_bcube);
 	void run_light_motion_detect_logic(point const &camera_bs);
 	bool toggle_room_light(point const &closest_to, bool sound_from_closest_to=0, int room_id=-1, bool inc_lamps=1, bool closet_light=0);
 	void toggle_light_object(room_object_t const &light, point const &sound_pos);
