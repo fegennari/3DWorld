@@ -234,6 +234,7 @@ struct city_zone_t : public cube_t {
 	unsigned nbuildings, capacity; // in number of buildings; 0 is unlimited
 	unsigned max_floors; // 0=unlimited
 	int parent_plot_ix; // if this is a sub-plot; -1 otherwise
+	std::string address;
 
 	city_zone_t() : zval(0.0), is_park(0), is_residential(0), street_dir(0), nbuildings(0), capacity(0), max_floors(0), parent_plot_ix(-1) {}
 	city_zone_t(cube_t const &c, float zval_=0.0, bool p=0, bool r=0, unsigned sdir=0, unsigned cap=0, int ppix=-1, unsigned mf=0) :
@@ -1266,6 +1267,7 @@ struct building_t : public building_geom_t {
 	vector<colored_sphere_t> ext_lights;
 	std::shared_ptr<building_interior_t> interior;
 	std::string name; // company name for office building; family name for house
+	std::string address; // only used for city buildings on roads
 	vertex_range_t ext_side_qv_range;
 	point tree_pos; // (0,0,0) is unplaced/no tree
 	float ao_bcz2=0.0, ground_floor_z1=0.0, interior_z2=0.0;

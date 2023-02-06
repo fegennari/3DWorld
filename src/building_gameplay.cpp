@@ -926,8 +926,10 @@ void building_t::register_player_enter_building() const {
 	//print_building_manifest(); // for debugging
 
 	if (!name.empty()) {
-		if (is_house) {print_entering_building("Entering " + name + " Residence");}
-		else          {print_entering_building("Entering " + name);}
+		string str("Entering " + name);
+		if (is_house) {str += " Residence";}
+		if (!address.empty()) {str += "\nAddress: " + address;} // add address on a second line if known
+		print_entering_building(str);
 	}
 }
 void building_t::register_player_exit_building() const {
