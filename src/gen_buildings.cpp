@@ -2220,6 +2220,10 @@ public:
 			for (auto i = avoid_bcubes.begin(); i != avoid_bcubes.end(); ++i) {avoid_bcubes_bcube.assign_or_union_with_cube(*i);}
 		}
 		bool const use_city_plots(!valid_city_plot_ixs.empty()), check_plot_coll(!avoid_bcubes.empty());
+		// options to make houses consistent across blocks
+		bool const use_consistent_mat (residential && use_city_plots);
+		bool const use_consistent_size(residential && use_city_plots && 0);
+		bool const use_consistent_geom(residential && use_city_plots && 0);
 		bix_by_plot.resize(city_plot_bcubes.size());
 		point center(all_zeros);
 		unsigned num_consec_fail(0), max_consec_fail(0);
@@ -2244,18 +2248,17 @@ public:
 					residential = city_plot_bcubes[plot_ix].is_residential;
 					if (residential && params.mat_gen_ix_res.empty()) break; // no residential buildings available, break from n loop (but retry i loop with new plot)
 				}
-				building_cand_t b(temp_parts);
-				b.mat_ix = params.choose_rand_mat(rgen, city_only, non_city_only, residential); // set material
-				building_mat_t const &mat(b.get_material());
 				cube_t pos_range;
 				float border_scale(1.0);
 				unsigned max_floors(0); // starts at unlimited
+				building_cand_t b(temp_parts);
 				
 				if (use_city_plots) { // select a random plot, if available
 					city_zone_t const &plot(city_plot_bcubes[plot_ix]);
-					pos_range = plot;
-					center.z  = plot.zval; // optimization: take zval from plot rather than calling get_exact_zval()
+					pos_range       = plot;
+					center.z        = plot.zval; // optimization: take zval from plot rather than calling get_exact_zval()
 					b.assigned_plot = plot; // only really needed for residential sub-plots
+					b.address       = plot.address;
 					city_plot_ix    = ((plot.parent_plot_ix >= 0) ? plot.parent_plot_ix : plot_ix);
 					max_floors      = plot.max_floors;
 					if (residential) {pref_dir = plot.street_dir;}
@@ -2263,9 +2266,14 @@ public:
 					pos_range.expand_by_xy(-min(min_building_spacing, 0.45f*min(plot.dx(), plot.dy())));
 					if (plot.capacity == 1) {border_scale *= 2.0;} // use smaller border scale since the individual building plots should handle borders
 				}
-				else {
-					pos_range = mat.pos_range + delta_range;
-				}
+				rand_gen_t group_rgen;
+				group_rgen.set_state(rseed, city_plot_ix+1); // varies per city
+				group_rgen.rand_mix();
+				rand_gen_t &rgen_mat(use_consistent_mat  ? group_rgen : rgen); // for material and color
+				rand_gen_t &rgen_sz (use_consistent_size ? group_rgen : rgen); // for size, height, and orient
+				b.mat_ix = params.choose_rand_mat(rgen_mat, city_only, non_city_only, residential); // set material
+				building_mat_t const &mat(b.get_material());
+				if (!use_city_plots) {pos_range = mat.pos_range + delta_range;} // select pos range by material
 				vector3d const pos_range_sz(pos_range.get_size());
 				assert(pos_range_sz.x > 0.0 && pos_range_sz.y > 0.0);
 				point const place_center(pos_range.get_cube_center());
@@ -2282,18 +2290,18 @@ public:
 				}
 				if (!keep) continue; // placement failed, skip
 				b.is_house = (mat.house_prob > 0.0 && (residential || rgen.rand_float() < mat.house_prob)); // force a house if residential and houses are enabled
-				float const size_scale(b.is_house ? mat.gen_house_size_scale(rgen) : 1.0);
+				float const size_scale(b.is_house ? mat.gen_house_size_scale(rgen_sz) : 1.0);
 				
 				for (unsigned d = 0; d < 2; ++d) { // x,y
 					float const size_cap(border_scale*pos_range_sz[d]*(b.is_house ? 0.8 : 1.0)); // size cap relative to plot size
-					float const sz(0.5*rgen.rand_uniform(min(size_scale*mat.sz_range.d[d][0], 0.3f*size_cap),
-						                                 min(size_scale*mat.sz_range.d[d][1], 0.5f*size_cap))); // use pos range size for max
+					float const sz(0.5*rgen_sz.rand_uniform(min(size_scale*mat.sz_range.d[d][0], 0.3f*size_cap),
+						                                    min(size_scale*mat.sz_range.d[d][1], 0.5f*size_cap))); // use pos range size for max
 					b.bcube.d[d][0] = center[d] - sz;
 					b.bcube.d[d][1] = center[d] + sz;
 				}
 				if (is_residential_block && b.bcube.contains_pt_xy(place_center)) continue; // house should not contain the center point of the plot
 				if ((use_city_plots || is_tile) && !pos_range.contains_cube_xy(b.bcube)) continue; // not completely contained in plot/tile (pre-rot)
-				if (!use_city_plots) {b.gen_rotation(rgen);} // city plots are Manhattan (non-rotated) - must rotate before bcube checks below
+				if (!use_city_plots) {b.gen_rotation(rgen_sz);} // city plots are Manhattan (non-rotated) - must rotate before bcube checks below
 				if (is_tile && !pos_range.contains_cube_xy(b.bcube)) continue; // not completely contained in tile
 				if (start_in_inf_terrain && b.bcube.contains_pt_xy(get_camera_pos())) continue; // don't place a building over the player appearance spot
 				if (!check_valid_building_placement(params, b, avoid_bcubes, avoid_bcubes_bcube, min_building_spacing,
@@ -2307,14 +2315,14 @@ public:
 				assert(hmin <= hmax);
 				float const height_range(mat.sz_range.dz());
 				assert(height_range >= 0.0);
-				float const z_size_scale(size_scale*(b.is_house ? rgen.rand_uniform(0.6, 0.8) : 1.0)); // make houses slightly shorter on average to offset extra height added by roof
-				float height_val(0.5f*z_size_scale*(mat.sz_range.z1() + height_range*rgen.rand_uniform(hmin, hmax)));
+				float const z_size_scale(size_scale*(b.is_house ? rgen_sz.rand_uniform(0.6, 0.8) : 1.0)); // make houses slightly shorter on average to offset extra height added by roof
+				float height_val(0.5f*z_size_scale*(mat.sz_range.z1() + height_range*rgen_sz.rand_uniform(hmin, hmax)));
 				if (max_floors > 0) {min_eq(height_val, max_floors*b.get_window_vspace());} // limit height based on max floors
 				assert(height_val > 0.0);
 				b.set_z_range(center.z, (center.z + height_val));
 				assert(b.bcube.is_strictly_normalized());
-				mat.side_color.gen_color(b.side_color, rgen);
-				mat.roof_color.gen_color(b.roof_color, rgen);
+				mat.side_color.gen_color(b.side_color, rgen_mat);
+				mat.roof_color.gen_color(b.roof_color, rgen_mat);
 				if (use_city_plots) {b.street_dir = (pref_dir ? pref_dir : get_street_dir(b.bcube, pos_range));}
 				if (city_only     ) {b.is_in_city = 1;}
 				add_to_grid(b.bcube, buildings.size(), 0);
@@ -2389,8 +2397,12 @@ public:
 		{ // open a scope
 			timer_t timer2("Gen Building Geometry", !is_tile);
 			bool const use_mt(!is_tile || global_building_params.gen_building_interiors); // only single threaded for tiles with no interiors, which is a fast case anyway
+
 #pragma omp parallel for schedule(static,1) num_threads(2) if (use_mt)
-			for (int i = 0; i < (int)buildings.size(); ++i) {buildings[i].gen_geometry(i, 1337*i+rseed);}
+			for (int i = 0; i < (int)buildings.size(); ++i) {
+				unsigned const rs_ix(use_consistent_geom ? buildings[i].mat_ix : i); // make consistent per plot/city, which has a consistent material
+				buildings[i].gen_geometry(rs_ix, 1337*rs_ix+rseed);
+			}
 		} // close the scope
 		if (0 && non_city_only) { // perform room graph analysis
 			timer_t timer3("Building Room Graph Analysis");
