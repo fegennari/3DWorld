@@ -1574,12 +1574,12 @@ float extend_fence_to_house(cube_t &fence, cube_t const &house, float fence_hwid
 }
 
 void city_obj_placer_t::place_residential_plot_objects(road_plot_t const &plot, vect_cube_t &blockers, vect_cube_t &colliders,
-	unsigned driveways_start, unsigned city_ix, rand_gen_t &rgen)
+	vector<road_t> const &roads, unsigned driveways_start, unsigned city_ix, rand_gen_t &rgen)
 {
 	assert(plot_subdiv_sz > 0.0);
 	sub_plots.clear();
 	if (plot.is_park) return; // no dividers in parks
-	subdivide_plot_for_residential(plot, plot_subdiv_sz, 0, city_ix, sub_plots); // parent_plot_ix=0, not needed
+	subdivide_plot_for_residential(plot, roads, plot_subdiv_sz, 0, city_ix, sub_plots); // parent_plot_ix=0, not needed
 	if (sub_plots.size() <= 1) return; // nothing to divide
 	if (rgen.rand_bool()) {std::reverse(sub_plots.begin(), sub_plots.end());} // reverse half the time so that we don't prefer a divider in one side or the other
 	unsigned const shrink_dim(rgen.rand_bool()); // mostly arbitrary, could maybe even make this a constant 0
@@ -1865,7 +1865,7 @@ void city_obj_placer_t::clear() {
 }
 
 void city_obj_placer_t::gen_parking_and_place_objects(vector<road_plot_t> &plots, vector<vect_cube_t> &plot_colliders, vector<car_t> &cars,
-	unsigned city_id, bool have_cars, bool is_residential, bool have_streetlights)
+	vector<road_t> const &roads, unsigned city_id, bool have_cars, bool is_residential, bool have_streetlights)
 {
 	// Note: fills in plots.has_parking
 	//timer_t timer("Gen Parking Lots and Place Objects");
@@ -1904,7 +1904,7 @@ void city_obj_placer_t::gen_parking_and_place_objects(vector<road_plot_t> &plots
 			bcubes.push_back(dw);
 		} // for j
 		if (city_params.assign_house_plots && plot_subdiv_sz > 0.0) {
-			place_residential_plot_objects(*i, bcubes, colliders, driveways_start, city_id, detail_rgen); // before placing trees
+			place_residential_plot_objects(*i, bcubes, colliders, roads, driveways_start, city_id, detail_rgen); // before placing trees
 		}
 		place_trees_in_plot (*i, bcubes, colliders, tree_pos, detail_rgen, buildings_end);
 		place_detail_objects(*i, bcubes, colliders, tree_pos, detail_rgen, is_residential, have_streetlights);
@@ -1948,7 +1948,9 @@ void city_obj_placer_t::add_objs_on_buildings(unsigned city_id) {
 	for (city_flag_t const &flag : flags_to_add) {flag_groups.add_obj(flag, flags);}
 }
 
-/*static*/ bool city_obj_placer_t::subdivide_plot_for_residential(cube_t const &plot, float plot_subdiv_sz, unsigned parent_plot_ix, unsigned city_ix, vect_city_zone_t &sub_plots) {
+/*static*/ bool city_obj_placer_t::subdivide_plot_for_residential(cube_t const &plot, vector<road_t> const &roads,
+	float plot_subdiv_sz, unsigned parent_plot_ix, unsigned city_ix, vect_city_zone_t &sub_plots)
+{
 	if (min(plot.dx(), plot.dy()) < city_params.road_width) return 0; // plot is too small to divide
 	assert(plot_subdiv_sz > 0.0);
 	unsigned ndiv[2] = {0,0};
@@ -1970,9 +1972,23 @@ void city_obj_placer_t::add_objs_on_buildings(unsigned city_id) {
 			if (x > 0 && y > 0 && x+1 < ndiv[0] && y+1 < ndiv[1]) continue; // interior plot, no road access, skip
 			float const x1(plot.x1() + spacing[0]*x), x2((x+1 == ndiv[0]) ? plot.x2() : (x1 + spacing[0])); // last sub-plot must end exactly at plot x2
 			cube_t const c(x1, x2, y1, y2, plot.z1(), plot.z2());
-			// will favor x-dim for corner plots
-			sub_plots.emplace_back(c, 0.0, 0, 1, get_street_dir(c, plot), 1, parent_plot_ix, city_ix, max_floors); // cube, zval, park, res, sdir, capacity, ppix, cix, nf
-		}
+			unsigned const street_dir(get_street_dir(c, plot)); // will favor x-dim for corner plots
+			sub_plots.emplace_back(c, 0.0, 0, 1, street_dir, 1, parent_plot_ix, city_ix, max_floors); // cube, zval, park, res, sdir, capacity, ppix, cix, nf
+
+			if (!roads.empty()) { // find the road name and determine the street address
+				bool const sdim((street_dir - 1) >> 1), sdir((street_dir - 1) & 1);
+				unsigned road_ix(0);
+				float dmin(FLT_MAX);
+
+				for (auto r = roads.begin(); r != roads.end(); ++r) {
+					if (r->dim == sdim) continue;
+					float const dist(fabs(r->d[!sdim][!sdir] - c.d[!sdim][sdir]));
+					if (dist < dmin) {dmin = dist; road_ix = (r - roads.begin());}
+				}
+				string const &road_name(roads[road_ix].get_name(city_ix));
+				sub_plots.back().address = road_name; // TODO: append street number
+			}
+		} // for x
 	} // for y
 	return 1;
 }

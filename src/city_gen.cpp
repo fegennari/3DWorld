@@ -1061,8 +1061,7 @@ public:
 	void gen_parking_lots_and_place_objects(vector<car_t> &cars, bool have_cars, bool &have_plot_dividers) {
 		city_obj_placer.clear();
 		city_obj_placer.set_plot_subdiv_sz(get_plot_subdiv_sz());
-		// TODO: call gen_name() on each road and pass that into this call as two vectors of roads for address assignment
-		city_obj_placer.gen_parking_and_place_objects(plots, plot_colliders, cars, city_id, have_cars, is_residential, !streetlights.empty());
+		city_obj_placer.gen_parking_and_place_objects(plots, plot_colliders, cars, roads, city_id, have_cars, is_residential, !streetlights.empty());
 		add_tile_blocks(city_obj_placer.parking_lots, tile_to_block_map, TYPE_PARK_LOT); // need to do this later, after gen_tile_blocks()
 		add_tile_blocks(city_obj_placer.driveways,    tile_to_block_map, TYPE_DRIVEWAY);
 		tile_to_block_map.clear(); // no longer needed
@@ -1097,7 +1096,7 @@ public:
 
 		for (auto i = plots.begin(); i != plots.end(); ++i, ++cur_global_plot_ix) { // capture all plot zones, even parks (needed for pedestrians)
 			if (plot_subdiv_sz > 0.0 && !i->is_park) { // split into smaller plots for each house
-				if (city_obj_placer.subdivide_plot_for_residential(*i, plot_subdiv_sz, cur_global_plot_ix, city_id, zones)) continue;
+				if (city_obj_placer.subdivide_plot_for_residential(*i, roads, plot_subdiv_sz, cur_global_plot_ix, city_id, zones)) continue;
 			}
 			zones.emplace_back(*i, 0.0, i->is_park, is_residential, 0, 0, cur_global_plot_ix, city_id, max_floors); // cube, zval, park, res, sdir, capacity, ppix, cix, max_floors
 		} // for i
