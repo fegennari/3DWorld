@@ -1982,7 +1982,7 @@ void city_obj_placer_t::add_objs_on_buildings(unsigned city_id) {
 
 				for (auto r = roads.begin(); r != roads.end(); ++r) {
 					if (r->dim == sdim) continue;
-					float const dist(fabs(r->d[!sdim][!sdir] - c.d[!sdim][sdir]));
+					float const dist(fabs(r->d[sdim][!sdir] - c.d[sdim][sdir]));
 					if (dist < dmin) {dmin = dist; road_ix = (r - roads.begin());}
 				}
 				string const &road_name(roads[road_ix].get_name(city_ix));
