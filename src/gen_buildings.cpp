@@ -2289,7 +2289,7 @@ public:
 					if (is_tile || mat.place_radius == 0.0 || dist_xy_less_than(center, place_center, mat.place_radius)) {keep = 1; break;} // place_radius ignored for tiles
 				}
 				if (!keep) continue; // placement failed, skip
-				b.is_house = (mat.house_prob > 0.0 && (residential || rgen.rand_float() < mat.house_prob)); // force a house if residential and houses are enabled
+				b.is_house = (mat.house_prob > 0.0 && (residential || rgen.rand_probability(mat.house_prob))); // force a house if residential and houses are enabled
 				float const size_scale(b.is_house ? mat.gen_house_size_scale(rgen_sz) : 1.0);
 				
 				for (unsigned d = 0; d < 2; ++d) { // x,y

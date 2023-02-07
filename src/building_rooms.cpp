@@ -2649,7 +2649,7 @@ void building_t::place_objects_onto_surfaces(rand_gen_t rgen, room_t const &room
 		if (is_eating_table) { // table in a room for eating, add a plate
 			if (place_plate_on_obj(rgen, surface, room_id, tot_light_amt, avoid)) {avoid = objs.back();}
 		}
-		if (avoid.is_all_zeros() && book_prob > 0.0 && rgen.rand_float() < book_prob) { // place book if it's the first item (no plate)
+		if (avoid.is_all_zeros() && rgen.rand_probability(book_prob)) { // place book if it's the first item (no plate)
 			placed_book_on_counter |= (obj.type == TYPE_COUNTER);
 			place_book_on_obj(rgen, surface, room_id, tot_light_amt, objs_start, (obj.type != TYPE_TABLE));
 			avoid = objs.back();
@@ -2661,12 +2661,12 @@ void building_t::place_objects_onto_surfaces(rand_gen_t rgen, room_t const &room
 				if (obj2.type == TYPE_PEN || obj2.type == TYPE_PENCIL) {avoid = obj2; break;} // we can only use the first one
 			}
 		}
-		if      (bottle_prob > 0.0 && rgen.rand_float() < bottle_prob && place_bottle_on_obj(rgen, surface, room_id, tot_light_amt, avoid)) {}
-		else if (cup_prob    > 0.0 && rgen.rand_float() < cup_prob    && place_cup_on_obj   (rgen, surface, room_id, tot_light_amt, avoid)) {}
-		else if (laptop_prob > 0.0 && rgen.rand_float() < laptop_prob && place_laptop_on_obj(rgen, surface, room_id, tot_light_amt, avoid, (obj.type != TYPE_TABLE))) {}
+		if      (rgen.rand_probability(bottle_prob) && place_bottle_on_obj(rgen, surface, room_id, tot_light_amt, avoid)) {}
+		else if (rgen.rand_probability(cup_prob)    && place_cup_on_obj   (rgen, surface, room_id, tot_light_amt, avoid)) {}
+		else if (rgen.rand_probability(laptop_prob) && place_laptop_on_obj(rgen, surface, room_id, tot_light_amt, avoid, (obj.type != TYPE_TABLE))) {}
 		// don't add both a plant and a bottle; don't add plants in the basement
 		else if (!is_basement && plant_prob > 0.0 && rgen.rand_float() < plant_prob && place_plant_on_obj(rgen, surface, room_id, tot_light_amt, avoid)) {}
-		else if (toy_prob    > 0.0 && rgen.rand_float() < toy_prob    && place_toy_on_obj   (rgen, surface, room_id, tot_light_amt, avoid)) {}
+		else if (rgen.rand_probability(toy_prob)    && place_toy_on_obj   (rgen, surface, room_id, tot_light_amt, avoid)) {}
 	} // for i
 }
 

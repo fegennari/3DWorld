@@ -2922,7 +2922,7 @@ public:
 			rand_gen_t rgen2; // don't use the built-in rgen to avoid affecting other state
 			rgen2.set_state(x1, y1+y2);
 			float const rp(params.residential_probability);
-			bool const is_residential((rp == 0.0) ? 0 : ((rp == 1.0) ? 1 : (rgen2.rand_float() < rp))), extra_spacing_dim(rgen2.rand_bool());
+			bool const is_residential(rgen2.rand_probability(rp)), extra_spacing_dim(rgen2.rand_bool());
 			vector2d road_spacing;
 
 			for (unsigned d = 0; d < 2; ++d) {

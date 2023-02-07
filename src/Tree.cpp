@@ -1551,7 +1551,7 @@ void tree_data_t::gen_tree_data(int tree_type_, int size, float tree_depth, floa
 		int const num(rgen.rand_int(1, 100));
 		deadness = ((num > 94) ? min(1.0f, float(num - 94)/8.0f) : 0.0);
 	}
-	if (deadness < 1.0 && tree_dead_prob > 0.0 && rgen.rand_float() < tree_dead_prob) {deadness = 1.0;}
+	if (deadness < 1.0 && rgen.rand_probability(tree_dead_prob)) {deadness = 1.0;}
 	tree_builder_t builder(clip_cube, rgen);
 	
 	// create leaves and all_cylins
