@@ -14,6 +14,16 @@ buildings window_color 0.5 0.5 0.5 1.0 # gray
 buildings max_floorplan_window_xscale 7.5
 buildings max_floorplan_window_yscale 11.0
 
+# consistency probabilities of houses for cities and blocks
+buildings house_same_mat_prob       0.50
+buildings house_same_size_prob      0.50
+buildings house_same_geom_prob      0.25
+buildings house_same_per_city_prob  0.00
+buildings office_same_mat_prob      0.25
+buildings office_same_size_prob     0.50
+buildings office_same_geom_prob     0.00
+buildings office_same_per_city_prob 0.00
+
 # interiors
 buildings wall_color  1.0 1.0 1.0 1.0 # white
 buildings ceil_color  1.0 1.0 1.0 1.0 # white

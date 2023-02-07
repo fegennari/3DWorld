@@ -233,12 +233,13 @@ struct city_zone_t : public cube_t {
 	uint8_t street_dir; // encoded as 2*dim + dir + 1; 0 is unassigned
 	unsigned nbuildings, capacity; // in number of buildings; 0 is unlimited
 	unsigned max_floors; // 0=unlimited
+	unsigned city_ix;
 	int parent_plot_ix; // if this is a sub-plot; -1 otherwise
 	std::string address;
 
-	city_zone_t() : zval(0.0), is_park(0), is_residential(0), street_dir(0), nbuildings(0), capacity(0), max_floors(0), parent_plot_ix(-1) {}
-	city_zone_t(cube_t const &c, float zval_=0.0, bool p=0, bool r=0, unsigned sdir=0, unsigned cap=0, int ppix=-1, unsigned mf=0) :
-		cube_t(c), zval(zval_), is_park(p), is_residential(r), street_dir(sdir), nbuildings(0), capacity(cap), max_floors(mf), parent_plot_ix(ppix) {}
+	city_zone_t() : zval(0.0), is_park(0), is_residential(0), street_dir(0), nbuildings(0), capacity(0), max_floors(0), city_ix(0), parent_plot_ix(-1) {}
+	city_zone_t(cube_t const &c, float zval_, bool p, bool r, unsigned sdir, unsigned cap, int ppix, int cix, unsigned mf) :
+		cube_t(c), zval(zval_), is_park(p), is_residential(r), street_dir(sdir), nbuildings(0), capacity(cap), max_floors(mf), city_ix(cix), parent_plot_ix(ppix) {}
 	bool is_full() const {return (capacity > 0 && nbuildings >= capacity);}
 };
 
@@ -348,6 +349,9 @@ struct building_params_t {
 	float window_width=0.0, window_height=0.0, window_xspace=0.0, window_yspace=0.0; // windows
 	float wall_split_thresh=4.0, max_fp_wind_xscale=0.0, max_fp_wind_yscale=0.0; // interiors
 	float open_door_prob=1.0, locked_door_prob=0.0, basement_prob_house=0.5, basement_prob_office=0.5, ball_prob=0.3; // interior probabilities
+	// consistency probabilities of houses for cities and blocks
+	float house_same_mat_prob =0.0, house_same_size_prob =0.0, house_same_geom_prob =0.0, house_same_per_city_prob =0.0;
+	float office_same_mat_prob=0.0, office_same_size_prob=0.0, office_same_geom_prob=0.0, office_same_per_city_prob=0.0;
 	// building people/AI params
 	bool enable_people_ai=0, ai_target_player=1, ai_follow_player=0, allow_elevator_line=1, no_coll_enter_exit_elevator=1;
 	unsigned ai_opens_doors=1; // 0=don't open doors, 1=only open if player closed door after path selection; 2=always open doors

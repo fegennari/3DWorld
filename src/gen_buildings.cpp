@@ -2084,7 +2084,7 @@ class building_creator_t {
 		cube_t test_bc(b.bcube);
 		test_bc.expand_by_xy(expand);
 
-		if (use_city_plots) {
+		if (use_city_plots) { // use city blocks
 			assert(plot_ix < bix_by_plot.size());
 			if (check_for_overlaps(bix_by_plot[plot_ix], test_bc, b, expand_val, min_building_spacing, points)) return 0;
 			bix_by_plot[plot_ix].push_back(buildings.size());
@@ -2167,14 +2167,57 @@ public:
 		}
 		return 1;
 	}
+
+	struct city_prob_t {
+		bool inited=0, same_mat_per_block[2]={0,0}, same_size_per_block[2]={0,0}, same_geom_per_mat[2]={0,0}, same_houses_citywide[2]={0,0}; // {office, house}
+
+		void init(building_params_t const &params, rand_gen_t &rgen) {
+			if (inited) return;
+			same_mat_per_block  [1] = rgen.rand_probability(params.house_same_mat_prob );
+			same_size_per_block [1] = rgen.rand_probability(params.house_same_size_prob);
+			same_geom_per_mat   [1] = rgen.rand_probability(params.house_same_geom_prob);
+			same_houses_citywide[1] = rgen.rand_probability(params.house_same_per_city_prob);
+			same_mat_per_block  [0] = rgen.rand_probability(params.office_same_mat_prob );
+			same_size_per_block [0] = rgen.rand_probability(params.office_same_size_prob);
+			same_geom_per_mat   [0] = rgen.rand_probability(params.office_same_geom_prob);
+			same_houses_citywide[0] = rgen.rand_probability(params.office_same_per_city_prob);
+			inited = 1;
+		}
+	};
+	struct vect_city_prob_t {
+		vector<city_prob_t> cps;
+		vector<unsigned> city_for_building;
+		city_prob_t def_prob;
+		bool enabled;
+
+		vect_city_prob_t(bool enabled_) : enabled(enabled_) {}
+
+		city_prob_t const &get(building_params_t const &params, rand_gen_t &rgen, unsigned city_ix) {
+			if (!enabled) return def_prob;
+			if (city_ix >= cps.size()) {cps.resize(city_ix+1);} // allocate a new entry
+			city_prob_t &ret(cps[city_ix]);
+			ret.init(params, rgen);
+			return ret;
+		}
+		city_prob_t const &get(unsigned bix) {
+			if (!enabled) return def_prob;
+			assert(bix < city_for_building.size());
+			assert(city_for_building[bix] < cps.size());
+			return cps[city_for_building[bix]];
+		}
+		void next_building(unsigned city_ix) {
+			if (enabled) {city_for_building.push_back(city_ix);} // only if in use
+		}
+	};
+
 	void gen(building_params_t const &params, bool city_only, bool non_city_only, bool is_tile, bool allow_flatten, int rseed=123) {
 		assert(!(city_only && non_city_only));
 		clear();
-		if (params.tt_only && world_mode != WMODE_INF_TERRAIN) return;
+		if (params.tt_only && world_mode != WMODE_INF_TERRAIN)    return;
 		if (params.gen_inf_buildings() && !is_tile && !city_only) return; // secondary buildings - not added here
 		vect_city_zone_t city_plot_bcubes;
 		vector<unsigned> valid_city_plot_ixs;
-		bool residential(0); // Note: may not be correct for a mix of residential and non-residential, but this only matters if the material nonemptiness or ranges differ
+		bool maybe_residential(0); // Note: may not be correct for a mix of residential and non-residential, but this only matters if the material nonemptiness or ranges differ
 
 		if (city_only) {
 			unsigned num_residential(0), num_non_residential(0);
@@ -2186,9 +2229,9 @@ public:
 				if (i->is_residential) {++num_residential;} else {++num_non_residential;}
 			}
 			//assert(!valid_city_plot_ixs.empty()); // too strong? what happens if this is true?
-			residential = (num_residential > num_non_residential); // consider this city residential if the majority of non-park plots are residential
+			maybe_residential = (num_residential > num_non_residential); // consider this city residential if the majority of non-park plots are residential
 		}
-		vector<unsigned> const &mat_ix_list(params.get_mat_list(city_only, non_city_only, residential));
+		vector<unsigned> const &mat_ix_list(params.get_mat_list(city_only, non_city_only, maybe_residential));
 		if (params.materials.empty() || mat_ix_list.empty()) return; // no materials
 		timer_t timer("Gen Buildings", !is_tile);
 		float const def_water_level(get_water_z_height()), min_building_spacing(get_min_obj_spacing());
@@ -2220,10 +2263,7 @@ public:
 			for (auto i = avoid_bcubes.begin(); i != avoid_bcubes.end(); ++i) {avoid_bcubes_bcube.assign_or_union_with_cube(*i);}
 		}
 		bool const use_city_plots(!valid_city_plot_ixs.empty()), check_plot_coll(!avoid_bcubes.empty());
-		// options to make houses consistent across blocks
-		bool const use_consistent_mat (residential && use_city_plots);
-		bool const use_consistent_size(residential && use_city_plots && 0);
-		bool const use_consistent_geom(residential && use_city_plots && 0);
+		vect_city_prob_t city_prob(use_city_plots); // calculated and reused once per city
 		bix_by_plot.resize(city_plot_bcubes.size());
 		point center(all_zeros);
 		unsigned num_consec_fail(0), max_consec_fail(0);
@@ -2233,7 +2273,8 @@ public:
 			bool success(0);
 
 			for (unsigned n = 0; n < params.num_tries; ++n) { // 10 tries to find a non-overlapping building placement
-				unsigned plot_ix(0), city_plot_ix(0), pref_dir(0);
+				unsigned plot_ix(0), city_block_ix(0), pref_dir(0);
+				int city_ix(-1);
 				bool residential(0);
 
 				if (use_city_plots) { // select a random plot, if available
@@ -2259,18 +2300,20 @@ public:
 					center.z        = plot.zval; // optimization: take zval from plot rather than calling get_exact_zval()
 					b.assigned_plot = plot; // only really needed for residential sub-plots
 					b.address       = plot.address;
-					city_plot_ix    = ((plot.parent_plot_ix >= 0) ? plot.parent_plot_ix : plot_ix);
+					city_block_ix   = ((plot.parent_plot_ix >= 0) ? plot.parent_plot_ix : plot_ix);
+					city_ix         = plot.city_ix;
 					max_floors      = plot.max_floors;
 					if (residential) {pref_dir = plot.street_dir;}
 					// force min spacing between building and edge of plot, but make sure the plot remains normalized after shrinking
 					pos_range.expand_by_xy(-min(min_building_spacing, 0.45f*min(plot.dx(), plot.dy())));
 					if (plot.capacity == 1) {border_scale *= 2.0;} // use smaller border scale since the individual building plots should handle borders
 				}
+				city_prob_t const &CP(city_prob.get(params, rgen, city_ix));
 				rand_gen_t group_rgen;
-				group_rgen.set_state(rseed, city_plot_ix+1); // varies per city
+				group_rgen.set_state(rseed, (CP.same_houses_citywide[residential] ? city_ix : city_block_ix)+1); // varies per city block
 				group_rgen.rand_mix();
-				rand_gen_t &rgen_mat(use_consistent_mat  ? group_rgen : rgen); // for material and color
-				rand_gen_t &rgen_sz (use_consistent_size ? group_rgen : rgen); // for size, height, and orient
+				rand_gen_t &rgen_mat(CP.same_mat_per_block [residential] ? group_rgen : rgen); // for material and color
+				rand_gen_t &rgen_sz (CP.same_size_per_block[residential] ? group_rgen : rgen); // for size, height, and orient
 				b.mat_ix = params.choose_rand_mat(rgen_mat, city_only, non_city_only, residential); // set material
 				building_mat_t const &mat(b.get_material());
 				if (!use_city_plots) {pos_range = mat.pos_range + delta_range;} // select pos range by material
@@ -2299,13 +2342,13 @@ public:
 					b.bcube.d[d][0] = center[d] - sz;
 					b.bcube.d[d][1] = center[d] + sz;
 				}
-				if (is_residential_block && b.bcube.contains_pt_xy(place_center)) continue; // house should not contain the center point of the plot
+				if (is_residential_block && b.is_house && b.bcube.contains_pt_xy(place_center)) continue; // house should not contain the center point of the plot
 				if ((use_city_plots || is_tile) && !pos_range.contains_cube_xy(b.bcube)) continue; // not completely contained in plot/tile (pre-rot)
 				if (!use_city_plots) {b.gen_rotation(rgen_sz);} // city plots are Manhattan (non-rotated) - must rotate before bcube checks below
 				if (is_tile && !pos_range.contains_cube_xy(b.bcube)) continue; // not completely contained in tile
 				if (start_in_inf_terrain && b.bcube.contains_pt_xy(get_camera_pos())) continue; // don't place a building over the player appearance spot
 				if (!check_valid_building_placement(params, b, avoid_bcubes, avoid_bcubes_bcube, min_building_spacing,
-					city_plot_ix, non_city_only, use_city_plots, check_plot_coll)) continue; // check overlap (use city plot_ix rather than sub-plot ix)
+					city_block_ix, non_city_only, use_city_plots, check_plot_coll)) continue; // check overlap (use city plot_ix rather than sub-plot ix)
 				++num_gen;
 				if (!use_city_plots) {center.z = get_exact_zval(center.x+xlate.x, center.y+xlate.y);} // only calculate when needed
 				float const z_sea_level(center.z - def_water_level);
@@ -2330,6 +2373,7 @@ public:
 				float const mult[3] = {0.5, 0.5, 1.0}; // half in X,Y and full in Z
 				UNROLL_3X(max_extent[i_] = max(max_extent[i_], mult[i_]*sz[i_]);)
 				buildings.push_back(b);
+				city_prob.next_building(city_ix);
 				if (use_city_plots) {++city_plot_bcubes[plot_ix].nbuildings;}
 				success = 1;
 				break; // done
@@ -2400,8 +2444,9 @@ public:
 
 #pragma omp parallel for schedule(static,1) num_threads(2) if (use_mt)
 			for (int i = 0; i < (int)buildings.size(); ++i) {
-				unsigned const rs_ix(use_consistent_geom ? buildings[i].mat_ix : i); // make consistent per plot/city, which has a consistent material
-				buildings[i].gen_geometry(rs_ix, 1337*rs_ix+rseed);
+				building_t &b(buildings[i]);
+				unsigned const rs_ix(city_prob.get(i).same_geom_per_mat[b.is_house] ? b.mat_ix : i); // same material, maybe from same block/city; could also use city_ix
+				b.gen_geometry(rs_ix, 1337*rs_ix+rseed);
 			}
 		} // close the scope
 		if (0 && non_city_only) { // perform room graph analysis
@@ -2429,7 +2474,7 @@ public:
 			buildings_bcube.assign_or_union_with_cube(b->bcube);
 			has_interior_geom |= b->has_interior();
 		} // for b
-		if (!is_tile && (!city_only || residential)) {place_building_trees(rgen);}
+		if (!is_tile && (!city_only || maybe_residential)) {place_building_trees(rgen);}
 
 		if (!is_tile) {
 			cout << "WM: " << world_mode << " MCF: " << max_consec_fail << " Buildings: " << params.num_place << " / " << num_tries << " / " << num_gen

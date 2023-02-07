@@ -184,6 +184,15 @@ void building_params_t::init_kw_maps() {
 	kwmr.add("cube_prob",  cur_mat.cube_prob,  FP_CHECK_01);
 	kwmr.add("round_prob", cur_mat.round_prob, FP_CHECK_01);
 	kwmr.add("alt_step_factor_prob", cur_mat.asf_prob, FP_CHECK_01);
+	// consistency probabilities of houses for cities and blocks
+	kwmr.add("house_same_mat_prob",       house_same_mat_prob,       FP_CHECK_01);
+	kwmr.add("house_same_size_prob",      house_same_size_prob,      FP_CHECK_01);
+	kwmr.add("house_same_geom_prob",      house_same_geom_prob,      FP_CHECK_01);
+	kwmr.add("house_same_per_city_prob",  house_same_per_city_prob,  FP_CHECK_01);
+	kwmr.add("office_same_mat_prob",      office_same_mat_prob,      FP_CHECK_01);
+	kwmr.add("office_same_size_prob",     office_same_size_prob,     FP_CHECK_01);
+	kwmr.add("office_same_geom_prob",     office_same_geom_prob,     FP_CHECK_01);
+	kwmr.add("office_same_per_city_prob", office_same_per_city_prob, FP_CHECK_01);
 	// material parameters
 	kwmf.add("place_radius", cur_mat.place_radius);
 	kwmf.add("max_delta_z", cur_mat.max_delta_z);
