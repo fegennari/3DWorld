@@ -928,7 +928,7 @@ void building_t::register_player_enter_building() const {
 	if (!name.empty()) {
 		string str("Entering " + name);
 		if (is_house) {str += " Residence";}
-		if (!address.empty()) {str += "\nAddress: " + address;} // add address on a second line if known
+		if (!address.empty()) {str += "\n" + address;} // add address on a second line if known
 		print_entering_building(str);
 	}
 }

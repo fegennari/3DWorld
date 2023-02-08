@@ -1978,15 +1978,20 @@ void city_obj_placer_t::add_objs_on_buildings(unsigned city_id) {
 			if (!roads.empty()) { // find the road name and determine the street address
 				bool const sdim((street_dir - 1) >> 1), sdir((street_dir - 1) & 1);
 				unsigned road_ix(0);
-				float dmin(FLT_MAX);
+				float dmin(FLT_MAX), road_pos(0.0);
 
 				for (auto r = roads.begin(); r != roads.end(); ++r) {
 					if (r->dim == sdim) continue;
 					float const dist(fabs(r->d[sdim][!sdir] - c.d[sdim][sdir]));
-					if (dist < dmin) {dmin = dist; road_ix = (r - roads.begin());}
+					if (dist < dmin) {dmin = dist; road_ix = (r - roads.begin()); road_pos = (c.get_center_dim(!sdim) - r->d[!sdim][0]);}
 				}
 				string const &road_name(roads[road_ix].get_name(city_ix));
-				sub_plots.back().address = road_name; // TODO: append street number
+				unsigned street_number(100 + 100*((7*road_ix + 13*road_name.size())%20)); // start at 100-2000 randomly based on road name and index
+				street_number += 2*round_fp(25.0*road_pos/plot.get_sz_dim(!sdim)); // generate an even street number; should it differ by more than 1?
+				if (sdir) {++street_number;} // make it an odd number if on this side of the road
+				ostringstream oss;
+				oss << street_number << " " << road_name;
+				sub_plots.back().address = oss.str();
 			}
 		} // for x
 	} // for y
