@@ -87,7 +87,7 @@ public:
 
 sign_helper_t sign_helper;
 
-colorRGBA choose_sign_color(rand_gen_t &rgen, bool emissive) {
+colorRGBA choose_sign_color(rand_gen_t &rgen, bool emissive=0) {
 	// regular sign text colors must be dark for good contrast with the white background; emissive colors must be bright to contrast with the dark sky and buildings
 	colorRGBA const sign_colors    [8] = {DK_RED, DK_BLUE, DK_BLUE, DK_BROWN, BLACK, BLACK, BLACK, BLACK};
 	colorRGBA const emissive_colors[5] = {RED, GREEN, BLUE, RED, BLUE};
@@ -145,7 +145,52 @@ void building_t::set_rgen_state_for_building(rand_gen_t &rgen) const {
 	rgen.rand_mix();
 }
 
-void building_t::add_signs(vector<sign_t> &signs) const {
+unsigned building_t::get_street_house_number() const { // for signs, etc.
+	if (address.empty()) return 0; // error?
+	return stoi(address); // street number should be first in the address
+}
+
+void building_t::add_exterior_door_items(rand_gen_t &rgen) { // mostly signs; added as interior objects
+	// Note: these are interior items drawn on the exterior and expect interior lights, so they won't get sunlight;
+	// but we want to generate these dynamically rather than statically because each sign text character is a separate quad
+	if (is_house) { // maybe add welcome sign and add doorbell
+		assert(!doors.empty());
+		tquad_with_ix_t const &front_door(doors.front());
+		add_doorbell_and_lamp(front_door, rgen);
+
+		if ((rgen.rand() & 3) == 0) { // add a welcome sign to 25% of houses
+			add_sign_by_door(front_door, 1, "Welcome", choose_sign_color(rgen), 0); // front door only, outside
+		}
+		else if (!name.empty() && name.back() != 's' && (rgen.rand() & 3) == 0) { // add a name sign to 25% of remaining houses
+			add_sign_by_door(front_door, 1, ("The " + name + "s"), choose_sign_color(rgen), 0); // front door only, outside
+		}
+		else if (!address.empty() && rgen.rand_bool()) { // add a house number sign
+			add_sign_by_door(front_door, 1, to_string(get_street_house_number()), choose_sign_color(rgen), 0); // front door only, outside
+		}
+	}
+	else { // office building; add signs
+		if (!name.empty()) {
+			// Note: these will only appear when the player is very close to city office buildings, and about to walk through a door
+			colorRGBA const &sign_color(choose_sign_color(rgen));
+
+			for (auto d = doors.begin(); d != doors.end(); ++d) {
+				if (has_courtyard && (d+1) == doors.end()) break; // courtyard door is not an exit
+				if (d->type != tquad_with_ix_t::TYPE_BDOOR) continue; // office front doors only (not back door, roof, etc.)
+				add_sign_by_door(*d, 1, name, sign_color, 0); // outside name plate sign, not emissive
+			}
+		}
+		if (pri_hall.is_all_zeros() && rgen.rand_bool()) return; // place exit signs on buildings with primary hallways and 50% of other buildings
+		colorRGBA const exit_color(rgen.rand_bool() ? RED : GREEN);
+
+		for (auto d = doors.begin(); d != doors.end(); ++d) {
+			if (has_courtyard && (d+1) == doors.end()) break; // courtyard door is not an exit
+			if (!d->is_building_door()) continue; // roof door, etc.
+			add_sign_by_door(*d, 0, "Exit", exit_color, 1); // inside exit sign, emissive
+		}
+	}
+}
+
+void building_t::add_signs(vector<sign_t> &signs) const { // added as exterior city objects
 	// house welcome and other door signs are currently part of the interior - should they be? I guess at least for secondary buildings, which aren't in a city
 	if (is_house)      return; // no sign, for now
 	if (name.empty())  return; // no company name; shouldn't get here

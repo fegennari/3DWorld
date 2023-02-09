@@ -21,7 +21,6 @@ car_t car_from_parking_space(room_object_t const &o);
 bool get_wall_quad_window_area(vect_vnctcc_t const &wall_quad_verts, unsigned i, cube_t &c, float &tx1, float &tx2, float &tz1, float &tz2);
 void get_stove_burner_locs(room_object_t const &stove, point locs[4]);
 string gen_random_full_name(rand_gen_t &rgen);
-colorRGBA choose_sign_color(rand_gen_t &rgen, bool emissive=0);
 
 
 class light_ix_assign_t {
@@ -3948,43 +3947,6 @@ void building_t::add_doorbell_and_lamp(tquad_with_ix_t const &door, rand_gen_t &
 		if (rgen.rand_bool()) {flags |= RO_FLAG_LIT;} // light is on 50% of the time
 		objs.emplace_back(lamp, TYPE_WALL_LAMP, 0, dim, dir, flags, 1.0); // room_id is not valid
 		if (objs.back().is_lit()) {ext_lights.emplace_back(lamp.get_cube_center(), 20.0*width, WALL_LAMP_COLOR);}
-	}
-}
-
-void building_t::add_exterior_door_items(rand_gen_t &rgen) {
-	// Note: these are interior items drawn on the exterior and expect interior lights, so they won't get sunlight;
-	// but we want to generate these dynamically rather than statically because each sign text character is a separate quad
-	if (is_house) { // maybe add welcome sign and add doorbell
-		assert(!doors.empty());
-		tquad_with_ix_t const &front_door(doors.front());
-		add_doorbell_and_lamp(front_door, rgen);
-		
-		if ((rgen.rand() & 3) == 0) { // add a welcome sign to 25% of houses
-			add_sign_by_door(front_door, 1, "Welcome", choose_sign_color(rgen), 0); // front door only, outside
-		}
-		else if (!name.empty() && name.back() != 's' && (rgen.rand() & 3) == 0) { // add a name sign to 25% of remaining houses
-			add_sign_by_door(front_door, 1, ("The " + name + "s"), choose_sign_color(rgen), 0); // front door only, outside
-		}
-	}
-	else { // office building; add signs
-		if (!name.empty()) {
-			// Note: these will only appear when the player is very close to city office buildings, and about to walk through a door
-			colorRGBA const &sign_color(choose_sign_color(rgen));
-
-			for (auto d = doors.begin(); d != doors.end(); ++d) {
-				if (has_courtyard && (d+1) == doors.end()) break; // courtyard door is not an exit
-				if (d->type != tquad_with_ix_t::TYPE_BDOOR) continue; // office front doors only (not back door, roof, etc.)
-				add_sign_by_door(*d, 1, name, sign_color, 0); // outside name plate sign, not emissive
-			}
-		}
-		if (pri_hall.is_all_zeros() && rgen.rand_bool()) return; // place exit signs on buildings with primary hallways and 50% of other buildings
-		colorRGBA const exit_color(rgen.rand_bool() ? RED : GREEN);
-		
-		for (auto d = doors.begin(); d != doors.end(); ++d) {
-			if (has_courtyard && (d+1) == doors.end()) break; // courtyard door is not an exit
-			if (!d->is_building_door()) continue; // roof door, etc.
-			add_sign_by_door(*d, 0, "Exit", exit_color, 1); // inside exit sign, emissive
-		}
 	}
 }
 

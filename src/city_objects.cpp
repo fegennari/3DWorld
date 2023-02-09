@@ -1761,7 +1761,20 @@ void city_obj_placer_t::place_residential_plot_objects(road_plot_t const &plot, 
 			}
 			break; // success
 		} // for n
-	} // for i
+
+		// TODO: place flags in front yards?
+
+		// place street number signs
+		if (i->street_num > 0 && i->street_dir > 0) {
+#if 0
+			bool const sdim((i->street_dir - 1) >> 1), sdir((i->street_dir - 1) & 1);
+			cube_t sign;
+			// TODO: WRITE
+			sign_t const sign_obj(sign, dim, dir, to_string(i->street_num), WHITE, WHITE, 0, 0); // two_sided=0, emissive=0; no connector
+			sign_groups.add_obj(sign_obj, signs);
+#endif
+		}
+	} // for i (sub_plots)
 	if (building_obj_model_loader.is_model_valid(OBJ_MODEL_MAILBOX)) {
 		// place mailboxes on residential streets
 		assert(driveways_start <= driveways.size());
@@ -1792,7 +1805,6 @@ void city_obj_placer_t::place_residential_plot_objects(road_plot_t const &plot, 
 			} // for n
 		} // for dw
 	}
-	// place flags in front yards?
 }
 
 void city_obj_placer_t::add_house_driveways(road_plot_t const &plot, vect_cube_t &temp_cubes, rand_gen_t &rgen, unsigned plot_ix) {
@@ -1991,7 +2003,8 @@ void city_obj_placer_t::add_objs_on_buildings(unsigned city_id) {
 				if (sdir) {++street_number;} // make it an odd number if on this side of the road
 				ostringstream oss;
 				oss << street_number << " " << road_name;
-				sub_plots.back().address = oss.str();
+				sub_plots.back().address    = oss.str();
+				sub_plots.back().street_num = street_number;
 			}
 		} // for x
 	} // for y

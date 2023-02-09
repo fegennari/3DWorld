@@ -228,18 +228,18 @@ public:
 };
 
 struct city_zone_t : public cube_t {
-	float zval;
-	bool is_park, is_residential;
-	uint8_t street_dir; // encoded as 2*dim + dir + 1; 0 is unassigned
-	unsigned nbuildings, capacity; // in number of buildings; 0 is unlimited
-	unsigned max_floors; // 0=unlimited
-	unsigned city_ix;
-	int parent_plot_ix; // if this is a sub-plot; -1 otherwise
-	std::string address;
+	float zval=0.0;
+	bool is_park=0, is_residential=0;
+	uint8_t street_dir=0; // encoded as 2*dim + dir + 1; 0 is unassigned
+	unsigned nbuildings=0, capacity=0; // in number of buildings; 0 is unlimited
+	unsigned max_floors=0; // 0=unlimited
+	unsigned city_ix=0, street_num=0;
+	int parent_plot_ix=-1; // if this is a sub-plot; -1 otherwise
+	std::string address; // or just store road_name?
 
-	city_zone_t() : zval(0.0), is_park(0), is_residential(0), street_dir(0), nbuildings(0), capacity(0), max_floors(0), city_ix(0), parent_plot_ix(-1) {}
+	city_zone_t() {}
 	city_zone_t(cube_t const &c, float zval_, bool p, bool r, unsigned sdir, unsigned cap, int ppix, int cix, unsigned mf) :
-		cube_t(c), zval(zval_), is_park(p), is_residential(r), street_dir(sdir), nbuildings(0), capacity(cap), max_floors(mf), city_ix(cix), parent_plot_ix(ppix) {}
+		cube_t(c), zval(zval_), is_park(p), is_residential(r), street_dir(sdir), capacity(cap), max_floors(mf), city_ix(cix), parent_plot_ix(ppix) {}
 	bool is_full() const {return (capacity > 0 && nbuildings >= capacity);}
 };
 
@@ -1392,6 +1392,7 @@ struct building_t : public building_geom_t {
 	void add_sign_by_door(tquad_with_ix_t const &door, bool outside, std::string const &text, colorRGBA const &color, bool emissive);
 	void add_doorbell_and_lamp(tquad_with_ix_t const &door, rand_gen_t &rgen);
 	void add_exterior_door_items(rand_gen_t &rgen);
+	unsigned get_street_house_number() const;
 	void gen_building_doors_if_needed(rand_gen_t &rgen);
 	void maybe_add_special_roof(rand_gen_t &rgen);
 	void gen_sloped_roof(rand_gen_t &rgen, cube_t const &top);
