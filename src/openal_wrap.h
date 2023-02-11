@@ -112,6 +112,7 @@ public:
 	void free_source();
 	void setup(openal_buffer const &buffer, point const &pos, unsigned sound_id, float gain=1.0, float pitch=1.0,
 		bool looping=0, bool rel_to_listener=0, vector3d const &vel=zero_vector);
+	void set_pos(point const &pos);
 	void set_gain(float gain);
 	void set_buffer(openal_buffer const &buffer) {set_buffer_ix(buffer.get_buffer_ix());}
 	void set_buffer_ix(unsigned buffer_ix);

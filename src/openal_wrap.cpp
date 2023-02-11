@@ -171,7 +171,7 @@ public:
 
 		for (unsigned i = 0; i < NUM_LOOP_SOUNDS; ++i) { // looping_source i is bound to sounds buffer i
 			openal_source &source(looping_sources.get_source(i));
-			source.setup(sounds.get_buffer(i), all_zeros, loop_sound_gains[i], loop_sound_pitches[i], 1, 1);
+			source.setup(sounds.get_buffer(i), all_zeros, i, loop_sound_gains[i], loop_sound_pitches[i], 1, 1);
 		}
 	}
 
@@ -332,16 +332,18 @@ void openal_source::setup(openal_buffer const &buffer, point const &pos, unsigne
 	bool looping, bool rel_to_listener, vector3d const &vel)
 {
 	assert(is_valid() && buffer.is_valid());
+	set_pos(pos);
+	set_gain(gain);
 	alSourcef (source, AL_PITCH,    pitch);
-	alSourcef (source, AL_GAIN,     gain);
-	alSourcefv(source, AL_POSITION, &pos.x);
 	alSourcefv(source, AL_VELOCITY, &vel.x);
 	alSourcei (source, AL_LOOPING,  looping);
 	alSourcei (source, AL_SOURCE_RELATIVE, rel_to_listener);
 	set_buffer_ix(buffer.get_buffer_ix());
 	params = sound_params_t(pos, sound_id, gain, pitch, rel_to_listener);
 }
-
+void openal_source::set_pos(point const &pos) {
+	alSourcefv(source, AL_POSITION, &pos.x);
+}
 void openal_source::set_gain(float gain) {
 	alSourcef(source, AL_GAIN, gain);
 }
