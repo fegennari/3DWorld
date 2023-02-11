@@ -186,6 +186,8 @@ void building_gameplay_action_key(int mode, bool mouse_wheel);
 float get_player_building_speed_mult();
 void toggle_city_spectate_mode();
 
+float get_tt_building_sound_gain();
+
 
 // all OpenGL error handling goes through these functions
 bool get_gl_error(unsigned loc_id, const char* stmt, const char* fname) {
@@ -564,9 +566,10 @@ void update_sound_loops() {
 
 	bool const universe(world_mode == WMODE_UNIVERSE);
 	float const fire_gain(0.1/dist_to_fire_sq);
+	float const rain_wind_volume(get_tt_building_sound_gain());
 	set_sound_loop_state(SOUND_LOOP_FIRE, (!universe && dist_to_fire_sq > 0.0 && dist_to_fire_sq < 2.0), fire_gain);
-	set_sound_loop_state(SOUND_LOOP_RAIN, (!universe && is_rain_enabled()));
-	set_sound_loop_state(SOUND_LOOP_WIND, (!universe && wind.mag() >= 1.0));
+	set_sound_loop_state(SOUND_LOOP_RAIN, (!universe && rain_wind_volume > 0.0 && is_rain_enabled()), rain_wind_volume);
+	set_sound_loop_state(SOUND_LOOP_WIND, (!universe && rain_wind_volume > 0.0 && wind.mag() >= 1.0), rain_wind_volume);
 	set_sound_loop_state(SOUND_LOOP_UNDERWATER, (!universe && underwater && frame_counter > change_wmode_frame+1));
 	dist_to_fire_sq = 0.0;
 	proc_delayed_and_placed_sounds();
