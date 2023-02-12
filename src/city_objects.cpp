@@ -1767,17 +1767,6 @@ void city_obj_placer_t::place_residential_plot_objects(road_plot_t const &plot, 
 		} // for n
 
 		// TODO: place flags in front yards?
-
-		// place street number signs
-		if (i->street_num > 0 && i->street_dir > 0) {
-#if 0
-			bool const sdim((i->street_dir - 1) >> 1), sdir((i->street_dir - 1) & 1);
-			cube_t sign;
-			// TODO: WRITE
-			sign_t const sign_obj(sign, dim, dir, to_string(i->street_num), WHITE, WHITE, 0, 0); // two_sided=0, emissive=0; no connector
-			sign_groups.add_obj(sign_obj, signs);
-#endif
-		}
 	} // for i (sub_plots)
 	if (building_obj_model_loader.is_model_valid(OBJ_MODEL_MAILBOX)) {
 		// place mailboxes on residential streets

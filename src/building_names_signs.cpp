@@ -193,7 +193,26 @@ void building_t::add_exterior_door_items(rand_gen_t &rgen) { // mostly signs; ad
 
 void building_t::add_signs(vector<sign_t> &signs) const { // added as exterior city objects
 	// house welcome and other door signs are currently part of the interior - should they be? I guess at least for secondary buildings, which aren't in a city
-	if (is_house)      return; // no sign, for now
+	if (is_house) { // add address sign above porch; should be 3-4 digits
+		if (address.empty()) return; // address not set - not in a city
+		if (street_dir == 0) return; // street_dir not set - shouldn't happen if address is set
+		if (!has_porch())    return;
+		cube_t porch_roof, sign;
+
+		for (auto i = get_real_parts_end_inc_sec(); i != parts.end(); ++i) {
+			if (i->contains_cube_xy(porch)) {porch_roof = *i; break;} // find the porch roof; should be the first part visited
+		}
+		assert(!porch_roof.is_all_zeros()); // must be found
+		bool const dim((street_dir-1)>>1), dir((street_dir-1)&1); // direction to the road; should be on the exterior side of the porch
+		float const sign_hwidth(0.08*porch.get_sz_dim(!dim)), sign_height(0.75*sign_hwidth), sign_depth(0.025*sign_height);
+		if (porch_roof.dz() < sign_height) {set_cube_zvals(sign, (porch_roof.z2() - sign_height), porch_roof.z2());} // hang from the top edge of the porch roof
+		else {set_wall_width(sign, porch_roof.zc(), 0.5*sign_height, 2);} // center on the porch roof
+		set_wall_width(sign, porch.get_center_dim(!dim), sign_hwidth, !dim);
+		sign.d[dim][!dir] = porch.d[dim][dir]; // back face
+		sign.d[dim][ dir] = sign.d[dim][!dir] + (dir ? 1.0 : -1.0)*sign_depth; // front face
+		signs.emplace_back(sign, dim, dir, to_string(get_street_house_number()), WHITE, BLACK, 0, 0, 1); // twp_sided=0, emissive=0, small=1
+		return;
+	}
 	if (name.empty())  return; // no company name; shouldn't get here
 	if (num_sides & 1) return; // odd number of sides, may not be able to place a sign correctly (but maybe we can check this with a collision test with conn?)
 	if (half_offset || flat_side_amt != 0.0 || alt_step_factor != 0.0 || start_angle != 0.0) return; // not a shape that's guanrateed to reach the bcube edge
