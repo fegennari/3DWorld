@@ -1078,19 +1078,22 @@ city_flag_t::city_flag_t(cube_t const &flag_bcube_, bool dim_, bool dir_, point 
 	if (!shadow_only) {select_texture(get_texture_by_name("american_flag_indexed.png"));}
 }
 void city_flag_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
+	bool const is_horizontal(flag_bcube.dz() > flag_bcube.get_sz_dim(!dim));
 	// draw the flag
 	unsigned const skip_dims(4 + (1<<unsigned(!dim))); // top, bottom, and edges
 	float const cview_dir((camera_pdu.pos[dim] - dstate.xlate[dim]) - pole_base[dim]);
-	bool const mirror_x((cview_dir < 0) ^ dir ^ dim ^ 1);
-	dstate.draw_cube(qbds.qbd, flag_bcube, WHITE, 1, 0.0, skip_dims, mirror_x, 0); // mirror_y=0
+	bool const visible_side((cview_dir < 0) ^ dir ^ dim), mirror_x(is_horizontal ? 1 : !visible_side), mirror_y(is_horizontal ? visible_side : 0);
+	dstate.draw_cube(qbds.qbd, flag_bcube, WHITE, 1, 0.0, skip_dims, mirror_x, mirror_y, is_horizontal); // swap_tc_xy=is_horizontal
 	if (pole_radius == 0.0) return; // no pole to draw
 	// draw the pole
-	float const dmax(dist_scale*dstate.draw_tile_dist);
+	float const dmax(dist_scale*dstate.draw_tile_dist*(is_horizontal ? 0.7 : 1.0)); // horizontals flag poles are less visible
 	if (!shadow_only && !bcube.closest_dist_less_than(dstate.camera_bs, 0.75*dmax)) return;
 	unsigned const ndiv = 16;
-	float const sphere_radius(1.0*pole_radius);
-	point const ce[2] = {pole_base, vector3d(pole_base.x, pole_base.y, bcube.z2()-sphere_radius)};
-	add_cylin_as_tris(qbds.untex_qbd.verts, ce, pole_radius, 0.5*pole_radius, WHITE, ndiv, 0); // truncated cone, sides only
+	float const sphere_radius((is_horizontal ? 1.5 : 1.0)*pole_radius);
+	point ce[2] = {pole_base, pole_base};
+	if (is_horizontal) {ce[1][!dim] = bcube.d[!dim][dir] + (dir ? 1.0 : -1.0)*sphere_radius;}
+	else {ce[1].z = bcube.z2() - sphere_radius;} // vertical pole
+	add_cylin_as_tris(qbds.untex_qbd.verts, ce, pole_radius, (is_horizontal ? 1.0 : 0.5)*pole_radius, WHITE, ndiv, 0); // (truncated, if vertical) cone, sides only
 	// draw the gold sphere at the top
 	//if (shadow_only) return; // too small to cast a shadow?
 	if (!shadow_only && !bcube.closest_dist_less_than(dstate.camera_bs, 0.4*dmax)) return;

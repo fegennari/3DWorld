@@ -185,13 +185,14 @@ void draw_state_t::draw_cube(quad_batch_draw &qbd, color_wrapper const &cw, poin
 	}
 }
 void draw_state_t::draw_cube(quad_batch_draw &qbd, cube_t const &c, color_wrapper const &cw,
-	bool skip_bottom, float tscale, unsigned skip_dims, bool mirror_x, bool mirror_y) const
+	bool skip_bottom, float tscale, unsigned skip_dims, bool mirror_x, bool mirror_y, bool swap_tc_xy) const
 {
 	point p[8];
 	set_cube_pts(c, 0, 0, p);
 	//draw_cube(qbd, cw, c.get_cube_center(), p, skip_bottom, 0, tscale, skip_dims); // customized for axis aligned cube below
 	vector3d const cview_dir(camera_bs - c.get_cube_center());
 	tex_range_t tr_top, tr_front, tr_right;
+	if (swap_tc_xy) {tr_top.swap_xy = tr_front.swap_xy = tr_right.swap_xy = 1;}
 
 	if (tscale > 0.0) { // compute texture s/t parameters from cube side lengths to get a 1:1 AR
 		float const ts01(tscale*c.dy()), ts12(tscale*c.dx()), ts15(tscale*c.dz());

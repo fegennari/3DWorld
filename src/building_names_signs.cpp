@@ -287,11 +287,36 @@ city_flag_t create_flag(bool dim, bool dir, point const &base_pt, float height, 
 	return city_flag_t(flag, dim, dir, base_pt, pradius);
 }
 void building_t::add_flags(vector<city_flag_t> &flags) const {
-	if (is_house   ) return; // no flags added to houses yet
-	if (has_helipad) return; // flag may block the helipad
-	if (roof_type != ROOF_TYPE_SLOPE) return; // only sloped roofs, since the flag is more visible
 	rand_gen_t rgen;
 	set_rgen_state_for_building(rgen);
+
+	if (is_house) {
+		if (street_dir == 0) return; // street_dir not set
+		if (rgen.rand_float() > 0.15) return; // add a flag 15% of the time
+		bool const dim((street_dir-1)>>1), dir((street_dir-1)&1);
+		cube_t part;
+
+		for (auto i = parts.begin(); i != get_real_parts_end(); ++i) {
+			if (i->d[dim][dir] == bcube.d[dim][dir]) {part = *i; break;} // find first part on front side of house
+		}
+		assert(!part.is_all_zeros());
+		float const floor_spacing(get_window_vspace());
+		if (part.dz() < 1.5*floor_spacing) return; // single floor; skip flag so that it doesn't block people, the door, etc.
+		float const length(0.65*floor_spacing), width(0.5*length), pradius(0.03*length), thickness(0.1*pradius), pole_len(2.5*width);
+		point base_pt;
+		base_pt[ dim] = part.d[dim][dir];
+		base_pt[!dim] = part.get_center_dim(!dim);
+		base_pt.z     = part.z2() - 0.15*length;
+		cube_t flag; // sticks out and hangs vertically
+		set_cube_zvals(flag, (base_pt.z - length), base_pt.z);
+		set_wall_width(flag, base_pt[!dim], thickness, !dim); // flag thickness
+		flag.d[dim][!dir] = base_pt[dim] + (dir ? 1.0 : -1.0)*(pole_len - width); // end near wall
+		flag.d[dim][ dir] = base_pt[dim] + (dir ? 1.0 : -1.0)*pole_len; // far end
+		flags.emplace_back(flag, !dim, dir, base_pt, pradius);
+		return;
+	}
+	if (has_helipad) return; // flag may block the helipad
+	if (roof_type != ROOF_TYPE_SLOPE) return; // only sloped roofs, since the flag is more visible
 	if (rgen.rand_bool()) return; // place a flag 50% of the time
 	// we can place signs on roof of the tallest part, or on the ground next to the building, on on the building wall; here we add them to the roof
 	// find the highest part, largest area if tied, and place the sign on top of it
