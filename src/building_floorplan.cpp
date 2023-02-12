@@ -1715,6 +1715,7 @@ bool building_t::clip_part_ceiling_for_stairs(cube_t const &c, vect_cube_t &out,
 		subtract_cube_from_cubes(*e, out);
 	}
 	if (has_pg_ramp()) {subtract_cube_from_cubes(interior->pg_ramp, out);} // is this needed?
+	// what about detail objects of type ROOF_OBJ_SKYLT?
 	return 1;
 }
 

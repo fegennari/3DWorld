@@ -1699,8 +1699,8 @@ void building_t::gen_details(rand_gen_t &rgen, bool is_rectangle) { // for the r
 		roof_tquads.emplace_back(helipad, (uint8_t)tquad_with_ix_t::TYPE_HELIPAD);
 		helipad_bcube = helipad.get_bcube();
 	}
-	else {
-		// TODO: add skylight?
+	else if (flat_roof) {
+		// TODO: add skylight (type ROOF_OBJ_SKYLT)?
 	}
 	unsigned const num_blocks(flat_roof ? (rgen.rand() % 9) : 0); // 0-8; 0 if there are roof quads (houses, etc.)
 	bool const add_antenna((flat_roof || roof_type == ROOF_TYPE_SLOPE) && !has_helipad && (rgen.rand() & 1));

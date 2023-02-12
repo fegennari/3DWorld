@@ -1768,8 +1768,6 @@ void city_obj_placer_t::place_residential_plot_objects(road_plot_t const &plot, 
 			}
 			break; // success
 		} // for n
-
-		// TODO: place flags in front yards?
 	} // for i (sub_plots)
 	if (building_obj_model_loader.is_model_valid(OBJ_MODEL_MAILBOX)) {
 		// place mailboxes on residential streets
