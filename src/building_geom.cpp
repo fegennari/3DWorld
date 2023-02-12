@@ -1067,7 +1067,7 @@ bool building_t::maybe_add_house_driveway(cube_t const &plot, cube_t &ret, unsig
 	rgen.rand_mix();
 	float const hwidth(0.8*get_window_vspace()*rgen.rand_uniform(0.9, 1.1));
 	avoid = fences;
-	if (!porch.is_all_zeros()) {avoid.push_back(porch);}
+	if (has_porch()) {avoid.push_back(porch);}
 	if (has_chimney == 2) {avoid.push_back(get_fireplace());} // avoid placing the driveway across from the chimney/fireplace
 	if (tree_pos != all_zeros) {avoid.push_back(cube_t()); avoid.back().set_from_sphere(tree_pos, hwidth);} // assume tree diameter is similar to driveway width
 	cube_t ac_unit;

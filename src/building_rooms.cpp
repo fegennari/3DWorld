@@ -3934,7 +3934,7 @@ void building_t::add_doorbell_and_lamp(tquad_with_ix_t const &door, rand_gen_t &
 	objs.emplace_back(c, TYPE_BUTTON, 0, dim, dir, (RO_FLAG_LIT | RO_FLAG_NOCOLL), 1.0, SHAPE_CYLIN); // always lit; room_id is not valid
 
 	// add a wall lamp above the button if there's a porch, garage, or shed (L-shaped house)
-	if ((!porch.is_all_zeros() || has_garage || has_shed) && building_obj_model_loader.is_model_valid(OBJ_MODEL_WALL_LAMP)) {
+	if ((has_porch() || has_garage || has_shed) && building_obj_model_loader.is_model_valid(OBJ_MODEL_WALL_LAMP)) {
 		vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_WALL_LAMP)); // D, W, H
 		float const width(0.3*door_width), height(width*sz.z/sz.y), depth(width*sz.x/sz.y); // scale to the width of the wall lamp
 		float const z1(door_bcube.z1() + 0.7*door_bcube.dz());

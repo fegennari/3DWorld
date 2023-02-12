@@ -320,7 +320,7 @@ bool building_t::check_sphere_coll(point &pos, point const &p_last, vector3d con
 				}
 			} // for i
 		}
-		if (is_house && porch.is_strictly_normalized() && sphere_cube_int_update_pos(pos2, radius, (porch + xlate), p_last2, 1, xy_only, cnorm_ptr)) {had_coll = 1;} // porch
+		if (is_house && has_porch() && sphere_cube_int_update_pos(pos2, radius, (porch + xlate), p_last2, 1, xy_only, cnorm_ptr)) {had_coll = 1;} // porch
 	} // end !is_interior case
 	if (!had_coll) return 0; // Note: no collisions with windows or doors, since they're colinear with walls
 
