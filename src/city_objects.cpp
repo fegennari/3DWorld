@@ -1029,8 +1029,8 @@ void mailbox_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_sc
 
 template<typename T> void add_sign_text_verts(string const &text, cube_t const &sign, bool dim, bool dir, colorRGBA const &color, vector<T> &verts_out);
 
-sign_t::sign_t(cube_t const &bcube_, bool dim_, bool dir_, string const &text_, colorRGBA const &bc, colorRGBA const &tc, bool two_sided_, bool emissive_) :
-	oriented_city_obj_t(dim_, dir_), two_sided(two_sided_), emissive(emissive_), bkg_color(bc), text_color(tc)
+sign_t::sign_t(cube_t const &bcube_, bool dim_, bool dir_, string const &text_, colorRGBA const &bc, colorRGBA const &tc, bool two_sided_, bool emissive_, bool small_) :
+	oriented_city_obj_t(dim_, dir_), two_sided(two_sided_), emissive(emissive_), small(small_), bkg_color(bc), text_color(tc)
 {
 	bcube  = bcube_;
 	pos    = bcube.get_cube_center();
@@ -1045,12 +1045,16 @@ sign_t::sign_t(cube_t const &bcube_, bool dim_, bool dir_, string const &text_, 
 	if (!shadow_only) {disable_blend();}
 }
 void sign_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
+	if (small && shadow_only) return; // small signs have no shadows
+	float const dmax(dist_scale*dstate.draw_tile_dist);
+	if (small && !bcube.closest_dist_less_than(dstate.camera_bs, 0.4*dmax)) return; // half view dist
 	dstate.draw_cube(qbds.untex_qbd, bcube, bkg_color); // untextured, matte back
 
 	if (!connector.is_all_zeros()) { // draw connector; is this needed for the shadow pass?
 		dstate.draw_cube(qbds.untex_qbd, connector, LT_GRAY); // untextured, matte
 	}
 	if (shadow_only) return; // no text in shadow pass
+	if (!(emissive && is_night()) && !bcube.closest_dist_less_than(dstate.camera_bs, 0.9*(small ? 0.4 : 1.0)*dmax)) return; // too far to see the text in daytime
 	quad_batch_draw &qbd((emissive /*&& is_night()*/) ? qbds.emissive_qbd : qbds.qbd);
 	bool const front_facing(((camera_pdu.pos[dim] - dstate.xlate[dim]) < bcube.d[dim][dir]) ^ dir);
 	if (front_facing  ) {add_sign_text_verts(text, bcube, dim,  dir, text_color, qbd.verts);} // draw the front side text
@@ -2074,7 +2078,7 @@ void city_obj_placer_t::draw_detail_objects(draw_state_t &dstate, bool shadow_on
 	draw_objects(sstations, sstation_groups, dstate, 0.15, shadow_only, 1); // dist_scale=0.15, has_immediate_draw=1
 	draw_objects(mboxes,    mbox_groups,     dstate, 0.04, shadow_only, 1); // dist_scale=0.10, has_immediate_draw=1
 	draw_objects(ppoles,    ppole_groups,    dstate, 0.20, shadow_only, 0); // dist_scale=0.20
-	draw_objects(signs,     sign_groups,     dstate, 0.20, shadow_only, 0, 1); // dist_scale=0.20, draw_qbd_as_quads=1
+	draw_objects(signs,     sign_groups,     dstate, 0.25, shadow_only, 0, 1); // dist_scale=0.25, draw_qbd_as_quads=1
 	draw_objects(flags,     flag_groups,     dstate, 0.18, shadow_only, 0); // dist_scale=0.16
 	if (!shadow_only) {draw_objects(hcaps,    hcap_groups,    dstate, 0.12, shadow_only, 0);} // dist_scale=0.12, no shadows
 	if (!shadow_only) {draw_objects(manholes, manhole_groups, dstate, 0.07, shadow_only, 1);} // dist_scale=0.07, no shadows, immediate draw

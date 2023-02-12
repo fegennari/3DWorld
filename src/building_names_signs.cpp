@@ -89,8 +89,9 @@ sign_helper_t sign_helper;
 
 colorRGBA choose_sign_color(rand_gen_t &rgen, bool emissive=0) {
 	// regular sign text colors must be dark for good contrast with the white background; emissive colors must be bright to contrast with the dark sky and buildings
+	colorRGBA const sign_green(0.0, 0.7, 0.0), sign_blue(0.05, 0.05, 1.0); // adjust brightness for emissive sign colors
 	colorRGBA const sign_colors    [8] = {DK_RED, DK_BLUE, DK_BLUE, DK_BROWN, BLACK, BLACK, BLACK, BLACK};
-	colorRGBA const emissive_colors[5] = {RED, GREEN, BLUE, RED, BLUE};
+	colorRGBA const emissive_colors[5] = {RED, sign_green, sign_blue, RED, sign_blue};
 	return (emissive ? emissive_colors[rgen.rand() % 5] : sign_colors[rgen.rand() % 8]);
 }
 
