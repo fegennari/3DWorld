@@ -1231,6 +1231,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 		check_box.d[stairs_dim][stairs_dir] += (stairs_dir ? 1.0 : -1.0)*doorway_width; // expand at stairs exit to ensure clearance
 
 		if (!has_bcube_int_no_adj(check_box, parts)) { // no overlap with other parts (should we check in front?)
+			if (has_skylight) {} // TODO: check details for skylight intersection
 			float const zc(z - fc_thick);
 			cube_t to_add[4]; // only one cut / 4 cubes (-y, +y, -x, +x)
 			subtract_cube_xy(part, stairs_cut, to_add);
@@ -1715,7 +1716,12 @@ bool building_t::clip_part_ceiling_for_stairs(cube_t const &c, vect_cube_t &out,
 		subtract_cube_from_cubes(*e, out);
 	}
 	if (has_pg_ramp()) {subtract_cube_from_cubes(interior->pg_ramp, out);} // is this needed?
-	// what about detail objects of type ROOF_OBJ_SKYLT?
+
+	if (has_skylight) { // check skylights
+		for (roof_obj_t const &obj : details) {
+			if (obj.type == ROOF_OBJ_SKYLT) {subtract_cube_from_cubes(obj, out);}
+		}
+	}
 	return 1;
 }
 
@@ -1746,7 +1752,7 @@ unsigned building_t::add_room(cube_t const &room, unsigned part_id, unsigned num
 
 void building_t::add_or_extend_elevator(elevator_t const &elevator, bool add) {
 	if (add) {interior->elevators.push_back(elevator);}
-	if (is_house || roof_type != ROOF_TYPE_FLAT || has_helipad) return; // sloped roof, not flat, can't add elevator cap
+	if (is_house || roof_type != ROOF_TYPE_FLAT || has_helipad) return; // sloped roof, not flat, can't add elevator cap; what about has_skylight?
 	float const window_vspacing(get_window_vspace());
 	cube_t ecap(elevator);
 	ecap.z1()  = elevator.z2();

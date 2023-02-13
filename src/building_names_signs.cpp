@@ -315,7 +315,7 @@ void building_t::add_flags(vector<city_flag_t> &flags) const {
 		flags.emplace_back(flag, !dim, dir, base_pt, pradius);
 		return;
 	}
-	if (has_helipad) return; // flag may block the helipad
+	if (has_helipad || has_skylight)  return; // flag may block the helipad or skylight
 	if (roof_type != ROOF_TYPE_SLOPE) return; // only sloped roofs, since the flag is more visible
 	if (rgen.rand_bool()) return; // place a flag 50% of the time
 	// we can place signs on roof of the tallest part, or on the ground next to the building, on on the building wall; here we add them to the roof

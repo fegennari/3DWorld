@@ -1403,8 +1403,9 @@ void building_t::get_all_drawn_exterior_verts(building_draw_t &bdraw) { // exter
 			bdraw.add_cube(*this, *i, tid_nm_pair_t(ac_tid, -1, 0.3, 1.0), WHITE, 0, 3, 1, 0, 0); // XY with stretched texture, ws_texture=0
 			continue;
 		}
-		if (i->type == ROOF_OBJ_SKYLT) {
-			// TODO: draw skylight, probably as mostly transparent; not implemented yet
+		if (i->type == ROOF_OBJ_SKYLT) { // skylight
+			bdraw.add_cube(*this, *i, tid_nm_pair_t(), colorRGBA(WHITE, 0.25), 0, 4, 0, 0, 0); // top and bottom only, untextured
+			continue;
 		}
 		bool const skip_bot(i->type != ROOF_OBJ_SCAP), pointed(i->type == ROOF_OBJ_ANT); // draw antenna as a point
 		building_t b(building_geom_t(4, rot_sin, rot_cos, pointed)); // cube
