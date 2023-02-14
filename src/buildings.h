@@ -1596,6 +1596,7 @@ private:
 	void remove_intersecting_roof_cubes(cube_t const &c);
 	bool overlaps_other_room_obj(cube_t const &c, unsigned objs_start=0, bool check_all=0) const;
 	bool overlaps_any_placed_obj(cube_t const &c) const;
+	bool check_skylight_intersection(cube_t const &c) const;
 	int classify_room_wall(room_t const &room, float zval, bool dim, bool dir, bool ret_sep_if_part_int_part_ext) const;
 	unsigned count_ext_walls_for_room(room_t const &room, float zval) const;
 	bool room_has_stairs_or_elevator(room_t const &room, float zval, unsigned floor) const;

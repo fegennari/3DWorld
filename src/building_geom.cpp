@@ -1700,7 +1700,7 @@ void building_t::gen_details(rand_gen_t &rgen, bool is_rectangle) { // for the r
 		roof_tquads.emplace_back(helipad, (uint8_t)tquad_with_ix_t::TYPE_HELIPAD);
 		helipad_bcube = helipad.get_bcube();
 	}
-	else if (0 && can_have_hp_or_sl) { // maybe add skylights
+	else if (0 && can_have_hp_or_sl && is_cube()) { // maybe add skylights; cube roofs only for now, since we can't cut holes in other shapes and they have no interiors
 		// find all top floor bcubes
 		float part_zmax(bcube.z1());
 		for (cube_t const &part : parts) {max_eq(part_zmax, part.z2());}
@@ -1795,11 +1795,6 @@ void building_t::gen_details(rand_gen_t &rgen, bool is_rectangle) { // for the r
 	}
 	for (auto i = details.begin(); i != details.end(); ++i) {assert(i->is_strictly_normalized()); max_eq(bcube.z2(), i->z2());} // extend bcube z2 to contain details
 	if (roof_type == ROOF_TYPE_FLAT) {gen_grayscale_detail_color(rgen, 0.2, 0.6);} // for antenna and roof
-}
-
-void building_t::add_company_sign(rand_gen_t &rgen) {
-	if (is_house || name.empty()) return; // shouldn't be called?
-	// TODO: add details object of type ROOF_OBJ_SIGN; note that city office buildings already have signs on their roofs that's part of the city object system
 }
 
 cube_t building_t::get_helipad_bcube() const {

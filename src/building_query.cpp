@@ -1275,6 +1275,17 @@ bool building_t::overlaps_any_placed_obj(cube_t const &c) const { // Note: inclu
 	return 0;
 }
 
+bool building_t::check_skylight_intersection(cube_t const &c) const {
+	if (!has_skylight) return 0;
+	cube_t test_cube(c);
+	test_cube.expand_in_dim(2, 0.5*get_window_vspace()); // expand to include half a floor of space above and below the skylight
+	
+	for (roof_obj_t const &obj : details) {
+		if (obj.type == ROOF_OBJ_SKYLT && obj.intersects(test_cube)) return 1;
+	}
+	return 0;
+}
+
 bool line_int_cube_exp(point const &p1, point const &p2, cube_t const &cube, vector3d const &expand) {
 	cube_t tc(cube);
 	tc.expand_by(expand);

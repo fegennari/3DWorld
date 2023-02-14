@@ -1404,7 +1404,9 @@ void building_t::get_all_drawn_exterior_verts(building_draw_t &bdraw) { // exter
 			continue;
 		}
 		if (i->type == ROOF_OBJ_SKYLT) { // skylight
-			bdraw.add_cube(*this, *i, tid_nm_pair_t(), colorRGBA(WHITE, 0.25), 0, 4, 0, 0, 0); // top and bottom only, untextured
+			tid_nm_pair_t tp;
+			tp.transparent = 1; // doesn't do anything? TODO: make this actually transparent
+			bdraw.add_cube(*this, *i, tp, colorRGBA(WHITE, 0.25), 0, 4, 0, 0, 0); // top and bottom only, untextured
 			continue;
 		}
 		bool const skip_bot(i->type != ROOF_OBJ_SCAP), pointed(i->type == ROOF_OBJ_ANT); // draw antenna as a point

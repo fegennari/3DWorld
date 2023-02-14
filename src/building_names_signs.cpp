@@ -277,6 +277,11 @@ void building_t::add_signs(vector<sign_t> &signs) const { // added as exterior c
 	} // for d
 }
 
+void building_t::add_company_sign(rand_gen_t &rgen) {
+	if (is_house || name.empty()) return; // shouldn't be called?
+	// TODO: add details object of type ROOF_OBJ_SIGN; note that city office buildings already have signs on their roofs that's part of the city object system
+}
+
 city_flag_t create_flag(bool dim, bool dir, point const &base_pt, float height, float length) {
 	float const width(0.5*length), pradius(0.05*length), thickness(0.1*pradius), pole_top(base_pt.z + height);
 	cube_t flag;
