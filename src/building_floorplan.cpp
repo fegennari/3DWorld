@@ -1247,7 +1247,9 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 			for (unsigned i = 0; i < 4; ++i) { // skip zero area cubes from stairs/elevator shafts along an exterior wall
 				cube_t &c(to_add[i]);
 				if (c.is_zero_area()) continue;
-				c.z1() = zc; c.z2() = z; interior->ceilings.push_back(c);
+				set_cube_zvals(c, zc, z);
+				if (has_skylight) {} // TODO: clip out ceiling at skylight
+				interior->ceilings.push_back(c);
 				c.set_to_zeros();
 			}
 			bool const dir(stairs_dir ^ (sshape == SHAPE_U)), u_side(dir); // see logic in building_t::add_stairs_and_elevators() for side
@@ -1337,7 +1339,10 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 				interior->floors.push_back(c);
 			} // for i
 		}
-		else {interior->ceilings.push_back(C);}
+		else {
+			if (has_skylight) {} // TODO: clip out ceiling at skylight
+			interior->ceilings.push_back(C);
+		}
 	}
 	std::reverse(interior->floors.begin()+floors_start, interior->floors.end()); // order floors top to bottom to reduce overdraw when viewed from above
 }

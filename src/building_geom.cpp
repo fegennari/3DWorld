@@ -1714,7 +1714,7 @@ void building_t::gen_details(rand_gen_t &rgen, bool is_rectangle) { // for the r
 			roof_ceiling.z1() = part.z2() - get_fc_thickness();
 			cube_t skylight(roof_ceiling);
 			for (unsigned d = 0; d < 2; ++d) {skylight.expand_in_dim(d, -0.3*roof_ceiling.get_sz_dim(d));} // 40% of width
-			skylight.expand_in_dim(2, 0.1*get_fc_thickness()); // expand in Z; temporary, for visualization
+			skylight.expand_in_dim(2, -0.1*get_fc_thickness()); // shrink in Z
 			details.emplace_back(skylight, ROOF_OBJ_SKYLT);
 			skylights.push_back(skylight);
 			has_skylight = 1;

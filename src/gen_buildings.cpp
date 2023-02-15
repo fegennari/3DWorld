@@ -1403,12 +1403,7 @@ void building_t::get_all_drawn_exterior_verts(building_draw_t &bdraw) { // exter
 			bdraw.add_cube(*this, *i, tid_nm_pair_t(ac_tid, -1, 0.3, 1.0), WHITE, 0, 3, 1, 0, 0); // XY with stretched texture, ws_texture=0
 			continue;
 		}
-		if (i->type == ROOF_OBJ_SKYLT) { // skylight
-			tid_nm_pair_t tp;
-			tp.transparent = 1; // doesn't do anything? TODO: make this actually transparent
-			bdraw.add_cube(*this, *i, tp, colorRGBA(WHITE, 0.25), 0, 4, 0, 0, 0); // top and bottom only, untextured
-			continue;
-		}
+		if (i->type == ROOF_OBJ_SKYLT) continue; // skylight drawn as windows, not here
 		bool const skip_bot(i->type != ROOF_OBJ_SCAP), pointed(i->type == ROOF_OBJ_ANT); // draw antenna as a point
 		building_t b(building_geom_t(4, rot_sin, rot_cos, pointed)); // cube
 		b.bcube = bcube;
@@ -1668,7 +1663,7 @@ template void building_t::add_door_verts(cube_t const &D, building_room_geom_t &
 	bool dim, bool dir, bool opened, bool opens_out, bool exterior, bool on_stairs, bool hinge_side) const;
 
 // Note: this is actually the geometry of walls that have windows, not the windows themselves
-void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_pass, float offset_scale, point const *const only_cont_pt_in) const {
+void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_pass, float offset_scale, point const *const only_cont_pt_in, bool no_skylights) const {
 
 	if (!is_valid()) return; // invalid building
 	point only_cont_pt;
@@ -1783,6 +1778,14 @@ void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_
 			} // for dir
 		} // for dim
 	} // for i
+	if (has_skylight && !no_skylights /*&& !lights_pass*/) { // draw skylights
+		for (auto i = details.begin(); i != details.end(); ++i) { // draw roof details
+			if (i->type != ROOF_OBJ_SKYLT) continue; // skylights only
+			tid_nm_pair_t tp;
+			tp.transparent = 1; // doesn't do anything? TODO: make this actually transparent
+			bdraw.add_cube(*this, *i, tp, colorRGBA(WHITE, 0.1), 0, 4, 0, 0, 0); // top and bottom only, untextured
+		}
+	}
 	if (only_cont_pt_in) { // camera inside this building, cut out holes so that the exterior doors show through
 		cut_holes_for_ext_doors(bdraw, only_cont_pt, draw_parts_mask);
 	}
@@ -1790,7 +1793,7 @@ void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_
 
 void building_t::get_all_drawn_window_verts_as_quads(vect_vnctcc_t &verts) const {
 	building_draw_t bdraw; // should this be a static variable?
-	get_all_drawn_window_verts(bdraw);
+	get_all_drawn_window_verts(bdraw, 0, 1.0, nullptr, 1); // no_skylights=1
 	bdraw.get_all_mat_verts(verts, 0); // combine quad verts across materials (should only be one)
 	assert((verts.size() & 3) == 0); // must be a multiple of 4
 }
