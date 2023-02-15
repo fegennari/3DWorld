@@ -1101,6 +1101,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 							if (wtype_y == ROOM_WALL_EXT) {elevator.d[1][y] += (y ? -shrink : shrink);}
 							if (has_bcube_int(elevator, interior->exclusion)) continue; // try again
 							if (is_cube_close_to_doorway(elevator, room))     continue; // try again
+							if (check_skylight_intersection(elevator))        continue; // check skylights; is this necessary?
 							add_or_extend_elevator(elevator, 1);
 							elevator_cut = elevator;
 							placed       = 1; // successfully placed
@@ -1753,7 +1754,7 @@ unsigned building_t::add_room(cube_t const &room, unsigned part_id, unsigned num
 
 void building_t::add_or_extend_elevator(elevator_t const &elevator, bool add) {
 	if (add) {interior->elevators.push_back(elevator);}
-	if (is_house || roof_type != ROOF_TYPE_FLAT || has_helipad) return; // sloped roof, not flat, can't add elevator cap; what about has_skylight?
+	if (is_house || roof_type != ROOF_TYPE_FLAT || has_helipad) return; // sloped roof, not flat, can't add elevator cap
 	float const window_vspacing(get_window_vspace());
 	cube_t ecap(elevator);
 	ecap.z1()  = elevator.z2();
@@ -1765,6 +1766,7 @@ void building_t::add_or_extend_elevator(elevator_t const &elevator, bool add) {
 		if (p->z1() != elevator.z2()) continue; // not on top of the elevator
 		if (p->intersects(ecap)) return; // part over elevator - should we add some sort of cap in this case, or block off the first floor, or add something to the interior?
 	}
+	if (check_skylight_intersection(ecap)) return; // can this happen? probably not if elevator is placed correctly with this check
 	remove_intersecting_roof_cubes(ecap);
 	details.emplace_back(ecap, ROOF_OBJ_ECAP);
 	max_eq(bcube.z2(), ecap.z2()); // extend bcube z2 to contain ecap
