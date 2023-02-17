@@ -1686,6 +1686,14 @@ void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_
 	}
 	building_mat_t const &mat(get_material());
 
+	if (has_skylight && !no_skylights && !lights_pass) { // draw skylights
+		for (auto i = details.begin(); i != details.end(); ++i) { // draw roof details
+			if (i->type != ROOF_OBJ_SKYLT) continue; // skylights only
+			tid_nm_pair_t tp;
+			tp.transparent = 1; // doesn't do anything? TODO: make this actually transparent
+			bdraw.add_cube(*this, *i, tp, colorRGBA(WHITE, 0.1), 0, 4, 0, 0, 0); // top and bottom only, untextured
+		}
+	}
 	if (!global_building_params.windows_enabled() || (lights_pass ? !mat.add_wind_lights : !mat.add_windows)) { // no windows for this material
 		if (only_cont_pt_in) {cut_holes_for_ext_doors(bdraw, only_cont_pt, 0xFFFF);} // still need to draw holes for doors
 		return;
@@ -1790,14 +1798,6 @@ void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_
 			} // for dir
 		} // for dim
 	} // for i
-	if (has_skylight && !no_skylights /*&& !lights_pass*/) { // draw skylights
-		for (auto i = details.begin(); i != details.end(); ++i) { // draw roof details
-			if (i->type != ROOF_OBJ_SKYLT) continue; // skylights only
-			tid_nm_pair_t tp;
-			tp.transparent = 1; // doesn't do anything? TODO: make this actually transparent
-			bdraw.add_cube(*this, *i, tp, colorRGBA(WHITE, 0.1), 0, 4, 0, 0, 0); // top and bottom only, untextured
-		}
-	}
 	if (only_cont_pt_in) { // camera inside this building, cut out holes so that the exterior doors show through
 		cut_holes_for_ext_doors(bdraw, only_cont_pt, draw_parts_mask);
 	}
