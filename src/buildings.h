@@ -1027,7 +1027,7 @@ struct elevator_t : public oriented_cube_t { // dim/dir applies to the door
 		call_request_t(unsigned f, float z, unsigned d, bool ip) : floor_ix(f), zval(z), req_dirs(d), inside_press(ip) {}
 		bool operator<(call_request_t const &cr) const {return (cr.inside_press < inside_press);} // sort so that CRs with inside_press=1 are first
 	};
-	bool at_edge=0, going_up=0, at_dest=0, stop_on_passing_floor=0, hold_doors=0, hold_movement=0;
+	bool at_edge=0, going_up=0, at_dest=0, stop_on_passing_floor=0, hold_doors=0, hold_movement=0, under_skylight=0;
 	unsigned room_id=0, car_obj_id=0, light_obj_id=0, button_id_start=0, button_id_end=0, num_occupants=0;
 	int at_dest_frame=0;
 	float open_amt=0;
@@ -1591,6 +1591,7 @@ private:
 	bool check_cube_contained_in_part(cube_t const &c) const;
 	bool is_valid_stairs_elevator_placement(cube_t const &c, float pad, bool check_walls=1) const;
 	bool clip_part_ceiling_for_stairs(cube_t const &c, vect_cube_t &out, vect_cube_t &temp) const;
+	void add_ceiling_cube_no_skylights(cube_t const &c);
 	unsigned add_room(cube_t const &room, unsigned part_id, unsigned num_lights, bool is_hallway, bool is_office, bool is_sec_bldg=0);
 	void add_or_extend_elevator(elevator_t const &elevator, bool add);
 	void remove_intersecting_roof_cubes(cube_t const &c);

@@ -1543,8 +1543,9 @@ void building_t::get_all_drawn_interior_verts(building_draw_t &bdraw) {
 					}
 				} // for r
 			}
+			if (check_skylight_intersection(*i)) {dim_mask |= 4;} // draw top surface if under skylight
 			colorRGBA const &color((i->z1() < ground_floor_z1) ? WHITE : wall_color); // basement walls are always white
-			bdraw.add_section(*this, 0, *i, mat.wall_tex, color, dim_mask, 0, 0, 1, 0); // no AO; X and/or Y dims only
+			bdraw.add_section(*this, 0, *i, mat.wall_tex, color, dim_mask, 1, 0, 1, 0); // no AO; X and/or Y dims only, skip bottom, only draw top if under skylight
 		}
 	}
 	// Note: stair/elevator landings can probably be drawn in room_geom along with stairs, though I don't think there would be much benefit in doing so
@@ -1557,6 +1558,12 @@ void building_t::get_all_drawn_interior_verts(building_draw_t &bdraw) {
 			else             {dim_mask |= ((i->xc() < basement.xc()) ?  8 : 16);} // Y, skip X face closest to building wall
 		}
 		bdraw.add_section(*this, 0, *i, mat.wall_tex, mat.wall_color, dim_mask, 0, 0, 1, 0, 0.0, 0, 1.0, 1); // no AO; X/Y dims only, inverted normals
+	}
+	if (has_skylight) { // draw skylight edges
+		for (auto i = details.begin(); i != details.end(); ++i) { // draw roof details
+			if (i->type != ROOF_OBJ_SKYLT) continue; // skylights only
+			bdraw.add_section(*this, 0, *i, mat.wall_tex, mat.wall_color, 3, 0, 0, 1, 0, 0.0, 0, 1.0, 1); // no AO; X/Y dims only, inverted normals
+		}
 	}
 	for (auto i = interior->elevators.begin(); i != interior->elevators.end(); ++i) {
 		bool const dim(i->dim), dir(i->dir);
@@ -1577,9 +1584,13 @@ void building_t::get_all_drawn_interior_verts(building_draw_t &bdraw) {
 		cube_t inner_cube(*i);
 		inner_cube.expand_by_xy(-spacing);
 		// add interior of elevator by drawing the inside of the cube with a slightly smaller size, with invert_normals=1; normal mapped?
-		tid_nm_pair_t wall_tex(FENCE_TEX, -1, 16.0, 16.0);
-		wall_tex.set_specular(0.5, 20.0);
-		bdraw.add_section(*this, 0, inner_cube, wall_tex, WHITE, dim_mask, 0, 0, 1, 0, 0.0, 0, 1.0, 1);
+		tid_nm_pair_t wall_panel_tex(FENCE_TEX, -1, 16.0, 16.0);
+		wall_panel_tex.set_specular(0.5, 20.0);
+		bdraw.add_section(*this, 0, inner_cube, wall_panel_tex, WHITE, dim_mask, 0, 0, 1, 0, 0.0, 0, 1.0, 1);
+
+		if (i->under_skylight ) { // under skylight, draw the top
+			bdraw.add_section(*this, 0, *i, mat.wall_tex, WHITE, 4, 1, 0, 1, 0); // top surface only
+		}
 		// Note elevator doors are dynamic and are drawn as part of room_geom
 	} // for i
 	if (has_attic() && interior->attic_type == ATTIC_TYPE_RAFTERS) { // underside of roof is visible
@@ -1656,6 +1667,7 @@ template<typename T> void building_t::add_door_verts(cube_t const &D, T &drawer,
 			}
 		}
 	} // for side
+	//if (check_skylight_intersection(D)) {} // draw top edge of door?
 }
 
 // explicit template specialization

@@ -2699,7 +2699,8 @@ bool any_cube_contains(cube_t const &cube, vect_cube_t const &cubes) {
 bool building_t::is_light_placement_valid(cube_t const &light, room_t const &room, float pad) const {
 	cube_t light_ext(light);
 	light_ext.expand_by_xy(pad);
-	if (!room.contains_cube(light_ext)) return 0; // room too small?
+	if (!room.contains_cube(light_ext))     return 0; // room too small?
+	if (check_skylight_intersection(light)) return 0;
 	light_ext.z1() = light_ext.z1() = light.z2() + get_fc_thickness(); // shift in between the ceiling and floor so that we can do a cube contains check
 	return any_cube_contains(light_ext, interior->fc_occluders);
 }
@@ -3263,11 +3264,14 @@ void building_t::add_wall_and_door_trim() { // and window trim
 		if (d->on_stairs) continue; // no frame for stairs door, skip
 		cube_t trim(*d);
 		trim.expand_in_dim(d->dim, door_trim_exp);
+		trim.z2() -= 0.1*trim_toler; // shift top down oh so slightly to prevent z-fighting with top of wall when drawn under a skylight
 
 		for (unsigned side = 0; side < 2; ++side) { // left/right of door
 			trim.d[!d->dim][0] = d->d[!d->dim][side] - (side ? trim_thickness : door_trim_width);
 			trim.d[!d->dim][1] = d->d[!d->dim][side] + (side ? door_trim_width : trim_thickness);
-			objs.emplace_back(trim, TYPE_WALL_TRIM, 0, d->dim, side, (flags | RO_FLAG_ADJ_BOT | RO_FLAG_ADJ_TOP), 1.0, SHAPE_TALL, trim_color); // abuse tall flag
+			bool const draw_top(check_skylight_intersection(trim)); // draw top edge of trim for top floor?
+			unsigned const flags2(flags | RO_FLAG_ADJ_BOT | (draw_top ? 0 : RO_FLAG_ADJ_TOP));
+			objs.emplace_back(trim, TYPE_WALL_TRIM, 0, d->dim, side, flags2, 1.0, SHAPE_TALL, trim_color); // abuse tall flag
 		}
 		// add trim at top of door
 		unsigned const num_floors(calc_num_floors(*d, window_vspacing, floor_thickness));
@@ -3277,7 +3281,9 @@ void building_t::add_wall_and_door_trim() { // and window trim
 
 		for (unsigned f = 0; f < num_floors; ++f, z += window_vspacing) {
 			set_cube_zvals(trim, z-trim_thickness, z); // z2=ceil height
-			objs.emplace_back(trim, TYPE_WALL_TRIM, 0, d->dim, 0, (flags | RO_FLAG_ADJ_TOP), 1.0, SHAPE_SHORT, trim_color);
+			bool const draw_top(f+1 == num_floors && check_skylight_intersection(trim)); // draw top edge of trim for top floor?
+			unsigned const flags2(flags | (draw_top ? 0 : RO_FLAG_ADJ_TOP));
+			objs.emplace_back(trim, TYPE_WALL_TRIM, 0, d->dim, 0, flags2, 1.0, SHAPE_SHORT, trim_color);
 		}
 	} // for d
 	for (auto d = doors.begin(); d != doors.end(); ++d) { // exterior doors

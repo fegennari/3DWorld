@@ -1248,8 +1248,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 				cube_t &c(to_add[i]);
 				if (c.is_zero_area()) continue;
 				set_cube_zvals(c, zc, z);
-				if (has_skylight) {} // TODO: clip out ceiling at skylight
-				interior->ceilings.push_back(c);
+				add_ceiling_cube_no_skylights(c);
 				c.set_to_zeros();
 			}
 			bool const dir(stairs_dir ^ (sshape == SHAPE_U)), u_side(dir); // see logic in building_t::add_stairs_and_elevators() for side
@@ -1340,11 +1339,26 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 			} // for i
 		}
 		else {
-			if (has_skylight) {} // TODO: clip out ceiling at skylight
-			interior->ceilings.push_back(C);
+			add_ceiling_cube_no_skylights(C);
 		}
 	}
 	std::reverse(interior->floors.begin()+floors_start, interior->floors.end()); // order floors top to bottom to reduce overdraw when viewed from above
+}
+
+void building_t::add_ceiling_cube_no_skylights(cube_t const &c) {
+	assert(interior);
+
+	if (!check_skylight_intersection(c)) {
+		interior->ceilings.push_back(c);
+		return;
+	}
+	vect_cube_t cubes;
+	cubes.push_back(c);
+
+	for (roof_obj_t const &obj : details) {
+		if (obj.type == ROOF_OBJ_SKYLT) {subtract_cube_from_cubes(obj, cubes);}
+	}
+	for (cube_t const &cube : cubes) {interior->ceilings.push_back(cube);}
 }
 
 bool building_t::check_cube_intersect_walls(cube_t const &c) const {
@@ -1713,7 +1727,8 @@ bool building_t::are_parts_stacked(cube_t const &p1, cube_t const &p2) const {
 	return 0;
 }
 
-bool building_t::clip_part_ceiling_for_stairs(cube_t const &c, vect_cube_t &out, vect_cube_t &temp) const { // and elevators, and ramp
+// clip exterior ceiling for stairs, elevators, ramps, and skylights
+bool building_t::clip_part_ceiling_for_stairs(cube_t const &c, vect_cube_t &out, vect_cube_t &temp) const {
 	if (!interior) return 0;
 	subtract_cubes_from_cube(c, interior->stairwells, out, temp);
 
@@ -1758,6 +1773,7 @@ unsigned building_t::add_room(cube_t const &room, unsigned part_id, unsigned num
 }
 
 void building_t::add_or_extend_elevator(elevator_t const &elevator, bool add) {
+	assert(interior);
 	if (add) {interior->elevators.push_back(elevator);}
 	if (is_house || roof_type != ROOF_TYPE_FLAT || has_helipad) return; // sloped roof, not flat, can't add elevator cap
 	float const window_vspacing(get_window_vspace());
@@ -1771,7 +1787,10 @@ void building_t::add_or_extend_elevator(elevator_t const &elevator, bool add) {
 		if (p->z1() != elevator.z2()) continue; // not on top of the elevator
 		if (p->intersects(ecap)) return; // part over elevator - should we add some sort of cap in this case, or block off the first floor, or add something to the interior?
 	}
-	if (check_skylight_intersection(ecap)) return; // can this happen? probably not if elevator is placed correctly with this check
+	if (check_skylight_intersection(ecap)) { // can this happen? probably not if elevator is placed correctly with this check
+		if (add) {interior->elevators.back().under_skylight = 1;}
+		return;
+	}
 	remove_intersecting_roof_cubes(ecap);
 	details.emplace_back(ecap, ROOF_OBJ_ECAP);
 	max_eq(bcube.z2(), ecap.z2()); // extend bcube z2 to contain ecap
