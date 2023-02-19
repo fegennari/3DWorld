@@ -1570,8 +1570,10 @@ void building_t::get_all_drawn_interior_verts(building_draw_t &bdraw) {
 		float const spacing(i->get_wall_thickness()), frame_width(i->get_frame_width()); // space between inner/outer walls + frame around door
 		unsigned dim_mask(3); // x and y dims enabled
 		dim_mask |= (1 << (i->get_door_face_id() + 3)); // disable the face for the door opening
-		bdraw.add_section(*this, 0, *i, mat.wall_tex, mat.wall_color, dim_mask, 0, 0, 1, 0); // outer elevator is textured like the walls
-		cube_t entrance(*i);
+		cube_t shaft(*i);
+		shaft.z2() -= get_fc_thickness(); // avoid clipping through skylights
+		bdraw.add_section(*this, 0, shaft, mat.wall_tex, mat.wall_color, dim_mask, 0, 0, 1, 0); // outer elevator is textured like the walls
+		cube_t entrance(shaft);
 		entrance.d[dim][!dir] = entrance.d[dim][dir] + (dir ? -1.0f : 1.0f)*spacing; // set correct thickness
 
 		for (unsigned d = 0; d < 2; ++d) { // add frame on both sides of the door opening
@@ -1581,7 +1583,7 @@ void building_t::get_all_drawn_interior_verts(building_draw_t &bdraw) {
 			dim_mask2 |= (1 << (2*(!dim) + (!d) + 3)); // 3 faces drawn
 			bdraw.add_section(*this, 0, frame, mat.wall_tex, mat.wall_color, dim_mask2, 0, 0, 1, 0);
 		}
-		cube_t inner_cube(*i);
+		cube_t inner_cube(shaft);
 		inner_cube.expand_by_xy(-spacing);
 		// add interior of elevator by drawing the inside of the cube with a slightly smaller size, with invert_normals=1; normal mapped?
 		tid_nm_pair_t wall_panel_tex(FENCE_TEX, -1, 16.0, 16.0);
@@ -1589,7 +1591,7 @@ void building_t::get_all_drawn_interior_verts(building_draw_t &bdraw) {
 		bdraw.add_section(*this, 0, inner_cube, wall_panel_tex, WHITE, dim_mask, 0, 0, 1, 0, 0.0, 0, 1.0, 1);
 
 		if (i->under_skylight ) { // under skylight, draw the top
-			bdraw.add_section(*this, 0, *i, mat.wall_tex, WHITE, 4, 1, 0, 1, 0); // top surface only
+			bdraw.add_section(*this, 0, shaft, mat.wall_tex, WHITE, 4, 1, 0, 1, 0); // top surface only
 		}
 		// Note elevator doors are dynamic and are drawn as part of room_geom
 	} // for i
