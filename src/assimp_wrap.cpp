@@ -528,6 +528,7 @@ public:
 			cerr << "Warning: AssImp flagged incomplete scene" << endl; // nonfatal
 		}
 		if (scene->mRootNode == nullptr) {cout << "Warning: No root node for model" << endl;}
+		if (scene->mNumAnimations == 0) {load_animations = 0;} // no animations to load
 		model_dir = fn;
 		while (!model_dir.empty() && model_dir.back() != '/' && model_dir.back() != '\\') {model_dir.pop_back();} // remove filename from end, but leave the slash
 		if (scene->mRootNode) {process_node_recur(scene->mRootNode, scene, model.model_anim_data);}
