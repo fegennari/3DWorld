@@ -8,6 +8,8 @@
 
 extern string assimp_alpha_exclude_str;
 
+string get_base_filename(string const &filename);
+
 void model_anim_t::anim_data_t::init(unsigned np, unsigned nr, unsigned ns) {
 	assert(pos.empty() && scale.empty() && rot.empty()); // can only call init() once
 	assert(np > 0);
@@ -288,8 +290,18 @@ class file_reader_assimp {
 			is_temp_image = 1;
 		}
 		else if (!check_texture_file_exists(full_path)) {
-			cerr << "Error: Can't find texture file for assimp model: " << full_path << endl;
-			return -1;
+			string const fn(filename);
+			bool found(0);
+
+			if (fn.size() > 3 && (fn[0] >= 'A' && fn[0] <= 'Z') && fn[1] == ':' && (fn[2] == '\\' || fn[2] == '/')) {
+				// looks like a Windows path that's invalid; try stripping off the path and looking in the current directory
+				string const local_path(model_dir + get_base_filename(fn));
+				if (check_texture_file_exists(local_path)) {full_path = local_path; found = 1;}
+			}
+			if (!found) {
+				cerr << "Error: Can't find texture file for assimp model: " << full_path << endl;
+				return -1;
+			}
 		}
 		// is_alpha_mask=0, verbose=0, invert_alpha=0, wrap=1, mirror=0, force_grayscale=0, invert_y=0, no_cache=is_temp_image, load_now=is_temp_image
 		return model.tmgr.create_texture(full_path, 0, 0, 0, 1, 0, 0, is_normal_map, 0, is_temp_image, is_temp_image);

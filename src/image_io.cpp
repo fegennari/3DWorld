@@ -42,6 +42,38 @@ string const texture_dir("textures");
 string append_texture_dir(string const &filename) {return (texture_dir + "/" + filename);}
 
 
+size_t get_last_slash_pos(string const &filename) {
+	size_t const spos[2] = {filename.find_last_of('\\'), filename.find_last_of('/')};
+	size_t smax(0);
+
+	for (unsigned i = 0; i < 2; ++i) {
+		if (spos[i] != string::npos) {smax = max(smax, spos[i]);}
+	}
+	return smax;
+}
+string get_base_filename(string const &filename) {
+	size_t const smax(get_last_slash_pos(filename));
+	if (smax == 0) return filename; // no slash
+	return string(filename, smax+1, filename.length()-1);
+}
+string get_file_extension(string const &filename, unsigned level, bool make_lower) {
+	size_t const epos(filename.find_last_of('.'));
+	size_t const smax(get_last_slash_pos(filename));
+	string ext;
+
+	if (epos != string::npos && epos > smax) { // make sure the dot is after the last slash (part of the filename, not part of the path)
+		ext = string(filename, epos+1, filename.length()-1);
+
+		if (level > 0 && !ext.empty()) {
+			string const fn2(string(filename, 0, epos));
+			ext = get_file_extension(fn2, level-1, make_lower); // recursively strip off extensions
+		}
+	}
+	unsigned const len((unsigned)ext.length());
+	for (unsigned i = 0; i < len; ++i) {ext[i] = tolower(ext[i]);} // convert upper case ext letters to lower case
+	return ext;
+}
+
 void checked_fclose(FILE *fp) {
 	if (fclose(fp) != 0) {
 		perror("Error: fclose() call failed");
@@ -51,7 +83,7 @@ void checked_fclose(FILE *fp) {
 
 FILE *open_texture_file_no_check(string const &filename) {
 	FILE *fp = fopen(append_texture_dir(filename).c_str(), "rb");
-	if (fp != nullptr) return fp;
+	if (fp != nullptr) return fp; // found
 	// if not in the texture directory, look in the current directory
 	return fopen(filename.c_str(), "rb");
 }
@@ -69,30 +101,6 @@ bool check_texture_file_exists(string const &filename) {
 	if (fp == nullptr) return 0;
 	checked_fclose(fp);
 	return 1;
-}
-
-
-string get_file_extension(string const &filename, unsigned level, bool make_lower) {
-
-	size_t const epos(filename.find_last_of('.'));
-	size_t const spos[2] = {filename.find_last_of('\\'), filename.find_last_of('/')};
-	size_t smax(0);
-	string ext;
-
-	for (unsigned i = 0; i < 2; ++i) {
-		if (spos[i] != string::npos) {smax = max(smax, spos[i]);}
-	}
-	if (epos != string::npos && epos > smax) { // make sure the dot is after the last slash (part of the filename, not part of the path)
-		ext = string(filename, epos+1, filename.length()-1);
-
-		if (level > 0 && !ext.empty()) {
-			string const fn2(string(filename, 0, epos));
-			ext = get_file_extension(fn2, level-1, make_lower); // recursively strip off extensions
-		}
-	}
-	unsigned const len((unsigned)ext.length());
-	for (unsigned i = 0; i < len; ++i) {ext[i] = tolower(ext[i]);} // convert upper case ext letters to lower case
-	return ext;
 }
 
 void texture_t::load(int index, bool allow_diff_width_height, bool allow_two_byte_grayscale, bool ignore_word_alignment) {
