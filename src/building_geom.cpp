@@ -1700,10 +1700,9 @@ void building_t::gen_details(rand_gen_t &rgen, bool is_rectangle) { // for the r
 		roof_tquads.emplace_back(helipad, (uint8_t)tquad_with_ix_t::TYPE_HELIPAD);
 		helipad_bcube = helipad.get_bcube();
 	}
-	else if (0 && can_have_hp_or_sl && is_cube()) {
+	else if (can_have_hp_or_sl && is_cube()) {
 		// maybe add skylights; cube roofs only for now, since we can't cut holes in other shapes and they have no interiors;
 		// note that at this point there has been no floorplanning, so we don't know where primary hallways, etc. will be
-		// find all top floor bcubes
 		float part_zmax(bcube.z1());
 		for (cube_t const &part : parts) {max_eq(part_zmax, part.z2());}
 		
@@ -1712,8 +1711,20 @@ void building_t::gen_details(rand_gen_t &rgen, bool is_rectangle) { // for the r
 			if (part.z2() != part_zmax) continue; // not top floor
 			cube_t roof_ceiling(part);
 			roof_ceiling.z1() = part.z2() - get_fc_thickness();
-			cube_t skylight(roof_ceiling);
-			for (unsigned d = 0; d < 2; ++d) {skylight.expand_in_dim(d, -0.3*roof_ceiling.get_sz_dim(d));} // 40% of width
+			vector2d center, hwidth;
+
+			for (unsigned d = 0; d < 2; ++d) {
+				hwidth[d] = rgen.rand_uniform(0.1, 0.2)*roof_ceiling.get_sz_dim(d);
+			}
+			if (rgen.rand_bool()) {center.assign(roof_ceiling.xc(), roof_ceiling.yc());} // make it centered
+			else { // make it misaligned
+				for (unsigned d = 0; d < 2; ++d) {
+					center[d] = rgen.rand_uniform((roof_ceiling.d[d][0] + 1.5*hwidth[d]), (roof_ceiling.d[d][1] - 1.5*hwidth[d]));
+				}
+			}
+			cube_t skylight;
+			for (unsigned d = 0; d < 2; ++d) {set_wall_width(skylight, center[d], hwidth[d], d);}
+			set_cube_zvals(skylight, roof_ceiling.z1(), roof_ceiling.z2());
 			details.emplace_back(skylight, ROOF_OBJ_SKYLT);
 			skylights.push_back(skylight);
 			has_skylight = 1;
