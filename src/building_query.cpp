@@ -661,6 +661,7 @@ bool building_t::check_pos_in_unlit_room_recur(point const &pos, set<unsigned> &
 	if (!room.interior) return 0; // room has windows and may be lit from outside
 	float const floor_spacing(get_window_vspace());
 	unsigned const floor_ix(max(0.0f, (pos.z - room.z1()))/floor_spacing);
+	if (room.has_skylight && pos.z > (room.z2() - floor_spacing)) return 0; // top floor of room with a skylight
 	if (room.has_elevator || (!room.is_ext_basement() && room.has_stairs_on_floor(floor_ix))) return 0; // assume light can come from stairs (not in ext basement) or open elevator
 	// check if all lights are off
 	auto objs_end(interior->room_geom->get_placed_objs_end()); // skip buttons/stairs/elevators

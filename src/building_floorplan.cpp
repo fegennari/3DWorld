@@ -1759,6 +1759,7 @@ unsigned building_t::add_room(cube_t const &room, unsigned part_id, unsigned num
 		} // for p
 		if (is_exterior) {r.ext_sides |= (1 << d);}
 	} // for d
+	if (check_skylight_intersection(room)) {r.has_skylight = 1;}
 	unsigned const room_id(interior->rooms.size());
 	interior->rooms.push_back(r);
 	return room_id;

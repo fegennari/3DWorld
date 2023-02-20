@@ -1057,7 +1057,7 @@ unsigned const NUM_RTYPE_SLOTS = 6; // enough for houses; hard max is 8
 struct room_t : public cube_t { // size=64
 	uint8_t has_stairs=0; // per-floor bit mask; always set to 255 for stairs that span the entire room
 	uint8_t has_elevator=0; // number of elevators, usually either 0 or 1
-	bool has_center_stairs=0, no_geom=0, is_hallway=0, is_office=0, is_sec_bldg=0, unpowered=0, has_mirror=0;
+	bool has_center_stairs=0, no_geom=0, is_hallway=0, is_office=0, is_sec_bldg=0, unpowered=0, has_mirror=0, has_skylight=0;
 	uint8_t interior=0; // 0=not interior (has windows), 1=interior, 2=extended basement
 	uint8_t ext_sides=0; // sides that have exteriors, and likely windows (bits for x1, x2, y1, y2)
 	uint8_t part_id=0, num_lights=0, rtype_locked=0;
