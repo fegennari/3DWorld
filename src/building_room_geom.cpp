@@ -1657,12 +1657,12 @@ void building_room_geom_t::add_elevator(room_object_t const &c, elevator_t const
 {
 	// elevator car, all materials are dynamic; no lighting scale
 	float const dz(c.dz()), thickness(fc_thick_scale*dz), dir_sign(c.dir ? 1.0 : -1.0), signed_thickness(dir_sign*thickness);
-	cube_t shaft(c);
-	min_eq(shaft.z2(), (e.z2() - ELEVATOR_Z2_SHIFT*thickness)); // prevent z-fighting when on the top floor of a building with a flat roof
-	cube_t floor_(shaft), ceil_(shaft), back(shaft);
+	cube_t car(c);
+	min_eq(car.z2(), (e.z2() - ELEVATOR_Z2_SHIFT*thickness)); // prevent z-fighting when on the top floor of a building with a flat roof
+	cube_t floor_(car), ceil_(car), back(car);
 	floor_.z2() = c.z1() + thickness;
 	ceil_. z1() = c.z2() - thickness;
-	min_eq(ceil_.z1(), (ceil_.z2() - 0.05f*thickness)); // make sure it's normalized
+	min_eq(ceil_.z1(), min((ceil_.z2() - 0.05f*thickness), (e.z2() - 1.04f*thickness))); // make sure it's normalized and below the top floor ceiling
 	floor_.expand_by_xy(-0.5f*thickness);
 	ceil_ .expand_by_xy(-0.5f*thickness);
 	back.d[c.dim][c.dir] = c.d[c.dim][!c.dir] + signed_thickness;
@@ -1675,14 +1675,14 @@ void building_room_geom_t::add_elevator(room_object_t const &c, elevator_t const
 	rgeom_mat_t &paneling_mat(get_material(paneling, 1, 1));
 	paneling_mat.add_cube_to_verts(back, WHITE, tex_origin, front_face_mask, !c.dim);
 	float const width(c.get_width()), frame_width(0.2*width), spacing(0.02*width), front_face(c.d[c.dim][c.dir] - signed_thickness);
-	cube_t front(shaft);
+	cube_t front(car);
 	front.d[c.dim][ c.dir] -= (c.dir ? 1.0 : -1.0)*spacing; // slight gap with elevator doors
 	front.d[c.dim][!c.dir]  = front_face;
 
 	for (unsigned d = 0; d < 2; ++d) {
 		// side walls
 		unsigned const side_skip_faces(get_face_mask(!c.dim, !d));
-		cube_t side(shaft);
+		cube_t side(car);
 		side.d[!c.dim][!d] = c.d[!c.dim][d] + (d ? -1.0 : 1.0)*thickness;
 		paneling_mat.add_cube_to_verts(side,  WHITE, tex_origin, side_skip_faces, c.dim);
 		// front sides of doors

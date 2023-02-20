@@ -923,3 +923,32 @@ void building_room_geom_t::add_chimney(room_object_t const &c, tid_nm_pair_t con
 	mat.add_cube_to_verts(c, c.color, c.get_llc(), (EF_Z12 | EF_X12), 0); // Y sides, swap_tex_st=0
 }
 
+// I guess skylights are similar to attics, so this code goes here?
+void building_room_geom_t::add_skylights_details(building_t const &b) {
+	for (cube_t const &skylight : b.skylights) {add_skylight_details(skylight);}
+}
+void add_skylight_bar_grid(rgeom_mat_t &bar_mat, cube_t const &skylight, float bar_hwidth, float spacing, unsigned num, bool dim) {
+	for (unsigned i = 0; i < num+1; ++i) { // includes bar at the end
+		cube_t bar(skylight); // uses skylight zvals
+		set_wall_width(bar, (skylight.d[dim][0] + bar_hwidth + i*spacing), bar_hwidth, dim);
+
+		if (i == 0 || i == num) { // make the bars at the edges a bit wider and taller
+			bar.expand_by_xy(0.25*bar_hwidth);
+			bar.z2() += 0.25*bar_hwidth;
+			bar.z1() -= 0.02*bar_hwidth; // move down slightly, enough to not Z-fight with the ceiling but not enough to clip through the elevator ceiling
+		}
+		bar_mat.add_cube_to_verts_untextured(bar, WHITE, get_skip_mask_for_xy(!dim)); // skip ends
+	} // for i
+}
+void building_room_geom_t::add_skylight_details(cube_t const &skylight) {
+	vector3d const sz(skylight.get_size());
+	bool const dmax(sz.x > sz.y);
+	float const thickness(skylight.dz()), length(sz[dmax]), width(sz[!dmax]), bar_width(0.67*sz.z), bar_hwidth(0.5*bar_width);
+	if (min(length, width) < 10.0*thickness) return; // no bars needed
+	unsigned const num_rows((unsigned)ceil(0.1*length/thickness)), num_cols((unsigned)ceil(0.04*width/thickness));
+	float const row_spacing((length - bar_width)/num_rows), col_spacing((width - bar_width)/num_cols);
+	rgeom_mat_t &bar_mat(get_untextured_material(1)); // inc_shadows=1
+	add_skylight_bar_grid(bar_mat, skylight, bar_hwidth, col_spacing, num_cols, !dmax);
+	add_skylight_bar_grid(bar_mat, skylight, bar_hwidth, row_spacing, num_rows,  dmax);
+}
+

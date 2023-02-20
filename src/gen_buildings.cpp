@@ -1558,9 +1558,9 @@ void building_t::get_all_drawn_interior_verts(building_draw_t &bdraw) {
 		}
 		bdraw.add_section(*this, 0, *i, mat.wall_tex, mat.wall_color, dim_mask, 0, 0, 1, 0, 0.0, 0, 1.0, 1); // no AO; X/Y dims only, inverted normals
 	}
-	for (cube_t const &skylight : skylights) { // draw skylight edges
+	/*for (cube_t const &skylight : skylights) { // draw skylight edges - no longer needed now that bars are drawn
 		bdraw.add_section(*this, 0, skylight, mat.wall_tex, mat.wall_color, 3, 0, 0, 1, 0, 0.0, 0, 1.0, 1); // no AO; X/Y dims only, inverted normals
-	}
+	}*/
 	for (auto i = interior->elevators.begin(); i != interior->elevators.end(); ++i) {
 		bool const dim(i->dim), dir(i->dir);
 		float const spacing(i->get_wall_thickness()), frame_width(i->get_frame_width()); // space between inner/outer walls + frame around door

@@ -756,6 +756,7 @@ void building_room_geom_t::create_static_vbos(building_t const &building) {
 		default: break;
 		} // end switch
 	} // for i
+	add_skylights_details(building);
 	for (room_object_t &rug : rugs) {add_rug(rug);} // rugs are added last so that alpha blending of their edges works
 	// Note: verts are temporary, but cubes are needed for things such as collision detection with the player and ray queries for indir lighting
 	//highres_timer_t timer2("Gen Room Geom VBOs"); // < 2ms
