@@ -1949,8 +1949,9 @@ bool building_t::check_obj_occluded(cube_t const &c, point const &viewer_in, occ
 	point viewer(viewer_in);
 	maybe_inv_rotate_point(viewer); // rotate viewer pos into building space
 	bool const player_in_building(point_in_building_or_basement_bcube(viewer));
+	float const floor_spacing(get_window_vspace());
 	// if fully inside basement, and viewer outside building or not on first floor, will be occluded
-	if (c.z2() < ground_floor_z1 && (viewer.z > (ground_floor_z1 + get_window_vspace()) || !player_in_building)) return 1;
+	if (c.z2() < ground_floor_z1 && (viewer.z > (ground_floor_z1 + floor_spacing) || !player_in_building)) return 1;
 	point pts[8];
 	unsigned const npts(get_cube_corners(c.d, pts, viewer, 0)); // should return only the 6 visible corners
 	
@@ -1963,7 +1964,7 @@ bool building_t::check_obj_occluded(cube_t const &c, point const &viewer_in, occ
 	if (!c_is_building_part && (reflection_pass || player_in_building)) {
 		// viewer inside this building; includes shadow_only case and reflection_pass (even if reflected camera is outside the building);
 		// check floors/ceilings of this building
-		if (fabs(viewer.z - c.zc()) > (reflection_pass ? 1.0 : 0.5)*get_window_vspace()) { // on different floors
+		if (fabs(viewer.z - c.zc()) > (reflection_pass ? 1.0 : 0.5)*floor_spacing) { // on different floors
 			if (are_pts_occluded_by_any_cubes<0>(viewer, pts, npts, interior->fc_occluders, 2)) return 1;
 		}
 	}
@@ -1984,8 +1985,13 @@ bool building_t::check_obj_occluded(cube_t const &c, point const &viewer_in, occ
 	}
 	else if (!c_is_building_part && is_simple_cube()) { // player above this building; check if object is occluded by the roof
 		for (auto p = parts.begin(); p != get_real_parts_end(); ++p) {
+			float const roof_z(p->z2());
+			//if (viewer.z < roof_z) continue; // viewer below the roof - can't happen at the moment
+			if (c.z2() > roof_z) continue; // object above the roof
 			cube_t roof(*p);
-			roof.z1() = roof.z2() - get_fc_thickness();
+			roof.z1() = roof_z - get_fc_thickness();
+			// check if on top floor of roof with a skylight; could split the roof in this case, but that may not make much of a difference
+			if (c.z2() > (roof_z - floor_spacing) && check_skylight_intersection(roof)) continue;
 			bool not_occluded(0);
 
 			for (unsigned p = 0; p < npts; ++p) {
