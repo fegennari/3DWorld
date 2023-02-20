@@ -2701,6 +2701,7 @@ bool building_t::is_light_placement_valid(cube_t const &light, room_t const &roo
 	light_ext.expand_by_xy(pad);
 	if (!room.contains_cube(light_ext))     return 0; // room too small?
 	if (check_skylight_intersection(light)) return 0;
+	if (has_bcube_int(light, interior->elevators)) return 0;
 	light_ext.z1() = light_ext.z1() = light.z2() + get_fc_thickness(); // shift in between the ceiling and floor so that we can do a cube contains check
 	return any_cube_contains(light_ext, interior->fc_occluders);
 }
