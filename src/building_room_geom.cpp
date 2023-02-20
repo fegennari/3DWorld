@@ -1645,10 +1645,10 @@ cube_t get_elevator_car_panel(room_object_t const &c, float fc_thick_scale) {
 	float const dz(c.dz()), thickness(fc_thick_scale*dz), signed_thickness((c.dir ? 1.0 : -1.0)*thickness);
 	float const width(c.get_width()), frame_width(0.2*width), panel_width(min(0.9f*frame_width, 0.25f*dz)), front_face(c.d[c.dim][c.dir] - signed_thickness);
 	cube_t panel(c);
-	panel.d[c.dim][ c.dir] = front_face; // flush front inner wall
-	panel.d[c.dim][!c.dir] = front_face - 0.1f*signed_thickness; // set panel thickness
-	panel.d[!c.dim][0] = c.d[!c.dim][0] + 0.5f*(frame_width - panel_width) + thickness; // edge near the wall
-	panel.d[!c.dim][1] = panel.d[!c.dim][0] + panel_width - thickness; // edge near door
+	panel.d[ c.dim][ c.dir] = front_face; // flush front inner wall
+	panel.d[ c.dim][!c.dir] = front_face - 0.1f*signed_thickness; // set panel thickness
+	panel.d[!c.dim][0]      = c.d[!c.dim][0] + 0.5f*(frame_width - panel_width) + thickness; // edge near the wall
+	panel.d[!c.dim][1]      = panel.d[!c.dim][0] + panel_width - thickness; // edge near door
 	panel.z1() += 0.28*dz; panel.z2() -= 0.28*dz;
 	return panel;
 }
@@ -1658,7 +1658,7 @@ void building_room_geom_t::add_elevator(room_object_t const &c, elevator_t const
 	// elevator car, all materials are dynamic; no lighting scale
 	float const dz(c.dz()), thickness(fc_thick_scale*dz), dir_sign(c.dir ? 1.0 : -1.0), signed_thickness(dir_sign*thickness);
 	cube_t shaft(c);
-	min_eq(shaft.z2(), (e.z2() - thickness)); // prevent z-fighting when on the top floor of a building with a flat roof
+	min_eq(shaft.z2(), (e.z2() - ELEVATOR_Z2_SHIFT*thickness)); // prevent z-fighting when on the top floor of a building with a flat roof
 	cube_t floor_(shaft), ceil_(shaft), back(shaft);
 	floor_.z2() = c.z1() + thickness;
 	ceil_. z1() = c.z2() - thickness;
@@ -1780,13 +1780,12 @@ void building_room_geom_t::add_elevator_doors(elevator_t const &e, float fc_thic
 	rgeom_mat_t &mat(get_untextured_material(1, 1));
 	assert(e.car_obj_id < objs.size());
 	room_object_t const &car(objs[e.car_obj_id]); // elevator car for this elevator
-	float const fc_thick(fc_thick_scale*car.dz()), door_z2(e.z2() - fc_thick); // avoid clipping through skylights
+	float const fc_thick(fc_thick_scale*car.dz()), door_z2(e.z2() - ELEVATOR_Z2_SHIFT*fc_thick); // avoid clipping through skylights
 	float open_z1(e.z1()), open_z2(door_z2);
 
 	if (e.open_amt > 0.0) { // only draw the doors as open for the floor the elevator car is on
-		float const z_shrink(0.8*fc_thick); // shrink slightly to avoid clipping through the ceiling and floor
-		open_z1 = car.z1() + z_shrink;
-		open_z2 = min((car.z2() - z_shrink), door_z2);
+		open_z1 = car.z1() + 0.8*fc_thick; // shrink slightly to avoid clipping through the ceiling and floor
+		open_z2 = car.z2() - ELEVATOR_Z2_SHIFT*fc_thick;
 		assert(open_z1 < open_z2);
 	}
 	for (unsigned d = 0; d < 2; ++d) { // left/right doors, untextured for now

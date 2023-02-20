@@ -25,6 +25,7 @@ float const DOOR_THICK_TO_WIDTH    = 0.04; // ratio of door thickness to width f
 float const DEF_CITY_MIN_ALPHA     = 0.01;
 float const DOOR_WIDTH_SCALE       = 0.5;
 float const STAIRS_WALL_WIDTH_MULT = 0.15; // relative to the depth of a stair
+float const ELEVATOR_Z2_SHIFT      = 0.6; // shift downward, relative to ceiling thickness
 
 unsigned const NUM_BOTTLE_TYPES = 6;
 unsigned const NUM_BOOK_COLORS  = 16;

@@ -1571,7 +1571,7 @@ void building_t::get_all_drawn_interior_verts(building_draw_t &bdraw) {
 		unsigned dim_mask(3); // x and y dims enabled
 		dim_mask |= (1 << (i->get_door_face_id() + 3)); // disable the face for the door opening
 		cube_t shaft(*i);
-		shaft.z2() -= get_fc_thickness(); // avoid clipping through skylights
+		shaft.z2() -= ELEVATOR_Z2_SHIFT*get_fc_thickness(); // avoid clipping through skylights
 		bdraw.add_section(*this, 0, shaft, mat.wall_tex, mat.wall_color, dim_mask, 0, 0, 1, 0); // outer elevator is textured like the walls
 		cube_t entrance(shaft);
 		entrance.d[dim][!dir] = entrance.d[dim][dir] + (dir ? -1.0f : 1.0f)*spacing; // set correct thickness
@@ -1692,9 +1692,13 @@ void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_
 		for (auto i = details.begin(); i != details.end(); ++i) { // draw roof details
 			if (i->type != ROOF_OBJ_SKYLT) continue; // skylights only
 			tid_nm_pair_t tp;
-			tp.transparent = 1; // doesn't do anything? TODO: make this actually transparent
-			bdraw.add_cube(*this, *i, tp, colorRGBA(WHITE, 0.1), 0, 4, 0, 0, 0); // top and bottom only, untextured
-		}
+			tp.transparent = 1; // doesn't do anything?
+			cube_t glass(*i);
+			float const ceil_thickness(glass.dz());
+			glass.z1() += 0.50*ceil_thickness; // glass pane is only 25% of ceiling thickness
+			glass.z2() -= 0.25*ceil_thickness;
+			bdraw.add_cube(*this, glass, tp, colorRGBA(WHITE, 0.1), 0, 4, 0, 0, 0); // top and bottom only, untextured
+		} // for i
 	}
 	if (!global_building_params.windows_enabled() || (lights_pass ? !mat.add_wind_lights : !mat.add_windows)) { // no windows for this material
 		if (only_cont_pt_in) {cut_holes_for_ext_doors(bdraw, only_cont_pt, 0xFFFF);} // still need to draw holes for doors
