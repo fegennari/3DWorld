@@ -1640,6 +1640,11 @@ void building_room_geom_t::add_breaker_panel(room_object_t const &c) {
 	}
 }
 
+float get_elevator_z2_offset(elevator_t const &e, cube_t const &car, float fc_thick_scale) {
+	float const thickness(fc_thick_scale*car.dz()); // elevator car is one floor in height, we can use it in place of floor_spacing to calculate ceiling thickness
+	return ELEVATOR_Z2_SHIFT*thickness*(e.under_skylight ? 1.0 : 0.25); // more clearance needed for skylights
+}
+
 // Note: there is a lot duplicated with building_room_geom_t::add_elevator(), but we need a separate function for adding interior elevator buttons
 cube_t get_elevator_car_panel(room_object_t const &c, float fc_thick_scale) {
 	float const dz(c.dz()), thickness(fc_thick_scale*dz), signed_thickness((c.dir ? 1.0 : -1.0)*thickness);
@@ -1657,8 +1662,9 @@ void building_room_geom_t::add_elevator(room_object_t const &c, elevator_t const
 {
 	// elevator car, all materials are dynamic; no lighting scale
 	float const dz(c.dz()), thickness(fc_thick_scale*dz), dir_sign(c.dir ? 1.0 : -1.0), signed_thickness(dir_sign*thickness);
+	float const z2_offset(get_elevator_z2_offset(e, c, fc_thick_scale));
 	cube_t car(c);
-	min_eq(car.z2(), (e.z2() - ELEVATOR_Z2_SHIFT*thickness)); // prevent z-fighting when on the top floor of a building with a flat roof
+	min_eq(car.z2(), (e.z2() - z2_offset)); // prevent z-fighting when on the top floor of a building with a flat roof
 	cube_t floor_(car), ceil_(car), back(car);
 	floor_.z2() = c.z1() + thickness;
 	ceil_. z1() = c.z2() - thickness;
@@ -1780,7 +1786,8 @@ void building_room_geom_t::add_elevator_doors(elevator_t const &e, float fc_thic
 	rgeom_mat_t &mat(get_untextured_material(1, 1));
 	assert(e.car_obj_id < objs.size());
 	room_object_t const &car(objs[e.car_obj_id]); // elevator car for this elevator
-	float const fc_thick(fc_thick_scale*car.dz()), door_z2(e.z2() - ELEVATOR_Z2_SHIFT*fc_thick); // avoid clipping through skylights
+	float const z2_offset(get_elevator_z2_offset(e, car, fc_thick_scale));
+	float const fc_thick(fc_thick_scale*car.dz()), door_z2(e.z2() - z2_offset); // avoid clipping through skylights
 	float open_z1(e.z1()), open_z2(door_z2);
 
 	if (e.open_amt > 0.0) { // only draw the doors as open for the floor the elevator car is on

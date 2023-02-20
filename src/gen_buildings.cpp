@@ -1558,16 +1558,13 @@ void building_t::get_all_drawn_interior_verts(building_draw_t &bdraw) {
 		}
 		bdraw.add_section(*this, 0, *i, mat.wall_tex, mat.wall_color, dim_mask, 0, 0, 1, 0, 0.0, 0, 1.0, 1); // no AO; X/Y dims only, inverted normals
 	}
-	/*for (cube_t const &skylight : skylights) { // draw skylight edges - no longer needed now that bars are drawn
-		bdraw.add_section(*this, 0, skylight, mat.wall_tex, mat.wall_color, 3, 0, 0, 1, 0, 0.0, 0, 1.0, 1); // no AO; X/Y dims only, inverted normals
-	}*/
 	for (auto i = interior->elevators.begin(); i != interior->elevators.end(); ++i) {
 		bool const dim(i->dim), dir(i->dir);
 		float const spacing(i->get_wall_thickness()), frame_width(i->get_frame_width()); // space between inner/outer walls + frame around door
 		unsigned dim_mask(3); // x and y dims enabled
 		dim_mask |= (1 << (i->get_door_face_id() + 3)); // disable the face for the door opening
 		cube_t shaft(*i);
-		shaft.z2() -= ELEVATOR_Z2_SHIFT*get_fc_thickness(); // avoid clipping through skylights
+		shaft.z2() -= ELEVATOR_Z2_SHIFT*get_fc_thickness()*(i->under_skylight ? 1.0 : 0.25); // avoid clipping through skylights
 		bdraw.add_section(*this, 0, shaft, mat.wall_tex, mat.wall_color, dim_mask, 0, 0, 1, 0); // outer elevator is textured like the walls
 		cube_t entrance(shaft);
 		entrance.d[dim][!dir] = entrance.d[dim][dir] + (dir ? -1.0f : 1.0f)*spacing; // set correct thickness
