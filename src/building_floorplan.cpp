@@ -1354,10 +1354,7 @@ void building_t::add_ceiling_cube_no_skylights(cube_t const &c) {
 	}
 	vect_cube_t cubes;
 	cubes.push_back(c);
-
-	for (roof_obj_t const &obj : details) {
-		if (obj.type == ROOF_OBJ_SKYLT) {subtract_cube_from_cubes(obj, cubes);}
-	}
+	for (cube_t const &skylight : skylights) {subtract_cube_from_cubes(skylight, cubes);}
 	for (cube_t const &cube : cubes) {interior->ceilings.push_back(cube);}
 }
 
@@ -1738,12 +1735,7 @@ bool building_t::clip_part_ceiling_for_stairs(cube_t const &c, vect_cube_t &out,
 		subtract_cube_from_cubes(*e, out);
 	}
 	if (has_pg_ramp()) {subtract_cube_from_cubes(interior->pg_ramp, out);} // is this needed?
-
-	if (has_skylight) { // check skylights
-		for (roof_obj_t const &obj : details) {
-			if (obj.type == ROOF_OBJ_SKYLT) {subtract_cube_from_cubes(obj, out);}
-		}
-	}
+	for (cube_t const &skylight : skylights) {subtract_cube_from_cubes(skylight, out);} // check skylights
 	return 1;
 }
 

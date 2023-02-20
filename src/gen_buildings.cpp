@@ -1403,7 +1403,6 @@ void building_t::get_all_drawn_exterior_verts(building_draw_t &bdraw) { // exter
 			bdraw.add_cube(*this, *i, tid_nm_pair_t(ac_tid, -1, 0.3, 1.0), WHITE, 0, 3, 1, 0, 0); // XY with stretched texture, ws_texture=0
 			continue;
 		}
-		if (i->type == ROOF_OBJ_SKYLT) continue; // skylight drawn as windows, not here
 		bool const skip_bot(i->type != ROOF_OBJ_SCAP), pointed(i->type == ROOF_OBJ_ANT); // draw antenna as a point
 		building_t b(building_geom_t(4, rot_sin, rot_cos, pointed)); // cube
 		b.bcube = bcube;
@@ -1559,11 +1558,8 @@ void building_t::get_all_drawn_interior_verts(building_draw_t &bdraw) {
 		}
 		bdraw.add_section(*this, 0, *i, mat.wall_tex, mat.wall_color, dim_mask, 0, 0, 1, 0, 0.0, 0, 1.0, 1); // no AO; X/Y dims only, inverted normals
 	}
-	if (has_skylight) { // draw skylight edges
-		for (auto i = details.begin(); i != details.end(); ++i) { // draw roof details
-			if (i->type != ROOF_OBJ_SKYLT) continue; // skylights only
-			bdraw.add_section(*this, 0, *i, mat.wall_tex, mat.wall_color, 3, 0, 0, 1, 0, 0.0, 0, 1.0, 1); // no AO; X/Y dims only, inverted normals
-		}
+	for (cube_t const &skylight : skylights) { // draw skylight edges
+		bdraw.add_section(*this, 0, skylight, mat.wall_tex, mat.wall_color, 3, 0, 0, 1, 0, 0.0, 0, 1.0, 1); // no AO; X/Y dims only, inverted normals
 	}
 	for (auto i = interior->elevators.begin(); i != interior->elevators.end(); ++i) {
 		bool const dim(i->dim), dir(i->dir);
@@ -1688,17 +1684,16 @@ void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_
 	}
 	building_mat_t const &mat(get_material());
 
-	if (has_skylight && !no_skylights && !lights_pass) { // draw skylights
-		for (auto i = details.begin(); i != details.end(); ++i) { // draw roof details
-			if (i->type != ROOF_OBJ_SKYLT) continue; // skylights only
+	if (!no_skylights && !lights_pass) { // draw skylight glass
+		for (cube_t const &skylight : skylights) {
 			tid_nm_pair_t tp;
 			tp.transparent = 1; // doesn't do anything?
-			cube_t glass(*i);
+			cube_t glass(skylight);
 			float const ceil_thickness(glass.dz());
 			glass.z1() += 0.50*ceil_thickness; // glass pane is only 25% of ceiling thickness
 			glass.z2() -= 0.25*ceil_thickness;
 			bdraw.add_cube(*this, glass, tp, colorRGBA(WHITE, 0.1), 0, 4, 0, 0, 0); // top and bottom only, untextured
-		} // for i
+		} // for skylight
 	}
 	if (!global_building_params.windows_enabled() || (lights_pass ? !mat.add_wind_lights : !mat.add_windows)) { // no windows for this material
 		if (only_cont_pt_in) {cut_holes_for_ext_doors(bdraw, only_cont_pt, 0xFFFF);} // still need to draw holes for doors

@@ -1684,7 +1684,6 @@ void building_t::gen_details(rand_gen_t &rgen, bool is_rectangle) { // for the r
 	bool const can_have_hp_or_sl(flat_roof && num_sides >= 4 && flat_side_amt == 0.0 && !is_house);
 	has_helipad = (can_have_hp_or_sl && min(top.dx(), top.dy()) > (is_simple_cube() ? 3.2 : 4.0)*helipad_radius && bcube.dz() > 8.0*window_vspacing && (rgen.rand() % 12) == 0);
 	cube_t helipad_bcube;
-	vect_cube_t skylights;
 
 	if (has_helipad) { // add helipad
 		tquad_t helipad(4); // quad
@@ -1725,13 +1724,11 @@ void building_t::gen_details(rand_gen_t &rgen, bool is_rectangle) { // for the r
 			cube_t skylight;
 			for (unsigned d = 0; d < 2; ++d) {set_wall_width(skylight, center[d], hwidth[d], d);}
 			set_cube_zvals(skylight, roof_ceiling.z1(), roof_ceiling.z2());
-			details.emplace_back(skylight, ROOF_OBJ_SKYLT);
 			skylights.push_back(skylight);
-			has_skylight = 1;
 		} // for i
 	}
-	unsigned const num_blocks((flat_roof && !has_skylight) ? (rgen.rand() % 9) : 0); // 0-8; 0 if there are roof quads (houses, etc.)
-	bool const add_antenna((flat_roof || roof_type == ROOF_TYPE_SLOPE) && !has_helipad && !has_skylight && (rgen.rand() & 1));
+	unsigned const num_blocks((flat_roof && skylights.empty()) ? (rgen.rand() % 9) : 0); // 0-8; 0 if there are roof quads (houses, etc.)
+	bool const add_antenna((flat_roof || roof_type == ROOF_TYPE_SLOPE) && !has_helipad && skylights.empty() && (rgen.rand() & 1));
 	unsigned const num_details(num_blocks + num_ac_units + 4*add_walls + add_antenna);
 	if (num_details == 0) return; // nothing to do
 	if (add_walls && min(top.dx(), top.dy()) < 4.0*wall_width) return; // too small

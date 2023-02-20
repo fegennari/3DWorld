@@ -1156,7 +1156,7 @@ struct door_t : public door_base_t {
 typedef vector<door_stack_t> vect_door_stack_t;
 typedef vector<door_t> vect_door_t;
 
-enum {ROOF_OBJ_BLOCK=0, ROOF_OBJ_ANT, ROOF_OBJ_WALL, ROOF_OBJ_ECAP, ROOF_OBJ_AC, ROOF_OBJ_SCAP, ROOF_OBJ_SIGN, ROOF_OBJ_SKYLT};
+enum {ROOF_OBJ_BLOCK=0, ROOF_OBJ_ANT, ROOF_OBJ_WALL, ROOF_OBJ_ECAP, ROOF_OBJ_AC, ROOF_OBJ_SCAP, ROOF_OBJ_SIGN};
 enum {ROOF_TYPE_FLAT=0, ROOF_TYPE_SLOPE, ROOF_TYPE_PEAK, ROOF_TYPE_HIPPED, ROOF_TYPE_DOME, ROOF_TYPE_ONION};
 
 struct roof_obj_t : public cube_t {
@@ -1262,11 +1262,11 @@ struct building_t : public building_geom_t {
 	uint8_t street_dir=0; // encoded as 2*dim + dir + 1; 0 is unassigned
 	int8_t open_door_ix=-1, basement_part_ix=-1;
 	uint8_t has_chimney=0; // 0=none, 1=interior, 2=exterior with fireplace
-	bool is_house=0, has_garage=0, has_shed=0, has_int_garage=0, has_courtyard=0, has_complex_floorplan=0, has_helipad=0, has_ac=0, has_skylight=0;
+	bool is_house=0, has_garage=0, has_shed=0, has_int_garage=0, has_courtyard=0, has_complex_floorplan=0, has_helipad=0, has_ac=0;
 	bool has_int_fplace=0, has_parking_garage=0, has_small_part=0, has_basement_door=0, has_basement_pipes=0, parts_generated=0, is_in_city=0;
 	colorRGBA side_color=WHITE, roof_color=WHITE, detail_color=BLACK, door_color=WHITE, wall_color=WHITE;
 	cube_t bcube, pri_hall, driveway, porch, assigned_plot;
-	vect_cube_t parts, fences;
+	vect_cube_t parts, fences, skylights;
 	vect_roof_obj_t details; // cubes on the roof - antennas, AC units, etc.
 	vector<tquad_with_ix_t> roof_tquads, doors;
 	vector<colored_sphere_t> ext_lights;
