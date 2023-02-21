@@ -448,7 +448,7 @@ class building_indir_light_mgr_t {
 		point const ray_scale(scene_bounds.get_size()/light_bounds.get_size()), llc_shift(scene_bounds.get_llc() - light_bounds.get_llc()*ray_scale);
 		float const tolerance(1.0E-5*valid_area.get_max_extent());
 		bool const is_window(cur_light & IS_WINDOW_BIT);
-		bool in_attic(0), in_ext_basement(0);
+		bool in_attic(0), in_ext_basement(0), is_skylight(0);
 		float weight(100.0), light_radius(0.0);
 		point light_center;
 		cube_t light_cube;
@@ -459,15 +459,25 @@ class building_indir_light_mgr_t {
 			unsigned const window_ix(cur_light & ~IS_WINDOW_BIT);
 			assert(window_ix < windows.size());
 			cube_with_ix_t const &window(windows[window_ix]);
-			assert(window.ix < 4); // encodes 2*dim + dir
-			dim =  bool(window.ix >> 1);
-			dir = !bool(window.ix &  1); // cast toward the interior
-			// light intensity scales with surface area, since incoming light is a constant per unit area (large windows = more light)
-			float const surface_area(window.dz()*window.get_sz_dim(!bool(dim)));
-			lcolor     = outdoor_color;
-			weight    *= surface_area/0.0012f; // 1/4 the surface area weight of lights
+			float surface_area(0.0);
 			light_cube = window;
-			light_cube.translate_dim(dim, (dir ? 1.0 : -1.0)*0.5*b.get_wall_thickness()); // shift slightly inside the building to avoid collision with the exterior wall
+
+			if (window.dz() < min(window.dx(), window.dy())) { // we could encode skylights as a different ix, but testing aspect ratio is easier
+				is_skylight    = 1; // keep default dim=2, dir=0
+				surface_area   = window.dx()*window.dy();
+				base_num_rays *= 8; // more rays, since skylights are larger and can cover multiple rooms
+				light_cube.translate_dim(2, -b.get_fc_thickness()); // shift slightly down into the building to avoid collision with the roof/ceiling
+			}
+			else { // normal window
+				assert(window.ix < 4); // encodes 2*dim + dir
+				dim =  bool(window.ix >> 1);
+				dir = !bool(window.ix &  1); // cast toward the interior
+				surface_area = window.dz()*window.get_sz_dim(!bool(dim));
+				light_cube.translate_dim(dim, (dir ? 1.0 : -1.0)*0.5*b.get_wall_thickness()); // shift slightly inside the building to avoid collision with the exterior wall
+			}
+			// light intensity scales with surface area, since incoming light is a constant per unit area (large windows = more light)
+			lcolor  = outdoor_color;
+			weight *= surface_area/0.0012f; // 1/4 the surface area weight of lights
 		}
 		else { // room light or lamp, pointing downward
 			vect_room_object_t const &objs(b.interior->room_geom->objs);
@@ -505,7 +515,7 @@ class building_indir_light_mgr_t {
 			rand_gen_t rgen;
 			rgen.set_state(n+1, cur_light); // should be deterministic, though add_path_to_lmcs() is not (due to thread races)
 			vector3d pri_dir(rgen.signed_rand_vector_spherical(1.0).get_norm()); // should this be cosine weighted for windows?
-			if (dir < 2 && ((pri_dir[dim] > 0.0) ^ dir)) {pri_dir[dim] *= -1.0;}
+			if (is_window && ((pri_dir[dim] > 0.0) ^ dir)) {pri_dir[dim] *= -1.0;}
 			point origin, init_cpos, cpos;
 			vector3d init_cnorm, cnorm;
 			colorRGBA ccolor(WHITE);
@@ -521,7 +531,7 @@ class building_indir_light_mgr_t {
 			init_cpos = origin; // init value
 			bool const hit(b.ray_cast_interior(origin, pri_dir, valid_area, bvh, in_attic, in_ext_basement, init_cpos, init_cnorm, ccolor, &rgen));
 
-			// room lights lights already contribute direct lighting, so we skip this ray; however, windows don't, so we add their primary ray contribution
+			// room lights already contribute direct lighting, so we skip this ray; however, windows don't, so we add their primary ray contribution
 			if (is_window && init_cpos != origin) {
 				point const p1(origin*ray_scale + llc_shift), p2(init_cpos*ray_scale + llc_shift); // transform building space to global scene space
 				add_path_to_lmcs(&lmgr, nullptr, p1, p2, weight, lcolor*NUM_PRI_SPLITS, LIGHTING_LOCAL, 0); // local light, no bcube; scale color based on splits
@@ -583,7 +593,8 @@ class building_indir_light_mgr_t {
 			point const center(i->get_cube_center());
 			if (center.z < valid_area.z1() || center.z > valid_area.z2()) continue; // wrong floor
 			float dist_sq(p2p_dist_sq(center, target));
-			dist_sq *= 0.05f*window_vspacing/(i->dz()*(i->dx() + i->dy())); // account for the size of the window, larger window smaller/higher priority
+			float const surface_area(i->dx()*i->dy() + i->dx()*i->dz() + i->dy()*i->dz());
+			dist_sq *= 0.05f*window_vspacing/surface_area; // account for the size of the window, larger window smaller/higher priority
 			if (target_room >= 0 && b.get_room_containing_pt(center) == target_room) {dist_sq *= 0.1;} // prioritize the room the player is in
 			lights_to_sort.emplace_back(dist_sq, ((i - windows.begin()) | IS_WINDOW_BIT));
 		} // for i
@@ -888,6 +899,7 @@ void building_t::get_all_windows(vect_cube_with_ix_t &windows) const { // Note: 
 			}
 		} // for z
 	} // for i
+	for (cube_t const &skylight : skylights) {windows.emplace_back(skylight, 0);} // add skylights as vertical windows with ix=0
 }
 
 bool building_t::register_indir_lighting_state_change(unsigned light_ix, bool is_door_change) const {
