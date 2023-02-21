@@ -2590,11 +2590,15 @@ public:
 				// draw interior for the building containing the light
 				for (auto g = (*i)->grid_by_tile.begin(); g != (*i)->grid_by_tile.end(); ++g) {
 					if (player_in_basement == 3 && player_building && g->bcube.contains_cube_xy(player_building->bcube)) {} // skip culling
-					else if (!g->bcube.contains_pt(lpos)) continue; // wrong tile
+					else if (!g->bcube.contains_pt_xy(lpos)) continue; // wrong tile (note that z test is skipped to handle skylights)
 					
 					for (auto bi = g->bc_ixs.begin(); bi != g->bc_ixs.end(); ++bi) {
 						building_t &b((*i)->get_building(bi->ix));
-						if (!b.interior || !b.point_in_building_or_basement_bcube(lpos)) continue; // no interior or wrong building
+						if (!b.interior) continue; // no interior
+						point lpos_clamped(lpos);
+						// include skylight light sources, which are above the building; buildings can't stack vertically, so the light can't belong to a different building
+						if (!b.skylights.empty()) {min_eq(lpos_clamped.z, b.bcube.z2());}
+						if (!b.point_in_building_or_basement_bcube(lpos_clamped)) continue; // wrong building
 						(*i)->building_draw_interior.draw_quads_for_draw_range(s, b.interior->draw_range, 1); // shadow_only=1
 						b.add_split_roof_shadow_quads(ext_parts_draw);
 						// no batch draw for shadow pass since textures aren't used; draw everything, since shadow may be cached

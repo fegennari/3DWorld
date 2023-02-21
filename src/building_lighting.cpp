@@ -387,6 +387,11 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc, int only_this_fl
 }
 
 
+colorRGBA get_outdoor_light_color() {
+	calc_cur_ambient_diffuse(); // needed for correct outdoor color
+	return blend_color(cur_ambient, cur_diffuse, 0.5, 0); // a mix of each
+}
+
 unsigned const IS_WINDOW_BIT = (1<<24); // if this bit is set, the light is from a window; if not, it's from a light room object
 
 class building_indir_light_mgr_t {
@@ -664,7 +669,7 @@ public:
 			build_bvh(b, target);
 		}
 		calc_cur_ambient_diffuse(); // needed for correct outdoor color
-		colorRGBA const cur_outdoor_color(blend_color(cur_ambient, cur_diffuse, 0.5, 0)); // a mix of each
+		colorRGBA const cur_outdoor_color(get_outdoor_light_color());
 
 		if (!windows.empty() && cur_outdoor_color != outdoor_color) {
 			// outdoor color change, need to update lighting
@@ -1066,8 +1071,8 @@ void building_t::refine_light_bcube(point const &lpos, float light_radius, cube_
 	light_bcube = rays_bcube;
 }
 
-void assign_light_for_building_interior(light_source &ls, room_object_t const &obj, cube_t const &light_bcube, bool cache_shadows, bool is_lamp) {
-	unsigned const smap_id(uintptr_t(&obj)/sizeof(void *) + is_lamp); // use memory address as a unique ID; add 1 for lmaps to keep them separate
+void assign_light_for_building_interior(light_source &ls, void const *obj, cube_t const &light_bcube, bool cache_shadows, bool is_lamp=0) {
+	unsigned const smap_id(uintptr_t(obj)/sizeof(void *) + is_lamp); // use memory address as a unique ID; add 1 for lmaps to keep them separate
 	ls.assign_smap_mgr_id(1); // use a different smap manager than the city (cars + streetlights) so that they don't interfere with each other
 	if (!light_bcube.is_all_zeros()) {ls.set_custom_bcube(light_bcube);}
 	ls.assign_smap_id(cache_shadows ? smap_id : 0); // if cache_shadows, mark so that shadow map can be reused in later frames
@@ -1081,7 +1086,7 @@ void setup_light_for_building_interior(light_source &ls, room_object_t &obj, cub
 	uint16_t const sc_hash16(shadow_caster_hash ^ (shadow_caster_hash >> 16)); // combine upper and lower 16 bits into a single 16-bit value
 	// cache if no objects moved (based on position hashing) this frame or last frame, and we're not forced to do an update
 	bool const shadow_update(obj.item_flags != sc_hash16), cache_shadows(!shadow_update && !force_smap_update && (obj.flags & RO_FLAG_NODYNAM));
-	assign_light_for_building_interior(ls, obj, light_bcube, cache_shadows, 0); // is_lamp=0
+	assign_light_for_building_interior(ls, &obj, light_bcube, cache_shadows);
 	if (shadow_update) {obj.flags &= ~RO_FLAG_NODYNAM;} else {obj.flags |= RO_FLAG_NODYNAM;} // store prev update state in object flag
 	obj.item_flags = sc_hash16; // store current object hash in item flags
 }
@@ -1513,7 +1518,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			if (is_lamp) { // add a second shadowed light source pointing up
 				dl_sources.emplace_back(light_radius, lpos_rot, lpos_rot, color, 0, plus_z, 0.5*bwidth); // points up
 				// lamps are static and have no dynamic shadows, so always cache their shadow maps
-				assign_light_for_building_interior(dl_sources.back(), *i, light_bc2, 1, 1); // cache_shadows=1, is_lamp=1
+				assign_light_for_building_interior(dl_sources.back(), &(*i), light_bc2, 1, 1); // cache_shadows=1, is_lamp=1
 				dl_sources.emplace_back(0.15*light_radius, lpos_rot, lpos_rot, color); // add an additional small unshadowed light for ambient effect
 				dl_sources.back().set_custom_bcube(light_bc2); // not sure if this is helpful, but should be okay
 			}
@@ -1526,7 +1531,43 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			if (!light_bc2.is_all_zeros()) {dl_sources.back().set_custom_bcube(light_bc2);}
 			dl_sources.back().disable_shadows();
 		}
-	} // for i
+	} // for i (objs)
+	for (unsigned l = 0; l < NUM_LIGHT_SRC; ++l) { // {sun, moon}
+		point sun_moon_pos;
+		if (!light_valid_and_enabled(l) || !get_light_pos(sun_moon_pos, l)) continue;
+
+		for (cube_t const &skylight : skylights) { // add virtual spotlights for each skylight to simulate sun light
+			if (!lights_bcube.intersects_xy(skylight))      continue; // not contained within the light volume
+			if (camera_z < skylight.z1() - window_vspacing) continue; // player below the floor with the skylight; may not be valid when flying outside the building
+			cube_t lit_area(skylight);
+			lit_area.z2() += fc_thick; // include the tops of the skylight
+			lit_area.z1() -= window_vspacing; // floor below the skylight
+			point lpos(skylight.get_cube_center());
+			vector3d const light_dir((sun_moon_pos - lpos).get_norm());
+			float const light_dist(2.0*window_vspacing);
+			lpos += light_dist*light_dir;
+			bcube.clamp_pt_xy(lpos); // must be within the XY bounds of the bcube to pick up shadows from this building
+
+			for (room_t const &room : interior->rooms) {
+				if (room.has_skylight && room.intersects(skylight)) {lit_area.union_with_cube_xy(room);}
+			}
+			lit_area.expand_by_xy(room_xy_expand); // include walls
+			if (!is_rot_cube_visible(lit_area, xlate)) continue; // VFC - post clip
+			if ((display_mode & 0x08) && check_obj_occluded(lit_area, camera_bs, oc, 0)) continue; // occlusion culling - likely doesn't help
+			if (is_rotated()) {do_xy_rotate(building_center, lpos);} // ???
+			// TODO: directional shadowing light using cur_diffuse, plus weaker unshadowed vertical light using cur_ambient?
+			//calc_cur_ambient_diffuse(); // needed for correct outdoor color
+			//colorRGBA const color(cur_diffuse);
+			colorRGBA const color(get_outdoor_light_color());
+			float const light_radius(1.2*(skylight.dx() + skylight.dy()) + 1.5*light_dist); // ???
+			float const bwidth = 0.35; // ???
+			bool const cache_shadows = 0; // TODO
+			dl_sources.emplace_back(light_radius, lpos, lpos, cur_diffuse, 0, -plus_z, bwidth); // points down
+			assign_light_for_building_interior(dl_sources.back(), &skylight, lit_area, cache_shadows);
+			min_eq(lights_bcube.z1(), lit_area.z1());
+			max_eq(lights_bcube.z2(), lpos.z); // must include the light
+		} // for skylight
+	}
 }
 
 float room_t::get_light_amt() const { // Note: not normalized to 1.0
