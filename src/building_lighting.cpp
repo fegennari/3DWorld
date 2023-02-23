@@ -1533,40 +1533,58 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		}
 	} // for i (objs)
 	for (unsigned l = 0; l < NUM_LIGHT_SRC; ++l) { // {sun, moon}
+		if (skylights.empty()) continue;
 		point sun_moon_pos;
 		if (!light_valid_and_enabled(l) || !get_light_pos(sun_moon_pos, l)) continue;
+		float const camera_zval_check((camera_somewhat_by_stairs ? 2.0 : 1.0)*window_vspacing); // allow two floors below if player can see skylight from stairs
 
-		for (cube_t const &skylight : skylights) { // add virtual spotlights for each skylight to simulate sun light
-			if (!lights_bcube.intersects_xy(skylight))      continue; // not contained within the light volume
-			if (camera_z < skylight.z1() - window_vspacing) continue; // player below the floor with the skylight; may not be valid when flying outside the building
-			cube_t lit_area(skylight);
+		for (cube_t const &sl : skylights) { // add virtual spotlights for each skylight to simulate sun light
+			if (!lights_bcube.intersects_xy(sl))        continue; // not contained within the light volume
+			if (camera_z < sl.z1() - camera_zval_check) continue; // player below the floor with the skylight or the one below; invalid when flying outside the building?
+			cube_t lit_area(sl);
 			lit_area.z2() += fc_thick; // include the tops of the skylight
-			lit_area.z1() -= window_vspacing; // floor below the skylight
-			point lpos(skylight.get_cube_center());
+			point lpos(sl.get_cube_center());
 			vector3d const light_dir((sun_moon_pos - lpos).get_norm());
 			float const light_dist(2.0*window_vspacing);
 			lpos += light_dist*light_dir;
 			bcube.clamp_pt_xy(lpos); // must be within the XY bounds of the bcube to pick up shadows from this building
+			bool room_has_stairs(0);
 
 			for (room_t const &room : interior->rooms) {
-				if (room.has_skylight && room.intersects(skylight)) {lit_area.union_with_cube_xy(room);}
+				if (room.has_skylight && room.intersects(sl)) {
+					lit_area.union_with_cube_xy(room);
+					unsigned const num_floors(calc_num_floors(room, window_vspacing, 2.0*fc_thick));
+					room_has_stairs |= room.has_stairs_on_floor(num_floors - 1); // check for stairs on top floor
+				}
 			}
+			if (camera_somewhat_by_stairs && !room_has_stairs && camera_z < sl.z1() - window_vspacing) continue; // player below the floor with the skylight
+			lit_area.z1() -= (room_has_stairs ? 2.0 : 1.0)*window_vspacing; // floor below the skylight; two floors if a room has stairs
 			lit_area.expand_by_xy(room_xy_expand); // include walls
-			if (!is_rot_cube_visible(lit_area, xlate)) continue; // VFC - post clip
+			if (!is_rot_cube_visible(lit_area, xlate)) continue; // VFC
+			// further constrain bcube based on projected light rays through the corners of the skylight to prevent unshadowed light from passing through exterior walls
+			cube_t proj_bcube(sl);
+			float const z(sl.z2()); // top edge
+			point const corners[4] = {point(sl.x1(), sl.y1(), z), point(sl.x2(), sl.y1(), z), point(sl.x2(), sl.y2(), z), point(sl.x1(), sl.y2(), z)};
+			float const extend_amt(window_vspacing/light_dist); // length of light ray reaching the floor is this much longer than the length of the ray to the skylight
+			for (unsigned n = 0; n < 4; ++n) {proj_bcube.union_with_pt(corners[n] + extend_amt*(corners[n] - lpos));}
+			lit_area.intersect_with_cube_xy(proj_bcube);
+			if (!is_rot_cube_visible(lit_area, xlate)) continue; // VFC, again
 			if ((display_mode & 0x08) && check_obj_occluded(lit_area, camera_bs, oc, 0)) continue; // occlusion culling - likely doesn't help
 			if (is_rotated()) {do_xy_rotate(building_center, lpos);} // ???
 			// TODO: directional shadowing light using cur_diffuse, plus weaker unshadowed vertical light using cur_ambient?
-			//calc_cur_ambient_diffuse(); // needed for correct outdoor color
-			//colorRGBA const color(cur_diffuse);
 			colorRGBA const color(get_outdoor_light_color());
-			float const light_radius(1.2*(skylight.dx() + skylight.dy()) + 1.5*light_dist); // ???
-			float const bwidth = 0.35; // ???
-			bool const cache_shadows = 0; // TODO
-			dl_sources.emplace_back(light_radius, lpos, lpos, cur_diffuse, 0, -plus_z, bwidth); // points down
-			assign_light_for_building_interior(dl_sources.back(), &skylight, lit_area, cache_shadows);
+			float const dx(sl.dx()), dy(sl.dy()), diag_sz(sqrt(dx*dx + dy*dy));
+			float const light_radius(1.2*diag_sz + 1.5*light_dist); // ???
+			float const dp(light_dist/sqrt(light_dist*light_dist + 0.25f*diag_sz*diag_sz)), bwidth(0.5*(1.0 - dp));
+			//cout << TXT(light_dist) << TXT(diag_sz) << TXT(dp) << TXT(bwidth) << endl;
+			bool const cache_shadows = 0; // TODO: check for the light pos and all the usual dynamic object from above
+			//vector3d const dir(-light_dir); // points away from the sun/moon
+			vector3d const dir(-plus_z); // points downward; less correct, but less aliased
+			dl_sources.emplace_back(light_radius, lpos, lpos, cur_diffuse, 0, dir, bwidth);
+			assign_light_for_building_interior(dl_sources.back(), &sl, lit_area, cache_shadows);
 			min_eq(lights_bcube.z1(), lit_area.z1());
 			max_eq(lights_bcube.z2(), lpos.z); // must include the light
-		} // for skylight
+		} // for skylight sl
 	}
 }
 
