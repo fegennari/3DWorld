@@ -1478,23 +1478,29 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 				}
 			}
 		}
-		if (!force_smap_update && camera_near_building) {
-			if (building_action_key) {
-				force_smap_update = 1; // toggling a door state or interacting with objects will generally invalidate shadows in the building for that frame
-			}
-			if (check_building_people && !is_lamp) { // update shadow_caster_hash for moving people, but not for lamps, because their light points toward the floor
-				if (ped_bcubes.empty()) { // get all cubes on first light
-					for (person_t const &p : interior->people) {
-						// if this person is waiting and their location isn't changing,
-						// assume they have an idle animation playing and use the frame counter to make sure their shadows are updated each frame
-						unsigned const ix((some_person_has_idle_animation && p.waiting_start > 0) ? frame_counter : 0);
-						ped_bcubes.emplace_back(p.get_bcube(), ix);
-					}
+		if (!force_smap_update) {
+			bool check_people_shadows(camera_near_building);
+			// handle people visible through skylights when player is above and light is on the top floor of a room with a skylight
+			check_people_shadows |= (room.has_skylight && camera_bs.z > lpos.z && lpos.z > (room.z2() - 0.5*window_vspacing));
+			
+			if (check_people_shadows) {
+				if (building_action_key) {
+					force_smap_update = 1; // toggling a door state or interacting with objects will generally invalidate shadows in the building for that frame
 				}
-				check_for_shadow_caster(ped_bcubes, clipped_bc, lpos_rot, dshadow_radius, stairs_light, xlate, shadow_caster_hash);
+				if (check_building_people && !is_lamp) { // update shadow_caster_hash for moving people, but not for lamps, because their light points toward the floor
+					if (ped_bcubes.empty()) { // get all cubes on first light
+						for (person_t const &p : interior->people) {
+							// if this person is waiting and their location isn't changing,
+							// assume they have an idle animation playing and use the frame counter to make sure their shadows are updated each frame
+							unsigned const ix((some_person_has_idle_animation && p.waiting_start > 0) ? frame_counter : 0);
+							ped_bcubes.emplace_back(p.get_bcube(), ix);
+						}
+					}
+					check_for_shadow_caster(ped_bcubes, clipped_bc, lpos_rot, dshadow_radius, stairs_light, xlate, shadow_caster_hash);
+				}
+				// update shadow_caster_hash for moving objects
+				check_for_shadow_caster(moving_objs, clipped_bc, lpos_rot, dshadow_radius, stairs_light, xlate, shadow_caster_hash);
 			}
-			// update shadow_caster_hash for moving objects
-			check_for_shadow_caster(moving_objs, clipped_bc, lpos_rot, dshadow_radius, stairs_light, xlate, shadow_caster_hash);
 		}
 		// end dynamic shadows check
 		cube_t const clipped_bc_rot(is_rotated() ? get_rotated_bcube(clipped_bc) : clipped_bc);
