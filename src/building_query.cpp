@@ -653,8 +653,8 @@ bool building_t::check_pos_in_unlit_room(point const &pos) const {
 	set<unsigned> rooms_visited;
 	return check_pos_in_unlit_room_recur(pos, rooms_visited);
 }
-bool building_t::check_pos_in_unlit_room_recur(point const &pos, set<unsigned> &rooms_visited) const {
-	int const room_id(get_room_containing_pt(pos));
+bool building_t::check_pos_in_unlit_room_recur(point const &pos, set<unsigned> &rooms_visited, int known_room_id) const {
+	int const room_id((known_room_id >= 0) ? known_room_id : get_room_containing_pt(pos));
 	if (room_id < 0)    return 0; // not in a room
 	if (rooms_visited.find(room_id) != rooms_visited.end()) return 1; // already visited, return true
 	room_t const &room(get_room(room_id));
@@ -674,7 +674,8 @@ bool building_t::check_pos_in_unlit_room_recur(point const &pos, set<unsigned> &
 	}
 	rooms_visited.insert(room_id); // mark this room as visited before making recursive calls
 	// check for a light path through a series of open doors
-	float const floor_thickness(get_floor_thickness()), expand_val(1.1*get_wall_thickness()), floor_zval(room.z1() + floor_ix*floor_spacing);
+	float const floor_thickness(get_floor_thickness()), wall_thickness(get_wall_thickness());
+	float const expand_val(1.1*wall_thickness), floor_zval(room.z1() + floor_ix*floor_spacing);
 	cube_t room_exp(room);
 	room_exp.expand_by_xy(expand_val);
 	set_cube_zvals(room_exp, (floor_zval + floor_thickness), (floor_zval + floor_spacing - floor_thickness)); // clip to z-range of this floor
@@ -703,6 +704,19 @@ bool building_t::check_pos_in_unlit_room_recur(point const &pos, set<unsigned> &
 			bool room_is_above(room.z2() > s.z2());
 			point const pos2(s.xc(), s.yc(), (room.zc() + (room_is_above ? -1.0 : 1.0)*floor_spacing));
 			if (!check_pos_in_unlit_room_recur(pos2, rooms_visited)) return 0; // if adjacent room is lit, return false
+		}
+	}
+	// check for light through connected office building hallways
+	if (!is_house && room.is_hallway) {
+		cube_t test_cube(room);
+		test_cube.expand_by_xy(0.5*wall_thickness); // include adjacency, but don't expand enough to go through a wall
+
+		for (unsigned r = 0; r < interior->rooms.size(); ++r) {
+			if (r == room_id) continue; // same room, skip
+			room_t const &room2(interior->rooms[r]);
+			if (!room2.is_hallway || !room2.intersects(test_cube)) continue;
+			point const center(room2.get_cube_center());
+			if (!check_pos_in_unlit_room_recur(point(center.x, center.y, pos.z), rooms_visited, r)) return 0; // if adjacent room is lit, return false; room_id is known
 		}
 	}
 	return 1;
