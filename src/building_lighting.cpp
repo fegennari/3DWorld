@@ -1113,6 +1113,11 @@ float get_radius_for_room_light(room_object_t const &obj) {
 	return radius;
 }
 
+void hash_mix_point(point const &p, unsigned &shadow_caster_hash) {
+	shadow_caster_hash += hash_point(p);
+	shadow_caster_hash += shadow_caster_hash << 10;
+	shadow_caster_hash ^= shadow_caster_hash >> 6;
+}
 bool check_for_shadow_caster(vect_cube_with_ix_t const &cubes, cube_t const &light_bcube, point const &lpos,
 	float dmax, bool has_stairs, vector3d const &xlate, unsigned &shadow_caster_hash)
 {
@@ -1139,13 +1144,12 @@ bool check_for_shadow_caster(vect_cube_with_ix_t const &cubes, cube_t const &lig
 			}
 			//if ((display_mode & 0x08) && check_obj_occluded((cube_ext + xlate), get_camera_pos(), oc, 0)) continue; // occlusion culling - is this useful?
 			if (!camera_pdu.cube_visible(cube_ext + xlate)) { // VFC
-				shadow_caster_hash += hash_point(c->get_size()); // hash size rather than position to include the object's presence but not its position (sort of)
+				hash_mix_point(c->get_size(), shadow_caster_hash); // hash size rather than position to include the object's presence but not its position (sort of)
 				continue;
 			}
 		}
-		shadow_caster_hash += hash_point(center) + c->ix;
-		shadow_caster_hash += shadow_caster_hash << 10;
-		shadow_caster_hash ^= shadow_caster_hash >> 6;
+		shadow_caster_hash += c->ix;
+		hash_mix_point(center, shadow_caster_hash);
 		ret = 1;
 	} // for c
 	return ret;
@@ -1423,7 +1427,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			clip_cube.expand_in_dim(!e.dim, 0.1*room_xy_expand); // expand sides to include walls adjacent to elevator (enough to account for FP error)
 			if (e.open_amt > 0.0) {clip_cube.d[e.dim][e.dir] += (e.dir ? 1.0 : -1.0)*light_radius;} // allow light to extend outside open elevator door
 			clipped_bc.intersect_with_cube(clip_cube); // Note: clipped_bc is likely contained in clip_cube and could be replaced with it
-			if (e.is_moving()) {shadow_caster_hash += hash_point(e.get_llc());} // make sure to update shadows if elevator or its doors are potentially moving
+			if (e.is_moving()) {hash_mix_point(e.get_llc(), shadow_caster_hash);} // make sure to update shadows if elevator or its doors are potentially moving
 			if (e.open_amt > 0.0 && e.open_amt < 1.0) {shadow_caster_hash += hash_by_bytes<float>()(e.open_amt);} // update shadows if door is opening or closing
 		}
 		else {
@@ -1544,7 +1548,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		if (!light_valid_and_enabled(l) || !get_light_pos(sun_moon_pos, l)) continue;
 		float const camera_zval_check((camera_somewhat_by_stairs ? 2.0 : 1.0)*window_vspacing); // allow two floors below if player can see skylight from stairs
 
-		for (cube_t const &sl : skylights) { // add virtual spotlights for each skylight to simulate sun light
+		for (cube_with_ix_t &sl : skylights) { // add virtual spotlights for each skylight to simulate sun light
 			if (!lights_bcube.intersects_xy(sl))        continue; // not contained within the light volume
 			if (camera_z < sl.z1() - camera_zval_check) continue; // player below the floor with the skylight or the one below; invalid when flying outside the building?
 			cube_t lit_area(sl);
@@ -1582,8 +1586,19 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			float const dx(sl.dx()), dy(sl.dy()), diag_sz(sqrt(dx*dx + dy*dy));
 			float const light_radius(1.2*diag_sz + 1.5*light_dist); // ???
 			float const dp(light_dist/sqrt(light_dist*light_dist + 0.25f*diag_sz*diag_sz)), bwidth(0.5*(1.0 - dp));
-			//cout << TXT(light_dist) << TXT(diag_sz) << TXT(dp) << TXT(bwidth) << endl;
-			bool const cache_shadows = 0; // TODO: check for the light pos and all the usual dynamic object from above
+			// check for dynamic shadow casters
+			bool force_smap_update(building_action_key); // update if a door is open or closed
+			unsigned shadow_caster_hash(0);
+
+			if (camera_surf_collide && camera_in_building && lit_area.contains_pt(camera_bs)) {
+				force_smap_update   = 1;
+				shadow_caster_hash ^= 0xdeadbeef; // update hash when player enters or leaves the light's area
+			}
+			hash_mix_point(lpos, shadow_caster_hash); // update when light (sun/moon) pos changes
+			// TODO: check for people (need to factor out shared code?)
+			// what about dynamic objects such as balls? maybe they can be skipped because they're not in office buildings?
+			bool const cache_shadows(!force_smap_update && sl.ix == shadow_caster_hash);
+			sl.ix = shadow_caster_hash; // store new hashval in the skylight for next frame
 			//vector3d const dir(-light_dir); // points away from the sun/moon
 			vector3d const dir(-plus_z); // points downward; less correct, but less aliased
 			dl_sources.emplace_back(light_radius, lpos, lpos, cur_diffuse, 0, dir, bwidth);

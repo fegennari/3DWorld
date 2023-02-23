@@ -1268,7 +1268,8 @@ struct building_t : public building_geom_t {
 	bool has_int_fplace=0, has_parking_garage=0, has_small_part=0, has_basement_door=0, has_basement_pipes=0, parts_generated=0, is_in_city=0;
 	colorRGBA side_color=WHITE, roof_color=WHITE, detail_color=BLACK, door_color=WHITE, wall_color=WHITE;
 	cube_t bcube, pri_hall, driveway, porch, assigned_plot;
-	vect_cube_t parts, fences, skylights;
+	vect_cube_t parts, fences;
+	vect_cube_with_ix_t skylights;
 	vect_roof_obj_t details; // cubes on the roof - antennas, AC units, etc.
 	vector<tquad_with_ix_t> roof_tquads, doors;
 	vector<colored_sphere_t> ext_lights;
