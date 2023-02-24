@@ -1956,7 +1956,7 @@ bool building_t::check_obj_occluded(cube_t const &c, point const &viewer_in, occ
 	point pts[8];
 	unsigned const npts(get_cube_corners(c.d, pts, viewer, 0)); // should return only the 6 visible corners
 	
-	if (!reflection_pass && !c_is_building_part) {
+	if (!c_is_building_part && !reflection_pass) {
 		// check walls of this building; not valid for reflections because the reflected camera may be on the other side of a wall/mirror
 		for (unsigned d = 0; d < 2; ++d) {
 			if (are_pts_occluded_by_any_cubes<1>(viewer, pts, npts, interior->walls[d], d, c.get_sz_dim(!d))) return 1; // with size check (helps with light bcubes)
@@ -1992,8 +1992,11 @@ bool building_t::check_obj_occluded(cube_t const &c, point const &viewer_in, occ
 			if (c.z2()   > roof_z) continue; // object above the roof
 			cube_t roof(*p);
 			roof.z1() = roof_z - get_fc_thickness();
-			// check if on top floor of roof with a skylight; could split the roof in this case, but that may not make much of a difference
-			if (c.z2() > (roof_z - floor_spacing) && check_skylight_intersection(roof)) continue;
+			
+			// check if on top floor of roof with a skylight, on on the stairs of the floor below; could split the roof in this case, but that may not make much of a difference
+			if ((c.z2() > (roof_z - floor_spacing) || (c.z2() > (roof_z - 2.0f*floor_spacing) && has_bcube_int(c, interior->stairwells))) && check_skylight_intersection(roof)) {
+				continue;
+			}
 			bool not_occluded(0);
 
 			for (unsigned p = 0; p < npts; ++p) {
