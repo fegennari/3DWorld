@@ -1977,6 +1977,9 @@ bool building_t::check_obj_occluded(cube_t const &c, point const &viewer_in, occ
 				for (unsigned d = 0; d < 2; ++d) { // check walls of the building the player is in; can't use min_sz due to perspective effect of walls near the camera
 					if (are_pts_occluded_by_any_cubes<0>(viewer, pts, npts, player_building->interior->walls[d], d)) return 1;
 				}
+				if (fabs(viewer.z - c.zc()) > floor_spacing) { // check floors and ceilings of the building the player is in
+					if (are_pts_occluded_by_any_cubes<0>(viewer, pts, npts, player_building->interior->fc_occluders, 2)) return 1;
+				}
 			}
 		}
 	}
