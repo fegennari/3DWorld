@@ -1699,8 +1699,8 @@ void building_t::gen_details(rand_gen_t &rgen, bool is_rectangle) { // for the r
 		roof_tquads.emplace_back(helipad, (uint8_t)tquad_with_ix_t::TYPE_HELIPAD);
 		helipad_bcube = helipad.get_bcube();
 	}
-	else if (can_have_hp_or_sl && is_cube()) {
-		// maybe add skylights; cube roofs only for now, since we can't cut holes in other shapes and they have no interiors;
+	else if (can_have_hp_or_sl && is_cube() && interior_enabled()) {
+		// maybe add skylights; cube roofs only for now, since we can't cut holes in other shapes; only for buildings with interiors;
 		// note that at this point there has been no floorplanning, so we don't know where primary hallways, etc. will be
 		float part_zmax(bcube.z1());
 		for (cube_t const &part : parts) {max_eq(part_zmax, part.z2());}
