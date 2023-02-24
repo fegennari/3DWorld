@@ -930,6 +930,12 @@ bool building_t::add_bathroom_objs(rand_gen_t rgen, room_t &room, float &zval, u
 {
 	// Note: zval passed by reference
 	float const floor_spacing(get_window_vspace()), wall_thickness(get_wall_thickness());
+
+	if (!skylights.empty()) { // check for skylights
+		cube_t test_cube(room);
+		set_cube_zvals(test_cube, zval, zval+floor_spacing);
+		if (check_skylight_intersection(test_cube)) return 0;
+	}
 	cube_t room_bounds(get_walkable_room_bounds(room)), place_area(room_bounds);
 	place_area.expand_by(-0.5*wall_thickness);
 	if (min(place_area.dx(), place_area.dy()) < 0.7*floor_spacing) return 0; // room is too small (should be rare)
