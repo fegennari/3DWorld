@@ -1127,7 +1127,7 @@ bool check_for_shadow_caster(vect_cube_with_ix_t const &cubes, cube_t const &lig
 		if (lpos.z < c->z1()) continue; // light is below the object's bottom; assumes lights are spotlights pointed downward
 		if (!c->intersects(light_bcube)) continue; // object not within light area of effect
 		point const center(c->get_cube_center());
-		if (!dist_less_than(lpos, center, dmax)) continue; // too far from light to cast a visible shadow
+		if (dmax > 0.0 && !dist_less_than(lpos, center, dmax)) continue; // too far from light to cast a visible shadow
 		
 		if (!has_stairs) {
 			// check for camera visibility of the union of the cube and the intersection points of the light rays
@@ -1153,6 +1153,23 @@ bool check_for_shadow_caster(vect_cube_with_ix_t const &cubes, cube_t const &lig
 		ret = 1;
 	} // for c
 	return ret;
+}
+void check_for_shadow_caster_people(vector<person_t> const &people, vect_cube_with_ix_t &ped_bcubes, vect_cube_with_ix_t const &moving_objs,
+	cube_t const &light_bcube, point const &lpos, float dmax, bool has_stairs, vector3d const &xlate, bool check_people, unsigned &shadow_caster_hash)
+{
+	if (check_people) { // update shadow_caster_hash for moving people, but not for lamps, because their light points toward the floor
+		if (ped_bcubes.empty()) { // get all cubes on first light
+			for (person_t const &p : people) {
+				// if this person is waiting and their location isn't changing,
+				// assume they have an idle animation playing and use the frame counter to make sure their shadows are updated each frame
+				unsigned const ix((some_person_has_idle_animation && p.waiting_start > 0) ? frame_counter : 0);
+				ped_bcubes.emplace_back(p.get_bcube(), ix);
+			}
+		}
+		check_for_shadow_caster(ped_bcubes, light_bcube, lpos, dmax, has_stairs, xlate, shadow_caster_hash);
+	}
+	// update shadow_caster_hash for moving objects
+	check_for_shadow_caster(moving_objs, light_bcube, lpos, dmax, has_stairs, xlate, shadow_caster_hash);
 }
 
 // Note: non const because this caches light_bcubes
@@ -1483,27 +1500,14 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			}
 		}
 		if (!force_smap_update) {
-			bool check_people_shadows(camera_near_building);
+			bool check_dynamic_shadows(camera_near_building);
 			// handle people visible through skylights when player is above and light is on the top floor of a room with a skylight
-			check_people_shadows |= (room.has_skylight && camera_bs.z > lpos.z && lpos.z > (room.z2() - 0.5*window_vspacing));
+			check_dynamic_shadows |= (room.has_skylight && camera_bs.z > lpos.z && lpos.z > (room.z2() - 0.5*window_vspacing));
 			
-			if (check_people_shadows) {
-				if (building_action_key) {
-					force_smap_update = 1; // toggling a door state or interacting with objects will generally invalidate shadows in the building for that frame
-				}
-				if (check_building_people && !is_lamp) { // update shadow_caster_hash for moving people, but not for lamps, because their light points toward the floor
-					if (ped_bcubes.empty()) { // get all cubes on first light
-						for (person_t const &p : interior->people) {
-							// if this person is waiting and their location isn't changing,
-							// assume they have an idle animation playing and use the frame counter to make sure their shadows are updated each frame
-							unsigned const ix((some_person_has_idle_animation && p.waiting_start > 0) ? frame_counter : 0);
-							ped_bcubes.emplace_back(p.get_bcube(), ix);
-						}
-					}
-					check_for_shadow_caster(ped_bcubes, clipped_bc, lpos_rot, dshadow_radius, stairs_light, xlate, shadow_caster_hash);
-				}
-				// update shadow_caster_hash for moving objects
-				check_for_shadow_caster(moving_objs, clipped_bc, lpos_rot, dshadow_radius, stairs_light, xlate, shadow_caster_hash);
+			if (check_dynamic_shadows) {
+				if (building_action_key) {force_smap_update = 1;} // toggling a door state or interacting with objects invalidates shadows in the building for that frame
+				check_for_shadow_caster_people(interior->people, ped_bcubes, moving_objs, clipped_bc, lpos_rot,
+					dshadow_radius, stairs_light, xlate, (check_building_people && !is_lamp), shadow_caster_hash); // no people shadows for lam[s
 			}
 		}
 		// end dynamic shadows check
@@ -1590,13 +1594,15 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			bool force_smap_update(building_action_key); // update if a door is open or closed
 			unsigned shadow_caster_hash(0);
 
-			if (camera_surf_collide && camera_in_building && lit_area.contains_pt(camera_bs)) {
+			if (camera_surf_collide && camera_in_building && lit_area.contains_pt(camera_rot)) {
 				force_smap_update   = 1;
 				shadow_caster_hash ^= 0xdeadbeef; // update hash when player enters or leaves the light's area
 			}
+			if (!force_smap_update && ((camera_near_building && camera_bs.z > lit_area.z1()) || camera_bs.z > z)) {
+				check_for_shadow_caster_people(interior->people, ped_bcubes, moving_objs, lit_area, lpos,
+					0.0, room_has_stairs, xlate, check_building_people, shadow_caster_hash); // dmax=0
+			}
 			hash_mix_point(lpos, shadow_caster_hash); // update when light (sun/moon) pos changes
-			// TODO: check for people (need to factor out shared code?)
-			// what about dynamic objects such as balls? maybe they can be skipped because they're not in office buildings?
 			bool const cache_shadows(!force_smap_update && sl.ix == shadow_caster_hash);
 			sl.ix = shadow_caster_hash; // store new hashval in the skylight for next frame
 			//vector3d const dir(-light_dir); // points away from the sun/moon
