@@ -3648,8 +3648,11 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 		// if this is the top landing, we need to add a floor sign on the ceiling above it for the top floor
 		if (i->is_at_top && !i->roof_access) {
 			sign.translate_dim(2, window_vspacing); // move up one floor
-			objs.emplace_back(sign, TYPE_SIGN, 0, i->dim, !i->dir, (RO_FLAG_NOCOLL | RO_FLAG_HANGING), 1.0, SHAPE_CUBE, DK_BLUE); // no room_id
-			set_floor_text_for_sign(objs.back(), (real_floor + 1), floor_offset, has_parking_garage, oss);
+
+			if (!check_skylight_intersection(sign)) { // don't hang floor sign from skylight? should it be off to the side of the stairs instead?
+				objs.emplace_back(sign, TYPE_SIGN, 0, i->dim, !i->dir, (RO_FLAG_NOCOLL | RO_FLAG_HANGING), 1.0, SHAPE_CUBE, DK_BLUE); // no room_id
+				set_floor_text_for_sign(objs.back(), (real_floor + 1), floor_offset, has_parking_garage, oss);
+			}
 		}
 	} // for i
 
