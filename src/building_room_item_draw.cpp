@@ -1997,7 +1997,7 @@ bool building_t::check_obj_occluded(cube_t const &c, point const &viewer_in, occ
 			roof.z1() = roof_z - get_fc_thickness();
 			
 			// check if on top floor of roof with a skylight, on on the stairs of the floor below; could split the roof in this case, but that may not make much of a difference
-			if ((c.z2() > (roof_z - floor_spacing) || (c.z2() > (roof_z - 2.0f*floor_spacing) && has_bcube_int(c, interior->stairwells))) && check_skylight_intersection(roof)) {
+			if ((c.z2() > (roof_z - floor_spacing) || (c.z2() > (roof_z - 2.0f*floor_spacing) && check_cube_on_or_near_stairs(c))) && check_skylight_intersection(roof)) {
 				continue;
 			}
 			bool not_occluded(0);

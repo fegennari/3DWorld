@@ -1263,6 +1263,17 @@ bool building_t::line_intersect_stairs_or_ramp(point const &p1, point const &p2)
 	return has_cube_line_coll(p1, p2, interior->stairwells);
 }
 
+bool building_t::check_cube_on_or_near_stairs(cube_t const &c) const {
+	float const doorway_width(get_doorway_width());
+
+	for (auto s = interior->stairwells.begin(); s != interior->stairwells.end(); ++s) {
+		cube_t tc(*s);
+		tc.expand_in_dim(s->dim, doorway_width); // add extra space at both ends of stairs
+		if (tc.intersects(c)) return 1;
+	}
+	return 0;
+}
+
 // Note: for procedural object placement; no expanded_objs, but includes blockers
 bool building_t::overlaps_other_room_obj(cube_t const &c, unsigned objs_start, bool check_all) const {
 	assert(has_room_geom());
