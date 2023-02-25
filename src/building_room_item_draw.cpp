@@ -1790,13 +1790,14 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, building_t c
 }
 
 template<bool check_sz, typename T> bool are_pts_occluded_by_any_cubes(point const &pt, point const *const pts, unsigned npts,
-	vector<T> const &cubes, unsigned dim, float min_sz=0.0)
+	vector<T> const &cubes, unsigned dim, float min_sz=0.0, float max_sep_dist=0.0)
 {
 	assert(npts > 0);
 
 	for (auto c = cubes.begin(); c != cubes.end(); ++c) {
 		if (check_sz && c->get_sz_dim(!dim) < min_sz) break; // too small an occluder; since cubes are sorted by size in this dim, we can exit the loop here
 		if (dim <= 2 && (pt[dim] < c->d[dim][0]) == (pts[0][dim] < c->d[dim][0])) continue; // skip if cube face does not separate pt from the first point (dim > 2 disables)
+		if (max_sep_dist > 0.0 && fabs(pt[dim] - c->get_center_dim(dim)) > max_sep_dist) continue; // check only one floor below/ceiling above
 		if (!check_line_clip(pt, pts[0], c->d)) continue; // first point does not intersect
 		bool not_occluded(0);
 
@@ -1966,7 +1967,7 @@ bool building_t::check_obj_occluded(cube_t const &c, point const &viewer_in, occ
 		// viewer inside this building; includes shadow_only case and reflection_pass (even if reflected camera is outside the building);
 		// check floors/ceilings of this building
 		if (fabs(viewer.z - c.zc()) > (reflection_pass ? 1.0 : 0.5)*floor_spacing) { // on different floors
-			if (are_pts_occluded_by_any_cubes<0>(viewer, pts, npts, interior->fc_occluders, 2)) return 1;
+			if (are_pts_occluded_by_any_cubes<0>(viewer, pts, npts, interior->fc_occluders, 2, 0.0, floor_spacing)) return 1; // max_sep_dist=floor_spacing
 		}
 	}
 	else if (camera_in_building) { // player in some other building
@@ -1977,8 +1978,8 @@ bool building_t::check_obj_occluded(cube_t const &c, point const &viewer_in, occ
 				for (unsigned d = 0; d < 2; ++d) { // check walls of the building the player is in; can't use min_sz due to perspective effect of walls near the camera
 					if (are_pts_occluded_by_any_cubes<0>(viewer, pts, npts, player_building->interior->walls[d], d)) return 1;
 				}
-				if (fabs(viewer.z - c.zc()) > floor_spacing) { // check floors and ceilings of the building the player is in
-					if (are_pts_occluded_by_any_cubes<0>(viewer, pts, npts, player_building->interior->fc_occluders, 2)) return 1;
+				if (fabs(viewer.z - c.zc()) > 0.5*floor_spacing) { // check floors and ceilings of the building the player is in
+					if (are_pts_occluded_by_any_cubes<0>(viewer, pts, npts, player_building->interior->fc_occluders, 2, 0.0, floor_spacing)) return 1;
 				}
 			}
 		}
