@@ -714,7 +714,7 @@ bool building_t::check_pos_in_unlit_room_recur(point const &pos, set<unsigned> &
 		test_cube.expand_by_xy(0.5*wall_thickness); // include adjacency, but don't expand enough to go through a wall
 
 		for (unsigned r = 0; r < interior->rooms.size(); ++r) {
-			if (r == room_id) continue; // same room, skip
+			if ((int)r == room_id) continue; // same room, skip
 			room_t const &room2(interior->rooms[r]);
 			if (!room2.is_hallway || !room2.intersects(test_cube)) continue;
 			point const center(room2.get_cube_center());

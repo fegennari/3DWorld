@@ -453,7 +453,7 @@ class building_indir_light_mgr_t {
 		point const ray_scale(scene_bounds.get_size()/light_bounds.get_size()), llc_shift(scene_bounds.get_llc() - light_bounds.get_llc()*ray_scale);
 		float const tolerance(1.0E-5*valid_area.get_max_extent());
 		bool const is_window(cur_light & IS_WINDOW_BIT);
-		bool in_attic(0), in_ext_basement(0), is_skylight(0);
+		bool in_attic(0), in_ext_basement(0);
 		float weight(100.0), light_radius(0.0);
 		point light_center;
 		cube_t light_cube;
@@ -468,7 +468,6 @@ class building_indir_light_mgr_t {
 			light_cube = window;
 
 			if (window.dz() < min(window.dx(), window.dy())) { // we could encode skylights as a different ix, but testing aspect ratio is easier
-				is_skylight    = 1; // keep default dim=2, dir=0
 				surface_area   = window.dx()*window.dy();
 				base_num_rays *= 8; // more rays, since skylights are larger and can cover multiple rooms
 				light_cube.translate_dim(2, -b.get_fc_thickness()); // shift slightly down into the building to avoid collision with the roof/ceiling
