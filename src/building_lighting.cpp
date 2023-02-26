@@ -1558,7 +1558,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			lit_area.z2() += fc_thick; // include the tops of the skylight
 			point lpos(sl.get_cube_center());
 			vector3d const light_dir((sun_moon_pos - lpos).get_norm());
-			float const light_dist(2.0*window_vspacing);
+			float const light_dist(3.0*window_vspacing); // larger is more physically correct (directional), but produces lower shadow resolution due to wasted texels
 			lpos += light_dist*light_dir;
 			bcube.clamp_pt_xy(lpos); // must be within the XY bounds of the bcube to pick up shadows from this building
 			bool room_has_stairs(0);
@@ -1582,13 +1582,22 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			for (unsigned n = 0; n < 4; ++n) {proj_bcube.union_with_pt(corners[n] + extend_amt*(corners[n] - lpos));}
 			lit_area.intersect_with_cube_xy(proj_bcube);
 			if (!is_rot_cube_visible(lit_area, xlate)) continue; // VFC, again
-			if ((display_mode & 0x08) && check_obj_occluded(lit_area, camera_bs, oc, 0)) continue; // occlusion culling - likely doesn't help
+			if ((display_mode & 0x08) && !lit_area.contains_pt(camera_rot) && check_obj_occluded(lit_area, camera_bs, oc, 0)) continue; // occlusion culling
 			if (is_rotated()) {do_xy_rotate(building_center, lpos);} // ???
 			// TODO: directional shadowing light using cur_diffuse, plus weaker unshadowed vertical light using cur_ambient?
 			colorRGBA const color(get_outdoor_light_color());
 			float const dx(sl.dx()), dy(sl.dy()), diag_sz(sqrt(dx*dx + dy*dy));
-			float const light_radius(1.2*diag_sz + 1.5*light_dist); // ???
-			float const dp(light_dist/sqrt(light_dist*light_dist + 0.25f*diag_sz*diag_sz)), bwidth(0.5*(1.0 - dp));
+			float const light_radius(1.2*diag_sz + 1.5*light_dist); // determined experimentally
+			float corner_horiz_dist(0.0);
+			bool const dir_always_vertical = 1;
+
+			if (dir_always_vertical) { // make the light dir vertical/Z to avoid aliasing artifacts, though this is less physically correct
+				for (unsigned n = 0; n < 4; ++n) {max_eq(corner_horiz_dist, p2p_dist_xy(lpos, corners[n]));} // find the furthest corner
+			}
+			else { // change the light direction correctly
+				corner_horiz_dist = 0.5*diag_sz; // calculate the radius
+			}
+			float const dp(light_dist/sqrt(light_dist*light_dist + corner_horiz_dist*corner_horiz_dist)), bwidth(0.5*(1.0 - dp));
 			// check for dynamic shadow casters
 			bool force_smap_update(building_action_key); // update if a door is open or closed
 			unsigned shadow_caster_hash(0);
@@ -1604,8 +1613,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			hash_mix_point(lpos, shadow_caster_hash); // update when light (sun/moon) pos changes
 			bool const cache_shadows(!force_smap_update && sl.ix == shadow_caster_hash);
 			sl.ix = shadow_caster_hash; // store new hashval in the skylight for next frame
-			//vector3d const dir(-light_dir); // points away from the sun/moon
-			vector3d const dir(-plus_z); // points downward; less correct, but less aliased
+			vector3d const dir(dir_always_vertical ? -plus_z : -light_dir); // points either downward or away from the sun/moon
 			dl_sources.emplace_back(light_radius, lpos, lpos, cur_diffuse, 0, dir, bwidth);
 			assign_light_for_building_interior(dl_sources.back(), &sl, lit_area, cache_shadows);
 			min_eq(lights_bcube.z1(), lit_area.z1());
