@@ -376,23 +376,18 @@ bool sphere_in_view(pos_dir_up const &pdu, point const &pos, float radius, int m
 
 
 int get_light_pos(point &lpos, int light) {
-
 	if      (light == LIGHT_SUN ) {lpos = sun_pos;  return 1;}
 	else if (light == LIGHT_MOON) {lpos = moon_pos; return 1;}
 	return 0;
 }
 
-
 inline bool back_face_test(int xpos, int ypos, point const &lpos) {
-
 	point pos;
 	get_matrix_point(xpos, ypos, pos);
 	return (dot_product_ptv(vertex_normals[ypos][xpos], lpos, pos) < 0.0); // back-face culling
 }
 
-
 bool light_visible_from_vertex(int xpos, int ypos, point const &lpos, int fast) {
-
 	point pos;
 	get_matrix_point(xpos, ypos, pos);
 	pos += vertex_normals[ypos][xpos]*NORM_VIS_EXTEND; // small offset so that line does not intersect with the starting surface

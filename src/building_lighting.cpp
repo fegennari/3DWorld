@@ -454,10 +454,11 @@ class building_indir_light_mgr_t {
 		float const tolerance(1.0E-5*valid_area.get_max_extent());
 		bool const is_window(cur_light & IS_WINDOW_BIT);
 		bool in_attic(0), in_ext_basement(0);
-		float weight(100.0), light_radius(0.0);
+		float weight(100.0), light_radius(0.0), pri_dir_blend(0.0);
 		point light_center;
 		cube_t light_cube;
 		colorRGBA lcolor;
+		vector3d light_dir;
 		assert(cur_light >= 0);
 
 		if (is_window) { // window
@@ -467,10 +468,14 @@ class building_indir_light_mgr_t {
 			float surface_area(0.0);
 			light_cube = window;
 
-			if (window.dz() < min(window.dx(), window.dy())) { // we could encode skylights as a different ix, but testing aspect ratio is easier
+			if (window.dz() < min(window.dx(), window.dy())) { // skylight; we could encode skylights as a different ix, but testing aspect ratio is easier
 				surface_area   = window.dx()*window.dy();
 				base_num_rays *= 8; // more rays, since skylights are larger and can cover multiple rooms
 				light_cube.translate_dim(2, -b.get_fc_thickness()); // shift slightly down into the building to avoid collision with the roof/ceiling
+#if 0 // select primary light rays oriented away from the sun/moon; doesn't work well due to reduced ray scattering, and requires indir to be recomputed when sun/moon pos changes
+				light_dir     = -get_light_pos().get_norm();
+				pri_dir_blend = 1.0 - cur_ambient.get_luminance()/cur_diffuse.get_luminance();
+#endif
 			}
 			else { // normal window
 				assert(window.ix < 4); // encodes 2*dim + dir
@@ -519,7 +524,8 @@ class building_indir_light_mgr_t {
 			rand_gen_t rgen;
 			rgen.set_state(n+1, cur_light); // should be deterministic, though add_path_to_lmcs() is not (due to thread races)
 			vector3d pri_dir(rgen.signed_rand_vector_spherical(1.0).get_norm()); // should this be cosine weighted for windows?
-			if (is_window && ((pri_dir[dim] > 0.0) ^ dir)) {pri_dir[dim] *= -1.0;}
+			if (pri_dir_blend > 0.0) {pri_dir = ((1.0 - pri_dir_blend)*pri_dir + pri_dir_blend*light_dir).get_norm();} // if light is directional (skylight), prefer light_dir
+			if (is_window && ((pri_dir[dim] > 0.0) ^ dir)) {pri_dir[dim] *= -1.0;} // reflect light if needed about window plane to ensure it enters the room
 			point origin, init_cpos, cpos;
 			vector3d init_cnorm, cnorm;
 			colorRGBA ccolor(WHITE);
@@ -903,7 +909,9 @@ void building_t::get_all_windows(vect_cube_with_ix_t &windows) const { // Note: 
 			}
 		} // for z
 	} // for i
-	for (cube_t const &skylight : skylights) {windows.emplace_back(skylight, 0);} // add skylights as vertical windows with ix=0
+	if (get_light_pos().z > 0.0) { // if primary light (sun/moon) is above the horizon, add skylight indir lighting
+		for (cube_t const &skylight : skylights) {windows.emplace_back(skylight, 0);} // add skylights as vertical windows with ix=0
+	}
 }
 
 bool building_t::register_indir_lighting_state_change(unsigned light_ix, bool is_door_change) const {
