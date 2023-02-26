@@ -389,7 +389,7 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc, int only_this_fl
 
 colorRGBA get_outdoor_light_color() {
 	calc_cur_ambient_diffuse(); // needed for correct outdoor color
-	return blend_color(cur_ambient, cur_diffuse, 0.5, 0); // a mix of each
+	return (cur_ambient + cur_diffuse); // sum of each
 }
 
 unsigned const IS_WINDOW_BIT = (1<<24); // if this bit is set, the light is from a window; if not, it's from a light room object
@@ -486,7 +486,7 @@ class building_indir_light_mgr_t {
 			}
 			// light intensity scales with surface area, since incoming light is a constant per unit area (large windows = more light)
 			lcolor  = outdoor_color;
-			weight *= surface_area/0.0012f; // 1/4 the surface area weight of lights
+			weight *= surface_area/0.0016f; // a fraction the surface area weight of lights
 		}
 		else { // room light or lamp, pointing downward
 			vect_room_object_t const &objs(b.interior->room_geom->objs);
@@ -1558,6 +1558,8 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		point sun_moon_pos;
 		if (!light_valid_and_enabled(l) || !get_light_pos(sun_moon_pos, l)) continue;
 		float const camera_zval_check((camera_somewhat_by_stairs ? 2.0 : 1.0)*window_vspacing); // allow two floors below if player can see skylight from stairs
+		bool const dir_always_vert  = 1;
+		bool const add_sky_lighting = 0;
 
 		for (cube_with_ix_t &sl : skylights) { // add virtual spotlights for each skylight to simulate sun light
 			if (!lights_bcube.intersects_xy(sl))        continue; // not contained within the light volume
@@ -1565,6 +1567,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			cube_t lit_area(sl);
 			lit_area.z2() += fc_thick; // include the tops of the skylight
 			point lpos(sl.get_cube_center());
+			if (is_rotated()) {do_xy_rotate(building_center, lpos);} // ???
 			vector3d const light_dir((sun_moon_pos - lpos).get_norm());
 			float const light_dist(3.0*window_vspacing); // larger is more physically correct (directional), but produces lower shadow resolution due to wasted texels
 			lpos += light_dist*light_dir;
@@ -1588,18 +1591,16 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			point const corners[4] = {point(sl.x1(), sl.y1(), z), point(sl.x2(), sl.y1(), z), point(sl.x2(), sl.y2(), z), point(sl.x1(), sl.y2(), z)};
 			float const extend_amt(window_vspacing/light_dist); // length of light ray reaching the floor is this much longer than the length of the ray to the skylight
 			for (unsigned n = 0; n < 4; ++n) {proj_bcube.union_with_pt(corners[n] + extend_amt*(corners[n] - lpos));}
-			lit_area.intersect_with_cube_xy(proj_bcube);
-			if (!is_rot_cube_visible(lit_area, xlate)) continue; // VFC, again
-			if ((display_mode & 0x08) && !lit_area.contains_pt(camera_rot) && check_obj_occluded(lit_area, camera_bs, oc, 0)) continue; // occlusion culling
-			if (is_rotated()) {do_xy_rotate(building_center, lpos);} // ???
-			// TODO: directional shadowing light using cur_diffuse, plus weaker unshadowed vertical light using cur_ambient?
-			colorRGBA const color(get_outdoor_light_color());
+			cube_t clipped_area(lit_area);
+			clipped_area.intersect_with_cube_xy(proj_bcube);
+			if (!is_rot_cube_visible(clipped_area, xlate)) continue; // VFC, again
+			if ((display_mode & 0x08) && !clipped_area.contains_pt(camera_rot) && check_obj_occluded(clipped_area, camera_bs, oc, 0)) continue; // occlusion culling
+			colorRGBA const color(add_sky_lighting ? cur_diffuse : get_outdoor_light_color());
 			float const dx(sl.dx()), dy(sl.dy()), diag_sz(sqrt(dx*dx + dy*dy));
 			float const light_radius(1.2*diag_sz + 1.5*light_dist); // determined experimentally
 			float corner_horiz_dist(0.0);
-			bool const dir_always_vertical = 1;
 
-			if (dir_always_vertical) { // make the light dir vertical/Z to avoid aliasing artifacts, though this is less physically correct
+			if (dir_always_vert) { // make the light dir vertical/Z to avoid aliasing artifacts, though this is less physically correct
 				for (unsigned n = 0; n < 4; ++n) {max_eq(corner_horiz_dist, p2p_dist_xy(lpos, corners[n]));} // find the furthest corner
 			}
 			else { // change the light direction correctly
@@ -1610,20 +1611,20 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			bool force_smap_update(building_action_key); // update if a door is open or closed
 			unsigned shadow_caster_hash(0);
 
-			if (camera_surf_collide && camera_in_building && lit_area.contains_pt(camera_rot)) {
+			if (camera_surf_collide && camera_in_building && clipped_area.contains_pt(camera_rot)) {
 				force_smap_update   = 1;
 				shadow_caster_hash ^= 0xdeadbeef; // update hash when player enters or leaves the light's area
 			}
-			if (!force_smap_update && ((camera_near_building && camera_bs.z > lit_area.z1()) || camera_bs.z > z)) {
-				check_for_shadow_caster_people(interior->people, ped_bcubes, moving_objs, lit_area, lpos,
+			if (!force_smap_update && ((camera_near_building && camera_bs.z > clipped_area.z1()) || camera_bs.z > z)) {
+				check_for_shadow_caster_people(interior->people, ped_bcubes, moving_objs, clipped_area, lpos,
 					0.0, room_has_stairs, xlate, check_building_people, shadow_caster_hash); // dmax=0
 			}
 			hash_mix_point(lpos, shadow_caster_hash); // update when light (sun/moon) pos changes
 			bool const cache_shadows(!force_smap_update && sl.ix == shadow_caster_hash);
 			sl.ix = shadow_caster_hash; // store new hashval in the skylight for next frame
-			vector3d const dir(dir_always_vertical ? -plus_z : -light_dir); // points either downward or away from the sun/moon
-			dl_sources.emplace_back(light_radius, lpos, lpos, cur_diffuse, 0, dir, bwidth);
-			assign_light_for_building_interior(dl_sources.back(), &sl, lit_area, cache_shadows);
+			vector3d const spotlight_dir(dir_always_vert ? -plus_z : -light_dir); // points either downward or away from the sun/moon
+			dl_sources.emplace_back(light_radius, lpos, lpos, color, 0, spotlight_dir, bwidth);
+			assign_light_for_building_interior(dl_sources.back(), &sl, clipped_area, cache_shadows);
 			min_eq(lights_bcube.z1(), lit_area.z1());
 			max_eq(lights_bcube.z2(), lpos.z); // must include the light
 		} // for skylight sl
