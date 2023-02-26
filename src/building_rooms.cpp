@@ -2705,11 +2705,10 @@ bool any_cube_contains(cube_t const &cube, vect_cube_t const &cubes) {
 bool building_t::is_light_placement_valid(cube_t const &light, room_t const &room, float pad) const {
 	cube_t light_ext(light);
 	light_ext.expand_by_xy(pad);
-	if (!room.contains_cube(light_ext))     return 0; // room too small?
-	if (check_skylight_intersection(light)) return 0;
+	if (!room.contains_cube(light_ext))            return 0; // room too small?
 	if (has_bcube_int(light, interior->elevators)) return 0;
 	light_ext.z1() = light_ext.z1() = light.z2() + get_fc_thickness(); // shift in between the ceiling and floor so that we can do a cube contains check
-	return any_cube_contains(light_ext, interior->fc_occluders);
+	return any_cube_contains(light_ext, interior->fc_occluders); // Note: don't need to check skylights because fc_occluders excludes skylights
 }
 void building_t::try_place_light_on_ceiling(cube_t const &light, room_t const &room, bool room_dim, float pad, bool allow_rot, bool allow_mult,
 	vect_cube_t &lights, rand_gen_t &rgen) const
@@ -2935,7 +2934,9 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			unsigned const objs_start_inc_lights(objs.size());
 
 			for (cube_t const &l : valid_lights) {
-				objs.emplace_back(l, TYPE_LIGHT, room_id, (light.dx() < light.dy()), 0, flags, light_amt, light_shape, color); // reclaculate dim; dir=0 (unused)
+				unsigned l_flags(flags);
+				if (check_skylight_intersection(l)) {l_flags |= RO_FLAG_ADJ_TOP;} // if attached to a skylight, draw top surface; currently never get here
+				objs.emplace_back(l, TYPE_LIGHT, room_id, (light.dx() < light.dy()), 0, l_flags, light_amt, light_shape, color); // reclaculate dim; dir=0 (unused)
 				objs.back().obj_id = light_ix_assign.get_ix_for_light(l);
 				unsigned const flicker_mod(is_parking_garage ? 50 : (is_ext_basement ? 20 : 0)); // 2% chance for parking garage, 5% chance for ext basement
 				if (flicker_mod > 0 && (((rgen_lights.rand() + 3*f)%flicker_mod) == 13)) {objs.back().flags |= RO_FLAG_BROKEN;} // maybe make this a flickering light
