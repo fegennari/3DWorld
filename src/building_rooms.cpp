@@ -3631,6 +3631,7 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 
 	float const window_vspacing(get_window_vspace()), floor_thickness(get_floor_thickness()), half_thick(0.5*floor_thickness);
 	float const wall_thickness(get_wall_thickness()), elevator_car_z1_add(0.05*floor_thickness), fc_thick_scale(get_elevator_fc_thick_scale());
+	float const stairs_sign_width(1.0*wall_thickness);
 	vect_room_object_t &objs(interior->room_geom->objs);
 	ostringstream oss; // reused across elevators/floors
 
@@ -3640,6 +3641,7 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 		// stacked conn stairs start at floor 0 but are really the top floor of the part below; i->floor is not a global index and can't be used
 		unsigned const floor_offset(calc_floor_offset(bcube.z1())); // use building z1 - should return number of underground levels
 		unsigned const real_floor(round_fp((i->z1() - bcube.z1())/get_window_vspace()));
+		unsigned flags(RO_FLAG_NOCOLL | RO_FLAG_HANGING);
 		point center;
 		center[ i->dim] = i->d[i->dim][!i->dir]; // front of stairs
 		center[!i->dim] = i->get_center_dim(!i->dim);
@@ -3647,19 +3649,21 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 		center.z = i->z1();
 		cube_t sign(center);
 		sign.d[i->dim][!i->dir] += (i->dir ? -1.0 : 1.0)*0.25*wall_thickness; // set sign thickness
-		sign.expand_in_dim(!i->dim, 1.0*wall_thickness); // set sign width
+		sign.expand_in_dim(!i->dim, stairs_sign_width); // set sign width
 		sign.z1() -= 2.5*wall_thickness; // set sign height
-		objs.emplace_back(sign, TYPE_SIGN, 0, i->dim, !i->dir, (RO_FLAG_NOCOLL | RO_FLAG_HANGING), 1.0, SHAPE_CUBE, DK_BLUE); // no room_id
+		objs.emplace_back(sign, TYPE_SIGN, 0, i->dim, !i->dir, flags, 1.0, SHAPE_CUBE, DK_BLUE); // no room_id
 		set_floor_text_for_sign(objs.back(), real_floor, floor_offset, has_parking_garage, oss);
 
 		// if this is the top landing, we need to add a floor sign on the ceiling above it for the top floor
 		if (i->is_at_top && !i->roof_access) {
 			sign.translate_dim(2, window_vspacing); // move up one floor
 
-			if (!check_skylight_intersection(sign)) { // don't hang floor sign from skylight? should it be off to the side of the stairs instead?
-				objs.emplace_back(sign, TYPE_SIGN, 0, i->dim, !i->dir, (RO_FLAG_NOCOLL | RO_FLAG_HANGING), 1.0, SHAPE_CUBE, DK_BLUE); // no room_id
-				set_floor_text_for_sign(objs.back(), (real_floor + 1), floor_offset, has_parking_garage, oss);
+			if (check_skylight_intersection(sign)) { // check for sklight and move sign to the side
+				sign.translate_dim(!i->dim, 0.5*(i->get_sz_dim(!i->dim) - stairs_sign_width)); // translate to the positive side
+				flags |= RO_FLAG_ADJ_TOP; // dra the top surface
 			}
+			objs.emplace_back(sign, TYPE_SIGN, 0, i->dim, !i->dir, flags, 1.0, SHAPE_CUBE, DK_BLUE); // no room_id
+			set_floor_text_for_sign(objs.back(), (real_floor + 1), floor_offset, has_parking_garage, oss);
 		}
 	} // for i
 

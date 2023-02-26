@@ -2898,8 +2898,8 @@ void add_room_obj_sign_text_verts(room_object_t const &c, colorRGBA const &color
 
 void building_room_geom_t::add_sign(room_object_t const &c, bool inc_back, bool inc_text) {
 	if (inc_back) {
-		bool const hanging(c.is_hanging()); // for exit sign
-		unsigned const skip_faces(hanging ? EF_Z2 : ~get_face_mask(c.dim, !c.dir)); // skip back face, top face if hanging
+		bool const hanging(c.is_hanging()), draw_top(c.flags & RO_FLAG_ADJ_TOP); // for exit sign and floor signs
+		unsigned const skip_faces(hanging ? (draw_top ? 0 : EF_Z2) : ~get_face_mask(c.dim, !c.dir)); // skip back face, top face if hanging and !draw_top
 		// what about transparent plastic back for hanging signs?
 		get_untextured_material(0, 0, 1).add_cube_to_verts_untextured(c, apply_light_color(c, WHITE), skip_faces); // back of the sign, always white (for now); unshadowed, small
 	}
