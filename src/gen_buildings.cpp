@@ -1635,11 +1635,11 @@ template<typename T> void building_t::add_door_verts(cube_t const &D, T &drawer,
 		if (opened && on_stairs) {dc.z2() = dc.z1();}
 		bool const int_other_side(exterior ? 0 : hinge_side);
 		bool const swap_sides(exterior ? (side == 0) : int_other_side); // swap sides for right half of exterior door
-		tquad_with_ix_t const door(set_door_from_cube(dc, dim, dir, type, 0.0, exterior, opened, opens_out, opens_up, swap_sides));
+		tquad_with_ix_t const door(set_door_from_cube(dc, dim, dir, type, 0.0, exterior, opened, opens_out, opens_up, swap_sides)); // 0,1: bottom, 2,3: top
 		vector3d const normal(door.get_norm());
 		tquad_with_ix_t door_edges[4] = {door, door, door, door}; // most doors will only use 2 of these
 
-		for (unsigned d = 0; d < 2; ++d) {
+		for (unsigned d = 0; d < 2; ++d) { // draw front and back sides
 			tquad_with_ix_t door_side(door);
 			vector3d const offset((d ? -1.0 : 1.0)*half_thickness*normal);
 			for (unsigned n = 0; n < 4; ++n) {door_side.pts[n] += offset;}
@@ -1658,11 +1658,18 @@ template<typename T> void building_t::add_door_verts(cube_t const &D, T &drawer,
 		} // for d
 		if (opened || on_stairs) { // add untextured door edges; only needed for open doors or doors at the bottom of basement stairs
 			for (unsigned e = 0; e < num_edges; ++e) {
-				drawer.add_tquad(*this, door_edges[e], bcube, tp, color, 0, 0, 1); // invert_tc_x=0, exclude_frame=0, no_tc=1, will use a single texel from the corner of the door texture
+				drawer.add_tquad(*this, door_edges[e], bcube, tp, color, 0, 0, 1); // invert_tc_x=0, exclude_frame=0, no_tc=1, use single texel from corner of door texture
 			}
 		}
+		if (opened && !exterior && !opens_up && num_sides == 1 && check_skylight_intersection(door.get_bcube())) { // open interior door at skylight; draw top edge of door
+			tquad_with_ix_t top_edge(4, door.type);
+			top_edge.pts[0] = door_edges[0].pts[0];
+			top_edge.pts[1] = door_edges[0].pts[3];
+			top_edge.pts[2] = door_edges[1].pts[2];
+			top_edge.pts[3] = door_edges[1].pts[1];
+			drawer.add_tquad(*this, top_edge, bcube, tp, color, 0, 0, 1); // invert_tc_x=0, exclude_frame=0, no_tc=1, use single texel from corner of door texture
+		}
 	} // for side
-	//if (check_skylight_intersection(D)) {} // draw top edge of door?
 }
 
 // explicit template specialization
