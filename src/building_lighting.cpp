@@ -1559,7 +1559,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		if (!light_valid_and_enabled(l) || !get_light_pos(sun_moon_pos, l)) continue;
 		float const camera_zval_check((camera_somewhat_by_stairs ? 2.0 : 1.0)*window_vspacing); // allow two floors below if player can see skylight from stairs
 		bool const dir_always_vert  = 1;
-		bool const add_sky_lighting = 0;
+		bool const add_sky_lighting = 1;
 
 		for (cube_with_ix_t &sl : skylights) { // add virtual spotlights for each skylight to simulate sun light
 			if (!lights_bcube.intersects_xy(sl))        continue; // not contained within the light volume
@@ -1593,40 +1593,63 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			for (unsigned n = 0; n < 4; ++n) {proj_bcube.union_with_pt(corners[n] + extend_amt*(corners[n] - lpos));}
 			cube_t clipped_area(lit_area);
 			clipped_area.intersect_with_cube_xy(proj_bcube);
-			if (!is_rot_cube_visible(clipped_area, xlate)) continue; // VFC, again
-			if ((display_mode & 0x08) && !clipped_area.contains_pt(camera_rot) && check_obj_occluded(clipped_area, camera_bs, oc, 0)) continue; // occlusion culling
-			colorRGBA const color(add_sky_lighting ? cur_diffuse : get_outdoor_light_color());
+			colorRGBA const outdoor_color(get_outdoor_light_color()); // required to calculate cur_ambient and cur_diffuse
 			float const dx(sl.dx()), dy(sl.dy()), diag_sz(sqrt(dx*dx + dy*dy));
 			float const light_radius(1.2*diag_sz + 1.5*light_dist); // determined experimentally
-			float corner_horiz_dist(0.0);
+			unsigned const dlights_start(dl_sources.size());
 
-			if (dir_always_vert) { // make the light dir vertical/Z to avoid aliasing artifacts, though this is less physically correct
-				for (unsigned n = 0; n < 4; ++n) {max_eq(corner_horiz_dist, p2p_dist_xy(lpos, corners[n]));} // find the furthest corner
-			}
-			else { // change the light direction correctly
-				corner_horiz_dist = 0.5*diag_sz; // calculate the radius
-			}
-			float const dp(light_dist/sqrt(light_dist*light_dist + corner_horiz_dist*corner_horiz_dist)), bwidth(0.5*(1.0 - dp));
-			// check for dynamic shadow casters
-			bool force_smap_update(building_action_key); // update if a door is open or closed
-			unsigned shadow_caster_hash(0);
+			if (!is_rot_cube_visible(clipped_area, xlate)) {} // VFC, again
+			else if ((display_mode & 0x08) && !clipped_area.contains_pt(camera_rot) && check_obj_occluded(clipped_area, camera_bs, oc, 0)) {} // occlusion culling
+			else { // add the light
+				colorRGBA const color(add_sky_lighting ? cur_diffuse : outdoor_color);
+				float corner_horiz_dist(0.0);
 
-			if (camera_surf_collide && camera_in_building && clipped_area.contains_pt(camera_rot)) {
-				force_smap_update   = 1;
-				shadow_caster_hash ^= 0xdeadbeef; // update hash when player enters or leaves the light's area
+				if (dir_always_vert) { // make the light dir vertical/Z to avoid aliasing artifacts, though this is less physically correct
+					for (unsigned n = 0; n < 4; ++n) {max_eq(corner_horiz_dist, p2p_dist_xy(lpos, corners[n]));} // find the furthest corner
+				}
+				else { // change the light direction correctly
+					corner_horiz_dist = 0.5*diag_sz; // calculate the radius
+				}
+				float const dp(light_dist/sqrt(light_dist*light_dist + corner_horiz_dist*corner_horiz_dist)), bwidth(0.5*(1.0 - dp));
+				// check for dynamic shadow casters
+				bool force_smap_update(building_action_key); // update if a door is open or closed
+				unsigned shadow_caster_hash(0);
+
+				if (camera_surf_collide && camera_in_building && clipped_area.contains_pt(camera_rot)) {
+					force_smap_update   = 1;
+					shadow_caster_hash ^= 0xdeadbeef; // update hash when player enters or leaves the light's area
+				}
+				if (!force_smap_update && ((camera_near_building && camera_bs.z > clipped_area.z1()) || camera_bs.z > z)) {
+					check_for_shadow_caster_people(interior->people, ped_bcubes, moving_objs, clipped_area, lpos,
+						0.0, room_has_stairs, xlate, check_building_people, shadow_caster_hash); // dmax=0
+				}
+				hash_mix_point(lpos, shadow_caster_hash); // update when light (sun/moon) pos changes
+				bool const cache_shadows(!force_smap_update && sl.ix == shadow_caster_hash);
+				sl.ix = shadow_caster_hash; // store new hashval in the skylight for next frame
+				vector3d const spotlight_dir(dir_always_vert ? -plus_z : -light_dir); // points either downward or away from the sun/moon
+				dl_sources.emplace_back(light_radius, lpos, lpos, color, 0, spotlight_dir, bwidth);
+				assign_light_for_building_interior(dl_sources.back(), &sl, clipped_area, cache_shadows);
 			}
-			if (!force_smap_update && ((camera_near_building && camera_bs.z > clipped_area.z1()) || camera_bs.z > z)) {
-				check_for_shadow_caster_people(interior->people, ped_bcubes, moving_objs, clipped_area, lpos,
-					0.0, room_has_stairs, xlate, check_building_people, shadow_caster_hash); // dmax=0
+			if (add_sky_lighting) { // add a weaker unshadowed vertical light using cur_ambient
+				point lpos2(sl.get_cube_center());
+				lpos2.z += light_dist; // directly above the skylight
+				cube_t proj_bcube2(sl);
+				for (unsigned n = 0; n < 4; ++n) {proj_bcube2.union_with_pt(corners[n] + extend_amt*(corners[n] - lpos2));}
+				cube_t clipped_area2(lit_area);
+				clipped_area2.intersect_with_cube_xy(proj_bcube2);
+
+				if (!is_rot_cube_visible(clipped_area2, xlate)) {} // VFC
+				else if ((display_mode & 0x08) && !clipped_area2.contains_pt(camera_rot) && check_obj_occluded(clipped_area2, camera_bs, oc, 0)) {} // occlusion culling
+				else { // add the light
+					dl_sources.emplace_back(light_radius, lpos2, lpos2, cur_ambient, 0);
+					dl_sources.back().set_custom_bcube(clipped_area2);
+					dl_sources.back().disable_shadows();
+				}
 			}
-			hash_mix_point(lpos, shadow_caster_hash); // update when light (sun/moon) pos changes
-			bool const cache_shadows(!force_smap_update && sl.ix == shadow_caster_hash);
-			sl.ix = shadow_caster_hash; // store new hashval in the skylight for next frame
-			vector3d const spotlight_dir(dir_always_vert ? -plus_z : -light_dir); // points either downward or away from the sun/moon
-			dl_sources.emplace_back(light_radius, lpos, lpos, color, 0, spotlight_dir, bwidth);
-			assign_light_for_building_interior(dl_sources.back(), &sl, clipped_area, cache_shadows);
-			min_eq(lights_bcube.z1(), lit_area.z1());
-			max_eq(lights_bcube.z2(), lpos.z); // must include the light
+			if (dl_sources.size() > dlights_start) { // a light was added, update lights_bcube
+				min_eq(lights_bcube.z1(), lit_area.z1());
+				max_eq(lights_bcube.z2(), lpos.z); // must include the light
+			}
 		} // for skylight sl
 	}
 }
