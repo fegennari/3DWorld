@@ -925,7 +925,7 @@ void building_room_geom_t::add_chimney(room_object_t const &c, tid_nm_pair_t con
 
 // I guess skylights are similar to attics, so this code goes here?
 void building_room_geom_t::add_skylights_details(building_t const &b) {
-	for (cube_t const &skylight : b.skylights) {add_skylight_details(skylight);}
+	for (cube_t const &skylight : b.skylights) {add_skylight_details(skylight, b.has_skylight_light);}
 }
 void add_skylight_bar_grid(rgeom_mat_t &bar_mat, cube_t const &skylight, float bar_hwidth, float spacing, unsigned num, bool dim) {
 	for (unsigned i = 0; i < num+1; ++i) { // includes bar at the end
@@ -940,7 +940,7 @@ void add_skylight_bar_grid(rgeom_mat_t &bar_mat, cube_t const &skylight, float b
 		bar_mat.add_cube_to_verts_untextured(bar, WHITE, get_skip_mask_for_xy(!dim)); // skip ends
 	} // for i
 }
-void building_room_geom_t::add_skylight_details(cube_t const &skylight) {
+void building_room_geom_t::add_skylight_details(cube_t const &skylight, bool has_skylight_light) {
 	vector3d const sz(skylight.get_size());
 	bool const dmax(sz.x > sz.y);
 	float const thickness(skylight.dz()), length(sz[dmax]), width(sz[!dmax]), bar_width(0.67*sz.z), bar_hwidth(0.5*bar_width);
@@ -950,5 +950,9 @@ void building_room_geom_t::add_skylight_details(cube_t const &skylight) {
 	rgeom_mat_t &bar_mat(get_untextured_material(1)); // inc_shadows=1
 	add_skylight_bar_grid(bar_mat, skylight, bar_hwidth, col_spacing, num_cols, !dmax);
 	add_skylight_bar_grid(bar_mat, skylight, bar_hwidth, row_spacing, num_rows,  dmax);
+
+	if (has_skylight_light) {
+		// TODO: add extra bars for lights
+	}
 }
 

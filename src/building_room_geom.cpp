@@ -1818,14 +1818,21 @@ void building_room_geom_t::add_elevator_doors(elevator_t const &e, float fc_thic
 
 void building_room_geom_t::add_light(room_object_t const &c, float tscale) {
 	// Note: need to use a different texture (or -1) for is_on because emissive flag alone does not cause a material change
-	bool const is_on(c.is_light_on() && !(c.is_broken() && !c.is_open())), draw_top(c.flags & RO_FLAG_ADJ_TOP);
+	bool const is_on(c.is_light_on() && !(c.is_broken() && !c.is_open()));
 	tid_nm_pair_t tp(((is_on || c.shape == SHAPE_SPHERE) ? (int)WHITE_TEX : (int)PLASTER_TEX), tscale);
 	tp.emissive = (is_on ? 1.0 : 0.0);
 	rgeom_mat_t &mat(mats_lights.get_material(tp, 0)); // no shadows
-	if      (c.shape == SHAPE_CUBE  ) {mat.add_cube_to_verts  (c, c.color, c.get_llc(), (draw_top ? 0 : EF_Z2));} // sometimes textured, maybe skip top face
-	else if (c.shape == SHAPE_CYLIN ) {mat.add_vcylin_to_verts(c, c.color, 1, draw_top);} // bottom only, unless draw_top=1
+	if      (c.shape == SHAPE_CUBE  ) {mat.add_cube_to_verts  (c, c.color, c.get_llc(), EF_Z2);} // sometimes textured, skip top face
+	else if (c.shape == SHAPE_CYLIN ) {mat.add_vcylin_to_verts(c, c.color, 1, 0);} // bottom only
 	else if (c.shape == SHAPE_SPHERE) {mat.add_sphere_to_verts(c, c.color);}
 	else {assert(0);}
+
+	if ((c.flags & RO_FLAG_ADJ_TOP) && (c.shape == SHAPE_CUBE || c.shape == SHAPE_CYLIN)) { // on skylight; draw top surface
+		tid_nm_pair_t top_tp(PLASTER_TEX, tscale, 1); // yes shadows
+		rgeom_mat_t &top_mat(mats_lights.get_material(top_tp, 1)); // yes shadows
+		if (c.shape == SHAPE_CUBE) {top_mat.add_cube_to_verts  (c, c.color, c.get_llc(), ~EF_Z2);} // textured, top face only
+		else                       {top_mat.add_vcylin_to_verts(c, c.color, 0, 1, 0, 0, 1.0, 1.0, 1.0, 1.0, 1);} // bottom only, skip sides
+	}
 }
 
 void building_room_geom_t::add_rug(room_object_t const &c) {

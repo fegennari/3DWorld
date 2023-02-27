@@ -9,6 +9,8 @@
 
 enum {PLACED_TOILET=1, PLACED_SINK=2, PLACED_TUB=4, PLACED_SHOWER=8}; // for bathroom objects
 
+bool const PLACE_LIGHTS_ON_SKYLIGHTS = 1;
+
 extern bool camera_in_building;
 extern int display_mode;
 extern building_params_t global_building_params;
@@ -2708,7 +2710,9 @@ bool building_t::is_light_placement_valid(cube_t const &light, room_t const &roo
 	if (!room.contains_cube(light_ext))            return 0; // room too small?
 	if (has_bcube_int(light, interior->elevators)) return 0;
 	light_ext.z1() = light_ext.z1() = light.z2() + get_fc_thickness(); // shift in between the ceiling and floor so that we can do a cube contains check
-	return any_cube_contains(light_ext, interior->fc_occluders); // Note: don't need to check skylights because fc_occluders excludes skylights
+	if (any_cube_contains(light_ext, interior->fc_occluders)) return 1; // Note: don't need to check skylights because fc_occluders excludes skylights
+	if (PLACE_LIGHTS_ON_SKYLIGHTS && check_skylight_intersection(light)) return 1; // if light intersects a skylight, assume it's contained in the ceiling + skylight
+	return 0;
 }
 void building_t::try_place_light_on_ceiling(cube_t const &light, room_t const &room, bool room_dim, float pad, bool allow_rot, bool allow_mult,
 	vect_cube_t &lights, rand_gen_t &rgen) const
@@ -2935,7 +2939,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 
 			for (cube_t const &l : valid_lights) {
 				unsigned l_flags(flags);
-				if (check_skylight_intersection(l)) {l_flags |= RO_FLAG_ADJ_TOP;} // if attached to a skylight, draw top surface; currently never get here
+				if (check_skylight_intersection(l)) {l_flags |= RO_FLAG_ADJ_TOP; has_skylight_light = 1;} // if attached to a skylight, draw top surface
 				objs.emplace_back(l, TYPE_LIGHT, room_id, (light.dx() < light.dy()), 0, l_flags, light_amt, light_shape, color); // reclaculate dim; dir=0 (unused)
 				objs.back().obj_id = light_ix_assign.get_ix_for_light(l);
 				unsigned const flicker_mod(is_parking_garage ? 50 : (is_ext_basement ? 20 : 0)); // 2% chance for parking garage, 5% chance for ext basement

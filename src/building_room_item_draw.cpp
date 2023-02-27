@@ -1576,7 +1576,8 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, building_t c
 	static unsigned num_geom_this_frame(0); // used to limit per-frame geom gen time; doesn't apply to shadow pass, in case shadows are cached
 	if (frame_counter < 100 || frame_counter > last_frame) {num_geom_this_frame = 0; last_frame = frame_counter;} // unlimited for the first 100 frames
 	point const camera_bs(camera_pdu.pos - xlate);
-	bool const draw_lights(camera_bs.z < building.bcube.z2()); // don't draw ceiling lights when player is above the building
+	// don't draw ceiling lights when player is above the building unless there's a light placed on a skylight
+	bool const draw_lights(camera_bs.z < building.bcube.z2() + (building.has_skylight_light ? 20.0*building.get_window_vspace() : 0.0));
 	// only parking garages and attics have detail objects that cast shadows
 	bool const draw_detail_objs(inc_small == 2 && (!shadow_only || building.has_parking_garage || building.has_attic()));
 	brg_batch_draw_t *const bbd_in(bbd); // capture bbd for instance drawing before setting to null if player_in_building
