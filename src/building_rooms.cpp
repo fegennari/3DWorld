@@ -2700,8 +2700,8 @@ unsigned calc_num_floors_room(room_t const &r, float window_vspacing, float floo
 	return (r.is_sec_bldg ? 1 : calc_num_floors(r, window_vspacing, floor_thickness));
 }
 
-bool any_cube_contains(cube_t const &cube, vect_cube_t const &cubes) {
-	for (cube_t const &c : cubes) {if (c.contains_cube(cube)) return 1;}
+template<typename T> bool any_cube_contains(cube_t const &cube, T const &cubes) {
+	for (auto const &c : cubes) {if (c.contains_cube(cube)) return 1;}
 	return 0;
 }
 bool building_t::is_light_placement_valid(cube_t const &light, room_t const &room, float pad) const {
@@ -2711,7 +2711,7 @@ bool building_t::is_light_placement_valid(cube_t const &light, room_t const &roo
 	if (has_bcube_int(light, interior->elevators)) return 0;
 	light_ext.z1() = light_ext.z1() = light.z2() + get_fc_thickness(); // shift in between the ceiling and floor so that we can do a cube contains check
 	if (any_cube_contains(light_ext, interior->fc_occluders)) return 1; // Note: don't need to check skylights because fc_occluders excludes skylights
-	if (PLACE_LIGHTS_ON_SKYLIGHTS && check_skylight_intersection(light)) return 1; // if light intersects a skylight, assume it's contained in the ceiling + skylight
+	if (PLACE_LIGHTS_ON_SKYLIGHTS && any_cube_contains(light_ext, skylights)) return 1;
 	return 0;
 }
 void building_t::try_place_light_on_ceiling(cube_t const &light, room_t const &room, bool room_dim, float pad, bool allow_rot, bool allow_mult,
