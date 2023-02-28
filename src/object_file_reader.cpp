@@ -12,7 +12,7 @@
 #include "fast_atof.h"
 
 
-extern bool use_obj_file_bump_grayscale, model_calc_tan_vect;
+extern bool use_obj_file_bump_grayscale, model_calc_tan_vect, enable_model_animations;
 extern float model_auto_tc_scale, model_mat_lod_thresh;
 extern model3ds all_models;
 
@@ -826,7 +826,8 @@ bool read_model_file(string const &filename, vector<coll_tquad> *ppts, geom_xfor
 	setlocale(LC_ALL, "C"); // optimization for obj file reading?
 
 	if (load_models) {
-		string const anim_name("default"); // used for debugging and general model loading; loaders that expect custom named animations don't call this function
+		// anim_name is used for debugging and general model loading; loaders that expect custom named animations don't call this function
+		string const anim_name(enable_model_animations ? "default" : "");
 		if (!load_model_file(filename, all_models, xf, anim_name, def_tid, def_c, reflective, metalness, recalc_normals, group_cobjs_level, write_file, verbose)) return 0;
 		if (ppts) {get_cur_model_polygons(*ppts);}
 		return 1;

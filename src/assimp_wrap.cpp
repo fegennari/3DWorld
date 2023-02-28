@@ -507,6 +507,8 @@ public:
 		// aiProcess_ValidateDataStructure - for debugging
 		// aiProcess_ImproveCacheLocality - optional, but already supported by the model3d class
 		// aiProcess_FindDegenerates, aiProcess_FindInvalidData - optional
+		// aiProcess_FlipUVs - not needed since this can be done in the texture loading
+		// aiProcess_CalcTangentSpace - ???
 		unsigned flags(aiProcess_Triangulate | aiProcess_SortByPType | aiProcess_JoinIdenticalVertices |
 			           aiProcess_FixInfacingNormals | aiProcess_GenUVCoords | aiProcess_OptimizeMeshes);
 		// Note: here we treat the recalc_normals flag as using smooth normals; if the model already contains normals, they're always used

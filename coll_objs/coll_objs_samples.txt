@@ -69,6 +69,7 @@ t 0 -100.0 0  s 1 2  m 0.01  O ../models/people/animated/remy_walking.fbx 4 0 0
 #t 0 -100.0 0  s 1 2  m 0.01  O ../models/people/animated/louise_walking.fbx 4 0 0
 #t 0 0 0  s 1 2  m 0.01  O ../models/people/animated/dancing_vampire/dancing_vampire.dae 4 0 0
 #t 0 -100.0 0  s 1 2  m 0.01  O ../models/people/animated/neutral_idle.fbx 4 0 0
+#t 0 0.0 0  s 1 2  m 0.2  O ../models/Sponza_pbr/NewSponza_Main_glTF_002.gltf 4 0 0
 
 cube_map_ref 0
 metalness 0.0
