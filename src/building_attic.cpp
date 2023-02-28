@@ -927,7 +927,7 @@ void building_room_geom_t::add_chimney(room_object_t const &c, tid_nm_pair_t con
 void building_room_geom_t::add_skylights_details(building_t const &b) {
 	for (cube_t const &skylight : b.skylights) {add_skylight_details(skylight, b.has_skylight_light);}
 }
-void add_skylight_bar_grid(rgeom_mat_t &bar_mat, cube_t const &skylight, float bar_hwidth, float spacing, unsigned num, bool dim) {
+void add_skylight_bar_grid(cube_t const &skylight, float bar_hwidth, float spacing, unsigned num, bool dim, vect_cube_t &bars) {
 	for (unsigned i = 0; i < num+1; ++i) { // includes bar at the end
 		cube_t bar(skylight); // uses skylight zvals
 		set_wall_width(bar, (skylight.d[dim][0] + bar_hwidth + i*spacing), bar_hwidth, dim);
@@ -937,22 +937,57 @@ void add_skylight_bar_grid(rgeom_mat_t &bar_mat, cube_t const &skylight, float b
 			bar.z2() += 0.25*bar_hwidth;
 			bar.z1() -= 0.02*bar_hwidth; // move down slightly, enough to not Z-fight with the ceiling but not enough to clip through the elevator ceiling
 		}
-		bar_mat.add_cube_to_verts_untextured(bar, WHITE, get_skip_mask_for_xy(!dim)); // skip ends
+		bars.push_back(bar);
 	} // for i
 }
 void building_room_geom_t::add_skylight_details(cube_t const &skylight, bool has_skylight_light) {
 	vector3d const sz(skylight.get_size());
-	bool const dmax(sz.x > sz.y);
+	bool const dmax(sz.x < sz.y);
 	float const thickness(skylight.dz()), length(sz[dmax]), width(sz[!dmax]), bar_width(0.67*sz.z), bar_hwidth(0.5*bar_width);
-	if (min(length, width) < 10.0*thickness) return; // no bars needed
+	if (width < 10.0*thickness) return; // no bars needed
 	unsigned const num_rows((unsigned)ceil(0.1*length/thickness)), num_cols((unsigned)ceil(0.04*width/thickness));
 	float const row_spacing((length - bar_width)/num_rows), col_spacing((width - bar_width)/num_cols);
-	rgeom_mat_t &bar_mat(get_untextured_material(1)); // inc_shadows=1
-	add_skylight_bar_grid(bar_mat, skylight, bar_hwidth, col_spacing, num_cols, !dmax);
-	add_skylight_bar_grid(bar_mat, skylight, bar_hwidth, row_spacing, num_rows,  dmax);
+	vect_cube_t bars[2]; // per dim
+	add_skylight_bar_grid(skylight, bar_hwidth, col_spacing, num_cols, !dmax, bars[!dmax]);
+	add_skylight_bar_grid(skylight, bar_hwidth, row_spacing, num_rows,  dmax, bars[ dmax]);
 
 	if (has_skylight_light) {
-		// TODO: add extra bars for lights
+		cube_t test_cube(skylight);
+		test_cube.z1() -= skylight.dz(); // shift down to include light z-val range
+		auto objs_end(get_placed_objs_end()); // skip buttons/stairs/elevators
+
+		for (auto i = objs.begin(); i != objs_end; ++i) {
+			if (i->type != TYPE_LIGHT || !i->intersects(test_cube)) continue;
+			cube_t bar_area(*i);
+			bar_area.expand_by_xy(-0.25*i->get_size()); // shrink to half length and width
+			bool connected(0);
+
+			for (unsigned d = 0; d < 2 && !connected; ++d) {
+				for (cube_t const &bar : bars[d]) {
+					if (bar.intersects_xy(bar_area)) {connected = 1; break;}
+				}
+			}
+			if (connected) continue; // already connected - done
+			cube_t conn;
+			set_cube_zvals(conn, skylight.z1(), skylight.zc()); // half height
+			set_wall_width(conn, i->get_center_dim(!dmax), 0.8*bar_hwidth, !dmax); // centered on the light
+
+			// find bars to either side in dmax; since they don't intersect the light, and the light is ocntained in the skylight, they must exist
+			for (cube_t const &bar : bars[dmax]) {
+				float const low_edge(bar.d[dmax][0]);
+				if (low_edge <  bar_area.d[dmax][0]) continue; // not yet
+				conn.d[dmax][1] = low_edge; // inner bar ends here
+				conn.d[dmax][0] = low_edge - (row_spacing - bar_width); // inner bar starts here
+				break; // done
+			}
+			assert(conn.is_strictly_normalized()); // must have been found in the loop above
+			bars[!dmax].push_back(conn);
+		} // for i
+	}
+	rgeom_mat_t &bar_mat(get_untextured_material(1)); // inc_shadows=1
+
+	for (unsigned d = 0; d < 2; ++d) {
+		for (cube_t const &bar : bars[d]) {bar_mat.add_cube_to_verts_untextured(bar, WHITE, get_skip_mask_for_xy(!d));} // skip ends
 	}
 }
 
