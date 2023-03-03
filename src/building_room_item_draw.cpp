@@ -1538,6 +1538,59 @@ public:
 };
 snake_draw_t snake_draw;
 
+class insect_draw_t {
+	rgeom_mat_t mat;
+	bool is_setup=0;
+
+	void init() { // generate insect geometry, just a simple sphere for now
+		colorRGBA const color(BLACK);
+		cube_t c; // centered at (0,0,0)
+		c.expand_by(1.0); // radius=1.0
+		mat.add_sphere_to_verts(c, color, 1); // low_detail=1
+		mat.create_vbo_inner();
+		mat.clear_vectors(1); // free_memory=1: vector data no longer needed
+		is_setup = 1;
+	}
+public:
+	void clear() {mat.clear(); is_setup = 0;}
+
+	void draw(vect_insect_t const &insects, shader_t &s, building_t const &building, occlusion_checker_noncity_t &oc, vector3d const &xlate, bool reflection_pass) {
+		if (insects.empty()) return; // nothing to draw
+		point const camera_bs(camera_pdu.pos - xlate);
+		bool const check_occlusion(display_mode & 0x08);//, low_detail(shadow_only || reflection_pass);
+		bool any_drawn(0);
+
+		for (insect_t const &i : insects) { // future work: use instancing
+			cube_t const bcube(i.get_bcube());
+			if (!camera_pdu.cube_visible(bcube + xlate)) continue; // VFC
+			if (check_occlusion && building.check_obj_occluded(bcube, camera_bs, oc, reflection_pass)) continue; // is this even necessary?
+
+			if (!any_drawn) { // setup shaders
+				if (!is_setup) {init();}
+				mat.vao_setup(0); // shadow_only=0
+				s.set_specular(0.5, 80.0);
+				select_texture(WHITE_TEX);
+				s.add_uniform_float("bump_map_mag", 0.0);
+				mat.pre_draw(0); // shadow_only=0
+				any_drawn = 1;
+			}
+			fgPushMatrix();
+			translate_to(i.pos);
+			uniform_scale(i.radius);
+			check_mvm_update();
+			mat.draw_geom(); // use hardware instancing?
+			fgPopMatrix();
+		} // for i
+		if (any_drawn) { // reset state
+			check_mvm_update(); // make sure to reset MVM
+			s.add_uniform_float("bump_map_mag", 1.0);
+			s.clear_specular();
+			indexed_vao_manager_with_shadow_t::post_render();
+		}
+	}
+};
+insect_draw_t insect_draw;
+
 void draw_obj_model(obj_model_inst_t const &i, room_object_t const &obj, shader_t &s, vector3d const &xlate, point const &obj_center, bool shadow_only) {
 	bool const is_emissive_first_mat(!shadow_only && obj.type == TYPE_LAMP      && obj.is_light_on());
 	bool const is_emissive_body_mat (!shadow_only && obj.type == TYPE_WALL_LAMP && obj.is_light_on());
@@ -1757,6 +1810,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, building_t c
 		} // end rats drawing
 		spider_draw.draw(spiders, s, building, oc, xlate, shadow_only, reflection_pass, check_clip_cube);
 		snake_draw .draw(snakes,  s, building, oc, xlate, shadow_only, reflection_pass, check_clip_cube);
+		if (!shadow_only) {insect_draw.draw(insects, s, building, oc, xlate, reflection_pass);} // insects are too small to cast shadows
 	}
 	if (disable_cull_face) {glEnable(GL_CULL_FACE);}
 	if (obj_drawn) {check_mvm_update();} // needed after popping model transform matrix

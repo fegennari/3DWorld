@@ -980,6 +980,7 @@
     <ClInclude Include="src\asteroid.h" />
     <ClInclude Include="src\binary_file_io.h" />
     <ClInclude Include="src\buildings.h" />
+    <ClInclude Include="src\building_animals.h" />
     <ClInclude Include="src\city.h" />
     <ClInclude Include="src\city_model.h" />
     <ClInclude Include="src\city_objects.h" />

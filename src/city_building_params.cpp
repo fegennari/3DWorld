@@ -279,6 +279,12 @@ void building_params_t::init_kw_maps() {
 	kwmf.add("snake_speed",    snake_speed);
 	kwmr.add("snake_size_min", snake_size_min, FP_CHECK_POS);
 	kwmr.add("snake_size_max", snake_size_max, FP_CHECK_POS);
+	// insects
+	kwmu.add("num_insects_min", num_insects_min);
+	kwmu.add("num_insects_max", num_insects_max);
+	kwmf.add("insect_speed",    insect_speed);
+	kwmr.add("insect_size_min", insect_size_min, FP_CHECK_POS);
+	kwmr.add("insect_size_max", insect_size_max, FP_CHECK_POS);
 	// gameplay state
 	kwmr.add("open_door_prob",       open_door_prob,       FP_CHECK_01);
 	kwmr.add("locked_door_prob",     locked_door_prob,     FP_CHECK_01);

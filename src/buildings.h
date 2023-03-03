@@ -258,10 +258,11 @@ struct building_params_t {
 	float ai_retreat_time=4.0, elevator_wait_time=60.0, use_elevator_prob=0.25, elevator_wait_recall_prob=0.5;
 	float people_min_alpha=0.0;
 	// building animal params
-	unsigned num_rats_min=0, num_rats_max=0, min_attack_rats=0, num_spiders_min=0, num_spiders_max=0, num_snakes_min=0, num_snakes_max=0;
-	float rat_speed=0.0, rat_size_min=0.5, rat_size_max=1.0; // rats
+	unsigned num_rats_min=0, num_rats_max=0, min_attack_rats=0, num_spiders_min=0, num_spiders_max=0, num_snakes_min=0, num_snakes_max=0, num_insects_min=0, num_insects_max=0;
+	float rat_speed   =0.0, rat_size_min   =0.5, rat_size_max   =1.0; // rats
 	float spider_speed=0.0, spider_size_min=0.5, spider_size_max=1.0, spider_drawer_prob=0.0; // spiders
-	float snake_speed=0.0, snake_size_min=0.5, snake_size_max=1.0; // snakes
+	float snake_speed =0.0, snake_size_min =0.5, snake_size_max =1.0; // snakes
+	float insect_speed=0.0, insect_size_min=0.5, insect_size_max=1.0; // snakes
 	// gameplay state
 	float player_weight_limit=100.0;
 	// materials
@@ -374,7 +375,7 @@ enum {
 	TYPE_LAMP, TYPE_WASHER, TYPE_DRYER, TYPE_KEY, TYPE_HANGER, TYPE_CLOTHES, TYPE_FESCAPE, TYPE_WALL_LAMP, TYPE_CUP, TYPE_TOASTER,
 	TYPE_HOOD, TYPE_RCHAIR, TYPE_SILVERWARE, TYPE_TOY_MODEL, TYPE_CEIL_FAN,
 	/* animals */
-	TYPE_RAT, TYPE_SPIDER, TYPE_SNAKE,
+	TYPE_RAT, TYPE_SPIDER, TYPE_SNAKE, TYPE_INSECT,
 	NUM_ROBJ_TYPES};
 typedef uint8_t room_object;
 
@@ -736,9 +737,10 @@ struct building_room_geom_t {
 	vector<room_obj_dstate_t> obj_dstate;
 	vector<obj_model_inst_t> obj_model_insts;
 	vector<unsigned> moved_obj_ids;
-	vect_rat_t rats;
+	vect_rat_t    rats;
 	vect_spider_t spiders;
 	vect_snake_t  snakes;
+	vect_insect_t insects;
 	// {large static, small static, dynamic, lights, alpha mask, transparent, door} materials
 	building_materials_t mats_static, mats_small, mats_text, mats_detail, mats_dynamic, mats_lights, mats_amask, mats_alpha, mats_doors;
 	vect_cube_t light_bcubes;
@@ -1392,6 +1394,7 @@ public:
 	void update_rats   (point const &camera_bs, unsigned building_ix);
 	void update_spiders(point const &camera_bs, unsigned building_ix);
 	void update_snakes (point const &camera_bs, unsigned building_ix);
+	void update_insects(point const &camera_bs, unsigned building_ix);
 	void get_objs_at_or_below_ground_floor(vect_room_object_t &ret, bool for_spider) const;
 private:
 	// animals
@@ -1405,6 +1408,7 @@ private:
 	bool maybe_squish_spider(room_object_t const &obj);
 	void update_snake (snake_t  &snake,  point const &camera_bs, float timestep, float &max_xmove, rand_gen_t &rgen) const;
 	int  check_for_snake_coll(snake_t const &snake, point const &camera_bs, float timestep, point const &old_pos, point const &query_pos, vector3d &coll_dir) const;
+	void update_insect(insect_t &insect, point const &camera_bs, float timestep, rand_gen_t &rgen) const;
 	void maybe_bite_and_poison_player(point const &pos, point const &camera_bs, vector3d const &dir, float coll_radius, float damage, int poison_type, rand_gen_t &rgen) const;
 
 	bool is_pos_inside_building(point const &pos, float xy_pad, float hheight, bool inc_attic=1) const;

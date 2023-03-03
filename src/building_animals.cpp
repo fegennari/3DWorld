@@ -58,6 +58,7 @@ void building_t::update_animals(point const &camera_bs, unsigned building_ix) {
 	update_rats   (camera_bs, building_ix);
 	update_spiders(camera_bs, building_ix);
 	update_snakes (camera_bs, building_ix);
+	update_insects(camera_bs, building_ix);
 }
 
 template<typename T> void building_t::add_animals_on_floor(T &animals, unsigned building_ix, unsigned num_min, unsigned num_max, float sz_min, float sz_max) const {
@@ -1261,5 +1262,28 @@ cube_t insect_t::get_bcube() const {
 	cube_t bcube(pos);
 	bcube.expand_by(radius);
 	return bcube;
+}
+
+void building_t::update_insects(point const &camera_bs, unsigned building_ix) {
+	vect_insect_t &insects(interior->room_geom->insects);
+	if (insects.placed && insects.empty()) return; // no insects placed in this building
+	//timer_t timer("Update Insects");
+	// spawn insects on the floor and let them lift off and fly away if they're a flying type
+	bool const was_placed(insects.placed);
+	add_animals_on_floor(insects, building_ix, global_building_params.num_insects_min, global_building_params.num_insects_max,
+		global_building_params.insect_size_min, global_building_params.insect_size_max);
+
+	if (!was_placed) { // newply placed (on the floor); shift by radius in Z
+		for (insect_t &insect : insects) {insect.pos.z += insect.radius;}
+	}
+	// update insects
+	float const timestep(min(fticks, 4.0f)); // clamp fticks to 100ms
+	for (insect_t &insect : insects) {insect.move(timestep);}
+	rand_gen_t rgen;
+	rgen.set_state(building_ix+1, frame_counter+1); // unique per building and per frame
+	for (insect_t &insect : insects) {update_insect(insect, camera_bs, timestep, rgen);}
+}
+void building_t::update_insect(insect_t &insect, point const &camera_bs, float timestep, rand_gen_t &rgen) const {
+	// TODO
 }
 
