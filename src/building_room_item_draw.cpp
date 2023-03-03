@@ -1376,6 +1376,7 @@ void add_cylin_indices_tris(vector<unsigned> &idata, unsigned ndiv, unsigned ix_
 		for (unsigned i = 0; i < 6; ++i) {idata.push_back(ix0 + ixs[quad_to_tris_ixs[i]]);}
 	}
 }
+// used for snakes and vases
 void draw_segment(rgeom_mat_t &mat, point const &p1, point const &p2, float radius1, float radius2,
 	float seg_ix, float tscale_x, float tscale_y, color_wrapper const &cw, unsigned ndiv, unsigned &data_pos)
 {
@@ -1506,15 +1507,18 @@ public:
 		//highres_timer_t timer("Draw Snakes");
 		point const camera_bs(camera_pdu.pos - xlate);
 		bool const check_occlusion(display_mode & 0x08);
+		bool any_drawn(0);
 
-		for (snake_t const &S : snakes) { // future work: use instancing
+		for (snake_t const &S : snakes) {
 			cube_t const bcube(S.get_bcube());
 			if (check_clip_cube && !smap_light_clip_cube.intersects(bcube + xlate)) continue; // shadow map clip cube test: fast and high rejection ratio, do this first
 			if (!camera_pdu.cube_visible(bcube + xlate)) continue; // VFC
 			if (check_occlusion && building.check_obj_occluded(bcube, camera_bs, oc, reflection_pass)) continue;
 			bool const is_distant(!dist_less_than(camera_bs, S.pos, 6.0*S.length));
 			draw_snake(S, shadow_only, reflection_pass, is_distant);
+			any_drawn = 1;
 		} // for S
+		if (!any_drawn) return;
 		tid_nm_pair_dstate_t state(s);
 		s.add_uniform_float("bump_map_mag", 0.0);
 		// draw the skin material
