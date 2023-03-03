@@ -1254,3 +1254,12 @@ int building_t::check_for_snake_coll(snake_t const &snake, point const &camera_b
 	return 0;
 }
 
+
+// *** Insects ***
+
+cube_t insect_t::get_bcube() const {
+	cube_t bcube(pos);
+	bcube.expand_by(radius);
+	return bcube;
+}
+
