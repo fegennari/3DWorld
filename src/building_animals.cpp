@@ -1214,14 +1214,14 @@ void get_xy_dir_to_closest_cube_edge(point const &pos, cube_t const &c, vector3d
 // applies to snakes and insects
 // return values: 0=no coll, 1=outside building, 2=static object, 3=dynamic object, 4=ourself (for snakes)
 // coll_dir points in the direction of the collision, opposite the collision normal
-int building_t::check_for_animal_coll(building_animal_t const &A, float hheight, point const &camera_bs, float timestep,
-	point const &old_pos, point const &query_pos, vector3d &coll_dir) const
+int building_t::check_for_animal_coll(building_animal_t const &A, float hheight, float z_center_offset, point const &camera_bs,
+	float timestep, point const &old_pos, point const &query_pos, vector3d &coll_dir) const
 {
 	if (!bcube.contains_pt_xy_exp(query_pos, -A.radius) && !interior->basement_ext_bcube.contains_pt_xy_exp(query_pos, -A.radius)) { // outside the building interior
 		get_xy_dir_to_closest_cube_edge(query_pos, bcube, coll_dir); // find closest bcube edge to head_pos
 		return 1; // outside building bcube
 	}
-	vector3d const center_dz(0.0, 0.0, hheight); // TODO: snakes only
+	vector3d const center_dz(0.0, 0.0, z_center_offset);
 	point const query_center_z(query_pos + center_dz);
 
 	if (!is_pos_inside_building(query_pos, A.radius, hheight, 0)) { // inc_attic=0
@@ -1254,7 +1254,8 @@ int building_t::check_for_animal_coll(building_animal_t const &A, float hheight,
 	return 0;
 }
 int building_t::check_for_snake_coll(snake_t const &snake, point const &camera_bs, float timestep, point const &old_pos, point const &query_pos, vector3d &coll_dir) const {
-	int const ret(check_for_animal_coll(snake, 0.5*snake.get_height(), camera_bs, timestep, old_pos, query_pos, coll_dir));
+	float const hheight(0.5*snake.get_height());
+	int const ret(check_for_animal_coll(snake, hheight, hheight, camera_bs, timestep, old_pos, query_pos, coll_dir));
 	if (ret) return ret;
 	vector3d seg_dir;
 
@@ -1317,15 +1318,17 @@ void building_t::update_insect(insect_t &insect, point const &camera_bs, float t
 		insect.dir *= -1.0; // reverse direction; maybe should use direction to closest building wall?
 		return; // continue below?
 	}
-	float const lookahead_amt(2.0*radius);
-	vector3d const lookahead(insect.dir*lookahead_amt);
-	point const prev_pos(insect.pos), query_pos(prev_pos + lookahead); // apply lookahead
+	point const prev_pos(insect.pos), query_pos(prev_pos + insect.dir*(2.0*radius)); // apply lookahead
 	vector3d coll_dir; // collision normal; points from the collider in the XY plane
 	// coll_type: 0=no coll, 1=outside building, 2=static object, 3=dynamic object
-	int const ret(check_for_animal_coll(insect, radius, camera_bs, timestep, prev_pos, query_pos, coll_dir));
-	if (!ret) return;
-	if (coll_dir == zero_vector) {coll_dir = insect.dir;} // use our own dir as coll_dir if not set
-	insect.dir = rgen.signed_rand_vector_norm();
-	if (dot_product(insect.dir, coll_dir) > 0.0) {insect.dir.negate();}
+	int const ret(check_for_animal_coll(insect, radius, 0.0, camera_bs, timestep, prev_pos, query_pos, coll_dir)); // z_center_offset=0.0
+	
+	if (ret) { // collision
+		if (coll_dir == zero_vector) {coll_dir = insect.dir;} // use our own dir as coll_dir if not set
+		insect.dir = rgen.signed_rand_vector_norm();
+		if (dot_product(insect.dir, coll_dir) > 0.0) {insect.dir.negate();}
+		return;
+	}
+	// TODO: random dir change
 }
 

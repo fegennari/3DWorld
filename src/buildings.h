@@ -1407,7 +1407,8 @@ private:
 	void update_spider(spider_t &spider, point const &camera_bs, float timestep, float &max_xmove, rand_gen_t &rgen) const;
 	bool maybe_squish_spider(room_object_t const &obj);
 	void update_snake(snake_t  &snake,  point const &camera_bs, float timestep, float &max_xmove, rand_gen_t &rgen) const;
-	int  check_for_animal_coll(building_animal_t const &A, float hheight, point const &camera_bs, float timestep, point const &old_pos, point const &query_pos, vector3d &coll_dir) const;
+	int  check_for_animal_coll(building_animal_t const &A, float hheight, float z_center_offset, point const &camera_bs,
+		float timestep, point const &old_pos, point const &query_pos, vector3d &coll_dir) const;
 	int  check_for_snake_coll(snake_t const &snake, point const &camera_bs, float timestep, point const &old_pos, point const &query_pos, vector3d &coll_dir) const;
 	void update_insect(insect_t &insect, point const &camera_bs, float timestep, rand_gen_t &rgen) const;
 	void maybe_bite_and_poison_player(point const &pos, point const &camera_bs, vector3d const &dir, float coll_radius, float damage, int poison_type, rand_gen_t &rgen) const;
