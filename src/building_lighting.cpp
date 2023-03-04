@@ -1601,7 +1601,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			if (!is_rot_cube_visible(clipped_area, xlate)) {} // VFC, again
 			else if ((display_mode & 0x08) && !clipped_area.contains_pt(camera_rot) && check_obj_occluded(clipped_area, camera_bs, oc, 0)) {} // occlusion culling
 			else { // add the light
-				colorRGBA const color(add_sky_lighting ? cur_diffuse : outdoor_color);
+				colorRGBA const color(add_sky_lighting ? colorRGBA(cur_diffuse) : outdoor_color);
 				float corner_horiz_dist(0.0);
 
 				if (dir_always_vert) { // make the light dir vertical/Z to avoid aliasing artifacts, though this is less physically correct
