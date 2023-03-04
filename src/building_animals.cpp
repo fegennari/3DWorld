@@ -26,6 +26,7 @@ bool in_building_gameplay_mode();
 bool player_take_damage(float damage_scale, int poison_type=0, bool *has_key=nullptr);
 void apply_building_gravity(float &vz, float dt_ticks);
 void apply_fc_cube_max_merge_xy(vect_cube_t &cubes);
+template<typename T> bool line_int_cubes_exp(point const &p1, point const &p2, vector<T> const &cubes, vector3d const &expand, cube_t const &line_bcube);
 
 
 void building_animal_t::sleep_for(float time_secs_min, float time_secs_max) {
@@ -1210,43 +1211,56 @@ void get_xy_dir_to_closest_cube_edge(point const &pos, cube_t const &c, vector3d
 	if (dy2 < dmin) {dmin = dy2; dir =  plus_y;}
 }
 
-// return values: 0=no coll, 1=outside building, 2=static object, 3=dynamic object, 4=snake itself
+// applies to snakes and insects
+// return values: 0=no coll, 1=outside building, 2=static object, 3=dynamic object, 4=ourself (for snakes)
 // coll_dir points in the direction of the collision, opposite the collision normal
-int building_t::check_for_snake_coll(snake_t const &snake, point const &camera_bs, float timestep, point const &old_pos, point const &query_pos, vector3d &coll_dir) const {
-	float const radius(snake.radius), height(snake.get_height()), hheight(0.5*height);
-
-	if (!bcube.contains_pt_xy_exp(query_pos, -radius) && !interior->basement_ext_bcube.contains_pt_xy_exp(query_pos, -radius)) { // outside the building interior
+int building_t::check_for_animal_coll(building_animal_t const &A, float hheight, point const &camera_bs, float timestep,
+	point const &old_pos, point const &query_pos, vector3d &coll_dir) const
+{
+	if (!bcube.contains_pt_xy_exp(query_pos, -A.radius) && !interior->basement_ext_bcube.contains_pt_xy_exp(query_pos, -A.radius)) { // outside the building interior
 		get_xy_dir_to_closest_cube_edge(query_pos, bcube, coll_dir); // find closest bcube edge to head_pos
 		return 1; // outside building bcube
 	}
-	vector3d const center_dz(0.0, 0.0, hheight);
+	vector3d const center_dz(0.0, 0.0, hheight); // TODO: snakes only
 	point const query_center_z(query_pos + center_dz);
 
-	if (!is_pos_inside_building(query_pos, radius, hheight, 0)) { // inc_attic=0
+	if (!is_pos_inside_building(query_pos, A.radius, hheight, 0)) { // inc_attic=0
 		for (auto p = parts.begin(); p != get_real_parts_end_inc_sec(); ++p) {
 			if (p->contains_pt(query_center_z)) {get_xy_dir_to_closest_cube_edge(query_pos, *p, coll_dir);}
 		}
 		return 1; // outside building
 	}
 	// return value: 0=no coll, 1=dim0 wall, 2=dim1 wall, 3=closed door dim0, 4=closed door dim1, 5=open door, 6=stairs, 7=elevator, 8=exterior wall, 9=room object
-	int const coll_ret(check_line_coll_expand((old_pos + center_dz), query_center_z, radius, hheight));
+	int const coll_ret(check_line_coll_expand((old_pos + center_dz), query_center_z, A.radius, hheight));
 
 	if (coll_ret) {
 		if (coll_ret == 1 || coll_ret == 3) {coll_dir.x = ((query_pos.x < old_pos.x) ? -1.0 : 1.0);} // dim=0 wall/door, separates in X
 		if (coll_ret == 2 || coll_ret == 4) {coll_dir.y = ((query_pos.y < old_pos.y) ? -1.0 : 1.0);} // dim=1 wall/door, separates in Y
 		return 2; // collision with static room object
 	}
+	if (query_pos.z != old_pos.z) { // non-horizontal (insect); check for ceiling and floor collisions
+		vector3d const expand(A.radius, A.radius, hheight);
+		cube_t line_bcube(old_pos, query_pos);
+		line_bcube.expand_by(expand);
+		if (line_int_cubes_exp(old_pos, query_pos, interior->ceilings, expand, line_bcube) ||
+		    line_int_cubes_exp(old_pos, query_pos, interior->floors,   expand, line_bcube)) {coll_dir.z = ((query_pos.z < old_pos.z) ? -1.0 : 1.0); return 2;}
+	}
 	point query_pos_coll(query_pos); // may be updated below on collision
 
-	if (check_and_handle_dynamic_obj_coll(query_pos_coll, snake.pos, radius, query_pos.z, (query_pos.z + height), camera_bs, 0)) { // check for collisions; for_spider=0
+	if (check_and_handle_dynamic_obj_coll(query_pos_coll, A.pos, A.radius, query_pos.z, (query_pos.z + 2.0*hheight), camera_bs, 0)) { // check for collisions; for_spider=0
 		coll_dir = (query_pos - query_pos_coll).get_norm();
 		return 3; // collision with dynamic object
 	}
+	return 0;
+}
+int building_t::check_for_snake_coll(snake_t const &snake, point const &camera_bs, float timestep, point const &old_pos, point const &query_pos, vector3d &coll_dir) const {
+	int const ret(check_for_animal_coll(snake, 0.5*snake.get_height(), camera_bs, timestep, old_pos, query_pos, coll_dir));
+	if (ret) return ret;
 	vector3d seg_dir;
 
 	// check for self intersection in a line in front and a sphere for the side; skip_head=1
-	if (snake.check_line_int_xy(old_pos, (query_pos + snake.dir*radius), 1, &seg_dir) ||
-		snake.check_sphere_int(query_pos, radius, 1, &seg_dir))
+	if (snake.check_line_int_xy(old_pos, (query_pos + snake.dir*snake.radius), 1, &seg_dir) ||
+		snake.check_sphere_int(query_pos, snake.radius, 1, &seg_dir))
 	{
 		// set coll_dir to the direction of the segment pointing toward the head - we don't want to go that way and get stuck in a spiral
 		coll_dir = seg_dir;
@@ -1284,6 +1298,34 @@ void building_t::update_insects(point const &camera_bs, unsigned building_ix) {
 	for (insect_t &insect : insects) {update_insect(insect, camera_bs, timestep, rgen);}
 }
 void building_t::update_insect(insect_t &insect, point const &camera_bs, float timestep, rand_gen_t &rgen) const {
-	// TODO
+	// here we assume this is a flying insect for now, since we already have walking animals such as spiders and rats
+	if (insect.speed == 0.0) { // generate initial speed and dir
+		insect.speed = global_building_params.insect_speed*rgen.rand_uniform(0.5, 1.0);
+		insect.dir = rgen.signed_rand_vector_norm();
+		if (insect.dir.z < 0.0) {insect.dir.z *= -1.0;} // assume starting on the floor, and fly upward
+	}
+	float const radius(insect.radius);
+
+	// check for collision and bounce off the object for now
+	if (!is_pos_inside_building(insect.pos, radius, radius)) {
+		insect.pos = insect.last_pos; // restore previous pos before collision
+
+		if (!is_pos_inside_building(insect.pos, radius, radius)) { // still not valid, respawn; error?
+			gen_animal_floor_pos(radius, insect_t::allow_in_attic(), rgen);
+			return;
+		}
+		insect.dir *= -1.0; // reverse direction; maybe should use direction to closest building wall?
+		return; // continue below?
+	}
+	float const lookahead_amt(2.0*radius);
+	vector3d const lookahead(insect.dir*lookahead_amt);
+	point const prev_pos(insect.pos), query_pos(prev_pos + lookahead); // apply lookahead
+	vector3d coll_dir; // collision normal; points from the collider in the XY plane
+	// coll_type: 0=no coll, 1=outside building, 2=static object, 3=dynamic object
+	int const ret(check_for_animal_coll(insect, radius, camera_bs, timestep, prev_pos, query_pos, coll_dir));
+	if (!ret) return;
+	if (coll_dir == zero_vector) {coll_dir = insect.dir;} // use our own dir as coll_dir if not set
+	insect.dir = rgen.signed_rand_vector_norm();
+	if (dot_product(insect.dir, coll_dir) > 0.0) {insect.dir.negate();}
 }
 
