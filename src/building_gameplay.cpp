@@ -11,7 +11,7 @@ using std::string;
 float const THROW_VELOCITY = 0.0050;
 float const ALERT_THRESH   = 0.08; // min sound alert level for AIs
 
-bool do_room_obj_pickup(0), use_last_pickup_object(0), show_bldg_pickup_crosshair(0), player_near_toilet(0);
+bool do_room_obj_pickup(0), use_last_pickup_object(0), show_bldg_pickup_crosshair(0), player_near_toilet(0), player_attracts_flies(0);
 bool city_action_key(0), can_do_building_action(0);
 int can_pickup_bldg_obj(0), player_in_elevator(0); // player_in_elevator: 0=no, 1=in, 2=in + doors closed/moving
 float office_chair_rot_rate(0.0), cur_building_sound_level(0.0);
@@ -407,6 +407,7 @@ public:
 		player_health = 1.0; // full health
 		num_doors_unlocked = 0; // not saved on death, but maybe should be?
 		prev_in_building = has_key = is_poisoned = poison_from_spider = 0;
+		player_attracts_flies = 0;
 		phone_manager.disable();
 		carried.clear();
 		tape_manager.clear();
@@ -476,6 +477,7 @@ public:
 		bool const bladder_was_full(bladder >= 0.9);
 		float const value(get_obj_value(obj));
 		if (obj.type == TYPE_PAPER && value >= 500.0) {register_achievement("Top Secret Document");}
+		if (obj.type == TYPE_TCAN || obj.type == TYPE_TOILET || obj.type == TYPE_URINAL || (obj.type == TYPE_RAT && obj.is_broken())) {player_attracts_flies = 1;}
 		damage_done += value;
 		colorRGBA text_color(GREEN);
 		std::ostringstream oss;

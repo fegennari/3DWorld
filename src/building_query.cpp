@@ -1729,8 +1729,10 @@ template<typename T> void vect_animal_t<T>::update_delta_sum_for_animal_coll(poi
 
 // vertical cylinder collision detection with dynamic objects: balls, the player? people? other rats?
 // only handles the first collision
-bool building_t::check_and_handle_dynamic_obj_coll(point &pos, point const &cur_obj_pos, float radius, float z1, float z2, point const &camera_bs, bool for_spider) const {
-	if (camera_surf_collide) { // check the player
+bool building_t::check_and_handle_dynamic_obj_coll(point &pos, point const &cur_obj_pos, float radius,
+	float z1, float z2, point const &camera_bs, bool for_spider, bool skip_player) const
+{
+	if (camera_surf_collide && !skip_player) { // check the player
 		if (z1 < camera_bs.z && z2 > (camera_bs.z - 1.1*CAMERA_RADIUS - get_player_height())) { // slighly below the player's feet
 			if (handle_vcylin_vcylin_int(pos, camera_bs, (radius + get_scaled_player_radius()))) return 1;
 		}

@@ -14,9 +14,11 @@ float const RAT_ATTACK_SPEED = 1.2; // multiplier
 float const RAT_FOV_DP(cos(0.5*RAT_FOV_DEG*TO_RADIANS));
 float const SPIDER_VIEW_FLOORS = 4.0; // view distance in floors
 
+extern bool player_attracts_flies;
 extern int animate2, camera_surf_collide, frame_counter, display_mode;
-extern float fticks;
+extern float fticks, NEAR_CLIP;
 extern double tfticks;
+extern building_dest_t cur_player_building_loc;
 extern building_params_t global_building_params;
 extern object_model_loader_t building_obj_model_loader;
 
@@ -127,11 +129,12 @@ bool building_t::is_pos_inside_building(point const &pos, float xy_pad, float hh
 	return (is_cube_contained_in_parts(req_area) || (inc_attic && cube_in_attic(req_area)));
 }
 
+void update_dir_incremental_no_zero_check(vector3d &dir, vector3d const &new_dir, float turn_rate, float timestep) {
+	float const delta_dir(turn_rate*min(1.0f, 1.5f*(1.0f - pow(0.7f, timestep))));
+	dir = (delta_dir*new_dir + (1.0 - delta_dir)*dir).get_norm();
+}
 void update_dir_incremental(vector3d &dir, vector3d const &new_dir, float turn_rate, float timestep, rand_gen_t &rgen) {
-	if (new_dir != zero_vector) { // update dir if new_dir was set above
-		float const delta_dir(turn_rate*min(1.0f, 1.5f*(1.0f - pow(0.7f, timestep))));
-		dir = (delta_dir*new_dir + (1.0 - delta_dir)*dir).get_norm();
-	}
+	if (new_dir != zero_vector) {update_dir_incremental_no_zero_check(dir, new_dir, turn_rate, timestep);} // update dir if new_dir is valid
 	if (dir == zero_vector) {dir = rgen.signed_rand_vector_xy().get_norm();} // dir must always be valid
 }
 void try_resolve_coll(vector3d const &dir, vector3d const &upv, vector3d const &coll_dir, vector3d &new_dir, bool try_tangent) {
@@ -211,6 +214,7 @@ bool building_t::add_rat(point const &pos, float hlength, vector3d const &dir, p
 				dead = 1;
 			}
 			if (dead) { // cook/kill
+				player_attracts_flies = 1;
 				register_achievement("Tastes Like Chicken");
 				return 0; // rat is not dropped
 			}
@@ -1214,8 +1218,8 @@ void get_xy_dir_to_closest_cube_edge(point const &pos, cube_t const &c, vector3d
 // applies to snakes and insects
 // return values: 0=no coll, 1=outside building, 2=static object, 3=dynamic object, 4=ourself (for snakes)
 // coll_dir points in the direction of the collision, opposite the collision normal
-int building_t::check_for_animal_coll(building_animal_t const &A, float hheight, float z_center_offset, bool on_floor_only, point const &camera_bs,
-	float timestep, point const &old_pos, point const &query_pos, vector3d &coll_dir) const
+int building_t::check_for_animal_coll(building_animal_t const &A, float hheight, float z_center_offset, bool on_floor_only, bool skip_player,
+	point const &camera_bs, float timestep, point const &old_pos, point const &query_pos, vector3d &coll_dir) const
 {
 	if (!bcube.contains_pt_xy_exp(query_pos, -A.radius) && !interior->basement_ext_bcube.contains_pt_xy_exp(query_pos, -A.radius)) { // outside the building interior
 		get_xy_dir_to_closest_cube_edge(query_pos, bcube, coll_dir); // find closest bcube edge to head_pos
@@ -1247,7 +1251,7 @@ int building_t::check_for_animal_coll(building_animal_t const &A, float hheight,
 	}
 	point query_pos_coll(query_pos); // may be updated below on collision
 
-	if (check_and_handle_dynamic_obj_coll(query_pos_coll, A.pos, A.radius, query_pos.z, (query_pos.z + 2.0*hheight), camera_bs, 0)) { // check for collisions; for_spider=0
+	if (check_and_handle_dynamic_obj_coll(query_pos_coll, A.pos, A.radius, query_pos.z, (query_pos.z + 2.0*hheight), camera_bs, 0, skip_player)) { // for_spider=0
 		coll_dir = (query_pos - query_pos_coll).get_norm();
 		return 3; // collision with dynamic object
 	}
@@ -1255,7 +1259,7 @@ int building_t::check_for_animal_coll(building_animal_t const &A, float hheight,
 }
 int building_t::check_for_snake_coll(snake_t const &snake, point const &camera_bs, float timestep, point const &old_pos, point const &query_pos, vector3d &coll_dir) const {
 	float const hheight(0.5*snake.get_height());
-	int const ret(check_for_animal_coll(snake, hheight, hheight, 1, camera_bs, timestep, old_pos, query_pos, coll_dir)); // on_floor_only=1
+	int const ret(check_for_animal_coll(snake, hheight, hheight, 1, 0, camera_bs, timestep, old_pos, query_pos, coll_dir)); // on_floor_only=1, skip_player=0
 	if (ret) return ret;
 	vector3d seg_dir;
 
@@ -1306,6 +1310,7 @@ void building_t::update_insect(insect_t &insect, point const &camera_bs, float t
 		insect.dir = rgen.signed_rand_vector_norm();
 		if (insect.dir.z < 0.0) {insect.dir.z *= -1.0;} // assume starting on the floor, and fly upward
 	}
+	insect.target_player = 0;
 	float const radius(insect.radius);
 	point &pos(insect.pos);
 
@@ -1321,13 +1326,14 @@ void building_t::update_insect(insect_t &insect, point const &camera_bs, float t
 		insect.delta_dir = zero_vector; // reset delta_dir
 		return; // continue below?
 	}
+	bool const target_player(player_attracts_flies && dist_xy_less_than(pos, camera_bs, 2.0*get_window_vspace()));
 	unsigned const update_freq(1 + interior->room_geom->insects.size()/250); // reduced update rate for many insects
 
 	if (((frame_counter + insect.id) % update_freq) == 0) {
 		vector3d const lookahead(insect.dir*(2.0*radius));
 		vector3d coll_dir; // collision normal; points from the collider in the XY plane
-		// coll_type: 0=no coll, 1=outside building, 2=static object, 3=dynamic object
-		int const ret(check_for_animal_coll(insect, radius, 0.0, 0, camera_bs, timestep, insect.pos, (insect.pos + lookahead), coll_dir)); // z_center_offset=0.0, on_floor_only=0
+		// coll_type: 0=no coll, 1=outside building, 2=static object, 3=dynamic object; z_center_offset=0.0, on_floor_only=0
+		int const ret(check_for_animal_coll(insect, radius, 0.0, 0, target_player, camera_bs, timestep, pos, (pos + lookahead), coll_dir));
 	
 		if (ret) { // collision
 			if (coll_dir == zero_vector) {coll_dir = insect.dir;} // use our own dir as coll_dir if not set
@@ -1337,13 +1343,18 @@ void building_t::update_insect(insect_t &insect, point const &camera_bs, float t
 			return;
 		}
 		if (rgen.rand_float() < 0.25) { // every 4 updates send out a longer range collision query
-			if (check_for_animal_coll(insect, radius, 0.0, 0, camera_bs, timestep, insect.pos, (insect.pos + 8.0*lookahead), coll_dir)) { // z_center_offset=0.0, on_floor_only=0
+			if (check_for_animal_coll(insect, radius, 0.0, 0, target_player, camera_bs, timestep, pos, (pos + 8.0*lookahead), coll_dir)) {
 				insect.delta_dir *= 0.9f; // reduce direction change
 				insect.dir       += 0.25*rgen.signed_rand_vector_norm(); // adjust direction
 				insect.dir.normalize();
 				min_eq(insect.accel, 0.0f); // stop accelerating
 			}
 		}
+	}
+	if (target_player && (get_room_containing_pt(pos) == cur_player_building_loc.room_ix || is_pt_visible(pos, camera_bs))) { // see if the player is visible
+		insect.target_player = 1;
+		vector3d const dir_to_player((camera_bs - pos).get_norm());
+		update_dir_incremental_no_zero_check(insect.dir, dir_to_player, 0.5, timestep); // slow turn to player direction
 	}
 	// apply a slow random dir change
 	insect.delta_dir += (0.1f*timestep)*rgen.signed_rand_vector();
@@ -1355,8 +1366,11 @@ void building_t::update_insect(insect_t &insect, point const &camera_bs, float t
 	insect.speed  = min(global_building_params.insect_speed, max(0.5f*global_building_params.insect_speed, (insect.speed + (0.05f*timestep)*insect.accel)));
 	
 	// play buzz sound if near player
-	if (dist_xy_less_than(pos, camera_bs, 1.5*get_scaled_player_radius())) {
+	if (dist_xy_less_than(pos, camera_bs, 1.0*get_scaled_player_radius())) {
 		gen_sound_thread_safe(SOUND_FLY_BUZZ, local_to_camera_space(pos), 1.0, 1.0, 1.0, 1); // skip_if_already_playing=1
 	}
+	// make sure we're not in front of the camera near clip plane
+	float const camera_dmin(radius + NEAR_CLIP);
+	if (dist_xy_less_than(pos, camera_bs, camera_dmin)) {pos = camera_bs + camera_dmin*(pos - camera_bs).get_norm();}
 }
 

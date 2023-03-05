@@ -92,6 +92,7 @@ struct snake_t : public building_animal_t {
 struct insect_t : public building_animal_t {
 	vector3d delta_dir;
 	float accel=0.0;
+	bool target_player=0;
 	insect_t(point const &pos_, float radius_, vector3d const &dir_, unsigned id_) : building_animal_t(pos_, radius_, dir_, id_) {}
 	static bool allow_in_attic() {return 0;} // could allow it?
 	float get_xy_radius() const {return radius;}
