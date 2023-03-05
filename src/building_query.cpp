@@ -1568,7 +1568,7 @@ int building_t::check_line_coll_expand(point const &p1, point const &p2, float r
 			if (c->z1() > obj_z2 || c->z2() < obj_z1) continue; // wrong floor
 			// skip non-colliding objects except for balls and books (that the player can drop), computers under desks, and expanded objects from closets,
 			// since rats must collide with these
-			if (!c->is_floor_collidable()) continue;
+			if (!(for_spider ? c->is_spider_collidable() : c->is_floor_collidable())) continue;
 			if (!line_bcube.intersects(*c) || !line_int_cube_exp(p1, p2, get_true_room_obj_bcube(*c), expand)) continue;
 
 			if (c->is_vert_cylinder()) { // vertical cylinder
