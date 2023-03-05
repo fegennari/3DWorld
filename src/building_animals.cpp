@@ -1319,17 +1319,29 @@ void building_t::update_insect(insect_t &insect, point const &camera_bs, float t
 		insect.delta_dir = zero_vector; // reset delta_dir
 		return; // continue below?
 	}
-	vector3d const lookahead(insect.dir*(2.0*radius));
-	vector3d coll_dir; // collision normal; points from the collider in the XY plane
-	// coll_type: 0=no coll, 1=outside building, 2=static object, 3=dynamic object
-	int const ret(check_for_animal_coll(insect, radius, 0.0, 0, camera_bs, timestep, insect.pos, (insect.pos + lookahead), coll_dir)); // z_center_offset=0.0, on_floor_only=0
+	unsigned const update_freq(1 + interior->room_geom->insects.size()/250); // reduced update rate for many insects
+
+	if (((frame_counter + insect.id) % update_freq) == 0) {
+		vector3d const lookahead(insect.dir*(2.0*radius));
+		vector3d coll_dir; // collision normal; points from the collider in the XY plane
+		// coll_type: 0=no coll, 1=outside building, 2=static object, 3=dynamic object
+		int const ret(check_for_animal_coll(insect, radius, 0.0, 0, camera_bs, timestep, insect.pos, (insect.pos + lookahead), coll_dir)); // z_center_offset=0.0, on_floor_only=0
 	
-	if (ret) { // collision
-		if (coll_dir == zero_vector) {coll_dir = insect.dir;} // use our own dir as coll_dir if not set
-		insect.dir = rgen.signed_rand_vector_norm();
-		if (dot_product(insect.dir, coll_dir) > 0.0) {insect.dir.negate();}
-		insect.delta_dir = zero_vector; // reset delta_dir on coll
-		return;
+		if (ret) { // collision
+			if (coll_dir == zero_vector) {coll_dir = insect.dir;} // use our own dir as coll_dir if not set
+			insect.dir = rgen.signed_rand_vector_norm();
+			if (dot_product(insect.dir, coll_dir) > 0.0) {insect.dir.negate();}
+			insect.delta_dir = zero_vector; // reset delta_dir on coll
+			return;
+		}
+		if (rgen.rand_float() < 0.25) { // every 4 updates send out a longer range collision query
+			if (check_for_animal_coll(insect, radius, 0.0, 0, camera_bs, timestep, insect.pos, (insect.pos + 8.0*lookahead), coll_dir)) { // z_center_offset=0.0, on_floor_only=0
+				insect.delta_dir *= 0.9f; // reduce direction change
+				insect.dir       += 0.25*rgen.signed_rand_vector_norm(); // adjust direction
+				insect.dir.normalize();
+				min_eq(insect.accel, 0.0f); // stop accelerating
+			}
+		}
 	}
 	// apply a slow random dir change
 	insect.delta_dir += (0.1f*timestep)*rgen.signed_rand_vector();
@@ -1339,14 +1351,5 @@ void building_t::update_insect(insect_t &insect, point const &camera_bs, float t
 	insect.accel += (0.04f*timestep)*rgen.signed_rand_float();
 	insect.accel  = CLIP_TO_pm1(insect.accel);
 	insect.speed  = min(global_building_params.insect_speed, max(0.5f*global_building_params.insect_speed, (insect.speed + (0.05f*timestep)*insect.accel)));
-
-	if (rgen.rand_float() < 0.25) { // every 4 frames send out a longer range collision query
-		if (check_for_animal_coll(insect, radius, 0.0, 0, camera_bs, timestep, insect.pos, (insect.pos + 8.0*lookahead), coll_dir)) { // z_center_offset=0.0, on_floor_only=0
-			insect.delta_dir *= 0.9f; // reduce direction change
-			insect.dir       += 0.25*rgen.signed_rand_vector_norm(); // adjust direction
-			insect.dir.normalize();
-			min_eq(insect.accel, 0.0f); // stop accelerating
-		}
-	}
 }
 
