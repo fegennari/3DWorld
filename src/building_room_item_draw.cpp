@@ -14,7 +14,7 @@ colorRGBA const rat_color(GRAY); // make the rat's fur darker
 vect_room_object_t pending_objs;
 object_model_loader_t building_obj_model_loader;
 
-extern bool camera_in_building;
+extern bool camera_in_building, enable_depth_clamp;
 extern int display_mode, frame_counter, animate2, player_in_basement;
 extern float office_chair_rot_rate, cur_dlight_pcf_offset;
 extern point pre_smap_player_pos;
@@ -1572,6 +1572,7 @@ public:
 				select_texture(WHITE_TEX);
 				s.add_uniform_float("bump_map_mag", 0.0);
 				mat.pre_draw(0); // shadow_only=0
+				if (!enable_depth_clamp) {glEnable(GL_DEPTH_CLAMP);} // make sure depth clamp is enabled so that insects are drawn when very close
 				any_drawn = 1;
 			}
 			fgPushMatrix();
@@ -1582,6 +1583,7 @@ public:
 			fgPopMatrix();
 		} // for i
 		if (any_drawn) { // reset state
+			if (!enable_depth_clamp) {glDisable(GL_DEPTH_CLAMP);}
 			check_mvm_update(); // make sure to reset MVM
 			s.add_uniform_float("bump_map_mag", 1.0);
 			s.clear_specular();
