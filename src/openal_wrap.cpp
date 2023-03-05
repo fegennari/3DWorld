@@ -163,6 +163,7 @@ public:
 		add_new_sound("helicopter.wav" ); // SOUND_HELICOPTER
 		add_new_sound("rat_squeak.wav" ); // SOUND_RAT_SQUEAK
 		add_new_sound("hurt2.wav"      ); // SOUND_HURT2
+		add_new_sound("fly_buzz.wav"   ); // SOUND_FLY_BUZZ
 		cout << endl;
 
 		// create sources

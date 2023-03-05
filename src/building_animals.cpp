@@ -1298,6 +1298,7 @@ void building_t::update_insects(point const &camera_bs, unsigned building_ix) {
 	rgen.set_state(building_ix+1, frame_counter+1); // unique per building and per frame
 	for (insect_t &insect : insects) {update_insect(insect, camera_bs, timestep, rgen);}
 }
+
 void building_t::update_insect(insect_t &insect, point const &camera_bs, float timestep, rand_gen_t &rgen) const {
 	// here we assume this is a flying insect for now, since we already have walking animals such as spiders and rats
 	if (insect.speed == 0.0) { // generate initial speed and dir
@@ -1306,12 +1307,13 @@ void building_t::update_insect(insect_t &insect, point const &camera_bs, float t
 		if (insect.dir.z < 0.0) {insect.dir.z *= -1.0;} // assume starting on the floor, and fly upward
 	}
 	float const radius(insect.radius);
+	point &pos(insect.pos);
 
 	// check for collision and bounce off the object for now
-	if (!is_pos_inside_building(insect.pos, radius, radius)) {
-		insect.pos = insect.last_pos; // restore previous pos before collision
+	if (!is_pos_inside_building(pos, radius, radius)) {
+		pos = insect.last_pos; // restore previous pos before collision
 
-		if (!is_pos_inside_building(insect.pos, radius, radius)) { // still not valid, respawn; error?
+		if (!is_pos_inside_building(pos, radius, radius)) { // still not valid, respawn; error?
 			gen_animal_floor_pos(radius, insect_t::allow_in_attic(), rgen);
 			return;
 		}
@@ -1351,5 +1353,10 @@ void building_t::update_insect(insect_t &insect, point const &camera_bs, float t
 	insect.accel += (0.04f*timestep)*rgen.signed_rand_float();
 	insect.accel  = CLIP_TO_pm1(insect.accel);
 	insect.speed  = min(global_building_params.insect_speed, max(0.5f*global_building_params.insect_speed, (insect.speed + (0.05f*timestep)*insect.accel)));
+	
+	// play buzz sound if near player
+	if (dist_xy_less_than(pos, camera_bs, 1.5*get_scaled_player_radius())) {
+		gen_sound_thread_safe(SOUND_FLY_BUZZ, local_to_camera_space(pos), 1.0, 1.0, 1.0, 1); // skip_if_already_playing=1
+	}
 }
 
