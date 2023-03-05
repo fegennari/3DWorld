@@ -1300,17 +1300,20 @@ void building_t::update_insects(point const &camera_bs, unsigned building_ix) {
 	for (insect_t &insect : insects) {insect.move(timestep);}
 	rand_gen_t rgen;
 	rgen.set_state(building_ix+1, frame_counter+1); // unique per building and per frame
-	for (insect_t &insect : insects) {update_insect(insect, camera_bs, timestep, rgen);}
+	vector<pair<float, point>> targets;
+	for (insect_t &insect : insects) {update_insect(insect, camera_bs, timestep, targets, rgen);}
 }
 
-void building_t::update_insect(insect_t &insect, point const &camera_bs, float timestep, rand_gen_t &rgen) const {
+void building_t::update_insect(insect_t &insect, point const &camera_bs, float timestep, vector<pair<float, point>> &targets, rand_gen_t &rgen) const {
+	float const max_speed(global_building_params.insect_speed);
+
 	// here we assume this is a flying insect for now, since we already have walking animals such as spiders and rats
 	if (insect.speed == 0.0) { // generate initial speed and dir
-		insect.speed = global_building_params.insect_speed*rgen.rand_uniform(0.5, 1.0);
+		insect.speed = max_speed*rgen.rand_uniform(0.5, 1.0);
 		insect.dir = rgen.signed_rand_vector_norm();
 		if (insect.dir.z < 0.0) {insect.dir.z *= -1.0;} // assume starting on the floor, and fly upward
 	}
-	insect.target_player = 0;
+	insect.has_target = insect.target_player = 0;
 	float const radius(insect.radius);
 	point &pos(insect.pos);
 
@@ -1326,7 +1329,8 @@ void building_t::update_insect(insect_t &insect, point const &camera_bs, float t
 		insect.delta_dir = zero_vector; // reset delta_dir
 		return; // continue below?
 	}
-	bool const target_player(player_attracts_flies && dist_xy_less_than(pos, camera_bs, 2.0*get_window_vspace()));
+	float const dist_to_player(p2p_dist(pos, camera_bs)), sight_range(2.0*get_window_vspace());
+	bool const target_player(player_attracts_flies && dist_to_player < sight_range);
 	unsigned const update_freq(1 + interior->room_geom->insects.size()/250); // reduced update rate for many insects
 
 	if (((frame_counter + insect.id) % update_freq) == 0) {
@@ -1351,10 +1355,29 @@ void building_t::update_insect(insect_t &insect, point const &camera_bs, float t
 			}
 		}
 	}
-	if (target_player && (get_room_containing_pt(pos) == cur_player_building_loc.room_ix || is_pt_visible(pos, camera_bs))) { // see if the player is visible
-		insect.target_player = 1;
-		vector3d const dir_to_player((camera_bs - pos).get_norm());
-		update_dir_incremental_no_zero_check(insect.dir, dir_to_player, 0.5, timestep); // slow turn to player direction
+	targets.clear();
+	if (target_player) {targets.emplace_back(dist_to_player, camera_bs);}
+	bool follow_mode(0);
+	
+	if (in_building_gameplay_mode()) { // look for zombies to follow
+		for (person_t const &p : interior->people) {
+			point const eye_pos(p.get_eye_pos());
+			float const dist_sq(p2p_dist_sq(pos, eye_pos));
+			if (dist_sq > sight_range*sight_range) continue; // too far away to see
+			targets.emplace_back(sqrt(dist_sq), eye_pos);
+		}
+	}
+	sort(targets.begin(), targets.end()); // sort min to max distance
+
+	for (auto const &target : targets) {
+		bool const is_player(target.second == camera_bs);
+		if ((get_room_containing_pt(pos) != (is_player ? cur_player_building_loc.room_ix : get_room_containing_pt(target.second)) &&
+			!is_pt_visible(pos, target.second))) continue; // not visible
+		insect.has_target = 1;
+		if (is_player) {insect.target_player = 1;}
+		follow_mode = (target.first > 1.2*get_scaled_player_radius()); // follow if not very close to the target
+		vector3d const dir_to_target((target.second - pos).get_norm());
+		update_dir_incremental_no_zero_check(insect.dir, dir_to_target, 0.5, timestep); // slow turn to target direction
 	}
 	// apply a slow random dir change
 	insect.delta_dir += (0.1f*timestep)*rgen.signed_rand_vector();
@@ -1363,14 +1386,14 @@ void building_t::update_insect(insect_t &insect, point const &camera_bs, float t
 	// apply a slow random acceleration
 	insect.accel += (0.04f*timestep)*rgen.signed_rand_float();
 	insect.accel  = CLIP_TO_pm1(insect.accel);
-	insect.speed  = min(global_building_params.insect_speed, max(0.5f*global_building_params.insect_speed, (insect.speed + (0.05f*timestep)*insect.accel)));
+	insect.speed  = (follow_mode ? 1.6 : 1.0)*min(max_speed, max(0.5f*max_speed, (insect.speed + (0.05f*timestep)*insect.accel))); // faster when following
 	
 	// play buzz sound if near player
-	if (dist_xy_less_than(pos, camera_bs, 1.0*get_scaled_player_radius())) {
+	if (dist_to_player < 1.1*get_scaled_player_radius()) {
 		gen_sound_thread_safe(SOUND_FLY_BUZZ, local_to_camera_space(pos), 1.0, 1.0, 1.0, 1); // skip_if_already_playing=1
 	}
 	// make sure we're not in front of the camera near clip plane
 	float const camera_dmin(radius + NEAR_CLIP);
-	if (dist_xy_less_than(pos, camera_bs, camera_dmin)) {pos = camera_bs + camera_dmin*(pos - camera_bs).get_norm();}
+	if (dist_to_player < camera_dmin) {pos = camera_bs + camera_dmin*(pos - camera_bs).get_norm();}
 }
 
