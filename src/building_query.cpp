@@ -1390,7 +1390,7 @@ bool room_object_t::is_vert_cylinder() const {
 	return dir; // duct/pipe encoding for vertical is dim=x, dir=1
 }
 float building_t::get_ground_floor_z_thresh(bool for_spider) const {
-	return (ground_floor_z1 + (for_spider ? 1.0f : 0.25f)*get_window_vspace()); // rats are on the ground, while spiders can climb walls
+	return (ground_floor_z1 + (for_spider ? 1.0f : 0.25f)*get_window_vspace()); // rats are on the ground, while spiders can climb walls and insects can fly
 }
 bool building_t::get_begin_end_room_objs_on_ground_floor(float zval, bool for_spider, vect_room_object_t::const_iterator &b, vect_room_object_t::const_iterator &e) const {
 	if (zval < get_ground_floor_z_thresh(for_spider)) { // optimized for the case of rats and spiders where most are on the ground floor or basement
@@ -1478,7 +1478,7 @@ void building_t::get_room_obj_cubes(room_object_t const &c, point const &pos, ve
 
 // collision query used for rats, snakes, and insects: p1 and p2 are line end points; radius applies in X and Y, hheight is half height and applies in +/- z
 // return value: 0=no coll, 1=dim0 wall, 2=dim1 wall, 3=closed door dim0, 4=closed door dim1, 5=open door, 6=stairs, 7=elevator, 8=exterior wall, 9=room object
-int building_t::check_line_coll_expand(point const &p1, point const &p2, float radius, float hheight) const {
+int building_t::check_line_coll_expand(point const &p1, point const &p2, float radius, float hheight, bool for_spider) const {
 	assert(interior != nullptr);
 	float const trim_thickness(get_trim_thickness()), zmin(min(p1.z, p2.z));
 	float const obj_z1(min(p1.z, p2.z) - hheight), obj_z2(max(p1.z, p2.z) + hheight);
@@ -1558,7 +1558,7 @@ int building_t::check_line_coll_expand(point const &p1, point const &p2, float r
 	// check room objects and expanded objects (from closets)
 	float t(0.0);
 	vect_room_object_t::const_iterator b, e;
-	bool const use_cached_objs(get_begin_end_room_objs_on_ground_floor(obj_z2, 0, b, e)); // for_spiders=0
+	bool const use_cached_objs(get_begin_end_room_objs_on_ground_floor(obj_z2, for_spider, b, e));
 
 	for (unsigned vect_id = 0; vect_id < (use_cached_objs ? 1U : 2U); ++vect_id) {
 		auto objs_beg((vect_id == 1) ? interior->room_geom->expanded_objs.begin() : b);

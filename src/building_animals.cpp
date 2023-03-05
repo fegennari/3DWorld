@@ -1214,7 +1214,7 @@ void get_xy_dir_to_closest_cube_edge(point const &pos, cube_t const &c, vector3d
 // applies to snakes and insects
 // return values: 0=no coll, 1=outside building, 2=static object, 3=dynamic object, 4=ourself (for snakes)
 // coll_dir points in the direction of the collision, opposite the collision normal
-int building_t::check_for_animal_coll(building_animal_t const &A, float hheight, float z_center_offset, point const &camera_bs,
+int building_t::check_for_animal_coll(building_animal_t const &A, float hheight, float z_center_offset, bool on_floor_only, point const &camera_bs,
 	float timestep, point const &old_pos, point const &query_pos, vector3d &coll_dir) const
 {
 	if (!bcube.contains_pt_xy_exp(query_pos, -A.radius) && !interior->basement_ext_bcube.contains_pt_xy_exp(query_pos, -A.radius)) { // outside the building interior
@@ -1231,7 +1231,7 @@ int building_t::check_for_animal_coll(building_animal_t const &A, float hheight,
 		return 1; // outside building
 	}
 	// return value: 0=no coll, 1=dim0 wall, 2=dim1 wall, 3=closed door dim0, 4=closed door dim1, 5=open door, 6=stairs, 7=elevator, 8=exterior wall, 9=room object
-	int const coll_ret(check_line_coll_expand((old_pos + center_dz), query_center_z, A.radius, hheight));
+	int const coll_ret(check_line_coll_expand((old_pos + center_dz), query_center_z, A.radius, hheight, !on_floor_only)); // for_spider=!on_floor_only
 
 	if (coll_ret) {
 		if (coll_ret == 1 || coll_ret == 3) {coll_dir.x = ((query_pos.x < old_pos.x) ? -1.0 : 1.0);} // dim=0 wall/door, separates in X
@@ -1255,7 +1255,7 @@ int building_t::check_for_animal_coll(building_animal_t const &A, float hheight,
 }
 int building_t::check_for_snake_coll(snake_t const &snake, point const &camera_bs, float timestep, point const &old_pos, point const &query_pos, vector3d &coll_dir) const {
 	float const hheight(0.5*snake.get_height());
-	int const ret(check_for_animal_coll(snake, hheight, hheight, camera_bs, timestep, old_pos, query_pos, coll_dir));
+	int const ret(check_for_animal_coll(snake, hheight, hheight, 1, camera_bs, timestep, old_pos, query_pos, coll_dir)); // on_floor_only=1
 	if (ret) return ret;
 	vector3d seg_dir;
 
@@ -1316,19 +1316,37 @@ void building_t::update_insect(insect_t &insect, point const &camera_bs, float t
 			return;
 		}
 		insect.dir *= -1.0; // reverse direction; maybe should use direction to closest building wall?
+		insect.delta_dir = zero_vector; // reset delta_dir
 		return; // continue below?
 	}
-	point const prev_pos(insect.pos), query_pos(prev_pos + insect.dir*(2.0*radius)); // apply lookahead
+	vector3d const lookahead(insect.dir*(2.0*radius));
 	vector3d coll_dir; // collision normal; points from the collider in the XY plane
 	// coll_type: 0=no coll, 1=outside building, 2=static object, 3=dynamic object
-	int const ret(check_for_animal_coll(insect, radius, 0.0, camera_bs, timestep, prev_pos, query_pos, coll_dir)); // z_center_offset=0.0
+	int const ret(check_for_animal_coll(insect, radius, 0.0, 0, camera_bs, timestep, insect.pos, (insect.pos + lookahead), coll_dir)); // z_center_offset=0.0, on_floor_only=0
 	
 	if (ret) { // collision
 		if (coll_dir == zero_vector) {coll_dir = insect.dir;} // use our own dir as coll_dir if not set
 		insect.dir = rgen.signed_rand_vector_norm();
 		if (dot_product(insect.dir, coll_dir) > 0.0) {insect.dir.negate();}
+		insect.delta_dir = zero_vector; // reset delta_dir on coll
 		return;
 	}
-	// TODO: random dir change
+	// apply a slow random dir change
+	insect.delta_dir += (0.1f*timestep)*rgen.signed_rand_vector();
+	insect.dir       += (0.1f*timestep)*insect.delta_dir;
+	insect.dir.normalize();
+	// apply a slow random acceleration
+	insect.accel += (0.04f*timestep)*rgen.signed_rand_float();
+	insect.accel  = CLIP_TO_pm1(insect.accel);
+	insect.speed  = min(global_building_params.insect_speed, max(0.5f*global_building_params.insect_speed, (insect.speed + (0.05f*timestep)*insect.accel)));
+
+	if (rgen.rand_float() < 0.25) { // every 4 frames send out a longer range collision query
+		if (check_for_animal_coll(insect, radius, 0.0, 0, camera_bs, timestep, insect.pos, (insect.pos + 8.0*lookahead), coll_dir)) { // z_center_offset=0.0, on_floor_only=0
+			insect.delta_dir *= 0.9f; // reduce direction change
+			insect.dir       += 0.25*rgen.signed_rand_vector_norm(); // adjust direction
+			insect.dir.normalize();
+			min_eq(insect.accel, 0.0f); // stop accelerating
+		}
+	}
 }
 
