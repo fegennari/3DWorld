@@ -58,11 +58,11 @@ buildings snake_size_min 0.30 # length relative to floor spacing
 buildings snake_size_max 0.60 # length relative to floor spacing
 
 # building insects
-buildings num_insects_min 0
-buildings num_insects_max 0
+buildings num_insects_min 10
+buildings num_insects_max 20
 buildings insect_speed 0.0004
-buildings insect_size_min 0.01 # radius relative to floor spacing
-buildings insect_size_max 0.02 # radius relative to floor spacing
+buildings insect_size_min 0.010 # radius relative to floor spacing
+buildings insect_size_max 0.015 # radius relative to floor spacing
 
 # building gameplay state
 buildings player_weight_limit 200 # in lbs
