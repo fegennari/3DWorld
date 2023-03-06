@@ -1477,6 +1477,7 @@ void building_t::get_room_obj_cubes(room_object_t const &c, point const &pos, ve
 }
 
 // collision query used for rats, snakes, and insects: p1 and p2 are line end points; radius applies in X and Y, hheight is half height and applies in +/- z
+// note that for_spider is used with insects, not spiders, but it's named this way because it's passed into nested calls that use this variable name
 // return value: 0=no coll, 1=dim0 wall, 2=dim1 wall, 3=closed door dim0, 4=closed door dim1, 5=open door, 6=stairs, 7=elevator, 8=exterior wall, 9=room object
 int building_t::check_line_coll_expand(point const &p1, point const &p2, float radius, float hheight, bool for_spider) const {
 	assert(interior != nullptr);
@@ -1505,7 +1506,7 @@ int building_t::check_line_coll_expand(point const &p1, point const &p2, float r
 			if (door.z1() > obj_z2 || door.z2() < obj_z1) continue; // wrong floor
 
 			if (door.open) {
-				if (line_int_cube_exp(p1, p2, get_door_bounding_cube(door), expand)) return 5;
+				if (line_int_cube_exp(p1, p2, get_door_bounding_cube(door), expand)) return 5; // approximate - uses bcube
 			}
 			else if (line_int_cube_exp(p1, p2, door, expand)) return (door.dim + 3); // 3-4
 		} // for dix
@@ -1513,17 +1514,17 @@ int building_t::check_line_coll_expand(point const &p1, point const &p2, float r
 	for (auto const &s : interior->stairwells) {
 		if (!line_int_cube_exp(p1, p2, s, expand)) continue;
 		bool walled_sides(s.shape == SHAPE_WALLED_SIDES);
-		if (s.shape != SHAPE_STRAIGHT && !walled_sides) return 6; // fully walled and U-shaped stairs always collide
-		if (s.z1() < zmin - 0.5f*get_window_vspace())   return 6; // not the ground floor - definitely a collision
+		if (s.shape != SHAPE_STRAIGHT && !walled_sides) return 6; // fully walled and U-shaped stairs always collide, even for spiders and insects
+		if (!for_spider && s.z1() < zmin - 0.5f*get_window_vspace()) return 6; // not the ground floor - definitely a collision; but not for spiders or insects
 
-		if (has_room_geom()) { // maybe we're under the stairs; check for individual stairs collisions
+		if (has_room_geom()) { // maybe we're under the stairs; check for individual stairs collisions; this condition should always be true
 			for (auto c = interior->room_geom->get_stairs_start(); c != interior->room_geom->objs.end(); ++c) {
 				if (c->no_coll()) continue;
 				if ((c->type == TYPE_STAIR || (walled_sides && c->type == TYPE_STAIR_WALL)) && line_int_cube_exp(p1, p2, *c, expand)) return 6;
 			}
 		}
 	} // for s
-	if (line_int_cubes_exp(p1, p2, interior->elevators, expand, line_bcube)) return 7;
+	if (line_int_cubes_exp(p1, p2, interior->elevators, expand, line_bcube)) return 7; // collide with entire elevator
 	
 	// check exterior walls
 	if (point_in_attic(p1) && point_in_attic(p2)) {} // both points in attic, no need to check exterior walls
