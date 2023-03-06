@@ -1383,6 +1383,7 @@ void building_t::update_insect(insect_t &insect, point const &camera_bs, float t
 	insect.delta_dir += (0.1f*timestep)*rgen.signed_rand_vector();
 	insect.dir       += (0.1f*timestep)*insect.delta_dir;
 	insect.dir.normalize();
+	if (fabs(insect.dir.z) > 0.99) {insect.dir = insect.delta_dir;} // don't point straight up or straight down
 	// apply a slow random acceleration
 	insect.accel += (0.04f*timestep)*rgen.signed_rand_float();
 	insect.accel  = CLIP_TO_pm1(insect.accel);
@@ -1393,7 +1394,7 @@ void building_t::update_insect(insect_t &insect, point const &camera_bs, float t
 		gen_sound_thread_safe(SOUND_FLY_BUZZ, local_to_camera_space(pos), 1.0, 1.0, 1.0, 1); // skip_if_already_playing=1
 	}
 	// make sure we're not in front of the camera near clip plane
-	float const camera_dmin(radius + NEAR_CLIP);
+	float const camera_dmin(1.2*(radius + NEAR_CLIP));
 	if (dist_to_player < camera_dmin) {pos = camera_bs + camera_dmin*(pos - camera_bs).get_norm();}
 }
 
