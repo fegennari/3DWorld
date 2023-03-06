@@ -485,6 +485,7 @@
     <ClCompile Include="src\assimp_wrap.cpp" />
     <ClCompile Include="src\asteroid.cpp" />
     <ClCompile Include="src\building_animals.cpp" />
+    <ClCompile Include="src\building_animal_draw.cpp" />
     <ClCompile Include="src\building_attic.cpp" />
     <ClCompile Include="src\building_basement.cpp" />
     <ClCompile Include="src\building_floorplan.cpp" />

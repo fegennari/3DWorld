@@ -54,6 +54,7 @@ colorRGBA const LAMP_COLOR(1.0, 0.8, 0.6); // soft white
 colorRGBA const WALL_LAMP_COLOR(1.0, 0.9, 0.8);
 colorRGBA const WOOD_COLOR(0.9, 0.7, 0.5); // light brown, multiplies wood texture color; typical value to use
 colorRGBA const DUCT_COLOR(WHITE);
+colorRGBA const rat_color(GRAY); // make the rat's fur darker
 
 inline colorRGBA gen_box_color(rand_gen_t &rgen) {return colorRGBA(rgen.rand_uniform(0.9, 1.0), rgen.rand_uniform(0.9, 1.0), rgen.rand_uniform(0.9, 1.0));} // add minor color variation
 
@@ -658,7 +659,7 @@ public:
 	void draw_geom() const;
 	void draw_inner(int shadow_only) const;
 	void upload_draw_and_clear(tid_nm_pair_dstate_t &state);
-};
+}; // rgeom_mat_t
 
 struct building_materials_t : public vector<rgeom_mat_t> {
 	bool valid = 0;
@@ -896,6 +897,8 @@ struct building_room_geom_t {
 	bool add_room_object(room_object_t const &obj, building_t &building, bool set_obj_id=0, vector3d const &velocity=zero_vector);
 	void draw(brg_batch_draw_t *bbd, shader_t &s, building_t const &building, occlusion_checker_noncity_t &oc, vector3d const &xlate,
 		unsigned building_ix, bool shadow_only, bool reflection_pass, unsigned inc_small, bool player_in_building);
+	void draw_animals(shader_t &s, building_t const &building, occlusion_checker_noncity_t &oc, vector3d const &xlate,
+		point const &camera_bs, bool shadow_only, bool reflection_pass, bool check_clip_cube) const;
 	unsigned allocate_dynamic_state();
 	room_obj_dstate_t &get_dstate(room_object_t const &obj);
 private:
@@ -1730,6 +1733,7 @@ template<typename T> cube_t get_cube_height_radius(point const &center, T radius
 inline point get_camera_building_space() {return (get_camera_pos() - get_tiled_terrain_model_xlate());}
 inline void set_cube_zvals(cube_t &c, float z1, float z2) {c.z1() = z1; c.z2() = z2;}
 inline float get_tc_leg_width(cube_t const &c, float width) {return 0.5f*width*(c.dx() + c.dy());} // make legs square
+inline unsigned get_rgeom_sphere_ndiv(bool low_detail) {return (low_detail ? N_SPHERE_DIV/2 : N_SPHERE_DIV);}
 
 void get_city_plot_zones(vect_city_zone_t &zones);
 void get_city_building_occluders(pos_dir_up const &pdu, building_occlusion_state_t &state);
