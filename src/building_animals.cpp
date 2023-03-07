@@ -21,6 +21,7 @@ extern double tfticks;
 extern building_dest_t cur_player_building_loc;
 extern building_params_t global_building_params;
 extern object_model_loader_t building_obj_model_loader;
+extern building_t const *player_building;
 
 float get_closest_building_sound(point const &at_pos, point &sound_pos, float floor_spacing);
 sphere_t get_cur_frame_loudest_sound();
@@ -28,6 +29,7 @@ bool in_building_gameplay_mode();
 bool player_take_damage(float damage_scale, int poison_type=0, bool *has_key=nullptr);
 void apply_building_gravity(float &vz, float dt_ticks);
 void apply_fc_cube_max_merge_xy(vect_cube_t &cubes);
+void register_fly_attract(bool no_msg);
 template<typename T> bool line_int_cubes_exp(point const &p1, point const &p2, vector<T> const &cubes, vector3d const &expand, cube_t const &line_bcube);
 
 
@@ -214,8 +216,8 @@ bool building_t::add_rat(point const &pos, float hlength, vector3d const &dir, p
 				dead = 1;
 			}
 			if (dead) { // cook/kill
-				player_attracts_flies = 1;
-				register_achievement("Tastes Like Chicken");
+				bool const new_achievement(register_achievement("Tastes Like Chicken"));
+				register_fly_attract(new_achievement); // don't print a message if the achievement message was printed
 				return 0; // rat is not dropped
 			}
 		} // for i
@@ -1396,5 +1398,14 @@ void building_t::update_insect(insect_t &insect, point const &camera_bs, float t
 	// make sure we're not in front of the camera near clip plane
 	float const camera_dmin(1.2*(radius + NEAR_CLIP));
 	if (dist_to_player < camera_dmin) {pos = camera_bs + camera_dmin*(pos - camera_bs).get_norm();}
+}
+
+void register_fly_attract(bool no_msg) {
+	if (player_attracts_flies) return; // no change
+	player_attracts_flies = 1;
+	
+	if (!no_msg && global_building_params.num_insects_max > 0 && player_building && !player_building->interior->room_geom->insects.empty()) {
+		print_text_onscreen("You have attracted the flies", ORANGE, 1.0, 2.5*TICKS_PER_SECOND, 1);
+	}
 }
 

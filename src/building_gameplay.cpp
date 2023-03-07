@@ -32,6 +32,7 @@ void show_key_icon();
 bool is_shirt_model(room_object_t const &obj);
 bool is_pants_model(room_object_t const &obj);
 bool player_at_full_health();
+void register_fly_attract(bool no_msg);
 room_obj_or_custom_item_t steal_from_car(room_object_t const &car, float floor_spacing, bool do_pickup);
 
 bool in_building_gameplay_mode() {return (game_mode == 2);} // replaces dodgeball mode
@@ -376,7 +377,7 @@ public:
 };
 achievement_tracker_t achievement_tracker;
 
-void register_achievement(string const &str) {achievement_tracker.register_achievement(str);}
+bool register_achievement(string const &str) {return achievement_tracker.register_achievement(str);}
 
 class player_inventory_t { // manages player inventory, health, and other stats
 	vector<carried_item_t> carried; // interactive items the player is currently carrying
@@ -477,7 +478,7 @@ public:
 		bool const bladder_was_full(bladder >= 0.9);
 		float const value(get_obj_value(obj));
 		if (obj.type == TYPE_PAPER && value >= 500.0) {register_achievement("Top Secret Document");}
-		if (obj.type == TYPE_TCAN || obj.type == TYPE_TOILET || obj.type == TYPE_URINAL || (obj.type == TYPE_RAT && obj.is_broken())) {player_attracts_flies = 1;}
+		if (obj.type == TYPE_TCAN || obj.type == TYPE_TOILET || obj.type == TYPE_URINAL || (obj.type == TYPE_RAT && obj.is_broken())) {register_fly_attract(0);}
 		damage_done += value;
 		colorRGBA text_color(GREEN);
 		std::ostringstream oss;
