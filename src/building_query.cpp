@@ -84,6 +84,25 @@ bool building_t::check_bcube_overlap_xy_one_dir(building_t const &b, float expan
 	return 0;
 }
 
+bool do_sphere_coll_polygon_sides(point &pos, cube_t const &part, float radius, bool interior_coll, vector<point> &points, vector3d *cnorm) {
+	point quad_pts[4]; // quads
+
+	for (unsigned S = 0; S < points.size(); ++S) { // generate vertex data quads
+		for (unsigned d = 0, ix = 0; d < 2; ++d) {
+			point const &p(points[(S+d)%points.size()]);
+			for (unsigned e = 0; e < 2; ++e) {quad_pts[ix++].assign(p.x, p.y, part.d[2][d^e]);}
+		}
+		vector3d const normal((interior_coll ? -1.0 : 1.0)*get_poly_norm(quad_pts)); // invert to get interior normal
+		float const rdist(dot_product_ptv(normal, pos, quad_pts[0]));
+		if (rdist < 0.0 || rdist >= radius) continue; // too far or wrong side
+		if (!sphere_poly_intersect(quad_pts, 4, pos, normal, rdist, radius)) continue;
+		pos += normal*(radius - rdist);
+		if (cnorm) {*cnorm = normal;}
+		return 1;
+	} // for S
+	return 0;
+}
+
 // called for players and butterfiles
 bool building_t::test_coll_with_sides(point &pos, point const &p_last, float radius, cube_t const &part, vector<point> &points, vector3d *cnorm) const {
 
@@ -97,21 +116,8 @@ bool building_t::test_coll_with_sides(point &pos, point const &p_last, float rad
 	// so we split the test into multiple smaller sphere collision steps
 	for (unsigned step = 0; step < num_steps; ++step) {
 		pos += step_delta;
-
-		for (unsigned S = 0; S < num_sides; ++S) { // generate vertex data quads
-			for (unsigned d = 0, ix = 0; d < 2; ++d) {
-				point const &p(points[(S+d)%num_sides]);
-				for (unsigned e = 0; e < 2; ++e) {quad_pts[ix++].assign(p.x, p.y, part.d[2][d^e]);}
-			}
-			vector3d const normal(get_poly_norm(quad_pts));
-			float const rdist(dot_product_ptv(normal, pos, quad_pts[0]));
-			if (rdist < 0.0 || rdist >= radius) continue; // too far or wrong side
-			if (!sphere_poly_intersect(quad_pts, 4, pos, normal, rdist, radius)) continue;
-			pos += normal*(radius - rdist);
-			if (cnorm) {*cnorm = normal;}
-			return 1;
-		} // for S
-	} // for step
+		if (do_sphere_coll_polygon_sides(pos, part, radius, 0, points, cnorm)) return 1; // interior_coll=0
+	}
 	if (max(pos.z, p_last.z) > part.z2() && point_in_polygon_2d(pos.x, pos.y, points.data(), num_sides, 0, 1)) { // test top plane (sphere on top of polygon?)
 		pos.z = part.z2() + radius; // make sure it doesn't intersect the roof
 		if (cnorm) {*cnorm = plus_z;}
@@ -199,6 +205,12 @@ bool building_t::check_sphere_coll(point &pos, point const &p_last, vector3d con
 			else {
 				if (!i->contains_pt(query_pt)) continue; // not interior to this part
 
+				if (!is_cube()) { // non-cube shaped building, clamp_part is conservative
+					//if (use_cylinder_coll()) {}
+					building_draw_utils::calc_poly_pts(*this, bcube, *i, points); // without the expand
+					if (!point_in_polygon_2d(p_last2.x, p_last2.y, points.data(), points.size())) continue; // outside the building, even though inside part bcube
+					else if (do_sphere_coll_polygon_sides(pos2, *i, radius, 1, points, cnorm_ptr)) {is_interior = had_coll = 1; break;} // interior_coll=1
+				}
 				for (auto p = parts.begin(); p != get_real_parts_end(); ++p) {
 					if (zval < p->z1() || zval > p->z2()) continue; // wrong floor/part in stack
 					accumulate_shared_xy_area(*p, sc, cont_area);
