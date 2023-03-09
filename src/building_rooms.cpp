@@ -2810,7 +2810,8 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 		// determine light pos and size for this stack of rooms
 		bool const room_dim(r->dx() < r->dy()); // longer room dim
 		bool const must_be_bathroom(room_id == cand_bathroom && num_bathrooms == 0); // cand bathroom, and bathroom not already placed
-		bool const is_parking_garage(r->get_room_type(0) == RTYPE_PARKING); // all floors should be parking garage
+		bool const is_parking_garage(r->get_room_type(0) == RTYPE_PARKING   ); // all floors should be parking garage
+		bool const is_unfinished    (r->get_room_type(0) == RTYPE_UNFINISHED); //  // unfinished room, for example in a non-cube shaped office building
 		bool const is_ext_basement(r->is_ext_basement());
 		float light_size(def_light_size); // default size for houses
 		unsigned const room_objs_start(objs.size());
@@ -2930,6 +2931,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 					}
 				} // for y
 			}
+			//if (is_unfinished) {} // more lights? but make sure they're inside the building
 			else { // normal room with a single light
 				try_place_light_on_ceiling(light, *r, room_dim, fc_thick, 1, 1, valid_lights, rgen); // allow_rot=1, allow_mult=1
 				if (!valid_lights.empty()) {light_obj_ix = objs.size();} // this will be the index of the light to be added later
@@ -2947,6 +2949,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			}
 			if (is_lit) {r->lit_by_floor |= (1ULL << (f&63));} // flag this floor as being lit (for up to 64 floors)
 			if (is_parking_garage) continue; // generated above, done; no outlets or light switches
+			if (is_unfinished    ) continue; // no objects for now; if adding objects later, need to make sure they stay inside the building bounds
 			float tot_light_amt(light_amt); // unitless, somewhere around 1.0
 			if (is_lit) {tot_light_amt += r->light_intensity;}
 			bool const is_ground_floor(f == 0 && (!is_basement /*|| has_basement_door*/) && r->z1() <= ground_floor_z1);

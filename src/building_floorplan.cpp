@@ -244,7 +244,7 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 		bool const is_basement_part(is_basement(p)), first_part(p == parts.begin()), first_part_this_stack(first_part || is_basement_part || (p-1)->z1() < p->z1());
 		bool const next_diff_stack(p+1 == parts.end() || (p+1)->z1() != p->z1());
 		// office building hallways only; house hallways are added later
-		bool const use_hallway(!is_house && !is_basement_part && !has_complex_floorplan && first_part_this_stack && next_diff_stack && cube_width > 4.0*min_wall_len);
+		bool const use_hallway(!is_house && !is_basement_part && !has_complex_floorplan && is_cube() && first_part_this_stack && next_diff_stack && cube_width > 4.0*min_wall_len);
 		unsigned const rooms_start(rooms.size()), part_id(p - parts.begin()), num_doors_per_stack(SPLIT_DOOR_PER_FLOOR ? num_floors : 1);
 		cube_t hall, place_area(*p);
 		place_area.expand_by_xy(-wall_edge_spacing); // shrink slightly to avoid z-fighting with walls
@@ -257,6 +257,8 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 		}
 		if (!is_cube()) { // cylinder, etc.
 			// rooms/floorplans aren't yet supported for these building types, but we can still add the floors and ceilings
+			add_room(*p, part_id, 1, 0, 0); // add entire part as a room; num_lights will be calculated later
+			rooms.back().assign_all_to(RTYPE_UNFINISHED);
 		}
 		else if (!is_house && is_basement_part && min(psz.x, psz.y) > 5.0*car_sz.x && max(psz.x, psz.y) > 12.0*car_sz.y) { // make this a parking garage
 			add_room(*p, part_id, 1, 0, 0); // add entire part as a room; num_lights will be calculated later
@@ -902,7 +904,7 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 		} // for w
 	} // for d
 
-	if (is_cube()) { // not supported for cylinders, etc.
+	if (is_cube()) { // not supported for cylinders, etc. because there's no function to cut the stairs hole out of a non-rectangular floor
 		// add stairs to connect together stacked parts for office buildings; must be done last after all walls/ceilings/floors have been assigned
 		for (auto p = parts.begin(); p != parts_end; ++p) {connect_stacked_parts_with_stairs(rgen, *p);}
 	}
@@ -1010,7 +1012,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 	int force_stairs_dir(2); // 2=unset
 
 	// add stairwells and elevator shafts
-	if (!is_cube()) {} // rooms are not yet supported, and neither are stairs or elevators
+	if (!is_cube()) {} // rooms are not yet supported, and neither are stairs or elevators; will assert if rooms is empty
 	else if (num_floors == 1) {} // no need for stairs or elevator
 	else if (use_hallway) { // part is the hallway cube
 		add_elevator = 1;
