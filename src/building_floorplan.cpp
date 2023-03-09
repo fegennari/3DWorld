@@ -189,6 +189,7 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 		details.resize(details_size);
 		roof_tquads.resize(roof_tquads_size);
 		doors.resize(doors_size);
+		ext_lights.clear(); // generated as part of the interior
 		gen_interior_int(rgen, has_overlapping_cubes);
 		if (!interior->is_unconnected) break; // done
 	}
