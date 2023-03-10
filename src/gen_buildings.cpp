@@ -811,7 +811,8 @@ public:
 		point const center(!is_rotated ? all_zeros : bg.bcube.get_cube_center()); // rotate about bounding cube / building center
 		vector3d const sz(cube.get_size()), llc(cube.get_llc()); // move origin from center to min corner
 
-		if (/*clip_to_other_parts &&*/ bg.num_sides != 4) { // not a cube, use cylinder
+		if ((clip_to_other_parts || dim_mask == 4) && bg.num_sides != 4) {
+			// not a cube, use cylinder; applies to exterior walls (clip_to_other_parts=1) and ceilings/floors (dim_mask == 4)
 			//assert(door_ztop == 0.0); // not supported / ignored for testing purposes
 			point const ccenter(cube.get_cube_center()), pos(ccenter.x, ccenter.y, cube.z1());
 			//float const rscale(0.5*((num_sides <= 8) ? SQRT2 : 1.0)); // larger for triangles/cubes/hexagons/octagons (to ensure overlap/connectivity), smaller for cylinders

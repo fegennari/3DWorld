@@ -3253,7 +3253,7 @@ void building_t::add_extra_obj_slots() {
 }
 
 void building_t::add_wall_and_door_trim_if_needed() {
-	if (!is_cube()) return; // not yet supported for non-cube buildings
+	if (!interior || (interior->walls[0].empty() && interior->walls[1].empty())) return; // no interior or walls
 	if (!interior->room_geom->trim_objs.empty()) return; // trim already generated
 	add_wall_and_door_trim();
 	interior->room_geom->trim_objs.shrink_to_fit();
@@ -3396,6 +3396,14 @@ void building_t::add_wall_and_door_trim() { // and window trim
 		bool const is_sec_bldg(i == get_real_parts_end());
 		unsigned const num_floors(is_sec_bldg ? 1 : calc_num_floors(*i, window_vspacing, floor_thickness));
 
+		if (!is_cube()) {
+			float z(i->z1() + fc_thick);
+
+			for (unsigned f = 0; f < num_floors; ++f, z += window_vspacing) {
+				// TODO: add trim around the interior of the exterior walls for each floor
+			}
+			continue;
+		}
 		for (unsigned dim = 0; dim < 2; ++dim) {
 			for (unsigned dir = 0; dir < 2; ++dir) {
 				cube_t trim(*i);
