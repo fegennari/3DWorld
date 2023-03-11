@@ -216,7 +216,6 @@ class fly_draw_t {
 			unsigned const ndiv = 8;
 
 			for (unsigned l = 0; l < 3; ++l) {
-				float const ts(l/3.0);
 				point const joint(0.12*(l - 1.5), 0.26*d_sign, body_zval);
 				point const knee (2.0*joint.x, 2.0*joint.y,  0.25);
 				point const ankle(1.5*knee .x, 1.5*knee .y, -0.20);

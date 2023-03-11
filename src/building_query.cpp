@@ -107,7 +107,6 @@ bool do_sphere_coll_polygon_sides(point &pos, cube_t const &part, float radius, 
 bool building_t::test_coll_with_sides(point &pos, point const &p_last, float radius, cube_t const &part, vector<point> &points, vector3d *cnorm) const {
 
 	building_draw_utils::calc_poly_pts(*this, bcube, part, points); // without the expand
-	point quad_pts[4]; // quads
 	unsigned const num_steps(max(1U, min(100U, (unsigned)ceil(2.0*p2p_dist_xy(pos, p_last)/radius))));
 	vector3d const step_delta((pos - p_last)/num_steps);
 	pos = p_last;
@@ -1355,6 +1354,7 @@ template<typename T> bool line_int_cubes(point const &p1, point const &p2, vecto
 	}
 	return 0;
 }
+template bool line_int_cubes_exp(point const &p1, point const &p2, vect_cube_t const &cubes, vector3d const &expand, cube_t const &line_bcube);
 
 unsigned get_ksink_cubes(room_object_t const &sink, cube_t cubes[3]) {
 	assert(sink.type == TYPE_KSINK);
