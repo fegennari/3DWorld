@@ -3396,12 +3396,20 @@ void building_t::add_wall_and_door_trim() { // and window trim
 		bool const is_sec_bldg(i == get_real_parts_end());
 		unsigned const num_floors(is_sec_bldg ? 1 : calc_num_floors(*i, window_vspacing, floor_thickness));
 
-		if (!is_cube()) {
+		if (!is_cube()) { // add trim around the interior of the exterior walls for each floor
+			vector<point> points;
+			building_draw_utils::calc_poly_pts(*this, bcube, *i, points, -trim_thickness); // shrink by trim thickness
 			float z(i->z1() + fc_thick);
 
 			for (unsigned f = 0; f < num_floors; ++f, z += window_vspacing) {
-				// TODO: add trim around the interior of the exterior walls for each floor
-			}
+				for (auto p = points.begin(); p != points.end(); ++p) {
+					point const &p1(*p), &p2((p+1 == points.end()) ? points.front() : *(p+1));
+					cube_t trim(p1, p2); // bcube of the edge
+					set_cube_zvals(trim, z, z+trim_height); // starts at floor height
+					bool const dim(0), dir((p1.x < p2.x) ^ (p1.y < p2.y)); // encode edge X/Y signs in dim and dir
+					objs.emplace_back(trim, TYPE_WALL_TRIM, 0, dim, dir, flags, 1.0, SHAPE_CYLIN, trim_color); // floor trim - cylindrical section
+				} // for p
+			} // for f
 			continue;
 		}
 		for (unsigned dim = 0; dim < 2; ++dim) {
