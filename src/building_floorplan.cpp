@@ -256,14 +256,25 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 			window_hspacing[d] = psz[d]/num_windows_per_side[d];
 		}
 		if (!is_cube()) { // cylinder, etc.
-			if (use_cylinder_coll() && min(p->dx(), p->dy()) > 2.0*min_wall_len) { // large cylinder
+			if (min(p->dx(), p->dy()) > 2.0*min_wall_len) { // large cylinder
 				// create a pie slice split for cylindrical parts; since we can only add X or Y walls, place one of each that crosses the entire part
 				point const center(p->xc(), p->yc(), p->z1()), size(p->get_size());
+				bool const clip_to_ext_walls(!use_cylinder_coll()); // if this building isn't a full cylinder, we may need to clip the walls shorter
+				vector<point> points;
+				if (clip_to_ext_walls) {building_draw_utils::calc_poly_pts(*this, bcube, *p, points);} // without the expand
 
 				for (unsigned d = 0; d < 2; ++d) {
 					cube_t wall(*p);
+					clip_wall_to_ceil_floor(wall, fc_thick);
 					set_wall_width(wall, center[d], wall_half_thick, d);
-					wall.expand_in_dim(!d, -wall_half_thick); // shrink slightly to avoid clipping through the exterior wall
+					
+					if (clip_to_ext_walls) {
+						for (auto p = points.begin(); p != points.end(); ++p) {
+							point const &p1(*p), &p2((p+1 == points.end()) ? points.front() : *(p+1));
+							// TODO
+						}
+					}
+					wall.expand_in_dim(!d, -0.25*wall_half_thick); // shrink slightly to avoid clipping through the exterior wall
 
 					// cut two doorways in each wall
 					for (unsigned e = 0; e < 2; ++e) {
