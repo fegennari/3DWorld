@@ -1315,14 +1315,14 @@ void building_room_geom_t::add_wall_trim(room_object_t const &c, bool for_closet
 		}
 	}
 	else if (c.shape == SHAPE_CYLIN) { // angled wall of a cylinder or multi-sided building
-		float const height(c.dz()), thickness(height*WALL_THICK_VAL*(0.1/0.4)); // from get_trim_thickness()/get_trim_height()
-		point const p1(c.x1(), c.d[1][c.dir], c.z1()), p2(c.x2(), c.d[1][!c.dir], c.z1()), center(c.get_cube_center());
+		float const height(c.dz()), thickness(height*WALL_THICK_VAL*(0.1/0.04)); // from get_trim_thickness()/get_trim_height()
+		point const p1(c.d[0][c.dim], c.d[1][c.dir], c.z1()), p2(c.d[0][!c.dim], c.d[1][!c.dir], c.z1()), center(c.get_cube_center());
 		float const length(p2p_dist_xy(p1, p2));
 		cube_t trim(c);
-		set_wall_width(trim, center.x, 0.5*length,    0); // seg length
-		set_wall_width(trim, center.y, 0.5*thickness, 1); // seg width/thickness
-		unsigned const qv_start(mat.quad_verts.size()), skip_faces(EF_Z1); // TODO: skip back face
-		mat.add_cube_to_verts_untextured(trim, c.color, skip_faces); // untextured
+		set_wall_width(trim, center.x, 0.5*length,    0); // seg length in X
+		set_wall_width(trim, center.y, 0.5*thickness, 1); // seg width/thickness in Y
+		unsigned const qv_start(mat.quad_verts.size());
+		mat.add_cube_to_verts_untextured(trim, c.color, (EF_Z1 | EF_Y1)); // untextured
 		rotate_verts(mat.quad_verts, plus_z, (c.dir ? 1.0 : -1.0)*get_norm_angle(plus_x, (p2 - p1).get_norm()), center, qv_start);
 	}
 	else { // cube/short/tall

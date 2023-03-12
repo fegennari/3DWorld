@@ -3405,8 +3405,12 @@ void building_t::add_wall_and_door_trim() { // and window trim
 				for (auto p = points.begin(); p != points.end(); ++p) {
 					point const &p1(*p), &p2((p+1 == points.end()) ? points.front() : *(p+1));
 					cube_t trim(p1, p2); // bcube of the edge
+
+					for (unsigned d = 0; d < 2; ++d) {
+						if (trim.get_sz_dim(d) < trim_thickness) {trim.expand_in_dim(d, 0.1*trim_thickness);} // expand slightly to make nonzero area
+					}
 					set_cube_zvals(trim, z, z+trim_height); // starts at floor height
-					bool const dim(0), dir((p1.x < p2.x) ^ (p1.y < p2.y)); // encode edge X/Y signs in dim and dir
+					bool const dim(p1.x < p2.x), dir(p1.y < p2.y); // encode edge X/Y signs in dim and dir
 					objs.emplace_back(trim, TYPE_WALL_TRIM, 0, dim, dir, flags, 1.0, SHAPE_CYLIN, trim_color); // floor trim - cylindrical section
 				} // for p
 			} // for f
