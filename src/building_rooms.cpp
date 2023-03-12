@@ -2744,9 +2744,10 @@ bool building_t::is_light_placement_valid(cube_t const &light, room_t const &roo
 	light_ext.expand_by_xy(pad);
 	if (!room.contains_cube(light_ext))            return 0; // room too small?
 	if (has_bcube_int(light, interior->elevators)) return 0;
+	if (!is_cube() && !building_bounds_checker.check_cube(light, room, *this)) return 0;
 	light_ext.z1() = light_ext.z1() = light.z2() + get_fc_thickness(); // shift in between the ceiling and floor so that we can do a cube contains check
 	if (any_cube_contains(light_ext, interior->fc_occluders)) return 1; // Note: don't need to check skylights because fc_occluders excludes skylights
-	if (PLACE_LIGHTS_ON_SKYLIGHTS && any_cube_contains(light_ext, skylights)) return 1;
+	if (PLACE_LIGHTS_ON_SKYLIGHTS && any_cube_contains(light_ext, skylights))  return 1;
 	return 0;
 }
 void building_t::try_place_light_on_ceiling(cube_t const &light, room_t const &room, bool room_dim, float pad, bool allow_rot, bool allow_mult,
@@ -2855,6 +2856,10 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 		if (r->is_office) { // more lights for large offices; parking garages are handled later
 			nx = max(1U, unsigned(0.5*r->dx()/window_vspacing));
 			ny = max(1U, unsigned(0.5*r->dy()/window_vspacing));
+		}
+		else if (!is_cube()) { // more lights for non-cube shaped building pie slices
+			nx = max(1U, unsigned(0.4*r->dx()/window_vspacing));
+			ny = max(1U, unsigned(0.4*r->dy()/window_vspacing));
 		}
 		if (r->is_sec_bldg) {
 			if    (has_garage) {r->assign_all_to(RTYPE_GARAGE);}
@@ -2966,7 +2971,6 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 					}
 				} // for y
 			}
-			//if (is_unfinished) {} // more lights? but make sure they're inside the building
 			else { // normal room with a single light
 				try_place_light_on_ceiling(light, *r, room_dim, fc_thick, 1, 1, valid_lights, rgen); // allow_rot=1, allow_mult=1
 				if (!valid_lights.empty()) {light_obj_ix = objs.size();} // this will be the index of the light to be added later
