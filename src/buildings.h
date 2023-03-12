@@ -1467,6 +1467,7 @@ public:
 	void play_open_close_sound(room_object_t const &obj, point const &sound_origin) const;
 	void maybe_gen_chimney_smoke() const;
 	cube_t get_part_containing_pt(point const &pt) const;
+	cube_t get_part_containing_cube(cube_t const &c) const;
 	void print_building_manifest() const;
 private:
 	void finish_gen_geometry(rand_gen_t &rgen, bool has_overlapping_cubes);

@@ -61,12 +61,7 @@ class building_bounds_checker_t {
 
 	void register_new_room(cube_t const &room, building_t const &b) {
 		if (cur_part.contains_cube(room)) return; // same room/part
-		bool found(0);
-
-		for (auto i = b.parts.begin(); i != b.get_real_parts_end_inc_sec(); ++i) { // could call b.get_part_for_room() if we had a room_t
-			if (i->contains_cube(room)) {cur_part = *i; found = 1; break;}
-		}
-		assert(found);
+		cur_part = b.get_part_containing_cube(room);
 		building_draw_utils::calc_poly_pts(b, b.bcube, cur_part, points);
 	}
 public:
