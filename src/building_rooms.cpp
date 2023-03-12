@@ -2476,6 +2476,7 @@ bool building_t::add_wall_vent_to_room(rand_gen_t rgen, room_t const &room, floa
 		}
 		if (bad_place) continue;
 		if (!check_if_placed_on_interior_wall(c, room, dim, dir)) continue; // ensure the vent is on a wall; is this really needed?
+		if (!is_cube() && !building_bounds_checker.check_cube(c, room, *this)) continue;
 
 		if (check_for_ducts) { // if this is a utility room, check to see if we can connect the vent to a furnace with a duct
 			assert(objs_start <= objs.size());
