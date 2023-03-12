@@ -1062,6 +1062,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 	bool const must_add_stairs(first_part_this_stack || (has_complex_floorplan && part == parts.back())); // first part in stack, or tallest/last part of complex building
 	bool const is_basement((int)part_ix == basement_part_ix);
 	int force_stairs_dir(2); // 2=unset
+	building_bounds_checker_t bbc;
 
 	// add stairwells and elevator shafts
 	if (!is_cube()) {} // rooms are not yet supported, and neither are stairs or elevators; will assert if rooms is empty
@@ -1143,6 +1144,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 						for (unsigned x = 0; x < 2 && !placed; ++x) {
 							int const wtype_x(classify_room_wall(room, room.z1(), 0, x, 1)), wtype_y(classify_room_wall(room, room.z1(), 1, y, 1)); // include partial sep walls
 							if (wtype_x == ROOM_WALL_SEP || wtype_y == ROOM_WALL_SEP) continue; // don't place elevators between parts where they could block doorways
+							if (!is_cube() && (wtype_x == ROOM_WALL_EXT || wtype_y == ROOM_WALL_EXT)) continue; // no exterior walls of non-cube buildings
 							float const xval(room.d[0][x] + (x ? -ewidth : ewidth)), yval(room.d[1][y] + (y ? -ewidth : ewidth)), shrink(0.01*ewidth);
 							// check room interior edge for intersection with windows
 							if (wtype_x == ROOM_WALL_EXT && is_val_inside_window(part, 0, xval, window_hspacing[0], window_border)) continue;
@@ -1157,6 +1159,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 							if (has_bcube_int(elevator, interior->exclusion)) continue; // try again
 							if (is_cube_close_to_doorway(elevator, room))     continue; // try again
 							if (check_skylight_intersection(elevator))        continue; // check skylights; is this necessary?
+							if (!is_cube() && !bbc.check_cube(elevator, part, *this)) continue; // outside building
 							add_or_extend_elevator(elevator, 1);
 							elevator_cut = elevator;
 							placed       = 1; // successfully placed
@@ -1187,8 +1190,10 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 
 							for (unsigned d = 0; d < 2; ++d) {
 								bool const dir(bool(d) ^ first_dir);
+								int const wall_type(classify_room_wall(room, room.z1(), dim, dir, 1));
 								// if the room is on the edge of the part that's not on the building exterior, then this room connects two parts and we need to place a door here later
-								if (classify_room_wall(room, room.z1(), dim, dir, 1) == ROOM_WALL_SEP) continue; // include partial sep walls
+								if (wall_type == ROOM_WALL_SEP) continue; // include partial sep walls
+								if (!is_cube() && wall_type == ROOM_WALL_EXT) continue; // no exterior walls of non-cube buildings
 								cube_t cand(cutout);
 								// add small gap to prevent z-fighting and FP accuracy asserts
 								float const shift((cand.d[dim][dir] - room.d[dim][dir]) - (dir ? -1.0 : 1.0)*wall_thickness); // negative if dir==1
@@ -1200,6 +1205,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 					bool const against_wall(stairs_against_wall[0] || stairs_against_wall[1]);
 					// skip if we can't push against a wall and the room is too narrow for space around the stairs to allow doors to open and people to walk
 					if (!against_wall && room.get_sz_dim(!stairs_dim) < (1.1*2.0*doorway_width + stairs_sz)) continue;
+					if (!is_cube() && !bbc.check_cube(cutout, part, *this)) continue; // outside building
 					if (!is_house && against_wall) {sshape = SHAPE_WALLED_SIDES;} // add wall between room and office stairs if against a room wall
 					if (interior->landings.empty()) {interior->landings.reserve(num_floors-1);}
 					assert(cutout.is_strictly_normalized());
@@ -1547,6 +1553,7 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 	// use fewer iterations on tiled buildings to reduce the frame spikes when new tiles are generated
 	unsigned const iter_mult_factor(global_building_params.gen_inf_buildings() ? 1 : 10), num_iters(20*iter_mult_factor);
 	unsigned const num_floors(calc_num_floors(part, window_vspacing, floor_thickness));
+	building_bounds_checker_t bbc;
 	assert(num_floors > 0);
 
 	if (part.z2() < bcube.z2()) { // if this is the top floor, there is nothing above it (but roof geom may get us into this case anyway)
@@ -1640,6 +1647,7 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 				for (unsigned d = 0; d < 2; ++d) {
 					if (has_bcube_int(cand_test[d], interior->exclusion)) {bad_place = 1; break;} // bad placement
 					if (!is_valid_stairs_elevator_placement(cand_test[d], stairs_pad, !allow_clip_walls)) {bad_place = 1; break;} // bad placement
+					if (!is_cube() && !bbc.check_cube(cand_test[d], part, *this)) {bad_place = 1; break;} // bad placement
 				}
 				if (bad_place) continue;
 
@@ -1726,7 +1734,8 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 			if (!p->contains_cube_xy(cand_test)) continue; // not enough space at elevator entrance
 			bool const allow_clip_walls = 1; // optional
 			if (!is_valid_stairs_elevator_placement(cand_test, doorway_width, !allow_clip_walls)) continue; // bad placement
-			if (has_bcube_int(cand_test, interior->exclusion)) continue; // bad placement
+			if (!is_cube() && !bbc.check_cube(cand_test, *p, *this)) continue; // bad placement
+			if (has_bcube_int(cand_test, interior->exclusion))       continue; // bad placement
 
 			if (allow_clip_walls) { // clip out walls around extended elevator
 				for (unsigned d = 0; d < 2; ++d) {
