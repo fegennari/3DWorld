@@ -55,10 +55,40 @@ colorRGBA get_light_color_temp_range(float tmin, float tmax, rand_gen_t &rgen) {
 	return get_light_color_temp(((tmin == tmax) ? tmin : rgen.rand_uniform(tmin, tmax)));
 }
 
+class building_bounds_checker_t {
+	cube_t cur_part;
+	vector<point> points;
+
+	void register_new_room(cube_t const &room, building_t const &b) {
+		if (cur_part.contains_cube(room)) return; // same room/part
+		bool found(0);
+
+		for (auto i = b.parts.begin(); i != b.get_real_parts_end_inc_sec(); ++i) { // could call b.get_part_for_room() if we had a room_t
+			if (i->contains_cube(room)) {cur_part = *i; found = 1; break;}
+		}
+		assert(found);
+		building_draw_utils::calc_poly_pts(b, b.bcube, cur_part, points);
+	}
+public:
+	bool check_cube(cube_t const &c, cube_t const &room, building_t const &b) { // assumes no two buildings can contain the same part
+		register_new_room(room, b);
+
+		for (unsigned n = 0; n < 4; ++n) { // test all 4 top corners; if any is outside, placement is invalid; correct as long as points forms a convex shape
+			if (!point_in_polygon_2d(c.d[0][n&1], c.d[1][n>>1], points.data(), points.size())) return 0;
+		}
+		return 1; // contained
+	}
+	bool check_point(point const &p, cube_t const &room, building_t const &b) { // assumes no two buildings can contain the same part
+		register_new_room(room, b);
+		return point_in_polygon_2d(p.x, p.y, points.data(), points.size());
+	}
+};
+building_bounds_checker_t building_bounds_checker;
+
 bool building_t::is_obj_placement_blocked(cube_t const &c, cube_t const &room, bool inc_open_doors, bool check_open_dir) const {
 	if (is_cube_close_to_doorway(c, room, 0.0, inc_open_doors, check_open_dir)) return 1; // too close to a doorway
 	if (interior && interior->is_blocked_by_stairs_or_elevator(c))              return 1; // faster to check only one per stairwell, but then we need to store another vector?
-	// TODO: add some case for object outside non-cube building bounds
+	if (!is_cube() && !building_bounds_checker.check_cube(c, room, *this))      return 1; // handle non-cube buildings; *NOT* thread safe
 	return 0;
 }
 bool building_t::is_valid_placement_for_room(cube_t const &c, cube_t const &room, vect_cube_t const &blockers, bool inc_open_doors, float room_pad) const {
@@ -906,6 +936,7 @@ bool building_t::place_obj_along_wall(room_object type, room_t const &room, floa
 		cube_t c3(c); // used for collision tests
 		c3.d[dim][!dir] += (dir ? -1.0 : 1.0)*obj_clearance; // smaller clearance value (without player diameter)
 		if (is_cube_close_to_doorway(c3, room, 0.0, 0)) continue; // bad placement
+		if (!is_cube() && !building_bounds_checker.check_cube(c, room, *this)) return 1; // handle non-cube buildings; *NOT* thread safe
 		unsigned const flags((type == TYPE_BOX) ? (RO_FLAG_ADJ_LO << orient) : 0); // set wall edge bit for boxes (what about other dim bit if place in room corner?)
 		objs.emplace_back(c, type, room_id, dim, !dir, flags, tot_light_amt, shape, color);
 		set_obj_id(objs);
@@ -979,6 +1010,7 @@ bool building_t::add_bathroom_objs(rand_gen_t rgen, room_t &room, float &zval, u
 			unsigned const corner_ix((first_corner + n)&3);
 			bool const xdir(corner_ix&1), ydir(corner_ix>>1);
 			point const corner(place_area.d[0][xdir], place_area.d[1][ydir], zval);
+			if (!is_cube() && !building_bounds_checker.check_point(corner, room, *this)) continue; // invalid corner
 
 			for (unsigned d = 0; d < 2 && !placed_toilet; ++d) { // try both dims
 				bool const dim(bool(d) ^ first_dim), dir(dim ? ydir : xdir);
@@ -1114,7 +1146,7 @@ bool building_t::add_tp_roll(cube_t const &room, unsigned room_id, float tot_lig
 	tp.d[dim][ dir] = room.d[dim][dir]; // against the wall
 	tp.d[dim][!dir] = tp  .d[dim][dir] + (dir ? -1.0 : 1.0)*diameter; // set the diameter
 	// Note: not checked against other bathroom objects because the toilet is placed first
-	if (check_valid_pos && (!room.contains_cube(tp) || is_cube_close_to_doorway(tp, room, 0.0, 1))) return 0;
+	if (check_valid_pos && (!room.contains_cube(tp) || is_obj_placement_blocked(tp, room, 1))) return 0;
 	interior->room_geom->objs.emplace_back(tp, TYPE_TPROLL, room_id, dim, dir, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CYLIN, WHITE);
 	set_obj_id(interior->room_geom->objs);
 	return 1;

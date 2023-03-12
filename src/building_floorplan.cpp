@@ -309,7 +309,7 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 				add_room(*p, part_id, 1, 0, 0); // add entire part as a room; num_lights will be calculated later
 			}
 			// assign all rooms as unfinished to avoid placing room objects that may extend outside the building
-			for (auto r = rooms.begin()+rooms_start; r != rooms.end(); ++r) {r->assign_all_to(RTYPE_UNFINISHED);}
+			//for (auto r = rooms.begin()+rooms_start; r != rooms.end(); ++r) {r->assign_all_to(RTYPE_UNFINISHED);}
 			// rooms/floorplans aren't fully supported for these building types, but we can still add the floors and ceilings below
 		}
 		else if (!is_house && is_basement_part && min(psz.x, psz.y) > 5.0*car_sz.x && max(psz.x, psz.y) > 12.0*car_sz.y) { // make this a parking garage
