@@ -94,7 +94,7 @@ unsigned building_t::add_water_heaters(rand_gen_t &rgen, room_t const &room, flo
 			center[!dim] = rgen.rand_uniform(place_area.d[!dim][0], place_area.d[!dim][1]);
 		}
 		cube_t c(get_cube_height_radius(center, radius, height));
-		if (is_cube_close_to_doorway(c, room, 0.0, 1) || interior->is_blocked_by_stairs_or_elevator(c)) continue;
+		if (is_obj_placement_blocked(c, room, 1)) continue;
 		cube_t c_exp(c);
 		c_exp.expand_by_xy(0.2*radius); // small keepout in XY
 		c_exp.d[dim][!dir] += (dir ? -1.0 : 1.0)*0.25*radius; // add more keepout in front where the controls are
@@ -117,7 +117,7 @@ unsigned building_t::add_water_heaters(rand_gen_t &rgen, room_t const &room, flo
 			for (unsigned m = 1; m < max_wh; ++m) { // one has already been placed
 				c.translate(step);
 				if (!room_bounds.contains_cube(c)) break; // went outside the room, done
-				if (is_cube_close_to_doorway(c, room, 0.0, 1) || interior->is_blocked_by_stairs_or_elevator(c)) continue; // bad placement, skip
+				if (is_obj_placement_blocked(c, room, 1)) continue; // bad placement, skip
 				c_exp.translate(step);
 				if (overlaps_other_room_obj(c_exp, objs_start)) continue; // check existing objects
 				objs.emplace_back(c, TYPE_WHEATER, room_id, dim, !dir, flags, tot_light_amt, SHAPE_CYLIN);
@@ -187,7 +187,7 @@ bool building_t::add_furnace_to_room(rand_gen_t &rgen, room_t const &room, float
 		if (!gen_furnace_cand(place_area, floor_spacing, 1, rgen, furnace, dim, dir)) break; // near_wall=1
 		cube_t test_cube(furnace);
 		test_cube.d[dim][dir] += (dir ? 1.0 : -1.0)*0.5*furnace.get_sz_dim(dim); // add clearance in front
-		if (is_cube_close_to_doorway(test_cube, room, 0.0, 1) || interior->is_blocked_by_stairs_or_elevator(test_cube) || overlaps_other_room_obj(test_cube, objs_start)) continue;
+		if (is_obj_placement_blocked(test_cube, room, 1) || overlaps_other_room_obj(test_cube, objs_start)) continue;
 		unsigned const flags((is_house ? RO_FLAG_IS_HOUSE : 0) | RO_FLAG_INTERIOR);
 		interior->room_geom->objs.emplace_back(furnace, TYPE_FURNACE, room_id, dim, dir, flags, tot_light_amt);
 		return 1; // success/done

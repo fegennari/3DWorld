@@ -55,13 +55,18 @@ colorRGBA get_light_color_temp_range(float tmin, float tmax, rand_gen_t &rgen) {
 	return get_light_color_temp(((tmin == tmax) ? tmin : rgen.rand_uniform(tmin, tmax)));
 }
 
+bool building_t::is_obj_placement_blocked(cube_t const &c, cube_t const &room, bool inc_open_doors, bool check_open_dir) const {
+	if (is_cube_close_to_doorway(c, room, 0.0, inc_open_doors, check_open_dir)) return 1; // too close to a doorway
+	if (interior && interior->is_blocked_by_stairs_or_elevator(c))              return 1; // faster to check only one per stairwell, but then we need to store another vector?
+	// TODO: add some case for object outside non-cube building bounds
+	return 0;
+}
 bool building_t::is_valid_placement_for_room(cube_t const &c, cube_t const &room, vect_cube_t const &blockers, bool inc_open_doors, float room_pad) const {
 	cube_t place_area(room);
 	if (room_pad != 0.0f) {place_area.expand_by_xy(-room_pad);} // shrink by dmin
-	if (!place_area.contains_cube_xy(c)) return 0; // not contained in interior part of the room
-	if (is_cube_close_to_doorway(c, room, 0.0, inc_open_doors)) return 0; // too close to a doorway
-	if (interior && interior->is_blocked_by_stairs_or_elevator(c)) return 0; // faster to check only one per stairwell, but then we need to store another vector?
-	if (has_bcube_int(c, blockers)) return 0; // Note: ignores dmin
+	if (!place_area.contains_cube_xy(c))                   return 0; // not contained in interior part of the room
+	if (is_obj_placement_blocked(c, room, inc_open_doors)) return 0;
+	if (has_bcube_int(c, blockers))                        return 0; // Note: ignores dmin
 	if (has_attic() && c.intersects_xy(interior->attic_access) && (c.z2() + get_window_vspace()) > interior->attic_access.z1()) return 0; // blocked by attic access door (when open)
 	return 1;
 }
@@ -209,7 +214,7 @@ void building_t::add_trashcan_to_room(rand_gen_t rgen, room_t const &room, float
 		} // for m
 		cube_t const c(get_cube_height_radius(center, radius, height));
 		if (!avoid.is_all_zeros() && c.intersects_xy(avoid)) continue; // bad placement
-		if (is_cube_close_to_doorway(c, room, 0.0, !room.is_hallway) || interior->is_blocked_by_stairs_or_elevator(c) || overlaps_other_room_obj(c, objs_start)) continue; // bad placement
+		if (is_obj_placement_blocked(c, room, !room.is_hallway) || overlaps_other_room_obj(c, objs_start)) continue; // bad placement
 		objs.emplace_back(c, TYPE_TCAN, room_id, dim, dir, 0, tot_light_amt, (cylin ? SHAPE_CYLIN : SHAPE_CUBE), tcan_colors[rgen.rand()%NUM_TCAN_COLORS]);
 		return; // done
 	} // for n
@@ -238,7 +243,7 @@ bool building_t::add_bookcase_to_room(rand_gen_t &rgen, room_t const &room, floa
 		set_wall_width(c, pos, 0.5*width, !dim);
 		cube_t tc(c);
 		tc.d[dim][!dir] += (dir ? -1.0 : 1.0)*clearance; // increase space to add clearance
-		if (is_cube_close_to_doorway(tc, room, 0.0, 1) || interior->is_blocked_by_stairs_or_elevator(tc) || overlaps_other_room_obj(tc, objs_start)) continue; // bad placement
+		if (is_obj_placement_blocked(tc, room, 1) || overlaps_other_room_obj(tc, objs_start)) continue; // bad placement
 		objs.emplace_back(c, TYPE_BCASE, room_id, dim, !dir, 0, tot_light_amt); // Note: dir faces into the room, not the wall
 		set_obj_id(objs);
 		return 1; // done/success
@@ -428,8 +433,7 @@ bool building_t::create_office_cubicles(rand_gen_t rgen, room_t const &room, flo
 				c.d[!long_dim][!dir] = wall_pos + dir_sign*cube_depth;
 				cube_t test_cube(c);
 				test_cube.d[!long_dim][!dir] += dir_sign*0.5*cube_depth; // allow space for people to enter the cubicle
-				if (interior->is_cube_close_to_doorway(test_cube, room, 0.0, 1)) continue; // too close to a doorway; inc_open=1
-				if (interior->is_blocked_by_stairs_or_elevator(test_cube)) continue;
+				if (is_obj_placement_blocked(test_cube, room, 1)) continue; // inc_open_doors=1
 				bool const against_window(room.d[!long_dim][dir] == part.d[!long_dim][dir]);
 				objs.emplace_back(c, TYPE_CUBICLE, room_id, !long_dim, dir, 0, tot_light_amt, ((against_window && !is_middle) ? SHAPE_SHORT : SHAPE_CUBE));
 				objs.back().obj_id = bldg_id;
@@ -723,7 +727,7 @@ bool building_t::add_bedroom_objs(rand_gen_t rgen, room_t &room, vect_cube_t con
 				center[!dim] = rgen.rand_uniform(ball_area.d[!dim][0], ball_area.d[!dim][1]); // random position along the wall
 				cube_t c(center);
 				c.expand_by(radius);
-				if (overlaps_other_room_obj(c, objs_start) || interior->is_blocked_by_stairs_or_elevator(c) || is_cube_close_to_doorway(c, room, 0.0, 1)) continue; // bad placement
+				if (overlaps_other_room_obj(c, objs_start) || is_obj_placement_blocked(c, room, 1)) continue; // bad placement
 				objs.emplace_back(c, TYPE_LG_BALL, room_id, 0, 0, RO_FLAG_DSTATE, tot_light_amt, SHAPE_SPHERE, WHITE);
 				objs.back().obj_id     = (uint16_t)interior->room_geom->allocate_dynamic_state(); // allocate a new dynamic state object
 				objs.back().item_flags = rgen.rand_bool(); // selects ball type
@@ -896,7 +900,7 @@ bool building_t::place_obj_along_wall(room_object type, room_t const &room, floa
 		}
 		cube_t c2(c); // used for collision tests
 		c2.d[dim][!dir] += (dir ? -1.0 : 1.0)*clearance;
-		if (overlaps_other_room_obj(c2, objs_start) || interior->is_blocked_by_stairs_or_elevator(c2)) continue; // bad placement
+		if (overlaps_other_room_obj(c2, objs_start) || interior->is_blocked_by_stairs_or_elevator(c2)) continue; // bad placement (Note: not using is_obj_placement_blocked())
 		// we don't need clearance for both the door and the object; test the object itself against the open door and the object with clearance against the closed door
 		if (is_cube_close_to_doorway(c, room, 0.0, 1)) continue; // bad placement
 		cube_t c3(c); // used for collision tests
@@ -1617,7 +1621,7 @@ void building_t::add_diningroom_objs(rand_gen_t rgen, room_t const &room, float 
 		set_wall_width(c, pos, 0.5*width, !dim);
 		cube_t tc(c);
 		tc.d[dim][!dir] += (dir ? -1.0 : 1.0)*clearance; // increase space to add clearance
-		if (is_cube_close_to_doorway(tc, room, 0.0, 1) || interior->is_blocked_by_stairs_or_elevator(tc) || overlaps_other_room_obj(tc, objs_start)) continue; // bad placement
+		if (is_obj_placement_blocked(tc, room, 1) || overlaps_other_room_obj(tc, objs_start)) continue; // bad placement
 		objs.emplace_back(c, TYPE_WINE_RACK, room_id, dim, !dir, 0, tot_light_amt); // Note: dir faces into the room, not the wall
 		set_obj_id(objs);
 		break; // done/success
@@ -1709,7 +1713,7 @@ bool building_t::add_storage_objs(rand_gen_t rgen, room_t const &room, float zva
 		cube_t chair(get_cube_height_radius(pos, chair_radius, chair_height));
 		
 		// for now, just make one random attempt; if it fails then there's no chair in this room
-		if (!has_bcube_int(chair, exclude) && !is_cube_close_to_doorway(chair, room, 0.0, 1) && !interior->is_blocked_by_stairs_or_elevator(chair)) {
+		if (!has_bcube_int(chair, exclude) && !is_obj_placement_blocked(chair, room, 1)) {
 			objs.emplace_back(chair, TYPE_OFF_CHAIR, room_id, rgen.rand_bool(), rgen.rand_bool(), RO_FLAG_RAND_ROT, tot_light_amt, SHAPE_CYLIN, GRAY_BLACK);
 		}
 	}
@@ -1729,7 +1733,7 @@ bool building_t::add_storage_objs(rand_gen_t rgen, room_t const &room, float zva
 			else {bad_placement = 1; break;}
 		}
 		if (bad_placement) continue;
-		if (is_cube_close_to_doorway(crate, room, 0.0, 1) || interior->is_blocked_by_stairs_or_elevator(crate)) continue;
+		if (is_obj_placement_blocked(crate, room, 1)) continue;
 		cube_t c2(crate);
 		c2.expand_by(vector3d(0.5*c2.dx(), 0.5*c2.dy(), 0.0)); // approx extents of flaps if open
 		unsigned flags(0);
@@ -1794,7 +1798,7 @@ void building_t::add_floor_clutter_objs(rand_gen_t rgen, room_t const &room, flo
 			cube_t c(get_cube_height_radius(pos, radius, height));
 
 			// for now, just make one random attempt; if it fails then there's no chair in this room
-			if (!overlaps_other_room_obj(c, objs_start) && !is_cube_close_to_doorway(c, room, 0.0, 1) && !interior->is_blocked_by_stairs_or_elevator(c)) {
+			if (!overlaps_other_room_obj(c, objs_start) && !is_obj_placement_blocked(c, room, 1)) {
 				if (use_model) { // symmetric, no dim or dir, but random rotation
 					objs.emplace_back(c, TYPE_TOY_MODEL, room_id, 0, 0, (RO_FLAG_RAND_ROT | RO_FLAG_NOCOLL), tot_light_amt);
 				}
@@ -1822,7 +1826,7 @@ void building_t::add_laundry_basket(rand_gen_t &rgen, room_t const &room, float 
 		center[!dim] = rgen.rand_uniform(place_area.d[!dim][0], place_area.d[!dim][1]);
 		if (!legal_area.contains_pt_xy(center)) continue; // too close to part edge
 		cube_t const c(get_cube_height_radius(center, radius, height));
-		if (is_cube_close_to_doorway(c, room, 0.0, !room.is_hallway) || interior->is_blocked_by_stairs_or_elevator(c) || overlaps_other_room_obj(c, objs_start)) continue; // bad placement
+		if (is_obj_placement_blocked(c, room, !room.is_hallway) || overlaps_other_room_obj(c, objs_start)) continue; // bad placement
 		colorRGBA const colors[4] = {WHITE, LT_BLUE, LT_GREEN, LT_BROWN};
 		interior->room_geom->objs.emplace_back(c, TYPE_LBASKET, room_id, dim, dir, 0, tot_light_amt, SHAPE_CYLIN, colors[rgen.rand()%4]);
 		break; // done
@@ -2056,7 +2060,7 @@ bool building_t::add_rug_to_room(rand_gen_t rgen, cube_t const &room, float zval
 				// maybe beds should be included as well, but then rugs are unlikely to be placed in bedrooms
 			}
 		} // for i
-		if (valid_placement && interior->is_blocked_by_stairs_or_elevator(rug)) {valid_placement = 0;} // check stairs (required for ext basement rooms)
+		if (valid_placement && interior->is_blocked_by_stairs_or_elevator(rug)) {valid_placement = 0;} // check stairs (required for ext basement rooms); no need to check doors
 
 		if (valid_placement) {
 			rug.intersect_with_cube(room); // make sure the rug stays within the room bounds
@@ -2298,8 +2302,7 @@ void building_t::add_light_switches_to_room(rand_gen_t rgen, room_t const &room,
 					cube_t c_test(c);
 					c_test.d[dim][!dir] += dir_sign*wall_thickness; // expand out more so that it's guaranteed to intersect appliances placed near the wall
 					if (overlaps_other_room_obj(c_test, objs_start))          continue;
-					if (is_cube_close_to_doorway(c, room, 0.0, (ei==1), 1))   continue; // inc_open=1/check_open_dir=1 for inside, to avoid placing behind an open door
-					if (interior->is_blocked_by_stairs_or_elevator(c))        continue; // check stairs and elevators
+					if (is_obj_placement_blocked(c, room, (ei==1), 1))        continue; // inc_open_doors=1/check_open_dir=1 for inside, to avoid placing behind an open door
 					if (!check_if_placed_on_interior_wall(c, room, dim, dir)) continue; // ensure the switch is on a wall
 					// if is_basement, and this is an exterior wall, use a non-recessed light switch? but the basement ext wall will never have a doorway; next to basement stairs?
 					unsigned flags(RO_FLAG_NOCOLL);
@@ -2463,8 +2466,7 @@ bool building_t::add_wall_vent_to_room(rand_gen_t rgen, room_t const &room, floa
 				test_cube.d[!dim][!side] -= duct_end_shift; // shrink slightly so as not to overlap the furnace
 				duct     .d[!dim][!side] += duct_end_shift; // extend duct into furnace duct (since there's a gap on the edge of the furnace)
 				if (overlaps_other_room_obj(test_cube, objs_start, 1)) continue; // check for objects
-				if (is_cube_close_to_doorway(duct, room, 0.0, 1))      continue; // too close to a doorway; inc_open=1
-				if (interior->is_blocked_by_stairs_or_elevator(duct))  continue; // check stairs and elevators
+				if (is_obj_placement_blocked(duct, room, 1))           continue; // too close to a doorway/stairs/elevator; inc_open=1
 				objs.emplace_back(duct, TYPE_DUCT, room_id, !dim, 0, RO_FLAG_NOCOLL, 1.0, SHAPE_CUBE, DUCT_COLOR);
 				c.translate_dim(dim, duct_wall_shift); // place vent on the duct
 				break; // only connect to one furnace
