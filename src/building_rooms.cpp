@@ -2123,7 +2123,7 @@ bool building_t::hang_pictures_in_room(rand_gen_t rgen, room_t const &room, floa
 	if (room.get_room_type(0) == RTYPE_STORAGE) return 0; // no pictures or whiteboards in storage rooms (always first floor)
 	cube_t const &part(get_part_for_room(room));
 	float const floor_height(get_window_vspace()), wall_thickness(get_wall_thickness());
-	bool const check_for_windows(!is_basement && has_windows());
+	bool const no_ext_walls(!is_basement && (has_windows() || !is_cube())); // don't place on ext walls with windows or non-square orients
 	vect_room_object_t &objs(interior->room_geom->objs);
 	bool was_hung(0);
 
@@ -2135,7 +2135,7 @@ bool building_t::hang_pictures_in_room(rand_gen_t rgen, room_t const &room, floa
 		for (unsigned dim2 = 0; dim2 < 2; ++dim2) {
 			for (unsigned dir2 = 0; dir2 < 2; ++dir2) {
 				bool const dim(bool(dim2) ^ pref_dim), dir(bool(dir2) ^ pref_dir);
-				if (check_for_windows && fabs(room.d[dim][dir] - part.d[dim][dir]) < 1.1*wall_thickness) continue; // on part boundary, likely exterior wall where there may be windows, skip
+				if (no_ext_walls && fabs(room.d[dim][dir] - part.d[dim][dir]) < 1.1*wall_thickness) continue; // on part boundary, likely ext wall where there may be windows, skip
 				cube_t c(room);
 				set_cube_zvals(c, zval+0.25*floor_height, zval+0.9*floor_height-floor_thick);
 				c.d[dim][!dir] = c.d[dim][dir] + (dir ? -1.0 : 1.0)*0.6*wall_thickness; // Note: offset by an additional half wall thickness
@@ -2162,7 +2162,7 @@ bool building_t::hang_pictures_in_room(rand_gen_t rgen, room_t const &room, floa
 	for (unsigned dim = 0; dim < 2; ++dim) {
 		for (unsigned dir = 0; dir < 2; ++dir) {
 			float const wall_pos(room.d[dim][dir]);
-			if (check_for_windows && fabs(room.d[dim][dir] - part.d[dim][dir]) < 1.1*wall_thickness) continue; // on part boundary, likely exterior wall where there may be windows, skip
+			if (no_ext_walls && fabs(room.d[dim][dir] - part.d[dim][dir]) < 1.1*wall_thickness) continue; // on part boundary, likely ext wall where there may be windows, skip
 			if (!room.is_hallway && rgen.rand_float() < 0.2) continue; // skip 20% of the time unless it's a hallway
 			float const height(floor_height*rgen.rand_uniform(0.3, 0.6)*(is_basement ? 0.8 : 1.0)); // smaller pictures in basement to avoid the pipes
 			float const width(height*rgen.rand_uniform(1.5, 2.0)); // width > height
@@ -2360,6 +2360,7 @@ void building_t::add_outlets_to_room(rand_gen_t rgen, room_t const &room, float 
 		bool const dim(wall >> 1), dir(wall & 1);
 		if (!is_house && room.get_sz_dim(!dim) < room.get_sz_dim(dim)) continue; // only add outlets to the long walls of office building rooms
 		bool const is_exterior_wall(classify_room_wall(room, zval, dim, dir, 0) == ROOM_WALL_EXT); // includes basement
+		if (is_exterior_wall && !is_cube()) continue; // don't place on ext wall if it's not X/Y aligned
 		cube_t const &wall_bounds(is_exterior_wall ? room : room_bounds); // exterior wall should use the original room, not room_bounds
 		float const wall_pos(rgen.rand_uniform((room_bounds.d[!dim][0] + min_wall_spacing), (room_bounds.d[!dim][1] - min_wall_spacing)));
 		float const wall_face(wall_bounds.d[dim][dir]), dir_sign(dir ? -1.0 : 1.0);
