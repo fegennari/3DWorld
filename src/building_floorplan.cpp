@@ -139,8 +139,9 @@ bool building_t::interior_enabled() const {
 	if (world_mode != WMODE_INF_TERRAIN)                return 0; // tiled terrain mode only
 	if (!global_building_params.gen_building_interiors) return 0; // disabled
 	if (!global_building_params.windows_enabled())      return 0; // no windows, can't assign floors and generate interior
-	if (!is_cube()) return 0; // only generate interiors for cube buildings for now; comment this out to experiment with interiors of non-cube building types
-	if (!global_building_params.add_city_interiors && !get_material().add_windows) return 0; // not a building type that has generated windows (skip buildings with windows baked into textures)
+	if (!is_cube() && has_complex_floorplan)            return 0; // not handling non-cube buildings with complex floorplans here
+	// skip buildings with windows baked into textures
+	if (!global_building_params.add_city_interiors && !get_material().add_windows) return 0; // not a building type that has generated windows
 	return 1;
 }
 
@@ -258,7 +259,7 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 		if (!is_cube()) { // cylinder, etc.
 			if (min(p->dx(), p->dy()) > 2.0*min_wall_len) { // large cylinder
 				// create a pie slice split for cylindrical parts; since we can only add X or Y walls, place one of each that crosses the entire part
-				point const center(p->xc(), p->yc(), p->z1()), size(p->get_size());
+				point const center(p->xc(), p->yc(), p->z1());
 				bool const clip_to_ext_walls(!use_cylinder_coll()); // if this building isn't a full cylinder, we may need to clip the walls shorter
 				vector<point> points;
 				if (clip_to_ext_walls) {building_draw_utils::calc_poly_pts(*this, bcube, *p, points);} // without the expand
@@ -269,16 +270,28 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 					set_wall_width(wall, center[d], wall_half_thick, d);
 					
 					if (clip_to_ext_walls) {
-						for (auto p = points.begin(); p != points.end(); ++p) {
-							point const &p1(*p), &p2((p+1 == points.end()) ? points.front() : *(p+1));
-							// TODO
-						}
+						for (unsigned e = 0; e < 2; ++e) { // for each end
+							for (auto p = points.begin(); p != points.end(); ++p) { // check each edge - only one can intersect
+								point const &p1(*p), &p2((p+1 == points.end()) ? points.front() : *(p+1));
+								if (max(p1[d], p2[d]) <= center[d] || min(p1[d], p2[d]) >= center[d]) continue; // doesn't cross the wall in dim d
+								float const t((p1[d] - center[d])/(p1[d] - p2[d])), int_pos(p1[!d] + t*(p2[!d] - p1[!d]));
+								
+								if (e) {
+									if (int_pos > center[!d]) {min_eq(wall.d[!d][1], int_pos); break;}
+								}
+								else {
+									if (int_pos < center[!d]) {max_eq(wall.d[!d][0], int_pos); break;}
+								}
+							} // for p
+						} // for e
 					}
-					wall.expand_in_dim(!d, -0.25*wall_half_thick); // shrink slightly to avoid clipping through the exterior wall
+					wall.expand_in_dim(!d, -(clip_to_ext_walls ? 0.75 : 0.25)*wall_half_thick); // shrink slightly to avoid clipping through the exterior wall
+					assert(wall.is_strictly_normalized());
 
-					// cut two doorways in each wall
+					// cut two doorways in each wall if there's space
 					for (unsigned e = 0; e < 2; ++e) {
-						float const door_pos(p->d[!d][0] + (0.25 + 0.5*e)*size[!d]); // at 25% and 75% to far edge
+						if (fabs(wall.d[!d][e] - center[!d]) < 2.0*doorway_width) continue; // wall too short to add a door
+						float const door_pos(0.5*(wall.d[!d][e] + center[!d])); // midpoint of the half-wall
 						insert_door_in_wall_and_add_seg(wall, (door_pos - doorway_hwidth), (door_pos + doorway_hwidth), !d, 0, 1); // keep_high_side=1
 					}
 					interior->walls[d].push_back(wall); // add remainder
