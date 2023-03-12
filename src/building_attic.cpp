@@ -24,7 +24,7 @@ bool building_t::point_under_attic_roof(point const &pos, vector3d *const cnorm)
 
 	for (auto const &tq : roof_tquads) {
 		if (!is_attic_roof(tq, 1)) continue; // type_roof_only=1
-		if (!point_in_polygon_2d(pos.x, pos.y, tq.pts, tq.npts, 0, 1)) continue; // check 2D XY point containment
+		if (!point_in_polygon_2d(pos.x, pos.y, tq.pts, tq.npts)) continue; // check 2D XY point containment
 		vector3d const normal(tq.get_norm());
 		if (normal.z == 0.0) continue; // skip vertical sides
 		if (cnorm) {*cnorm = -normal;} // we're looking at the underside of the roof, so reverse the normal; set whether or not we're inside the attic

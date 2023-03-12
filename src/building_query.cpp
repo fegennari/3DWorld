@@ -35,7 +35,7 @@ bool building_t::check_part_contains_pt_xy(cube_t const &part, point const &pt, 
 	if (!part.contains_pt_xy(pt)) return 0; // check bounding cube
 	if (is_simple_cube()) return 1; // that's it
 	building_draw_utils::calc_poly_pts(*this, bcube, part, points);
-	return point_in_polygon_2d(pt.x, pt.y, points.data(), points.size(), 0, 1); // 2D x/y containment
+	return point_in_polygon_2d(pt.x, pt.y, points.data(), points.size()); // 2D x/y containment
 }
 
 bool building_t::cube_int_parts_no_sec(cube_t const &c) const {
@@ -117,7 +117,7 @@ bool building_t::test_coll_with_sides(point &pos, point const &p_last, float rad
 		pos += step_delta;
 		if (do_sphere_coll_polygon_sides(pos, part, radius, 0, points, cnorm)) return 1; // interior_coll=0
 	}
-	if (max(pos.z, p_last.z) > part.z2() && point_in_polygon_2d(pos.x, pos.y, points.data(), num_sides, 0, 1)) { // test top plane (sphere on top of polygon?)
+	if (max(pos.z, p_last.z) > part.z2() && point_in_polygon_2d(pos.x, pos.y, points.data(), num_sides)) { // test top plane (sphere on top of polygon?)
 		pos.z = part.z2() + radius; // make sure it doesn't intersect the roof
 		if (cnorm) {*cnorm = plus_z;}
 		return 1;
@@ -306,7 +306,7 @@ bool building_t::check_sphere_coll(point &pos, point const &p_last, vector3d con
 				point const pos_xlate(pos2 - xlate);
 
 				if (check_interior && had_coll && pos2.z - xlate.z > part_z2) { // player standing on top of a building with a sloped roof or roof access cover
-					if (point_in_polygon_2d(pos_xlate.x, pos_xlate.y, i->pts, i->npts, 0, 1)) {
+					if (point_in_polygon_2d(pos_xlate.x, pos_xlate.y, i->pts, i->npts)) {
 						vector3d const normal(i->get_norm());
 						if (normal.z == 0.0) continue; // skip vertical sides as the player can't stand on them
 						float const rdist(dot_product_ptv(normal, pos_xlate, i->pts[0]));
@@ -1055,7 +1055,7 @@ unsigned building_t::check_line_coll(point const &p1, point const &p2, float &t,
 
 			if (tz >= 0.0 && tz < t) {
 				float const xval(p1r.x + tz*(p2r.x - p1r.x)), yval(p1r.y + tz*(p2r.y - p1r.y));
-				if (point_in_polygon_2d(xval, yval, points.data(), points.size(), 0, 1)) {t = tz; hit = 1;} // XY plane test for vertical lines and top surface
+				if (point_in_polygon_2d(xval, yval, points.data(), points.size())) {t = tz; hit = 1;} // XY plane test for vertical lines and top surface
 			}
 			if (!vert) { // test building sides
 				point quad_pts[4]; // quads
@@ -1233,7 +1233,7 @@ bool building_t::check_point_or_cylin_contained(point const &pos, float xy_radiu
 					*p += dir*(xy_radius/dir.mag());
 				}
 			}
-			if (point_in_polygon_2d(pr.x, pr.y, &points.front(), points.size(), 0, 1)) return 1; // XY plane test for top surface
+			if (point_in_polygon_2d(pr.x, pr.y, &points.front(), points.size())) return 1; // XY plane test for top surface
 		}
 		else { // cube
 			if (xy_radius > 0.0) {
