@@ -300,8 +300,8 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 				for (unsigned r = 0; r < 4; ++r) {
 					bool const xside(r & 1), yside(r >> 1);
 					cube_t room(*p);
-					room.d[0][xside] = center.x;
-					room.d[1][yside] = center.y;
+					room.d[0][xside] = center.x - (xside ? 1.0 : -1.0)*wall_half_thick; // wall not included in room bounds
+					room.d[1][yside] = center.y - (yside ? 1.0 : -1.0)*wall_half_thick; // wall not included in room bounds
 					add_room(room, part_id, 1, 0, 0);
 				}
 			}
