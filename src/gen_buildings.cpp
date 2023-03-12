@@ -709,14 +709,15 @@ public:
 		unsigned const ndiv(bg.num_sides); // Note: no LOD
 		assert(ndiv >= 3);
 		bool const smooth_normals(ndiv >= 16); // cylinder vs. N-gon
-		float const bcz1(bg.bcube.z1()), z_top(pos.z + height), tscale_x(2.0*tex.tscale_x), tscale_y(2.0*tex.tscale_y); // adjust for local vs. global space change
+		float const bcz1(bg.bcube.z1()), z_top(pos.z + height); // adjust for local vs. global space change
+		float const ts_factor((dim_mask == 4) ? 1.0 : 2.0), tscale_x(ts_factor*tex.tscale_x), tscale_y(ts_factor*tex.tscale_y);
 		bool const apply_ao(!no_ao && global_building_params.ao_factor > 0.0);
 		vert_norm_comp_tc_color vert;
 		color_wrapper cw[2];
 		setup_ao_color(color, bcz1, bg.ao_bcz2, pos.z, z_top, cw, vert, no_ao);
 		float tex_pos[2] = {0.0, 1.0};
 		building_draw_utils::calc_normals(bg, normals, ndiv);
-		UNROLL_2X(tex_pos[i_] = ((i_ ? z_top : pos.z) - bcz1);)
+		UNROLL_2X(tex_pos[i_] = ((i_ ? z_top : pos.z) - bcz1););
 
 		if (dim_mask & 3) { // draw sides
 			auto &verts(get_verts(tex)); // Note: cubes are drawn with quads, so we want to emit quads here
@@ -755,9 +756,13 @@ public:
 				} // for d
 			} // for S
 		} // end draw sides
-		if (dim_mask & 4) { // draw end(s) / roof
+		if (dim_mask & 4) { // draw end(s) / ceiling/floor/roof
 			auto &tri_verts(get_verts(tex, 1));
-			
+			// convert normals to vertices
+			vector<point> &verts(normals);
+			for (point &v : verts) {v.assign((pos.x + rx*v.x), (pos.y + ry*v.y), pos.z);}
+			float tsx(tscale_x*(part.dx()/bg.bcube.dx())/rx), tsy(tscale_y*(part.dy()/bg.bcube.dy())/ry);
+
 			for (unsigned d = 0; d < 2; ++d) { // bottom, top
 				if (d ? skip_top : skip_bottom) continue;
 				if (is_city && pos.z == bcz1 && d == 0) continue; // skip bottom
@@ -775,12 +780,12 @@ public:
 
 					for (unsigned e = 0; e < 2; ++e) {
 						if (S > 0 && e == 0) {tri_verts.push_back(tri_verts[tri_verts.size()-2]); continue;} // reuse prev vertex
-						vector3d const &n(normals[(S+e)%ndiv]);
-						vert.v.assign((pos.x + rx*n.x), (pos.y + ry*n.y), center.v.z);
-						vert.t[0] = tscale_x*n[0]; vert.t[1] = tscale_y*n[1];
+						vert.v    = verts[(S+e)%ndiv];
+						vert.v.z  = center.v.z;
+						vert.t[0] = tsx*(vert.v.x - pos.x); vert.t[1] = tsy*(vert.v.y - pos.y);
 						if (bg.is_rotated()) {bg.do_xy_rotate(pos, vert.v);}
 						tri_verts.push_back(vert);
-					}
+					} // for e
 				} // for S
 				if (d == 1) {std::reverse(tri_verts.begin()+start, tri_verts.end());} // winding order is wrong, but it's easier to reverse it than change all of the indexing logic
 			} // for d
