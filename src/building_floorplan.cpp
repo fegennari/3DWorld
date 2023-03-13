@@ -1065,8 +1065,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 	building_bounds_checker_t bbc;
 
 	// add stairwells and elevator shafts
-	if (!is_cube()) {} // rooms are not yet supported, and neither are stairs or elevators; will assert if rooms is empty
-	else if (num_floors == 1) {} // no need for stairs or elevator
+	if (num_floors == 1) {} // no need for stairs or elevator
 	else if (use_hallway) { // part is the hallway cube
 		add_elevator = 1;
 		if (interior->landings.empty()) {interior->landings.reserve(add_elevator ? 1 : (num_floors-1));} // lower bound

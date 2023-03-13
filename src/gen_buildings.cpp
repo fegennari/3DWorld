@@ -777,24 +777,14 @@ public:
 
 			if (part != cube) {
 				// clip verts to cube and update ndiv; this isn't the cleanest or most efficient solution, but it's the simplest that uses existing math functions
-				cube_t clip_cube(cube);
-				set_cube_zvals(clip_cube, part.z1(), part.z2()); // no clipping in Z
-				clip_cube.expand_by_xy(0.1*height);
 				vector<point> verts2;
-				verts2.reserve(2*verts.size());
-
-				for (auto i = verts.begin(); i != verts.end(); ++i) {
-					point p1(*i), p2((i+1 == verts.end()) ? verts.front() : *(i+1));
-					if (!do_line_clip(p1, p2, clip_cube.d)) {clip_cube.clamp_pt_xy(p1);} // if points are outside, clamp to the cube
-					verts2.push_back(p1);
-				}
-				unique_cont(verts2); // remove any duplicates
+				verts2.reserve(verts.size());
+				clip_polygon_xy(verts, cube, verts2);
 				verts.swap(verts2);
 				ndiv = verts.size();
 			}
-			assert(ndiv > 2);
-
 			for (unsigned d = 0; d < 2; ++d) { // bottom, top
+				if (ndiv < 3) continue; // shouldn't happen, but maybe can due to FP error
 				if (d ? skip_top : skip_bottom) continue;
 				if (is_city && pos.z == bcz1 && d == 0) continue; // skip bottom
 				vert.set_ortho_norm(2, d); // +/- z
