@@ -703,10 +703,22 @@ public:
 		assert((unsigned)ix < to_draw.size());
 		to_draw[ix].no_shadows = 1;
 	}
-	void add_cylinder(building_t const &bg, point const &pos, float height, float rx, float ry, tid_nm_pair_t const &tex,
+	void add_cylinder(building_t const &bg, cube_t const &cube, tid_nm_pair_t const &tex,
 		colorRGBA const &color, unsigned dim_mask, bool skip_bottom, bool skip_top, bool no_ao, bool clip_windows)
 	{
-		unsigned const ndiv(bg.num_sides); // Note: no LOD
+		cube_t part(cube); // assume full part
+		
+		if (dim_mask == 4) { // find the part containing this cube to determine if we need to clip the cylinder; only for floors and ceilings
+			cube_t test_cube(cube);
+			test_cube.expand_by(-0.1*cube.dz()); // shrink slightly to avoid failing due to FP error in clipping
+			part = bg.get_part_containing_cube(test_cube);
+		}
+		//float const rscale(0.5*((bg.num_sides <= 8) ? SQRT2 : 1.0)); // larger for triangles/cubes/hexagons/octagons (to ensure overlap/connectivity), smaller for cylinders
+		float const rscale(0.5); // use shape contained in bcube so that bcube tests are correct, since we're not creating L/T/U shapes for this case
+		// get the bounds from the part, but clip to the cube
+		point const pos(part.xc(), part.yc(), cube.z1());
+		float const height(cube.dz()), rx(rscale*part.dx()), ry(rscale*part.dy());
+		unsigned ndiv(bg.num_sides); // Note: no LOD
 		assert(ndiv >= 3);
 		bool const smooth_normals(ndiv >= 16); // cylinder vs. N-gon
 		float const bcz1(bg.bcube.z1()), z_top(pos.z + height); // adjust for local vs. global space change
@@ -763,25 +775,40 @@ public:
 			for (point &v : verts) {v.assign((pos.x + rx*v.x), (pos.y + ry*v.y), pos.z);}
 			float tsx(tscale_x*(part.dx()/bg.bcube.dx())/rx), tsy(tscale_y*(part.dy()/bg.bcube.dy())/ry);
 
+			if (part != cube) {
+				// clip verts to cube and update ndiv; this isn't the cleanest or most efficient solution, but it's the simplest that uses existing math functions
+				cube_t clip_cube(cube);
+				set_cube_zvals(clip_cube, part.z1(), part.z2()); // no clipping in Z
+				clip_cube.expand_by_xy(0.1*height);
+				vector<point> verts2;
+				verts2.reserve(2*verts.size());
+
+				for (auto i = verts.begin(); i != verts.end(); ++i) {
+					point p1(*i), p2((i+1 == verts.end()) ? verts.front() : *(i+1));
+					if (!do_line_clip(p1, p2, clip_cube.d)) {clip_cube.clamp_pt_xy(p1);} // if points are outside, clamp to the cube
+					verts2.push_back(p1);
+				}
+				unique_cont(verts2); // remove any duplicates
+				verts.swap(verts2);
+				ndiv = verts.size();
+			}
+			assert(ndiv > 2);
+
 			for (unsigned d = 0; d < 2; ++d) { // bottom, top
 				if (d ? skip_top : skip_bottom) continue;
 				if (is_city && pos.z == bcz1 && d == 0) continue; // skip bottom
 				vert.set_ortho_norm(2, d); // +/- z
 				if (apply_ao) {vert.copy_color(cw[d]);}
-				vert_norm_comp_tc_color center(vert);
-				center.t[0] = center.t[1] = 0.0; // center of texture space for this disk
-				center.v = pos;
-				if (d) {center.v.z += height;}
-				if (bg.is_rotated()) {bg.do_xy_rotate(pos, center.v);}
+				float const zval(pos.z + (d ? height : 0.0));
+				// first vertex is shared across all triangles
 				unsigned const start(tri_verts.size());
 
-				for (unsigned S = 0; S < ndiv; ++S) { // generate vertex data triangles
-					tri_verts.push_back(center);
-
-					for (unsigned e = 0; e < 2; ++e) {
-						if (S > 0 && e == 0) {tri_verts.push_back(tri_verts[tri_verts.size()-2]); continue;} // reuse prev vertex
-						vert.v    = verts[(S+e)%ndiv];
-						vert.v.z  = center.v.z;
+				for (unsigned S = 0; S < ndiv-2; ++S) { // generate vertex data triangles
+					for (unsigned n = 0; n < 3; ++n) {
+						if (S > 0 && n == 0) {tri_verts.push_back(tri_verts[start]); continue;} // reuse shared vertex
+						if (S > 0 && n == 1) {tri_verts.push_back(tri_verts[tri_verts.size()-2]); continue;} // reuse prev vertex
+						vert.v    = verts[S + n];
+						vert.v.z  = zval;
 						vert.t[0] = tsx*(vert.v.x - pos.x); vert.t[1] = tsy*(vert.v.y - pos.y);
 						if (bg.is_rotated()) {bg.do_xy_rotate(pos, vert.v);}
 						tri_verts.push_back(vert);
@@ -812,20 +839,17 @@ public:
 		float door_ztop=0.0, unsigned door_sides=0, float offset_scale=1.0, bool invert_normals=0, cube_t const *const clamp_cube=nullptr)
 	{
 		assert(bg.num_sides >= 3); // must be nonzero volume
-		bool const is_rotated(bg.is_rotated());
-		point const center(!is_rotated ? all_zeros : bg.bcube.get_cube_center()); // rotate about bounding cube / building center
-		vector3d const sz(cube.get_size()), llc(cube.get_llc()); // move origin from center to min corner
 
-		if ((clip_to_other_parts || dim_mask == 4) && bg.num_sides != 4) {
+		if ((clip_to_other_parts || dim_mask == 4) && !bg.is_cube()) {
 			// not a cube, use cylinder; applies to exterior walls (clip_to_other_parts=1) and ceilings/floors (dim_mask == 4)
 			//assert(door_ztop == 0.0); // not supported / ignored for testing purposes
-			point const ccenter(cube.get_cube_center()), pos(ccenter.x, ccenter.y, cube.z1());
-			//float const rscale(0.5*((num_sides <= 8) ? SQRT2 : 1.0)); // larger for triangles/cubes/hexagons/octagons (to ensure overlap/connectivity), smaller for cylinders
-			float const rscale(0.5); // use shape contained in bcube so that bcube tests are correct, since we're not creating L/T/U shapes for this case
-			add_cylinder(bg, pos, sz.z, rscale*sz.x, rscale*sz.y, tex, color, dim_mask, skip_bottom, skip_top, no_ao, clip_windows);
+			add_cylinder(bg, cube, tex, color, dim_mask, skip_bottom, skip_top, no_ao, clip_windows);
 			return;
 		}
 		// else draw as a cube (optimized flow)
+		bool const is_rotated(bg.is_rotated());
+		point const center(!is_rotated ? all_zeros : bg.bcube.get_cube_center()); // rotate about bounding cube / building center
+		vector3d const sz(cube.get_size()), llc(cube.get_llc()); // move origin from center to min corner
 		auto &verts(get_verts(tex, bg.is_pointed)); // bg.is_pointed ? tris : quads
 		vert_norm_comp_tc_color vert;
 		if (bg.is_pointed) {dim_mask &= 3;} // mask off z-dim since pointed objects (antenna) have no horizontal surfaces
