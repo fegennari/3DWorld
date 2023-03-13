@@ -553,6 +553,9 @@ class building_draw_t {
 		void draw_quad_geom_range(tid_nm_pair_dstate_t &state, vertex_range_t const &range, bool shadow_only=0) { // no tris; empty range is legal
 			draw_geom_range(state, shadow_only, vert_ix_pair(range.start, 0), vert_ix_pair(range.end, 0));
 		}
+		void draw_tri_geom_range(tid_nm_pair_dstate_t &state, vertex_range_t const &range, bool shadow_only=0) { // no quads; empty range is legal
+			draw_geom_range(state, shadow_only, vert_ix_pair(0, range.start), vert_ix_pair(0, range.end));
+		}
 		void draw_geom_tile(tid_nm_pair_dstate_t &state, unsigned tile_id, bool shadow_only) {
 			if (pos_by_tile.empty()) return; // nothing to draw for this block/texture
 			assert(tile_id+1 < pos_by_tile.size()); // tile and next tile must be valid indices
@@ -610,7 +613,7 @@ class building_draw_t {
 		unsigned num_verts() const {return (num_quad_verts() + num_tri_verts());}
 		unsigned num_tris () const {return (num_quad_verts()/2 + num_tri_verts()/3);} // Note: 1 quad = 4 verts = 2 triangles
 		unsigned start_quad_vert() const {return start_num_verts[0];}
-		unsigned start_tri_vert () const {return start_num_verts[0];}
+		unsigned start_tri_vert () const {return start_num_verts[1];}
 	}; // end draw_block_t
 	vector<draw_block_t> to_draw; // one per texture, assumes tids are dense
 
@@ -686,13 +689,20 @@ public:
 		for (auto i = to_draw.begin(); i != to_draw.end(); ++i) {i->record_num_verts();}
 	}
 	void end_draw_range_capture(draw_range_t &r) const { // capture quads added since begin_draw_range_capture() call across to_draw
-		for (unsigned i = 0, rix = 0; i < to_draw.size(); ++i) {
+		for (unsigned i = 0, rix = 0; i < to_draw.size(); ++i) { // quads
 			unsigned const start(to_draw[i].start_quad_vert()), end(to_draw[i].num_quad_verts());
 			if (start == end) continue; // empty, skip
 			assert(start < end);
 			assert(rix < MAX_DRAW_BLOCKS); // make sure we have enough slots for this entry
-			r.vr[rix++] = vertex_range_t(start, end, i);
-		}
+			r.vrq[rix++] = vertex_range_t(start, end, i);
+		} // for i
+		for (unsigned i = 0, rix = 0; i < to_draw.size(); ++i) { // triangles
+			unsigned const start(to_draw[i].start_tri_vert()), end(to_draw[i].num_tri_verts());
+			if (start == end) continue; // empty, skip
+			assert(start < end);
+			assert(rix < MAX_DRAW_BLOCKS); // make sure we have enough slots for this entry
+			r.vrt[rix++] = vertex_range_t(start, end, i);
+		} // for i
 	}
 	void toggle_transparent_windows_mode() {
 		for (auto i = to_draw.begin(); i != to_draw.end(); ++i) {i->tex.toggle_transparent_windows_mode();}
@@ -1151,13 +1161,14 @@ public:
 		tid_nm_pair_dstate_t state(s);
 		to_draw[ix].draw_all_geom(state, shadow_only, 0, exclude);
 	}
-	void draw_quad_geom_range(tid_nm_pair_dstate_t &state, vertex_range_t const &range, bool shadow_only=0) {
-		if (range.draw_ix < 0 || (unsigned)range.draw_ix >= to_draw.size()) return; // invalid range, skip
-		to_draw[range.draw_ix].draw_quad_geom_range(state, range, shadow_only);
-	}
-	void draw_quads_for_draw_range(shader_t &s, draw_range_t const &draw_range, bool shadow_only=0) {
+	void draw_for_draw_range(shader_t &s, draw_range_t const &draw_range, bool shadow_only=0) {
 		tid_nm_pair_dstate_t state(s);
-		for (unsigned i = 0; i < MAX_DRAW_BLOCKS; ++i) {draw_quad_geom_range(state, draw_range.vr[i], shadow_only);}
+		
+		for (unsigned i = 0; i < MAX_DRAW_BLOCKS; ++i) {
+			vertex_range_t const &qrange(draw_range.vrq[i]), &trange(draw_range.vrt[i]);
+			if (qrange.draw_ix >= 0 && (unsigned)qrange.draw_ix < to_draw.size()) {to_draw[qrange.draw_ix].draw_quad_geom_range(state, qrange, shadow_only);}
+			if (trange.draw_ix >= 0 && (unsigned)trange.draw_ix < to_draw.size()) {to_draw[trange.draw_ix].draw_tri_geom_range (state, trange, shadow_only);}
+		}
 	}
 }; // end building_draw_t
 
@@ -2626,7 +2637,7 @@ public:
 						// include skylight light sources, which are above the building; buildings can't stack vertically, so the light can't belong to a different building
 						if (!b.skylights.empty()) {min_eq(lpos_clamped.z, b.bcube.z2());}
 						if (!b.point_in_building_or_basement_bcube(lpos_clamped)) continue; // wrong building
-						(*i)->building_draw_interior.draw_quads_for_draw_range(s, b.interior->draw_range, 1); // shadow_only=1
+						(*i)->building_draw_interior.draw_for_draw_range(s, b.interior->draw_range, 1); // shadow_only=1
 						b.add_split_roof_shadow_quads(ext_parts_draw);
 						// no batch draw for shadow pass since textures aren't used; draw everything, since shadow may be cached
 						bool const camera_in_this_building(b.check_point_or_cylin_contained(pre_smap_player_pos, 0.0, points, 1, 1)); // inc_attic=1, inc_ext_basement=1

@@ -349,7 +349,7 @@ struct tquad_with_ix_t : public tquad_t {
 	tquad_with_ix_t(tquad_t const &t, unsigned type_) : tquad_t(t), type(type_) {}
 };
 
-struct vertex_range_t {
+struct vertex_range_t { // size=12
 	int draw_ix; // -1 is unset
 	unsigned start, end;
 	vertex_range_t() : draw_ix(-1), start(0), end(0) {}
@@ -358,7 +358,8 @@ struct vertex_range_t {
 
 struct draw_range_t {
 	// intended for building interiors, which don't have many materials; may need to increase MAX_DRAW_BLOCKS later
-	vertex_range_t vr[MAX_DRAW_BLOCKS]; // quad verts only for now
+	vertex_range_t vrq[MAX_DRAW_BLOCKS]; // quad     verts
+	vertex_range_t vrt[MAX_DRAW_BLOCKS]; // triangle verts
 };
 
 enum {
