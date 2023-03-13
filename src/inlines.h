@@ -754,9 +754,12 @@ template<typename T> void remove_element(vector<T> &v, unsigned &ix) {
 
 template<typename S, typename T> void vector_add_to(S const &src, T &dest) {dest.insert(dest.end(), src.begin(), src.end());}
 
+template<typename T> void unique_cont(T &v) {
+	v.erase(std::unique(v.begin(), v.end()), v.end());
+}
 template<typename T> void sort_and_unique(T &v) {
 	std::sort(v.begin(), v.end());
-	v.erase(std::unique(v.begin(), v.end()), v.end());
+	unique_cont(v);
 }
 
 // string converters
