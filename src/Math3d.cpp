@@ -1063,7 +1063,6 @@ bool get_line_clip_xy(point const &v1, point const &v2, float const d[3][2], flo
 	return 1;
 }
 
-
 // performance critical: return 1 if line intersects the cube
 bool do_line_clip(point &v1, point &v2, float const d[3][2]) {
 
@@ -1082,6 +1081,56 @@ bool do_line_clip(point &v1, point &v2, float const d[3][2]) {
 	if (tmax > TOLERANCE)         {v2  = v1 + dv*tmax;}
 	if (tmin < (1.0 - TOLERANCE)) {v1 += dv*tmin;}
 	return 1;
+}
+
+void add_point_to_poly(point const &pt, vector<point> &pts) {
+	unsigned const size(pts.size());
+	if (size > 0 && pt == pts.back()) return; // duplicate, skip
+	
+	if (size > 1) {
+		point &p1(pts[size-1]), &p2(pts[size-2]);
+		if (pt.x == p1.x && pt.x == p2.x) {p1.y = pt.y; return;} // colinear, update yval
+		if (pt.y == p1.y && pt.y == p2.y) {p1.x = pt.x; return;} // colinear, update xval
+	}
+	pts.push_back(pt); // add a new point
+}
+void clip_polygon_xy(vector<point> const &pts, cube_t const &c, vector<point> &pts_out) {
+	assert(pts.size() > 1);
+	point p1(pts.back());
+
+	for (point const &p2 : pts) {
+		unsigned const region1(get_region_xy(p1, c.d)), region2(get_region_xy(p2, c.d)), region3(region1 | region2);
+		if (region1 && region1 == region2) {p1 = p2; continue;} // both ends in same region, ignore
+
+		if (region3 == 0) { // entire line inside optimization
+			add_point_to_poly(p2, pts_out);
+		}
+		else {
+			point const delta(p2 - p1);
+			float tvals[4] = {};
+			unsigned cur_t(0);
+			if (!region_in_corner(region1)) {tvals[cur_t++] = 0.0;} // first point inside one/both dims
+
+			for (unsigned d = 0; d < 2; ++d) { // hi,lo
+				for (unsigned e = 0; e < 2; ++e) { // x,y
+					if ((region3 & (1<<(d+(e<<1)))) && delta[e]) {tvals[cur_t++] = (c.d[e][d] - p1[e]) / delta[e];} // plane intersection
+				}
+			}
+			std::sort(tvals, tvals+cur_t);
+			if (!region_in_corner(region2)) {tvals[cur_t++] = 1.0;} // last point inside one/both dims
+
+			for(unsigned i = 0; i < cur_t; ++i) {
+				point pt(p1 + point(tvals[i]*delta.x, tvals[i]*delta.y, 0.0));
+				c.clamp_pt_xy(pt);
+				add_point_to_poly(pt, pts_out);
+			}
+		}
+		p1 = p2;
+	} // for k
+	for (unsigned d = 0; d < 2; ++d) { // cleanup wraparound in each dim
+		while (pts_out.size() > 2 && pts_out.back()[d] == pts_out[0][d] && pts_out[0][d] == pts_out[1][d]) {pts_out.erase(pts_out.begin());}
+		while (pts_out.size() > 2 && pts_out[pts_out.size()-2][d] == pts_out.back()[d] && pts_out.back()[d] == pts_out[0][d]) {pts_out.pop_back();}
+	}
 }
 
 

@@ -544,6 +544,7 @@ bool approx_poly_cylin_int(point const *const pts, unsigned npts, cylinder_3dw c
 bool do_line_clip(point &v1, point &v2, float const d[3][2]);
 bool get_line_clip(point const &v1, point const &v2, float const d[3][2], float &tmin, float &tmax);
 bool get_line_clip_xy(point const &v1, point const &v2, float const d[3][2], float &tmin, float &tmax);
+void clip_polygon_xy(vector<point> const &pts, cube_t const &c, vector<point> &pts_out);
 float line_line_dist(point const &p1a, point const &p1b, point const &p2a, point const &p2b);
 float get_cylinder_params(point const &cp1, point const &cp2, point const &pos, vector3d &v1, vector3d &v2);
 int  line_intersect_trunc_cone(point const &p1, point const &p2, point const &cp1, point const &cp2,
