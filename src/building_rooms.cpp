@@ -2405,6 +2405,7 @@ void building_t::add_outlets_to_room(rand_gen_t rgen, room_t const &room, float 
 		c_exp.expand_by_xy(0.5*wall_thickness);
 		if (overlaps_other_room_obj(c_exp, objs_start, 1))     continue; // check for things like closets; check_all=1 to include blinds
 		if (interior->is_blocked_by_stairs_or_elevator(c_exp)) continue; // check stairs and elevators
+		if (!is_cube() && !building_bounds_checker.check_cube(c_exp, room, *this)) continue;
 		bool bad_place(0);
 
 		if (is_ground_floor) { // handle exterior doors
