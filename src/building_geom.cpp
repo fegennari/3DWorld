@@ -116,8 +116,7 @@ cube_t building_t::get_part_containing_cube(cube_t const &c) const {
 	for (auto i = parts.begin(); i != get_real_parts_end_inc_sec(); ++i) { // could call b.get_part_for_room() if we had a room_t
 		if (i->contains_cube(c)) return *i;
 	}
-	assert(0); // should never get here
-	return c;
+	return cube_t(); // not found
 }
 
 void building_t::adjust_part_zvals_for_floor_spacing(cube_t &c) const {

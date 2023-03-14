@@ -108,7 +108,9 @@ point building_t::gen_animal_floor_pos(float radius, bool place_in_attic, rand_g
 	return all_zeros; // failed
 }
 
-bool building_t::is_pos_inside_building(point const &pos, float xy_pad, float hheight, bool inc_attic) const {
+building_bounds_checker_t ai_query_bbc[2]; // separate queries for {animals, people} since they can be called from different threads
+
+bool building_t::is_pos_inside_building(point const &pos, float xy_pad, float hheight, bool inc_attic, bool for_person_ai) const {
 	float bcube_pad(xy_pad);
 	if (inc_attic && has_attic() && pos.z >= interior->attic_access.z2()) {bcube_pad += get_attic_beam_depth();} // add extra spacing for attic beams (approximate)
 	
@@ -128,7 +130,9 @@ bool building_t::is_pos_inside_building(point const &pos, float xy_pad, float hh
 	cube_t req_area(pos, pos);
 	req_area.expand_by_xy(xy_pad);
 	req_area.z2() += hheight;
-	return (is_cube_contained_in_parts(req_area) || (inc_attic && cube_in_attic(req_area)));
+	if (!is_cube_contained_in_parts(req_area) && !(inc_attic && cube_in_attic(req_area))) return 0;
+	if (!is_cube() && !ai_query_bbc[for_person_ai].check_cube(req_area, req_area, *this))  return 0; // handle non-cube walls; probably slow; room isn't known
+	return 1;
 }
 
 void update_dir_incremental_no_zero_check(vector3d &dir, vector3d const &new_dir, float turn_rate, float timestep) {

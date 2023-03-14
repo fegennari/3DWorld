@@ -1417,7 +1417,7 @@ private:
 	void update_insect(insect_t &insect, point const &camera_bs, float timestep, vector<pair<float, point>> &targets, rand_gen_t &rgen) const;
 	void maybe_bite_and_poison_player(point const &pos, point const &camera_bs, vector3d const &dir, float coll_radius, float damage, int poison_type, rand_gen_t &rgen) const;
 
-	bool is_pos_inside_building(point const &pos, float xy_pad, float hheight, bool inc_attic=1) const;
+	bool is_pos_inside_building(point const &pos, float xy_pad, float hheight, bool inc_attic=1, bool for_person_ai=0) const;
 	void get_room_obj_cubes(room_object_t const &c, point const &pos, vect_cube_t &lg_cubes, vect_cube_t &sm_cubes, vect_cube_t &non_cubes) const;
 	int  check_line_coll_expand(point const &p1, point const &p2, float radius, float hheight, bool for_spider=0) const;
 	bool check_line_of_sight_large_objs(point const &p1, point const &p2) const;
@@ -1710,7 +1710,7 @@ class building_bounds_checker_t {
 	cube_t cur_part;
 	vector<point> points;
 
-	void register_new_room(cube_t const &room, building_t const &b);
+	bool register_new_room(cube_t const &room, building_t const &b);
 public:
 	bool check_cube(cube_t const &c, cube_t const &room, building_t const &b);
 	bool check_point(point const &p, cube_t const &room, building_t const &b);

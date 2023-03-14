@@ -1084,7 +1084,7 @@ void person_t::next_path_pt(bool starting_path) {
 }
 
 bool building_t::is_valid_ai_placement(point const &pos, float radius, bool skip_nocoll) const { // for people and animals
-	if (!is_pos_inside_building(pos, radius, radius)) return 0; // required for attic
+	if (!is_pos_inside_building(pos, radius, radius, 1, 1)) return 0; // required for attic; for_attic=1, for_person_ai=1
 	cube_t ai_bcube(pos);
 	ai_bcube.expand_by(radius); // expand more in Z?
 	if (!is_valid_stairs_elevator_placement(ai_bcube, radius)) return 0;

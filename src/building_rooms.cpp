@@ -55,13 +55,16 @@ colorRGBA get_light_color_temp_range(float tmin, float tmax, rand_gen_t &rgen) {
 	return get_light_color_temp(((tmin == tmax) ? tmin : rgen.rand_uniform(tmin, tmax)));
 }
 
-void building_bounds_checker_t::register_new_room(cube_t const &room, building_t const &b) {
-	if (cur_part.contains_cube(room)) return; // same room/part
-	cur_part = b.get_part_containing_cube(room);
+bool building_bounds_checker_t::register_new_room(cube_t const &room, building_t const &b) {
+	if (cur_part.contains_cube(room)) return 1; // same room/part
+	cube_t const cont_part(b.get_part_containing_cube(room));
+	if (cont_part.is_all_zeros()) return 0; // no containing part
+	cur_part = cont_part;
 	building_draw_utils::calc_poly_pts(b, b.bcube, cur_part, points);
+	return 1;
 }
 bool building_bounds_checker_t::check_cube(cube_t const &c, cube_t const &room, building_t const &b) { // assumes no two buildings can contain the same part
-	register_new_room(room, b);
+	if (!register_new_room(room, b)) return 0;
 
 	for (unsigned n = 0; n < 4; ++n) { // test all 4 top corners; if any is outside, placement is invalid; correct as long as points forms a convex shape
 		if (!point_in_polygon_2d(c.d[0][n&1], c.d[1][n>>1], points.data(), points.size())) return 0;
@@ -69,7 +72,7 @@ bool building_bounds_checker_t::check_cube(cube_t const &c, cube_t const &room, 
 	return 1; // contained
 }
 bool building_bounds_checker_t::check_point(point const &p, cube_t const &room, building_t const &b) { // assumes no two buildings can contain the same part
-	register_new_room(room, b);
+	if (!register_new_room(room, b)) return 0;
 	return point_in_polygon_2d(p.x, p.y, points.data(), points.size());
 }
 building_bounds_checker_t building_bounds_checker;

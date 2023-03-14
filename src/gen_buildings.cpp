@@ -722,6 +722,7 @@ public:
 			cube_t test_cube(cube);
 			test_cube.expand_by(-0.1*cube.dz()); // shrink slightly to avoid failing due to FP error in clipping
 			part = bg.get_part_containing_cube(test_cube);
+			assert(part.is_strictly_normalized()); // must be found
 		}
 		//float const rscale(0.5*((bg.num_sides <= 8) ? SQRT2 : 1.0)); // larger for triangles/cubes/hexagons/octagons (to ensure overlap/connectivity), smaller for cylinders
 		float const rscale(0.5); // use shape contained in bcube so that bcube tests are correct, since we're not creating L/T/U shapes for this case
