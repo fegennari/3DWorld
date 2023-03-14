@@ -848,7 +848,14 @@ bool building_t::update_spider_pos_orient(spider_t &spider, point const &camera_
 	// check elevators
 	for (elevator_t const &e : interior->elevators) {surface_orienter.register_cube(e);} // should we avoid open elevators?
 	
-	if (!in_attic) { // check exterior walls; exterior doors are ignored for now (meaning the spider can walk on them)
+	if (in_attic) {
+		// the attic roof is not a cube we can walk on and the beams aren't real objects;
+		// also, it's not really possible to move from the attic floor to the roof without getting stuck in/on the corner
+	}
+	else if (!is_cube()) {
+		// not cube walls, skip exterior
+	}
+	else { // check exterior walls; exterior doors are ignored for now (meaning the spider can walk on them)
 		for (auto i = parts.begin(); i != get_real_parts_end_inc_sec(); ++i) {
 			for (unsigned dim = 0; dim < 2; ++dim) {
 				for (unsigned dir = 0; dir < 2; ++dir) {
@@ -874,10 +881,6 @@ bool building_t::update_spider_pos_orient(spider_t &spider, point const &camera_
 				} // for dir
 			} // for dim
 		} // for i
-	}
-	else { // in_attic case
-		// the attic roof is not a cube we can walk on and the beams aren't real objects;
-		// also, it's not really possible to move from the attic floor to the roof without getting stuck in/on the corner
 	}
 	if (obj_avoid.had_coll) {spider.end_jump();}
 	float const delta_dir(min(1.0f, 1.5f*(1.0f - pow(0.7f, timestep))));
