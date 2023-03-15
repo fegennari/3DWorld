@@ -3195,7 +3195,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 	} // for r (room)
 	if (is_house) {interior->assign_master_bedroom(window_vspacing, floor_thickness);}
 
-	if (is_rotated()) {} // skip for rotated buildings, since toilets, etc. may not be placed
+	if (is_rotated() || !is_cube()) {} // skip for rotated and non-cube buildings, since toilets, etc. may not be placed
 	else if (num_bathrooms == 0) { // can happen, but very rare
 		cout << "no bathroom in building " << bcube.xc() << " " << bcube.yc() << endl;
 		if (cand_bathroom < rooms.size()) {cout << "cand bathroom was at " << rooms[cand_bathroom].str() << endl;}

@@ -955,11 +955,8 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 			} // for nsplits
 		} // for w
 	} // for d
-
-	if (is_cube()) { // not supported for cylinders, etc. because there's no function to cut the stairs hole out of a non-rectangular floor
-		// add stairs to connect together stacked parts for office buildings; must be done last after all walls/ceilings/floors have been assigned
-		for (auto p = parts.begin(); p != parts_end; ++p) {connect_stacked_parts_with_stairs(rgen, *p);}
-	}
+	// add stairs to connect together stacked parts for office buildings; must be done last after all walls/ceilings/floors have been assigned
+	for (auto p = parts.begin(); p != parts_end; ++p) {connect_stacked_parts_with_stairs(rgen, *p);}
 	if (has_parking_garage) {add_parking_garage_ramp(rgen);}
 
 	// furnace logic
@@ -1646,7 +1643,7 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 				for (unsigned d = 0; d < 2; ++d) {
 					if (has_bcube_int(cand_test[d], interior->exclusion)) {bad_place = 1; break;} // bad placement
 					if (!is_valid_stairs_elevator_placement(cand_test[d], stairs_pad, !allow_clip_walls)) {bad_place = 1; break;} // bad placement
-					if (!is_cube() && !bbc.check_cube(cand_test[d], part, *this)) {bad_place = 1; break;} // bad placement
+					if (!is_cube() && !(bbc.check_cube(cand_test[d], part, *this) && bbc.check_cube(cand_test[d], *p, *this))) {bad_place = 1; break;} // check both top/bot parts
 				}
 				if (bad_place) continue;
 

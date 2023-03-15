@@ -1286,17 +1286,31 @@ void building_t::get_all_drawn_exterior_verts(building_draw_t &bdraw) { // exter
 		bdraw.add_section(*this, 1, *i, mat.side_tex, side_color, 3, 0, 0, is_house, 0); // XY exterior walls
 		bool skip_top((!need_top_roof && (is_house || i+1 == parts.end())) || is_basement(i)); // don't add the flat roof for the top part in this case
 		// skip the bottom of stacked cubes (not using ground_floor_z1); need to draw the porch roof, so test i->dz()
-		bool const is_stacked(num_sides == 4 && i->z1() > bcube.z1() && i->dz() > 0.5f*get_window_vspace());
-		if (is_stacked && skip_top) continue; // no top/bottom to draw
+		bool const is_stacked(i->z1() > bcube.z1() && i->dz() > 0.5f*get_window_vspace()), is_stacked_cube(is_stacked && is_cube());
+		if (is_stacked_cube && skip_top) continue; // no top/bottom to draw
 
-		if (!is_house && !skip_top && interior && clip_part_ceiling_for_stairs(*i, bdraw.temp_cubes, bdraw.temp_cubes2)) { // add roof quads
+		// add roof quads
+		if (!is_house && !skip_top && interior && clip_part_ceiling_for_stairs(*i, bdraw.temp_cubes, bdraw.temp_cubes2)) {
 			for (auto c = bdraw.temp_cubes.begin(); c != bdraw.temp_cubes.end(); ++c) { // add floors after removing stairwells
-				bdraw.add_section(*this, 0, *c, mat.roof_tex, roof_color, 4, 1, 0, is_house, 0); // only Z dim
+				bdraw.add_section(*this, 0, *c, mat.roof_tex, roof_color, 4, 1, 0, is_house, 0); // only top surface
 			}
 			skip_top = 1;
-			if (is_stacked) continue; // no top/bottom to draw
+			if (is_stacked_cube) continue; // no top/bottom to draw
 		}
-		bdraw.add_section(*this, 1, *i, mat.roof_tex, roof_color, 4, is_stacked, skip_top, is_house, 0); // only Z dim
+		if (is_stacked && !is_cube()) { // handle bottom of stacked parts from non-cube buildings that may overhang
+			cube_t test_cube(*i);
+			// clip_part_ceiling_for_stairs() expects a ceiling, shift zval to the top floor of the part below
+			set_cube_zvals(test_cube, (i->z1() - get_window_vspace() - get_floor_thickness()), i->z1());
+
+			if (clip_part_ceiling_for_stairs(test_cube, bdraw.temp_cubes, bdraw.temp_cubes2)) {
+				for (auto c = bdraw.temp_cubes.begin(); c != bdraw.temp_cubes.end(); ++c) { // add floors after removing stairwells
+					set_cube_zvals(*c, i->z1(), i->z2()); // set back to the correct zvals
+					bdraw.add_section(*this, 0, *c, mat.roof_tex, roof_color, 4, 0, 1, is_house, 0); // only bottom surface
+				}
+				continue;
+			}
+		}
+		bdraw.add_section(*this, 1, *i, mat.roof_tex, roof_color, 4, is_stacked_cube, skip_top, is_house, 0); // only Z dim
 	} // for i
 	for (auto i = roof_tquads.begin(); i != roof_tquads.end(); ++i) {
 		if (i->type == tquad_with_ix_t::TYPE_HELIPAD) {
