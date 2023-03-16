@@ -643,7 +643,7 @@ public:
 	quad_batch_draw ao_qbd;
 	vect_cube_t &get_occluders() {return occlusion_checker.occluders;}
 	void pre_draw(vector3d const &xlate_, bool use_dlights_, bool shadow_only_);
-	bool is_occluded(cube_t const &bcube) {return (!shadow_only && occlusion_checker.is_occluded(bcube));} // Note: non-const - OC state temp_points is modified
+	bool is_occluded(cube_t const &bcube) const {return (!shadow_only && occlusion_checker.is_occluded(bcube));}
 	void draw_ao_qbd();
 	virtual void draw_unshadowed() {draw_ao_qbd();}
 };

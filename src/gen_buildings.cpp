@@ -384,12 +384,12 @@ void setup_building_draw_shader(shader_t &s, float min_alpha, bool enable_indir,
 	}
 }
 
-/*static*/ void building_draw_utils::calc_poly_pts(building_geom_t const &bg, cube_t const &bcube, cube_t const &part, vector<point> &pts, float expand) {
+/*static*/ void building_draw_utils::calc_poly_pts(building_geom_t const &bg, cube_t const &bcube, cube_t const &part, vect_point &pts) {
 
 	calc_normals(bg, pts, bg.num_sides);
 	vector3d const sz(part.get_size());
 	point const cc(part.get_cube_center());
-	float const rx(0.5*sz.x + expand), ry(0.5*sz.y + expand); // expand polygon by sphere radius
+	float const rx(0.5*sz.x), ry(0.5*sz.y);
 
 	if (bg.is_rotated() && part != bcube) {
 		// the building is rotated around the bcube center, but the part itself is rotated around its own center, so we have to adjust the points correctly
@@ -2092,16 +2092,16 @@ class building_creator_t {
 			for (unsigned x = ixr[0][0]; x <= ixr[1][0]; ++x) {get_grid_elem(x, y).add(bcube, bix, is_road_seg);}
 		}
 	}
-	bool check_for_overlaps(vector<unsigned> const &ixs, cube_t const &test_bc, building_t const &b, float expand_rel, float expand_abs, vector<point> &points) const {
+	bool check_for_overlaps(vector<unsigned> const &ixs, cube_t const &test_bc, building_t const &b, float expand_rel, float expand_abs) const {
 		for (auto i = ixs.begin(); i != ixs.end(); ++i) {
 			building_t const &ob(get_building(*i));
-			if (test_bc.intersects_xy(ob.bcube) && ob.check_bcube_overlap_xy(b, expand_rel, expand_abs, points)) return 1;
+			if (test_bc.intersects_xy(ob.bcube) && ob.check_bcube_overlap_xy(b, expand_rel, expand_abs)) return 1;
 		}
 		return 0;
 	}
-	bool check_for_overlaps(vector<cube_with_ix_t> const &bc_ixs, cube_t const &test_bc, building_t const &b, float expand_rel, float expand_abs, vector<point> &points) const {
+	bool check_for_overlaps(vector<cube_with_ix_t> const &bc_ixs, cube_t const &test_bc, building_t const &b, float expand_rel, float expand_abs) const {
 		for (auto i = bc_ixs.begin(); i != bc_ixs.end(); ++i) {
-			if (test_bc.intersects_xy(*i) && get_building(i->ix).check_bcube_overlap_xy(b, expand_rel, expand_abs, points)) return 1;
+			if (test_bc.intersects_xy(*i) && get_building(i->ix).check_bcube_overlap_xy(b, expand_rel, expand_abs)) return 1;
 		}
 		return 0;
 	}
@@ -2158,7 +2158,7 @@ class building_creator_t {
 
 		if (use_city_plots) { // use city blocks
 			assert(plot_ix < bix_by_plot.size());
-			if (check_for_overlaps(bix_by_plot[plot_ix], test_bc, b, expand_val, min_building_spacing, points)) return 0;
+			if (check_for_overlaps(bix_by_plot[plot_ix], test_bc, b, expand_val, min_building_spacing)) return 0;
 			bix_by_plot[plot_ix].push_back(buildings.size());
 		}
 		else if (check_plot_coll && !avoid_bcubes.empty() && avoid_bcubes_bcube.intersects_xy(test_bc) &&
@@ -2177,7 +2177,7 @@ class building_creator_t {
 				for (unsigned x = ixr[0][0]; x <= ixr[1][0]; ++x) {
 					grid_elem_t const &ge(get_grid_elem(x, y));
 					if (!test_bc.intersects_xy(ge.bcube)) continue;
-					if (check_for_overlaps(ge.bc_ixs, test_bc, b, expand_val, max(min_building_spacing, extra_spacing), points)) {return 0;}
+					if (check_for_overlaps(ge.bc_ixs, test_bc, b, expand_val, max(min_building_spacing, extra_spacing))) {return 0;}
 				} // for x
 			} // for y
 		}
@@ -3395,7 +3395,6 @@ public:
 	bool check_sphere_coll(point &pos, point const &p_last, float radius, bool xy_only=0, vector3d *cnorm=nullptr, bool check_interior=0) const { // Note: pos is in camera space
 		if (empty()) return 0;
 		vector3d const xlate(get_camera_coord_space_xlate());
-		vector<point> points; // reused across calls
 
 		if (radius == 0.0) { // point coll - ignore p_last as well
 			point const p1x(pos - xlate); // convert back to building space
@@ -3407,7 +3406,7 @@ public:
 
 			for (auto b = ge.bc_ixs.begin(); b != ge.bc_ixs.end(); ++b) {
 				if (!(xy_only ? b->contains_pt_xy(p1x) : b->contains_pt(p1x))) continue;
-				if (get_building(b->ix).check_sphere_coll(pos, p_last, xlate, 0.0, xy_only, points, cnorm, check_interior)) return 1;
+				if (get_building(b->ix).check_sphere_coll(pos, p_last, xlate, 0.0, xy_only, cnorm, check_interior)) return 1;
 			}
 			return check_road_seg_sphere_coll(ge, pos, p_last, xlate, radius, xy_only, cnorm);
 		}
@@ -3431,7 +3430,7 @@ public:
 					for (auto b = ge.bc_ixs.begin(); b != ge.bc_ixs.end(); ++b) {
 						if (!b->intersects_xy(bcube)) continue;
 						building_t const &building(get_building(b->ix));
-						if (building.check_sphere_coll(pos, p_last, xlate, radius, xy_only, points, cnorm, check_interior)) return 1;
+						if (building.check_sphere_coll(pos, p_last, xlate, radius, xy_only, cnorm, check_interior)) return 1;
 						saw_player_building |= (check_interior && &building == player_building);
 					} // for b
 					if (check_interior && player_in_basement == 3) continue; // hack to keep player from popping from extended basement to top of driveway
@@ -3443,7 +3442,7 @@ public:
 		// if player is in the basement, and we haven't checked the player's building, and the player's building is in our range of buildings, check it now
 		if (check_interior && !saw_player_building && player_in_basement && own_this_building(player_building)) {
 			if (dist_xy_less_than(get_camera_pos(), pos, CAMERA_RADIUS)) { // if this is the player
-				if (player_building->check_sphere_coll(pos, p_last, xlate, radius, xy_only, points, cnorm, check_interior)) return 1;
+				if (player_building->check_sphere_coll(pos, p_last, xlate, radius, xy_only, cnorm, check_interior)) return 1;
 			}
 		}
 		return 0;
@@ -3517,7 +3516,6 @@ public:
 	// Note: p1 and p2 are in building space; returns BLDG_COLL_NONE=0, BLDG_COLL_SIDE, BLDG_COLL_ROOF, BLDG_COLL_DETAIL, BLDG_COLL_DRIVEWAY
 	unsigned check_line_coll(point const &p1, point const &p2, float &t, unsigned &hit_bix, bool ret_any_pt, bool no_coll_pt) const {
 		if (empty()) return 0;
-		vector<point> points; // reused across calls
 
 		if (p1.x == p2.x && p1.y == p2.y) { // vertical line special case optimization (for example map mode)
 			if (!get_bcube().contains_pt_xy(p1)) return 0;
@@ -3528,7 +3526,7 @@ public:
 
 			for (auto b = ge.bc_ixs.begin(); b != ge.bc_ixs.end(); ++b) {
 				if (!b->contains_pt_xy(p1)) continue;
-				unsigned const ret(get_building(b->ix).check_line_coll(p1, p2, t, points, 0, ret_any_pt, no_coll_pt));
+				unsigned const ret(get_building(b->ix).check_line_coll(p1, p2, t, 0, ret_any_pt, no_coll_pt));
 				if (ret) {hit_bix = b->ix; return ret;} // can only intersect one building
 			} // for b
 			for (cube_t const &seg : ge.road_segs) { // check driveways; not guaranteed to be correct if driveway is in another grid than building?
@@ -3553,7 +3551,7 @@ public:
 				for (auto b = ge.bc_ixs.begin(); b != ge.bc_ixs.end(); ++b) { // Note: okay to check the same building more than once
 					if (!b->intersects(bcube)) continue;
 					float t_new(t);
-					unsigned const ret(get_building(b->ix).check_line_coll(p1, p2, t_new, points, 0, ret_any_pt, no_coll_pt));
+					unsigned const ret(get_building(b->ix).check_line_coll(p1, p2, t_new, 0, ret_any_pt, no_coll_pt));
 
 					if (ret && t_new <= t) { // closer hit pos, update state
 						t = t_new; hit_bix = b->ix; coll = ret;
@@ -3574,7 +3572,6 @@ public:
 		bcube.expand_by_xy(radius);
 		unsigned ixr[2][2];
 		get_grid_range(bcube, ixr);
-		vector<point> points; // reused across calls
 		
 		// for now, just do a slow iteration over every grid element within the line's bbox in XY
 		for (unsigned y = ixr[0][1]; y <= ixr[1][1]; ++y) {
@@ -3596,7 +3593,7 @@ public:
 					float t(1.0); // result is unused
 					// Note: unclear if we need to do a detailed line collision check, maybe testing the building bbox is good enough?
 					// if radius is passed in as nonzero, then simply assume it intersects because check_line_coll() can't easily take a radius value
-					if (radius > 0.0 || building.check_line_coll(p1, p2, t, points, 0, 1, 1)) {
+					if (radius > 0.0 || building.check_line_coll(p1, p2, t, 0, 1, 1)) {
 						max_eq(cur_zmax, bbc.z2());
 						p1.z = p2.z = cur_zmax; // update line end points to match this new elevation so that line clipping works properly
 					}
@@ -3608,9 +3605,8 @@ public:
 	// Note: we can get building_id by calling check_ped_coll() or get_building_bcube_at_pos(); p1 and p2 are in building space
 	bool check_line_coll_building(point const &p1, point const &p2, unsigned building_id) const { // Note: not thread safe due to static points
 		assert(building_id < buildings.size());
-		static vector<point> points; // reused across calls
 		float t_new(1.0);
-		return buildings[building_id].check_line_coll(p1, p2, t_new, points, 0, 1);
+		return buildings[building_id].check_line_coll(p1, p2, t_new, 0, 1);
 	}
 
 	int get_building_bcube_contains_pos(point const &pos) { // Note: not thread safe due to static points
@@ -3721,7 +3717,7 @@ public:
 			}
 		}
 	}
-	bool check_pts_occluded(point const *const pts, unsigned npts, building_occlusion_state_t &state) const { // pts are in building space
+	bool check_pts_occluded(point const *const pts, unsigned npts, building_occlusion_state_t const &state) const { // pts are in building space
 		point const pos_bs(state.pos - state.xlate);
 
 		for (auto b = state.building_ids.begin(); b != state.building_ids.end(); ++b) {
@@ -3732,7 +3728,7 @@ public:
 
 			for (unsigned i = 0; i < npts; ++i) {
 				float t(1.0); // start at end of line
-				if (!building.check_line_coll(pos_bs, pts[i], t, state.temp_points, 1)) {occluded = 0; break;}
+				if (!building.check_line_coll(pos_bs, pts[i], t, 1)) {occluded = 0; break;}
 			}
 			if (occluded) return 1;
 		} // for b
@@ -3744,7 +3740,6 @@ public:
 		point const pts[4] = {point(c.x1(), c.y1(), z), point(c.x2(), c.y1(), z), point(c.x2(), c.y2(), z), point(c.x1(), c.y2(), z)};
 		cube_t query_region(c);
 		query_region.union_with_pt(pos);
-		vector<point> temp_points; // could maybe reuse across calls if thread safe?
 
 		for (auto g = grid.begin(); g != grid.end(); ++g) {
 			if (g->bc_ixs.empty() || !g->bcube.intersects(query_region)) continue;
@@ -3756,7 +3751,7 @@ public:
 
 				for (unsigned i = 0; i < 4; ++i) {
 					float t(1.0); // start at end of line
-					if (!building.check_line_coll(pos, pts[i], t, temp_points, 1)) {occluded = 0; break;}
+					if (!building.check_line_coll(pos, pts[i], t, 1)) {occluded = 0; break;}
 				}
 				if (occluded) return 0;
 			} // for b
@@ -3906,7 +3901,7 @@ public:
 		auto it(get_tile_by_pos_cs(pdu.pos));
 		if (it != tiles.end()) {it->second.get_occluders(pdu, state);}
 	}
-	bool check_pts_occluded(point const *const pts, unsigned npts, building_occlusion_state_t &state) const {
+	bool check_pts_occluded(point const *const pts, unsigned npts, building_occlusion_state_t const &state) const {
 		auto it(get_tile_by_pos_cs(state.pos));
 		return ((it == tiles.end()) ? 0 : it->second.check_pts_occluded(pts, npts, state));
 	}
@@ -3933,7 +3928,7 @@ void occlusion_checker_noncity_t::set_camera(pos_dir_up const &pdu) {
 	bc.get_occluders(near_pdu, state);
 	//cout << "buildings: " << bc.get_num_buildings() << ", occluders: " << state.building_ids.size() << endl;
 }
-bool occlusion_checker_noncity_t::is_occluded(cube_t const &c) {
+bool occlusion_checker_noncity_t::is_occluded(cube_t const &c) const {
 	if (state.building_ids.empty()) return 0;
 	float const z(c.z2()); // top edge
 	point const corners[4] = {point(c.x1(), c.y1(), z), point(c.x2(), c.y1(), z), point(c.x2(), c.y2(), z), point(c.x1(), c.y2(), z)};
@@ -4092,7 +4087,7 @@ void add_building_interior_lights(point const &xlate, cube_t &lights_bcube) {
 }
 // cars + peds
 void get_city_building_occluders(pos_dir_up const &pdu, building_occlusion_state_t &state) {building_creator_city.get_occluders(pdu, state);}
-bool check_city_pts_occluded(point const *const pts, unsigned npts, building_occlusion_state_t &state) {return building_creator_city.check_pts_occluded(pts, npts, state);}
+bool check_city_pts_occluded(point const *const pts, unsigned npts, building_occlusion_state_t const &state) {return building_creator_city.check_pts_occluded(pts, npts, state);}
 bool city_single_cube_visible_check(point const &pos, cube_t const &c) {return building_creator_city.single_cube_visible_check(pos, c);}
 cube_t get_building_lights_bcube() {return building_lights_manager.get_lights_bcube();}
 // used for pedestrians in cities

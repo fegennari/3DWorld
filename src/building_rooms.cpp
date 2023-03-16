@@ -22,6 +22,7 @@ bool enable_parked_cars();
 car_t car_from_parking_space(room_object_t const &o);
 bool get_wall_quad_window_area(vect_vnctcc_t const &wall_quad_verts, unsigned i, cube_t &c, float &tx1, float &tx2, float &tz1, float &tz2);
 void get_stove_burner_locs(room_object_t const &stove, point locs[4]);
+void expand_convex_polygon_xy(vect_point &points, point const &center, float expand);
 string gen_random_full_name(rand_gen_t &rgen);
 
 
@@ -57,10 +58,10 @@ colorRGBA get_light_color_temp_range(float tmin, float tmax, rand_gen_t &rgen) {
 
 bool building_bounds_checker_t::register_new_room(cube_t const &room, building_t const &b) {
 	if (cur_part.contains_cube(room)) return 1; // same room/part
-	cube_t const cont_part(b.get_part_containing_cube(room));
-	if (cont_part.is_all_zeros()) return 0; // no containing part
-	cur_part = cont_part;
-	building_draw_utils::calc_poly_pts(b, b.bcube, cur_part, points);
+	int const part_ix(b.get_part_ix_containing_cube(room));
+	if (part_ix < 0) return 0; // no containing part
+	cur_part = b.parts[part_ix];
+	points   = b.get_part_ext_verts(part_ix); // deep copy
 	return 1;
 }
 bool building_bounds_checker_t::check_cube(cube_t const &c, cube_t const &room, building_t const &b) { // assumes no two buildings can contain the same part
@@ -3430,8 +3431,8 @@ void building_t::add_wall_and_door_trim() { // and window trim
 		unsigned const num_floors(is_sec_bldg ? 1 : calc_num_floors(*i, window_vspacing, floor_thickness));
 
 		if (!is_cube()) { // add trim around the interior of the exterior walls for each floor
-			vector<point> points;
-			building_draw_utils::calc_poly_pts(*this, bcube, *i, points, -trim_thickness); // shrink by trim thickness
+			vect_point points(get_part_ext_verts(i - parts.begin())); // deep copy so that we can modify it
+			expand_convex_polygon_xy(points, i->get_cube_center(), -trim_thickness); // shrink by trim thickness
 			float z(i->z1() + fc_thick);
 
 			for (unsigned f = 0; f < num_floors; ++f, z += window_vspacing) {

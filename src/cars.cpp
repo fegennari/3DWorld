@@ -457,7 +457,7 @@ void occlusion_checker_t::set_camera(pos_dir_up const &pdu) {
 	get_city_building_occluders(near_pdu, state);
 	//cout << "occluders: " << state.building_ids.size() << endl;
 }
-bool occlusion_checker_t::is_occluded(cube_t const &c) {
+bool occlusion_checker_t::is_occluded(cube_t const &c) const {
 	if (state.building_ids.empty() && occluders.empty()) return 0;
 	float const z(c.z2()); // top edge
 	point const corners[4] = {point(c.x1(), c.y1(), z), point(c.x2(), c.y1(), z), point(c.x2(), c.y2(), z), point(c.x1(), c.y2(), z)};

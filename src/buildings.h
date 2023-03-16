@@ -69,6 +69,7 @@ class brg_batch_draw_t;
 typedef vector<vert_norm_comp_tc_color> vect_vnctcc_t;
 struct sign_t;
 struct city_flag_t;
+typedef vector<point> vect_point;
 
 struct bottle_params_t {
 	std::string name, texture_fn;
@@ -95,7 +96,6 @@ struct building_occlusion_state_t {
 	point pos;
 	vector3d xlate;
 	vector<cube_with_ix_t> building_ids;
-	vector<point> temp_points;
 	building_occlusion_state_t() : exclude_bix(-1), skip_cont_camera(0) {}
 
 	void init(point const &pos_, vector3d const &xlate_) {
@@ -112,7 +112,7 @@ public:
 	void set_exclude_bix(int exclude_bix) {state.exclude_bix = exclude_bix;}
 	void set_exclude_camera_building() {state.skip_cont_camera = 1;}
 	void set_camera(pos_dir_up const &pdu);
-	bool is_occluded(cube_t const &c); // Note: non-const - state temp_points is modified
+	bool is_occluded(cube_t const &c) const;
 };
 
 class occlusion_checker_noncity_t {
@@ -122,7 +122,7 @@ public:
 	occlusion_checker_noncity_t(building_creator_t const &bc_) : bc(bc_) {}
 	void set_exclude_bix(int exclude_bix) {state.exclude_bix = exclude_bix;}
 	void set_camera(pos_dir_up const &pdu);
-	bool is_occluded(cube_t const &c); // Note: non-const - state temp_points is modified
+	bool is_occluded(cube_t const &c) const;
 };
 
 struct city_zone_t : public cube_t {
@@ -1175,6 +1175,7 @@ struct building_t : public building_geom_t {
 	vect_roof_obj_t details; // cubes on the roof - antennas, AC units, etc.
 	vector<tquad_with_ix_t> roof_tquads, doors;
 	vector<colored_sphere_t> ext_lights;
+	vector<vect_point> per_part_ext_verts; // only used for non-cube buildings
 	std::shared_ptr<building_interior_t> interior;
 	std::string name; // company name for office building; family name for house
 	std::string address; // only used for city buildings on roads
@@ -1231,28 +1232,27 @@ struct building_t : public building_geom_t {
 	void maybe_inv_rotate_point(point &p) const {if (is_rotated()) {do_xy_rotate_inv(bcube.get_cube_center(), p);}} // inverse rotate - negate the sine term
 	void maybe_inv_rotate_pos_dir(point &pos, vector3d &dir) const;
 	void set_z_range(float z1, float z2);
-	bool check_part_contains_pt_xy(cube_t const &part, point const &pt, vector<point> &points) const;
+	bool check_part_contains_pt_xy(cube_t const &part, unsigned part_id, point const &pt) const;
 	bool cube_int_parts_no_sec(cube_t const &c) const;
-	bool check_bcube_overlap_xy(building_t const &b, float expand_rel, float expand_abs, vector<point> &points) const;
+	bool check_bcube_overlap_xy(building_t const &b, float expand_rel, float expand_abs) const;
 	vect_cube_t::const_iterator get_real_parts_end() const {return (parts.begin() + real_num_parts);}
 	vect_cube_t::const_iterator get_real_parts_end_inc_sec() const {return (get_real_parts_end() + has_sec_bldg());}
+	vect_point const &get_part_ext_verts(unsigned part_id) const {assert(part_id < per_part_ext_verts.size()); return per_part_ext_verts[part_id];}
 	cube_t const &get_sec_bldg () const {assert(has_sec_bldg()); assert(real_num_parts < parts.size()); return parts[real_num_parts];}
 	cube_t const &get_chimney  () const {assert(has_chimney      && parts.size() > 1); return parts.back();}
 	cube_t const &get_fireplace() const {assert(has_chimney == 2 && parts.size() > 2); return parts[parts.size()-2];}
-	void end_add_parts() {assert(parts.size() < 256); real_num_parts = uint8_t(parts.size());}
 	cube_t get_coll_bcube() const;
 	cube_t get_interior_bcube(bool inc_ext_basement) const;
 
-	bool check_sphere_coll(point const &pos, float radius, bool xy_only, vector<point> &points, vector3d *cnorm=nullptr) const {
+	bool check_sphere_coll(point const &pos, float radius, bool xy_only, vector3d *cnorm=nullptr) const {
 		point pos2(pos);
-		return check_sphere_coll(pos2, pos, zero_vector, radius, xy_only, points, cnorm);
+		return check_sphere_coll(pos2, pos, zero_vector, radius, xy_only, cnorm);
 	}
-	bool check_sphere_coll(point &pos, point const &p_last, vector3d const &xlate, float radius, bool xy_only,
-		vector<point> &points, vector3d *cnorm=nullptr, bool check_interior=0) const;
+	bool check_sphere_coll(point &pos, point const &p_last, vector3d const &xlate, float radius, bool xy_only, vector3d *cnorm=nullptr, bool check_interior=0) const;
 	bool check_sphere_coll_interior(point &pos, point const &p_last, float radius, bool is_in_attic, bool xy_only, vector3d *cnorm) const;
 	bool check_pos_in_unlit_room(point const &pos) const;
 	bool check_pos_in_unlit_room_recur(point const &pos, std::set<unsigned> &rooms_visited, int known_room_id=-1) const;
-	unsigned check_line_coll(point const &p1, point const &p2, float &t, vector<point> &points, bool occlusion_only=0, bool ret_any_pt=0, bool no_coll_pt=0) const;
+	unsigned check_line_coll(point const &p1, point const &p2, float &t, bool occlusion_only=0, bool ret_any_pt=0, bool no_coll_pt=0) const;
 	bool get_interior_color_at_xy(point const &pos, colorRGBA &color) const;
 	bool check_point_or_cylin_contained(point const &pos, float xy_radius, vector<point> &points, bool inc_attic, bool inc_ext_basement) const;
 	bool point_under_attic_roof(point const &pos, vector3d *const cnorm=nullptr) const;
@@ -1467,10 +1467,12 @@ public:
 	void play_door_open_close_sound(point const &pos, bool open, float gain=1.0, float pitch=1.0) const;
 	void play_open_close_sound(room_object_t const &obj, point const &sound_origin) const;
 	void maybe_gen_chimney_smoke() const;
-	cube_t get_part_containing_pt(point const &pt) const;
+	int get_part_ix_containing_cube(cube_t const &c) const;
 	cube_t get_part_containing_cube(cube_t const &c) const;
+	cube_t get_part_containing_pt(point const &pt) const;
 	void print_building_manifest() const;
 private:
+	void create_per_part_ext_verts();
 	void finish_gen_geometry(rand_gen_t &rgen, bool has_overlapping_cubes);
 	bool add_outdoor_ac_unit(rand_gen_t &rgen);
 	bool add_chimney(cube_t const &part, bool dim, bool dir, float chimney_dz, rand_gen_t &rgen);
@@ -1602,9 +1604,9 @@ private:
 	void add_wall_and_door_trim();
 	void add_window_trim_and_coverings(bool add_trim, bool add_blinds);
 	unsigned count_num_int_doors(room_t const &room) const;
-	bool check_bcube_overlap_xy_one_dir(building_t const &b, float expand_rel, float expand_abs, vector<point> &points) const;
+	bool check_bcube_overlap_xy_one_dir(building_t const &b, float expand_rel, float expand_abs) const;
 	void split_in_xy(cube_t const &seed_cube, rand_gen_t &rgen);
-	bool test_coll_with_sides(point &pos, point const &p_last, float radius, cube_t const &part, vector<point> &points, vector3d *cnorm) const;
+	bool test_coll_with_sides(point &pos, point const &p_last, float radius, cube_t const &part, unsigned part_id, vector3d *cnorm) const;
 	void gather_interior_cubes(vect_colored_cube_t &cc, int only_this_floor=-1) const;
 	void get_lights_with_priorities(point const &target, cube_t const &valid_area, vector<pair<float, unsigned>> &lights_to_sort) const;
 	void get_all_windows(vect_cube_with_ix_t &windows) const;
@@ -1663,7 +1665,7 @@ struct vect_building_t : public vector<building_t> {
 
 struct building_draw_utils {
 	static void calc_normals(building_geom_t const &bg, vector<vector3d> &nv, unsigned ndiv);
-	static void calc_poly_pts(building_geom_t const &bg, cube_t const &bcube, cube_t const &part, vector<point> &pts, float expand=0.0);
+	static void calc_poly_pts(building_geom_t const &bg, cube_t const &bcube, cube_t const &part, vect_point &pts);
 };
 
 class city_lights_manager_t {
@@ -1750,7 +1752,7 @@ inline unsigned get_rgeom_sphere_ndiv(bool low_detail) {return (low_detail ? N_S
 
 void get_city_plot_zones(vect_city_zone_t &zones);
 void get_city_building_occluders(pos_dir_up const &pdu, building_occlusion_state_t &state);
-bool check_city_pts_occluded(point const *const pts, unsigned npts, building_occlusion_state_t &state);
+bool check_city_pts_occluded(point const *const pts, unsigned npts, building_occlusion_state_t const &state);
 bool city_single_cube_visible_check(point const &pos, cube_t const &c);
 cube_t get_building_lights_bcube();
 cube_t get_grid_bcube_for_building(building_t const &b);

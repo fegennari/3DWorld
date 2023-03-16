@@ -23,18 +23,18 @@ pair<cube_t, colorRGBA> car_bcube_color_from_parking_space(room_object_t const &
 void force_player_height(double height);
 
 
-bool building_t::check_bcube_overlap_xy(building_t const &b, float expand_rel, float expand_abs, vector<point> &points) const {
+bool building_t::check_bcube_overlap_xy(building_t const &b, float expand_rel, float expand_abs) const {
 	if (expand_rel == 0.0 && expand_abs == 0.0 && !bcube.intersects(b.bcube)) return 0;
 	if (!is_rotated() && !b.is_rotated()) return 1; // above check is exact, top-level bcube check up to the caller
 	if (b.bcube.contains_pt_xy(bcube.get_cube_center()) || bcube.contains_pt_xy(b.bcube.get_cube_center())) return 1; // slightly faster to include this check
-	return (check_bcube_overlap_xy_one_dir(b, expand_rel, expand_abs, points) || b.check_bcube_overlap_xy_one_dir(*this, expand_rel, expand_abs, points));
+	return (check_bcube_overlap_xy_one_dir(b, expand_rel, expand_abs) || b.check_bcube_overlap_xy_one_dir(*this, expand_rel, expand_abs));
 }
 
 // Note: only checks for point (x,y) value contained in one cube/N-gon/cylinder; assumes pt has already been rotated into local coordinate frame
-bool building_t::check_part_contains_pt_xy(cube_t const &part, point const &pt, vector<point> &points) const {
+bool building_t::check_part_contains_pt_xy(cube_t const &part, unsigned part_id, point const &pt) const {
 	if (!part.contains_pt_xy(pt)) return 0; // check bounding cube
-	if (is_simple_cube()) return 1; // that's it
-	building_draw_utils::calc_poly_pts(*this, bcube, part, points);
+	if (is_simple_cube())         return 1; // that's it
+	vector<point> const &points(get_part_ext_verts(part_id));
 	return point_in_polygon_2d(pt.x, pt.y, points.data(), points.size()); // 2D x/y containment
 }
 
@@ -45,7 +45,7 @@ bool building_t::cube_int_parts_no_sec(cube_t const &c) const {
 	return 0;
 }
 
-bool building_t::check_bcube_overlap_xy_one_dir(building_t const &b, float expand_rel, float expand_abs, vector<point> &points) const { // can be called before levels/splits are created
+bool building_t::check_bcube_overlap_xy_one_dir(building_t const &b, float expand_rel, float expand_abs) const { // can be called before levels/splits are created
 
 	// Note: easy cases are handled by check_bcube_overlap_xy() above
 	point const center1(b.bcube.get_cube_center()), center2(bcube.get_cube_center());
@@ -76,7 +76,7 @@ bool building_t::check_bcube_overlap_xy_one_dir(building_t const &b, float expan
 			if (c_exp_rot.contains_pt_xy(p2->get_cube_center())) return 1; // quick and easy test for heavy overlap
 
 			for (unsigned i = 0; i < 9; ++i) {
-				if (check_part_contains_pt_xy(*p2, pts[i], points)) return 1; // Note: building geometry is likely not yet generated, this check should be sufficient
+				if (check_part_contains_pt_xy(*p2, (p2 - parts.begin()), pts[i])) return 1; // Note: building geometry is likely not yet generated, this check should be sufficient
 				//if (p2->contains_pt_xy(pts[i])) return 1;
 			}
 		}
@@ -84,7 +84,7 @@ bool building_t::check_bcube_overlap_xy_one_dir(building_t const &b, float expan
 	return 0;
 }
 
-bool do_sphere_coll_polygon_sides(point &pos, cube_t const &part, float radius, bool interior_coll, vector<point> &points, vector3d *cnorm) {
+bool do_sphere_coll_polygon_sides(point &pos, cube_t const &part, float radius, bool interior_coll, vector<point> const &points, vector3d *cnorm) {
 	point quad_pts[4]; // quads
 
 	for (unsigned S = 0; S < points.size(); ++S) { // generate vertex data quads
@@ -104,9 +104,9 @@ bool do_sphere_coll_polygon_sides(point &pos, cube_t const &part, float radius, 
 }
 
 // called for players and butterfiles
-bool building_t::test_coll_with_sides(point &pos, point const &p_last, float radius, cube_t const &part, vector<point> &points, vector3d *cnorm) const {
+bool building_t::test_coll_with_sides(point &pos, point const &p_last, float radius, cube_t const &part, unsigned part_id, vector3d *cnorm) const {
 
-	building_draw_utils::calc_poly_pts(*this, bcube, part, points); // without the expand
+	vect_point const &points(get_part_ext_verts(part_id));
 	unsigned const num_steps(max(1U, min(100U, (unsigned)ceil(2.0*p2p_dist_xy(pos, p_last)/radius))));
 	vector3d const step_delta((pos - p_last)/num_steps);
 	pos = p_last;
@@ -143,9 +143,7 @@ void accumulate_shared_xy_area(cube_t const &c, cube_t const &sc, float &area) {
 }
 
 // Note: used for the player when check_interior=1
-bool building_t::check_sphere_coll(point &pos, point const &p_last, vector3d const &xlate,
-	float radius, bool xy_only, vector<point> &points, vector3d *cnorm_ptr, bool check_interior) const
-{
+bool building_t::check_sphere_coll(point &pos, point const &p_last, vector3d const &xlate, float radius, bool xy_only, vector3d *cnorm_ptr, bool check_interior) const {
 	if (!is_valid()) return 0; // invalid building
 	
 	if (radius > 0.0) {
@@ -206,7 +204,7 @@ bool building_t::check_sphere_coll(point &pos, point const &p_last, vector3d con
 
 				if (!is_cube()) { // non-cube shaped building, clamp_part is conservative
 					//if (use_cylinder_coll()) {}
-					building_draw_utils::calc_poly_pts(*this, bcube, *i, points); // without the expand
+					vect_point const &points(get_part_ext_verts(i - parts.begin()));
 					if (!point_in_polygon_2d(p_last2.x, p_last2.y, points.data(), points.size())) continue; // outside the building, even though inside part bcube
 					else if (do_sphere_coll_polygon_sides(pos2, *i, radius, 1, points, cnorm_ptr)) {is_interior = had_coll = 1; break;} // interior_coll=1
 				}
@@ -253,6 +251,7 @@ bool building_t::check_sphere_coll(point &pos, point const &p_last, vector3d con
 			}
 			if (!xy_only && ((pos2.z + radius < i->z1() + xlate.z) || (pos2.z - radius > i->z2() + xlate.z))) continue; // test z overlap
 			if (radius == 0.0 && !(xy_only ? i->contains_pt_xy(pos2) : i->contains_pt(pos2))) continue; // no intersection; ignores p_last
+			unsigned const part_id(i - parts.begin());
 			cube_t const part_bc(*i + xlate);
 			bool part_coll(0);
 
@@ -276,11 +275,11 @@ bool building_t::check_sphere_coll(point &pos, point const &p_last, vector3d con
 					part_coll = 1;
 				}
 				else {
-					part_coll |= test_coll_with_sides(pos2, p_last2, radius, part_bc, points, cnorm_ptr); // use polygon collision test
+					part_coll |= test_coll_with_sides(pos2, p_last2, radius, part_bc, part_id, cnorm_ptr); // use polygon collision test
 				}
 			}
 			else if (num_sides != 4) { // triangle, hexagon, octagon, etc.
-				part_coll |= test_coll_with_sides(pos2, p_last2, radius, part_bc, points, cnorm_ptr);
+				part_coll |= test_coll_with_sides(pos2, p_last2, radius, part_bc, part_id, cnorm_ptr);
 			}
 			else if (!xy_only && part_bc.contains_pt_xy_exp(pos2, radius) && p_last2.z > (i->z2() + xlate.z)) { // on top of building
 				pos2.z = i->z2() + xlate.z + radius;
@@ -1002,7 +1001,7 @@ point building_interior_t::find_closest_pt_on_obj_to_pos(building_t const &build
 }
 
 // Note: p1/p2 are in building space
-unsigned building_t::check_line_coll(point const &p1, point const &p2, float &t, vector<point> &points, bool occlusion_only, bool ret_any_pt, bool no_coll_pt) const {
+unsigned building_t::check_line_coll(point const &p1, point const &p2, float &t, bool occlusion_only, bool ret_any_pt, bool no_coll_pt) const {
 	point p1r(p1), p2r(p2); // copy before clipping
 	if (!check_line_clip(p1r, p2r, bcube.d)) return BLDG_COLL_NONE; // no intersection (never returns here for vertical lines)
 	
@@ -1050,7 +1049,7 @@ unsigned building_t::check_line_coll(point const &p1, point const &p2, float &t,
 			}
 		}
 		else if (num_sides != 4) {
-			building_draw_utils::calc_poly_pts(*this, bcube, *i, points);
+			vect_point const &points(get_part_ext_verts(i - parts.begin()));
 			float const tz((i->z2() - p1r.z)/(p2r.z - p1r.z)); // t value at zval = top of cube
 
 			if (tz >= 0.0 && tz < t) {
@@ -1200,6 +1199,15 @@ bool building_t::get_interior_color_at_xy(point const &pos_in, colorRGBA &color)
 	return 1;
 }
 
+void expand_convex_polygon_xy(vect_point &points, point const &center, float expand) {
+	if (expand == 0.0) return;
+
+	for (auto p = points.begin(); p != points.end(); ++p) {
+		vector3d const dir((p->x - center.x), (p->y - center.y), 0.0); // only want XY component
+		*p += dir*(expand/dir.mag());
+	}
+}
+
 // Note: if xy_radius == 0.0, this is a point test; otherwise, it's an approximate vertical cylinder test; attic and basement queries only work with points
 bool building_t::check_point_or_cylin_contained(point const &pos, float xy_radius, vector<point> &points, bool inc_attic, bool inc_ext_basement) const {
 	if (inc_ext_basement && point_in_extended_basement_not_basement(pos)) { // extended basement is not rotated
@@ -1222,18 +1230,9 @@ bool building_t::check_point_or_cylin_contained(point const &pos, float xy_radiu
 			return 1;
 		}
 		else if (num_sides != 4) {
-			building_draw_utils::calc_poly_pts(*this, bcube, *i, points);
-
-			if (xy_radius > 0.0) { // cylinder case: expand polygon by xy_radius; assumes a convex polygon
-				point const center(i->get_cube_center());
-
-				for (auto p = points.begin(); p != points.end(); ++p) {
-					vector3d dir(*p - center);
-					dir.z = 0.0; // only want XY component
-					*p += dir*(xy_radius/dir.mag());
-				}
-			}
-			if (point_in_polygon_2d(pr.x, pr.y, &points.front(), points.size())) return 1; // XY plane test for top surface
+			points = get_part_ext_verts(i - parts.begin()); // deep copy so that we can modify points below to apply the expand
+			expand_convex_polygon_xy(points, i->get_cube_center(), xy_radius); // cylinder case: expand polygon by xy_radius; assumes a convex polygon
+			if (point_in_polygon_2d(pr.x, pr.y, points.data(), points.size())) return 1; // XY plane test for top surface
 		}
 		else { // cube
 			if (xy_radius > 0.0) {

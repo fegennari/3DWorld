@@ -112,11 +112,15 @@ cube_t building_t::get_part_containing_pt(point const &pt) const {
 	assert(!closest.is_all_zeros()); // must be found
 	return closest;
 }
-cube_t building_t::get_part_containing_cube(cube_t const &c) const {
+int building_t::get_part_ix_containing_cube(cube_t const &c) const {
 	for (auto i = parts.begin(); i != get_real_parts_end_inc_sec(); ++i) { // could call b.get_part_for_room() if we had a room_t
-		if (i->contains_cube(c)) return *i;
+		if (i->contains_cube(c)) return (i - parts.begin());
 	}
-	return cube_t(); // not found
+	return -1; // not found
+}
+cube_t building_t::get_part_containing_cube(cube_t const &c) const {
+	int const part_ix(get_part_ix_containing_cube(c));
+	return ((part_ix < 0) ? cube_t() : parts[part_ix]);
 }
 
 void building_t::adjust_part_zvals_for_floor_spacing(cube_t &c) const {
@@ -345,9 +349,17 @@ void building_t::gen_geometry(int rseed1, int rseed2) {
 	finish_gen_geometry(rgen, 0);
 }
 
+void building_t::create_per_part_ext_verts() {
+	if (per_part_ext_verts.empty() && !is_cube()) { // generate exterior verts for each part if not yet created
+		per_part_ext_verts.resize(parts.size());
+		for (unsigned p = 0; p < parts.size(); ++p) {building_draw_utils::calc_poly_pts(*this, bcube, parts[p], per_part_ext_verts[p]);}
+	}
+}
 void building_t::finish_gen_geometry(rand_gen_t &rgen, bool has_overlapping_cubes) { // for office buildings
 	if (global_building_params.add_office_basements) {maybe_add_basement(rgen);}
-	end_add_parts();
+	assert(parts.size() < 256);
+	real_num_parts = uint8_t(parts.size()); // no parts can be added after this point
+	create_per_part_ext_verts();
 	parts_generated = 1;
 	gen_interior(rgen, has_overlapping_cubes);
 	if (interior) {interior->finalize();}
@@ -1641,6 +1653,7 @@ void building_t::gen_details(rand_gen_t &rgen, bool is_rectangle) { // for the r
 	unsigned const num_ac_units((flat_roof && is_cube()) ? (rgen.rand() % 7) : 0); // cube buildings only for now
 	float const window_vspacing(get_window_vspace()), wall_width(0.049*window_vspacing); // slightly narrower than interior wall width to avoid z-fighting with roof access
 	assert(!parts.empty());
+	create_per_part_ext_verts(); // needed for roof containment queries
 	add_company_sign(rgen);
 
 	if (!is_rectangle) { // polygon roof, can only add AC units
@@ -1742,7 +1755,6 @@ void building_t::gen_details(rand_gen_t &rgen, bool is_rectangle) { // for the r
 	cube_t bounds(top);
 	if (add_walls) {bounds.expand_by_xy(-wall_width);}
 	details.reserve(details.size() + num_details);
-	vector<point> points; // reused across calls
 
 	for (unsigned i = 0; i < num_blocks; ++i) {
 		roof_obj_t c(ROOF_OBJ_BLOCK); // generic block
@@ -1760,7 +1772,7 @@ void building_t::gen_details(rand_gen_t &rgen, bool is_rectangle) { // for the r
 
 			for (unsigned j = 0; j < 4; ++j) { // check cylinder/ellipse
 				point const pt(c.d[0][j&1], c.d[1][j>>1], 0.0); // XY only
-				if (!check_part_contains_pt_xy(top, pt, points)) {placed = 0; break;}
+				if (!check_part_contains_pt_xy(top, parts.size()-1, pt)) {placed = 0; break;}
 			}
 		} // for n
 		if (!placed) break; // failed, exit loop

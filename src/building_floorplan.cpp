@@ -236,17 +236,17 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 	// generate walls and floors for each part;
 	// this will need to be modified to handle buildings that have overlapping parts, or skip those building types completely
 	for (auto p = parts.begin(); p != parts_end; ++p) {
-		unsigned const num_floors(calc_num_floors(*p, window_vspacing, floor_thickness));
+		unsigned const num_floors(calc_num_floors(*p, window_vspacing, floor_thickness)), part_id(p - parts.begin());
 		if (num_floors == 0) continue; // not enough space to add a floor (can this happen?)
 		// for now, assume each part has the same XY bounds and can use the same floorplan; this means walls can span all floors and don't need to be duplicated for each floor
 		vector3d const psz(p->get_size());
 		bool const min_dim(psz.y < psz.x); // hall dim
 		float const cube_width(psz[min_dim]);
-		bool const is_basement_part(is_basement(p)), first_part(p == parts.begin()), first_part_this_stack(first_part || is_basement_part || (p-1)->z1() < p->z1());
+		bool const is_basement_part(is_basement(p)), first_part(part_id == 0), first_part_this_stack(first_part || is_basement_part || (p-1)->z1() < p->z1());
 		bool const next_diff_stack(p+1 == parts.end() || (p+1)->z1() != p->z1());
 		// office building hallways only; house hallways are added later
 		bool const use_hallway(!is_house && !is_basement_part && !has_complex_floorplan && is_cube() && first_part_this_stack && next_diff_stack && cube_width > 4.0*min_wall_len);
-		unsigned const rooms_start(rooms.size()), part_id(p - parts.begin()), num_doors_per_stack(SPLIT_DOOR_PER_FLOOR ? num_floors : 1);
+		unsigned const rooms_start(rooms.size()), num_doors_per_stack(SPLIT_DOOR_PER_FLOOR ? num_floors : 1);
 		cube_t hall, place_area(*p);
 		place_area.expand_by_xy(-wall_edge_spacing); // shrink slightly to avoid z-fighting with walls
 		float window_hspacing[2] = {0.0};
@@ -261,8 +261,7 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 				// create a pie slice split for cylindrical parts; since we can only add X or Y walls, place one of each that crosses the entire part
 				point const center(p->xc(), p->yc(), p->z1());
 				bool const clip_to_ext_walls(!use_cylinder_coll()); // if this building isn't a full cylinder, we may need to clip the walls shorter
-				vector<point> points;
-				if (clip_to_ext_walls) {building_draw_utils::calc_poly_pts(*this, bcube, *p, points);} // without the expand
+				vector<point> const &points(get_part_ext_verts(part_id));
 
 				for (unsigned d = 0; d < 2; ++d) {
 					cube_t wall(*p);
@@ -782,7 +781,7 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 				float door_lo[2] = {lo_pos, lo_pos}, door_hi[2] = {hi_pos, hi_pos}; // passed to next split step to avoid placing a wall that intersects this doorway
 				// split into two smaller rooms; ensure we can split at least once per dim
 				bool const do_split(csz[wall_dim] > min(min_split_len, max(min_wall_len, 0.9f*bcube.get_sz_dim(wall_dim))));
-				bool const is_basement(has_basement() && (p - parts.begin()) == (int)basement_part_ix);
+				bool const is_basement(has_basement() && part_id == (int)basement_part_ix);
 
 				// add central hallway if wall/hall len is at least enough to place 2-3 rooms; 50% chance if part is a basement; houses and small office buildings
 				if (is_first_split && csz[!wall_dim] > 1.2*min_split_len && (!is_basement || rgen.rand_bool())) {
@@ -877,7 +876,7 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 				} // for p2
 			} // end !too_small
 		} // end wall placement
-		add_ceilings_floors_stairs(rgen, *p, hall, (p - parts.begin()), num_floors, rooms_start, use_hallway, first_part_this_stack, window_hspacing, window_border);
+		add_ceilings_floors_stairs(rgen, *p, hall, part_id, num_floors, rooms_start, use_hallway, first_part_this_stack, window_hspacing, window_border);
 	} // for p (parts)
 
 	if (has_sec_bldg()) { // add garage/shed floor and ceiling
