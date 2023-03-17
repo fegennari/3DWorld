@@ -214,13 +214,27 @@ public:
 		pos = orig_pos; // use orig value as failed point
 		return 0;
 	}
+	point get_room_center(building_t const &building, cube_t const &room, float zval) const {
+		point pos(get_cube_center_zval(room, zval));
+		if (building.is_cube()) return pos;
+		int const part_ix(building.get_part_ix_containing_pt(pos));
+		if (part_ix < 0) return pos; // shouldn't get here
+		cube_t const &part(building.parts[part_ix]);
+		if (room.get_area_xy() > 0.75*part.get_area_xy()) return pos; // part is a single large room
+		point const part_center(part.get_cube_center());
+		// if room is adjacent to the part center (pie slice), then move the point toward the center and away from the curved exterior wall
+		if (!room.contains_pt_xy_exp(part_center, building.get_wall_thickness())) return pos;
+		float const blend_val(1.0/SQRT2);
+		return blend_val * pos + (1.0 - blend_val)*point(part_center.x, part_center.y, pos.z);
+	}
 	point find_valid_room_dest(vect_cube_t const &avoid, building_t const &building, float radius, float height, float zval, unsigned node_ix,
 		bool up_or_down, bool &not_room_center, rand_gen_t &rgen, bool no_use_init, point const *const custom_dest) const
 	{
 		node_t const &node(get_node(node_ix));
 		if (node.is_vert_conn()) {return get_stairs_entrance_pt(zval, node_ix, up_or_down);}
-		// first candidate is the center of the room, if not custom; maybe should be different if !building.is_cube()?
-		point pos((custom_dest != nullptr) ? *custom_dest : get_cube_center_zval(node.bcube, zval));
+		point pos;
+		if (custom_dest != nullptr) {pos = *custom_dest;}
+		else {pos = get_room_center(building, node.bcube, zval);} // first candidate is the center of the room
 		if (find_valid_pt_in_room(avoid, building, radius, height, zval, node.bcube, rgen, pos, no_use_init)) {not_room_center = 1;} // success
 		return pos;
 	}
@@ -765,7 +779,7 @@ bool building_t::select_person_dest_in_room(person_t &person, rand_gen_t &rgen, 
 	if (!interior->nav_graph->find_valid_pt_in_room(avoid, *this, radius, height, person.target_pos.z, room, rgen, dest_pos, no_use_init)) return 0;
 	
 	if (!is_cube()) { // non-cube building
-		cube_t const person_bcube(person.get_bcube() + dest_pos - person.pos); // bcube, but translated to dest_pos
+		cube_t const person_bcube(person.get_bcube() + (dest_pos - person.pos)); // bcube, but translated to dest_pos
 		if (!check_cube_within_part_sides(person_bcube)) return 0; // outside building - will try again with a new pos next time
 	}
 	person.target_pos.x = dest_pos.x;
@@ -1704,8 +1718,17 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 	clip_cube.expand_by_xy(-coll_dist); // shrink
 	clip_cube.clamp_pt_xy(new_pos); // make sure person stays within building bcube; can't clip to room because person may be exiting it
 	
-	if (!is_cube()) {
-		// TODO: keep inside building if we got out somehow? how do we know which dir?
+	if (!is_cube() && !check_cube_within_part_sides(person.get_bcube() + (new_pos - person.pos))) { // outside the building
+		int const part_ix(get_part_ix_containing_pt(new_pos));
+
+		if (part_ix >= 0) { // center is at least in a valid part
+			// we don't know exactly how far outside the building this person is,
+			// so move them 10% of their radius toward the center of their current part and hope they make it back into the building after a few frames
+			point const part_center(parts[part_ix].get_cube_center());
+			vector3d const move_dir((part_center.x - new_pos.x), (part_center.y - new_pos.y), 0.0);
+			new_pos += move_dir*(0.1*person.radius/move_dir.mag());
+			person.abort_dest();
+		}
 	}
 	if (!point_in_building_or_basement_bcube(new_pos)) { // person must be inside the building
 		cout << TXT(new_pos.str()) << TXT(bcube.str()) << TXT(interior->basement_ext_bcube.str()) << endl;
