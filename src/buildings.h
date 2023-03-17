@@ -1235,6 +1235,8 @@ struct building_t : public building_geom_t {
 	bool check_part_contains_pt_xy(cube_t const &part, unsigned part_id, point const &pt) const;
 	bool cube_int_parts_no_sec(cube_t const &c) const;
 	bool check_bcube_overlap_xy(building_t const &b, float expand_rel, float expand_abs) const;
+	bool check_cube_within_part_sides(cube_t const &c) const;
+	bool check_pt_within_part_sides(point const &p) const;
 	vect_cube_t::const_iterator get_real_parts_end() const {return (parts.begin() + real_num_parts);}
 	vect_cube_t::const_iterator get_real_parts_end_inc_sec() const {return (get_real_parts_end() + has_sec_bldg());}
 	vect_point const &get_part_ext_verts(unsigned part_id) const {assert(part_id < per_part_ext_verts.size()); return per_part_ext_verts[part_id];}
@@ -1417,7 +1419,7 @@ private:
 	void update_insect(insect_t &insect, point const &camera_bs, float timestep, vector<pair<float, point>> &targets, rand_gen_t &rgen) const;
 	void maybe_bite_and_poison_player(point const &pos, point const &camera_bs, vector3d const &dir, float coll_radius, float damage, int poison_type, rand_gen_t &rgen) const;
 
-	bool is_pos_inside_building(point const &pos, float xy_pad, float hheight, bool inc_attic=1, bool for_person_ai=0) const;
+	bool is_pos_inside_building(point const &pos, float xy_pad, float hheight, bool inc_attic=1) const;
 	void get_room_obj_cubes(room_object_t const &c, point const &pos, vect_cube_t &lg_cubes, vect_cube_t &sm_cubes, vect_cube_t &non_cubes) const;
 	int  check_line_coll_expand(point const &p1, point const &p2, float radius, float hheight, bool for_spider=0) const;
 	bool check_line_of_sight_large_objs(point const &p1, point const &p2) const;
@@ -1468,6 +1470,7 @@ public:
 	void play_open_close_sound(room_object_t const &obj, point const &sound_origin) const;
 	void maybe_gen_chimney_smoke() const;
 	int get_part_ix_containing_cube(cube_t const &c) const;
+	int get_part_ix_containing_pt(point const &pt) const;
 	cube_t get_part_containing_cube(cube_t const &c) const;
 	cube_t get_part_containing_pt(point const &pt) const;
 	void print_building_manifest() const;
@@ -1706,16 +1709,6 @@ public:
 	water_sound_manager_t(point const &camera_bs_) : camera_bs(camera_bs_), dmin_sq(0.0) {}
 	void register_running_water(room_object_t const &obj, building_t const &building);
 	void finalize();
-};
-
-class building_bounds_checker_t {
-	cube_t cur_part;
-	vector<point> points;
-
-	bool register_new_room(cube_t const &room, building_t const &b);
-public:
-	bool check_cube(cube_t const &c, cube_t const &room, building_t const &b);
-	bool check_point(point const &p, cube_t const &room, building_t const &b);
 };
 
 inline void clip_low_high_tc(float &t0, float &t1) {

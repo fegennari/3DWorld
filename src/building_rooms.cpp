@@ -56,32 +56,10 @@ colorRGBA get_light_color_temp_range(float tmin, float tmax, rand_gen_t &rgen) {
 	return get_light_color_temp(((tmin == tmax) ? tmin : rgen.rand_uniform(tmin, tmax)));
 }
 
-bool building_bounds_checker_t::register_new_room(cube_t const &room, building_t const &b) {
-	if (cur_part.contains_cube(room)) return 1; // same room/part
-	int const part_ix(b.get_part_ix_containing_cube(room));
-	if (part_ix < 0) return 0; // no containing part
-	cur_part = b.parts[part_ix];
-	points   = b.get_part_ext_verts(part_ix); // deep copy
-	return 1;
-}
-bool building_bounds_checker_t::check_cube(cube_t const &c, cube_t const &room, building_t const &b) { // assumes no two buildings can contain the same part
-	if (!register_new_room(room, b)) return 0;
-
-	for (unsigned n = 0; n < 4; ++n) { // test all 4 top corners; if any is outside, placement is invalid; correct as long as points forms a convex shape
-		if (!point_in_polygon_2d(c.d[0][n&1], c.d[1][n>>1], points.data(), points.size())) return 0;
-	}
-	return 1; // contained
-}
-bool building_bounds_checker_t::check_point(point const &p, cube_t const &room, building_t const &b) { // assumes no two buildings can contain the same part
-	if (!register_new_room(room, b)) return 0;
-	return point_in_polygon_2d(p.x, p.y, points.data(), points.size());
-}
-building_bounds_checker_t building_bounds_checker;
-
 bool building_t::is_obj_placement_blocked(cube_t const &c, cube_t const &room, bool inc_open_doors, bool check_open_dir) const {
 	if (is_cube_close_to_doorway(c, room, 0.0, inc_open_doors, check_open_dir)) return 1; // too close to a doorway
 	if (interior && interior->is_blocked_by_stairs_or_elevator(c))              return 1; // faster to check only one per stairwell, but then we need to store another vector?
-	if (!is_cube() && !building_bounds_checker.check_cube(c, room, *this))      return 1; // handle non-cube buildings; *NOT* thread safe
+	if (!check_cube_within_part_sides(c)) return 1; // handle non-cube buildings
 	return 0;
 }
 bool building_t::is_valid_placement_for_room(cube_t const &c, cube_t const &room, vect_cube_t const &blockers, bool inc_open_doors, float room_pad) const {
@@ -925,11 +903,11 @@ bool building_t::place_obj_along_wall(room_object type, room_t const &room, floa
 		c2.d[dim][!dir] += (dir ? -1.0 : 1.0)*clearance;
 		if (overlaps_other_room_obj(c2, objs_start) || interior->is_blocked_by_stairs_or_elevator(c2)) continue; // bad placement (Note: not using is_obj_placement_blocked())
 		// we don't need clearance for both the door and the object; test the object itself against the open door and the object with clearance against the closed door
-		if (is_cube_close_to_doorway(c, room, 0.0, 1)) continue; // bad placement
+		if (is_cube_close_to_doorway(c, room, 0.0, 1))  continue; // bad placement
 		cube_t c3(c); // used for collision tests
 		c3.d[dim][!dir] += (dir ? -1.0 : 1.0)*obj_clearance; // smaller clearance value (without player diameter)
 		if (is_cube_close_to_doorway(c3, room, 0.0, 0)) continue; // bad placement
-		if (!is_cube() && !building_bounds_checker.check_cube(c, room, *this)) return 1; // handle non-cube buildings; *NOT* thread safe
+		if (!check_cube_within_part_sides(c))           continue; // handle non-cube buildings
 		unsigned const flags((type == TYPE_BOX) ? (RO_FLAG_ADJ_LO << orient) : 0); // set wall edge bit for boxes (what about other dim bit if place in room corner?)
 		objs.emplace_back(c, type, room_id, dim, !dir, flags, tot_light_amt, shape, color);
 		set_obj_id(objs);
@@ -1003,7 +981,7 @@ bool building_t::add_bathroom_objs(rand_gen_t rgen, room_t &room, float &zval, u
 			unsigned const corner_ix((first_corner + n)&3);
 			bool const xdir(corner_ix&1), ydir(corner_ix>>1);
 			point const corner(place_area.d[0][xdir], place_area.d[1][ydir], zval);
-			if (!is_cube() && !building_bounds_checker.check_point(corner, room, *this)) continue; // invalid corner
+			if (!check_pt_within_part_sides(corner)) continue; // invalid corner
 
 			for (unsigned d = 0; d < 2 && !placed_toilet; ++d) { // try both dims
 				bool const dim(bool(d) ^ first_dim), dir(dim ? ydir : xdir);
@@ -2409,7 +2387,7 @@ void building_t::add_outlets_to_room(rand_gen_t rgen, room_t const &room, float 
 		c_exp.expand_by_xy(0.5*wall_thickness);
 		if (overlaps_other_room_obj(c_exp, objs_start, 1))     continue; // check for things like closets; check_all=1 to include blinds
 		if (interior->is_blocked_by_stairs_or_elevator(c_exp)) continue; // check stairs and elevators
-		if (!is_cube() && !building_bounds_checker.check_cube(c_exp, room, *this)) continue;
+		if (!check_cube_within_part_sides(c_exp))              continue;
 		bool bad_place(0);
 
 		if (is_ground_floor) { // handle exterior doors
@@ -2475,7 +2453,7 @@ bool building_t::add_wall_vent_to_room(rand_gen_t rgen, room_t const &room, floa
 		}
 		if (bad_place) continue;
 		if (!check_if_placed_on_interior_wall(c, room, dim, dir)) continue; // ensure the vent is on a wall; is this really needed?
-		if (!is_cube() && !building_bounds_checker.check_cube(c, room, *this)) continue;
+		if (!check_cube_within_part_sides(c)) continue;
 
 		if (check_for_ducts) { // if this is a utility room, check to see if we can connect the vent to a furnace with a duct
 			assert(objs_start <= objs.size());
@@ -2739,7 +2717,7 @@ bool building_t::is_light_placement_valid(cube_t const &light, room_t const &roo
 	light_ext.expand_by_xy(pad);
 	if (!room.contains_cube(light_ext))            return 0; // room too small?
 	if (has_bcube_int(light, interior->elevators)) return 0;
-	if (!is_cube() && !building_bounds_checker.check_cube(light, room, *this)) return 0;
+	if (!check_cube_within_part_sides(light))      return 0;
 	light_ext.z1() = light_ext.z1() = light.z2() + get_fc_thickness(); // shift in between the ceiling and floor so that we can do a cube contains check
 	if (any_cube_contains(light_ext, interior->fc_occluders)) return 1; // Note: don't need to check skylights because fc_occluders excludes skylights
 	if (PLACE_LIGHTS_ON_SKYLIGHTS && any_cube_contains(light_ext, skylights))  return 1;

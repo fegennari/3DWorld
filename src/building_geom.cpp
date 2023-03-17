@@ -95,6 +95,14 @@ void building_t::clip_door_to_interior(tquad_with_ix_t &door, bool clip_to_floor
 	for (unsigned n = 0; n < door.npts; ++n) {clip_cube.clamp_pt(door.pts[n]);}
 }
 
+int building_t::get_part_ix_containing_pt(point const &pt) const {
+	auto parts_end(get_real_parts_end_inc_sec());
+
+	for (auto i = parts.begin(); i != parts_end; ++i) { // includes garage/shed
+		if (i->contains_pt(pt)) {return (i - parts.begin());}
+	}
+	return -1; // not found
+}
 cube_t building_t::get_part_containing_pt(point const &pt) const {
 	auto parts_end(get_real_parts_end_inc_sec());
 
@@ -113,7 +121,9 @@ cube_t building_t::get_part_containing_pt(point const &pt) const {
 	return closest;
 }
 int building_t::get_part_ix_containing_cube(cube_t const &c) const {
-	for (auto i = parts.begin(); i != get_real_parts_end_inc_sec(); ++i) { // could call b.get_part_for_room() if we had a room_t
+	auto parts_end(get_real_parts_end_inc_sec());
+
+	for (auto i = parts.begin(); i != parts_end; ++i) { // could call b.get_part_for_room() if we had a room_t
 		if (i->contains_cube(c)) return (i - parts.begin());
 	}
 	return -1; // not found
@@ -121,6 +131,24 @@ int building_t::get_part_ix_containing_cube(cube_t const &c) const {
 cube_t building_t::get_part_containing_cube(cube_t const &c) const {
 	int const part_ix(get_part_ix_containing_cube(c));
 	return ((part_ix < 0) ? cube_t() : parts[part_ix]);
+}
+bool building_t::check_cube_within_part_sides(cube_t const &c) const {
+	if (is_cube())   return 1; // assume caller has already checked parts/bcube
+	int const part_ix(get_part_ix_containing_cube(c));
+	if (part_ix < 0) return 0;
+	vect_point const &points(get_part_ext_verts(part_ix));
+
+	for (unsigned n = 0; n < 4; ++n) { // test all 4 top corners; if any is outside, placement is invalid; correct as long as points forms a convex shape
+		if (!point_in_polygon_2d(c.d[0][n&1], c.d[1][n>>1], points.data(), points.size())) return 0;
+	}
+	return 1; // contained
+}
+bool building_t::check_pt_within_part_sides(point const &p) const {
+	if (is_cube())   return 1; // assume caller has already checked parts/bcube
+	int const part_ix(get_part_ix_containing_pt(p));
+	if (part_ix < 0) return 0;
+	vect_point const &points(get_part_ext_verts(part_ix));
+	return point_in_polygon_2d(p.x, p.y, points.data(), points.size());
 }
 
 void building_t::adjust_part_zvals_for_floor_spacing(cube_t &c) const {

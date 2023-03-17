@@ -13,7 +13,6 @@ float const COLL_RADIUS_SCALE = 0.75; // somewhat smaller than radius, but large
 int player_hiding_frame(0);
 building_dest_t cur_player_building_loc, prev_player_building_loc;
 room_object_t player_hiding_obj;
-building_bounds_checker_t ai_dest_bbc;
 
 extern bool player_is_hiding;
 extern int frame_counter, display_mode, animate2;
@@ -173,7 +172,7 @@ public:
 	bool is_fully_connected() const {return (count_connected_components() == 1);}
 
 	// Note: assumes zvals are already checked
-	static bool is_valid_pos(vect_cube_t const &avoid, building_t const &building, cube_t const &room, point const &pos, float radius, float height) {
+	static bool is_valid_pos(vect_cube_t const &avoid, building_t const &building, point const &pos, float radius, float height) {
 		cube_t c(pos, pos);
 		c.expand_by_xy(radius);
 
@@ -181,7 +180,7 @@ public:
 			if (i->intersects_xy(c) && sphere_cube_intersect_xy(pos, radius, *i)) return 0;
 		}
 		if (!building.is_cube()) { // non-cube building - check for inside walls
-			if (!ai_dest_bbc.check_cube(c, room, building)) return 0; // outside building - will try again with a new pos next time
+			if (!building.check_cube_within_part_sides(c)) return 0; // outside building - will try again with a new pos next time
 		}
 		return 1;
 	}
@@ -209,7 +208,7 @@ public:
 		point orig_pos(pos);
 
 		for (unsigned n = 0; n < 100; ++n) { // 100 random tries to find a valid dest_pos
-			if (is_valid_pos(avoid, building, room, pos, radius, height)) return 1; // success
+			if (is_valid_pos(avoid, building, pos, radius, height)) return 1; // success
 			choose_pt_xy_in_room(pos, place_area, rgen); // choose a random new point in the room
 		}
 		pos = orig_pos; // use orig value as failed point
@@ -767,7 +766,7 @@ bool building_t::select_person_dest_in_room(person_t &person, rand_gen_t &rgen, 
 	
 	if (!is_cube()) { // non-cube building
 		cube_t const person_bcube(person.get_bcube() + dest_pos - person.pos); // bcube, but translated to dest_pos
-		if (!ai_dest_bbc.check_cube(person_bcube, room, *this)) return 0; // outside building - will try again with a new pos next time
+		if (!check_cube_within_part_sides(person_bcube)) return 0; // outside building - will try again with a new pos next time
 	}
 	person.target_pos.x = dest_pos.x;
 	person.target_pos.y = dest_pos.y;
@@ -1098,7 +1097,7 @@ void person_t::next_path_pt(bool starting_path) {
 }
 
 bool building_t::is_valid_ai_placement(point const &pos, float radius, bool skip_nocoll) const { // for people and animals
-	if (!is_pos_inside_building(pos, radius, radius, 1, 1)) return 0; // required for attic; for_attic=1, for_person_ai=1
+	if (!is_pos_inside_building(pos, radius, radius, 1)) return 0; // required for attic; for_attic=1
 	cube_t ai_bcube(pos);
 	ai_bcube.expand_by(radius); // expand more in Z?
 	if (!is_valid_stairs_elevator_placement(ai_bcube, radius)) return 0;
