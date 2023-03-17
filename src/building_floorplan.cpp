@@ -257,13 +257,19 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 			window_hspacing[d] = psz[d]/num_windows_per_side[d];
 		}
 		if (!is_cube()) { // cylinder, etc.
-			if (min(p->dx(), p->dy()) > 2.0*min_wall_len) { // large cylinder
+			float const min_dim_sz(min(p->dx(), p->dy()));
+
+			if (min_dim_sz > 2.0*min_wall_len) { // large cylinder
 				// create a pie slice split for cylindrical parts; since we can only add X or Y walls, place one of each that crosses the entire part
 				point const center(p->xc(), p->yc(), p->z1());
 				bool const clip_to_ext_walls(!use_cylinder_coll()); // if this building isn't a full cylinder, we may need to clip the walls shorter
 				vector<point> const &points(get_part_ext_verts(part_id));
+				// if the part is on the small side, only add a single wall; choose randomly; maybe should add the shorter wall if asymmetric?
+				bool const only_one_wall(min_dim_sz < 3.0*min_wall_len);
+				unsigned skip_dim(only_one_wall ? rgen.rand_bool() : 2);
 
 				for (unsigned d = 0; d < 2; ++d) {
+					if (d == skip_dim) continue;
 					cube_t wall(*p);
 					clip_wall_to_ceil_floor(wall, fc_thick);
 					set_wall_width(wall, center[d], wall_half_thick, d);

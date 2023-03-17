@@ -219,8 +219,6 @@ void building_t::gen_geometry(int rseed1, int rseed2) {
 		return;
 	}
 	name = choose_business_name(rgen);
-//#pragma omp critical(printout)
-//	cout << name << endl; // TESTING
 
 	// determine building shape (cube, cylinder, other)
 	if (rgen.rand_probability(mat.round_prob)) {num_sides = MAX_CYLIN_SIDES;} // max number of sides for drawing rounded (cylinder) buildings
