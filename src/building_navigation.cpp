@@ -1584,7 +1584,10 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 		}
 	}
 	bool choose_dest(!person.target_valid());
-	bool const update_path(need_to_update_ai_path(person));
+	bool const update_path(need_to_update_ai_path(person)), has_rgeom(has_room_geom());
+	// if room objects spawn in, select a new dest to avoid walking through objects based on our previous, possibly invalid path
+	if (has_rgeom && !person.has_room_geom) {person.abort_dest();}
+	person.has_room_geom = has_rgeom;
 
 	if (update_path) { // need to update based on player movement; higher priority than choose_dest
 		if (choose_dest_goal(person, rgen) != 1 || // check if person can reach the target
@@ -1625,7 +1628,7 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 			person.wait_for(1.0); // stop for 1 second, then try again
 			return AI_WAITING;
 		}
-		if (has_room_geom()) {person.is_first_path = 0;} // treat the path as the first path until room geom is generated
+		if (has_rgeom) {person.is_first_path = 0;} // treat the path as the first path until room geom is generated
 		person.next_path_pt(1);
 		return AI_BEGIN_PATH;
 	}
