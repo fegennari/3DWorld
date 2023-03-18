@@ -3013,7 +3013,22 @@ public:
 				vector3d texgen_origin(xoff2*DX_VAL, yoff2*DY_VAL, 0.0);
 				for (unsigned d = 0; d < 2; ++d) {texgen_origin[d] = mat.wall_tex.tscale_x*int(texgen_origin[d]/mat.wall_tex.tscale_x);}
 				s.add_uniform_vector3d("texgen_origin", texgen_origin);
-				setup_texgen_full(2.0f*mat.wall_tex.tscale_x, 2.0f*mat.wall_tex.tscale_x, 0.0, 0.0, 0.0, 0.0, 2.0f*mat.wall_tex.tscale_y, 0.0, s, 0);
+				float const side_tscale(2.0f*mat.wall_tex.tscale_x);
+				float tsx(side_tscale), tsy(side_tscale);
+
+				// since walls are mostly XY axis aligned, we can use both axes for the texture 's' component scale and Z for the 't' component scale;
+				// this doesn't really work for non-cube buildings though, in particular on near 45 degree edges where the delta_x cancels with the delta_y;
+				// so we hack it by selecting the sign based on the room/quadrant the player is in (or maybe the view dir?);
+				// this produces a pop when the player crosses rooms, but it's better when the player remains inside a room
+				if (player_building != nullptr && player_building->num_sides > 8 && (display_mode & 0x20)) { // player in cylinder building
+					cube_t const part(player_building->get_part_containing_pt(camera_xlated));
+
+					if (!part.is_all_zeros()) {
+						vector3d const dir(camera_xlated - part.get_cube_center());
+						if ((dir.x < 0) == (dir.y < 0)) {tsx *= -1.0;}
+					}
+				}
+				setup_texgen_full(tsx, tsy, 0.0, 0.0, 0.0, 0.0, 2.0f*mat.wall_tex.tscale_y, 0.0, s, 0);
 				
 				if (!per_bcs_exclude.empty()) { // draw this range using stencil test but the rest of the buildings without stencil test
 					vertex_range_t const &vr(per_bcs_exclude[bcs_ix]);
