@@ -932,6 +932,7 @@ void building_t::register_player_enter_building() const {
 		string str("Entering " + name);
 		if (is_house) {str += " Residence";}
 		if (!address.empty()) {str += "\n" + address;} // add address on a second line if known
+		if (interior && !interior->people.empty()) {str += "\nPopulation " + std::to_string(interior->people.size());}
 		print_entering_building(str);
 	}
 }

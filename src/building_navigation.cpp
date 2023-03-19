@@ -1145,6 +1145,7 @@ bool building_t::place_people_if_needed(unsigned building_ix, float radius, vect
 	if (num_max == 0) return 0;
 	rand_gen_t rgen;
 	rgen.set_state(building_ix+1, mat_ix); // should be canonical per building
+	rgen.rand_mix();
 	unsigned const num_people(num_min + (rgen.rand()%(num_max - num_min + 1)));
 	if (num_people == 0) return 0;
 	float const window_vspacing(get_window_vspace()), floor_thickness(get_floor_thickness()), fc_thick(0.5*floor_thickness);
