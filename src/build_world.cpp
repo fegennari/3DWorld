@@ -2108,8 +2108,6 @@ int read_coll_objects(const char *filename) {
 
 
 string texture_str(int tid) {
-
-	//ostringstream oss; oss << tid; return oss.str();
 	if (tid < 0) {return "none";} // or -1
 	assert((unsigned)tid < textures.size());
 	return textures[tid].name;

@@ -465,7 +465,7 @@ bool camera_collision(int index, int obj_index, vector3d const &velocity, point 
 
 	case AMMO:
 		sstate.p_ammo[wa_id] = min(weapons[wa_id].max_ammo, sstate.p_ammo[wa_id]+weapons[wa_id].def_ammo);
-		print_text_onscreen((make_string(weapons[wa_id].def_ammo) + " " + weapons[wa_id].name + " ammo"), GREEN, 0.8, 2*MESSAGE_TIME/3, 1);
+		print_text_onscreen((std::to_string(weapons[wa_id].def_ammo) + " " + weapons[wa_id].name + " ammo"), GREEN, 0.8, 2*MESSAGE_TIME/3, 1);
 		camera_weapon_ammo_pickup(position, cam_filter_color);
 		break;
 
@@ -474,7 +474,7 @@ bool camera_collision(int index, int obj_index, vector3d const &velocity, point 
 			int const pickup_ammo((int)obj_groups[coll_id[type]].get_obj(obj_index).angle);
 			sstate.p_weapons[wa_id] = 1;
 			sstate.p_ammo[wa_id]    = min((int)weapons[wa_id].max_ammo, (sstate.p_ammo[wa_id] + pickup_ammo));
-			print_text_onscreen((weapons[wa_id].name + " pack with ammo " + make_string(pickup_ammo)), GREEN, 0.8, 2*MESSAGE_TIME/3, 1);
+			print_text_onscreen((weapons[wa_id].name + " pack with ammo " + std::to_string(pickup_ammo)), GREEN, 0.8, 2*MESSAGE_TIME/3, 1);
 			camera_weapon_ammo_pickup(position, cam_filter_color);
 		}
 		break;
@@ -2609,9 +2609,7 @@ void init_game_state() {
 			avail_smiley_names.erase(avail_smiley_names.begin() + nid);
 		}
 		else {
-			std::ostringstream oss;
-			oss << "Smiley " << i;
-			sstates[i].name = oss.str();
+			sstates[i].name = "Smiley " + std::to_string(i);
 		}
 	}
 	for (int i = 0; i < teams; ++i) {

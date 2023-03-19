@@ -756,14 +756,6 @@ template<typename T> void sort_and_unique(T &v) {
 	unique_cont(v);
 }
 
-// string converters
-
-template<typename T> inline std::string make_string(T const val) {
-	std::ostringstream oss;
-	oss << val;
-	return oss.str();
-}
-
 template<typename T> void set_bit_flag_to(T &flags, unsigned mask, bool val) {
 	if (val) {flags |= mask;} else {flags &= ~mask;}
 }

@@ -2175,7 +2175,6 @@ float tile_draw_t::update(float &min_camera_dist) { // view-independent updates;
 	// Note: we may want to calculate distant low-res or larger tiles when the camera is high above the mesh
 
 	if (!to_gen_zvals.empty()) {
-		//ostringstream oss; oss << "Gen " << to_gen_zvals.size() << " tiles (wait)"; timer_t timer(oss.str());
 		assert(to_gen_zvals.size() <= height_gens.size());
 
 		for (unsigned i = 0; i < to_gen_zvals.size(); ++i) { // tiles were waiting on zval generation (async)
@@ -2233,7 +2232,6 @@ float tile_draw_t::update(float &min_camera_dist) { // view-independent updates;
 		int const prev_mesh_gen_mode(mesh_gen_mode);
 		if (gpu_mode && gen_this_frame <= max_cpu_tiles) {mesh_gen_mode = MGEN_SIMPLEX;} // GPU simplex => CPU simplex
 		if (gen_this_frame < num_to_gen) {sort(to_gen_zvals.begin(), to_gen_zvals.end());} // sort by priority if not all generated
-		//ostringstream oss; oss << "Gen " << gen_this_frame << " tiles"; timer_t timer(oss.str());
 
 		for (unsigned i = 0; i < num_to_gen; ++i) {
 			tile_t *tile(to_gen_zvals[i].second);

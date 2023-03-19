@@ -370,12 +370,7 @@ bool throw_sphere(bool mode) {
 	if (spheres_mode == 3 || spheres_mode == 4) { // static objects
 		cobj_params cp(0.0, BLACK, 1, 0); // elastic, color, draw, is_dynamic
 		add_static_material_object(cp, mat, fpos, base_radius, is_cube);
-
-		if (display_framerate) {
-			ostringstream oss;
-			oss << num_objs_thrown;
-			print_debug_text(oss.str(), -100); // low priority
-		}
+		if (display_framerate) {print_debug_text(std::to_string(num_objs_thrown), -100);} // low priority
 		return 1;
 	}
 	assert(cid < NUM_TOT_OBJS);

@@ -1612,7 +1612,7 @@ bool u_ship::fire_weapon(vector3d const &fire_dir, float target_dist) {
 					if (fobj != NULL && !fobj->invalid()) { // can query projectiles for now
 						string msg;
 						if (target) {msg = string("Target Acquired: ") + fobj->get_name();}
-						else {msg = fobj->get_name() + "\n" + fobj->get_info() + "  Dist: " + make_string(li_data.dist);}
+						else {msg = fobj->get_name() + "\n" + fobj->get_info() + "  Dist: " + std::to_string(li_data.dist);}
 						print_text_onscreen(msg, PURPLE, 0.5, TICKS_PER_SECOND, 1);
 
 						if (target && fobj->is_target() && target_valid(fobj)) {
@@ -1621,7 +1621,7 @@ bool u_ship::fire_weapon(vector3d const &fire_dir, float target_dist) {
 						}
 					}
 					else if (sobj != NULL) {
-						string const msg(sobj->get_name() + " at distance " + make_string(li_data.dist) + "\n" + sobj->get_info());
+						string const msg(sobj->get_name() + " at distance " + std::to_string(li_data.dist) + "\n" + sobj->get_info());
 						print_text_onscreen(msg, PURPLE, 0.5, TICKS_PER_SECOND, 1);
 					}
 				}

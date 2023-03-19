@@ -141,17 +141,8 @@ void load_flare_textures() {
 
 	int id(0);
 	static bool init(1);
-
-	for (unsigned i = 0; i < NUM_SHINE; i++) {
-		std::ostringstream oss;
-		oss << "Shine" << (i+1) << ".bw";
-		gen_texture(oss.str(), shineTex[i], id, init);
-	}
-	for (unsigned i = 0; i < NUM_FLARE; i++) {
-		std::ostringstream oss;
-		oss << "Flare" << (i+1) << ".bw";
-		gen_texture(oss.str(), flareTex[i], id, init);
-	}
+	for (unsigned i = 0; i < NUM_SHINE; i++) {gen_texture(("Shine" + std::to_string(i+1) + ".bw"), shineTex[i], id, init);}
+	for (unsigned i = 0; i < NUM_FLARE; i++) {gen_texture(("Flare" + std::to_string(i+1) + ".bw"), flareTex[i], id, init);}
 	init       = 0;
 	tex_loaded = 1;
 }
@@ -159,12 +150,8 @@ void load_flare_textures() {
 
 void free_flare_textures() {
 
-	for (unsigned i = 0; i < NUM_SHINE; i++) {
-		free_texture(shineTex[i]);
-	}
-	for (unsigned i = 0; i < NUM_FLARE; i++) {
-		free_texture(flareTex[i]);
-	}
+	for (unsigned i = 0; i < NUM_SHINE; i++) {free_texture(shineTex[i]);}
+	for (unsigned i = 0; i < NUM_FLARE; i++) {free_texture(flareTex[i]);}
 	tex_loaded = 0;
 }
 

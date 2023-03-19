@@ -1995,9 +1995,7 @@ void city_obj_placer_t::add_objs_on_buildings(unsigned city_id) {
 				unsigned street_number(100 + 100*((7*road_ix + 13*road_name.size())%20)); // start at 100-2000 randomly based on road name and index
 				street_number += 2*round_fp(25.0*road_pos/plot.get_sz_dim(!sdim)); // generate an even street number; should it differ by more than 1?
 				if (sdir) {++street_number;} // make it an odd number if on this side of the road
-				ostringstream oss;
-				oss << street_number << " " << road_name;
-				sub_plots.back().address    = oss.str();
+				sub_plots.back().address    = std::to_string(street_number) + " " + road_name;
 				sub_plots.back().street_num = street_number;
 			}
 		} // for x

@@ -42,9 +42,7 @@ public:
 		unsigned tid(0);
 		frame_buffer_to_texture(tid, 0);
 		unsigned const tex_ix(textures.size());
-		std::ostringstream oss;
-		oss << "screenshot_" << screenshots.size();
-		std::string const name(oss.str());
+		std::string const name("screenshot_" + std::to_string(screenshots.size()));
 		// type format width height wrap_mir ncolors use_mipmaps name [invert_y=0 [do_compress=1 [anisotropy=1.0 [mipmap_alpha_weight=1.0 [normal_map=0]]]]]
 		texture_t new_tex(0, 9, window_width, window_height, 0, 3, 0, name, 0, def_tex_compress, def_tex_aniso, 1.0, 0);
 		new_tex.set_existing_tid(tid, WHITE); // not sure what to set the color to
