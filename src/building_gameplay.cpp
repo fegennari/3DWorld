@@ -927,6 +927,7 @@ void print_entering_building(string const &str) {
 }
 void building_t::register_player_enter_building() const {
 	//print_building_manifest(); // for debugging
+	//print_building_stats(); // for debugging
 
 	if (!name.empty()) {
 		string str("Entering " + name);

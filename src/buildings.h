@@ -1474,6 +1474,7 @@ public:
 	cube_t get_part_containing_cube(cube_t const &c) const;
 	cube_t get_part_containing_pt(point const &pt) const;
 	void print_building_manifest() const;
+	void print_building_stats() const;
 private:
 	void create_per_part_ext_verts();
 	void finish_gen_geometry(rand_gen_t &rgen, bool has_overlapping_cubes);

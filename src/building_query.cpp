@@ -1883,4 +1883,28 @@ void building_t::print_building_manifest() const { // Note: skips expanded_objs
 	}
 	else {cout << endl;}
 }
+void building_t::print_building_stats() const {
+	if (!interior) return;
+	float const floor_thickness(get_floor_thickness()), floor_spacing(get_window_vspace());
+	float const feet_per_unit(8.0/floor_spacing), feet_per_unit_sq(feet_per_unit*feet_per_unit);
+	unsigned num_rooms(0), num_bedrooms(0), num_bathrooms(0);
+	float square_footage(0.0);
+
+	for (room_t const &room : interior->rooms) {
+		if (room.is_sec_bldg)       continue; // garage/shed not included in count
+		if (room.is_ext_basement()) continue; // extended basement not included in count
+		if (room.is_hallway)        continue; // hallway not included in count
+		unsigned const num_floors(calc_num_floors(room, floor_spacing, floor_thickness));
+		assert(num_floors > 0);
+		num_rooms += num_floors;
+		if (room.z1() >= ground_floor_z1) {square_footage += num_floors*feet_per_unit_sq*room.get_area_xy();} // basement doesn't count
+
+		for (unsigned f = 0; f < num_floors; ++f) {
+			room_type const rtype(room.get_room_type(f));
+			if      (rtype == RTYPE_BED || rtype == RTYPE_MASTER_BED) {++num_bedrooms;}
+			else if (rtype == RTYPE_BATH) {++num_bathrooms;}
+		}
+	} // for room
+	cout << TXT(num_rooms) << TXT(num_bedrooms) << TXT(num_bathrooms) << TXT(square_footage) << endl;
+}
 
