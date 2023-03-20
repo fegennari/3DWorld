@@ -179,9 +179,7 @@ public:
 		for (auto i = avoid.begin(); i != avoid.end(); ++i) {
 			if (i->intersects_xy(c) && sphere_cube_intersect_xy(pos, radius, *i)) return 0;
 		}
-		if (!building.is_cube()) { // non-cube building - check for inside walls
-			if (!building.check_cube_within_part_sides(c)) return 0; // outside building - will try again with a new pos next time
-		}
+		if (!building.check_cube_within_part_sides(c)) return 0; // outside non-cube building - will try again with a new pos next time
 		return 1;
 	}
 	static void choose_pt_xy_in_room(point &pos, cube_t const &c, rand_gen_t &rgen) {
@@ -203,7 +201,7 @@ public:
 
 		if (no_use_init) { // chose a new initial point
 			choose_pt_xy_in_room(pos, place_area, rgen);
-			if (avoid.empty()) return 1;
+			if (avoid.empty() && building.is_cube()) return 1; // no collision checks needed
 		}
 		point orig_pos(pos);
 
@@ -251,7 +249,7 @@ public:
 		}
 		return 0;
 	}
-	bool connect_room_endpoints(vect_cube_t const &avoid, cube_t const &walk_area, point const &p1, point const &p2, float radius,
+	bool connect_room_endpoints(vect_cube_t const &avoid, building_t const &building, cube_t const &walk_area, point const &p1, point const &p2, float radius,
 		vector<point> &path, vect_cube_t &keepout, rand_gen_t &rgen, bool ignore_p1_coll=0, bool ignore_p2_coll=0) const
 	{
 		assert(p1.z == p2.z);
@@ -297,7 +295,8 @@ public:
 
 			for (unsigned n = 0; n < num_tries; ++n) { // make num_tries attempts
 				choose_pt_xy_in_room(pos, walk_area, rgen); // choose a rand point in the room
-				if (check_pt_contained_xy(keepout, pos)) continue; // bad point
+				if (check_pt_contained_xy(keepout, pos))       continue; // bad point
+				if (!building.check_pt_within_part_sides(pos)) continue; // outside non-cube building
 				bool const seg1_bad(check_line_int_xy(keepout, p1, pos)), seg2_bad(check_line_int_xy(keepout, pos, p2));
 
 				if (npts == 1 || !(seg1_bad || seg2_bad)) { // single point or both segments valid
@@ -311,6 +310,7 @@ public:
 
 					for (unsigned m = 0; m < 20; ++m) { // make 20 random attempts
 						choose_pt_xy_in_room(pos2, walk_area, rgen); // choose a rand point in the room
+						if (!building.check_pt_within_part_sides(pos2)) continue; // outside non-cube building
 						if (!check_pt_contained_xy(keepout, pos2) && !check_line_int_xy(keepout, pos, pos2)) {success = 1; break;} // good point
 					}
 					if (!success) continue; // no good point
@@ -371,7 +371,7 @@ public:
 					path.push_back(end_point);
 					if (node.is_vert_conn()) {success = 1; break;} // done, don't need to run code below
 					point const room_exit(closest_room_pt(walk_area, next)); // first doorway
-					if (connect_room_endpoints(avoid, walk_area, end_point, room_exit, radius, path, keepout, rgen)) {path.push_back(room_exit); success = 1; break;}
+					if (connect_room_endpoints(avoid, building, walk_area, end_point, room_exit, radius, path, keepout, rgen)) {path.push_back(room_exit); success = 1; break;}
 					path.clear(); // failed, reset for next iteration
 					if (!not_room_center) break; // if we did choose the room center, and there is no path to it, we've failed
 				} // for n
@@ -384,7 +384,7 @@ public:
 				path.push_back(final_pt);
 
 				// find path to first doorway; ignore collisions with p2 (cur_pt) in case this person was pushed into an object by another person
-				if (!connect_room_endpoints(avoid, walk_area, final_pt, cur_pt, radius, path, keepout, rgen, 0, 1)) {
+				if (!connect_room_endpoints(avoid, building, walk_area, final_pt, cur_pt, radius, path, keepout, rgen, 0, 1)) {
 					// allow a failure if this is the first path taken by this AI so that it's not stuck behind an object due to bad initial placement
 					if (!is_first_path) {path.clear(); return 0;}
 				}
@@ -397,7 +397,7 @@ public:
 				point const p1(closest_room_pt(walk_area, prev)), p2(closest_room_pt(walk_area, next));
 				path.push_back(p1); // walk out of doorway and into room
 				
-				if (!connect_room_endpoints(avoid, walk_area, p1, p2, radius, path, keepout, rgen)) { // unreachable
+				if (!connect_room_endpoints(avoid, building, walk_area, p1, p2, radius, path, keepout, rgen)) { // unreachable
 					path.clear();
 					// try another path? this case is rare; on failure, the person will wait a second then choose a different destination room
 					//disconnect_room_pair(n, came_from); // ???
@@ -411,7 +411,7 @@ public:
 		return 0; // never gets here
 	}
 	bool complete_path_within_room(point const &from, point const &to, unsigned room, unsigned ped_ix, float radius,
-		unsigned ped_rseed, bool is_first_path, bool following_player, vect_cube_t const &avoid, vector<point> &path) const
+		unsigned ped_rseed, bool is_first_path, bool following_player, vect_cube_t const &avoid, building_t const &building, vector<point> &path) const
 	{
 		// used for reaching a goal such as the player within the same room;
 		// assumes the building shape is convex and the goal is inside the building so that the path to the goal never leaves a non-cube building
@@ -423,7 +423,7 @@ public:
 		
 		// ignore starting collisions, for example collisions with stairwell when exiting stairs?
 		// ignore initial coll with "from", and coll with "to" when following the player
-		if (!connect_room_endpoints(avoid, walk_area, to, from, radius, path, keepout, rgen, 1, following_player)) { // ignore_p1_coll (to) = 1
+		if (!connect_room_endpoints(avoid, building, walk_area, to, from, radius, path, keepout, rgen, 1, following_player)) { // ignore_p1_coll (to) = 1
 			if (!is_first_path) { // ignore failure on first path to allow person to get out from an object they spawn in
 				bool success(0);
 
@@ -433,7 +433,7 @@ public:
 						point new_to(to + (float(n)/10)*(from - to));
 						//if (!walk_area.contains_pt(new_to)) continue; // can fail for player hiding in a closet
 						walk_area.clamp_pt_xy(new_to);
-						if (connect_room_endpoints(avoid, walk_area, new_to, from, radius, path, keepout, rgen, 0, following_player)) {success = 1; break;} // ignore_p1_coll = 0
+						if (connect_room_endpoints(avoid, building, walk_area, new_to, from, radius, path, keepout, rgen, 0, following_player)) {success = 1; break;} // ignore_p1_coll = 0
 					} // for n
 				}
 				if (!success) {path.clear(); return 0;}
@@ -1030,7 +1030,7 @@ bool building_t::find_route_to_point(person_t const &person, float radius, bool 
 
 	if (loc1.same_room_floor(loc2)) { // same room/floor (not checking stairs_ix)
 		assert(from.z == to.z);
-		return interior->nav_graph->complete_path_within_room(from, to, loc1.room_ix, person.ssn, radius, person.cur_rseed, is_first_path, following_player, avoid, path);
+		return interior->nav_graph->complete_path_within_room(from, to, loc1.room_ix, person.ssn, radius, person.cur_rseed, is_first_path, following_player, avoid, *this, path);
 	}
 	if (loc1.floor_ix != loc2.floor_ix) { // different floors: find path from <from> to nearest stairs, then find path from stairs to <to>
 		vector<unsigned> nearest_stairs_or_ramp;
@@ -1724,7 +1724,7 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 	clip_cube.expand_by_xy(-coll_dist); // shrink
 	clip_cube.clamp_pt_xy(new_pos); // make sure person stays within building bcube; can't clip to room because person may be exiting it
 	
-	if (!is_cube() && !check_cube_within_part_sides(person.get_bcube() + (new_pos - person.pos))) { // outside the building
+	if (!is_cube() && !person.on_stairs() && !check_cube_within_part_sides(person.get_bcube() + (new_pos - person.pos))) { // outside the building
 		int const part_ix(get_part_ix_containing_pt(new_pos));
 
 		if (part_ix >= 0) { // center is at least in a valid part
