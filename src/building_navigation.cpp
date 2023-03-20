@@ -59,9 +59,9 @@ class building_nav_graph_t {
 		a_star_node_state_t() : came_from_ix(-1), g_score(0), h_score(0), f_score(0) {}
 	};
 
-	unsigned num_rooms, num_stairs;
-	float stairs_extend;
-	bool has_pg_ramp;
+	unsigned num_rooms=0, num_stairs=0;
+	float stairs_extend=0;
+	bool has_pg_ramp=0;
 	vector<node_t> nodes;
 	node_t       &get_node(unsigned room)       {assert(room < nodes.size()); return nodes[room];}
 	node_t const &get_node(unsigned room) const {assert(room < nodes.size()); return nodes[room];}
@@ -75,8 +75,8 @@ class building_nav_graph_t {
 		assert(0); // must be found - should not get here
 	}
 public:
-	bool invalid;
-	building_nav_graph_t(float stairs_extend_) : num_rooms(0), num_stairs(0), stairs_extend(stairs_extend_), invalid(0) {}
+	bool invalid=0;
+	building_nav_graph_t(float stairs_extend_) : stairs_extend(stairs_extend_) {}
 
 	void set_num_rooms(unsigned num_rooms_, unsigned num_stairs_, bool has_pg_ramp_) {
 		num_rooms   = num_rooms_;
@@ -1529,8 +1529,10 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 				float const rsum(coll_dist + COLL_RADIUS_SCALE*p->radius);
 				if (!dist_xy_less_than(person.pos, p->pos, rsum)) continue; // not intersecting
 				move_person_to_not_collide(person, *p, person.pos, rsum, coll_dist); // if we get here, we have to actively move out of the way
+				wait_time = 0.0; // stop waiting so that we can react
 			} // for p
 			wait_time -= fticks;
+			max_eq(wait_time, 0.0f);
 			person.anim_time = 0.0; // reset just in case (though should already be at 0.0)
 
 			if (person.ai_state != AI_WAIT_ELEVATOR) { // don't reset goal and return here if waiting at an elevator
