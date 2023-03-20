@@ -33,6 +33,7 @@ bool bed_has_canopy_mat(room_object_t const &c);
 int get_canopy_texture();
 colorRGBA get_canopy_base_color(room_object_t const &c);
 void get_water_heater_cubes(room_object_t const &wh, cube_t cubes[2]);
+bool line_int_polygon_sides(point const &p1, point const &p2, cube_t const &bcube, vect_point const &points, float &t);
 
 bool check_indir_enabled(bool in_basement, bool in_attic) {
 	if (in_basement) return INDIR_BASEMENT_EN;
@@ -124,7 +125,7 @@ colorRGBA building_interior_t::get_attic_ceiling_color() const {
 bool building_t::ray_cast_interior(point const &pos, vector3d const &dir, cube_t const &valid_area, cube_bvh_t const &bvh, bool in_attic, bool in_ext_basement,
 	point &cpos, vector3d &cnorm, colorRGBA &ccolor, rand_gen_t *rgen) const
 {
-	if (!interior || is_rotated() || !is_simple_cube()) return 0; // these cases are not yet supported
+	if (!interior || is_rotated()) return 0; // these cases are not yet supported
 	float const extent(valid_area.get_max_extent());
 	cube_t clip_cube(valid_area);
 	clip_cube.expand_by(0.01*extent); // expand slightly so that collisions with objects on the edge are still considered interior
@@ -154,9 +155,15 @@ bool building_t::ray_cast_interior(point const &pos, vector3d const &dir, cube_t
 	}
 	else { // check for exterior rays (uncommon case)
 		bool hit(0);
-		auto const parts_end(get_real_parts_end_inc_sec());
-		for (auto p = parts.begin(); p != parts_end; ++p) {hit |= ray_cast_cube(p1, p2, *p, cnorm, t);} // find closest entrance point
-		
+
+		if (!is_cube()) {
+			int const part_ix(get_part_ix_containing_pt(p2));
+			if (part_ix >= 0 && line_int_polygon_sides(p1, p2, parts[part_ix], get_part_ext_verts(part_ix), t)) {hit = 1;}
+		}
+		if (!hit) {
+			auto const parts_end(get_real_parts_end_inc_sec());
+			for (auto p = parts.begin(); p != parts_end; ++p) {hit |= ray_cast_cube(p1, p2, *p, cnorm, t);} // find closest entrance point
+		}
 		if (hit) { // exterior hit (ray outside building) - don't need to check interior geometry
 			cpos   = p1 + (p2 - p1)*t;
 			ccolor = side_color.modulate_with(mat.side_tex.get_avg_color());

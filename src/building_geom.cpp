@@ -133,7 +133,7 @@ cube_t building_t::get_part_containing_cube(cube_t const &c) const {
 	return ((part_ix < 0) ? cube_t() : parts[part_ix]);
 }
 bool building_t::check_cube_within_part_sides(cube_t const &c) const {
-	if (is_cube())   return 1; // assume caller has already checked parts/bcube
+	if (is_cube())   return 1; // assume caller has already checked parts/bcube; TODO: is_simple_cube()?
 	int const part_ix(get_part_ix_containing_cube(c));
 	if (part_ix < 0) return 0;
 	vect_point const &points(get_part_ext_verts(part_ix));

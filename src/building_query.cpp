@@ -1000,6 +1000,21 @@ point building_interior_t::find_closest_pt_on_obj_to_pos(building_t const &build
 	return closest;
 }
 
+bool line_int_polygon_sides(point const &p1, point const &p2, cube_t const &bcube, vect_point const &points, float &t) {
+	point quad_pts[4]; // quads
+	bool hit(0);
+
+	for (unsigned S = 0; S < points.size(); ++S) { // generate vertex data quads
+		for (unsigned d = 0, ix = 0; d < 2; ++d) {
+			point const &p(points[(S+d)%points.size()]);
+			for (unsigned e = 0; e < 2; ++e) {quad_pts[ix++].assign(p.x, p.y, bcube.d[2][d^e]);}
+		}
+		float tmin(0.0);
+		if (line_poly_intersect(p1, p2, quad_pts, 4, get_poly_norm(quad_pts), tmin) && tmin < t) {t = tmin; hit = 1;} // Note: untested
+	} // for S
+	return hit;
+}
+
 // Note: p1/p2 are in building space
 unsigned building_t::check_line_coll(point const &p1, point const &p2, float &t, bool occlusion_only, bool ret_any_pt, bool no_coll_pt) const {
 	point p1r(p1), p2r(p2); // copy before clipping
@@ -1048,7 +1063,7 @@ unsigned building_t::check_line_coll(point const &p1, point const &p2, float &t,
 				t = tmin; hit = 1;
 			}
 		}
-		else if (num_sides != 4) {
+		else if (!is_cube()) {
 			vect_point const &points(get_part_ext_verts(i - parts.begin()));
 			float const tz((i->z2() - p1r.z)/(p2r.z - p1r.z)); // t value at zval = top of cube
 
@@ -1056,17 +1071,7 @@ unsigned building_t::check_line_coll(point const &p1, point const &p2, float &t,
 				float const xval(p1r.x + tz*(p2r.x - p1r.x)), yval(p1r.y + tz*(p2r.y - p1r.y));
 				if (point_in_polygon_2d(xval, yval, points.data(), points.size())) {t = tz; hit = 1;} // XY plane test for vertical lines and top surface
 			}
-			if (!vert) { // test building sides
-				point quad_pts[4]; // quads
-
-				for (unsigned S = 0; S < num_sides; ++S) { // generate vertex data quads
-					for (unsigned d = 0, ix = 0; d < 2; ++d) {
-						point const &p(points[(S+d)%num_sides]);
-						for (unsigned e = 0; e < 2; ++e) {quad_pts[ix++].assign(p.x, p.y, i->d[2][d^e]);}
-					}
-					if (line_poly_intersect(p1r, p2r, quad_pts, 4, get_poly_norm(quad_pts), tmin) && tmin < t) {t = tmin; hit = 1;} // Note: untested
-				} // for S
-			}
+			if (!vert && line_int_polygon_sides(p1r, p2r, *i, points, t)) {hit = 1;} // test building sides
 		}
 		else {hit |= get_line_clip_update_t(p1r, p2r, *i, t);} // cube
 
