@@ -1544,6 +1544,10 @@ void building_t::draw_cars_in_building(shader_t &s, vector3d const &xlate, bool 
 	check_mvm_update(); // needed after popping model transform matrix
 }
 
+void append_line_pt(vector<vert_wrap_t> &line_pts, point const &pos) {
+	if (line_pts.size() > 1) {line_pts.emplace_back(line_pts.back());} // duplicate point to create a line segment
+	line_pts.emplace_back(pos);
+}
 void building_t::debug_people_in_building(shader_t &s) const {
 	if (!has_people()) return;
 	shader_t color_shader;
@@ -1553,14 +1557,13 @@ void building_t::debug_people_in_building(shader_t &s) const {
 	for (person_t const &p : interior->people) {
 		for (point const &v : p.path) {
 			draw_sphere_vbo(v, 0.25*p.radius, 16, 0);
-			if (line_pts.size() > 1) {line_pts.emplace_back(line_pts.back());} // duplicate point to create a line segment
-			line_pts.emplace_back(v);
+			append_line_pt(line_pts, v);
 		}
 		if (p.target_valid()) {
 			draw_sphere_vbo(p.target_pos, 0.25*p.radius, 16, 0);
-			if (line_pts.size() > 1) {line_pts.emplace_back(line_pts.back());} // duplicate point to create a line segment
-			line_pts.emplace_back(p.target_pos);
+			append_line_pt(line_pts, p.target_pos);
 		}
+		if (!line_pts.empty()) {append_line_pt(line_pts, p.pos);} // add starting point if there's a valid path
 		if (line_pts.size() > 1) {draw_verts(line_pts, GL_LINES);}
 		line_pts.clear();
 	} // for p
