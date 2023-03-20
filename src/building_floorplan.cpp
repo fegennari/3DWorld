@@ -280,13 +280,8 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 								point const &p1(*p), &p2((p+1 == points.end()) ? points.front() : *(p+1));
 								if (max(p1[d], p2[d]) <= center[d] || min(p1[d], p2[d]) >= center[d]) continue; // doesn't cross the wall in dim d
 								float const t((p1[d] - center[d])/(p1[d] - p2[d])), int_pos(p1[!d] + t*(p2[!d] - p1[!d]));
-								
-								if (e) {
-									if (int_pos > center[!d]) {min_eq(wall.d[!d][1], int_pos); break;}
-								}
-								else {
-									if (int_pos < center[!d]) {max_eq(wall.d[!d][0], int_pos); break;}
-								}
+								if      ( e && int_pos > center[!d]) {min_eq(wall.d[!d][1], int_pos); break;}
+								else if (!e && int_pos < center[!d]) {max_eq(wall.d[!d][0], int_pos); break;}
 							} // for p
 						} // for e
 					}
@@ -301,21 +296,19 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 					}
 					interior->walls[d].push_back(wall); // add remainder
 				} // for d
-				// now add four rooms
+				// now add 2-4 rooms
 				for (unsigned r = 0; r < 4; ++r) {
 					bool const xside(r & 1), yside(r >> 1);
+					if ((skip_dim == 0 && xside) || (skip_dim == 1 && yside)) continue; // part not split in this dim
 					cube_t room(*p);
-					room.d[0][xside] = center.x - (xside ? 1.0 : -1.0)*wall_half_thick; // wall not included in room bounds
-					room.d[1][yside] = center.y - (yside ? 1.0 : -1.0)*wall_half_thick; // wall not included in room bounds
+					if (skip_dim != 0) {room.d[0][xside] = center.x - (xside ? 1.0 : -1.0)*wall_half_thick;} // wall not included in room bounds
+					if (skip_dim != 1) {room.d[1][yside] = center.y - (yside ? 1.0 : -1.0)*wall_half_thick;} // wall not included in room bounds
 					add_room(room, part_id, 1, 0, 0);
 				}
 			}
 			else {
 				add_room(*p, part_id, 1, 0, 0); // add entire part as a room; num_lights will be calculated later
 			}
-			// assign all rooms as unfinished to avoid placing room objects that may extend outside the building
-			//for (auto r = rooms.begin()+rooms_start; r != rooms.end(); ++r) {r->assign_all_to(RTYPE_UNFINISHED);}
-			// rooms/floorplans aren't fully supported for these building types, but we can still add the floors and ceilings below
 		}
 		else if (!is_house && is_basement_part && min(psz.x, psz.y) > 5.0*car_sz.x && max(psz.x, psz.y) > 12.0*car_sz.y) { // make this a parking garage
 			add_room(*p, part_id, 1, 0, 0); // add entire part as a room; num_lights will be calculated later
