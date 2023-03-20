@@ -286,8 +286,6 @@ void building_t::gen_geometry(int rseed1, int rseed2) {
 
 	if (!do_split && not_too_small && (rgen.rand()&3) < (was_cube ? 2 : 3) && !has_windows()) {
 		// oddly shaped multi-sided overlapping sections (50% chance for cube buildings and 75% chance for others);
-		// this tends to create some strange interior rooms, so skip this building type for secondary buildings with windows that the player can see through
-		has_complex_floorplan = 1;
 		point const sz(base.get_size());
 		parts.reserve(num_levels); // at least this many
 
@@ -317,6 +315,8 @@ void building_t::gen_geometry(int rseed1, int rseed2) {
 			split_cubes_recur(bc, parts, 0, parts.size()); // split this cube against all previously added cubes and remove overlapping areas
 		} // for i
 		if (!parts.empty()) { // at least one part was placed; should (almost) always be true?
+			// this tends to create some strange interior rooms, so skip this building type for secondary buildings with windows that the player can see through
+			if (parts.size() > 1) {has_complex_floorplan = 1;}
 			parts.shrink_to_fit(); // optional
 			std::reverse(parts.begin(), parts.end()); // highest part should be last so that it gets the roof details (remember to update basement_part_ix if needed)
 			calc_bcube_from_parts(); // update bcube
