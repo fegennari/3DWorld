@@ -142,7 +142,7 @@ void accumulate_shared_xy_area(cube_t const &c, cube_t const &sc, float &area) {
 	if (c.intersects_xy(sc)) {area += (min(c.x2(), sc.x2()) - max(c.x1(), sc.x1()))*(min(c.y2(), sc.y2()) - max(c.y1(), sc.y1()));}
 }
 
-// Note: used for the player when check_interior=1
+// Note: used for the player when check_interior=1; pos and p_last are in camera space
 bool building_t::check_sphere_coll(point &pos, point const &p_last, vector3d const &xlate, float radius, bool xy_only, vector3d *cnorm_ptr, bool check_interior) const {
 	if (!is_valid()) return 0; // invalid building
 	
@@ -205,8 +205,12 @@ bool building_t::check_sphere_coll(point &pos, point const &p_last, vector3d con
 				if (!is_cube()) { // non-cube shaped building, clamp_part is conservative
 					//if (use_cylinder_coll()) {}
 					vect_point const &points(get_part_ext_verts(i - parts.begin()));
-					if (!point_in_polygon_2d(p_last2.x, p_last2.y, points.data(), points.size())) continue; // outside the building, even though inside part bcube
-					else if (do_sphere_coll_polygon_sides(pos2, *i, radius, 1, points, cnorm_ptr)) {is_interior = had_coll = 1; break;} // interior_coll=1
+					point const p_last2_bs(p_last2 - xlate);
+					if (!point_in_polygon_2d(p_last2_bs.x, p_last2_bs.y, points.data(), points.size())) continue; // outside the building, even though inside part bcube
+					pos2 -= xlate; // temporarily convert to building space
+					bool const had_int(do_sphere_coll_polygon_sides(pos2, *i, radius, 1, points, cnorm_ptr));
+					pos2 += xlate; // convert back to camera space
+					if (had_int) {is_interior = had_coll = 1; break;} // interior_coll=1
 				}
 				for (auto p = parts.begin(); p != get_real_parts_end(); ++p) {
 					if (zval < p->z1() || zval > p->z2()) continue; // wrong floor/part in stack
