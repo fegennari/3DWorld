@@ -1541,7 +1541,8 @@ float building_t::gen_hipped_roof(cube_t const &top_, float peak_height, float e
 
 void building_t::gen_building_doors_if_needed(rand_gen_t &rgen) { // for office buildings
 
-	if (!is_cube()) return; // cube shaped buildings only
+	if (use_cylinder_coll())                 return; // can't place doors on curved building sides
+	if (!is_cube() && has_complex_floorplan) return; // this case isn't handled either
 	assert(!parts.empty());
 	float const door_height(1.1*get_door_height()), wscale(0.7); // a bit taller and a lot wider than house doors
 
@@ -1564,8 +1565,30 @@ void building_t::gen_building_doors_if_needed(rand_gen_t &rgen) { // for office 
 			if (is_basement(b)) continue; // skip the basement
 			unsigned const part_ix(b - parts.begin());
 			if (bldg_has_windows && part_ix >= 4) break; // only first 4 parts can have doors - must match first floor window removal logic
-			if (b->z1() > ground_floor_z1)   break; // moved off the ground floor
+			if (b->z1() > ground_floor_z1)        break; // moved off the ground floor
 
+			if (!is_cube()) { // N-gon building; See if there's an X or Y oriented side to add a door to; should get here for exactly one part
+				vect_point const &points(get_part_ext_verts(part_ix));
+				float const toler(0.1*get_wall_thickness()); // add a bit of tolerance to account for FP error
+				unsigned match_side_ix(0);
+				bool found(0);
+
+				for (auto i = points.begin(); i != points.end() && !found; ++i) {
+					point const &p1(*i), &p2((i == points.begin()) ? points.back() : *(i-1));
+					
+					for (unsigned d = 0; d < 2; ++d) { // check for horizontal or vertical dim
+						if (fabs(p1[d] - p2[d]) > toler) continue; // not aligned in this axis
+						if (match_side_ix != num)        continue; // not the selected side; should this be randomized? most of the time there's only one valid side
+						++match_side_ix;
+						float const side_pos(0.5*(p1[d] + p2[d])), side_center(0.5*(p1[!d] + p2[!d]));
+						bool const dir(side_pos > b->get_center_dim(d)), allow_fail(!doors.empty());
+						if (!add_door(place_door(*b, d, dir, door_height, side_center, side_pos, 0.0, wscale, allow_fail, 0, rgen), part_ix, d, dir, 1)) continue;
+						placed = found = 1;
+						break;
+					} // for d
+				} // for i
+				continue;
+			}
 			for (unsigned n = 0; n < 4; ++n) {
 				bool const dim(pref_dim ^ bool(n>>1)), dir(pref_dir ^ bool(n&1));
 				if (used[2*dim + dir]) continue; // door already placed on this side
