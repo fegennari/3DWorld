@@ -1727,7 +1727,8 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 
 		if (part_ix >= 0) { // center is at least in a valid part
 			// we don't know exactly how far outside the building this person is,
-			// so move them 10% of their radius toward the center of their current part and hope they make it back into the building after a few frames
+			// so move them 10% of their radius toward the center of their current part and hope they make it back into the building after a few frames;
+			// seems to work better than calling do_sphere_coll_polygon_sides() here
 			point const part_center(parts[part_ix].get_cube_center());
 			vector3d const move_dir((part_center.x - new_pos.x), (part_center.y - new_pos.y), 0.0);
 			new_pos += move_dir*(0.1*person.radius/move_dir.mag());

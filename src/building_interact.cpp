@@ -1249,14 +1249,7 @@ bool building_t::move_sphere_to_valid_part(point &pos, point const &p_last, floa
 
 			if (!check_cube_within_part_sides(sphere_bcube)) { // outside the building
 				int const part_ix(get_part_ix_containing_pt(pos));
-
-				if (part_ix >= 0) { // center is at least in a valid part
-					// we don't know exactly how far outside the building this object is, so move it 10% of radius toward the center of the current part in XY
-					point const part_center(parts[part_ix].get_cube_center());
-					vector3d const move_dir((part_center.x - pos.x), (part_center.y - pos.y), 0.0);
-					pos += move_dir*(0.25*radius/move_dir.mag()); // not perfect, but close enough
-					return 1;
-				}
+				if (part_ix >= 0 && do_sphere_coll_polygon_sides(pos, parts[part_ix], radius, 1, get_part_ext_verts(part_ix), nullptr)) return 1; // interior_coll=1
 			}
 			return 0;
 		}
