@@ -327,7 +327,6 @@ struct building_geom_t { // describes the physical shape of a building
 	}
 	bool is_rotated() const {return (rot_sin != 0.0);}
 	bool is_cube()    const {return (num_sides == 4);}
-	bool is_simple_cube()    const {return (is_cube() && !half_offset && flat_side_amt == 0.0 && alt_step_factor == 0.0);}
 	bool use_cylinder_coll() const {return (num_sides > 8 && flat_side_amt == 0.0);} // use cylinder collision if not a cube, triangle, octagon, etc. (approximate)
 	void do_xy_rotate    (point const &center, point &pos) const;
 	void do_xy_rotate_inv(point const &center, point &pos) const;

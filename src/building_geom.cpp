@@ -133,7 +133,7 @@ cube_t building_t::get_part_containing_cube(cube_t const &c) const {
 	return ((part_ix < 0) ? cube_t() : parts[part_ix]);
 }
 bool building_t::check_cube_within_part_sides(cube_t const &c) const {
-	if (is_cube())   return 1; // assume caller has already checked parts/bcube; TODO: is_simple_cube()?
+	if (is_cube())   return 1; // assume caller has already checked parts/bcube
 	int const part_ix(get_part_ix_containing_cube(c));
 	if (part_ix < 0) return 0;
 	vect_point const &points(get_part_ext_verts(part_ix));
@@ -313,7 +313,7 @@ void building_t::gen_geometry(int rseed1, int rseed2) {
 				if (!contained) {valid = 1; break;} // success
 			} // for n
 			if (!valid) break; // remove this part and end the building here
-			if (i == 0 || !is_simple_cube()) {parts.push_back(bc); continue;} // no splitting
+			if (i == 0 || !is_cube()) {parts.push_back(bc); continue;} // no splitting
 			split_cubes_recur(bc, parts, 0, parts.size()); // split this cube against all previously added cubes and remove overlapping areas
 		} // for i
 		if (!parts.empty()) { // at least one part was placed; should (almost) always be true?
@@ -1175,7 +1175,7 @@ void try_expand_into_xy(cube_t &c1, cube_t const &c2) {
 
 // for houses or office buildings
 void building_t::maybe_add_basement(rand_gen_t rgen) { // rgen passed by value so that the original isn't modified
-	if (!is_simple_cube()) return; // simple cube shaped buildings only
+	if (!is_cube()) return; // simple cube shaped buildings only
 	float basement_prob(is_house ? global_building_params.basement_prob_house : global_building_params.basement_prob_office);
 	if (is_in_city && !is_house) {basement_prob *= 2.0;} // double the basement/parking garage probability for city office buildings
 	if (basement_prob <= 0.0) return; // no basement
@@ -1541,7 +1541,7 @@ float building_t::gen_hipped_roof(cube_t const &top_, float peak_height, float e
 
 void building_t::gen_building_doors_if_needed(rand_gen_t &rgen) { // for office buildings
 
-	if (!is_simple_cube()) return; // for now, only simple cube buildings can have doors; doors can be added to N-gon (non cylinder) buildings later
+	if (!is_cube()) return; // cube shaped buildings only
 	assert(!parts.empty());
 	float const door_height(1.1*get_door_height()), wscale(0.7); // a bit taller and a lot wider than house doors
 
@@ -1675,7 +1675,7 @@ void merge_cubes_xy(vect_cube_t &cubes) {
 
 void building_t::gen_details(rand_gen_t &rgen, bool is_rectangle) { // for the roof; office buildings, not houses
 
-	bool const flat_roof(roof_type == ROOF_TYPE_FLAT), add_walls(is_simple_cube() && flat_roof); // simple cube buildings with flat roofs
+	bool const flat_roof(roof_type == ROOF_TYPE_FLAT), add_walls(is_cube() && flat_roof); // simple cube buildings with flat roofs
 	unsigned const num_ac_units((flat_roof && is_cube()) ? (rgen.rand() % 7) : 0); // cube buildings only for now
 	float const window_vspacing(get_window_vspace()), wall_width(0.049*window_vspacing); // slightly narrower than interior wall width to avoid z-fighting with roof access
 	assert(!parts.empty());
@@ -1727,7 +1727,7 @@ void building_t::gen_details(rand_gen_t &rgen, bool is_rectangle) { // for the r
 	cube_t const &top(parts.back()); // top/last part
 	float const helipad_radius(2.0*window_vspacing);
 	bool const can_have_hp_or_sl(flat_roof && num_sides >= 4 && flat_side_amt == 0.0 && !is_house);
-	has_helipad = (can_have_hp_or_sl && min(top.dx(), top.dy()) > (is_simple_cube() ? 3.2 : 4.0)*helipad_radius && bcube.dz() > 8.0*window_vspacing && (rgen.rand() % 12) == 0);
+	has_helipad = (can_have_hp_or_sl && min(top.dx(), top.dy()) > (is_cube() ? 3.2 : 4.0)*helipad_radius && bcube.dz() > 8.0*window_vspacing && (rgen.rand() % 12) == 0);
 	cube_t helipad_bcube;
 
 	if (has_helipad) { // add helipad
@@ -1794,7 +1794,7 @@ void building_t::gen_details(rand_gen_t &rgen, bool is_rectangle) { // for the r
 			if (!bounds.contains_cube_xy(c)) continue; // not contained
 			if (has_helipad && c.intersects_xy(helipad_bcube)) continue; // bad placement
 			placed = 1;
-			if (is_simple_cube()) break; // success/done
+			if (is_cube()) break; // success/done
 
 			for (unsigned j = 0; j < 4; ++j) { // check cylinder/ellipse
 				point const pt(c.d[0][j&1], c.d[1][j>>1], 0.0); // XY only
@@ -1868,7 +1868,7 @@ void building_t::maybe_add_special_roof(rand_gen_t &rgen) {
 	if (global_building_params.onion_roof && num_sides >= 16 && flat_side_amt == 0.0) { // cylinder building
 		if (sz.x < 1.2*sz.y && sz.y < 1.2*sz.x && sz.z > max(sz.x, sz.y)) {roof_type = ROOF_TYPE_ONION;}
 	}
-	else if (is_simple_cube()) { // only simple cubes are handled
+	else if (is_cube()) { // only simple cubes are handled
 		if (global_building_params.dome_roof && sz.x < 1.2*sz.y && sz.y < 1.2*sz.x && sz.z > max(sz.x, sz.y)) {roof_type = ROOF_TYPE_DOME;} // roughly square, not too short
 		else {gen_sloped_roof(rgen, top);} // sloped roof
 	}

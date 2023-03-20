@@ -490,7 +490,7 @@ bool building_t::can_be_bedroom_or_bathroom(room_t const &room, unsigned floor, 
 			assert(cur_room >= 0); // must be found
 			assert(!stairs_rooms.empty());
 
-			if (!is_rotated() && is_simple_cube() && !has_complex_floorplan) { // too strong for rotated or non-cube buildings, where door placement can sometimes fail
+			if (!is_rotated() && is_cube() && !has_complex_floorplan) { // too strong for rotated or non-cube buildings, where door placement can sometimes fail
 				assert(!doors.empty());
 				assert(!door_rooms.empty());
 			}

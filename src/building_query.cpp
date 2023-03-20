@@ -33,7 +33,7 @@ bool building_t::check_bcube_overlap_xy(building_t const &b, float expand_rel, f
 // Note: only checks for point (x,y) value contained in one cube/N-gon/cylinder; assumes pt has already been rotated into local coordinate frame
 bool building_t::check_part_contains_pt_xy(cube_t const &part, unsigned part_id, point const &pt) const {
 	if (!part.contains_pt_xy(pt)) return 0; // check bounding cube
-	if (is_simple_cube())         return 1; // that's it
+	if (is_cube())                return 1; // that's it
 	vector<point> const &points(get_part_ext_verts(part_id));
 	return point_in_polygon_2d(pt.x, pt.y, points.data(), points.size()); // 2D x/y containment
 }
@@ -1187,7 +1187,7 @@ public:
 building_color_query_geom_cache_t building_color_query_geom_cache;
 
 bool building_t::get_interior_color_at_xy(point const &pos_in, colorRGBA &color) const {
-	if (!interior || !is_simple_cube() || is_rotated()) return 0; // these cases aren't handled
+	if (!interior || !is_cube() || is_rotated()) return 0; // these cases aren't handled
 	bool const player_in_this_building(camera_in_building && player_building == this);
 	if (!player_in_this_building) return 0; // not currently handled; maybe could allow this if the zoom level is high enough
 	point pos(pos_in); // set zval to the player's height if in this building, otherwise use the ground floor
