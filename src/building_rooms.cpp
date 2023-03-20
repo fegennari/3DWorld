@@ -2826,25 +2826,23 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 		unsigned const room_objs_start(objs.size());
 		unsigned nx(1), ny(1); // number of lights in X and Y for this room
 
-		if (r->is_office) { // more lights for large offices; parking garages are handled later
-			nx = max(1U, unsigned(0.5*r->dx()/window_vspacing));
-			ny = max(1U, unsigned(0.5*r->dy()/window_vspacing));
-		}
-		else if (!is_cube()) { // more lights for non-cube shaped building pie slices
+		if (!is_cube()) { // somewhat more lights for non-cube shaped building pie slices
 			nx = max(1U, unsigned(0.4*r->dx()/window_vspacing));
 			ny = max(1U, unsigned(0.4*r->dy()/window_vspacing));
+		}
+		else if (r->is_office) { // more lights for large offices; light size varies by office size; parking garages are handled later
+			nx = max(1U, unsigned(0.5*r->dx()/window_vspacing));
+			ny = max(1U, unsigned(0.5*r->dy()/window_vspacing));
+			float const room_size(r->dx() + r->dy()); // normalized to office size
+			light_size = max(0.015f*room_size, 0.67f*def_light_size);
+		}
+		else if (r->is_hallway) { // light size varies by hallway size
+			float const room_size(min(r->dx(), r->dy())); // normalized to hallway width
+			light_size = max(0.06f*room_size, 0.67f*def_light_size);
 		}
 		if (r->is_sec_bldg) {
 			if    (has_garage) {r->assign_all_to(RTYPE_GARAGE);}
 			else if (has_shed) {r->assign_all_to(RTYPE_SHED);}
-		}
-		if (r->is_office) { // light size varies by office size
-			float const room_size(r->dx() + r->dy()); // normalized to office size
-			light_size = max(0.015f*room_size, 0.67f*def_light_size);
-		}
-		if (r->is_hallway) { // light size varies by hallway size
-			float const room_size(min(r->dx(), r->dy())); // normalized to hallway width
-			light_size = max(0.06f*room_size, 0.67f*def_light_size);
 		}
 		float const light_val(22.0*light_size);
 		r->light_intensity = light_val*light_val/r->get_area_xy(); // average for room, unitless; light surface area divided by room surface area with some fudge constant

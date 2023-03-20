@@ -258,6 +258,7 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 		}
 		if (!is_cube()) { // cylinder, etc.
 			float const min_dim_sz(min(p->dx(), p->dy()));
+			bool const is_office(!is_house);
 
 			if (min_dim_sz > 2.0*min_wall_len) { // large cylinder
 				// create a pie slice split for cylindrical parts; since we can only add X or Y walls, place one of each that crosses the entire part
@@ -303,11 +304,11 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 					cube_t room(*p);
 					if (skip_dim != 0) {room.d[0][xside] = center.x - (xside ? 1.0 : -1.0)*wall_half_thick;} // wall not included in room bounds
 					if (skip_dim != 1) {room.d[1][yside] = center.y - (yside ? 1.0 : -1.0)*wall_half_thick;} // wall not included in room bounds
-					add_room(room, part_id, 1, 0, 0);
+					add_room(room, part_id, 1, 0, is_office);
 				}
 			}
 			else {
-				add_room(*p, part_id, 1, 0, 0); // add entire part as a room; num_lights will be calculated later
+				add_room(*p, part_id, 1, 0, is_office); // add entire part as a room; num_lights will be calculated later
 			}
 		}
 		else if (!is_house && is_basement_part && min(psz.x, psz.y) > 5.0*car_sz.x && max(psz.x, psz.y) > 12.0*car_sz.y) { // make this a parking garage
