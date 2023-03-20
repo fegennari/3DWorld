@@ -1213,7 +1213,8 @@ void clamp_sphere_xy(point &pos, cube_t const &c, float radius) {
 	bounds.expand_by_xy(-radius); // must fit entire sphere
 	bounds.clamp_pt_xy(pos);
 }
-bool building_t::move_sphere_to_valid_part(point &pos, point const &p_last, float radius) const { // Note: only moves in XY
+// applies to balls; Note: only moves in XY
+bool building_t::move_sphere_to_valid_part(point &pos, point const &p_last, float radius) const {
 	point const init_pos(pos);
 
 	if (has_attic() && pos.z > interior->attic_access.z2()) { // special case handling for attic
@@ -1243,8 +1244,22 @@ bool building_t::move_sphere_to_valid_part(point &pos, point const &p_last, floa
 			cube_t const &basement_cube(point_in_extended_basement_not_basement(pos) ? interior->basement_ext_bcube : (cube_t)get_ext_basement_hallway());
 			accumulate_shared_xy_area(basement_cube, sphere_bcube, xy_area_contained);
 		}
-		if (xy_area_contained > 0.99*sphere_bcube.dx()*sphere_bcube.dy()) return (pos != init_pos); // sphere contained in union of parts (not outside the building)
+		if (xy_area_contained > 0.99*sphere_bcube.dx()*sphere_bcube.dy()) { // sphere contained in union of parts (not outside the building)
+			if (pos != init_pos) return 1;
 
+			if (!check_cube_within_part_sides(sphere_bcube)) { // outside the building
+				int const part_ix(get_part_ix_containing_pt(pos));
+
+				if (part_ix >= 0) { // center is at least in a valid part
+					// we don't know exactly how far outside the building this object is, so move it 10% of radius toward the center of the current part in XY
+					point const part_center(parts[part_ix].get_cube_center());
+					vector3d const move_dir((part_center.x - pos.x), (part_center.y - pos.y), 0.0);
+					pos += move_dir*(0.25*radius/move_dir.mag()); // not perfect, but close enough
+					return 1;
+				}
+			}
+			return 0;
+		}
 		// find part containing p_last and clamp to that part
 		for (auto i = parts.begin(); i != get_real_parts_end_inc_sec(); ++i) {
 			if (!i->contains_pt(p_last)) continue; // not the part containing the previous pos
