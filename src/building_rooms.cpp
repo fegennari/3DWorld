@@ -1207,7 +1207,7 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t &room, flo
 		float const dir_sign(dir ? -1.0 : 1.0), wall_pos(place_area.d[br_dim][dir]), stall_from_wall(wall_pos + dir_sign*(0.5*tlength + wall_thickness));
 		float stall_pos(place_area.d[!br_dim][!sink_side] + 0.5*stall_step);
 
-		for (unsigned n = 0; n < num_stalls; ++n) {
+		for (unsigned n = 0; n < num_stalls; ++n, stall_pos += stall_step) {
 			point center(stall_from_wall, stall_pos, zval);
 			if (br_dim) {swap(center.x, center.y);} // R90 about z
 			cube_t toilet(center, center), stall(toilet);
@@ -1218,17 +1218,15 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t &room, flo
 			stall.expand_in_dim(!br_dim, 0.5*stall_width);
 			stall.d[br_dim][ dir] = wall_pos; // + wall_thickness?
 			stall.d[br_dim][!dir] = wall_pos + dir_sign*stall_depth;
-			
-			if (!interior->is_cube_close_to_doorway(stall, room, 0.0, 1)) { // skip if close to a door (for rooms with doors at both ends); inc_open=1
-				bool const is_open(rgen.rand_bool()); // 50% chance of stall door being open
-				objs.emplace_back(toilet, TYPE_TOILET, room_id, br_dim, !dir, 0, tot_light_amt);
-				objs.emplace_back(stall,  TYPE_STALL,  room_id, br_dim,  dir, (is_open ? RO_FLAG_OPEN : 0), tot_light_amt, SHAPE_CUBE, stall_color);
-				float const tp_length(0.18*theight), wall_pos(toilet.get_center_dim(br_dim));
-				cube_t stall_inner(stall);
-				stall_inner.expand_in_dim(!br_dim, -0.0125*stall.dz()); // subtract off stall wall thickness
-				add_tp_roll(stall_inner, room_id, tot_light_amt, !br_dim, dir, tp_length, (zval + 0.7*theight), wall_pos);
-			}
-			stall_pos += stall_step;
+			if (interior->is_cube_close_to_doorway(stall, room, 0.0, 1)) continue; // skip if close to a door (for rooms with doors at both ends); inc_open=1
+			if (!check_cube_within_part_sides(stall)) continue; // outside the building
+			bool const is_open(rgen.rand_bool()); // 50% chance of stall door being open
+			objs.emplace_back(toilet, TYPE_TOILET, room_id, br_dim, !dir, 0, tot_light_amt);
+			objs.emplace_back(stall,  TYPE_STALL,  room_id, br_dim,  dir, (is_open ? RO_FLAG_OPEN : 0), tot_light_amt, SHAPE_CUBE, stall_color);
+			float const tp_length(0.18*theight), wall_pos(toilet.get_center_dim(br_dim));
+			cube_t stall_inner(stall);
+			stall_inner.expand_in_dim(!br_dim, -0.0125*stall.dz()); // subtract off stall wall thickness
+			add_tp_roll(stall_inner, room_id, tot_light_amt, !br_dim, dir, tp_length, (zval + 0.7*theight), wall_pos);
 		} // for n
 		if (add_urinals && dir == (unsigned)skip_stalls_side) continue; // no urinals and sinks are each on one side
 		// add sinks
@@ -1237,12 +1235,14 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t &room, flo
 		float sink_pos(sink_start);
 		cube_t sinks_bcube;
 
-		for (unsigned n = 0; n < num_sinks; ++n) {
+		for (unsigned n = 0; n < num_sinks; ++n, sink_pos += sink_step) {
 			point center(sink_from_wall, sink_pos, zval);
 			if (br_dim) {swap(center.x, center.y);} // R90 about z
 			cube_t sink(center, center);
 			sink.expand_in_dim(br_dim, 0.5*slength);
 			sink.z2() += sheight;
+			if (interior->is_cube_close_to_doorway(sink, room, 0.0, 1)) continue; // skip if close to a door
+			if (!check_cube_within_part_sides(sink)) continue; // outside the building
 
 			if (use_sink_model) { // sink 3D model
 				sink.expand_in_dim(!br_dim, 0.5*swidth);
@@ -1253,7 +1253,6 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t &room, flo
 				objs.emplace_back(sink, TYPE_BRSINK, room_id, br_dim, !dir, 0, tot_light_amt);
 			}
 			sinks_bcube.assign_or_union_with_cube(sink);
-			sink_pos += sink_step;
 		} // for n
 		if (add_urinals) { // add urinals opposite the sinks, using same spacing as sinks
 			float const u_wall(place_area.d[br_dim][!dir]), u_from_wall(u_wall - dir_sign*(0.5*ulength + 0.01*wall_thickness));
@@ -1263,7 +1262,7 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t &room, flo
 			sep_wall.d[br_dim][!dir] = u_wall;
 			sep_wall.d[br_dim][ dir] = u_wall - dir_sign*0.25*floor_spacing;
 
-			for (unsigned n = 0; n < num_sinks; ++n) {
+			for (unsigned n = 0; n < num_sinks; ++n, u_pos += sink_step) {
 				set_wall_width(sep_wall, (u_pos - 0.5*sink_step), 0.2*wall_thickness, !br_dim);
 				objs.emplace_back(sep_wall, TYPE_STALL, room_id, br_dim, !dir, 0, tot_light_amt, SHAPE_SHORT, stall_color);
 				point center(u_from_wall, u_pos, (zval + 0.2*uheight));
@@ -1272,8 +1271,9 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t &room, flo
 				urinal.expand_in_dim( br_dim, 0.5*ulength);
 				urinal.expand_in_dim(!br_dim, 0.5*uwidth);
 				urinal.z2() += uheight;
+				if (interior->is_cube_close_to_doorway(urinal, room, 0.0, 1)) continue; // skip if close to a door
+				if (!check_cube_within_part_sides(urinal)) continue; // outside the building
 				objs.emplace_back(urinal, TYPE_URINAL, room_id, br_dim, dir, 0, tot_light_amt);
-				u_pos += sink_step;
 			} // for n
 			if (!two_rows) { // skip first wall if adjacent to a stall
 				set_wall_width(sep_wall, (u_pos - 0.5*sink_step), 0.2*wall_thickness, !br_dim);

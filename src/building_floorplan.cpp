@@ -298,6 +298,8 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 					interior->walls[d].push_back(wall); // add remainder
 				} // for d
 				// now add 2-4 rooms
+				unsigned br_floors_used(0); // bit mask for bathrooms
+
 				for (unsigned r = 0; r < 4; ++r) {
 					bool const xside(r & 1), yside(r >> 1);
 					if ((skip_dim == 0 && xside) || (skip_dim == 1 && yside)) continue; // part not split in this dim
@@ -306,7 +308,14 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 					if (skip_dim != 0) {room.d[0][xside] = center.x - (xside ? 1.0 : -1.0)*shrink_val;}
 					if (skip_dim != 1) {room.d[1][yside] = center.y - (yside ? 1.0 : -1.0)*shrink_val;}
 					add_room(room, part_id, 1, 0, is_office);
-				}
+					
+					// assign one floor of this room as a bathroom unless there are only a few floors; should guarantee each building has at least one bathroom
+					if (r <= num_floors) {
+						unsigned const floor_ix(rgen.rand() % min(num_floors, NUM_RTYPE_SLOTS-1)); // not too high a floor so that slot clamp occurs
+						if (!(br_floors_used & (1<<floor_ix))) {interior->rooms.back().assign_to(RTYPE_BATH, floor_ix);}
+						br_floors_used |= (1<<floor_ix); // at most one bathroom per floor
+					}
+				} // for r
 			}
 			else {
 				add_room(*p, part_id, 1, 0, is_office); // add entire part as a room; num_lights will be calculated later
