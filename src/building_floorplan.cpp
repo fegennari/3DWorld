@@ -302,8 +302,9 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 					bool const xside(r & 1), yside(r >> 1);
 					if ((skip_dim == 0 && xside) || (skip_dim == 1 && yside)) continue; // part not split in this dim
 					cube_t room(*p);
-					if (skip_dim != 0) {room.d[0][xside] = center.x - (xside ? 1.0 : -1.0)*wall_half_thick;} // wall not included in room bounds
-					if (skip_dim != 1) {room.d[1][yside] = center.y - (yside ? 1.0 : -1.0)*wall_half_thick;} // wall not included in room bounds
+					float const shrink_val(is_office ? 0.0 : wall_half_thick); // wall not included in room bounds unless this is an office
+					if (skip_dim != 0) {room.d[0][xside] = center.x - (xside ? 1.0 : -1.0)*shrink_val;}
+					if (skip_dim != 1) {room.d[1][yside] = center.y - (yside ? 1.0 : -1.0)*shrink_val;}
 					add_room(room, part_id, 1, 0, is_office);
 				}
 			}
