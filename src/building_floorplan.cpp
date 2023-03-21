@@ -1163,7 +1163,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 							if (has_bcube_int(elevator, interior->exclusion)) continue; // try again
 							if (is_cube_close_to_doorway(elevator, room))     continue; // try again
 							if (check_skylight_intersection(elevator))        continue; // check skylights; is this necessary?
-							if (!check_cube_within_part_sides(elevator))      continue; // outside building
+							if (!check_cube_within_part_sides(elevator))      continue; // outside building; do we need to check for clearance?
 							add_or_extend_elevator(elevator, 1);
 							elevator_cut = elevator;
 							placed       = 1; // successfully placed
@@ -1209,7 +1209,12 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 					bool const against_wall(stairs_against_wall[0] || stairs_against_wall[1]);
 					// skip if we can't push against a wall and the room is too narrow for space around the stairs to allow doors to open and people to walk
 					if (!against_wall && room.get_sz_dim(!stairs_dim) < (1.1*2.0*doorway_width + stairs_sz)) continue;
-					if (!check_cube_within_part_sides(cutout)) continue; // outside building
+
+					if (!is_cube()) { // check for stairs outside or too close to building walls
+						cube_t stairs_ext(cutout);
+						stairs_ext.expand_in_dim(stairs_dim, doorway_width);
+						if (!check_cube_within_part_sides(stairs_ext)) continue; // outside building
+					}
 					if (!is_house && against_wall) {sshape = SHAPE_WALLED_SIDES;} // add wall between room and office stairs if against a room wall
 					if (interior->landings.empty()) {interior->landings.reserve(num_floors-1);}
 					assert(cutout.is_strictly_normalized());
@@ -1742,7 +1747,7 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 			if (!p->contains_cube_xy(cand_test)) continue; // not enough space at elevator entrance
 			bool const allow_clip_walls = 1; // optional
 			if (!is_valid_stairs_elevator_placement(cand_test, doorway_width, !allow_clip_walls)) continue; // bad placement
-			if (!check_cube_within_part_sides(cand_test))      continue; // bad placement
+			if (!check_cube_within_part_sides(cand_test))      continue; // bad placement; do we need to check for clearance?
 			if (has_bcube_int(cand_test, interior->exclusion)) continue; // bad placement
 
 			if (allow_clip_walls) { // clip out walls around extended elevator
