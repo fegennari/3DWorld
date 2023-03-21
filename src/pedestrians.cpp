@@ -107,7 +107,7 @@ void person_base_t::wait_for(float seconds) {
 	target_pos    = all_zeros; // clear any previous target
 }
 float person_base_t::get_idle_anim_time() const { // in animation units
-	return (in_building ? waiting_start : get_wait_time_ticks())*speed; // will count up for city pedestrians and count down for building people
+	return (in_building ? idle_time : get_wait_time_ticks())*speed; // will count up for city pedestrians and count down for building people
 }
 cube_t person_base_t::get_bcube() const {
 	cube_t c;

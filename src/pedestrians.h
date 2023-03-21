@@ -24,7 +24,7 @@ struct person_base_t : public waiting_obj_t {
 	point target_pos;
 	vector3d dir, vel;
 	point pos;
-	float radius=0.0, speed=0.0, anim_time=0.0;
+	float radius=0.0, speed=0.0, anim_time=0.0, idle_time=0.0; // Note: idle_time is currently only used for building people
 	unsigned short model_id=0, ssn=0;
 	int model_rand_seed=0;
 	bool in_building=0, is_stopped=0, is_female=0, is_zombie=0;

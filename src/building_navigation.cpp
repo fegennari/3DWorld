@@ -1521,18 +1521,22 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 		max_eq(person.retreat_time, 0.0f);
 	}
 	if (wait_time > 0) { // waiting, possibly for an elevator
+		person.idle_time += fticks;
+
 		if (wait_time > fticks && !can_ai_follow_player(person)) { // waiting; don't wait if there's a player to follow
 			// check for other people colliding with this person and handle it
+			bool was_bumped(0);
+
 			for (auto p = interior->people.begin()+person_ix+1; p < interior->people.end(); ++p) {
 				if (fabs(person.pos.z - p->pos.z) > coll_dist) continue; // different floors
 				if (global_building_params.no_coll_enter_exit_elevator && person.ai_state == AI_WAIT_ELEVATOR && p->ai_state == AI_EXIT_ELEVATOR) continue;
 				float const rsum(coll_dist + COLL_RADIUS_SCALE*p->radius);
 				if (!dist_xy_less_than(person.pos, p->pos, rsum)) continue; // not intersecting
 				move_person_to_not_collide(person, *p, person.pos, rsum, coll_dist); // if we get here, we have to actively move out of the way
-				wait_time = 0.0; // stop waiting so that we can react
+				was_bumped = 1;
 			} // for p
-			wait_time -= fticks;
-			max_eq(wait_time, 0.0f);
+			if (was_bumped) {wait_time  = 0.0;} // stop waiting so that we can react
+			else            {wait_time -= fticks;}
 			person.anim_time = 0.0; // reset just in case (though should already be at 0.0)
 
 			if (person.ai_state != AI_WAIT_ELEVATOR) { // don't reset goal and return here if waiting at an elevator
@@ -1830,6 +1834,7 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 	if (ai_follow_player() && global_building_params.ai_player_vis_test >= 3) {enable_bl_update = 0;} // if AI tests that player is lit, don't turn on/off lights
 	if (enable_bl_update) {ai_room_lights_update(person);} // non-const part
 	if (player_in_this_building) {person.cur_room = get_room_containing_pt(person.pos);} // update cur_room after moving and lights update
+	person.idle_time = 0.0; // reset idle time if we actually move
 	return AI_MOVING;
 }
 
