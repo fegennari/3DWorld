@@ -1833,22 +1833,24 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 	bool enable_bl_update(display_mode & 0x20); // disabled by default, enable with key '6'
 	if (ai_follow_player() && global_building_params.ai_player_vis_test >= 3) {enable_bl_update = 0;} // if AI tests that player is lit, don't turn on/off lights
 	if (enable_bl_update) {ai_room_lights_update(person);} // non-const part
-	if (player_in_this_building) {person.cur_room = get_room_containing_pt(person.pos);} // update cur_room after moving and lights update
+	// update cur_room after moving and lights update; needed if player is in the room and for ai_room_lights_update() same room optimization
+	if (player_in_this_building || enable_bl_update) {person.cur_room = get_room_containing_pt(person.pos);}
 	person.idle_time = 0.0; // reset idle time if we actually move
 	return AI_MOVING;
 }
 
 void building_t::ai_room_lights_update(person_t const &person) {
 	int const room_ix(get_room_containing_pt(person.pos));
-	if (room_ix < 0) return; // room is not valid (between rooms, etc.)
-	set_room_light_state_to(get_room(room_ix), person.pos.z, 1); // make sure current room light is on
 	if (room_ix == person.cur_room) return; // same room as last time - done
+	if (room_ix >= 0) {set_room_light_state_to(get_room(room_ix), person.pos.z, 1);} // make sure current room light is on when entering
+	if (person.cur_room < 0) return;
+	float const floor_spacing(get_window_vspace());
 	bool other_person_in_room(0);
 
 	// check for other people in the room before turning the lights off on them
 	for (person_t const &p : interior->people) {
 		if (p.pos == person.pos) continue; // skip ourself
-		if (get_room_containing_pt(p.pos) == person.cur_room && fabs(person.pos.z - p.pos.z) < get_window_vspace()) {other_person_in_room = 1; break;}
+		if (fabs(person.pos.z - p.pos.z) < floor_spacing && get_room_containing_pt(p.pos) == person.cur_room) {other_person_in_room = 1; break;}
 	}
 	if (!other_person_in_room) {set_room_light_state_to(get_room(person.cur_room), person.pos.z, 0);} // make sure old room light is off
 }
