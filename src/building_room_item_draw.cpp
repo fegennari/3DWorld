@@ -1232,8 +1232,9 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, building_t c
 	static unsigned num_geom_this_frame(0); // used to limit per-frame geom gen time; doesn't apply to shadow pass, in case shadows are cached
 	if (frame_counter < 100 || frame_counter > last_frame) {num_geom_this_frame = 0; last_frame = frame_counter;} // unlimited for the first 100 frames
 	point const camera_bs(camera_pdu.pos - xlate);
+	float const floor_spacing(building.get_window_vspace());
 	// don't draw ceiling lights when player is above the building unless there's a light placed on a skylight
-	bool const draw_lights(camera_bs.z < building.bcube.z2() + (building.has_skylight_light ? 20.0*building.get_window_vspace() : 0.0));
+	bool const draw_lights(camera_bs.z < building.bcube.z2() + (building.has_skylight_light ? 20.0*floor_spacing : 0.0));
 	// only parking garages and attics have detail objects that cast shadows
 	bool const draw_detail_objs(inc_small == 2 && (!shadow_only || building.has_parking_garage || building.has_attic()));
 	brg_batch_draw_t *const bbd_in(bbd); // capture bbd for instance drawing before setting to null if player_in_building
@@ -1337,9 +1338,14 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, building_t c
 		room_object_t &obj(get_room_object_by_index(i->obj_id));
 		if (!player_in_building && !shadow_only && obj.is_interior()) continue; // don't draw objects in interior rooms if the player is outside the building (useful for office bathrooms)
 		if (check_clip_cube && !smap_light_clip_cube.intersects(obj + xlate)) continue; // shadow map clip cube test: fast and high rejection ratio, do this first
+
+		if (shadow_only) {
+			if (obj.z1() > camera_bs.z) continue; // above the light
+			if (obj.z2() < camera_bs.z - 2.0*floor_spacing) continue; // more than two floors below the light
+		}
 		point obj_center(obj.get_cube_center());
 		if (is_rotated) {building.do_xy_rotate(building_center, obj_center);}
-		if (!shadow_only && !dist_less_than(camera_bs, obj_center, 32.0*(obj.dx() + obj.dy() + obj.dz()))) continue; // too far away (obj.max_len()?)
+		if (!shadow_only && !dist_less_than(camera_bs, obj_center, 32.0*(obj.dx() + obj.dy() + obj.dz())))   continue; // too far away (obj.max_len()?)
 		if (!(is_rotated ? building.is_rot_cube_visible(obj, xlate) : camera_pdu.cube_visible(obj + xlate))) continue; // VFC
 		if (check_occlusion && building.check_obj_occluded(obj, camera_bs, oc, reflection_pass)) continue;
 		apply_room_obj_rotate(obj, *i); // Note: may modify obj by clearing flags and inst by updating dir

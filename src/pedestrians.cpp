@@ -1560,6 +1560,10 @@ void ped_manager_t::draw_people_in_building(vector<person_t> const &people, ped_
 	for (person_t const &p : people) {
 		if (skip_bai_draw(p)) continue;
 		
+		if (pdv.shadow_only) {
+			if (p.pos.z > pdu.pos.z) continue; // above the light
+			if (p.pos.z < pdu.pos.z - 2.0*pdv.building.get_window_vspace()) continue; // more than two floors below the light
+		}
 		if ((display_mode & 0x08) && !city_params.ped_model_files.empty()) { // occlusion culling, if using models
 			if (pdv.building.check_obj_occluded(p.get_bcube(), pdu.pos, pdv.oc, pdv.reflection_pass)) continue;
 		}
