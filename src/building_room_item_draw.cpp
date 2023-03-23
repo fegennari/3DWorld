@@ -1607,6 +1607,7 @@ bool building_t::check_obj_occluded(cube_t const &c, point const &viewer_in, occ
 	}
 	else if (camera_in_building) { // player in some other building
 		if (player_in_basement) return 1; // if player is in the basement of a different building, they probably can't see an object in this building
+		if (player_in_windowless_building()) return 1; // player inside another windowless office building, objects in this building not visible
 		if (is_rotated()) return 0; // not implemented yet - need to rotate viewer and pts into coordinate space of player_building
 
 		if (player_building != nullptr && player_building->interior) { // check walls of the building the player is in

@@ -1260,6 +1260,7 @@ struct building_t : public building_geom_t {
 	bool point_in_attic(point const &pos, vector3d *const cnorm=nullptr) const;
 	bool cube_in_attic(cube_t const &c) const;
 	bool check_point_xy_in_part(point const &pos) const;
+	bool player_can_see_outside() const;
 	bool ray_cast_exterior_walls(point const &p1, point const &p2, vector3d &cnorm, float &t) const;
 	bool ray_cast_interior(point const &pos, vector3d const &dir, cube_t const &valid_area, cube_bvh_t const &bvh, bool in_attic, bool in_ext_basement,
 		point &cpos, vector3d &cnorm, colorRGBA &ccolor, rand_gen_t *rgen=nullptr) const;
@@ -1805,6 +1806,7 @@ bool get_building_door_pos_closest_to(unsigned building_id, point const &target_
 bool register_achievement(std::string const &str);
 bool enable_building_indir_lighting_no_cib();
 bool enable_building_indir_lighting();
+bool player_in_windowless_building();
 // functions in building_room_obj_expand.cc
 point gen_xy_pos_in_area(cube_t const &S, vector3d const &sz, rand_gen_t &rgen, float zval=0.0);
 point gen_xy_pos_in_area(cube_t const &S, float radius, rand_gen_t &rgen, float zval=0.0);

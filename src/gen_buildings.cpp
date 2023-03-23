@@ -21,7 +21,7 @@ bool const DRAW_EXT_REFLECTIONS     = 1; // draw building exteriors in mirror re
 float const WIND_LIGHT_ON_RAND      = 0.08;
 float const BASEMENT_ENTRANCE_SCALE = 0.33;
 
-bool camera_in_building(0), interior_shadow_maps(0), player_is_hiding(0), player_in_unlit_room(0), player_in_attic(0);
+bool camera_in_building(0), interior_shadow_maps(0), player_is_hiding(0), player_in_unlit_room(0), player_in_attic(0), building_has_open_ext_door(0);
 int player_in_basement(0); // 0=no, 1=below ground level, 2=in basement and not on stairs, 3=in extended basement
 int player_in_closet(0); // uses flags RO_FLAG_IN_CLOSET (player in closet), RO_FLAG_LIT (closet light is on), RO_FLAG_OPEN (closet door is open)
 building_params_t global_building_params;
@@ -2976,6 +2976,7 @@ public:
 				camera_in_building = this_frame_camera_in_building;
 				player_in_basement = this_frame_player_in_basement;
 				player_in_attic    = this_frame_player_in_attic;
+				building_has_open_ext_door = !ext_door_draw.empty();
 			}
 			reset_interior_lighting_and_end_shader(s);
 			reflection_shader.clear();
@@ -3102,7 +3103,7 @@ public:
 
 		// everything after this point is part of the building exteriors and uses city lights rather than building room lights;
 		// when the player is in the extended basement we still need to draw the exterior wall and door
-		if ((player_in_basement >= 2) || player_in_attic || (reflection_pass && (!DRAW_EXT_REFLECTIONS || reflection_pass != 3))) {
+		if ((player_in_basement >= 2) || player_in_attic || (reflection_pass && (!DRAW_EXT_REFLECTIONS || reflection_pass != 3)) || player_in_windowless_building()) {
 			// early exit for player fully in basement or attic, or house reflections, if enabled
 			fgPopMatrix();
 			enable_dlight_bcubes = 0;

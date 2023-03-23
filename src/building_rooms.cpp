@@ -556,7 +556,7 @@ bool building_t::add_bedroom_objs(rand_gen_t rgen, room_t &room, vect_cube_t con
 	unsigned closet_obj_id(0);
 	bool chk_windows[2][2] = {0}; // precompute which walls are exterior and can have windows, {dim}x{dir}
 
-	if (!is_basement && has_windows()) { // are bedrooms ever plaed in the basement?
+	if (!is_basement && has_windows()) { // are bedrooms ever placed in the basement?
 		for (unsigned d = 0; d < 4; ++d) {chk_windows[d>>1][d&1] = (classify_room_wall(room, zval, (d>>1), (d&1), 0) == ROOM_WALL_EXT);}
 	}
 	for (unsigned n = 0; n < 4 && !placed_closet; ++n) { // try 4 room corners

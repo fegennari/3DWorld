@@ -87,6 +87,7 @@ bool no_grass_under_buildings();
 bool check_buildings_no_grass(point const &pos);
 colorRGBA get_avg_color_for_landscape_tex(unsigned id); // defined later in this file
 void building_gameplay_action_key(int mode, bool mouse_wheel);
+bool player_in_windowless_building();
 
 
 float get_inf_terrain_fog_dist() {return FOG_DIST_TILES*get_scaled_tile_radius();}
@@ -2617,7 +2618,8 @@ tile_draw_t::occluder_cubes_t::occluder_cubes_t(tile_t const *const tile_) : til
 
 void tile_draw_t::draw(int reflection_pass) { // reflection_pass: 0=none, 1=water plane Z, 2=building mirror
 
-	if (player_in_basement >= 3) return; // no need to draw tiles if player in extended basement
+	if (player_in_basement >= 3)         return; // no need to draw tiles if player in extended basement
+	if (player_in_windowless_building()) return; // player can't see the terrain
 	//timer_t timer("TT Draw");
 	unsigned num_trees(0), num_smaps(0);
 	unsigned long long mem(0), tree_mem(0), smap_mem(0);

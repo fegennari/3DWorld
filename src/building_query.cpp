@@ -6,7 +6,7 @@
 #include "buildings.h"
 
 
-extern bool draw_building_interiors, camera_in_building, player_near_toilet, player_in_unlit_room, player_in_attic, ctrl_key_pressed;
+extern bool draw_building_interiors, camera_in_building, player_near_toilet, player_in_unlit_room, player_in_attic, building_has_open_ext_door, ctrl_key_pressed;
 extern float CAMERA_RADIUS, C_STEP_HEIGHT, NEAR_CLIP;
 extern int player_in_closet, camera_surf_collide, frame_counter, player_in_elevator;
 extern double camera_zh;
@@ -22,6 +22,14 @@ void register_in_closed_bathroom_stall();
 pair<cube_t, colorRGBA> car_bcube_color_from_parking_space(room_object_t const &o);
 void force_player_height(double height);
 
+
+// assumes player is in this building; handles windows and exterior doors but not attics and basements
+bool building_t::player_can_see_outside() const {
+	if (player_building->has_windows()) return 1; // maybe can see out window
+	if (building_has_open_ext_door && !doors.empty()) return 1; // maybe can see out open door
+	return 0;
+}
+bool player_in_windowless_building() {return (player_building != nullptr && !player_building->player_can_see_outside());}
 
 bool building_t::check_bcube_overlap_xy(building_t const &b, float expand_rel, float expand_abs) const {
 	if (expand_rel == 0.0 && expand_abs == 0.0 && !bcube.intersects(b.bcube)) return 0;
