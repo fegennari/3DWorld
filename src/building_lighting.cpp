@@ -1171,7 +1171,7 @@ bool check_for_shadow_caster(vect_cube_with_ix_t const &cubes, cube_t const &lig
 void check_for_shadow_caster_people(vector<person_t> const &people, vect_cube_with_ix_t &ped_bcubes, vect_cube_with_ix_t const &moving_objs,
 	cube_t const &light_bcube, point const &lpos, float dmax, bool has_stairs, vector3d const &xlate, bool check_people, unsigned &shadow_caster_hash)
 {
-	if (check_people) { // update shadow_caster_hash for moving people, but not for lamps, because their light points toward the floor
+	if (check_people && animate2) { // update shadow_caster_hash for moving people, but not for lamps, because their light points toward the floor
 		if (ped_bcubes.empty()) { // get all cubes on first light
 			for (person_t const &p : people) {
 				// if this person is waiting and their location isn't changing,
