@@ -504,7 +504,8 @@ bool building_t::interact_with_object(unsigned obj_ix, point const &int_pos, poi
 	cube_t dishwasher;
 
 	if (obj.type == TYPE_TOILET || obj.type == TYPE_URINAL) { // toilet/urinal can be flushed, but otherwise is not modified
-		gen_sound_thread_safe(SOUND_FLUSH, local_center);
+		bool const is_urinal(obj.type == TYPE_URINAL); // urinal is quieter and higher pitch
+		gen_sound_thread_safe(SOUND_FLUSH, local_center, (is_urinal ? 0.5 : 1.0), (is_urinal ? 1.25 : 1.0));
 		sound_scale = 0.5;
 	}
 	else if (obj.type == TYPE_KSINK && get_dishwasher_for_ksink(obj, dishwasher) && dishwasher.line_intersects(int_pos, query_ray_end)) { // dishwasher
