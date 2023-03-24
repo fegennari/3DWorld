@@ -679,10 +679,10 @@ bool building_t::check_pos_in_unlit_room(point const &pos) const {
 }
 bool building_t::check_pos_in_unlit_room_recur(point const &pos, set<unsigned> &rooms_visited, int known_room_id) const {
 	int const room_id((known_room_id >= 0) ? known_room_id : get_room_containing_pt(pos));
-	if (room_id < 0)    return 0; // not in a room
+	if (room_id < 0) return 0; // not in a room
 	if (rooms_visited.find(room_id) != rooms_visited.end()) return 1; // already visited, return true
 	room_t const &room(get_room(room_id));
-	if (!room.interior) return 0; // room has windows and may be lit from outside
+	if (!room.interior && has_windows()) return 0; // room has windows and may be lit from outside; what about a room with an open exterior door?
 	float const floor_spacing(get_window_vspace());
 	unsigned const floor_ix(max(0.0f, (pos.z - room.z1()))/floor_spacing);
 	if (room.has_skylight && pos.z > (room.z2() - floor_spacing)) return 0; // top floor of room with a skylight
