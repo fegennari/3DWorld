@@ -69,10 +69,24 @@ void building_t::move_door_to_other_side_of_wall(tquad_with_ix_t &door, float di
 		door_shift = bcube.dz(); // start with a large value
 
 		for (auto p = parts.begin(); p != get_real_parts_end_inc_sec(); ++p) { // find the part that this door was added to (inc garages and sheds)
-			if (is_basement(p)) continue; // skip the basement
-			float const dist(door.pts[0][dim] - p->d[dim][dir]); // signed
+			if (p->z1() != ground_floor_z1) continue; // ground floor only
+			if (is_basement(p))             continue; // skip the basement; probably not needed with the above check
+			float edge_pos(p->d[dim][dir]); // start with bcube edge
+
+			if (!is_cube()) { // find polygon edge
+				float const toler(0.1*get_wall_thickness()); // add a bit of tolerance to account for FP error
+				vect_point const &points(get_part_ext_verts(p - parts.begin()));
+
+				for (auto i = points.begin(); i != points.end(); ++i) {
+					point const &p1(*i), &p2((i == points.begin()) ? points.back() : *(i-1));
+					if (fabs(p1[dim] - p2[dim]) > toler) continue; // edge not in this dim
+					edge_pos = 0.5*(p1[dim] + p2[dim]);
+					break; // should be only one
+				} // for i
+			}
+			float const dist(door.pts[0][dim] - edge_pos); // signed
 			if (fabs(dist) < fabs(door_shift)) {door_shift = dist;}
-		}
+		} // for p
 		assert(fabs(door_shift) < bcube.dz());
 	}
 	door_shift *= -(1.0 + dist_mult); // reflect on other side

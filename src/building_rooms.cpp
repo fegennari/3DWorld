@@ -3312,13 +3312,10 @@ void building_t::add_wall_and_door_trim() { // and window trim
 		}
 	} // for d
 	for (auto d = doors.begin(); d != doors.end(); ++d) { // exterior doors
-		if (d->type == tquad_with_ix_t::TYPE_RDOOR) { // roof access door
-			continue; // this requires a completely different approach to trim and has not yet been implemented
-		}
+		if (d->type == tquad_with_ix_t::TYPE_RDOOR) continue; // roof access door - requires completely different approach to trim and has not been implemented
 		bool const garage_door(d->type == tquad_with_ix_t::TYPE_GDOOR);
 		cube_t door(d->get_bcube());
 		bool const dim(door.dy() < door.dx());
-		//door.expand_in_dim(!dim, -0.1*door_trim_width); // shrink slightly so that the edge of the wall is contained in the trim
 		cube_t trim(door);
 		trim.expand_in_dim(dim, door_trim_exp);
 		bool dir(0);
@@ -3330,6 +3327,18 @@ void building_t::add_wall_and_door_trim() { // and window trim
 			if (!i->intersects_no_adj(trim)) continue;
 			trim.intersect_with_cube_xy(*i); // clip to containing part
 			dir = (i->get_center_dim(dim) < trim.get_center_dim(dim));
+
+			if (!is_cube()) { // handle polygon sides
+				vect_point const &points(get_part_ext_verts(i - parts.begin()));
+
+				for (auto v = points.begin(); v != points.end(); ++v) {
+					point const &p1(*v), &p2((v == points.begin()) ? points.back() : *(v-1));
+					cube_t const edge_bc(p1, p2);
+					if (!edge_bc.intersects_xy(trim)) continue; // wrong edge
+					trim.d[dim][dir] = 0.5*(p1[dim] + p2[dim]); // clip to edge pos
+					break; // should be only one
+				} // for i
+			}
 			trim.d[dim][dir] -= (dir ? -1.0 : 1.0)*0.025*window_vspacing; // move to to same offset for door
 			ext_flags |= (dir ? RO_FLAG_ADJ_HI : RO_FLAG_ADJ_LO);
 			break;
