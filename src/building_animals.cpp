@@ -1396,8 +1396,8 @@ void building_t::update_insect(insect_t &insect, point const &camera_bs, float t
 	insect.accel  = CLIP_TO_pm1(insect.accel);
 	insect.speed  = (follow_mode ? 1.6 : 1.0)*min(max_speed, max(0.5f*max_speed, (insect.speed + (0.05f*timestep)*insect.accel))); // faster when following
 	
-	// play buzz sound if near player
-	if (dist_to_player < 1.1*get_scaled_player_radius()) {
+	// play buzz sound if near player and also attracted to the player
+	if (player_attracts_flies && dist_to_player < 1.1*get_scaled_player_radius()) {
 		gen_sound_thread_safe(SOUND_FLY_BUZZ, local_to_camera_space(pos), 1.0, 1.0, 1.0, 1); // skip_if_already_playing=1
 	}
 	// make sure we're not in front of the camera near clip plane
