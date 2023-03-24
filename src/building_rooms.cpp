@@ -3269,6 +3269,16 @@ void building_t::add_wall_and_door_trim_if_needed() {
 	interior->room_geom->trim_objs.shrink_to_fit();
 }
 
+void cut_trim_around_doors(vector<tquad_with_ix_t> const &doors, vect_cube_t &trim_cubes, float door_expand, bool dim) {
+	for (auto d = doors.begin(); d != doors.end(); ++d) {
+		cube_t door(d->get_bcube());
+		bool const door_dim(door.dy() < door.dx());
+		if (door_dim != bool(dim)) continue;
+		door.expand_in_dim(door_dim, door_expand); // expand to nonzero area; use a larger expand to account for distance door is offset away from ext wall
+		subtract_cube_from_cubes(door, trim_cubes); // subtract this door from current trim cubes by clipping in XY
+	}
+}
+
 void building_t::add_wall_and_door_trim() { // and window trim
 	//highres_timer_t timer("Add Wall And Door Trim");
 	assert(has_room_geom());
@@ -3415,7 +3425,8 @@ void building_t::add_wall_and_door_trim() { // and window trim
 		bool const is_sec_bldg(i == get_real_parts_end());
 		unsigned const num_floors(is_sec_bldg ? 1 : calc_num_floors(*i, window_vspacing, floor_thickness));
 
-		if (!is_cube()) { // add trim around the interior of the exterior walls for each floor
+		if (!is_cube()) { // add floor trim around the interior of the exterior walls for each floor
+			float const toler(0.1*wall_thickness); // add a bit of tolerance to account for FP error
 			vect_point points(get_part_ext_verts(i - parts.begin())); // deep copy so that we can modify it
 			expand_convex_polygon_xy(points, i->get_cube_center(), -trim_thickness); // shrink by trim thickness
 			float z(i->z1() + fc_thick);
@@ -3424,13 +3435,29 @@ void building_t::add_wall_and_door_trim() { // and window trim
 				for (auto p = points.begin(); p != points.end(); ++p) {
 					point const &p1(*p), &p2((p+1 == points.end()) ? points.front() : *(p+1));
 					cube_t trim(p1, p2); // bcube of the edge
+					set_cube_zvals(trim, z, z+trim_height); // starts at floor height
+					bool added(0);
+
+					for (unsigned d = 0; d < 2; ++d) { // check for horizontal or vertical dim; maybe need to clip to door
+						if (fabs(p1[d] - p2[d]) > toler) continue; // not aligned in this axis
+						float const side_pos(0.5*(p1[d] + p2[d]));
+						bool const dir(side_pos > i->get_center_dim(d));
+						trim.d[d][ dir] = side_pos;
+						trim.d[d][!dir] = side_pos + (dir ? -1.0 : 1.0)*trim_thickness;
+						trim_cubes.clear();
+						trim_cubes.push_back(trim); // start with entire length
+						if (f == 0) {cut_trim_around_doors(doors, trim_cubes, (expand_val + wall_thickness), d);} // first floor, cut out areas for ext doors
+						for (cube_t const &c : trim_cubes) {objs.emplace_back(c, TYPE_WALL_TRIM, 0, d, dir, flags, 1.0, SHAPE_CUBE, trim_color);}
+						added = 1;
+						break;
+					}
+					if (added) continue;
 
 					for (unsigned d = 0; d < 2; ++d) {
 						if (trim.get_sz_dim(d) < trim_thickness) {trim.expand_in_dim(d, 0.1*trim_thickness);} // expand slightly to make nonzero area
 					}
-					set_cube_zvals(trim, z, z+trim_height); // starts at floor height
 					bool const dim(p1.x < p2.x), dir(p1.y < p2.y); // encode edge X/Y signs in dim and dir
-					objs.emplace_back(trim, TYPE_WALL_TRIM, 0, dim, dir, flags, 1.0, SHAPE_CYLIN, trim_color); // floor trim - cylindrical section
+					objs.emplace_back(trim, TYPE_WALL_TRIM, 0, dim, dir, flags, 1.0, SHAPE_CYLIN, trim_color); // floor trim - cylin section
 				} // for p
 			} // for f
 			continue;
@@ -3463,20 +3490,13 @@ void building_t::add_wall_and_door_trim() { // and window trim
 							objs.emplace_back(trim, TYPE_WALL_TRIM, 0, dim, !dir, flags, 1.0, SHAPE_ANGLED, trim_color); // ceiling trim
 						}
 					}
-					if (f == 0) { // first floor, cut out areas for exterior doors
-						for (auto d = doors.begin(); d != doors.end(); ++d) {
-							cube_t door(d->get_bcube());
-							bool const door_dim(door.dy() < door.dx());
-							if (door_dim != bool(dim)) continue;
-							door.expand_in_dim(door_dim, (expand_val + wall_thickness)); // expand to nonzero area; use a larger expand to account for distance door is offset away from ext wall
-							subtract_cube_from_cubes(door, trim_cubes); // subtract this door from current trim cubes by clipping in XY
-						}
-					}
-					for (auto c = trim_cubes.begin(); c != trim_cubes.end(); ++c) {
-						objs.emplace_back(*c, TYPE_WALL_TRIM, 0, dim, 0, ext_flags, 1.0, SHAPE_CUBE, trim_color); // floor trim
+					if (f == 0) {cut_trim_around_doors(doors, trim_cubes, (expand_val + wall_thickness), dim);} // first floor, cut out areas for ext doors
+
+					for (cube_t &c : trim_cubes) {
+						objs.emplace_back(c, TYPE_WALL_TRIM, 0, dim, 0, ext_flags, 1.0, SHAPE_CUBE, trim_color); // floor trim
 						if (!has_ceil_trim || is_house) continue;
-						set_cube_zvals(*c, ceil_trim_z1, ceil_trim_z2); // okay to edit in-place here
-						objs.emplace_back(*c, TYPE_WALL_TRIM, 0, dim, !dir, flags, 1.0, SHAPE_ANGLED, trim_color); // ceiling trim
+						set_cube_zvals(c, ceil_trim_z1, ceil_trim_z2); // okay to edit in-place here
+						objs.emplace_back(c, TYPE_WALL_TRIM, 0, dim, !dir, flags, 1.0, SHAPE_ANGLED, trim_color); // ceiling trim
 					}
 				} // for f
 			} // for dir
