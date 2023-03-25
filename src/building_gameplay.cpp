@@ -1047,6 +1047,7 @@ int building_room_geom_t::find_nearest_pickup_object(building_t const &building,
 			if (i->type == TYPE_BED     && i->taken_level > 2)            continue; // can only take pillow, sheets, and mattress - not the frame
 			if (i->type == TYPE_SHELVES && i->obj_expanded())             continue; // shelves are already expanded, can no longer select this object
 			if (i->type == TYPE_MIRROR  && i->is_open())                  continue; // can't take mirror/medicine cabinet until it's closed
+			if (i->type == TYPE_LIGHT   && !i->is_visible())              continue; // can't take light attached to a ceiling fan as a separate object
 			if (obj_has_open_drawers(*i))                                 continue; // can't take if any drawers are open
 			if (object_has_something_on_it(*i,       obj_vect, objs_end)) continue; // can't remove a table, etc. that has something on it
 			if (object_has_something_on_it(*i, other_obj_vect, other_objs_end)) continue; // check the other one as well
@@ -1226,6 +1227,14 @@ void building_room_geom_t::remove_object(unsigned obj_id, building_t &building) 
 	else if (obj.type == TYPE_TOY) { // take one ring at a time then the base (5 parts)
 		if (obj.taken_level >= 4) {obj.remove();} // take the toy base
 		else {++obj.taken_level;} // take a ring
+	}
+	else if (obj.type == TYPE_CEIL_FAN && obj_id > 0) { // Note: currently can't be picked up
+		// find and remove the light assigned to this ceiling fan; should be a few objects before this one
+		for (unsigned light_id = obj_id-1; light_id > 0; --light_id) {
+			room_object_t &light_obj(get_room_object_by_index(light_id));
+			if (light_obj.type == TYPE_LIGHT && light_obj.intersects(obj)) {light_obj.remove(); break;}
+		}
+		obj.remove();
 	}
 	else { // replace it with an invisible blocker that won't collide with anything
 		obj.remove();
