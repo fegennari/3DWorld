@@ -17,6 +17,7 @@ extern int display_mode, game_mode, animate2, frame_counter, camera_surf_collide
 extern float FAR_CLIP;
 extern double camera_zh;
 extern point pre_smap_player_pos;
+extern cube_t smap_light_clip_cube;
 extern city_params_t city_params;
 extern building_params_t global_building_params;
 extern object_model_loader_t building_obj_model_loader; // for umbrella model
@@ -1563,6 +1564,7 @@ void ped_manager_t::draw_people_in_building(vector<person_t> const &people, ped_
 		if (pdv.shadow_only) {
 			if (p.pos.z > pdu.pos.z) continue; // above the light
 			if (p.pos.z < pdu.pos.z - 2.0*pdv.building.get_window_vspace()) continue; // more than two floors below the light
+			if (!smap_light_clip_cube.is_all_zeros() && !smap_light_clip_cube.intersects(p.get_bcube() + pdv.xlate)) continue; // shadow map clip cube test
 		}
 		if ((display_mode & 0x08) && !city_params.ped_model_files.empty()) { // occlusion culling, if using models
 			if (pdv.building.check_obj_occluded(p.get_bcube(), pdu.pos, pdv.oc, pdv.reflection_pass)) continue;
