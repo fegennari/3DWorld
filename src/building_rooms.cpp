@@ -3514,12 +3514,14 @@ void building_t::add_window_trim_and_coverings(bool add_trim, bool add_coverings
 	float const window_h_border(border_mult*get_window_h_border()), window_v_border(border_mult*get_window_v_border()); // (0, 1) range
 	// Note: depth must be small to avoid object intersections; this applies to the windowsill as well
 	float const window_trim_width(0.75*get_wall_thickness()), window_trim_depth(1.0*trim_thickness), windowsill_depth(1.0*trim_thickness);
-	float const window_offset(0.01*get_window_vspace()); // must match building_draw_t::add_section()
+	float const floor_spacing(get_window_vspace()), window_offset(0.01*floor_spacing); // must match building_draw_t::add_section()
 	colorRGBA const &trim_color(is_house ? WHITE : DK_GRAY);
 	vect_room_object_t &objs(interior->room_geom->trim_objs);
 	static vect_vnctcc_t wall_quad_verts;
 	wall_quad_verts.clear();
 	get_all_drawn_window_verts_as_quads(wall_quad_verts);
+	rand_gen_t rgen;
+	if (is_house) {rgen.set_state(wall_quad_verts.size(), interior->rooms.size());}
 
 	for (unsigned i = 0; i < wall_quad_verts.size(); i += 4) { // iterate over each quad
 		cube_t c;
@@ -3534,11 +3536,12 @@ void building_t::add_window_trim_and_coverings(bool add_trim, bool add_coverings
 		window.translate_dim(dim, dscale*window_offset);
 		window.d[dim][!dir] += dscale*window_trim_depth; // add thickness on interior of building
 		window.d[dim][ dir] += dscale*ext_wall_toler; // slight bias away from the exterior wall
-		unsigned ext_flags(RO_FLAG_NOCOLL | (dir ? RO_FLAG_ADJ_HI : RO_FLAG_ADJ_LO));
+		unsigned const ext_flags(RO_FLAG_NOCOLL | (dir ? RO_FLAG_ADJ_HI : RO_FLAG_ADJ_LO));
 
 		for (float z = tz1; z < tz2; z += 1.0) { // each floor
 			float const bot_edge(c.z1() + (z - tz1)*window_height);
 			set_cube_zvals(window, bot_edge+border_z, bot_edge+window_height-border_z);
+			bool const add_separators(is_house && rgen.rand_bool()); // 50% of walls/floors for houses; not for glass block windows?
 
 			for (float xy = tx1; xy < tx2; xy += 1.0) { // windows along each wall
 				float const low_edge(c.d[!dim][0] + (xy - tx1)*window_width);
@@ -3563,6 +3566,15 @@ void building_t::add_window_trim_and_coverings(bool add_trim, bool add_coverings
 						side.d[!dim][ s] = window.d[!dim][s] - (s ? -1.0 : 1.0)*side_trim_width;
 						side.d[!dim][!s] = window.d[!dim][s];
 						objs.emplace_back(side, TYPE_WALL_TRIM, 0, dim, dir, ext_flags, 1.0, SHAPE_TALL, trim_color);
+					}
+					if (add_separators) { // add cross shaped window pane separator
+						float const sep_hwidth(0.2*side_trim_width);
+						cube_t sep(window); // horizontal separator
+						set_wall_width(sep, window.zc(), sep_hwidth, 2);
+						objs.emplace_back(sep, TYPE_WALL_TRIM, 0, dim, dir, RO_FLAG_NOCOLL, 1.0, SHAPE_SHORT, trim_color); // skip !dim ends
+						sep = window; // vertical separator
+						set_wall_width(sep, window.get_center_dim(!dim), sep_hwidth, !dim);
+						objs.emplace_back(sep, TYPE_WALL_TRIM, 0, dim, dir, (RO_FLAG_NOCOLL | RO_FLAG_ADJ_BOT | RO_FLAG_ADJ_TOP), 1.0, SHAPE_TALL, trim_color);
 					}
 				}
 				if (add_coverings) {add_window_coverings(window, dim, dir);}
