@@ -737,7 +737,7 @@ bool building_t::add_bedroom_objs(rand_gen_t rgen, room_t &room, vect_cube_t con
 		}
 	}
 	if (building_obj_model_loader.is_model_valid(OBJ_MODEL_CEIL_FAN) && rgen.rand_float() < 0.25) { // maybe add ceiling fan
-		// find the ceiling light, which should be the last object placed, and center the fan on it
+		// find the ceiling light, which should be the last object placed before calling this function, and center the fan on it
 		if (objs_start > 0 && objs[objs_start-1].type == TYPE_LIGHT) {
 			vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_CEIL_FAN)); // D, W, H
 			float const diameter(min(0.4*min(room.dx(), room.dy()), 0.5*window_vspacing)), height(diameter*sz.z/sz.y); // assumes width = depth = diameter
@@ -749,7 +749,10 @@ bool building_t::add_bedroom_objs(rand_gen_t rgen, room_t &room, vect_cube_t con
 			cube_t fan(top_center, top_center);
 			fan.expand_by_xy(0.5*diameter);
 			fan.z1() -= height;
-			objs.emplace_back(fan, TYPE_CEIL_FAN, room_id, 0, 0, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CYLIN, WHITE);
+			unsigned flags(RO_FLAG_NOCOLL);
+			if (rgen.rand_bool()) {flags |= RO_FLAG_ROTATING;} // make fan rotate
+			objs.emplace_back(fan, TYPE_CEIL_FAN, room_id, 0, 0, flags, tot_light_amt, SHAPE_CYLIN, WHITE);
+			objs.back().obj_id = objs_start-1; // store light index in this object
 		}
 	}
 	return 1; // success

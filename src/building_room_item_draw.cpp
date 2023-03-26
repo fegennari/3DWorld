@@ -971,7 +971,7 @@ void rotate_dir_about_z(vector3d &dir, float angle) { // Note: assumes dir is no
 	float const new_angle(atan2(dir.y, dir.x) + angle);
 	dir.assign(cosf(new_angle), sinf(new_angle), 0.0);
 }
-void apply_room_obj_rotate(room_object_t &obj, obj_model_inst_t &inst) {
+void apply_room_obj_rotate(room_object_t &obj, obj_model_inst_t &inst, vect_room_object_t const &objs) {
 	if (!(obj.flags & RO_FLAG_ROTATING)) return;
 
 	if (obj.type == TYPE_OFF_CHAIR) {
@@ -982,6 +982,10 @@ void apply_room_obj_rotate(room_object_t &obj, obj_model_inst_t &inst) {
 		inst.dir = obj.get_dir(); // reset before applying rotate
 		float const angle(((obj.flags & RO_FLAG_ADJ_LO) ? -1.0 : 1.0)*0.08*TWO_PI);
 		rotate_dir_about_z(inst.dir, -angle); // limited rotation angle
+	}
+	else if (obj.type == TYPE_CEIL_FAN && obj.is_powered()) { // rotate the entire model rather than just the fan blades
+		assert(obj.obj_id < objs.size());
+		if (objs[obj.obj_id].type == TYPE_LIGHT && objs[obj.obj_id].is_light_on()) {rotate_dir_about_z(inst.dir, 0.2*fticks);} // fan is on if light is on
 	}
 	else {
 		assert(0); // unsupported object type
@@ -1348,7 +1352,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, building_t c
 		if (!shadow_only && !dist_less_than(camera_bs, obj_center, 32.0*(obj.dx() + obj.dy() + obj.dz())))   continue; // too far away (obj.max_len()?)
 		if (!(is_rotated ? building.is_rot_cube_visible(obj, xlate) : camera_pdu.cube_visible(obj + xlate))) continue; // VFC
 		if (check_occlusion && building.check_obj_occluded(obj, camera_bs, oc, reflection_pass)) continue;
-		apply_room_obj_rotate(obj, *i); // Note: may modify obj by clearing flags and inst by updating dir
+		apply_room_obj_rotate(obj, *i, objs); // Note: may modify obj by clearing flags and inst by updating dir
 		
 		if (bbd_in && !shadow_only && !is_rotated && (obj.type == TYPE_WALL_LAMP || obj.type == TYPE_FESCAPE)) { // not for rotated buildings
 			// wall lamp has transparent glass and must be drawn last; fire escape and wall lamp use outdoor lighting

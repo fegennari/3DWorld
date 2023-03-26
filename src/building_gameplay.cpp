@@ -1230,10 +1230,9 @@ void building_room_geom_t::remove_object(unsigned obj_id, building_t &building) 
 	}
 	else if (obj.type == TYPE_CEIL_FAN && obj_id > 0) { // Note: currently can't be picked up
 		// find and remove the light assigned to this ceiling fan; should be a few objects before this one
-		for (unsigned light_id = obj_id-1; light_id > 0; --light_id) {
-			room_object_t &light_obj(get_room_object_by_index(light_id));
-			if (light_obj.type == TYPE_LIGHT && light_obj.intersects(obj)) {light_obj.remove(); break;}
-		}
+		assert(obj.obj_id < objs.size());
+		room_object_t &light_obj(get_room_object_by_index(obj.obj_id));
+		if (light_obj.type == TYPE_LIGHT) {light_obj.remove();}
 		obj.remove();
 	}
 	else { // replace it with an invisible blocker that won't collide with anything
