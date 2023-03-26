@@ -972,7 +972,7 @@ void rotate_dir_about_z(vector3d &dir, float angle) { // Note: assumes dir is no
 	dir.assign(cosf(new_angle), sinf(new_angle), 0.0);
 }
 void apply_room_obj_rotate(room_object_t &obj, obj_model_inst_t &inst, vect_room_object_t const &objs) {
-	if (!(obj.flags & RO_FLAG_ROTATING)) return;
+	if (!animate2 || !(obj.flags & RO_FLAG_ROTATING)) return;
 
 	if (obj.type == TYPE_OFF_CHAIR) {
 		if (office_chair_rot_rate == 0.0) {obj.flags &= ~RO_FLAG_ROTATING; return;} // if no longer rotating, clear rotation bit
@@ -1344,6 +1344,8 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, building_t c
 		if (check_clip_cube && !smap_light_clip_cube.intersects(obj + xlate)) continue; // shadow map clip cube test: fast and high rejection ratio, do this first
 
 		if (shadow_only) {
+			if (obj.type == TYPE_CEIL_FAN) continue; // not shadow casting; would shadow its own light
+			if (obj.type == TYPE_KEY || obj.type == TYPE_FESCAPE || obj.type == TYPE_WALL_LAMP || obj.type == TYPE_SILVERWARE) continue; // too small or outdoors
 			if (obj.z1() > camera_bs.z) continue; // above the light
 			if (obj.z2() < camera_bs.z - 2.0*floor_spacing) continue; // more than two floors below the light
 		}
