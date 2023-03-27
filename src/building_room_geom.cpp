@@ -3294,7 +3294,6 @@ void building_room_geom_t::add_switch(room_object_t const &c, bool draw_detail_p
 		vector3d rot_axis(zero_vector);
 		rot_axis[!c.dim] = ((c.dir ^ c.is_open()) ? 1.0 : -1.0);
 		rotate_verts(mat.quad_verts, rot_axis, 0.015*PI, plate.get_cube_center(), qv_start); // rotate rocker slightly about base plate center; could be optimized by caching
-		mat.no_caching = 1; // rotation may not change verts_sum, so don't cache this material
 	}
 }
 

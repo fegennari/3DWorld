@@ -461,15 +461,9 @@ void rgeom_mat_t::create_vbo_inner() {
 	assert(itri_verts.empty() == indices.empty());
 	unsigned const qsz(quad_verts.size()*sizeof(vertex_t)), itsz(itri_verts.size()*sizeof(vertex_t)), tot_verts_sz(qsz + itsz);
 	unsigned const new_num_verts(quad_verts.size() + itri_verts.size());
-
-	if (num_verts > 0 && !no_caching) { // update of existing buffer, not newly created buffer
-		vector3d verts_sum(zero_vector);
-		for (auto const &v : quad_verts) {verts_sum += v.v;}
-		for (auto const &v : itri_verts) {verts_sum += v.v;}
-		if (num_verts == new_num_verts && prev_verts_sum == verts_sum) return; // same contents - skip update; ~3x faster than doing an update
-		prev_verts_sum = verts_sum;
-	}
-	num_verts = new_num_verts;
+	// in most cases when num_verts starts out nonzero there is no actual update for this material, but accurately skipping the VBO update is difficult;
+	// hashing the vertex data is too slow, and simply summing the verts is inaccurate for things like light switch rotations and buildings far from the origin
+	num_verts = quad_verts.size() + itri_verts.size();
 	if (num_verts == 0) return; // nothing to do
 	gen_quad_ixs(indices, 6*(quad_verts.size()/4), itri_verts.size()); // append indices for quad_verts
 	num_ixs = indices.size();

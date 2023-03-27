@@ -619,11 +619,10 @@ class rgeom_mat_t : public rgeom_storage_t { // simplified version of building_d
 
 	indexed_vao_manager_with_shadow_t vao_mgr;
 	static vbo_cache_t vbo_cache; // shared across all buildings and materials
-	vector3d prev_verts_sum; // for checking if verts changed since the last update
 public:
 	unsigned num_verts=0, num_ixs=0, vert_vbo_sz=0, ixs_vbo_sz=0; // for drawing
 	uint8_t dir_mask=0; // {-x, +x, -y, +y, -z, +z}
-	bool en_shadows=0, no_caching=0;
+	bool en_shadows=0;
 
 	rgeom_mat_t(tid_nm_pair_t const &tex_=tid_nm_pair_t()) : rgeom_storage_t(tex_) {}
 	//~rgeom_mat_t() {assert(vbo_mgr.vbo == 0); assert(vbo_mgr.ivbo == 0);} // VBOs should be freed before destruction
