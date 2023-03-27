@@ -621,7 +621,7 @@ void add_tproll_to_material(room_object_t const &c, rgeom_mat_t &mat) {
 	cube_t roll(c);
 	roll.expand_in_dim(c.dim, roll_shrink);
 	roll.expand_in_dim(2,     roll_shrink); // z
-	mat.add_ortho_cylin_to_verts(roll, tp_color, !c.dim, 1, 1); // c.dim applies to the wall; the roll is oriented perpendicular
+	mat.add_ortho_cylin_to_verts(roll, tp_color, !c.dim, 1, 1, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, 24); // c.dim applies to the wall; the roll is oriented perpendicular; ndiv=24
 	cube_t square(roll); // hanging square of TP
 	set_cube_zvals(square, c.z1(), c.zc()); // starts at the centerline (tangent) and extends to the bottom
 	if (c.is_hanging()) {square.z1() -= 3.0*c.dz();} // player has pulled it down lower
@@ -662,7 +662,7 @@ void building_room_geom_t::add_tproll(room_object_t const &c) { // is_small=1
 	plate.d[c.dim][!c.dir] -= (c.dir ? -1.0 : 1.0)*0.6*radius;
 	plate.d[!c.dim][0] = rod_end - 0.08*length; // set thickness; will go slightly outside the bounds of c
 	plate.d[!c.dim][1] = rod_end;
-	holder_mat.add_ortho_cylin_to_verts(rod, holder_color, !c.dim, 0, 1);
+	holder_mat.add_ortho_cylin_to_verts(rod, holder_color, !c.dim, 0, 1, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, 24); // ndiv=24
 	holder_mat.add_cube_to_verts_untextured(plate, holder_color, ~get_face_mask(c.dim, c.dir)); // skip the face against the wall
 }
 void building_room_geom_t::add_tape(room_object_t const &c) { // is_small=1
