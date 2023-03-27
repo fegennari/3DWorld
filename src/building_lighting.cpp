@@ -1438,6 +1438,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		float const bwidth = 0.25; // as close to 180 degree FOV as we can get without shadow clipping
 		colorRGBA color;
 		unsigned shadow_caster_hash(0);
+		bool lamp_was_moved(0);
 
 		if (is_lamp) { // no light refinement, since lamps are not aligned between floors; refinement doesn't help as much with houses anyway
 			if (i->obj_id == 0) { // this lamp has not yet been assigned a light bcube (ID 0 will never be valid because the bedroom will have a light assigned first)
@@ -1471,6 +1472,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 				if (is_lamp && (i->flags & RO_FLAG_MOVED)) {
 					i->flags &= ~RO_FLAG_MOVED; // clear moved flag, since we noticed it was moved
 					light_bcube.set_to_zeros(); // will be recalculated below
+					lamp_was_moved = 1; // force update of upward pointing light shadows
 				}
 				if (light_bcube.is_all_zeros()) { // not yet calculated - calculate and cache
 					light_bcube = clipped_bc;
@@ -1544,9 +1546,10 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			if (is_rotated()) {light_bc2 = get_rotated_bcube(light_bc2);}
 
 			if (is_lamp) { // add a second shadowed light source pointing up
+				bool const cache_shadows(!lamp_was_moved);
 				dl_sources.emplace_back(light_radius, lpos_rot, lpos_rot, color, 0, plus_z, 0.5*bwidth); // points up
 				// lamps are static and have no dynamic shadows, so always cache their shadow maps
-				assign_light_for_building_interior(dl_sources.back(), &(*i), light_bc2, 1, 1); // cache_shadows=1, is_lamp=1
+				assign_light_for_building_interior(dl_sources.back(), &(*i), light_bc2, cache_shadows, 1); // is_lamp=1
 				dl_sources.emplace_back(0.15*light_radius, lpos_rot, lpos_rot, color); // add an additional small unshadowed light for ambient effect
 				dl_sources.back().set_custom_bcube(light_bc2); // not sure if this is helpful, but should be okay
 			}
