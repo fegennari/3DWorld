@@ -460,7 +460,16 @@ void rgeom_mat_t::create_vbo(building_t const &building) {
 void rgeom_mat_t::create_vbo_inner() {
 	assert(itri_verts.empty() == indices.empty());
 	unsigned const qsz(quad_verts.size()*sizeof(vertex_t)), itsz(itri_verts.size()*sizeof(vertex_t)), tot_verts_sz(qsz + itsz);
-	num_verts = quad_verts.size() + itri_verts.size();
+	unsigned const new_num_verts(quad_verts.size() + itri_verts.size());
+
+	if (num_verts > 0 && !no_caching) { // update of existing buffer, not newly created buffer
+		vector3d verts_sum(zero_vector);
+		for (auto const &v : quad_verts) {verts_sum += v.v;}
+		for (auto const &v : itri_verts) {verts_sum += v.v;}
+		if (num_verts == new_num_verts && prev_verts_sum == verts_sum) return; // same contents - skip update; ~3x faster than doing an update
+		prev_verts_sum = verts_sum;
+	}
+	num_verts = new_num_verts;
 	if (num_verts == 0) return; // nothing to do
 	gen_quad_ixs(indices, 6*(quad_verts.size()/4), itri_verts.size()); // append indices for quad_verts
 	num_ixs = indices.size();
@@ -1270,12 +1279,14 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, building_t c
 		bool const create_small(inc_small && !mats_small.valid), create_text(inc_small == 2 && !mats_text.valid);
 		//highres_timer_t timer("Create Small + Text VBOs", (create_small || create_text));
 
-		if (create_small && create_text) {
+		if (create_small && create_text) { // MT case
 #pragma omp parallel num_threads(2)
 			if (omp_get_thread_num_3dw() == 0) {create_small_static_vbos(building);} else {create_text_vbos(building);}
 		}
-		else if (create_small) {create_small_static_vbos(building);}
-		else if (create_text ) {create_text_vbos        (building);}
+		else { // serial case
+			if (create_small) {create_small_static_vbos(building);}
+			if (create_text ) {create_text_vbos        (building);}
+		}
 		add_small_static_objs_to_verts(pending_objs, create_text);
 		pending_objs.clear();
 
