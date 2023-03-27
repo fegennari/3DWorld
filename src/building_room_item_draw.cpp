@@ -673,6 +673,7 @@ void building_room_geom_t::invalidate_draw_data_for_obj(room_object_t const &obj
 	bldg_obj_type_t const type(was_taken ? get_taken_obj_type(obj) : get_room_obj_type(obj));
 	if ( type.lg_sm & 2 )                  {invalidate_small_geom ();} // small objects
 	if ((type.lg_sm & 1) || type.is_model) {invalidate_static_geom();} // large objects and 3D models
+	if (obj.type == TYPE_CEIL_FAN)         {invalidate_lights_geom();} // invalidate the light on the fan as well
 }
 // Note: called when adding, removing, or moving objects
 void building_room_geom_t::update_draw_state_for_room_object(room_object_t const &obj, building_t &building, bool was_taken) {
@@ -918,6 +919,7 @@ void building_room_geom_t::create_lights_vbos(building_t const &building) {
 
 	for (auto i = objs.begin(); i != objs_end; ++i) {
 		if (i->is_visible() && i->type == TYPE_LIGHT) {add_light(*i, tscale);}
+		else if (i->type == TYPE_CEIL_FAN) {add_ceiling_fan_light(*i, get_room_object_by_index(i->obj_id));} // pass in both the fan and the light
 	}
 	mats_lights.create_vbos(building);
 }

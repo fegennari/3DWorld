@@ -1383,6 +1383,17 @@ void building_room_geom_t::add_fireplace(room_object_t const &c, float tscale) {
 	marble_mat.add_cube_to_verts(top, color, tex_origin,  skip_back_face); // skip back face
 }
 
+void building_room_geom_t::add_ceiling_fan_light(room_object_t const &fan, room_object_t const &light) {
+	bool const is_on(light.is_light_on() && !light.is_broken());
+	if (!is_on) return; // only drawn when light is on
+	tid_nm_pair_t tp(WHITE_TEX);
+	tp.emissive = (is_on ? 1.0 : 0.0);
+	cube_t light_bcube;
+	light_bcube.set_from_sphere(light.get_cube_center(), 0.035*(fan.dx() + fan.dy()));
+	light_bcube.expand_in_dim(2, -0.4*light_bcube.dz()); // shrink in Z
+	mats_lights.get_material(tp, 0).add_sphere_to_verts(light_bcube, apply_light_color(fan)); // no shadows
+}
+
 float get_railing_height(room_object_t const &c) {
 	bool const is_u_stairs(c.flags & (RO_FLAG_ADJ_LO | RO_FLAG_ADJ_HI));
 	return (is_u_stairs ? 0.70 : 0.35)*c.dz(); // use a larger relative height for lo/hi railings on U-shaped stairs

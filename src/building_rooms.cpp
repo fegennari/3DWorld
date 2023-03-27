@@ -743,7 +743,7 @@ bool building_t::add_bedroom_objs(rand_gen_t rgen, room_t &room, vect_cube_t con
 			float const diameter(min(0.4*min(room.dx(), room.dy()), 0.5*window_vspacing)), height(diameter*sz.z/sz.y); // assumes width = depth = diameter
 			room_object_t &light(objs[objs_start-1]);
 			point const top_center(light.xc(), light.yc(), (zval + window_vspacing - floor_thickness)); // on the ceiling
-			light.translate_dim(2, -0.8*height); // move near the bottom of the ceiling fan (before invalidating with objs.emplace_back())
+			light.translate_dim(2, -0.9*height); // move near the bottom of the ceiling fan (before invalidating with objs.emplace_back())
 			light.flags |= RO_FLAG_INVIS;   // don't draw the light itself; assume the light is part of the bottom of the fan instead
 			light.flags |= RO_FLAG_HANGING; // don't draw upward facing light
 			cube_t fan(top_center, top_center);

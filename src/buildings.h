@@ -862,6 +862,7 @@ struct building_room_geom_t {
 	void add_wall_trim(room_object_t const &c, bool for_closet=0);
 	void add_blinds(room_object_t const &c);
 	void add_fireplace(room_object_t const &c, float tscale);
+	void add_ceiling_fan_light(room_object_t const &fan, room_object_t const &light);
 	void add_railing(room_object_t const &c);
 	void add_potted_plant(room_object_t const &c, bool inc_pot, bool inc_plant);
 	void add_lg_ball(room_object_t const &c);

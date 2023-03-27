@@ -132,7 +132,7 @@ void setup_bldg_obj_types() {
 	// 3D models
 	bldg_obj_types[TYPE_TOILET    ] = bldg_obj_type_t(1, 1, 1, 1, 1, 1, 0, 120.0, 88.0,  "toilet");
 	bldg_obj_types[TYPE_SINK      ] = bldg_obj_type_t(1, 1, 1, 1, 1, 1, 0, 80.0,  55.0,  "sink");
-	bldg_obj_types[TYPE_TUB       ] = bldg_obj_type_t(1, 1, 1, 0, 1, 1, 1, 250.0, 200.0, "bathtub");
+	bldg_obj_types[TYPE_TUB       ] = bldg_obj_type_t(1, 1, 1, 0, 1, 1, 1, 250.0, 200.0, "bathtub"); // large object for sides
 	bldg_obj_types[TYPE_FRIDGE    ] = bldg_obj_type_t(1, 1, 1, 1, 0, 1, 0, 700.0, 300.0, "refrigerator"); // no pickup, too large and may want to keep it for future hunger bar
 	bldg_obj_types[TYPE_STOVE     ] = bldg_obj_type_t(1, 1, 1, 1, 0, 1, 0, 400.0, 150.0, "stove");
 	bldg_obj_types[TYPE_TV        ] = bldg_obj_type_t(1, 1, 1, 1, 0, 1, 1, 400.0, 70.0,  "TV");
@@ -1230,7 +1230,6 @@ void building_room_geom_t::remove_object(unsigned obj_id, building_t &building) 
 	}
 	else if (obj.type == TYPE_CEIL_FAN && obj_id > 0) { // Note: currently can't be picked up
 		// find and remove the light assigned to this ceiling fan; should be a few objects before this one
-		assert(obj.obj_id < objs.size());
 		room_object_t &light_obj(get_room_object_by_index(obj.obj_id));
 		if (light_obj.type == TYPE_LIGHT) {light_obj.remove();}
 		obj.remove();
