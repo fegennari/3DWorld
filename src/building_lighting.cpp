@@ -1127,11 +1127,6 @@ float get_radius_for_room_light(room_object_t const &obj) {
 	return radius;
 }
 
-void hash_mix_point(point const &p, unsigned &shadow_caster_hash) {
-	shadow_caster_hash += hash_point(p);
-	shadow_caster_hash += shadow_caster_hash << 10;
-	shadow_caster_hash ^= shadow_caster_hash >> 6;
-}
 bool check_for_shadow_caster(vect_cube_with_ix_t const &cubes, cube_t const &light_bcube, point const &lpos,
 	float dmax, bool has_stairs, vector3d const &xlate, unsigned &shadow_caster_hash)
 {
