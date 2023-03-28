@@ -1336,13 +1336,9 @@ void particle_cloud::draw(quad_batch_draw &qbd) const {
 	assert(status);
 	colorRGBA color(base_color);
 	color.A *= density;
-	
-	if (is_fire()) {
-		color.G *= get_rscale();
-	}
-	else {
-		color *= (no_lighting ? 1.0 : brightness)*(0.5*(1.0 - darkness));
-	}
+	if (is_fire()) {color.G *= get_rscale();}
+	else {color *= (no_lighting ? 1.0 : brightness)*(0.5*(1.0 - darkness));}
+
 	if (parts.empty()) {
 		if (status && sphere_in_camera_view(pos, radius, 0)) {draw_part(pos, radius, color, qbd);}
 	}

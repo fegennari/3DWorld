@@ -207,13 +207,10 @@ void decal_obj::gen(point const &p, float r, float ang, vector3d const &o, int l
 
 
 void gen_bubble(point const &pos, float r, colorRGBA const &c) {
-
 	if (animate2 && begin_motion) {bubbles[bubbles.choose_element()].gen(pos, r, c);}
 }
 
-
 void gen_line_of_bubbles(point const &p1, point const &p2, float r, colorRGBA const &c) {
-
 	//RESET_TIME;
 	if (!animate2) return;
 	point cur(p1);
@@ -246,17 +243,12 @@ bool gen_arb_smoke(point const &pos, colorRGBA const &bc, vector3d const &iv, fl
 	part_clouds[ix].gen(pos, bc, iv, 0.62*r, den, dark, dam, src, dt, as, 1, no_lighting, spread);
 	return 1;
 }
-
-
 bool gen_smoke(point const &pos, float zvel_scale, float radius_scale, colorRGBA const &color, bool no_lighting) {
-
 	return gen_arb_smoke(pos, color, vector3d(0.0, 0.0, SMOKE_ZVEL*zvel_scale),
 		radius_scale*rand_uniform(0.01, 0.025), rand_uniform(0.7, 0.9), rand_uniform(0.75, 0.95), 0.0, NO_SOURCE, SMOKE, 1, 1.0, no_lighting);
 }
 
-
 bool gen_fire(point const &pos, float size, int source, bool allow_close, bool is_static, float light_bwidth, float intensity) {
-
 	assert(size > 0.0);
 	if (!is_over_mesh(pos) || is_underwater(pos)) return 0; // off the mesh or under water/ice
 
@@ -271,7 +263,6 @@ bool gen_fire(point const &pos, float size, int source, bool allow_close, bool i
 	fires[fires.choose_element()].gen(pos, size, intensity, source, is_static, light_bwidth);
 	return 1;
 }
-
 
 void gen_decal(point const &pos, float radius, vector3d const &orient, int tid, int cid, colorRGBA const &color,
 	bool is_glass, bool rand_angle, int lifetime, float min_dist_scale, tex_range_t const &tr)
@@ -297,9 +288,7 @@ void gen_decal(point const &pos, float radius, vector3d const &orient, int tid, 
 	has_decals = 1;
 }
 
-
 void gen_particles(point const &pos, unsigned num, float lt_scale, bool fade) { // lt_scale: 0.0 = full lt, 1.0 = no lt
-
 	obj_group &objg(obj_groups[coll_id[PARTICLE]]);
 
 	for (unsigned o = 0; o < num; ++o) {

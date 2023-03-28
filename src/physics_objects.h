@@ -15,44 +15,35 @@ struct quad_batch_draw;
 
 
 struct spark_t {
-
-	float s;
+	float s=0.0;
 	point pos;
-	colorRGBA c;
+	colorRGBA c=BLACK;
 	static int  const status = 1;
 	static float const radius;
 	point const &get_pos() const {return pos;}
 
-	spark_t() : s(0.0f), pos(all_zeros), c(BLACK) {}
 	spark_t(point const &p_, colorRGBA const &c_, float s_) : s(s_), pos(p_), c(c_) {}
 	void draw(quad_batch_draw &qbd) const;
 };
 
 
 struct star { // size = 32
-
-	float intensity;
+	float intensity=1.0;
 	colorRGBA color;
 	point pos;
-	star() : intensity(1.0) {}
 };
 
 
 struct obj_type { // size = 88
-
-	int lifetime, tid;
-	unsigned flags;
-	float mass, radius, volume, surface_area, density, air_factor, terminal_vel, friction_factor;
-	float health, damage, min_t, max_t, elasticity, gravity, deform, def_recover;
+	int lifetime=0, tid=-1;
+	unsigned flags=0;
+	float mass=0, radius=0, volume=0, surface_area=0, density=0, air_factor=0, terminal_vel=0, friction_factor=0;
+	float health=0, damage=0, min_t=0, max_t=0, elasticity=0, gravity=0, deform=0, def_recover=0;
 	colorRGBA color;
-
-	obj_type() : lifetime(0), tid(-1), flags(0), mass(0), radius(0), volume(0), surface_area(0), density(0), air_factor(0), terminal_vel(0), friction_factor(0),
-		health(0), damage(0), min_t(0), max_t(0), elasticity(0), gravity(0), deform(0), def_recover(0) {}
 };
 
 
 struct basic_physics_obj { // size = 20
-
 	point pos;
 	int time;
 	char status;
@@ -73,37 +64,30 @@ struct basic_physics_obj { // size = 20
 
 
 struct bubble : public basic_physics_obj { // size = 44
-
-	float radius, velocity;
+	float radius=0.0, velocity=0.0;
 	colorRGBA color;
 
-	bubble() : radius(0), velocity(0) {}
 	void gen(point const &p, float r=0.0, colorRGBA const &c=WATER_C);
 	void draw(bool set_liquid_color) const;
 	void apply_physics(unsigned i);
 };
 
-
 typedef vector<pair<float, unsigned> > order_vect_t;
 
 
 struct particle_cloud : public basic_physics_obj { // size = 88
-
 	struct part : public sphere_t {
-		bool status;
-		part() : status(0) {}
+		bool status=0;
 	};
-	bool acc_smoke, no_lighting, red_only;
-	int source, damage_type;
-	float radius, init_radius, density, darkness, damage;
+	bool acc_smoke=0, no_lighting=0, red_only=0;
+	int source=-1, damage_type=0;
+	float radius=0.0, init_radius=0.0, density=0.0, darkness=0.0, damage=0.0, timestep_factor=1.0;
 	vector3d init_vel;
-	colorRGBA base_color;
+	colorRGBA base_color=BLACK;
 	vector<part> parts;
 	mutable vector<part> render_parts;
 	static order_vect_t order;
 
-	particle_cloud() : acc_smoke(0), no_lighting(0), red_only(0), source(-1), damage_type(0), radius(0.0f), init_radius(0.0f),
-		density(0.0f), darkness(0.0f), damage(0.0f), init_vel(zero_vector), base_color(BLACK) {}
 	void gen(point const &p, colorRGBA const &bc, vector3d const &iv, float r, float den, float dark, float dam,
 		int src, int dt, bool as, bool use_parts=1, bool nl=0, float spread=1.0);
 	void draw(quad_batch_draw &qbd) const;
@@ -115,13 +99,11 @@ struct particle_cloud : public basic_physics_obj { // size = 88
 
 
 struct fire : public basic_physics_obj { // size = 60
-
-	int source;
-	bool is_static;
-	float radius, heat, cval, inten, light_bwidth;
+	int source=-1;
+	bool is_static=0;
+	float radius=0.0, heat=0.0, cval=0.0, inten=0.0, light_bwidth=0.0;
 	vector3d velocity;
 
-	fire() : source(-1), is_static(0), radius(0), heat(0), cval(0), inten(0), light_bwidth(0) {}
 	void gen(point const &p, float size, float intensity, int src, bool is_static_, float light_bw);
 	void draw(quad_batch_draw &qbd, int &last_in_smoke) const;
 	void apply_physics(unsigned i);
@@ -131,26 +113,23 @@ struct fire : public basic_physics_obj { // size = 60
 
 
 class lightning_t { // size = 40
-
 	struct lseg_t : public line3d {
-		unsigned parent_len;
-		float damage;
-		bool full_path, hit_water, has_child;
+		unsigned parent_len=0;
+		float damage=0.0;
+		bool full_path=1, hit_water=0, has_child=0;
 
-		lseg_t() : parent_len(), damage(0.0f), full_path(1), hit_water(0), has_child(0) {color = LITN_C;}
+		lseg_t() {color = LITN_C;}
 		unsigned get_len() const {return (points.size() + parent_len);}
 		void set_params(unsigned pl, float d, bool fp, bool hw, bool hc) {parent_len = pl; damage = d; full_path = fp; hit_water = hw; has_child = hc;}
 	};
-	bool enabled;
-	int time;
+	bool enabled=0;
+	int time=0;
 	point hit_pos;
 	vector<lseg_t> paths;
 	rand_gen_t rgen;
 
 	void gen_recur(point const &start, vector3d const &start_dir, float strength, unsigned parent_len);
-
 public:
-	lightning_t() : enabled(0), time(0) {}
 	void reset_time() {time = LITNING_TIME;}
 	void disable();
 	bool is_enabled() const {return (enabled && !paths.empty());}
@@ -161,7 +140,6 @@ public:
 
 
 class physics_particle_manager {
-
 protected:
 	struct part_t { // size = 28
 		point p; // position
@@ -172,7 +150,6 @@ protected:
 		part_t(point const &p_, vector3d const &v_, colorRGBA const &c_) : p(p_), v(v_) {c.set_c4(c_);}
 	};
 	vector<part_t> parts;
-
 public:
 	void clear() {parts.clear();}
 	void gen_particles(point const &pos, vector3d const &vadd, float vmag, float gen_radius, colorRGBA const &color, unsigned num);
@@ -183,7 +160,6 @@ public:
 
 
 class water_particle_manager : public physics_particle_manager {
-
 public:
 	static colorRGBA calc_color(float mud_mix, float blood_mix) {
 		return blend_color(BLOOD_C, blend_color(MUD_C, WATER_C, mud_mix, 1), blood_mix, 1);
@@ -194,16 +170,14 @@ public:
 
 
 struct decal_obj : public basic_physics_obj { // size = 76
-
-	bool is_glass;
-	int cid, tid, lifetime;
-	float radius, alpha, rot_angle;
-	colorRGBA color;
+	bool is_glass=0;
+	int cid=-1, tid=-1, lifetime=0;
+	float radius=0.0, alpha=1.0, rot_angle=0.0;
+	colorRGBA color=BLACK;
 	point ipos, cobj_cent_mass;
 	vector3d orient;
 	tex_range_t tex_range;
 
-	decal_obj() : is_glass(0), cid(-1), tid(-1), lifetime(0), radius(0.0), alpha(1.0), rot_angle(0.0), color(BLACK) {}
 	void gen(point const &p, float r, float ang, vector3d const &o, int lt, int tid_, int cid_=-1, colorRGBA const &color_=BLACK,
 		bool is_glass_=0, tex_range_t const &tr=tex_range_t());
 	bool draw(quad_batch_draw &qbd) const;
@@ -219,18 +193,15 @@ struct decal_obj : public basic_physics_obj { // size = 76
 
 struct dwobject : public basic_physics_obj { // size = 67(68) (dynamic world object)
 
-	int coll_id;
-	short type, source, flags;
-	unsigned char direction;
-	float health, angle;
+	int coll_id=-1;
+	short type=0, source=NO_SOURCE, flags=0;
+	unsigned char direction=0;
+	float health=0.0, angle=0.0;
 	vector3d velocity, orientation, init_dir, vdeform;
 
-	dwobject() : coll_id(-1), type(0), source(NO_SOURCE), flags(0), direction(0), health(0.0), angle(0.0),
-		velocity(zero_vector), orientation(plus_z), init_dir(plus_z), vdeform(zero_vector) {}
+	dwobject() : orientation(plus_z), init_dir(plus_z) {}
 	dwobject(int type_, point const &pos_, vector3d const &vel_=all_zeros, int status_=0, float health_=0.0)
-		: basic_physics_obj(pos_, status_), coll_id(-1), type(type_), source(NO_SOURCE), flags(0),
-		direction(0), health(health_), angle(0.0), velocity(vel_), orientation(0.0, 0.0, -1.0),
-		init_dir(0.0, 0.0, -1.0), vdeform(all_zeros) {}
+		: basic_physics_obj(pos_, status_), type(type_), health(health_), velocity(vel_), orientation(-plus_z), init_dir(-plus_z) {}
 	float get_true_radius() const;
 	float get_true_density() const;
 	float get_true_mass() const;
@@ -264,11 +235,11 @@ struct dwobject : public basic_physics_obj { // size = 67(68) (dynamic world obj
 class vert_coll_detector {
 
 	dwobject &obj;
-	int type, iter;
-	bool player, already_bounced, skip_dynamic, only_drawn, skip_movable;
-	int coll, obj_index, do_coll_funcs, only_cobj;
-	unsigned cdir, lcoll;
-	float z_old, o_radius, z1, z2;
+	int type=0, iter=0;
+	bool player=0, already_bounced=0, skip_dynamic=0, only_drawn=0, skip_movable=0;
+	int coll=0, obj_index=0, do_coll_funcs=0, only_cobj=0;
+	unsigned cdir=0, lcoll=0;
+	float z_old=0.0, o_radius=0.0, z1=0.0, z2=0.0;
 	point pos, pold;
 	vector3d motion_dir, obj_vel;
 	vector3d *cnorm;
@@ -280,10 +251,9 @@ class vert_coll_detector {
 public:
 	vert_coll_detector(dwobject &obj_, int obj_index_, int do_coll_funcs_, int iter_, vector3d *cnorm_,
 		vector3d const &mdir=zero_vector, bool skip_dynamic_=0, bool only_drawn_=0, int only_cobj_=-1, bool skip_movable_=0) :
-	obj(obj_), type(obj.type), iter(iter_), player(type == CAMERA || type == SMILEY || type == WAYPOINT),
-	already_bounced(0), skip_dynamic(skip_dynamic_), only_drawn(only_drawn_), skip_movable(skip_movable_), coll(0), obj_index(obj_index_),
-	do_coll_funcs(do_coll_funcs_), only_cobj(only_cobj_), cdir(0), lcoll(0), z_old(obj.pos.z), o_radius(0.0),
-	z1(0.0), z2(0.0), pos(obj.pos), pold(obj.pos), motion_dir(mdir), obj_vel(obj.velocity), cnorm(cnorm_) {}
+	obj(obj_), type(obj.type), iter(iter_), player(type == CAMERA || type == SMILEY || type == WAYPOINT), skip_dynamic(skip_dynamic_), only_drawn(only_drawn_),
+		skip_movable(skip_movable_), obj_index(obj_index_), do_coll_funcs(do_coll_funcs_), only_cobj(only_cobj_), z_old(obj.pos.z), 
+		pos(obj.pos), pold(obj.pos), motion_dir(mdir), obj_vel(obj.velocity), cnorm(cnorm_) {}
 
 	void check_cobj(int index);
 	int check_coll();
@@ -291,7 +261,6 @@ public:
 
 
 struct enabled_pos {
-
 	point pos;
 	bool enabled;
 
@@ -302,8 +271,8 @@ struct enabled_pos {
 
 template<typename T> class obj_vector_t : public vector<T> {
 
-	unsigned cur_avail;
-	bool enabled;
+	unsigned cur_avail=0;
+	bool enabled=0;
 
 	struct int_uint_pair {
 		int i;
@@ -311,16 +280,14 @@ template<typename T> class obj_vector_t : public vector<T> {
 		int_uint_pair(int i_=0, unsigned u_=0) : i(i_), u(u_) {}
 		bool operator<(int_uint_pair const &p) const {return (i > p.i);} // greater than on the int
 	};
-
 	void inc_cur_avail() {
 		++cur_avail;
 		if (cur_avail == size()) cur_avail = 0;
 	}
-
 public:
 	using vector<T>::size;
 	using vector<T>::empty;
-	obj_vector_t(unsigned sz=0) : vector<T>(sz), cur_avail(0), enabled(0) {}
+	obj_vector_t(unsigned sz=0) : vector<T>(sz) {}
 
 	unsigned choose_element(bool peek=0) {
 		assert(!empty());
@@ -391,14 +358,12 @@ public:
 
 
 class cloud_manager_t : public obj_vector_t<particle_cloud> {
-
-	unsigned cloud_tid, fbo_id, txsize, tysize;
-	float frustum_z, last_xy_scale;
+	unsigned cloud_tid=0, fbo_id=0, txsize=0, tysize=0;
+	float frustum_z=0.0, last_xy_scale=0.0;
 	mutable cube_t bcube;
 
 	void set_red_only(bool val) {for (iterator i = begin(); i != end(); ++i) i->red_only = val;}
 public:
-	cloud_manager_t() : cloud_tid(0), fbo_id(0), txsize(0), tysize(0), frustum_z(0.0), last_xy_scale(0.0) {bcube.set_to_zeros();}
 	~cloud_manager_t() {free_textures();}
 	void create_clouds();
 	void update_lighting();
@@ -417,13 +382,11 @@ typedef std::shared_ptr<transform_data> p_transform_data;
 
 
 struct predef_obj { // size = 28
-
 	point pos;
-	int type, obj_used;
-	float regen_time, cur_time;
+	int type=0, obj_used=-1;
+	float regen_time=0.0, cur_time=0.0;
 
-	predef_obj(point const &pos_=all_zeros, int type_=0, float rtime=0)
-		: pos(pos_), type(type_), obj_used(-1), regen_time(rtime), cur_time(0) {}
+	predef_obj(point const &pos_=all_zeros, int type_=0, float rtime=0) : pos(pos_), type(type_), regen_time(rtime) {}
 };
 
 
@@ -434,12 +397,11 @@ class obj_group { // size = 36
 	p_transform_data td;
 
 public:
-	unsigned init_objects, max_objs, app_rate, end_id, new_id;
-	bool enabled, reorderable, predef_use_once;
-	short type;
-	unsigned char flags;
+	unsigned init_objects=0, max_objs=0, app_rate=0, end_id=0, new_id=0;
+	bool enabled=0, reorderable=0, predef_use_once=0;
+	short type=0;
+	unsigned char flags=0;
 
-	obj_group() : init_objects(0), max_objs(0), app_rate(0), end_id(0), new_id(0), enabled(0), reorderable(0), predef_use_once(0), type(0), flags(0) {}
 	void create(int obj_type_, unsigned max_objects_, unsigned init_objects_, unsigned app_rate_,
 		bool init_enabled_, bool reorderable_, bool auto_max, bool predef_use_once_);
 	unsigned get_updated_max_objs() const;
@@ -480,12 +442,10 @@ template<typename T> void reset_status(vector<T> &objs) {
 class reflective_cobjs_t {
 
 	struct map_val_t {
-		unsigned tid, tsize, last_size, faces_valid;
+		unsigned tid=0, tsize=0, last_size=0, faces_valid=0;
 		cube_t bcube; // cached bcube to determine when the cobj is moved
-		map_val_t() : tid(0), tsize(0), last_size(0), faces_valid(0) {}
 	};
 	map<unsigned, map_val_t> cobjs; // maps cid to tid
-
 public:
 	void add_cobj(unsigned cid);
 	bool remove_cobj(unsigned cid);
