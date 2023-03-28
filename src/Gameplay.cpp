@@ -880,7 +880,11 @@ void gen_rocket_smoke(point const &pos, vector3d const &orient, float radius, bo
 	
 	if (distance_to_camera_sq(pos) > 0.04 && iticks > rand()%3) {
 		if (freeze) {gen_arb_smoke(pos, FREEZE_COLOR, vector3d(0,0,0.05), rand_uniform(0.01, 0.025), 0.5, 0.0, 0.0, NO_SOURCE, SMOKE, 0, 0.5, 1);} // blue smoke, no lighting
-		else {gen_smoke(dpos, 0.2, 1.0);}
+		else {
+			gen_smoke(dpos, 0.2, 1.0);
+			gen_arb_smoke(dpos, WHITE, vector3d(0.0, 0.0, 0.02), rand_uniform(0.01, 0.025), rand_uniform(0.7, 0.9),
+				rand_uniform(0.0, 0.2), 0.0, NO_SOURCE, SMOKE, 0, 1.0, 0, 0.1); // contrail, tsfact=0.1
+		}
 	}
 	//if (freeze) {add_blastr(dpos, orient, 4.0*radius, 0.0, 4, NO_SOURCE, FREEZE_COLOR, colorRGBA(0,0,0.5,0), ETYPE_FUSION);}
 	if (freeze) {add_blastr(dpos, orient, 3.5*radius, 0.0, 4, NO_SOURCE, WHITE, colorRGBA(0,0,0.2,0), ETYPE_PC_ICE);}

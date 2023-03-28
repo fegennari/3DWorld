@@ -1466,7 +1466,7 @@ void particle_cloud::apply_physics(unsigned i) {
 			break;
 		}
 	} // for j
-	float const tstep_scale(TIMESTEP/DEF_TIMESTEP), rscale(get_rscale());
+	float const tstep_scale(timestep_factor*TIMESTEP/DEF_TIMESTEP), rscale(get_rscale());
 	pos       = obj.pos;
 	time     += iticks;
 	density  *= pow(0.97f, tstep_scale);

@@ -11,7 +11,7 @@
 float    const SMOKE_ZVEL      = 3.0;
 unsigned const NUM_STARS       = 5000;
 unsigned const MAX_BUBBLES     = 2500;
-unsigned const MAX_PART_CLOUDS = 250;
+unsigned const MAX_PART_CLOUDS = 300;
 unsigned const MAX_FIRES       = 75;
 unsigned const MAX_DECALS      = 5000;
 
@@ -120,7 +120,7 @@ void bubble::gen(point const &p, float r, colorRGBA const &c) {
 
 
 void particle_cloud::gen(point const &p, colorRGBA const &bc, vector3d const &iv, float r, float den, float dark, float dam,
-	int src, int dt, bool as, bool use_parts, bool nl, float spread)
+	int src, int dt, bool as, bool use_parts, bool nl, float spread, float tsfact)
 {
 	init_gen_rand(p, 0.005*spread, 0.025*spread);
 	acc_smoke  = as;
@@ -133,6 +133,7 @@ void particle_cloud::gen(point const &p, colorRGBA const &bc, vector3d const &iv
 	darkness   = dark;
 	density    = den;
 	damage     = dam;
+	timestep_factor = tsfact;
 	no_lighting= nl;
 	red_only   = 0;
 
@@ -223,13 +224,13 @@ void gen_line_of_bubbles(point const &p1, point const &p2, float r, colorRGBA co
 
 
 bool gen_arb_smoke(point const &pos, colorRGBA const &bc, vector3d const &iv, float r, float den, float dark, float dam,
-	int src, int dt, bool as, float spread, bool no_lighting)
+	int src, int dt, bool as, float spread, bool no_lighting, float tsfact)
 {
 	if (!animate2 || is_underwater(pos) || is_under_mesh(pos)) return 0;
 	// Note: we scale by 0.62 since we're using BLUR_CENT_TEX rather than BLUR_TEX to draw smoke (to reduce fill rate)
 	unsigned ix(0);
 	if (!part_clouds.choose_element_not_newer_than(1.0*TICKS_PER_SECOND, ix)) return 0; // no available smoke slots, and none older than 1s
-	part_clouds[ix].gen(pos, bc, iv, 0.62*r, den, dark, dam, src, dt, as, 1, no_lighting, spread);
+	part_clouds[ix].gen(pos, bc, iv, 0.62*r, den, dark, dam, src, dt, as, 1, no_lighting, spread, tsfact);
 	return 1;
 }
 bool gen_smoke(point const &pos, float zvel_scale, float radius_scale, colorRGBA const &color, bool no_lighting) {
