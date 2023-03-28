@@ -1240,6 +1240,16 @@ void building_room_geom_t::remove_object(unsigned obj_id, building_t &building) 
 	if (old_obj.type == TYPE_MIRROR && old_obj.obj_expanded()) {
 		remove_objs_contained_in(old_obj, expanded_objs, building); // search for and remove any contained medicine or other objects
 	}
+	if (old_obj.type == TYPE_WBOARD || old_obj.type == TYPE_PICTURE || old_obj.type == TYPE_MIRROR) {
+		cube_t bc(old_obj);
+		bc.d[old_obj.dim][old_obj.dir] += (old_obj.dir ? 1.0 : -1.0)*building.get_wall_thickness();
+		building.remove_paint_in_cube(bc);
+	}
+	if (old_obj.type == TYPE_RUG || old_obj.type == TYPE_FLOORING) {
+		cube_t bc(old_obj);
+		bc.z2() += building.get_wall_thickness();
+		building.remove_paint_in_cube(bc);
+	}
 	if (is_light) {invalidate_lights_geom();}
 	update_draw_state_for_room_object(old_obj, building, 1);
 }
@@ -1821,6 +1831,25 @@ bool building_t::apply_paint(point const &pos, vector3d const &dir, colorRGBA co
 	}
 	player_inventory.record_damage_done(is_spraypaint ? 1.0 : 0.1); // spraypaint does more damage than markers
 	return 1;
+}
+
+void remove_quads_in_bcube_from_qbd(cube_t const &c, quad_batch_draw &qbd) {
+	unsigned const num_verts(qbd.verts.size());
+	assert((num_verts % 6) == 0); // must be quads formed from pairs of triangles
+
+	for (unsigned n = 0; n < num_verts; n += 6) { // iterate over quads
+		point center;
+		for (unsigned m = 0; m < 6; ++m) {center += qbd.verts[n+m].v;}
+		if (!c.contains_pt(center/6.0)) continue;
+		for (unsigned m = 0; m < 6; ++m) {qbd.verts[n+m].v = zero_vector;} // move all points to the origin to remove this quad
+	} // for n
+}
+void building_t::remove_paint_in_cube(cube_t const &c) const { // for whiteboards, pictures, etc.
+	for (unsigned exterior_wall = 0; exterior_wall < 2; ++exterior_wall) {
+		paint_draw_t &pd(interior->room_geom->decal_manager.paint_draw[exterior_wall]);
+		remove_quads_in_bcube_from_qbd(c, pd.m_qbd);
+		for (unsigned n = 0; n <= NUM_SP_EMISSIVE_COLORS; ++n) {remove_quads_in_bcube_from_qbd(c, pd.sp_qbd[n]);}
+	}
 }
 
 bool room_object_t::can_use() const { // excludes dynamic objects

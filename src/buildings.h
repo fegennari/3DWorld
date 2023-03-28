@@ -1474,6 +1474,7 @@ public:
 	int get_part_ix_containing_pt(point const &pt) const;
 	cube_t get_part_containing_cube(cube_t const &c) const;
 	cube_t get_part_containing_pt(point const &pt) const;
+	void remove_paint_in_cube(cube_t const &c) const;
 	void print_building_manifest() const;
 	void print_building_stats() const;
 private:
