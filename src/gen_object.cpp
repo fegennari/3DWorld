@@ -73,7 +73,6 @@ void gen_and_draw_stars(float alpha, bool half_sphere, bool no_update) {
 
 
 void gen_star(star &star1, int half_sphere) {
-
 	float const radius(0.7f*(FAR_CLIP+X_SCENE_SIZE)), theta(rand_uniform(0.0, TWO_PI));
 	float phi(gen_rand_phi<rand_uniform>());
 	if (!half_sphere && (rand()&1) == 0) phi = PI - phi;
@@ -84,44 +83,34 @@ void gen_star(star &star1, int half_sphere) {
 
 
 void rand_xy_point(float zval, point &pt, unsigned flags) {
-
 	for (unsigned i = 0; i < 2; ++i) {
 		pt[i] = ((flags & FALL_EVERYWHERE) ? 1.5 : 1.0)*SCENE_SIZE[i]*signed_rand_float();
 	}
 	pt.z = zval;
 }
-
-
 void gen_object_pos(point &position, unsigned flags) {
-
 	rand_xy_point((CLOUD_CEILING + ztop)*(1.0 + rand_uniform(-0.1, 0.1)), position, flags);
 }
 
 
 void basic_physics_obj::init(point const &p) {
-
 	status = 1;
 	time   = 0;
 	pos    = p;
 }
-
-
 void basic_physics_obj::init_gen_rand(point const &p, float rxy, float rz) {
-
 	init(p);
 	pos += point(rand_uniform(-rxy, rxy), rand_uniform(-rxy, rxy), rand_uniform(-rz, rz));
 }
 
 
 void dwobject::print_and_terminate() const { // only called when there is an error
-
 	cout << "pos = " << pos.str() << ", vel = " << velocity.str() << ", type = " << int(type) << ", status = " << int(status) << endl;
 	assert(0);
 }
 
 
 void bubble::gen(point const &p, float r, colorRGBA const &c) {
-
 	init_gen_rand(p, 0.005, 0.01);
 	radius   = ((r == 0.0) ? rand_uniform(0.001, 0.004) : r);
 	velocity = rand_uniform(0.15, 0.2);

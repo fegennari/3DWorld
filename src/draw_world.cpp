@@ -1330,7 +1330,6 @@ void bubble::draw(bool set_liquid_color) const {
 
 order_vect_t particle_cloud::order;
 
-
 void particle_cloud::draw(quad_batch_draw &qbd) const {
 
 	assert(status);
