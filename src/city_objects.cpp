@@ -5,7 +5,7 @@
 #include "city_objects.h"
 #include "tree_3dw.h" // for tree_placer_t
 
-extern int display_mode;
+extern int display_mode, animate2;
 extern unsigned max_unique_trees;
 extern double camera_zh;
 extern tree_placer_t tree_placer;
@@ -1029,13 +1029,14 @@ void mailbox_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_sc
 
 template<typename T> void add_sign_text_verts(string const &text, cube_t const &sign, bool dim, bool dir, colorRGBA const &color, vector<T> &verts_out);
 
-sign_t::sign_t(cube_t const &bcube_, bool dim_, bool dir_, string const &text_, colorRGBA const &bc, colorRGBA const &tc, bool two_sided_, bool emissive_, bool small_) :
-	oriented_city_obj_t(dim_, dir_), two_sided(two_sided_), emissive(emissive_), small(small_), bkg_color(bc), text_color(tc)
+sign_t::sign_t(cube_t const &bcube_, bool dim_, bool dir_, string const &text_, colorRGBA const &bc, colorRGBA const &tc,
+	bool two_sided_, bool emissive_, bool small_, bool scrolling_) :
+	oriented_city_obj_t(dim_, dir_), two_sided(two_sided_), emissive(emissive_), small(small_), scrolling(scrolling_), bkg_color(bc), text_color(tc)
 {
 	bcube  = bcube_;
 	pos    = bcube.get_cube_center();
 	radius = bcube.get_bsphere_radius();
-	text   = text_;
+	text   = (scrolling ? " "+text_+" " : text_); // pad with space on both sides if scrolling
 }
 /*static*/ void sign_t::pre_draw(draw_state_t &dstate, bool shadow_only) {
 	if (!shadow_only) {text_drawer::bind_font_texture();}
@@ -1055,10 +1056,24 @@ void sign_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale
 	}
 	if (shadow_only) return; // no text in shadow pass
 	if (!(emissive && is_night()) && !bcube.closest_dist_less_than(dstate.camera_bs, 0.9*(small ? 0.4 : 1.0)*dmax)) return; // too far to see the text in daytime
+
+	if (scrolling && animate2) { // at the moment we can only scroll in integer characters, 4 per second
+		float const scroll_val(4.0*tfticks/TICKS_PER_SECOND + pos.x + pos.y); // add pos x/y so that signs scroll at different points per building
+		unsigned const offset(text.size() - (unsigned(scroll_val) % text.size()) - 1);
+		string scroll_text(text);
+		std::rotate(scroll_text.begin(), scroll_text.begin()+offset, scroll_text.end());
+		draw_text(dstate, qbds, scroll_text);
+	}
+	else {draw_text(dstate, qbds, text);}
+}
+void sign_t::draw_text(draw_state_t &dstate, city_draw_qbds_t &qbds, string const &text_to_draw) const {
+	cube_t text_bcube(bcube);
+	// if scrolling, make text area a bit wider to account for the space padding
+	if (scrolling) {text_bcube.expand_in_dim(!dim, 0.25*(float(text.size())/float(text.size()-2) - 1.0)*text_bcube.get_sz_dim(!dim));}
 	quad_batch_draw &qbd((emissive /*&& is_night()*/) ? qbds.emissive_qbd : qbds.qbd);
 	bool const front_facing(((camera_pdu.pos[dim] - dstate.xlate[dim]) < bcube.d[dim][dir]) ^ dir);
-	if (front_facing  ) {add_sign_text_verts(text, bcube, dim,  dir, text_color, qbd.verts);} // draw the front side text
-	else if (two_sided) {add_sign_text_verts(text, bcube, dim, !dir, text_color, qbd.verts);} // draw the back side text
+	if (front_facing  ) {add_sign_text_verts(text_to_draw, text_bcube, dim,  dir, text_color, qbd.verts);} // draw the front side text
+	else if (two_sided) {add_sign_text_verts(text_to_draw, text_bcube, dim, !dir, text_color, qbd.verts);} // draw the back  side text
 }
 
 // city flags

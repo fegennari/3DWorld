@@ -241,7 +241,7 @@ void building_t::add_signs(vector<sign_t> &signs) const { // added as exterior c
 		if (dim == sdim) {pri_dir = sdir;} // face the street if possible
 	}
 	bool sign_both_sides(rgen.rand_bool());
-	bool const two_sided(!sign_both_sides && 0), emissive(rgen.rand_bool());
+	bool const two_sided(!sign_both_sides && 0), emissive(rgen.rand_float() < 0.65), scrolling(emissive && name.size() >= 8 && rgen.rand_float() < 0.75);
 	// non-cube buildings can have signs tangent to a point or curve and need proper connectors; also, only cube buildings have roof walls that connectors may clip through
 	bool const add_connector(!is_cube());
 	float const width(bcube.get_sz_dim(!dim)), sign_hwidth(0.5*min(0.8*best_width, 0.5*width));
@@ -263,7 +263,7 @@ void building_t::add_signs(vector<sign_t> &signs) const { // added as exterior c
 			if (i->z2() == part_zmax && i->intersects_xy_no_adj(sign)) {bad_place = 1; break;}
 		}
 		if (bad_place) continue; // Note: intentionally skips the break below
-		signs.emplace_back(sign, dim, dir, name, WHITE, color, two_sided, emissive);
+		signs.emplace_back(sign, dim, dir, name, WHITE, color, two_sided, emissive, 0, scrolling); // small=0
 
 		if (add_connector) {
 			cube_t conn(sign);

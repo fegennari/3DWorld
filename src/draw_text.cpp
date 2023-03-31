@@ -114,7 +114,8 @@ void gen_text_verts(vector<vert_tc_t> &verts, point const &pos, string const &te
 			if (pcd.width == 0.0) continue; // non-printable character, skip it (currently never get here, but left for future use)
 			float const char_width(char_sz*pcd.width);
 
-			if (*i != ' ') { // skip non-printable space character
+			// skip non-printable space character, except at the beginning and end (for scrolling signs) because we need those verts for the bcube bounds
+			if (*i != ' ' || i == text.begin() || i+1 == text.end()) {
 				float const t[4][2] = {{pcd.u1,pcd.v1}, {pcd.u2,pcd.v1}, {pcd.u2,pcd.v2}, {pcd.u1,pcd.v2}};
 				float const dx[4] = {0.0, char_width, char_width, 0.0};
 				float const dy[4] = {0.0, 0.0, char_sz, char_sz};
