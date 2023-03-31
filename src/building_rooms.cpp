@@ -3346,6 +3346,7 @@ void building_t::add_wall_and_door_trim() { // and window trim
 
 				for (auto v = points.begin(); v != points.end(); ++v) {
 					point const &p1(*v), &p2((v == points.begin()) ? points.back() : *(v-1));
+					if (fabs(p1[dim] - p2[dim]) > 0.1*wall_thickness) continue; // not nearly parallel in dim
 					cube_t const edge_bc(p1, p2);
 					if (!edge_bc.intersects_xy(trim)) continue; // wrong edge
 					trim.d[dim][dir] = 0.5*(p1[dim] + p2[dim]); // clip to edge pos
@@ -3359,6 +3360,7 @@ void building_t::add_wall_and_door_trim() { // and window trim
 		for (unsigned side = 0; side < 2; ++side) { // left/right of door
 			trim.d[!dim][0] = door.d[!dim][side] - (side ? trim_width : 0.0);
 			trim.d[!dim][1] = door.d[!dim][side] + (side ? 0.0 : trim_width);
+			assert(trim.is_strictly_normalized());
 			objs.emplace_back(trim, TYPE_WALL_TRIM, 0, dim, side, (ext_flags | RO_FLAG_ADJ_BOT | RO_FLAG_ADJ_TOP), 1.0, SHAPE_TALL, ext_trim_color); // abuse tall flag
 		}
 		// add trim at bottom of door for threshold
