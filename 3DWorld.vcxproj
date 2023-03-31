@@ -1155,6 +1155,7 @@
     <None Include="shaders\model_animation.part.vert" />
     <None Include="shaders\moon_draw.frag" />
     <None Include="shaders\moon_draw.vert" />
+    <None Include="shaders\msdf_text.frag" />
     <None Include="shaders\multitex_2.vert" />
     <None Include="shaders\nebula.frag" />
     <None Include="shaders\nebula.vert" />

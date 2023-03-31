@@ -1464,6 +1464,9 @@
     <None Include="shaders\model_animation.part.vert">
       <Filter>Shaders\vert</Filter>
     </None>
+    <None Include="shaders\msdf_text.frag">
+      <Filter>Shaders\frag</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Script1.rc">
