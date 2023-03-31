@@ -1236,6 +1236,8 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t &room, flo
 		float const sink_start(place_area.d[!br_dim][sink_side] + 0.5f*sink_step);
 		float const sink_from_wall(wall_pos + dir_sign*(0.5f*slength + (use_sink_model ? wall_thickness : 0.0f)));
 		float sink_pos(sink_start);
+		bool hit_mirror_end(0);
+		unsigned last_sink_ix(0);
 		cube_t sinks_bcube;
 
 		for (unsigned n = 0; n < num_sinks; ++n, sink_pos += sink_step) {
@@ -1244,18 +1246,16 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t &room, flo
 			cube_t sink(center, center);
 			sink.expand_in_dim(br_dim, 0.5*slength);
 			sink.z2() += sheight;
-			if (interior->is_cube_close_to_doorway(sink, room, 0.0, 1)) continue; // skip if close to a door
+			if (interior->is_cube_close_to_doorway(sink, room, 0.0, 1)) continue; // skip if close to a door, inc_open=1, pre expand
+			sink.expand_in_dim(!br_dim, 0.5*(use_sink_model ? swidth : fabs(sink_step))); // tile exactly with the adjacent sink
+			if (interior->is_cube_close_to_doorway(sink, room, 0.0, 0)) continue; // skip if close to a door
 			if (!check_cube_within_part_sides(sink)) continue; // outside the building
-
-			if (use_sink_model) { // sink 3D model
-				sink.expand_in_dim(!br_dim, 0.5*swidth);
-				objs.emplace_back(sink, TYPE_SINK, room_id, br_dim, !dir, 0, tot_light_amt);
-			}
-			else { // flat basin sink
-				sink.expand_in_dim(!br_dim, 0.5*fabs(sink_step)); // tile exactly with the adjacent sink
-				objs.emplace_back(sink, TYPE_BRSINK, room_id, br_dim, !dir, 0, tot_light_amt);
-			}
-			sinks_bcube.assign_or_union_with_cube(sink);
+			if (use_sink_model) {objs.emplace_back(sink, TYPE_SINK,   room_id, br_dim, !dir, 0, tot_light_amt);} // sink 3D model
+			else                {objs.emplace_back(sink, TYPE_BRSINK, room_id, br_dim, !dir, 0, tot_light_amt);} // flat basin sink
+			// if we started the mirror, but we have a gap with no sink (blocked by a door, etc.), then end the mirror
+			hit_mirror_end |= (n > last_sink_ix+1 && !sinks_bcube.is_all_zeros());
+			if (!hit_mirror_end) {sinks_bcube.assign_or_union_with_cube(sink);}
+			last_sink_ix = n;
 		} // for n
 		if (add_urinals) { // add urinals opposite the sinks, using same spacing as sinks
 			float const u_wall(place_area.d[br_dim][!dir]), u_from_wall(u_wall - dir_sign*(0.5*ulength + 0.01*wall_thickness));
