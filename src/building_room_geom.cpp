@@ -1383,6 +1383,10 @@ void building_room_geom_t::add_fireplace(room_object_t const &c, float tscale) {
 	marble_mat.add_cube_to_verts(top, color, tex_origin,  skip_back_face); // skip back face
 }
 
+void building_room_geom_t::add_filing_cabinet(room_object_t const &c) {
+	add_obj_with_front_texture(c, "interiors/filing_cabinet.jpg", GRAY, 0); // is_small=0
+}
+
 void building_room_geom_t::add_ceiling_fan_light(room_object_t const &fan, room_object_t const &light) {
 	bool const is_on(light.is_light_on() && !light.is_broken());
 	if (!is_on) return; // only drawn when light is on

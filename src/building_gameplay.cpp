@@ -128,6 +128,7 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_PAN       ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 15.0,  4.0,   "Frying Pan");
 	bldg_obj_types[TYPE_VASE      ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 20.0,  1.0,   "Vase");
 	bldg_obj_types[TYPE_URN       ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 40.0,  2.0,   "Urn");
+	bldg_obj_types[TYPE_FCABINET  ] = bldg_obj_type_t(1, 1, 1, 0, 0, 0, 1, 100.0, 100.0, "Filing Cabinet");
 	// player_coll, ai_coll, rat_coll, pickup, attached, is_model, lg_sm, value, weight, name [capacity]
 	// 3D models
 	bldg_obj_types[TYPE_TOILET    ] = bldg_obj_type_t(1, 1, 1, 1, 1, 1, 0, 120.0, 88.0,  "toilet");
@@ -954,7 +955,7 @@ bool object_can_have_something_on_it(room_object_t const &obj) {
 	// only these types can have objects placed on them (what about TYPE_SHELF? what about TYPE_BED with a ball or book placed on it?)
 	return (obj.type == TYPE_TABLE || obj.type == TYPE_DESK || obj.type == TYPE_COUNTER || obj.type == TYPE_DRESSER || obj.type == TYPE_NIGHTSTAND ||
 		obj.type == TYPE_BOX || obj.type == TYPE_CRATE || obj.type == TYPE_WINE_RACK || obj.type == TYPE_BOOK || obj.type == TYPE_STOVE
-		/*|| obj.type == TYPE_SHELF*/ /*|| obj.type == TYPE_BED*/);
+		/*|| obj.type == TYPE_FCABINET*/ /*|| obj.type == TYPE_SHELF*/ /*|| obj.type == TYPE_BED*/);
 }
 bool object_has_something_on_it(room_object_t const &obj, vect_room_object_t const &objs, vect_room_object_t::const_iterator objs_end) {
 	if (!object_can_have_something_on_it(obj)) return 0;
@@ -996,8 +997,9 @@ cube_t get_true_obj_bcube(room_object_t const &obj) {
 	return obj; // unmodified
 }
 
-bool obj_has_open_drawers(room_object_t const &obj) {return ((obj.type == TYPE_NIGHTSTAND || obj.type == TYPE_DRESSER || obj.type == TYPE_DESK) && obj.drawer_flags);}
-
+bool obj_has_open_drawers(room_object_t const &obj) {
+	return ((obj.type == TYPE_NIGHTSTAND || obj.type == TYPE_DRESSER || obj.type == TYPE_DESK || obj.type == TYPE_FCABINET) && obj.drawer_flags);
+}
 int building_room_geom_t::find_nearest_pickup_object(building_t const &building, point const &at_pos, vector3d const &in_dir, float range, float &obj_dist) const {
 	int closest_obj_id(-1);
 	float dmin_sq(0.0);
@@ -1070,7 +1072,8 @@ bool building_room_geom_t::open_nearest_drawer(building_t &building, point const
 
 	for (auto i = objs.begin(); i != objs_end; ++i) {
 		bool const is_counter_type(is_counter(*i) || i->type == TYPE_CABINET);
-		bool const has_drawers(i->type == TYPE_DRESSER || i->type == TYPE_NIGHTSTAND || i->type == TYPE_DESK || i->type == TYPE_COUNTER); // drawers that can be opened or picked from
+		// drawers that can be opened or picked from
+		bool const has_drawers(i->type == TYPE_DRESSER || i->type == TYPE_NIGHTSTAND || i->type == TYPE_DESK || i->type == TYPE_COUNTER || i->type == TYPE_FCABINET);
 		if (!(has_drawers || (!pickup_item && is_counter_type))) continue; // || doors that can be opened (no item pickup)
 		cube_t bcube(*i);
 		float &front_face(bcube.d[i->dim][i->dir]);
@@ -1099,7 +1102,10 @@ bool building_room_geom_t::open_nearest_drawer(building_t &building, point const
 		drawer_extend = (obj.dir ? 1.0 : -1.0)*0.8*obj.get_depth(); // used for cabinet drawers
 	}
 	else {
-		if (obj.type == TYPE_DESK) {
+		if (obj.type == TYPE_FCABINET) {
+			// TODO
+		}
+		else if (obj.type == TYPE_DESK) {
 			if (!obj.desk_has_drawers()) return 0; // no drawers for this desk
 			drawers_part = get_desk_drawers_part(obj);
 			bool const side(obj.obj_id & 1);
@@ -1859,7 +1865,7 @@ bool room_object_t::can_use() const { // excludes dynamic objects
 }
 bool room_object_t::can_place_onto() const {
 	return (type == TYPE_TABLE || type == TYPE_DESK || type == TYPE_DRESSER || type == TYPE_NIGHTSTAND || type == TYPE_COUNTER || type == TYPE_KSINK ||
-		type == TYPE_BRSINK || type == TYPE_BED || type == TYPE_BOX || type == TYPE_CRATE || type == TYPE_KEYBOARD || type == TYPE_BOOK); // TYPE_STAIR?
+		type == TYPE_BRSINK || type == TYPE_BED || type == TYPE_BOX || type == TYPE_CRATE || type == TYPE_KEYBOARD || type == TYPE_BOOK || type == TYPE_FCABINET); // TYPE_STAIR?
 }
 
 bool building_t::apply_toilet_paper(point const &pos, vector3d const &dir, float half_width) {

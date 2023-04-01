@@ -392,6 +392,9 @@ bool building_t::add_desk_to_room(rand_gen_t rgen, room_t const &room, vect_cube
 		if (room.is_office && num_placed == 1 && rgen.rand_float() < 0.5 && !room_has_stairs_or_elevator(room, zval, floor)) {placed_desk = bc; continue;} // allow two desks in one office
 		break; // done/success
 	} // for n
+	if (room.is_office) {
+		// TODO: place TYPE_FCABINET
+	}
 	return (num_placed > 0);
 }
 
@@ -2061,7 +2064,7 @@ bool building_t::add_rug_to_room(rand_gen_t rgen, cube_t const &room, float zval
 				if (max_area > 0.8*rug.dx()*rug.dy()) {rug = best_cand;} // good enough
 				else {valid_placement = 0;} // shrink is not enough, try again
 			}
-			else if (i->type == TYPE_TABLE || i->type == TYPE_DESK) { // rugs can't partially overlap these object types
+			else if (i->type == TYPE_TABLE || i->type == TYPE_DESK || i->type == TYPE_FCABINET) { // rugs can't partially overlap these object types
 				valid_placement = rug.contains_cube_xy(*i); // don't expand as that could cause the rug to intersect a previous object
 				// maybe beds should be included as well, but then rugs are unlikely to be placed in bedrooms
 			}

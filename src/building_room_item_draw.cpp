@@ -749,6 +749,7 @@ void building_room_geom_t::create_static_vbos(building_t const &building) {
 		case TYPE_MWAVE:   add_mwave   (*i); break;
 		case TYPE_BLINDS:  add_blinds  (*i); break;
 		case TYPE_FPLACE:  add_fireplace(*i, tscale); break;
+		case TYPE_FCABINET: add_filing_cabinet(*i); break;
 		//case TYPE_FRIDGE: if (i->is_open()) {} break; // draw open fridge?
 		case TYPE_ELEVATOR: break; // not handled here
 		case TYPE_BLOCKER:  break; // not drawn

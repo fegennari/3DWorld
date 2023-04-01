@@ -1635,6 +1635,7 @@ int building_t::check_line_coll_expand(point const &p1, point const &p2, float r
 				else if (c->type == TYPE_DESK && c->desk_has_drawers()) {
 					if (line_int_cube_exp(p1, p2, get_desk_drawers_part(*c), expand)) return 9;
 				}
+				else if (c->type == TYPE_FCABINET) {} // TODO
 			}
 			else if (c->type == TYPE_CHAIR) {
 				cube_t cubes[3], leg_cubes[4]; // seat, back, legs_bcube
