@@ -460,7 +460,6 @@ void rgeom_mat_t::create_vbo(building_t const &building) {
 void rgeom_mat_t::create_vbo_inner() {
 	assert(itri_verts.empty() == indices.empty());
 	unsigned const qsz(quad_verts.size()*sizeof(vertex_t)), itsz(itri_verts.size()*sizeof(vertex_t)), tot_verts_sz(qsz + itsz);
-	unsigned const new_num_verts(quad_verts.size() + itri_verts.size());
 	// in most cases when num_verts starts out nonzero there is no actual update for this material, but accurately skipping the VBO update is difficult;
 	// hashing the vertex data is too slow, and simply summing the verts is inaccurate for things like light switch rotations and buildings far from the origin
 	num_verts = quad_verts.size() + itri_verts.size();
