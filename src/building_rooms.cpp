@@ -279,8 +279,7 @@ bool building_t::add_desk_to_room(rand_gen_t rgen, room_t const &room, vect_cube
 	float const width(0.8*vspace*rgen.rand_uniform(1.0, 1.2)), depth(0.38*vspace*rgen.rand_uniform(1.0, 1.2)), height(0.21*vspace*rgen.rand_uniform(1.0, 1.2));
 	float const clearance(max(0.5f*depth, get_min_front_clearance_inc_people()));
 	vect_room_object_t &objs(interior->room_geom->objs);
-	unsigned num_placed(0);
-	cube_t c, placed_desk;
+	cube_t c;
 	set_cube_zvals(c, zval, zval+height);
 
 	for (unsigned n = 0; n < 20; ++n) { // make 20 attempts to place a desk
@@ -292,15 +291,13 @@ bool building_t::add_desk_to_room(rand_gen_t rgen, room_t const &room, vect_cube
 		set_wall_width(c, pos, 0.5*width, !dim);
 		cube_t desk_pad(c);
 		desk_pad.d[dim][!dir] += dsign*clearance; // ensure clearance in front of the desk so that a chair can be placed
-		if (num_placed > 0 && desk_pad.intersects(placed_desk))        continue; // intersects previously placed desk
 		if (!is_valid_placement_for_room(desk_pad, room, blockers, 1)) continue; // check proximity to doors and collision with blockers
-		if (overlaps_other_room_obj(desk_pad, objs_start))             continue; // check other objects (for bedroom desks)
+		if (overlaps_other_room_obj(desk_pad, objs_start))             continue; // check other objects (for bedroom desks or multiple office desks)
 		// make short if against an exterior wall, in an office, or if there's a complex floorplan (in case there's no back wall)
 		bool const is_tall(!room.is_office && !has_complex_floorplan && rgen.rand_float() < 0.5 && (is_basement || classify_room_wall(room, zval, dim, dir, 0) != ROOM_WALL_EXT));
 		unsigned const desk_obj_ix(objs.size());
 		objs.emplace_back(c, TYPE_DESK, room_id, dim, !dir, 0, tot_light_amt, (is_tall ? SHAPE_TALL : SHAPE_CUBE));
 		set_obj_id(objs);
-		cube_t bc(c);
 		bool const add_computer(building_obj_model_loader.is_model_valid(OBJ_MODEL_TV) && rgen.rand_bool());
 
 		if (add_computer) {
@@ -379,23 +376,33 @@ bool building_t::add_desk_to_room(rand_gen_t rgen, room_t const &room, vect_cube
 			chair_pos.z = zval;
 			chair_pos[dim]  = c.d[dim][!dir];
 			chair_pos[!dim] = pos + rgen.rand_uniform(-0.1, 0.1)*width; // slightly misaligned
-			// there are too many desks in office buildings, and they have office chairs in cubicles anyway, so only use chair models for desks in houses with computer monitors
-			bool const office_chair_model(add_computer && is_house);
-			
-			if (add_chair(rgen, room, blockers, room_id, chair_pos, chair_color, dim, dir, tot_light_amt, office_chair_model)) {
-				cube_t const &chair(objs.back());
-				if (num_placed > 0 && chair.intersects(placed_desk)) {objs.pop_back();} // intersects previously placed desk, remove it
-				else {bc.union_with_cube(chair);} // include the chair
-			}
+			// use office chair models when the desk has a computer monitor; now that occlusion culling works well, it's okay to have a ton of these in office buildings
+			bool const office_chair_model(add_computer /*&& is_house*/);
+			add_chair(rgen, room, blockers, room_id, chair_pos, chair_color, dim, dir, tot_light_amt, office_chair_model);
 		}
-		++num_placed;
-		if (room.is_office && num_placed == 1 && rgen.rand_float() < 0.5 && !room_has_stairs_or_elevator(room, zval, floor)) {placed_desk = bc; continue;} // allow two desks in one office
-		break; // done/success
+		return 1; // done/success
 	} // for n
-	if (room.is_office) {
-		// TODO: place TYPE_FCABINET
+	return 0; // failed
+}
+
+bool building_t::add_office_objs(rand_gen_t rgen, room_t const &room, vect_cube_t &blockers, colorRGBA const &chair_color,
+	float zval, unsigned room_id, unsigned floor, float tot_light_amt, unsigned objs_start, bool is_basement)
+{
+	vect_room_object_t &objs(interior->room_geom->objs);
+	unsigned const desk_obj_id(objs.size());
+	if (!add_desk_to_room(rgen, room, blockers, chair_color, zval, room_id, floor, tot_light_amt, objs_start, is_basement)) return 0;
+
+	if (rgen.rand_float() < 0.5 && !room_has_stairs_or_elevator(room, zval, floor)) { // allow two desks in one office
+		assert(objs[desk_obj_id].type == TYPE_DESK);
+		blockers.push_back(objs[desk_obj_id]); // temporarily add the previous desk as a blocker for the new desk and its chair
+		room_object_t const &maybe_chair(objs.back());
+		bool const added_chair(maybe_chair.type == TYPE_CHAIR || maybe_chair.type == TYPE_OFF_CHAIR);
+		if (added_chair) {blockers.push_back(maybe_chair);}
+		add_desk_to_room(rgen, room, blockers, chair_color, zval, room_id, floor, tot_light_amt, objs_start, is_basement);
+		if (added_chair) {blockers.pop_back();} // remove the chair if it was added
+		blockers.pop_back(); // remove the first desk blocker
 	}
-	return (num_placed > 0);
+	return 1;
 }
 
 bool building_t::create_office_cubicles(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt) { // assumes no prior placed objects
@@ -3063,7 +3070,9 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				if (added_obj) {r->assign_to(RTYPE_STORAGE, f);}
 			}
 			if (!added_obj && (!is_basement || rgen.rand_bool())) { // try to place a desk if there's no table, bed, etc.
-				added_obj = can_place_onto = added_desk = add_desk_to_room(rgen, *r, blockers, chair_color, room_center.z, room_id, f, tot_light_amt, objs_start, is_basement);
+				added_obj = can_place_onto = added_desk = (is_house ?
+					add_desk_to_room(rgen, *r, blockers, chair_color, room_center.z, room_id, f, tot_light_amt, objs_start, is_basement) :
+					add_office_objs (rgen, *r, blockers, chair_color, room_center.z, room_id, f, tot_light_amt, objs_start, is_basement));
 				if (added_obj && !has_stairs_this_floor) {r->assign_to((is_house ? (room_type)RTYPE_STUDY : (room_type)RTYPE_OFFICE), f);} // or other room type - may overwrite below
 			}
 			if (is_house && (added_tc || added_desk) && !is_kitchen && f == 0) { // don't add second living room unless we added a kitchen and have enough rooms
