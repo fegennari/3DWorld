@@ -1103,7 +1103,7 @@ bool building_room_geom_t::open_nearest_drawer(building_t &building, point const
 	}
 	else {
 		if (obj.type == TYPE_FCABINET) {
-			// TODO
+			return 0; // TODO
 		}
 		else if (obj.type == TYPE_DESK) {
 			if (!obj.desk_has_drawers()) return 0; // no drawers for this desk

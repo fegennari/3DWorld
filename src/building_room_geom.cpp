@@ -1384,7 +1384,8 @@ void building_room_geom_t::add_fireplace(room_object_t const &c, float tscale) {
 }
 
 void building_room_geom_t::add_filing_cabinet(room_object_t const &c) {
-	add_obj_with_front_texture(c, "interiors/filing_cabinet.jpg", GRAY, 0); // is_small=0
+	// TODO: logic to draw open drawers
+	add_obj_with_front_texture(c, "interiors/filing_cabinet.png", GRAY, 0); // is_small=0
 }
 
 void building_room_geom_t::add_ceiling_fan_light(room_object_t const &fan, room_object_t const &light) {
@@ -3557,6 +3558,7 @@ colorRGBA room_object_t::get_color() const {
 	case TYPE_FURNACE:  return get_furnace_color();
 	case TYPE_ATTIC_DOOR:return get_textured_wood_color();
 	case TYPE_DUCT:     return texture_color((shape == SHAPE_CYLIN) ? get_cylin_duct_tid() : get_cube_duct_tid()).modulate_with(color);
+	case TYPE_FCABINET: return texture_color(get_texture_by_name("interiors/filing_cabinet.png"));
 	//case TYPE_CHIMNEY:  return texture_color(get_material().side_tex); // should modulate with texture color, but we don't have it here
 	default: return color; // TYPE_LIGHT, TYPE_TCAN, TYPE_BOOK, TYPE_BOTTLE, TYPE_PEN_PENCIL, etc.
 	}

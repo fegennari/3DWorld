@@ -402,6 +402,13 @@ bool building_t::add_office_objs(rand_gen_t rgen, room_t const &room, vect_cube_
 		if (added_chair) {blockers.pop_back();} // remove the chair if it was added
 		blockers.pop_back(); // remove the first desk blocker
 	}
+	if (rgen.rand_float() < 0.75) { // maybe place a filing cabinet along a wall
+		float const fc_height(rgen.rand_uniform(0.45, 0.6)*get_window_vspace());
+		vector3d const fc_sz_scale(rgen.rand_uniform(0.40, 0.45), rgen.rand_uniform(0.25, 0.30), 1.0); // depth, width, height
+		cube_t place_area(get_walkable_room_bounds(room));
+		place_area.expand_by(-0.25*get_wall_thickness());
+		place_obj_along_wall(TYPE_FCABINET, room, fc_height, fc_sz_scale, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 1.0);
+	}
 	return 1;
 }
 
