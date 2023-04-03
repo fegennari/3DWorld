@@ -664,7 +664,7 @@ void place_book(room_object_t &obj, cube_t const &parent, float length, float ma
 	if (c.item_flags & (1U << drawer_ix)) {return room_object_t();} // item has been taken
 	assert(drawer.is_strictly_normalized());
 	vector3d const sz(drawer.get_size()); // Note: drawer is the interior area
-	bool const is_cabinet(c.type == TYPE_COUNTER);
+	bool const is_cabinet(c.type == TYPE_COUNTER), is_filing_cabinet(c.type == TYPE_FCABINET);
 	rand_gen_t rgen;
 	rgen.set_state((123*drawer_ix + 1), (456*c.room_id + 777*c.obj_id + 1));
 	room_object_t obj; // starts as no item
@@ -673,6 +673,9 @@ void place_book(room_object_t &obj, cube_t const &parent, float length, float ma
 	if (c.in_attic()) { // custom object overrides for attic item drawers
 		if (type_ix == 7) {type_ix = 0;} // replace money with box
 		if (type_ix == 8) {type_ix = 4;} // replace cell phone with book
+	}
+	if (is_filing_cabinet) { // TODO: add some other office supply objects to put in filing cabinets
+		if (type_ix == 5) {type_ix = 1;} // replace key with paper
 	}
 	switch (type_ix) {
 	case 0: // box

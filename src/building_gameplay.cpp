@@ -34,6 +34,7 @@ bool is_pants_model(room_object_t const &obj);
 bool player_at_full_health();
 void register_fly_attract(bool no_msg);
 room_obj_or_custom_item_t steal_from_car(room_object_t const &car, float floor_spacing, bool do_pickup);
+float get_filing_cabinet_drawers(room_object_t const &c, vect_cube_t &drawers);
 
 bool in_building_gameplay_mode() {return (game_mode == 2);} // replaces dodgeball mode
 
@@ -128,7 +129,7 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_PAN       ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 15.0,  4.0,   "Frying Pan");
 	bldg_obj_types[TYPE_VASE      ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 20.0,  1.0,   "Vase");
 	bldg_obj_types[TYPE_URN       ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 40.0,  2.0,   "Urn");
-	bldg_obj_types[TYPE_FCABINET  ] = bldg_obj_type_t(1, 1, 1, 0, 0, 0, 1, 100.0, 100.0, "Filing Cabinet");
+	bldg_obj_types[TYPE_FCABINET  ] = bldg_obj_type_t(1, 1, 1, 0, 0, 0, 3, 100.0, 100.0, "Filing Cabinet"); // body is large, drawers and their contents are small
 	// player_coll, ai_coll, rat_coll, pickup, attached, is_model, lg_sm, value, weight, name [capacity]
 	// 3D models
 	bldg_obj_types[TYPE_TOILET    ] = bldg_obj_type_t(1, 1, 1, 1, 1, 1, 0, 120.0, 88.0,  "toilet");
@@ -1101,11 +1102,12 @@ bool building_room_geom_t::open_nearest_drawer(building_t &building, point const
 		drawers_part  = obj; // need to at least copy the IDs and flags
 		drawer_extend = (obj.dir ? 1.0 : -1.0)*0.8*obj.get_depth(); // used for cabinet drawers
 	}
+	else if (obj.type == TYPE_FCABINET) {
+		drawers_part  = obj;
+		drawer_extend = get_filing_cabinet_drawers(obj, drawers);
+	}
 	else {
-		if (obj.type == TYPE_FCABINET) {
-			return 0; // TODO
-		}
-		else if (obj.type == TYPE_DESK) {
+		if (obj.type == TYPE_DESK) {
 			if (!obj.desk_has_drawers()) return 0; // no drawers for this desk
 			drawers_part = get_desk_drawers_part(obj);
 			bool const side(obj.obj_id & 1);
@@ -1158,7 +1160,8 @@ bool building_room_geom_t::open_nearest_drawer(building_t &building, point const
 		}
 		point const drawer_center(drawer.get_cube_center());
 		if (is_door) {building.play_door_open_close_sound(drawer_center, obj.is_open(), 0.5, 1.5);}
-		else {gen_sound_thread_safe(SOUND_SLIDING, building.local_to_camera_space(drawer_center), 0.5);}
+		else if (obj.type == TYPE_FCABINET) {gen_sound_thread_safe(SOUND_METAL_DOOR, building.local_to_camera_space(drawer_center), 0.5, 1.5);}
+		else                                {gen_sound_thread_safe(SOUND_SLIDING,    building.local_to_camera_space(drawer_center), 0.5);}
 		register_building_sound(drawer_center, 0.4);
 
 		if (is_door) { // expand any items in the cabinet so that the player can pick them up

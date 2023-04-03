@@ -749,7 +749,7 @@ void building_room_geom_t::create_static_vbos(building_t const &building) {
 		case TYPE_MWAVE:   add_mwave   (*i); break;
 		case TYPE_BLINDS:  add_blinds  (*i); break;
 		case TYPE_FPLACE:  add_fireplace(*i, tscale); break;
-		case TYPE_FCABINET: add_filing_cabinet(*i); break;
+		case TYPE_FCABINET: add_filing_cabinet(*i, 1, 0); break; // lg
 		//case TYPE_FRIDGE: if (i->is_open()) {} break; // draw open fridge?
 		case TYPE_ELEVATOR: break; // not handled here
 		case TYPE_BLOCKER:  break; // not drawn
@@ -836,6 +836,7 @@ void building_room_geom_t::add_small_static_objs_to_verts(vect_room_object_t con
 		case TYPE_COUNTER: add_counter (c, tscale, 0, 1); break; // sm
 		case TYPE_KSINK:   add_counter (c, tscale, 0, 1); break; // sm
 		case TYPE_CABINET: add_cabinet (c, tscale, 0, 1); break; // sm
+		case TYPE_FCABINET: add_filing_cabinet(c,  0, 1); break; // sm
 		default: break;
 		} // end switch
 	} // for i

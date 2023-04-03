@@ -223,7 +223,7 @@ void clip_drawer_to_interior(room_object_t const &c, cube_t &drawer, float insid
 	drawer.z1() += 0.15*drawer_height;
 	drawer.z2() -= 0.05*drawer_height;
 }
-float get_drawer_cubes(room_object_t const &c, vect_cube_t &drawers, bool front_only, bool inside_only) {
+float get_drawer_cubes(room_object_t const &c, vect_cube_t &drawers, bool front_only, bool inside_only) { // Note: c is the drawers part of the object
 	assert(!(front_only && inside_only)); // these options only apply to open drawers and are mutually exclusive
 	assert(c.is_strictly_normalized());
 	drawers.clear();
@@ -1383,9 +1383,44 @@ void building_room_geom_t::add_fireplace(room_object_t const &c, float tscale) {
 	marble_mat.add_cube_to_verts(top, color, tex_origin,  skip_back_face); // skip back face
 }
 
-void building_room_geom_t::add_filing_cabinet(room_object_t const &c) {
-	// TODO: logic to draw open drawers
-	add_obj_with_front_texture(c, "interiors/filing_cabinet.png", GRAY, 0); // is_small=0
+float get_filing_cabinet_drawers(room_object_t const &c, vect_cube_t &drawers) { // c is the drawers part of the object
+	cube_t drawer_area(c);
+	drawer_area.expand_in_dim(!c.dim, -0.05*c.get_width()); // shrink width
+	drawer_area.d[c.dim][!c.dir] += (c.dir ? 1.0 : -1.0)*0.2*c.get_depth(); // shift back in (shrink depth)
+	drawer_area.z1() += 0.10*c.dz();
+	drawer_area.z2() -= 0.03*c.dz();
+	drawers.clear();
+	unsigned const num_drawers = 4; // hard-coded to 4 for now, to match the texture
+	float const spacing(drawer_area.dz()/num_drawers), border(0.025*spacing), dir_sign(c.dir ? 1.0 : -1.0), drawer_extend(dir_sign*drawer_area.get_sz_dim(c.dim));
+	float vpos(drawer_area.z1());
+
+	for (unsigned n = 0; n < num_drawers; ++n, vpos += spacing) { // at most 12 drawers
+		cube_t drawer(drawer_area);
+		set_cube_zvals(drawer, (vpos + border), (vpos + spacing - border));
+		if (c.drawer_flags & (1 << drawers.size())) {drawer.translate_dim(c.dim, drawer_extend);} // make a drawer open
+		drawers.push_back(drawer);
+	}
+	return drawer_extend; // signed
+}
+void building_room_geom_t::add_filing_cabinet(room_object_t const &c, bool inc_lg, bool inc_sm) {
+	colorRGBA const color(c.get_color());
+	if (inc_lg) {add_obj_with_front_texture(c, "interiors/filing_cabinet.png", color, 0);} // is_small=0
+
+	if (inc_sm) { // add drawers and their contents
+		vect_cube_t &drawers(get_temp_cubes());
+		vect_room_object_t &objects(get_temp_objects());
+		get_filing_cabinet_drawers(c, drawers);
+
+		for (auto i = drawers.begin(); i != drawers.end(); ++i) {
+			if (i->d[c.dim][c.dir] == c.d[c.dim][c.dir]) continue; // closed - not drawn
+			room_object_t drawer(c);
+			drawer.copy_from(*i);
+			add_obj_with_front_texture(drawer, "interiors/filing_cabinet_drawer.png", color, 1); // is_small=1
+			room_object_t const obj(get_item_in_drawer(c, drawer, (i - drawers.begin())));
+			if (obj.type != TYPE_NONE) {objects.push_back(obj);}
+		} // for i
+		add_nested_objs_to_verts(objects); // add any objects that were found in open drawers; must be small static objects
+	}
 }
 
 void building_room_geom_t::add_ceiling_fan_light(room_object_t const &fan, room_object_t const &light) {
