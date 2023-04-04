@@ -403,7 +403,7 @@ void building_room_geom_t::expand_dishwasher(room_object_t &c, cube_t const &dis
 	unsigned const expanded_objs_start(expanded_objs.size());
 	c.item_flags = expanded_objs_start; // record the location where we'll add our objects
 	//rand_gen_t rgen(c.create_rgen());
-	// add TYPE_PLATE, and TYPE_CUP, and TYPE_SILVERWARE
+	// add TYPE_PLATE, and TYPE_CUP, and TYPE_SILVER
 	unsigned const num_plates = 4; // random?
 	unsigned const flags(RO_FLAG_NOCOLL | RO_FLAG_INTERIOR | RO_FLAG_WAS_EXP);
 	uint16_t obj_place_index(0);
@@ -441,7 +441,7 @@ void building_room_geom_t::unexpand_dishwasher(room_object_t &c, cube_t const &d
 	for (unsigned i = c.item_flags; i < expanded_objs.size(); ++i) { // search starting at our expanded_objs insertion point
 		room_object_t &obj(expanded_objs[i]);
 		if (!door_region.contains_pt(obj.get_cube_center())) break; // break when outside our object range
-		if (/*obj.type == TYPE_BLOCKER*/obj.type != TYPE_PLATE && obj.type != TYPE_CUP && obj.type != TYPE_SILVERWARE) continue; // not a dishwasher item
+		if (/*obj.type == TYPE_BLOCKER*/obj.type != TYPE_PLATE && obj.type != TYPE_CUP && obj.type != TYPE_SILVER) continue; // not a dishwasher item
 		obj.remove();
 		c.taken_level &= ~(1 << (i - c.item_flags)); // mark this object as untaken
 		++num_rem;
@@ -669,16 +669,16 @@ void place_book(room_object_t &obj, cube_t const &parent, float length, float ma
 	rgen.set_state((123*drawer_ix + 1), (456*c.room_id + 777*c.obj_id + 1));
 	room_object_t obj; // starts as no item
 	unsigned const type_ix(rgen.rand() % 11); // 0-10
-	unsigned const types_drawer  [11] = {TYPE_BOX, TYPE_PAPER, TYPE_PEN, TYPE_PEN, TYPE_BOOK, TYPE_KEY,   TYPE_BOTTLE, TYPE_MONEY,  TYPE_PHONE,      TYPE_SPRAYCAN, TYPE_TAPE};
-	unsigned const types_attic   [11] = {TYPE_BOX, TYPE_PAPER, TYPE_PEN, TYPE_PEN, TYPE_BOOK, TYPE_KEY,   TYPE_BOTTLE, TYPE_BOX,    TYPE_BOOK,       TYPE_SPRAYCAN, TYPE_TAPE};
-	unsigned const types_kcabinet[11] = {TYPE_BOX, TYPE_PAPER, TYPE_PEN, TYPE_PEN, TYPE_BOOK, TYPE_PLATE, TYPE_BOTTLE, TYPE_BOTTLE, TYPE_SILVERWARE, TYPE_SPRAYCAN, TYPE_TAPE};
-	unsigned const types_fcabinet[11] = {TYPE_BOX, TYPE_PAPER, TYPE_PEN, TYPE_PEN, TYPE_BOOK, TYPE_BOX,   TYPE_PAPER,  TYPE_BOOK,   TYPE_TAPE,       TYPE_PAPER,    TYPE_TAPE};
+	unsigned const types_drawer  [11] = {TYPE_BOX, TYPE_PAPER, TYPE_PEN, TYPE_PEN, TYPE_BOOK, TYPE_KEY,   TYPE_BOTTLE, TYPE_MONEY,  TYPE_PHONE,  TYPE_SPRAYCAN, TYPE_TAPE};
+	unsigned const types_attic   [11] = {TYPE_BOX, TYPE_PAPER, TYPE_PEN, TYPE_PEN, TYPE_BOOK, TYPE_KEY,   TYPE_BOTTLE, TYPE_BOX,    TYPE_BOOK,   TYPE_SPRAYCAN, TYPE_TAPE};
+	unsigned const types_kcabinet[11] = {TYPE_BOX, TYPE_PAPER, TYPE_PEN, TYPE_PEN, TYPE_BOOK, TYPE_PLATE, TYPE_BOTTLE, TYPE_BOTTLE, TYPE_SILVER, TYPE_SPRAYCAN, TYPE_TAPE};
+	unsigned const types_fcabinet[11] = {TYPE_BOX, TYPE_PAPER, TYPE_PEN, TYPE_PEN, TYPE_BOOK, TYPE_BOX,   TYPE_PAPER,  TYPE_BOOK,   TYPE_TAPE,   TYPE_PAPER,    TYPE_TAPE};
 	unsigned obj_type(0);
 	if (c.in_attic())                 {obj_type = types_attic   [type_ix];} // custom object overrides for attic item drawers
 	else if (c.type == TYPE_COUNTER)  {obj_type = types_kcabinet[type_ix];}
 	else if (c.type == TYPE_FCABINET) {obj_type = types_fcabinet[type_ix];}
 	else                              {obj_type = types_drawer  [type_ix];} // desk, dresser, or nightstand
-	if (obj_type == TYPE_SILVERWARE && !building_obj_model_loader.is_model_valid(OBJ_MODEL_SILVERWARE)) {obj_type = TYPE_BOOK;} // replace silverware with book
+	if (obj_type == TYPE_SILVER && !building_obj_model_loader.is_model_valid(OBJ_MODEL_SILVER)) {obj_type = TYPE_BOOK;} // replace silverware with book
 
 	switch (obj_type) {
 	case TYPE_BOX: // box
@@ -755,11 +755,11 @@ void place_book(room_object_t &obj, cube_t const &parent, float length, float ma
 		if (length < 0.9*sz[c.dim] && width < 0.9*sz[!c.dim]) {place_money(obj, drawer, length, width, c.room_id, c.dim, c.dir, rgen);} // if it can fit
 		break;
 	}
-	case TYPE_SILVERWARE: // silverware
+	case TYPE_SILVER: // silverware
 	{
-		vector3d const ssz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_SILVERWARE)); // D, W, H
+		vector3d const ssz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_SILVER)); // D, W, H
 		float const sw_width(0.5*min(sz[!c.dim], (ssz.y/ssz.x)*sz[c.dim])), sw_length(sw_width*ssz.x/ssz.y), sw_height(sw_width*ssz.z/ssz.y);
-		obj = room_object_t(drawer, TYPE_SILVERWARE, c.room_id, c.dim, c.dir);
+		obj = room_object_t(drawer, TYPE_SILVER, c.room_id, c.dim, c.dir);
 		obj.z2() = obj.z1() + sw_height; // set height
 		set_rand_pos_for_sz(obj, c.dim, sw_length, sw_width, rgen);
 		break;

@@ -2584,8 +2584,8 @@ bool building_t::place_eating_items_on_table(rand_gen_t &rgen, unsigned table_ob
 		objs.emplace_back(plate, TYPE_PLATE, table.room_id, 0, 0, RO_FLAG_NOCOLL, table.light_amt, SHAPE_CYLIN);
 		set_obj_id(objs);
 
-		if (building_obj_model_loader.is_model_valid(OBJ_MODEL_SILVERWARE)) {
-			vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_SILVERWARE)); // D, W, H
+		if (building_obj_model_loader.is_model_valid(OBJ_MODEL_SILVER)) {
+			vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_SILVER)); // D, W, H
 			float const sw_height(0.0075*floor_spacing), sw_hwidth(0.5*sw_height*sz.x/sz.z), sw_hlen(0.5*sw_height*sz.y/sz.z); // Note: x/y swapped
 			vector3d const offset(pos - table_center);
 			bool const dim(fabs(offset.x) < fabs(offset.y)), dir(offset[dim] > 0.0);
@@ -2593,7 +2593,7 @@ bool building_t::place_eating_items_on_table(rand_gen_t &rgen, unsigned table_ob
 			set_cube_zvals(sw_bc, table.z2()+0.1*sw_height, table.z2()+sw_height);
 			set_wall_width(sw_bc, pos[!dim] + ((dim ^ dir) ? 1.0 : -1.0)*1.2*(plate_radius + sw_hlen), sw_hlen, !dim);
 			set_wall_width(sw_bc, pos[ dim], sw_hwidth, dim);
-			objs.emplace_back(sw_bc, TYPE_SILVERWARE, table.room_id, dim, dir, RO_FLAG_NOCOLL, table.light_amt, SHAPE_CUBE, GRAY);
+			objs.emplace_back(sw_bc, TYPE_SILVER, table.room_id, dim, dir, RO_FLAG_NOCOLL, table.light_amt, SHAPE_CUBE, GRAY);
 		}
 		added_obj = 1;
 	} // for i

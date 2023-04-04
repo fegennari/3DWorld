@@ -813,7 +813,7 @@ void building_room_geom_t::add_small_static_objs_to_verts(vect_room_object_t con
 		case TYPE_HANGER_ROD:add_hanger_rod(c); break;
 		case TYPE_DRAIN:     add_drain_pipe(c); break;
 		case TYPE_KEY:       if (has_key_3d_model()) {model_objs.push_back(c);} else {add_key(c);} break; // draw or add as 3D model
-		case TYPE_SILVERWARE: if (c.was_expanded() ) {model_objs.push_back(c);} break; // only draw here if expanded
+		case TYPE_SILVER:    if (c.was_expanded()  ) {model_objs.push_back(c);} break; // only draw here if expanded
 		case TYPE_MONEY:     add_money   (c); break;
 		case TYPE_PHONE:     add_phone   (c); break;
 		case TYPE_TPROLL:    add_tproll  (c); break;
@@ -901,7 +901,7 @@ void building_room_geom_t::create_obj_model_insts(building_t const &building) { 
 
 		for (auto i = obj_vect.begin(); i != objs_end; ++i) {
 			if (!i->is_visible() || !i->is_obj_model_type()) continue;
-			if (i->type == TYPE_KEY || (i->type == TYPE_SILVERWARE && i->was_expanded())) continue; // drawn as small object model
+			if (i->type == TYPE_KEY || (i->type == TYPE_SILVER && i->was_expanded())) continue; // drawn as small object model
 			vector3d dir(i->get_dir());
 
 			if (i->flags & RO_FLAG_RAND_ROT) {
@@ -1353,7 +1353,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, building_t c
 
 		if (shadow_only) {
 			if (obj.type == TYPE_CEIL_FAN) continue; // not shadow casting; would shadow its own light
-			if (obj.type == TYPE_KEY || obj.type == TYPE_FESCAPE || obj.type == TYPE_WALL_LAMP || obj.type == TYPE_SILVERWARE) continue; // too small or outdoors
+			if (obj.type == TYPE_KEY || obj.type == TYPE_FESCAPE || obj.type == TYPE_WALL_LAMP || obj.type == TYPE_SILVER) continue; // too small or outdoors
 			if (obj.z1() > camera_bs.z) continue; // above the light
 			if (obj.z2() < camera_bs.z - 2.0*floor_spacing) continue; // more than two floors below the light
 		}
