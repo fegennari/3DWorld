@@ -129,7 +129,7 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_PAN       ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 15.0,  4.0,   "Frying Pan");
 	bldg_obj_types[TYPE_VASE      ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 20.0,  1.0,   "Vase");
 	bldg_obj_types[TYPE_URN       ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 40.0,  2.0,   "Urn");
-	bldg_obj_types[TYPE_FCABINET  ] = bldg_obj_type_t(1, 1, 1, 0, 0, 0, 3, 100.0, 100.0, "Filing Cabinet"); // body is large, drawers and their contents are small
+	bldg_obj_types[TYPE_FCABINET  ] = bldg_obj_type_t(1, 1, 1, 1, 0, 0, 3, 100.0, 220.0, "Filing Cabinet"); // body is large, drawers and their contents are small
 	// player_coll, ai_coll, rat_coll, pickup, attached, is_model, lg_sm, value, weight, name [capacity]
 	// 3D models
 	bldg_obj_types[TYPE_TOILET    ] = bldg_obj_type_t(1, 1, 1, 1, 1, 1, 0, 120.0, 88.0,  "toilet");
@@ -1160,7 +1160,7 @@ bool building_room_geom_t::open_nearest_drawer(building_t &building, point const
 		}
 		point const drawer_center(drawer.get_cube_center());
 		if (is_door) {building.play_door_open_close_sound(drawer_center, obj.is_open(), 0.5, 1.5);}
-		else if (obj.type == TYPE_FCABINET) {gen_sound_thread_safe(SOUND_METAL_DOOR, building.local_to_camera_space(drawer_center), 0.5, 1.5);}
+		else if (obj.type == TYPE_FCABINET) {gen_sound_thread_safe(SOUND_METAL_DOOR, building.local_to_camera_space(drawer_center), 0.5, 1.25);}
 		else                                {gen_sound_thread_safe(SOUND_SLIDING,    building.local_to_camera_space(drawer_center), 0.5);}
 		register_building_sound(drawer_center, 0.4);
 

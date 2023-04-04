@@ -1386,18 +1386,18 @@ void building_room_geom_t::add_fireplace(room_object_t const &c, float tscale) {
 float get_filing_cabinet_drawers(room_object_t const &c, vect_cube_t &drawers) { // c is the drawers part of the object
 	cube_t drawer_area(c);
 	drawer_area.expand_in_dim(!c.dim, -0.05*c.get_width()); // shrink width
-	drawer_area.d[c.dim][!c.dir] += (c.dir ? 1.0 : -1.0)*0.2*c.get_depth(); // shift back in (shrink depth)
-	drawer_area.z1() += 0.10*c.dz();
-	drawer_area.z2() -= 0.03*c.dz();
+	drawer_area.d[c.dim][!c.dir] += (c.dir ? 1.0 : -1.0)*0.33*c.get_depth(); // shift back in (shrink depth)
+	drawer_area.z1() += 0.065*c.dz();
+	drawer_area.z2() -= 0.020*c.dz();
 	drawers.clear();
 	unsigned const num_drawers = 4; // hard-coded to 4 for now, to match the texture
-	float const spacing(drawer_area.dz()/num_drawers), border(0.025*spacing), dir_sign(c.dir ? 1.0 : -1.0), drawer_extend(dir_sign*drawer_area.get_sz_dim(c.dim));
+	float const spacing(drawer_area.dz()/num_drawers), border(0.02*spacing), dir_sign(c.dir ? 1.0 : -1.0), drawer_extend(dir_sign*drawer_area.get_sz_dim(c.dim));
 	float vpos(drawer_area.z1());
 
 	for (unsigned n = 0; n < num_drawers; ++n, vpos += spacing) { // at most 12 drawers
 		cube_t drawer(drawer_area);
 		set_cube_zvals(drawer, (vpos + border), (vpos + spacing - border));
-		if (c.drawer_flags & (1 << drawers.size())) {drawer.translate_dim(c.dim, drawer_extend);} // make a drawer open
+		if (c.drawer_flags & (1 << n)) {drawer.translate_dim(c.dim, drawer_extend);} // make a drawer open
 		drawers.push_back(drawer);
 	}
 	return drawer_extend; // signed
@@ -1406,17 +1406,28 @@ void building_room_geom_t::add_filing_cabinet(room_object_t const &c, bool inc_l
 	colorRGBA const color(c.get_color());
 	if (inc_lg) {add_obj_with_front_texture(c, "interiors/filing_cabinet.png", color, 0);} // is_small=0
 
-	if (inc_sm) { // add drawers and their contents
+	if (inc_sm && c.drawer_flags != 0) { // add drawers and their contents if any drawer is open
 		vect_cube_t &drawers(get_temp_cubes());
 		vect_room_object_t &objects(get_temp_objects());
+		get_untextured_material(1, 0, 1); // ensure material is loaded
+		rgeom_mat_t &front_mat(get_material(tid_nm_pair_t(get_texture_by_name("interiors/filing_cabinet_drawer.png"), 0.0), 1, 0, 1)); // shadows, small
+		rgeom_mat_t &sides_mat(get_untextured_material(1, 0, 1)); // shadows, small
+		unsigned const front_mask(get_face_mask(c.dim, c.dir)), fb_mask(~get_skip_mask_for_xy(c.dim)), sides_mask(~get_skip_mask_for_xy(!c.dim));
+		colorRGBA const &drawers_color(apply_light_color(c, color));
 		get_filing_cabinet_drawers(c, drawers);
 
-		for (auto i = drawers.begin(); i != drawers.end(); ++i) {
-			if (i->d[c.dim][c.dir] == c.d[c.dim][c.dir]) continue; // closed - not drawn
-			room_object_t drawer(c);
-			drawer.copy_from(*i);
-			add_obj_with_front_texture(drawer, "interiors/filing_cabinet_drawer.png", color, 1); // is_small=1
-			room_object_t const obj(get_item_in_drawer(c, drawer, (i - drawers.begin())));
+		for (unsigned n = 0; n < drawers.size(); ++n) {
+			if (!(c.drawer_flags & (1 << n))) continue; // closed - not drawn
+			cube_t const &drawer(drawers[n]);
+			cube_t drawer_sides(drawer), drawer_ends(drawer);
+			drawer_sides.z2() -= 0.2*drawer.dz(); // lower the sides
+			drawer_ends.d[c.dim][!c.dir] += (c.dir ? 1.0 : -1.0)*0.01*c.get_sz_dim(c.dim); // shift back outward to prevent z-fighting with cabinet front
+			front_mat.add_cube_to_verts(drawer, apply_light_color(c), zero_vector, front_mask, !c.dim, (c.dim ^ c.dir ^ 1), 0); // front face only
+			sides_mat.add_cube_to_verts_untextured(drawer_sides, drawers_color, sides_mask); // sides,  outer
+			sides_mat.add_cube_to_verts_untextured(drawer,       drawers_color, ~EF_Z1    ); // bottom, outer
+			sides_mat.add_cube_to_verts           (drawer_sides, drawers_color, all_zeros, (~fb_mask | EF_Z2), 0, 0, 0, 1); // sides + bottom, inner/inverted
+			sides_mat.add_cube_to_verts           (drawer_ends,  drawers_color, all_zeros,   fb_mask,          0, 0, 0, 1); // front + back,   inner/inverted
+			room_object_t const obj(get_item_in_drawer(c, drawer_sides, n));
 			if (obj.type != TYPE_NONE) {objects.push_back(obj);}
 		} // for i
 		add_nested_objs_to_verts(objects); // add any objects that were found in open drawers; must be small static objects
