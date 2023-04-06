@@ -769,7 +769,7 @@ bool building_t::adjust_blinds_state(unsigned obj_ix) {
 void building_t::toggle_door_state(unsigned door_ix, bool player_in_this_building, bool by_player, point const &actor_pos) { // called by the player or AI
 	assert(interior && door_ix < interior->doors.size());
 	door_t &door(interior->doors[door_ix]);
-	door.open ^= 1; // toggle open state
+	door.toggle_open_state(player_in_this_building); // allow partial open/animated door if player is in this building
 	// we changed the door state, but navigation should adapt to this, except for doors on stairs (which are special)
 	if (door.on_stairs) {invalidate_nav_graph();} // any in-progress paths may have people walking to and stopping at closed/locked doors
 	interior->door_state_updated = 1; // required for AI navigation logic to adjust to this change
@@ -806,6 +806,23 @@ void building_t::toggle_door_state(unsigned door_ix, bool player_in_this_buildin
 			interior->room_geom->invalidate_draw_data_for_obj(obj);
 		} // for obj
 	}
+}
+
+void door_t::toggle_open_state(bool allow_partial_open) {
+	open ^= 1;
+	if (!allow_partial_open) {make_fully_open_or_closed();} // update open_amt immediately
+}
+bool door_t::next_frame() { // returns true if state changed
+	if (!is_partially_open()) return 0;
+	open_amt += (open ? 1.0 : -1.0)*2.0*(fticks/TICKS_PER_SECOND); // 0.5s to open/close
+	open_amt  = CLIP_TO_01(open_amt);
+	return 1;
+}
+void building_t::doors_next_frame() {
+	if (!has_room_geom()) return;
+	bool updated(0);
+	for (door_t &door : interior->doors) {updated |= door.next_frame();}
+	if (updated) {interior->room_geom->invalidate_mats_mask |= (1 << MAT_TYPE_DOORS);} // need to recreate doors VBO
 }
 
 point building_t::local_to_camera_space(point const &pos) const {

@@ -1032,12 +1032,12 @@ struct stairs_place_t : public cube_t { // for extended basements
 };
 
 struct door_base_t : public cube_t {
-	bool dim, open_dir, hinge_side, on_stairs;
+	bool dim=0, open_dir=0, hinge_side=0, on_stairs=0;
 	// is it useful to store the two rooms in the door/door_stack? this will speed up connectivity searches for navigation and room assignment,
 	// but only for finding the second room connected to a door, because we still need to iterate over all doors;
 	// unfortunately, it's not easy/cheap to assign these values because the room may not even be added until after the door is placed, so we have to go back and set room1/room2 later
 	//uint8_t room1, room2;
-	door_base_t() : dim(0), open_dir(0), hinge_side(0), on_stairs(0) {}
+	door_base_t() {}
 	door_base_t(cube_t const &c, bool dim_, bool dir, bool os=0, bool hs=0) :
 		cube_t(c), dim(dim_), open_dir(dir), hinge_side(hs), on_stairs(os) {assert(is_normalized());}
 	bool get_check_dirs  () const {return (dim ^ open_dir ^ hinge_side ^ 1);}
@@ -1047,16 +1047,21 @@ struct door_base_t : public cube_t {
 	bool is_same_stack(door_base_t const &d) const {return (d.x1() == x1() && d.y1() == y1());}
 };
 struct door_stack_t : public door_base_t {
-	unsigned first_door_ix; // on the lowest floor
-	door_stack_t() : first_door_ix(0) {}
+	unsigned first_door_ix=0; // on the lowest floor
+	door_stack_t() {}
 	door_stack_t(door_base_t const &db, unsigned fdix) : door_base_t(db), first_door_ix(fdix) {}
 };
 struct door_t : public door_base_t {
-	bool open, locked, blocked;
-	door_t() : open(0), locked(0), blocked(0) {}
-	door_t(cube_t const &c, bool dim_, bool dir, bool open_=1, bool os=0, bool hs=0) : door_base_t(c, dim_, dir, os, hs), open(open_), locked(0), blocked(0) {}
+	bool open=0, locked=0, blocked=0;
+	float open_amt=0.0; // 0.0=fully closed, 1.0=fully open
+	door_t() {}
+	door_t(cube_t const &c, bool dim_, bool dir, bool open_=1, bool os=0, bool hs=0) : door_base_t(c, dim_, dir, os, hs), open(open_), open_amt(open ? 1.0 : 0.0) {}
 	bool is_closed_and_locked() const {return (!open && locked);}
 	bool is_locked_or_blocked(bool have_key) const {return (blocked || (is_closed_and_locked() && !have_key));}
+	bool is_partially_open() const {return (open_amt != (open ? 1.0 : 0.0));}
+	void toggle_open_state(bool allow_partial_open=0);
+	void make_fully_open_or_closed() {open_amt = (open ? 1.0 : 0.0);}
+	bool next_frame();
 };
 typedef vector<door_stack_t> vect_door_stack_t;
 typedef vector<door_t> vect_door_t;
@@ -1341,6 +1346,7 @@ struct building_t : public building_geom_t {
 	bool adjust_blinds_state(unsigned obj_ix);
 	void add_box_contents(room_object_t const &box);
 	void toggle_door_state(unsigned door_ix, bool player_in_this_building, bool by_player, point const &actor_pos);
+	void doors_next_frame();
 	bool set_room_light_state_to(room_t const &room, float zval, bool make_on);
 	void set_obj_lit_state_to(unsigned room_id, float light_z2, bool lit_state);
 	bool player_pickup_object(point const &at_pos, vector3d const &in_dir);

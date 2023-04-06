@@ -30,6 +30,7 @@ void building_t::add_interior_door_for_floor(door_t &door, bool is_bathroom, boo
 		door.open   = (                                fract(interior->doors.size()*1.61803) < global_building_params.open_door_prob  ); // use the golden ratio
 		door.locked = (!make_unlocked && !door.open && fract(interior->doors.size()*3.14159) < global_building_params.locked_door_prob); // use pi
 	}
+	door.make_fully_open_or_closed();
 	interior->doors.push_back(door);
 }
 
@@ -727,6 +728,7 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 
 				for (auto i = interior->doors.begin()+doors_start; i != interior->doors.end(); ++i) {
 					if (i->open && i->get_true_bcube().intersects(test_cube)) {i->open = 0;} // make sure door is closed
+					i->make_fully_open_or_closed();
 				}
 				utility_room_ix = utility_room_cands.back();
 				utility_room_cands.pop_back(); // remove this room from consideration
