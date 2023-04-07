@@ -769,7 +769,7 @@ bool building_t::adjust_blinds_state(unsigned obj_ix) {
 void building_t::toggle_door_state(unsigned door_ix, bool player_in_this_building, bool by_player, point const &actor_pos) { // called by the player or AI
 	assert(interior && door_ix < interior->doors.size());
 	door_t &door(interior->doors[door_ix]);
-	door.toggle_open_state(player_in_this_building); // allow partial open/animated door if player is in this building
+	door.toggle_open_state(by_player/*player_in_this_building*/); // allow partial open/animated door if player is in this building - no, if done by the player
 	// we changed the door state, but navigation should adapt to this, except for doors on stairs (which are special)
 	if (door.on_stairs) {invalidate_nav_graph();} // any in-progress paths may have people walking to and stopping at closed/locked doors
 	interior->door_state_updated = 1; // required for AI navigation logic to adjust to this change
@@ -810,11 +810,12 @@ void building_t::toggle_door_state(unsigned door_ix, bool player_in_this_buildin
 
 void door_t::toggle_open_state(bool allow_partial_open) {
 	open ^= 1;
-	if (!allow_partial_open) {make_fully_open_or_closed();} // update open_amt immediately
+	if (!allow_partial_open || on_stairs) {make_fully_open_or_closed();} // update open_amt immediately if needed
 }
 bool door_t::next_frame() { // returns true if state changed
 	if (!is_partially_open()) return 0;
 	open_amt += (open ? 1.0 : -1.0)*2.0*(fticks/TICKS_PER_SECOND); // 0.5s to open/close
+	// TODO: if (!open && open_amt == 0.0) {play_door_open_close_sound(door_center, 0);} // play close sound
 	open_amt  = CLIP_TO_01(open_amt);
 	return 1;
 }
@@ -1031,6 +1032,7 @@ void building_t::update_player_interact_objects(point const &player_pos) {
 		use_last_pickup_object = 0; // reset for next frame
 	}
 	maybe_update_tape(player_pos, 0); // end_of_tape=0
+	doors_next_frame();
 }
 
 bool building_interior_t::update_elevators(building_t const &building, point const &player_pos) { // Note: player_pos is in building space

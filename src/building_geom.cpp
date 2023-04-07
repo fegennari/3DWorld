@@ -1365,10 +1365,16 @@ bool building_room_geom_t::cube_intersects_moved_obj(cube_t const &c, int ignore
 	return 0;
 }
 
+void rotate_and_shift_door(tquad_with_ix_t &door, float angle, float shift, bool dim, bool swap_sides) {
+	float const rot_angle(-float(angle)*TO_RADIANS*(swap_sides ? -1.0 : 1.0));
+	for (unsigned i = 1; i < 3; ++i) {rotate_xy(door.pts[i], door.pts[0], rot_angle);}
+	UNROLL_4X(door.pts[i_][dim] += shift;);
+}
 tquad_with_ix_t building_t::set_door_from_cube(cube_t const &c, bool dim, bool dir, unsigned type, float pos_adj,
-	bool exterior, bool opened, bool opens_out, bool opens_up, bool swap_sides) const
+	bool exterior, float open_amt, bool opens_out, bool opens_up, bool swap_sides) const
 {
 	tquad_with_ix_t door(4, type); // quad
+	bool const opened(open_amt > 0.0);
 	float const wall_thickness(get_wall_thickness()), floor_thickness(get_floor_thickness());
 	float const pos(c.d[dim][0] + (opened ? 0.0 : pos_adj*(dir ? 1.0 : -1.0))); // move away from wall slightly (not needed if opened)
 	door.pts[0].z = door.pts[1].z = c.z1(); // bottom
@@ -1378,41 +1384,54 @@ tquad_with_ix_t building_t::set_door_from_cube(cube_t const &c, bool dim, bool d
 	door.pts[0][ dim] = door.pts[1][ dim] = door.pts[2][dim] = door.pts[3][dim] = pos;
 	if (dim == 0) {swap(door.pts[0], door.pts[1]); swap(door.pts[2], door.pts[3]);} // swap two corner points to flip winding dir and invert normal for doors oriented in X
 
-	if (opened) { // rotate 90 degrees about pts[0]/pts[3] or pts[1]/pts[2]
-		if (opens_up) { // rotates inward and upward
+	if (opened) { // rotate >= 90 degrees about pts[0]/pts[3] or pts[1]/pts[2]
+		if (opens_up) { // rotates inward and upward 90 degrees
 			door.pts[0].z    = door.pts[1].z    = c.z2();
 			door.pts[0][dim] = door.pts[1][dim] = pos + c.dz()*((dir ^ opens_out) ? 1.0 : -1.0);
 		}
 		else { // rotates to the side
-			bool const has_moved_objs(has_room_geom() && !interior->room_geom->moved_obj_ids.empty());
 			float const width(c.get_sz_dim(!dim)), signed_width(width*((dir ^ opens_out) ? 1.0 : -1.0));
-			float const offset(0.01*width*((dir ^ dim) ? 1.0 : -1.0)); // move slightly away from the wall to prevent z-fighting
-			door.pts[1-swap_sides][!dim] = door.pts[2+swap_sides][!dim] = door.pts[swap_sides][!dim] + offset; // 1,2=0+o / 0,3=1+o
+			float const offset(0.005*width*((dir ^ dim) ? 1.0 : -1.0)*open_amt); // move slightly away from the wall to prevent z-fighting
+			for (unsigned i = 0; i < 4; ++i) {door.pts[i][!dim] += offset;}
+			// open exactly 90 degrees to start
+			door.pts[1-swap_sides][!dim] = door.pts[2+swap_sides][!dim] = door.pts[swap_sides][!dim]; // 1,2=0 / 0,3=1
 			door.pts[1][dim] = door.pts[2][dim] = pos + signed_width;
+			
+			if (!exterior) { // interior
+				float const max_open_angle = 75.0; // for interior doors
+				float const target_angle((max_open_angle + 90.0)*open_amt - 90.0); // angle remaining to rotate
+				float const shift(0.07*signed_width*open_amt);
 
-			if (!exterior) { // try to open the door all the way
-				for (unsigned angle = 75; angle > 0; angle -= 15) { // try to open door as much as 75 degrees in steps of 15 degrees
-					tquad_with_ix_t orig_door(door); // cache orig 90 degree open door in case we need to revert it
-					float const shift(0.07*signed_width), rot_angle(-float(angle)*TO_RADIANS*(swap_sides ? -1.0 : 1.0));
-					for (unsigned i = 1; i < 3; ++i) {rotate_xy(door.pts[i], door.pts[0], rot_angle);}
-					for (unsigned i = 0; i < 4; ++i) {door.pts[i][dim] += shift;}
-					cube_t test_bcube(door.get_bcube());
-					test_bcube.expand_in_dim(!dim,  wall_thickness); // expand slightly to leave a bit of a gap between walls, and space for whiteboards
-					test_bcube.expand_in_dim( dim, -wall_thickness); // shrink in other dim to avoid intersecting with other part/walls when this door separates two parts
-					test_bcube.expand_in_dim(2, -floor_thickness);   // shrink a bit in z to avoid picking up objects from stacks above or below
-					bool is_bad(!check_cube_contained_in_part(test_bcube));           // extends outside part
-					is_bad |= has_bcube_int(test_bcube, interior->walls[!dim]);       // hits perp wall
-					is_bad |= interior->is_blocked_by_stairs_or_elevator(test_bcube); // hits stairs or elevator
-					
-					// check if the player moved an object that would block this door
-					if (!is_bad && has_moved_objs) {
-						cube_t union_cube(test_bcube);
-						union_cube.union_with_cube(orig_door.get_bcube()); // include the full path from 90 degrees to ensure the door can be swung open
-						is_bad = interior->room_geom->cube_intersects_moved_obj(union_cube);
-					}
-					if (is_bad) {door = orig_door; continue;} // revert
-					break; // done
-				} // for angle
+				if (target_angle < 0.0) { // opened too much - close it partially
+					rotate_and_shift_door(door, target_angle, shift, dim, swap_sides);
+				}
+				else { // try to open the door all the way
+					bool const has_moved_objs(has_room_geom() && !interior->room_geom->moved_obj_ids.empty());
+
+					// TODO: calculate max angle first, then run above logic
+					for (float angle = 75.0; angle > 0.0; angle -= 15.0) { // try to open door as much as 75 degrees in steps of 15 degrees
+						tquad_with_ix_t orig_door(door); // cache orig 90 degree open door in case we need to revert it
+						rotate_and_shift_door(door, angle, shift, dim, swap_sides);
+						cube_t test_bcube(door.get_bcube());
+						test_bcube.expand_in_dim(!dim,  wall_thickness); // expand slightly to leave a bit of a gap between walls, and space for whiteboards
+						test_bcube.expand_in_dim( dim, -wall_thickness); // shrink in other dim to avoid intersecting with other part/walls when this door separates two parts
+						test_bcube.expand_in_dim(2, -floor_thickness);   // shrink a bit in z to avoid picking up objects from stacks above or below
+						bool is_bad(!check_cube_contained_in_part(test_bcube));           // extends outside part
+						is_bad |= has_bcube_int(test_bcube, interior->walls[!dim]);       // hits perp wall
+						is_bad |= interior->is_blocked_by_stairs_or_elevator(test_bcube); // hits stairs or elevator
+
+						// check if the player moved an object that would block this door
+						if (!is_bad && has_moved_objs) {
+							cube_t union_cube(test_bcube);
+							union_cube.union_with_cube(orig_door.get_bcube()); // include the full path from 90 degrees to ensure the door can be swung open
+							is_bad = interior->room_geom->cube_intersects_moved_obj(union_cube);
+						}
+						if (is_bad) {door = orig_door; continue;} // revert
+						// we've rotated the max amount allowed, but it may be too far for the current open_amt, so rotate it back (but don't shift)
+						if (open_amt < 1.0 && angle > target_angle) {rotate_and_shift_door(door, (target_angle - angle), 0.0, dim, swap_sides);}
+						break; // done
+					} // for angle
+				}
 			}
 		}
 	}
@@ -1420,7 +1439,7 @@ tquad_with_ix_t building_t::set_door_from_cube(cube_t const &c, bool dim, bool d
 }
 tquad_with_ix_t building_t::set_interior_door_from_cube(door_t const &door) const {
 	unsigned const type(is_house ? (unsigned)tquad_with_ix_t::TYPE_IDOOR : (unsigned)tquad_with_ix_t::TYPE_ODOOR); // house or office door
-	return set_door_from_cube(door, door.dim, door.open_dir, type, 0.0, 0, door.open, 0, 0, door.hinge_side);
+	return set_door_from_cube(door, door.dim, door.open_dir, type, 0.0, 0, door.open_amt, 0, 0, door.hinge_side);
 }
 cube_t building_t::get_door_bounding_cube(door_t const &door) const {
 	tquad_with_ix_t const door_tq(set_interior_door_from_cube(door));
@@ -1440,7 +1459,7 @@ bool building_t::add_door(cube_t const &c, unsigned part_ix, bool dim, bool dir,
 		(unsigned)tquad_with_ix_t::TYPE_BDOOR2 : (unsigned)tquad_with_ix_t::TYPE_BDOOR) :
 		(unsigned)tquad_with_ix_t::TYPE_HDOOR);
 	float const pos_adj(0.015*get_window_vspace()); // distance to move away from the building wall
-	doors.push_back(set_door_from_cube(c, dim, dir, type, pos_adj, 1, 0, 0, 0, 0)); // exterior=1, opened=0, opens_out=0, opens_up=0, swap_sides=0
+	doors.push_back(set_door_from_cube(c, dim, dir, type, pos_adj, 1, 0.0, 0, 0, 0)); // exterior=1, open_amt=0.0, opens_out=0, opens_up=0, swap_sides=0
 	if (!roof_access && part_ix < 4) {door_sides[part_ix] |= 1 << (2*dim + dir);}
 	if (roof_access) {doors.back().type = tquad_with_ix_t::TYPE_RDOOR;}
 	return 1;

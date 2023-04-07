@@ -1466,9 +1466,9 @@ public:
 	cube_t get_full_basement_bcube () const;
 	room_t const &get_ext_basement_hallway() const;
 	template<typename T> void add_door_verts(cube_t const &D, T &drawer, uint8_t door_type,
-		bool dim, bool dir, bool opened, bool opens_out, bool exterior, bool on_stairs=0, bool hinge_side=0) const;
+		bool dim, bool dir, float open_amt, bool opens_out, bool exterior, bool on_stairs=0, bool hinge_side=0) const;
 	tquad_with_ix_t set_door_from_cube(cube_t const &c, bool dim, bool dir, unsigned type, float pos_adj,
-		bool exterior, bool opened, bool opens_out, bool opens_up, bool swap_sides) const;
+		bool exterior, float open_amt, bool opens_out, bool opens_up, bool swap_sides) const;
 	tquad_with_ix_t set_interior_door_from_cube(door_t const &door) const;
 	cube_t get_door_bounding_cube(door_t const &door) const;
 	cube_t get_attic_access_door_avoid() const;
