@@ -777,7 +777,8 @@ void building_t::toggle_door_state(unsigned door_ix, bool player_in_this_buildin
 
 	if (player_in_this_building) { // is it really safe to call this from the AI thread?
 		point door_center(door.xc(), door.yc(), actor_pos.z);
-		play_door_open_close_sound(door_center, door.open);
+		// if door was opened or is fully closed play a sound; otherwise, play the close sound later when fully closed
+		if (door.open || door.open_amt == 0.0) {play_door_open_close_sound(door_center, door.open);}
 		
 		if (by_player) {
 			// bias the sound slightly toward the side of the door the player is on to force a zombie to go through the doorway to get there,
@@ -814,15 +815,19 @@ void door_t::toggle_open_state(bool allow_partial_open) {
 }
 bool door_t::next_frame() { // returns true if state changed
 	if (!is_partially_open()) return 0;
-	open_amt += (open ? 1.0 : -1.0)*2.0*(fticks/TICKS_PER_SECOND); // 0.5s to open/close
-	// TODO: if (!open && open_amt == 0.0) {play_door_open_close_sound(door_center, 0);} // play close sound
+	open_amt += (open ? 1.0 : -1.0)*4.0*(fticks/TICKS_PER_SECOND); // 0.25s to open/close
 	open_amt  = CLIP_TO_01(open_amt);
 	return 1;
 }
 void building_t::doors_next_frame() {
 	if (!has_room_geom()) return;
 	bool updated(0);
-	for (door_t &door : interior->doors) {updated |= door.next_frame();}
+
+	for (door_t &door : interior->doors) {
+		if (!door.next_frame()) continue;
+		if (!door.open && door.open_amt == 0.0) {play_door_open_close_sound(point(door.xc(), door.yc(), camera_pos.z), 0);} // play close sound at player z; open=0
+		updated = 1;
+	}
 	if (updated) {interior->room_geom->invalidate_mats_mask |= (1 << MAT_TYPE_DOORS);} // need to recreate doors VBO
 }
 
