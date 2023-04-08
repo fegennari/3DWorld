@@ -460,11 +460,11 @@ void add_tquad_to_verts(building_geom_t const &bg, tquad_with_ix_t const &tquad,
 		else if (tquad.is_interior_door()) { // interior door textured/stretched in Y unless SPLIT_DOOR_PER_FLOOR=1
 			vert.t[0] = tex.tscale_x*((i == 1 || i == 2) ^ invert_tc_x);
 			vert.t[1] = tex.tscale_y*((i == 2 || i == 3));
-			if (exclude_frame)        {vert.t[0]  = 0.07 + 0.86*vert.t[0];}
 			if (SPLIT_DOOR_PER_FLOOR) {vert.t[1] *= 0.97;} // trim off the top door frame
 		}
 		else if (tquad.type == tquad_with_ix_t::TYPE_TRIM) {} // untextured - no tex coords
 		else {assert(0);}
+		if (exclude_frame && (tquad.is_interior_door() || tquad.is_exterior_door())) {vert.t[0] = DOOR_FRAME_WIDTH + (1.0 - 2.0*DOOR_FRAME_WIDTH)*vert.t[0];}
 		if (do_rotate) {bg.do_xy_rotate(center, vert.v);}
 		if (swap_tc_xy) {swap(vert.t[0], vert.t[1]);}
 		verts.push_back(vert);
@@ -1666,7 +1666,7 @@ template<typename T> void building_t::add_door_verts(cube_t const &D, T &drawer,
 	int const type(tquad_with_ix_t::TYPE_IDOOR); // always use interior door type, even for exterior door, because we're drawing it in 3D inside the building
 	bool const opened(open_amt > 0.0), opens_up(door_type == tquad_with_ix_t::TYPE_GDOOR);
 	// exclude the frame on open interior doors
-	bool const exclude_frame((door_type == tquad_with_ix_t::TYPE_HDOOR || door_type == tquad_with_ix_t::TYPE_ODOOR) && !exterior /*&& opened*/);
+	bool const exclude_frame((door_type == tquad_with_ix_t::TYPE_HDOOR || door_type == tquad_with_ix_t::TYPE_ODOOR) && (!exterior || opened));
 	unsigned const num_edges(opens_up ? 4 : 2);
 	int const tid(get_building_door_tid(door_type));
 	float const half_thickness(opens_up ? 0.01*D.dz() : 0.5*DOOR_THICK_TO_WIDTH*D.get_sz_dim(!dim));

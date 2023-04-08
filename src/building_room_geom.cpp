@@ -447,15 +447,23 @@ void building_room_geom_t::add_closet(room_object_t const &c, tid_nm_pair_t cons
 
 		if (use_small_door) { // small house closet door
 			tid_nm_pair_t const tp(get_int_door_tid(), 0.0);
+			rgeom_mat_t &door_mat(get_material(tp, 1));
+			unsigned const door_verts_start(door_mat.quad_verts.size());
 
 			if (open) {
 				cube_t const door(get_open_closet_door(c, doors));
-				get_material(tp, 1).add_cube_to_verts(door, WHITE, llc, ~get_skip_mask_for_xy(!c.dim), c.dim, !c.dir); // draw front and back faces
-				get_untextured_material(1).add_cube_to_verts_untextured(door, WHITE, ~get_skip_mask_for_xy( c.dim)); // draw edges untextured
+				door_mat.add_cube_to_verts(door, WHITE, llc, ~get_skip_mask_for_xy(!c.dim), c.dim, !c.dir); // draw front and back faces
+				get_untextured_material(1).add_cube_to_verts_untextured(door, WHITE, ~get_skip_mask_for_xy(c.dim)); // draw edges untextured
 			}
 			else {
 				unsigned const door_skip_faces(~get_skip_mask_for_xy(c.dim)); // draw both front and back faces so that shadows are cast correctly / light doesn't leak
-				get_material(tp, 1).add_cube_to_verts(doors, WHITE, llc, door_skip_faces, !c.dim);
+				door_mat.add_cube_to_verts(doors, WHITE, llc, door_skip_faces, !c.dim);
+			}
+			auto &qv(get_material(tp, 1).quad_verts); // re-capture reference in case it was invalidated
+			
+			for (auto i = qv.begin()+door_verts_start; i != qv.end(); ++i) { // clip the door frame off of the texture
+				min_eq(i->t[0], 1.0f-DOOR_FRAME_WIDTH);
+				max_eq(i->t[0],      DOOR_FRAME_WIDTH);
 			}
 		}
 		else { // 4 panel folding door
