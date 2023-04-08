@@ -1114,9 +1114,9 @@ struct building_interior_t {
 	cube_t basement_ext_bcube;
 	draw_range_t draw_range;
 	unsigned extb_walls_start[2] = {0,0};
-	int garage_room, ext_basement_hallway_room_id, ext_basement_door_stack_ix;
-	uint8_t furnace_type, attic_type;
-	bool door_state_updated, is_unconnected, ignore_ramp_placement, placed_people, elevators_disabled, attic_access_open;
+	int garage_room=-1, ext_basement_hallway_room_id=-1, ext_basement_door_stack_ix=-1, last_active_door_ix=-1;
+	uint8_t furnace_type=FTYPE_NONE, attic_type=ATTIC_TYPE_RAFTERS;
+	bool door_state_updated=0, is_unconnected=0, ignore_ramp_placement=0, placed_people=0, elevators_disabled=0, attic_access_open=0;
 
 	building_interior_t();
 	~building_interior_t();

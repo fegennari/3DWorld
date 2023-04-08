@@ -1521,6 +1521,11 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 					dshadow_radius, stairs_light, xlate, (check_building_people && !is_lamp), shadow_caster_hash); // no people shadows for lam[s
 			}
 		}
+		if (!force_smap_update && interior->last_active_door_ix >= 0) { // check for door opening or closing; since this is player controlled, there should be at most one
+			assert(interior->last_active_door_ix < interior->doors.size());
+			door_t const &door(interior->doors[interior->last_active_door_ix]);
+			force_smap_update |= (door.is_partially_open() && clipped_bc.intersects(door));
+		}
 		// end dynamic shadows check
 		cube_t const clipped_bc_rot(is_rotated() ? get_rotated_bcube(clipped_bc) : clipped_bc);
 		setup_light_for_building_interior(dl_sources.back(), *i, clipped_bc_rot, force_smap_update, shadow_caster_hash);

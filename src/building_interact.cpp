@@ -821,14 +821,14 @@ bool door_t::next_frame() { // returns true if state changed
 }
 void building_t::doors_next_frame() {
 	if (!has_room_geom()) return;
-	bool updated(0);
+	interior->last_active_door_ix = -1;
 
-	for (door_t &door : interior->doors) {
-		if (!door.next_frame()) continue;
-		if (!door.open && door.open_amt == 0.0) {play_door_open_close_sound(point(door.xc(), door.yc(), camera_pos.z), 0);} // play close sound at player z; open=0
-		updated = 1;
+	for (auto d = interior->doors.begin(); d != interior->doors.end(); ++d) {
+		if (!d->next_frame()) continue;
+		if (!d->open && d->open_amt == 0.0) {play_door_open_close_sound(point(d->xc(), d->yc(), camera_pos.z), 0);} // play close sound at player z; open=0
+		interior->last_active_door_ix = (d - interior->doors.begin());
 	}
-	if (updated) {interior->room_geom->invalidate_mats_mask |= (1 << MAT_TYPE_DOORS);} // need to recreate doors VBO
+	if (interior->last_active_door_ix >= 0) {interior->room_geom->invalidate_mats_mask |= (1 << MAT_TYPE_DOORS);} // need to recreate doors VBO
 }
 
 point building_t::local_to_camera_space(point const &pos) const {
