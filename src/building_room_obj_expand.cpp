@@ -664,7 +664,6 @@ void place_book(room_object_t &obj, cube_t const &parent, float length, float ma
 	if (c.item_flags & (1U << drawer_ix)) {return room_object_t();} // item has been taken
 	assert(drawer.is_strictly_normalized());
 	vector3d const sz(drawer.get_size()); // Note: drawer is the interior area
-	bool const is_kcabinet(c.type == TYPE_COUNTER), is_fcabinet(c.type == TYPE_FCABINET);
 	rand_gen_t rgen;
 	rgen.set_state((123*drawer_ix + 1), (456*c.room_id + 777*c.obj_id + 1));
 	room_object_t obj; // starts as no item
