@@ -425,6 +425,7 @@ cube_t get_open_closet_door(room_object_t const &c, cube_t const &closed_door) {
 }
 void building_room_geom_t::add_closet(room_object_t const &c, tid_nm_pair_t const &wall_tex, bool inc_lg, bool inc_sm) { // no lighting scale, houses only
 	bool const open(c.is_open()), use_small_door(c.is_small_closet()), draw_interior(open || player_in_closet);
+	float const wall_thick(get_closet_wall_thickness(c)), trim_hwidth(0.3*wall_thick);
 	cube_t cubes[5];
 	get_closet_cubes(c, cubes);
 
@@ -460,13 +461,16 @@ void building_room_geom_t::add_closet(room_object_t const &c, tid_nm_pair_t cons
 				door_mat.add_cube_to_verts(doors, WHITE, llc, door_skip_faces, !c.dim);
 			}
 			auto &qv(get_material(tp, 1).quad_verts); // re-capture reference in case it was invalidated
+			float const shrink(DOOR_FRAME_WIDTH*(open ? 1.0 : 0.75)); // only partial frame when closed
 			
 			for (auto i = qv.begin()+door_verts_start; i != qv.end(); ++i) { // clip the door frame off of the texture
-				min_eq(i->t[0], 1.0f-DOOR_FRAME_WIDTH);
-				max_eq(i->t[0],      DOOR_FRAME_WIDTH);
+				min_eq(i->t[0], 1.0f-shrink);
+				max_eq(i->t[0],      shrink);
 			}
 		}
 		else { // 4 panel folding door
+			cube_t doors_no_trim(doors);
+			doors_no_trim.expand_in_dim(!c.dim, -trim_hwidth);
 			float const doors_width(doors.get_sz_dim(!c.dim)), door_thickness(doors.get_sz_dim(c.dim));
 			float const door_spacing(0.25*doors_width), door_gap(0.01*door_spacing);
 			int const tid(get_rect_panel_tid());
@@ -478,8 +482,8 @@ void building_room_geom_t::add_closet(room_object_t const &c, tid_nm_pair_t cons
 
 			if (doors_fold && open) { // draw open bifold doors open on both
 				// Note: this doesn't always look correct because doors can intersect other objects such as lights and dressers, and they have no edge quads
-				float const panel_len(0.2*doors.get_sz_dim(!c.dim) - 2.0*door_gap), open_amt(0.5*panel_len), extend(sqrt(panel_len*panel_len - open_amt*open_amt));
-				float const nom_pos(doors.d[c.dim][!c.dir]), front_pos(nom_pos + out_sign*extend), z1(doors.z1()), z2(doors.z2());
+				float const panel_len(0.2*doors_no_trim.get_sz_dim(!c.dim) - 2.0*door_gap), open_amt(0.5*panel_len), extend(sqrt(panel_len*panel_len - open_amt*open_amt));
+				float const nom_pos(doors_no_trim.d[c.dim][!c.dir]), front_pos(nom_pos + out_sign*extend), z1(doors.z1()), z2(doors.z2());
 				float const ts[4] = {0.0, 0.25, 0.25, 0.0}, tt[4] = {0.0, 0.0, 0.25, 0.25};
 				color_wrapper const cw(WHITE);
 				point side_pt, out_pt, inner_pt; // left side door points in this order from left to right, forming a V-shape pointing outward
@@ -487,7 +491,7 @@ void building_room_geom_t::add_closet(room_object_t const &c, tid_nm_pair_t cons
 				out_pt [c.dim] = front_pos;
 
 				for (unsigned side = 0; side < 2; ++side) {
-					float const open_sign(side ? -1.0 : 1.0), side_pos(doors.d[!c.dim][side]);
+					float const open_sign(side ? -1.0 : 1.0), side_pos(doors_no_trim.d[!c.dim][side]);
 					side_pt [!c.dim] = side_pos;
 					out_pt  [!c.dim] = side_pos + open_sign*open_amt;
 					inner_pt[!c.dim] = side_pos + 2*open_sign*open_amt;
@@ -517,9 +521,9 @@ void building_room_geom_t::add_closet(room_object_t const &c, tid_nm_pair_t cons
 
 				for (unsigned n = 0; n < 4; ++n) {
 					unsigned const N(open ? open_n[n] : n);
-					cube_t door(doors);
-					door.d[!c.dim][0] = doors.d[!c.dim][0] +  N   *door_spacing + gaps[N  ]; // left  edge
-					door.d[!c.dim][1] = doors.d[!c.dim][0] + (N+1)*door_spacing - gaps[N+1]; // right edge
+					cube_t door(doors_no_trim);
+					door.d[!c.dim][0] = doors_no_trim.d[!c.dim][0] +  N   *door_spacing + gaps[N  ]; // left  edge
+					door.d[!c.dim][1] = doors_no_trim.d[!c.dim][0] + (N+1)*door_spacing - gaps[N+1]; // right edge
 					if (!doors_fold && (n == 1 || n == 2)) {door.translate_dim(c.dim, -1.1*out_sign*door_thickness);} // inset the inner sliding doors
 					door_mat.add_cube_to_verts(door, WHITE, llc, skip_faces);
 				}
@@ -528,8 +532,7 @@ void building_room_geom_t::add_closet(room_object_t const &c, tid_nm_pair_t cons
 	} // end inc_lg
 	if (inc_sm) { // add wall trim for each side of the closet door
 		float const height(c.dz()), window_vspacing(height*(1.0 + FLOOR_THICK_VAL_HOUSE));
-		float const trim_height(0.04*window_vspacing), trim_thickness(0.1*WALL_THICK_VAL*window_vspacing);
-		float const wall_thick(get_closet_wall_thickness(c)), trim_plus_wall_thick(trim_thickness + wall_thick);
+		float const trim_height(0.04*window_vspacing), trim_thickness(0.1*WALL_THICK_VAL*window_vspacing), trim_plus_wall_thick(trim_thickness + wall_thick);
 		colorRGBA const trim_color(WHITE); // assume trim is white
 		bool const draw_interior_trim(1 || draw_interior); // always enable so that we don't have to regenerate small geom when closet doors are opened or closed
 
@@ -571,6 +574,13 @@ void building_room_geom_t::add_closet(room_object_t const &c, tid_nm_pair_t cons
 				set_cube_zvals(trim, c.z2()-trim_height, c.z2());
 				// ceiling trim, missing end caps; exterior only
 				add_wall_trim(room_object_t(trim, TYPE_WALL_TRIM, c.room_id, trim_dim, trim_dir, trim_flags, 1.0, SHAPE_ANGLED, trim_color), 1);
+
+				if (!is_side) { // draw vertical door frame on either side of the door
+					set_cube_zvals(trim, c.z1(), c.z2()); // full z height
+					set_wall_width(trim, cubes[2*d].get_center_dim(c.dim), 0.6*wall_thick, c.dim);
+					set_wall_width(trim, trim.d[!c.dim][!d], trim_hwidth, !c.dim);
+					add_wall_trim(room_object_t(trim, TYPE_WALL_TRIM, c.room_id, trim_dim, trim_dir, (RO_FLAG_ADJ_BOT | RO_FLAG_ADJ_TOP), 1.0, SHAPE_TALL, trim_color), 1);
+				}
 			} // for d
 		} // for is_side
 		// Note: always drawn to avoid recreating all small objects when the player opens/closes a closet door, and so that objects can be seen through the cracks in the doors
