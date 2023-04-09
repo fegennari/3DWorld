@@ -659,14 +659,22 @@ void place_book(room_object_t &obj, cube_t const &parent, float length, float ma
 	set_rand_pos_for_sz(obj, !dim, length, width, rgen);
 }
 
-/*static*/ room_object_t building_room_geom_t::get_item_in_drawer(room_object_t const &c, cube_t const &drawer, unsigned drawer_ix) {
-	assert(drawer_ix < 16);
-	if (c.item_flags & (1U << drawer_ix)) {return room_object_t();} // item has been taken
+/*static*/ room_object_t building_room_geom_t::get_item_in_drawer(room_object_t const &c, cube_t const &drawer, unsigned drawer_ix, unsigned item_ix) {
+	room_object_t obj; // starts as no item
+
+	if (c.type == TYPE_FCABINET) { // supports up to 4 drawers and 4 items
+		if (drawer_ix >= 4  || item_ix >= 4) return obj; // too many drawers or items
+		drawer_ix += 4*item_ix; // encode into a single index
+	}
+	else { // supports up to 16 drawers
+		if (drawer_ix >= 16 || item_ix >= 1) return obj; // too many drawers or items; should never exceed 16 drawers with current room objects
+	}
+	if (c.item_flags & (1U << drawer_ix)) return obj; // item has been taken
 	assert(drawer.is_strictly_normalized());
 	vector3d const sz(drawer.get_size()); // Note: drawer is the interior area
 	rand_gen_t rgen;
-	rgen.set_state((123*drawer_ix + 1), (456*c.room_id + 777*c.obj_id + 1));
-	room_object_t obj; // starts as no item
+	rgen.set_state((123*drawer_ix + 777*item_ix + 1), (456*c.room_id + 777*c.obj_id + 1));
+	if (item_ix > 0 && rgen.rand_bool()) return obj; // no more items
 	unsigned const type_ix(rgen.rand() % 11); // 0-10
 	unsigned const types_drawer  [11] = {TYPE_BOX, TYPE_PAPER, TYPE_PEN, TYPE_PEN, TYPE_BOOK, TYPE_KEY,   TYPE_BOTTLE, TYPE_MONEY,  TYPE_PHONE,  TYPE_SPRAYCAN, TYPE_TAPE};
 	unsigned const types_attic   [11] = {TYPE_BOX, TYPE_PAPER, TYPE_PEN, TYPE_PEN, TYPE_BOOK, TYPE_KEY,   TYPE_BOTTLE, TYPE_BOX,    TYPE_BOOK,   TYPE_SPRAYCAN, TYPE_TAPE};
@@ -796,6 +804,13 @@ void place_book(room_object_t &obj, cube_t const &parent, float length, float ma
 	obj.flags    |= (RO_FLAG_WAS_EXP | RO_FLAG_NOCOLL);
 	obj.light_amt = c.light_amt;
 	return obj;
+}
+/*static*/ void building_room_geom_t::add_draw_items(room_object_t const &c, cube_t const &drawer, unsigned drawer_ix, vect_room_object_t &objects) {
+	for (unsigned item_ix = 0; item_ix < 16; ++item_ix) { // will likely break before we hit 16 items, though 16 is the max
+		room_object_t const obj(get_item_in_drawer(c, drawer, drawer_ix, item_ix));
+		if (obj.type == TYPE_NONE) break;
+		objects.push_back(obj);
+	}
 }
 
 bool place_objects_in_box(cube_t const &box, vect_cube_t &obj_bcubes, float radius, float height) {

@@ -316,8 +316,7 @@ void building_room_geom_t::add_drawers(room_object_t const &c, float tscale, vec
 			interior.d[!c.dim][0]      = left .d[!c.dim][1];
 			interior.d[!c.dim][1]      = right.d[!c.dim][0];
 			interior.d[ c.dim][!c.dir] = back .d[ c.dim][c.dir];
-			room_object_t const obj(get_item_in_drawer(c, interior, (drawer_index_offset + (i - drawers.begin()))));
-			if (obj.type != TYPE_NONE) {objects.push_back(obj);}
+			add_draw_items(c, interior, (drawer_index_offset + (i - drawers.begin())), objects);
 		}
 		drawer_mat.add_cube_to_verts(*i, drawer_color, tex_orig, door_skip_faces_mod, 1); // swap the texture orientation of drawers to make them stand out more
 		// add door handle
@@ -1445,8 +1444,7 @@ void building_room_geom_t::add_filing_cabinet(room_object_t const &c, bool inc_l
 			sides_mat.add_cube_to_verts_untextured(drawer,       drawers_color, ~EF_Z1    ); // bottom, outer
 			sides_mat.add_cube_to_verts           (drawer_sides, drawers_color, all_zeros, (~fb_mask | EF_Z2), 0, 0, 0, 1); // sides + bottom, inner/inverted
 			sides_mat.add_cube_to_verts           (drawer_ends,  drawers_color, all_zeros,   fb_mask,          0, 0, 0, 1); // front + back,   inner/inverted
-			room_object_t const obj(get_item_in_drawer(c, drawer_sides, n));
-			if (obj.type != TYPE_NONE) {objects.push_back(obj);}
+			add_draw_items(c, drawer_sides, n, objects);
 		} // for i
 		add_nested_objs_to_verts(objects); // add any objects that were found in open drawers; must be small static objects
 	}
