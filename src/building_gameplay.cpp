@@ -1137,10 +1137,11 @@ bool building_room_geom_t::open_nearest_drawer(building_t &building, point const
 	if (pickup_item && !is_door) { // pick up item in drawer rather than opening drawer; doesn't apply to doors because items aren't in the doors themselves
 		if (!(obj.drawer_flags & (1U << closest_drawer_id))) return 0; // drawer is not open
 		unsigned sel_item_ix(0);
+		float stack_z1(0.0);
 		room_object_t item;
 
 		for (unsigned item_ix = 0; item_ix < 16; ++item_ix) { // take the *last* item in the drawer first
-			room_object_t const cand_item(get_item_in_drawer(drawers_part, drawer, closest_drawer_id, item_ix));
+			room_object_t const cand_item(get_item_in_drawer(drawers_part, drawer, closest_drawer_id, item_ix, stack_z1));
 			if (cand_item.type == TYPE_NONE) break; // no more items
 			item = cand_item;
 			sel_item_ix = item_ix;

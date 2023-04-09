@@ -659,7 +659,7 @@ void place_book(room_object_t &obj, cube_t const &parent, float length, float ma
 	set_rand_pos_for_sz(obj, !dim, length, width, rgen);
 }
 
-/*static*/ room_object_t building_room_geom_t::get_item_in_drawer(room_object_t const &c, cube_t const &drawer, unsigned drawer_ix, unsigned item_ix) {
+/*static*/ room_object_t building_room_geom_t::get_item_in_drawer(room_object_t const &c, cube_t const &drawer_in, unsigned drawer_ix, unsigned item_ix, float &stack_z1) {
 	room_object_t obj; // starts as no item
 
 	if (c.type == TYPE_FCABINET) { // supports up to 4 drawers and 4 items
@@ -670,10 +670,10 @@ void place_book(room_object_t &obj, cube_t const &parent, float length, float ma
 		if (drawer_ix >= 16 || item_ix >= 1) return obj; // too many drawers or items; should never exceed 16 drawers with current room objects
 	}
 	if (c.item_flags & (1U << drawer_ix)) return obj; // item has been taken
-	assert(drawer.is_strictly_normalized());
-	vector3d const sz(drawer.get_size()); // Note: drawer is the interior area
+	assert(drawer_in.is_strictly_normalized());
 	rand_gen_t rgen;
 	rgen.set_state((123*drawer_ix + 777*item_ix + 1), (456*c.room_id + 777*c.obj_id + 1));
+	rgen.rand_mix();
 	if (item_ix > 0 && rgen.rand_bool()) return obj; // no more items
 	unsigned const type_ix(rgen.rand() % 11); // 0-10
 	unsigned const types_drawer  [11] = {TYPE_BOX, TYPE_PAPER, TYPE_PEN, TYPE_PEN, TYPE_BOOK, TYPE_KEY,   TYPE_BOTTLE, TYPE_MONEY,  TYPE_PHONE,  TYPE_SPRAYCAN, TYPE_TAPE};
@@ -686,6 +686,17 @@ void place_book(room_object_t &obj, cube_t const &parent, float length, float ma
 	else if (c.type == TYPE_FCABINET) {obj_type = types_fcabinet[type_ix];}
 	else                              {obj_type = types_drawer  [type_ix];} // desk, dresser, or nightstand
 	if (obj_type == TYPE_SILVER && !building_obj_model_loader.is_model_valid(OBJ_MODEL_SILVER)) {obj_type = TYPE_BOOK;} // replace silverware with book
+	// object stacking logic
+	bool const is_stackable(obj_type == TYPE_BOX || obj_type == TYPE_PAPER || obj_type == TYPE_BOOK || obj_type == TYPE_PLATE); // TYPE_TAPE?
+	cube_t drawer(drawer_in); // copy so that we can adjust z1
+	
+	if (item_ix == 0) {stack_z1 = drawer.z1();} // base case
+	else if (is_stackable) {
+		assert(stack_z1 >= drawer.z1());
+		drawer.z1() = stack_z1; // shift bottom of drawer to top of stack
+		if (drawer.dz() < 0.1*drawer_in.dz()) return obj; // stack too high
+	}
+	vector3d const sz(drawer.get_size()); // Note: drawer is the interior area
 
 	switch (obj_type) {
 	case TYPE_BOX: // box
@@ -801,13 +812,16 @@ void place_book(room_object_t &obj, cube_t const &parent, float length, float ma
 	}
 	default: assert(0);
 	} // end switch
+	if (is_stackable) {stack_z1 = obj.z2();} // move the stack up
 	obj.flags    |= (RO_FLAG_WAS_EXP | RO_FLAG_NOCOLL);
 	obj.light_amt = c.light_amt;
 	return obj;
 }
 /*static*/ void building_room_geom_t::add_draw_items(room_object_t const &c, cube_t const &drawer, unsigned drawer_ix, vect_room_object_t &objects) {
+	float stack_z1(0.0);
+
 	for (unsigned item_ix = 0; item_ix < 16; ++item_ix) { // will likely break before we hit 16 items, though 16 is the max
-		room_object_t const obj(get_item_in_drawer(c, drawer, drawer_ix, item_ix));
+		room_object_t const obj(get_item_in_drawer(c, drawer, drawer_ix, item_ix, stack_z1));
 		if (obj.type == TYPE_NONE) break;
 		objects.push_back(obj);
 	}

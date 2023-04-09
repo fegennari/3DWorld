@@ -882,7 +882,7 @@ struct building_room_geom_t {
 	void expand_dishwasher(room_object_t &c, cube_t const &dishwasher);
 	void unexpand_dishwasher(room_object_t &c, cube_t const &dishwasher);
 	bool expand_object(room_object_t &c, building_t const &building);
-	static room_object_t get_item_in_drawer(room_object_t const &c, cube_t const &drawer, unsigned drawer_ix, unsigned item_ix=0);
+	static room_object_t get_item_in_drawer(room_object_t const &c, cube_t const &drawer, unsigned drawer_ix, unsigned item_ix, float &stack_z1);
 	static void add_draw_items(room_object_t const &c, cube_t const &drawer, unsigned drawer_ix, vect_room_object_t &objects);
 	bool maybe_spawn_spider_in_drawer(room_object_t const &c, cube_t const &drawer, unsigned drawer_id, float floor_spacing, bool is_door);
 	// other functions
