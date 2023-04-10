@@ -1052,7 +1052,17 @@ void apply_room_obj_rotate(room_object_t &obj, obj_model_inst_t &inst, vect_room
 	}
 	else if (c.is_medicine()) {
 		static building_room_geom_t tmp_rgeom;
-		tmp_rgeom.add_bottle(c);
+		room_object_t bottle(c);
+		vector3d const sz(bottle.get_size());
+
+		for (unsigned d = 0; d < 2; ++d) { // if bottle was on its side, draw it as upright
+			if (sz[d] < sz.z) continue;
+			float const val(0.5*(sz[d] - sz.z));
+			bottle.expand_in_dim(2,  val);
+			bottle.expand_in_dim(d, -val);
+			break;
+		}
+		tmp_rgeom.add_bottle(bottle);
 		tmp_rgeom.mats_small.upload_draw_and_clear(s);
 	}
 	else {assert(0);}
