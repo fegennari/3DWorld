@@ -676,15 +676,17 @@ void place_book(room_object_t &obj, cube_t const &parent, float length, float ma
 	rgen.rand_mix();
 	if (item_ix > 0 && rgen.rand_bool()) return obj; // no more items
 	unsigned const type_ix(rgen.rand() % 11); // 0-10
-	unsigned const types_drawer  [11] = {TYPE_BOX, TYPE_PAPER, TYPE_PEN, TYPE_PEN, TYPE_BOOK, TYPE_KEY,   TYPE_BOTTLE, TYPE_MONEY,  TYPE_PHONE,  TYPE_SPRAYCAN, TYPE_TAPE};
-	unsigned const types_attic   [11] = {TYPE_BOX, TYPE_PAPER, TYPE_PEN, TYPE_PEN, TYPE_BOOK, TYPE_KEY,   TYPE_BOTTLE, TYPE_BOX,    TYPE_BOOK,   TYPE_SPRAYCAN, TYPE_TAPE};
-	unsigned const types_kcabinet[11] = {TYPE_BOX, TYPE_PAPER, TYPE_PEN, TYPE_PEN, TYPE_BOOK, TYPE_PLATE, TYPE_BOTTLE, TYPE_BOTTLE, TYPE_SILVER, TYPE_SPRAYCAN, TYPE_TAPE};
-	unsigned const types_fcabinet[11] = {TYPE_BOX, TYPE_PAPER, TYPE_PEN, TYPE_PEN, TYPE_BOOK, TYPE_BOX,   TYPE_PAPER,  TYPE_BOOK,   TYPE_TAPE,   TYPE_PAPER,    TYPE_TAPE};
+	unsigned const types_dresser [11] = {TYPE_BOX, TYPE_PAPER, TYPE_PEN, TYPE_PEN,     TYPE_BOOK, TYPE_KEY,     TYPE_BOTTLE, TYPE_MONEY,  TYPE_PHONE,  TYPE_SPRAYCAN, TYPE_TAPE};
+	unsigned const types_desk    [11] = {TYPE_BOX, TYPE_PAPER, TYPE_PEN, TYPE_STAPLER, TYPE_BOOK, TYPE_KEY,     TYPE_BOTTLE, TYPE_MONEY,  TYPE_PHONE,  TYPE_SPRAYCAN, TYPE_TAPE};
+	unsigned const types_attic   [11] = {TYPE_BOX, TYPE_PAPER, TYPE_PEN, TYPE_PEN,     TYPE_BOOK, TYPE_KEY,     TYPE_BOTTLE, TYPE_BOX,    TYPE_BOOK,   TYPE_SPRAYCAN, TYPE_TAPE};
+	unsigned const types_kcabinet[11] = {TYPE_BOX, TYPE_PAPER, TYPE_PEN, TYPE_PEN,     TYPE_BOOK, TYPE_PLATE,   TYPE_BOTTLE, TYPE_BOTTLE, TYPE_SILVER, TYPE_SPRAYCAN, TYPE_TAPE};
+	unsigned const types_fcabinet[11] = {TYPE_BOX, TYPE_PAPER, TYPE_PEN, TYPE_PEN,     TYPE_BOOK, TYPE_STAPLER, TYPE_PAPER,  TYPE_BOOK,   TYPE_TAPE,   TYPE_STAPLER,  TYPE_TAPE};
 	unsigned obj_type(0);
 	if (c.in_attic())                 {obj_type = types_attic   [type_ix];} // custom object overrides for attic item drawers
+	else if (c.type == TYPE_DESK)     {obj_type = types_desk    [type_ix];}
 	else if (c.type == TYPE_COUNTER)  {obj_type = types_kcabinet[type_ix];}
 	else if (c.type == TYPE_FCABINET) {obj_type = types_fcabinet[type_ix];}
-	else                              {obj_type = types_drawer  [type_ix];} // desk, dresser, or nightstand
+	else                              {obj_type = types_dresser [type_ix];} // dresser or nightstand
 	if (obj_type == TYPE_SILVER && !building_obj_model_loader.is_model_valid(OBJ_MODEL_SILVER)) {obj_type = TYPE_BOOK;} // replace silverware with book
 	// object stacking logic
 	bool const is_stackable(obj_type == TYPE_BOX || obj_type == TYPE_PAPER || obj_type == TYPE_BOOK || obj_type == TYPE_PLATE); // TYPE_TAPE?
@@ -808,6 +810,15 @@ void place_book(room_object_t &obj, cube_t const &parent, float length, float ma
 			obj.z2() = obj.z1() + 0.5f*TAPE_HEIGHT_TO_RADIUS*diameter; // set height
 			set_rand_pos_for_sz(obj, 0, diameter, diameter, rgen);
 		}
+		break;
+	}
+	case TYPE_STAPLER: // stapler
+	{
+		float const length(min(0.5f*min(sz.x, sz.y), 0.2f*(sz.x + sz.y + sz.z))), width(0.2*length), height(0.3*length);
+		obj = room_object_t(drawer, TYPE_STAPLER, c.room_id, rgen.rand_bool(), rgen.rand_bool());
+		obj.color = stapler_colors[rgen.rand()%NUM_STAPLER_COLORS];
+		obj.z2()  = obj.z1() + height;
+		set_rand_pos_for_sz(obj, obj.dim, length, width, rgen);
 		break;
 	}
 	default: assert(0);

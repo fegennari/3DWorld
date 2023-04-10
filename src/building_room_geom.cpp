@@ -1450,6 +1450,27 @@ void building_room_geom_t::add_filing_cabinet(room_object_t const &c, bool inc_l
 	}
 }
 
+void building_room_geom_t::add_stapler(room_object_t const &c) {
+	rgeom_mat_t &mat(get_untextured_material(0, 0, 1)); // unshadowed, small
+	colorRGBA const color(apply_light_color(c));
+	float const length(c.get_length()), signed_len(length*(c.dir ? 1.0 : -1.0)), width(c.get_width()), height(c.get_height());
+	cube_t base(c), top(c), hinge(c), metal(c);
+	base .z2() -= 0.9*height;
+	metal.z1() += 0.4*height;
+	metal.z2() -= 0.4*height;
+	top  .z1()  = metal.z2();
+	metal.expand_in_dim(!c.dim, -0.10*width);
+	top  .expand_in_dim(!c.dim, -0.05*width);
+	metal.d[c.dim][ c.dir] -= 0.10*signed_len; // front
+	top  .d[c.dim][ c.dir] -= 0.05*signed_len; // front
+	hinge.d[c.dim][ c.dir] -= 0.70*signed_len; // front
+	metal.d[c.dim][!c.dir] = top.d[c.dim][!c.dir] = hinge.d[c.dim][c.dir]; // back
+	mat.add_cube_to_verts_untextured(base,   color, EF_Z1);
+	mat.add_cube_to_verts_untextured(top,    color, EF_Z1);
+	mat.add_cube_to_verts_untextured(hinge,  color, EF_Z1);
+	mat.add_cube_to_verts_untextured(metal,  apply_light_color(c, LT_GRAY), EF_Z12);
+}
+
 void building_room_geom_t::add_ceiling_fan_light(room_object_t const &fan, room_object_t const &light) {
 	bool const is_on(light.is_light_on() && !light.is_broken());
 	if (!is_on) return; // only drawn when light is on
