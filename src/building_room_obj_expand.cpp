@@ -662,8 +662,9 @@ void place_book(room_object_t &obj, cube_t const &parent, float length, float ma
 /*static*/ room_object_t building_room_geom_t::get_item_in_drawer(room_object_t const &c, cube_t const &drawer_in, unsigned drawer_ix, unsigned item_ix, float &stack_z1) {
 	room_object_t obj; // starts as no item
 
-	if (c.type == TYPE_FCABINET) { // supports up to 4 drawers and 4 items
-		if (drawer_ix >= 4  || item_ix >= 4) return obj; // too many drawers or items
+	if (c.type == TYPE_FCABINET || c.type == TYPE_DESK) { // supports up to 4 drawers and 4 items
+		unsigned const max_items((c.type == TYPE_DESK) ? 2 : 4);
+		if (drawer_ix >= 4 || item_ix >= max_items) return obj; // too many drawers or items
 		drawer_ix += 4*item_ix; // encode into a single index
 	}
 	else { // supports up to 16 drawers
