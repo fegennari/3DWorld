@@ -1058,7 +1058,7 @@ void setup_wind_for_shader(shader_t &s, unsigned tu_id) {
 	s.add_uniform_float("wind_x", wind.x);
 	s.add_uniform_float("wind_y", wind.y);
 	s.add_uniform_int("wind_noise_tex", tu_id);
-	select_multitex(WIND_TEX, tu_id);
+	select_texture(WIND_TEX, tu_id);
 }
 
 

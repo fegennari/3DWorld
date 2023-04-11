@@ -1609,10 +1609,10 @@ void voxel_model::setup_tex_gen_for_rendering(shader_t &s) {
 	unsigned const tu_ids[2] = {0,8};
 
 	for (unsigned i = 0; i < 2; ++i) {
-		select_multitex(params.tids[i], tu_ids[i]);
+		select_texture(params.tids[i], tu_ids[i]);
 		s.add_uniform_color(cnames[i], params.colors[i]);
 	}
-	select_multitex(params.tids[2], 15); // top texture
+	select_texture(params.tids[2], 15); // top texture
 }
 
 

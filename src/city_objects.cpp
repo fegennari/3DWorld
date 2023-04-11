@@ -43,10 +43,10 @@ struct plot_divider_type_t {
 		}
 		if (nm_tid < 0 && !nm_tex_name.empty()) {nm_tid = get_texture_by_name(nm_tex_name, 1);} // load/lookup texture if needed
 		select_texture(tid);
-		if (nm_tid >= 0) {select_multitex(nm_tid, 5);} // bind normal map if it was specified
+		if (nm_tid >= 0) {select_texture(nm_tid, 5);} // bind normal map if it was specified
 	}
 	void post_draw(bool shadow_only) {
-		if (!shadow_only && nm_tid >= 0) {select_multitex(FLAT_NMAP_TEX, 5);} // restore default flat normal map
+		if (!shadow_only && nm_tid >= 0) {select_texture(FLAT_NMAP_TEX, 5);} // restore default flat normal map
 	}
 };
 enum {DIV_WALL=0, DIV_FENCE, DIV_HEDGE, DIV_CHAINLINK, DIV_NUM_TYPES}; // types of plot dividers, with end terminator
@@ -177,12 +177,12 @@ trashcan_t::trashcan_t(point const &pos_, float radius_, float height, bool is_c
 	else if (dstate.pass_ix == 0) {select_texture(get_texture_by_name("roads/asphalt.jpg"));} // cube city/park
 	else { // cylinder residential
 		select_texture (get_texture_by_name("buildings/corrugated_metal.tif"));
-		select_multitex(get_texture_by_name("buildings/corrugated_metal_normal.tif", 1), 5);
+		select_texture(get_texture_by_name("buildings/corrugated_metal_normal.tif", 1), 5);
 		dstate.s.set_cur_color(GRAY);
 	}
 }
 /*static*/ void trashcan_t::post_draw(draw_state_t &dstate, bool shadow_only) {
-	if (!shadow_only && dstate.pass_ix > 0) {select_multitex(FLAT_NMAP_TEX, 5);} // restore to default for cylindrical trashcan
+	if (!shadow_only && dstate.pass_ix > 0) {select_texture(FLAT_NMAP_TEX, 5);} // restore to default for cylindrical trashcan
 	city_obj_t::post_draw(dstate, shadow_only);
 }
 void trashcan_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
@@ -605,10 +605,10 @@ bool power_pole_t::add_wire(point const &p1, point const &p2, bool add_pole) { /
 /*static*/ void power_pole_t::pre_draw(draw_state_t &dstate, bool shadow_only) {
 	if (shadow_only) return;
 	select_texture(WOOD2_TEX);
-	select_multitex(get_texture_by_name("normal_maps/wood_NRM.jpg", 1), 5);
+	select_texture(get_texture_by_name("normal_maps/wood_NRM.jpg", 1), 5);
 }
 /*static*/ void power_pole_t::post_draw(draw_state_t &dstate, bool shadow_only) {
-	if (!shadow_only) {select_multitex(FLAT_NMAP_TEX, 5);} // restore to default
+	if (!shadow_only) {select_texture(FLAT_NMAP_TEX, 5);} // restore to default
 	city_obj_t::post_draw(dstate, shadow_only);
 }
 

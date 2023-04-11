@@ -442,7 +442,7 @@ void tree_cont_t::pre_leaf_draw(shader_t &shader, bool enable_opacity, bool shad
 		if (enable_smap) {shader.set_prefix("#define NO_SHADOW_PCF", (use_fs_smap ? 1 : 0));} // faster shadows
 		if (use_leaf_trans()) {shader.set_prefix("#define ENABLE_ALPHA_TO_COVERAGE", 1);} // FS
 		set_leaf_shader(shader, (use_leaf_trans() ? 0.05 : 0.75), 3, enable_opacity, (shadow_only || !enable_dlights), wind_mag, 0, use_fs_smap, enable_smap, 0, shadow_only); // no underwater trees
-		for (int i = 0; i < NUM_TREE_TYPES; ++i) {select_multitex(((draw_model == 0) ? tree_types[i].leaf_tex : WHITE_TEX), TLEAF_START_TUID+i);}
+		for (int i = 0; i < NUM_TREE_TYPES; ++i) {select_texture(((draw_model == 0) ? tree_types[i].leaf_tex : WHITE_TEX), TLEAF_START_TUID+i);}
 	}
 	if (!shadow_only) {
 		shader.set_specular(0.2, 20.0); // small amount of specular

@@ -350,8 +350,8 @@ public:
 			add_uniform_int("particles_tex", 2);
 			add_uniform_float("obj_radius", 1.0); // so that vertex scaling within the planet shader does nothing
 		}
-		select_multitex(NOISE_GEN_MIPMAP_TEX, 1);
-		select_multitex(SPARSE_NOISE_TEX,     2);
+		select_texture(NOISE_GEN_MIPMAP_TEX, 1);
+		select_texture(SPARSE_NOISE_TEX,     2);
 		enable();
 		set_specular(0.5, 50.0);
 		shadowed_state.calc_shadowers_for_planet(planet);

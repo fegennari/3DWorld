@@ -19,7 +19,6 @@ inline GLenum get_texture_format(int ncolors) {
 void init_glew();
 
 // multitexture prototypes
-void select_multitex(int id, unsigned tu_id);
 void bind_texture_tu(unsigned tid, unsigned tu_id);
 void bind_texture_tu_def_white_tex(unsigned tid, unsigned tu_id);
 

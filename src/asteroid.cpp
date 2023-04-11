@@ -309,7 +309,7 @@ void enable_bump_map_pre(shader_t &shader) {
 	shader.set_prefix("in vec3 vpos, normal;",   1); // FS
 }
 void enable_bump_map_post(shader_t &shader, unsigned tu_id, float tscale) {
-	select_multitex(get_texture_by_name("normal_maps/moon_NRM.jpg", 1, 0), tu_id);
+	select_texture(get_texture_by_name("normal_maps/moon_NRM.jpg", 1, 0), tu_id);
 	shader.add_uniform_int("bump_map", tu_id);
 	shader.add_uniform_float("bump_tex_scale", tscale);
 }

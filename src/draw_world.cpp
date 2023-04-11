@@ -260,7 +260,7 @@ void set_indir_lighting_block(shader_t &s, bool use_smoke, bool use_indir) {
 
 	// hemispherical lighting
 	s.add_uniform_color("sky_color", colorRGB(bkg_color));
-	select_multitex(LANDSCAPE_TEX, 12); // even for tiled terrain mode?
+	select_texture(LANDSCAPE_TEX, 12); // even for tiled terrain mode?
 	s.add_uniform_int("ground_tex", 12);
 }
 
@@ -433,19 +433,19 @@ void setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool keep
 		}
 		if (volume_lighting && use_smap && shadow_map_enabled()) {
 			s.add_uniform_int("blue_noise_tex", 12);
-			select_multitex(get_texture_by_name("noise/blue_noise.png"), 12);
+			select_texture(get_texture_by_name("noise/blue_noise.png"), 12);
 		}
 	}
 	if (use_burn_mask) {
 		s.add_uniform_float("burn_tex_scale", burn_tex_scale);
 		s.add_uniform_float("burn_offset", -2.0); // starts disabled
 		s.add_uniform_int("burn_mask", 10);
-		select_multitex(DISINT_TEX, 10); // PLASMA_TEX?
+		select_texture(DISINT_TEX, 10); // PLASMA_TEX?
 	}
 	if (enable_reflect) {s.add_uniform_int("reflection_tex", 14);}
 
 	if (enable_reflect == 1) {
-		select_multitex(RIPPLE_MAP_TEX, 15);
+		select_texture(RIPPLE_MAP_TEX, 15);
 		s.add_uniform_int("ripple_tex", 15);
 		static float ripple_time(0.0);
 		static int update_frame(0);
@@ -519,7 +519,7 @@ void setup_procedural_shaders(shader_t &s, float min_alpha, bool indir_lighting,
 		s.add_uniform_float("tex_mix_saturate", tex_mix_saturate);
 	}
 	if (use_bmap) {
-		select_multitex(ROCK_NORMAL_TEX, 11);
+		select_texture(ROCK_NORMAL_TEX, 11);
 		s.add_uniform_int("bump_map", 11);
 		s.add_uniform_float("bump_tex_scale", 4.0);
 	}
@@ -668,7 +668,7 @@ void draw_cobjs_group(vector<unsigned> const &cobjs, cobj_draw_buffer &cdb, int 
 			if (c.cp.normal_map != nm_tid) { // normal map change
 				cdb.flush();
 				nm_tid = c.cp.normal_map;
-				select_multitex(nm_tid, 5);
+				select_texture(nm_tid, 5);
 			}
 			if (bbs != bump_b_scale) {
 				cdb.flush();
@@ -1129,7 +1129,7 @@ void set_cloud_intersection_shader(shader_t &s) {
 	s.add_uniform_float   ("dx", cur_spo.dx);
 	s.add_uniform_float   ("dy", cur_spo.dy);
 	s.add_uniform_int("cloud_tex", 8);
-	select_multitex(CLOUD_TEX, 8);
+	select_texture(CLOUD_TEX, 8);
 }
 
 
@@ -1488,7 +1488,7 @@ void draw_bubbles() {
 void draw_part_clouds(vector<particle_cloud> const &pc, int tid) {
 
 	enable_flares(tid);
-	//select_multitex(CLOUD_TEX, 1);
+	//select_texture(CLOUD_TEX, 1);
 	static quad_batch_draw qbd;
 	draw_objects(pc, qbd);
 	qbd.draw_and_clear(); // color will be set per object
@@ -1692,8 +1692,8 @@ void draw_cracks_and_decals() {
 				bullet_shader.add_uniform_float("bump_tb_scale", -1.0); // invert the coordinate system (something backwards?)
 				bullet_shader.add_uniform_float("hole_depth", 0.2);
 				bullet_shader.add_uniform_int("depth_map", 9);
-				select_multitex(BULLET_N_TEX, 5);
-				select_multitex(BULLET_D_TEX, 9);
+				select_texture(BULLET_N_TEX, 5);
+				select_texture(BULLET_D_TEX, 9);
 			}
 			bullet_shader.enable();
 		}

@@ -276,7 +276,7 @@ void draw_blasts(shader_t &s) {
 	int const min_alpha_loc(s.get_uniform_loc("min_alpha"));
 	//s.set_uniform_float(min_alpha_loc, 0.05);
 	enable_blend();
-	select_multitex(WHITE_TEX, 1);
+	select_texture(WHITE_TEX, 1);
 	vector<ix_type_pair> to_draw;
 	usw_ray_group exp_rays;
 
@@ -370,7 +370,7 @@ void draw_blasts(shader_t &s) {
 		case ETYPE_SIEGE:
 			if (begin_type) {
 				glDepthMask(GL_FALSE);
-				select_multitex(((br.type == ETYPE_FUSION || br.type == ETYPE_FUSION_ROT) ? (int)FLARE5_TEX : ((br.type == ETYPE_STARB) ? (int)STARBURST_TEX : (int)BLUR_TEX)), 0);
+				select_texture(((br.type == ETYPE_FUSION || br.type == ETYPE_FUSION_ROT) ? (int)FLARE5_TEX : ((br.type == ETYPE_STARB) ? (int)STARBURST_TEX : (int)BLUR_TEX)), 0);
 			}
 			draw_billboard_explosion(br, qbd, camera, (br.type == ETYPE_FUSION_ROT)); // only ETYPE_FUSION_ROT aligns to the camera
 

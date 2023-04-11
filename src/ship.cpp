@@ -968,7 +968,7 @@ void setup_ship_draw_shader(shader_t &s) {
 	s.add_uniform_float("lum_offset", 0.0);
 	set_sane_light_atten(&s);
 	// burn mask stuff
-	select_multitex(DISINT_TEX, 1);
+	select_texture(DISINT_TEX, 1);
 	s.add_uniform_int ("burn_mask", 1); // used instead of alpha_mask_tex
 	s.add_uniform_float("burn_offset",   -1.0);
 	s.add_uniform_float("burn_tex_scale", 1.0);

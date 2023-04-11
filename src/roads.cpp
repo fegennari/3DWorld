@@ -1121,7 +1121,7 @@ void road_draw_state_t::draw_tunnel(tunnel_t const &tunnel, bool shadow_only) { 
 	if (!shadow_only) {
 		s.add_uniform_float("hemi_lighting_scale", 0.5); // set back to the default of 0.5
 		select_texture(get_texture_by_name("cblock2.jpg"));
-		select_multitex(get_texture_by_name("normal_maps/cblock2_NRM.jpg", 1), 5); // set normal map
+		select_texture(get_texture_by_name("normal_maps/cblock2_NRM.jpg", 1), 5); // set normal map
 		tscale *= 4.0;
 	}
 	for (unsigned n = 0; n < 2; ++n) { // add tunnel facades
@@ -1139,7 +1139,7 @@ void road_draw_state_t::draw_tunnel(tunnel_t const &tunnel, bool shadow_only) { 
 		draw_cube(qbd, c, cw_concrete, 0, tscale); // skip_bottom=0 in case there are overhangs due to steep cliffs
 		qbd.draw_and_clear();
 	} // for n
-	if (!shadow_only) {select_multitex(FLAT_NMAP_TEX, 5);} // restore flat normal map
+	if (!shadow_only) {select_texture(FLAT_NMAP_TEX, 5);} // restore flat normal map
 }
 
 void road_draw_state_t::draw_stoplights(vector<road_isec_t> const &isecs, vector<road_t> const &roads, range_pair_t const &rp, unsigned cur_city, bool shadow_only) {

@@ -158,7 +158,7 @@ void add_color_only_effect(string const &frag_shader, float intensity=1.0, float
 	if (pos_scale != 0.0) {s.add_uniform_float("pos_scale", pos_scale);} // not all shaders have this uniform
 	s.add_uniform_int("frame_buffer_tex", 0);
 	s.add_uniform_float("time", time); // may not be used
-	select_multitex(NOISE_TEX, 1);
+	select_texture(NOISE_TEX, 1);
 	s.add_uniform_int("noise_tex", 1); // Note: used for heat waves effect, could be used for others
 	set_xy_step(s); // may not be used
 	fill_screen_white_and_end_shader(s);

@@ -2316,8 +2316,8 @@ colorRGBA get_avg_color_for_landscape_tex(unsigned id) {
 		int const nm_tid((disable_for_grass[i] && is_grass_enabled()) ? FLAT_NMAP_TEX : normal_tids_dirt[i]);
 		float const tscale(mesh_tex_scale[i]*float(base_tsize)/float(get_texture_size(tid, 0))); // assumes textures are square
 		unsigned const tu_id(start_tu_id + i), nm_tu_id(i + 16); // tu_id 16-20 for normal maps
-		select_multitex(tid, tu_id);
-		select_multitex(nm_tid, nm_tu_id);
+		select_texture(tid, tu_id);
+		select_texture(nm_tid, nm_tu_id);
 		assert(tu_id <= 9); // must map to a single character
 		string tu_id_str;
 		tu_id_str.push_back('0' + tu_id);
@@ -2440,7 +2440,7 @@ void tile_draw_t::setup_mesh_draw_shaders(shader_t &s, bool reflection_pass, boo
 		s.add_uniform_color("uw_atten_scale", uw_atten_scale);
 
 		if (water_caustics) {
-			select_multitex(WATER_CAUSTIC_TEX, 10);
+			select_texture(WATER_CAUSTIC_TEX, 10);
 			s.add_uniform_int("caustic_tex", 10);
 			s.add_uniform_float("caustics_weight", (1.5 - water_params.alpha));
 		}
@@ -2764,7 +2764,7 @@ void tile_draw_t::draw_tiles(int reflection_pass, bool enable_shadow_map) const 
 	if ((display_mode & 0x01) && !enable_shadow_map && !reflection_pass && draw_distant_water() && water_plane_z > terrain_zmin) {
 		bind_2d_texture(BLACK_TEX); // all snow? at least it's set to something valid
 		bind_texture_tu(WHITE_TEX, 15); // shadow_map texture, use something determinsitic (not that it matters visually)
-		select_multitex(FLAT_NMAP_TEX, 7); // normal_map texture
+		select_texture(FLAT_NMAP_TEX, 7); // normal_map texture
 		disable_shadow_maps(s);
 		int const loc(s.get_uniform_loc("htex_scale"));
 		if (loc >= 0) {s.set_uniform_float(loc, 0.0);} // disable height texture
@@ -2873,7 +2873,7 @@ colorRGBA get_color_scale(float mag=1.0, float cloud_cover_factor=0.0) {
 
 
 /*static*/ void tile_draw_t::set_noise_tex(shader_t &s, unsigned tu_id) {
-	select_multitex(DITHER_NOISE_TEX, tu_id);
+	select_texture(DITHER_NOISE_TEX, tu_id);
 	s.add_uniform_int("noise_tex", tu_id);
 }
 /*static*/ void tile_draw_t::set_tree_dither_noise_tex(shader_t &s, unsigned tu_id) {

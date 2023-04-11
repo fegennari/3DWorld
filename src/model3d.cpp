@@ -1942,7 +1942,7 @@ void model3d::simplify_indices(float reduce_target) {
 
 
 void set_def_spec_map() {
-	if (enable_spec_map()) {select_multitex(WHITE_TEX, 8);} // all white/specular (no specular map texture)
+	if (enable_spec_map()) {select_texture(WHITE_TEX, 8);} // all white/specular (no specular map texture)
 }
 
 void model3d::render_materials(shader_t &shader, bool is_shadow_pass, int reflection_pass, bool is_z_prepass, int enable_alpha_mask,

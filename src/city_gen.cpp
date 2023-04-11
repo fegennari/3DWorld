@@ -1298,8 +1298,8 @@ public:
 	void get_occluders(vect_cube_t &occluders) const {
 		if (bcube.contains_pt_xy(camera_pdu.pos)) {city_obj_placer.get_occluders(camera_pdu, occluders);} // only add if this city contains the camera
 	}
-	static void set_road_normal_map  () {select_multitex(get_texture_by_name("normal_maps/dirt_normal.jpg", 1), 5);}
-	static void reset_road_normal_map() {select_multitex(FLAT_NMAP_TEX, 5);}
+	static void set_road_normal_map  () {select_texture(get_texture_by_name("normal_maps/dirt_normal.jpg", 1), 5);}
+	static void reset_road_normal_map() {select_texture(FLAT_NMAP_TEX, 5);}
 
 	void draw(road_draw_state_t &dstate, bool shadow_only, bool is_connector_road) {
 		city_obj_placer.draw_detail_objects(dstate, shadow_only); // always drawn; does its own VFC and distance test
@@ -2606,7 +2606,7 @@ public:
 
 			if (1 || have_plot_dividers) { // enable normal maps for fences and walls; also applies to tunnels and power poles
 				dstate.set_enable_normal_map(1);
-				select_multitex(FLAT_NMAP_TEX, 5); // set flat normal map texture as the default
+				select_texture(FLAT_NMAP_TEX, 5); // set flat normal map texture as the default
 			}
 			dstate.pre_draw(xlate, use_dlights, shadow_only, 1); // always_setup_shader=1
 			assert(dstate.s.is_setup());

@@ -179,7 +179,7 @@ void set_landscape_texgen(float tex_scale, int xoffset, int yoffset, int xsize, 
 	float const tx(tex_scale*(((float)xoffset)/((float)xsize) + 0.5));
 	float const ty(tex_scale*(((float)yoffset)/((float)ysize) + 0.5));
 	setup_texgen(tex_scale/TWO_XSS, tex_scale/TWO_YSS, tx, ty, 0.0, shader, 0);
-	select_multitex(mesh_detail_tex, detail_tu_id); // detail texture
+	select_texture(mesh_detail_tex, detail_tu_id); // detail texture
 }
 
 void set_landscape_texture_texgen(shader_t &shader) {
@@ -248,7 +248,7 @@ void setup_detail_normal_map_prefix(shader_t &s, bool enable) {
 
 void setup_detail_normal_map(shader_t &s, float tscale) { // also used for tiled terrain mesh
 
-	select_multitex(ROCK_NORMAL_TEX, 11);
+	select_texture(ROCK_NORMAL_TEX, 11);
 	s.add_uniform_int("detail_normal_tex", 11);
 	s.add_uniform_vector2d("detail_normal_tex_scale", vector2d(tscale*X_SCENE_SIZE, tscale*Y_SCENE_SIZE));
 }
@@ -823,20 +823,20 @@ void setup_water_plane_shader(shader_t &s, bool no_specular, bool reflections, b
 
 	// waves (as normal maps)
 	if (add_waves) {
-		select_multitex(WATER_NORMAL_TEX,       1);
-		select_multitex(OCEAN_WATER_NORMAL_TEX, 4);
+		select_texture(WATER_NORMAL_TEX,       1);
+		select_texture(OCEAN_WATER_NORMAL_TEX, 4);
 		s.add_uniform_int("water_normal_tex",      1);
 		s.add_uniform_int("deep_water_normal_tex", 4);
 	}
 	if (rain_mode) {
-		select_multitex(RAINDROP_TEX, 3);
+		select_texture(RAINDROP_TEX, 3);
 		s.add_uniform_int  ("noise_tex", 3);
 		s.add_uniform_float("noise_time", frame_counter); // rain ripples
-		select_multitex(RIPPLE_MAP_TEX, 7);
+		select_texture(RIPPLE_MAP_TEX, 7);
 		s.add_uniform_int("ripple_tex", 7);
 		s.add_uniform_float("rain_intensity", get_rain_intensity());
 	}
-	select_multitex(FOAM_TEX, 5);
+	select_texture(FOAM_TEX, 5);
 	s.add_uniform_int("foam_tex", 5);
 }
 
