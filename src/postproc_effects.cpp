@@ -23,16 +23,13 @@ bool player_is_drowning();
 float get_player_drunkenness();
 
 
-void bind_depth_buffer() {
-
+void bind_depth_buffer(unsigned tu_id=0) {
 	if (frame_counter != depth_buffer_frame) {depth_buffer_to_texture(depth_tid);} // depth texture is not valid for this frame, create it
 	depth_buffer_frame = frame_counter;
 	assert(depth_tid > 0);
-	bind_2d_texture(depth_tid);
+	bind_texture_tu(depth_tid, tu_id);
 }
-
 void bind_frame_buffer_RGB() {
-	
 	if (frame_counter != color_buffer_frame) {frame_buffer_RGB_to_texture(frame_buffer_RGB_tid);} // FB RGB texture is not valid for this frame, create it
 	color_buffer_frame = frame_counter;
 	assert(frame_buffer_RGB_tid > 0);
@@ -62,7 +59,6 @@ void draw_ortho_screen_space_triangle() {
 void set_xy_step(shader_t &s) {s.add_uniform_vector2d("xy_step", vector2d(1.0/window_width, 1.0/window_height));}
 
 void setup_depth_tex(shader_t &s, int tu_id) {
-
 	set_xy_step(s);
 	s.add_uniform_int("depth_tex", tu_id);
 	s.add_uniform_float("znear", NEAR_CLIP);
@@ -70,7 +66,6 @@ void setup_depth_tex(shader_t &s, int tu_id) {
 }
 
 void fill_screen_white_and_end_shader(shader_t &s) {
-
 	s.set_cur_color(WHITE);
 	draw_ortho_screen_space_triangle();
 	s.end_shader();
@@ -207,9 +202,7 @@ void add_sphere_refract_effect(sphere_t const &sphere, float intensity) {
 
 void add_depth_of_field(float focus_depth, float dof_val) {
 
-	set_active_texture(1);
-	bind_depth_buffer();
-	set_active_texture(0);
+	bind_depth_buffer(1); // tu_id=1
 	shader_t s;
 
 	for (unsigned dim = 0; dim < 2; ++dim) {

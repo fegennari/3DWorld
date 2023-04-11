@@ -390,30 +390,26 @@ unsigned load_cube_map_texture(string const &name) {
 
 void check_init_texture(int id, bool free_after_upload) {textures[id].check_init(free_after_upload);}
 
-bool select_texture(int id) {
-
+bool select_texture(int id, unsigned tu_id) {
 	bool const no_tex(id < 0);
 	if (no_tex) {id = WHITE_TEX;} //glBindTexture(GL_TEXTURE_2D, 0); // bind to none
 	assert((unsigned)id < textures.size());
 	bool const free_after_upload(no_store_model_textures_in_memory && id >= NUM_PREDEF_TEXTURES); // free textures loaded by name only
 	check_init_texture(id, free_after_upload);
-	textures[id].bind_gl();
+	textures[id].bind_gl(tu_id);
 	return !no_tex;
 }
 
 void bind_texture_tu_def_white_tex(unsigned tid, unsigned tu_id) {
-	assert(WHITE_TEX < textures.size());
-	bind_texture_tu(((tid == 0) ? textures[WHITE_TEX].get_tid() : tid), tu_id);
+	if (tid == 0) {select_texture(WHITE_TEX, tu_id);}
+	else {bind_texture_tu(tid, tu_id);}
 }
 
-
 float get_tex_ar(int id) {
-
 	if (id < 0) return 1.0;
 	texture_t const &texture(get_texture_by_id(id));
 	return (((double)texture.width)/((double)texture.height));
 }
-
 
 void free_textures() {
 	for (unsigned i = 0; i < textures.size(); ++i) {textures[i].gl_delete();}
@@ -478,9 +474,9 @@ void texture_t::alloc() {
 	}
 }
 
-void texture_t::bind_gl() const {
+void texture_t::bind_gl(unsigned tu_id) const {
 	assert(tid > 0);
-	bind_2d_texture(tid);
+	bind_texture_tu(tid, tu_id);
 }
 GLuint64 texture_t::get_bindless_handle(bool make_resident) const {
 	assert(tid > 0);

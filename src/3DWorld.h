@@ -1061,7 +1061,7 @@ public:
 	void set_to_color(colorRGBA const &c);
 	void maybe_assign_normal_map_tid(int nm_tid) {if (nm_tid >= 0 && bump_tid < 0) {bump_tid = nm_tid;}}
 	void alloc();
-	void bind_gl() const;
+	void bind_gl(unsigned tu_id=0) const;
 	GLuint64 get_bindless_handle(bool make_resident=1) const;
 	void free_client_mem();
 	void free_data() {gl_delete(); free_client_mem();}

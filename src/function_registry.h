@@ -614,7 +614,7 @@ unsigned get_loaded_textures_gpu_mem();
 int texture_lookup(std::string const &name);
 int get_texture_by_name(std::string const &name, bool is_normal_map=0, bool invert_y=0, int wrap_mir=1, float aniso=0.0, bool allow_compress=1, int use_mipmaps=1, unsigned ncolors=3);
 unsigned load_cube_map_texture(std::string const &name);
-bool select_texture(int id);
+bool select_texture(int id, unsigned tu_id=0);
 void update_player_bbb_texture(float extra_blood, bool recreate);
 float get_tex_ar(int id);
 void bind_1d_texture(unsigned tid, bool is_array=0);
