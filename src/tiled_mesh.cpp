@@ -2873,7 +2873,7 @@ colorRGBA get_color_scale(float mag=1.0, float cloud_cover_factor=0.0) {
 
 
 /*static*/ void tile_draw_t::set_noise_tex(shader_t &s, unsigned tu_id) {
-	select_multitex(DITHER_NOISE_TEX, tu_id, 1);
+	select_multitex(DITHER_NOISE_TEX, tu_id);
 	s.add_uniform_int("noise_tex", tu_id);
 }
 /*static*/ void tile_draw_t::set_tree_dither_noise_tex(shader_t &s, unsigned tu_id) {

@@ -51,10 +51,10 @@ void set_active_texture(unsigned tu_id) {
 	glActiveTexture((GL_TEXTURE0 + tu_id));
 }
 
-void select_multitex(int id, unsigned tu_id, bool reset) {
+void select_multitex(int id, unsigned tu_id) {
 	set_active_texture(tu_id);
 	select_texture(id);
-	if (reset) {set_active_texture(0);}
+	set_active_texture(0);
 }
 
 void bind_texture_tu(unsigned tid, unsigned tu_id, bool is_cube_map) {

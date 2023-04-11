@@ -179,7 +179,7 @@ void set_landscape_texgen(float tex_scale, int xoffset, int yoffset, int xsize, 
 	float const tx(tex_scale*(((float)xoffset)/((float)xsize) + 0.5));
 	float const ty(tex_scale*(((float)yoffset)/((float)ysize) + 0.5));
 	setup_texgen(tex_scale/TWO_XSS, tex_scale/TWO_YSS, tx, ty, 0.0, shader, 0);
-	select_multitex(mesh_detail_tex, detail_tu_id, 1); // detail texture
+	select_multitex(mesh_detail_tex, detail_tu_id); // detail texture
 }
 
 void set_landscape_texture_texgen(shader_t &shader) {
@@ -248,7 +248,7 @@ void setup_detail_normal_map_prefix(shader_t &s, bool enable) {
 
 void setup_detail_normal_map(shader_t &s, float tscale) { // also used for tiled terrain mesh
 
-	select_multitex(ROCK_NORMAL_TEX, 11, 1);
+	select_multitex(ROCK_NORMAL_TEX, 11);
 	s.add_uniform_int("detail_normal_tex", 11);
 	s.add_uniform_vector2d("detail_normal_tex_scale", vector2d(tscale*X_SCENE_SIZE, tscale*Y_SCENE_SIZE));
 }

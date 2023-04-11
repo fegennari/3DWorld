@@ -473,9 +473,8 @@ void draw_water(bool no_update, bool draw_fast) {
 		int const xend(MESH_X_SIZE-1), yend(MESH_Y_SIZE-1);
 
 		if (use_foam) { // use sea foam texture
-			select_multitex(FOAM_TEX, 1, 0);
+			select_multitex(FOAM_TEX, 1);
 			setup_texgen(20.0*tx_scale, 20.0*ty_scale, 0.0, 0.0, 0.0, s, 0);
-			set_active_texture(0);
 			s.add_uniform_float("detail_tex_scale", 1.0);
 		}
 		static water_strip_drawer wsdraw;

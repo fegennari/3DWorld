@@ -315,7 +315,7 @@ void uobj_draw_data::end_exp_texture() const {
 }
 
 void uobj_draw_data::enable_normal_map(string const &name) const {
-	select_multitex(get_texture_by_name(name, 1, 0), 2, 1); // tu_id = 2
+	select_multitex(get_texture_by_name(name, 1, 0), 2); // tu_id = 2
 	if (shader) {shader->reset_subroutine(1, "maybe_bump_map_op", "yes_bump_map");}
 }
 void uobj_draw_data::disable_normal_map() const {

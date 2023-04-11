@@ -260,7 +260,7 @@ void set_indir_lighting_block(shader_t &s, bool use_smoke, bool use_indir) {
 
 	// hemispherical lighting
 	s.add_uniform_color("sky_color", colorRGB(bkg_color));
-	select_multitex(LANDSCAPE_TEX, 12, 1); // even for tiled terrain mode?
+	select_multitex(LANDSCAPE_TEX, 12); // even for tiled terrain mode?
 	s.add_uniform_int("ground_tex", 12);
 }
 
@@ -520,7 +520,7 @@ void setup_procedural_shaders(shader_t &s, float min_alpha, bool indir_lighting,
 		s.add_uniform_float("tex_mix_saturate", tex_mix_saturate);
 	}
 	if (use_bmap) {
-		select_multitex(ROCK_NORMAL_TEX, 11, 1);
+		select_multitex(ROCK_NORMAL_TEX, 11);
 		s.add_uniform_int("bump_map", 11);
 		s.add_uniform_float("bump_tex_scale", 4.0);
 	}
@@ -1130,7 +1130,7 @@ void set_cloud_intersection_shader(shader_t &s) {
 	s.add_uniform_float   ("dx", cur_spo.dx);
 	s.add_uniform_float   ("dy", cur_spo.dy);
 	s.add_uniform_int("cloud_tex", 8);
-	select_multitex(CLOUD_TEX, 8, 1);
+	select_multitex(CLOUD_TEX, 8);
 }
 
 
@@ -1694,8 +1694,8 @@ void draw_cracks_and_decals() {
 				bullet_shader.add_uniform_float("bump_tb_scale", -1.0); // invert the coordinate system (something backwards?)
 				bullet_shader.add_uniform_float("hole_depth", 0.2);
 				bullet_shader.add_uniform_int("depth_map", 9);
-				select_multitex(BULLET_N_TEX, 5, 0);
-				select_multitex(BULLET_D_TEX, 9, 1);
+				select_multitex(BULLET_N_TEX, 5);
+				select_multitex(BULLET_D_TEX, 9);
 			}
 			bullet_shader.enable();
 		}
