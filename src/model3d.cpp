@@ -1310,7 +1310,6 @@ void material_t::check_for_tc_invert_y(texture_manager &tmgr) {
 
 
 void bind_texture_tu_or_white_tex(texture_manager const &tmgr, int tid, unsigned tu_id) {
-
 	set_active_texture(tu_id);
 	if (tid >= 0) {tmgr.bind_texture(tid);} else {select_texture(WHITE_TEX);}
 	set_active_texture(0);

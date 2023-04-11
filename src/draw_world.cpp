@@ -280,7 +280,6 @@ void common_shader_block_post(shader_t &s, bool dlights, bool use_shadow_map, bo
 		if (world_mode == WMODE_GROUND) {set_smap_shader_for_all_lights(s, cobj_z_bias);}
 		else {pre_bind_smap_tus(s);} // TT mode still requires binding the texture units
 	}
-	set_active_texture(0);
 	s.clear_specular();
 	if (world_mode == WMODE_INF_TERRAIN) {setup_tt_fog_post(s);}
 }
@@ -1494,7 +1493,6 @@ void draw_part_clouds(vector<particle_cloud> const &pc, int tid) {
 	draw_objects(pc, qbd);
 	qbd.draw_and_clear(); // color will be set per object
 	disable_flares();
-	//set_active_texture(0);
 }
 
 
@@ -1727,7 +1725,6 @@ void setup_depth_trans_texture(shader_t &s, unsigned &depth_tid) {
 	setup_depth_tex(s, depth_tu_id);
 	depth_buffer_to_texture(depth_tid);
 	bind_texture_tu(depth_tid, depth_tu_id);
-	set_active_texture(0);
 }
 
 void draw_smoke_and_fires() {

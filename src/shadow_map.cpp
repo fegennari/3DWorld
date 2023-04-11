@@ -352,19 +352,11 @@ void bind_default_sun_moon_smap_textures() { // Note: uses different TUs compare
 }
 
 bool smap_data_t::bind_smap_texture(bool light_valid) const {
-
-	set_active_texture(tu_id);
-
 	// Note: the is_allocated() check shouldn't be required, but can happen in tiled terrain mode when switching between combined_gu mode (safe and conservative)
 	// due to some disagreement between the update pass and draw pass during reflection drawing
-	if (light_valid && is_allocated()) { // otherwise, we know that sm_scale will be 0.0 and we won't do the lookup
-		bind_2d_texture(get_tid(), is_arrayed());
-		set_active_texture(0);
-		return 1;
-	}
-	bind_2d_texture(get_empty_smap_tid());
-	set_active_texture(0);
-	return 0;
+	bool const use_tid(light_valid && is_allocated()); // otherwise, we know that sm_scale will be 0.0 and we won't do the lookup
+	bind_texture_tu((use_tid ? get_tid() : get_empty_smap_tid()), tu_id);
+	return use_tid;
 }
 
 

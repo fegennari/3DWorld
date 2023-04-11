@@ -516,7 +516,6 @@ void display_mesh(bool shadow_pass, bool reflection_pass) { // fast array versio
 		draw_mesh_mvd(reflection_pass);
 	}
 	if (SHOW_MESH_TIME) {PRINT_TIME("Draw");}
-	set_active_texture(0);
 	if (!reflection_pass) {draw_sides_and_bottom(0);} // not generally needed in the reflection pass, since reflective objects should be over the mesh
 
 	if (SHOW_NORMALS) {

@@ -2675,9 +2675,7 @@ void uplanet::ensure_rings_texture() {
 void uplanet::bind_rings_texture(unsigned tu_id) const { // setup ring texture so we can create ring shadows
 
 	if (ring_data.empty() || ring_tid == 0) return;
-	set_active_texture(2);
-	bind_1d_texture(ring_tid);
-	set_active_texture(0);
+	bind_texture_tu(ring_tid, 2);
 }
 
 void uplanet::draw_prings(ushader_group &usg, upos_point_type const &pos_, float size_, float back_face_mult, bool a2c) const {

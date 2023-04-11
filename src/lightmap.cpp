@@ -1028,7 +1028,6 @@ void setup_dlight_textures(shader_t &s, bool enable_dlights_smap) {
 	set_one_texture(s, elem_tid, 3, "dlelm_tex");
 	set_one_texture(s, gb_tid,   4, "dlgb_tex");
 	if (enable_dlight_bcubes) {set_one_texture(s, dl_bc_tid, 15, "dlbcube_tex");} // TU_ID 15 is shared with ripples texture, hopefully we won't have a situation where we need both
-	set_active_texture(0);
 	if (enable_dlights_smap && shadow_map_enabled()) {setup_dlight_shadow_maps(s);}
 	s.add_uniform_float("LT_DIR_FALLOFF", LT_DIR_FALLOFF);
 }

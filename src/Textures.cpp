@@ -1903,21 +1903,17 @@ vector2d get_billboard_texture_uv(point const *const points, point const &pos) {
 
 
 bool is_billboard_texture_transparent(point const *const points, point const &pos, int tid) {
-
 	vector2d const uv(get_billboard_texture_uv(points, pos));
 	return (get_texture_component(tid, uv.x, uv.y, 3) == 0.0);
 }
 
-
 void ensure_texture_loaded(unsigned &tid, unsigned txsize, unsigned tysize, bool mipmap, bool nearest, bool multisample) { // used with texture_pair_t/render-to-texture RGBA
-
 	assert(txsize > 0 && tysize > 0);
 	if (tid) return; // already created
 	setup_texture(tid, mipmap, 0, 0, 0, 0, nearest, 1.0, 0, multisample);
 	if (multisample) {glTexImage2DMultisample(GL_TEXTURE_2D_MULTISAMPLE, NUM_TEX_MS_SAMPLES, GL_RGBA8, txsize, tysize, false);}
 	else {glTexImage2D(get_2d_texture_target(0, multisample), 0, GL_RGBA8, txsize, tysize, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);}
 }
-
 
 void build_texture_mipmaps(unsigned tid, unsigned dim) {
 	bind_2d_texture(tid);
@@ -1929,21 +1925,15 @@ void texture_pair_t::free_context() {
 	free_texture(tids[0]);
 	free_texture(tids[1]);
 }
-
 void texture_pair_t::bind_texture() const {
-
 	assert(is_valid());
-	bind_2d_texture(tids[0], 0, multisample);
-	set_active_texture(1);
-	bind_2d_texture(tids[1], 0, multisample);
-	set_active_texture(0);
+	bind_texture_tu(tids[0], 0);
+	bind_texture_tu(tids[1], 1);
 }
-
 void texture_pair_t::ensure_tid(unsigned tsize, bool mipmap) {
 	ensure_texture_loaded(tids[0], tsize, tsize, mipmap, 0, multisample); // color
 	ensure_texture_loaded(tids[1], tsize, tsize, mipmap, 0, multisample); // normal
 }
-
 
 void texture_atlas_t::free_context() {free_texture(tid);}
 
@@ -1951,7 +1941,6 @@ void texture_atlas_t::bind_texture() const {
 	assert(tid);
 	bind_2d_texture(tid, 0, multisample);
 }
-
 void texture_atlas_t::ensure_tid(unsigned base_tsize, bool mipmap) {
 	assert(nx > 0 && ny > 0);
 	ensure_texture_loaded(tid, nx*base_tsize, ny*base_tsize, mipmap, 0, multisample);

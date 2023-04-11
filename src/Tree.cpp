@@ -417,7 +417,6 @@ void set_leaf_shader(shader_t &s, float min_alpha, unsigned tc_start_ix, bool en
 	if (enable_tex_coord_weight) {s.add_uniform_float("tex_coord_weight", 0.0);}
 	s.add_uniform_float("water_depth", water_depth);
 	s.add_uniform_float("min_alpha",   min_alpha);
-	set_active_texture(0);
 	s.add_uniform_int("tex0", 0);
 	s.add_uniform_int("tc_start_ix", tc_start_ix);
 	s.add_uniform_vector3d("world_space_offset", zero_vector); // reset
