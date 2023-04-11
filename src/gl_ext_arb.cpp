@@ -41,17 +41,9 @@ GLenum get_internal_texture_format(int ncolors, bool compressed, bool linear_spa
 }
 
 
-// ***************** MULTITEXTURING *****************
-
-unsigned const MAX_MULTITEX = 32; // max is GL_TEXTURE31
-
-
-void set_active_texture(unsigned tu_id) {
-	assert(tu_id < MAX_MULTITEX); // Note: Assumes textures are defined sequentially
-	glActiveTexture((GL_TEXTURE0 + tu_id));
-}
 void bind_texture_tu(unsigned tid, unsigned tu_id) {
 	assert(tid);
+	assert(tu_id < 32); // max is GL_TEXTURE31; too strict?
 	glBindTextureUnit(tu_id, tid);
 }
 
