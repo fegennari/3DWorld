@@ -57,11 +57,9 @@ void select_multitex(int id, unsigned tu_id) {
 	set_active_texture(0);
 }
 
-void bind_texture_tu(unsigned tid, unsigned tu_id, bool is_cube_map) {
+void bind_texture_tu(unsigned tid, unsigned tu_id) {
 	assert(tid);
-	set_active_texture(tu_id);
-	if (is_cube_map) {bind_cube_map_texture(tid);} else {bind_2d_texture(tid);}
-	set_active_texture(0);
+	glBindTextureUnit(tu_id, tid);
 }
 
 

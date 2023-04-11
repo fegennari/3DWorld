@@ -422,7 +422,7 @@ void setup_shader_cube_map_params(shader_t &shader, cube_t const &bcube, unsigne
 	shader.add_uniform_vector3d("cube_map_center", bcube.get_cube_center()); // world space
 	shader.add_uniform_float("cube_map_near_clip", 0.5f*bcube.max_len());
 	shader.add_uniform_int("cube_map_texture_size", tsize);
-	bind_texture_tu(tid, 14, 1); // tu_id=14, is_cube_map=1
+	bind_texture_tu(tid, 14); // tu_id=14
 }
 
 

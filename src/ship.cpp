@@ -974,7 +974,7 @@ void setup_ship_draw_shader(shader_t &s) {
 	s.add_uniform_float("burn_tex_scale", 1.0);
 
 	if (ship_cube_map_reflection) {
-		bind_texture_tu(univ_reflection_tid, 14, 1);
+		bind_texture_tu(univ_reflection_tid, 14);
 		s.add_uniform_int("reflection_tex", 14);
 		upload_mvm_to_shader(s, "fg_ViewMatrix");
 		s.add_uniform_vector3d("camera_pos", get_camera_pos());
