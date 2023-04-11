@@ -1309,10 +1309,8 @@ void material_t::check_for_tc_invert_y(texture_manager &tmgr) {
 }
 
 
-void bind_texture_tu_or_white_tex(texture_manager const &tmgr, int tid, unsigned tu_id) {
-	set_active_texture(tu_id);
-	if (tid >= 0) {tmgr.bind_texture(tid);} else {select_texture(WHITE_TEX);}
-	set_active_texture(0);
+void texture_manager::bind_texture_tu_or_white_tex(int tid, unsigned tu_id) const {
+	bind_texture_tu_def_white_tex(((tid >= 0) ? get_texture(tid).get_tid() : 0), tu_id);
 }
 
 // enable_alpha_mask: 0=non-alpha mask only, 1=alpha mask only, 2=both
@@ -1359,9 +1357,7 @@ void material_t::render(shader_t &shader, texture_manager const &tmgr, int defau
 			select_texture((default_tid >= 0) ? default_tid : WHITE_TEX); // no texture specified - use white texture
 		}
 		if (use_bump_map()) {
-			set_active_texture(5);
-			tmgr.bind_texture(bump_tid);
-			set_active_texture(0);
+			bind_texture_tu(tmgr.get_texture(bump_tid).get_tid(), 5);
 		}
 		else if (is_bmap_pass) {
 			if (enable_bump_map()) {model3d::bind_default_flat_normal_map();} // use default normal map in this case instead of leaving it unbound, or bound to the previous material
@@ -1369,8 +1365,8 @@ void material_t::render(shader_t &shader, texture_manager const &tmgr, int defau
 			bmap_disabled = 1;
 		}
 		if (enable_spec_map()) { // all white/specular if no specular map texture
-			bind_texture_tu_or_white_tex(tmgr, s_tid,  8); // specular map
-			bind_texture_tu_or_white_tex(tmgr, ns_tid, 9); // gloss map (Note: unclear how to interpret map_ns in object files)
+			tmgr.bind_texture_tu_or_white_tex(s_tid,  8); // specular map
+			tmgr.bind_texture_tu_or_white_tex(ns_tid, 9); // gloss map (Note: unclear how to interpret map_ns in object files)
 		}
 		if (metalness >= 0.0) {shader.add_uniform_float("metalness", metalness);} // set metalness if specified/valid; may or may not be used
 		bool const set_ref_ix(!disable_shader_effects /*&& alpha < 1.0*/ && ni != 1.0);

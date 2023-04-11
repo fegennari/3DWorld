@@ -462,6 +462,7 @@ public:
 	void add_work_item(int tid, bool is_nm);
 	void load_work_items_mt();
 	void bind_texture(int tid) const {get_texture(tid).bind_gl();}
+	void bind_texture_tu_or_white_tex(int tid, unsigned tu_id) const;
 	colorRGBA get_tex_avg_color(int tid) const {return get_texture(tid).get_avg_color();}
 	bool has_binary_alpha(int tid) const {return get_texture(tid).has_binary_alpha;}
 	bool might_have_alpha_comp(int tid) const {return (tid >= 0 && get_texture(tid).ncolors == 4);}

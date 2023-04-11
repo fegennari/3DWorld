@@ -951,24 +951,13 @@ void draw_water_plane(float zval, float terrain_zmin, unsigned reflection_tid) {
 		if (wave_time > 3600.0) {wave_time = 0.0;}
 	}
 	enable_blend();
-	colorRGBA rcolor;
-	set_active_texture(8); // reflection texture tu_id=8
-
-	if (reflection_tid) {
-		bind_2d_texture(reflection_tid);
-		rcolor = WHITE;
-	}
-	else {
-		select_texture(WHITE_TEX);
-		rcolor = cur_fog_color;
-		//blend_color(rcolor, bkg_color, get_cloud_color(), 0.75, 1);
-	}
-	set_active_texture(0); // reset
+	bind_texture_tu_def_white_tex(reflection_tid, 8); // reflection texture tu_id=8
 	point const camera(get_camera_pos());
 	bool const add_waves(enable_ocean_waves());
 	bool const camera_underwater(camera.z < zval);
 	bool const rain_mode(add_waves && !water_is_lava && is_rain_enabled() /*&& !camera_underwater*/);
 	bool const use_tess(use_water_plane_tess());
+	colorRGBA rcolor(reflection_tid ? WHITE : cur_fog_color); // or blend_color(rcolor, bkg_color, get_cloud_color(), 0.75, 1)?
 	rcolor.alpha = 0.5*(0.5 + color.alpha);
 	shader_t s;
 	set_std_depth_func_with_eq(); // helps prevent Z-fighting

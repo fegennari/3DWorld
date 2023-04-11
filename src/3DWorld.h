@@ -1106,6 +1106,7 @@ public:
 	unsigned bytes_per_channel() const {return (is_16_bit_gray ? 2U : 1U);}
 	unsigned get_cpu_mem() const {return (is_allocated() ? num_bytes() : 0);} // Note: ignores other data; excludes deferred load/DDS textures
 	unsigned get_gpu_mem() const;
+	unsigned get_tid() const {return tid;} // for passing into bind_texture_tu() calls
 	void set_color_alpha_to_one() {color.alpha = 1.0;} // to make has_alpha() return 0
 	bool has_alpha()    const {return (color.alpha < 1.0 || alpha_tid >= 0);}
 	bool is_bound()     const {return (tid > 0);}

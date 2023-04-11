@@ -401,6 +401,11 @@ bool select_texture(int id) {
 	return !no_tex;
 }
 
+void bind_texture_tu_def_white_tex(unsigned tid, unsigned tu_id) {
+	assert(WHITE_TEX < textures.size());
+	bind_texture_tu(((tid == 0) ? textures[WHITE_TEX].get_tid() : tid), tu_id);
+}
+
 
 float get_tex_ar(int id) {
 

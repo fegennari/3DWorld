@@ -22,6 +22,7 @@ void init_glew();
 void set_active_texture(unsigned tu_id);
 void select_multitex(int id, unsigned tu_id);
 void bind_texture_tu(unsigned tid, unsigned tu_id);
+void bind_texture_tu_def_white_tex(unsigned tid, unsigned tu_id);
 
 // 3D texture prototypes
 void bind_3d_texture(unsigned tid);
