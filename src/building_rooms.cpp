@@ -4033,7 +4033,7 @@ void building_t::add_sign_by_door(tquad_with_ix_t const &door, bool outside, std
 			if (p2->intersects(c)) return; // sign intersects porch roof, skip this building
 		}
 	}
-	unsigned flags(RO_FLAG_LIT | RO_FLAG_NOCOLL | (emissive ? RO_FLAG_EMISSIVE : 0) | (outside ? 0 : RO_FLAG_HANGING));
+	unsigned flags(RO_FLAG_LIT | RO_FLAG_NOCOLL | (emissive ? RO_FLAG_EMISSIVE : 0) | (outside ? RO_FLAG_EXTERIOR : RO_FLAG_HANGING));
 	vect_room_object_t &objs(interior->room_geom->objs);
 	objs.emplace_back(c, TYPE_SIGN, 0, dim, dir, flags, 1.0, SHAPE_CUBE, color); // always lit; room_id is not valid
 	objs.back().obj_id = register_sign_text(text);

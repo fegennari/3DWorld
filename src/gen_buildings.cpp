@@ -2902,6 +2902,7 @@ public:
 					// iterate over nearby buildings in this tile and draw interior room geom, generating it if needed
 					if (gdist_sq > rgeom_draw_dist_sq) continue; // too far
 					if (is_first_tile && !reflection_pass) {oc.set_camera(camera_pdu);} // setup occlusion culling on the first visible tile
+					bbd.next_tile(g->bcube);
 					is_first_tile = 0;
 					
 					for (auto bi = g->bc_ixs.begin(); bi != g->bc_ixs.end(); ++bi) {
@@ -3151,7 +3152,11 @@ public:
 		}
 		glDisable(GL_CULL_FACE);
 		bool const use_smap_pass(use_tt_smap && !reflection_pass);
-		if (!use_smap_pass) {bbd.draw_obj_models(s, xlate, 0);} // draw models here if the code below won't be run; shadow_only=0
+		
+		if (!use_smap_pass) { // draw models here if the code below won't be run; shadow_only=0
+			bbd.draw_obj_models(s, xlate, 0);
+			bbd.draw_and_clear_ext_tiles(s, xlate);
+		}
 		if (building_cont_player) {building_cont_player->write_basement_entrance_depth_pass(s);} // drawn last
 		s.end_shader();
 
@@ -3193,6 +3198,7 @@ public:
 			} // for i
 			glDisable(GL_CULL_FACE);
 			bbd.draw_obj_models(s, xlate, 0); // shadow_only=0
+			bbd.draw_and_clear_ext_tiles(s, xlate);
 			s.end_shader();
 		}
 		if (night && have_wind_lights) { // add night time random lights in windows

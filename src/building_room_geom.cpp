@@ -3013,18 +3013,21 @@ void building_room_geom_t::add_cubicle(room_object_t const &c, float tscale) {
 
 void add_room_obj_sign_text_verts(room_object_t const &c, colorRGBA const &color, vector<vert_norm_comp_tc_color> &verts_out);
 
-void building_room_geom_t::add_sign(room_object_t const &c, bool inc_back, bool inc_text) {
+void building_room_geom_t::add_sign(room_object_t const &c, bool inc_back, bool inc_text, bool exterior_only) {
+	bool const exterior(c.flags & RO_FLAG_EXTERIOR), small(!exterior);
+	if (exterior != exterior_only) return; // wrong pass
+
 	if (inc_back) {
 		bool const hanging(c.is_hanging()), draw_top(c.flags & RO_FLAG_ADJ_TOP); // for exit sign and floor signs
 		unsigned const skip_faces(hanging ? (draw_top ? 0 : EF_Z2) : ~get_face_mask(c.dim, !c.dir)); // skip back face, top face if hanging and !draw_top
-		// what about transparent plastic back for hanging signs?
-		get_untextured_material(0, 0, 1).add_cube_to_verts_untextured(c, apply_light_color(c, WHITE), skip_faces); // back of the sign, always white (for now); unshadowed, small
+		// back of the sign, always white (for now); unshadowed; what about transparent plastic back for hanging signs?
+		get_untextured_material(0, 0, small, 0, exterior).add_cube_to_verts_untextured(c, apply_light_color(c, WHITE), skip_faces);
 	}
 	if (!inc_text) return;
 	// add sign text
 	tid_nm_pair_t tex(FONT_TEXTURE_ID);
 	if (c.flags & RO_FLAG_EMISSIVE) {tex.emissive = 1.0;}
-	add_room_obj_sign_text_verts(c, apply_light_color(c), get_material(tex, 0, 0, 1).quad_verts); // unshadowed, small=1
+	add_room_obj_sign_text_verts(c, apply_light_color(c), get_material(tex, 0, 0, small, 0, exterior).quad_verts); // unshadowed, small=1
 }
 
 bool get_dishwasher_for_ksink(room_object_t const &c, cube_t &dishwasher) {

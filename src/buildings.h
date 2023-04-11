@@ -430,18 +430,18 @@ unsigned const RO_FLAG_ADJ_TOP = 0x2000; // for door trim/railings
 unsigned const RO_FLAG_IS_HOUSE= 0x4000; // used for mirror reflections, shelves, and tables
 unsigned const RO_FLAG_RAND_ROT= 0x8000; // random rotation; used for office chairs, papers, pictures, and cups
 unsigned const RO_FLAG_UNTEXTURED= 0x1000; // for shirts, aliased with RO_FLAG_ADJ_BOT
-unsigned const RO_FLAG_FROM_SET  = 0x1000; // for books, aliased with RO_FLAG_ADJ_BOT
-unsigned const RO_FLAG_HAS_VOL_IX= 0x2000; // for books, aliased with RO_FLAG_ADJ_TOP
+unsigned const RO_FLAG_FROM_SET  = 0x1000; // for books,  aliased with RO_FLAG_ADJ_BOT
+unsigned const RO_FLAG_HAS_VOL_IX= 0x2000; // for books,  aliased with RO_FLAG_ADJ_TOP
 unsigned const RO_FLAG_FOR_CAR   = 0x1000; // for car blockers, aliased with RO_FLAG_ADJ_BOT
 // object flags, third byte, for pickup/interact state
 unsigned const RO_FLAG_IN_HALLWAY= 0x010000;
 unsigned const RO_FLAG_IN_ATTIC  = 0x020000;
 unsigned const RO_FLAG_HAS_EXTRA = 0x040000; // used for counter backsplash
-//unsigned const x = 0x080000; // currently unused
-unsigned const RO_FLAG_EXPANDED= 0x100000; // for shelves, closets, boxes, and mirrors
-unsigned const RO_FLAG_WAS_EXP = 0x200000; // for objects in/on shelves, closets, and drawers, cabinets, and books
-unsigned const RO_FLAG_ROTATING= 0x400000; // for office chairs and clothes on hangers
-unsigned const RO_FLAG_IN_CLOSET=0x800000; // for closet lights
+unsigned const RO_FLAG_EXTERIOR  = 0x080000; // for signs, etc.
+unsigned const RO_FLAG_EXPANDED  = 0x100000; // for shelves, closets, boxes, and mirrors
+unsigned const RO_FLAG_WAS_EXP   = 0x200000; // for objects in/on shelves, closets, and drawers, cabinets, and books
+unsigned const RO_FLAG_ROTATING  = 0x400000; // for office chairs and clothes on hangers
+unsigned const RO_FLAG_IN_CLOSET = 0x800000; // for closet lights
 // object flags, fourth byte
 unsigned const RO_FLAG_DYNAMIC  = 0x01000000; // dynamic object (balls, elevators, etc.)
 unsigned const RO_FLAG_DSTATE   = 0x02000000; // this object has dynamic state
@@ -656,7 +656,7 @@ public:
 	void create_vbo(building_t const &building);
 	void create_vbo_inner();
 	void vao_setup(bool shadow_only);
-	void draw(tid_nm_pair_dstate_t &state, brg_batch_draw_t *bbd, int shadow_only, bool reflection_pass);
+	void draw(tid_nm_pair_dstate_t &state, brg_batch_draw_t *bbd, int shadow_only, bool reflection_pass, bool exterior_geom);
 	void pre_draw(int shadow_only) const;
 	void draw_geom() const;
 	void draw_inner(int shadow_only) const;
@@ -670,7 +670,7 @@ struct building_materials_t : public vector<rgeom_mat_t> {
 	unsigned count_all_verts() const;
 	rgeom_mat_t &get_material(tid_nm_pair_t const &tex, bool inc_shadows);
 	void create_vbos(building_t const &building);
-	void draw(brg_batch_draw_t *bbd, shader_t &s, int shadow_only, bool reflection_pass);
+	void draw(brg_batch_draw_t *bbd, shader_t &s, int shadow_only, bool reflection_pass, bool exterior_geom=0);
 	void upload_draw_and_clear(shader_t &s);
 };
 
@@ -691,17 +691,27 @@ class brg_batch_draw_t {
 		mat_entry_t() {}
 		mat_entry_t(rgeom_mat_t const &m) : tex(m.tex) {mats.push_back(&m);}
 	};
-	vector<mat_entry_t> to_draw;
+	struct tile_block_t {
+		vector<mat_entry_t> to_draw;
+		cube_t bcube;
+		tile_block_t(cube_t const &bcube_=cube_t()) : bcube(bcube_) {}
+	};
+	vector<mat_entry_t> to_draw; // interior objects
+	vector<tile_block_t> ext_by_tile; // exterior objects, stored by tile for shadow mapping
 	vector<int> tid_to_first_mat_map; // -1 is unset
+
+	void draw_and_clear_batch(vector<mat_entry_t> &batch, tid_nm_pair_dstate_t &state);
 public:
 	uint8_t camera_dir_mask;
 	vector<obj_model_inst_with_obj_t> models_to_draw; // models on building exteriors to draw after buildings
 
 	brg_batch_draw_t() : camera_dir_mask(0) {}
-	void clear() {to_draw.clear(); tid_to_first_mat_map.clear();}
+	void clear();
 	void set_camera_dir_mask(point const &camera_bs, cube_t const &bcube);
-	void add_material(rgeom_mat_t const &m);
+	void next_tile(cube_t const &bcube);
+	void add_material(rgeom_mat_t const &m, bool is_ext_tile=0);
 	void draw_and_clear(shader_t &s);
+	void draw_and_clear_ext_tiles(shader_t &s, vector3d const &xlate);
 	void clear_obj_models() {models_to_draw.clear();}
 	void draw_obj_models(shader_t &s, vector3d const &xlate, bool shadow_only) const;
 };
@@ -745,7 +755,7 @@ struct building_room_geom_t {
 	vect_snake_t  snakes;
 	vect_insect_t insects;
 	// {large static, small static, dynamic, lights, alpha mask, transparent, door} materials
-	building_materials_t mats_static, mats_small, mats_text, mats_detail, mats_dynamic, mats_lights, mats_amask, mats_alpha, mats_doors;
+	building_materials_t mats_static, mats_small, mats_text, mats_detail, mats_dynamic, mats_lights, mats_amask, mats_alpha, mats_doors, mats_exterior;
 	vect_cube_t light_bcubes;
 	building_decal_manager_t decal_manager;
 
@@ -761,11 +771,10 @@ struct building_room_geom_t {
 	void update_dynamic_draw_data() {invalidate_mats_mask |= (1 << MAT_TYPE_DYNAMIC);}
 	void check_invalid_draw_data();
 	void invalidate_draw_data_for_obj(room_object_t const &obj, bool was_taken=0);
-	unsigned get_num_verts() const {return (mats_static.count_all_verts() + mats_small.count_all_verts() + mats_text.count_all_verts() + mats_detail.count_all_verts() +
-		mats_dynamic.count_all_verts() + mats_lights.count_all_verts() + mats_amask.count_all_verts() + mats_alpha.count_all_verts() + mats_doors.count_all_verts());}
-	rgeom_mat_t &get_material(tid_nm_pair_t const &tex, bool inc_shadows=0, bool dynamic=0, unsigned small=0, bool transparent=0);
-	rgeom_mat_t &get_untextured_material(bool inc_shadows=0, bool dynamic=0, unsigned small=0, bool transparent=0) {
-		return get_material(tid_nm_pair_t(-1, 1.0, inc_shadows, transparent), inc_shadows, dynamic, small, transparent);
+	unsigned get_num_verts() const;
+	rgeom_mat_t &get_material(tid_nm_pair_t const &tex, bool inc_shadows=0, bool dynamic=0, unsigned small=0, bool transparent=0, bool exterior=0);
+	rgeom_mat_t &get_untextured_material(bool inc_shadows=0, bool dynamic=0, unsigned small=0, bool transparent=0, bool exterior=0) {
+		return get_material(tid_nm_pair_t(-1, 1.0, inc_shadows, transparent), inc_shadows, dynamic, small, transparent, exterior);
 	}
 	rgeom_mat_t &get_wood_material(float tscale=1.0, bool inc_shadows=1, bool dynamic=0, unsigned small=0);
 	rgeom_mat_t &get_metal_material(bool inc_shadows=0, bool dynamic=0, unsigned small=0, colorRGBA const &spec_color=WHITE);
@@ -829,7 +838,7 @@ struct building_room_geom_t {
 	void add_toaster_proxy(room_object_t const &c);
 	void add_br_stall(room_object_t const &c);
 	void add_cubicle(room_object_t const &c, float tscale);
-	void add_sign(room_object_t const &c, bool inc_back, bool inc_text);
+	void add_sign(room_object_t const &c, bool inc_back, bool inc_text, bool exterior_only=0);
 	void add_counter(room_object_t const &c, float tscale, bool inc_lg, bool inc_sm);
 	void add_cabinet(room_object_t const &c, float tscale, bool inc_lg, bool inc_sm);
 	void add_closet(room_object_t const &c, tid_nm_pair_t const &wall_tex, bool inc_lg, bool inc_sm);
