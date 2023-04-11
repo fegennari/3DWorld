@@ -8,17 +8,11 @@
 #include "shaders.h"
 
 
-GLuint CreateGLTextureFromTextureDataStruct(const TextureDataFloat& im, GLenum wrapMode, bool generateMips) {
+GLuint CreateGLTextureFromTextureDataStruct(const TextureDataFloat& im, bool wrap, bool generateMips) {
 
 	if (im.data.empty()) return 0;
-	GLuint texture;
-	glGenTextures(1, &texture);
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, texture);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, generateMips ? GL_LINEAR_MIPMAP_LINEAR : GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, wrapMode);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, wrapMode);
+	GLuint texture(0);
+	setup_texture(texture, generateMips, wrap, wrap);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, im.width, im.height, 0, GL_RGB, GL_FLOAT, im.data.data());
 	if (generateMips) {glGenerateMipmap(GL_TEXTURE_2D);}
 	return texture;
@@ -45,11 +39,10 @@ void tile_blend_tex_data_t::create_textures(texture_t const &texture) {
 	unsigned const num_bytes(texture.num_bytes());
 	TextureDataFloat input(texture.width, texture.height, texture.ncolors);
 	for (unsigned i = 0; i < num_bytes; ++i) {input.data[i] = texture.get_data()[i] / 255.0;} // convert unsigned char to bytes
-	TextureDataFloat Tinput;
-	TextureDataFloat lut;
+	TextureDataFloat Tinput, lut;
 	Precomputations(input, Tinput, lut, colorSpaceVector1, colorSpaceVector2, colorSpaceVector3, colorSpaceOrigin);
-	tid_tinput = CreateGLTextureFromTextureDataStruct(Tinput, GL_REPEAT, true);
-	tid_lut    = CreateGLTextureFromTextureDataStruct(lut, GL_CLAMP_TO_EDGE, false);
+	tid_tinput = CreateGLTextureFromTextureDataStruct(Tinput, true,  true );
+	tid_lut    = CreateGLTextureFromTextureDataStruct(lut,    false, false);
 }
 
 void tile_blend_tex_data_t::ensure_textures(unsigned tid) {
