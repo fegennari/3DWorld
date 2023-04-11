@@ -109,12 +109,6 @@ void update_3d_texture(unsigned tid, unsigned xoff, unsigned yoff, unsigned zoff
 	glTexSubImage3D(GL_TEXTURE_3D, 0, xoff, yoff, zoff, xsz, ysz, zsz, get_texture_format(ncomp), GL_UNSIGNED_BYTE, data);
 }
 
-void set_3d_texture_as_current(unsigned tid, unsigned tu_id) { // end with active tu_id = 0
-	set_active_texture(tu_id);
-	bind_3d_texture(tid);
-	if (tu_id != 0) {set_active_texture(0);}
-}
-
 
 // ***************** VBOs / VAOs *****************
 

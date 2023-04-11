@@ -1011,7 +1011,7 @@ void setup_shield_shader(shader_t &shader, int noise_tu_id) {
 	shader.add_uniform_float("min_alpha", 0.001);
 	shader.add_uniform_int("tex0", 0);
 	shader.add_uniform_int("noise_tex", noise_tu_id);
-	set_3d_texture_as_current(get_noise_tex_3d(64, 1), noise_tu_id); // grayscale noise
+	bind_texture_tu(get_noise_tex_3d(64, 1), noise_tu_id); // grayscale noise
 	static float shields_time(0.0);
 	if (animate2) {shields_time += fticks; if (shields_time > 1.0E4) {shields_time = 0.0;}} // reset when large to avoid FP error
 	shader.add_uniform_float("time", shields_time);

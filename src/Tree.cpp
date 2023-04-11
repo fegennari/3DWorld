@@ -422,7 +422,7 @@ void set_leaf_shader(shader_t &s, float min_alpha, unsigned tc_start_ix, bool en
 	s.add_uniform_vector3d("world_space_offset", zero_vector); // reset
 
 	if (use_indir) {
-		set_3d_texture_as_current(smoke_tid, 1);
+		bind_texture_tu(smoke_tid, 1);
 		s.add_uniform_int("smoke_and_indir_tex", 1);
 		set_indir_color(s);
 	}

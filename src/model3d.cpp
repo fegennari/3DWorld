@@ -2195,7 +2195,7 @@ void model3d::render(shader_t &shader, bool is_shadow_pass, int reflection_pass,
 	if (enable_tt_model_indir && world_mode == WMODE_INF_TERRAIN && !is_shadow_pass) {
 		if (model_indir_tid == 0) {create_indir_texture();}
 		if (model_indir_tid != 0) {
-			set_3d_texture_as_current(model_indir_tid, 1); // indir texture uses TU_ID=1
+			bind_texture_tu(model_indir_tid, 1); // indir texture uses TU_ID=1
 			shader.add_uniform_color("const_indir_color", colorRGB(0,0,0)); // set black indir color - assumes all models will get here, so not reset
 		}
 		set_local_model_scene_bounds(shader);

@@ -251,7 +251,7 @@ void set_indir_color(shader_t &s) {
 void set_indir_lighting_block(shader_t &s, bool use_smoke, bool use_indir) {
 
 	s.setup_scene_bounds();
-	if ((use_smoke || use_indir) && smoke_tid) {set_3d_texture_as_current(smoke_tid, 1);}
+	if ((use_smoke || use_indir) && smoke_tid) {bind_texture_tu(smoke_tid, 1);}
 	s.add_uniform_int("smoke_and_indir_tex", 1);
 	s.add_uniform_float("half_dxy", HALF_DXY);
 	s.add_uniform_float("indir_vert_offset", indir_vert_offset);
@@ -422,7 +422,7 @@ void setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool keep
 		s.add_uniform_float("smoke_const_add", ((use_smoke_for_fog == 1) ? CLIP_TO_01(0.25f/fog_dist_scale) : 0.0f));
 
 		if (use_smoke_noise()) {
-			set_3d_texture_as_current(get_noise_tex_3d(64, 1), 11); // grayscale noise
+			bind_texture_tu(get_noise_tex_3d(64, 1), 11); // grayscale noise
 			s.add_uniform_int("cloud_noise_tex", 11);
 			s.add_uniform_float("smoke_noise_mag", SMOKE_NOISE_MAG);
 			s.add_uniform_float("noise_scale", 0.45);
@@ -457,7 +457,7 @@ void setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool keep
 		s.add_uniform_float("reflect_plane_ztop", bcube.d[2][1]);
 	}
 	if (enable_puddles) {
-		set_3d_texture_as_current(get_noise_tex_3d(64, 1), 11); // grayscale noise
+		bind_texture_tu(get_noise_tex_3d(64, 1), 11); // grayscale noise
 		s.add_uniform_int("wet_noise_tex", 11);
 	}
 	if (use_wet_mask || is_snowy || enable_sky_occlusion) {

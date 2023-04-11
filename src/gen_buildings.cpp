@@ -272,7 +272,7 @@ public:
 		if (!enabled()) return 0; // no texture set
 		cube_t const lighting_bcube(get_building_indir_light_bounds());
 		float const dx(lighting_bcube.dx()/MESH_X_SIZE), dy(lighting_bcube.dy()/MESH_Y_SIZE), dxy_offset(0.5f*(dx + dy));
-		set_3d_texture_as_current(tid, 1); // indir texture uses TU_ID=1
+		bind_texture_tu(tid, 1); // indir texture uses TU_ID=1
 		s.add_uniform_vector3d("alt_scene_llc",   lighting_bcube.get_llc());
 		s.add_uniform_vector3d("alt_scene_scale", lighting_bcube.get_size());
 		s.add_uniform_float("half_dxy", dxy_offset);

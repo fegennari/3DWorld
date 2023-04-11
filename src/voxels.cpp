@@ -63,7 +63,7 @@ void noise_texture_manager_t::ensure_tid() {
 }
 
 void noise_texture_manager_t::bind_texture(unsigned tu_id) const {
-	set_3d_texture_as_current(noise_tid, tu_id);
+	bind_texture_tu(noise_tid, tu_id);
 }
 
 void noise_texture_manager_t::clear() {
@@ -1677,7 +1677,7 @@ void voxel_model_space::setup_tex_gen_for_rendering(shader_t &s) {
 	
 	if (!ao_lighting.empty()) {
 		if (ao_tid == 0) {ao_tid = create_3d_texture(nx, ny, nz, 1, ao_lighting, GL_LINEAR, GL_CLAMP_TO_EDGE);}
-		set_3d_texture_as_current(ao_tid, 9);
+		bind_texture_tu(ao_tid, 9);
 	}
 	if (shadow_tid == 0) {
 		voxel_grid<unsigned char> shadow_data; // 0 == no light/in shadow, 255 = full light/no shadow
@@ -1685,7 +1685,7 @@ void voxel_model_space::setup_tex_gen_for_rendering(shader_t &s) {
 		extract_shadow_edges(shadow_data);
 		shadow_tid = create_3d_texture(nx, ny, nz, 1, shadow_data, GL_LINEAR, GL_CLAMP_TO_EDGE);
 	}
-	set_3d_texture_as_current(shadow_tid, 10);
+	bind_texture_tu(shadow_tid, 10);
 }
 
 

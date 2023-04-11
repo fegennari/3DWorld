@@ -30,7 +30,6 @@ void setup_3d_texture(unsigned &tid, int filter, int wrap);
 unsigned create_3d_texture(unsigned xsz, unsigned ysz, unsigned zsz, unsigned ncomp, vector<unsigned char> const &data, int filter, int wrap, bool compress=0, unsigned bytes_per_pixel=1);
 void update_3d_texture(unsigned tid, unsigned xoff, unsigned yoff, unsigned zoff, unsigned xsz, unsigned ysz, unsigned zsz,
 					   unsigned ncomp, unsigned char const *const data);
-void set_3d_texture_as_current(unsigned tid, unsigned tu_id);
 
 // gl_ext_arb
 unsigned create_vbo();
