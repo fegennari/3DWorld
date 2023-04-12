@@ -3629,8 +3629,17 @@ void building_t::add_window_blinds(cube_t const &window, bool dim, bool dir, uns
 	bool vertical((mat_ix + interior->rooms.size() + parts.size()) & 1); // something that's per-building
 	
 	if (vertical) { // check for horizontal wall clearance
+		float const min_space(2.0*wall_thickness);
 		room_t const &room(get_room(room_id));
-		if ((window.d[!dim][0] - 2.0*wall_thickness) < room.d[!dim][0] || (window.d[!dim][1] + 2.0*wall_thickness) > room.d[!dim][1]) {vertical = 0;} // not enough space for vertical
+		if ((window.d[!dim][0] - min_space) < room.d[!dim][0] || (window.d[!dim][1] + min_space) > room.d[!dim][1]) {vertical = 0;} // not enough space for vertical
+		else if (is_house) { // check for blocking bedroom closets
+			cube_t window_exp(window);
+			window_exp.expand_by_xy(min_space);
+
+			for (auto i = objs.begin(); i != objs.end(); ++i) { // iterate over room objects placed so far
+				if (i->type == TYPE_CLOSET && i->intersects(window_exp)) {vertical = 0; break;}
+			}
+		}
 	}
 	rand_gen_t rgen;
 	rgen.set_state((123*room_id + 211*interior->rooms.size()), (777*floor + 1));
