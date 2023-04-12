@@ -437,7 +437,7 @@ unsigned const RO_FLAG_FOR_CAR   = 0x1000; // for car blockers, aliased with RO_
 unsigned const RO_FLAG_IN_HALLWAY= 0x010000;
 unsigned const RO_FLAG_IN_ATTIC  = 0x020000;
 unsigned const RO_FLAG_HAS_EXTRA = 0x040000; // used for counter backsplash
-unsigned const RO_FLAG_EXTERIOR  = 0x080000; // for signs, etc.
+unsigned const RO_FLAG_EXTERIOR  = 0x080000; // for signs, window trim, etc.
 unsigned const RO_FLAG_EXPANDED  = 0x100000; // for shelves, closets, boxes, and mirrors
 unsigned const RO_FLAG_WAS_EXP   = 0x200000; // for objects in/on shelves, closets, and drawers, cabinets, and books
 unsigned const RO_FLAG_ROTATING  = 0x400000; // for office chairs and clothes on hangers
@@ -517,6 +517,7 @@ struct room_object_t : public oriented_cube_t { // size=64
 	bool in_elevator() const {return  (flags & RO_FLAG_IN_ELEV);}
 	bool in_closet  () const {return  (flags & RO_FLAG_IN_CLOSET);}
 	bool in_attic   () const {return  (flags & RO_FLAG_IN_ATTIC);}
+	bool is_exterior() const {return  (flags & RO_FLAG_EXTERIOR);}
 	bool is_light_type() const {return (type == TYPE_LIGHT || (type == TYPE_LAMP && !was_expanded() && !in_attic()));} // light, or lamp not in closet
 	bool is_sink_type () const {return (type == TYPE_SINK || type == TYPE_KSINK || type == TYPE_BRSINK);}
 	bool is_obj_model_type() const {return (type >= TYPE_TOILET && type < NUM_ROBJ_TYPES);}
@@ -872,7 +873,7 @@ struct building_room_geom_t {
 	static void add_pen_pencil_marker_to_material(room_object_t const &c_, rgeom_mat_t &mat);
 	void add_pen_pencil_marker(room_object_t const &c);
 	void add_flooring(room_object_t const &c, float tscale);
-	void add_wall_trim(room_object_t const &c, bool for_closet=0);
+	void add_wall_trim(room_object_t const &c, bool for_closet=0, bool exterior_only=0);
 	void add_blinds(room_object_t const &c);
 	void add_fireplace(room_object_t const &c, float tscale);
 	void add_filing_cabinet(room_object_t const &c, bool inc_lg, bool inc_sm);

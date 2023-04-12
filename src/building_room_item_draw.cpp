@@ -819,8 +819,8 @@ void building_room_geom_t::create_static_vbos(building_t const &building) {
 	//highres_timer_t timer2("Gen Room Geom VBOs"); // < 2ms
 	mats_static  .create_vbos(building);
 	mats_alpha   .create_vbos(building);
-	mats_exterior.create_vbos(building);
-	//cout << "static: size: " << rgeom_alloc.size() << " mem: " << rgeom_alloc.get_mem_usage() << endl; // start=50MB, peak=76MB
+	mats_exterior.create_vbos(building); // Note: ideally we want to include window dividers from trim_objs, but that may not have been created yet
+	//cout << "static: size: " << rgeom_alloc.size() << " mem: " << rgeom_alloc.get_mem_usage() << endl; // start=47MB, peak=132MB
 }
 
 void building_room_geom_t::create_small_static_vbos(building_t const &building) {

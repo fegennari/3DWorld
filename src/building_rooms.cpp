@@ -3606,13 +3606,14 @@ void building_t::add_window_trim_and_coverings(bool add_trim, bool add_coverings
 						}
 					}
 					if (!has_bathroom_block_window) {
+						unsigned const base_flags(RO_FLAG_NOCOLL | RO_FLAG_EXTERIOR);
 						float const sep_hwidth(0.2*side_trim_width);
 						cube_t sep(window); // horizontal separator
 						set_wall_width(sep, window.zc(), sep_hwidth, 2);
-						objs.emplace_back(sep, TYPE_WALL_TRIM, 0, dim, dir, RO_FLAG_NOCOLL, 1.0, SHAPE_SHORT, trim_color); // skip !dim ends
+						objs.emplace_back(sep, TYPE_WALL_TRIM, 0, dim, dir, base_flags, 1.0, SHAPE_SHORT, trim_color); // skip !dim ends
 						sep = window; // vertical separator
 						set_wall_width(sep, window.get_center_dim(!dim), sep_hwidth, !dim);
-						objs.emplace_back(sep, TYPE_WALL_TRIM, 0, dim, dir, (RO_FLAG_NOCOLL | RO_FLAG_ADJ_BOT | RO_FLAG_ADJ_TOP), 1.0, SHAPE_TALL, trim_color);
+						objs.emplace_back(sep, TYPE_WALL_TRIM, 0, dim, dir, (base_flags | RO_FLAG_ADJ_BOT | RO_FLAG_ADJ_TOP), 1.0, SHAPE_TALL, trim_color);
 					}
 				}
 			} // for xy
