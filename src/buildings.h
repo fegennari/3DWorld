@@ -707,6 +707,7 @@ public:
 	vector<obj_model_inst_with_obj_t> models_to_draw; // models on building exteriors to draw after buildings
 
 	brg_batch_draw_t() : camera_dir_mask(0) {}
+	bool has_ext_geom() const;
 	void clear();
 	void set_camera_dir_mask(point const &camera_bs, cube_t const &bcube);
 	void next_tile(cube_t const &bcube);

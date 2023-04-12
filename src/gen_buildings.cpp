@@ -2768,6 +2768,13 @@ public:
 		bool valid() const {return (building != nullptr);}
 	};
 
+	static void ensure_city_shader_setup(int reflection_pass, vector3d const &xlate, bool &is_setup) {
+		if (is_setup) return;
+		city_dlight_pcf_offset_scale = 1.0; // restore city value
+		if (!reflection_pass) {setup_city_lights(xlate);}
+		is_setup = 1;
+	}
+
 	// reflection_pass: 0 = not reflection pass, 1 = reflection for room with exterior wall,
 	// 2 = reflection for room no exterior wall (can't see outside windows), 3 = reflection from mirror in a house (windows and doors need to be drawn)
 	static void multi_draw(int shadow_only, int reflection_pass, vector3d const &xlate, vector<building_creator_t *> const &bcs) {
@@ -2793,10 +2800,10 @@ public:
 		//timer_t timer("Draw Buildings"); // 0.57ms (2.6ms with glFinish(), 6.3ms with building interiors)
 		point const camera(get_camera_pos()), camera_xlated(camera - xlate);
 		int const use_bmap(global_building_params.has_normal_map);
-		bool const night(is_night(WIND_LIGHT_ON_RAND));
+		bool const night(is_night(WIND_LIGHT_ON_RAND)), use_city_dlights(!reflection_pass);
 		// check for sun or moon; also need the smap pass for drawing with dynamic lights at night, so basically it's always enabled
 		bool const use_tt_smap(check_tile_smap(0)); // && (night || light_valid_and_enabled(0) || light_valid_and_enabled(1)));
-		bool have_windows(0), have_wind_lights(0), have_interior(0), this_frame_camera_in_building(0), this_frame_player_in_attic(0);
+		bool have_windows(0), have_wind_lights(0), have_interior(0), this_frame_camera_in_building(0), this_frame_player_in_attic(0), is_city_shader_setup(0);
 		int this_frame_player_in_basement(0);
 		unsigned max_draw_ix(0);
 		shader_t s;
@@ -3081,6 +3088,12 @@ public:
 				draw_player_model(s, xlate, 0); // shadow_only=0
 				reset_interior_lighting_and_end_shader(s);
 			}
+			if (bbd.has_ext_geom()) {
+				ensure_city_shader_setup(reflection_pass, xlate, is_city_shader_setup); // needed for dlights to work
+				shader_t ext_shader;
+				city_shader_setup(ext_shader, get_city_lights_bcube(), use_city_dlights, 1, use_bmap, min_alpha); // use_smap=1
+				bbd.draw_and_clear_ext_tiles(ext_shader, xlate); // draw after ext walls but before windows so that alpha blending works properly
+			}
 			if (!reflection_pass) { // draw windows and doors in depth pass to create holes
 				shader_t holes_shader;
 				setup_smoke_shaders(holes_shader, 0.9, 0, 0, 0, 0, 0, 0); // min_alpha=0.9 for depth test - need same shader to avoid z-fighting
@@ -3110,9 +3123,7 @@ public:
 			enable_dlight_bcubes = 0;
 			return;
 		}
-		city_dlight_pcf_offset_scale = 1.0; // restore city value
-		if (!reflection_pass) {setup_city_lights(xlate);}
-
+		ensure_city_shader_setup(reflection_pass, xlate, is_city_shader_setup);
 		// main/batched draw pass
 		setup_smoke_shaders(s, min_alpha, 0, 0, indir, 1, dlights, 0, 0, (use_smap ? 2 : 1), use_bmap, 0, 0, 0, 0.0, 0.0, 0, 0, 1); // is_outside=1
 
@@ -3152,18 +3163,13 @@ public:
 		}
 		glDisable(GL_CULL_FACE);
 		bool const use_smap_pass(use_tt_smap && !reflection_pass);
-		
-		if (!use_smap_pass) { // draw models here if the code below won't be run; shadow_only=0
-			bbd.draw_obj_models(s, xlate, 0);
-			bbd.draw_and_clear_ext_tiles(s, xlate);
-		}
+		if (!use_smap_pass) {bbd.draw_obj_models(s, xlate, 0);} // draw models here if the code below won't be run; shadow_only=0
 		if (building_cont_player) {building_cont_player->write_basement_entrance_depth_pass(s);} // drawn last
 		s.end_shader();
 
 		// post-pass to render building exteriors in nearby tiles that have shadow maps; shadow maps don't work right when using reflections
 		if (use_smap_pass) {
 			//timer_t timer2("Draw Buildings Smap"); // 0.3
-			bool const use_city_dlights(!reflection_pass);
 			city_shader_setup(s, get_city_lights_bcube(), use_city_dlights, 1, use_bmap, min_alpha); // use_smap=1
 			float const draw_dist(get_tile_smap_dist() + 0.5f*(X_SCENE_SIZE + Y_SCENE_SIZE));
 			glEnable(GL_CULL_FACE); // cull back faces to avoid lighting/shadows on inside walls of building interiors
@@ -3198,7 +3204,6 @@ public:
 			} // for i
 			glDisable(GL_CULL_FACE);
 			bbd.draw_obj_models(s, xlate, 0); // shadow_only=0
-			bbd.draw_and_clear_ext_tiles(s, xlate);
 			s.end_shader();
 		}
 		if (night && have_wind_lights) { // add night time random lights in windows

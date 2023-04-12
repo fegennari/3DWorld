@@ -516,6 +516,14 @@ void rgeom_mat_t::create_vbo_inner() {
 	}
 }
 
+bool brg_batch_draw_t::has_ext_geom() const {
+	for (tile_block_t const &tb : ext_by_tile) {
+		for (mat_entry_t const &e : tb.to_draw) {
+			if (!e.mats.empty()) return 1;
+		}
+	}
+	return 0;
+}
 void brg_batch_draw_t::clear() {
 	to_draw.clear();
 	ext_by_tile.clear();
@@ -1366,10 +1374,11 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, building_t c
 	enable_blend(); // needed for rugs and book text
 	assert(s.is_setup());
 	mats_static.draw(bbd, s, shadow_only, reflection_pass); // this is the slowest call
-	if (draw_lights)      {mats_lights  .draw(bbd,    s, shadow_only, reflection_pass);}
-	if (inc_small  )      {mats_dynamic .draw(bbd,    s, shadow_only, reflection_pass);}
-	if (draw_detail_objs) {mats_detail  .draw(bbd,    s, shadow_only, reflection_pass);}
-	if (!shadow_only)     {mats_exterior.draw(bbd_in, s, shadow_only, reflection_pass, 1);} // shadows not supported; exterior_geom=1; always use bbd; what about reflections?
+	if (draw_lights)      {mats_lights .draw(bbd,    s, shadow_only, reflection_pass);}
+	if (inc_small  )      {mats_dynamic.draw(bbd,    s, shadow_only, reflection_pass);}
+	if (draw_detail_objs) {mats_detail .draw(bbd,    s, shadow_only, reflection_pass);}
+	// draw exterior geom; shadows not supported; always use bbd; skip in reflection pass because that control flow doesn't work and is probably not needed (except for L-shaped house?)
+	if (!shadow_only && !reflection_pass) {mats_exterior.draw(bbd_in, s, shadow_only, reflection_pass, 1);} // exterior_geom=1
 	mats_doors.draw(bbd, s, shadow_only, reflection_pass);
 	
 	if (inc_small) {
