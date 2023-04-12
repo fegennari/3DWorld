@@ -699,6 +699,7 @@ class brg_batch_draw_t {
 	vector<mat_entry_t> to_draw; // interior objects
 	vector<tile_block_t> ext_by_tile; // exterior objects, stored by tile for shadow mapping
 	vector<int> tid_to_first_mat_map; // -1 is unset
+	unsigned cur_tile_slot=0;
 
 	void draw_and_clear_batch(vector<mat_entry_t> &batch, tid_nm_pair_dstate_t &state);
 public:

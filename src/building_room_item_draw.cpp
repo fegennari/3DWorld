@@ -520,6 +520,7 @@ void brg_batch_draw_t::clear() {
 	to_draw.clear();
 	ext_by_tile.clear();
 	tid_to_first_mat_map.clear();
+	cur_tile_slot = 0;
 }
 void brg_batch_draw_t::set_camera_dir_mask(point const &camera_bs, cube_t const &bcube) {
 	camera_dir_mask = 0;
@@ -529,12 +530,18 @@ void brg_batch_draw_t::set_camera_dir_mask(point const &camera_bs, cube_t const 
 	}
 }
 void brg_batch_draw_t::next_tile(cube_t const &bcube) {
-	if (ext_by_tile.empty() || !ext_by_tile.back().to_draw.empty()) {ext_by_tile.emplace_back(bcube);} // add new block
-	else {ext_by_tile.back().bcube = bcube;} // reuse last empty block
+	for (unsigned i = 0; i < ext_by_tile.size(); ++i) { // try to find an unused slot
+		if (!ext_by_tile[i].bcube.is_all_zeros()) continue; // already used
+		ext_by_tile[i].bcube = bcube;
+		cur_tile_slot = i;
+		return;
+	}
+	cur_tile_slot = ext_by_tile.size();
+	ext_by_tile.emplace_back(bcube); // create a new slot
 }
 void brg_batch_draw_t::add_material(rgeom_mat_t const &m, bool is_ext_tile) {
-	if (is_ext_tile) {assert(!ext_by_tile.empty());} // must call next_tile() first
-	vector<mat_entry_t> &dest(is_ext_tile ? ext_by_tile.back().to_draw : to_draw);
+	if (is_ext_tile) {assert(cur_tile_slot < ext_by_tile.size());}
+	vector<mat_entry_t>& dest(is_ext_tile ? ext_by_tile[cur_tile_slot].to_draw : to_draw);
 
 	for (auto &i : dest) { // check all existing materials for a matching texture, etc.
 		if (i.tex.is_compat_ignore_shadowed(m.tex)) {i.mats.push_back(&m); return;} // found existing material
@@ -564,9 +571,11 @@ void brg_batch_draw_t::draw_and_clear_ext_tiles(shader_t &s, vector3d const &xla
 	enable_blend(); // needed for sign text
 
 	for (tile_block_t &tb : ext_by_tile) {
-		if (tb.to_draw.empty()) continue; // empty batch - should only be the last one
-		try_bind_tile_smap_at_point((tb.bcube.get_cube_center() + xlate), s);
-		draw_and_clear_batch(tb.to_draw, state);
+		if (!tb.to_draw.empty()) { // skip empty batches
+			try_bind_tile_smap_at_point((tb.bcube.get_cube_center() + xlate), s);
+			draw_and_clear_batch(tb.to_draw, state);
+		}
+		tb.bcube = cube_t(); // reset for next frame
 	}
 	disable_blend();
 	indexed_vao_manager_with_shadow_t::post_render();
