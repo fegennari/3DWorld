@@ -1359,16 +1359,18 @@ void building_room_geom_t::add_blinds(room_object_t const &c) {
 	colorRGBA const color(c.color); // room color not applied as it looks wrong when viewed from outside the building
 	// fit the texture to the cube; blinds have a fixed number of slats that compress when they are shortened
 	// should these be partially transparent/backlit like bathroom windows? I guess not, most blinds are plastic or wood rather than material
-	int const nm_tid(get_texture_by_name("interiors/blinds_hn.jpg", 1, 0, 1, 8.0)); // use high aniso
+	int const blinds_tid(get_blinds_tid()), nm_tid(get_texture_by_name("interiors/blinds_hn.jpg", 1, 0, 1, 8.0)); // use high aniso
 	float tx(vertical ? 1.0/c.dz() : 0.0), ty(vertical ? 0.5/c.get_width() : 0.0);
 	if (c.dim) {swap(tx, ty);}
-	int const blinds_tid(get_blinds_tid());
-	rgeom_mat_t &mat(get_material(tid_nm_pair_t(blinds_tid, nm_tid, tx, ty), 1));
+	tid_nm_pair_t const tex(blinds_tid, nm_tid, tx, ty);
+	rgeom_mat_t &mat(get_material(tex, 1));
 	unsigned df1(~get_skip_mask_for_xy(!c.dim)), df2(~EF_Z12);
 	if (vertical) {swap(df1, df2);} // swap sides vs. top/bottom
 	vector3d const llc(c.get_llc());
-	mat.add_cube_to_verts(c, color, llc, ~get_skip_mask_for_xy(c.dim), (c.dim ^ vertical ^ 1)); // draw front and back faces
+	bool const swap_st(c.dim ^ vertical ^ 1);
 	mat.add_cube_to_verts(c, color, llc, df1, (c.dim ^ vertical)); // draw sides / top and bottom
+	mat.add_cube_to_verts(c, color, llc, get_face_mask(c.dim, !c.dir), swap_st); // draw interior face
+	get_material(tex, 0, 0, 0, 0, 1).add_cube_to_verts(c, color, llc, get_face_mask(c.dim, c.dir), swap_st); // draw exterior face; exterior=1
 	get_untextured_material(1).add_cube_to_verts_untextured(c, texture_color(blinds_tid).modulate_with(color), df2); // draw top and bottom / front and back untextured
 }
 
@@ -3356,11 +3358,11 @@ void building_room_geom_t::add_window(room_object_t const &c, float tscale) { //
 	//   - Can't use the stencil buffer because that's used (and cleared) by the main drawing code after drawing windows.
 	//   - Drawing windows last won't properly alpha blend with other windows, showers, water, etc., and the depth buffer may be wrong.
 	//   - Drawing windows in world space on the CPU (like blast effects) doesn't correctly handle occlusion by fragments of lower depth (such as interior walls).
-	unsigned const skip_faces(get_skip_mask_for_xy(!c.dim) | EF_Z12); // only enable faces in dim
 	cube_t window(c);
 	tid_nm_pair_t tex(get_bath_wind_tid(), 0.0); // fit texture to the window front/back faces
 	if (c.is_light_on()) {tex.emissive = 0.33;} // one third emissive
-	get_material(tex, 0).add_cube_to_verts(window, c.color, c.get_llc(), skip_faces); // no apply_light_color()
+	get_material(tex, 0, 0, 0, 0, 0).add_cube_to_verts(window, c.color, c.get_llc(), get_face_mask(c.dim, !c.dir)); // interior face, no apply_light_color()
+	get_material(tex, 0, 0, 0, 0, 1).add_cube_to_verts(window, c.color, c.get_llc(), get_face_mask(c.dim,  c.dir)); // exterior face, no apply_light_color()
 }
 
 colorRGBA const &get_outlet_or_switch_box_color(room_object_t const &c) {return (c.is_hanging() ? GRAY : c.color);} // should be silver metal
