@@ -116,20 +116,20 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_WHEATER   ] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 0, 300.0, 500.0, "water heater"); // detail object
 	bldg_obj_types[TYPE_FURNACE   ] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 0, 500.0, 200.0, "furnace"); // detail object
 	bldg_obj_types[TYPE_TAPE      ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 2.0,   0.4,   "duct tape", 1000);
-	bldg_obj_types[TYPE_OUTLET    ] = bldg_obj_type_t(0, 0, 0, 0, 1, 0, 0, 7.0,   0.1,   "Outlet"); // detail object
-	bldg_obj_types[TYPE_PIPE      ] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 0, 0.0,   0.0,   "Pipe"); // detail object; only vertical pipes are collidable
-	bldg_obj_types[TYPE_CURB      ] = bldg_obj_type_t(0, 0, 1, 0, 1, 0, 0, 0.0,   100.0, "Curb"); // for parking garages; only rats collide
-	bldg_obj_types[TYPE_BRK_PANEL ] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 2, 1000.0,100.0, "Breaker Panel");
-	bldg_obj_types[TYPE_VENT      ] = bldg_obj_type_t(0, 0, 0, 0, 1, 0, 0, 20.0,  2.0,   "Vent"); // detail object
-	bldg_obj_types[TYPE_ATTIC_DOOR] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 2, 100.0, 50.0,  "Attic Door"); // door/ladder
-	bldg_obj_types[TYPE_CHIMNEY   ] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 2, 1000.0,1000.0,"Chimney"); // interior chimney in attic
-	bldg_obj_types[TYPE_DUCT      ] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 0, 0.0,   0.0,   "Duct"); // detail object
+	bldg_obj_types[TYPE_OUTLET    ] = bldg_obj_type_t(0, 0, 0, 0, 1, 0, 0, 7.0,   0.1,   "outlet"); // detail object
+	bldg_obj_types[TYPE_PIPE      ] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 0, 0.0,   0.0,   "pipe"); // detail object; only vertical pipes are collidable
+	bldg_obj_types[TYPE_CURB      ] = bldg_obj_type_t(0, 0, 1, 0, 1, 0, 0, 0.0,   100.0, "curb"); // for parking garages; only rats collide
+	bldg_obj_types[TYPE_BRK_PANEL ] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 2, 1000.0,100.0, "breaker panel");
+	bldg_obj_types[TYPE_VENT      ] = bldg_obj_type_t(0, 0, 0, 0, 1, 0, 0, 20.0,  2.0,   "vent"); // detail object
+	bldg_obj_types[TYPE_ATTIC_DOOR] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 2, 100.0, 50.0,  "attic door"); // door/ladder
+	bldg_obj_types[TYPE_CHIMNEY   ] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 2, 1000.0,1000.0,"chimney"); // interior chimney in attic
+	bldg_obj_types[TYPE_DUCT      ] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 0, 0.0,   0.0,   "duct"); // detail object
 	bldg_obj_types[TYPE_TOY       ] = bldg_obj_type_t(0, 0, 1, 1, 0, 0, 2, 2.0,   0.1,   "toy"); // plastic ring stack
 	bldg_obj_types[TYPE_DRESS_MIR ] = bldg_obj_type_t(0, 0, 1, 1, 0, 0, 1, 100.0, 30.0,  "mirror");
-	bldg_obj_types[TYPE_PAN       ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 15.0,  4.0,   "Frying Pan");
-	bldg_obj_types[TYPE_VASE      ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 20.0,  1.0,   "Vase");
-	bldg_obj_types[TYPE_URN       ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 40.0,  2.0,   "Urn");
-	bldg_obj_types[TYPE_FCABINET  ] = bldg_obj_type_t(1, 1, 1, 1, 0, 0, 3, 100.0, 220.0, "Filing Cabinet"); // body is large, drawers and their contents are small
+	bldg_obj_types[TYPE_PAN       ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 15.0,  4.0,   "frying pan");
+	bldg_obj_types[TYPE_VASE      ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 20.0,  1.0,   "vase");
+	bldg_obj_types[TYPE_URN       ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 40.0,  2.0,   "urn");
+	bldg_obj_types[TYPE_FCABINET  ] = bldg_obj_type_t(1, 1, 1, 1, 0, 0, 3, 100.0, 220.0, "filing cabinet"); // body is large, drawers and their contents are small
 	bldg_obj_types[TYPE_STAPLER   ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 10.0,  0.6,   "stapler");
 	// player_coll, ai_coll, rat_coll, pickup, attached, is_model, lg_sm, value, weight, name [capacity]
 	// 3D models
@@ -152,8 +152,8 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_CLOTHES   ] = bldg_obj_type_t(0, 0, 0, 1, 0, 1, 0, 10.0,  0.25,  "clothes"); // teeshirt, shirt, pants, etc.
 	bldg_obj_types[TYPE_FESCAPE   ] = bldg_obj_type_t(1, 1, 1, 0, 1, 1, 0, 10000, 4000,  "fire escape"); // technically exterior, not interior
 	bldg_obj_types[TYPE_CUP       ] = bldg_obj_type_t(0, 0, 0, 1, 0, 1, 0, 5.0,   0.2,   "cup");
-	bldg_obj_types[TYPE_TOASTER   ] = bldg_obj_type_t(0, 0, 0, 1, 0, 1, 2, 20.0,  2.5,   "Toaster");
-	bldg_obj_types[TYPE_HOOD      ] = bldg_obj_type_t(0, 0, 1, 0, 1, 1, 0, 200.0, 40.0,  "Ventilation Hood");
+	bldg_obj_types[TYPE_TOASTER   ] = bldg_obj_type_t(0, 0, 0, 1, 0, 1, 2, 20.0,  2.5,   "toaster");
+	bldg_obj_types[TYPE_HOOD      ] = bldg_obj_type_t(0, 0, 1, 0, 1, 1, 0, 200.0, 40.0,  "ventilation hood");
 	bldg_obj_types[TYPE_RCHAIR    ] = bldg_obj_type_t(1, 1, 1, 1, 0, 1, 0, 120.0, 45.0,  "rocking chair");
 	bldg_obj_types[TYPE_SILVER    ] = bldg_obj_type_t(0, 0, 0, 1, 0, 1, 2, 10.0,  0.2,   "silverware");
 	bldg_obj_types[TYPE_TOY_MODEL ] = bldg_obj_type_t(0, 0, 1, 1, 0, 1, 0, 4.0,   0.2,   "toy"); // plastic ring stack
