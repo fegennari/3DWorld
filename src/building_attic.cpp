@@ -984,7 +984,10 @@ void building_room_geom_t::add_skylight_details(cube_t const &skylight, bool has
 			bars[!dmax].push_back(conn);
 		} // for i
 	}
-	rgeom_mat_t &bar_mat(get_untextured_material(1)); // inc_shadows=1
+	// Note: if drawn as exterior, lighting may look better, but it won't cast shadows on the interior;
+	// can draw only the top as exterior, but that's the face oriented toward the light that casts the shadow
+	bool const draw_as_exterior = 0;
+	rgeom_mat_t &bar_mat(get_untextured_material(!draw_as_exterior, 0, 0, 0, draw_as_exterior)); // inc_shadows=1
 
 	for (unsigned d = 0; d < 2; ++d) {
 		for (cube_t const &bar : bars[d]) {bar_mat.add_cube_to_verts_untextured(bar, WHITE, get_skip_mask_for_xy(!d));} // skip ends
