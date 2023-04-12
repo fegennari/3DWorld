@@ -3571,27 +3571,41 @@ void building_t::add_window_trim_and_coverings(bool add_trim, bool add_coverings
 				float const low_edge(c.d[!dim][0] + (xy - tx1)*window_width);
 				window.d[!dim][0] = low_edge + border_xy;
 				window.d[!dim][1] = low_edge + window_width - border_xy;
+				if (add_coverings) {add_window_coverings(window, dim, dir);}
+				if (!add_trim) continue;
+				// add window trim
+				float const window_ar(window.get_sz_dim(!dim)/window.dz());
+				float const side_trim_width(window_trim_width*((window_ar > 1.5) ? (window_ar - 0.5) : 1.0)); // widen for very wide windows to cover holes at stretched edges
+				cube_t top(window), bot(window), side(window);
+				top.z1()  = window.z2();
+				top.z2() += window_trim_width;
+				bot.z2()  = window.z1();
+				bot.z1() -= window_trim_width;
+				bot.d[dim][!dir] += dscale*(windowsill_depth - window_trim_depth); // shift out further for windowsill
+				top.expand_in_dim(!dim, side_trim_width);
+				bot.expand_in_dim(!dim, side_trim_width);
+				objs.emplace_back(top, TYPE_WALL_TRIM, 0, dim, dir, ext_flags, 1.0, SHAPE_TALL, trim_color);
+				objs.emplace_back(bot, TYPE_WALL_TRIM, 0, dim, dir, ext_flags, 1.0, SHAPE_TALL, trim_color);
 
-				if (add_trim) {
-					float const window_ar(window.get_sz_dim(!dim)/window.dz());
-					float const side_trim_width(window_trim_width*((window_ar > 1.5) ? (window_ar - 0.5) : 1.0)); // widen for very wide windows to cover holes at stretched edges
-					cube_t top(window), bot(window), side(window);
-					top.z1()  = window.z2();
-					top.z2() += window_trim_width;
-					bot.z2()  = window.z1();
-					bot.z1() -= window_trim_width;
-					bot.d[dim][!dir] += dscale*(windowsill_depth - window_trim_depth); // shift out further for windowsill
-					top.expand_in_dim(!dim, side_trim_width);
-					bot.expand_in_dim(!dim, side_trim_width);
-					objs.emplace_back(top, TYPE_WALL_TRIM, 0, dim, dir, ext_flags, 1.0, SHAPE_TALL, trim_color);
-					objs.emplace_back(bot, TYPE_WALL_TRIM, 0, dim, dir, ext_flags, 1.0, SHAPE_TALL, trim_color);
+				for (unsigned s = 0; s < 2; ++s) { // left/right sides
+					side.d[!dim][ s] = window.d[!dim][s] - (s ? -1.0 : 1.0)*side_trim_width;
+					side.d[!dim][!s] = window.d[!dim][s];
+					objs.emplace_back(side, TYPE_WALL_TRIM, 0, dim, dir, ext_flags, 1.0, SHAPE_TALL, trim_color);
+				}
+				if (add_separators) { // add cross shaped window pane separator
+					bool is_split(0), has_bathroom_block_window(0);
+					int const room_id(get_room_id_for_window(window, dim, dir, is_split));
+					unsigned floor_ix(0); // unused
 
-					for (unsigned s = 0; s < 2; ++s) { // left/right sides
-						side.d[!dim][ s] = window.d[!dim][s] - (s ? -1.0 : 1.0)*side_trim_width;
-						side.d[!dim][!s] = window.d[!dim][s];
-						objs.emplace_back(side, TYPE_WALL_TRIM, 0, dim, dir, ext_flags, 1.0, SHAPE_TALL, trim_color);
+					if (get_room_type_and_floor(room_id, window.zc(), floor_ix) == RTYPE_BATH) { // check for bathroom block windows
+						cube_t window_exp(window);
+						window_exp.expand_by_xy(2.0*trim_thickness); // window is shifted by trim_thickness, so need to expand by more than that
+
+						for (room_object_t const &obj : interior->room_geom->objs) { // Note: local 'objs' is really trim_objs
+							if (obj.type == TYPE_WINDOW && obj.intersects(window_exp)) {has_bathroom_block_window = 1; break;}
+						}
 					}
-					if (add_separators) { // add cross shaped window pane separator
+					if (!has_bathroom_block_window) {
 						float const sep_hwidth(0.2*side_trim_width);
 						cube_t sep(window); // horizontal separator
 						set_wall_width(sep, window.zc(), sep_hwidth, 2);
@@ -3601,25 +3615,27 @@ void building_t::add_window_trim_and_coverings(bool add_trim, bool add_coverings
 						objs.emplace_back(sep, TYPE_WALL_TRIM, 0, dim, dir, (RO_FLAG_NOCOLL | RO_FLAG_ADJ_BOT | RO_FLAG_ADJ_TOP), 1.0, SHAPE_TALL, trim_color);
 					}
 				}
-				if (add_coverings) {add_window_coverings(window, dim, dir);}
 			} // for xy
 		} // for z
 	} // for i
 }
 
+room_type building_t::get_room_type_and_floor(int room_id, float zval, unsigned &floor_ix) const {
+	if (room_id < 0) return RTYPE_NOTSET; // error?
+	room_t const &room(get_room(room_id));
+	floor_ix = room.get_floor_containing_zval(zval, get_window_vspace());
+	return room.get_room_type(floor_ix);
+}
 void building_t::add_window_coverings(cube_t const &window, bool dim, bool dir) {
 	// add blinds to some windows based on the containing room type for this floor
 	bool is_split(0);
 	int const room_id(get_room_id_for_window(window, dim, dir, is_split));
-	if (room_id < 0) return; // room not found - should this be an error?
-	if (is_split)    return; // window split across multiple rooms - how do we handle this? for now skip it
-	room_t const &room(get_room(room_id));
-	unsigned const floor(room.get_floor_containing_zval(window.zc(), get_window_vspace()));
-	room_type const rtype(room.get_room_type(floor));
+	if (is_split) return; // window split across multiple rooms - how do we handle this? for now skip it
+	unsigned floor_ix(0);
 
-	switch (rtype) {
-	case RTYPE_BED: case RTYPE_MASTER_BED: add_window_blinds(window, dim, dir, room_id, floor); break; // bedroom
-	case RTYPE_BATH: add_bathroom_window(window, dim, dir, room_id, floor); break; // bathroom
+	switch (get_room_type_and_floor(room_id, window.zc(), floor_ix)) {
+	case RTYPE_BED: case RTYPE_MASTER_BED: add_window_blinds(window, dim, dir, room_id, floor_ix); break; // bedroom
+	case RTYPE_BATH: add_bathroom_window(window, dim, dir, room_id, floor_ix); break; // bathroom
 	} // end switch
 }
 

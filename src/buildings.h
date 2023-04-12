@@ -1648,6 +1648,7 @@ private:
 	cube_t get_rotated_bcube(cube_t const &c) const;
 	cube_t get_part_for_room(room_t const &room) const {assert(room.part_id < parts.size()); return parts[room.part_id];}
 	bool are_parts_stacked(cube_t const &p1, cube_t const &p2) const;
+	room_type get_room_type_and_floor(int room_id, float zval, unsigned &floor_ix) const;
 	void add_window_coverings(cube_t const &window, bool dim, bool dir);
 	void add_window_blinds(cube_t const &window, bool dim, bool dir, unsigned room_ix, unsigned floor);
 	void add_bathroom_window(cube_t const &window, bool dim, bool dir, unsigned room_id, unsigned floor);
