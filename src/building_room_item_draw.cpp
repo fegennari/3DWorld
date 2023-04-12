@@ -1307,9 +1307,9 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, building_t c
 	bool const draw_lights(camera_bs.z < building.bcube.z2() + (building.has_skylight_light ? 20.0*floor_spacing : 0.0));
 	// only parking garages and attics have detail objects that cast shadows
 	bool const draw_detail_objs(inc_small == 2 && (!shadow_only || building.has_parking_garage || building.has_attic()));
+	if (bbd != nullptr) {bbd->set_camera_dir_mask(camera_bs, building.bcube);}
 	brg_batch_draw_t *const bbd_in(bbd); // capture bbd for instance drawing before setting to null if player_in_building
 	if (player_in_building) {bbd = nullptr;} // use immediate drawing when player is in the building because draw order matters for alpha blending
-	if (bbd != nullptr) {bbd->set_camera_dir_mask(camera_bs, building.bcube);}
 
 	if (player_in_building && !shadow_only && !reflection_pass) { // indir lighting auto update logic
 		static bool last_enable_indir(0);
@@ -1366,10 +1366,10 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, building_t c
 	enable_blend(); // needed for rugs and book text
 	assert(s.is_setup());
 	mats_static.draw(bbd, s, shadow_only, reflection_pass); // this is the slowest call
-	if (draw_lights)      {mats_lights  .draw(bbd, s, shadow_only, reflection_pass);}
-	if (inc_small  )      {mats_dynamic .draw(bbd, s, shadow_only, reflection_pass);}
-	if (draw_detail_objs) {mats_detail  .draw(bbd, s, shadow_only, reflection_pass);}
-	if (!shadow_only)     {mats_exterior.draw(bbd, s, shadow_only, reflection_pass, 1);} // shadows not supported; exterior_geom=1; what about reflections?
+	if (draw_lights)      {mats_lights  .draw(bbd,    s, shadow_only, reflection_pass);}
+	if (inc_small  )      {mats_dynamic .draw(bbd,    s, shadow_only, reflection_pass);}
+	if (draw_detail_objs) {mats_detail  .draw(bbd,    s, shadow_only, reflection_pass);}
+	if (!shadow_only)     {mats_exterior.draw(bbd_in, s, shadow_only, reflection_pass, 1);} // shadows not supported; exterior_geom=1; always use bbd; what about reflections?
 	mats_doors.draw(bbd, s, shadow_only, reflection_pass);
 	
 	if (inc_small) {
