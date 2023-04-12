@@ -781,7 +781,8 @@ bool building_interior_t::check_sphere_coll(building_t const &building, point &p
 		// ignore blockers and railings, but allow more than c->no_coll()
 		if (c == self || c->type == TYPE_BLOCKER || c->type == TYPE_RAILING || c->type == TYPE_PAPER || c->type == TYPE_PEN || c->type == TYPE_PENCIL ||
 			c->type == TYPE_BOTTLE || c->type == TYPE_FLOORING || c->type == TYPE_SIGN || c->type == TYPE_WBOARD || c->type == TYPE_WALL_TRIM ||
-			c->type == TYPE_DRAIN || c->type == TYPE_CRACK || c->type == TYPE_SWITCH || c->type == TYPE_BREAKER || c->type == TYPE_OUTLET || c->type == TYPE_VENT) continue;
+			c->type == TYPE_DRAIN || c->type == TYPE_CRACK || c->type == TYPE_SWITCH || c->type == TYPE_BREAKER || c->type == TYPE_OUTLET || c->type == TYPE_VENT ||
+			c->type == TYPE_WIND_SILL) continue;
 		cube_t const bc(get_true_room_obj_bcube(*c));
 		if (!sphere_cube_intersect(pos, radius, bc)) continue; // no intersection (optimization)
 		unsigned coll_ret(0);

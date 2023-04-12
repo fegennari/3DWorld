@@ -3041,6 +3041,11 @@ void building_room_geom_t::add_sign(room_object_t const &c, bool inc_back, bool 
 	add_room_obj_sign_text_verts(c, apply_light_color(c), get_material(tex, 0, 0, small, 0, exterior).quad_verts); // unshadowed, small=1
 }
 
+void building_room_geom_t::add_window_sill(room_object_t const &c) {
+	// TODO: should be textured exterior object
+	get_untextured_material(0, 0, 0, 0, 1).add_cube_to_verts_untextured(c, apply_light_color(c), ~get_face_mask(c.dim, c.dir));
+}
+
 bool get_dishwasher_for_ksink(room_object_t const &c, cube_t &dishwasher) {
 	if (c.type != TYPE_KSINK) return 0; // error?
 	float const dz(c.dz()), depth(c.get_depth()), width(c.get_width()), dir_sign(c.dir ? 1.0 : -1.0);

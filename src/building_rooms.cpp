@@ -3530,8 +3530,8 @@ void building_t::add_wall_and_door_trim() { // and window trim
 	add_window_trim_and_coverings(1, 0); // add_trim=1, add_coverings=0
 }
 
-void building_t::add_window_trim_and_coverings(bool add_trim, bool add_coverings) {
-	assert(add_trim || add_coverings);
+void building_t::add_window_trim_and_coverings(bool add_trim, bool add_coverings, bool add_ext_sills) {
+	assert(add_trim || add_coverings || add_ext_sills);
 	if (!has_windows()) return; // no windows
 	float const border_mult(0.94); // account for the frame part of the window texture, which is included in the interior cutout of the window
 	float const trim_thickness(get_trim_thickness()), ext_wall_toler(0.01*trim_thickness); // required to prevent z-fighting when AA is disabled
@@ -3572,6 +3572,10 @@ void building_t::add_window_trim_and_coverings(bool add_trim, bool add_coverings
 				window.d[!dim][0] = low_edge + border_xy;
 				window.d[!dim][1] = low_edge + window_width - border_xy;
 				if (add_coverings) {add_window_coverings(window, dim, dir);}
+
+				if (add_ext_sills) {
+					// TODO: WRITE: add TYPE_WIND_SILL
+				}
 				if (!add_trim) continue;
 				// add window trim
 				float const window_ar(window.get_sz_dim(!dim)/window.dz());

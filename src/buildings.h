@@ -373,7 +373,7 @@ enum {
 	TYPE_DRAIN, TYPE_MONEY, TYPE_PHONE, TYPE_TPROLL, TYPE_SPRAYCAN, TYPE_MARKER, TYPE_BUTTON, TYPE_CRACK, TYPE_SWITCH, TYPE_PLATE,
 	TYPE_LAPTOP, TYPE_FPLACE, TYPE_LBASKET, TYPE_WHEATER, TYPE_TAPE, TYPE_OUTLET, TYPE_PG_WALL, TYPE_PARK_SPACE, TYPE_RAMP, TYPE_PIPE,
 	TYPE_CURB, TYPE_BRK_PANEL, TYPE_VENT, TYPE_BREAKER, TYPE_FURNACE, TYPE_ATTIC_DOOR, TYPE_CHIMNEY, TYPE_DUCT, TYPE_TOY, TYPE_DRESS_MIR,
-	TYPE_PAN, TYPE_VASE, TYPE_URN, TYPE_FCABINET, TYPE_STAPLER,
+	TYPE_PAN, TYPE_VASE, TYPE_URN, TYPE_FCABINET, TYPE_STAPLER, TYPE_WIND_SILL,
 	/* these next ones are all 3D models - see logic in room_object_t::is_obj_model_type() */
 	TYPE_TOILET, TYPE_SINK, TYPE_TUB, TYPE_FRIDGE, TYPE_STOVE, TYPE_TV, TYPE_MONITOR, TYPE_COUCH, TYPE_OFF_CHAIR, TYPE_URINAL,
 	TYPE_LAMP, TYPE_WASHER, TYPE_DRYER, TYPE_KEY, TYPE_HANGER, TYPE_CLOTHES, TYPE_FESCAPE, TYPE_WALL_LAMP, TYPE_CUP, TYPE_TOASTER,
@@ -841,6 +841,7 @@ struct building_room_geom_t {
 	void add_toaster_proxy(room_object_t const &c);
 	void add_br_stall(room_object_t const &c);
 	void add_cubicle(room_object_t const &c, float tscale);
+	void add_window_sill(room_object_t const &c);
 	void add_sign(room_object_t const &c, bool inc_back, bool inc_text, bool exterior_only=0);
 	void add_counter(room_object_t const &c, float tscale, bool inc_lg, bool inc_sm);
 	void add_cabinet(room_object_t const &c, float tscale, bool inc_lg, bool inc_sm);
@@ -1633,7 +1634,8 @@ private:
 	void add_extra_obj_slots();
 	void add_wall_and_door_trim_if_needed();
 	void add_wall_and_door_trim();
-	void add_window_trim_and_coverings(bool add_trim, bool add_blinds);
+	void add_window_trim_and_coverings(bool add_trim, bool add_blinds, bool add_ext_sills=0);
+	void add_exterior_window_details();
 	unsigned count_num_int_doors(room_t const &room) const;
 	bool check_bcube_overlap_xy_one_dir(building_t const &b, float expand_rel, float expand_abs) const;
 	void split_in_xy(cube_t const &seed_cube, rand_gen_t &rgen);
