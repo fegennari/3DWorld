@@ -1105,12 +1105,15 @@ void setup_light_for_building_interior(light_source &ls, room_object_t &obj, cub
 	obj.item_flags = sc_hash16; // store current object hash in item flags
 }
 
-cube_t building_t::get_rotated_bcube(cube_t const &c) const {
+cube_t building_t::get_rotated_bcube(cube_t const &c, bool inv_rotate) const {
 	if (!is_rotated()) return c;
 	point const center(bcube.get_cube_center());
 	float const z(c.z2()); // top edge
 	point corners[4] = {point(c.x1(), c.y1(), z), point(c.x2(), c.y1(), z), point(c.x2(), c.y2(), z), point(c.x1(), c.y2(), z)};
-	for (unsigned n = 0; n < 4; ++n) {do_xy_rotate(center, corners[n]);}
+	
+	for (unsigned n = 0; n < 4; ++n) {
+		if (inv_rotate) {do_xy_rotate_inv(center, corners[n]);} else {do_xy_rotate(center, corners[n]);}
+	}
 	cube_t ret;
 	ret.set_from_points(corners, 4);
 	ret.z1() = c.z1();
@@ -1380,19 +1383,20 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		float const dshadow_radius((is_in_attic ? 1.0 : 0.8)*light_radius); // use full light radius for attics since they're more open
 		if (!camera_pdu.sphere_visible_test((lpos_rot + xlate), cull_radius)) continue; // VFC
 		// check visibility of bcube of light sphere clipped to building bcube; this excludes lights behind the camera and improves shadow map assignment quality
-		cube_t sphere_bc; // in building space
+		cube_t sphere_bc, light_clip_cube; // in building space, unrotated
 		sphere_bc.set_from_sphere(lpos, cull_radius);
-		cube_t light_clip_cube;
 
 		if (light_in_basement) { // clip to basement + ext basement
 			light_clip_cube = get_basement();
 			if (has_ext_basement()) {light_clip_cube.union_with_cube(interior->basement_ext_bcube);}
-			if (is_in_elevator) {light_clip_cube.z2() = bcube.z2();} // extends up the elevator shaft into floors above the basement
+			if (is_in_elevator)     {light_clip_cube.z2() = bcube.z2();} // extends up the elevator shaft into floors above the basement
+			assert(light_clip_cube.contains_pt(lpos)); // Note: may not be contained in building bcube
 		}
 		else { // clip to bcube
-			light_clip_cube = bcube;
+			if (is_rotated()) {light_clip_cube = get_rotated_bcube(bcube, 1);} // inv_rotate=1
+			else {light_clip_cube = bcube;}
+			assert(light_clip_cube.contains_pt(lpos));
 		}
-		assert(light_clip_cube.contains_pt(lpos_rot));
 		cube_t clipped_bc(sphere_bc);
 		clipped_bc.intersect_with_cube(light_clip_cube);
 		// clip zval to current floor if light not in a room with stairs or elevator
@@ -1400,7 +1404,8 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		min_eq(clipped_bc.z2(), (ceil_z + fc_thick)); // ceiling is always valid, since lights point downward
 
 		if (!clipped_bc.is_strictly_normalized()) {
-			cout << "Error: Invalid light bcube: " << TXT(clipped_bc.str()) << TXT(lpos.str()) << TXT(floor_z) << TXT(ceil_z) << TXT(is_lamp) << TXT(is_in_elevator) << endl;
+			cout << "Error: Invalid light bcube: " << TXT(clipped_bc.str()) << TXT(sphere_bc.str()) << TXT(light_clip_cube.str())
+				 << TXT(lpos.str()) << TXT(floor_z) << TXT(ceil_z) << TXT(is_lamp) << TXT(is_in_elevator) << TXT(light_in_basement) << endl;
 			assert(0);
 		}
 		if (!is_rot_cube_visible(clipped_bc, xlate)) continue; // VFC
@@ -1471,7 +1476,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 				}
 				if (light_bcube.is_all_zeros()) { // not yet calculated - calculate and cache
 					light_bcube = clipped_bc;
-					refine_light_bcube(lpos, light_radius, room, light_bcube, (light_in_basement && has_parking_garage));
+					refine_light_bcube(lpos, light_radius, room, light_bcube, (light_in_basement && has_parking_garage)); // incorrect for rotated buildings?
 				}
 				clipped_bc.x1() = light_bcube.x1(); clipped_bc.x2() = light_bcube.x2(); // copy X/Y but keep orig zvals
 				clipped_bc.y1() = light_bcube.y1(); clipped_bc.y2() = light_bcube.y2();
