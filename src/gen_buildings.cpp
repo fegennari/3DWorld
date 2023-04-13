@@ -2769,14 +2769,18 @@ public:
 		bool valid() const {return (building != nullptr);}
 	};
 
-	static void ensure_city_shader_setup(int reflection_pass, vector3d const &xlate, bool &is_setup) {
+	static void ensure_city_lighting_setup(int reflection_pass, vector3d const &xlate, bool &is_setup) {
 		if (is_setup) return;
 		city_dlight_pcf_offset_scale = 1.0; // restore city value
 		if (!reflection_pass) {setup_city_lights(xlate);}
 		is_setup = 1;
 	}
-	static void setup_holes_shader(shader_t &s) {
+	static void enable_holes_shader(shader_t &s) {
 		if (!s.is_setup()) {setup_smoke_shaders(s, 0.9, 0, 0, 0, 0, 0, 0);} // min_alpha=0.9 for depth test
+		else {s.enable();}
+	}
+	static void enable_city_shader(shader_t &s, bool use_dlights, int use_bmap, float min_alpha) {
+		if (!s.is_setup()) {city_shader_setup(s, get_city_lights_bcube(), use_dlights, 1, use_bmap, min_alpha);} // use_smap=1
 		else {s.enable();}
 	}
 
@@ -2808,10 +2812,10 @@ public:
 		bool const night(is_night(WIND_LIGHT_ON_RAND)), use_city_dlights(!reflection_pass);
 		// check for sun or moon; also need the smap pass for drawing with dynamic lights at night, so basically it's always enabled
 		bool const use_tt_smap(check_tile_smap(0)); // && (night || light_valid_and_enabled(0) || light_valid_and_enabled(1)));
-		bool have_windows(0), have_wind_lights(0), have_interior(0), this_frame_camera_in_building(0), this_frame_player_in_attic(0), is_city_shader_setup(0);
+		bool have_windows(0), have_wind_lights(0), have_interior(0), this_frame_camera_in_building(0), this_frame_player_in_attic(0), is_city_lighting_setup(0);
 		int this_frame_player_in_basement(0);
 		unsigned max_draw_ix(0);
-		shader_t s, holes_shader;
+		shader_t s, holes_shader, city_shader;
 
 		for (auto i = bcs.begin(); i != bcs.end(); ++i) {
 			assert(*i);
@@ -3000,7 +3004,7 @@ public:
 			else if (!reflection_pass) {end_building_rt_job();}
 			
 			if (draw_interior && have_windows && reflection_pass != 2) { // write to stencil buffer, use stencil test for back facing building walls
-				setup_holes_shader(holes_shader);
+				enable_holes_shader(holes_shader);
 				setup_stencil_buffer_write();
 				glStencilOpSeparate((reflection_pass ? GL_BACK : GL_FRONT), GL_KEEP, GL_KEEP, GL_KEEP); // ignore front faces
 				glStencilOpSeparate((reflection_pass ? GL_FRONT : GL_BACK), GL_KEEP, GL_KEEP, GL_INCR); // mark stencil on back faces
@@ -3093,13 +3097,13 @@ public:
 				reset_interior_lighting_and_end_shader(s);
 			}
 			if (bbd.has_ext_geom()) {
-				ensure_city_shader_setup(reflection_pass, xlate, is_city_shader_setup); // needed for dlights to work
-				shader_t ext_shader;
-				city_shader_setup(ext_shader, get_city_lights_bcube(), use_city_dlights, 1, use_bmap, min_alpha); // use_smap=1
-				bbd.draw_and_clear_ext_tiles(ext_shader, xlate); // draw after ext walls but before windows so that alpha blending works properly
+				ensure_city_lighting_setup(reflection_pass, xlate, is_city_lighting_setup); // needed for dlights to work
+				enable_city_shader(city_shader, use_city_dlights, use_bmap, min_alpha);
+				bbd.draw_and_clear_ext_tiles(city_shader, xlate); // draw after ext walls but before windows so that alpha blending works properly
+				city_shader.disable();
 			}
 			if (!reflection_pass) { // draw windows and doors in depth pass to create holes
-				setup_holes_shader(holes_shader); // need same shader to avoid z-fighting
+				enable_holes_shader(holes_shader); // need same shader to avoid z-fighting
 				glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE); // Disable color writing, we only want to write to the Z-Buffer
 				if (!ext_door_draw.empty()) {glDisable(GL_DEPTH_CLAMP);}
 				for (auto i = bcs.begin(); i != bcs.end(); ++i) {(*i)->building_draw_windows.draw(holes_shader, 0);} // draw windows on top of other buildings
@@ -3126,8 +3130,8 @@ public:
 			enable_dlight_bcubes = 0;
 			return;
 		}
-		ensure_city_shader_setup(reflection_pass, xlate, is_city_shader_setup);
 		// main/batched draw pass
+		ensure_city_lighting_setup(reflection_pass, xlate, is_city_lighting_setup);
 		setup_smoke_shaders(s, min_alpha, 0, 0, indir, 1, dlights, 0, 0, (use_smap ? 2 : 1), use_bmap, 0, 0, 0, 0.0, 0.0, 0, 0, 1); // is_outside=1
 
 		if (!reflection_pass) { // don't want to do this in the reflection pass
@@ -3173,7 +3177,7 @@ public:
 		// post-pass to render building exteriors in nearby tiles that have shadow maps; shadow maps don't work right when using reflections
 		if (use_smap_pass) {
 			//timer_t timer2("Draw Buildings Smap"); // 0.3
-			city_shader_setup(s, get_city_lights_bcube(), use_city_dlights, 1, use_bmap, min_alpha); // use_smap=1
+			enable_city_shader(city_shader, use_city_dlights, use_bmap, min_alpha);
 			float const draw_dist(get_tile_smap_dist() + 0.5f*(X_SCENE_SIZE + Y_SCENE_SIZE));
 			glEnable(GL_CULL_FACE); // cull back faces to avoid lighting/shadows on inside walls of building interiors
 
@@ -3186,17 +3190,17 @@ public:
 					if (!g->bcube.closest_dist_less_than(camera_xlated, draw_dist)) continue; // too far
 					point const pos(g->bcube.get_cube_center() + xlate);
 					if (!camera_pdu.sphere_and_cube_visible_test(pos, g->bcube.get_bsphere_radius(), (g->bcube + xlate))) continue; // VFC
-					if (!try_bind_tile_smap_at_point(pos, s)) continue; // no shadow maps - not drawn in this pass
+					if (!try_bind_tile_smap_at_point(pos, city_shader)) continue; // no shadow maps - not drawn in this pass
 					unsigned const tile_id(g - (*i)->grid_by_tile.begin());
 					// Note: we could skip detail materials like trim for tiles that are further, but it's unclear if that would make much difference
-					(*i)->building_draw_vbo.draw_tile(s, tile_id);
+					(*i)->building_draw_vbo.draw_tile(city_shader, tile_id);
 
 					if (!(*i)->building_draw_windows.empty()) {
 						enable_blend();
 						glEnable(GL_POLYGON_OFFSET_FILL);
 						if (!no_depth_write) {glDepthMask(GL_FALSE);} // always disable depth writing
 						if (transparent_windows) {(*i)->building_draw_windows.toggle_transparent_windows_mode();}
-						(*i)->building_draw_windows.draw_tile(s, tile_id); // draw windows on top of other buildings
+						(*i)->building_draw_windows.draw_tile(city_shader, tile_id); // draw windows on top of other buildings
 						if (transparent_windows) {(*i)->building_draw_windows.toggle_transparent_windows_mode();}
 						if (!no_depth_write) {glDepthMask(GL_TRUE);} // always re-enable depth writing
 						glDisable(GL_POLYGON_OFFSET_FILL);
@@ -3206,14 +3210,13 @@ public:
 				if (no_depth_write) {glDepthMask(GL_TRUE);} // re-enable depth writing
 			} // for i
 			glDisable(GL_CULL_FACE);
-			bbd.draw_obj_models(s, xlate, 0); // shadow_only=0
-			s.end_shader();
+			bbd.draw_obj_models(city_shader, xlate, 0); // shadow_only=0
+			city_shader.end_shader();
 		}
 		if (night && have_wind_lights) { // add night time random lights in windows
 			enable_blend();
 			glDepthMask(GL_FALSE); // disable depth writing
 			float const low_v(0.5 - WIND_LIGHT_ON_RAND), high_v(0.5 + WIND_LIGHT_ON_RAND), lit_thresh_mult(1.0 + 2.0*CLIP_TO_01((light_factor - low_v)/(high_v - low_v)));
-			s.end_shader();
 			s.set_vert_shader("window_lights");
 			s.set_frag_shader("linear_fog.part+window_lights");
 			s.set_prefix("#define FOG_FADE_TO_TRANSPARENT", 1);
