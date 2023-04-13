@@ -708,6 +708,7 @@ public:
 		for (auto i = to_draw.begin(); i != to_draw.end(); ++i) {i->tex.toggle_transparent_windows_mode();}
 	}
 	void set_no_shadows_for_tex(tid_nm_pair_t const &tex) { // must call get_verts() on this tex first
+		if (to_draw.empty()) return; // no geometry; can get here with calls of tex.tid=-1 for empty building tiles
 		int const ix(get_to_draw_ix_if_exists(tex));
 		if (ix < 0) return; // tex doesn't exist - ignore it
 		assert((unsigned)ix < to_draw.size());
