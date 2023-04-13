@@ -694,6 +694,7 @@ void building_room_geom_t::clear_materials() { // clears all materials
 	mats_lights .clear();
 	mats_detail .clear();
 	mats_exterior.clear();
+	mats_ext_detail.clear();
 	obj_model_insts.clear(); // these are associated with static VBOs
 }
 // Note: used for room lighting changes; detail object changes are not supported
@@ -732,17 +733,27 @@ void building_room_geom_t::update_draw_state_for_room_object(room_object_t const
 	modified_by_player = 1; // flag so that we avoid re-generating room geom if the player leaves and comes back
 }
 unsigned building_room_geom_t::get_num_verts() const {
-	return (mats_static.count_all_verts() + mats_small.count_all_verts() + mats_text.count_all_verts() + mats_detail.count_all_verts() +
-	mats_dynamic.count_all_verts() + mats_lights.count_all_verts() + mats_amask.count_all_verts() + mats_alpha.count_all_verts() +
-		mats_doors.count_all_verts() + mats_exterior.count_all_verts());
+	return (mats_static.count_all_verts() +
+		mats_small.count_all_verts() +
+		mats_text.count_all_verts() +
+		mats_detail.count_all_verts() +
+		mats_dynamic.count_all_verts() +
+		mats_lights.count_all_verts() +
+		mats_amask.count_all_verts() +
+		mats_alpha.count_all_verts() +
+		mats_doors.count_all_verts() +
+		mats_exterior.count_all_verts()) +
+		mats_ext_detail.count_all_verts();
 }
 
-rgeom_mat_t &building_room_geom_t::get_material(tid_nm_pair_t const &tex, bool inc_shadows, bool dynamic, unsigned small, bool transparent, bool exterior) {
-	assert(unsigned(dynamic) + unsigned(small > 0) + unsigned(exterior) <= 1); // can only have one of these set
-	// small: 0=mats_static, 1=mats_small, 2=mats_detail
-	if (small == 1 && tex.tid == FONT_TEXTURE_ID) {return mats_text.get_material(tex, inc_shadows);} // inc_shadows should be 0
-	return (exterior ? mats_exterior : (dynamic ? mats_dynamic : (small ? ((small == 2) ? mats_detail : mats_small) : (transparent ? mats_alpha : mats_static)))).
-		get_material(tex, inc_shadows);
+building_materials_t &building_room_geom_t::get_building_mat(tid_nm_pair_t const &tex, bool dynamic, unsigned small, bool transparent, bool exterior) {
+	assert(!(dynamic && exterior));
+	assert(small <= 2); // 0=mats_static, 1=mats_small, 2=mats_detail
+	if (exterior)   return (small ? mats_ext_detail : mats_exterior);
+	if (dynamic)    return mats_dynamic;
+	if (small == 2) return mats_detail;
+	if (small)      return ((tex.tid == FONT_TEXTURE_ID) ? mats_text : mats_small);
+	return (transparent ? mats_alpha : mats_static);
 }
 rgeom_mat_t &building_room_geom_t::get_metal_material(bool inc_shadows, bool dynamic, unsigned small, colorRGBA const &spec_color) {
 	tid_nm_pair_t tex(-1, 1.0, inc_shadows);
@@ -946,7 +957,8 @@ void building_room_geom_t::create_detail_vbos(building_t const &building) {
 		add_wall_trim(i);
 	}
 	add_attic_rafters(building, 2.0/obj_scale); // only if there's an attic
-	mats_detail.create_vbos(building);
+	mats_detail    .create_vbos(building);
+	mats_ext_detail.create_vbos(building);
 }
 
 void building_room_geom_t::create_obj_model_insts(building_t const &building) { // handle drawing of 3D models
@@ -1364,7 +1376,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, building_t c
 
 		// Note: not created on the shadow pass unless trim_objs has been created so that we don't miss including it;
 		// the trim_objs test is needed to handle parking garage and attic objects, which are also drawn as details
-		if (draw_detail_objs && (!shadow_only || !trim_objs.empty()) && !mats_detail.valid) { // create detail materials if needed
+		if (draw_detail_objs && (!shadow_only || !trim_objs.empty()) && !mats_detail.valid) { // create detail materials if needed (mats_detail and mats_ext_detail)
 			create_detail_vbos(building);
 			if (!shadow_only) {++num_geom_this_frame;}
 		}
@@ -1378,8 +1390,12 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, building_t c
 	if (draw_lights)      {mats_lights .draw(bbd,    s, shadow_only, reflection_pass);}
 	if (inc_small  )      {mats_dynamic.draw(bbd,    s, shadow_only, reflection_pass);}
 	if (draw_detail_objs) {mats_detail .draw(bbd,    s, shadow_only, reflection_pass);}
+	
 	// draw exterior geom; shadows not supported; always use bbd; skip in reflection pass because that control flow doesn't work and is probably not needed (except for L-shaped house?)
-	if (!shadow_only && !reflection_pass) {mats_exterior.draw(bbd_in, s, shadow_only, reflection_pass, 1);} // exterior_geom=1
+	if (!shadow_only && !reflection_pass) {
+		mats_exterior.draw(bbd_in, s, shadow_only, reflection_pass, 1); // exterior_geom=1
+		if (draw_detail_objs) {mats_ext_detail.draw(bbd_in, s, shadow_only, reflection_pass, 1);} // exterior_geom=1
+	}
 	mats_doors.draw(bbd, s, shadow_only, reflection_pass);
 	
 	if (inc_small) {

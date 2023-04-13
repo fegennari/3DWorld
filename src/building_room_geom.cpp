@@ -1291,15 +1291,7 @@ void building_room_geom_t::add_flooring(room_object_t const &c, float tscale) {
 	get_material(tid_nm_pair_t(get_flooring_texture(c), 0.8*tscale)).add_cube_to_verts(c, apply_light_color(c), tex_origin, ~EF_Z2); // top face only, unshadowed
 }
 
-void building_room_geom_t::add_wall_trim(room_object_t const &c, bool for_closet, bool exterior_only) { // uses mats_detail
-	bool const is_exterior(c.is_exterior());
-	
-	if (exterior_only) { // unused
-		if (!is_exterior) return;
-		assert(c.shape == SHAPE_SHORT || c.shape == SHAPE_TALL);
-		get_untextured_material(0, 0, 0, 0, 1).add_cube_to_verts_untextured(c, c.color, get_face_mask(c.dim, c.dir)); // exterior=1, exterior face only
-		return;
-	}
+void building_room_geom_t::add_wall_trim(room_object_t const &c, bool for_closet) { // uses mats_detail
 	rgeom_mat_t &mat(get_untextured_material(0, 0, (for_closet ? 1 : 2))); // inc_shadows=0, dynamic=0, small=2 (1 for closet)
 
 	if (c.shape == SHAPE_ANGLED) { // single quad
@@ -1351,6 +1343,7 @@ void building_room_geom_t::add_wall_trim(room_object_t const &c, bool for_closet
 		rotate_verts(mat.quad_verts, plus_z, (c.dir ? 1.0 : -1.0)*get_norm_angle(plus_x, (p2 - p1).get_norm()), center, qv_start);
 	}
 	else { // cube/short/tall
+		bool const is_exterior(c.is_exterior());
 		unsigned skip_faces(0);
 		if      (c.shape == SHAPE_TALL ) {skip_faces = 0;} // door/window side trim
 		else if (c.shape == SHAPE_SHORT) {skip_faces = get_skip_mask_for_xy(!c.dim);} // door top trim: skip ends
@@ -1358,8 +1351,9 @@ void building_room_geom_t::add_wall_trim(room_object_t const &c, bool for_closet
 		if (c.flags & RO_FLAG_ADJ_LO) {skip_faces |= ~get_face_mask(c.dim, 0);}
 		if (c.flags & RO_FLAG_ADJ_HI) {skip_faces |= ~get_face_mask(c.dim, 1);}
 		skip_faces |= ((c.flags & RO_FLAG_ADJ_BOT) ? EF_Z1 : 0) | ((c.flags & RO_FLAG_ADJ_TOP) ? EF_Z2 : 0);
-		//if (is_exterior) {skip_faces |= ~get_face_mask(c.dim, c.dir);} // skip exterior face
+		if (is_exterior) {skip_faces |= ~get_face_mask(c.dim, c.dir);} // skip exterior face
 		mat.add_cube_to_verts_untextured(c, c.color, skip_faces); // is_small, untextured, no shadows
+		if (is_exterior) {get_untextured_material(0, 0, 2, 0, 1).add_cube_to_verts_untextured(c, c.color, get_face_mask(c.dim, c.dir));} // detail, exterior=1, ext face only
 	}
 }
 

@@ -758,7 +758,7 @@ struct building_room_geom_t {
 	vect_snake_t  snakes;
 	vect_insect_t insects;
 	// {large static, small static, dynamic, lights, alpha mask, transparent, door} materials
-	building_materials_t mats_static, mats_small, mats_text, mats_detail, mats_dynamic, mats_lights, mats_amask, mats_alpha, mats_doors, mats_exterior;
+	building_materials_t mats_static, mats_small, mats_text, mats_detail, mats_dynamic, mats_lights, mats_amask, mats_alpha, mats_doors, mats_exterior, mats_ext_detail;
 	vect_cube_t light_bcubes;
 	building_decal_manager_t decal_manager;
 
@@ -775,7 +775,9 @@ struct building_room_geom_t {
 	void check_invalid_draw_data();
 	void invalidate_draw_data_for_obj(room_object_t const &obj, bool was_taken=0);
 	unsigned get_num_verts() const;
-	rgeom_mat_t &get_material(tid_nm_pair_t const &tex, bool inc_shadows=0, bool dynamic=0, unsigned small=0, bool transparent=0, bool exterior=0);
+	rgeom_mat_t &get_material(tid_nm_pair_t const &tex, bool inc_shadows=0, bool dynamic=0, unsigned small=0, bool transparent=0, bool exterior=0) {
+		return get_building_mat(tex, dynamic, small, transparent, exterior).get_material(tex, inc_shadows);
+	}
 	rgeom_mat_t &get_untextured_material(bool inc_shadows=0, bool dynamic=0, unsigned small=0, bool transparent=0, bool exterior=0) {
 		return get_material(tid_nm_pair_t(-1, 1.0, inc_shadows, transparent), inc_shadows, dynamic, small, transparent, exterior);
 	}
@@ -874,7 +876,7 @@ struct building_room_geom_t {
 	static void add_pen_pencil_marker_to_material(room_object_t const &c_, rgeom_mat_t &mat);
 	void add_pen_pencil_marker(room_object_t const &c);
 	void add_flooring(room_object_t const &c, float tscale);
-	void add_wall_trim(room_object_t const &c, bool for_closet=0, bool exterior_only=0);
+	void add_wall_trim(room_object_t const &c, bool for_closet=0);
 	void add_blinds(room_object_t const &c);
 	void add_fireplace(room_object_t const &c, float tscale);
 	void add_filing_cabinet(room_object_t const &c, bool inc_lg, bool inc_sm);
@@ -921,6 +923,7 @@ struct building_room_geom_t {
 	unsigned allocate_dynamic_state();
 	room_obj_dstate_t &get_dstate(room_object_t const &obj);
 private:
+	building_materials_t &get_building_mat(tid_nm_pair_t const &tex, bool dynamic, unsigned small, bool transparent, bool exterior);
 	void create_static_vbos(building_t const &building);
 	void create_small_static_vbos(building_t const &building);
 	void create_text_vbos(building_t const &building);
