@@ -3036,8 +3036,7 @@ void building_room_geom_t::add_sign(room_object_t const &c, bool inc_back, bool 
 }
 
 void building_room_geom_t::add_window_sill(room_object_t const &c) {
-	// TODO: should be textured exterior object
-	get_untextured_material(0, 0, 0, 0, 1).add_cube_to_verts_untextured(c, apply_light_color(c), ~get_face_mask(c.dim, c.dir));
+	get_untextured_material(0, 0, 0, 0, 1).add_cube_to_verts_untextured(c, apply_light_color(c), ~get_face_mask(c.dim, !c.dir)); // unshadowed, exterior
 }
 
 bool get_dishwasher_for_ksink(room_object_t const &c, cube_t &dishwasher) {

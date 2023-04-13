@@ -3204,7 +3204,8 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 		if (!(added_bathroom_objs_mask & PLACED_SINK  )) {cout << "no sink in building "   << bcube.xc() << " " << bcube.yc() << endl;}
 		//if (is_house && !(added_bathroom_objs_mask & (PLACED_TUB | PLACED_SHOWER))) {cout << "no bathtub or shower in building " << bcube.xc() << " " << bcube.yc() << endl;} // common
 	}
-	if (!is_rotated()) {add_window_trim_and_coverings(0, 1);} // add_trim=0, add_coverings=1; must be done after room assignment; not implemented for rotated buildings
+	// add trim + window coverings; must be done after room assignment; not implemented for rotated buildings
+	if (!is_rotated()) {add_window_trim_and_coverings(0, 1, 1);} // add_trim=0, add_coverings=1, add_ext_sills=1
 	if (is_house && has_basement()) {add_basement_electrical_house(rgen);}
 	if (is_house && has_basement_pipes) {add_house_basement_pipes (rgen);}
 	if (has_attic()) {add_attic_objects(rgen);}
@@ -3540,13 +3541,18 @@ void building_t::add_window_trim_and_coverings(bool add_trim, bool add_coverings
 	float const window_trim_width(0.75*get_wall_thickness()), window_trim_depth(1.0*trim_thickness), windowsill_depth(1.0*trim_thickness);
 	float const floor_spacing(get_window_vspace()), window_offset(0.01*floor_spacing); // must match building_draw_t::add_section()
 	colorRGBA const &trim_color(is_house ? WHITE : DK_GRAY);
-	vect_room_object_t &objs(interior->room_geom->trim_objs);
+	vect_room_object_t &trim_objs(interior->room_geom->trim_objs), &objs(interior->room_geom->objs);
 	static vect_vnctcc_t wall_quad_verts;
 	wall_quad_verts.clear();
 	get_all_drawn_window_verts_as_quads(wall_quad_verts);
 	rand_gen_t rgen;
-	if (is_house) {rgen.set_state(wall_quad_verts.size(), interior->rooms.size());}
-
+	rgen.set_state(wall_quad_verts.size(), interior->rooms.size());
+	rgen.rand_mix();
+	
+	if (add_ext_sills && !rgen.rand_bool()) { // 50% of the time
+		add_ext_sills = 0;
+		if (!add_trim && !add_coverings) return; // nothing else to add
+	}
 	for (unsigned i = 0; i < wall_quad_verts.size(); i += 4) { // iterate over each quad
 		cube_t c;
 		float tx1, tx2, tz1, tz2;
@@ -3574,7 +3580,13 @@ void building_t::add_window_trim_and_coverings(bool add_trim, bool add_coverings
 				if (add_coverings) {add_window_coverings(window, dim, dir);}
 
 				if (add_ext_sills) {
-					// TODO: WRITE: add TYPE_WIND_SILL
+					cube_t sill(window);
+					sill.z1() -= 0.04*window_height;
+					sill.z2()  = sill.z1() + 0.03*window_height;
+					sill.expand_in_dim(!dim, 0.05*window_height);
+					sill.d[dim][!dir] -= dscale*window_offset; // flush with exterior wall to avoid clipping through interior
+					sill.d[dim][ dir] -= dscale*0.06*window_height; // extend out from the wall
+					objs.emplace_back(sill, TYPE_WIND_SILL, 0, dim, dir, (RO_FLAG_NOCOLL | RO_FLAG_EXTERIOR), 1.0, SHAPE_CUBE, colorRGBA(0.9, 0.8, 0.65));
 				}
 				if (!add_trim) continue;
 				// add window trim
@@ -3588,13 +3600,13 @@ void building_t::add_window_trim_and_coverings(bool add_trim, bool add_coverings
 				bot.d[dim][!dir] += dscale*(windowsill_depth - window_trim_depth); // shift out further for windowsill
 				top.expand_in_dim(!dim, side_trim_width);
 				bot.expand_in_dim(!dim, side_trim_width);
-				objs.emplace_back(top, TYPE_WALL_TRIM, 0, dim, dir, ext_flags, 1.0, SHAPE_TALL, trim_color);
-				objs.emplace_back(bot, TYPE_WALL_TRIM, 0, dim, dir, ext_flags, 1.0, SHAPE_TALL, trim_color);
+				trim_objs.emplace_back(top, TYPE_WALL_TRIM, 0, dim, dir, ext_flags, 1.0, SHAPE_TALL, trim_color);
+				trim_objs.emplace_back(bot, TYPE_WALL_TRIM, 0, dim, dir, ext_flags, 1.0, SHAPE_TALL, trim_color);
 
 				for (unsigned s = 0; s < 2; ++s) { // left/right sides
 					side.d[!dim][ s] = window.d[!dim][s] - (s ? -1.0 : 1.0)*side_trim_width;
 					side.d[!dim][!s] = window.d[!dim][s];
-					objs.emplace_back(side, TYPE_WALL_TRIM, 0, dim, dir, ext_flags, 1.0, SHAPE_TALL, trim_color);
+					trim_objs.emplace_back(side, TYPE_WALL_TRIM, 0, dim, dir, ext_flags, 1.0, SHAPE_TALL, trim_color);
 				}
 				if (add_separators) { // add cross shaped window pane separator
 					bool is_split(0), has_bathroom_block_window(0);
@@ -3605,7 +3617,7 @@ void building_t::add_window_trim_and_coverings(bool add_trim, bool add_coverings
 						cube_t window_exp(window);
 						window_exp.expand_by_xy(2.0*trim_thickness); // window is shifted by trim_thickness, so need to expand by more than that
 
-						for (room_object_t const &obj : interior->room_geom->objs) { // Note: local 'objs' is really trim_objs
+						for (room_object_t const &obj : objs) {
 							if (obj.type == TYPE_WINDOW && obj.intersects(window_exp)) {has_bathroom_block_window = 1; break;}
 						}
 					}
@@ -3614,10 +3626,10 @@ void building_t::add_window_trim_and_coverings(bool add_trim, bool add_coverings
 						float const sep_hwidth(0.2*side_trim_width);
 						cube_t sep(window); // horizontal separator
 						set_wall_width(sep, window.zc(), sep_hwidth, 2);
-						objs.emplace_back(sep, TYPE_WALL_TRIM, 0, dim, dir, base_flags, 1.0, SHAPE_SHORT, trim_color); // skip !dim ends
+						trim_objs.emplace_back(sep, TYPE_WALL_TRIM, 0, dim, dir, base_flags, 1.0, SHAPE_SHORT, trim_color); // skip !dim ends
 						sep = window; // vertical separator
 						set_wall_width(sep, window.get_center_dim(!dim), sep_hwidth, !dim);
-						objs.emplace_back(sep, TYPE_WALL_TRIM, 0, dim, dir, (base_flags | RO_FLAG_ADJ_BOT | RO_FLAG_ADJ_TOP), 1.0, SHAPE_TALL, trim_color);
+						trim_objs.emplace_back(sep, TYPE_WALL_TRIM, 0, dim, dir, (base_flags | RO_FLAG_ADJ_BOT | RO_FLAG_ADJ_TOP), 1.0, SHAPE_TALL, trim_color);
 					}
 				}
 			} // for xy
