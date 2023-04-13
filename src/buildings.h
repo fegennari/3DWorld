@@ -1347,6 +1347,7 @@ struct building_t : public building_geom_t {
 	void get_all_nearby_ext_door_verts(building_draw_t &bdraw, shader_t &s, vector<point> const &pts, float dist);
 	void player_not_near_building() {register_open_ext_door_state(-1);}
 	int find_ext_door_close_to_point(tquad_with_ix_t &door, point const &pos, float dist) const;
+	bool point_near_ext_door(point const &pos, float dist) const;
 	bool get_building_door_pos_closest_to(point const &target_pos, point &door_pos) const;
 	void get_split_int_window_wall_verts(building_draw_t &bdraw_front, building_draw_t &bdraw_back, point const &only_cont_pt_in, bool make_all_front=0) const;
 	void get_ext_wall_verts_no_sec(building_draw_t &bdraw) const;

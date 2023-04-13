@@ -270,6 +270,7 @@ void building_t::toggle_circuit_breaker(bool is_on, unsigned zone_id, unsigned n
 
 // used for drawing open doors
 int building_t::find_ext_door_close_to_point(tquad_with_ix_t &door, point const &pos, float dist) const {
+	if (doors.empty()) return -1;
 	point query_pt(pos);
 	if (is_rotated()) {do_xy_rotate_inv(bcube.get_cube_center(), query_pt);}
 	int const room_id(get_room_containing_pt(query_pt));
@@ -287,6 +288,16 @@ int building_t::find_ext_door_close_to_point(tquad_with_ix_t &door, point const 
 		if (c.contains_pt(query_pt)) {door = *d; return (d - doors.begin());}
 	} // for d
 	return -1; // not found
+}
+bool building_t::point_near_ext_door(point const &pos, float dist) const { // simplified version of above function
+	if (doors.empty()) return 0;
+	point query_pt(pos);
+	if (is_rotated()) {do_xy_rotate_inv(bcube.get_cube_center(), query_pt);}
+
+	for (auto d = doors.begin(); d != doors.end(); ++d) {
+		if (d->get_bcube().contains_pt_exp(query_pt, dist)) return 1;
+	}
+	return 0;
 }
 
 // used for pedestrians; pos should be outside the building

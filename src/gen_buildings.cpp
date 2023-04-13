@@ -2923,7 +2923,8 @@ public:
 						if (!player_in_building_bcube && !camera_pdu.cube_visible(b.bcube + xlate)) continue; // VFC
 						b.maybe_gen_chimney_smoke();
 						bool const camera_near_building(player_in_building_bcube || b.bcube.contains_pt_xy_exp(camera_xlated, door_open_dist));
-						if (!camera_near_building && !b.has_windows()) continue; // player is outside a windowless building (city office building)
+						// check if player is outside a windowless building (city office building); need to account for open doors and exterior signs over doors
+						if (!camera_near_building && !b.has_windows() && !b.point_near_ext_door(camera_xlated, 5.0*door_open_dist)) continue;
 						if ((display_mode & 0x08) && !player_in_building_bcube && b.is_entire_building_occluded(camera_xlated, oc)) continue; // check occlusion
 						// draw ddetail objects if player is in the building (inc ext basement), even if far from the building center
 						unsigned inc_small(player_in_building_bcube ? 2 : (bdist_sq < rgeom_sm_draw_dist_sq));
