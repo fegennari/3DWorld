@@ -4,6 +4,7 @@ uniform float x1, y1, dx_inv, dy_inv;
 uniform vec4 clip_box1, clip_box2; // {x1 y1 x2 y2} => {x y z w}
 uniform sampler2D height_tex, normal_tex, shadow_tex, weight_tex, noise_tex;
 uniform vec2 xlate = vec2(0.0);
+//uniform float height = 1.0; // from wind.part
 
 in vec2 local_translate;
 
@@ -19,10 +20,9 @@ void main() {
 	vec4 vertex = fg_Vertex;
 	vertex.xy  += local_translate;
 #ifdef ENABLE_VERTEX_CLIP
-	float vx = vertex.x + xlate.x;
-	float vy = vertex.y + xlate.y;
-	if ((vx > clip_box1.x && vy > clip_box1.y && vx < clip_box1.z && vy < clip_box1.w) ||
-	    (vx > clip_box2.x && vy > clip_box2.y && vx < clip_box2.z && vy < clip_box2.w)) {vertex.z -= height;}
+	vec2 v = vertex.xy + xlate.xy;
+	if ((v.x > clip_box1.x && v.y > clip_box1.y && v.x < clip_box1.z && v.y < clip_box1.w) ||
+	    (v.x > clip_box2.x && v.y > clip_box2.y && v.x < clip_box2.z && v.y < clip_box2.w)) {vertex.z -= height;}
 #endif
 	float z_val = texture(height_tex, vec2((vertex.x - x1)*dx_inv, (vertex.y - y1)*dy_inv)).r;
 	float ascale= 1.0;

@@ -1,7 +1,7 @@
 uniform float time   = 0.0;
 uniform float wind_x = 0.0;
 uniform float wind_y = 0.0;
-uniform float height = 1.0; // for grass
+uniform float height = 1.0; // for grass and flowers
 uniform sampler2D wind_noise_tex;
 
 float get_wind_delta(in vec3 vertex, in float flex_comp) {
