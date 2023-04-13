@@ -2775,6 +2775,10 @@ public:
 		if (!reflection_pass) {setup_city_lights(xlate);}
 		is_setup = 1;
 	}
+	static void setup_holes_shader(shader_t &s) {
+		if (!s.is_setup()) {setup_smoke_shaders(s, 0.9, 0, 0, 0, 0, 0, 0);} // min_alpha=0.9 for depth test
+		else {s.enable();}
+	}
 
 	// reflection_pass: 0 = not reflection pass, 1 = reflection for room with exterior wall,
 	// 2 = reflection for room no exterior wall (can't see outside windows), 3 = reflection from mirror in a house (windows and doors need to be drawn)
@@ -2807,7 +2811,7 @@ public:
 		bool have_windows(0), have_wind_lights(0), have_interior(0), this_frame_camera_in_building(0), this_frame_player_in_attic(0), is_city_shader_setup(0);
 		int this_frame_player_in_basement(0);
 		unsigned max_draw_ix(0);
-		shader_t s;
+		shader_t s, holes_shader;
 
 		for (auto i = bcs.begin(); i != bcs.end(); ++i) {
 			assert(*i);
@@ -2996,13 +3000,13 @@ public:
 			else if (!reflection_pass) {end_building_rt_job();}
 			
 			if (draw_interior && have_windows && reflection_pass != 2) { // write to stencil buffer, use stencil test for back facing building walls
-				shader_t holes_shader;
-				setup_smoke_shaders(holes_shader, 0.9, 0, 0, 0, 0, 0, 0); // min_alpha=0.9 for depth test
+				setup_holes_shader(holes_shader);
 				setup_stencil_buffer_write();
 				glStencilOpSeparate((reflection_pass ? GL_BACK : GL_FRONT), GL_KEEP, GL_KEEP, GL_KEEP); // ignore front faces
 				glStencilOpSeparate((reflection_pass ? GL_FRONT : GL_BACK), GL_KEEP, GL_KEEP, GL_INCR); // mark stencil on back faces
 				interior_wind_draw.draw(holes_shader, 0, 1); // draw back facing windows; direct_draw_no_vbo=1
 				end_stencil_write();
+				holes_shader.disable();
 			}
 		} // end have_interior
 		if (!reflection_pass) {
@@ -3097,8 +3101,7 @@ public:
 				bbd.draw_and_clear_ext_tiles(ext_shader, xlate); // draw after ext walls but before windows so that alpha blending works properly
 			}
 			if (!reflection_pass) { // draw windows and doors in depth pass to create holes
-				shader_t holes_shader;
-				setup_smoke_shaders(holes_shader, 0.9, 0, 0, 0, 0, 0, 0); // min_alpha=0.9 for depth test - need same shader to avoid z-fighting
+				setup_holes_shader(holes_shader); // need same shader to avoid z-fighting
 				glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE); // Disable color writing, we only want to write to the Z-Buffer
 				if (!ext_door_draw.empty()) {glDisable(GL_DEPTH_CLAMP);}
 				for (auto i = bcs.begin(); i != bcs.end(); ++i) {(*i)->building_draw_windows.draw(holes_shader, 0);} // draw windows on top of other buildings
