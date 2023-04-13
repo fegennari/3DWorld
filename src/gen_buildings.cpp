@@ -3080,18 +3080,16 @@ public:
 			glCullFace(reflection_pass ? GL_FRONT : GL_BACK); // draw front faces
 
 			// draw people in the player's building here with alpha mask enabled
-			if (defer_ped_draw_vars.valid()) {
+			if (defer_ped_draw_vars.valid() || reflection_pass) {
 				if (global_building_params.enable_people_ai) {enable_animations_for_shader(s);}
 				setup_building_draw_shader(s, global_building_params.people_min_alpha, 1, 0, 0); // enable_indir=1, force_tsl=0, use_texgen=0
-				occlusion_checker_noncity_t oc(*defer_ped_draw_vars.bc);
-				if (!reflection_pass) {oc.set_camera(camera_pdu);} // setup occlusion culling
-				gen_and_draw_people_in_building(ped_draw_vars_t(*defer_ped_draw_vars.building, oc, s, xlate, defer_ped_draw_vars.bix, 0, reflection_pass));
-				reset_interior_lighting_and_end_shader(s);
-			}
-			if (reflection_pass) { // draw last so that alpha blending of hair works properly
-				if (global_building_params.enable_people_ai) {enable_animations_for_shader(s);}
-				setup_building_draw_shader(s, global_building_params.people_min_alpha, 1, 0, 0); // enable_indir=1, force_tsl=0, use_texgen=0
-				draw_player_model(s, xlate, 0); // shadow_only=0
+
+				if (defer_ped_draw_vars.valid()) {
+					occlusion_checker_noncity_t oc(*defer_ped_draw_vars.bc);
+					if (!reflection_pass) {oc.set_camera(camera_pdu);} // setup occlusion culling
+					gen_and_draw_people_in_building(ped_draw_vars_t(*defer_ped_draw_vars.building, oc, s, xlate, defer_ped_draw_vars.bix, 0, reflection_pass));
+				}
+				if (reflection_pass) {draw_player_model(s, xlate, 0);} // draw last so that alpha blending of hair works properly; shadow_only=0
 				reset_interior_lighting_and_end_shader(s);
 			}
 			if (bbd.has_ext_geom()) {
