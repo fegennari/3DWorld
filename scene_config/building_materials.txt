@@ -202,6 +202,25 @@ buildings add_material
 buildings side_color 0.6 0.3 0.2 1.0
 buildings add_material
 
+# siding materials
+# disabled for now because they change building layout and don't mix well with brick buildings
+#buildings house_prob 1.0 # houses only
+#buildings side_tscale 12.0
+#buildings side_color 1.0 1.0 1.0 1.0
+# metal/plastic siding material
+#buildings side_tid buildings/siding.jpg
+#buildings side_nm_tid none
+#buildings add_material
+# wood siding material
+#buildings side_tid buildings/wood_siding.jpg
+#buildings side_nm_tid buildings/wood_siding_normal.jpg
+#buildings house_floor_tscale 64.0
+#buildings house_floor_tid paneling.png
+#buildings house_floor_nm_tid normal_maps/paneling_NRM.jpg
+#buildings basement_floor_tid carpet/carpet1.jpg
+#buildings house_floor_specular 0.60 50.0
+#buildings add_material
+
 
 # concrete and metal buildings - slightly larger
 buildings house_prob 0.0 # no more houses
