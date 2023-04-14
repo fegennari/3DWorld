@@ -3036,7 +3036,23 @@ void building_room_geom_t::add_sign(room_object_t const &c, bool inc_back, bool 
 }
 
 void building_room_geom_t::add_window_sill(room_object_t const &c) {
-	get_untextured_material(0, 0, 0, 0, 1).add_cube_to_verts_untextured(c, apply_light_color(c), ~get_face_mask(c.dim, !c.dir)); // unshadowed, exterior
+	rgeom_mat_t &mat(get_untextured_material(0, 0, 0, 0, 1));
+	unsigned const verts_start(mat.quad_verts.size());
+	mat.add_cube_to_verts_untextured(c, apply_light_color(c), ~get_face_mask(c.dim, !c.dir)); // unshadowed, exterior
+	float const slope_dz(0.5*c.dz());
+	vector3d v1, v2;
+	v1[!c.dim] = 1.0; // side vector
+	v2[ c.dim] = (c.dir ? 1.0 : -1.0); // front vector
+	v2.z = -slope_dz/c.get_sz_dim(c.dim); // sloped downward
+	vector3d const normal(cross_product(v1, v2).get_norm());
+	norm_comp const nc((normal.z < 0.0) ? -normal : normal);
+
+	// now make the top sloped slightly downward on the outside
+	for (auto i = mat.quad_verts.begin()+verts_start; i != mat.quad_verts.end(); ++i) {
+		if (i->v.z != c.z2()) continue; // not the top surface
+		if (i->v[c.dim] == c.d[c.dim][c.dir]) {i->v.z -= slope_dz;}
+		if (i->n[2] == 127) {i->set_norm(nc);} // upward normal
+	}
 }
 
 bool get_dishwasher_for_ksink(room_object_t const &c, cube_t &dishwasher) {

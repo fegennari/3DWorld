@@ -3582,8 +3582,8 @@ void building_t::add_window_trim_and_coverings(bool add_trim, bool add_coverings
 				if (add_ext_sills) {
 					cube_t sill(window);
 					sill.z1() -= 0.04*window_height;
-					sill.z2()  = sill.z1() + 0.03*window_height;
-					sill.expand_in_dim(!dim, 0.05*window_height);
+					sill.z2()  = sill.z1() + 0.035*window_height;
+					sill.expand_in_dim(!dim, 0.050*window_height);
 					sill.d[dim][!dir] -= dscale*window_offset; // flush with exterior wall to avoid clipping through interior
 					sill.d[dim][ dir] -= dscale*0.06*window_height; // extend out from the wall
 					objs.emplace_back(sill, TYPE_WIND_SILL, 0, dim, dir, (RO_FLAG_NOCOLL | RO_FLAG_EXTERIOR), 1.0, SHAPE_CUBE, colorRGBA(0.9, 0.8, 0.65));
