@@ -3586,7 +3586,7 @@ void building_t::add_window_trim_and_coverings(bool add_trim, bool add_coverings
 					sill.expand_in_dim(!dim, 0.050*window_height);
 					sill.d[dim][!dir] -= dscale*window_offset; // flush with exterior wall to avoid clipping through interior
 					sill.d[dim][ dir] -= dscale*0.06*window_height; // extend out from the wall
-					objs.emplace_back(sill, TYPE_WIND_SILL, 0, dim, dir, (RO_FLAG_NOCOLL | RO_FLAG_EXTERIOR), 1.0, SHAPE_CUBE, colorRGBA(0.9, 0.8, 0.65));
+					objs.emplace_back(sill, TYPE_WIND_SILL, 0, dim, dir, (RO_FLAG_NOCOLL | RO_FLAG_EXTERIOR), 1.0, SHAPE_CUBE, get_material().window_color);
 				}
 				if (!add_trim) continue;
 				// add window trim

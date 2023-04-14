@@ -10,7 +10,7 @@ buildings window_width  0.44
 buildings window_height 0.55
 buildings window_xspace 0.56
 buildings window_yspace 0.45
-buildings window_color 0.5 0.5 0.5 1.0 # gray
+buildings window_color 1.0 1.0 1.0 1.0 # white
 buildings max_floorplan_window_xscale 7.5
 buildings max_floorplan_window_yscale 11.0
 
@@ -234,7 +234,6 @@ buildings size_range 0.6 1.2  0.6 1.2  0.6 2.0
 buildings side_tscale 8.0
 buildings side_tid cblock.png
 buildings side_nm_tid normal_maps/cblock_NRM.jpg
-buildings window_color 0.3 0.3 0.3 1.0 # dark gray for higher contrast
 buildings roof_tscale 2.0
 buildings roof_tid mossy_rock.jpg
 buildings roof_nm_tid -1
@@ -244,8 +243,10 @@ buildings floor_tid carpet/office_carpet1.jpg # nice, even has a normal map, but
 buildings floor_nm_tid carpet/office_carpet1_nrm.jpg
 buildings add_material
 
+buildings window_color 0.02 0.02 0.02 1.0 # near black for higher contrast
 buildings side_color 0.7 0.7 0.7 1.0
 buildings add_material
+buildings window_color 0.9 0.9 0.9 1.0 # near white for higher contrast
 buildings side_color 0.4 0.4 0.4 1.0
 buildings add_material
 

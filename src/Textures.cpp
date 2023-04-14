@@ -169,8 +169,8 @@ texture_t(0, 5, 0,    0,    1, 3, 1, "normal_maps/dirt_normal.jpg", 0, 0, 2.0, 1
 texture_t(0, 6, 16,   16,   1, 3, 0, "cyan.png"), // for normal maps
 texture_t(0, 6, 16,   16,   1, 3, 0, "red.png"), // for TT default sand weights texture
 texture_t(0, 5, 0,    0,    1, 3, 1, "hazard_stripes.jpg", 0, 0, 4.0), // 500x500
-texture_t(1, 9, 256,  256,  1, 4, 1, "@windows" , 0, 0, 4.0),  // not real file
-texture_t(1, 9, 256,  256,  1, 4, 1, "@twindows", 0, 0, 4.0),  // not real file
+texture_t(1, 9, 512,  512,  1, 4, 1, "@windows" , 0, 0, 4.0),  // not real file
+texture_t(1, 9, 512,  512,  1, 4, 1, "@twindows", 0, 0, 4.0),  // not real file
 texture_t(0, 6, 0,    0,    1, 3, 1, "keycard.png", 0, 1, 4.0), // 512x512
 // type format width height wrap_mir ncolors use_mipmaps name [invert_y=0 [do_compress=1 [anisotropy=1.0 [mipmap_alpha_weight=1.0 [normal_map=0]]]]]
 };
@@ -1176,14 +1176,14 @@ void gen_building_window_texture(float width_frac, float height_frac) { // Note:
 		assert(height_frac > 0.0 && height_frac < 1.0);
 		float const xspace(0.5*(1.0 - width_frac)), yspace(0.5*(1.0 - height_frac));
 		int const w1(round_fp(xspace*tex.width)), w2(round_fp((1.0 - xspace)*tex.width)), h1(round_fp(yspace*tex.height)), h2(round_fp((1.0 - yspace)*tex.height));
-		int const border(8 + n), w1b(w1 - border), w2b(w2 + border), h1b(h1 - border), h2b(h2 + border); // window borders
+		int const border(tex.width/32 + n), w1b(w1 - border), w2b(w2 + border), h1b(h1 - border), h2b(h2 + border); // window borders
 
 		for (int i = 0; i < tex.height; ++i) {
 			for (int j = 0; j < tex.width; ++j) {
 				int const offset(4*(i*tex.width + j));
 				bool const pane(i > h1 && i <= h2 && j > w1 && j <= w2), frame(i > h1b && i <= h2b && j > w1b && j <= w2b);
 				unsigned char luminance(pane ? 128 : 255); // gray for window, white for border
-				UNROLL_3X(tex_data[offset+i_] = luminance;) // white
+				UNROLL_3X(tex_data[offset+i_] = luminance;)
 				tex_data[offset+3] = (frame ? ((!pane || n==0) ? 255 : 32) : 0); // alpha: partially transparent inside window, opaque border, and transparent outside
 			}
 		}
