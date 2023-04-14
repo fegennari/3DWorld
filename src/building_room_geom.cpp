@@ -1351,9 +1351,18 @@ void building_room_geom_t::add_wall_trim(room_object_t const &c, bool for_closet
 		if (c.flags & RO_FLAG_ADJ_LO) {skip_faces |= ~get_face_mask(c.dim, 0);}
 		if (c.flags & RO_FLAG_ADJ_HI) {skip_faces |= ~get_face_mask(c.dim, 1);}
 		skip_faces |= ((c.flags & RO_FLAG_ADJ_BOT) ? EF_Z1 : 0) | ((c.flags & RO_FLAG_ADJ_TOP) ? EF_Z2 : 0);
-		if (is_exterior) {skip_faces |= ~get_face_mask(c.dim, c.dir);} // skip exterior face
-		mat.add_cube_to_verts_untextured(c, c.color, skip_faces); // is_small, untextured, no shadows
-		if (is_exterior) {get_untextured_material(0, 0, 2, 0, 1).add_cube_to_verts_untextured(c, c.color, get_face_mask(c.dim, c.dir));} // detail, exterior=1, ext face only
+
+		if (is_exterior && (c.flags & RO_FLAG_HAS_EXTRA)) { // fully exterior
+			get_untextured_material(0, 0, 2, 0, 1).add_cube_to_verts_untextured(c, c.color, skip_faces); // is_small, untextured, no shadows
+		}
+		else if (is_exterior) { // half exterior half interior
+			unsigned const face_skip_flags(get_face_mask(c.dim, c.dir)); // skip exterior face
+			mat.add_cube_to_verts_untextured(c, c.color, (skip_faces | ~face_skip_flags)); // is_small, untextured, no shadows
+			get_untextured_material(0, 0, 2, 0, 1).add_cube_to_verts_untextured(c, c.color, face_skip_flags); // detail, exterior=1, ext face only
+		}
+		else {
+			mat.add_cube_to_verts_untextured(c, c.color, skip_faces); // is_small, untextured, no shadows
+		}
 	}
 }
 

@@ -3541,6 +3541,7 @@ void building_t::add_window_trim_and_coverings(bool add_trim, bool add_coverings
 	float const window_trim_width(0.75*get_wall_thickness()), window_trim_depth(1.0*trim_thickness), windowsill_depth(1.0*trim_thickness);
 	float const floor_spacing(get_window_vspace()), window_offset(0.01*floor_spacing); // must match building_draw_t::add_section()
 	colorRGBA const &trim_color(is_house ? WHITE : DK_GRAY);
+	colorRGBA const &frame_color(get_material().window_color);
 	vect_room_object_t &trim_objs(interior->room_geom->trim_objs), &objs(interior->room_geom->objs);
 	static vect_vnctcc_t wall_quad_verts;
 	wall_quad_verts.clear();
@@ -3586,7 +3587,7 @@ void building_t::add_window_trim_and_coverings(bool add_trim, bool add_coverings
 					sill.expand_in_dim(!dim, 0.050*window_height);
 					sill.d[dim][!dir] -= dscale*window_offset; // flush with exterior wall to avoid clipping through interior
 					sill.d[dim][ dir] -= dscale*0.06*window_height; // extend out from the wall
-					objs.emplace_back(sill, TYPE_WIND_SILL, 0, dim, dir, (RO_FLAG_NOCOLL | RO_FLAG_EXTERIOR), 1.0, SHAPE_CUBE, get_material().window_color);
+					objs.emplace_back(sill, TYPE_WIND_SILL, 0, dim, dir, (RO_FLAG_NOCOLL | RO_FLAG_EXTERIOR), 1.0, SHAPE_CUBE, frame_color);
 				}
 				if (!add_trim) continue;
 				// add window trim
@@ -3600,6 +3601,8 @@ void building_t::add_window_trim_and_coverings(bool add_trim, bool add_coverings
 				bot.d[dim][!dir] += dscale*(windowsill_depth - window_trim_depth); // shift out further for windowsill
 				top.expand_in_dim(!dim, side_trim_width);
 				bot.expand_in_dim(!dim, side_trim_width);
+				// interior trim
+				unsigned const trim_start(trim_objs.size());
 				trim_objs.emplace_back(top, TYPE_WALL_TRIM, 0, dim, dir, ext_flags, 1.0, SHAPE_TALL, trim_color);
 				trim_objs.emplace_back(bot, TYPE_WALL_TRIM, 0, dim, dir, ext_flags, 1.0, SHAPE_TALL, trim_color);
 
@@ -3608,7 +3611,19 @@ void building_t::add_window_trim_and_coverings(bool add_trim, bool add_coverings
 					side.d[!dim][!s] = window.d[!dim][s];
 					trim_objs.emplace_back(side, TYPE_WALL_TRIM, 0, dim, dir, ext_flags, 1.0, SHAPE_TALL, trim_color);
 				}
-				if (add_separators) { // add cross shaped window pane separator
+				unsigned const trim_end(trim_objs.size());
+				// exterior trim
+				for (unsigned ix = trim_start; ix < trim_end; ++ix) {
+					room_object_t trim(trim_objs[ix]); // start with interior trim
+					trim.dir  ^= 1; // flip to exterior
+					trim.flags = RO_FLAG_EXTERIOR | RO_FLAG_HAS_EXTRA | RO_FLAG_NOCOLL | (dir ? RO_FLAG_ADJ_LO : RO_FLAG_ADJ_HI); // swap lo/hi flags; flag as fully exterior
+					trim.color = frame_color;
+					trim.d[dim][!dir]  = trim.d[dim][dir]; // shift to other side of the wall
+					trim.d[dim][ dir] -= dscale*2.5*window_trim_depth; // shift away from the wall
+					trim_objs.push_back(trim);
+				} // for i
+				// add cross shaped window pane separators
+				if (add_separators) {
 					bool is_split(0), has_bathroom_block_window(0);
 					int const room_id(get_room_id_for_window(window, dim, dir, is_split));
 					unsigned floor_ix(0); // unused
