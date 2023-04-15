@@ -3306,7 +3306,7 @@ void building_t::add_wall_and_door_trim() { // and window trim
 	//highres_timer_t timer("Add Wall And Door Trim");
 	assert(has_room_geom());
 	float const window_vspacing(get_window_vspace()), floor_thickness(get_floor_thickness()), fc_thick(0.5*floor_thickness), wall_thickness(get_wall_thickness());
-	float const trim_height(get_trim_height()), trim_thickness(get_trim_thickness()), expand_val(2.0*trim_thickness);
+	float const trim_height(get_trim_height()), trim_thickness(get_trim_thickness()), expand_val(2.0*trim_thickness), door_trim_offset(0.025*window_vspacing);
 	float const door_trim_exp(2.0*trim_thickness + 0.5*wall_thickness), door_trim_width(0.5*wall_thickness), floor_to_ceil_height(window_vspacing - floor_thickness);
 	float const trim_toler(0.1*trim_thickness); // required to handle wall intersections that were calculated with FP math and may misalign due to FP rounding error
 	float const ext_wall_toler(0.01*trim_thickness); // required to prevent z-fighting when AA is disabled
@@ -3346,10 +3346,8 @@ void building_t::add_wall_and_door_trim() { // and window trim
 	} // for d
 	for (auto d = doors.begin(); d != doors.end(); ++d) { // exterior doors
 		if (d->type == tquad_with_ix_t::TYPE_RDOOR) continue; // roof access door - requires completely different approach to trim and has not been implemented
-		bool const garage_door(d->type == tquad_with_ix_t::TYPE_GDOOR);
-		cube_t door(d->get_bcube());
-		bool const dim(door.dy() < door.dx());
-		cube_t trim(door);
+		cube_t door(d->get_bcube()), trim(door);
+		bool const dim(door.dy() < door.dx()), garage_door(d->type == tquad_with_ix_t::TYPE_GDOOR);
 		trim.expand_in_dim(dim, door_trim_exp);
 		bool dir(0);
 		unsigned ext_flags(flags);
@@ -3373,15 +3371,19 @@ void building_t::add_wall_and_door_trim() { // and window trim
 					break; // should be only one
 				} // for i
 			}
-			trim.d[dim][dir] -= (dir ? -1.0 : 1.0)*0.025*window_vspacing; // move to to same offset for door
+			trim.d[dim][dir] -= (dir ? -1.0 : 1.0)*door_trim_offset; // move to the same offset for door
 			ext_flags |= (dir ? RO_FLAG_ADJ_HI : RO_FLAG_ADJ_LO);
 			break;
 		}
+		unsigned const side_trim_flags(ext_flags | RO_FLAG_ADJ_BOT | RO_FLAG_ADJ_TOP);
+
+		// add side trim; we could split this into interior vs. exterior geom, but there's no static assignment that works for both open and closed doors,
+		// and it's not very noticeable anyway due to how thin the edges of the door trim are
 		for (unsigned side = 0; side < 2; ++side) { // left/right of door
 			trim.d[!dim][0] = door.d[!dim][side] - (side ? trim_width : 0.0);
 			trim.d[!dim][1] = door.d[!dim][side] + (side ? 0.0 : trim_width);
 			assert(trim.is_strictly_normalized());
-			objs.emplace_back(trim, TYPE_WALL_TRIM, 0, dim, side, (ext_flags | RO_FLAG_ADJ_BOT | RO_FLAG_ADJ_TOP), 1.0, SHAPE_TALL, ext_trim_color); // abuse tall flag
+			objs.emplace_back(trim, TYPE_WALL_TRIM, 0, dim, side, side_trim_flags, 1.0, SHAPE_TALL, ext_trim_color); // abuse tall flag
 		}
 		// add trim at bottom of door for threshold
 		trim.d[!dim][0] = door.d[!dim][0];
@@ -3394,7 +3396,7 @@ void building_t::add_wall_and_door_trim() { // and window trim
 		}
 		if (d->is_building_door()) { // different logic for building doors
 			ext_flags = flags; // unlike hdoors, need to draw the back face to hide the gap betweeen ceiling and floor above
-			trim.d[dim][dir] += (dir ? -1.0 : 1.0)*0.005*window_vspacing; // minor shift back toward building to prevent z-fighting
+			trim.d[dim][dir] += (dir ? -1.0 : 1.0)*0.2*door_trim_offset; // minor shift back toward building to prevent z-fighting
 		}
 		objs.emplace_back(trim, TYPE_WALL_TRIM, 0, dim, dir, ext_flags, 1.0, SHAPE_SHORT, ext_trim_color); // top of door
 	} // for d
