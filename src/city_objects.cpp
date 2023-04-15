@@ -1681,7 +1681,7 @@ void city_obj_placer_t::place_residential_plot_objects(road_plot_t const &plot, 
 			if (tc_radius > 0.25*house.get_sz_dim(!tc_dim)) continue; // house wall is too short - shouldn't happen in the normal case
 			point pos, door_pos;
 			pos.z = i->z2();
-			pos[ tc_dim] = house.d[tc_dim][tc_dir] + (tc_dir ? 1.0 : -1.0)*1.5*tc_radius; // place near this wall of the house
+			pos[ tc_dim] = house.d[tc_dim][tc_dir] + (tc_dir ? 1.0 : -1.0)*1.75*tc_radius; // place near this wall of the house
 			pos[!tc_dim] = rgen.rand_uniform((house.d[!tc_dim][0] + tc_radius), (house.d[!tc_dim][1] - tc_radius));
 			trashcan_t const trashcan(pos, tc_radius, tc_height, 1); // is_cylin=1
 

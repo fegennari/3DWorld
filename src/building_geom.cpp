@@ -1003,7 +1003,7 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 	// white, white, white, white, pink, peach, lt green, lt blue
 	colorRGBA const wall_colors[8] = {WHITE, WHITE, WHITE, WHITE, colorRGBA(1.0, 0.85, 0.85), colorRGBA(1.0, 0.85, 0.75), colorRGBA(0.85, 1.0, 0.85), colorRGBA(0.85, 0.85, 1.0)};
 	wall_color = wall_color.modulate_with(wall_colors[rgen.rand()%8]);
-	if (rgen.rand_bool()) {add_solar_panels(rgen);} // maybe add solar panels
+	if (rgen.rand_bool()) {add_solar_panels   (rgen);} // maybe add solar panels
 	if (rgen.rand_bool()) {add_outdoor_ac_unit(rgen);} // place an outdoor AC unit against an exterior wall 50% of the time, not actually on the roof
 	if (has_basement()) {has_basement_pipes = rgen.rand_bool();}
 	if (interior) {interior->finalize();}
@@ -1018,7 +1018,7 @@ bool building_t::add_outdoor_ac_unit(rand_gen_t &rgen) {
 	if (ac_part.get_sz_dim(!ac_dim) < 4.0*width) return 0; // not enough space
 	float const place_pos(rgen.rand_uniform(ac_part.d[!ac_dim][0]+width, ac_part.d[!ac_dim][1]-width));
 	roof_obj_t ac(ROOF_OBJ_AC);
-	ac.d[ac_dim][!ac_dir] = ac_part.d[ac_dim][ ac_dir] + (ac_dir ? 1.0 : -1.0)*0.1*depth; // place slightly away from the exterior wall
+	ac.d[ac_dim][!ac_dir] = ac_part.d[ac_dim][ ac_dir] + (ac_dir ? 1.0 : -1.0)*0.07*get_window_vspace(); // place slightly away from the exterior wall to avoid window sills
 	ac.d[ac_dim][ ac_dir] = ac     .d[ac_dim][!ac_dir] + (ac_dir ? 1.0 : -1.0)*depth;
 	set_wall_width(ac, place_pos, 0.5*width, !ac_dim);
 	set_cube_zvals(ac, ac_part.z1(), (ac_part.z1() + height));
