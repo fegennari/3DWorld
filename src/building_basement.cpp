@@ -1725,3 +1725,69 @@ door_t const &building_interior_t::get_ext_basement_door() const {
 	return doors[door_ix];
 }
 
+
+// code to join exterior basements of two nearby buildings
+
+float const EXT_BASEMENT_JOIN_DIST = 2.0; // relative to floor spacing
+
+void building_t::try_connect_ext_basement_to_building(building_t &b) {
+	assert(has_ext_basement() && b.has_ext_basement());
+	float const floor_spacing(get_window_vspace()), connect_dist(EXT_BASEMENT_JOIN_DIST*floor_spacing), z_toler(0.1*get_trim_thickness());
+	float const doorway_width(get_doorway_width()), min_shared_wall_len(1.6*doorway_width);
+	assert(b.get_window_vspace() == floor_spacing);
+	cube_t const &other_eb_bc(b.interior->basement_ext_bcube);
+	assert(interior->basement_ext_bcube.z2() == other_eb_bc.z2()); // must be at same elevation
+	assert((unsigned)  interior->ext_basement_hallway_room_id <   interior->rooms.size());
+	assert((unsigned)b.interior->ext_basement_hallway_room_id < b.interior->rooms.size());
+
+	// find nearby candidate rooms
+	for (auto r1 = interior->rooms.begin()+interior->ext_basement_hallway_room_id; r1 != interior->rooms.end(); ++r1) {
+		cube_t search_area(*r1);
+		search_area.expand_by(connect_dist);
+		if (!search_area.intersects(other_eb_bc)) continue; // too far
+
+		for (auto r2 = b.interior->rooms.begin()+b.interior->ext_basement_hallway_room_id; r2 != b.interior->rooms.end(); ++r2) {
+			if (!search_area.intersects(*r2))        continue; // too far
+			if (fabs(r1->z1() - r2->z1()) > z_toler) continue; // different floors/levels; do we need to check toler?
+
+			for (unsigned d = 0; d < 2; ++d) { // join dim {x, y}
+				// check for projection in dim !d
+				float const shared_lo(max(r1->d[!d][0], r2->d[!d][0])), shared_hi(min(r1->d[!d][1], r2->d[!d][1]));
+				if (shared_hi - shared_lo < min_shared_wall_len) continue;
+				cube_t cand_join(*r1);
+				//cout << r1->str() << " | " << r2->str() << endl; // TESTING
+				// TODO: try to join *r1 and *r2
+			} // for d
+		} // for r2
+	} // for r1
+}
+
+void try_join_house_ext_basements(vect_building_t &buildings) {
+	return; // incomplete - not yet enabled
+	// TODO: remember to re-finalize() building interiors when adding rooms
+	timer_t timer("try_join_house_ext_basements");
+	vector<vector<unsigned>> houses_by_city;
+
+	for (auto b = buildings.begin(); b != buildings.end(); ++b) {
+		if (!b->is_in_city || !b->is_house || !b->has_ext_basement()) continue;
+		if (b->city_ix >= houses_by_city.size()) {houses_by_city.resize(b->city_ix+1);}
+		houses_by_city[b->city_ix].push_back(b - buildings.begin());
+	}
+//#pragma omp parallel for schedule(static)
+	for (vector<unsigned> const &work : houses_by_city) {
+		cout << TXT(work.size()) << endl;
+		// do a quadratic iteration to find nearby houses in this city that can potentially be connected
+		for (unsigned i = 0; i < work.size(); ++i) {
+			building_t &b1(buildings[work[i]]);
+			cube_t search_area(b1.interior->basement_ext_bcube);
+			search_area.expand_by_xy(EXT_BASEMENT_JOIN_DIST*b1.get_window_vspace());
+
+			for (unsigned j = i+1; j < work.size(); ++j) {
+				building_t &b2(buildings[work[j]]);
+				if (!search_area.intersects(b2.interior->basement_ext_bcube)) continue; // too far
+				b1.try_connect_ext_basement_to_building(b2);
+			}
+		} // for i
+	} // for work
+}
+

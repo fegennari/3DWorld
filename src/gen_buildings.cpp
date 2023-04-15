@@ -43,6 +43,7 @@ void get_all_model_bcubes(vector<cube_t> &bcubes); // from model3d.h
 cube_t get_building_indir_light_bounds(); // from building_lighting.cpp
 void register_player_not_in_building();
 void parse_universe_name_str_tables();
+void try_join_house_ext_basements(vect_building_t &buildings);
 
 float get_door_open_dist() {return 3.5*CAMERA_RADIUS;}
 
@@ -2440,7 +2441,7 @@ public:
 				mat.side_color.gen_color(b.side_color, rgen_mat);
 				mat.roof_color.gen_color(b.roof_color, rgen_mat);
 				if (use_city_plots) {b.street_dir = (pref_dir ? pref_dir : get_street_dir(b.bcube, pos_range));}
-				if (city_only     ) {b.is_in_city = 1;}
+				if (city_only     ) {b.is_in_city = 1; b.city_ix = city_ix;}
 				add_to_grid(b.bcube, buildings.size(), 0);
 				vector3d const sz(b.bcube.get_size());
 				float const mult[3] = {0.5, 0.5, 1.0}; // half in X,Y and full in Z
@@ -2513,7 +2514,8 @@ public:
 		} // if flatten_mesh
 		{ // open a scope
 			timer_t timer2("Gen Building Geometry", !is_tile);
-			bool const use_mt(!is_tile || global_building_params.gen_building_interiors); // only single threaded for tiles with no interiors, which is a fast case anyway
+			bool const gen_interiors(global_building_params.gen_building_interiors);
+			bool const use_mt(!is_tile || gen_interiors); // only single threaded for tiles with no interiors, which is a fast case anyway
 
 #pragma omp parallel for schedule(static,1) num_threads(2) if (use_mt)
 			for (int i = 0; i < (int)buildings.size(); ++i) {
@@ -2521,6 +2523,7 @@ public:
 				unsigned const rs_ix(city_prob.get(i).same_geom_per_mat[b.is_house] ? b.mat_ix : i); // same material, maybe from same block/city; could also use city_ix
 				b.gen_geometry(rs_ix, 1337*rs_ix+rseed);
 			}
+			if (city_only && gen_interiors && global_building_params.max_ext_basement_room_depth > 0) {try_join_house_ext_basements(buildings);}
 		} // close the scope
 		if (0 && non_city_only) { // perform room graph analysis
 			timer_t timer3("Building Room Graph Analysis");

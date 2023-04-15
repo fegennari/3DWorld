@@ -1192,6 +1192,7 @@ struct building_t : public building_geom_t {
 	uint8_t street_dir=0; // encoded as 2*dim + dir + 1; 0 is unassigned
 	int8_t open_door_ix=-1, basement_part_ix=-1;
 	uint8_t has_chimney=0; // 0=none, 1=interior, 2=exterior with fireplace
+	uint8_t city_ix=0; // supports up to 256 cities
 	bool is_house=0, has_garage=0, has_shed=0, has_int_garage=0, has_courtyard=0, has_complex_floorplan=0, has_helipad=0, has_ac=0;
 	bool has_int_fplace=0, has_parking_garage=0, has_small_part=0, has_basement_door=0, has_basement_pipes=0, parts_generated=0, is_in_city=0, has_skylight_light=0;
 	colorRGBA side_color=WHITE, roof_color=WHITE, detail_color=BLACK, door_color=WHITE, wall_color=WHITE;
@@ -1486,6 +1487,7 @@ public:
 	cube_t get_bcube_inc_extensions() const;
 	cube_t get_full_basement_bcube () const;
 	room_t const &get_ext_basement_hallway() const;
+	void try_connect_ext_basement_to_building(building_t &b);
 	template<typename T> void add_door_verts(cube_t const &D, T &drawer, uint8_t door_type,
 		bool dim, bool dir, float open_amt, bool opens_out, bool exterior, bool on_stairs=0, bool hinge_side=0) const;
 	tquad_with_ix_t set_door_from_cube(cube_t const &c, bool dim, bool dir, unsigned type, float pos_adj,
