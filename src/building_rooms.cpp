@@ -3571,6 +3571,15 @@ void building_t::add_window_trim_and_coverings(bool add_trim, bool add_coverings
 		window.d[dim][ dir] += dscale*ext_wall_toler; // slight bias away from the exterior wall
 		unsigned const ext_flags(RO_FLAG_NOCOLL | (dir ? RO_FLAG_ADJ_HI : RO_FLAG_ADJ_LO));
 
+		if (0 && add_trim && c.dz() > 1.5*floor_spacing) { // multiple floors
+			// add band around edges of wall above first floor; flag as fully exterior; TODO: make this work with ext doors, and draw/connect ends around corners
+			float const zval(c.z1() + floor_spacing), width(2.0*window_trim_depth);
+			cube_t trim(c);
+			set_cube_zvals(trim, zval, zval+width);
+			trim.expand_in_dim(dim, width); // set width adjacen to wall
+			unsigned const flags(RO_FLAG_NOCOLL | (dir ? RO_FLAG_ADJ_LO : RO_FLAG_ADJ_HI) | RO_FLAG_EXTERIOR | RO_FLAG_HAS_EXTRA);
+			trim_objs.emplace_back(trim, TYPE_WALL_TRIM, 0, dim, dir, flags, 1.0, SHAPE_CUBE, trim_color);
+		}
 		for (float z = tz1; z < tz2; z += 1.0) { // each floor
 			float const bot_edge(c.z1() + (z - tz1)*window_height);
 			set_cube_zvals(window, bot_edge+border_z, bot_edge+window_height-border_z);
