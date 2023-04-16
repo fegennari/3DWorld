@@ -3483,7 +3483,7 @@ public:
 		}
 		return 0;
 	}
-	bool check_cube_coll(cube_t const &bcube, bool xy_only, bool inc_basement, building_t const *exclude) const { // Note: pos is in local building space
+	bool check_cube_coll(cube_t const &bcube, bool xy_only, bool inc_basement, building_t const *exclude1, building_t const *exclude2) const { // Note: pos is in local building space
 		if (empty() || !range.intersects_xy(bcube)) return 0; // no buildings, or outside buildings bcube
 		unsigned ixr[2][2];
 		get_grid_range(bcube, ixr);
@@ -3497,7 +3497,7 @@ public:
 
 				for (auto b = ge.bc_ixs.begin(); b != ge.bc_ixs.end(); ++b) {
 					building_t const &building(get_building(b->ix));
-					if (&building == exclude) continue;
+					if (&building == exclude1 || &building == exclude2) continue;
 					// Note: could check individual ext basement rooms, but that's not thread safe
 					if (inc_basement && building.cube_int_ext_basement(bcube)) return 1; // extended basement intersection
 					if (!bcube.intersects_xy(*b)) continue; // no intersection
@@ -3868,9 +3868,9 @@ public:
 		}
 		return 0;
 	}
-	bool check_cube_coll(cube_t const &bcube, bool xy_only, bool inc_basement, building_t const *exclude) const {
+	bool check_cube_coll(cube_t const &bcube, bool xy_only, bool inc_basement, building_t const *exclude1, building_t const *exclude2) const {
 		for (auto i = tiles.begin(); i != tiles.end(); ++i) {
-			if (i->second.check_cube_coll(bcube, xy_only, inc_basement, exclude)) return 1;
+			if (i->second.check_cube_coll(bcube, xy_only, inc_basement, exclude1, exclude2)) return 1;
 		}
 		return 0;
 	}
@@ -4037,10 +4037,10 @@ bool check_buildings_no_grass(point const &pos) { // for tiled terrain mode; pos
 	if (building_tiles  .check_sphere_coll(center, pos, 0.0, 1, nullptr)) return 1;
 	return 0;
 }
-bool check_buildings_cube_coll(cube_t const &c, bool xy_only, bool inc_basement, building_t const *exclude) {
-	return (building_creator_city.check_cube_coll(c, xy_only, inc_basement, exclude) ||
-		building_creator.check_cube_coll(c, xy_only, inc_basement, exclude) ||
-		building_tiles.check_cube_coll(c, xy_only, inc_basement, exclude));
+bool check_buildings_cube_coll(cube_t const &c, bool xy_only, bool inc_basement, building_t const *exclude1, building_t const *exclude2) {
+	return (building_creator_city.check_cube_coll(c, xy_only, inc_basement, exclude1, exclude2) ||
+		building_creator.check_cube_coll(c, xy_only, inc_basement, exclude1, exclude2) ||
+		building_tiles.check_cube_coll(c, xy_only, inc_basement, exclude1, exclude2));
 }
 void get_driveway_sphere_coll_cubes(point const &pos, float radius, bool xy_only, vect_cube_t &out) { // for tiled terrain mode; pos is in local space
 	building_creator.get_driveway_sphere_coll_cubes(pos, radius, xy_only, out);

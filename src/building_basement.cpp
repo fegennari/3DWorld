@@ -1425,7 +1425,7 @@ struct ext_basement_room_params_t {
 	vector<stairs_place_t> stairs;
 };
 
-bool building_t::is_basement_room_placement_valid(cube_t &room, ext_basement_room_params_t &P, bool dim, bool dir, bool *add_end_door) const {
+bool building_t::is_basement_room_placement_valid(cube_t &room, ext_basement_room_params_t &P, bool dim, bool dir, bool *add_end_door, building_t const *exclude) const {
 	cube_t test_cube(room);
 	test_cube.expand_in_dim(dim, -0.1*get_wall_thickness()); // shrink slightly to avoid intersections with our parent room
 	test_cube.expand_in_dim(2, -0.01*test_cube.dz()); // shrink slightly so that rooms on different floors can cross over each other
@@ -1452,10 +1452,10 @@ bool building_t::is_basement_room_placement_valid(cube_t &room, ext_basement_roo
 		if (avoid.intersects(room)) return 0;
 	}
 	float const ceiling_zval(room.z2() - get_fc_thickness());
-	if (query_min_height(room, ceiling_zval) < ceiling_zval) return 0; // check for terrain clipping through ceiling
+	if (query_min_height(room, ceiling_zval) < ceiling_zval)  return 0; // check for terrain clipping through ceiling
 	// check for other buildings, including their extended basements;
 	// Warning: technically not thread safe, since we can be adding basements to another building at the same time, but seems to be okay in practice
-	if (check_buildings_cube_coll(room, 0, 1, this))         return 0; // xy_only=0, inc_basement=1, exclude ourself
+	if (check_buildings_cube_coll(room, 0, 1, this, exclude)) return 0; // xy_only=0, inc_basement=1, exclude ourself
 	cube_t const grid_bcube(get_grid_bcube_for_building(*this));
 	assert(!grid_bcube.is_all_zeros()); // must be found
 	assert(grid_bcube.contains_cube_xy(bcube)); // must contain our building
