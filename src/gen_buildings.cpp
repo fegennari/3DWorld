@@ -2076,7 +2076,7 @@ class building_creator_t {
 		}
 		return (gxy[1]*grid_sz + gxy[0]);
 	}
-	void get_grid_range(cube_t const &bcube, unsigned ixr[2][2]) const { // {lo,hi}x{x,y}
+	void get_grid_range(cube_t const &bcube, unsigned ixr[2][2], bool expand_by_one=0) const { // {lo,hi}x{x,y}
 		point llc(bcube.get_llc()), urc(bcube.get_urc());
 		range.clamp_pt_xy(llc);
 		range.clamp_pt_xy(urc);
@@ -2085,6 +2085,8 @@ class building_creator_t {
 			ixr[0][d] = unsigned(v1*(grid_sz-1));
 			ixr[1][d] = unsigned(v2*(grid_sz-1));
 			assert(ixr[0][d] < grid_sz && ixr[1][d] < grid_sz);
+			if (expand_by_one && ixr[0][d]   > 0      ) {--ixr[0][d];}
+			if (expand_by_one && ixr[1][d]+1 < grid_sz) {++ixr[1][d];}
 		}
 	}
 	void add_to_grid(cube_t const &bcube, unsigned bix, bool is_road_seg) {
@@ -3483,10 +3485,11 @@ public:
 		}
 		return 0;
 	}
-	bool check_cube_coll(cube_t const &bcube, bool xy_only, bool inc_basement, building_t const *exclude1, building_t const *exclude2) const { // Note: pos is in local building space
+	// used for extended basement intersection checks; Note: bcube is in local building space
+	bool check_cube_coll(cube_t const &bcube, bool xy_only, bool inc_basement, building_t const *exclude1, building_t const *exclude2) const {
 		if (empty() || !range.intersects_xy(bcube)) return 0; // no buildings, or outside buildings bcube
 		unsigned ixr[2][2];
-		get_grid_range(bcube, ixr);
+		get_grid_range(bcube, ixr, 1); // expand_by_one=1; buildings can extend outside grid bcubes, so we need to look in adjacent grids
 
 		// Note: can't check driveways/road_segs because they may not have been created yet
 		for (unsigned y = ixr[0][1]; y <= ixr[1][1]; ++y) {
