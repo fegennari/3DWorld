@@ -1454,7 +1454,7 @@ bool building_t::is_basement_room_placement_valid(cube_t &room, ext_basement_roo
 	float const ceiling_zval(room.z2() - get_fc_thickness());
 	if (query_min_height(room, ceiling_zval) < ceiling_zval)  return 0; // check for terrain clipping through ceiling
 	// check for other buildings, including their extended basements;
-	// Warning: technically not thread safe, since we can be adding basements to another building at the same time, but seems to be okay in practice
+	// Warning: not thread safe, since we can be adding basements to another building at the same time
 	if (check_buildings_cube_coll(room, 0, 1, this, exclude)) return 0; // xy_only=0, inc_basement=1, exclude ourself
 	cube_t const grid_bcube(get_grid_bcube_for_building(*this));
 	assert(!grid_bcube.is_all_zeros()); // must be found
