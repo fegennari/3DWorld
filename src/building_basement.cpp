@@ -1730,15 +1730,22 @@ door_t const &building_interior_t::get_ext_basement_door() const {
 
 float const EXT_BASEMENT_JOIN_DIST = 2.0; // relative to floor spacing
 
+void populate_params_from_building(building_interior_t const &bi, ext_basement_room_params_t &P) {
+	if (!P.rooms.empty()) return; // already populated
+	for (auto r = bi.rooms.begin()+bi.ext_basement_hallway_room_id+1; r != bi.rooms.end(); ++r) {P.rooms.emplace_back(*r, r->is_hallway, r->has_stairs);}
+	for (auto s = bi.stairwells.begin(); s != bi.stairwells.end(); ++s) {P.stairs.emplace_back(*s, s->dim, s->dir, 0);} // add_railing=0 (unused)
+}
 void building_t::try_connect_ext_basement_to_building(building_t &b) {
 	assert(has_ext_basement() && b.has_ext_basement());
-	float const floor_spacing(get_window_vspace()), connect_dist(EXT_BASEMENT_JOIN_DIST*floor_spacing), z_toler(0.1*get_trim_thickness());
-	float const doorway_width(get_doorway_width()), min_shared_wall_len(1.6*doorway_width);
+	float const floor_spacing(get_window_vspace()), wall_thickness(get_wall_thickness());
+	float const connect_dist(EXT_BASEMENT_JOIN_DIST*floor_spacing), z_toler(0.1*get_trim_thickness());
+	float const doorway_width(get_doorway_width()), wall_hwidth(0.8*doorway_width), min_shared_wall_len(2.01*wall_hwidth);
 	assert(b.get_window_vspace() == floor_spacing);
 	cube_t const &other_eb_bc(b.interior->basement_ext_bcube);
 	assert(interior->basement_ext_bcube.z2() == other_eb_bc.z2()); // must be at same elevation
 	assert((unsigned)  interior->ext_basement_hallway_room_id <   interior->rooms.size());
 	assert((unsigned)b.interior->ext_basement_hallway_room_id < b.interior->rooms.size());
+	ext_basement_room_params_t P, Pb, Padd; // P=input rooms for *this, Pb=input rooms for b, Padd=new rooms output for *this
 
 	// find nearby candidate rooms
 	for (auto r1 = interior->rooms.begin()+interior->ext_basement_hallway_room_id; r1 != interior->rooms.end(); ++r1) {
@@ -1749,23 +1756,44 @@ void building_t::try_connect_ext_basement_to_building(building_t &b) {
 		for (auto r2 = b.interior->rooms.begin()+b.interior->ext_basement_hallway_room_id; r2 != b.interior->rooms.end(); ++r2) {
 			if (!search_area.intersects(*r2))        continue; // too far
 			if (fabs(r1->z1() - r2->z1()) > z_toler) continue; // different floors/levels; do we need to check toler?
-
-			for (unsigned d = 0; d < 2; ++d) { // join dim {x, y}
-				// check for projection in dim !d
+			
+			if (r1->intersects(*r2)) { // fails at -1.07, -15.7
+				cout << "Error: Invalid intersection of rooms at " << r1->str() << " and " << r2->str() << endl;
+				continue; // uuuuh, just leave the rooms be, I guess...
+			}
+			for (unsigned d = 0; d < 2; ++d) { // r1/r2 join dim {x, y}
 				float const shared_lo(max(r1->d[!d][0], r2->d[!d][0])), shared_hi(min(r1->d[!d][1], r2->d[!d][1]));
-				if (shared_hi - shared_lo < min_shared_wall_len) continue;
+				if (shared_hi - shared_lo < min_shared_wall_len) continue; // check for projection in dim !d long enough to place a hallway and door
+				float const door_center(0.5*(shared_lo + shared_hi)); // exactly halfway; TODO: make random from (shared_lo+wall_hwidth, shared_hi-wall_hwidth)
+				bool const dir(r1->d[d][0] < r2->d[d][0]); // dir sign from r1 => r2 in dim d
 				cube_t cand_join(*r1);
-				//cout << r1->str() << " | " << r2->str() << endl; // TESTING
-				// TODO: try to join *r1 and *r2
+				cand_join.d[d][ dir] = r2->d[d][!dir];
+				cand_join.d[d][!dir] = r1->d[d][ dir];
+				set_wall_width(cand_join, door_center, wall_hwidth, !d);
+				assert(cand_join.is_strictly_normalized());
+				cube_t test_cube(cand_join);
+				test_cube.expand_in_dim(d, -wall_thickness); // shrink ends to avoid false intersection with rooms at either end
+				populate_params_from_building(*  interior, P );
+				populate_params_from_building(*b.interior, Pb);
+				if (!  is_basement_room_placement_valid(test_cube, P,  d,  dir, nullptr, &b  )) continue; // add_end_door=nullptr
+				if (!b.is_basement_room_placement_valid(test_cube, Pb, d, !dir, nullptr, this)) continue; // add_end_door=nullptr
+				//if (fabs(r1->x1()) < 10.0 && fabs(r1->y1()) < 10.0) {cout << r1->str() << " | " << r2->str() << endl;} // TESTING
+				Padd.rooms.emplace_back(cand_join, 1, 0); // is_hallway=1, has_stairs=0
 			} // for d
 		} // for r2
 	} // for r1
+	if (Padd.rooms.empty()) return; // failed to connect
+
+	for (auto const &r : Padd.rooms) { // add any new rooms from above
+		if (fabs(r.x1()) < 10.0 && fabs(r.y1()) < 10.0) {cout << r.str() << endl;} // TESTING; first at -0.9, -8.8
+		interior->place_exterior_room(r, r, get_fc_thickness(), wall_thickness, P, basement_part_ix, 0, r.is_hallway);
+	}
+	interior->remove_excess_capacity(); // optional optimization
 }
 
 void try_join_house_ext_basements(vect_building_t &buildings) {
 	return; // incomplete - not yet enabled
-	// TODO: remember to re-finalize() building interiors when adding rooms
-	timer_t timer("try_join_house_ext_basements");
+	timer_t timer("Join House Basements");
 	vector<vector<unsigned>> houses_by_city;
 
 	for (auto b = buildings.begin(); b != buildings.end(); ++b) {
