@@ -1511,7 +1511,7 @@ bool building_t::add_underground_exterior_rooms(rand_gen_t &rgen, cube_t const &
 		bool const against_wall[2] = {1, 1};
 		landing.set_against_wall(against_wall);
 		stairs_landing_base_t stairwell(landing);
-		landing  .z1() = stairs.z2() - 2.0*fc_thick;
+		landing  .z1()  = stairs.z2() - 2.0*fc_thick;
 		stairwell.z2() += 0.99*get_floor_ceil_gap(); // bottom of ceiling of upper part; must cover z-range of upper floor for AIs and room object collisions
 		interior->landings.push_back(landing);
 		interior->stairwells.emplace_back(stairwell, 1); // num_floors=1
@@ -1551,6 +1551,17 @@ bool building_t::add_ext_basement_rooms_recur(extb_room_t &parent_room, ext_base
 	return was_added;
 }
 
+cube_t building_t::add_ext_basement_door(cube_t const &room, float door_width, bool dim, bool dir, bool is_end_room, rand_gen_t &rgen) {
+	float const fc_thick(get_fc_thickness());
+	cube_t door;
+	set_cube_zvals(door, room.z1()+fc_thick, room.z2()-fc_thick);
+	set_wall_width(door, room.get_center_dim(!dim), 0.5*door_width, !dim);
+	door.d[dim][0] = door.d[dim][1] = room.d[dim][dir]; // one end of the room
+	door_t Door(door, dim, !dir, rgen.rand_bool());
+	add_interior_door(Door, 0, !is_end_room); // open 50% of the time; is_bathroom=0, make_unlocked=!is_end_room
+	door.expand_in_dim(dim, 2.0*get_wall_thickness());
+	return door;
+}
 cube_t building_t::add_and_connect_ext_basement_room(extb_room_t &room, ext_basement_room_params_t &P,
 	float door_width, bool dim, bool dir, bool is_end_room, unsigned depth, bool const add_doors[2], rand_gen_t &rgen)
 {
@@ -1558,17 +1569,9 @@ cube_t building_t::add_and_connect_ext_basement_room(extb_room_t &room, ext_base
 	unsigned const cur_room_ix(P.rooms.size());
 	P.rooms.push_back(room);
 	// add a connecting door at one or both ends
-	float const fc_thick(get_fc_thickness());
-
 	for (unsigned d = 0; d < 2; ++d) {
 		if (!add_doors[d]) continue; // no door at this end
-		cube_t door;
-		set_cube_zvals(door, room.z1()+fc_thick, room.z2()-fc_thick);
-		set_wall_width(door, room.get_center_dim(!dim), 0.5*door_width, !dim);
-		door.d[dim][0] = door.d[dim][1] = room.d[dim][d]; // one end of the room
-		door_t Door(door, dim, !d, rgen.rand_bool());
-		add_interior_door(Door, 0, !is_end_room); // open 50% of the time; is_bathroom=0, make_unlocked=!is_end_room
-		door.expand_in_dim(dim, 2.0*get_wall_thickness());
+		cube_t const door(add_ext_basement_door(room, door_width, dim, d, is_end_room, rgen));
 		P.wall_exclude.push_back(door);
 		room.conn_bcube.assign_or_union_with_cube(door);
 	}
@@ -1746,6 +1749,8 @@ void building_t::try_connect_ext_basement_to_building(building_t &b) {
 	assert((unsigned)  interior->ext_basement_hallway_room_id <   interior->rooms.size());
 	assert((unsigned)b.interior->ext_basement_hallway_room_id < b.interior->rooms.size());
 	ext_basement_room_params_t P, Pb, Padd; // P=input rooms for *this, Pb=input rooms for b, Padd=new rooms output for *this
+	rand_gen_t rgen;
+	rgen.set_state(interior->rooms.size(), b.interior->rooms.size());
 
 	// find nearby candidate rooms
 	for (auto r1 = interior->rooms.begin()+interior->ext_basement_hallway_room_id; r1 != interior->rooms.end(); ++r1) {
@@ -1757,14 +1762,14 @@ void building_t::try_connect_ext_basement_to_building(building_t &b) {
 			if (!search_area.intersects(*r2))        continue; // too far
 			if (fabs(r1->z1() - r2->z1()) > z_toler) continue; // different floors/levels; do we need to check toler?
 			
-			if (r1->intersects(*r2)) { // fails at -1.07, -15.7
+			if (r1->intersects(*r2)) { // previously failed at -1.12, -15.7
 				cout << "Error: Invalid intersection of rooms at " << r1->str() << " and " << r2->str() << endl;
 				continue; // uuuuh, just leave the rooms be, I guess...
 			}
 			for (unsigned d = 0; d < 2; ++d) { // r1/r2 join dim {x, y}
 				float const shared_lo(max(r1->d[!d][0], r2->d[!d][0])), shared_hi(min(r1->d[!d][1], r2->d[!d][1]));
 				if (shared_hi - shared_lo < min_shared_wall_len) continue; // check for projection in dim !d long enough to place a hallway and door
-				float const door_center(0.5*(shared_lo + shared_hi)); // exactly halfway; TODO: make random from (shared_lo+wall_hwidth, shared_hi-wall_hwidth)
+				float const door_center(rgen.rand_uniform(shared_lo+wall_hwidth, shared_hi-wall_hwidth));
 				bool const dir(r1->d[d][0] < r2->d[d][0]); // dir sign from r1 => r2 in dim d
 				cube_t cand_join(*r1);
 				cand_join.d[d][ dir] = r2->d[d][!dir];
@@ -1778,7 +1783,7 @@ void building_t::try_connect_ext_basement_to_building(building_t &b) {
 				if (!  is_basement_room_placement_valid(test_cube, P,  d,  dir, nullptr, &b  )) continue; // add_end_door=nullptr
 				if (!b.is_basement_room_placement_valid(test_cube, Pb, d, !dir, nullptr, this)) continue; // add_end_door=nullptr
 				//if (fabs(r1->x1()) < 10.0 && fabs(r1->y1()) < 10.0) {cout << r1->str() << " | " << r2->str() << endl;} // TESTING
-				Padd.rooms.emplace_back(cand_join, 1, 0); // is_hallway=1, has_stairs=0
+				Padd.rooms.emplace_back(cand_join, 1, 0, d); // is_hallway=1, has_stairs=0
 			} // for d
 		} // for r2
 	} // for r1
@@ -1787,6 +1792,17 @@ void building_t::try_connect_ext_basement_to_building(building_t &b) {
 	for (auto const &r : Padd.rooms) { // add any new rooms from above
 		if (fabs(r.x1()) < 10.0 && fabs(r.y1()) < 10.0) {cout << r.str() << endl;} // TESTING; first at -0.9, -8.8
 		interior->place_exterior_room(r, r, get_fc_thickness(), wall_thickness, P, basement_part_ix, 0, r.is_hallway);
+		// place doors at each end
+		for (unsigned dir = 0; dir < 2; ++dir) {
+			cube_t const door(add_ext_basement_door(r, doorway_width, r.hallway_dim, dir, 0, rgen)); // is_end_room=0
+			// subtract door from walls of each building
+			for (unsigned bix = 0; bix < 2; ++bix) {
+				building_interior_t &bi(*(bix ? b : *this).interior);
+				vect_cube_t &walls(bi.walls[r.hallway_dim]);
+				subtract_cube_from_cubes(door, walls);
+				//for (unsigned wix = 0; wix < walls.size(); ++wix) {}
+			} // for bix
+		} // for dir
 	}
 	interior->remove_excess_capacity(); // optional optimization
 }
@@ -1803,7 +1819,7 @@ void try_join_house_ext_basements(vect_building_t &buildings) {
 	}
 //#pragma omp parallel for schedule(static)
 	for (vector<unsigned> const &work : houses_by_city) {
-		cout << TXT(work.size()) << endl;
+		//cout << TXT(work.size()) << endl;
 		// do a quadratic iteration to find nearby houses in this city that can potentially be connected
 		for (unsigned i = 0; i < work.size(); ++i) {
 			building_t &b1(buildings[work[i]]);

@@ -1006,8 +1006,8 @@ struct room_t : public cube_t { // size=64
 
 struct extb_room_t : public cube_t { // extended basement room candidate
 	cube_t conn_bcube;
-	bool is_hallway, has_stairs;
-	extb_room_t(cube_t const &c, bool is_hallway_, bool has_stairs_=0) : cube_t(c), is_hallway(is_hallway_), has_stairs(has_stairs_) {}
+	bool is_hallway, has_stairs, hallway_dim; // Note: hallway_dim only used for connecting between two buildings
+	extb_room_t(cube_t const &c, bool is_hallway_, bool has_stairs_=0, bool dim=0) : cube_t(c), is_hallway(is_hallway_), has_stairs(has_stairs_), hallway_dim(dim) {}
 	void clip_hallway_to_conn_bcube(bool dim);
 };
 typedef vector<extb_room_t> vect_extb_room_t;
@@ -1518,6 +1518,7 @@ private:
 	bool is_basement_room_placement_valid(cube_t &room, ext_basement_room_params_t &P, bool dim, bool dir, bool *add_end_door=nullptr, building_t const *exclude=nullptr) const;
 	bool add_underground_exterior_rooms(rand_gen_t &rgen, cube_t const &door_bcube, bool wall_dim, bool wall_dir, float length_mult);
 	bool add_ext_basement_rooms_recur(extb_room_t &parent_room, ext_basement_room_params_t &P, float door_width, bool dim, unsigned depth, rand_gen_t &rgen);
+	cube_t add_ext_basement_door(cube_t const &room, float door_width, bool dim, bool dir, bool is_end_room, rand_gen_t &rgen);
 	cube_t add_and_connect_ext_basement_room(extb_room_t &room, ext_basement_room_params_t &P,
 		float door_width, bool dim, bool dir, bool is_end_room, unsigned depth, bool const add_doors[2], rand_gen_t &rgen);
 	void end_ext_basement_hallway(extb_room_t &room, cube_t const &conn_bcube, ext_basement_room_params_t &P,
