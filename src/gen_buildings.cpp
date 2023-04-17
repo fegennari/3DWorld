@@ -3493,7 +3493,12 @@ public:
 	bool check_cube_coll(cube_t const &bcube, bool xy_only, bool inc_basement, building_t const *exclude1, building_t const *exclude2) const {
 		if (empty() || !range.intersects_xy(bcube)) return 0; // no buildings, or outside buildings bcube
 		unsigned ixr[2][2];
-		get_grid_range(bcube, ixr, 1); // expand_by_one=1; buildings can extend outside grid bcubes, so we need to look in adjacent grids
+		// buildings can extend outside grid bcubes, so we need to look in adjacent grids;
+		// note that buildings are actually added to each grid they overlap, but that's their bcube only, and doesn't include their extended basement (which is added later);
+		// extended basements are limited to the grid containing the building's center, but the grid bcube can extend outside the grid itself
+		// due to other buildings that extend off the grid, even if the current building is completely contained and isn't itself in the adjacent grid
+		bool const expand_by_one(inc_basement); // example: (-1.12, -15.7)
+		get_grid_range(bcube, ixr, expand_by_one);
 
 		// Note: can't check driveways/road_segs because they may not have been created yet
 		for (unsigned y = ixr[0][1]; y <= ixr[1][1]; ++y) {
