@@ -1783,7 +1783,7 @@ void building_t::try_connect_ext_basement_to_building(building_t &b) {
 				if (!  is_basement_room_placement_valid(test_cube, P,  d,  dir, nullptr, &b  )) continue; // add_end_door=nullptr
 				if (!b.is_basement_room_placement_valid(test_cube, Pb, d, !dir, nullptr, this)) continue; // add_end_door=nullptr
 				//if (fabs(r1->x1()) < 10.0 && fabs(r1->y1()) < 10.0) {cout << r1->str() << " | " << r2->str() << endl;} // TESTING
-				Padd.rooms.emplace_back(cand_join, 1, 0, d); // is_hallway=1, has_stairs=0
+				Padd.rooms.emplace_back(cand_join, 1, 0, d, dir); // is_hallway=1, has_stairs=0
 			} // for d
 		} // for r2
 	} // for r1
@@ -1794,17 +1794,17 @@ void building_t::try_connect_ext_basement_to_building(building_t &b) {
 		interior->place_exterior_room(r, r, get_fc_thickness(), wall_thickness, P, basement_part_ix, 0, r.is_hallway);
 		// place doors at each end
 		for (unsigned dir = 0; dir < 2; ++dir) {
-			cube_t const door(add_ext_basement_door(r, doorway_width, r.hallway_dim, dir, 0, rgen)); // is_end_room=0
+			building_t &door_dest((bool(dir) ^ r.connect_dir) ? *this : b); // add door to the building whose room it connects to
+			cube_t const door(door_dest.add_ext_basement_door(r, doorway_width, r.hallway_dim, dir, 0, rgen)); // is_end_room=0
 			// subtract door from walls of each building
 			for (unsigned bix = 0; bix < 2; ++bix) {
 				building_interior_t &bi(*(bix ? b : *this).interior);
-				vect_cube_t &walls(bi.walls[r.hallway_dim]);
-				subtract_cube_from_cubes(door, walls);
-				//for (unsigned wix = 0; wix < walls.size(); ++wix) {}
-			} // for bix
+				subtract_cube_from_cubes(door, bi.walls[r.hallway_dim]);
+			}
 		} // for dir
 	}
-	interior->remove_excess_capacity(); // optional optimization
+	interior  ->remove_excess_capacity(); // optional optimization
+	b.interior->remove_excess_capacity(); // optional optimization
 }
 
 void try_join_house_ext_basements(vect_building_t &buildings) {
