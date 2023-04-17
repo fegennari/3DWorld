@@ -10,9 +10,11 @@
 
 enum {PIPE_TYPE_SEWER=0, PIPE_TYPE_CW, PIPE_TYPE_HW, PIPE_TYPE_GAS, NUM_PIPE_TYPES};
 
+extern int display_mode;
 extern float DX_VAL_INV, DY_VAL_INV;
 extern building_params_t global_building_params;
 extern city_params_t city_params; // for num_cars
+extern building_t const *player_building;
 
 car_t car_from_parking_space(room_object_t const &o);
 void subtract_cube_from_floor_ceil(cube_t const &c, vect_cube_t &fs);
@@ -1789,28 +1791,31 @@ void building_t::try_connect_ext_basement_to_building(building_t &b) {
 		} // for r2
 	} // for r1
 	if (Padd.rooms.empty()) return; // failed to connect
+	building_t *const buildings[2] = {this, &b};
 
+	for (unsigned bix = 0; bix < 2; ++bix) {
+		if (!buildings[bix]->interior->conn_info) {buildings[bix]->interior->conn_info.reset(new building_conn_info_t);}
+	}
 	for (auto const &r : Padd.rooms) { // add any new rooms from above
-		// TODO: tag room so that no objects are placed on end walls
-		// TODO: lights and objects draw for other building
-		// TODO: wall texture Z-fighting
+		// TODO: lights draw for other building
+		// TODO: objects draw for other building
+		// TODO: lights flow between buildings
 		// TODO: player walk between houses
+		// TODO: player open doors from either side
+		// TODO: wall texture Z-fighting
 		if (fabs(r.x1()) < 10.0 && fabs(r.y1()) < 10.0) {cout << r.str() << endl;} // TESTING; first at -0.9, -8.8
 		unsigned const is_building_conn(r.hallway_dim ? 2 : 1);
 		interior->place_exterior_room(r, r, get_fc_thickness(), wall_thickness, P, basement_part_ix, 0, r.is_hallway, is_building_conn);
 		// place doors at each end
 		for (unsigned dir = 0; dir < 2; ++dir) {
-			building_t &door_dest((bool(dir) ^ r.connect_dir) ? *this : b); // add door to the building whose room it connects to
-			cube_t const door(door_dest.add_ext_basement_door(r, doorway_width, r.hallway_dim, dir, 0, rgen)); // is_end_room=0
+			building_t *door_dest(buildings[bool(dir) ^ r.connect_dir ^ 1]); // add door to the building whose room it connects to
+			cube_t const door(door_dest->add_ext_basement_door(r, doorway_width, r.hallway_dim, dir, 0, rgen)); // is_end_room=0
 			// subtract door from walls of each building
-			for (unsigned bix = 0; bix < 2; ++bix) {
-				building_interior_t &bi(*(bix ? b : *this).interior);
-				subtract_cube_from_cubes(door, bi.walls[r.hallway_dim]);
-			}
+			for (unsigned bix = 0; bix < 2; ++bix) {subtract_cube_from_cubes(door, buildings[bix]->interior->walls[r.hallway_dim]);}
 		} // for dir
-	}
-	interior  ->remove_excess_capacity(); // optional optimization
-	b.interior->remove_excess_capacity(); // optional optimization
+		for (unsigned bix = 0; bix < 2; ++bix) {buildings[bix]->interior->conn_info->add_connection(buildings[!bix], r);} // connect both ways
+	} // for r
+	for (unsigned bix = 0; bix < 2; ++bix) {buildings[bix]->interior->remove_excess_capacity();} // optional optimization
 }
 
 void try_join_house_ext_basements(vect_building_t &buildings) {
@@ -1840,4 +1845,42 @@ void try_join_house_ext_basements(vect_building_t &buildings) {
 		} // for i
 	} // for work
 }
+
+building_t *building_t::get_conn_bldg_for_pt(point const &p) const {
+	if (!interior || !interior->conn_info) return nullptr;
+	return interior->conn_info->get_conn_bldg_for_pt(p);
+}
+bool building_t::is_visible_through_conn(building_t const &b, vector3d const &xlate, float view_dist) const {
+	return (interior && interior->conn_info && interior->conn_info->is_visible_through_conn(b, xlate, view_dist));
+}
+bool building_t::interior_visible_from_other_building_ext_basement(vector3d const &xlate) const {
+	if (player_building == nullptr || player_building == this || !interior || !interior->conn_info) return 0;
+	float const view_dist(8.0*get_window_vspace()); // arbitrary constant, should reflect length of largest hallway
+	return player_building->is_visible_through_conn(*this, xlate, view_dist) || 1;
+}
+
+void building_conn_info_t::add_connection(building_t *b, cube_t const &room) {
+	if (conn.empty() || conn.back().b != b) {conn.emplace_back(b);} // register a new building if needed
+	conn.back().rooms.push_back(room);
+}
+building_t *building_conn_info_t::get_conn_bldg_for_pt(point const &p) const {
+	for (conn_pt_t const &c : conn) {
+		for (cube_t const &room : c.rooms) {
+			if (room.contains_pt(p)) return c.b;
+		}
+	}
+	return nullptr;
+}
+bool building_conn_info_t::is_visible_through_conn(building_t const &b, vector3d const &xlate, float view_dist) const {
+	for (conn_pt_t const &c : conn) {
+		if (c.b != &b) continue; // skip wrong building
+
+		for (cube_t const &room : c.rooms) {
+			cube_t const room_bs(room + xlate);
+			if (room_bs.closest_dist_less_than(camera_pdu.pos, view_dist) && camera_pdu.cube_visible(room_bs)) return 1;
+		}
+	} // for c
+	return 0;
+}
+
 

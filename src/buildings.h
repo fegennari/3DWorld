@@ -126,6 +126,7 @@ public:
 	void set_exclude_bix(int exclude_bix) {state.exclude_bix = exclude_bix;}
 	void set_camera(pos_dir_up const &pdu);
 	bool is_occluded(cube_t const &c) const;
+	vector3d const &get_xlate() const {return state.xlate;}
 };
 
 struct city_zone_t : public cube_t {
@@ -1118,6 +1119,19 @@ struct building_dest_t : public building_loc_t {
 
 struct ext_basement_room_params_t;
 
+struct building_conn_info_t { // use for buildings with connected rooms (for example house extended basements)
+	struct conn_pt_t {
+		building_t *b;
+		vect_cube_t rooms;
+		conn_pt_t(building_t *b_) : b(b_) {assert(b != nullptr);}
+	};
+	vector<conn_pt_t> conn;
+
+	void add_connection(building_t *b, cube_t const &room);
+	building_t *get_conn_bldg_for_pt(point const &p) const;
+	bool is_visible_through_conn(building_t const &b, vector3d const &xlate, float view_dist) const;
+};
+
 
 struct building_interior_t {
 	vect_cube_t floors, ceilings, fc_occluders, exclusion;
@@ -1131,6 +1145,7 @@ struct building_interior_t {
 	vector<person_t> people;
 	std::unique_ptr<building_room_geom_t> room_geom;
 	std::unique_ptr<building_nav_graph_t> nav_graph;
+	std::unique_ptr<building_conn_info_t> conn_info;
 	cube_with_ix_t pg_ramp, attic_access; // ix stores {dim, dir}
 	cube_t basement_ext_bcube;
 	draw_range_t draw_range;
@@ -1525,6 +1540,9 @@ private:
 		float door_width, bool dim, bool dir, bool is_end_room, unsigned depth, bool const add_doors[2], rand_gen_t &rgen);
 	void end_ext_basement_hallway(extb_room_t &room, cube_t const &conn_bcube, ext_basement_room_params_t &P,
 		float door_width, bool dim, bool dir, unsigned depth, rand_gen_t &rgen);
+	building_t *get_conn_bldg_for_pt(point const &p) const;
+	bool is_visible_through_conn(building_t const &b, vector3d const &xlate, float view_dist) const;
+	bool interior_visible_from_other_building_ext_basement(vector3d const &xlate) const;
 	bool has_L_shaped_roof_area() const;
 	void get_attic_roof_tquads(vector<tquad_with_ix_t> &tquads) const;
 	bool add_attic_access_door(cube_t const &ceiling, unsigned part_ix, unsigned num_floors, unsigned rooms_start, rand_gen_t &rgen);

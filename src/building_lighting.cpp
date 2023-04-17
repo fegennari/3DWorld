@@ -1205,7 +1205,8 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 	bool const player_on_attic_stairs(check_attic && player_in_attic && interior->attic_access.contains_pt_xy(camera_rot));
 	unsigned camera_part(parts.size()); // start at an invalid value
 	unsigned camera_floor(0);
-	bool camera_by_stairs(0), camera_on_stairs(0), camera_somewhat_by_stairs(0), camera_in_hallway(0), camera_near_building(camera_in_building);
+	bool camera_by_stairs(0), camera_on_stairs(0), camera_somewhat_by_stairs(0), camera_in_hallway(0), camera_can_see_ext_basement(0);
+	bool camera_near_building(camera_in_building);
 	int camera_room(-1);
 	vect_cube_with_ix_t moving_objs;
 	ped_bcubes.clear();
