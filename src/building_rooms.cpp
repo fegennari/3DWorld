@@ -2987,6 +2987,15 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			unsigned const objs_start(objs.size());
 			rgen.rand_mix();
 
+			if (r->is_ext_basement_conn()) { // room connecting extended basements of two buildings
+				bool const conn_dim(r->interior == 4);
+				// add blockers at both room ends to avoid placing objects there, since there's a door to the other building blocking it
+				for (unsigned d = 0; d < 2; ++d) {
+					cube_t blocker(*r);
+					blocker.d[conn_dim][!d] = blocker.d[conn_dim][d] + (d ? -1.0 : 1.0)*2.0*get_wall_thickness();
+					objs.emplace_back(blocker, TYPE_BLOCKER, room_id, conn_dim, d, RO_FLAG_INVIS);
+				}
+			}
 			if (r->no_geom || is_garage_or_shed) {
 				if (is_garage_or_shed) {
 					if (r->get_room_type(0) == RTYPE_GARAGE) {

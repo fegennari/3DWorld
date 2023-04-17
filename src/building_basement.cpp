@@ -1638,13 +1638,13 @@ void extb_room_t::clip_hallway_to_conn_bcube(bool dim) { // clip off the unconne
 }
 
 void building_interior_t::place_exterior_room(extb_room_t const &room, cube_t const &wall_area, float fc_thick, float wall_thick, ext_basement_room_params_t &P,
-	unsigned part_id, unsigned num_lights, bool is_hallway)
+	unsigned part_id, unsigned num_lights, bool is_hallway, unsigned is_building_conn)
 {
 	assert(room.is_strictly_normalized());
 	bool const long_dim(room.dx() < room.dy());
 	if (num_lights == 0) {num_lights = max(1U, min(8U, (unsigned)round_fp(0.33*room.get_sz_dim(long_dim)/room.get_sz_dim(!long_dim))));} // auto calculate num_lights
 	room_t Room(room, part_id, num_lights, is_hallway);
-	Room.interior = 2; // mark as extended basement
+	Room.interior = is_building_conn + 2; // mark as extended basement, or possibly connecting room between two buildings if is_building_conn == 1|2
 	if (room.has_stairs) {Room.has_stairs = 1;} // stairs on the first/only floor
 	if (is_hallway) {Room.assign_all_to(RTYPE_HALL, 0);} // initially all hallways; locked=0
 	rooms.push_back(Room);
@@ -1731,7 +1731,7 @@ door_t const &building_interior_t::get_ext_basement_door() const {
 
 // code to join exterior basements of two nearby buildings
 
-float const EXT_BASEMENT_JOIN_DIST = 2.0; // relative to floor spacing
+float const EXT_BASEMENT_JOIN_DIST = 3.0; // relative to floor spacing
 
 void populate_params_from_building(building_interior_t const &bi, ext_basement_room_params_t &P) {
 	if (!P.rooms.empty()) return; // already populated
@@ -1740,9 +1740,9 @@ void populate_params_from_building(building_interior_t const &bi, ext_basement_r
 }
 void building_t::try_connect_ext_basement_to_building(building_t &b) {
 	assert(has_ext_basement() && b.has_ext_basement());
-	float const floor_spacing(get_window_vspace()), wall_thickness(get_wall_thickness());
-	float const connect_dist(EXT_BASEMENT_JOIN_DIST*floor_spacing), z_toler(0.1*get_trim_thickness());
+	float const floor_spacing(get_window_vspace()), wall_thickness(get_wall_thickness()), z_toler(0.1*get_trim_thickness());
 	float const doorway_width(get_doorway_width()), wall_hwidth(0.8*doorway_width), min_shared_wall_len(2.01*wall_hwidth);
+	float const max_connect_dist(EXT_BASEMENT_JOIN_DIST*floor_spacing), min_connect_dist(2.1*doorway_width); // need enough space to fit two open doors
 	assert(b.get_window_vspace() == floor_spacing);
 	cube_t const &other_eb_bc(b.interior->basement_ext_bcube);
 	assert(interior->basement_ext_bcube.z2() == other_eb_bc.z2()); // must be at same elevation
@@ -1755,7 +1755,7 @@ void building_t::try_connect_ext_basement_to_building(building_t &b) {
 	// find nearby candidate rooms
 	for (auto r1 = interior->rooms.begin()+interior->ext_basement_hallway_room_id; r1 != interior->rooms.end(); ++r1) {
 		cube_t search_area(*r1);
-		search_area.expand_by(connect_dist);
+		search_area.expand_by(max_connect_dist);
 		if (!search_area.intersects(other_eb_bc)) continue; // too far
 
 		for (auto r2 = b.interior->rooms.begin()+b.interior->ext_basement_hallway_room_id; r2 != b.interior->rooms.end(); ++r2) {
@@ -1774,6 +1774,7 @@ void building_t::try_connect_ext_basement_to_building(building_t &b) {
 				cube_t cand_join(*r1);
 				cand_join.d[d][ dir] = r2->d[d][!dir];
 				cand_join.d[d][!dir] = r1->d[d][ dir];
+				if (cand_join.get_sz_dim(d) < min_connect_dist) continue;
 				set_wall_width(cand_join, door_center, wall_hwidth, !d);
 				assert(cand_join.is_strictly_normalized());
 				cube_t test_cube(cand_join);
@@ -1790,8 +1791,13 @@ void building_t::try_connect_ext_basement_to_building(building_t &b) {
 	if (Padd.rooms.empty()) return; // failed to connect
 
 	for (auto const &r : Padd.rooms) { // add any new rooms from above
+		// TODO: tag room so that no objects are placed on end walls
+		// TODO: lights and objects draw for other building
+		// TODO: wall texture Z-fighting
+		// TODO: player walk between houses
 		if (fabs(r.x1()) < 10.0 && fabs(r.y1()) < 10.0) {cout << r.str() << endl;} // TESTING; first at -0.9, -8.8
-		interior->place_exterior_room(r, r, get_fc_thickness(), wall_thickness, P, basement_part_ix, 0, r.is_hallway);
+		unsigned const is_building_conn(r.hallway_dim ? 2 : 1);
+		interior->place_exterior_room(r, r, get_fc_thickness(), wall_thickness, P, basement_part_ix, 0, r.is_hallway, is_building_conn);
 		// place doors at each end
 		for (unsigned dir = 0; dir < 2; ++dir) {
 			building_t &door_dest((bool(dir) ^ r.connect_dir) ? *this : b); // add door to the building whose room it connects to
