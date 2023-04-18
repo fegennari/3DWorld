@@ -1176,7 +1176,7 @@ struct building_interior_t {
 	void get_avoid_cubes(vect_cube_t &avoid, float z1, float z2, float r_shrink_if_low, float floor_thickness, bool same_as_player, bool skip_stairs=0) const;
 	void create_fc_occluders();
 	void place_exterior_room(extb_room_t const &room, cube_t const &wall_area, float fc_thick, float wall_thick, ext_basement_room_params_t &P,
-		unsigned part_id, unsigned num_lights=0, bool is_hallway=0, unsigned is_building_conn=0);
+		unsigned part_id, unsigned num_lights=0, bool is_hallway=0, unsigned is_building_conn=0, unsigned wall_skip_dim=2);
 	colorRGBA get_attic_ceiling_color() const;
 	room_t const &get_garage_room() const {assert((unsigned)garage_room < rooms.size()); return rooms[garage_room];}
 	vector<room_t>::const_iterator ext_basement_rooms_start() const;

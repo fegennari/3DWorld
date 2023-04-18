@@ -1640,7 +1640,7 @@ void extb_room_t::clip_hallway_to_conn_bcube(bool dim) { // clip off the unconne
 }
 
 void building_interior_t::place_exterior_room(extb_room_t const &room, cube_t const &wall_area, float fc_thick, float wall_thick, ext_basement_room_params_t &P,
-	unsigned part_id, unsigned num_lights, bool is_hallway, unsigned is_building_conn)
+	unsigned part_id, unsigned num_lights, bool is_hallway, unsigned is_building_conn, unsigned wall_skip_dim)
 {
 	assert(room.is_strictly_normalized());
 	bool const long_dim(room.dx() < room.dy());
@@ -1662,6 +1662,8 @@ void building_interior_t::place_exterior_room(extb_room_t const &room, cube_t co
 	float const wall_half_thick(0.5*wall_thick);
 
 	for (unsigned dim = 0; dim < 2; ++dim) {
+		if (dim == wall_skip_dim) continue; // no walls in this dim
+
 		for (unsigned dir = 0; dir < 2; ++dir) {
 			cube_t wall(wall_area);
 			set_wall_width(wall, wall_area.d[dim][dir], wall_half_thick, dim);
@@ -1801,11 +1803,10 @@ void building_t::try_connect_ext_basement_to_building(building_t &b) {
 		// TODO: door shadows
 		// TODO: player walk between houses
 		// TODO: player open doors from either side
-		// TODO: wall texture Z-fighting
 		// TODO: one frame flicker when passing between buildings
 		if (fabs(r.x1()) < 10.0 && fabs(r.y1()) < 10.0) {cout << r.str() << endl;} // TESTING; first at -0.9, -8.8
 		unsigned const is_building_conn(r.hallway_dim ? 2 : 1);
-		interior->place_exterior_room(r, r, get_fc_thickness(), wall_thickness, P, basement_part_ix, 0, r.is_hallway, is_building_conn);
+		interior->place_exterior_room(r, r, get_fc_thickness(), wall_thickness, P, basement_part_ix, 0, r.is_hallway, is_building_conn, r.hallway_dim); // skip ends
 		// place doors at each end
 		for (unsigned dir = 0; dir < 2; ++dir) {
 			building_t *door_dest(buildings[bool(dir) ^ r.connect_dir ^ 1]); // add door to the building whose room it connects to
