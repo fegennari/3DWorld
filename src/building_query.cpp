@@ -683,6 +683,8 @@ bool building_t::check_pos_in_unlit_room_recur(point const &pos, set<unsigned> &
 	if (rooms_visited.find(room_id) != rooms_visited.end()) return 1; // already visited, return true
 	room_t const &room(get_room(room_id));
 	if (!room.interior && has_windows()) return 0; // room has windows and may be lit from outside; what about a room with an open exterior door?
+	// Note: we can't easily check the connected building here, so assume it's lit; this doesn't fix the case where the conn room is in the other building
+	if ( room.is_ext_basement_conn   ()) return 0; // be safe/conservative and treat rooms connected to two buildings as potentially lit
 	float const floor_spacing(get_window_vspace());
 	unsigned const floor_ix(max(0.0f, (pos.z - room.z1()))/floor_spacing);
 	if (room.has_skylight && pos.z > (room.z2() - floor_spacing)) return 0; // top floor of room with a skylight

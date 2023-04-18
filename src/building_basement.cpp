@@ -1799,7 +1799,6 @@ void building_t::try_connect_ext_basement_to_building(building_t &b) {
 		if (!buildings[bix]->interior->conn_info) {buildings[bix]->interior->conn_info.reset(new building_conn_info_t);}
 	}
 	for (auto const &r : Padd.rooms) { // add any new rooms from above
-		// TODO: room lit logic
 		// TODO: door shadows
 		// TODO: player walk between houses
 		// TODO: player open doors from either side
