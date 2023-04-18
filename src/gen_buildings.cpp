@@ -2967,7 +2967,10 @@ public:
 						if (!reflection_pass) {b.update_grass_exclude_at_pos(camera_xlated, xlate, camera_in_this_building);} // disable grass in building part(s) containing the player
 						if (!reflection_pass && player_in_building_bcube) {b.update_animals(camera_xlated, bi->ix);}
 						// Note: if we skip this check and treat all walls/windows as front/containing part, this almost works, but will skip front faces of other buildings
-						if (!camera_in_this_building) continue; // camera not in building
+						if (!camera_in_this_building) { // camera not in building
+							if (ext_basement_conn_visible && animate2) {b.update_player_interact_objects(camera_xlated);} // need to at least update door open/close state
+							continue;
+						}
 						// pass in camera pos to only include the part that contains the camera to avoid drawing artifacts when looking into another part of the building
 						// neg offset to move windows on the inside of the building's exterior wall;
 						// since there are no basement windows, we should treat the player as being in the part above so that windows are drawn correctly through the basement stairs

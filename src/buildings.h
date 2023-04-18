@@ -1379,7 +1379,7 @@ struct building_t : public building_geom_t {
 	void register_light_state_change(room_object_t const &light, point const &sound_pos, bool is_lamp=0);
 	void toggle_circuit_breaker(bool is_on, unsigned zone_id, unsigned num_zones);
 	bool chair_can_be_rotated(room_object_t const &chair) const;
-	bool apply_player_action_key(point const &closest_to_in, vector3d const &in_dir_in, int mode, bool check_only=0);
+	bool apply_player_action_key(point const &closest_to_in, vector3d const &in_dir_in, int mode, bool check_only=0, bool no_check_conn_building=0);
 	void assign_correct_room_to_object(room_object_t &obj) const;
 	bool move_nearest_object(point const &at_pos, vector3d const &in_dir, float range, int mode);
 	bool interact_with_object(unsigned obj_ix, point const &int_pos, point const &query_ray_end, vector3d const &int_dir);

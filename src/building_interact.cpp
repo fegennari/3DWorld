@@ -374,7 +374,7 @@ bool building_t::chair_can_be_rotated(room_object_t const &chair) const {
 }
 
 // called for the player; mode: 0=normal, 1=pull
-bool building_t::apply_player_action_key(point const &closest_to_in, vector3d const &in_dir_in, int mode, bool check_only) {
+bool building_t::apply_player_action_key(point const &closest_to_in, vector3d const &in_dir_in, int mode, bool check_only, bool no_check_conn_building) {
 	if (!interior) return 0; // error?
 	float const dmax(4.0*CAMERA_RADIUS), floor_spacing(get_window_vspace());
 	float closest_dist_sq(0.0), t(0.0); // t is unused
@@ -490,7 +490,12 @@ bool building_t::apply_player_action_key(point const &closest_to_in, vector3d co
 			}
 		}
 		if (!found_item && !check_only && !player_in_closet) {move_nearest_object(closest_to, in_dir, 3.0*CAMERA_RADIUS, mode);} // try to move an object instead
-		if (!found_item) return 0; // no door or object found
+	}
+	if (!found_item) { // no door or object found
+		if (no_check_conn_building)   return 0; // avoid infinite recursion
+		building_t *const conn_building(get_conn_bldg_for_pt(closest_to)); // check for door in connected building; should we check if room is ext conn first?
+		if (conn_building == nullptr) return 0; // no other building
+		return conn_building->apply_player_action_key(closest_to_in, in_dir_in, mode, check_only, 1); // chain call to the other building; no_check_conn_building=1
 	}
 	if (check_only) return 1;
 
@@ -786,7 +791,7 @@ void building_t::toggle_door_state(unsigned door_ix, bool player_in_this_buildin
 	interior->door_state_updated = 1; // required for AI navigation logic to adjust to this change
 	if (has_room_geom()) {interior->room_geom->invalidate_mats_mask |= (1 << MAT_TYPE_DOORS);} // need to recreate doors VBO
 
-	if (player_in_this_building) { // is it really safe to call this from the AI thread?
+	if (player_in_this_building || by_player) { // is it really safe to call this from the AI thread?
 		point door_center(door.xc(), door.yc(), actor_pos.z);
 		// if door was opened or is fully closed play a sound; otherwise, play the close sound later when fully closed
 		if (door.open || door.open_amt == 0.0) {play_door_open_close_sound(door_center, door.open);}
