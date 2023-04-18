@@ -2804,7 +2804,7 @@ public:
 			return;
 		}
 		bind_default_sun_moon_smap_textures(); // bind default sun/moon smap textures
-		building_t const *const prev_player_building(player_building);
+		building_t const *new_player_building(nullptr);
 
 		if (!reflection_pass) {
 			interior_shadow_maps = 1; // set state so that above call will know that it was called recursively from here and should draw interior shadow maps
@@ -2813,7 +2813,6 @@ public:
 			enable_dlight_bcubes = 0; // disable when creating the reflection image (will be set when we re-enter multi_draw())
 			interior_shadow_maps = 0;
 			create_mirror_reflection_if_needed();
-			player_building = nullptr; // reset, may be set below
 		}
 		//timer_t timer("Draw Buildings"); // 0.57ms (2.6ms with glFinish(), 6.3ms with building interiors)
 		point const camera(get_camera_pos()), camera_xlated(camera - xlate);
@@ -2909,7 +2908,7 @@ public:
 				float const rgeom_sm_draw_dist_sq(ddist_scale_sq*room_geom_sm_draw_dist*room_geom_draw_dist);
 				float const rgeom_detail_dist_sq(ddist_scale_sq*room_geom_sm_draw_dist*room_geom_detail_draw_dist);
 				occlusion_checker_noncity_t oc(**i);
-				bool is_first_tile(1);
+				bool is_first_tile(1), can_break_from_loop(0);
 
 				for (auto g = (*i)->grid_by_tile.begin(); g != (*i)->grid_by_tile.end(); ++g) { // Note: all grids should be nonempty
 					if (reflection_pass && !g->bcube.contains_pt_xy(camera_xlated)) continue; // not the correct tile
@@ -2921,7 +2920,7 @@ public:
 						g->has_room_geom = 0;
 					}
 					if (gdist_sq > int_draw_dist_sq) continue; // too far
-					if (!building_grid_visible(xlate, g->bcube, prev_player_building)) continue; // VFC
+					if (!building_grid_visible(xlate, g->bcube, player_building)) continue; // VFC
 					if (is_first_tile) {(*i)->ensure_interior_geom_vbos();} // we need the interior geom at this point
 					(*i)->building_draw_interior.draw_tile(s, (g - (*i)->grid_by_tile.begin()));
 					// iterate over nearby buildings in this tile and draw interior room geom, generating it if needed
@@ -2938,13 +2937,17 @@ public:
 						float const bdist_sq(p2p_dist_sq(camera_xlated, b.bcube.closest_pt(camera_xlated)));
 						//if (bdist_sq > rgeom_clear_dist_sq) {b.clear_room_geom(); continue;} // too far away - is this useful?
 						if (bdist_sq > rgeom_draw_dist_sq) continue; // too far away
-						if (!player_in_building_bcube && !camera_pdu.cube_visible(b.bcube + xlate)) continue; // VFC
+						bool const ext_basement_conn_visible(b.interior_visible_from_other_building_ext_basement(xlate));
+						if (!player_in_building_bcube && !ext_basement_conn_visible && !camera_pdu.cube_visible(b.bcube + xlate)) continue; // VFC
 						b.maybe_gen_chimney_smoke();
 						bool const camera_near_building(player_in_building_bcube || b.bcube.contains_pt_xy_exp(camera_xlated, door_open_dist));
-						// check if player is outside a windowless building (city office building); need to account for open doors and exterior signs over doors
-						if (!camera_near_building && !b.has_windows() && !b.point_near_ext_door(camera_xlated, 5.0*door_open_dist)) continue;
-						if ((display_mode & 0x08) && !player_in_building_bcube && b.is_entire_building_occluded(camera_xlated, oc)) continue; // check occlusion
-						// draw ddetail objects if player is in the building (inc ext basement), even if far from the building center
+
+						if (!ext_basement_conn_visible) {
+							// check if player is outside a windowless building (city office building); need to account for open doors and exterior signs over doors
+							if (!camera_near_building && !b.has_windows() && !b.point_near_ext_door(camera_xlated, 5.0*door_open_dist)) continue;
+							if ((display_mode & 0x08) && !player_in_building_bcube && b.is_entire_building_occluded(camera_xlated, oc)) continue; // check occlusion
+						}
+						// draw detail objects if player is in the building (inc ext basement), even if far from the building center
 						unsigned inc_small(player_in_building_bcube ? 2 : (bdist_sq < rgeom_sm_draw_dist_sq));
 						if (inc_small && bdist_sq < rgeom_detail_dist_sq) {inc_small = 2;} // include detail objects
 						b.gen_and_draw_room_geom(&bbd, s, oc, xlate, bi->ix, 0, reflection_pass, inc_small, player_in_building_bcube); // shadow_only=0
@@ -2980,7 +2983,9 @@ public:
 						this_frame_camera_in_building  = 1;
 						this_frame_player_in_basement |= b.check_player_in_basement(camera_xlated - vector3d(0.0, 0.0, BASEMENT_ENTRANCE_SCALE*b.get_floor_thickness())); // only set once
 						this_frame_player_in_attic    |= b.point_in_attic(camera_xlated);
-						player_building = &b;
+						// player can only be in one basement or attic, except for extended basement connector rooms
+						can_break_from_loop |= ((this_frame_player_in_basement >= 2 && !ext_basement_conn_visible) || this_frame_player_in_attic);
+						new_player_building = &b;
 						b.register_player_in_building(camera_xlated, bi->ix); // required for AI following logic
 						if (enable_building_indir_lighting()) {indir_bcs_ix = bcs_ix; indir_bix = bi->ix;} // compute indirect lighting for this building
 						// run any player interaction logic here
@@ -2991,9 +2996,9 @@ public:
 						if (teleport_to_screenshot) {b.maybe_teleport_to_screenshot();}
 						if (animate2) {b.update_player_interact_objects(camera_xlated);} // update dynamic objects if the player is in the building
 					} // for bi
-					if (this_frame_player_in_basement >= 2 || this_frame_player_in_attic) break; // player can only be in one basement or attic - done
+					if (can_break_from_loop) break; // done
 				} // for g
-				if (this_frame_player_in_basement >= 2 || this_frame_player_in_attic) break; // player can only be in one basement or attic - done
+				if (can_break_from_loop) break; // done
 			} // for i
 			bbd.draw_and_clear(s);
 			set_std_depth_func(); // restore
@@ -3022,8 +3027,14 @@ public:
 				holes_shader.disable();
 			}
 		} // end have_interior
-		if (!reflection_pass) {
-			if (player_building == nullptr) {register_player_not_in_building();}
+		if (!reflection_pass) { // update player_building state
+			if (new_player_building == nullptr) {register_player_not_in_building();}
+
+			if (new_player_building != player_building) { // building transition
+				if (new_player_building) {new_player_building->register_player_enter_building();}
+				if (player_building    ) {player_building    ->register_player_exit_building ();}
+				player_building = new_player_building;
+			}
 			toggle_room_light = teleport_to_screenshot = 0; building_action_key = 0; // reset these even if the player wasn't in a building
 		}
 		if (draw_interior && reflection_pass != 2) { // skip for interior room reflections (but what about looking out through the bathroom door?)
@@ -3242,11 +3253,6 @@ public:
 		set_std_depth_func();
 		fgPopMatrix();
 		enable_dlight_bcubes = 0;
-
-		if (player_building != prev_player_building) { // building transition
-			if (player_building     ) {player_building     ->register_player_enter_building();}
-			if (prev_player_building) {prev_player_building->register_player_exit_building ();}
-		}
 	}
 
 	void draw_building_lights(vector3d const &xlate) { // add night time lights to buildings; non-const because it modifies building_lights

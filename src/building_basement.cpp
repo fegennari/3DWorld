@@ -1799,10 +1799,10 @@ void building_t::try_connect_ext_basement_to_building(building_t &b) {
 	for (auto const &r : Padd.rooms) { // add any new rooms from above
 		// TODO: room lit logic
 		// TODO: door shadows
-		// TODO: objects draw for other building
 		// TODO: player walk between houses
 		// TODO: player open doors from either side
 		// TODO: wall texture Z-fighting
+		// TODO: one frame flicker when passing between buildings
 		if (fabs(r.x1()) < 10.0 && fabs(r.y1()) < 10.0) {cout << r.str() << endl;} // TESTING; first at -0.9, -8.8
 		unsigned const is_building_conn(r.hallway_dim ? 2 : 1);
 		interior->place_exterior_room(r, r, get_fc_thickness(), wall_thickness, P, basement_part_ix, 0, r.is_hallway, is_building_conn);
