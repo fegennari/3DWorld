@@ -122,7 +122,8 @@ class occlusion_checker_noncity_t {
 	building_occlusion_state_t state;
 	building_creator_t const &bc;
 public:
-	occlusion_checker_noncity_t(building_creator_t const &bc_) : bc(bc_) {}
+	bool query_is_for_light;
+	occlusion_checker_noncity_t(building_creator_t const &bc_, bool for_light=0) : bc(bc_), query_is_for_light(for_light) {}
 	void set_exclude_bix(int exclude_bix) {state.exclude_bix = exclude_bix;}
 	void set_camera(pos_dir_up const &pdu);
 	bool is_occluded(cube_t const &c) const;
@@ -1129,7 +1130,7 @@ struct building_conn_info_t { // use for buildings with connected rooms (for exa
 
 	void add_connection(building_t *b, cube_t const &room);
 	building_t *get_conn_bldg_for_pt(point const &p) const;
-	bool is_visible_through_conn(building_t const &b, vector3d const &xlate, float view_dist) const;
+	bool is_visible_through_conn(building_t const &b, vector3d const &xlate, float view_dist, bool expand_for_light=0) const;
 };
 
 
@@ -1504,6 +1505,7 @@ public:
 	cube_t get_bcube_inc_extensions() const;
 	cube_t get_full_basement_bcube () const;
 	room_t const &get_ext_basement_hallway() const;
+	bool interior_visible_from_other_building_ext_basement(vector3d const &xlate, bool expand_for_light=0) const;
 	void try_connect_ext_basement_to_building(building_t &b);
 	template<typename T> void add_door_verts(cube_t const &D, T &drawer, uint8_t door_type,
 		bool dim, bool dir, float open_amt, bool opens_out, bool exterior, bool on_stairs=0, bool hinge_side=0) const;
@@ -1541,8 +1543,7 @@ private:
 	void end_ext_basement_hallway(extb_room_t &room, cube_t const &conn_bcube, ext_basement_room_params_t &P,
 		float door_width, bool dim, bool dir, unsigned depth, rand_gen_t &rgen);
 	building_t *get_conn_bldg_for_pt(point const &p) const;
-	bool is_visible_through_conn(building_t const &b, vector3d const &xlate, float view_dist) const;
-	bool interior_visible_from_other_building_ext_basement(vector3d const &xlate) const;
+	bool is_visible_through_conn(building_t const &b, vector3d const &xlate, float view_dist, bool expand_for_light=0) const;
 	bool has_L_shaped_roof_area() const;
 	void get_attic_roof_tquads(vector<tquad_with_ix_t> &tquads) const;
 	bool add_attic_access_door(cube_t const &ceiling, unsigned part_ix, unsigned num_floors, unsigned rooms_start, rand_gen_t &rgen);

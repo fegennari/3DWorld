@@ -1707,6 +1707,7 @@ bool building_t::check_obj_occluded(cube_t const &c, point const &viewer_in, occ
 		}
 	}
 	else if (camera_in_building) { // player in some other building
+		if (interior_visible_from_other_building_ext_basement(oc.get_xlate(), oc.query_is_for_light)) return 0; // skip below checks in this case
 		if (player_in_basement) return 1; // if player is in the basement of a different building, they probably can't see an object in this building
 		if (player_in_windowless_building()) return 1; // player inside another windowless office building, objects in this building not visible
 		if (is_rotated()) return 0; // not implemented yet - need to rotate viewer and pts into coordinate space of player_building
@@ -1757,6 +1758,7 @@ bool building_t::is_entire_building_occluded(point const &viewer, occlusion_chec
 		if (has_basement() && (i - parts.begin()) == (int)basement_part_ix) continue; // skip the basement, which isn't visible from outside the building
 		if (!check_obj_occluded(*i, viewer, oc, 0, 1)) return 0; // c_is_building_part=1
 	}
+	if (interior_visible_from_other_building_ext_basement(oc.get_xlate(), oc.query_is_for_light)) return 0;
 	return 1; // all parts occluded
 }
 

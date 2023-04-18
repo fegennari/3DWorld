@@ -10,7 +10,7 @@
 
 enum {PIPE_TYPE_SEWER=0, PIPE_TYPE_CW, PIPE_TYPE_HW, PIPE_TYPE_GAS, NUM_PIPE_TYPES};
 
-extern int display_mode;
+extern int player_in_basement, display_mode;
 extern float DX_VAL_INV, DY_VAL_INV;
 extern building_params_t global_building_params;
 extern city_params_t city_params; // for num_cars
@@ -1797,9 +1797,9 @@ void building_t::try_connect_ext_basement_to_building(building_t &b) {
 		if (!buildings[bix]->interior->conn_info) {buildings[bix]->interior->conn_info.reset(new building_conn_info_t);}
 	}
 	for (auto const &r : Padd.rooms) { // add any new rooms from above
-		// TODO: lights draw for other building
+		// TODO: room lit logic
+		// TODO: door shadows
 		// TODO: objects draw for other building
-		// TODO: lights flow between buildings
 		// TODO: player walk between houses
 		// TODO: player open doors from either side
 		// TODO: wall texture Z-fighting
@@ -1830,7 +1830,6 @@ void try_join_house_ext_basements(vect_building_t &buildings) {
 	}
 //#pragma omp parallel for schedule(static)
 	for (vector<unsigned> const &work : houses_by_city) {
-		//cout << TXT(work.size()) << endl;
 		// do a quadratic iteration to find nearby houses in this city that can potentially be connected
 		for (unsigned i = 0; i < work.size(); ++i) {
 			building_t &b1(buildings[work[i]]);
@@ -1850,13 +1849,14 @@ building_t *building_t::get_conn_bldg_for_pt(point const &p) const {
 	if (!interior || !interior->conn_info) return nullptr;
 	return interior->conn_info->get_conn_bldg_for_pt(p);
 }
-bool building_t::is_visible_through_conn(building_t const &b, vector3d const &xlate, float view_dist) const {
-	return (interior && interior->conn_info && interior->conn_info->is_visible_through_conn(b, xlate, view_dist));
+bool building_t::is_visible_through_conn(building_t const &b, vector3d const &xlate, float view_dist, bool expand_for_light) const {
+	return (interior && interior->conn_info && interior->conn_info->is_visible_through_conn(b, xlate, view_dist, expand_for_light));
 }
-bool building_t::interior_visible_from_other_building_ext_basement(vector3d const &xlate) const {
+bool building_t::interior_visible_from_other_building_ext_basement(vector3d const &xlate, bool expand_for_light) const {
+	if (player_in_basement != 3) return 0; // player not in extended basement
 	if (player_building == nullptr || player_building == this || !interior || !interior->conn_info) return 0;
 	float const view_dist(8.0*get_window_vspace()); // arbitrary constant, should reflect length of largest hallway
-	return player_building->is_visible_through_conn(*this, xlate, view_dist) || 1;
+	return player_building->is_visible_through_conn(*this, xlate, view_dist, expand_for_light);
 }
 
 void building_conn_info_t::add_connection(building_t *b, cube_t const &room) {
@@ -1871,13 +1871,15 @@ building_t *building_conn_info_t::get_conn_bldg_for_pt(point const &p) const {
 	}
 	return nullptr;
 }
-bool building_conn_info_t::is_visible_through_conn(building_t const &b, vector3d const &xlate, float view_dist) const {
+bool building_conn_info_t::is_visible_through_conn(building_t const &b, vector3d const &xlate, float view_dist, bool expand_for_light) const {
 	for (conn_pt_t const &c : conn) {
 		if (c.b != &b) continue; // skip wrong building
 
 		for (cube_t const &room : c.rooms) {
-			cube_t const room_bs(room + xlate);
-			if (room_bs.closest_dist_less_than(camera_pdu.pos, view_dist) && camera_pdu.cube_visible(room_bs)) return 1;
+			cube_t room_bs(room + xlate);
+			if (!room_bs.closest_dist_less_than(camera_pdu.pos, view_dist)) continue; // too far away
+			if (expand_for_light) {room_bs.expand_by(view_dist);} // increase the bounds in case room is behind the player but light cast from it is visible
+			if (camera_pdu.cube_visible(room_bs)) return 1;
 		}
 	} // for c
 	return 0;

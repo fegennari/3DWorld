@@ -2726,7 +2726,7 @@ public:
 		point const camera(get_camera_pos()), camera_xlated(camera - xlate);
 		vector<point> points; // reused temporary
 		vect_cube_with_ix_t ped_bcubes; // reused temporary
-		occlusion_checker_noncity_t oc(*this);
+		occlusion_checker_noncity_t oc(*this, 1); // for_light=1
 		bool is_first_building(1);
 		//highres_timer_t timer("Add Interior Lights");
 
@@ -2740,7 +2740,7 @@ public:
 				if (!lights_bcube.intersects_xy(b.bcube)) continue; // not within light volume (too far from camera)
 				bool const camera_in_this_building(b.check_point_or_cylin_contained(camera_xlated, 0.0, points, 1, 1)); // inc_attic=1, inc_ext_basement=1
 				// limit room lights to when the player is in a building because we can restrict them to a single floor, otherwise it's too slow
-				if (!camera_in_this_building && !camera_pdu.cube_visible(b.bcube + xlate)) continue; // VFC
+				if (!camera_in_this_building && !camera_pdu.cube_visible(b.bcube + xlate) && !b.interior_visible_from_other_building_ext_basement(xlate, 1)) continue; // VFC
 				if (is_first_building) {oc.set_camera(camera_pdu);} // setup occlusion culling on the first visible building
 				is_first_building = 0;
 				oc.set_exclude_bix(bi->ix);
