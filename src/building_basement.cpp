@@ -1640,7 +1640,7 @@ void extb_room_t::clip_hallway_to_conn_bcube(bool dim) { // clip off the unconne
 }
 
 void building_interior_t::place_exterior_room(extb_room_t const &room, cube_t const &wall_area, float fc_thick, float wall_thick, ext_basement_room_params_t &P,
-	unsigned part_id, unsigned num_lights, bool is_hallway, unsigned is_building_conn, unsigned wall_skip_dim)
+	unsigned part_id, unsigned num_lights, bool is_hallway, unsigned is_building_conn, unsigned wall_skip_dim, unsigned thin_wall_dir)
 {
 	assert(room.is_strictly_normalized());
 	bool const long_dim(room.dx() < room.dy());
@@ -1662,13 +1662,17 @@ void building_interior_t::place_exterior_room(extb_room_t const &room, cube_t co
 	float const wall_half_thick(0.5*wall_thick);
 
 	for (unsigned dim = 0; dim < 2; ++dim) {
-		if (dim == wall_skip_dim) continue; // no walls in this dim
-
 		for (unsigned dir = 0; dir < 2; ++dir) {
+			float half_thick(wall_half_thick);
+			
+			if (dim == wall_skip_dim) {
+				if (dir == thin_wall_dir) {half_thick *= 0.5;} // this wall needed for shadows, but make it thinner to avoid Z-fighting
+				else continue; // no walls in this dim/dir
+			}
 			cube_t wall(wall_area);
-			set_wall_width(wall, wall_area.d[dim][dir], wall_half_thick, dim);
+			set_wall_width(wall, wall_area.d[dim][dir], half_thick, dim);
 			set_cube_zvals(wall, floor.z2(), ceiling.z1());
-			if (bool(dim) != long_dim) {wall.expand_in_dim(!dim, -wall_half_thick);} // remove the overlaps at corners in the long time (house exterior wall dim)
+			if (bool(dim) != long_dim) {wall.expand_in_dim(!dim, -half_thick);} // remove the overlaps at corners in the long dim (house exterior wall dim)
 			// remove overlapping walls from shared rooms
 			unsigned const wall_exclude_sz(P.wall_exclude.size());
 			assert(extb_walls_start[dim] <= walls[dim].size());
@@ -1803,7 +1807,9 @@ void building_t::try_connect_ext_basement_to_building(building_t &b) {
 		// TODO: one frame flicker when passing between buildings
 		if (fabs(r.x1()) < 10.0 && fabs(r.y1()) < 10.0) {cout << r.str() << endl;} // TESTING; first at -0.9, -8.8
 		unsigned const is_building_conn(r.hallway_dim ? 2 : 1);
-		interior->place_exterior_room(r, r, get_fc_thickness(), wall_thickness, P, basement_part_ix, 0, r.is_hallway, is_building_conn, r.hallway_dim); // skip ends
+		// skip one end in hallway_dim and make the other end (bordering the other building) thinner to avoid Z-fighting but still cast shadows
+		interior->place_exterior_room(r, r, get_fc_thickness(), wall_thickness, P, basement_part_ix, 0, r.is_hallway, is_building_conn, r.hallway_dim, r.connect_dir);
+		unsigned const conn_door_ix(b.interior->doors.size()); // index of door that will be added to the other building, and separates the two buildings
 		// place doors at each end
 		for (unsigned dir = 0; dir < 2; ++dir) {
 			building_t *door_dest(buildings[bool(dir) ^ r.connect_dir ^ 1]); // add door to the building whose room it connects to
