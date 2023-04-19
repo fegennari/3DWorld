@@ -1799,7 +1799,6 @@ void building_t::try_connect_ext_basement_to_building(building_t &b) {
 		if (!buildings[bix]->interior->conn_info) {buildings[bix]->interior->conn_info.reset(new building_conn_info_t);}
 	}
 	for (auto const &r : Padd.rooms) { // add any new rooms from above
-		// TODO: door shadows
 		// TODO: player walk between houses
 		// TODO: one frame flicker when passing between buildings
 		if (fabs(r.x1()) < 10.0 && fabs(r.y1()) < 10.0) {cout << r.str() << endl;} // TESTING; first at -0.9, -8.8
@@ -1849,7 +1848,7 @@ building_t *building_t::get_conn_bldg_for_pt(point const &p) const {
 	return interior->conn_info->get_conn_bldg_for_pt(p);
 }
 bool building_t::is_visible_through_conn(building_t const &b, vector3d const &xlate, float view_dist, bool expand_for_light) const {
-	return (interior && interior->conn_info && interior->conn_info->is_visible_through_conn(b, xlate, view_dist, expand_for_light));
+	return (interior && interior->conn_info && interior->conn_info->is_visible_through_conn(*this, b, xlate, view_dist, expand_for_light));
 }
 bool building_t::interior_visible_from_other_building_ext_basement(vector3d const &xlate, bool expand_for_light) const {
 	if (player_in_basement != 3) return 0; // player not in extended basement
@@ -1858,9 +1857,9 @@ bool building_t::interior_visible_from_other_building_ext_basement(vector3d cons
 	return player_building->is_visible_through_conn(*this, xlate, view_dist, expand_for_light);
 }
 
-void building_conn_info_t::add_connection(building_t *b, cube_t const &room) {
+void building_conn_info_t::add_connection(building_t *b, cube_t const &room, unsigned door_ix, bool door_is_b) {
 	if (conn.empty() || conn.back().b != b) {conn.emplace_back(b);} // register a new building if needed
-	conn.back().rooms.push_back(room);
+	conn.back().rooms.emplace_back(room, door_ix, door_is_b);
 }
 building_t *building_conn_info_t::get_conn_bldg_for_pt(point const &p) const {
 	for (conn_pt_t const &c : conn) {
@@ -1870,16 +1869,23 @@ building_t *building_conn_info_t::get_conn_bldg_for_pt(point const &p) const {
 	}
 	return nullptr;
 }
-bool building_conn_info_t::is_visible_through_conn(building_t const &b, vector3d const &xlate, float view_dist, bool expand_for_light) const {
+bool building_conn_info_t::is_visible_through_conn(building_t const &parent, building_t const &target, vector3d const &xlate, float view_dist, bool expand_for_light) const {
 	for (conn_pt_t const &c : conn) {
-		if (c.b != &b) continue; // skip wrong building
+		if (c.b != &target) continue; // skip wrong building
 
-		for (cube_t const &room : c.rooms) {
+		for (conn_room_t const &room : c.rooms) {
 			cube_t room_bs(room + xlate);
 			if (!room_bs.closest_dist_less_than(camera_pdu.pos, view_dist)) continue; // too far away
 			if (expand_for_light) {room_bs.expand_by(view_dist);} // increase the bounds in case room is behind the player but light cast from it is visible
-			if (camera_pdu.cube_visible(room_bs)) return 1;
-		}
+			if (!camera_pdu.cube_visible(room_bs)) return 0;
+			if (!expand_for_light) return 1; // can't ignore closed doors for room objects because they we may not draw the door itself
+			// if this is a light, check if the connecting door is open
+			building_t const &door_building(room.door_is_b ? target : parent);
+			assert(door_building.interior);
+			assert(room.door_ix < door_building.interior->doors.size());
+			door_t const &door(door_building.interior->doors[room.door_ix]);
+			return (door.open || door.open_amt > 0.0); // true if either about to open or not fully closed
+		} // for room
 	} // for c
 	return 0;
 }

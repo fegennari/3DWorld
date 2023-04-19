@@ -1121,16 +1121,21 @@ struct building_dest_t : public building_loc_t {
 struct ext_basement_room_params_t;
 
 struct building_conn_info_t { // use for buildings with connected rooms (for example house extended basements)
+	struct conn_room_t : public cube_t {
+		unsigned door_ix;
+		bool door_is_b;
+		conn_room_t(cube_t const &c, unsigned dix, bool dib) : cube_t(c), door_ix(dix), door_is_b(dib) {}
+	};
 	struct conn_pt_t {
 		building_t *b;
-		vect_cube_t rooms;
+		vector<conn_room_t> rooms;
 		conn_pt_t(building_t *b_) : b(b_) {assert(b != nullptr);}
 	};
 	vector<conn_pt_t> conn;
 
-	void add_connection(building_t *b, cube_t const &room);
+	void add_connection(building_t *b, cube_t const &room, unsigned door_ix, bool door_is_b);
 	building_t *get_conn_bldg_for_pt(point const &p) const;
-	bool is_visible_through_conn(building_t const &b, vector3d const &xlate, float view_dist, bool expand_for_light=0) const;
+	bool is_visible_through_conn(building_t const &parent, building_t const &target, vector3d const &xlate, float view_dist, bool expand_for_light=0) const;
 };
 
 
