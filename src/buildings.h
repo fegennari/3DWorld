@@ -1134,7 +1134,7 @@ struct building_conn_info_t { // use for buildings with connected rooms (for exa
 	vector<conn_pt_t> conn;
 
 	void add_connection(building_t *b, cube_t const &room, unsigned door_ix, bool door_is_b);
-	building_t *get_conn_bldg_for_pt(point const &p) const;
+	building_t *get_conn_bldg_for_pt(point const &p, float radius=0.0) const;
 	bool is_visible_through_conn(building_t const &parent, building_t const &target, vector3d const &xlate, float view_dist, bool expand_for_light=0) const;
 };
 
@@ -1301,6 +1301,7 @@ struct building_t : public building_geom_t {
 		return check_sphere_coll(pos2, pos, zero_vector, radius, xy_only, cnorm);
 	}
 	bool check_sphere_coll(point &pos, point const &p_last, vector3d const &xlate, float radius, bool xy_only, vector3d *cnorm=nullptr, bool check_interior=0) const;
+	bool check_sphere_coll_inner(point &pos, point const &p_last, vector3d const &xlate, float radius, bool xy_only, vector3d *cnorm=nullptr, bool check_interior=0) const;
 	bool check_sphere_coll_interior(point &pos, point const &p_last, float radius, bool is_in_attic, bool xy_only, vector3d *cnorm) const;
 	bool check_pos_in_unlit_room(point const &pos) const;
 	bool check_pos_in_unlit_room_recur(point const &pos, std::set<unsigned> &rooms_visited, int known_room_id=-1) const;
@@ -1547,7 +1548,7 @@ private:
 		float door_width, bool dim, bool dir, bool is_end_room, unsigned depth, bool const add_doors[2], rand_gen_t &rgen);
 	void end_ext_basement_hallway(extb_room_t &room, cube_t const &conn_bcube, ext_basement_room_params_t &P,
 		float door_width, bool dim, bool dir, unsigned depth, rand_gen_t &rgen);
-	building_t *get_conn_bldg_for_pt(point const &p) const;
+	building_t *get_conn_bldg_for_pt(point const &p, float radius=0.0) const;
 	bool is_visible_through_conn(building_t const &b, vector3d const &xlate, float view_dist, bool expand_for_light=0) const;
 	bool has_L_shaped_roof_area() const;
 	void get_attic_roof_tquads(vector<tquad_with_ix_t> &tquads) const;

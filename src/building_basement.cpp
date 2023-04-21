@@ -10,6 +10,8 @@
 
 enum {PIPE_TYPE_SEWER=0, PIPE_TYPE_CW, PIPE_TYPE_HW, PIPE_TYPE_GAS, NUM_PIPE_TYPES};
 
+float const EXT_BASEMENT_JOIN_DIST = 3.0; // relative to floor spacing
+
 extern int player_in_basement, display_mode;
 extern float DX_VAL_INV, DY_VAL_INV;
 extern building_params_t global_building_params;
@@ -1739,8 +1741,6 @@ door_t const &building_interior_t::get_ext_basement_door() const {
 
 // code to join exterior basements of two nearby buildings
 
-float const EXT_BASEMENT_JOIN_DIST = 3.0; // relative to floor spacing
-
 void populate_params_from_building(building_interior_t const &bi, ext_basement_room_params_t &P) {
 	if (!P.rooms.empty()) return; // already populated
 	for (auto r = bi.rooms.begin()+bi.ext_basement_hallway_room_id+1; r != bi.rooms.end(); ++r) {P.rooms.emplace_back(*r, r->is_hallway, r->has_stairs);}
@@ -1803,7 +1803,8 @@ void building_t::try_connect_ext_basement_to_building(building_t &b) {
 		if (!buildings[bix]->interior->conn_info) {buildings[bix]->interior->conn_info.reset(new building_conn_info_t);}
 	}
 	for (auto const &r : Padd.rooms) { // add any new rooms from above
-		// TODO: player walk between houses
+		// TODO: player walk between houses blocked by closed door
+		// TODO: player shadow update when walking between buildings
 		// TODO: one frame flicker when passing between buildings
 		if (fabs(r.x1()) < 10.0 && fabs(r.y1()) < 10.0) {cout << r.str() << endl;} // TESTING; first at -0.9, -8.8
 		unsigned const is_building_conn(r.hallway_dim ? 2 : 1);
@@ -1817,7 +1818,13 @@ void building_t::try_connect_ext_basement_to_building(building_t &b) {
 			// subtract door from walls of each building
 			for (unsigned bix = 0; bix < 2; ++bix) {subtract_cube_from_cubes(door, buildings[bix]->interior->walls[r.hallway_dim]);}
 		} // for dir
-		for (unsigned bix = 0; bix < 2; ++bix) {buildings[bix]->interior->conn_info->add_connection(buildings[!bix], r);} // connect both ways
+		cube_t ext_bcube(r);
+		set_wall_width(ext_bcube, r.d[r.hallway_dim][r.connect_dir], doorway_width, r.hallway_dim); // door width on either side of door separating buildings
+
+		for (unsigned bix = 0; bix < 2; ++bix) { // connect both ways
+			buildings[bix]->interior->conn_info->add_connection(buildings[!bix], r, conn_door_ix, (bix == 0)); // door belongs to b, which is the first building passed in
+			buildings[bix]->interior->basement_ext_bcube.union_with_cube(ext_bcube);
+		}
 	} // for r
 	for (unsigned bix = 0; bix < 2; ++bix) {buildings[bix]->interior->remove_excess_capacity();} // optional optimization
 }
@@ -1849,9 +1856,9 @@ void try_join_house_ext_basements(vect_building_t &buildings) {
 	} // for work
 }
 
-building_t *building_t::get_conn_bldg_for_pt(point const &p) const {
+building_t *building_t::get_conn_bldg_for_pt(point const &p, float radius) const {
 	if (!interior || !interior->conn_info) return nullptr;
-	return interior->conn_info->get_conn_bldg_for_pt(p);
+	return interior->conn_info->get_conn_bldg_for_pt(p, radius);
 }
 bool building_t::is_visible_through_conn(building_t const &b, vector3d const &xlate, float view_dist, bool expand_for_light) const {
 	return (interior && interior->conn_info && interior->conn_info->is_visible_through_conn(*this, b, xlate, view_dist, expand_for_light));
@@ -1867,10 +1874,10 @@ void building_conn_info_t::add_connection(building_t *b, cube_t const &room, uns
 	if (conn.empty() || conn.back().b != b) {conn.emplace_back(b);} // register a new building if needed
 	conn.back().rooms.emplace_back(room, door_ix, door_is_b);
 }
-building_t *building_conn_info_t::get_conn_bldg_for_pt(point const &p) const {
+building_t *building_conn_info_t::get_conn_bldg_for_pt(point const &p, float radius) const {
 	for (conn_pt_t const &c : conn) {
 		for (cube_t const &room : c.rooms) {
-			if (room.contains_pt(p)) return c.b;
+			if ((radius == 0.0) ? room.contains_pt(p) : sphere_cube_intersect(p, radius, room)) return c.b;
 		}
 	}
 	return nullptr;

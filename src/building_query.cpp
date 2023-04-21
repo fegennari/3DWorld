@@ -164,6 +164,12 @@ bool building_t::check_sphere_coll(point &pos, point const &p_last, vector3d con
 		cube_t const cc(get_coll_bcube());
 		if (!(sc_xy_only ? sphere_cube_intersect_xy((pos - xlate), radius, cc) : sphere_cube_intersect((pos - xlate), radius, cc))) return 0;
 	}
+	if (check_sphere_coll_inner(pos, p_last, xlate, radius, xy_only, cnorm_ptr, check_interior)) return 1;
+	building_t const *const other_bldg(get_conn_bldg_for_pt((pos - xlate), radius)); // Note: not handling pos rotation
+	if (other_bldg == nullptr) return 0; // no connected building at this location
+	return other_bldg->check_sphere_coll_inner(pos, p_last, xlate, radius, xy_only, cnorm_ptr, check_interior); // check connected building
+}
+bool building_t::check_sphere_coll_inner(point &pos, point const &p_last, vector3d const &xlate, float radius, bool xy_only, vector3d *cnorm_ptr, bool check_interior) const {
 	float const xy_radius(radius*global_building_params.player_coll_radius_scale);
 	point pos2(pos), p_last2(p_last), center;
 	bool had_coll(0), is_interior(0), is_in_attic(0);
