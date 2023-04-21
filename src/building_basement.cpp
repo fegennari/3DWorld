@@ -1830,7 +1830,6 @@ void building_t::try_connect_ext_basement_to_building(building_t &b) {
 }
 
 void try_join_house_ext_basements(vect_building_t &buildings) {
-	return; // incomplete - not yet enabled
 	timer_t timer("Join House Basements");
 	vector<vector<unsigned>> houses_by_city;
 
