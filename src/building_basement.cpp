@@ -1804,7 +1804,8 @@ void building_t::try_connect_ext_basement_to_building(building_t &b) {
 	}
 	for (auto const &r : Padd.rooms) { // add any new rooms from above
 		// TODO: one frame flicker when passing between buildings
-		if (fabs(r.x1()) < 10.0 && fabs(r.y1()) < 10.0) {cout << r.str() << endl;} // TESTING; first at -0.9, -8.8
+		// TODO: throw ball between buildings
+		//if (fabs(r.x1()) < 10.0 && fabs(r.y1()) < 10.0) {cout << r.str() << endl;} // TESTING; first at -0.9, -8.8
 		unsigned const is_building_conn(r.hallway_dim ? 2 : 1);
 		// skip one end in hallway_dim and make the other end (bordering the other building) thinner to avoid Z-fighting but still cast shadows
 		interior->place_exterior_room(r, r, get_fc_thickness(), wall_thickness, P, basement_part_ix, 0, r.is_hallway, is_building_conn, r.hallway_dim, r.connect_dir);
@@ -1828,7 +1829,7 @@ void building_t::try_connect_ext_basement_to_building(building_t &b) {
 }
 
 void try_join_house_ext_basements(vect_building_t &buildings) {
-	timer_t timer("Join House Basements");
+	//timer_t timer("Join House Basements"); // ~10ms
 	vector<vector<unsigned>> houses_by_city;
 
 	for (auto b = buildings.begin(); b != buildings.end(); ++b) {
@@ -1836,8 +1837,7 @@ void try_join_house_ext_basements(vect_building_t &buildings) {
 		if (b->city_ix >= houses_by_city.size()) {houses_by_city.resize(b->city_ix+1);}
 		houses_by_city[b->city_ix].push_back(b - buildings.begin());
 	}
-//#pragma omp parallel for schedule(static)
-	for (vector<unsigned> const &work : houses_by_city) {
+	for (vector<unsigned> const &work : houses_by_city) { // could be run in parallel, but not needed
 		// do a quadratic iteration to find nearby houses in this city that can potentially be connected
 		for (unsigned i = 0; i < work.size(); ++i) {
 			building_t &b1(buildings[work[i]]);
