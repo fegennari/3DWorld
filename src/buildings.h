@@ -1219,6 +1219,7 @@ struct building_t : public building_geom_t {
 	uint8_t city_ix=0; // supports up to 256 cities
 	bool is_house=0, has_garage=0, has_shed=0, has_int_garage=0, has_courtyard=0, has_complex_floorplan=0, has_helipad=0, has_ac=0;
 	bool has_int_fplace=0, has_parking_garage=0, has_small_part=0, has_basement_door=0, has_basement_pipes=0, parts_generated=0, is_in_city=0, has_skylight_light=0;
+	mutable bool player_visited=0; // for stats tracking
 	colorRGBA side_color=WHITE, roof_color=WHITE, detail_color=BLACK, door_color=WHITE, wall_color=WHITE;
 	cube_t bcube, pri_hall, driveway, porch, assigned_plot;
 	vect_cube_t parts, fences;
@@ -1398,7 +1399,7 @@ struct building_t : public building_geom_t {
 	void set_obj_lit_state_to(unsigned room_id, float light_z2, bool lit_state);
 	bool player_pickup_object(point const &at_pos, vector3d const &in_dir);
 	void register_player_enter_building() const;
-	void register_player_exit_building () const;
+	void register_player_exit_building (bool entered_another_building) const;
 	bool check_for_wall_ceil_floor_int(point const &p1, point const &p2) const;
 	bool line_intersect_stairs_or_ramp(point const &p1, point const &p2) const;
 	bool check_cube_on_or_near_stairs(cube_t const &c) const;

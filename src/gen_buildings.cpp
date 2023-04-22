@@ -3035,7 +3035,7 @@ public:
 
 			if (new_player_building != player_building) { // building transition
 				if (new_player_building) {new_player_building->register_player_enter_building();}
-				if (player_building    ) {player_building    ->register_player_exit_building ();}
+				if (player_building    ) {player_building    ->register_player_exit_building (new_player_building != nullptr);}
 				player_building = new_player_building;
 			}
 			toggle_room_light = teleport_to_screenshot = 0; building_action_key = 0; // reset these even if the player wasn't in a building

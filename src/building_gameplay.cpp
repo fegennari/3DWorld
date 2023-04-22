@@ -934,16 +934,17 @@ void building_t::register_player_enter_building() const {
 	//print_building_stats(); // for debugging
 
 	if (!name.empty()) {
-		string str("Entering " + name);
+		string str("Entering " + name); // Re-Entering if player_visited?
 		if (is_house) {str += " Residence";}
 		if (!address.empty()) {str += "\n" + address;} // add address on a second line if known
 		if (interior && !interior->people.empty()) {str += "\nPopulation " + std::to_string(interior->people.size());}
 		print_entering_building(str);
 	}
+	player_visited = 1;
 }
-void building_t::register_player_exit_building() const {
+void building_t::register_player_exit_building(bool entered_another_building) const {
 	// only collect items in gameplay mode where there's a risk the player can lose them; otherwise, let the player carry items between buildings
-	player_inventory.collect_items(!in_building_gameplay_mode());
+	if (!entered_another_building) {player_inventory.collect_items(!in_building_gameplay_mode());} // only when not in a building
 }
 
 bool is_obj_in_or_on_obj(room_object_t const &parent, room_object_t const &child) {
