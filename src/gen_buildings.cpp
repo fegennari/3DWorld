@@ -2665,7 +2665,8 @@ public:
 						(*i)->building_draw_interior.draw_for_draw_range(s, b.interior->draw_range, 1); // shadow_only=1
 						b.add_split_roof_shadow_quads(ext_parts_draw);
 						// no batch draw for shadow pass since textures aren't used; draw everything, since shadow may be cached
-						bool const camera_in_this_building(b.check_point_or_cylin_contained(pre_smap_player_pos, 0.0, points, 1, 1)); // inc_attic=1, inc_ext_basement=1
+						bool camera_in_this_building(b.check_point_or_cylin_contained(pre_smap_player_pos, 0.0, points, 1, 1)); // inc_attic=1, inc_ext_basement=1
+						camera_in_this_building |= b.interior_visible_from_other_building_ext_basement(xlate, 1); // check conn building as well; expand_for_light=1
 						// generate detail objects during the shadow pass when the player is in the building so that it can be done in parallel with small static geom gen
 						int const inc_small(camera_in_this_building ? 2 : 1);
 						b.draw_room_geom(nullptr, s, oc, xlate, bi->ix, 1, 0, inc_small, 1); // shadow_only=1, player_in_building=1
