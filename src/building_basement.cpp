@@ -1803,7 +1803,6 @@ void building_t::try_connect_ext_basement_to_building(building_t &b) {
 		if (!buildings[bix]->interior->conn_info) {buildings[bix]->interior->conn_info.reset(new building_conn_info_t);}
 	}
 	for (auto const &r : Padd.rooms) { // add any new rooms from above
-		// TODO: player walk between houses blocked by closed door
 		// TODO: player shadow update when walking between buildings
 		// TODO: one frame flicker when passing between buildings
 		if (fabs(r.x1()) < 10.0 && fabs(r.y1()) < 10.0) {cout << r.str() << endl;} // TESTING; first at -0.9, -8.8
@@ -1886,20 +1885,26 @@ bool building_conn_info_t::is_visible_through_conn(building_t const &parent, bui
 		if (c.b != &target) continue; // skip wrong building
 
 		for (conn_room_t const &room : c.rooms) {
-			cube_t room_bs(room + xlate);
-			if (!room_bs.closest_dist_less_than(camera_pdu.pos, view_dist)) continue; // too far away
-			if (expand_for_light) {room_bs.expand_by(view_dist);} // increase the bounds in case room is behind the player but light cast from it is visible
-			if (!camera_pdu.cube_visible(room_bs)) return 0;
+			cube_t room_cs(room + xlate);
+			if (!room_cs.closest_dist_less_than(camera_pdu.pos, view_dist)) continue; // too far away
+			if (expand_for_light) {room_cs.expand_by(view_dist);} // increase the bounds in case room is behind the player but light cast from it is visible
+			if (!camera_pdu.cube_visible(room_cs)) return 0;
 			if (!expand_for_light) return 1; // can't ignore closed doors for room objects because they we may not draw the door itself
 			// if this is a light, check if the connecting door is open
-			building_t const &door_building(room.door_is_b ? target : parent);
-			assert(door_building.interior);
-			assert(room.door_ix < door_building.interior->doors.size());
-			door_t const &door(door_building.interior->doors[room.door_ix]);
+			door_t const &door((room.door_is_b ? target : parent).get_door(room.door_ix));
 			return (door.open || door.open_amt > 0.0); // true if either about to open or not fully closed
 		} // for room
 	} // for c
 	return 0;
 }
+door_t const *building_conn_info_t::get_door_to_conn_part(building_t const &parent, point const &pos_bs) const {
+	for (conn_pt_t const &c : conn) {
+		for (conn_room_t const &room : c.rooms) {
+			if (room.contains_pt(pos_bs)) return &(room.door_is_b ? *c.b : parent).get_door(room.door_ix);
+		}
+	}
+	return nullptr;
+}
+
 
 

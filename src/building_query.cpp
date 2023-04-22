@@ -539,6 +539,10 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, flo
 	// pass in radius as wall_test_extra_z as a hack to allow player to step over a wall that's below the stairs connecting stacked parts
 	had_coll |= interior->check_sphere_coll_walls_elevators_doors(*this, pos, p_last, xy_radius, radius, 0, cnorm); // check_open_doors=0 (to avoid getting the player stuck)
 
+	if (interior->conn_info) { // check for collision with closed door separating the adjacent building at the end of the connecting room
+		door_t const *const conn_door(interior->conn_info->get_door_to_conn_part(*this, pos));
+		if (conn_door != nullptr && !conn_door->open) {had_coll |= sphere_cube_int_update_pos(pos, radius, *conn_door, p_last, 1, 0, cnorm);} // skip_z=0
+	}
 	if (interior->room_geom) { // collision with room geometry
 		vect_room_object_t const &objs(interior->room_geom->objs);
 

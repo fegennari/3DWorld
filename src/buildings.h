@@ -1136,6 +1136,7 @@ struct building_conn_info_t { // use for buildings with connected rooms (for exa
 	void add_connection(building_t *b, cube_t const &room, unsigned door_ix, bool door_is_b);
 	building_t *get_conn_bldg_for_pt(point const &p, float radius=0.0) const;
 	bool is_visible_through_conn(building_t const &parent, building_t const &target, vector3d const &xlate, float view_dist, bool expand_for_light=0) const;
+	door_t const *get_door_to_conn_part(building_t const &parent, point const &pos_bs) const;
 };
 
 
