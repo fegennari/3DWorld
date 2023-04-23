@@ -1815,6 +1815,7 @@ void building_t::try_connect_ext_basement_to_building(building_t &b) {
 			// subtract door from walls of each building
 			for (unsigned bix = 0; bix < 2; ++bix) {subtract_cube_from_cubes(door, buildings[bix]->interior->walls[r.hallway_dim]);}
 		} // for dir
+		b.interior->doors[conn_door_ix].is_bldg_conn = 1;
 		cube_t ext_bcube(r);
 		set_wall_width(ext_bcube, r.d[r.hallway_dim][r.connect_dir], doorway_width, r.hallway_dim); // door width on either side of door separating buildings
 

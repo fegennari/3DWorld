@@ -1663,7 +1663,7 @@ void building_t::get_all_drawn_interior_verts(building_draw_t &bdraw) {
 }
 
 template<typename T> void building_t::add_door_verts(cube_t const &D, T &drawer, uint8_t door_type,
-	bool dim, bool dir, float open_amt, bool opens_out, bool exterior, bool on_stairs, bool hinge_side) const
+	bool dim, bool dir, float open_amt, bool opens_out, bool exterior, bool on_stairs, bool hinge_side, bool is_bldg_conn) const
 {
 	float const ty((exterior || SPLIT_DOOR_PER_FLOOR) ? 1.0 : D.dz()/get_window_vspace()); // tile door texture across floors for unsplit interior doors
 	int const type(tquad_with_ix_t::TYPE_IDOOR); // always use interior door type, even for exterior door, because we're drawing it in 3D inside the building
@@ -1684,7 +1684,7 @@ template<typename T> void building_t::add_door_verts(cube_t const &D, T &drawer,
 		if (opened && on_stairs) {dc.z2() = dc.z1();}
 		bool const int_other_side(exterior ? 0 : hinge_side);
 		bool const swap_sides(exterior ? (side == 0) : int_other_side); // swap sides for right half of exterior door
-		tquad_with_ix_t const door(set_door_from_cube(dc, dim, dir, type, 0.0, exterior, open_amt, opens_out, opens_up, swap_sides)); // 0,1: bottom, 2,3: top
+		tquad_with_ix_t const door(set_door_from_cube(dc, dim, dir, type, 0.0, exterior, open_amt, opens_out, opens_up, swap_sides, is_bldg_conn)); // 0,1: bottom, 2,3: top
 		vector3d const normal(door.get_norm());
 		tquad_with_ix_t door_edges[4] = {door, door, door, door}; // most doors will only use 2 of these
 
@@ -1723,7 +1723,7 @@ template<typename T> void building_t::add_door_verts(cube_t const &D, T &drawer,
 
 // explicit template specialization
 template void building_t::add_door_verts(cube_t const &D, building_room_geom_t &drawer, uint8_t door_type,
-	bool dim, bool dir, float open_amt, bool opens_out, bool exterior, bool on_stairs, bool hinge_side) const;
+	bool dim, bool dir, float open_amt, bool opens_out, bool exterior, bool on_stairs, bool hinge_side, bool is_bldg_conn) const;
 
 // Note: this is actually the geometry of walls that have windows, not the windows themselves
 void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_pass, float offset_scale, point const *const only_cont_pt_in, bool no_skylights) const {

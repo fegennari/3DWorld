@@ -1077,7 +1077,7 @@ struct door_stack_t : public door_base_t {
 	door_stack_t(door_base_t const &db, unsigned fdix) : door_base_t(db), first_door_ix(fdix) {}
 };
 struct door_t : public door_base_t {
-	bool open=0, locked=0, blocked=0;
+	bool open=0, locked=0, blocked=0, is_bldg_conn=0;
 	float open_amt=0.0; // 0.0=fully closed, 1.0=fully open
 	door_t() {}
 	door_t(cube_t const &c, bool dim_, bool dir, bool open_=1, bool os=0, bool hs=0) : door_base_t(c, dim_, dir, os, hs), open(open_), open_amt(open ? 1.0 : 0.0) {}
@@ -1520,9 +1520,9 @@ public:
 	bool interior_visible_from_other_building_ext_basement(vector3d const &xlate, bool expand_for_light=0) const;
 	void try_connect_ext_basement_to_building(building_t &b);
 	template<typename T> void add_door_verts(cube_t const &D, T &drawer, uint8_t door_type,
-		bool dim, bool dir, float open_amt, bool opens_out, bool exterior, bool on_stairs=0, bool hinge_side=0) const;
+		bool dim, bool dir, float open_amt, bool opens_out, bool exterior, bool on_stairs=0, bool hinge_side=0, bool is_bldg_conn=0) const;
 	tquad_with_ix_t set_door_from_cube(cube_t const &c, bool dim, bool dir, unsigned type, float pos_adj,
-		bool exterior, float open_amt, bool opens_out, bool opens_up, bool swap_sides) const;
+		bool exterior, float open_amt, bool opens_out, bool opens_up, bool swap_sides, bool is_bldg_conn=0) const;
 	tquad_with_ix_t set_interior_door_from_cube(door_t const &door) const;
 	cube_t get_door_bounding_cube(door_t const &door) const;
 	cube_t get_attic_access_door_avoid() const;

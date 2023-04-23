@@ -1372,7 +1372,7 @@ void rotate_and_shift_door(tquad_with_ix_t &door, float angle, float shift, bool
 	UNROLL_4X(door.pts[i_][dim] += shift;);
 }
 tquad_with_ix_t building_t::set_door_from_cube(cube_t const &c, bool dim, bool dir, unsigned type, float pos_adj,
-	bool exterior, float open_amt, bool opens_out, bool opens_up, bool swap_sides) const
+	bool exterior, float open_amt, bool opens_out, bool opens_up, bool swap_sides, bool is_bldg_conn) const
 {
 	tquad_with_ix_t door(4, type); // quad
 	bool const opened(open_amt > 0.0);
@@ -1405,6 +1405,7 @@ tquad_with_ix_t building_t::set_door_from_cube(cube_t const &c, bool dim, bool d
 				unsigned max_angle(75); // in degrees
 
 				for (; max_angle > 0; max_angle -= 15) { // try to open door as much as 75 degrees in steps of 15 degrees
+					if (is_bldg_conn) continue; // no opening for these doors, since they open into another building and the queries below aren't valid
 					tquad_with_ix_t door_rot(door); // cache orig 90 degree open door in case we need to revert it
 					rotate_and_shift_door(door_rot, max_angle, shift, dim, swap_sides);
 					cube_t test_bcube(door_rot.get_bcube());
@@ -1432,7 +1433,7 @@ tquad_with_ix_t building_t::set_door_from_cube(cube_t const &c, bool dim, bool d
 }
 tquad_with_ix_t building_t::set_interior_door_from_cube(door_t const &door) const {
 	unsigned const type(is_house ? (unsigned)tquad_with_ix_t::TYPE_IDOOR : (unsigned)tquad_with_ix_t::TYPE_ODOOR); // house or office door
-	return set_door_from_cube(door, door.dim, door.open_dir, type, 0.0, 0, door.open_amt, 0, 0, door.hinge_side);
+	return set_door_from_cube(door, door.dim, door.open_dir, type, 0.0, 0, door.open_amt, 0, 0, door.hinge_side, door.is_bldg_conn);
 }
 cube_t building_t::get_door_bounding_cube(door_t const &door) const {
 	tquad_with_ix_t const door_tq(set_interior_door_from_cube(door));
