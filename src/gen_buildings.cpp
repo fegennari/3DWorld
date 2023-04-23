@@ -2961,7 +2961,7 @@ public:
 						else {gen_and_draw_people_in_building(ped_draw_vars_t(b, oc, s, xlate, bi->ix, 0, reflection_pass));} // draw people in this building
 						if (b.has_cars_to_draw(player_in_building_bcube)) {buildings_with_cars.push_back(&b);}
 						// check the bcube rather than check_point_or_cylin_contained() so that it works with roof doors that are outside any part?
-						if (!camera_near_building) {b.player_not_near_building(); continue;} // camera not near building
+						if (!camera_near_building && !ext_basement_conn_visible) {b.player_not_near_building(); continue;} // camera not near building or ext basement conn
 						if (reflection_pass == 2) continue; // interior room, don't need to draw windows and exterior doors
 						b.get_nearby_ext_door_verts(ext_door_draw, s, camera_xlated, door_open_dist); // and draw opened door
 						bool const camera_in_this_building(b.check_point_or_cylin_contained(camera_xlated, 0.0, points, 1, 1)); // inc_attic=1, inc_ext_basement=1

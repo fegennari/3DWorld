@@ -1123,8 +1123,8 @@ struct ext_basement_room_params_t;
 struct building_conn_info_t { // use for buildings with connected rooms (for example house extended basements)
 	struct conn_room_t : public cube_t {
 		unsigned door_ix;
-		bool door_is_b;
-		conn_room_t(cube_t const &c, unsigned dix, bool dib) : cube_t(c), door_ix(dix), door_is_b(dib) {}
+		bool dim, dir, door_is_b;
+		conn_room_t(cube_t const &c, unsigned dix, bool dim_, bool dir_, bool dib) : cube_t(c), door_ix(dix), dim(dim_), dir(dir_), door_is_b(dib) {}
 	};
 	struct conn_pt_t {
 		building_t *b;
@@ -1133,8 +1133,9 @@ struct building_conn_info_t { // use for buildings with connected rooms (for exa
 	};
 	vector<conn_pt_t> conn;
 
-	void add_connection(building_t *b, cube_t const &room, unsigned door_ix, bool door_is_b);
+	void add_connection(building_t *b, cube_t const &room, unsigned door_ix, bool dim, bool dir, bool door_is_b);
 	building_t *get_conn_bldg_for_pt(point const &p, float radius=0.0) const;
+	building_t *get_bldg_containing_pt(building_t &parent, point const &p) const;
 	bool is_visible_through_conn(building_t const &parent, building_t const &target, vector3d const &xlate, float view_dist, bool expand_for_light=0) const;
 	door_t const *get_door_to_conn_part(building_t const &parent, point const &pos_bs) const;
 };
@@ -1551,6 +1552,7 @@ private:
 	void end_ext_basement_hallway(extb_room_t &room, cube_t const &conn_bcube, ext_basement_room_params_t &P,
 		float door_width, bool dim, bool dir, unsigned depth, rand_gen_t &rgen);
 	building_t *get_conn_bldg_for_pt(point const &p, float radius=0.0) const;
+	building_t *get_bldg_containing_pt(point const &p);
 	bool is_visible_through_conn(building_t const &b, vector3d const &xlate, float view_dist, bool expand_for_light=0) const;
 	bool has_L_shaped_roof_area() const;
 	void get_attic_roof_tquads(vector<tquad_with_ix_t> &tquads) const;

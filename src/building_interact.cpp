@@ -993,7 +993,7 @@ void building_t::update_player_interact_objects(point const &player_pos) {
 					auto &obj(interior->room_geom->get_room_object_by_index(obj_ix));
 					bool handled(0);
 
-					// break the glass if not already broken
+					// break the glass if not already broken; should windows get broken as well?
 					if ((obj.type == TYPE_TV || obj.type == TYPE_MONITOR || obj.type == TYPE_DRESS_MIR || (obj.type == TYPE_MIRROR && !obj.is_open())) &&
 						velocity.mag() > 2.0*MIN_VELOCITY && !obj.is_broken())
 					{
@@ -1031,6 +1031,12 @@ void building_t::update_player_interact_objects(point const &player_pos) {
 			if (!was_dynamic) {interior->room_geom->invalidate_small_geom();} // static => dynamic transition, need to remove from static object vertex data
 			interior->update_dynamic_draw_data();
 			c->translate(new_center - center);
+			// check for collision with closed door separating the adjacent building at the end of the connecting room
+			building_t *const cont_bldg(get_bldg_containing_pt(new_center));
+
+			if (cont_bldg != nullptr && cont_bldg != this) { // switched buildings
+				if (cont_bldg->interior->room_geom->add_room_object(*c, *this, 1, velocity)) {c->remove();} // move ball from this to other_bldg
+			}
 		}
 	} // for c
 	if (player_in_closet) { // check for collisions with expanded objects in closets

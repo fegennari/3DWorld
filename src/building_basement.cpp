@@ -1803,8 +1803,6 @@ void building_t::try_connect_ext_basement_to_building(building_t &b) {
 		if (!buildings[bix]->interior->conn_info) {buildings[bix]->interior->conn_info.reset(new building_conn_info_t);}
 	}
 	for (auto const &r : Padd.rooms) { // add any new rooms from above
-		// TODO: one frame flicker when passing between buildings
-		// TODO: throw ball between buildings
 		//if (fabs(r.x1()) < 10.0 && fabs(r.y1()) < 10.0) {cout << r.str() << endl;} // TESTING; first at -0.9, -8.8
 		unsigned const is_building_conn(r.hallway_dim ? 2 : 1);
 		// skip one end in hallway_dim and make the other end (bordering the other building) thinner to avoid Z-fighting but still cast shadows
@@ -1821,7 +1819,8 @@ void building_t::try_connect_ext_basement_to_building(building_t &b) {
 		set_wall_width(ext_bcube, r.d[r.hallway_dim][r.connect_dir], doorway_width, r.hallway_dim); // door width on either side of door separating buildings
 
 		for (unsigned bix = 0; bix < 2; ++bix) { // connect both ways
-			buildings[bix]->interior->conn_info->add_connection(buildings[!bix], r, conn_door_ix, (bix == 0)); // door belongs to b, which is the first building passed in
+			// door belongs to b, which is the first building passed in
+			buildings[bix]->interior->conn_info->add_connection(buildings[!bix], r, conn_door_ix, r.hallway_dim, r.connect_dir, (bix == 0));
 			buildings[bix]->interior->basement_ext_bcube.union_with_cube(ext_bcube);
 		}
 	} // for r
@@ -1857,6 +1856,10 @@ building_t *building_t::get_conn_bldg_for_pt(point const &p, float radius) const
 	if (!interior || !interior->conn_info) return nullptr;
 	return interior->conn_info->get_conn_bldg_for_pt(p, radius);
 }
+building_t *building_t::get_bldg_containing_pt(point const &p) {
+	if (!interior || !interior->conn_info) return nullptr; // not really meant to be called in this case; caller must check for null ret and run some default logic
+	return interior->conn_info->get_bldg_containing_pt(*this, p);
+}
 bool building_t::is_visible_through_conn(building_t const &b, vector3d const &xlate, float view_dist, bool expand_for_light) const {
 	return (interior && interior->conn_info && interior->conn_info->is_visible_through_conn(*this, b, xlate, view_dist, expand_for_light));
 }
@@ -1867,16 +1870,28 @@ bool building_t::interior_visible_from_other_building_ext_basement(vector3d cons
 	return player_building->is_visible_through_conn(*this, xlate, view_dist, expand_for_light);
 }
 
-void building_conn_info_t::add_connection(building_t *b, cube_t const &room, unsigned door_ix, bool door_is_b) {
+void building_conn_info_t::add_connection(building_t *b, cube_t const &room, unsigned door_ix, bool dim, bool dir, bool door_is_b) {
 	if (conn.empty() || conn.back().b != b) {conn.emplace_back(b);} // register a new building if needed
-	conn.back().rooms.emplace_back(room, door_ix, door_is_b);
+	conn.back().rooms.emplace_back(room, door_ix, dim, dir, door_is_b);
 }
 building_t *building_conn_info_t::get_conn_bldg_for_pt(point const &p, float radius) const {
 	for (conn_pt_t const &c : conn) {
-		for (cube_t const &room : c.rooms) {
+		for (conn_room_t const &room : c.rooms) {
 			if ((radius == 0.0) ? room.contains_pt(p) : sphere_cube_intersect(p, radius, room)) return c.b;
 		}
 	}
+	return nullptr;
+}
+building_t *building_conn_info_t::get_bldg_containing_pt(building_t &parent, point const &p) const {
+	for (conn_pt_t const &c : conn) {
+		for (conn_room_t const &room : c.rooms) {
+			if (room.contains_pt(p)) return (room.door_is_b ? &parent : c.b); // room belongs to one building and door belongs to the other
+			cube_t other_side_of_door(room);
+			other_side_of_door.d[room.dim][!room.dir] = room.d[room.dim][room.dir]; // flush with the door
+			other_side_of_door.d[room.dim][ room.dir] = room.d[room.dim][room.dir] + (room.dir ? 1.0 : -1.0)*parent.get_doorway_width(); // extend into adj room
+			if (other_side_of_door.contains_pt(p)) return (room.door_is_b ? c.b : &parent);
+		}
+	} // for c
 	return nullptr;
 }
 bool building_conn_info_t::is_visible_through_conn(building_t const &parent, building_t const &target, vector3d const &xlate, float view_dist, bool expand_for_light) const {

@@ -539,10 +539,6 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, flo
 	// pass in radius as wall_test_extra_z as a hack to allow player to step over a wall that's below the stairs connecting stacked parts
 	had_coll |= interior->check_sphere_coll_walls_elevators_doors(*this, pos, p_last, xy_radius, radius, 0, cnorm); // check_open_doors=0 (to avoid getting the player stuck)
 
-	if (interior->conn_info) { // check for collision with closed door separating the adjacent building at the end of the connecting room
-		door_t const *const conn_door(interior->conn_info->get_door_to_conn_part(*this, pos));
-		if (conn_door != nullptr && !conn_door->open) {had_coll |= sphere_cube_int_update_pos(pos, radius, *conn_door, p_last, 1, 0, cnorm);} // skip_z=0
-	}
 	if (interior->room_geom) { // collision with room geometry
 		vect_room_object_t const &objs(interior->room_geom->objs);
 
@@ -849,6 +845,30 @@ room_object_t const &building_interior_t::get_elevator_car(elevator_t const &e) 
 	return obj;
 }
 
+bool check_door_coll(building_t const &building, door_t const &door, point &pos, point const &p_last, float radius, float obj_z, bool check_open_doors, vector3d *cnorm) {
+	if (door.open) {
+		if (!check_open_doors) return 0; // doors tend to block the player and other objects, don't collide with them unless they're closed
+		cube_t door_bounds(door);
+		door_bounds.expand_by_xy(door.get_width());
+		if (!sphere_cube_intersect(pos, radius, door_bounds)) return 0; // check intersection with rough/conservative door bounds (optimization)
+		tquad_with_ix_t const door_tq(building.set_interior_door_from_cube(door));
+		vector3d normal(door_tq.get_norm());
+		if (dot_product_ptv(normal, pos, door_tq.pts[0]) < 0.0) {normal.negate();} // use correct normal sign
+		float rdist, thick;
+
+		if (sphere_ext_poly_int_base(door_tq.pts[0], normal, pos, radius, door.get_thickness(), thick, rdist)) {
+			if (sphere_poly_intersect(door_tq.pts, door_tq.npts, pos, normal, rdist, thick)) {
+				pos += normal*(thick - rdist);
+				if (cnorm) {*cnorm = normal;}
+				return 1;
+			}
+		}
+		return 0;
+	}
+	if (obj_z < door.z1() || obj_z > door.z2()) return 0; // wrong part/floor
+	return sphere_cube_int_update_pos(pos, radius, door, p_last, 1, 0, cnorm); // skip_z=0
+}
+
 // Note: should be valid for players and other spherical objects
 bool building_interior_t::check_sphere_coll_walls_elevators_doors(building_t const &building, point &pos, point const &p_last, float radius,
 	float wall_test_extra_z, bool check_open_doors, vector3d *cnorm) const
@@ -879,28 +899,12 @@ bool building_interior_t::check_sphere_coll_walls_elevators_doors(building_t con
 		had_coll |= sphere_cube_int_update_pos(pos, radius, *e, p_last, 1, 1, cnorm); // handle as a single blocking cube; skip_z=1
 	} // for e
 	for (auto i = doors.begin(); i != doors.end(); ++i) {
-		if (i->open) {
-			if (!check_open_doors) continue; // doors tend to block the player and other objects, don't collide with them unless they're closed
-			cube_t door_bounds(*i);
-			door_bounds.expand_by_xy(i->get_width());
-			if (!sphere_cube_intersect(pos, radius, door_bounds)) continue; // check intersection with rough/conservative door bounds (optimization)
-			tquad_with_ix_t const door(building.set_interior_door_from_cube(*i));
-			vector3d normal(door.get_norm());
-			if (dot_product_ptv(normal, pos, door.pts[0]) < 0.0) {normal.negate();} // use correct normal sign
-			float rdist, thick;
-			
-			if (sphere_ext_poly_int_base(door.pts[0], normal, pos, radius, i->get_thickness(), thick, rdist)) {
-				if (sphere_poly_intersect(door.pts, door.npts, pos, normal, rdist, thick)) {
-					pos += normal*(thick - rdist);
-					if (cnorm) {*cnorm = normal;}
-					had_coll = 1;
-				}
-			}
-			continue;
-		}
-		if (obj_z < i->z1() || obj_z > i->z2()) continue; // wrong part/floor
-		had_coll |= sphere_cube_int_update_pos(pos, radius, *i, p_last, 1, 0, cnorm); // skip_z=0
-	} // for i
+		had_coll |= check_door_coll(building, *i, pos, p_last, radius, obj_z, check_open_doors, cnorm);
+	}
+	if (conn_info) { // check for collision with closed door separating the adjacent building at the end of the connecting room
+		door_t const *const conn_door(conn_info->get_door_to_conn_part(building, pos));
+		if (conn_door != nullptr) {had_coll |= check_door_coll(building, *conn_door, pos, p_last, radius, obj_z, check_open_doors, cnorm);}
+	}
 	return had_coll;
 }
 
