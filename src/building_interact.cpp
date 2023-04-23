@@ -20,6 +20,7 @@ extern int player_in_closet, camera_surf_collide, building_action_key, can_picku
 extern float fticks, CAMERA_RADIUS, office_chair_rot_rate;
 extern double tfticks;
 extern building_dest_t cur_player_building_loc;
+extern building_t const *player_building;
 
 
 cube_t get_sink_cube(room_object_t const &c);
@@ -907,10 +908,13 @@ void building_t::update_player_interact_objects(point const &player_pos) {
 	if (!has_room_geom()) return; // nothing else to do
 	float const player_radius(get_scaled_player_radius()), player_z1(player_pos.z - get_player_height() - player_radius), player_z2(player_pos.z);
 	float const fc_thick(get_fc_thickness()), fticks_stable(min(fticks, 1.0f)); // cap to 1/40s to improve stability
+	bool const player_in_this_building(this == player_building);
 	static float last_sound_tfticks(0);
 	static point last_sound_pt(all_zeros), last_player_pos(all_zeros);
 	bool const player_is_moving(player_pos != last_player_pos);
-	last_player_pos = player_pos;
+	if (player_in_this_building) {last_player_pos = player_pos;}
+
+	// update dynamic objects; run for current and connected buildings
 	auto &objs(interior->room_geom->objs), &expanded_objs(interior->room_geom->expanded_objs);
 
 	for (auto c = objs.begin(); c != objs.end(); ++c) { // check for other objects to collide with (including stairs)
@@ -1039,27 +1043,29 @@ void building_t::update_player_interact_objects(point const &player_pos) {
 			}
 		}
 	} // for c
-	if (player_in_closet) { // check for collisions with expanded objects in closets
-		for (auto c = expanded_objs.begin(); c != expanded_objs.end(); ++c) {
-			if (c->type == TYPE_CLOTHES && sphere_cube_intersect(player_pos, player_radius, *c)) { // shirt in a closet with the player
-				assert(c != objs.begin());
-				room_object_t &hanger(*(c-1)); // hanger is the previous object
-				assert(hanger.type == TYPE_HANGER);
-				bool const rot_dir(dot_product(c->get_dir(), (player_pos - c->get_cube_center())) < 0);
-				unsigned const add_flag(rot_dir ? RO_FLAG_ADJ_LO : RO_FLAG_ADJ_HI), rem_flag(rot_dir ? RO_FLAG_ADJ_HI : RO_FLAG_ADJ_LO);
-				c->flags     |= ((c->type == TYPE_CLOTHES) ? RO_FLAG_ROTATING : 0) | add_flag;
-				c->flags     &= ~rem_flag;
-				hanger.flags |= RO_FLAG_ROTATING | add_flag; // play a sound as well?
-				hanger.flags &= ~rem_flag;
-			}
-		} // for c
+	if (player_in_this_building) { // interactions only run for player building
+		if (player_in_closet) { // check for collisions with expanded objects in closets
+			for (auto c = expanded_objs.begin(); c != expanded_objs.end(); ++c) {
+				if (c->type == TYPE_CLOTHES && sphere_cube_intersect(player_pos, player_radius, *c)) { // shirt in a closet with the player
+					assert(c != objs.begin());
+					room_object_t &hanger(*(c-1)); // hanger is the previous object
+					assert(hanger.type == TYPE_HANGER);
+					bool const rot_dir(dot_product(c->get_dir(), (player_pos - c->get_cube_center())) < 0);
+					unsigned const add_flag(rot_dir ? RO_FLAG_ADJ_LO : RO_FLAG_ADJ_HI), rem_flag(rot_dir ? RO_FLAG_ADJ_HI : RO_FLAG_ADJ_LO);
+					c->flags     |= ((c->type == TYPE_CLOTHES) ? RO_FLAG_ROTATING : 0) | add_flag;
+					c->flags     &= ~rem_flag;
+					hanger.flags |= RO_FLAG_ROTATING | add_flag; // play a sound as well?
+					hanger.flags &= ~rem_flag;
+				}
+			} // for c
+		}
+		if (use_last_pickup_object || (tt_fire_button_down && !flashlight_on)) { // use object not active, and not using fire key without flashlight (space bar)
+			maybe_use_last_pickup_room_object(player_pos);
+			use_last_pickup_object = 0; // reset for next frame
+		}
+		maybe_update_tape(player_pos, 0); // end_of_tape=0
 	}
-	if (use_last_pickup_object || (tt_fire_button_down && !flashlight_on)) { // use object not active, and not using fire key without flashlight (space bar)
-		maybe_use_last_pickup_room_object(player_pos);
-		use_last_pickup_object = 0; // reset for next frame
-	}
-	maybe_update_tape(player_pos, 0); // end_of_tape=0
-	doors_next_frame();
+	doors_next_frame(); // run for current and connected buildings
 }
 
 bool building_interior_t::update_elevators(building_t const &building, point const &player_pos) { // Note: player_pos is in building space
