@@ -1855,18 +1855,20 @@ void try_join_house_ext_basements(vect_building_t &buildings) {
 }
 
 building_t *building_t::get_conn_bldg_for_pt(point const &p, float radius) const {
-	if (!interior || !interior->conn_info) return nullptr;
+	if (!player_in_basement || !interior || !interior->conn_info) return nullptr; // only active when player is in the basement
 	return interior->conn_info->get_conn_bldg_for_pt(p, radius);
 }
 building_t *building_t::get_bldg_containing_pt(point const &p) {
+	if (!player_in_basement) return nullptr; // only active when player is in the basement
 	if (!interior || !interior->conn_info) return nullptr; // not really meant to be called in this case; caller must check for null ret and run some default logic
 	return interior->conn_info->get_bldg_containing_pt(*this, p);
 }
 bool building_t::is_visible_through_conn(building_t const &b, vector3d const &xlate, float view_dist, bool expand_for_light) const {
+	if (!player_in_basement) return 0; // only active when player is in the basement
 	return (interior && interior->conn_info && interior->conn_info->is_visible_through_conn(*this, b, xlate, view_dist, expand_for_light));
 }
 bool building_t::interior_visible_from_other_building_ext_basement(vector3d const &xlate, bool expand_for_light) const {
-	if (player_in_basement != 3) return 0; // player not in extended basement
+	if (!player_in_basement) return 0; // player not in basement; note that it's possible for the player to be in the basement and still see the conn room in the ext basement
 	if (player_building == nullptr || player_building == this || !interior || !interior->conn_info) return 0;
 	float const view_dist(8.0*get_window_vspace()); // arbitrary constant, should reflect length of largest hallway
 	return player_building->is_visible_through_conn(*this, xlate, view_dist, expand_for_light);
