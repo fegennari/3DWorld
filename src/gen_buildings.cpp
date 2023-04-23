@@ -1498,34 +1498,35 @@ void building_t::get_all_drawn_ext_wall_verts(building_draw_t &bdraw) {
 		if (!is_basement(i)) {bdraw.add_section(*this, 1, *i, mat.wall_tex, wall_color, 3, 0, 0, 1, 0);} // XY
 	}
 	ext_side_qv_range.end = bdraw.get_num_verts(mat.wall_tex);
+	get_basment_ext_wall_verts(bdraw);
+}
+void building_t::get_basment_ext_wall_verts(building_draw_t &bdraw) const {
+	if (!has_basement()) return;
+	tid_nm_pair_t const tp(get_basement_wall_texture());
+	// find basement door and exclude it
+	// dim_mask bits: enable dims: 1=x, 2=y, 4=z | disable cube faces: 8=x1, 16=x2, 32=y1, 64=y2, 128=z1, 256=z2
+	unsigned dim_mask(3); // XY
+	cube_t const &basement(get_basement());
 
-	if (has_basement()) {
-		tid_nm_pair_t const tp(get_basement_wall_texture());
-		// find basement door and exclude it
-		// dim_mask bits: enable dims: 1=x, 2=y, 4=z | disable cube faces: 8=x1, 16=x2, 32=y1, 64=y2, 128=z1, 256=z2
-		unsigned dim_mask(3); // XY
-		cube_t const &basement(get_basement());
+	if (has_basement_door) {
+		// find basement door and remove a section of wall around it; can't use stencil test associated with ext_side_qv_range
+		assert(interior);
 
-		if (has_basement_door) {
-			// find basement door and remove a section of wall around it; can't use stencil test associated with ext_side_qv_range
-			assert(interior);
+		for (auto const &door : interior->doors) { // check all exterior doors
+			if (door.z1() >= ground_floor_z1)    continue; // not a basement door
+			if (basement.contains_cube_xy(door)) continue; // not the door separating the basement from the exterior basement
+			unsigned const this_face(1 << (2*door.dim + door.open_dir + 3));
+			dim_mask |= this_face; // skip this face for the full basement call below
 
-			for (auto const &door : interior->doors) { // check all exterior doors
-				if (door.z1() >= ground_floor_z1)    continue; // not a basement door
-				if (basement.contains_cube_xy(door)) continue; // not the door separating the basement from the exterior basement
-				unsigned const this_face(1 << (2*door.dim + door.open_dir + 3));
-				dim_mask |= this_face; // skip this face for the full basement call below
-
-				for (unsigned d = 0; d < 2; ++d) {
-					cube_t side(basement);
-					side.d[!door.dim][!d] = door.d[!door.dim][d];
-					bdraw.add_section(*this, 0, side, tp, WHITE, ~(this_face | 4), 0, 0, 1, 0); // single face, always white
-				}
-				break; // the first door should be the one connecting the basement to the extended basement
-			} // for doors
-		}
-		bdraw.add_section(*this, 0, basement, tp, WHITE, dim_mask, 0, 0, 1, 0); // XY, always white
+			for (unsigned d = 0; d < 2; ++d) {
+				cube_t side(basement);
+				side.d[!door.dim][!d] = door.d[!door.dim][d];
+				bdraw.add_section(*this, 0, side, tp, WHITE, ~(this_face | 4), 0, 0, 1, 0); // single face, always white
+			}
+			break; // the first door should be the one connecting the basement to the extended basement
+		} // for doors
 	}
+	bdraw.add_section(*this, 0, basement, tp, WHITE, dim_mask, 0, 0, 1, 0); // XY, always white
 }
 
 void set_skip_faces_for_nearby_cube_edge(cube_t const &c, cube_t const &C, float dist, bool dim, unsigned &dim_mask) {
@@ -2672,6 +2673,7 @@ public:
 						b.draw_room_geom(nullptr, s, oc, xlate, bi->ix, 1, 0, inc_small, 1); // shadow_only=1, player_in_building=1
 						b.get_ext_wall_verts_no_sec(ext_parts_draw); // add exterior walls to prevent light leaking between adjacent parts
 						b.draw_cars_in_building(s, xlate, 1, 1); // player_in_building=1, shadow_only=1
+						if (b.has_ext_basement()) {b.get_basment_ext_wall_verts(ext_parts_draw);} // draw basement exterior walls
 						bool const player_close(dist_less_than(lpos, pre_smap_player_pos, camera_pdu.far_)); // Note: pre_smap_player_pos already in building space
 						bool const add_player_shadow(camera_surf_collide ? player_close : 0);
 						bool shader_was_changed(0);
