@@ -1749,7 +1749,7 @@ void populate_params_from_building(building_interior_t const &bi, ext_basement_r
 void building_t::try_connect_ext_basement_to_building(building_t &b) {
 	assert(has_ext_basement() && b.has_ext_basement());
 	float const floor_spacing(get_window_vspace()), wall_thickness(get_wall_thickness()), z_toler(0.1*get_trim_thickness());
-	float const doorway_width(get_doorway_width()), wall_hwidth(0.8*doorway_width), min_shared_wall_len(2.01*wall_hwidth);
+	float const doorway_width(get_doorway_width()), wall_hwidth(0.8*doorway_width), min_shared_wall_len(2.01*(wall_hwidth + 2.0*wall_thickness));
 	float const max_connect_dist(EXT_BASEMENT_JOIN_DIST*floor_spacing), min_connect_dist(2.1*doorway_width); // need enough space to fit two open doors
 	assert(b.get_window_vspace() == floor_spacing);
 	cube_t const &other_eb_bc(b.interior->basement_ext_bcube);
@@ -1777,7 +1777,8 @@ void building_t::try_connect_ext_basement_to_building(building_t &b) {
 			for (unsigned d = 0; d < 2; ++d) { // r1/r2 join dim {x, y}
 				float const shared_lo(max(r1->d[!d][0], r2->d[!d][0])), shared_hi(min(r1->d[!d][1], r2->d[!d][1]));
 				if (shared_hi - shared_lo < min_shared_wall_len) continue; // check for projection in dim !d long enough to place a hallway and door
-				float const door_center(rgen.rand_uniform(shared_lo+wall_hwidth, shared_hi-wall_hwidth));
+				// add an extra wall_thickness padding on either side to avoid wall trim clipping through a nearby room
+				float const door_center(rgen.rand_uniform(shared_lo+wall_hwidth+wall_thickness, shared_hi-wall_hwidth-wall_thickness));
 				bool const dir(r1->d[d][0] < r2->d[d][0]); // dir sign from r1 => r2 in dim d
 				cube_t cand_join(*r1);
 				cand_join.d[d][ dir] = r2->d[d][!dir];
