@@ -10,8 +10,6 @@
 
 enum {PIPE_TYPE_SEWER=0, PIPE_TYPE_CW, PIPE_TYPE_HW, PIPE_TYPE_GAS, NUM_PIPE_TYPES};
 
-float const EXT_BASEMENT_JOIN_DIST = 3.0; // relative to floor spacing
-
 extern int player_in_basement, display_mode;
 extern float DX_VAL_INV, DY_VAL_INV;
 extern building_params_t global_building_params;
@@ -1873,6 +1871,10 @@ bool building_t::interior_visible_from_other_building_ext_basement(vector3d cons
 	float const view_dist(8.0*get_window_vspace()); // arbitrary constant, should reflect length of largest hallway
 	return player_building->is_visible_through_conn(*this, xlate, view_dist, expand_for_light);
 }
+cube_t building_t::get_conn_room_closest_to(point const &pos_bs) const { // in reference to the player's current building
+	if (!player_in_basement || player_building == nullptr || player_building == this || !interior || !interior->conn_info) return cube_t();
+	return interior->conn_info->get_conn_room_closest_to(*this, *player_building, pos_bs);
+}
 
 void building_conn_info_t::add_connection(building_t *b, cube_t const &room, unsigned door_ix, bool dim, bool dir, bool door_is_b) {
 	if (conn.empty() || conn.back().b != b) {conn.emplace_back(b);} // register a new building if needed
@@ -1922,6 +1924,20 @@ door_t const *building_conn_info_t::get_door_to_conn_part(building_t const &pare
 		}
 	}
 	return nullptr;
+}
+cube_t building_conn_info_t::get_conn_room_closest_to(building_t const &parent, building_t const &target, point const &pos_bs) const {
+	cube_t closest;
+	float dmin_sq(0.0);
+
+	for (conn_pt_t const &c : conn) {
+		if (c.b != &target) continue; // wrong building
+		for (conn_room_t const &room : c.rooms) {
+			if (room.contains_pt(pos_bs)) return room; // contained case returns immediately
+			float const dist_sq(p2p_dist_sq(room.closest_pt(pos_bs), pos_bs));
+			if (dmin_sq == 0.0 || dist_sq < dmin_sq) {dmin_sq = dist_sq; closest = room;}
+		}
+	}
+	return closest;
 }
 
 

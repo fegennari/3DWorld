@@ -28,6 +28,7 @@ float const DOOR_WIDTH_SCALE       = 0.5;
 float const STAIRS_WALL_WIDTH_MULT = 0.15; // relative to the depth of a stair
 float const ELEVATOR_Z2_SHIFT      = 0.6; // shift downward, relative to ceiling thickness
 float const DOOR_FRAME_WIDTH       = 0.07; // for door texture, relative to door width
+float const EXT_BASEMENT_JOIN_DIST = 3.0; // relative to floor spacing
 
 unsigned const NUM_BOTTLE_TYPES = 6;
 unsigned const NUM_BOOK_COLORS  = 16;
@@ -1138,6 +1139,7 @@ struct building_conn_info_t { // use for buildings with connected rooms (for exa
 	building_t *get_bldg_containing_pt(building_t &parent, point const &p) const;
 	bool is_visible_through_conn(building_t const &parent, building_t const &target, vector3d const &xlate, float view_dist, bool expand_for_light=0) const;
 	door_t const *get_door_to_conn_part(building_t const &parent, point const &pos_bs) const;
+	cube_t get_conn_room_closest_to(building_t const &parent, building_t const &target, point const &pos_bs) const;
 };
 
 
@@ -1555,6 +1557,7 @@ private:
 	building_t *get_conn_bldg_for_pt(point const &p, float radius=0.0) const;
 	building_t *get_bldg_containing_pt(point const &p);
 	bool is_visible_through_conn(building_t const &b, vector3d const &xlate, float view_dist, bool expand_for_light=0) const;
+	cube_t get_conn_room_closest_to(point const &pos_bs) const;
 	bool has_L_shaped_roof_area() const;
 	void get_attic_roof_tquads(vector<tquad_with_ix_t> &tquads) const;
 	bool add_attic_access_door(cube_t const &ceiling, unsigned part_ix, unsigned num_floors, unsigned rooms_start, rand_gen_t &rgen);

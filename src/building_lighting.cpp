@@ -1257,8 +1257,8 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 	else {
 		cube_t bcube_exp(bcube);
 		bcube_exp.expand_by_xy(2.0*window_vspacing);
-		camera_near_building = bcube_exp.contains_pt(camera_bs);
 		camera_can_see_ext_basement = interior_visible_from_other_building_ext_basement(xlate, 1); // expand_for_light=1
+		camera_near_building        = bcube_exp.contains_pt(camera_bs) || camera_can_see_ext_basement;
 	}
 	if (camera_near_building) { // build moving objects vector
 		for (auto i = objs.begin(); i != objs_end; ++i) {
@@ -1384,18 +1384,24 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		float const light_radius(get_radius_for_room_light(*i)), cull_radius(0.95*light_radius);
 		float const dshadow_radius((is_in_attic ? 1.0 : 0.8)*light_radius); // use full light radius for attics since they're more open
 		if (!camera_pdu.sphere_visible_test((lpos_rot + xlate), cull_radius)) continue; // VFC
-		// ext basement connector room must include the other building's ext basement, and it's simplest to just expand it by a hallway width
-		float const light_bcube_expand(i->is_exterior() ? 2.0*window_vspacing : 0.0);
+		// ext basement connector room must include the other building's ext basement, and it's simplest to just expand it by the max length of that room plus approx hallway width
+		bool const is_ext_conn_light(i->is_exterior());
+		float const light_bcube_expand(is_ext_conn_light ? (EXT_BASEMENT_JOIN_DIST*window_vspacing + get_doorway_width()) : 0.0);
 		// check visibility of bcube of light sphere clipped to building bcube; this excludes lights behind the camera and improves shadow map assignment quality
-		cube_t sphere_bc, light_clip_cube; // in building space, unrotated
+		cube_t sphere_bc, light_clip_cube, conn_room; // in building space, unrotated
 		sphere_bc.set_from_sphere(lpos, cull_radius);
+		bool union_with_conn_room(0);
 
 		if (light_in_basement) { // clip to basement + ext basement
 			light_clip_cube = get_basement();
 			if (has_ext_basement()) {light_clip_cube.union_with_cube(interior->basement_ext_bcube);}
 			if (is_in_elevator)     {light_clip_cube.z2() = bcube.z2();} // extends up the elevator shaft into floors above the basement
 			assert(light_clip_cube.contains_pt(lpos)); // Note: may not be contained in building bcube
-			light_clip_cube.expand_by_xy(light_bcube_expand);
+			if (is_ext_conn_light) {light_clip_cube.expand_by_xy(light_bcube_expand);}
+			else if (camera_can_see_ext_basement) {
+				conn_room = get_conn_room_closest_to(lpos); // lpos_rot?
+				if (!conn_room.is_all_zeros() && conn_room.intersects(light_clip_cube)) {light_clip_cube.union_with_cube(conn_room); union_with_conn_room = 1;} // include entire room
+			}
 		}
 		else { // clip to bcube
 			if (is_rotated()) {light_clip_cube = get_rotated_bcube(bcube, 1);} // inv_rotate=1
@@ -1485,7 +1491,8 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 				}
 				clipped_bc.x1() = light_bcube.x1(); clipped_bc.x2() = light_bcube.x2(); // copy X/Y but keep orig zvals
 				clipped_bc.y1() = light_bcube.y1(); clipped_bc.y2() = light_bcube.y2();
-				clipped_bc.expand_by_xy(light_bcube_expand);
+				if (is_ext_conn_light) {clipped_bc.expand_by_xy(light_bcube_expand);}
+				else if (union_with_conn_room) {clipped_bc.union_with_cube(conn_room);} // include the entire room
 			}
 			clipped_bc.expand_by_xy(room_xy_expand); // expand so that offset exterior doors are properly handled
 			clipped_bc.intersect_with_cube(sphere_bc); // clip to original light sphere, which still applies (only need to expand at building exterior)
