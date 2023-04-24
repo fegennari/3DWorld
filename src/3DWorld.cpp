@@ -26,8 +26,8 @@
 
 #ifdef _WIN32
 extern "C" { // force use of dedicated GPUs rather than Intel integrated graphics
-	_declspec(dllexport) DWORD NvOptimusEnablement = 1;
-	_declspec(dllexport) int AmdPowerXpressRequestHighPerformance = 1;
+	__declspec(dllexport) DWORD NvOptimusEnablement = 1;
+	__declspec(dllexport) int AmdPowerXpressRequestHighPerformance = 1;
 }
 #endif
 
