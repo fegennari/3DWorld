@@ -2653,9 +2653,16 @@ public:
 
 				// draw interior for the building containing the light
 				for (auto g = (*i)->grid_by_tile.begin(); g != (*i)->grid_by_tile.end(); ++g) {
-					if (player_in_basement == 3 && player_building && g->bcube.contains_cube_xy(player_building->bcube)) {} // skip culling
-					else if (!g->bcube.contains_pt_xy(lpos)) continue; // wrong tile (note that z test is skipped to handle skylights)
+					if (!g->bcube.contains_pt_xy(lpos)) { // wrong tile (note that z test is skipped to handle skylights)
+						bool skip_culling(0);
 					
+						if (player_in_basement == 3 && player_building) {
+							// check player building extended basement, since it can overlap an adjacent grid; the second check is required for connected buildings
+							if (g->bcube.contains_cube_xy(player_building->bcube)) {skip_culling = 1;}
+							else if (player_building->has_ext_basement() && g->bcube.intersects_xy(player_building->interior->basement_ext_bcube)) {skip_culling = 1;}
+						}
+						if (!skip_culling) continue;
+					}
 					for (auto bi = g->bc_ixs.begin(); bi != g->bc_ixs.end(); ++bi) {
 						building_t &b((*i)->get_building(bi->ix));
 						if (!b.interior) continue; // no interior
