@@ -1246,7 +1246,8 @@ void expand_convex_polygon_xy(vect_point &points, point const &center, float exp
 bool building_t::check_point_or_cylin_contained(point const &pos, float xy_radius, vector<point> &points, bool inc_attic, bool inc_ext_basement) const {
 	if (inc_ext_basement && point_in_extended_basement_not_basement(pos)) { // extended basement is not rotated
 		// this check must be accurate; since the extended basement is sparse, we need to check every extended basement room
-		return interior->point_in_ext_basement_room(pos);
+		// expand by wall thickness to avoid failing when crossing between two rooms that don't exactly line up, such as with conn room boundary with adj building
+		return interior->point_in_ext_basement_room(pos, get_wall_thickness());
 	}
 	if (xy_radius == 0.0 && !bcube.contains_pt(pos)) return 0; // no intersection (bcube does not need to be rotated)
 	point pr(pos);

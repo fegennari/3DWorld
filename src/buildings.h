@@ -1189,7 +1189,7 @@ struct building_interior_t {
 	colorRGBA get_attic_ceiling_color() const;
 	room_t const &get_garage_room() const {assert((unsigned)garage_room < rooms.size()); return rooms[garage_room];}
 	vector<room_t>::const_iterator ext_basement_rooms_start() const;
-	bool point_in_ext_basement_room(point const &pos) const;
+	bool point_in_ext_basement_room(point const &pos, float expand=0.0) const;
 	bool cube_in_ext_basement_room(cube_t const &c, bool xy_only) const;
 	door_t const &get_ext_basement_door() const;
 	void assign_master_bedroom(float window_vspacing, float floor_thickness);
