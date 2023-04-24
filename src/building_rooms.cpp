@@ -888,7 +888,8 @@ bool building_t::maybe_add_fireplace_to_room(rand_gen_t &rgen, room_t const &roo
 bool building_t::place_obj_along_wall(room_object type, room_t const &room, float height, vector3d const &sz_scale, rand_gen_t &rgen, float zval, unsigned room_id, float tot_light_amt,
 	cube_t const &place_area, unsigned objs_start, float front_clearance, unsigned pref_orient, bool pref_centered, colorRGBA const &color, bool not_at_window, room_obj_shape shape)
 {
-	float const hwidth(0.5*height*sz_scale.y/sz_scale.z), depth(height*sz_scale.x/sz_scale.z), min_space(2.8*hwidth);
+	float const hwidth(0.5*height*sz_scale.y/sz_scale.z), depth(height*sz_scale.x/sz_scale.z);
+	float const min_space(max(2.8f*hwidth, 2.1f*(max(hwidth, 0.5f*depth) + get_scaled_player_radius()))); // make sure the player can get around the object
 	vector3d const place_area_sz(place_area.get_size());
 	if (max(place_area_sz.x, place_area_sz.y) <= min_space) return 0; // can't fit in either dim
 	unsigned const force_dim((place_area_sz.x <= min_space) ? 0 : ((place_area_sz.y <= min_space) ? 1 : 2)); // *other* dim; 2=neither
