@@ -1790,8 +1790,8 @@ void building_t::try_connect_ext_basement_to_building(building_t &b) {
 				populate_params_from_building(*b.interior, Pb);
 				if (!  is_basement_room_placement_valid(test_cube, P,  d,  dir, nullptr, &b  )) continue; // add_end_door=nullptr
 				if (!b.is_basement_room_placement_valid(test_cube, Pb, d, !dir, nullptr, this)) continue; // add_end_door=nullptr
-				//if (fabs(r1->x1()) < 10.0 && fabs(r1->y1()) < 10.0) {cout << r1->str() << " | " << r2->str() << endl;} // TESTING
 				Padd.rooms.emplace_back(cand_join, 1, 0, d, dir); // is_hallway=1, has_stairs=0
+				Padd.rooms.back().conn_bcube = *r2; // store room in the other building that we're connecting to in conn_bcube
 			} // for d
 		} // for r2
 	} // for r1
@@ -1817,7 +1817,7 @@ void building_t::try_connect_ext_basement_to_building(building_t &b) {
 		} // for dir
 		b.interior->doors[conn_door_ix].is_bldg_conn = 1;
 		cube_t ext_bcube(r);
-		set_wall_width(ext_bcube, r.d[r.hallway_dim][r.connect_dir], doorway_width, r.hallway_dim); // door width on either side of door separating buildings
+		ext_bcube.d[r.hallway_dim][r.connect_dir] = r.conn_bcube.d[r.hallway_dim][r.connect_dir]; // extend to cover the entire width of the adjacent hallway in the other building
 
 		for (unsigned bix = 0; bix < 2; ++bix) { // connect both ways
 			// door belongs to b, which is the first building passed in
