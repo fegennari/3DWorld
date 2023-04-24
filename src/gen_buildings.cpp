@@ -2989,8 +2989,9 @@ public:
 						this_frame_camera_in_building  = 1;
 						this_frame_player_in_basement |= b.check_player_in_basement(camera_xlated - vector3d(0.0, 0.0, BASEMENT_ENTRANCE_SCALE*b.get_floor_thickness())); // only set once
 						this_frame_player_in_attic    |= b.point_in_attic(camera_xlated);
-						// player can only be in one basement or attic, except for extended basement connector rooms
-						can_break_from_loop |= ((this_frame_player_in_basement >= 2 && !ext_basement_conn_visible) || this_frame_player_in_attic);
+						// player can only be in one basement or attic, except for extended basement connector rooms;
+						// be conservative and don't break if the player is in the basement and this building has any connections to other basements
+						can_break_from_loop |= ((this_frame_player_in_basement >= 2 && !b.has_conn_info()) || this_frame_player_in_attic);
 						new_player_building = &b;
 						b.register_player_in_building(camera_xlated, bi->ix); // required for AI following logic
 						if (enable_building_indir_lighting()) {indir_bcs_ix = bcs_ix; indir_bix = bi->ix;} // compute indirect lighting for this building

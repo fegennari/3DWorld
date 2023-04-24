@@ -1247,6 +1247,7 @@ struct building_t : public building_geom_t {
 	static float get_min_front_clearance_inc_people();
 	bool is_valid() const {return !bcube.is_all_zeros();}
 	bool has_interior () const {return bool(interior);}
+	bool has_conn_info() const {return (interior && interior->conn_info);}
 	bool has_room_geom() const {return (has_interior() && interior->room_geom);}
 	bool has_sec_bldg () const {return (has_garage || has_shed);}
 	bool has_pri_hall () const {return (hallway_dim <= 1);} // otherswise == 2 (Note: some callers check !pri_hall.is_all_zeros(); should they instead call this function?)
