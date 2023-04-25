@@ -162,7 +162,7 @@ struct sign_t : public oriented_city_obj_t {
 	static void pre_draw(draw_state_t &dstate, bool shadow_only);
 	static void post_draw(draw_state_t &dstate, bool shadow_only);
 	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const;
-	void draw_text(draw_state_t &dstate, city_draw_qbds_t &qbds, string const &text_to_draw) const;
+	void draw_text(draw_state_t &dstate, city_draw_qbds_t &qbds, string const &text_to_draw, float first_char_clip_val=0.0, float last_char_clip_val=0.0) const;
 };
 
 struct city_flag_t : public oriented_city_obj_t {

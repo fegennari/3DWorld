@@ -925,7 +925,6 @@ cube_t get_city_bcube(unsigned city_id);
 cube_t get_city_bcube_at_pt(point const &pos);
 float get_sidewalk_width();
 float get_inner_sidewalk_width();
-
 // from gen_buildings.cpp
 bool have_city_buildings();
 bool enable_building_people_ai();
@@ -933,9 +932,11 @@ void update_building_ai_state(float delta_dir);
 void get_all_city_helipads(vect_cube_t &helipads);
 bool check_city_building_line_coll_bs(point const &p1, point const &p2, point &p_int);
 void update_buildings_zmax_for_line(point const &p1, point const &p2, float radius, float house_extra_zval, float &cur_zmax);
-
 // from city_interact.cpp
 void init_city_spectate_manager(car_manager_t &car_manager, ped_manager_t &ped_manager);
 bool skip_bai_draw(person_t     const &bai);
 bool skip_ped_draw(pedestrian_t const &ped);
 bool skip_car_draw(car_t        const &car);
+// from building_room_geom.cpp
+template<typename T> void add_sign_text_verts(string const &text, cube_t const &sign, bool dim, bool dir, colorRGBA const &color,
+	vector<T> &verts_out, float first_char_clip_val=0.0, float last_char_clip_val=0.0);

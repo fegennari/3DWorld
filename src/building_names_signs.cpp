@@ -97,13 +97,40 @@ colorRGBA choose_sign_color(rand_gen_t &rgen, bool emissive=0) {
 
 unsigned register_sign_text(string const &text) {return sign_helper.register_text(text);}
 
-template<typename T> void add_sign_text_verts(string const &text, cube_t const &sign, bool dim, bool dir, colorRGBA const &color, vector<T> &verts_out) {
+// here dim and dir are the direction the text is read
+float clip_char_quad(vector<vert_tc_t> &verts, unsigned start_ix, bool dim, bool dir, float lo_val, float hi_val) {
+	assert(start_ix + 4 <= verts.size());
+	cube_t range(verts[start_ix].v); // only X and Y are used
+	float tc_lo(verts[start_ix].t[0]), tc_hi(tc_lo);
+	
+	for (unsigned n = 1; n < 4; ++n) { // skip first point
+		vert_tc_t const &v(verts[start_ix+n]);
+		range.union_with_pt(v.v);
+		min_eq(tc_lo, v.t[0]);
+		max_eq(tc_hi, v.t[0]);
+	}
+	float const width(range.get_sz_dim(dim)), width_signed((dir ? 1.0 : -1.0)*width), dtc(tc_hi - tc_lo);
+	float const clip_vlo(range.d[dim][!dir] + lo_val*width_signed), clip_vhi(range.d[dim][!dir] + hi_val*width_signed);
+	float const clip_tlo(tc_lo + lo_val*dtc), clip_thi(tc_lo + hi_val*dtc);
+	assert(width > 0.0);
+	assert(dtc   > 0.0);
+	
+	for (unsigned n = 0; n < 4; ++n) {
+		vert_tc_t &v(verts[start_ix+n]);
+		if      (v.v[dim] == range.d[dim][!dir]) {v.v[dim] = clip_vlo; v.t[0] = clip_tlo;}
+		else if (v.v[dim] == range.d[dim][ dir]) {v.v[dim] = clip_vhi; v.t[0] = clip_thi;}
+	}
+	return clip_vlo;
+}
+template<typename T> void add_sign_text_verts(string const &text, cube_t const &sign, bool dim, bool dir, colorRGBA const &color,
+	vector<T> &verts_out, float first_char_clip_val, float last_char_clip_val)
+{
 	assert(!text.empty());
 	cube_t ct(sign); // text area is slightly smaller than full cube
 	ct.expand_in_dim(!dim, -0.1*ct.get_sz_dim(!dim));
 	ct.expand_in_dim(2, -0.05*ct.dz());
 	vector3d col_dir(zero_vector), normal(zero_vector);
-	bool const ldir(dim ^ dir);
+	bool const ldir(dim ^ dir), is_scrolling(first_char_clip_val != 0.0 || last_char_clip_val != 0.0);
 	col_dir[!dim] = (ldir  ? 1.0 : -1.0);
 	normal [ dim] = (dir ? 1.0 : -1.0);
 	static vector<vert_tc_t> verts;
@@ -112,10 +139,18 @@ template<typename T> void add_sign_text_verts(string const &text, cube_t const &
 	pos[dim] = ct.d[dim][dir] + (dir ? 1.0 : -1.0)*0.2*ct.get_sz_dim(dim); // shift away from the front face to prevent z-fighting
 	gen_text_verts(verts, pos, text, 1.0, col_dir, plus_z, 1); // use_quads=1
 	assert(!verts.empty());
-	cube_t text_bcube(verts[0].v);
-	for (auto i = verts.begin()+2; i != verts.end(); i += 2) {text_bcube.union_with_pt(i->v);} // only need to include opposite corners
+	//unsigned const bcube_start_ix(is_scrolling ? 4 : 0); // exclude first duplicated character if scrolling
+	unsigned const bcube_start_ix(0); // TODO
+	cube_t text_bcube(verts[bcube_start_ix].v);
+	for (auto i = verts.begin()+bcube_start_ix+2; i != verts.end(); i += 2) {text_bcube.union_with_pt(i->v);} // only need to include opposite corners
 	float const width_scale(ct.get_sz_dim(!dim)/text_bcube.get_sz_dim(!dim)), height_scale(ct.dz()/text_bcube.dz());
 	if (dot_product(normal, cross_product((verts[1].v - verts[0].v), (verts[2].v - verts[1].v))) < 0.0) {std::reverse(verts.begin(), verts.end());} // swap vertex winding order
+	if (last_char_clip_val  > 0.0) {clip_char_quad(verts, verts.size()-4, !dim, ldir, 0.0, 1.0-last_char_clip_val);}
+	
+	if (first_char_clip_val > 0.0) {
+		float const left_edge(clip_char_quad(verts, 0, !dim, ldir, first_char_clip_val, 1.0)), shift(pos[!dim] - left_edge);
+		for (vert_tc_t &v : verts) {v.v[!dim] += shift;} // shift so that left edge of text aligns with left edge of the sign
+	}
 	color_wrapper const cw(color);
 	typename T::normal_type const nc(normal); // vector3d or norm_comp
 
@@ -125,8 +160,10 @@ template<typename T> void add_sign_text_verts(string const &text, cube_t const &
 		verts_out.emplace_back(i->v, nc, i->t[0], i->t[1], cw);
 	}
 }
-template void add_sign_text_verts(string const &text, cube_t const &sign, bool dim, bool dir, colorRGBA const &color, vector<vert_norm_comp_tc_color> &verts_out);
-template void add_sign_text_verts(string const &text, cube_t const &sign, bool dim, bool dir, colorRGBA const &color, vector<vert_norm_tc_color     > &verts_out);
+template void add_sign_text_verts(string const &text, cube_t const &sign, bool dim, bool dir, colorRGBA const &color, 
+	vector<vert_norm_comp_tc_color> &verts_out, float first_char_clip_val, float last_char_clip_val);
+template void add_sign_text_verts(string const &text, cube_t const &sign, bool dim, bool dir, colorRGBA const &color,
+	vector<vert_norm_tc_color     > &verts_out, float first_char_clip_val, float last_char_clip_val);
 
 void add_room_obj_sign_text_verts(room_object_t const &c, colorRGBA const &color, vector<vert_norm_comp_tc_color> &verts_out) {
 	add_sign_text_verts(sign_helper.get_text(c.obj_id), c, c.dim, c.dir, color, verts_out);

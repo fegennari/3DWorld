@@ -16,7 +16,6 @@ extern city_params_t city_params;
 
 string gen_random_name(rand_gen_t &rgen); // from Universe_name.cpp
 string gen_random_first_name(rand_gen_t &rgen); // from pedestrians.cpp
-template<typename T> void add_sign_text_verts(string const &text, cube_t const &sign, bool dim, bool dir, colorRGBA const &color, vector<T> &verts_out); // from building_room_geom.cpp
 
 class road_name_gen_t {
 	static string get_numbered_street_name(unsigned num) {
