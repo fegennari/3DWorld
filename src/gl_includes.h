@@ -13,7 +13,11 @@
 #include <GL/gl.h>
 
 #ifdef _WIN32
+#ifdef __MINGW32__
+#include <GL/freeglut.h>
+#else
 #include <freeglut.h>
+#endif
 #undef FAR // undefine conflicting defines picked up from windows headers
 #else // linux
 #include <GL/freeglut.h> // standard glut

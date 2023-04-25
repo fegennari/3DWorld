@@ -1,1 +1,1 @@
-../Targa/targa.cpp
+#include "../Targa/targa.cpp"

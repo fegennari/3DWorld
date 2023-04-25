@@ -1,1 +1,1 @@
-../dependencies/meshoptimizer/src/simplifier.cpp
+#include "../dependencies/meshoptimizer/src/simplifier.cpp"

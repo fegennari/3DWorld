@@ -16,7 +16,7 @@ extern float CAMERA_RADIUS;
 #define ENABLE_OPENAL // comment this out to disable OpenAL sound support
 
 #ifdef ENABLE_OPENAL
-#ifdef _WIN32 // Note: the Windows OpenAL 1.1 SDK doesn't have the AL directory, but the openal-soft GitHub repo does
+#if defined(_WIN32) && !defined(__MINGW32__) // Note: the Windows OpenAL 1.1 SDK doesn't have the AL directory, but the openal-soft GitHub repo does
 #include <al.h>
 #include <alc.h>
 #else
