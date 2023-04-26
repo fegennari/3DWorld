@@ -1031,10 +1031,26 @@ sign_t::sign_t(cube_t const &bcube_, bool dim_, bool dir_, string const &text_, 
 	bool two_sided_, bool emissive_, bool small_, bool scrolling_) :
 	oriented_city_obj_t(dim_, dir_), two_sided(two_sided_), emissive(emissive_), small(small_), scrolling(scrolling_), bkg_color(bc), text_color(tc)
 {
-	bcube  = bcube_;
+	assert(!text_.empty());
+	bcube  = text_bcube = bcube_;
 	pos    = bcube.get_cube_center();
 	radius = bcube.get_bsphere_radius();
 	text   = (scrolling ? " "+text_+" " : text_); // pad with space on both sides if scrolling
+
+	if (scrolling) { // precompute text character offsets for scrolling effect
+		unsigned const text_len(text.size());
+		float const width(text_bcube.get_sz_dim(!dim)); // make text area a bit wider to account for the space padding
+		text_bcube.expand_in_dim(!dim, 0.25*(float(text_len)/float(text_len-2) - 1.0)*width);
+		vector<vert_norm_tc_color> verts;
+		add_sign_text_verts(text, text_bcube, dim, dir, text_color, verts, 0.0, 0.0, 1); // include_space_chars=1, since we need offsets for all characters
+		assert(verts.size() == 4*text_len);
+		char_pos.resize(text_len);
+		float const start_val(verts.front().v[!dim]);
+		for (unsigned n = 0; n < text_len; ++n) {char_pos[n] = (verts[4*n+2].v[!dim] - start_val);}
+		assert(char_pos.back() != 0.0);
+		float const pos_scale(1.0/char_pos.back()); // can be positive or negative; result of divide should always be positive
+		for (unsigned n = 0; n < text_len; ++n) {char_pos[n] *= pos_scale;} // scale so that full width is 1.0
+	}
 }
 /*static*/ void sign_t::pre_draw(draw_state_t &dstate, bool shadow_only) {
 	if (!shadow_only) {text_drawer::bind_font_texture();}
@@ -1057,9 +1073,17 @@ void sign_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale
 
 	if (scrolling && animate2) { // at the moment we can only scroll in integer characters, 4 per second
 		// TODO: do we need to reset the time after a while to avoid large number FP problems?
-		float const scroll_val(4.0*tfticks/TICKS_PER_SECOND + pos.x + pos.y); // add pos x/y so that signs scroll at different points per building
-		unsigned const scroll_uint((unsigned)scroll_val), offset(text.size() - (scroll_uint % text.size()) - 1);
-		float const last_char_clip_val(scroll_val - scroll_uint), first_char_clip_val(1.0 - last_char_clip_val);
+		float const scroll_val(0.25*tfticks/TICKS_PER_SECOND + fabs(pos.x) + fabs(pos.y)); // add pos x/y so that signs scroll at different points per building; make sure it's positive
+		assert(!char_pos.empty());
+		float const scroll_val_mod(1.0 - (scroll_val - unsigned(scroll_val))); // take the fractional part
+		auto it(std::lower_bound(char_pos.begin(), char_pos.end(), scroll_val_mod));
+		unsigned const offset(it - char_pos.begin());
+		assert(it != char_pos.end()); // can't be >= 1.0
+		float const lo((offset == 0) ? 0.0f : char_pos[offset-1]), hi(char_pos[offset]), width(hi - lo), remainder(scroll_val_mod - lo);
+		assert(width > 0.0);
+		assert(remainder >= 0.0);
+		assert(remainder <= width);
+		float const first_char_clip_val(remainder/width), last_char_clip_val(1.0 - first_char_clip_val);
 		string scroll_text(text);
 		std::rotate(scroll_text.begin(), scroll_text.begin()+offset, scroll_text.end());
 		scroll_text.push_back(scroll_text.front()); // duplicate first character for partial character scroll effect
@@ -1068,13 +1092,6 @@ void sign_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale
 	else {draw_text(dstate, qbds, text);}
 }
 void sign_t::draw_text(draw_state_t &dstate, city_draw_qbds_t &qbds, string const &text_to_draw, float first_char_clip_val, float last_char_clip_val) const {
-	cube_t text_bcube(bcube);
-	// if scrolling, make text area a bit wider to account for the space padding
-	if (scrolling) {
-		float const width(text_bcube.get_sz_dim(!dim));
-		text_bcube.expand_in_dim(!dim, 0.25*(float(text.size())/float(text.size()-2) - 1.0)*width);
-		//text_bcube.translate_dim(!dim, ((dim ^ dir) ? -1.0 : 1.0)*first_char_clip_val*width/(text.size()+1)); // only works with fixed width font?
-	}
 	quad_batch_draw &qbd((emissive /*&& is_night()*/) ? qbds.emissive_qbd : qbds.qbd);
 	bool const front_facing(((camera_pdu.pos[dim] - dstate.xlate[dim]) < bcube.d[dim][dir]) ^ dir);
 	if (front_facing  ) {add_sign_text_verts(text_to_draw, text_bcube, dim,  dir, text_color, qbd.verts, first_char_clip_val, last_char_clip_val);} // draw the front side text

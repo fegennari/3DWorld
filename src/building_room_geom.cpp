@@ -25,7 +25,8 @@ int get_rand_screenshot_texture(unsigned rand_ix);
 unsigned get_num_screenshot_tids();
 string gen_random_full_name (rand_gen_t &rgen);
 
-void gen_text_verts(vector<vert_tc_t> &verts, point const &pos, string const &text, float tsize, vector3d const &column_dir, vector3d const &line_dir, bool use_quads=0);
+void gen_text_verts(vector<vert_tc_t> &verts, point const &pos, string const &text, float tsize,
+	vector3d const &column_dir, vector3d const &line_dir, bool use_quads=0, bool include_space_chars=0);
 string const &gen_book_title(unsigned rand_id, string *author, unsigned split_len);
 void add_floor_number(unsigned floor_ix, unsigned floor_offset, bool has_parking_garage, ostringstream &oss);
 unsigned get_rgeom_sphere_ndiv(bool low_detail);

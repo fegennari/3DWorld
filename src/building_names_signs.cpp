@@ -62,7 +62,8 @@ string choose_business_name(rand_gen_t rgen) {
 
 // signs
 
-void gen_text_verts(vector<vert_tc_t> &verts, point const &pos, string const &text, float tsize, vector3d const &column_dir, vector3d const &line_dir, bool use_quads=0);
+void gen_text_verts(vector<vert_tc_t> &verts, point const &pos, string const &text, float tsize,
+	vector3d const &column_dir, vector3d const &line_dir, bool use_quads=0, bool include_space_chars=0);
 void add_city_building_signs(cube_t const &city_bcube, vector<sign_t> &signs);
 void add_city_building_flags(cube_t const &city_bcube, vector<city_flag_t> &flags);
 
@@ -123,7 +124,7 @@ float clip_char_quad(vector<vert_tc_t> &verts, unsigned start_ix, bool dim, bool
 	return clip_vlo;
 }
 template<typename T> void add_sign_text_verts(string const &text, cube_t const &sign, bool dim, bool dir, colorRGBA const &color,
-	vector<T> &verts_out, float first_char_clip_val, float last_char_clip_val)
+	vector<T> &verts_out, float first_char_clip_val, float last_char_clip_val, bool include_space_chars)
 {
 	assert(!text.empty());
 	cube_t ct(sign); // text area is slightly smaller than full cube
@@ -137,20 +138,18 @@ template<typename T> void add_sign_text_verts(string const &text, cube_t const &
 	verts.clear();
 	point pos;
 	pos[dim] = ct.d[dim][dir] + (dir ? 1.0 : -1.0)*0.2*ct.get_sz_dim(dim); // shift away from the front face to prevent z-fighting
-	gen_text_verts(verts, pos, text, 1.0, col_dir, plus_z, 1); // use_quads=1
+	gen_text_verts(verts, pos, text, 1.0, col_dir, plus_z, 1, include_space_chars); // use_quads=1
 	assert(!verts.empty());
-	//unsigned const bcube_start_ix(is_scrolling ? 4 : 0); // exclude first duplicated character if scrolling
-	unsigned const bcube_start_ix(0); // TODO
-	cube_t text_bcube(verts[bcube_start_ix].v);
-	for (auto i = verts.begin()+bcube_start_ix+2; i != verts.end(); i += 2) {text_bcube.union_with_pt(i->v);} // only need to include opposite corners
-	float const width_scale(ct.get_sz_dim(!dim)/text_bcube.get_sz_dim(!dim)), height_scale(ct.dz()/text_bcube.dz());
-	if (dot_product(normal, cross_product((verts[1].v - verts[0].v), (verts[2].v - verts[1].v))) < 0.0) {std::reverse(verts.begin(), verts.end());} // swap vertex winding order
 	if (last_char_clip_val  > 0.0) {clip_char_quad(verts, verts.size()-4, !dim, ldir, 0.0, 1.0-last_char_clip_val);}
-	
+
 	if (first_char_clip_val > 0.0) {
 		float const left_edge(clip_char_quad(verts, 0, !dim, ldir, first_char_clip_val, 1.0)), shift(pos[!dim] - left_edge);
 		for (vert_tc_t &v : verts) {v.v[!dim] += shift;} // shift so that left edge of text aligns with left edge of the sign
 	}
+	cube_t text_bcube(verts[0].v);
+	for (auto i = verts.begin()+2; i != verts.end(); i += 2) {text_bcube.union_with_pt(i->v);} // only need to include opposite corners
+	float const width_scale(ct.get_sz_dim(!dim)/text_bcube.get_sz_dim(!dim)), height_scale(ct.dz()/text_bcube.dz());
+	if (dot_product(normal, cross_product((verts[1].v - verts[0].v), (verts[2].v - verts[1].v))) < 0.0) {std::reverse(verts.begin(), verts.end());} // swap vertex winding order
 	color_wrapper const cw(color);
 	typename T::normal_type const nc(normal); // vector3d or norm_comp
 
@@ -161,9 +160,9 @@ template<typename T> void add_sign_text_verts(string const &text, cube_t const &
 	}
 }
 template void add_sign_text_verts(string const &text, cube_t const &sign, bool dim, bool dir, colorRGBA const &color, 
-	vector<vert_norm_comp_tc_color> &verts_out, float first_char_clip_val, float last_char_clip_val);
+	vector<vert_norm_comp_tc_color> &verts_out, float first_char_clip_val, float last_char_clip_val, bool include_space_chars);
 template void add_sign_text_verts(string const &text, cube_t const &sign, bool dim, bool dir, colorRGBA const &color,
-	vector<vert_norm_tc_color     > &verts_out, float first_char_clip_val, float last_char_clip_val);
+	vector<vert_norm_tc_color     > &verts_out, float first_char_clip_val, float last_char_clip_val, bool include_space_chars);
 
 void add_room_obj_sign_text_verts(room_object_t const &c, colorRGBA const &color, vector<vert_norm_comp_tc_color> &verts_out) {
 	add_sign_text_verts(sign_helper.get_text(c.obj_id), c, c.dim, c.dir, color, verts_out);

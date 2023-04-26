@@ -91,8 +91,9 @@ void load_font_texture_atlas(string const &fn) {font_texture_manager.load(fn);}
 void free_font_texture_atlas() {font_texture_manager.free_gl_state();}
 
 
-void gen_text_verts(vector<vert_tc_t> &verts, point const &pos, string const &text, float tsize, vector3d const &column_dir, vector3d const &line_dir, bool use_quads=0) {
-
+void gen_text_verts(vector<vert_tc_t> &verts, point const &pos, string const &text, float tsize,
+	vector3d const &column_dir, vector3d const &line_dir, bool use_quads=0, bool include_space_chars=0)
+{
 	float const line_spacing = 1.25;
 	float const char_spacing = 0.06;
 	float const char_sz(0.001*tsize);
@@ -115,7 +116,7 @@ void gen_text_verts(vector<vert_tc_t> &verts, point const &pos, string const &te
 			float const char_width(char_sz*pcd.width);
 
 			// skip non-printable space character, except at the beginning and end (for scrolling signs) because we need those verts for the bcube bounds
-			if (*i != ' ' || i == text.begin() || i+1 == text.end()) {
+			if (include_space_chars || *i != ' ' || i == text.begin() || i+1 == text.end()) {
 				float const t[4][2] = {{pcd.u1,pcd.v1}, {pcd.u2,pcd.v1}, {pcd.u2,pcd.v2}, {pcd.u1,pcd.v2}};
 				float const dx[4] = {0.0, char_width, char_width, 0.0};
 				float const dy[4] = {0.0, 0.0, char_sz, char_sz};
