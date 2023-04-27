@@ -1346,11 +1346,11 @@ void building_room_geom_t::add_wall_trim(room_object_t const &c, bool for_closet
 	else { // cube/short/tall
 		bool const is_exterior(c.is_exterior());
 		unsigned skip_faces(0);
-		if      (c.shape == SHAPE_TALL ) {skip_faces = 0;} // door/window side trim
-		else if (c.shape == SHAPE_SHORT) {skip_faces = get_skip_mask_for_xy(!c.dim);} // door top trim: skip ends
-		else                             {skip_faces = get_skip_mask_for_xy(!c.dim) | EF_Z1;} // wall trim: skip bottom surface and short sides
-		if (c.flags & RO_FLAG_ADJ_LO) {skip_faces |= ~get_face_mask(c.dim, 0);}
-		if (c.flags & RO_FLAG_ADJ_HI) {skip_faces |= ~get_face_mask(c.dim, 1);}
+		if      (c.shape == SHAPE_TALL ) {skip_faces  = 0;} // door/window side trim, or exterior wall trim
+		else if (c.shape == SHAPE_SHORT) {skip_faces  =  get_skip_mask_for_xy(!c.dim);} // door top trim: skip ends
+		else                             {skip_faces  =  get_skip_mask_for_xy(!c.dim) | EF_Z1;} // wall trim: skip bottom surface and short sides
+		if (c.flags & RO_FLAG_ADJ_LO)    {skip_faces |= ~get_face_mask(c.dim, 0);}
+		if (c.flags & RO_FLAG_ADJ_HI)    {skip_faces |= ~get_face_mask(c.dim, 1);}
 		skip_faces |= ((c.flags & RO_FLAG_ADJ_BOT) ? EF_Z1 : 0) | ((c.flags & RO_FLAG_ADJ_TOP) ? EF_Z2 : 0);
 
 		if (is_exterior && (c.flags & RO_FLAG_HAS_EXTRA)) { // fully exterior
