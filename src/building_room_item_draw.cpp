@@ -1226,7 +1226,7 @@ void building_t::gen_and_draw_room_geom(brg_batch_draw_t *bbd, shader_t &s, occl
 		gen_room_details(rgen, building_ix); // generate so that we can draw it
 		assert(has_room_geom());
 	}
-	if (has_room_geom() && inc_small == 2) {add_wall_and_door_trim_if_needed();} // gen trim when close to the player
+	if (has_room_geom() && inc_small >= 2) {add_wall_and_door_trim_if_needed();} // gen trim (exterior and interior) when close to the player
 	draw_room_geom(bbd, s, oc, xlate, building_ix, shadow_only, reflection_pass, inc_small, player_in_building);
 }
 void building_t::clear_room_geom() {
@@ -1313,7 +1313,7 @@ void brg_batch_draw_t::draw_obj_models(shader_t &s, vector3d const &xlate, bool 
 	if (!models_to_draw.empty()) {check_mvm_update();}
 }
 
-// Note: non-const because it creates the VBO; inc_small: 0=large only, 1=large+small, 2=large+small+detail
+// Note: non-const because it creates the VBO; inc_small: 0=large only, 1=large+small, 2=large+small+ext detail, 2=large+small+ext detail+int detail
 void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, building_t const &building, occlusion_checker_noncity_t &oc, vector3d const &xlate,
 	unsigned building_ix, bool shadow_only, bool reflection_pass, unsigned inc_small, bool player_in_building)
 {
@@ -1327,7 +1327,8 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, building_t c
 	// don't draw ceiling lights when player is above the building unless there's a light placed on a skylight
 	bool const draw_lights(camera_bs.z < building.bcube.z2() + (building.has_skylight_light ? 20.0*floor_spacing : 0.0));
 	// only parking garages and attics have detail objects that cast shadows
-	bool const draw_detail_objs(inc_small == 2 && (!shadow_only || building.has_parking_garage || building.has_attic()));
+	bool const draw_detail_objs(inc_small >= 2 && (!shadow_only || building.has_parking_garage || building.has_attic()));
+	bool const draw_int_detail_objs(inc_small >= 3 && !shadow_only);
 	if (bbd != nullptr) {bbd->set_camera_dir_mask(camera_bs, building.bcube);}
 	brg_batch_draw_t *const bbd_in(bbd); // capture bbd for instance drawing before setting to null if player_in_building
 	if (player_in_building) {bbd = nullptr;} // use immediate drawing when player is in the building because draw order matters for alpha blending
@@ -1352,7 +1353,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, building_t c
 			create_static_vbos(building);
 			if (!shadow_only) {++num_geom_this_frame;}
 		}
-		bool const create_small(inc_small && !mats_small.valid), create_text(inc_small == 2 && !mats_text.valid);
+		bool const create_small(inc_small && !mats_small.valid), create_text(draw_int_detail_objs && !mats_text.valid);
 		//highres_timer_t timer("Create Small + Text VBOs", (create_small || create_text));
 
 		if (create_small && create_text) { // MT case
@@ -1387,9 +1388,9 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, building_t c
 	enable_blend(); // needed for rugs and book text
 	assert(s.is_setup());
 	mats_static.draw(bbd, s, shadow_only, reflection_pass); // this is the slowest call
-	if (draw_lights)      {mats_lights .draw(bbd,    s, shadow_only, reflection_pass);}
-	if (inc_small  )      {mats_dynamic.draw(bbd,    s, shadow_only, reflection_pass);}
-	if (draw_detail_objs) {mats_detail .draw(bbd,    s, shadow_only, reflection_pass);}
+	if (draw_lights)          {mats_lights .draw(bbd,    s, shadow_only, reflection_pass);}
+	if (inc_small  )          {mats_dynamic.draw(bbd,    s, shadow_only, reflection_pass);}
+	if (draw_int_detail_objs) {mats_detail .draw(bbd,    s, shadow_only, reflection_pass);}
 	
 	// draw exterior geom; shadows not supported; always use bbd; skip in reflection pass because that control flow doesn't work and is probably not needed (except for L-shaped house?)
 	if (!shadow_only && !reflection_pass) {
@@ -1419,7 +1420,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, building_t c
 			}
 		}
 	}
-	if (inc_small == 2 && !shadow_only) {mats_text.draw(bbd, s, shadow_only, reflection_pass);} // text must be drawn last; drawn as detail objects
+	if (draw_int_detail_objs && !shadow_only) {mats_text.draw(bbd, s, shadow_only, reflection_pass);} // text must be drawn last; drawn as interior detail objects
 	disable_blend();
 	indexed_vao_manager_with_shadow_t::post_render();
 	bool const disable_cull_face(0); // better but slower?

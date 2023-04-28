@@ -2675,8 +2675,8 @@ public:
 						// no batch draw for shadow pass since textures aren't used; draw everything, since shadow may be cached
 						bool camera_in_this_building(b.check_point_or_cylin_contained(pre_smap_player_pos, 0.0, points, 1, 1)); // inc_attic=1, inc_ext_basement=1
 						camera_in_this_building |= b.interior_visible_from_other_building_ext_basement(xlate, 1); // check conn building as well; expand_for_light=1
-						// generate detail objects during the shadow pass when the player is in the building so that it can be done in parallel with small static geom gen
-						int const inc_small(camera_in_this_building ? 2 : 1);
+						// generate interior detail objects during the shadow pass when the player is in the building so that it can be done in parallel with small static geom gen
+						int const inc_small(camera_in_this_building ? 3 : 1);
 						b.draw_room_geom(nullptr, s, oc, xlate, bi->ix, 1, 0, inc_small, 1); // shadow_only=1, player_in_building=1
 						b.get_ext_wall_verts_no_sec(ext_parts_draw); // add exterior walls to prevent light leaking between adjacent parts
 						b.draw_cars_in_building(s, xlate, 1, 1); // player_in_building=1, shadow_only=1
@@ -2868,8 +2868,8 @@ public:
 		if (have_interior) {
 			//timer_t timer2("Draw Building Interiors");
 			float const interior_draw_dist(global_building_params.interior_view_dist_scale*2.0f*(X_SCENE_SIZE + Y_SCENE_SIZE));
-			float const room_geom_draw_dist(0.4*interior_draw_dist), room_geom_clear_dist(1.05*room_geom_draw_dist), room_geom_sm_draw_dist(0.05*interior_draw_dist);
-			float const room_geom_detail_draw_dist(0.04*interior_draw_dist), z_prepass_dist(0.25*interior_draw_dist);
+			float const room_geom_draw_dist(0.4*interior_draw_dist), room_geom_clear_dist(1.05*room_geom_draw_dist), room_geom_sm_draw_dist(0.14*interior_draw_dist);
+			float const room_geom_int_detail_draw_dist(0.045*interior_draw_dist), room_geom_ext_detail_draw_dist(0.08*interior_draw_dist), z_prepass_dist(0.25*interior_draw_dist);
 			glEnable(GL_CULL_FACE); // back face culling optimization, helps with expensive lighting shaders
 			glCullFace(reflection_pass ? GL_FRONT : GL_BACK);
 
@@ -2915,8 +2915,9 @@ public:
 				float const int_draw_dist_sq(ddist_scale_sq*interior_draw_dist*interior_draw_dist);
 				float const rgeom_clear_dist_sq(ddist_scale_sq*room_geom_clear_dist*room_geom_clear_dist);
 				float const rgeom_draw_dist_sq(ddist_scale_sq*room_geom_draw_dist*room_geom_draw_dist);
-				float const rgeom_sm_draw_dist_sq(ddist_scale_sq*room_geom_sm_draw_dist*room_geom_draw_dist);
-				float const rgeom_detail_dist_sq(ddist_scale_sq*room_geom_sm_draw_dist*room_geom_detail_draw_dist);
+				float const rgeom_sm_draw_dist_sq(ddist_scale_sq*room_geom_sm_draw_dist*room_geom_sm_draw_dist);
+				float const rgeom_int_detail_dist_sq(ddist_scale_sq*room_geom_int_detail_draw_dist*room_geom_int_detail_draw_dist);
+				float const rgeom_ext_detail_dist_sq(ddist_scale_sq*room_geom_ext_detail_draw_dist*room_geom_ext_detail_draw_dist);
 				occlusion_checker_noncity_t oc(**i);
 				bool is_first_tile(1), can_break_from_loop(0);
 
@@ -2959,7 +2960,8 @@ public:
 						}
 						// draw detail objects if player is in the building (inc ext basement), even if far from the building center
 						unsigned inc_small(player_in_building_bcube ? 2 : (bdist_sq < rgeom_sm_draw_dist_sq));
-						if (inc_small && bdist_sq < rgeom_detail_dist_sq) {inc_small = 2;} // include detail objects
+						if      (inc_small && bdist_sq < rgeom_int_detail_dist_sq) {inc_small = 3;} // include interior and exterior detail objects
+						else if (inc_small && bdist_sq < rgeom_ext_detail_dist_sq) {inc_small = 2;} // include exterior detail objects
 						b.gen_and_draw_room_geom(&bbd, s, oc, xlate, bi->ix, 0, reflection_pass, inc_small, player_in_building_bcube); // shadow_only=0
 						g->has_room_geom = 1;
 						if (!draw_interior) continue;
