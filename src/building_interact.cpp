@@ -1522,7 +1522,7 @@ bool building_t::get_zval_for_obj_placement(point const &pos, float radius, floa
 		if (!i->can_place_onto() && i->type != TYPE_RUG) { // can't place on this object type
 			if (!i->is_floor_collidable()) continue; // ignore
 			if (!sphere_cube_intersect(pos, radius, *i)) continue; // no intersection
-			if ((i->shape == SHAPE_CYLIN || i->shape == SHAPE_SPHERE) && dist_xy_less_than(pos, i->get_cube_center(), (i->get_radius() + radius))) continue; // round object (approx)
+			if ((i->shape == SHAPE_CYLIN || i->shape == SHAPE_SPHERE) && !dist_xy_less_than(pos, i->get_cube_center(), (i->get_radius() + radius))) continue; // round object (approx)
 			return 0; // object in the way, can't place here
 		}
 		if (!i->contains_pt_xy(pos)) continue; // center of mass not contained
