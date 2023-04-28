@@ -3568,9 +3568,6 @@ void building_t::add_window_trim_and_coverings(bool add_trim, bool add_coverings
 		add_ext_sills = 0;
 		if (!add_trim && !add_coverings) return; // nothing else to add
 	}
-	// houses only; skip if chimney because it doesn't look right; still has some gaps on short windowless wall segments
-	bool const add_ext_wall_trim(is_house && add_trim && !has_chimney && rgen.rand_float() < 0.5);
-
 	for (unsigned i = 0; i < wall_quad_verts.size(); i += 4) { // iterate over each quad
 		cube_t c;
 		float tx1, tx2, tz1, tz2;
@@ -3586,17 +3583,6 @@ void building_t::add_window_trim_and_coverings(bool add_trim, bool add_coverings
 		window.d[dim][ dir] += dscale*ext_wall_toler; // slight bias away from the exterior wall
 		unsigned const ext_flags(RO_FLAG_NOCOLL | (dir ? RO_FLAG_ADJ_HI : RO_FLAG_ADJ_LO));
 
-		if (add_ext_wall_trim && (c.z2() - ground_floor_z1) > 1.5*floor_spacing) { // multiple floors above ground
-			// add band around edges of wall above first floor; flag as fully exterior;
-			// may clip through the building interior on inside corners, but should be hidden between the ceiling below and floor above
-			float const zval(ground_floor_z1 + floor_spacing), width(2.0*window_trim_depth);
-			cube_t trim(c);
-			set_cube_zvals(trim, zval, zval+2.0*width);
-			trim.expand_in_dim( dim,     width); // set width adjacent to wall
-			trim.expand_in_dim(!dim, 2.0*width); // overlap the ends so that corners join properly (with some overlap)
-			unsigned const flags(RO_FLAG_NOCOLL | (dir ? RO_FLAG_ADJ_LO : RO_FLAG_ADJ_HI) | RO_FLAG_EXTERIOR | RO_FLAG_HAS_EXTRA);
-			trim_objs.emplace_back(trim, TYPE_WALL_TRIM, 0, dim, dir, flags, 1.0, SHAPE_TALL, trim_color); // not tall, but we need to draw the bottom surface
-		}
 		for (float z = tz1; z < tz2; z += 1.0) { // each floor
 			float const bot_edge(c.z1() + (z - tz1)*window_height);
 			set_cube_zvals(window, bot_edge+border_z, bot_edge+window_height-border_z);
@@ -3678,6 +3664,37 @@ void building_t::add_window_trim_and_coverings(bool add_trim, bool add_coverings
 			} // for xy
 		} // for z
 	} // for i
+	if (is_house && add_trim && rgen.rand_float() < 0.2) { // add exterior house wall first floor trim
+		float const zval(ground_floor_z1 + floor_spacing), width(4.0*window_trim_depth);
+		vect_cube_t trims;
+
+		for (auto p = parts.begin(); p != get_real_parts_end(); ++p) {
+			if ((p->z2() - ground_floor_z1) < 1.5*floor_spacing) continue; // single story, skip
+
+			for (unsigned dim = 0; dim < 2; ++dim) {
+				for (unsigned dir = 0; dir < 2; ++dir) {
+					unsigned const flags(RO_FLAG_NOCOLL | (dir ? RO_FLAG_ADJ_LO : RO_FLAG_ADJ_HI) | RO_FLAG_EXTERIOR | RO_FLAG_HAS_EXTRA);
+					cube_t trim(*p);
+					set_cube_zvals(trim, zval, zval+width);
+					trim.d[dim][!dir]  = trim.d[dim][dir]; // set to zero area
+					trim.d[dim][ dir] += (dir ? 1.0 : -1.0)*width; // set width adjacent to wall
+					trim.expand_in_dim(!dim, width); // overlap the ends so that corners join properly (with some overlap)
+					trims.clear();
+					trims.push_back(trim);
+
+					for (auto p2 = parts.begin(); p2 != get_real_parts_end(); ++p2) {
+						if (p2 == p) continue; // skip self
+						cube_t sub_cube(*p2);
+						sub_cube.z2() += 0.1*floor_spacing; // clip if part ends just below the trim because the roof will clip through it
+						subtract_cube_from_cubes(sub_cube, trims);
+					}
+					for (cube_t const &trim : trims) {
+						trim_objs.emplace_back(trim, TYPE_WALL_TRIM, 0, dim, dir, flags, 1.0, SHAPE_TALL, trim_color); // not tall, but we need to draw the bottom surface
+					}
+				} // for dir
+			} // for dim
+		} // for p
+	}
 }
 
 room_type building_t::get_room_type_and_floor(int room_id, float zval, unsigned &floor_ix) const {
