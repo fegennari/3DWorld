@@ -131,7 +131,7 @@ template<typename T> void add_sign_text_verts(string const &text, cube_t const &
 	ct.expand_in_dim(!dim, -0.1*ct.get_sz_dim(!dim));
 	ct.expand_in_dim(2, -0.05*ct.dz());
 	vector3d col_dir(zero_vector), normal(zero_vector);
-	bool const ldir(dim ^ dir), is_scrolling(first_char_clip_val != 0.0 || last_char_clip_val != 0.0);
+	bool const ldir(dim ^ dir);
 	col_dir[!dim] = (ldir  ? 1.0 : -1.0);
 	normal [ dim] = (dir ? 1.0 : -1.0);
 	static vector<vert_tc_t> verts;
