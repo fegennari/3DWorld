@@ -1760,11 +1760,19 @@ bool building_t::apply_paint(point const &pos, vector3d const &dir, colorRGBA co
 	bool walls_blocked(0);
 
 	for (auto i = interior->room_geom->objs.begin(); i != objs_end; ++i) {
+		float const pre_tmin(tmin);
+
  		if ((is_wall && (i->type == TYPE_PICTURE || i->type == TYPE_WBOARD || i->type == TYPE_MIRROR)) || (is_floor && (i->type == TYPE_RUG || i->type == TYPE_FLOORING))) {
 			if (line_int_cube_get_t(pos, pos2, *i, tmin)) {target = *i;} // Note: return value is ignored, we only need to update tmin and target; normal should be unchanged
 		}
 		else if (i->type == TYPE_CLOSET && line_int_cube_get_t(pos, pos2, *i, tmin)) {
 			point const cand_p_int(pos + tmin*(pos2 - pos));
+
+			if (i->is_open()) { // exclude open doors
+				cube_t door(get_open_closet_door(*i));
+				door.expand_in_dim(i->dim, 0.5*get_wall_thickness());
+				if (line_int_cube_get_t(pos, pos2, door, tmin)) {tmin = pre_tmin; continue;} // restore tmin and skip
+			}
 			normal = get_normal_for_ray_cube_int_xy(cand_p_int, *i, tolerance); // should always return a valid normal
 			target = *i;
 		}

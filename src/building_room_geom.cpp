@@ -409,6 +409,14 @@ void get_closet_cubes(room_object_t const &c, cube_t cubes[5], bool for_collisio
 	if (for_collision && c.is_open() && use_small_door) {cubes[4] = get_open_closet_door(c, doors);} // include open doors for small closets
 	else {cubes[4] = doors;} // return closed door cube; caller must handle open door
 }
+cube_t get_open_closet_door(room_object_t const &obj) {
+	cube_t cubes[5];
+	get_closet_cubes(obj, cubes, 0); // for_collision=0
+	cube_t &door(cubes[4]);
+	// closets with sliding doors only open the inner two doors (out of 4)
+	if (!obj.is_small_closet() && !obj.is_hanging()) {door.expand_in_dim(!obj.dim, -0.25*door.get_sz_dim(!obj.dim));}
+	return door;
+}
 
 void add_quad_to_mat(rgeom_mat_t &mat, point const pts[4], float const ts[4], float const tt[4], color_wrapper const &cw) {
 	norm_comp normal(get_poly_norm(pts));

@@ -697,6 +697,12 @@ bool building_t::interact_with_object(unsigned obj_ix, point const &int_pos, poi
 		update_draw_data = 1;
 	}
 	else if (obj.type == TYPE_CLOSET || obj.type == TYPE_STALL) {
+		if (!obj.is_open()) { // not yet open
+			// remove any spraypaint or marker that's on the door; would be better if we could move it with the door, or add it back when the door is closed
+			cube_t door(get_open_closet_door(obj));
+			door.expand_in_dim(obj.dim, get_wall_thickness());
+			remove_paint_in_cube(door); // use the door before it's opened
+		}
 		obj.flags ^= RO_FLAG_OPEN; // toggle open/close
 
 		if (obj.type == TYPE_CLOSET) {
