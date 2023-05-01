@@ -1399,6 +1399,7 @@ struct building_t : public building_geom_t {
 	bool adjust_blinds_state(unsigned obj_ix);
 	void add_box_contents(room_object_t const &box);
 	void toggle_door_state(unsigned door_ix, bool player_in_this_building, bool by_player, point const &actor_pos);
+	void handle_items_intersecting_closed_door(door_t const &door);
 	void doors_next_frame();
 	bool set_room_light_state_to(room_t const &room, float zval, bool make_on);
 	void set_obj_lit_state_to(unsigned room_id, float light_z2, bool lit_state);

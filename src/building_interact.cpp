@@ -818,23 +818,27 @@ void building_t::toggle_door_state(unsigned door_ix, bool player_in_this_buildin
 			for (unsigned light_ix : light_ids) {register_indir_lighting_state_change(light_ix, 1);} // is_door_change=1
 		}
 	}
-	if (!door.open && has_room_geom()) { // door was open and is now closed, check if we need to move any objects out of the way
-		cube_t const door_bcube(door.get_true_bcube());
-
-		for (room_object_t &obj : interior->room_geom->expanded_objs) { // currently only expanded objects such as books
-			if (!obj.intersects(door_bcube)) continue;
-			float const door_center(door_bcube.get_center_dim(door.dim)), obj_center(obj.get_center_dim(door.dim));
-			bool const move_dir(door_center < obj_center);
-			float const move_dist(door_bcube.d[door.dim][move_dir] - obj.d[door.dim][!move_dir]);
-			obj.translate_dim(door.dim, move_dist);
-			interior->room_geom->invalidate_draw_data_for_obj(obj);
-		} // for obj
-	}
+	handle_items_intersecting_closed_door(door); // check if we need to move any objects out of the way
+	
 	if (door.open) { // was closed and now open; remove any paint that was over the closed door
 		cube_t door_exp(door);
 		door_exp.expand_in_dim(door.dim, 0.5*get_wall_thickness()); // make sure decals are included
 		remove_paint_in_cube(door_exp);
 	}
+}
+void building_t::handle_items_intersecting_closed_door(door_t const &door) {
+	if (door.open || door.open_amt > 0.0) return; // not fully closed or about to open
+	if (!has_room_geom()) return;
+	cube_t const door_bcube(door.get_true_bcube());
+
+	for (room_object_t &obj : interior->room_geom->expanded_objs) { // currently only expanded objects such as books
+		if (!obj.intersects(door_bcube)) continue;
+		float const door_center(door_bcube.get_center_dim(door.dim)), obj_center(obj.get_center_dim(door.dim));
+		bool const move_dir(door_center < obj_center);
+		float const move_dist(door_bcube.d[door.dim][move_dir] - obj.d[door.dim][!move_dir]);
+		obj.translate_dim(door.dim, move_dist);
+		interior->room_geom->invalidate_draw_data_for_obj(obj);
+	} // for obj
 }
 
 void door_t::toggle_open_state(bool allow_partial_open) {
@@ -853,6 +857,7 @@ void building_t::doors_next_frame() {
 
 	for (auto d = interior->doors.begin(); d != interior->doors.end(); ++d) {
 		if (!d->next_frame()) continue;
+		handle_items_intersecting_closed_door(*d);
 		if (!d->open && d->open_amt == 0.0) {play_door_open_close_sound(point(d->xc(), d->yc(), camera_pos.z), 0);} // play close sound at player z; open=0
 		interior->last_active_door_ix = (d - interior->doors.begin());
 	}
