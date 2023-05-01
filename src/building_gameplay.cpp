@@ -1754,6 +1754,15 @@ bool building_t::apply_paint(point const &pos, vector3d const &dir, colorRGBA co
 			if (n != zero_vector) {tmin = tmax0; normal = n; target = part; exterior_wall = 1;}
 		}
 	}
+	// check closed interior doors
+	for (auto i = interior->doors.begin(); i != interior->doors.end(); ++i) {
+		if (i->open_amt > 0.0) continue;
+		cube_t door(i->get_true_bcube());
+		if (!line_int_cube_get_t(pos, pos2, door, tmin)) continue;
+		target = door;
+		normal = zero_vector;
+		normal[i->dim] = -SIGN(dir[i->dim]);
+	} // for i
 	// check for rugs, pictures, and whiteboards, which can all be painted over; also check for walls from closets
 	auto objs_end(interior->room_geom->get_placed_objs_end()); // skip buttons/stairs/elevators
 	bool const is_wall(normal.x != 0.0 || normal.y != 0.0), is_floor(normal == plus_z);
@@ -1787,7 +1796,7 @@ bool building_t::apply_paint(point const &pos, vector3d const &dir, colorRGBA co
 			if (!line_int_cube_get_t(pos, pos2, c, tmin0)) continue;
 			if (i->contains_pt(pos)) continue; // inside stall/cubicle, can't paint the exterior
 			vector3d const n(get_normal_for_ray_cube_int_xy((pos + tmin0*(pos2 - pos)), c, tolerance)); // should always return a valid normal
-			if (n[i->dim] != 0) {walls_blocked = 1; continue;} // only the side walls count
+			if (n[i->dim] != 0) {walls_blocked = 1; continue;} // only the side walls count; avoids dealing with open doors
 			tmin = tmin0; normal = n; target = c;
 		}
 	} // for i

@@ -818,7 +818,7 @@ void building_t::toggle_door_state(unsigned door_ix, bool player_in_this_buildin
 			for (unsigned light_ix : light_ids) {register_indir_lighting_state_change(light_ix, 1);} // is_door_change=1
 		}
 	}
-	if (!door.open && has_room_geom()) { // door was closed, check if we need to move any objects out of the way
+	if (!door.open && has_room_geom()) { // door was open and is now closed, check if we need to move any objects out of the way
 		cube_t const door_bcube(door.get_true_bcube());
 
 		for (room_object_t &obj : interior->room_geom->expanded_objs) { // currently only expanded objects such as books
@@ -829,6 +829,11 @@ void building_t::toggle_door_state(unsigned door_ix, bool player_in_this_buildin
 			obj.translate_dim(door.dim, move_dist);
 			interior->room_geom->invalidate_draw_data_for_obj(obj);
 		} // for obj
+	}
+	if (door.open) { // was closed and now open; remove any paint that was over the closed door
+		cube_t door_exp(door);
+		door_exp.expand_in_dim(door.dim, 0.5*get_wall_thickness()); // make sure decals are included
+		remove_paint_in_cube(door_exp);
 	}
 }
 
