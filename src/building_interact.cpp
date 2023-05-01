@@ -1496,6 +1496,28 @@ bool is_blocking_obj_on_top_surface(room_object_t const &obj) { // objects on ta
 		obj.type == TYPE_PLATE || obj.type == TYPE_LAPTOP || obj.type == TYPE_PAN || obj.type == TYPE_VASE || obj.type == TYPE_URN ||
 		obj.type == TYPE_MONITOR || obj.type == TYPE_LAMP || obj.type == TYPE_CUP || obj.type == TYPE_TOASTER || obj.type == TYPE_SILVER);
 }
+bool can_place_on_object(room_object_t const &obj, point const &pos, float radius, float z_bias, float start_zval, float &zval) {
+	if (!obj.can_place_onto() && obj.type != TYPE_RUG) return 0; // can't place on this object type
+	if (!obj.contains_pt_xy(pos)) return 0; // center of mass not contained
+	cube_t c(obj);
+
+	if (obj.type == TYPE_BED) {
+		cube_t cubes[6]; // frame, head, foot, mattress, pillow, legs_bcube
+		get_bed_cubes(obj, cubes);
+		if (!cubes[3].contains_pt_xy(pos)) return 0; // check again
+		if (cubes[1].contains_pt_xy_exp(pos, radius) || cubes[2].contains_pt_xy_exp(pos, radius)) return 0; // intersects the head or foot, skip
+		c = cubes[3]; // mattress
+	}
+	if (c.z2() < zval || c.z2() > start_zval) return 0; // below the floor or above the object's starting position; maybe can place under this object
+
+	if (obj.shape == SHAPE_CYLIN) {
+		if (!dist_xy_less_than(pos, obj.get_cube_center(), obj.get_radius())) return 0; // round table
+	}
+	else {assert(obj.shape != SHAPE_SPHERE);} // SHAPE_CUBE, SHAPE_TALL, SHAPE_SHORT are okay; others don't make sense
+	zval = c.z2() + z_bias; // place on top of this object
+	return 1;
+}
+
 bool building_t::get_zval_of_floor(point const &pos, float radius, float &zval) const {
 	if (!interior) return 0; // error?
 	cube_t cur_bcube;
@@ -1525,31 +1547,15 @@ bool building_t::get_zval_for_obj_placement(point const &pos, float radius, floa
 	bool is_placed_on_obj(0);
 
 	for (auto i = interior->room_geom->objs.begin(); i != objs_end; ++i) {
-		if (!i->can_place_onto() && i->type != TYPE_RUG) { // can't place on this object type
-			if (is_placed_on_obj && is_blocking_obj_on_top_surface(*i)) {} // check it; skips the code below
-			else if (!i->is_floor_collidable())          continue; // ignore
-			if (!sphere_cube_intersect(pos, radius, *i)) continue; // no intersection
-			if ((i->shape == SHAPE_CYLIN || i->shape == SHAPE_SPHERE) && !dist_xy_less_than(pos, i->get_cube_center(), (i->get_radius() + radius))) continue; // round object (approx)
-			return 0; // object in the way, can't place here
+		if (can_place_on_object(*i, pos, radius, z_bias, start_zval, zval)) { // can place on this object
+			is_placed_on_obj = 1; // Note: any object placed on top of this object will be added/seen after it
+			continue;
 		}
-		if (!i->contains_pt_xy(pos)) continue; // center of mass not contained
-		cube_t c(*i);
-
-		if (i->type == TYPE_BED) {
-			cube_t cubes[6]; // frame, head, foot, mattress, pillow, legs_bcube
-			get_bed_cubes(*i, cubes);
-			if (!cubes[3].contains_pt_xy(pos)) continue; // check again
-			if (cubes[1].contains_pt_xy_exp(pos, radius) || cubes[2].contains_pt_xy_exp(pos, radius)) continue; // intersects the head or foot, skip
-			c = cubes[3]; // mattress
-		}
-		if (c.z2() < zval || c.z2() > start_zval) continue; // below the floor or above the object's starting position; maybe can place under this object
-
-		if (i->shape == SHAPE_CYLIN) {
-			if (!dist_xy_less_than(pos, i->get_cube_center(), i->get_radius())) continue; // round table
-		}
-		else {assert(i->shape != SHAPE_SPHERE);} // SHAPE_CUBE, SHAPE_TALL, SHAPE_SHORT are okay; others don't make sense
-		zval = c.z2() + z_bias; // place on top of this object
-		is_placed_on_obj = 1; // Note: any object placed on top of this object will be added/seen after it
+		if (is_placed_on_obj && is_blocking_obj_on_top_surface(*i)) {} // check it; skips the code below
+		else if (!i->is_floor_collidable())          continue; // ignore
+		if (!sphere_cube_intersect(pos, radius, *i)) continue; // no intersection
+		if ((i->shape == SHAPE_CYLIN || i->shape == SHAPE_SPHERE) && !dist_xy_less_than(pos, i->get_cube_center(), (i->get_radius() + radius))) continue; // round object (approx)
+		return 0; // object in the way, can't place here
 	} // for i
 	for (auto i = interior->room_geom->expanded_objs.begin(); i != interior->room_geom->expanded_objs.end(); ++i) { // check books, etc.
 		if (!i->can_place_onto() || !i->contains_pt_xy(pos) || i->z2() < zval || i->z2() > start_zval) continue; // not a valid placement
