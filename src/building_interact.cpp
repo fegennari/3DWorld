@@ -1491,6 +1491,11 @@ room_obj_dstate_t &building_room_geom_t::get_dstate(room_object_t const &obj) {
 	return obj_dstate[obj.obj_id];
 }
 
+bool is_blocking_obj_on_top_surface(room_object_t const &obj) { // objects on tables, counters, desks, etc.
+	return (obj.type == TYPE_PLANT || obj.type == TYPE_KEYBOARD || obj.type == TYPE_BOTTLE || obj.type == TYPE_MWAVE || obj.type == TYPE_LG_BALL ||
+		obj.type == TYPE_PLATE || obj.type == TYPE_LAPTOP || obj.type == TYPE_PAN || obj.type == TYPE_VASE || obj.type == TYPE_URN ||
+		obj.type == TYPE_MONITOR || obj.type == TYPE_LAMP || obj.type == TYPE_CUP || obj.type == TYPE_TOASTER || obj.type == TYPE_SILVER);
+}
 bool building_t::get_zval_of_floor(point const &pos, float radius, float &zval) const {
 	if (!interior) return 0; // error?
 	cube_t cur_bcube;
@@ -1517,10 +1522,12 @@ bool building_t::get_zval_for_obj_placement(point const &pos, float radius, floa
 	}
 	float const z_bias(add_z_bias ? 0.0005*get_window_vspace() : 0.0); // maybe add a tiny bias to prevent z-fighting
 	auto objs_end(interior->room_geom->objs.end()); // must include stairs and elevators, which means we have to check all objects
+	bool is_placed_on_obj(0);
 
 	for (auto i = interior->room_geom->objs.begin(); i != objs_end; ++i) {
 		if (!i->can_place_onto() && i->type != TYPE_RUG) { // can't place on this object type
-			if (!i->is_floor_collidable()) continue; // ignore
+			if (is_placed_on_obj && is_blocking_obj_on_top_surface(*i)) {} // check it; skips the code below
+			else if (!i->is_floor_collidable())          continue; // ignore
 			if (!sphere_cube_intersect(pos, radius, *i)) continue; // no intersection
 			if ((i->shape == SHAPE_CYLIN || i->shape == SHAPE_SPHERE) && !dist_xy_less_than(pos, i->get_cube_center(), (i->get_radius() + radius))) continue; // round object (approx)
 			return 0; // object in the way, can't place here
@@ -1542,6 +1549,7 @@ bool building_t::get_zval_for_obj_placement(point const &pos, float radius, floa
 		}
 		else {assert(i->shape != SHAPE_SPHERE);} // SHAPE_CUBE, SHAPE_TALL, SHAPE_SHORT are okay; others don't make sense
 		zval = c.z2() + z_bias; // place on top of this object
+		is_placed_on_obj = 1; // Note: any object placed on top of this object will be added/seen after it
 	} // for i
 	for (auto i = interior->room_geom->expanded_objs.begin(); i != interior->room_geom->expanded_objs.end(); ++i) { // check books, etc.
 		if (!i->can_place_onto() || !i->contains_pt_xy(pos) || i->z2() < zval || i->z2() > start_zval) continue; // not a valid placement

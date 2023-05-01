@@ -958,7 +958,7 @@ bool is_obj_in_or_on_obj(room_object_t const &parent, room_object_t const &child
 bool object_can_have_something_on_it(room_object_t const &obj) {
 	// only these types can have objects placed on them (what about TYPE_SHELF? what about TYPE_BED with a ball or book placed on it?)
 	return (obj.type == TYPE_TABLE || obj.type == TYPE_DESK || obj.type == TYPE_COUNTER || obj.type == TYPE_DRESSER || obj.type == TYPE_NIGHTSTAND ||
-		obj.type == TYPE_BOX || obj.type == TYPE_CRATE || obj.type == TYPE_WINE_RACK || obj.type == TYPE_BOOK || obj.type == TYPE_STOVE
+		obj.type == TYPE_BOX || obj.type == TYPE_CRATE || obj.type == TYPE_WINE_RACK || obj.type == TYPE_BOOK || obj.type == TYPE_STOVE || obj.type == TYPE_MWAVE
 		/*|| obj.type == TYPE_FCABINET*/ /*|| obj.type == TYPE_SHELF*/ /*|| obj.type == TYPE_BED*/);
 }
 bool object_has_something_on_it(room_object_t const &obj, vect_room_object_t const &objs, vect_room_object_t::const_iterator objs_end) {
@@ -1880,7 +1880,8 @@ bool room_object_t::can_use() const { // excludes dynamic objects
 }
 bool room_object_t::can_place_onto() const {
 	return (type == TYPE_TABLE || type == TYPE_DESK || type == TYPE_DRESSER || type == TYPE_NIGHTSTAND || type == TYPE_COUNTER || type == TYPE_KSINK ||
-		type == TYPE_BRSINK || type == TYPE_BED || type == TYPE_BOX || type == TYPE_CRATE || type == TYPE_KEYBOARD || type == TYPE_BOOK || type == TYPE_FCABINET); // TYPE_STAIR?
+		type == TYPE_BRSINK || type == TYPE_BED || type == TYPE_BOX || type == TYPE_CRATE || type == TYPE_KEYBOARD || type == TYPE_BOOK ||
+		type == TYPE_FCABINET || type == TYPE_MWAVE); // TYPE_STAIR?
 }
 
 bool building_t::apply_toilet_paper(point const &pos, vector3d const &dir, float half_width) {
