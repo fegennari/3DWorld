@@ -23,8 +23,6 @@ extern building_dest_t cur_player_building_loc;
 extern building_t const *player_building;
 
 
-cube_t get_sink_cube(room_object_t const &c);
-cube_t get_mwave_panel_bcube(room_object_t const &c);
 bool player_can_open_door(door_t const &door);
 bool player_has_room_key();
 void register_broken_object(room_object_t const &obj);

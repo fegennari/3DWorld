@@ -220,6 +220,21 @@ bool building_t::add_rat(point const &pos, float hlength, vector3d const &dir, p
 			if (dead) { // cook/kill
 				bool const new_achievement(register_achievement("Tastes Like Chicken"));
 				register_fly_attract(new_achievement); // don't print a message if the achievement message was printed
+
+				if (i->type == TYPE_MWAVE && i->is_open() && !(i->flags & RO_FLAG_NONEMPTY)) { // open and empty, microwave, put the rat inside
+					// see building_room_geom_t::add_mwave()
+					bool const open_dir(i->dim ^ i->dir ^ 1);
+					cube_t const panel(get_mwave_panel_bcube(*i));
+					cube_t body(*i);
+					body.d[!i->dim][!open_dir] = panel.d[!i->dim][open_dir]; // the other half
+					float const tray_height(0.25*panel.get_sz_dim(!i->dim));
+					i->flags |= RO_FLAG_NONEMPTY; // TODO: logic to remove this flag when the player takes the rat back out
+					rat.pos.assign(body.xc(), body.yc(), (body.z1() + tray_height)); // centered on the microwave tray
+					rat.dead = 1;
+					interior->room_geom->rats.add(rat);
+					interior->room_geom->modified_by_player = 1;
+					return 1;
+				}
 				return 0; // rat is not dropped
 			}
 		} // for i

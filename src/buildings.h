@@ -439,12 +439,13 @@ unsigned const RO_FLAG_FOR_CAR   = 0x1000; // for car blockers, aliased with RO_
 // object flags, third byte, for pickup/interact state
 unsigned const RO_FLAG_IN_HALLWAY= 0x010000;
 unsigned const RO_FLAG_IN_ATTIC  = 0x020000;
-unsigned const RO_FLAG_HAS_EXTRA = 0x040000; // used for counter backsplash
+unsigned const RO_FLAG_HAS_EXTRA = 0x040000; // used for counter backsplash and exterior wall trim
 unsigned const RO_FLAG_EXTERIOR  = 0x080000; // for signs, window trim, etc.
 unsigned const RO_FLAG_EXPANDED  = 0x100000; // for shelves, closets, boxes, and mirrors
 unsigned const RO_FLAG_WAS_EXP   = 0x200000; // for objects in/on shelves, closets, and drawers, cabinets, and books
 unsigned const RO_FLAG_ROTATING  = 0x400000; // for office chairs and clothes on hangers
 unsigned const RO_FLAG_IN_CLOSET = 0x800000; // for closet lights
+unsigned const RO_FLAG_NONEMPTY  = 0x040000; // for microwaves, aliased with RO_FLAG_HAS_EXTRA
 // object flags, fourth byte
 unsigned const RO_FLAG_DYNAMIC  = 0x01000000; // dynamic object (balls, elevators, etc.)
 unsigned const RO_FLAG_DSTATE   = 0x02000000; // this object has dynamic state
@@ -1845,6 +1846,8 @@ cube_t get_attic_access_door_cube(room_object_t const &c, bool inc_ladder=0);
 cube_t get_ladder_bcube_from_open_attic_door(room_object_t const &c, cube_t const &door);
 cube_t get_elevator_car_panel(room_object_t const &c, float fc_thick_scale);
 cube_t get_true_room_obj_bcube(room_object_t const &c);
+cube_t get_sink_cube(room_object_t const &c);
+cube_t get_mwave_panel_bcube(room_object_t const &c);
 void set_rand_pos_for_sz(cube_t &c, bool dim, float length, float width, rand_gen_t &rgen);
 template<typename T> bool has_bcube_int_xy(cube_t const &bcube, vector<T> const &bcubes, float pad_dist=0.0);
 bool door_opens_inward(door_base_t const &door, cube_t const &room);

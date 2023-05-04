@@ -1054,6 +1054,7 @@ int building_room_geom_t::find_nearest_pickup_object(building_t const &building,
 			if (i->type == TYPE_SHELVES && i->obj_expanded())             continue; // shelves are already expanded, can no longer select this object
 			if (i->type == TYPE_MIRROR  && i->is_open())                  continue; // can't take mirror/medicine cabinet until it's closed
 			if (i->type == TYPE_LIGHT   && !i->is_visible())              continue; // can't take light attached to a ceiling fan as a separate object
+			if (i->type == TYPE_MWAVE   && (i->flags & RO_FLAG_NONEMPTY)) continue; // can't take a microwave with something inside it
 			if (obj_has_open_drawers(*i))                                 continue; // can't take if any drawers are open
 			if (object_has_something_on_it(*i,       obj_vect, objs_end)) continue; // can't remove a table, etc. that has something on it
 			if (object_has_something_on_it(*i, other_obj_vect, other_objs_end)) continue; // check the other one as well
@@ -1496,7 +1497,7 @@ bool building_t::maybe_use_last_pickup_room_object(point const &player_pos) {
 				bool const was_dead(obj.is_broken());
 				bool is_dead(was_dead);
 				bool const dropped(add_rat(dest, half_width, cview_dir, player_pos, is_dead));// facing away from the player
-				if (is_dead && !was_dead) player_inventory.mark_last_item_broken();
+				if (is_dead && !was_dead) {player_inventory.mark_last_item_broken();}
 				
 				if (!was_dead) { // squeak if alive
 					gen_sound_thread_safe_at_player(SOUND_RAT_SQUEAK); // play the sound whether or not we can drop the rat
