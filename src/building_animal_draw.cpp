@@ -188,13 +188,13 @@ public:
 };
 spider_draw_t spider_draw;
 
-class fly_draw_t {
-	rgeom_mat_t mat;
-	bool is_setup=0;
+class insect_draw_t {
+	rgeom_mat_t fly_mat, roach_mat;
 	float timebase=0.0;
-	vector<vert_norm_comp> wing_verts; // temp used in draw calls
+	vector<vert_norm_comp> wing_verts; // temp used in draw calls for flies
 
-	void init() { // generate insect geometry, just a simple sphere for now
+	void init_fly() { // generate fly geometry, just a simple sphere for now
+		if (fly_mat.num_verts > 0) return; // already setup
 		bool const low_detail = 1;
 		colorRGBA const color(BLACK);
 		float const body_zval(0.0), leg_radius(0.02);
@@ -202,16 +202,16 @@ class fly_draw_t {
 		thorax .expand_by(vector3d(0.50, 0.33, 0.28));
 		abdomen.expand_by(vector3d(0.70, 0.22, 0.22));
 		head   .expand_by(vector3d(0.18, 0.26, 0.24));
-		mat.add_sphere_to_verts(thorax,  color, low_detail);
-		mat.add_sphere_to_verts(abdomen, color, low_detail);
-		mat.add_sphere_to_verts(head,    color, low_detail);
+		fly_mat.add_sphere_to_verts(thorax,  color, low_detail);
+		fly_mat.add_sphere_to_verts(abdomen, color, low_detail);
+		fly_mat.add_sphere_to_verts(head,    color, low_detail);
 
 		for (unsigned d = 0; d < 2; ++d) { // {left, right}
 			float const d_sign(d ? -1.0 : 1.0);
 			point const eye_pos(0.90, 0.12*d_sign, 0.05);
 			cube_t eye(eye_pos);
 			eye.expand_by(vector3d(0.08, 0.14, 0.14));
-			mat.add_sphere_to_verts(eye, colorRGBA(0.5, 0.1, 0.0), low_detail); // dark red-orange
+			fly_mat.add_sphere_to_verts(eye, colorRGBA(0.5, 0.1, 0.0), low_detail); // dark red-orange
 			// add 3 pairs of legs; don't need to draw the leg joints because flies are so small
 			unsigned const ndiv = 8;
 
@@ -220,17 +220,20 @@ class fly_draw_t {
 				point const knee (2.0*joint.x, 2.0*joint.y,  0.25);
 				point const ankle(1.5*knee .x, 1.5*knee .y, -0.20);
 				point const foot (3.0*knee .x, 3.0*knee .y, -0.70);
-				mat.add_cylin_to_verts(joint, knee, leg_radius, leg_radius, color, 0, 0, 0, 0, 1.0, 1.0, 0, ndiv);
-				mat.add_cylin_to_verts(ankle, knee, leg_radius, leg_radius, color, 0, 0, 0, 0, 1.0, 1.0, 0, ndiv);
-				mat.add_cylin_to_verts(foot,  ankle, 0.1*leg_radius, leg_radius, color, 0, 0, 0, 0, 1.0, 1.0, 0, ndiv);
+				fly_mat.add_cylin_to_verts(joint, knee, leg_radius, leg_radius, color, 0, 0, 0, 0, 1.0, 1.0, 0, ndiv);
+				fly_mat.add_cylin_to_verts(ankle, knee, leg_radius, leg_radius, color, 0, 0, 0, 0, 1.0, 1.0, 0, ndiv);
+				fly_mat.add_cylin_to_verts(foot,  ankle, 0.1*leg_radius, leg_radius, color, 0, 0, 0, 0, 1.0, 1.0, 0, ndiv);
 			} // for l
 		} // for d
-		mat.create_vbo_inner();
-		mat.clear_vectors(1); // free_memory=1: vector data no longer needed
-		is_setup = 1;
+		fly_mat.create_vbo_inner();
+		fly_mat.clear_vectors(1); // free_memory=1: vector data no longer needed
+	}
+	void init_roach() {
+		if (roach_mat.num_verts > 0) return; // already setup
+		// TODO: WRITE
 	}
 public:
-	void clear() {mat.clear(); is_setup = 0;}
+	void clear() {fly_mat.clear(); roach_mat.clear();}
 
 	void draw(vect_insect_t const &insects, shader_t &s, building_t const &building, occlusion_checker_noncity_t &oc, vector3d const &xlate, bool reflection_pass) {
 		if (insects.empty()) return; // nothing to draw
@@ -238,25 +241,33 @@ public:
 		bool const check_occlusion(display_mode & 0x08);//, low_detail(shadow_only || reflection_pass);
 		float const draw_dist_scale = 500.0;
 		bool any_drawn(0);
+		unsigned cur_insect_type(NUM_INSECT_TYPES); // start at an invalid value
 		wing_verts.clear();
 		if (animate2) {timebase = tfticks;}
 
 		for (insect_t const &i : insects) { // future work: use instancing
-			if (i.type != INSECT_TYPE_FLY) continue; // only flies are drawn here
 			if (!dist_less_than(i.pos, camera_bs, draw_dist_scale*i.radius)) continue; // too far
 			cube_t const bcube(i.get_bcube());
 			if (!camera_pdu.cube_visible(bcube + xlate)) continue; // VFC
 			if (check_occlusion && building.check_obj_occluded(bcube, camera_bs, oc, reflection_pass)) continue;
+			rgeom_mat_t *mat(nullptr);
+			if      (i.type == INSECT_TYPE_FLY  ) {mat = &fly_mat;} // use hardware instancing?
+			else if (i.type == INSECT_TYPE_ROACH) {mat = &roach_mat;}
+			else {assert(0);} // unsupported insect type
 
-			if (!any_drawn) { // setup shaders
-				if (!is_setup) {init();}
-				mat.vao_setup(0); // shadow_only=0
+			if (!any_drawn) { // setup shaders on first draw
 				s.set_specular(0.5, 80.0);
 				select_texture(WHITE_TEX);
 				s.add_uniform_float("bump_map_mag", 0.0);
-				mat.pre_draw(0); // shadow_only=0
 				if (!enable_depth_clamp) {glEnable(GL_DEPTH_CLAMP);} // make sure depth clamp is enabled so that insects are drawn when very close
 				any_drawn = 1;
+			}
+			if (i.type != cur_insect_type) { // new/different insect type
+				cur_insect_type = i.type;
+				if      (i.type == INSECT_TYPE_FLY  ) {init_fly  ();}
+				else if (i.type == INSECT_TYPE_ROACH) {init_roach();}
+				mat->vao_setup(0); // shadow_only=0
+				mat->pre_draw (0); // shadow_only=0
 			}
 			//if (i.has_target) {s.set_color_e(i.target_player ? RED : GREEN);} // debug visualization
 			vector3d const orient(vector3d(i.dir.x, i.dir.y, 0.0).get_norm()); // in XY plane
@@ -265,24 +276,25 @@ public:
 			rotate_from_v2v(orient, plus_x); // rotate around Z axis
 			uniform_scale(i.radius);
 			check_mvm_update();
-			mat.draw_geom(); // use hardware instancing?
+			mat->draw_geom(); // use hardware instancing?
 			fgPopMatrix();
 			//if (i.has_target) {s.clear_color_e();}
 
-			// add wings
-			if (!dist_less_than(i.pos, camera_bs, 0.25*draw_dist_scale*i.radius)) continue; // too far to draw wings
-			vector3d const side_dir(cross_product(orient, plus_z)); // should be normalized
-			norm_comp const normal(plus_z); // use actual normal?
-			float const lift_amt(0.5 + 0.5*sin(4.0*(i.anim_time + timebase))); // add in global time so that wings still flap when hovering
+			if (i.type == INSECT_TYPE_FLY) { // add wings
+				if (!dist_less_than(i.pos, camera_bs, 0.25*draw_dist_scale*i.radius)) continue; // too far to draw wings
+				vector3d const side_dir(cross_product(orient, plus_z)); // should be normalized
+				norm_comp const normal(plus_z); // use actual normal?
+				float const lift_amt(0.5 + 0.5*sin(4.0*(i.anim_time + timebase))); // add in global time so that wings still flap when hovering
 
-			for (unsigned d = 0; d < 2; ++d) { // {left, right}
-				float const d_sign(d ? -1.0 : 1.0);
-				point v[3]; // wing triangle verts, in local coordinate space of fly model
-				v[0] =  0.25*orient + 0.10*d_sign*side_dir + 0.3*plus_z; // back connect point
-				v[1] = -0.30*orient - 0.02*d_sign*side_dir + 0.3*plus_z; // near center of body
-				v[2] = -1.50*orient + (1.0 - 0.7*lift_amt)*d_sign*side_dir + (0.3 + 0.7*lift_amt)*plus_z; // tip
-				UNROLL_3X(wing_verts.emplace_back((i.pos + i.radius*v[i_]), normal););
-			} // for d
+				for (unsigned d = 0; d < 2; ++d) { // {left, right}
+					float const d_sign(d ? -1.0 : 1.0);
+					point v[3]; // wing triangle verts, in local coordinate space of fly model
+					v[0] =  0.25*orient + 0.10*d_sign*side_dir + 0.3*plus_z; // back connect point
+					v[1] = -0.30*orient - 0.02*d_sign*side_dir + 0.3*plus_z; // near center of body
+					v[2] = -1.50*orient + (1.0 - 0.7*lift_amt)*d_sign*side_dir + (0.3 + 0.7*lift_amt)*plus_z; // tip
+					UNROLL_3X(wing_verts.emplace_back((i.pos + i.radius*v[i_]), normal););
+				} // for d
+			}
 		} // for i
 		if (!wing_verts.empty()) {
 			indexed_vao_manager_with_shadow_t::post_render(); // unbind VBO/VAO
@@ -303,7 +315,7 @@ public:
 		}
 	}
 };
-fly_draw_t fly_draw;
+insect_draw_t insect_draw;
 
 // Note: similar to the functions in Tree.cpp, but pushes back rather than assigning, and step is hard-coded to 1
 void add_cylin_indices_tris(vector<unsigned> &idata, unsigned ndiv, unsigned ix_start) {
@@ -517,7 +529,7 @@ void building_room_geom_t::draw_animals(shader_t &s, building_t const &building,
 	} // end rats drawing
 	spider_draw.draw(spiders, s, building, oc, xlate, shadow_only, reflection_pass, check_clip_cube);
 	snake_draw .draw(snakes,  s, building, oc, xlate, shadow_only, reflection_pass, check_clip_cube);
-	if (!shadow_only) {fly_draw.draw(insects, s, building, oc, xlate, reflection_pass);} // insects are too small to cast shadows
+	if (!shadow_only) {insect_draw.draw(insects, s, building, oc, xlate, reflection_pass);} // insects are too small to cast shadows
 }
 
 
