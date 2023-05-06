@@ -666,6 +666,7 @@ public:
 		}
 		cur_value  = keep_value;
 		cur_weight = keep_weight;
+		player_attracts_flies = 0; // even if items remain in the player's inventory
 	}
 	void show_stats() const {
 		if (!carried.empty()) {
