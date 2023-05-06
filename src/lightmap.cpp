@@ -7,6 +7,7 @@
 #include "gl_ext_arb.h"
 #include "shaders.h"
 #include "binary_file_io.h"
+#include "profiler.h"
 #include <functional>
 
 using std::cerr;
@@ -883,12 +884,12 @@ void setup_2d_texture(unsigned &tid) {
 // 15: dlight bounding cubes (optionally enabled)
 void upload_dlights_textures(cube_t const &bounds, float &dlight_add_thresh) { // 0.21ms => 0.05ms with dlights_enabled
 
-	//RESET_TIME;
 	if (disable_dlights) return;
 	static bool last_dlights_empty(0);
 	bool const cur_dlights_empty(dl_sources.empty());
 	if (cur_dlights_empty && last_dlights_empty && dl_tid != 0 && elem_tid != 0 && gb_tid != 0) return; // no updates
 	last_dlights_empty = cur_dlights_empty;
+	//highres_timer_t timer("Dlight Texture Upload");
 
 	// step 1: the light sources themselves
 	unsigned const max_dlights           = 1024;
@@ -1009,7 +1010,6 @@ void upload_dlights_textures(cube_t const &bounds, float &dlight_add_thresh) { /
 		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, gbx, gby, GL_RED_INTEGER, GL_UNSIGNED_INT, &gb_data.front());
 	}
 	check_gl_error(440);
-	//PRINT_TIME("Dlight Texture Upload");
 	//cout << "ndl: " << ndl << ", elix: " << elem_data.size() << ", gb_sz: " << gb_data.size() << endl;
 }
 
@@ -1179,7 +1179,7 @@ void calc_spotlight_pdu(light_source const &ls, pos_dir_up &pdu) {
 
 void add_dynamic_lights_ground(float &dlight_add_thresh) {
 
-	//RESET_TIME;
+	//highres_timer_t timer("Dynamic Light Add");
 	sync_flashlight();
 	if (!animate2) return;
 	if (disable_dlights) {dl_sources.clear(); return;}
@@ -1256,13 +1256,10 @@ void add_dynamic_lights_ground(float &dlight_add_thresh) {
 			} // for x
 		} // for y
 	} // for ix (light index)
-	//PRINT_TIME("Dynamic Light Add");
 }
-
 
 void add_dynamic_lights_city(cube_t const &scene_bcube, float &dlight_add_thresh) {
 
-	//RESET_TIME;
 	if (disable_dlights) {dl_sources.clear(); return;}
 	assert(DL_GRID_BS == 0); // not supported
 	unsigned const ndl((unsigned)dl_sources.size()), gbx(MESH_X_SIZE), gby(MESH_Y_SIZE);
@@ -1270,6 +1267,7 @@ void add_dynamic_lights_city(cube_t const &scene_bcube, float &dlight_add_thresh
 	if (!has_dl_sources) return; // nothing else to do
 	dlight_add_thresh *= 0.99;
 	if (!scene_bcube.is_strictly_normalized()) {cerr << "Invalid scene_bcube: " << scene_bcube.str() << endl;}
+	//highres_timer_t timer("Dynamic Light Add"); // 0.18ms start, 0.37ms in office building
 	assert(scene_bcube.dx() > 0.0 && scene_bcube.dy() > 0.0);
 	point const scene_llc(scene_bcube.get_llc()); // Note: zval ignored
 	vector3d const scene_sz(scene_bcube.get_size()); // Note: zval ignored
@@ -1318,7 +1316,6 @@ void add_dynamic_lights_city(cube_t const &scene_bcube, float &dlight_add_thresh
 			} // for y
 		}
 	} // for ix (light index)
-	//PRINT_TIME("Dynamic Light Add"); // 0.33ms
 }
 
 
