@@ -850,11 +850,24 @@ bool building_room_geom_t::player_pickup_object(building_t &building, point cons
 	if (obj_id < 0) { // no room object to pick up
 		if (rat_ix >= 0) { // can pick up a rat
 			rat_t const &r(rats[rat_ix]);
+			unsigned *mwave_flag(nullptr);
+
+			if (r.dead) { // dead - check if in a microwave
+				auto objs_end(get_placed_objs_end()); // skip buttons/stairs/elevators
+
+				for (auto i = objs.begin(); i != objs_end; ++i) {
+					if (i->type != TYPE_MWAVE || !i->contains_pt(r.pos)) continue; // wrong object
+					if (!i->is_open()) return 0; // inside a closed microwave, can't pick up
+					mwave_flag = &i->flags;
+					break;
+				}
+			}
 			room_object_t rat(r.get_bcube_with_dir(), TYPE_RAT, 0, 0, 0, (r.dead ? RO_FLAG_BROKEN : 0)); // no room, flag as broken if dead
 			if (!register_player_object_pickup(rat, at_pos)) return 0;
 			player_inventory.add_item(rat);
+			if (mwave_flag) {*mwave_flag &= ~RO_FLAG_NONEMPTY;} // microwave is now empty
 
-			if (!rat.is_broken()) { // squeak if alive
+			if (!r.dead) { // squeak if alive
 				gen_sound_thread_safe(SOUND_RAT_SQUEAK, building.local_to_camera_space(rats[rat_ix].pos));
 				register_building_sound(rats[rat_ix].pos, 0.8);
 			}
@@ -1496,7 +1509,7 @@ bool building_t::maybe_use_last_pickup_room_object(point const &player_pos) {
 			if (is_rat) {
 				bool const was_dead(obj.is_broken());
 				bool is_dead(was_dead);
-				bool const dropped(add_rat(dest, half_width, cview_dir, player_pos, is_dead));// facing away from the player
+				bool const dropped(add_rat(dest, half_width, cview_dir, player_pos, is_dead)); // facing away from the player
 				if (is_dead && !was_dead) {player_inventory.mark_last_item_broken();}
 				
 				if (!was_dead) { // squeak if alive

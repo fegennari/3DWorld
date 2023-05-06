@@ -210,16 +210,19 @@ bool building_t::add_rat(point const &pos, float hlength, vector3d const &dir, p
 				register_achievement("Sleep with the Fishes");
 				return 1;
 			}
+			bool killed(0);
+
 			if (i->type == TYPE_MWAVE && i->is_powered() && check_line_clip(pos, rat_pos, i->d)) { // Note: not on the floor, so can't check test_pos
 				gen_sound_thread_safe(SOUND_BEEP, local_to_camera_space(i->get_cube_center()), 0.25);
-				dead = 1;
+				killed = 1;
 			}
 			else if (i->type == TYPE_STOVE && i->item_flags != 0 && i->contains_pt(test_pos)) { // at least one burner is on (gas, not electric - always powered)
-				dead = 1;
+				killed = 1;
 			}
-			if (dead) { // cook/kill
+			if (killed) { // cook/kill
 				bool const new_achievement(register_achievement("Tastes Like Chicken"));
 				register_fly_attract(new_achievement); // don't print a message if the achievement message was printed
+				dead = 1;
 
 				if (i->type == TYPE_MWAVE && i->is_open() && !(i->flags & RO_FLAG_NONEMPTY)) { // open and empty, microwave, put the rat inside
 					// see building_room_geom_t::add_mwave()
@@ -228,7 +231,7 @@ bool building_t::add_rat(point const &pos, float hlength, vector3d const &dir, p
 					cube_t body(*i);
 					body.d[!i->dim][!open_dir] = panel.d[!i->dim][open_dir]; // the other half
 					float const tray_height(0.25*panel.get_sz_dim(!i->dim));
-					i->flags |= RO_FLAG_NONEMPTY; // TODO: logic to remove this flag when the player takes the rat back out
+					i->flags |= RO_FLAG_NONEMPTY;
 					rat.pos.assign(body.xc(), body.yc(), (body.z1() + tray_height)); // centered on the microwave tray
 					rat.dead = 1;
 					interior->room_geom->rats.add(rat);
