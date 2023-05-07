@@ -1898,6 +1898,8 @@ void remove_quads_in_bcube_from_qbd(cube_t const &c, quad_batch_draw &qbd) {
 	} // for n
 }
 void building_t::remove_paint_in_cube(cube_t const &c) const { // for whiteboards, pictures, etc.
+	if (!has_room_geom()) return;
+
 	for (unsigned exterior_wall = 0; exterior_wall < 2; ++exterior_wall) {
 		paint_draw_t &pd(interior->room_geom->decal_manager.paint_draw[exterior_wall]);
 		remove_quads_in_bcube_from_qbd(c, pd.m_qbd);
