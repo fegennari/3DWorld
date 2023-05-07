@@ -1168,6 +1168,8 @@ struct building_interior_t {
 	building_interior_t();
 	~building_interior_t();
 	float get_doorway_width() const;
+	room_t const &get_room(unsigned room_ix) const {assert(room_ix < rooms.size()); return rooms[room_ix];}
+	door_t const &get_door(unsigned door_ix) const {assert(door_ix < doors.size()); return doors[door_ix];}
 	bool is_cube_close_to_doorway(cube_t const &c, cube_t const &room, float dmin=0.0f, bool inc_open=0, bool check_open_dir=0) const;
 	bool is_blocked_by_stairs_or_elevator(cube_t const &c, float dmin=0.0f, bool elevators_only=0) const;
 	void get_stairs_and_elevators_bcubes_intersecting_cube(cube_t const &c, vect_cube_t &bcubes, float ends_clearance=0.0, float sides_clearance=0.0) const;
@@ -1428,8 +1430,8 @@ struct building_t : public building_geom_t {
 	void update_stats(building_stats_t &s) const;
 	bool are_rooms_connected_without_using_room(unsigned room1, unsigned room2, unsigned room_exclude) const;
 	bool is_room_adjacent_to_ext_door(cube_t const &room, bool front_door_only=0) const;
-	room_t const &get_room(unsigned room_ix) const {assert(interior && room_ix < interior->rooms.size()); return interior->rooms[room_ix];}
-	door_t const &get_door(unsigned door_ix) const {assert(interior && door_ix < interior->doors.size()); return interior->doors[door_ix];}
+	room_t const &get_room(unsigned room_ix) const {assert(interior); return interior->get_room(room_ix);}
+	door_t const &get_door(unsigned door_ix) const {assert(interior); return interior->get_door(door_ix);}
 	point get_center_of_room(unsigned room_ix) const {return get_room(room_ix).get_cube_center();}
 
 	// building AI people

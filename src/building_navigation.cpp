@@ -964,6 +964,16 @@ void building_interior_t::get_avoid_cubes(vect_cube_t &avoid, float z1, float z2
 			}
 		}
 	} // for c
+	if (conn_info != nullptr) { // include extended basement connector doors because building people can't pass through these yet
+		for (auto const &c : conn_info->conn) {
+			for (auto const &room : c.rooms) {
+				if (room.door_is_b) continue; // door is for the other building
+				door_t const &door(get_door(room.door_ix));
+				avoid.push_back(door.get_true_bcube());
+				avoid.back().expand_in_dim(door.dim, floor_thickness); // make it a bit wider to be sure the person will collide with it
+			}
+		} // for c
+	}
 }
 
 bool building_t::stairs_contained_in_part(stairwell_t const &s, cube_t const &p) const {
