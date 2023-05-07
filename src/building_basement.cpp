@@ -1711,8 +1711,8 @@ vector<room_t>::const_iterator building_interior_t::ext_basement_rooms_start() c
 	return rooms.begin() + ext_basement_hallway_room_id;
 }
 bool building_interior_t::point_in_ext_basement_room(point const &pos, float expand) const {
-	if (ext_basement_hallway_room_id < 0)     return 0; // no ext basement rooms
-	if (!basement_ext_bcube.contains_pt(pos)) return 0;
+	if (ext_basement_hallway_room_id < 0)                 return 0; // no ext basement rooms
+	if (!basement_ext_bcube.contains_pt_exp(pos, expand)) return 0;
 
 	for (auto r = ext_basement_rooms_start(); r != rooms.end(); ++r) {
 		if (r->contains_pt_exp(pos, expand)) return 1;
