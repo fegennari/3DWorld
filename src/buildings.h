@@ -1190,7 +1190,7 @@ struct building_interior_t {
 	void place_exterior_room(extb_room_t const &room, cube_t const &wall_area, float fc_thick, float wall_thick, ext_basement_room_params_t &P,
 		unsigned part_id, unsigned num_lights=0, bool is_hallway=0, unsigned is_building_conn=0, unsigned wall_skip_dim=2, unsigned thin_wall_dir=2);
 	colorRGBA get_attic_ceiling_color() const;
-	room_t const &get_garage_room() const {assert((unsigned)garage_room < rooms.size()); return rooms[garage_room];}
+	room_t const &get_garage_room() const {assert(garage_room >= 0); return get_room(garage_room);}
 	vector<room_t>::const_iterator ext_basement_rooms_start() const;
 	bool point_in_ext_basement_room(point const &pos, float expand=0.0) const;
 	bool cube_in_ext_basement_room(cube_t const &c, bool xy_only) const;

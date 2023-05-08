@@ -1732,8 +1732,7 @@ bool building_interior_t::cube_in_ext_basement_room(cube_t const &c, bool xy_onl
 door_t const &building_interior_t::get_ext_basement_door() const {
 	assert(ext_basement_door_stack_ix >= 0 && (unsigned)ext_basement_door_stack_ix < door_stacks.size());
 	unsigned const door_ix(door_stacks[ext_basement_door_stack_ix].first_door_ix);
-	assert(door_ix < doors.size());
-	return doors[door_ix];
+	return get_door(door_ix);
 }
 
 
