@@ -22,7 +22,7 @@ extern bldg_obj_type_t bldg_obj_types[];
 
 bool in_building_gameplay_mode();
 bool ai_follow_player() {return (global_building_params.ai_follow_player || in_building_gameplay_mode());}
-bool can_ai_follow_player(person_t const &person);
+bool can_ai_follow_player(person_t const &person, bool allow_diff_building=0);
 float get_closest_building_sound(point const &at_pos, point &sound_pos, float floor_spacing);
 void maybe_play_zombie_sound(point const &sound_pos_bs, unsigned zombie_ix, bool alert_other_zombies, bool high_priority=0, float gain=1.0, float pitch=1.0);
 int register_ai_player_coll(bool &has_key, float height);
@@ -1217,10 +1217,10 @@ bool building_t::place_people_if_needed(unsigned building_ix, float radius, vect
 	return 1;
 }
 
-bool can_ai_follow_player(person_t const &person) {
+bool can_ai_follow_player(person_t const &person, bool allow_diff_building) {
 	if (!ai_follow_player()) return 0; // disabled
 	if (!cur_player_building_loc.is_valid()) return 0; // no target
-	if (cur_player_building_loc.building_ix != person.cur_bldg) return 0; // wrong building
+	if (!allow_diff_building && cur_player_building_loc.building_ix != person.cur_bldg) return 0; // wrong building
 	if (player_is_hiding && !person.saw_player_hide) return 0; // ignore player in closet, bathroom stall, or shower with door closed, and we didn't see them hide
 	if (person.retreat_time > 0.0) return 0; // ignore the player if retreating
 	return 1;
@@ -1533,6 +1533,9 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 	float &wait_time(person.waiting_start); // reuse this field
 	float speed_mult(1.0);
 	person.following_player = 0; // reset for this frame
+	// skip the same building check for coll if both this person and the player may be in different but connected buildings
+	bool allow_diff_building(interior->conn_info && person.pos.z < ground_floor_z1 && cur_player_building_loc.pos.z < ground_floor_z1 &&
+		dist_xy_less_than(person.pos, cur_player_building_loc.pos, 2.0*get_window_vspace()));
 
 	if (person.retreat_time > 0.0) {
 		if (person.retreat_time == global_building_params.ai_retreat_time*TICKS_PER_SECOND) { // first retreating frame - clear path
@@ -1546,7 +1549,7 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 	if (wait_time > 0) { // waiting, possibly for an elevator
 		person.idle_time += fticks;
 
-		if (wait_time > fticks && !can_ai_follow_player(person)) { // waiting; don't wait if there's a player to follow
+		if (wait_time > fticks && !can_ai_follow_player(person, allow_diff_building)) { // waiting; don't wait if there's a player to follow
 			// check for other people colliding with this person and handle it
 			bool was_bumped(0);
 
@@ -1581,7 +1584,7 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 	person.must_re_call_elevator = 0; // reset if we got out of the elevator logic with this set
 	build_nav_graph();
 
-	if (can_ai_follow_player(person)) {
+	if (can_ai_follow_player(person, allow_diff_building)) {
 		// use zval of the feet to handle cases where the person and the player are different heights
 		point const feet_pos(person.pos.x, person.pos.y, person.get_z1()), player_feet_pos(cur_player_building_loc.pos - vector3d(0.0, 0.0, CAMERA_RADIUS+get_player_height()));
 
@@ -1594,7 +1597,7 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 			}
 		}
 		if (player_is_hiding && person.saw_player_hide && global_building_params.ai_opens_doors && global_building_params.ai_sees_player_hide >= 2 &&
-			player_hiding_obj.type != TYPE_NONE && same_room_and_floor_as_player(person))
+			player_hiding_obj.type != TYPE_NONE && same_room_and_floor_as_player(person) && cur_player_building_loc.building_ix == person.cur_bldg)
 		{
 			// open the closet, stall, or shower door
 			// it may not be safe to use an object iterator or even an index since we're in a different thread, so do a linear search for the target object
