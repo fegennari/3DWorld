@@ -1040,7 +1040,20 @@ bool building_t::find_route_to_point(person_t const &person, float radius, bool 
 
 	if (loc1.same_room_floor(loc2)) { // same room/floor (not checking stairs_ix)
 		assert(from.z == to.z);
-		return interior->nav_graph->complete_path_within_room(from, to, loc1.room_ix, person.ssn, radius, person.cur_rseed, is_first_path, following_player, avoid, *this, path);
+		point dest(to);
+
+		// if both the person and target (player) are in an extended basement room, clamp dest to walkable room bounds;
+		// since these rooms aren't packed together, it's possible for the player to be unreachable, for example when crossing through a connector hallway
+		if (to.z < ground_floor_z1) { // in the basement
+			room_t const &room(get_room(loc1.room_ix));
+
+			if (room.is_ext_basement()) { // extended basement room; room.is_ext_basement_conn()? or does it need to apply to the other adj room as well?
+				cube_t valid_area(room);
+				valid_area.expand_by_xy(-radius);
+				valid_area.clamp_pt_xy(dest);
+			}
+		}
+		return interior->nav_graph->complete_path_within_room(from, dest, loc1.room_ix, person.ssn, radius, person.cur_rseed, is_first_path, following_player, avoid, *this, path);
 	}
 	if (loc1.floor_ix != loc2.floor_ix) { // different floors: find path from <from> to nearest stairs, then find path from stairs to <to>
 		vector<unsigned> nearest_stairs_or_ramp;
