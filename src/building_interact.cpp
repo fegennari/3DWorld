@@ -1028,6 +1028,7 @@ void building_t::update_player_interact_objects(point const &player_pos) {
 								register_building_sound(sound_origin, 0.7);
 								interior->room_geom->update_draw_state_for_room_object(obj, *this, 0);
 								if (obj.type == TYPE_DRESS_MIR || obj.type == TYPE_MIRROR) {register_achievement("7 Years of Bad Luck");}
+								else if (obj.type == TYPE_TV || obj.type == TYPE_MONITOR) {add_particle_effect(center, radius, front_dir, PART_EFFECT_SPARKS);}
 								handled = 1;
 							}
 						}
@@ -1081,6 +1082,49 @@ void building_t::update_player_interact_objects(point const &player_pos) {
 	}
 	doors_next_frame(); // run for current and connected buildings
 }
+
+// particle effects
+
+void building_t::add_particle_effect(point const &pos, float radius, vector3d const &dir, unsigned effect) {
+	if (has_room_geom()) {interior->room_geom->particle_manager.add(pos, radius, dir, effect);}
+}
+
+void particle_manager_t::add(point const &pos, float radius, vector3d const &dir, unsigned effect) {
+	assert(effect == PART_EFFECT_SPARKS); // the only supported effect
+	return; // TODO: remove when completed
+	unsigned const num(40 + (rgen.rand()%21)); // 40-60
+
+	for (unsigned n = 0; n < num; ++n) {
+		vector3d part_dir(rgen.signed_rand_vector_norm());
+		if (dot_product(dir, part_dir) < 0.0) {part_dir.negate();} // make opposite of dir
+		float const dist(sqrt(radius*radius*rgen.rand_float())), part_radius(0.1*radius*rgen.rand_uniform(0.5, 1.0));
+		point const p(pos + dist*part_dir);
+		vector3d const v(0.1*part_dir*rgen.rand_uniform(0.5, 1.0));
+		particles.emplace_back(p, v, part_radius, 0.0, effect); // time=0.0
+	} // for n
+}
+void particle_manager_t::next_frame() {
+	for (particle_t &p : particles) {
+		p.pos  += fticks*p.vel;
+		p.time += fticks;
+		// TODO: add gravity
+		// TODO: check for coll with building/floor/objects, etc. - must pass in building?
+	}
+	// remove dead particles
+	auto i(particles.begin()), o(i);
+
+	for (; i != particles.end(); ++i) {
+		if (i->effect != PART_EFFECT_NONE) {*(o++) = *i;} // TODO: std::remove_if()?
+	}
+	particles.erase(o, particles.end());
+}
+void particle_manager_t::draw() const {
+	for (particle_t const &p : particles) {
+		// TODO
+	}
+}
+
+// elevators
 
 bool building_interior_t::update_elevators(building_t const &building, point const &player_pos) { // Note: player_pos is in building space
 	if (elevators_disabled) return 0;

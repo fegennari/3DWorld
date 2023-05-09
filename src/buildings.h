@@ -414,6 +414,8 @@ enum {/*building models*/ OBJ_MODEL_TOILET=0, OBJ_MODEL_SINK, OBJ_MODEL_TUB, OBJ
 	OBJ_MODEL_WALL_LAMP, OBJ_MODEL_CUP, OBJ_MODEL_TOASTER, OBJ_MODEL_HOOD, OBJ_MODEL_RCHAIR, OBJ_MODEL_SILVER, OBJ_MODEL_TOY, OBJ_MODEL_CEIL_FAN, OBJ_MODEL_RAT,
 	/*city models*/ OBJ_MODEL_FHYDRANT, OBJ_MODEL_SUBSTATION, OBJ_MODEL_MAILBOX, OBJ_MODEL_UMBRELLA, NUM_OBJ_MODELS};
 
+enum {PART_EFFECT_NONE=0, PART_EFFECT_SPARKS, NUM_PART_EFFECTS};
+
 // object flags
 unsigned const RO_FLAG_LIT     = 0x01; // light is on
 unsigned const RO_FLAG_TOS     = 0x02; // at top of stairs; used for railings
@@ -744,6 +746,25 @@ struct building_decal_manager_t {
 	void draw_building_interior_decals(shader_t &s, bool player_in_building, bool shadow_only) const;
 };
 
+class particle_manager_t {
+	struct particle_t {
+		point pos;
+		vector3d vel;
+		float radius=0.0, time=0.0;
+		unsigned effect=PART_EFFECT_NONE;
+
+		particle_t() {}
+		particle_t(point const &p, vector3d const &v, float r, float t, unsigned e) : pos(p), vel(v), radius(r), time(t), effect(e) {}
+	};
+	vector<particle_t> particles;
+	quad_batch_draw qbd;
+	rand_gen_t rgen;
+public:
+	void add(point const &pos, float radius, vector3d const &dir, unsigned effect);
+	void next_frame();
+	void draw() const;
+};
+
 struct building_room_geom_t {
 
 	bool has_elevators, has_pictures, has_garage_car, modified_by_player;
@@ -765,6 +786,7 @@ struct building_room_geom_t {
 	building_materials_t mats_static, mats_small, mats_text, mats_detail, mats_dynamic, mats_lights, mats_amask, mats_alpha, mats_doors, mats_exterior, mats_ext_detail;
 	vect_cube_t light_bcubes;
 	building_decal_manager_t decal_manager;
+	particle_manager_t particle_manager;
 
 	building_room_geom_t(point const &tex_origin_=all_zeros) : has_elevators(0), has_pictures(0), has_garage_car(0), modified_by_player(0),
 		num_pic_tids(0), invalidate_mats_mask(0), obj_scale(1.0), wall_ps_start(0), buttons_start(0), stairs_start(0), tex_origin(tex_origin_), wood_color(WHITE) {}
@@ -1724,6 +1746,7 @@ private:
 	bool get_zval_for_obj_placement(point const &pos, float radius, float &zval, bool add_z_bias) const;
 	void add_blood_decal(point const &pos, float radius);
 	void add_broken_glass_to_floor(point const &pos, float radius);
+	void add_particle_effect(point const &pos, float radius, vector3d const &dir, unsigned effect);
 	void play_tape_sound(point const &sound_pos, float sound_gain) const;
 	bool is_obj_above_ramp(cube_t const &c) const;
 	bool is_room_above_ramp(cube_t const &room, float zval) const;
