@@ -3497,7 +3497,7 @@ void building_room_geom_t::add_crack(room_object_t const &c) { // in window? (TV
 }
 
 void building_room_geom_t::add_tv_picture(room_object_t const &c) {
-	if ((c.obj_id & 1) && !c.is_broken()) return; // TV is off half the time
+	if ((c.obj_id & 1) && !c.is_broken()) return; // TV is off half the time; broken TV draws the crack
 	cube_t screen(c);
 	screen.d[c.dim][c.dir] += (c.dir ? -1.0 : 1.0)*0.35*c.get_depth();
 	screen.expand_in_dim(!c.dim, -0.03*c.get_width()); // shrink the sides in

@@ -26,6 +26,7 @@ extern building_t const *player_building;
 bool player_can_open_door(door_t const &door);
 bool player_has_room_key();
 void register_broken_object(room_object_t const &obj);
+colorRGBA get_glow_color(float stime, bool fade);
 
 // Note: pos is in camera space
 void gen_sound_thread_safe(unsigned id, point const &pos, float gain, float pitch, float gain_scale, bool skip_if_already_playing) {
@@ -1028,7 +1029,9 @@ void building_t::update_player_interact_objects(point const &player_pos) {
 								register_building_sound(sound_origin, 0.7);
 								interior->room_geom->update_draw_state_for_room_object(obj, *this, 0);
 								if (obj.type == TYPE_DRESS_MIR || obj.type == TYPE_MIRROR) {register_achievement("7 Years of Bad Luck");}
-								else if (obj.type == TYPE_TV || obj.type == TYPE_MONITOR) {add_particle_effect(center, radius, front_dir, PART_EFFECT_SPARKS);}
+								else if (obj.type == TYPE_TV || obj.type == TYPE_MONITOR) {
+									if (obj.is_powered()/*!(obj.obj_id & 1)*/) {add_particle_effect(center, radius, front_dir, PART_EFFECT_SPARKS);} // only if turned on?
+								}
 								handled = 1;
 							}
 						}
@@ -1081,6 +1084,7 @@ void building_t::update_player_interact_objects(point const &player_pos) {
 		maybe_update_tape(player_pos, 0); // end_of_tape=0
 	}
 	doors_next_frame(); // run for current and connected buildings
+	interior->room_geom->particle_manager.next_frame();
 }
 
 // particle effects
@@ -1100,7 +1104,7 @@ void particle_manager_t::add(point const &pos, float radius, vector3d const &dir
 		float const dist(sqrt(radius*radius*rgen.rand_float())), part_radius(0.1*radius*rgen.rand_uniform(0.5, 1.0));
 		point const p(pos + dist*part_dir);
 		vector3d const v(0.1*part_dir*rgen.rand_uniform(0.5, 1.0));
-		particles.emplace_back(p, v, part_radius, 0.0, effect); // time=0.0
+		particles.emplace_back(p, v, WHITE, part_radius, 0.0, effect); // time=0.0
 	} // for n
 }
 void particle_manager_t::next_frame() {
@@ -1109,7 +1113,10 @@ void particle_manager_t::next_frame() {
 		p.time += fticks;
 		// TODO: add gravity
 		// TODO: check for coll with building/floor/objects, etc. - must pass in building?
-	}
+		float const lifetime(p.time/(4.0*TICKS_PER_SECOND));
+		p.color = get_glow_color(lifetime, 1); // fade=1
+		if (lifetime > 1.0) {p.effect = PART_EFFECT_NONE;} // end of life
+	} // for p
 	// remove dead particles
 	auto i(particles.begin()), o(i);
 
@@ -1117,11 +1124,6 @@ void particle_manager_t::next_frame() {
 		if (i->effect != PART_EFFECT_NONE) {*(o++) = *i;} // TODO: std::remove_if()?
 	}
 	particles.erase(o, particles.end());
-}
-void particle_manager_t::draw() const {
-	for (particle_t const &p : particles) {
-		// TODO
-	}
 }
 
 // elevators

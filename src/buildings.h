@@ -750,11 +750,12 @@ class particle_manager_t {
 	struct particle_t {
 		point pos;
 		vector3d vel;
+		colorRGBA color;
 		float radius=0.0, time=0.0;
 		unsigned effect=PART_EFFECT_NONE;
 
 		particle_t() {}
-		particle_t(point const &p, vector3d const &v, float r, float t, unsigned e) : pos(p), vel(v), radius(r), time(t), effect(e) {}
+		particle_t(point const &p, vector3d const &v, colorRGBA const &c, float r, float t, unsigned e) : pos(p), vel(v), color(c), radius(r), time(t), effect(e) {}
 	};
 	vector<particle_t> particles;
 	quad_batch_draw qbd;
@@ -762,7 +763,7 @@ class particle_manager_t {
 public:
 	void add(point const &pos, float radius, vector3d const &dir, unsigned effect);
 	void next_frame();
-	void draw() const;
+	void draw(shader_t &s, vector3d const &xlate);
 };
 
 struct building_room_geom_t {

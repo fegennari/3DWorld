@@ -1507,6 +1507,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, building_t c
 	}
 	// alpha blended, should be drawn near last
 	decal_manager.draw_building_interior_decals(s, player_in_building, shadow_only); // draw decals in this building
+	if (player_in_building && !shadow_only) {particle_manager.draw(s, xlate);}
 	
 	if (!shadow_only && !mats_alpha.empty()) { // draw last; not shadow casters; for shower glass, etc.
 		enable_blend();
@@ -1516,6 +1517,24 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, building_t c
 		disable_blend();
 		indexed_vao_manager_with_shadow_t::post_render();
 	}
+}
+
+void particle_manager_t::draw(shader_t &s, vector3d const &xlate) { // non-const because qbd is modified
+	if (particles.empty()) return;
+	glDepthMask(GL_FALSE); // disable depth write
+	enable_blend();
+	set_additive_blend_mode();
+	select_texture(BLUR_CENT_TEX); // spraypaint - smooth alpha blended edges
+	point const viewer_bs(camera_pdu.pos - xlate);
+
+	for (particle_t const &p : particles) {
+		if (!camera_pdu.sphere_visible_test((p.pos + xlate), p.radius)) continue; // VFC
+		qbd.add_billboard(p.pos, viewer_bs, plus_z, p.color, p.radius, p.radius);
+	}
+	qbd.draw_and_clear();
+	set_std_blend_mode();
+	disable_blend();
+	glDepthMask(GL_TRUE);
 }
 
 template<bool check_sz, typename T> bool are_pts_occluded_by_any_cubes(point const &pt, point const *const pts, unsigned npts,

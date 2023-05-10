@@ -1504,18 +1504,17 @@ void draw_keycard(point const &pos, vector3d const &orient, vector3d const &init
 }
 
 
-colorRGBA get_glowing_obj_color(point const &pos, int time, int lifetime, float &stime, bool shrapnel_cscale, bool fade) {
-
-	stime = ((float)time)/((float)lifetime)*(shrapnel_cscale ? 1.0 : 0.3);
-	if (is_underwater(pos)) stime *= 5.0;
-	stime = min(1.0f, 5.0f*stime);
+colorRGBA get_glow_color(float stime, bool fade) {
 	if (fade) {return colorRGBA(1.0, min(1.0, (2.0 - 2.0*stime)), max(0.0f, (1.0f - 1.5f*stime)), min(1.0, (4.0 - 4.0*stime)));}
 	else      {return colorRGBA((1.0 - 0.9*stime), max(0.0f, (0.9f - 2.0f*stime)), max(0.0f, (0.6f - 4.0f*stime)), 1.0);}
 }
-
-
+colorRGBA get_glowing_obj_color(point const &pos, int time, int lifetime, float &stime, bool shrapnel_cscale, bool fade) {
+	stime = ((float)time)/((float)lifetime)*(shrapnel_cscale ? 1.0 : 0.3);
+	if (is_underwater(pos)) {stime *= 5.0;}
+	stime = min(1.0f, 5.0f*stime);
+	return get_glow_color(stime, fade);
+}
 colorRGBA get_glow_color(dwobject const &obj, bool shrapnel_cscale) {
-
 	float stime;
 	colorRGBA color(get_glowing_obj_color(obj.pos, obj.time, object_types[obj.type].lifetime, stime, shrapnel_cscale, ((obj.flags & TYPE_FLAG) != 0)));
 	if (shrapnel_cscale) {color *= CLIP_TO_01(1.0f - stime);}

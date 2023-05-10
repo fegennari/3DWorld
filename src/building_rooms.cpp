@@ -49,8 +49,8 @@ colorRGBA get_light_color_temp(float t) {
 	// 0.0: 1.0 1.0 0.5
 	// 0.5: 1.0 1.0 1.0
 	// 1.0: 0.5 0.5 1.0
-	if (t > 0.5) {return colorRGBA(1.5-t, 1.5-t, 1.0  );} // high temp blue spectrum
-	else         {return colorRGBA(1.0,   1.0,   t+0.5);} // low temp yellow spectrum
+	if (t > 0.5) {return colorRGBA(1.5-t, 1.5-t, 1.0  );} // high temp blue   spectrum
+	else         {return colorRGBA(1.0,   1.0,   t+0.5);} // low  temp yellow spectrum
 }
 colorRGBA get_light_color_temp_range(float tmin, float tmax, rand_gen_t &rgen) {
 	return get_light_color_temp(((tmin == tmax) ? tmin : rgen.rand_uniform(tmin, tmax)));
