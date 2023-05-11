@@ -762,7 +762,7 @@ class particle_manager_t {
 	rand_gen_t rgen;
 public:
 	void add(point const &pos, float radius, vector3d const &dir, unsigned effect);
-	void next_frame();
+	void next_frame(building_t const &building);
 	void draw(shader_t &s, vector3d const &xlate);
 };
 
@@ -1563,6 +1563,7 @@ public:
 	int get_part_ix_containing_pt(point const &pt) const;
 	cube_t get_part_containing_cube(cube_t const &c) const;
 	cube_t get_part_containing_pt(point const &pt) const;
+	bool move_sphere_to_valid_part(point &pos, point const &p_last, float radius) const;
 	void remove_paint_in_cube(cube_t const &c) const;
 	void print_building_manifest() const;
 	void print_building_stats() const;
@@ -1592,7 +1593,6 @@ private:
 	bool is_light_placement_valid(cube_t const &light, room_t const &room, float pad) const;
 	void try_place_light_on_ceiling(cube_t const &light, room_t const &room, bool room_dim, float pad, bool allow_rot, bool allow_mult, vect_cube_t &out, rand_gen_t &rgen) const;
 	bool clip_cube_to_parts(cube_t &c, vect_cube_t &cubes) const;
-	bool move_sphere_to_valid_part(point &pos, point const &p_last, float radius) const;
 	cube_t get_walkable_room_bounds(room_t const &room) const;
 	bool is_cube_contained_in_parts(cube_t const &c) const;
 	void expand_ground_floor_cube(cube_t &cube, cube_t const &skip=cube_t()) const;

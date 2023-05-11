@@ -886,19 +886,27 @@ void building_t::play_open_close_sound(room_object_t const &obj, point const &so
 
 // dynamic objects: elevators and balls
 
-void apply_object_bounce(building_t const &building, vector3d &velocity, vector3d const &cnorm, point const &pos, float hardness, bool on_floor) {
-	bool const vert_coll(cnorm == plus_z);
+bool apply_object_bounce(vector3d &velocity, vector3d const &cnorm, float hardness, bool on_floor) {
 	float const vmag(velocity.mag()), elasticity(OBJ_ELASTICITY*hardness);
-	if (vmag < TOLERANCE) return;
+	if (vmag < TOLERANCE) return 0;
 	vector3d v_ref;
 	calc_reflection_angle(velocity/vmag, v_ref, cnorm);
 	velocity = vmag*v_ref;
-	if (on_floor && vert_coll) {velocity.z *= elasticity;} else {velocity *= elasticity;} // only attenuate velocity in Z for a floor collision
-	float const bounce_volume(min(1.0f, (vert_coll ? 0.5f : 1.0f)*vmag/KICK_VELOCITY)); // relative to kick velocity
+	if (on_floor && cnorm == plus_z) {velocity.z *= elasticity;} else {velocity *= elasticity;} // only attenuate velocity in Z for a floor collision
+	return 1;
+}
+void apply_object_bounce_with_sound(building_t const &building, vector3d &velocity, vector3d const &cnorm, point const &pos, float hardness, bool on_floor) {
+	if (!apply_object_bounce(velocity, cnorm, hardness, on_floor)) return;
+	float const bounce_volume(min(1.0f, ((cnorm == plus_z) ? 0.5f : 1.0f)*velocity.mag()/KICK_VELOCITY)); // relative to kick velocity; lower if vertical/floor coll
 
 	if (bounce_volume > 0.25) { // apply bounce sound
 		if (bounce_volume > 0.5) {gen_sound_thread_safe(SOUND_KICK_BALL, building.local_to_camera_space(pos), 0.75*bounce_volume*bounce_volume);}
 		register_building_sound(pos, 0.7*bounce_volume);
+	}
+}
+void apply_floor_vel_thresh(vector3d &velocity, vector3d const &cnorm) {
+	if (cnorm == plus_z) { // collision with the floor or the top surface of something
+		if (fabs(velocity.z) < 0.25*OBJ_GRAVITY*fticks) {velocity.z = 0.0;} // zero velocity z component if near zero to reduce instability
 	}
 }
 
@@ -952,7 +960,7 @@ void building_t::update_player_interact_objects(point const &player_pos) {
 
 				if (sphere_cube_int_update_pos(new_center, radius, p->get_bcube(), center, 1, 0, &cnorm)) {
 					register_person_hit((p - interior->people.begin()), *c, velocity);
-					apply_object_bounce(*this, velocity, cnorm, new_center, 0.75, on_floor); // hardness=0.75
+					apply_object_bounce_with_sound(*this, velocity, cnorm, new_center, 0.75, on_floor); // hardness=0.75
 				}
 			}
 			else { // treat collision as a kick
@@ -1003,10 +1011,8 @@ void building_t::update_player_interact_objects(point const &player_pos) {
 			float hardness(0.0);
 
 			if (interior->check_sphere_coll(*this, new_center, center, radius, c, cnorm, hardness, obj_ix)) {
-				if (cnorm == plus_z) { // collision with the floor or the top surface of something
-					if (fabs(velocity.z) < 0.25*OBJ_GRAVITY*fticks) {velocity.z = 0.0;} // zero velocity z component if near zero to reduce instability
-				}
-				apply_object_bounce(*this, velocity, cnorm, new_center, hardness, on_floor);
+				apply_floor_vel_thresh(velocity, cnorm);
+				apply_object_bounce_with_sound(*this, velocity, cnorm, new_center, hardness, on_floor);
 				
 				if (obj_ix >= 0) { // collided with a room object
 					auto &obj(interior->room_geom->get_room_object_by_index(obj_ix));
@@ -1046,7 +1052,7 @@ void building_t::update_player_interact_objects(point const &player_pos) {
 			point const prev_new_center(new_center);
 			
 			if (move_sphere_to_valid_part(new_center, center, radius) && new_center != prev_new_center) { // collision with exterior wall
-				apply_object_bounce(*this, velocity, (new_center - prev_new_center).get_norm(), new_center, 1.0, on_floor); // hardness=1.0
+				apply_object_bounce_with_sound(*this, velocity, (new_center - prev_new_center).get_norm(), new_center, 1.0, on_floor); // hardness=1.0
 				// add TYPE_CRACK if collides with a window?
 			}
 			if (new_center != center) {apply_roll_to_matrix(dstate.rot_matrix, new_center, center, plus_z, radius, (on_floor ? 0.0 : 0.01), (on_floor ? 1.0 : 0.2));}
@@ -1084,7 +1090,7 @@ void building_t::update_player_interact_objects(point const &player_pos) {
 		maybe_update_tape(player_pos, 0); // end_of_tape=0
 	}
 	doors_next_frame(); // run for current and connected buildings
-	interior->room_geom->particle_manager.next_frame();
+	interior->room_geom->particle_manager.next_frame(*this);
 }
 
 // particle effects
@@ -1095,27 +1101,44 @@ void building_t::add_particle_effect(point const &pos, float radius, vector3d co
 
 void particle_manager_t::add(point const &pos, float radius, vector3d const &dir, unsigned effect) {
 	assert(effect == PART_EFFECT_SPARKS); // the only supported effect
-	return; // TODO: remove when completed
 	unsigned const num(40 + (rgen.rand()%21)); // 40-60
 
 	for (unsigned n = 0; n < num; ++n) {
 		vector3d part_dir(rgen.signed_rand_vector_norm());
 		if (dot_product(dir, part_dir) < 0.0) {part_dir.negate();} // make opposite of dir
-		float const dist(sqrt(radius*radius*rgen.rand_float())), part_radius(0.1*radius*rgen.rand_uniform(0.5, 1.0));
+		float const dist(sqrt(radius*radius*rgen.rand_float())), part_radius(0.1*radius*rgen.rand_uniform(0.8, 1.25));
 		point const p(pos + dist*part_dir);
-		vector3d const v(0.1*part_dir*rgen.rand_uniform(0.5, 1.0));
+		vector3d const v(1.0*KICK_VELOCITY*part_dir*rgen.rand_uniform(0.8, 1.25)); // similar to ball kick velocity
 		particles.emplace_back(p, v, WHITE, part_radius, 0.0, effect); // time=0.0
 	} // for n
 }
-void particle_manager_t::next_frame() {
+void particle_manager_t::next_frame(building_t const &building) {
+	if (particles.empty()) return;
+	float const fticks_stable(min(fticks, 4.0f)); // clamp to 0.1s
+
 	for (particle_t &p : particles) {
-		p.pos  += fticks*p.vel;
-		p.time += fticks;
-		// TODO: add gravity
-		// TODO: check for coll with building/floor/objects, etc. - must pass in building?
-		float const lifetime(p.time/(4.0*TICKS_PER_SECOND));
-		p.color = get_glow_color(lifetime, 1); // fade=1
-		if (lifetime > 1.0) {p.effect = PART_EFFECT_NONE;} // end of life
+		point const p_last(p.pos);
+		p.pos  += fticks_stable*p.vel;
+		p.time += fticks_stable;
+		float const lifetime(p.time/(2.0*TICKS_PER_SECOND));
+		if (lifetime > 1.0) {p.effect = PART_EFFECT_NONE; continue;} // end of life
+		p.color = get_glow_color(2.0*lifetime, 1); // fade=1
+		apply_building_gravity(p.vel.z, fticks_stable);
+		// check for collisions and apply bounce, similar to balls
+		float const bounce_scale = 0.5;
+		vector3d cnorm;
+		int obj_ix(-1);
+		float hardness(0.0);
+
+		if (building.interior->check_sphere_coll(building, p.pos, p_last, p.radius, building.interior->room_geom->objs.end(), cnorm, hardness, obj_ix)) {
+			apply_floor_vel_thresh(p.vel, cnorm);
+			apply_object_bounce(p.vel, cnorm, bounce_scale*hardness, 0); // on_floor=0
+		}
+		point const prev_pos(p.pos);
+
+		if (building.move_sphere_to_valid_part(p.pos, p_last, p.radius) && p.pos != prev_pos) { // collision with exterior wall
+			apply_object_bounce(p.vel, (p.pos - prev_pos).get_norm(), bounce_scale, 0); // on_floor=0
+		}
 	} // for p
 	// remove dead particles
 	auto i(particles.begin()), o(i);
