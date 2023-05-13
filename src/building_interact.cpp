@@ -936,9 +936,8 @@ void building_t::update_player_interact_objects(point const &player_pos) {
 	static point last_sound_pt(all_zeros), last_player_pos(all_zeros);
 	bool const player_is_moving(player_pos != last_player_pos);
 	if (player_in_this_building) {last_player_pos = player_pos;}
-
 	// update dynamic objects; run for current and connected buildings
-	auto &objs(interior->room_geom->objs), &expanded_objs(interior->room_geom->expanded_objs);
+	auto &objs(interior->room_geom->objs);
 
 	for (auto c = objs.begin(); c != objs.end(); ++c) { // check for other objects to collide with (including stairs)
 		if (c->no_coll() || !c->has_dstate()) continue; // Note: no test of player_coll flag
@@ -1036,7 +1035,7 @@ void building_t::update_player_interact_objects(point const &player_pos) {
 								interior->room_geom->update_draw_state_for_room_object(obj, *this, 0);
 								if (obj.type == TYPE_DRESS_MIR || obj.type == TYPE_MIRROR) {register_achievement("7 Years of Bad Luck");}
 								else if (obj.type == TYPE_TV || obj.type == TYPE_MONITOR) {
-									if (obj.is_powered()/*!(obj.obj_id & 1)*/) {add_particle_effect(center, radius, front_dir, PART_EFFECT_SPARKS);} // only if turned on?
+									if (obj.is_powered()/*!(obj.obj_id & 1)*/) {add_particle_effect(center, radius, front_dir, PART_EFFECT_SPARKS, (c - objs.begin()));}
 								}
 								handled = 1;
 							}
@@ -1069,6 +1068,8 @@ void building_t::update_player_interact_objects(point const &player_pos) {
 	} // for c
 	if (player_in_this_building) { // interactions only run for player building
 		if (player_in_closet) { // check for collisions with expanded objects in closets
+			auto &expanded_objs(interior->room_geom->expanded_objs);
+
 			for (auto c = expanded_objs.begin(); c != expanded_objs.end(); ++c) {
 				if (c->type == TYPE_CLOTHES && sphere_cube_intersect(player_pos, player_radius, *c)) { // shirt in a closet with the player
 					assert(c != objs.begin());
@@ -1095,26 +1096,27 @@ void building_t::update_player_interact_objects(point const &player_pos) {
 
 // particle effects
 
-void building_t::add_particle_effect(point const &pos, float radius, vector3d const &dir, unsigned effect) {
-	if (has_room_geom()) {interior->room_geom->particle_manager.add(pos, radius, dir, effect);}
+void building_t::add_particle_effect(point const &pos, float radius, vector3d const &dir, unsigned effect, int parent_obj_id) {
+	if (has_room_geom()) {interior->room_geom->particle_manager.add(pos, radius, dir, effect, parent_obj_id);}
 }
 
-void particle_manager_t::add(point const &pos, float radius, vector3d const &dir, unsigned effect) {
+void particle_manager_t::add(point const &pos, float radius, vector3d const &dir, unsigned effect, int parent_obj_id) {
 	assert(effect == PART_EFFECT_SPARKS); // the only supported effect
-	unsigned const num(40 + (rgen.rand()%21)); // 40-60
+	unsigned const num(50 + (rgen.rand()%11)); // 50-60
 
 	for (unsigned n = 0; n < num; ++n) {
 		vector3d part_dir(rgen.signed_rand_vector_norm());
 		if (dot_product(dir, part_dir) < 0.0) {part_dir.negate();} // make opposite of dir
 		float const dist(sqrt(radius*radius*rgen.rand_float())), part_radius(0.1*radius*rgen.rand_uniform(0.8, 1.25));
 		point const p(pos + dist*part_dir);
-		vector3d const v(1.0*KICK_VELOCITY*part_dir*rgen.rand_uniform(0.8, 1.25)); // similar to ball kick velocity
-		particles.emplace_back(p, v, WHITE, part_radius, 0.0, effect); // time=0.0
+		vector3d const v(1.2*KICK_VELOCITY*rgen.rand_uniform(0.8, 1.25)*part_dir); // similar to ball kick velocity
+		particles.emplace_back(p, v, WHITE, part_radius, effect, parent_obj_id);
 	} // for n
 }
 void particle_manager_t::next_frame(building_t const &building) {
 	if (particles.empty()) return;
 	float const fticks_stable(min(fticks, 4.0f)); // clamp to 0.1s
+	auto const &objs(building.interior->room_geom->objs);
 
 	for (particle_t &p : particles) {
 		point const p_last(p.pos);
@@ -1123,14 +1125,16 @@ void particle_manager_t::next_frame(building_t const &building) {
 		float const lifetime(p.time/(2.0*TICKS_PER_SECOND));
 		if (lifetime > 1.0) {p.effect = PART_EFFECT_NONE; continue;} // end of life
 		p.color = get_glow_color(2.0*lifetime, 1); // fade=1
-		apply_building_gravity(p.vel.z, fticks_stable);
+		apply_building_gravity(p.vel.z, 0.5*fticks_stable); // half gravity
 		// check for collisions and apply bounce, similar to balls
 		float const bounce_scale = 0.5;
 		vector3d cnorm;
 		int obj_ix(-1);
 		float hardness(0.0);
+		auto self(objs.end());
+		if (p.parent_obj_id >= 0) {assert((unsigned)p.parent_obj_id < objs.size()); self = objs.begin() + p.parent_obj_id;}
 
-		if (building.interior->check_sphere_coll(building, p.pos, p_last, p.radius, building.interior->room_geom->objs.end(), cnorm, hardness, obj_ix)) {
+		if (building.interior->check_sphere_coll(building, p.pos, p_last, p.radius, self, cnorm, hardness, obj_ix)) {
 			apply_floor_vel_thresh(p.vel, cnorm);
 			apply_object_bounce(p.vel, cnorm, bounce_scale*hardness, 0); // on_floor=0
 		}

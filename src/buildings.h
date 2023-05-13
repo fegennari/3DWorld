@@ -752,16 +752,18 @@ class particle_manager_t {
 		vector3d vel;
 		colorRGBA color;
 		float radius=0.0, time=0.0;
+		int parent_obj_id=0;
 		unsigned effect=PART_EFFECT_NONE;
 
 		particle_t() {}
-		particle_t(point const &p, vector3d const &v, colorRGBA const &c, float r, float t, unsigned e) : pos(p), vel(v), color(c), radius(r), time(t), effect(e) {}
+		particle_t(point const &p, vector3d const &v, colorRGBA const &c, float r, unsigned e, int pid=-1) :
+			pos(p), vel(v), color(c), radius(r), effect(e), parent_obj_id(pid) {}
 	};
 	vector<particle_t> particles;
 	quad_batch_draw qbd;
 	rand_gen_t rgen;
 public:
-	void add(point const &pos, float radius, vector3d const &dir, unsigned effect);
+	void add(point const &pos, float radius, vector3d const &dir, unsigned effect, int parent_obj_id=-1);
 	void next_frame(building_t const &building);
 	void draw(shader_t &s, vector3d const &xlate);
 };
@@ -1747,7 +1749,7 @@ private:
 	bool get_zval_for_obj_placement(point const &pos, float radius, float &zval, bool add_z_bias) const;
 	void add_blood_decal(point const &pos, float radius);
 	void add_broken_glass_to_floor(point const &pos, float radius);
-	void add_particle_effect(point const &pos, float radius, vector3d const &dir, unsigned effect);
+	void add_particle_effect(point const &pos, float radius, vector3d const &dir, unsigned effect, int parent_obj_id=-1);
 	void play_tape_sound(point const &sound_pos, float sound_gain) const;
 	bool is_obj_above_ramp(cube_t const &c) const;
 	bool is_room_above_ramp(cube_t const &room, float zval) const;
