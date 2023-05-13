@@ -1025,17 +1025,17 @@ void building_t::update_player_interact_objects(point const &player_pos) {
 						front_dir[obj.dim] = (obj.dir ? 1.0 : -1.0);
 						
 						if (dot_product(cnorm, front_dir) > 0.9) { // hit the front side of the screen
-							if (dist_less_than(center, obj.get_cube_center(), (radius + 0.5*obj.get_length() + 0.2*obj.dz()))) { // near the screen center
+							if (dist_less_than(new_center, obj.get_cube_center(), (radius + 0.5*obj.get_length() + 0.2*obj.dz()))) { // near the screen center
 								// capture value before breaking; if the player then takes this object, damage will be higher, but we can attribute this to making a mess of broken glass
 								register_broken_object(obj);
 								obj.flags |= RO_FLAG_BROKEN;
-								point const sound_origin(obj.xc(), obj.yc(), center.z); // generate sound from the player height
+								point const sound_origin(obj.xc(), obj.yc(), new_center.z); // generate sound from the player height
 								gen_sound_thread_safe(SOUND_GLASS, local_to_camera_space(sound_origin), 0.7);
 								register_building_sound(sound_origin, 0.7);
 								interior->room_geom->update_draw_state_for_room_object(obj, *this, 0);
 								if (obj.type == TYPE_DRESS_MIR || obj.type == TYPE_MIRROR) {register_achievement("7 Years of Bad Luck");}
 								else if (obj.type == TYPE_TV || obj.type == TYPE_MONITOR) {
-									if (obj.is_powered()/*!(obj.obj_id & 1)*/) {add_particle_effect(center, radius, front_dir, PART_EFFECT_SPARKS, (c - objs.begin()));}
+									if (obj.is_powered()/*!(obj.obj_id & 1)*/) {add_particle_effect(new_center, radius, front_dir, PART_EFFECT_SPARKS, (c - objs.begin()));}
 								}
 								handled = 1;
 							}
@@ -1044,7 +1044,7 @@ void building_t::update_player_interact_objects(point const &player_pos) {
 					if (obj.type == TYPE_PICTURE || obj.type == TYPE_TV || obj.type == TYPE_MONITOR || obj.type == TYPE_BUTTON || obj.type == TYPE_SWITCH ||
 						obj.type == TYPE_BREAKER || (obj.type == TYPE_OFF_CHAIR && (obj.flags & RO_FLAG_RAND_ROT)))
 					{
-						if (!handled) {interact_with_object(obj_ix, center, center, velocity.get_norm());}
+						if (!handled) {interact_with_object(obj_ix, new_center, new_center, velocity.get_norm());}
 					}
 				}
 			}
@@ -1107,9 +1107,9 @@ void particle_manager_t::add(point const &pos, float radius, vector3d const &dir
 	for (unsigned n = 0; n < num; ++n) {
 		vector3d part_dir(rgen.signed_rand_vector_norm());
 		if (dot_product(dir, part_dir) < 0.0) {part_dir.negate();} // make opposite of dir
-		float const dist(sqrt(radius*radius*rgen.rand_float())), part_radius(0.1*radius*rgen.rand_uniform(0.8, 1.25));
+		float const dist(sqrt(radius*radius*rgen.rand_float())), part_radius(0.06*radius*rgen.rand_uniform(0.8, 1.25));
 		point const p(pos + dist*part_dir);
-		vector3d const v(1.2*KICK_VELOCITY*rgen.rand_uniform(0.8, 1.25)*part_dir); // similar to ball kick velocity
+		vector3d const v(1.0*KICK_VELOCITY*rgen.rand_uniform(0.8, 1.25)*part_dir); // similar to ball kick velocity
 		particles.emplace_back(p, v, WHITE, part_radius, effect, parent_obj_id);
 	} // for n
 }
@@ -1122,7 +1122,7 @@ void particle_manager_t::next_frame(building_t const &building) {
 		point const p_last(p.pos);
 		p.pos  += fticks_stable*p.vel;
 		p.time += fticks_stable;
-		float const lifetime(p.time/(2.0*TICKS_PER_SECOND));
+		float const lifetime(p.time/(2.5*TICKS_PER_SECOND));
 		if (lifetime > 1.0) {p.effect = PART_EFFECT_NONE; continue;} // end of life
 		p.color = get_glow_color(2.0*lifetime, 1); // fade=1
 		apply_building_gravity(p.vel.z, 0.5*fticks_stable); // half gravity

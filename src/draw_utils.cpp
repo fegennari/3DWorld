@@ -463,8 +463,8 @@ void quad_batch_draw::add_xlated_billboard(point const &pos, point const &xlate,
 	colorRGBA const &c, float xsize, float ysize, tex_range_t const &tr, bool minimize_fill, vector3d const *const normal_)
 {
 	vector3d const vdir(viewer - pos); // z
-	vector3d const v1((cross_product(vdir, up_dir).get_norm())*xsize); // x (what if colinear?)
-	vector3d const v2(cross_product(v1, vdir).get_norm()*ysize); // y
+	vector3d const v1(cross_product(vdir, up_dir).get_norm()*xsize); // x (what if colinear?)
+	vector3d const v2(cross_product(v1,   vdir  ).get_norm()*ysize); // y
 	vector3d const normal(normal_ ? *normal_ : vdir.get_norm());
 
 	if (minimize_fill) { // draw as octagon
