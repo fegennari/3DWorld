@@ -20,7 +20,7 @@ bldg_obj_type_t bldg_obj_types[NUM_ROBJ_TYPES];
 vector<sphere_t> cur_sounds; // radius = sound volume
 
 extern bool camera_in_building, player_is_hiding, player_in_unlit_room, disable_blood;
-extern int window_width, window_height, display_framerate, display_mode, game_mode, building_action_key, frame_counter;
+extern int window_width, window_height, display_framerate, display_mode, game_mode, building_action_key, frame_counter, player_in_basement;
 extern float fticks, CAMERA_RADIUS;
 extern double tfticks;
 extern colorRGBA vignette_color;
@@ -35,6 +35,7 @@ bool player_at_full_health();
 void register_fly_attract(bool no_msg);
 room_obj_or_custom_item_t steal_from_car(room_object_t const &car, float floor_spacing, bool do_pickup);
 float get_filing_cabinet_drawers(room_object_t const &c, vect_cube_t &drawers);
+void reset_creepy_sounds();
 
 bool in_building_gameplay_mode() {return (game_mode == 2);} // replaces dodgeball mode
 
@@ -954,6 +955,7 @@ void building_t::register_player_enter_building() const {
 		if (interior && !interior->people.empty()) {str += "\nPopulation " + std::to_string(interior->people.size());}
 		print_entering_building(str);
 	}
+	reset_creepy_sounds();
 	player_visited = 1;
 }
 void building_t::register_player_exit_building(bool entered_another_building) const {
@@ -1963,7 +1965,6 @@ class sound_tracker_t {
 	point pos;
 	float volume;
 	int cur_frame;
-
 public:
 	sound_tracker_t() : volume(0.0), cur_frame(0) {}
 
@@ -2046,6 +2047,50 @@ void water_sound_manager_t::finalize() {
 	bool const skip_if_already_playing(closest == prev_closest); // don't reset sound loop unless it moves to a different sink
 	prev_closest = closest;
 	gen_sound_thread_safe(SOUND_SINK, closest, 1.0, 1.0, 0.06, skip_if_already_playing); // fast distance falloff; will loop at the end if needed
+}
+
+class creepy_sound_manager_t {
+	int sound_ix=-1;
+	float time_to_next_sound=0.0; // in ticks
+	point sound_pos;
+	rand_gen_t rgen;
+	static unsigned const NUM_SOUNDS = 3;
+	unsigned const sounds[NUM_SOUNDS] = {SOUND_OBJ_FALL, SOUND_WOOD_CRACK, SOUND_SNOW_STEP}; // TODO: knocking, scratching
+
+	void schedule_next_sound() {time_to_next_sound = rgen.rand_uniform(4.0, 10.0)*TICKS_PER_SECOND;}
+public:
+	void reset() {
+		sound_ix  = -1;
+		sound_pos = zero_vector; // in local building space
+		schedule_next_sound();
+	}
+	void next_frame(building_t const &building, point const &player_pos) { // player_pos is in building space
+		if (NUM_SOUNDS == 0) return; // no sounds enabled
+		time_to_next_sound -= fticks;
+		if (time_to_next_sound > 0.0) return; // not yet
+		bool const gen_new_pos(sound_pos == all_zeros || rgen.rand_bool());
+		bool const gen_new_sound(sound_ix < 0 || (gen_new_pos && NUM_SOUNDS > 1));
+		if (gen_new_pos  ) {sound_pos = building.choose_creepy_sound_pos(player_pos, rgen);}
+		if (gen_new_sound) {sound_ix  = rgen.rand()%NUM_SOUNDS;} // select a random new sound
+		assert(sound_ix >= 0 && (unsigned)sound_ix < NUM_SOUNDS);
+		gen_sound_thread_safe(sounds[sound_ix], building.local_to_camera_space(sound_pos)); // doesn't alert zombies
+		schedule_next_sound();
+	}
+};
+
+creepy_sound_manager_t creepy_sound_manager;
+
+void reset_creepy_sounds() {creepy_sound_manager.reset();}
+
+point building_t::choose_creepy_sound_pos(point const &player_pos, rand_gen_t &rgen) const {
+	// TODO: choose location in a nearby building basement room
+	point sound_pos(player_pos);
+	sound_pos += rgen.signed_rand_vector_spherical_xy(get_window_vspace());
+	return sound_pos;
+}
+void building_t::update_creepy_sounds(point const &player_pos) const {
+	return; // TODO: enable when ready
+	if (player_in_basement == 3) {creepy_sound_manager.next_frame(*this, player_pos);} // update if player in extended basement
 }
 
 // gameplay logic

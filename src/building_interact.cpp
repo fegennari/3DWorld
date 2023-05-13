@@ -928,6 +928,7 @@ void apply_building_gravity(float &vz, float dt_ticks) {
 void building_t::update_player_interact_objects(point const &player_pos) {
 	assert(interior);
 	interior->update_elevators(*this, player_pos);
+	update_creepy_sounds(player_pos);
 	if (!has_room_geom()) return; // nothing else to do
 	float const player_radius(get_scaled_player_radius()), player_z1(player_pos.z - get_player_height() - player_radius), player_z2(player_pos.z);
 	float const fc_thick(get_fc_thickness()), fticks_stable(min(fticks, 1.0f)); // cap to 1/40s to improve stability

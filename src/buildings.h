@@ -1530,6 +1530,8 @@ public:
 		unsigned pref_orient=4, bool pref_centered=0, colorRGBA const &color=WHITE, bool not_at_window=0);
 	int check_valid_picture_placement(room_t const &room, cube_t const &c, float width, float zval, bool dim, bool dir, unsigned objs_start) const;
 	void update_player_interact_objects(point const &player_pos);
+	void update_creepy_sounds(point const &player_pos) const;
+	point choose_creepy_sound_pos(point const &player_pos, rand_gen_t &rgen) const;
 	bool line_intersect_walls(point const &p1, point const &p2) const;
 	bool is_obj_pos_valid(room_object_t const &obj, bool keep_in_room, bool allow_block_door, bool check_stairs) const;
 	bool is_rot_cube_visible(cube_t const &c, vector3d const &xlate) const;
