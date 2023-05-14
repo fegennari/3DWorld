@@ -448,17 +448,17 @@ unsigned const RO_FLAG_WAS_EXP   = 0x200000; // for objects in/on shelves, close
 unsigned const RO_FLAG_ROTATING  = 0x400000; // for office chairs and clothes on hangers
 unsigned const RO_FLAG_IN_CLOSET = 0x800000; // for closet lights
 unsigned const RO_FLAG_NONEMPTY  = 0x040000; // for microwaves, aliased with RO_FLAG_HAS_EXTRA
+unsigned const RO_FLAG_BROKEN2   = 0x040000; // for lights that are completely broken, aliased with RO_FLAG_HAS_EXTRA and RO_FLAG_NONEMPTY
 // object flags, fourth byte
 unsigned const RO_FLAG_DYNAMIC  = 0x01000000; // dynamic object (balls, elevators, etc.)
 unsigned const RO_FLAG_DSTATE   = 0x02000000; // this object has dynamic state
 unsigned const RO_FLAG_NO_CONS  = 0x04000000; // this object is not consumable (bottles)
-unsigned const RO_FLAG_NO_POWER = 0x04000000; // unpowered; related to circuit breakers
+unsigned const RO_FLAG_NO_POWER = 0x04000000; // unpowered; related to circuit breakers, aliased with RO_FLAG_NO_CONS
 unsigned const RO_FLAG_IS_ACTIVE= 0x08000000; // active, for sinks, tubs, buttons, etc.
 unsigned const RO_FLAG_USED     = 0x10000000; // used by the player (spraypaint, marker, etc.); used by parking spaces to indicate cars
 unsigned const RO_FLAG_IN_ELEV  = 0x20000000; // for elevator lights, buttons, and flooring
-unsigned const RO_FLAG_BROKEN   = 0x40000000; // for TVs and monitors, maybe can use for windows
+unsigned const RO_FLAG_BROKEN   = 0x40000000; // for TVs, monitors, and flickering lights, maybe can use for windows
 unsigned const RO_FLAG_MOVED    = 0x80000000; // for player push/pull
-
 
 struct bldg_obj_type_t {
 	bool player_coll=0, ai_coll=0, rat_coll=0, pickup=0, attached=0, is_model=0;

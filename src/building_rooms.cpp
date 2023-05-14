@@ -2980,10 +2980,12 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			for (cube_t const &l : valid_lights) {
 				unsigned l_flags(flags);
 				if (check_skylight_intersection(l)) {l_flags |= RO_FLAG_ADJ_TOP; has_skylight_light = 1;} // if attached to a skylight, draw top surface
-				objs.emplace_back(l, TYPE_LIGHT, room_id, (light.dx() < light.dy()), 0, l_flags, light_amt, light_shape, color); // reclaculate dim; dir=0 (unused)
-				objs.back().obj_id = light_ix_assign.get_ix_for_light(l);
+				room_object_t light_obj(l, TYPE_LIGHT, room_id, (light.dx() < light.dy()), 0, l_flags, light_amt, light_shape, color); // reclaculate dim; dir=0 (unused)
+				light_obj.obj_id = light_ix_assign.get_ix_for_light(l);
 				unsigned const flicker_mod(is_parking_garage ? 50 : (is_ext_basement ? 20 : 0)); // 2% chance for parking garage, 5% chance for ext basement
-				if (flicker_mod > 0 && (((rgen_lights.rand() + 3*f)%flicker_mod) == 13)) {objs.back().flags |= RO_FLAG_BROKEN;} // maybe make this a flickering light
+				if (flicker_mod > 0 && (((rgen_lights.rand() + 3*f)%flicker_mod) == 13)) {light_obj.flags |= RO_FLAG_BROKEN;} // maybe make this a flickering light
+				else if (is_ext_basement && (rgen_lights.rand() & 7) == 0) {light_obj.flags |= RO_FLAG_BROKEN2; light_obj.flags &= ~RO_FLAG_LIT;} // broken ext basement light
+				objs.emplace_back(light_obj);
 			}
 			if (is_lit) {r->lit_by_floor |= (1ULL << (f&63));} // flag this floor as being lit (for up to 64 floors)
 			if (is_parking_garage) continue; // generated above, done; no outlets or light switches

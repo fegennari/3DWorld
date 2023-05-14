@@ -212,7 +212,8 @@ bldg_obj_type_t get_taken_obj_type(room_object_t const &obj) {
 	if (obj.type == TYPE_CRATE    && obj.is_open     ()) {return bldg_obj_type_t(1, 1, 1, 1, 0, 0, 2,   2.0, 0.5,  "opened crate");}
 	if (obj.type == TYPE_TV       && obj.is_broken   ()) {return bldg_obj_type_t(1, 1, 1, 1, 0, 1, 1,  20.0, 70.0, "broken TV"   );}
 	if (obj.type == TYPE_MONITOR  && obj.is_broken   ()) {return bldg_obj_type_t(1, 1, 1, 1, 0, 1, 1,  10.0, 15.0, "broken computer monitor");}
-	if (obj.type == TYPE_LIGHT    && obj.is_broken   ()) {return bldg_obj_type_t(0, 0, 0, 1, 0, 0, 0,  20.0,  5.0, "broken light");}
+	if (obj.type == TYPE_LIGHT    && obj.is_broken   ()) {return bldg_obj_type_t(0, 0, 0, 1, 0, 0, 0,  20.0,  5.0, "flickering light");}
+	if (obj.type == TYPE_LIGHT    && obj.flags & RO_FLAG_BROKEN2) {return bldg_obj_type_t(0, 0, 0, 1, 0, 0, 0,  10.0,  5.0, "broken light");}
 	if (obj.type == TYPE_RAT      && obj.is_broken   ()) {return bldg_obj_type_t(0, 0, 1, 1, 0, 1, 0,   0.0,  1.0, "cooked/dead rat");}
 
 	if (obj.type == TYPE_BOTTLE) {

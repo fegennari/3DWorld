@@ -52,7 +52,7 @@ void building_t::run_light_motion_detect_logic(point const &camera_bs) {
 	auto objs_end(interior->room_geom->get_placed_objs_end()); // skip buttons/stairs/elevators
 
 	for (auto i = interior->room_geom->objs.begin(); i != objs_end; ++i) {
-		if (i->type != TYPE_LIGHT || !(i->flags & RO_FLAG_IS_ACTIVE) || !i->is_powered()) continue; // not a light, unpowered, or not motion activated
+		if (i->type != TYPE_LIGHT || !i->is_active() || !i->is_powered()) continue; // not a light, unpowered, or not motion activated
 		assert(i->room_id < interior->rooms.size());
 		room_t const &room(interior->rooms[i->room_id]);
 		bool const is_player(is_motion_detected(camera_bs, *i, room, floor_spacing));

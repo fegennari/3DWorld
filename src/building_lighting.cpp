@@ -1417,14 +1417,17 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		if (!is_rot_cube_visible(clipped_bc, xlate)) continue; // VFC
 		//if (line_intersect_walls(lpos, camera_rot)) continue; // straight line visibility test - for debugging, or maybe future use in assigning priorities
 		//if (check_cube_occluded(clipped_bc, interior->fc_occluders, camera_rot)) continue; // legal, but may not help much
+		bool const is_fully_broken(i->flags & RO_FLAG_BROKEN2);
 		
 		// run flicker logic for broken lights; this is done later in the control flow because updating light gemetry can be expensive
-		if (animate2 && i->is_broken()) {
+		if (animate2 && (i->is_broken() || is_fully_broken)) {
 			static rand_gen_t rgen;
 
-			if (tfticks > i->light_amt) { // time for state transition
-				float const delay_mult(i->is_open() ? 0.1 : 1.0);
-				i->light_amt = tfticks + rgen.rand_uniform(0.1, 1.0)*TICKS_PER_SECOND*delay_mult; // schedule time for next transition
+			if (tfticks > i->light_amt) { // flickering; time for state transition
+				float const flicker_time_secs(rgen.rand_uniform(0.1, 1.0));
+				float const on_amt(is_fully_broken ? 0.1 : 1.0), off_amt(is_fully_broken ? 1.0 : 0.1);
+				float const delay_mult(i->is_open() ? off_amt : on_amt);
+				i->light_amt = tfticks + flicker_time_secs*TICKS_PER_SECOND*delay_mult; // schedule time for next transition
 				i->flags    ^= RO_FLAG_OPEN;
 				// regenerate lights geometry (can be somewhat slow); only update if player is below the level of the light
 				if (camera_bs.z < i->z2()) {interior->room_geom->invalidate_lights_geom();}
