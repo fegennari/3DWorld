@@ -1572,8 +1572,9 @@ void add_tape_quad(point const &p1, point const &p2, float width, color_wrapper 
 	qbd.add_quad_pts(pts, color, -normal);
 }
 
-void building_t::play_tape_sound(point const &sound_pos, float sound_gain) const {
-	gen_sound_thread_safe(get_sound_id_for_file("tape.wav"), local_to_camera_space(sound_pos), sound_gain);
+void building_t::play_tape_sound(point const &sound_pos, float sound_gain, bool tape_break) const {
+	int const sound_id(tape_break ? get_sound_id_for_file("tape_pull.wav") : get_sound_id_for_file("tape.wav"));
+	gen_sound_thread_safe(sound_id, local_to_camera_space(sound_pos), sound_gain);
 	register_building_sound(sound_pos, 0.35*sound_gain);
 }
 
@@ -1619,7 +1620,7 @@ bool building_t::maybe_update_tape(point const &player_pos, bool end_of_tape) {
 		int const delta_use_count(round_fp(0.5f*delta/thickness));
 		if (!player_inventory.update_last_item_use_count(delta_use_count)) {tape_manager.clear();} // check if we ran out of tape
 	}
-	if (sound_gain > 0.0) {play_tape_sound(sound_pos, sound_gain);}
+	if (sound_gain > 0.0) {play_tape_sound(sound_pos, sound_gain, 0);} // tape_break=0
 	tape_manager.last_pos = pos;
 	return 1;
 }
@@ -1681,7 +1682,7 @@ void building_t::handle_vert_cylin_tape_collision(point &cur_pos, point const &p
 	
 	if (vert_ix >= 0) {
 		tape_qbd.split_tape_at(vert_ix, cur_pos, z1); // min_zval=z1
-		play_tape_sound(cur_pos, 1.0);
+		play_tape_sound(cur_pos, 1.0, 1); // tape_break=1
 	}
 	else {tape_qbd.moving_vert_cyilin_int_tape(cur_pos, prev_pos, z1, z2, radius, 0.85, is_player);} // slow_amt=0.85
 }

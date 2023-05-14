@@ -1752,7 +1752,7 @@ private:
 	void add_blood_decal(point const &pos, float radius);
 	void add_broken_glass_to_floor(point const &pos, float radius);
 	void add_particle_effect(point const &pos, float radius, vector3d const &dir, unsigned effect, int parent_obj_id=-1);
-	void play_tape_sound(point const &sound_pos, float sound_gain) const;
+	void play_tape_sound(point const &sound_pos, float sound_gain, bool tape_break) const;
 	bool is_obj_above_ramp(cube_t const &c) const;
 	bool is_room_above_ramp(cube_t const &room, float zval) const;
 	void get_rooms_for_door(unsigned door_ix, int room_ix[2]) const;
