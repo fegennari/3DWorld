@@ -1420,12 +1420,12 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		bool const is_fully_broken(i->flags & RO_FLAG_BROKEN2);
 		
 		// run flicker logic for broken lights; this is done later in the control flow because updating light gemetry can be expensive
-		if (animate2 && (i->is_broken() || is_fully_broken)) {
+		if (i->is_broken() || is_fully_broken) {
 			static rand_gen_t rgen;
 
-			if (tfticks > i->light_amt) { // flickering; time for state transition
+			if (animate2 && tfticks > i->light_amt) { // flickering; time for state transition
 				float const flicker_time_secs(rgen.rand_uniform(0.1, 1.0));
-				float const on_amt(is_fully_broken ? 0.025 : 1.0), off_amt(is_fully_broken ? 1.0 : 0.1);
+				float const on_amt(is_fully_broken ? 0.02 : 1.0), off_amt(is_fully_broken ? 1.0 : 0.1);
 				float const delay_mult(i->is_open() ? off_amt : on_amt);
 				i->light_amt = tfticks + flicker_time_secs*TICKS_PER_SECOND*delay_mult; // schedule time for next transition
 				i->flags    ^= RO_FLAG_OPEN;
@@ -1433,13 +1433,13 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 				if (camera_bs.z < i->z2()) {interior->room_geom->invalidate_lights_geom();}
 			}
 			// emit sparks only if player in building, which should be true since we shouldn't get here otherwise
-			if (is_fully_broken && camera_in_building && rgen.rand_float() < 20*fticks/TICKS_PER_SECOND) { // 20/s
+			if (animate2 && is_fully_broken && camera_in_building && rgen.rand_float() < 22*fticks/TICKS_PER_SECOND) { // 22/s
 				cube_t sparks_area(*i);
 				sparks_area.z1() = floor_z;
 				sparks_area.expand_by_xy(0.75*window_vspacing);
 
 				if (is_rot_cube_visible(sparks_area, xlate)) {
-					interior->room_geom->particle_manager.add_for_obj(*i, 0.2*i->dz(), -plus_z, 0.001, 1, 1, PART_EFFECT_SPARKS, (i - objs.begin()));
+					interior->room_geom->particle_manager.add_for_obj(*i, 0.16*i->dz(), -plus_z, 0.001, 1, 1, PART_EFFECT_SPARKS, (i - objs.begin()));
 				}
 			}
 			if (!i->is_open()) continue; // not currently on

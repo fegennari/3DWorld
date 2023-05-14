@@ -1535,7 +1535,7 @@ void particle_manager_t::draw(shader_t &s, vector3d const &xlate) { // non-const
 	for (particle_t const &p : particles) {
 		assert(p.effect == PART_EFFECT_SPARKS); // currently the only supported effect
 		if (!camera_pdu.sphere_visible_test((p.pos + xlate), p.radius)) continue; // VFC
-		float const elongate(1.0 + 1000.0*p.vel.mag());
+		float const elongate(1.0 + 1500.0*p.vel.mag());
 		vector3d const vdir(viewer_bs - p.pos), up_dir((p.vel == zero_vector) ? plus_z : p.vel);
 		vector3d const v1(cross_product(vdir, up_dir).get_norm()*p.radius);
 		vector3d const v2(cross_product(v1,   vdir  ).get_norm()*p.radius*elongate); // stretch in velocity dir
