@@ -1687,6 +1687,21 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 				max_eq(lights_bcube.z2(), lpos.z); // must include the light
 			}
 		} // for skylight sl
+	} // for l
+	if (camera_in_building) {interior->room_geom->particle_manager.add_lights(xlate, *this, oc, lights_bcube);}
+}
+
+void particle_manager_t::add_lights(vector3d const &xlate, building_t const &building, occlusion_checker_noncity_t &oc, cube_t &lights_bcube) const {
+	if (particles.empty()) return;
+	cube_t const bcube_cs(get_bcube() + xlate); // maybe we should check each parent object separately? but it could be rare if there's more than one
+	if (!camera_pdu.cube_visible(bcube_cs)) return; // no particles are visible
+	if ((display_mode & 0x08) && building.check_obj_occluded(bcube_cs, get_camera_pos(), oc)) return;
+
+	for (particle_t const &p : particles) {
+		assert(p.effect == PART_EFFECT_SPARKS); // currently the only supported effect
+		float const light_radius(10.0*p.radius);
+		if (!camera_pdu.sphere_visible_test((p.pos + xlate), light_radius)) continue; // VFC
+		// TODO
 	}
 }
 

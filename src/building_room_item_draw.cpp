@@ -1521,9 +1521,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, building_t c
 
 void particle_manager_t::draw(shader_t &s, vector3d const &xlate) { // non-const because qbd is modified
 	if (particles.empty()) return;
-	cube_t particles_bcube;
-	for (particle_t const &p : particles) {particles_bcube.assign_or_union_with_sphere(p.pos, p.radius);}
-	if (!camera_pdu.cube_visible(particles_bcube + xlate)) return; // no particles are visible
+	if (!camera_pdu.cube_visible(get_bcube() + xlate)) return; // no particles are visible
 	shader_t part_shader;
 	part_shader.begin_simple_textured_shader(); // unlit/emissive and textured
 	glDepthMask(GL_FALSE); // disable depth write

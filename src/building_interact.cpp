@@ -1117,6 +1117,11 @@ void particle_manager_t::add_for_obj(room_object_t &obj, float pradius, vector3d
 		particles.emplace_back(pos, v, WHITE, pradius*rgen.rand_uniform(0.8, 1.25), effect, parent_obj_id);
 	}
 }
+cube_t particle_manager_t::get_bcube() const {
+	cube_t bcube;
+	for (particle_t const &p : particles) {bcube.assign_or_union_with_sphere(p.pos, p.radius);}
+	return bcube;
+}
 void particle_manager_t::next_frame(building_t const &building) {
 	if (particles.empty()) return;
 	float const fticks_stable(min(fticks, 4.0f)); // clamp to 0.1s
