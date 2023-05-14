@@ -1035,8 +1035,9 @@ void building_t::update_player_interact_objects(point const &player_pos) {
 								register_building_sound(sound_origin, 0.7);
 								interior->room_geom->update_draw_state_for_room_object(obj, *this, 0);
 								if (obj.type == TYPE_DRESS_MIR || obj.type == TYPE_MIRROR) {register_achievement("7 Years of Bad Luck");}
-								else if (obj.type == TYPE_TV || obj.type == TYPE_MONITOR) {
-									if (obj.is_powered()/*!(obj.obj_id & 1)*/) {add_particle_effect(new_center, radius, front_dir, PART_EFFECT_SPARKS, (c - objs.begin()));}
+								else if ((obj.type == TYPE_TV || obj.type == TYPE_MONITOR) && obj.is_powered()/*!(obj.obj_id & 1)*/) { // only if turned on?
+									interior->room_geom->particle_manager.add_sphere(new_center, radius, 0.06*radius, front_dir,
+										1.0*KICK_VELOCITY, 50, 60, PART_EFFECT_SPARKS, (c - objs.begin()));
 								}
 								handled = 1;
 							}
@@ -1095,24 +1096,39 @@ void building_t::update_player_interact_objects(point const &player_pos) {
 	interior->room_geom->particle_manager.next_frame(*this);
 }
 
-// particle effects
+// particle_manager_t
 
-void building_t::add_particle_effect(point const &pos, float radius, vector3d const &dir, unsigned effect, int parent_obj_id) {
-	if (has_room_geom()) {interior->room_geom->particle_manager.add(pos, radius, dir, effect, parent_obj_id);}
+vector3d gen_dir_in_hemisphere(vector3d const &hemi_dir, rand_gen_t &rgen) {
+	vector3d const dir(rgen.signed_rand_vector_norm());
+	return ((dot_product(hemi_dir, dir) < 0.0) ? -dir : dir);
 }
-
-void particle_manager_t::add(point const &pos, float radius, vector3d const &dir, unsigned effect, int parent_obj_id) {
-	assert(effect == PART_EFFECT_SPARKS); // the only supported effect
-	unsigned const num(50 + (rgen.rand()%11)); // 50-60
+unsigned particle_manager_t::calc_num_parts(unsigned min_parts, unsigned max_parts) {
+	assert(min_parts > 0 && min_parts <= max_parts);
+	return min_parts + ((max_parts == min_parts) ? 0 : (rgen.rand()%(max_parts - min_parts + 1)));
+}
+void particle_manager_t::add_sphere(point const &pos, float radius, float pradius, vector3d const &dir, float part_vel,
+	unsigned min_parts, unsigned max_parts, unsigned effect, int parent_obj_id)
+{
+	unsigned const num(calc_num_parts(min_parts, max_parts));
 
 	for (unsigned n = 0; n < num; ++n) {
-		vector3d part_dir(rgen.signed_rand_vector_norm());
-		if (dot_product(dir, part_dir) < 0.0) {part_dir.negate();} // make opposite of dir
-		float const dist(sqrt(radius*radius*rgen.rand_float())), part_radius(0.06*radius*rgen.rand_uniform(0.8, 1.25));
-		point const p(pos + dist*part_dir);
-		vector3d const v(1.0*KICK_VELOCITY*rgen.rand_uniform(0.8, 1.25)*part_dir); // similar to ball kick velocity
-		particles.emplace_back(p, v, WHITE, part_radius, effect, parent_obj_id);
-	} // for n
+		vector3d const part_dir(gen_dir_in_hemisphere(dir, rgen));
+		point const p(pos + sqrt(radius*radius*rgen.rand_float())*part_dir);
+		vector3d const v(part_vel*rgen.rand_uniform(0.8, 1.25)*part_dir);
+		particles.emplace_back(p, v, WHITE, pradius*rgen.rand_uniform(0.8, 1.25), effect, parent_obj_id);
+	}
+}
+void particle_manager_t::add_cube(cube_t const &c, float pradius, vector3d const &dir, float part_vel,
+	unsigned min_parts, unsigned max_parts, unsigned effect, int parent_obj_id)
+{
+	unsigned const num(calc_num_parts(min_parts, max_parts));
+
+	for (unsigned n = 0; n < num; ++n) {
+		vector3d const part_dir(gen_dir_in_hemisphere(dir, rgen));
+		point const p(rgen.gen_rand_cube_point(c));
+		vector3d const v(part_vel*rgen.rand_uniform(0.8, 1.25)*part_dir);
+		particles.emplace_back(p, v, WHITE, pradius*rgen.rand_uniform(0.8, 1.25), effect, parent_obj_id);
+	}
 }
 void particle_manager_t::next_frame(building_t const &building) {
 	if (particles.empty()) return;
@@ -1125,6 +1141,7 @@ void particle_manager_t::next_frame(building_t const &building) {
 		p.time += fticks_stable;
 		float const lifetime(p.time/(2.5*TICKS_PER_SECOND));
 		if (lifetime > 1.0) {p.effect = PART_EFFECT_NONE; continue;} // end of life
+		assert(p.effect == PART_EFFECT_SPARKS); // currently the only supported effect
 		p.color = get_glow_color(2.0*lifetime, 1); // fade=1
 		apply_building_gravity(p.vel.z, 0.5*fticks_stable); // half gravity
 		// check for collisions and apply bounce, similar to balls

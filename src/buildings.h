@@ -762,8 +762,11 @@ class particle_manager_t {
 	vector<particle_t> particles;
 	quad_batch_draw qbd;
 	rand_gen_t rgen;
+
+	unsigned calc_num_parts(unsigned min_parts, unsigned max_parts);
 public:
-	void add(point const &pos, float radius, vector3d const &dir, unsigned effect, int parent_obj_id=-1);
+	void add_sphere(point const &pos, float radius, float pradius, vector3d const &dir, float part_vel, unsigned min_parts, unsigned max_parts, unsigned effect, int parent_obj_id);
+	void add_cube  (cube_t const &c, float pradius, vector3d const &dir, float part_vel, unsigned min_parts, unsigned max_parts, unsigned effect, int parent_obj_id);
 	void next_frame(building_t const &building);
 	void draw(shader_t &s, vector3d const &xlate);
 };
@@ -1751,7 +1754,6 @@ private:
 	bool get_zval_for_obj_placement(point const &pos, float radius, float &zval, bool add_z_bias) const;
 	void add_blood_decal(point const &pos, float radius);
 	void add_broken_glass_to_floor(point const &pos, float radius);
-	void add_particle_effect(point const &pos, float radius, vector3d const &dir, unsigned effect, int parent_obj_id=-1);
 	void play_tape_sound(point const &sound_pos, float sound_gain, bool tape_break) const;
 	bool is_obj_above_ramp(cube_t const &c) const;
 	bool is_room_above_ramp(cube_t const &room, float zval) const;
