@@ -1036,8 +1036,7 @@ void building_t::update_player_interact_objects(point const &player_pos) {
 								interior->room_geom->update_draw_state_for_room_object(obj, *this, 0);
 								if (obj.type == TYPE_DRESS_MIR || obj.type == TYPE_MIRROR) {register_achievement("7 Years of Bad Luck");}
 								else if ((obj.type == TYPE_TV || obj.type == TYPE_MONITOR) && obj.is_powered()/*!(obj.obj_id & 1)*/) { // only if turned on?
-									interior->room_geom->particle_manager.add_sphere(new_center, radius, 0.06*radius, front_dir,
-										1.0*KICK_VELOCITY, 50, 60, PART_EFFECT_SPARKS, (c - objs.begin()));
+									interior->room_geom->particle_manager.add_for_obj(*c, 0.06*radius, front_dir, 1.0*KICK_VELOCITY, 50, 60, PART_EFFECT_SPARKS, (c-objs.begin()));
 								}
 								handled = 1;
 							}
@@ -1098,36 +1097,24 @@ void building_t::update_player_interact_objects(point const &player_pos) {
 
 // particle_manager_t
 
-vector3d gen_dir_in_hemisphere(vector3d const &hemi_dir, rand_gen_t &rgen) {
-	vector3d const dir(rgen.signed_rand_vector_norm());
-	return ((dot_product(hemi_dir, dir) < 0.0) ? -dir : dir);
-}
-unsigned particle_manager_t::calc_num_parts(unsigned min_parts, unsigned max_parts) {
+void particle_manager_t::add_for_obj(room_object_t &obj, float pradius, vector3d const &dir, float part_vel,
+	unsigned min_parts, unsigned max_parts, unsigned effect, int parent_obj_id)
+{
 	assert(min_parts > 0 && min_parts <= max_parts);
-	return min_parts + ((max_parts == min_parts) ? 0 : (rgen.rand()%(max_parts - min_parts + 1)));
-}
-void particle_manager_t::add_sphere(point const &pos, float radius, float pradius, vector3d const &dir, float part_vel,
-	unsigned min_parts, unsigned max_parts, unsigned effect, int parent_obj_id)
-{
-	unsigned const num(calc_num_parts(min_parts, max_parts));
+	unsigned const num(min_parts + ((max_parts == min_parts) ? 0 : (rgen.rand()%(max_parts - min_parts + 1))));
 
 	for (unsigned n = 0; n < num; ++n) {
-		vector3d const part_dir(gen_dir_in_hemisphere(dir, rgen));
-		point const p(pos + sqrt(radius*radius*rgen.rand_float())*part_dir);
+		vector3d part_dir(rgen.signed_rand_vector_norm());
+		if (dot_product(dir, dir) < 0.0) {part_dir.negate();}
+		point pos;
+		switch (obj.shape) {
+		case SHAPE_CUBE  : pos = rgen.gen_rand_cube_point(obj); break;
+		case SHAPE_SPHERE: pos = obj.get_cube_center() + sqrt(obj.get_radius()*obj.get_radius()*rgen.rand_float())*part_dir; break;
+		case SHAPE_CYLIN : pos = obj.get_cube_center() + sqrt(obj.get_radius()*obj.get_radius()*rgen.rand_float())*part_dir; pos.z = rgen.rand_uniform(obj.z1(), obj.z2()); break;
+		default: assert(0); // unsupported shape
+		}
 		vector3d const v(part_vel*rgen.rand_uniform(0.8, 1.25)*part_dir);
-		particles.emplace_back(p, v, WHITE, pradius*rgen.rand_uniform(0.8, 1.25), effect, parent_obj_id);
-	}
-}
-void particle_manager_t::add_cube(cube_t const &c, float pradius, vector3d const &dir, float part_vel,
-	unsigned min_parts, unsigned max_parts, unsigned effect, int parent_obj_id)
-{
-	unsigned const num(calc_num_parts(min_parts, max_parts));
-
-	for (unsigned n = 0; n < num; ++n) {
-		vector3d const part_dir(gen_dir_in_hemisphere(dir, rgen));
-		point const p(rgen.gen_rand_cube_point(c));
-		vector3d const v(part_vel*rgen.rand_uniform(0.8, 1.25)*part_dir);
-		particles.emplace_back(p, v, WHITE, pradius*rgen.rand_uniform(0.8, 1.25), effect, parent_obj_id);
+		particles.emplace_back(pos, v, WHITE, pradius*rgen.rand_uniform(0.8, 1.25), effect, parent_obj_id);
 	}
 }
 void particle_manager_t::next_frame(building_t const &building) {

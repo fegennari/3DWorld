@@ -762,11 +762,8 @@ class particle_manager_t {
 	vector<particle_t> particles;
 	quad_batch_draw qbd;
 	rand_gen_t rgen;
-
-	unsigned calc_num_parts(unsigned min_parts, unsigned max_parts);
 public:
-	void add_sphere(point const &pos, float radius, float pradius, vector3d const &dir, float part_vel, unsigned min_parts, unsigned max_parts, unsigned effect, int parent_obj_id);
-	void add_cube  (cube_t const &c, float pradius, vector3d const &dir, float part_vel, unsigned min_parts, unsigned max_parts, unsigned effect, int parent_obj_id);
+	void add_for_obj(room_object_t &obj, float pradius, vector3d const &dir, float part_vel, unsigned min_parts, unsigned max_parts, unsigned effect, int parent_obj_id);
 	void next_frame(building_t const &building);
 	void draw(shader_t &s, vector3d const &xlate);
 };
