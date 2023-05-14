@@ -19,7 +19,7 @@ float const ATTIC_LIGHT_RADIUS_SCALE = 2.0; // larger radius in attic, since spa
 extern bool camera_in_building, player_in_attic, some_person_has_idle_animation;
 extern int MESH_Z_SIZE, display_mode, display_framerate, camera_surf_collide, animate2, frame_counter, building_action_key, player_in_basement, player_in_elevator;
 extern unsigned LOCAL_RAYS, MAX_RAY_BOUNCES, NUM_THREADS;
-extern float indir_light_exp;
+extern float indir_light_exp, fticks;
 extern double tfticks;
 extern colorRGB cur_ambient, cur_diffuse;
 extern std::string lighting_update_text;
@@ -1425,12 +1425,22 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 
 			if (tfticks > i->light_amt) { // flickering; time for state transition
 				float const flicker_time_secs(rgen.rand_uniform(0.1, 1.0));
-				float const on_amt(is_fully_broken ? 0.1 : 1.0), off_amt(is_fully_broken ? 1.0 : 0.1);
+				float const on_amt(is_fully_broken ? 0.025 : 1.0), off_amt(is_fully_broken ? 1.0 : 0.1);
 				float const delay_mult(i->is_open() ? off_amt : on_amt);
 				i->light_amt = tfticks + flicker_time_secs*TICKS_PER_SECOND*delay_mult; // schedule time for next transition
 				i->flags    ^= RO_FLAG_OPEN;
 				// regenerate lights geometry (can be somewhat slow); only update if player is below the level of the light
 				if (camera_bs.z < i->z2()) {interior->room_geom->invalidate_lights_geom();}
+			}
+			// emit sparks only if player in building, which should be true since we shouldn't get here otherwise
+			if (is_fully_broken && camera_in_building && rgen.rand_float() < 20*fticks/TICKS_PER_SECOND) { // 20/s
+				cube_t sparks_area(*i);
+				sparks_area.z1() = floor_z;
+				sparks_area.expand_by_xy(0.75*window_vspacing);
+
+				if (is_rot_cube_visible(sparks_area, xlate)) {
+					interior->room_geom->particle_manager.add_for_obj(*i, 0.2*i->dz(), -plus_z, 0.001, 1, 1, PART_EFFECT_SPARKS, (i - objs.begin()));
+				}
 			}
 			if (!i->is_open()) continue; // not currently on
 		}
