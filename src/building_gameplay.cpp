@@ -2055,8 +2055,9 @@ class creepy_sound_manager_t {
 	float time_to_next_sound=0.0; // in ticks
 	point sound_pos;
 	rand_gen_t rgen;
-	static unsigned const NUM_SOUNDS = 3;
-	unsigned const sounds[NUM_SOUNDS] = {SOUND_OBJ_FALL, SOUND_WOOD_CRACK, SOUND_SNOW_STEP}; // TODO: knocking, scratching
+	static unsigned const NUM_SOUNDS = 8;
+	int sounds[NUM_SOUNDS] = {SOUND_OBJ_FALL, SOUND_WOOD_CRACK, SOUND_SNOW_STEP, -1, -1, -1, -1, -1};
+	string const sound_filenames[NUM_SOUNDS] = {"", "", "", "knock_rattle.wav", "knock_wood.wav", "knock_door.wav", "creak1.wav", "creak2.wav"};
 
 	void schedule_next_sound() {time_to_next_sound = rgen.rand_uniform(4.0, 10.0)*TICKS_PER_SECOND;}
 public:
@@ -2074,7 +2075,15 @@ public:
 		if (gen_new_pos  ) {sound_pos = building.choose_creepy_sound_pos(player_pos, rgen);}
 		if (gen_new_sound) {sound_ix  = rgen.rand()%NUM_SOUNDS;} // select a random new sound
 		assert(sound_ix >= 0 && (unsigned)sound_ix < NUM_SOUNDS);
-		gen_sound_thread_safe(sounds[sound_ix], building.local_to_camera_space(sound_pos)); // doesn't alert zombies
+		int &sid(sounds[sound_ix]);
+		
+		if (sid < 0) { // sound not yet loaded
+			assert(!sound_filenames[sound_ix].empty());
+			sid = get_sound_id_for_file(sound_filenames[sound_ix]);
+			if (sid < 0) {sid = SOUND_OBJ_FALL;} // if load failed, use a default sound
+		}
+		float const gain(rgen.rand_uniform(0.1, 1.0)), pitch(rgen.rand_uniform(0.9, 1.1));
+		gen_sound_thread_safe(sid, building.local_to_camera_space(sound_pos), gain, pitch); // doesn't alert zombies
 		schedule_next_sound();
 	}
 };
