@@ -2059,7 +2059,7 @@ class creepy_sound_manager_t {
 	int sounds[NUM_SOUNDS] = {SOUND_OBJ_FALL, SOUND_WOOD_CRACK, SOUND_SNOW_STEP, -1, -1, -1, -1, -1};
 	string const sound_filenames[NUM_SOUNDS] = {"", "", "", "knock_rattle.wav", "knock_wood.wav", "knock_door.wav", "creak1.wav", "creak2.wav"};
 
-	void schedule_next_sound() {time_to_next_sound = rgen.rand_uniform(4.0, 10.0)*TICKS_PER_SECOND;}
+	void schedule_next_sound() {time_to_next_sound = rgen.rand_uniform(15.0, 60.0)*TICKS_PER_SECOND;} // every 15-60s
 public:
 	void reset() {
 		sound_ix  = -1;
@@ -2093,13 +2093,34 @@ creepy_sound_manager_t creepy_sound_manager;
 void reset_creepy_sounds() {creepy_sound_manager.reset();}
 
 point building_t::choose_creepy_sound_pos(point const &player_pos, rand_gen_t &rgen) const {
-	// TODO: choose location in a nearby building basement room
-	point sound_pos(player_pos);
-	sound_pos += rgen.signed_rand_vector_spherical_xy(get_window_vspace());
+	float const max_dist(4.0*get_window_vspace());
+	int const room_ix(get_room_containing_pt(player_pos));
+	if (room_ix < 0) {return (player_pos + rgen.signed_rand_vector_spherical_xy(max_dist));} // player room invalid, use a random sound pos
+	// player room is valid; choose location in a nearby building basement room
+	point sound_pos;
+	cube_t room_exp(get_room(room_ix));
+	room_exp.expand_by(2.0*get_wall_thickness()); // expand to include walls and overlap adj rooms
+
+	for (unsigned n = 0; n < 100; ++n) { // 100 attempts to find a valid pos
+		sound_pos = player_pos + rgen.signed_rand_vector_spherical_xy(max_dist);
+		if (room_exp.contains_pt_xy(sound_pos))  continue; // same room as player
+		int const room_ix2(get_room_containing_pt(sound_pos));
+		if (room_ix2 < 0 || room_ix2 == room_ix) continue; // invalid room
+		cube_t const &room2(get_room(room_ix2)); // okay if regular basement room
+		if (!room2.intersects(room_exp)) break; // non-adjacent room, not visible/connected, pos is valid
+		bool is_visible(0);
+			
+		// adjacent room, check line of sight vs. doors
+		for (door_t const &door : interior->doors) {
+			if (door.open_amt == 0.0)        continue; // fully closed, skip
+			if (door.z2() > ground_floor_z1) continue; // not a basement door
+			if (check_line_clip(player_pos, sound_pos, door.get_true_bcube().d)) {is_visible = 1; break;}
+		}
+		if (!is_visible) break; // valid pos
+	} // for n
 	return sound_pos;
 }
 void building_t::update_creepy_sounds(point const &player_pos) const {
-	return; // TODO: enable when ready
 	if (player_in_basement == 3) {creepy_sound_manager.next_frame(*this, player_pos);} // update if player in extended basement
 }
 
