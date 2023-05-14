@@ -1003,6 +1003,7 @@ point building_interior_t::find_closest_pt_on_obj_to_pos(building_t const &build
 	if (room_geom) { // check room geometry
 		for (auto c = room_geom->objs.begin(); c != room_geom->objs.end(); ++c) { // check for other objects to collide with (including stairs)
 			if (c->no_coll() || c->type == TYPE_BLOCKER || c->type == TYPE_ELEVATOR) continue; // skip blockers and elevators
+			if (c->type == TYPE_RAILING || c->type == TYPE_PLANT) continue; // these have complex shapes that are too hard to attach to
 
 			if (c->type == TYPE_CLOSET) { // special case to handle closet interiors
 				cube_t cubes[5];
