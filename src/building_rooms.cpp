@@ -407,7 +407,7 @@ bool building_t::add_office_objs(rand_gen_t rgen, room_t const &room, vect_cube_
 		vector3d const fc_sz_scale(rgen.rand_uniform(0.40, 0.45), rgen.rand_uniform(0.25, 0.30), 1.0); // depth, width, height
 		cube_t place_area(get_walkable_room_bounds(room));
 		place_area.expand_by(-0.25*get_wall_thickness());
-		place_obj_along_wall(TYPE_FCABINET, room, fc_height, fc_sz_scale, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 1.0);
+		place_obj_along_wall(TYPE_FCABINET, room, fc_height, fc_sz_scale, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 1.0, 1); // door clearance
 	}
 	return 1;
 }
@@ -647,7 +647,7 @@ bool building_t::add_bedroom_objs(rand_gen_t rgen, room_t &room, vect_cube_t con
 	vector3d const ds_sz_scale(ds_depth/ds_height, ds_width/ds_height, 1.0);
 	unsigned const dresser_obj_id(objs.size());
 	
-	if (place_obj_along_wall(TYPE_DRESSER, room, ds_height, ds_sz_scale, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 1.0)) {
+	if (place_obj_along_wall(TYPE_DRESSER, room, ds_height, ds_sz_scale, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 1.0, 1)) { // door clearance
 		room_object_t &dresser(objs[dresser_obj_id]);
 
 		// place a mirror on the dresser 25% of the time; skip if against an exterior wall to avoid blocking a window
@@ -669,7 +669,7 @@ bool building_t::add_bedroom_objs(rand_gen_t rgen, room_t &room, vect_cube_t con
 	unsigned const pref_orient(2*bed.dim + (!bed.dir)); // prefer the same orient as the bed so that it's placed on the same wall next to the bed
 	float const ns_height(rgen.rand_uniform(0.24, 0.26)*window_vspacing), ns_depth(rgen.rand_uniform(0.15, 0.2)*window_vspacing), ns_width(rgen.rand_uniform(1.0, 2.0)*ns_depth);
 	vector3d const ns_sz_scale(ns_depth/ns_height, ns_width/ns_height, 1.0);
-	place_obj_along_wall(TYPE_NIGHTSTAND, room, ns_height, ns_sz_scale, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 1.0, pref_orient);
+	place_obj_along_wall(TYPE_NIGHTSTAND, room, ns_height, ns_sz_scale, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 1.0, 1, pref_orient); // door clearance
 
 	if (placed_closet) { // determine if there's space for the closet doors to fold outward
 		room_object_t &closet(objs[closet_obj_id]);
@@ -885,8 +885,9 @@ bool building_t::maybe_add_fireplace_to_room(rand_gen_t &rgen, room_t const &roo
 	return 1;
 }
 
-bool building_t::place_obj_along_wall(room_object type, room_t const &room, float height, vector3d const &sz_scale, rand_gen_t &rgen, float zval, unsigned room_id, float tot_light_amt,
-	cube_t const &place_area, unsigned objs_start, float front_clearance, unsigned pref_orient, bool pref_centered, colorRGBA const &color, bool not_at_window, room_obj_shape shape)
+bool building_t::place_obj_along_wall(room_object type, room_t const &room, float height, vector3d const &sz_scale, rand_gen_t &rgen, float zval,
+	unsigned room_id, float tot_light_amt, cube_t const &place_area, unsigned objs_start, float front_clearance, bool add_door_clearance,
+	unsigned pref_orient, bool pref_centered, colorRGBA const &color, bool not_at_window, room_obj_shape shape)
 {
 	float const hwidth(0.5*height*sz_scale.y/sz_scale.z), depth(height*sz_scale.x/sz_scale.z);
 	float const min_space(max(2.8f*hwidth, 2.1f*(max(hwidth, 0.5f*depth) + get_scaled_player_radius()))); // make sure the player can get around the object
@@ -920,15 +921,19 @@ bool building_t::place_obj_along_wall(room_object type, room_t const &room, floa
 				is_val_inside_window(part, !dim, c.d[!dim][1], hspacing, border) ||
 				is_val_inside_window(part, !dim, c.get_center_dim(!dim), hspacing, border)) continue;
 		}
-		cube_t c2(c); // used for collision tests
+		cube_t c2(c), c3(c); // used for collision tests
 		c2.d[dim][!dir] += (dir ? -1.0 : 1.0)*clearance;
 		if (overlaps_other_room_obj(c2, objs_start) || interior->is_blocked_by_stairs_or_elevator(c2)) continue; // bad placement (Note: not using is_obj_placement_blocked())
-		// we don't need clearance for both the door and the object; test the object itself against the open door and the object with clearance against the closed door
-		if (is_cube_close_to_doorway(c, room, 0.0, 1))  continue; // bad placement
-		cube_t c3(c); // used for collision tests
 		c3.d[dim][!dir] += (dir ? -1.0 : 1.0)*obj_clearance; // smaller clearance value (without player diameter)
-		if (is_cube_close_to_doorway(c3, room, 0.0, 0)) continue; // bad placement
-		if (!check_cube_within_part_sides(c))           continue; // handle non-cube buildings
+
+		if (add_door_clearance) {
+			if (is_cube_close_to_doorway(c3, room, 0.0, 1)) continue; // bad placement
+		}
+		else { // we don't need clearance for both door and object; test the object itself against the open door and the object with clearance against the closed door
+			if (is_cube_close_to_doorway(c,  room, 0.0, 1)) continue; // bad placement
+			if (is_cube_close_to_doorway(c3, room, 0.0, 0)) continue; // bad placement
+		}
+		if (!check_cube_within_part_sides(c)) continue; // handle non-cube buildings
 		unsigned const flags((type == TYPE_BOX) ? (RO_FLAG_ADJ_LO << orient) : 0); // set wall edge bit for boxes (what about other dim bit if place in room corner?)
 		objs.emplace_back(c, type, room_id, dim, !dir, flags, tot_light_amt, shape, color);
 		set_obj_id(objs);
@@ -943,7 +948,7 @@ bool building_t::place_model_along_wall(unsigned model_id, room_object type, roo
 	if (!building_obj_model_loader.is_model_valid(model_id)) return 0; // don't have a model of this type
 	vector3d const sz(building_obj_model_loader.get_model_world_space_size(model_id)); // D, W, H
 	return place_obj_along_wall(type, room, height*get_window_vspace(), sz, rgen, zval, room_id, tot_light_amt,
-		place_area, objs_start, front_clearance, pref_orient, pref_centered, color, not_at_window);
+		place_area, objs_start, front_clearance, 0, pref_orient, pref_centered, color, not_at_window);
 }
 
 float building_t::add_flooring(room_t const &room, float &zval, unsigned room_id, float tot_light_amt, unsigned flooring_type) {
@@ -2238,7 +2243,7 @@ void building_t::add_plants_to_room(rand_gen_t rgen, room_t const &room, float z
 		float const height(rgen.rand_uniform(0.6, 0.9)*window_vspacing), width(rgen.rand_uniform(0.15, 0.35)*window_vspacing);
 		vector3d const sz_scale(width/height, width/height, 1.0);
 		place_obj_along_wall(TYPE_PLANT, room, height, sz_scale, rgen, zval, room_id, tot_light_amt,
-			place_area, objs_start, 0.0, 4, 0, choose_pot_color(rgen), 0, SHAPE_CYLIN); // no clearance, pref_orient, or color
+			place_area, objs_start, 0.0, 0, 4, 0, choose_pot_color(rgen), 0, SHAPE_CYLIN); // no clearance, pref_orient, or color
 	}
 }
 
@@ -2253,7 +2258,7 @@ void building_t::add_boxes_to_room(rand_gen_t rgen, room_t const &room, float zv
 		vector3d sz;
 		gen_crate_sz(sz, rgen, window_vspacing);
 		sz *= 1.5; // make larger than storage room boxes
-		place_obj_along_wall(TYPE_BOX, room, sz.z, sz, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 0.0, 4, 0, gen_box_color(rgen));
+		place_obj_along_wall(TYPE_BOX, room, sz.z, sz, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 0.0, 0, 4, 0, gen_box_color(rgen));
 	} // for n
 }
 
