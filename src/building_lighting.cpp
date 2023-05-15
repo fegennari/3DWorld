@@ -1699,9 +1699,9 @@ void particle_manager_t::add_lights(vector3d const &xlate, building_t const &bui
 
 	for (particle_t const &p : particles) {
 		assert(p.effect == PART_EFFECT_SPARKS); // currently the only supported effect
-		float const light_radius(10.0*p.radius);
+		float const light_radius(20.0*p.radius);
 		if (!camera_pdu.sphere_visible_test((p.pos + xlate), light_radius)) continue; // VFC
-		// TODO
+		dl_sources.emplace_back(light_radius, p.pos, p.pos, p.color);
 	}
 }
 
