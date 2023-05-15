@@ -230,7 +230,14 @@ class insect_draw_t {
 	}
 	void init_roach() {
 		if (roach_mat.num_verts > 0) return; // already setup
-		// TODO: WRITE
+		bool const low_detail = 0;
+		colorRGBA const color(0.2, 0.1, 0.05, 1.0); // darker brown
+		cube_t body; // centered on (0,0,0)
+		body.expand_by(vector3d(1.2, 0.5, 0.2));
+		roach_mat.add_sphere_to_verts(body, color, low_detail);
+		// cockroaches are fast and run when disturbed, and their legs are under them, so they don't really need to be drawn/animated
+		roach_mat.create_vbo_inner();
+		roach_mat.clear_vectors(1); // free_memory=1: vector data no longer needed
 	}
 public:
 	void clear() {fly_mat.clear(); roach_mat.clear();}
@@ -251,21 +258,29 @@ public:
 			if (!camera_pdu.cube_visible(bcube + xlate)) continue; // VFC
 			if (check_occlusion && building.check_obj_occluded(bcube, camera_bs, oc, reflection_pass)) continue;
 			rgeom_mat_t *mat(nullptr);
-			if      (i.type == INSECT_TYPE_FLY  ) {mat = &fly_mat;} // use hardware instancing?
+			if      (i.type == INSECT_TYPE_FLY  ) {mat = &fly_mat  ;} // use hardware instancing?
 			else if (i.type == INSECT_TYPE_ROACH) {mat = &roach_mat;}
 			else {assert(0);} // unsupported insect type
+			assert(mat != nullptr);
 
 			if (!any_drawn) { // setup shaders on first draw
-				s.set_specular(0.5, 80.0);
 				select_texture(WHITE_TEX);
 				s.add_uniform_float("bump_map_mag", 0.0);
 				if (!enable_depth_clamp) {glEnable(GL_DEPTH_CLAMP);} // make sure depth clamp is enabled so that insects are drawn when very close
 				any_drawn = 1;
 			}
 			if (i.type != cur_insect_type) { // new/different insect type
+				indexed_vao_manager_with_shadow_t::post_render(); // unbind VBO/VAO prior to setup
 				cur_insect_type = i.type;
-				if      (i.type == INSECT_TYPE_FLY  ) {init_fly  ();}
-				else if (i.type == INSECT_TYPE_ROACH) {init_roach();}
+
+				if (i.type == INSECT_TYPE_FLY) {
+					init_fly();
+					s.set_specular(0.5, 80.0);
+				}
+				else if (i.type == INSECT_TYPE_ROACH) {
+					init_roach();
+					s.set_specular(0.35, 40.0);
+				}
 				mat->vao_setup(0); // shadow_only=0
 				mat->pre_draw (0); // shadow_only=0
 			}
