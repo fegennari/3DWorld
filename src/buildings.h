@@ -1496,7 +1496,7 @@ public:
 	void get_objs_at_or_below_ground_floor(vect_room_object_t &ret, bool for_spider) const;
 private:
 	// animals
-	point gen_animal_floor_pos(float radius, bool place_in_attic, rand_gen_t &rgen) const;
+	point gen_animal_floor_pos(float radius, bool place_in_attic, bool not_player_visible, rand_gen_t &rgen) const;
 	bool add_rat(point const &pos, float hlength, vector3d const &dir, point const &placed_from, bool &dead);
 	void update_rat(rat_t &rat, point const &camera_bs, float timestep, float &max_xmove, bool can_attack_player, rand_gen_t &rgen) const;
 	void scare_rat(rat_t &rat, point const &camera_bs) const;

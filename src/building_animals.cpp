@@ -79,13 +79,16 @@ template<typename T> void building_t::add_animals_on_floor(T &animals, unsigned 
 	for (unsigned n = 0; n < num; ++n) {
 		// there's no error check for min_sz <= max_sz, so just use min_sz in that case
 		float const sz_scale((sz_min >= sz_max) ? sz_min : rgen.rand_uniform(sz_min, sz_max)), radius(0.5f*floor_spacing*sz_scale);
-		point const pos(gen_animal_floor_pos(radius, T::value_type::allow_in_attic(), rgen));
+		point const pos(gen_animal_floor_pos(radius, T::value_type::allow_in_attic(), 0, rgen)); // not_player_visible=0
 		if (pos == all_zeros) continue; // bad pos? skip this animal
 		animals.add(typename T::value_type(pos, radius, rgen.signed_rand_vector_xy().get_norm(), n));
 	}
 }
 
-point building_t::gen_animal_floor_pos(float radius, bool place_in_attic, rand_gen_t &rgen) const {
+point building_t::gen_animal_floor_pos(float radius, bool place_in_attic, bool not_player_visible, rand_gen_t &rgen) const {
+	vector3d const xlate(get_tiled_terrain_model_xlate()); // too difficult to pass this in through the call stack, so just recalculate
+	point const camera_bs(camera_pdu.pos - xlate);
+
 	for (unsigned n = 0; n < 100; ++n) { // make up to 100 tries
 		cube_t place_area;
 
@@ -103,7 +106,14 @@ point building_t::gen_animal_floor_pos(float radius, bool place_in_attic, rand_g
 		place_area.expand_by_xy(-(radius + get_wall_thickness()));
 		if (min(place_area.dx(), place_area.dy()) < 4.0*radius) continue; // room too small (can happen for has_complex_floorplan office buildings)
 		point const pos(gen_xy_pos_in_area(place_area, radius, rgen, place_area.z1()));
-		if (is_valid_ai_placement(pos, radius, 0)) {return pos;} // check room objects; start in the open, not under something; skip_nocoll=0
+		if (!is_valid_ai_placement(pos, radius, 0)) continue; // check room objects; start in the open, not under something; skip_nocoll=0
+		
+		if (not_player_visible && n < 50 && fabs(camera_bs.z - pos.z) < get_window_vspace() && camera_pdu.sphere_visible_test((pos + xlate), radius)) {
+			// may be visible to the player; checked for the first 50 iterations
+			if (get_room_containing_pt(pos) == get_room_containing_pt(camera_bs)) continue; // same room, skip
+			if (!line_intersect_walls(pos, camera_bs)) continue; // line of sight, skip
+		}
+		return pos; // success
 	} // for n
 	return all_zeros; // failed
 }
@@ -960,7 +970,7 @@ void building_t::update_spider(spider_t &spider, point const &camera_bs, float t
 
 		if (!is_pos_inside_building(spider.pos, radius, radius)) { // still not valid
 			if (spider.last_valid_pos == all_zeros) { // bad spawn pos - retry
-				gen_animal_floor_pos(radius, spider_t::allow_in_attic(), rgen);
+				gen_animal_floor_pos(radius, spider_t::allow_in_attic(), 1, rgen); // not_player_visible=1
 				return;
 			}
 			spider.pos = spider.last_valid_pos; // restore to prev frame pos
