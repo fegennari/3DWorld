@@ -1326,70 +1326,83 @@ void building_t::update_insects(point const &camera_bs, unsigned building_ix) {
 	bool const was_placed(insects.placed);
 	add_animals_on_floor(insects, building_ix, global_building_params.num_insects_min, global_building_params.num_insects_max,
 		global_building_params.insect_size_min, global_building_params.insect_size_max);
+	rand_gen_t rgen;
+	rgen.set_state(building_ix+1, frame_counter+1); // unique per building and per frame
 
 	if (!was_placed) { // newply placed (on the floor); shift by radius in Z
-		for (insect_t &insect : insects) {insect.pos.z += insect.radius;}
+		for (insect_t &insect : insects) {
+			if (rgen.rand_bool()) {insect.type = INSECT_TYPE_FLY;} // make it a fly (which it already should be)
+			else { // make it a cockroach
+				insect.type    = INSECT_TYPE_ROACH;
+				insect.radius *= 4.0; // larger than a fly
+			}
+			insect.pos.z += 0.5*insect.get_height(); // for insects, pos.z is the center rather than the bottom
+		} // for insect
 	}
 	// update insects
 	float const timestep(min(fticks, 4.0f)); // clamp fticks to 100ms
 	for (insect_t &insect : insects) {insect.move(timestep);}
-	rand_gen_t rgen;
-	rgen.set_state(building_ix+1, frame_counter+1); // unique per building and per frame
-	vector<pair<float, point>> targets;
+	vector<pair<float, point>> targets; // used for flies
 	for (insect_t &insect : insects) {update_insect(insect, camera_bs, timestep, targets, rgen);}
 }
 
 void building_t::update_insect(insect_t &insect, point const &camera_bs, float timestep, vector<pair<float, point>> &targets, rand_gen_t &rgen) const {
-	float const max_speed(global_building_params.insect_speed);
-
-	// here we assume this is a flying insect for now, since we already have walking animals such as spiders and rats
+	// run logic that's common to all insects
 	if (insect.speed == 0.0) { // generate initial speed and dir
-		insect.speed = max_speed*rgen.rand_uniform(0.5, 1.0);
-		insect.dir = rgen.signed_rand_vector_norm();
-		if (insect.dir.z < 0.0) {insect.dir.z *= -1.0;} // assume starting on the floor, and fly upward
+		insect.speed = global_building_params.insect_speed*rgen.rand_uniform(0.5, 1.0);
+		insect.dir   = rgen.signed_rand_vector_norm();
+		if     (!insect.flies())     {insect.dir.z  =  0.0;} // moves in the XY plane
+		else if (insect.dir.z < 0.0) {insect.dir.z *= -1.0;} // assume starting on the floor, and fly upward
 	}
-	insect.has_target = insect.target_player = 0;
-	float const radius(insect.radius);
-	point &pos(insect.pos);
+	if      (insect.type == INSECT_TYPE_FLY  ) {update_fly  (insect, camera_bs, timestep, targets, rgen);}
+	else if (insect.type == INSECT_TYPE_ROACH) {update_roach(insect, camera_bs, timestep, rgen);}
+	else {assert(0);} // unsupported insect type
+}
+
+void building_t::update_fly(insect_t &fly, point const &camera_bs, float timestep, vector<pair<float, point>> &targets, rand_gen_t &rgen) const {
+	fly.has_target = fly.target_player = 0;
+	float const radius(fly.radius), hheight(0.5*fly.get_height());
+	point &pos(fly.pos);
 
 	// check for collision and bounce off the object for now
-	if (!is_pos_inside_building(pos, radius, radius)) {
-		pos = insect.last_pos; // restore previous pos before collision
+	if (!is_pos_inside_building(pos, radius, hheight)) {
+		pos = fly.last_pos; // restore previous pos before collision
 
-		if (!is_pos_inside_building(pos, radius, radius)) { // still not valid, respawn; error?
-			gen_animal_floor_pos(radius, insect_t::allow_in_attic(), rgen);
+		if (!is_pos_inside_building(pos, radius, hheight)) { // still not valid, respawn; error?
+			gen_animal_floor_pos(radius, insect_t::allow_in_attic(), 1, rgen); // not_player_visible=1
 			return;
 		}
-		insect.dir *= -1.0; // reverse direction; maybe should use direction to closest building wall?
-		insect.delta_dir = zero_vector; // reset delta_dir
+		fly.dir *= -1.0; // reverse direction; maybe should use direction to closest building wall?
+		fly.delta_dir = zero_vector; // reset delta_dir
 		return; // continue below?
 	}
 	float const dist_to_player(p2p_dist(pos, camera_bs)), sight_range(2.0*get_window_vspace());
 	bool const target_player(player_attracts_flies && dist_to_player < sight_range);
 	unsigned const update_freq(1 + interior->room_geom->insects.size()/250); // reduced update rate for many insects
 
-	if (((frame_counter + insect.id) % update_freq) == 0) {
-		vector3d const lookahead(insect.dir*(2.0*radius));
+	if (((frame_counter + fly.id) % update_freq) == 0) { // run collision/update logic every few frames
+		vector3d const lookahead(fly.dir*(2.0*radius));
 		vector3d coll_dir; // collision normal; points from the collider in the XY plane
 		// coll_type: 0=no coll, 1=outside building, 2=static object, 3=dynamic object; z_center_offset=0.0, on_floor_only=0
-		int const ret(check_for_animal_coll(insect, radius, 0.0, 0, target_player, camera_bs, timestep, pos, (pos + lookahead), coll_dir));
+		int const ret(check_for_animal_coll(fly, hheight, 0.0, 0, target_player, camera_bs, timestep, pos, (pos + lookahead), coll_dir));
 	
 		if (ret) { // collision
-			if (coll_dir == zero_vector) {coll_dir = insect.dir;} // use our own dir as coll_dir if not set
-			insect.dir = rgen.signed_rand_vector_norm();
-			if (dot_product(insect.dir, coll_dir) > 0.0) {insect.dir.negate();}
-			insect.delta_dir = zero_vector; // reset delta_dir on coll
+			if (coll_dir == zero_vector) {coll_dir = fly.dir;} // use our own dir as coll_dir if not set
+			fly.dir = rgen.signed_rand_vector_norm();
+			if (dot_product(fly.dir, coll_dir) > 0.0) {fly.dir.negate();}
+			fly.delta_dir = zero_vector; // reset delta_dir on coll
 			return;
 		}
 		if (rgen.rand_float() < 0.25) { // every 4 updates send out a longer range collision query
-			if (check_for_animal_coll(insect, radius, 0.0, 0, target_player, camera_bs, timestep, pos, (pos + 8.0*lookahead), coll_dir)) {
-				insect.delta_dir *= 0.9f; // reduce direction change
-				insect.dir       += 0.25*rgen.signed_rand_vector_norm(); // adjust direction
-				insect.dir.normalize();
-				min_eq(insect.accel, 0.0f); // stop accelerating
+			if (check_for_animal_coll(fly, hheight, 0.0, 0, target_player, camera_bs, timestep, pos, (pos + 8.0*lookahead), coll_dir)) {
+				fly.delta_dir *= 0.9f; // reduce direction change
+				fly.dir       += 0.25*rgen.signed_rand_vector_norm(); // adjust direction
+				fly.dir.normalize();
+				min_eq(fly.accel, 0.0f); // stop accelerating
 			}
 		}
 	}
+	// run player/zombie targeting logic
 	targets.clear();
 	if (target_player) {targets.emplace_back(dist_to_player, camera_bs);}
 	bool follow_mode(0);
@@ -1408,21 +1421,22 @@ void building_t::update_insect(insect_t &insect, point const &camera_bs, float t
 		bool const is_player(target.second == camera_bs);
 		if ((get_room_containing_pt(pos) != (is_player ? cur_player_building_loc.room_ix : get_room_containing_pt(target.second)) &&
 			!is_pt_visible(pos, target.second))) continue; // not visible
-		insect.has_target = 1;
-		if (is_player) {insect.target_player = 1;}
+		fly.has_target = 1;
+		if (is_player) {fly.target_player = 1;}
 		follow_mode = (target.first > 1.2*get_scaled_player_radius()); // follow if not very close to the target
 		vector3d const dir_to_target((target.second - pos).get_norm());
-		update_dir_incremental_no_zero_check(insect.dir, dir_to_target, 0.5, timestep); // slow turn to target direction
+		update_dir_incremental_no_zero_check(fly.dir, dir_to_target, 0.5, timestep); // slow turn to target direction
 	}
 	// apply a slow random dir change
-	insect.delta_dir += (0.1f*timestep)*rgen.signed_rand_vector();
-	insect.dir       += (0.1f*timestep)*insect.delta_dir;
-	insect.dir.normalize();
-	if (fabs(insect.dir.z) > 0.99) {insect.dir = insect.delta_dir;} // don't point straight up or straight down
+	fly.delta_dir += (0.1f*timestep)*rgen.signed_rand_vector();
+	fly.dir       += (0.1f*timestep)*fly.delta_dir;
+	fly.dir.normalize();
+	if (fabs(fly.dir.z) > 0.99) {fly.dir = fly.delta_dir;} // don't point straight up or straight down
 	// apply a slow random acceleration
-	insect.accel += (0.04f*timestep)*rgen.signed_rand_float();
-	insect.accel  = CLIP_TO_pm1(insect.accel);
-	insect.speed  = (follow_mode ? 1.6 : 1.0)*min(max_speed, max(0.5f*max_speed, (insect.speed + (0.05f*timestep)*insect.accel))); // faster when following
+	float const max_speed(global_building_params.insect_speed);
+	fly.accel += (0.04f*timestep)*rgen.signed_rand_float();
+	fly.accel  = CLIP_TO_pm1(fly.accel);
+	fly.speed  = (follow_mode ? 1.6 : 1.0)*min(max_speed, max(0.5f*max_speed, (fly.speed + (0.05f*timestep)*fly.accel))); // faster when following
 	
 	// play buzz sound if near player and also attracted to the player
 	if (player_attracts_flies && dist_to_player < 1.1*get_scaled_player_radius()) {
@@ -1431,6 +1445,17 @@ void building_t::update_insect(insect_t &insect, point const &camera_bs, float t
 	// make sure we're not in front of the camera near clip plane
 	float const camera_dmin(1.2*(radius + NEAR_CLIP));
 	if (dist_to_player < camera_dmin) {pos = camera_bs + camera_dmin*(pos - camera_bs).get_norm();}
+}
+
+void building_t::update_roach(insect_t &roach, point const &camera_bs, float timestep, rand_gen_t &rgen) const {
+	float const radius(roach.radius), hheight(0.5*roach.get_height());
+	point &pos(roach.pos);
+
+	if (!is_pos_inside_building(pos, radius, hheight)) { // outside building, respawn
+		gen_animal_floor_pos(radius, insect_t::allow_in_attic(), 1, rgen); // not_player_visible=1
+		return;
+	}
+	// TODO
 }
 
 void register_fly_attract(bool no_msg) {

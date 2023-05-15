@@ -100,8 +100,9 @@ struct insect_t : public building_animal_t {
 	insect_t(point const &pos_, float radius_, vector3d const &dir_, unsigned id_, unsigned char type_=INSECT_TYPE_FLY) :
 		building_animal_t(pos_, radius_, dir_, id_), type(type_) {}
 	static bool allow_in_attic() {return 0;} // could allow it?
+	bool flies() const {return (type == INSECT_TYPE_FLY);}
 	float get_xy_radius() const {return radius;}
-	float get_height   () const {return 2.0*radius;}
+	float get_height   () const {return (flies() ? 2.0 : 0.4)*radius;}
 	cube_t get_bcube   () const;
 };
 

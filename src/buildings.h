@@ -1509,6 +1509,8 @@ private:
 		point const &camera_bs, float timestep, point const &old_pos, point const &query_pos, vector3d &coll_dir) const;
 	int  check_for_snake_coll(snake_t const &snake, point const &camera_bs, float timestep, point const &old_pos, point const &query_pos, vector3d &coll_dir) const;
 	void update_insect(insect_t &insect, point const &camera_bs, float timestep, vector<pair<float, point>> &targets, rand_gen_t &rgen) const;
+	void update_fly   (insect_t &fly,    point const &camera_bs, float timestep, vector<pair<float, point>> &targets, rand_gen_t &rgen) const;
+	void update_roach (insect_t &roach,  point const &camera_bs, float timestep, rand_gen_t &rgen) const;
 	void maybe_bite_and_poison_player(point const &pos, point const &camera_bs, vector3d const &dir, float coll_radius, float damage, int poison_type, rand_gen_t &rgen) const;
 
 	bool is_pos_inside_building(point const &pos, float xy_pad, float hheight, bool inc_attic=1) const;
