@@ -970,7 +970,7 @@ void building_t::update_spider(spider_t &spider, point const &camera_bs, float t
 
 		if (!is_pos_inside_building(spider.pos, radius, radius)) { // still not valid
 			if (spider.last_valid_pos == all_zeros) { // bad spawn pos - retry
-				gen_animal_floor_pos(radius, spider_t::allow_in_attic(), 1, rgen); // not_player_visible=1
+				spider.pos = gen_animal_floor_pos(radius, spider_t::allow_in_attic(), 1, rgen); // not_player_visible=1
 				return;
 			}
 			spider.pos = spider.last_valid_pos; // restore to prev frame pos
@@ -1369,7 +1369,7 @@ void building_t::update_fly(insect_t &fly, point const &camera_bs, float timeste
 		pos = fly.last_pos; // restore previous pos before collision
 
 		if (!is_pos_inside_building(pos, radius, hheight)) { // still not valid, respawn; error?
-			gen_animal_floor_pos(radius, insect_t::allow_in_attic(), 1, rgen); // not_player_visible=1
+			pos = gen_animal_floor_pos(radius, insect_t::allow_in_attic(), 1, rgen); // not_player_visible=1
 			return;
 		}
 		fly.dir *= -1.0; // reverse direction; maybe should use direction to closest building wall?
@@ -1452,7 +1452,7 @@ void building_t::update_roach(insect_t &roach, point const &camera_bs, float tim
 	point &pos(roach.pos);
 
 	if (!is_pos_inside_building(pos, radius, hheight)) { // outside building, respawn
-		gen_animal_floor_pos(radius, insect_t::allow_in_attic(), 1, rgen); // not_player_visible=1
+		pos = gen_animal_floor_pos(radius, insect_t::allow_in_attic(), 1, rgen); // not_player_visible=1
 		return;
 	}
 	// TODO
