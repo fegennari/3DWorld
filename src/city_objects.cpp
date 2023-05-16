@@ -22,16 +22,15 @@ city_flag_t create_flag(bool dim, bool dir, point const &base_pt, float height, 
 float get_power_pole_offset() {return 0.045*city_params.road_width;}
 
 
-struct plot_divider_type_t {
-	bool is_occluder, has_alpha_mask;
+struct textured_mat_t {
+	bool has_alpha_mask;
 	int tid, nm_tid;
-	float wscale, hscale, tscale; // width, height, and texture scales
 	colorRGBA color, map_color;
 	string tex_name, nm_tex_name;
 
-	plot_divider_type_t(string const &tn, string const &nm_tn, float ws, float hs, float ts, bool ic, bool ham, colorRGBA const &c, colorRGBA const &mc) :
-		is_occluder(ic), has_alpha_mask(ham), tid(-1), nm_tid(-1), wscale(ws), hscale(hs), tscale(ts), color(c), map_color(mc), tex_name(tn), nm_tex_name(nm_tn) {}
-	colorRGBA get_avg_color() const {return ((tid >= 0) ? texture_color(tid) : map_color).modulate_with(color);}
+	textured_mat_t(string const &tn, string const &nm_tn, bool ham, colorRGBA const &c, colorRGBA const &mc) :
+		has_alpha_mask(ham), tid(-1), nm_tid(-1), color(c), map_color(mc), tex_name(tn), nm_tex_name(nm_tn) {}
+	colorRGBA get_avg_color() const {return ((tid >= 0) ? texture_color(tid) : map_color).modulate_with(color);} // for overhead map
 
 	void pre_draw(bool shadow_only) {
 		if (shadow_only && !has_alpha_mask) return; // not textured
@@ -48,6 +47,13 @@ struct plot_divider_type_t {
 	void post_draw(bool shadow_only) {
 		if (!shadow_only && nm_tid >= 0) {select_texture(FLAT_NMAP_TEX, 5);} // restore default flat normal map
 	}
+};
+
+struct plot_divider_type_t : public textured_mat_t {
+	bool is_occluder;
+	float wscale, hscale, tscale; // width, height, and texture scales
+	plot_divider_type_t(string const &tn, string const &nm_tn, float ws, float hs, float ts, bool ic, bool ham, colorRGBA const &c, colorRGBA const &mc) :
+		textured_mat_t(tn, nm_tn, ham, c, mc), is_occluder(ic), wscale(ws), hscale(hs), tscale(ts) {}
 };
 enum {DIV_WALL=0, DIV_FENCE, DIV_HEDGE, DIV_CHAINLINK, DIV_NUM_TYPES}; // types of plot dividers, with end terminator
 
