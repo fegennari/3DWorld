@@ -94,6 +94,14 @@ struct swimming_pool_t : public oriented_city_obj_t { // Note: dim and dir are u
 	bool proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const;
 };
 
+struct pool_deck_t : public city_obj_t {
+	unsigned mat_id;
+	pool_deck_t(cube_t const &bcube_, unsigned tid_);
+	static void pre_draw(draw_state_t &dstate, bool shadow_only);
+	static void post_draw(draw_state_t &dstate, bool shadow_only);
+	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const;
+};
+
 class power_pole_t : public city_obj_t {
 	struct wire_t {
 		point pts[2], pole_base;
@@ -177,6 +185,14 @@ struct city_flag_t : public oriented_city_obj_t {
 	bool proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const;
 };
 
+struct newsrack_t : public oriented_city_obj_t {
+	colorRGBA color;
+
+	newsrack_t(point const &pos_, float height, bool dim_, bool dir_, colorRGBA const &color_);
+	static void pre_draw(draw_state_t &dstate, bool shadow_only);
+	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const;
+};
+
 class city_obj_groups_t : public vector<cube_with_ix_t> {
 	map<uint64_t, vector<unsigned> > by_tile;
 public:
@@ -196,15 +212,17 @@ private:
 	vector<substation_t> sstations;
 	vector<divider_t> dividers; // dividers for residential plots
 	vector<swimming_pool_t> pools;
+	vector<pool_deck_t> pdecks;
 	vector<power_pole_t> ppoles;
 	vector<hcap_space_t> hcaps; // handicap signs painted on parking lots
 	vector<manhole_t> manholes;
 	vector<mailbox_t> mboxes;
 	vector<sign_t> signs;
 	vector<city_flag_t> flags;
+	vector<newsrack_t> newsracks;
 	// index is last obj in group
-	city_obj_groups_t bench_groups, planter_groups, trashcan_groups, fhydrant_groups, sstation_groups, divider_groups, pool_groups, ppole_groups,
-		hcap_groups, manhole_groups, mbox_groups, sign_groups, flag_groups;
+	city_obj_groups_t bench_groups, planter_groups, trashcan_groups, fhydrant_groups, sstation_groups, divider_groups, pool_groups, pdeck_groups,
+		ppole_groups, hcap_groups, manhole_groups, mbox_groups, sign_groups, flag_groups, nrack_groups;
 	vector<city_zone_t> sub_plots; // reused across calls
 	cube_t all_objs_bcube;
 	unsigned num_spaces, filled_spaces, num_x_plots, num_y_plots;
