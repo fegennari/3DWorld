@@ -3054,9 +3054,9 @@ void building_room_geom_t::add_sign(room_object_t const &c, bool inc_back, bool 
 }
 
 void building_room_geom_t::add_window_sill(room_object_t const &c) {
-	rgeom_mat_t &mat(get_untextured_material(0, 0, 0, 0, 1));
+	rgeom_mat_t &mat(get_untextured_material(0, 0, 0, 0, 1)); // unshadowed, exterior
 	unsigned const verts_start(mat.quad_verts.size());
-	mat.add_cube_to_verts_untextured(c, apply_light_color(c), ~get_face_mask(c.dim, !c.dir)); // unshadowed, exterior
+	mat.add_cube_to_verts_untextured(c, apply_light_color(c), ~get_face_mask(c.dim, !c.dir));
 	float const slope_dz(0.5*c.dz());
 	vector3d v1, v2;
 	v1[!c.dim] = 1.0; // side vector
@@ -3071,6 +3071,12 @@ void building_room_geom_t::add_window_sill(room_object_t const &c) {
 		if (i->v[c.dim] == c.d[c.dim][c.dir]) {i->v.z -= slope_dz;}
 		if (i->n[2] == 127) {i->set_norm(nc);} // upward normal
 	}
+}
+
+void building_room_geom_t::add_balcony(room_object_t const &c) {
+	int const tid((c.obj_id & 1) ? get_concrete_tid() : FENCE_TEX);
+	rgeom_mat_t &mat(get_material(tid, 1, 0, 0, 0, 1)); // shadowed?, exterior
+	mat.add_cube_to_verts(c, c.color, tex_origin, ~get_face_mask(c.dim, c.dir)); // TODO: make more detailed, shorter wall with floor
 }
 
 bool get_dishwasher_for_ksink(room_object_t const &c, cube_t &dishwasher) {
