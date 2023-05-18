@@ -940,7 +940,10 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 		bool const other_dim(two_parts ? ((main_part && force_dim[1-ix] < 2) ? force_dim[1-ix] : get_largest_xy_dim(other)) : 0);
 		float extend_to(0.0), max_dz(i->dz());
 
-		if (type == 1 && ix == 1 && dim != other_dim && parts[0].z2() == parts[1].z2()) { // same z2, opposite dim T-junction
+		if (has_sec_bldg() && ix == real_num_parts) { // garage or shed
+			if (has_shed) {} // use ROOF_TYPE_SHED? need to add triangle wall sections for this
+		}
+		if (type == 1 && ix == 1 && dim != other_dim && parts[0].z2() == parts[1].z2()) { // L-shape, same z2, opposite dim T-junction
 			max_dz    = peak_height*parts[0].get_sz_dim(!other_dim); // clamp roof zval to other roof's peak
 			extend_to = parts[0].get_center_dim(!other_dim); // extend lower part roof to center of upper part roof
 		}
