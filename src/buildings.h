@@ -1563,6 +1563,7 @@ public:
 	tquad_with_ix_t set_interior_door_from_cube(door_t const &door) const;
 	cube_t get_door_bounding_cube(door_t const &door) const;
 	cube_t get_attic_access_door_avoid() const;
+	void get_all_door_centers_for_room(cube_t const &room, float zval, vector<point> &door_centers) const;
 	void invalidate_nav_graph();
 	point local_to_camera_space(point const &pos) const;
 	void play_door_open_close_sound(point const &pos, bool open, float gain=1.0, float pitch=1.0) const;
@@ -1630,7 +1631,7 @@ private:
 	bool room_has_stairs_or_elevator(room_t const &room, float zval, unsigned floor) const;
 	bool is_room_office_bathroom(room_t const &room, float zval, unsigned floor) const;
 	int gather_room_placement_blockers(cube_t const &room, unsigned objs_start, vect_cube_t &blockers, bool inc_open_doors=1, bool ignore_chairs=0) const;
-	vect_door_stack_t &get_doorways_for_room(room_t const &room, float zval) const;
+	vect_door_stack_t &get_doorways_for_room(cube_t const &room, float zval) const;
 	bool add_chair(rand_gen_t &rgen, cube_t const &room, vect_cube_t const &blockers, unsigned room_id, point const &place_pos,
 		colorRGBA const &chair_color, bool dim, bool dir, float tot_light_amt, bool office_chair_model);
 	unsigned add_table_and_chairs(rand_gen_t rgen, cube_t const &room, vect_cube_t const &blockers, unsigned room_id,

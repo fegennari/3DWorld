@@ -156,7 +156,7 @@ void building_t::shorten_chairs_in_region(cube_t const &region, unsigned objs_st
 	}
 }
 
-vect_door_stack_t &building_t::get_doorways_for_room(room_t const &room, float zval) const { // interior doorways
+vect_door_stack_t &building_t::get_doorways_for_room(cube_t const &room, float zval) const { // interior doorways
 	// find interior doorways connected to this room
 	float const floor_thickness(get_floor_thickness());
 	cube_t room_exp(room);
@@ -171,6 +171,37 @@ vect_door_stack_t &building_t::get_doorways_for_room(room_t const &room, float z
 	}
 	return doorways;
 }
+void building_t::get_all_door_centers_for_room(cube_t const &room, float zval, vector<point> &door_centers) const {
+	vect_door_stack_t const &doorways(get_doorways_for_room(room, zval)); // get interior doors
+	for (door_stack_t const &ds : doorways) {door_centers.emplace_back(ds.xc(), ds.yc(), zval);}
+
+	if (zval < ground_floor_z1 + 0.5*get_window_vspace()) { // get exterior doors if on the ground floor
+		cube_t room_exp(room);
+		room_exp.expand_by_xy(get_wall_thickness());
+
+		for (tquad_with_ix_t const &door : doors) {
+			cube_t door_bcube(door.get_bcube());
+			if (door_bcube.intersects(room_exp)) {door_centers.emplace_back(door_bcube.xc(), door_bcube.yc(), zval);}
+		}
+	}
+}
+
+class door_path_checker_t {
+	vector<point> door_centers;
+public:
+	bool check_door_path_blocked(cube_t const &c, room_t const &room, float zval, building_t const &building) {
+		if (door_centers.empty()) {building.get_all_door_centers_for_room(room, zval, door_centers);}
+		if (door_centers.size() < 2) return 0; // must have at least 2 doors for the path to be blocked
+
+		for (auto p1 = door_centers.begin(); p1 != door_centers.end(); ++p1) {
+			for (auto p2 = p1+1; p2 != door_centers.end(); ++p2) {
+				if (check_line_clip(*p1, *p2, c.d)) return 1;
+			}
+		}
+		return 0;
+	}
+	void clear() {door_centers.clear();} // to allow for reuse across rooms
+};
 
 void building_t::add_trashcan_to_room(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, bool check_last_obj) {
 	int const rr(rgen.rand()%3), rar(rgen.rand()%3); // three sizes/ARs
