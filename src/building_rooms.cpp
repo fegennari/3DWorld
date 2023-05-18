@@ -3625,6 +3625,7 @@ void building_t::add_window_trim_and_coverings(bool add_trim, bool add_coverings
 			float const bot_edge(c.z1() + (z - tz1)*window_height);
 			set_cube_zvals(window, bot_edge+border_z, bot_edge+window_height-border_z);
 			bool const add_separators(is_house && rgen.rand_bool()); // 50% of walls/floors for houses; not for glass block windows?
+			bool const add_horiz_separators(rgen.rand_bool()); // 0=vert separators only, 1=cross shaped separators
 
 			for (float xy = tx1; xy < tx2; xy += 1.0) { // windows along each wall
 				float const low_edge(c.d[!dim][0] + (xy - tx1)*window_width);
@@ -3690,15 +3691,18 @@ void building_t::add_window_trim_and_coverings(bool add_trim, bool add_coverings
 					}
 					if (!has_bathroom_block_window) {
 						unsigned const base_flags(RO_FLAG_NOCOLL | RO_FLAG_EXTERIOR);
-						float const sep_hwidth(0.2*side_trim_width);
-						cube_t sep(window); // horizontal separator
-						set_wall_width(sep, window.zc(), sep_hwidth, 2);
-						trim_objs.emplace_back(sep, TYPE_WALL_TRIM, 0, dim, dir, base_flags, 1.0, SHAPE_SHORT, trim_color); // skip !dim ends
-						sep = window; // vertical separator
+						float const sep_hwidth(0.2*side_trim_width*(add_horiz_separators ? 1.0 : 2.0));
+						cube_t sep(window); // vertical separator
 						set_wall_width(sep, window.get_center_dim(!dim), sep_hwidth, !dim);
 						trim_objs.emplace_back(sep, TYPE_WALL_TRIM, 0, dim, dir, (base_flags | RO_FLAG_ADJ_BOT | RO_FLAG_ADJ_TOP), 1.0, SHAPE_TALL, trim_color);
+
+						if (add_horiz_separators) { // horizontal separator
+							cube_t sep(window);
+							set_wall_width(sep, window.zc(), sep_hwidth, 2);
+							trim_objs.emplace_back(sep, TYPE_WALL_TRIM, 0, dim, dir, base_flags, 1.0, SHAPE_SHORT, trim_color); // skip !dim ends
+						}
 					}
-				}
+				} // end add_separators
 			} // for xy
 		} // for z
 	} // for i
