@@ -188,7 +188,7 @@ struct city_flag_t : public oriented_city_obj_t {
 struct newsrack_t : public oriented_city_obj_t {
 	colorRGBA color;
 
-	newsrack_t(point const &pos_, float height, bool dim_, bool dir_, colorRGBA const &color_);
+	newsrack_t(point const &pos_, float height, float width, float depth, bool dim_, bool dir_, colorRGBA const &color_);
 	static void pre_draw(draw_state_t &dstate, bool shadow_only);
 	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const;
 };

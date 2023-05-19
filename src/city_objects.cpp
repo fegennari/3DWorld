@@ -549,15 +549,22 @@ pool_deck_t::pool_deck_t(cube_t const &bcube_, unsigned mat_id_, bool dim_, bool
 }
 void pool_deck_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
 	if (mat_id != dstate.pass_ix) return; // this type not enabled in this pass
-	dstate.draw_cube(qbds.qbd, bcube, pool_deck_mats[mat_id].color, 1, 0.25/(bcube.dx() + bcube.dy())); // skip bottom
+	float const tscale = 2.0; // applied independently in each dim
+	dstate.draw_cube(qbds.qbd, bcube, pool_deck_mats[mat_id].color, 1, 1.0, 0, 0, 0, dim, tscale/bcube.dx(), tscale/bcube.dy(), tscale/bcube.dz()); // skip bottom
 }
 
 // newsracks
 
-newsrack_t::newsrack_t(point const &pos_, float height, bool dim_, bool dir_, colorRGBA const &color_) :
-	oriented_city_obj_t(pos_, 0.5*height, dim_, dir_), color(color_) {}
+newsrack_t::newsrack_t(point const &pos_, float height, float width, float depth, bool dim_, bool dir_, colorRGBA const &color_) :
+	oriented_city_obj_t(pos_, 0.5*sqrt(height*height + width*width + depth*depth), dim_, dir_), color(color_)
+{
+	bcube.set_from_point(pos_);
+	bcube.expand_in_dim( dim, 0.5*depth);
+	bcube.expand_in_dim(!dim, 0.5*width);
+	bcube.z2() += height;
+}
 /*static*/ void newsrack_t::pre_draw(draw_state_t &dstate, bool shadow_only) {
-	select_texture(WHITE_TEX);
+	select_texture(WHITE_TEX); // untextured
 }
 void newsrack_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
 	// TODO: better job
@@ -1600,7 +1607,32 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 	}
 	// place newsracks along non-residential city streets
 	if (!is_residential) {
-		// TODO
+		unsigned const NUM_NR_COLORS = 8;
+		colorRGBA const nr_colors[NUM_NR_COLORS] = {WHITE, DK_BLUE, LT_BLUE, ORANGE, RED, DK_GREEN, YELLOW, BLACK};
+		float const dist_from_corner(0.06); // dist from corner relative to plot size
+		point pos(0, 0, plot.z2());
+
+		for (unsigned dim = 0; dim < 2; ++dim) {
+			for (unsigned dir = 0; dir < 2; ++dir) {
+				unsigned const num_this_side(rgen.rand() % 5); // 0-4
+				if (num_this_side == 0) continue;
+				pos[dim] = (1.0 - dist_from_corner)*plot.d[dim][dir] + dist_from_corner*plot.get_center_dim(dim); // set distance from the plot edge
+
+				for (unsigned n = 0; n < num_this_side; ++n) {
+					float const nr_height(0.28*car_length*rgen.rand_uniform(0.9, 1.11));
+					float const nr_width(0.44*nr_height*rgen.rand_uniform(0.8, 1.25)), nr_depth(0.44*nr_height*rgen.rand_uniform(0.8, 1.25));
+					pos[!dim] = plot.d[!dim][0] + rgen.rand_uniform(0.1, 0.9)*plot.get_sz_dim(!dim); // random pos along plot
+					newsrack_t const newsrack(pos, nr_height, nr_width, nr_depth, dim, dir, nr_colors[rgen.rand() % NUM_NR_COLORS]);
+					cube_t test_cube(newsrack.bcube);
+					test_cube.d[dim][dir] += (dir ? 1.0 : -1.0)*nr_depth; // add front clearance
+
+					if (!has_bcube_int_xy(test_cube, blockers, 0.1*nr_width)) { // skip if intersects a building or parking lot, with a bit of padding
+						nrack_groups.add_obj(newsrack, newsracks);
+						add_cube_to_colliders_and_blockers(test_cube, colliders, blockers);
+					}
+				} // for n
+			} // for dir
+		} // for dim
 	}
 	// place manholes in adjacent roads, only on +x and +y sides; this will leave one edge road in each dim with no manholes
 	if (1) {
