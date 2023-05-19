@@ -184,8 +184,8 @@ void draw_state_t::draw_cube(quad_batch_draw &qbd, color_wrapper const &cw, poin
 		else                                     {point const pts[4] = {p[3], p[0], p[4], p[7]}; qbd.add_quad_pts(pts, cw, -right_n, tr_right);} // right
 	}
 }
-void draw_state_t::draw_cube(quad_batch_draw &qbd, cube_t const &c, color_wrapper const &cw,
-	bool skip_bottom, float tscale, unsigned skip_dims, bool mirror_x, bool mirror_y, bool swap_tc_xy) const
+void draw_state_t::draw_cube(quad_batch_draw &qbd, cube_t const &c, color_wrapper const &cw, bool skip_bottom, float tscale,
+	unsigned skip_dims, bool mirror_x, bool mirror_y, bool swap_tc_xy, float tscale_x, float tscale_y, float tscale_z) const
 {
 	point p[8];
 	set_cube_pts(c, 0, 0, p);
@@ -195,7 +195,7 @@ void draw_state_t::draw_cube(quad_batch_draw &qbd, cube_t const &c, color_wrappe
 	if (swap_tc_xy) {tr_top.swap_xy = tr_front.swap_xy = tr_right.swap_xy = 1;}
 
 	if (tscale > 0.0) { // compute texture s/t parameters from cube side lengths to get a 1:1 AR
-		float const ts01(tscale*c.dy()), ts12(tscale*c.dx()), ts15(tscale*c.dz());
+		float const ts01(tscale*tscale_y*c.dy()), ts12(tscale*tscale_x*c.dx()), ts15(tscale*tscale_z*c.dz());
 		tr_top  .x2 = ts01; tr_top  .y2 = ts12;
 		tr_front.x2 = ts01; tr_front.y2 = ts15;
 		tr_right.x2 = ts12; tr_right.y2 = ts15;

@@ -531,12 +531,12 @@ enum {POOL_DECK_WOOD=0, POOL_DECK_CONCRETE, NUM_POOL_DECK_TYPES};
 
 textured_mat_t pool_deck_mats[NUM_POOL_DECK_TYPES] = {
 	textured_mat_t("fence.jpg",          "normal_maps/fence_NRM.jpg", 0, WHITE, LT_BROWN),
-	textured_mat_t("roads/concrete.jpg", "",                          0, WHITE, LT_GRAY )
+	textured_mat_t("roads/concrete.jpg", "",                          0, GRAY,  LT_GRAY )
 };
 
-pool_deck_t::pool_deck_t(cube_t const &bcube_, unsigned mat_id_) : mat_id(mat_id_) {
-	assert(mat_id < NUM_POOL_DECK_TYPES);
-	bcube = bcube_;
+pool_deck_t::pool_deck_t(cube_t const &bcube_, unsigned mat_id_, bool dim_, bool dir_) : oriented_city_obj_t(dim_, dir_), mat_id(mat_id_) {
+	mat_id %= NUM_POOL_DECK_TYPES;
+	bcube   = bcube_;
 	*(sphere_t *)this = bcube.get_bsphere();
 }
 /*static*/ void pool_deck_t::pre_draw(draw_state_t &dstate, bool shadow_only) {
@@ -1842,8 +1842,9 @@ void city_obj_placer_t::place_residential_plot_objects(road_plot_t const &plot, 
 			} // for side
 			if (bad_fence_place) continue; // failed to fence off the pool, don't place it here
 			pool_groups.add_obj(swimming_pool_t(pool, color, wcolor, above_ground, dim, dir), pools);
-			pool.z2() += 0.1*city_params.road_width; // extend upward to make a better collider
-			add_cube_to_colliders_and_blockers(pool, colliders, blockers);
+			cube_t collider(pool);
+			collider.z2() += 0.1*city_params.road_width; // extend upward to make a better collider
+			add_cube_to_colliders_and_blockers(collider, colliders, blockers);
 
 			for (unsigned side = 0; side < 2; ++side) {
 				divider_t const &fence(fences[side]);
@@ -1851,8 +1852,23 @@ void city_obj_placer_t::place_residential_plot_objects(road_plot_t const &plot, 
 				divider_groups.add_obj(fence, dividers);
 				add_cube_to_colliders_and_blockers(fence.bcube, colliders, blockers);
 			}
-			if (!above_ground) { // in-ground pool
-				// TODO: add pool deck
+			if (!above_ground && rgen.rand_float() < 0.8) { // in-ground pool, add pool deck 80% of the time
+				for (unsigned d = 0; d < 2; ++d) { // check for projections in both dims
+					float const deck_height(0.4*pool.dz()), deck_shrink(0.8*deck_height);
+					float const lo(max(pool.d[d][0], house.d[d][0]) + deck_shrink), hi(min(pool.d[d][1], house.d[d][1]) - deck_shrink);
+					if (hi - lo < 0.25*pool.get_sz_dim(d)) continue; // not enough shared area
+					bool const dir(house.get_center_dim(!d) < pool.get_center_dim(!d)); // dir from house to pool
+					cube_t deck;
+					set_cube_zvals(deck, pool.z1(), (pool.z1() + deck_height)); // lower height than the pool
+					deck.d[ d][0   ] = lo;
+					deck.d[ d][1   ] = hi;
+					deck.d[!d][ dir] = pool .d[!d][!dir];
+					deck.d[!d][!dir] = house.d[!d][ dir];
+					assert(deck.is_strictly_normalized());
+					//if (has_bcube_int_xy(deck, blockers, -0.1*deck_height)) continue; // shink slightly to avoid false collisions with pool; just place the deck under any objects?
+					pdeck_groups.add_obj(pool_deck_t(deck, rgen.rand(), d, dir), pdecks);// choose a random material
+					blockers.push_back(deck); // blocker for other objects, but not a collider for people or the player
+				} // for d
 			}
 			break; // success
 		} // for n
@@ -2185,7 +2201,7 @@ void city_obj_placer_t::draw_detail_objects(draw_state_t &dstate, bool shadow_on
 	}
 	if (!shadow_only) {
 		for (dstate.pass_ix = 0; dstate.pass_ix < NUM_POOL_DECK_TYPES; ++dstate.pass_ix) { // {wood, concrete}
-			draw_objects(pdecks, pdeck_groups, dstate, 0.5, shadow_only, 0); // dist_scale=0.5
+			draw_objects(pdecks, pdeck_groups, dstate, 0.3, shadow_only, 0); // dist_scale=0.3
 		}
 	}
 	dstate.pass_ix = 0; // reset back to 0

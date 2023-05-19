@@ -94,9 +94,9 @@ struct swimming_pool_t : public oriented_city_obj_t { // Note: dim and dir are u
 	bool proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const;
 };
 
-struct pool_deck_t : public city_obj_t {
+struct pool_deck_t : public oriented_city_obj_t {
 	unsigned mat_id;
-	pool_deck_t(cube_t const &bcube_, unsigned tid_);
+	pool_deck_t(cube_t const &bcube_, unsigned tid_, bool dim_, bool dir_);
 	static void pre_draw(draw_state_t &dstate, bool shadow_only);
 	static void post_draw(draw_state_t &dstate, bool shadow_only);
 	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const;
