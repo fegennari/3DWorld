@@ -1668,7 +1668,7 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 	}
 }
 
-bool is_placement_blocked(cube_t const &cube, vect_cube_t const &blockers, cube_t const &exclude, unsigned prev_blockers_end, float expand, bool exp_dim) {
+bool is_placement_blocked(cube_t const &cube, vect_cube_t const &blockers, cube_t const &exclude, unsigned prev_blockers_end, float expand=0.0, bool exp_dim=0) {
 	cube_t query_cube(cube);
 	query_cube.expand_in_dim(exp_dim, expand);
 
@@ -1828,7 +1828,9 @@ void city_obj_placer_t::place_residential_plot_objects(road_plot_t const &plot, 
 		for (unsigned n = 0; n < 20; ++n) { // make some attempts to generate a valid pool location
 			for (unsigned d = 0; d < 2; ++d) {pool_llc[d] = rgen.rand_uniform(pool_area.d[d][0], pool_area.d[d][1]);}
 			cube_t pool(pool_llc, (pool_llc + pool_sz));
-			if (has_bcube_int_xy(pool, blockers, 0.08*dmin)) continue; // intersects some other object
+			cube_t tc(pool);
+			tc.expand_by_xy(0.08*dmin);
+			if (is_placement_blocked(tc, blockers, cube_t(), prev_blockers_end)) continue; // intersects some other object
 			float const grayscale(rgen.rand_uniform(0.7, 1.0));
 			float const water_white_comp(rgen.rand_uniform(0.1, 0.3)), extra_green(rgen.rand_uniform(0.2, 0.5)), lightness(rgen.rand_uniform(0.5, 0.8));
 			colorRGBA const color(above_ground ? pool_side_colors[rgen.rand()%5]: colorRGBA(grayscale, grayscale, grayscale));
@@ -1874,9 +1876,10 @@ void city_obj_placer_t::place_residential_plot_objects(road_plot_t const &plot, 
 			} // for side
 			if (bad_fence_place) continue; // failed to fence off the pool, don't place it here
 			pool_groups.add_obj(swimming_pool_t(pool, color, wcolor, above_ground, dim, dir), pools);
-			cube_t collider(pool);
-			collider.z2() += 0.1*city_params.road_width; // extend upward to make a better collider
-			add_cube_to_colliders_and_blockers(collider, colliders, blockers);
+			unsigned const pre_pool_blockers_end(blockers.size());
+			cube_t pool_collider(pool);
+			pool_collider.z2() += 0.1*city_params.road_width; // extend upward to make a better collider
+			add_cube_to_colliders_and_blockers(pool_collider, colliders, blockers);
 
 			for (unsigned side = 0; side < 2; ++side) {
 				divider_t const &fence(fences[side]);
@@ -1897,7 +1900,13 @@ void city_obj_placer_t::place_residential_plot_objects(road_plot_t const &plot, 
 					deck.d[!d][ dir] = pool .d[!d][!dir];
 					deck.d[!d][!dir] = house.d[!d][ dir];
 					assert(deck.is_strictly_normalized());
-					//if (has_bcube_int_xy(deck, blockers, -0.1*deck_height)) continue; // shink slightly to avoid false collisions with pool; just place the deck under any objects?
+					// check for partial intersections of objects such as trashcans, etc. and skip the deck in that case; allow contained objects to rest on the deck
+					bool valid(1);
+
+					for (auto b = blockers.begin()+prev_blockers_end; b != blockers.begin()+pre_pool_blockers_end; ++b) { // skip pool, pool fence, and house
+						if (*b != house && deck.intersects_xy_no_adj(*b) && !deck.contains_cube_xy(*b)) {valid = 0; break;}
+					}
+					if (!valid) continue;
 					pdeck_groups.add_obj(pool_deck_t(deck, rgen.rand(), d, dir), pdecks);// choose a random material
 					blockers.push_back(deck); // blocker for other objects, but not a collider for people or the player
 				} // for d
