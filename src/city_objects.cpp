@@ -555,8 +555,8 @@ void pool_deck_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_
 
 // newsracks
 
-newsrack_t::newsrack_t(point const &pos_, float height, float width, float depth, bool dim_, bool dir_, colorRGBA const &color_) :
-	oriented_city_obj_t(pos_, 0.5*sqrt(height*height + width*width + depth*depth), dim_, dir_), color(color_)
+newsrack_t::newsrack_t(point const &pos_, float height, float width, float depth, bool dim_, bool dir_, unsigned style_, colorRGBA const &color_) :
+	oriented_city_obj_t(pos_, 0.5*sqrt(height*height + width*width + depth*depth), dim_, dir_), color(color_), style(style_)
 {
 	bcube.set_from_point(pos_);
 	bcube.expand_in_dim( dim, 0.5*depth);
@@ -567,7 +567,7 @@ newsrack_t::newsrack_t(point const &pos_, float height, float width, float depth
 	select_texture(WHITE_TEX); // untextured
 }
 void newsrack_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
-	// TODO: better job
+	// TODO: better job; use style
 	dstate.draw_cube(qbds.qbd, bcube, color, 1); // skip bottom
 }
 
@@ -1609,7 +1609,7 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 	if (!is_residential) {
 		unsigned const NUM_NR_COLORS = 8;
 		colorRGBA const nr_colors[NUM_NR_COLORS] = {WHITE, DK_BLUE, LT_BLUE, ORANGE, RED, DK_GREEN, YELLOW, BLACK};
-		float const dist_from_corner(0.06); // dist from corner relative to plot size
+		float const dist_from_corner(-0.03); // dist from corner relative to plot size; negative is outside the plot in the street area
 		point pos(0, 0, plot.z2());
 
 		for (unsigned dim = 0; dim < 2; ++dim) {
@@ -1622,9 +1622,9 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 					float const nr_height(0.28*car_length*rgen.rand_uniform(0.9, 1.11));
 					float const nr_width(0.44*nr_height*rgen.rand_uniform(0.8, 1.25)), nr_depth(0.44*nr_height*rgen.rand_uniform(0.8, 1.25));
 					pos[!dim] = plot.d[!dim][0] + rgen.rand_uniform(0.1, 0.9)*plot.get_sz_dim(!dim); // random pos along plot
-					newsrack_t const newsrack(pos, nr_height, nr_width, nr_depth, dim, dir, nr_colors[rgen.rand() % NUM_NR_COLORS]);
+					newsrack_t const newsrack(pos, nr_height, nr_width, nr_depth, dim, !dir, rgen.rand(), nr_colors[rgen.rand() % NUM_NR_COLORS]); // random style
 					cube_t test_cube(newsrack.bcube);
-					test_cube.d[dim][dir] += (dir ? 1.0 : -1.0)*nr_depth; // add front clearance
+					test_cube.d[dim][!dir] += (dir ? -1.0 : 1.0)*nr_depth; // add front clearance; faces inward from the plot
 
 					if (!has_bcube_int_xy(test_cube, blockers, 0.1*nr_width)) { // skip if intersects a building or parking lot, with a bit of padding
 						nrack_groups.add_obj(newsrack, newsracks);
