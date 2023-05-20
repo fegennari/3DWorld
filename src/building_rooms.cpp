@@ -3260,6 +3260,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 	if (is_house && has_basement_pipes) {add_house_basement_pipes (rgen);}
 	if (has_attic()) {add_attic_objects(rgen);}
 	maybe_add_fire_escape  (rgen);
+	add_balconies          (rgen);
 	add_exterior_door_items(rgen);
 	add_extra_obj_slots(); // needed to handle balls taken from one building and brought to another
 	add_stairs_and_elevators(rgen); // the room objects - stairs and elevators have already been placed within a room
@@ -3320,6 +3321,11 @@ void building_t::maybe_add_fire_escape(rand_gen_t &rgen) {
 			return; // success/done
 		} // for d
 	} // for p
+}
+
+void building_t::add_balconies(rand_gen_t &rgen) {
+	if (!is_house) return; // houses only for now
+	// TODO: TYPE_BALCONY; iterate over exterior walls or windows on floors > 0 and skip intersections with other parts (including porch, chimney, and fire escape)
 }
 
 void building_t::add_extra_obj_slots() {

@@ -1711,6 +1711,7 @@ private:
 	bool find_mirror_needing_reflection(vector3d const &xlate) const;
 	tquad_with_ix_t const &find_main_roof_tquad(rand_gen_t &rgen, bool skip_if_has_other_obj) const;
 	void maybe_add_fire_escape(rand_gen_t &rgen);
+	void add_balconies(rand_gen_t &rgen);
 	void add_extra_obj_slots();
 	void add_wall_and_door_trim_if_needed();
 	void add_wall_and_door_trim();
