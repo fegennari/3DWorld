@@ -757,7 +757,7 @@ class particle_manager_t {
 
 		particle_t() {}
 		particle_t(point const &p, vector3d const &v, colorRGBA const &c, float r, unsigned e, int pid=-1) :
-			pos(p), vel(v), color(c), radius(r), effect(e), parent_obj_id(pid) {}
+			pos(p), vel(v), color(c), radius(r), parent_obj_id(pid), effect(e) {}
 	};
 	vector<particle_t> particles;
 	quad_batch_draw qbd;
