@@ -565,10 +565,59 @@ newsrack_t::newsrack_t(point const &pos_, float height, float width, float depth
 }
 /*static*/ void newsrack_t::pre_draw(draw_state_t &dstate, bool shadow_only) {
 	select_texture(WHITE_TEX); // untextured
+	// specular?
 }
 void newsrack_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
-	// TODO: better job; use style
-	dstate.draw_cube(qbds.qbd, bcube, color, 1); // skip bottom
+	float const dir_sign(dir ? 1.0 : -1.0);
+	vector3d const sz(bcube.get_size());
+	cube_t body(bcube);
+	bool skip_bottom(1);
+
+	switch (style & 3) {
+	case 0: break; // simple cube
+	case 1: { // cube with coin mechanism on top
+		cube_t cm(bcube);
+		cm.z1() = body.z2() = bcube.z1() + 0.7*sz.z;
+		cm.expand_in_dim(!dim, -0.3*sz[!dim]); // shrink width
+		cm.d[dim][!dir] += dir_sign*0.6*sz[dim]; // shift back inward
+		dstate.draw_cube(qbds.qbd, cm, color, 1); // coin mech; skip bottom
+		cube_t bar(cm);
+		bar.expand_in_dim(!dim, -0.1*sz[!dim] ); // shrink width
+		bar.d[dim][!dir]  = cm.d[dim][dir]; // flush with front of coin mech
+		bar.d[dim][ dir] += dir_sign*0.05*sz[dim]; // extend outward a bit
+		bar.z2() -= 0.50*cm.dz();
+		bar.z1() -= 0.25*cm.dz();
+		dstate.draw_cube(qbds.qbd, bar, color); // bar; skip face dim, !dir, or draw if player is in front?
+		break;
+	}
+	case 2: { // cube with extended front
+		cube_t stand(bcube);
+		stand.z2() = body.z1() = bcube.z1() + 0.35*sz.z;
+		stand.d[dim][dir] -= dir_sign*0.1*sz[dim]; // shift front inward
+		dstate.draw_cube(qbds.qbd, stand, color, 1, 0.0, 4); // stand, skip top and bottom
+		skip_bottom = 0; // front of bottom may be visible
+		break;
+	}
+	case 3: { // cube on narrow stand
+		cube_t stand(bcube), base(bcube);
+		stand.z2() = body .z1() = bcube.z1() + 0.50*sz.z;
+		base .z2() = stand.z1() = bcube.z1() + 0.06*sz.z;
+		stand.expand_by_xy(-0.3*min(sz.x, sz.y)); // shrink in XY
+		dstate.draw_cube(qbds.qbd, stand, color, 1, 0.0, 4); // stand, skip top and bottom
+		dstate.draw_cube(qbds.qbd, base,  color, 1); // base, skip bottom
+		skip_bottom = 0; // edges of bottom may be visible
+		break;
+	}
+	} // end switch
+	dstate.draw_cube(qbds.qbd, body, color, skip_bottom); // main body
+	// draw the door; TODO: only if close to the player? only if viewed from the front?
+	cube_t door(body);
+	door.expand_in_dim( 2,   -0.1*body.dz()); // shrink height
+	door.expand_in_dim(!dim, -0.1*sz[!dim] ); // shrink width
+	max_eq(door.z1(), (door.z2() - 1.33f*door.get_sz_dim(!dim))); // shift up if it's too tall compared to width
+	door.d[dim][!dir]  = body.d[dim][dir]; // flush with front of body
+	door.d[dim][ dir] += dir_sign*0.04*sz[dim]; // extend outward a bit
+	dstate.draw_cube(qbds.qbd, door, WHITE); // TODO: should be textured with newspaper or magazine texture?
 }
 
 // power poles
@@ -1608,7 +1657,7 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 	// place newsracks along non-residential city streets
 	if (!is_residential) {
 		unsigned const NUM_NR_COLORS = 8;
-		colorRGBA const nr_colors[NUM_NR_COLORS] = {WHITE, DK_BLUE, LT_BLUE, ORANGE, RED, DK_GREEN, YELLOW, BLACK};
+		colorRGBA const nr_colors[NUM_NR_COLORS] = {WHITE, DK_BLUE, LT_BLUE, ORANGE, RED, DK_GREEN, YELLOW, GRAY_BLACK};
 		float const dist_from_corner(-0.03); // dist from corner relative to plot size; negative is outside the plot in the street area
 		point pos(0, 0, plot.z2());
 
@@ -1621,7 +1670,9 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 				for (unsigned n = 0; n < num_this_side; ++n) {
 					float const nr_height(0.28*car_length*rgen.rand_uniform(0.9, 1.11));
 					float const nr_width(0.44*nr_height*rgen.rand_uniform(0.8, 1.25)), nr_depth(0.44*nr_height*rgen.rand_uniform(0.8, 1.25));
-					pos[!dim] = plot.d[!dim][0] + rgen.rand_uniform(0.1, 0.9)*plot.get_sz_dim(!dim); // random pos along plot
+					// skip middle to avoid telephone poles; TODO: what about streetlights and fire hydrants? and benches vs. substations?
+					float const road_pos(rgen.rand_bool() ? rgen.rand_uniform(0.1, 0.4) : rgen.rand_uniform(0.5, 0.9));
+					pos[!dim] = plot.d[!dim][0] + road_pos*plot.get_sz_dim(!dim); // random pos along plot
 					newsrack_t const newsrack(pos, nr_height, nr_width, nr_depth, dim, !dir, rgen.rand(), nr_colors[rgen.rand() % NUM_NR_COLORS]); // random style
 					cube_t test_cube(newsrack.bcube);
 					test_cube.d[dim][!dir] += (dir ? -1.0 : 1.0)*nr_depth; // add front clearance; faces inward from the plot
