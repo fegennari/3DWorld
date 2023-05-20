@@ -56,6 +56,23 @@ colorRGBA get_light_color_temp_range(float tmin, float tmax, rand_gen_t &rgen) {
 	return get_light_color_temp(((tmin == tmax) ? tmin : rgen.rand_uniform(tmin, tmax)));
 }
 
+class door_path_checker_t {
+	vector<point> door_centers;
+public:
+	bool check_door_path_blocked(cube_t const &c, cube_t const &room, float zval, building_t const &building) {
+		if (door_centers.empty()) {building.get_all_door_centers_for_room(room, zval, door_centers);}
+		if (door_centers.size() < 2) return 0; // must have at least 2 doors for the path to be blocked
+
+		for (auto p1 = door_centers.begin(); p1 != door_centers.end(); ++p1) {
+			for (auto p2 = p1+1; p2 != door_centers.end(); ++p2) {
+				if (check_line_clip(*p1, *p2, c.d)) return 1;
+			}
+		}
+		return 0;
+	}
+	void clear() {door_centers.clear();} // to allow for reuse across rooms
+};
+
 bool building_t::is_obj_placement_blocked(cube_t const &c, cube_t const &room, bool inc_open_doors, bool check_open_dir) const {
 	if (is_cube_close_to_doorway(c, room, 0.0, inc_open_doors, check_open_dir)) return 1; // too close to a doorway
 	if (interior && interior->is_blocked_by_stairs_or_elevator(c))              return 1; // faster to check only one per stairwell, but then we need to store another vector?
@@ -133,6 +150,7 @@ unsigned building_t::add_table_and_chairs(rand_gen_t rgen, cube_t const &room, v
 	urc.z = table_pos.z + rgen.rand_uniform(0.20, 0.22)*window_vspacing; // top
 	cube_t table(llc, urc);
 	if (!is_valid_placement_for_room(table, room, blockers, 0, room_pad)) return 0; // check proximity to doors and collision with blockers
+	//if (door_path_checker_t().check_door_path_blocked(table, room, table_pos.z, *this)) return 0; // optional, but we may want to allow this for kitchens and dining rooms
 	objs.emplace_back(table, TYPE_TABLE, room_id, 0, 0, (is_house ? RO_FLAG_IS_HOUSE : 0), tot_light_amt, (is_round ? SHAPE_CYLIN : SHAPE_CUBE));
 	set_obj_id(objs);
 	unsigned num_added(1); // start with the table
@@ -185,23 +203,6 @@ void building_t::get_all_door_centers_for_room(cube_t const &room, float zval, v
 		}
 	}
 }
-
-class door_path_checker_t {
-	vector<point> door_centers;
-public:
-	bool check_door_path_blocked(cube_t const &c, room_t const &room, float zval, building_t const &building) {
-		if (door_centers.empty()) {building.get_all_door_centers_for_room(room, zval, door_centers);}
-		if (door_centers.size() < 2) return 0; // must have at least 2 doors for the path to be blocked
-
-		for (auto p1 = door_centers.begin(); p1 != door_centers.end(); ++p1) {
-			for (auto p2 = p1+1; p2 != door_centers.end(); ++p2) {
-				if (check_line_clip(*p1, *p2, c.d)) return 1;
-			}
-		}
-		return 0;
-	}
-	void clear() {door_centers.clear();} // to allow for reuse across rooms
-};
 
 void building_t::add_trashcan_to_room(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, bool check_last_obj) {
 	int const rr(rgen.rand()%3), rar(rgen.rand()%3); // three sizes/ARs
@@ -828,6 +829,7 @@ bool building_t::add_bed_to_room(rand_gen_t &rgen, room_t const &room, vect_cube
 		if (room_len > 4.5*vspace || room_width > 3.5*vspace) return 0; // room is too large to be a bedroom
 	}
 	bool const first_head_dir(rgen.rand_bool()), first_wall_dir(rgen.rand_bool());
+	door_path_checker_t door_path_checker;
 	vect_room_object_t &objs(interior->room_geom->objs);
 	cube_t c;
 	c.z1() = zval;
@@ -856,6 +858,8 @@ bool building_t::add_bed_to_room(rand_gen_t &rgen, room_t const &room, vect_cube
 			c.d[d][1] = c.d[d][0] + bed_sz[d];
 		} // for d
 		if (!is_valid_placement_for_room(c, room, blockers, 1)) continue; // check proximity to doors and collision with blockers
+		// prefer not to block the path between doors in the first half of iterations
+		if (n < 10 && door_path_checker.check_door_path_blocked(c, room, zval, *this)) continue;
 		bool const dir((room_bounds.d[dim][1] - c.d[dim][1]) < (c.d[dim][0] - room_bounds.d[dim][0])); // head of the bed is closer to the wall
 		objs.emplace_back(c, TYPE_BED, room_id, dim, dir, 0, tot_light_amt);
 		room_object_t &bed(objs.back());
@@ -1777,6 +1781,8 @@ bool building_t::add_storage_objs(rand_gen_t rgen, room_t const &room, float zva
 			objs.emplace_back(chair, TYPE_OFF_CHAIR, room_id, rgen.rand_bool(), rgen.rand_bool(), RO_FLAG_RAND_ROT, tot_light_amt, SHAPE_CYLIN, GRAY_BLACK);
 		}
 	}
+	door_path_checker_t door_path_checker;
+
 	for (unsigned n = 0; n < 4*num_crates; ++n) { // make up to 4 attempts for every crate/box
 		vector3d sz; // half size relative to window_vspacing
 		gen_crate_sz(sz, rgen, window_vspacing*(is_house ? (is_basement ? 0.75 : 0.5) : 1.0)); // smaller for houses
@@ -1794,6 +1800,7 @@ bool building_t::add_storage_objs(rand_gen_t rgen, room_t const &room, float zva
 		}
 		if (bad_placement) continue;
 		if (is_obj_placement_blocked(crate, room, 1)) continue;
+		if (door_path_checker.check_door_path_blocked(crate, room, zval, *this)) continue; // don't block the path between doors
 		cube_t c2(crate);
 		c2.expand_by(vector3d(0.5*c2.dx(), 0.5*c2.dy(), 0.0)); // approx extents of flaps if open
 		unsigned flags(0);
