@@ -6,6 +6,27 @@
 
 #include "city.h"
 
+struct textured_mat_t {
+	bool has_alpha_mask=0;
+	int tid=-1, nm_tid=-1;
+	colorRGBA color, map_color;
+	string tex_name, nm_tex_name;
+
+	textured_mat_t(string const &tn, string const &nm_tn, bool ham, colorRGBA const &c, colorRGBA const &mc) :
+		has_alpha_mask(ham), color(c), map_color(mc), tex_name(tn), nm_tex_name(nm_tn) {}
+	colorRGBA get_avg_color() const {return ((tid >= 0) ? texture_color(tid) : map_color).modulate_with(color);} // for overhead map
+	void pre_draw(bool shadow_only);
+	void post_draw(bool shadow_only);
+};
+struct plot_divider_type_t : public textured_mat_t {
+	bool is_occluder;
+	float wscale, hscale, tscale; // width, height, and texture scales
+	plot_divider_type_t(string const &tn, string const &nm_tn, float ws, float hs, float ts, bool ic, bool ham, colorRGBA const &c, colorRGBA const &mc) :
+		textured_mat_t(tn, nm_tn, ham, c, mc), is_occluder(ic), wscale(ws), hscale(hs), tscale(ts) {}
+};
+enum {DIV_WALL=0, DIV_FENCE, DIV_HEDGE, DIV_CHAINLINK, DIV_NUM_TYPES}; // types of plot dividers, with end terminator
+enum {POOL_DECK_WOOD=0, POOL_DECK_CONCRETE, NUM_POOL_DECK_TYPES};
+
 struct city_draw_qbds_t {
 	quad_batch_draw qbd, untex_qbd, untex_spec_qbd, emissive_qbd;
 	bool empty() const {return (qbd.empty() && untex_qbd.empty() && untex_spec_qbd.empty() && emissive_qbd.empty());}
@@ -144,6 +165,12 @@ struct hcap_space_t : public oriented_city_obj_t { // handicap space
 	static void pre_draw(draw_state_t &dstate, bool shadow_only);
 	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const;
 };
+struct hcap_with_dist_t : public hcap_space_t {
+	float dmin_sq;
+
+	hcap_with_dist_t(hcap_space_t const &hs, cube_t const &plot, vect_cube_t &bcubes, unsigned bcubes_end);
+	bool operator<(hcap_with_dist_t const &v) const {return (dmin_sq < v.dmin_sq);}
+};
 
 struct manhole_t : public city_obj_t {
 	manhole_t(point const &pos_, float radius_);
@@ -264,3 +291,7 @@ public:
 	void get_occluders(pos_dir_up const &pdu, vect_cube_t &occluders) const;
 	void move_to_not_intersect_driveway(point &pos, float radius, bool dim) const;
 };
+
+float get_power_pole_offset();
+bool check_city_building_line_coll_bs_any(point const &p1, point const &p2);
+

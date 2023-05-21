@@ -471,6 +471,9 @@
     <ClCompile Include="src\building_animal_draw.cpp">
       <Filter>Source Files\City</Filter>
     </ClCompile>
+    <ClCompile Include="src\city_obj_placer.cpp">
+      <Filter>Source Files\City</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\3DWorld.h">
