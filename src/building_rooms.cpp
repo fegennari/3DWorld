@@ -190,10 +190,12 @@ vect_door_stack_t &building_t::get_doorways_for_room(cube_t const &room, float z
 	return doorways;
 }
 void building_t::get_all_door_centers_for_room(cube_t const &room, float zval, vector<point> &door_centers) const {
+	float const floor_spacing(get_window_vspace());
+	zval += 0.01*floor_spacing; // shift up so that it intersects objects even if they're placed with their z1 exactly at zval
 	vect_door_stack_t const &doorways(get_doorways_for_room(room, zval)); // get interior doors
 	for (door_stack_t const &ds : doorways) {door_centers.emplace_back(ds.xc(), ds.yc(), zval);}
 
-	if (zval < ground_floor_z1 + 0.5*get_window_vspace()) { // get exterior doors if on the ground floor
+	if (zval < (ground_floor_z1 + 0.5*floor_spacing)) { // get exterior doors if on the ground floor
 		cube_t room_exp(room);
 		room_exp.expand_by_xy(get_wall_thickness());
 
