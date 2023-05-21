@@ -84,7 +84,7 @@ void bench_t::calc_bcube() {
 void bench_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
 	if (!dstate.check_cube_visible(bcube, dist_scale)) return;
 
-	cube_t cubes[] = { // Note: taken from mapx/bench.txt
+	cube_t cubes[] = { // Note: taken from mapx/bench.txt; front-back is in X
 		cube_t(-0.4, 0.0,  -5.0,   5.0,   1.6, 5.0), // back (straight)
 		cube_t( 0.0, 4.0,  -5.35,  5.35,  1.6, 2.0), // seat
 		cube_t( 0.3, 1.3,  -5.3,  -4.7,   0.0, 1.6), // legs
@@ -1545,6 +1545,8 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 			bench.calc_bcube();
 			bench_groups.add_obj(bench, benches);
 			colliders.push_back(bench.bcube);
+			blockers.back() = bench.bcube; // update blocker since bench is non-square
+			blockers.back().expand_in_dim(!bench.dim, 0.25*bench.radius); // add extra padding in front (for seat access) and back (which extends outside bcube)
 		} // for n
 	}
 	// place planters; don't add planters in parks or residential areas
@@ -1657,7 +1659,7 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 	// place newsracks along non-residential city streets
 	if (!is_residential) {
 		unsigned const NUM_NR_COLORS = 8;
-		colorRGBA const nr_colors[NUM_NR_COLORS] = {WHITE, DK_BLUE, LT_BLUE, ORANGE, RED, DK_GREEN, YELLOW, GRAY_BLACK};
+		colorRGBA const nr_colors[NUM_NR_COLORS] = {WHITE, DK_BLUE, BLUE, ORANGE, RED, DK_GREEN, YELLOW, GRAY_BLACK};
 		float const dist_from_corner(-0.03); // dist from corner relative to plot size; negative is outside the plot in the street area
 		point pos(0, 0, plot.z2());
 
@@ -1670,8 +1672,14 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 				for (unsigned n = 0; n < num_this_side; ++n) {
 					float const nr_height(0.28*car_length*rgen.rand_uniform(0.9, 1.11));
 					float const nr_width(0.44*nr_height*rgen.rand_uniform(0.8, 1.25)), nr_depth(0.44*nr_height*rgen.rand_uniform(0.8, 1.25));
-					// skip middle to avoid telephone poles; TODO: what about streetlights and fire hydrants? and benches vs. substations?
-					float const road_pos(rgen.rand_bool() ? rgen.rand_uniform(0.1, 0.4) : rgen.rand_uniform(0.5, 0.9));
+					float road_pos(0.0);
+					// streetlights are at 0.25 and 0.75, and telephone poles are at 0.5, so skip those ranges
+					switch (rgen.rand()&3) {
+					case 0: road_pos = rgen.rand_uniform(0.10, 0.20); break;
+					case 1: road_pos = rgen.rand_uniform(0.30, 0.45); break;
+					case 2: road_pos = rgen.rand_uniform(0.55, 0.70); break;
+					case 3: road_pos = rgen.rand_uniform(0.80, 0.90); break;
+					}
 					pos[!dim] = plot.d[!dim][0] + road_pos*plot.get_sz_dim(!dim); // random pos along plot
 					newsrack_t const newsrack(pos, nr_height, nr_width, nr_depth, dim, !dir, rgen.rand(), nr_colors[rgen.rand() % NUM_NR_COLORS]); // random style
 					cube_t test_cube(newsrack.bcube);
