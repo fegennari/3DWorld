@@ -549,8 +549,7 @@ pool_deck_t::pool_deck_t(cube_t const &bcube_, unsigned mat_id_, bool dim_, bool
 }
 void pool_deck_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
 	if (mat_id != dstate.pass_ix) return; // this type not enabled in this pass
-	float const tscale = 2.0; // applied independently in each dim
-	dstate.draw_cube(qbds.qbd, bcube, pool_deck_mats[mat_id].color, 1, 1.0, 0, 0, 0, dim, tscale/bcube.dx(), tscale/bcube.dy(), tscale/bcube.dz()); // skip bottom
+	dstate.draw_cube(qbds.qbd, bcube, pool_deck_mats[mat_id].color, 1, 1.0/bcube.get_sz_dim(!dim), 0, 0, 0, dim); // skip bottom
 }
 
 // newsracks
@@ -1947,9 +1946,14 @@ void city_obj_placer_t::place_residential_plot_objects(road_plot_t const &plot, 
 				add_cube_to_colliders_and_blockers(fence.bcube, colliders, blockers);
 			}
 			if (!above_ground && rgen.rand_float() < 0.8) { // in-ground pool, add pool deck 80% of the time
-				for (unsigned d = 0; d < 2; ++d) { // check for projections in both dims
+				bool had_cand(0);
+
+				for (unsigned d = 0; d < 2 && !had_cand; ++d) { // check for projections in both dims
 					float const deck_height(0.4*pool.dz()), deck_shrink(0.8*deck_height);
-					float const lo(max(pool.d[d][0], house.d[d][0]) + deck_shrink), hi(min(pool.d[d][1], house.d[d][1]) - deck_shrink);
+					float const plo(pool.d[d][0]), phi(pool.d[d][1]), hlo(house.d[d][0]), hhi(house.d[d][1]);
+					if (max(plo, hlo) > min(phi, hhi)) continue; // no shared projection in this dim
+					// randomly choose to extend deck to cover both objects or restrict to the shared length
+					float const lo((rgen.rand_bool() ? min(plo, hlo) : max(plo, hlo)) + deck_shrink), hi((rgen.rand_bool() ? max(phi, hhi) : min(phi, hhi)) - deck_shrink);
 					if (hi - lo < 0.25*pool.get_sz_dim(d)) continue; // not enough shared area
 					bool const dir(house.get_center_dim(!d) < pool.get_center_dim(!d)); // dir from house to pool
 					cube_t deck;
@@ -1959,6 +1963,7 @@ void city_obj_placer_t::place_residential_plot_objects(road_plot_t const &plot, 
 					deck.d[!d][ dir] = pool .d[!d][!dir];
 					deck.d[!d][!dir] = house.d[!d][ dir];
 					assert(deck.is_strictly_normalized());
+					had_cand = 1; // we have a candidate, even if it was blocked, so there are no more cands to check
 					// check for partial intersections of objects such as trashcans, etc. and skip the deck in that case; allow contained objects to rest on the deck
 					bool valid(1);
 
@@ -1970,7 +1975,7 @@ void city_obj_placer_t::place_residential_plot_objects(road_plot_t const &plot, 
 					blockers.push_back(deck); // blocker for other objects, but not a collider for people or the player
 				} // for d
 			}
-			break; // success
+			break; // success - done with pool
 		} // for n
 	} // for i (sub_plots)
 	if (building_obj_model_loader.is_model_valid(OBJ_MODEL_MAILBOX)) {
@@ -2275,7 +2280,7 @@ void city_obj_placer_t::draw_detail_objects(draw_state_t &dstate, bool shadow_on
 	draw_objects(ppoles,    ppole_groups,    dstate, 0.20, shadow_only, 0); // dist_scale=0.20
 	draw_objects(signs,     sign_groups,     dstate, 0.25, shadow_only, 0, 1); // dist_scale=0.25, draw_qbd_as_quads=1
 	draw_objects(flags,     flag_groups,     dstate, 0.18, shadow_only, 0); // dist_scale=0.16
-	draw_objects(newsracks, nrack_groups,    dstate, 0.14, shadow_only, 0); // dist_scale=0.14
+	draw_objects(newsracks, nrack_groups,    dstate, 0.10, shadow_only, 0); // dist_scale=0.14
 	if (!shadow_only) {draw_objects(hcaps,    hcap_groups,    dstate, 0.12, shadow_only, 0);} // dist_scale=0.12, no shadows
 	if (!shadow_only) {draw_objects(manholes, manhole_groups, dstate, 0.07, shadow_only, 1);} // dist_scale=0.07, no shadows, immediate draw
 	dstate.s.add_uniform_float("min_alpha", DEF_CITY_MIN_ALPHA); // reset back to default after drawing fire hydrant and substation models
@@ -2301,7 +2306,7 @@ void city_obj_placer_t::draw_detail_objects(draw_state_t &dstate, bool shadow_on
 	}
 	if (!shadow_only) {
 		for (dstate.pass_ix = 0; dstate.pass_ix < NUM_POOL_DECK_TYPES; ++dstate.pass_ix) { // {wood, concrete}
-			draw_objects(pdecks, pdeck_groups, dstate, 0.3, shadow_only, 0); // dist_scale=0.3
+			draw_objects(pdecks, pdeck_groups, dstate, 0.26, shadow_only, 0); // dist_scale=0.3
 		}
 	}
 	dstate.pass_ix = 0; // reset back to 0
@@ -2434,7 +2439,7 @@ bool city_obj_placer_t::get_color_at_xy(point const &pos, colorRGBA &color, bool
 		color = pool_deck_mats[pdecks[obj_ix].mat_id].get_avg_color();
 		return 1;
 	}
-	if (check_city_obj_bcube_pt_xy_contain(nrack_groups, newsracks, pos, obj_ix)) {
+	if (!skip_in_road && check_city_obj_bcube_pt_xy_contain(nrack_groups, newsracks, pos, obj_ix)) { // now placed in roads
 		assert(obj_ix < newsracks.size());
 		color = newsracks[obj_ix].color;
 		return 1;

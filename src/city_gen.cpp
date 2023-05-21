@@ -194,11 +194,12 @@ void draw_state_t::draw_cube(quad_batch_draw &qbd, cube_t const &c, color_wrappe
 	tex_range_t tr_top, tr_front, tr_right;
 	if (swap_tc_xy) {tr_top.swap_xy = tr_front.swap_xy = tr_right.swap_xy = 1;}
 
-	if (tscale > 0.0) { // compute texture s/t parameters from cube side lengths to get a 1:1 AR
+	if (tscale != 0.0) { // tscale: compute texture s/t parameters from cube side lengths to get a 1:1 AR
 		float const ts01(tscale*tscale_y*c.dy()), ts12(tscale*tscale_x*c.dx()), ts15(tscale*tscale_z*c.dz());
 		tr_top  .x2 = ts01; tr_top  .y2 = ts12;
 		tr_front.x2 = ts01; tr_front.y2 = ts15;
 		tr_right.x2 = ts12; tr_right.y2 = ts15;
+		if (swap_tc_xy) {swap(tr_top.x2, tr_top.y2); swap(tr_front.x2, tr_front.y2); swap(tr_right.x2, tr_right.y2);}
 	}
 	if (!(skip_dims & 4)) { // Z
 		if (mirror_x) {tr_top.mirror_x();}
