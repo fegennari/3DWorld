@@ -563,11 +563,20 @@ newsrack_t::newsrack_t(point const &pos_, float height, float width, float depth
 	bcube.z2() += height;
 }
 /*static*/ void newsrack_t::pre_draw(draw_state_t &dstate, bool shadow_only) {
-	select_texture(WHITE_TEX); // untextured
-	// specular?
+	if (!shadow_only) {select_texture(get_texture_by_name("roads/fake_news.jpg"));}
+	if (!shadow_only) {dstate.s.set_specular(0.33, 40.0);} // low specular
+}
+/*static*/ void newsrack_t::post_draw(draw_state_t &dstate, bool shadow_only) {
+	if (!shadow_only) {dstate.s.clear_specular();}
 }
 void newsrack_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
-	float const dir_sign(dir ? 1.0 : -1.0);
+	if (!bcube.closest_dist_less_than(dstate.camera_bs, 0.45*dist_scale*dstate.draw_tile_dist)) { // far away, draw low detail single cube
+		dstate.draw_cube(qbds.qbd, bcube, color, 1); // skip_bottom=1
+		return;
+	}
+	// use a tiny texture scale so that we can use the newspaper texture for drawing the sides with the white texel in the LLC
+	float const dir_sign(dir ? 1.0 : -1.0), llc_tscale(0.0001);
+	bool const front_facing((dstate.camera_bs[dim] < bcube.get_center_dim(dim)) ^ dir);
 	vector3d const sz(bcube.get_size());
 	cube_t body(bcube);
 	bool skip_bottom(1);
@@ -579,21 +588,24 @@ void newsrack_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_s
 		cm.z1() = body.z2() = bcube.z1() + 0.7*sz.z;
 		cm.expand_in_dim(!dim, -0.3*sz[!dim]); // shrink width
 		cm.d[dim][!dir] += dir_sign*0.6*sz[dim]; // shift back inward
-		dstate.draw_cube(qbds.qbd, cm, color, 1); // coin mech; skip bottom
-		cube_t bar(cm);
-		bar.expand_in_dim(!dim, -0.1*sz[!dim] ); // shrink width
-		bar.d[dim][!dir]  = cm.d[dim][dir]; // flush with front of coin mech
-		bar.d[dim][ dir] += dir_sign*0.05*sz[dim]; // extend outward a bit
-		bar.z2() -= 0.50*cm.dz();
-		bar.z1() -= 0.25*cm.dz();
-		dstate.draw_cube(qbds.qbd, bar, color); // bar; skip face dim, !dir, or draw if player is in front?
+		dstate.draw_cube(qbds.qbd, cm, color, 1, llc_tscale); // coin mech; skip bottom
+
+		if (front_facing) { // draw the lock bar
+			cube_t bar(cm);
+			bar.expand_in_dim(!dim, -0.1*sz[!dim] ); // shrink width
+			bar.d[dim][!dir]  = cm.d[dim][dir]; // flush with front of coin mech
+			bar.d[dim][ dir] += dir_sign*0.05*sz[dim]; // extend outward a bit
+			bar.z2() -= 0.5*cm.dz();
+			bar.z1() -= 0.3*cm.dz();
+			dstate.draw_cube(qbds.qbd, bar, color, 0, llc_tscale); // skip face dim, !dir, or draw if player is in front?
+		}
 		break;
 	}
 	case 2: { // cube with extended front
 		cube_t stand(bcube);
 		stand.z2() = body.z1() = bcube.z1() + 0.35*sz.z;
 		stand.d[dim][dir] -= dir_sign*0.1*sz[dim]; // shift front inward
-		dstate.draw_cube(qbds.qbd, stand, color, 1, 0.0, 4); // stand, skip top and bottom
+		dstate.draw_cube(qbds.qbd, stand, color, 1, llc_tscale, 4); // stand, skip top and bottom
 		skip_bottom = 0; // front of bottom may be visible
 		break;
 	}
@@ -602,21 +614,23 @@ void newsrack_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_s
 		stand.z2() = body .z1() = bcube.z1() + 0.50*sz.z;
 		base .z2() = stand.z1() = bcube.z1() + 0.06*sz.z;
 		stand.expand_by_xy(-0.3*min(sz.x, sz.y)); // shrink in XY
-		dstate.draw_cube(qbds.qbd, stand, color, 1, 0.0, 4); // stand, skip top and bottom
-		dstate.draw_cube(qbds.qbd, base,  color, 1); // base, skip bottom
+		dstate.draw_cube(qbds.qbd, stand, color, 1, llc_tscale, 4); // stand, skip top and bottom
+		dstate.draw_cube(qbds.qbd, base,  color, 1, llc_tscale); // base, skip bottom
 		skip_bottom = 0; // edges of bottom may be visible
 		break;
 	}
 	} // end switch
-	dstate.draw_cube(qbds.qbd, body, color, skip_bottom); // main body
-	// draw the door; TODO: only if close to the player? only if viewed from the front?
-	cube_t door(body);
-	door.expand_in_dim( 2,   -0.1*body.dz()); // shrink height
-	door.expand_in_dim(!dim, -0.1*sz[!dim] ); // shrink width
-	max_eq(door.z1(), (door.z2() - 1.33f*door.get_sz_dim(!dim))); // shift up if it's too tall compared to width
-	door.d[dim][!dir]  = body.d[dim][dir]; // flush with front of body
-	door.d[dim][ dir] += dir_sign*0.04*sz[dim]; // extend outward a bit
-	dstate.draw_cube(qbds.qbd, door, WHITE); // TODO: should be textured with newspaper or magazine texture?
+	dstate.draw_cube(qbds.qbd, body, color, skip_bottom, llc_tscale); // main body
+	
+	if (front_facing) { // draw the door
+		cube_t door(body);
+		door.expand_in_dim( 2,   -0.1*body.dz()); // shrink height
+		door.expand_in_dim(!dim, -0.1*sz[!dim] ); // shrink width
+		max_eq(door.z1(), (door.z2() - 1.1f*door.get_sz_dim(!dim))); // shift up if it's too tall compared to width
+		door.d[dim][!dir]  = body.d[dim][dir]; // flush with front of body
+		door.d[dim][ dir] += dir_sign*0.02*sz[dim]; // extend outward a bit
+		dstate.draw_cube(qbds.qbd, door, WHITE); // TODO: should be textured with newspaper or magazine texture?
+	}
 }
 
 // power poles
@@ -1664,8 +1678,8 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 
 		for (unsigned dim = 0; dim < 2; ++dim) {
 			for (unsigned dir = 0; dir < 2; ++dir) {
-				unsigned const num_this_side(rgen.rand() % 5); // 0-4
-				if (num_this_side == 0) continue;
+				if (rgen.rand_float() < 0.65) continue; // add to about a third of edges
+				unsigned const num_this_side(1 + (rgen.rand() % 5)); // 1-5
 				pos[dim] = (1.0 - dist_from_corner)*plot.d[dim][dir] + dist_from_corner*plot.get_center_dim(dim); // set distance from the plot edge
 
 				for (unsigned n = 0; n < num_this_side; ++n) {

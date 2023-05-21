@@ -190,7 +190,8 @@ struct newsrack_t : public oriented_city_obj_t {
 	unsigned style=0;
 
 	newsrack_t(point const &pos_, float height, float width, float depth, bool dim_, bool dir_, unsigned style_, colorRGBA const &color_);
-	static void pre_draw(draw_state_t &dstate, bool shadow_only);
+	static void pre_draw (draw_state_t &dstate, bool shadow_only);
+	static void post_draw(draw_state_t &dstate, bool shadow_only);
 	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const;
 };
 
