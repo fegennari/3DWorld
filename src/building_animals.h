@@ -94,8 +94,10 @@ enum {INSECT_TYPE_FLY=0, INSECT_TYPE_ROACH, NUM_INSECT_TYPES};
 struct insect_t : public building_animal_t {
 	vector3d delta_dir;
 	unsigned char type;
-	float accel=0.0;
-	bool has_target=0, target_player=0;
+	float accel=0.0; // for flies
+	float dist_to_sleep=0.0; // for roaches
+	bool has_target=0, target_player=0; // for flies
+	bool is_scared=0; // for roaches
 
 	insect_t(point const &pos_, float radius_, vector3d const &dir_, unsigned id_, unsigned char type_=INSECT_TYPE_FLY) :
 		building_animal_t(pos_, radius_, dir_, id_), type(type_) {}

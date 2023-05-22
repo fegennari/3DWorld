@@ -17,7 +17,7 @@ float const SPIDER_VIEW_FLOORS = 4.0; // view distance in floors
 extern bool player_attracts_flies;
 extern int animate2, camera_surf_collide, frame_counter, display_mode;
 extern float fticks, NEAR_CLIP;
-extern double tfticks;
+extern double tfticks, camera_zh;
 extern building_dest_t cur_player_building_loc;
 extern building_params_t global_building_params;
 extern object_model_loader_t building_obj_model_loader;
@@ -1453,28 +1453,81 @@ void building_t::update_fly(insect_t &fly, point const &camera_bs, float timeste
 void building_t::update_roach(insect_t &roach, point const &camera_bs, float timestep, rand_gen_t &rgen) const {
 	float const radius(roach.radius), hheight(0.5*roach.get_height());
 	point &pos(roach.pos);
-	bool spawn_new_pos(0);
-	if (!is_pos_inside_building(pos, radius, hheight, 0)) {spawn_new_pos = 1;} // outside building, respawn, inc_attic=0
 
-	if (!spawn_new_pos) {
-		// return value: 0=no coll, 1=dim0 wall, 2=dim1 wall, 3=closed door dim0, 4=closed door dim1, 5=open door, 6=stairs, 7=elevator, 8=exterior wall, 9=room object, 10=closet
-		int const coll_ret(check_line_coll_expand(roach.last_pos, roach.pos, roach.radius, hheight, 0)); // for_spider=0
+	if (!roach.is_sleeping()) { // check for collisions
+		bool spawn_new_pos(0);
+		if (!is_pos_inside_building(pos, radius, hheight, 0)) {spawn_new_pos = 1;} // outside building, respawn, inc_attic=0
 
-		if (coll_ret == 9) { // room object (except closet); open door collisions are ignored (can go under doors)
-			if (roach.pos == roach.last_pos) {spawn_new_pos = 1;} // stuck?
-			else {
-				vector3d const new_dir(rgen.signed_rand_vector_spherical_xy_norm());
-				roach.dir = (dot_product(roach.dir, new_dir) < 0.0) ? new_dir : -new_dir; // make sure it's at least 180 degrees different
-				if (roach.last_pos != all_zeros) {roach.pos = roach.last_pos;} // reset pos to prev frame
+		if (!spawn_new_pos) {
+			// return value: 0=no coll, 1=dim0 wall, 2=dim1 wall, 3=closed door dim0, 4=closed door dim1, 5=open door, 6=stairs, 7=elevator, 8=exterior wall, 9=room object, 10=closet
+			int const coll_ret(check_line_coll_expand(roach.last_pos, pos, roach.radius, hheight, 0)); // for_spider=0
+
+			if (coll_ret == 9) { // room object (except closet); open door collisions are ignored (can go under doors)
+				if (pos == roach.last_pos) {spawn_new_pos = 1;} // stuck?
+				else {
+					vector3d const new_dir(rgen.signed_rand_vector_spherical_xy_norm());
+					roach.dir = (dot_product(roach.dir, new_dir) < 0.0) ? new_dir : -new_dir; // make sure it's at least 180 degrees different
+					if (roach.last_pos != all_zeros) {pos = roach.last_pos;} // reset pos to prev frame
+					roach.is_scared = 0; // distracted, no longer scared, but may be scared again
+				}
 			}
+			else if (coll_ret > 0 && coll_ret != 5) {spawn_new_pos = 1;} // wall, closed door, stairs, elevator, or closet: disappear under it and respawn
 		}
-		else if (coll_ret > 0 && coll_ret != 5) {spawn_new_pos = 1;} // wall, closed door, stairs, elevator, or closet: disappear under it and respawn
+		if (spawn_new_pos) {
+			pos = gen_animal_floor_pos(radius, 0, 1, 1, rgen); // place_in_attic=0, not_player_visible=1, pref_dark_room=1
+			roach.is_scared = 0; // no longer scared
+			return;
+		}
 	}
-	if (spawn_new_pos) {
-		pos = gen_animal_floor_pos(radius, 0, 1, 1, rgen); // place_in_attic=0, not_player_visible=1, pref_dark_room=1
-		return;
+	// Note: no need to check for dynamic object collisions since we can likely just go under them
+	int room_id(-1);
+	float const floor_spacing(get_window_vspace()), scare_dist(0.5*floor_spacing);
+	point const camera_bot(camera_bs.x, camera_bs.y, camera_bs.z-CAMERA_RADIUS-camera_zh);
+	point run_from;
+	
+	// similar to building_t::scare_rat()
+	if (camera_surf_collide && dist_less_than(pos, camera_bot, scare_dist)) {
+		run_from = camera_bot;
+		roach.is_scared = 1;
 	}
-	// no need to check for dynamic object collisions since we can likely just go under them
+	else {
+		for (person_t const &p : interior->people) { // other people in the building scare the rats
+			if (p.is_waiting_or_stopped()) continue; // only scare if moving
+			point const ppos(p.pos.x, p.pos.y, p.get_z1());
+			if (dist_less_than(pos, ppos, scare_dist)) {run_from = ppos; roach.is_scared = 1; break;}
+		}
+		sphere_t const cur_sound(get_cur_frame_loudest_sound());
+		if (cur_sound.radius > 0.0 && dist_less_than(pos, cur_sound.pos, 4.0*cur_sound.radius)) {run_from = cur_sound.pos; roach.is_scared = 1;}
+		else if (!roach.is_scared) {
+			room_id = get_room_containing_pt(pos);
+			roach.is_scared |= is_room_lit(room_id, roach.get_z2()); // run from the light
+		}
+	}
+	float const nom_speed((roach.is_scared ? 1.0 : 0.25)*global_building_params.insect_speed), max_speed(2.0*nom_speed);
+	roach.speed += 0.01*max_speed*fticks*rgen.signed_rand_float(); // add a bit of random variation over time
+	max_eq(roach.speed, nom_speed);
+	min_eq(roach.speed, max_speed);
+
+	if (roach.is_scared) {
+		roach.wake_time = 0.0; // wake up
+		if (run_from != all_zeros) {roach.dir = (pos - point(run_from.x, run_from.y, pos.z)).get_norm();} // run away
+		else if (room_id >= 0) { // in a room, run toward the nearest wall
+			cube_t const &room(get_room(room_id));
+			roach.dir = room.closest_side_dir(pos, 4); // skip_dims=4 (z)
+		}
+		// else run quickly in the current direction
+	}
+	else { // slow random walk and stop
+		if (!roach.is_sleeping() && roach.dist_since_sleep > roach.dist_to_sleep) { // sleep
+			roach.sleep_for(0.0, 4.0); // 0-4s
+			roach.speed     = 0.0;
+			roach.delta_dir = rgen.signed_rand_vector_spherical_xy_norm(); // choose a new random dir after sleep is over
+			roach.dist_to_sleep = floor_spacing*rgen.rand_uniform(0.2, 1.0); // walk for a while before sleeping again
+		}
+		else if (roach.dir != roach.delta_dir) { // slowly turn
+			update_dir_incremental(roach.dir, roach.delta_dir, 0.25, timestep, rgen);
+		}
+	}
 }
 
 void register_fly_attract(bool no_msg) {
