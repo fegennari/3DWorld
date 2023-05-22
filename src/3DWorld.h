@@ -612,7 +612,7 @@ struct cube_t { // size = 24
 	unsigned get_split_dim(float &max_sz, float &sval, unsigned skip_dims) const;
 	bool cube_intersection(const cube_t &cube, cube_t &res) const;
 	float get_overlap_volume(const cube_t &cube) const;
-	vector3d closest_side_dir(point const &pos) const;
+	vector3d closest_side_dir(point const &pos, unsigned skip_dims=0) const;
 	bool closest_dist_less_than(point const &pos, float dist) const;
 	bool closest_dist_xy_less_than(point const &pos, float dist) const;
 	

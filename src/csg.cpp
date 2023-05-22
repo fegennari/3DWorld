@@ -223,13 +223,15 @@ float cube_t::get_overlap_volume(const cube_t &cube) const {
 }
 
 
-vector3d cube_t::closest_side_dir(point const &pos) const { // for fragment velocity
+vector3d cube_t::closest_side_dir(point const &pos, unsigned skip_dims) const {
 
 	int dir(-1);
 	float mdist(0.0);
 	vector3d dv(zero_vector);
 
 	for (unsigned i = 0; i < 3; ++i) {
+		if (skip_dims & (1<<i)) continue;
+
 		for (unsigned j = 0; j < 2; ++j) {
 			float const dist(fabs(d[i][j] - pos[i]));
 
