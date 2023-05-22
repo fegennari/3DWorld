@@ -149,7 +149,7 @@ void update_dir_incremental_no_zero_check(vector3d &dir, vector3d const &new_dir
 }
 void update_dir_incremental(vector3d &dir, vector3d const &new_dir, float turn_rate, float timestep, rand_gen_t &rgen) {
 	if (new_dir != zero_vector) {update_dir_incremental_no_zero_check(dir, new_dir, turn_rate, timestep);} // update dir if new_dir is valid
-	if (dir == zero_vector) {dir = rgen.signed_rand_vector_xy().get_norm();} // dir must always be valid
+	if (dir == zero_vector) {dir = rgen.signed_rand_vector_spherical_xy_norm();} // dir must always be valid
 }
 void try_resolve_coll(vector3d const &dir, vector3d const &upv, vector3d const &coll_dir, vector3d &new_dir, bool try_tangent) {
 	if (dot_product(coll_dir, new_dir) > 0.0) { // must move away from the collision direction
@@ -669,7 +669,7 @@ vector3d spider_t::get_size() const {
 }
 void spider_t::choose_new_dir(rand_gen_t &rgen) {
 	if (upv == zero_vector) {upv = plus_z;} // can this ever happen?
-	dir = cross_product(rgen.signed_rand_vector(), upv).get_norm(); // must be orthogonal to upv
+	dir = cross_product(rgen.signed_rand_vector_spherical(), upv).get_norm(); // must be orthogonal to upv
 }
 void spider_t::jump(float vel) {
 	assert(vel > 0.0);
@@ -1201,7 +1201,7 @@ void building_t::update_snake(snake_t &snake, point const &camera_bs, float time
 		float const min_allowed_dp(0.9 - 0.014*n); // 0.9 => -0.5; prefer a slight turn
 
 		for (unsigned m = 0; m < 100; ++m) { // 100 attempts to chose a valid dir; should amost always be successful
-			dir = rgen.signed_rand_vector_xy().get_norm();
+			dir = rgen.signed_rand_vector_spherical_xy_norm();
 			// if dir is too close to the X or Y axis, choose a new dir; this prevents head-on collisions with common axis aligned cubes such as walls;
 			// maybe initial dir should follow this logic as well?
 			if (max(fabs(dir.x), fabs(dir.y)) > 0.95) continue;

@@ -446,6 +446,8 @@ template<typename base> vector3d rand_gen_template_t<base>::signed_rand_vector_s
 	return scale*vector3d(xy_term*cos(theta), xy_term*sin(theta), u);
 }
 
+template<typename base> vector3d rand_gen_template_t<base>::signed_rand_vector_spherical_xy_norm() {return signed_rand_vector_spherical_xy().get_norm();}
+
 template<typename base> point rand_gen_template_t<base>::gen_rand_cube_point(cube_t const &c) {
 	point pt;
 	UNROLL_3X(pt[i_] = rand_uniform(c.d[i_][0], c.d[i_][1]););

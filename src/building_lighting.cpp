@@ -530,7 +530,7 @@ class building_indir_light_mgr_t {
 			if (kill_thread) continue;
 			rand_gen_t rgen;
 			rgen.set_state(n+1, cur_light); // should be deterministic, though add_path_to_lmcs() is not (due to thread races)
-			vector3d pri_dir(rgen.signed_rand_vector_spherical(1.0).get_norm()); // should this be cosine weighted for windows?
+			vector3d pri_dir(rgen.signed_rand_vector_spherical().get_norm()); // should this be cosine weighted for windows?
 			if (pri_dir_blend > 0.0) {pri_dir = ((1.0 - pri_dir_blend)*pri_dir + pri_dir_blend*light_dir).get_norm();} // if light is directional (skylight), prefer light_dir
 			if (is_window && ((pri_dir[dim] > 0.0) ^ dir)) {pri_dir[dim] *= -1.0;} // reflect light if needed about window plane to ensure it enters the room
 			point origin, init_cpos, cpos;
