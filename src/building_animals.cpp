@@ -79,20 +79,20 @@ template<typename T> void building_t::add_animals_on_floor(T &animals, unsigned 
 	for (unsigned n = 0; n < num; ++n) {
 		// there's no error check for min_sz <= max_sz, so just use min_sz in that case
 		float const sz_scale((sz_min >= sz_max) ? sz_min : rgen.rand_uniform(sz_min, sz_max)), radius(0.5f*floor_spacing*sz_scale);
-		point const pos(gen_animal_floor_pos(radius, T::value_type::allow_in_attic(), 0, rgen)); // not_player_visible=0
+		point const pos(gen_animal_floor_pos(radius, T::value_type::allow_in_attic(), 0, 0, rgen)); // not_player_visible=0, pref_dark_room=0
 		if (pos == all_zeros) continue; // bad pos? skip this animal
-		animals.add(typename T::value_type(pos, radius, rgen.signed_rand_vector_xy().get_norm(), n));
+		animals.add(typename T::value_type(pos, radius, rgen.signed_rand_vector_spherical_xy_norm(), n));
 	}
 }
 
-point building_t::gen_animal_floor_pos(float radius, bool place_in_attic, bool not_player_visible, rand_gen_t &rgen) const {
+point building_t::gen_animal_floor_pos(float radius, bool place_in_attic, bool not_player_visible, bool pref_dark_room, rand_gen_t &rgen) const {
 	vector3d const xlate(get_tiled_terrain_model_xlate()); // too difficult to pass this in through the call stack, so just recalculate
 	point const camera_bs(camera_pdu.pos - xlate);
 
 	for (unsigned n = 0; n < 100; ++n) { // make up to 100 tries
 		cube_t place_area;
 
-		if (place_in_attic && has_attic() && (rgen.rand()%10) == 0) { // 10% of the time in the attic
+		if (place_in_attic && has_attic() && (rgen.rand()%10) == 0) { // 10% of the time in the attic; counts as a dark room even if the light is on
 			place_area = get_attic_part();
 			place_area.z1() = place_area.z2();
 		}
@@ -100,6 +100,7 @@ point building_t::gen_animal_floor_pos(float radius, bool place_in_attic, bool n
 			unsigned const room_ix(rgen.rand() % interior->rooms.size());
 			room_t const &room(interior->rooms[room_ix]);
 			if (room.z1() > ground_floor_z1) continue; // not on the ground floor or basement
+			if (pref_dark_room && n < 50 && is_room_lit(room_ix, (room.z1() + radius))) continue; // check for dark room in first 50 iterations
 			place_area = room; // will represent the usable floor area
 			place_area.z1() += get_fc_thickness(); // on top of the floor
 		}
@@ -970,7 +971,7 @@ void building_t::update_spider(spider_t &spider, point const &camera_bs, float t
 
 		if (!is_pos_inside_building(spider.pos, radius, radius)) { // still not valid
 			if (spider.last_valid_pos == all_zeros) { // bad spawn pos - retry
-				spider.pos = gen_animal_floor_pos(radius, spider_t::allow_in_attic(), 1, rgen); // not_player_visible=1
+				spider.pos = gen_animal_floor_pos(radius, spider_t::allow_in_attic(), 1, 0, rgen); // not_player_visible=1, pref_dark_room=0
 				return;
 			}
 			spider.pos = spider.last_valid_pos; // restore to prev frame pos
@@ -1329,9 +1330,11 @@ void building_t::update_insects(point const &camera_bs, unsigned building_ix) {
 	rand_gen_t rgen;
 	rgen.set_state(building_ix+1, frame_counter+1); // unique per building and per frame
 
-	if (!was_placed) { // newply placed (on the floor); shift by radius in Z
+	if (!was_placed) { // newly placed (on the floor); shift by radius in Z
 		for (insect_t &insect : insects) {
-			if (rgen.rand_bool()) {insect.type = INSECT_TYPE_FLY;} // make it a fly (which it already should be)
+			// add flies to lit rooms and cockroaches to dark rooms
+			int const room_id(get_room_containing_pt(insect.pos));
+			if (is_room_lit(room_id, insect.get_z2())) {insect.type = INSECT_TYPE_FLY;} // make it a fly (which it already should be)
 			else { // make it a cockroach
 				insect.type    = INSECT_TYPE_ROACH;
 				insect.radius *= 4.0; // larger than a fly
@@ -1369,7 +1372,7 @@ void building_t::update_fly(insect_t &fly, point const &camera_bs, float timeste
 		pos = fly.last_pos; // restore previous pos before collision
 
 		if (!is_pos_inside_building(pos, radius, hheight)) { // still not valid, respawn; error?
-			pos = gen_animal_floor_pos(radius, insect_t::allow_in_attic(), 1, rgen); // not_player_visible=1
+			pos = gen_animal_floor_pos(radius, insect_t::allow_in_attic(), 1, 0, rgen); // not_player_visible=1, pref_dark_room=0
 			return;
 		}
 		fly.dir *= -1.0; // reverse direction; maybe should use direction to closest building wall?

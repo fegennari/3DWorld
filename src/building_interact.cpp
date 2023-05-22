@@ -1524,6 +1524,18 @@ bool building_t::is_sphere_lit(point const &center, float radius) const {
 	for (unsigned n = 0; n < 7; ++n) {if (is_pt_lit(pts[n])) return 1;}
 	return 0;
 }
+bool building_t::is_room_lit(int room_id, float zval) const {
+	if (room_id < 0) return 0; // outside building?
+	room_t const &room(get_room(room_id));
+	auto objs_end(interior->room_geom->get_placed_objs_end()); // skip buttons/stairs/elevators
+
+	for (auto i = interior->room_geom->objs.begin(); i != objs_end; ++i) {
+		if (!i->is_light_type() || !i->is_light_on() || i->in_closet()) continue; // not a light, or light not on; skip closet lights
+		if ((int)i->room_id != room_id) continue; // different room
+		if (room.is_sec_bldg || get_floor_for_zval(zval) == get_floor_for_zval(i->z1())) return 1; // same floor - lit
+	}
+	return 0;
+}
 
 // room objects
 

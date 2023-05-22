@@ -1497,7 +1497,7 @@ public:
 	void get_objs_at_or_below_ground_floor(vect_room_object_t &ret, bool for_spider) const;
 private:
 	// animals
-	point gen_animal_floor_pos(float radius, bool place_in_attic, bool not_player_visible, rand_gen_t &rgen) const;
+	point gen_animal_floor_pos(float radius, bool place_in_attic, bool not_player_visible, bool pref_dark_room, rand_gen_t &rgen) const;
 	bool add_rat(point const &pos, float hlength, vector3d const &dir, point const &placed_from, bool &dead);
 	void update_rat(rat_t &rat, point const &camera_bs, float timestep, float &max_xmove, bool can_attack_player, rand_gen_t &rgen) const;
 	void scare_rat(rat_t &rat, point const &camera_bs) const;
@@ -1761,6 +1761,7 @@ private:
 	void play_tape_sound(point const &sound_pos, float sound_gain, bool tape_break) const;
 	bool is_obj_above_ramp(cube_t const &c) const;
 	bool is_room_above_ramp(cube_t const &room, float zval) const;
+	bool is_room_lit(int room_id, float zval) const;
 	void get_rooms_for_door(unsigned door_ix, int room_ix[2]) const;
 	void get_lights_for_room_and_floor(unsigned room_ix, unsigned floor_ix, vector<unsigned> &light_ids) const;
 	void get_lights_near_door(unsigned door_ix, vector<unsigned> &light_ids) const;
