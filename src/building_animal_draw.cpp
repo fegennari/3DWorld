@@ -234,7 +234,7 @@ class insect_draw_t {
 		colorRGBA const color(0.2, 0.1, 0.05, 1.0); // darker brown
 		cube_t body; // centered on (0,0,0)
 		body.expand_by(vector3d(1.2, 0.5, 0.2));
-		roach_mat.add_sphere_to_verts(body, color, low_detail);
+		roach_mat.add_sphere_to_verts(body, color, low_detail, -plus_z); // skip bottom
 		// cockroaches are fast and run when disturbed, and their legs are under them, so they don't really need to be drawn/animated
 		roach_mat.create_vbo_inner();
 		roach_mat.clear_vectors(1); // free_memory=1: vector data no longer needed
