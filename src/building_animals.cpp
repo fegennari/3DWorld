@@ -1453,12 +1453,28 @@ void building_t::update_fly(insect_t &fly, point const &camera_bs, float timeste
 void building_t::update_roach(insect_t &roach, point const &camera_bs, float timestep, rand_gen_t &rgen) const {
 	float const radius(roach.radius), hheight(0.5*roach.get_height());
 	point &pos(roach.pos);
+	bool spawn_new_pos(0);
+	if (!is_pos_inside_building(pos, radius, hheight, 0)) {spawn_new_pos = 1;} // outside building, respawn, inc_attic=0
 
-	if (!is_pos_inside_building(pos, radius, hheight)) { // outside building, respawn
-		pos = gen_animal_floor_pos(radius, insect_t::allow_in_attic(), 1, rgen); // not_player_visible=1
+	if (!spawn_new_pos) {
+		// return value: 0=no coll, 1=dim0 wall, 2=dim1 wall, 3=closed door dim0, 4=closed door dim1, 5=open door, 6=stairs, 7=elevator, 8=exterior wall, 9=room object, 10=closet
+		int const coll_ret(check_line_coll_expand(roach.last_pos, roach.pos, roach.radius, hheight, 0)); // for_spider=0
+
+		if (coll_ret == 9) { // room object (except closet); open door collisions are ignored (can go under doors)
+			if (roach.pos == roach.last_pos) {spawn_new_pos = 1;} // stuck?
+			else {
+				vector3d const new_dir(rgen.signed_rand_vector_spherical_xy_norm());
+				roach.dir = (dot_product(roach.dir, new_dir) < 0.0) ? new_dir : -new_dir; // make sure it's at least 180 degrees different
+				if (roach.last_pos != all_zeros) {roach.pos = roach.last_pos;} // reset pos to prev frame
+			}
+		}
+		else if (coll_ret > 0 && coll_ret != 5) {spawn_new_pos = 1;} // wall, closed door, stairs, elevator, or closet: disappear under it and respawn
+	}
+	if (spawn_new_pos) {
+		pos = gen_animal_floor_pos(radius, 0, 1, 1, rgen); // place_in_attic=0, not_player_visible=1, pref_dark_room=1
 		return;
 	}
-	// TODO
+	// no need to check for dynamic object collisions since we can likely just go under them
 }
 
 void register_fly_attract(bool no_msg) {
