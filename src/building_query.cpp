@@ -1526,13 +1526,12 @@ void building_t::get_room_obj_cubes(room_object_t const &c, point const &pos, ve
 
 // collision query used for rats, snakes, and insects: p1 and p2 are line end points; radius applies in X and Y, hheight is half height and applies in +/- z
 // note that for_spider is used with insects, not spiders, but it's named this way because it's passed into nested calls that use this variable name
-// return value: 0=no coll, 1=dim0 wall, 2=dim1 wall, 3=closed door dim0, 4=closed door dim1, 5=open door, 6=stairs, 7=elevator, 8=exterior wall, 9=room object
+// return value: 0=no coll, 1=dim0 wall, 2=dim1 wall, 3=closed door dim0, 4=closed door dim1, 5=open door, 6=stairs, 7=elevator, 8=exterior wall, 9=room object, 10=closet
 int building_t::check_line_coll_expand(point const &p1, point const &p2, float radius, float hheight, bool for_spider) const {
 	assert(interior != nullptr);
 	float const trim_thickness(get_trim_thickness()), zmin(min(p1.z, p2.z));
 	float const obj_z1(min(p1.z, p2.z) - hheight), obj_z2(max(p1.z, p2.z) + hheight);
-	vector3d const expand(radius, radius, hheight);
-	vector3d const expand_walls(expand + vector3d(trim_thickness, trim_thickness, 0.0)); // include the wall trim width
+	vector3d const expand(radius, radius, hheight), expand_walls(expand + vector3d(trim_thickness, trim_thickness, 0.0)); // include the wall trim width
 	cube_t line_bcube(p1, p2);
 	line_bcube.expand_by(expand_walls); // use the larger/conservative expand
 
@@ -1635,7 +1634,7 @@ int building_t::check_line_coll_expand(point const &p1, point const &p2, float r
 				cube_t cubes[5];
 				get_closet_cubes(*c, cubes, 1); // get cubes for walls and door; for_collision=1
 				// skip check of open doors for large closets since this case is more complex
-				if (line_int_cubes_exp(p1, p2, cubes, ((c->is_open() && !c->is_small_closet()) ? 4U : 5U), expand)) return 9;
+				if (line_int_cubes_exp(p1, p2, cubes, ((c->is_open() && !c->is_small_closet()) ? 4U : 5U), expand)) return 10; // closet
 			}
 			else if (c->type == TYPE_BED) {
 				cube_t cubes[6]; // frame, head, foot, mattress, pillow, legs_bcube

@@ -1270,7 +1270,7 @@ int building_t::check_for_animal_coll(building_animal_t const &A, float hheight,
 		}
 		return 1; // outside building
 	}
-	// return value: 0=no coll, 1=dim0 wall, 2=dim1 wall, 3=closed door dim0, 4=closed door dim1, 5=open door, 6=stairs, 7=elevator, 8=exterior wall, 9=room object
+	// return value: 0=no coll, 1=dim0 wall, 2=dim1 wall, 3=closed door dim0, 4=closed door dim1, 5=open door, 6=stairs, 7=elevator, 8=exterior wall, 9=room object, 10=closet
 	int const coll_ret(check_line_coll_expand((old_pos + center_dz), query_center_z, A.radius, hheight, !on_floor_only)); // for_spider=!on_floor_only
 
 	if (coll_ret) {
