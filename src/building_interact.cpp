@@ -1504,7 +1504,7 @@ bool building_t::is_pt_lit(point const &pt) const {
 	auto objs_end(interior->room_geom->get_placed_objs_end()); // skip buttons/stairs/elevators
 
 	for (auto i = interior->room_geom->objs.begin(); i != objs_end; ++i) {
-		if (!i->is_light_type() || !i->is_light_on()) continue; // not a light, or light not on
+		if (!i->is_light_type() || !i->is_light_on() || i->in_closet()) continue; // not a light, or light not on; skip closet lights
 		bool const same_room((int)i->room_id == room_id);
 		//if (!same_room) continue; // different room (optimization); too strong?
 		//bool const same_floor(fabs(i->z1() - pt.z) < floor_spacing); // doesn't work with lamps
