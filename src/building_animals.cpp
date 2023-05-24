@@ -1320,7 +1320,14 @@ int building_t::check_for_snake_coll(snake_t const &snake, point const &camera_b
 
 cube_t insect_t::get_bcube() const {
 	cube_t bcube(pos);
-	bcube.expand_by(radius);
+	
+	if (type == INSECT_TYPE_ROACH) {
+		bcube.expand_by_xy(radius);
+		bcube.z2() += get_height();
+	}
+	else { // default spherical (INSECT_TYPE_FLY)
+		bcube.expand_by(radius);
+	}
 	return bcube;
 }
 
@@ -1486,7 +1493,7 @@ void building_t::update_roach(insect_t &roach, point const &camera_bs, float tim
 	}
 	// Note: no need to check for dynamic object collisions since we can likely just go under them
 	int room_id(-1);
-	float const floor_spacing(get_window_vspace()), scare_dist(0.5*floor_spacing);
+	float const floor_spacing(get_window_vspace()), scare_dist(0.9*floor_spacing);
 	point const camera_bot(camera_bs.x, camera_bs.y, camera_bs.z-CAMERA_RADIUS-camera_zh);
 	point run_from;
 	

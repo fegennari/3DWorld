@@ -106,6 +106,7 @@ struct insect_t : public building_animal_t {
 	float get_xy_radius() const {return radius;}
 	float get_height   () const {return (flies() ? 2.0 : 0.4)*radius;}
 	float get_z2       () const {return (pos.z + 0.5*get_height());}
+	vector3d get_orient() const {return vector3d(dir.x, dir.y, 0.0).get_norm();} // XY plane for all insects
 	cube_t get_bcube   () const;
 };
 

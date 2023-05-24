@@ -192,6 +192,7 @@ class insect_draw_t {
 	rgeom_mat_t fly_mat, roach_mat;
 	float timebase=0.0;
 	vector<vert_norm_comp> wing_verts; // temp used in draw calls for flies
+	vector<unsigned> to_draw[NUM_INSECT_TYPES]; // temp state used when drawing
 
 	void init_fly() { // generate fly geometry, just a simple sphere for now
 		if (fly_mat.num_verts > 0) return; // already setup
@@ -239,6 +240,38 @@ class insect_draw_t {
 		roach_mat.create_vbo_inner();
 		roach_mat.clear_vectors(1); // free_memory=1: vector data no longer needed
 	}
+	void draw_insect_list(vect_insect_t const &insects, shader_t &s, rgeom_mat_t &mat, vector3d const &xlate,
+		vector<unsigned> const &ixs, unsigned obj_model_ix=NUM_OBJ_MODELS) const
+	{
+		if (ixs.empty()) return;
+		bool const use_model(obj_model_ix < NUM_OBJ_MODELS && building_obj_model_loader.is_model_valid(obj_model_ix));
+
+		if (!use_model) { // no model, setup material for drawing
+			mat.vao_setup(0); // shadow_only=0
+			mat.pre_draw (0); // shadow_only=0
+		}
+		for (unsigned ix : ixs) { // for ix
+			assert(ix < insects.size());
+			insect_t const &i(insects[ix]);
+			
+			if (use_model) {
+				cube_t const bcube(i.get_bcube());
+				building_obj_model_loader.draw_model(s, bcube.get_cube_center(), bcube, i.dir, LT_BROWN, xlate, obj_model_ix, 0); // shadow_only=0
+			}
+			else { // draw as untextured sphere geometry
+				//if (i.has_target) {s.set_color_e(i.target_player ? RED : GREEN);} // debug visualization for flies
+				fgPushMatrix();
+				translate_to(i.pos);
+				rotate_from_v2v(i.get_orient(), plus_x); // rotate around Z axis
+				uniform_scale(i.radius);
+				check_mvm_update();
+				mat.draw_geom(); // use hardware instancing?
+				fgPopMatrix();
+				//if (i.has_target) {s.clear_color_e();}
+			}
+		} // for ix
+		check_mvm_update();
+	}
 public:
 	void clear() {fly_mat.clear(); roach_mat.clear();}
 
@@ -248,55 +281,32 @@ public:
 		bool const check_occlusion(display_mode & 0x08);//, low_detail(shadow_only || reflection_pass);
 		float const draw_dist_scale = 500.0;
 		bool any_drawn(0);
-		unsigned cur_insect_type(NUM_INSECT_TYPES); // start at an invalid value
 		wing_verts.clear();
 		if (animate2) {timebase = tfticks;}
 
-		for (insect_t const &i : insects) { // future work: use instancing
-			if (!dist_less_than(i.pos, camera_bs, draw_dist_scale*i.radius)) continue; // too far
-			cube_t const bcube(i.get_bcube());
+		for (auto i = insects.begin(); i != insects.end(); ++i) { // future work: use instancing
+			if (!dist_less_than(i->pos, camera_bs, draw_dist_scale*i->radius)) continue; // too far
+			cube_t const bcube(i->get_bcube());
 			if (!camera_pdu.cube_visible(bcube + xlate)) continue; // VFC
 			if (check_occlusion && building.check_obj_occluded(bcube, camera_bs, oc, reflection_pass)) continue;
-			rgeom_mat_t *mat(nullptr);
-			if      (i.type == INSECT_TYPE_FLY  ) {mat = &fly_mat  ;} // use hardware instancing?
-			else if (i.type == INSECT_TYPE_ROACH) {mat = &roach_mat;}
-			else {assert(0);} // unsupported insect type
-			assert(mat != nullptr);
+			assert(i->type < NUM_INSECT_TYPES);
+			to_draw[i->type].push_back(i - insects.begin());
+			any_drawn = 1;
+		}
+		if (!any_drawn) return;
+		select_texture(WHITE_TEX);
+		s.add_uniform_float("bump_map_mag", 0.0); // no normal maps
 
-			if (!any_drawn) { // setup shaders on first draw
-				select_texture(WHITE_TEX);
-				s.add_uniform_float("bump_map_mag", 0.0);
-				if (!enable_depth_clamp) {glEnable(GL_DEPTH_CLAMP);} // make sure depth clamp is enabled so that insects are drawn when very close
-				any_drawn = 1;
-			}
-			if (i.type != cur_insect_type) { // new/different insect type
-				indexed_vao_manager_with_shadow_t::post_render(); // unbind VBO/VAO prior to setup
-				cur_insect_type = i.type;
+		if (!to_draw[INSECT_TYPE_FLY].empty()) { // draw flies
+			init_fly();
+			s.set_specular(0.5, 80.0);
+			if (!enable_depth_clamp) {glEnable(GL_DEPTH_CLAMP);} // make sure depth clamp is enabled so that insects are drawn when very close
+			draw_insect_list(insects, s, fly_mat, xlate, to_draw[INSECT_TYPE_FLY]);
 
-				if (i.type == INSECT_TYPE_FLY) {
-					init_fly();
-					s.set_specular(0.5, 80.0);
-				}
-				else if (i.type == INSECT_TYPE_ROACH) {
-					init_roach();
-					s.set_specular(0.35, 40.0);
-				}
-				mat->vao_setup(0); // shadow_only=0
-				mat->pre_draw (0); // shadow_only=0
-			}
-			//if (i.has_target) {s.set_color_e(i.target_player ? RED : GREEN);} // debug visualization
-			vector3d const orient(vector3d(i.dir.x, i.dir.y, 0.0).get_norm()); // in XY plane
-			fgPushMatrix();
-			translate_to(i.pos);
-			rotate_from_v2v(orient, plus_x); // rotate around Z axis
-			uniform_scale(i.radius);
-			check_mvm_update();
-			mat->draw_geom(); // use hardware instancing?
-			fgPopMatrix();
-			//if (i.has_target) {s.clear_color_e();}
-
-			if (i.type == INSECT_TYPE_FLY) { // add wings
+			for (unsigned ix : to_draw[INSECT_TYPE_FLY]) { // draw the wings
+				insect_t const &i(insects[ix]);
 				if (!dist_less_than(i.pos, camera_bs, 0.25*draw_dist_scale*i.radius)) continue; // too far to draw wings
+				vector3d const orient(i.get_orient());
 				vector3d const side_dir(cross_product(orient, plus_z)); // should be normalized
 				norm_comp const normal(plus_z); // use actual normal?
 				float const lift_amt(0.5 + 0.5*sin(4.0*(i.anim_time + timebase))); // add in global time so that wings still flap when hovering
@@ -309,25 +319,32 @@ public:
 					v[2] = -1.50*orient + (1.0 - 0.7*lift_amt)*d_sign*side_dir + (0.3 + 0.7*lift_amt)*plus_z; // tip
 					UNROLL_3X(wing_verts.emplace_back((i.pos + i.radius*v[i_]), normal););
 				} // for d
-			}
-		} // for i
-		if (!wing_verts.empty()) {
+			} // for ix
+			to_draw[INSECT_TYPE_FLY].clear();
 			indexed_vao_manager_with_shadow_t::post_render(); // unbind VBO/VAO
-			glDisable(GL_CULL_FACE); // wings are two sided
-			enable_blend();
-			s.set_cur_color(colorRGBA(1.0, 1.0, 1.0, 0.25)); // transparent white
-			draw_verts(wing_verts, GL_TRIANGLES);
-			s.set_cur_color(WHITE);
-			disable_blend();
-			glEnable(GL_CULL_FACE);
-		}
-		if (any_drawn) { // reset state
+
+			if (!wing_verts.empty()) {
+				glDisable(GL_CULL_FACE); // wings are two sided
+				enable_blend();
+				s.set_cur_color(colorRGBA(1.0, 1.0, 1.0, 0.25)); // transparent white
+				draw_verts(wing_verts, GL_TRIANGLES);
+				s.set_cur_color(WHITE);
+				disable_blend();
+				glEnable(GL_CULL_FACE);
+			}
 			if (!enable_depth_clamp) {glDisable(GL_DEPTH_CLAMP);}
-			check_mvm_update(); // make sure to reset MVM
-			s.add_uniform_float("bump_map_mag", 1.0);
-			s.clear_specular();
+		}
+		if (!to_draw[INSECT_TYPE_ROACH].empty()) { // draw cockroaches
+			init_roach();
+			s.set_specular(0.35, 40.0);
+			draw_insect_list(insects, s, roach_mat, xlate, to_draw[INSECT_TYPE_ROACH], OBJ_MODEL_ROACH);
+			to_draw[INSECT_TYPE_ROACH].clear();
 			indexed_vao_manager_with_shadow_t::post_render();
 		}
+		// reset state
+		check_mvm_update(); // make sure to reset MVM
+		s.add_uniform_float("bump_map_mag", 1.0);
+		s.clear_specular();
 	}
 };
 insect_draw_t insect_draw;
