@@ -402,10 +402,15 @@ void building_t::update_rat(rat_t &rat, point const &camera_bs, float timestep, 
 	float const dist_thresh(2.0f*timestep*max(rat.speed, global_building_params.rat_speed));
 	float const xy_pad(hlength + trim_thickness);
 	vector3d const center_dz(0.0, 0.0, hheight); // or squish_hheight?
-	assert(hwidth <= hlength); // otherwise the model is probably in the wrong orientation
 	bool update_path(0);
 	vector3d coll_dir;
 	point const prev_pos(rat.pos); // capture the pre-collision point
+	static bool wrong_orient_warning(0);
+
+	if (hwidth > hlength && !wrong_orient_warning) {
+		cout << "*** Warning: Rat model is likely in the wrong orient: " << TXT(hlength) << TXT(hwidth) << endl;
+		wrong_orient_warning = 1;
+	}
 	rgen.rand_mix(); // make sure it's different per rat
 
 	if (rat.is_sleeping() && rat.fear == 0.0) {} // peacefully sleeping, no collision needed
