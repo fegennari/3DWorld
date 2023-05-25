@@ -1526,7 +1526,7 @@ void building_t::get_room_obj_cubes(room_object_t const &c, point const &pos, ve
 
 // collision query used for rats, snakes, and insects: p1 and p2 are line end points; radius applies in X and Y, hheight is half height and applies in +/- z
 // note that for_spider is used with insects, not spiders, but it's named this way because it's passed into nested calls that use this variable name
-// return value: 0=no coll, 1=dim0 wall, 2=dim1 wall, 3=closed door dim0, 4=closed door dim1, 5=open door, 6=stairs, 7=elevator, 8=exterior wall, 9=room object, 10=closet
+// return value: 0=no coll, 1=d0 wall, 2=d1 wall, 3=closed door d0, 4=closed door d1, 5=open door, 6=stairs, 7=elevator, 8=exterior wall, 9=room object, 10=closet, 11=cabinet
 int building_t::check_line_coll_expand(point const &p1, point const &p2, float radius, float hheight, bool for_spider) const {
 	assert(interior != nullptr);
 	float const trim_thickness(get_trim_thickness()), zmin(min(p1.z, p2.z));
@@ -1619,7 +1619,7 @@ int building_t::check_line_coll_expand(point const &p1, point const &p2, float r
 			if (!(for_spider ? c->is_spider_collidable() : c->is_floor_collidable())) continue;
 			if (!line_bcube.intersects(*c) || !line_int_cube_exp(p1, p2, get_true_room_obj_bcube(*c), expand)) continue;
 
-			if (c->is_vert_cylinder()) { // vertical cylinder
+			if (c->is_vert_cylinder()) { // vertical cylinder (should bathroom sink count?)
 				if (!is_house && c->type == TYPE_WHEATER) return 9; // office building water heaters have pipes into the floor, more than a cylinder, so use their bcubes
 				cylinder_3dw cylin(c->get_cylinder());
 				cylin.p1.z -= hheight; cylin.p2.z += hheight; // extend top and bottom
@@ -1670,7 +1670,7 @@ int building_t::check_line_coll_expand(point const &p1, point const &p2, float r
 			}
 			else if (c->type == TYPE_KSINK) {
 				cube_t cubes[3];
-				if (line_int_cubes_exp(p1, p2, cubes, get_ksink_cubes(*c, cubes), expand)) return 9; // 1 or 3 sink parts
+				if (line_int_cubes_exp(p1, p2, cubes, get_ksink_cubes(*c, cubes), expand)) return 11; // 1 or 3 sink parts; counts as a cabinet
 			}
 			else if (c->type == TYPE_COUCH) {
 				cube_t couch_body(*c);
@@ -1688,7 +1688,9 @@ int building_t::check_line_coll_expand(point const &p1, point const &p2, float r
 				if (line_int_cubes_exp(p1, p2, cubes, 5, expand)) return 9;
 			}
 			//else if (c->type == TYPE_STALL && maybe_inside_room_object(*c, p2, radius)) {} // is this useful? inside test only applied to end point
-			else return 9; // intersection
+			else {
+				return ((c->type == TYPE_COUNTER || c->type == TYPE_CABINET) ? 11 : 9); // intersection
+			}
 		} // for c
 	} // for vect_id
 	return 0;

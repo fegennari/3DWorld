@@ -1278,7 +1278,7 @@ int building_t::check_for_animal_coll(building_animal_t const &A, float hheight,
 		}
 		return 1; // outside building
 	}
-	// return value: 0=no coll, 1=dim0 wall, 2=dim1 wall, 3=closed door dim0, 4=closed door dim1, 5=open door, 6=stairs, 7=elevator, 8=exterior wall, 9=room object, 10=closet
+	// coll_ret: 0=no coll, 1=d0 wall, 2=d1 wall, 3=closed door d0, 4=closed door d1, 5=open door, 6=stairs, 7=elevator, 8=exterior wall, 9=room object, 10=closet, 11=cabinet
 	int const coll_ret(check_line_coll_expand((old_pos + center_dz), query_center_z, A.radius, hheight, !on_floor_only)); // for_spider=!on_floor_only
 
 	if (coll_ret) {
@@ -1478,10 +1478,10 @@ void building_t::update_roach(insect_t &roach, point const &camera_bs, float tim
 		if (!is_pos_inside_building(pos, radius, hheight, 0)) {spawn_new_pos = 1;} // outside building, respawn, inc_attic=0
 
 		if (!spawn_new_pos) {
-			// return value: 0=no coll, 1=dim0 wall, 2=dim1 wall, 3=closed door dim0, 4=closed door dim1, 5=open door, 6=stairs, 7=elevator, 8=exterior wall, 9=room object, 10=closet
+			// coll_ret: 0=no coll, 1=d0 wall, 2=d1 wall, 3=closed door d0, 4=closed door d1, 5=open door, 6=stairs, 7=elevator, 8=exterior wall, 9=room object, 10=closet, 11=cabinet
 			int const coll_ret(check_line_coll_expand(roach.last_pos, pos, roach.radius, hheight, 0)); // for_spider=0
 
-			if (coll_ret == 9) { // room object (except closet); open door collisions are ignored (can go under doors)
+			if (coll_ret == 9) { // room object (except closet or kitchen cabinet); open door collisions are ignored (can go under doors)
 				if (pos == roach.last_pos) {spawn_new_pos = 1;} // stuck?
 				else {
 					vector3d const new_dir(rgen.signed_rand_vector_spherical_xy_norm());
