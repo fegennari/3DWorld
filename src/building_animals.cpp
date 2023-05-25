@@ -187,14 +187,17 @@ cube_t rat_t::get_bcube() const {
 	bcube.z2() += height;
 	return bcube;
 }
-cube_t rat_t::get_bcube_with_dir() const {
+cube_t get_obj_model_bcube_for_dir(point const &pos, vector3d const &dir, float radius, float height, unsigned model_id) {
 	bool const pri_dim(fabs(dir.x) < fabs(dir.y));
-	vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_RAT));
+	vector3d const sz(building_obj_model_loader.get_model_world_space_size(model_id));
 	cube_t bcube(pos, pos);
 	bcube.expand_in_dim( pri_dim, radius); // larger dim
 	bcube.expand_in_dim(!pri_dim, radius*min(sz.x, sz.y)/max(sz.x, sz.y)); // smaller dim
 	bcube.z2() += height;
 	return bcube;
+}
+cube_t rat_t::get_bcube_with_dir() const {
+	return get_obj_model_bcube_for_dir(pos, dir, radius, height, OBJ_MODEL_RAT);
 }
 bool rat_t::is_facing_dest() const {
 	return (dot_product((dest - pos).get_norm(), dir) > 0.75); // only move if we're facing our dest, to avoid walking through an object
@@ -1320,15 +1323,19 @@ int building_t::check_for_snake_coll(snake_t const &snake, point const &camera_b
 
 cube_t insect_t::get_bcube() const {
 	cube_t bcube(pos);
-	
+
 	if (type == INSECT_TYPE_ROACH) {
 		bcube.expand_by_xy(radius);
 		bcube.z2() += get_height();
 	}
-	else { // default spherical (INSECT_TYPE_FLY)
-		bcube.expand_by(radius);
-	}
+	else {bcube.expand_by(radius);} // default spherical (INSECT_TYPE_FLY)
 	return bcube;
+}
+cube_t insect_t::get_bcube_with_dir() const {
+	if (type == INSECT_TYPE_ROACH && building_obj_model_loader.is_model_valid(OBJ_MODEL_ROACH)) {
+		return get_obj_model_bcube_for_dir(pos, dir, radius, get_height(), OBJ_MODEL_ROACH);
+	}
+	return get_bcube();
 }
 
 void building_t::update_insects(point const &camera_bs, unsigned building_ix) {
@@ -1349,7 +1356,7 @@ void building_t::update_insects(point const &camera_bs, unsigned building_ix) {
 			if (is_room_lit(room_id, insect.get_z2())) {insect.type = INSECT_TYPE_FLY;} // make it a fly (which it already should be)
 			else { // make it a cockroach
 				insect.type    = INSECT_TYPE_ROACH;
-				insect.radius *= 4.0; // larger than a fly
+				insect.radius *= 5.0; // larger than a fly
 			}
 			insect.pos.z += 0.5*insect.get_height(); // for insects, pos.z is the center rather than the bottom
 		} // for insect

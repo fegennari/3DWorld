@@ -255,7 +255,7 @@ class insect_draw_t {
 			insect_t const &i(insects[ix]);
 			
 			if (use_model) {
-				cube_t const bcube(i.get_bcube());
+				cube_t const bcube(i.get_bcube_with_dir());
 				building_obj_model_loader.draw_model(s, bcube.get_cube_center(), bcube, i.dir, LT_BROWN, xlate, obj_model_ix, 0); // shadow_only=0
 			}
 			else { // draw as untextured sphere geometry
@@ -333,18 +333,20 @@ public:
 				glEnable(GL_CULL_FACE);
 			}
 			if (!enable_depth_clamp) {glDisable(GL_DEPTH_CLAMP);}
+			s.clear_specular();
 		}
 		if (!to_draw[INSECT_TYPE_ROACH].empty()) { // draw cockroaches
-			init_roach();
-			s.set_specular(0.35, 40.0);
+			bool const draw_as_model(building_obj_model_loader.is_model_valid(INSECT_TYPE_ROACH));
+			if (!draw_as_model) {init_roach();} // only setup if not drawing the 3D model
+			if (!draw_as_model) {s.set_specular(0.35, 40.0);}
 			draw_insect_list(insects, s, roach_mat, xlate, to_draw[INSECT_TYPE_ROACH], OBJ_MODEL_ROACH);
+			if (!draw_as_model) {s.clear_specular();}
 			to_draw[INSECT_TYPE_ROACH].clear();
 			indexed_vao_manager_with_shadow_t::post_render();
 		}
 		// reset state
 		check_mvm_update(); // make sure to reset MVM
 		s.add_uniform_float("bump_map_mag", 1.0);
-		s.clear_specular();
 	}
 };
 insect_draw_t insect_draw;
