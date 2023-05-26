@@ -1488,14 +1488,17 @@ void building_t::update_roach(insect_t &roach, point const &camera_bs, float tim
 					vector3d const new_dir(rgen.signed_rand_vector_spherical_xy_norm());
 					roach.dir = (dot_product(roach.dir, new_dir) < 0.0) ? new_dir : -new_dir; // make sure it's at least 180 degrees different
 					if (roach.last_pos != all_zeros) {pos = roach.last_pos;} // reset pos to prev frame
-					roach.is_scared = 0; // distracted, no longer scared, but may be scared again
+					roach.is_scared = 0; // distracted, no longer scared
+					roach.no_scare  = 1;
 				}
 			}
-			else if (coll_ret > 0 && coll_ret != 5) {spawn_new_pos = 1;} // wall, closed door, stairs, elevator, or closet: disappear under it and respawn
+			else if (coll_ret > 0 && coll_ret != 5) { // wall, closed door, stairs, elevator, or closet
+				spawn_new_pos = 1; // disappear under it and respawn
+			}
 		}
 		if (spawn_new_pos) {
-			pos = gen_animal_floor_pos(radius, 0, 1, 1, rgen); // place_in_attic=0, not_player_visible=1, pref_dark_room=1
-			roach.is_scared = 0; // no longer scared
+			pos = gen_animal_floor_pos(roach.radius, 0, 1, 1, rgen); // place_in_attic=0, not_player_visible=1, pref_dark_room=1
+			roach.is_scared = roach.no_scare = 0; // no longer scared
 			return;
 		}
 	}
@@ -1505,22 +1508,23 @@ void building_t::update_roach(insect_t &roach, point const &camera_bs, float tim
 	point const camera_bot(camera_bs.x, camera_bs.y, camera_bs.z-CAMERA_RADIUS-camera_zh);
 	point run_from;
 	
-	// similar to building_t::scare_rat()
-	if (camera_surf_collide && dist_less_than(pos, camera_bot, scare_dist)) {
-		run_from = camera_bot;
-		roach.is_scared = 1;
-	}
-	else {
-		for (person_t const &p : interior->people) { // other people in the building scare the rats
-			if (p.is_waiting_or_stopped()) continue; // only scare if moving
-			point const ppos(p.pos.x, p.pos.y, p.get_z1());
-			if (dist_less_than(pos, ppos, scare_dist)) {run_from = ppos; roach.is_scared = 1; break;}
+	if (!roach.no_scare) { // run scare logic; similar to building_t::scare_rat()
+		if (camera_surf_collide && dist_less_than(pos, camera_bot, scare_dist)) {
+			run_from = camera_bot;
+			roach.is_scared = 1;
 		}
-		sphere_t const cur_sound(get_cur_frame_loudest_sound());
-		if (cur_sound.radius > 0.0 && dist_less_than(pos, cur_sound.pos, 4.0*cur_sound.radius)) {run_from = cur_sound.pos; roach.is_scared = 1;}
-		else if (!roach.is_scared) {
-			room_id = get_room_containing_pt(pos);
-			roach.is_scared |= is_room_lit(room_id, roach.get_z2()); // run from the light
+		else {
+			for (person_t const &p : interior->people) { // other people in the building scare the rats
+				if (p.is_waiting_or_stopped()) continue; // only scare if moving
+				point const ppos(p.pos.x, p.pos.y, p.get_z1());
+				if (dist_less_than(pos, ppos, scare_dist)) {run_from = ppos; roach.is_scared = 1; break;}
+			}
+			sphere_t const cur_sound(get_cur_frame_loudest_sound());
+			if (cur_sound.radius > 0.0 && dist_less_than(pos, cur_sound.pos, 4.0*cur_sound.radius)) {run_from = cur_sound.pos; roach.is_scared = 1;}
+			else if (!roach.is_scared) {
+				room_id = get_room_containing_pt(pos);
+				roach.is_scared |= is_room_lit(room_id, roach.get_z2()); // run from the light
+			}
 		}
 	}
 	float const nom_speed((roach.is_scared ? 1.0 : 0.25)*global_building_params.insect_speed), max_speed(2.0*nom_speed);
@@ -1540,6 +1544,7 @@ void building_t::update_roach(insect_t &roach, point const &camera_bs, float tim
 	else { // slow random walk and stop
 		if (!roach.is_sleeping() && roach.dist_since_sleep > roach.dist_to_sleep) { // sleep
 			roach.sleep_for(0.0, 4.0); // 0-4s
+			roach.no_scare  = 0; // allow scaring again
 			roach.speed     = 0.0;
 			roach.delta_dir = rgen.signed_rand_vector_spherical_xy_norm(); // choose a new random dir after sleep is over
 			roach.dist_to_sleep = floor_spacing*rgen.rand_uniform(0.2, 1.0); // walk for a while before sleeping again
