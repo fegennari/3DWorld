@@ -1470,7 +1470,8 @@ void building_t::update_fly(insect_t &fly, point const &camera_bs, float timeste
 }
 
 void building_t::update_roach(insect_t &roach, point const &camera_bs, float timestep, rand_gen_t &rgen) const {
-	float const radius(roach.radius), hheight(0.5*roach.get_height());
+	float const hheight(0.5*roach.get_height());
+	float const radius(0.67*roach.radius); // use a smaller collision radius to allow roaches to partially enter a wall or object before disappearing
 	point &pos(roach.pos);
 
 	if (!roach.is_sleeping()) { // check for collisions
@@ -1479,7 +1480,7 @@ void building_t::update_roach(insect_t &roach, point const &camera_bs, float tim
 
 		if (!spawn_new_pos) {
 			// coll_ret: 0=no coll, 1=d0 wall, 2=d1 wall, 3=closed door d0, 4=closed door d1, 5=open door, 6=stairs, 7=elevator, 8=exterior wall, 9=room object, 10=closet, 11=cabinet
-			int const coll_ret(check_line_coll_expand(roach.last_pos, pos, roach.radius, hheight, 0)); // for_spider=0
+			int const coll_ret(check_line_coll_expand(roach.last_pos, pos, radius, hheight, 0)); // for_spider=0
 
 			if (coll_ret == 9) { // room object (except closet or kitchen cabinet); open door collisions are ignored (can go under doors)
 				if (pos == roach.last_pos) {spawn_new_pos = 1;} // stuck?
