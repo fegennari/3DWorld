@@ -3074,9 +3074,24 @@ void building_room_geom_t::add_window_sill(room_object_t const &c) {
 }
 
 void building_room_geom_t::add_balcony(room_object_t const &c) {
-	int const tid((c.obj_id & 1) ? get_concrete_tid() : FENCE_TEX);
-	rgeom_mat_t &mat(get_material(tid, 1, 0, 0, 0, 1)); // shadowed?, exterior
-	mat.add_cube_to_verts(c, c.color, tex_origin, ~get_face_mask(c.dim, c.dir)); // TODO: make more detailed, shorter wall with floor
+	unsigned const skip_face_against_wall(~get_face_mask(c.dim, !c.dir));
+	float const floor_thickness(0.08*c.dz()), wall_thickness(0.08*c.get_depth()), bot_expand(0.1*wall_thickness);
+	cube_t bot(c), front(c), sides[2] = {c, c};
+	bot.z2() = front.z1() = sides[0].z1() = sides[1].z1() = c.z1() + floor_thickness;
+	front.d[c.dim][!c.dir] = c.d[c.dim][c.dir] + (c.dir ? -1.0 : 1.0)*wall_thickness;
+	bot.expand_in_dim(!c.dim, bot_expand);
+	bot.d[c.dim][c.dir] += (c.dir ? 1.0 : -1.0)*bot_expand;
+	rgeom_mat_t &wall_mat(get_material(tid_nm_pair_t(FENCE_TEX, 32.0), 1, 0, 0, 0, 1)); // shadowed?, exterior
+	wall_mat.add_cube_to_verts(front, c.color, tex_origin, EF_Z1, !c.dim); // front; skip bottom face
+
+	for (unsigned d = 0; d < 2; ++d) { // left/right sides
+		cube_t &side(sides[d]);
+		side.d[!c.dim][!d]    = side .d[!c.dim][d] + (d ? -1.0 : 1.0)*wall_thickness;
+		side.d[ c.dim][c.dir] = front.d[ c.dim][!c.dir]; // clip to front wall
+		wall_mat.add_cube_to_verts(side, c.color, tex_origin, (EF_Z1 | get_skip_mask_for_xy(c.dim)), c.dim); // skip bottom and faces abutting front wall
+	}
+	rgeom_mat_t &floor_mat(get_material(tid_nm_pair_t(get_concrete_tid(), 16.0), 1, 0, 0, 0, 1)); // shadowed?, exterior
+	floor_mat.add_cube_to_verts(bot, c.color, tex_origin, skip_face_against_wall);
 }
 
 bool get_dishwasher_for_ksink(room_object_t const &c, cube_t &dishwasher) {

@@ -3333,8 +3333,42 @@ void building_t::maybe_add_fire_escape(rand_gen_t &rgen) {
 }
 
 void building_t::add_balconies(rand_gen_t &rgen) {
-	if (!is_house) return; // houses only for now
-	// TODO: TYPE_BALCONY; iterate over exterior walls or windows on floors > 0 and skip intersections with other parts (including porch, chimney, and fire escape)
+	return; // TODO: remove when balconies are ready
+	if (!is_house || !has_room_geom()) return; // houses only for now
+	float const floor_spacing(get_window_vspace());
+	float const balcony_depth(floor_spacing*rgen.rand_uniform(0.4, 0.6)); // constant per house
+	float const room_min_z2(ground_floor_z1 + 1.5*floor_spacing); // > 1 floor
+	auto &objs(interior->room_geom->objs);
+	cube_t avoid;
+	if (!objs.empty() && objs.back().type == TYPE_FESCAPE) {avoid = objs.back();}
+
+	// find suitable rooms for balconies; since room walls will never intersect windows, we can make the balcony the same width to avoid intersecting windows
+	for (auto room = interior->rooms.begin(); room != interior->rooms.end(); ++room) {
+		if (room->interior)           continue; // no windows
+		if (room->z2() < room_min_z2) continue; // ground floor only
+		float const balcony_z1(room->z2() - floor_spacing /*+ get_fc_thickness()*/); // floor level of top floor of room
+
+		for (unsigned dim = 0; dim < 2; ++dim) {
+			for (unsigned dir = 0; dir < 2; ++dir) {
+				if (classify_room_wall(*room, balcony_z1, dim, dir, 1) != ROOM_WALL_EXT) continue; // not fully exterior wall, skip
+				cube_t balcony(*room);
+				balcony.z1() = balcony_z1;
+				balcony.d[dim][!dir]  = balcony.d[dim][dir]; // abuts the exterior wall of the room
+				balcony.d[dim][ dir] += (dir ? 1.0 : -1.0)*balcony_depth; // extend outward from the house
+				if (!avoid.is_all_zeros() && avoid.intersects(balcony)) continue; // check for fire escape intersection
+				bool skip(0);
+
+				// check other parts such as porch roof, porch support, and chimney for intersections; I guess we check the garage and shed as well, just in case
+				for (auto p = get_real_parts_end(); p != parts.end(); ++p) {
+					if (p->intersects(balcony)) {skip = 1; break;}
+				}
+				if (skip) continue;
+				balcony.z2() -= 0.4*floor_spacing; // reduce wall height
+				//balcony.expand_in_dim(!dim, -get_wall_thickness()); // expand slightly; TODO: not at the corner of the building
+				objs.emplace_back(balcony, TYPE_BALCONY, (room - interior->rooms.begin()), dim, dir, 0, 1.0, SHAPE_CUBE, WHITE);
+			} // for dir
+		} // for dim
+	} // for room
 }
 
 void building_t::add_extra_obj_slots() {
