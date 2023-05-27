@@ -3335,7 +3335,7 @@ void building_t::maybe_add_fire_escape(rand_gen_t &rgen) {
 void building_t::add_balconies(rand_gen_t &rgen) {
 	return; // TODO: remove when balconies are ready
 	if (!is_house || !has_room_geom()) return; // houses only for now
-	float const floor_spacing(get_window_vspace());
+	float const floor_spacing(get_window_vspace()), wall_thickness(get_wall_thickness());
 	float const balcony_depth(floor_spacing*rgen.rand_uniform(0.4, 0.6)); // constant per house
 	float const room_min_z2(ground_floor_z1 + 1.5*floor_spacing); // > 1 floor
 	auto &objs(interior->room_geom->objs);
@@ -3347,6 +3347,8 @@ void building_t::add_balconies(rand_gen_t &rgen) {
 		if (room->interior)           continue; // no windows
 		if (room->z2() < room_min_z2) continue; // ground floor only
 		float const balcony_z1(room->z2() - floor_spacing /*+ get_fc_thickness()*/); // floor level of top floor of room
+		assert(room->part_id < parts.size());
+		cube_t const &part(parts[room->part_id]);
 
 		for (unsigned dim = 0; dim < 2; ++dim) {
 			for (unsigned dir = 0; dir < 2; ++dir) {
@@ -3363,8 +3365,10 @@ void building_t::add_balconies(rand_gen_t &rgen) {
 					if (p->intersects(balcony)) {skip = 1; break;}
 				}
 				if (skip) continue;
-				balcony.z2() -= 0.4*floor_spacing; // reduce wall height
-				//balcony.expand_in_dim(!dim, -get_wall_thickness()); // expand slightly; TODO: not at the corner of the building
+				balcony.z2() -= 0.6*floor_spacing; // reduce wall height to 40%
+				balcony.expand_in_dim(!dim, wall_thickness); // expand slightly to include window frame and merge adj balcony shared walls
+				max_eq(balcony.d[!dim][0], (part.d[!dim][0] + 0.25f*wall_thickness)); // clamp slightly smaller than the containing part in !dim
+				min_eq(balcony.d[!dim][1], (part.d[!dim][1] - 0.25f*wall_thickness));
 				objs.emplace_back(balcony, TYPE_BALCONY, (room - interior->rooms.begin()), dim, dir, 0, 1.0, SHAPE_CUBE, WHITE);
 			} // for dir
 		} // for dim

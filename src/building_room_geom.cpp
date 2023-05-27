@@ -3075,7 +3075,7 @@ void building_room_geom_t::add_window_sill(room_object_t const &c) {
 
 void building_room_geom_t::add_balcony(room_object_t const &c) {
 	unsigned const skip_face_against_wall(~get_face_mask(c.dim, !c.dir));
-	float const floor_thickness(0.08*c.dz()), wall_thickness(0.08*c.get_depth()), bot_expand(0.1*wall_thickness);
+	float const floor_thickness(0.12*c.dz()), wall_thickness(0.08*c.get_depth()), bot_expand(0.1*wall_thickness);
 	cube_t bot(c), front(c), sides[2] = {c, c};
 	bot.z2() = front.z1() = sides[0].z1() = sides[1].z1() = c.z1() + floor_thickness;
 	front.d[c.dim][!c.dir] = c.d[c.dim][c.dir] + (c.dir ? -1.0 : 1.0)*wall_thickness;
