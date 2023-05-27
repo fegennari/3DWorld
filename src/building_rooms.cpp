@@ -3333,11 +3333,14 @@ void building_t::maybe_add_fire_escape(rand_gen_t &rgen) {
 }
 
 void building_t::add_balconies(rand_gen_t &rgen) {
-	return; // TODO: remove when balconies are ready
 	if (!is_house || !has_room_geom()) return; // houses only for now
+	if (rgen.rand_bool()) return; // only add balconies to 50% of houses
 	float const floor_spacing(get_window_vspace()), wall_thickness(get_wall_thickness());
-	float const balcony_depth(floor_spacing*rgen.rand_uniform(0.4, 0.6)); // constant per house
+	float const balcony_depth(floor_spacing*rgen.rand_uniform(0.45, 0.6)); // constant per house
 	float const room_min_z2(ground_floor_z1 + 1.5*floor_spacing); // > 1 floor
+	unsigned const balcony_style(rgen.rand()); // shared across all balconies of this house
+	unsigned const max_balconies(1 + rgen.rand_bool()); // 1-2 per house
+	unsigned num_balconies(0);
 	auto &objs(interior->room_geom->objs);
 	cube_t avoid;
 	if (!objs.empty() && objs.back().type == TYPE_FESCAPE) {avoid = objs.back();}
@@ -3346,12 +3349,14 @@ void building_t::add_balconies(rand_gen_t &rgen) {
 	for (auto room = interior->rooms.begin(); room != interior->rooms.end(); ++room) {
 		if (room->interior)           continue; // no windows
 		if (room->z2() < room_min_z2) continue; // ground floor only
+		if (rgen.rand_float() < 0.75) continue;
 		float const balcony_z1(room->z2() - floor_spacing /*+ get_fc_thickness()*/); // floor level of top floor of room
 		assert(room->part_id < parts.size());
 		cube_t const &part(parts[room->part_id]);
+		bool added(0);
 
-		for (unsigned dim = 0; dim < 2; ++dim) {
-			for (unsigned dir = 0; dir < 2; ++dir) {
+		for (unsigned dim = 0; dim < 2 && !added; ++dim) {
+			for (unsigned dir = 0; dir < 2 && !added; ++dir) {
 				if (classify_room_wall(*room, balcony_z1, dim, dir, 1) != ROOM_WALL_EXT) continue; // not fully exterior wall, skip
 				cube_t balcony(*room);
 				balcony.z1() = balcony_z1;
@@ -3370,8 +3375,12 @@ void building_t::add_balconies(rand_gen_t &rgen) {
 				max_eq(balcony.d[!dim][0], (part.d[!dim][0] + 0.25f*wall_thickness)); // clamp slightly smaller than the containing part in !dim
 				min_eq(balcony.d[!dim][1], (part.d[!dim][1] - 0.25f*wall_thickness));
 				objs.emplace_back(balcony, TYPE_BALCONY, (room - interior->rooms.begin()), dim, dir, 0, 1.0, SHAPE_CUBE, WHITE);
+				objs.back().obj_id = balcony_style; // set so that we can select from multiple balcony styles
+				++num_balconies;
+				added = 1;
 			} // for dir
 		} // for dim
+		if (num_balconies == max_balconies) break; // done
 	} // for room
 }
 
