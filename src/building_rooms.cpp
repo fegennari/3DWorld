@@ -3348,9 +3348,13 @@ void building_t::add_balconies(rand_gen_t &rgen) {
 	// find suitable rooms for balconies; since room walls will never intersect windows, we can make the balcony the same width to avoid intersecting windows
 	for (auto room = interior->rooms.begin(); room != interior->rooms.end(); ++room) {
 		if (room->interior)           continue; // no windows
+		if (room->is_sec_bldg)        continue; // no garage or shed, even if it's multiple stories tall
 		if (room->z2() < room_min_z2) continue; // ground floor only
 		if (rgen.rand_float() < 0.75) continue;
 		float const balcony_z1(room->z2() - floor_spacing /*+ get_fc_thickness()*/); // floor level of top floor of room
+		unsigned const floor_ix(room->get_floor_containing_zval((balcony_z1 + 0.1*floor_spacing), floor_spacing));
+		room_type const rtype(room->get_room_type(floor_ix));
+		if (rtype == RTYPE_BATH) continue; // no bathroom balconies as that would be weird
 		assert(room->part_id < parts.size());
 		cube_t const &part(parts[room->part_id]);
 		bool added(0);
@@ -3362,6 +3366,7 @@ void building_t::add_balconies(rand_gen_t &rgen) {
 				balcony.z1() = balcony_z1;
 				balcony.d[dim][!dir]  = balcony.d[dim][dir]; // abuts the exterior wall of the room
 				balcony.d[dim][ dir] += (dir ? 1.0 : -1.0)*balcony_depth; // extend outward from the house
+				if (!objs.empty() && objs.back().type == TYPE_BALCONY && objs.back().intersects(balcony)) continue; // don't place two adjacent balconies
 				if (!avoid.is_all_zeros() && avoid.intersects(balcony)) continue; // check for fire escape intersection
 				bool skip(0);
 
