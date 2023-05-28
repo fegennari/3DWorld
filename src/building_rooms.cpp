@@ -3342,8 +3342,8 @@ void building_t::add_balconies(rand_gen_t &rgen) {
 	unsigned const max_balconies(1 + rgen.rand_bool()); // 1-2 per house
 	unsigned num_balconies(0);
 	auto &objs(interior->room_geom->objs);
-	cube_t avoid;
-	if (!objs.empty() && objs.back().type == TYPE_FESCAPE) {avoid = objs.back();}
+	cube_t avoid1, avoid2;
+	if (!objs.empty() && objs.back().type == TYPE_FESCAPE) {avoid1 = objs.back();}
 
 	// find suitable rooms for balconies; since room walls will never intersect windows, we can make the balcony the same width to avoid intersecting windows
 	for (auto room = interior->rooms.begin(); room != interior->rooms.end(); ++room) {
@@ -3366,8 +3366,8 @@ void building_t::add_balconies(rand_gen_t &rgen) {
 				balcony.z1() = balcony_z1;
 				balcony.d[dim][!dir]  = balcony.d[dim][dir]; // abuts the exterior wall of the room
 				balcony.d[dim][ dir] += (dir ? 1.0 : -1.0)*balcony_depth; // extend outward from the house
-				if (!objs.empty() && objs.back().type == TYPE_BALCONY && objs.back().intersects(balcony)) continue; // don't place two adjacent balconies
-				if (!avoid.is_all_zeros() && avoid.intersects(balcony)) continue; // check for fire escape intersection
+				if (!avoid1.is_all_zeros() && avoid1.intersects(balcony)) continue; // check for fire escape intersection
+				if (!avoid2.is_all_zeros() && avoid2.intersects(balcony)) continue; // check for previous balcony intersection
 				bool skip(0);
 
 				// check other parts such as porch roof, porch support, and chimney for intersections; I guess we check the garage and shed as well, just in case
@@ -3381,6 +3381,9 @@ void building_t::add_balconies(rand_gen_t &rgen) {
 				min_eq(balcony.d[!dim][1], (part.d[!dim][1] - 0.25f*wall_thickness));
 				objs.emplace_back(balcony, TYPE_BALCONY, (room - interior->rooms.begin()), dim, dir, 0, 1.0, SHAPE_CUBE, WHITE);
 				objs.back().obj_id = balcony_style; // set so that we can select from multiple balcony styles
+				avoid2 = balcony;
+				avoid2.expand_by_xy(wall_thickness);
+				// TODO: place table, chairs, potted plant, etc.
 				++num_balconies;
 				added = 1;
 			} // for dir
