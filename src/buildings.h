@@ -1885,6 +1885,7 @@ cube_t get_elevator_car_panel(room_object_t const &c, float fc_thick_scale);
 cube_t get_true_room_obj_bcube(room_object_t const &c);
 cube_t get_sink_cube(room_object_t const &c);
 cube_t get_mwave_panel_bcube(room_object_t const &c);
+void get_balcony_cubes(room_object_t const &c, cube_t cubes[4]);
 void set_rand_pos_for_sz(cube_t &c, bool dim, float length, float width, rand_gen_t &rgen);
 template<typename T> bool has_bcube_int_xy(cube_t const &bcube, vector<T> const &bcubes, float pad_dist=0.0);
 bool door_opens_inward(door_base_t const &door, cube_t const &room);
