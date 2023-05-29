@@ -3073,7 +3073,9 @@ void building_room_geom_t::add_window_sill(room_object_t const &c) {
 	}
 }
 
-void add_spaced_vert_bars(rgeom_mat_t &mat, cube_t const &railing, colorRGBA const &color, float bar_z2, float bar_hwidth, float bar_spacing, bool dim) {
+void add_spaced_vert_bars(rgeom_mat_t &mat, cube_t const &railing, colorRGBA const &color,
+	float bar_z2, float bar_hwidth, float bar_hdepth, float bar_spacing, bool dim, float rot_angle=0.0)
+{
 	float const length(railing.get_sz_dim(dim));
 	if (length < 1.6*bar_spacing) return; // no bars
 	unsigned const num_segs(round_fp(length/bar_spacing)), num_bars(num_segs - 1);
@@ -3082,10 +3084,12 @@ void add_spaced_vert_bars(rgeom_mat_t &mat, cube_t const &railing, colorRGBA con
 	for (unsigned n = 0; n < num_bars; ++n) {
 		cube_t bar(railing);
 		bar.z2() = bar_z2;
-		bar.expand_in_dim(!dim, -(hwidth - bar_hwidth));
+		bar.expand_in_dim(!dim, -(hwidth - bar_hdepth));
 		set_wall_width(bar, (railing.d[dim][0] + (n+1)*seg_spacing), bar_hwidth, dim);
-		mat.add_cube_to_verts(bar, color, zero_vector, EF_Z12); // skip top and bottom
-	}
+		unsigned const qv_start(mat.quad_verts.size());
+		mat.add_cube_to_verts(bar, color, zero_vector, EF_Z12, dim); // skip top and bottom; maybe untextured
+		if (rot_angle != 0.0) {rotate_verts(mat.quad_verts, plus_z, rot_angle, bar.get_cube_center(), qv_start);}
+	} // for n
 }
 void get_balcony_cubes(room_object_t const &c, cube_t cubes[4]) { // {bottom, front, left side, right side}
 	float const floor_thickness(0.12*c.dz()), wall_thickness(0.08*c.get_depth()), bot_expand(0.1*wall_thickness);
@@ -3106,16 +3110,17 @@ void get_balcony_cubes(room_object_t const &c, cube_t cubes[4]) { // {bottom, fr
 void building_room_geom_t::add_balcony(room_object_t const &c) {
 	unsigned const skip_face_against_wall(~get_face_mask(c.dim, !c.dir));
 	unsigned const skip_face_sides(get_skip_mask_for_xy(c.dim)); // skip abutting front wall
+	unsigned const balcony_style(c.obj_id & 3); // wooden walls, metal railing + bars, metal railing + 45 deg rotated bars, metal railing + wood sides
 	cube_t cubes[4]; // {bottom, front, left side, right side}
 	get_balcony_cubes(c, cubes);
-	cube_t const &bot(cubes[0]), &front(cubes[1]);
+	cube_t &bot(cubes[0]), &front(cubes[1]);
 
-	if (c.obj_id & 1) { // balcony with wooden sides
+	if (balcony_style == 0) { // balcony with wooden sides
 		rgeom_mat_t &wall_mat(get_material(tid_nm_pair_t(FENCE_TEX, 32.0), 1, 0, 0, 0, 1)); // shadowed?, exterior
 		wall_mat.add_cube_to_verts(front, c.color, tex_origin, EF_Z1, !c.dim); // front; skip bottom face
 		for (unsigned d = 0; d < 2; ++d) {wall_mat.add_cube_to_verts(cubes[d+2], c.color, tex_origin, (EF_Z1 | skip_face_sides), c.dim);} // skip bottom
 	}
-	else { // balcony with vertical metal bars
+	else { // balcony with railings
 		unsigned const NUM_BAR_COLORS = 4;
 		colorRGBA const bar_colors[NUM_BAR_COLORS] = {WHITE, BKGRAY, GRAY, DK_BROWN};
 		colorRGBA const &bar_color(bar_colors[(c.obj_id >> 1) % NUM_BAR_COLORS]); // choose a random color
@@ -3126,18 +3131,42 @@ void building_room_geom_t::add_balcony(room_object_t const &c) {
 		front_top.z1() = top_z1;
 		rgeom_mat_t &railing_mat(get_untextured_material(1, 0, 0, 0, 1)); // shadowed?, exterior
 		railing_mat.add_cube_to_verts(front_top, bar_color, zero_vector, 0); // front; draw all sides
-		add_spaced_vert_bars(railing_mat, front, bar_color, top_z1, bar_hwidth, bar_spacing, !c.dim); // front bars
+		cube_t corner_bars[2];
 
-		for (unsigned d = 0; d < 2; ++d) { // draw sides and corner bars
+		for (unsigned d = 0; d < 2; ++d) { // draw side railings and corner bars
 			cube_t side_top(cubes[d+2]);
 			side_top.z1() = top_z1;
 			railing_mat.add_cube_to_verts(side_top, bar_color, zero_vector, skip_face_sides); // sides
-			cube_t corner_bar(front);
-			corner_bar.z2() = top_z1;
-			corner_bar.expand_in_dim(c.dim, -(railing_hwidth - corner_bar_hwidth));
-			set_wall_width(corner_bar, (front.d[!c.dim][d] + (d ? -1.0 : 1.0)*railing_hwidth), corner_bar_hwidth, !c.dim);
-			railing_mat.add_cube_to_verts(corner_bar, bar_color, zero_vector, EF_Z12); // corner bar; skip top and bottom
-			add_spaced_vert_bars(railing_mat, cubes[d+2], bar_color, top_z1, bar_hwidth, bar_spacing, c.dim); // side bars
+			corner_bars[d] = front;
+			corner_bars[d].z2() = top_z1;
+			corner_bars[d].expand_in_dim(c.dim, -(railing_hwidth - corner_bar_hwidth));
+			set_wall_width(corner_bars[d], (front.d[!c.dim][d] + (d ? -1.0 : 1.0)*railing_hwidth), corner_bar_hwidth, !c.dim);
+			railing_mat.add_cube_to_verts(corner_bars[d], bar_color, zero_vector, EF_Z12); // corner bar; skip top and bottom
+		}
+		if (balcony_style <= 2) { // vertical metal bars
+			float const rot_angle((balcony_style == 1) ? PI/4.0 : 0.0); // maybe rotate 45 degrees
+			for (unsigned d = 0; d < 2; ++d) {add_spaced_vert_bars(railing_mat, cubes[d+2], bar_color, top_z1, bar_hwidth, bar_hwidth, bar_spacing, c.dim, rot_angle);}
+			add_spaced_vert_bars(railing_mat, front, bar_color, top_z1, bar_hwidth, bar_hwidth, bar_spacing, !c.dim, rot_angle); // front bars
+		}
+		else { // vertical wooden sides
+			rgeom_mat_t &wall_mat(get_material(tid_nm_pair_t(FENCE_TEX, 32.0), 1, 0, 0, 0, 1)); // shadowed?, exterior
+			float const wall_shrink(0.5*railing_hwidth);
+			front.z2() = top_z1;
+			front.expand_in_dim(c.dim, -wall_shrink);
+			front.d[!c.dim][0] = corner_bars[0].d[!c.dim][1]; // end at corner bar
+			front.d[!c.dim][1] = corner_bars[1].d[!c.dim][0]; // end at corner bar
+			wall_mat.add_cube_to_verts(front, c.color, tex_origin, EF_Z12, !c.dim); // front; skip bottom face
+			
+			for (unsigned d = 0; d < 2; ++d) {
+				cube_t &side(cubes[d+2]);
+				side.z2() = top_z1;
+				side.expand_in_dim(!c.dim, -wall_shrink);
+				side.d[c.dim][c.dir] = corner_bars[d].d[c.dim][!c.dir]; // end at corner bar
+				wall_mat.add_cube_to_verts(side, c.color, tex_origin, (EF_Z12 | skip_face_sides), c.dim); // skip top/bottom
+			}
+			//float const slat_hwidth(min(0.1f*bar_spacing, 4.0f*bar_hwidth)), rot_angle(6.0*TO_RADIANS);
+			//for (unsigned d = 0; d < 2; ++d) {add_spaced_vert_bars(wall_mat, cubes[d+2], WHITE, top_z1, slat_hwidth, bar_hwidth, bar_spacing, c.dim, rot_angle);}
+			//add_spaced_vert_bars(wall_mat, front, WHITE, top_z1, slat_hwidth, bar_hwidth, bar_spacing, !c.dim, rot_angle); // front slats
 		}
 	}
 	// draw concrete floor
