@@ -264,7 +264,7 @@ struct vert_norm_comp_tc_color : public vert_norm_comp_tc, public color_wrapper 
 	typedef vert_norm_tc non_color_class;
 	vert_norm_comp_tc_color() {}
 	vert_norm_comp_tc_color(vert_norm_comp_tc const &vntc, color_wrapper const &cw) : vert_norm_comp_tc(vntc), color_wrapper(cw) {}
-	vert_norm_comp_tc_color(point const &v_, norm_comp const &n_, float ts, float tt, color_wrapper const &cw) : vert_norm_comp_tc(v_, n_, ts, tt), color_wrapper(cw) {}
+	template<typename T> vert_norm_comp_tc_color(point const &v_, T const &n_, float ts, float tt, color_wrapper const &cw) : vert_norm_comp_tc(v_, n_, ts, tt), color_wrapper(cw) {}
 	template<typename T> void assign(point const &v_, T const &n_, float ts, float tt, unsigned char const *const c_, bool has_alpha=0) { // T can be vector3d or norm_comp
 		v = v_; set_norm(n_); t[0] = ts; t[1] = tt; copy_color(c_, has_alpha);
 	}

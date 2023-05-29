@@ -1132,9 +1132,40 @@ public:
 		}
 	}
 
-	void add_water_tower(building_t const &bg, cube_t const &wt_bcube) {
-		tid_nm_pair_t const tex(building_texture_mgr.get_met_plate_tid(), building_texture_mgr.get_mplate_nm_tid(), 1.0, 1.0);
-		add_cube(bg, wt_bcube, tex, WHITE, 0, 7, 1, 0, 0); // TODO: placeholder
+	void add_water_tower(building_t const &bg, cube_t const &wtc) {
+		tid_nm_pair_t const side_tex(building_texture_mgr.get_met_plate_tid(), building_texture_mgr.get_mplate_nm_tid(), 1.0, 1.0);
+		tid_nm_pair_t const roof_tex(WHITE_TEX); // untextured
+		auto &tverts(get_verts(roof_tex, 1)), &qverts(get_verts(side_tex, 0)); // triangle and quad verts
+		unsigned const ndiv(N_CYL_SIDES);
+		float const radius(0.25*(wtc.dx() + wtc.dy())); // should be equal size in X vs. Y
+		float const tscale(1.0), ndiv_inv(1.0/ndiv), cylin_z1(wtc.z1()), cone_z2(wtc.z2()), cylin_z2(cylin_z1 + 0.75*(cone_z2 - cylin_z1));
+		vector3d const center(wtc.get_cube_center());
+		point ce[2] = {point(center.x, center.y, cylin_z1), point(center.x, center.y, cylin_z2)};
+		color_wrapper const sides_cw(WHITE), roof_cw(colorRGBA(0.15, 0.12, 0.10, 1.0));
+		vector3d v12;
+		// draw side quads
+		vector_point_norm const &vpn(gen_cylinder_data(ce, radius, radius, ndiv, v12));
+
+		for (unsigned i = 0; i < ndiv; ++i) { // similar to gen_cylinder_quads(), but with a color
+			for (unsigned j = 0; j < 2; ++j) {
+				unsigned const S(i + j), s(S%ndiv);
+				norm_comp const normal((vpn.n[s] + vpn.n[(S+ndiv-1)%ndiv]).get_norm());
+				float const ts(4.0*S*tscale*ndiv_inv);
+				qverts.emplace_back(vpn.p[(s<<1)+ j], normal, ts, (1.0-j)*tscale, sides_cw);
+				qverts.emplace_back(vpn.p[(s<<1)+!j], normal, ts, j      *tscale, sides_cw);
+			}
+		} // for i
+		// draw top cone triangles
+		ce[0].z = cylin_z2; ce[1].z = cone_z2;
+		gen_cylinder_data(ce, 1.1*radius, 0.0, ndiv, v12); // slightly wider at the bottom; should write to the same vpn
+
+		for (unsigned i = 0; i < ndiv; ++i) { // similar to gen_cylinder_quads(), but with a color
+			unsigned const ip((i+ndiv-1)%ndiv), in((i+1)%ndiv);
+			float const ts(1.0 - i*ndiv_inv);
+			tverts.emplace_back(vpn.p[(i <<1)+1],  vpn.n[i],                         0.5,             1.0, roof_cw);
+			tverts.emplace_back(vpn.p[(in<<1)+0], (vpn.n[i] + vpn.n[in]).get_norm(), (ts - ndiv_inv), 0.0, roof_cw);
+			tverts.emplace_back(vpn.p[(i <<1)+0], (vpn.n[i] + vpn.n[ip]).get_norm(), ts,              0.0, roof_cw);
+		} // for i
 	}
 
 	unsigned num_verts() const {
