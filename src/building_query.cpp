@@ -45,6 +45,13 @@ bool building_t::check_part_contains_pt_xy(cube_t const &part, unsigned part_id,
 	vector<point> const &points(get_part_ext_verts(part_id));
 	return point_in_polygon_2d(pt.x, pt.y, points.data(), points.size()); // 2D x/y containment
 }
+bool building_t::check_part_contains_cube_xy(cube_t const &part, unsigned part_id, cube_t const &c) const { // for placing roof objects
+	for (unsigned i = 0; i < 4; ++i) { // check cylinder/ellipse
+		point const pt(c.d[0][i&1], c.d[1][i>>1], 0.0); // XY only
+		if (!check_part_contains_pt_xy(part, part_id, pt)) return 0;
+	}
+	return 1;
+}
 
 bool building_t::cube_int_parts_no_sec(cube_t const &c) const {
 	for (auto p = parts.begin(); p != get_real_parts_end(); ++p) {

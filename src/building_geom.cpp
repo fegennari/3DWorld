@@ -1735,8 +1735,8 @@ void building_t::gen_details(rand_gen_t &rgen, bool is_rectangle) { // for the r
 	create_per_part_ext_verts(); // needed for roof containment queries
 	add_company_sign(rgen);
 
-	if (!is_rectangle) { // polygon roof, can only add AC units
-		if (add_walls && rgen.rand_bool()) { // 50% of the time
+	if (!is_rectangle) { // polygon roof, can only add walls and AC units
+		if (add_walls && rgen.rand_bool()) { // add walls 50% of the time
 			cube_t temp[4];
 			vect_cube_t cubes, to_add;
 
@@ -1841,18 +1841,14 @@ void building_t::gen_details(rand_gen_t &rgen, bool is_rectangle) { // for the r
 		float height(height_scale*rgen.rand_uniform(1.0, 4.0));
 		bool placed(0);
 
-		for (unsigned n = 0; n < 100 && !placed; ++n) { // limited to 100 attempts to prevent infinite loop
+		for (unsigned n = 0; n < 100; ++n) { // limited to 100 attempts to prevent infinite loop
 			c.set_from_point(point(rgen.rand_uniform(bounds.x1(), bounds.x2()), rgen.rand_uniform(bounds.y1(), bounds.y2()), top.z2()));
 			c.expand_by_xy(vector3d(xy_sz*rgen.rand_uniform(0.01, 0.07), xy_sz*rgen.rand_uniform(0.01, 0.07), 0.0));
 			if (!bounds.contains_cube_xy(c)) continue; // not contained
 			if (has_helipad && c.intersects_xy(helipad_bcube)) continue; // bad placement
+			if (!is_cube() && !check_part_contains_cube_xy(top, parts.size()-1, c)) continue; // not contained in roof
 			placed = 1;
-			if (is_cube()) break; // success/done
-
-			for (unsigned j = 0; j < 4; ++j) { // check cylinder/ellipse
-				point const pt(c.d[0][j&1], c.d[1][j>>1], 0.0); // XY only
-				if (!check_part_contains_pt_xy(top, parts.size()-1, pt)) {placed = 0; break;}
-			}
+			break;
 		} // for n
 		if (!placed) break; // failed, exit loop
 

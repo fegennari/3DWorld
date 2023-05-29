@@ -1320,6 +1320,7 @@ struct building_t : public building_geom_t {
 	void maybe_inv_rotate_pos_dir(point &pos, vector3d &dir) const;
 	void set_z_range(float z1, float z2);
 	bool check_part_contains_pt_xy(cube_t const &part, unsigned part_id, point const &pt) const;
+	bool check_part_contains_cube_xy(cube_t const &part, unsigned part_id, cube_t const &c) const;
 	bool cube_int_parts_no_sec(cube_t const &c) const;
 	bool check_bcube_overlap_xy(building_t const &b, float expand_rel, float expand_abs) const;
 	bool check_cube_within_part_sides(cube_t const &c) const;
