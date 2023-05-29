@@ -1838,7 +1838,7 @@ void building_t::gen_details(rand_gen_t &rgen, bool is_rectangle) { // for the r
 	details.reserve(details.size() + num_details);
 
 	if (add_water_tower) {
-		float const radius(rgen.rand_uniform(0.04, 0.06)*(tsz.x + tsz.y)), height(rgen.rand_uniform(2.5, 4.0)*radius);
+		float const radius(rgen.rand_uniform(0.04, 0.06)*(tsz.x + tsz.y)), height(rgen.rand_uniform(3.0, 4.5)*radius);
 		roof_obj_t wtower(ROOF_OBJ_WTOWER);
 		point wt_center(top_center);
 		for (unsigned d = 0; d < 2; ++d) {wt_center[d] += rgen.rand_uniform(-1.0, 1.0)*0.25*tsz[d];} // apply a random shift
