@@ -722,7 +722,9 @@ public:
 	{
 		cube_t part(cube); // assume full part
 		
-		if (dim_mask == 4) { // find the part containing this cube to determine if we need to clip the cylinder; only for floors and ceilings
+		// skip this step for complex floorplan buildings because it doesn't work since multiple parts can contain the cube, and it's not needed anyway
+		if (dim_mask == 4 && !bg.has_complex_floorplan) { // only for floors and ceilings
+			// find the part containing this cube to determine if we need to clip the cylinder; needed for cutting holes in ceilings and floors for building interiors
 			cube_t test_cube(cube);
 			test_cube.expand_by(-0.1*cube.dz()); // shrink slightly to avoid failing due to FP error in clipping
 			part = bg.get_part_containing_cube(test_cube);
