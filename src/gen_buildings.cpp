@@ -125,16 +125,15 @@ void building_geom_t::do_xy_rotate_normal_inv(point &n) const {::do_xy_rotate_no
 
 
 class building_texture_mgr_t {
-	int window_tid, hdoor_tid, odoor_tid, bdoor_tid, bdoor2_tid, gdoor_tid, ac_unit_tid1, ac_unit_tid2, bath_wind_tid, helipad_tex, solarp_tex, concrete_tex;
+	int window_tid=-1, hdoor_tid=-1, odoor_tid=-1, bdoor_tid=-1, bdoor2_tid=-1, gdoor_tid=-1, ac_unit_tid1=-1, ac_unit_tid2=-1, bath_wind_tid=-1, helipad_tex=-1,
+		solarp_tex=-1, concrete_tex=-1, met_plate_tex=-1, mplate_nm_tex=-1;
 
-	int ensure_tid(int &tid, const char *name) {
-		if (tid < 0) {tid = get_texture_by_name(name);}
-		if (tid < 0) {tid = WHITE_TEX;} // failed to load texture - use a simple white texture
+	int ensure_tid(int &tid, const char *name, bool is_normal_map=0) {
+		if (tid < 0) {tid = get_texture_by_name(name, is_normal_map);}
+		if (tid < 0) {tid = (is_normal_map ? FLAT_NMAP_TEX : WHITE_TEX);} // failed to load texture - use a simple white texture/flat normal map
 		return tid;
 	}
 public:
-	building_texture_mgr_t() : window_tid(-1), hdoor_tid(-1), odoor_tid(-1), bdoor_tid(-1), bdoor2_tid(-1), gdoor_tid(-1),
-		ac_unit_tid1(-1), ac_unit_tid2(-1), bath_wind_tid(-1), helipad_tex(-1), solarp_tex(-1), concrete_tex(-1) {}
 	int get_window_tid   () const {return window_tid;}
 	int get_hdoor_tid    () {return ensure_tid(hdoor_tid,     "white_door.jpg");} // house door
 	int get_odoor_tid    () {return ensure_tid(odoor_tid,     "buildings/office_door.jpg");} // office door (low resolution); unused
@@ -147,6 +146,8 @@ public:
 	int get_helipad_tid  () {return ensure_tid(helipad_tex,   "buildings/helipad.jpg");}
 	int get_solarp_tid   () {return ensure_tid(solarp_tex,    "buildings/solar_panel.jpg");}
 	int get_concrete_tid () {return ensure_tid(concrete_tex,  "roads/concrete.jpg");}
+	int get_met_plate_tid() {return ensure_tid(met_plate_tex, "metal_plate.jpg");}
+	int get_mplate_nm_tid() {return ensure_tid(mplate_nm_tex, "normal_maps/metal_plate_NRM.jpg", 1);} // is_normal_map=1
 
 	bool check_windows_texture() {
 		if (!global_building_params.windows_enabled()) return 0;
@@ -204,6 +205,7 @@ public:
 		register_tid(building_texture_mgr.get_helipad_tid());
 		register_tid(building_texture_mgr.get_solarp_tid());
 		register_tid(building_texture_mgr.get_concrete_tid());
+		register_tid(building_texture_mgr.get_met_plate_tid());
 		register_tid(get_plywood_tid()); // for attics
 		for (unsigned i = 0; i < num_special_tids; ++i) {register_tid(special_tids[i]);}
 
@@ -1040,7 +1042,7 @@ public:
 	}
 
 	void add_cube(building_t const &bg, cube_t const &cube, tid_nm_pair_t const &tex, colorRGBA const &color,
-		bool swap_txy, unsigned dim_mask, bool skip_bottom, bool skip_top, bool ws_texture)
+		bool swap_txy=0, unsigned dim_mask=7, bool skip_bottom=0, bool skip_top=0, bool ws_texture=0)
 	{
 		assert(dim_mask != 0); // must draw at least some face
 		auto &verts(get_verts(tex));
@@ -1107,7 +1109,7 @@ public:
 		}
 	}
 
-	void add_roof_dome(point const &pos, float rx, float ry, tid_nm_pair_t const &tex, colorRGBA const &color, bool onion) {
+	void add_roof_dome(point const &pos, float rx, float ry, tid_nm_pair_t const &tex, colorRGBA const &color, bool onion) { // Note: no rotation needed, no bg argument
 		auto &verts(get_verts(tex));
 		color_wrapper cw(color);
 		unsigned const ndiv(N_SPHERE_DIV);
@@ -1126,6 +1128,11 @@ public:
 			if (onion && i->v.z > 0.0) {i->v.z += 0.05f*ravg*(1.0f/(1.01f - i->v.z/ravg) - 1.0f);} // form a point at the top
 			verts.emplace_back(vert_norm_comp_tc((i->v + center), i->n, i->t[0]*tex.tscale_x, i->t[1]*tex.tscale_y), cw);
 		}
+	}
+
+	void add_water_tower(building_t const &bg, cube_t const &wt_bcube) {
+		tid_nm_pair_t const tex(building_texture_mgr.get_met_plate_tid(), building_texture_mgr.get_mplate_nm_tid(), 1.0, 1.0);
+		add_cube(bg, wt_bcube, tex, WHITE, 0, 7, 1, 0, 0); // TODO: placeholder
 	}
 
 	unsigned num_verts() const {
@@ -1449,6 +1456,10 @@ void building_t::get_all_drawn_exterior_verts(building_draw_t &bdraw) { // exter
 			int const ac_tid(tex_id ? building_texture_mgr.get_ac_unit_tid1() : building_texture_mgr.get_ac_unit_tid2());
 			bdraw.add_cube(*this, *i, tid_nm_pair_t(ac_tid, -1, (swap_st ? 1.0 : -1.0), 1.0), WHITE, swap_st, 4, 1, 0, 0); // Z, skip bottom, ws_texture=0
 			bdraw.add_cube(*this, *i, tid_nm_pair_t(ac_tid, -1, 0.3, 1.0), WHITE, 0, 3, 1, 0, 0); // XY with stretched texture, ws_texture=0
+			continue;
+		}
+		if (i->type == ROOF_OBJ_WTOWER) {
+			bdraw.add_water_tower(*this, *i);
 			continue;
 		}
 		bool const skip_bot(i->type != ROOF_OBJ_SCAP), pointed(i->type == ROOF_OBJ_ANT); // draw antenna as a point
