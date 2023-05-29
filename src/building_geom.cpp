@@ -1778,15 +1778,16 @@ void building_t::gen_details(rand_gen_t &rgen, bool is_rectangle) { // for the r
 		return;
 	}
 	cube_t const &top(parts.back()); // top/last part
+	vector3d const tsz(top.get_size());
+	point top_center(top.get_cube_center());
+	if (is_rotated() && !is_cube()) {do_xy_rotate_inv(bcube.get_cube_center(), top_center);} // put top_center in building bcube coordinate space
 	float const helipad_radius(2.0*window_vspacing);
 	bool const can_have_hp_or_sl(flat_roof && num_sides >= 4 && flat_side_amt == 0.0 && !is_house);
-	has_helipad = (can_have_hp_or_sl && min(top.dx(), top.dy()) > (is_cube() ? 3.2 : 4.0)*helipad_radius && bcube.dz() > 8.0*window_vspacing && (rgen.rand() % 12) == 0);
-	cube_t helipad_bcube;
+	has_helipad = (can_have_hp_or_sl && min(tsz.x, tsz.y) > (is_cube() ? 3.2 : 4.0)*helipad_radius && bcube.dz() > 8.0*window_vspacing && (rgen.rand() % 12) == 0);
+	cube_t avoid_bcube;
 
 	if (has_helipad) { // add helipad
 		tquad_t helipad(4); // quad
-		point top_center(top.get_cube_center());
-		if (is_rotated() && !is_cube()) {do_xy_rotate_inv(bcube.get_cube_center(), top_center);} // put antenna center in building bcube coordinate space
 		float const z(top.z2() + 0.01*window_vspacing); // slightly above the roof to avoid Z-fighting
 		float const x1(top_center.x - helipad_radius), x2(top_center.x + helipad_radius), y1(top_center.y - helipad_radius), y2(top_center.y + helipad_radius);
 		bool const dir(rgen.rand_bool()); // R90 50% of the time
@@ -1795,7 +1796,7 @@ void building_t::gen_details(rand_gen_t &rgen, bool is_rectangle) { // for the r
 		helipad.pts[ dir+2   ].assign(x2, y2, z);
 		helipad.pts[(dir+3)&3].assign(x1, y2, z);
 		roof_tquads.emplace_back(helipad, (uint8_t)tquad_with_ix_t::TYPE_HELIPAD);
-		helipad_bcube = helipad.get_bcube();
+		avoid_bcube = helipad.get_bcube();
 	}
 	else if (can_have_hp_or_sl && is_cube() && interior_enabled()) {
 		// maybe add skylights; cube roofs only for now, since we can't cut holes in other shapes; only for buildings with interiors;
@@ -1826,18 +1827,33 @@ void building_t::gen_details(rand_gen_t &rgen, bool is_rectangle) { // for the r
 		} // for i
 	}
 	unsigned const num_blocks((flat_roof && skylights.empty()) ? (rgen.rand() % 9) : 0); // 0-8; 0 if there are roof quads (houses, etc.)
-	bool const add_antenna((flat_roof || roof_type == ROOF_TYPE_SLOPE) && !has_helipad && skylights.empty() && (rgen.rand() & 1));
-	unsigned const num_details(num_blocks + num_ac_units + 4*add_walls + add_antenna);
+	bool const add_antenna((flat_roof || roof_type == ROOF_TYPE_SLOPE) && !has_helipad && skylights.empty() && rgen.rand_bool());
+	bool const add_water_tower(flat_roof && !has_helipad && !add_antenna && skylights.empty() && (tsz.x < 2.0*tsz.y && tsz.y < 2.0*tsz.x) /*&& rgen.rand_bool()*/);
+	unsigned const num_details(num_blocks + num_ac_units + 4*add_walls + add_antenna + add_water_tower);
 	if (num_details == 0) return; // nothing to do
-	if (add_walls && min(top.dx(), top.dy()) < 4.0*wall_width) return; // too small
-	float const xy_sz(top.get_size().xy_mag()); // better to use bcube for size?
+	if (add_walls && min(tsz.x, tsz.y) < 4.0*wall_width) return; // too small
+	float const xy_sz(tsz.xy_mag()); // better to use bcube for size?
 	cube_t bounds(top);
 	if (add_walls) {bounds.expand_by_xy(-wall_width);}
 	details.reserve(details.size() + num_details);
 
+	if (add_water_tower) {
+		float const radius(rgen.rand_uniform(0.04, 0.06)*(tsz.x + tsz.y)), height(rgen.rand_uniform(2.5, 4.0)*radius);
+		roof_obj_t wtower(ROOF_OBJ_WTOWER);
+		point wt_center(top_center);
+		for (unsigned d = 0; d < 2; ++d) {wt_center[d] += rgen.rand_uniform(-1.0, 1.0)*0.25*tsz[d];} // apply a random shift
+		wtower.set_from_point(wt_center);
+		wtower.expand_by_xy(radius);
+
+		if (check_part_contains_cube_xy(top, parts.size()-1, wtower)) {
+			set_cube_zvals(wtower, top.z2(), (bcube.z2() + height)); // z2 uses bcube to include sloped roof
+			details.push_back(wtower);
+			avoid_bcube = wtower;
+		}
+	}
 	for (unsigned i = 0; i < num_blocks; ++i) {
 		roof_obj_t c(ROOF_OBJ_BLOCK); // generic block
-		float const height_scale(0.0035f*(top.dz() + bcube.dz())); // based on avg height of current section and entire building
+		float const height_scale(0.0035f*(tsz.z + bcube.dz())); // based on avg height of current section and entire building
 		float height(height_scale*rgen.rand_uniform(1.0, 4.0));
 		bool placed(0);
 
@@ -1845,7 +1861,7 @@ void building_t::gen_details(rand_gen_t &rgen, bool is_rectangle) { // for the r
 			c.set_from_point(point(rgen.rand_uniform(bounds.x1(), bounds.x2()), rgen.rand_uniform(bounds.y1(), bounds.y2()), top.z2()));
 			c.expand_by_xy(vector3d(xy_sz*rgen.rand_uniform(0.01, 0.07), xy_sz*rgen.rand_uniform(0.01, 0.07), 0.0));
 			if (!bounds.contains_cube_xy(c)) continue; // not contained
-			if (has_helipad && c.intersects_xy(helipad_bcube)) continue; // bad placement
+			if (!avoid_bcube.is_all_zeros() && c.intersects_xy(avoid_bcube))        continue; // bad placement
 			if (!is_cube() && !check_part_contains_cube_xy(top, parts.size()-1, c)) continue; // not contained in roof
 			placed = 1;
 			break;
@@ -1876,7 +1892,7 @@ void building_t::gen_details(rand_gen_t &rgen, bool is_rectangle) { // for the r
 	if (num_ac_units > 0) {
 		vect_cube_t ac_avoid;
 		for (cube_t const &s : skylights) {ac_avoid.push_back(s); ac_avoid.back().expand_in_dim(2, 0.25*window_vspacing);} // avoid skylights
-		if (has_helipad) {ac_avoid.push_back(helipad_bcube);}
+		if (!avoid_bcube.is_all_zeros()) {ac_avoid.push_back(avoid_bcube);}
 		place_roof_ac_units(num_ac_units, xy_sz*rgen.rand_uniform(0.012, 0.02), bounds, ac_avoid, add_antenna, rgen);
 	}
 	if (add_walls) {
@@ -1885,12 +1901,9 @@ void building_t::gen_details(rand_gen_t &rgen, bool is_rectangle) { // for the r
 		for (unsigned i = 0; i < 4; ++i) {details.emplace_back(cubes[i], (uint8_t)ROOF_OBJ_WALL);}
 	}
 	if (add_antenna) { // add antenna
-		float const radius(0.003f*rgen.rand_uniform(1.0, 2.0)*(top.dx() + top.dy()));
-		float const height(rgen.rand_uniform(0.25, 0.5)*top.dz());
+		float const radius(0.003f*rgen.rand_uniform(1.0, 2.0)*(tsz.x + tsz.y)), height(rgen.rand_uniform(0.25, 0.5)*tsz.z);
 		roof_obj_t antenna(ROOF_OBJ_ANT);
-		point top_center(top.get_cube_center());
-		if (is_rotated() && !is_cube()) {do_xy_rotate_inv(bcube.get_cube_center(), top_center);} // put antenna center in building bcube coordinate space
-		antenna.set_from_point(top_center);
+		antenna.set_from_point(top_center); // always in the center of the roof
 		antenna.expand_by_xy(radius);
 		set_cube_zvals(antenna, top.z2(), (bcube.z2() + height)); // z2 uses bcube to include sloped roof
 		details.push_back(antenna);
