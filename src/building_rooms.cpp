@@ -2023,7 +2023,7 @@ bool building_t::place_bottle_on_obj(rand_gen_t &rgen, room_object_t const &plac
 	return 1;
 }
 
-bool building_t::place_plant_on_obj(rand_gen_t &rgen, room_object_t const &place_on, unsigned room_id, float tot_light_amt, cube_t const &avoid) {
+bool building_t::place_plant_on_obj(rand_gen_t &rgen, cube_t const &place_on, unsigned room_id, float tot_light_amt, cube_t const &avoid) {
 	float const window_vspacing(get_window_vspace()), height(rgen.rand_uniform(0.25, 0.4)*window_vspacing);
 	float const radius(min(rgen.rand_uniform(0.06, 0.08)*window_vspacing, min(place_on.dx(), place_on.dy())/3.0f));
 	cube_t const plant(place_cylin_object(rgen, place_on, radius, height, 1.2*radius));
@@ -3353,6 +3353,7 @@ void building_t::add_balconies(rand_gen_t &rgen) {
 		if (rgen.rand_float() < 0.75) continue;
 		float const balcony_z1(room->z2() - floor_spacing /*+ get_fc_thickness()*/); // floor level of top floor of room
 		unsigned const floor_ix(room->get_floor_containing_zval((balcony_z1 + 0.1*floor_spacing), floor_spacing));
+		unsigned const room_id(room - interior->rooms.begin());
 		room_type const rtype(room->get_room_type(floor_ix));
 		if (rtype == RTYPE_BATH) continue; // no bathroom balconies as that would be weird
 		assert(room->part_id < parts.size());
@@ -3379,11 +3380,26 @@ void building_t::add_balconies(rand_gen_t &rgen) {
 				balcony.expand_in_dim(!dim, wall_thickness); // expand slightly to include window frame and merge adj balcony shared walls
 				max_eq(balcony.d[!dim][0], (part.d[!dim][0] + 0.25f*wall_thickness)); // clamp slightly smaller than the containing part in !dim
 				min_eq(balcony.d[!dim][1], (part.d[!dim][1] - 0.25f*wall_thickness));
-				objs.emplace_back(balcony, TYPE_BALCONY, (room - interior->rooms.begin()), dim, dir, 0, 1.0, SHAPE_CUBE, WHITE);
+				objs.emplace_back(balcony, TYPE_BALCONY, room_id, dim, dir, 0, 1.0, SHAPE_CUBE, WHITE);
 				objs.back().obj_id = balcony_style; // set so that we can select from multiple balcony styles
 				avoid2 = balcony;
 				avoid2.expand_by_xy(wall_thickness);
-				// TODO: place table, chairs, potted plant, etc.
+				// maybe add plants to balconies; note that they won't be properly lit since plants use indoor lighting,
+				// and the plants won't be drawn when the player is outside the building; this should be okay because an empty pot works on a balcony as well
+				unsigned const num_plants(rgen.rand() % 3); // 0-2
+
+				if (num_plants > 0) { // place plants
+					cube_t cubes[4], plant_avoid;
+					get_balcony_cubes(objs.back(), cubes);
+					float const wall_width(cubes[1].get_sz_dim(dim)); // use front wall
+					cube_t floor_inner(cubes[0]);
+					floor_inner.expand_by_xy(-wall_width);
+
+					for (unsigned n = 0; n < num_plants; ++n) {
+						if (place_plant_on_obj(rgen, floor_inner, room_id, 1.0, plant_avoid)) {plant_avoid = objs.back();} // tot_light_amt=1.0
+					}
+				}
+				// else place table and chairs?
 				++num_balconies;
 				added = 1;
 			} // for dir
