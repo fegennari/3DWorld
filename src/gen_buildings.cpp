@@ -1143,7 +1143,6 @@ public:
 		float const radius(0.25*(wtc.dx() + wtc.dy())); // should be equal size in X vs. Y
 		float const tscale_x(2.0), tscale_y(2.0), ndiv_inv(1.0/ndiv), height(wtc.dz());
 		float const base_z1(wtc.z1() + 0.5*height - 0.5*radius), cylin_z1(base_z1 + 0.01*height), cylin_z2(wtc.z2() - 0.12*height), cone_z2(wtc.z2());
-		vector3d const center(wtc.get_cube_center());
 		color_wrapper const sides_cw(WHITE), roof_cw(colorRGBA(0.15, 0.12, 0.10, 1.0));
 		// draw base
 		cube_t base(wtc);
@@ -1164,6 +1163,8 @@ public:
 			} // for x
 		} // for y
 		// draw side quads
+		vector3d center(wtc.get_cube_center());
+		if (bg.is_rotated()) {bg.do_xy_rotate(bg.bcube.get_cube_center(), center);}
 		point ce[2] = {point(center.x, center.y, cylin_z1), point(center.x, center.y, cylin_z2)};
 		vector3d v12;
 		vector_point_norm const &vpn(gen_cylinder_data(ce, radius, radius, ndiv, v12));
