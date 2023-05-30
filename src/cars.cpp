@@ -599,7 +599,7 @@ void car_draw_state_t::draw_car(car_t const &car, bool is_dlight_shadows) { // N
 	unsigned const lr_xor(((camera_pdu.pos[!dim] - xlate[!dim]) - center[!dim]) < 0.0f);
 	bool const brake_lights_on(car.is_almost_stopped() || car.stopped_at_light), headlights_on(car.headlights_on());
 	float const hv1(car.is_truck ? 0.8 : 0.2), hv2(1.0 - hv1); // headlights and tail lights; blend from bottom to top
-	float const sv1(car.is_truck ? 0.8 : 0.3), sv2(1.0 - hv1); // turn signals; blend from bottom to top
+	float const sv1(car.is_truck ? 0.8 : 0.3), sv2(1.0 - sv1); // turn signals; blend from bottom to top
 
 	if (headlights_on && dist_val < 0.3) { // night time headlights
 		colorRGBA const hl_color(get_headlight_color(car));
