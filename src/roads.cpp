@@ -348,8 +348,9 @@ namespace streetlight_ns {
 		max_eq(lights_bcube.z2(), (lpos.z + 0.1f*ldist)); // pointed down - don't extend as far up
 		dl_sources.emplace_back(ldist, lpos, lpos, light_color, 0, -plus_z, STREETLIGHT_BEAMWIDTH); // points down
 		
-		// cache shadow maps if there are no dynamic cars or pedestrians (player doesn't cast a shadow)
-		if (city_params.num_cars == 0 && city_params.num_peds == 0) {
+		// cache shadow maps if there are no dynamic cars or pedestrians (player doesn't cast a shadow);
+		// if this streetligt is on a bridge or tunnel, there are no pedestrians since they don't go here
+		if (city_params.num_cars == 0 && (on_bridge_or_tunnel || city_params.num_peds == 0)) {
 			if (cached_smap) {dl_sources.back().assign_smap_id(uintptr_t(this)/sizeof(void *));} // cache on second frame
 			cached_smap = 1;
 		} else {cached_smap = 0;}
@@ -726,8 +727,8 @@ void road_connector_t::add_streetlights(unsigned num_per_side, bool staggered, f
 		pos1[!dim] = d[!dim][0] - dn_shift; pos2[!dim] = d[!dim][1] + dn_shift;
 		pos1.z = pos2.z = za + v*(zb - za);
 		vector3d dir(zero_vector); dir[!dim] = 1.0;
-		if (!staggered || (n&1) == 0) {streetlights.emplace_back(pos1,  dir);}
-		if (!staggered || (n&1) == 1) {streetlights.emplace_back(pos2, -dir);}
+		if (!staggered || (n&1) == 0) {streetlights.emplace_back(pos1,  dir, 1);} // on_bridge_or_tunnel=1
+		if (!staggered || (n&1) == 1) {streetlights.emplace_back(pos2, -dir, 1);} // on_bridge_or_tunnel=1
 	} // for n
 	sort_streetlights_by_yx();
 }
