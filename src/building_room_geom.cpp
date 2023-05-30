@@ -3123,7 +3123,7 @@ void building_room_geom_t::add_balcony(room_object_t const &c) {
 	else { // balcony with railings
 		unsigned const NUM_BAR_COLORS = 4;
 		colorRGBA const bar_colors[NUM_BAR_COLORS] = {WHITE, BKGRAY, GRAY, DK_BROWN};
-		colorRGBA const &bar_color(bar_colors[(c.obj_id >> 1) % NUM_BAR_COLORS]); // choose a random color
+		colorRGBA const &bar_color(bar_colors[(c.obj_id >> 2) % NUM_BAR_COLORS]); // choose a random color
 		float const top_z1(c.z2() - 0.4*bot.dz()), wall_thickness(front.get_sz_dim(c.dim)), railing_hwidth(0.5*wall_thickness);
 		float const corner_bar_hwidth(0.75*0.5*wall_thickness), bar_hwidth(0.75*corner_bar_hwidth);
 		float const bar_spacing(0.6*c.dz());
