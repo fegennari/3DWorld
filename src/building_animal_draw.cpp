@@ -256,7 +256,8 @@ class insect_draw_t {
 			
 			if (use_model) {
 				cube_t const bcube(i.get_bcube_with_dir());
-				building_obj_model_loader.draw_model(s, bcube.get_cube_center(), bcube, i.dir, LT_BROWN, xlate, obj_model_ix, 0); // shadow_only=0
+				point const pos(bcube.xc(), bcube.yc(), bcube.z1());
+				building_obj_model_loader.draw_model(s, pos, bcube, i.dir, LT_BROWN, xlate, obj_model_ix, 0); // shadow_only=0
 			}
 			else { // draw as untextured sphere geometry
 				//if (i.has_target) {s.set_color_e(i.target_player ? RED : GREEN);} // debug visualization for flies

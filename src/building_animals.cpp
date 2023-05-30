@@ -1321,6 +1321,12 @@ int building_t::check_for_snake_coll(snake_t const &snake, point const &camera_b
 
 // *** Insects ***
 
+float insect_t::get_height() const {
+	if (flies()) {return 2.0*radius;} // spherical
+	if (type != INSECT_TYPE_ROACH || !building_obj_model_loader.is_model_valid(OBJ_MODEL_ROACH)) {return 0.4*radius;} // roach squished sphere
+	vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_ROACH));
+	return 2.0*radius*sz.z/max(sz.x, sz.y);
+}
 cube_t insect_t::get_bcube() const {
 	cube_t bcube(pos);
 

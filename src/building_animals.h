@@ -104,7 +104,7 @@ struct insect_t : public building_animal_t {
 	static bool allow_in_attic() {return 0;} // could allow it for flies but not cockroaches?
 	bool flies() const {return (type == INSECT_TYPE_FLY);}
 	float get_xy_radius() const {return radius;}
-	float get_height   () const {return (flies() ? 2.0 : 0.4)*radius;}
+	float get_height   () const;
 	float get_z2       () const {return (pos.z + 0.5*get_height());}
 	vector3d get_orient() const {return vector3d(dir.x, dir.y, 0.0).get_norm();} // XY plane for all insects
 	cube_t get_bcube () const; // used for collision detection and VFC; bounding cube across rotations
