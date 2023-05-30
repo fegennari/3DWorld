@@ -3200,7 +3200,9 @@ public:
 				reset_interior_lighting_and_end_shader(s);
 			}
 			if (bbd.has_ext_geom()) {
+				glDisable(GL_CULL_FACE);
 				ensure_city_lighting_setup(reflection_pass, xlate, is_city_lighting_setup); // needed for dlights to work
+				glEnable(GL_CULL_FACE); // above call may create shadow maps and disable face culling, so make sure it's re-enabled
 				enable_city_shader(city_shader, use_city_dlights, use_bmap, min_alpha);
 				bbd.draw_and_clear_ext_tiles(city_shader, xlate); // draw after ext walls but before windows so that alpha blending works properly
 				city_shader.disable();
