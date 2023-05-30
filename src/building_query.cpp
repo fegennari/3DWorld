@@ -223,7 +223,7 @@ bool building_t::check_sphere_coll_inner(point &pos, point const &p_last, vector
 			else {
 				if (!i->contains_pt(query_pt)) continue; // not interior to this part
 
-				if (!is_cube()) { // non-cube shaped building, clamp_part is conservative
+				if (!is_cube() && zval > i->z1() && zval < i->z2()) { // non-cube shaped building, in Z bounds, clamp_part is conservative
 					//if (use_cylinder_coll()) {}
 					vect_point const &points(get_part_ext_verts(i - parts.begin()));
 					point const p_last2_bs(p_last2 - xlate);
