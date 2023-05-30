@@ -1828,7 +1828,7 @@ void building_t::gen_details(rand_gen_t &rgen, bool is_rectangle) { // for the r
 	}
 	unsigned const num_blocks((flat_roof && skylights.empty()) ? (rgen.rand() % 9) : 0); // 0-8; 0 if there are roof quads (houses, etc.)
 	bool const add_antenna((flat_roof || roof_type == ROOF_TYPE_SLOPE) && !has_helipad && skylights.empty() && rgen.rand_bool());
-	bool const add_water_tower(flat_roof && !has_helipad && !add_antenna && skylights.empty() && (tsz.x < 2.0*tsz.y && tsz.y < 2.0*tsz.x) /*&& rgen.rand_bool()*/);
+	bool const add_water_tower(flat_roof && !has_helipad && !add_antenna && skylights.empty() && (tsz.x < 2.0*tsz.y && tsz.y < 2.0*tsz.x) && rgen.rand_bool());
 	unsigned const num_details(num_blocks + num_ac_units + 4*add_walls + add_antenna + add_water_tower);
 	if (num_details == 0) return; // nothing to do
 	if (add_walls && min(tsz.x, tsz.y) < 4.0*wall_width) return; // too small
@@ -1838,7 +1838,7 @@ void building_t::gen_details(rand_gen_t &rgen, bool is_rectangle) { // for the r
 	details.reserve(details.size() + num_details);
 
 	if (add_water_tower) {
-		float const radius(rgen.rand_uniform(0.04, 0.06)*(tsz.x + tsz.y)), height(rgen.rand_uniform(3.0, 4.5)*radius);
+		float const radius(rgen.rand_uniform(0.04, 0.06)*(tsz.x + tsz.y)), height(rgen.rand_uniform(3.0, 5.0)*radius);
 		roof_obj_t wtower(ROOF_OBJ_WTOWER);
 		point wt_center(top_center);
 		for (unsigned d = 0; d < 2; ++d) {wt_center[d] += rgen.rand_uniform(-1.0, 1.0)*0.25*tsz[d];} // apply a random shift

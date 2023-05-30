@@ -126,7 +126,7 @@ void building_geom_t::do_xy_rotate_normal_inv(point &n) const {::do_xy_rotate_no
 
 class building_texture_mgr_t {
 	int window_tid=-1, hdoor_tid=-1, odoor_tid=-1, bdoor_tid=-1, bdoor2_tid=-1, gdoor_tid=-1, ac_unit_tid1=-1, ac_unit_tid2=-1, bath_wind_tid=-1, helipad_tex=-1,
-		solarp_tex=-1, concrete_tex=-1, met_plate_tex=-1, mplate_nm_tex=-1;
+		solarp_tex=-1, concrete_tex=-1, met_plate_tex=-1, mplate_nm_tex=-1, met_roof_tex=-1;
 
 	int ensure_tid(int &tid, const char *name, bool is_normal_map=0) {
 		if (tid < 0) {tid = get_texture_by_name(name, is_normal_map);}
@@ -148,6 +148,7 @@ public:
 	int get_concrete_tid () {return ensure_tid(concrete_tex,  "roads/concrete.jpg");}
 	int get_met_plate_tid() {return ensure_tid(met_plate_tex, "metal_plate.jpg");}
 	int get_mplate_nm_tid() {return ensure_tid(mplate_nm_tex, "normal_maps/metal_plate_NRM.jpg", 1);} // is_normal_map=1
+	int get_met_roof_tid () {return ensure_tid(met_roof_tex,  "buildings/metal_roof.jpg");}
 
 	bool check_windows_texture() {
 		if (!global_building_params.windows_enabled()) return 0;
@@ -206,6 +207,7 @@ public:
 		register_tid(building_texture_mgr.get_solarp_tid());
 		register_tid(building_texture_mgr.get_concrete_tid());
 		register_tid(building_texture_mgr.get_met_plate_tid());
+		register_tid(building_texture_mgr.get_met_roof_tid());
 		register_tid(get_plywood_tid()); // for attics
 		for (unsigned i = 0; i < num_special_tids; ++i) {register_tid(special_tids[i]);}
 
@@ -1134,25 +1136,45 @@ public:
 
 	void add_water_tower(building_t const &bg, cube_t const &wtc) {
 		tid_nm_pair_t const side_tex(building_texture_mgr.get_met_plate_tid(), building_texture_mgr.get_mplate_nm_tid(), 1.0, 1.0);
+		tid_nm_pair_t const base_tex(building_texture_mgr.get_met_roof_tid ()); // no normal map
 		tid_nm_pair_t const roof_tex(WHITE_TEX); // untextured
 		auto &tverts(get_verts(roof_tex, 1)), &qverts(get_verts(side_tex, 0)); // triangle and quad verts
 		unsigned const ndiv(N_CYL_SIDES);
 		float const radius(0.25*(wtc.dx() + wtc.dy())); // should be equal size in X vs. Y
-		float const tscale(1.0), ndiv_inv(1.0/ndiv), cylin_z1(wtc.z1()), cone_z2(wtc.z2()), cylin_z2(cylin_z1 + 0.75*(cone_z2 - cylin_z1));
+		float const tscale_x(2.0), tscale_y(2.0), ndiv_inv(1.0/ndiv), height(wtc.dz());
+		float const base_z1(wtc.z1() + 0.5*height - 0.5*radius), cylin_z1(base_z1 + 0.01*height), cylin_z2(wtc.z2() - 0.12*height), cone_z2(wtc.z2());
 		vector3d const center(wtc.get_cube_center());
-		point ce[2] = {point(center.x, center.y, cylin_z1), point(center.x, center.y, cylin_z2)};
 		color_wrapper const sides_cw(WHITE), roof_cw(colorRGBA(0.15, 0.12, 0.10, 1.0));
-		vector3d v12;
+		// draw base
+		cube_t base(wtc);
+		set_cube_zvals(base, base_z1, cylin_z1);
+		add_cube(bg, base, base_tex, GRAY); // draw all sides
+		// draw legs
+		float const leg_width(0.08*radius);
+		cube_t legs(wtc);
+		legs.expand_by_xy(-0.5*leg_width); // shrink slightly
+		legs.z2() = base_z1;
+
+		for (unsigned y = 0; y < 2; ++y) {
+			for (unsigned x = 0; x < 2; ++x) {
+				cube_t leg(legs);
+				leg.d[0][!x] = leg.d[0][x] + (x ? -1.0 : 1.0)*leg_width;
+				leg.d[1][!y] = leg.d[1][y] + (y ? -1.0 : 1.0)*leg_width;
+				add_cube(bg, leg, roof_tex, DK_GRAY, 0, 3); // skip top and bottom; untextured like roof
+			} // for x
+		} // for y
 		// draw side quads
+		point ce[2] = {point(center.x, center.y, cylin_z1), point(center.x, center.y, cylin_z2)};
+		vector3d v12;
 		vector_point_norm const &vpn(gen_cylinder_data(ce, radius, radius, ndiv, v12));
 
 		for (unsigned i = 0; i < ndiv; ++i) { // similar to gen_cylinder_quads(), but with a color
 			for (unsigned j = 0; j < 2; ++j) {
 				unsigned const S(i + j), s(S%ndiv);
 				norm_comp const normal((vpn.n[s] + vpn.n[(S+ndiv-1)%ndiv]).get_norm());
-				float const ts(4.0*S*tscale*ndiv_inv);
-				qverts.emplace_back(vpn.p[(s<<1)+ j], normal, ts, (1.0-j)*tscale, sides_cw);
-				qverts.emplace_back(vpn.p[(s<<1)+!j], normal, ts, j      *tscale, sides_cw);
+				float const ts(4.0*S*tscale_x*ndiv_inv);
+				qverts.emplace_back(vpn.p[(s<<1)+ j], normal, ts, (1.0-j)*tscale_y, sides_cw);
+				qverts.emplace_back(vpn.p[(s<<1)+!j], normal, ts, j      *tscale_y, sides_cw);
 			}
 		} // for i
 		// draw top cone triangles
