@@ -1049,7 +1049,7 @@ bool building_t::maybe_squish_spider(room_object_t const &obj) {
 
 	for (spider_t &spider : interior->room_geom->spiders) {
 		if (spider.squished) continue; // already squished
-		if (!!obj.contains_pt_xy(spider.pos) || !obj.intersects(spider.get_bcube())) continue;
+		if (!obj.contains_pt_xy(spider.pos) || !obj.intersects(spider.get_bcube())) continue;
 		if (obj.get_size().get_max_val() < spider.get_xy_radius()) continue; // object is too small to squish this spider
 		add_blood_decal(spider.pos, 1.5*spider.get_xy_radius());
 		spider.pos.z -= 0.4*spider.get_height(); // move it near the ground since it will be drawn flattened
