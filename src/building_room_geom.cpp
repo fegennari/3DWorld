@@ -1950,7 +1950,7 @@ void building_room_geom_t::add_elevator_doors(elevator_t const &e, float fc_thic
 }
 
 void building_room_geom_t::add_light(room_object_t const &c, float tscale) {
-	bool const is_on(c.is_light_on()), on_but_dim(is_on && ((c.is_broken() || (c.flags & RO_FLAG_BROKEN2)) && !c.is_open()));
+	bool const is_on(c.is_light_on()), on_but_dim(is_on && c.light_is_out());
 	tid_nm_pair_t tp(((is_on || c.shape == SHAPE_SPHERE) ? (int)WHITE_TEX : (int)PLASTER_TEX), tscale);
 	tp.emissive = (is_on ? 1.0 : 0.0);
 	colorRGBA const color(c.color*(on_but_dim ? 0.4 : 1.0));

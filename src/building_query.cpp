@@ -710,8 +710,9 @@ bool building_t::check_pos_in_unlit_room_recur(point const &pos, set<unsigned> &
 	auto objs_end(interior->room_geom->get_placed_objs_end()); // skip buttons/stairs/elevators
 
 	for (auto i = interior->room_geom->objs.begin(); i != objs_end; ++i) {
-		if (!i->is_light_type() || !i->is_light_on()) continue; // not a light, or light not on
 		if ((int)i->room_id != room_id) continue; // wrong room
+		if (!i->is_light_type() || !i->is_light_on()) continue; // not a light, or light not on
+		//if (i->light_is_out()) continue; // broken light; continuing here doesn't work because sparks won't be drawn
 		if (unsigned(max(0.0f, (i->z1() - room.z1()))/floor_spacing) != floor_ix) continue; // different floors
 		return 0; // lit by a room light, including one in a closet (Note that closets are only in house bedrooms, which should always have windows anyway)
 	}

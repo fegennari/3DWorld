@@ -1530,7 +1530,7 @@ bool building_t::is_room_lit(int room_id, float zval) const {
 	auto objs_end(interior->room_geom->get_placed_objs_end()); // skip buttons/stairs/elevators
 
 	for (auto i = interior->room_geom->objs.begin(); i != objs_end; ++i) {
-		if (!i->is_light_type() || !i->is_light_on() || i->in_closet()) continue; // not a light, or light not on; skip closet lights
+		if (!i->is_light_type() || !i->is_light_on() || i->light_is_out() || i->in_closet()) continue; // not a light, light not on, or broken; skip closet lights
 		if ((int)i->room_id != room_id) continue; // different room
 		if (room.is_sec_bldg || get_floor_for_zval(zval) == get_floor_for_zval(i->z1())) return 1; // same floor - lit
 	}
