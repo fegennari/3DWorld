@@ -1043,7 +1043,7 @@ void building_t::update_spider(spider_t &spider, point const &camera_bs, float t
 	}
 }
 
-bool building_t::maybe_squish_spider(room_object_t const &obj) {
+bool building_t::maybe_squish_animals(room_object_t const &obj) { // spiders and cockroaches
 	assert(has_room_geom());
 	bool any_squished(0);
 
@@ -1056,6 +1056,12 @@ bool building_t::maybe_squish_spider(room_object_t const &obj) {
 		any_squished  = spider.squished = 1;
 		register_achievement("Splat the Spider");
 	} // for spider
+	for (insect_t &insect : interior->room_geom->insects) { // Note: no size check, achievement, or height reduction
+		if (insect.squished || insect.type != INSECT_TYPE_ROACH) continue; // already squished, or not a cockroach
+		if (!obj.contains_pt_xy(insect.pos) || !obj.intersects(insect.get_bcube())) continue;
+		add_blood_decal(insect.pos, 1.5*insect.get_xy_radius());
+		any_squished = insect.squished = 1;
+	} // for insect
 	return any_squished;
 }
 
@@ -1369,13 +1375,18 @@ void building_t::update_insects(point const &camera_bs, unsigned building_ix) {
 	}
 	// update insects
 	float const timestep(min(fticks, 4.0f)); // clamp fticks to 100ms
-	for (insect_t &insect : insects) {insect.move(timestep);}
+
+	for (insect_t &insect : insects) {
+		if (!insect.squished) {insect.move(timestep);}
+	}
 	vector<pair<float, point>> targets; // used for flies
 	for (insect_t &insect : insects) {update_insect(insect, camera_bs, timestep, targets, rgen);}
 }
 
 void building_t::update_insect(insect_t &insect, point const &camera_bs, float timestep, vector<pair<float, point>> &targets, rand_gen_t &rgen) const {
 	// run logic that's common to all insects
+	if (insect.squished) return;
+
 	if (insect.speed == 0.0) { // generate initial speed and dir
 		insect.speed = global_building_params.insect_speed*rgen.rand_uniform(0.5, 1.0);
 		insect.dir   = rgen.signed_rand_vector_norm();
