@@ -42,7 +42,7 @@ int get_money_tid      () {return get_texture_by_name("interiors/dollar20.jpg");
 int get_crack_tid(room_object_t const &obj, bool alpha=0) {
 	return get_texture_by_name(((5*obj.obj_id + 7*obj.room_id) & 1) ?
 		(alpha ? "interiors/cracked_glass2_alpha.jpg" : "interiors/cracked_glass2.jpg") :
-		(alpha ? "interiors/cracked_glass_alpha.jpg" : "interiors/cracked_glass.jpg"), 0, 0, 1, 0.0, 1, 1, (alpha ? 4 : 3));
+		(alpha ? "interiors/cracked_glass_alpha.jpg"  : "interiors/cracked_glass.jpg" ), 0, 0, 1, 0.0, 1, 1, (alpha ? 4 : 3));
 }
 int get_box_tid() {return get_texture_by_name("interiors/box.jpg");}
 int get_crate_tid(room_object_t const &c) {return get_texture_by_name((c.obj_id & 1) ? "interiors/crate2.jpg" : "interiors/crate.jpg");}

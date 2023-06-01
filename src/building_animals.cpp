@@ -1051,15 +1051,15 @@ bool building_t::maybe_squish_animals(room_object_t const &obj) { // spiders and
 		if (spider.squished) continue; // already squished
 		if (!obj.contains_pt_xy(spider.pos) || !obj.intersects(spider.get_bcube())) continue;
 		if (obj.get_size().get_max_val() < spider.get_xy_radius()) continue; // object is too small to squish this spider
-		add_blood_decal(spider.pos, 1.5*spider.get_xy_radius());
+		add_blood_decal(spider.pos, 1.5*spider.get_xy_radius(), colorRGBA(0.4, 1.0, 0.2, 1.0)); // yellow-green
 		spider.pos.z -= 0.4*spider.get_height(); // move it near the ground since it will be drawn flattened
 		any_squished  = spider.squished = 1;
 		register_achievement("Splat the Spider");
 	} // for spider
 	for (insect_t &insect : interior->room_geom->insects) { // Note: no size check, achievement, or height reduction
 		if (insect.squished || insect.type != INSECT_TYPE_ROACH) continue; // already squished, or not a cockroach
-		if (!obj.contains_pt_xy(insect.pos) || !obj.intersects(insect.get_bcube())) continue;
-		add_blood_decal(insect.pos, 1.5*insect.get_xy_radius());
+		if (/*!obj.contains_pt_xy(insect.pos) ||*/ !obj.intersects(insect.get_bcube())) continue; // squish if intersects, to avoid getting stuck
+		add_blood_decal(insect.pos, 1.6*insect.get_xy_radius(), colorRGBA(1.0, 1.0, 0.2, 1.0)); // yellow
 		any_squished = insect.squished = 1;
 	} // for insect
 	return any_squished;

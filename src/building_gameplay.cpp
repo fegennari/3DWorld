@@ -1941,15 +1941,17 @@ bool building_t::apply_toilet_paper(point const &pos, vector3d const &dir, float
 	return 1;
 }
 
-void building_t::add_blood_decal(point const &pos, float radius) {
-	if (disable_blood) return;
+void building_t::add_blood_decal(point const &pos, float radius, colorRGBA const &color) {
+	bool const is_blood(color == WHITE); // else insect guts; here WHITE represents real red blood, while any other color is something custom
+	if (disable_blood && is_blood) return; // disable_blood only applies to red blood, not bug guts
 	assert(has_room_geom());
 	float zval(pos.z);
 	if (!get_zval_of_floor(pos, radius, zval)) return; // no suitable floor found
 	tex_range_t const tex_range(tex_range_t::from_atlas((rand()&1), (rand()&1), 2, 2)); // 2x2 texture atlas
-	interior->room_geom->decal_manager.blood_qbd.add_quad_dirs(point(pos.x, pos.y, zval), -plus_x*radius, plus_y*radius, WHITE, plus_z, tex_range); // Note: never cleared
+	// Note: bloor is never cleared and will continue to accumulate in the current building
+	interior->room_geom->decal_manager.blood_qbd[!is_blood].add_quad_dirs(point(pos.x, pos.y, zval), -plus_x*radius, plus_y*radius, color, plus_z, tex_range);
 	interior->room_geom->modified_by_player = 1; // make sure blood stays in this building
-	player_inventory.record_damage_done(100.0); // blood is a mess to clean up (though damage will be reset on player death anyway)
+	player_inventory.record_damage_done(is_blood ? 100.0 : 1.0); // blood is a mess to clean up; bug guts less so (though damage will be reset on player death anyway)
 }
 
 void building_t::add_broken_glass_to_floor(point const &pos, float radius) {
