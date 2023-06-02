@@ -766,7 +766,7 @@ bool building_t::check_pos_in_unlit_room_recur(point const &pos, set<unsigned> &
 	return 1;
 }
 
-// Note: called on basketballs and soccer balls
+// Note: called on basketballs, soccer balls, and particles
 bool building_interior_t::check_sphere_coll(building_t const &building, point &pos, point const &p_last, float radius,
 	vect_room_object_t::const_iterator self, vector3d &cnorm, float &hardness, int &obj_ix) const
 {
@@ -794,7 +794,14 @@ bool building_interior_t::check_sphere_coll(building_t const &building, point &p
 			had_coll = 1; hardness = 1.0;
 		}
 	}
-	if (!room_geom) {return had_coll;} // no room geometry
+	had_coll |= check_sphere_coll_room_objects(building, pos, p_last, radius, self, cnorm, hardness, obj_ix);
+	return had_coll;
+}
+bool building_interior_t::check_sphere_coll_room_objects(building_t const &building, point &pos, point const &p_last, float radius,
+	vect_room_object_t::const_iterator self, vector3d &cnorm, float &hardness, int &obj_ix) const
+{
+	if (!room_geom) return 0;
+	bool had_coll(0);
 
 	// Note: no collision check with expanded_objs
 	for (auto c = room_geom->objs.begin(); c != room_geom->objs.end(); ++c) { // check for other objects to collide with
