@@ -2286,6 +2286,7 @@ void building_room_geom_t::add_bookcase(room_object_t const &c, bool inc_lg, boo
 	// add shelves
 	rand_gen_t rgen(c.create_rgen());
 	unsigned const num_shelves(3 + ((17*c.room_id + int(1000.0*fabs(c.z1())))%3)); // 3-5, randomly selected by room ID and floor
+	unsigned const max_books(MAX_BCASE_BOOKS); // limited by room_object_t combined flags bits; could increase, but then book taking logic won't always be correct
 	float const shelf_dz(middle.dz()/num_shelves), shelf_thick(0.12*shelf_dz);
 	// 40% of the time lower shelves are higher than upper shelves
 	float const shelf_dz_range((rgen.rand_float() < 0.4) ? rgen.rand_uniform(0.15, 0.28)*shelf_dz : 0.0);
@@ -2305,7 +2306,7 @@ void building_room_geom_t::add_bookcase(room_object_t const &c, bool inc_lg, boo
 		if (inc_lg) {get_wood_material(tscale).add_cube_to_verts(shelf, color, tex_origin, skip_faces_shelves);} // Note: mat reference may be invalidated by adding books
 	}
 	// add books
-	for (unsigned i = 0, book_ix = 0; i < num_shelves; ++i) {
+	for (unsigned i = 0, book_ix = 0; i < num_shelves && book_ix < max_books; ++i) {
 		// Future work: add vertical shelf splits as well? With recursive nesting?
 		if (rgen.rand_float() < 0.15) continue; // no books on this shelf
 		cube_t const &shelf(shelves[i]);
@@ -2340,14 +2341,17 @@ void building_room_geom_t::add_bookcase(room_object_t const &c, bool inc_lg, boo
 				}
 				++book_ix;
 				cur_zval = next_zval;
+				if (book_ix == max_books) break; // no more books
 			} // for n
 			continue; // done with this shelf
 		}
-		unsigned const num_spaces(22 + (rgen.rand()%11)); // 22-32 book spaces per shelf
+		unsigned const num_left(max_books - book_ix), rand_mod(min(11U, max(3U, num_left/3)));
+		unsigned const num_spaces(22 + (rgen.rand()%rand_mod)); // 22-32 book spaces per shelf, fewer when running out of books
+		float const skip_rate((num_left < max_books/3) ? 0.2 : 0.12); // skip more often when running out of books
 		unsigned skip_mask(0), set_start_ix(0);
 
 		for (unsigned n = 0; n < num_spaces; ++n) {
-			if (rgen.rand_float() < 0.12) {
+			if (rgen.rand_float() < skip_rate) {
 				unsigned const skip_end(n + (rgen.rand()%8) + 1); // skip 1-8 books
 				for (; n < skip_end; ++n) {skip_mask |= (1<<n);}
 			}
@@ -2417,6 +2421,7 @@ void building_room_geom_t::add_bookcase(room_object_t const &c, bool inc_lg, boo
 			pos += width;
 			last_book_pos = pos;
 			prev_tilted   = (tilt_angle != 0.0); // don't tilt two books in a row
+			if (book_ix == max_books) break; // no more books
 		} // for n
 	} // for i
 }

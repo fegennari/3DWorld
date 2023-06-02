@@ -31,6 +31,7 @@ float const DOOR_FRAME_WIDTH       = 0.07; // for door texture, relative to door
 float const EXT_BASEMENT_JOIN_DIST = 3.0; // relative to floor spacing
 
 unsigned const NUM_BOTTLE_TYPES = 6;
+unsigned const MAX_BCASE_BOOKS  = 48; // limited by available bit flags
 unsigned const NUM_BOOK_COLORS  = 16;
 unsigned const NUM_PAPER_COLORS = 6;
 unsigned const NUM_SPCAN_COLORS = 11;
@@ -501,7 +502,7 @@ struct room_object_t : public oriented_cube_t { // size=64
 	// treat {drawer_flags, item_flags, state_flags} as a single 48-bit flags; the upper 16 bits of set_combined_flags() argument are ignored
 	uint64_t get_combined_flags() const {return (uint64_t)drawer_flags + ((uint64_t)item_flags << 16) + ((uint64_t)state_flags << 32);}
 	void set_combined_flags(uint64_t v) {drawer_flags = (v & 0xFFFF); item_flags = ((v >> 16) & 0xFFFF); state_flags = ((v >> 32) & 0xFFFF);}
-	static uint64_t get_book_ix_mask(unsigned ix) {return (uint64_t)1 << (ix % 48);} // up to 48 books
+	static uint64_t get_book_ix_mask(unsigned ix) {return (uint64_t)1 << (ix % MAX_BCASE_BOOKS);} // up to 48 books
 	bool is_valid   () const {return  (type != TYPE_NONE);}
 	bool is_lit     () const {return  (flags & RO_FLAG_LIT);}
 	bool is_powered () const {return !(flags & RO_FLAG_NO_POWER);}
