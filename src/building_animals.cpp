@@ -777,11 +777,11 @@ public:
 			if (!had_coll) continue; // floating in space, not a valid dir
 			had_coll = 0;
 			vector3d coll_norm(s.upv);
-			for (auto const &c : colliders) {had_coll |= sphere_cube_int_update_pos(cand, r_inner, c, s.last_pos, 1, 0, &coll_norm);}
+			for (auto const &c : colliders) {had_coll |= sphere_cube_int_update_pos(cand, r_inner, c, s.last_pos, 0, &coll_norm);}
 
 			if (n == 0 && !had_coll) { // forward vector, no coll
 				// rerun with outer radius to ensure coll_norm is correct
-				for (auto const &c : colliders) {point tmp(cand); sphere_cube_int_update_pos(tmp, r_outer, c, s.last_pos, 1, 0, &coll_norm);}
+				for (auto const &c : colliders) {point tmp(cand); sphere_cube_int_update_pos(tmp, r_outer, c, s.last_pos, 0, &coll_norm);}
 			}
 			// squared movement distance, with higher weight for moving in the correct direction, and a preference for moving orthogonal in upv
 			float const dir_dp(dot_product(dir, s.dir)), up_dp(fabs(dot_product(dir, s.upv)));

@@ -377,7 +377,7 @@ float car_t::get_sum_len_space_for_cars_in_front(cube_t const &range) const {
 }
 
 bool car_t::proc_sphere_coll(point &pos, point const &p_last, float radius, vector3d const &xlate, vector3d *cnorm) const {
-	return sphere_cube_int_update_pos(pos, radius, (bcube + xlate), p_last, 1, 0, cnorm); // Note: approximate when car is tilted or turning
+	return sphere_cube_int_update_pos(pos, radius, (bcube + xlate), p_last, 0, cnorm); // Note: approximate when car is tilted or turning
 	//return sphere_sphere_int((bcube.get_cube_center() + xlate), pos, bcube.get_bsphere_radius(), radius, cnorm, pos); // Note: handle cnorm in if using this
 }
 

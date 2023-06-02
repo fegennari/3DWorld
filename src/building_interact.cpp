@@ -958,7 +958,7 @@ void building_t::update_player_interact_objects(point const &player_pos) {
 			if (is_moving_fast) { // treat collision as a bounce
 				vector3d cnorm;
 
-				if (sphere_cube_int_update_pos(new_center, radius, p->get_bcube(), center, 1, 0, &cnorm)) {
+				if (sphere_cube_int_update_pos(new_center, radius, p->get_bcube(), center, 0, &cnorm)) {
 					register_person_hit((p - interior->people.begin()), *c, velocity);
 					apply_object_bounce_with_sound(*this, velocity, cnorm, new_center, 0.75, on_floor); // hardness=0.75
 				}

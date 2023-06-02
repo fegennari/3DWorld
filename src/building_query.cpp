@@ -311,7 +311,7 @@ bool building_t::check_sphere_coll_inner(point &pos, point const &p_last, vector
 				if (cnorm_ptr) {*cnorm_ptr = plus_z;}
 				part_coll = 1;
 			}
-			else if (sphere_cube_int_update_pos(pos2, radius, part_bc, p_last2, 1, xy_only, cnorm_ptr)) { // cube
+			else if (sphere_cube_int_update_pos(pos2, radius, part_bc, p_last2, xy_only, cnorm_ptr)) { // cube
 				part_coll = 1; // flag as colliding, continue to look for more collisions (inside corners)
 			}
 			if (part_coll && pos2.z < part_bc.z1()) {pos2.z = part_bc.z2() + radius;} // can't be under a building - make it on top of the building instead
@@ -319,12 +319,12 @@ bool building_t::check_sphere_coll_inner(point &pos, point const &p_last, vector
 			had_coll |= part_coll;
 		} // for i
 		for (auto i = fences.begin(); i != fences.end(); ++i) {
-			had_coll |= sphere_cube_int_update_pos(pos2, radius, (*i + xlate), p_last2, 1, xy_only, cnorm_ptr);
+			had_coll |= sphere_cube_int_update_pos(pos2, radius, (*i + xlate), p_last2, xy_only, cnorm_ptr);
 		}
 		// Note: driveways are handled elsewhere in the control flow
 		if (!xy_only) { // don't need to check details and roof in xy_only mode because they're contained in the XY footprint of the parts
 			for (auto i = details.begin(); i != details.end(); ++i) {
-				had_coll |= sphere_cube_int_update_pos(pos2, radius, (*i + xlate), p_last2, 1, xy_only, cnorm_ptr); // cube, flag as colliding
+				had_coll |= sphere_cube_int_update_pos(pos2, radius, (*i + xlate), p_last2, xy_only, cnorm_ptr); // cube, flag as colliding
 			}
 			for (auto i = roof_tquads.begin(); i != roof_tquads.end(); ++i) {
 				point const pos_xlate(pos2 - xlate);
@@ -355,7 +355,7 @@ bool building_t::check_sphere_coll_inner(point &pos, point const &p_last, vector
 				}
 			} // for i
 		}
-		if (is_house && has_porch() && sphere_cube_int_update_pos(pos2, radius, (porch + xlate), p_last2, 1, xy_only, cnorm_ptr)) {had_coll = 1;} // porch
+		if (is_house && has_porch() && sphere_cube_int_update_pos(pos2, radius, (porch + xlate), p_last2, xy_only, cnorm_ptr)) {had_coll = 1;} // porch
 	} // end !is_interior case
 	if (!had_coll) return 0; // Note: no collisions with windows or doors, since they're colinear with walls
 
@@ -384,7 +384,7 @@ unsigned check_cubes_collision(cube_t const *const cubes, unsigned num_cubes, po
 	unsigned coll_ret(0);
 
 	for (unsigned n = 0; n < num_cubes; ++n) {
-		if (!cubes[n].is_all_zeros() && sphere_cube_int_update_pos(pos, radius, cubes[n], p_last, 1, 0, cnorm)) {coll_ret |= (1<<n);} // skip_z=0
+		if (!cubes[n].is_all_zeros() && sphere_cube_int_update_pos(pos, radius, cubes[n], p_last, 0, cnorm)) {coll_ret |= (1<<n);} // skip_z=0
 	}
 	return coll_ret;
 }
@@ -664,7 +664,7 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, flo
 			else if (c->type == TYPE_BALCONY) {
 				had_coll |= check_balcony_collision(*c, pos, p_last, xy_radius, cnorm);
 			}
-			else if (sphere_cube_int_update_pos(pos, xy_radius, c_extended, p_last, 1, 0, cnorm)) { // assume it's a cube; skip_z=0
+			else if (sphere_cube_int_update_pos(pos, xy_radius, c_extended, p_last, 0, cnorm)) { // assume it's a cube; skip_z=0
 				if (c->type == TYPE_TOILET || c->type == TYPE_URINAL) {player_near_toilet = 1;}
 				had_coll = 1;
 			}
@@ -842,7 +842,7 @@ bool building_interior_t::check_sphere_coll_room_objects(building_t const &build
 			else if (c->type == TYPE_BALCONY) {had_coll |= (unsigned)check_balcony_collision(*c, pos, p_last, radius, &cnorm);}
 			else if (c->type == TYPE_STALL  && maybe_inside_room_object(*c, pos, radius)) {coll_ret |= (unsigned)check_stall_collision (*c, pos, p_last, radius, &cnorm);}
 			else if (c->type == TYPE_SHOWER && maybe_inside_room_object(*c, pos, radius)) {coll_ret |= (unsigned)check_shower_collision(*c, pos, p_last, radius, &cnorm);}
-			else {coll_ret |= (unsigned)sphere_cube_int_update_pos(pos, radius, bc, p_last, 1, 0, &cnorm);} // skip_z=0
+			else {coll_ret |= (unsigned)sphere_cube_int_update_pos(pos, radius, bc, p_last, 0, &cnorm);} // skip_z=0
 		}
 		if (coll_ret) { // collision with this object - set hardness
 			if      (c->type == TYPE_COUCH ) {hardness = 0.6;} // couches are soft
@@ -886,7 +886,7 @@ bool check_door_coll(building_t const &building, door_t const &door, point &pos,
 		return 0;
 	}
 	if (obj_z < door.z1() || obj_z > door.z2()) return 0; // wrong part/floor
-	return sphere_cube_int_update_pos(pos, radius, door, p_last, 1, 0, cnorm); // skip_z=0
+	return sphere_cube_int_update_pos(pos, radius, door, p_last, 0, cnorm); // skip_z=0
 }
 
 // Note: should be valid for players and other spherical objects
@@ -900,7 +900,7 @@ bool building_interior_t::check_sphere_coll_walls_elevators_doors(building_t con
 	for (unsigned d = 0; d < 2; ++d) { // check XY collision with walls
 		for (auto i = walls[d].begin(); i != walls[d].end(); ++i) {
 			if (wall_test_z < i->z1() || wall_test_z > i->z2()) continue; // wrong part/floor
-			had_coll |= sphere_cube_int_update_pos(pos, radius, *i, p_last, 1, 1, cnorm); // skip_z=1 (handled by zval test above)
+			had_coll |= sphere_cube_int_update_pos(pos, radius, *i, p_last, 1, cnorm); // skip_z=1 (handled by zval test above)
 		}
 	}
 	for (auto e = elevators.begin(); e != elevators.end(); ++e) {
@@ -912,11 +912,11 @@ bool building_interior_t::check_sphere_coll_walls_elevators_doors(building_t con
 			if (obj_z > obj.z1() && obj_z < obj.z2()) { // same floor as elevator car - can enter it; otherwise can't enter elevator shaft
 				cube_t cubes[5];
 				unsigned const num_cubes(e->get_coll_cubes(cubes));
-				for (unsigned n = 0; n < num_cubes; ++n) {had_coll |= sphere_cube_int_update_pos(pos, radius, cubes[n], p_last, 1, 1, cnorm);} // skip_z=1
+				for (unsigned n = 0; n < num_cubes; ++n) {had_coll |= sphere_cube_int_update_pos(pos, radius, cubes[n], p_last, 1, cnorm);} // skip_z=1
 				continue; // done with elevator
 			}
 		}
-		had_coll |= sphere_cube_int_update_pos(pos, radius, *e, p_last, 1, 1, cnorm); // handle as a single blocking cube; skip_z=1
+		had_coll |= sphere_cube_int_update_pos(pos, radius, *e, p_last, 1, cnorm); // handle as a single blocking cube; skip_z=1
 	} // for e
 	for (auto i = doors.begin(); i != doors.end(); ++i) {
 		had_coll |= check_door_coll(building, *i, pos, p_last, radius, obj_z, check_open_doors, cnorm);

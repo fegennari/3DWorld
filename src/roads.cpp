@@ -525,7 +525,7 @@ bool road_isec_t::proc_sphere_coll(point &pos, point const &p_last, float radius
 
 	for (unsigned n = 0; n < 4; ++n) {
 		if (!(conn & (1<<n))) continue; // no road in this dir
-		if (sphere_cube_int_update_pos(pos, radius, (get_stoplight_cube(n) + xlate), p_last, 1, 0, cnorm)) return 1; // typically only one coll, just return the first one
+		if (sphere_cube_int_update_pos(pos, radius, (get_stoplight_cube(n) + xlate), p_last, 0, cnorm)) return 1; // typically only one coll, just return the first one
 	}
 	return 0;
 }

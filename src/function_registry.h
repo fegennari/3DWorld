@@ -537,7 +537,7 @@ bool sphere_cube_intersect_xy(point const &pos, float radius, cube_t const &cube
 bool ellipse_cube_intersect(point const &pos, vector3d const &radius, cube_t const &cube);
 bool sphere_cube_intersect(point const &pos, float radius, cube_t const &cube, point const &p_last,
 						   point &p_int, vector3d &norm, unsigned &cdir, bool check_int=1, bool skip_z=0);
-bool sphere_cube_int_update_pos(point &pos, float radius, cube_t const &cube, point const &p_last, bool check_int=1, bool skip_z=0, vector3d *cnorm=nullptr);
+bool sphere_cube_int_update_pos(point &pos, float radius, cube_t const &cube, point const &p_last, bool skip_z=0, vector3d *cnorm=nullptr);
 bool coll_sphere_cylin_int(point const &sc, float sr, coll_obj const &c);
 bool sphere_def_coll_vert_cylin(point const &sc, float sr, point const &cp1, point const &cp2, float cr);
 bool approx_poly_cylin_int(point const *const pts, unsigned npts, cylinder_3dw const &cylin);

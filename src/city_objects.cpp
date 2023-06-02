@@ -32,7 +32,7 @@ void textured_mat_t::post_draw(bool shadow_only) {
 
 
 bool city_obj_t::proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const {
-	return sphere_cube_int_update_pos(pos_, radius_, (bcube + xlate), p_last, 1, 0, cnorm);
+	return sphere_cube_int_update_pos(pos_, radius_, (bcube + xlate), p_last, 0, cnorm);
 }
 
 // benches
@@ -338,7 +338,7 @@ void divider_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_sc
 bool divider_t::proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const {
 	cube_t bcube_wide(bcube + xlate);
 	bcube_wide.expand_in_dim(dim, max(0.0f, 0.5f*(0.5f*building_t::get_scaled_player_radius() - bcube.get_sz_dim(dim)))); // make sure it's at least half player radius in thickness
-	return sphere_cube_int_update_pos(pos_, radius_, bcube_wide, p_last, 1, 0, cnorm);
+	return sphere_cube_int_update_pos(pos_, radius_, bcube_wide, p_last, 0, cnorm);
 }
 
 void hedge_draw_t::create(cube_t const &bc) {
@@ -493,7 +493,7 @@ bool swimming_pool_t::proc_sphere_coll(point &pos_, point const &p_last, float r
 	}
 	cube_t bcube_tall(bcube + xlate);
 	bcube_tall.z2() += CAMERA_RADIUS + camera_zh; // extend upward so that player collision detection works better
-	return sphere_cube_int_update_pos(pos_, radius_, bcube_tall, p_last, 1, 0, cnorm);
+	return sphere_cube_int_update_pos(pos_, radius_, bcube_tall, p_last, 0, cnorm);
 }
 
 // pool decks
@@ -1218,7 +1218,7 @@ void city_flag_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_
 	for (vert_wrap_t const &v : dstate.temp_verts) {qbds.untex_qbd.verts.emplace_back(v.v, (v.v - ce[1]).get_norm(), 0.0, 0.0, cw);}
 }
 bool city_flag_t::proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const {
-	if (sphere_cube_int_update_pos(pos_, radius_, (flag_bcube + xlate), p_last, 1, 0, cnorm)) return 1; // flag coll
+	if (sphere_cube_int_update_pos(pos_, radius_, (flag_bcube + xlate), p_last, 0, cnorm)) return 1; // flag coll
 	if (pole_radius == 0.0) return 0; // no pole, skip
 	return sphere_city_obj_cylin_coll(pole_base, pole_radius, pos_, p_last, radius_, xlate, cnorm); // pole coll
 }

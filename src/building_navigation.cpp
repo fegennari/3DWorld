@@ -762,7 +762,7 @@ bool building_t::choose_dest_goal(person_t &person, rand_gen_t &rgen) const { //
 			for (auto i = avoid.begin(); i != avoid.end(); ++i) { // move target_pos to avoid room objects
 				cube_t c(*i);
 				c.expand_by_xy(coll_dist);
-				any_updated |= sphere_cube_int_update_pos(person.target_pos, 1.01*coll_dist, c, person.pos, 1, 1); // check_int=1, skip_z=1, ignore return value
+				any_updated |= sphere_cube_int_update_pos(person.target_pos, 1.01*coll_dist, c, person.pos, 1); // skip_z=1, ignore return value
 			}
 			if (!any_updated) break; // done
 		} // for n

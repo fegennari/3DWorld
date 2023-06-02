@@ -1009,7 +1009,7 @@ bool sphere_cube_intersect(point const &pos, float radius, cube_t const &cube, p
 	return found;
 }
 
-bool sphere_cube_int_update_pos(point &pos, float radius, cube_t const &cube, point const &p_last, bool check_int, bool skip_z, vector3d *cnorm_ptr) {
+bool sphere_cube_int_update_pos(point &pos, float radius, cube_t const &cube, point const &p_last, bool skip_z, vector3d *cnorm_ptr) {
 	vector3d cnorm;
 	unsigned cdir(0); // unused
 	point p_int;
