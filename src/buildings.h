@@ -498,8 +498,10 @@ struct room_object_t : public oriented_cube_t { // size=64
 		oriented_cube_t(c, dim_, dir_), room_id(rid), item_flags(iflags), type(type_), shape(shape_), flags(f), light_amt(light), color(color_)
 	{check_normalized();}
 	void check_normalized() const;
-	unsigned get_combined_flags() const {return (((unsigned)drawer_flags << 16) + (unsigned)item_flags);} // treat {drawer_flags, item_flags} as a single 32-bit flags
-	void set_combined_flags(unsigned v) {drawer_flags = (v >> 16); item_flags = (v & 0xFFFF);}
+	// treat {drawer_flags, item_flags, state_flags} as a single 48-bit flags; the upper 16 bits of set_combined_flags() argument are ignored
+	uint64_t get_combined_flags() const {return (uint64_t)drawer_flags + ((uint64_t)item_flags << 16) + ((uint64_t)state_flags << 32);}
+	void set_combined_flags(uint64_t v) {drawer_flags = (v & 0xFFFF); item_flags = ((v >> 16) & 0xFFFF); state_flags = ((v >> 32) & 0xFFFF);}
+	static uint64_t get_book_ix_mask(unsigned ix) {return (uint64_t)1 << (ix % 48);} // up to 48 books
 	bool is_valid   () const {return  (type != TYPE_NONE);}
 	bool is_lit     () const {return  (flags & RO_FLAG_LIT);}
 	bool is_powered () const {return !(flags & RO_FLAG_NO_POWER);}

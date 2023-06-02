@@ -2289,7 +2289,7 @@ void building_room_geom_t::add_bookcase(room_object_t const &c, bool inc_lg, boo
 	float const shelf_dz(middle.dz()/num_shelves), shelf_thick(0.12*shelf_dz);
 	// 40% of the time lower shelves are higher than upper shelves
 	float const shelf_dz_range((rgen.rand_float() < 0.4) ? rgen.rand_uniform(0.15, 0.28)*shelf_dz : 0.0);
-	unsigned const skip_book_flags(c.get_combined_flags());
+	uint64_t const skip_book_flags(c.get_combined_flags());
 	cube_t shelves[5];
 	float cur_zval(0.0), shelf_heights[5] = {};
 	
@@ -2335,7 +2335,7 @@ void building_room_geom_t::add_bookcase(room_object_t const &c, bool inc_lg, boo
 				colorRGBA const book_color(book_colors[rgen.rand() % NUM_BOOK_COLORS]);
 				bool const backwards((rgen.rand()%10) == 0); // spine facing out 90% of the time
 
-				if (!(skip_book_flags & (1<<(book_ix&31)))) {
+				if (!(skip_book_flags & c.get_book_ix_mask(book_ix))) { // works with up to 48 books
 					add_bcase_book(c, book, inc_lg, inc_sm, inc_text, backwards, 0, skip_faces, book_ix, 0, book_color, books); // in_set=0, set_start_ix=0
 				}
 				++book_ix;
@@ -2343,7 +2343,7 @@ void building_room_geom_t::add_bookcase(room_object_t const &c, bool inc_lg, boo
 			} // for n
 			continue; // done with this shelf
 		}
-		unsigned const num_spaces(22 + (rgen.rand()%11)); // 22-32 books per shelf
+		unsigned const num_spaces(22 + (rgen.rand()%11)); // 22-32 book spaces per shelf
 		unsigned skip_mask(0), set_start_ix(0);
 
 		for (unsigned n = 0; n < num_spaces; ++n) {
@@ -2410,7 +2410,7 @@ void building_room_geom_t::add_bookcase(room_object_t const &c, bool inc_lg, boo
 			}
 			bool const backwards(!in_set && (rgen.rand()%10) == 0); // spine facing out 90% of the time if not in a set
 
-			if (!(skip_book_flags & (1<<(book_ix&31)))) { // may have more than 32 books, and will wrap in that case
+			if (!(skip_book_flags & c.get_book_ix_mask(book_ix))) { // may have more than 48 books, and will wrap in that case
 				add_bcase_book(c, book, inc_lg, inc_sm, inc_text, backwards, in_set, skip_faces, book_ix, set_start_ix, book_color, books);
 			}
 			++book_ix;

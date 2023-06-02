@@ -910,7 +910,8 @@ bool building_room_geom_t::player_pickup_object(building_t &building, point cons
 		if (dmin_sq == 0.0) return 0; // no book to pick up
 		room_object_t &book(books[closest_obj_id]);
 		if (!register_player_object_pickup(book, at_pos)) return 0;
-		obj.set_combined_flags(obj.get_combined_flags() | (1<<(book.item_flags&31))); // set flag bit to remove this book from the bookcase
+		// set flag bit to remove this book from the bookcase; supports up to 48 books
+		obj.set_combined_flags(obj.get_combined_flags() | obj.get_book_ix_mask(book.item_flags));
 		player_inventory.add_item(book);
 		update_draw_state_for_room_object(book, building, 1);
 		return 1;
