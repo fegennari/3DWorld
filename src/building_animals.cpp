@@ -1058,7 +1058,13 @@ bool building_t::maybe_squish_animals(room_object_t const &obj) { // spiders and
 	} // for spider
 	for (insect_t &insect : interior->room_geom->insects) { // Note: no size check, achievement, or height reduction
 		if (insect.squished || insect.type != INSECT_TYPE_ROACH) continue; // already squished, or not a cockroach
-		if (/*!obj.contains_pt_xy(insect.pos) ||*/ !obj.intersects(insect.get_bcube())) continue; // squish if intersects, to avoid getting stuck
+		if (!obj.intersects(insect.get_bcube())) continue;
+
+		if (!obj.contains_pt_xy(insect.pos)) { // partial intersection: push cockroach out of the way
+			point const orig_pos(insect.pos);
+			if (sphere_cube_int_update_pos(insect.pos, insect.radius, obj, insect.last_pos)) {insect.last_pos = orig_pos;}
+			continue;
+		}
 		add_blood_decal(insect.pos, 1.6*insect.get_xy_radius(), colorRGBA(1.0, 1.0, 0.2, 1.0)); // yellow
 		any_squished = insect.squished = 1;
 	} // for insect
@@ -1500,7 +1506,15 @@ void building_t::update_roach(insect_t &roach, point const &camera_bs, float tim
 			int const coll_ret(check_line_coll_expand(roach.last_pos, pos, radius, hheight, 0)); // for_spider=0
 
 			if (coll_ret == 9) { // room object (except closet or kitchen cabinet); open door collisions are ignored (can go under doors)
+				vector3d cnorm;
+				float hardness(0.0);
+				int obj_ix(-1);
 				if (pos == roach.last_pos) {spawn_new_pos = 1;} // stuck?
+				else if (interior->check_sphere_coll_room_objects(*this, roach.last_pos, roach.last_pos, radius, interior->room_geom->objs.end(), cnorm, hardness, obj_ix) &&
+					dot_product(cnorm, roach.dir) >= 0.0)
+				{
+					// last_pos is also colliding, and dir is away from the collision - continue without direction change; applies to books dropped by the player
+				}
 				else {
 					vector3d const new_dir(rgen.signed_rand_vector_spherical_xy_norm());
 					roach.dir = (dot_product(roach.dir, new_dir) < 0.0) ? new_dir : -new_dir; // make sure it's at least 180 degrees different
