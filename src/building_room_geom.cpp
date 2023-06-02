@@ -2242,7 +2242,7 @@ void get_bookcase_cubes(room_object_t const &c, cube_t &top, cube_t &middle, cub
 }
 
 void building_room_geom_t::add_bcase_book(room_object_t const &c, cube_t const &book, bool inc_lg, bool inc_sm, bool inc_text, bool backwards, bool in_set,
-	unsigned skip_faces, unsigned book_ix, unsigned set_start_ix, colorRGBA const &color, vect_room_object_t *books)
+	unsigned skip_faces, unsigned book_ix, unsigned set_start_ix, colorRGBA const &color, float tilt_angle, vect_room_object_t *books)
 {
 	assert(book.is_strictly_normalized());
 	bool const book_dir(c.dir ^ backwards ^ 1);
@@ -2260,7 +2260,7 @@ void building_room_geom_t::add_bcase_book(room_object_t const &c, cube_t const &
 		obj.obj_id = c.obj_id + 123*book_ix;
 	}
 	obj.item_flags = (uint16_t)book_ix; // always unique per bookcase book; used for removing books from bookcases
-	if (inc_lg || inc_sm || inc_text) {add_book(obj, inc_lg, inc_sm, inc_text, 0.0, skip_faces, backwards);} // detailed book, no title if backwards
+	if (inc_lg || inc_sm || inc_text) {add_book(obj, inc_lg, inc_sm, inc_text, tilt_angle, skip_faces, backwards);} // detailed book, no title if backwards
 	if (books) {books->push_back(obj);}
 }
 
@@ -2337,7 +2337,7 @@ void building_room_geom_t::add_bookcase(room_object_t const &c, bool inc_lg, boo
 				bool const backwards((rgen.rand()%10) == 0); // spine facing out 90% of the time
 
 				if (!(skip_book_flags & c.get_book_ix_mask(book_ix))) { // works with up to 48 books
-					add_bcase_book(c, book, inc_lg, inc_sm, inc_text, backwards, 0, skip_faces, book_ix, 0, book_color, books); // in_set=0, set_start_ix=0
+					add_bcase_book(c, book, inc_lg, inc_sm, inc_text, backwards, 0, skip_faces, book_ix, 0, book_color, 0.0, books); // in_set=0, set_start_ix=0, tilt_angle=0.0
 				}
 				++book_ix;
 				cur_zval = next_zval;
@@ -2415,7 +2415,7 @@ void building_room_geom_t::add_bookcase(room_object_t const &c, bool inc_lg, boo
 			bool const backwards(!in_set && (rgen.rand()%10) == 0); // spine facing out 90% of the time if not in a set
 
 			if (!(skip_book_flags & c.get_book_ix_mask(book_ix))) { // may have more than 48 books, and will wrap in that case
-				add_bcase_book(c, book, inc_lg, inc_sm, inc_text, backwards, in_set, skip_faces, book_ix, set_start_ix, book_color, books);
+				add_bcase_book(c, book, inc_lg, inc_sm, inc_text, backwards, in_set, skip_faces, book_ix, set_start_ix, book_color, tilt_angle, books);
 			}
 			++book_ix;
 			pos += width;
