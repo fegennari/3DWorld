@@ -9,12 +9,11 @@
 struct building_animal_t {
 	point pos, last_pos;
 	vector3d dir;
-	float radius, speed, anim_time, wake_time, dist_since_sleep;
-	unsigned id;
+	float radius=0.0, speed=0.0, anim_time=0.0, wake_time=0.0, dist_since_sleep=0.0;
+	unsigned id=0;
 
-	building_animal_t(float xval) : pos(xval, 0.0, 0.0), radius(0), speed(0), anim_time(0), wake_time(0), dist_since_sleep(0), id(0) {}
-	building_animal_t(point const &pos_, float radius_, vector3d const &dir_, unsigned id_) :
-		pos(pos_), dir(dir_), radius(radius_), speed(0.0), anim_time(0.0), wake_time(0), dist_since_sleep(0), id(id_) {}
+	building_animal_t(float xval) : pos(xval, 0.0, 0.0) {}
+	building_animal_t(point const &pos_, float radius_, vector3d const &dir_, unsigned id_) : pos(pos_), dir(dir_), radius(radius_), id(id_) {}
 	bool operator<(building_animal_t const &a) const {return (pos.x < a.pos.x);} // compare only xvals
 	bool is_moving  () const {return (speed     > 0.0);}
 	bool is_sleeping() const {return (wake_time > 0.0);}

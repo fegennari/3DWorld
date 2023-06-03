@@ -1552,7 +1552,7 @@ void building_t::update_roach(insect_t &roach, point const &camera_bs, float tim
 			}
 			sphere_t const cur_sound(get_cur_frame_loudest_sound());
 			if (cur_sound.radius > 0.0 && dist_less_than(pos, cur_sound.pos, 4.0*cur_sound.radius)) {run_from = cur_sound.pos; roach.is_scared = 1;}
-			else if (!roach.is_scared) {
+			else if (!roach.is_scared && ((frame_counter + roach.id) & 3) == 0) { // check for light every 4 frames
 				room_id = get_room_containing_pt(pos);
 				roach.is_scared |= is_room_lit(room_id, roach.get_z2()); // run from the light
 			}
