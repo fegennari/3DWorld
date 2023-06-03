@@ -415,7 +415,7 @@ enum {/*building models*/ OBJ_MODEL_TOILET=0, OBJ_MODEL_SINK, OBJ_MODEL_TUB, OBJ
 	OBJ_MODEL_WALL_LAMP, OBJ_MODEL_CUP, OBJ_MODEL_TOASTER, OBJ_MODEL_HOOD, OBJ_MODEL_RCHAIR, OBJ_MODEL_SILVER, OBJ_MODEL_TOY, OBJ_MODEL_CEIL_FAN, OBJ_MODEL_RAT, OBJ_MODEL_ROACH,
 	/*city models*/ OBJ_MODEL_FHYDRANT, OBJ_MODEL_SUBSTATION, OBJ_MODEL_MAILBOX, OBJ_MODEL_UMBRELLA, NUM_OBJ_MODELS};
 
-enum {PART_EFFECT_NONE=0, PART_EFFECT_SPARKS, NUM_PART_EFFECTS};
+enum {PART_EFFECT_NONE=0, PART_EFFECT_SPARK, NUM_PART_EFFECTS};
 
 // object flags
 unsigned const RO_FLAG_LIT     = 0x01; // light is on
@@ -769,7 +769,7 @@ class particle_manager_t {
 public:
 	void add_for_obj(room_object_t &obj, float pradius, vector3d const &dir, float part_vel, unsigned min_parts, unsigned max_parts, unsigned effect, int parent_obj_id);
 	cube_t get_bcube() const;
-	void next_frame(building_t const &building);
+	void next_frame(building_t &building);
 	void add_lights(vector3d const &xlate, building_t const &building, occlusion_checker_noncity_t &oc, cube_t &lights_bcube) const;
 	void draw(shader_t &s, vector3d const &xlate);
 };
@@ -1544,6 +1544,7 @@ public:
 	void update_player_interact_objects(point const &player_pos);
 	void update_creepy_sounds(point const &player_pos) const;
 	point choose_creepy_sound_pos(point const &player_pos, rand_gen_t &rgen) const;
+	void register_spark_floor_hit(point const &pos);
 	bool line_intersect_walls(point const &p1, point const &p2) const;
 	bool is_obj_pos_valid(room_object_t const &obj, bool keep_in_room, bool allow_block_door, bool check_stairs) const;
 	bool is_rot_cube_visible(cube_t const &c, vector3d const &xlate) const;

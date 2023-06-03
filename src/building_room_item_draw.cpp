@@ -1532,7 +1532,7 @@ void particle_manager_t::draw(shader_t &s, vector3d const &xlate) { // non-const
 	point const viewer_bs(camera_pdu.pos - xlate);
 
 	for (particle_t const &p : particles) {
-		assert(p.effect == PART_EFFECT_SPARKS); // currently the only supported effect
+		assert(p.effect == PART_EFFECT_SPARK); // currently the only supported effect
 		if (!camera_pdu.sphere_visible_test((p.pos + xlate), p.radius)) continue; // VFC
 		float const elongate(1.0 + 1500.0*p.vel.mag());
 		vector3d const vdir(viewer_bs - p.pos), up_dir((p.vel == zero_vector) ? plus_z : p.vel);

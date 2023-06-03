@@ -1439,7 +1439,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 				sparks_area.expand_by_xy(0.75*window_vspacing);
 
 				if (is_rot_cube_visible(sparks_area, xlate)) {
-					interior->room_geom->particle_manager.add_for_obj(*i, 0.16*i->dz(), -plus_z, 0.001, 1, 1, PART_EFFECT_SPARKS, (i - objs.begin()));
+					interior->room_geom->particle_manager.add_for_obj(*i, 0.16*i->dz(), -plus_z, 0.001, 1, 1, PART_EFFECT_SPARK, (i - objs.begin()));
 				}
 			}
 			if (!i->is_open()) continue; // not currently on
@@ -1698,7 +1698,7 @@ void particle_manager_t::add_lights(vector3d const &xlate, building_t const &bui
 	if ((display_mode & 0x08) && building.check_obj_occluded(bcube_cs, get_camera_pos(), oc)) return;
 
 	for (particle_t const &p : particles) {
-		assert(p.effect == PART_EFFECT_SPARKS); // currently the only supported effect
+		assert(p.effect == PART_EFFECT_SPARK); // currently the only supported effect
 		float const light_radius(20.0*p.radius);
 		if (!camera_pdu.sphere_visible_test((p.pos + xlate), light_radius)) continue; // VFC
 		dl_sources.emplace_back(light_radius, p.pos, p.pos, p.color);

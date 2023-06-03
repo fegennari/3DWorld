@@ -1036,7 +1036,7 @@ void building_t::update_player_interact_objects(point const &player_pos) {
 								interior->room_geom->update_draw_state_for_room_object(obj, *this, 0);
 								if (obj.type == TYPE_DRESS_MIR || obj.type == TYPE_MIRROR) {register_achievement("7 Years of Bad Luck");}
 								else if ((obj.type == TYPE_TV || obj.type == TYPE_MONITOR) && obj.is_powered()/*!(obj.obj_id & 1)*/) { // only if turned on?
-									interior->room_geom->particle_manager.add_for_obj(*c, 0.06*radius, front_dir, 1.0*KICK_VELOCITY, 50, 60, PART_EFFECT_SPARKS, (c-objs.begin()));
+									interior->room_geom->particle_manager.add_for_obj(*c, 0.06*radius, front_dir, 1.0*KICK_VELOCITY, 50, 60, PART_EFFECT_SPARK, (c-objs.begin()));
 								}
 								handled = 1;
 							}
@@ -1122,7 +1122,7 @@ cube_t particle_manager_t::get_bcube() const {
 	for (particle_t const &p : particles) {bcube.assign_or_union_with_sphere(p.pos, p.radius);}
 	return bcube;
 }
-void particle_manager_t::next_frame(building_t const &building) {
+void particle_manager_t::next_frame(building_t &building) {
 	if (particles.empty()) return;
 	float const fticks_stable(min(fticks, 4.0f)); // clamp to 0.1s
 	auto const &objs(building.interior->room_geom->objs);
@@ -1133,7 +1133,7 @@ void particle_manager_t::next_frame(building_t const &building) {
 		p.time += fticks_stable;
 		float const lifetime(p.time/(2.5*TICKS_PER_SECOND));
 		if (lifetime > 1.0) {p.effect = PART_EFFECT_NONE; continue;} // end of life
-		assert(p.effect == PART_EFFECT_SPARKS); // currently the only supported effect
+		assert(p.effect == PART_EFFECT_SPARK); // currently the only supported effect
 		p.color = get_glow_color(2.0*lifetime, 1); // fade=1
 		apply_building_gravity(p.vel.z, 0.5*fticks_stable); // half gravity
 		// check for collisions and apply bounce, similar to balls
@@ -1146,7 +1146,9 @@ void particle_manager_t::next_frame(building_t const &building) {
 
 		if (building.interior->check_sphere_coll(building, p.pos, p_last, p.radius, self, cnorm, hardness, obj_ix)) {
 			apply_floor_vel_thresh(p.vel, cnorm);
-			apply_object_bounce(p.vel, cnorm, bounce_scale*hardness, 0); // on_floor=0
+			bool const bounced(apply_object_bounce(p.vel, cnorm, bounce_scale*hardness, 0)); // on_floor=0
+			// sparks create fires on floor coll when still hot, not bounced, and not stopped
+			if (p.effect == PART_EFFECT_SPARK && !bounced && p.pos != p_last && lifetime < 0.5 && cnorm == plus_z) {building.register_spark_floor_hit(p.pos);}
 		}
 		point const prev_pos(p.pos);
 
@@ -1161,6 +1163,18 @@ void particle_manager_t::next_frame(building_t const &building) {
 		if (i->effect != PART_EFFECT_NONE) {*(o++) = *i;} // TODO: std::remove_if()?
 	}
 	particles.erase(o, particles.end());
+}
+
+void building_t::register_spark_floor_hit(point const &pos) {
+	if (!has_room_geom()) return;
+	float const z_range(0.1*get_wall_thickness()), z1(pos.z - z_range), z2(pos.z + z_range);
+	auto objs_end(interior->room_geom->get_placed_objs_end()); // skip buttons/stairs/elevators
+
+	for (auto i = interior->room_geom->objs.begin(); i != objs_end; ++i) {
+		if (i->type != TYPE_RUG) continue; // currently, only rugs can be burned
+		if (!i->contains_pt_xy(pos) || i->z1() > z2 || i->z2() < z1) continue; // no collision
+		// TODO
+	} // for i
 }
 
 // elevators
