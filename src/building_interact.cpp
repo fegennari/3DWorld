@@ -1178,8 +1178,10 @@ cube_t fire_manager_t::fire_t::get_bcube() const {
 void fire_manager_t::spawn_fire(point const &pos, float size) {
 	size *= rgen.rand_uniform(0.8, 1.25); // randomize size a bit
 
-	for (fire_t &f : fires) {
-		// TODO: merge if near other fires
+	for (fire_t &f : fires) { // merge if near other fires
+		if (!dist_less_than(pos, f.pos, (size + f.radius))) continue;
+		f.max_radius = sqrt(f.max_radius*f.max_radius + size*size); // increase radius
+		return;
 	}
 	fires.emplace_back(pos, size);
 }
