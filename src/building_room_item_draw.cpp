@@ -1508,8 +1508,11 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, building_t c
 	}
 	// alpha blended, should be drawn near last
 	decal_manager.draw_building_interior_decals(s, player_in_building, shadow_only); // draw decals in this building
-	if (player_in_building && !shadow_only) {particle_manager.draw(s, xlate);}
 	
+	if (player_in_building && !shadow_only) {
+		particle_manager.draw(s, xlate);
+		fire_manager    .draw(s, xlate);
+	}
 	if (!shadow_only && !mats_alpha.empty()) { // draw last; not shadow casters; for shower glass, etc.
 		enable_blend();
 		glDepthMask(GL_FALSE); // disable depth writing
@@ -1520,15 +1523,22 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, building_t c
 	}
 }
 
-void particle_manager_t::draw(shader_t &s, vector3d const &xlate) { // non-const because qbd is modified
-	if (particles.empty()) return;
-	if (!camera_pdu.cube_visible(get_bcube() + xlate)) return; // no particles are visible
-	shader_t part_shader;
-	part_shader.begin_simple_textured_shader(); // unlit/emissive and textured
+void draw_emissive_billboard(quad_batch_draw &qbd, int tid) {
+	if (qbd.empty()) return;
+	shader_t s;
+	s.begin_simple_textured_shader(); // unlit/emissive and textured
 	glDepthMask(GL_FALSE); // disable depth write
 	enable_blend();
 	set_additive_blend_mode();
-	select_texture(BLUR_CENT_TEX); // spraypaint - smooth alpha blended edges
+	select_texture(tid);
+	qbd.draw_and_clear();
+	set_std_blend_mode();
+	disable_blend();
+	glDepthMask(GL_TRUE);
+}
+
+void particle_manager_t::draw(shader_t &s, vector3d const &xlate) { // non-const because qbd is modified
+	if (particles.empty() || !camera_pdu.cube_visible(get_bcube() + xlate)) return; // no particles are visible
 	point const viewer_bs(camera_pdu.pos - xlate);
 
 	for (particle_t const &p : particles) {
@@ -1540,10 +1550,21 @@ void particle_manager_t::draw(shader_t &s, vector3d const &xlate) { // non-const
 		vector3d const v2(cross_product(v1,   vdir  ).get_norm()*p.radius*elongate); // stretch in velocity dir
 		qbd.add_quad_dirs(p.pos, v1, v2, p.color, vdir.get_norm());
 	}
-	qbd.draw_and_clear();
-	set_std_blend_mode();
-	disable_blend();
-	glDepthMask(GL_TRUE);
+	draw_emissive_billboard(qbd, BLUR_CENT_TEX); // smooth alpha blended edges
+	s.make_current();
+}
+
+void fire_manager_t::draw(shader_t &s, vector3d const &xlate) {
+	if (fires.empty() || !camera_pdu.cube_visible(get_bcube() + xlate)) return; // no particles are visible
+	point const viewer_bs(camera_pdu.pos - xlate);
+
+	for (fire_t const &f : fires) {
+		float const height(f.get_height());
+		point const center(f.get_center());
+		if (!camera_pdu.sphere_visible_test((center + xlate), max(f.radius, height))) continue; // VFC
+		qbd.add_animated_billboard(center, viewer_bs, up_vector, WHITE, 2.0*f.radius, height, fract(2.0f*f.time/TICKS_PER_SECOND));
+	}
+	draw_emissive_billboard(qbd, FIRE_TEX);
 	s.make_current();
 }
 

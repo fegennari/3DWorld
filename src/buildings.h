@@ -757,7 +757,7 @@ class particle_manager_t {
 		colorRGBA color;
 		float radius=0.0, time=0.0;
 		int parent_obj_id=0;
-		unsigned effect=PART_EFFECT_NONE;
+		unsigned effect=PART_EFFECT_NONE, bounce_count=0;
 
 		particle_t() {}
 		particle_t(point const &p, vector3d const &v, colorRGBA const &c, float r, unsigned e, int pid=-1) :
@@ -770,6 +770,26 @@ public:
 	void add_for_obj(room_object_t &obj, float pradius, vector3d const &dir, float part_vel, unsigned min_parts, unsigned max_parts, unsigned effect, int parent_obj_id);
 	cube_t get_bcube() const;
 	void next_frame(building_t &building);
+	void add_lights(vector3d const &xlate, building_t const &building, occlusion_checker_noncity_t &oc, cube_t &lights_bcube) const;
+	void draw(shader_t &s, vector3d const &xlate);
+};
+
+class fire_manager_t {
+	struct fire_t {
+		point pos; // pos is the bottom
+		float max_radius=0.0, radius=0.0, time=0.0;
+		fire_t(point const &pos_, float max_radius_) : pos(pos_), max_radius(max_radius_), radius(0.0) {}
+		float get_height() const {return 2.0*radius;}
+		point get_center() const {return pos + vector3d(0.0, 0.0, 0.5*get_height());}
+		cube_t get_bcube() const;
+	};
+	vector<fire_t> fires;
+	quad_batch_draw qbd;
+	rand_gen_t rgen;
+public:
+	void spawn_fire(point const &pos, float size);
+	cube_t get_bcube() const;
+	void next_frame();
 	void add_lights(vector3d const &xlate, building_t const &building, occlusion_checker_noncity_t &oc, cube_t &lights_bcube) const;
 	void draw(shader_t &s, vector3d const &xlate);
 };
@@ -796,6 +816,7 @@ struct building_room_geom_t {
 	vect_cube_t light_bcubes;
 	building_decal_manager_t decal_manager;
 	particle_manager_t particle_manager;
+	fire_manager_t fire_manager;
 
 	building_room_geom_t(point const &tex_origin_=all_zeros) : has_elevators(0), has_pictures(0), has_garage_car(0), modified_by_player(0),
 		num_pic_tids(0), invalidate_mats_mask(0), obj_scale(1.0), wall_ps_start(0), buttons_start(0), stairs_start(0), tex_origin(tex_origin_), wood_color(WHITE) {}

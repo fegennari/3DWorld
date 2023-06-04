@@ -1689,7 +1689,10 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			}
 		} // for skylight sl
 	} // for l
-	if (camera_in_building) {interior->room_geom->particle_manager.add_lights(xlate, *this, oc, lights_bcube);}
+	if (camera_in_building) {
+		interior->room_geom->particle_manager.add_lights(xlate, *this, oc, lights_bcube);
+		interior->room_geom->fire_manager    .add_lights(xlate, *this, oc, lights_bcube);
+	}
 }
 
 bool check_bcube_visible_for_building(cube_t const &bcube, vector3d const &xlate, building_t const &building, occlusion_checker_noncity_t &oc, cube_t &lights_bcube) {
@@ -1713,6 +1716,11 @@ void particle_manager_t::add_lights(vector3d const &xlate, building_t const &bui
 		assert(p.effect == PART_EFFECT_SPARK); // currently the only supported effect
 		add_dlight_if_visible(p.pos, 20.0*p.radius, p.color, xlate, lights_bcube);
 	}
+}
+void fire_manager_t::add_lights(vector3d const &xlate, building_t const &building, occlusion_checker_noncity_t &oc, cube_t &lights_bcube) const {
+	if (fires.empty()) return;
+	if (!check_bcube_visible_for_building(get_bcube(), xlate, building, oc, lights_bcube)) return;
+	for (fire_t const &f : fires) {add_dlight_if_visible(f.get_center(), 4.0*f.radius, ORANGE, xlate, lights_bcube);}
 }
 
 float room_t::get_light_amt() const { // Note: not normalized to 1.0
