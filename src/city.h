@@ -250,14 +250,13 @@ struct helicopter_t {
 
 class road_mat_mgr_t {
 
-	bool inited;
-	unsigned tids[NUM_RD_TIDS] = {}, sl_tid;
-
+	bool inited=0;
+	unsigned tids[NUM_RD_TIDS] = {}, sl_tid=0, ssign_tid=0; // {stoplight, stop sign}
 public:
-	road_mat_mgr_t() : inited(0), sl_tid(0) {}
 	void ensure_road_textures();
 	void set_texture(unsigned type);
 	void set_stoplight_texture();
+	void set_stop_sign_texture();
 };
 
 template<typename T> static void add_flat_city_quad(T const &r, quad_batch_draw &qbd, colorRGBA const &color, float ar) { // z1 == z2
@@ -598,7 +597,7 @@ struct range_pair_t {
 class road_draw_state_t : public draw_state_t {
 	quad_batch_draw qbd_batched[NUM_RD_TIDS], qbd_bridge;
 public: // used directly by stoplight drawing
-	quad_batch_draw qbd_sl, qbd_untextured;
+	quad_batch_draw qbd_sl, qbd_untextured; // {stoplight, untextured}; could add qbd_ssign here as well for stop signs
 	vector<vert_norm_comp_tc_color> text_verts;
 private:
 	float ar;

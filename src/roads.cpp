@@ -72,8 +72,9 @@ void road_mat_mgr_t::ensure_road_textures() {
 		                                   "parking_lot.png", "rail_tracks.jpg", "grass_park.jpg", "concrete.jpg"};
 	float const aniso[NUM_RD_TIDS] = {4.0, 16.0, 8.0, 8.0, 8.0, 4.0, 16.0};
 	for (unsigned i = 0; i < NUM_RD_TIDS; ++i) {tids[i] = get_texture_by_name(("roads/" + img_names[i]), 0, 0, 1, aniso[i]);}
-	sl_tid = get_texture_by_name("roads/traffic_light.png");
-	inited = 1;
+	sl_tid    = get_texture_by_name("roads/traffic_light.png");
+	//ssign_tid = get_texture_by_name("roads/stop_sign.png"); // enable when ready to use
+	inited    = 1;
 }
 
 void road_mat_mgr_t::set_texture(unsigned type) {
@@ -81,10 +82,13 @@ void road_mat_mgr_t::set_texture(unsigned type) {
 	ensure_road_textures();
 	select_texture(tids[type]);
 }
-
 void road_mat_mgr_t::set_stoplight_texture() {
 	ensure_road_textures();
 	select_texture(sl_tid);
+}
+void road_mat_mgr_t::set_stop_sign_texture() {
+	ensure_road_textures();
+	select_texture(ssign_tid);
 }
 
 road_t::road_t(point const &s, point const &e, float width, bool dim_, bool slope_, unsigned road_ix_) : road_ix(road_ix_), dim(dim_), slope(slope_) {
