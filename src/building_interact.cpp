@@ -1157,12 +1157,7 @@ void particle_manager_t::next_frame(building_t &building) {
 		}
 	} // for p
 	// remove dead particles
-	auto i(particles.begin()), o(i);
-
-	for (; i != particles.end(); ++i) {
-		if (i->effect != PART_EFFECT_NONE) {*(o++) = *i;} // TODO: std::remove_if()?
-	}
-	particles.erase(o, particles.end());
+	particles.erase(std::remove_if(particles.begin(), particles.end(), [](particle_t const &p) {return (p.effect == PART_EFFECT_NONE);}), particles.end());
 }
 
 void building_t::register_spark_floor_hit(point const &pos) {
