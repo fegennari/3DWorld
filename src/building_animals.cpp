@@ -26,7 +26,6 @@ extern building_t const *player_building;
 float get_closest_building_sound(point const &at_pos, point &sound_pos, float floor_spacing);
 sphere_t get_cur_frame_loudest_sound();
 bool in_building_gameplay_mode();
-bool player_take_damage(float damage_scale, int poison_type=0, bool *has_key=nullptr);
 void apply_building_gravity(float &vz, float dt_ticks);
 void apply_fc_cube_max_merge_xy(vect_cube_t &cubes);
 void register_fly_attract(bool no_msg);
@@ -620,6 +619,14 @@ void building_t::update_rat(rat_t &rat, point const &camera_bs, float timestep, 
 void building_t::scare_rat(rat_t &rat, point const &camera_bs) const {
 	// Note: later calls to scare_rat_at_pos() have priority and will set rat.fear_pos, but all calls will accumulate fear
 	assert(interior);
+	point fire_pos;
+
+	if (has_room_geom() && interior->room_geom->fire_manager.get_closest_fire(rat.pos, 2.0*rat.radius, rat.pos.z, rat.pos.z+rat.height, &fire_pos)) { // fire
+		//scare_rat_at_pos(rat, fire_pos, 1.0, 1);
+		rat.fear     = 1.0; // max fear
+		rat.fear_pos = fire_pos;
+		return; // done
+	}
 	float const sight_scare_amt = 0.5;
 	rat.near_player = 0;
 
@@ -1540,7 +1547,10 @@ void building_t::update_roach(insect_t &roach, point const &camera_bs, float tim
 	point run_from;
 	
 	if (!roach.no_scare) { // run scare logic; similar to building_t::scare_rat()
-		if (camera_surf_collide && dist_less_than(pos, camera_bot, scare_dist)) {
+		if (has_room_geom() && interior->room_geom->fire_manager.get_closest_fire(pos, 2.0*radius, pos.z-hheight, pos.z+hheight, &run_from)) { // fire
+			roach.is_scared = 1;
+		}
+		else if (camera_surf_collide && dist_less_than(pos, camera_bot, scare_dist)) {
 			run_from = camera_bot;
 			roach.is_scared = 1;
 		}

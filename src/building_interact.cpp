@@ -1090,6 +1090,7 @@ void building_t::update_player_interact_objects(point const &player_pos) {
 			use_last_pickup_object = 0; // reset for next frame
 		}
 		maybe_update_tape(player_pos, 0); // end_of_tape=0
+		if (interior->room_geom->fire_manager.get_closest_fire(player_pos, player_radius, player_z1, player_z2)) {player_take_damage(0.006);} // small amount of fire damage
 	}
 	doors_next_frame(); // run for current and connected buildings
 	interior->room_geom->particle_manager.next_frame(*this);
@@ -1186,6 +1187,21 @@ cube_t fire_manager_t::get_bcube() const {
 	cube_t bcube;
 	for (fire_t const &f : fires) {bcube.assign_or_union_with_cube(f.get_bcube());}
 	return bcube;
+}
+bool fire_manager_t::get_closest_fire(point const &pos, float xy_radius, float z1, float z2, point *fire_pos) const {
+	bool found(0);
+	float dmin_sq(0.0);
+
+	for (fire_t const &f : fires) {
+		if (!dist_xy_less_than(pos, f.pos, (xy_radius + f.radius))) continue;
+		if (f.pos.z > z2 || (f.pos.z + f.get_height()) < z1)        continue;
+		float const dist_sq(p2p_dist_xy_sq(pos, f.pos));
+		if (found && dist_sq >= dmin_sq) continue; // not the closest
+		dmin_sq = dist_sq;
+		found   = 1;
+		if (fire_pos != nullptr) {*fire_pos = f.pos;}
+	}
+	return found;
 }
 void fire_manager_t::next_frame() {
 	float const fticks_stable(min(fticks, 4.0f)); // clamp to 0.1s

@@ -789,6 +789,7 @@ class fire_manager_t {
 public:
 	void spawn_fire(point const &pos, float size);
 	cube_t get_bcube() const;
+	bool get_closest_fire(point const &pos, float xy_radius, float z1, float z2, point *fire_pos=nullptr) const;
 	void next_frame();
 	void add_lights(vector3d const &xlate, building_t const &building, occlusion_checker_noncity_t &oc, cube_t &lights_bcube) const;
 	void draw(shader_t &s, vector3d const &xlate);
@@ -1952,6 +1953,7 @@ bool register_achievement(std::string const &str);
 bool enable_building_indir_lighting_no_cib();
 bool enable_building_indir_lighting();
 bool player_in_windowless_building();
+bool player_take_damage(float damage_scale, int poison_type=0, bool *has_key=nullptr);
 // functions in building_room_obj_expand.cc
 point gen_xy_pos_in_area(cube_t const &S, vector3d const &sz, rand_gen_t &rgen, float zval=0.0);
 point gen_xy_pos_in_area(cube_t const &S, float radius, rand_gen_t &rgen, float zval=0.0);

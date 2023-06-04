@@ -1665,6 +1665,7 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 		person.next_path_pt(1);
 		return AI_BEGIN_PATH;
 	}
+	//if (has_room_geom() && interior->room_geom->fire_manager.get_closest_fire(person.pos, person.radius, person.get_z1(), person.get_z2(), &fire_pos)) {} // TODO
 	float const max_dist(get_person_max_move_dist(person, speed_mult));
 	person.on_new_path_seg = 0; // clear flag for this frame
 	//person.following_player = can_target_player(person); // for debugging visualization

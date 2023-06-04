@@ -2136,7 +2136,7 @@ bool player_has_room_key() {return player_inventory.player_has_key();}
 // returns player_dead
 // should we include falling damage? currently the player can't fall down elevator shafts or stairwells,
 // and falling off building roofs doesn't count because gameplay isn't enabled because the player isn't in the building
-bool player_take_damage(float damage_scale, int  poison_type, bool *has_key) {
+bool player_take_damage(float damage_scale, int poison_type, bool *has_key) {
 	static double last_scream_time(0.0), last_hurt_time(0.0);
 
 	if (damage_scale < 0.01) { // hurt for rats, scream for zombies and spiders
