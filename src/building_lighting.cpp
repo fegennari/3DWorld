@@ -1183,6 +1183,10 @@ void check_for_shadow_caster_people(vector<person_t> const &people, vect_cube_wi
 	// update shadow_caster_hash for moving objects
 	check_for_shadow_caster(moving_objs, light_bcube, lpos, dmax, has_stairs, xlate, shadow_caster_hash);
 }
+void expand_cube_zvals(cube_t &c, float z1, float z2) {
+	min_eq(c.z1(), z1);
+	max_eq(c.z2(), z2);
+}
 
 // Note: non const because this caches light_bcubes
 void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bool camera_in_building,
@@ -1447,12 +1451,10 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		// update lights_bcube and add light(s)
 
 		if (is_lamp) { // lamps are generally against a wall and not in a room with stairs and only illuminate that one room
-			min_eq(lights_bcube.z1(), (lpos_rot.z - min(window_vspacing, light_radius)));
-			max_eq(lights_bcube.z2(), (lpos_rot.z + min(window_vspacing, light_radius)));
+			expand_cube_zvals(lights_bcube, (lpos_rot.z - min(window_vspacing, light_radius)), (lpos_rot.z + min(window_vspacing, light_radius)));
 		}
 		else {
-			min_eq(lights_bcube.z1(), (lpos_rot.z - light_radius));
-			max_eq(lights_bcube.z2(), (lpos_rot.z + 0.1f*light_radius)); // pointed down - don't extend as far up
+			expand_cube_zvals(lights_bcube, (lpos_rot.z - light_radius), (lpos_rot.z + 0.1f*light_radius)); // pointed down - don't extend as far up
 		}
 		float const bwidth = 0.25; // as close to 180 degree FOV as we can get without shadow clipping
 		colorRGBA color;
@@ -1683,25 +1685,33 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 				}
 			}
 			if (dl_sources.size() > dlights_start) { // a light was added, update lights_bcube
-				min_eq(lights_bcube.z1(), lit_area.z1());
-				max_eq(lights_bcube.z2(), lpos.z); // must include the light
+				expand_cube_zvals(lights_bcube, lit_area.z1(), lpos.z); // must include the light
 			}
 		} // for skylight sl
 	} // for l
 	if (camera_in_building) {interior->room_geom->particle_manager.add_lights(xlate, *this, oc, lights_bcube);}
 }
 
+bool check_bcube_visible_for_building(cube_t const &bcube, vector3d const &xlate, building_t const &building, occlusion_checker_noncity_t &oc, cube_t &lights_bcube) {
+	if (!lights_bcube.intersects_xy(bcube)) return 0;
+	cube_t const bcube_cs(bcube + xlate); // maybe we should check each parent object separately? but it could be rare if there's more than one
+	if (!camera_pdu.cube_visible(bcube_cs)) return 0; // no particles are visible
+	if ((display_mode & 0x08) && building.check_obj_occluded(bcube_cs, get_camera_pos(), oc)) return 0;
+	return 1;
+}
+void add_dlight_if_visible(point const &pos, float radius, colorRGBA const &color, vector3d const &xlate, cube_t &lights_bcube) {
+	if (!lights_bcube.contains_pt_xy(pos)) return;
+	if (!camera_pdu.sphere_visible_test((pos + xlate), radius)) return; // VFC
+	dl_sources.emplace_back(radius, pos, pos, color);
+	expand_cube_zvals(lights_bcube, (pos.z - radius), (pos.z + radius));
+}
 void particle_manager_t::add_lights(vector3d const &xlate, building_t const &building, occlusion_checker_noncity_t &oc, cube_t &lights_bcube) const {
 	if (particles.empty()) return;
-	cube_t const bcube_cs(get_bcube() + xlate); // maybe we should check each parent object separately? but it could be rare if there's more than one
-	if (!camera_pdu.cube_visible(bcube_cs)) return; // no particles are visible
-	if ((display_mode & 0x08) && building.check_obj_occluded(bcube_cs, get_camera_pos(), oc)) return;
+	if (!check_bcube_visible_for_building(get_bcube(), xlate, building, oc, lights_bcube)) return;
 
 	for (particle_t const &p : particles) {
 		assert(p.effect == PART_EFFECT_SPARK); // currently the only supported effect
-		float const light_radius(20.0*p.radius);
-		if (!camera_pdu.sphere_visible_test((p.pos + xlate), light_radius)) continue; // VFC
-		dl_sources.emplace_back(light_radius, p.pos, p.pos, p.color);
+		add_dlight_if_visible(p.pos, 20.0*p.radius, p.color, xlate, lights_bcube);
 	}
 }
 
