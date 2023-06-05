@@ -1720,7 +1720,7 @@ void particle_manager_t::add_lights(vector3d const &xlate, building_t const &bui
 void fire_manager_t::add_lights(vector3d const &xlate, building_t const &building, occlusion_checker_noncity_t &oc, cube_t &lights_bcube) const {
 	if (fires.empty()) return;
 	if (!check_bcube_visible_for_building(get_bcube(), xlate, building, oc, lights_bcube)) return;
-	for (fire_t const &f : fires) {add_dlight_if_visible(f.get_center(), 4.0*f.radius, ORANGE, xlate, lights_bcube);}
+	for (fire_t const &f : fires) {add_dlight_if_visible(f.get_center(), 5.0*f.radius, ORANGE, xlate, lights_bcube);}
 }
 
 float room_t::get_light_amt() const { // Note: not normalized to 1.0

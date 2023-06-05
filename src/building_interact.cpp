@@ -26,6 +26,7 @@ extern building_t const *player_building;
 bool player_can_open_door(door_t const &door);
 bool player_has_room_key();
 void register_broken_object(room_object_t const &obj);
+void record_building_damage(float damage);
 colorRGBA get_glow_color(float stime, bool fade);
 
 // Note: pos is in camera space
@@ -1213,7 +1214,7 @@ void fire_manager_t::next_frame() {
 		float const lifetime(f.time/(2.5*TICKS_PER_SECOND));
 		if (lifetime < 0.3) {f.radius = (lifetime/0.3)*f.max_radius;} // grow at start of life
 		if (lifetime > 0.7) {f.radius = (1.0 - (lifetime - 0.7)/0.3)*f.max_radius;} // shink at end of life
-		// TODO: slow random drift? would need to check object collisions
+		// slow random drift? would need to check object collisions
 	}
 	// remove dead fires
 	fires.erase(std::remove_if(fires.begin(), fires.end(), [](fire_t const &f) {return (f.radius < 0.0);}), fires.end());
@@ -1221,15 +1222,26 @@ void fire_manager_t::next_frame() {
 
 void building_t::register_spark_floor_hit(point const &pos) {
 	if (!has_room_geom()) return;
-	float const wall_thickness(get_wall_thickness()), z_range(0.1*wall_thickness), z1(pos.z - z_range), z2(pos.z + z_range);
+	float const wall_thickness(get_wall_thickness()), z_range(0.1*wall_thickness), z1(pos.z - z_range), z2(pos.z + z_range), fire_size(1.2*wall_thickness);
 	auto objs_end(interior->room_geom->get_placed_objs_end()); // skip buttons/stairs/elevators
 
 	for (auto i = interior->room_geom->objs.begin(); i != objs_end; ++i) {
 		if (i->type != TYPE_RUG) continue; // currently, only rugs can be burned
 		if (!i->contains_pt_xy(pos) || i->z1() > z2 || i->z2() < z1) continue; // no collision
-		interior->room_geom->fire_manager.spawn_fire(pos, 1.2*wall_thickness);
+		point const fpos(pos.x, pos.y, (i->z2() + 0.01*wall_thickness));
+		interior->room_geom->fire_manager .spawn_fire   (fpos,     fire_size);
+		interior->room_geom->decal_manager.add_burn_spot(fpos, 2.4*fire_size); // add black spot on the rug
+		record_building_damage(10.0);
 		break; // spawn only one fire
 	} // for i
+}
+
+void building_decal_manager_t::add_burn_spot(point const &pos, float radius) {
+	// if there are too many existing spots, remove the first (oldest) one; this can be slow, but shouldn't happen very often
+	unsigned const max_spots = 100;
+	unsigned const num_spots(burn_qbd.verts.size()/6); // 6 verts/2 triangles per quad
+	if (num_spots >= max_spots) {burn_qbd.verts.erase(burn_qbd.verts.begin(), (burn_qbd.verts.begin() + 6*(num_spots - max_spots + 1)));}
+	burn_qbd.add_quad_dirs(pos, -plus_x*radius, plus_y*radius, BLACK); // -x!
 }
 
 // elevators

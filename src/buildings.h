@@ -743,10 +743,11 @@ struct paint_draw_t {
 };
 struct building_decal_manager_t {
 	paint_draw_t paint_draw[2]; // {interior, exterior}
-	quad_batch_draw blood_qbd[2], tp_qbd, pend_tape_qbd, glass_qbd; // blood_qbd: {red human blood, bug guts}
+	quad_batch_draw blood_qbd[2], tp_qbd, pend_tape_qbd, glass_qbd, burn_qbd; // blood_qbd: {red human blood, bug guts}
 	tape_quad_batch_draw tape_qbd; // for tape, but not pend_tape because it hasn't been placed yet
 
 	void commit_pend_tape_qbd();
+	void add_burn_spot(point const &pos, float radius);
 	void draw_building_interior_decals(shader_t &s, bool player_in_building, bool shadow_only) const;
 };
 
@@ -779,7 +780,7 @@ class fire_manager_t {
 		point pos; // pos is the bottom
 		float max_radius=0.0, radius=0.0, time=0.0;
 		fire_t(point const &pos_, float max_radius_) : pos(pos_), max_radius(max_radius_), radius(0.0) {}
-		float get_height() const {return 2.0*radius;}
+		float get_height() const {return 4.0*radius;}
 		point get_center() const {return pos + vector3d(0.0, 0.0, 0.5*get_height());}
 		cube_t get_bcube() const;
 	};

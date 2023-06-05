@@ -1561,8 +1561,8 @@ void fire_manager_t::draw(shader_t &s, vector3d const &xlate) {
 	for (fire_t const &f : fires) {
 		float const height(f.get_height());
 		point const center(f.get_center());
-		if (!camera_pdu.sphere_visible_test((center + xlate), max(f.radius, height))) continue; // VFC
-		qbd.add_animated_billboard(center, viewer_bs, up_vector, WHITE, 2.0*f.radius, height, fract(2.0f*f.time/TICKS_PER_SECOND));
+		if (!camera_pdu.sphere_visible_test((center + xlate), max(f.radius, 0.5f*height))) continue; // VFC
+		qbd.add_animated_billboard(center, viewer_bs, up_vector, WHITE, 1.5*f.radius, 0.5*height, fract(2.0f*f.time/TICKS_PER_SECOND));
 	}
 	draw_emissive_billboard(qbd, FIRE_TEX);
 	s.make_current();
@@ -1879,7 +1879,7 @@ void building_decal_manager_t::draw_building_interior_decals(shader_t &s, bool p
 		tape_qbd.draw();
 		pend_tape_qbd.draw();
 	}
-	if (!blood_qbd[0].empty() || !blood_qbd[1].empty() || !glass_qbd.empty()) {
+	if (!blood_qbd[0].empty() || !blood_qbd[1].empty() || !glass_qbd.empty() || !burn_qbd.empty()) { // draw alpha blended decals
 		glDepthMask(GL_FALSE); // disable depth write
 		enable_blend();
 		int const blood_tids[2] = {BLOOD_SPLAT_TEX, get_texture_by_name("atlas/blood_white.png")};
@@ -1892,6 +1892,10 @@ void building_decal_manager_t::draw_building_interior_decals(shader_t &s, bool p
 		if (!glass_qbd.empty()) {
 			select_texture(get_texture_by_name("interiors/broken_glass.png"));
 			glass_qbd.draw();
+		}
+		if (!burn_qbd.empty()) {
+			select_texture(BLUR_CENT_TEX);
+			burn_qbd.draw();
 		}
 		disable_blend();
 		glDepthMask(GL_TRUE);
