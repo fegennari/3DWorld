@@ -860,7 +860,7 @@ struct building_room_geom_t {
 	void add_parking_garage_wall(room_object_t const &c, vector3d const &tex_origin, tid_nm_pair_t const &wall_tex);
 	void add_parking_space(room_object_t const &c, vector3d const &tex_origin, float tscale);
 	void add_pg_ramp(room_object_t const &c, vector3d const &tex_origin, float tscale);
-	void add_pipe(room_object_t const &c);
+	void add_pipe(room_object_t const &c, bool add_exterior);
 	void add_duct(room_object_t const &c);
 	void add_curb(room_object_t const &c);
 	void add_chimney(room_object_t const &c, tid_nm_pair_t const &tex);

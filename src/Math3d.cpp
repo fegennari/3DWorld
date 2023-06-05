@@ -10,8 +10,7 @@ extern float orig_timestep, base_gravity;
 extern int display_mode; // for debugging
 
 
-bool line_intersect_torus(double ax, double ay, double az, double bx, double by,
-						  double bz, double R, double r, double vlength, float &t);
+bool line_intersect_torus(double ax, double ay, double az, double bx, double by, double bz, double R, double r, double vlength, float &t);
 
 
 // ************ BASIC VECTOR MATH, ETC. ************

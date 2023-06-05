@@ -1642,7 +1642,9 @@ void building_room_geom_t::add_pg_ramp(room_object_t const &c, vector3d const &t
 	} // for s
 }
 
-void building_room_geom_t::add_pipe(room_object_t const &c) { // should be SHAPE_CYLIN
+void building_room_geom_t::add_pipe(room_object_t const &c, bool add_exterior) { // should be SHAPE_CYLIN
+	bool const exterior(c.is_exterior());
+	if (exterior != add_exterior) return;
 	unsigned const dim(c.dir ? 2 : unsigned(c.dim)); // encoded as: X:dim=0,dir=0 Y:dim=1,dir=0, Z:dim=x,dir=1
 	float const radius(0.5*c.get_sz_dim((dim+1)%3));
 	//assert(0.5*c.get_sz_dim((dim+2)%3) == radius); // must be a square cross section, but too strong due to FP error
@@ -1662,7 +1664,7 @@ void building_room_geom_t::add_pipe(room_object_t const &c) { // should be SHAPE
 	// draw sides and possibly one or both ends
 	tid_nm_pair_t tex((is_duct ? get_cylin_duct_tid() : -1), 1.0, shadowed); // custom specular color
 	tex.set_specular_color(spec_color, 0.8, 60.0);
-	rgeom_mat_t &mat(get_material(tex, shadowed, 0, 2)); // detail object
+	rgeom_mat_t &mat(get_material(tex, shadowed, 0, (exterior ? 0 : 2), 0, exterior)); // detail or exterior object
 	// swap texture XY for ducts
 	mat.add_ortho_cylin_to_verts(c, color, dim, (flat_ends && draw_joints[0]), (flat_ends && draw_joints[1]),
 		0, 0, 1.0, 1.0, side_tscale, 1.0, 0, ndiv, 0.0, is_duct, len_tscale);
@@ -1711,7 +1713,7 @@ void building_room_geom_t::add_duct(room_object_t const &c) {
 			get_material(tex, 1, 0, 2).add_cube_to_verts(c, c.color, c.get_llc(), face_sf, swap_st); // shadowed, detail, not using lit color
 		} // for d
 	}
-	else if (c.shape == SHAPE_CYLIN) {add_pipe(c);} // draw using pipe logic
+	else if (c.shape == SHAPE_CYLIN) {add_pipe(c, 0);} // draw using pipe logic; add_exterior=0
 	else {assert(0);} // unsupported shape
 }
 

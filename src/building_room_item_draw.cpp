@@ -817,6 +817,7 @@ void building_room_geom_t::create_static_vbos(building_t const &building) {
 		case TYPE_FPLACE:  add_fireplace(*i, tscale); break;
 		case TYPE_FCABINET: add_filing_cabinet(*i, 1, 0); break; // lg
 		case TYPE_SIGN:    add_sign    (*i, 1, 1, 1); break; // lg, exterior_only=1
+		case TYPE_PIPE:    add_pipe(*i, 1); break; // add_exterior=1
 		case TYPE_WIND_SILL: add_window_sill(*i); break;
 		case TYPE_BALCONY: add_balcony (*i); break;
 		//case TYPE_FRIDGE: if (i->is_open()) {} break; // draw open fridge?
@@ -946,7 +947,7 @@ void building_room_geom_t::create_detail_vbos(building_t const &building) {
 		case TYPE_PG_WALL:    add_parking_garage_wall(*i, tex_origin, wall_tex); break;
 		case TYPE_PARK_SPACE: add_parking_space(*i, tex_origin, wall_tex.tscale_x); break;
 		case TYPE_RAMP:       add_pg_ramp(*i, tex_origin, wall_tex.tscale_x); break;
-		case TYPE_PIPE:       add_pipe(*i); break;
+		case TYPE_PIPE:       add_pipe(*i, 0); break; // add_exterior=0
 		case TYPE_CURB:       add_curb(*i); break;
 		case TYPE_CHIMNEY:    add_chimney(*i, building.get_material().side_tex); break; // uses exterior wall texture
 		case TYPE_DUCT:       add_duct(*i);
