@@ -163,6 +163,13 @@ void create_attic_posts(building_t const &b, cube_t const &beam, bool dim, cube_
 	} // for d
 }
 
+unsigned count_num_poly_intersects(float x, float y, float radius, point const *const points, int npts) {
+	float const dx[5] = {0.0, 1.0, -1.0, 0.0, 0.0}, dy[5] = {0.0, 0.0, 0.0, 1.0, -1.0};
+	unsigned count(0);
+	for (unsigned n = 0; n < 5; ++n) {count += point_in_polygon_2d((x + radius*dx[n]), (y + radius*dy[n]), points, npts);} // check 2D XY point contain
+	return count;
+}
+
 void building_t::add_attic_objects(rand_gen_t rgen) {
 	assign_attic_type(rgen); // must be done after roof is added, not in add_attic_access_door()
 	vect_room_object_t &objs(interior->room_geom->objs);
@@ -277,8 +284,9 @@ void building_t::add_attic_objects(rand_gen_t rgen) {
 			cube_t furnace;
 			bool dim(0), dir(0);
 			if (!gen_furnace_cand(furnace_place_area, floor_spacing, 0, rgen, furnace, dim, dir)) break; // near_wall=0
+			float const width(furnace.get_sz_dim(!dim)), depth(furnace.get_sz_dim(dim));
 			cube_t test_cube(furnace);
-			test_cube.d[dim][dir] += (dir ? 1.0 : -1.0)*0.5*furnace.get_sz_dim(dim); // add clearance in front
+			test_cube.d[dim][dir] += (dir ? 1.0 : -1.0)*0.5*depth; // add clearance in front
 			if (has_bcube_int(test_cube, avoid_cubes) || !cube_in_attic(furnace)) continue;
 			unsigned const flags((is_house ? RO_FLAG_IS_HOUSE : 0) | obj_flags);
 			room_object_t const furnace_obj(furnace, TYPE_FURNACE, room_id, dim, dir, flags, light_amt);
@@ -288,7 +296,7 @@ void building_t::add_attic_objects(rand_gen_t rgen) {
 
 			if (furnace_room >= 0) { // place an intake vent in the ceiling of this room under the furnace
 				cube_t vent(furnace);
-				vent.expand_by_xy(-0.05*furnace.get_sz_dim(!dim)); // shrink slightly
+				vent.expand_by_xy(-0.05*width); // shrink slightly
 				vent.z2() = furnace.z1() - get_fc_thickness(); // ceiling of the room below
 				vent.z1() = vent.z2() - 0.1*get_wall_thickness();
 				bool place_ok(1);
@@ -303,6 +311,38 @@ void building_t::add_attic_objects(rand_gen_t rgen) {
 					if (use_this_slot != objs.end()) {use_this_slot->copy_from(vent); use_this_slot->dim = dim;} // replace ceiling vent with air return vent
 					else {objs.emplace_back(vent, TYPE_VENT, furnace_room, dim, 0, (RO_FLAG_NOCOLL | RO_FLAG_HANGING), 1.0);} // dir=0/horizontal; fully lit
 				}
+			}
+			// add an exhaust vent up through the roof; it may clip through the rafters, but this is difficult to check for and avoid
+			float const radius(0.1*width), dir_offset(0.26);
+			cube_t pipe;
+			set_wall_width(pipe, furnace.get_center_dim(!dim), radius, !dim);
+			set_wall_width(pipe, (dir_offset*furnace.d[dim][!dir] + (1.0 - dir_offset)*furnace.d[dim][dir]), radius, dim);
+			point const pipe_center(pipe.xc(), pipe.yc(), furnace.z1());
+			float pipe_z2(furnace.z2() + floor_spacing); // staring value; should clip to roof below
+			bool add_pipe(0);
+
+			for (auto const &tq : roof_tquads) {
+				bool const is_solar_panel(tq.type == tquad_with_ix_t::TYPE_SOLAR);
+				if (!is_solar_panel && !is_attic_roof(tq, 1)) continue; // type_roof_only=1
+				unsigned const int_count(count_num_poly_intersects(pipe_center.x, pipe_center.y, radius, tq.pts, tq.npts));
+				if (int_count == 0) continue; // no intersections, skip
+				if (int_count < 5 || is_solar_panel) {add_pipe = 0; break;} // don't allow vent to clip through solar panel or partially clip through a roof
+				vector3d const normal(tq.get_norm());
+				if (normal.z == 0.0) continue; // skip vertical sides
+				float const denom(dot_product(normal, plus_z));
+				if (fabs(denom) < TOLERANCE) break; // should never fail?
+				pipe_z2  = furnace.z1() + dot_product_ptv(normal, tq.pts[0], pipe_center)/denom;
+				add_pipe = 1;
+			} // for tq
+			if (add_pipe && pipe_z2 > furnace.z2()) { // zval test should always be true?
+				pipe_z2 += 0.06*floor_spacing; // move up a bit to get it above the roof
+				set_cube_zvals(pipe, furnace.z2(), pipe_z2);
+				cube_t end_cap(pipe);
+				set_cube_zvals(end_cap, pipe_z2, (pipe_z2 + 0.05*floor_spacing));
+				end_cap.expand_by_xy(0.8*radius);
+				unsigned const end_cap_flags(RO_FLAG_LIT | RO_FLAG_EXTERIOR | RO_FLAG_ADJ_LO | RO_FLAG_ADJ_HI | RO_FLAG_HANGING); // draw top and bottom flat ends
+				objs.emplace_back(pipe,    TYPE_PIPE, room_id, 0, 1, RO_FLAG_LIT,   light_amt, SHAPE_CYLIN, LT_GRAY); // dir=1 for vertical; casts shadows
+				objs.emplace_back(end_cap, TYPE_PIPE, room_id, 0, 1, end_cap_flags, 1.0,       SHAPE_CYLIN, GRAY);
 			}
 			has_furnace = 1;
 			break; // success/done

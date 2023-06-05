@@ -1475,6 +1475,7 @@ bool building_t::add_kitchen_objs(rand_gen_t rgen, room_t const &room, float zva
 				set_cube_zvals(hood, z_top-height, z_top);
 				hood.d[stove.dim][stove.dir] = stove.d[stove.dim][!stove.dir] + (stove.dir ? 1.0 : -1.0)*depth;
 				objs.emplace_back(hood, TYPE_HOOD, room_id, stove.dim, stove.dir, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CUBE, LT_GRAY);
+				// TODO: add some type of rooftop vent above the hood?
 			}
 			if (!rgen.rand_bool()) { // maybe add a pan on one of the stove burners
 				room_object_t const &stove(objs[stove_ix]);

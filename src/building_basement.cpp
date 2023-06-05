@@ -192,6 +192,7 @@ bool building_t::add_furnace_to_room(rand_gen_t &rgen, room_t const &room, float
 		if (is_obj_placement_blocked(test_cube, room, 1) || overlaps_other_room_obj(test_cube, objs_start)) continue;
 		unsigned const flags((is_house ? RO_FLAG_IS_HOUSE : 0) | RO_FLAG_INTERIOR);
 		interior->room_geom->objs.emplace_back(furnace, TYPE_FURNACE, room_id, dim, dir, flags, tot_light_amt);
+		// no room for exhaust vent, so I guess it's inside the intake vent at the top
 		return 1; // success/done
 	} // for n
 	return 0; // failed
