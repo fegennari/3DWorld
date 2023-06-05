@@ -1732,11 +1732,14 @@ bool building_t::add_storage_objs(rand_gen_t rgen, room_t const &room, float zva
 		num_doors += is_cube_close_to_door(test_cube, 0.0, 0, *i, 2); // check both dirs
 	}
 	for (auto i = interior->door_stacks.begin(); i != interior->door_stacks.end(); ++i) {
-		if (!is_cube_close_to_door(test_cube, 0.0, 0, *i, 2)) continue; // check both dirs
+		if (!is_cube_close_to_door(test_cube, 0.0, 0, *i, 2)) continue; // wrong room; check both dirs
 		exclude.push_back(*i);
 		exclude.back().expand_in_dim( i->dim, 0.6*room.get_sz_dim(i->dim));
+		// add more clearance if door opens inward, but we're not checking which side the door opens to
+		float const width_expand((door_opens_inward(*i, room) ? 1.0 : 0.1)*i->get_width());
 		// if there are multiple doors (houses only?), expand the exclude area more in the other dimension to make sure there's a path between doors
-		exclude.back().expand_in_dim(!i->dim, max(0.1*i->get_width(), ((num_doors > 1) ? 0.3*room.get_sz_dim(!i->dim) : 0.0)));
+		float const path_expand(((num_doors > 1) ? 0.3*room.get_sz_dim(!i->dim) : 0.0));
+		exclude.back().expand_in_dim(!i->dim, max(width_expand, path_expand));
 	}
 	// add shelves on walls (avoiding any door(s)), and have crates avoid them
 	for (unsigned dim = 0; dim < 2; ++dim) {
