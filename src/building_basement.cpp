@@ -1060,9 +1060,19 @@ void building_t::add_sprinkler_pipes(vect_cube_t const &obstacles, vect_cube_t c
 			cube_t h_pipe(p1, p2);
 			h_pipe.expand_in_dim(!dim, h_pipe_radius);
 			h_pipe.expand_in_dim(2,    h_pipe_radius); // set zvals
-			if (has_bcube_int(h_pipe, obstacles) || has_bcube_int(h_pipe, walls) || has_bcube_int(h_pipe, beams) || has_bcube_int(h_pipe, pipe_cubes)) continue;
-			if (h_pipe.intersects(interior->pg_ramp)) continue; // check ramps as well, since they won't be included for lower floors
 			unsigned flags(RO_FLAG_NOCOLL | RO_FLAG_HANGING);
+			unsigned const num_steps = 8;
+			float const step_val((h_pipe.d[dim][dir] - h_pipe.d[dim][!dir])/num_steps); // can be positive or negative
+			bool success(0);
+
+			for (unsigned n = 0; n < num_steps-1; ++n, h_pipe.d[dim][!dir] += step_val) { // keep cutting off the ends until we can place a pipe
+				if (has_bcube_int(h_pipe, obstacles) || has_bcube_int(h_pipe, walls) || has_bcube_int(h_pipe, beams) || has_bcube_int(h_pipe, pipe_cubes)) continue;
+				if (h_pipe.intersects(interior->pg_ramp)) continue; // check ramps as well, since they won't be included for lower floors
+				if (n > 0) {flags |= (dir ? RO_FLAG_ADJ_LO : RO_FLAG_ADJ_HI);} // shortened pipe, draw the end caps
+				success = 1;
+				break;
+			}
+			if (!success) continue; // failed to place a pipe at any length
 			// encoded as: X:dim=0,dir=0 Y:dim=1,dir=0, Z:dim=x,dir=1
 			objs.emplace_back(h_pipe, TYPE_PIPE, room_id, dim, 0, flags, tot_light_amt, SHAPE_CYLIN, RED); // add to pipe_cubes?
 
@@ -1073,7 +1083,8 @@ void building_t::add_sprinkler_pipes(vect_cube_t const &obstacles, vect_cube_t c
 				conn.expand_in_dim(2,    conn_thickness);
 				objs.emplace_back(conn, TYPE_PIPE, room_id, dim, 0, (flags | (d ? RO_FLAG_ADJ_LO : RO_FLAG_ADJ_HI)), tot_light_amt, SHAPE_CYLIN, RED);
 			}
-		} // f
+			// TODO: run smaller branch lines off this pipe in the other dim
+		} // for f
 		break; // done
 	} // for n
 	//cout << TXT(pipe_ends.size()) << TXT(num_valid) << TXT(num_connected) << TXT(pipes.size()) << TXT(xy_map.size()) << endl;
