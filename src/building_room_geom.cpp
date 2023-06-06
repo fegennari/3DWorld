@@ -11,6 +11,7 @@ using std::swap;
 
 bool const ADD_BOOK_COVERS = 1; // cover pictures
 bool const ADD_BOOK_TITLES = 1;
+bool const USE_REAL_AUTHOR = 1; // for books
 colorRGBA const STAIRS_COLOR_TOP(0.7, 0.7, 0.7);
 colorRGBA const STAIRS_COLOR_BOT(0.9, 0.9, 0.9);
 
@@ -2149,7 +2150,8 @@ void building_room_geom_t::add_book(room_object_t const &c, bool inc_lg, bool in
 		bool const is_set_volume(from_book_set && c.drawer_flags > 0), add_volume_index(c.drawer_flags <= 20 && (c.flags & RO_FLAG_HAS_VOL_IX));
 		// if this is a set, but not a numbered volume, include the volume index in the title random seed so that the title is unique
 		unsigned const title_rand_id(c.obj_id + ((is_set_volume && !add_volume_index) ? (unsigned(c.drawer_flags) << 16) : 0));
-		string title(gen_book_title(title_rand_id, nullptr, SPLIT_LINE_SZ)); // select our title text
+		string author;
+		string title(gen_book_title(title_rand_id, (USE_REAL_AUTHOR ? &author : nullptr), SPLIT_LINE_SZ)); // select our title text
 		if (title.empty()) return; // no title (error?)
 		rand_gen_t rgen;
 		rgen.set_state(c.obj_id+1, c.obj_id+123);
@@ -2174,12 +2176,14 @@ void building_room_geom_t::add_book(room_object_t const &c, bool inc_lg, bool in
 		rgeom_mat_t &mat(get_material(tid_nm_pair_t(FONT_TEXTURE_ID), 0, 0, 1)); // no shadows, small=1
 		unsigned const qv_start(mat.quad_verts.size());
 		// maybe choose author
-		string author;
 		bool add_author((!from_book_set || is_set_volume) && (rgen.rand() & 3)), add_spine_author(0); // add an author 75% of the time if not from a non-volume set
 		
 		if (add_author) {
 			add_spine_author = (rgen.rand() & 3); // 75% of the time
-			if ((can_add_front_title && !has_cover) || add_spine_author) {author = gen_random_full_name(rgen);} // generate author if it will be added
+
+			if (author.empty() && ((can_add_front_title && !has_cover) || add_spine_author)) {
+				author = gen_random_full_name(rgen); // generate author if it will be added and hasn't already been filled in with the title
+			}
 		}
 		if (add_spine_title) { // add title along spine
 			cube_t title_area(c);
@@ -2259,7 +2263,7 @@ void building_room_geom_t::add_bcase_book(room_object_t const &c, cube_t const &
 		if (obj.dim ^ obj.dir ^ 1) {obj.flags |= RO_FLAG_HAS_VOL_IX;}
 	}
 	else { // individual book; book_ix/obj_id is unique
-		obj.obj_id = c.obj_id + 123*book_ix;
+		obj.obj_id = 777*c.obj_id + 123*book_ix;
 	}
 	obj.item_flags = (uint16_t)book_ix; // always unique per bookcase book; used for removing books from bookcases
 	if (inc_lg || inc_sm || inc_text) {add_book(obj, inc_lg, inc_sm, inc_text, tilt_angle, skip_faces, backwards);} // detailed book, no title if backwards
