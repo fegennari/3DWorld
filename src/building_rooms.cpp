@@ -1766,12 +1766,20 @@ bool building_t::add_storage_objs(rand_gen_t rgen, room_t const &room, float zva
 			set_cube_zvals(shelves, zval, ceil_zval-floor_thickness);
 			crate_bounds.d[dim][dir] = shelves.d[dim][!dir] = shelves.d[dim][dir] + (dir ? -1.0 : 1.0)*shelf_depth; // outer edge of shelves, which is also the crate bounds
 			shelves.expand_in_dim(!dim, -shelf_shorten); // shorten shelves
-			if (has_bcube_int(shelves, exclude)) continue; // too close to a doorway
-			if (!is_garage_or_shed && interior->is_blocked_by_stairs_or_elevator(shelves)) continue;
-			if (overlaps_other_room_obj(shelves, objs_start)) continue; // can be blocked by bookcase, etc.
-			unsigned const shelf_flags((is_house ? RO_FLAG_IS_HOUSE : 0) | (is_garage_or_shed ? 0 : RO_FLAG_INTERIOR));
-			objs.emplace_back(shelves, TYPE_SHELVES, room_id, dim, dir, shelf_flags, tot_light_amt);
-			set_obj_id(objs);
+			cube_t cands[3] = {shelves, shelves, shelves}; // full, lo half, hi half
+			cands[1].d[!dim][1] = cands[2].d[!dim][0] = shelves.get_center_dim(!dim); // split in half
+			unsigned const num_cands((cands[1].get_sz_dim(!dim) < 4.0*shelf_shorten) ? 1 : 3); // only check full length if short
+
+			for (unsigned n = 0; n < num_cands; ++n) {
+				cube_t const &cand(cands[n]);
+				if (has_bcube_int(cand, exclude)) continue; // too close to a doorway
+				if (!is_garage_or_shed && interior->is_blocked_by_stairs_or_elevator(cand)) continue;
+				if (overlaps_other_room_obj(cand, objs_start)) continue; // can be blocked by bookcase, etc.
+				unsigned const shelf_flags((is_house ? RO_FLAG_IS_HOUSE : 0) | (is_garage_or_shed ? 0 : RO_FLAG_INTERIOR));
+				objs.emplace_back(cand, TYPE_SHELVES, room_id, dim, dir, shelf_flags, tot_light_amt);
+				set_obj_id(objs);
+				break; // done
+			} // for n
 		} // for dir
 	} // for dim
 	if (is_garage_or_shed) return 1; // no chair, crates, or boxes in garages or sheds
