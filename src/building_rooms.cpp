@@ -1735,11 +1735,10 @@ bool building_t::add_storage_objs(rand_gen_t rgen, room_t const &room, float zva
 		if (!is_cube_close_to_door(test_cube, 0.0, 0, *i, 2)) continue; // wrong room; check both dirs
 		exclude.push_back(*i);
 		exclude.back().expand_in_dim( i->dim, 0.6*room.get_sz_dim(i->dim));
-		// add more clearance if door opens inward, but we're not checking which side the door opens to
-		float const width_expand((door_opens_inward(*i, room) ? 1.0 : 0.1)*i->get_width());
 		// if there are multiple doors (houses only?), expand the exclude area more in the other dimension to make sure there's a path between doors
-		float const path_expand(((num_doors > 1) ? 0.3*room.get_sz_dim(!i->dim) : 0.0));
-		exclude.back().expand_in_dim(!i->dim, max(width_expand, path_expand));
+		float const path_expand(((num_doors > 1) ? min(1.2f*i->get_width(), 0.3f*room.get_sz_dim(!i->dim)) : 0.0));
+		exclude.back().expand_in_dim(!i->dim, path_expand);
+		exclude.back().union_with_cube(i->get_open_door_bcube_for_room(room)); // include open door
 	}
 	// add shelves on walls (avoiding any door(s)), and have crates avoid them
 	for (unsigned dim = 0; dim < 2; ++dim) {
@@ -2494,6 +2493,13 @@ void building_t::add_outlets_to_room(rand_gen_t rgen, room_t const &room, float 
 	} // for wall
 }
 
+cube_t door_base_t::get_open_door_bcube_for_room(cube_t const &room) const {
+	bool const dir(get_check_dirs());
+	cube_t bcube(get_true_bcube());
+	if (door_opens_inward(*this, room)) {bcube.d[!dim][dir] += (dir ? 1.0 : -1.0)*get_width();} // include open door
+	return bcube;
+}
+
 bool building_t::add_wall_vent_to_room(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned objs_start, bool check_for_ducts) {
 	float const wall_thickness(get_wall_thickness()), ceiling_zval(zval + get_floor_ceil_gap());
 	float const thickness(0.1*wall_thickness), height(2.5*wall_thickness), hwidth(2.0*wall_thickness), min_wall_spacing(1.5*hwidth);
@@ -2524,10 +2530,7 @@ bool building_t::add_wall_vent_to_room(rand_gen_t rgen, room_t const &room, floa
 		bool bad_place(0);
 
 		for (auto const &d : doorways) {
-			bool const dir(d.get_check_dirs());
-			cube_t door_bcube(d.get_true_bcube());
-			if (door_opens_inward(d, room)) {door_bcube.d[!d.dim][dir] += (dir ? 1.0 : -1.0)*d.get_width();} // include open door
-			if (door_bcube.intersects(door_test_cube)) {bad_place = 1; break;}
+			if (d.get_open_door_bcube_for_room(room).intersects(door_test_cube)) {bad_place = 1; break;}
 		}
 		if (bad_place) continue;
 		if (!check_if_placed_on_interior_wall(c, room, dim, dir)) continue; // ensure the vent is on a wall; is this really needed?
