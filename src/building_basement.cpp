@@ -1066,12 +1066,13 @@ void building_t::add_sprinkler_pipes(vect_cube_t const &obstacles, vect_cube_t c
 			bool success(0);
 
 			for (unsigned n = 0; n < num_steps-1; ++n, h_pipe.d[dim][!dir] += step_val) { // keep cutting off the ends until we can place a pipe
-				if (has_bcube_int(h_pipe, obstacles) || has_bcube_int(h_pipe, walls) || has_bcube_int(h_pipe, beams) || has_bcube_int(h_pipe, pipe_cubes)) continue;
+				// Note: pipe should touch the bottom of beams, so we don't need to check intersections with beams (and it may fail due to FP error)
+				if (has_bcube_int(h_pipe, obstacles) || has_bcube_int(h_pipe, walls) || has_bcube_int(h_pipe, pipe_cubes)) continue;
 				if (h_pipe.intersects(interior->pg_ramp)) continue; // check ramps as well, since they won't be included for lower floors
 				if (n > 0) {flags |= (dir ? RO_FLAG_ADJ_LO : RO_FLAG_ADJ_HI);} // shortened pipe, draw the end caps
 				success = 1;
 				break;
-			}
+			} // for n
 			if (!success) continue; // failed to place a pipe at any length
 			// encoded as: X:dim=0,dir=0 Y:dim=1,dir=0, Z:dim=x,dir=1
 			objs.emplace_back(h_pipe, TYPE_PIPE, room_id, dim, 0, flags, tot_light_amt, SHAPE_CYLIN, RED); // add to pipe_cubes?
