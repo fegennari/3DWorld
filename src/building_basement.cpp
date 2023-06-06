@@ -1287,13 +1287,13 @@ void building_t::add_house_basement_pipes(rand_gen_t &rgen) {
 	for (door_t const &d : interior->doors) {
 		if (d.z1() >= ground_floor_z1) continue; // not in the basement
 		door_t door(d);
-		door.open = 0; // start closed
+		door.open = 0; door.open_amt = 0.0; // start closed
 		cube_t door_bcube(get_door_bounding_cube(door));
 		door_bcube.d[d.dim][ d.open_dir] += (d.open_dir ? 1.0 : -1.0)*d.get_width(); // include space for door to swing open
 		door_bcube.d[d.dim][!d.open_dir] -= (d.open_dir ? 1.0 : -1.0)*door_trim_exp; // include door trim width on the other side
 
 		if (!d.on_stairs) { // [basement] stairs doors don't really open, so we only need clearance in front
-			door.open = 1; // now try the open door to avoid blocking it when open
+			door.open = 1; door.open_amt = 1.0; // now try the open door to avoid blocking it when open
 			door_bcube.union_with_cube(get_door_bounding_cube(door));
 		}
 		obstacles.push_back(door_bcube);
