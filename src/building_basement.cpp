@@ -1006,6 +1006,43 @@ bool building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 	return 1;
 }
 
+bool add_sprinkler_pipe(point const &p1, float end_val, float radius, bool dim, bool dir, vect_cube_t const &obstacles, vect_cube_t const &walls,
+	vect_cube_t const &pipe_cubes, cube_t &ramp, unsigned room_id, float tot_light_amt, vect_room_object_t &objs, colorRGBA const &pcolor, colorRGBA const &ccolor)
+{
+	// TODO: ignore walls but include pillars?
+	// TODO: what about clipping through lights on beams?
+	point p2(p1);
+	p2[dim] = end_val;
+	cube_t h_pipe(p1, p2);
+	h_pipe.expand_in_dim(!dim, radius);
+	h_pipe.expand_in_dim(2,    radius); // set zvals
+	unsigned pipe_flags(RO_FLAG_NOCOLL | RO_FLAG_HANGING), conn_flags(pipe_flags);
+	unsigned const num_steps = 8;
+	float const step_val((h_pipe.d[dim][dir] - h_pipe.d[dim][!dir])/num_steps); // can be positive or negative
+	bool success(0);
+
+	for (unsigned n = 0; n < num_steps-1; ++n, h_pipe.d[dim][!dir] += step_val) { // keep cutting off the ends until we can place a pipe
+		// Note: pipe should touch the bottom of beams, so we don't need to check intersections with beams (and it may fail due to FP error)
+		if (has_bcube_int(h_pipe, obstacles) || has_bcube_int(h_pipe, walls) || has_bcube_int(h_pipe, pipe_cubes)) continue;
+		if (!ramp.is_all_zeros() && h_pipe.intersects(ramp)) continue; // check ramps as well, since they won't be included for lower floors
+		if (n > 0) {conn_flags |= (dir ? RO_FLAG_ADJ_LO : RO_FLAG_ADJ_HI);} // shortened pipe, draw the connector end caps
+		success = 1;
+		break;
+	} // for n
+	if (!success) return 0; // failed to place a pipe at any length
+	float const conn_thickness(0.2*radius), end_extend(0.1*radius);
+	// encoded as: X:dim=0,dir=0 Y:dim=1,dir=0, Z:dim=x,dir=1
+	objs.emplace_back(h_pipe, TYPE_PIPE, room_id, dim, 0, pipe_flags, tot_light_amt, SHAPE_CYLIN, pcolor); // add to pipe_cubes?
+
+	for (unsigned d = 0; d < 2; ++d) { // add connector segments
+		cube_t conn(h_pipe);
+		conn.d[dim][!d] = conn.d[dim][d] + (d ? -1.0 : 1.0)*3.0*radius; // set length
+		conn.expand_in_dim(!dim, conn_thickness);
+		conn.expand_in_dim(2,    conn_thickness);
+		objs.emplace_back(conn, TYPE_PIPE, room_id, dim, 0, (conn_flags | (d ? RO_FLAG_ADJ_LO : RO_FLAG_ADJ_HI)), tot_light_amt, SHAPE_CYLIN, ccolor);
+	}
+	return 1;
+}
 void building_t::add_sprinkler_pipes(vect_cube_t const &obstacles, vect_cube_t const &walls, vect_cube_t const &beams, vect_cube_t const &pipe_cubes,
 		unsigned room_id, unsigned num_floors, float tot_light_amt, rand_gen_t &rgen)
 {
@@ -1013,6 +1050,7 @@ void building_t::add_sprinkler_pipes(vect_cube_t const &obstacles, vect_cube_t c
 	float const floor_spacing(get_window_vspace()), fc_thickness(get_fc_thickness());
 	float const sp_radius(1.2*get_wall_thickness()), spacing(2.0*sp_radius), flange_expand(0.3*sp_radius);
 	float const bolt_dist(sp_radius + 0.5*flange_expand), bolt_radius(0.32*flange_expand), bolt_height(0.1*fc_thickness);
+	colorRGBA const pcolor(RED), ccolor(BRASS_C); // pipe and connector colors
 	vect_room_object_t &objs(interior->room_geom->objs);
 	cube_t const &basement(get_basement());
 	cube_t c;
@@ -1024,7 +1062,7 @@ void building_t::add_sprinkler_pipes(vect_cube_t const &obstacles, vect_cube_t c
 		c.d[dim][ dir] = basement.d[dim][dir] + (dir ? -1.0 : 1.0)*flange_expand; // against the wall (with space for the flange)
 		c.d[dim][!dir] = c.d[dim][dir] + (dir ? -1.0 : 1.0)*2.0*sp_radius;
 		if (has_bcube_int(c, obstacles) || has_bcube_int(c, walls) || has_bcube_int(c, beams) || has_bcube_int(c, pipe_cubes)) continue; // bad position
-		objs.emplace_back(c, TYPE_PIPE, room_id, 0, 1, RO_FLAG_LIT, tot_light_amt, SHAPE_CYLIN, RED); // dir=1 for vertical; casts shadows; add to pipe_cubes?
+		objs.emplace_back(c, TYPE_PIPE, room_id, 0, 1, RO_FLAG_LIT, tot_light_amt, SHAPE_CYLIN, pcolor); // dir=1 for vertical; casts shadows; add to pipe_cubes?
 		// add flanges at top and bottom of each floor
 		cube_t flange(c);
 		flange.expand_by_xy(flange_expand);
@@ -1035,7 +1073,7 @@ void building_t::add_sprinkler_pipes(vect_cube_t const &obstacles, vect_cube_t c
 			float const z(basement.z1() + f*floor_spacing);
 			flange.z1() = z - ((f ==          0) ? -1.0 : 1.15)*fc_thickness;
 			flange.z2() = z + ((f == num_floors) ? -1.0 : 1.15)*fc_thickness;
-			objs.emplace_back(flange, TYPE_PIPE, room_id, 0, 1, flags, tot_light_amt, SHAPE_CYLIN, RED);
+			objs.emplace_back(flange, TYPE_PIPE, room_id, 0, 1, flags, tot_light_amt, SHAPE_CYLIN, pcolor);
 			unsigned const NUM_BOLTS = 8;
 			float const angle_step(TWO_PI/NUM_BOLTS);
 
@@ -1044,7 +1082,7 @@ void building_t::add_sprinkler_pipes(vect_cube_t const &obstacles, vect_cube_t c
 				cube_t bolt;
 				bolt.set_from_sphere(point(center.x+dx, center.y+dy, 0.0), bolt_radius);
 				set_cube_zvals(bolt, flange.z1()-bolt_height, flange.z2()+bolt_height);
-				objs.emplace_back(bolt, TYPE_PIPE, room_id, 0, 1, (flags | RO_FLAG_RAND_ROT), tot_light_amt, SHAPE_CYLIN, RED);
+				objs.emplace_back(bolt, TYPE_PIPE, room_id, 0, 1, (flags | RO_FLAG_RAND_ROT), tot_light_amt, SHAPE_CYLIN, pcolor);
 			} // for m
 		} // for f
 
@@ -1055,40 +1093,36 @@ void building_t::add_sprinkler_pipes(vect_cube_t const &obstacles, vect_cube_t c
 		for (unsigned f = 0; f < num_floors; ++f) {
 			point p1(center); // vertical pipe center
 			p1.z = basement.z1() + (f+1)*floor_spacing - ceil_gap - h_pipe_radius;
-			point p2(p1);
-			p2[dim] = basement.d[dim][!dir]; // extend to the opposite wall
-			cube_t h_pipe(p1, p2);
-			h_pipe.expand_in_dim(!dim, h_pipe_radius);
-			h_pipe.expand_in_dim(2,    h_pipe_radius); // set zvals
-			unsigned flags(RO_FLAG_NOCOLL | RO_FLAG_HANGING);
-			unsigned const num_steps = 8;
-			float const step_val((h_pipe.d[dim][dir] - h_pipe.d[dim][!dir])/num_steps); // can be positive or negative
-			bool success(0);
+			unsigned const pipe_obj_ix(objs.size());
+			float const wpos(basement.d[dim][!dir]); // extend to the opposite wall
+			if (!add_sprinkler_pipe(p1, wpos, h_pipe_radius, dim, dir, obstacles, walls, pipe_cubes, interior->pg_ramp, room_id, tot_light_amt, objs, pcolor, ccolor)) continue;
+			// run smaller branch lines off this pipe in the other dim
+			cube_t const h_pipe(objs[pipe_obj_ix]);
+			float const h_pipe_len(h_pipe.get_sz_dim(dim)), conn_radius(0.5*h_pipe_radius);
+			unsigned const num_conn(max(1U, unsigned(h_pipe_len/(1.5*floor_spacing))));
+			float const conn_step((dir ? -1.0 : 1.0)*h_pipe_len/num_conn); // signed step (pipe runs in -dir)
+			p1[dim] += 0.5*conn_step; // first half step
 
-			for (unsigned n = 0; n < num_steps-1; ++n, h_pipe.d[dim][!dir] += step_val) { // keep cutting off the ends until we can place a pipe
-				// Note: pipe should touch the bottom of beams, so we don't need to check intersections with beams (and it may fail due to FP error)
-				if (has_bcube_int(h_pipe, obstacles) || has_bcube_int(h_pipe, walls) || has_bcube_int(h_pipe, pipe_cubes)) continue;
-				if (h_pipe.intersects(interior->pg_ramp)) continue; // check ramps as well, since they won't be included for lower floors
-				if (n > 0) {flags |= (dir ? RO_FLAG_ADJ_LO : RO_FLAG_ADJ_HI);} // shortened pipe, draw the end caps
-				success = 1;
-				break;
+			for (unsigned n = 0; n < num_conn; ++n) {
+				bool added(0);
+
+				for (unsigned d = 0; d < 2; ++d) { // extend to either side of the pipe
+					float const wpos2(basement.d[!dim][!d]); // extend to the opposite wall
+					added |= add_sprinkler_pipe(p1, wpos2, conn_radius, !dim, d, obstacles, walls, pipe_cubes, interior->pg_ramp, room_id, tot_light_amt, objs, pcolor, ccolor);
+				}
+				if (added) { // if conn was added in either dir, add a connector segment
+					unsigned const flags(RO_FLAG_NOCOLL | RO_FLAG_HANGING | RO_FLAG_ADJ_LO | RO_FLAG_ADJ_HI); // flat ends on both sides
+					cube_t conn(h_pipe);
+					set_wall_width(conn, p1[dim], 1.2*h_pipe_radius, dim); // set length
+					conn.expand_in_dim(!dim, conn_thickness);
+					conn.expand_in_dim(2,    conn_thickness);
+					objs.emplace_back(conn, TYPE_PIPE, room_id, dim, 0, flags, tot_light_amt, SHAPE_CYLIN, ccolor);
+				}
+				p1[dim] += conn_step;
 			} // for n
-			if (!success) continue; // failed to place a pipe at any length
-			// encoded as: X:dim=0,dir=0 Y:dim=1,dir=0, Z:dim=x,dir=1
-			objs.emplace_back(h_pipe, TYPE_PIPE, room_id, dim, 0, flags, tot_light_amt, SHAPE_CYLIN, RED); // add to pipe_cubes?
-
-			for (unsigned d = 0; d < 2; ++d) { // add connector segments
-				cube_t conn(h_pipe);
-				conn.d[dim][!d] = conn.d[dim][d] + (d ? -1.0 : 1.0)*1.6*sp_radius; // set length
-				conn.expand_in_dim(!dim, conn_thickness);
-				conn.expand_in_dim(2,    conn_thickness);
-				objs.emplace_back(conn, TYPE_PIPE, room_id, dim, 0, (flags | (d ? RO_FLAG_ADJ_LO : RO_FLAG_ADJ_HI)), tot_light_amt, SHAPE_CYLIN, RED);
-			}
-			// TODO: run smaller branch lines off this pipe in the other dim
 		} // for f
 		break; // done
 	} // for n
-	//cout << TXT(pipe_ends.size()) << TXT(num_valid) << TXT(num_connected) << TXT(pipes.size()) << TXT(xy_map.size()) << endl;
 }
 
 // here each sphere represents the entry point of a pipe with this radius into the basement ceiling
