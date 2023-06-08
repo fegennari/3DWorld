@@ -340,7 +340,7 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 			
 					for (auto const &w : wall_parts) {
 						if (w.get_sz_dim(dim) < 2.0*window_vspacing) continue; // too short, skip
-						objs.emplace_back(w, TYPE_PG_WALL, room_id, !dim, 0, 0, tot_light_amt, SHAPE_CUBE, wall_color, 0);
+						objs.emplace_back(w, TYPE_PG_WALL, room_id, !dim, 0, 0, tot_light_amt, SHAPE_CUBE, wall_color);
 					}
 				} // for side
 			}
@@ -357,7 +357,7 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 			pillars.push_back(pillar);
 		} // for p
 	} // for n
-	for (auto const &p : pillars) {objs.emplace_back(p, TYPE_PG_WALL, room_id, !dim, 0, 0, tot_light_amt, SHAPE_CUBE, wall_color, 1);}
+	for (auto const &p : pillars) {objs.emplace_back(p, TYPE_PG_PILLAR, room_id, !dim, 0, 0, tot_light_amt, SHAPE_CUBE, wall_color);}
 
 	// add beams in !dim, at and between pillars
 	unsigned const beam_flags(RO_FLAG_NOCOLL | RO_FLAG_HANGING);
@@ -368,9 +368,9 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 		subtract_cubes_from_cube_split_in_dim(beam, obstacles, wall_parts, temp, !dim);
 		
 		for (auto const &w : wall_parts) {
-			if (min(w.dx(), w.dy()) > beam_hwidth) {objs.emplace_back(w, TYPE_PG_WALL, room_id, !dim, 0, beam_flags, tot_light_amt, SHAPE_CUBE, wall_color, 2);}
+			if (min(w.dx(), w.dy()) > beam_hwidth) {objs.emplace_back(w, TYPE_PG_BEAM, room_id, !dim, 0, beam_flags, tot_light_amt, SHAPE_CUBE, wall_color);}
 		}
-	}
+	} // for p
 	// add beams in dim for each row of lights
 	for (unsigned n = 0; n < num_rows; ++n) {
 		float const pos(room.d[!dim][0] + (n + 0.5)*beam_spacing);
@@ -380,7 +380,7 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 		subtract_cubes_from_cube_split_in_dim(beam, obstacles, wall_parts, temp, dim);
 
 		for (auto const &w : wall_parts) {
-			if (min(w.dx(), w.dy()) > beam_hwidth) {objs.emplace_back(w, TYPE_PG_WALL, room_id, !dim, 0, beam_flags, tot_light_amt, SHAPE_CUBE, wall_color, 2);}
+			if (min(w.dx(), w.dy()) > beam_hwidth) {objs.emplace_back(w, TYPE_PG_BEAM, room_id, !dim, 0, beam_flags, tot_light_amt, SHAPE_CUBE, wall_color);}
 		}
 	}
 
@@ -476,14 +476,15 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 		vect_cube_t walls, beams;
 
 		for (auto i = objs.begin()+objs_start; i != objs.end(); ++i) {
-			if (i->type == TYPE_PG_WALL) {
-				if (i->item_flags == 2) {beams    .push_back(*i);} // beams
-				else                    {walls    .push_back(*i);} // walls and pillars
-				// pillars also count as obstacles; extend down to all floors so that these work with sprinkler pipes on a lower floor
-				if (i->item_flags == 1) {obstacles.push_back(*i); obstacles.back().z1() = room.z1();}
+			if (i->type == TYPE_PG_WALL) {walls.push_back(*i);} // wall
+			else if (i->type == TYPE_PG_PILLAR) { // pillar
+				walls.push_back(*i); // included in walls
+				obstacles.push_back(*i); // pillars also count as obstacles
+				obstacles.back().z1() = room.z1(); // extend down to all floors so that these work with sprinkler pipes on a lower floor
 			}
+			else if (i->type == TYPE_PG_BEAM) {beams.push_back(*i);} // ceiling beam
 			else if (i->type == TYPE_RAMP) {obstacles.push_back(*i);} // ramps are obstacles for pipes
-		}
+		} // for i
 		add_basement_electrical(obstacles, walls, beams, room_id, pipe_light_amt, rgen);
 		// get pipe ends (risers) coming in through the ceiling
 		vect_riser_pos_t sewer, cold_water, hot_water, gas_pipes;

@@ -1569,18 +1569,14 @@ void building_room_geom_t::add_stair(room_object_t const &c, float tscale, vecto
 void building_room_geom_t::add_stairs_wall(room_object_t const &c, vector3d const &tex_origin, tid_nm_pair_t const &wall_tex) {
 	get_material(get_scaled_wall_tex(wall_tex), 1).add_cube_to_verts(c, c.color, tex_origin, EF_Z1); // skip bottom; no room lighting color atten
 }
-void building_room_geom_t::add_parking_garage_wall(room_object_t const &c, vector3d const &tex_origin, tid_nm_pair_t const &wall_tex, bool detail_obj_pass) {
-	// no room lighting color atten; walls and pillars cast shadows, while beams don't
-	if (c.item_flags == 0) { // wall; small=1
-		if (!detail_obj_pass) {get_material(get_scaled_wall_tex(wall_tex), 1, 0, 1).add_cube_to_verts(c, c.color, tex_origin, EF_Z12);}
-	}
-	else if (c.item_flags == 1) { // pillar; small=1
-		if (!detail_obj_pass) {get_material(tid_nm_pair_t(get_concrete_tid(), wall_tex.tscale_x, 1), 1, 0, 1).add_cube_to_verts(c, c.color, all_zeros, EF_Z12);}
-	}
-	else if (c.item_flags == 2) { // beam; small=2: drawn as detail object
-		if ( detail_obj_pass) {get_material(tid_nm_pair_t(get_concrete_tid(), wall_tex.tscale_x, 0), 0, 0, 2).add_cube_to_verts(c, c.color, all_zeros, EF_Z2 );}
-	}
-	else {assert(0);}
+void building_room_geom_t::add_parking_garage_wall(room_object_t const &c, vector3d const &tex_origin, tid_nm_pair_t const &wall_tex) {
+	get_material(get_scaled_wall_tex(wall_tex), 1, 0, 1).add_cube_to_verts(c, c.color, tex_origin, EF_Z12); // small=1, shadowed, no color atten
+}
+void building_room_geom_t::add_parking_garage_pillar(room_object_t const &c, vector3d const &tex_origin, tid_nm_pair_t const &wall_tex) {
+	get_material(tid_nm_pair_t(get_concrete_tid(), wall_tex.tscale_x, 1), 1, 0, 1).add_cube_to_verts(c, c.color, all_zeros, EF_Z12); // small=1, shadowed, no color atten
+}
+void building_room_geom_t::add_parking_garage_beam(room_object_t const &c, vector3d const &tex_origin, tid_nm_pair_t const &wall_tex) {
+	get_material(tid_nm_pair_t(get_concrete_tid(), wall_tex.tscale_x, 0), 0, 0, 2).add_cube_to_verts(c, c.color, all_zeros, EF_Z2 ); // small=2, unshadowed, no color atten
 }
 void building_room_geom_t::add_parking_space(room_object_t const &c, vector3d const &tex_origin, float tscale) {
 	float const space_width(c.get_width()), line_width(0.04*space_width);
@@ -3765,6 +3761,8 @@ colorRGBA room_object_t::get_color() const {
 	case TYPE_STAIR:    return (STAIRS_COLOR_TOP*0.5 + STAIRS_COLOR_BOT*0.5).modulate_with(texture_color(MARBLE_TEX));
 	case TYPE_STAIR_WALL: return texture_color(STUCCO_TEX);
 	case TYPE_PG_WALL:    return texture_color(STUCCO_TEX);
+	case TYPE_PG_PILLAR:  return texture_color(get_concrete_tid());
+	case TYPE_PG_BEAM:    return texture_color(get_concrete_tid());
 	case TYPE_PARK_SPACE: return LT_GRAY; // texture_color(...)?
 	case TYPE_ELEVATOR: return LT_BROWN; // ???
 	case TYPE_RUG:      return texture_color(get_rug_tid());

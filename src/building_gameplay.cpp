@@ -51,7 +51,9 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_CHAIR     ] = bldg_obj_type_t(0, 1, 1, 1, 0, 0, 1, 50.0,  25.0,  "chair"); // skip player collisions because they can be in the way and block the path in some rooms
 	bldg_obj_types[TYPE_STAIR     ] = bldg_obj_type_t(1, 0, 1, 0, 1, 0, 1, 0.0,   0.0,   "stair");
 	bldg_obj_types[TYPE_STAIR_WALL] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 1, 0.0,   0.0,   "stairs wall");
-	bldg_obj_types[TYPE_PG_WALL   ] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 0, 0.0,   0.0,   "parking garage wall"); // or support column; detail object
+	bldg_obj_types[TYPE_PG_WALL   ] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 2, 0.0,   0.0,   "parking garage wall");
+	bldg_obj_types[TYPE_PG_PILLAR ] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 2, 0.0,   0.0,   "support pillar");
+	bldg_obj_types[TYPE_PG_BEAM   ] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 0, 0.0,   0.0,   "ceiling beam"); // detail object
 	bldg_obj_types[TYPE_ELEVATOR  ] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 0, 0.0,   0.0,   "elevator");
 	bldg_obj_types[TYPE_PARK_SPACE] = bldg_obj_type_t(0, 0, 0, 0, 1, 0, 0, 0.0,   0.0,   "parking space"); // detail object
 	bldg_obj_types[TYPE_RAMP      ] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 0, 0.0,   0.0,   "ramp"); // detail object

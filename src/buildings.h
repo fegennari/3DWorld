@@ -375,9 +375,9 @@ enum {
 	TYPE_WALL_TRIM, TYPE_RAILING, TYPE_CRATE, TYPE_BOX, TYPE_MIRROR, TYPE_SHELVES, TYPE_KEYBOARD, TYPE_SHOWER, TYPE_RDESK, TYPE_BOTTLE,
 	TYPE_WINE_RACK, TYPE_COMPUTER, TYPE_MWAVE, TYPE_PAPER, TYPE_BLINDS, TYPE_PEN, TYPE_PENCIL, TYPE_PAINTCAN, TYPE_LG_BALL, TYPE_HANGER_ROD,
 	TYPE_DRAIN, TYPE_MONEY, TYPE_PHONE, TYPE_TPROLL, TYPE_SPRAYCAN, TYPE_MARKER, TYPE_BUTTON, TYPE_CRACK, TYPE_SWITCH, TYPE_PLATE,
-	TYPE_LAPTOP, TYPE_FPLACE, TYPE_LBASKET, TYPE_WHEATER, TYPE_TAPE, TYPE_OUTLET, TYPE_PG_WALL, TYPE_PARK_SPACE, TYPE_RAMP, TYPE_PIPE,
-	TYPE_CURB, TYPE_BRK_PANEL, TYPE_VENT, TYPE_BREAKER, TYPE_FURNACE, TYPE_ATTIC_DOOR, TYPE_CHIMNEY, TYPE_DUCT, TYPE_TOY, TYPE_DRESS_MIR,
-	TYPE_PAN, TYPE_VASE, TYPE_URN, TYPE_FCABINET, TYPE_STAPLER, TYPE_WIND_SILL, TYPE_BALCONY,
+	TYPE_LAPTOP, TYPE_FPLACE, TYPE_LBASKET, TYPE_WHEATER, TYPE_TAPE, TYPE_OUTLET, TYPE_PG_WALL, TYPE_PG_PILLAR, TYPE_PG_BEAM, TYPE_PARK_SPACE,
+	TYPE_RAMP, TYPE_PIPE, TYPE_CURB, TYPE_BRK_PANEL, TYPE_VENT, TYPE_BREAKER, TYPE_FURNACE, TYPE_ATTIC_DOOR, TYPE_CHIMNEY, TYPE_DUCT,
+	TYPE_TOY, TYPE_DRESS_MIR, TYPE_PAN, TYPE_VASE, TYPE_URN, TYPE_FCABINET, TYPE_STAPLER, TYPE_WIND_SILL, TYPE_BALCONY,
 	/* these next ones are all 3D models - see logic in room_object_t::is_obj_model_type() */
 	TYPE_TOILET, TYPE_SINK, TYPE_TUB, TYPE_FRIDGE, TYPE_STOVE, TYPE_TV, TYPE_MONITOR, TYPE_COUCH, TYPE_OFF_CHAIR, TYPE_URINAL,
 	TYPE_LAMP, TYPE_WASHER, TYPE_DRYER, TYPE_KEY, TYPE_HANGER, TYPE_CLOTHES, TYPE_FESCAPE, TYPE_WALL_LAMP, TYPE_CUP, TYPE_TOASTER,
@@ -801,7 +801,7 @@ struct building_room_geom_t {
 	bool has_elevators, has_pictures, has_garage_car, modified_by_player;
 	unsigned char num_pic_tids, invalidate_mats_mask;
 	float obj_scale;
-	unsigned wall_ps_start, buttons_start, stairs_start; // index of first object of {TYPE_PG_WALL|TYPE_PSPACE, TYPE_BUTTON, TYPE_STAIR}
+	unsigned wall_ps_start, buttons_start, stairs_start; // index of first object of {TYPE_PG_*|TYPE_PSPACE, TYPE_BUTTON, TYPE_STAIR}
 	point tex_origin;
 	colorRGBA wood_color;
 	// objects in rooms; expanded_objs is for things that have been expanded for player interaction; model_objs is for models in drawers; trim_objs is for wall/door/window trim
@@ -857,7 +857,9 @@ struct building_room_geom_t {
 	void add_drawers(room_object_t const &c, float tscale, vect_cube_t const &drawers, unsigned drawer_index_offset=0);
 	void add_stair(room_object_t const &c, float tscale, vector3d const &tex_origin);
 	void add_stairs_wall(room_object_t const &c, vector3d const &tex_origin, tid_nm_pair_t const &wall_tex);
-	void add_parking_garage_wall(room_object_t const &c, vector3d const &tex_origin, tid_nm_pair_t const &wall_tex, bool detail_obj_pass);
+	void add_parking_garage_wall  (room_object_t const &c, vector3d const &tex_origin, tid_nm_pair_t const &wall_tex);
+	void add_parking_garage_pillar(room_object_t const &c, vector3d const &tex_origin, tid_nm_pair_t const &wall_tex);
+	void add_parking_garage_beam  (room_object_t const &c, vector3d const &tex_origin, tid_nm_pair_t const &wall_tex);
 	void add_parking_space(room_object_t const &c, vector3d const &tex_origin, float tscale);
 	void add_pg_ramp(room_object_t const &c, vector3d const &tex_origin, float tscale);
 	void add_pipe(room_object_t const &c, bool add_exterior);

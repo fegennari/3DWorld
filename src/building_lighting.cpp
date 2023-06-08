@@ -1039,7 +1039,7 @@ void building_t::refine_light_bcube(point const &lpos, float light_radius, cube_
 		assert(pg_wall_start < interior->room_geom->objs.size());
 
 		for (auto i = (interior->room_geom->objs.begin() + pg_wall_start); i != objs_end; ++i) {
-			if (i->type != TYPE_PG_WALL || i->item_flags != 0) continue; // not parking garage wall (breaking is incorrect for multiple PG levels)
+			if (i->type != TYPE_PG_WALL) continue; // not parking garage wall (breaking is incorrect for multiple PG levels)
 			if (tight_bcube.intersects(*i)) {walls[i->dim].push_back(*i);}
 		}
 	}

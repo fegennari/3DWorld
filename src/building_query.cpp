@@ -1200,8 +1200,8 @@ public:
 				if (obj.type != TYPE_PIPE && min(obj.dx(), obj.dy()) < sz_thresh) continue; // too small; exclude pipes
 				if (obj.type == TYPE_BOOK || obj.type == TYPE_PLANT || obj.type == TYPE_RAILING || obj.type == TYPE_BOTTLE || obj.type == TYPE_PAPER ||
 					obj.type == TYPE_PAINTCAN || obj.type == TYPE_WBOARD || obj.type == TYPE_DRAIN || obj.type == TYPE_PLATE || obj.type == TYPE_LBASKET ||
-					obj.type == TYPE_LAMP || obj.type == TYPE_CUP || obj.type == TYPE_LAPTOP || obj.type == TYPE_LG_BALL || obj.type == TYPE_PAN) continue;
-				if (obj.type == TYPE_PG_WALL && obj.item_flags == 2) continue; // skip parking garage beams
+					obj.type == TYPE_LAMP || obj.type == TYPE_CUP || obj.type == TYPE_LAPTOP || obj.type == TYPE_LG_BALL || obj.type == TYPE_PAN ||
+					obj.type == TYPE_PG_BEAM) continue;
 				if (z1 > obj.z2() || z2 < obj.z1()) continue; // zval test
 
 				if (obj.type == TYPE_PARK_SPACE) {
