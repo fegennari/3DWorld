@@ -2799,6 +2799,17 @@ bool building_t::is_light_placement_valid(cube_t const &light, room_t const &roo
 	if (!room.contains_cube(light_ext))            return 0; // room too small?
 	if (has_bcube_int(light, interior->elevators)) return 0;
 	if (!check_cube_within_part_sides(light))      return 0;
+	unsigned const pg_wall_start(interior->room_geom->wall_ps_start);
+
+	// check for intersection with low pipes such as sprinkler pipes that have been previously placed; only works for top level of parking garage
+	if (light.z1() < ground_floor_z1 && has_parking_garage && pg_wall_start > 0) {
+		vect_room_object_t const &objs(interior->room_geom->objs);
+		assert(pg_wall_start < objs.size());
+
+		for (auto i = (objs.begin() + pg_wall_start); i != objs.end(); ++i) {
+			if (i->type == TYPE_PIPE && i->intersects(light)) return 0; // check for pipe intersections (in particular horizontal sprinkler pipes)
+		}
+	}
 	light_ext.z1() = light_ext.z1() = light.z2() + get_fc_thickness(); // shift in between the ceiling and floor so that we can do a cube contains check
 	if (any_cube_contains(light_ext, interior->fc_occluders)) return 1; // Note: don't need to check skylights because fc_occluders excludes skylights
 	if (PLACE_LIGHTS_ON_SKYLIGHTS && any_cube_contains(light_ext, skylights))  return 1;

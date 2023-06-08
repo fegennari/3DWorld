@@ -1012,7 +1012,6 @@ bool building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 int add_sprinkler_pipe(point const &p1, float end_val, float radius, bool dim, bool dir, vect_cube_t const &obstacles, vect_cube_t const &pipe_cubes,
 	cube_t &ramp, unsigned room_id, float tot_light_amt, vect_room_object_t &objs, colorRGBA const &pcolor, colorRGBA const &ccolor)
 {
-	// TODO: what about clipping through lights on beams?
 	point p2(p1);
 	p2[dim] = end_val;
 	cube_t h_pipe(p1, p2);
