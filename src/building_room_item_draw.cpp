@@ -840,14 +840,14 @@ void building_room_geom_t::create_static_vbos(building_t const &building) {
 void building_room_geom_t::create_small_static_vbos(building_t const &building) {
 	//highres_timer_t timer("Gen Room Geom Small"); // 7.8ms, slow building at 26,16
 	model_objs.clear(); // currently model_objs are only created for small objects in drawers, so we clear this here
-	add_small_static_objs_to_verts(expanded_objs);
-	add_small_static_objs_to_verts(objs);
+	add_small_static_objs_to_verts(building, expanded_objs);
+	add_small_static_objs_to_verts(building, objs);
 }
 
 void building_room_geom_t::add_nested_objs_to_verts(vect_room_object_t const &objs_to_add) {
 	vector_add_to(objs_to_add, pending_objs); // nested objects are added at the end so that small and text materials are thread safe
 }
-void building_room_geom_t::add_small_static_objs_to_verts(vect_room_object_t const &objs_to_add, bool inc_text) {
+void building_room_geom_t::add_small_static_objs_to_verts(building_t const &building, vect_room_object_t const &objs_to_add, bool inc_text) {
 	if (objs_to_add.empty()) return; // don't add untextured material, otherwise we may fail the (num_verts > 0) assert
 	float const tscale(2.0/obj_scale);
 
@@ -902,6 +902,7 @@ void building_room_geom_t::add_small_static_objs_to_verts(vect_room_object_t con
 		case TYPE_FURNACE:   add_furnace       (c); break;
 		case TYPE_BRK_PANEL: add_breaker_panel (c); break; // only added to basements
 		case TYPE_ATTIC_DOOR:add_attic_door(c, tscale); break;
+		case TYPE_PG_WALL:   add_parking_garage_wall(c, tex_origin, building.get_material().wall_tex, 0); break; // detail_obj_pass=0
 		case TYPE_TOY:       add_toy(c); break;
 		case TYPE_PAN:       add_pan(c); break;
 		case TYPE_COUNTER: add_counter (c, tscale, 0, 1); break; // sm
@@ -944,7 +945,7 @@ void building_room_geom_t::create_detail_vbos(building_t const &building) {
 		case TYPE_OUTLET:     add_outlet(*i); break;
 		case TYPE_VENT:       add_vent  (*i); break;
 		case TYPE_SWITCH:     add_switch(*i, 1); break; // draw_detail_pass=0
-		case TYPE_PG_WALL:    add_parking_garage_wall(*i, tex_origin, wall_tex); break;
+		case TYPE_PG_WALL:    add_parking_garage_wall(*i, tex_origin, wall_tex, 1); break; // detail_obj_pass=1
 		case TYPE_PARK_SPACE: add_parking_space(*i, tex_origin, wall_tex.tscale_x); break;
 		case TYPE_RAMP:       add_pg_ramp(*i, tex_origin, wall_tex.tscale_x); break;
 		case TYPE_PIPE:       add_pipe(*i, 0); break; // add_exterior=0
@@ -1366,7 +1367,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, building_t c
 			if (create_small) {create_small_static_vbos(building);}
 			if (create_text ) {create_text_vbos        (building);}
 		}
-		add_small_static_objs_to_verts(pending_objs, create_text);
+		add_small_static_objs_to_verts(building, pending_objs, create_text);
 		pending_objs.clear();
 
 		// upload VBO data serially

@@ -870,7 +870,7 @@ void building_room_geom_t::add_shelves(room_object_t const &c, float tscale) {
 	if (c.obj_expanded()) return; // shelves have already been expanded, don't need to create contained objects below
 	vect_room_object_t &objects(get_temp_objects());
 	get_shelf_objects(c, shelves, num_shelves, objects);
-	add_small_static_objs_to_verts(objects, 1); // is_nested=1
+	add_small_static_objs_to_verts(building_t(), objects, 1); // inc_text=1; building not needed in this case
 }
 
 void building_room_geom_t::add_obj_with_top_texture(room_object_t const &c, string const &texture_name, colorRGBA const &sides_color, bool is_small) {
@@ -1569,11 +1569,17 @@ void building_room_geom_t::add_stair(room_object_t const &c, float tscale, vecto
 void building_room_geom_t::add_stairs_wall(room_object_t const &c, vector3d const &tex_origin, tid_nm_pair_t const &wall_tex) {
 	get_material(get_scaled_wall_tex(wall_tex), 1).add_cube_to_verts(c, c.color, tex_origin, EF_Z1); // skip bottom; no room lighting color atten
 }
-void building_room_geom_t::add_parking_garage_wall(room_object_t const &c, vector3d const &tex_origin, tid_nm_pair_t const &wall_tex) {
-	// small=2: drawn as detail object; no room lighting color atten
-	if      (c.item_flags == 0) {get_material(get_scaled_wall_tex(wall_tex), 1, 0, 2).add_cube_to_verts(c, c.color, tex_origin, EF_Z12);} // wall
-	else if (c.item_flags == 1) {get_material(tid_nm_pair_t(get_concrete_tid(), wall_tex.tscale_x, 1), 1, 0, 2).add_cube_to_verts(c, c.color, all_zeros, EF_Z12);} // pillar
-	else if (c.item_flags == 2) {get_material(tid_nm_pair_t(get_concrete_tid(), wall_tex.tscale_x, 0), 0, 0, 2).add_cube_to_verts(c, c.color, all_zeros, EF_Z2 );} // beam
+void building_room_geom_t::add_parking_garage_wall(room_object_t const &c, vector3d const &tex_origin, tid_nm_pair_t const &wall_tex, bool detail_obj_pass) {
+	// no room lighting color atten; walls and pillars cast shadows, while beams don't
+	if (c.item_flags == 0) { // wall; small=1
+		if (!detail_obj_pass) {get_material(get_scaled_wall_tex(wall_tex), 1, 0, 1).add_cube_to_verts(c, c.color, tex_origin, EF_Z12);}
+	}
+	else if (c.item_flags == 1) { // pillar; small=1
+		if (!detail_obj_pass) {get_material(tid_nm_pair_t(get_concrete_tid(), wall_tex.tscale_x, 1), 1, 0, 1).add_cube_to_verts(c, c.color, all_zeros, EF_Z12);}
+	}
+	else if (c.item_flags == 2) { // beam; small=2: drawn as detail object
+		if ( detail_obj_pass) {get_material(tid_nm_pair_t(get_concrete_tid(), wall_tex.tscale_x, 0), 0, 0, 2).add_cube_to_verts(c, c.color, all_zeros, EF_Z2 );}
+	}
 	else {assert(0);}
 }
 void building_room_geom_t::add_parking_space(room_object_t const &c, vector3d const &tex_origin, float tscale) {

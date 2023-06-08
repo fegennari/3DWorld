@@ -1108,7 +1108,7 @@ void building_t::add_sprinkler_pipes(vect_cube_t const &obstacles, vect_cube_t c
 			p1[dim] += 0.5*conn_step; // first half step
 
 			for (unsigned n = 0; n < num_conn; ++n) {
-				bool added(0);
+				int added(0);
 
 				for (unsigned d = 0; d < 2; ++d) { // extend to either side of the pipe
 					float const wpos2(basement.d[!dim][!d]); // extend to the opposite wall

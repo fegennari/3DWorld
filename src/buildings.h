@@ -857,7 +857,7 @@ struct building_room_geom_t {
 	void add_drawers(room_object_t const &c, float tscale, vect_cube_t const &drawers, unsigned drawer_index_offset=0);
 	void add_stair(room_object_t const &c, float tscale, vector3d const &tex_origin);
 	void add_stairs_wall(room_object_t const &c, vector3d const &tex_origin, tid_nm_pair_t const &wall_tex);
-	void add_parking_garage_wall(room_object_t const &c, vector3d const &tex_origin, tid_nm_pair_t const &wall_tex);
+	void add_parking_garage_wall(room_object_t const &c, vector3d const &tex_origin, tid_nm_pair_t const &wall_tex, bool detail_obj_pass);
 	void add_parking_space(room_object_t const &c, vector3d const &tex_origin, float tscale);
 	void add_pg_ramp(room_object_t const &c, vector3d const &tex_origin, float tscale);
 	void add_pipe(room_object_t const &c, bool add_exterior);
@@ -988,7 +988,7 @@ private:
 	void create_text_vbos(building_t const &building);
 	void create_detail_vbos(building_t const &building);
 	void add_nested_objs_to_verts(vect_room_object_t const &objs_to_add);
-	void add_small_static_objs_to_verts(vect_room_object_t const &objs_to_add, bool inc_text=0);
+	void add_small_static_objs_to_verts(building_t const &building, vect_room_object_t const &objs_to_add, bool inc_text=0);
 	void create_obj_model_insts(building_t const &building);
 	void create_lights_vbos(building_t const &building);
 	void create_dynamic_vbos(building_t const &building);
