@@ -1599,8 +1599,7 @@ void building_room_geom_t::add_parking_space(room_object_t const &c, vector3d co
 }
 
 void building_room_geom_t::add_pg_ramp(room_object_t const &c, vector3d const &tex_origin, float tscale) {
-	rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_concrete_tid(), tscale, 1), 1, 0, 2));
-	//mat.add_cube_to_verts(c, WHITE, all_zeros); // TESTING
+	rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_concrete_tid(), tscale, 1), 1, 0, 1)); // small=1
 	tquad_t ramp(4); // ramp surface
 	float const length(c.get_length()), thickness(FLOOR_THICK_VAL_OFFICE*c.dz()), side_tc_y(thickness/length);
 	float const zv[2] = {c.z1(), c.z2()};
@@ -1667,7 +1666,7 @@ void building_room_geom_t::add_pipe(room_object_t const &c, bool add_exterior) {
 	// draw sides and possibly one or both ends
 	tid_nm_pair_t tex((is_duct ? get_cylin_duct_tid() : -1), 1.0, shadowed); // custom specular color
 	tex.set_specular_color(spec_color, 0.8, 60.0);
-	rgeom_mat_t &mat(get_material(tex, shadowed, 0, (exterior ? 0 : 2), 0, exterior)); // detail or exterior object
+	rgeom_mat_t &mat(get_material(tex, shadowed, 0, (exterior ? 0 : 2), 0, exterior)); // detail or exterior object; note that detail objects don't cast shadows
 	// swap texture XY for ducts
 	mat.add_ortho_cylin_to_verts(c, color, dim, (flat_ends && draw_joints[0]), (flat_ends && draw_joints[1]),
 		0, 0, 1.0, 1.0, side_tscale, 1.0, 0, ndiv, 0.0, is_duct, len_tscale);
@@ -1713,7 +1712,7 @@ void building_room_geom_t::add_duct(room_object_t const &c) {
 			tex.tscale_y = tscales[d1];
 			bool const swap_st(d2 != dim);
 			(swap_st ? tex.tscale_y : tex.tscale_x) *= 0.5; // account for the 2x texture repetition in X
-			get_material(tex, 1, 0, 2).add_cube_to_verts(c, c.color, c.get_llc(), face_sf, swap_st); // shadowed, detail, not using lit color
+			get_material(tex, 1, 0, 2).add_cube_to_verts(c, c.color, c.get_llc(), face_sf, swap_st); // shadowed(?), detail, not using lit color
 		} // for d
 	}
 	else if (c.shape == SHAPE_CYLIN) {add_pipe(c, 0);} // draw using pipe logic; add_exterior=0
@@ -1722,7 +1721,7 @@ void building_room_geom_t::add_duct(room_object_t const &c) {
 
 void building_room_geom_t::add_curb(room_object_t const &c) {
 	float const tscale(1.0/c.get_length());
-	rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_concrete_tid(), tscale, 1), 1, 0, 2)); // shadowed, detail object
+	rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_concrete_tid(), tscale, 1), 1, 0, 2)); // shadowed(?), detail object
 	colorRGBA const color(apply_light_color(c));
 	cube_t t(c);
 	t.expand_by_xy(-0.25*c.get_width()); // pinch the top face into a trapezoid

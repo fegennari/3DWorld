@@ -904,6 +904,7 @@ void building_room_geom_t::add_small_static_objs_to_verts(building_t const &buil
 		case TYPE_ATTIC_DOOR:add_attic_door(c, tscale); break;
 		case TYPE_PG_WALL:   add_parking_garage_wall  (c, tex_origin, building.get_material().wall_tex); break;
 		case TYPE_PG_PILLAR: add_parking_garage_pillar(c, tex_origin, building.get_material().wall_tex); break;
+		case TYPE_RAMP:      add_pg_ramp(c, tex_origin, building.get_material().wall_tex.tscale_x); break;
 		case TYPE_TOY:       add_toy(c); break;
 		case TYPE_PAN:       add_pan(c); break;
 		case TYPE_COUNTER: add_counter (c, tscale, 0, 1); break; // sm
@@ -937,7 +938,6 @@ void building_room_geom_t::create_text_vbos(building_t const &building) {
 void building_room_geom_t::create_detail_vbos(building_t const &building) {
 	// currently only small objects that are non-interactive and can't be taken; TYPE_SWITCH almost counts; also, anything in the basement not seen from outside the building
 	auto objs_end(get_placed_objs_end()); // skip buttons/stairs/elevators
-	tid_nm_pair_t const &wall_tex(building.get_material().wall_tex);
 
 	for (auto i = objs.begin(); i != objs_end; ++i) {
 		if (!i->is_visible()) continue;
@@ -946,9 +946,8 @@ void building_room_geom_t::create_detail_vbos(building_t const &building) {
 		case TYPE_OUTLET:     add_outlet(*i); break;
 		case TYPE_VENT:       add_vent  (*i); break;
 		case TYPE_SWITCH:     add_switch(*i, 1); break; // draw_detail_pass=0
-		case TYPE_PG_BEAM:    add_parking_garage_beam(*i, tex_origin, wall_tex); break;
-		case TYPE_PARK_SPACE: add_parking_space(*i, tex_origin, wall_tex.tscale_x); break;
-		case TYPE_RAMP:       add_pg_ramp(*i, tex_origin, wall_tex.tscale_x); break;
+		case TYPE_PG_BEAM:    add_parking_garage_beam(*i, tex_origin, building.get_material().wall_tex); break;
+		case TYPE_PARK_SPACE: add_parking_space(*i, tex_origin, building.get_material().wall_tex.tscale_x); break;
 		case TYPE_PIPE:       add_pipe(*i, 0); break; // add_exterior=0
 		case TYPE_CURB:       add_curb(*i); break;
 		case TYPE_CHIMNEY:    add_chimney(*i, building.get_material().side_tex); break; // uses exterior wall texture
