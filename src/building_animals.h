@@ -88,7 +88,7 @@ struct snake_t : public building_animal_t {
 	float get_curve_factor() const;
 };
 
-enum {INSECT_TYPE_FLY=0, INSECT_TYPE_ROACH, NUM_INSECT_TYPES};
+enum {INSECT_TYPE_FLY=0, INSECT_TYPE_ROACH, INSECT_TYPE_CENTIPEDE, NUM_INSECT_TYPES};
 
 struct insect_t : public building_animal_t {
 	vector3d delta_dir;

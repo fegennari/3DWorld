@@ -1408,6 +1408,7 @@ void building_t::update_insect(insect_t &insect, point const &camera_bs, float t
 	}
 	if      (insect.type == INSECT_TYPE_FLY  ) {update_fly  (insect, camera_bs, timestep, targets, rgen);}
 	else if (insect.type == INSECT_TYPE_ROACH) {update_roach(insect, camera_bs, timestep, rgen);}
+	//else if (insect.type == INSECT_TYPE_CENTIPEDE) {update_centipede(insect, camera_bs, timestep, rgen);}
 	else {assert(0);} // unsupported insect type
 }
 
