@@ -106,6 +106,11 @@ unsigned building_t::add_water_heaters(rand_gen_t &rgen, room_t const &room, flo
 		objs.emplace_back(c, TYPE_WHEATER, room_id, dim, !dir, flags, tot_light_amt, SHAPE_CYLIN);
 		unsigned num_added(1);
 
+		if (is_house && has_attic()) { // add rooftop vent above the water heater
+			float const attic_floor_zval(get_attic_part().z2()), vent_radius(0.15*radius);
+			point const vent_bot_center(center.x, center.y, attic_floor_zval);
+			add_attic_roof_vent(vent_bot_center, vent_radius, room_id, 1.0); // light_amt=1.0; room_id is for the basement because there's no attic room
+		}
 		if (!is_house && n < 4) { // office building, placed at corner; try to add additional water heaters along the wall
 			vector3d step;
 			step[!dim] = 2.2*radius*((dim ? xdir : ydir) ? -1.0 : 1.0); // step in the opposite dim

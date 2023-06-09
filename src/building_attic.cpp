@@ -240,6 +240,10 @@ void building_t::add_attic_objects(rand_gen_t rgen) {
 			}
 		}
 	}
+	// add vertical vent pipes as avoid cubes
+	for (auto i = objs.begin(); i != objs.begin()+objs_start; ++i) {
+		if (i->type == TYPE_PIPE && !i->is_exterior() && i->z2() > z_floor && i->intersects_xy(part)) {avoid_cubes.push_back(*i);}
+	}
 	// add posts as colliders; somewhat of a duplicate of the code in building_room_geom_t::add_attic_rafters()
 	for (tquad_with_ix_t const &tq : roof_tquads) {
 		if (tq.npts == 3 || !is_attic_roof(tq, 1)) continue; // not a roof tquad; type_roof_only=1
@@ -427,7 +431,7 @@ bool building_t::add_attic_roof_vent(point const &bot_center, float radius, unsi
 	cube_t end_cap(pipe);
 	set_cube_zvals(end_cap, pipe_z2, (pipe_z2 + 0.04*floor_spacing + radius));
 	end_cap.expand_by_xy(0.8*radius);
-	unsigned const end_cap_flags(RO_FLAG_LIT | RO_FLAG_EXTERIOR | RO_FLAG_ADJ_LO | RO_FLAG_ADJ_HI | RO_FLAG_HANGING); // draw top and bottom flat ends
+	unsigned const end_cap_flags(RO_FLAG_LIT | RO_FLAG_EXTERIOR | RO_FLAG_ADJ_LO | RO_FLAG_ADJ_HI | RO_FLAG_HANGING | RO_FLAG_NOCOLL); // draw top and bottom flat ends
 	interior->room_geom->objs.emplace_back(pipe,    TYPE_PIPE, room_id, 0, 1, RO_FLAG_LIT,   light_amt, SHAPE_CYLIN, LT_GRAY); // dir=1 for vertical; casts shadows
 	interior->room_geom->objs.emplace_back(end_cap, TYPE_PIPE, room_id, 0, 1, end_cap_flags, 1.0,       SHAPE_CYLIN, GRAY);
 	return 1;
