@@ -313,37 +313,10 @@ void building_t::add_attic_objects(rand_gen_t rgen) {
 				}
 			}
 			// add an exhaust vent up through the roof; it may clip through the rafters, but this is difficult to check for and avoid
-			float const radius(0.1*width), dir_offset(0.26);
-			cube_t pipe;
-			set_wall_width(pipe, furnace.get_center_dim(!dim), radius, !dim);
-			set_wall_width(pipe, (dir_offset*furnace.d[dim][!dir] + (1.0 - dir_offset)*furnace.d[dim][dir]), radius, dim);
-			point const pipe_center(pipe.xc(), pipe.yc(), furnace.z1());
-			float pipe_z2(furnace.z2() + floor_spacing); // staring value; should clip to roof below
-			bool add_pipe(0);
-
-			for (auto const &tq : roof_tquads) {
-				bool const is_solar_panel(tq.type == tquad_with_ix_t::TYPE_SOLAR);
-				if (!is_solar_panel && !is_attic_roof(tq, 1)) continue; // type_roof_only=1
-				unsigned const int_count(count_num_poly_intersects(pipe_center.x, pipe_center.y, radius, tq.pts, tq.npts));
-				if (int_count == 0) continue; // no intersections, skip
-				if (int_count < 5 || is_solar_panel) {add_pipe = 0; break;} // don't allow vent to clip through solar panel or partially clip through a roof
-				vector3d const normal(tq.get_norm());
-				if (normal.z == 0.0) continue; // skip vertical sides
-				float const denom(dot_product(normal, plus_z));
-				if (fabs(denom) < TOLERANCE) break; // should never fail?
-				pipe_z2  = furnace.z1() + dot_product_ptv(normal, tq.pts[0], pipe_center)/denom;
-				add_pipe = 1;
-			} // for tq
-			if (add_pipe && pipe_z2 > furnace.z2()) { // zval test should always be true?
-				pipe_z2 += 0.06*floor_spacing; // move up a bit to get it above the roof
-				set_cube_zvals(pipe, furnace.z2(), pipe_z2);
-				cube_t end_cap(pipe);
-				set_cube_zvals(end_cap, pipe_z2, (pipe_z2 + 0.05*floor_spacing));
-				end_cap.expand_by_xy(0.8*radius);
-				unsigned const end_cap_flags(RO_FLAG_LIT | RO_FLAG_EXTERIOR | RO_FLAG_ADJ_LO | RO_FLAG_ADJ_HI | RO_FLAG_HANGING); // draw top and bottom flat ends
-				objs.emplace_back(pipe,    TYPE_PIPE, room_id, 0, 1, RO_FLAG_LIT,   light_amt, SHAPE_CYLIN, LT_GRAY); // dir=1 for vertical; casts shadows
-				objs.emplace_back(end_cap, TYPE_PIPE, room_id, 0, 1, end_cap_flags, 1.0,       SHAPE_CYLIN, GRAY);
-			}
+			float const vent_radius(0.1*width), dir_offset(0.26);
+			point vent_bot_center(furnace.xc(), furnace.yc(), furnace.z2());
+			vent_bot_center[dim] = (dir_offset*furnace.d[dim][!dir] + (1.0 - dir_offset)*furnace.d[dim][dir]);
+			add_attic_roof_vent(vent_bot_center, vent_radius, room_id, light_amt);
 			has_furnace = 1;
 			break; // success/done
 		} // for n
@@ -428,6 +401,36 @@ void building_t::add_attic_objects(rand_gen_t rgen) {
 		objs.back().obj_id = uint16_t(objs.size()); // determines rug texture
 		break; // done
 	} // for n
+}
+
+bool building_t::add_attic_roof_vent(point const &bot_center, float radius, unsigned room_id, float light_amt) {
+	cube_t pipe(bot_center, bot_center);
+	pipe.expand_by_xy(radius);
+	float pipe_z2(bot_center.z); // starting value zero height; should set based on roof height below
+
+	for (auto const &tq : roof_tquads) {
+		bool const is_solar_panel(tq.type == tquad_with_ix_t::TYPE_SOLAR);
+		if (!is_solar_panel && !is_attic_roof(tq, 1)) continue; // type_roof_only=1
+		unsigned const int_count(count_num_poly_intersects(bot_center.x, bot_center.y, radius, tq.pts, tq.npts));
+		if (int_count == 0) continue; // no intersections, skip
+		if (int_count < 5 || is_solar_panel) return 0; // don't allow vent to clip through solar panel or partially clip through a roof
+		vector3d const normal(tq.get_norm());
+		if (normal.z == 0.0) continue; // skip vertical sides
+		float const denom(dot_product(normal, plus_z));
+		if (fabs(denom) < TOLERANCE) break; // should never fail?
+		pipe_z2  = bot_center.z + dot_product_ptv(normal, tq.pts[0], bot_center)/denom;
+	} // for tq
+	if (pipe_z2 <= bot_center.z) return 0; // no roof tquad found; can this happen?
+	float const floor_spacing(get_window_vspace());
+	pipe_z2 += 0.05*floor_spacing + radius; // move up a bit to get it above the roof
+	set_cube_zvals(pipe, bot_center.z, pipe_z2);
+	cube_t end_cap(pipe);
+	set_cube_zvals(end_cap, pipe_z2, (pipe_z2 + 0.04*floor_spacing + radius));
+	end_cap.expand_by_xy(0.8*radius);
+	unsigned const end_cap_flags(RO_FLAG_LIT | RO_FLAG_EXTERIOR | RO_FLAG_ADJ_LO | RO_FLAG_ADJ_HI | RO_FLAG_HANGING); // draw top and bottom flat ends
+	interior->room_geom->objs.emplace_back(pipe,    TYPE_PIPE, room_id, 0, 1, RO_FLAG_LIT,   light_amt, SHAPE_CYLIN, LT_GRAY); // dir=1 for vertical; casts shadows
+	interior->room_geom->objs.emplace_back(end_cap, TYPE_PIPE, room_id, 0, 1, end_cap_flags, 1.0,       SHAPE_CYLIN, GRAY);
+	return 1;
 }
 
 cube_t get_attic_access_door_cube(room_object_t const &c, bool inc_ladder) {
