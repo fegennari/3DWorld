@@ -229,7 +229,7 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 	nlights_len = num_rows; // lights over each row of parking spaces
 	nlights_wid = round_fp(0.25*wid_sz/parking_sz.y); // 4 parking spaces per light on average, including roads
 	//cout << TXT(nlights_len) << TXT(nlights_wid) << TXT(num_space_wid) << TXT(num_rows) << TXT(capacity) << endl; // TESTING
-	assert(num_space_wid   >= 4); // must fit at least 4 cars per row
+	assert(num_space_wid >= 4); // must fit at least 4 cars per row
 	
 	// add walls and pillars between strips
 	vect_room_object_t &objs(interior->room_geom->objs);
@@ -469,7 +469,7 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 			} // for s
 		} // for d
 	} // for n
-	if (is_top_floor) {
+	if (is_top_floor) { // place pipes on the top level parking garage ceiling (except for sprinkler pipes, which go on every floor)
 		float const pipe_light_amt = 1.0; // make pipes and electrical brighter and easier to see
 		// avoid intersecting lights, pillars, walls, stairs, elevators, and ramps;
 		// note that lights haven't been added yet though, but they're placed on beams, so we can avoid beams instead
@@ -501,6 +501,12 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 		get_pipe_basement_gas_connections(gas_pipes);
 		add_basement_pipes(obstacles, walls, beams, gas_pipes,  pipe_cubes, room_id, num_floors, objs_start, pipe_light_amt, water_ceil_zval, rgen, PIPE_TYPE_GAS, 1); // gas
 		add_to_and_clear(pipe_cubes, obstacles); // add gas pipes to obstacles
+
+		// if there are multiple parking garage floors, lights have already been added on the floor(s) below; add them as occluders for sprinkler pipes;
+		// lights on the top floor will be added later and will check for pipe intersections
+		for (auto i = objs.begin()+interior->room_geom->wall_ps_start; i < objs.begin()+objs_start; ++i) {
+			if (i->type == TYPE_LIGHT && room.contains_cube(*i)) {obstacles.push_back(*i);}
+		}
 		add_sprinkler_pipes(obstacles, walls, beams, pipe_cubes, room_id, num_floors, pipe_light_amt, rgen);
 	}
 }
@@ -1106,9 +1112,11 @@ void building_t::add_sprinkler_pipes(vect_cube_t const &obstacles, vect_cube_t c
 			bool const end_flush(ret == 2); // if a partial pipe was added, place the last connector at the end of the pipe so that there's no unused length
 			float const conn_step((dir ? -1.0 : 1.0)*h_pipe_len/(num_conn - (end_flush ? 0.5 : 0.0))); // signed step (pipe runs in -dir)
 			p1[dim] += 0.5*conn_step; // first half step
+			int added(0);
+			float last_added_conn_pipe_pos(center[dim]); // start at center of vertical pipe
 
 			for (unsigned n = 0; n < num_conn; ++n) {
-				int added(0);
+				added = 0; // reset for this conn
 
 				for (unsigned d = 0; d < 2; ++d) { // extend to either side of the pipe
 					float const wpos2(basement.d[!dim][!d]); // extend to the opposite wall
@@ -1121,9 +1129,19 @@ void building_t::add_sprinkler_pipes(vect_cube_t const &obstacles, vect_cube_t c
 					conn.expand_in_dim(!dim, conn_thickness);
 					conn.expand_in_dim(2,    conn_thickness);
 					objs.emplace_back(conn, TYPE_PIPE, room_id, dim, 0, flags, tot_light_amt, SHAPE_CYLIN, ccolor);
+					last_added_conn_pipe_pos = p1[dim];
 				}
 				p1[dim] += conn_step;
 			} // for n
+			if (end_flush && !added && last_added_conn_pipe_pos != center[dim]) { // partial pipe with final connector not added, but some other connector added
+				float &end_to_move(objs[pipe_obj_ix].d[dim][!dir]);
+				float const pipe_end(end_to_move), xlate(last_added_conn_pipe_pos - pipe_end);
+				end_to_move = last_added_conn_pipe_pos;
+
+				for (unsigned i = pipe_obj_ix+1; i < pipe_obj_ix+3; ++i) { // check both end caps
+					if (objs[i].d[dim][!dir] == pipe_end) {objs[i].translate_dim(dim, xlate);}
+				}
+			}
 		} // for f
 		break; // done
 	} // for n
