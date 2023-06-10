@@ -1042,9 +1042,9 @@ int add_sprinkler_pipe(point const &p1, float end_val, float radius, bool dim, b
 		break;
 	} // for n
 	if (ret == 0) return 0; // failed to place a pipe at any length
-	float const conn_thickness(0.2*radius), end_extend(0.1*radius);
 	// encoded as: X:dim=0,dir=0 Y:dim=1,dir=0, Z:dim=x,dir=1
 	objs.emplace_back(h_pipe, TYPE_PIPE, room_id, dim, 0, pipe_flags, tot_light_amt, SHAPE_CYLIN, pcolor); // add to pipe_cubes?
+	float const conn_thickness(0.2*radius);
 
 	for (unsigned d = 0; d < 2; ++d) { // add connector segments
 		cube_t conn(h_pipe);
