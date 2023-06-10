@@ -986,11 +986,11 @@ struct building_room_geom_t {
 private:
 	building_materials_t &get_building_mat(tid_nm_pair_t const &tex, bool dynamic, unsigned small, bool transparent, bool exterior);
 	void create_static_vbos(building_t const &building);
-	void create_small_static_vbos(building_t const &building);
-	void create_text_vbos(building_t const &building);
+	void create_small_static_vbos();
+	void create_text_vbos();
 	void create_detail_vbos(building_t const &building);
 	void add_nested_objs_to_verts(vect_room_object_t const &objs_to_add);
-	void add_small_static_objs_to_verts(building_t const &building, vect_room_object_t const &objs_to_add, bool inc_text=0);
+	void add_small_static_objs_to_verts(vect_room_object_t const &objs_to_add, bool inc_text=0);
 	void create_obj_model_insts(building_t const &building);
 	void create_lights_vbos(building_t const &building);
 	void create_dynamic_vbos(building_t const &building);

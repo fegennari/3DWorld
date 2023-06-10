@@ -837,17 +837,17 @@ void building_room_geom_t::create_static_vbos(building_t const &building) {
 	//cout << "static: size: " << rgeom_alloc.size() << " mem: " << rgeom_alloc.get_mem_usage() << endl; // start=47MB, peak=132MB
 }
 
-void building_room_geom_t::create_small_static_vbos(building_t const &building) {
+void building_room_geom_t::create_small_static_vbos() {
 	//highres_timer_t timer("Gen Room Geom Small"); // 7.8ms, slow building at 26,16
 	model_objs.clear(); // currently model_objs are only created for small objects in drawers, so we clear this here
-	add_small_static_objs_to_verts(building, expanded_objs);
-	add_small_static_objs_to_verts(building, objs);
+	add_small_static_objs_to_verts(expanded_objs);
+	add_small_static_objs_to_verts(objs);
 }
 
 void building_room_geom_t::add_nested_objs_to_verts(vect_room_object_t const &objs_to_add) {
 	vector_add_to(objs_to_add, pending_objs); // nested objects are added at the end so that small and text materials are thread safe
 }
-void building_room_geom_t::add_small_static_objs_to_verts(building_t const &building, vect_room_object_t const &objs_to_add, bool inc_text) {
+void building_room_geom_t::add_small_static_objs_to_verts(vect_room_object_t const &objs_to_add, bool inc_text) {
 	if (objs_to_add.empty()) return; // don't add untextured material, otherwise we may fail the (num_verts > 0) assert
 	float const tscale(2.0/obj_scale);
 
@@ -902,9 +902,6 @@ void building_room_geom_t::add_small_static_objs_to_verts(building_t const &buil
 		case TYPE_FURNACE:   add_furnace       (c); break;
 		case TYPE_BRK_PANEL: add_breaker_panel (c); break; // only added to basements
 		case TYPE_ATTIC_DOOR:add_attic_door(c, tscale); break;
-		case TYPE_PG_WALL:   add_parking_garage_wall  (c, tex_origin, building.get_material().wall_tex); break;
-		case TYPE_PG_PILLAR: add_parking_garage_pillar(c, tex_origin, building.get_material().wall_tex); break;
-		case TYPE_RAMP:      add_pg_ramp(c, tex_origin, building.get_material().wall_tex.tscale_x); break;
 		case TYPE_TOY:       add_toy(c); break;
 		case TYPE_PAN:       add_pan(c); break;
 		case TYPE_COUNTER: add_counter (c, tscale, 0, 1); break; // sm
@@ -917,7 +914,7 @@ void building_room_geom_t::add_small_static_objs_to_verts(building_t const &buil
 	} // for i
 }
 
-void building_room_geom_t::create_text_vbos(building_t const &building) {
+void building_room_geom_t::create_text_vbos() {
 	//highres_timer_t timer("Gen Room Geom Text");
 
 	for (unsigned d = 0; d < 2; ++d) { // {objs, expanded_objs}
@@ -938,6 +935,7 @@ void building_room_geom_t::create_text_vbos(building_t const &building) {
 void building_room_geom_t::create_detail_vbos(building_t const &building) {
 	// currently only small objects that are non-interactive and can't be taken; TYPE_SWITCH almost counts; also, anything in the basement not seen from outside the building
 	auto objs_end(get_placed_objs_end()); // skip buttons/stairs/elevators
+	tid_nm_pair_t const &wall_tex(building.get_material().wall_tex);
 
 	for (auto i = objs.begin(); i != objs_end; ++i) {
 		if (!i->is_visible()) continue;
@@ -946,8 +944,11 @@ void building_room_geom_t::create_detail_vbos(building_t const &building) {
 		case TYPE_OUTLET:     add_outlet(*i); break;
 		case TYPE_VENT:       add_vent  (*i); break;
 		case TYPE_SWITCH:     add_switch(*i, 1); break; // draw_detail_pass=0
-		case TYPE_PG_BEAM:    add_parking_garage_beam(*i, tex_origin, building.get_material().wall_tex); break;
-		case TYPE_PARK_SPACE: add_parking_space(*i, tex_origin, building.get_material().wall_tex.tscale_x); break;
+		case TYPE_PG_BEAM:    add_parking_garage_beam  (*i, tex_origin, wall_tex); break;
+		case TYPE_PG_WALL:    add_parking_garage_wall  (*i, tex_origin, wall_tex); break;
+		case TYPE_PG_PILLAR:  add_parking_garage_pillar(*i, tex_origin, wall_tex); break;
+		case TYPE_RAMP:       add_pg_ramp              (*i, tex_origin, wall_tex.tscale_x); break;
+		case TYPE_PARK_SPACE: add_parking_space        (*i, tex_origin, wall_tex.tscale_x); break;
 		case TYPE_PIPE:       add_pipe(*i, 0); break; // add_exterior=0
 		case TYPE_CURB:       add_curb(*i); break;
 		case TYPE_CHIMNEY:    add_chimney(*i, building.get_material().side_tex); break; // uses exterior wall texture
@@ -1361,13 +1362,13 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, building_t c
 
 		if (create_small && create_text) { // MT case
 #pragma omp parallel num_threads(2)
-			if (omp_get_thread_num_3dw() == 0) {create_small_static_vbos(building);} else {create_text_vbos(building);}
+			if (omp_get_thread_num_3dw() == 0) {create_small_static_vbos();} else {create_text_vbos();}
 		}
 		else { // serial case
-			if (create_small) {create_small_static_vbos(building);}
-			if (create_text ) {create_text_vbos        (building);}
+			if (create_small) {create_small_static_vbos();}
+			if (create_text ) {create_text_vbos        ();}
 		}
-		add_small_static_objs_to_verts(building, pending_objs, create_text);
+		add_small_static_objs_to_verts(pending_objs, create_text);
 		pending_objs.clear();
 
 		// upload VBO data serially
@@ -1391,9 +1392,9 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, building_t c
 	enable_blend(); // needed for rugs and book text
 	assert(s.is_setup());
 	mats_static.draw(bbd, s, shadow_only, reflection_pass); // this is the slowest call
-	if (draw_lights)          {mats_lights .draw(bbd,    s, shadow_only, reflection_pass);}
-	if (inc_small  )          {mats_dynamic.draw(bbd,    s, shadow_only, reflection_pass);}
-	if (draw_int_detail_objs) {mats_detail .draw(bbd,    s, shadow_only, reflection_pass);}
+	if (draw_lights)    {mats_lights .draw(bbd, s, shadow_only, reflection_pass);}
+	if (inc_small  )    {mats_dynamic.draw(bbd, s, shadow_only, reflection_pass);}
+	if (inc_small >= 3) {mats_detail .draw(bbd, s, shadow_only, reflection_pass);} // now included in the shadow pass
 	
 	// draw exterior geom; shadows not supported; always use bbd; skip in reflection pass because that control flow doesn't work and is probably not needed (except for L-shaped house?)
 	if (!shadow_only && !reflection_pass) {
