@@ -42,7 +42,7 @@ struct city_obj_t : public sphere_t {
 	float get_bsphere_radius(bool shadow_only) const {return radius;}
 	void set_bsphere_from_bcube() {*((sphere_t *)this) = bcube.get_bsphere();}
 	static void post_draw(draw_state_t &dstate, bool shadow_only) {}
-	bool proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const; // default, can be overridden in derived class
+	bool proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const; // default bcube coll, can override in derived class
 };
 
 struct oriented_city_obj_t : public city_obj_t {
@@ -201,6 +201,12 @@ struct sign_t : public oriented_city_obj_t {
 	void draw_text(draw_state_t &dstate, city_draw_qbds_t &qbds, string const &text_to_draw, float first_char_clip_val=0.0, float last_char_clip_val=0.0) const;
 };
 
+struct stopsign_t : public oriented_city_obj_t {
+	stopsign_t(point const &pos_, float height, float width, bool dim_, bool dir_);
+	static void pre_draw (draw_state_t &dstate, bool shadow_only);
+	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const;
+};
+
 struct city_flag_t : public oriented_city_obj_t {
 	cube_t flag_bcube;
 	point pole_base;
@@ -247,11 +253,12 @@ private:
 	vector<manhole_t> manholes;
 	vector<mailbox_t> mboxes;
 	vector<sign_t> signs;
+	vector<stopsign_t> stopsigns;
 	vector<city_flag_t> flags;
 	vector<newsrack_t> newsracks;
 	// index is last obj in group
 	city_obj_groups_t bench_groups, planter_groups, trashcan_groups, fhydrant_groups, sstation_groups, divider_groups, pool_groups, pdeck_groups,
-		ppole_groups, hcap_groups, manhole_groups, mbox_groups, sign_groups, flag_groups, nrack_groups;
+		ppole_groups, hcap_groups, manhole_groups, mbox_groups, sign_groups, stopsign_groups, flag_groups, nrack_groups;
 	vector<city_zone_t> sub_plots; // reused across calls
 	cube_t all_objs_bcube;
 	unsigned num_spaces, filled_spaces, num_x_plots, num_y_plots;

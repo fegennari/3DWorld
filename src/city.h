@@ -251,12 +251,11 @@ struct helicopter_t {
 class road_mat_mgr_t {
 
 	bool inited=0;
-	unsigned tids[NUM_RD_TIDS] = {}, sl_tid=0, ssign_tid=0; // {stoplight, stop sign}
+	unsigned tids[NUM_RD_TIDS] = {}, sl_tid=0; // stoplight tid
 public:
 	void ensure_road_textures();
 	void set_texture(unsigned type);
 	void set_stoplight_texture();
-	void set_stop_sign_texture();
 };
 
 template<typename T> static void add_flat_city_quad(T const &r, quad_batch_draw &qbd, colorRGBA const &color, float ar) { // z1 == z2

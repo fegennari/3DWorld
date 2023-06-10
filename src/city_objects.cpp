@@ -1176,6 +1176,22 @@ void sign_t::draw_text(draw_state_t &dstate, city_draw_qbds_t &qbds, string cons
 	else if (two_sided) {add_sign_text_verts(text_to_draw, text_bcube, dim, !dir, text_color, qbd.verts, first_char_clip_val, last_char_clip_val);} // draw the back  side text
 }
 
+stopsign_t::stopsign_t(point const &pos_, float height, float width, bool dim_, bool dir_) :
+	oriented_city_obj_t(pos_, max(width, height), dim_, dir_)
+{
+	bcube.set_from_point(pos);
+	bcube.expand_in_dim( dim, 0.02*width); // thickness
+	bcube.expand_in_dim(!dim, 0.50*width); // width
+	bcube.z2() += height;
+}
+/*static*/ void stopsign_t::pre_draw(draw_state_t &dstate, bool shadow_only) {
+	if (!shadow_only) {select_texture(get_texture_by_name("roads/stop_sign.png"));}
+}
+void stopsign_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
+	// TODO: WRITE - octagon with one side textured and the other not, plus green pole
+	dstate.draw_cube(qbds.qbd, bcube, RED);
+}
+
 // city flags
 
 city_flag_t::city_flag_t(cube_t const &flag_bcube_, bool dim_, bool dir_, point const &pole_base_, float pradius) :
