@@ -796,6 +796,22 @@ void city_obj_placer_t::add_house_driveways(road_plot_t const &plot, vect_cube_t
 	}
 }
 
+void city_obj_placer_t::place_signs_in_isec(road_isec_t const &isec) {
+	if (isec.num_conn != 2) return; // 2-way intersections (bends) only
+	// place stop signs on each end; no pedestrian colliders since they don't normally walk out here on the corners of the city
+	float const height(0.05*(isec.dx() + isec.dy())), width(0.33*height), dist_to_edge(0.84), dist_to_center(1.0 - dist_to_edge);
+
+	for (unsigned n = 0; n < 4; ++n) {
+		if (!(isec.conn & (1 << n))) continue; // no road in this dir
+		bool const dim((n>>1) != 0), dir((n&1) == 0), side((dir^dim^1) != 0); // Note: dir is inverted here to represent car dir
+		point pos(isec.xc(), isec.yc(), isec.z1());
+		pos[ dim] = dist_to_center*pos[ dim] + dist_to_edge*isec.d[ dim][!dir];
+		pos[!dim] = dist_to_center*pos[!dim] + dist_to_edge*isec.d[!dim][side];
+		stopsign_t const ssign(pos, height, width, dim, !dir);
+		stopsign_groups.add_obj(ssign, stopsigns);
+	} // for n
+}
+
 template<typename T> void city_obj_placer_t::draw_objects(vector<T> const &objs, city_obj_groups_t const &groups, draw_state_t &dstate,
 	float dist_scale, bool shadow_only, bool has_immediate_draw, bool draw_qbd_as_quads, float specular, float shininess)
 {
@@ -853,7 +869,7 @@ void city_obj_placer_t::clear() {
 }
 
 void city_obj_placer_t::gen_parking_and_place_objects(vector<road_plot_t> &plots, vector<vect_cube_t> &plot_colliders, vector<car_t> &cars,
-	vector<road_t> const &roads, unsigned city_id, bool have_cars, bool is_residential, bool have_streetlights)
+	vector<road_t> const &roads, vector<road_isec_t> const isecs[3], unsigned city_id, bool have_cars, bool is_residential, bool have_streetlights)
 {
 	// Note: fills in plots.has_parking
 	//timer_t timer("Gen Parking Lots and Place Objects");
@@ -897,6 +913,9 @@ void city_obj_placer_t::gen_parking_and_place_objects(vector<road_plot_t> &plots
 		place_trees_in_plot (*i, bcubes, colliders, tree_pos, detail_rgen, buildings_end);
 		place_detail_objects(*i, bcubes, colliders, tree_pos, detail_rgen, is_residential, have_streetlights);
 	} // for i
+	for (unsigned n = 0; n < 3; ++n) {
+		for (road_isec_t const &isec : isecs[n]) {place_signs_in_isec(isec);} // Note: not a plot, can't use plot colliders
+	}
 	connect_power_to_buildings(plots);
 	if (have_cars) {add_cars_to_driveways(cars, plots, plot_colliders, city_id, rgen);}
 	add_objs_on_buildings(city_id);
