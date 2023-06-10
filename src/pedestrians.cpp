@@ -760,9 +760,9 @@ void pedestrian_t::next_frame(ped_manager_t &ped_mgr, vector<pedestrian_t> &peds
 	if (collided) {} // already collided with a previous ped this frame, handled below
 	// this call will set at_crosswalk and in_the_road
 	else if (!check_inside_plot(ped_mgr, prev_pos, plot_bcube, next_plot_bcube)) {collided = outside_plot = 1;} // outside the plot, treat as a collision with the plot bounds
-	else if (!is_valid_pos(colliders, at_dest, &ped_mgr)) {collided = 1;} // collided with a static collider
+	else if (!is_valid_pos(colliders, at_dest, &ped_mgr))           {collided = 1;} // collided with a static collider
 	else if (check_road_coll(ped_mgr, plot_bcube, next_plot_bcube)) {collided = 1;} // collided with something in the road (stoplight, streetlight, etc.)
-	else if (check_ped_ped_coll(ped_mgr, peds, pid, delta_dir)) {collided = 1;} // collided with another pedestrian
+	else if (check_ped_ped_coll(ped_mgr, peds, pid, delta_dir))     {collided = 1;} // collided with another pedestrian
 	else { // no collisions
 		//cout << TXT(pid) << TXT(plot) << TXT(dest_plot) << TXT(next_plot) << TXT(at_dest) << TXT(delta_dir) << TXT((unsigned)stuck_count) << TXT(collided) << endl;
 		int debug_state(0); // unused

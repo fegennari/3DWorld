@@ -509,22 +509,24 @@ struct streetlights_t {
 
 
 struct road_isec_t : public cube_t {
+	bool has_stoplight=0, has_stopsign=0;
 	unsigned char num_conn, conn; // connected roads in {-x, +x, -y, +y} = {W, E, S, N} facing = car traveling {E, W, N, S}
 	short conn_to_city;
 	short rix_xy[4], conn_ix[4]; // road/segment index: pos=cur city road, neg=global road; always segment ix
 	stoplight_ns::stoplight_t stoplight; // Note: not always needed, maybe should be by pointer/index?
 
-	road_isec_t(cube_t const &c, int rx, int ry, unsigned char conn_, bool at_conn_road, short conn_to_city_=-1);
+	road_isec_t(cube_t const &c, int rx, int ry, unsigned char conn_, bool at_conn_road, bool has_stoplight_, short conn_to_city_=-1);
 	tex_range_t get_tex_range(float ar) const;
 	void make_4way(unsigned conn_to_city_);
-	void next_frame() {stoplight.next_frame();}
-	void notify_waiting_car(car_base_t const &car) const {stoplight.notify_waiting_car(car.dim, car.dir, car.turn_dir);}
+	void next_frame();
+	void notify_waiting_car(car_base_t const &car) const;
+	void mark_crosswalk_in_use(bool dim, bool dir) const;
 	bool is_global_conn_int() const {return (rix_xy[0] < 0 || rix_xy[1] < 0 || rix_xy[2] < 0 || rix_xy[3] < 0);}
-	bool red_light(car_base_t const &car) const {return stoplight.red_light(car.dim, car.dir, car.turn_dir);}
-	bool red_or_yellow_light(car_base_t const &car) const {return (stoplight.get_light_state(car.dim, car.dir, car.turn_dir) != stoplight_ns::GREEN_LIGHT);}
-	bool yellow_light(car_base_t const &car) const {return (stoplight.get_light_state(car.dim, car.dir, car.turn_dir) == stoplight_ns::YELLOW_LIGHT);}
+	bool red_light(car_base_t const &car) const {return (has_stoplight && stoplight.red_light(car.dim, car.dir, car.turn_dir));}
+	bool red_or_yellow_light(car_base_t const &car) const {return (has_stoplight && stoplight.get_light_state(car.dim, car.dir, car.turn_dir) != stoplight_ns::GREEN_LIGHT);}
+	bool yellow_light(car_base_t const &car) const {return (has_stoplight && stoplight.get_light_state(car.dim, car.dir, car.turn_dir) == stoplight_ns::YELLOW_LIGHT);}
 	bool will_be_green_light_in(car_base_t const &car, float future_seconds) const {
-		return (stoplight.get_future_light_state(car.dim, car.dir, car.turn_dir, future_seconds) == stoplight_ns::GREEN_LIGHT);
+		return (has_stoplight && stoplight.get_future_light_state(car.dim, car.dir, car.turn_dir, future_seconds) == stoplight_ns::GREEN_LIGHT);
 	}
 	bool can_go_based_on_light(car_base_t const &car) const;
 	bool is_orient_currently_valid(unsigned orient, unsigned turn_dir) const;
@@ -536,8 +538,10 @@ struct road_isec_t : public cube_t {
 	bool check_sphere_coll(point const &pos, float radius) const;
 	bool proc_sphere_coll(point &pos, point const &p_last, float radius, vector3d const &xlate, float dist, vector3d *cnorm) const;
 	bool line_intersect(point const &p1, point const &p2, float &t) const;
-	void draw_sl_block(quad_batch_draw &qbd, draw_state_t &dstate, point p[4], float h, unsigned state, bool draw_unlit, float flare_alpha, vector3d const &n, tex_range_t const &tr) const;
 	void draw_stoplights(road_draw_state_t &dstate, vector<road_t> const &roads, unsigned cur_city, bool shadow_only) const;
+private:
+	void draw_sl_block(quad_batch_draw &qbd, draw_state_t &dstate, point p[4], float h, unsigned state,
+		bool draw_unlit, float flare_alpha, vector3d const &n, tex_range_t const &tr) const;
 };
 
 

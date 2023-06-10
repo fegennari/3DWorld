@@ -796,8 +796,9 @@ void city_obj_placer_t::add_house_driveways(road_plot_t const &plot, vect_cube_t
 	}
 }
 
-void city_obj_placer_t::place_signs_in_isec(road_isec_t const &isec) {
+void city_obj_placer_t::place_signs_in_isec(road_isec_t &isec) {
 	if (isec.num_conn != 2) return; // 2-way intersections (bends) only
+	assert(!isec.has_stoplight); // can't have both a stoplight and a stopsign
 	// place stop signs on each end; no pedestrian colliders since they don't normally walk out here on the corners of the city
 	float const height(0.05*(isec.dx() + isec.dy())), width(0.33*height), dist_to_edge(0.84), dist_to_center(1.0 - dist_to_edge);
 
@@ -809,6 +810,7 @@ void city_obj_placer_t::place_signs_in_isec(road_isec_t const &isec) {
 		pos[!dim] = dist_to_center*pos[!dim] + dist_to_edge*isec.d[!dim][side];
 		stopsign_t const ssign(pos, height, width, dim, !dir);
 		stopsign_groups.add_obj(ssign, stopsigns);
+		isec.has_stopsign = 1;
 	} // for n
 }
 
@@ -869,7 +871,7 @@ void city_obj_placer_t::clear() {
 }
 
 void city_obj_placer_t::gen_parking_and_place_objects(vector<road_plot_t> &plots, vector<vect_cube_t> &plot_colliders, vector<car_t> &cars,
-	vector<road_t> const &roads, vector<road_isec_t> const isecs[3], unsigned city_id, bool have_cars, bool is_residential, bool have_streetlights)
+	vector<road_t> const &roads, vector<road_isec_t> isecs[3], unsigned city_id, bool have_cars, bool is_residential, bool have_streetlights)
 {
 	// Note: fills in plots.has_parking
 	//timer_t timer("Gen Parking Lots and Place Objects");
@@ -914,7 +916,7 @@ void city_obj_placer_t::gen_parking_and_place_objects(vector<road_plot_t> &plots
 		place_detail_objects(*i, bcubes, colliders, tree_pos, detail_rgen, is_residential, have_streetlights);
 	} // for i
 	for (unsigned n = 0; n < 3; ++n) {
-		for (road_isec_t const &isec : isecs[n]) {place_signs_in_isec(isec);} // Note: not a plot, can't use plot colliders
+		for (road_isec_t &isec : isecs[n]) {place_signs_in_isec(isec);} // Note: not a plot, can't use plot colliders
 	}
 	connect_power_to_buildings(plots);
 	if (have_cars) {add_cars_to_driveways(cars, plots, plot_colliders, city_id, rgen);}

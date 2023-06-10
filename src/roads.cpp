@@ -411,16 +411,19 @@ bool streetlights_t::line_intersect_streetlights(point const &p1, point const &p
 }
 
 
-road_isec_t::road_isec_t(cube_t const &c, int rx, int ry, unsigned char conn_, bool at_conn_road, short conn_to_city_) :
-	cube_t(c), num_conn(0), conn(conn_), conn_to_city(conn_to_city_), stoplight(at_conn_road)
+road_isec_t::road_isec_t(cube_t const &c, int rx, int ry, unsigned char conn_, bool at_conn_road, bool has_stoplight_, short conn_to_city_) :
+	cube_t(c), has_stoplight(has_stoplight_), num_conn(0), conn(conn_), conn_to_city(conn_to_city_), stoplight(at_conn_road)
 {
 	rix_xy[0] = rix_xy[1] = rx; rix_xy[2] = rix_xy[3] = ry; conn_ix[0] = conn_ix[1] = conn_ix[2] = conn_ix[3] = 0;
 	if (conn == 15) {num_conn = 4;} // 4-way
 	else if (conn == 7 || conn == 11 || conn == 13 || conn == 14) {num_conn = 3;} // 3-way
 	else if (conn == 5 || conn == 6  || conn == 9  || conn == 10) {num_conn = 2;} // 2-way
 	else {assert(0);}
-	stoplight.init(num_conn, conn);
-	z2() += stoplight_ns::stoplight_max_height(); // include stoplights in Z-range
+
+	if (has_stoplight) {
+		stoplight.init(num_conn, conn);
+		z2() += stoplight_ns::stoplight_max_height(); // include stoplights in Z-range
+	}
 }
 
 tex_range_t road_isec_t::get_tex_range(float ar) const {
@@ -442,13 +445,20 @@ tex_range_t road_isec_t::get_tex_range(float ar) const {
 void road_isec_t::make_4way(unsigned conn_to_city_) {
 	num_conn = 4; conn = 15;
 	assert(conn_to_city < 0); conn_to_city = conn_to_city_;
-	stoplight.init(num_conn, conn); // re-init with new conn
+	if (has_stoplight) {stoplight.init(num_conn, conn);} // re-init with new conn
 }
-
+void road_isec_t::next_frame() {
+	if (has_stoplight) {stoplight.next_frame();}
+}
+void road_isec_t::notify_waiting_car(car_base_t const &car) const {
+	if (has_stoplight) {stoplight.notify_waiting_car(car.dim, car.dir, car.turn_dir);}
+}
+void road_isec_t::mark_crosswalk_in_use(bool dim, bool dir) const { // Note: const because in_use flag is mutable
+	if (has_stoplight) {stoplight.mark_crosswalk_in_use(dim, dir);}
+}
 bool road_isec_t::can_go_based_on_light(car_base_t const &car) const {
-	return (!red_or_yellow_light(car) || stoplight.can_turn_right_on_red(car)); // green light or right turn on red
+	return (!has_stoplight || !red_or_yellow_light(car) || stoplight.can_turn_right_on_red(car)); // green light or right turn on red
 }
-
 bool road_isec_t::is_orient_currently_valid(unsigned orient, unsigned turn_dir) const {
 	if (!(conn & (1<<orient))) return 0; // no road connection in this orient
 	//if (!can_go_based_on_light(car)) return 1; // Note: can't call this without more car info
@@ -472,14 +482,16 @@ unsigned road_isec_t::get_dest_orient_for_car_in_isec(car_base_t const &car, boo
 }
 
 bool road_isec_t::can_go_now(car_t const &car) const {
-	if (!can_go_based_on_light(car)) return 0;
+	if (has_stopsign) {} // TODO: stop sign logic
+	if (!has_stoplight) return 1;
+	if (!can_go_based_on_light   (car)) return 0;
 	if (stoplight.check_int_clear(car)) return 1;
 	if ((frame_counter&15) == 0) {car.honk_horn_if_close_and_fast();} // honk every so often
 	return 0; // intersection not clear
 }
 
 bool road_isec_t::has_left_turn_signal(unsigned orient) const {
-	if (num_conn == 2) return 0; // never
+	if (!has_stoplight || num_conn == 2) return 0; // never
 	if (num_conn == 4) return 1; // always
 	assert(num_conn == 3);
 	switch (conn) {
@@ -493,6 +505,7 @@ bool road_isec_t::has_left_turn_signal(unsigned orient) const {
 }
 
 cube_t road_isec_t::get_stoplight_cube(unsigned n) const { // Note: mostly duplicated with draw_stoplights(), but difficult to factor the code out and share it
+	assert(has_stoplight);
 	assert(conn & (1<<n));
 	float const sz(0.03*city_params.road_width), h(1.0*sz);
 	bool const dim((n>>1) != 0), dir((n&1) == 0), side((dir^dim^1) != 0); // Note: dir is inverted here to represent car dir
@@ -508,7 +521,8 @@ cube_t road_isec_t::get_stoplight_cube(unsigned n) const { // Note: mostly dupli
 }
 
 bool road_isec_t::check_sphere_coll(point const &pos, float radius) const { // used for peds
-	if (num_conn == 2) return 0; // no stoplights
+	//if (has_stopsign) {} // not handled here
+	if (!has_stoplight || num_conn == 2) return 0; // no stoplights
 	if (!sphere_cube_intersect_xy(pos, radius, *this)) return 0;
 
 	for (unsigned n = 0; n < 4; ++n) {
@@ -519,7 +533,8 @@ bool road_isec_t::check_sphere_coll(point const &pos, float radius) const { // u
 }
 
 bool road_isec_t::proc_sphere_coll(point &pos, point const &p_last, float radius, vector3d const &xlate, float dist, vector3d *cnorm) const {
-	if (num_conn == 2) return 0; // no stoplights
+	//if (has_stopsign) {} // not handled here
+	if (!has_stoplight || num_conn == 2) return 0; // no stoplights
 	if (!sphere_cube_intersect(pos, (radius + dist), (*this + xlate))) return 0;
 
 	for (unsigned n = 0; n < 4; ++n) {
@@ -536,7 +551,8 @@ bool check_line_clip_update_t(point const &p1, point const &p2, float &t, cube_t
 }
 
 bool road_isec_t::line_intersect(point const &p1, point const &p2, float &t) const {
-	if (num_conn == 2) return 0; // no stoplights
+	//if (has_stopsign) {} // not handled here
+	if (!has_stoplight || num_conn == 2) return 0; // no stoplights
 	if (!line_intersects(p1, p2)) return 0;
 	bool ret(0);
 
@@ -563,7 +579,7 @@ void road_isec_t::draw_sl_block(quad_batch_draw &qbd, draw_state_t &dstate, poin
 
 // should this be a function of road_draw_state_t that takes the road_isec_t instead?
 void road_isec_t::draw_stoplights(road_draw_state_t &dstate, vector<road_t> const &roads, unsigned cur_city, bool shadow_only) const {
-	if (num_conn == 2) return; // no stoplights
+	if (!has_stoplight || num_conn == 2) return; // no stoplights
 	if (!dstate.check_cube_visible(*this, 0.16)) return; // dist_scale=0.16
 	point const center(get_cube_center() + dstate.xlate);
 	float const dist_val(shadow_only ? 0.0 : p2p_dist(camera_pdu.pos, center)/dstate.draw_tile_dist);

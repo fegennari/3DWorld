@@ -553,6 +553,7 @@ public:
 		bcube.y2() = roads[num_r-1].y2(); // actual bcube y2 from last  y road
 
 		// create road segments and intersections
+		bool const add_stoplights = 1; // !is_residential
 		plot_xy.nx = num_x - 1; plot_xy.ny = num_y - 1;
 		segs .reserve(num_x*(num_y-1) + (num_x-1)*num_y + 4); // X + Y segments, allocate one extra per side for connectors
 		plots.reserve(plot_xy.num());
@@ -569,7 +570,7 @@ public:
 				unsigned const num_conn((!FX) + (!LX) + (!FY) + (!LY));
 				if (num_conn < 2) continue; // error?
 				uint8_t const conn(((!FX) << 0) | ((!LX) << 1) | ((!FY) << 2) | ((!LY) << 3)); // 1-15
-				isecs[num_conn - 2].emplace_back(cube_t(rx.x1(), rx.x2(), ry.y1(), ry.y2(), zval, zval), y, x, conn, false); // intersections
+				isecs[num_conn - 2].emplace_back(cube_t(rx.x1(), rx.x2(), ry.y1(), ry.y2(), zval, zval), y, x, conn, false, (add_stoplights && num_conn > 2)); // intersections
 					
 				if (!LX) { // skip last y segment
 					cube_t const &rxn(roads[x+1]);
@@ -930,7 +931,8 @@ public:
 			ibc.d[!dim][1] = c.d[!dim][1];
 			uint8_t const conns[4] = {7, 11, 13, 14};
 			int const other_rix(encode_neg_ix(grn_rix)); // make negative
-			isecs[1].emplace_back(ibc, (dim ? seg.road_ix : (int)other_rix), (dim ? other_rix : (int)seg.road_ix), conns[2*(!dim) + dir], true, dest_city_id); // 3-way
+			bool const add_stoplights = 1; // always true for connector roads or !is_residential?
+			isecs[1].emplace_back(ibc, (dim ? seg.road_ix : (int)other_rix), (dim ? other_rix : (int)seg.road_ix), conns[2*(!dim) + dir], true, add_stoplights, dest_city_id); // 3-way
 		}
 	}
 
@@ -1019,7 +1021,7 @@ public:
 	}
 	void create_connector_bend(cube_t const &int_bcube, bool dx, bool dy, unsigned road_ix_x, unsigned road_ix_y) {
 		uint8_t const conns[4] = {6, 5, 10, 9};
-		isecs[0].emplace_back(int_bcube, road_ix_x, road_ix_y, conns[2*dy + dx], true);
+		isecs[0].emplace_back(int_bcube, road_ix_x, road_ix_y, conns[2*dy + dx], true, false); // add_stoplights=0
 		//blockers.push_back(int_bcube); // ???
 	}
 	void split_connector_roads(float road_spacing) { // required for correct shadow maps, since default segments may be too long
@@ -1160,7 +1162,7 @@ public:
 			float const max_obj_z(bcube.z1() + radius);
 			if (pos.z < max_obj_z) {pos.z = max_obj_z; plot_coll = 1;} // make sure the sphere is above the city road/plot surface
 		}
-		for (unsigned n = 1; n < 3; ++n) { // intersections with stoplights (3-way, 4-way)
+		for (unsigned n = 1; n < 3; ++n) { // intersections, possibly with stoplights (3-way, 4-way)
 			for (auto i = isecs[n].begin(); i != isecs[n].end(); ++i) {
 				if (i->proc_sphere_coll(pos, p_last, radius, xlate, dist, cnorm)) return 1;
 			}
@@ -1186,7 +1188,7 @@ public:
 		bool ret(0);
 			
 		if (get_bcube_inc_stoplights_and_streetlights().line_intersects(p1, p2)) { // z2 too small for streetlights?
-			for (unsigned n = 1; n < 3; ++n) { // intersections with stoplights (3-way, 4-way)
+			for (unsigned n = 1; n < 3; ++n) { // intersections, possibly with stoplights (3-way, 4-way)
 				for (auto i = isecs[n].begin(); i != isecs[n].end(); ++i) {ret |= i->line_intersect(p1, p2, t);}
 			}
 			for (auto i = bridges.begin(); i != bridges.end(); ++i) {ret |= i->line_intersect(p1, p2, t);}
@@ -1989,7 +1991,7 @@ public:
 	bool mark_crosswalk_in_use(point const &pos, bool dim, bool dir) const {
 		road_isec_t const *isec(find_isec_containing_pt(pos, 1, 3)); // 2-way can be skipped because there's no light/crosswalk
 		if (isec == nullptr) return 0; // ped not at a crosswalk, maybe crossing in the middle of the street; this is okay for now, nothing else to do in this case
-		isec->stoplight.mark_crosswalk_in_use(dim, dir);
+		isec->mark_crosswalk_in_use(dim, dir);
 		return 1;
 	}
 	bool check_isec_sphere_coll(point const &pos, float radius) const {
