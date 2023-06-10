@@ -1180,16 +1180,38 @@ stopsign_t::stopsign_t(point const &pos_, float height, float width, bool dim_, 
 	oriented_city_obj_t(pos_, max(width, height), dim_, dir_)
 {
 	bcube.set_from_point(pos);
-	bcube.expand_in_dim( dim, 0.02*width); // thickness
+	bcube.expand_in_dim( dim, 0.05*width); // thickness
 	bcube.expand_in_dim(!dim, 0.50*width); // width
 	bcube.z2() += height;
 }
-/*static*/ void stopsign_t::pre_draw(draw_state_t &dstate, bool shadow_only) {
-	if (!shadow_only) {select_texture(get_texture_by_name("roads/stop_sign.png"));}
+/*static*/ void stopsign_t::pre_draw (draw_state_t &dstate, bool shadow_only) {
+	if (shadow_only) return;
+	select_texture(get_texture_by_name((dstate.pass_ix == 0) ? "roads/stop_sign.png" : "roads/white_octagon.png"));
+	dstate.s.add_uniform_float("min_alpha", 0.5); // fix for dark colored border
+}
+/*static*/ void stopsign_t::post_draw(draw_state_t &dstate, bool shadow_only) {
+	if (!shadow_only) {dstate.s.add_uniform_float("min_alpha", DEF_CITY_MIN_ALPHA);}
 }
 void stopsign_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
-	// TODO: WRITE - octagon with one side textured and the other not, plus green pole
-	dstate.draw_cube(qbds.qbd, bcube, RED);
+	float const width(bcube.get_sz_dim(!dim)), thickness(bcube.get_sz_dim(dim)), sign_back(bcube.d[dim][dir] + (dir ? -1.0 : 1.0)*0.1*thickness);
+	// draw the octagon with one side textured and the other not, in two passes
+	bool const front_facing(((camera_pdu.pos[dim] - dstate.xlate[dim]) < bcube.d[dim][dir]) ^ dir);
+	
+	if (front_facing == (dstate.pass_ix == 0)) {
+		cube_t sign(bcube);
+		sign.z1() = bcube.z2() - width;
+		sign.d[dim][!dir] = sign_back; // make it very thin
+		bool const mirror_x(0);
+		unsigned const skip_dims((1 << (1-dim)) | 4); // skip edges and top/bottom
+		dstate.draw_cube(qbds.qbd, sign, (front_facing ? WHITE : GRAY), 0, 0.0, skip_dims, mirror_x);
+	}
+	if (dstate.pass_ix == 0) return; // no pole in this pass
+	if (!shadow_only && !bcube.closest_dist_less_than(dstate.camera_bs, 0.4*dist_scale*dstate.draw_tile_dist)) return; // pole too far away to draw
+	// draw the dark green pole
+	cube_t pole(bcube);
+	pole.d[dim][dir] = sign_back; // fix for Z-fighting
+	set_wall_width(pole, pos[!dim], 0.5*thickness, !dim);
+	dstate.draw_cube(qbds.untex_qbd, pole, colorRGBA(0.0, 0.5, 0.0, 1.0), 1); // skip_bottom=1
 }
 
 // city flags
