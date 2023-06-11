@@ -123,14 +123,12 @@ struct road_gen_base_t {
 
 struct car_base_t { // the part needed for the pedestrian interface (size = 48)
 	cube_t bcube;
-	bool dim, dir, stopped_at_light;
-	uint8_t cur_road_type, turn_dir;
-	uint16_t cur_city, cur_road, cur_seg;
-	short dest_driveway; // -1 is unset
-	float max_speed, cur_speed;
+	bool dim=0, dir=0, stopped_at_light=0, stopped_for_ssign=0; // Note: stopped_at_light also applies to stopped at stop sign
+	uint8_t cur_road_type=TYPE_RSEG, turn_dir=TURN_NONE;
+	uint16_t cur_city=0, cur_road=0, cur_seg=0;
+	short dest_driveway=-1; // -1 is unset
+	float max_speed=0.0, cur_speed=0.0;
 
-	car_base_t() : dim(0), dir(0), stopped_at_light(0), cur_road_type(TYPE_RSEG), turn_dir(TURN_NONE),
-		cur_city(0), cur_road(0), cur_seg(0), dest_driveway(-1), max_speed(0.0), cur_speed(0.0) {}
 	point get_center() const {return bcube.get_cube_center();}
 	unsigned get_orient() const {return (2*dim + dir);}
 	unsigned get_orient_in_isec() const {return (2*dim + (!dir));} // invert dir (incoming, not outgoing)
@@ -367,11 +365,11 @@ namespace stoplight_ns {
 	float stoplight_max_height();
 
 	class stoplight_t {
-		uint8_t num_conn, conn, cur_state;
+		uint8_t num_conn=0, conn=0, cur_state=RED_LIGHT;
 		bool at_conn_road; // longer light times in this case
-		float cur_state_ticks;
+		float cur_state_ticks=0.0;
 		// these are mutable because they are set during car update logic, where roads are supposed to be const
-		mutable uint8_t car_waiting_sr, car_waiting_left, cw_in_use; // one bit per orient
+		mutable uint8_t car_waiting_sr=0, car_waiting_left=0, cw_in_use=0; // one bit per orient
 		mutable bool blocked[4]; // Note: 4 bit flags corresponding to conn bits
 
 		void next_state() {
@@ -386,9 +384,7 @@ namespace stoplight_ns {
 		float get_cur_state_time_secs() const {return (at_conn_road ? 2.0 : 1.0)*TICKS_PER_SECOND*state_times[cur_state];}
 		void ffwd_to_future(float time_secs);
 	public:
-		stoplight_t(bool at_conn_road_) : num_conn(0), conn(0), cur_state(RED_LIGHT), at_conn_road(at_conn_road_), cur_state_ticks(0.0), car_waiting_sr(0), car_waiting_left(0), cw_in_use(0) {
-			reset_blocked();
-		}
+		stoplight_t(bool at_conn_road_) : at_conn_road(at_conn_road_) {reset_blocked();}
 		void reset_blocked() {UNROLL_4X(blocked[i_] = 0;)}
 		void mark_blocked(bool dim, bool dir) const {blocked[2*dim + dir] = 1;} // Note: not actually const, but blocked is mutable
 		bool is_blocked(bool dim, bool dir) const {return (blocked[2*dim + dir] != 0);}
