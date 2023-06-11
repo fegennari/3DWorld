@@ -1045,22 +1045,38 @@ int add_sprinkler_pipe(point const &p1, float end_val, float radius, bool dim, b
 		break;
 	} // for n
 	if (ret == 0) return 0; // failed to place a pipe at any length
+	bool const is_partial(ret == 2);
 	// encoded as: X:dim=0,dir=0 Y:dim=1,dir=0, Z:dim=x,dir=1
 	objs.emplace_back(h_pipe, TYPE_PIPE, room_id, dim, 0, pipe_flags, tot_light_amt, SHAPE_CYLIN, pcolor); // add to pipe_cubes?
 	float const conn_thickness(0.2*radius), conn_max_length(3.2*radius);
 
 	for (unsigned d = 0; d < 2; ++d) { // add connector segments
-		float const conn_length(conn_max_length*((d == dir) ? 1.0 : ((ret == 2) ? 0.4 : 0.6))); // long where connected to pipe, medium when at the wall, and short when partial
+		float const conn_length(conn_max_length*((bool(d) == dir) ? 1.0 : (is_partial ? 0.4 : 0.6))); // long connected to pipe, medium at the wall, and short partial
 		cube_t conn(h_pipe);
 		conn.d[dim][!d] = conn.d[dim][d] + (d ? -1.0 : 1.0)*conn_length; // set length
 		conn.expand_in_dim(!dim, conn_thickness);
 		conn.expand_in_dim(2,    conn_thickness);
 		objs.emplace_back(conn, TYPE_PIPE, room_id, dim, 0, (conn_flags | (d ? RO_FLAG_ADJ_LO : RO_FLAG_ADJ_HI)), tot_light_amt, SHAPE_CYLIN, ccolor);
 	}
+	if (is_partial) { // partial pipe, add a bracket to suspend the end
+		cube_t bracket(h_pipe);
+		set_wall_width(bracket, (pipe_end - (dir ? -1.0 : 1.0)*2.6*conn_max_length), 0.25*conn_max_length, dim);
+		bracket.expand_in_dim(!dim, 0.6*conn_thickness);
+		bracket.expand_in_dim(2,    0.6*conn_thickness);
+		objs.emplace_back(bracket, TYPE_PIPE, room_id, dim, 0, (pipe_flags | RO_FLAG_ADJ_LO | RO_FLAG_ADJ_HI), tot_light_amt, SHAPE_CYLIN, LT_GRAY);
+		
+		if (!beams.empty() && h_pipe.z2() < beams.front().z2()) { // add a vertical bolt into the ceiling; beams should not be empty
+			cube_t bolt;
+			set_cube_zvals(bolt, h_pipe.z2(), beams.front().z2());
+			set_wall_width(bolt, bracket.get_center_dim( dim), 0.2*radius,  dim);
+			set_wall_width(bolt, bracket.get_center_dim(!dim), 0.2*radius, !dim);
+			objs.emplace_back(bolt, TYPE_PIPE, room_id, 0, 1, pipe_flags, tot_light_amt, SHAPE_CYLIN, GRAY); // vertical, no ends
+		}
+	}
 	if (add_sprinklers) {
 		float const length(h_pipe.get_sz_dim(dim)), sprinkler_height(3.2*radius), sprinkler_radius(0.9*radius);
 		unsigned const num_sprinklers(max(1U, unsigned(length/(60.0*radius))));
-		float const end_spacing((ret == 2) ? 1.5*conn_max_length : length/(num_sprinklers - 0.5)); // near the connector if truncated, otherwise one spacing from the wall
+		float const end_spacing(is_partial ? 1.5*conn_max_length : length/(num_sprinklers - 0.5)); // near the connector if truncated, otherwise one spacing from the wall
 		float const end(pipe_end - (dir ? -1.0 : 1.0)*end_spacing);
 		float const spacing((num_sprinklers == 1) ? (pipe_end - p1[dim]) : (end - p1[dim])/(num_sprinklers - 0.5)); // signed; always halfway if single sprinkler
 		point center(p1);
