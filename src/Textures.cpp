@@ -323,8 +323,9 @@ int texture_lookup(string const &name) {
 	return ((it != texture_name_map.end()) ? it->second : -1);
 }
 
-int get_texture_by_name(string const &name, bool is_normal_map, bool invert_y, int wrap_mir, float aniso, bool allow_compress, int use_mipmaps, unsigned ncolors) {
-
+int get_texture_by_name(string const &name, bool is_normal_map, bool invert_y, int wrap_mir, float aniso,
+	bool allow_compress, int use_mipmaps, unsigned ncolors, bool is_alpha_mask)
+{
 	int const ix(atoi(name.c_str()));
 	if (ix > 0 || ix == -1 || name == "0") return ix; // a number was specified
 	if (name == "none" || name == "null")  return -1; // no texture
@@ -335,11 +336,12 @@ int get_texture_by_name(string const &name, bool is_normal_map, bool invert_y, i
 	tid = textures.size();
 	bool const do_compress(allow_compress && def_tex_compress && !is_normal_map);
 	// type format width height wrap_mir ncolors use_mipmaps name [invert_y=0 [do_compress=1 [anisotropy=1.0 [mipmap_alpha_weight=1.0 [normal_map=0]]]]]
-	texture_t new_tex(0, IMG_FMT_AUTO, 0, 0, wrap_mir, ncolors, use_mipmaps, name, invert_y, do_compress, ((aniso > 0.0) ? aniso : def_tex_aniso), 1.0, is_normal_map);
+	texture_t new_tex(0, IMG_FMT_AUTO, 0, 0, wrap_mir, ncolors, use_mipmaps, name, invert_y, do_compress,
+		((aniso > 0.0) ? aniso : def_tex_aniso), 1.0, is_normal_map);
 
 	if (textures_inited) {
 		new_tex.load(tid);
-		if (ncolors == 1 && new_tex.ncolors == 4) {new_tex.fill_to_grayscale_color(255);} // alpha mask - fill color to white
+		if ((is_alpha_mask || ncolors == 1) && new_tex.ncolors == 4) {new_tex.fill_to_grayscale_color(255);} // alpha mask - fill color to white
 		new_tex.init();
 	}
 	textures.push_back(new_tex);

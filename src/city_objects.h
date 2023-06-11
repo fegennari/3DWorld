@@ -203,8 +203,7 @@ struct sign_t : public oriented_city_obj_t {
 
 struct stopsign_t : public oriented_city_obj_t {
 	stopsign_t(point const &pos_, float height, float width, bool dim_, bool dir_);
-	static void pre_draw (draw_state_t &dstate, bool shadow_only);
-	static void post_draw(draw_state_t &dstate, bool shadow_only);
+	static void pre_draw(draw_state_t &dstate, bool shadow_only);
 	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const;
 };
 
