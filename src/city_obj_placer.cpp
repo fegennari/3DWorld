@@ -797,10 +797,10 @@ void city_obj_placer_t::add_house_driveways(road_plot_t const &plot, vect_cube_t
 }
 
 void city_obj_placer_t::place_signs_in_isec(road_isec_t &isec) {
-	if (isec.num_conn != 2) return; // 2-way intersections (bends) only
-	assert(!isec.has_stoplight); // can't have both a stoplight and a stopsign
-	// place stop signs on each end; no pedestrian colliders since they don't normally walk out here on the corners of the city
-	float const height(0.06*(isec.dx() + isec.dy())), width(0.33*height), dist_to_edge(0.84), dist_to_center(1.0 - dist_to_edge);
+	if (isec.has_stoplight) return; // can't have both a stoplight and a stopsign
+	if (isec.num_conn == 2) return; // skip for 2-way intersections (bends)
+	// place stop signs on each connector
+	float const height(0.06*(isec.dx() + isec.dy())), width(0.38*height), dist_to_edge(0.78), dist_to_center(1.0 - dist_to_edge);
 
 	for (unsigned n = 0; n < 4; ++n) {
 		if (!(isec.conn & (1 << n))) continue; // no road in this dir
@@ -812,6 +812,20 @@ void city_obj_placer_t::place_signs_in_isec(road_isec_t &isec) {
 		stopsign_groups.add_obj(ssign, stopsigns);
 		isec.has_stopsign = 1;
 	} // for n
+}
+
+void city_obj_placer_t::add_stop_sign_plot_colliders(vector<road_plot_t> const &plots, vector<vect_cube_t> &plot_colliders) const {
+	assert(plots.size() == plot_colliders.size());
+	float const bcube_expand(2.0*get_sidewalk_width()); // include sidewalk stop signs in their associated plots
+
+	for (stopsign_t const &s : stopsigns) {
+		cube_t bcube_ext(s.bcube);
+		bcube_ext.expand_by_xy(bcube_expand);
+
+		for (unsigned i = 0; i < plots.size(); ++i) { // linear iteration; seems to be only 0.05ms per call
+			if (plots[i].intersects_xy(bcube_ext)) {plot_colliders[i].push_back(s.bcube); break;}
+		}
+	}
 }
 
 template<typename T> void city_obj_placer_t::draw_objects(vector<T> const &objs, city_obj_groups_t const &groups, draw_state_t &dstate,
@@ -918,6 +932,7 @@ void city_obj_placer_t::gen_parking_and_place_objects(vector<road_plot_t> &plots
 	for (unsigned n = 0; n < 3; ++n) {
 		for (road_isec_t &isec : isecs[n]) {place_signs_in_isec(isec);} // Note: not a plot, can't use plot colliders
 	}
+	add_stop_sign_plot_colliders(plots, plot_colliders);
 	connect_power_to_buildings(plots);
 	if (have_cars) {add_cars_to_driveways(cars, plots, plot_colliders, city_id, rgen);}
 	add_objs_on_buildings(city_id);
