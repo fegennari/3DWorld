@@ -1403,26 +1403,23 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, building_t c
 		if (draw_detail_objs) {mats_ext_detail.draw(bbd_in, s, shadow_only, reflection_pass, 1);} // exterior_geom=1
 	}
 	mats_doors.draw(bbd, s, shadow_only, reflection_pass);
-	
-	if (inc_small) {
-		mats_small.draw(bbd, s, shadow_only, reflection_pass);
+	if (inc_small) {mats_small.draw(bbd, s, shadow_only, reflection_pass);}
 
-		if (player_in_building) { // if we're not in the building, don't draw alpha mask materials at all; without the special shader they won't look correct when drawn through windows
-			if (shadow_only) {
-				shader_t amask_shader;
-				amask_shader.begin_simple_textured_shader(0.9); // need to use texture with alpha test
-				mats_amask.draw(nullptr, amask_shader, 2, 0); // shadow pass with alpha mask; no brg_batch_draw
-				s.make_current(); // switch back to the normal shader
-			}
-			else if (reflection_pass) {
-				mats_amask.draw(nullptr, s, 0, 1); // no brg_batch_draw
-			}
-			else { // this is expensive: only enable for the current building and the main draw pass
-				shader_t amask_shader;
-				setup_building_draw_shader(amask_shader, 0.9, 1, 1, 0); // min_alpha=0.9, enable_indir=1, force_tsl=1, use_texgen=0
-				mats_amask.draw(nullptr, amask_shader, 0, 0); // no brg_batch_draw
-				s.make_current(); // switch back to the normal shader
-			}
+	if (inc_small >= 2 && !mats_amask.empty()) { // draw plants using alpha masks in the detail pass
+		if (shadow_only) {
+			shader_t amask_shader;
+			amask_shader.begin_simple_textured_shader(0.9); // need to use texture with alpha test
+			mats_amask.draw(nullptr, amask_shader, 2, 0); // shadow pass with alpha mask; no brg_batch_draw
+			s.make_current(); // switch back to the normal shader
+		}
+		else if (reflection_pass) {
+			mats_amask.draw(nullptr, s, 0, 1); // no brg_batch_draw
+		}
+		else if (player_in_building || !camera_in_building) { // this is expensive: only enable for the main draw pass and skip for buildings the player isn't in
+			shader_t amask_shader; // without the special shader these won't look correct when drawn through windows
+			setup_building_draw_shader(amask_shader, 0.9, 1, 1, 0); // min_alpha=0.9, enable_indir=1, force_tsl=1, use_texgen=0
+			mats_amask.draw(nullptr, amask_shader, 0, 0); // no brg_batch_draw
+			s.make_current(); // switch back to the normal shader
 		}
 	}
 	if (draw_int_detail_objs && !shadow_only) {mats_text.draw(bbd, s, shadow_only, reflection_pass);} // text must be drawn last; drawn as interior detail objects
@@ -1527,7 +1524,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, building_t c
 	}
 }
 
-void draw_emissive_billboard(quad_batch_draw &qbd, int tid) {
+void draw_emissive_billboards(quad_batch_draw &qbd, int tid) {
 	if (qbd.empty()) return;
 	shader_t s;
 	s.begin_simple_textured_shader(); // unlit/emissive and textured
@@ -1554,7 +1551,7 @@ void particle_manager_t::draw(shader_t &s, vector3d const &xlate) { // non-const
 		vector3d const v2(cross_product(v1,   vdir  ).get_norm()*p.radius*elongate); // stretch in velocity dir
 		qbd.add_quad_dirs(p.pos, v1, v2, p.color, vdir.get_norm());
 	}
-	draw_emissive_billboard(qbd, BLUR_CENT_TEX); // smooth alpha blended edges
+	draw_emissive_billboards(qbd, BLUR_CENT_TEX); // smooth alpha blended edges
 	s.make_current();
 }
 
@@ -1568,7 +1565,7 @@ void fire_manager_t::draw(shader_t &s, vector3d const &xlate) {
 		if (!camera_pdu.sphere_visible_test((center + xlate), max(f.radius, 0.5f*height))) continue; // VFC
 		qbd.add_animated_billboard(center, viewer_bs, up_vector, WHITE, 1.5*f.radius, 0.5*height, fract(2.0f*f.time/TICKS_PER_SECOND));
 	}
-	draw_emissive_billboard(qbd, FIRE_TEX);
+	draw_emissive_billboards(qbd, FIRE_TEX);
 	s.make_current();
 }
 

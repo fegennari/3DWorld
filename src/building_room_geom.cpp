@@ -2960,7 +2960,6 @@ void building_room_geom_t::add_toaster_proxy(room_object_t const &c) { // draw a
 void building_room_geom_t::add_laundry_basket(room_object_t const &c) {
 	// Note: no alpha test is enabled in the shader when drawing this, so the holes in the material may not be drawn correctly against objects such as exterior walls
 	rgeom_mat_t &tex_mat(get_material(tid_nm_pair_t(get_texture_by_name("interiors/plastic_mesh.png")), 1, 0, 1)); // inc_shadows=1, dynamic=0, small=1
-	//rgeom_mat_t &tex_mat(mats_amask.get_material(tid_nm_pair_t(get_texture_by_name("interiors/plastic_mesh.png")), 1)); // shadowed with alpha mask - doesn't look as good, need min_alpha=0.0
 	cube_t bot(c), mid(c), top(c);
 	bot.z2() = mid.z1() = c.z1() + 0.12*c.dz();
 	mid.z2() = top.z1() = c.z2() - 0.12*c.dz();
