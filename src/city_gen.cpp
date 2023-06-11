@@ -1696,9 +1696,9 @@ public:
 		}
 		if (car.stopped_at_light) {
 			bool const was_stopped(car.is_stopped());
-			if (was_stopped) {car.stopped_for_ssign = 1;} // maybe at stop sign, or maybe at stoplight
 			if (car_can_go_now(car, global_rn)) {car.stopped_at_light = 0;} // can go now
 			else if (car.in_isect()) {stop_and_wait_car(car, rgen, road_networks, get_car_isec(car));} // Note: is_isect test allows cars to coast through lights when decel is very low
+			if (was_stopped) {car.stopped_for_ssign = 1;} // maybe at stop sign, or maybe at stoplight; after checking to ensure a full stop
 			if (was_stopped) return; // no update needed
 		}
 		else {car.maybe_accelerate();}
