@@ -1188,6 +1188,10 @@ stopsign_t::stopsign_t(point const &pos_, float height, float width, bool dim_, 
 	// Note: the texture is still needed in the shadow pass as an alpha mask
 	select_texture((dstate.pass_ix == 0) ? get_texture_by_name("roads/stop_sign.png", 0, 0, 0) : // wrap_mir=0
 		get_texture_by_name("roads/white_octagon.png", 0, 0, 0, 0.0, 1, 1, 4, 1)); // wrap_mir=0, is_alpha_mask=1
+	if (!shadow_only) {dstate.s.add_uniform_float("min_alpha", 0.25);} // fix mipmap drawing
+}
+/*static*/ void stopsign_t::post_draw(draw_state_t &dstate, bool shadow_only) {
+	if (!shadow_only) {dstate.s.add_uniform_float("min_alpha", DEF_CITY_MIN_ALPHA);}
 }
 void stopsign_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
 	float const width(bcube.get_sz_dim(!dim)), thickness(bcube.get_sz_dim(dim)), sign_back(bcube.d[dim][dir] + (dir ? -1.0 : 1.0)*0.1*thickness);
