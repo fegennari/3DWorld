@@ -482,7 +482,11 @@ unsigned road_isec_t::get_dest_orient_for_car_in_isec(car_base_t const &car, boo
 }
 
 bool road_isec_t::can_go_now(car_t const &car) const {
-	if (has_stopsign) {} // TODO: stop sign logic
+	if (has_stopsign) { // TODO: stop sign logic
+		if (!car.stopped_for_ssign) return 0; // must stop at stop sign first
+		// TODO: logic to check other cars at other stop signs; car_waiting_sr and car_waiting_left aren't enough, need to track {used, time, dest} for each conn
+		return 1;
+	}
 	if (!has_stoplight) return 1;
 	if (!can_go_based_on_light   (car)) return 0;
 	if (stoplight.check_int_clear(car)) return 1;

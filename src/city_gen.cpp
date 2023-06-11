@@ -1563,7 +1563,7 @@ public:
 	}
 	bool car_can_go_now(car_t const &car, road_network_t const &global_rn) const {
 		if (!car.in_isect()) return 1; // not at an intersection
-		if (car.cur_road_type != TYPE_ISEC2 && !get_car_isec(car).can_go_now(car)) return 0; // check stoplights and blocked intersections
+		if (car.cur_road_type != TYPE_ISEC2 && !get_car_isec(car).can_go_now(car)) return 0; // check stoplights, stopsigns, and blocked intersections
 		return car_can_fit_in_seg(car, global_rn); // check if there's space, to avoid blocking the intersection
 	}
 private:
@@ -1696,6 +1696,7 @@ public:
 		}
 		if (car.stopped_at_light) {
 			bool const was_stopped(car.is_stopped());
+			if (was_stopped) {car.stopped_for_ssign = 1;} // maybe at stop sign, or maybe at stoplight
 			if (car_can_go_now(car, global_rn)) {car.stopped_at_light = 0;} // can go now
 			else if (car.in_isect()) {stop_and_wait_car(car, rgen, road_networks, get_car_isec(car));} // Note: is_isect test allows cars to coast through lights when decel is very low
 			if (was_stopped) return; // no update needed
@@ -1823,6 +1824,7 @@ public:
 				}
 				assert(isec.conn & (1<<orients[car.turn_dir]));
 				car.front_car_turn_dir = TURN_UNSPEC; // reset state now that it's been used
+				car.stopped_for_ssign  = 0; // reset for this intersection
 				car.stopped_at_light   = (isec.red_or_yellow_light(car) || !car_rn.car_can_go_now(car, global_rn));
 				if (car.stopped_at_light) {car.decelerate_fast();}
 				if (car.turn_dir != TURN_NONE) {car.begin_turn();} // capture car centerline before the turn
