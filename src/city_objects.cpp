@@ -1200,15 +1200,15 @@ void stopsign_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_s
 		sign.d[dim][!dir] = sign_back; // make it very thin
 		bool const mirror_x(0);
 		unsigned const skip_dims((1 << (1-dim)) | 4); // skip edges and top/bottom
-		dstate.draw_cube(qbds.qbd, sign, (front_facing ? WHITE : GRAY), 0, 0.0, skip_dims, mirror_x);
+		dstate.draw_cube(qbds.qbd, sign, (front_facing ? WHITE : LT_GRAY), 0, 0.0, skip_dims, mirror_x);
 	}
 	if (dstate.pass_ix == 0) return; // no pole in this pass
 	if (!shadow_only && !bcube.closest_dist_less_than(dstate.camera_bs, 0.4*dist_scale*dstate.draw_tile_dist)) return; // pole too far away to draw
-	// draw the dark green pole
+	// draw the pole
 	cube_t pole(bcube);
 	pole.d[dim][dir] = sign_back; // fix for Z-fighting
 	set_wall_width(pole, pos[!dim], 0.5*thickness, !dim);
-	dstate.draw_cube(qbds.untex_qbd, pole, colorRGBA(0.0, 0.5, 0.0, 1.0), 1); // skip_bottom=1
+	dstate.draw_cube(qbds.untex_qbd, pole, GRAY, 1); // skip_bottom=1
 }
 
 // city flags

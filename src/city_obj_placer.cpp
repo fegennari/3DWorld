@@ -800,7 +800,7 @@ void city_obj_placer_t::place_signs_in_isec(road_isec_t &isec) {
 	if (isec.num_conn != 2) return; // 2-way intersections (bends) only
 	assert(!isec.has_stoplight); // can't have both a stoplight and a stopsign
 	// place stop signs on each end; no pedestrian colliders since they don't normally walk out here on the corners of the city
-	float const height(0.05*(isec.dx() + isec.dy())), width(0.33*height), dist_to_edge(0.84), dist_to_center(1.0 - dist_to_edge);
+	float const height(0.06*(isec.dx() + isec.dy())), width(0.33*height), dist_to_edge(0.84), dist_to_center(1.0 - dist_to_edge);
 
 	for (unsigned n = 0; n < 4; ++n) {
 		if (!(isec.conn & (1 << n))) continue; // no road in this dir
@@ -1105,7 +1105,7 @@ void city_obj_placer_t::draw_detail_objects(draw_state_t &dstate, bool shadow_on
 		}
 	}
 	for (dstate.pass_ix = 0; dstate.pass_ix < 2; ++dstate.pass_ix) { // {sign front, sign back + pole}
-		draw_objects(stopsigns, stopsign_groups, dstate, 0.08, shadow_only, 0); // dist_scale=0.08
+		draw_objects(stopsigns, stopsign_groups, dstate, 0.1, shadow_only, 0); // dist_scale=0.1
 	}
 	dstate.pass_ix = 0; // reset back to 0
 }
