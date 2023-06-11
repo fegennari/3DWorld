@@ -1019,29 +1019,25 @@ enum {IMG_FMT_RAW_RGB=0, IMG_FMT_BMP, IMG_FMT_RAW_INVY, IMG_FMT_RAW_RGBA, IMG_FM
 class texture_t { // size >= 116
 
 public:
-	char type, format, use_mipmaps, defer_load_type;
-	bool wrap, mirror, invert_y, do_compress, has_binary_alpha, is_16_bit_gray, no_avg_color_alpha_fill, invert_alpha, normal_map;
-	int width, height, ncolors, bump_tid, alpha_tid;
-	float anisotropy, mipmap_alpha_weight;
+	char type=0, format=0, use_mipmaps=0, defer_load_type=DEFER_TYPE_NONE;
+	bool wrap=0, mirror=0, invert_y=0, do_compress=0, has_binary_alpha=0, is_16_bit_gray=0, no_avg_color_alpha_fill=0, invert_alpha=0, normal_map=0;
+	int width=0, height=0, ncolors=0, bump_tid=-1, alpha_tid=-1;
+	float anisotropy=1.0, mipmap_alpha_weight=1.0;
 	std::string name;
 
 protected:
-	unsigned char *data, *orig_data, *colored_data;
-	unsigned tid;
-	colorRGBA color;
+	unsigned char *data=nullptr, *orig_data=nullptr, *colored_data=nullptr;
+	unsigned tid=0;
+	colorRGBA color=DEF_TEX_COLOR;
 	enum {DEFER_TYPE_NONE=0, DEFER_TYPE_DDS, NUM_DEFER_TYPE};
 
 	void maybe_swap_rb(unsigned char *ptr) const;
 
 public:
-	texture_t() : type(0), format(0), use_mipmaps(0), defer_load_type(DEFER_TYPE_NONE), wrap(0), mirror(0), invert_y(0), do_compress(0), has_binary_alpha(0),
-		is_16_bit_gray(0), no_avg_color_alpha_fill(0), invert_alpha(0), normal_map(0), width(0), height(0), ncolors(0), bump_tid(-1), alpha_tid(-1),
-		anisotropy(1.0), mipmap_alpha_weight(1.0), data(0), orig_data(0), colored_data(0), tid(0), color(DEF_TEX_COLOR) {}
-
+	texture_t() {}
 	texture_t(char t, char f, int w, int h, int wrap_mir, int nc, char um, std::string const &n, bool inv=0, bool do_comp=1, float a=1.0, float maw=1.0, bool nm=0)
-		: type(t), format(f), use_mipmaps(um), defer_load_type(DEFER_TYPE_NONE), wrap(wrap_mir != 0), mirror(wrap_mir == 2), invert_y(inv), do_compress(do_comp),
-		has_binary_alpha(0), is_16_bit_gray(0), no_avg_color_alpha_fill(0), invert_alpha(0), normal_map(nm), width(w), height(h), ncolors(nc), bump_tid(-1),
-		alpha_tid(-1), anisotropy(a), mipmap_alpha_weight(maw), name(n), data(0), orig_data(0), colored_data(0), tid(0), color(DEF_TEX_COLOR) {}
+		: type(t), format(f), use_mipmaps(um), wrap(wrap_mir != 0), mirror(wrap_mir == 2), invert_y(inv), do_compress(do_comp),
+		normal_map(nm), width(w), height(h), ncolors(nc), anisotropy(a), mipmap_alpha_weight(maw), name(n) {}
 	bool is_inverted_y_type() const {return (defer_load_type == DEFER_TYPE_DDS);}
 	void set_existing_tid(unsigned tid_, colorRGBA const &color_) {tid = tid_; color = color_;}
 	void set_16_bit_grayscale();
