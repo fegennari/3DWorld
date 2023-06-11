@@ -1719,6 +1719,15 @@ void building_room_geom_t::add_duct(room_object_t const &c) {
 	else {assert(0);} // unsupported shape
 }
 
+void building_room_geom_t::add_sprinkler(room_object_t const &c) { // vertical sprinkler
+	rgeom_mat_t &mat(get_metal_material(0, 0, 2)); // unshadowed, detail=1
+	// Note: dir determines if it's facing up or down; for now we only support upward pointing sprinklers from parking garage pipes
+	cube_t bot(c), top(c);
+	bot.z2() = top.z1() = c.z1() + 0.6*c.dz();
+	mat.add_vcylin_to_verts(bot, apply_light_color(c),          0, 0); // no ends
+	mat.add_vcylin_to_verts(top, apply_light_color(c, LT_GRAY), 0, 1); // draw top only
+}
+
 void building_room_geom_t::add_curb(room_object_t const &c) {
 	float const tscale(1.0/c.get_length());
 	rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_concrete_tid(), tscale, 1), 1, 0, 2)); // shadowed, detail object

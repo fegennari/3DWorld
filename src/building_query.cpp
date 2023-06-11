@@ -1448,7 +1448,7 @@ bool room_object_t::is_floor_collidable() const {return bldg_obj_types[type].rat
 bool room_object_t::is_spider_collidable() const { // include objects on the floor, walls, and ceilings
 	if (!is_floor_collidable() && type != TYPE_LIGHT && type != TYPE_BRSINK && type && type != TYPE_MIRROR && type != TYPE_MWAVE && type != TYPE_HANGER_ROD &&
 		type != TYPE_LAPTOP && type != TYPE_MONITOR && type != TYPE_CLOTHES && type != TYPE_TOASTER && type != TYPE_CABINET && type != TYPE_VASE &&
-		type != TYPE_URN && type != TYPE_CEIL_FAN) return 0; // ceiling fans are obstacles, not something spiders can walk on
+		type != TYPE_URN && type != TYPE_SPRINKLER && type != TYPE_CEIL_FAN) return 0; // ceiling fans are obstacles, not something spiders can walk on
 	if (type == TYPE_BOOK) return 0; // I guess books don't count, since they're too small to walk on?
 	return 1;
 }
