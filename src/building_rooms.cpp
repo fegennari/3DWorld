@@ -2671,15 +2671,6 @@ bool building_t::place_eating_items_on_table(rand_gen_t &rgen, unsigned table_ob
 		set_cube_zvals(vase, table.z2(), table.z2()+vase_height); // place on the table
 		objs.emplace_back(vase, TYPE_VASE, table.room_id, 0, 0, RO_FLAG_NOCOLL, table.light_amt, SHAPE_CYLIN, gen_vase_color(rgen));
 		set_obj_id(objs);
-#if 0 // TESTING: add more vases
-		vector3d const xlates[4] = {vector3d(-1.0,0.0,0.0), vector3d(1.0,0.0,0.0), vector3d(0.0,-1.0,0.0), vector3d(0.0,1.0,0.0)};
-		for (unsigned n = 0; n < 4; ++n) {
-			cube_t vase2(vase);
-			vase2.translate(5.0*vase_radius*xlates[n]);
-			objs.emplace_back(vase2, TYPE_VASE, table.room_id+n, 0, 0, RO_FLAG_NOCOLL, table.light_amt, SHAPE_CYLIN, gen_vase_color(rgen));
-			set_obj_id(objs);
-		}
-#endif
 	}
 	return added_obj;
 }
