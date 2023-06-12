@@ -504,18 +504,29 @@ struct streetlights_t {
 };
 
 
+struct ssign_state_t { // per incoming orient
+	bool in_use=0;
+	uint8_t turn_dir=0, dest_orient=0;
+	int arrive_frame=0;
+};
+struct ssign_state_pair_t {
+	ssign_state_t waiting, entering;
+};
+
 struct road_isec_t : public cube_t {
 	bool has_stoplight=0, has_stopsign=0;
 	unsigned char num_conn, conn; // connected roads in {-x, +x, -y, +y} = {W, E, S, N} facing = car traveling {E, W, N, S}
 	short conn_to_city;
 	short rix_xy[4], conn_ix[4]; // road/segment index: pos=cur city road, neg=global road; always segment ix
 	stoplight_ns::stoplight_t stoplight; // Note: not always needed, maybe should be by pointer/index?
+	mutable ssign_state_pair_t ssign_state[4]; // one per orient; updated by cars through const functions, must be mutable
 
 	road_isec_t(cube_t const &c, int rx, int ry, unsigned char conn_, bool at_conn_road, bool has_stoplight_, short conn_to_city_=-1);
 	tex_range_t get_tex_range(float ar) const;
 	void make_4way(unsigned conn_to_city_);
 	void next_frame();
 	void notify_waiting_car(car_base_t const &car) const;
+	void notify_leaving_car(car_base_t const &car) const;
 	void mark_crosswalk_in_use(bool dim, bool dir) const;
 	bool is_global_conn_int() const {return (rix_xy[0] < 0 || rix_xy[1] < 0 || rix_xy[2] < 0 || rix_xy[3] < 0);}
 	bool red_light(car_base_t const &car) const {return (has_stoplight && stoplight.red_light(car.dim, car.dir, car.turn_dir));}
@@ -526,7 +537,7 @@ struct road_isec_t : public cube_t {
 	}
 	bool can_go_based_on_light(car_base_t const &car) const;
 	bool is_orient_currently_valid(unsigned orient, unsigned turn_dir) const;
-	unsigned get_dest_orient_for_car_in_isec(car_base_t const &car, bool is_entering) const;
+	unsigned get_dest_orient_for_car_in_isec(car_base_t const &car, bool is_entering=1) const;
 	bool can_go_now(car_t const &car) const;
 	bool is_blocked(car_base_t const &car) const {return (can_go_based_on_light(car) && !stoplight.check_int_clear(car));} // light is green but intersection is blocked
 	bool has_left_turn_signal(unsigned orient) const;
@@ -538,6 +549,8 @@ struct road_isec_t : public cube_t {
 private:
 	void draw_sl_block(quad_batch_draw &qbd, draw_state_t &dstate, point p[4], float h, unsigned state,
 		bool draw_unlit, float flare_alpha, vector3d const &n, tex_range_t const &tr) const;
+	ssign_state_pair_t &get_ssign_state(car_base_t const &car) const {return ssign_state[car.get_orient_in_isec()];}
+	void init_ssign_state(car_base_t const &car, ssign_state_t &ss, bool is_entering) const;
 };
 
 

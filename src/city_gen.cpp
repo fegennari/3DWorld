@@ -1522,6 +1522,7 @@ public:
 		unsigned const orient(car.get_orient());
 		int conn_ix(isec.conn_ix[orient]), rix(isec.rix_xy[car.get_orient()]);
 		assert(isec.conn & (1<<orient));
+		isec.notify_leaving_car(car);
 
 		if (conn_ix < 0) { // city connector road case, use global_rn
 			assert(rix < 0);
@@ -1735,10 +1736,12 @@ public:
 			assert(car.in_isect());
 			float const isec_center(road_bcube.get_cube_center()[dim]);
 			float const centerline(isec_center + (((car.turn_dir == TURN_RIGHT) ^ car.dir) ? 1.0 : -1.0)*get_car_lane_offset());
+			car_base_t const car_pre_turn(car);
 			car.maybe_apply_turn(centerline, 0); // for_driveway=0
 
 			if (car.turn_dir == TURN_NONE) { // turn has been completed
 				road_isec_t const &isec(get_car_isec(car));
+				isec.notify_leaving_car(car_pre_turn); // leaving this orient, entering the exit orient
 
 				if (isec.conn_ix[car.get_orient()] >= 0) {
 					short const rix(isec.rix_xy[car.get_orient()]);

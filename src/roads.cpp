@@ -450,8 +450,36 @@ void road_isec_t::make_4way(unsigned conn_to_city_) {
 void road_isec_t::next_frame() {
 	if (has_stoplight) {stoplight.next_frame();}
 }
-void road_isec_t::notify_waiting_car(car_base_t const &car) const {
+void road_isec_t::init_ssign_state(car_base_t const &car, ssign_state_t &ss, bool is_entering) const {
+	ss.arrive_frame = frame_counter;
+	ss.turn_dir     = car.turn_dir;
+	ss.dest_orient  = get_dest_orient_for_car_in_isec(car, is_entering);
+	ss.in_use       = 1;
+}
+void road_isec_t::notify_waiting_car(car_base_t const &car) const { // can be called every frame, when waiting or in the intersection
 	if (has_stoplight) {stoplight.notify_waiting_car(car.dim, car.dir, car.turn_dir);}
+	
+	if (has_stopsign) {
+		ssign_state_pair_t &ss(get_ssign_state(car));
+
+		if (car.stopped_at_light) { // stopped and waiting
+			if (!ss.waiting.in_use) {init_ssign_state(car, ss.waiting, 1);} // not yet marked as waiting; is_entering=1
+		}
+		else { // driving through intersection
+			if (!ss.entering.in_use) { // not yet entered intersection
+				//assert(ss.waiting.in_use); // car must have been waiting - unless it spawned here?
+				init_ssign_state(car, ss.entering, 0); // is_entering=0
+				ss.waiting.in_use = 0; // car is no longer waiting
+			}
+		}
+	}
+}
+void road_isec_t::notify_leaving_car(car_base_t const &car) const { // called once per exit
+	if (has_stopsign) {
+		ssign_state_t &ss(get_ssign_state(car).entering);
+		assert(ss.in_use); // must have been in the intersection
+		ss.in_use = 0;
+	}
 }
 void road_isec_t::mark_crosswalk_in_use(bool dim, bool dir) const { // Note: const because in_use flag is mutable
 	if (has_stoplight) {stoplight.mark_crosswalk_in_use(dim, dir);}
@@ -477,14 +505,33 @@ unsigned road_isec_t::get_dest_orient_for_car_in_isec(car_base_t const &car, boo
 	case TURN_RIGHT: new_orient = stoplight_ns::conn_right[orient_in]; break;
 	default: assert(0);
 	}
-	assert(conn & (1<<new_orient)); // car mustto go an enabled orient
+	assert(conn & (1<<new_orient)); // car must go to an enabled orient
 	return new_orient;
 }
 
+bool check_paths_cross(ssign_state_t const &ss, unsigned cur_orient, unsigned dest_orient, unsigned turn_dir) {
+	if (ss.dest_orient == dest_orient) return 1; // same destination
+	if (ss.turn_dir == TURN_RIGHT || turn_dir == TURN_RIGHT) return 0; // can't cross if either is making a right turn
+	if (ss.turn_dir == TURN_LEFT  || turn_dir == TURN_LEFT ) return 1; // otherwise, must cross if either is making a left turn
+	return ((ss.dest_orient>>1) != (dest_orient>>1)); // both cars going straight; they cross if their dims are different
+}
 bool road_isec_t::can_go_now(car_t const &car) const {
-	if (has_stopsign) { // TODO: stop sign logic
+	if (has_stopsign) { // run stop sign logic
 		if (!car.stopped_for_ssign) return 0; // must stop at stop sign first
-		// TODO: logic to check other cars at other stop signs; car_waiting_sr and car_waiting_left aren't enough, need to track {used, time, dest} for each conn
+		// run logic to check other cars at other stop signs or in the intersection
+		unsigned const cur_orient(car.get_orient_in_isec()), dest_orient(get_dest_orient_for_car_in_isec(car, 1)); // is_entering=1
+		assert(conn & (1<<cur_orient));
+		int const arrive_frame(ssign_state[cur_orient].waiting.arrive_frame);
+
+		for (unsigned n = 0; n < 2; ++n) { // test each intersection connection
+			if (!(conn & (1<<n))) continue; // no connection in this orient, skip
+			if (n == cur_orient)  continue; // skip our own orient, assuming no two cars can be at the same place
+			ssign_state_pair_t const &ss(ssign_state[n]);
+			// check entering and waiting slots; if another car is waiting, check for earlier arrival time; if tied, use the orient as a tie breaker
+			if (ss.entering.in_use && check_paths_cross(ss.entering, cur_orient, dest_orient, car.turn_dir)) return 0;
+			if (ss.waiting .in_use && (ss.waiting.arrive_frame < arrive_frame || (ss.waiting.arrive_frame == arrive_frame && n < cur_orient)) &&
+				check_paths_cross(ss.waiting, cur_orient, dest_orient, car.turn_dir)) return 0;
+		} // for n
 		return 1;
 	}
 	if (!has_stoplight) return 1;
