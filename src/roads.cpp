@@ -546,7 +546,7 @@ bool road_isec_t::can_go_now(car_t const &car) const {
 }
 
 bool road_isec_t::has_left_turn_signal(unsigned orient) const {
-	if (!has_stoplight || num_conn == 2) return 0; // never
+	if (!has_stoplight) return 0; // never
 	if (num_conn == 4) return 1; // always
 	assert(num_conn == 3);
 	switch (conn) {
@@ -586,7 +586,7 @@ point road_isec_t::get_stop_sign_pos(unsigned n) const {
 
 bool road_isec_t::check_sphere_coll(point const &pos, float radius) const { // used for peds
 	//if (has_stopsign) {} // not handled here
-	if (!has_stoplight || num_conn == 2) return 0; // no stoplights
+	if (!has_stoplight) return 0; // no stoplights
 	if (!sphere_cube_intersect_xy(pos, radius, *this)) return 0;
 
 	for (unsigned n = 0; n < 4; ++n) {
@@ -598,7 +598,7 @@ bool road_isec_t::check_sphere_coll(point const &pos, float radius) const { // u
 
 bool road_isec_t::proc_sphere_coll(point &pos, point const &p_last, float radius, vector3d const &xlate, float dist, vector3d *cnorm) const {
 	//if (has_stopsign) {} // not handled here
-	if (!has_stoplight || num_conn == 2) return 0; // no stoplights
+	if (!has_stoplight) return 0; // no stoplights
 	if (!sphere_cube_intersect(pos, (radius + dist), (*this + xlate))) return 0;
 
 	for (unsigned n = 0; n < 4; ++n) {
@@ -616,7 +616,7 @@ bool check_line_clip_update_t(point const &p1, point const &p2, float &t, cube_t
 
 bool road_isec_t::line_intersect(point const &p1, point const &p2, float &t) const {
 	//if (has_stopsign) {} // not handled here
-	if (!has_stoplight || num_conn == 2) return 0; // no stoplights
+	if (!has_stoplight) return 0; // no stoplights
 	if (!line_intersects(p1, p2)) return 0;
 	bool ret(0);
 
