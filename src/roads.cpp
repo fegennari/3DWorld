@@ -521,7 +521,8 @@ bool check_paths_cross(ssign_state_t const &ss, unsigned cur_orient, unsigned de
 }
 bool road_isec_t::can_go_now(car_t const &car) const {
 	if (has_stopsign) { // run stop sign logic
-		if (!car.stopped_for_ssign) return 0; // must stop at stop sign first
+		if (!car.stopped_for_ssign)          return 0; // must stop at stop sign first
+		if (car.get_wait_time_secs() < 0.25) return 0; // must wait a quarter second before going - no rolling stops
 		// run logic to check other cars at other stop signs or in the intersection
 		unsigned const cur_orient(car.get_orient_in_isec()), dest_orient(get_dest_orient_for_car_in_isec(car, 1)); // is_entering=1
 		assert(conn & (1<<cur_orient));
