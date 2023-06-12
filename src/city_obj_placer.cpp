@@ -1119,7 +1119,7 @@ void city_obj_placer_t::draw_detail_objects(draw_state_t &dstate, bool shadow_on
 			draw_objects(pdecks, pdeck_groups, dstate, 0.26, shadow_only, 0); // dist_scale=0.3
 		}
 	}
-	for (dstate.pass_ix = 0; dstate.pass_ix < 2; ++dstate.pass_ix) { // {sign front, sign back + pole}
+	for (dstate.pass_ix = 0; dstate.pass_ix < 3; ++dstate.pass_ix) { // {sign front, sign back + pole, 4-way sign}
 		draw_objects(stopsigns, stopsign_groups, dstate, 0.1, shadow_only, 0); // dist_scale=0.1
 	}
 	dstate.pass_ix = 0; // reset back to 0

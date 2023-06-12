@@ -1176,9 +1176,10 @@ void sign_t::draw_text(draw_state_t &dstate, city_draw_qbds_t &qbds, string cons
 	else if (two_sided) {add_sign_text_verts(text_to_draw, text_bcube, dim, !dir, text_color, qbd.verts, first_char_clip_val, last_char_clip_val);} // draw the back  side text
 }
 
-stopsign_t::stopsign_t(point const &pos_, float height, float width, bool dim_, bool dir_) :
-	oriented_city_obj_t(pos_, max(width, height), dim_, dir_)
+stopsign_t::stopsign_t(point const &pos_, float height, float width, bool dim_, bool dir_, unsigned num_way_) :
+	oriented_city_obj_t(pos_, max(width, height), dim_, dir_), num_way(num_way_)
 {
+	assert(num_way == 3 || num_way == 4);
 	bcube.set_from_point(pos);
 	bcube.expand_in_dim( dim, 0.05*width); // thickness
 	bcube.expand_in_dim(!dim, 0.50*width); // width
@@ -1186,8 +1187,11 @@ stopsign_t::stopsign_t(point const &pos_, float height, float width, bool dim_, 
 }
 /*static*/ void stopsign_t::pre_draw (draw_state_t &dstate, bool shadow_only) {
 	// Note: the texture is still needed in the shadow pass as an alpha mask
-	select_texture((dstate.pass_ix == 0) ? get_texture_by_name("roads/stop_sign.png", 0, 0, 0) : // wrap_mir=0
-		get_texture_by_name("roads/white_octagon.png", 0, 0, 0, 0.0, 1, 1, 4, 1)); // wrap_mir=0, is_alpha_mask=1
+	int tid(-1);
+	if      (dstate.pass_ix == 0) {tid = get_texture_by_name("roads/stop_sign.png",     0, 0, 0);} // wrap_mir=0
+	else if (dstate.pass_ix == 1) {tid = get_texture_by_name("roads/white_octagon.png", 0, 0, 0, 0.0, 1, 1, 4, 1);} // wrap_mir=0, is_alpha_mask=1
+	else if (!shadow_only)        {tid = get_texture_by_name("roads/stop_4_way.jpg",    0, 0, 0);} // wrap_mir=0
+	if (tid >= 0) {select_texture(tid);}
 	if (!shadow_only) {dstate.s.add_uniform_float("min_alpha", 0.25);} // fix mipmap drawing
 }
 /*static*/ void stopsign_t::post_draw(draw_state_t &dstate, bool shadow_only) {
@@ -1197,16 +1201,22 @@ void stopsign_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_s
 	float const width(bcube.get_sz_dim(!dim)), thickness(bcube.get_sz_dim(dim)), sign_back(bcube.d[dim][dir] + (dir ? -1.0 : 1.0)*0.1*thickness);
 	// draw the octagon with one side textured and the other not, in two passes
 	bool const front_facing(((camera_pdu.pos[dim] - dstate.xlate[dim]) < bcube.d[dim][dir]) ^ dir);
+	unsigned const skip_dims((1 << (1-dim)) | 4); // skip edges and top/bottom
 	
-	if (front_facing == (dstate.pass_ix == 0)) {
+	if (unsigned(!front_facing) == dstate.pass_ix) { // pass 0: front; pass 1: back
 		cube_t sign(bcube);
 		sign.z1() = bcube.z2() - width;
 		sign.d[dim][!dir] = sign_back; // make it very thin
-		bool const mirror_x(0);
-		unsigned const skip_dims((1 << (1-dim)) | 4); // skip edges and top/bottom
-		dstate.draw_cube(qbds.qbd, sign, (front_facing ? WHITE : LT_GRAY), 0, 0.0, skip_dims, mirror_x);
+		dstate.draw_cube(qbds.qbd, sign, (front_facing ? WHITE : LT_GRAY), 0, 0.0, skip_dims);
 	}
-	if (dstate.pass_ix == 0) return; // no pole in this pass
+	if (num_way == 4 && dstate.pass_ix == 2) { // draw the 4-way sign part (only when close?)
+		cube_t sign(bcube);
+		set_cube_zvals(sign, (bcube.z2() - 1.3*width), (bcube.z2() - width)); // below the main octagon sign part
+		sign.expand_in_dim(!dim, -0.2*width); // shrink
+		sign.d[dim][!dir] = sign_back; // make it very thin
+		dstate.draw_cube((front_facing ? qbds.qbd : qbds.untex_qbd), sign, (front_facing ? WHITE : LT_GRAY), 0, 0.0, skip_dims); // back side is untextured
+	}
+	if (dstate.pass_ix != 1) return; // no pole in this pass
 	if (!shadow_only && !bcube.closest_dist_less_than(dstate.camera_bs, 0.4*dist_scale*dstate.draw_tile_dist)) return; // pole too far away to draw
 	// draw the pole
 	cube_t pole(bcube);
