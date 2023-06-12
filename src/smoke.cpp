@@ -198,10 +198,6 @@ void distribute_smoke() { // called at most once per frame
 		smoke_exists  = smoke_man.enabled;
 		next_smoke_man.reset();
 	}
-	/*if ((display_mode & 0x10) && !smoke_bounds.empty()) {
-		cur_smoke_bb = smoke_bounds[0];
-		for (vector<cube_t>::const_iterator i = smoke_bounds.begin()+1; i != smoke_bounds.end(); ++i) {cur_smoke_bb.union_with_cube(*i);}
-	}*/
 	float const xy_rate(SMOKE_DIS_XY*SMOKE_SKIPVAL);
 	int const dx(rgen.rand() & 1), dy(rgen.rand() & 1); // randomize the processing order
 	

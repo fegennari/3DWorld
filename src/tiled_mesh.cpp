@@ -3229,7 +3229,7 @@ void tile_draw_t::draw_grass(bool reflection_pass) {
 
 	// draw flowers
 	for (unsigned spass = 0; spass < 2; ++spass) { // shadow maps, no shadow maps
-		if (flower_density == 0.0 || (display_mode & 0x10)) continue; // no flowers
+		if (flower_density == 0.0) continue; // no flowers
 		if (spass == 0 && !shadow_map_enabled()) continue;
 		shader_t s;
 		lighting_with_cloud_shadows_setup(s, 1, use_cloud_shadows);

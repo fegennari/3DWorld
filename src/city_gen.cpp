@@ -68,7 +68,6 @@ void city_shader_setup(shader_t &s, cube_t const &lights_bcube, bool use_dlights
 	use_dlights &= (lights_bcube.is_strictly_normalized() && !dl_sources.empty());
 	have_indir_smoke_tex = indir_lighting; // assume someone is going to set the indir texture in this case
 	if (indir_lighting) {s.set_prefix("#define USE_ALT_SCENE_BOUNDS", 1);} // FS; need to use different scene_llc_scale for dynamic lighting vs. building indir lighting
-	//if ((display_mode & 0x10) && use_dlights) {s.set_prefix("#define LINEAR_DLIGHT_ATTEN", 1);} // FS
 	// Note: here use_texgen mode 5 is used as a hack so that the shader still has binding points for tex coords (can't optimize it out)
 	// and we can share the same VAO between texgen and texcoords modes without having to worry about which mode we were in when the VAO was created
 	setup_smoke_shaders(s, min_alpha, (use_texgen ? 5 : 0), 0, indir_lighting, 1, use_dlights, 0, 0,

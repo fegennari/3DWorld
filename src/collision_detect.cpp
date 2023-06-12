@@ -1890,12 +1890,6 @@ int set_true_obj_height(point &pos, point const &lpos, float step_height, float 
 
 	if (is_player && !test_only) {
 		if (display_mode & 0x0100) {create_footsteps(pos, radius, sstate->velocity.get_norm(), sstate->prev_foot_pos, sstate->step_num, sstate->foot_down, is_camera);}
-
-		/*if (display_mode & 0x10) { // walk on snow (smiley and camera, though doesn't actually set smiley z value correctly)
-			float zval;
-			vector3d norm;
-			if (get_snow_height(pos, radius, zval, norm)) {pos.z = zval + radius;}
-		}*/
 	}
 	if (jump_time > 0) {
 		float const jump_val((float(jump_time)/TICKS_PER_SECOND - (JUMP_COOL - JUMP_TIME))/JUMP_TIME); // jt == JC => 1.0; jt == JC-JT => 0.0

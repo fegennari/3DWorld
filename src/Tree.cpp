@@ -431,30 +431,24 @@ void set_leaf_shader(shader_t &s, float min_alpha, unsigned tc_start_ix, bool en
 }
 
 
-// Note: this doesn't really work - leaves are antialiased, but have bright speckles, bright borders, and transparent lines between leaves, and it's slower
-bool use_leaf_trans() {return 0/*((display_mode & 0x10) != 0)*/;}
-
 void tree_cont_t::pre_leaf_draw(shader_t &shader, bool enable_opacity, bool shadow_only, bool use_fs_smap, bool enable_smap, bool enable_dlights) {
 	
 	if (shader.is_setup()) {shader.enable();}
 	else { // Note: disabling leaf wind when shadow_only is faster but looks odd
 		float const wind_mag((has_snow || !animate2 /*|| shadow_only*/) ? 0.0f : 0.05f*REL_LEAF_SIZE*TREE_SIZE/(sqrt(nleaves_scale)*tree_scale)*min(2.0f, wind.mag()));
 		if (enable_smap) {shader.set_prefix("#define NO_SHADOW_PCF", (use_fs_smap ? 1 : 0));} // faster shadows
-		if (use_leaf_trans()) {shader.set_prefix("#define ENABLE_ALPHA_TO_COVERAGE", 1);} // FS
-		set_leaf_shader(shader, (use_leaf_trans() ? 0.05 : 0.75), 3, enable_opacity, (shadow_only || !enable_dlights), wind_mag, 0, use_fs_smap, enable_smap, 0, shadow_only); // no underwater trees
+		set_leaf_shader(shader, 0.75, 3, enable_opacity, (shadow_only || !enable_dlights), wind_mag, 0, use_fs_smap, enable_smap, 0, shadow_only); // no underwater trees
 		for (int i = 0; i < NUM_TREE_TYPES; ++i) {select_texture(((draw_model == 0) ? tree_types[i].leaf_tex : WHITE_TEX), TLEAF_START_TUID+i);}
 	}
 	if (!shadow_only) {
 		shader.set_specular(0.2, 20.0); // small amount of specular
-		if (!use_leaf_trans()) {set_multisample(0);} // disable AA to prevent bright pixel artifacts and to improve frame rate
-		else {enable_blend(); glEnable(GL_SAMPLE_ALPHA_TO_COVERAGE);}
+		set_multisample(0); // disable AA to prevent bright pixel artifacts and to improve frame rate
 	}
 }
 
 void tree_cont_t::post_leaf_draw(shader_t &shader, bool shadow_only) {
 	if (!shadow_only) {
-		if (!use_leaf_trans()) {set_multisample(1);} // re-enable AA
-		else {disable_blend(); glDisable(GL_SAMPLE_ALPHA_TO_COVERAGE);}
+		set_multisample(1); // re-enable AA
 		shader.clear_specular();
 	}
 	shader.disable();
