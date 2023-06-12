@@ -445,6 +445,7 @@ tex_range_t road_isec_t::get_tex_range(float ar) const {
 void road_isec_t::make_4way(unsigned conn_to_city_) {
 	num_conn = 4; conn = 15;
 	assert(conn_to_city < 0); conn_to_city = conn_to_city_;
+	has_stopsign = 0; has_stoplight = 1; // replace 3 stop signs with 4 stoplights
 	if (has_stoplight) {stoplight.init(num_conn, conn);} // re-init with new conn
 }
 void road_isec_t::next_frame() {

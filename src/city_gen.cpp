@@ -552,7 +552,7 @@ public:
 		bcube.y2() = roads[num_r-1].y2(); // actual bcube y2 from last  y road
 
 		// create road segments and intersections
-		bool const add_stoplights = 1; // !is_residential
+		bool const add_stoplights(!is_residential); // add stoplights in cities, and stop signs in residential neighborhoods
 		plot_xy.nx = num_x - 1; plot_xy.ny = num_y - 1;
 		segs .reserve(num_x*(num_y-1) + (num_x-1)*num_y + 4); // X + Y segments, allocate one extra per side for connectors
 		plots.reserve(plot_xy.num());
