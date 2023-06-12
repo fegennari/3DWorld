@@ -2707,7 +2707,7 @@ public:
 		//timer_t timer("Draw Buildings Shadow");
 		fgPushMatrix();
 		translate_to(xlate);
-		shader_t s, person_shader;
+		shader_t s, amask_shader, person_shader;
 		s.begin_color_only_shader(); // really don't even need colors
 		glEnable(GL_CULL_FACE); // slightly faster for interior shadow maps
 		vector<point> points; // reused temporary
@@ -2744,7 +2744,7 @@ public:
 						camera_in_this_building |= b.interior_visible_from_other_building_ext_basement(xlate, 1); // check conn building as well; expand_for_light=1
 						// generate interior detail objects during the shadow pass when the player is in the building so that it can be done in parallel with small static geom gen
 						int const inc_small(camera_in_this_building ? 3 : 1);
-						b.draw_room_geom(nullptr, s, oc, xlate, bi->ix, 1, 0, inc_small, 1); // shadow_only=1, player_in_building=1
+						b.draw_room_geom(nullptr, s, amask_shader, oc, xlate, bi->ix, 1, 0, inc_small, 1); // shadow_only=1, player_in_building=1
 						b.get_ext_wall_verts_no_sec(ext_parts_draw); // add exterior walls to prevent light leaking between adjacent parts
 						b.draw_cars_in_building(s, xlate, 1, 1); // player_in_building=1, shadow_only=1
 						if (b.has_ext_basement()) {b.get_basment_ext_wall_verts(ext_parts_draw);} // draw basement exterior walls
@@ -2900,7 +2900,7 @@ public:
 		bool have_windows(0), have_wind_lights(0), have_interior(0), this_frame_camera_in_building(0), this_frame_player_in_attic(0), is_city_lighting_setup(0);
 		int this_frame_player_in_basement(0);
 		unsigned max_draw_ix(0);
-		shader_t s, holes_shader, city_shader;
+		shader_t s, amask_shader, holes_shader, city_shader;
 
 		for (auto i = bcs.begin(); i != bcs.end(); ++i) {
 			assert(*i);
@@ -3029,7 +3029,7 @@ public:
 						unsigned inc_small(player_in_building_bcube ? 2 : (bdist_sq < rgeom_sm_draw_dist_sq));
 						if      (inc_small && bdist_sq < rgeom_int_detail_dist_sq) {inc_small = 3;} // include interior and exterior detail objects
 						else if (inc_small && bdist_sq < rgeom_ext_detail_dist_sq) {inc_small = 2;} // include exterior detail objects
-						b.gen_and_draw_room_geom(&bbd, s, oc, xlate, bi->ix, 0, reflection_pass, inc_small, player_in_building_bcube); // shadow_only=0
+						b.gen_and_draw_room_geom(&bbd, s, amask_shader, oc, xlate, bi->ix, 0, reflection_pass, inc_small, player_in_building_bcube); // shadow_only=0
 						g->has_room_geom = 1;
 						if (!draw_interior) continue;
 						// when player is in the building (not attic or ext basement), draw people later so that alpha blending of hair against ext walls and windows works properly

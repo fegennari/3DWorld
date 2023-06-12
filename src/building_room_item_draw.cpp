@@ -1189,8 +1189,8 @@ int room_object_t::get_model_id() const {
 	return id;
 }
 
-void building_t::draw_room_geom(brg_batch_draw_t *bbd, shader_t &s, occlusion_checker_noncity_t &oc, vector3d const &xlate, unsigned building_ix,
-	bool shadow_only, bool reflection_pass, unsigned inc_small, bool player_in_building)
+void building_t::draw_room_geom(brg_batch_draw_t *bbd, shader_t &s, shader_t &amask_shader, occlusion_checker_noncity_t &oc, vector3d const &xlate,
+	unsigned building_ix, bool shadow_only, bool reflection_pass, unsigned inc_small, bool player_in_building)
 {
 	if (!has_room_geom()) return;
 
@@ -1207,10 +1207,10 @@ void building_t::draw_room_geom(brg_batch_draw_t *bbd, shader_t &s, occlusion_ch
 		return;
 	}
 	if (ENABLE_MIRROR_REFLECTIONS && !shadow_only && !reflection_pass && player_in_building) {find_mirror_needing_reflection(xlate);}
-	interior->room_geom->draw(bbd, s, *this, oc, xlate, building_ix, shadow_only, reflection_pass, inc_small, player_in_building);
+	interior->room_geom->draw(bbd, s, amask_shader, *this, oc, xlate, building_ix, shadow_only, reflection_pass, inc_small, player_in_building);
 }
-void building_t::gen_and_draw_room_geom(brg_batch_draw_t *bbd, shader_t &s, occlusion_checker_noncity_t &oc, vector3d const &xlate,
-	unsigned building_ix, bool shadow_only, bool reflection_pass, unsigned inc_small, bool player_in_building)
+void building_t::gen_and_draw_room_geom(brg_batch_draw_t *bbd, shader_t &s, shader_t &amask_shader, occlusion_checker_noncity_t &oc,
+	vector3d const &xlate, unsigned building_ix, bool shadow_only, bool reflection_pass, unsigned inc_small, bool player_in_building)
 {
 	if (!interior) return;
 	if (!global_building_params.enable_rotated_room_geom && is_rotated()) return; // rotated buildings: need to fix texture coords, room object collisions, mirrors, etc.
@@ -1232,7 +1232,7 @@ void building_t::gen_and_draw_room_geom(brg_batch_draw_t *bbd, shader_t &s, occl
 		assert(has_room_geom());
 	}
 	if (has_room_geom() && inc_small >= 2) {add_wall_and_door_trim_if_needed();} // gen trim (exterior and interior) when close to the player
-	draw_room_geom(bbd, s, oc, xlate, building_ix, shadow_only, reflection_pass, inc_small, player_in_building);
+	draw_room_geom(bbd, s, amask_shader, oc, xlate, building_ix, shadow_only, reflection_pass, inc_small, player_in_building);
 }
 void building_t::clear_room_geom() {
 	if (!has_room_geom()) return;
@@ -1319,8 +1319,8 @@ void brg_batch_draw_t::draw_obj_models(shader_t &s, vector3d const &xlate, bool 
 }
 
 // Note: non-const because it creates the VBO; inc_small: 0=large only, 1=large+small, 2=large+small+ext detail, 2=large+small+ext detail+int detail
-void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, building_t const &building, occlusion_checker_noncity_t &oc, vector3d const &xlate,
-	unsigned building_ix, bool shadow_only, bool reflection_pass, unsigned inc_small, bool player_in_building)
+void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &amask_shader, building_t const &building, occlusion_checker_noncity_t &oc,
+	vector3d const &xlate, unsigned building_ix, bool shadow_only, bool reflection_pass, unsigned inc_small, bool player_in_building)
 {
 	if (empty()) return; // no geom
 	unsigned const num_screenshot_tids(get_num_screenshot_tids());
@@ -1407,8 +1407,8 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, building_t c
 
 	if (inc_small >= 2 && !mats_amask.empty()) { // draw plants using alpha masks in the detail pass
 		if (shadow_only) {
-			shader_t amask_shader;
-			amask_shader.begin_simple_textured_shader(0.9); // need to use texture with alpha test
+			if (!amask_shader.is_setup()) {amask_shader.begin_simple_textured_shader(0.9);} // need to use texture with alpha test
+			else {amask_shader.make_current();}
 			mats_amask.draw(nullptr, amask_shader, 2, 0); // shadow pass with alpha mask; no brg_batch_draw
 			s.make_current(); // switch back to the normal shader
 		}
@@ -1416,8 +1416,9 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, building_t c
 			mats_amask.draw(nullptr, s, 0, 1); // no brg_batch_draw
 		}
 		else if (player_in_building || !camera_in_building) { // this is expensive: only enable for the main draw pass and skip for buildings the player isn't in
-			shader_t amask_shader; // without the special shader these won't look correct when drawn through windows
-			setup_building_draw_shader(amask_shader, 0.9, 1, 1, 0); // min_alpha=0.9, enable_indir=1, force_tsl=1, use_texgen=0
+			// without the special shader these won't look correct when drawn through windows
+			if (!amask_shader.is_setup()) {setup_building_draw_shader(amask_shader, 0.9, 1, 1, 0);} // min_alpha=0.9, enable_indir=1, force_tsl=1, use_texgen=0
+			else {amask_shader.make_current();}
 			mats_amask.draw(nullptr, amask_shader, 0, 0); // no brg_batch_draw
 			s.make_current(); // switch back to the normal shader
 		}
