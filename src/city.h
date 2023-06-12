@@ -527,6 +527,7 @@ struct road_isec_t : public cube_t {
 	void next_frame();
 	void notify_waiting_car(car_base_t const &car) const;
 	void notify_leaving_car(car_base_t const &car) const;
+	void notify_turned_car (car_base_t const &car) const;
 	void mark_crosswalk_in_use(bool dim, bool dir) const;
 	bool is_global_conn_int() const {return (rix_xy[0] < 0 || rix_xy[1] < 0 || rix_xy[2] < 0 || rix_xy[3] < 0);}
 	bool red_light(car_base_t const &car) const {return (has_stoplight && stoplight.red_light(car.dim, car.dir, car.turn_dir));}

@@ -481,6 +481,9 @@ void road_isec_t::notify_leaving_car(car_base_t const &car) const { // called on
 		ss.in_use = 0;
 	}
 }
+void road_isec_t::notify_turned_car(car_base_t const &car) const { // called once per turn completed
+	if (has_stopsign) {init_ssign_state(car, get_ssign_state(car).entering, 0);} // is_entering=0; no in_use checking or setting
+}
 void road_isec_t::mark_crosswalk_in_use(bool dim, bool dir) const { // Note: const because in_use flag is mutable
 	if (has_stoplight) {stoplight.mark_crosswalk_in_use(dim, dir);}
 }
@@ -523,7 +526,7 @@ bool road_isec_t::can_go_now(car_t const &car) const {
 		assert(conn & (1<<cur_orient));
 		int const arrive_frame(ssign_state[cur_orient].waiting.arrive_frame);
 
-		for (unsigned n = 0; n < 2; ++n) { // test each intersection connection
+		for (unsigned n = 0; n < 4; ++n) { // test each intersection connection
 			if (!(conn & (1<<n))) continue; // no connection in this orient, skip
 			if (n == cur_orient)  continue; // skip our own orient, assuming no two cars can be at the same place
 			ssign_state_pair_t const &ss(ssign_state[n]);

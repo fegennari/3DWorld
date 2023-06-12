@@ -1741,8 +1741,10 @@ public:
 
 			if (car.turn_dir == TURN_NONE) { // turn has been completed
 				road_isec_t const &isec(get_car_isec(car));
+				// special case for stop signs to handle orient change
 				isec.notify_leaving_car(car_pre_turn); // leaving this orient, entering the exit orient
-
+				isec.notify_turned_car (car); // register in new orient so that waiting cars don't see this slot as open for one frame
+				
 				if (isec.conn_ix[car.get_orient()] >= 0) {
 					short const rix(isec.rix_xy[car.get_orient()]);
 					assert(rix >= 0); // not connector road
