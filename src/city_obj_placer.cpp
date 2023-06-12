@@ -799,16 +799,12 @@ void city_obj_placer_t::add_house_driveways(road_plot_t const &plot, vect_cube_t
 void city_obj_placer_t::place_signs_in_isec(road_isec_t &isec) {
 	if (isec.has_stoplight) return; // can't have both a stoplight and a stopsign
 	if (isec.num_conn == 2) return; // skip for 2-way intersections (bends)
-	// place stop signs on each connector
-	float const height(0.06*(isec.dx() + isec.dy())), width(0.38*height), dist_to_edge(0.78), dist_to_center(1.0 - dist_to_edge);
+	float const height(0.06*(isec.dx() + isec.dy())), width(0.38*height);
 
-	for (unsigned n = 0; n < 4; ++n) {
+	for (unsigned n = 0; n < 4; ++n) { // place stop signs on each connector
 		if (!(isec.conn & (1 << n))) continue; // no road in this dir
 		bool const dim((n>>1) != 0), dir((n&1) == 0), side((dir^dim^1) != 0); // Note: dir is inverted here to represent car dir
-		point pos(isec.xc(), isec.yc(), isec.z1());
-		pos[ dim] = dist_to_center*pos[ dim] + dist_to_edge*isec.d[ dim][!dir];
-		pos[!dim] = dist_to_center*pos[!dim] + dist_to_edge*isec.d[!dim][side];
-		stopsign_t const ssign(pos, height, width, dim, !dir);
+		stopsign_t const ssign(isec.get_stop_sign_pos(n), height, width, dim, !dir, isec.num_conn);
 		stopsign_groups.add_obj(ssign, stopsigns);
 		isec.has_stopsign = 1;
 	} // for n

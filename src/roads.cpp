@@ -575,6 +575,15 @@ cube_t road_isec_t::get_stoplight_cube(unsigned n) const { // Note: mostly dupli
 	return c;
 }
 
+point road_isec_t::get_stop_sign_pos(unsigned n) const {
+	float const dist_to_edge(0.78), dist_to_center(1.0 - dist_to_edge);
+	bool const dim((n>>1) != 0), dir((n&1) == 0), side((dir^dim^1) != 0); // Note: dir is inverted here to represent car dir
+	point pos(xc(), yc(), z1());
+	pos[ dim] = dist_to_center*pos[ dim] + dist_to_edge*d[ dim][!dir];
+	pos[!dim] = dist_to_center*pos[!dim] + dist_to_edge*d[!dim][side];
+	return pos;
+}
+
 bool road_isec_t::check_sphere_coll(point const &pos, float radius) const { // used for peds
 	//if (has_stopsign) {} // not handled here
 	if (!has_stoplight || num_conn == 2) return 0; // no stoplights
@@ -633,8 +642,8 @@ void road_isec_t::draw_sl_block(quad_batch_draw &qbd, draw_state_t &dstate, poin
 }
 
 // should this be a function of road_draw_state_t that takes the road_isec_t instead?
-void road_isec_t::draw_stoplights(road_draw_state_t &dstate, vector<road_t> const &roads, unsigned cur_city, bool shadow_only) const {
-	if (!has_stoplight || num_conn == 2) return; // no stoplights
+void road_isec_t::draw_stoplights_and_street_signs(road_draw_state_t &dstate, vector<road_t> const &roads, unsigned cur_city, bool shadow_only) const {
+	if (!(has_stoplight || has_stopsign)) return; // no stoplights or street signs
 	if (!dstate.check_cube_visible(*this, 0.16)) return; // dist_scale=0.16
 	point const center(get_cube_center() + dstate.xlate);
 	float const dist_val(shadow_only ? 0.0 : p2p_dist(camera_pdu.pos, center)/dstate.draw_tile_dist);
@@ -722,8 +731,8 @@ void road_isec_t::draw_stoplights(road_draw_state_t &dstate, vector<road_t> cons
 		if (dist_val < 0.08) { // draw street signs if close
 			// draw green sign cube
 			cube_t sign(sc); // start with stoplight cube
-			sign.z1() = sign.z2() - 0.7*sz; // high up
-			sign.z2() = sign.z2() - 0.1*sz;
+			sign.z1() = sc.z2() - 0.7*sz; // high up
+			sign.z2() = sc.z2() - 0.1*sz;
 			sign.d[ dim][dir  ] -= (dir ? 1.0 : -1.0)*0.8*sc.get_sz_dim(dim); // shrink
 			sign.d[!dim][ side]  = sign.d[!dim][!side]; // flush with the side of the stoplight body
 			sign.d[!dim][!side] += 5.0*side_len; // extend into the road
@@ -1212,8 +1221,8 @@ void road_draw_state_t::draw_tunnel(tunnel_t const &tunnel, bool shadow_only) { 
 	if (!shadow_only) {select_texture(FLAT_NMAP_TEX, 5);} // restore flat normal map
 }
 
-void road_draw_state_t::draw_stoplights(vector<road_isec_t> const &isecs, vector<road_t> const &roads, range_pair_t const &rp, unsigned cur_city, bool shadow_only) {
-	for (unsigned i = rp.s; i < rp.e; ++i) {isecs[i].draw_stoplights(*this, roads, cur_city, shadow_only);}
+void road_draw_state_t::draw_stoplights_and_street_signs(vector<road_isec_t> const &isecs, vector<road_t> const &roads, range_pair_t const &rp, unsigned cur_city, bool shadow_only) {
+	for (unsigned i = rp.s; i < rp.e; ++i) {isecs[i].draw_stoplights_and_street_signs(*this, roads, cur_city, shadow_only);}
 }
 
 // not really related to roads, but I guess this goes here
