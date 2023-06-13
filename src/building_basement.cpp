@@ -1274,6 +1274,13 @@ void building_t::get_pipe_basement_water_connections(vect_riser_pos_t &sewer, ve
 			hot_water .emplace_back((center - shift_val*shift_dir), per_wh_radius, 1, 0); // has_hot=1, flow_dir=0/out
 		} // for wh
 	}
+	if (!is_house) { // add pipes for office building rooftop water tower, if present; unclear if we ever get here
+		for (auto i = details.begin(); i != details.end(); ++i) {
+			if (i->type != ROOF_OBJ_WTOWER) continue;
+			// assume water enters water tower through this pipe and exits water tower to provide water to upper floors, which we don't need to consider in the basement
+			cold_water.emplace_back(point(i->xc(), i->yc(), ceil_zval), 2.0*base_pipe_radius, 0, 1); // 2x base radius, has_hot=0, flow_dir=1/in
+		}
+	}
 }
 
 void building_t::get_pipe_basement_gas_connections(vect_riser_pos_t &pipes) const {
