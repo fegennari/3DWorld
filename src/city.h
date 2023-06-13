@@ -544,6 +544,7 @@ struct road_isec_t : public cube_t {
 	bool has_left_turn_signal(unsigned orient) const;
 	cube_t get_stoplight_cube(unsigned n) const;
 	point get_stop_sign_pos  (unsigned n) const;
+	float get_stop_sign_height() const {return 0.06*(dx() + dy());}
 	bool check_sphere_coll(point const &pos, float radius) const;
 	bool proc_sphere_coll(point &pos, point const &p_last, float radius, vector3d const &xlate, float dist, vector3d *cnorm) const;
 	bool line_intersect(point const &p1, point const &p2, float &t) const;

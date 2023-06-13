@@ -648,6 +648,8 @@ void road_isec_t::draw_stoplights_and_street_signs(road_draw_state_t &dstate, ve
 	if (!dstate.check_cube_visible(*this, 0.16)) return; // dist_scale=0.16
 	point const center(get_cube_center() + dstate.xlate);
 	float const dist_val(shadow_only ? 0.0 : p2p_dist(camera_pdu.pos, center)/dstate.draw_tile_dist);
+	bool const draw_street_sign(dist_val < 0.06);
+	if (!(has_stoplight || draw_street_sign)) return; // nothing to draw
 	vector3d const cview_dir(camera_pdu.pos - center);
 	float const sz(0.03*city_params.road_width), h(1.0*sz);
 	color_wrapper cw(BLACK);
@@ -655,82 +657,113 @@ void road_isec_t::draw_stoplights_and_street_signs(road_draw_state_t &dstate, ve
 	for (unsigned n = 0; n < 4; ++n) { // {-x, +x, -y, +y} = {W, E, S, N} facing = car traveling {E, W, N, S}
 		if (!(conn & (1<<n))) continue; // no road in this dir
 		bool const dim((n>>1) != 0), dir((n&1) == 0), side((dir^dim^1) != 0); // Note: dir is inverted here to represent car dir
-		float const zbot(z1() + 2.0*h), dim_pos(d[dim][!dir] + SLIGHT_DIST_TO_CORNER_SCALE*(dir ? sz : -sz)); // pos in road dim
-		float const side_len(side ? -sz : sz), v1(d[!dim][side] + (SLIGHT_DIST_TO_CORNER_SCALE - 1.0)*side_len), v2(v1 + side_len); // pos in other dim
-		// draw base
-		unsigned const num_segs(has_left_turn_signal(n) ? 6 : 3);
-		float const sl_height(1.2*h*max(float(num_segs), 4.2f)); // use 4.2 segs rather than 3 so that the street sign isn't blocked by the crosswalk sign
-		float const sl_top(zbot + sl_height), sl_lo(min(v1, v2) - 0.25*sz), sl_hi(max(v1, v2) + 0.25*sz);
+		float const side_len(side ? -sz : sz);
 		cube_t sc;
 
-		if (dist_val > 0.06) { // draw front face only
-			point pts[4];
-			pts[0][dim]  = pts[1][dim]  = pts[2][dim] = pts[3][dim] = dim_pos; // plane of the face
-			pts[0][!dim] = pts[3][!dim] = sl_lo;
-			pts[1][!dim] = pts[2][!dim] = sl_hi;
-			pts[0].z = pts[1].z = z1();
-			pts[2].z = pts[3].z = sl_top;
-			dstate.qbd_sl.add_quad_pts(pts, cw,  (dim ? (dir ? plus_y : -plus_y) : (dir ? plus_x : -plus_x))); // Note: normal doesn't really matter since color is black
-		}
-		else {
-			sc.z1() = z1(); sc.z2() = sl_top;
-			sc.d[ dim][0] = dim_pos - (dir ? -0.04 : 0.5)*sz; sc.d[dim][1] = dim_pos + (dir ? 0.5 : -0.04)*sz;
-			sc.d[!dim][0] = sl_lo; sc.d[!dim][1] = sl_hi;
-			dstate.draw_cube(dstate.qbd_sl, sc, cw, 1); // skip_bottom=1; Note: uses traffic light texture, but color is black so it's all black anyway
+		if (has_stoplight) {
+			float const zbot(z1() + 2.0*h), dim_pos(d[dim][!dir] + SLIGHT_DIST_TO_CORNER_SCALE*(dir ? sz : -sz)); // pos in road dim
+			float const v1(d[!dim][side] + (SLIGHT_DIST_TO_CORNER_SCALE - 1.0)*side_len), v2(v1 + side_len); // pos in other dim
+			// draw base
+			unsigned const num_segs(has_left_turn_signal(n) ? 6 : 3);
+			float const sl_height(1.2*h*max(float(num_segs), 4.2f)); // use 4.2 segs rather than 3 so that the street sign isn't blocked by the crosswalk sign
+			float const sl_top(zbot + sl_height), sl_lo(min(v1, v2) - 0.25*sz), sl_hi(max(v1, v2) + 0.25*sz);
 
-			if (!shadow_only && tt_fire_button_down && game_mode != 1) { // player debug visualization
-				point const p1(camera_pdu.pos - dstate.xlate), p2(p1 + camera_pdu.dir*FAR_CLIP);
-				if (sc.line_intersects(p1, p2)) {dstate.set_label_text(stoplight.label_str(), (sc.get_cube_center() + dstate.xlate));}
+			if (!draw_street_sign) { // draw front face only
+				point pts[4];
+				pts[0][dim]  = pts[1][dim]  = pts[2][dim] = pts[3][dim] = dim_pos; // plane of the face
+				pts[0][!dim] = pts[3][!dim] = sl_lo;
+				pts[1][!dim] = pts[2][!dim] = sl_hi;
+				pts[0].z = pts[1].z = z1();
+				pts[2].z = pts[3].z = sl_top;
+				dstate.qbd_sl.add_quad_pts(pts, cw,  (dim ? (dir ? plus_y : -plus_y) : (dir ? plus_x : -plus_x))); // Note: normal doesn't really matter since color is black
 			}
-		}
-		bool const draw_detail(dist_val < 0.05); // add flares only when very close
+			else {
+				set_cube_zvals(sc, z1(), sl_top);
+				sc.d[ dim][0] = dim_pos - (dir ? -0.04 : 0.5)*sz; sc.d[dim][1] = dim_pos + (dir ? 0.5 : -0.04)*sz;
+				sc.d[!dim][0] = sl_lo; sc.d[!dim][1] = sl_hi;
+				dstate.draw_cube(dstate.qbd_sl, sc, cw, 1); // skip_bottom=1; Note: uses traffic light texture, but color is black so it's all black anyway
 
-		// Note skip crosswalk signal for road to the right of an unconnected 3-way int (T-junction)
-		// because it's not needed and will never get to walk (due to opposing left turn light), and there's no stoplight to attach it to
-		if (dist_val <= 0.06 && (conn & (1<<stoplight_ns::to_right[2*dim + (!dir)])) != 0) { // draw crosswalk signal
-			int const cw_state(shadow_only ? 0 : stoplight.get_crosswalk_state(dim, !dir)); // Note: backwards dir
-			colorRGBA cw_color(stoplight_ns::crosswalk_colors[cw_state] * 0.6); // less bright
-
-			if (cw_state == stoplight_ns::CW_WARN) { // flashing
-				float const flash_period = 0.5; // in seconds
-				double const time(fract(tfticks/(double(flash_period)*TICKS_PER_SECOND)));
-				if (time > 0.5) {cw_color = BLACK;}
+				if (!shadow_only && tt_fire_button_down && game_mode != 1) { // player debug visualization
+					point const p1(camera_pdu.pos - dstate.xlate), p2(p1 + camera_pdu.dir*FAR_CLIP);
+					if (sc.line_intersects(p1, p2)) {dstate.set_label_text(stoplight.label_str(), (sc.get_cube_center() + dstate.xlate));}
+				}
 			}
-			float const cw_dim_pos(dim_pos + 0.7*(dir ? sz : -sz)); // location in road dim
-			cube_t c;
-			c.z1() = zbot + 1.2*h + 1.4*h*dim; c.z2() = c.z1() + 1.6*h;
-			c.d[dim][0] = cw_dim_pos - 0.5*sz; c.d[dim][1] = cw_dim_pos + 0.5*sz;
+			bool const draw_detail(dist_val < 0.05); // add flares only when very close
 
-			for (unsigned i = 0; i < 2; ++i) { // opposite sides of the road
-				float const ndp(d[!dim][i] - (SLIGHT_DIST_TO_CORNER_SCALE + 0.2)*(i ? sz : -sz));
-				c.d[!dim][0] = ndp - 0.1*sz; c.d[!dim][1] = ndp + 0.1*sz;
-				dstate.draw_cube(dstate.qbd_sl, c, cw, shadow_only); // skip_bottom=shadow_only
+			// Note skip crosswalk signal for road to the right of an unconnected 3-way int (T-junction)
+			// because it's not needed and will never get to walk (due to opposing left turn light), and there's no stoplight to attach it to
+			if (dist_val <= 0.06 && (conn & (1<<stoplight_ns::to_right[2*dim + (!dir)])) != 0) { // draw crosswalk signal
+				int const cw_state(shadow_only ? 0 : stoplight.get_crosswalk_state(dim, !dir)); // Note: backwards dir
+				colorRGBA cw_color(stoplight_ns::crosswalk_colors[cw_state] * 0.6); // less bright
 
-				if (!shadow_only && cw_color != BLACK) { // draw light
-					point p[4];
-					p[0][!dim] = p[1][!dim] = p[2][!dim] = p[3][!dim] = c.d[!dim][!i] + 0.01*(i ? -sz : sz);
-					p[0][dim] = p[3][dim] = c.d[dim][0]; p[1][dim] = p[2][dim] = c.d[dim][1];
-					p[0].z = p[1].z = c.z1(); p[2].z = p[3].z = c.z2();
-					vector3d normal(zero_vector);
-					normal[!dim] = (i ? -1.0 : 1.0);
-					point const cw_center(0.25*(p[0] + p[1] + p[2] + p[3]));
-					vector3d const cw_cview_dir(camera_pdu.pos - (cw_center + dstate.xlate));
-					float dp(dot_product(normal, cw_cview_dir));
+				if (cw_state == stoplight_ns::CW_WARN) { // flashing
+					float const flash_period = 0.5; // in seconds
+					double const time(fract(tfticks/(double(flash_period)*TICKS_PER_SECOND)));
+					if (time > 0.5) {cw_color = BLACK;}
+				}
+				float const cw_dim_pos(dim_pos + 0.7*(dir ? sz : -sz)); // location in road dim
+				cube_t c;
+				c.z1() = zbot + 1.2*h + 1.4*h*dim; c.z2() = c.z1() + 1.6*h;
+				c.d[dim][0] = cw_dim_pos - 0.5*sz; c.d[dim][1] = cw_dim_pos + 0.5*sz;
 
-					if (dp > 0.0) { // if back facing, don't draw the lights
-						float const mag(CLIP_TO_01(2.5f*dp/cw_cview_dir.mag() - 1.0f)); // normalize and strengthen slope
+				for (unsigned i = 0; i < 2; ++i) { // opposite sides of the road
+					float const ndp(d[!dim][i] - (SLIGHT_DIST_TO_CORNER_SCALE + 0.2)*(i ? sz : -sz));
+					c.d[!dim][0] = ndp - 0.1*sz; c.d[!dim][1] = ndp + 0.1*sz;
+					dstate.draw_cube(dstate.qbd_sl, c, cw, shadow_only); // skip_bottom=shadow_only
 
-						if (mag > 0.0) {
-							bool const is_walk(cw_state == stoplight_ns::CW_WALK);
-							dstate.qbd_sl.add_quad_pts(p, WHITE*mag, normal, tex_range_t((is_walk ? 0.25 : 0.0), 0.0, (is_walk ? 0.5 : 0.25), 0.5)); // color stored in texture
-							if (draw_detail) {dstate.add_light_flare(cw_center, normal, cw_color*mag, 1.0, 0.8*h);}
+					if (!shadow_only && cw_color != BLACK) { // draw light
+						point p[4];
+						p[0][!dim] = p[1][!dim] = p[2][!dim] = p[3][!dim] = c.d[!dim][!i] + 0.01*(i ? -sz : sz);
+						p[0][dim] = p[3][dim] = c.d[dim][0]; p[1][dim] = p[2][dim] = c.d[dim][1];
+						p[0].z = p[1].z = c.z1(); p[2].z = p[3].z = c.z2();
+						vector3d normal(zero_vector);
+						normal[!dim] = (i ? -1.0 : 1.0);
+						point const cw_center(0.25*(p[0] + p[1] + p[2] + p[3]));
+						vector3d const cw_cview_dir(camera_pdu.pos - (cw_center + dstate.xlate));
+						float dp(dot_product(normal, cw_cview_dir));
+
+						if (dp > 0.0) { // if back facing, don't draw the lights
+							float const mag(CLIP_TO_01(2.5f*dp/cw_cview_dir.mag() - 1.0f)); // normalize and strengthen slope
+
+							if (mag > 0.0) {
+								bool const is_walk(cw_state == stoplight_ns::CW_WALK);
+								dstate.qbd_sl.add_quad_pts(p, WHITE*mag, normal, tex_range_t((is_walk ? 0.25 : 0.0), 0.0, (is_walk ? 0.5 : 0.25), 0.5)); // color stored in texture
+								if (draw_detail) {dstate.add_light_flare(cw_center, normal, cw_color*mag, 1.0, 0.8*h);}
+							}
 						}
 					}
+				} // for i
+			} // end crosswalk signal
+			if (!shadow_only && dist_val < 0.1) { // draw light decals when not in the shadow pass
+				vector3d normal(zero_vector);
+				normal[dim] = (dir ? -1.0 : 1.0);
+				
+				if (dot_product(normal, cview_dir) > 0.0) { // only draw lights if front facing
+					// draw straight/line turn light
+					point p[4];
+					p[0][dim] = p[1][dim] = p[2][dim] = p[3][dim] = dim_pos;
+					p[0][!dim] = p[3][!dim] = v1; p[1][!dim] = p[2][!dim] = v2;
+					p[0].z = p[1].z = zbot; p[2].z = p[3].z = zbot + h;
+					draw_sl_block(dstate.qbd_sl, dstate, p, h, stoplight.get_light_state(dim, dir, TURN_NONE), draw_detail, draw_detail, normal, tex_range_t(0.0, 0.5, 0.5, 1.0));
+
+					if (has_left_turn_signal(n)) { // draw left turn light (upper light section)
+						draw_sl_block(dstate.qbd_sl, dstate, p, h, stoplight.get_light_state(dim, dir, TURN_LEFT), draw_detail, 0.5*draw_detail, normal, tex_range_t(1.0, 0.5, 0.5, 1.0));
+					}
 				}
-			} // for i
-		} // end crosswalk signal
-		if (dist_val < 0.08) { // draw street signs if close
+			}
+		} // end stoplight drawing
+		else { // stop sign case; add a vertical pole
+			float const ss_height(get_stop_sign_height());
+			point spos(get_stop_sign_pos(n));
+			spos[dim] += (dir ? 1.0 : -1.0)*0.07*ss_height; // move a bit behind the stop sign
+			sc.set_from_point(spos);
+			sc.expand_by_xy(0.02*ss_height);
+			set_cube_zvals(sc, z1(), (z1() + 1.4*ss_height));
+			if (dist_val < 0.04) {dstate.draw_cube(dstate.qbd_untextured, sc, GRAY);} // draw the sign pole if close
+		}
+		if (draw_street_sign) { // draw street sign
 			// draw green sign cube
+			assert(sc.is_strictly_normalized());
 			cube_t sign(sc); // start with stoplight cube
 			sign.z1() = sc.z2() - 0.7*sz; // high up
 			sign.z2() = sc.z2() - 0.1*sz;
@@ -770,21 +803,6 @@ void road_isec_t::draw_stoplights_and_street_signs(road_draw_state_t &dstate, ve
 				//add_sign_text_verts(name, sign, dim, text_dir, WHITE, dstate.text_verts); // single font size text
 			}
 		} // end street sign
-		if (shadow_only)    continue; // no lights in shadow pass
-		if (dist_val > 0.1) continue; // too far away
-		vector3d normal(zero_vector);
-		normal[dim] = (dir ? -1.0 : 1.0);
-		if (dot_product(normal, cview_dir) < 0.0) continue; // if back facing, don't draw the lights
-		// draw straight/line turn light
-		point p[4];
-		p[0][dim] = p[1][dim] = p[2][dim] = p[3][dim] = dim_pos;
-		p[0][!dim] = p[3][!dim] = v1; p[1][!dim] = p[2][!dim] = v2;
-		p[0].z = p[1].z = zbot; p[2].z = p[3].z = zbot + h;
-		draw_sl_block(dstate.qbd_sl, dstate, p, h, stoplight.get_light_state(dim, dir, TURN_NONE), draw_detail, draw_detail, normal, tex_range_t(0.0, 0.5, 0.5, 1.0));
-
-		if (has_left_turn_signal(n)) { // draw left turn light (upper light section)
-			draw_sl_block(dstate.qbd_sl, dstate, p, h, stoplight.get_light_state(dim, dir, TURN_LEFT), draw_detail, 0.5*draw_detail, normal, tex_range_t(1.0, 0.5, 0.5, 1.0));
-		}
 	} // for n
 }
 
