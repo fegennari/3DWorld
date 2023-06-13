@@ -1134,6 +1134,23 @@ public:
 		}
 	}
 
+	void add_vert_cylinder(point const &center, float z1, float z2, float radius, float tscale_x, float tscale_y, unsigned ndiv, colorRGBA const &color, vect_vnctcc_t &qverts) {
+		float const ndiv_inv(1.0/ndiv);
+		color_wrapper const cw(color);
+		point const ce[2] = {point(center.x, center.y, z1), point(center.x, center.y, z2)};
+		vector3d v12;
+		vector_point_norm const &vpn(gen_cylinder_data(ce, radius, radius, ndiv, v12));
+
+		for (unsigned i = 0; i < ndiv; ++i) { // similar to gen_cylinder_quads(), but with a color
+			for (unsigned j = 0; j < 2; ++j) {
+				unsigned const S(i + j), s(S%ndiv);
+				norm_comp const normal((vpn.n[s] + vpn.n[(S+ndiv-1)%ndiv]).get_norm());
+				float const ts(4.0*S*tscale_x*ndiv_inv);
+				qverts.emplace_back(vpn.p[(s<<1)+ j], normal, ts, (1.0-j)*tscale_y, cw);
+				qverts.emplace_back(vpn.p[(s<<1)+!j], normal, ts, j      *tscale_y, cw);
+			}
+		} // for i
+	}
 	void add_water_tower(building_t const &bg, cube_t const &wtc) {
 		tid_nm_pair_t const side_tex(building_texture_mgr.get_met_plate_tid(), building_texture_mgr.get_mplate_nm_tid(), 1.0, 1.0);
 		tid_nm_pair_t const base_tex(building_texture_mgr.get_met_roof_tid ()); // no normal map
@@ -1143,7 +1160,7 @@ public:
 		float const radius(0.25*(wtc.dx() + wtc.dy())); // should be equal size in X vs. Y
 		float const tscale_x(2.0), tscale_y(2.0), ndiv_inv(1.0/ndiv), height(wtc.dz());
 		float const base_z1(wtc.z1() + 0.5*height - 0.5*radius), cylin_z1(base_z1 + 0.01*height), cylin_z2(wtc.z2() - 0.12*height), cone_z2(wtc.z2());
-		color_wrapper const sides_cw(WHITE), roof_cw(colorRGBA(0.15, 0.12, 0.10, 1.0));
+		color_wrapper const roof_cw(colorRGBA(0.15, 0.12, 0.10, 1.0));
 		// draw base
 		cube_t base(wtc);
 		set_cube_zvals(base, base_z1, cylin_z1);
@@ -1163,24 +1180,12 @@ public:
 			} // for x
 		} // for y
 		// draw side quads
-		vector3d center(wtc.get_cube_center());
+		vector3d center(wtc.get_cube_center()), v12;
 		if (bg.is_rotated()) {bg.do_xy_rotate(bg.bcube.get_cube_center(), center);}
-		point ce[2] = {point(center.x, center.y, cylin_z1), point(center.x, center.y, cylin_z2)};
-		vector3d v12;
-		vector_point_norm const &vpn(gen_cylinder_data(ce, radius, radius, ndiv, v12));
-
-		for (unsigned i = 0; i < ndiv; ++i) { // similar to gen_cylinder_quads(), but with a color
-			for (unsigned j = 0; j < 2; ++j) {
-				unsigned const S(i + j), s(S%ndiv);
-				norm_comp const normal((vpn.n[s] + vpn.n[(S+ndiv-1)%ndiv]).get_norm());
-				float const ts(4.0*S*tscale_x*ndiv_inv);
-				qverts.emplace_back(vpn.p[(s<<1)+ j], normal, ts, (1.0-j)*tscale_y, sides_cw);
-				qverts.emplace_back(vpn.p[(s<<1)+!j], normal, ts, j      *tscale_y, sides_cw);
-			}
-		} // for i
+		add_vert_cylinder(center, cylin_z1, cylin_z2, radius, 2.0, 2.0, ndiv, WHITE, qverts); // tscale=2.0/2.0
 		// draw top cone triangles
-		ce[0].z = cylin_z2; ce[1].z = cone_z2;
-		gen_cylinder_data(ce, 1.1*radius, 0.0, ndiv, v12); // slightly wider at the bottom; should write to the same vpn
+		point const ce[2] = {point(center.x, center.y, cylin_z2), point(center.x, center.y, cone_z2)};
+		vector_point_norm const &vpn(gen_cylinder_data(ce, 1.1*radius, 0.0, ndiv, v12)); // slightly wider at the bottom
 
 		for (unsigned i = 0; i < ndiv; ++i) { // similar to gen_cylinder_quads(), but with a color
 			unsigned const ip((i+ndiv-1)%ndiv), in((i+1)%ndiv);
@@ -1189,6 +1194,8 @@ public:
 			tverts.emplace_back(vpn.p[(in<<1)+0], (vpn.n[i] + vpn.n[in]).get_norm(), (ts - ndiv_inv), 0.0, roof_cw);
 			tverts.emplace_back(vpn.p[(i <<1)+0], (vpn.n[i] + vpn.n[ip]).get_norm(), ts,              0.0, roof_cw);
 		} // for i
+		// draw pipe through the center going down into the roof
+		add_vert_cylinder(center, wtc.z1(), base_z1, 0.1*radius, 1.0, 4.0, ndiv/2, WHITE, qverts); // tscale=1.0/4.0
 	}
 
 	unsigned num_verts() const {
