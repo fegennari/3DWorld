@@ -1739,7 +1739,7 @@ public:
 			assert(car.in_isect());
 			float const isec_center(road_bcube.get_cube_center()[dim]);
 			float const centerline(isec_center + (((car.turn_dir == TURN_RIGHT) ^ car.dir) ? 1.0 : -1.0)*get_car_lane_offset());
-			car_base_t const car_pre_turn(car);
+			car_t const car_pre_turn(car); // make a copy before turning that we can pass into isec.notify_leaving_car()
 			car.maybe_apply_turn(centerline, 0); // for_driveway=0
 
 			if (car.turn_dir == TURN_NONE) { // turn has been completed

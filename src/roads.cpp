@@ -451,13 +451,14 @@ void road_isec_t::make_4way(unsigned conn_to_city_) {
 void road_isec_t::next_frame() {
 	if (has_stoplight) {stoplight.next_frame();}
 }
-void road_isec_t::init_ssign_state(car_base_t const &car, ssign_state_t &ss, bool is_entering) const {
+void road_isec_t::init_ssign_state(car_t const &car, ssign_state_t &ss, bool is_entering) const {
 	ss.arrive_frame = frame_counter;
 	ss.turn_dir     = car.turn_dir;
 	ss.dest_orient  = get_dest_orient_for_car_in_isec(car, is_entering);
+	ss.is_truck     = car.is_truck;
 	ss.in_use       = 1;
 }
-void road_isec_t::notify_waiting_car(car_base_t const &car) const { // can be called every frame, when waiting or in the intersection
+void road_isec_t::notify_waiting_car(car_t const &car) const { // can be called every frame, when waiting or in the intersection
 	if (has_stoplight) {stoplight.notify_waiting_car(car.dim, car.dir, car.turn_dir);}
 	
 	if (has_stopsign) {
@@ -475,14 +476,14 @@ void road_isec_t::notify_waiting_car(car_base_t const &car) const { // can be ca
 		}
 	}
 }
-void road_isec_t::notify_leaving_car(car_base_t const &car) const { // called once per exit
+void road_isec_t::notify_leaving_car(car_t const &car) const { // called once per exit
 	if (has_stopsign) {
 		ssign_state_t &ss(get_ssign_state(car).entering);
 		assert(ss.in_use); // must have been in the intersection
 		ss.in_use = 0;
 	}
 }
-void road_isec_t::notify_turned_car(car_base_t const &car) const { // called once per turn completed
+void road_isec_t::notify_turned_car(car_t const &car) const { // called once per turn completed
 	if (has_stopsign) {init_ssign_state(car, get_ssign_state(car).entering, 0);} // is_entering=0; no in_use checking or setting
 }
 void road_isec_t::mark_crosswalk_in_use(bool dim, bool dir) const { // Note: const because in_use flag is mutable
@@ -513,8 +514,14 @@ unsigned road_isec_t::get_dest_orient_for_car_in_isec(car_base_t const &car, boo
 	return new_orient;
 }
 
-bool check_paths_cross(ssign_state_t const &ss, unsigned cur_orient, unsigned dest_orient, unsigned turn_dir) {
+bool check_paths_cross(ssign_state_t const &ss, unsigned cur_orient, unsigned dest_orient, unsigned turn_dir, bool is_truck) {
 	if (ss.dest_orient == dest_orient) return 1; // same destination
+	
+	if ((is_truck || ss.is_truck) && ss.dest_orient == cur_orient) { // right turn near outside of left turn
+		// trucks are larger and may clip through each other when one is making a right turn opposite another making a left turn
+		if (turn_dir == TURN_LEFT && ss.turn_dir == TURN_RIGHT) return 1;
+		if (ss.turn_dir == TURN_LEFT && turn_dir == TURN_RIGHT) return 1;
+	}
 	if (ss.turn_dir == TURN_RIGHT || turn_dir == TURN_RIGHT) return 0; // can't cross if either is making a right turn
 	if (ss.turn_dir == TURN_LEFT  || turn_dir == TURN_LEFT ) return 1; // otherwise, must cross if either is making a left turn
 	return ((ss.dest_orient>>1) != (dest_orient>>1)); // both cars going straight; they cross if their dims are different
@@ -533,9 +540,9 @@ bool road_isec_t::can_go_now(car_t const &car) const {
 			if (n == cur_orient)  continue; // skip our own orient, assuming no two cars can be at the same place
 			ssign_state_pair_t const &ss(ssign_state[n]);
 			// check entering and waiting slots; if another car is waiting, check for earlier arrival time; if tied, use the orient as a tie breaker
-			if (ss.entering.in_use && check_paths_cross(ss.entering, cur_orient, dest_orient, car.turn_dir)) return 0;
+			if (ss.entering.in_use && check_paths_cross(ss.entering, cur_orient, dest_orient, car.turn_dir, car.is_truck)) return 0;
 			if (ss.waiting .in_use && (ss.waiting.arrive_frame < arrive_frame || (ss.waiting.arrive_frame == arrive_frame && n < cur_orient)) &&
-				check_paths_cross(ss.waiting, cur_orient, dest_orient, car.turn_dir)) return 0;
+				check_paths_cross(ss.waiting, cur_orient, dest_orient, car.turn_dir, car.is_truck)) return 0;
 		} // for n
 		return 1;
 	}

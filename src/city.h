@@ -505,7 +505,7 @@ struct streetlights_t {
 
 
 struct ssign_state_t { // per incoming orient
-	bool in_use=0;
+	bool in_use=0, is_truck=0;
 	uint8_t turn_dir=0, dest_orient=0;
 	int arrive_frame=0;
 };
@@ -525,9 +525,9 @@ struct road_isec_t : public cube_t {
 	tex_range_t get_tex_range(float ar) const;
 	void make_4way(unsigned conn_to_city_);
 	void next_frame();
-	void notify_waiting_car(car_base_t const &car) const;
-	void notify_leaving_car(car_base_t const &car) const;
-	void notify_turned_car (car_base_t const &car) const;
+	void notify_waiting_car(car_t const &car) const;
+	void notify_leaving_car(car_t const &car) const;
+	void notify_turned_car (car_t const &car) const;
 	void mark_crosswalk_in_use(bool dim, bool dir) const;
 	bool is_global_conn_int() const {return (rix_xy[0] < 0 || rix_xy[1] < 0 || rix_xy[2] < 0 || rix_xy[3] < 0);}
 	bool red_light(car_base_t const &car) const {return (has_stoplight && stoplight.red_light(car.dim, car.dir, car.turn_dir));}
@@ -552,8 +552,8 @@ struct road_isec_t : public cube_t {
 private:
 	void draw_sl_block(quad_batch_draw &qbd, draw_state_t &dstate, point p[4], float h, unsigned state,
 		bool draw_unlit, float flare_alpha, vector3d const &n, tex_range_t const &tr) const;
-	ssign_state_pair_t &get_ssign_state(car_base_t const &car) const {return ssign_state[car.get_orient_in_isec()];}
-	void init_ssign_state(car_base_t const &car, ssign_state_t &ss, bool is_entering) const;
+	ssign_state_pair_t &get_ssign_state(car_t const &car) const {return ssign_state[car.get_orient_in_isec()];}
+	void init_ssign_state(car_t const &car, ssign_state_t &ss, bool is_entering) const;
 };
 
 
