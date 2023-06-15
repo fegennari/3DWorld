@@ -839,8 +839,8 @@ struct building_room_geom_t {
 	rgeom_mat_t &get_untextured_material(bool inc_shadows=0, bool dynamic=0, unsigned small=0, bool transparent=0, bool exterior=0) {
 		return get_material(tid_nm_pair_t(-1, 1.0, inc_shadows, transparent), inc_shadows, dynamic, small, transparent, exterior);
 	}
-	rgeom_mat_t &get_wood_material(float tscale=1.0, bool inc_shadows=1, bool dynamic=0, unsigned small=0);
-	rgeom_mat_t &get_metal_material(bool inc_shadows=0, bool dynamic=0, unsigned small=0, colorRGBA const &spec_color=WHITE);
+	rgeom_mat_t &get_wood_material(float tscale=1.0, bool inc_shadows=1, bool dynamic=0, unsigned small=0, bool exterior=0);
+	rgeom_mat_t &get_metal_material(bool inc_shadows=0, bool dynamic=0, unsigned small=0, bool exterior=0, colorRGBA const &spec_color=WHITE);
 	colorRGBA apply_wood_light_color(room_object_t const &o) const;
 	void add_tquad(building_geom_t const &bg, tquad_with_ix_t const &tquad, cube_t const &bcube, tid_nm_pair_t const &tex,
 		colorRGBA const &color, bool invert_tc_x, bool exclude_frame, bool no_tc);

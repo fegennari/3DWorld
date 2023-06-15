@@ -57,9 +57,9 @@ colorRGBA get_counter_color      () {return (get_textured_wood_color()*0.75 + te
 
 bool is_known_metal_color(colorRGBA const &c) {return (c == COPPER_C || c == BRASS_C || c == BRONZE_C || c == GOLD);}
 
-rgeom_mat_t &building_room_geom_t::get_wood_material(float tscale, bool inc_shadows, bool dynamic, unsigned small) {
+rgeom_mat_t &building_room_geom_t::get_wood_material(float tscale, bool inc_shadows, bool dynamic, unsigned small, bool exterior) {
 	return get_material(tid_nm_pair_t(WOOD2_TEX, get_texture_by_name("normal_maps/wood_NRM.jpg", 1),
-		3.0*tscale, 3.0*tscale, 0.0, 0.0, inc_shadows), inc_shadows, dynamic, small); // hard-coded for common material
+		3.0*tscale, 3.0*tscale, 0.0, 0.0, inc_shadows), inc_shadows, dynamic, small, 0, exterior); // hard-coded for common material
 }
 
 void get_tc_leg_cubes_abs_width(cube_t const &c, float leg_width, cube_t cubes[4]) {
@@ -1720,7 +1720,7 @@ void building_room_geom_t::add_duct(room_object_t const &c) {
 }
 
 void building_room_geom_t::add_sprinkler(room_object_t const &c) { // vertical sprinkler
-	rgeom_mat_t &mat(get_metal_material(0, 0, 2)); // unshadowed, detail=1
+	rgeom_mat_t &mat(get_metal_material(0, 0, 2)); // unshadowed, detail
 	colorRGBA const metal_color(apply_light_color(c, LT_GRAY));
 	unsigned const ndiv = 12;
 	// Note: dir determines if it's facing up or down; for now we only support upward pointing sprinklers from parking garage pipes
@@ -2844,8 +2844,8 @@ void building_room_geom_t::add_water_heater(room_object_t const &c) {
 	metal_mat.add_vcylin_to_verts(top,  apply_light_color(c, DK_GRAY), 0, 1, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, 64); // top - draw top; ndiv=64
 	metal_mat.add_vcylin_to_verts(vent, apply_light_color(c, LT_GRAY), 0, 0, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, 16); // ndiv=16
 	metal_mat.add_vcylin_to_verts(cone, apply_light_color(c, LT_GRAY), 0, 0, 0, 0, 1.8, 0.0); // cone
-	if (!is_house) {get_metal_material(1, 0, 1, BRASS_C);} // make sure it exists in the materials
-	rgeom_mat_t &copper_mat(get_metal_material(1, 0, 1, COPPER_C)); // small=1
+	if (!is_house) {get_metal_material(1, 0, 1, 0, BRASS_C);} // make sure it exists in the materials
+	rgeom_mat_t &copper_mat(get_metal_material(1, 0, 1, 0, COPPER_C)); // small=1
 	colorRGBA const copper_color(apply_light_color(c, COPPER_C));
 	bool const low_detail = 1;
 	unsigned const pipe_ndiv(get_rgeom_sphere_ndiv(low_detail));
@@ -2863,7 +2863,7 @@ void building_room_geom_t::add_water_heater(room_object_t const &c) {
 			copper_mat.add_vcylin_to_verts(v_pipe, copper_color, 0, 0, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, pipe_ndiv);
 			copper_mat.add_cylin_to_verts(bends[0], bends[1], pipe_radius, pipe_radius, copper_color, 0, 0, 0, 0, 1.0, 1.0, 0, pipe_ndiv);
 			// add brass fittings
-			rgeom_mat_t &brass_mat(get_metal_material(1, 0, 1, BRASS_C )); // small=1
+			rgeom_mat_t &brass_mat(get_metal_material(1, 0, 1, 0, BRASS_C )); // small=1
 			colorRGBA const brass_color(apply_light_color(c, BRASS_C));
 			float const fr(1.1*pipe_radius), extend(2.0*fr);
 			vector3d const delta((bends[0] - bends[1])*(extend/pipe_len));
@@ -2934,10 +2934,10 @@ void building_room_geom_t::add_furnace(room_object_t const &c) {
 	bool const low_detail = 1;
 	unsigned const pipe_ndiv(get_rgeom_sphere_ndiv(low_detail));
 	// insulated
-	rgeom_mat_t &insul_mat(get_metal_material(1, 0, 1, WHITE)); // black reflective tape (not actually metal); shadows=1, small=1
+	rgeom_mat_t &insul_mat(get_metal_material(1, 0, 1, 0, WHITE)); // white reflective tape (not actually metal); shadows=1, small=1
 	add_furnace_pipe_with_bend(c, insul_mat, apply_light_color(c, BLACK), pipe_ndiv, 0.02, 0.87, 0.484, 2.2);
 	// copper
-	rgeom_mat_t &copper_mat(get_metal_material(1, 0, 1, COPPER_C)); // shadows=1, small=1
+	rgeom_mat_t &copper_mat(get_metal_material(1, 0, 1, 0, COPPER_C)); // shadows=1, small=1
 	add_furnace_pipe_with_bend(c, copper_mat, apply_light_color(c, COPPER_C), pipe_ndiv, 0.007, 0.88, 0.45, 1.6);
 	// drain (2x)
 	rgeom_mat_t &plastic_mat(get_untextured_material(1, 0, 1)); // shadows=1, small=1

@@ -755,10 +755,10 @@ building_materials_t &building_room_geom_t::get_building_mat(tid_nm_pair_t const
 	if (small)      return ((tex.tid == FONT_TEXTURE_ID) ? mats_text : mats_small);
 	return (transparent ? mats_alpha : mats_static);
 }
-rgeom_mat_t &building_room_geom_t::get_metal_material(bool inc_shadows, bool dynamic, unsigned small, colorRGBA const &spec_color) {
+rgeom_mat_t &building_room_geom_t::get_metal_material(bool inc_shadows, bool dynamic, unsigned small, bool exterior, colorRGBA const &spec_color) {
 	tid_nm_pair_t tex(-1, 1.0, inc_shadows);
 	tex.set_specular_color(spec_color, 0.8, 60.0);
-	return get_material(tex, inc_shadows, dynamic, small);
+	return get_material(tex, inc_shadows, dynamic, small, 0, exterior);
 }
 
 void room_object_t::set_as_bottle(unsigned rand_id, unsigned max_type, bool no_empty, unsigned exclude_mask) {
