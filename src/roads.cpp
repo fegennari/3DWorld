@@ -517,7 +517,7 @@ unsigned road_isec_t::get_dest_orient_for_car_in_isec(car_base_t const &car, boo
 bool check_paths_cross(ssign_state_t const &ss, unsigned cur_orient, unsigned dest_orient, unsigned turn_dir, bool is_truck) {
 	if (ss.dest_orient == dest_orient) return 1; // same destination
 	
-	if ((is_truck || ss.is_truck) && ss.dest_orient == cur_orient) { // right turn near outside of left turn
+	if ((is_truck || ss.is_truck) && ss.dest_orient == cur_orient) { // at least one is a truck, and moving in the same general direction
 		// trucks are larger and may clip through each other when one is making a right turn opposite another making a left turn
 		if (turn_dir == TURN_LEFT && ss.turn_dir == TURN_RIGHT) return 1;
 		if (ss.turn_dir == TURN_LEFT && turn_dir == TURN_RIGHT) return 1;

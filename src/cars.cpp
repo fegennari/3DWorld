@@ -712,10 +712,15 @@ void car_manager_t::assign_car_model_size_color(car_t &car, rand_gen_t &local_rg
 			if (FORCE_MODEL_ID >= 0) {car.model_id = (unsigned char)FORCE_MODEL_ID;}
 			else {car.model_id = ((num_models > 1) ? (local_rgen.rand() % num_models) : 0);}
 			city_model_t const &model(car_model_loader.get_model(car.model_id));
+			bool apply_scale(1);
+			
 			// if there are multiple models to choose from, and this car is in a garage, try for a model that's not scaled up (the truck) (what about driveways?)
-			if (FORCE_MODEL_ID < 0 && num_models > 1 && is_in_garage && n+1 < 20 && model.scale > 1.0) continue;
+			if (FORCE_MODEL_ID < 0 && is_in_garage && model.scale > 1.0) {
+				if (num_models > 1 && n+1 < 20) continue; // try a different model
+				apply_scale = 0; // don't scale the model because it may not fit; instead, add a small truck
+			}
 			fixed_color = model.fixed_color_id;
-			car.apply_scale(model.scale);
+			if (apply_scale) {car.apply_scale(model.scale);}
 			break; // done
 		} // for n
 	}
