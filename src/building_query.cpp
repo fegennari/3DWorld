@@ -689,6 +689,15 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, flo
 	return had_coll; // will generally always be true due to floors
 }
 
+bool building_t::check_cube_intersect_non_main_part(cube_t const &c) const {
+	if (!c.intersects(bcube)) return 0;
+	// check parts such as garage, shed, porch roof, porch support, and chimney for intersections
+	for (auto p = get_real_parts_end(); p != parts.end(); ++p) {
+		if (p->intersects(c)) return 1;
+	}
+	return 0;
+}
+
 bool building_t::check_pos_in_unlit_room(point const &pos) const {
 	if (!interior) return 0; // error?
 	set<unsigned> rooms_visited;

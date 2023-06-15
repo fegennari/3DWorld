@@ -3392,13 +3392,7 @@ void building_t::add_balconies(rand_gen_t &rgen) {
 				balcony.d[dim][ dir] += (dir ? 1.0 : -1.0)*balcony_depth; // extend outward from the house
 				if (!avoid1.is_all_zeros() && avoid1.intersects(balcony)) continue; // check for fire escape intersection
 				if (!avoid2.is_all_zeros() && avoid2.intersects(balcony)) continue; // check for previous balcony intersection
-				bool skip(0);
-
-				// check other parts such as porch roof, porch support, and chimney for intersections; I guess we check the garage and shed as well, just in case
-				for (auto p = get_real_parts_end(); p != parts.end(); ++p) {
-					if (p->intersects(balcony)) {skip = 1; break;}
-				}
-				if (skip) continue;
+				if (check_cube_intersect_non_main_part(balcony))          continue; // porch roof, porch support, and chimney, etc.
 				balcony.z2() -= 0.6*floor_spacing; // reduce wall height to 40%
 				balcony.expand_in_dim(!dim, wall_thickness); // expand slightly to include window frame and merge adj balcony shared walls
 				max_eq(balcony.d[!dim][0], (part.d[!dim][0] + 0.25f*wall_thickness)); // clamp slightly smaller than the containing part in !dim
