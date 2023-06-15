@@ -3404,7 +3404,8 @@ void building_t::add_balconies(rand_gen_t &rgen) {
 
 				if ((!avoid1.is_all_zeros() && avoid1.intersects(area_below)) ||
 					(!avoid2.is_all_zeros() && avoid2.intersects(area_below)) ||
-					check_cube_intersect_non_main_part(area_below)) {flags |= RO_FLAG_HANGING;}
+					check_cube_intersect_non_main_part(area_below) ||
+					(has_driveway() && driveway.intersects_xy(area_below))) {flags |= RO_FLAG_HANGING;}
 				else {} // add colliders for vertical supports? can we do that for objects outside the building?
 				objs.emplace_back(balcony, TYPE_BALCONY, room_id, dim, dir, flags, 1.0, SHAPE_CUBE, WHITE);
 				objs.back().obj_id = balcony_style; // set so that we can select from multiple balcony styles
