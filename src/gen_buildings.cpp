@@ -1513,6 +1513,8 @@ void building_t::get_all_drawn_exterior_verts(building_draw_t &bdraw) { // exter
 		}
 	} // for i
 	for (auto i = details.begin(); i != details.end(); ++i) { // draw roof details
+		if (i->type == ROOF_OBJ_COLLIDER) continue; // not drawn
+
 		if (i->type == ROOF_OBJ_AC) {
 			bool const swap_st(i->dx() > i->dy());
 			bool const tex_id((details.size() + parts.size() + mat_ix) & 1); // somewhat of a hash of various things; deterministic

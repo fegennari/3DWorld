@@ -3133,6 +3133,17 @@ void get_balcony_cubes(room_object_t const &c, cube_t cubes[4]) { // {bottom, fr
 	}
 	cubes[0] = bot; cubes[1] = front;
 }
+void get_balcony_pillars(room_object_t const &c, float ground_floor_z1, cube_t pillar[2]) {
+	float const width(c.get_width()), depth(c.get_depth()), pillar_width(0.15*depth);
+	cube_t pillars(c);
+	set_cube_zvals(pillars, ground_floor_z1, c.z1());
+	pillars.d[c.dim][!c.dir] -= (c.dir ? -1.0 : 1.0)*(depth - pillar_width);
+
+	for (unsigned d = 0; d < 2; ++d) {
+		pillar[d] = pillars;
+		pillar[d].d[!c.dim][!d] -= (d ? -1.0 : 1.0)*(width - pillar_width);
+	}
+}
 void building_room_geom_t::add_balcony(room_object_t const &c, float ground_floor_z1) {
 	bool const shadowed = 1; // doesn't work since exterior?
 	unsigned const skip_face_against_wall(~get_face_mask(c.dim, !c.dir));
@@ -3199,18 +3210,13 @@ void building_room_geom_t::add_balcony(room_object_t const &c, float ground_floo
 	
 	if (!c.is_hanging()) { // draw vertical supports if not hanging
 		rgeom_mat_t &wood_mat(get_wood_material(16.0, shadowed, 0, 0, 1)); // exterior=1
-		float const width(c.get_width()), depth(c.get_depth()), pillar_width(0.15*depth);
-		cube_t pillars(c);
-		set_cube_zvals(pillars, ground_floor_z1, c.z1());
-		pillars.d[c.dim][!c.dir] -= (c.dir ? -1.0 : 1.0)*(depth - pillar_width);
+		cube_t pillar[2];
+		get_balcony_pillars(c, ground_floor_z1, pillar);
 
 		for (unsigned d = 0; d < 2; ++d) {
-			cube_t pillar(pillars);
-			pillar.d[!c.dim][!d] -= (d ? -1.0 : 1.0)*(width - pillar_width);
-			pillar.expand_by_xy(-0.1*pillar_width); // shrink slightly to create an undercut
-			wood_mat.add_cube_to_verts(pillar, WHITE, zero_vector, (EF_Z12 | EF_Y12), 0); // X sides
-			wood_mat.add_cube_to_verts(pillar, WHITE, zero_vector, (EF_Z12 | EF_X12), 1); // Y sides, swap texture to vertical grain orient
-		} // for d
+			wood_mat.add_cube_to_verts(pillar[d], WHITE, zero_vector, (EF_Z12 | EF_Y12), 0); // X sides
+			wood_mat.add_cube_to_verts(pillar[d], WHITE, zero_vector, (EF_Z12 | EF_X12), 1); // Y sides, swap texture to vertical grain orient
+		}
 	}
 }
 

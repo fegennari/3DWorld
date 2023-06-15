@@ -22,6 +22,7 @@ bool enable_parked_cars();
 car_t car_from_parking_space(room_object_t const &o);
 bool get_wall_quad_window_area(vect_vnctcc_t const &wall_quad_verts, unsigned i, cube_t &c, float &tx1, float &tx2, float &tz1, float &tz2);
 void get_stove_burner_locs(room_object_t const &stove, point locs[4]);
+void get_balcony_pillars(room_object_t const &c, float ground_floor_z1, cube_t pillar[2]);
 void expand_convex_polygon_xy(vect_point &points, point const &center, float expand);
 string gen_random_full_name(rand_gen_t &rgen);
 
@@ -3350,6 +3351,7 @@ void building_t::maybe_add_fire_escape(rand_gen_t &rgen) {
 			if (has_driveway() && fe_bc.intersects_xy(driveway)) continue; // skip if intersects driveway or garage
 			if (is_room_adjacent_to_ext_door(fe_bc, 0))          continue; // check exterior doors; front_door_only=0
 			interior->room_geom->objs.emplace_back(fe_bc, TYPE_FESCAPE, 0, dim, dir, 0, 1.0, SHAPE_CUBE, BLACK); // room_id=0
+			details.emplace_back(fe_bc, ROOF_OBJ_COLLIDER);
 			coll_bcube.union_with_cube(fe_bc);
 			return; // success/done
 		} // for d
@@ -3401,16 +3403,14 @@ void building_t::add_balconies(rand_gen_t &rgen) {
 				// if the space below the balcony is blocked by something, flag as hanging so that we don't try to draw vertical supports later
 				cube_t area_below(balcony);
 				set_cube_zvals(area_below, ground_floor_z1, balcony.z1());
-				unsigned flags(0);
-
-				if ((!avoid1.is_all_zeros() && avoid1.intersects(area_below)) ||
+				bool const hanging((!avoid1.is_all_zeros() && avoid1.intersects(area_below)) ||
 					(!avoid2.is_all_zeros() && avoid2.intersects(area_below)) ||
 					check_cube_intersect_non_main_part(area_below) ||
-					(has_driveway() && driveway.intersects_xy(area_below))) {flags |= RO_FLAG_HANGING;}
-				else {} // add colliders for vertical supports? can we do that for objects outside the building?
-				objs.emplace_back(balcony, TYPE_BALCONY, room_id, dim, dir, flags, 1.0, SHAPE_CUBE, WHITE);
-				objs.back().obj_id = balcony_style; // set so that we can select from multiple balcony styles
-				avoid2 = balcony;
+					(has_driveway() && driveway.intersects_xy(area_below)));
+				room_object_t balcony_obj(balcony, TYPE_BALCONY, room_id, dim, dir, (hanging ? RO_FLAG_HANGING : 0), 1.0, SHAPE_CUBE, WHITE);
+				balcony_obj.obj_id = balcony_style; // set so that we can select from multiple balcony styles
+				objs.push_back(balcony_obj);
+				avoid2 = balcony; // shouldn't need to consider area_below
 				avoid2.expand_by_xy(wall_thickness);
 				// maybe add plants to balconies; note that they won't be properly lit since plants use indoor lighting,
 				// and the plants won't be drawn when the player is outside the building; this should be okay because an empty pot works on a balcony as well
@@ -3428,6 +3428,11 @@ void building_t::add_balconies(rand_gen_t &rgen) {
 					}
 				}
 				// else place table and chairs?
+				if (!hanging) { // add colliders for vertical supports
+					cube_t pillar[2];
+					get_balcony_pillars(balcony_obj, ground_floor_z1, pillar);
+					for (unsigned d = 0; d < 2; ++d) {details.emplace_back(pillar[d], ROOF_OBJ_COLLIDER);}
+				}
 				coll_bcube.union_with_cube(balcony); // should include area_below as well
 				++num_balconies;
 				added = 1;
