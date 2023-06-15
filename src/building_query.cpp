@@ -140,13 +140,6 @@ bool building_t::test_coll_with_sides(point &pos, point const &p_last, float rad
 	return 0;
 }
 
-cube_t building_t::get_coll_bcube() const {
-	cube_t cc(get_bcube_inc_extensions());
-	if (!is_house || (!has_ac && !has_driveway())) return cc;
-	if (has_ac) {cc.expand_by_xy(0.35*get_window_vspace());} // conservative
-	if (has_driveway()) {cc.union_with_cube(driveway);}
-	return cc;
-}
 cube_t building_t::get_interior_bcube(bool inc_ext_basement) const { // Note: called for indir lighting; could cache z2
 	cube_t int_bcube(inc_ext_basement ? get_bcube_inc_extensions() : bcube);
 	int_bcube.z2() = interior_z2;
@@ -168,8 +161,7 @@ bool building_t::check_sphere_coll(point &pos, point const &p_last, vector3d con
 		// which could be above the top of the building when the player is in the extended basement;
 		// this should be legal because the player can't exit the building in the Z direction; maybe better to use p_last.z?
 		bool const sc_xy_only(xy_only || (camera_in_building && player_building == this));
-		cube_t const cc(get_coll_bcube());
-		if (!(sc_xy_only ? sphere_cube_intersect_xy((pos - xlate), radius, cc) : sphere_cube_intersect((pos - xlate), radius, cc))) return 0;
+		if (!(sc_xy_only ? sphere_cube_intersect_xy((pos - xlate), radius, coll_bcube) : sphere_cube_intersect((pos - xlate), radius, coll_bcube))) return 0;
 	}
 	if (check_sphere_coll_inner(pos, p_last, xlate, radius, xy_only, cnorm_ptr, check_interior)) return 1;
 	building_t const *const other_bldg(get_conn_bldg_for_pt((pos - xlate), radius)); // Note: not handling pos rotation

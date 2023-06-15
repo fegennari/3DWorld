@@ -1288,7 +1288,7 @@ struct building_t : public building_geom_t {
 	bool has_int_fplace=0, has_parking_garage=0, has_small_part=0, has_basement_door=0, has_basement_pipes=0, parts_generated=0, is_in_city=0, has_skylight_light=0;
 	mutable bool player_visited=0; // for stats tracking
 	colorRGBA side_color=WHITE, roof_color=WHITE, detail_color=BLACK, door_color=WHITE, wall_color=WHITE;
-	cube_t bcube, pri_hall, driveway, porch, assigned_plot;
+	cube_t bcube, coll_bcube, pri_hall, driveway, porch, assigned_plot;
 	vect_cube_t parts, fences;
 	vect_cube_with_ix_t skylights;
 	vect_roof_obj_t details; // cubes on the roof - antennas, AC units, etc.
@@ -1364,7 +1364,6 @@ struct building_t : public building_geom_t {
 	cube_t const &get_sec_bldg () const {assert(has_sec_bldg()); assert(real_num_parts < parts.size()); return parts[real_num_parts];}
 	cube_t const &get_chimney  () const {assert(has_chimney      && parts.size() > 1); return parts.back();}
 	cube_t const &get_fireplace() const {assert(has_chimney == 2 && parts.size() > 2); return parts[parts.size()-2];}
-	cube_t get_coll_bcube() const;
 	cube_t get_interior_bcube(bool inc_ext_basement) const;
 
 	bool check_sphere_coll(point const &pos, float radius, bool xy_only, vector3d *cnorm=nullptr) const {
@@ -1592,6 +1591,7 @@ public:
 	room_t const &get_ext_basement_hallway() const;
 	bool interior_visible_from_other_building_ext_basement(vector3d const &xlate, bool expand_for_light=0) const;
 	void try_connect_ext_basement_to_building(building_t &b);
+	void update_basement_ext_bcube(cube_t const &new_room);
 	template<typename T> void add_door_verts(cube_t const &D, T &drawer, uint8_t door_type,
 		bool dim, bool dir, float open_amt, bool opens_out, bool exterior, bool on_stairs=0, bool hinge_side=0, bool is_bldg_conn=0) const;
 	tquad_with_ix_t set_door_from_cube(cube_t const &c, bool dim, bool dir, unsigned type, float pos_adj,

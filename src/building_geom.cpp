@@ -54,6 +54,7 @@ void building_t::calc_bcube_from_parts() {
 	cube_t bc(parts[0]);
 	for (auto i = parts.begin()+1; i != parts.end(); ++i) {bc.union_with_cube(*i);} // update bcube
 	if (!is_rotated()) {bcube = bc;} else {set_bcube_from_rotated_cube(bc);} // apply rotation if needed and set bcube
+	coll_bcube = bcube; // initial value
 }
 
 void building_t::move_door_to_other_side_of_wall(tquad_with_ix_t &door, float dist_mult, bool invert_normal) const {
@@ -998,6 +999,7 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 		float const chimney_dz((hipped_roof[part_ix] ? 0.5 : 1.0)*roof_dz[part_ix]); // lower for hipped roof
 		add_chimney(part, dim, dir, chimney_dz, rgen); // Note: return value is ignored
 	}
+	if (has_driveway()) {coll_bcube.union_with_cube(driveway);}
 	parts_generated = 1; // must be after adding chimney
 	roof_type = (any_hipped ? ROOF_TYPE_HIPPED : ROOF_TYPE_PEAK);
 	add_roof_to_bcube();
@@ -1032,6 +1034,7 @@ bool building_t::add_outdoor_ac_unit(rand_gen_t &rgen) {
 	}
 	if (is_cube_close_to_exterior_doorway(ac, width, 1)) return 0;
 	details.push_back(ac);
+	coll_bcube.union_with_cube(ac);
 	has_ac = 1;
 	return 1;
 }
@@ -1237,6 +1240,7 @@ void building_t::maybe_add_basement(rand_gen_t rgen) { // rgen passed by value s
 	set_cube_zvals(basement, basement_z1, ground_floor_z1);
 	parts.push_back(basement);
 	min_eq(bcube.z1(), basement_z1); // not really necessary, will be updated later anyway, but good to have here for reference; orig bcube.z1() is saved in ground_floor_z1
+	coll_bcube.union_with_cube(basement);
 	++real_num_parts;
 }
 
