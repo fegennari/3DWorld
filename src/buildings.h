@@ -428,7 +428,7 @@ unsigned const RO_FLAG_NODYNAM = 0x40; // for light shadow maps
 unsigned const RO_FLAG_INTERIOR= 0x80; // applies to containing room
 // object flags, second byte
 unsigned const RO_FLAG_EMISSIVE= 0x0100; // for signs, lights, and phones
-unsigned const RO_FLAG_HANGING = 0x0200; // for signs, blinds, hangers, shirts, and beams; treated as "folding" for closet doors
+unsigned const RO_FLAG_HANGING = 0x0200; // for signs, blinds, hangers, shirts, beams, and balconies; treated as "folding" for closet doors
 unsigned const RO_FLAG_ADJ_LO  = 0x0400; // for kitchen counters/closets/door trim/blinds/railings
 unsigned const RO_FLAG_ADJ_HI  = 0x0800; // for kitchen counters/closets/door trim/blinds/railings
 unsigned const RO_FLAG_ADJ_BOT = 0x1000; // for door trim/railings
@@ -905,7 +905,7 @@ struct building_room_geom_t {
 	void add_br_stall(room_object_t const &c);
 	void add_cubicle(room_object_t const &c, float tscale);
 	void add_window_sill(room_object_t const &c);
-	void add_balcony(room_object_t const &c);
+	void add_balcony(room_object_t const &c, float ground_floor_z1);
 	void add_sign(room_object_t const &c, bool inc_back, bool inc_text, bool exterior_only=0);
 	void add_counter(room_object_t const &c, float tscale, bool inc_lg, bool inc_sm);
 	void add_cabinet(room_object_t const &c, float tscale, bool inc_lg, bool inc_sm);

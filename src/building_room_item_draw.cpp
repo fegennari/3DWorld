@@ -819,7 +819,7 @@ void building_room_geom_t::create_static_vbos(building_t const &building) {
 		case TYPE_SIGN:    add_sign    (*i, 1, 1, 1); break; // lg, exterior_only=1
 		case TYPE_PIPE:    add_pipe(*i, 1); break; // add_exterior=1
 		case TYPE_WIND_SILL: add_window_sill(*i); break;
-		case TYPE_BALCONY: add_balcony (*i); break;
+		case TYPE_BALCONY: add_balcony (*i, building.ground_floor_z1); break;
 		//case TYPE_FRIDGE: if (i->is_open()) {} break; // draw open fridge?
 		case TYPE_ELEVATOR: break; // not handled here
 		case TYPE_BLOCKER:  break; // not drawn
