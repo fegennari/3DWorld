@@ -106,7 +106,7 @@ bool building_t::is_cube_face_visible_from_pt(cube_t const &c, point const &p, u
 }
 
 bool building_t::find_mirror_in_room(unsigned room_id, vector3d const &xlate, bool check_visibility) const {
-	assert(interior);
+	assert(has_room_geom());
 	point camera_bs(camera_pdu.pos - xlate);
 	maybe_inv_rotate_point(camera_bs); // rotate camera pos into building space
 	auto objs_end(interior->room_geom->get_placed_objs_end()); // skip buttons/stairs/elevators
@@ -126,8 +126,8 @@ bool building_t::find_mirror_in_room(unsigned room_id, vector3d const &xlate, bo
 }
 
 bool building_t::find_mirror_needing_reflection(vector3d const &xlate) const {
-	if (is_rotated()) return 0; // mirrors don't yet work in rotated buildings, so disable for now
-	assert(interior);
+	if (!has_room_geom()) return 0; // can't have mirrors; maybe interior wasn't generated yet
+	if (is_rotated())     return 0; // mirrors don't yet work in rotated buildings, so disable for now
 	point const camera_bs(camera_pdu.pos - xlate);
 	vector<point> points;
 	if (!check_point_or_cylin_contained(camera_bs, 0.0, points, 0, 1)) return 0; // camera not in the building; inc_attic=0, inc_ext_basement=1
