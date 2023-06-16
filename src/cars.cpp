@@ -1002,10 +1002,11 @@ void car_manager_t::next_frame(ped_manager_t const &ped_manager, float car_speed
 	// Warning: not really thread safe, but should be okay; the ped state should valid at all points (thought maybe inconsistent) and we don't need it to be exact every frame
 	ped_manager.get_peds_crossing_roads(peds_crossing_roads);
 	//timer_t timer("Update Cars"); // 4K cars = 0.7ms / 2.1ms with destinations + navigation
+	comp_car_road_then_pos const sort_func(camera_pdu.pos - dstate.xlate);
 #pragma omp critical(modify_car_data)
 	{
 		if (car_destroyed) {remove_destroyed_cars();} // at least one car was destroyed in the previous frame - remove it/them
-		sort(cars.begin(), cars.end(), comp_car_road_then_pos(camera_pdu.pos - dstate.xlate)); // sort by city/road/position for intersection tests and tile shadow map binds
+		sort(cars.begin(), cars.end(), sort_func); // sort by city/road/position for intersection tests and tile shadow map binds
 	}
 	entering_city.clear();
 	car_blocks.clear();
@@ -1061,8 +1062,8 @@ void car_manager_t::next_frame(ped_manager_t const &ped_manager, float car_speed
 	update_cars(); // run update logic
 
 	if (map_mode) { // create cars_by_road
-		// cars have moved since the last sort and may no longer be in city/road order, but this algorithm doesn't require that;
-		// out-of-order cars will end up in their own blocks, which is less efficient but still correct
+		// cars have moved since the last sort and may no longer be in city/road order, so we need to re-sort them
+		sort(cars.begin(), cars.end(), sort_func);
 		car_blocks_by_road.clear();
 		cars_by_road.clear();
 		unsigned cur_city(1<<31), cur_road(1<<31); // start at invalid values
