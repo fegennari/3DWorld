@@ -8,7 +8,7 @@ float const STREETLIGHT_BEAMWIDTH       = 0.25;
 float const SLIGHT_DIST_TO_CORNER_SCALE = 3.0; // larger is closer to the road surface
 
 extern bool tt_fire_button_down;
-extern int frame_counter, game_mode, display_mode, animate2;
+extern int frame_counter, game_mode, display_mode;
 extern float FAR_CLIP;
 extern vector<light_source> dl_sources;
 extern city_params_t city_params;
@@ -540,21 +540,6 @@ bool road_isec_t::can_go_now(car_t const &car) const {
 			if (!(conn & (1<<n))) continue; // no connection in this orient, skip
 			if (n == cur_orient)  continue; // skip our own orient, assuming no two cars can be at the same place
 			ssign_state_pair_t const &ss(ssign_state[n]);
-
-			if (display_mode & 0x10) { // debugging of deadlocked waiting state
-				if ((ss.entering.in_use && (frame_counter - ss.waiting.arrive_frame) > 6000) || (ss.waiting.in_use && (frame_counter - ss.waiting.arrive_frame) > 6000)) {
-					cout << TXT(frame_counter) << TXT(n) << TXT(cur_orient) << TXT(dest_orient) << TXT(xc()) << TXT(yc()) << endl;
-					for (unsigned i = 0; i < 4; ++i) {
-						ssign_state_t const &s(ssign_state[i].entering);
-						cout << TXT(i) << TXT(s.in_use) << TXT(s.arrive_frame) << TXTi(s.turn_dir) << endl;
-					}
-					for (unsigned i = 0; i < 4; ++i) {
-						ssign_state_t const &s(ssign_state[i].waiting);
-						cout << TXT(i) << TXT(s.in_use) << TXT(s.arrive_frame) << TXTi(s.turn_dir) << endl;
-					}
-					animate2 = 0; // pause animations
-				}
-			}
 			// check entering and waiting slots; if another car is waiting, check for earlier arrival time; if tied, use the orient as a tie breaker
 			if (ss.entering.in_use && check_paths_cross(ss.entering, n, cur_orient, dest_orient, car.turn_dir, car.is_truck)) return 0;
 			if (ss.waiting .in_use && (ss.waiting.arrive_frame < arrive_frame || (ss.waiting.arrive_frame == arrive_frame && n < cur_orient)) &&
