@@ -168,7 +168,8 @@ bool building_t::check_sphere_coll(point &pos, point const &p_last, vector3d con
 		if (!(sc_xy_only ? sphere_cube_intersect_xy((pos - xlate), radius, coll_bcube) : sphere_cube_intersect((pos - xlate), radius, coll_bcube))) return 0;
 	}
 	if (check_sphere_coll_inner(pos, p_last, xlate, radius, xy_only, cnorm_ptr, check_interior)) return 1;
-	building_t const *const other_bldg(get_conn_bldg_for_pt((pos - xlate), radius)); // Note: not handling pos rotation
+	if (!check_interior) return 0;
+	building_t const *const other_bldg(get_conn_bldg_for_pt((point(pos.x, pos.y, min(pos.z, p_last.z)) - xlate), radius)); // Note: not handling pos rotation
 	if (other_bldg == nullptr) return 0; // no connected building at this location
 	return other_bldg->check_sphere_coll_inner(pos, p_last, xlate, radius, xy_only, cnorm_ptr, check_interior); // check connected building
 }
