@@ -24,6 +24,7 @@ float const BASEMENT_ENTRANCE_SCALE = 0.33;
 bool camera_in_building(0), interior_shadow_maps(0), player_is_hiding(0), player_in_unlit_room(0), player_in_attic(0), building_has_open_ext_door(0);
 int player_in_basement(0); // 0=no, 1=below ground level, 2=in basement and not on stairs, 3=in extended basement
 int player_in_closet(0); // uses flags RO_FLAG_IN_CLOSET (player in closet), RO_FLAG_LIT (closet light is on), RO_FLAG_OPEN (closet door is open)
+float building_bcube_expand(0.0);
 building_params_t global_building_params;
 building_t const *player_building(nullptr);
 
@@ -3552,8 +3553,8 @@ public:
 			}
 			return check_road_seg_sphere_coll(ge, pos, p_last, xlate, radius, xy_only, cnorm);
 		}
-		float const expand_val(3.0*radius); // use a larger value to handle things outside the building bcube such as AC units
-		cube_t bcube; bcube.set_from_sphere((pos - xlate), expand_val);
+		cube_t bcube;
+		bcube.set_from_sphere((pos - xlate), (radius + building_bcube_expand)); // expand to handle AC units, balconies, fire escapes, etc.
 		bool saw_player_building(0);
 		
 		if (range.intersects_xy(bcube)) { // inside buildings bcube

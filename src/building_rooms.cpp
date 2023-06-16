@@ -3352,7 +3352,7 @@ void building_t::maybe_add_fire_escape(rand_gen_t &rgen) {
 			if (is_room_adjacent_to_ext_door(fe_bc, 0))          continue; // check exterior doors; front_door_only=0
 			interior->room_geom->objs.emplace_back(fe_bc, TYPE_FESCAPE, 0, dim, dir, 0, 1.0, SHAPE_CUBE, BLACK); // room_id=0
 			details.emplace_back(fe_bc, ROOF_OBJ_COLLIDER);
-			coll_bcube.union_with_cube(fe_bc);
+			union_with_coll_bcube(fe_bc);
 			return; // success/done
 		} // for d
 	} // for p
@@ -3433,7 +3433,7 @@ void building_t::add_balconies(rand_gen_t &rgen) {
 					get_balcony_pillars(balcony_obj, ground_floor_z1, pillar);
 					for (unsigned d = 0; d < 2; ++d) {details.emplace_back(pillar[d], ROOF_OBJ_COLLIDER);}
 				}
-				coll_bcube.union_with_cube(balcony); // should include area_below as well
+				union_with_coll_bcube(balcony); // should include area_below as well
 				++num_balconies;
 				added = 1;
 			} // for dir

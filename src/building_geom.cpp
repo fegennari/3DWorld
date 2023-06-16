@@ -1034,7 +1034,7 @@ bool building_t::add_outdoor_ac_unit(rand_gen_t &rgen) {
 	}
 	if (is_cube_close_to_exterior_doorway(ac, width, 1)) return 0;
 	details.push_back(ac);
-	coll_bcube.union_with_cube(ac);
+	union_with_coll_bcube(ac);
 	has_ac = 1;
 	return 1;
 }

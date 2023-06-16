@@ -7,7 +7,7 @@
 
 
 extern bool draw_building_interiors, camera_in_building, player_near_toilet, player_in_unlit_room, player_in_attic, building_has_open_ext_door, ctrl_key_pressed;
-extern float CAMERA_RADIUS, C_STEP_HEIGHT, NEAR_CLIP;
+extern float CAMERA_RADIUS, C_STEP_HEIGHT, NEAR_CLIP, building_bcube_expand;
 extern int player_in_closet, camera_surf_collide, frame_counter, player_in_elevator;
 extern double camera_zh;
 extern building_params_t global_building_params;
@@ -144,6 +144,10 @@ cube_t building_t::get_interior_bcube(bool inc_ext_basement) const { // Note: ca
 	cube_t int_bcube(inc_ext_basement ? get_bcube_inc_extensions() : bcube);
 	int_bcube.z2() = interior_z2;
 	return int_bcube;
+}
+void building_t::union_with_coll_bcube(cube_t const &c) {
+	coll_bcube.union_with_cube(c);
+	for (unsigned d = 0; d < 2; ++d) {max_eq(building_bcube_expand, max((bcube.d[d][0] - c.d[d][0]), (c.d[d][1] - bcube.d[d][1])));}
 }
 
 void accumulate_shared_xy_area(cube_t const &c, cube_t const &sc, float &area) {
