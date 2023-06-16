@@ -8,7 +8,7 @@ float const STREETLIGHT_BEAMWIDTH       = 0.25;
 float const SLIGHT_DIST_TO_CORNER_SCALE = 3.0; // larger is closer to the road surface
 
 extern bool tt_fire_button_down;
-extern int frame_counter, game_mode, display_mode;
+extern int frame_counter, game_mode, display_mode, animate2;
 extern float FAR_CLIP;
 extern vector<light_source> dl_sources;
 extern city_params_t city_params;
@@ -464,7 +464,7 @@ void road_isec_t::notify_waiting_car(car_t const &car) const { // can be called 
 	if (has_stopsign) {
 		ssign_state_pair_t &ss(get_ssign_state(car));
 
-		if (car.stopped_at_light) { // stopped and waiting
+		if (car.stopped_at_light) { // stopped and waiting (at stop sign)
 			if (!ss.waiting.in_use) {init_ssign_state(car, ss.waiting, 1);} // not yet marked as waiting; is_entering=1
 		}
 		else { // driving through intersection
@@ -480,7 +480,7 @@ void road_isec_t::notify_leaving_car(car_t const &car) const { // called once pe
 	if (has_stopsign) {
 		ssign_state_t &ss(get_ssign_state(car).entering);
 		assert(ss.in_use); // must have been in the intersection
-		ss.in_use = 0;
+		ss = ssign_state_t(); // clear to zeros
 	}
 }
 void road_isec_t::notify_turned_car(car_t const &car) const { // called once per turn completed
@@ -514,10 +514,11 @@ unsigned road_isec_t::get_dest_orient_for_car_in_isec(car_base_t const &car, boo
 	return new_orient;
 }
 
-bool check_paths_cross(ssign_state_t const &ss, unsigned cur_orient, unsigned dest_orient, unsigned turn_dir, bool is_truck) {
+bool check_paths_cross(ssign_state_t const &ss, unsigned ss_cur_orient, unsigned cur_orient, unsigned dest_orient, unsigned turn_dir, bool is_truck) {
 	if (ss.dest_orient == dest_orient) return 1; // same destination
 	
-	if ((is_truck || ss.is_truck) && ss.dest_orient == cur_orient) { // at least one is a truck, and moving in the same general direction
+	// check if at least one is a truck, and moving in the same general direction
+	if ((is_truck || ss.is_truck) && (ss.dest_orient == cur_orient || ss_cur_orient == dest_orient || ss_cur_orient == cur_orient)) {
 		// trucks are larger and may clip through each other when one is making a right turn opposite another making a left turn
 		if (turn_dir == TURN_LEFT && ss.turn_dir == TURN_RIGHT) return 1;
 		if (ss.turn_dir == TURN_LEFT && turn_dir == TURN_RIGHT) return 1;
@@ -539,10 +540,25 @@ bool road_isec_t::can_go_now(car_t const &car) const {
 			if (!(conn & (1<<n))) continue; // no connection in this orient, skip
 			if (n == cur_orient)  continue; // skip our own orient, assuming no two cars can be at the same place
 			ssign_state_pair_t const &ss(ssign_state[n]);
+
+			if (display_mode & 0x10) { // debugging of deadlocked waiting state
+				if ((ss.entering.in_use && (frame_counter - ss.waiting.arrive_frame) > 6000) || (ss.waiting.in_use && (frame_counter - ss.waiting.arrive_frame) > 6000)) {
+					cout << TXT(frame_counter) << TXT(n) << TXT(cur_orient) << TXT(dest_orient) << TXT(xc()) << TXT(yc()) << endl;
+					for (unsigned i = 0; i < 4; ++i) {
+						ssign_state_t const &s(ssign_state[i].entering);
+						cout << TXT(i) << TXT(s.in_use) << TXT(s.arrive_frame) << TXTi(s.turn_dir) << endl;
+					}
+					for (unsigned i = 0; i < 4; ++i) {
+						ssign_state_t const &s(ssign_state[i].waiting);
+						cout << TXT(i) << TXT(s.in_use) << TXT(s.arrive_frame) << TXTi(s.turn_dir) << endl;
+					}
+					animate2 = 0; // pause animations
+				}
+			}
 			// check entering and waiting slots; if another car is waiting, check for earlier arrival time; if tied, use the orient as a tie breaker
-			if (ss.entering.in_use && check_paths_cross(ss.entering, cur_orient, dest_orient, car.turn_dir, car.is_truck)) return 0;
+			if (ss.entering.in_use && check_paths_cross(ss.entering, n, cur_orient, dest_orient, car.turn_dir, car.is_truck)) return 0;
 			if (ss.waiting .in_use && (ss.waiting.arrive_frame < arrive_frame || (ss.waiting.arrive_frame == arrive_frame && n < cur_orient)) &&
-				check_paths_cross(ss.waiting, cur_orient, dest_orient, car.turn_dir, car.is_truck)) return 0;
+				check_paths_cross(ss.waiting, n, cur_orient, dest_orient, car.turn_dir, car.is_truck)) return 0;
 		} // for n
 		return 1;
 	}
@@ -767,6 +783,13 @@ void road_isec_t::draw_stoplights_and_street_signs(road_draw_state_t &dstate, ve
 			sc.expand_by_xy(0.02*ss_height);
 			set_cube_zvals(sc, z1(), (z1() + 2.0*ss_height));
 			if (dist_val < 0.04) {dstate.draw_cube(dstate.qbd_untextured, sc, GRAY);} // draw the sign pole if close
+#if 0 // code for debugging stop sign logic
+			colorRGBA const color(ssign_state[n].entering.in_use, ssign_state[n].waiting.in_use, 0, 1); // entering=RED, waiting=GREEN, both=YELLOW, neither=BLACK
+			cube_t c(sc);
+			c.expand_by_xy(0.1*ss_height);
+			set_cube_zvals(c, sc.z2(), sc.z2()+0.2*ss_height);
+			dstate.draw_cube(dstate.qbd_untextured, c, color);
+#endif
 		}
 		if (draw_street_sign) { // draw street sign
 			// draw green sign cube

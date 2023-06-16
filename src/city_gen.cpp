@@ -1521,6 +1521,7 @@ public:
 			find_and_set_car_road_and_seg(car);
 			return;
 		}
+		// else it must be in an intersection
 		road_isec_t const &isec(get_car_isec(car)); // conn_ix: {-x, +x, -y, +y}
 		unsigned const orient(car.get_orient());
 		int conn_ix(isec.conn_ix[orient]), rix(isec.rix_xy[car.get_orient()]);
@@ -1691,9 +1692,12 @@ public:
 			road_isec_t const &isec(get_car_isec(car));
 			isec.notify_waiting_car(car); // even if not stopped
 
-			// unclear why this was needed (how was stopped_at_light not set earlier?)
-			if (isec.contains_pt_xy(car.get_front()) && !isec.contains_pt_xy(car.get_center()) && !car_can_fit_in_seg(car, global_rn)) { // not yet in the isec - stop and wait
+			// if we started to pull into the intersection but aren't at least halfway inside, and we can't fit ourselves in the dest road,
+			// then wait at the light rather than blocking the intersection
+			if (isec.contains_pt_xy(car.get_front()) && !isec.contains_pt_xy(car.get_center()) && !car_can_fit_in_seg(car, global_rn)) {
+				bool const was_stopped(car.stopped_at_light);
 				stop_and_wait_car(car, rgen, road_networks, isec);
+				if (!was_stopped) {isec.notify_leaving_car(car);} // unset the entering flag so that we don't keep ourselves from entering again (and deadlocking)
 				return;
 			}
 		}
