@@ -622,7 +622,7 @@ void car_draw_state_t::draw_car(car_t const &car, bool is_dlight_shadows) { // N
 		float const ts_period = 1.5; // in seconds
 		double const time(fract((tfticks + 1000.0*car.max_speed)/(double(ts_period)*TICKS_PER_SECOND))); // use car max_speed as seed to offset time base
 
-		if (time > 0.5) { // flash on and off
+		if (time > 0.5 || !animate2) { // flash on and off; always on when time is stopped to help with visual debugging
 			bool const tdir((car.turn_dir == TURN_LEFT) ^ dim ^ dir); // R=1,2,5,6 or L=0,3,4,7
 			vector3d const side_n(cross_product((pb[6] - pb[2]), (pb[1] - pb[2])).get_norm()*sign*(tdir ? 1.0 : -1.0));
 
@@ -857,7 +857,10 @@ bool car_manager_t::get_color_at_xy(point const &pos, colorRGBA &color, int int_
 			assert(ix_end <= cars.size());
 
 			for (unsigned c = v.ix; c != ix_end; ++c) {
-				if (cars[c].bcube.contains_pt_xy(pos)) {color = cars[c].get_color(); return 1;}
+				if (!cars[c].bcube.contains_pt_xy(pos)) continue;
+				color = cars[c].get_color();
+				if (color == GRAY) {color = colorRGBA(0.6, 0.6, 0.6, 1.0);} // trucks blend in with the road, make them lighter
+				return 1;
 			}
 		}
 	} // for cb
