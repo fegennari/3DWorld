@@ -803,7 +803,7 @@ void city_obj_placer_t::place_signs_in_isec(road_isec_t &isec) {
 
 	for (unsigned n = 0; n < 4; ++n) { // place stop signs on each connector
 		if (!(isec.conn & (1 << n))) continue; // no road in this dir
-		bool const dim((n>>1) != 0), dir((n&1) == 0), side((dir^dim^1) != 0); // Note: dir is inverted here to represent car dir
+		bool const dim((n>>1) != 0), dir((n&1) == 0); // Note: dir is inverted here to represent car dir
 		stopsign_t const ssign(isec.get_stop_sign_pos(n), height, width, dim, !dir, isec.num_conn);
 		stopsign_groups.add_obj(ssign, stopsigns);
 		isec.has_stopsign = 1;

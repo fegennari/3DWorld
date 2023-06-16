@@ -525,7 +525,7 @@ bool check_paths_cross(ssign_state_t const &ss, unsigned ss_cur_orient, unsigned
 	}
 	if (ss.turn_dir == TURN_RIGHT || turn_dir == TURN_RIGHT) return 0; // can't cross if either is making a right turn
 	if (ss.turn_dir == TURN_LEFT  || turn_dir == TURN_LEFT ) return 1; // otherwise, must cross if either is making a left turn
-	return ((ss.dest_orient>>1) != (dest_orient>>1)); // both cars going straight; they cross if their dims are different
+	return ((unsigned(ss.dest_orient)>>1) != (dest_orient>>1)); // both cars going straight; they cross if their dims are different
 }
 bool road_isec_t::can_go_now(car_t const &car) const {
 	if (has_stopsign) { // run stop sign logic

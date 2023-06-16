@@ -1159,7 +1159,7 @@ public:
 		auto &tverts(get_verts(roof_tex, 1)), &qverts(get_verts(side_tex, 0)); // triangle and quad verts
 		unsigned const ndiv(N_CYL_SIDES);
 		float const radius(0.25*(wtc.dx() + wtc.dy())); // should be equal size in X vs. Y
-		float const tscale_x(2.0), tscale_y(2.0), ndiv_inv(1.0/ndiv), height(wtc.dz());
+		float const ndiv_inv(1.0/ndiv), height(wtc.dz());
 		float const base_z1(wtc.z1() + 0.5*height - 0.5*radius), cylin_z1(base_z1 + 0.01*height), cylin_z2(wtc.z2() - 0.12*height), cone_z2(wtc.z2());
 		color_wrapper const roof_cw(colorRGBA(0.15, 0.12, 0.10, 1.0));
 		// draw base
