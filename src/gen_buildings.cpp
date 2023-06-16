@@ -3576,7 +3576,7 @@ public:
 						saw_player_building |= (check_interior && &building == player_building);
 					} // for b
 					if (check_interior && player_in_basement == 3) continue; // hack to keep player from popping from extended basement to top of driveway
-					//if (check_road_seg_sphere_coll(ge, pos, p_last, xlate, radius, xy_only, cnorm)) return 1;
+					if (check_road_seg_sphere_coll(ge, pos, p_last, xlate, radius, xy_only, cnorm)) return 1; // check driveways
 				} // for x
 			} // for y
 		}
