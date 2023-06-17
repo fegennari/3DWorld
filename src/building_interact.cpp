@@ -949,12 +949,14 @@ void building_t::update_player_interact_objects(point const &player_pos) {
 		vector3d &velocity(dstate.velocity);
 		point const center(c->get_cube_center());
 		float const radius(c->get_radius());
-		bool const was_dynamic(c->is_dynamic());
-		bool on_floor(0);
+		bool const was_dynamic(c->is_dynamic()), is_moving_fast(velocity.mag() > 0.5*KICK_VELOCITY);
+		bool on_floor(0), kicked(0);
 		point new_center(center);
-		bool kicked(camera_surf_collide && player_is_moving && check_ball_kick(*c, velocity, new_center, player_pos, player_z1, player_z2, player_radius)); // check the player
-		bool const is_moving_fast(velocity.mag() > 0.5*KICK_VELOCITY);
-
+		
+		// check the player, but not if they're looking directly at the ball; assume in that case they intend to pick it up instead
+		if (camera_surf_collide && player_is_moving && dot_product_ptv(cview_dir, new_center, player_pos) < 0.9*p2p_dist(new_center, player_pos)) {
+			kicked |= check_ball_kick(*c, velocity, new_center, player_pos, player_z1, player_z2, player_radius);
+		}
 		for (auto p = interior->people.begin(); p != interior->people.end(); ++p) { // check building AI people
 			if (is_moving_fast) { // treat collision as a bounce
 				vector3d cnorm;
