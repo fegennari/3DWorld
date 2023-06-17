@@ -2048,7 +2048,7 @@ bool building_conn_info_t::is_visible_through_conn(building_t const &parent, bui
 			if (!expand_for_light) return 1; // can't ignore closed doors for room objects because they we may not draw the door itself
 			// if this is a light, check if the connecting door is open
 			door_t const &door((room.door_is_b ? target : parent).get_door(room.door_ix));
-			return (door.open || door.open_amt > 0.0); // true if either about to open or not fully closed
+			if (door.open || door.open_amt > 0.0) return 1; // true if either about to open or not fully closed
 		} // for room
 	} // for c
 	return 0;
