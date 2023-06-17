@@ -3351,7 +3351,7 @@ void building_t::maybe_add_fire_escape(rand_gen_t &rgen) {
 			if (has_driveway() && fe_bc.intersects_xy(driveway)) continue; // skip if intersects driveway or garage
 			if (is_room_adjacent_to_ext_door(fe_bc, 0))          continue; // check exterior doors; front_door_only=0
 			interior->room_geom->objs.emplace_back(fe_bc, TYPE_FESCAPE, 0, dim, dir, 0, 1.0, SHAPE_CUBE, BLACK); // room_id=0
-			details.emplace_back(fe_bc, ROOF_OBJ_COLLIDER);
+			details.emplace_back(fe_bc, DETAIL_OBJ_COLLIDER);
 			union_with_coll_bcube(fe_bc);
 			return; // success/done
 		} // for d
@@ -3431,7 +3431,7 @@ void building_t::add_balconies(rand_gen_t &rgen) {
 				if (!hanging) { // add colliders for vertical supports
 					cube_t pillar[2];
 					get_balcony_pillars(balcony_obj, ground_floor_z1, pillar);
-					for (unsigned d = 0; d < 2; ++d) {details.emplace_back(pillar[d], ROOF_OBJ_COLLIDER);}
+					for (unsigned d = 0; d < 2; ++d) {details.emplace_back(pillar[d], DETAIL_OBJ_COLL_SHAD);} // collider + shadow caster
 				}
 				union_with_coll_bcube(balcony); // should include area_below as well
 				++num_balconies;

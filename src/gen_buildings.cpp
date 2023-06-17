@@ -1514,7 +1514,8 @@ void building_t::get_all_drawn_exterior_verts(building_draw_t &bdraw) { // exter
 		}
 	} // for i
 	for (auto i = details.begin(); i != details.end(); ++i) { // draw roof details
-		if (i->type == ROOF_OBJ_COLLIDER) continue; // not drawn
+		if (i->type == DETAIL_OBJ_COLLIDER ) continue; // not drawn
+		if (i->type == DETAIL_OBJ_COLL_SHAD) continue; // should only be drawn in the shadow pass, which isn't setup here; future work
 
 		if (i->type == ROOF_OBJ_AC) {
 			bool const swap_st(i->dx() > i->dy());
