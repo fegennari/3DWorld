@@ -1208,6 +1208,12 @@ bool fire_manager_t::get_closest_fire(point const &pos, float xy_radius, float z
 	}
 	return found;
 }
+void fire_manager_t::add_fire_bcubes_for_cube(cube_t const &sel_cube, vect_cube_t &fire_bcubes) const {
+	for (fire_t const &f : fires) {
+		cube_t const bcube(f.get_bcube());
+		if (bcube.intersects(sel_cube)) {fire_bcubes.push_back(bcube);}
+	}
+}
 void fire_manager_t::next_frame() {
 	float const fticks_stable(min(fticks, 4.0f)); // clamp to 0.1s
 

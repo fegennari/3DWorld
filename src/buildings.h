@@ -791,6 +791,7 @@ public:
 	void spawn_fire(point const &pos, float size);
 	cube_t get_bcube() const;
 	bool get_closest_fire(point const &pos, float xy_radius, float z1, float z2, point *fire_pos=nullptr) const;
+	void add_fire_bcubes_for_cube(cube_t const &sel_cube, vect_cube_t &fire_bcubes) const;
 	void next_frame();
 	void add_lights(vector3d const &xlate, building_t const &building, occlusion_checker_noncity_t &oc, cube_t &lights_bcube) const;
 	void draw(shader_t &s, vector3d const &xlate);
@@ -1247,7 +1248,8 @@ struct building_interior_t {
 	bool line_coll(building_t const &building, point const &p1, point const &p2, point &p_int) const;
 	point find_closest_pt_on_obj_to_pos(building_t const &building, point const &pos, float pad_dist, bool no_ceil_floor) const;
 	void update_dynamic_draw_data() {assert(room_geom); room_geom->update_dynamic_draw_data();}
-	void get_avoid_cubes(vect_cube_t &avoid, float z1, float z2, float r_shrink_if_low, float floor_thickness, bool same_as_player, bool skip_stairs=0) const;
+	void get_avoid_cubes(vect_cube_t &avoid, float z1, float z2, float r_shrink_if_low, float floor_thickness,
+		bool same_as_player, bool skip_stairs=0, cube_t const *const fires_select_cube=nullptr) const;
 	void create_fc_occluders();
 	void place_exterior_room(extb_room_t const &room, cube_t const &wall_area, float fc_thick, float wall_thick, ext_basement_room_params_t &P,
 		unsigned part_id, unsigned num_lights=0, bool is_hallway=0, unsigned is_building_conn=0, unsigned wall_skip_dim=2, unsigned thin_wall_dir=2);
@@ -1511,7 +1513,7 @@ private:
 	bool choose_dest_goal(person_t &person, rand_gen_t &rgen) const;
 	int  choose_dest_room(person_t &person, rand_gen_t &rgen) const;
 	bool select_person_dest_in_room(person_t &person, rand_gen_t &rgen, room_t const &room) const;
-	void get_avoid_cubes(float zval, float height, float radius, vect_cube_t &avoid, bool following_player) const;
+	void get_avoid_cubes(float zval, float height, float radius, vect_cube_t &avoid, bool following_player, cube_t const *const fires_select_cube=nullptr) const;
 	bool find_route_to_point(person_t const &person, float radius, bool is_first_path, bool following_player, vector<point> &path) const;
 	bool stairs_contained_in_part(stairwell_t const &s, cube_t const &p) const;
 	void find_nearest_stairs_or_ramp(point const &p1, point const &p2, vector<unsigned> &nearest_stairs, int part_ix=-1) const;

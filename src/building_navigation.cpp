@@ -898,7 +898,9 @@ template<typename T> void add_bcube_if_overlaps_zval(vector<T> const &cubes, vec
 }
 
 // for AI collision detection
-void building_interior_t::get_avoid_cubes(vect_cube_t &avoid, float z1, float z2, float r_shrink_if_low, float floor_thickness, bool same_as_player, bool skip_stairs) const {
+void building_interior_t::get_avoid_cubes(vect_cube_t &avoid, float z1, float z2, float r_shrink_if_low, float floor_thickness,
+	bool same_as_player, bool skip_stairs, cube_t const *const fires_select_cube) const
+{
 	avoid.clear();
 	if (!skip_stairs) {add_bcube_if_overlaps_zval(stairwells, avoid, z1, z2);} // clearance not required
 	add_bcube_if_overlaps_zval(elevators, avoid, z1, z2); // clearance not required
@@ -974,6 +976,11 @@ void building_interior_t::get_avoid_cubes(vect_cube_t &avoid, float z1, float z2
 			}
 		} // for c
 	}
+	if (fires_select_cube != nullptr) {
+		cube_t sel_cube(*fires_select_cube);
+		set_cube_zvals(sel_cube, z1, z2); // clip to the current Z-range
+		room_geom->fire_manager.add_fire_bcubes_for_cube(sel_cube, avoid);
+	}
 }
 
 bool building_t::stairs_contained_in_part(stairwell_t const &s, cube_t const &p) const {
@@ -1021,9 +1028,9 @@ cube_t get_stairs_plus_step_up(stairwell_t const &stairs) {
 	return stairs_ext;
 }
 
-void building_t::get_avoid_cubes(float zval, float height, float radius, vect_cube_t &avoid, bool following_player) const {
+void building_t::get_avoid_cubes(float zval, float height, float radius, vect_cube_t &avoid, bool following_player, cube_t const *const fires_select_cube) const {
 	assert(interior);
-	interior->get_avoid_cubes(avoid, (zval - radius), (zval + (height - radius)), 0.5*radius, get_floor_thickness(), following_player);
+	interior->get_avoid_cubes(avoid, (zval - radius), (zval + (height - radius)), 0.5*radius, get_floor_thickness(), following_player, 0, fires_select_cube); // skip_stairs=0
 }
 bool building_t::find_route_to_point(person_t const &person, float radius, bool is_first_path, bool following_player, vector<point> &path) const {
 
@@ -1036,7 +1043,7 @@ bool building_t::find_route_to_point(person_t const &person, float radius, bool 
 	assert((unsigned)loc1.room_ix < interior->rooms.size() && (unsigned)loc2.room_ix < interior->rooms.size());
 	float const floor_spacing(get_window_vspace()), height(0.7*floor_spacing), z2_add(height - radius); // approximate, since we're not tracking actual heights
 	static vect_cube_t avoid; // reuse across frames/people
-	get_avoid_cubes(from.z, height, radius, avoid, following_player);
+	get_avoid_cubes(from.z, height, radius, avoid, following_player, &get_room(loc1.room_ix)); // include fires in the current room
 
 	if (loc1.same_room_floor(loc2)) { // same room/floor (not checking stairs_ix)
 		assert(from.z == to.z);
@@ -1665,7 +1672,6 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 		person.next_path_pt(1);
 		return AI_BEGIN_PATH;
 	}
-	//if (has_room_geom() && interior->room_geom->fire_manager.get_closest_fire(person.pos, person.radius, person.get_z1(), person.get_z2(), &fire_pos)) {} // TODO
 	float const max_dist(get_person_max_move_dist(person, speed_mult));
 	person.on_new_path_seg = 0; // clear flag for this frame
 	//person.following_player = can_target_player(person); // for debugging visualization
