@@ -1739,8 +1739,17 @@ bool building_t::check_obj_occluded(cube_t const &c, point const &viewer_in, occ
 	maybe_inv_rotate_point(viewer); // rotate viewer pos into building space
 	bool const player_in_building(point_in_building_or_basement_bcube(viewer));
 	float const floor_spacing(get_window_vspace());
-	// if fully inside basement, and viewer outside building or not on first floor, will be occluded
-	if (c.z2() < ground_floor_z1 && (viewer.z > (ground_floor_z1 + floor_spacing) || !player_in_building)) return 1;
+	bool checked_conn_ret(0);
+	
+	if (c.z2() < ground_floor_z1) { // fully inside basement
+		if (viewer.z > (ground_floor_z1 + floor_spacing)) return 1; // viewer not on first floor
+		
+		if (!player_in_building) { // player not in this building
+			checked_conn_ret = (camera_in_building && player_in_basement == 3 &&
+				interior_visible_from_other_building_ext_basement(oc.get_xlate(), oc.query_is_for_light));
+			if (!checked_conn_ret) return 1;
+		}
+	}
 	point pts[8];
 	unsigned const npts(get_cube_corners(c.d, pts, viewer, 0)); // should return only the 6 visible corners
 	cube_t occ_area(c);
@@ -1760,7 +1769,7 @@ bool building_t::check_obj_occluded(cube_t const &c, point const &viewer_in, occ
 		}
 	}
 	else if (camera_in_building) { // player in some other building
-		if (interior_visible_from_other_building_ext_basement(oc.get_xlate(), oc.query_is_for_light)) return 0; // skip below checks in this case
+		if (checked_conn_ret  ) return 0; // player in ext basement connected to this building; skip below checks in this case
 		if (player_in_basement) return 1; // if player is in the basement of a different building, they probably can't see an object in this building
 		if (player_in_windowless_building()) return 1; // player inside another windowless office building, objects in this building not visible
 		if (is_rotated()) return 0; // not implemented yet - need to rotate viewer and pts into coordinate space of player_building
