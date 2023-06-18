@@ -158,12 +158,13 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_CLOTHES   ] = bldg_obj_type_t(0, 0, 0, 1, 0, 1, 0, 10.0,  0.25,  "clothes"); // teeshirt, shirt, pants, etc.
 	bldg_obj_types[TYPE_FESCAPE   ] = bldg_obj_type_t(1, 1, 1, 0, 1, 1, 0, 10000, 4000,  "fire escape"); // technically exterior, not interior
 	bldg_obj_types[TYPE_CUP       ] = bldg_obj_type_t(0, 0, 0, 1, 0, 1, 0, 5.0,   0.2,   "cup");
-	bldg_obj_types[TYPE_TOASTER   ] = bldg_obj_type_t(0, 0, 0, 1, 0, 1, 2, 20.0,  2.5,   "toaster");
+	bldg_obj_types[TYPE_TOASTER   ] = bldg_obj_type_t(0, 0, 0, 1, 0, 1, 2, 20.0,  2.5,   "toaster"); // mixed model and object geom
 	bldg_obj_types[TYPE_HOOD      ] = bldg_obj_type_t(0, 0, 1, 0, 1, 1, 0, 200.0, 40.0,  "ventilation hood");
 	bldg_obj_types[TYPE_RCHAIR    ] = bldg_obj_type_t(1, 1, 1, 1, 0, 1, 0, 120.0, 45.0,  "rocking chair");
-	bldg_obj_types[TYPE_SILVER    ] = bldg_obj_type_t(0, 0, 0, 1, 0, 1, 2, 10.0,  0.2,   "silverware");
+	bldg_obj_types[TYPE_SILVER    ] = bldg_obj_type_t(0, 0, 0, 1, 0, 1, 0, 10.0,  0.2,   "silverware");
 	bldg_obj_types[TYPE_TOY_MODEL ] = bldg_obj_type_t(0, 0, 1, 1, 0, 1, 0, 4.0,   0.2,   "toy"); // plastic ring stack
 	bldg_obj_types[TYPE_CEIL_FAN  ] = bldg_obj_type_t(0, 0, 0, 0, 1, 1, 0, 200.0, 25.0,  "ceiling fan");
+	bldg_obj_types[TYPE_FIRE_EXT  ] = bldg_obj_type_t(0, 0, 1, 1, 0, 1, 0, 20.0,  10.0,  "fire extinguisher");
 	// animals; not room objects
 	bldg_obj_types[TYPE_RAT       ] = bldg_obj_type_t(0, 0, 1, 1, 0, 1, 0, 8.99,  1.0,   "rat"); // can be picked up
 	bldg_obj_types[TYPE_SPIDER    ] = bldg_obj_type_t(0, 0, 1, 0, 0, 0, 0, 0.0,   0.1,   "spider");
