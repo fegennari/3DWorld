@@ -164,7 +164,7 @@ bool building_t::check_sphere_coll(point &pos, point const &p_last, vector3d con
 		// skip zval check when the player is in the building because pos.z may be placed on the mesh,
 		// which could be above the top of the building when the player is in the extended basement;
 		// this should be legal because the player can't exit the building in the Z direction; maybe better to use p_last.z?
-		bool const sc_xy_only(xy_only || (camera_in_building && player_building == this));
+		bool const sc_xy_only(xy_only || (check_interior && camera_in_building && player_building == this));
 		if (!(sc_xy_only ? sphere_cube_intersect_xy((pos - xlate), radius, coll_bcube) : sphere_cube_intersect((pos - xlate), radius, coll_bcube))) return 0;
 	}
 	if (check_sphere_coll_inner(pos, p_last, xlate, radius, xy_only, cnorm_ptr, check_interior)) return 1;

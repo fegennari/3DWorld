@@ -397,6 +397,7 @@ void building_t::create_per_part_ext_verts() {
 	}
 }
 void building_t::finish_gen_geometry(rand_gen_t &rgen, bool has_overlapping_cubes) { // for office buildings
+	if (coll_bcube.is_all_zeros()) {coll_bcube = bcube;} // calculate if it hasn't been calculated yet
 	if (global_building_params.add_office_basements) {maybe_add_basement(rgen);}
 	assert(parts.size() < 256);
 	real_num_parts = uint8_t(parts.size()); // no parts can be added after this point
