@@ -439,14 +439,17 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 			for (unsigned dir = 0; dir < 2; ++dir) {
 				if (rgen.rand_float() < 0.65) continue; // add to about a third of edges
 				unsigned const num_this_side(1 + (rgen.rand() % 5)); // 1-5
+				bool const place_together(num_this_side > 1 && rgen.rand_float() < 0.75); // 75% of the time
+				unsigned place_region(0);
 				pos[dim] = (1.0 - dist_from_corner)*plot.d[dim][dir] + dist_from_corner*plot.get_center_dim(dim); // set distance from the plot edge
 
 				for (unsigned n = 0; n < num_this_side; ++n) {
 					float const nr_height(0.28*car_length*rgen.rand_uniform(0.9, 1.11));
 					float const nr_width(0.44*nr_height*rgen.rand_uniform(0.8, 1.25)), nr_depth(0.44*nr_height*rgen.rand_uniform(0.8, 1.25));
 					float road_pos(0.0);
+					if (n == 0 || !place_together) {place_region = (rgen.rand()&3);} // select a new placement region
 					// streetlights are at 0.25 and 0.75, and telephone poles are at 0.5, so skip those ranges
-					switch (rgen.rand()&3) {
+					switch (place_region) {
 					case 0: road_pos = rgen.rand_uniform(0.10, 0.20); break;
 					case 1: road_pos = rgen.rand_uniform(0.30, 0.45); break;
 					case 2: road_pos = rgen.rand_uniform(0.55, 0.70); break;
