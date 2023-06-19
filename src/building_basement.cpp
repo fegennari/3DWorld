@@ -1648,7 +1648,6 @@ bool building_t::add_underground_exterior_rooms(rand_gen_t &rgen, cube_t const &
 		interior->landings.push_back(landing);
 		interior->stairwells.emplace_back(stairwell, 1); // num_floors=1
 	} // for stairs
-	coll_bcube.union_with_cube(interior->basement_ext_bcube);
 	return 1;
 }
 
@@ -1952,15 +1951,10 @@ void building_t::try_connect_ext_basement_to_building(building_t &b) {
 		for (unsigned bix = 0; bix < 2; ++bix) { // connect both ways
 			// door belongs to b, which is the first building passed in
 			buildings[bix]->interior->conn_info->add_connection(buildings[!bix], r, conn_door_ix, r.hallway_dim, r.connect_dir, (bix == 0));
-			buildings[bix]->update_basement_ext_bcube(ext_bcube);
+			buildings[bix]->interior->basement_ext_bcube.union_with_cube(ext_bcube);
 		}
 	} // for r
 	for (unsigned bix = 0; bix < 2; ++bix) {buildings[bix]->interior->remove_excess_capacity();} // optional optimization
-}
-void building_t::update_basement_ext_bcube(cube_t const &new_room) {
-	assert(interior);
-	interior->basement_ext_bcube.union_with_cube(new_room);
-	coll_bcube.union_with_cube(new_room);
 }
 
 void try_join_house_ext_basements(vect_building_t &buildings) {

@@ -1000,7 +1000,7 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 		float const chimney_dz((hipped_roof[part_ix] ? 0.5 : 1.0)*roof_dz[part_ix]); // lower for hipped roof
 		add_chimney(part, dim, dir, chimney_dz, rgen); // Note: return value is ignored
 	}
-	//if (has_driveway()) {coll_bcube.union_with_cube(driveway);} // not needed/doesn't work, driveway collisions are handled through check_road_seg_sphere_coll()
+	// Note: driveway collisions are handled through check_road_seg_sphere_coll()
 	parts_generated = 1; // must be after adding chimney
 	roof_type = (any_hipped ? ROOF_TYPE_HIPPED : ROOF_TYPE_PEAK);
 	add_roof_to_bcube();

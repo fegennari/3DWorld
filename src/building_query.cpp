@@ -165,7 +165,10 @@ bool building_t::check_sphere_coll(point &pos, point const &p_last, vector3d con
 		// which could be above the top of the building when the player is in the extended basement;
 		// this should be legal because the player can't exit the building in the Z direction; maybe better to use p_last.z?
 		bool const sc_xy_only(xy_only || (check_interior && camera_in_building && player_building == this));
-		if (!(sc_xy_only ? sphere_cube_intersect_xy((pos - xlate), radius, coll_bcube) : sphere_cube_intersect((pos - xlate), radius, coll_bcube))) return 0;
+		point const pos_bs(pos - xlate);
+		cube_t test_cube(coll_bcube);
+		if (check_interior && has_ext_basement()) {test_cube.union_with_cube(interior->basement_ext_bcube);} // include the extended basement for interior checks
+		if (!(sc_xy_only ? sphere_cube_intersect_xy(pos_bs, radius, test_cube) : sphere_cube_intersect(pos_bs, radius, test_cube))) return 0;
 	}
 	if (check_sphere_coll_inner(pos, p_last, xlate, radius, xy_only, cnorm_ptr, check_interior)) return 1;
 	if (!check_interior) return 0;
