@@ -26,18 +26,22 @@ extern obj_vector_t<fire> fires;
 unsigned trigger_t::register_activator_pos(point const &p, float act_radius, int activator, bool clicks) const {
 
 	// Note: since only the camera/player can issue an action, we assume requires_action implies player_only
-	if (player_only && activator != CAMERA_ID) return 0; // not activated by player
-	if (req_keycard_id >= 0 && !has_keycard_id(activator, req_keycard_id)) return 0; // activator doesn't have the required keycard
-	bool const is_explosion_action(activator == NO_SOURCE);
-
-	if (requires_action && !is_explosion_action) { // requires explicit player action
-		if (activator != CAMERA_ID) return 0; // not activated by player
+	bool const is_player(activator == CAMERA_ID);
+	if (player_only && !is_player) return 0; // not activated by player
+	bool const is_close(dist_less_than(p, act_pos, (act_dist + act_radius)));
+	
+	if (req_keycard_id >= 0 && !has_keycard_id(activator, req_keycard_id)) { // activator doesn't have the required keycard
+		if (is_player && requires_action && user_action_key && is_close) {print_text_onscreen("You need the correct keycard", RED, 1.2, 2*TICKS_PER_SECOND, 1);}
+		return 0;
+	}
+	if (requires_action && activator != NO_SOURCE) { // requires explicit player action; explosion actions don't count
+		if (!is_player)       return 0; // not activated by player
 		if (!user_action_key) return 0; // check action key
 		if (!use_act_region && !camera_pdu.point_visible_test(act_pos)) return 0; // player not looking at the activation pos
 	}
-	if (use_act_region) {return (act_region.contains_pt(p) ? (requires_action ? 2 : 1) : 0);} // check active region containment
-	else if (act_dist == 0.0) {return 0;} // act_dist of 0 disables this trigger
-	if (!dist_less_than(p, act_pos, (act_dist + act_radius))) {return 0;} // too far to activate
+	if (use_act_region) return (act_region.contains_pt(p) ? (requires_action ? 2 : 1) : 0); // check active region containment
+	else if (act_dist == 0.0) return 0; // act_dist of 0 disables this trigger
+	if (!is_close)            return 0; // too far to activate
 	if (requires_action && clicks) {gen_sound(SOUND_CLICK, act_pos, 1.0);}
 	return (requires_action ? 2 : 1); // triggered by proximity = 1, triggered by player action = 2
 }
