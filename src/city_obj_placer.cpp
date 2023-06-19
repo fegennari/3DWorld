@@ -799,7 +799,7 @@ void city_obj_placer_t::add_house_driveways(road_plot_t const &plot, vect_cube_t
 void city_obj_placer_t::place_signs_in_isec(road_isec_t &isec) {
 	if (isec.has_stoplight) return; // can't have both a stoplight and a stopsign
 	if (isec.num_conn == 2) return; // skip for 2-way intersections (bends)
-	float const height(isec.get_stop_sign_height()), width(0.38*height);
+	float const height(isec.get_stop_sign_height()), width(0.3*height);
 
 	for (unsigned n = 0; n < 4; ++n) { // place stop signs on each connector
 		if (!(isec.conn & (1 << n))) continue; // no road in this dir
