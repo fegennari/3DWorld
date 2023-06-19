@@ -249,6 +249,7 @@ void building_room_geom_t::expand_cabinet(room_object_t const &c) { // called on
 	cube_t interior(c), dishwasher;
 	interior.expand_by(-wall_thickness);
 	vector3d const c_sz(interior.get_size());
+	bool const is_counter(c.type == TYPE_COUNTER || c.type == TYPE_KSINK);
 	
 	if (c.type == TYPE_KSINK && get_dishwasher_for_ksink(c, dishwasher)) { // avoid placing objects that overlap the dishwasher
 		dishwasher.d[c.dim][!c.dir] = c.d[c.dim][!c.dir]; // extend to the back of the cabinet
@@ -257,12 +258,24 @@ void building_room_geom_t::expand_cabinet(room_object_t const &c) { // called on
 	}
 	unsigned const start_num_cubes(cubes.size()), flags(RO_FLAG_NOCOLL | RO_FLAG_INTERIOR | RO_FLAG_WAS_EXP);
 
-	if ((c.type == TYPE_COUNTER || c.type == TYPE_KSINK) && rgen.rand_bool()) {
+	if (is_counter && rgen.rand_bool()) {
 		float const tcan_height(c_sz.z*rgen.rand_uniform(0.35, 0.55)), tcan_radius(min(tcan_height/rgen.rand_uniform(1.6, 2.8), 0.4f*min(c_sz.x, c_sz.y)));
 		cube_t tcan;
 		gen_xy_pos_for_round_obj(tcan, interior, tcan_radius, tcan_height, 1.1*tcan_radius, rgen, 1); // place_at_z1=1
 		room_object_t obj(tcan, TYPE_TCAN, c.room_id, c.dim, c.dir, flags, light_amt, (rgen.rand_bool() ? SHAPE_CYLIN : SHAPE_CUBE), tcan_colors[rgen.rand()%NUM_TCAN_COLORS]);
 		add_if_not_intersecting(obj, expanded_objs, cubes);
+	}
+	// maybe add fire extinguisher
+	if (is_counter && building_obj_model_loader.is_model_valid(OBJ_MODEL_FIRE_EXT) && rgen.rand_float() < 0.3) { // 30% of the time
+		vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_FIRE_EXT)); // D, W, H
+		float const fe_height(0.38*c.dz()), fe_radius(fe_height*(0.5*(sz.x + sz.y)/sz.z));
+
+		if (2.2*fe_radius < min(c_sz.x, c_sz.y)) {
+			cube_t fire_ext;
+			gen_xy_pos_for_round_obj(fire_ext, interior, fe_radius, fe_height, 1.05*fe_radius, rgen, 1); // place_at_z1=1
+			room_object_t obj(fire_ext, TYPE_FIRE_EXT, c.room_id, rgen.rand_bool(), rgen.rand_bool(), flags, light_amt, SHAPE_CYLIN);
+			add_if_not_intersecting(obj, expanded_objs, cubes);
+		}
 	}
 	// add boxes
 	unsigned const num_boxes(rgen.rand()%4); // 0-3
@@ -475,11 +488,11 @@ void building_room_geom_t::get_shelf_objects(room_object_t const &c_in, cube_t c
 	float const z_step(dz/(num_shelves + 1)), shelf_clearance(z_step - thickness - bracket_thickness), sz_scale(is_house ? 0.7 : 1.0), box_zscale(shelf_clearance*sz_scale);
 	rand_gen_t rgen(c.create_rgen());
 
+	// Note: this function doesn't support placement of objects drawn as 3D models such as fire extinguishers
 	for (unsigned s = 0; s < num_shelves; ++s) {
 		cube_t const &S(shelves[s]);
 		vect_cube_t &cubes(get_temp_cubes());
 		room_object_t C(c);
-		vector3d sz;
 		// add crates/boxes
 		unsigned const num_boxes(rgen.rand() % (is_house ? 8 : 13)); // 0-12
 		cube_t bounds(S);
@@ -488,6 +501,7 @@ void building_room_geom_t::get_shelf_objects(room_object_t const &c_in, cube_t c
 		// add computers; what about monitors?
 		bool const top_shelf(s+1 == num_shelves);
 		float const h_val(0.21*1.1*dz), cheight(0.75*h_val), cwidth(0.44*cheight), cdepth(0.9*cheight); // fixed AR=0.44 to match the texture
+		vector3d sz;
 		sz[ c.dim] = 0.5*cdepth;
 		sz[!c.dim] = 0.5*cwidth;
 
@@ -549,8 +563,9 @@ void building_room_geom_t::get_shelf_objects(room_object_t const &c_in, cube_t c
 
 		if (min(c_sz.x, c_sz.y) > 5.0*spcan_radius) { // add if shelf wide/deep enough
 			unsigned const num_spcans(((rgen.rand()%5) < 3) ? (rgen.rand() % 4) : 0); // 0-3, 60% chance
-			C.dir  = C.dim = 0;
-			C.type = TYPE_SPRAYCAN;
+			C.dir   = C.dim = 0;
+			C.type  = TYPE_SPRAYCAN;
+			C.shape = SHAPE_CYLIN;
 
 			for (unsigned n = 0; n < num_spcans; ++n) {
 				gen_xy_pos_for_round_obj(C, S, spcan_radius, spcan_height, 1.5*spcan_radius, rgen);
@@ -558,6 +573,7 @@ void building_room_geom_t::get_shelf_objects(room_object_t const &c_in, cube_t c
 				C.obj_id = rgen.rand(); // used to select emissive color
 				add_if_not_intersecting(C, objects, cubes);
 			}
+			C.shape = SHAPE_CUBE; // reset for next object type
 		}
 		// add large balls to houses
 		float const ball_radius(0.048*1.1*dz); // 4.7 inches
