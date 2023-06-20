@@ -802,8 +802,9 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 					float other_wall_pos(0.0);
 					bool other_pos_valid(0);
 
-					for (unsigned num = 0; num < 10; ++num) { // 10 tries to choose a wall pos that's not inside a window
-						other_wall_pos = wall_pos + ((dir ? 1.0 : -1.0)*rgen.rand_uniform(1.6, 2.4)*doorway_width); // opposite edge of hallway
+					for (unsigned num = 0; num < 40; ++num) { // 40 tries to choose a wall pos that's not inside a window
+						float const upper_sz((num < 20) ? 2.4 : 3.0); // allow wider hallways if the first 20 placements fail
+						other_wall_pos = wall_pos + ((dir ? 1.0 : -1.0)*rgen.rand_uniform(1.6, upper_sz)*doorway_width); // opposite edge of hallway
 						if (on_edge && is_val_inside_window(*p, wall_dim, other_wall_pos, window_hspacing[wall_dim], window_border)) continue; // try a new wall_pos
 						other_pos_valid = 1; break; // done, keep wall_pos
 					}
