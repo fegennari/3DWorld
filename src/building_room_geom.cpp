@@ -1495,6 +1495,10 @@ void building_room_geom_t::add_stapler(room_object_t const &c) {
 	mat.add_cube_to_verts_untextured(metal,  apply_light_color(c, LT_GRAY), EF_Z12);
 }
 
+void building_room_geom_t::add_fire_ext_mount(room_object_t const &c) {
+	// TODO: write; or is this another 3D model?
+}
+
 void building_room_geom_t::add_ceiling_fan_light(room_object_t const &fan, room_object_t const &light) {
 	bool const is_on(light.is_light_on() && !light.is_broken());
 	if (!is_on) return; // only drawn when light is on

@@ -1956,7 +1956,7 @@ bool building_t::add_laundry_objs(rand_gen_t rgen, room_t const &room, float zva
 	return 0; // failed
 }
 
-void building_t::add_pri_hall_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt) {
+void building_t::add_pri_hall_objs(rand_gen_t rgen, rand_gen_t room_rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt) {
 	float const window_vspacing(get_window_vspace()), desk_width(0.9*window_vspacing);
 	bool const long_dim(room.dx() < room.dy());
 	if (room.get_sz_dim(!long_dim) < (desk_width + 1.6*get_doorway_width())) return; // hallway is too narrow
@@ -1989,6 +1989,39 @@ void building_t::add_pri_hall_objs(rand_gen_t rgen, room_t const &room, float zv
 			break; // done
 		} // for n
 	} // for dir
+	if (building_obj_model_loader.is_model_valid(OBJ_MODEL_FIRE_EXT)) { // add a fire extinguisher on the wall
+		vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_FIRE_EXT)); // D, W, H
+		float const fe_height(0.16*window_vspacing), fe_radius(fe_height*(0.5*(sz.x + sz.y)/sz.z)), min_clearance(2.0*fe_radius);
+		float const wall_pos_lo(room.d[long_dim][0] + min_clearance), wall_pos_hi(room.d[long_dim][1] - min_clearance);
+
+		if (wall_pos_lo < wall_pos_hi) { // should always be true?
+			bool const dir(room_rgen.rand_bool()); // random, but the same across all floors
+			float const wall_pos(room.d[!long_dim][dir]);
+			point fe_pos(0.0, 0.0, (zval + 0.32*window_vspacing)); // bottom position
+			fe_pos[!long_dim] = wall_pos + (dir ? -1.0 : 1.0)*fe_radius; // touching the wall
+
+			for (unsigned n = 0; n < 20; ++n) { // make 20 attempts at placing a fire extinguisher
+				float const val(room_rgen.rand_uniform(wall_pos_lo, wall_pos_hi)), cov_lo(val - min_clearance), cov_hi(val + min_clearance);
+				fe_pos[long_dim] = val;
+				bool contained_in_wall(0);
+
+				for (cube_t const &wall : interior->walls[!long_dim]) {
+					if (wall.d[!long_dim][0] > wall_pos || wall.d[!long_dim][1] < wall_pos) continue; // not on the correct side of this hallway
+					if (wall.d[ long_dim][0] > cov_lo   || wall.d[ long_dim][1] < cov_hi  ) continue; // range not covered
+					if (wall.z1() > fe_pos.z || wall.z2() < fe_pos.z) continue; // wrong zval/floor
+					contained_in_wall = 1; break;
+				}
+				if (contained_in_wall) { // shouldn't need to check anything else?
+					cube_t fe_bcube(fe_pos, fe_pos);
+					fe_bcube.expand_by_xy(fe_radius);
+					fe_bcube.z2() += fe_height;
+					objs.emplace_back(fe_bcube, TYPE_FIRE_EXT, room_id, long_dim, dir, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CYLIN);
+					// TODO: add TYPE_FEXT_MOUNT as a second object
+					break; // done/success
+				}
+			} // for n
+		}
+	}
 }
 
 colorRGBA choose_pot_color(rand_gen_t &rgen) {
@@ -2947,6 +2980,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 		colorRGBA chair_colors[12] = {WHITE, WHITE, GRAY, DK_GRAY, LT_GRAY, BLUE, DK_BLUE, LT_BLUE, YELLOW, RED, DK_GREEN, LT_BROWN};
 		colorRGBA chair_color(chair_colors[(13*r->part_id + 123*tot_num_rooms + 617*mat_ix + 1367*num_floors) % 12]);
 		light_ix_assign.next_room();
+		rand_gen_t room_rgen(rgen); // shared across all floors of this room
 		// select light color for this room
 		colorRGBA color;
 		if (r->is_ext_basement_conn()) {color = RED;}
@@ -3089,7 +3123,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 					if (rgen.rand_bool()) {add_rug_to_room(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);} // 50% of the time; not all rugs will be placed
 				}
 				if (!is_house && r->is_hallway && f == 0 && *r == pri_hall) { // first floor primary hallway, make it the lobby
-					add_pri_hall_objs(rgen, *r, room_center.z, room_id, tot_light_amt);
+					add_pri_hall_objs(rgen, room_rgen, *r, room_center.z, room_id, tot_light_amt);
 					r->assign_to(RTYPE_LOBBY, f);
 				}
 				continue; // no other geometry for this room
