@@ -1956,39 +1956,46 @@ bool building_t::add_laundry_objs(rand_gen_t rgen, room_t const &room, float zva
 	return 0; // failed
 }
 
-void building_t::add_pri_hall_objs(rand_gen_t rgen, rand_gen_t room_rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt) {
-	float const window_vspacing(get_window_vspace()), desk_width(0.9*window_vspacing);
+void building_t::add_pri_hall_objs(rand_gen_t rgen, rand_gen_t room_rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned floor_ix) {
 	bool const long_dim(room.dx() < room.dy());
-	if (room.get_sz_dim(!long_dim) < (desk_width + 1.6*get_doorway_width())) return; // hallway is too narrow
-	float const centerline(room.get_center_dim(!long_dim)), desk_depth(0.6*desk_width);
+	float const window_vspacing(get_window_vspace());
 	vect_room_object_t &objs(interior->room_geom->objs);
-	cube_t desk;
-	set_cube_zvals(desk, zval, zval+0.32*window_vspacing);
-	set_wall_width(desk, centerline, 0.5*desk_width, !long_dim);
 
-	for (unsigned dir = 0; dir < 2; ++dir) { // add a reception desk at each entrance
-		float const hall_len(room.get_sz_dim(long_dim)), hall_start(room.d[long_dim][dir]), dir_sign(dir ? -1.0 : 1.0);
-		float const val1(hall_start + max(0.1f*hall_len, window_vspacing)*dir_sign), val2(hall_start + 0.3*hall_len*dir_sign); // range of reasonable desk placements along the hall
+	if (floor_ix == 0) { // place first floor objects
+		// reception desks
+		float const desk_width(0.9*window_vspacing);
+		
+		if (room.get_sz_dim(!long_dim) > (desk_width + 1.6*get_doorway_width())) { // hallway is wide enough for a reception desk
+			float const centerline(room.get_center_dim(!long_dim)), desk_depth(0.6*desk_width);
+			cube_t desk;
+			set_cube_zvals(desk, zval, zval+0.32*window_vspacing);
+			set_wall_width(desk, centerline, 0.5*desk_width, !long_dim);
 
-		for (unsigned n = 0; n < 10; ++n) { // try to find the closest valid placement to the door, make 10 random attempts
-			float const val(rgen.rand_uniform(min(val1, val2), max(val1, val2)));
-			set_wall_width(desk, val, 0.5*desk_depth, long_dim);
-			if (interior->is_blocked_by_stairs_or_elevator(desk)) continue; // bad location, try a new one
+			for (unsigned dir = 0; dir < 2; ++dir) { // add a reception desk at each entrance
+				float const hall_len(room.get_sz_dim(long_dim)), hall_start(room.d[long_dim][dir]), dir_sign(dir ? -1.0 : 1.0);
+				float const val1(hall_start + max(0.1f*hall_len, window_vspacing)*dir_sign), val2(hall_start + 0.3*hall_len*dir_sign); // range of reasonable desk placements along the hall
 
-			if (building_obj_model_loader.is_model_valid(OBJ_MODEL_OFFICE_CHAIR)) {
-				float const chair_height(0.425*window_vspacing), chair_radius(0.5f*chair_height*get_radius_for_square_model(OBJ_MODEL_OFFICE_CHAIR));
-				point pos;
-				pos.z = zval;
-				pos[!long_dim] = centerline;
-				pos[ long_dim] = val + dir_sign*(-0.05*desk_depth + chair_radius); // push the chair into the cutout of the desk
-				cube_t const chair(get_cube_height_radius(pos, chair_radius, chair_height));
-				if (interior->is_blocked_by_stairs_or_elevator(chair)) continue; // bad location, try a new one
-				objs.emplace_back(chair, TYPE_OFF_CHAIR, room_id, long_dim, dir, 0, tot_light_amt, SHAPE_CYLIN, GRAY_BLACK);
-			}
-			objs.emplace_back(desk, TYPE_RDESK, room_id, long_dim, dir, 0, tot_light_amt, SHAPE_CUBE);
-			break; // done
-		} // for n
-	} // for dir
+				for (unsigned n = 0; n < 10; ++n) { // try to find the closest valid placement to the door, make 10 random attempts
+					float const val(rgen.rand_uniform(min(val1, val2), max(val1, val2)));
+					set_wall_width(desk, val, 0.5*desk_depth, long_dim);
+					if (interior->is_blocked_by_stairs_or_elevator(desk)) continue; // bad location, try a new one
+
+					if (building_obj_model_loader.is_model_valid(OBJ_MODEL_OFFICE_CHAIR)) {
+						float const chair_height(0.425*window_vspacing), chair_radius(0.5f*chair_height*get_radius_for_square_model(OBJ_MODEL_OFFICE_CHAIR));
+						point pos;
+						pos.z = zval;
+						pos[!long_dim] = centerline;
+						pos[ long_dim] = val + dir_sign*(-0.05*desk_depth + chair_radius); // push the chair into the cutout of the desk
+						cube_t const chair(get_cube_height_radius(pos, chair_radius, chair_height));
+						if (interior->is_blocked_by_stairs_or_elevator(chair)) continue; // bad location, try a new one
+						objs.emplace_back(chair, TYPE_OFF_CHAIR, room_id, long_dim, dir, 0, tot_light_amt, SHAPE_CYLIN, GRAY_BLACK);
+					}
+					objs.emplace_back(desk, TYPE_RDESK, room_id, long_dim, dir, 0, tot_light_amt, SHAPE_CUBE);
+					break; // done
+				} // for n
+			} // for dir
+		}
+	}
 	if (building_obj_model_loader.is_model_valid(OBJ_MODEL_FIRE_EXT)) { // add a fire extinguisher on the wall
 		vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_FIRE_EXT)); // D, W, H
 		float const fe_height(0.16*window_vspacing), fe_radius(fe_height*(0.5*(sz.x + sz.y)/sz.z)), min_clearance(2.0*fe_radius);
@@ -3122,9 +3129,9 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 					hang_pictures_in_room(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, f, is_basement);
 					if (rgen.rand_bool()) {add_rug_to_room(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);} // 50% of the time; not all rugs will be placed
 				}
-				if (!is_house && r->is_hallway && f == 0 && *r == pri_hall) { // first floor primary hallway, make it the lobby
-					add_pri_hall_objs(rgen, room_rgen, *r, room_center.z, room_id, tot_light_amt);
-					r->assign_to(RTYPE_LOBBY, f);
+				if (!is_house && r->is_hallway && *r == pri_hall) { // office building primary hallway
+					add_pri_hall_objs(rgen, room_rgen, *r, room_center.z, room_id, tot_light_amt, f);
+					if (f == 0) {r->assign_to(RTYPE_LOBBY, f);} // first floor primary hallway, make it the lobby
 				}
 				continue; // no other geometry for this room
 			}
