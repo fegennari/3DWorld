@@ -2229,7 +2229,9 @@ bool building_t::hang_pictures_in_room(rand_gen_t rgen, room_t const &room, floa
 				if (no_ext_walls && fabs(room.d[dim][dir] - part.d[dim][dir]) < 1.1*wall_thickness) continue; // on part boundary, likely ext wall where there may be windows, skip
 				cube_t c(room);
 				set_cube_zvals(c, zval+0.25*floor_height, zval+0.9*floor_height-floor_thick);
-				c.d[dim][!dir] = c.d[dim][dir] + (dir ? -1.0 : 1.0)*0.6*wall_thickness; // Note: offset by an additional half wall thickness
+				c.d[dim][!dir] = c.d[dim][dir] + (dir ? -1.0 : 1.0)*0.6*wall_thickness;
+				// translate by half wall thickness if not interior hallway or office wall
+				if (!(room.inc_half_walls() && classify_room_wall(room, zval, dim, dir, 0) != ROOM_WALL_EXT)) {c.translate_dim(dim, (dir ? 1.0 : -1.0)*0.5*wall_thickness);}
 				float const room_len(room.get_sz_dim(!dim));
 				c.expand_in_dim(!dim, -0.2*room_len); // xy_space
 				
@@ -2274,7 +2276,7 @@ bool building_t::hang_pictures_in_room(rand_gen_t rgen, room_t const &room, floa
 				cube_t c(center, center);
 				c.expand_in_dim(2, 0.5*height);
 				c.d[dim][!dir] += 0.2*base_shift; // move out to prevent z-fighting
-				// add an additional half wall thickness for interior hallway walls
+				// add an additional half wall thickness for interior hallway and office walls
 				if (room.inc_half_walls() && classify_room_wall(room, zval, dim, dir, 0) != ROOM_WALL_EXT) {c.translate_dim(dim, base_shift);}
 				c.expand_in_dim(!dim, 0.5*width);
 				int const ret(check_valid_picture_placement(room, c, width, zval, dim, dir, objs_start));
