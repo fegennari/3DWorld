@@ -515,6 +515,7 @@ cube_t building_t::place_door(cube_t const &base, bool dim, bool dir, float door
 			float const dpos_lo(door_pos    -     door_half_width), dpos_hi(door_pos    +     door_half_width); // expand width of the door
 
 			for (auto w = walls.begin(); w != walls.end(); ++w) {
+				if (w->z1() > door.z2() || w->z2() < door.z1())         continue; // wrong part/floor
 				if (w->d[ dim][0] > dpos_hi || w->d[ dim][1] < dpos_lo) continue; // not ending at same wall as door
 				if (w->d[!dim][0] > door_hi || w->d[!dim][1] < door_lo) continue; // not intersecting door
 				// Note: since we know that all rooms are wider than the door width, we know that we have space for a door on either side of the wall
@@ -525,10 +526,9 @@ cube_t building_t::place_door(cube_t const &base, bool dim, bool dir, float door
 				break;
 			} // for w
 		}
-		door.d[ dim][!dir] = door_pos + door_shift*(dir ? 1.0 : -1.0); // move slightly away from the house to prevent z-fighting
-		door.d[ dim][ dir] = door.d[dim][!dir]; // make zero size in this dim
-		door.d[!dim][   0] = door_center - door_half_width; // left
-		door.d[!dim][   1] = door_center + door_half_width; // right
+		door.d[dim][!dir] = door_pos + door_shift*(dir ? 1.0 : -1.0); // move slightly away from the house to prevent z-fighting
+		door.d[dim][ dir] = door.d[dim][!dir]; // make zero size in this dim
+		set_wall_width(door, door_center, door_half_width, !dim);
 
 		// we're free to choose the door pos, and have the interior, so we can check if the door is in a good location;
 		// if we get here on the last iteration, just keep the door even if it's an invalid location
