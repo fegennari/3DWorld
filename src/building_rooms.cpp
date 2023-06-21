@@ -1611,6 +1611,7 @@ bool building_t::add_kitchen_objs(rand_gen_t rgen, room_t const &room, float zva
 					}
 				}
 			}
+			if (is_sink) {} // TODO: maybe place a dead cockroach (TYPE_INSECT) in the sink
 			is_sink = 0; // sink is in first placed counter only
 		} // for n
 	}

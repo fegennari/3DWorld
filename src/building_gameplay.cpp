@@ -165,11 +165,12 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_SILVER    ] = bldg_obj_type_t(0, 0, 0, 1, 0, 1, 0, 10.0,  0.2,   "silverware");
 	bldg_obj_types[TYPE_TOY_MODEL ] = bldg_obj_type_t(0, 0, 1, 1, 0, 1, 0, 4.0,   0.2,   "toy"); // plastic ring stack
 	bldg_obj_types[TYPE_CEIL_FAN  ] = bldg_obj_type_t(0, 0, 0, 0, 1, 1, 0, 200.0, 25.0,  "ceiling fan");
-	bldg_obj_types[TYPE_FIRE_EXT  ] = bldg_obj_type_t(0, 0, 1, 1, 0, 1, 0, 20.0,  10.0,  "fire extinguisher");
+	bldg_obj_types[TYPE_FIRE_EXT  ] = bldg_obj_type_t(0, 0, 1, 1, 0, 1, 0, 20.0,  10.0,  "fire extinguisher", 1000);
 	// animals; not room objects
 	bldg_obj_types[TYPE_RAT       ] = bldg_obj_type_t(0, 0, 1, 1, 0, 1, 0, 8.99,  1.0,   "rat"); // can be picked up
 	bldg_obj_types[TYPE_SPIDER    ] = bldg_obj_type_t(0, 0, 1, 0, 0, 0, 0, 0.0,   0.1,   "spider");
 	bldg_obj_types[TYPE_SNAKE     ] = bldg_obj_type_t(0, 0, 1, 0, 0, 0, 0, 50.00, 4.0,   "snake");
+	bldg_obj_types[TYPE_INSECT    ] = bldg_obj_type_t(0, 0, 0, 0, 0, 1, 0, 0.0,   0.01,  "insect");
 	//                                                pc ac rc pu at im ls value  weight  name [capacity]
 }
 
@@ -199,7 +200,7 @@ bldg_obj_type_t get_taken_obj_type(room_object_t const &obj) {
 	if (obj.type == TYPE_PICTURE && obj.taken_level > 0) {return bldg_obj_type_t(0, 0, 0, 1, 0, 0, 1, 20.0, 6.0, "picture frame");} // second item to take from picture
 	if (obj.type == TYPE_TPROLL  && obj.taken_level > 0) {return bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 6.0,  0.5, "toilet paper holder");} // second item to take from tproll
 
-	if (obj.type == TYPE_BED) { // player_coll, ai_coll, pickup, attached, is_model, lg_sm, value, weight, name
+	if (obj.type == TYPE_BED) { // player_coll, ai_coll, rat_coll, pickup, attached, is_model, lg_sm, value, weight, name
 		if (obj.taken_level > 1) {return bldg_obj_type_t(0, 0, 0, 1, 0, 0, 1, 250.0, mattress_weight, "mattress"  );} // third item to take from bed
 		if (obj.taken_level > 0) {return bldg_obj_type_t(0, 0, 0, 1, 0, 0, 1, 80.0,  sheets_weight,   "bed sheets");} // second item to take from bed
 		return bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 20.0, pillow_weight, "pillow"); // first item to take from bed
@@ -222,6 +223,11 @@ bldg_obj_type_t get_taken_obj_type(room_object_t const &obj) {
 	if (obj.type == TYPE_LIGHT    && obj.flags & RO_FLAG_BROKEN2) {return bldg_obj_type_t(0, 0, 0, 1, 0, 0, 0,  10.0,  5.0, "broken light");}
 	if (obj.type == TYPE_RAT      && obj.is_broken   ()) {return bldg_obj_type_t(0, 0, 1, 1, 0, 1, 0,   0.0,  1.0, "cooked/dead rat");}
 
+	if (obj.type == TYPE_INSECT) {
+		bool const is_fly(obj.is_hanging());
+		string const name(string(obj.is_broken() ? "dead " : "") + (is_fly ? "fly" : "cockroach"));
+		return bldg_obj_type_t(0, 0, 0, 1, 0, !is_fly, (is_fly ? 2 : 0), 0.0, 0.01, name);
+	}
 	if (obj.type == TYPE_BOTTLE) {
 		bottle_params_t const &bparams(bottle_params[obj.get_bottle_type()]);
 		bldg_obj_type_t type(0, 0, 0, 1, 0, 0, 2,  bparams.value, 1.0, bparams.name);
