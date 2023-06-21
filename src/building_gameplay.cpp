@@ -1573,6 +1573,18 @@ bool building_t::maybe_use_last_pickup_room_object(point const &player_pos) {
 				player_inventory.mark_last_item_used(); // will remove it
 			}
 		}
+		else if (obj.type == TYPE_FIRE_EXT) {
+			static double next_sound_time(0.0);
+
+			if (tfticks > next_sound_time) { // play sound if sprayed/marked, but not too frequently; marker has no sound
+				gen_sound_thread_safe_at_player(SOUND_SPRAY, 0.5);
+				register_building_sound(player_pos, 0.1);
+				next_sound_time = tfticks + 0.25*TICKS_PER_SECOND;
+			}
+			// TODO: spray effect
+			player_inventory.mark_last_item_used();
+			//player_inventory.record_damage_done(0.25);
+		}
 		else {assert(0);}
 	}
 	else {assert(0);}
@@ -1931,7 +1943,7 @@ void building_t::remove_paint_in_cube(cube_t const &c) const { // for whiteboard
 bool room_object_t::can_use() const { // excludes dynamic objects
 	if (is_medicine()) return 1; // medicine can be carried in the inventory and used later
 	if (type == TYPE_TPROLL) {return (taken_level == 0);} // can only use the TP roll, not the holder
-	return (type == TYPE_SPRAYCAN || type == TYPE_MARKER || type == TYPE_BOOK || type == TYPE_PHONE || type == TYPE_TAPE || type == TYPE_RAT);
+	return (type == TYPE_SPRAYCAN || type == TYPE_MARKER || type == TYPE_BOOK || type == TYPE_PHONE || type == TYPE_TAPE || type == TYPE_RAT || type == TYPE_FIRE_EXT);
 }
 bool room_object_t::can_place_onto() const {
 	return (type == TYPE_TABLE || type == TYPE_DESK || type == TYPE_DRESSER || type == TYPE_NIGHTSTAND || type == TYPE_COUNTER || type == TYPE_KSINK ||

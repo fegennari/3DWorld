@@ -1142,6 +1142,11 @@ void apply_room_obj_rotate(room_object_t &obj, obj_model_inst_t &inst, vect_room
 		tmp_rgeom.add_bottle(bottle);
 		tmp_rgeom.mats_small.upload_draw_and_clear(s);
 	}
+	else if (c.type == TYPE_FIRE_EXT) {
+		building_obj_model_loader.draw_model(s, c.get_cube_center(), c, cview_dir, WHITE, xlate, OBJ_MODEL_FIRE_EXT);
+		check_mvm_update();
+		return; // don't need to run the code below
+	}
 	else {assert(0);}
 	if (needs_blend) {enable_blend();}
 	tid_nm_pair_dstate_t state(s);
