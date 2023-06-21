@@ -1489,14 +1489,28 @@ void building_room_geom_t::add_stapler(room_object_t const &c) {
 	top  .d[c.dim][ c.dir] -= 0.05*signed_len; // front
 	hinge.d[c.dim][ c.dir] -= 0.70*signed_len; // front
 	metal.d[c.dim][!c.dir] = top.d[c.dim][!c.dir] = hinge.d[c.dim][c.dir]; // back
-	mat.add_cube_to_verts_untextured(base,   color, EF_Z1);
-	mat.add_cube_to_verts_untextured(top,    color, EF_Z1);
-	mat.add_cube_to_verts_untextured(hinge,  color, EF_Z1);
-	mat.add_cube_to_verts_untextured(metal,  apply_light_color(c, LT_GRAY), EF_Z12);
+	mat.add_cube_to_verts_untextured(base,  color, EF_Z1);
+	mat.add_cube_to_verts_untextured(top,   color, EF_Z1);
+	mat.add_cube_to_verts_untextured(hinge, color, EF_Z1);
+	mat.add_cube_to_verts_untextured(metal, apply_light_color(c, LT_GRAY), EF_Z12);
 }
 
 void building_room_geom_t::add_fire_ext_mount(room_object_t const &c) {
-	// TODO: write; or is this another 3D model?
+	rgeom_mat_t &mat(get_untextured_material(1, 0, 1)); // shadowed, small
+	colorRGBA const color(apply_light_color(c));
+	float const plate_thickness(c.get_depth() - c.get_width()), inside_face(c.d[c.dim][!c.dir] + (c.dir ? 1.0 : -1.0)*plate_thickness);
+	assert(plate_thickness > 0.0);
+	cube_t back(c), loop(c);
+	back.d[c.dim][c.dir] = loop.d[c.dim][!c.dir] = inside_face;
+	loop.z1() += 0.20*c.dz();
+	loop.z2() -= 0.50*c.dz();
+	mat.add_cube_to_verts_untextured(back, color, ~get_face_mask(c.dim, !c.dir)); // skip back face against the wall
+	mat.add_vcylin_to_verts(loop, color, 1, 1); // draw both ends
+}
+
+void building_room_geom_t::add_fire_ext_sign(room_object_t const &c) {
+	rgeom_mat_t& mat(get_material(tid_nm_pair_t(get_texture_by_name("interiors/fire_extinguisher_sign.jpg"), 0.0), 0, 0, 1)); // unshadowed, small
+	mat.add_cube_to_verts(c, apply_light_color(c), zero_vector, get_face_mask(c.dim, c.dir), !c.dim, (c.dim ^ c.dir ^ 1)); // front face only
 }
 
 void building_room_geom_t::add_ceiling_fan_light(room_object_t const &fan, room_object_t const &light) {
@@ -3841,6 +3855,8 @@ colorRGBA room_object_t::get_color() const {
 	case TYPE_ATTIC_DOOR:return get_textured_wood_color();
 	case TYPE_DUCT:     return texture_color((shape == SHAPE_CYLIN) ? get_cylin_duct_tid() : get_cube_duct_tid()).modulate_with(color);
 	case TYPE_FCABINET: return texture_color(get_texture_by_name("interiors/filing_cabinet.png"));
+	case TYPE_FEXT_SIGN: return colorRGBA(1.0, 0.4, 0.4, 1.0); // close enough
+	case TYPE_FIRE_EXT:  return RED;
 	//case TYPE_CHIMNEY:  return texture_color(get_material().side_tex); // should modulate with texture color, but we don't have it here
 	default: return color; // TYPE_LIGHT, TYPE_TCAN, TYPE_BOOK, TYPE_BOTTLE, TYPE_PEN_PENCIL, etc.
 	}

@@ -2004,9 +2004,9 @@ void building_t::add_pri_hall_objs(rand_gen_t rgen, rand_gen_t room_rgen, room_t
 
 		if (wall_pos_lo < wall_pos_hi) { // should always be true?
 			bool const dir(room_rgen.rand_bool()); // random, but the same across all floors
-			float const wall_pos(room.d[!long_dim][dir]);
+			float const dir_sign(dir ? -1.0 : 1.0), wall_pos(room.d[!long_dim][dir] + dir_sign*0.5*get_wall_thickness()), mount_thickness(0.15*fe_radius);
 			point fe_pos(0.0, 0.0, (zval + 0.32*window_vspacing)); // bottom position
-			fe_pos[!long_dim] = wall_pos + (dir ? -1.0 : 1.0)*fe_radius; // touching the wall
+			fe_pos[!long_dim] = wall_pos + dir_sign*fe_radius; // radius away from the wall
 
 			for (unsigned n = 0; n < 20; ++n) { // make 20 attempts at placing a fire extinguisher
 				float const val(room_rgen.rand_uniform(wall_pos_lo, wall_pos_hi)), cov_lo(val - min_clearance), cov_hi(val + min_clearance);
@@ -2020,11 +2020,26 @@ void building_t::add_pri_hall_objs(rand_gen_t rgen, rand_gen_t room_rgen, room_t
 					contained_in_wall = 1; break;
 				}
 				if (contained_in_wall) { // shouldn't need to check anything else?
+					// add fire extinguisher
 					cube_t fe_bcube(fe_pos, fe_pos);
 					fe_bcube.expand_by_xy(fe_radius);
 					fe_bcube.z2() += fe_height;
-					objs.emplace_back(fe_bcube, TYPE_FIRE_EXT, room_id, long_dim, dir, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CYLIN);
-					// TODO: add TYPE_FEXT_MOUNT as a second object
+					objs.emplace_back(fe_bcube, TYPE_FIRE_EXT, room_id, long_dim, dir, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CYLIN); // mounted sideways
+					// add the wall mounting bracket; what about adding a small box with a door that contains the fire extinguisher?
+					cube_t wall_mount(fe_bcube);
+					wall_mount.expand_in_dim(long_dim, -0.2*fe_radius);
+					wall_mount.d[!long_dim][ dir]  = wall_pos; // extend to touch the wall
+					wall_mount.d[!long_dim][!dir] -= dir_sign*0.2*fe_radius;
+					wall_mount.z1() -= 0.05*fe_height; // under the fire extinguisher
+					wall_mount.z2() -= 0.30*fe_height;
+					objs.emplace_back(wall_mount, TYPE_FEXT_MOUNT, room_id, !long_dim, !dir, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CUBE, BKGRAY);
+					// add the sign
+					cube_t sign;
+					sign.d[!long_dim][ dir] = wall_pos; // extend to touch the wall
+					sign.d[!long_dim][!dir] = wall_pos + dir_sign*0.05*fe_radius;
+					set_cube_zvals(sign, (zval + 0.65*window_vspacing), (zval + 0.8*window_vspacing));
+					set_wall_width(sign, val, 0.5*fe_radius, long_dim);
+					objs.emplace_back(sign, TYPE_FEXT_SIGN, room_id, !long_dim, !dir, RO_FLAG_NOCOLL, tot_light_amt);
 					break; // done/success
 				}
 			} // for n

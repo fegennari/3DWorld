@@ -910,6 +910,7 @@ void building_room_geom_t::add_small_static_objs_to_verts(vect_room_object_t con
 		case TYPE_FCABINET: add_filing_cabinet(c,  0, 1); break; // sm
 		case TYPE_STAPLER: add_stapler(c); break;
 		case TYPE_FEXT_MOUNT: add_fire_ext_mount(c); break;
+		case TYPE_FEXT_SIGN:  add_fire_ext_sign (c); break;
 		default: break;
 		} // end switch
 	} // for i
