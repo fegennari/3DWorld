@@ -1498,14 +1498,20 @@ void building_room_geom_t::add_stapler(room_object_t const &c) {
 void building_room_geom_t::add_fire_ext_mount(room_object_t const &c) {
 	rgeom_mat_t &mat(get_untextured_material(1, 0, 1)); // shadowed, small
 	colorRGBA const color(apply_light_color(c));
-	float const plate_thickness(c.get_depth() - c.get_width()), inside_face(c.d[c.dim][!c.dir] + (c.dir ? 1.0 : -1.0)*plate_thickness);
+	float const plate_thickness(c.get_depth() - c.get_width()), inside_face(c.d[c.dim][!c.dir] + (c.dir ? 1.0 : -1.0)*plate_thickness), dz(c.dz());
 	assert(plate_thickness > 0.0);
 	cube_t back(c), loop(c);
 	back.d[c.dim][c.dir] = loop.d[c.dim][!c.dir] = inside_face;
-	loop.z1() += 0.20*c.dz();
-	loop.z2() -= 0.50*c.dz();
+	cube_t bottom(loop);
+	loop  .z1() += 0.20*dz;
+	loop  .z2() -= 0.50*dz;
+	bottom.z2() -= 0.96*dz;
+	cube_t bot_cube(bottom);
+	bot_cube.d[c.dim][c.dir] = bottom.get_center_dim(c.dim); // half width
 	mat.add_cube_to_verts_untextured(back, color, ~get_face_mask(c.dim, !c.dir)); // skip back face against the wall
-	mat.add_vcylin_to_verts(loop, color, 1, 1); // draw both ends
+	mat.add_vcylin_to_verts(loop,   color, 0, 0, 1); // two sided hollow cylinder
+	mat.add_vcylin_to_verts(bottom, color, 1, 1, 0); // draw top and bottom ends
+	mat.add_cube_to_verts_untextured(bot_cube, color, get_skip_mask_for_xy(c.dim)); // skip faces adjacent to back and bottom
 }
 
 void building_room_geom_t::add_fire_ext_sign(room_object_t const &c) {

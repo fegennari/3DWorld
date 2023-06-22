@@ -2024,15 +2024,16 @@ void building_t::add_pri_hall_objs(rand_gen_t rgen, rand_gen_t room_rgen, room_t
 					cube_t fe_bcube(fe_pos, fe_pos);
 					fe_bcube.expand_by_xy(fe_radius);
 					fe_bcube.z2() += fe_height;
-					objs.emplace_back(fe_bcube, TYPE_FIRE_EXT, room_id, long_dim, dir, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CYLIN); // mounted sideways
+					objs.emplace_back(fe_bcube, TYPE_FIRE_EXT, room_id, long_dim, (dir ^ long_dim ^ 1), RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CYLIN); // mounted sideways
 					// add the wall mounting bracket; what about adding a small box with a door that contains the fire extinguisher?
 					cube_t wall_mount(fe_bcube);
-					wall_mount.expand_in_dim(long_dim, -0.2*fe_radius);
+					wall_mount.expand_in_dim(long_dim, -0.52*fe_radius);
+					wall_mount.translate_dim(long_dim, ((long_dim ^ dir) ? 1.0 : -1.0)*0.24*fe_radius); // shift to line up with FE body
 					wall_mount.d[!long_dim][ dir]  = wall_pos; // extend to touch the wall
-					wall_mount.d[!long_dim][!dir] -= dir_sign*0.2*fe_radius;
-					wall_mount.z1() -= 0.05*fe_height; // under the fire extinguisher
+					wall_mount.d[!long_dim][!dir] -= dir_sign*0.8*fe_radius; // move inward
+					wall_mount.z1() -= 0.02*fe_height; // under the fire extinguisher
 					wall_mount.z2() -= 0.30*fe_height;
-					objs.emplace_back(wall_mount, TYPE_FEXT_MOUNT, room_id, !long_dim, !dir, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CUBE, BKGRAY);
+					objs.emplace_back(wall_mount, TYPE_FEXT_MOUNT, room_id, !long_dim, !dir, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CUBE, GRAY_BLACK);
 					// add the sign
 					cube_t sign;
 					sign.d[!long_dim][ dir] = wall_pos; // extend to touch the wall
