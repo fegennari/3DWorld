@@ -417,7 +417,7 @@ enum {/*building models*/ OBJ_MODEL_TOILET=0, OBJ_MODEL_SINK, OBJ_MODEL_TUB, OBJ
 	OBJ_MODEL_RAT, OBJ_MODEL_ROACH,
 	/*city models*/ OBJ_MODEL_FHYDRANT, OBJ_MODEL_SUBSTATION, OBJ_MODEL_MAILBOX, OBJ_MODEL_UMBRELLA, NUM_OBJ_MODELS};
 
-enum {PART_EFFECT_NONE=0, PART_EFFECT_SPARK, NUM_PART_EFFECTS};
+enum {PART_EFFECT_NONE=0, PART_EFFECT_SPARK, PART_EFFECT_SMOKE, NUM_PART_EFFECTS};
 
 // object flags
 unsigned const RO_FLAG_LIT     = 0x01; // light is on
@@ -758,18 +758,21 @@ class particle_manager_t {
 		point pos;
 		vector3d vel;
 		colorRGBA color;
-		float radius=0.0, time=0.0;
+		float init_radius=0.0, radius=0.0, time=0.0;
 		int parent_obj_id=0;
 		unsigned effect=PART_EFFECT_NONE, bounce_count=0;
 
 		particle_t() {}
 		particle_t(point const &p, vector3d const &v, colorRGBA const &c, float r, unsigned e, int pid=-1) :
-			pos(p), vel(v), color(c), radius(r), parent_obj_id(pid), effect(e) {}
+			pos(p), vel(v), color(c), init_radius(r), radius(r), parent_obj_id(pid), effect(e) {}
 	};
 	vector<particle_t> particles;
-	quad_batch_draw qbd;
+	quad_batch_draw qbd[2]; // {non-emissive, emissive}
 	rand_gen_t rgen;
 public:
+	void add_particle(point const &pos, vector3d const &vel, colorRGBA const &color, float radius, unsigned effect, int pid=-1) {
+		particles.emplace_back(pos, vel, color, radius, effect, pid);
+	}
 	void add_for_obj(room_object_t &obj, float pradius, vector3d const &dir, float part_vel, unsigned min_parts, unsigned max_parts, unsigned effect, int parent_obj_id);
 	cube_t get_bcube() const;
 	void next_frame(building_t &building);

@@ -1532,18 +1532,23 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 	}
 }
 
+void draw_blended_billboards(quad_batch_draw &qbd, int tid) {
+	if (qbd.empty()) return;
+	glDepthMask(GL_FALSE); // disable depth write
+	enable_blend();
+	select_texture(tid);
+	select_texture(FLAT_NMAP_TEX, 5); // no normal map
+	qbd.draw_and_clear();
+	disable_blend();
+	glDepthMask(GL_TRUE);
+}
 void draw_emissive_billboards(quad_batch_draw &qbd, int tid) {
 	if (qbd.empty()) return;
 	shader_t s;
 	s.begin_simple_textured_shader(); // unlit/emissive and textured
-	glDepthMask(GL_FALSE); // disable depth write
-	enable_blend();
 	set_additive_blend_mode();
-	select_texture(tid);
-	qbd.draw_and_clear();
+	draw_blended_billboards(qbd, tid);
 	set_std_blend_mode();
-	disable_blend();
-	glDepthMask(GL_TRUE);
 }
 
 void particle_manager_t::draw(shader_t &s, vector3d const &xlate) { // non-const because qbd is modified
@@ -1551,16 +1556,21 @@ void particle_manager_t::draw(shader_t &s, vector3d const &xlate) { // non-const
 	point const viewer_bs(camera_pdu.pos - xlate);
 
 	for (particle_t const &p : particles) {
-		assert(p.effect == PART_EFFECT_SPARK); // currently the only supported effect
 		if (!camera_pdu.sphere_visible_test((p.pos + xlate), p.radius)) continue; // VFC
-		float const elongate(1.0 + 1500.0*p.vel.mag());
 		vector3d const vdir(viewer_bs - p.pos), up_dir((p.vel == zero_vector) ? plus_z : p.vel);
-		vector3d const v1(cross_product(vdir, up_dir).get_norm()*p.radius);
-		vector3d const v2(cross_product(v1,   vdir  ).get_norm()*p.radius*elongate); // stretch in velocity dir
-		qbd.add_quad_dirs(p.pos, v1, v2, p.color, vdir.get_norm());
+		vector3d v1(cross_product(vdir, up_dir).get_norm()*p.radius);
+		vector3d v2(cross_product(v1,   vdir  ).get_norm()*p.radius);
+		if (p.effect == PART_EFFECT_SPARK) {v2 *= (1.0 + 1500.0*p.vel.mag());} // stretch in velocity dir
+		else if (p.effect == PART_EFFECT_SMOKE) {} // nothing?
+		else {assert(0);}
+		bool const emissive(p.effect == PART_EFFECT_SPARK);
+		qbd[emissive].add_quad_dirs(p.pos, v1, v2, p.color, plus_z); // use +z form the normal
+	} // for p
+	if (!qbd[1].empty()) { // draw emissive particles with a custom shader
+		draw_emissive_billboards(qbd[1], BLUR_CENT_TEX); // smooth alpha blended edges
+		s.make_current();
 	}
-	draw_emissive_billboards(qbd, BLUR_CENT_TEX); // smooth alpha blended edges
-	s.make_current();
+	if (!qbd[0].empty()) {draw_blended_billboards(qbd[0], BLUR_TEX);} // draw non-emissive particles
 }
 
 void fire_manager_t::draw(shader_t &s, vector3d const &xlate) {

@@ -1131,16 +1131,24 @@ void particle_manager_t::next_frame(building_t &building) {
 	if (particles.empty()) return;
 	float const fticks_stable(min(fticks, 4.0f)); // clamp to 0.1s
 	auto const &objs(building.interior->room_geom->objs);
+	float const lifetimes[NUM_PART_EFFECTS] = {0.0, 2.5, 2.0}; // none, sparks, smoke
 
 	for (particle_t &p : particles) {
 		point const p_last(p.pos);
 		p.pos  += fticks_stable*p.vel;
 		p.time += fticks_stable;
-		float const lifetime(p.time/(2.5*TICKS_PER_SECOND));
+		float const lifetime(p.time/(lifetimes[p.effect]*TICKS_PER_SECOND));
 		if (lifetime > 1.0) {p.effect = PART_EFFECT_NONE; continue;} // end of life
-		assert(p.effect == PART_EFFECT_SPARK); // currently the only supported effect
-		p.color = get_glow_color(2.0*lifetime, 1); // fade=1
-		apply_building_gravity(p.vel.z, 0.5*fticks_stable); // half gravity
+		
+		if (p.effect == PART_EFFECT_SPARK) {
+			p.color = get_glow_color(2.0*lifetime, 1); // fade=1
+			apply_building_gravity(p.vel.z, 0.5*fticks_stable); // half gravity
+		}
+		else if (p.effect == PART_EFFECT_SMOKE) {
+			p.radius = p.init_radius*(1.0 + 4.0*lifetime); // radius increases over lifetime
+			apply_building_gravity(p.vel.z, 0.05*fticks_stable); // very small gravity
+		}
+		else {assert(0);}
 		// check for collisions and apply bounce, similar to balls
 		float const bounce_scale = 0.5;
 		vector3d cnorm;
@@ -1150,6 +1158,7 @@ void particle_manager_t::next_frame(building_t &building) {
 		if (p.parent_obj_id >= 0) {assert((unsigned)p.parent_obj_id < objs.size()); self = objs.begin() + p.parent_obj_id;}
 
 		if (building.interior->check_sphere_coll(building, p.pos, p_last, p.radius, self, cnorm, hardness, obj_ix)) {
+			if (p.effect == PART_EFFECT_SMOKE) {p.effect = PART_EFFECT_NONE; continue;} // no bounce
 			apply_floor_vel_thresh(p.vel, cnorm);
 			bool const bounced(apply_object_bounce(p.vel, cnorm, bounce_scale*hardness, 0)); // on_floor=0
 			

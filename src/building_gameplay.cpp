@@ -1495,11 +1495,11 @@ bool building_t::maybe_use_last_pickup_room_object(point const &player_pos) {
 	delay_use = 0;
 	room_object_t obj;
 	if (!player_inventory.try_use_last_item(obj)) return 0;
+	float const player_radius(get_scaled_player_radius());
 
 	if (obj.has_dstate()) { // it's a dynamic object (ball), throw it; only activated with use_object/'E' key
-		float const cradius(get_scaled_player_radius());
-		point dest(player_pos + (1.2f*(cradius + obj.get_radius()))*cview_dir);
-		dest.z -= 0.5*cradius; // slightly below the player's face
+		point dest(player_pos + (1.2f*(player_radius + obj.get_radius()))*cview_dir);
+		dest.z -= 0.5*player_radius; // slightly below the player's face
 		obj.translate(dest - point(obj.xc(), obj.yc(), obj.z1()));
 		obj.flags |= RO_FLAG_DYNAMIC; // make it dynamic, assuming it will be dropped/thrown
 		if (!interior->room_geom->add_room_object(obj, *this, 1, THROW_VELOCITY*cview_dir)) return 0;
@@ -1509,7 +1509,7 @@ bool building_t::maybe_use_last_pickup_room_object(point const &player_pos) {
 	}
 	else if (obj.can_use()) { // active with either use_object or fire key
 		if (obj.type == TYPE_TPROLL) {
-			point const dest(player_pos + (1.5f*get_scaled_player_radius())*cview_dir);
+			point const dest(player_pos + (1.5f*player_radius)*cview_dir);
 			if (!apply_toilet_paper(dest, cview_dir, 0.5*obj.dz())) return 0;
 			player_inventory.mark_last_item_used();
 		}
@@ -1525,7 +1525,7 @@ bool building_t::maybe_use_last_pickup_room_object(point const &player_pos) {
 		else if (obj.type == TYPE_BOOK || obj.type == TYPE_RAT) { // items that can be dropped
 			bool const is_rat(obj.type == TYPE_RAT);
 			float const half_width(0.5*max(max(obj.dx(), obj.dy()), obj.dz())); // use conservative max dim
-			point dest(player_pos + (1.2f*(get_scaled_player_radius() + half_width))*cview_dir);
+			point dest(player_pos + (1.2f*(player_radius + half_width))*cview_dir);
 
 			if (is_rat) {
 				bool const was_dead(obj.is_broken());
@@ -1581,9 +1581,17 @@ bool building_t::maybe_use_last_pickup_room_object(point const &player_pos) {
 				register_building_sound(player_pos, 0.1);
 				next_sound_time = tfticks + 0.25*TICKS_PER_SECOND;
 			}
-			// TODO: spray effect
+			static rand_gen_t rgen;
+			float const obj_radius(obj.get_radius());
+			point const part_pos(player_pos + (1.0f*(player_radius + obj_radius))*cview_dir);
+			vector3d const velocity(0.0015*(cview_dir + 0.12*rgen.signed_rand_vector())); // add a bit of random variation
+			interior->room_geom->particle_manager.add_particle(part_pos, velocity, WHITE, 1.0*obj_radius, PART_EFFECT_SMOKE);
 			player_inventory.mark_last_item_used();
-			//player_inventory.record_damage_done(0.25);
+			player_inventory.record_damage_done(0.05); // very small amount of damage
+
+			for (auto p = interior->people.begin(); p != interior->people.end(); ++p) {
+				// TODO: retreat if zombie; look at register_person_hit()
+			}
 		}
 		else {assert(0);}
 	}
