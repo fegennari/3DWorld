@@ -1611,7 +1611,20 @@ bool building_t::add_kitchen_objs(rand_gen_t rgen, room_t const &room, float zva
 					}
 				}
 			}
-			if (is_sink) {} // TODO: maybe place a dead cockroach (TYPE_INSECT) in the sink
+			if (is_sink) { // kitchen sink; maybe place a plate, cup, or dead cockroach (TYPE_INSECT) in the sink
+				cube_t sink(get_sink_cube(objs[cabinet_id]));
+				sink.z2() = sink.z1(); // shrink to zero area at the bottom
+				unsigned const obj_type(rgen.rand()%3);
+
+				if      (obj_type == 0) {place_plate_on_obj(rgen, sink, room_id, tot_light_amt);} // add a plate
+				else if (obj_type == 1) {place_cup_on_obj(rgen, sink, room_id, tot_light_amt);} // add a cup
+				else if (obj_type == 2 && building_obj_model_loader.is_model_valid(OBJ_MODEL_ROACH)) { // add a cockroach (upside down?)
+					cube_t roach;
+					float const radius(sink.get_sz_dim(dim)*rgen.rand_uniform(0.07, 0.1)), height(0.1*radius);
+					gen_xy_pos_for_round_obj(roach, sink, radius, height, 1.1*radius, rgen);
+					objs.emplace_back(roach, TYPE_ROACH, room_id, 0, 0, (RO_FLAG_NOCOLL | RO_FLAG_RAND_ROT), tot_light_amt);
+				}
+			}
 			is_sink = 0; // sink is in first placed counter only
 		} // for n
 	}
@@ -2086,7 +2099,7 @@ cube_t place_cylin_object(rand_gen_t rgen, cube_t const &place_on, float radius,
 	return c;
 }
 
-bool building_t::place_bottle_on_obj(rand_gen_t &rgen, room_object_t const &place_on, unsigned room_id, float tot_light_amt, cube_t const &avoid) {
+bool building_t::place_bottle_on_obj(rand_gen_t &rgen, cube_t const &place_on, unsigned room_id, float tot_light_amt, cube_t const &avoid) {
 	float const window_vspacing(get_window_vspace());
 	float const height(window_vspacing*rgen.rand_uniform(0.075, 0.12)), radius(window_vspacing*rgen.rand_uniform(0.012, 0.018));
 	if (min(place_on.dx(), place_on.dy()) < 6.0*radius) return 0; // surface is too small to place this bottle
@@ -2125,11 +2138,11 @@ bool building_t::place_laptop_on_obj(rand_gen_t &rgen, room_object_t const &plac
 	return 1;
 }
 
-float get_plate_radius(rand_gen_t &rgen, room_object_t const &place_on, float window_vspacing) {
+float get_plate_radius(rand_gen_t &rgen, cube_t const &place_on, float window_vspacing) {
 	return min(rgen.rand_uniform(0.05, 0.07)*window_vspacing, 0.25f*min(place_on.dx(), place_on.dy()));
 }
 
-bool building_t::place_plate_on_obj(rand_gen_t &rgen, room_object_t const &place_on, unsigned room_id, float tot_light_amt, cube_t const &avoid) {
+bool building_t::place_plate_on_obj(rand_gen_t &rgen, cube_t const &place_on, unsigned room_id, float tot_light_amt, cube_t const &avoid) {
 	float const radius(get_plate_radius(rgen, place_on, get_window_vspace()));
 	cube_t const plate(place_cylin_object(rgen, place_on, radius, 0.1*radius, 1.1*radius));
 	if (!avoid.is_all_zeros() && plate.intersects(avoid)) return 0; // only make one attempt
@@ -2139,7 +2152,7 @@ bool building_t::place_plate_on_obj(rand_gen_t &rgen, room_object_t const &place
 	return 1;
 }
 
-bool building_t::place_cup_on_obj(rand_gen_t &rgen, room_object_t const &place_on, unsigned room_id, float tot_light_amt, cube_t const &avoid) {
+bool building_t::place_cup_on_obj(rand_gen_t &rgen, cube_t const &place_on, unsigned room_id, float tot_light_amt, cube_t const &avoid) {
 	if (!building_obj_model_loader.is_model_valid(OBJ_MODEL_CUP)) return 0;
 	float const height(0.06*get_window_vspace()), radius(0.5f*height*get_radius_for_square_model(OBJ_MODEL_CUP)); // almost square
 	if (min(place_on.dx(), place_on.dy()) < 2.5*radius) return 0; // surface is too small to place this cup
@@ -2150,7 +2163,7 @@ bool building_t::place_cup_on_obj(rand_gen_t &rgen, room_object_t const &place_o
 	return 1;
 }
 
-bool building_t::place_toy_on_obj(rand_gen_t &rgen, room_object_t const &place_on, unsigned room_id, float tot_light_amt, cube_t const &avoid) {
+bool building_t::place_toy_on_obj(rand_gen_t &rgen, cube_t const &place_on, unsigned room_id, float tot_light_amt, cube_t const &avoid) {
 	float const height(0.11*get_window_vspace()), radius(0.5f*height*0.67f);
 	if (min(place_on.dx(), place_on.dy()) < 2.5*radius) return 0; // surface is too small to place this toy
 	cube_t const toy(place_cylin_object(rgen, place_on, radius, height, 1.1*radius));
