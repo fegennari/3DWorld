@@ -165,7 +165,10 @@ bool pedestrian_t::is_valid_pos(vect_cube_t const &colliders, bool &ped_at_dest,
 	unsigned building_id(0);
 
 	if (check_buildings_ped_coll(pos, radius, plot, building_id)) {
-		if (!has_dest_bldg || building_id != dest_bldg) return 0;
+		if (!has_dest_bldg || building_id != dest_bldg) return 0; // collided with the wrong building
+		float const enter_radius(0.25*radius);
+		if (!get_building_bcube(dest_bldg).contains_pt_xy_exp(pos, enter_radius)) return 1; // collided with dest building, but not yet entered
+		if (!check_buildings_ped_coll(pos, enter_radius, plot, building_id))      return 1; // test this building at a smaller radius to make sure we've entered
 		bool const ret(!at_dest);
 		ped_at_dest = 1;
 		return ret; // only valid if we just reached our dest
@@ -486,7 +489,7 @@ point pedestrian_t::get_dest_pos(cube_t const &plot_bcube, cube_t const &next_pl
 		if (!at_dest && has_dest_bldg) { // not there yet
 			cube_t const dest_bcube(get_building_bcube(dest_bldg));
 			//if (dest_bcube.contains_pt_xy(pos)) {at_dest = 1;} // could set this here, but requiring a collision also works
-			point const dest_pos(dest_bcube.get_cube_center()); // target a door nearest pos?
+			point const dest_pos(dest_bcube.get_cube_center()); // target a door nearest pos? this is done in get_avoid_cubes()
 			debug_state = 1;
 			return point(dest_pos.x, dest_pos.y, pos.z); // same zval
 		}
@@ -623,7 +626,8 @@ void pedestrian_t::get_avoid_cubes(ped_manager_t const &ped_mgr, vect_cube_t con
 		}
 	} // else we can walk through this plot
 	if (is_home_plot && has_dest_bldg && !keep_cur_dest) {
-		// target a building door; if it's on the wrong side of the building we'll still collide with the building when walking to it
+		// target a building door; if it's on the wrong side of the building we'll still collide with the building when walking to it;
+		// it would be nice to have the door open when the ped enters, but it's not easy to do this with the way peds and buildings are separate and in different threads
 		point door_pos;
 		if (get_building_door_pos_closest_to(dest_bldg, pos, door_pos)) {dest_pos.x = door_pos.x; dest_pos.y = door_pos.y;}
 	}

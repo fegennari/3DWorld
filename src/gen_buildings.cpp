@@ -3052,6 +3052,7 @@ public:
 						// check the bcube rather than check_point_or_cylin_contained() so that it works with roof doors that are outside any part?
 						if (!camera_near_building && !ext_basement_conn_visible) {b.player_not_near_building(); continue;} // camera not near building or ext basement conn
 						if (reflection_pass == 2) continue; // interior room, don't need to draw windows and exterior doors
+						// it would be nice to open doors for pedestrians, but we don't have access to them here and this system doesn't support more than one open door
 						b.get_nearby_ext_door_verts(ext_door_draw, s, camera_xlated, door_open_dist); // and draw opened door
 						bool const camera_in_this_building(b.check_point_or_cylin_contained(camera_xlated, 0.0, points, 1, 1)); // inc_attic=1, inc_ext_basement=1
 						if (!reflection_pass) {b.update_grass_exclude_at_pos(camera_xlated, xlate, camera_in_this_building);} // disable grass in building part(s) containing the player
