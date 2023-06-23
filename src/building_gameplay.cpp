@@ -166,7 +166,7 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_SILVER    ] = bldg_obj_type_t(0, 0, 0, 1, 0, 1, 0, 10.0,  0.2,   "silverware");
 	bldg_obj_types[TYPE_TOY_MODEL ] = bldg_obj_type_t(0, 0, 1, 1, 0, 1, 0, 4.0,   0.2,   "toy"); // plastic ring stack
 	bldg_obj_types[TYPE_CEIL_FAN  ] = bldg_obj_type_t(0, 0, 0, 0, 1, 1, 0, 200.0, 25.0,  "ceiling fan");
-	bldg_obj_types[TYPE_FIRE_EXT  ] = bldg_obj_type_t(0, 0, 1, 1, 0, 1, 0, 20.0,  10.0,  "fire extinguisher", 1000);
+	bldg_obj_types[TYPE_FIRE_EXT  ] = bldg_obj_type_t(0, 0, 1, 1, 0, 1, 0, 20.0,  10.0,  "fire extinguisher", 250);
 	// animals; not room objects
 	bldg_obj_types[TYPE_RAT       ] = bldg_obj_type_t(0, 0, 1, 1, 0, 1, 0, 8.99,  1.0,   "rat"); // can be picked up
 	bldg_obj_types[TYPE_SPIDER    ] = bldg_obj_type_t(0, 0, 1, 0, 0, 0, 0, 0.0,   0.1,   "spider");
@@ -1582,15 +1582,20 @@ bool building_t::maybe_use_last_pickup_room_object(point const &player_pos) {
 				next_sound_time = tfticks + 0.25*TICKS_PER_SECOND;
 			}
 			static rand_gen_t rgen;
-			float const obj_radius(obj.get_radius());
-			point const part_pos(player_pos + (1.0f*(player_radius + obj_radius))*cview_dir);
+			float const obj_radius(obj.get_radius()), r_sum(player_radius + obj_radius);
+			point const part_pos(player_pos + (1.1f*r_sum)*cview_dir);
 			vector3d const velocity(0.0015*(cview_dir + 0.12*rgen.signed_rand_vector())); // add a bit of random variation
 			interior->room_geom->particle_manager.add_particle(part_pos, velocity, WHITE, 1.0*obj_radius, PART_EFFECT_SMOKE);
 			player_inventory.mark_last_item_used();
 			player_inventory.record_damage_done(0.05); // very small amount of damage
 
-			for (auto p = interior->people.begin(); p != interior->people.end(); ++p) {
-				// TODO: retreat if zombie; look at register_person_hit()
+			if (!interior->people.empty()) { // check for people in range
+				point const ray_start(player_pos + player_radius*cview_dir), ray_end(player_pos + (2.0f*r_sum)*cview_dir);
+
+				for (unsigned i = 0; i < interior->people.size(); ++i) {
+					cube_t const person_bcube(interior->people[i].get_bcube());
+					if (person_bcube.line_intersects(ray_start, ray_end)) {maybe_zombie_retreat(i, part_pos);}
+				}
 			}
 		}
 		else {assert(0);}

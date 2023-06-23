@@ -1955,21 +1955,22 @@ bool building_t::room_containing_pt_has_stairs(point const &pt) const { // Note:
 	return get_room(room_ix).has_stairs; // Note: used for drawing, can be conservative and return true if any floor of this room has stairs
 }
 
-void building_t::register_person_hit(unsigned person_ix, room_object_t const &obj, vector3d const &velocity) {
-	if (velocity == zero_vector) return; // stationary object, ignore it
-	if (!ai_follow_player())     return; // not in gameplay mode, ignore it
+bool building_t::maybe_zombie_retreat(unsigned person_ix, point const &hit_pos) {
+	if (!ai_follow_player()) return 0; // not in gameplay mode, ignore it
 	assert(interior && person_ix < interior->people.size());
 	person_t &person(interior->people[person_ix]);
-
-	if (obj.type == TYPE_LG_BALL) { // currently this is the only throwable/dynamic object
-		if (person.is_on_stairs) return; // ignore when on stairs as this doesn't work correctly
-		if (obj.zc() < (person.get_z1() + 0.25*person.get_height())) return; // less than 25% up, coll with legs, assume this is kicking a ball that's on the floor
-		// play sound on first retreat: alert_other_zombies=1, high_priority=1, gain=1.0, pitch=1.25
-		if (person.retreat_time == 0.0) {maybe_play_zombie_sound(person.pos, person_ix, 1, 1, 1.0, 1.25);}
-		// Note: this isn't really thread safe, but it should be okay to modify this state while the AI thread is running
-		person.retreat_time = global_building_params.ai_retreat_time*TICKS_PER_SECOND; // retreat
-		register_achievement("Zombie Bashing");
-	}
+	if (person.is_on_stairs) return 0; // ignore when on stairs as this doesn't work correctly
+	if (hit_pos.z < (person.get_z1() + 0.25*person.get_height())) return 0; // less than 25% up, coll with legs, assume this is kicking a ball that's on the floor (if a ball)
+	// play sound on first retreat: alert_other_zombies=1, high_priority=1, gain=1.0, pitch=1.25
+	if (person.retreat_time == 0.0) {maybe_play_zombie_sound(person.pos, person_ix, 1, 1, 1.0, 1.25);}
+	// Note: this isn't really thread safe, but it should be okay to modify this state while the AI thread is running
+	person.retreat_time = global_building_params.ai_retreat_time*TICKS_PER_SECOND; // retreat
+	return 1;
+}
+void building_t::register_person_hit(unsigned person_ix, room_object_t const &obj, vector3d const &velocity) {
+	if (velocity == zero_vector)  return; // stationary object, ignore it
+	if (obj.type != TYPE_LG_BALL) return; // currently this is the only throwable/dynamic object
+	if (maybe_zombie_retreat(person_ix, obj.get_cube_center())) {register_achievement("Zombie Bashing");}
 }
 
 /*static*/ float building_t::get_min_front_clearance_inc_people() {
