@@ -169,6 +169,7 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_FIRE_EXT  ] = bldg_obj_type_t(0, 0, 1, 1, 0, 1, 0, 20.0,  10.0,  "fire extinguisher", 250);
 	// animals; not room objects
 	bldg_obj_types[TYPE_RAT       ] = bldg_obj_type_t(0, 0, 1, 1, 0, 1, 0, 8.99,  1.0,   "rat"); // can be picked up
+	bldg_obj_types[TYPE_ROACH     ] = bldg_obj_type_t(0, 0, 0, 1, 0, 1, 0, 0.0,   0.01,  "cockroach");
 	bldg_obj_types[TYPE_SPIDER    ] = bldg_obj_type_t(0, 0, 1, 0, 0, 0, 0, 0.0,   0.1,   "spider");
 	bldg_obj_types[TYPE_SNAKE     ] = bldg_obj_type_t(0, 0, 1, 0, 0, 0, 0, 50.00, 4.0,   "snake");
 	bldg_obj_types[TYPE_INSECT    ] = bldg_obj_type_t(0, 0, 0, 0, 0, 1, 0, 0.0,   0.01,  "insect");
@@ -223,8 +224,9 @@ bldg_obj_type_t get_taken_obj_type(room_object_t const &obj) {
 	if (obj.type == TYPE_LIGHT    && obj.is_broken   ()) {return bldg_obj_type_t(0, 0, 0, 1, 0, 0, 0,  20.0,  5.0, "flickering light");}
 	if (obj.type == TYPE_LIGHT    && obj.flags & RO_FLAG_BROKEN2) {return bldg_obj_type_t(0, 0, 0, 1, 0, 0, 0,  10.0,  5.0, "broken light");}
 	if (obj.type == TYPE_RAT      && obj.is_broken   ()) {return bldg_obj_type_t(0, 0, 1, 1, 0, 1, 0,   0.0,  1.0, "cooked/dead rat");}
+	if (obj.type == TYPE_ROACH    && obj.is_broken   ()) {return bldg_obj_type_t(0, 0, 0, 1, 0, 1, 0,   0.0, 0.01, "dead cockroach");} // same stats as live cockroach
 
-	if (obj.type == TYPE_INSECT) {
+	if (obj.type == TYPE_INSECT) { // unused
 		bool const is_fly(obj.is_hanging());
 		string const name(string(obj.is_broken() ? "dead " : "") + (is_fly ? "fly" : "cockroach"));
 		return bldg_obj_type_t(0, 0, 0, 1, 0, !is_fly, (is_fly ? 2 : 0), 0.0, 0.01, name);
