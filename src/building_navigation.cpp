@@ -487,20 +487,20 @@ public:
 			point const center(cur_node.get_center(cur_pt.z));
 			assert(!closed[cur]);
 			closed[cur] = 1;
-			open[cur]   = 0;
+			open  [cur] = 0;
 
 			for (auto i = cur_node.conn_rooms.begin(); i != cur_node.conn_rooms.end(); ++i) {
 				assert(i->ix < nodes.size());
 				if (closed[i->ix]) continue; // already closed (duplicate)
 				node_t const &conn_node(get_node(i->ix));
 				if (conn_node.is_vert_conn() && !use_stairs && i->ix != room2) continue; // skip stairs/ramp in this mode
+				if (!can_use_conn(*i, doors, cur_pt.z, has_key)) continue; // blocked by closed or locked door; must do this check before setting open state
 				point const conn_center(conn_node.get_center(cur_pt.z));
 				a_star_node_state_t &sn(state[i->ix]);
 				vector2d const &pt(i->pt[up_or_down]);
 				float const new_g_score(sn.g_score + p2p_dist_xy(center, pt) + p2p_dist_xy(pt, conn_center));
 				if (!open[i->ix]) {open[i->ix] = 1;}
 				else if (new_g_score >= sn.g_score) continue; // not better
-				if (!can_use_conn(*i, doors, cur_pt.z, has_key)) continue; // blocked by closed or locked door
 				sn.came_from_ix = cur;
 				sn.path_pt.assign(pt.x, pt.y, cur_pt.z);
 				
@@ -709,6 +709,9 @@ bool building_t::choose_dest_goal(person_t &person, rand_gen_t &rgen) const { //
 	person.is_on_stairs = 0;
 
 	// allow moving to a different floor, currently only one floor at a time
+	// note that if we're following a sound this may lead us to the wrong floor of the room if more than one floor above or below;
+	// the current system doesn't allow for paths that span more than two floors;
+	// however, this will get us on a floor closer to the player, and hopefully there will be new sounds to guide us from there
 	if (goal.floor_ix < loc.floor_ix) { // try one floor below
 		float const new_z(person.target_pos.z - floor_spacing);
 		if (new_z > room.z1()) {person.target_pos.z = new_z;} // change if there is a floor below
