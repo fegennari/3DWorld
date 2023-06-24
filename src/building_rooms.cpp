@@ -2017,7 +2017,7 @@ void building_t::add_pri_hall_objs(rand_gen_t rgen, rand_gen_t room_rgen, room_t
 
 		if (wall_pos_lo < wall_pos_hi) { // should always be true?
 			bool const dir(room_rgen.rand_bool()); // random, but the same across all floors
-			float const dir_sign(dir ? -1.0 : 1.0), wall_pos(room.d[!long_dim][dir] + dir_sign*0.5*get_wall_thickness()), mount_thickness(0.15*fe_radius);
+			float const dir_sign(dir ? -1.0 : 1.0), wall_pos(room.d[!long_dim][dir] + dir_sign*0.5*get_wall_thickness());
 			point fe_pos(0.0, 0.0, (zval + 0.32*window_vspacing)); // bottom position
 			fe_pos[!long_dim] = wall_pos + dir_sign*fe_radius; // radius away from the wall
 
