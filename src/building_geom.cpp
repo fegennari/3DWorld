@@ -1015,10 +1015,10 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 	if (interior) {interior->finalize();}
 }
 
-bool building_t::add_outdoor_ac_unit(rand_gen_t &rgen) {
+bool building_t::add_outdoor_ac_unit(rand_gen_t &rgen) { // for houses
 	float const door_height(get_door_height());
 	float const depth(door_height*rgen.rand_uniform(0.26, 0.35)), width(1.5*depth), height(door_height*rgen.rand_uniform(0.32, 0.36)); // constant width to keep the texture square
-	unsigned const ac_part_ix((real_num_parts == 2) ? rgen.rand_bool() : 0);
+	unsigned const ac_part_ix((real_num_parts == 2 && parts[0].z1() == parts[1].z1()) ? rgen.rand_bool() : 0); // select a random part if two are on the ground floor
 	cube_t const &ac_part(parts[ac_part_ix]);
 	bool const ac_dim(rgen.rand_bool()), ac_dir(rgen.rand_bool());
 	if (ac_part.get_sz_dim(!ac_dim) < 4.0*width) return 0; // not enough space

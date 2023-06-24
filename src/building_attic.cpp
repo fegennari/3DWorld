@@ -19,6 +19,11 @@ bool add_obj_to_closet(room_object_t const &c, cube_t const &interior, vect_room
 void narrow_furnace_intake(cube_t &duct, room_object_t const &c);
 
 
+unsigned building_t::get_attic_part_ix() const { // Note: can be called before adding the attic, so can't check has_attic()
+	assert(!parts.empty());
+	return ((real_num_parts >= 2 && parts[1].z2() > parts[0].z2()) ? 1 : 0); // if there are at least two parts, use the taller one
+}
+
 bool building_t::point_under_attic_roof(point const &pos, vector3d *const cnorm) const {
 	if (!get_attic_part().contains_pt_xy(pos)) return 0;
 

@@ -1396,7 +1396,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 	if (!has_roof_access) { // roof ceiling, full area
 		set_cube_zvals(C, (z - fc_thick), z);
 		
-		if (is_house && part_ix == 0 && add_attic_access_door(C, part_ix, num_floors, rooms_start, rgen)) { // first/primary house part only
+		if (is_house && part_ix == get_attic_part_ix() && add_attic_access_door(C, part_ix, num_floors, rooms_start, rgen)) { // primary/upper part only
 			cube_t ceiling_parts[4];
 			subtract_cube_xy(C, interior->attic_access, ceiling_parts);
 			float const fc_mid_z(C.zc()); // split between the ceiling and floor parts
@@ -1712,7 +1712,7 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 					test_pt[dim] = stairwell.d[dim][stairs_dir];
 					if (r->contains_pt_xy(test_pt)) {r->has_stairs |= 1;} // bottom floor
 				}
-				else {assert(0);}
+				else {assert(0);} // something bad happened
 			} // for r
 			if (use_basement_stairs) { // add a basement door at the bottom of the stairs
 				float const pos_shift((stairs_dir ? 1.0 : -1.0)*0.8*wall_thickness);
