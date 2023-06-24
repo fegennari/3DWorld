@@ -1757,7 +1757,7 @@ private:
 	bool can_be_bathroom(room_t const &room) const;
 	bool find_mirror_in_room(unsigned room_id, vector3d const &xlate, bool check_visibility) const;
 	bool find_mirror_needing_reflection(vector3d const &xlate) const;
-	tquad_with_ix_t const &find_main_roof_tquad(rand_gen_t &rgen, bool skip_if_has_other_obj) const;
+	int find_main_roof_tquad_ix(rand_gen_t &rgen, bool skip_if_has_other_obj) const;
 	void maybe_add_fire_escape(rand_gen_t &rgen);
 	void add_balconies(rand_gen_t &rgen);
 	void add_extra_obj_slots();

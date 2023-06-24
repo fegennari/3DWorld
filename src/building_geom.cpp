@@ -167,10 +167,10 @@ bool building_t::check_pt_within_part_sides(point const &p) const {
 }
 
 void building_t::adjust_part_zvals_for_floor_spacing(cube_t &c) const {
-
 	if (!EXACT_MULT_FLOOR_HEIGHT) return;
 	float const floor_spacing(get_window_vspace()), dz(c.dz());
-	assert(dz > 0.0 && floor_spacing > 0.0);
+	assert(dz > 0.0);
+	assert(floor_spacing > 0.0);
 	float const num_floors(dz/floor_spacing);
 	int const targ_num_floors(max(1, round_fp(num_floors)));
 	c.z2() += floor_spacing*(targ_num_floors - num_floors); // ensure c.dz() is an exact multiple of num_floors
@@ -1245,9 +1245,9 @@ void building_t::maybe_add_basement(rand_gen_t rgen) { // rgen passed by value s
 	++real_num_parts;
 }
 
-tquad_with_ix_t const &building_t::find_main_roof_tquad(rand_gen_t &rgen, bool skip_if_has_other_obj) const {
+int building_t::find_main_roof_tquad_ix(rand_gen_t &rgen, bool skip_if_has_other_obj) const {
 	assert(!roof_tquads.empty());
-	unsigned best_tquad(0);
+	int best_tquad(-1);
 	float best_zmax(0.0), best_area(0.0);
 
 	for (auto r = roof_tquads.begin(); r != roof_tquads.end(); ++r) { // find highest roof, otherwise largest area if tied
@@ -1271,18 +1271,20 @@ tquad_with_ix_t const &building_t::find_main_roof_tquad(rand_gen_t &rgen, bool s
 			}
 			best_zmax  = zmax;
 			best_area  = area;
-			best_tquad = (r - roof_tquads.begin());
+			best_tquad = int(r - roof_tquads.begin());
 		}
 	} // for r
-	assert(best_tquad < roof_tquads.size());
-	return roof_tquads[best_tquad];
+	return best_tquad;
 }
 
 // Note: occasionally the chosen point will generate a wire that intersects some other part of the house for every nearby power pole and may be skipped
 bool building_t::get_power_point(vector<point> &ppts) const {
-	if (!is_house || roof_tquads.empty()) return 0; // houses only for now
+	if (!is_house) return 0; // houses only for now
 	static rand_gen_t rgen; // used for tie breaker when both sides of the roof are symmetric
-	tquad_with_ix_t const &roof(find_main_roof_tquad(rgen, 0)); // skip_if_has_other_obj=0
+	int const roof_tquad_ix(find_main_roof_tquad_ix(rgen, 0)); // skip_if_has_other_obj=0
+	if (roof_tquad_ix < 0) return 0; // not found
+	assert((unsigned)roof_tquad_ix < roof_tquads.size());
+	tquad_with_ix_t const &roof(roof_tquads[roof_tquad_ix]);
 	assert(roof.npts == 4);
 	float zmax(0.0);
 	unsigned ridge_ix(0);
@@ -1310,8 +1312,10 @@ bool building_t::get_power_point(vector<point> &ppts) const {
 }
 
 void building_t::add_solar_panels(rand_gen_t &rgen) { // for houses
-	if (roof_tquads.empty()) return; // not a house?
-	tquad_with_ix_t const &roof(find_main_roof_tquad(rgen, 1)); // skip_if_has_other_obj
+	int const roof_tquad_ix(find_main_roof_tquad_ix(rgen, 1)); // skip_if_has_other_obj=1
+	if (roof_tquad_ix < 0) return; // not found, possibly not a house
+	assert((unsigned)roof_tquad_ix < roof_tquads.size());
+	tquad_with_ix_t const &roof(roof_tquads[roof_tquad_ix]);
 	assert(roof.npts == 4);
 	cube_t const roof_bcube(roof.get_bcube());
 	float const thickness(0.075*get_window_vspace());
