@@ -3478,6 +3478,14 @@ void building_t::add_balconies(rand_gen_t &rgen) {
 				if (!avoid1.is_all_zeros() && avoid1.intersects(balcony)) continue; // check for fire escape intersection
 				if (!avoid2.is_all_zeros() && avoid2.intersects(balcony)) continue; // check for previous balcony intersection
 				if (check_cube_intersect_non_main_part(balcony))          continue; // porch roof, porch support, and chimney, etc.
+				cube_t balcony_ext_down(balcony);
+				balcony_ext_down.z1() = ground_floor_z1; // extend down to the ground
+				bool part_int(0);
+
+				for (auto p = parts.begin(); p != get_real_parts_end(); ++p) { // check for any intersecting parts (likely below this one, for stacked parts)
+					if ((p - parts.begin()) != room->part_id && p->intersects_no_adj(balcony_ext_down)) {part_int = 1; break;}
+				}
+				if (part_int) continue;
 				balcony.z2() -= 0.6*floor_spacing; // reduce wall height to 40%
 				balcony.expand_in_dim(!dim, wall_thickness); // expand slightly to include window frame and merge adj balcony shared walls
 				max_eq(balcony.d[!dim][0], (part.d[!dim][0] + 0.25f*wall_thickness)); // clamp slightly smaller than the containing part in !dim
@@ -3515,7 +3523,7 @@ void building_t::add_balconies(rand_gen_t &rgen) {
 					get_balcony_pillars(balcony_obj, ground_floor_z1, pillar);
 					for (unsigned d = 0; d < 2; ++d) {details.emplace_back(pillar[d], DETAIL_OBJ_COLL_SHAD);} // collider + shadow caster
 				}
-				union_with_coll_bcube(balcony); // should include area_below as well
+				union_with_coll_bcube(balcony_ext_down);
 				++num_balconies;
 				added = 1;
 			} // for dir
