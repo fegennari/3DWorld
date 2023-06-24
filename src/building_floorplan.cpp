@@ -1002,7 +1002,7 @@ bool building_t::maybe_assign_interior_garage(bool &gdim, bool &gdir) {
 	for (unsigned rix = 0; rix < num_rooms; ++rix) {
 		unsigned const cur_room((rix + room_start) % num_rooms);
 		room_t &r(rooms[cur_room]);
-		if (r.has_stairs_on_floor(0) || r.is_hallway) continue;
+		if (r.has_stairs_on_floor(0) || r.is_hallway || r.z1() != ground_floor_z1) continue;
 		if (has_basement() && r.part_id == (int)basement_part_ix) continue; // skip basement rooms
 		if (get_part_for_room(r).contains_cube_xy_no_adj(r)) continue; // skip interior rooms
 		if (r.get_room_type(0) != RTYPE_NOTSET) continue; // already assigned
