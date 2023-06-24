@@ -1614,16 +1614,24 @@ bool building_t::add_kitchen_objs(rand_gen_t rgen, room_t const &room, float zva
 			if (is_sink) { // kitchen sink; maybe place a plate, cup, or dead cockroach (TYPE_INSECT) in the sink
 				cube_t sink(get_sink_cube(objs[cabinet_id]));
 				sink.z2() = sink.z1(); // shrink to zero area at the bottom
-				unsigned const obj_type(rgen.rand()%3);
+				unsigned const objs_start(objs.size()), num_objs(1 + rgen.rand_bool()); // 1-2 objects
 
-				if      (obj_type == 0) {place_plate_on_obj(rgen, sink, room_id, tot_light_amt);} // add a plate
-				else if (obj_type == 1) {place_cup_on_obj(rgen, sink, room_id, tot_light_amt);} // add a cup
-				else if (obj_type == 2 && building_obj_model_loader.is_model_valid(OBJ_MODEL_ROACH)) { // add a cockroach (upside down?)
-					cube_t roach;
-					float const radius(sink.get_sz_dim(dim)*rgen.rand_uniform(0.07, 0.1)), height(0.1*radius);
-					gen_xy_pos_for_round_obj(roach, sink, radius, height, 1.1*radius, rgen);
-					objs.emplace_back(roach, TYPE_ROACH, room_id, 0, 0, (RO_FLAG_NOCOLL | RO_FLAG_RAND_ROT), tot_light_amt);
-				}
+				for (unsigned n = 0; n < num_objs; ++n) {
+					unsigned const obj_type(rgen.rand()%3);
+					cube_t avoid;
+					if (objs.size() > objs_start) {avoid = objs.back();} // avoid the last object that was placed, if there was one
+
+					if      (obj_type == 0) {place_plate_on_obj(rgen, sink, room_id, tot_light_amt);} // add a plate
+					else if (obj_type == 1) {place_cup_on_obj  (rgen, sink, room_id, tot_light_amt);} // add a cup
+					else if (obj_type == 2 && building_obj_model_loader.is_model_valid(OBJ_MODEL_ROACH)) { // add a cockroach (upside down?)
+						sink.d[dim][!dir] = sink.get_center_dim(dim); // use the half area near the back wall to make sure the roach is visible to the player
+						cube_t roach;
+						float const radius(sink.get_sz_dim(dim)*rgen.rand_uniform(0.08, 0.12)), height(0.1*radius);
+						gen_xy_pos_for_round_obj(roach, sink, radius, height, 1.1*radius, rgen);
+						objs.emplace_back(roach, TYPE_ROACH, room_id, 0, 0, (RO_FLAG_NOCOLL | RO_FLAG_RAND_ROT), tot_light_amt);
+						if (rgen.rand_bool()) {objs.back().flags |= RO_FLAG_BROKEN;} // 50% chance it's dead
+					}
+				} // for n
 			}
 			is_sink = 0; // sink is in first placed counter only
 		} // for n
