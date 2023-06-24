@@ -665,7 +665,7 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 	cube_t door_cube;
 
 	if (two_parts) { // multi-part house; parts[1] is the lower height part
-		dir = rgen.rand_bool(); // in dim; may be rea-assigned in street_dir case below
+		dir = rgen.rand_bool(); // in dim; may be reassigned in street_dir case below
 		float const split(rgen.rand_uniform(0.4, 0.6));
 		float delta_height(0.0), shrink[2] = {0.0};
 		parts.push_back(base); // add second part

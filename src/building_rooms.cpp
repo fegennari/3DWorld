@@ -24,6 +24,7 @@ bool get_wall_quad_window_area(vect_vnctcc_t const &wall_quad_verts, unsigned i,
 void get_stove_burner_locs(room_object_t const &stove, point locs[4]);
 void get_balcony_pillars(room_object_t const &c, float ground_floor_z1, cube_t pillar[2]);
 void expand_convex_polygon_xy(vect_point &points, point const &center, float expand);
+float get_cockroach_height_from_radius(float radius);
 string gen_random_full_name(rand_gen_t &rgen);
 
 
@@ -1611,7 +1612,7 @@ bool building_t::add_kitchen_objs(rand_gen_t rgen, room_t const &room, float zva
 					}
 				}
 			}
-			if (is_sink) { // kitchen sink; maybe place a plate, cup, or dead cockroach (TYPE_INSECT) in the sink
+			if (is_sink) { // kitchen sink; add cups, plates, and cockroaches
 				cube_t sink(get_sink_cube(objs[cabinet_id]));
 				sink.z2() = sink.z1(); // shrink to zero area at the bottom
 				unsigned const objs_start(objs.size()), num_objs(1 + rgen.rand_bool()); // 1-2 objects
@@ -1626,7 +1627,7 @@ bool building_t::add_kitchen_objs(rand_gen_t rgen, room_t const &room, float zva
 					else if (obj_type == 2 && building_obj_model_loader.is_model_valid(OBJ_MODEL_ROACH)) { // add a cockroach (upside down?)
 						sink.d[dim][!dir] = sink.get_center_dim(dim); // use the half area near the back wall to make sure the roach is visible to the player
 						cube_t roach;
-						float const radius(sink.get_sz_dim(dim)*rgen.rand_uniform(0.08, 0.12)), height(0.1*radius);
+						float const radius(sink.get_sz_dim(dim)*rgen.rand_uniform(0.08, 0.12)), height(get_cockroach_height_from_radius(radius));
 						gen_xy_pos_for_round_obj(roach, sink, radius, height, 1.1*radius, rgen);
 						objs.emplace_back(roach, TYPE_ROACH, room_id, 0, 0, (RO_FLAG_NOCOLL | RO_FLAG_RAND_ROT), tot_light_amt);
 						if (rgen.rand_bool()) {objs.back().flags |= RO_FLAG_BROKEN;} // 50% chance it's dead

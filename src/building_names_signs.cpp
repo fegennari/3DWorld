@@ -315,7 +315,7 @@ void building_t::add_signs(vector<sign_t> &signs) const { // added as exterior c
 
 void building_t::add_company_sign(rand_gen_t &rgen) {
 	if (is_house || name.empty()) return; // shouldn't be called?
-	// TODO: add details object of type ROOF_OBJ_SIGN; note that city office buildings already have signs on their roofs that's part of the city object system
+	// TODO: add exterior details object of type ROOF_OBJ_SIGN; note that city office buildings already have signs on their roofs that's part of the city object system
 }
 
 void building_t::add_sign_by_door(tquad_with_ix_t const &door, bool outside, std::string const &text, colorRGBA const &color, bool emissive) { // interior signs

@@ -198,9 +198,9 @@ void city_model_loader_t::draw_model(shader_t &s, vector3d const &pos, cube_t co
 	rotate_model_from_plus_x_to_dir(dir);
 	if (dir.z != 0.0) {fgRotate(TO_DEG*asinf(-dir.z), 0.0, 1.0, 0.0);} // handle cars on a slope
 	if (model_file.xy_rot != 0.0) {fgRotate(model_file.xy_rot, 0.0, 0.0, 1.0);} // apply model rotation about z/up axis (in degrees)
-	if (model_file.swap_xz) {fgRotate(90.0, 0.0, 1.0, 0.0);} // swap X and Z dirs; models have up=X, but we want up=Z
-	if (model_file.swap_yz) {fgRotate(90.0, 1.0, 0.0, 0.0);} // swap Y and Z dirs; models have up=Y, but we want up=Z
-	if (upside_down) {fgRotate(180.0, 1.0, 0.0, 0.0);} // R180 about X to flip over
+	if (model_file.swap_xz) {fgRotate( 90.0, 0.0, 1.0, 0.0);} // swap X and Z dirs; models have up=X, but we want up=Z
+	if (model_file.swap_yz) {fgRotate( 90.0, 1.0, 0.0, 0.0);} // swap Y and Z dirs; models have up=Y, but we want up=Z
+	if (upside_down       ) {fgRotate(180.0, 1.0, 0.0, 0.0);} // R180 about X to flip over
 	uniform_scale(sz_scale); // scale from model space to the world space size of our target cube, using a uniform scale based on the averages of the x,y,z sizes
 	point center(bcube_center);
 	UNROLL_3X(if (model_file.centered & (1<<i_)) {center[i_] = 0.0;}); // use centered bit mask to control which component is centered vs. translated
@@ -216,7 +216,7 @@ void city_model_loader_t::draw_model(shader_t &s, vector3d const &pos, cube_t co
 	}
 	else if (!force_high_detail && (low_detail || is_shadow_pass)) { // low detail pass, normal maps disabled
 		if (!is_shadow_pass && use_model3d_bump_maps()) {model3d::bind_default_flat_normal_map();} // still need to set the default here in case the shader is using it
-		// TODO: combine shadow materials into a single VBO and draw with one call when is_shadow_pass==1; this is complex and may not yield a significant improvement
+		// combine shadow materials into a single VBO and draw with one call when is_shadow_pass==1? this is complex and may not yield a significant improvement
 		for (auto i = model_file.shadow_mat_ids.begin(); i != model_file.shadow_mat_ids.end(); ++i) {model.render_material(s, *i, is_shadow_pass, 0, 2, 0, nullptr, 1);}
 	}
 	else { // draw all materials
