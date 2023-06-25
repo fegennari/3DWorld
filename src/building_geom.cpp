@@ -569,6 +569,9 @@ bool building_t::add_chimney(cube_t const &part, bool dim, bool dir, float chimn
 	float const window_vspace(get_window_vspace()), sz1_sane(max(sz1, 2.0f*window_vspace)), chimney_depth(0.03f*(sz1_sane + sz2));
 	float shift(0.0);
 
+	if (real_num_parts >= 2 && parts[1].z2() > part.z2()) { // handle stacked_parts case
+		if (parts[1].d[dim][dir] == part.d[dim][dir]) {c.z2() = parts[1].z2();} // shared wall - extend upward to top part
+	}
 	if ((rgen.rand()%3) != 0) { // make the chimney non-centered 67% of the time
 		shift = sz1*rgen.rand_uniform(0.1, 0.25); // select a shift in +/- (0.1, 0.25) - no small offset from center
 		if (rgen.rand_bool()) {shift = -shift;}
