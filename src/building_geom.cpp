@@ -661,6 +661,7 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 	unsigned const rand_num(rgen.rand()); // some bits will be used for random bools
 	float door_height(get_door_height()), door_center(0.0), door_pos(0.0), dist1(0.0), dist2(0.0);
 	float const floor_spacing(get_window_vspace()), driveway_dz(0.004*door_height);
+	bool const stacked_parts(0 && !two_parts && bcube.dz() > 1.8*floor_spacing); // single part and at least two floors; TODO: set stacked_parts with rgen
 	bool const pref_street_dim(street_dir ? ((street_dir-1) >> 1) : 0), pref_street_dir(street_dir ? ((street_dir-1)&1) : 0);
 	bool door_dim(street_dir ? pref_street_dim : (rand_num & 1)), door_dir(0), dim(0), dir(0), dir2(0);
 	unsigned door_part(0), detail_type(0);
@@ -846,8 +847,25 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 				roof_dims    = 1; // mark as perpendicular
 			}
 		}
-	} // end type != 0  (multi-part house)
-	else if (gen_door) { // single cube house
+	} // end two_parts (multi-part house)
+	if (stacked_parts) {
+		cube_t top_part(bcube); // parts[0] is the bottom
+		parts[0].z2() = rgen.rand_uniform((bcube.z1() + 0.8*floor_spacing), (bcube.z2() - 0.8*floor_spacing)); // split zval
+		if (global_building_params.gen_building_interiors) {adjust_part_zvals_for_floor_spacing(parts[0]);}
+		top_part.z1() = parts[0].z2();
+		if (global_building_params.gen_building_interiors) {adjust_part_zvals_for_floor_spacing(top_part);}
+		float const sz[2] = {bcube.dx(), bcube.dy()};
+
+		for (unsigned dim = 0; dim < 2; ++dim) { // x/y
+			for (unsigned dir = 0; dir < 2; ++dir) {
+				if (!rgen.rand_bool()) continue; // no shrink on this side
+				top_part.d[dim][dir] += (dir ? -1.0 : 1.0)*sz[dim]*rgen.rand_uniform(0.1, 0.25); // shrink edge
+			}
+		} // for dim
+		parts.push_back(top_part);
+		++real_num_parts;
+	}
+	if (!two_parts && !stacked_parts && gen_door) { // single cube house
 		maybe_add_basement(rgen);
 		door_dir  = (street_dir ? pref_street_dir : rgen.rand_bool()); // select a random dir if street_dir is not set
 		door_part = 0; // only one part
@@ -938,6 +956,11 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 	for (auto i = parts.begin(); (i + skip_last_roof) != parts.end(); ++i) {
 		if (is_basement(i)) continue; // skip the basement
 		unsigned const ix(i - parts.begin());
+
+		if (stacked_parts && ix == 0) { // bottom part of stacked parts
+			roof_dz[ix] = gen_sloped_roof_for_stacked_parts(parts[0], parts[1]);
+			continue;
+		}
 		bool const main_part(ix < real_num_parts);
 		unsigned const fdim(main_part ? force_dim[ix] : 2);
 		cube_t const &other((two_parts && main_part) ? parts[1-ix] : *i); // == self for single part houses
@@ -993,7 +1016,7 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 			if      (v0 > 2.0*v1) {part_ix = 0;} // choose larger part 0
 			else if (v1 > 2.0*v0) {part_ix = 1;} // choose larger part 1
 			else {part_ix = rgen.rand_bool();} // close in area - choose a random part
-		}
+		} // else if stacked_parts use the first/bottom part
 		assert(roof_dz[part_ix] > 0.0);
 		unsigned const fdim(force_dim[part_ix]);
 		cube_t const &part(parts[part_ix]);
@@ -1578,6 +1601,48 @@ float building_t::gen_hipped_roof(cube_t const &top_, float peak_height, float e
 		roof_tquads.emplace_back(3, tquad_with_ix_t::TYPE_ROOF_HIP); // triangle
 		UNROLL_3X(roof_tquads.back().pts[i_] = pts[tixs[n][i_]];)
 	}
+	return roof_dz;
+}
+
+float building_t::gen_sloped_roof_for_stacked_parts(cube_t const &bot, cube_t const &top) {
+
+	assert(bot.contains_cube_xy(top));
+	float const window_vspace(get_window_vspace());
+	float roof_dz(window_vspace*WINDOW_BORDER_MULT*get_window_v_border() - 0.04f*window_vspace); // bottom of window sill
+	float const roof_z1(bot.z2()), roof_z2(roof_z1 + roof_dz);
+	max_eq(roof_dz, 0.05f*window_vspace); // make sure it's not near zero
+	
+	for (unsigned dim = 0; dim < 2; ++dim) { // x/y
+		for (unsigned dir = 0; dir < 2; ++dir) {
+			if (bot.d[dim][dir] == top.d[dim][dir]) continue; // no roof on this side
+			// add sloped roof tquad; if either end is inset, treat it as a hipped roof with no gutters
+			bool inset[2] = {};
+			for (unsigned d = 0; d < 2; ++d) {inset[d] = (top.d[!dim][d] != bot.d[!dim][d]);}
+			tquad_with_ix_t roof(4, ((inset[0] || inset[1]) ? tquad_with_ix_t::TYPE_ROOF_HIP : tquad_with_ix_t::TYPE_ROOF_PEAK)/*tquad_with_ix_t::TYPE_ROOF_SLOPE*/);
+			roof.pts[0][ dim] = roof.pts[1][ dim] = bot.d[ dim][dir]; // lower edge
+			roof.pts[2][ dim] = roof.pts[3][ dim] = top.d[ dim][dir]; // upper edge
+			roof.pts[0].z     = roof.pts[1].z     = roof_z1; // lower edge
+			roof.pts[2].z     = roof.pts[3].z     = roof_z2; // upper edge
+			roof.pts[0][!dim] = bot.d[!dim][1];
+			roof.pts[1][!dim] = bot.d[!dim][0];
+			roof.pts[2][!dim] = top.d[!dim][0];
+			roof.pts[3][!dim] = top.d[!dim][1];
+			if (dim ^ dir) {swap(roof.pts[1], roof.pts[3]);} // use correct winding order
+			roof_tquads.push_back(roof);
+			
+			for (unsigned d = 0; d < 2; ++d) { // add required wall triangles
+				if (inset[d]) continue; // inset on this edge, not flush; no wall needed
+				tquad_with_ix_t wall(3, tquad_with_ix_t::TYPE_WALL); // triangle
+				wall.pts[0].z = wall.pts[1].z = roof_z1;
+				wall.pts[2].z = roof_z2;
+				wall.pts[0][dim] = bot.d[dim][dir];
+				wall.pts[1][dim] = wall.pts[2][dim] = top.d[dim][dir];
+				UNROLL_3X(wall.pts[i_][!dim] = bot.d[!dim][d];);
+				if (d ^ dir ^ dim) {swap(wall.pts[1], wall.pts[2]);} // use correct winding order
+				roof_tquads.push_back(wall);
+			} // for d
+		} // for dir
+	} // for dim
 	return roof_dz;
 }
 

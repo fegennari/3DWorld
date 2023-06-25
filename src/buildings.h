@@ -344,9 +344,9 @@ struct building_geom_t { // describes the physical shape of a building
 
 struct tquad_with_ix_t : public tquad_t {
 	// roof {office, peak, hip}, roof access cover, wall, house door, building front door, building back door, garage door, interior doors back face, office doors, roof doors
-	enum {TYPE_ROOF_OFFICE=0, TYPE_ROOF_PEAK, TYPE_ROOF_HIP, TYPE_ROOF_ACC, TYPE_WALL, TYPE_HDOOR, TYPE_BDOOR, TYPE_BDOOR2, TYPE_GDOOR,
+	enum {TYPE_ROOF_OFFICE=0, TYPE_ROOF_PEAK, TYPE_ROOF_HIP, TYPE_ROOF_SLOPE, TYPE_ROOF_ACC, TYPE_WALL, TYPE_HDOOR, TYPE_BDOOR, TYPE_BDOOR2, TYPE_GDOOR,
 		TYPE_IDOOR, TYPE_IDOOR2, TYPE_ODOOR, TYPE_ODOOR2, TYPE_RDOOR, TYPE_RDOOR2, TYPE_HELIPAD, TYPE_SOLAR, TYPE_TRIM};
-	bool is_roof         () const {return (type == TYPE_ROOF_OFFICE || type == TYPE_ROOF_PEAK || type == TYPE_ROOF_HIP);}
+	bool is_roof         () const {return (type == TYPE_ROOF_OFFICE || type == TYPE_ROOF_PEAK || type == TYPE_ROOF_HIP || type == TYPE_ROOF_SLOPE);}
 	bool is_building_door() const {return (type == TYPE_BDOOR || type == TYPE_BDOOR2);} // for office buildings
 	bool is_exterior_door() const {return (type == TYPE_HDOOR || type == TYPE_GDOOR  || type == TYPE_RDOOR || type == TYPE_RDOOR2 || is_building_door());}
 	bool is_interior_door() const {return (type == TYPE_IDOOR || type == TYPE_IDOOR2 || type == TYPE_ODOOR || type == TYPE_ODOOR2);}
@@ -1414,6 +1414,7 @@ struct building_t : public building_geom_t {
 	bool add_door(cube_t const &c, unsigned part_ix, bool dim, bool dir, bool for_office_building, bool roof_access=0);
 	float gen_peaked_roof(cube_t const &top_, float peak_height, bool dim, float extend_to, float max_dz, unsigned skip_side_tri);
 	float gen_hipped_roof(cube_t const &top_, float peak_height, float extend_to);
+	float gen_sloped_roof_for_stacked_parts(cube_t const &bot, cube_t const &top);
 	void place_roof_ac_units(unsigned num, float sz_scale, cube_t const &bounds, vect_cube_t const &avoid, bool avoid_center, rand_gen_t &rgen);
 	void add_roof_walls(cube_t const &c, float wall_width, bool overlap_corners, cube_t out[4]);
 	void gen_details(rand_gen_t &rgen, bool is_rectangle);

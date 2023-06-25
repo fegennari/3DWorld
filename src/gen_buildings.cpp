@@ -1395,7 +1395,7 @@ void building_t::get_all_drawn_exterior_verts(building_draw_t &bdraw) { // exter
 		else if (i->type == tquad_with_ix_t::TYPE_TRIM) {
 			bdraw.add_tquad(*this, *i, bcube, tid_nm_pair_t(), LT_GRAY); // untextured
 		}
-		else if (is_house && i->type == tquad_with_ix_t::TYPE_ROOF_PEAK && i->npts == 4) {
+		else if (is_house && (i->type == tquad_with_ix_t::TYPE_ROOF_PEAK || i->type == tquad_with_ix_t::TYPE_ROOF_SLOPE) && i->npts == 4) {
 			// house peaked/sloped trapezoid roof: extend lower zvals out a bit
 			tquad_with_ix_t tq(*i);
 			float const extend(0.3*get_doorway_width());
@@ -1474,7 +1474,7 @@ void building_t::get_all_drawn_exterior_verts(building_draw_t &bdraw) { // exter
 					assert(!bot_edge_bcube.is_all_zeros()); // must have at least one point
 					cube_t const new_bcube(tq.get_bcube());
 
-					// add trim along the underside and edges of the roof
+					// add trim along the underside and edges of the roof to create rain gutters
 					for (unsigned d = 0; d < 2; ++d) {
 						float const old_edge(tq_bcube.d[!top_dim][d]), new_edge(new_bcube.d[!top_dim][d]);
 						if (old_edge == new_edge) continue; // not extended in this dir (can only extend in one dir per tquad)
