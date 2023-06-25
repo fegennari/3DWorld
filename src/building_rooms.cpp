@@ -1479,8 +1479,7 @@ bool building_t::add_kitchen_objs(rand_gen_t rgen, room_t const &room, float zva
 				objs.emplace_back(hood, TYPE_HOOD, room_id, stove.dim, stove.dir, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CUBE, LT_GRAY);
 				
 				if (has_attic()) { // add rooftop vent above the hood; should be close to the edge of the house in many cases
-					assert(room.part_id < parts.size());
-					float const attic_floor_zval(parts[room.part_id].z2()), vent_radius(0.075*(width + depth));
+					float const attic_floor_zval(get_attic_part().z2()), vent_radius(0.075*(width + depth)); // kitchen can be in a part below the one with the attic
 					point const vent_bot_center(hood.xc(), hood.yc(), attic_floor_zval);
 					add_attic_roof_vent(vent_bot_center, vent_radius, room_id, 1.0); // light_amt=1.0; room_id is for the kitchen because there's no attic room
 				}
@@ -3138,8 +3137,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			if (is_unfinished    ) continue; // no objects for now; if adding objects later, need to make sure they stay inside the building bounds
 			float tot_light_amt(light_amt); // unitless, somewhere around 1.0
 			if (is_lit) {tot_light_amt += r->light_intensity;}
-			bool const is_ground_floor(f == 0 && (!is_basement /*|| has_basement_door*/) && r->z1() <= ground_floor_z1);
-			bool const is_garage_or_shed(r->is_garage_or_shed(f));
+			bool const is_ground_floor(f == 0 && !is_basement && r->z1() <= ground_floor_z1), is_garage_or_shed(r->is_garage_or_shed(f));
 			unsigned const objs_start(objs.size());
 			rgen.rand_mix();
 
@@ -3170,7 +3168,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				}
 				if (!is_house && r->is_hallway && *r == pri_hall) { // office building primary hallway
 					add_pri_hall_objs(rgen, room_rgen, *r, room_center.z, room_id, tot_light_amt, f);
-					if (f == 0) {r->assign_to(RTYPE_LOBBY, f);} // first floor primary hallway, make it the lobby
+					if (is_ground_floor) {r->assign_to(RTYPE_LOBBY, f);} // first floor primary hallway, make it the lobby
 				}
 				continue; // no other geometry for this room
 			}
@@ -3187,14 +3185,14 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			bool is_office_bathroom(is_room_office_bathroom(*r, room_center.z, f)), has_fireplace(0);
 			blockers.clear(); // clear for this new room
 			
-			if (has_chimney == 2 && !is_basement && f == 0 && !added_fireplace) { // handle fireplaces on the first floor
+			if (has_chimney == 2 && !is_basement && is_ground_floor && !added_fireplace) { // handle fireplaces on the first floor
 				has_fireplace = added_fireplace = maybe_add_fireplace_to_room(rgen, *r, blockers, room_center.z, room_id, tot_light_amt);
 			}
 			if (is_office_bathroom) { // bathroom is already assigned
 				added_obj = is_bathroom = added_bathroom = no_whiteboard =
 					add_bathroom_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, f, is_basement, added_bathroom_objs_mask); // add bathroom
 			}
-			else if (!is_house && f == 0 && r->get_room_type(f) == RTYPE_UTILITY) { // office building utility room; currently first floor only
+			else if (!is_house && f == 0 && r->get_room_type(f) == RTYPE_UTILITY) { // office building utility room; currently first floor only (but can be in a stacked part)
 				added_obj = no_whiteboard = is_utility = add_office_utility_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);
 			}
 			// bedroom or bathroom case; need to check first floor even if must_be_bathroom
@@ -3226,7 +3224,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				unsigned const num_tcs(add_table_and_chairs(rgen, *r, blockers, room_id, room_center, chair_color, 0.1, tot_light_amt));
 				if (num_tcs > 0) {added_tc = added_obj = can_place_onto = 1; num_chairs = num_tcs - 1;}
 				// on ground floor, try to make this a kitchen; not all houses will have a kitchen with this logic - maybe we need fewer bedrooms?
-				if (!(added_kitchen_mask & floor_mask) && (!is_house || f == 0) && !is_basement) { // office buildings can also have kitchens, even on non-ground floors
+				if (!(added_kitchen_mask & floor_mask) && (!is_house || is_ground_floor) && !is_basement) { // office buildings can also have kitchens, even on non-ground floors
 					if (added_tc || (is_house && (r+1) == rooms.end())) { // make it a kitchen if it's the last room in a house, even if there's no table
 						if (add_kitchen_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, added_living)) {
 							r->assign_to(RTYPE_KITCHEN, f);
@@ -3247,7 +3245,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 					add_office_objs (rgen, *r, blockers, chair_color, room_center.z, room_id, f, tot_light_amt, objs_start, is_basement));
 				if (added_obj && !has_stairs_this_floor) {r->assign_to((is_house ? (room_type)RTYPE_STUDY : (room_type)RTYPE_OFFICE), f);} // or other room type - may overwrite below
 			}
-			if (is_house && (added_tc || added_desk) && !is_kitchen && f == 0) { // don't add second living room unless we added a kitchen and have enough rooms
+			if (is_house && (added_tc || added_desk) && !is_kitchen && is_ground_floor) { // don't add second living room unless we added a kitchen and have enough rooms
 				if ((!added_living && !r->has_center_stairs && rooms.size() >= 8 && (added_kitchen_mask || rgen.rand_bool())) || is_room_adjacent_to_ext_door(*r, 1)) { // front_door_only=1
 					// add a living room on the ground floor if it has a table or desk but isn't a kitchen
 					added_living = is_living = add_livingroom_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);
@@ -3255,7 +3253,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				}
 			}
 			if (is_house && added_tc && num_chairs > 0 && !is_living && !is_kitchen) { // room with table and chair that's not a kitchen
-				if (f == 0 && !is_basement) { // dining room, must be on the first floor
+				if (is_ground_floor) { // dining room, must be on the ground floor
 					if (light_obj_ix >= 0) { // handle dining room light (assume there is only one): extend downward and make it a sphere
 						assert((unsigned)light_obj_ix < objs.size());
 						room_object_t &light(objs[light_obj_ix]);
@@ -3288,13 +3286,13 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 					add_rug_to_room(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);
 				}
 			}
-			else if (has_pri_hall() && r->part_id == 0 && f == 0 && added_desk) { // office building part with primary hallway, first floor
+			else if (has_pri_hall() && r->part_id == 0 && f == 0 && added_desk) { // office building part with primary hallway, first floor of any part
 				add_office_door_sign(rgen, *r, room_center.z, room_id, tot_light_amt);
 			}
 			bool const room_type_was_not_set(r->get_room_type(f) == RTYPE_NOTSET);
 
 			if (room_type_was_not_set) { // attempt to assign it with an optional room type
-				if (!is_basement && f == 0 && is_room_adjacent_to_ext_door(*r)) { // entryway/lobby if on first floor, has exterior door, and unassigned
+				if (is_ground_floor && is_room_adjacent_to_ext_door(*r)) { // entryway/lobby if on ground floor, has exterior door, and unassigned
 					r->assign_to((is_house ? (room_type)RTYPE_ENTRY : (room_type)RTYPE_LOBBY), f); // office building lobby can have a whiteboard - is that okay?
 				}
 				else if (!is_house) {r->assign_to(RTYPE_OFFICE, f);} // any unset room in an office building is an office
@@ -3796,9 +3794,8 @@ void building_t::add_wall_and_door_trim() { // and window trim
 void building_t::add_window_trim_and_coverings(bool add_trim, bool add_coverings, bool add_ext_sills) {
 	assert(add_trim || add_coverings || add_ext_sills);
 	if (!has_windows()) return; // no windows
-	float const border_mult(0.94); // account for the frame part of the window texture, which is included in the interior cutout of the window
 	float const trim_thickness(get_trim_thickness()), ext_wall_toler(0.01*trim_thickness); // required to prevent z-fighting when AA is disabled
-	float const window_h_border(border_mult*get_window_h_border()), window_v_border(border_mult*get_window_v_border()); // (0, 1) range
+	float const window_h_border(WINDOW_BORDER_MULT*get_window_h_border()), window_v_border(WINDOW_BORDER_MULT*get_window_v_border()); // (0, 1) range
 	// Note: depth must be small to avoid object intersections; this applies to the windowsill as well
 	float const window_trim_width(0.75*get_wall_thickness()), window_trim_depth(1.0*trim_thickness), windowsill_depth(1.0*trim_thickness);
 	float const floor_spacing(get_window_vspace()), window_offset(0.01*floor_spacing); // must match building_draw_t::add_section()

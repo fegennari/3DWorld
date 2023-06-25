@@ -855,7 +855,7 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 	calc_bcube_from_parts(); // maybe calculate a tighter bounding cube
 	gen_interior(rgen, 0); // before adding door
 
-	if (gen_door) {
+	if (gen_door) { // add exterior doors and possibly a garage + driveway and extended basement
 		if (!has_garage && (street_dir || (rand_num & 24))) { // attempt to add an interior garage when legal, always when along a street, else 75% of the time
 			bool gdim(0), gdir(0);
 
@@ -931,8 +931,8 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 	// add roof tquads
 	float peak_height(rgen.rand_uniform(0.15, 0.5)); // same for all parts
 	if (has_attic()) {max_eq(peak_height, 0.3f);} // set larger min size if there's an attic
-	float roof_dz[4] = {0.0f};
-	bool any_hipped(0), hipped_roof[4] = {0};
+	float roof_dz[4] = {};
+	bool any_hipped(0), hipped_roof[4] = {};
 	int last_hipped(2); // starts at <unset>
 
 	for (auto i = parts.begin(); (i + skip_last_roof) != parts.end(); ++i) {
