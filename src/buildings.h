@@ -1631,7 +1631,7 @@ private:
 	void create_per_part_ext_verts();
 	void finish_gen_geometry(rand_gen_t &rgen, bool has_overlapping_cubes);
 	bool add_outdoor_ac_unit(rand_gen_t &rgen);
-	bool add_chimney(cube_t const &part, bool dim, bool dir, float chimney_dz, rand_gen_t &rgen);
+	bool add_chimney(bool two_parts, bool stacked_parts, bool hipped_roof[4], float roof_dz[4], unsigned force_dim[2], rand_gen_t &rgen);
 	void gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes);
 	void maybe_add_basement(rand_gen_t rgen);
 	bool extend_underground_basement(rand_gen_t rgen);

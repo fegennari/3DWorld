@@ -563,14 +563,30 @@ void add_cube_top(cube_t const &c, vector<tquad_with_ix_t> &tquads, unsigned typ
 	tquads.emplace_back(tquad, type);
 }
 
-bool building_t::add_chimney(cube_t const &part, bool dim, bool dir, float chimney_dz, rand_gen_t &rgen) {
+bool building_t::add_chimney(bool two_parts, bool stacked_parts, bool hipped_roof[4], float roof_dz[4], unsigned force_dim[2], rand_gen_t &rgen) {
+	unsigned part_ix(0);
+
+	if (two_parts) { // start by selecting a part (if two parts)
+		float const v0(parts[0].get_volume()), v1(parts[1].get_volume());
+		if      (v0 > 2.0*v1) {part_ix = 0;} // choose larger part 0
+		else if (v1 > 2.0*v0) {part_ix = 1;} // choose larger part 1
+		else {part_ix = rgen.rand_bool();} // close in area - choose a random part
+	} // else if stacked_parts use the first/bottom part
+	assert(roof_dz[part_ix] > 0.0);
+	unsigned const fdim(force_dim[part_ix]);
+	cube_t const &part(parts[part_ix]);
+	bool const dim((fdim < 2) ? fdim : get_largest_xy_dim(part)); // use longest side if not forced
+	bool dir(rgen.rand_bool());
+	if (two_parts && part.d[dim][dir] != bcube.d[dim][dir]) {dir ^= 1;} // force dir to be on the edge of the house bcube (not at a point interior to the house)
+	float chimney_dz((hipped_roof[part_ix] ? 0.5 : 1.0)*roof_dz[part_ix]); // lower for hipped roof
 	cube_t c(part);
 	float const sz1(c.get_sz_dim(!dim)), sz2(c.get_sz_dim(dim)), center(c.get_center_dim(!dim));
 	float const window_vspace(get_window_vspace()), sz1_sane(max(sz1, 2.0f*window_vspace)), chimney_depth(0.03f*(sz1_sane + sz2));
 	float shift(0.0);
 
-	if (real_num_parts >= 2 && parts[1].z2() > part.z2()) { // handle stacked_parts case
-		if (parts[1].d[dim][dir] == part.d[dim][dir]) {c.z2() = parts[1].z2();} // shared wall - extend upward to top part
+	if (stacked_parts && part_ix == 0 && parts[1].d[dim][dir] == part.d[dim][dir]) { // shared wall for stacked parts
+		c.z2() = parts[1].z2(); // extend upward to top part
+		max_eq(chimney_dz, (hipped_roof[1] ? 0.5f : 1.0f)*roof_dz[1]); // must extend above the upper part's roof
 	}
 	if ((rgen.rand()%3) != 0) { // make the chimney non-centered 67% of the time
 		shift = sz1*rgen.rand_uniform(0.1, 0.25); // select a shift in +/- (0.1, 0.25) - no small offset from center
@@ -1007,22 +1023,7 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 		any_hipped     |= hipped;
 	} // for i
 	if ((rgen.rand()%3) != 0) { // add a chimney 67% of the time
-		unsigned part_ix(0);
-
-		if (two_parts) { // start by selecting a part (if two parts)
-			float const v0(parts[0].get_volume()), v1(parts[1].get_volume());
-			if      (v0 > 2.0*v1) {part_ix = 0;} // choose larger part 0
-			else if (v1 > 2.0*v0) {part_ix = 1;} // choose larger part 1
-			else {part_ix = rgen.rand_bool();} // close in area - choose a random part
-		} // else if stacked_parts use the first/bottom part
-		assert(roof_dz[part_ix] > 0.0);
-		unsigned const fdim(force_dim[part_ix]);
-		cube_t const &part(parts[part_ix]);
-		bool const dim((fdim < 2) ? fdim : get_largest_xy_dim(part)); // use longest side if not forced
-		bool dir(rgen.rand_bool());
-		if (two_parts && part.d[dim][dir] != bcube.d[dim][dir]) {dir ^= 1;} // force dir to be on the edge of the house bcube (not at a point interior to the house)
-		float const chimney_dz((hipped_roof[part_ix] ? 0.5 : 1.0)*roof_dz[part_ix]); // lower for hipped roof
-		add_chimney(part, dim, dir, chimney_dz, rgen); // Note: return value is ignored
+		add_chimney(two_parts, stacked_parts, hipped_roof, roof_dz, force_dim, rgen); // Note: return value is ignored
 	}
 	// Note: driveway collisions are handled through check_road_seg_sphere_coll()
 	parts_generated = 1; // must be after adding chimney
