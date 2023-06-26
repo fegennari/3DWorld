@@ -1332,6 +1332,7 @@ void building_t::get_all_drawn_exterior_verts(building_draw_t &bdraw) { // exter
 		
 	for (auto i = parts.begin(); i != parts.end(); ++i) { // multiple cubes/parts/levels - no AO for houses
 		if (is_basement(i)) continue; // don't need to draw the basement exterior walls since they should be underground
+		float const chimney_tscale = 1.0; // smaller bricks?
 			
 		if (has_chimney == 2 && (i+2 == parts.end())) { // fireplace; skip inside face (optimization); needs to be draw as part of the interior instead
 			unsigned dim_mask(3); // disable faces: 8=x1, 16=x2, 32=y1, 64=y2
@@ -1339,13 +1340,13 @@ void building_t::get_all_drawn_exterior_verts(building_draw_t &bdraw) { // exter
 			else if (i->x2() >= bcube.x2()) {dim_mask |=  8;}
 			else if (i->y1() <= bcube.y1()) {dim_mask |= 64;}
 			else if (i->y2() >= bcube.y2()) {dim_mask |= 32;}
-			tid_nm_pair_t const tp(mat.side_tex.get_scaled_version(2.0)); // smaller bricks
+			tid_nm_pair_t const tp(mat.side_tex.get_scaled_version(chimney_tscale));
 			bdraw.add_section(*this, 0, *i, tp, side_color, dim_mask, 0, 0, is_house, 0); // XY exterior walls
 			bdraw.add_section(*this, 0, *i, tp, side_color, 4, 1, 0, 1, 0); // draw top of fireplace exterior, even if not wider than the chimney - should it be sloped?
 			continue;
 		}
 		else if (has_chimney && (i+1 == parts.end())) { // chimney
-			tid_nm_pair_t const tp(mat.side_tex.get_scaled_version(2.0)); // smaller bricks
+			tid_nm_pair_t const tp(mat.side_tex.get_scaled_version(chimney_tscale));
 			bdraw.add_section(*this, 0, *i, tp, side_color, 3, 0, 0, is_house, 0); // XY exterior walls
 			float const wall_width(0.25*min(i->dx(), i->dy()));
 			cube_t hole(*i);
