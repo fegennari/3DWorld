@@ -926,7 +926,7 @@ void apply_building_gravity(float &vz, float dt_ticks) {
 	max_eq(vz, -TERM_VELOCITY);
 }
 
-void building_t::update_player_interact_objects(point const &player_pos) {
+void building_t::update_player_interact_objects(point const &player_pos) { // Note: player_pos is in building space
 	assert(interior);
 	interior->update_elevators(*this, player_pos);
 	update_creepy_sounds(player_pos);
@@ -1058,10 +1058,15 @@ void building_t::update_player_interact_objects(point const &player_pos) {
 				apply_object_bounce_with_sound(*this, velocity, (new_center - prev_new_center).get_norm(), new_center, 1.0, on_floor); // hardness=1.0
 				// add TYPE_CRACK if collides with a window?
 			}
-			if (new_center != center) {apply_roll_to_matrix(dstate.rot_matrix, new_center, center, plus_z, radius, (on_floor ? 0.0 : 0.01), (on_floor ? 1.0 : 0.2));}
-			if (!was_dynamic) {interior->room_geom->invalidate_small_geom();} // static => dynamic transition, need to remove from static object vertex data
-			interior->update_dynamic_draw_data();
-			c->translate(new_center - center);
+			if (new_center != center) { // is moving
+				apply_roll_to_matrix(dstate.rot_matrix, new_center, center, plus_z, radius, (on_floor ? 0.0 : 0.01), (on_floor ? 1.0 : 0.2));
+				if (!was_dynamic) {interior->room_geom->invalidate_small_geom();} // static => dynamic transition, need to remove from static object vertex data
+				interior->update_dynamic_draw_data();
+				c->translate(new_center - center);
+				room_object_t squish_obj(*c);
+				squish_obj.expand_by_xy(0.5*radius); // increase the radius to account for spiders and roaches being pushed out of the way of moving balls
+				maybe_squish_animals(squish_obj, player_pos);
+			}
 			// check for collision with closed door separating the adjacent building at the end of the connecting room
 			building_t *const cont_bldg(get_bldg_containing_pt(new_center));
 

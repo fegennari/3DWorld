@@ -1553,7 +1553,7 @@ private:
 	void scare_rat_at_pos(rat_t &rat, point const &scare_pos, float amount, bool by_sight) const;
 	bool update_spider_pos_orient(spider_t &spider, point const &camera_bs, float timestep, rand_gen_t &rgen) const;
 	void update_spider(spider_t &spider, point const &camera_bs, float timestep, float &max_xmove, rand_gen_t &rgen) const;
-	bool maybe_squish_animals(room_object_t const &obj);
+	bool maybe_squish_animals(room_object_t const &obj, point const &player_pos);
 	void update_snake(snake_t  &snake,  point const &camera_bs, float timestep, float &max_xmove, rand_gen_t &rgen) const;
 	int  check_for_animal_coll(building_animal_t const &A, float hheight, float z_center_offset, bool on_floor_only, bool skip_player,
 		point const &camera_bs, float timestep, point const &old_pos, point const &query_pos, vector3d &coll_dir) const;

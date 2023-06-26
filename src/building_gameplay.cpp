@@ -1559,7 +1559,7 @@ bool building_t::maybe_use_last_pickup_room_object(point const &player_pos) {
 				if (point_in_attic(obj.get_cube_center())) {obj.flags |= RO_FLAG_IN_ATTIC;} else {obj.flags &= ~RO_FLAG_IN_ATTIC;} // set attic flag
 				//obj.flags |= RO_FLAG_RAND_ROT; // maybe set this for some random books to have them misaligned? or does that cause problems with clipping through objects?
 				if (!interior->room_geom->add_room_object(obj, *this)) return 0;
-				if (maybe_squish_animals(obj)) {gen_sound_thread_safe(SOUND_SQUISH, (get_camera_pos() + (obj.get_cube_center() - player_pos)));}
+				maybe_squish_animals(obj, player_pos);
 			}
 			player_inventory.return_object_to_building(obj); // re-add this object's value
 			player_inventory.remove_last_item(); // used

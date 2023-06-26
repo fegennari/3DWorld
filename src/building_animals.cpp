@@ -1067,7 +1067,7 @@ void building_t::update_spider(spider_t &spider, point const &camera_bs, float t
 	}
 }
 
-bool building_t::maybe_squish_animals(room_object_t const &obj) { // spiders and cockroaches
+bool building_t::maybe_squish_animals(room_object_t const &obj, point const &player_pos) { // spiders and cockroaches
 	assert(has_room_geom());
 	bool any_squished(0);
 
@@ -1092,6 +1092,7 @@ bool building_t::maybe_squish_animals(room_object_t const &obj) { // spiders and
 		add_blood_decal(insect.pos, 1.6*insect.get_xy_radius(), colorRGBA(1.0, 1.0, 0.2, 1.0)); // yellow
 		any_squished = insect.squished = 1;
 	} // for insect
+	if (any_squished) {gen_sound_thread_safe(SOUND_SQUISH, (obj.get_cube_center() + (get_camera_pos() - player_pos)));} // get xlate from player delta
 	return any_squished;
 }
 
