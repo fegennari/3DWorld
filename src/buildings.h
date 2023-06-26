@@ -343,7 +343,7 @@ struct building_geom_t { // describes the physical shape of a building
 };
 
 struct tquad_with_ix_t : public tquad_t {
-	// roof {office, peak, hip}, roof access cover, wall, house door, building front door, building back door, garage door, interior doors back face, office doors, roof doors
+	// roof {office, peak, hip, slope}, roof access cover, wall, house door, building front door, building back door, garage door, interior doors back face, office doors, roof doors
 	enum {TYPE_ROOF_OFFICE=0, TYPE_ROOF_PEAK, TYPE_ROOF_HIP, TYPE_ROOF_SLOPE, TYPE_ROOF_ACC, TYPE_WALL, TYPE_HDOOR, TYPE_BDOOR, TYPE_BDOOR2, TYPE_GDOOR,
 		TYPE_IDOOR, TYPE_IDOOR2, TYPE_ODOOR, TYPE_ODOOR2, TYPE_RDOOR, TYPE_RDOOR2, TYPE_HELIPAD, TYPE_SOLAR, TYPE_TRIM};
 	bool is_roof         () const {return (type == TYPE_ROOF_OFFICE || type == TYPE_ROOF_PEAK || type == TYPE_ROOF_HIP || type == TYPE_ROOF_SLOPE);}
@@ -1546,7 +1546,7 @@ public:
 	void get_objs_at_or_below_ground_floor(vect_room_object_t &ret, bool for_spider) const;
 private:
 	// animals
-	point gen_animal_floor_pos(float radius, bool place_in_attic, bool not_player_visible, bool pref_dark_room, rand_gen_t &rgen) const;
+	point gen_animal_floor_pos(float radius, bool place_in_attic, bool not_player_visible, bool pref_dark_room, bool not_by_ext_door, rand_gen_t &rgen) const;
 	bool add_rat(point const &pos, float hlength, vector3d const &dir, point const &placed_from, bool &dead);
 	void update_rat(rat_t &rat, point const &camera_bs, float timestep, float &max_xmove, bool can_attack_player, rand_gen_t &rgen) const;
 	void scare_rat(rat_t &rat, point const &camera_bs) const;

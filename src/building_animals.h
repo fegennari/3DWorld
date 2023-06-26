@@ -31,7 +31,8 @@ struct rat_t : public building_animal_t {
 	rat_t(float xval) : building_animal_t(xval) {}
 	rat_t(point const &pos_, float radius_, vector3d const &dir_, unsigned id_, bool dead_=0);
 	bool operator<(rat_t const &r) const {return (pos.x < r.pos.x);} // compare only xvals
-	static bool allow_in_attic() {return 1;}
+	static bool allow_in_attic () {return 1;}
+	static bool not_by_ext_door() {return 0;}
 	float get_hlength() const {return radius;} // this is the bounding radius, so it represents the longest dim (half length)
 	float get_height () const {return height;}
 	float get_xy_radius() const {return radius;}
@@ -49,7 +50,8 @@ struct spider_t : public building_animal_t {
 	// this first constructor is for the lower_bound() call in vect_rat_t::get_first_rat_with_x2_gt()
 	spider_t(float xval) : building_animal_t(xval) {}
 	spider_t(point const &pos_, float radius_, vector3d const &dir_, unsigned id_);
-	static bool allow_in_attic() {return 1;}
+	static bool allow_in_attic () {return 1;}
+	static bool not_by_ext_door() {return 1;}
 	float get_xy_radius() const {return 2.0*radius;}
 	float get_height   () const {return 2.0*radius;}
 	vector3d get_size  () const;
@@ -72,7 +74,8 @@ struct snake_t : public building_animal_t {
 
 	snake_t(float xval) : building_animal_t(xval) {}
 	snake_t(point const &pos_, float radius_, vector3d const &dir_, unsigned id_);
-	static bool allow_in_attic() {return 0;}
+	static bool allow_in_attic () {return 0;}
+	static bool not_by_ext_door() {return 1;}
 	void  calc_xy_radius();
 	float get_xy_radius () const {return xy_radius;} // must be fast
 	float get_height    () const {return radius;}
@@ -100,7 +103,8 @@ struct insect_t : public building_animal_t {
 
 	insect_t(point const &pos_, float radius_, vector3d const &dir_, unsigned id_, unsigned char type_=INSECT_TYPE_FLY) :
 		building_animal_t(pos_, radius_, dir_, id_), type(type_) {}
-	static bool allow_in_attic() {return 0;} // could allow it for flies but not cockroaches?
+	static bool allow_in_attic () {return 0;} // could allow it for flies but not cockroaches?
+	static bool not_by_ext_door() {return 0;}
 	bool flies() const {return (type == INSECT_TYPE_FLY);}
 	float get_xy_radius() const {return radius;}
 	float get_height   () const;

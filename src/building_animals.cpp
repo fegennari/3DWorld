@@ -78,37 +78,54 @@ template<typename T> void building_t::add_animals_on_floor(T &animals, unsigned 
 	for (unsigned n = 0; n < num; ++n) {
 		// there's no error check for min_sz <= max_sz, so just use min_sz in that case
 		float const sz_scale((sz_min >= sz_max) ? sz_min : rgen.rand_uniform(sz_min, sz_max)), radius(0.5f*floor_spacing*sz_scale);
-		point const pos(gen_animal_floor_pos(radius, T::value_type::allow_in_attic(), 0, 0, rgen)); // not_player_visible=0, pref_dark_room=0
+		point const pos(gen_animal_floor_pos(radius, T::value_type::allow_in_attic(), 0, 0, T::value_type::not_by_ext_door(), rgen)); // not_player_visible=0, pref_dark_room=0
 		if (pos == all_zeros) continue; // bad pos? skip this animal
 		animals.add(typename T::value_type(pos, radius, rgen.signed_rand_vector_spherical_xy_norm(), n));
 	}
 }
 
-point building_t::gen_animal_floor_pos(float radius, bool place_in_attic, bool not_player_visible, bool pref_dark_room, rand_gen_t &rgen) const {
+point building_t::gen_animal_floor_pos(float radius, bool place_in_attic, bool not_player_visible, bool pref_dark_room, bool not_by_ext_door, rand_gen_t &rgen) const {
 	vector3d const xlate(get_tiled_terrain_model_xlate()); // too difficult to pass this in through the call stack, so just recalculate
 	point const camera_bs(camera_pdu.pos - xlate);
+	float const floor_spacing(get_window_vspace()), wall_thickness(get_wall_thickness());
 
 	for (unsigned n = 0; n < 100; ++n) { // make up to 100 tries
 		cube_t place_area;
+		int room_ix(-1); // attic will be -1
 
 		if (place_in_attic && has_attic() && (rgen.rand()%10) == 0) { // 10% of the time in the attic; counts as a dark room even if the light is on
 			place_area = get_attic_part();
 			place_area.z1() = place_area.z2();
 		}
 		else {
-			unsigned const room_ix(rgen.rand() % interior->rooms.size());
+			room_ix = (rgen.rand() % interior->rooms.size());
 			room_t const &room(interior->rooms[room_ix]);
 			if (room.z1() > ground_floor_z1) continue; // not on the ground floor or basement
 			if (pref_dark_room && n < 50 && is_room_lit(room_ix, (room.z1() + radius))) continue; // check for dark room in first 50 iterations
 			place_area = room; // will represent the usable floor area
 			place_area.z1() += get_fc_thickness(); // on top of the floor
 		}
-		place_area.expand_by_xy(-(radius + get_wall_thickness()));
+		place_area.expand_by_xy(-(radius + wall_thickness));
 		if (min(place_area.dx(), place_area.dy()) < 4.0*radius) continue; // room too small (can happen for has_complex_floorplan office buildings)
 		point const pos(gen_xy_pos_in_area(place_area, radius, rgen, place_area.z1()));
 		if (!is_valid_ai_placement(pos, radius, 0)) continue; // check room objects; start in the open, not under something; skip_nocoll=0
 		
-		if (not_player_visible && n < 50 && fabs(camera_bs.z - pos.z) < get_window_vspace() && camera_pdu.sphere_visible_test((pos + xlate), radius)) {
+		if (not_by_ext_door && room_ix >= 0 && pos.z > ground_floor_z1 && pos.z < (ground_floor_z1 + floor_spacing)) { // on ground floor
+			float const min_door_dist(1.5*floor_spacing);
+			room_t const &room(interior->rooms[room_ix]);
+			bool near_door(0);
+			
+			for (tquad_with_ix_t const &door : doors) { // exterior doors
+				if (door.type == tquad_with_ix_t::TYPE_RDOOR) continue; // ignore roof access doors
+				cube_t door_bcube(door.get_bcube());
+				door_bcube.expand_by_xy(wall_thickness); // make sure it overlaps the room
+				if (!door_bcube.intersects(room)) continue;
+				door_bcube.expand_by_xy(min_door_dist - wall_thickness);
+				if (door_bcube.contains_pt_xy(pos)) {near_door = 1; break;}
+			}
+			if (near_door) continue; // bad placement; don't spawn venemous spiders and snakes near the door that the player could run into immediately
+		}
+		if (not_player_visible && n < 50 && fabs(camera_bs.z - pos.z) < floor_spacing && camera_pdu.sphere_visible_test((pos + xlate), radius)) {
 			// may be visible to the player; checked for the first 50 iterations
 			if (get_room_containing_pt(pos) == get_room_containing_pt(camera_bs)) continue; // same room, skip
 			if (!line_intersect_walls(pos, camera_bs)) continue; // line of sight, skip
@@ -986,7 +1003,7 @@ void building_t::update_spider(spider_t &spider, point const &camera_bs, float t
 
 		if (!is_pos_inside_building(spider.pos, radius, radius)) { // still not valid
 			if (spider.last_valid_pos == all_zeros) { // bad spawn pos - retry
-				spider.pos = gen_animal_floor_pos(radius, spider_t::allow_in_attic(), 1, 0, rgen); // not_player_visible=1, pref_dark_room=0
+				spider.pos = gen_animal_floor_pos(radius, spider_t::allow_in_attic(), 1, 0, 1, rgen); // not_player_visible=1, pref_dark_room=0, not_by_ext_door=1
 				return;
 			}
 			spider.pos = spider.last_valid_pos; // restore to prev frame pos
@@ -1425,7 +1442,7 @@ void building_t::update_fly(insect_t &fly, point const &camera_bs, float timeste
 		pos = fly.last_pos; // restore previous pos before collision
 
 		if (!is_pos_inside_building(pos, radius, hheight)) { // still not valid, respawn; error?
-			pos = gen_animal_floor_pos(radius, insect_t::allow_in_attic(), 1, 0, rgen); // not_player_visible=1, pref_dark_room=0
+			pos = gen_animal_floor_pos(radius, insect_t::allow_in_attic(), 1, 0, 0, rgen); // not_player_visible=1, pref_dark_room=0, not_by_ext_door=0
 			return;
 		}
 		fly.dir *= -1.0; // reverse direction; maybe should use direction to closest building wall?
@@ -1539,7 +1556,7 @@ void building_t::update_roach(insect_t &roach, point const &camera_bs, float tim
 			}
 		}
 		if (spawn_new_pos) {
-			pos = gen_animal_floor_pos(roach.radius, 0, 1, 1, rgen); // place_in_attic=0, not_player_visible=1, pref_dark_room=1
+			pos = gen_animal_floor_pos(roach.radius, 0, 1, 1, 0, rgen); // place_in_attic=0, not_player_visible=1, pref_dark_room=1, not_by_ext_door=0
 			roach.is_scared = roach.no_scare = 0; // no longer scared
 			return;
 		}
