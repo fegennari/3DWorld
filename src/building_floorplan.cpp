@@ -796,7 +796,7 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 				bool const is_basement(has_basement() && part_id == (unsigned)basement_part_ix);
 
 				// add central hallway if wall/hall len is at least enough to place 2-3 rooms; 50% chance if part is a basement; houses and small office buildings
-				if (is_first_split && csz[!wall_dim] > 1.2*min_split_len && (!is_basement || rgen.rand_bool())) {
+				if (is_first_split && csz[!wall_dim] > 1.5*min_split_len && (!is_basement || rgen.rand_bool())) {
 					// maybe create a hallway: create another split parallel to this one offset a bit and make the room in between a hallway
 					bool const dir((wall_pos - c.d[wall_dim][0]) < (c.d[wall_dim][1] - wall_pos)); // further part edge
 					float other_wall_pos(0.0);
@@ -1315,7 +1315,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 			landing.set_against_wall(stairs_against_wall);
 			interior->landings.push_back(landing);
 			interior->stairwells.back().z2() += fc_thick; // extend upward
-			interior->stairwells.back().z1() += fc_thick; // requiured to trick roof clipping into treating this as a stack connector stairwell
+			interior->stairwells.back().z1() += fc_thick; // required to trick roof clipping into treating this as a stack connector stairwell
 
 			for (unsigned i = 0; i < 4; ++i) { // skip zero area cubes from stairs/elevator shafts along an exterior wall
 				cube_t &c(to_add[i]);
