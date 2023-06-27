@@ -1180,7 +1180,7 @@ bool building_room_geom_t::open_nearest_drawer(building_t &building, point const
 		float stack_z1(0.0);
 		room_object_t item;
 
-		for (unsigned item_ix = 0; item_ix < 16; ++item_ix) { // take the *last* item in the drawer first
+		for (unsigned item_ix = 0; item_ix < 16; ++item_ix) { // take the *last* item in the drawer first, which will be the top item if stacked
 			room_object_t const cand_item(get_item_in_drawer(drawers_part, drawer, closest_drawer_id, item_ix, stack_z1));
 			if (cand_item.type == TYPE_NONE) break; // no more items
 			item = cand_item;

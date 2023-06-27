@@ -1123,7 +1123,8 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 		room_t &room(interior->rooms.back()); // should be the last room
 		room.has_stairs = 255; // stairs on all floors
 	}
-	else if (!is_house || interior->stairwells.empty()) { // only add stairs to first part of a house unless we haven't added stairs yet
+	// only add stairs to first part of a house unless we haven't added stairs yet, or if it's the top floor of a stacked part
+	else if (!is_house || interior->stairwells.empty() || (first_part_this_stack && part.z1() > ground_floor_z1)) {
 		// sometimes add an elevator to building parts, but not the first part in a stack (to guarantee we have at least one set of stairs)
 		// it might not be possible to place an elevator a part with no interior rooms, but that should be okay, because some other part will still have stairs
 		// do we need support for multiple floor cutouts stairs + elevator in this case as well?
@@ -1231,6 +1232,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 			if (!must_add_stairs || add_elevator || !stairs_cut.is_all_zeros()) break; // successfully placed stairs, or not required to place stairs
 			stairs_scale -= 0.1; // shrink stairs a bit and try again
 		} // for N
+		//if (is_house && interior->stairwells.empty()) {interior->is_unconnected = 1;} // fails too often/too slow
 	} // end stairs/elevator placement
 
 	// add ceilings and floors; we have num_floors+1 separators; the first is only a floor, and the last is only a ceiling
@@ -1764,7 +1766,8 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 			connected = 1;
 			if (use_basement_stairs) break; // only need to connect one part for the basement
 		} // for p
-		if (!connected && is_basement) {interior->is_unconnected = 1;} // failed to connect basement with stairs - flag as unconnected
+		// flag as unconnected if failed to connect basement with stairs; failed to connect house stacked parts would be good, but it's too slow
+		if (!connected && (is_basement /*|| is_house*/)) {interior->is_unconnected = 1;}
 	}
 
 	// now attempt to extend elevators into floors above/below
