@@ -11,7 +11,7 @@ unsigned get_skip_mask_for_xy(bool dim);
 colorRGBA apply_light_color(room_object_t const &o, colorRGBA const &c);
 void add_boxes_to_space(room_object_t const &c, vect_room_object_t &objects, cube_t const &bounds, vect_cube_t &cubes, rand_gen_t &rgen,
 	unsigned num_boxes, float xy_scale, float hmin, float hmax, bool allow_crates, unsigned flags); // from building_room_obj_expand
-void try_add_lamp(cube_t const &place_area, float floor_spacing, unsigned room_id, unsigned flags, float light_amt,
+bool try_add_lamp(cube_t const &place_area, float floor_spacing, unsigned room_id, unsigned flags, float light_amt,
 	vect_cube_t &cubes, vect_room_object_t &objects, rand_gen_t &rgen);
 bool gen_furnace_cand(cube_t const &place_area, float floor_spacing, bool near_wall, rand_gen_t &rgen, cube_t &furnace, bool &dim, bool &dir);
 bool add_obj_to_closet(room_object_t const &c, cube_t const &interior, vect_room_object_t &objects, vect_cube_t &cubes,
@@ -335,7 +335,11 @@ void building_t::add_attic_objects(rand_gen_t rgen) {
 
 	// add lamp(s)
 	unsigned const num_lamps(rgen.rand() % (has_furnace ? 5 : 3)); // 0-4/2
-	for (unsigned n = 0; n < num_lamps; ++n) {try_add_lamp(place_area, floor_spacing, room_id, obj_flags, light_amt, avoid_cubes, objs, rgen);}
+	
+	for (unsigned n = 0; n < num_lamps; ++n) {
+		if (!try_add_lamp(place_area, floor_spacing, room_id, obj_flags, light_amt, avoid_cubes, objs, rgen)) continue;
+		if (!cube_in_attic(objs.back())) {objs.pop_back();} // too tall, skip
+	}
 	// add chair(s)
 	unsigned const num_chairs(rgen.rand() % (has_furnace ? 4 : 3)); // 0-3/2
 	
@@ -348,11 +352,11 @@ void building_t::add_attic_objects(rand_gen_t rgen) {
 			if (i->type == TYPE_CHAIR) {chair_color = i->color; break;} // use the color of the first chair added to this building
 		}
 		for (unsigned n = 0; n < num_chairs; ++n) {
-			if (add_obj_to_closet(objs[attic_door_ix], place_area, objs, avoid_cubes, rgen, sz, TYPE_CHAIR, obj_flags)) {
-				objs.back().dim   = rgen.rand_bool(); // random orient
-				objs.back().dir   = rgen.rand_bool();
-				objs.back().color = chair_color;
-			}
+			if (!add_obj_to_closet(objs[attic_door_ix], place_area, objs, avoid_cubes, rgen, sz, TYPE_CHAIR, obj_flags)) continue;
+			if (!cube_in_attic(objs.back())) {objs.pop_back(); continue;} // too tall, skip
+			objs.back().dim   = rgen.rand_bool(); // random orient
+			objs.back().dir   = rgen.rand_bool();
+			objs.back().color = chair_color;
 		}
 	}
 	// add nightstand(s)
@@ -364,12 +368,11 @@ void building_t::add_attic_objects(rand_gen_t rgen) {
 		sz[ dim] = 0.5*depth;
 		sz[!dim] = 0.5*width;
 		sz.z     = height;
-		
-		if (add_obj_to_closet(objs[attic_door_ix], place_area, objs, avoid_cubes, rgen, sz, TYPE_NIGHTSTAND, obj_flags)) {
-			objs.back().dim = dim;
-			objs.back().dir = (objs.back().get_center_dim(dim) < place_area.get_center_dim(dim)); // face the center of the attic so that drawers can be opened
-		}
-	}
+		if (!add_obj_to_closet(objs[attic_door_ix], place_area, objs, avoid_cubes, rgen, sz, TYPE_NIGHTSTAND, obj_flags)) continue;
+		if (!cube_in_attic(objs.back())) {objs.pop_back(); continue;} // too tall, skip
+		objs.back().dim = dim;
+		objs.back().dir = (objs.back().get_center_dim(dim) < place_area.get_center_dim(dim)); // face the center of the attic so that drawers can be opened
+	} // for n
 	// add paintcan(s)
 	unsigned const num_paintcans(rgen.rand() % (has_furnace ? 6 : 4)); // 0-5/3
 	

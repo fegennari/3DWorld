@@ -111,11 +111,11 @@ bool add_obj_to_closet(room_object_t const &c, cube_t const &interior, vect_room
 	return 0; // failed
 }
 
-void try_add_lamp(cube_t const &place_area, float floor_spacing, unsigned room_id, unsigned flags, float light_amt,
+bool try_add_lamp(cube_t const &place_area, float floor_spacing, unsigned room_id, unsigned flags, float light_amt,
 	vect_cube_t &cubes, vect_room_object_t &objects, rand_gen_t &rgen)
 {
 	float const height(0.25*floor_spacing), width(height*get_lamp_width_scale()), radius(0.5*width);
-	if (width == 0.0 || width > 0.9*min(place_area.dx(), place_area.dy())) return; // check if lamp model is valid and lamp fits in closet
+	if (width == 0.0 || width > 0.9*min(place_area.dx(), place_area.dy())) return 0; // check if lamp model is valid and lamp fits in closet
 		
 	for (unsigned n = 0; n < 4; ++n) { // make up to 4 attempts
 		point const center(gen_xy_pos_in_area(place_area, radius, rgen, place_area.z1()));
@@ -124,9 +124,10 @@ void try_add_lamp(cube_t const &place_area, float floor_spacing, unsigned room_i
 		if (!has_bcube_int(lamp, cubes)) { // check for intersection with other objects
 			objects.emplace_back(lamp, TYPE_LAMP, room_id, 0, 0, flags, light_amt, SHAPE_CYLIN, lamp_colors[rgen.rand()%NUM_LAMP_COLORS]);
 			cubes.push_back(lamp);
-			break;
+			return 1;
 		}
 	} // for n
+	return 0;
 }
 
 rand_gen_t room_object_t::create_rgen() const {
