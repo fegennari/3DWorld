@@ -1490,10 +1490,10 @@ int building_t::run_ai_elevator_logic(person_t &person, float delta_dir, rand_ge
 
 		if (e.open_amt == 1.0) { // doors are fully open
 			// Note: we could probably query e.get_target_floor() for this
-			if (get_elevator_floor(ecar.zc(), e, floor_spacing) == person.dest_elevator_floor) { // at destination floor
-				return AI_EXIT_ELEVATOR;
-			}
+			if (get_elevator_floor(ecar.zc(), e, floor_spacing) == person.dest_elevator_floor) {return AI_EXIT_ELEVATOR;} // at destination floor
 		}
+		person.is_stopped = 1; // enable idle animation
+		person.idle_time += fticks;
 	}
 	else if (person.ai_state == AI_EXIT_ELEVATOR) {
 		point const target_dest(get_pos_to_stand_for_elevator(person, e, floor_spacing));
@@ -1542,7 +1542,7 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 	float const coll_dist(COLL_RADIUS_SCALE*person.radius);
 	float &wait_time(person.waiting_start); // reuse this field
 	float speed_mult(1.0);
-	person.following_player = 0; // reset for this frame
+	person.following_player = person.is_stopped = 0; // reset for this frame
 	// skip the same building check for coll if both this person and the player may be in different but connected buildings
 	bool allow_diff_building(interior->conn_info && person.pos.z < ground_floor_z1 && cur_player_building_loc.pos.z < ground_floor_z1 &&
 		dist_xy_less_than(person.pos, cur_player_building_loc.pos, 2.0*get_window_vspace()));
