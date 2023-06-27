@@ -791,23 +791,26 @@ bool building_t::add_bedroom_objs(rand_gen_t rgen, room_t &room, vect_cube_t con
 			} // for n
 		}
 	}
-	if (building_obj_model_loader.is_model_valid(OBJ_MODEL_CEIL_FAN) && rgen.rand_float() < 0.25) { // maybe add ceiling fan
+	if (building_obj_model_loader.is_model_valid(OBJ_MODEL_CEIL_FAN) && rgen.rand_float() < 0.3) { // maybe add ceiling fan
 		// find the ceiling light, which should be the last object placed before calling this function, and center the fan on it
 		if (objs_start > 0 && objs[objs_start-1].type == TYPE_LIGHT) {
 			vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_CEIL_FAN)); // D, W, H
 			float const diameter(min(0.4*min(room.dx(), room.dy()), 0.5*window_vspacing)), height(diameter*sz.z/sz.y); // assumes width = depth = diameter
 			room_object_t &light(objs[objs_start-1]);
 			point const top_center(light.xc(), light.yc(), (zval + window_vspacing - floor_thickness)); // on the ceiling
-			light.translate_dim(2, -0.9*height); // move near the bottom of the ceiling fan (before invalidating with objs.emplace_back())
-			light.flags |= RO_FLAG_INVIS;   // don't draw the light itself; assume the light is part of the bottom of the fan instead
-			light.flags |= RO_FLAG_HANGING; // don't draw upward facing light
 			cube_t fan(top_center, top_center);
 			fan.expand_by_xy(0.5*diameter);
 			fan.z1() -= height;
-			unsigned flags(RO_FLAG_NOCOLL);
-			if (rgen.rand_bool()) {flags |= RO_FLAG_ROTATING;} // make fan rotate
-			objs.emplace_back(fan, TYPE_CEIL_FAN, room_id, 0, 0, flags, tot_light_amt, SHAPE_CYLIN, WHITE);
-			objs.back().obj_id = objs_start-1; // store light index in this object
+
+			if (!placed_closet || !objs[closet_obj_id].intersects(fan)) { // check for closet intersection
+				light.translate_dim(2, -0.9*height); // move near the bottom of the ceiling fan (before invalidating with objs.emplace_back())
+				light.flags |= RO_FLAG_INVIS;   // don't draw the light itself; assume the light is part of the bottom of the fan instead
+				light.flags |= RO_FLAG_HANGING; // don't draw upward facing light
+				unsigned flags(RO_FLAG_NOCOLL);
+				if (rgen.rand_float() < 0.65) {flags |= RO_FLAG_ROTATING;} // make fan rotate when turned on 65% of the time
+				objs.emplace_back(fan, TYPE_CEIL_FAN, room_id, 0, 0, (RO_FLAG_NOCOLL | RO_FLAG_ROTATING), tot_light_amt, SHAPE_CYLIN, WHITE);
+				objs.back().obj_id = objs_start-1; // store light index in this object
+			}
 		}
 	}
 	return 1; // success
