@@ -1047,6 +1047,7 @@ struct elevator_t : public oriented_cube_t { // dim/dir applies to the door
 };
 
 unsigned const NUM_RTYPE_SLOTS = 6; // enough for houses; hard max is 8
+inline unsigned wrap_room_floor(unsigned floor) {return min(floor, NUM_RTYPE_SLOTS-1U);}
 
 struct room_t : public cube_t { // size=64
 	uint8_t has_stairs=0; // per-floor bit mask; always set to 255 for stairs that span the entire room
@@ -1063,8 +1064,8 @@ struct room_t : public cube_t { // size=64
 	room_t(cube_t const &c, unsigned p, unsigned nl=0, bool is_hallway_=0, bool is_office_=0, bool is_sec_bldg_=0);
 	void assign_all_to(room_type rt, bool locked=1); // locked by default
 	void assign_to(room_type rt, unsigned floor, bool locked=0); // unlocked by default
-	room_type get_room_type (unsigned floor) const {return rtype[min(floor, NUM_RTYPE_SLOTS-1U)];}
-	bool is_rtype_locked    (unsigned floor) const {return (rtype_locked & (1 << min(floor, NUM_RTYPE_SLOTS-1U)));}
+	room_type get_room_type (unsigned floor) const {return rtype[wrap_room_floor(floor)];}
+	bool is_rtype_locked    (unsigned floor) const {return (rtype_locked & (1 << wrap_room_floor(floor)));}
 	bool is_lit_on_floor    (unsigned floor) const {return (lit_by_floor & (1ULL << (floor&63)));}
 	bool has_stairs_on_floor(unsigned floor) const {return (has_stairs & (1U << min(floor, 7U)));} // floors >= 7 are treated as the top floor
 	bool is_garage_or_shed  (unsigned floor) const {return (is_sec_bldg || get_room_type(floor) == RTYPE_GARAGE || get_room_type(floor) == RTYPE_SHED);}
@@ -1679,7 +1680,7 @@ private:
 	int classify_room_wall(room_t const &room, float zval, bool dim, bool dir, bool ret_sep_if_part_int_part_ext) const;
 	unsigned count_ext_walls_for_room(room_t const &room, float zval) const;
 	bool room_has_stairs_or_elevator(room_t const &room, float zval, unsigned floor) const;
-	bool is_room_office_bathroom(room_t const &room, float zval, unsigned floor) const;
+	bool is_room_office_bathroom(room_t &room, float zval, unsigned floor) const;
 	int gather_room_placement_blockers(cube_t const &room, unsigned objs_start, vect_cube_t &blockers, bool inc_open_doors=1, bool ignore_chairs=0) const;
 	vect_door_stack_t &get_doorways_for_room(cube_t const &room, float zval) const;
 	bool add_chair(rand_gen_t &rgen, cube_t const &room, vect_cube_t const &blockers, unsigned room_id, point const &place_pos,

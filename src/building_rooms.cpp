@@ -300,9 +300,11 @@ bool building_t::room_has_stairs_or_elevator(room_t const &room, float zval, uns
 	}
 	return 0;
 }
-
-bool building_t::is_room_office_bathroom(room_t const &room, float zval, unsigned floor) const {
-	return (room.is_office && room.get_room_type(floor) == RTYPE_BATH && !room_has_stairs_or_elevator(room, zval, floor));
+bool building_t::is_room_office_bathroom(room_t &room, float zval, unsigned floor) const { // Note: may also update room flags
+	if (!room.is_office || room.get_room_type(floor) != RTYPE_BATH) return 0;
+	if (!room_has_stairs_or_elevator(room, zval, floor))            return 1;
+	room.rtype[wrap_room_floor(floor)] = RTYPE_NOTSET; // not a bathroom; can't call assign_to() because it skips bathrooms
+	return 0;
 }
 
 // Note: must be first placed object
@@ -4410,7 +4412,8 @@ void room_t::assign_all_to(room_type rt, bool locked) {
 	if (locked) {rtype_locked = 0xFF;} // room type is locked on all floors
 }
 void room_t::assign_to(room_type rt, unsigned floor, bool locked) {
-	min_eq(floor, NUM_RTYPE_SLOTS-1U); // room types are only tracked up to the 4th floor, and every floor above that has the same type as the 4th floor; good enough for houses at least
+	// room types are only tracked up to the 4th floor, and every floor above that has the same type as the 4th floor; good enough for houses at least
+	floor = wrap_room_floor(floor);
 	if (rtype[floor] == RTYPE_BATH) return; // assign unless already set to a bathroom, since we need that for has_room_of_type(RTYPE_BATH)
 	rtype[floor] = rt;
 	if (locked) {rtype_locked |= (1 << floor);} // lock this floor
