@@ -706,7 +706,7 @@ void place_book(room_object_t &obj, cube_t const &parent, float length, float ma
 	else                              {obj_type = types_dresser [type_ix];} // dresser or nightstand
 	if (obj_type == TYPE_SILVER && !building_obj_model_loader.is_model_valid(OBJ_MODEL_SILVER)) {obj_type = TYPE_BOOK;} // replace silverware with book
 	// object stacking logic
-	bool const is_stackable(obj_type == TYPE_BOX || obj_type == TYPE_PAPER || obj_type == TYPE_BOOK || obj_type == TYPE_PLATE); // TYPE_TAPE?
+	bool const is_stackable(obj_type == TYPE_BOX || obj_type == TYPE_PAPER || obj_type == TYPE_BOOK || obj_type == TYPE_PLATE || obj_type == TYPE_TAPE);
 	cube_t drawer(drawer_in); // copy so that we can adjust z1
 	
 	if (item_ix == 0) {stack_z1 = drawer.z1();} // base case
