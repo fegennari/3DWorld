@@ -527,7 +527,7 @@ bool building_t::can_be_bedroom_or_bathroom(room_t const &room, unsigned floor, 
 		if (skip_conn_check) return 1;
 
 		if (room.dz() > 1.5*get_window_vspace()) { // more than one floor
-			if (interior->stairwells.empty()) return 1; // failed to place stairs in this house, maybe because it was too small; I guess we just return 0 here
+			if (interior->stairwells.empty()) return 1; // failed to place stairs in this house, maybe because it was too small; I guess we just return 1 here
 			// determine if this room is on the shortest path from an exterior door to the stairs; if so, it can't be a bedroom or bathroom;
 			// okay, that's not easy/fast to do, so determine if there is any path from the exterior door to the stairs that doesn't go through this room;
 			// this won't work when there are two paths from the door to the stairs and this room is only on one of the paths, so we could put a BR/BR on both paths
@@ -589,13 +589,13 @@ float get_lamp_width_scale() {
 }
 
 bool building_t::add_bedroom_objs(rand_gen_t rgen, room_t &room, vect_cube_t const &blockers, colorRGBA const &chair_color, float zval, unsigned room_id,
-	unsigned floor, float tot_light_amt, unsigned objs_start, bool room_is_lit, bool is_basement, light_ix_assign_t &light_ix_assign)
+	unsigned floor, float tot_light_amt, unsigned objs_start, bool room_is_lit, bool is_basement, bool force, light_ix_assign_t &light_ix_assign)
 {
 	// bedrooms should have at least one window; if windowless/interior, it can't be a bedroom; faster than checking count_ext_walls_for_room(room, zval) > 0
 	if (room.interior) return 0;
 	vect_room_object_t &objs(interior->room_geom->objs);
 	unsigned const bed_obj_ix(objs.size()); // if placed, it will be this index
-	if (!add_bed_to_room(rgen, room, blockers, zval, room_id, tot_light_amt, floor)) return 0; // it's only a bedroom if there's bed
+	if (!add_bed_to_room(rgen, room, blockers, zval, room_id, tot_light_amt, floor, force)) return 0; // it's only a bedroom if there's bed
 	assert(bed_obj_ix < objs.size());
 	room_object_t const bed(objs[bed_obj_ix]); // deep copy so that we don't need to worry about invalidating the reference below
 	float const window_vspacing(get_window_vspace());
@@ -814,7 +814,7 @@ bool building_t::add_bedroom_objs(rand_gen_t rgen, room_t &room, vect_cube_t con
 }
 
 // Note: must be first placed object
-bool building_t::add_bed_to_room(rand_gen_t &rgen, room_t const &room, vect_cube_t const &blockers, float zval, unsigned room_id, float tot_light_amt, unsigned floor) {
+bool building_t::add_bed_to_room(rand_gen_t &rgen, room_t const &room, vect_cube_t const &blockers, float zval, unsigned room_id, float tot_light_amt, unsigned floor, bool force) {
 	unsigned const NUM_COLORS = 8;
 	colorRGBA const colors[NUM_COLORS] = {WHITE, WHITE, WHITE, LT_BLUE, LT_BLUE, PINK, PINK, LT_GREEN}; // color of the sheets
 	cube_t room_bounds(get_walkable_room_bounds(room));
@@ -826,7 +826,10 @@ bool building_t::add_bed_to_room(rand_gen_t &rgen, room_t const &room, vect_cube
 	room_bounds.expand_by_xy(expand);
 	float const room_len(room_bounds.get_sz_dim(dim)), room_width(room_bounds.get_sz_dim(!dim));
 	
-	if (floor == 0) { // special case for ground floor
+	if (force) { // no room is too large
+		if (room_len < 1.0*vspace || room_width < 0.55*vspace) return 0; // room is too small to fit a bed
+	}
+	else if (floor == 0) { // special case for ground floor
 		if (room_len < 1.3*vspace || room_width < 0.7*vspace) return 0; // room is too small to fit a bed
 		if (room_len > 4.0*vspace || room_width > 2.5*vspace) return 0; // room is too large to be a bedroom
 	}
@@ -840,7 +843,7 @@ bool building_t::add_bed_to_room(rand_gen_t &rgen, room_t const &room, vect_cube
 	cube_t c;
 	c.z1() = zval;
 
-	for (unsigned n = 0; n < 20; ++n) { // make 20 attempts to place a bed
+	for (unsigned n = 0; n < (force ? 100 : 20); ++n) { // make 20 attempts to place a bed
 		float const sizes[6][2] = {{38, 75}, {38, 80}, {53, 75}, {60, 80}, {76, 80}, {72, 84}}; // twin, twin XL, full, queen, king, cal king
 		unsigned const size_ix((room_width < 0.9*vspace) ? (rgen.rand() % 6) : (2 + (rgen.rand() % 4))); // only add twin beds to narrow rooms
 		bed_sz[ dim] = 0.01f*vspace*(sizes[size_ix][1] + 8.0f); // length (mattress + headboard + footboard)
@@ -3205,8 +3208,10 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				// place a bedroom 75% of the time unless this must be a bathroom; if we got to the second floor and haven't placed a bedroom, always place it;
 				// houses only, and must have a window (exterior wall)
 				if (is_house && !must_be_bathroom && !is_basement && ((f > 0 && !added_bedroom) || rgen.rand_float() < bedroom_prob)) {
+					// if haven't added a bedroom, force if last floor of last room (excluding the extended basement)
+					bool const force(!added_bedroom && f+1 == num_floors && (r+1 == rooms.end() || (r+1)->is_ext_basement()));
 					added_obj = can_place_onto = added_bedroom = is_bedroom =
-						add_bedroom_objs(rgen, *r, blockers, chair_color, room_center.z, room_id, f, tot_light_amt, objs_start, is_lit, is_basement, light_ix_assign);
+						add_bedroom_objs(rgen, *r, blockers, chair_color, room_center.z, room_id, f, tot_light_amt, objs_start, is_lit, is_basement, force, light_ix_assign);
 					if (is_bedroom) {r->assign_to(RTYPE_BED, f);}
 					num_bedrooms += is_bedroom;
 				}
