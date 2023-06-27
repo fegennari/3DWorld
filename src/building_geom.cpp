@@ -878,6 +878,7 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 		} // for dim
 		parts.push_back(top_part);
 		++real_num_parts;
+		maybe_add_basement(rgen);
 	}
 	if (!two_parts && !stacked_parts && gen_door) { // single cube house
 		maybe_add_basement(rgen);
