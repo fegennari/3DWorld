@@ -1623,8 +1623,8 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 						set_cube_zvals(ext_cube, cand_z1, cand_z2);
 						if (!ab) {ext_cube.z1() += 0.1*window_vspacing; ext_cube.z2() -= 0.1*window_vspacing;} // shrink to lower part
 						else     {ext_cube.z1() += 1.1*window_vspacing; ext_cube.z2() += 0.9*window_vspacing;} // move to upper part
-						if (ab ^ stairs_dir) {ext_cube.d[dim][0] -= stairs_pad;} // add padding on exit side
-						else                 {ext_cube.d[dim][1] += stairs_pad;} // add padding on exit side
+						if (bool(ab) ^ stairs_dir) {ext_cube.d[dim][0] -= stairs_pad;} // add padding on exit side
+						else                       {ext_cube.d[dim][1] += stairs_pad;} // add padding on exit side
 						if (!shared.contains_cube_xy(ext_cube)) continue; // test for space to enter and exit
 						if (has_bcube_int(ext_cube, interior->exclusion))              continue; // bad placement
 						if (!is_valid_stairs_elevator_placement(ext_cube, stairs_pad)) continue; // bad placement
@@ -1833,7 +1833,6 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 }
 
 bool building_t::are_parts_stacked(cube_t const &p1, cube_t const &p2) const {
-	if (is_house) return 0; // houses are never stacked
 	if (p1.z2() == p2.z1() && p1.contains_cube_xy(p2)) return 1; // p2 stacked on p1
 	if (p2.z2() == p1.z1() && p2.contains_cube_xy(p1)) return 1; // p1 stacked on p2
 	return 0;
