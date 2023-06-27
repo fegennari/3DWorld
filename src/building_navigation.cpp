@@ -1978,6 +1978,7 @@ void building_t::register_person_hit(unsigned person_ix, room_object_t const &ob
 
 /*static*/ float building_t::get_min_front_clearance_inc_people() {
 	float clearance(get_min_front_clearance());
+	// include people models; note that this means building interiors may be generated differently when building AIs are enabled
 	if (enable_building_people_ai() && global_building_params.building_people_enabled()) {max_eq(clearance, 2.0f*ped_manager_t::get_ped_radius());}
 	return clearance;
 }
