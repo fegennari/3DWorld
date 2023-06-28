@@ -677,6 +677,7 @@ void place_book(room_object_t &obj, cube_t const &parent, float length, float ma
 }
 
 /*static*/ room_object_t building_room_geom_t::get_item_in_drawer(room_object_t const &c, cube_t const &drawer_in, unsigned drawer_ix, unsigned item_ix, float &stack_z1) {
+	unsigned const per_drawer_ix(123*c.room_id + 17*c.obj_id + 31*drawer_ix); // per-drawer but not per item
 	room_object_t obj; // starts as no item
 
 	if (c.type == TYPE_FCABINET || c.type == TYPE_DESK) { // supports up to 4 drawers and 4 items
@@ -779,7 +780,7 @@ void place_book(room_object_t &obj, cube_t const &parent, float length, float ma
 	}
 	case TYPE_BOTTLE: // bottle
 	{
-		bool const dim(c.dim ^ rgen.rand_bool() ^ 1); // random orient
+		bool const dim(c.dim ^ bool(per_drawer_ix & 1)); // random orient, but consistent across the items in the drawer
 		float const length(rgen.rand_uniform(0.7, 0.9)*min(((c.type == TYPE_COUNTER) ? 2.7f : 1.8f)*sz.z, min(sz.x, sz.y))), diameter(length*rgen.rand_uniform(0.26, 0.34));
 		obj = room_object_t(drawer, TYPE_BOTTLE, c.room_id, dim, rgen.rand_bool(), 0, 1.0, SHAPE_CYLIN);
 		obj.set_as_bottle(rgen.rand()); // can be empty
@@ -811,7 +812,7 @@ void place_book(room_object_t &obj, cube_t const &parent, float length, float ma
 	}
 	case TYPE_SPRAYCAN: // spray paint can
 	{
-		bool const dim(c.dim ^ rgen.rand_bool() ^ 1); // random orient
+		bool const dim(c.dim ^ bool(per_drawer_ix & 1)); // random orient, but consistent across the items in the drawer
 		float const length(rgen.rand_uniform(0.8, 0.9)*min(1.8f*sz.z, min(sz.x, sz.y))), diameter(0.34*length);
 		obj = room_object_t(drawer, TYPE_SPRAYCAN, c.room_id, dim, rgen.rand_bool(), 0, 1.0, SHAPE_CYLIN, spcan_colors[rgen.rand() % NUM_SPCAN_COLORS]);
 		obj.z2()   = obj.z1() + diameter;
