@@ -1804,7 +1804,7 @@ bool building_t::check_obj_occluded(cube_t const &c, point const &viewer_in, occ
 		}
 	}
 	else if (viewer.z < bcube.z2()) { // player not in a building and not above this building
-		if (is_rotated()) return 0; // not implemented yet - c is not an axis aligned cube in global coordinate space
+		if (is_rotated())      return 0; // not implemented yet - c is not an axis aligned cube in global coordinate space
 		if (oc.is_occluded(c)) return 1; // check other buildings
 	}
 	if (!c_is_building_part && viewer.z > (ground_floor_z1 + floor_spacing) && is_cube()) {
@@ -1813,10 +1813,11 @@ bool building_t::check_obj_occluded(cube_t const &c, point const &viewer_in, occ
 			float const roof_z(p->z2());
 			if (viewer.z < roof_z) continue; // viewer below the roof
 			if (c.z2()   > roof_z) continue; // object above the roof
+			if (p->contains_pt_xy(viewer) && p->contains_pt_xy(c.get_cube_center())) continue; // skip stacked parts case; should be handled by floor occluders
 			cube_t roof(*p);
 			roof.z1() = roof_z - get_fc_thickness();
 			
-			// check if on top floor of roof with a skylight, on on the stairs of the floor below; could split the roof in this case, but that may not make much of a difference
+			// check if on top floor of roof with a skylight, or on the stairs of the floor below; could split the roof in this case, but that may not make much of a difference
 			if ((c.z2() > (roof_z - floor_spacing) || (c.z2() > (roof_z - 2.0f*floor_spacing) && check_cube_on_or_near_stairs(c))) && check_skylight_intersection(roof)) {
 				continue;
 			}
