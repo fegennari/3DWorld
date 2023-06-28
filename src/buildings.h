@@ -542,7 +542,7 @@ struct room_object_t : public oriented_cube_t { // size=64
 	bool is_player_collidable() const;
 	bool can_use        () const;
 	bool is_interactive () const {return (has_dstate() || can_use());}
-	bool is_medicine    () const {return (type == TYPE_BOTTLE && get_bottle_type() == BOTTLE_TYPE_MEDS);}
+	bool is_medicine    () const {return (type == TYPE_BOTTLE && get_bottle_type() == BOTTLE_TYPE_MEDS && !is_bottle_empty());}
 	bool can_place_onto () const;
 	bool is_floor_collidable () const;
 	bool is_spider_collidable() const;
