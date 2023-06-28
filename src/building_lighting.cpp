@@ -1303,7 +1303,9 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		float const floor_below_zval(floor_z - window_vspacing), ceil_above_zval(ceil_z + window_vspacing);
 		// Note: we use level_z rather than floor_z for floor_is_above test so that it agrees with the threshold logic for player_in_basement
 		bool const floor_is_above((camera_z < level_z) && !is_single_floor), floor_is_below(camera_z > ceil_z);
-		bool const camera_room_same_part(room.part_id == camera_part), has_stairs_this_floor(!is_in_attic && room.has_stairs_on_floor(cur_floor));
+		bool const camera_in_room_part_xy(parts[room.part_id].contains_pt_xy(camera_rot));
+		bool const camera_room_same_part(room.part_id == camera_part || (is_house && camera_in_room_part_xy)); // treat stacked house parts as the same
+		bool const has_stairs_this_floor(!is_in_attic && room.has_stairs_on_floor(cur_floor));
 		bool const has_ramp(!interior->ignore_ramp_placement && is_room_above_ramp(room, i->z1()));
 		bool const light_room_has_stairs_or_ramp(i->has_stairs() || has_stairs_this_floor || has_ramp);
 		bool stairs_light(0), player_in_elevator(0);
@@ -1352,7 +1354,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 				if (camera_in_ext_basement && (camera_by_stairs || (light_room_has_stairs_or_ramp && camera_somewhat_by_stairs)) && has_stairs_this_floor && room.is_ext_basement()) {
 					// camera and light are on different floors of the extended basement in two rooms connected by stairs
 				}
-				else if (camera_in_building && (camera_room_same_part || ((player_in_basement || light_in_basement) && parts[room.part_id].contains_pt_xy(camera_rot)) ||
+				else if (camera_in_building && (camera_room_same_part || ((player_in_basement || light_in_basement) && camera_in_room_part_xy) ||
 					(room.contains_pt_xy(camera_rot) && camera_z < ceil_above_zval && camera_z > floor_below_zval)))
 				{
 					// player is on a different floor of the same building part, or more than one floor away in a part stack, and can't see a light from the floor above/below
