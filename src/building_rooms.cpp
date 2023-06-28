@@ -522,7 +522,8 @@ bool building_t::create_office_cubicles(rand_gen_t rgen, room_t const &room, flo
 bool building_t::can_be_bedroom_or_bathroom(room_t const &room, unsigned floor, bool skip_conn_check) const { // check room type and existence of exterior door
 	if (room.has_stairs_on_floor(floor) || room.has_elevator || room.is_hallway || room.is_office || room.is_sec_bldg) return 0; // no bed/bath in these cases
 	
-	if (floor == 0) { // run special logic for bedrooms and bathrooms (private rooms) on the first floor of a house
+	if (floor == 0 && room.z1() == ground_floor_z1) {
+		// run special logic for bedrooms and bathrooms (private rooms) on the first floor of a house
 		if (is_room_adjacent_to_ext_door(room)) return 0; // door to house does not open into a bedroom/bathroom
 		if (skip_conn_check) return 1;
 
