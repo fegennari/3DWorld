@@ -1207,7 +1207,6 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 	maybe_inv_rotate_point(camera_rot); // rotate camera pos into building space; should use this pos below except with building bcube, occlusion checks, or lpos_rot
 	bool const player_on_attic_stairs(check_attic && player_in_attic && interior->attic_access.contains_pt_xy(camera_rot));
 	unsigned camera_part(parts.size()); // start at an invalid value
-	unsigned camera_floor(0);
 	bool camera_by_stairs(0), camera_on_stairs(0), camera_somewhat_by_stairs(0), camera_in_hallway(0), camera_can_see_ext_basement(0);
 	bool camera_near_building(camera_in_building);
 	int camera_room(-1);
@@ -1225,12 +1224,12 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		if (room_ix >= 0) {
 			// Note: stairs connecting stacked parts aren't flagged with has_stairs because stairs only connect to the bottom floor, but they're partially handled below
 			room_t const &room(get_room(room_ix));
-			camera_floor      = max(0.0f, (camera_rot.z - room.z1()))/window_vspacing;
+			unsigned const camera_floor(room.get_floor_containing_zval(max(camera_rot.z, room.z1()), window_vspacing)); // clamp zval to room range
+			unsigned const room_type(room.get_room_type(camera_floor));
+			assert(room_type < NUM_RTYPES);
 			camera_room       = room_ix;
 			camera_by_stairs  = camera_somewhat_by_stairs = room.has_stairs_on_floor(camera_floor);
 			camera_in_hallway = room.is_hallway;
-			unsigned const room_type(room.get_room_type(camera_floor));
-			assert(room_type < NUM_RTYPES);
 			if (show_room_name) {lighting_update_text = room_names[room_type];}
 
 			if (camera_by_stairs) { // by stairs - check if we're actually on the stairs
@@ -1243,14 +1242,8 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			{
 				camera_on_stairs = camera_by_stairs = camera_somewhat_by_stairs = 1; // ramp counts as stairs
 			}
-			if (!camera_somewhat_by_stairs) { // what about camera in room adjacent to one with stairs? maybe set camera_somewhat_by_stairs
-				cube_t cr(get_room(camera_room));
-				cr.expand_by_xy(2.0*wall_thickness);
-
-				for (auto r = interior->rooms.begin(); r != interior->rooms.end(); ++r) {
-					if (r->has_stairs_on_floor(camera_floor) && r->intersects_no_adj(cr)) {camera_somewhat_by_stairs = 1; break;}
-				}
-			}
+			// set camera_somewhat_by_stairs when camera is in room with stairs, or adjacent to one with stairs
+			camera_somewhat_by_stairs |= room_or_adj_room_has_stairs(camera_room, camera_rot.z, 1); // inc_adj_rooms=1
 		}
 		else if (point_in_attic(camera_rot)) {
 			if (show_room_name) {lighting_update_text = room_names[RTYPE_ATTIC];}

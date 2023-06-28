@@ -1849,8 +1849,8 @@ void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_
 	cube_t cont_part; // part containing the point
 
 	if (only_cont_pt_in) {
-		cont_part = get_part_containing_pt(only_cont_pt);
-		room_with_stairs = room_containing_pt_has_stairs(only_cont_pt);
+		cont_part        = get_part_containing_pt(only_cont_pt);
+		room_with_stairs = room_or_adj_room_has_stairs(get_room_containing_pt(only_cont_pt), only_cont_pt.z, 1); // inc_adj_rooms=1
 	}
 	for (auto i = parts.begin(); i != get_real_parts_end_inc_sec(); ++i) { // multiple cubes/parts/levels, excluding chimney/porch/etc.
 		if (is_basement(i)) continue; // skip the basement
@@ -1859,7 +1859,7 @@ void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_
 
 		if (only_cont_pt_in && !i->contains_pt(only_cont_pt)) { // not the part containing the point
 			if (room_with_stairs && are_parts_stacked(*i, cont_part)) { // windows may be visible through stairs in rooms with stacked parts
-				draw_part = cont_part;
+				draw_part  = cont_part;
 				draw_part.intersect_with_cube_xy(*i);
 				clamp_cube = &draw_part;
 			}

@@ -846,7 +846,7 @@ bool building_t::add_bed_to_room(rand_gen_t &rgen, room_t const &room, vect_cube
 	cube_t c;
 	c.z1() = zval;
 
-	for (unsigned n = 0; n < (force ? 100 : 20); ++n) { // make 20 attempts to place a bed
+	for (unsigned n = 0; n < (force ? 100U : 20U); ++n) { // make 20 attempts to place a bed
 		float const sizes[6][2] = {{38, 75}, {38, 80}, {53, 75}, {60, 80}, {76, 80}, {72, 84}}; // twin, twin XL, full, queen, king, cal king
 		unsigned const size_ix((room_width < 0.9*vspace) ? (rgen.rand() % 6) : (2 + (rgen.rand() % 4))); // only add twin beds to narrow rooms
 		bed_sz[ dim] = 0.01f*vspace*(sizes[size_ix][1] + 8.0f); // length (mattress + headboard + footboard)

@@ -1574,7 +1574,7 @@ private:
 
 public:
 	int get_room_containing_pt(point const &pt) const;
-	bool room_containing_pt_has_stairs(point const &pt) const;
+	bool room_or_adj_room_has_stairs(int room_ix, float zval, bool inc_adj_rooms) const;
 	void register_player_in_building(point const &camera_bs, unsigned building_id) const;
 	bool maybe_teleport_to_screenshot() const;
 	bool place_obj_along_wall(room_object type, room_t const &room, float height, vector3d const &sz_scale, rand_gen_t &rgen, float zval, unsigned room_id,

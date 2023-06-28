@@ -1952,10 +1952,19 @@ building_loc_t building_t::get_building_loc_for_pt(point const &pt) const {
 	}
 	return loc;
 }
-bool building_t::room_containing_pt_has_stairs(point const &pt) const { // Note: only used in building_t::get_all_drawn_window_verts()
-	int const room_ix(get_room_containing_pt(pt));
+bool building_t::room_or_adj_room_has_stairs(int room_ix, float zval, bool inc_adj_rooms) const {
 	if (room_ix < 0) return 0; // no room contains this point
-	return get_room(room_ix).has_stairs; // Note: used for drawing, can be conservative and return true if any floor of this room has stairs
+	room_t const &room(get_room(room_ix));
+	unsigned floor_ix(room.get_floor_containing_zval(max(zval, room.z1()), get_window_vspace())); // clamp zval to the room
+	if (room.has_stairs_on_floor(floor_ix)) return 1;
+	if (!inc_adj_rooms) return 0;
+	cube_t cr(room);
+	cr.expand_by_xy(2.0*get_wall_thickness());
+
+	for (auto r = interior->rooms.begin(); r != interior->rooms.end(); ++r) {
+		if (r->has_stairs_on_floor(floor_ix) && r->intersects_no_adj(cr)) return 1;
+	}
+	return 0;
 }
 
 bool building_t::maybe_zombie_retreat(unsigned person_ix, point const &hit_pos) {
