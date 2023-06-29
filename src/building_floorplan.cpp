@@ -1723,7 +1723,7 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 				continue;
 			}
 			if (!is_house) { // houses should only have one set of stairs on each floor
-				// TODO: extend stairs to other floors of the part above and/or below?
+				// extend stairs to other floors of the part above and/or below if the parts don't already have stairs?
 			}
 			landing_t landing(cand, 0, 0, dim, stairs_dir, add_railing, sshape, 0, is_at_top, stack_conn); // roof_access=0
 			stairs_landing_base_t stairwell(landing);
