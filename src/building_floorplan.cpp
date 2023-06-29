@@ -185,7 +185,7 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 	unsigned const details_size(details.size()), roof_tquads_size(roof_tquads.size()), doors_size(doors.size());
 
 	// make up to 16 attempts to generate a connected interior; the first attempt almost always succeeds; currently it only fails if a basement is unconnected
-	// 64 houses are unconnected, this loop fixes all but 6 of them after 3 iterations; 12 iterations is required for 100% success
+	// 64 house basements are unconnected, this loop fixes all but 6 of them after 3 iterations; 12 iterations is required for 100% success
 	for (unsigned n = 0; n < 16; ++n) {
 		// remove any objects added in the previous (failed) iteration
 		details.resize(details_size);
@@ -194,7 +194,7 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 		ext_lights.clear(); // generated as part of the interior
 		gen_interior_int(rgen, has_overlapping_cubes);
 		if (!interior->is_unconnected) break; // done
-	}
+	} // for n
 	for (unsigned d = 0; d < 2; ++d) {interior->extb_walls_start[d] = interior->walls[d].size();}
 	// calculate and cache interior_z2
 	interior_z2 = ground_floor_z1;
@@ -1718,8 +1718,10 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 				cand_is_valid = 1;
 				break;
 			} // for n
-			if (!cand_is_valid) continue; // no valid candidate found
-
+			if (!cand_is_valid) { // no valid candidate found
+				if (is_house && !is_basement) {interior->is_unconnected = 1;} // failed to connect house stacked parts
+				continue;
+			}
 			if (!is_house) { // houses should only have one set of stairs on each floor
 				// TODO: extend stairs to other floors of the part above and/or below?
 			}
@@ -1766,8 +1768,7 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 			connected = 1;
 			if (use_basement_stairs) break; // only need to connect one part for the basement
 		} // for p
-		// flag as unconnected if failed to connect basement with stairs; failed to connect house stacked parts would be good, but it's too slow
-		if (!connected && (is_basement /*|| is_house*/)) {interior->is_unconnected = 1;}
+		if (!connected && is_basement) {interior->is_unconnected = 1;} // flag as unconnected if failed to connect basement with stairs
 	}
 
 	// now attempt to extend elevators into floors above/below
