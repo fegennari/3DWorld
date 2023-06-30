@@ -204,7 +204,7 @@ bool cube_t::cube_intersection(const cube_t &cube, cube_t &res) const { // flags
 	for (unsigned i = 0; i < 3; ++i) {
 		res.d[i][0] = max(d[i][0], cube.d[i][0]);
 		res.d[i][1] = min(d[i][1], cube.d[i][1]);
-		if (res.d[0] >= res.d[1]) return 0; // no intersection
+		if (res.d[0][i] >= res.d[1][i]) return 0; // no intersection
 	}
 	return 1;
 }
@@ -440,7 +440,6 @@ bool csg_cube::subtract_from_internal(const csg_cube &cube, vector<csg_cube> &ou
 
 
 csg_cube::csg_cube(const coll_obj &cobj, bool use_bounding_cube) : eflags(cobj.cp.surfs) { // coll_obj constructor
-
 	assert(use_bounding_cube || cobj.type == COLL_CUBE);
 	copy_from(cobj);
 	normalize();
@@ -448,7 +447,6 @@ csg_cube::csg_cube(const coll_obj &cobj, bool use_bounding_cube) : eflags(cobj.c
 
 
 inline void csg_cube::write_to_cobj(coll_obj &cobj) const {
-
 	assert(cobj.type == COLL_CUBE);
 	cobj.copy_from(*this);
 	cobj.cp.surfs = eflags;
@@ -456,7 +454,6 @@ inline void csg_cube::write_to_cobj(coll_obj &cobj) const {
 
 
 bool csg_cube::cube_intersection(const csg_cube &cube, csg_cube &res) const { // flags are not set
-
 	res.eflags = 0; // fix later
 	return cube_t::cube_intersection(cube, res);
 }
