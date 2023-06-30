@@ -415,7 +415,7 @@ class file_reader_assimp {
 				cur_xf.xform_pos   (v.v);
 				cur_xf.xform_pos_rm(v.n);
 			}
-			if (mesh->mTextureCoords != nullptr && mesh->mTextureCoords[0] != nullptr) { // TCs are optional and default to (0,0); we only use the first of 8
+			if (mesh->mTextureCoords[0] != nullptr) { // TCs are optional and default to (0,0); we only use the first of 8
 				v.t[0] = mesh->mTextureCoords[0][i].x; 
 				v.t[1] = mesh->mTextureCoords[0][i].y;
 			}
