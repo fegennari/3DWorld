@@ -14,6 +14,22 @@ sudo apt install libxi-dev
 
 *************************
 
+Install (Arch Linux)
+pacman -S openal
+pacman -S freealut
+pacman -S freeglut
+pacman -S libpng
+pacman -S glew
+pacman -S glm
+pacman -S zstd
+pacman -S libtiff
+pacman -S libjpeg-turbo
+pacman -S libxrender
+pacman -S libxmu
+pacman -S libxi
+
+*************************
+
 Clone 3DWorld:
 git clone https://github.com/fegennari/3DWorld.git
 
