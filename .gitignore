@@ -14,7 +14,6 @@ noback/
 deps_build/
 screenshot*.jpg
 screenshot*.bmp
-video_out*.mp4
 heightmap.png
 positions.log.txt
 state.txt
@@ -25,8 +24,6 @@ textures/skybox/ely_hills
 textures/pictures
 textures/papers
 dependencies/meshoptimizer/src/*.o
-dependencies/tracy*
-dependencies/libjpeg-turbo-32
 house/snow.wind.map
 temp_assimp_embedded_image.*
 TAGS
