@@ -483,7 +483,7 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 		for (auto i = objs.begin()+objs_start; i != objs.end(); ++i) {
 			if (i->type == TYPE_PG_WALL) {walls.push_back(*i);} // wall
 			else if (i->type == TYPE_PG_PILLAR) { // pillar
-				walls.push_back(*i); // included in walls
+				walls    .push_back(*i); // included in walls
 				obstacles.push_back(*i); // pillars also count as obstacles
 				obstacles.back().z1() = room.z1(); // extend down to all floors so that these work with sprinkler pipes on a lower floor
 			}
@@ -1150,6 +1150,14 @@ void building_t::add_sprinkler_pipes(vect_cube_t const &obstacles, vect_cube_t c
 		c.d[dim][ dir] = basement.d[dim][dir] + (dir ? -1.0 : 1.0)*flange_expand; // against the wall (with space for the flange)
 		c.d[dim][!dir] = c.d[dim][dir] + (dir ? -1.0 : 1.0)*2.0*sp_radius;
 		if (has_bcube_int(c, obstacles) || has_bcube_int(c, walls) || has_bcube_int(c, beams) || has_bcube_int(c, pipe_cubes)) continue; // include walls and beams
+		// skip if the pipe aligns with a pillar because we won't be able to place a horizontal sprinkler pipe
+		bool is_blocked(0);
+		
+		for (cube_t const &wall : walls) { // includes both walls and pillars
+			if (wall.dx() > 2.0*wall.dy() || wall.dy() > 2.0*wall.dx()) continue; // skip walls since they have pillars intersecting them as well
+			if ((wall.x2() > c.x1() && wall.x1() < c.x2()) || (wall.y2() > c.y1() && wall.y1() < c.y2())) {is_blocked = 1; break;} // X or Y projection
+		}
+		if (is_blocked) continue;
 		objs.emplace_back(c, TYPE_PIPE, room_id, 0, 1, RO_FLAG_LIT, tot_light_amt, SHAPE_CYLIN, pcolor); // dir=1 for vertical; casts shadows; add to pipe_cubes?
 		// add flanges at top and bottom of each floor
 		cube_t flange(c);
