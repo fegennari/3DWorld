@@ -1028,6 +1028,13 @@ void add_hanging_pipe_bracket(cube_t const &pipe, float len_pos, float ceiling_z
 	set_wall_width(bracket, len_pos, 0.8*radius, dim);
 	bracket.expand_in_dim(!dim, thickness);
 	bracket.expand_in_dim(2,    thickness);
+	cube_t bc(bracket);
+	bc.z1() = ceiling_zval; // extend up to ceiling
+	if (has_bcube_int(bc, obstacles) || has_bcube_int(bc, walls)) return;
+
+	for (auto i = objs.begin()+pipe_conn_start; i != objs.end(); ++i) {
+		if (i->intersects(bc)) return; // is this intersection possible given the existing constraints on pipe placement? unclear
+	}
 	objs.emplace_back(bracket, TYPE_PIPE, room_id, dim, 0, (pipe_flags | RO_FLAG_ADJ_LO | RO_FLAG_ADJ_HI), tot_light_amt, SHAPE_CYLIN, LT_GRAY);
 
 	if (bracket.z2() < ceiling_zval) { // add a vertical bolt into the ceiling; beams should not be empty
@@ -1184,7 +1191,7 @@ void building_t::add_sprinkler_pipes(vect_cube_t const &obstacles, vect_cube_t c
 			// run smaller branch lines off this pipe in the other dim; we could add the actual sprinklers to these
 			cube_t const h_pipe(objs[pipe_obj_ix]);
 			float const h_pipe_len(h_pipe.get_sz_dim(dim)), conn_radius(0.5*h_pipe_radius);
-			unsigned const num_conn(max(1U, unsigned(h_pipe_len/(1.5*floor_spacing))));
+			unsigned const pri_pipe_end_ix(objs.size()), num_conn(max(1U, unsigned(h_pipe_len/(1.5*floor_spacing))));
 			bool const end_flush(ret == 2); // if a partial pipe was added, place the last connector at the end of the pipe so that there's no unused length
 			float const conn_step((dir ? -1.0 : 1.0)*h_pipe_len/(num_conn - (end_flush ? 0.5 : 0.0))); // signed step (pipe runs in -dir)
 			p1[dim] += 0.5*conn_step; // first half step
@@ -1211,12 +1218,17 @@ void building_t::add_sprinkler_pipes(vect_cube_t const &obstacles, vect_cube_t c
 				p1[dim] += conn_step;
 			} // for n
 			if (end_flush && !added && last_added_conn_pipe_pos != center[dim]) { // partial pipe with final connector not added, but some other connector added
-				float &end_to_move(objs[pipe_obj_ix].d[dim][!dir]);
+				cube_t &pipe_bc(objs[pipe_obj_ix]);
+				float &end_to_move(pipe_bc.d[dim][!dir]);
 				float const pipe_end(end_to_move), xlate(last_added_conn_pipe_pos - pipe_end);
 				end_to_move = last_added_conn_pipe_pos;
 
 				for (unsigned i = pipe_obj_ix+1; i < pipe_obj_ix+3; ++i) { // check both end caps
 					if (objs[i].d[dim][!dir] == pipe_end) {objs[i].translate_dim(dim, xlate);}
+				}
+				for (unsigned i = pipe_obj_ix+3; i < pri_pipe_end_ix; ++i) { // remove end caps no longer covering shortened pipe
+					room_object_t &obj(objs[i]);
+					if (obj.d[dim][0] < pipe_bc.d[dim][0] || obj.d[dim][1] > pipe_bc.d[dim][1]) {obj.remove();}
 				}
 			}
 		} // for f
