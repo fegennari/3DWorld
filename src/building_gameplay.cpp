@@ -166,7 +166,7 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_SILVER    ] = bldg_obj_type_t(0, 0, 0, 1, 0, 1, 0, 10.0,  0.2,   "silverware");
 	bldg_obj_types[TYPE_TOY_MODEL ] = bldg_obj_type_t(0, 0, 1, 1, 0, 1, 0, 4.0,   0.2,   "toy"); // plastic ring stack
 	bldg_obj_types[TYPE_CEIL_FAN  ] = bldg_obj_type_t(0, 0, 0, 0, 1, 1, 0, 200.0, 25.0,  "ceiling fan");
-	bldg_obj_types[TYPE_FIRE_EXT  ] = bldg_obj_type_t(0, 0, 1, 1, 0, 1, 0, 20.0,  10.0,  "fire extinguisher", 250);
+	bldg_obj_types[TYPE_FIRE_EXT  ] = bldg_obj_type_t(0, 0, 1, 1, 0, 1, 0, 25.0,  10.0,  "fire extinguisher", 250);
 	// animals; not room objects
 	bldg_obj_types[TYPE_RAT       ] = bldg_obj_type_t(0, 0, 1, 1, 0, 1, 0, 8.99,  1.0,   "rat"); // can be picked up
 	bldg_obj_types[TYPE_ROACH     ] = bldg_obj_type_t(0, 0, 0, 1, 0, 1, 0, 0.0,   0.01,  "cockroach");
@@ -225,6 +225,7 @@ bldg_obj_type_t get_taken_obj_type(room_object_t const &obj) {
 	if (obj.type == TYPE_LIGHT    && obj.flags & RO_FLAG_BROKEN2) {return bldg_obj_type_t(0, 0, 0, 1, 0, 0, 0,  10.0,  5.0, "broken light");}
 	if (obj.type == TYPE_RAT      && obj.is_broken   ()) {return bldg_obj_type_t(0, 0, 1, 1, 0, 1, 0,   0.0,  1.0, "cooked/dead rat");}
 	if (obj.type == TYPE_ROACH    && obj.is_broken   ()) {return bldg_obj_type_t(0, 0, 0, 1, 0, 1, 0,   0.0, 0.01, "dead cockroach");} // same stats as live cockroach
+	if (obj.type == TYPE_FIRE_EXT && obj.is_broken   ()) {return bldg_obj_type_t(0, 0, 1, 1, 0, 1, 0,  20.0, 10.0, "empty fire extinguisher");}
 
 	if (obj.type == TYPE_INSECT) { // unused
 		bool const is_fly(obj.is_hanging());
@@ -263,6 +264,8 @@ bldg_obj_type_t get_taken_obj_type(room_object_t const &obj) {
 	}
 	return type;
 }
+bool is_refillable(room_object_t const &obj) {return (obj.type == TYPE_FIRE_EXT);}
+
 float get_obj_value(room_object_t const &obj) {
 	float value(get_taken_obj_type(obj).value);
 	if (obj.type == TYPE_CRATE || obj.type == TYPE_BOX) {value *= (1 + (rgen_from_obj(obj).rand() % 20));}
@@ -271,7 +274,7 @@ float get_obj_value(room_object_t const &obj) {
 		unsigned const num_bills(round_fp(obj.dz()/(0.01*obj.get_length())));
 		value *= num_bills;
 	}
-	if (obj.is_used()) {value = 0.01*floor(50.0*value);} // used objects have half value, rounded down to the nearest cent
+	if (obj.is_used() && !is_refillable(obj)) {value = 0.01*floor(50.0*value);} // used objects have half value, rounded down to the nearest cent
 	return value;
 }
 float get_obj_weight(room_object_t const &obj) {
@@ -623,6 +626,14 @@ public:
 			obj.use_count += val;
 
 			if (obj.use_count >= capacity) { // remove after too many uses
+				if (obj.type == TYPE_FIRE_EXT) {
+					float const old_value(get_obj_value(obj));
+					obj.flags |= RO_FLAG_BROKEN; // mark as empty
+					float const new_value(get_obj_value(obj));
+					assert(new_value <= old_value); // value can't increase
+					cur_value -= min(cur_value, (old_value - new_value));
+					return 1;
+				}
 				if (obj.type == TYPE_TPROLL) {register_achievement("TP Artist");}
 				remove_last_item();
 				return 0;
@@ -705,7 +716,7 @@ public:
 				if (!carried.empty()) {
 					unsigned const capacity(get_room_obj_type(player_held_object).capacity);
 					oss << "  [" << get_taken_obj_type(player_held_object).name; // print the name of the throwable object
-					if (capacity > 0) {oss << " " << (capacity - carried.back().use_count) << "/" << capacity;} // print use/capacity
+					if (capacity > 0 && !player_held_object.is_broken()) {oss << " " << (capacity - carried.back().use_count) << "/" << capacity;} // print use/capacity if nonempty
 					oss << "]";
 				}
 				draw_text(GREEN, -0.010*aspect_ratio, -0.011, -0.02, oss.str(), 0.8); // size=0.8
@@ -1488,6 +1499,24 @@ void building_t::assign_correct_room_to_object(room_object_t &obj) const {
 	}
 }
 
+void drop_inventory_item(room_object_t const &obj, point const &player_pos) {
+	player_inventory.return_object_to_building(obj); // re-add this object's value
+	player_inventory.remove_last_item(); // used
+	play_obj_fall_sound(obj, player_pos);
+}
+bool building_t::drop_room_object(room_object_t &obj, point const &dest, point const &player_pos, bool dim, bool dir) {
+	obj.dim    = dim;
+	obj.dir    = dir;
+	obj.flags |= RO_FLAG_WAS_EXP;
+	obj.taken_level = 1;
+	obj.translate(dest - point(obj.xc(), obj.yc(), obj.z1()));
+	assign_correct_room_to_object(obj); // set new room; required for opening books; room should be valid, but okay if not
+	if (point_in_attic(obj.get_cube_center())) {obj.flags |= RO_FLAG_IN_ATTIC;} else {obj.flags &= ~RO_FLAG_IN_ATTIC;} // set attic flag
+	if (!interior->room_geom->add_room_object(obj, *this)) return 0;
+	maybe_squish_animals(obj, player_pos);
+	return 1;
+}
+
 bool building_t::maybe_use_last_pickup_room_object(point const &player_pos) {
 	if (player_in_elevator) return 0; // can't use items in elevators
 	assert(has_room_geom());
@@ -1543,27 +1572,17 @@ bool building_t::maybe_use_last_pickup_room_object(point const &player_pos) {
 			}
 			else { // book; orient based on the player's primary direction
 				if (!get_zval_for_obj_placement(dest, half_width, dest.z, 0)) return 0; // no suitable placement found; add_z_bias=0
-				bool const place_dim(fabs(cview_dir.y) < fabs(cview_dir.x));
+				//obj.flags |= RO_FLAG_RAND_ROT; // maybe set this for some random books to have them misaligned? or does that cause problems with clipping through objects?
+				bool const place_dim(fabs(cview_dir.y) < fabs(cview_dir.x)), place_dir((cview_dir[!place_dim] > 0) ^ place_dim);
 
 				if (obj.dim != place_dim) {
 					float const dx(obj.dx()), dy(obj.dy());
 					obj.x2() = obj.x1() + dy;
 					obj.y2() = obj.y1() + dx;
 				}
-				obj.dim    = place_dim;
-				obj.dir    = ((cview_dir[!place_dim] > 0) ^ place_dim);
-				obj.flags |= RO_FLAG_WAS_EXP;
-				obj.taken_level = 1;
-				obj.translate(dest - point(obj.xc(), obj.yc(), obj.z1()));
-				assign_correct_room_to_object(obj); // set new room; required for opening books; room should be valid, but okay if not
-				if (point_in_attic(obj.get_cube_center())) {obj.flags |= RO_FLAG_IN_ATTIC;} else {obj.flags &= ~RO_FLAG_IN_ATTIC;} // set attic flag
-				//obj.flags |= RO_FLAG_RAND_ROT; // maybe set this for some random books to have them misaligned? or does that cause problems with clipping through objects?
-				if (!interior->room_geom->add_room_object(obj, *this)) return 0;
-				maybe_squish_animals(obj, player_pos);
+				if (!drop_room_object(obj, dest, player_pos, place_dim, place_dir)) return 0;
 			}
-			player_inventory.return_object_to_building(obj); // re-add this object's value
-			player_inventory.remove_last_item(); // used
-			play_obj_fall_sound(obj, player_pos);
+			drop_inventory_item(obj, player_pos);
 			delay_use = 1;
 		}
 		else if (obj.type == TYPE_PHONE) {
@@ -1576,6 +1595,15 @@ bool building_t::maybe_use_last_pickup_room_object(point const &player_pos) {
 			}
 		}
 		else if (obj.type == TYPE_FIRE_EXT) {
+			if (obj.is_broken()) { // empty, drop it
+				float const radius(obj.get_radius());
+				point dest(player_pos + (1.2f*(player_radius + radius))*cview_dir);
+				if (!get_zval_for_obj_placement(dest, radius, dest.z, 0)) return 0; // can't drop, so keep it in the inventory
+				bool const place_dim(fabs(cview_dir.y) < fabs(cview_dir.x)), place_dir(cview_dir[!place_dim] > 0);
+				if (!drop_room_object(obj, dest, player_pos, !place_dim, place_dir)) return 0;
+				drop_inventory_item(obj, player_pos);
+				return 1;
+			}
 			static double next_sound_time(0.0);
 
 			if (tfticks > next_sound_time) { // play sound if sprayed/marked, but not too frequently; marker has no sound
