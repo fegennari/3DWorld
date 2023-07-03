@@ -711,7 +711,7 @@ public:
 			if (cur_weight > 0.0 || tot_weight > 0.0 || best_value > 0.0) { // don't show stats until the player has picked something up
 				std::ostringstream oss;
 				oss << "Cur $" << cur_value << " / " << cur_weight << " lbs  Total $" << tot_value << " / " << tot_weight
-					<< " lbs  Best $" << best_value << "  Damage $" << damage_done;
+					<< " lbs  Best $" << best_value << "  Damage $" << round_fp(damage_done); // print damage to nearest dollar
 				
 				if (!carried.empty()) {
 					unsigned const capacity(get_room_obj_type(player_held_object).capacity);
