@@ -44,6 +44,9 @@ num_light_rays 0 0 0 1000000
 lighting_file_global "" 1 0.1 0.0
 indir_light_exp 1.0
 
+# From https://learnopengl.com/Advanced-OpenGL/Cubemaps
+skybox_cube_map skybox/water_scene/top.jpg
+
 end
 
 

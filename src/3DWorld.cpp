@@ -2126,7 +2126,9 @@ int load_config(string const &config_file) {
 		}
 		else if (str == "skybox_tex") {
 			if (!read_str(fp, strc)) cfg_err("skybox_tex", error);
-			skybox_tid = get_texture_by_name(string(strc), 0, 0, 0); // clamp
+			string const texture_name = string(strc);
+			if (!check_texture_file_exists(texture_name)) {std::cerr << "Error: Failed to load skybox texture '" << texture_name << "'; Disabling skybox" << endl;}
+			else {skybox_tid = get_texture_by_name(texture_name, 0, 0, 0);} // clamp
 		}
 		else if (str == "ship_def_file") {
 			if (!read_str(fp, ship_def_file)) cfg_err("ship_def_file command", error);

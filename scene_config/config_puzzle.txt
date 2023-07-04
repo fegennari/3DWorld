@@ -54,5 +54,6 @@ include config_resolution.txt
 coll_obj_file coll_objs/coll_objs_puzzle.txt
 sphere_materials_fn sphere_materials.txt
 
-
+# From https://learnopengl.com/Advanced-OpenGL/Cubemaps
+skybox_cube_map skybox/water_scene/top.jpg
 

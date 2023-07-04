@@ -20,7 +20,6 @@ state.txt
 shaders/generated/*
 textures/skybox/skybox*.png
 textures/skybox/craterlake
-textures/skybox/ely_hills
 textures/pictures
 textures/papers
 dependencies/meshoptimizer/src/*.o

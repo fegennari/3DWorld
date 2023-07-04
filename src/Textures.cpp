@@ -349,7 +349,7 @@ int get_texture_by_name(string const &name, bool is_normal_map, bool invert_y, i
 	return tid;
 }
 
-unsigned load_cube_map_texture(string const &name) {
+unsigned load_cube_map_texture(string const &name) { // used for sky boxes
 
 	// Rather than specify each of the 6 textures (one per side), we're going to specify the top texture and try to guess the names of the others
 	// There doesn't seem to be any well defined specs for which face corresponds to which direction, other than that Y is up (vs. Z being up in 3DWorld),
@@ -373,7 +373,11 @@ unsigned load_cube_map_texture(string const &name) {
 		std::cerr << "Expecting cube map texture filename to end with 'top' or 'up': " << prefix << endl;
 		return 0;
 	}
-	//for (unsigned n = 0; n < 6; ++n) {cout << names[n] << endl;}
+	for (unsigned n = 0; n < 6; ++n) {
+		if (check_texture_file_exists(names[n])) continue;
+		std::cerr << "Error: Failed to load cube map texture '" << names[n] << "'; Skipping file '" << name << "'" << endl;
+		return 0; // fails if any of the cube side textures don't exist
+	}
 	unsigned tid(0), tex_size(0);
 	bool const allocate(0), use_mipmaps(0), do_compress(1);
 	setup_cube_map_texture(tid, tex_size, allocate, use_mipmaps, 1.0);
