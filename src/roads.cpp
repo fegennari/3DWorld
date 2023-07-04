@@ -767,7 +767,7 @@ void road_isec_t::draw_stoplights_and_street_signs(road_draw_state_t &dstate, ve
 			sc.set_from_point(spos);
 			sc.expand_by_xy(0.02*ss_height);
 			set_cube_zvals(sc, z1(), (z1() + 2.0*ss_height));
-			if (dist_val < 0.04) {dstate.draw_cube(dstate.qbd_untextured, sc, GRAY);} // draw the sign pole if close
+			if (draw_street_sign) {dstate.draw_cube(dstate.qbd_untextured, sc, GRAY);} // draw the sign pole if close
 #if 0 // code for debugging stop sign logic
 			colorRGBA const color(ssign_state[n].entering.in_use, ssign_state[n].waiting.in_use, 0, 1); // entering=RED, waiting=GREEN, both=YELLOW, neither=BLACK
 			cube_t c(sc);
