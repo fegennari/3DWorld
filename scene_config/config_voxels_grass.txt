@@ -19,6 +19,8 @@ voxel tid2 lichen.jpg # 105
 voxel tid_top grass.png # grass tex
 #voxel tid_top snow2.jpg # snow tex
 
+player_start 3.5 -3.5 0.0
+
 disable_water 1
 default_ground_tex 13 # dirt texture
 #default_ground_tex 0 # grass texture
