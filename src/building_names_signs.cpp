@@ -164,6 +164,10 @@ template void add_sign_text_verts(string const &text, cube_t const &sign, bool d
 template void add_sign_text_verts(string const &text, cube_t const &sign, bool dim, bool dir, colorRGBA const &color,
 	vector<vert_norm_tc_color     > &verts_out, float first_char_clip_val, float last_char_clip_val, bool include_space_chars);
 
+void add_sign_text_verts_both_sides(string const &text, cube_t const &sign, bool dim, colorRGBA const &color, vect_vnctcc_t &verts) {
+	for (unsigned dir = 0; dir < 2; ++dir) {add_sign_text_verts(text, sign, dim, dir, color, verts, 0.0, 0.0, 0);} // no clipping or space chars
+}
+
 void add_room_obj_sign_text_verts(room_object_t const &c, colorRGBA const &color, vector<vert_norm_comp_tc_color> &verts_out) {
 	add_sign_text_verts(sign_helper.get_text(c.obj_id), c, c.dim, c.dir, color, verts_out);
 }
@@ -246,6 +250,7 @@ void building_t::add_signs(vector<sign_t> &signs) const { // added as exterior c
 		set_wall_width(sign, porch.get_center_dim(!dim), sign_hwidth, !dim);
 		sign.d[dim][!dir] = porch.d[dim][dir]; // back face
 		sign.d[dim][ dir] = sign.d[dim][!dir] + (dir ? 1.0 : -1.0)*sign_depth; // front face
+		assert(sign.is_strictly_normalized());
 		signs.emplace_back(sign, dim, dir, to_string(get_street_house_number()), WHITE, BLACK, 0, 0, 1); // twp_sided=0, emissive=0, small=1
 		return;
 	}
@@ -258,8 +263,9 @@ void building_t::add_signs(vector<sign_t> &signs) const { // added as exterior c
 	assert(!parts.empty());
 	float part_zmax(bcube.z1()), best_width(0.0), wall_pos[2] = {}, center_pos(0.0);
 	bool dim(0), pri_dir(rgen.rand_bool());
+	auto parts_end((real_num_parts > 0) ? get_real_parts_end() : parts.end()); // if real_num_parts hasn't been set yet, assume it includes all parts (for non-city office buildings)
 
-	for (auto i = parts.begin(); i != get_real_parts_end(); ++i) {
+	for (auto i = parts.begin(); i != parts_end; ++i) {
 		// choose max dim; or should we use dim from street_dir if set? but that would limit us for corner buildings
 		bool const dmax(i->dx() < i->dy());
 		float const width(i->get_sz_dim(dmax));
@@ -272,12 +278,16 @@ void building_t::add_signs(vector<sign_t> &signs) const { // added as exterior c
 			UNROLL_2X(wall_pos[i_] = i->d[dim][i_];);
 		}
 	} // for i
+	assert(best_width > 0.0);
+
 	if (street_dir > 0) { // encoded as 2*dim + dir + 1; 0 is unassigned
 		bool const sdim((street_dir - 1) >> 1), sdir((street_dir - 1) & 1);
 		if (dim == sdim) {pri_dir = sdir;} // face the street if possible
 	}
 	bool sign_both_sides(rgen.rand_bool());
-	bool const two_sided(!sign_both_sides && 0), emissive(rgen.rand_float() < 0.65), scrolling(emissive && name.size() >= 8 && rgen.rand_float() < 0.75);
+	bool const two_sided(!sign_both_sides && 0);
+	bool const emissive(is_in_city && rgen.rand_float() < 0.65);
+	bool const scrolling(emissive && name.size() >= 8 && rgen.rand_float() < 0.75);
 	// non-cube buildings can have signs tangent to a point or curve and need proper connectors; also, only cube buildings have roof walls that connectors may clip through
 	bool const add_connector(!is_cube());
 	float const width(bcube.get_sz_dim(!dim)), sign_hwidth(0.5*min(0.8*best_width, 0.5*width));
@@ -293,9 +303,10 @@ void building_t::add_signs(vector<sign_t> &signs) const { // added as exterior c
 		bool const dir(pri_dir ^ bool(d));
 		sign.d[dim][!dir] = wall_pos[dir];
 		sign.d[dim][ dir] = wall_pos[dir] + (dir ? 1.0 : -1.0)*sign_depth;
+		assert(sign.is_strictly_normalized());
 		bool bad_place(0);
 
-		for (auto i = parts.begin(); i != get_real_parts_end(); ++i) { // check for interior split edges
+		for (auto i = parts.begin(); i != parts_end; ++i) { // check for interior split edges
 			if (i->z2() == part_zmax && i->intersects_xy_no_adj(sign)) {bad_place = 1; break;}
 		}
 		if (bad_place) continue; // Note: intentionally skips the break below
@@ -307,6 +318,7 @@ void building_t::add_signs(vector<sign_t> &signs) const { // added as exterior c
 			conn.expand_in_dim(!dim, -0.94*sign_hwidth);
 			conn.d[dim][!dir] = wall_pos[dir] - (dir ? 1.0 : -1.0)*(4.0*sign_depth + get_wall_thickness());
 			conn.d[dim][ dir] = wall_pos[dir];
+			assert(conn.is_strictly_normalized());
 			signs.back().connector = conn;
 		}
 		if (sign_both_sides) break; // one side only - done
@@ -316,7 +328,15 @@ void building_t::add_signs(vector<sign_t> &signs) const { // added as exterior c
 void building_t::add_company_sign(rand_gen_t &rgen) {
 	if (is_house || name.empty()) return; // shouldn't be called?
 	if (is_in_city) return; // already has a sign added as a city object
-	// TODO: add exterior details object of type ROOF_OBJ_SIGN
+	vector<sign_t> signs;
+	add_signs(signs); // should add office building rooftop signs only
+
+	for (sign_t const &sign : signs) {
+		assert(!sign.emissive && !sign.scrolling); // not supported
+		assert(sign.text == name);
+		details.emplace_back(sign.bcube, ROOF_OBJ_SIGN);
+		if (!sign.connector.is_all_zeros()) {details.emplace_back(sign.connector, ROOF_OBJ_SIGN_CONN);} // never added for this type of building?
+	}
 }
 
 void building_t::add_sign_by_door(tquad_with_ix_t const &door, bool outside, std::string const &text, colorRGBA const &color, bool emissive) { // interior signs

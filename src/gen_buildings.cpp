@@ -45,6 +45,7 @@ cube_t get_building_indir_light_bounds(); // from building_lighting.cpp
 void register_player_not_in_building();
 void parse_universe_name_str_tables();
 void try_join_house_ext_basements(vect_building_t &buildings);
+void add_sign_text_verts_both_sides(string const &text, cube_t const &sign, bool dim, colorRGBA const &color, vect_vnctcc_t &verts);
 
 float get_door_open_dist() {return 3.5*CAMERA_RADIUS;}
 
@@ -210,6 +211,7 @@ public:
 		register_tid(building_texture_mgr.get_met_plate_tid());
 		register_tid(building_texture_mgr.get_met_roof_tid());
 		register_tid(get_plywood_tid()); // for attics
+		register_tid(FONT_TEXTURE_ID); // for roof signs
 		for (unsigned i = 0; i < num_special_tids; ++i) {register_tid(special_tids[i]);}
 
 		for (auto i = global_building_params.materials.begin(); i != global_building_params.materials.end(); ++i) {
@@ -517,8 +519,13 @@ class building_draw_t {
 		void record_num_verts() {start_num_verts[0] = num_quad_verts(); start_num_verts[1] = num_tri_verts();}
 
 		void draw_geom_range(tid_nm_pair_dstate_t &state, bool shadow_only, vert_ix_pair const &vstart, vert_ix_pair const &vend) { // use VBO rendering
-			if (vstart == vend) return; // empty range - no verts for this tile
+			if (vstart == vend)            return; // empty range - no verts for this tile
 			if (shadow_only && no_shadows) return; // no shadows on this material
+			
+			if (tex.tid == FONT_TEXTURE_ID) {
+				if (shadow_only) return; // no shadows for text
+				enable_blend();
+			}
 			if (!shadow_only) {tex.set_gl(state);}
 			assert(vao_mgr.vbo_valid());
 			vao_mgr.create_from_vbo<vert_norm_comp_tc_color>(shadow_only, 1, 1); // setup_pointers=1, always_bind=1
@@ -531,6 +538,7 @@ class building_draw_t {
 				assert(vstart.tix < vend.tix);
 				glDrawArrays(GL_TRIANGLES, (vstart.tix + tri_vbo_off), (vend.tix - vstart.tix));
 			}
+			if (tex.tid == FONT_TEXTURE_ID) {disable_blend();}
 			if (!shadow_only) {tex.unset_gl(state);}
 			vao_manager_t::post_render();
 		}
@@ -682,6 +690,7 @@ public:
 	int      get_to_draw_ix_if_exists(tid_nm_pair_t const &tex) const {return tid_mapper.get_slot_ix_if_exists(tex.tid);} // returns -1 if not found
 	unsigned get_num_verts (tid_nm_pair_t const &tex, bool quads_or_tris=0) {return get_verts(tex, quads_or_tris).size    ();}
 	unsigned get_cap_verts (tid_nm_pair_t const &tex, bool quads_or_tris=0) {return get_verts(tex, quads_or_tris).capacity();}
+	vect_vnctcc_t &get_text_verts() {return get_verts(tid_nm_pair_t(FONT_TEXTURE_ID));} // quads
 
 	void print_stats() const {
 		for (draw_block_t const &b : to_draw) {
@@ -1530,7 +1539,8 @@ void building_t::get_all_drawn_exterior_verts(building_draw_t &bdraw) { // exter
 			bdraw.add_water_tower(*this, *i);
 			continue;
 		}
-		bool const skip_bot(i->type != ROOF_OBJ_SCAP), pointed(i->type == ROOF_OBJ_ANT); // draw antenna as a point
+		bool const skip_bot(i->type != ROOF_OBJ_SCAP && i->type != ROOF_OBJ_SIGN && i->type != ROOF_OBJ_SIGN_CONN);
+		bool const pointed(i->type == ROOF_OBJ_ANT); // draw antenna as a point
 		building_t b(building_geom_t(4, rot_sin, rot_cos, pointed)); // cube
 		b.bcube = bcube;
 		tid_nm_pair_t tex;
@@ -1540,11 +1550,20 @@ void building_t::get_all_drawn_exterior_verts(building_draw_t &bdraw) { // exter
 			tex   = mat.side_tex;
 			color = side_color;
 		}
+		else if (i->type == ROOF_OBJ_SIGN || i->type == ROOF_OBJ_SIGN_CONN) {
+			color = WHITE; // also untextured
+		}
 		else { // otherwise use roof color
 			tex   = mat.roof_tex.get_scaled_version(1.5);
 			color = detail_color*(pointed ? 0.5 : 1.0);
 		}
 		bdraw.add_section(b, 0, *i, tex, color, 7, skip_bot, 0, 1, 0); // all dims, no AO
+
+		if (i->type == ROOF_OBJ_SIGN) { // add sign text
+			bool const dim(i->dy() < i->dx());
+			colorRGBA const color(BLACK);
+			add_sign_text_verts_both_sides(name, *i, dim, color, bdraw.get_text_verts());
+		}
 	} // for i
 	for (auto i = doors.begin(); i != doors.end(); ++i) { // these are the exterior doors
 		colorRGBA const &dcolor((i->type == tquad_with_ix_t::TYPE_GDOOR) ? WHITE : door_color); // garage doors are always white
