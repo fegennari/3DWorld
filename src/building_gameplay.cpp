@@ -1928,7 +1928,7 @@ bool building_t::apply_paint(point const &pos, vector3d const &dir, colorRGBA co
 	float const dist(p2p_dist(pos, p_int)), radius(is_spraypaint ? min(max_radius, max(0.05f*max_radius, 0.1f*dist)) : max_radius); // modified version of get_spray_radius()
 	float const alpha((is_spraypaint && radius > 0.5*max_radius) ? (1.0 - (radius - 0.5*max_radius)/max_radius) : 1.0); // 0.5 - 1.0
 	p_int += 0.01*radius*normal; // move slightly away from the surface
-	assert(bcube.contains_pt(p_int));
+	assert(get_bcube_inc_extensions().contains_pt(p_int));
 	unsigned const dim(get_max_dim(normal)), d1((dim+1)%3), d2((dim+2)%3);
 
 	// check that entire circle is contained in the target
