@@ -45,7 +45,7 @@ cube_t get_building_indir_light_bounds(); // from building_lighting.cpp
 void register_player_not_in_building();
 void parse_universe_name_str_tables();
 void try_join_house_ext_basements(vect_building_t &buildings);
-void add_sign_text_verts_both_sides(string const &text, cube_t const &sign, bool dim, colorRGBA const &color, vect_vnctcc_t &verts);
+void add_sign_text_verts_both_sides(string const &text, cube_t const &sign, bool dim, bool dir, vect_vnctcc_t &verts);
 
 float get_door_open_dist() {return 3.5*CAMERA_RADIUS;}
 
@@ -1561,8 +1561,15 @@ void building_t::get_all_drawn_exterior_verts(building_draw_t &bdraw) { // exter
 
 		if (i->type == ROOF_OBJ_SIGN) { // add sign text
 			bool const dim(i->dy() < i->dx());
-			colorRGBA const color(BLACK);
-			add_sign_text_verts_both_sides(name, *i, dim, color, bdraw.get_text_verts());
+			float const center_dim(i->get_center_dim(dim));
+			bool dir(bcube.get_center_dim(dim) < center_dim); // choose dir based on center of building; inexact, will check parts below
+			cube_t test_cube(*i);
+			test_cube.expand_by(i->get_sz_dim(!dim)); // expand by sign width to include adjacency
+
+			for (auto p = parts.begin(); p != get_real_parts_end(); ++p) { // find part attached to the sign
+				if (p->intersects(*i)) {dir = (p->get_center_dim(dim) < center_dim); break;}
+			}
+			add_sign_text_verts_both_sides(name, *i, dim, dir, bdraw.get_text_verts());
 		}
 	} // for i
 	for (auto i = doors.begin(); i != doors.end(); ++i) { // these are the exterior doors

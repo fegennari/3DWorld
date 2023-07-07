@@ -164,8 +164,12 @@ template void add_sign_text_verts(string const &text, cube_t const &sign, bool d
 template void add_sign_text_verts(string const &text, cube_t const &sign, bool dim, bool dir, colorRGBA const &color,
 	vector<vert_norm_tc_color     > &verts_out, float first_char_clip_val, float last_char_clip_val, bool include_space_chars);
 
-void add_sign_text_verts_both_sides(string const &text, cube_t const &sign, bool dim, colorRGBA const &color, vect_vnctcc_t &verts) {
-	for (unsigned dir = 0; dir < 2; ++dir) {add_sign_text_verts(text, sign, dim, dir, color, verts, 0.0, 0.0, 0);} // no clipping or space chars
+void add_sign_text_verts_both_sides(string const &text, cube_t const &sign, bool dim, bool dir, vect_vnctcc_t &verts) {
+	assert(!text.empty());
+	rand_gen_t rgen;
+	rgen.set_state(text.size(), text.front()); // use text string as a random seed for the color
+	colorRGBA const color(choose_sign_color(rgen)); // non-emissive
+	add_sign_text_verts(text, sign, dim, dir, color, verts, 0.0, 0.0, 0); // no clipping or space chars
 }
 
 void add_room_obj_sign_text_verts(room_object_t const &c, colorRGBA const &color, vector<vert_norm_comp_tc_color> &verts_out) {
@@ -290,7 +294,7 @@ void building_t::add_signs(vector<sign_t> &signs) const { // added as exterior c
 	bool const scrolling(emissive && name.size() >= 8 && rgen.rand_float() < 0.75);
 	// non-cube buildings can have signs tangent to a point or curve and need proper connectors; also, only cube buildings have roof walls that connectors may clip through
 	bool const add_connector(!is_cube());
-	float const width(bcube.get_sz_dim(!dim)), sign_hwidth(0.5*min(0.8*best_width, 0.5*width));
+	float const width(bcube.get_sz_dim(!dim)*(is_in_city ? 1.0 : 0.67)), sign_hwidth(0.5*min(0.8*best_width, 0.5*width)); // city office building signs are larger
 	float const sign_height(4.0*sign_hwidth/(name.size() + 2)), sign_depth(0.025*sign_height);
 	colorRGBA const color(choose_sign_color(rgen, emissive));
 	float sign_z1(part_zmax);
@@ -301,8 +305,10 @@ void building_t::add_signs(vector<sign_t> &signs) const { // added as exterior c
 
 	for (unsigned d = 0; d < 2; ++d) {
 		bool const dir(pri_dir ^ bool(d));
-		sign.d[dim][!dir] = wall_pos[dir];
-		sign.d[dim][ dir] = wall_pos[dir] + (dir ? 1.0 : -1.0)*sign_depth;
+		float const wpos(wall_pos[dir]);
+		if (has_courtyard && wpos != bcube.d[dim][dir]) continue; // no signs in the courtyard
+		sign.d[dim][!dir] = wpos;
+		sign.d[dim][ dir] = wpos + (dir ? 1.0 : -1.0)*sign_depth;
 		assert(sign.is_strictly_normalized());
 		bool bad_place(0);
 
@@ -316,8 +322,8 @@ void building_t::add_signs(vector<sign_t> &signs) const { // added as exterior c
 			cube_t conn(sign);
 			conn.z2() = sign.z1() + 0.01*sign_height;
 			conn.expand_in_dim(!dim, -0.94*sign_hwidth);
-			conn.d[dim][!dir] = wall_pos[dir] - (dir ? 1.0 : -1.0)*(4.0*sign_depth + get_wall_thickness());
-			conn.d[dim][ dir] = wall_pos[dir];
+			conn.d[dim][!dir] = wpos - (dir ? 1.0 : -1.0)*(4.0*sign_depth + get_wall_thickness());
+			conn.d[dim][ dir] = wpos;
 			assert(conn.is_strictly_normalized());
 			signs.back().connector = conn;
 		}
