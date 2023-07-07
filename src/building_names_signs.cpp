@@ -333,7 +333,8 @@ void building_t::add_signs(vector<sign_t> &signs) const { // added as exterior c
 
 void building_t::add_company_sign(rand_gen_t &rgen) {
 	if (is_house || name.empty()) return; // shouldn't be called?
-	if (is_in_city) return; // already has a sign added as a city object
+	if (is_in_city)               return; // already has a sign added as a city object
+	if (rgen.rand_bool())         return; // only add sign 50% of the time
 	vector<sign_t> signs;
 	add_signs(signs); // should add office building rooftop signs only
 
