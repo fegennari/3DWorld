@@ -1748,7 +1748,9 @@ bool building_t::check_line_of_sight_large_objs(point const &p1, point const &p2
 	} // for door_stacks
 	if (line_int_cubes(p1, p2, interior->elevators, line_bcube)) return 0; // check elevators only because stairs aren't solid visual blockers
 
-	if (real_num_parts > 1) { // check exterior walls; this is simpler than ray_cast_exterior_walls()
+	// check exterior walls if there are multiple non-basement parts; skip for extended basement because this logic doesn't work and only interior walls are needed;
+	// this is simpler than ray_cast_exterior_walls()
+	if (real_num_parts > (1 + has_basement()) && !point_in_extended_basement(p1) && !point_in_extended_basement(p2)) {
 		if (point_in_attic(p1) && point_in_attic(p2)) return 1; // always visible in attic
 		float tot_len(0.0);
 		auto parts_end(get_real_parts_end_inc_sec());
