@@ -299,8 +299,8 @@ void draw_overhead_map() {
 							vector3d normal(plus_z);
 
 							if (height > map_heights[4]) {
-								float const hx((j == 0) ? height : last_height);
-								float const hy(CLIP_TO_01(hscale*(get_mesh_height(height_gen, xstart, ystart, xscale, yscale, max(i-1, 0), j, nearest_texel) + zmax2)));
+								float const mh2(get_mesh_height(height_gen, xstart, ystart, xscale, yscale, max(i-1, 0), j, nearest_texel));
+								float const hx((j == 0) ? height : last_height), hy(CLIP_TO_01(hscale*(mh2 + zmax2)) + relh_adj_tex);
 								normal = vector3d(DY_VAL*(hx - height), DX_VAL*(hy - height), dxdy).get_norm();
 							}
 							last_height = height;
