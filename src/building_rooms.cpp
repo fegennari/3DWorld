@@ -4371,7 +4371,7 @@ int building_t::get_ext_door_dir(cube_t const &door_bcube, bool dim) const { // 
 	return 2; // not found
 }
 
-void building_t::add_doorbell_and_lamp(tquad_with_ix_t const &door, rand_gen_t &rgen) {
+void building_t::add_doorbell_and_lamp(tquad_with_ix_t const &door, rand_gen_t &rgen) { // and porch packages
 	cube_t const door_bcube(door.get_bcube());
 	bool const dim(door_bcube.dy() < door_bcube.dx());
 	int const dir_ret(get_ext_door_dir(door_bcube, dim));
@@ -4388,7 +4388,10 @@ void building_t::add_doorbell_and_lamp(tquad_with_ix_t const &door, rand_gen_t &
 	set_wall_width(c, pos, half_width, !dim);
 	expand_to_nonzero_area(c, button_thickness, dim);
 	vect_room_object_t &objs(interior->room_geom->objs);
-	objs.emplace_back(c, TYPE_BUTTON, 0, dim, dir, (RO_FLAG_LIT | RO_FLAG_NOCOLL), 1.0, SHAPE_CYLIN); // always lit; room_id is not valid
+	unsigned const room_id(0); // not valid, should be unused
+	float const tot_light_amt(1.0);
+	// should these objects use RO_FLAG_EXTERIOR?
+	objs.emplace_back(c, TYPE_BUTTON, room_id, dim, dir, (RO_FLAG_LIT | RO_FLAG_NOCOLL), tot_light_amt, SHAPE_CYLIN); // always lit
 
 	// add a wall lamp above the button if there's a porch, garage, or shed (L-shaped house)
 	if ((has_porch() || has_garage || has_shed) && building_obj_model_loader.is_model_valid(OBJ_MODEL_WALL_LAMP)) {
@@ -4402,8 +4405,46 @@ void building_t::add_doorbell_and_lamp(tquad_with_ix_t const &door, rand_gen_t &
 		set_wall_width(lamp, lamp_pos, 0.5*width, !dim);
 		unsigned flags(RO_FLAG_NOCOLL);
 		if (rgen.rand_bool()) {flags |= RO_FLAG_LIT;} // light is on 50% of the time
-		objs.emplace_back(lamp, TYPE_WALL_LAMP, 0, dim, dir, flags, 1.0); // room_id is not valid
+		objs.emplace_back(lamp, TYPE_WALL_LAMP, room_id, dim, dir, flags, tot_light_amt);
 		if (objs.back().is_lit()) {ext_lights.emplace_back(lamp.get_cube_center(), 20.0*width, WALL_LAMP_COLOR);}
+	}
+	if (has_porch() && rgen.rand_bool()) { // maybe add a package on the porch
+		// find the front door
+		float const wall_thickness(get_wall_thickness());
+		cube_t front_door;
+
+		for (auto const &d : doors) {
+			cube_t dbc(d.get_bcube());
+			dbc.expand_by_xy(wall_thickness);
+			if (porch.intersects(dbc)) {front_door = dbc;}
+		}
+		if (!front_door.is_all_zeros()) { // should never fail?
+			vector3d sz; // half size relative to window_vspacing
+			gen_crate_sz(sz, rgen, get_window_vspace());
+			bool const door_dim(front_door.dy() < front_door.dx());
+			cube_t place_area(front_door), avoid(front_door);
+			place_area.expand_by(vector3d(4.0*sz.x, 4.0*sz.y, 0.0));
+			cube_t porch_shrink(porch);
+			porch_shrink.expand_by_xy(-1.0*wall_thickness); // add space for window sill (approximate)
+			place_area.intersect_with_cube(porch_shrink);
+			avoid.expand_in_dim(door_dim, 4.0*sz[door_dim]); // add clearance in front of the door; package must be left to one side
+
+			if (place_area.dx() > 2.5*sz.x && place_area.dy() > 2.5*sz.y) { // check if large enough
+				for (unsigned n = 0; n < 50; ++n) {
+					point const pos(gen_xy_pos_in_area(place_area, sz, rgen, porch.z2()));
+					cube_t const box(get_cube_height_radius(pos, sz, 2.0*sz.z)); // multiply by 2 since this is a size rather than half size/radius
+					if (box.intersects(avoid)) continue;
+					bool skip(0);
+
+					for (cube_t const &part : parts) { // check for intersection with porch support
+						if (box.intersects(part)) {skip = 1; break;}
+					}
+					if (skip) continue;
+					objs.emplace_back(box, TYPE_BOX, room_id, rgen.rand_bool(), 0, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CUBE, gen_box_color(rgen));
+					break; // done
+				} // for n
+			}
+		}
 	}
 }
 
