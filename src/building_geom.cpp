@@ -1055,6 +1055,7 @@ bool building_t::add_outdoor_ac_unit(rand_gen_t &rgen) { // for houses
 	set_wall_width(ac, place_pos, 0.5*width, !ac_dim);
 	set_cube_zvals(ac, ac_part.z1(), (ac_part.z1() + height));
 	if (has_driveway() && ac.intersects_xy(driveway)) return 0; // driveway in the way
+	if (has_porch   () && ac.intersects_xy(porch   )) return 0; // porch    in the way
 
 	for (unsigned i = 0; i < parts.size(); ++i) {
 		if (i != ac_part_ix && ac.intersects(parts[i])) return 0; // intersects another part, or the fireplace
