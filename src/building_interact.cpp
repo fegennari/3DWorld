@@ -325,6 +325,7 @@ void building_t::register_open_ext_door_state(int door_ix) {
 	point const door_center(door.get_bcube().get_cube_center());
 
 	if (ring_doorbell) {
+		if (!camera_pdu.point_visible_test(door_center + get_camera_coord_space_xlate())) return; // not looking at the door
 		gen_sound_thread_safe(SOUND_DOORBELL, local_to_camera_space(door_center)); // convert to camera space
 		return;
 	}
