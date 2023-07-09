@@ -1131,7 +1131,7 @@ void building_room_geom_t::add_shower(room_object_t const &c, float tscale) {
 	} // for d
 }
 
-void building_room_geom_t::add_bottle(room_object_t const &c) {
+void building_room_geom_t::add_bottle(room_object_t const &c, bool add_bottom) {
 	// obj_id: bits 1-3 for type, bits 6-7 for emptiness, bit 6 for cap color
 	unsigned const bottle_ndiv = 16; // use smaller ndiv to reduce vertex count
 	tid_nm_pair_t tex(-1, 1.0, 1); // shadowed
@@ -1140,7 +1140,8 @@ void building_room_geom_t::add_bottle(room_object_t const &c) {
 	colorRGBA const color(apply_light_color(c)), cap_colors[2] = {LT_GRAY, GOLD}; // should gold caps have gold colored specular?
 	vector3d const sz(c.get_size());
 	unsigned const dim(get_max_dim(sz)), dim1((dim+1)%3), dim2((dim+2)%3);
-	bool const is_empty(c.is_bottle_empty()), add_bottom(dim != 2); // add bottom if bottle is on its side
+	bool const is_empty(c.is_bottle_empty());
+	add_bottom |= (dim != 2); // add bottom if bottle is on its side
 	float const dir_sign(c.dir ? -1.0 : 1.0), radius(0.25f*(sz[dim1] + sz[dim2])); // base should be square (default/avg radius is 0.15*height)
 	float const length(sz[dim]); // AKA height, if standing up
 	cube_t sphere(c), body(c), neck(c);

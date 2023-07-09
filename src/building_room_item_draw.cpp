@@ -1139,7 +1139,7 @@ void apply_room_obj_rotate(room_object_t &obj, obj_model_inst_t &inst, vect_room
 			bottle.expand_in_dim(d, -val);
 			break;
 		}
-		tmp_rgeom.add_bottle(bottle);
+		tmp_rgeom.add_bottle(bottle, 1); // add_bottom=1
 		tmp_rgeom.mats_small.upload_draw_and_clear(s);
 	}
 	else if (c.type == TYPE_FIRE_EXT) {
