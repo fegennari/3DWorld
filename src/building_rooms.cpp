@@ -4390,8 +4390,8 @@ void building_t::add_doorbell_and_lamp(tquad_with_ix_t const &door, rand_gen_t &
 	vect_room_object_t &objs(interior->room_geom->objs);
 	unsigned const room_id(0); // not valid, should be unused
 	float const tot_light_amt(1.0);
-	// should these objects use RO_FLAG_EXTERIOR?
-	objs.emplace_back(c, TYPE_BUTTON, room_id, dim, dir, (RO_FLAG_LIT | RO_FLAG_NOCOLL), tot_light_amt, SHAPE_CYLIN); // always lit
+	unsigned const base_flags(RO_FLAG_NOCOLL | RO_FLAG_EXTERIOR);
+	objs.emplace_back(c, TYPE_BUTTON, room_id, dim, dir, (base_flags | RO_FLAG_LIT), tot_light_amt, SHAPE_CYLIN); // always lit
 
 	// add a wall lamp above the button if there's a porch, garage, or shed (L-shaped house)
 	if ((has_porch() || has_garage || has_shed) && building_obj_model_loader.is_model_valid(OBJ_MODEL_WALL_LAMP)) {
@@ -4403,7 +4403,7 @@ void building_t::add_doorbell_and_lamp(tquad_with_ix_t const &door, rand_gen_t &
 		lamp.d[dim][dir] = c.d[dim][!dir] + (dir ? 1.0 : -1.0)*depth;
 		set_cube_zvals(lamp, z1, (z1 + height));
 		set_wall_width(lamp, lamp_pos, 0.5*width, !dim);
-		unsigned flags(RO_FLAG_NOCOLL);
+		unsigned flags(base_flags);
 		if (rgen.rand_bool()) {flags |= RO_FLAG_LIT;} // light is on 50% of the time
 		objs.emplace_back(lamp, TYPE_WALL_LAMP, room_id, dim, dir, flags, tot_light_amt);
 		if (objs.back().is_lit()) {ext_lights.emplace_back(lamp.get_cube_center(), 20.0*width, WALL_LAMP_COLOR);}
@@ -4440,7 +4440,7 @@ void building_t::add_doorbell_and_lamp(tquad_with_ix_t const &door, rand_gen_t &
 						if (box.intersects(part)) {skip = 1; break;}
 					}
 					if (skip) continue;
-					objs.emplace_back(box, TYPE_BOX, room_id, rgen.rand_bool(), 0, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CUBE, gen_box_color(rgen));
+					objs.emplace_back(box, TYPE_BOX, room_id, rgen.rand_bool(), 0, base_flags, tot_light_amt, SHAPE_CUBE, gen_box_color(rgen));
 					break; // done
 				} // for n
 			}
