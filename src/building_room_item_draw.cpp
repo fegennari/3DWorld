@@ -895,6 +895,7 @@ void building_room_geom_t::add_small_static_objs_to_verts(vect_room_object_t con
 		case TYPE_BREAKER:   add_breaker (c); break;
 		case TYPE_PLATE:     add_plate   (c); break;
 		case TYPE_LAPTOP:    add_laptop  (c); break;
+		case TYPE_PIZZA_BOX: add_pizza_box(c); break;
 		case TYPE_BUTTON:    if (!c.in_elevator()) {add_button(c);} break; // skip buttons inside elevators, which are drawn as dynamic objects
 		case TYPE_LBASKET:   add_laundry_basket(c); break;
 		case TYPE_TOASTER:   add_toaster_proxy (c); break;

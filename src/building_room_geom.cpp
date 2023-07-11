@@ -886,9 +886,17 @@ void building_room_geom_t::add_obj_with_front_texture(room_object_t const &c, st
 	get_untextured_material(1, 0, is_small).add_cube_to_verts_untextured(c, apply_light_color(c, sides_color), ~front_mask); // sides, shadows
 }
 
-void building_room_geom_t::add_keyboard(room_object_t const &c) {add_obj_with_top_texture  (c, "interiors/keyboard.jpg",  BKGRAY, 1);} // is_small=1
-void building_room_geom_t::add_laptop  (room_object_t const &c) {add_obj_with_top_texture  (c, "interiors/laptop.jpg",    BKGRAY, 1);} // is_small=1
-void building_room_geom_t::add_computer(room_object_t const &c) {add_obj_with_front_texture(c, "interiors/computer.jpg",  BKGRAY, 1);} // is_small=1
+void building_room_geom_t::add_keyboard (room_object_t const &c) {add_obj_with_top_texture  (c, "interiors/keyboard.jpg",  BKGRAY, 1);} // is_small=1
+void building_room_geom_t::add_laptop   (room_object_t const &c) {add_obj_with_top_texture  (c, "interiors/laptop.jpg",    BKGRAY, 1);} // is_small=1
+void building_room_geom_t::add_computer (room_object_t const &c) {add_obj_with_front_texture(c, "interiors/computer.jpg",  BKGRAY, 1);} // is_small=1
+
+void building_room_geom_t::add_pizza_box(room_object_t const &c) {
+	if (!c.is_open()) {
+		add_obj_with_top_texture(c, "interiors/pizzatop.jpg", WHITE, 1); // is_small=1
+		return;
+	}
+	// TODO: draw open box with pizza inside
+}
 
 // used for drawing open microwave and dishwasher
 void add_interior_and_front_face(room_object_t const &c, cube_t const &body, rgeom_mat_t &mat, float wall_width, unsigned front_mask, colorRGBA const &color) {
@@ -3854,6 +3862,7 @@ colorRGBA room_object_t::get_color() const {
 	case TYPE_MONEY:    return texture_color(get_money_tid());
 	case TYPE_PHONE:    return color*0.5; // 50% case color, 50% black
 	case TYPE_LAPTOP:   return BKGRAY; // black-gray case, ignore logo colors
+	case TYPE_PIZZA_BOX:return texture_color(get_texture_by_name("interiors/pizzatop.jpg"));
 	case TYPE_TPROLL:   return (WHITE*0.75  + GRAY*0.25);
 	case TYPE_SPRAYCAN: return (DK_GRAY*0.5 + color*0.5);
 	case TYPE_CRACK:    return ALPHA0; // transparent

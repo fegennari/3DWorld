@@ -379,7 +379,7 @@ enum {
 	TYPE_LAPTOP, TYPE_FPLACE, TYPE_LBASKET, TYPE_WHEATER, TYPE_TAPE, TYPE_OUTLET, TYPE_PG_WALL, TYPE_PG_PILLAR, TYPE_PG_BEAM, TYPE_PARK_SPACE,
 	TYPE_RAMP, TYPE_PIPE, TYPE_CURB, TYPE_BRK_PANEL, TYPE_VENT, TYPE_BREAKER, TYPE_FURNACE, TYPE_ATTIC_DOOR, TYPE_CHIMNEY, TYPE_DUCT,
 	TYPE_TOY, TYPE_DRESS_MIR, TYPE_PAN, TYPE_VASE, TYPE_URN, TYPE_FCABINET, TYPE_STAPLER, TYPE_WIND_SILL, TYPE_BALCONY, TYPE_SPRINKLER,
-	TYPE_FEXT_MOUNT, TYPE_FEXT_SIGN,
+	TYPE_FEXT_MOUNT, TYPE_FEXT_SIGN, TYPE_PIZZA_BOX,
 	/* these next ones are all 3D models - see logic in room_object_t::is_obj_model_type() */
 	TYPE_TOILET, TYPE_SINK, TYPE_TUB, TYPE_FRIDGE, TYPE_STOVE, TYPE_TV, TYPE_MONITOR, TYPE_COUCH, TYPE_OFF_CHAIR, TYPE_URINAL,
 	TYPE_LAMP, TYPE_WASHER, TYPE_DRYER, TYPE_KEY, TYPE_HANGER, TYPE_CLOTHES, TYPE_FESCAPE, TYPE_WALL_LAMP, TYPE_CUP, TYPE_TOASTER,
@@ -936,6 +936,7 @@ struct building_room_geom_t {
 	void add_obj_with_front_texture(room_object_t const &c, std::string const &texture_name, colorRGBA const &sides_color, bool is_small=0);
 	void add_computer(room_object_t const &c);
 	void add_laptop(room_object_t const &c);
+	void add_pizza_box(room_object_t const &c);
 	void add_mwave(room_object_t const &c);
 	void add_mirror(room_object_t const &c);
 	void add_shower(room_object_t const &c, float tscale);
@@ -951,7 +952,7 @@ struct building_room_geom_t {
 	void add_filing_cabinet(room_object_t const &c, bool inc_lg, bool inc_sm);
 	void add_stapler(room_object_t const &c);
 	void add_fire_ext_mount(room_object_t const &c);
-	void add_fire_ext_sign(room_object_t const &c);
+	void add_fire_ext_sign (room_object_t const &c);
 	void add_ceiling_fan_light(room_object_t const &fan, room_object_t const &light);
 	void add_railing(room_object_t const &c);
 	void add_potted_plant(room_object_t const &c, bool inc_pot, bool inc_plant);
@@ -1745,6 +1746,7 @@ private:
 	bool place_bottle_on_obj (rand_gen_t &rgen, cube_t const &place_on, unsigned room_id, float tot_light_amt, cube_t const &avoid=cube_t());
 	bool place_plant_on_obj  (rand_gen_t &rgen, cube_t const &place_on, unsigned room_id, float tot_light_amt, cube_t const &avoid=cube_t());
 	bool place_laptop_on_obj (rand_gen_t &rgen, room_object_t const &place_on, unsigned room_id, float tot_light_amt, cube_t const &avoid=cube_t(), bool use_dim_dir=0);
+	bool place_pizza_on_obj  (rand_gen_t &rgen, cube_t const &place_on, unsigned room_id, float tot_light_amt, cube_t const &avoid=cube_t());
 	bool place_plate_on_obj  (rand_gen_t &rgen, cube_t const &place_on, unsigned room_id, float tot_light_amt, cube_t const &avoid=cube_t());
 	bool place_cup_on_obj    (rand_gen_t &rgen, cube_t const &place_on, unsigned room_id, float tot_light_amt, cube_t const &avoid=cube_t());
 	bool place_toy_on_obj    (rand_gen_t &rgen, cube_t const &place_on, unsigned room_id, float tot_light_amt, cube_t const &avoid=cube_t());
@@ -1981,6 +1983,7 @@ bool player_take_damage(float damage_scale, int poison_type=0, bool *has_key=nul
 // functions in building_room_obj_expand.cc
 point gen_xy_pos_in_area(cube_t const &S, vector3d const &sz, rand_gen_t &rgen, float zval=0.0);
 point gen_xy_pos_in_area(cube_t const &S, float radius, rand_gen_t &rgen, float zval=0.0);
+void gen_xy_pos_for_cube_obj(cube_t &C, cube_t const &S, vector3d const &sz, float height, rand_gen_t &rgen);
 void gen_xy_pos_for_round_obj(cube_t &C, cube_t const &S, float radius, float height, float spacing, rand_gen_t &rgen, bool place_at_z1=0);
 // functions in building_interact.cc and building_gameplay.cc
 void gen_sound_thread_safe(unsigned id, point const &pos, float gain=1.0, float pitch=1.0, float gain_scale=1.0, bool skip_if_already_playing=0);

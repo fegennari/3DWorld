@@ -139,6 +139,7 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_SPRINKLER ] = bldg_obj_type_t(0, 0, 0, 0, 1, 0, 0,  0.0,  0.0,   "fire sprinkler"); // detail object
 	bldg_obj_types[TYPE_FEXT_MOUNT] = bldg_obj_type_t(0, 0, 0, 0, 1, 0, 2,  0.0,  0.0,   "fire extinguisher mount");
 	bldg_obj_types[TYPE_FEXT_SIGN ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2,  5.0,  0.2,   "fire extinguisher sign");
+	bldg_obj_types[TYPE_PIZZA_BOX ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 10.0,  1.0,   "pizza box");
 	// player_coll, ai_coll, rat_coll, pickup, attached, is_model, lg_sm, value, weight, name [capacity]
 	// 3D models
 	bldg_obj_types[TYPE_TOILET    ] = bldg_obj_type_t(1, 1, 1, 1, 1, 1, 0, 120.0, 88.0,  "toilet");
