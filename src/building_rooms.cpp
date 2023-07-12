@@ -2859,13 +2859,20 @@ void building_t::place_objects_onto_surfaces(rand_gen_t rgen, room_t const &room
 				if (obj2.type == TYPE_PEN || obj2.type == TYPE_PENCIL) {avoid = obj2; break;} // we can only use the first one
 			}
 		}
-		if      (rgen.rand_probability(bottle_prob) && place_bottle_on_obj(rgen, surface, room_id, tot_light_amt, avoid)) {}
-		else if (rgen.rand_probability(cup_prob   ) && place_cup_on_obj   (rgen, surface, room_id, tot_light_amt, avoid)) {}
-		else if (rgen.rand_probability(laptop_prob) && place_laptop_on_obj(rgen, surface, room_id, tot_light_amt, avoid, (obj.type != TYPE_TABLE))) {}
-		else if (rgen.rand_probability(pizza_prob ) && place_pizza_on_obj (rgen, surface, room_id, tot_light_amt, avoid)) {}
-		// don't add both a plant and a bottle; don't add plants in the basement
-		else if (!is_basement && plant_prob > 0.0 && rgen.rand_float() < plant_prob && place_plant_on_obj(rgen, surface, room_id, tot_light_amt, avoid)) {}
-		else if (rgen.rand_probability(toy_prob)    && place_toy_on_obj   (rgen, surface, room_id, tot_light_amt, avoid)) {}
+		unsigned const num_obj_types = 6;
+		unsigned const obj_type_start(rgen.rand() % num_obj_types); // select a random starting point to remove bias toward objects checked first
+		bool placed(0);
+
+		for (unsigned n = 0; n < num_obj_types && !placed; ++n) { // place a single object
+			switch ((n + obj_type_start) % num_obj_types) {
+			case 0: placed = (rgen.rand_probability(bottle_prob) && place_bottle_on_obj(rgen, surface, room_id, tot_light_amt, avoid)); break;
+			case 1: placed = (rgen.rand_probability(cup_prob   ) && place_cup_on_obj   (rgen, surface, room_id, tot_light_amt, avoid)); break;
+			case 2: placed = (rgen.rand_probability(laptop_prob) && place_laptop_on_obj(rgen, surface, room_id, tot_light_amt, avoid, (obj.type != TYPE_TABLE))); break;
+			case 3: placed = (rgen.rand_probability(pizza_prob ) && place_pizza_on_obj (rgen, surface, room_id, tot_light_amt, avoid)); break;
+			case 4: placed = (!is_basement && rgen.rand_probability(plant_prob) && place_plant_on_obj(rgen, surface, room_id, tot_light_amt, avoid)); break;
+			case 5: placed = (rgen.rand_probability(toy_prob)    && place_toy_on_obj   (rgen, surface, room_id, tot_light_amt, avoid)); break;
+			}
+		} // for n
 	} // for i
 }
 
