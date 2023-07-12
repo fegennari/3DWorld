@@ -139,7 +139,7 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_SPRINKLER ] = bldg_obj_type_t(0, 0, 0, 0, 1, 0, 0,  0.0,  0.0,   "fire sprinkler"); // detail object
 	bldg_obj_types[TYPE_FEXT_MOUNT] = bldg_obj_type_t(0, 0, 0, 0, 1, 0, 2,  0.0,  0.0,   "fire extinguisher mount");
 	bldg_obj_types[TYPE_FEXT_SIGN ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2,  5.0,  0.2,   "fire extinguisher sign");
-	bldg_obj_types[TYPE_PIZZA_BOX ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 10.0,  1.0,   "pizza box");
+	bldg_obj_types[TYPE_PIZZA_BOX ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 10.0,  1.0,   "box of pizza");
 	// player_coll, ai_coll, rat_coll, pickup, attached, is_model, lg_sm, value, weight, name [capacity]
 	// 3D models
 	bldg_obj_types[TYPE_TOILET    ] = bldg_obj_type_t(1, 1, 1, 1, 1, 1, 0, 120.0, 88.0,  "toilet");
@@ -244,6 +244,10 @@ bldg_obj_type_t get_taken_obj_type(room_object_t const &obj) {
 		}
 		return type;
 	}
+	if (obj.type == TYPE_PIZZA_BOX) {
+		if (obj.taken_level == 1) {return bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 0.0,  0.25, "empty pizza box");} // whether or not the box is open
+		if (obj.is_open()       ) {return bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 10.0, 0.75, "pizza"          );} // take the pizza; pizza slice?
+	} // else take the entire box with the pizza
 	// default value, name may be modified below
 	bldg_obj_type_t type(get_room_obj_type(obj));
 
@@ -1279,7 +1283,8 @@ void building_room_geom_t::remove_object(unsigned obj_id, building_t &building) 
 	bldg_obj_type_t const type(get_taken_obj_type(obj)); // capture type before updating obj
 	bool const is_light(obj.type == TYPE_LIGHT);
 
-	if (obj.type == TYPE_PICTURE && obj.taken_level == 0) {++obj.taken_level;} // take picture, leave frame
+	if      (obj.type == TYPE_PICTURE   && obj.taken_level == 0) {++obj.taken_level;} // take picture, leave frame
+	else if (obj.type == TYPE_PIZZA_BOX && obj.taken_level == 0 && obj.is_open()) {++obj.taken_level;} // take pizza, leave box
 	else if (obj.type == TYPE_TPROLL && !(obj.taken_level > 0 || (obj.flags & RO_FLAG_WAS_EXP))) {++obj.taken_level;} // take TP roll, leave holder; not for expanded TP rolls
 	else if (obj.type == TYPE_BED) {++obj.taken_level;} // take pillow(s), then sheets, then mattress
 	else if (obj.type == TYPE_PLANT && !(obj.flags & RO_FLAG_ADJ_BOT)) { // plant not on a table/desk

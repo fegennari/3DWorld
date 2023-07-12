@@ -877,7 +877,7 @@ void building_room_geom_t::add_shelves(room_object_t const &c, float tscale) {
 void building_room_geom_t::add_obj_with_top_texture(room_object_t const &c, string const &texture_name, colorRGBA const &sides_color, bool is_small) {
 	rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_texture_by_name(texture_name), 0.0), 1, 0, is_small)); // shadows
 	mat.add_cube_to_verts(c, apply_light_color(c), zero_vector, ~EF_Z2, c.dim, (c.dim ^ c.dir ^ 1), c.dir); // top face only
-	get_untextured_material(1, 0, is_small).add_cube_to_verts_untextured(c, apply_light_color(c, sides_color), EF_Z12); // sides, no shadows, small
+	get_untextured_material(1, 0, is_small).add_cube_to_verts_untextured(c, apply_light_color(c, sides_color), EF_Z12); // sides, shadows
 }
 void building_room_geom_t::add_obj_with_front_texture(room_object_t const &c, string const &texture_name, colorRGBA const &sides_color, bool is_small) {
 	rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_texture_by_name(texture_name), 0.0, 1), 1, 0, is_small)); // shadows
@@ -891,11 +891,38 @@ void building_room_geom_t::add_laptop   (room_object_t const &c) {add_obj_with_t
 void building_room_geom_t::add_computer (room_object_t const &c) {add_obj_with_front_texture(c, "interiors/computer.jpg",  BKGRAY, 1);} // is_small=1
 
 void building_room_geom_t::add_pizza_box(room_object_t const &c) {
-	if (!c.is_open()) {
-		add_obj_with_top_texture(c, "interiors/pizzatop.jpg", WHITE, 1); // is_small=1
+	string const pbox_tex_fn("interiors/pizzatop.jpg");
+	colorRGBA box_color(WHITE);
+
+	if (!c.is_open()) { // draw closed box
+		add_obj_with_top_texture(c, pbox_tex_fn, box_color, 1); // is_small=1
 		return;
 	}
-	// TODO: draw open box with pizza inside
+	// draw open box
+	unsigned const back_skip_mask(get_face_mask(c.dim, !c.dir)); // back of box/top of open box
+	float const height(c.dz()), depth(c.get_depth()); // Note: width should be equal to depth
+	box_color = apply_light_color(c, box_color);
+	cube_t bot(c), lid(c);
+	bot.z2() -= 0.98*height; // shift bottom up slightly to prevent z-fighting, but draw the top
+	lid.z2()  = c.z1() + depth; // set top edge
+	lid.d[c.dim][c.dir] = c.d[c.dim][!c.dir] + (c.dir ? 1.0 : -1.0)*height; // set thickness; width remains unchanged
+	rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_texture_by_name(pbox_tex_fn), 0.0), 1, 0, 1)); // shadows, is_small=1
+	mat.add_cube_to_verts(lid, apply_light_color(c), zero_vector, back_skip_mask, !c.dim, (c.dim ^ c.dir ^ 1), 1); // top face only, upside down
+	rgeom_mat_t &untex_mat(get_untextured_material(1, 0, 1));
+	untex_mat.add_cube_to_verts_untextured(c,   box_color, (EF_Z12 | ~back_skip_mask)); // outside sides except for back
+	untex_mat.add_cube_to_verts(c, box_color, all_zeros,   (EF_Z12 | ~back_skip_mask), 0, 0, 0, 1); // inside sides except for back, inverted
+	untex_mat.add_cube_to_verts_untextured(bot, box_color, ~EF_Z2 ); // top surface of bottom of box
+	untex_mat.add_cube_to_verts_untextured(lid,   box_color, get_skip_mask_for_xy(c.dim)); // lid outside sides
+	untex_mat.add_cube_to_verts(lid, box_color, all_zeros, ~get_face_mask(c.dim, c.dir), 0, 0, 0, 1); // lid inside sides and top surface, inverted
+
+	if (c.taken_level == 0) { // draw pizza inside
+		cube_t pizza(c);
+		pizza.expand_by_xy(-0.08*depth);  // small shrink
+		pizza.z2() = c.z1() + 0.3*height; // set height
+		untex_mat.add_vcylin_to_verts(pizza, apply_light_color(c, LT_BROWN), 0, 0); // sides
+		rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_texture_by_name("interiors/pizza.png"), 0.0), 1, 0, 1)); // shadows, small
+		mat.add_vcylin_to_verts(pizza, apply_light_color(c), 0, 1, 0, 0, 1.0, 1.0, 1.0, 1.0, 1); // top only
+	}
 }
 
 // used for drawing open microwave and dishwasher
