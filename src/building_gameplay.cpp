@@ -295,6 +295,9 @@ bool is_consumable(room_object_t const &obj) {
 	}
 	return 1;
 }
+bool is_healing_food(room_object_t const &obj) {
+	return (obj.type == TYPE_PIZZA_BOX && obj.is_open() && obj.taken_level == 0 && in_building_gameplay_mode() && !player_at_full_health());
+}
 
 void show_weight_limit_message() {
 	std::ostringstream oss;
@@ -523,6 +526,9 @@ public:
 			case BOTTLE_TYPE_MEDS  : health =  1.00; is_poisoned = 0; break; // medicine, restore full health and cure poisoning
 			default: assert(0);
 			}
+		}
+		else if (is_healing_food(obj)) {
+			health = 0.50; // healing pizza
 		}
 		if (health > 0.0) { // heal
 			player_health = min(1.0f, (player_health + health));
@@ -842,12 +848,10 @@ bool register_player_object_pickup(room_object_t const &obj, point const &at_pos
 		can_pickup_bldg_obj = (can_pick_up ? 1 : 2);
 		return 0;
 	}
-	if (!can_pick_up) {
-		show_weight_limit_message();
-		return 0;
-	}
-	if (is_consumable(obj)) {gen_sound_thread_safe_at_player(SOUND_GULP, 1.0 );}
-	else                    {gen_sound_thread_safe_at_player(SOUND_ITEM, 0.25);}
+	if (!can_pick_up) {show_weight_limit_message(); return 0;}
+	if      (is_consumable  (obj)) {gen_sound_thread_safe_at_player(SOUND_GULP,      1.00);}
+	else if (is_healing_food(obj)) {gen_sound_thread_safe_at_player(SOUND_SNOW_STEP, 1.00);} // the closest I have to a crunch sound
+	else                           {gen_sound_thread_safe_at_player(SOUND_ITEM,      0.25);}
 	register_building_sound_for_obj(obj, at_pos);
 	do_room_obj_pickup = 0; // no more object pickups
 	return 1;
