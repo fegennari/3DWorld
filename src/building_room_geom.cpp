@@ -1556,6 +1556,12 @@ void building_room_geom_t::add_fire_ext_sign(room_object_t const &c) {
 	mat.add_cube_to_verts(c, apply_light_color(c), zero_vector, get_face_mask(c.dim, c.dir), !c.dim, (c.dim ^ c.dir ^ 1)); // front face only
 }
 
+void building_room_geom_t::add_teeshirt(room_object_t const &c) {
+	rgeom_mat_t& mat(get_material(tid_nm_pair_t(get_texture_by_name("interiors/teeshirt.png"), 0.0), 0, 0, 1)); // unshadowed, small
+	//rgeom_mat_t& mat(mats_amask.get_material(tid_nm_pair_t(get_texture_by_name("interiors/teeshirt.png"), 0.0), 1)); // unshadowed
+	mat.add_cube_to_verts(c, apply_light_color(c), zero_vector, ~EF_Z2, c.dim, (c.dim ^ c.dir ^ 1), c.dir); // top face only
+}
+
 void building_room_geom_t::add_ceiling_fan_light(room_object_t const &fan, room_object_t const &light) {
 	bool const is_on(light.is_light_on() && !light.is_broken());
 	if (!is_on) return; // only drawn when light is on

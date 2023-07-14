@@ -912,6 +912,7 @@ void building_room_geom_t::add_small_static_objs_to_verts(vect_room_object_t con
 		case TYPE_STAPLER: add_stapler(c); break;
 		case TYPE_FEXT_MOUNT: add_fire_ext_mount(c); break;
 		case TYPE_FEXT_SIGN:  add_fire_ext_sign (c); break;
+		case TYPE_TEESHIRT:   add_teeshirt(c); break;
 		default: break;
 		} // end switch
 	} // for i
@@ -1414,7 +1415,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 	mats_doors.draw(bbd, s, shadow_only, reflection_pass);
 	if (inc_small) {mats_small.draw(bbd, s, shadow_only, reflection_pass);}
 
-	if (inc_small >= 2 && !mats_amask.empty()) { // draw plants using alpha masks in the detail pass
+	if (inc_small >= 2 && !mats_amask.empty()) { // draw plants, etc. using alpha masks in the detail pass
 		if (shadow_only) {
 			if (!amask_shader.is_setup()) {amask_shader.begin_simple_textured_shader(0.9);} // need to use texture with alpha test
 			else {amask_shader.make_current();}

@@ -695,6 +695,7 @@ void place_book(room_object_t &obj, cube_t const &parent, float length, float ma
 	rgen.rand_mix();
 	if (item_ix > 0 && rgen.rand_bool()) return obj; // no more items
 	unsigned const type_ix(rgen.rand() % 11); // 0-10
+	// TODO: add TYPE_TEESHIRT for types_dresser
 	unsigned const types_dresser [11] = {TYPE_BOX, TYPE_PAPER, TYPE_PEN, TYPE_PEN,     TYPE_BOOK, TYPE_KEY,     TYPE_BOTTLE, TYPE_MONEY,  TYPE_PHONE,  TYPE_SPRAYCAN, TYPE_TAPE};
 	unsigned const types_desk    [11] = {TYPE_BOX, TYPE_PAPER, TYPE_PEN, TYPE_STAPLER, TYPE_BOOK, TYPE_KEY,     TYPE_BOTTLE, TYPE_MONEY,  TYPE_PHONE,  TYPE_SPRAYCAN, TYPE_TAPE};
 	unsigned const types_attic   [11] = {TYPE_BOX, TYPE_PAPER, TYPE_PEN, TYPE_PEN,     TYPE_BOOK, TYPE_KEY,     TYPE_BOTTLE, TYPE_BOX,    TYPE_BOOK,   TYPE_SPRAYCAN, TYPE_TAPE};
