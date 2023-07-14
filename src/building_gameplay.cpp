@@ -849,9 +849,9 @@ bool register_player_object_pickup(room_object_t const &obj, point const &at_pos
 		return 0;
 	}
 	if (!can_pick_up) {show_weight_limit_message(); return 0;}
-	if      (is_consumable  (obj)) {gen_sound_thread_safe_at_player(SOUND_GULP,      1.00);}
-	else if (is_healing_food(obj)) {gen_sound_thread_safe_at_player(SOUND_SNOW_STEP, 1.00);} // the closest I have to a crunch sound
-	else                           {gen_sound_thread_safe_at_player(SOUND_ITEM,      0.25);}
+	if      (is_consumable  (obj)) {gen_sound_thread_safe_at_player(SOUND_GULP,   1.00);}
+	else if (is_healing_food(obj)) {gen_sound_thread_safe_at_player(SOUND_EATING, 1.00);}
+	else                           {gen_sound_thread_safe_at_player(SOUND_ITEM,   0.25);}
 	register_building_sound_for_obj(obj, at_pos);
 	do_room_obj_pickup = 0; // no more object pickups
 	return 1;
