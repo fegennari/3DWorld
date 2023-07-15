@@ -1870,6 +1870,7 @@ cube_t building_t::get_bcube_inc_extensions() const {
 	return ret;
 }
 cube_t building_t::get_full_basement_bcube() const {
+	assert(has_basement());
 	cube_t ret(get_basement());
 	if (has_ext_basement()) {ret.union_with_cube(interior->basement_ext_bcube);}
 	return ret;

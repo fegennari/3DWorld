@@ -993,6 +993,7 @@ void building_t::refine_light_bcube(point const &lpos, float light_radius, cube_
 	// first determine the union of all intersections with parts; ignore zvals here so that we get the same result for every floor
 	if (is_parking_garage) {tight_bcube = part = room;} // parking garage is the entire room; other_parts remains empty
 	else if (lpos.z < ground_floor_z1) { // light in basement
+		assert(has_basement());
 		cube_t const basement(get_basement());
 
 		if (point_in_extended_basement_not_basement(lpos)) { // light in extended basement

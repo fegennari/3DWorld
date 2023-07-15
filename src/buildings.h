@@ -1613,7 +1613,7 @@ public:
 	bool register_indir_lighting_state_change(unsigned light_ix, bool is_door_change=0) const;
 	bool is_attic_roof(tquad_with_ix_t const &tq, bool type_roof_only) const;
 	bool has_ext_basement() const {return (interior && !interior->basement_ext_bcube.is_all_zeros());}
-	bool point_in_extended_basement(point const &pos) const {return (interior && interior->basement_ext_bcube.contains_pt(pos));}
+	bool point_in_extended_basement(point const &pos) const {return (has_basement() && interior && interior->basement_ext_bcube.contains_pt(pos));}
 	bool point_in_extended_basement_not_basement(point const &pos) const {return (point_in_extended_basement(pos) && !get_basement().contains_pt(pos));}
 	bool cube_int_ext_basement(cube_t const &c) const {return (interior && interior->basement_ext_bcube.intersects(c));}
 	bool point_in_building_or_basement_bcube(point const &pos) const {return (bcube.contains_pt(pos) || point_in_extended_basement(pos));}

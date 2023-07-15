@@ -1497,7 +1497,7 @@ bool building_t::move_sphere_to_valid_part(point &pos, point const &p_last, floa
 	else {
 		float xy_area_contained(0.0);
 		cube_t sphere_bcube; sphere_bcube.set_from_sphere(pos, radius);
-		cube_t const clamp_cube((pos.z < ground_floor_z1) ? get_full_basement_bcube() : bcube);
+		cube_t const clamp_cube((has_basement() && pos.z < ground_floor_z1) ? get_full_basement_bcube() : bcube);
 		clamp_sphere_xy(pos, clamp_cube, radius); // keep pos within the valid building bcube
 		for (auto i = parts.begin(); i != get_real_parts_end_inc_sec(); ++i) {accumulate_shared_xy_area(*i, sphere_bcube, xy_area_contained);}
 		
