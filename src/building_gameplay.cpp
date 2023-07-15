@@ -580,6 +580,16 @@ public:
 					co.dim = co.dir = 0; // clear dim and dir
 					phone_manager.enable();
 				}
+				else if (obj.type == TYPE_BOTTLE) { // medicine bottle
+					float const dx(co.dx()), dy(co.dy()), dz(co.dz());
+
+					if (max(dx, dy) > dz) { // sideways bottle, make upright
+						co.y2() = co.y1() + dz;
+						co.x2() = co.x1() + dz;
+						co.z2() = co.z1() + max(dx, dy);
+					}
+					co.dim = co.dir = 0; // vertical
+				}
 				tape_manager.clear();
 			}
 			print_value_and_weight(oss, value, get_obj_weight(obj));
