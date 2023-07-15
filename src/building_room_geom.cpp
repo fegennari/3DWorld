@@ -1557,8 +1557,8 @@ void building_room_geom_t::add_fire_ext_sign(room_object_t const &c) {
 }
 
 void building_room_geom_t::add_teeshirt(room_object_t const &c) {
+	// Note: alpha mask material, but not using mats_amask because blending works correctly without it
 	rgeom_mat_t& mat(get_material(tid_nm_pair_t(get_texture_by_name("interiors/teeshirt.png"), 0.0), 0, 0, 1)); // unshadowed, small
-	//rgeom_mat_t& mat(mats_amask.get_material(tid_nm_pair_t(get_texture_by_name("interiors/teeshirt.png"), 0.0), 1)); // unshadowed
 	mat.add_cube_to_verts(c, apply_light_color(c), zero_vector, ~EF_Z2, c.dim, (c.dim ^ c.dir ^ 1), c.dir); // top face only
 }
 
