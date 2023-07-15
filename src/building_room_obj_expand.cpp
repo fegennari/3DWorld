@@ -695,7 +695,6 @@ void place_book(room_object_t &obj, cube_t const &parent, float length, float ma
 	if (item_ix > 0 && rgen.rand_bool()) return obj; // no more items
 	cube_t drawer(drawer_in); // copy so that we can adjust z1
 	unsigned const type_ix(rgen.rand() % 11); // 0-10
-	// TODO: add TYPE_TEESHIRT for types_dresser
 	unsigned const types_dresser [11] = {TYPE_BOX, TYPE_PAPER, TYPE_TEESHIRT, TYPE_TEESHIRT, TYPE_BOOK, TYPE_KEY,     TYPE_BOTTLE, TYPE_MONEY,  TYPE_PHONE,  TYPE_SPRAYCAN, TYPE_TAPE};
 	unsigned const types_desk    [11] = {TYPE_BOX, TYPE_PAPER, TYPE_PEN,      TYPE_STAPLER,  TYPE_BOOK, TYPE_KEY,     TYPE_BOTTLE, TYPE_MONEY,  TYPE_PHONE,  TYPE_SPRAYCAN, TYPE_TAPE};
 	unsigned const types_attic   [11] = {TYPE_BOX, TYPE_PAPER, TYPE_PEN,      TYPE_PEN,      TYPE_BOOK, TYPE_KEY,     TYPE_BOTTLE, TYPE_BOX,    TYPE_BOOK,   TYPE_SPRAYCAN, TYPE_TAPE};
@@ -709,7 +708,7 @@ void place_book(room_object_t &obj, cube_t const &parent, float length, float ma
 	else                              {obj_type = types_dresser [type_ix];} // dresser or nightstand
 	if (obj_type == TYPE_SILVER && !building_obj_model_loader.is_model_valid(OBJ_MODEL_SILVER)) {obj_type = TYPE_BOOK;} // replace silverware with book
 	// if drawer is too small, replace teeshirt with pen
-	if (obj_type == TYPE_TEESHIRT && (drawer.get_sz_dim(c.dim) < 0.6*c.dz() || drawer.get_sz_dim(!c.dim) < 0.52*c.dz())) {obj_type = TYPE_PEN;}
+	if (obj_type == TYPE_TEESHIRT && (drawer.get_sz_dim(c.dim) < 0.55*c.dz() || drawer.get_sz_dim(!c.dim) < 0.52*c.dz())) {obj_type = TYPE_PEN;}
 	// object stacking logic
 	bool const is_stackable(obj_type == TYPE_BOX || obj_type == TYPE_PAPER || obj_type == TYPE_BOOK || obj_type == TYPE_PLATE || obj_type == TYPE_TAPE || obj_type == TYPE_TEESHIRT);
 	
@@ -845,8 +844,8 @@ void place_book(room_object_t &obj, cube_t const &parent, float length, float ma
 	case TYPE_TEESHIRT: // T-shirt
 	{
 		float length(0.9*drawer.get_sz_dim(c.dim)), width(0.9*drawer.get_sz_dim(!c.dim));
-		min_eq(length, 1.3f*width );
-		min_eq(width,  0.9f*length);
+		min_eq(length, 1.10f*width );
+		min_eq(width,  1.05f*length);
 		cube_t shirt(drawer);
 		set_rand_pos_for_sz(shirt, c.dim, length, width, rgen);
 		shirt.z2() = shirt.z1() + 0.1*drawer.dz(); // set height

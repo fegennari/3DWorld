@@ -681,7 +681,7 @@ bool building_t::add_bedroom_objs(rand_gen_t rgen, room_t &room, vect_cube_t con
 		cube_t ball_area(place_area);
 		ball_area.expand_by_xy(-radius*rgen.rand_uniform(1.0, 10.0));
 
-		if (ball_area.is_strictly_normalized()) {
+		if (ball_area.is_strictly_normalized()) { // should always be true
 			for (unsigned n = 0; n < 10; ++n) { // make 10 attempts to place the object
 				bool const dim(rgen.rand_bool()), dir(rgen.rand_bool()); // choose a random wall
 				point center(0.0, 0.0, (zval + radius));
@@ -719,8 +719,27 @@ bool building_t::add_bedroom_objs(rand_gen_t rgen, room_t &room, vect_cube_t con
 			}
 		}
 	}
-	// maybe add a t-shirt on the floor
-	// TODO: TYPE_TEESHIRT
+	if (rgen.rand_float() < 0.3) { // maybe add a t-shirt on the floor
+		float const length(0.3*window_vspacing), width(0.98*length), height(0.002*window_vspacing);
+		cube_t shirt_area(place_area);
+		shirt_area.expand_by_xy(-0.8*length); // not too close to a wall
+
+		if (shirt_area.is_strictly_normalized()) { // should always be true
+			bool const dim(rgen.rand_bool()), dir(rgen.rand_bool()); // choose a random orientation
+			vector3d size(length, width, height);
+			if (dim) {std::swap(size.x, size.y);}
+
+			for (unsigned n = 0; n < 10; ++n) { // make 10 attempts to place the object
+				point const pos(gen_xy_pos_in_area(place_area, size, rgen, zval));
+				cube_t c(pos);
+				c.expand_by_xy(0.5*size);
+				c.z2() += size.z;
+				if (overlaps_other_room_obj(c, objs_start) || is_obj_placement_blocked(c, room, 1)) continue; // bad placement
+				objs.emplace_back(c, TYPE_TEESHIRT, room_id, dim, dir, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CUBE, TSHIRT_COLORS[rgen.rand()%NUM_TSHIRT_COLORS]);
+				break; // done
+			} // for n
+		}
+	}
 	return 1; // success
 }
 
