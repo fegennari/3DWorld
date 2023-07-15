@@ -502,6 +502,7 @@
     <ClCompile Include="src\building_room_geom.cpp" />
     <ClCompile Include="src\building_room_item_draw.cpp" />
     <ClCompile Include="src\building_room_obj_expand.cpp" />
+    <ClCompile Include="src\building_room_obj_place.cpp" />
     <ClCompile Include="src\build_world.cpp">
       <Optimization Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">MaxSpeed</Optimization>
       <Optimization Condition="'$(Configuration)|$(Platform)'=='Tracy|Win32'">MaxSpeed</Optimization>

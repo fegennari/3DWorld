@@ -71,7 +71,6 @@ class lmap_manager_t;
 class building_nav_graph_t;
 struct building_t;
 class building_creator_t;
-class light_ix_assign_t;
 struct elevator_t;
 class brg_batch_draw_t;
 typedef vector<vert_norm_comp_tc_color> vect_vnctcc_t;
@@ -97,6 +96,16 @@ bottle_params_t const bottle_params[NUM_BOTTLE_TYPES] = {
 };
 enum {BOTTLE_TYPE_WATER=0, BOTTLE_TYPE_COKE, BOTTLE_TYPE_BEER, BOTTLE_TYPE_WINE, BOTTLE_TYPE_POISON, BOTTLE_TYPE_MEDS};
 
+
+class light_ix_assign_t {
+	vector<pair<point2d<float>, unsigned>> cur;
+	unsigned next_ix;
+public:
+	light_ix_assign_t() : next_ix(0) {}
+	void next_room() {cur.clear();}
+	unsigned get_next_ix() {return next_ix++;}
+	unsigned get_ix_for_light(cube_t const &c);
+};
 
 struct building_occlusion_state_t {
 	int exclude_bix;
@@ -413,6 +422,7 @@ enum {MAT_TYPE_STATIC=0, MAT_TYPE_SMALL, MAT_TYPE_DYNAMIC, MAT_TYPE_DETAIL, MAT_
 enum {FTYPE_NONE=0, FTYPE_BASEMENT, FTYPE_ATTIC}; // for furnace
 enum {ATTIC_TYPE_RAFTERS=0, ATTIC_TYPE_FIBERGLASS, ATTIC_TYPE_WOOD, ATTIC_TYPE_PLASTER, NUM_ATTIC_TYPES};
 enum {BLDG_COLL_NONE=0, BLDG_COLL_SIDE, BLDG_COLL_ROOF, BLDG_COLL_DETAIL, BLDG_COLL_DRIVEWAY};
+enum {PLACED_TOILET=1, PLACED_SINK=2, PLACED_TUB=4, PLACED_SHOWER=8}; // for bathroom objects
 
 enum {/*building models*/ OBJ_MODEL_TOILET=0, OBJ_MODEL_SINK, OBJ_MODEL_TUB, OBJ_MODEL_FRIDGE, OBJ_MODEL_STOVE, OBJ_MODEL_TV, OBJ_MODEL_MONITOR, OBJ_MODEL_COUCH,
 	OBJ_MODEL_OFFICE_CHAIR, OBJ_MODEL_URINAL, OBJ_MODEL_LAMP, OBJ_MODEL_WASHER, OBJ_MODEL_DRYER, OBJ_MODEL_KEY, OBJ_MODEL_HANGER, OBJ_MODEL_CLOTHES, OBJ_MODEL_FESCAPE,
@@ -1944,6 +1954,7 @@ cube_t get_elevator_car_panel(room_object_t const &c, float fc_thick_scale);
 cube_t get_true_room_obj_bcube(room_object_t const &c);
 cube_t get_sink_cube(room_object_t const &c);
 cube_t get_mwave_panel_bcube(room_object_t const &c);
+void gen_crate_sz(vector3d &sz, rand_gen_t &rgen, float window_vspacing);
 void get_balcony_cubes(room_object_t const &c, cube_t cubes[4]);
 void set_rand_pos_for_sz(cube_t &c, bool dim, float length, float width, rand_gen_t &rgen);
 template<typename T> bool has_bcube_int_xy(cube_t const &bcube, vector<T> const &bcubes, float pad_dist=0.0);
@@ -1957,6 +1968,7 @@ template<typename T> void subtract_cube_from_cube(T const &c, cube_t const &s, v
 template<typename T> void subtract_cube_from_cube_inplace(cube_t const &s, vector<T> &cubes, unsigned &ix, unsigned &iter_end);
 template<typename T> void subtract_cubes_from_cube(cube_t const &c, vector<T> const &sub, vect_cube_t &out, vect_cube_t &out2, int zval_mode=0);
 template<typename T> bool subtract_cube_from_cubes(cube_t const &s, vector<T> &cubes, vect_cube_t *holes=nullptr, bool clip_in_z=0, bool include_adj=0);
+void expand_to_nonzero_area(cube_t &c, float exp_amt, bool dim);
 bool do_sphere_coll_polygon_sides(point &pos, cube_t const &part, float radius, bool interior_coll, vector<point> const &points, vector3d *cnorm);
 int get_rect_panel_tid();
 int get_bath_wind_tid ();
