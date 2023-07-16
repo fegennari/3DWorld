@@ -810,6 +810,7 @@ public:
 	cube_t get_bcube() const;
 	bool get_closest_fire(point const &pos, float xy_radius, float z1, float z2, point *fire_pos=nullptr) const;
 	void add_fire_bcubes_for_cube(cube_t const &sel_cube, vect_cube_t &fire_bcubes) const;
+	void put_out_fires(point const &p1, point const &p2, float radius);
 	void next_frame();
 	void add_lights(vector3d const &xlate, building_t const &building, occlusion_checker_noncity_t &oc, cube_t &lights_bcube) const;
 	void draw(shader_t &s, vector3d const &xlate);

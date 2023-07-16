@@ -1236,6 +1236,13 @@ void fire_manager_t::add_fire_bcubes_for_cube(cube_t const &sel_cube, vect_cube_
 		if (bcube.intersects(sel_cube)) {fire_bcubes.push_back(bcube);}
 	}
 }
+void fire_manager_t::put_out_fires(point const &p1, point const &p2, float radius) { // area can be cylindrical
+	for (fire_t &f : fires) {
+		bool hit(dist_less_than(p1, f.pos, radius)); // sphere
+		if (p1 != p2) {hit |= (dist_less_than(p2, f.pos, radius) || pt_line_seg_dist_less_than(f.pos, p1, p2, radius));} // extend to capsule shape
+		if (hit) {f.max_radius = 0.0;}
+	}
+}
 void fire_manager_t::next_frame() {
 	float const fticks_stable(min(fticks, 4.0f)); // clamp to 0.1s
 
@@ -1247,7 +1254,7 @@ void fire_manager_t::next_frame() {
 		// slow random drift? would need to check object collisions
 	}
 	// remove dead fires
-	fires.erase(std::remove_if(fires.begin(), fires.end(), [](fire_t const &f) {return (f.radius < 0.0);}), fires.end());
+	fires.erase(std::remove_if(fires.begin(), fires.end(), [](fire_t const &f) {return (f.max_radius == 0.0 || f.radius < 0.0);}), fires.end());
 }
 
 void building_t::register_spark_floor_hit(point const &pos) {

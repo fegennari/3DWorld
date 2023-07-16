@@ -1636,18 +1636,21 @@ bool building_t::maybe_use_last_pickup_room_object(point const &player_pos) {
 			float const obj_radius(obj.get_radius()), r_sum(player_radius + obj_radius);
 			point const part_pos(player_pos + (1.1f*r_sum)*cview_dir);
 			vector3d const velocity(0.0015*(cview_dir + 0.12*rgen.signed_rand_vector())); // add a bit of random variation
+			point const ray_start(player_pos + player_radius*cview_dir);
 			interior->room_geom->particle_manager.add_particle(part_pos, velocity, WHITE, 1.0*obj_radius, PART_EFFECT_SMOKE);
 			player_inventory.mark_last_item_used();
 			player_inventory.record_damage_done(0.05); // very small amount of damage
 
 			if (!interior->people.empty()) { // check for people in range
-				point const ray_start(player_pos + player_radius*cview_dir), ray_end(player_pos + (2.0f*r_sum)*cview_dir);
+				point const zombie_ray_end(player_pos + (2.0f*r_sum)*cview_dir);
 
 				for (unsigned i = 0; i < interior->people.size(); ++i) {
 					cube_t const person_bcube(interior->people[i].get_bcube());
-					if (person_bcube.line_intersects(ray_start, ray_end)) {maybe_zombie_retreat(i, part_pos);}
+					if (person_bcube.line_intersects(ray_start, zombie_ray_end)) {maybe_zombie_retreat(i, part_pos);}
 				}
 			}
+			point const fire_ray_end(player_pos + (4.0f*r_sum)*cview_dir); // longer range
+			interior->room_geom->fire_manager.put_out_fires(ray_start, fire_ray_end, 0.5*r_sum); // check for fires in range and put them out
 		}
 		else {assert(0);}
 	}
