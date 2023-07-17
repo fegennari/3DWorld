@@ -69,7 +69,6 @@ bool mesh_intersector::line_intersect_surface() {
 	int &xpos(ret.xpos), &ypos(ret.ypos);
 	xpos  = x1;
 	ypos  = y1;
-	v2_v1 = v2 - v1; // update after clip
 	if (x1 == x2 && y1 == y2) {return intersect_mesh_quad(x1, y1);}
 	int x_steps(x2-x1), y_steps(y2-y1), xs1, xs2, ys1, ys2, xval, yval;
 	double const slope((x_steps == 0) ? 1.0e6 : ((double)y_steps)/((double)x_steps));
@@ -174,36 +173,27 @@ bool mesh_intersector::line_intersect_plane(int x1, int x2, int y1, int y2) {
 	return 0;
 }
 
-
+bool line_poly_intersect(vector3d const &p1, point const &p2, point const *points, unsigned npts, float &t) {
+	vector3d norm;
+	get_normal(points[0], points[1], points[2], norm, 0); // doesn't require norm to be normalized
+	return line_poly_intersect(p1, p2, points, npts, norm, t);
+}
 bool mesh_intersector::intersect_mesh_quad(int x, int y) {
 
 	if (x < 0 || y < 0 || x >= MESH_X_SIZE-1 || y >= MESH_Y_SIZE-1) return 0;
 	double const xv(get_xval(x)), yv(get_yval(y));
-	point const mesh_pt[4] = {
+	point const pts[4] = {
 		point(xv,        yv,        mesh_height[y  ][x  ]),
+		point(xv,        yv+DY_VAL, mesh_height[y+1][x  ]),
 		point(xv+DX_VAL, yv,        mesh_height[y  ][x+1]),
-		point(xv+DX_VAL, yv+DY_VAL, mesh_height[y+1][x+1]),
-		point(xv,        yv+DY_VAL, mesh_height[y+1][x  ])};
-
-	for (unsigned i = 0; i < 4; i += 2) {
-		vector3d const norm(cross_product((mesh_pt[i] - mesh_pt[(3+i)&3]), (mesh_pt[1+i] - mesh_pt[i])));
-		if (intersect_plane(mesh_pt[i], norm, (i != 0))) return 1;
+		point(xv+DX_VAL, yv+DY_VAL, mesh_height[y+1][x+1])};
+	float t(0.0);
+	
+	if (line_poly_intersect(v1, v2, pts, 3, t) || line_poly_intersect(v1, v2, pts+1, 3, t)) {
+		ret.zval = float(v1.z + (v2.z - v1.z)*t);
+		return 1;
 	}
 	return 0;
-}
-
-
-bool mesh_intersector::intersect_plane(point const &mesh_pt, vector3d const &norm, bool sign) {
-	
-	double const denom(dot_product(norm, v2_v1)); // norm does not need to be normalized
-	if (fabs(denom) < TOLERANCE) return 0; // line is parallel to plane - no intersection
-	double const t(dot_product_ptv(norm, mesh_pt, v1)/denom);
-	if (t <= 0.0 || t >= 1.0)    return 0;
-	double const px(v1.x + v2_v1.x*t + (sign ? DX_VAL : 0.0)), py(v1.y + v2_v1.y*t + (sign ? DY_VAL : 0.0));
-	double const T(0.00001); // tolerance
-	if (px < mesh_pt.x-T || px > (mesh_pt.x + (double)DX_VAL)+T || py < mesh_pt.y-T || py > (mesh_pt.y + (double)DY_VAL)+T) return 0;
-	ret.zval = float(v1.z + v2_v1.z*t);
-	return 1;
 }
 
 
@@ -235,8 +225,7 @@ bool mesh_intersector::get_any_non_intersection(point const *const pts, unsigned
 	assert(pts);
 
 	for (unsigned i = 0; i < npts; ++i) {
-		v1    = pts[i];
-		v2_v1 = v2 - v1;
+		v1 = pts[i];
 		if (!get_intersection()) return 1;
 	}
 	return 0;
@@ -246,9 +235,7 @@ bool mesh_intersector::get_any_non_intersection(point const *const pts, unsigned
 // ************ mesh intersection drivers ************
 
 
-// inexact, can miss some visible spheres when radius is large and the mesh is steep
 bool sphere_visible_to_pt(point const &pt, point const &center, float radius) {
-
 	if (radius == 0.0) return line_intersect_mesh(center, pt, 1);
 	point qp[4];
 	unsigned const num_pts((radius < 0.5*HALF_DXY) ? 2 : 4);
@@ -259,19 +246,14 @@ bool sphere_visible_to_pt(point const &pt, point const &center, float radius) {
 
 
 bool line_intersect_mesh(point const &v1, point const &v2, int fast) {
-
 	mesh_intersector mint(v1, v2, fast);
 	return mint.get_intersection();
 }
-
 bool line_intersect_mesh(point const &v1, point const &v2, int &xpos, int &ypos, float &zval, int fast, bool cached) {
-
 	mesh_intersector mint(v1, v2, fast);
 	return mint.get_intersection(xpos, ypos, zval, cached);
 }
-
 bool line_intersect_mesh(point const &v1, point const &v2, point &cpos, int fast, bool cached) {
-
 	int xpos, ypos; // unused
 	float zval;
 	if (!line_intersect_mesh(v1, v2, xpos, ypos, zval, fast, cached)) return 0;
@@ -282,7 +264,6 @@ bool line_intersect_mesh(point const &v1, point const &v2, point &cpos, int fast
 
 
 bool is_visible_from_light(point const &pos, point const &lpos, int fast) {
-
 	if (lpos.x == 0.0 && lpos.y == 0.0 && lpos.z == 0.0) return 0;
 	if (lpos.z > ztop && pos.z > ztop) return 1; // above the mesh
 	return !line_intersect_mesh(lpos, pos, fast);
@@ -293,7 +274,6 @@ bool is_visible_from_light(point const &pos, point const &lpos, int fast) {
 
 
 bool is_pow_2(int val) { // slow
-
 	unsigned num_ones(0);
 	for (; val != 0; val >>= 1) {if (val & 1) ++num_ones;}
 	return (num_ones == 1);
