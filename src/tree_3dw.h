@@ -324,7 +324,6 @@ class tree {
 	bool physics_enabled() const;
 	void get_abs_leaf_pts(point pts[4], unsigned ix) const;
 	void create_leaf_obj(unsigned ix) const;
-
 	bool is_over_mesh() const;
 	bool is_visible_to_camera(vector3d const &xlate=zero_vector) const;
 	void burn_leaves();

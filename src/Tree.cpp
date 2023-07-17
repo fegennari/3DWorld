@@ -925,7 +925,7 @@ void tree::draw_branches_top(shader_t &s, tree_lod_render_t &lod_renderer, bool 
 
 	if (!created || (!shadow_only && not_visible)) return;
 	tree_data_t &td(tdata());
-	point const tree_xlate(tree_center + xlate);
+	vector3d const tree_xlate(tree_center + xlate);
 	if (!camera_pdu.cube_visible_likely(td.branches_bcube + tree_xlate)) return;
 	bool const ground_mode(world_mode == WMODE_GROUND), wind_enabled(ground_mode && (display_mode & 0x0100) != 0);
 
@@ -973,7 +973,7 @@ void tree::draw_leaves_top(shader_t &s, tree_lod_render_t &lod_renderer, bool sh
 	if (!created) return;
 	tree_data_t &td(tdata());
 	bool const ground_mode(world_mode == WMODE_GROUND), wind_enabled(ground_mode && (display_mode & 0x0100) != 0);
-	point const tree_xlate(tree_center + xlate);
+	vector3d const tree_xlate(tree_center + xlate);
 
 	if (shadow_only) {
 		if (ground_mode && !is_over_mesh()) return;
@@ -1838,7 +1838,7 @@ void tree_builder_t::create_1_order_branch(int base_cylin_num, float rotate_star
 		}
 		else {
 			int const denom(((num_2_branches_created+1)*branch.num_cylins));
-			temp_num2 = int((j+1)*int(branch.num_branches)/denom) + int(branch.num_branches)/denom;
+			temp_num2 = float(int((j+1)*int(branch.num_branches)/denom) + int(branch.num_branches)/denom);
 		}
 		if (temp_num2*branch_1_distribution >= 1.0f && num_2_branches_created < branch.num_branches) branch_just_created = true;
 		int const deg_added(generate_next_cylin(j, branch.num_cylins, branch_just_created, branch_deflected));

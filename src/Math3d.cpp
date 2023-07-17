@@ -471,9 +471,8 @@ void get_sphere_border_pts(point *qp, point const &pos, point const &viewed_from
 	}
 	for (unsigned i = 0; i < num_pts; ++i) { // center, z+, xy-, xy+, z-
 		qp[i] = pos;
-		
-		if      (i == 1 || i == 4) {qp[i].z += ((i == 1) ? radius : -radius);}
-		else if (i == 2 || i == 3) {qp[i] += vortho*((i == 2) ? radius : -radius);}
+		if      (i == 1 || i == 4) {qp[i].z +=        ((i == 1) ? radius : -radius);}
+		else if (i == 2 || i == 3) {qp[i]   += vortho*((i == 2) ? radius : -radius);}
 	}
 }
 
