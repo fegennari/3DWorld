@@ -3082,7 +3082,11 @@ public:
 						// it would be nice to open doors for pedestrians, but we don't have access to them here and this system doesn't support more than one open door
 						b.get_nearby_ext_door_verts(ext_door_draw, s, camera_xlated, door_open_dist); // and draw opened door
 						bool const camera_in_this_building(b.check_point_or_cylin_contained(camera_xlated, 0.0, points, 1, 1)); // inc_attic=1, inc_ext_basement=1
-						if (!reflection_pass) {b.update_grass_exclude_at_pos(camera_xlated, xlate, camera_in_this_building);} // disable grass in building part(s) containing the player
+						
+						if (!reflection_pass && (camera_in_this_building || !this_frame_camera_in_building)) { // player in this building, or near but not inside another
+							// disable grass in building part(s) containing the player
+							b.update_grass_exclude_at_pos(camera_xlated, xlate, camera_in_this_building);
+						}
 						if (!reflection_pass && player_in_building_bcube) {b.update_animals(camera_xlated, bi->ix);}
 						// Note: if we skip this check and treat all walls/windows as front/containing part, this almost works, but will skip front faces of other buildings
 						if (!camera_in_this_building) { // camera not in building
