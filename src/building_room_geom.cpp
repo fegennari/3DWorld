@@ -1627,8 +1627,11 @@ void building_room_geom_t::add_stair(room_object_t const &c, float tscale, vecto
 	float const width(c.get_width()); // use width as a size reference because this is constant for a set of stairs and in a relative small range
 	cube_t top(c), bot(c);
 	bot.z2() = top.z1() = c.z2() - min(0.025*width, 0.25*c.dz()); // set top thickness
-	top.d[c.dim][!c.dir] += (c.dir ? -1.0 : 1.0)*0.0125*width; // extension
-	top.expand_in_dim(!c.dim, 0.01*width); // make slightly wider
+
+	if (!(c.flags & RO_FLAG_RSTAIRS)) { // not basement stairs
+		top.d[c.dim][!c.dir] += (c.dir ? -1.0 : 1.0)*0.0125*width; // extension
+		top.expand_in_dim(!c.dim, 0.01*width); // make slightly wider
+	}
 	mat.add_cube_to_verts(top, STAIRS_COLOR_TOP, tex_origin); // all faces drawn
 	mat.add_cube_to_verts(bot, STAIRS_COLOR_BOT, tex_origin, EF_Z2); // skip top face
 }

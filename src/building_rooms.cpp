@@ -1402,11 +1402,13 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 
 		if (i->shape != SHAPE_U) { // straight stairs
 			for (unsigned n = 0; n < num_stairs; ++n, z += stair_dz, pos += step_len) {
+				// tag basement bottom stair so that no width extension is added, since this may clip through the basement door
+				unsigned const flags((n == 0 && !i->in_ext_basement && i->z1() < ground_floor_z1) ? RO_FLAG_RSTAIRS : 0);
 				stair.d[dim][!dir] = pos; stair.d[dim][dir] = pos + step_len;
 				set_cube_zvals(stair, max(stairs_zmin, (z + 0.4f*stair_height)), z+stair_height); // don't go below the floor (Note: z1 was (z + 0.5f*half_thick))
 				assert(stair.z1() < stair.z2());
-				objs.emplace_back(stair, TYPE_STAIR, 0, dim, dir); // Note: room_id=0, not tracked, unused
-			}
+				objs.emplace_back(stair, TYPE_STAIR, 0, dim, dir, flags); // Note: room_id=0, not tracked, unused
+			} // for n
 		}
 		else { // U-shaped stairs
 			float const mid(i->get_center_dim(!dim));
