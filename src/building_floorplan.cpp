@@ -1674,11 +1674,13 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 					float const stairs_sz((bool(d) == dim) ? len_with_pad : stairs_width);
 					float const v1(place_region.d[d][0]), v2(place_region.d[d][1] - stairs_sz);
 					if (v2 <= v1) {too_small = 1; break;}
-					// should we try to start with a corner of the room when is_basement==1?
-					cand.d[d][0] = rgen.rand_uniform(v1, v2); // LLC
-					cand.d[d][1] = cand.d[d][0] + stairs_sz; // URC
-				}
+					// basement stairs prefer to align to a basement wall on one side
+					if (is_basement && bool(d) != dim && !(n&1)) {cand.d[d][0] = (rgen.rand_bool() ? v2 : v1);} // choose edge of the region, against a wall
+					else {cand.d[d][0] = rgen.rand_uniform(v1, v2);} // LLC
+					cand.d[d][1] = min((cand.d[d][0] + stairs_sz), place_region.d[d][1]); // URC; clamp to avoid assert due to FP error
+				} // for d
 				if (too_small) continue;
+				assert(place_region.contains_cube_xy(cand));
 
 				if (is_basement && !is_house && has_pri_hall() && pri_hall.z1() == ground_floor_z1 && dim == (hallway_dim == 1)) {
 					// basement stairs placed in a first floor office building primary hallway should face the door
