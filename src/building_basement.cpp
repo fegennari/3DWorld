@@ -1601,9 +1601,16 @@ struct ext_basement_room_params_t {
 };
 
 bool building_t::is_basement_room_placement_valid(cube_t &room, ext_basement_room_params_t &P, bool dim, bool dir, bool *add_end_door, building_t const *exclude) const {
+	float const wall_thickness(get_wall_thickness());
 	cube_t test_cube(room);
-	test_cube.expand_in_dim(dim, -0.1*get_wall_thickness()); // shrink slightly to avoid intersections with our parent room
 	test_cube.expand_in_dim(2, -0.01*test_cube.dz()); // shrink slightly so that rooms on different floors can cross over each other
+	
+	if (!P.rooms.empty()) { // not the first hallway; check if too close to the basement such that the wall or trim will clip through the basement wall
+		cube_t room_exp(test_cube);
+		room_exp.expand_by_xy(wall_thickness + get_trim_thickness());
+		if (room_exp.intersects(P.rooms.front())) return 0;
+	}
+	test_cube.expand_in_dim(dim, -0.1*wall_thickness); // shrink slightly to avoid intersections with our parent room
 	float const room_len(room.get_sz_dim(dim)), room_width(room.get_sz_dim(!dim));
 	extb_room_t *end_conn_room(nullptr);
 
