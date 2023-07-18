@@ -3467,13 +3467,16 @@ void draw_tiled_terrain(int reflection_pass) {
 
 	//RESET_TIME;
 	if (player_in_elevator == 2) return; // skip terrain draw if the player is in a closed elevator so that we don't see the terrain when crossing the ground
-	bool const disable_depth_clamp(enable_depth_clamp && !reflection_pass && camera_in_building); // helps with terrain covering basement stairs entrance
-	if (disable_depth_clamp) {glDisable(GL_DEPTH_CLAMP);}
+	bool const disable_dclamp(enable_depth_clamp &&  camera_in_building && !reflection_pass   ); // helps with terrain covering basement stairs entrance
+	bool const enable_dclamp(!enable_depth_clamp && !camera_in_building && camera_surf_collide); // helps prevent camera clipping through the terrain
+	if (disable_dclamp) {glDisable(GL_DEPTH_CLAMP);}
+	if (enable_dclamp ) {glEnable (GL_DEPTH_CLAMP);}
 	// don't need to draw the bottom of the terrain when in the basement; for some reason the faces are backwards
 	if (player_in_basement)  {glEnable (GL_CULL_FACE); glCullFace(GL_FRONT);}
 	terrain_tile_draw.draw(reflection_pass);
 	if (player_in_basement)  {glDisable(GL_CULL_FACE); glCullFace(GL_BACK);}
-	if (disable_depth_clamp) {glEnable (GL_DEPTH_CLAMP);} // restore
+	if (disable_dclamp) {glEnable (GL_DEPTH_CLAMP);} // restore
+	if (enable_dclamp)  {glDisable(GL_DEPTH_CLAMP);} // restore
 	//glFinish(); PRINT_TIME("Tiled Terrain Draw"); //exit(0);
 	if (reflection_pass) return; // nothing else to do
 
