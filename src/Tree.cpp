@@ -920,6 +920,13 @@ float tree::calc_size_scale(point const &draw_pos) const {
 
 float tree_data_t::get_size_scale_mult() const {return (has_4th_branches ? LEAF_4TH_SCALE : 1.0);}
 
+void tree::pre_transform(vector3d const &tree_xlate) const {
+	fgPushMatrix();
+	translate_to(tree_xlate);
+}
+void tree::post_transform() const {
+	fgPopMatrix();
+}
 
 void tree::draw_branches_top(shader_t &s, tree_lod_render_t &lod_renderer, bool shadow_only, bool reflection_pass, vector3d const &xlate, int wsoff_loc) {
 
@@ -931,10 +938,9 @@ void tree::draw_branches_top(shader_t &s, tree_lod_render_t &lod_renderer, bool 
 
 	if (shadow_only) {
 		if (ground_mode && !is_over_mesh()) return;
-		fgPushMatrix();
-		translate_to(tree_xlate);
+		pre_transform(tree_xlate);
 		td.draw_branches(s, (ground_mode ? (wind_enabled ? last_size_scale : 0.0) : 1.0), 1, 1); // draw branches (untextured), low_detail=1, shadow_pass=1
-		fgPopMatrix();
+		post_transform();
 		return;
 	}
 	point const draw_pos(sphere_center() + xlate);
@@ -960,10 +966,9 @@ void tree::draw_branches_top(shader_t &s, tree_lod_render_t &lod_renderer, bool 
 	select_texture(tree_types[type].bark_tex);
 	s.set_cur_color(bcolor);
 	s.set_uniform_vector3d(wsoff_loc, (tree_xlate - get_camera_coord_space_xlate()));
-	fgPushMatrix();
-	translate_to(tree_xlate);
+	pre_transform(tree_xlate);
 	td.draw_branches(s, size_scale, reflection_pass);
-	fgPopMatrix();
+	post_transform();
 }
 
 
@@ -977,12 +982,11 @@ void tree::draw_leaves_top(shader_t &s, tree_lod_render_t &lod_renderer, bool sh
 
 	if (shadow_only) {
 		if (ground_mode && !is_over_mesh()) return;
-		fgPushMatrix();
-		translate_to(tree_xlate);
+		pre_transform(tree_xlate);
 		td.leaf_draw_setup(1);
 		// Note: since the shadow map is updated every frame when wind is enabled, we can use dynamic LOD without locking in a low-LOD static shadow map
 		td.draw_leaves_shadow_only((ground_mode ? (wind_enabled ? last_size_scale : 0.0) : 0.5));
-		fgPopMatrix();
+		post_transform();
 		return;
 	}
 	bool const has_leaves(!td.get_leaves().empty());
@@ -1023,10 +1027,9 @@ void tree::draw_leaves_top(shader_t &s, tree_lod_render_t &lod_renderer, bool sh
 		s.set_uniform_vector3d(wsoff_loc, (tree_xlate - get_camera_coord_space_xlate()));
 	}
 	s.set_uniform_int(tex0_off, TLEAF_START_TUID+type); // what about texture color mod?
-	fgPushMatrix();
-	translate_to(tree_xlate);
+	pre_transform(tree_xlate);
 	td.draw_leaves(size_scale);
-	fgPopMatrix();
+	post_transform();
 }
 
 

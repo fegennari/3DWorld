@@ -333,6 +333,8 @@ class tree {
 	bool damage_leaf(unsigned i, float damage_done, rand_gen_t &rgen);
 	void update_leaf_cobj_color(unsigned i);
 	void copy_color(unsigned i, bool no_mark_changed=0);
+	void pre_transform (vector3d const &tree_xlate) const;
+	void post_transform() const;
 
 public:
 	tree(bool en_lw=1) : tree_data(NULL), type(-1), created(0), leaf_burn_ix(0), no_delete(0), not_visible(0), leaf_orients_valid(0),
