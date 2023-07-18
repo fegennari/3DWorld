@@ -1745,7 +1745,7 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 
 			// set has_stairs flags for containing rooms
 			for (auto r = interior->rooms.begin(); r != interior->rooms.end(); ++r) {
-				if (!r->intersects(stairwell)) continue; // no stairs in this room
+				if (!r->intersects_no_adj(stairwell)) continue; // no stairs in this room
 				// set the test point to the stairs entrance on the correct level using stairs_dir; the room contains stairs if it contains the stairs entrance
 				point test_pt(stairwell.get_cube_center());
 
@@ -1757,7 +1757,7 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 					test_pt[dim] = stairwell.d[dim][stairs_dir];
 					if (r->contains_pt_xy(test_pt)) {r->has_stairs |= 1;} // bottom floor
 				}
-				else {assert(0);} // something bad happened
+				else {cout << TXT(stairwell.str()) << TXT(r->str()) << TXT(part.str()) << TXT(p->str()) << endl; assert(0);} // something bad happened
 			} // for r
 			if (use_basement_stairs) { // add a basement door at the bottom of the stairs
 				float const pos_shift((stairs_dir ? 1.0 : -1.0)*0.8*wall_thickness);
