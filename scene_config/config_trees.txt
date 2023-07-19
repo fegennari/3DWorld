@@ -1,5 +1,5 @@
 ntrees 200
-max_unique_trees 0 # infinite
+max_unique_trees 0 # infinite (all unique, since there are only ~200)
 tree_4th_branches 0
 nleaves_scale 1.0
 tree_branch_radius 0.75

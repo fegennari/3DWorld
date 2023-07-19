@@ -60,7 +60,7 @@ tree_cont_t t_trees(tree_data_manager);
 tree_placer_t tree_placer;
 
 
-extern bool has_snow, no_sun_lpos_update, has_dl_sources, gen_tree_roots, tt_lightning_enabled, tree_indir_lighting, begin_motion, enable_grass_fire;
+extern bool has_snow, no_sun_lpos_update, has_dl_sources, gen_tree_roots, tt_lightning_enabled, tree_indir_lighting, begin_motion, enable_grass_fire, rotate_trees;
 extern int num_trees, do_zoom, display_mode, animate2, iticks, draw_model, frame_counter;
 extern int xoff2, yoff2, rand_gen_index, leaf_color_changed, scrolling, dx_scroll, dy_scroll, window_width, window_height;
 extern unsigned smoke_tid;
@@ -923,6 +923,14 @@ float tree_data_t::get_size_scale_mult() const {return (has_4th_branches ? LEAF_
 void tree::pre_transform(vector3d const &tree_xlate) const {
 	fgPushMatrix();
 	translate_to(tree_xlate);
+
+	// rotate trees in tiled terrain only; ground mode has fewer trees, and they're often all unique anyway;
+	// also, ground mode trees often have collisions, dropping leaves, wind, fires, indir lighting, etc. that would be wrong when rotated
+	if (rotate_trees && world_mode == WMODE_INF_TERRAIN) {
+		float const xy_mult(1.0/tdata().sphere_radius); // need enough random variation between adjacent trees
+		float const angle(TWO_PI*fract(xy_mult*tree_xlate.x) + fract(xy_mult*tree_xlate.y)); // random angle based on pos
+		fgRotateRadians(angle, 0.0, 0.0, 1.0); // rotate around Z axis
+	}
 }
 void tree::post_transform() const {
 	fgPopMatrix();
