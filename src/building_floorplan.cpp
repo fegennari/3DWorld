@@ -1681,19 +1681,46 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 				} // for d
 				if (too_small) continue;
 				assert(place_region.contains_cube_xy(cand));
+				// clipped walls don't look right in some cases and may block hallways and rooms, use as a last resort; disable for houses since basement is optional anyway
+				bool const allow_clip_walls(n > 180 && !is_house);
+				bool const pri_hall_stairs(is_basement && !is_house && has_pri_hall() && pri_hall.z1() == ground_floor_z1 && dim == (hallway_dim == 1));
 
-				if (is_basement && !is_house && has_pri_hall() && pri_hall.z1() == ground_floor_z1 && dim == (hallway_dim == 1)) {
-					// basement stairs placed in a first floor office building primary hallway should face the door
+				if (pri_hall_stairs) { // basement stairs placed in a first floor office building primary hallway should face the door
 					if (pri_hall.contains_cube_xy(cand)) {stairs_dir = (pri_hall.get_center_dim(dim) < cand.get_center_dim(dim));}
 				}
 				cube_t cand_test[2] = {cand, cand}; // {lower, upper} parts, starts on lower floor
 				cand_test[0].z1() += 0.1*window_vspacing; cand_test[0].z2() -= 0.1*window_vspacing; // shrink to lower part
 				cand_test[1].z1() += 1.1*window_vspacing; cand_test[1].z2() += 0.9*window_vspacing; // move to upper part
+				bool bad_place(0), wall_clipped(0);
+
+				if (!pri_hall_stairs && !allow_clip_walls) { // prefer stairs_dir that puts entrances and exits near doors
+					point const stairs_center(cand.get_cube_center());
+					point stair_ends[2] = {stairs_center, stairs_center};
+					for (unsigned d = 0; d < 2; ++d) {stair_ends[d][dim] = cand.d[dim][d];}
+					vect_door_stack_t doorways;
+					unsigned pref_dir(0); // two-bit mask
+
+					for (room_t const &r : interior->rooms) {
+						if (!r.intersects_xy(cand)) continue; // stairs not in this room
+
+						for (unsigned d = 0; d < 2; ++d) {
+							cube_t const &c(cand_test[d]);
+							if (!r.intersects(c)) continue; // stairs not in this room
+							if (!r.contains_cube_xy(c)) {bad_place = 1; break;} // stairs overlapping but not contained in this room
+							get_doorways_for_room(r, r.z1(), doorways); // get interior doors using thread safe function
+							
+							for (door_stack_t const &ds : doorways) {
+								point const door_center(ds.get_cube_center());
+								bool const dir(p2p_dist_xy_sq(door_center, stair_ends[0]) < p2p_dist_xy_sq(door_center, stair_ends[1]));
+								pref_dir |= (1 << (dir ^ bool(d))); // record closer door dir, inverted for lower vs. upper entrances
+							}
+						} // for d
+					} // for r
+					if (bad_place) continue;
+					if (pref_dir == 1) {stairs_dir = 0;} else if (pref_dir == 2) {stairs_dir = 1;} // pref agrees for all doors of both rooms
+				}
 				cand_test[ stairs_dir].d[dim][0] += stairs_pad; // subtract off padding on one side
 				cand_test[!stairs_dir].d[dim][1] -= stairs_pad; // subtract off padding on one side
-				// clipped walls don't look right in some cases and may block hallways and rooms, use as a last resort; disable for houses since basement is optional anyway
-				bool const allow_clip_walls(n > 180 && !is_house);
-				bool bad_place(0), wall_clipped(0);
 
 				for (unsigned d = 0; d < 2; ++d) {
 					if (has_bcube_int(cand_test[d], interior->exclusion)) {bad_place = 1; break;} // bad placement

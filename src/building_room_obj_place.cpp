@@ -136,19 +136,22 @@ void building_t::shorten_chairs_in_region(cube_t const &region, unsigned objs_st
 	}
 }
 
-vect_door_stack_t &building_t::get_doorways_for_room(cube_t const &room, float zval) const { // interior doorways
+void building_t::get_doorways_for_room(cube_t const &room, float zval, vect_door_stack_t &doorways) const { // interior doorways; thread safe
 	// find interior doorways connected to this room
 	float const floor_thickness(get_floor_thickness());
 	cube_t room_exp(room);
 	room_exp.expand_by_xy(get_wall_thickness());
 	set_cube_zvals(room_exp, (zval + floor_thickness), (zval + get_window_vspace() - floor_thickness)); // clip to z-range of this floor
-	static vect_door_stack_t doorways; // reuse across rooms
 	doorways.clear();
 
 	for (auto i = interior->door_stacks.begin(); i != interior->door_stacks.end(); ++i) {
 		if (i->on_stairs) continue; // skip basement door
 		if (i->intersects(room_exp)) {doorways.push_back(*i);}
 	}
+}
+vect_door_stack_t &building_t::get_doorways_for_room(cube_t const &room, float zval) const { // interior doorways; not thread safe
+	static vect_door_stack_t doorways; // reuse across rooms
+	get_doorways_for_room(room, zval, doorways);
 	return doorways;
 }
 void building_t::get_all_door_centers_for_room(cube_t const &room, float zval, vector<point> &door_centers) const {

@@ -1699,6 +1699,7 @@ private:
 	bool room_has_stairs_or_elevator(room_t const &room, float zval, unsigned floor) const;
 	bool is_room_office_bathroom(room_t &room, float zval, unsigned floor) const;
 	int gather_room_placement_blockers(cube_t const &room, unsigned objs_start, vect_cube_t &blockers, bool inc_open_doors=1, bool ignore_chairs=0) const;
+	void get_doorways_for_room(cube_t const &room, float zval, vect_door_stack_t &doorways) const;
 	vect_door_stack_t &get_doorways_for_room(cube_t const &room, float zval) const;
 	bool add_chair(rand_gen_t &rgen, cube_t const &room, vect_cube_t const &blockers, unsigned room_id, point const &place_pos,
 		colorRGBA const &chair_color, bool dim, bool dir, float tot_light_amt, bool office_chair_model);
