@@ -1415,7 +1415,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 	mats_doors.draw(bbd, s, shadow_only, reflection_pass);
 	if (inc_small) {mats_small.draw(bbd, s, shadow_only, reflection_pass);}
 
-	if (inc_small >= 2 && !mats_amask.empty()) { // draw plants, etc. using alpha masks in the detail pass; shadows not drawn unless the player is in the building
+	if (!mats_amask.empty()) { // draw plants, etc. using alpha masks in the detail pass
 		if (shadow_only) {
 			if (!amask_shader.is_setup()) {amask_shader.begin_simple_textured_shader(0.9);} // need to use texture with alpha test
 			else {amask_shader.make_current();}
@@ -1425,7 +1425,8 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 		else if (reflection_pass) {
 			mats_amask.draw(nullptr, s, 0, 1); // no brg_batch_draw
 		}
-		else if (player_in_building || !camera_in_building) { // this is expensive: only enable for the main draw pass and skip for buildings the player isn't in
+		// this is expensive: only enable for the main draw pass and skip for buildings the player isn't in
+		else if (inc_small >= 2 && (player_in_building || !camera_in_building)) {
 			// without the special shader these won't look correct when drawn through windows
 			if (!amask_shader.is_setup()) {setup_building_draw_shader(amask_shader, 0.9, 1, 1, 0);} // min_alpha=0.9, enable_indir=1, force_tsl=1, use_texgen=0
 			else {amask_shader.make_current();}
