@@ -2120,7 +2120,7 @@ void building_t::write_basement_entrance_depth_pass(shader_t &s) const {
 	glEnable(GL_CULL_FACE);
 
 	for (auto i = interior->stairwells.begin(); i != interior->stairwells.end(); ++i) {
-		if (i->z1() < zval) {draw_basement_entrance_cap(*i, z);} // draw if this is a basement stairwell
+		if (i->z1() < zval && !i->in_ext_basement) {draw_basement_entrance_cap(*i, z);} // draw if this is a basement stairwell (not extended basement stairs)
 	}
 	if (has_pg_ramp() && !interior->ignore_ramp_placement) { // add opening for the ramp onto the ground floor
 		draw_basement_entrance_cap(interior->pg_ramp, z);
