@@ -73,19 +73,17 @@ extern coll_obj_group coll_objects;
 void set_indir_color(shader_t &s);
 
 
+bool enable_rotate_trees() {return (rotate_trees && world_mode == WMODE_INF_TERRAIN);}
 
 inline colorRGBA get_leaf_base_color(int type) {
-
 	colorRGBA color(tree_types[type].leafc);
 	UNROLL_3X(color[i_] = CLIP_TO_01(color[i_] + leaf_base_color[i_]);)
 	return color;
 }
-
 colorRGBA get_leaf_texture_color(unsigned type) {
 	// alpha is always 1.0 - texture alpha is handled by check_poly_billboard_alpha()
 	return colorRGBA(texture_color(tree_types[type].leaf_tex), 1.0);
 }
-
 colorRGBA get_avg_leaf_color(unsigned type) {
 	return get_leaf_base_color(type).modulate_with(get_leaf_texture_color(type));
 }
@@ -927,16 +925,14 @@ float tree::pre_transform(vector3d const &tree_xlate) const { // returns rotatio
 
 	// rotate trees in tiled terrain only; ground mode has fewer trees, and they're often all unique anyway;
 	// also, ground mode trees often have collisions, dropping leaves, wind, fires, indir lighting, etc. that would be wrong when rotated
-	if (rotate_trees && world_mode == WMODE_INF_TERRAIN) {
+	if (enable_rotate_trees()) {
 		float const xy_mult(1.0/tdata().sphere_radius); // need enough random variation between adjacent trees
 		rot_angle = TWO_PI*fract(xy_mult*tree_xlate.x) + fract(xy_mult*tree_xlate.y); // random angle based on pos
 		fgRotateRadians(rot_angle, 0.0, 0.0, 1.0); // rotate around Z axis
 	}
 	return rot_angle;
 }
-void tree::post_transform() const {
-	fgPopMatrix();
-}
+void tree::post_transform() const {fgPopMatrix();}
 
 void tree::draw_branches_top(shader_t &s, tree_lod_render_t &lod_renderer, bool shadow_only, bool reflection_pass, vector3d const &xlate, int wsoff_loc) {
 

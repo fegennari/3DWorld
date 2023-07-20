@@ -3019,7 +3019,7 @@ void tile_draw_t::tree_branch_shader_setup(shader_t &s, bool enable_shadow_maps,
 		lights_bcube = get_city_lights_bcube();
 		if (lights_bcube.is_all_zeros()) {enable_dlights = 0;}
 	}
-	if (enable_opacity) {s.set_prefix("#define ENABLE_OPACITY", 1);} // FS
+	if (enable_opacity) {s.set_prefix("#define ENABLE_OPACITY",        1);} // FS
 	if (enable_dlights) {s.set_prefix("#define ENABLE_DYNAMIC_LIGHTS", 1);} // FS
 	s.setup_enabled_lights(3, 2); // FS; sun, moon, and lightning
 	set_dlights_booleans(s, enable_dlights, 1, 1); // no_dl_smap=1
