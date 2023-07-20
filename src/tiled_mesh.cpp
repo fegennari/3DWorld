@@ -58,7 +58,7 @@ tile_offset_t model3d_offset;
 vector<clear_area_t> tile_smaps_to_clear;
 
 extern bool inf_terrain_scenery, enable_tiled_mesh_ao, underwater, fog_enabled, volume_lighting, combined_gu, enable_depth_clamp, tt_triplanar_tex, use_grass_tess;
-extern bool use_instanced_pine_trees, enable_tt_model_reflect, water_is_lava, tt_fire_button_down, flashlight_on, camera_in_building, player_in_attic;
+extern bool use_instanced_pine_trees, enable_tt_model_reflect, water_is_lava, tt_fire_button_down, flashlight_on, camera_in_building, player_in_attic, rotate_trees;
 extern unsigned grass_density, max_unique_trees, shadow_map_sz, erosion_iters_tt, num_rnd_grass_blocks, tiled_terrain_gen_heightmap_sz;
 extern unsigned num_birds_per_tile, num_fish_per_tile, num_bflies_per_tile;
 extern int DISABLE_WATER, display_mode, tree_mode, leaf_color_changed, ground_effects_level, animate2, iticks, num_trees, window_width, window_height, player_in_basement;
@@ -3021,12 +3021,14 @@ void tile_draw_t::tree_branch_shader_setup(shader_t &s, bool enable_shadow_maps,
 	}
 	if (enable_opacity) {s.set_prefix("#define ENABLE_OPACITY",        1);} // FS
 	if (enable_dlights) {s.set_prefix("#define ENABLE_DYNAMIC_LIGHTS", 1);} // FS
+	if (rotate_trees && enable_dlights) {s.set_prefix("#define ENABLE_ROTATIONS", 0);} // VS
 	s.setup_enabled_lights(3, 2); // FS; sun, moon, and lightning
 	set_dlights_booleans(s, enable_dlights, 1, 1); // no_dl_smap=1
 	if (!shadow_only) {setup_tt_fog_pre(s);}
 	set_smap_enable_for_shader(s, enable_shadow_maps, 1); // FS
-	s.set_vert_shader(enable_dlights ? "tiled_tree_branches" : "per_pixel_lighting");
-	s.set_frag_shader(string("linear_fog.part+ads_lighting.part*+") + (enable_dlights ? "dynamic_lighting.part*+" : "") + "noise_dither.part+shadow_map.part*+tiled_shadow_map.part*+tiled_tree_branches");
+	s.set_vert_shader(enable_dlights ? "world_space_offset_rot.part+tiled_tree_branches" : "per_pixel_lighting");
+	s.set_frag_shader(string("linear_fog.part+ads_lighting.part*+") + (enable_dlights ? "dynamic_lighting.part*+" : "") +
+		"noise_dither.part+shadow_map.part*+tiled_shadow_map.part*+tiled_tree_branches");
 	s.begin_shader();
 	s.add_uniform_int("tex0", 0);
 	//s.add_uniform_int("shadow_tex", 6);
@@ -3082,7 +3084,7 @@ void tile_draw_t::draw_decid_trees(bool reflection_pass, bool shadow_pass) {
 		if (!shadow_pass) {set_tree_dither_noise_tex(bs, 1);} // TU=1 (for opacity)
 		if (enable_billboards) {lod_renderer.branch_opacity_loc = bs.get_uniform_loc("opacity");}
 		draw_decid_tree_bl(bs, lod_renderer, 1, 0, reflection_pass, shadow_pass, enable_shadow_maps);
-		bs.add_uniform_vector3d("world_space_offset", zero_vector); // reset
+		bs.add_uniform_vector4d("world_space_offset", vector4d()); // reset
 		bs.end_shader();
 	}
 	lod_renderer.finalize();

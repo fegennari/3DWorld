@@ -3,7 +3,7 @@ uniform mat4 fg_ViewMatrix;
 uniform float tex_scale_s    = 1.0;
 uniform float tex_scale_t    = 1.0;
 uniform float tc_texgen_mix  = 0.0;
-uniform vec3 world_space_offset = vec3(0.0);
+uniform vec4 world_space_offset   = vec4(0.0); // {x, y, z, rot_angle}
 uniform float vertex_offset_scale = 0.0; // hack to make vertex_offset ignored when unused/unset
 uniform vec3 sun_pos; // used for dynamic smoke shadows line clipping
 
@@ -46,7 +46,7 @@ void main() {
 	}
 	else {
 		eye_norm = normalize(mat3(fg_ModelViewMatrix) * normal_in); // Note: avoids the fg_NormalMatrix upload
-		vpos     = vertex.xyz + world_space_offset;
+		vpos     = vertex.xyz + world_space_offset.xyz; // Note: rotation not supported here
 		normal   = normalize(normal_in);
 	}
 #ifdef USE_BUMP_MAP

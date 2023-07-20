@@ -383,6 +383,7 @@ void set_leaf_shader(shader_t &s, float min_alpha, unsigned tc_start_ix, bool en
 	float const water_depth(setup_underwater_fog(s, 0)); // VS
 	bool const use_indir(tree_indir_lighting && smoke_tid && !shadow_only);
 	bool const use_smap(enable_smap && shadow_map_enabled());
+	bool const for_trees(tc_start_ix == 3); // hack
 	s.set_prefix(make_shader_bool_prefix("indir_lighting", use_indir), shader_type);
 	if (wind_mag > 0.0)          {s.set_prefix("#define ENABLE_WIND",             0);} // VS
 	if (enable_tex_coord_weight) {s.set_prefix("#define ENABLE_TEX_COORD_WEIGHT", 0);} // VS
@@ -392,16 +393,17 @@ void set_leaf_shader(shader_t &s, float min_alpha, unsigned tc_start_ix, bool en
 	set_dlights_booleans(s, !no_dlights, shader_type, 1); // no_dl_smap=1
 	s.set_prefix(make_shader_bool_prefix("use_shadow_map", use_smap), shader_type);
 	if (use_smap) {s.set_prefix("#define ENABLE_LEAF_SMAP", shader_type);} // need to set this as well to avoid even using the shadow texture in the shader on ATI cards
+	if (enable_rotate_trees() && for_trees) {s.set_prefix("#define ENABLE_ROTATIONS", 0);} // VS
 	string const ls_str("ads_lighting.part*+shadow_map.part*+dynamic_lighting.part*+leaf_lighting_comp.part*+tree_leaf_lighting.part*");
 
 	if (shader_type == 0) { // VS
 		s.set_frag_shader(enable_opacity ? "linear_fog.part+noise_dither.part+textured_with_fog_opacity" : "linear_fog.part+textured_with_fog");
-		s.set_vert_shader(ls_str + "+leaf_lighting.part+texture_gen.part+leaf_wind.part+tree_leaves");
+		s.set_vert_shader(ls_str + "+world_space_offset_rot.part+leaf_lighting.part+texture_gen.part+leaf_wind.part+tree_leaves");
 	}
 	else { // FS
-		if (enable_opacity) {s.set_prefix("#define ENABLE_OPACITY", shader_type);}
+		if (enable_opacity) {s.set_prefix("#define ENABLE_OPACITY", 1);} // FS
 		s.set_frag_shader(ls_str + (enable_opacity ? "+noise_dither.part" : "") + "+linear_fog.part+leaf_lighting_ppl");
-		s.set_vert_shader("texture_gen.part+leaf_wind.part+tree_leaves_ppl");
+		s.set_vert_shader("texture_gen.part+leaf_wind.part+world_space_offset_rot.part+tree_leaves_ppl");
 	}
 	s.begin_shader();
 	s.setup_scene_bounds(); // also sets camera_pos
@@ -417,7 +419,7 @@ void set_leaf_shader(shader_t &s, float min_alpha, unsigned tc_start_ix, bool en
 	s.add_uniform_float("min_alpha",   min_alpha);
 	s.add_uniform_int("tex0", 0);
 	s.add_uniform_int("tc_start_ix", tc_start_ix);
-	s.add_uniform_vector3d("world_space_offset", zero_vector); // reset
+	s.add_uniform_vector4d("world_space_offset", vector4d()); // reset
 
 	if (use_indir) {
 		bind_texture_tu(smoke_tid, 1);
@@ -471,7 +473,7 @@ void tree_cont_t::draw(bool shadow_only, bool reflection_pass) {
 	bool const branch_smap(!shadow_only); // looks better, but slower
 	set_tree_branch_shader(bs, !shadow_only, !shadow_only, branch_smap);
 	draw_branches_and_leaves(bs, lod_renderer, 1, 0, shadow_only, reflection_pass, zero_vector);
-	bs.add_uniform_vector3d("world_space_offset", zero_vector); // reset
+	bs.add_uniform_vector4d("world_space_offset", vector4d()); // reset
 	bs.end_shader();
 }
 
@@ -970,9 +972,9 @@ void tree::draw_branches_top(shader_t &s, tree_lod_render_t &lod_renderer, bool 
 		s.set_uniform_float(lod_renderer.branch_opacity_loc, geom_opacity);
 	}
 	select_texture(tree_types[type].bark_tex);
+	float const rot_angle(pre_transform(tree_xlate));
 	s.set_cur_color(bcolor);
-	s.set_uniform_vector3d(wsoff_loc, (tree_xlate - get_camera_coord_space_xlate()));
-	pre_transform(tree_xlate);
+	s.set_uniform_vector4d(wsoff_loc, vector4d((tree_xlate - get_camera_coord_space_xlate()), rot_angle));
 	td.draw_branches(s, size_scale, reflection_pass);
 	post_transform();
 }
@@ -1029,11 +1031,12 @@ void tree::draw_leaves_top(shader_t &s, tree_lod_render_t &lod_renderer, bool sh
 	if (gen_arrays || leaf_color_changed) {
 		for (unsigned i = 0; i < leaf_cobjs.size(); ++i) {update_leaf_cobj_color(i);}
 	}
+	float const rot_angle(pre_transform(tree_xlate));
+
 	if ((has_dl_sources || (tree_indir_lighting && smoke_tid)) && (ground_mode || !get_city_lights_bcube().is_all_zeros())) {
-		s.set_uniform_vector3d(wsoff_loc, (tree_xlate - get_camera_coord_space_xlate()));
+		s.set_uniform_vector4d(wsoff_loc, vector4d((tree_xlate - get_camera_coord_space_xlate()), rot_angle));
 	}
 	s.set_uniform_int(tex0_off, TLEAF_START_TUID+type); // what about texture color mod?
-	pre_transform(tree_xlate);
 	td.draw_leaves(size_scale);
 	post_transform();
 }

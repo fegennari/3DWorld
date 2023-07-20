@@ -1,23 +1,19 @@
 uniform float normal_scale = 1.0;
-uniform float water_depth = 0.0;
-uniform vec3 world_space_offset = vec3(0.0);
+uniform float water_depth  = 0.0;
 
 out vec4 epos;
 out vec3 normal; // eye space
-out vec3 ws_pos;
-out vec3 ws_normal;
+out vec3 ws_pos, ws_normal;
 
 void main() {
 	set_tc0_blend_from_tc_vert_id();
+	set_ws_pos_and_normal(ws_pos, ws_normal); // from world_space_offset_rot.part.vert
 	vec4 vpos   = fg_Vertex;
 	add_leaf_wind(vpos);
 	gl_Position = fg_ProjectionMatrix * (fg_ModelViewMatrix * vpos); // Note: faster than using fg_ModelViewProjectionMatrix (avoids CPU mult+upload)
 	fg_Color_vf = fg_Color;
-
-	ws_pos    = fg_Vertex.xyz + world_space_offset;
-	epos      = fg_ModelViewMatrix * fg_Vertex;
-	ws_normal = normalize(fg_Normal);
-	normal    = normalize(fg_NormalMatrix * ws_normal * normal_scale); // eye space
+	epos        = fg_ModelViewMatrix * fg_Vertex;
+	normal      = normalize(fg_NormalMatrix * fg_Normal * normal_scale); // eye space
 
 	if (underwater) {
 		vec3 eye        = fg_ModelViewMatrixInverse[3].xyz;
