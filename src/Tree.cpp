@@ -920,17 +920,19 @@ float tree::calc_size_scale(point const &draw_pos) const {
 
 float tree_data_t::get_size_scale_mult() const {return (has_4th_branches ? LEAF_4TH_SCALE : 1.0);}
 
-void tree::pre_transform(vector3d const &tree_xlate) const {
+float tree::pre_transform(vector3d const &tree_xlate) const { // returns rotation angle
 	fgPushMatrix();
 	translate_to(tree_xlate);
+	float rot_angle(0.0);
 
 	// rotate trees in tiled terrain only; ground mode has fewer trees, and they're often all unique anyway;
 	// also, ground mode trees often have collisions, dropping leaves, wind, fires, indir lighting, etc. that would be wrong when rotated
 	if (rotate_trees && world_mode == WMODE_INF_TERRAIN) {
 		float const xy_mult(1.0/tdata().sphere_radius); // need enough random variation between adjacent trees
-		float const angle(TWO_PI*fract(xy_mult*tree_xlate.x) + fract(xy_mult*tree_xlate.y)); // random angle based on pos
-		fgRotateRadians(angle, 0.0, 0.0, 1.0); // rotate around Z axis
+		rot_angle = TWO_PI*fract(xy_mult*tree_xlate.x) + fract(xy_mult*tree_xlate.y); // random angle based on pos
+		fgRotateRadians(rot_angle, 0.0, 0.0, 1.0); // rotate around Z axis
 	}
+	return rot_angle;
 }
 void tree::post_transform() const {
 	fgPopMatrix();
