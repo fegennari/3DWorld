@@ -1266,6 +1266,7 @@
     <None Include="shaders\wind.part" />
     <None Include="shaders\window_lights.frag" />
     <None Include="shaders\window_lights.vert" />
+    <None Include="shaders\world_space_offset_rot.part.vert" />
     <None Include="shaders\write_const_depth.frag" />
     <None Include="shaders\write_depth.frag" />
     <None Include="shaders\write_normal.frag" />
