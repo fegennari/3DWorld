@@ -1665,10 +1665,12 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 					max_eq(stairs_width, min_clearance);
 					max_eq(stairs_pad,   min_clearance);
 				}
-				bool too_small(0);
 				if (min(place_region.dx(), place_region.dy()) < 1.5*len_with_pad) {dim = (place_region.dx() < place_region.dy());} // use larger dim
 				else {dim  = rgen.rand_bool();}
 				stairs_dir = rgen.rand_bool(); // the direction we move in when going up the stairs
+				// shrink place_region sides slightly to allow for the railing in office buildings and avoid z-fighting with the walls in houses
+				place_region.expand_in_dim(!dim, -(is_house ? 0.01 : 0.5)*wall_thickness);
+				bool too_small(0);
 
 				for (unsigned d = 0; d < 2; ++d) {
 					float const stairs_sz((bool(d) == dim) ? len_with_pad : stairs_width);
