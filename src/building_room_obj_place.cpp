@@ -2850,7 +2850,7 @@ void building_t::try_place_light_on_ceiling(cube_t const &light, room_t const &r
 				cand.translate_dim(dim, ((bool(d) ^ first_dir) ? -1.0 : 1.0)*n*shift_step);
 				if (!is_light_placement_valid(cand, room, pad)) continue;
 				cube_t test_cube(cand);
-				test_cube.expand_in_dim(2, 0.4*window_vspacing); // expand in Z to cover nearly an entire floor so that it's guaranteed to overlap a door
+				test_cube.z1() -= 0.4*window_vspacing; // lower Z1 so that it's guaranteed to overlap a door
 			
 				// maybe should exclude basement doors, since they don't show as open? but then it would be wrong if I later draw basement doors;
 				// note that this test is conservative for cylindrical house lights

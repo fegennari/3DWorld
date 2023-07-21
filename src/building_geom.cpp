@@ -2143,7 +2143,8 @@ bool is_cube_close_to_door(cube_t const &c, float dmin, bool inc_open, cube_t co
 }
 bool building_t::is_cube_close_to_exterior_doorway(cube_t const &c, float dmin, bool inc_open) const {
 	for (auto i = doors.begin(); i != doors.end(); ++i) { // test exterior doors
-		if (is_cube_close_to_door(c, dmin, inc_open, i->get_bcube(), 2)) return 1; // check both dirs
+		bool const is_garage_door(i->type == tquad_with_ix_t::TYPE_GDOOR), check_open(inc_open && !is_garage_door); // garage doors open up, not sideways
+		if (is_cube_close_to_door(c, dmin, check_open, i->get_bcube(), 2)) return 1; // check both dirs
 	}
 	return 0;
 }
