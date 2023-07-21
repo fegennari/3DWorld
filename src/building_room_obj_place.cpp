@@ -2829,32 +2829,39 @@ void building_t::try_place_light_on_ceiling(cube_t const &light, room_t const &r
 	assert(has_room_geom());
 	if (is_light_placement_valid(light, room, pad)) {lights.push_back(light); return;} // contained = done
 	point room_center(room.get_cube_center());
-	bool const first_dir(rgen.rand_bool());
-	float const window_vspacing(get_window_vspace()), light_width(light.get_sz_dim(!room_dim));
-	cube_t light_cand(light);
+	bool const first_dir(rgen.rand_bool()); // randomize shift direction
+	float const window_vspacing(get_window_vspace());
+	cube_t light_cand(light); // Note: same logic for cube and cylinder light shape - cylinder uses bounding cube
+	unsigned const num_shifts = 10;
 
 	if (allow_rot) { // flip aspect ratio
 		float const sz_diff(0.5*(light.dx() - light.dy()));
 		light_cand.expand_in_dim(0, -sz_diff);
 		light_cand.expand_in_dim(1,  sz_diff);
 	}
-	for (unsigned d = 0; d < 2; ++d) { // see if we can place it by moving on one direction
-		for (unsigned n = 0; n < 10; ++n) { // try 10 different shift values
-			cube_t cand(light_cand);
-			cand.translate_dim(room_dim, ((bool(d) ^ first_dir) ? -1.0 : 1.0)*n*light_width);
-			if (!is_light_placement_valid(cand, room, pad)) continue;
-			cube_t test_cube(cand);
-			test_cube.expand_in_dim(2, 0.4*window_vspacing); // expand to cover nearly an entire floor so that it's guaranteed to overlap a door
+	for (unsigned D = 0; D < 2 && lights.empty(); ++D) { // try both dims
+		bool const dim(room_dim ^ D);
+		float const shift_step((0.5*(room.get_sz_dim(dim) - light_cand.get_sz_dim(dim)))/num_shifts);
+
+		for (unsigned d = 0; d < 2; ++d) { // dir: see if we can place it by moving on one direction
+			for (unsigned n = 1; n <= num_shifts; ++n) { // try different shift values
+				cube_t cand(light_cand);
+				cand.translate_dim(dim, ((bool(d) ^ first_dir) ? -1.0 : 1.0)*n*shift_step);
+				if (!is_light_placement_valid(cand, room, pad)) continue;
+				cube_t test_cube(cand);
+				test_cube.expand_in_dim(2, 0.4*window_vspacing); // expand in Z to cover nearly an entire floor so that it's guaranteed to overlap a door
 			
-			// maybe should exclude basement doors, since they don't show as open? but then it would be wrong if I later draw basement doors;
-			// note that this test is conservative for cylindrical house lights
-			if (is_cube_close_to_doorway(test_cube, room, 0.0, 1, 1)) { // inc_open=1, check_open_dir=1
-				cand.z1() += 0.99*cand.dz(); // if light intersects door, move it up into the ceiling rather than letting it hang down into the room
-			}
-			lights.push_back(cand);
-			break;
-		} // for n
-		if (!allow_mult) break;
-	} // for d
+				// maybe should exclude basement doors, since they don't show as open? but then it would be wrong if I later draw basement doors;
+				// note that this test is conservative for cylindrical house lights
+				if (is_cube_close_to_doorway(test_cube, room, 0.0, 1, 1)) { // inc_open=1, check_open_dir=1
+					cand.z1() += 0.99*cand.dz(); // if light intersects door, move it up into the ceiling rather than letting it hang down into the room
+				}
+				lights.push_back(cand);
+				break;
+			} // for n
+			if (!allow_mult) break;
+		} // for d
+	} // for D
+	if (lights.empty()) {} // place light on a wall instead? do we ever get here?
 }
 
