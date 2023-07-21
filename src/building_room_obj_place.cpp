@@ -2717,7 +2717,8 @@ void building_t::place_objects_onto_surfaces(rand_gen_t rgen, room_t const &room
 	for (unsigned i = objs_start; i < objs_end; ++i) { // can't iterate over objs because we modify it
 		room_object_t const &obj(objs[i]);
 		// add place settings to kitchen and dining room tables 50% of the time
-		bool const is_eating_table(obj.type == TYPE_TABLE && (room.get_room_type(floor) == RTYPE_KITCHEN || room.get_room_type(floor) == RTYPE_DINING) && rgen.rand_bool());
+		bool const is_table(obj.type == TYPE_TABLE);
+		bool const is_eating_table(is_table && (room.get_room_type(floor) == RTYPE_KITCHEN || room.get_room_type(floor) == RTYPE_DINING) && rgen.rand_bool());
 		if (is_eating_table && place_eating_items_on_table(rgen, i)) continue; // no other items to place
 		float book_prob(0.0), bottle_prob(0.0), cup_prob(0.0), plant_prob(0.0), laptop_prob(0.0), pizza_prob(0.0), toy_prob(0.0);
 		cube_t avoid;
@@ -2770,7 +2771,7 @@ void building_t::place_objects_onto_surfaces(rand_gen_t rgen, room_t const &room
 		}
 		if (avoid.is_all_zeros() && rgen.rand_probability(book_prob)) { // place book if it's the first item (no plate)
 			placed_book_on_counter |= (obj.type == TYPE_COUNTER);
-			place_book_on_obj(rgen, surface, room_id, tot_light_amt, objs_start, (obj.type != TYPE_TABLE));
+			place_book_on_obj(rgen, surface, room_id, tot_light_amt, objs_start, !is_table);
 			avoid = objs.back();
 		}
 		if (avoid.is_all_zeros() && obj.type == TYPE_DESK) {
@@ -2784,11 +2785,11 @@ void building_t::place_objects_onto_surfaces(rand_gen_t rgen, room_t const &room
 		unsigned const obj_type_start(rgen.rand() % num_obj_types); // select a random starting point to remove bias toward objects checked first
 		bool placed(0);
 
-		for (unsigned n = 0; n < num_obj_types && !placed; ++n) { // place a single object
+		for (unsigned n = 0; n < num_obj_types && !placed; ++n) { // place a single object; ***Note: obj is invalidated by this loop and can't be used***
 			switch ((n + obj_type_start) % num_obj_types) {
 			case 0: placed = (rgen.rand_probability(bottle_prob) && place_bottle_on_obj(rgen, surface, room_id, tot_light_amt, avoid)); break;
 			case 1: placed = (rgen.rand_probability(cup_prob   ) && place_cup_on_obj   (rgen, surface, room_id, tot_light_amt, avoid)); break;
-			case 2: placed = (rgen.rand_probability(laptop_prob) && place_laptop_on_obj(rgen, surface, room_id, tot_light_amt, avoid, (obj.type != TYPE_TABLE))); break;
+			case 2: placed = (rgen.rand_probability(laptop_prob) && place_laptop_on_obj(rgen, surface, room_id, tot_light_amt, avoid, !is_table)); break;
 			case 3: placed = (rgen.rand_probability(pizza_prob ) && place_pizza_on_obj (rgen, surface, room_id, tot_light_amt, avoid)); break;
 			case 4: placed = (!is_basement && rgen.rand_probability(plant_prob) && place_plant_on_obj(rgen, surface, room_id, tot_light_amt, avoid)); break;
 			case 5: placed = (rgen.rand_probability(toy_prob)    && place_toy_on_obj   (rgen, surface, room_id, tot_light_amt, avoid)); break;
