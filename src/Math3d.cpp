@@ -737,14 +737,18 @@ bool sphere_int_cylinder_pretest(point const &sc, float sr, point const &cp1, po
 	t   = get_cylinder_params(cp1, cp2, sc, v1, v2); // v1 = cylinder vector, v2 = cylinder_p1-sphere vector
 	float const t_clamped(CLIP_TO_01(t));
 	rad = (r1 + t_clamped*(r2 - r1)); // radius of cylinder at closest point to sphere
+	bool is_axis_aligned(0);
 
-	if (cp1.x == cp2.x && cp1.y == cp2.y) { // special case of a vertical cylinder
-		float const closest_z(cp1.z + t_clamped*(cp2.z - cp1.z)), sphere_dist(fabs(closest_z - sc.z));
+	for (unsigned d = 0; d < 3; ++d) {
+		unsigned const d1((d+1)%3), d2((d+2)%3);
+		if (cp1[d1] != cp2[d1] || cp1[d2] != cp2[d2]) continue; // not oriented in dim d
+		float const closest_val(cp1[d] + t_clamped*(cp2[d] - cp1[d])), sphere_dist(fabs(closest_val - sc[d]));
 		if (sphere_dist < sr) {rad += sqrt(sr*sr - sphere_dist*sphere_dist);}
-	}
-	else {
-		rad += sr; // add sphere radius (FIXME: inaccurate)
-	}
+		is_axis_aligned = 1;
+		break;
+	} // for d
+	if (!is_axis_aligned) {rad += sr;} // add sphere radius; FIXME: inaccurate
+	
 	if (check_ends || (t >= 0.0 && t <= 1.0)) {
 		v2 -= v1*t; // vector from point to collision point along cylinder axis
 		if (v2.mag_sq() <= rad*rad) return 1;
