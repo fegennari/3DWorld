@@ -141,6 +141,7 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_FEXT_SIGN ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2,  5.0,  0.2,   "fire extinguisher sign");
 	bldg_obj_types[TYPE_PIZZA_BOX ] = bldg_obj_type_t(0, 0, 1, 1, 0, 0, 2, 10.0,  1.0,   "box of pizza");
 	bldg_obj_types[TYPE_TEESHIRT  ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 10.0,  0.25,  "tee shirt");
+	bldg_obj_types[TYPE_BLANKET   ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 20.0,  2.0,   "blanket");
 	// player_coll, ai_coll, rat_coll, pickup, attached, is_model, lg_sm, value, weight, name [capacity]
 	// 3D models
 	bldg_obj_types[TYPE_TOILET    ] = bldg_obj_type_t(1, 1, 1, 1, 1, 1, 0, 120.0, 88.0,  "toilet");
@@ -1023,10 +1024,10 @@ bool is_obj_in_or_on_obj(room_object_t const &parent, room_object_t const &child
 	return 0;
 }
 bool object_can_have_something_on_it(room_object_t const &obj) {
-	// only these types can have objects placed on them (what about TYPE_SHELF? what about TYPE_BED with a ball or book placed on it?)
+	// only these types can have objects placed on them (what about TYPE_SHELF? what about TYPE_BED with a ball, book, or blanket placed on it?)
 	return (obj.type == TYPE_TABLE || obj.type == TYPE_DESK || obj.type == TYPE_COUNTER || obj.type == TYPE_DRESSER || obj.type == TYPE_NIGHTSTAND ||
 		obj.type == TYPE_BOX || obj.type == TYPE_CRATE || obj.type == TYPE_WINE_RACK || obj.type == TYPE_BOOK || obj.type == TYPE_STOVE || obj.type == TYPE_MWAVE
-		/*|| obj.type == TYPE_FCABINET*/ /*|| obj.type == TYPE_SHELF*/ /*|| obj.type == TYPE_BED*/);
+		|| obj.type == TYPE_BED /*|| obj.type == TYPE_FCABINET*/ /*|| obj.type == TYPE_SHELF*/);
 }
 bool object_has_something_on_it(room_object_t const &obj, vect_room_object_t const &objs, vect_room_object_t::const_iterator objs_end) {
 	if (!object_can_have_something_on_it(obj)) return 0;
@@ -2012,7 +2013,7 @@ bool room_object_t::can_use() const { // excludes dynamic objects
 	if (type == TYPE_TPROLL) {return (taken_level == 0);} // can only use the TP roll, not the holder
 	return (type == TYPE_SPRAYCAN || type == TYPE_MARKER || type == TYPE_BOOK || type == TYPE_PHONE || type == TYPE_TAPE || type == TYPE_RAT || type == TYPE_FIRE_EXT);
 }
-bool room_object_t::can_place_onto() const {
+bool room_object_t::can_place_onto() const { // Note: excludes flat objects such as TYPE_RUG and TYPE_BLANKET
 	return (type == TYPE_TABLE || type == TYPE_DESK || type == TYPE_DRESSER || type == TYPE_NIGHTSTAND || type == TYPE_COUNTER || type == TYPE_KSINK ||
 		type == TYPE_BRSINK || type == TYPE_BED || type == TYPE_BOX || type == TYPE_CRATE || type == TYPE_KEYBOARD || type == TYPE_BOOK ||
 		type == TYPE_FCABINET || type == TYPE_MWAVE); // TYPE_STAIR?

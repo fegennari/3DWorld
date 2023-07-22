@@ -2059,7 +2059,13 @@ void building_room_geom_t::add_light(room_object_t const &c, float tscale) {
 
 void building_room_geom_t::add_rug(room_object_t const &c) {
 	bool const swap_tex_st(c.dy() < c.dx()); // rug textures are oriented with the long side in X, so swap the coordinates (rotate 90 degrees) if our rug is oriented the other way
-	get_material(tid_nm_pair_t(c.get_rug_tid(), 0.0)).add_cube_to_verts(c, c.color, c.get_llc(), 61, swap_tex_st); // only draw top/+z face
+	get_material(tid_nm_pair_t(c.get_rug_tid(), 0.0)).add_cube_to_verts(c, c.color, c.get_llc(), ~EF_Z2, swap_tex_st); // only draw top/+z face
+}
+
+void building_room_geom_t::add_blanket(room_object_t const &c) {
+	bool const swap_tex_st(c.dy() < c.dx()); // same as rug
+	// TODO: use different textures
+	get_material(tid_nm_pair_t(c.get_rug_tid(), 0.0), 0, 0, 1).add_cube_to_verts(c, c.color, c.get_llc(), ~EF_Z2, swap_tex_st); // only draw top/+z face; small=1
 }
 
 void building_room_geom_t::add_picture(room_object_t const &c) { // also whiteboards; not affected by room color

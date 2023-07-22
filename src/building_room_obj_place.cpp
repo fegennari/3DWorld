@@ -804,11 +804,25 @@ bool building_t::add_bed_to_room(rand_gen_t &rgen, room_t const &room, vect_cube
 		if (n < 10 && door_path_checker.check_door_path_blocked(c, room, zval, *this)) continue;
 		bool const dir((room_bounds.d[dim][1] - c.d[dim][1]) < (c.d[dim][0] - room_bounds.d[dim][0])); // head of the bed is closer to the wall
 		objs.emplace_back(c, TYPE_BED, room_id, dim, dir, 0, tot_light_amt);
+		set_obj_id(objs);
 		room_object_t &bed(objs.back());
-		bed.obj_id = (uint16_t)objs.size();
 		// use white color if a texture is assigned that's not close to white
 		int const sheet_tid(bed.get_sheet_tid());
 		if (sheet_tid < 0 || sheet_tid == WHITE_TEX || texture_color(sheet_tid).get_luminance() > 0.5) {bed.color = colors[rgen.rand()%NUM_COLORS];}
+
+		if (rgen.rand_bool()) { // sometimes add a blanket on the bed
+			cube_t cubes[6]; // frame, head, foot, mattress, pillow, legs_bcube
+			get_bed_cubes(bed, cubes);
+			cube_t const &mattress(cubes[3]), &pillow(cubes[4]);
+			vector3d const mattress_sz(mattress.get_size());
+			cube_t blanket(mattress);
+			set_cube_zvals(blanket, mattress.z2(), (mattress.z2() + 0.02*mattress_sz.z)); // on top of mattress; set height
+			blanket.d[dim][ dir] = pillow.d[dim][!dir] - (dir ? 1.0 : -1.0)*rgen.rand_uniform(0.01, 0.06)*mattress_sz[dim]; // shrink at head
+			blanket.d[dim][!dir] += (dir ? 1.0 : -1.0)*rgen.rand_uniform(0.03, 0.08)*mattress_sz[dim]; // shrink at foot
+			blanket.expand_in_dim(!dim, -rgen.rand_uniform(0.08, 0.16)*mattress_sz[!dim]); // shrink width
+			objs.emplace_back(blanket, TYPE_BLANKET, room_id, dim, dir, RO_FLAG_NOCOLL, tot_light_amt);
+			set_obj_id(objs);
+		}
 		return 1; // done/success
 	} // for n
 	return 0;
