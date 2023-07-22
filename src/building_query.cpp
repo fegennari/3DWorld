@@ -855,9 +855,10 @@ bool building_interior_t::check_sphere_coll_room_objects(building_t const &build
 		}
 		if (coll_ret) { // collision with this object - set hardness
 			if      (c->type == TYPE_COUCH    ) {hardness = 0.6;} // couches are soft
-			else if (c->type == TYPE_RUG      ) {hardness = 0.8;} // rug is somewhat soft
+			else if (c->type == TYPE_RUG      ) {hardness = 0.8;} // rug is somewhat soft, but placed on a hard floor
 			else if (c->type == TYPE_BLINDS   ) {hardness = 0.6;} // blinds are soft
 			else if (c->type == TYPE_PIZZA_BOX) {hardness = 0.7;} // somewhat soft
+			else if (c->type == TYPE_TEESHIRT ) {hardness = 0.7;} // somewhat soft, though at the moment there is no collision
 			else if (c->type == TYPE_BED && (coll_ret & 24)) {hardness = 0.5;} // pillow/mattress collision is very soft
 			else {hardness = 1.0;}
 			obj_ix   = (c - room_geom->objs.begin()); // may be overwritten, will be the last collided object
