@@ -2435,9 +2435,13 @@ void building_t::add_light_switches_to_room(rand_gen_t rgen, room_t const &room,
 					unsigned flags(RO_FLAG_NOCOLL);
 
 					if (is_house && is_basement && classify_room_wall(room, zval, dim, dir, 0) == ROOM_WALL_EXT) { // house exterior basement wall; non-recessed
-						objs.push_back(get_conduit(dim, dir, 0.25*switch_hwidth, c.d[dim][dir], wall_pos, c.z2(), (zval + get_floor_ceil_gap()), room_id));
-						c.d[dim][!dir] += dir_sign*1.0*switch_hwidth; // shift front outward more
-						flags |= RO_FLAG_HANGING;
+						room_object_t const conduit(get_conduit(dim, dir, 0.25*switch_hwidth, c.d[dim][dir], wall_pos, c.z2(), (zval + get_floor_ceil_gap()), room_id));
+
+						if (!overlaps_other_room_obj(conduit, objs_start)) {
+							objs.push_back(conduit);
+							c.d[dim][!dir] += dir_sign*1.0*switch_hwidth; // shift front outward more
+							flags |= RO_FLAG_HANGING;
+						}
 					}
 					expand_to_nonzero_area(c, switch_thickness, dim);
 					objs.emplace_back(c, TYPE_SWITCH, room_id, dim, dir, flags, 1.0); // dim/dir matches wall; fully lit
@@ -2511,7 +2515,7 @@ void building_t::add_outlets_to_room(rand_gen_t rgen, room_t const &room, float 
 		c_exp.expand_by_xy(0.5*wall_thickness);
 		if (overlaps_other_room_obj(c_exp, objs_start, 1))     continue; // check for things like closets; check_all=1 to include blinds
 		if (interior->is_blocked_by_stairs_or_elevator(c_exp)) continue; // check stairs and elevators
-		if (!check_cube_within_part_sides(c_exp))              continue;
+		if (!check_cube_within_part_sides(c_exp))              continue; // handle non-cube buildings
 		bool bad_place(0);
 
 		if (is_ground_floor) { // handle exterior doors
@@ -2531,9 +2535,13 @@ void building_t::add_outlets_to_room(rand_gen_t rgen, room_t const &room, float 
 		unsigned flags(RO_FLAG_NOCOLL);
 
 		if (is_house && is_basement && is_exterior_wall) { // house exterior basement wall; non-recessed
-			objs.push_back(get_conduit(dim, dir, 0.25*plate_hwidth, c.d[dim][dir], wall_pos, c.z2(), (zval + get_floor_ceil_gap()), room_id));
-			c.d[dim][!dir] += dir_sign*1.2*plate_hwidth; // shift front outward more
-			flags |= RO_FLAG_HANGING;
+			room_object_t const conduit(get_conduit(dim, dir, 0.25*plate_hwidth, c.d[dim][dir], wall_pos, c.z2(), (zval + get_floor_ceil_gap()), room_id));
+
+			if (!overlaps_other_room_obj(conduit, objs_start)) {
+				objs.push_back(conduit);
+				c.d[dim][!dir] += dir_sign*1.2*plate_hwidth; // shift front outward more
+				flags |= RO_FLAG_HANGING;
+			}
 		}
 		expand_to_nonzero_area(c, plate_thickness, dim);
 		objs.emplace_back(c, TYPE_OUTLET, room_id, dim, dir, flags, 1.0); // dim/dir matches wall; fully lit
@@ -2552,7 +2560,7 @@ bool building_t::add_wall_vent_to_room(rand_gen_t rgen, room_t const &room, floa
 	float const thickness(0.1*wall_thickness), height(2.5*wall_thickness), hwidth(2.0*wall_thickness), min_wall_spacing(1.5*hwidth);
 	cube_t const room_bounds(get_walkable_room_bounds(room));
 	if (min(room_bounds.dx(), room_bounds.dy()) < 3.0*min_wall_spacing) return 0; // room is too small; shouldn't happen
-	bool const pref_dim(room.dx() < room.dy()); // shorter dir, to make it less likely to conflict with whiteboards
+	bool const pref_dim(room.dx() < room.dy()); // shorter dim, to make it less likely to conflict with whiteboards
 	vect_door_stack_t const &doorways(get_doorways_for_room(room, zval));
 	vect_room_object_t &objs(interior->room_geom->objs);
 	cube_t c;
@@ -2581,7 +2589,7 @@ bool building_t::add_wall_vent_to_room(rand_gen_t rgen, room_t const &room, floa
 		}
 		if (bad_place) continue;
 		if (!check_if_placed_on_interior_wall(c, room, dim, dir)) continue; // ensure the vent is on a wall; is this really needed?
-		if (!check_cube_within_part_sides(c)) continue;
+		if (!check_cube_within_part_sides(c)) continue; // handle non-cube buildings
 
 		if (check_for_ducts) { // if this is a utility room, check to see if we can connect the vent to a furnace with a duct
 			assert(objs_start <= objs.size());
@@ -2826,7 +2834,7 @@ bool building_t::is_light_placement_valid(cube_t const &light, room_t const &roo
 	light_ext.expand_by_xy(pad);
 	if (!room.contains_cube(light_ext))            return 0; // room too small?
 	if (has_bcube_int(light, interior->elevators)) return 0;
-	if (!check_cube_within_part_sides(light))      return 0;
+	if (!check_cube_within_part_sides(light))      return 0; // handle non-cube buildings
 	unsigned const pg_wall_start(interior->room_geom->wall_ps_start);
 
 	// check for intersection with low pipes such as sprinkler pipes that have been previously placed; only works for top level of parking garage
