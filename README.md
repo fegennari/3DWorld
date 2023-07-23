@@ -72,7 +72,7 @@ These files are too large to store in the git repo. I've attempted to have 3DWor
 Many of the larger models can be found at the McGuire Computer Graphics Archive:
 http://casual-effects.com/data/
 
-I've packaged up the 3D models that are too large for the GitHub repo and put them on Google Drive here (up to v4 now):
+I've packaged up the 3D models that are too large for the GitHub repo and put them on Google Drive here (up to v5 now):
 https://drive.google.com/file/d/1kLC20joYUt7EWO8f86WCJR3JSHv0wGtx/view?usp=drive_link
 Some of these models are stored in 3DWorld's internal format and should not be reused in other projects. Others come from websites such as Mixamo.
 
