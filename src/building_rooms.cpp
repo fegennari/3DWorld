@@ -156,7 +156,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 		} // for r
 	}
 	for (auto r = rooms.begin(); r != rooms.end(); ++r) {
-		bool const is_basement(has_basement() && r->part_id == (int)basement_part_ix);
+		bool const is_basement(has_basement() && r->part_id == (int)basement_part_ix); // includes extended basement
 		float light_amt(is_basement ? 0.0f : window_vspacing*r->get_light_amt()); // exterior light: multiply perimeter/area by window spacing to make unitless; none for basement rooms
 		if (!is_house && r->is_hallway) {light_amt *= 2.0;} // double the light in office building hallways because they often connect to other lit hallways
 		float const floor_height(r->is_sec_bldg ? r->dz() : window_vspacing); // secondary buildings are always one floor
@@ -300,9 +300,10 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			unsigned const objs_start_inc_lights(objs.size());
 
 			for (cube_t const &l : valid_lights) {
+				bool dim(l.dx() < l.dy()), dir(0); // dir is unused
 				unsigned l_flags(flags);
 				if (check_skylight_intersection(l)) {l_flags |= RO_FLAG_ADJ_TOP; has_skylight_light = 1;} // if attached to a skylight, draw top surface
-				room_object_t light_obj(l, TYPE_LIGHT, room_id, (light.dx() < light.dy()), 0, l_flags, light_amt, light_shape, color); // reclaculate dim; dir=0 (unused)
+				room_object_t light_obj(l, TYPE_LIGHT, room_id, dim, dir, l_flags, light_amt, light_shape, color);
 				light_obj.obj_id = light_ix_assign.get_ix_for_light(l);
 				unsigned const flicker_mod(is_parking_garage ? 50 : (is_ext_basement ? 20 : 0)); // 2% chance for parking garage, 5% chance for ext basement
 				
