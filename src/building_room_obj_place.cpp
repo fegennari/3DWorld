@@ -971,8 +971,7 @@ bool building_t::add_bathroom_objs(rand_gen_t rgen, room_t &room, float &zval, u
 		int const flooring_type(is_house ? (is_basement ? (int)FLOORING_CONCRETE : (int)FLOORING_TILE) : (int)FLOORING_MARBLE);
 		if (flooring_type == FLOORING_CONCRETE && get_material().basement_floor_tex.tid == get_concrete_tid()) {} // already concrete
 		else { // replace carpet/wood with marble/tile/concrete
-			zval       = add_flooring(room, zval, room_id, tot_light_amt, flooring_type); // move the effective floor up
-			objs_start = objs.size(); // exclude this from collision checks
+			zval = add_flooring(room, zval, room_id, tot_light_amt, flooring_type); // move the effective floor up
 		}
 	}
 	if (have_toilet && room.is_office) { // office bathroom
@@ -1103,10 +1102,13 @@ bool building_t::add_bathroom_objs(rand_gen_t rgen, room_t &room, float &zval, u
 			added_bathroom_objs_mask |= PLACED_TUB;
 		}
 	}
+	unsigned const sink_obj_ix(objs.size());
+
 	if (place_model_along_wall(OBJ_MODEL_SINK, TYPE_SINK, room, 0.45, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 0.6)) {
 		placed_obj = 1;
 		added_bathroom_objs_mask |= PLACED_SINK;
-		room_object_t const &sink((objs.back().type == TYPE_SINK) ? objs.back() : objs[objs.size()-2]); // find sink, skip blocker
+		assert(sink_obj_ix < objs.size());
+		room_object_t const &sink(objs[sink_obj_ix]); // sink, not blocker
 		
 		if (is_basement || classify_room_wall(room, zval, sink.dim, !sink.dir, 0) != ROOM_WALL_EXT) { // interior wall only
 			// add a mirror/medicine cabinet above the sink; could later make into medicine cabinet
@@ -1115,12 +1117,15 @@ bool building_t::add_bathroom_objs(rand_gen_t rgen, room_t &room, float &zval, u
 			set_cube_zvals(mirror, sink.z2(), sink.z2()+0.3*floor_spacing);
 			mirror.d[sink.dim][!sink.dir] = room_bounds.d[sink.dim][!sink.dir];
 			mirror.d[sink.dim][ sink.dir] = mirror.d[sink.dim][!sink.dir] + (sink.dir ? 1.0 : -1.0)*1.0*wall_thickness; // thickness
-			// this mirror is actually 3D, so we enable collision detection; treat as a house even if it's in an office building
-			unsigned flags(RO_FLAG_IS_HOUSE);
-			if (count_ext_walls_for_room(room, mirror.z1()) == 1) {flags |= RO_FLAG_INTERIOR;} // flag as interior if windows are opaque glass blocks
-			objs.emplace_back(mirror, TYPE_MIRROR, room_id, sink.dim, sink.dir, flags, tot_light_amt);
-			set_obj_id(objs); // for crack texture selection/orient
-			room.has_mirror = 1;
+
+			if (!overlaps_other_room_obj(mirror, objs_start, 0, &sink_obj_ix)) { // check_all=0; skip sink + blocker
+				// this mirror is actually 3D, so we enable collision detection; treat as a house even if it's in an office building
+				unsigned flags(RO_FLAG_IS_HOUSE);
+				if (count_ext_walls_for_room(room, mirror.z1()) == 1) {flags |= RO_FLAG_INTERIOR;} // flag as interior if windows are opaque glass blocks
+				objs.emplace_back(mirror, TYPE_MIRROR, room_id, sink.dim, sink.dir, flags, tot_light_amt);
+				set_obj_id(objs); // for crack texture selection/orient
+				room.has_mirror = 1;
+			}
 		}
 	}
 	return placed_obj;
