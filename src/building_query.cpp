@@ -1355,12 +1355,13 @@ bool building_t::check_cube_on_or_near_stairs(cube_t const &c) const {
 }
 
 // Note: for procedural object placement; no expanded_objs, but includes blockers
-bool building_t::overlaps_other_room_obj(cube_t const &c, unsigned objs_start, bool check_all) const {
+bool building_t::overlaps_other_room_obj(cube_t const &c, unsigned objs_start, bool check_all, unsigned const *objs_end) const {
 	assert(has_room_geom());
 	vect_room_object_t &objs(interior->room_geom->objs);
-	assert(objs_start <= objs.size());
+	auto start(objs.begin()+objs_start), end((objs_end == nullptr) ? objs.end() : (objs.begin()+*objs_end));
+	assert(objs_start <= objs.size() && start <= end);
 
-	for (auto i = objs.begin()+objs_start; i != objs.end(); ++i) {
+	for (auto i = start; i != end; ++i) {
 		// Note: light switches/outlets/vents/pipes don't collide with the player or AI, but they collide with other placed objects to avoid blocking them;
 		// however, it's okay to block outlets with furniture
 		if ((check_all || !i->no_coll() || i->type == TYPE_SWITCH || i->type == TYPE_OUTLET || i->type == TYPE_VENT || i->type == TYPE_PIPE) && i->intersects(c)) return 1;
