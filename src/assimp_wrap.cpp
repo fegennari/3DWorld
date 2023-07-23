@@ -291,15 +291,18 @@ class file_reader_assimp {
 		}
 		else if (!check_texture_file_exists(full_path)) {
 			string const fn(filename);
+			string local_path;
 			bool found(0);
 
 			if (fn.size() > 3 && (fn[0] >= 'A' && fn[0] <= 'Z') && fn[1] == ':' && (fn[2] == '\\' || fn[2] == '/')) {
 				// looks like a Windows path that's invalid; try stripping off the path and looking in the current directory
-				string const local_path(model_dir + get_base_filename(fn));
+				local_path = model_dir + get_base_filename(fn);
 				if (check_texture_file_exists(local_path)) {full_path = local_path; found = 1;}
 			}
 			if (!found) {
-				cerr << "Error: Can't find texture file for assimp model: " << full_path << endl;
+				cerr << "Error: Can't find texture file for assimp model: " << full_path;
+				if (!local_path.empty()) {cerr << " or " << local_path;}
+				cerr << endl;
 				return -1;
 			}
 		}
