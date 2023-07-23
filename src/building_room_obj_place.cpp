@@ -2851,6 +2851,7 @@ bool building_t::is_light_placement_valid(cube_t const &light, room_t const &roo
 	if (PLACE_LIGHTS_ON_SKYLIGHTS && any_cube_contains(light_ext, skylights)) return 1; // place on a skylight
 	return 0;
 }
+
 void building_t::try_place_light_on_ceiling(cube_t const &light, room_t const &room, bool room_dim, float pad, bool allow_rot, bool allow_mult,
 	vect_cube_t &lights, rand_gen_t &rgen) const
 {
@@ -2868,7 +2869,7 @@ void building_t::try_place_light_on_ceiling(cube_t const &light, room_t const &r
 		light_cand.expand_in_dim(1,  sz_diff);
 	}
 	for (unsigned D = 0; D < 2 && lights.empty(); ++D) { // try both dims
-		bool const dim(room_dim ^ D);
+		bool const dim(room_dim ^ bool(D));
 		float const shift_step((0.5*(room.get_sz_dim(dim) - light_cand.get_sz_dim(dim)))/num_shifts);
 
 		for (unsigned d = 0; d < 2; ++d) { // dir: see if we can place it by moving on one direction
@@ -2891,5 +2892,42 @@ void building_t::try_place_light_on_ceiling(cube_t const &light, room_t const &r
 		} // for d
 	} // for D
 	if (lights.empty()) {} // place light on a wall instead? do we ever get here?
+}
+
+void building_t::try_place_light_on_wall(cube_t const &light, room_t const &room, bool room_dim, float zval, vect_cube_t &lights, rand_gen_t &rgen) const {
+	float const wall_thickness(get_wall_thickness()), window_vspacing(get_window_vspace());
+	float const length(light.dz()), radius(0.35*min(light.dx(), light.dy())), min_wall_spacing(2.0*radius);
+	cube_t const room_bounds(get_walkable_room_bounds(room));
+	if (min(room_bounds.dx(), room_bounds.dy()) < 3.0*min_wall_spacing) return; // room is too small; shouldn't happen
+	bool const pref_dim(!room_dim); // shorter dim
+	vect_door_stack_t const &doorways(get_doorways_for_room(room, zval)); // must use floor zval
+	cube_t c;
+	c.z2() = light.z2() - 0.05*window_vspacing;
+	c.z1() = c.z2() - 2.0*radius;
+
+	for (unsigned n = 0; n < 100; ++n) { // 100 tries
+		bool const dim((n < 10) ? pref_dim : rgen.rand_bool()), dir(rgen.rand_bool());
+		float const wall_pos(rgen.rand_uniform((room_bounds.d[!dim][0] + min_wall_spacing), (room_bounds.d[!dim][1] - min_wall_spacing)));
+		float const wall_face(room_bounds.d[dim][dir]);
+		c.d[dim][ dir] = wall_face; // flush with wall
+		c.d[dim][!dir] = wall_face + (dir ? -1.0 : 1.0)*length; // expand outward
+		set_wall_width(c, wall_pos, radius, !dim);
+		cube_t c_exp(c);
+		c_exp.expand_by_xy(0.5*wall_thickness);
+		c_exp.d[dim][!dir] += (dir ? -1.0 : 1.0)*2.0*(length + radius); // add some clearance in front
+		if (interior->is_blocked_by_stairs_or_elevator(c_exp)) continue; // check stairs and elevators; no other room objects have been placed yet
+		cube_t door_test_cube(c_exp);
+		door_test_cube.expand_in_dim(!dim, 1.0*radius); // not too close to doors
+		bool bad_place(0);
+
+		for (auto const &d : doorways) {
+			if (d.get_open_door_bcube_for_room(room).intersects(door_test_cube)) {bad_place = 1; break;}
+		}
+		if (bad_place) continue;
+		if (!check_if_placed_on_interior_wall(c, room, dim, dir)) continue; // ensure the light is on a wall; is this really needed?
+		if (!check_cube_within_part_sides(c)) continue; // handle non-cube buildings
+		lights.push_back(c);
+		break; // success/done
+	} // for n
 }
 

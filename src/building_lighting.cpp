@@ -1286,7 +1286,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		//if (is_light_occluded(lpos_rot, camera_bs))  continue; // too strong a test in general, but may be useful for selecting high importance lights
 		//if (!camera_in_building && i->is_interior()) continue; // skip interior lights when camera is outside the building: makes little difference, not worth the trouble
 		room_t const &room(get_room(i->room_id));
-		bool const is_lamp(i->type == TYPE_LAMP), is_single_floor(room.is_sec_bldg || is_in_elevator);
+		bool const is_lamp(i->type == TYPE_LAMP), is_single_floor(room.is_sec_bldg || is_in_elevator), wall_light(i->flags & RO_FLAG_ADJ_HI);
 		int const cur_floor(is_single_floor ? 0 : (i->z1() - room.z1())/window_vspacing); // garages and sheds are all one floor
 		float const level_z(is_in_attic ? interior->attic_access.z1() : (room.z1() + cur_floor*window_vspacing)), floor_z(level_z + fc_thick);
 		float ceil_z(0.0);
@@ -1512,6 +1512,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		}
 		if (!is_rot_cube_visible(clipped_bc, xlate)) continue; // VFC - post clip
 		if ((display_mode & 0x08) && !clipped_bc.contains_pt(camera_rot) && check_obj_occluded(clipped_bc, camera_bs, oc, 0)) continue; // occlusion culling
+		// TODO: if (wall_light) {}: handle point lights rather than only spotlights pointed down
 		dl_sources.emplace_back(light_radius, lpos_rot, lpos_rot, color, 0, -plus_z, bwidth); // points down
 		bool force_smap_update(0);
 
@@ -1553,8 +1554,8 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		cube_t const clipped_bc_rot(is_rotated() ? get_rotated_bcube(clipped_bc) : clipped_bc);
 		setup_light_for_building_interior(dl_sources.back(), *i, clipped_bc_rot, force_smap_update, shadow_caster_hash);
 		
-		// add upward pointing light; only when the player is near/inside a building (optimization); not for lights hanging on ceiling fans
-		if (camera_near_building && (is_lamp || lpos_rot.z > camera_bs.z) && !i->is_hanging()) {
+		// add upward pointing light; only when the player is near/inside a building (optimization); not for lights hanging on ceiling fans or walls
+		if (camera_near_building && (is_lamp || lpos_rot.z > camera_bs.z) && !i->is_hanging() && !wall_light) {
 			cube_t light_bc2(clipped_bc);
 
 			if (is_in_elevator) {
@@ -1580,7 +1581,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 				point const lpos_up(lpos_rot - vector3d(0.0, 0.0, 2.0*i->dz()));
 				// the upward pointing light is unshadowed and won't pick up shadows from any stairs in the room, so reduce the radius
 				float const rscale((room.is_hallway ? 0.25 : room.is_office ? 0.45 : 0.5)*(has_stairs_this_floor ? 0.67 : 1.0));
-				dl_sources.emplace_back(rscale*light_radius, lpos_up, lpos_up, color, 0, plus_z, 0.5);
+				dl_sources.emplace_back(rscale*light_radius, lpos_up, lpos_up, color, 0, plus_z, 0.5); // points up
 			}
 			if (!light_bc2.is_all_zeros()) {dl_sources.back().set_custom_bcube(light_bc2);}
 			dl_sources.back().disable_shadows();

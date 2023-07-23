@@ -219,7 +219,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			// top floor may have stairs connecting to upper stack
 			bool const top_floor(f+1 == num_floors);
 			bool const has_stairs_this_floor(r->has_stairs_on_floor(f));
-			bool is_lit(0), has_light(1), light_dim(room_dim), has_stairs(has_stairs_this_floor), top_of_stairs(has_stairs && top_floor);
+			bool is_lit(0), has_light(1), light_dim(room_dim), wall_light(0), has_stairs(has_stairs_this_floor), top_of_stairs(has_stairs && top_floor);
 			float light_delta_z(0.0);
 
 			if (is_parking_garage) { // parking garage; added first because this sets the number of lights
@@ -239,7 +239,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				} // for s
 			}
 			int light_obj_ix(-1);
-			unsigned num_lights(r->num_lights), flags(RO_FLAG_NOCOLL); // no collision detection with lights
+			unsigned num_lights(r->num_lights), flags(0);
 			float const light_z2(z + floor_height - fc_thick + light_delta_z);
 
 			// motion detection lights for large office building office; limit to interior rooms so that we still have some lit rooms viewed through windows
@@ -293,15 +293,26 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				} // for y
 			}
 			else { // normal room with a single light
-				try_place_light_on_ceiling(light, *r, room_dim, fc_thick, 1, 1, valid_lights, rgen); // allow_rot=1, allow_mult=1
+				if (0 && is_house && is_basement && !is_ext_basement) { // house basement cylindrical lights only
+					try_place_light_on_wall(light, *r, room_dim, floor_zval, valid_lights, rgen);
+					wall_light = !valid_lights.empty(); // if this fails, fall back to a ceiling light
+				}
+				if (!wall_light) {try_place_light_on_ceiling(light, *r, room_dim, fc_thick, 1, 1, valid_lights, rgen);} // allow_rot=1, allow_mult=1
 				if (!valid_lights.empty()) {light_obj_ix = objs.size();} // this will be the index of the light to be added later
 			}
 			rand_gen_t rgen_lights(rgen); // copy state so that we don't modify rgen
 			unsigned const objs_start_inc_lights(objs.size());
 
 			for (cube_t const &l : valid_lights) {
-				bool dim(l.dx() < l.dy()), dir(0); // dir is unused
+				bool dim(l.dx() < l.dy()), dir(0); // dir is only used for wall lights
 				unsigned l_flags(flags);
+				
+				if (wall_light) {
+					l_flags |= RO_FLAG_ADJ_HI; // flag as on wall
+					dim     ^= 1; // use shorter dim
+					dir      = (l.get_center_dim(dim) < r->get_center_dim(dim)); // direction the light is pointing, opposite the wall
+				}
+				else {l_flags |= RO_FLAG_NOCOLL;} // no collision detection for ceiling lights
 				if (check_skylight_intersection(l)) {l_flags |= RO_FLAG_ADJ_TOP; has_skylight_light = 1;} // if attached to a skylight, draw top surface
 				room_object_t light_obj(l, TYPE_LIGHT, room_id, dim, dir, l_flags, light_amt, light_shape, color);
 				light_obj.obj_id = light_ix_assign.get_ix_for_light(l);
@@ -320,7 +331,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			float tot_light_amt(light_amt); // unitless, somewhere around 1.0
 			if (is_lit) {tot_light_amt += r->light_intensity;}
 			bool const is_ground_floor(f == 0 && !is_basement && r->z1() <= ground_floor_z1), is_garage_or_shed(r->is_garage_or_shed(f));
-			unsigned const objs_start(objs.size());
+			unsigned const objs_start(wall_light ? objs_start_inc_lights : objs.size()); // wall light counts as an object since it must be avoided
 			rgen.rand_mix();
 
 			if (r->is_ext_basement_conn()) { // room connecting extended basements of two buildings

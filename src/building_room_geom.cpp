@@ -2044,7 +2044,12 @@ void building_room_geom_t::add_light(room_object_t const &c, float tscale) {
 	tp.emissive = (is_on ? 1.0 : 0.0);
 	colorRGBA const color(c.color*(on_but_dim ? 0.4 : 1.0));
 	rgeom_mat_t &mat(mats_lights.get_material(tp, 0)); // no shadows
-	if      (c.shape == SHAPE_CUBE  ) {mat.add_cube_to_verts  (c, color, c.get_llc(), EF_Z2);} // sometimes textured, skip top face
+
+	if (c.flags & RO_FLAG_ADJ_HI) { // wall light
+		assert(c.shape == SHAPE_CYLIN);
+		mat.add_ortho_cylin_to_verts(c, color, c.dim, !c.dir, c.dir); // draw top but not bottom
+	}
+	else if (c.shape == SHAPE_CUBE  ) {mat.add_cube_to_verts  (c, color, c.get_llc(), EF_Z2);} // sometimes textured, skip top face
 	else if (c.shape == SHAPE_CYLIN ) {mat.add_vcylin_to_verts(c, color, 1, 0);} // bottom only
 	else if (c.shape == SHAPE_SPHERE) {mat.add_sphere_to_verts(c, color);}
 	else {assert(0);}
