@@ -1402,7 +1402,7 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 	} // for e
 	interior->room_geom->stairs_start  = objs.size();
 	interior->room_geom->has_elevators = (!interior->elevators.empty());
-	colorRGBA const railing_colors[3] = {GOLD, LT_GRAY, BLACK};
+	colorRGBA const railing_colors[3]  = {GOLD, LT_GRAY, BLACK};
 	colorRGBA const railing_color(railing_colors[rgen.rand()%3]); // set per-building
 
 	for (auto i = interior->landings.begin(); i != interior->landings.end(); ++i) {
@@ -1414,7 +1414,7 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 		bool const side(dir); // for U-shaped stairs; for now this needs to be consistent for the entire stairwell, can't use rgen.rand_bool()
 		// Note: stairs always start at floor_thickness above the landing z1, ignoring landing z2/height
 		float const tot_len(i->get_sz_dim(dim)), floor_z(i->z1() + floor_thickness - window_vspacing), step_len_pos(tot_len/num_stairs);
-		float const wall_hw(min(max(0.15*step_len_pos, 0.15*stair_dz), 0.25*stair_dz));
+		float const wall_hw(min(STAIRS_WALL_WIDTH_MULT*max(step_len_pos, stair_dz), 0.25f*stair_dz));
 		float const stairs_zmin(i->in_ext_basement ? interior->basement_ext_bcube.z1() : bcube.z1());
 		float step_len((dir ? 1.0 : -1.0)*step_len_pos), z(floor_z - floor_thickness), pos(i->d[dim][!dir]);
 		cube_t stair(*i);
