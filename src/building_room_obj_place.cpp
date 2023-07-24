@@ -2195,10 +2195,15 @@ bool building_t::add_rug_to_room(rand_gen_t rgen, cube_t const &room, float zval
 		if (valid_placement && interior->is_blocked_by_stairs_or_elevator(rug)) {valid_placement = 0;} // check stairs (required for ext basement rooms); no need to check doors
 
 		if (valid_placement) {
-			rug.intersect_with_cube(room); // make sure the rug stays within the room bounds
-			objs.emplace_back(rug, TYPE_RUG, room_id, 0, 0, RO_FLAG_NOCOLL, tot_light_amt);
-			objs.back().obj_id = uint16_t(objs.size() + 13*room_id + 31*mat_ix); // determines rug texture
-			return 1;
+			cube_t place_area(room);
+			place_area.expand_by_xy(-0.1*get_wall_thickness()); // add small border to avoid alpha blending artifacts if the rug intersects the wall
+			rug.intersect_with_cube_xy(place_area); // make sure the rug stays within the room bounds
+
+			if (rug.is_strictly_normalized()) {
+				objs.emplace_back(rug, TYPE_RUG, room_id, 0, 0, RO_FLAG_NOCOLL, tot_light_amt);
+				objs.back().obj_id = uint16_t(objs.size() + 13*room_id + 31*mat_ix); // determines rug texture
+				return 1;
+			}
 		}
 		sz_scale *= 0.9; // decrease rug size and try again
 	} // for n
