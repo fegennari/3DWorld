@@ -1154,6 +1154,7 @@ struct door_base_t : public cube_t {
 	float get_width      () const {return get_sz_dim(!dim);}
 	float get_thickness  () const {return DOOR_THICK_TO_WIDTH*get_width();}
 	cube_t get_true_bcube() const {cube_t bc(*this); bc.expand_in_dim(dim, 0.5*get_thickness()); return bc;}
+	cube_t get_open_door_path_bcube() const;
 	cube_t get_open_door_bcube_for_room(cube_t const &room) const;
 	bool is_same_stack(door_base_t const &d) const {return (d.x1() == x1() && d.y1() == y1());}
 };
@@ -1815,6 +1816,7 @@ private:
 	void add_interior_door_for_floor(door_t &door, bool is_bathroom, bool make_unlocked);
 	void remove_section_from_cube_and_add_door(cube_t &c, cube_t &c2, float v1, float v2, bool xy, bool open_dir, bool is_bathroom=0);
 	void insert_door_in_wall_and_add_seg(cube_t &wall, float v1, float v2, bool dim, bool open_dir, bool keep_high_side, bool is_bathroom=0);
+	void reverse_door_hinges_if_needed();
 	unsigned get_floor_for_zval(float zval) const {return unsigned((zval - get_bcube_z1_inc_ext_basement())/get_window_vspace());}
 	building_loc_t get_building_loc_for_pt(point const &pt) const;
 	bool same_room_and_floor_as_player(person_t const &person) const;

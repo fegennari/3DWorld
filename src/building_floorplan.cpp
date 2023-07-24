@@ -54,6 +54,39 @@ void building_t::insert_door_in_wall_and_add_seg(cube_t &wall, float v1, float v
 	interior->walls[!dim].push_back(wall2);
 }
 
+cube_t door_base_t::get_open_door_path_bcube() const { // independent of room
+	cube_t bcube(get_true_bcube());
+	float const width(get_width());
+	bool const dir(get_check_dirs());
+	bcube.d[!dim][dir     ] += (dir      ? 1.0 : -1.0)*width; // include door fully open position
+	bcube.d[ dim][open_dir] += (open_dir ? 1.0 : -1.0)*width;
+	return bcube;
+}
+void building_t::reverse_door_hinges_if_needed() { // quadratic in the number of door stacks, which should be relatively small
+	for (auto i = interior->door_stacks.begin(); i != interior->door_stacks.end(); ++i) {
+		if (i->on_stairs) continue;
+		cube_t const bc1(i->get_open_door_path_bcube());
+		bool reverse_hinges(0);
+
+		for (auto j = interior->door_stacks.begin(); j != interior->door_stacks.end(); ++j) {
+			if (i == j || j->on_stairs) continue; // skip self and stairs doors
+			if (j->z1() >= i->z2() || j->z2() <= i->z1()) continue; // no Z overlap
+			cube_t const bc2(j->get_open_door_path_bcube());
+			if (bc1.intersects_no_adj(bc2)) {reverse_hinges = 1; break;}
+		}
+		if (reverse_hinges) {
+			i->hinge_side ^= 1; // reverse the door stack's hinges
+			assert(i->first_door_ix < interior->doors.size());
+			
+			for (unsigned dix = i->first_door_ix; dix < interior->doors.size(); ++dix) { // reverse the doors themselves
+				door_t &door(interior->doors[dix]);
+				if (!i->is_same_stack(door)) break; // moved to a different stack, done
+				door.hinge_side ^= 1;
+			}
+		}
+	} // for i
+}
+
 float cube_rand_side_pos(cube_t const &c, bool dim, float min_dist_param, float min_dist_abs, rand_gen_t &rgen) {
 	assert(min_dist_param < 0.5f); // aplies to both ends
 	float const lo(c.d[dim][0]), hi(c.d[dim][1]), delta(hi - lo), gap(max(min_dist_abs, min_dist_param*delta)), v1(lo + gap), v2(hi - gap);
@@ -967,6 +1000,8 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 			} // for nsplits
 		} // for w
 	} // for d
+	reverse_door_hinges_if_needed();
+
 	// add stairs to connect together stacked parts for office buildings; must be done last after all walls/ceilings/floors have been assigned
 	for (auto p = parts.begin(); p != parts_end; ++p) {connect_stacked_parts_with_stairs(rgen, *p);}
 	if (has_parking_garage) {add_parking_garage_ramp(rgen);}

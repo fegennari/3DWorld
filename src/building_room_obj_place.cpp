@@ -2556,7 +2556,7 @@ void building_t::add_outlets_to_room(rand_gen_t rgen, room_t const &room, float 
 cube_t door_base_t::get_open_door_bcube_for_room(cube_t const &room) const {
 	bool const dir(get_check_dirs());
 	cube_t bcube(get_true_bcube());
-	if (door_opens_inward(*this, room)) {bcube.d[!dim][dir] += (dir ? 1.0 : -1.0)*get_width();} // include open door
+	if (door_opens_inward(*this, room)) {bcube.d[!dim][dir] += (dir ? 1.0 : -1.0)*get_width();} // include door fully open position
 	return bcube;
 }
 
