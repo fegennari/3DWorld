@@ -1126,6 +1126,7 @@ bool building_t::is_rot_cube_visible(cube_t const &c, vector3d const &xlate) con
 float get_radius_for_room_light(room_object_t const &obj) {
 	float radius(6.0f*(obj.dx() + obj.dy()));
 	//if (obj.type == TYPE_LAMP) {radius *= 1.0;}
+	if (obj.flags & RO_FLAG_ADJ_HI) {radius *= 2.0;} // wall lights have a larger radius since they're not as centered in the room
 	if (obj.in_attic()) {radius *= ATTIC_LIGHT_RADIUS_SCALE;}
 	return radius;
 }
@@ -1444,14 +1445,13 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			if (!i->is_open()) continue; // not currently on
 		}
 		// update lights_bcube and add light(s)
-
 		if (is_lamp) { // lamps are generally against a wall and not in a room with stairs and only illuminate that one room
 			expand_cube_zvals(lights_bcube, (lpos_rot.z - min(window_vspacing, light_radius)), (lpos_rot.z + min(window_vspacing, light_radius)));
 		}
 		else {
-			expand_cube_zvals(lights_bcube, (lpos_rot.z - light_radius), (lpos_rot.z + 0.1f*light_radius)); // pointed down - don't extend as far up
+			float const plus_z_factor(wall_light ? 1.0 : 0.1); // if not a wall light it's pointed down - don't extend as far up
+			expand_cube_zvals(lights_bcube, (lpos_rot.z - light_radius), (lpos_rot.z + plus_z_factor*light_radius));
 		}
-		float const bwidth = 0.25; // as close to 180 degree FOV as we can get without shadow clipping
 		colorRGBA color;
 		unsigned shadow_caster_hash(0);
 		bool lamp_was_moved(0);
@@ -1512,8 +1512,11 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		}
 		if (!is_rot_cube_visible(clipped_bc, xlate)) continue; // VFC - post clip
 		if ((display_mode & 0x08) && !clipped_bc.contains_pt(camera_rot) && check_obj_occluded(clipped_bc, camera_bs, oc, 0)) continue; // occlusion culling
-		// TODO: if (wall_light) {}: handle point lights rather than only spotlights pointed down
-		dl_sources.emplace_back(light_radius, lpos_rot, lpos_rot, color, 0, -plus_z, bwidth); // points down
+		//float const bwidth(wall_light ? 1.0 : 0.25); // wall light omnidirectional; ceiling light as close to 180 degree FOV as can get without shadow clipping; shadows are wrong
+		float const bwidth(0.25); // as close to 180 degree FOV as we can get without shadow clipping
+		vector3d dir;
+		if (wall_light) {dir[i->dim] = (i->dir ? 1.0 : -1.0);} else {dir = -plus_z;} // points down, unless it's a wall light
+		dl_sources.emplace_back(light_radius, lpos_rot, lpos_rot, color, 0, dir, bwidth);
 		bool force_smap_update(0);
 
 		// check for dynamic shadows
@@ -1555,7 +1558,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		setup_light_for_building_interior(dl_sources.back(), *i, clipped_bc_rot, force_smap_update, shadow_caster_hash);
 		
 		// add upward pointing light; only when the player is near/inside a building (optimization); not for lights hanging on ceiling fans or walls
-		if (camera_near_building && (is_lamp || lpos_rot.z > camera_bs.z) && !i->is_hanging() && !wall_light) {
+		if (camera_near_building && (is_lamp || lpos_rot.z > camera_bs.z) && !i->is_hanging()) {
 			cube_t light_bc2(clipped_bc);
 
 			if (is_in_elevator) {
@@ -1577,11 +1580,18 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 				dl_sources.emplace_back(0.15*light_radius, lpos_rot, lpos_rot, color); // add an additional small unshadowed light for ambient effect
 				dl_sources.back().set_custom_bcube(light_bc2); // not sure if this is helpful, but should be okay
 			}
-			else { // add a second, smaller unshadowed light for the upper hemisphere
-				point const lpos_up(lpos_rot - vector3d(0.0, 0.0, 2.0*i->dz()));
-				// the upward pointing light is unshadowed and won't pick up shadows from any stairs in the room, so reduce the radius
+			else { // add a second, smaller unshadowed light for the upper hemisphere or omnidirectional for wall lights
+				// the secondary light is unshadowed and won't pick up shadows from any stairs in the room, so reduce the radius
 				float const rscale((room.is_hallway ? 0.25 : room.is_office ? 0.45 : 0.5)*(has_stairs_this_floor ? 0.67 : 1.0));
-				dl_sources.emplace_back(rscale*light_radius, lpos_up, lpos_up, color, 0, plus_z, 0.5); // points up
+
+				if (wall_light) {
+					point const lpos2(lpos_rot + (2.0*i->get_sz_dim(i->dim))*dir);
+					dl_sources.emplace_back(rscale*light_radius, lpos2, lpos2, color, 0, -dir, 1.0); // omnidirectional
+				}
+				else { // ceiling light
+					point const lpos_up(lpos_rot - vector3d(0.0, 0.0, 2.0*i->dz()));
+					dl_sources.emplace_back(rscale*light_radius, lpos_up, lpos_up, color, 0, plus_z, 0.5); // hemisphere that points up
+				}
 			}
 			if (!light_bc2.is_all_zeros()) {dl_sources.back().set_custom_bcube(light_bc2);}
 			dl_sources.back().disable_shadows();

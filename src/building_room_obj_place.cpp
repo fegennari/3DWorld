@@ -2896,13 +2896,13 @@ void building_t::try_place_light_on_ceiling(cube_t const &light, room_t const &r
 
 void building_t::try_place_light_on_wall(cube_t const &light, room_t const &room, bool room_dim, float zval, vect_cube_t &lights, rand_gen_t &rgen) const {
 	float const wall_thickness(get_wall_thickness()), window_vspacing(get_window_vspace());
-	float const length(light.dz()), radius(0.35*min(light.dx(), light.dy())), min_wall_spacing(2.0*radius);
+	float const length(light.dz()), radius(0.25*min(light.dx(), light.dy())), min_wall_spacing(2.0*radius);
 	cube_t const room_bounds(get_walkable_room_bounds(room));
 	if (min(room_bounds.dx(), room_bounds.dy()) < 3.0*min_wall_spacing) return; // room is too small; shouldn't happen
 	bool const pref_dim(!room_dim); // shorter dim
 	vect_door_stack_t const &doorways(get_doorways_for_room(room, zval)); // must use floor zval
 	cube_t c;
-	c.z2() = light.z2() - 0.05*window_vspacing;
+	c.z2() = light.z2() - 0.1*window_vspacing;
 	c.z1() = c.z2() - 2.0*radius;
 
 	for (unsigned n = 0; n < 100; ++n) { // 100 tries
