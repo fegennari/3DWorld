@@ -164,7 +164,8 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 		point room_center(r->get_cube_center());
 
 		// determine light pos and size for this stack of rooms
-		bool const room_dim(r->dx() < r->dy()); // longer room dim
+		float const dx(r->dx()), dy(r->dy());
+		bool const room_dim(dx < dy); // longer room dim
 		bool const must_be_bathroom(room_id == cand_bathroom && num_bathrooms == 0); // cand bathroom, and bathroom not already placed
 		bool const is_parking_garage(r->get_room_type(0) == RTYPE_PARKING   ); // all floors should be parking garage
 		bool const is_unfinished    (r->get_room_type(0) == RTYPE_UNFINISHED); //  // unfinished room, for example in a non-cube shaped office building
@@ -174,17 +175,17 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 		unsigned nx(1), ny(1); // number of lights in X and Y for this room
 
 		if (!is_cube()) { // somewhat more lights for non-cube shaped building pie slices
-			nx = max(1U, unsigned(0.4*r->dx()/window_vspacing));
-			ny = max(1U, unsigned(0.4*r->dy()/window_vspacing));
+			nx = max(1U, unsigned(0.4*dx/window_vspacing));
+			ny = max(1U, unsigned(0.4*dy/window_vspacing));
 		}
 		else if (r->is_office) { // more lights for large offices; light size varies by office size; parking garages are handled later
-			nx = max(1U, unsigned(0.5*r->dx()/window_vspacing));
-			ny = max(1U, unsigned(0.5*r->dy()/window_vspacing));
-			float const room_size(r->dx() + r->dy()); // normalized to office size
+			nx = max(1U, unsigned(0.5*dx/window_vspacing));
+			ny = max(1U, unsigned(0.5*dy/window_vspacing));
+			float const room_size(dx + dy); // normalized to office size
 			light_size = max(0.015f*room_size, 0.67f*def_light_size);
 		}
 		else if (r->is_hallway) { // light size varies by hallway size
-			float const room_size(min(r->dx(), r->dy())); // normalized to hallway width
+			float const room_size(min(dx, dy)); // normalized to hallway width
 			light_size = max(0.06f*room_size, 0.67f*def_light_size);
 		}
 		if (r->is_sec_bldg) {
@@ -280,7 +281,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				}
 			}
 			else if (nx > 1 || ny > 1) { // office or parking garage with multiple lights
-				float const dx(r->dx()), dy(r->dy()), xstep(dx/nx), ystep(dy/ny);
+				float const xstep(dx/nx), ystep(dy/ny);
 				vector3d const shrink(0.5*light.dx()*sqrt((nx - 1)/nx), 0.5*light.dy()*sqrt((ny - 1)/ny), 0.0);
 
 				for (unsigned y = 0; y < ny; ++y) {
@@ -293,9 +294,11 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				} // for y
 			}
 			else { // normal room with a single light
-				if (0 && is_house && is_basement && !is_ext_basement) { // house basement cylindrical lights only
-					try_place_light_on_wall(light, *r, room_dim, floor_zval, valid_lights, rgen);
-					wall_light = !valid_lights.empty(); // if this fails, fall back to a ceiling light
+				if (is_house && is_basement && !is_ext_basement) { // house basement cylindrical lights only
+					if (max(dx, dy) < 2.5*window_vspacing && min(dx, dy) < 2.0*window_vspacing) { // small rooms only
+						try_place_light_on_wall(light, *r, room_dim, floor_zval, valid_lights, rgen);
+						wall_light = !valid_lights.empty(); // if this fails, fall back to a ceiling light
+					}
 				}
 				if (!wall_light) {try_place_light_on_ceiling(light, *r, room_dim, fc_thick, 1, 1, valid_lights, rgen);} // allow_rot=1, allow_mult=1
 				if (!valid_lights.empty()) {light_obj_ix = objs.size();} // this will be the index of the light to be added later

@@ -2912,7 +2912,8 @@ void building_t::try_place_light_on_wall(cube_t const &light, room_t const &room
 
 	for (unsigned n = 0; n < 100; ++n) { // 100 tries
 		bool const dim((n < 10) ? pref_dim : rgen.rand_bool()), dir(rgen.rand_bool());
-		float const wall_pos(rgen.rand_uniform((room_bounds.d[!dim][0] + min_wall_spacing), (room_bounds.d[!dim][1] - min_wall_spacing)));
+		float const wall_edge_spacing(max(min_wall_spacing, 0.25f*room_bounds.get_sz_dim(!dim))); // not near a corner of the room
+		float const wall_pos(rgen.rand_uniform((room_bounds.d[!dim][0] + wall_edge_spacing), (room_bounds.d[!dim][1] - wall_edge_spacing)));
 		float const wall_face(room_bounds.d[dim][dir]);
 		c.d[dim][ dir] = wall_face; // flush with wall
 		c.d[dim][!dir] = wall_face + (dir ? -1.0 : 1.0)*length; // expand outward
