@@ -1070,11 +1070,14 @@ void apply_room_obj_rotate(room_object_t &obj, obj_model_inst_t &inst, vect_room
 		float const angle(((obj.flags & RO_FLAG_ADJ_LO) ? -1.0 : 1.0)*0.08*TWO_PI);
 		rotate_dir_about_z(inst.dir, -angle); // limited rotation angle
 	}
-	else if (obj.type == TYPE_CEIL_FAN && obj.is_powered()) { // rotate the entire model rather than just the fan blades; only enabled for some fans
-		assert(obj.obj_id < objs.size());
-		if (objs[obj.obj_id].type == TYPE_LIGHT && objs[obj.obj_id].is_light_on()) {rotate_dir_about_z(inst.dir, 0.2*fticks);} // fan is on if light is on
+	else if (obj.type == TYPE_CEIL_FAN) { // rotate the entire model rather than just the fan blades
+		if (obj.is_powered()) { // only enabled for some fans
+			assert(obj.obj_id < objs.size());
+			if (objs[obj.obj_id].type == TYPE_LIGHT && objs[obj.obj_id].is_light_on()) {rotate_dir_about_z(inst.dir, 0.2*fticks);} // fan is on if light is on
+		}
 	}
 	else {
+		cerr << "Error: apply_room_obj_rotate() on unsupported object type " << unsigned(obj.type) << endl;
 		assert(0); // unsupported object type
 	}
 }
