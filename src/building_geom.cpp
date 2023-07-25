@@ -1453,8 +1453,9 @@ tquad_with_ix_t building_t::set_door_from_cube(cube_t const &c, bool dim, bool d
 					if (!in_ext_basement && !check_cube_contained_in_part(test_bcube)) continue; // extends outside part
 					cube_t walls_test_bcube(test_bcube);
 					walls_test_bcube.expand_in_dim(!dim, wall_thickness); // expand slightly to leave a bit of a gap between walls, and space for whiteboards
-					if (has_bcube_int(walls_test_bcube, interior->walls[!dim])) continue; // hits perp wall
-					if (interior->is_blocked_by_stairs_or_elevator(test_bcube)) continue; // hits stairs or elevator; may be too conservative
+					if (has_bcube_int(walls_test_bcube, interior->walls[!dim]))            continue; // hits perp wall
+					// open doors don't really block the player from entering or exiting stairs since they can be walked through or closed
+					if (interior->is_blocked_by_stairs_or_elevator(test_bcube, 0.0, 0, 1)) continue; // hits stairs or elevator; dmin=0, elevators_only=0, no_check_enter_exit=1
 
 					// check if the player moved an object that would block this door
 					if (has_moved_objs) {
@@ -2168,26 +2169,27 @@ bool building_interior_t::is_cube_close_to_doorway(cube_t const &c, cube_t const
 	return 0;
 }
 
-cube_t get_stairs_bcube_expanded(stairwell_t const &s, float ends_clearance, float sides_clearance) {
+cube_t get_stairs_bcube_expanded(stairwell_t const &s, float ends_clearance, float sides_clearance, float doorway_width) {
 	cube_t tc(s);
 	tc.expand_in_dim(s.dim, ends_clearance); // add extra space at both ends of stairs; may only need to add on open ends, but this is difficult to check for
 	// see step_len_pos logic in building_t::add_stairs_and_elevators()
 	unsigned const num_stairs(s.get_num_stairs());
-	//float const stair_dz(floor_spacing/(num_stairs+1)), wall_hw(min(STAIRS_WALL_WIDTH_MULT*max(s.get_sz_dim(s.dim)/num_stairs, stair_dz), 0.25*stair_dz)); // more accurate, but need floor_spacing
-	float const wall_hw(STAIRS_WALL_WIDTH_MULT*s.get_sz_dim(s.dim)/num_stairs);
+	float const floor_spacing(doorway_width/DOOR_WIDTH_SCALE);
+	float const stair_dz(floor_spacing/(num_stairs+1)), wall_hw(min(STAIRS_WALL_WIDTH_MULT*max(s.get_sz_dim(s.dim)/num_stairs, stair_dz), 0.25f*stair_dz)); // more accurate
+	//float const wall_hw(STAIRS_WALL_WIDTH_MULT*s.get_sz_dim(s.dim)/num_stairs); // faster/simpler
 	tc.expand_in_dim(!s.dim, (sides_clearance + wall_hw)); // add extra space to account for walls and railings on stairs
 	return tc;
 }
-bool has_bcube_int(cube_t const &bcube, vect_stairwell_t const &stairs, float doorway_width) {
+bool has_bcube_int(cube_t const &bcube, vect_stairwell_t const &stairs, float doorway_width, bool no_check_enter_exit=0) {
 	cube_t pre_test(bcube);
 	pre_test.expand_by_xy(doorway_width);
 
 	for (auto s = stairs.begin(); s != stairs.end(); ++s) {
 		if (!s->intersects(pre_test)) continue; // early termination test optimization
-		cube_t const tc(get_stairs_bcube_expanded(*s, doorway_width, 0.0)); // sides_clearance=0.0
+		cube_t const tc(get_stairs_bcube_expanded(*s, doorway_width, 0.0, doorway_width)); // sides_clearance=0.0
 		if (tc.intersects(bcube)) return 1;
 		// extra check for objects blocking the entrance/exit to the side; this is really only needed for open ends, but helps to avoid squeezing objects behind stairs as well
-		if (s->shape == SHAPE_U) continue; // U-shaped stairs are only open on one side and generally placed in hallways, so ignore
+		if (no_check_enter_exit || s->shape == SHAPE_U) continue; // U-shaped stairs are only open on one side and generally placed in hallways, so ignore
 
 		for (unsigned e = 0; e < 2; ++e) { // for each end (entrance/exit)
 			cube_t end(tc);
@@ -2215,14 +2217,14 @@ float building_t::get_doorway_width() const {
 	if (interior) {width = interior->get_doorway_width();}
 	return (width ? width : DOOR_WIDTH_SCALE*get_door_height()); // calculate from window spacing/door height if there's no interior or no interior doors
 }
-bool building_interior_t::is_blocked_by_stairs_or_elevator(cube_t const &c, float dmin, bool elevators_only) const { // and ramps
+bool building_interior_t::is_blocked_by_stairs_or_elevator(cube_t const &c, float dmin, bool elevators_only, bool no_check_enter_exit) const { // and ramps
 	cube_t tc(c);
 	tc.expand_by_xy(dmin); // no pad in z
 	float const doorway_width(get_doorway_width()); // Note: can return zero
-	if (has_bcube_int(tc, elevators, doorway_width))       return 1;
-	if (elevators_only || stairwells.empty())              return 0;
+	if (has_bcube_int(tc, elevators, doorway_width)) return 1;
+	if (elevators_only || stairwells.empty())        return 0;
 	tc.z1() -= 0.001*tc.dz(); // expand slightly to avoid placing an object exactly at the top of the stairs
-	if (has_bcube_int(tc, stairwells, doorway_width))      return 1; // must check zval to exclude stairs and elevators in parts with other z-ranges
+	if (has_bcube_int(tc, stairwells, doorway_width, no_check_enter_exit)) return 1; // must check zval to exclude stairs and elevators in parts with other z-ranges
 	
 	if (!ignore_ramp_placement && !pg_ramp.is_all_zeros()) {
 		bool const dim(pg_ramp.ix >> 1), dir(pg_ramp.ix & 1);
@@ -2235,8 +2237,10 @@ bool building_interior_t::is_blocked_by_stairs_or_elevator(cube_t const &c, floa
 }
 // similar to above (without stairs pretest), but returns bounding cubes rather than checking for intersections
 void building_interior_t::get_stairs_and_elevators_bcubes_intersecting_cube(cube_t const &c, vect_cube_t &bcubes, float ends_clearance, float sides_clearance) const {
+	float const doorway_width(get_doorway_width());
+
 	for (auto const &s : stairwells) {
-		cube_t const tc(get_stairs_bcube_expanded(s, ends_clearance, sides_clearance));
+		cube_t const tc(get_stairs_bcube_expanded(s, ends_clearance, sides_clearance, doorway_width));
 		if (tc.intersects(c)) {bcubes.push_back(tc);}
 	}
 	for (auto const &e : elevators) {
