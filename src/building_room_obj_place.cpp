@@ -2378,7 +2378,7 @@ room_object_t get_conduit(bool dim, bool dir, float radius, float wall_pos_dim, 
 	conduit.d[dim][ dir] = wall_pos_dim; // flush with wall
 	conduit.d[dim][!dir] = conduit.d[dim][dir] + (dir ? -1.0 : 1.0)*2.0*radius;
 	set_cube_zvals(conduit, z1, z2);
-	return room_object_t(conduit, TYPE_PIPE, room_id, 0, 1, RO_FLAG_NOCOLL, 1.0, SHAPE_CYLIN, LT_GRAY);
+	return room_object_t(conduit, TYPE_PIPE, room_id, 0, 1, RO_FLAG_NOCOLL, 1.0, SHAPE_CYLIN, LT_GRAY); // vertical
 }
 
 void building_t::add_light_switches_to_room(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned objs_start, bool is_ground_floor, bool is_basement) {

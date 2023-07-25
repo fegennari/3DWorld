@@ -1343,6 +1343,7 @@ void building_t::add_basement_electrical(vect_cube_t &obstacles, vect_cube_t con
 	unsigned const num_panels(is_house ? 1 : (1 + (rgen.rand()&3))); // 1 for houses, 1-3 for office buildings
 	colorRGBA const color(0.5, 0.6, 0.7);
 	auto &objs(interior->room_geom->objs);
+	unsigned const objs_start(objs.size());
 
 	for (unsigned n = 0; n < num_panels; ++n) {
 		float const bp_hwidth(rgen.rand_uniform(0.15, 0.25)*(is_house ? 0.7 : 1.0)*floor_height), bp_depth(rgen.rand_uniform(0.05, 0.07)*(is_house ? 0.5 : 1.0)*floor_height);
@@ -1352,9 +1353,10 @@ void building_t::add_basement_electrical(vect_cube_t &obstacles, vect_cube_t con
 
 		for (unsigned t = 0; t < ((n == 0) ? 100U : 1U); ++t) { // 100 tries for the first panel, one try after that
 			bool const dim(rgen.rand_bool()), dir(rgen.rand_bool());
-			set_wall_width(c, rgen.rand_uniform(basement.d[!dim][0]+bp_hwidth, basement.d[!dim][1]-bp_hwidth), bp_hwidth, !dim);
-			c.d[dim][ dir] = basement.d[dim][dir];
-			c.d[dim][!dir] = c.d[dim][dir] + (dir ? -1.0 : 1.0)*2.0*bp_depth;
+			float const wall_pos(basement.d[dim][dir]), bp_center(rgen.rand_uniform(basement.d[!dim][0]+bp_hwidth, basement.d[!dim][1]-bp_hwidth));
+			set_wall_width(c, bp_center, bp_hwidth, !dim);
+			c.d[dim][ dir] = wall_pos;
+			c.d[dim][!dir] = wall_pos + (dir ? -1.0 : 1.0)*2.0*bp_depth; // extend outward from wall
 			assert(c.is_strictly_normalized());
 			cube_t test_cube(c);
 			test_cube.d[dim][!dir] += (dir ? -1.0 : 1.0)*2.0*bp_hwidth; // add a width worth of clearance in the front so that the door can be opened
@@ -1367,10 +1369,86 @@ void building_t::add_basement_electrical(vect_cube_t &obstacles, vect_cube_t con
 			if (has_bcube_int(conduit, beams)) continue; // bad conduit position
 			unsigned cur_room_id((room_id < 0) ? get_room_containing_pt(c.get_cube_center()) : (unsigned)room_id); // calculate room_id if needed
 			objs.emplace_back(c, TYPE_BRK_PANEL, cur_room_id, dim, dir, RO_FLAG_INTERIOR, tot_light_amt, SHAPE_CUBE, color);
-			objs.emplace_back(conduit, TYPE_PIPE, cur_room_id, 0, 1, (RO_FLAG_NOCOLL | RO_FLAG_INTERIOR), tot_light_amt, SHAPE_CYLIN, LT_GRAY); // vertical pipe
 			set_obj_id(objs);
-			set_cube_zvals(c, ceil_zval-floor_height, ceil_zval); // expand to floor-to-ceiling
-			obstacles.push_back(c); // block off from pipes
+			objs.emplace_back(conduit, TYPE_PIPE, cur_room_id, 0, 1, (RO_FLAG_NOCOLL | RO_FLAG_INTERIOR), tot_light_amt, SHAPE_CYLIN, LT_GRAY); // vertical pipe
+			cube_t blocker(c);
+			set_cube_zvals(blocker, ceil_zval-floor_height, ceil_zval); // expand to floor-to-ceiling
+			obstacles.push_back(blocker); // block off from pipes
+
+			if (is_house) { // try to reroute outlet conduits that were previously placed on the same wall horizontally to the breaker box
+				float const conn_height(c.z1() + rgen.rand_uniform(0.25, 0.75)*c.dz());
+				cube_t avoid;
+
+				if (has_ext_basement()) {
+					door_t const &eb_door(interior->get_ext_basement_door());
+					avoid = eb_door.get_true_bcube();
+					avoid.expand_in_dim(eb_door.dim, get_wall_thickness());
+				}
+				// TODO: iterate over only objects placed in the basement part?
+				for (unsigned i = 0; i < objs_start; ++i) { // can't use an iterator as it may be invalidated
+					room_object_t &obj(objs[i]);
+					// handle power outlets
+					if (obj.type != TYPE_PIPE || obj.shape != SHAPE_CYLIN || obj.dim != 0 || obj.dir != 1) continue; // vertical pipes only
+					if (obj.d[dim][dir] != wall_pos) continue; // wrong wall
+					if (obj.intersects_xy(c))        continue; // too close to the panel; may intersect anyway; is this possibe?
+					float const radius(obj.get_radius());
+					if ((obj.z1() + 4.0*radius) > conn_height) continue; // too high (possibly light switch rather than outlet)
+					float const pipe_center(obj.get_center_dim(!dim));
+					bool const pipe_dir(pipe_center < bp_center);
+					float const bp_near_edge(c.d[!dim][!pipe_dir]);
+					room_object_t h_pipe(obj);
+					set_wall_width(h_pipe, conn_height, radius, 2); // set zvals
+					h_pipe.d[!dim][!pipe_dir] = pipe_center;
+					h_pipe.d[!dim][ pipe_dir] = bp_near_edge;
+					assert(h_pipe.is_strictly_normalized());
+					// check for valid placement/blocked by ext basement door or other objects;
+					// we may place two horizontal conduits that overlap, but they should be at the same positions and look correct enough
+					if (!avoid.is_all_zeros() && h_pipe.intersects(avoid)) continue;
+					bool had_obj_coll(0);
+					
+					for (unsigned j = 0; j < objs_start; ++j) {
+						if (j != i && objs[j].intersects(h_pipe)) {had_obj_coll = 1; break;}
+					}
+					if (had_obj_coll) continue;
+					h_pipe.dim = !dim;
+					h_pipe.dir = 0; // horizontal
+					obj.z2()   = conn_height; // shorten original conduit
+
+					if (min(obj.dz(), h_pipe.get_sz_dim(!dim)) > 4.0*radius) { // not a short segment; add connector parts
+						float const conn_exp(0.2*radius), conn_radius(radius + conn_exp), xlate((dir ? -1.0 : 1.0)*conn_exp);
+						float const conn_len(2.0*radius), signed_conn_len((pipe_dir ? 1.0 : -1.0)*conn_len);
+						obj   .translate_dim(dim, xlate); // move away from the wall
+						h_pipe.translate_dim(dim, xlate);
+						room_object_t v_conn(obj), h_conn(h_pipe);
+						h_conn.expand_in_dim(dim,  conn_exp);
+						v_conn.expand_in_dim(dim,  conn_exp);
+						h_conn.expand_in_dim(2,    conn_exp);
+						v_conn.expand_in_dim(!dim, conn_exp);
+						room_object_t v_conn2(v_conn), h_conn2(h_conn); // these will be the short connectors going to the outlet and breaker box, respectively
+						v_conn .z1()  = conn_height -     conn_len;
+						v_conn2.z2()  = obj.z1()    + 0.6*conn_len;
+						h_conn .d[!dim][ pipe_dir] = pipe_center  +     signed_conn_len;
+						h_conn2.d[!dim][!pipe_dir] = bp_near_edge - 0.6*signed_conn_len;
+						v_conn .flags |=  RO_FLAG_ADJ_HI; // add joint connecting to horizontal pipe
+						h_conn .flags |= (RO_FLAG_HANGING | (pipe_dir ? RO_FLAG_ADJ_HI : RO_FLAG_ADJ_LO)); // one flat end
+						v_conn2.flags |= (RO_FLAG_HANGING | RO_FLAG_ADJ_HI); // flat end on top
+						h_conn2.flags |= (RO_FLAG_HANGING | (pipe_dir ? RO_FLAG_ADJ_LO : RO_FLAG_ADJ_HI)); // one flat end
+						v_conn .color  = h_conn.color = v_conn2.color  = h_conn2.color = GRAY; // darker
+						objs.push_back(v_conn );
+						objs.push_back(h_conn );
+						objs.push_back(v_conn2);
+						objs.push_back(h_conn2);
+						// duplicate to get flat ends on the vertical part as well
+						v_conn.flags |=  RO_FLAG_ADJ_LO | RO_FLAG_HANGING;
+						v_conn.flags &= ~RO_FLAG_ADJ_HI;
+						objs.push_back(v_conn);
+					}
+					else { // short segment
+						obj.flags |= RO_FLAG_ADJ_HI; // add joint connecting to horizontal pipe
+					}
+					objs.push_back(h_pipe); // not added to obstacles since this should not affect pipes routed in the ceiling
+				} // for i
+			}
 			break; // done
 		} // for t
 	} // for n
