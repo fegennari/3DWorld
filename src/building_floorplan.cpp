@@ -749,6 +749,7 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 			if (is_ground_floor || pri_hall.is_all_zeros()) {pri_hall = hall;} // assign to primary hallway if on first floor of hasn't yet been assigned
 			for (unsigned d = 0; d < 2; ++d) {first_wall_to_split[d] = interior->walls[d].size();} // don't split any walls added up to this point
 
+			// add utlity room(s)
 			for (unsigned n = 0; n < MAX_OFFICE_UTILITY_ROOMS; ++n) {
 				if (utility_room_cands.empty()) break; // no more rooms to assign
 				unsigned &utility_room_ix(utility_room_cands[rand() % utility_room_cands.size()]);
@@ -766,6 +767,8 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 				utility_room_ix = utility_room_cands.back();
 				utility_room_cands.pop_back(); // remove this room from consideration
 			} // for n
+			// add server room(s)
+			// TODO: RTYPE_SERVER, can also use utility_room_cands
 		} // end use_hallway
 
 		else { // generate random walls using recursive 2D slices

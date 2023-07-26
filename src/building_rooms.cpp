@@ -371,7 +371,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			//if (has_stairs && !pri_hall.is_all_zeros()) continue; // no other geometry in office building base part rooms that have stairs
 			unsigned const floor_mask(1<<f);
 			bool added_tc(0), added_desk(0), added_obj(0), can_place_onto(0), no_whiteboard(0);
-			bool is_bathroom(0), is_bedroom(0), is_kitchen(0), is_living(0), is_dining(0), is_storage(0), is_utility(0), is_play_art(0);
+			bool is_bathroom(0), is_bedroom(0), is_kitchen(0), is_living(0), is_dining(0), is_storage(0), is_utility(0), no_plants(0), is_play_art(0);
 			unsigned num_chairs(0);
 			// unset room type if not locked on this floor during floorplanning; required to generate determinstic room geom
 			if (!r->is_rtype_locked(f)) {r->assign_to(RTYPE_NOTSET, f);}
@@ -381,15 +381,20 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			bool is_office_bathroom(is_room_office_bathroom(*r, room_center.z, f)), has_fireplace(0);
 			blockers.clear(); // clear for this new room
 			
-			if (has_chimney == 2 && !is_basement && is_ground_floor && !added_fireplace) { // handle fireplaces on the first floor
+			if (has_chimney == 2 && !is_basement && is_entry_floor && !added_fireplace) { // handle fireplaces on the first floor
 				has_fireplace = added_fireplace = maybe_add_fireplace_to_room(rgen, *r, blockers, room_center.z, room_id, tot_light_amt);
 			}
 			if (is_office_bathroom) { // bathroom is already assigned
 				added_obj = is_bathroom = added_bathroom = no_whiteboard =
 					add_bathroom_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, f, is_basement, added_bathroom_objs_mask); // add bathroom
 			}
-			else if (!is_house && f == 0 && r->get_room_type(f) == RTYPE_UTILITY) { // office building utility room; currently first floor only (but can be in a stacked part)
-				added_obj = no_whiteboard = is_utility = add_office_utility_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);
+			else if (!is_house && f == 0) { // office building special first floor rooms; can be in a stacked part
+				if (r->get_room_type(f) == RTYPE_UTILITY) {
+					added_obj = no_whiteboard = no_plants = is_utility = add_office_utility_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);
+				}
+				else if (r->get_room_type(f) == RTYPE_SERVER) {
+					added_obj = no_whiteboard = no_plants = add_server_room_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);
+				}
 			}
 			// bedroom or bathroom case; need to check first floor even if must_be_bathroom
 			if (!added_obj && allow_br && can_be_bedroom_or_bathroom(*r, f)) {
@@ -516,10 +521,10 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			}
 			if (is_house && is_basement && !added_basement_utility && !has_stairs && (is_storage || room_type_was_not_set) && rgen.rand_bool()) {
 				// basement laundry, storage, or card room; should this be placed before adding boxes to the floor of storage rooms?
-				added_basement_utility = is_utility = add_basement_utility_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);
+				added_basement_utility = is_utility = no_plants = add_basement_utility_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);
 				if (added_basement_utility) {r->assign_to(RTYPE_UTILITY, f);}
 			}
-			if (!is_bathroom && !is_bedroom && !is_kitchen && !is_storage && !is_utility && !is_basement) { // add potted plants to some room types
+			if (!is_bathroom && !is_bedroom && !is_kitchen && !is_storage && !no_plants && !is_basement) { // add potted plants to some room types
 				// 0-2 for living/dining rooms, 50% chance for houses, 25% (first floor) / 10% (other floors) chance for offices
 				unsigned const num(is_house ? (rgen.rand() % ((is_living || is_dining) ? 3 : 2)) : ((rgen.rand()%((f == 0) ? 4 : 10)) == 0));
 				if (num > 0) {add_plants_to_room(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, num);}
