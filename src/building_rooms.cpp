@@ -333,7 +333,9 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			if (is_unfinished    ) continue; // no objects for now; if adding objects later, need to make sure they stay inside the building bounds
 			float tot_light_amt(light_amt); // unitless, somewhere around 1.0
 			if (is_lit) {tot_light_amt += r->light_intensity;}
-			bool const is_ground_floor(f == 0 && !is_basement && r->z1() <= ground_floor_z1), is_garage_or_shed(r->is_garage_or_shed(f));
+			bool const is_ground_floor_part(!is_basement && r->z1() <= ground_floor_z1);
+			bool const is_ground_floor(is_ground_floor_part && f == 0), is_garage_or_shed(r->is_garage_or_shed(f));
+			bool const is_entry_floor(is_ground_floor || (is_ground_floor_part && multi_family)); // for placing entry level rooms/objs (fireplace, living, dining, kitchen, etc.)
 			unsigned const objs_start(wall_light ? objs_start_inc_lights : objs.size()); // wall light counts as an object since it must be avoided
 			rgen.rand_mix();
 
@@ -427,7 +429,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				unsigned const num_tcs(add_table_and_chairs(rgen, *r, blockers, room_id, room_center, chair_color, 0.1, tot_light_amt));
 				if (num_tcs > 0) {added_tc = added_obj = can_place_onto = 1; num_chairs = num_tcs - 1;}
 				// on ground floor, try to make this a kitchen; not all houses will have a kitchen with this logic - maybe we need fewer bedrooms?
-				if (!(added_kitchen_mask & floor_mask) && (!is_house || is_ground_floor) && !is_basement) { // office buildings can also have kitchens, even on non-ground floors
+				if (!(added_kitchen_mask & floor_mask) && (!is_house || is_entry_floor) && !is_basement) { // office buildings can also have kitchens, even on non-ground floors
 					if (added_tc || (is_house && (r+1) == rooms.end())) { // make it a kitchen if it's the last room in a house, even if there's no table
 						if (add_kitchen_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, added_living)) {
 							r->assign_to(RTYPE_KITCHEN, f);
@@ -448,7 +450,8 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 					add_office_objs (rgen, *r, blockers, chair_color, room_center.z, room_id, f, tot_light_amt, objs_start, is_basement));
 				if (added_obj && !has_stairs_this_floor) {r->assign_to((is_house ? (room_type)RTYPE_STUDY : (room_type)RTYPE_OFFICE), f);} // or other room type - may overwrite below
 			}
-			if (is_house && (added_tc || added_desk) && !is_kitchen && is_ground_floor) { // don't add second living room unless we added a kitchen and have enough rooms
+			if (is_house && (added_tc || added_desk) && !is_kitchen && is_entry_floor) { // don't add second living room unless we added a kitchen and have enough rooms
+				// TODO: update logic to handle upper floor living rooms when multi_family=1
 				if ((!added_living && !r->has_center_stairs && rooms.size() >= 8 && (added_kitchen_mask || rgen.rand_bool())) || is_room_adjacent_to_ext_door(*r, 1)) { // front_door_only=1
 					// add a living room on the ground floor if it has a table or desk but isn't a kitchen
 					added_living = is_living = add_livingroom_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);
@@ -456,7 +459,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				}
 			}
 			if (is_house && added_tc && num_chairs > 0 && !is_living && !is_kitchen) { // room with table and chair that's not a kitchen
-				if (is_ground_floor) { // dining room, must be on the ground floor
+				if (is_entry_floor) { // dining room, must be on the ground floor or an entry floor
 					if (light_obj_ix >= 0) { // handle dining room light (assume there is only one): extend downward and make it a sphere
 						assert((unsigned)light_obj_ix < objs.size());
 						room_object_t &light(objs[light_obj_ix]);

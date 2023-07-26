@@ -862,7 +862,7 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 			}
 		}
 	} // end two_parts (multi-part house)
-	if (stacked_parts) {
+	else if (stacked_parts) {
 		cube_t top_part(bcube); // parts[0] is the bottom
 		parts[0].z2() = rgen.rand_uniform((bcube.z1() + 0.8*floor_spacing), (bcube.z2() - 0.8*floor_spacing)); // split zval
 		if (global_building_params.gen_building_interiors) {adjust_part_zvals_for_floor_spacing(parts[0]);}
@@ -880,10 +880,15 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 		++real_num_parts;
 		maybe_add_basement(rgen);
 	}
-	if (!two_parts && !stacked_parts && gen_door) { // single cube house
+	else { // single cube house
+		unsigned const num_floors(calc_num_floors(parts[0], floor_spacing, get_floor_thickness()));
+		multi_family = (num_floors > 1 && parts[0].dx()*parts[0].dy() > 50.0*floor_spacing*floor_spacing);
 		maybe_add_basement(rgen);
-		door_dir  = (street_dir ? pref_street_dir : rgen.rand_bool()); // select a random dir if street_dir is not set
-		door_part = 0; // only one part
+
+		if (gen_door) { // have exterior doors and windows
+			door_dir  = (street_dir ? pref_street_dir : rgen.rand_bool()); // select a random dir if street_dir is not set
+			door_part = 0; // only one part
+		}
 	}
 	calc_bcube_from_parts(); // maybe calculate a tighter bounding cube
 	gen_interior(rgen, 0); // before adding door
