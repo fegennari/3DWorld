@@ -1337,6 +1337,14 @@ void building_t::get_pipe_basement_gas_connections(vect_riser_pos_t &pipes) cons
 	}
 }
 
+bool is_good_conduit_placement(cube_t const &c, cube_t const &avoid, vect_room_object_t const &objs, unsigned end_ix, unsigned skip_ix) {
+	if (!avoid.is_all_zeros() && c.intersects(avoid)) return 0;
+
+	for (unsigned i = 0; i < end_ix; ++i) {
+		if (i != skip_ix && objs[i].intersects(c)) return 0;
+	}
+	return 1;
+}
 void building_t::add_basement_electrical(vect_cube_t &obstacles, vect_cube_t const &walls, vect_cube_t const &beams, int room_id, float tot_light_amt, rand_gen_t &rgen) {
 	cube_t const &basement(get_basement());
 	float const floor_spacing(get_window_vspace()), fc_thickness(get_fc_thickness()), floor_height(floor_spacing - 2.0*fc_thickness), ceil_zval(basement.z2() - fc_thickness);
@@ -1353,19 +1361,20 @@ void building_t::add_basement_electrical(vect_cube_t &obstacles, vect_cube_t con
 
 		for (unsigned t = 0; t < ((n == 0) ? 100U : 1U); ++t) { // 100 tries for the first panel, one try after that
 			bool const dim(rgen.rand_bool()), dir(rgen.rand_bool());
-			float const wall_pos(basement.d[dim][dir]), bp_center(rgen.rand_uniform(basement.d[!dim][0]+bp_hwidth, basement.d[!dim][1]-bp_hwidth));
+			float const dir_sign(dir ? -1.0 : 1.0), wall_pos(basement.d[dim][dir]), bp_center(rgen.rand_uniform(basement.d[!dim][0]+bp_hwidth, basement.d[!dim][1]-bp_hwidth));
 			set_wall_width(c, bp_center, bp_hwidth, !dim);
 			c.d[dim][ dir] = wall_pos;
-			c.d[dim][!dir] = wall_pos + (dir ? -1.0 : 1.0)*2.0*bp_depth; // extend outward from wall
+			c.d[dim][!dir] = wall_pos + dir_sign*2.0*bp_depth; // extend outward from wall
 			assert(c.is_strictly_normalized());
 			cube_t test_cube(c);
-			test_cube.d[dim][!dir] += (dir ? -1.0 : 1.0)*2.0*bp_hwidth; // add a width worth of clearance in the front so that the door can be opened
+			test_cube.d[dim][!dir] += dir_sign*2.0*bp_hwidth; // add a width worth of clearance in the front so that the door can be opened
 			if (has_bcube_int(test_cube, obstacles) || has_bcube_int(test_cube, walls)) continue; // bad breaker box position
 			if (is_cube_close_to_doorway(test_cube, basement, 0.0, 1)) continue; // needed for ext basement doorways; inc_open=1
 			point top_center(c.xc(), c.yc(), c.z2());
 			cube_t conduit(top_center);
 			conduit.z2() = ceil_zval;
-			conduit.expand_by_xy(rgen.rand_uniform(0.38, 0.46)*bp_depth);
+			float const conduit_radius(rgen.rand_uniform(0.38, 0.46)*bp_depth);
+			conduit.expand_by_xy(conduit_radius);
 			if (has_bcube_int(conduit, beams)) continue; // bad conduit position
 			unsigned cur_room_id((room_id < 0) ? get_room_containing_pt(c.get_cube_center()) : (unsigned)room_id); // calculate room_id if needed
 			objs.emplace_back(c, TYPE_BRK_PANEL, cur_room_id, dim, dir, RO_FLAG_INTERIOR, tot_light_amt, SHAPE_CUBE, color);
@@ -1387,9 +1396,28 @@ void building_t::add_basement_electrical(vect_cube_t &obstacles, vect_cube_t con
 				// TODO: iterate over only objects placed in the basement part?
 				for (unsigned i = 0; i < objs_start; ++i) { // can't use an iterator as it may be invalidated
 					room_object_t &obj(objs[i]);
+
+					if (obj.type == TYPE_FURNACE) { // connect to furnace if on the same wall; straight segment with no connectors
+						if (obj.dim != dim || obj.dir == dir) continue; // wrong orient (note that dir is backwards)
+						if (obj.d[dim][dir] < c.d[dim][0] || obj.d[dim][dir] > c.d[dim][1]) continue; // back against the wrong wall (can't check wall_pos here)
+						float const radius(0.67*conduit_radius);
+						cube_t C;
+						set_wall_width(C, conn_height, radius, 2); // set zvals
+						if (C.z1() < obj.z1() || C.z2() > obj.z2()) continue;
+						float const furnace_center(obj.get_center_dim(!dim));
+						bool const pipe_dir(furnace_center < bp_center);
+						set_wall_width(C, conn_height, radius, 2);
+						C.d[dim][ dir] = wall_pos;
+						C.d[dim][!dir] = wall_pos + dir_sign*2.0*radius; // extend outward from wall
+						C.d[!dim][!pipe_dir] = obj.d[!dim][ pipe_dir];
+						C.d[!dim][ pipe_dir] = c  .d[!dim][!pipe_dir];
+						if (!is_good_conduit_placement(C, avoid, objs, objs_start, i)) continue;
+						objs.emplace_back(C, TYPE_PIPE, room_id, !dim, 0, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CYLIN, LT_GRAY); // horizontal
+						continue;
+					}
 					// handle power outlets
 					if (obj.type != TYPE_PIPE || obj.shape != SHAPE_CYLIN || obj.dim != 0 || obj.dir != 1) continue; // vertical pipes only
-					if (obj.d[dim][dir] != wall_pos) continue; // wrong wall
+					if (obj.d[dim][dir] != wall_pos) continue; // wrong wall; though we could always bend the pipe around the corner?
 					if (obj.intersects_xy(c))        continue; // too close to the panel; may intersect anyway; is this possibe?
 					float const radius(obj.get_radius());
 					if ((obj.z1() + 4.0*radius) > conn_height) continue; // too high (possibly light switch rather than outlet)
@@ -1403,13 +1431,7 @@ void building_t::add_basement_electrical(vect_cube_t &obstacles, vect_cube_t con
 					assert(h_pipe.is_strictly_normalized());
 					// check for valid placement/blocked by ext basement door or other objects;
 					// we may place two horizontal conduits that overlap, but they should be at the same positions and look correct enough
-					if (!avoid.is_all_zeros() && h_pipe.intersects(avoid)) continue;
-					bool had_obj_coll(0);
-					
-					for (unsigned j = 0; j < objs_start; ++j) {
-						if (j != i && objs[j].intersects(h_pipe)) {had_obj_coll = 1; break;}
-					}
-					if (had_obj_coll) continue;
+					if (!is_good_conduit_placement(h_pipe, avoid, objs, objs_start, i)) continue;
 					h_pipe.dim = !dim;
 					h_pipe.dir = 0; // horizontal
 					obj.z2()   = conn_height; // shorten original conduit
