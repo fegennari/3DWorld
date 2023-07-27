@@ -505,6 +505,7 @@ cube_t building_t::place_door(cube_t const &base, bool dim, bool dir, float door
 
 	for (unsigned n = 0; n < 10; ++n) { // make up to 10 tries to place a valid door
 		if (calc_center) { // add door to first part of house/building
+			if (multi_family) {} // TODO: prefer to add door to the room containing the stairs
 			float const offset(centered ? 0.5 : rgen.rand_uniform(0.5-door_center_shift, 0.5+door_center_shift));
 			door_center = offset*base_lo + (1.0 - offset)*base_hi;
 			door_pos    = base.d[dim][dir];
@@ -882,6 +883,7 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 	}
 	else { // single cube house
 		unsigned const num_floors(calc_num_floors(parts[0], floor_spacing, get_floor_thickness()));
+		// make it a multi-family house if it's a single large part with multiple floors
 		multi_family = (num_floors > 1 && parts[0].dx()*parts[0].dy() > 50.0*floor_spacing*floor_spacing);
 		maybe_add_basement(rgen);
 
@@ -894,7 +896,8 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 	gen_interior(rgen, 0); // before adding door
 
 	if (gen_door) { // add exterior doors and possibly a garage + driveway and extended basement
-		if (!has_garage && (street_dir || (rand_num & 24))) { // attempt to add an interior garage when legal, always when along a street, else 75% of the time
+		// attempt to add an interior garage when legal, always when along a street, else 75% of the time; not for multi-family, since we can't make them one per resident
+		if (!has_garage && !multi_family && (street_dir || (rand_num & 24))) {
 			bool gdim(0), gdir(0);
 
 			if (maybe_assign_interior_garage(gdim, gdir)) { // assigned a garage
