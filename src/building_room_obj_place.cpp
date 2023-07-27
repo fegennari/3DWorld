@@ -171,6 +171,13 @@ void building_t::get_all_door_centers_for_room(cube_t const &room, float zval, v
 	}
 }
 
+bool building_t::is_room_an_exit(cube_t const &room, int room_ix, float zval) const { // for living rooms, etc.
+	if (is_room_adjacent_to_ext_door(room, 1)) return 1; // front_door_only=1
+	if (!multi_family) return 0; // stairs check is only for multi-family houses
+	int const has_stairs(room_or_adj_room_has_stairs(room_ix, zval, 1)); // inc_adj_rooms=1
+	return (has_stairs == 2); // only if adjacent to stairs
+}
+
 void building_t::add_trashcan_to_room(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, bool check_last_obj) {
 	int const rr(rgen.rand()%3), rar(rgen.rand()%3); // three sizes/ARs
 	float const floor_spacing(get_window_vspace()), radius(0.02f*(3 + rr)*floor_spacing), height(0.55f*(3 + rar)*radius); // radius={0.06, 0.08, 0.10} x AR={1.65, 2.2, 2.75}

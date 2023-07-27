@@ -125,9 +125,9 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 	float const extra_bathroom_prob((is_house ? 2.0 : 1.0)*0.02*min((int(tot_num_rooms) - 4), 20));
 	room_obj_shape const light_shape(is_house ? SHAPE_CYLIN : SHAPE_CUBE);
 	unsigned cand_bathroom(rooms.size()); // start at an invalid value
-	unsigned added_kitchen_mask(0); // per-floor
+	unsigned added_kitchen_mask(0), added_living_mask(0); // per-floor
 	unsigned added_bathroom_objs_mask(0);
-	bool added_bedroom(0), added_living(0), added_library(0), added_dining(0), added_laundry(0), added_basement_utility(0), added_fireplace(0);
+	bool added_bedroom(0), added_library(0), added_dining(0), added_laundry(0), added_basement_utility(0), added_fireplace(0);
 	light_ix_assign_t light_ix_assign;
 	interior->create_fc_occluders(); // not really part of room geom, but needed for generating and drawing room geom, so we create them here
 	has_int_fplace = 0; // reset for this generation
@@ -379,6 +379,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			if (!r->is_rtype_locked(f)) {r->assign_to(RTYPE_NOTSET, f);}
 
 			// place room objects
+			bool const added_living(added_living_mask & (1 << f));
 			bool const allow_br(!is_house || must_be_bathroom || f > 0 || num_floors == 1 || (rgen.rand_float() < 0.33f*(added_living + (added_kitchen_mask&1) + 1))); // bed/bath
 			bool is_office_bathroom(is_room_office_bathroom(*r, room_center.z, f)), has_fireplace(0);
 			blockers.clear(); // clear for this new room
@@ -451,10 +452,10 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				if (added_obj && !has_stairs_this_floor) {r->assign_to((is_house ? (room_type)RTYPE_STUDY : (room_type)RTYPE_OFFICE), f);} // or other room type - may overwrite below
 			}
 			if (is_house && (added_tc || added_desk) && !is_kitchen && is_entry_floor) { // don't add second living room unless we added a kitchen and have enough rooms
-				// TODO: update logic to handle upper floor living rooms when multi_family=1
-				if ((!added_living && !r->has_center_stairs && rooms.size() >= 8 && (added_kitchen_mask || rgen.rand_bool())) || is_room_adjacent_to_ext_door(*r, 1)) { // front_door_only=1
+				if ((!added_living && !r->has_center_stairs && rooms.size() >= 8 && (added_kitchen_mask || rgen.rand_bool())) || is_room_an_exit(*r, room_id, room_center.z)) {
 					// add a living room on the ground floor if it has a table or desk but isn't a kitchen
-					added_living = is_living = add_livingroom_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);
+					is_living = add_livingroom_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);
+					if (is_living) {added_living_mask |= (1 << f);}
 					if (is_living) {r->assign_to(RTYPE_LIVING, f);}
 				}
 			}

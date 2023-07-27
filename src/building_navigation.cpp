@@ -1952,7 +1952,8 @@ building_loc_t building_t::get_building_loc_for_pt(point const &pt) const {
 	}
 	return loc;
 }
-bool building_t::room_or_adj_room_has_stairs(int room_ix, float zval, bool inc_adj_rooms) const {
+// returns: 0=no room, 1=cur room, 2=adj room
+int building_t::room_or_adj_room_has_stairs(int room_ix, float zval, bool inc_adj_rooms) const {
 	if (room_ix < 0) return 0; // no room contains this point
 	room_t const &room(get_room(room_ix));
 	unsigned floor_ix(room.get_floor_containing_zval(max(zval, room.z1()), get_window_vspace())); // clamp zval to the room
@@ -1962,7 +1963,7 @@ bool building_t::room_or_adj_room_has_stairs(int room_ix, float zval, bool inc_a
 	cr.expand_by_xy(2.0*get_wall_thickness());
 
 	for (auto r = interior->rooms.begin(); r != interior->rooms.end(); ++r) {
-		if (r->has_stairs_on_floor(floor_ix) && r->intersects_no_adj(cr)) return 1;
+		if (r->has_stairs_on_floor(floor_ix) && r->intersects_no_adj(cr)) return 2;
 	}
 	return 0;
 }

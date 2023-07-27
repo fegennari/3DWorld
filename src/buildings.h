@@ -1594,7 +1594,7 @@ private:
 
 public:
 	int get_room_containing_pt(point const &pt) const;
-	bool room_or_adj_room_has_stairs(int room_ix, float zval, bool inc_adj_rooms) const;
+	int room_or_adj_room_has_stairs(int room_ix, float zval, bool inc_adj_rooms) const;
 	void register_player_in_building(point const &camera_bs, unsigned building_id) const;
 	bool maybe_teleport_to_screenshot() const;
 	bool place_obj_along_wall(room_object type, room_t const &room, float height, vector3d const &sz_scale, rand_gen_t &rgen, float zval, unsigned room_id,
@@ -1705,6 +1705,7 @@ private:
 	int gather_room_placement_blockers(cube_t const &room, unsigned objs_start, vect_cube_t &blockers, bool inc_open_doors=1, bool ignore_chairs=0) const;
 	void get_doorways_for_room(cube_t const &room, float zval, vect_door_stack_t &doorways) const;
 	vect_door_stack_t &get_doorways_for_room(cube_t const &room, float zval) const;
+	bool is_room_an_exit(cube_t const &room, int room_ix, float zval) const;
 	bool add_chair(rand_gen_t &rgen, cube_t const &room, vect_cube_t const &blockers, unsigned room_id, point const &place_pos,
 		colorRGBA const &chair_color, bool dim, bool dir, float tot_light_amt, bool office_chair_model);
 	unsigned add_table_and_chairs(rand_gen_t rgen, cube_t const &room, vect_cube_t const &blockers, unsigned room_id,
