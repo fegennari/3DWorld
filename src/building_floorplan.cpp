@@ -87,6 +87,19 @@ void building_t::reverse_door_hinges_if_needed() { // quadratic in the number of
 	} // for i
 }
 
+void building_t::ensure_doors_to_room_are_closed(room_t const &room, unsigned doors_start, bool ensure_locked) {
+	float const window_vspacing(get_window_vspace()), floor_thickness(get_floor_thickness()), wall_thick(get_wall_thickness());
+	cube_t test_cube(room);
+	test_cube.expand_by_xy(wall_thick);
+	set_cube_zvals(test_cube, room.z1()+floor_thickness, room.z1()+window_vspacing-floor_thickness); // shrink to first floor
+
+	for (auto i = interior->doors.begin()+doors_start; i != interior->doors.end(); ++i) {
+		if (i->open && i->get_true_bcube().intersects(test_cube)) {i->open = 0;} // make sure door is closed
+		i->make_fully_open_or_closed();
+		if (ensure_locked) {i->locked = 1;}
+	}
+}
+
 float cube_rand_side_pos(cube_t const &c, bool dim, float min_dist_param, float min_dist_abs, rand_gen_t &rgen) {
 	assert(min_dist_param < 0.5f); // aplies to both ends
 	float const lo(c.d[dim][0]), hi(c.d[dim][1]), delta(hi - lo), gap(max(min_dist_abs, min_dist_param*delta)), v1(lo + gap), v2(hi - gap);
@@ -749,26 +762,23 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 			if (is_ground_floor || pri_hall.is_all_zeros()) {pri_hall = hall;} // assign to primary hallway if on first floor of hasn't yet been assigned
 			for (unsigned d = 0; d < 2; ++d) {first_wall_to_split[d] = interior->walls[d].size();} // don't split any walls added up to this point
 
-			// add utlity room(s)
-			for (unsigned n = 0; n < MAX_OFFICE_UTILITY_ROOMS; ++n) {
-				if (utility_room_cands.empty()) break; // no more rooms to assign
-				unsigned &utility_room_ix(utility_room_cands[rand() % utility_room_cands.size()]);
-				assert(utility_room_ix < rooms.size());
-				room_t &utility_room(rooms[utility_room_ix]);
-				utility_room.assign_to(RTYPE_UTILITY, 0, 1); // make this room a utility room on floor 0; locked=1
-				cube_t test_cube(utility_room);
-				test_cube.expand_by_xy(wall_thick);
-				set_cube_zvals(test_cube, utility_room.z1()+floor_thickness, utility_room.z1()+window_vspacing-floor_thickness); // shrink to first floor
+			// add utlity and server room(s)
+			unsigned const NUM_UTIL_RTYPES = 2;
+			unsigned const UTIL_RTYPES      [NUM_UTIL_RTYPES] = {RTYPE_UTILITY, RTYPE_SERVER};
+			unsigned const UTIL_RTYPE_COUNTS[NUM_UTIL_RTYPES] = {MAX_OFFICE_UTILITY_ROOMS, 1};
 
-				for (auto i = interior->doors.begin()+doors_start; i != interior->doors.end(); ++i) {
-					if (i->open && i->get_true_bcube().intersects(test_cube)) {i->open = 0;} // make sure door is closed
-					i->make_fully_open_or_closed();
-				}
-				utility_room_ix = utility_room_cands.back();
-				utility_room_cands.pop_back(); // remove this room from consideration
-			} // for n
-			// add server room(s)
-			// TODO: RTYPE_SERVER, can also use utility_room_cands
+			for (unsigned rtype = 0; rtype < NUM_UTIL_RTYPES; ++rtype) {
+				for (unsigned n = 0; n < UTIL_RTYPE_COUNTS[rtype]; ++n) {
+					if (utility_room_cands.empty()) break; // no more rooms to assign
+					unsigned &room_ix(utility_room_cands[rand() % utility_room_cands.size()]);
+					assert(room_ix < rooms.size());
+					room_t &room(rooms[room_ix]);
+					room.assign_to(UTIL_RTYPES[rtype], 0, 1); // assign this room on floor 0; locked=1
+					ensure_doors_to_room_are_closed(room, doors_start, 0); // ensure_locked=0; probably should be locked, but unlocked makes these rooms easier to explore
+					room_ix = utility_room_cands.back();
+					utility_room_cands.pop_back(); // remove this room from consideration
+				} // for n
+			} // for rtype
 		} // end use_hallway
 
 		else { // generate random walls using recursive 2D slices

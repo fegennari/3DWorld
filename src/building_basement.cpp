@@ -1393,7 +1393,7 @@ void building_t::add_basement_electrical(vect_cube_t &obstacles, vect_cube_t con
 					avoid = eb_door.get_true_bcube();
 					avoid.expand_in_dim(eb_door.dim, get_wall_thickness());
 				}
-				// TODO: iterate over only objects placed in the basement part?
+				// Note: only need to check basement objects, but there's no easy way to do this (index not recorded), so we check them all
 				for (unsigned i = 0; i < objs_start; ++i) { // can't use an iterator as it may be invalidated
 					room_object_t &obj(objs[i]);
 
