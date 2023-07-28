@@ -3028,9 +3028,10 @@ void building_room_geom_t::add_furnace(room_object_t const &c) {
 	}
 }
 
+colorRGBA get_server_color() {return texture_color(get_texture_by_name("interiors/server_rack.png"));}
+
 void building_room_geom_t::add_server(room_object_t const &c) {
-	// TODO: server texture
-	add_obj_with_front_texture(c, "interiors/furnace.jpg", get_furnace_color(), 1); // small=1
+	add_obj_with_front_texture(c, "interiors/server_rack.png", get_server_color(), 1); // small=1
 }
 
 void building_room_geom_t::add_toaster_proxy(room_object_t const &c) { // draw a simple untextured XY cube to show a lower LOD model of the toaster
@@ -3921,6 +3922,7 @@ colorRGBA room_object_t::get_color() const {
 	case TYPE_FPLACE:   return texture_color(BRICK2_TEX).modulate_with(color);
 	case TYPE_WHEATER:  return GRAY;
 	case TYPE_FURNACE:  return get_furnace_color();
+	case TYPE_SERVER:   return get_server_color ();
 	case TYPE_ATTIC_DOOR:return get_textured_wood_color();
 	case TYPE_DUCT:     return texture_color((shape == SHAPE_CYLIN) ? get_cylin_duct_tid() : get_cube_duct_tid()).modulate_with(color);
 	case TYPE_FCABINET: return texture_color(get_texture_by_name("interiors/filing_cabinet.png"));
