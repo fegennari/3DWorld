@@ -914,6 +914,7 @@ void building_room_geom_t::add_small_static_objs_to_verts(vect_room_object_t con
 		case TYPE_FEXT_SIGN:  add_fire_ext_sign (c); break;
 		case TYPE_TEESHIRT:   add_teeshirt(c); break;
 		case TYPE_BLANKET:    add_blanket (c); break;
+		case TYPE_SERVER:     add_server  (c); break;
 		default: break;
 		} // end switch
 	} // for i

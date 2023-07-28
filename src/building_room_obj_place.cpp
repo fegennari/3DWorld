@@ -2034,7 +2034,49 @@ void building_t::add_pri_hall_objs(rand_gen_t rgen, rand_gen_t room_rgen, room_t
 }
 
 bool building_t::add_server_room_objs(rand_gen_t rgen, room_t const &room, float &zval, unsigned room_id, float tot_light_amt, unsigned objs_start) { // for office buildings
-	// TODO
+	float const window_vspacing(get_window_vspace());
+	float const server_height(0.7*window_vspacing*rgen.rand_uniform(0.9, 1.1));
+	float const server_width (0.3*window_vspacing*rgen.rand_uniform(0.9, 1.1)), server_hwidth(0.5*server_width);
+	float const server_depth (0.4*window_vspacing*rgen.rand_uniform(0.9, 1.1)), server_hdepth(0.5*server_depth);
+	float const min_spacing  (0.1*window_vspacing*rgen.rand_uniform(0.9, 1.1));
+	float const server_period(server_width + min_spacing);
+	bool const long_dim(room.dx() < room.dy());
+	cube_t place_area(get_walkable_room_bounds(room));
+	place_area.expand_by(-0.25*get_wall_thickness()); // server spacing from walls
+	zval = add_flooring(room, zval, room_id, tot_light_amt, FLOORING_CONCRETE); // add concreate and move the effective floor up
+	cube_t server;
+	set_cube_zvals(server, zval, (zval + server_height));
+	point center;
+	bool added_server(0);
+	vect_room_object_t &objs(interior->room_geom->objs);
+
+	// try to line servers up against each wall wherever they fit
+	for (unsigned D = 0; D < 2; ++D) {
+		bool const dim(D ^ long_dim); // place along walls in long dim first
+		float const room_len(place_area.get_sz_dim(dim));
+		unsigned const num(room_len/server_period); // take the floor
+		if (num == 0) continue; // not enough space for a server in this dim
+		float const server_spacing(room_len/num);
+		center[dim] = place_area.d[dim][0] + 0.5*server_spacing; // first position at half spacing
+
+		for (unsigned n = 0; n < num; ++n, center[dim] += server_spacing) {
+			set_wall_width(server, center[dim], server_hwidth, dim); // position along the wall
+
+			for (unsigned dir = 0; dir < 2; ++dir) {
+				center[!dim] = place_area.d[!dim][dir] + (dir ? -1.0 : 1.0)*server_hdepth;
+				set_wall_width(server, center[!dim], server_hdepth, !dim); // position from the wall
+				// Note: overlaps_other_room_obj includes previously placed servers, so we don't have to check for intersections at the corners of rooms
+				if (is_obj_placement_blocked(server, room, 1) || overlaps_other_room_obj(server, objs_start)) continue;
+				objs.emplace_back(server, TYPE_SERVER, room_id, !dim, !dir, 0, tot_light_amt);
+				cube_t blocker(server);
+				blocker.d[!dim][ dir]  = server.d[!dim][!dir]; // front of server
+				blocker.d[!dim][!dir] += (dir ? -1.0 : 1.0)*server_width; // add space in the front for the door to open (don't block with another server)
+				objs.emplace_back(blocker, TYPE_BLOCKER, room_id, dim, 0, RO_FLAG_INVIS);
+				added_server = 1;
+			} // for dir
+		} // for n
+	} // for dim
+	if (!added_server) return 0;
 	add_door_sign("Server Room", room, zval, room_id, tot_light_amt);
 	return 1;
 }
