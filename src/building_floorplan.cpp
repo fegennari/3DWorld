@@ -262,6 +262,7 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 	vector<split_cube_t> to_split;
 	uint64_t must_split[2] = {0,0};
 	unsigned first_wall_to_split[2] = {0,0};
+	cube_t pref_conn_to; // house hallway, etc.
 	// allocate space for all floors
 	unsigned tot_num_floors(0), tot_num_stairwells(0), tot_num_landings(0); // num floor/ceiling cubes, not number of stories; used only for reserving vectors
 
@@ -865,6 +866,8 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 						assert(hall.is_strictly_normalized());
 						unsigned const num_lights(2.0*csz[!wall_dim]/min_split_len); // more lights for longer hallways
 						add_room(hall, part_id, num_lights, 1, 0);
+						pref_conn_to = hall; // prefer to connect doors to this room
+						pref_conn_to.expand_by_xy(2.0*wall_thick);
 						// add other wall parts and doorway, with a different random doorway pos
 						cube_t o_wall1(c), o_wall2;
 						create_wall(o_wall1, wall_dim, other_wall_pos, fc_thick, wall_half_thick, wall_edge_spacing);
@@ -965,6 +968,7 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 				float const len(wall.get_sz_dim(!d)), min_split_len((pref_split ? 0.5 : 1.5)*min_wall_len); // = 2.0/6.0 * doorway_width
 				if (len < min_split_len) break; // not long enough to split - done
 				float const min_dist_abs(min(1.5f*doorway_width, 0.5f*min_split_len));
+				bool const pref_conn(pref_conn_to.contains_cube(wall)); // house hallway, etc.
 				// walls currently don't run along the inside of exterior building walls, so we don't need to handle that case yet
 				bool was_split(0);
 
@@ -1002,7 +1006,8 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 					cube_t cand(wall); // sub-section of wall that will become a doorway
 					cand.d[!d][0] = lo_pos; cand.d[!d][1] = hi_pos;
 					bool const elevators_only(pref_split && ntries > 20); // allow blocking stairs if there's no other way to insert a door
-					if (interior->is_blocked_by_stairs_or_elevator(cand, stairs_elev_pad, elevators_only)) continue; // stairs in the way, skip; should we assert !pref_split?
+					int  const no_check_enter_exit((ntries > 5) ? (pref_conn ? 2 : 1) : 0); // no stairs enter/exit pad after first 5 tries, no enter/exit at all if pref_conn
+					if (interior->is_blocked_by_stairs_or_elevator(cand, stairs_elev_pad, elevators_only, no_check_enter_exit)) continue; // should we assert !pref_split?
 					bool const open_dir(wall.get_center_dim(d) > bldg_door_open_dir_tp[d]); // doors open away from the building center
 					insert_door_in_wall_and_add_seg(wall, lo_pos, hi_pos, !d, open_dir, 0); // Note: modifies wall
 					was_split = 1;

@@ -2188,13 +2188,14 @@ cube_t get_stairs_bcube_expanded(stairwell_t const &s, float ends_clearance, flo
 	tc.expand_in_dim(!s.dim, (sides_clearance + wall_hw)); // add extra space to account for walls and railings on stairs
 	return tc;
 }
-bool has_bcube_int(cube_t const &bcube, vect_stairwell_t const &stairs, float doorway_width, bool no_check_enter_exit=0) {
+// no_check_enter_exit: 0=check enter and exit with expand, 1=check enter and exit with no expand, 2=don't check enter and exit at all
+bool has_bcube_int(cube_t const &bcube, vect_stairwell_t const &stairs, float doorway_width, int no_check_enter_exit=0) {
 	cube_t pre_test(bcube);
-	pre_test.expand_by_xy(doorway_width);
+	if (no_check_enter_exit < 2) {pre_test.expand_by_xy(doorway_width);}
 
 	for (auto s = stairs.begin(); s != stairs.end(); ++s) {
 		if (!s->intersects(pre_test)) continue; // early termination test optimization
-		cube_t const tc(get_stairs_bcube_expanded(*s, doorway_width, 0.0, doorway_width)); // sides_clearance=0.0
+		cube_t const tc(get_stairs_bcube_expanded(*s, ((no_check_enter_exit == 2) ? 0.0 : doorway_width), 0.0, doorway_width)); // sides_clearance=0.0
 		if (tc.intersects(bcube)) return 1;
 		// extra check for objects blocking the entrance/exit to the side; this is really only needed for open ends, but helps to avoid squeezing objects behind stairs as well
 		if (no_check_enter_exit || s->shape == SHAPE_U) continue; // U-shaped stairs are only open on one side and generally placed in hallways, so ignore
@@ -2225,7 +2226,7 @@ float building_t::get_doorway_width() const {
 	if (interior) {width = interior->get_doorway_width();}
 	return (width ? width : DOOR_WIDTH_SCALE*get_door_height()); // calculate from window spacing/door height if there's no interior or no interior doors
 }
-bool building_interior_t::is_blocked_by_stairs_or_elevator(cube_t const &c, float dmin, bool elevators_only, bool no_check_enter_exit) const { // and ramps
+bool building_interior_t::is_blocked_by_stairs_or_elevator(cube_t const &c, float dmin, bool elevators_only, int no_check_enter_exit) const { // and ramps
 	cube_t tc(c);
 	tc.expand_by_xy(dmin); // no pad in z
 	float const doorway_width(get_doorway_width()); // Note: can return zero
