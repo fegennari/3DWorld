@@ -883,8 +883,8 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 	}
 	else { // single cube house
 		unsigned const num_floors(calc_num_floors(parts[0], floor_spacing, get_floor_thickness()));
-		// make it a multi-family house if it's a single large part with multiple floors
-		multi_family = (num_floors > 1 && parts[0].dx()*parts[0].dy() > 50.0*floor_spacing*floor_spacing);
+		// make it a multi-family house if it's a single large part with at least three floors
+		multi_family = (num_floors > 2 && parts[0].dx()*parts[0].dy() > 50.0*floor_spacing*floor_spacing);
 		maybe_add_basement(rgen);
 
 		if (gen_door) { // have exterior doors and windows
