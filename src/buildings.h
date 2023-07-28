@@ -1503,6 +1503,7 @@ struct building_t : public building_geom_t {
 	bool set_room_light_state_to(room_t const &room, float zval, bool make_on);
 	void set_obj_lit_state_to(unsigned room_id, float light_z2, bool lit_state);
 	bool player_pickup_object(point const &at_pos, vector3d const &in_dir);
+	void register_player_change_floor(unsigned old_floor, unsigned new_floor) const;
 	void register_player_enter_building() const;
 	void register_player_exit_building (bool entered_another_building) const;
 	bool check_for_wall_ceil_floor_int(point const &p1, point const &p2) const;
@@ -1651,6 +1652,8 @@ public:
 private:
 	void create_per_part_ext_verts();
 	void finish_gen_geometry(rand_gen_t &rgen, bool has_overlapping_cubes);
+	void assign_name(rand_gen_t &rgen);
+	std::string get_name_for_floor(unsigned floor_ix) const;
 	bool add_outdoor_ac_unit(rand_gen_t &rgen);
 	bool add_chimney(bool two_parts, bool stacked_parts, bool hipped_roof[4], float roof_dz[4], unsigned force_dim[2], rand_gen_t &rgen);
 	void gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes);

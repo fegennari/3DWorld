@@ -60,6 +60,19 @@ string choose_business_name(rand_gen_t rgen) {
 	return ""; // never gets here
 }
 
+void building_t::assign_name(rand_gen_t &rgen) {
+	name = (is_house ? choose_family_name(rgen) : choose_business_name(rgen));
+}
+string building_t::get_name_for_floor(unsigned floor_ix) const {
+	if (!multi_family) return name;
+	// floor_ix includes basement; adjust to be relative to ground floor
+	int const floor_ix_from_ground(floor_ix - get_floor_for_zval(ground_floor_z1 + 0.5*get_window_vspace()));
+	if (floor_ix_from_ground <= 0) return name;
+	rand_gen_t rgen;
+	rgen.set_state(hash<string>{}(name), floor_ix_from_ground); // seed with hash of original name to create a new family name for an upper floor
+	return choose_family_name(rgen);
+}
+
 // signs
 
 void gen_text_verts(vector<vert_tc_t> &verts, point const &pos, string const &text, float tsize,

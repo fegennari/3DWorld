@@ -996,6 +996,11 @@ bool building_room_geom_t::player_pickup_object(building_t &building, point cons
 void print_entering_building(string const &str) {
 	print_text_onscreen(str, WHITE, 1.0, 2.0*TICKS_PER_SECOND, 0);
 }
+void building_t::register_player_change_floor(unsigned old_floor, unsigned new_floor) const {
+	if (!multi_family) return; // single residence/name or office building
+	if (camera_pos.z < ground_floor_z1) return; // skip if basement, since no one resident owns it
+	print_entering_building("Entering " + get_name_for_floor(new_floor) + " Residence");
+}
 void building_t::register_player_enter_building() const {
 	//print_building_manifest(); // for debugging
 	//print_building_stats(); // for debugging

@@ -15,9 +15,6 @@ extern float grass_width, CAMERA_RADIUS, fticks;
 extern building_params_t global_building_params;
 
 
-string choose_family_name(rand_gen_t rgen);
-string choose_business_name(rand_gen_t rgen);
-
 /*static*/ float building_t::get_scaled_player_radius() {return CAMERA_RADIUS*global_building_params.player_coll_radius_scale;}
 
 void building_t::set_z_range(float z1, float z2) {
@@ -227,14 +224,12 @@ void building_t::gen_geometry(int rseed1, int rseed2) {
 	ao_bcz2         = bcube.z2(); // capture z2 before union with roof and detail geometry (which increases building height)
 	ground_floor_z1 = bcube.z1(); // record before adding basement
 	wall_color      = mat.wall_color; // start with default wall color
+	assign_name(rgen);
 	
 	if (is_house) {
-		name = choose_family_name(rgen);
 		gen_house(base, rgen);
 		return;
 	}
-	name = choose_business_name(rgen);
-
 	// determine building shape (cube, cylinder, other)
 	if (rgen.rand_probability(mat.round_prob)) {num_sides = MAX_CYLIN_SIDES;} // max number of sides for drawing rounded (cylinder) buildings
 	else if (rgen.rand_probability(mat.cube_prob)) {num_sides = 4;} // cube
