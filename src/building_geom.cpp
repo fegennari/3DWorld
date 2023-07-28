@@ -495,20 +495,35 @@ cube_t building_t::place_door(cube_t const &base, bool dim, bool dir, float door
 {
 	float const door_width(width_scale*door_height), door_half_width(0.5*door_width);
 	if (can_fail && base.get_sz_dim(!dim) < 2.0*door_width) return cube_t(); // part is too small to place a door
-	float const door_shift(0.01*get_window_vspace()), base_lo(base.d[!dim][0]), base_hi(base.d[!dim][1]);
+	float const door_shift(0.01*get_window_vspace()), base_lo(base.d[!dim][0]), base_hi(base.d[!dim][1]), wall_thickness(get_wall_thickness());
 	bool const calc_center(door_center == 0.0); // door not yet calculated
 	bool const centered(door_center_shift == 0.0 || hallway_dim == (uint8_t)dim); // center doors connected to primary hallways
-	bool const is_basement(base.zc() < ground_floor_z1);
+	// ideally we want the front (first) door to connect to the stairs in a multi-family house, but the stairs may be in the back, so we allow the back door as well
+	bool const is_basement(base.zc() < ground_floor_z1), is_front_door(/*doors.empty() &&*/ !is_basement);
+	bool const pref_near_stairs(interior && is_front_door && multi_family);
+	unsigned const base_num_tries(10), num_tries((pref_near_stairs ? 2 : 1)*base_num_tries);
 	cube_t door;
 	door.z1() = base.z1(); // same bottom as house
 	door.z2() = door.z1() + door_height;
 
-	for (unsigned n = 0; n < 10; ++n) { // make up to 10 tries to place a valid door
+	for (unsigned n = 0; n < num_tries; ++n) { // make up to 10 tries to place a valid door
 		if (calc_center) { // add door to first part of house/building
-			if (multi_family) {} // TODO: prefer to add door to the room containing the stairs
 			float const offset(centered ? 0.5 : rgen.rand_uniform(0.5-door_center_shift, 0.5+door_center_shift));
 			door_center = offset*base_lo + (1.0 - offset)*base_hi;
 			door_pos    = base.d[dim][dir];
+		}
+		if (pref_near_stairs && n < 15) { // check if room has stairs or is a hallway; basement stairs stairs don't count
+			point center;
+			center.z     = door.zc();
+			center[ dim] = door_pos - wall_thickness*(dir ? 1.0 : -1.0); // move into the house interior
+			center[!dim] = door_center;
+			int const room_ix(get_room_containing_pt(center));
+			assert(room_ix >= 0 && (unsigned)room_ix < interior->rooms.size());
+			room_t const &room(interior->rooms[room_ix]);
+			
+			if (!room.has_stairs_on_floor(1)) { // check for stairs on second floor to exclude basement stairs; we know there must be at least two floors
+				if (n < base_num_tries || !room.is_hallway) continue; // allow hallways as well for n=[10, 14]
+			}
 		}
 		if (interior && (!has_pri_hall() || is_basement) && !opens_up) { // not on a hallway - check distance to interior walls to make sure the door has space to open
 			auto const &walls(interior->walls[!dim]); // perpendicular to door
@@ -534,7 +549,7 @@ cube_t building_t::place_door(cube_t const &base, bool dim, bool dir, float door
 		// we're free to choose the door pos, and have the interior, so we can check if the door is in a good location;
 		// if we get here on the last iteration, just keep the door even if it's an invalid location
 		if (calc_center && interior && !centered && !is_valid_door_pos(door, door_width, dim)) {
-			if (can_fail && n == 9) return cube_t(); // last iteration, fail
+			if (can_fail && n+1 == num_tries) return cube_t(); // last iteration, fail
 			continue; // try a new location
 		}
 		break; // done
