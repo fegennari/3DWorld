@@ -513,8 +513,9 @@ cube_t building_t::place_door(cube_t const &base, bool dim, bool dir, float door
 			center[ dim] = door_pos - wall_thickness*(dir ? 1.0 : -1.0); // move into the house interior
 			center[!dim] = door_center;
 			int const room_ix(get_room_containing_pt(center));
-			assert(room_ix >= 0 && (unsigned)room_ix < interior->rooms.size());
-			room_t const &room(interior->rooms[room_ix]);
+			//assert(room_ix >= 0);
+			if (room_ix < 0) continue; // should never fail, but if it does, then the door placement must be bad
+			room_t const &room(interior->get_room(room_ix));
 			
 			if (!room.has_stairs_on_floor(1)) { // check for stairs on second floor to exclude basement stairs; we know there must be at least two floors
 				if (n < base_num_tries || !room.is_hallway) continue; // allow hallways as well for n=[10, 14]
