@@ -159,6 +159,20 @@ bool gen_furnace_cand(cube_t const &place_area, float floor_spacing, bool near_w
 	return 1;
 }
 
+void building_t::add_breaker_panel(rand_gen_t &rgen, cube_t const &c, float bp_depth, float ceil_zval, bool dim, bool dir, unsigned room_id, float tot_light_amt) {
+	assert(has_room_geom());
+	colorRGBA const color(0.5, 0.6, 0.7);
+	auto &objs(interior->room_geom->objs);
+	point top_center(c.xc(), c.yc(), c.z2());
+	cube_t conduit(top_center);
+	conduit.z2() = ceil_zval;
+	float const conduit_radius(rgen.rand_uniform(0.38, 0.46)*bp_depth);
+	conduit.expand_by_xy(conduit_radius);
+	objs.emplace_back(c, TYPE_BRK_PANEL, room_id, dim, dir, RO_FLAG_INTERIOR, tot_light_amt, SHAPE_CUBE, color);
+	set_obj_id(objs);
+	objs.emplace_back(conduit, TYPE_PIPE, room_id, 0, 1, (RO_FLAG_NOCOLL | RO_FLAG_INTERIOR), tot_light_amt, SHAPE_CYLIN, LT_GRAY); // vertical pipe
+}
+
 // Note: for houses
 bool building_t::add_basement_utility_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
 	if (!has_room_geom()) return 0;
@@ -178,6 +192,30 @@ bool building_t::add_office_utility_objs(rand_gen_t rgen, room_t const &room, fl
 	for (unsigned n = 0; n < num_water_heaters; ++n) {add_furnace_to_room(rgen, room, zval, room_id, tot_light_amt, objs_start);}
 	cube_t place_area(get_walkable_room_bounds(room));
 	place_model_along_wall(OBJ_MODEL_SINK, TYPE_SINK, room, 0.45, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 0.6); // place janitorial sink
+	// add breaker panel
+	float const floor_spacing(get_window_vspace()), floor_height(floor_spacing - 2.0*get_fc_thickness()), ceil_zval(zval + get_floor_ceil_gap());
+	auto &objs(interior->room_geom->objs);
+	float const bp_hwidth(rgen.rand_uniform(0.15, 0.25)*(is_house ? 0.7 : 1.0)*floor_height), bp_depth(rgen.rand_uniform(0.05, 0.07)*(is_house ? 0.5 : 1.0)*floor_height);
+	
+	if (bp_hwidth < 0.25*min(room.dx(), room.dy())) { // if room is large enough
+		cube_t c;
+		set_cube_zvals(c, (ceil_zval - 0.75*floor_height), (ceil_zval - rgen.rand_uniform(0.2, 0.35)*floor_height));
+
+		for (unsigned n = 0; n < 20; ++n) { // 20 tries
+			bool const dim(rgen.rand_bool()), dir(rgen.rand_bool());
+			float const dir_sign(dir ? -1.0 : 1.0), wall_pos(room.d[dim][dir]), bp_center(rgen.rand_uniform(room.d[!dim][0]+bp_hwidth, room.d[!dim][1]-bp_hwidth));
+			set_wall_width(c, bp_center, bp_hwidth, !dim);
+			c.d[dim][ dir] = wall_pos;
+			c.d[dim][!dir] = wall_pos + dir_sign*2.0*bp_depth; // extend outward from wall
+			assert(c.is_strictly_normalized());
+			cube_t test_cube(c);
+			test_cube.d[dim][!dir] += dir_sign*2.0*bp_hwidth; // add a width worth of clearance in the front so that the door can be opened
+			test_cube.z2() = ceil_zval; // extend up to ceiling to ensure space for the conduit
+			if (is_obj_placement_blocked(test_cube, room, 1) || overlaps_other_room_obj(test_cube, objs_start)) continue;
+			add_breaker_panel(rgen, c, bp_depth, ceil_zval, dim, dir, room_id, tot_light_amt);
+			break; // done
+		} // for n
+	}
 	add_door_sign("Utility", room, zval, room_id, tot_light_amt);
 	return 1;
 }
@@ -1348,8 +1386,7 @@ bool is_good_conduit_placement(cube_t const &c, cube_t const &avoid, vect_room_o
 void building_t::add_basement_electrical(vect_cube_t &obstacles, vect_cube_t const &walls, vect_cube_t const &beams, int room_id, float tot_light_amt, rand_gen_t &rgen) {
 	cube_t const &basement(get_basement());
 	float const floor_spacing(get_window_vspace()), fc_thickness(get_fc_thickness()), floor_height(floor_spacing - 2.0*fc_thickness), ceil_zval(basement.z2() - fc_thickness);
-	unsigned const num_panels(is_house ? 1 : (1 + (rgen.rand()&3))); // 1 for houses, 1-3 for office buildings
-	colorRGBA const color(0.5, 0.6, 0.7);
+	unsigned const num_panels(is_house ? 1 : (2 + (rgen.rand()&3))); // 1 for houses, 2-4 for office buildings
 	auto &objs(interior->room_geom->objs);
 	unsigned const objs_start(objs.size());
 
@@ -1368,18 +1405,11 @@ void building_t::add_basement_electrical(vect_cube_t &obstacles, vect_cube_t con
 			assert(c.is_strictly_normalized());
 			cube_t test_cube(c);
 			test_cube.d[dim][!dir] += dir_sign*2.0*bp_hwidth; // add a width worth of clearance in the front so that the door can be opened
-			if (has_bcube_int(test_cube, obstacles) || has_bcube_int(test_cube, walls)) continue; // bad breaker box position
+			test_cube.z2() = ceil_zval; // extend up to ceiling to ensure space for the conduit
+			if (has_bcube_int(test_cube, obstacles) || has_bcube_int(test_cube, walls) || has_bcube_int(test_cube, beams)) continue; // bad breaker box or conduit position
 			if (is_cube_close_to_doorway(test_cube, basement, 0.0, 1)) continue; // needed for ext basement doorways; inc_open=1
-			point top_center(c.xc(), c.yc(), c.z2());
-			cube_t conduit(top_center);
-			conduit.z2() = ceil_zval;
-			float const conduit_radius(rgen.rand_uniform(0.38, 0.46)*bp_depth);
-			conduit.expand_by_xy(conduit_radius);
-			if (has_bcube_int(conduit, beams)) continue; // bad conduit position
 			unsigned cur_room_id((room_id < 0) ? get_room_containing_pt(c.get_cube_center()) : (unsigned)room_id); // calculate room_id if needed
-			objs.emplace_back(c, TYPE_BRK_PANEL, cur_room_id, dim, dir, RO_FLAG_INTERIOR, tot_light_amt, SHAPE_CUBE, color);
-			set_obj_id(objs);
-			objs.emplace_back(conduit, TYPE_PIPE, cur_room_id, 0, 1, (RO_FLAG_NOCOLL | RO_FLAG_INTERIOR), tot_light_amt, SHAPE_CYLIN, LT_GRAY); // vertical pipe
+			add_breaker_panel(rgen, c, bp_depth, ceil_zval, dim, dir, cur_room_id, tot_light_amt);
 			cube_t blocker(c);
 			set_cube_zvals(blocker, ceil_zval-floor_height, ceil_zval); // expand to floor-to-ceiling
 			obstacles.push_back(blocker); // block off from pipes
@@ -1400,7 +1430,7 @@ void building_t::add_basement_electrical(vect_cube_t &obstacles, vect_cube_t con
 					if (obj.type == TYPE_FURNACE) { // connect to furnace if on the same wall; straight segment with no connectors
 						if (obj.dim != dim || obj.dir == dir) continue; // wrong orient (note that dir is backwards)
 						if (obj.d[dim][dir] < c.d[dim][0] || obj.d[dim][dir] > c.d[dim][1]) continue; // back against the wrong wall (can't check wall_pos here)
-						float const radius(0.67*conduit_radius);
+						float const radius(0.67*0.42*bp_depth); // 67% of average conduit radius
 						cube_t C;
 						set_wall_width(C, conn_height, radius, 2); // set zvals
 						if (C.z1() < obj.z1() || C.z2() > obj.z2()) continue;
