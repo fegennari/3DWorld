@@ -133,7 +133,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 	has_int_fplace = 0; // reset for this generation
 
 	if (rooms.size() > 1) { // choose best room assignments for required rooms; if a single room, skip this step
-		float min_score(0.0);
+		float min_score(0.0); // lower is better
 
 		// Note: assigning cand_bathroom when has_pri_hall() is not strictly necessary, but may help add a bathroom to an upper stacked part
 		for (auto r = rooms.begin(); r != rooms.end(); ++r) {
@@ -151,7 +151,8 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				}
 				float score(r->dx() + r->dy()); // starts as half the perimeter
 				score *= (1.0 + 10.0*(max(count_num_int_doors(*r), 1U) - 1U)); // multiply by a large value if there are mult doors so we only choose this if there are no alternatives
-				if (min_score == 0.0 || score < min_score) {cand_bathroom = (r - rooms.begin()); min_score = score;}
+				if (num_floors > 1 && r->has_stairs_on_floor(0)) {score *= 4.0;} // penalty for ground floors stairs connecting to the basement or a stacked part
+				if (min_score == 0.0 || score < min_score) {cand_bathroom = (r - rooms.begin()); min_score = score;} // lower score is better
 			}
 		} // for r
 	}
