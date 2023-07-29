@@ -162,12 +162,13 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 		if (!is_house && r->is_hallway) {light_amt *= 2.0;} // double the light in office building hallways because they often connect to other lit hallways
 		float const floor_height(r->is_sec_bldg ? r->dz() : window_vspacing); // secondary buildings are always one floor
 		unsigned const num_floors(calc_num_floors_room(*r, floor_height, floor_thickness)), room_id(r - rooms.begin());
+		unsigned const min_br(multi_family ? num_floors : 1); // multi-family house requires one per floor; can apply to both bedrooms and bathrooms
 		point room_center(r->get_cube_center());
 
 		// determine light pos and size for this stack of rooms
 		float const dx(r->dx()), dy(r->dy());
 		bool const room_dim(dx < dy); // longer room dim
-		bool const must_be_bathroom(room_id == cand_bathroom && num_bathrooms == 0); // cand bathroom, and bathroom not already placed
+		bool const must_be_bathroom(room_id == cand_bathroom && num_bathrooms == 0); // cand bathroom, and bathroom not already placed; applies to all floors of this room
 		bool const is_parking_garage(r->get_room_type(0) == RTYPE_PARKING   ); // all floors should be parking garage
 		bool const is_unfinished    (r->get_room_type(0) == RTYPE_UNFINISHED); //  // unfinished room, for example in a non-cube shaped office building
 		bool const is_ext_basement(r->is_ext_basement());
@@ -403,7 +404,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			// bedroom or bathroom case; need to check first floor even if must_be_bathroom
 			if (!added_obj && allow_br && can_be_bedroom_or_bathroom(*r, f)) {
 				// Note: num_bedrooms is summed across all floors, while num_bathrooms is per-floor
-				bool const pref_sec_bath(is_house && num_bathrooms == 1 && num_bedrooms > 1 && rooms.size() >= 6 && !must_be_bathroom && !has_fireplace && can_be_bathroom(*r));
+				bool const pref_sec_bath(is_house && num_bathrooms == 1 && num_bedrooms > min_br && rooms.size() >= 6 && !must_be_bathroom && !has_fireplace && can_be_bathroom(*r));
 				float const bedroom_prob(pref_sec_bath ? 0.25 : 0.75), bathroom_prob((pref_sec_bath ? 2.0 : 1.0)*extra_bathroom_prob);
 				// place a bedroom 75% of the time unless this must be a bathroom; if we got to the second floor and haven't placed a bedroom, always place it;
 				// houses only, and must have a window (exterior wall)
