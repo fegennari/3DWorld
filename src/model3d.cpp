@@ -33,7 +33,7 @@ bool model_calc_tan_vect(1); // slower and more memory but sometimes better qual
 extern bool group_back_face_cull, enable_model3d_tex_comp, disable_shader_effects, texture_alpha_in_red_comp, use_model3d_tex_mipmaps, enable_model3d_bump_maps;
 extern bool two_sided_lighting, have_indir_smoke_tex, use_core_context, model3d_wn_normal, invert_model_nmap_bscale, use_z_prepass, all_model3d_ref_update;
 extern bool use_interior_cube_map_refl, enable_model3d_custom_mipmaps, enable_tt_model_indir, no_subdiv_model, auto_calc_tt_model_zvals, use_model_lod_blocks;
-extern bool flatten_tt_mesh_under_models, no_store_model_textures_in_memory, disable_model_textures, allow_model3d_quads, merge_model_objects;
+extern bool flatten_tt_mesh_under_models, no_store_model_textures_in_memory, disable_model_textures, allow_model3d_quads, merge_model_objects, invert_model3d_faces;
 extern unsigned shadow_map_sz, reflection_tid;
 extern int display_mode, animate2;
 extern float model3d_alpha_thresh, model3d_texture_anisotropy, model_triplanar_tc_scale, model_mat_lod_thresh, cobj_z_bias, model_hemi_lighting_scale, light_int_scale[];
@@ -1944,6 +1944,10 @@ void model3d::simplify_indices(float reduce_target) {
 void set_def_spec_map() {
 	if (enable_spec_map()) {select_texture(WHITE_TEX, 8);} // all white/specular (no specular map texture)
 }
+bool cull_front_faces(int reflection_pass) {
+	// the reflection pass uses a mirror, which changes the winding direction, so we cull the front faces instead
+	return ((reflection_pass == 1) ^ invert_model3d_faces);
+}
 
 void model3d::render_materials(shader_t &shader, bool is_shadow_pass, int reflection_pass, bool is_z_prepass, int enable_alpha_mask,
 	unsigned bmap_pass_mask, int trans_op_mask, base_mat_t const &unbound_mat, rotation_t const &rot, point const *const xlate,
@@ -1953,7 +1957,7 @@ void model3d::render_materials(shader_t &shader, bool is_shadow_pass, int reflec
 	if (is_normal_pass) {smap_data[rot].set_for_all_lights(shader, mvm);} // choose correct shadow map based on rotation
 
 	if (group_back_face_cull && reflection_pass != 2 && !skip_cull_face) { // okay enable culling if is_shadow_pass on some scenes
-		if (reflection_pass == 1) {glCullFace(GL_FRONT);} // the reflection pass uses a mirror, which changes the winding direction, so we cull the front faces instead
+		if (cull_front_faces(reflection_pass)) {glCullFace(GL_FRONT);}
 		glEnable(GL_CULL_FACE);
 	}
 
@@ -2009,7 +2013,7 @@ void model3d::render_materials(shader_t &shader, bool is_shadow_pass, int reflec
 		to_draw.clear();
 	}
 	if (group_back_face_cull && reflection_pass != 2 && !skip_cull_face) { // okay enable culling if is_shadow_pass on some scenes
-		if (reflection_pass == 1) {glCullFace(GL_BACK);} // restore the default
+		if (cull_front_faces(reflection_pass)) {glCullFace(GL_BACK);} // restore the default
 		glDisable(GL_CULL_FACE);
 	}
 }
@@ -2749,7 +2753,7 @@ void model3ds::render(bool is_shadow_pass, int reflection_pass, int trans_op_mas
 						if (use_custom_smaps) {s.add_uniform_float("z_bias", cobj_z_bias);} // unnecessary?
 						if (use_bmap && invert_model_nmap_bscale) {s.add_uniform_float("bump_b_scale", 1.0); reset_bscale = 1;}
 						if (ref_pass && any_planar_reflective) {bind_texture_tu(reflection_tid, 14);}
-						if (model3d_wn_normal) {s.add_uniform_float("winding_normal_sign", ((reflection_pass == 1) ? -1.0 : 1.0));}
+						if (model3d_wn_normal) {s.add_uniform_float("winding_normal_sign", (cull_front_faces(reflection_pass) ? -1.0 : 1.0));}
 						s.add_uniform_float("hemi_lighting_scale", model_hemi_lighting_scale);
 					}
 					else {

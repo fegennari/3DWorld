@@ -34,6 +34,7 @@ include config_gameplay.txt
 unlimited_weapons 1
 
 group_back_face_cull 0
+invert_model3d_faces 0
 enable_model3d_tex_comp 0
 disable_shader_effects 0
 two_sided_lighting 1
