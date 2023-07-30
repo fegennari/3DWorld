@@ -2038,14 +2038,17 @@ bool building_t::add_server_room_objs(rand_gen_t rgen, room_t const &room, float
 	float const server_height(0.7*window_vspacing*rgen.rand_uniform(0.9, 1.1));
 	float const server_width (0.3*window_vspacing*rgen.rand_uniform(0.9, 1.1)), server_hwidth(0.5*server_width);
 	float const server_depth (0.4*window_vspacing*rgen.rand_uniform(0.9, 1.1)), server_hdepth(0.5*server_depth);
+	float const comp_height  (0.2*window_vspacing*rgen.rand_uniform(0.9, 1.1));
 	float const min_spacing  (0.1*window_vspacing*rgen.rand_uniform(0.9, 1.1));
+	float const comp_hwidth(0.5*0.44*comp_height), comp_hdepth(0.5*0.9*comp_height); // fixed AR=0.44 to match the texture
 	float const server_period(server_width + min_spacing);
 	bool const long_dim(room.dx() < room.dy());
 	cube_t place_area(get_walkable_room_bounds(room));
 	place_area.expand_by(-0.25*get_wall_thickness()); // server spacing from walls
 	zval = add_flooring(room, zval, room_id, tot_light_amt, FLOORING_CONCRETE); // add concreate and move the effective floor up
-	cube_t server;
-	set_cube_zvals(server, zval, (zval + server_height));
+	cube_t server, computer;
+	set_cube_zvals(server,   zval, (zval + server_height));
+	set_cube_zvals(computer, zval, (zval + comp_height  ));
 	point center;
 	bool added_server(0);
 	vect_room_object_t &objs(interior->room_geom->objs);
@@ -2063,14 +2066,23 @@ bool building_t::add_server_room_objs(rand_gen_t rgen, room_t const &room, float
 			set_wall_width(server, center[dim], server_hwidth, dim); // position along the wall
 
 			for (unsigned dir = 0; dir < 2; ++dir) {
-				center[!dim] = place_area.d[!dim][dir] + (dir ? -1.0 : 1.0)*server_hdepth;
+				float const dir_sign(dir ? -1.0 : 1.0);
+				center[!dim] = place_area.d[!dim][dir] + dir_sign*server_hdepth;
 				set_wall_width(server, center[!dim], server_hdepth, !dim); // position from the wall
+				
 				// Note: overlaps_other_room_obj includes previously placed servers, so we don't have to check for intersections at the corners of rooms
-				if (is_obj_placement_blocked(server, room, 1) || overlaps_other_room_obj(server, objs_start)) continue;
+				if (is_obj_placement_blocked(server, room, 1) || overlaps_other_room_obj(server, objs_start)) { // no space for server; try computer instead
+					set_wall_width(computer,  center[ dim], comp_hwidth, dim); // position along the wall
+					set_wall_width(computer, (place_area.d[!dim][dir] + 1.2*dir_sign*comp_hdepth), comp_hdepth, !dim); // position from the wall
+					if (is_obj_placement_blocked(computer, room, 1) || overlaps_other_room_obj(computer, objs_start)) continue;
+					objs.emplace_back(computer, TYPE_COMPUTER, room_id, !dim, !dir, 0, tot_light_amt);
+					added_server = 1; // I guess this counts?
+					continue;
+				}
 				objs.emplace_back(server, TYPE_SERVER, room_id, !dim, !dir, 0, tot_light_amt);
 				cube_t blocker(server);
 				blocker.d[!dim][ dir]  = server.d[!dim][!dir]; // front of server
-				blocker.d[!dim][!dir] += (dir ? -1.0 : 1.0)*server_width; // add space in the front for the door to open (don't block with another server)
+				blocker.d[!dim][!dir] += dir_sign*server_width; // add space in the front for the door to open (don't block with another server)
 				objs.emplace_back(blocker, TYPE_BLOCKER, room_id, dim, 0, RO_FLAG_INVIS);
 				added_server = 1;
 			} // for dir
