@@ -1215,7 +1215,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 	vector<coll_tquad> ppts;
 	// tree state
 	float tree_br_scale_mult(1.0), tree_nl_scale(1.0), tree_height(1.0);
-	bool enable_leaf_wind(1), remove_t_junctions(0), outdoor_shadows(0), dynamic_indir(0), skip_cur_model(0);
+	bool enable_leaf_wind(1), remove_t_junctions(0), outdoor_shadows(0), dynamic_indir(0), skip_cur_model(0), model3d_fit_to_scene(0);
 	int reflective(0); // reflective: 0=none, 1=planar, 2=cube map (applies to cobjs and model3d)
 	typedef map<string, cobj_params> material_map_t;
 	material_map_t materials;
@@ -1301,6 +1301,9 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 				}
 				else if (keyword == "sensor") {
 					if (!cur_sensor.read_from_file(fp, xf)) {return read_error(fp, keyword, coll_obj_file);}
+				}
+				else if (keyword == "model3d_fit_to_scene") {
+					if (!read_bool(fp, model3d_fit_to_scene)) {return read_error(fp, keyword, coll_obj_file);}
 				}
 				else if (keyword == "transform_array_1d") {
 					unsigned num(0);
@@ -1461,6 +1464,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 					skip_cur_model = 1;
 					break;
 				}
+				if (model3d_fit_to_scene) {fit_cur_model_to_scene();} // apply translate and scale as a transform before adding the model
 				string const error_str(add_loaded_model(ppts, cobj, xf.scale, has_layer, model_xf2));
 				if (!error_str.empty()) {return read_error(fp, error_str.c_str(), coll_obj_file);}
 				skip_cur_model = 0;

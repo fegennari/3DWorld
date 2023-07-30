@@ -638,7 +638,7 @@ unsigned model3d::get_anim_id(shader_t &shader, string const &prop_name, int ani
 	string const anim_name(shader.get_property(prop_name));
 
 	if (anim_name.empty()) { // no named animation, use the first one; could also use "default" for the name as that matches the default name
-		model_error_logger.log_error("Error: No animation name or ID specified for model '" + filename + "'; Using the first animation");
+		model_error_logger.log_error("Warning: No animation name or ID specified for model '" + filename + "'; Using the first animation");
 		return 0; // use first animation
 	}
 	anim_id = model_anim_data.get_animation_id_by_name(anim_name);
@@ -2168,6 +2168,17 @@ bool is_cube_visible_to_camera(cube_t const &cube, bool is_shadow_pass, bool ani
 }
 
 
+void model3d::fit_to_scene() {
+	if (!transforms.empty()) {cerr << "Error: Can't fit model3d to scene when transforms have been added" << endl; return;}
+	cube_t scene(get_scene_bounds());
+	max_eq(scene.z2(), (scene.z1() + Z_SCENE_SIZE)); // make sure delta Z is at least Z_SCENE_SIZE
+	vector3d const model_sz(bcube.get_size()), scene_sz(scene.get_size());
+	model3d_xform_t xf;
+	xf.scale = min(scene_sz.x/model_sz.x, min(scene_sz.y/model_sz.y, scene_sz.z/model_sz.z)); // make sure it fits in all dims
+	xf.tv    = scene.get_cube_center() - xf.scale*bcube.get_cube_center();
+	transforms.push_back(xf);
+}
+
 void model3d::set_target_translate_scale(point const &target_pos, float target_radius, geom_xform_t &xf) const {
 	xf.scale = target_radius / (0.5*bcube.max_len());
 	xf.tv    = target_pos - xf.scale*bcube.get_cube_center(); // scale is applied before translate
@@ -2965,7 +2976,7 @@ void get_cur_model_as_cubes(vector<cube_t> &cubes, model3d_xform_t const &xf) { 
 }
 
 bool add_transform_for_cur_model(model3d_xform_t const &xf) {
-	if (all_models.empty()) {cerr << "Error: No model to add transform to" << endl; return 0;}
+	if (all_models.empty()) {cerr << "Error: No model to add transform to" << endl; return 0;} // nonfatal
 	get_cur_model("transform").add_transform(xf);
 	return 1;
 }
@@ -2974,6 +2985,9 @@ void set_sky_lighting_file_for_cur_model(string const &fn, float weight, unsigne
 }
 void set_occlusion_cube_for_cur_model(cube_t const &cube) {
 	get_cur_model("model_occlusion_cube").set_occlusion_cube(cube);
+}
+void fit_cur_model_to_scene() {
+	get_cur_model("fit_to_scene").fit_to_scene();
 }
 bool have_cur_model() {return (!all_models.empty());}
 
