@@ -237,16 +237,19 @@ void building_t::toggle_circuit_breaker(bool is_on, unsigned zone_id, unsigned n
 	if (rooms_start >= rooms_end) return; // no rooms
 	for (unsigned r = rooms_start; r < rooms_end; ++r) {interior->rooms[r].unpowered = !is_on;} // update room unpowered flags; not yet used, but they may be later
 	bool updated(0);
-	auto objs_end(interior->room_geom->get_placed_objs_end()); // skip buttons/stairs/elevators
+	auto objs_start(interior->room_geom->objs.begin());
+	auto objs_end  (interior->room_geom->get_placed_objs_end()); // skip buttons/stairs/elevators
 
-	for (auto i = interior->room_geom->objs.begin(); i != objs_end; ++i) {
-		if ((i->is_powered() == is_on) || i->room_id < rooms_start || i->room_id >= rooms_end) continue;
+	for (auto i = objs_start; i != objs_end; ++i) {
+		if ((i->is_powered() == is_on) || i->room_id < rooms_start || i->room_id >= rooms_end) continue; // no state change, or wrong zone
 
 		if (i->is_light_type()) { // light
 			if (i->in_elevator()) continue; // handled above
 			bool const was_on(i->is_light_on());
 			i->flags ^= RO_FLAG_NO_POWER; // need to disable this light and not allow the player/AI/motion detector to turn it back on
-			updated  |= (i->is_light_on() != was_on); // update if light on state changed
+			bool const state_change(i->is_light_on() != was_on); // update if light on state changed
+			updated  |= state_change;
+			if (state_change) {register_indir_lighting_state_change(i - objs_start);} // Note: could be slow
 		}
 		else if (i->type == TYPE_MONITOR || i->type == TYPE_TV) { // interactive + drawn powered devices
 			if (i->obj_id != 1) {interior->room_geom->invalidate_draw_data_for_obj(*i);}
@@ -257,7 +260,7 @@ void building_t::toggle_circuit_breaker(bool is_on, unsigned zone_id, unsigned n
 			i->flags ^= RO_FLAG_NO_POWER;
 		}
 		// Note: stoves use gas rather than electricity and don't need power; lit exit signs are always on
-	}
+	} // for i
 	interior->room_geom->modified_by_player = 1; // I guess we need to set this, to be safe, as this breaker will likely have some effect
 	if (!updated) return; // that's it, don't need to update geom
 	// since the state of at least one light has changed, it's likely that other geom has been invalidated, so just update it all
