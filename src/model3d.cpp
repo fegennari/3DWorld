@@ -2251,6 +2251,7 @@ void model3d::render(shader_t &shader, bool is_shadow_pass, int reflection_pass,
 	// we need the vbo to be created here even in the shadow pass,
 	// and the textures are needed for determining whether or not we need to build the tanget_vectors for bump mapping
 	bind_all_used_tids();
+	if (is_shadow_pass) {select_texture(WHITE_TEX);} // make sure a valid texture is enabled for the shadow pass
 
 	if (transforms.empty()) { // no transforms case
 		render_materials_def(shader, is_shadow_pass, reflection_pass, is_z_prepass, enable_alpha_mask, bmap_pass_mask, trans_op_mask, &xlate, &mvm);
