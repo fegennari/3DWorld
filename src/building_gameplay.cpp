@@ -1033,7 +1033,7 @@ bool object_can_have_something_on_it(room_object_t const &obj) {
 	// only these types can have objects placed on them (what about TYPE_SHELF? what about TYPE_BED with a ball, book, or blanket placed on it?)
 	return (obj.type == TYPE_TABLE || obj.type == TYPE_DESK || obj.type == TYPE_COUNTER || obj.type == TYPE_DRESSER || obj.type == TYPE_NIGHTSTAND ||
 		obj.type == TYPE_BOX || obj.type == TYPE_CRATE || obj.type == TYPE_WINE_RACK || obj.type == TYPE_BOOK || obj.type == TYPE_STOVE || obj.type == TYPE_MWAVE
-		|| obj.type == TYPE_BED /*|| obj.type == TYPE_FCABINET*/ /*|| obj.type == TYPE_SHELF*/);
+		|| obj.type == TYPE_BED || obj.type == TYPE_SERVER /*|| obj.type == TYPE_FCABINET*/ /*|| obj.type == TYPE_SHELF*/);
 }
 bool object_has_something_on_it(room_object_t const &obj, vect_room_object_t const &objs, vect_room_object_t::const_iterator objs_end) {
 	if (!object_can_have_something_on_it(obj)) return 0;

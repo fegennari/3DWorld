@@ -2055,7 +2055,7 @@ bool building_t::add_server_room_objs(rand_gen_t rgen, room_t const &room, float
 
 	// try to line servers up against each wall wherever they fit
 	for (unsigned D = 0; D < 2; ++D) {
-		bool const dim(D ^ long_dim); // place along walls in long dim first
+		bool const dim(bool(D) ^ long_dim); // place along walls in long dim first
 		float const room_len(place_area.get_sz_dim(dim));
 		unsigned const num(room_len/server_period); // take the floor
 		if (num == 0) continue; // not enough space for a server in this dim
@@ -2103,14 +2103,27 @@ bool building_t::add_server_room_objs(rand_gen_t rgen, room_t const &room, float
 			cube_t keyboard;
 			set_cube_zvals(keyboard, kbd_z1, kbd_z1+kbd_height);
 			keyboard.d[dim][!dir] = server_front; // at front of server
-			keyboard.d[dim][ dir] = server_front - (dir ? -1.0 : 1.0)*kbd_depth;
+			keyboard.d[dim][ dir] = server_front + (dir ? 1.0 : -1.0)*kbd_depth; // sticks out of the front
 			set_wall_width(keyboard, server.get_center_dim(!dim), kbd_hwidth, !dim);
 			if (is_obj_placement_blocked(keyboard, room, 1)) break; // Note: not checking overlaps_other_room_obj() because it will overlap server blockers
 			objs.emplace_back(keyboard, TYPE_KEYBOARD, room_id, dim, dir, RO_FLAG_HANGING, tot_light_amt); // add as white, will be drawn with gray/black texture
 			break;
 		} // for i
 	}
-	// TODO: maybe add a laptop on the floor
+	// maybe add laptops on top of some servers, to reward the player for finding this room
+	for (unsigned i = objs_start, server_ix = 0; i < objs.size(); ++i) {
+		room_object_t const &server(objs[i]);
+		if (server.type != TYPE_SERVER) continue;
+		if (rgen.rand_float() > 0.2)    continue; // place laptops 20% of the time
+		bool const dim(server.dim), dir(server.dir);
+		float const server_front(server.d[dim][dir]); // copy before reference is invalidated
+		if (!place_laptop_on_obj(rgen, server, room_id, tot_light_amt)) continue; // no avoid, use_dim_dir=0
+		// make the laptop hang over the edge of the front of the server so that the player can see and take it
+		room_object_t &laptop(objs.back());
+		float const xlate(server_front - laptop.d[dim][dir] + (dir ? 1.0 : -1.0)*rgen.rand_uniform(0.05, 0.35)*laptop.get_sz_dim(dim));
+		laptop.translate_dim(dim, xlate);
+		laptop.flags |= RO_FLAG_HANGING;
+	} // for i
 	add_door_sign("Server Room", room, zval, room_id, tot_light_amt);
 	return 1;
 }
