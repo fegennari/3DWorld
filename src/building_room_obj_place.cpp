@@ -2050,7 +2050,7 @@ bool building_t::add_server_room_objs(rand_gen_t rgen, room_t const &room, float
 	set_cube_zvals(server,   zval, (zval + server_height));
 	set_cube_zvals(computer, zval, (zval + comp_height  ));
 	point center;
-	bool added_server(0);
+	unsigned num_servers(0), num_comps(0);
 	vect_room_object_t &objs(interior->room_geom->objs);
 
 	// try to line servers up against each wall wherever they fit
@@ -2076,7 +2076,7 @@ bool building_t::add_server_room_objs(rand_gen_t rgen, room_t const &room, float
 					set_wall_width(computer, (place_area.d[!dim][dir] + 1.2*dir_sign*comp_hdepth), comp_hdepth, !dim); // position from the wall
 					if (is_obj_placement_blocked(computer, room, 1) || overlaps_other_room_obj(computer, objs_start)) continue;
 					objs.emplace_back(computer, TYPE_COMPUTER, room_id, !dim, !dir, 0, tot_light_amt);
-					added_server = 1; // I guess this counts?
+					++num_comps;
 					continue;
 				}
 				objs.emplace_back(server, TYPE_SERVER, room_id, !dim, !dir, 0, tot_light_amt);
@@ -2084,11 +2084,33 @@ bool building_t::add_server_room_objs(rand_gen_t rgen, room_t const &room, float
 				blocker.d[!dim][ dir]  = server.d[!dim][!dir]; // front of server
 				blocker.d[!dim][!dir] += dir_sign*server_width; // add space in the front for the door to open (don't block with another server)
 				objs.emplace_back(blocker, TYPE_BLOCKER, room_id, dim, 0, RO_FLAG_INVIS);
-				added_server = 1;
+				++num_servers;
 			} // for dir
 		} // for n
 	} // for dim
-	if (!added_server) return 0;
+	if (num_servers == 0 && num_comps == 0) return 0; // both servers and computers count
+	
+	if (num_servers > 0) { // add a keyboard to the master server
+		unsigned const master_server(rgen.rand() % num_servers);
+
+		for (unsigned i = objs_start, server_ix = 0; i < objs.size(); ++i) {
+			room_object_t const &server(objs[i]);
+			if (server.type != TYPE_SERVER  ) continue;
+			if (server_ix++ != master_server) continue;
+			float const kbd_hwidth(0.8*server_hwidth), kbd_depth(0.6*kbd_hwidth), kbd_height(0.04*kbd_hwidth); // slightly flatter than regular keyboards
+			bool const dim(server.dim), dir(server.dir);
+			float const kbd_z1(server.z1() + 0.57*server.dz()), server_front(server.d[dim][dir]);
+			cube_t keyboard;
+			set_cube_zvals(keyboard, kbd_z1, kbd_z1+kbd_height);
+			keyboard.d[dim][!dir] = server_front; // at front of server
+			keyboard.d[dim][ dir] = server_front - (dir ? -1.0 : 1.0)*kbd_depth;
+			set_wall_width(keyboard, server.get_center_dim(!dim), kbd_hwidth, !dim);
+			if (is_obj_placement_blocked(keyboard, room, 1)) break; // Note: not checking overlaps_other_room_obj() because it will overlap server blockers
+			objs.emplace_back(keyboard, TYPE_KEYBOARD, room_id, dim, dir, RO_FLAG_HANGING, tot_light_amt); // add as white, will be drawn with gray/black texture
+			break;
+		} // for i
+	}
+	// TODO: maybe add a laptop on the floor
 	add_door_sign("Server Room", room, zval, room_id, tot_light_amt);
 	return 1;
 }
