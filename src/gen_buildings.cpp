@@ -3063,9 +3063,10 @@ public:
 							if (!camera_near_building && !b.has_windows() && !b.point_near_ext_door(camera_xlated, 5.0*door_open_dist)) continue;
 							if ((display_mode & 0x08) && !player_in_building_bcube && b.is_entire_building_occluded(camera_xlated, oc)) continue; // check occlusion
 						}
-						// draw detail objects if player is in the building (inc ext basement), even if far from the building center
-						unsigned inc_small(player_in_building_bcube ? 2 : (bdist_sq < rgeom_sm_draw_dist_sq));
-						if      (inc_small && bdist_sq < rgeom_int_detail_dist_sq) {inc_small = 3;} // include interior and exterior detail objects
+						// draw interior detail objects if player is in the building (inc ext basement), even if far from the building center
+						unsigned inc_small(bdist_sq < rgeom_sm_draw_dist_sq);
+						if      (player_in_building_bcube)                         {inc_small = 3;} // include interior and exterior detail objects
+						else if (inc_small && bdist_sq < rgeom_int_detail_dist_sq) {inc_small = 3;} // include interior and exterior detail objects
 						else if (inc_small && bdist_sq < rgeom_ext_detail_dist_sq) {inc_small = 2;} // include exterior detail objects
 						b.gen_and_draw_room_geom(&bbd, s, amask_shader, oc, xlate, bi->ix, 0, reflection_pass, inc_small, player_in_building_bcube); // shadow_only=0
 						g->has_room_geom = 1;
