@@ -1274,9 +1274,11 @@ int get_building_door_tid(unsigned type) { // exterior doors, and interior doors
 	return -1; // never gets here
 }
 
+tid_nm_pair_t get_concrete_texture(float tscale=16.0) {return tid_nm_pair_t(get_concrete_tid(), tscale);}
+
 void add_driveway_or_porch(building_draw_t &bdraw, building_t const &building, cube_t const &c, colorRGBA const &color) {
 	if (c.is_all_zeros()) return;
-	tid_nm_pair_t const tex(get_concrete_tid(), 16.0);
+	tid_nm_pair_t const tex(get_concrete_texture());
 	bdraw.add_section(building, 0, c, tex, color, 7, 1, 0, 1, 0); // all dims, skip bottom, no AO
 }
 
@@ -1305,26 +1307,31 @@ colorRGBA building_t::get_floor_tex_and_color(cube_t const &floor_cube, tid_nm_p
 	building_mat_t const &mat(get_material());
 
 	if (is_house) {
-		if (has_sec_bldg() && get_sec_bldg().contains_cube(floor_cube)) {tex = tid_nm_pair_t(get_concrete_tid(), 16.0);} // garage or shed
+		if (has_sec_bldg() && get_sec_bldg().contains_cube(floor_cube)) {tex = get_concrete_texture();} // garage or shed
 		else if (in_basement) {tex = mat.basement_floor_tex;} // basement
 		else {tex = mat.house_floor_tex;}
 	}
 	else { // office building
-		if (has_parking_garage && in_basement) {tex = tid_nm_pair_t(get_concrete_tid(), 16.0);} // parking garage
+		bool const in_ext_basement(in_basement && !get_basement().contains_cube_xy(floor_cube));
+		if (in_basement && (has_parking_garage || in_ext_basement)) {tex = get_concrete_texture();} // parking garage or extended basement
 		else {tex = mat.floor_tex;} // office block
 	}
 	return (is_house ? mat.house_floor_color : mat.floor_color);
 }
 colorRGBA building_t::get_ceil_tex_and_color(cube_t const &ceil_cube, tid_nm_pair_t &tex) const {
-	bool const in_basement((is_house || has_parking_garage) && ceil_cube.z1() < ground_floor_z1);
+	bool const in_basement(ceil_cube.z1() < ground_floor_z1), in_ext_basement(in_basement && !get_basement().contains_cube_xy(ceil_cube));
 	building_mat_t const &mat(get_material());
 	colorRGBA color;
 
-	if (is_house && in_basement && has_basement_pipes && bcube.contains_cube_xy(ceil_cube)) { // draw wood flooring for basement ceiling (not ext basement)
+	if (is_house && in_basement && has_basement_pipes && !in_ext_basement) { // draw wood flooring for basement ceiling (not ext basement)
 		tex = mat.house_floor_tex;
 		return (is_house ? mat.house_floor_color : mat.floor_color);
 	}
-	else if (in_basement) { // use wall texture for basement/parking garage ceilings, not ceiling texture
+	else if (!is_house && in_ext_basement) { // use concrete for office building extended basements
+		tex = get_concrete_texture();
+		return WHITE;
+	}
+	else if (in_basement && (is_house || has_parking_garage)) { // use wall texture for basement/parking garage ceilings, not ceiling texture
 		tex = mat.wall_tex;
 		return WHITE; // basement walls are always white
 	}
@@ -1676,10 +1683,11 @@ void building_t::get_all_drawn_interior_verts(building_draw_t &bdraw) {
 			//unsigned const dim_mask(1 << dim); // doesn't work with office building hallway intersection corners and door frame shadows
 			unsigned dim_mask(3);
 			set_skip_faces_for_nearby_cube_edge(*i, bcube, wall_thickness, !dim, dim_mask); // easy case: skip faces along the edges of the building bcube
+			bool const in_basement(i->z1() < ground_floor_z1);
+			bool const in_ext_basement(in_basement && i >= (interior->walls[dim].begin() + interior->extb_walls_start[dim]));
 			
 			// check rooms; skip this for above ground complex floorplans because they may have unexpected wall ends visible at non-rectangular rooms
-			if (!has_complex_floorplan || i->z1() < ground_floor_z1) {
-				bool const in_ext_basement(i >= interior->walls[dim].begin() + interior->extb_walls_start[dim]);
+			if (!has_complex_floorplan || in_basement) {
 				unsigned const extb_room_start((interior->ext_basement_hallway_room_id >= 0) ? interior->ext_basement_hallway_room_id : interior->rooms.size());
 				unsigned const rooms_start(in_ext_basement ? extb_room_start : 0);
 				unsigned const rooms_end  (in_ext_basement ? interior->rooms.size() : extb_room_start);
@@ -1697,8 +1705,11 @@ void building_t::get_all_drawn_interior_verts(building_draw_t &bdraw) {
 				} // for r
 			}
 			if (check_skylight_intersection(*i)) {dim_mask |= 4;} // draw top surface if under skylight
-			colorRGBA const &color((i->z1() < ground_floor_z1) ? WHITE : wall_color); // basement walls are always white
-			bdraw.add_section(*this, 0, *i, mat.wall_tex, color, dim_mask, 1, 0, 1, 0); // no AO; X and/or Y dims only, skip bottom, only draw top if under skylight
+			colorRGBA const &color(in_basement ? WHITE : wall_color); // basement walls are always white
+			tid_nm_pair_t tex;
+			if (!is_house && in_ext_basement) {tex = get_concrete_texture();} // office building extended basements
+			else {tex = mat.wall_tex;}
+			bdraw.add_section(*this, 0, *i, tex, color, dim_mask, 1, 0, 1, 0); // no AO; X and/or Y dims only, skip bottom, only draw top if under skylight
 		}
 	}
 	// Note: stair/elevator landings can probably be drawn in room_geom along with stairs, though I don't think there would be much benefit in doing so
