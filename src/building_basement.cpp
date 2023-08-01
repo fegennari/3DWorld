@@ -1693,7 +1693,7 @@ void building_t::add_parking_garage_ramp(rand_gen_t &rgen) {
 }
 
 bool building_t::extend_underground_basement(rand_gen_t rgen) {
-	if (!interior) return 0;
+	if (!has_basement() || is_rotated() || !interior) return 0;
 	//highres_timer_t timer("Extend Underground Basement"); // 540ms total
 	float const height(get_window_vspace() - get_fc_thickness()); // full height of floor to avoid a gap at the top (not get_floor_ceil_gap())
 	cube_t const &basement(get_basement());
@@ -1711,6 +1711,7 @@ bool building_t::extend_underground_basement(rand_gen_t rgen) {
 				if (add_underground_exterior_rooms(rgen, cand_door, dim, dir, 0.25*len)) return 1; // exit on success
 			} // for e
 		} // for d
+		if (!is_house) return 0; // not large enough for office building
 	} // for len
 	return 0;
 }
@@ -2163,7 +2164,7 @@ void try_join_house_ext_basements(vect_building_t &buildings) {
 	vector<vector<unsigned>> houses_by_city;
 
 	for (auto b = buildings.begin(); b != buildings.end(); ++b) {
-		if (!b->is_in_city || !b->is_house || !b->has_ext_basement()) continue;
+		if (!b->is_in_city || !b->is_house || !b->has_ext_basement()) continue; // Note: houses only, for now
 		if (b->city_ix >= houses_by_city.size()) {houses_by_city.resize(b->city_ix+1);}
 		houses_by_city[b->city_ix].push_back(b - buildings.begin());
 	}

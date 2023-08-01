@@ -399,6 +399,10 @@ void building_t::finish_gen_geometry(rand_gen_t &rgen, bool has_overlapping_cube
 	create_per_part_ext_verts();
 	parts_generated = 1;
 	gen_interior(rgen, has_overlapping_cubes);
+
+	if (global_building_params.windows_enabled() && global_building_params.add_office_br_basements) {
+		extend_underground_basement(rgen); // maybe add door inside basement and connected backrooms area; rgen is copied, not modified
+	}
 	if (interior) {interior->finalize();}
 	gen_building_doors_if_needed(rgen);
 }
@@ -976,8 +980,8 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 				} // for d
 			} // for p
 		} // end back door
-		if (global_building_params.max_ext_basement_room_depth > 0 && has_basement() && !is_rotated() && interior) {
-			extend_underground_basement(rgen); // add door inside basement; rgen is copied, not modified
+		if (global_building_params.max_ext_basement_room_depth > 0) {
+			extend_underground_basement(rgen); // maybe add door inside basement and connected extended basement; rgen is copied, not modified
 		}
 	} // end gen_door
 	// add roof tquads
