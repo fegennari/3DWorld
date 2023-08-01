@@ -1771,7 +1771,7 @@ bool building_t::check_obj_occluded(cube_t const &c, point const &viewer_in, occ
 	float const floor_spacing(get_window_vspace());
 	bool checked_conn_ret(0);
 	
-	if (c.z2() < ground_floor_z1) { // fully inside basement
+	if (c.z2() <= ground_floor_z1) { // fully inside basement
 		if (viewer.z > (ground_floor_z1 + floor_spacing)) return 1; // viewer not on first floor
 		
 		if (!player_in_building) { // player not in this building
