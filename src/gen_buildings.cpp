@@ -1635,6 +1635,12 @@ void building_t::get_basment_ext_wall_verts(building_draw_t &bdraw) const {
 				side.d[!door.dim][!d] = door.d[!door.dim][d];
 				bdraw.add_section(*this, 0, side, tp, WHITE, ~(this_face | 4), 0, 0, 1, 0); // single face, always white
 			}
+			if (door.z2() < basement.z2()) { // door shorter than basement; can happen with multi-level parking garages
+				cube_t top(basement);
+				for (unsigned d = 0; d < 2; ++d) {top.d[!door.dim][d] = door.d[!door.dim][d];} // same range as door in !door.dim
+				top.z1() = door.z2();
+				bdraw.add_section(*this, 0, top, tp, WHITE, ~(this_face | 4), 0, 0, 1, 0); // single face, always white
+			}
 			break; // the first door should be the one connecting the basement to the extended basement
 		} // for doors
 	}
