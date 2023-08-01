@@ -1696,7 +1696,8 @@ bool building_t::extend_underground_basement(rand_gen_t rgen) {
 	if (!has_basement() || is_rotated() || !interior) return 0;
 	//highres_timer_t timer("Extend Underground Basement"); // 540ms total
 	float const height(get_window_vspace() - get_fc_thickness()); // full height of floor to avoid a gap at the top (not get_floor_ceil_gap())
-	cube_t const &basement(get_basement());
+	cube_t basement(get_basement());
+	basement.z2() = basement.z1() + get_window_vspace(); // limit basement to the bottom floor if a parking garage
 	bool dim(rgen.rand_bool()), dir(rgen.rand_bool());
 
 	for (unsigned len = 4; len >= 2; --len) { // 100%, 75%, 50% of basement length
@@ -1708,7 +1709,7 @@ bool building_t::extend_underground_basement(rand_gen_t rgen) {
 				float const fc_thick(get_fc_thickness());
 				set_cube_zvals(cand_door, basement.z1()+fc_thick, basement.z2()-fc_thick); // change z to span floor to ceiling for interior door
 				cand_door.translate_dim(dim, (dir ? 1.0 : -1.0)*0.25*get_wall_thickness()); // zero width, centered on the door
-				if (add_underground_exterior_rooms(rgen, cand_door, dim, dir, 0.25*len)) return 1; // exit on success
+				if (add_underground_exterior_rooms(rgen, cand_door, basement, dim, dir, 0.25*len)) return 1; // exit on success
 			} // for e
 		} // for d
 		if (!is_house) return 0; // not large enough for office building
@@ -1796,10 +1797,9 @@ bool building_t::is_basement_room_placement_valid(cube_t &room, ext_basement_roo
 }
 
 // add rooms to the basement that may extend outside the building's bcube
-bool building_t::add_underground_exterior_rooms(rand_gen_t &rgen, cube_t const &door_bcube, bool wall_dim, bool wall_dir, float length_mult) {
+bool building_t::add_underground_exterior_rooms(rand_gen_t &rgen, cube_t const &door_bcube, cube_t const &basement, bool wall_dim, bool wall_dir, float length_mult) {
 	// start by placing a hallway in ext_wall_dim/dir using interior walls;
 	assert(interior);
-	cube_t const &basement(get_basement());
 	float const ext_wall_pos(basement.d[wall_dim][wall_dir]);
 	float const hallway_len(length_mult*basement.get_sz_dim(wall_dim)), door_width(door_bcube.get_sz_dim(!wall_dim)), hallway_width(1.6*door_width);
 	extb_room_t hallway(basement, 0); // is_hallway=0; will likely be set below

@@ -879,7 +879,8 @@ void building_t::add_wall_and_door_trim() { // and window trim
 			cube_t trim(*w);
 			trim.expand_in_dim(dim, trim_thickness);
 
-			if (has_outside_corners) { // handle outside corners of office building hallway intersections
+			// handle outside corners of office building hallway intersections; not needed for basements, and incorrect for office building extended basements
+			if (has_outside_corners && w->zc() > ground_floor_z1) {
 				for (auto W = interior->walls[!dim].begin(); W != interior->walls[!dim].end(); ++W) { // check walls in other dim for an outside corner
 					for (unsigned d = 0; d < 2; ++d) {
 						if (W->z1() > w->z2() || W->z2() < w->z1()) continue; // no z overlap, wrong stack

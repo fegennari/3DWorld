@@ -513,7 +513,7 @@ class building_indir_light_mgr_t {
 			weight *= surface_area/0.0003f;
 			if (b.has_pri_hall())     {weight *= 0.70;} // floorplan is open and well lit, indir lighting value seems too high
 			if (ro.type == TYPE_LAMP) {weight *= 0.33;} // lamps are less bright
-			if (light_in_basement)    {weight *= (b.has_parking_garage ? 0.25 : 0.5);} // basement is darker, parking garages are even darker
+			if (light_in_basement)    {weight *= ((b.has_parking_garage && !in_ext_basement) ? 0.25 : 0.5);} // basement is darker, parking garages are even darker
 			if (in_attic)             {weight *= ATTIC_LIGHT_RADIUS_SCALE*ATTIC_LIGHT_RADIUS_SCALE;} // based on surface area rather than radius
 			if (ro.shape == SHAPE_CYLIN || ro.shape == SHAPE_SPHERE) {light_radius = ro.get_radius();}
 		}
@@ -1302,7 +1302,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		bool const camera_room_same_part(room.part_id == camera_part || (is_house && camera_in_room_part_xy)); // treat stacked house parts as the same
 		bool const has_stairs_this_floor(!is_in_attic && room.has_stairs_on_floor(cur_floor));
 		bool const has_ramp(!interior->ignore_ramp_placement && is_room_above_ramp(room, i->z1()));
-		bool const light_room_has_stairs_or_ramp(i->has_stairs() || has_stairs_this_floor || has_ramp);
+		bool const light_room_has_stairs_or_ramp(i->has_stairs() || has_stairs_this_floor || has_ramp), in_ext_basement(room.is_ext_basement());
 		bool stairs_light(0), player_in_elevator(0);
 
 		if (is_in_elevator) {
@@ -1346,7 +1346,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			}
 			else if (floor_is_above || floor_is_below) { // light is on a different floor from the camera
 				// the basement is a different part, but it's still the same vertical stack; consider this the same effective part if the camera is in the basement above the room's part
-				if (camera_in_ext_basement && (camera_by_stairs || (light_room_has_stairs_or_ramp && camera_somewhat_by_stairs)) && has_stairs_this_floor && room.is_ext_basement()) {
+				if (camera_in_ext_basement && (camera_by_stairs || (light_room_has_stairs_or_ramp && camera_somewhat_by_stairs)) && has_stairs_this_floor && in_ext_basement) {
 					// camera and light are on different floors of the extended basement in two rooms connected by stairs
 				}
 				else if (camera_in_building && (camera_room_same_part || ((player_in_basement || light_in_basement) && camera_in_room_part_xy) ||
@@ -1492,7 +1492,8 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 				}
 				if (light_bcube.is_all_zeros()) { // not yet calculated - calculate and cache
 					light_bcube = clipped_bc;
-					refine_light_bcube(lpos, light_radius, room, light_bcube, (light_in_basement && has_parking_garage)); // incorrect for rotated buildings?
+					bool const is_parking_garage(light_in_basement && has_parking_garage && !in_ext_basement);
+					refine_light_bcube(lpos, light_radius, room, light_bcube, is_parking_garage); // incorrect for rotated buildings?
 				}
 				clipped_bc.x1() = light_bcube.x1(); clipped_bc.x2() = light_bcube.x2(); // copy X/Y but keep orig zvals
 				clipped_bc.y1() = light_bcube.y1(); clipped_bc.y2() = light_bcube.y2();
