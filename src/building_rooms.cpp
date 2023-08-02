@@ -880,10 +880,12 @@ void building_t::add_wall_and_door_trim() { // and window trim
 			cube_t trim(*w);
 			trim.expand_in_dim(dim, trim_thickness);
 
-			// handle outside corners of office building hallway intersections; not needed for basements, and incorrect for office building extended basements
+			// handle outside corners of office building hallway intersections; not needed for basements
 			if (has_outside_corners && w->zc() > ground_floor_z1) {
-				for (auto W = interior->walls[!dim].begin(); W != interior->walls[!dim].end(); ++W) { // check walls in other dim for an outside corner
-					for (unsigned d = 0; d < 2; ++d) {
+				auto const end(interior->walls[!dim].begin()+interior->extb_walls_start[!dim]); // exclude extended basement walls
+
+				for (auto W = interior->walls[!dim].begin(); W != end; ++W) { // check walls in other dim for an outside corner
+					for (unsigned d = 0; d < 2; ++d) { // check both ends of the current wall/trim
 						if (W->z1() > w->z2() || W->z2() < w->z1()) continue; // no z overlap, wrong stack
 						if (W->d[!dim][0] > w->d[!dim][d]+trim_toler || W->d[!dim][1] < w->d[!dim][d]-trim_toler) continue; // not adjacent/overlapping
 						if (W->d[ dim][0] < w->d[ dim][0]-trim_toler && W->d[ dim][1] > w->d[ dim][1]+trim_toler) continue; // skip T junctions
@@ -902,10 +904,16 @@ void building_t::add_wall_and_door_trim() { // and window trim
 
 				if (z < ground_floor_z1 && has_ext_basement() && !get_basement().intersects(trim)) { // check for exterior wall of extended basement
 					for (unsigned dir = 0; dir < 2; ++dir) { // for each side of wall
-						cube_t test_cube(trim);
-						test_cube.d[dim][!dir] = w->d[dim][dir];
-						point const center(test_cube.get_cube_center());
-						ext_dirs[dir] = !interior->point_in_ext_basement_room(center);
+						point test_pt(0.0, 0.0, trim.z2());
+						test_pt[dim] = w->d[dim][dir];
+						float const test_vals[3] = {w->d[!dim][0], w->get_center_dim(!dim), w->d[!dim][1]}; // try both ends and center point
+						bool any_inside(0);
+						
+						for (unsigned d = 0; d < 3 && !any_inside; ++d) {
+							test_pt[!dim] = test_vals[d];
+							any_inside   |= interior->point_in_ext_basement_room(test_pt);
+						}
+						ext_dirs[dir] = !any_inside;
 					}
 				}
 				unsigned const trim_flags(flags | (ext_dirs[0] ? RO_FLAG_ADJ_LO : 0) | (ext_dirs[1] ? RO_FLAG_ADJ_HI : 0)); // disable exterior faces
