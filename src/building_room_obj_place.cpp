@@ -2391,7 +2391,7 @@ bool building_t::hang_pictures_in_room(rand_gen_t rgen, room_t const &room, floa
 				
 				if (!check_valid_picture_placement(room, c, 0.6*room_len, zval, dim, dir, objs_start)) { // fails wide/tall placement
 					cube_t c_prev(c);
-					c.expand_in_dim(!dim, -0.1*room_len); // shrink width a bit and try again
+					c.expand_in_dim(!dim, -0.167*c.get_sz_dim(!dim)); // shrink width a bit and try again
 					
 					if (!check_valid_picture_placement(room, c, 0.4*room_len, zval, dim, dir, objs_start)) { // fails narrow/tall placement
 						c = c_prev;
@@ -2399,6 +2399,7 @@ bool building_t::hang_pictures_in_room(rand_gen_t rgen, room_t const &room, floa
 						if (!check_valid_picture_placement(room, c, 0.6*room_len, zval, dim, dir, objs_start)) continue; // give up/fail
 					}
 				}
+				assert(c.is_strictly_normalized());
 				objs.emplace_back(c, TYPE_WBOARD, room_id, dim, !dir, RO_FLAG_NOCOLL, tot_light_amt); // whiteboard faces dir opposite the wall
 				return 1; // done, only need to add one
 			} // for dir
@@ -2439,6 +2440,7 @@ bool building_t::hang_pictures_in_room(rand_gen_t rgen, room_t const &room, floa
 				if (ret == 1) break; // valid and good - keep this pos
 			} // for n
 			if (best_pos.is_all_zeros()) continue; // failed placement
+			assert(best_pos.is_strictly_normalized());
 			objs.emplace_back(best_pos, TYPE_PICTURE, room_id, dim, !dir, RO_FLAG_NOCOLL, tot_light_amt); // picture faces dir opposite the wall
 			objs.back().obj_id = uint16_t(objs.size() + 13*room_id + 17*floor_ix + 31*mat_ix + 61*dim + 123*dir); // determines picture texture
 			was_hung = 1;
