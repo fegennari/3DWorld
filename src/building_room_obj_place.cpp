@@ -2329,7 +2329,7 @@ int building_t::check_valid_picture_placement(room_t const &room, cube_t const &
 	if (interior->is_blocked_by_stairs_or_elevator(tc, 4.0*wall_thickness)) return 0; // check stairs and elevators
 	if (!inc_open && !room.is_hallway && is_cube_close_to_doorway(tc, room, 0.0, 1)) return 2; // success, but could be better (doors never open into hallway)
 
-	if (has_complex_floorplan) { // check for office building whiteboards placed on room sides that aren't true walls
+	if (has_complex_floorplan && c.z1() > ground_floor_z1) { // check for office building whiteboards placed on room sides that aren't true walls; skip basements
 		cube_t test_cube(c);
 		test_cube.expand_by_xy(2.0*wall_thickness); // max sure it extends through the wall
 		unsigned num_parts_int(0);

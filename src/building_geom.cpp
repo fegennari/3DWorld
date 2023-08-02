@@ -400,7 +400,7 @@ void building_t::finish_gen_geometry(rand_gen_t &rgen, bool has_overlapping_cube
 	parts_generated = 1;
 	gen_interior(rgen, has_overlapping_cubes);
 
-	if (global_building_params.windows_enabled() && global_building_params.add_office_br_basements) {
+	if (global_building_params.windows_enabled() && global_building_params.add_office_br_basements && !has_complex_floorplan) { // skip complex floorplan buildings
 		extend_underground_basement(rgen); // maybe add door inside basement and connected backrooms area; rgen is copied, not modified
 	}
 	if (interior) {interior->finalize();}
