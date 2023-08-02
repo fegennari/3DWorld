@@ -171,23 +171,28 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 		bool const is_parking_garage(r->get_room_type(0) == RTYPE_PARKING   ); // all floors should be parking garage
 		bool const is_unfinished    (r->get_room_type(0) == RTYPE_UNFINISHED); //  // unfinished room, for example in a non-cube shaped office building
 		bool const is_ext_basement(r->is_ext_basement());
-		float light_size(def_light_size); // default size for houses
+		float light_spacing(0.0), light_size(def_light_size); // default size for houses
 		unsigned const room_objs_start(objs.size());
 		unsigned nx(1), ny(1); // number of lights in X and Y for this room
 
 		if (!is_cube()) { // somewhat more lights for non-cube shaped building pie slices
-			nx = max(1U, unsigned(0.4*dx/window_vspacing));
-			ny = max(1U, unsigned(0.4*dy/window_vspacing));
+			light_spacing = 0.4;
 		}
 		else if (r->is_office) { // more lights for large offices; light size varies by office size; parking garages are handled later
-			nx = max(1U, unsigned(0.5*dx/window_vspacing));
-			ny = max(1U, unsigned(0.5*dy/window_vspacing));
+			light_spacing = 0.5;
 			float const room_size(dx + dy); // normalized to office size
 			light_size = max(0.015f*room_size, 0.67f*def_light_size);
 		}
 		else if (r->is_hallway) { // light size varies by hallway size
 			float const room_size(min(dx, dy)); // normalized to hallway width
 			light_size = max(0.06f*room_size, 0.67f*def_light_size);
+		}
+		else if (!is_house && r->is_ext_basement() && r->get_area_xy() > get_part_for_room(*r).get_area_xy()) { // large office basement room
+			light_spacing = 0.35;
+		}
+		if (light_spacing > 0.0) { // uniform 2D grid of lights
+			nx = max(1U, unsigned(light_spacing*dx/window_vspacing));
+			ny = max(1U, unsigned(light_spacing*dy/window_vspacing));
 		}
 		if (r->is_sec_bldg) {
 			if    (has_garage) {r->assign_all_to(RTYPE_GARAGE);}

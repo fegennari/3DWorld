@@ -1750,6 +1750,18 @@ struct ext_basement_room_params_t {
 	vector<stairs_place_t> stairs;
 };
 
+bool building_t::is_basement_room_under_mesh_not_int_bldg(cube_t &room, building_t const *exclude) const {
+	float const ceiling_zval(room.z2() - get_fc_thickness());
+	if (query_min_height(room, ceiling_zval) < ceiling_zval)  return 0; // check for terrain clipping through ceiling
+	// check for other buildings, including their extended basements;
+	// Warning: not thread safe, since we can be adding basements to another building at the same time
+	if (check_buildings_cube_coll(room, 0, 1, this, exclude)) return 0; // xy_only=0, inc_basement=1, exclude ourself
+	cube_t const grid_bcube(get_grid_bcube_for_building(*this));
+	assert(!grid_bcube.is_all_zeros()); // must be found
+	assert(grid_bcube.contains_cube_xy(bcube)); // must contain our building
+	if (!grid_bcube.contains_cube_xy(room)) return 0; // outside the grid (tile or city) bcube
+	return 1;
+}
 bool building_t::is_basement_room_placement_valid(cube_t &room, ext_basement_room_params_t &P, bool dim, bool dir, bool *add_end_door, building_t const *exclude) const {
 	float const wall_thickness(get_wall_thickness());
 	cube_t test_cube(room);
@@ -1783,15 +1795,7 @@ bool building_t::is_basement_room_placement_valid(cube_t &room, ext_basement_roo
 		avoid.expand_in_dim(!s.dim, 0.25*s.get_sz_dim(!s.dim)); // expand to the sides to avoid placing a door too close to the stairs
 		if (avoid.intersects(room)) return 0;
 	}
-	float const ceiling_zval(room.z2() - get_fc_thickness());
-	if (query_min_height(room, ceiling_zval) < ceiling_zval)  return 0; // check for terrain clipping through ceiling
-	// check for other buildings, including their extended basements;
-	// Warning: not thread safe, since we can be adding basements to another building at the same time
-	if (check_buildings_cube_coll(room, 0, 1, this, exclude)) return 0; // xy_only=0, inc_basement=1, exclude ourself
-	cube_t const grid_bcube(get_grid_bcube_for_building(*this));
-	assert(!grid_bcube.is_all_zeros()); // must be found
-	assert(grid_bcube.contains_cube_xy(bcube)); // must contain our building
-	if (!grid_bcube.contains_cube_xy(room)) return 0; // outside the grid (tile or city) bcube
+	if (!is_basement_room_under_mesh_not_int_bldg(room, exclude)) return 0;
 	if (end_conn_room) {end_conn_room->conn_bcube.assign_or_union_with_cube(room);} // include this room in our connected bcube
 	return 1;
 }
@@ -1802,13 +1806,14 @@ bool building_t::add_underground_exterior_rooms(rand_gen_t &rgen, cube_t const &
 	assert(interior);
 	float const ext_wall_pos(basement.d[wall_dim][wall_dir]);
 	float const hallway_len(length_mult*basement.get_sz_dim(wall_dim)), door_width(door_bcube.get_sz_dim(!wall_dim)), hallway_width(1.6*door_width);
+	// Note: misnamed: hallway for houses, but backrooms for offices with parking garages
 	extb_room_t hallway(basement, 0); // is_hallway=0; will likely be set below
 	set_wall_width(hallway, door_bcube.get_center_dim(!wall_dim), 0.5*hallway_width, !wall_dim);
 	hallway.d[wall_dim][!wall_dir] = ext_wall_pos; // flush with the exterior wall/door
 	hallway.d[wall_dim][ wall_dir] = ext_wall_pos + (wall_dir ? 1.0 : -1.0)*hallway_len;
 	assert(hallway.is_strictly_normalized());
 	ext_basement_room_params_t P;
-	if (!is_basement_room_placement_valid(hallway, P, wall_dim, wall_dir, nullptr)) return 0; // try to place the hallway; add_end_door=nullptr
+	if (!is_basement_room_placement_valid(hallway, P, wall_dim, wall_dir)) return 0; // try to place the hallway; add_end_door=nullptr
 	// valid placement; now add the door, hallway, and connected rooms
 	has_basement_door = 1;
 	// Note: recording the door_stack index rather than the door index allows us to get either the first door or the first stack
@@ -1825,10 +1830,16 @@ bool building_t::add_underground_exterior_rooms(rand_gen_t &rgen, cube_t const &
 	P.rooms.push_back(hallway);
 	hallway.conn_bcube = basement; // make sure the basement is included
 
-	// recursively add rooms connected to this hallway in alternating dimensions
-	if (add_ext_basement_rooms_recur(hallway, P, door_width, !wall_dim, 1, rgen)) { // dept=1, since we already added a hallway
-		end_ext_basement_hallway(hallway, P.rooms[1].conn_bcube, P, door_width, wall_dim, wall_dir, 0, rgen);
-		hallway.is_hallway = 1;
+	if (0 && !is_house && has_parking_garage && max_expand_underground_room(hallway, wall_dim, wall_dir, rgen)) { // office building with parking garage
+		subdivide_underground_room(hallway, rgen);
+		hallway.is_hallway = 0; // should already be set to 0, but this makes it more clear
+	}
+	else { // recursively add rooms connected to this hallway in alternating dimensions
+		// Note: if we get here for office buildings and global_building_params.max_ext_basement_room_depth == 0, this will only generate the hallway
+		if (add_ext_basement_rooms_recur(hallway, P, door_width, !wall_dim, 1, rgen)) { // dept=1, since we already added a hallway
+			end_ext_basement_hallway(hallway, P.rooms[1].conn_bcube, P, door_width, wall_dim, wall_dir, 0, rgen);
+			hallway.is_hallway = 1;
+		}
 	}
 	// place rooms, now that wall_exclude has been calculated, starting with the hallway
 	cube_t wall_area(hallway);
@@ -1882,6 +1893,41 @@ bool building_t::add_ext_basement_rooms_recur(extb_room_t &parent_room, ext_base
 		} // for N
 	} // for n
 	return was_added;
+}
+
+bool building_t::max_expand_underground_room(cube_t &room, bool dim, bool dir, rand_gen_t &rgen) const {
+	float const floor_spacing(get_window_vspace()), step_len(1.0*floor_spacing), room_len(room.get_sz_dim(dim));
+	float const room_width_min(0.5*room_len), room_sz_max(2.0*room_len);
+	bool cant_expand[4] = {};
+	cant_expand[2*dim + (!dir)] = 1; // can't expand back into the basement where we came from
+	unsigned const start_ix(rgen.rand() & 3); // start with a random side
+	cube_t exp_room(room);
+
+	while (1) {
+		bool any_valid(0);
+
+		for (unsigned i = 0; i < 4; ++i) { // check all 4 dims
+			unsigned const d((i + start_ix) & 3);
+			if (cant_expand[d]) continue;
+			bool const edim(d >> 1), edir(d & 1);
+			cube_t exp_slice(exp_room);
+			exp_slice.d[edim][ edir] += (edir ? 1.0 : -1.0)*step_len; // move the edge outward
+			if (exp_slice.get_sz_dim(edim) > room_sz_max) {cant_expand[d] = 1; continue;} // too large
+			exp_slice.d[edim][!edir]  = exp_room.d[edim][edir]; // shrink to zero area since we've already checked exp_room
+			assert(exp_slice.is_strictly_normalized());
+			if (!is_basement_room_under_mesh_not_int_bldg(exp_slice)) {cant_expand[d] = 1; continue;} // can't expand this edge any more
+			exp_room.d[edim][edir] = exp_slice.d[edim][edir]; // keep edge movement
+			any_valid = 1;
+		} // for i
+		if (!any_valid) break;
+	} // end while
+	assert(exp_room.contains_cube(room));
+	if (exp_room.get_sz_dim(!dim) < room_width_min) return 0; // room is too narrow, make it a hallway instead
+	room = exp_room;
+	return 1;
+}
+void building_t::subdivide_underground_room(extb_room_t &room, rand_gen_t &rgen) {
+	// TODO
 }
 
 cube_t building_t::add_ext_basement_door(cube_t const &room, float door_width, bool dim, bool dir, bool is_end_room, rand_gen_t &rgen) {
