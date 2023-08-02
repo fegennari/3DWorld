@@ -195,7 +195,7 @@ bool building_t::check_sphere_coll_inner(point &pos, point const &p_last, vector
 
 		// Note: first check uses min of the two zvals to reject the basement, which is actually under the mesh
 		if ((min(pos2.z, p_last2.z) + radius) > ground_floor_z1 && zval < (ground_floor_z1 + get_door_height())) { // on the ground floor
-			for (auto d = doors.begin(); d != doors.end(); ++d) {
+			for (auto d = doors.begin(); d != doors.end(); ++d) { // exterior doors
 				if (d->type == tquad_with_ix_t::TYPE_RDOOR) continue; // doesn't apply to roof door
 				cube_t bc(d->get_bcube());
 				bool const door_dim(bc.dy() < bc.dx());
@@ -215,7 +215,8 @@ bool building_t::check_sphere_coll_inner(point &pos, point const &p_last, vector
 				else if (!i->contains_pt(query_pt)) continue; // not in basement
 				accumulate_shared_xy_area(*i, sc, cont_area);
 				
-				if (has_ext_basement()) { // use the ext basement hallway if pos is in the basement, otherwise use the entire ext basement
+				if (has_ext_basement() && zval < interior->basement_ext_bcube.z2()) { // below ext basement top (not in upper level of two level parking garage)
+					// use the ext basement hallway if pos is in the basement, otherwise use the entire ext basement
 					cube_t const &basement_cube(in_ext_basement ? interior->basement_ext_bcube : (cube_t)get_ext_basement_hallway());
 					accumulate_shared_xy_area(basement_cube, sc, cont_area);
 				}
@@ -265,7 +266,7 @@ bool building_t::check_sphere_coll_inner(point &pos, point const &p_last, vector
 		point pos2_bs(pos2 - xlate);
 		if (check_sphere_coll_interior(pos2_bs, (p_last2 - xlate), radius, is_in_attic, xy_only, cnorm_ptr)) {pos2 = pos2_bs + xlate; had_coll = 1;}
 	}
-	else {
+	else { // exterior
 		for (auto i = parts.begin(); i != parts.end(); ++i) {
 			if (xy_only) {
 				if (i->z1() < ground_floor_z1) continue; // skip basements, since they should be contained in the union of the ground floor (optimization)
