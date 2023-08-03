@@ -885,11 +885,13 @@ void building_t::add_wall_and_door_trim() { // and window trim
 	} // for d
 	for (unsigned dim = 0; dim < 2; ++dim) { // add horizontal strips along each wall at each floor/ceiling
 		for (auto w = interior->walls[dim].begin(); w != interior->walls[dim].end(); ++w) {
+			bool const in_basement(w->zc() < ground_floor_z1);
+			if (in_basement && interior->has_backrooms && !get_basement().intersects_no_adj(*w)) continue; // no trim in basement backrooms
 			cube_t trim(*w);
 			trim.expand_in_dim(dim, trim_thickness);
 
 			// handle outside corners of office building hallway intersections; not needed for basements
-			if (has_outside_corners && w->zc() > ground_floor_z1) {
+			if (has_outside_corners && !in_basement) {
 				auto const end(interior->walls[!dim].begin()+interior->extb_walls_start[!dim]); // exclude extended basement walls
 
 				for (auto W = interior->walls[!dim].begin(); W != end; ++W) { // check walls in other dim for an outside corner
