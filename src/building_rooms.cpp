@@ -893,6 +893,7 @@ void building_t::add_wall_and_door_trim() { // and window trim
 					for (unsigned d = 0; d < 2; ++d) { // check both ends of the current wall/trim
 						if (W->z1() > w->z2() || W->z2() < w->z1()) continue; // no z overlap, wrong stack
 						if (W->d[!dim][0] > w->d[!dim][d]+trim_toler || W->d[!dim][1] < w->d[!dim][d]-trim_toler) continue; // not adjacent/overlapping
+						if (W->d[ dim][0] > w->d[ dim][1]+trim_toler || W->d[ dim][1] < w->d[ dim][0]-trim_toler) continue; // not adjacent/overlapping in other dim
 						if (W->d[ dim][0] < w->d[ dim][0]-trim_toler && W->d[ dim][1] > w->d[ dim][1]+trim_toler) continue; // skip T junctions
 						trim.d[!dim][d] = W->d[!dim][d] + (d ? 1.0 : -1.0)*trim_thickness; // expand to cover gap at outside corners of hallway walls
 					}
