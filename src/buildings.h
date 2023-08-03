@@ -473,6 +473,7 @@ unsigned const RO_FLAG_NO_POWER = 0x04000000; // unpowered; related to circuit b
 unsigned const RO_FLAG_IS_ACTIVE= 0x08000000; // active, for sinks, tubs, buttons, etc.
 unsigned const RO_FLAG_USED     = 0x10000000; // used by the player (spraypaint, marker, etc.); used by parking spaces to indicate cars
 unsigned const RO_FLAG_IN_ELEV  = 0x20000000; // for elevator lights, buttons, and flooring
+unsigned const RO_FLAG_BACKROOM = 0x20000000; // in backrooms, for walls; aliased with RO_FLAG_IN_ELEV
 unsigned const RO_FLAG_BROKEN   = 0x40000000; // for TVs, monitors, and flickering lights, maybe can use for windows
 unsigned const RO_FLAG_MOVED    = 0x80000000; // for player push/pull
 
@@ -877,9 +878,9 @@ struct building_room_geom_t {
 	void add_drawers(room_object_t const &c, float tscale, vect_cube_t const &drawers, unsigned drawer_index_offset=0);
 	void add_stair(room_object_t const &c, float tscale, vector3d const &tex_origin);
 	void add_stairs_wall(room_object_t const &c, vector3d const &tex_origin, tid_nm_pair_t const &wall_tex);
-	void add_parking_garage_wall  (room_object_t const &c, vector3d const &tex_origin, tid_nm_pair_t const &wall_tex);
-	void add_parking_garage_pillar(room_object_t const &c, vector3d const &tex_origin, tid_nm_pair_t const &wall_tex);
-	void add_parking_garage_beam  (room_object_t const &c, vector3d const &tex_origin, tid_nm_pair_t const &wall_tex);
+	void add_basement_wall  (room_object_t const &c, vector3d const &tex_origin, tid_nm_pair_t const &wall_tex);
+	void add_basement_pillar(room_object_t const &c, vector3d const &tex_origin, tid_nm_pair_t const &wall_tex);
+	void add_basement_beam  (room_object_t const &c, vector3d const &tex_origin, tid_nm_pair_t const &wall_tex);
 	void add_parking_space(room_object_t const &c, vector3d const &tex_origin, float tscale);
 	void add_pg_ramp(room_object_t const &c, vector3d const &tex_origin, float tscale);
 	void add_pipe(room_object_t const &c, bool add_exterior);
