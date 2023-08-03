@@ -92,7 +92,7 @@ bottle_params_t const bottle_params[NUM_BOTTLE_TYPES] = {
 	bottle_params_t("bottle of beer",     "interiors/heineken_label.jpg", colorRGBA(0.1, 0.4, 0.1 ), 3.0, 2.0),
 	bottle_params_t("bottle of wine",     "interiors/wine_label.jpg",     BLACK,                    10.0, 2.0),
 	bottle_params_t("bottle of poison",   "yuck.png",                     BLACK,                     5.0, 2.0),
-	bottle_params_t("bottle of medicine", "interiors/red_cross.png",      LT_BLUE,                  20.0, 1.0),
+	bottle_params_t("bottle of medicine", "interiors/magenta_cross.png",  LT_BLUE,                  20.0, 1.0),
 };
 enum {BOTTLE_TYPE_WATER=0, BOTTLE_TYPE_COKE, BOTTLE_TYPE_BEER, BOTTLE_TYPE_WINE, BOTTLE_TYPE_POISON, BOTTLE_TYPE_MEDS};
 
