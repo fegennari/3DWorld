@@ -157,7 +157,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 		} // for r
 	}
 	for (auto r = rooms.begin(); r != rooms.end(); ++r) {
-		bool const is_basement(has_basement() && r->part_id == (int)basement_part_ix); // includes extended basement
+		bool const is_basement(has_basement() && r->part_id == (int)basement_part_ix); // includes extended basement and parking garage
 		float light_amt(is_basement ? 0.0f : window_vspacing*r->get_light_amt()); // exterior light: multiply perimeter/area by window spacing to make unitless; none for basement rooms
 		if (!is_house && r->is_hallway) {light_amt *= 2.0;} // double the light in office building hallways because they often connect to other lit hallways
 		float const floor_height(r->is_sec_bldg ? r->dz() : window_vspacing); // secondary buildings are always one floor

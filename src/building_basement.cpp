@@ -54,6 +54,8 @@ void subtract_cubes_from_cube_split_in_dim(cube_t const &c, vect_cube_t const &s
 	} // for s
 }
 
+// *** Utilities ***
+
 unsigned building_t::add_water_heaters(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
 	float const floor_spacing(get_window_vspace()), height(get_floor_ceil_gap());
 	float const radius((is_house ? 0.18 : 0.20)*height); // larger radius for office buildings
@@ -269,6 +271,8 @@ bool building_t::add_furnace_to_room(rand_gen_t &rgen, room_t const &room, float
 	} // for n
 	return 0; // failed
 }
+
+// *** Parking Garages ***
 
 vector3d building_t::get_parked_car_size() const {
 	vector3d car_sz(get_nom_car_size());
@@ -582,6 +586,8 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 		add_sprinkler_pipes(obstacles, walls, beams, pipe_cubes, room_id, num_floors, pipe_light_amt, rgen);
 	}
 }
+
+// *** Pipes ***
 
 // find the closest wall (including room wall) to this location, avoiding obstacles, and shift outward by radius; routes in X or Y only, for now
 point get_closest_wall_pos(point const &pos, float radius, cube_t const &room, vect_cube_t const &walls, vect_cube_t const &obstacles, bool vertical) {
@@ -1403,6 +1409,8 @@ void building_t::get_pipe_basement_gas_connections(vect_riser_pos_t &pipes) cons
 	}
 }
 
+// *** Electrical ***
+
 bool is_good_conduit_placement(cube_t const &c, cube_t const &avoid, vect_room_object_t const &objs, unsigned end_ix, unsigned skip_ix) {
 	if (!avoid.is_all_zeros() && c.intersects(avoid)) return 0;
 
@@ -1692,6 +1700,8 @@ void building_t::add_parking_garage_ramp(rand_gen_t &rgen) {
 	// make rooms over the ramp of type RTYPE_RAMP_EXIT
 }
 
+// *** Extended Basements ***
+
 bool building_t::extend_underground_basement(rand_gen_t rgen) {
 	if (!has_basement() || is_rotated() || !interior) return 0;
 	//highres_timer_t timer("Extend Underground Basement"); // 540ms total
@@ -1927,7 +1937,7 @@ bool building_t::max_expand_underground_room(cube_t &room, bool dim, bool dir, r
 	return 1;
 }
 void building_t::subdivide_underground_room(extb_room_t &room, rand_gen_t &rgen) {
-	// TODO
+	// currently nothing to do, but we could divide the room into multiple smaller rooms that may or may not be connected by doors
 }
 
 cube_t building_t::add_ext_basement_door(cube_t const &room, float door_width, bool dim, bool dir, bool is_end_room, rand_gen_t &rgen) {
@@ -2114,7 +2124,7 @@ door_t const &building_interior_t::get_ext_basement_door() const {
 }
 
 
-// code to join exterior basements of two nearby buildings
+// *** Code to join exterior basements of two nearby buildings ***
 
 void populate_params_from_building(building_interior_t const &bi, ext_basement_room_params_t &P) {
 	if (!P.rooms.empty()) return; // already populated
