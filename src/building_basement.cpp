@@ -1849,7 +1849,7 @@ bool building_t::add_underground_exterior_rooms(rand_gen_t &rgen, cube_t const &
 	P.rooms.push_back(hallway);
 	hallway.conn_bcube = basement; // make sure the basement is included
 
-	if (0 && !is_house && has_parking_garage && max_expand_underground_room(hallway, wall_dim, wall_dir, rgen)) { // office building with parking garage
+	if (!is_house && has_parking_garage && max_expand_underground_room(hallway, wall_dim, wall_dir, rgen)) { // office building with parking garage
 		// currently, the extended basement can only be a network of connected hallways with leaf rooms, or a single large basement room (this case);
 		// if we want to allow both (either a large room connected to a hallway or a large room with hallways coming off of it), we need per-room flags
 		subdivide_underground_room(hallway, rgen);
@@ -2090,7 +2090,58 @@ void building_interior_t::place_exterior_room(extb_room_t const &room, cube_t co
 
 void building_t::add_backrooms_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id) {
 	// TODO: what about lights? do we place them here? do we place them in a grid later and check against walls added here?
-	// TODO
+	// general approach, somewhat in this order:
+	// * Add random interior walls (of type TYPE_PG_WALL?) to create a sort of maze
+	// * Add doorways + doors to guarantee full connectivity
+	// * Add some random pillars in large open spaces
+	// * Make sure at least some spaces are lit, and no lights overlap walls
+	// * Add occasional random items/furniture
+	// * Add more variety to light colors, wall/ceiling/floor textures, etc.
+	float const floor_spacing(get_window_vspace()), wall_thickness(get_wall_thickness());
+	float const ceiling_z(zval + get_floor_ceil_gap()); // Note: zval is at floor level, not at the bottom of the room
+	float const tot_light_amt(room.light_intensity); // ???
+	vector3d const sz(room.get_size());
+	vect_room_object_t &objs(interior->room_geom->objs);
+	//unsigned const objs_start(objs.size());
+
+	// add interior walls
+	float const min_gap(1.2*get_doorway_width());
+	cube_t place_area(get_walkable_room_bounds(room));
+	cube_t wall_place_area(place_area);
+	wall_place_area.expand_by_xy(-min_gap);
+	
+	if (min(wall_place_area.dx(), wall_place_area.dy()) > 2.0*floor_spacing) { // room large enough to place walls
+		float const min_side(min(sz.x, sz.y)), area(sz.x*sz.y);
+		float const wall_len_min(1.0*floor_spacing), wall_len_max(0.25*min_side), wall_len_avg(0.5*(wall_len_min + wall_len_max));
+		unsigned const num_walls(round_fp(rgen.rand_uniform(1.5, 2.0)*area/(wall_len_avg*wall_len_avg))); // add a bit of random density variation
+		colorRGBA const wall_color(WHITE); // to match exterior walls, ceilings, and floors
+		cube_t wall;
+		set_cube_zvals(wall, zval, ceiling_z);
+		vect_cube_t blockers_per_dim[2];
+
+		for (unsigned n = 0; n < num_walls; ++n) {
+			for (unsigned m = 0; m < 10; ++m) { // 10 tries to place a wall
+				bool const dim(rgen.rand_bool()); // should this be weighted by the room aspect ratio?
+				float const wall_len(rgen.rand_uniform(wall_len_min, wall_len_max));
+				float const wall_pos(rgen.rand_uniform(wall_place_area.d[dim][0], wall_place_area.d[dim][1])); // position of wall centerline
+				float const wall_center(rgen.rand_uniform(place_area.d[!dim][0], place_area.d[!dim][1])); // center of wall
+				set_wall_width(wall, wall_pos, wall_thickness,   dim);
+				set_wall_width(wall, wall_center, 0.5*wall_len, !dim);
+				// wall can extend outside the room, and we generally want it to end at the room edge in some cases
+				if (wall.d[!dim][0] < place_area.d[!dim][0]) {wall.d[!dim][0] = place_area.d[!dim][0];} // clip to room bounds
+				else if (wall.d[!dim][0] - place_area.d[!dim][0] < min_gap) {wall.d[!dim][0] += min_gap;} // force min_gap from wall
+				if (wall.d[!dim][1] > place_area.d[!dim][1]) {wall.d[!dim][1] = place_area.d[!dim][1];} // clip to room bounds
+				else if (place_area.d[!dim][1] - wall.d[!dim][1] < min_gap) {wall.d[!dim][1] -= min_gap;} // force min_gap from wall
+				if (wall.get_sz_dim(!dim) < wall_len_min) continue; // too short
+				vect_cube_t &blockers(blockers_per_dim[dim]);
+				if (has_bcube_int(wall, blockers)) continue; // too close to a previous wall in this dim
+				objs.emplace_back(wall, TYPE_PG_WALL, room_id, dim, 0, RO_FLAG_BACKROOM, tot_light_amt, SHAPE_CUBE, wall_color); // dir=0
+				blockers.push_back(wall);
+				blockers.back().expand_by_xy(min_gap); // require a gap around this wall - but can still have intersections in the other dim
+				break; // success
+			} // for m
+		} // for n
+	}
 }
 
 cube_t building_t::get_bcube_inc_extensions() const {
