@@ -1841,8 +1841,11 @@ bool building_t::add_underground_exterior_rooms(rand_gen_t &rgen, cube_t const &
 	hallway.conn_bcube = basement; // make sure the basement is included
 
 	if (0 && !is_house && has_parking_garage && max_expand_underground_room(hallway, wall_dim, wall_dir, rgen)) { // office building with parking garage
+		// currently, the extended basement can only be a network of connected hallways with leaf rooms, or a single large basement room (this case);
+		// if we want to allow both (either a large room connected to a hallway or a large room with hallways coming off of it), we need per-room flags
 		subdivide_underground_room(hallway, rgen);
 		hallway.is_hallway = 0; // should already be set to 0, but this makes it more clear
+		interior->has_backrooms = 1;
 	}
 	else { // recursively add rooms connected to this hallway in alternating dimensions
 		// Note: if we get here for office buildings and global_building_params.max_ext_basement_room_depth == 0, this will only generate the hallway
@@ -2074,6 +2077,11 @@ void building_interior_t::place_exterior_room(extb_room_t const &room, cube_t co
 			P.wall_exclude.resize(wall_exclude_sz); // remove the wall_exclude cubes we just added
 		} // for dir
 	} // for dim
+}
+
+void building_t::add_backrooms_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id) {
+	// TODO: what about lights? do we place them here? do we place them in a grid later and check against walls added here?
+	// TODO
 }
 
 cube_t building_t::get_bcube_inc_extensions() const {
