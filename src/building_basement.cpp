@@ -2089,14 +2089,8 @@ void building_interior_t::place_exterior_room(extb_room_t const &room, cube_t co
 }
 
 void building_t::add_backrooms_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id) {
+	highres_timer_t timer("Add Backrooms Objs");
 	// TODO: what about lights? do we place them here? do we place them in a grid later and check against walls added here?
-	// general approach, somewhat in this order:
-	// * Add random interior walls (of type TYPE_PG_WALL?) to create a sort of maze
-	// * Add doorways + doors to guarantee full connectivity
-	// * Add some random pillars in large open spaces
-	// * Make sure at least some spaces are lit, and no lights overlap walls
-	// * Add occasional random items/furniture
-	// * Add more variety to light colors, wall/ceiling/floor textures, etc.
 	float const floor_spacing(get_window_vspace()), wall_thickness(get_wall_thickness());
 	float const ceiling_z(zval + get_floor_ceil_gap()); // Note: zval is at floor level, not at the bottom of the room
 	float const tot_light_amt(room.light_intensity); // ???
@@ -2104,7 +2098,7 @@ void building_t::add_backrooms_objs(rand_gen_t rgen, room_t const &room, float z
 	vect_room_object_t &objs(interior->room_geom->objs);
 	//unsigned const objs_start(objs.size());
 
-	// add interior walls
+	// add random interior walls to create an initial maze
 	float const min_gap(1.2*get_doorway_width());
 	cube_t place_area(get_walkable_room_bounds(room));
 	cube_t wall_place_area(place_area);
@@ -2112,13 +2106,14 @@ void building_t::add_backrooms_objs(rand_gen_t rgen, room_t const &room, float z
 	
 	if (min(wall_place_area.dx(), wall_place_area.dy()) > 2.0*floor_spacing) { // room large enough to place walls
 		float const min_side(min(sz.x, sz.y)), area(sz.x*sz.y);
-		float const wall_len_min(1.0*floor_spacing), wall_len_max(0.25*min_side), wall_len_avg(0.5*(wall_len_min + wall_len_max));
+		float const wall_len_min(1.0*floor_spacing), wall_len_max(0.25*min_side), wall_len_avg(0.5*(wall_len_min + wall_len_max)); // min_gap/wall_len_min = 0.6
 		unsigned const num_walls(round_fp(rgen.rand_uniform(1.5, 2.0)*area/(wall_len_avg*wall_len_avg))); // add a bit of random density variation
 		colorRGBA const wall_color(WHITE); // to match exterior walls, ceilings, and floors
 		cube_t wall;
 		set_cube_zvals(wall, zval, ceiling_z);
-		vect_cube_t blockers_per_dim[2];
+		vect_cube_t blockers_per_dim[2], walls_per_dim[2];
 
+		// create candidate random walls
 		for (unsigned n = 0; n < num_walls; ++n) {
 			for (unsigned m = 0; m < 10; ++m) { // 10 tries to place a wall
 				bool const dim(rgen.rand_bool()); // should this be weighted by the room aspect ratio?
@@ -2135,13 +2130,35 @@ void building_t::add_backrooms_objs(rand_gen_t rgen, room_t const &room, float z
 				if (wall.get_sz_dim(!dim) < wall_len_min) continue; // too short
 				vect_cube_t &blockers(blockers_per_dim[dim]);
 				if (has_bcube_int(wall, blockers)) continue; // too close to a previous wall in this dim
-				objs.emplace_back(wall, TYPE_PG_WALL, room_id, dim, 0, RO_FLAG_BACKROOM, tot_light_amt, SHAPE_CUBE, wall_color); // dir=0
+				walls_per_dim[dim].push_back(wall);
 				blockers.push_back(wall);
 				blockers.back().expand_by_xy(min_gap); // require a gap around this wall - but can still have intersections in the other dim
 				break; // success
 			} // for m
 		} // for n
+		// shift wall ends to remove small gaps and stubs and add objects
+		for (unsigned dim = 0; dim < 2; ++dim) {
+			for (cube_t &wall : walls_per_dim[dim]) {
+				for (unsigned d = 0; d < 2; ++d) { // check each end
+					float &val(wall.d[!dim][d]);
+					if (val == place_area.d[!dim][d]) continue; // at exterior wall, skip
+
+					for (cube_t &w : walls_per_dim[!dim]) {
+						if (wall.d[dim][0] > w.d[dim][1] || wall.d[dim][1] < w.d[dim][0]) continue; // no projection
+						float const edge_pos(w.d[!dim][!d]);
+						if (fabs(val - edge_pos) < min_gap) {val = edge_pos; break;}
+					} // for w
+				} // for d
+				if (wall.get_sz_dim(!dim) < wall_len_min) continue; // too short
+				objs.emplace_back(wall, TYPE_PG_WALL, room_id, dim, 0, RO_FLAG_BACKROOM, tot_light_amt, SHAPE_CUBE, wall_color); // dir=0
+			} // for wall
+		} // for dim
 	}
+	// * Add doorways + doors to guarantee full connectivity
+	// * Add some random pillars in large open spaces
+	// * Make sure at least some spaces are lit, and no lights overlap walls
+	// * Add occasional random items/furniture
+	// * Add more variety to light colors, wall/ceiling/floor textures, etc.
 }
 
 cube_t building_t::get_bcube_inc_extensions() const {
