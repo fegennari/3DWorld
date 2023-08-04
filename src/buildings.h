@@ -1680,7 +1680,8 @@ private:
 	void get_attic_roof_tquads(vector<tquad_with_ix_t> &tquads) const;
 	bool add_attic_access_door(cube_t const &ceiling, unsigned part_ix, unsigned num_floors, unsigned rooms_start, rand_gen_t &rgen);
 	bool is_light_placement_valid(cube_t const &light, room_t const &room, float pad) const;
-	void try_place_light_on_ceiling(cube_t const &light, room_t const &room, bool room_dim, float pad, bool allow_rot, bool allow_mult, vect_cube_t &lights, rand_gen_t &rgen) const;
+	void try_place_light_on_ceiling(cube_t const &light, room_t const &room, bool room_dim, float pad, bool allow_rot, bool allow_mult,
+		unsigned nx, unsigned ny, unsigned check_coll_start, vect_cube_t &lights, rand_gen_t &rgen) const;
 	void try_place_light_on_wall   (cube_t const &light, room_t const &room, bool room_dim, float zval, vect_cube_t &lights, rand_gen_t &rgen) const;
 	bool clip_cube_to_parts(cube_t &c, vect_cube_t &cubes) const;
 	cube_t get_walkable_room_bounds(room_t const &room) const;

@@ -172,15 +172,15 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 		bool const is_unfinished    (r->get_room_type(0) == RTYPE_UNFINISHED); //  // unfinished room, for example in a non-cube shaped office building
 		bool const is_ext_basement(r->is_ext_basement());
 		bool const is_backrooms(r->is_ext_basement() && interior->has_backrooms);
-		float light_spacing(0.0), light_size(def_light_size); // default size for houses
+		float light_density(0.0), light_size(def_light_size); // default size for houses
 		unsigned const room_objs_start(objs.size());
 		unsigned nx(1), ny(1); // number of lights in X and Y for this room
 
 		if (!is_cube()) { // somewhat more lights for non-cube shaped building pie slices
-			light_spacing = 0.4;
+			light_density = 0.4;
 		}
 		else if (r->is_office) { // more lights for large offices; light size varies by office size; parking garages are handled later
-			light_spacing = 0.5;
+			light_density = 0.5;
 			float const room_size(dx + dy); // normalized to office size
 			light_size = max(0.015f*room_size, 0.67f*def_light_size);
 		}
@@ -189,11 +189,12 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			light_size = max(0.06f*room_size, 0.67f*def_light_size);
 		}
 		else if (is_backrooms) { // large office basement room
-			light_spacing = 0.35;
+			light_density = 0.45;
+			light_size   *= 0.75; // smaller
 		}
-		if (light_spacing > 0.0) { // uniform 2D grid of lights
-			nx = max(1U, unsigned(light_spacing*dx/window_vspacing));
-			ny = max(1U, unsigned(light_spacing*dy/window_vspacing));
+		if (light_density > 0.0) { // uniform 2D grid of lights
+			nx = max(1U, unsigned(light_density*dx/window_vspacing));
+			ny = max(1U, unsigned(light_density*dy/window_vspacing));
 		}
 		if (r->is_sec_bldg) {
 			if    (has_garage) {r->assign_all_to(RTYPE_GARAGE);}
@@ -227,6 +228,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			// top floor may have stairs connecting to upper stack
 			bool const top_floor(f+1 == num_floors);
 			bool const has_stairs_this_floor(r->has_stairs_on_floor(f));
+			unsigned const floor_objs_start(objs.size()); // needed for backrooms lights
 			bool is_lit(0), has_light(1), light_dim(room_dim), wall_light(0), has_stairs(has_stairs_this_floor), top_of_stairs(has_stairs && top_floor);
 			float light_delta_z(0.0);
 
@@ -257,8 +259,8 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				flags |= RO_FLAG_IS_ACTIVE; // leave unlit and enable motion detection for lights
 			}
 			else {
-				// 50% of lights are on, 75% for top of stairs, 100% for non-basement hallways, 100% for parking garages
-				is_lit  = ((r->is_hallway && !is_basement) || is_parking_garage || ((rgen.rand() & (top_of_stairs ? 3 : 1)) != 0));
+				// 50% of lights are on, 75% for top of stairs, 100% for non-basement hallways, 100% for parking garages and backrooms
+				is_lit  = ((r->is_hallway && !is_basement) || is_parking_garage || is_backrooms || ((rgen.rand() & (top_of_stairs ? 3 : 1)) != 0));
 				is_lit |= (r->is_ext_basement_conn() || (r->is_ext_basement() && r->intersects(get_basement()))); // ext basement conn or primary hallway
 
 				if (!is_lit) { // check people and set is_lit if anyone is in this floor of this room
@@ -272,7 +274,8 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			if (is_lit)     {flags |= RO_FLAG_LIT | RO_FLAG_EMISSIVE;}
 			if (has_stairs) {flags |= RO_FLAG_RSTAIRS;}
 			if (r->is_ext_basement_conn()) {flags |= RO_FLAG_EXTERIOR;} // flag as exterior since this light may reach the connected building
-			// add a light to the ceiling of this room if there's space (always for top of stairs);
+			// add a light to the ceiling of this room if there's space (always for top of stairs)
+			unsigned const lcheck_start_ix(is_backrooms ? floor_objs_start : objs.size()); // must check lights vs. backrooms walls and pillars
 			set_cube_zvals(light, (light_z2 - light_thick), light_z2);
 			valid_lights.clear();
 
@@ -282,15 +285,17 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				min_eq(num_lights, 6U);
 				float const offsets[6] = {0.0, -0.2, -0.3, -0.36, -0.4, -0.43}, steps[6] = {0.0, 0.4, 0.3, 0.24, 0.2, 0.172}; // indexed by num_lights-1
 				float const hallway_len(r->get_sz_dim(light_dim));
+				unsigned num[2] = {1, 1};
+				num[light_dim] = num_lights;
 
 				for (unsigned d = 0; d < num_lights; ++d) {
 					float const delta((offsets[num_lights-1] + d*steps[num_lights-1])*hallway_len);
 					cube_t hall_light(light);
 					hall_light.translate_dim(light_dim, delta);
-					try_place_light_on_ceiling(hall_light, *r, room_dim, fc_thick, 0, 0, valid_lights, rgen); // allow_rot=0, allow_mult=0
+					try_place_light_on_ceiling(hall_light, *r, room_dim, fc_thick, 0, 0, num[0], num[1], lcheck_start_ix, valid_lights, rgen); // allow_rot=0, allow_mult=0
 				}
 			}
-			else if (nx > 1 || ny > 1) { // office or parking garage with multiple lights
+			else if (nx > 1 || ny > 1) { // office, parking garage, or backrooms with multiple lights
 				float const xstep(dx/nx), ystep(dy/ny);
 				vector3d const shrink(0.5*light.dx()*sqrt((nx - 1)/nx), 0.5*light.dy()*sqrt((ny - 1)/ny), 0.0);
 
@@ -299,7 +304,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 						cube_t cur_light(light);
 						cur_light.expand_by_xy(-shrink);
 						cur_light.translate(point((-0.5f*dx + (x + 0.5)*xstep), (-0.5f*dy + (y + 0.5)*ystep), 0.0));
-						try_place_light_on_ceiling(cur_light, *r, room_dim, fc_thick, 0, 0, valid_lights, rgen); // allow_rot=0, allow_mult=0
+						try_place_light_on_ceiling(cur_light, *r, room_dim, fc_thick, 0, 0, nx, ny, lcheck_start_ix, valid_lights, rgen); // allow_rot=0, allow_mult=0
 					}
 				} // for y
 			}
@@ -310,7 +315,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 						wall_light = !valid_lights.empty(); // if this fails, fall back to a ceiling light
 					}
 				}
-				if (!wall_light) {try_place_light_on_ceiling(light, *r, room_dim, fc_thick, 1, 1, valid_lights, rgen);} // allow_rot=1, allow_mult=1
+				if (!wall_light) {try_place_light_on_ceiling(light, *r, room_dim, fc_thick, 1, 1, 1, 1, lcheck_start_ix, valid_lights, rgen);} // allow_rot=1, allow_mult=1
 				if (!valid_lights.empty()) {light_obj_ix = objs.size();} // this will be the index of the light to be added later
 			}
 			rand_gen_t rgen_lights(rgen); // copy state so that we don't modify rgen

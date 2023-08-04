@@ -2090,7 +2090,6 @@ void building_interior_t::place_exterior_room(extb_room_t const &room, cube_t co
 
 void building_t::add_backrooms_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id) {
 	highres_timer_t timer("Add Backrooms Objs");
-	// TODO: what about lights? do we place them here? do we place them in a grid later and check against walls added here?
 	float const floor_spacing(get_window_vspace()), wall_thickness(get_wall_thickness());
 	float const ceiling_z(zval + get_floor_ceil_gap()); // Note: zval is at floor level, not at the bottom of the room
 	float const tot_light_amt(room.light_intensity); // ???

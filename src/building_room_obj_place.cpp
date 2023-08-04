@@ -2964,14 +2964,19 @@ bool building_t::is_light_placement_valid(cube_t const &light, room_t const &roo
 }
 
 void building_t::try_place_light_on_ceiling(cube_t const &light, room_t const &room, bool room_dim, float pad, bool allow_rot, bool allow_mult,
-	vect_cube_t &lights, rand_gen_t &rgen) const
+	unsigned nx, unsigned ny, unsigned check_coll_start, vect_cube_t &lights, rand_gen_t &rgen) const
 {
 	assert(has_room_geom());
-	if (is_light_placement_valid(light, room, pad)) {lights.push_back(light); return;} // contained = done
+
+	if (is_light_placement_valid(light, room, pad) && !overlaps_other_room_obj(light, check_coll_start)) {
+		lights.push_back(light); // valid placement, done
+		return;
+	}
 	point room_center(room.get_cube_center());
 	bool const first_dir(rgen.rand_bool()); // randomize shift direction
 	float const window_vspacing(get_window_vspace());
 	cube_t light_cand(light); // Note: same logic for cube and cylinder light shape - cylinder uses bounding cube
+	bool light_placed(0);
 	unsigned const num_shifts = 10;
 
 	if (allow_rot) { // flip aspect ratio
@@ -2979,15 +2984,17 @@ void building_t::try_place_light_on_ceiling(cube_t const &light, room_t const &r
 		light_cand.expand_in_dim(0, -sz_diff);
 		light_cand.expand_in_dim(1,  sz_diff);
 	}
-	for (unsigned D = 0; D < 2 && lights.empty(); ++D) { // try both dims
+	for (unsigned D = 0; D < 2 && !light_placed; ++D) { // try both dims
 		bool const dim(room_dim ^ bool(D));
-		float const shift_step((0.5*(room.get_sz_dim(dim) - light_cand.get_sz_dim(dim)))/num_shifts);
+		unsigned const num(room_dim ? ny : nx);
+		float const shift_step((0.5*(room.get_sz_dim(dim) - light_cand.get_sz_dim(dim)))/(num*num_shifts)); // shift within the bounds of placement grid based on num
 
 		for (unsigned d = 0; d < 2; ++d) { // dir: see if we can place it by moving on one direction
 			for (unsigned n = 1; n <= num_shifts; ++n) { // try different shift values
 				cube_t cand(light_cand);
 				cand.translate_dim(dim, ((bool(d) ^ first_dir) ? -1.0 : 1.0)*n*shift_step);
-				if (!is_light_placement_valid(cand, room, pad)) continue;
+				if (!is_light_placement_valid(cand, room, pad))      continue;
+				if (overlaps_other_room_obj(cand, check_coll_start)) continue; // intersects wall, pillar, etc.
 				cube_t test_cube(cand);
 				test_cube.z1() -= 0.4*window_vspacing; // lower Z1 so that it's guaranteed to overlap a door
 			
@@ -2997,12 +3004,13 @@ void building_t::try_place_light_on_ceiling(cube_t const &light, room_t const &r
 					cand.z1() += 0.99*cand.dz(); // if light intersects door, move it up into the ceiling rather than letting it hang down into the room
 				}
 				lights.push_back(cand);
+				light_placed = 1;
 				break;
 			} // for n
-			if (!allow_mult) break;
+			if (!allow_mult && light_placed) break;
 		} // for d
 	} // for D
-	if (lights.empty()) {} // place light on a wall instead? do we ever get here?
+	if (!light_placed) {} // place light on a wall instead? do we ever get here?
 }
 
 void building_t::try_place_light_on_wall(cube_t const &light, room_t const &room, bool room_dim, float zval, vect_cube_t &lights, rand_gen_t &rgen) const {
