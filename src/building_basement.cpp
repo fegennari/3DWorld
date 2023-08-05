@@ -2140,7 +2140,7 @@ struct cube_by_center_dim_descending {
 };
 
 void building_t::add_backrooms_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id) {
-	highres_timer_t timer("Add Backrooms Objs"); // up to ~2.5ms
+	highres_timer_t timer("Add Backrooms Objs"); // up to ~2ms
 	assert(has_room_geom());
 	float const floor_spacing(get_window_vspace()), wall_thickness(1.2*get_wall_thickness()), wall_half_thick(0.5*wall_thickness); // slightly thicker than regular walls
 	float const ceiling_z(zval + get_floor_ceil_gap()); // Note: zval is at floor level, not at the bottom of the room
@@ -2208,40 +2208,13 @@ void building_t::add_backrooms_objs(rand_gen_t rgen, room_t const &room, float z
 	} // for dim
 
 	// find areas of empty space
-	float const grid_step(1.0*min_gap), pad(wall_half_thick);
-	unsigned const xdiv(ceil(wall_place_area.dx()/grid_step)), ydiv(ceil(wall_place_area.dy()/grid_step));
-	float const xstep(wall_place_area.dx()/(xdiv-1)), ystep(wall_place_area.dy()/(ydiv-1));
-	vect_cube_t big_space;
-	vector<unsigned char> is_space(xdiv*ydiv, 0);
-	cube_t grid(wall); // copy zvals
-
-	for (unsigned y = 0; y < ydiv; ++y) {
-		set_wall_width(grid, (wall_place_area.y1() + y*ystep), min_gap, 1);
-
-		for (unsigned x = 0; x < xdiv; ++x) {
-			set_wall_width(grid, (wall_place_area.x1() + x*xstep), min_gap, 0);
-			if (has_bcube_int(grid, walls_per_dim[0]) || has_bcube_int(grid, walls_per_dim[1])) continue; // not empty space
-			is_space[x + y*xdiv] = 1;
-			if (bool(y&1) || bool(x&1)) continue; // x or y are odd
-			cube_t big_grid(grid);
-			big_grid.expand_by_xy(min_gap);		
-			if (!place_area.contains_cube_xy(big_grid) || has_bcube_int(big_grid, walls_per_dim[0]) || has_bcube_int(big_grid, walls_per_dim[1])) continue;
-			big_space.push_back(big_grid);
-			//objs.emplace_back(big_grid, TYPE_DBG_SHAPE, room_id, 0, 0, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CUBE, RED); // debugging
-		} // for x
-	} // for y
-	float const doorway_hwidth(0.5*doorway_width), nav_pad(doorway_hwidth); // pad with doorway radius for player navigation
+	float const doorway_hwidth(0.5*doorway_width), pad(wall_half_thick), nav_pad(doorway_hwidth); // pad with doorway radius for player navigation
 	vect_cube_t space;
 	vector<vect_cube_t> space_groups;
 	invert_walls(place_area, walls_per_dim, space, nav_pad);
 	resize_cubes_xy(space, nav_pad); // restore padding (under-over)
 	partition_cubes_into_conn_groups(space, space_groups, pad);
-#if 0
-	for (vect_cube_t &group : space_groups) { // debugging
-		colorRGBA const color(rgen.rand_float(), rgen.rand_float(), rgen.rand_float());
-		for (cube_t const &s : group) {objs.emplace_back(s, TYPE_DBG_SHAPE, room_id, 0, 0, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CUBE, color);}
-	}
-#endif
+
 	// Add doorways + doors to guarantee full connectivity using space
 	if (space_groups.size() > 1) { // multiple disconnected sub-graphs
 		float const door_min_spacing(0.5*doorway_width), min_shared_edge(doorway_width + 2*wall_thickness); // allow space for door frame
@@ -2283,17 +2256,11 @@ void building_t::add_backrooms_objs(rand_gen_t rgen, room_t const &room, float z
 						if (hi - lo < min_shared_edge) continue; // not enough space to add a door
 						pair<unsigned, unsigned> const ix_pair(min(g1.gix, g2.gix), max(g1.gix, g2.gix));
 						if (connected.find(ix_pair) != connected.end()) continue; // these two groups were already connected
-#if 0
-						cube_t shared(query);
-						shared.d[!dim][0] = lo; shared.d[!dim][1] = hi;
-						objs.emplace_back(shared, TYPE_DBG_SHAPE, room_id, 0, 0, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CUBE, RED); // TESTING
-#endif
 						float const vmin(lo + doorway_hwidth), vmax(hi - doorway_hwidth);
 							
 						// add a doorway here if possible
 						for (unsigned n = 0; n < 10; ++n) { // make up to 10 tries
 							float const door_pos(rgen.rand_uniform(vmin, vmax));
-							//cube_t door_cand(query); // TESTING: for visualization; use wall for actual door
 							cube_t door_cand(wall);
 							set_wall_width(door_cand, door_pos, doorway_hwidth, !dim);
 							// check for collisions with walls in other dims and prev placed doors; shouldn't collide with walls in this dim due to checks during wall placement
@@ -2303,7 +2270,6 @@ void building_t::add_backrooms_objs(rand_gen_t rgen, room_t const &room, float z
 							cube_t door_test_cube(wall);
 							door_test_cube.expand_in_dim(!dim, door_min_spacing);
 							if (has_bcube_int(door_test_cube, doors_to_add)) continue;
-							//objs.emplace_back(door_cand, TYPE_DBG_SHAPE, room_id, 0, 0, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CUBE, RED); // TESTING
 							doors_to_add.push_back(door_cand);
 							connected.insert(ix_pair); // mark these two space groups as being connected
 							break;
@@ -2311,10 +2277,8 @@ void building_t::add_backrooms_objs(rand_gen_t rgen, room_t const &room, float z
 					} // for j
 				} // for i
 				sort(doors_to_add.begin(), doors_to_add.end(), cube_by_center_dim_descending(!dim)); // sort in dim !dim, high to low
-				//cout << TXT(dim) << endl;
 
 				for (cube_t const &door : doors_to_add) {
-					//cout << TXT(door.str()) << TXT(wall.str()) << endl;
 					assert(door.is_strictly_normalized());
 					cube_t wall2;
 					bool const make_unlocked = 1; // makes exploring easier
@@ -2335,12 +2299,26 @@ void building_t::add_backrooms_objs(rand_gen_t rgen, room_t const &room, float z
 		}
 	}
 	// Add some random pillars in large open spaces, but not if there are too many
-	float const pillar_hwidth(0.07*floor_spacing);
-	vector<vect_cube_t> bs_groups;
-	partition_cubes_into_conn_groups(big_space, bs_groups, pad);
+	float const pillar_grid_step(2.5*min_gap), pillar_hwidth(0.07*floor_spacing);
+	unsigned const xdiv(ceil(wall_place_area.dx()/pillar_grid_step)), ydiv(ceil(wall_place_area.dy()/pillar_grid_step));
+	float const xstep(wall_place_area.dx()/(xdiv-1)), ystep(wall_place_area.dy()/(ydiv-1));
+	vect_cube_t big_space;
+	cube_t grid(wall); // copy zvals
+
+	for (unsigned y = 0; y < ydiv; ++y) {
+		for (unsigned x = 0; x < xdiv; ++x) {
+			set_wall_width(grid, (wall_place_area.y1() + y*ystep), min_gap, 1);
+			set_wall_width(grid, (wall_place_area.x1() + x*xstep), min_gap, 0);
+			grid.expand_by_xy(min_gap);		
+			if (!place_area.contains_cube_xy(grid) || has_bcube_int(grid, walls_per_dim[0]) || has_bcube_int(grid, walls_per_dim[1])) continue;
+			big_space.push_back(grid);
+		} // for x
+	} // for y
+	space_groups.clear(); // reuse the vector
+	partition_cubes_into_conn_groups(big_space, space_groups, pad);
 	cube_t pillar(wall); // copy zvals
 
-	for (vect_cube_t &group : bs_groups) {
+	for (vect_cube_t &group : space_groups) {
 		if (rgen.rand_bool()) continue; // add 50% of groups
 
 		for (cube_t const &s : group) {
