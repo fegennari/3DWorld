@@ -2111,7 +2111,7 @@ bool building_t::add_server_room_objs(rand_gen_t rgen, room_t const &room, float
 		} // for i
 	}
 	// maybe add laptops on top of some servers, to reward the player for finding this room
-	for (unsigned i = objs_start, server_ix = 0; i < objs.size(); ++i) {
+	for (unsigned i = objs_start; i < objs.size(); ++i) {
 		room_object_t const &server(objs[i]);
 		if (server.type != TYPE_SERVER) continue;
 		if (rgen.rand_float() > 0.2)    continue; // place laptops 20% of the time

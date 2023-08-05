@@ -1501,7 +1501,7 @@ void building_t::add_basement_electrical(vect_cube_t &obstacles, vect_cube_t con
 					obj.z2()   = conn_height; // shorten original conduit
 
 					if (min(obj.dz(), h_pipe.get_sz_dim(!dim)) > 4.0*radius) { // not a short segment; add connector parts
-						float const conn_exp(0.2*radius), conn_radius(radius + conn_exp), xlate((dir ? -1.0 : 1.0)*conn_exp);
+						float const conn_exp(0.2*radius), xlate((dir ? -1.0 : 1.0)*conn_exp);
 						float const conn_len(2.0*radius), signed_conn_len((pipe_dir ? 1.0 : -1.0)*conn_len);
 						obj   .translate_dim(dim, xlate); // move away from the wall
 						h_pipe.translate_dim(dim, xlate);
