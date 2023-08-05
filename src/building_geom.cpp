@@ -1453,6 +1453,7 @@ tquad_with_ix_t building_t::set_door_from_cube(cube_t const &c, bool dim, bool d
 			door.pts[0][dim] = door.pts[1][dim] = pos + c.dz()*((dir ^ opens_out) ? 1.0 : -1.0);
 		}
 		else { // rotates to the side
+			bool const check_backroom_walls(interior && interior->has_backrooms && c.z1() < ground_floor_z1 && !get_basement().contains_cube(c));
 			float const width(c.get_sz_dim(!dim)), signed_width(width*((dir ^ opens_out) ? 1.0 : -1.0));
 			float const offset(0.005*width*((dir ^ dim) ? 1.0 : -1.0)*open_amt); // move slightly away from the wall to prevent z-fighting
 			for (unsigned i = 0; i < 4; ++i) {door.pts[i][!dim] += offset;}
@@ -1479,7 +1480,8 @@ tquad_with_ix_t building_t::set_door_from_cube(cube_t const &c, bool dim, bool d
 					if (has_bcube_int(walls_test_bcube, interior->walls[!dim]))            continue; // hits perp wall
 					// open doors don't really block the player from entering or exiting stairs since they can be walked through or closed
 					if (interior->is_blocked_by_stairs_or_elevator(test_bcube, 0.0, 0, 1)) continue; // hits stairs or elevator; dmin=0, elevators_only=0, no_check_enter_exit=1
-
+					if (check_backroom_walls && interior->room_geom->cube_int_backrooms_walls(walls_test_bcube)) continue;
+					
 					// check if the player moved an object that would block this door
 					if (has_moved_objs) {
 						cube_t union_cube(test_bcube);

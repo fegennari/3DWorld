@@ -819,10 +819,10 @@ public:
 
 struct building_room_geom_t {
 
-	bool has_elevators, has_pictures, has_garage_car, modified_by_player;
-	unsigned char num_pic_tids, invalidate_mats_mask;
-	float obj_scale;
-	unsigned wall_ps_start, buttons_start, stairs_start; // index of first object of {TYPE_PG_*|TYPE_PSPACE, TYPE_BUTTON, TYPE_STAIR}
+	bool has_elevators=0, has_pictures=0, has_garage_car=0, modified_by_player=0;
+	unsigned char num_pic_tids=0, invalidate_mats_mask=0;
+	float obj_scale=1.0;
+	unsigned wall_ps_start=0, buttons_start=0, stairs_start=0, backrooms_start=0; // index of first object of {TYPE_PG_*|TYPE_PSPACE, TYPE_BUTTON, TYPE_STAIR}
 	point tex_origin;
 	colorRGBA wood_color;
 	// objects in rooms; expanded_objs is for things that have been expanded for player interaction; model_objs is for models in drawers; trim_objs is for wall/door/window trim
@@ -841,8 +841,7 @@ struct building_room_geom_t {
 	particle_manager_t particle_manager;
 	fire_manager_t fire_manager;
 
-	building_room_geom_t(point const &tex_origin_=all_zeros) : has_elevators(0), has_pictures(0), has_garage_car(0), modified_by_player(0),
-		num_pic_tids(0), invalidate_mats_mask(0), obj_scale(1.0), wall_ps_start(0), buttons_start(0), stairs_start(0), tex_origin(tex_origin_), wood_color(WHITE) {}
+	building_room_geom_t(point const &tex_origin_=all_zeros) : tex_origin(tex_origin_), wood_color(WHITE) {}
 	bool empty() const {return objs.empty();}
 	void clear();
 	void clear_materials();
@@ -867,6 +866,7 @@ struct building_room_geom_t {
 		colorRGBA const &color, bool invert_tc_x, bool exclude_frame, bool no_tc);
 	vect_room_object_t::const_iterator get_placed_objs_end() const {return (objs.begin() + buttons_start);} // excludes buttons, stairs, and elevators
 	vect_room_object_t::const_iterator get_stairs_start   () const {return (objs.begin() + stairs_start );} // excludes stairs
+	bool cube_int_backrooms_walls(cube_t const &c) const;
 	// Note: these functions are all for drawing objects / adding them to the vertex list
 	void add_tc_legs(cube_t const &c, colorRGBA const &color, float width, float tscale, bool use_metal_mat=0, bool draw_tops=0, float frame_height=0.0);
 	void add_table(room_object_t const &c, float tscale, float top_dz, float leg_width);

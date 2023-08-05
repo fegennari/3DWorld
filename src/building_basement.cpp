@@ -2112,6 +2112,32 @@ void partition_cubes_into_conn_groups(vect_cube_t const &cubes, vector<vect_cube
 		groups.push_back(group);
 	} // while
 }
+void invert_walls(cube_t const &room, vect_cube_t const walls[2], vect_cube_t &space, float pad=0.0) {
+	space.push_back(room);
+	
+	for (unsigned d = 0; d < 2; ++d) {
+		for (cube_t const &wall : walls[d]) {
+			cube_t sub(wall);
+			sub.expand_by_xy(pad);
+			subtract_cube_from_cubes(sub, space);
+		}
+	}
+}
+void resize_cubes_xy(vect_cube_t &cubes, float val) { // val can be positive or negative
+	for (cube_t &c : cubes) {c.expand_by_xy(val);}
+}
+struct group_range_t {
+	unsigned gix;
+	float lo, hi;
+	group_range_t(unsigned gix_, float lo_, float hi_) : gix(gix_), lo(lo_), hi(hi_) {}
+	void update(float lo_, float hi_) {min_eq(lo, lo_); max_eq(hi, hi_);}
+	float len() const {return (hi - lo);}
+};
+struct cube_by_center_dim_descending {
+	unsigned dim;
+	cube_by_center_dim_descending(unsigned dim_) : dim(dim_) {}
+	bool operator()(cube_t const &a, cube_t const &b) const {return (b.get_center_dim(dim) < a.get_center_dim(dim));}
+};
 
 void building_t::add_backrooms_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id) {
 	highres_timer_t timer("Add Backrooms Objs"); // up to ~2.5ms
@@ -2122,6 +2148,7 @@ void building_t::add_backrooms_objs(rand_gen_t rgen, room_t const &room, float z
 	vector3d const sz(room.get_size());
 	vect_room_object_t &objs(interior->room_geom->objs);
 	//unsigned const objs_start(objs.size());
+	if (interior->room_geom->backrooms_start == 0) {interior->room_geom->backrooms_start = objs.size();}
 
 	// add random interior walls to create an initial maze
 	float const doorway_width(get_doorway_width()), min_gap(1.2*doorway_width);
@@ -2197,50 +2224,109 @@ void building_t::add_backrooms_objs(rand_gen_t rgen, room_t const &room, float z
 			is_space[x + y*xdiv] = 1;
 			if (bool(y&1) || bool(x&1)) continue; // x or y are odd
 			cube_t big_grid(grid);
-			big_grid.expand_by_xy(big_grid_expand);		
+			big_grid.expand_by_xy(min_gap);		
 			if (!place_area.contains_cube_xy(big_grid) || has_bcube_int(big_grid, walls_per_dim[0]) || has_bcube_int(big_grid, walls_per_dim[1])) continue;
 			big_space.push_back(big_grid);
 			//objs.emplace_back(big_grid, TYPE_DBG_SHAPE, room_id, 0, 0, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CUBE, RED); // debugging
 		} // for x
 	} // for y
-
+	float const doorway_hwidth(0.5*doorway_width), nav_pad(doorway_hwidth); // pad with doorway radius for player navigation
+	vect_cube_t space;
+	vector<vect_cube_t> space_groups;
+	invert_walls(place_area, walls_per_dim, space, nav_pad);
+	resize_cubes_xy(space, nav_pad); // restore padding (under-over)
+	partition_cubes_into_conn_groups(space, space_groups, pad);
+#if 0
+	for (vect_cube_t &group : space_groups) { // debugging
+		colorRGBA const color(rgen.rand_float(), rgen.rand_float(), rgen.rand_float());
+		for (cube_t const &s : group) {objs.emplace_back(s, TYPE_DBG_SHAPE, room_id, 0, 0, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CUBE, color);}
+	}
+#endif
 	// Add doorways + doors to guarantee full connectivity using space
-	unsigned const ndiv[2] = {xdiv, ydiv};
+	if (space_groups.size() > 1) { // multiple disconnected sub-graphs
+		float const door_min_spacing(0.5*doorway_width), min_shared_edge(doorway_width + 2*wall_thickness); // allow space for door frame
+		vector<group_range_t> adj;
+		vect_cube_t doors_to_add, walls_to_add;
+		set<pair<unsigned, unsigned>> connected;
+		bool const first_dim(rgen.rand_bool()); // mix it up to avoid favoring one dim
 
-	for (unsigned dim = 0; dim < 2; ++dim) {
-		for (unsigned row = 0; row < ndiv[!dim]; ++row) {
-			unsigned start_ix(0);
-			bool prev_space(1); // outside of room counts as space
+		for (unsigned d = 0; d < 2; ++d) {
+			unsigned const dim(bool(d) ^ first_dim);
+			walls_to_add.clear();
+			vect_cube_t &walls(walls_per_dim[dim]);
 
-			for (unsigned i = 0; i <= ndiv[dim]; ++i) {
-				bool const cur_space((i == ndiv[dim]) ? 1 : is_space[(dim ? row : i) + (dim ? i : row)*xdiv]);
-				if      (!prev_space &&  cur_space) {start_ix = i;} // space start
-				else if ( prev_space && !cur_space) { // space end
-					unsigned const run_len(i - start_ix);
+			for (cube_t &wall : walls) {
+				cube_t query(wall);
+				query.expand_in_dim(dim, pad); // increase wall width to overlap space cubes
+				adj.clear();
 
-					if (run_len > 2) { // 3 or more space - hallway
-						float const center(wall_place_area.d[!dim][0] + (dim ? xstep : ystep)*row); // row centerline
+				for (unsigned gix = 0; gix < space_groups.size(); ++gix) {
+					bool hit(0);
 
-						for (unsigned d = 0; d < 2; ++d) { // for each end
-							unsigned const ix(d ? (i-1) : start_ix); // index of space that's next to filled
-							float const step_sign(d ? 1.0 : -1.0), step_len(dim ? ystep : xstep);
-							float const start_val(wall_place_area.d[dim][0] + step_len*ix + step_sign*min_gap); // starting search position within this row (edge of grid)
-							float const end_val(start_val + step_sign*step_len); // one grid over
-							cube_t best_wall;
-							// TODO: find wall closest to start_val but within [start_val, end_val] that overlaps center by at least doorway_width in each dim
-							for (cube_t &wall : walls_per_dim[dim]) {
-								
-							}
-							if (!best_wall.is_all_zeros()) {
-								// TODO: cut door of size doorway_width in this wall
-							}
-						} // for d
+					for (cube_t const &s : space_groups[gix]) {
+						if (!s.intersects(query)) continue;
+						float const lo(max(query.d[!dim][0], s.d[!dim][0])), hi(min(query.d[!dim][1], s.d[!dim][1]));
+						if (!hit) {adj.emplace_back(gix, lo, hi);} else {adj.back().update(lo, hi);}
+						hit = 1;
 					}
+					if (hit && adj.back().len() < min_shared_edge) {adj.pop_back();} // remove if too short
+				} // for gix
+				if (adj.size() <= 1) continue; // not adjacent to multiple space group
+				//objs.emplace_back(query, TYPE_DBG_SHAPE, room_id, 0, 0, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CUBE, RED); // TESTING
+				doors_to_add.clear();
+
+				// test every pair of groups
+				for (unsigned i = 0; i < adj.size(); ++i) {
+					for (unsigned j = i+1; j < adj.size(); ++j) {
+						group_range_t const &g1(adj[i]), &g2(adj[j]);
+						float const lo(max(g1.lo, g2.lo)), hi(min(g1.hi, g2.hi));
+						if (hi - lo < min_shared_edge) continue; // not enough space to add a door
+						pair<unsigned, unsigned> const ix_pair(min(g1.gix, g2.gix), max(g1.gix, g2.gix));
+						if (connected.find(ix_pair) != connected.end()) continue; // these two groups were already connected
+#if 0
+						cube_t shared(query);
+						shared.d[!dim][0] = lo; shared.d[!dim][1] = hi;
+						objs.emplace_back(shared, TYPE_DBG_SHAPE, room_id, 0, 0, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CUBE, RED); // TESTING
+#endif
+						float const vmin(lo + doorway_hwidth), vmax(hi - doorway_hwidth);
+							
+						// add a doorway here if possible
+						for (unsigned n = 0; n < 10; ++n) { // make up to 10 tries
+							float const door_pos(rgen.rand_uniform(vmin, vmax));
+							//cube_t door_cand(query); // TESTING: for visualization; use wall for actual door
+							cube_t door_cand(wall);
+							set_wall_width(door_cand, door_pos, doorway_hwidth, !dim);
+							// check for collisions with walls in other dims and prev placed doors; shouldn't collide with walls in this dim due to checks during wall placement
+							cube_t wall_test_cube(door_cand);
+							wall_test_cube.expand_in_dim(dim, doorway_width); // make room for the door to open
+							if (has_bcube_int(wall_test_cube, walls_per_dim[!dim])) continue;
+							cube_t door_test_cube(wall);
+							door_test_cube.expand_in_dim(!dim, door_min_spacing);
+							if (has_bcube_int(door_test_cube, doors_to_add)) continue;
+							//objs.emplace_back(door_cand, TYPE_DBG_SHAPE, room_id, 0, 0, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CUBE, RED); // TESTING
+							doors_to_add.push_back(door_cand);
+							connected.insert(ix_pair); // mark these two space groups as being connected
+							break;
+						} // for n
+					} // for j
+				} // for i
+				sort(doors_to_add.begin(), doors_to_add.end(), cube_by_center_dim_descending(!dim)); // sort in dim !dim, high to low
+				//cout << TXT(dim) << endl;
+
+				for (cube_t const &door : doors_to_add) {
+					//cout << TXT(door.str()) << TXT(wall.str()) << endl;
+					assert(door.is_strictly_normalized());
+					cube_t wall2;
+					bool const make_unlocked = 1; // makes exploring easier
+					bool const make_closed   = 1; // makes it easier to tell if the door has been used
+					bool const open_dir(rgen.rand_bool());
+					remove_section_from_cube_and_add_door(wall, wall2, door.d[!dim][0], door.d[!dim][1], !dim, open_dir, 0, make_unlocked, make_closed); // is_bathroom=0
+					walls_to_add.push_back(wall2); // keep high side as it won't be used with any other doors
 				}
-				prev_space = cur_space;
-			} // for i
-		} // for row
-	} // for dim
+			} // for wall
+			vector_add_to(walls_to_add, walls);
+		} // for d
+	}
 
 	// add walls
 	for (unsigned dim = 0; dim < 2; ++dim) {
@@ -2267,6 +2353,15 @@ void building_t::add_backrooms_objs(rand_gen_t rgen, room_t const &room, float z
 	
 	// Add more variety to light colors, wall/ceiling/floor textures, etc.
 	// TODO
+}
+
+bool building_room_geom_t::cube_int_backrooms_walls(cube_t const &c) const { // TODO: store walls in a vector?
+	assert(backrooms_start > 0); // too strong?
+
+	for (auto i = objs.begin()+backrooms_start; i != get_placed_objs_end(); ++i) {
+		if ((i->type == TYPE_PG_WALL || i->type == TYPE_PG_PILLAR) && i->intersects(c)) return 1;
+	}
+	return 0;
 }
 
 cube_t building_t::get_bcube_inc_extensions() const {
