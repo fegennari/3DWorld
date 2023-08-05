@@ -1764,11 +1764,11 @@ bool building_t::check_obj_occluded(cube_t const &c, point const &viewer_in, occ
 	//highres_timer_t timer("Check Object Occlusion"); // 0.001ms
 	point viewer(viewer_in);
 	maybe_inv_rotate_point(viewer); // rotate viewer pos into building space
-	bool const player_in_building(point_in_building_or_basement_bcube(viewer));
+	bool const player_in_building(point_in_building_or_basement_bcube(viewer)), targ_in_basement(c.z2() <= ground_floor_z1);
 	float const floor_spacing(get_window_vspace());
 	bool checked_conn_ret(0);
 	
-	if (c.z2() <= ground_floor_z1) { // fully inside basement
+	if (targ_in_basement) { // fully inside basement
 		if (viewer.z > (ground_floor_z1 + floor_spacing)) return 1; // viewer not on first floor
 		
 		if (!player_in_building) { // player not in this building
@@ -1784,8 +1784,17 @@ bool building_t::check_obj_occluded(cube_t const &c, point const &viewer_in, occ
 	
 	if (!c_is_building_part && !reflection_pass) {
 		// check walls of this building; not valid for reflections because the reflected camera may be on the other side of a wall/mirror
-		for (unsigned d = 0; d < 2; ++d) {
-			if (are_pts_occluded_by_any_cubes<1>(viewer, pts, npts, occ_area, interior->walls[d], d, c.get_sz_dim(!d))) return 1; // with size check (helps with light bcubes)
+		if (targ_in_basement && viewer.z < ground_floor_z1 && (has_parking_garage || interior->has_backrooms)) { // object and pos are both in the parking garage or backrooms
+			if (has_room_geom()) {
+				for (unsigned d = 0; d < 2; ++d) {
+					if (are_pts_occluded_by_any_cubes<1>(viewer, pts, npts, occ_area, interior->room_geom->pgbr_walls[d], d, 0.0)) return 1; // no size check
+				}
+			}
+		}
+		else { // regular walls case
+			for (unsigned d = 0; d < 2; ++d) {
+				if (are_pts_occluded_by_any_cubes<1>(viewer, pts, npts, occ_area, interior->walls[d], d, c.get_sz_dim(!d))) return 1; // with size check (helps with light bcubes)
+			}
 		}
 	}
 	if (!c_is_building_part && (reflection_pass || player_in_building)) {

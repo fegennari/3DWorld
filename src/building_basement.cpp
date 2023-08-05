@@ -426,6 +426,7 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 					for (auto const &w : wall_parts) {
 						if (w.get_sz_dim(dim) < 2.0*window_vspacing) continue; // too short, skip
 						objs.emplace_back(w, TYPE_PG_WALL, room_id, !dim, 0, 0, tot_light_amt, SHAPE_CUBE, wall_color);
+						interior->room_geom->pgbr_walls[!dim].push_back(w); // save for occlusion culling
 					}
 				} // for side
 			}
@@ -2296,6 +2297,7 @@ void building_t::add_backrooms_objs(rand_gen_t rgen, room_t const &room, float z
 		for (cube_t &wall : walls_per_dim[dim]) {
 			objs.emplace_back(wall, TYPE_PG_WALL, room_id, dim, 0, RO_FLAG_BACKROOM, tot_light_amt, SHAPE_CUBE, wall_color); // dir=0
 		}
+		vector_add_to(walls_per_dim[dim], interior->room_geom->pgbr_walls[dim]); // store final walls for occlusion culling and door opening checks
 	}
 	// Add some random pillars in large open spaces, but not if there are too many
 	float const pillar_grid_step(2.5*min_gap), pillar_hwidth(0.07*floor_spacing);
@@ -2328,15 +2330,13 @@ void building_t::add_backrooms_objs(rand_gen_t rgen, room_t const &room, float z
 	// Add occasional random items/furniture
 	// TODO
 	
-	// Add more variety to light colors, wall/ceiling/floor textures, etc.
-	// TODO
+	// Add more variety to light colors, wall/ceiling/floor textures, etc.?
 }
 
-bool building_room_geom_t::cube_int_backrooms_walls(cube_t const &c) const { // TODO: store walls in a vector?
-	assert(backrooms_start > 0); // too strong?
-
-	for (auto i = objs.begin()+backrooms_start; i != get_placed_objs_end(); ++i) {
-		if ((i->type == TYPE_PG_WALL || i->type == TYPE_PG_PILLAR) && i->intersects(c)) return 1;
+bool building_room_geom_t::cube_int_backrooms_walls(cube_t const &c) const { // used for door opening collision checks
+	// no dim is passed in, so we check both dims; includes parking garage walls, which we can probably ignore, but they should be small in size
+	for (unsigned d = 0; d < 2; ++d) {
+		if (has_bcube_int(c, pgbr_walls[d])) return 1;
 	}
 	return 0;
 }

@@ -836,7 +836,7 @@ struct building_room_geom_t {
 	vect_insect_t insects;
 	// {large static, small static, dynamic, lights, alpha mask, transparent, door} materials
 	building_materials_t mats_static, mats_small, mats_text, mats_detail, mats_dynamic, mats_lights, mats_amask, mats_alpha, mats_doors, mats_exterior, mats_ext_detail;
-	vect_cube_t light_bcubes;
+	vect_cube_t light_bcubes, pgbr_walls[2]; // parking garage and backrooms walls, in each dim
 	building_decal_manager_t decal_manager;
 	particle_manager_t particle_manager;
 	fire_manager_t fire_manager;
