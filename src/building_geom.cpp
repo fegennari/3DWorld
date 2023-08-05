@@ -879,12 +879,12 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 		}
 	} // end two_parts (multi-part house)
 	else if (stacked_parts) {
-		cube_t top_part(bcube); // parts[0] is the bottom
-		parts[0].z2() = rgen.rand_uniform((bcube.z1() + 0.8*floor_spacing), (bcube.z2() - 0.8*floor_spacing)); // split zval
+		cube_t top_part(base); // parts[0] is the bottom
+		parts[0].z2() = rgen.rand_uniform((base.z1() + 0.8*floor_spacing), (base.z2() - 0.8*floor_spacing)); // split zval
 		if (global_building_params.gen_building_interiors) {adjust_part_zvals_for_floor_spacing(parts[0]);}
 		top_part.z1() = parts[0].z2();
 		if (global_building_params.gen_building_interiors) {adjust_part_zvals_for_floor_spacing(top_part);}
-		float const sz[2] = {bcube.dx(), bcube.dy()};
+		float const sz[2] = {base.dx(), base.dy()};
 
 		for (unsigned dim = 0; dim < 2; ++dim) { // x/y
 			for (unsigned dir = 0; dir < 2; ++dir) {
