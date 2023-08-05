@@ -3877,6 +3877,12 @@ void building_room_geom_t::add_pan(room_object_t const &c) { // is_small=1
 	for (auto i = mat.itri_verts.begin()+base_start; i != mat.itri_verts.end(); ++i) {i->v.z = c.z2() - 0.5*(c.z2() - i->v.z);}
 }
 
+void building_room_geom_t::add_debug_shape(room_object_t const &c) {
+	rgeom_mat_t &mat(get_untextured_material(0)); // unshadowed
+	assert(c.shape == SHAPE_CUBE); // currently only cubes are supported, but we could also draw cylinders and spheres
+	mat.add_cube_to_verts_untextured(c, apply_light_color(c)); // all faces
+}
+
 colorRGBA room_object_t::get_color() const {
 	switch (type) {
 	case TYPE_TABLE:    return get_table_color(*this);

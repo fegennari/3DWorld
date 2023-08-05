@@ -390,7 +390,7 @@ enum {
 	TYPE_LAPTOP, TYPE_FPLACE, TYPE_LBASKET, TYPE_WHEATER, TYPE_TAPE, TYPE_OUTLET, TYPE_PG_WALL, TYPE_PG_PILLAR, TYPE_PG_BEAM, TYPE_PARK_SPACE,
 	TYPE_RAMP, TYPE_PIPE, TYPE_CURB, TYPE_BRK_PANEL, TYPE_VENT, TYPE_BREAKER, TYPE_FURNACE, TYPE_ATTIC_DOOR, TYPE_CHIMNEY, TYPE_DUCT,
 	TYPE_TOY, TYPE_DRESS_MIR, TYPE_PAN, TYPE_VASE, TYPE_URN, TYPE_FCABINET, TYPE_STAPLER, TYPE_WIND_SILL, TYPE_BALCONY, TYPE_SPRINKLER,
-	TYPE_FEXT_MOUNT, TYPE_FEXT_SIGN, TYPE_PIZZA_BOX, TYPE_TEESHIRT, TYPE_BLANKET, TYPE_SERVER,
+	TYPE_FEXT_MOUNT, TYPE_FEXT_SIGN, TYPE_PIZZA_BOX, TYPE_TEESHIRT, TYPE_BLANKET, TYPE_SERVER, TYPE_DBG_SHAPE,
 	/* these next ones are all 3D models - see logic in room_object_t::is_obj_model_type() */
 	TYPE_TOILET, TYPE_SINK, TYPE_TUB, TYPE_FRIDGE, TYPE_STOVE, TYPE_TV, TYPE_MONITOR, TYPE_COUCH, TYPE_OFF_CHAIR, TYPE_URINAL,
 	TYPE_LAMP, TYPE_WASHER, TYPE_DRYER, TYPE_KEY, TYPE_HANGER, TYPE_CLOTHES, TYPE_FESCAPE, TYPE_WALL_LAMP, TYPE_CUP, TYPE_TOASTER,
@@ -976,6 +976,7 @@ struct building_room_geom_t {
 	void add_lg_ball(room_object_t const &c);
 	void add_toy(room_object_t const &c);
 	void add_pan(room_object_t const &c);
+	void add_debug_shape(room_object_t const &c);
 	static void draw_lg_ball_in_building   (room_object_t  const &c, shader_t &s);
 	static void draw_interactive_player_obj(carried_item_t const &c, shader_t &s, vector3d const &xlate);
 	// functions for expanding nested objects

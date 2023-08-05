@@ -2173,6 +2173,7 @@ void building_t::add_backrooms_objs(rand_gen_t rgen, room_t const &room, float z
 			big_grid.expand_by_xy(min_gap);		
 			if (!place_area.contains_cube_xy(big_grid) || has_bcube_int(big_grid, walls_per_dim[0]) || has_bcube_int(big_grid, walls_per_dim[1])) continue;
 			big_space.push_back(big_grid);
+			//objs.emplace_back(big_grid, TYPE_DBG_SHAPE, room_id, 0, 0, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CUBE, RED); // debugging
 		} // for x
 	} // for y
 
