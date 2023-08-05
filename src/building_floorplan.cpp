@@ -11,7 +11,7 @@ unsigned const MAX_OFFICE_UTILITY_ROOMS = 1;
 extern building_params_t global_building_params;
 
 
-void building_t::add_interior_door(door_t &door, bool is_bathroom, bool make_unlocked) {
+void building_t::add_interior_door(door_t &door, bool is_bathroom, bool make_unlocked, bool make_closed) {
 	assert(interior);
 	interior->door_stacks.emplace_back(door, interior->doors.size());
 	if (!SPLIT_DOOR_PER_FLOOR || door.on_stairs) {add_interior_door_for_floor(door, is_bathroom, make_unlocked); return;} // add a single door across all floors
@@ -21,22 +21,23 @@ void building_t::add_interior_door(door_t &door, bool is_bathroom, bool make_unl
 	for (float zval = door.z1(); zval + 0.5f*floor_spacing < door.z2(); zval += floor_spacing) { // continue until we don't have enough space left to add a door
 		door_t door_seg(door);
 		set_cube_zvals(door_seg, zval, zval+door_height); // clip to ceiling
-		add_interior_door_for_floor(door_seg, is_bathroom, make_unlocked);
+		add_interior_door_for_floor(door_seg, is_bathroom, make_unlocked, make_closed);
 	}
 }
-void building_t::add_interior_door_for_floor(door_t &door, bool is_bathroom, bool make_unlocked) {
+void building_t::add_interior_door_for_floor(door_t &door, bool is_bathroom, bool make_unlocked, bool make_closed) {
 	if (is_bathroom) {door.open = door.locked = 0;} // bathroom doors are always closed but unlocked
 	else if (!door.on_stairs) { // don't set open/locked state for stairs doors
-		door.open   = (                                fract(interior->doors.size()*1.61803) < global_building_params.open_door_prob  ); // use the golden ratio
+		door.open   = (!make_closed   &&               fract(interior->doors.size()*1.61803) < global_building_params.open_door_prob  ); // use the golden ratio
 		door.locked = (!make_unlocked && !door.open && fract(interior->doors.size()*3.14159) < global_building_params.locked_door_prob); // use pi
 	}
 	door.make_fully_open_or_closed();
 	interior->doors.push_back(door);
 }
 
-void building_t::remove_section_from_cube_and_add_door(cube_t &c, cube_t &c2, float v1, float v2, bool xy, bool open_dir, bool is_bathroom) {
+void building_t::remove_section_from_cube_and_add_door(cube_t &c, cube_t &c2, float v1, float v2, bool xy, bool open_dir, bool is_bathroom, bool make_unlocked, bool make_closed) {
 	// remove a section from this cube; c is input+output cube, c2 is other output cube
-	assert(v1 > c.d[xy][0] && v1 < v2 && v2 < c.d[xy][1]); // v1/v2 must be interior values for cube
+	assert(v1 < v2);
+	assert(v1 > c.d[xy][0] && v2 < c.d[xy][1]); // v1/v2 must be interior values for cube
 	bool const hinge_side(xy ^ open_dir ^ (v1-c.d[xy][0] < c.d[xy][1]-v1) ^ 1); // put the hinge on the side closer to the end of the wall
 	c2 = c; // clone first cube
 	c.d[xy][1] = v1; c2.d[xy][0] = v2; // c=low side, c2=high side
@@ -44,7 +45,7 @@ void building_t::remove_section_from_cube_and_add_door(cube_t &c, cube_t &c2, fl
 	door_t door(c, !xy, open_dir, 1, 0, hinge_side); // open=1, on_stairs=0
 	door.d[!xy][0] = door.d[!xy][1] = c.get_center_dim(!xy); // zero area at wall centerline
 	door.d[ xy][0] = v1; door.d[ xy][1] = v2;
-	add_interior_door(door, is_bathroom);
+	add_interior_door(door, is_bathroom, make_unlocked, make_closed);
 }
 
 void building_t::insert_door_in_wall_and_add_seg(cube_t &wall, float v1, float v2, bool dim, bool open_dir, bool keep_high_side, bool is_bathroom) {
