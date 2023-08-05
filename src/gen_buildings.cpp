@@ -1576,7 +1576,15 @@ void building_t::get_all_drawn_exterior_verts(building_draw_t &bdraw) { // exter
 			for (auto p = parts.begin(); p != get_real_parts_end(); ++p) { // find part attached to the sign
 				if (p->intersects(*i)) {dir = (p->get_center_dim(dim) < center_dim); break;}
 			}
-			add_sign_text_verts_both_sides(name, *i, dim, dir, bdraw.get_text_verts());
+			vect_vnctcc_t &text_verts(bdraw.get_text_verts());
+			unsigned text_verts_start(text_verts.size());
+			add_sign_text_verts_both_sides(name, *i, dim, dir, text_verts);
+
+			if (is_rotated()) {
+				point const center(bcube.get_cube_center());
+				// what about rotating the normal? seems difficult since normals are compressed, and maybe not very noticeable for sign text?
+				for (auto i = text_verts.begin()+text_verts_start; i != text_verts.end(); ++i) {do_xy_rotate(center, i->v);}
+			}
 		}
 	} // for i
 	for (auto i = doors.begin(); i != doors.end(); ++i) { // these are the exterior doors
