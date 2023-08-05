@@ -2147,7 +2147,6 @@ void building_t::add_backrooms_objs(rand_gen_t rgen, room_t const &room, float z
 	float const tot_light_amt(room.light_intensity); // ???
 	vector3d const sz(room.get_size());
 	vect_room_object_t &objs(interior->room_geom->objs);
-	//unsigned const objs_start(objs.size());
 	if (interior->room_geom->backrooms_start == 0) {interior->room_geom->backrooms_start = objs.size();}
 
 	// add random interior walls to create an initial maze

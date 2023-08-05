@@ -217,6 +217,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 		if (r->is_ext_basement_conn()) {color = RED;}
 		else if (is_house)          {color = get_light_color_temp(0.4);} // house - yellowish
 		else if (is_parking_garage) {color = get_light_color_temp_range(0.2, 0.5, rgen);} // parking garage - yellow-white
+		else if (is_backrooms)      {color = get_light_color_temp_range(0.2, 0.4, rgen);} // backrooms - yellow-white
 		else if (r->is_office)      {color = get_light_color_temp(0.6);} // office - blueish
 		else if (r->is_hallway)     {color = get_light_color_temp(0.6);} // office building hallway - blueish
 		else                        {color = get_light_color_temp(0.5);} // small office - white
