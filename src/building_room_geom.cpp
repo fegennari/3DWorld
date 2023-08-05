@@ -163,7 +163,7 @@ void building_room_geom_t::add_table(room_object_t const &c, float tscale, float
 			legs_bcube.expand_by_xy(-0.05*min(c.dx(), c.dy())); // inset the legs
 			colorRGBA const top_color(apply_light_color(c, table_glass_color));
 			rgeom_mat_t &mat(get_untextured_material(0, 0, 0, 1)); // no shadows + transparent
-			mat.add_cube_to_verts(top, top_color, c.get_llc()); // all faces drawn
+			mat.add_cube_to_verts_untextured(top, top_color); // all faces drawn
 			add_tc_legs(legs_bcube, BLACK, 0.5*leg_width, tscale, glass, glass, 1.0*top.dz()); // use_metal_mat=1, draw_tops=1, frame_height=nonzero
 		}
 		else { // wood
