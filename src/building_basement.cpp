@@ -2114,8 +2114,9 @@ void partition_cubes_into_conn_groups(vect_cube_t const &cubes, vector<vect_cube
 }
 
 void building_t::add_backrooms_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id) {
-	highres_timer_t timer("Add Backrooms Objs");
-	float const floor_spacing(get_window_vspace()), wall_thickness(get_wall_thickness());
+	highres_timer_t timer("Add Backrooms Objs"); // up to ~2.5ms
+	assert(has_room_geom());
+	float const floor_spacing(get_window_vspace()), wall_thickness(1.2*get_wall_thickness()), wall_half_thick(0.5*wall_thickness); // slightly thicker than regular walls
 	float const ceiling_z(zval + get_floor_ceil_gap()); // Note: zval is at floor level, not at the bottom of the room
 	float const tot_light_amt(room.light_intensity); // ???
 	vector3d const sz(room.get_size());
@@ -2143,7 +2144,7 @@ void building_t::add_backrooms_objs(rand_gen_t rgen, room_t const &room, float z
 			float const wall_len(rgen.rand_uniform(wall_len_min, wall_len_max));
 			float const wall_pos(rgen.rand_uniform(wall_place_area.d[dim][0], wall_place_area.d[dim][1])); // position of wall centerline
 			float const wall_center(rgen.rand_uniform(place_area.d[!dim][0], place_area.d[!dim][1])); // center of wall
-			set_wall_width(wall, wall_pos, wall_thickness,   dim);
+			set_wall_width(wall, wall_pos, wall_half_thick,  dim);
 			set_wall_width(wall, wall_center, 0.5*wall_len, !dim);
 			// wall can extend outside the room, and we generally want it to end at the room edge in some cases
 			if (wall.d[!dim][0] < place_area.d[!dim][0]) {wall.d[!dim][0] = place_area.d[!dim][0];} // clip to room bounds
@@ -2180,7 +2181,7 @@ void building_t::add_backrooms_objs(rand_gen_t rgen, room_t const &room, float z
 	} // for dim
 
 	// find areas of empty space
-	float const grid_step(1.0*min_gap), pad(0.5*wall_thickness);
+	float const grid_step(1.0*min_gap), pad(wall_half_thick);
 	unsigned const xdiv(ceil(wall_place_area.dx()/grid_step)), ydiv(ceil(wall_place_area.dy()/grid_step));
 	float const xstep(wall_place_area.dx()/(xdiv-1)), ystep(wall_place_area.dy()/(ydiv-1));
 	vect_cube_t big_space;
