@@ -189,7 +189,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			light_size = max(0.06f*room_size, 0.67f*def_light_size);
 		}
 		else if (is_backrooms) { // large office basement room
-			light_density = 0.45;
+			light_density = 0.55;
 			light_size   *= 0.75; // smaller
 		}
 		if (light_density > 0.0) { // uniform 2D grid of lights
