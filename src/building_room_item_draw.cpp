@@ -1694,11 +1694,13 @@ void building_t::draw_cars_in_building(shader_t &s, vector3d const &xlate, bool 
 		if (!shadow_only) {max_vis_zval += floor_spacing;} // player on first floor?
 		if (viewer.z > max_vis_zval) return;
 		maybe_inv_rotate_point(viewer); // not needed because there are no cars in rotated buildings?
+		vect_cube_t occluders; // should this be split out per PG level?
 
-		// start at walls, since parking spaces are added after those
+		// start at walls, since parking spaces are added after those; breaking is incorrect for multiple PG levels
 		for (auto i = (objs.begin() + pg_wall_start); i != objs_end; ++i) {
+			if (check_occlusion && i->type == TYPE_PG_WALL) {occluders.push_back(*i);}
 			if (i->type != TYPE_PARK_SPACE || !i->is_used()) continue; // not a space, or no car in this space
-			if (i->z2() < viewer.z - 2.0*floor_spacing) continue; // move than a floor below - skip
+			if (i->z2() < viewer.z - 2.0*floor_spacing)      continue; // move than a floor below - skip
 			car_t car(car_from_parking_space(*i));
 			if (!shadow_only && check_occlusion && viewer.z > ground_floor_z1 && !line_intersect_stairs_or_ramp(viewer, car.get_center())) continue;
 			if (camera_pdu.cube_visible(car.bcube + xlate)) {cars_to_draw.push_back(car);}
@@ -1706,12 +1708,6 @@ void building_t::draw_cars_in_building(shader_t &s, vector3d const &xlate, bool 
 		if (cars_to_draw.empty()) return;
 
 		if (check_occlusion) {
-			vect_cube_t occluders; // should this be split out per PG level?
-
-			for (auto i = (objs.begin() + pg_wall_start); i != objs_end; ++i) {
-				if (i->type != TYPE_PG_WALL) continue; // not parking garage wall (breaking is incorrect for multiple PG levels)
-				occluders.push_back(*i);
-			}
 			// gather occluders from parking garage ceilings and floors (below ground floor)
 			for (auto const &ceiling : interior->fc_occluders) {
 				if (ceiling.z1() <= max_vis_zval) {occluders.push_back(ceiling);}
