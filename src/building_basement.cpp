@@ -2151,7 +2151,7 @@ void building_t::add_backrooms_objs(rand_gen_t rgen, room_t const &room, float z
 	if (interior->room_geom->backrooms_start == 0) {interior->room_geom->backrooms_start = objs.size();}
 
 	// add random interior walls to create an initial maze
-	float const doorway_width(get_doorway_width()), min_gap(1.2*doorway_width);
+	float const doorway_width(get_doorway_width()), doorway_hwidth(0.5*doorway_width), min_gap(1.2*doorway_width);
 	cube_t place_area(get_walkable_room_bounds(room));
 	cube_t wall_place_area(place_area);
 	wall_place_area.expand_by_xy(-min_gap);
@@ -2164,7 +2164,6 @@ void building_t::add_backrooms_objs(rand_gen_t rgen, room_t const &room, float z
 	set_cube_zvals(wall, zval, ceiling_z);
 	vect_cube_t blockers_per_dim[2], walls_per_dim[2];
 
-	// create candidate random walls
 	for (unsigned n = 0; n < num_walls; ++n) {
 		for (unsigned m = 0; m < 10; ++m) { // 10 tries to place a wall
 			bool const dim(rgen.rand_bool()); // should this be weighted by the room aspect ratio?
@@ -2178,16 +2177,18 @@ void building_t::add_backrooms_objs(rand_gen_t rgen, room_t const &room, float z
 			else if (wall.d[!dim][0] - place_area.d[!dim][0] < min_gap) {wall.d[!dim][0] += min_gap;} // force min_gap from wall
 			if (wall.d[!dim][1] > place_area.d[!dim][1]) {wall.d[!dim][1] = place_area.d[!dim][1];} // clip to room bounds
 			else if (place_area.d[!dim][1] - wall.d[!dim][1] < min_gap) {wall.d[!dim][1] -= min_gap;} // force min_gap from wall
-			if (wall.get_sz_dim(!dim) < wall_len_min) continue; // too short
-			vect_cube_t &blockers(blockers_per_dim[dim]);
-			if (has_bcube_int(wall, blockers)) continue; // too close to a previous wall in this dim
+			if (wall.get_sz_dim(!dim) < wall_len_min)       continue; // too short
+			if (has_bcube_int(wall, blockers_per_dim[dim])) continue; // too close to a previous wall in this dim
 			walls_per_dim[dim].push_back(wall);
-			blockers.push_back(wall);
-			blockers.back().expand_by_xy(min_gap); // require a gap around this wall - but can still have intersections in the other dim
+			wall.expand_by_xy(min_gap); // require a gap around this wall - but can still have intersections in the other dim
+			blockers_per_dim[dim].push_back(wall);
 			break; // success
 		} // for m
 	} // for n
+
 	// shift wall ends to remove small gaps and stubs
+	float const wall_end_ext(doorway_width); // needed to handle two orthogonal walls with nearby corners but no projection
+
 	for (unsigned dim = 0; dim < 2; ++dim) {
 		vect_cube_t &walls(walls_per_dim[dim]);
 
@@ -2196,10 +2197,17 @@ void building_t::add_backrooms_objs(rand_gen_t rgen, room_t const &room, float z
 				float &val(wall.d[!dim][d]);
 				if (val == place_area.d[!dim][d]) continue; // at exterior wall, skip
 
-				for (cube_t &w : walls_per_dim[!dim]) { // TODO: what about nearby corners that the player can't fit through
-					if (wall.d[dim][0] > w.d[dim][1] || wall.d[dim][1] < w.d[dim][0]) continue; // no projection
-					float const edge_pos(w.d[!dim][!d]);
-					if (fabs(val - edge_pos) < min_gap) {val = edge_pos; break;}
+				for (cube_t &w : walls_per_dim[!dim]) {
+					if (wall.d[dim][0] > w.d[dim][1] || wall.d[dim][1] < w.d[dim][0]) { // no projection
+						if (wall.d[dim][0] > w.d[dim][1]+wall_end_ext || wall.d[dim][1] < w.d[dim][0]-wall_end_ext) continue; // no extended projection
+						// handle nearby corners by moving wall away from the corner if needed; doesn't break because the edge may be moved again in the else case
+						if      (d == 0 && val > w.d[!dim][1]) {max_eq(val, w.d[!dim][1]+min_gap);} // ensure left  space between walls is at least min_gap
+						else if (d == 1 && val < w.d[!dim][0]) {min_eq(val, w.d[!dim][0]-min_gap);} // ensure right space between walls is at least min_gap
+					}
+					else {
+						float const edge_pos(w.d[!dim][!d]);
+						if (fabs(val - edge_pos) < min_gap) {val = edge_pos; break;}
+					}
 				} // for w
 			} // for d
 			if (wall.get_sz_dim(!dim) < wall_len_min) {wall = cube_t();} // too short, drop
@@ -2208,7 +2216,7 @@ void building_t::add_backrooms_objs(rand_gen_t rgen, room_t const &room, float z
 	} // for dim
 
 	// find areas of empty space
-	float const doorway_hwidth(0.5*doorway_width), pad(wall_half_thick), nav_pad(doorway_hwidth); // pad with doorway radius for player navigation
+	float const pad(wall_half_thick), nav_pad(doorway_hwidth); // min radius for player and AI navigation;
 	vect_cube_t space;
 	vector<vect_cube_t> space_groups;
 	invert_walls(place_area, walls_per_dim, space, nav_pad);
@@ -2299,7 +2307,8 @@ void building_t::add_backrooms_objs(rand_gen_t rgen, room_t const &room, float z
 		}
 		vector_add_to(walls_per_dim[dim], interior->room_geom->pgbr_walls[dim]); // store final walls for occlusion culling and door opening checks
 	}
-	// Add some random pillars in large open spaces, but not if there are too many
+
+	// Add some random pillars in large open spaces
 	float const pillar_grid_step(2.5*min_gap), pillar_hwidth(0.07*floor_spacing);
 	unsigned const xdiv(ceil(wall_place_area.dx()/pillar_grid_step)), ydiv(ceil(wall_place_area.dy()/pillar_grid_step));
 	float const xstep(wall_place_area.dx()/(xdiv-1)), ystep(wall_place_area.dy()/(ydiv-1));
@@ -2327,6 +2336,7 @@ void building_t::add_backrooms_objs(rand_gen_t rgen, room_t const &room, float z
 			objs.emplace_back(pillar, TYPE_PG_PILLAR, room_id, 0, 0, RO_FLAG_BACKROOM, tot_light_amt, SHAPE_CUBE, wall_color); // dim=0, dir=0
 		}
 	} // for g
+
 	// Add occasional random items/furniture
 	// TODO
 	
