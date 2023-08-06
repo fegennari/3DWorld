@@ -2141,7 +2141,7 @@ struct cube_by_center_dim_descending {
 };
 
 void building_t::add_backrooms_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id) {
-	highres_timer_t timer("Add Backrooms Objs"); // up to ~2ms
+	highres_timer_t timer("Add Backrooms Objs"); // up to ~3ms
 	assert(has_room_geom());
 	float const floor_spacing(get_window_vspace()), wall_thickness(1.2*get_wall_thickness()), wall_half_thick(0.5*wall_thickness); // slightly thicker than regular walls
 	float const ceiling_z(zval + get_floor_ceil_gap()); // Note: zval is at floor level, not at the bottom of the room
@@ -2227,7 +2227,7 @@ void building_t::add_backrooms_objs(rand_gen_t rgen, room_t const &room, float z
 	if (space_groups.size() > 1) { // multiple disconnected sub-graphs
 		float const door_min_spacing(0.5*doorway_width), min_shared_edge(doorway_width + 2*wall_thickness); // allow space for door frame
 		vector<group_range_t> adj;
-		vect_cube_t doors_to_add, walls_to_add;
+		vect_cube_t doors_to_add, walls_to_add, door_keepout;
 		set<pair<unsigned, unsigned>> connected;
 		bool const first_dim(rgen.rand_bool()); // mix it up to avoid favoring one dim
 
@@ -2288,16 +2288,25 @@ void building_t::add_backrooms_objs(rand_gen_t rgen, room_t const &room, float z
 
 				for (cube_t const &door : doors_to_add) {
 					assert(door.is_strictly_normalized());
+					// select an open direction that doesn't block another door
+					bool open_dir(rgen.rand_bool());
+					cube_t open_area(door);
+					open_area.d[dim][open_dir] += (open_dir ? 1.0 : -1.0)*doorway_width;
+					if (has_bcube_int(open_area, door_keepout)) {open_dir ^= 1;} // swap the open direction; hopefully we don't block a different door now
+					// cut the doorway into the wall and add the door
 					cube_t wall2;
 					bool const make_unlocked = 1; // makes exploring easier
 					bool const make_closed   = 1; // makes it easier to tell if the door has been used
-					bool const open_dir(rgen.rand_bool());
 					remove_section_from_cube_and_add_door(wall, wall2, door.d[!dim][0], door.d[!dim][1], !dim, open_dir, 0, make_unlocked, make_closed); // is_bathroom=0
 					walls_to_add.push_back(wall2); // keep high side as it won't be used with any other doors
 					// add a blocker so that no ceiling lights are placed in the path of this door
 					cube_t blocker(door);
-					blocker.expand_in_dim(dim, doorway_width);
+					blocker.d[dim][open_dir] += (open_dir ? 1.0 : -1.0)*doorway_width; // add clearance in front
 					objs.emplace_back(blocker, TYPE_BLOCKER, room_id, dim, 0, RO_FLAG_BACKROOM, tot_light_amt);
+					// keep other doors from opening into this door's space
+					cube_t keepout(door);
+					keepout.expand_in_dim(dim, doorway_width); // don't block either end
+					door_keepout.push_back(keepout);
 				} // for door
 			} // for wall
 			vector_add_to(walls_to_add, walls);
