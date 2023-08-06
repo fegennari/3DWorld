@@ -2089,6 +2089,27 @@ void building_interior_t::place_exterior_room(extb_room_t const &room, cube_t co
 	} // for dim
 }
 
+bool try_place_wall(cube_t const &place_area, cube_t const &wall_area, bool dim, float len_min, float len_max, float half_thick, float min_gap,
+	vect_cube_t &walls, vect_cube_t &blockers, rand_gen_t &rgen)
+{
+	float const wall_len   (rgen.rand_uniform(len_min, len_max));
+	float const wall_pos   (rgen.rand_uniform(wall_area .d[ dim][0], wall_area .d[ dim][1])); // position of wall centerline
+	float const wall_center(rgen.rand_uniform(place_area.d[!dim][0], place_area.d[!dim][1])); // center of wall
+	cube_t wall(wall_area); // copy zvals
+	set_wall_width(wall, wall_pos,    half_thick,    dim);
+	set_wall_width(wall, wall_center, 0.5*wall_len, !dim);
+	// wall can extend outside the room, and we generally want it to end at the room edge in some cases
+	if (wall.d[!dim][0] < place_area.d[!dim][0]) {wall.d[!dim][0] = place_area.d[!dim][0];} // clip to room bounds
+	else if (wall.d[!dim][0] - place_area.d[!dim][0] < min_gap) {wall.d[!dim][0] += min_gap;} // force min_gap from wall
+	if (wall.d[!dim][1] > place_area.d[!dim][1]) {wall.d[!dim][1] = place_area.d[!dim][1];} // clip to room bounds
+	else if (place_area.d[!dim][1] - wall.d[!dim][1] < min_gap) {wall.d[!dim][1] -= min_gap;} // force min_gap from wall
+	if (wall.get_sz_dim(!dim) < len_min) return 0; // too short
+	if (has_bcube_int(wall, blockers))   return 0; // too close to a previous wall in this dim
+	walls.push_back(wall);
+	wall.expand_by_xy(min_gap); // require a gap around this wall - but can still have intersections in the other dim
+	blockers.push_back(wall);
+	return 1;
+}
 void partition_cubes_into_conn_groups(vect_cube_t const &cubes, vector<vect_cube_t> &groups, float pad=0.0) {
 	vect_cube_t ungrouped(cubes); // all cubes start ungrouped
 
@@ -2135,9 +2156,14 @@ struct group_range_t {
 	float len() const {return (hi - lo);}
 };
 struct cube_by_center_dim_descending {
-	unsigned dim;
-	cube_by_center_dim_descending(unsigned dim_) : dim(dim_) {}
-	bool operator()(cube_t const &a, cube_t const &b) const {return (b.get_center_dim(dim) < a.get_center_dim(dim));}
+	unsigned d;
+	cube_by_center_dim_descending(unsigned dim) : d(dim) {}
+	bool operator()(cube_t const &a, cube_t const &b) const {return (b.get_center_dim(d) < a.get_center_dim(d));}
+};
+struct cube_by_xy_dim {
+	unsigned d;
+	cube_by_xy_dim(unsigned dim) : d(dim) {}
+	bool operator()(cube_t const &a, cube_t const &b) const {return ((a.d[d][0] == b.d[d][0]) ? (a.d[!d][0] < b.d[!d][0]) : (a.d[d][0] < b.d[d][0]));}
 };
 
 void building_t::add_backrooms_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id) {
@@ -2153,38 +2179,28 @@ void building_t::add_backrooms_objs(rand_gen_t rgen, room_t const &room, float z
 	// add random interior walls to create an initial maze
 	float const doorway_width(get_doorway_width()), doorway_hwidth(0.5*doorway_width), min_gap(1.2*doorway_width);
 	cube_t place_area(get_walkable_room_bounds(room));
-	cube_t wall_place_area(place_area);
-	wall_place_area.expand_by_xy(-min_gap);
-	if (min(wall_place_area.dx(), wall_place_area.dy()) < 2.0*floor_spacing) return; // room too small to place walls - shouldn't happen
+	cube_t wall_area(place_area);
+	wall_area.expand_by_xy(-min_gap);
+	if (min(wall_area.dx(), wall_area.dy()) < 2.0*floor_spacing) return; // room too small to place walls - shouldn't happen
+	set_cube_zvals(wall_area, zval, ceiling_z);
 	float const min_side(min(sz.x, sz.y)), area(sz.x*sz.y);
 	float const wall_len_min(1.0*floor_spacing), wall_len_max(0.25*min_side), wall_len_avg(0.5*(wall_len_min + wall_len_max)); // min_gap/wall_len_min = 0.6
 	unsigned const num_walls(round_fp(rgen.rand_uniform(1.6, 2.0)*area/(wall_len_avg*wall_len_avg))); // add a bit of random density variation
 	colorRGBA const wall_color(WHITE); // to match exterior walls, ceilings, and floors
-	cube_t wall;
-	set_cube_zvals(wall, zval, ceiling_z);
 	vect_cube_t blockers_per_dim[2], walls_per_dim[2];
 
 	for (unsigned n = 0; n < num_walls; ++n) {
 		for (unsigned m = 0; m < 10; ++m) { // 10 tries to place a wall
 			bool const dim(rgen.rand_bool()); // should this be weighted by the room aspect ratio?
-			float const wall_len(rgen.rand_uniform(wall_len_min, wall_len_max));
-			float const wall_pos(rgen.rand_uniform(wall_place_area.d[dim][0], wall_place_area.d[dim][1])); // position of wall centerline
-			float const wall_center(rgen.rand_uniform(place_area.d[!dim][0], place_area.d[!dim][1])); // center of wall
-			set_wall_width(wall, wall_pos, wall_half_thick,  dim);
-			set_wall_width(wall, wall_center, 0.5*wall_len, !dim);
-			// wall can extend outside the room, and we generally want it to end at the room edge in some cases
-			if (wall.d[!dim][0] < place_area.d[!dim][0]) {wall.d[!dim][0] = place_area.d[!dim][0];} // clip to room bounds
-			else if (wall.d[!dim][0] - place_area.d[!dim][0] < min_gap) {wall.d[!dim][0] += min_gap;} // force min_gap from wall
-			if (wall.d[!dim][1] > place_area.d[!dim][1]) {wall.d[!dim][1] = place_area.d[!dim][1];} // clip to room bounds
-			else if (place_area.d[!dim][1] - wall.d[!dim][1] < min_gap) {wall.d[!dim][1] -= min_gap;} // force min_gap from wall
-			if (wall.get_sz_dim(!dim) < wall_len_min)       continue; // too short
-			if (has_bcube_int(wall, blockers_per_dim[dim])) continue; // too close to a previous wall in this dim
-			walls_per_dim[dim].push_back(wall);
-			wall.expand_by_xy(min_gap); // require a gap around this wall - but can still have intersections in the other dim
-			blockers_per_dim[dim].push_back(wall);
-			break; // success
-		} // for m
-	} // for n
+			if (try_place_wall(place_area, wall_area, dim, wall_len_min, wall_len_max, wall_half_thick, min_gap, walls_per_dim[dim], blockers_per_dim[dim], rgen)) break;
+		}
+	}
+
+	// find long lines of sight and add extra walls to block them
+	for (unsigned dim = 0; dim < 2; ++dim) {
+		// TODO
+	} // for dim
+	// what if we instead calculate the shortest path from the entrance door to the far wall and add walls until it's some min length? is the runtime acceptable?
 
 	// shift wall ends to remove small gaps and stubs
 	float const wall_end_ext(doorway_width); // needed to handle two orthogonal walls with nearby corners but no projection
@@ -2313,42 +2329,65 @@ void building_t::add_backrooms_objs(rand_gen_t rgen, room_t const &room, float z
 		} // for d
 	}
 
-	// add walls
-	for (unsigned dim = 0; dim < 2; ++dim) {
-		for (cube_t &wall : walls_per_dim[dim]) {
-			objs.emplace_back(wall, TYPE_PG_WALL, room_id, dim, 0, RO_FLAG_BACKROOM, tot_light_amt, SHAPE_CUBE, wall_color); // dir=0
-		}
-		vector_add_to(walls_per_dim[dim], interior->room_geom->pgbr_walls[dim]); // store final walls for occlusion culling and door opening checks
-	}
-
 	// Add some random pillars in large open spaces
-	float const pillar_grid_step(2.5*min_gap), pillar_hwidth(0.07*floor_spacing);
-	unsigned const xdiv(ceil(wall_place_area.dx()/pillar_grid_step)), ydiv(ceil(wall_place_area.dy()/pillar_grid_step));
-	float const xstep(wall_place_area.dx()/(xdiv-1)), ystep(wall_place_area.dy()/(ydiv-1));
+	float const pillar_grid_step(2.5*min_gap), pillar_grid_exp(0.75*pillar_grid_step), pillar_hwidth(0.07*floor_spacing), merge_wall_min(1.0*pillar_grid_step);
+	unsigned const xdiv(ceil(wall_area.dx()/pillar_grid_step)), ydiv(ceil(wall_area.dy()/pillar_grid_step));
+	float const xstep(wall_area.dx()/(xdiv-1)), ystep(wall_area.dy()/(ydiv-1));
 	vect_cube_t big_space;
-	cube_t grid(wall); // copy zvals
+	cube_t grid(wall_area); // copy zvals
 
 	for (unsigned y = 0; y < ydiv; ++y) {
 		for (unsigned x = 0; x < xdiv; ++x) {
-			set_wall_width(grid, (wall_place_area.y1() + y*ystep), min_gap, 1);
-			set_wall_width(grid, (wall_place_area.x1() + x*xstep), min_gap, 0);
-			grid.expand_by_xy(min_gap);		
+			set_wall_width(grid, (wall_area.y1() + y*ystep), pillar_grid_exp, 1);
+			set_wall_width(grid, (wall_area.x1() + x*xstep), pillar_grid_exp, 0);	
 			if (!place_area.contains_cube_xy(grid) || has_bcube_int(grid, walls_per_dim[0]) || has_bcube_int(grid, walls_per_dim[1])) continue;
 			big_space.push_back(grid);
 		} // for x
 	} // for y
 	space_groups.clear(); // reuse the vector
 	partition_cubes_into_conn_groups(big_space, space_groups, pad);
-	cube_t pillar(wall); // copy zvals
+	cube_t pillar(wall_area); // copy zvals
 
 	for (vect_cube_t &group : space_groups) {
-		if (rgen.rand_bool()) continue; // add 50% of groups
+		if (rgen.rand_float() < 0.4) continue; // no pillars 40% of the time
+		cube_t prev_space, cur_row;
+		sort(group.begin(), group.end(), cube_by_xy_dim(rgen.rand_bool())); // make adjacent space cubes adjacent in order, with dim chosen randomly
 
-		for (cube_t const &s : group) {
-			for (unsigned d = 0; d < 2; ++d) {set_wall_width(pillar, s.get_center_dim(d), pillar_hwidth, d);}
+		for (auto s = group.begin(); s != group.end(); ++s) {
+			for (unsigned d = 0; d < 2; ++d) {set_wall_width(pillar, s->get_center_dim(d), pillar_hwidth, d);}
 			objs.emplace_back(pillar, TYPE_PG_PILLAR, room_id, 0, 0, RO_FLAG_BACKROOM, tot_light_amt, SHAPE_CUBE, wall_color); // dim=0, dir=0
-		}
+			// maybe merge rows of adjacent pillars into a single wall
+			cube_t merge_cand;
+
+			if (!s->intersects(prev_space) || ((pillar.x1() != cur_row.x1() || pillar.x2() != cur_row.x2()) && (pillar.y1() != cur_row.y1() || pillar.y2() != cur_row.y2()))) {
+				// different row, gap, or first pillar
+				merge_cand = cur_row;
+				cur_row    = pillar; // seed for next row
+			}
+			else { // extend row
+				cur_row.union_with_cube(pillar);
+			}
+			if (s+1 == group.end()) {merge_cand = cur_row;} // last pillar
+			prev_space = *s;
+
+			if (!merge_cand.is_all_zeros() && rgen.rand_float() < 0.5) { // add wall 50% of the time
+				for (unsigned dim = 0; dim < 2; ++dim) {
+					if (merge_cand.get_sz_dim(!dim) < merge_wall_min) continue; // too short to create a wall; will get here in at least one dim
+					cube_t wall(merge_cand);
+					wall.expand_by_xy(wall_half_thick - pillar_hwidth); // shrink
+					walls_per_dim[dim].push_back(wall);
+				}
+			}
+		} // for d
 	} // for g
+
+	// add walls
+	for (unsigned dim = 0; dim < 2; ++dim) {
+		for (cube_t &wall : walls_per_dim[dim]) {
+			objs.emplace_back(wall, TYPE_PG_WALL, room_id, dim, 0, RO_FLAG_BACKROOM, tot_light_amt, SHAPE_CUBE, wall_color); // dir=0
+		}
+		vector_add_to(walls_per_dim[dim], interior->room_geom->pgbr_walls[dim]); // store walls for occlusion and door opening checks
+	}
 
 	// Add occasional random items/furniture
 	// TODO
