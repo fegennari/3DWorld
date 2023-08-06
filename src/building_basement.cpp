@@ -2089,12 +2089,12 @@ void building_interior_t::place_exterior_room(extb_room_t const &room, cube_t co
 	} // for dim
 }
 
-bool try_place_wall(cube_t const &place_area, cube_t const &wall_area, bool dim, float len_min, float len_max, float half_thick, float min_gap,
+bool try_place_wall(cube_t const &place_area, cube_t const &wall_area, cube_t const &cent_area, bool dim, float len_min, float len_max, float half_thick, float min_gap,
 	vect_cube_t &walls, vect_cube_t &blockers, rand_gen_t &rgen)
 {
 	float const wall_len   (rgen.rand_uniform(len_min, len_max));
-	float const wall_pos   (rgen.rand_uniform(wall_area .d[ dim][0], wall_area .d[ dim][1])); // position of wall centerline
-	float const wall_center(rgen.rand_uniform(place_area.d[!dim][0], place_area.d[!dim][1])); // center of wall
+	float const wall_pos   (rgen.rand_uniform(wall_area.d[ dim][0], wall_area.d[ dim][1])); // position of wall centerline
+	float const wall_center(rgen.rand_uniform(cent_area.d[!dim][0], cent_area.d[!dim][1])); // center of wall
 	cube_t wall(wall_area); // copy zvals
 	set_wall_width(wall, wall_pos,    half_thick,    dim);
 	set_wall_width(wall, wall_center, 0.5*wall_len, !dim);
@@ -2111,6 +2111,7 @@ bool try_place_wall(cube_t const &place_area, cube_t const &wall_area, bool dim,
 	return 1;
 }
 void partition_cubes_into_conn_groups(vect_cube_t const &cubes, vector<vect_cube_t> &groups, float pad=0.0) {
+	groups.clear();
 	vect_cube_t ungrouped(cubes); // all cubes start ungrouped
 
 	while (!ungrouped.empty()) {
@@ -2135,6 +2136,7 @@ void partition_cubes_into_conn_groups(vect_cube_t const &cubes, vector<vect_cube
 	} // while
 }
 void invert_walls(cube_t const &room, vect_cube_t const walls[2], vect_cube_t &space, float pad=0.0) {
+	space.clear();
 	space.push_back(room);
 	
 	for (unsigned d = 0; d < 2; ++d) {
@@ -2148,6 +2150,14 @@ void invert_walls(cube_t const &room, vect_cube_t const walls[2], vect_cube_t &s
 void resize_cubes_xy(vect_cube_t &cubes, float val) { // val can be positive or negative
 	for (cube_t &c : cubes) {c.expand_by_xy(val);}
 }
+void transpose_cube_xy(cube_t &c) {
+	swap(c.x1(), c.y1());
+	swap(c.x2(), c.y2());
+}
+void transpose_cubes_xy(vect_cube_t &cubes) {
+	for (cube_t &c : cubes) {transpose_cube_xy(c);}
+}
+
 struct group_range_t {
 	unsigned gix;
 	float lo, hi;
@@ -2167,7 +2177,7 @@ struct cube_by_xy_dim {
 };
 
 void building_t::add_backrooms_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id) {
-	highres_timer_t timer("Add Backrooms Objs"); // up to ~3ms
+	highres_timer_t timer("Add Backrooms Objs"); // up to ~2ms
 	assert(has_room_geom());
 	float const floor_spacing(get_window_vspace()), wall_thickness(1.2*get_wall_thickness()), wall_half_thick(0.5*wall_thickness); // slightly thicker than regular walls
 	float const ceiling_z(zval + get_floor_ceil_gap()); // Note: zval is at floor level, not at the bottom of the room
@@ -2192,13 +2202,43 @@ void building_t::add_backrooms_objs(rand_gen_t rgen, room_t const &room, float z
 	for (unsigned n = 0; n < num_walls; ++n) {
 		for (unsigned m = 0; m < 10; ++m) { // 10 tries to place a wall
 			bool const dim(rgen.rand_bool()); // should this be weighted by the room aspect ratio?
-			if (try_place_wall(place_area, wall_area, dim, wall_len_min, wall_len_max, wall_half_thick, min_gap, walls_per_dim[dim], blockers_per_dim[dim], rgen)) break;
+			if (try_place_wall(place_area, wall_area, place_area, dim, wall_len_min, wall_len_max, wall_half_thick, min_gap, walls_per_dim[dim], blockers_per_dim[dim], rgen)) break;
 		}
 	}
 
 	// find long lines of sight and add extra walls to block them
+	float const max_space_factor = 0.5; // relative to room size
+	vect_cube_t space, extra_walls;
+
 	for (unsigned dim = 0; dim < 2; ++dim) {
-		// TODO
+		// Note: wall ends may be moved slightly to snap to orthogonal walls, so this test isn't perfectly accurate
+		if (dim) { // transpose cubes so that max merge is in Y rather than X
+			vect_cube_t walls_transpose[2] = {walls_per_dim[1], walls_per_dim[0]};
+			for (unsigned d = 0; d < 2; ++d) {transpose_cubes_xy(walls_transpose[d]);}
+			cube_t place_area_transpose(place_area);
+			transpose_cube_xy(place_area_transpose);
+			invert_walls(place_area_transpose, walls_transpose, space); // no padding
+			transpose_cubes_xy(space); // transpose back
+		}
+		else {invert_walls(place_area, walls_per_dim, space);} // no padding
+		float const max_space(max_space_factor*sz[dim]);
+		
+		for (cube_t &s : space) {
+			float const space_len(s.get_sz_dim(dim));
+			if (space_len < max_space)         continue; // small enough
+			if (has_bcube_int(s, extra_walls)) continue; // covered (at least partially) by a previously placed extra wall
+			cube_t cent_area(s);
+			cent_area.expand_in_dim(dim, -0.375*space_len); // restrict to central 25%
+			float const space_width(s.get_sz_dim(!dim)), min_len(max(wall_len_min, space_width)), max_len(max(wall_len_max, 2.0f*space_width)); // must cross the space
+
+			for (unsigned m = 0; m < 10; ++m) { // 10 tries to place a wall
+				if (try_place_wall(place_area, cent_area, cent_area, dim, min_len, max_len, wall_half_thick, min_gap, walls_per_dim[dim], blockers_per_dim[dim], rgen)) {
+					extra_walls.push_back(walls_per_dim[dim].back()); // record in case this blocks other long spaces in this loop
+					break; // done
+				}
+			}
+		} // for s
+		extra_walls.clear();
 	} // for dim
 	// what if we instead calculate the shortest path from the entrance door to the far wall and add walls until it's some min length? is the runtime acceptable?
 
@@ -2232,8 +2272,7 @@ void building_t::add_backrooms_objs(rand_gen_t rgen, room_t const &room, float z
 	} // for dim
 
 	// find areas of empty space
-	float const pad(wall_half_thick), nav_pad(doorway_hwidth); // min radius for player and AI navigation;
-	vect_cube_t space;
+	float const pad(wall_half_thick), nav_pad(doorway_hwidth); // min radius for player and AI navigation
 	vector<vect_cube_t> space_groups;
 	invert_walls(place_area, walls_per_dim, space, nav_pad);
 	resize_cubes_xy(space, nav_pad); // restore padding (under-over)
@@ -2344,7 +2383,6 @@ void building_t::add_backrooms_objs(rand_gen_t rgen, room_t const &room, float z
 			big_space.push_back(grid);
 		} // for x
 	} // for y
-	space_groups.clear(); // reuse the vector
 	partition_cubes_into_conn_groups(big_space, space_groups, pad);
 	cube_t pillar(wall_area); // copy zvals
 
