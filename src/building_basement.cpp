@@ -2294,7 +2294,11 @@ void building_t::add_backrooms_objs(rand_gen_t rgen, room_t const &room, float z
 					bool const open_dir(rgen.rand_bool());
 					remove_section_from_cube_and_add_door(wall, wall2, door.d[!dim][0], door.d[!dim][1], !dim, open_dir, 0, make_unlocked, make_closed); // is_bathroom=0
 					walls_to_add.push_back(wall2); // keep high side as it won't be used with any other doors
-				}
+					// add a blocker so that no ceiling lights are placed in the path of this door
+					cube_t blocker(door);
+					blocker.expand_in_dim(dim, doorway_width);
+					objs.emplace_back(blocker, TYPE_BLOCKER, room_id, dim, 0, RO_FLAG_BACKROOM, tot_light_amt);
+				} // for door
 			} // for wall
 			vector_add_to(walls_to_add, walls);
 		} // for d
