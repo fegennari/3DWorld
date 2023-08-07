@@ -760,6 +760,8 @@ class surface_orienter_t {
 	cube_t check_cube;
 	vect_cube_t colliders;
 public:
+	cube_t get_check_cube() const {return check_cube;}
+
 	void init(point const &p1, point const &p2, vector3d const &size_) {
 		size = size_;
 		check_cube.set_from_point(p1); // include both cur and last points
@@ -864,9 +866,7 @@ bool building_t::update_spider_pos_orient(spider_t &spider, point const &camera_
 	if (!in_attic) {
 		for (unsigned d = 0; d < 2; ++d) {surface_orienter.register_cubes(interior->walls[d]);} // XY walls
 	}
-	cube_t tc(spider.pos);
-	tc.expand_by_xy(size); // use xy_radius for all dims; okay to be convervative
-	tc.expand_in_dim(2, 1.5*spider.radius); // smaller expand in Z
+	cube_t const tc(surface_orienter.get_check_cube());
 
 	if (!in_attic) { // check doors
 		for (auto const &ds : interior->door_stacks) {

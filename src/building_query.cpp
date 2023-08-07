@@ -1482,7 +1482,7 @@ bool building_t::get_begin_end_room_objs_on_ground_floor(float zval, bool for_sp
 		return 1; // use cached objects
 	}
 	b = interior->room_geom->objs.begin();
-	e = interior->room_geom->get_placed_objs_end(); // skip buttons/stairs/elevators
+	e = (for_spider ? interior->room_geom->objs.end() : interior->room_geom->get_placed_objs_end()); // skip buttons/stairs/elevators for rats, but include stairs for spiders
 	return 0; // use standard objects
 }
 void building_t::get_objs_at_or_below_ground_floor(vect_room_object_t &ret, bool for_spider) const {
@@ -1520,6 +1520,7 @@ void get_approx_car_cubes(room_object_t const &cb, cube_t cubes[5]) {
 
 void building_t::get_room_obj_cubes(room_object_t const &c, point const &pos, vect_cube_t &lg_cubes, vect_cube_t &sm_cubes, vect_cube_t &non_cubes) const { // for spiders
 	if (c.shape == SHAPE_CYLIN || c.shape == SHAPE_SPHERE) {non_cubes.push_back(c);}
+	else if (c.type == TYPE_RAILING || c.type == TYPE_SHELVES || c.type == TYPE_RAMP || c.type == TYPE_BALCONY) {non_cubes.push_back(c);} // non-cubes
 	else if (c.type == TYPE_CLOSET && (c.is_open() || c.contains_pt(pos))) {
 		cube_t cubes[5];
 		get_closet_cubes(c, cubes, 1); // get cubes for walls and door; for_collision=1
