@@ -757,7 +757,12 @@ public:
 		valid_area = get_valid_area(b, target, cur_floor);
 		in_ext_basement = b.point_in_extended_basement_not_basement(target);
 
-		if (in_ext_basement) {light_bounds = valid_area;} // extended basement
+		if (in_ext_basement) { // extended basement
+			light_bounds = valid_area;
+			// very high aspect ratio cubes cause banding artifacts in lighting, so increase the height if needed to avoid this;
+			// note that there's significant loss of vertical resolution, though lighting should be a bit faster
+			max_eq(light_bounds.z2(), (light_bounds.z1() + 0.25f*max(light_bounds.dx(), light_bounds.dy())));
+		}
 		else if (INDIR_LIGHT_FLOOR_SPAN == 0) {light_bounds = b.get_interior_bcube(0);} // unlimited floor span/entire building; inc_ext_basement=0
 		else if (INDIR_LIGHT_FLOOR_SPAN == 1) {light_bounds = valid_area;} // single floor only
 		else if (light_bounds.contains_cube(valid_area)) {} // valid area already contained, no update needed (will fail if light_bounds is not set)
