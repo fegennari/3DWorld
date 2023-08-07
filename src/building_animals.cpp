@@ -105,6 +105,11 @@ point building_t::gen_animal_floor_pos(float radius, bool place_in_attic, bool n
 			if (pref_dark_room && n < 50 && is_room_lit(room_ix, (room.z1() + radius))) continue; // check for dark room in first 50 iterations
 			place_area = room; // will represent the usable floor area
 			place_area.z1() += get_fc_thickness(); // on top of the floor
+
+			if (has_parking_garage && room.part_id == basement_part_ix) { // allow placement on multiple floors of parking garage
+				unsigned const num_floors(calc_num_floors(room, floor_spacing, get_floor_thickness()));
+				if (num_floors > 1) {place_area.z1() += floor_spacing*(rgen.rand()%num_floors);} // select a random floor
+			}
 		}
 		place_area.expand_by_xy(-(radius + wall_thickness));
 		if (min(place_area.dx(), place_area.dy()) < 4.0*radius) continue; // room too small (can happen for has_complex_floorplan office buildings)
