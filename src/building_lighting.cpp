@@ -207,54 +207,47 @@ unsigned elevator_t::get_coll_cubes(cube_t cubes[5]) const {
 	}
 }
 
-template<typename T> void add_colored_cubes(vector<T> const &cubes, colorRGBA const &color, float z1, float z2, vect_colored_cube_t &cc) {
+template<typename T> void add_colored_cubes(vector<T> const &cubes, colorRGBA const &color, cube_t const &ext_bcube, vect_colored_cube_t &cc) {
 	for (auto c = cubes.begin(); c != cubes.end(); ++c) {
-		if (c->z1() < z2 && c->z2() > z1) {cc.emplace_back(*c, color);}
+		if (c->intersects(ext_bcube)) {cc.emplace_back(*c, color);}
 	}
 }
-void add_colored_cubes(cube_t const *const cubes, unsigned num_cubes, colorRGBA const &color, vect_colored_cube_t &cc) {
+void add_colored_cubes(cube_t const *const cubes, unsigned num_cubes, colorRGBA const &color, vect_colored_cube_t &cc) { // Note: no ext_bcube intersection check
 	for (unsigned n = 0; n < num_cubes; ++n) {
 		if (!cubes[n].is_all_zeros()) {cc.emplace_back(cubes[n], color);}
 	}
 }
-void building_t::gather_interior_cubes(vect_colored_cube_t &cc, int only_this_floor) const {
+void building_t::gather_interior_cubes(vect_colored_cube_t &cc, cube_t const &ext_bcube) const {
 	if (!interior) return; // nothing to do
 	building_mat_t const &mat(get_material());
 	colorRGBA const wall_color(wall_color.modulate_with(mat.wall_tex.get_avg_color()));
-	float z1(get_bcube_z1_inc_ext_basement()), z2(bcube.z2()), stairs_z1(z1), stairs_z2(z2); // start with full bcube Z range
+	float const floor_spacing(get_window_vspace()), z1(ext_bcube.z1()), z2(ext_bcube.z2());
+	float const stairs_z1(z1 - floor_spacing), stairs_z2(z2 + floor_spacing); // stairs extend an extra floor up and down to block rays in stairwells
 
-	if (only_this_floor >= 0) { // clip per light source to current floor
-		float const floor_spacing(get_window_vspace());
-		z1 += only_this_floor*floor_spacing;
-		z2  = z1 + floor_spacing;
-		stairs_z1 = z1 - floor_spacing; // stairs extend an extra floor up and down to block rays in stairwells
-		stairs_z2 = z2 + floor_spacing;
-	}
-	for (unsigned d = 0; d < 2; ++d) {add_colored_cubes(interior->walls[d], wall_color, z1, z2, cc);}
+	for (unsigned d = 0; d < 2; ++d) {add_colored_cubes(interior->walls[d], wall_color, ext_bcube, cc);}
 
 	for (auto e = interior->elevators.begin(); e != interior->elevators.end(); ++e) {
-		if (e->z1() > z2 || e->z2() < z1) continue;
+		if (!e->intersects(ext_bcube)) continue;
 		cube_t cubes[5];
 		unsigned const num_cubes(e->get_coll_cubes(cubes));
 		// for now elevators are treated the same as walls with the same color, even though the inside of open elevators is wood
 		add_colored_cubes(cubes, num_cubes, wall_color, cc); // can only assign the same color to all sides of the cube
 	}
 	for (auto i = interior->doors.begin(); i != interior->doors.end(); ++i) {
-		if (i->open) continue; // add only closed doors
-		if (i->z1() > z2 || i->z2() < z1) continue;
+		if (i->open || !i->intersects(ext_bcube)) continue; // add only closed doors
 		cc.emplace_back(i->get_true_bcube(), WHITE);
 	}
 	for (auto i = interior->floors.begin(); i != interior->floors.end(); ++i) {
-		if (i->z1() > z2 || i->z2() < z1) continue;
+		if (!i->intersects(ext_bcube)) continue;
 		tid_nm_pair_t tex;
 		cc.emplace_back(*i, get_floor_tex_and_color(*i, tex).modulate_with(tex.get_avg_color()));
 	}
 	for (auto i = interior->ceilings.begin(); i != interior->ceilings.end(); ++i) {
-		if (i->z1() > z2 || i->z2() < z1) continue;
+		if (!i->intersects(ext_bcube)) continue;
 		tid_nm_pair_t tex;
 		cc.emplace_back(*i, get_ceil_tex_and_color(*i, tex).modulate_with(tex.get_avg_color()));
 	}
-	add_colored_cubes(details, detail_color.modulate_with(mat.roof_tex.get_avg_color()), z1, z2, cc); // should this be included?
+	add_colored_cubes(details, detail_color.modulate_with(mat.roof_tex.get_avg_color()), ext_bcube, cc); // should this be included?
 	if (!has_room_geom()) return; // nothing else to add
 	vect_room_object_t const &objs(interior->room_geom->objs);
 	static vect_cube_t temp; // used across calls for subtracting holes
@@ -275,6 +268,7 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc, int only_this_fl
 			c->type == TYPE_BALCONY || c->type == TYPE_TOY_MODEL || c->type == TYPE_CEIL_FAN) continue;
 		bool const is_stairs(c->type == TYPE_STAIR || c->type == TYPE_STAIR_WALL);
 		if (c->z1() > (is_stairs ? stairs_z2 : z2) || c->z2() < (is_stairs ? stairs_z1 : z1)) continue;
+		if (!c->intersects_xy(ext_bcube)) continue;
 		colorRGBA const color(c->get_color());
 		
 		if (c->shape == SHAPE_CYLIN || c->shape == SHAPE_SPHERE) {
@@ -375,7 +369,7 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc, int only_this_fl
 				temp.clear();
 				subtract_cube_from_cube(top, inside, temp);
 				assert(temp.size() == 4); // -y, +y, -x, +x
-				add_colored_cubes(temp, color, z1, z2, cc);
+				add_colored_cubes(temp, color, ext_bcube, cc);
 			}
 			else if (c->type == TYPE_HOOD) {
 				bc.expand_in_dim(!dim, 0.25*c->get_sz_dim(!dim)); // shrink width
@@ -780,7 +774,7 @@ public:
 			// Note: if we get here, we assume lighting has already been invalidated
 		}
 		bvh.clear();
-		b.gather_interior_cubes(bvh.get_objs(), cur_floor);
+		b.gather_interior_cubes(bvh.get_objs(), valid_area);
 		if (b.point_in_attic(target)) {b.get_attic_roof_tquads(bvh.roof_tquads);}
 		bvh.build_tree_top(0); // verbose=0
 		need_bvh_rebuild = 0;

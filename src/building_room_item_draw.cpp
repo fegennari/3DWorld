@@ -1210,15 +1210,10 @@ void building_t::draw_room_geom(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 	if (!has_room_geom()) return;
 
 	if (0 && (display_mode & 0x20) && player_in_building && bcube.contains_pt(camera_pdu.pos - xlate)) { // debug visualization of light occluders
-		int const cur_floor(get_floor_for_zval(camera_pdu.pos.z));
 		vect_colored_cube_t cc;
-		gather_interior_cubes(cc, cur_floor);
+		gather_interior_cubes(cc, get_bcube_inc_extensions());
 		select_texture(WHITE_TEX);
-
-		for (colored_cube_t const &c : cc) {
-			s.set_cur_color(c.color);
-			draw_simple_cube(c);
-		}
+		for (colored_cube_t const &c : cc) {s.set_cur_color(c.color); draw_simple_cube(c);}
 		return;
 	}
 	if (ENABLE_MIRROR_REFLECTIONS && !shadow_only && !reflection_pass && player_in_building) {find_mirror_needing_reflection(xlate);}
