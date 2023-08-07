@@ -1347,7 +1347,7 @@ void building_t::add_door_sign(string const &text, room_t const &room, float zva
 	set_cube_zvals(c, zval, zval+wall_thickness); // reduce to a small z strip for this floor to avoid picking up doors on floors above or below
 
 	for (auto i = interior->door_stacks.begin(); i != interior->door_stacks.end(); ++i) {
-		if (!is_cube_close_to_door(c, 0.0, 0, *i, 2)) continue; // check both dirs
+		if (!is_cube_close_to_door(c, 0.0, 0, *i, 2)) continue; // check both dirs; should we check that the room on the other side of the door is a hallway?
 		// put the sign toward the outside of the building because there's more space and more light
 		bool const side(room_center[i->dim] < i->get_center_dim(i->dim)), shift_dir(room_center[!i->dim] < part_center[!i->dim]);
 		float const door_width(i->get_width()), side_sign(side ? 1.0 : -1.0);
@@ -1357,6 +1357,9 @@ void building_t::add_door_sign(string const &text, room_t const &room, float zva
 		sign.expand_in_dim(!i->dim, -(0.45 - 0.03*min((unsigned)text.size(), 6U))*door_width); // shrink a bit
 		sign.translate_dim( i->dim, side_sign*0.5*wall_thickness); // move to outside wall
 		sign.d[i->dim][side] += side_sign*0.1*wall_thickness; // make nonzero area
+		cube_t test_cube(sign);
+		test_cube.translate_dim(i->dim, side_sign*0.1*wall_thickness); // move out in front of the current wall to avoid colliding with it (in case of T-junction)
+		if (has_bcube_int(test_cube, interior->walls[!i->dim])) continue; // check for intersections with orthogonal walls; needed for inside corner offices
 		add_hallway_sign(interior->room_geom->objs, sign, text, room_id, i->dim, side);
 	} // for i
 }

@@ -379,7 +379,7 @@ void building_t::add_sign_by_door(tquad_with_ix_t const &door, bool outside, std
 	float const sign_width(0.8*text.size()*c.dz()), shrink(0.5f*(width - sign_width));
 	c.expand_in_dim(!dim, -shrink);
 	if (!outside) {dir ^= 1; c.translate_dim(dim, (dir ? 1.0 : -1.0)*0.1*height);} // move inside the building
-	c.d[dim][dir] += (dir ? 1.0 : -1.0)*0.01*height;
+	c.d[dim][dir] += (dir ? 1.0 : -1.0)*0.01*height; // front face
 
 	if (outside) {
 		for (auto p2 = get_real_parts_end_inc_sec(); p2 != parts.end(); ++p2) {
