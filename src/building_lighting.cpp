@@ -451,7 +451,7 @@ class building_indir_light_mgr_t {
 		unsigned const num_rt_threads(max(1U, (NUM_THREADS - (USE_BKG_THREAD ? 1 : 0)))); // reserve a thread for the main thread if running in the background
 		unsigned base_num_rays(LOCAL_RAYS), dim(2), dir(0); // default dim is z; dir=2 is omnidirectional
 		cube_t const scene_bounds(get_scene_bounds_bcube()); // expected by lmap update code
-		point const ray_scale(scene_bounds.get_size()/light_bounds.get_size()), llc_shift(scene_bounds.get_llc() - light_bounds.get_llc()*ray_scale);
+		vector3d const ray_scale(scene_bounds.get_size()/light_bounds.get_size()), llc_shift(scene_bounds.get_llc() - light_bounds.get_llc()*ray_scale);
 		float const tolerance(1.0E-5*valid_area.get_max_dim_sz());
 		bool const is_window(cur_light & IS_WINDOW_BIT);
 		bool in_attic(0), in_ext_basement(0);

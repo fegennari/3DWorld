@@ -2092,6 +2092,7 @@ void building_interior_t::place_exterior_room(extb_room_t const &room, cube_t co
 bool try_place_wall(cube_t const &place_area, cube_t const &wall_area, cube_t const &cent_area, bool dim, float len_min, float len_max, float half_thick, float min_gap,
 	vect_cube_t &walls, vect_cube_t &blockers, rand_gen_t &rgen)
 {
+	assert(len_min < len_max);
 	float const wall_len   (rgen.rand_uniform(len_min, len_max));
 	float const wall_pos   (rgen.rand_uniform(wall_area.d[ dim][0], wall_area.d[ dim][1])); // position of wall centerline
 	float const wall_center(rgen.rand_uniform(cent_area.d[!dim][0], cent_area.d[!dim][1])); // center of wall
@@ -2194,7 +2195,7 @@ void building_t::add_backrooms_objs(rand_gen_t rgen, room_t const &room, float z
 	if (min(wall_area.dx(), wall_area.dy()) < 2.0*floor_spacing) return; // room too small to place walls - shouldn't happen
 	set_cube_zvals(wall_area, zval, ceiling_z);
 	float const min_side(min(sz.x, sz.y)), area(sz.x*sz.y);
-	float const wall_len_min(1.0*floor_spacing), wall_len_max(0.25*min_side), wall_len_avg(0.5*(wall_len_min + wall_len_max)); // min_gap/wall_len_min = 0.6
+	float const wall_len_min(1.0*floor_spacing), wall_len_max(max(0.25f*min_side, 1.5f*wall_len_min)), wall_len_avg(0.5*(wall_len_min + wall_len_max)); // min_gap/wall_len_min = 0.6
 	unsigned const num_walls(round_fp(rgen.rand_uniform(1.6, 2.0)*area/(wall_len_avg*wall_len_avg))); // add a bit of random density variation
 	colorRGBA const wall_color(WHITE); // to match exterior walls, ceilings, and floors
 	vect_cube_t blockers_per_dim[2], walls_per_dim[2];
