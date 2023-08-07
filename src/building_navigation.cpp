@@ -744,19 +744,21 @@ bool building_t::choose_dest_goal(person_t &person, rand_gen_t &rgen) const { //
 		legal_area.z2() -= z2_add;
 		assert(legal_area.is_strictly_normalized());
 		legal_area.clamp_pt(person.target_pos); // clamp to building interior
-		float dmin_sq(bcube.get_max_extent()); // start at a large value
+		// if target_pos is outside any building parts, target the nearest part
+		bool contained(0);
+		float dmin_sq(0.0);
 		cube_t closest_part;
 
 		for (auto p = parts.begin(); p != get_real_parts_end_inc_sec(); ++p) { // there shouldn't be any people in secondary buildings, but include them anyway
-			if (p->contains_pt(person.target_pos)) {dmin_sq = 0; break;} // done
-			float const dsq(p2p_dist_sq(person.target_pos, p->closest_pt(person.target_pos)));
-			if (dsq < dmin_sq) {closest_part = *p;}
+			if (p->contains_pt(person.target_pos)) {contained = 1; closest_part = *p; break;} // done
+			float const dsq(p2p_dist_sq(person.target_pos, p->closest_pt(person.target_pos))); // what about basements? should we check zvals?
+			if (dmin_sq == 0.0 || dsq < dmin_sq) {dmin_sq = dsq; closest_part = *p;}
 		}
-		if (has_ext_basement()) {
+		if (!contained && person.target_pos.z < ground_floor_z1 && has_ext_basement()) { // check extended basement
 			float const dsq(p2p_dist_sq(person.target_pos, interior->basement_ext_bcube.closest_pt(person.target_pos)));
 			if (dsq < dmin_sq) {closest_part = interior->basement_ext_bcube;}
 		}
-		if (dmin_sq > 0.0 && !closest_part.is_all_zeros()) {closest_part.clamp_pt(person.target_pos);} // clamp to closest part
+		if (!contained && !closest_part.is_all_zeros()) {closest_part.clamp_pt(person.target_pos);} // clamp to closest part
 		static vect_cube_t avoid; // reuse across frames/people
 		// same_as_player=1, skip_stairs=1
 		interior->get_avoid_cubes(avoid, (person.target_pos.z - person.radius), (person.target_pos.z + z2_add), 0.5*person.radius, get_floor_thickness(), 1, 1);
