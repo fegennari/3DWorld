@@ -820,6 +820,7 @@ void building_t::get_lights_with_priorities(point const &target, cube_t const &v
 
 	for (auto i = objs.begin(); i != objs_end; ++i) {
 		if (!i->is_light_type() || !i->is_light_on()) continue; // not a light, or light not on
+		if (i->flags & RO_FLAG_BROKEN2) continue; // fully broken light
 		bool const light_in_basement(i->z1() < ground_floor_z1);
 		if (!check_indir_enabled(light_in_basement, i->in_attic())) continue;
 		if (!valid_area.contains_cube(*i)) continue; // outside valid area
