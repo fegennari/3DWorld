@@ -189,9 +189,11 @@ bool building_t::check_sphere_coll_inner(point &pos, point const &p_last, vector
 	}
 	if (check_interior && draw_building_interiors && interior != nullptr) { // check for interior case first
 		// this is the real zval for use in collsion detection, in building space
-		float const zval(((p_last2.z < ground_floor_z1) ? min(pos2.z, p_last2.z) : max(pos2.z, p_last2.z)) - xlate.z); // min/max away from the ground floor
+		float zval(((p_last2.z < ground_floor_z1) ? min(pos2.z, p_last2.z) : max(pos2.z, p_last2.z)) - xlate.z); // min/max away from the ground floor
+		// if the player is in flight mode and enables collision detection at the ground floor or basement with their feet just below the floor,
+		// clamp to Z1 to keep them inside the building rather than putting them on the roof
+		if (zval < bcube.z1() && zval+camera_zh > bcube.z1() && bcube.contains_pt_xy(pos2 - xlate) && p_last == p_last2) {zval = bcube.z1();}
 		point const pos2_bs(pos2 - xlate), query_pt(pos2_bs.x, pos2_bs.y, zval);
-		cube_t sc; sc.set_from_sphere(pos2_bs, radius); // sphere bounding cube
 
 		// Note: first check uses min of the two zvals to reject the basement, which is actually under the mesh
 		if ((min(pos2.z, p_last2.z) + radius) > ground_floor_z1 && zval < (ground_floor_z1 + get_door_height())) { // on the ground floor
@@ -205,6 +207,8 @@ bool building_t::check_sphere_coll_inner(point &pos, point const &p_last, vector
 				if (bc.contains_pt(pos2_bs)) return 0; // check if we can use a door - disable collsion detection to allow the player to walk through
 			}
 		}
+		cube_t sc; sc.set_from_sphere(query_pt, radius); // sphere bounding cube; zvals are ignored
+
 		for (auto i = parts.begin(); i != get_real_parts_end_inc_sec(); ++i) { // include garages and sheds
 			float cont_area(0.0);
 			cube_t clamp_part(*i);
