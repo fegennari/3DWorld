@@ -626,6 +626,8 @@ struct cube_t { // size = 24
 		UNROLL_3X(mextent = max(mextent, max(-d[i_][0], d[i_][1]));)
 		return mextent;
 	}
+	float get_max_dim_sz() const {return std::max(dz(), std::max(dx(), dy()));}
+
 	float furthest_dist_to_pt(point const &pos) const {
 		vector3d dmax;
 		UNROLL_3X(dmax[i_] = max((pos[i_] - d[i_][0]), (d[i_][1] - pos[i_]));)

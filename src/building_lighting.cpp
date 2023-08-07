@@ -126,7 +126,7 @@ bool building_t::ray_cast_interior(point const &pos, vector3d const &dir, cube_t
 	point &cpos, vector3d &cnorm, colorRGBA &ccolor, rand_gen_t *rgen) const
 {
 	if (!interior || is_rotated()) return 0; // these cases are not yet supported
-	float const extent(valid_area.get_max_extent());
+	float const extent(valid_area.get_max_dim_sz());
 	cube_t clip_cube(valid_area);
 	clip_cube.expand_by(0.01*extent); // expand slightly so that collisions with objects on the edge are still considered interior
 	point p1(pos), p2(pos + dir*(2.0*extent));
@@ -458,7 +458,7 @@ class building_indir_light_mgr_t {
 		unsigned base_num_rays(LOCAL_RAYS), dim(2), dir(0); // default dim is z; dir=2 is omnidirectional
 		cube_t const scene_bounds(get_scene_bounds_bcube()); // expected by lmap update code
 		point const ray_scale(scene_bounds.get_size()/light_bounds.get_size()), llc_shift(scene_bounds.get_llc() - light_bounds.get_llc()*ray_scale);
-		float const tolerance(1.0E-5*valid_area.get_max_extent());
+		float const tolerance(1.0E-5*valid_area.get_max_dim_sz());
 		bool const is_window(cur_light & IS_WINDOW_BIT);
 		bool in_attic(0), in_ext_basement(0);
 		float weight(100.0), light_radius(0.0), pri_dir_blend(0.0);
@@ -752,7 +752,7 @@ public:
 		else {
 			float const floor_spacing(b.get_window_vspace()), building_z1(b.get_bcube_z1_inc_ext_basement());
 			VA = (b.point_in_extended_basement_not_basement(target) ? b.interior->basement_ext_bcube : b.bcube);
-			VA.z1() = building_z1 + (target_floor  )*floor_spacing;
+			VA.z1() = building_z1 + target_floor*floor_spacing;
 			VA.z2() = VA.z1() + floor_spacing;
 		}
 		return VA;

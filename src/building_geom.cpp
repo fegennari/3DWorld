@@ -2106,7 +2106,7 @@ void building_t::expand_ground_floor_cube(cube_t &cube, cube_t const &skip) cons
 }
 
 void building_t::get_exclude_cube(point const &pos, cube_t const &skip, cube_t &exclude, bool camera_in_building) const {
-	float const cube_pad(4.0*grass_width*(camera_in_building ? 2.0 : 1.0)), extent(bcube.get_max_extent());
+	float const cube_pad(4.0*grass_width*(camera_in_building ? 2.0 : 1.0)), extent(bcube.get_max_dim_sz());
 	float dmin_sq(extent*extent); // start with a large value, squared
 	exclude.set_to_zeros();
 

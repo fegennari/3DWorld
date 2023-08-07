@@ -2258,7 +2258,7 @@ void model3d::render(shader_t &shader, bool is_shadow_pass, int reflection_pass,
 	}
 	else if (world_mode == WMODE_INF_TERRAIN) {
 		//timer_t timer("Draw Models");
-		float const view_dist(get_inf_terrain_fog_dist() + bcube.get_max_extent()), view_dist_sq(view_dist*view_dist); // or get_draw_tile_dist()?
+		float const view_dist(get_inf_terrain_fog_dist() + bcube.get_max_dim_sz()), view_dist_sq(view_dist*view_dist); // or get_draw_tile_dist()?
 		to_draw_xf.clear();
 		
 		for (unsigned i = 0; i < transforms.size(); ++i) {

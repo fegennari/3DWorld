@@ -766,7 +766,7 @@ public:
 		
 		if (check_z_merge) { // attempt to merge ceilings into floors
 			for (cube_t &c2 : colliders) {
-				if (c2.z1() == c.z2()) {c2.z1() = c.z1();return;}
+				if (c2.z1() == c.z2()) {c2.z1() = c.z1(); return;}
 			}
 		}
 		colliders.push_back(c); // record for later processing in align_to_surfaces()
@@ -901,7 +901,7 @@ bool building_t::update_spider_pos_orient(spider_t &spider, point const &camera_
 		if (i->z2() < tc.z1() && !(i->type == TYPE_DESK && i->shape == SHAPE_TALL)) continue; // sigh, tall desks are special
 		if (!tc.intersects_xy((i->type == TYPE_CLOSET) ? get_true_room_obj_bcube(*i) : (cube_t)*i)) continue; // no intersection with this object
 		if (!i->is_spider_collidable()) continue;
-		if (i->get_max_extent() < spider.radius) continue; // too small, skip
+		if (i->get_max_dim_sz() < spider.radius) continue; // too small, skip
 		get_room_obj_cubes(*i, spider.pos, cubes, cubes, avoid); // climb on large and small objects and avoid non-cube objects
 		surface_orienter.register_cubes(cubes);
 		for (cube_t const &c : avoid) {obj_avoid.register_avoid_cube(c);}
