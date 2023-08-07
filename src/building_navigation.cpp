@@ -1203,7 +1203,9 @@ bool building_t::place_people_if_needed(unsigned building_ix, float radius, vect
 
 		for (unsigned f = 0; f < num_floors; ++f) {
 			if (r->lit_by_floor && !r->is_lit_on_floor(f)) continue; // don't place person in an unlit room; only applies if room lighting has been calculated
-			room_cands.emplace_back(room_ix, f);
+			bool const is_backrooms(r->is_ext_basement() && interior->has_backrooms);
+			unsigned const num_cands(is_backrooms ? 4 : 1); // add 4x for backrooms since this is one room with many sub-rooms
+			for (unsigned n = 0; n < num_cands; ++n) {room_cands.emplace_back(room_ix, f);}
 		}
 	} // for r
 	for (unsigned N = 0; N < num_people && !room_cands.empty(); ++N) {

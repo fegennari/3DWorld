@@ -101,6 +101,7 @@ point building_t::gen_animal_floor_pos(float radius, bool place_in_attic, bool n
 			room_ix = (rgen.rand() % interior->rooms.size());
 			room_t const &room(interior->rooms[room_ix]);
 			if (room.z1() > ground_floor_z1) continue; // not on the ground floor or basement
+			if (has_parking_garage && room.z1() == ground_floor_z1 && (rgen.rand()&3))  continue; // prefer parking garage and backrooms 4x, since each is a single room
 			if (pref_dark_room && n < 50 && is_room_lit(room_ix, (room.z1() + radius))) continue; // check for dark room in first 50 iterations
 			place_area = room; // will represent the usable floor area
 			place_area.z1() += get_fc_thickness(); // on top of the floor
