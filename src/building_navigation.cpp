@@ -779,10 +779,6 @@ bool building_t::choose_dest_goal(person_t &person, rand_gen_t &rgen) const { //
 	return 1;
 }
 
-bool building_t::is_room_pg_or_backrooms(room_t const &room) const {
-	// return (has_parking_garage && room.z1() < ground_floor_z1); // is this as accurate?
-	return(room.get_room_type(0) == RTYPE_PARKING || (room.is_ext_basement() && interior->has_backrooms));
-}
 bool building_t::select_person_dest_in_room(person_t &person, rand_gen_t &rgen, room_t const &room) const {
 	float const height(0.7*get_window_vspace()), radius(COLL_RADIUS_SCALE*person.radius);
 	point dest_pos(room.get_cube_center());
@@ -1216,8 +1212,7 @@ bool building_t::place_people_if_needed(unsigned building_ix, float radius, vect
 
 		for (unsigned f = 0; f < num_floors; ++f) {
 			if (r->lit_by_floor && !r->is_lit_on_floor(f)) continue; // don't place person in an unlit room; only applies if room lighting has been calculated
-			bool const is_backrooms(r->is_ext_basement() && interior->has_backrooms);
-			unsigned const num_cands(is_backrooms ? 4 : 1); // add 4x for backrooms since this is one room with many sub-rooms
+			unsigned const num_cands(is_room_backrooms(*r) ? 4 : 1); // add 4x for backrooms since this is one room with many sub-rooms
 			for (unsigned n = 0; n < num_cands; ++n) {room_cands.emplace_back(room_ix, f);}
 		}
 	} // for r

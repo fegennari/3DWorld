@@ -1544,12 +1544,15 @@ struct building_t : public building_geom_t {
 	int run_ai_elevator_logic(person_t &person, float delta_dir, rand_gen_t &rgen);
 	bool maybe_zombie_retreat(unsigned person_ix, point const &hit_pos);
 	void register_person_hit(unsigned person_ix, room_object_t const &obj, vector3d const &velocity);
+	//bool is_room_pg_or_backrooms(unsigned room_ix) const {return is_room_pg_or_backrooms(get_room(room_ix));}
+	bool is_room_backrooms(unsigned room_ix)   const {return is_room_backrooms(get_room(room_ix));}
+	bool is_room_backrooms(room_t const &room) const {return (interior && room.is_ext_basement() && interior->has_backrooms);}
 private:
 	void build_nav_graph() const;
 	bool is_valid_ai_placement(point const &pos, float radius, bool skip_nocoll) const;
 	bool choose_dest_goal(person_t &person, rand_gen_t &rgen) const;
 	int  choose_dest_room(person_t &person, rand_gen_t &rgen) const;
-	bool is_room_pg_or_backrooms(room_t const &room) const;
+	bool is_room_pg_or_backrooms(room_t const &room) const {return(room.get_room_type(0) == RTYPE_PARKING || is_room_backrooms(room));}
 	bool is_pos_in_pg_or_backrooms(point const &pos) const {return (has_parking_garage && pos.z < ground_floor_z1);}
 	bool select_person_dest_in_room(person_t &person, rand_gen_t &rgen, room_t const &room) const;
 	void get_avoid_cubes(float zval, float height, float radius, vect_cube_t &avoid, bool following_player, cube_t const *const fires_select_cube=nullptr) const;
