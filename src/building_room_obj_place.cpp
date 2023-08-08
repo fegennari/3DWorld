@@ -729,7 +729,7 @@ bool building_t::add_bedroom_objs(rand_gen_t rgen, room_t &room, vect_cube_t con
 			}
 		}
 	}
-	if (rgen.rand_float() < 0.3) { // maybe add a t-shirt on the floor
+	if (rgen.rand_float() < 0.3) { // maybe add a t-shirt or jeans on the floor
 		float const length(0.3*window_vspacing), width(0.98*length), height(0.002*window_vspacing);
 		cube_t shirt_area(place_area);
 		shirt_area.expand_by_xy(-0.8*length); // not too close to a wall
@@ -745,7 +745,9 @@ bool building_t::add_bedroom_objs(rand_gen_t rgen, room_t &room, vect_cube_t con
 				c.expand_by_xy(0.5*size);
 				c.z2() += size.z;
 				if (overlaps_other_room_obj(c, objs_start) || is_obj_placement_blocked(c, room, 1)) continue; // bad placement
-				objs.emplace_back(c, TYPE_TEESHIRT, room_id, dim, dir, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CUBE, TSHIRT_COLORS[rgen.rand()%NUM_TSHIRT_COLORS]);
+				unsigned const type(rgen.rand_bool() ? TYPE_PANTS : TYPE_TEESHIRT);
+				colorRGBA const &color((type == TYPE_TEESHIRT) ? TSHIRT_COLORS[rgen.rand()%NUM_TSHIRT_COLORS] : WHITE); // T-shirts are colored, jeans are always white
+				objs.emplace_back(c, type, room_id, dim, dir, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CUBE, color);
 				break; // done
 			} // for n
 		}

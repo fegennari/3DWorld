@@ -1557,9 +1557,14 @@ void building_room_geom_t::add_fire_ext_sign(room_object_t const &c) {
 	mat.add_cube_to_verts(c, apply_light_color(c), zero_vector, get_face_mask(c.dim, c.dir), !c.dim, (c.dim ^ c.dir ^ 1)); // front face only
 }
 
+// Note: alpha mask materials, but not using mats_amask because blending works correctly without it
 void building_room_geom_t::add_teeshirt(room_object_t const &c) {
-	// Note: alpha mask material, but not using mats_amask because blending works correctly without it
 	rgeom_mat_t& mat(get_material(tid_nm_pair_t(get_texture_by_name("interiors/teeshirt.png"), 0.0), 0, 0, 1)); // unshadowed, small
+	mat.add_cube_to_verts(c, apply_light_color(c), zero_vector, ~EF_Z2, c.dim, (c.dim ^ c.dir ^ 1), c.dir); // top face only
+}
+void building_room_geom_t::add_pants(room_object_t const &c) {
+	string const tex_name((c.room_id & 1) ? "interiors/folded_jeans.png" : "interiors/folded_jeans2.png");
+	rgeom_mat_t& mat(get_material(tid_nm_pair_t(get_texture_by_name(tex_name), 0.0), 0, 0, 1)); // unshadowed, small
 	mat.add_cube_to_verts(c, apply_light_color(c), zero_vector, ~EF_Z2, c.dim, (c.dim ^ c.dir ^ 1), c.dir); // top face only
 }
 
@@ -3935,8 +3940,9 @@ colorRGBA room_object_t::get_color() const {
 	case TYPE_ATTIC_DOOR:return get_textured_wood_color();
 	case TYPE_DUCT:     return texture_color((shape == SHAPE_CYLIN) ? get_cylin_duct_tid() : get_cube_duct_tid()).modulate_with(color);
 	case TYPE_FCABINET: return texture_color(get_texture_by_name("interiors/filing_cabinet.png"));
-	case TYPE_FEXT_SIGN: return colorRGBA(1.0, 0.4, 0.4, 1.0); // close enough
-	case TYPE_FIRE_EXT:  return RED;
+	case TYPE_FEXT_SIGN:return colorRGBA(1.0, 0.4, 0.4, 1.0); // close enough
+	case TYPE_FIRE_EXT: return RED;
+	case TYPE_PANTS:    return LT_BLUE; // close enough, don't need to use the texture color
 	//case TYPE_CHIMNEY:  return texture_color(get_material().side_tex); // should modulate with texture color, but we don't have it here
 	default: return color; // TYPE_LIGHT, TYPE_TCAN, TYPE_BOOK, TYPE_BOTTLE, TYPE_PEN_PENCIL, etc.
 	}

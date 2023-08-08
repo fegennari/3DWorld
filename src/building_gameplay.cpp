@@ -141,6 +141,7 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_FEXT_SIGN ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2,  5.0,  0.2,   "fire extinguisher sign");
 	bldg_obj_types[TYPE_PIZZA_BOX ] = bldg_obj_type_t(0, 0, 1, 1, 0, 0, 2, 10.0,  1.0,   "box of pizza");
 	bldg_obj_types[TYPE_TEESHIRT  ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 10.0,  0.25,  "tee shirt");
+	bldg_obj_types[TYPE_PANTS     ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 16.0,  0.50,  "jeans");
 	bldg_obj_types[TYPE_BLANKET   ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 20.0,  2.0,   "blanket");
 	bldg_obj_types[TYPE_SERVER    ] = bldg_obj_type_t(1, 1, 1, 1, 0, 0, 2, 10000, 400.00,"server"); // small because it's in a windowless room; too heavy for inventory
 	bldg_obj_types[TYPE_DBG_SHAPE ] = bldg_obj_type_t(0, 0, 0, 0, 0, 0, 0,  0.0,   0.0,  "debug shape");
