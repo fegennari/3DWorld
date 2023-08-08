@@ -904,6 +904,7 @@ bool building_t::update_spider_pos_orient(spider_t &spider, point const &camera_
 
 	for (auto i = b; i != e; ++i) {
 		if (i->z1() > tc.z2()) continue; // object is too high
+		//if (i->type == TYPE_LIGHT && i->shape == SHAPE_CUBE) {} // spiders sometimes get stuck on the bottom of cube lights, but they do cast intersting shadows there
 		if (i->z2() < tc.z1() && !(i->type == TYPE_DESK && i->shape == SHAPE_TALL)) continue; // sigh, tall desks are special
 		if (!tc.intersects_xy((i->type == TYPE_CLOSET) ? get_true_room_obj_bcube(*i) : (cube_t)*i)) continue; // no intersection with this object
 		if (!i->is_spider_collidable()) continue;
