@@ -2177,6 +2177,81 @@ struct cube_by_xy_dim {
 	bool operator()(cube_t const &a, cube_t const &b) const {return ((a.d[d][0] == b.d[d][0]) ? (a.d[!d][0] < b.d[!d][0]) : (a.d[d][0] < b.d[d][0]));}
 };
 
+float get_ped_coll_radius();
+
+class cube_nav_grid {
+	cube_t grid_bcube;
+	unsigned num[2] = {};
+	float   step[2] = {};
+	vector<uint8_t> nodes; // N x M; 0=blocked, 1=open
+	vector<uint8_t> edges[2]; // {x, y}; N-1 x M-1
+
+	static bool pt_contained_xy(point const &pt, vect_cube_t const &cubes) {
+		for (cube_t const &c : cubes) {
+			if (c.contains_pt_xy(pt)) return 1;
+		}
+		return 0;
+	}
+	unsigned get_node_ix(unsigned x, unsigned y) const {assert(x < num[0]   && y < num[1]  ); return (x + y* num[0]   );}
+	unsigned get_edge_ix(unsigned x, unsigned y) const {assert(x < num[0]-1 && y < num[1]-1); return (x + y*(num[0]-1));}
+
+	point get_grid_pt(unsigned x, unsigned y) const {
+		return point((grid_bcube.x1() + x*step[0]), (grid_bcube.y1() + y*step[1]), grid_bcube.z1());
+	}
+public:
+	void get_open_nodes(vector<point> &pts) const { // for visualization/debugging
+		for (unsigned y = 0; y < num[1]; ++y) {
+			for (unsigned x = 0; x < num[0]; ++x) {
+				if (nodes[get_node_ix(x, y)]) {pts.push_back(get_grid_pt(x, y));}
+			}
+		}
+	}
+	void get_valid_edges(vect_cube_t &edge_cubes) { // for visualization/debugging
+		for (unsigned d = 0; d < 2; ++d) {
+			for (unsigned y = 0; y < num[1]-1; ++y) {
+				for (unsigned x = 0; x < num[0]-1; ++x) {
+					if (edges[d][get_edge_ix(x, y)]) {edge_cubes.emplace_back(get_grid_pt(x, y), get_grid_pt(x+(1-d), y+d));}
+				}
+			}
+		} // for d
+	}
+	void build(cube_t const &bcube, vect_cube_t const &blockers, float radius) {
+		highres_timer_t timer("Build Nav Grid");
+		// determine grid size and allocate vectors
+		float const spacing(2.0*radius);
+		grid_bcube = bcube;
+		grid_bcube.expand_by_xy(-radius);
+		point const size(grid_bcube.get_size());
+		if (min(size.x, size.y) <= 2.0*spacing) return; // too small (error?)
+
+		for (unsigned d = 0; d < 2; ++d) {
+			num [d] = unsigned(ceil(size[d]/spacing));
+			step[d] = size[d]/(num[d] - 1);
+		}
+		nodes.resize(num[0]*num[1], 0);
+		for (unsigned d = 0; d < 2; ++d) {edges[d].resize((num[0]-1)*(num[1]-1), 0);}
+		// determine open nodes
+		vect_cube_t blockers_exp(blockers);
+		resize_cubes_xy(blockers_exp, radius);
+
+		for (unsigned y = 0; y < num[1]; ++y) {
+			for (unsigned x = 0; x < num[0]; ++x) {
+				if (!pt_contained_xy(get_grid_pt(x, y), blockers_exp)) {nodes[get_node_ix(x, y)] = 1;}
+			}
+		}
+		// determine reachable edges
+		for (unsigned d = 0; d < 2; ++d) {
+			for (unsigned y = 0; y < num[1]-1; ++y) {
+				for (unsigned x = 0; x < num[0]-1; ++x) {
+					cube_t const edge(get_grid_pt(x, y), get_grid_pt(x+(1-d), y+d));
+					if (!has_bcube_int_xy(edge, blockers_exp)) {edges[d][get_edge_ix(x, y)] = 1;}
+				}
+			}
+		} // for d
+	}
+	// TODO: find_path()
+};
+
 void building_t::add_backrooms_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id) {
 	highres_timer_t timer("Add Backrooms Objs"); // up to ~2ms
 	assert(has_room_geom());
@@ -2309,7 +2384,7 @@ void building_t::add_backrooms_objs(rand_gen_t rgen, room_t const &room, float z
 					if (hit && adj.back().len() < min_shared_edge) {adj.pop_back();} // remove if too short
 				} // for gix
 				if (adj.size() <= 1) continue; // not adjacent to multiple space group
-				//objs.emplace_back(query, TYPE_DBG_SHAPE, room_id, 0, 0, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CUBE, RED); // TESTING
+				//objs.emplace_back(query, TYPE_DBG_SHAPE, room_id, 0, 0, RO_FLAG_NOCOLL, 1.0, SHAPE_CUBE, RED); // TESTING
 				doors_to_add.clear();
 
 				// test every pair of groups
@@ -2432,6 +2507,29 @@ void building_t::add_backrooms_objs(rand_gen_t rgen, room_t const &room, float z
 	// TODO
 	
 	// Add more variety to light colors, wall/ceiling/floor textures, etc.?
+#if 0
+	// build and test nav grid
+	vect_cube_t blockers;
+	for (unsigned dim = 0; dim < 2; ++dim) {vector_add_to(interior->room_geom->pgbr_walls[dim], blockers);} // combine into a single vector
+	// TODO: add pillars?
+	float const radius(get_ped_coll_radius());
+	cube_nav_grid nav_grid;
+	nav_grid.build(place_area, blockers, radius);
+	// debug visualization
+	vector<point> nodes;
+	vect_cube_t edges;
+	nav_grid.get_open_nodes (nodes);
+	nav_grid.get_valid_edges(edges);
+	
+	for (point const &p : nodes) {
+		cube_t c; c.set_from_sphere(point(p.x, p.y, p.z+radius), radius);
+		objs.emplace_back(c, TYPE_DBG_SHAPE, room_id, 0, 0, RO_FLAG_NOCOLL, 1.0, SHAPE_SPHERE, RED);
+	}
+	for (cube_t &c : edges) {
+		c.expand_by(0.25*radius);
+		objs.emplace_back(c, TYPE_DBG_SHAPE, room_id, 0, 0, RO_FLAG_NOCOLL, 1.0, SHAPE_CUBE, BLUE);
+	}
+#endif
 }
 
 bool building_room_geom_t::cube_int_backrooms_walls(cube_t const &c) const { // used for door opening collision checks
