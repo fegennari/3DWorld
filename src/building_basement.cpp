@@ -2183,8 +2183,7 @@ class cube_nav_grid {
 	cube_t grid_bcube;
 	unsigned num[2] = {};
 	float   step[2] = {};
-	vector<uint8_t> nodes; // N x M; 0=blocked, 1=open
-	vector<uint8_t> edges[2]; // {x, y}; N-1 x M-1
+	vector<uint8_t> nodes; // num[0] x num[1]; 0=blocked, 1=open
 
 	static bool pt_contained_xy(point const &pt, vect_cube_t const &cubes) {
 		for (cube_t const &c : cubes) {
@@ -2192,8 +2191,7 @@ class cube_nav_grid {
 		}
 		return 0;
 	}
-	unsigned get_node_ix(unsigned x, unsigned y) const {assert(x < num[0]   && y < num[1]  ); return (x + y* num[0]   );}
-	unsigned get_edge_ix(unsigned x, unsigned y) const {assert(x < num[0]-1 && y < num[1]-1); return (x + y*(num[0]-1));}
+	unsigned get_node_ix(unsigned x, unsigned y) const {assert(x < num[0] && y < num[1]); return (x + y* num[0]);}
 
 	point get_grid_pt(unsigned x, unsigned y) const {
 		return point((grid_bcube.x1() + x*step[0]), (grid_bcube.y1() + y*step[1]), grid_bcube.z1());
@@ -2206,19 +2204,10 @@ public:
 			}
 		}
 	}
-	void get_valid_edges(vect_cube_t &edge_cubes) { // for visualization/debugging
-		for (unsigned d = 0; d < 2; ++d) {
-			for (unsigned y = 0; y < num[1]-1; ++y) {
-				for (unsigned x = 0; x < num[0]-1; ++x) {
-					if (edges[d][get_edge_ix(x, y)]) {edge_cubes.emplace_back(get_grid_pt(x, y), get_grid_pt(x+(1-d), y+d));}
-				}
-			}
-		} // for d
-	}
-	void build(cube_t const &bcube, vect_cube_t const &blockers, float radius) {
+	void build(cube_t const &bcube, vect_cube_t const &blockers, float radius, float spacing) {
 		highres_timer_t timer("Build Nav Grid");
 		// determine grid size and allocate vectors
-		float const spacing(2.0*radius);
+		min_eq(spacing, 2.0f*radius); // spacing can't be further than the test diameter or we'll miss blockers in the gap
 		grid_bcube = bcube;
 		grid_bcube.expand_by_xy(-radius);
 		point const size(grid_bcube.get_size());
@@ -2229,8 +2218,8 @@ public:
 			step[d] = size[d]/(num[d] - 1);
 		}
 		nodes.resize(num[0]*num[1], 0);
-		for (unsigned d = 0; d < 2; ++d) {edges[d].resize((num[0]-1)*(num[1]-1), 0);}
-		// determine open nodes
+		//cout << TXT(blockers.size()) << TXT(num[0]) << TXT(num[1]) << TXT(nodes.size()) << endl;
+		// determine open nodes; edges are implicitly from adjacent 1 nodes
 		vect_cube_t blockers_exp(blockers);
 		resize_cubes_xy(blockers_exp, radius);
 
@@ -2239,15 +2228,6 @@ public:
 				if (!pt_contained_xy(get_grid_pt(x, y), blockers_exp)) {nodes[get_node_ix(x, y)] = 1;}
 			}
 		}
-		// determine reachable edges
-		for (unsigned d = 0; d < 2; ++d) {
-			for (unsigned y = 0; y < num[1]-1; ++y) {
-				for (unsigned x = 0; x < num[0]-1; ++x) {
-					cube_t const edge(get_grid_pt(x, y), get_grid_pt(x+(1-d), y+d));
-					if (!has_bcube_int_xy(edge, blockers_exp)) {edges[d][get_edge_ix(x, y)] = 1;}
-				}
-			}
-		} // for d
 	}
 	// TODO: find_path()
 };
@@ -2507,27 +2487,21 @@ void building_t::add_backrooms_objs(rand_gen_t rgen, room_t const &room, float z
 	// TODO
 	
 	// Add more variety to light colors, wall/ceiling/floor textures, etc.?
-#if 0
+#if 1
 	// build and test nav grid
 	vect_cube_t blockers;
 	for (unsigned dim = 0; dim < 2; ++dim) {vector_add_to(interior->room_geom->pgbr_walls[dim], blockers);} // combine into a single vector
 	// TODO: add pillars?
 	float const radius(get_ped_coll_radius());
 	cube_nav_grid nav_grid;
-	nav_grid.build(place_area, blockers, radius);
+	nav_grid.build(place_area, blockers, radius, nav_pad);
 	// debug visualization
 	vector<point> nodes;
-	vect_cube_t edges;
-	nav_grid.get_open_nodes (nodes);
-	nav_grid.get_valid_edges(edges);
+	nav_grid.get_open_nodes(nodes);
 	
 	for (point const &p : nodes) {
 		cube_t c; c.set_from_sphere(point(p.x, p.y, p.z+radius), radius);
 		objs.emplace_back(c, TYPE_DBG_SHAPE, room_id, 0, 0, RO_FLAG_NOCOLL, 1.0, SHAPE_SPHERE, RED);
-	}
-	for (cube_t &c : edges) {
-		c.expand_by(0.25*radius);
-		objs.emplace_back(c, TYPE_DBG_SHAPE, room_id, 0, 0, RO_FLAG_NOCOLL, 1.0, SHAPE_CUBE, BLUE);
 	}
 #endif
 }
