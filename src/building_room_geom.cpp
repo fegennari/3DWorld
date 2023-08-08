@@ -2723,7 +2723,7 @@ void get_bed_cubes(room_object_t const &c, cube_t cubes[6]) { // frame, head, fo
 	legs_bcube.z2() = frame.z1();
 	mattress.expand_in_dim(!c.dim, -0.02*width); // shrink slightly
 	float const pillow_space((is_wide ? 0.08 : 0.23)*width);
-	pillow.expand_in_dim(!c.dim, -pillow_space);
+	pillow.expand_in_dim(!c.dim, -pillow_space); // shrink on sides
 	pillow.d[c.dim][ c.dir] = mattress.d[c.dim][ c.dir] + (c.dir ? -1.0 : 1.0)*0.02*length; // head
 	pillow.d[c.dim][!c.dir] = pillow  .d[c.dim][ c.dir] + (c.dir ? -1.0 : 1.0)*(is_wide ? 0.25 : 0.6)*pillow.get_sz_dim(!c.dim);
 	cubes[0] = frame; cubes[1] = head; cubes[2] = foot; cubes[3] = mattress; cubes[4] = pillow; cubes[5] = legs_bcube;

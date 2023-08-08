@@ -730,26 +730,32 @@ bool building_t::add_bedroom_objs(rand_gen_t rgen, room_t &room, vect_cube_t con
 		}
 	}
 	if (rgen.rand_float() < 0.3) { // maybe add a t-shirt or jeans on the floor
-		float const length(0.3*window_vspacing), width(0.98*length), height(0.002*window_vspacing);
-		cube_t shirt_area(place_area);
-		shirt_area.expand_by_xy(-0.8*length); // not too close to a wall
+		unsigned const type(rgen.rand_bool() ? TYPE_PANTS : TYPE_TEESHIRT);
+		bool already_on_bed(0);
 
-		if (shirt_area.is_strictly_normalized()) { // should always be true
+		for (auto i = objs.begin()+objs_start; i != objs.end(); ++i) {
+			if (i->type == type) {already_on_bed = 1; break;}
+		}
+		if (!already_on_bed) { // if shirt/pants are already on the bed, don't put them on the floor
+			float const length(((type == TYPE_TEESHIRT) ? 0.26 : 0.2)*window_vspacing), width(0.98*length), height(0.002*window_vspacing);
+			cube_t valid_area(place_area);
+			valid_area.expand_by_xy(-0.25*window_vspacing); // not too close to a wall to avoid bookcases, dressers, and nightstands
 			bool const dim(rgen.rand_bool()), dir(rgen.rand_bool()); // choose a random orientation
-			vector3d size(length, width, height);
+			vector3d size(0.5*length, 0.5*width, height);
 			if (dim) {std::swap(size.x, size.y);}
 
-			for (unsigned n = 0; n < 10; ++n) { // make 10 attempts to place the object
-				point const pos(gen_xy_pos_in_area(place_area, size, rgen, zval));
-				cube_t c(pos);
-				c.expand_by_xy(0.5*size);
-				c.z2() += size.z;
-				if (overlaps_other_room_obj(c, objs_start) || is_obj_placement_blocked(c, room, 1)) continue; // bad placement
-				unsigned const type(rgen.rand_bool() ? TYPE_PANTS : TYPE_TEESHIRT);
-				colorRGBA const &color((type == TYPE_TEESHIRT) ? TSHIRT_COLORS[rgen.rand()%NUM_TSHIRT_COLORS] : WHITE); // T-shirts are colored, jeans are always white
-				objs.emplace_back(c, type, room_id, dim, dir, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CUBE, color);
-				break; // done
-			} // for n
+			if (valid_area.dx() > 2.0*size.x && valid_area.dy() > 2.0*size.y) { // should always be true
+				for (unsigned n = 0; n < 10; ++n) { // make 10 attempts to place the object
+					point const pos(gen_xy_pos_in_area(valid_area, size, rgen, zval));
+					cube_t c(pos);
+					c.expand_by_xy(size);
+					c.z2() += size.z;
+					if (overlaps_other_room_obj(c, objs_start) || is_obj_placement_blocked(c, room, 1)) continue; // bad placement
+					colorRGBA const &color((type == TYPE_TEESHIRT) ? TSHIRT_COLORS[rgen.rand()%NUM_TSHIRT_COLORS] : WHITE); // T-shirts are colored, jeans are always white
+					objs.emplace_back(c, type, room_id, dim, dir, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CUBE, color);
+					break; // done
+				} // for n
+			}
 		}
 	}
 	return 1; // success
@@ -818,11 +824,12 @@ bool building_t::add_bed_to_room(rand_gen_t &rgen, room_t const &room, vect_cube
 		// use white color if a texture is assigned that's not close to white
 		int const sheet_tid(bed.get_sheet_tid());
 		if (sheet_tid < 0 || sheet_tid == WHITE_TEX || texture_color(sheet_tid).get_luminance() > 0.5) {bed.color = colors[rgen.rand()%NUM_COLORS];}
+		cube_t cubes[6]; // frame, head, foot, mattress, pillow, legs_bcube
+		get_bed_cubes(bed, cubes);
+		cube_t const &mattress(cubes[3]), &pillow(cubes[4]);
+		float const rand_val(rgen.rand_float());
 
-		if (rgen.rand_bool()) { // sometimes add a blanket on the bed
-			cube_t cubes[6]; // frame, head, foot, mattress, pillow, legs_bcube
-			get_bed_cubes(bed, cubes);
-			cube_t const &mattress(cubes[3]), &pillow(cubes[4]);
+		if (rand_val < 0.4) { // add a blanket on the bed 40% of the time
 			vector3d const mattress_sz(mattress.get_size());
 			cube_t blanket(mattress);
 			set_cube_zvals(blanket, mattress.z2(), (mattress.z2() + 0.02*mattress_sz.z)); // on top of mattress; set height
@@ -831,6 +838,24 @@ bool building_t::add_bed_to_room(rand_gen_t &rgen, room_t const &room, vect_cube
 			blanket.expand_in_dim(!dim, -rgen.rand_uniform(0.08, 0.16)*mattress_sz[!dim]); // shrink width
 			objs.emplace_back(blanket, TYPE_BLANKET, room_id, dim, dir, RO_FLAG_NOCOLL, tot_light_amt);
 			set_obj_id(objs);
+		}
+		else if (rand_val < 0.7) { // add teeshirt or jeans on the bed 30% of the time
+			unsigned const type(rgen.rand_bool() ? TYPE_PANTS : TYPE_TEESHIRT);
+			float const length(((type == TYPE_TEESHIRT) ? 0.26 : 0.2)*vspace), width(0.98*length), height(0.002*vspace);
+			cube_t valid_area(mattress);
+			valid_area.d[dim][dir] = pillow.d[dim][!dir]; // don't place under the pillow
+			bool const dim2(rgen.rand_bool()), dir2(rgen.rand_bool()); // choose a random orientation
+			vector3d size(0.5*length, 0.5*width, height);
+			if (dim2) {std::swap(size.x, size.y);}
+
+			if (valid_area.dx() > 2.0*size.x && valid_area.dy() > 2.0*size.y) {
+				point const pos(gen_xy_pos_in_area(valid_area, size, rgen, mattress.z2()));
+				cube_t c(pos);
+				c.expand_by_xy(size);
+				c.z2() += size.z;
+				colorRGBA const &color((type == TYPE_TEESHIRT) ? TSHIRT_COLORS[rgen.rand()%NUM_TSHIRT_COLORS] : WHITE); // T-shirts are colored, jeans are always white
+				objs.emplace_back(c, type, room_id, dim2, dir2, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CUBE, color);
+			}
 		}
 		return 1; // done/success
 	} // for n
