@@ -1620,7 +1620,7 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 		point const feet_pos(person.pos.x, person.pos.y, person.get_z1()), player_feet_pos(cur_player_building_loc.pos - vector3d(0.0, 0.0, CAMERA_RADIUS+get_player_height()));
 
 		if (dist_less_than(feet_pos, player_feet_pos, 1.2f*(person.radius + get_scaled_player_radius()))) { // intersecting the player
-			if (!check_for_wall_ceil_floor_int(person.pos, cur_player_building_loc.pos)) {
+			if (!check_for_wall_ceil_floor_int(person.pos, cur_player_building_loc.pos, 1)) { // inc_pg_br_walls=1
 				int const ret_status(register_ai_player_coll(person.has_key, person.get_height())); // return value: 0=no effect, 1=player is killed, 2=this person is killed
 				// player is killed, we could track kills here
 				if (ret_status == 1) {add_blood_decal(cur_player_building_loc.pos, get_scaled_player_radius());}

@@ -1336,11 +1336,21 @@ template <typename T> bool has_cube_line_coll(point const &p1, point const &p2, 
 	}
 	return 0;
 }
-bool building_t::check_for_wall_ceil_floor_int(point const &p1, point const &p2) const { // and interior doors
+bool building_t::check_for_wall_ceil_floor_int(point const &p1, point const &p2, bool inc_pg_br_walls) const { // and interior doors
 	if (!interior) return 0;
-	for (unsigned d = 0; d < 2; ++d) {if (has_cube_line_coll(p1, p2, interior->walls[d])) return 1;}
-	if (has_cube_line_coll(p1, p2, interior->fc_occluders)) return 1;
-	return check_line_intersect_doors(p1, p2);
+
+	for (unsigned d = 0; d < 2; ++d) {
+		if (has_cube_line_coll(p1, p2, interior->walls[d])) return 1;
+	}
+	if (p1.z != p2.z && has_cube_line_coll(p1, p2, interior->fc_occluders)) return 1; // skip for horizontal lines
+	if (check_line_intersect_doors(p1, p2)) return 1;
+
+	if (inc_pg_br_walls && has_parking_garage && has_room_geom() && min(p1.z, p2.z) < ground_floor_z1) {
+		for (unsigned d = 0; d < 2; ++d) {
+			if (has_cube_line_coll(p1, p2, interior->room_geom->pgbr_walls[d])) return 1;
+		}
+	}
+	return 0;
 }
 bool building_t::line_intersect_stairs_or_ramp(point const &p1, point const &p2) const {
 	if (!interior) return 0;
