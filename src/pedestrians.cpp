@@ -1606,7 +1606,7 @@ bool ped_manager_t::draw_ped(person_base_t const &ped, shader_t &s, pos_dir_up c
 		if (!pdu.sphere_visible_test(bcube.get_cube_center(), 0.5*ped.get_height())) return 0; // not visible - skip
 		if (!ped.in_building && dstate.is_occluded(bcube)) return 0; // only check occlusion for expensive ped models, and for peds outside buildings
 		end_sphere_draw(in_sphere_draw);
-		bool const low_detail(!shadow_only && dist_sq > 0.25*draw_dist_sq); // low detail for non-shadow pass at half draw dist
+		bool const low_detail(!shadow_only && !is_in_building && dist_sq > 0.25*draw_dist_sq); // low detail for non-shadow pass at half draw dist, if not in building
 		
 		if (anim_state) { // calculate/update animation data
 			// only consider the person as idle if there's an idle animation;
