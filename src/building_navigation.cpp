@@ -5,6 +5,7 @@
 #include "function_registry.h"
 #include "buildings.h"
 #include "city.h" // for person_t
+#include "profiler.h"
 #include <queue>
 
 
@@ -28,8 +29,60 @@ void maybe_play_zombie_sound(point const &sound_pos_bs, unsigned zombie_ix, bool
 int register_ai_player_coll(bool &has_key, float height);
 unsigned get_stall_cubes(room_object_t const &c, cube_t sides[3]);
 unsigned get_shower_cubes(room_object_t const &c, cube_t sides[2]);
+void resize_cubes_xy(vect_cube_t &cubes, float val);
 
 point get_cube_center_zval(cube_t const &c, float zval) {return point(c.xc(), c.yc(), zval);}
+float get_ped_coll_radius() {return COLL_RADIUS_SCALE*ped_manager_t::get_ped_radius();}
+
+class cube_nav_grid {
+	cube_t grid_bcube;
+	unsigned num[2] = {};
+	float   step[2] = {};
+	vector<uint8_t> nodes; // num[0] x num[1]; 0=blocked, 1=open
+
+	static bool pt_contained_xy(point const &pt, vect_cube_t const &cubes) {
+		for (cube_t const &c : cubes) {
+			if (c.contains_pt_xy(pt)) return 1;
+		}
+		return 0;
+	}
+	unsigned get_node_ix(unsigned x, unsigned y) const {assert(x < num[0] && y < num[1]); return (x + y* num[0]);}
+
+	point get_grid_pt(unsigned x, unsigned y) const {
+		return point((grid_bcube.x1() + x*step[0]), (grid_bcube.y1() + y*step[1]), grid_bcube.z1());
+	}
+public:
+	bool is_built() const {return !nodes.empty();}
+
+	void build(cube_t const &bcube, vect_cube_t const &blockers, float radius, float spacing) {
+		// determine grid size and allocate vectors
+		min_eq(spacing, 2.0f*radius); // spacing can't be further than the test diameter or we'll miss blockers in the gap
+		grid_bcube = bcube;
+		grid_bcube.expand_by_xy(-radius);
+		point const size(grid_bcube.get_size());
+		if (min(size.x, size.y) <= 2.0*spacing) return; // too small (error?)
+
+		for (unsigned d = 0; d < 2; ++d) {
+			num [d] = unsigned(ceil(size[d]/spacing));
+			step[d] = size[d]/(num[d] - 1);
+		}
+		nodes.resize(num[0]*num[1], 0);
+		//cout << TXT(blockers.size()) << TXT(num[0]) << TXT(num[1]) << TXT(nodes.size()) << endl;
+		// determine open nodes; edges are implicitly from adjacent 1 nodes
+		vect_cube_t blockers_exp(blockers);
+		resize_cubes_xy(blockers_exp, radius);
+
+		for (unsigned y = 0; y < num[1]; ++y) {
+			for (unsigned x = 0; x < num[0]; ++x) {
+				if (!pt_contained_xy(get_grid_pt(x, y), blockers_exp)) {nodes[get_node_ix(x, y)] = 1;}
+			}
+		}
+	}
+	bool find_path(point const &p1, point const &p2, vector<point> &path) const {
+		// TODO: WRITE
+		return 0;
+	}
+};
 
 // Note: this should go into building_t/buildings.h at some point, but is temporarily here
 class building_nav_graph_t {
@@ -63,6 +116,7 @@ class building_nav_graph_t {
 	float stairs_extend=0;
 	bool has_pg_ramp=0;
 	vector<node_t> nodes;
+	mutable cube_nav_grid nav_grid; // for use with backrooms; cached during path finding
 	node_t       &get_node(unsigned room)       {assert(room < nodes.size()); return nodes[room];}
 	node_t const &get_node(unsigned room) const {assert(room < nodes.size()); return nodes[room];}
 
@@ -328,6 +382,22 @@ public:
 			if (use_pos2) {path.push_back(best_pt2);}
 			return 1; // success
 		} // for npts
+		if (0 && building.is_room_backrooms(room_ix)) { // run detailed path finding on backrooms
+			if (!nav_grid.is_built()) { // build once and cache
+				highres_timer_t timer("Build Nav Grid");
+				vect_cube_t blockers;
+				
+				for (unsigned dim = 0; dim < 2; ++dim) { // combine into a single vector; no pillars
+					for (cube_t const &c : building.interior->room_geom->pgbr_walls[dim]) {
+						if (c.intersects(walk_area)) {blockers.push_back(c);} // backrooms walls only, no parking garage walls
+					}
+				}
+				float const radius(get_ped_coll_radius());
+				nav_grid.build(walk_area, blockers, radius, 1.5*radius);
+			}
+			if (nav_grid.find_path(p1, p2, path)) return 1;
+		}
+		// else, what about parking garages?
 		return 0; // failed
 	}
 	static point closest_room_pt(cube_t const &c, point const &pos) {
@@ -2003,8 +2073,6 @@ void building_t::register_person_hit(unsigned person_ix, room_object_t const &ob
 	if (obj.type != TYPE_LG_BALL) return; // currently this is the only throwable/dynamic object
 	if (maybe_zombie_retreat(person_ix, obj.get_cube_center())) {register_achievement("Zombie Bashing");}
 }
-
-float get_ped_coll_radius() {return COLL_RADIUS_SCALE*ped_manager_t::get_ped_radius();}
 
 /*static*/ float building_t::get_min_front_clearance_inc_people() {
 	float clearance(get_min_front_clearance());
