@@ -779,12 +779,16 @@ bool building_t::choose_dest_goal(person_t &person, rand_gen_t &rgen) const { //
 	return 1;
 }
 
+bool building_t::is_room_pg_or_backrooms(room_t const &room) const {
+	// return (has_parking_garage && room.z1() < ground_floor_z1); // is this as accurate?
+	return(room.get_room_type(0) == RTYPE_PARKING || (room.is_ext_basement() && interior->has_backrooms));
+}
 bool building_t::select_person_dest_in_room(person_t &person, rand_gen_t &rgen, room_t const &room) const {
 	float const height(0.7*get_window_vspace()), radius(COLL_RADIUS_SCALE*person.radius);
 	point dest_pos(room.get_cube_center());
 	static vect_cube_t avoid; // reuse across frames/people
 	get_avoid_cubes(person.target_pos.z, height, radius, avoid, 0); // following_player=0
-	bool const no_use_init(room.get_room_type(0) == RTYPE_PARKING); // don't use the room center for a parking garage
+	bool const no_use_init(is_room_pg_or_backrooms(room)); // don't use the room center for a parking garage or backrooms
 	if (!interior->nav_graph->find_valid_pt_in_room(avoid, *this, radius, height, person.target_pos.z, room, rgen, dest_pos, no_use_init)) return 0;
 	
 	if (!is_cube()) { // non-cube building
@@ -816,7 +820,9 @@ int building_t::choose_dest_room(person_t &person, rand_gen_t &rgen) const { // 
 	float const floor_spacing(get_window_vspace());
 
 	// maybe choose a destination elevator (for office buildings) if our prev dest wasn't an elevator
-	if (!is_house && !interior->elevators_disabled && !person.last_used_elevator && person.goal_type != GOAL_TYPE_ELEVATOR && global_building_params.elevator_capacity > 0) {
+	if (!is_house && !person.is_first_path && !interior->elevators_disabled && !person.last_used_elevator &&
+		person.goal_type != GOAL_TYPE_ELEVATOR && global_building_params.elevator_capacity > 0)
+	{
 		if (global_building_params.use_elevator_prob >= 1.0 || (global_building_params.use_elevator_prob > 0.0 && rgen.rand_float() < global_building_params.use_elevator_prob)) {
 			int const nearest_elevator(find_nearest_elevator_this_floor(person.pos));
 
@@ -835,6 +841,13 @@ int building_t::choose_dest_room(person_t &person, rand_gen_t &rgen) const { // 
 					return 1;
 				}
 			}
+		}
+	}
+	if (is_pos_in_pg_or_backrooms(person.pos)) {
+		if (person.cur_room >= 0 && (person.is_first_path || rgen.rand_float() < 0.75)) { // stay in this room 75% of the time, always on the first path
+			person.is_first_path = 0; // respect the walls
+			if (select_person_dest_in_room(person, rgen, get_room(person.cur_room))) return 1;
+			// if we failed above (for example, stuck inside a small sub-room), we'll walk through the walls to get out of the room
 		}
 	}
 
@@ -880,12 +893,12 @@ int building_t::choose_dest_room(person_t &person, rand_gen_t &rgen) const { // 
 		person.goal_type = GOAL_TYPE_ROOM;
 		return 1;
 	} // for n
-	if (loc.room_ix < 0) return 2; // failed - room not vali (error?)
+	if (loc.room_ix < 0) return 2; // failed - room not valid (error?)
 	room_t const &room(get_room(loc.room_ix));
-	bool const is_parking_garage(room.get_room_type(0) == RTYPE_PARKING);
+	bool const is_single_large_room(is_room_pg_or_backrooms(room));
 
 	// how about a different floor of the same room? only check this 50% of the time for parking garages to allow movement within a level
-	if (room.has_stairs == 255 && (!is_parking_garage || rgen.rand_bool())) {
+	if (room.has_stairs == 255 && (!is_single_large_room || rgen.rand_bool())) {
 		float const new_z(person.target_pos.z + (rgen.rand_bool() ? -1.0 : 1.0)*floor_spacing); // one floor above or below
 
 		if (new_z > room.z1() && new_z < room.z2()) { // valid if this floor is inside the room
@@ -894,7 +907,7 @@ int building_t::choose_dest_room(person_t &person, rand_gen_t &rgen) const { // 
 		}
 	}
 	// how about a different location in the same room? this will at least get the person unstuck from an object and moving inside a parking garage
-	if (person.is_first_path || is_parking_garage) {
+	if (person.is_first_path || is_single_large_room) {
 		if (select_person_dest_in_room(person, rgen, room)) return 1;
 	}
 	return 2; // failed, but can retry
@@ -1676,7 +1689,8 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 			return AI_STOP;
 		}
 		if (!find_route_to_point(person, coll_dist, person.is_first_path, 0, person.path)) { // following_player=0
-			person.wait_for(1.0); // stop for 1 second, then try again
+			float const wait_time(is_pos_in_pg_or_backrooms(person.pos) ? 0.05 : 1.0);
+			person.wait_for(wait_time); // stop for 1 second (0.1s for parking garage or backrooms), then try again
 			return AI_WAITING;
 		}
 		if (has_rgeom) {person.is_first_path = 0;} // treat the path as the first path until room geom is generated

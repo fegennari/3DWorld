@@ -1548,6 +1548,8 @@ private:
 	bool is_valid_ai_placement(point const &pos, float radius, bool skip_nocoll) const;
 	bool choose_dest_goal(person_t &person, rand_gen_t &rgen) const;
 	int  choose_dest_room(person_t &person, rand_gen_t &rgen) const;
+	bool is_room_pg_or_backrooms(room_t const &room) const;
+	bool is_pos_in_pg_or_backrooms(point const &pos) const {return (has_parking_garage && pos.z < ground_floor_z1);}
 	bool select_person_dest_in_room(person_t &person, rand_gen_t &rgen, room_t const &room) const;
 	void get_avoid_cubes(float zval, float height, float radius, vect_cube_t &avoid, bool following_player, cube_t const *const fires_select_cube=nullptr) const;
 	bool find_route_to_point(person_t const &person, float radius, bool is_first_path, bool following_player, vector<point> &path) const;
