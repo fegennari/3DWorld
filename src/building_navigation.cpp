@@ -387,13 +387,11 @@ public:
 			if (!nav_grid.is_built()) { // build once and cache
 				highres_timer_t timer("Build Nav Grid");
 				vect_cube_t blockers;
-#if 1
+				blockers.reserve(avoid.size());
+
 				for (cube_t const &c : avoid) {
 					if (c.intersects(walk_area)) {blockers.push_back(c);}
 				}
-#else
-				building.get_backroom_blockers(blockers);
-#endif
 				float const radius(get_ped_coll_radius());
 				nav_grid.build(walk_area, blockers, radius, 1.5*radius);
 			}

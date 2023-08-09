@@ -2441,17 +2441,6 @@ bool building_room_geom_t::cube_int_backrooms_walls(cube_t const &c) const { // 
 	}
 	return 0;
 }
-void building_room_geom_t::get_backroom_blockers(vect_cube_t &blockers) const {
-	assert(backrooms_start <= objs.size());
-
-	for (auto i = objs.begin()+backrooms_start; i != objs.end(); ++i) {
-		if (!(i->flags & RO_FLAG_BACKROOM)) break; // out of backrooms objects range, done
-		if (!i->no_coll()) {blockers.push_back(*i);}
-	}
-}
-void building_t::get_backroom_blockers(vect_cube_t &blockers) const {
-	if (has_room_geom() && interior->has_backrooms) {interior->room_geom->get_backroom_blockers(blockers);}
-}
 
 cube_t building_t::get_bcube_inc_extensions() const {
 	cube_t ret(bcube);
