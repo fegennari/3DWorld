@@ -303,6 +303,7 @@ public:
 		}
 		return 0;
 	}
+	// add any necessary points to <path> that are required to get from <p1> to <p2> inside <walk_area> without intersecting <avoid>
 	bool connect_room_endpoints(vect_cube_t const &avoid, building_t const &building, cube_t const &walk_area, unsigned room_ix, point const &p1, point const &p2,
 		float radius, vector<point> &path, vect_cube_t &keepout, rand_gen_t &rgen, bool ignore_p1_coll=0, bool ignore_p2_coll=0) const
 	{
@@ -386,12 +387,13 @@ public:
 			if (!nav_grid.is_built()) { // build once and cache
 				highres_timer_t timer("Build Nav Grid");
 				vect_cube_t blockers;
-				
-				for (unsigned dim = 0; dim < 2; ++dim) { // combine into a single vector; no pillars
-					for (cube_t const &c : building.interior->room_geom->pgbr_walls[dim]) {
-						if (c.intersects(walk_area)) {blockers.push_back(c);} // backrooms walls only, no parking garage walls
-					}
+#if 1
+				for (cube_t const &c : avoid) {
+					if (c.intersects(walk_area)) {blockers.push_back(c);}
 				}
+#else
+				building.get_backroom_blockers(blockers);
+#endif
 				float const radius(get_ped_coll_radius());
 				nav_grid.build(walk_area, blockers, radius, 1.5*radius);
 			}

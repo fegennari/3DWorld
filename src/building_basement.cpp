@@ -2178,7 +2178,7 @@ struct cube_by_xy_dim {
 };
 
 void building_t::add_backrooms_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id) {
-	highres_timer_t timer("Add Backrooms Objs"); // up to ~2ms
+	//highres_timer_t timer("Add Backrooms Objs"); // up to ~2ms
 	assert(has_room_geom());
 	float const floor_spacing(get_window_vspace()), wall_thickness(1.2*get_wall_thickness()), wall_half_thick(0.5*wall_thickness); // slightly thicker than regular walls
 	float const ceiling_z(zval + get_floor_ceil_gap()); // Note: zval is at floor level, not at the bottom of the room
@@ -2309,7 +2309,7 @@ void building_t::add_backrooms_objs(rand_gen_t rgen, room_t const &room, float z
 					if (hit && adj.back().len() < min_shared_edge) {adj.pop_back();} // remove if too short
 				} // for gix
 				if (adj.size() <= 1) continue; // not adjacent to multiple space group
-				//objs.emplace_back(query, TYPE_DBG_SHAPE, room_id, 0, 0, RO_FLAG_NOCOLL, 1.0, SHAPE_CUBE, RED); // TESTING
+				//objs.emplace_back(query, TYPE_DBG_SHAPE, room_id, 0, 0, (RO_FLAG_NOCOLL | RO_FLAG_BACKROOM), 1.0, SHAPE_CUBE, RED); // TESTING
 				doors_to_add.clear();
 
 				// test every pair of groups
@@ -2358,7 +2358,7 @@ void building_t::add_backrooms_objs(rand_gen_t rgen, room_t const &room, float z
 					// add a blocker so that no ceiling lights are placed in the path of this door
 					cube_t blocker(door);
 					blocker.d[dim][open_dir] += (open_dir ? 1.0 : -1.0)*doorway_width; // add clearance in front
-					objs.emplace_back(blocker, TYPE_BLOCKER, room_id, dim, 0, RO_FLAG_BACKROOM, tot_light_amt);
+					objs.emplace_back(blocker, TYPE_BLOCKER, room_id, dim, 0, (RO_FLAG_NOCOLL | RO_FLAG_BACKROOM), tot_light_amt);
 					// keep other doors from opening into this door's space
 					cube_t keepout(door);
 					keepout.expand_in_dim(dim, doorway_width); // don't block either end
@@ -2440,6 +2440,17 @@ bool building_room_geom_t::cube_int_backrooms_walls(cube_t const &c) const { // 
 		if (has_bcube_int(c, pgbr_walls[d])) return 1;
 	}
 	return 0;
+}
+void building_room_geom_t::get_backroom_blockers(vect_cube_t &blockers) const {
+	assert(backrooms_start <= objs.size());
+
+	for (auto i = objs.begin()+backrooms_start; i != objs.end(); ++i) {
+		if (!(i->flags & RO_FLAG_BACKROOM)) break; // out of backrooms objects range, done
+		if (!i->no_coll()) {blockers.push_back(*i);}
+	}
+}
+void building_t::get_backroom_blockers(vect_cube_t &blockers) const {
+	if (has_room_geom() && interior->has_backrooms) {interior->room_geom->get_backroom_blockers(blockers);}
 }
 
 cube_t building_t::get_bcube_inc_extensions() const {

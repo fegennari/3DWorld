@@ -867,6 +867,7 @@ struct building_room_geom_t {
 	vect_room_object_t::const_iterator get_placed_objs_end() const {return (objs.begin() + buttons_start);} // excludes buttons, stairs, and elevators
 	vect_room_object_t::const_iterator get_stairs_start   () const {return (objs.begin() + stairs_start );} // excludes stairs
 	bool cube_int_backrooms_walls(cube_t const &c) const;
+	void get_backroom_blockers(vect_cube_t &blockers) const;
 	// Note: these functions are all for drawing objects / adding them to the vertex list
 	void add_tc_legs(cube_t const &c, colorRGBA const &color, float width, float tscale, bool use_metal_mat=0, bool draw_tops=0, float frame_height=0.0);
 	void add_table(room_object_t const &c, float tscale, float top_dz, float leg_width);
@@ -1547,6 +1548,7 @@ struct building_t : public building_geom_t {
 	//bool is_room_pg_or_backrooms(unsigned room_ix) const {return is_room_pg_or_backrooms(get_room(room_ix));}
 	bool is_room_backrooms(unsigned room_ix)   const {return is_room_backrooms(get_room(room_ix));}
 	bool is_room_backrooms(room_t const &room) const {return (interior && room.is_ext_basement() && interior->has_backrooms);}
+	void get_backroom_blockers(vect_cube_t &blockers) const;
 private:
 	void build_nav_graph() const;
 	bool is_valid_ai_placement(point const &pos, float radius, bool skip_nocoll) const;
