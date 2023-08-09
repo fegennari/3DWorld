@@ -646,7 +646,7 @@ public:
 		//cout << "start: " << start.size() << ", goal: mode: " << goal.mode << ", pos: " << goal.pos.str() << ", wpt: " << goal.wpt << endl;
 		if (int(goal.wpt) < 0) return 0.0; // no current waypoint, maybe none visible (this code may be unreachable)
 		std::priority_queue<pair<float, unsigned> > open_queue;
-		wc.open.resize(waypoints.size(), 0); // already resized after the first call
+		wc.open  .resize(waypoints.size(), 0); // already resized after the first call
 		wc.closed.resize(waypoints.size(), 0);
 		++wc.call_ix;
 

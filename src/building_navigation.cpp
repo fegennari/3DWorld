@@ -106,10 +106,9 @@ class building_nav_graph_t {
 		}
 	};
 	struct a_star_node_state_t {
-		int came_from_ix;
+		int came_from_ix=-1;
 		point path_pt;
-		float g_score, h_score, f_score;
-		a_star_node_state_t() : came_from_ix(-1), g_score(0), h_score(0), f_score(0) {}
+		float g_score=0.0, h_score=0.0, f_score=0.0;
 	};
 
 	unsigned num_rooms=0, num_stairs=0;
@@ -553,7 +552,6 @@ public:
 		while (!open_queue.empty()) {
 			unsigned const cur(open_queue.top().second);
 			open_queue.pop();
-			assert(!closed[cur]);
 			node_t const &cur_node(get_node(cur));
 			point const center(cur_node.get_center(cur_pt.z));
 			assert(!closed[cur]);
