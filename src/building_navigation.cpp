@@ -89,6 +89,16 @@ class cube_nav_grid {
 		} // for y
 		return found;
 	}
+	bool can_extend_path(vector<point> const &path, point const &path_pt, unsigned rev_start_ix) const {
+		if (path.size() <= rev_start_ix+1) return 0; // no previous point to use
+		point const &prev_pt(path[path.size()-2]);
+		cube_t const check_cube(prev_pt, path_pt);
+
+		for (cube_t const &c : blockers_exp) {
+			if (c.intersects(check_cube) && check_line_clip_xy(prev_pt, path_pt, c.d)) return 0; // blocked
+		}
+		return 1;
+	}
 public:
 	bool is_built() const {return !bcube.is_all_zeros();}
 
@@ -165,8 +175,8 @@ public:
 					sn.set(cur.x, cur.y, new_x, new_y);
 
 					if (new_ix == end_ix) { // done, reconstruct path (in reverse)
-						path.push_back(get_grid_pt(nx1, ny1, p1.z)); // first point
 						unsigned const rev_start_ix(path.size());
+						path.push_back(get_grid_pt(nx2, ny2, p1.z)); // last point, added first
 						unsigned path_ix(cur_ix), prev_x(new_x), prev_y(new_y);
 						int prev_dx(0), prev_dy(0); // starts at an invalid value so that the first point is always added
 
@@ -177,27 +187,21 @@ public:
 							assert(xn >= 0 && yn >= 0);
 							assert(xn != prev_x || yn != prev_y); // must have a delta
 							point const path_pt(get_grid_pt(xn, yn, p1.z));
-							// smooth path by removing colinear segments and merging unblocked segments
+							// smooth path by removing colinear points and merging unblocked segments
 							int dx(xn - int(prev_x)), dy(yn - int(prev_y));
-							bool extend(0), blocked(0);
-							
+							bool extend(0);
 							if (dx == prev_dx && dy == prev_dy) {extend = 1;} // same angle
-							else if (path.size() > rev_start_ix+1) { // straighten if the line from the point before this to the next point is unblocked
-								point const &prev_pt(path[path.size()-2]);
-								cube_t const check_cube(prev_pt, path_pt);
-								
-								for (cube_t const &c : blockers_exp) {
-									if (c.intersects(check_cube) && check_line_clip_xy(prev_pt, path_pt, c.d)) {blocked = 1; break;}
-								}
-								if (!blocked) {extend = 1; dx = dy = 0;} // clear deltas so that we don't try to extend the next point based on angle
-							}
+							// straighten if the line from the point before this to the next point is unblocked
+							else if (can_extend_path(path, path_pt, rev_start_ix)) {extend = 1; dx = dy = 0;} // clear deltas; don't extend next point based on angle
 							if (extend) {path.back() = path_pt;} // extend previous point
 							else {path.push_back(path_pt);} // add new point
 							path_ix = get_node_ix(xn, yn);
 							prev_x = xn; prev_y = yn; prev_dx = dx; prev_dy = dy;
 						} // end while()
+						point const fin_pt(get_grid_pt(nx1, ny1, p1.z)); // first point, added last
+						if (can_extend_path(path, fin_pt, rev_start_ix)) {path.back() = fin_pt;}
+						else {path.push_back(fin_pt);}
 						reverse(path.begin()+rev_start_ix, path.end());
-						path.push_back(get_grid_pt(nx2, ny2, p1.z)); // last point
 						//cout << "success: " << path.size() << endl;
 						return 1; // success
 					}
