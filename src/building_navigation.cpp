@@ -165,15 +165,22 @@ public:
 					if (new_ix == end_ix) { // done, reconstruct path (in reverse)
 						path.push_back(get_grid_pt(nx1, ny1, p1.z)); // first point
 						unsigned const rev_start_ix(path.size());
-						unsigned path_ix(cur_ix);
+						unsigned path_ix(cur_ix), prev_x(new_x), prev_y(new_y);
+						int prev_dx(0), prev_dy(0); // starts at an invalid value so that the first point is always added
 
 						while (path_ix != start_ix) {
 							assert(path_ix < state.size());
 							a_star_node_state_t &sp(state[path_ix]);
-							assert(sp.came_from[0] >= 0 && sp.came_from[1] >= 0);
-							// TODO: smooth path by removing colinear segments
-							path.push_back(get_grid_pt(sp.came_from[0], sp.came_from[1], p1.z));
-							path_ix = get_node_ix(sp.came_from[0], sp.came_from[1]);
+							int const xn(sp.came_from[0]), yn(sp.came_from[1]);
+							assert(xn >= 0 && yn >= 0);
+							assert(xn != prev_x || yn != prev_y); // must have a delta
+							point const path_pt(get_grid_pt(xn, yn, p1.z));
+							// smooth path by removing colinear segments
+							int const dx(xn - int(prev_x)), dy(yn - int(prev_y));
+							if (dx == prev_dx && dy == prev_dy) {path.back() = path_pt;} // same angle, extend previous point
+							else {path.push_back(path_pt);} // add new point
+							path_ix = get_node_ix(xn, yn);
+							prev_x = xn; prev_y = yn; prev_dx = dx; prev_dy = dy;
 						} // end while()
 						reverse(path.begin()+rev_start_ix, path.end());
 						path.push_back(get_grid_pt(nx2, ny2, p1.z)); // last  point
