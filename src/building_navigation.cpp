@@ -40,6 +40,7 @@ class cube_nav_grid {
 	unsigned num[2] = {};
 	float   step[2] = {};
 	vector<uint8_t> nodes; // num[0] x num[1]; 0=blocked, 1=open
+	vect_cube_t blockers_exp;
 
 	struct ix_pair_t {
 		unsigned x, y;
@@ -108,8 +109,9 @@ public:
 		nodes.resize(num[0]*num[1], 0);
 		//cout << TXT(blockers.size()) << TXT(num[0]) << TXT(num[1]) << TXT(nodes.size()) << endl;
 		// determine open nodes; edges are implicitly from adjacent 1 nodes
-		vect_cube_t blockers_exp(blockers), row_blockers;
+		blockers_exp = blockers;
 		resize_cubes_xy(blockers_exp, radius);
+		vect_cube_t row_blockers;
 
 		for (unsigned y = 0; y < num[1]; ++y) {
 			float const yval(grid_bcube.y1() + y*step[1]);
@@ -175,15 +177,27 @@ public:
 							assert(xn >= 0 && yn >= 0);
 							assert(xn != prev_x || yn != prev_y); // must have a delta
 							point const path_pt(get_grid_pt(xn, yn, p1.z));
-							// smooth path by removing colinear segments
-							int const dx(xn - int(prev_x)), dy(yn - int(prev_y));
-							if (dx == prev_dx && dy == prev_dy) {path.back() = path_pt;} // same angle, extend previous point
+							// smooth path by removing colinear segments and merging unblocked segments
+							int dx(xn - int(prev_x)), dy(yn - int(prev_y));
+							bool extend(0), blocked(0);
+							
+							if (dx == prev_dx && dy == prev_dy) {extend = 1;} // same angle
+							else if (path.size() > rev_start_ix+1) { // straighten if the line from the point before this to the next point is unblocked
+								point const &prev_pt(path[path.size()-2]);
+								cube_t const check_cube(prev_pt, path_pt);
+								
+								for (cube_t const &c : blockers_exp) {
+									if (c.intersects(check_cube) && check_line_clip_xy(prev_pt, path_pt, c.d)) {blocked = 1; break;}
+								}
+								if (!blocked) {extend = 1; dx = dy = 0;} // clear deltas so that we don't try to extend the next point based on angle
+							}
+							if (extend) {path.back() = path_pt;} // extend previous point
 							else {path.push_back(path_pt);} // add new point
 							path_ix = get_node_ix(xn, yn);
 							prev_x = xn; prev_y = yn; prev_dx = dx; prev_dy = dy;
 						} // end while()
 						reverse(path.begin()+rev_start_ix, path.end());
-						path.push_back(get_grid_pt(nx2, ny2, p1.z)); // last  point
+						path.push_back(get_grid_pt(nx2, ny2, p1.z)); // last point
 						//cout << "success: " << path.size() << endl;
 						return 1; // success
 					}
