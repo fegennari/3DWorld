@@ -405,13 +405,13 @@ typedef uint8_t room_obj_shape;
 
 enum {RTYPE_NOTSET=0, RTYPE_HALL, RTYPE_STAIRS, RTYPE_OFFICE, RTYPE_BATH, RTYPE_BED, RTYPE_KITCHEN, RTYPE_LIVING, RTYPE_DINING, RTYPE_STUDY,
 	  RTYPE_ENTRY, RTYPE_LIBRARY, RTYPE_STORAGE, RTYPE_GARAGE, RTYPE_SHED, RTYPE_LOBBY, RTYPE_LAUNDRY, RTYPE_CARD, RTYPE_PLAY, RTYPE_ART,
-	  RTYPE_UTILITY, RTYPE_PARKING, RTYPE_RAMP_EXIT, RTYPE_ATTIC, RTYPE_MASTER_BED, RTYPE_UNFINISHED, RTYPE_SERVER, NUM_RTYPES};
+	  RTYPE_UTILITY, RTYPE_PARKING, RTYPE_RAMP_EXIT, RTYPE_ATTIC, RTYPE_MASTER_BED, RTYPE_UNFINISHED, RTYPE_SERVER, RTYPE_BACKROOMS, NUM_RTYPES};
 typedef uint8_t room_type;
 
 std::string const room_names[NUM_RTYPES] =
 	{"Unset", "Hallway", "Stairs", "Office", "Bathroom", "Bedroom", "Kitchen", "Living Room", "Dining Room", "Study",
 	 "Entryway", "Library", "Storage Room", "Garage", "Shed", "Lobby", "Laundry Room", "Card Room", "Play Room", "Art Room",
-	 "Utility Room", "Parking Garage", "Ramp Exit", "Attic", "Master Bedroom", "Unfinished Room", "Server Room"};
+	 "Utility Room", "Parking Garage", "Ramp Exit", "Attic", "Master Bedroom", "Unfinished Room", "Server Room", "Backrooms"};
 
 enum {SHAPE_STRAIGHT=0, SHAPE_U, SHAPE_WALLED, SHAPE_WALLED_SIDES, SHAPE_RAMP};
 typedef uint8_t stairs_shape;
@@ -1546,7 +1546,7 @@ struct building_t : public building_geom_t {
 	void register_person_hit(unsigned person_ix, room_object_t const &obj, vector3d const &velocity);
 	//bool is_room_pg_or_backrooms(unsigned room_ix) const {return is_room_pg_or_backrooms(get_room(room_ix));}
 	bool is_room_backrooms(unsigned room_ix)   const {return is_room_backrooms(get_room(room_ix));}
-	bool is_room_backrooms(room_t const &room) const {return (interior && room.is_ext_basement() && interior->has_backrooms);}
+	bool is_room_backrooms(room_t const &room) const {return (room.get_room_type(0) == RTYPE_BACKROOMS);}
 private:
 	void build_nav_graph() const;
 	bool is_valid_ai_placement(point const &pos, float radius, bool skip_nocoll) const;
