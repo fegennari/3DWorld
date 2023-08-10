@@ -2358,7 +2358,7 @@ void building_t::add_backrooms_objs(rand_gen_t rgen, room_t const &room, float z
 					// add a blocker so that no ceiling lights are placed in the path of this door
 					cube_t blocker(door);
 					blocker.d[dim][open_dir] += (open_dir ? 1.0 : -1.0)*doorway_width; // add clearance in front
-					objs.emplace_back(blocker, TYPE_BLOCKER, room_id, dim, 0, (RO_FLAG_NOCOLL | RO_FLAG_BACKROOM), tot_light_amt);
+					objs.emplace_back(blocker, TYPE_BLOCKER, room_id, dim, 0, (RO_FLAG_INVIS | RO_FLAG_BACKROOM), tot_light_amt);
 					// keep other doors from opening into this door's space
 					cube_t keepout(door);
 					keepout.expand_in_dim(dim, doorway_width); // don't block either end
