@@ -91,12 +91,12 @@ class cube_nav_grid {
 public:
 	bool is_built() const {return !bcube.is_all_zeros();}
 
-	void build(cube_t const &bcube_, vect_cube_t const &blockers, float radius_, float spacing) {
+	void build(cube_t const &bcube_, vect_cube_t const &blockers, float radius_) {
 		radius     = radius_;
 		bcube      = bcube_;
 		grid_bcube = bcube;
 		// determine grid size and allocate vectors
-		min_eq(spacing, 2.0f*radius); // spacing can't be further than the test diameter or we'll miss blockers in the gap
+		float const spacing(SQRT2*radius); // can't be further than the test diameter or we'll miss blockers in the gap; use sqrt(2) to make spheres diagonally tangential
 		grid_bcube.expand_by_xy(-radius);
 		point const size(grid_bcube.get_size());
 		if (min(size.x, size.y) <= 2.0*spacing) return; // too small (error?)
@@ -127,8 +127,7 @@ public:
 		if (!find_open_node_closest_to(p1, nx1, ny1) || !find_open_node_closest_to(p2, nx2, ny2)) return 0;
 		// does it make sense to use A* rather than Dijkstra? maybe not because paths will generally be short compared to the number of total nodes
 		unsigned start_ix(get_node_ix(nx1, ny1)), end_ix(get_node_ix(nx2, ny2));
-		// TODO: replace dense vector with hash_map?
-		vector<a_star_node_state_t> state(nodes.size());
+		vector<a_star_node_state_t> state(nodes.size()); // dense vector; unordered_map seems to be slower
 		vector<uint8_t> open(nodes.size(), 0), closed(nodes.size(), 0); // tentative/already evaluated nodes
 		std::priority_queue<pair<float, ix_pair_t> > open_queue;
 		a_star_node_state_t &start(state[start_ix]);
@@ -145,10 +144,10 @@ public:
 			closed[cur_ix] = 1;
 			open  [cur_ix] = 0;
 
-			for (unsigned dim = 0; dim < 2; ++dim) {
-				for (unsigned dir = 0; dir < 2; ++dir) {
-					unsigned new_x(cur.x), new_y(cur.y);
-					(dim ? new_y : new_x) += (dir ? 1 : -1); // may wrap around to 2^32
+			for (int dy = -1; dy <= 1; ++dy) { // check 3x3 grid except center
+				for (int dx = -1; dx <= 1; ++dx) {
+					if (dx == 0 && dy == 0) continue; // skip self
+					unsigned const new_x(cur.x + dx), new_y(cur.y + dy); // may wrap around to 2^32
 					if (!are_ixs_valid(new_x, new_y)) continue; // off the grid
 					unsigned const new_ix(get_node_ix(new_x, new_y));
 					if (closed[new_ix]) continue; // already closed (duplicate)
@@ -181,8 +180,8 @@ public:
 					sn.h_score = get_distance(new_x, new_y, nx2, ny2);
 					sn.f_score = sn.g_score + sn.h_score;
 					open_queue.push(make_pair(-sn.f_score, ix_pair_t(new_x, new_y)));
-				} // for dir
-			} // for dim
+				} // for dx
+			} // for dy
 		} // end while()
 		//cout << "failed" << endl;
 		return 0; // failed - no path from room1 to room2
@@ -497,7 +496,7 @@ public:
 					if (c.intersects(walk_area)) {blockers.push_back(c);}
 				}
 				float const radius(get_ped_coll_radius());
-				nav_grid.build(walk_area, blockers, radius, 1.5*radius);
+				nav_grid.build(walk_area, blockers, radius);
 			}
 			if (nav_grid.find_path(p1, p2, path)) return 1;
 		}
