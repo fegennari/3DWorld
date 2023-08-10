@@ -74,7 +74,7 @@ bool waypt_used_set::is_valid(unsigned wp) { // called to determine whether or n
 
 waypoint_t::waypoint_t(point const &p, int cid, bool up, bool i, bool g, bool t)
 	: user_placed(up), placed_item(i), goal(g), temp(t), visited(0), disabled(0), next_valid(0),
-	came_from(-1), item_group(-1), item_ix(-1), coll_id(cid), connected_to(-1), g_score(0), h_score(0), f_score(0), pos(p)
+	came_from(-1), item_group(-1), item_ix(-1), coll_id(cid), connected_to(-1), g_score(0), f_score(0), pos(p)
 {
 	clear();
 }
@@ -655,9 +655,8 @@ public:
 			assert(ix < waypoints.size());
 			waypoint_t &w(waypoints[ix]);
 			w.g_score   = i->second; // cost from start along best known path
-			w.h_score   = get_h_dist(ix);
-			//if (wps_penalty.find(ix) != wps_penalty.end()) {w.h_score *= 10.0;} // distance penalty for this waypoint
-			w.f_score   = w.h_score; // estimated total cost from start to goal through current
+			w.f_score   = get_h_dist(ix); // estimated total cost from start to goal through current
+			//if (wps_penalty.find(ix) != wps_penalty.end()) {w.f_score *= 10.0;} // distance penalty for this waypoint
 			w.came_from = -1;
 
 			if (is_goal(ix)) { // already at the goal
@@ -699,8 +698,7 @@ public:
 				else if (new_g_score >= wn.g_score) continue; // not better
 				wn.came_from = cur;
 				wn.g_score   = new_g_score;
-				wn.h_score   = get_h_dist(*i);
-				wn.f_score   = wn.g_score + wn.h_score;
+				wn.f_score   = wn.g_score + get_h_dist(*i);
 				open_queue.push(make_pair(-wn.f_score, *i));
 			} // for i
 		} // end while()

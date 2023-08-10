@@ -56,7 +56,7 @@ struct waypoint_t {
 
 	bool user_placed, placed_item, goal, temp, visited, disabled, next_valid;
 	int came_from, item_group, item_ix, coll_id, connected_to;
-	float g_score, h_score, f_score;
+	float g_score, f_score;
 	point pos;
 	double last_smiley_time;
 	waypt_adj_vect next_wpts, prev_wpts;

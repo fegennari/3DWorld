@@ -49,7 +49,7 @@ class cube_nav_grid {
 	struct a_star_node_state_t {
 		int came_from[2] = {-1,-1};
 		unsigned xy[2] = {0,0};
-		float g_score=0.0, h_score=0.0, f_score=0.0;
+		float g_score=0.0, f_score=0.0;
 		void set(unsigned from_x, unsigned from_y, unsigned x, unsigned y) {came_from[0] = from_x; came_from[1] = from_y; xy[0] = x; xy[1] = y;}
 	};
 	static bool pt_contained_xy(point const &pt, vect_cube_t const &cubes) {
@@ -137,7 +137,7 @@ public:
 		std::priority_queue<pair<float, ix_pair_t> > open_queue;
 		a_star_node_state_t &start(state[start_ix]);
 		start.g_score  = 0.0;
-		start.h_score  = start.f_score = get_distance(nx1, ny1, nx2, ny2); // estimated total cost from start to end
+		start.f_score  = get_distance(nx1, ny1, nx2, ny2); // estimated total cost from start to end
 		open[start_ix] = 1;
 		open_queue.push(make_pair(-start.f_score, ix_pair_t(nx1, ny1)));
 
@@ -182,8 +182,7 @@ public:
 						return 1; // success
 					}
 					sn.g_score = new_g_score;
-					sn.h_score = get_distance(new_x, new_y, nx2, ny2);
-					sn.f_score = sn.g_score + sn.h_score;
+					sn.f_score = sn.g_score + get_distance(new_x, new_y, nx2, ny2);
 					open_queue.push(make_pair(-sn.f_score, ix_pair_t(new_x, new_y)));
 				} // for dx
 			} // for dy
@@ -217,7 +216,7 @@ class building_nav_graph_t {
 	struct a_star_node_state_t {
 		int came_from_ix=-1;
 		point path_pt;
-		float g_score=0.0, h_score=0.0, f_score=0.0;
+		float g_score=0.0, f_score=0.0;
 	};
 
 	unsigned num_rooms=0, num_stairs=0;
@@ -654,7 +653,7 @@ public:
 		point const dest_pos(get_node(room2).get_center(cur_pt.z)); // Note: approximate, actual dest may be different
 		a_star_node_state_t &start(state[room1]);
 		start.g_score = 0.0;
-		start.h_score = start.f_score = p2p_dist_xy(get_node(room1).get_center(cur_pt.z), dest_pos); // estimated total cost from start to goal through current
+		start.f_score = p2p_dist_xy(get_node(room1).get_center(cur_pt.z), dest_pos); // estimated total cost from start to goal through current
 		open[room1]   = 1;
 		open_queue.push(make_pair(-start.f_score, room1));
 
@@ -686,8 +685,7 @@ public:
 					return reconstruct_path(state, avoid, building, cur_pt, radius, height, i->ix, room1, ped_ix, is_first_path, up_or_down, ped_rseed, custom_dest, path);
 				}
 				sn.g_score = new_g_score;
-				sn.h_score = p2p_dist_xy(conn_center, dest_pos);
-				sn.f_score = sn.g_score + sn.h_score;
+				sn.f_score = sn.g_score + p2p_dist_xy(conn_center, dest_pos);
 				open_queue.push(make_pair(-sn.f_score, i->ix));
 			} // for i
 		} // end while()
