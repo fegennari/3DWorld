@@ -108,20 +108,25 @@ public:
 		nodes.resize(num[0]*num[1], 0);
 		//cout << TXT(blockers.size()) << TXT(num[0]) << TXT(num[1]) << TXT(nodes.size()) << endl;
 		// determine open nodes; edges are implicitly from adjacent 1 nodes
-		vect_cube_t blockers_exp(blockers);
+		vect_cube_t blockers_exp(blockers), row_blockers;
 		resize_cubes_xy(blockers_exp, radius);
 
 		for (unsigned y = 0; y < num[1]; ++y) {
-			// TODO: extract temp vector of blocker cubes intersecting this Y slice
+			float const yval(grid_bcube.y1() + y*step[1]);
+			row_blockers.clear();
+
+			for (cube_t const &c : blockers_exp) {
+				if (c.y1() < yval && c.y2() > yval) {row_blockers.push_back(c);} // include if it spans yval
+			}
 			for (unsigned x = 0; x < num[0]; ++x) {
-				if (!pt_contained_xy(get_grid_pt(x, y), blockers_exp)) {nodes[get_node_ix(x, y)] = 1;}
+				if (!pt_contained_xy(get_grid_pt(x, y), row_blockers)) {nodes[get_node_ix(x, y)] = 1;}
 			}
 		}
 	}
 	bool find_path(point const &p1, point const &p2, vector<point> &path) const {
 		assert(is_built());
 		if (nodes.empty()) return 0; // not built or too small/empty
-		//highres_timer_t timer("Find Path");
+		//highres_timer_t timer("Find Path"); // <= 0.5ms
 		assert(p1.z == p2.z); // must be horizontal
 		unsigned nx1(0), ny1(0), nx2(0), ny2(0);
 		if (!find_open_node_closest_to(p1, nx1, ny1) || !find_open_node_closest_to(p2, nx2, ny2)) return 0;
@@ -488,7 +493,7 @@ public:
 		} // for npts
 		if (0 && building.is_room_backrooms(room_ix)) { // run detailed path finding on backrooms
 			if (!nav_grid.is_built()) { // build once and cache
-				highres_timer_t timer("Build Nav Grid");
+				//highres_timer_t timer("Build Nav Grid");
 				vect_cube_t blockers;
 				blockers.reserve(avoid.size());
 
