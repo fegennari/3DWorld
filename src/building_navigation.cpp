@@ -126,7 +126,7 @@ public:
 	bool find_path(point const &p1, point const &p2, vector<point> &path) const {
 		assert(is_built());
 		if (nodes.empty()) return 0; // not built or too small/empty
-		//highres_timer_t timer("Find Path"); // <= 0.5ms
+		//highres_timer_t timer("Find Path"); // ~1.3ms max
 		assert(p1.z == p2.z); // must be horizontal
 		unsigned nx1(0), ny1(0), nx2(0), ny2(0);
 		if (!find_open_node_closest_to(p1, nx1, ny1) || !find_open_node_closest_to(p2, nx2, ny2)) return 0;
@@ -145,7 +145,6 @@ public:
 			ix_pair_t const cur(open_queue.top().second);
 			unsigned const cur_ix(get_node_ix(cur.x, cur.y));
 			open_queue.pop();
-			assert(!closed[cur_ix]);
 			closed[cur_ix] = 1;
 			open  [cur_ix] = 0;
 
@@ -158,7 +157,7 @@ public:
 					if (closed[new_ix]) continue; // already closed (duplicate)
 					if (!nodes[new_ix]) continue; // blocked
 					a_star_node_state_t &sn(state[new_ix]);
-					float const new_g_score(sn.g_score + get_distance(cur.x, cur.y, new_x, new_y));
+					float const new_g_score(state[cur_ix].g_score + get_distance(cur.x, cur.y, new_x, new_y));
 					if (!open[new_ix]) {open[new_ix] = 1;}
 					else if (new_g_score >= sn.g_score) continue; // not better
 					sn.set(cur.x, cur.y, new_x, new_y);
@@ -178,7 +177,7 @@ public:
 						} // end while()
 						reverse(path.begin()+rev_start_ix, path.end());
 						path.push_back(get_grid_pt(nx2, ny2, p1.z)); // last  point
-						cout << "success: " << path.size() << endl;
+						//cout << "success: " << path.size() << endl;
 						return 1; // success
 					}
 					sn.g_score = new_g_score;
@@ -187,7 +186,6 @@ public:
 				} // for dx
 			} // for dy
 		} // end while()
-		//cout << "failed" << endl;
 		return 0; // failed - no path from room1 to room2
 	}
 };
@@ -490,7 +488,7 @@ public:
 			if (use_pos2) {path.push_back(best_pt2);}
 			return 1; // success
 		} // for npts
-		if (0 && building.is_room_backrooms(room_ix)) { // run detailed path finding on backrooms
+		if (building.is_room_backrooms(room_ix)) { // run detailed path finding on backrooms
 			if (!nav_grid.is_built()) { // build once and cache
 				//highres_timer_t timer("Build Nav Grid");
 				vect_cube_t blockers;
@@ -499,8 +497,7 @@ public:
 				for (cube_t const &c : avoid) {
 					if (c.intersects(walk_area)) {blockers.push_back(c);}
 				}
-				float const radius(get_ped_coll_radius());
-				nav_grid.build(walk_area, blockers, radius);
+				nav_grid.build(walk_area, blockers, get_ped_coll_radius()); // should be the radius of this person, to avoid being too conservative?
 			}
 			if (nav_grid.find_path(p1, p2, path)) return 1;
 		}
@@ -662,7 +659,6 @@ public:
 			open_queue.pop();
 			node_t const &cur_node(get_node(cur));
 			point const center(cur_node.get_center(cur_pt.z));
-			assert(!closed[cur]);
 			closed[cur] = 1;
 			open  [cur] = 0;
 
@@ -675,7 +671,7 @@ public:
 				point const conn_center(conn_node.get_center(cur_pt.z));
 				a_star_node_state_t &sn(state[i->ix]);
 				vector2d const &pt(i->pt[up_or_down]);
-				float const new_g_score(sn.g_score + p2p_dist_xy(center, pt) + p2p_dist_xy(pt, conn_center));
+				float const new_g_score(state[cur].g_score + p2p_dist_xy(center, pt) + p2p_dist_xy(pt, conn_center));
 				if (!open[i->ix]) {open[i->ix] = 1;}
 				else if (new_g_score >= sn.g_score) continue; // not better
 				sn.came_from_ix = cur;
@@ -1860,7 +1856,7 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 			return AI_STOP;
 		}
 		if (!find_route_to_point(person, coll_dist, person.is_first_path, 0, person.path)) { // following_player=0
-			float const wait_time(is_pos_in_pg_or_backrooms(person.pos) ? 0.05 : 1.0);
+			float const wait_time(is_pos_in_pg_or_backrooms(person.pos) ? 0.1 : 1.0);
 			person.wait_for(wait_time); // stop for 1 second (0.1s for parking garage or backrooms), then try again
 			return AI_WAITING;
 		}
