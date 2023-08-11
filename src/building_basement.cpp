@@ -1853,7 +1853,6 @@ bool building_t::add_underground_exterior_rooms(rand_gen_t &rgen, cube_t const &
 	if (!is_house && has_parking_garage && max_expand_underground_room(hallway, wall_dim, wall_dir, rgen)) { // office building with parking garage
 		// currently, the extended basement can only be a network of connected hallways with leaf rooms, or a single large basement room (this case);
 		// if we want to allow both (either a large room connected to a hallway or a large room with hallways coming off of it), we need per-room flags
-		subdivide_underground_room(hallway, rgen);
 		hallway.is_hallway = 0; // should already be set to 0, but this makes it more clear
 		interior->has_backrooms = 1;
 	}
@@ -1949,9 +1948,6 @@ bool building_t::max_expand_underground_room(cube_t &room, bool dim, bool dir, r
 	if (exp_room.get_sz_dim(!dim) < room_width_min) return 0; // room is too narrow, make it a hallway instead
 	room = exp_room;
 	return 1;
-}
-void building_t::subdivide_underground_room(extb_room_t &room, rand_gen_t &rgen) {
-	// currently nothing to do, but we could divide the room into multiple smaller rooms that may or may not be connected by doors
 }
 
 cube_t building_t::add_ext_basement_door(cube_t const &room, float door_width, bool dim, bool dir, bool is_end_room, rand_gen_t &rgen) {
