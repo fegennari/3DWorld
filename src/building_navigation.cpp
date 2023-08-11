@@ -30,6 +30,8 @@ int register_ai_player_coll(bool &has_key, float height);
 unsigned get_stall_cubes(room_object_t const &c, cube_t sides[3]);
 unsigned get_shower_cubes(room_object_t const &c, cube_t sides[2]);
 void resize_cubes_xy(vect_cube_t &cubes, float val);
+void get_sphere_boundary_pts(point const &center, float radius, point *pts, bool skip_z=0);
+template<typename T> bool line_int_cubes(point const &p1, point const &p2, vector<T> const &cubes);
 
 point get_cube_center_zval(cube_t const &c, float zval) {return point(c.xc(), c.yc(), zval);}
 float get_ped_coll_radius() {return COLL_RADIUS_SCALE*ped_manager_t::get_ped_radius();}
@@ -1467,8 +1469,21 @@ bool building_t::is_player_visible(person_t const &person, unsigned vis_test) co
 	unsigned const person_floor_ix(get_floor_for_zval(person.pos.z));
 	unsigned const floor_delta(abs((int)cur_player_building_loc.floor_ix - (int)person_floor_ix));
 	bool const same_room_and_floor(same_room && floor_delta == 0); // Note: doesn't check cur_player_building_loc.stairs_ix
-	bool has_los(same_room_and_floor); // assume that we have a line of sight if we're in the same room and floor as the player (optimization)
+	bool has_los(0);
 
+	if (same_room_and_floor) {
+		if (is_pos_in_pg_or_backrooms(person.pos) && has_room_geom()) {
+			point const eye_pos(person.get_eye_pos());
+			point pts[5]; // center, -x, +x, -y, +y; no need to check -z/+z
+			get_sphere_boundary_pts(target.pos, player_radius, pts, 1); // skip_z=1
+			
+			for (unsigned n = 0; n < 5 && !has_los; ++n) { // check backrooms and parking garage walls
+				has_los |= (!line_int_cubes(pts[n], eye_pos, interior->room_geom->pgbr_walls[0]) && !line_int_cubes(pts[n], eye_pos, interior->room_geom->pgbr_walls[1]));
+			}
+			if (!has_los) return 0; // blocked by a wall
+		}
+		else {has_los = 1;} // assume that we have a line of sight if we're in the same room and floor as the player (optimization)
+	}
 	if (!has_los && same_room && floor_delta == 1 && person.pos.z > ground_floor_z1) {
 		// if the person and the player are on adjacent floors of the same room connected by stairs (and not in a parking garage), cheat and say they have a line of sight
 		room_t const &room(get_room(person.cur_room));

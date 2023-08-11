@@ -1542,11 +1542,11 @@ bool building_t::move_sphere_to_valid_part(point &pos, point const &p_last, floa
 
 // ray queries
 
-// center, -x, +x, -y, +y, -z, +z
-void get_sphere_boundary_pts(point const &center, float radius, point pts[7]) {
+// center, -x, +x, -y, +y, -z, +z; assumes pts is at least size 7/5 for skip_z=0/1
+void get_sphere_boundary_pts(point const &center, float radius, point *pts, bool skip_z=0) {
 	pts[0] = center;
 
-	for (unsigned dim = 0, ix = 1; dim < 3; ++dim) {
+	for (unsigned dim = 0, ix = 1; dim < (skip_z ? 2 : 3); ++dim) {
 		vector3d dir(zero_vector);
 		dir[dim]  = radius;
 		pts[ix++] = center - dir;
