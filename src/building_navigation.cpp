@@ -83,19 +83,18 @@ class cube_nav_grid {
 				unsigned const xi(x ? unsigned(ceil(gxy[0])) : unsigned(floor(gxy[0])));
 				if (!are_ixs_valid(xi, yi)) continue; // invalid, skip; error/can't happen?
 				if (!get_node_val (xi, yi)) continue; // blocked, skip
+				// what about closest distance to opposite point, assuming our destination is in that direction?
 				float const dsq(p2p_dist_xy_sq(p, get_grid_pt(xi, yi))); // dist should be < SQRT2*radius
 				if (!found || dsq < dmin_sq) {found = 1; dmin_sq = dsq; nx = xi; ny = yi;} // keep if closer
 			}
 		} // for y
 		return found;
 	}
-	bool can_extend_path(vector<point> const &path, point const &path_pt, unsigned rev_start_ix) const {
-		if (path.size() <= rev_start_ix+1) return 0; // no previous point to use
-		point const &prev_pt(path[path.size()-2]);
-		cube_t const check_cube(prev_pt, path_pt);
+	bool check_line_intersect(point const &p1, point const &p2) const {
+		cube_t const check_cube(p1, p2);
 
 		for (cube_t const &c : blockers_exp) {
-			if (c.intersects(check_cube) && check_line_clip_xy(prev_pt, path_pt, c.d)) return 0; // blocked
+			if (c.intersects(check_cube) && check_line_clip_xy(p1, p2, c.d)) return 0; // blocked
 		}
 		return 1;
 	}
@@ -175,6 +174,7 @@ public:
 					sn.set(cur.x, cur.y, new_x, new_y);
 
 					if (new_ix == end_ix) { // done, reconstruct path (in reverse)
+						assert(!path.empty()); // p1 should have been added previously
 						unsigned const rev_start_ix(path.size());
 						path.push_back(get_grid_pt(nx2, ny2, p1.z)); // last point, added first
 						unsigned path_ix(cur_ix), prev_x(new_x), prev_y(new_y);
@@ -189,20 +189,21 @@ public:
 							point const path_pt(get_grid_pt(xn, yn, p1.z));
 							// smooth path by removing colinear points and merging unblocked segments
 							int dx(xn - int(prev_x)), dy(yn - int(prev_y));
-							bool extend(0);
-							if (dx == prev_dx && dy == prev_dy) {extend = 1;} // same angle
-							// straighten if the line from the point before this to the next point is unblocked
-							else if (can_extend_path(path, path_pt, rev_start_ix)) {extend = 1; dx = dy = 0;} // clear deltas; don't extend next point based on angle
-							if (extend) {path.back() = path_pt;} // extend previous point
+							if (dx == prev_dx && dy == prev_dy) {path.back() = path_pt;} // same angle, extend previous point
 							else {path.push_back(path_pt);} // add new point
 							path_ix = get_node_ix(xn, yn);
 							prev_x = xn; prev_y = yn; prev_dx = dx; prev_dy = dy;
 						} // end while()
-						point const fin_pt(get_grid_pt(nx1, ny1, p1.z)); // first point, added last
-						if (can_extend_path(path, fin_pt, rev_start_ix)) {path.back() = fin_pt;}
-						else {path.push_back(fin_pt);}
+						path.push_back(get_grid_pt(nx1, ny1, p1.z)); // first point, added last
 						reverse(path.begin()+rev_start_ix, path.end());
-						//cout << "success: " << path.size() << endl;
+						// run another pass to remove unnecessary points
+						path.push_back(p2); // temporary end point
+						auto in(path.begin()+rev_start_ix), out(in);
+
+						for (; in+1 != path.end(); ++in) {
+							if (!check_line_intersect(*(in-1), *(in+1))) {*(out++) = *in;} // remove points where the line bypassing them has no intersection
+						}
+						path.erase(out, path.end()); // Note: since we skipped the last point in the above iteration, the p2 point that was added will be removed
 						return 1; // success
 					}
 					sn.g_score = new_g_score;
