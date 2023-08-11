@@ -2448,14 +2448,17 @@ void building_t::add_backrooms_objs(rand_gen_t rgen, room_t const &room, float z
 		}
 	}
 	assert(adj_found);
+	float const shared_extend((sw_dir ? -1.0 : 1.0)*0.5*get_wall_thickness()); // account for extra shift applied to shared wall to keep it from clipping into the basement/PG
 	cube_t shared_wall(parking_garage);
-	shared_wall.d[sw_dim][!sw_dir] = place_area.d[sw_dim][sw_dir] + (sw_dir ? -1.0 : 1.0)*0.5*get_wall_thickness(); // extend to include shared wall
+	shared_wall.d[sw_dim][!sw_dir] = place_area.d[sw_dim][sw_dir] + shared_extend; // extend to include shared wall
 	assert(shared_wall.intersects(room));
 	shared_wall.intersect_with_cube(room);
 	//objs.emplace_back(shared_wall, TYPE_DBG_SHAPE, room_id, 0, 0, (RO_FLAG_NOCOLL | RO_FLAG_BACKROOM), 1.0, SHAPE_CUBE, RED); // TESTING
 	
 	// Add vents, light switch, and outlets on wall adjacent to building or next to the door
-	add_light_switches_to_room(rgen, room, zval, room_id, objs_start, 0, 1); // is_ground_floor=0, is_basement=1
+	room_t true_room(room);
+	true_room.d[sw_dim][sw_dir] += shared_extend;
+	add_light_switches_to_room(rgen, true_room, zval, room_id, objs_start, 0, 1); // is_ground_floor=0, is_basement=1
 	// TODO: more
 	
 	// Make small rooms with doors bathrooms, etc.
@@ -2463,7 +2466,7 @@ void building_t::add_backrooms_objs(rand_gen_t rgen, room_t const &room, float z
 		// TODO: only make bathroom if there's a single door and at least one light
 		room_t bathroom(room);
 		bathroom.copy_from(r); // keep flags, copy cube
-		bathroom.intersect_with_cube(room); // can't go outside the backrooms (under-over can move exterior walls)
+		bathroom.intersect_with_cube(true_room); // can't go outside the backrooms (under-over can move exterior walls)
 		bathroom.interior = 1; // treated as basement but not extended basement (no wall padding)
 		float floor_zval(zval); // may be modified below
 		unsigned const floor_ix(0); // pass this in, or always zero?
