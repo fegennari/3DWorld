@@ -2282,6 +2282,7 @@ void building_t::add_backrooms_objs(rand_gen_t rgen, room_t const &room, float z
 	invert_walls(place_area, walls_per_dim, space, nav_pad);
 	resize_cubes_xy(space, nav_pad); // restore padding (under-over)
 	partition_cubes_into_conn_groups(space, space_groups, pad);
+	vect_cube_t small_rooms;
 
 	// Add doorways + doors to guarantee full connectivity using space
 	if (space_groups.size() > 1) { // multiple disconnected sub-graphs
@@ -2371,6 +2372,14 @@ void building_t::add_backrooms_objs(rand_gen_t rgen, room_t const &room, float z
 			} // for wall
 			vector_add_to(walls_to_add, walls);
 		} // for d
+		for (unsigned gix = 0; gix < space_groups.size(); ++gix) {
+			vect_cube_t const &group(space_groups[gix]);
+			if (group.size() != 1) continue;
+
+			for (auto const &c : connected) { // add if it was connected with a door
+				if (c.first == gix || c.second == gix) {small_rooms.push_back(group.front()); break;}
+			}
+		} // for gix
 	}
 
 	// Add some random pillars in large open spaces
@@ -2433,9 +2442,38 @@ void building_t::add_backrooms_objs(rand_gen_t rgen, room_t const &room, float z
 	}
 
 	// Add occasional random items/furniture
-	// TODO
+	// find the shared wall with the basement/parking garage
+	bool sw_dim(0), sw_dir(0), adj_found(0);
+	cube_t const &parking_garage(get_basement());
+
+	for (unsigned dim = 0; dim < 2; ++dim) {
+		for (unsigned dir = 0; dir < 2; ++dir) {
+			if (room.d[dim][dir] == parking_garage.d[dim][!dir]) {sw_dim = dim; sw_dir = dir; adj_found = 1;}
+		}
+	}
+	assert(adj_found);
+	cube_t shared_wall(parking_garage);
+	shared_wall.d[sw_dim][!sw_dir] = place_area.d[sw_dim][sw_dir] + (sw_dir ? -1.0 : 1.0)*0.5*get_wall_thickness(); // extend to include shared wall
+	assert(shared_wall.intersects(room));
+	shared_wall.intersect_with_cube(room);
+	//objs.emplace_back(shared_wall, TYPE_DBG_SHAPE, room_id, 0, 0, (RO_FLAG_NOCOLL | RO_FLAG_BACKROOM), 1.0, SHAPE_CUBE, RED); // TESTING
 	
-	// Add more variety to light colors, wall/ceiling/floor textures, etc.?
+	// Add vents, light switch, and outlets on wall adjacent to building or next to the door
+	add_light_switches_to_room(rgen, room, zval, room_id, objs_start, 0, 1); // is_ground_floor=0, is_basement=1
+	// TODO: more
+	
+	// Make small rooms with doors bathrooms, etc.
+	for (cube_t const &r : small_rooms) {
+		// TODO: only make bathroom if there's a single door and at least one light
+		room_t bathroom(room);
+		bathroom.copy_from(r); // keep flags, copy cube
+		bathroom.intersect_with_cube(room); // can't go outside the backrooms (under-over can move exterior walls)
+		bathroom.interior = 1; // treated as basement but not extended basement (no wall padding)
+		float floor_zval(zval); // may be modified below
+		unsigned const floor_ix(0); // pass this in, or always zero?
+		unsigned added_bathroom_objs_mask(0); // unused
+		add_bathroom_objs(rgen, bathroom, floor_zval, room_id, tot_light_amt, objs.size(), floor_ix, 1, added_bathroom_objs_mask); // is_basement=1
+	} // for r
 }
 
 bool building_room_geom_t::cube_int_backrooms_walls(cube_t const &c) const { // used for door opening collision checks
