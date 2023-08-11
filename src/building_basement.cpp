@@ -2183,14 +2183,16 @@ void building_t::add_backrooms_objs(rand_gen_t rgen, room_t const &room, float z
 	assert(has_room_geom());
 	float const floor_spacing(get_window_vspace()), wall_thickness(1.2*get_wall_thickness()), wall_half_thick(0.5*wall_thickness); // slightly thicker than regular walls
 	float const ceiling_z(zval + get_floor_ceil_gap()); // Note: zval is at floor level, not at the bottom of the room
-	float const tot_light_amt(room.light_intensity); // ???
+	//float const tot_light_amt(room.light_intensity /*+ floor_spacing*room.get_light_amt()*/); // ???
+	float const tot_light_amt(0.5);
 	vector3d const sz(room.get_size());
 	vect_room_object_t &objs(interior->room_geom->objs);
-	if (interior->room_geom->backrooms_start == 0) {interior->room_geom->backrooms_start = objs.size();}
+	unsigned const objs_start(objs.size());
+	if (interior->room_geom->backrooms_start == 0) {interior->room_geom->backrooms_start = objs_start;}
 
 	// add random interior walls to create an initial maze
 	float const doorway_width(get_doorway_width()), doorway_hwidth(0.5*doorway_width), min_gap(1.2*doorway_width);
-	cube_t place_area(get_walkable_room_bounds(room));
+	cube_t const place_area(get_walkable_room_bounds(room));
 	cube_t wall_area(place_area);
 	wall_area.expand_by_xy(-min_gap);
 	if (min(wall_area.dx(), wall_area.dy()) < 2.0*floor_spacing) return; // room too small to place walls - shouldn't happen
@@ -2231,6 +2233,7 @@ void building_t::add_backrooms_objs(rand_gen_t rgen, room_t const &room, float z
 			if (has_bcube_int(s, extra_walls)) continue; // covered (at least partially) by a previously placed extra wall
 			cube_t cent_area(s);
 			cent_area.expand_in_dim(dim, -0.375*space_len); // restrict to central 25%
+			set_cube_zvals(cent_area, wall_area.z1(), wall_area.z2()); // set zvals the same as walls
 			float const space_width(s.get_sz_dim(!dim)), min_len(max(wall_len_min, space_width)), max_len(max(wall_len_max, 2.0f*space_width)); // must cross the space
 
 			for (unsigned m = 0; m < 10; ++m) { // 10 tries to place a wall
