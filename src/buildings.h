@@ -1685,8 +1685,8 @@ private:
 	bool has_L_shaped_roof_area() const;
 	void get_attic_roof_tquads(vector<tquad_with_ix_t> &tquads) const;
 	bool add_attic_access_door(cube_t const &ceiling, unsigned part_ix, unsigned num_floors, unsigned rooms_start, rand_gen_t &rgen);
-	bool is_light_placement_valid(cube_t const &light, room_t const &room, float pad) const;
-	void try_place_light_on_ceiling(cube_t const &light, room_t const &room, bool room_dim, float pad, bool allow_rot, bool allow_mult,
+	bool is_light_placement_valid(cube_t const &light, cube_t const &room, float pad) const;
+	void try_place_light_on_ceiling(cube_t const &light, cube_t const &room, bool room_dim, float pad, bool allow_rot, bool allow_mult,
 		unsigned nx, unsigned ny, unsigned check_coll_start, vect_cube_t &lights, rand_gen_t &rgen) const;
 	void try_place_light_on_wall   (cube_t const &light, room_t const &room, bool room_dim, float zval, vect_cube_t &lights, rand_gen_t &rgen) const;
 	bool clip_cube_to_parts(cube_t &c, vect_cube_t &cubes) const;
@@ -1770,7 +1770,9 @@ private:
 	vector3d get_parked_car_size() const;
 	void add_parking_garage_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned floor_ix,
 		unsigned num_floors, unsigned &nlights_x, unsigned &nlights_y, float &light_delta_z);
-	void add_backrooms_objs(rand_gen_t rgen, room_t &room, float zval, unsigned room_id);
+	void add_backrooms_objs(rand_gen_t rgen, room_t &room, float zval, unsigned room_id, vect_cube_t &rooms_to_light);
+	void add_missing_backrooms_lights(rand_gen_t rgen, float zval, unsigned room_id, unsigned objs_start, unsigned lights_start,
+		vect_cube_t const &rooms_to_light, light_ix_assign_t &light_ix_assign);
 	bool add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t const &walls, vect_cube_t const &beams, vect_riser_pos_t const &risers, vect_cube_t &pipe_cubes,
 		unsigned room_id, unsigned num_floors, unsigned objs_start, float tot_light_amt, float ceil_zval, rand_gen_t &rgen, unsigned pipe_type, bool allow_place_fail=0);
 	void add_sprinkler_pipes(vect_cube_t const &obstacles, vect_cube_t const &walls, vect_cube_t const &beams, vect_cube_t const &pipe_cubes,

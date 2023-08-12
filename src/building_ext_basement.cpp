@@ -477,7 +477,7 @@ struct cube_by_xy_dim {
 	bool operator()(cube_t const &a, cube_t const &b) const {return ((a.d[d][0] == b.d[d][0]) ? (a.d[!d][0] < b.d[!d][0]) : (a.d[d][0] < b.d[d][0]));}
 };
 
-void building_t::add_backrooms_objs(rand_gen_t rgen, room_t &room, float zval, unsigned room_id) {
+void building_t::add_backrooms_objs(rand_gen_t rgen, room_t &room, float zval, unsigned room_id, vect_cube_t &rooms_to_light) {
 	//highres_timer_t timer("Add Backrooms Objs"); // up to ~2ms
 	assert(has_room_geom());
 	float const floor_spacing(get_window_vspace()), wall_thickness(1.2*get_wall_thickness()), wall_half_thick(0.5*wall_thickness); // slightly thicker than regular walls
@@ -688,9 +688,11 @@ void building_t::add_backrooms_objs(rand_gen_t rgen, room_t &room, float zval, u
 		for (unsigned gix = 0; gix < space_groups.size(); ++gix) {
 			vect_cube_t const &group(space_groups[gix]);
 			if (group.size() != 1) continue;
+			cube_t sub_room(group.front());
+			sub_room.intersect_with_cube(true_room); // can't go outside the backrooms (under-over can move exterior walls)
 
 			for (auto const &c : connected) { // add if it was connected with a door
-				if (c.first == gix || c.second == gix) {small_rooms.push_back(group.front()); break;}
+				if (c.first == gix || c.second == gix) {small_rooms.push_back(sub_room); break;}
 			}
 		} // for gix
 	}
@@ -772,19 +774,52 @@ void building_t::add_backrooms_objs(rand_gen_t rgen, room_t &room, float zval, u
 		for (cube_t const &dk : door_keepout) {
 			if (dk.intersects_xy(r)) {++num_doors;}
 		}
-		if (num_doors == 0) continue; // not connected with a door, not reachable, skip
+		if (num_doors == 0) continue; // not connected with a door, not reachable, skip (and don't need a light either)
 
 		if (num_doors == 1) { // only make bathroom if there's a single door
-			// TODO: we want a light in the bathrooms, but lights haven't been added yet; maybe should go back after and add a wall light if there's no ceiling light?
 			room_t bathroom(room);
 			bathroom.copy_from(r); // keep flags, copy cube
-			bathroom.intersect_with_cube(true_room); // can't go outside the backrooms (under-over can move exterior walls)
 			bathroom.interior = 1; // treated as basement but not extended basement (no wall padding)
 			float floor_zval(zval); // may be modified below
 			unsigned const floor_ix(0); // pass this in, or always zero?
 			unsigned added_bathroom_objs_mask(0); // unused
 			add_bathroom_objs(rgen, bathroom, floor_zval, room_id, tot_light_amt, objs.size(), floor_ix, 1, added_bathroom_objs_mask); // is_basement=1
 			room.has_mirror |= bathroom.has_mirror;
+		}
+		rooms_to_light.push_back(r);
+	} // for r
+}
+
+void building_t::add_missing_backrooms_lights(rand_gen_t rgen, float zval, unsigned room_id, unsigned objs_start, unsigned lights_start,
+	vect_cube_t const &rooms_to_light, light_ix_assign_t &light_ix_assign)
+{
+	if (rooms_to_light.empty()) return; // nothing to do
+	vect_room_object_t &objs(interior->room_geom->objs);
+	unsigned const lights_end(objs.size());
+	assert(lights_start < lights_end);
+	if (lights_start == lights_end) return; // no lights; error?
+	room_object_t const ref_light(objs[lights_start]); // use this as a reference for the light size/shape/color
+	point const ref_light_center(ref_light.get_cube_center());
+	vect_cube_t to_add;
+
+	for (cube_t const &r : rooms_to_light) {
+		bool has_light(0);
+
+		for (auto i = objs.begin()+lights_start; i != objs.begin()+lights_end; ++i) {
+			assert(i->type == TYPE_LIGHT);
+			if (i->intersects(r)) {has_light = 1; break;}
+		}
+		if (has_light) continue;
+		room_object_t light(ref_light);
+		light += vector3d((r.xc() - ref_light_center.x), (r.yc() - ref_light_center.y), 0.0);
+		bool const room_dim(r.dx() < r.dy()); // longer room dim
+		to_add.clear();
+		try_place_light_on_ceiling(light, r, room_dim, get_fc_thickness(), 1, 0, 1, 1, objs_start, to_add, rgen); // or wall light?
+
+		for (cube_t const &L : to_add) { // should be size 1
+			light.copy_from(L);
+			light.obj_id = light_ix_assign.get_ix_for_light(light);
+			objs.push_back(light);
 		}
 	} // for r
 }

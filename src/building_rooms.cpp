@@ -231,13 +231,14 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			unsigned const floor_objs_start(objs.size()); // needed for backrooms lights
 			bool is_lit(0), has_light(1), light_dim(room_dim), wall_light(0), has_stairs(has_stairs_this_floor), top_of_stairs(has_stairs && top_floor);
 			float light_delta_z(0.0);
+			vect_cube_t rooms_to_light;
 
 			if (is_parking_garage) { // parking garage; added first because this sets the number of lights
 				assert(r->interior == 1);
 				add_parking_garage_objs(rgen, *r, room_center.z, room_id, f, num_floors, nx, ny, light_delta_z);
 			}
 			else if (is_backrooms) { // should be single floor only
-				add_backrooms_objs(rgen, *r, room_center.z, room_id);
+				add_backrooms_objs(rgen, *r, room_center.z, room_id, rooms_to_light);
 			}
 			if ((!has_stairs && (f == 0 || top_floor) && interior->stairwells.size() > 1) || top_of_stairs) { // should this be outside the loop?
 				// check for stairwells connecting stacked parts (is this still needed?); check for roof access stairs and set top_of_stairs=0
@@ -344,8 +345,13 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				objs.emplace_back(light_obj);
 			} // for l
 			if (is_lit) {r->lit_by_floor |= (1ULL << (f&63));} // flag this floor as being lit (for up to 64 floors)
-			if (is_parking_garage || is_backrooms) continue; // generated above, done; no outlets or light switches
-			if (is_unfinished) continue; // no objects for now; if adding objects later, need to make sure they stay inside the building bounds
+
+			if (is_backrooms) {
+				add_missing_backrooms_lights(rgen, room_center.z, room_id, floor_objs_start, objs_start_inc_lights, rooms_to_light, light_ix_assign);
+				continue; // nothing else to add
+			}
+			if (is_parking_garage) continue; // generated above, done; no outlets or light switches
+			if (is_unfinished    ) continue; // no objects for now; if adding objects later, need to make sure they stay inside the building bounds
 			float tot_light_amt(light_amt); // unitless, somewhere around 1.0
 			if (is_lit) {tot_light_amt += r->light_intensity;}
 			bool const is_ground_floor_part(!is_basement && r->z1() <= ground_floor_z1);

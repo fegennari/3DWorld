@@ -2970,7 +2970,7 @@ template<typename T> bool any_cube_contains(cube_t const &cube, T const &cubes) 
 	for (auto const &c : cubes) {if (c.contains_cube(cube)) return 1;}
 	return 0;
 }
-bool building_t::is_light_placement_valid(cube_t const &light, room_t const &room, float pad) const {
+bool building_t::is_light_placement_valid(cube_t const &light, cube_t const &room, float pad) const {
 	cube_t light_ext(light);
 	light_ext.expand_by_xy(pad);
 	if (!room.contains_cube(light_ext))            return 0; // room too small?
@@ -2993,7 +2993,7 @@ bool building_t::is_light_placement_valid(cube_t const &light, room_t const &roo
 	return 0;
 }
 
-void building_t::try_place_light_on_ceiling(cube_t const &light, room_t const &room, bool room_dim, float pad, bool allow_rot, bool allow_mult,
+void building_t::try_place_light_on_ceiling(cube_t const &light, cube_t const &room, bool room_dim, float pad, bool allow_rot, bool allow_mult,
 	unsigned nx, unsigned ny, unsigned check_coll_start, vect_cube_t &lights, rand_gen_t &rgen) const
 {
 	assert(has_room_geom());
