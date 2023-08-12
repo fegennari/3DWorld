@@ -71,7 +71,7 @@ class cube_nav_grid {
 		float const dx(float(x2) - float(x1)), dy(float(y2) - float(y1));
 		return sqrt(dx*dx + dy*dy);
 	}
-	bool find_open_node_closest_to(point p, unsigned &nx, unsigned &ny) const {
+	bool find_open_node_closest_to(point p, point const &dest, unsigned &nx, unsigned &ny) const {
 		if (!bcube.contains_pt_xy(p)) return 0; // outside the grid valid area; error?
 		grid_bcube.clamp_pt_xy(p);
 		float gxy[2]; // grid index, with partial offset
@@ -79,24 +79,24 @@ class cube_nav_grid {
 		float dmin_sq(0.0);
 		bool found(0);
 
-		for (unsigned y = 0; y < 2; ++y) {
+		for (unsigned y = 0; y < 2; ++y) { // visit points in all directions < SQRT2*radius from p
 			for (unsigned x = 0; x < 2; ++x) {
 				unsigned const yi(y ? unsigned(ceil(gxy[1])) : unsigned(floor(gxy[1])));
 				unsigned const xi(x ? unsigned(ceil(gxy[0])) : unsigned(floor(gxy[0])));
 				if (!are_ixs_valid(xi, yi)) continue; // invalid, skip; error/can't happen?
 				if (!get_node_val (xi, yi)) continue; // blocked, skip
-				// what about closest distance to opposite point, assuming our destination is in that direction?
-				float const dsq(p2p_dist_xy_sq(p, get_grid_pt(xi, yi))); // dist should be < SQRT2*radius
+				float const dsq(p2p_dist_xy_sq(dest, get_grid_pt(xi, yi))); // choose dir closest to dest to avoid backtracking
 				if (!found || dsq < dmin_sq) {found = 1; dmin_sq = dsq; nx = xi; ny = yi;} // keep if closer
 			}
 		} // for y
 		return found;
 	}
 	bool check_line_intersect(point const &p1, point const &p2) const {
+		// zvals are ignored - effectively 2D; otherwise could call line_intersect_cubes()
 		cube_t const check_cube(p1, p2);
 
 		for (cube_t const &c : blockers_exp) {
-			if (c.intersects(check_cube) && check_line_clip_xy(p1, p2, c.d)) return 0; // blocked
+			if (c.intersects_xy(check_cube) && check_line_clip_xy(p1, p2, c.d)) return 0; // blocked
 		}
 		return 1;
 	}
@@ -142,7 +142,7 @@ public:
 		//highres_timer_t timer("Find Path"); // ~1.3ms max
 		assert(p1.z == p2.z); // must be horizontal
 		unsigned nx1(0), ny1(0), nx2(0), ny2(0);
-		if (!find_open_node_closest_to(p1, nx1, ny1) || !find_open_node_closest_to(p2, nx2, ny2)) return 0;
+		if (!find_open_node_closest_to(p1, p2, nx1, ny1) || !find_open_node_closest_to(p2, p1, nx2, ny2)) return 0;
 		// does it make sense to use A* rather than Dijkstra? maybe not because paths will generally be short compared to the number of total nodes
 		unsigned start_ix(get_node_ix(nx1, ny1)), end_ix(get_node_ix(nx2, ny2));
 		vector<a_star_node_state_t> state(nodes.size()); // dense vector; unordered_map seems to be slower
@@ -187,7 +187,7 @@ public:
 							a_star_node_state_t &sp(state[path_ix]);
 							int const xn(sp.came_from[0]), yn(sp.came_from[1]);
 							assert(xn >= 0 && yn >= 0);
-							assert(xn != prev_x || yn != prev_y); // must have a delta
+							assert(xn != (int)prev_x || yn != (int)prev_y); // must have a delta
 							point const path_pt(get_grid_pt(xn, yn, p1.z));
 							// smooth path by removing colinear points and merging unblocked segments
 							int dx(xn - int(prev_x)), dy(yn - int(prev_y));
@@ -1913,36 +1913,42 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 	if (dist_xy_less_than(person.pos, person.target_pos, 1.1f*max_dist) && fabs(person.pos.z - person.target_pos.z) < 0.5*person.get_height()) {
 		assert(point_in_building_or_basement_bcube(person.target_pos));
 		person.pos = person.target_pos;
-		if (!person.path.empty()) {person.next_path_pt(0); return AI_NEXT_PT;} // move to next path point
-		float const floor_spacing(get_window_vspace());
-
-		if (person.goal_type == GOAL_TYPE_ELEVATOR) {
-			elevator_t &e(get_elevator(person.cur_elevator));
-			// floor index relative to this elevator, not the room or building
-			unsigned const cur_floor(get_elevator_floor(person.pos.z, e, floor_spacing)), num_floors(round_fp(e.dz()/floor_spacing));
-			assert(num_floors > 1);
-			assert(cur_floor  < num_floors);
-
-			// select the destination floor, different from the current floor; this must be done before calling the elevator so that we know if we're going up or down
-			while (1) {
-				person.dest_elevator_floor = rgen.rand() % num_floors;
-				if (person.dest_elevator_floor != cur_floor) break; // floor is valid
-			}
-			bool const is_up(person.dest_elevator_floor > cur_floor);
-			call_elevator_to_floor_and_light_nearest_button(e, cur_floor, 0, is_up); // is_inside_elevator=0
-			vector3d const dir_to_elevator(e.get_cube_center() - person.pos);
-			// snap to face the elevator; would be better to gradually turn, but it's not clear how to do that; at least we should be facing in that general direction
-			person.dir.assign(dir_to_elevator.x, dir_to_elevator.y, 0.0);
-			person.dir.normalize();
-			person.wait_for(global_building_params.elevator_wait_time); // wait there for the elevator to arrive; if we're waiting too long, give up and choose another dest
-			return AI_WAIT_ELEVATOR;
+		
+		if (!person.path.empty()) { // move to next path point
+			person.next_path_pt(0);
+			//return AI_NEXT_PT; // returning here and recalculating the path on the next frame can get us stuck at this point when chasing the player
 		}
-		// don't wait if we can follow the player
-		bool const no_wait(global_building_params.ai_target_player && (can_target_player(person) || has_nearby_sound(person, floor_spacing)));
-		if (!no_wait) {person.wait_for(rgen.rand_uniform(1.0, (can_ai_follow_player(person) ? 2.0 : 10.0)));} // stop for 1-10s, 1-2s if player is in this building in gameplay mode
-		person.on_new_path_seg    = 1; // allow player following AI update logic to rerun this frame
-		person.last_used_elevator = 0;
-		return AI_AT_DEST;
+		else {
+			float const floor_spacing(get_window_vspace());
+
+			if (person.goal_type == GOAL_TYPE_ELEVATOR) {
+				elevator_t &e(get_elevator(person.cur_elevator));
+				// floor index relative to this elevator, not the room or building
+				unsigned const cur_floor(get_elevator_floor(person.pos.z, e, floor_spacing)), num_floors(round_fp(e.dz()/floor_spacing));
+				assert(num_floors > 1);
+				assert(cur_floor  < num_floors);
+
+				// select the destination floor, different from the current floor; this must be done before calling the elevator so that we know if we're going up or down
+				while (1) {
+					person.dest_elevator_floor = rgen.rand() % num_floors;
+					if (person.dest_elevator_floor != cur_floor) break; // floor is valid
+				}
+				bool const is_up(person.dest_elevator_floor > cur_floor);
+				call_elevator_to_floor_and_light_nearest_button(e, cur_floor, 0, is_up); // is_inside_elevator=0
+				vector3d const dir_to_elevator(e.get_cube_center() - person.pos);
+				// snap to face the elevator; would be better to gradually turn, but it's not clear how to do that; at least we should be facing in that general direction
+				person.dir.assign(dir_to_elevator.x, dir_to_elevator.y, 0.0);
+				person.dir.normalize();
+				person.wait_for(global_building_params.elevator_wait_time); // wait there for the elevator to arrive; if we're waiting too long, give up and choose another dest
+				return AI_WAIT_ELEVATOR;
+			}
+			// don't wait if we can follow the player
+			bool const no_wait(global_building_params.ai_target_player && (can_target_player(person) || has_nearby_sound(person, floor_spacing)));
+			if (!no_wait) {person.wait_for(rgen.rand_uniform(1.0, (can_ai_follow_player(person) ? 2.0 : 10.0)));} // stop for 1-10s, 1-2s if player is in this building in gameplay mode
+			person.on_new_path_seg    = 1; // allow player following AI update logic to rerun this frame
+			person.last_used_elevator = 0;
+			return AI_AT_DEST;
+		}
 	}
 	// this person is walking to a destination point
 	vector3d const new_dir(person.target_pos - person.pos);
