@@ -484,14 +484,28 @@ void building_t::add_backrooms_objs(rand_gen_t rgen, room_t const &room, float z
 	float const ceiling_z(zval + get_floor_ceil_gap()); // Note: zval is at floor level, not at the bottom of the room
 	//float const tot_light_amt(room.light_intensity /*+ floor_spacing*room.get_light_amt()*/); // ???
 	float const tot_light_amt(0.5);
-	vector3d const sz(room.get_size());
 	vect_room_object_t &objs(interior->room_geom->objs);
 	unsigned const objs_start(objs.size());
 	if (interior->room_geom->backrooms_start == 0) {interior->room_geom->backrooms_start = objs_start;}
 
+	// find the shared wall with the basement/parking garage and calculate true room bounds
+	bool sw_dim(0), sw_dir(0), adj_found(0);
+	cube_t const &parking_garage(get_basement());
+
+	for (unsigned dim = 0; dim < 2; ++dim) {
+		for (unsigned dir = 0; dir < 2; ++dir) {
+			if (room.d[dim][dir] == parking_garage.d[dim][!dir]) {sw_dim = dim; sw_dir = dir; adj_found = 1;}
+		}
+	}
+	assert(adj_found);
+	float const shared_extend((sw_dir ? -1.0 : 1.0)*0.5*get_wall_thickness()); // account for extra shift applied to shared wall to keep it from clipping into the basement/PG
+	room_t true_room(room);
+	true_room.d[sw_dim][sw_dir] += shared_extend;
+	vector3d const sz(true_room.get_size());
+
 	// add random interior walls to create an initial maze
 	float const doorway_width(get_doorway_width()), doorway_hwidth(0.5*doorway_width), min_gap(1.2*doorway_width);
-	cube_t const place_area(get_walkable_room_bounds(room));
+	cube_t const place_area(get_walkable_room_bounds(true_room));
 	cube_t wall_area(place_area);
 	wall_area.expand_by_xy(-min_gap);
 	if (min(wall_area.dx(), wall_area.dy()) < 2.0*floor_spacing) return; // room too small to place walls - shouldn't happen
@@ -741,26 +755,13 @@ void building_t::add_backrooms_objs(rand_gen_t rgen, room_t const &room, float z
 	}
 
 	// Add occasional random items/furniture
-	// find the shared wall with the basement/parking garage
-	bool sw_dim(0), sw_dir(0), adj_found(0);
-	cube_t const &parking_garage(get_basement());
-
-	for (unsigned dim = 0; dim < 2; ++dim) {
-		for (unsigned dir = 0; dir < 2; ++dir) {
-			if (room.d[dim][dir] == parking_garage.d[dim][!dir]) {sw_dim = dim; sw_dir = dir; adj_found = 1;}
-		}
-	}
-	assert(adj_found);
-	float const shared_extend((sw_dir ? -1.0 : 1.0)*0.5*get_wall_thickness()); // account for extra shift applied to shared wall to keep it from clipping into the basement/PG
 	cube_t shared_wall(parking_garage);
-	shared_wall.d[sw_dim][!sw_dir] = place_area.d[sw_dim][sw_dir] + shared_extend; // extend to include shared wall
-	assert(shared_wall.intersects(room));
-	shared_wall.intersect_with_cube(room);
+	shared_wall.d[sw_dim][!sw_dir] = place_area.d[sw_dim][sw_dir]; // extend to include shared wall
+	assert(shared_wall.intersects(true_room));
+	shared_wall.intersect_with_cube(true_room);
 	//objs.emplace_back(shared_wall, TYPE_DBG_SHAPE, room_id, 0, 0, (RO_FLAG_NOCOLL | RO_FLAG_BACKROOM), 1.0, SHAPE_CUBE, RED); // TESTING
 	
 	// Add vents, light switch, and outlets on wall adjacent to building or next to the door
-	room_t true_room(room);
-	true_room.d[sw_dim][sw_dir] += shared_extend;
 	add_light_switches_to_room(rgen, true_room, zval, room_id, objs_start, 0, 1); // is_ground_floor=0, is_basement=1
 	// TODO: more
 	
