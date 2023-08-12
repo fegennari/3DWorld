@@ -477,13 +477,13 @@ struct cube_by_xy_dim {
 	bool operator()(cube_t const &a, cube_t const &b) const {return ((a.d[d][0] == b.d[d][0]) ? (a.d[!d][0] < b.d[!d][0]) : (a.d[d][0] < b.d[d][0]));}
 };
 
-void building_t::add_backrooms_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id) {
+void building_t::add_backrooms_objs(rand_gen_t rgen, room_t &room, float zval, unsigned room_id) {
 	//highres_timer_t timer("Add Backrooms Objs"); // up to ~2ms
 	assert(has_room_geom());
 	float const floor_spacing(get_window_vspace()), wall_thickness(1.2*get_wall_thickness()), wall_half_thick(0.5*wall_thickness); // slightly thicker than regular walls
 	float const ceiling_z(zval + get_floor_ceil_gap()); // Note: zval is at floor level, not at the bottom of the room
 	//float const tot_light_amt(room.light_intensity /*+ floor_spacing*room.get_light_amt()*/); // ???
-	float const tot_light_amt(0.5);
+	float const tot_light_amt(0.75);
 	vect_room_object_t &objs(interior->room_geom->objs);
 	unsigned const objs_start(objs.size());
 	if (interior->room_geom->backrooms_start == 0) {interior->room_geom->backrooms_start = objs_start;}
@@ -595,13 +595,13 @@ void building_t::add_backrooms_objs(rand_gen_t rgen, room_t const &room, float z
 	invert_walls(place_area, walls_per_dim, space, nav_pad);
 	resize_cubes_xy(space, nav_pad); // restore padding (under-over)
 	partition_cubes_into_conn_groups(space, space_groups, pad);
-	vect_cube_t small_rooms;
+	vect_cube_t small_rooms, door_keepout;
 
 	// Add doorways + doors to guarantee full connectivity using space
 	if (space_groups.size() > 1) { // multiple disconnected sub-graphs
 		float const door_min_spacing(0.5*doorway_width), min_shared_edge(doorway_width + 2*wall_thickness); // allow space for door frame
 		vector<group_range_t> adj;
-		vect_cube_t doors_to_add, walls_to_add, door_keepout;
+		vect_cube_t doors_to_add, walls_to_add;
 		set<pair<unsigned, unsigned>> connected;
 		bool const first_dim(rgen.rand_bool()); // mix it up to avoid favoring one dim
 
@@ -767,15 +767,25 @@ void building_t::add_backrooms_objs(rand_gen_t rgen, room_t const &room, float z
 	
 	// Make small rooms with doors bathrooms, etc.
 	for (cube_t const &r : small_rooms) {
-		// TODO: only make bathroom if there's a single door and at least one light
-		room_t bathroom(room);
-		bathroom.copy_from(r); // keep flags, copy cube
-		bathroom.intersect_with_cube(true_room); // can't go outside the backrooms (under-over can move exterior walls)
-		bathroom.interior = 1; // treated as basement but not extended basement (no wall padding)
-		float floor_zval(zval); // may be modified below
-		unsigned const floor_ix(0); // pass this in, or always zero?
-		unsigned added_bathroom_objs_mask(0); // unused
-		add_bathroom_objs(rgen, bathroom, floor_zval, room_id, tot_light_amt, objs.size(), floor_ix, 1, added_bathroom_objs_mask); // is_basement=1
+		unsigned num_doors(0);
+
+		for (cube_t const &dk : door_keepout) {
+			if (dk.intersects_xy(r)) {++num_doors;}
+		}
+		if (num_doors == 0) continue; // not connected with a door, not reachable, skip
+
+		if (num_doors == 1) { // only make bathroom if there's a single door
+			// TODO: we want a light in the bathrooms, but lights haven't been added yet; maybe should go back after and add a wall light if there's no ceiling light?
+			room_t bathroom(room);
+			bathroom.copy_from(r); // keep flags, copy cube
+			bathroom.intersect_with_cube(true_room); // can't go outside the backrooms (under-over can move exterior walls)
+			bathroom.interior = 1; // treated as basement but not extended basement (no wall padding)
+			float floor_zval(zval); // may be modified below
+			unsigned const floor_ix(0); // pass this in, or always zero?
+			unsigned added_bathroom_objs_mask(0); // unused
+			add_bathroom_objs(rgen, bathroom, floor_zval, room_id, tot_light_amt, objs.size(), floor_ix, 1, added_bathroom_objs_mask); // is_basement=1
+			room.has_mirror |= bathroom.has_mirror;
+		}
 	} // for r
 }
 
