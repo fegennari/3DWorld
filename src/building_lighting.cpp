@@ -944,6 +944,8 @@ template<typename T> bool line_int_cubes(point const &p1, point const &p2, vecto
 	}
 	return 0;
 }
+template bool line_int_cubes(point const &p1, point const &p2, vect_cube_t const &cubes); // explicit instantiation
+
 bool building_t::is_light_occluded(point const &lpos, point const &camera_bs) const {
 	assert(interior);
 	// Note: assumes the light is inside the building
