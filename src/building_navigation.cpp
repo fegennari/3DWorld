@@ -96,9 +96,9 @@ class cube_nav_grid {
 		cube_t const check_cube(p1, p2);
 
 		for (cube_t const &c : blockers_exp) {
-			if (c.intersects_xy(check_cube) && check_line_clip_xy(p1, p2, c.d)) return 0; // blocked
+			if (c.intersects_xy(check_cube) && check_line_clip_xy(p1, p2, c.d)) return 1; // intersects
 		}
-		return 1;
+		return 0; // no intersection
 	}
 public:
 	bool is_built() const {return !bcube.is_all_zeros();}
@@ -200,12 +200,10 @@ public:
 						reverse(path.begin()+rev_start_ix, path.end());
 						// run another pass to remove unnecessary points
 						path.push_back(p2); // temporary end point
-						auto in(path.begin()+rev_start_ix), out(in);
-
-						for (; in+1 != path.end(); ++in) {
-							if (!check_line_intersect(*(in-1), *(in+1))) {*(out++) = *in;} // remove points where the line bypassing them has no intersection
+						for (unsigned i = rev_start_ix; i+1 < path.size(); ++i) { // inefficient, but simple
+							if (!check_line_intersect(path[i-1], path[i+1])) {path.erase(path.begin() + i); --i;}
 						}
-						path.erase(out, path.end()); // Note: since we skipped the last point in the above iteration, the p2 point that was added will be removed
+						path.pop_back(); // remove p2
 						return 1; // success
 					}
 					sn.g_score = new_g_score;
