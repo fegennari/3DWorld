@@ -623,7 +623,7 @@ public:
 		
 		// ignore starting collisions, for example collisions with stairwell when exiting stairs?
 		// ignore initial coll with "from", and coll with "to" when following the player
-		if (!connect_room_endpoints(avoid, building, walk_area, room_ix, to, from, radius, path, keepout, rgen, 1, following_player)) { // ignore_p1_coll (to) = 1
+		if (!connect_room_endpoints(avoid, building, walk_area, room_ix, to, from, radius, path, keepout, rgen, 1, following_player)) { // ignore_p1_coll (to)=1
 			if (!is_first_path) { // ignore failure on first path to allow person to get out from an object they spawn in
 				bool success(0);
 
@@ -633,8 +633,8 @@ public:
 						point new_to(to + (float(n)/10)*(from - to));
 						//if (!walk_area.contains_pt(new_to)) continue; // can fail for player hiding in a closet
 						walk_area.clamp_pt_xy(new_to);
-						// ignore_p1_coll = 0
-						if (connect_room_endpoints(avoid, building, walk_area, room_ix, new_to, from, radius, path, keepout, rgen, 0, following_player)) {success = 1; break;}
+						// ignore_p1_coll=0, ignore_p2_coll=1
+						if (connect_room_endpoints(avoid, building, walk_area, room_ix, new_to, from, radius, path, keepout, rgen, 0, 1)) {success = 1; break;}
 					} // for n
 				}
 				if (!success) {path.clear(); return 0;}
@@ -1529,7 +1529,10 @@ bool building_t::need_to_update_ai_path(person_t const &person) const {
 		if (fabs(person.pos.z - target.pos.z) > 2.0f*floor_spacing) return 0; // person and player are > 2 floors apart, continue toward stairs (or should it be one floor apart?) (optimization)
 	}
 	if (can_target_player(person)) { // have player visibility
-		if (person.goal_type == GOAL_TYPE_PLAYER && target.same_room_floor(prev_player_building_loc) && !same_room && !person.on_new_path_seg && !person.path.empty()) return 0;
+		if (person.goal_type == GOAL_TYPE_PLAYER && target.same_room_floor(prev_player_building_loc) && !person.on_new_path_seg && !person.path.empty()) {
+			if (!same_room) return 0;
+			if (is_pos_in_pg_or_backrooms(person.pos) && ((person.ssn + frame_counter) & 3) != 0) return 0; // path finding is expensive, update every 4th frame
+		}
 		return 1;
 	}
 	if (has_nearby_sound(person, floor_spacing)) return 1; // new sound source
