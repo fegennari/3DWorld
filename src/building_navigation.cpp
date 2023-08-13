@@ -31,7 +31,6 @@ unsigned get_stall_cubes(room_object_t const &c, cube_t sides[3]);
 unsigned get_shower_cubes(room_object_t const &c, cube_t sides[2]);
 void resize_cubes_xy(vect_cube_t &cubes, float val);
 void get_sphere_boundary_pts(point const &center, float radius, point *pts, bool skip_z=0);
-template<typename T> bool line_int_cubes(point const &p1, point const &p2, vector<T> const &cubes);
 
 point get_cube_center_zval(cube_t const &c, float zval) {return point(c.xc(), c.yc(), zval);}
 float get_ped_coll_radius() {return COLL_RADIUS_SCALE*ped_manager_t::get_ped_radius();}
@@ -1476,7 +1475,12 @@ bool building_t::is_player_visible(person_t const &person, unsigned vis_test) co
 			get_sphere_boundary_pts(target.pos, player_radius, pts, 1); // skip_z=1
 			
 			for (unsigned n = 0; n < 5 && !has_los; ++n) { // check backrooms and parking garage walls
-				has_los |= (!line_int_cubes(pts[n], eye_pos, interior->room_geom->pgbr_walls[0]) && !line_int_cubes(pts[n], eye_pos, interior->room_geom->pgbr_walls[1]));
+				cube_t const line_bcube(pts[n], eye_pos);
+				has_los = 1;
+				
+				for (unsigned d = 0; d < 2; ++d) {
+					if (line_int_cubes(pts[n], eye_pos, interior->room_geom->pgbr_walls[d], line_bcube)) {has_los = 0; break;}
+				}
 			}
 			if (!has_los) return 0; // blocked by a wall
 		}

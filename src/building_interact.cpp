@@ -1546,7 +1546,7 @@ bool building_t::move_sphere_to_valid_part(point &pos, point const &p_last, floa
 void get_sphere_boundary_pts(point const &center, float radius, point *pts, bool skip_z=0) {
 	pts[0] = center;
 
-	for (unsigned dim = 0, ix = 1; dim < (skip_z ? 2 : 3); ++dim) {
+	for (unsigned dim = 0, ix = 1; dim < (skip_z ? 2U : 3U); ++dim) {
 		vector3d dir(zero_vector);
 		dir[dim]  = radius;
 		pts[ix++] = center - dir;

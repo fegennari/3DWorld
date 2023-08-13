@@ -1431,13 +1431,15 @@ template<typename T> bool line_int_cubes_exp(point const &p1, point const &p2, v
 	}
 	return 0;
 }
+template bool line_int_cubes_exp(point const &p1, point const &p2, vect_cube_t const &cubes, vector3d const &expand, cube_t const &line_bcube); // explicit instantiation
+
 template<typename T> bool line_int_cubes(point const &p1, point const &p2, vector<T> const &cubes, cube_t const &line_bcube) {
 	for (auto const &c : cubes) {
 		if (line_bcube.intersects(c) && c.line_intersects(p1, p2)) return 1;
 	}
 	return 0;
 }
-template bool line_int_cubes_exp(point const &p1, point const &p2, vect_cube_t const &cubes, vector3d const &expand, cube_t const &line_bcube);
+template bool line_int_cubes(point const &p1, point const &p2, vect_cube_t const &cubes, cube_t const &line_bcube); // explicit instantiation
 
 unsigned get_ksink_cubes(room_object_t const &sink, cube_t cubes[3]) {
 	assert(sink.type == TYPE_KSINK);
@@ -1748,7 +1750,7 @@ int building_t::check_line_coll_expand(point const &p1, point const &p2, float r
 // visibility query used for rats: ignores room objects
 bool building_t::check_line_of_sight_large_objs(point const &p1, point const &p2) const {
 	assert(interior != nullptr);
-	cube_t line_bcube(p1, p2);
+	cube_t const line_bcube(p1, p2);
 	if (line_int_cubes(p1, p2, interior->fc_occluders, line_bcube)) return 0; // likely fastest test
 
 	for (unsigned d = 0; d < 2; ++d) {

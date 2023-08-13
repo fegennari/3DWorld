@@ -938,22 +938,12 @@ void building_t::register_blinds_state_change() const {
 	register_indir_lighting_geom_change();
 }
 
-template<typename T> bool line_int_cubes(point const &p1, point const &p2, vector<T> const &cubes) { // cube_t, cube_with_ix_t, etc.
-	for (auto c = cubes.begin(); c != cubes.end(); ++c) {
-		if (c->line_intersects(p1, p2)) return 1;
-	}
-	return 0;
-}
-template bool line_int_cubes(point const &p1, point const &p2, vect_cube_t const &cubes); // explicit instantiation
-
 bool building_t::is_light_occluded(point const &lpos, point const &camera_bs) const {
 	assert(interior);
 	// Note: assumes the light is inside the building
 	// exterior walls have windows and don't generally occlude lights; room objects and doors are too small to occlude; elevators are too sparse to occlude
-	for (unsigned d = 0; d < 2; ++d) {
-		if (line_int_cubes(lpos, camera_bs, interior->walls[d])) return 1;
-	}
-	if (line_int_cubes(lpos, camera_bs, interior->fc_occluders)) return 1;
+	if (line_intersect_walls(lpos, camera_bs)) return 1; // check interior walls
+	if (line_int_cubes(lpos, camera_bs, interior->fc_occluders, cube_t(lpos, camera_bs))) return 1; // check floors and ceilings
 	return 0;
 }
 void building_t::clip_ray_to_walls(point const &p1, point &p2, vect_cube_t const walls[2]) const { // Note: assumes p1.z == p2.z

@@ -82,15 +82,23 @@ void create_mirror_reflection_if_needed() {
 	cur_room_mirror = room_object_t(); // reset for next frame
 }
 
-bool building_t::line_intersect_walls(point const &p1, point const &p2) const {
-	for (unsigned d = 0; d < 2; ++d) {
-		for (auto c = interior->walls[d].begin(); c != interior->walls[d].end(); ++c) {
-			if (check_line_clip(p1, p2, c->d)) return 1;
+bool building_t::line_intersect_walls(point const &p1, point const &p2, bool same_room) const {
+	cube_t const line_bcube(p1, p2);
+	
+	if (!same_room) { // no need to check walls if both points are in the same room
+		for (unsigned d = 0; d < 2; ++d) {
+			if (line_int_cubes(p1, p2, interior->walls[d], line_bcube)) return 1;
+		}
+	}
+	if (has_room_geom() && (is_pos_in_pg_or_backrooms(p1) || is_pos_in_pg_or_backrooms(p2))) {
+		for (unsigned d = 0; d < 2; ++d) {
+			if (line_int_cubes(p1, p2, interior->room_geom->pgbr_walls[d], line_bcube)) return 1;
 		}
 	}
 	return 0;
 }
-bool building_t::is_cube_face_visible_from_pt(cube_t const &c, point const &p, unsigned dim, bool dir) const { // approximate
+bool building_t::is_cube_face_visible_from_pt(cube_t const &c, point const &p, unsigned dim, bool dir, bool same_room) const { // approximate
+	if (same_room && !is_pos_in_pg_or_backrooms(p)) return 1; // skip intersection tests
 	assert(dim < 2); // X or Y only
 	unsigned const steps(21), d1(1-dim);
 	float const delta(c.get_sz_dim(d1)/(steps-1));
@@ -105,7 +113,7 @@ bool building_t::is_cube_face_visible_from_pt(cube_t const &c, point const &p, u
 	return 0;
 }
 
-bool building_t::find_mirror_in_room(unsigned room_id, vector3d const &xlate, bool check_visibility) const {
+bool building_t::find_mirror_in_room(unsigned room_id, vector3d const &xlate, bool same_room) const {
 	assert(has_room_geom());
 	point camera_bs(camera_pdu.pos - xlate);
 	maybe_inv_rotate_point(camera_bs); // rotate camera pos into building space
@@ -118,7 +126,7 @@ bool building_t::find_mirror_in_room(unsigned room_id, vector3d const &xlate, bo
 		// Note: we could probably return 0 rather than continuing after this point, but that may change if rooms with multiple mirrors are enabled
 		if (((camera_bs[i->dim] - i->get_center_dim(i->dim)) < 0.0f) ^ i->dir ^ 1) continue; // back facing
 		if (!camera_pdu.cube_visible(*i + xlate)) continue; // VFC
-		if (check_visibility && !is_cube_face_visible_from_pt(*i, camera_bs, i->dim, i->dir)) continue; // visibility test (slow)
+		if (!is_cube_face_visible_from_pt(*i, camera_bs, i->dim, i->dir, same_room)) continue; // visibility test (slow)
 		cur_room_mirror = *i;
 		return 1;
 	} // for i
@@ -137,7 +145,7 @@ bool building_t::find_mirror_needing_reflection(vector3d const &xlate) const {
 	for (auto r = interior->rooms.begin(); r != interior->rooms.end(); ++r) {
 		if (!r->has_mirror) continue; // no mirror in this room stack
 		if (!r->contains_pt(camera_bs)) continue;
-		if (find_mirror_in_room(((r - interior->rooms.begin()) & 255), xlate, 0)) return 1;
+		if (find_mirror_in_room(((r - interior->rooms.begin()) & 255), xlate, 1)) return 1; // same_room=1
 	}
 	// not found, look for a connecting hallway
 	for (auto h = interior->rooms.begin(); h != interior->rooms.end(); ++h) {
@@ -154,8 +162,8 @@ bool building_t::find_mirror_needing_reflection(vector3d const &xlate) const {
 			r_exp.expand_in_dim( short_dim, hallway_width);
 			r_exp.expand_in_dim(!short_dim, hallway_width); // expand in the other dim to include a bit of buffer along the hallway
 			if (!r_exp.contains_pt(camera_bs)) continue; // camera not within the hallway across from the room
-			if (find_mirror_in_room(((r - interior->rooms.begin()) & 255), xlate, 1)) return 1;
-		}
+			if (find_mirror_in_room(((r - interior->rooms.begin()) & 255), xlate, 0)) return 1; // same_room=0
+		} // for r
 	} // for h
 	return 0; // not found
 }
