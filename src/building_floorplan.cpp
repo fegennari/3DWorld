@@ -1538,8 +1538,9 @@ template<typename T> void subtract_cube_from_cube_inplace(cube_t const &s, vecto
 	assert(ix < prev_sz);
 	T const c(cubes[ix]); // deep copy - reference will become invalid
 	subtract_cube_from_cube(c, s, cubes);
+	bool const none_added(cubes.size() == prev_sz);
 	cubes[ix] = cubes.back(); cubes.pop_back(); // reuse this slot for one of the output cubes (or move the last cube here if there are no output cubes)
-	if (cubes.size() <= prev_sz) {--ix; --iter_end;} // no cubes added, last cube was swapped into this slot and needs to be reprocessed
+	if (none_added) {--ix; --iter_end;} // no cubes added, last cube was swapped into this slot and needs to be reprocessed
 }
 // subtracts in X and Y only; zval_mode: 0=check floor/building ext walls, 1=ignore zvals, 2=check zval overlap
 template<typename T> void subtract_cubes_from_cube(cube_t const &c, vector<T> const &sub, vect_cube_t &out, vect_cube_t &out2, int zval_mode) {
