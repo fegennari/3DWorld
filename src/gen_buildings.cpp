@@ -29,7 +29,7 @@ building_params_t global_building_params;
 building_t const *player_building(nullptr);
 
 extern bool start_in_inf_terrain, draw_building_interiors, flashlight_on, enable_use_temp_vbo, toggle_room_light;
-extern bool teleport_to_screenshot, enable_dlight_bcubes, can_do_building_action;
+extern bool teleport_to_screenshot, enable_dlight_bcubes, can_do_building_action, mirror_in_ext_basement;
 extern unsigned room_mirror_ref_tid;
 extern int rand_gen_index, display_mode, window_width, window_height, camera_surf_collide, animate2, building_action_key, player_in_elevator;
 extern float CAMERA_RADIUS, city_dlight_pcf_offset_scale, fticks, FAR_CLIP;
@@ -3052,17 +3052,19 @@ public:
 				bool is_first_tile(1), can_break_from_loop(0);
 
 				for (auto g = (*i)->grid_by_tile.begin(); g != (*i)->grid_by_tile.end(); ++g) { // Note: all grids should be nonempty
-					if (reflection_pass && !g->bcube.contains_pt_xy(camera_xlated)) continue; // not the correct tile
+					// for the reflection pass, we only need to look at the grid containing the building with the mirror, which must be the player's building;
+					// but if it's in the extended basement, it can be outside the building's home grid, so we have to skip the check
+					if (reflection_pass && !mirror_in_ext_basement && !g->bcube.contains_pt_xy(camera_xlated)) continue; // not the correct tile
 					float const gdist_sq(p2p_dist_sq(camera_xlated, g->bcube.closest_pt(camera_xlated)));
 
-					if (gdist_sq > rgeom_clear_dist_sq && g->has_room_geom) { // need to clear room geom
+					if (!reflection_pass && gdist_sq > rgeom_clear_dist_sq && g->has_room_geom) { // need to clear room geom
 						//highres_timer_t timer("Clear Room Geom");
 						for (auto bi = g->bc_ixs.begin(); bi != g->bc_ixs.end(); ++bi) {(*i)->get_building(bi->ix).clear_room_geom();}
 						g->has_room_geom = 0;
 					}
 					if (gdist_sq > int_draw_dist_sq) continue; // too far
 					if (!building_grid_visible(xlate, g->bcube, player_building)) continue; // VFC
-					if (is_first_tile) {(*i)->ensure_interior_geom_vbos();} // we need the interior geom at this point
+					if (is_first_tile) {(*i)->ensure_interior_geom_vbos();} // we need the interior geom at this point, even if it's the reflection pass
 					(*i)->building_draw_interior.draw_tile(s, (g - (*i)->grid_by_tile.begin()));
 					// iterate over nearby buildings in this tile and draw interior room geom, generating it if needed
 					if (gdist_sq > rgeom_draw_dist_sq) continue; // too far

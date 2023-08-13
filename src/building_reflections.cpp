@@ -5,7 +5,7 @@
 #include "buildings.h"
 #include "shaders.h"
 
-bool disable_city_shadow_maps(0);
+bool disable_city_shadow_maps(0), mirror_in_ext_basement(0);
 unsigned room_mirror_ref_tid(0);
 room_object_t cur_room_mirror;
 shader_t reflection_shader;
@@ -130,7 +130,13 @@ bool building_t::find_mirror_in_room(unsigned room_id, vector3d const &xlate, bo
 		if (!camera_pdu.cube_visible(*i + xlate)) continue; // VFC
 		if (!is_cube_face_visible_from_pt(*i, camera_bs, i->dim, i->dir, same_room)) continue; // visibility test (slow)
 		float const dsq(p2p_dist_sq(camera_bs, i->get_cube_center()));
-		if (!found || dsq < dmin_sq) {dmin_sq = dsq; cur_room_mirror = *i; found = 1;}
+		
+		if (!found || dsq < dmin_sq) {
+			dmin_sq = dsq;
+			found   = 1;
+			cur_room_mirror = *i;
+			mirror_in_ext_basement = get_room(room_id).is_ext_basement();
+		}
 	} // for i
 	return found;
 }
