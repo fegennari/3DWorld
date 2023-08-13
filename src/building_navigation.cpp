@@ -621,7 +621,9 @@ public:
 		path.push_back(to); // Note: path is constructed backwards, so "to" is added first and connect_room_endpoints takes swapped arguments
 		
 		// ignore starting collisions, for example collisions with stairwell when exiting stairs?
-		// ignore initial coll with "from", and coll with "to" when following the player
+		// ignore initial coll with "from", and coll with "to" when following the player;
+		// this can cause zombies to walk through walls the player is standing next to, but generally only when they have a line of sight;
+		// while this is wrong, it's better for gameplay than not being able to reach a player who is hiding in a corner
 		if (!connect_room_endpoints(avoid, building, walk_area, room_ix, to, from, radius, path, keepout, rgen, 1, following_player)) { // ignore_p1_coll (to)=1
 			if (!is_first_path) { // ignore failure on first path to allow person to get out from an object they spawn in
 				bool success(0);
@@ -1539,6 +1541,8 @@ bool building_t::need_to_update_ai_path(person_t const &person) const {
 		}
 		return 1;
 	}
+	// if we were following the player, don't get distracted by a sound such as another zombie moaning
+	if (person.goal_type == GOAL_TYPE_PLAYER_LAST_POS && person.target_valid() && !person.path.empty()) return 0;
 	if (has_nearby_sound(person, floor_spacing)) return 1; // new sound source
 	return 0; // continue on the previously chosen path
 }
@@ -1864,6 +1868,7 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 	bool const update_path(need_to_update_ai_path(person)), has_rgeom(has_room_geom());
 	// if room objects spawn in, select a new dest to avoid walking through objects based on our previous, possibly invalid path
 	if (has_rgeom && !person.has_room_geom) {person.abort_dest();}
+	if (!update_path && person.goal_type == GOAL_TYPE_PLAYER) {person.goal_type = GOAL_TYPE_PLAYER_LAST_POS;} // target is player's last known pos
 	person.has_room_geom = has_rgeom;
 
 	if (update_path) { // need to update based on player movement; higher priority than choose_dest
