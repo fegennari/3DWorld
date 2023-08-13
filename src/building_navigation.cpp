@@ -67,15 +67,18 @@ class cube_nav_grid {
 	point    get_grid_pt (unsigned x, unsigned y) const {return get_grid_pt(x, y, grid_bcube.z1());}
 	uint8_t  get_node_val(unsigned x, unsigned y) const {return nodes[get_node_ix(x, y)];}
 
+	void get_grid_ix_fp(point p, float gxy[2]) const {
+		grid_bcube.clamp_pt_xy(p);
+		for (unsigned d = 0; d < 2; ++d) {gxy[d] = (p[d] - grid_bcube.d[d][0])/step[d];}
+	}
 	float get_distance(unsigned x1, unsigned y1, unsigned x2, unsigned y2) const {
 		float const dx(float(x2) - float(x1)), dy(float(y2) - float(y1));
 		return sqrt(dx*dx + dy*dy);
 	}
-	bool find_open_node_closest_to(point p, point const &dest, unsigned &nx, unsigned &ny) const {
+	bool find_open_node_closest_to(point const &p, point const &dest, unsigned &nx, unsigned &ny) const {
 		if (!bcube.contains_pt_xy(p)) return 0; // outside the grid valid area; error?
-		grid_bcube.clamp_pt_xy(p);
 		float gxy[2]; // grid index, with partial offset
-		for (unsigned d = 0; d < 2; ++d) {gxy[d] = (p[d] - grid_bcube.d[d][0])/step[d];}
+		get_grid_ix_fp(p, gxy);
 		float dmin_sq(0.0);
 		bool found(0);
 
@@ -103,7 +106,7 @@ class cube_nav_grid {
 public:
 	bool is_built() const {return !bcube.is_all_zeros();}
 
-	void build(cube_t const &bcube_, vect_cube_t const &blockers, float radius_) {
+	void build(cube_t const &bcube_, vect_cube_t const &blockers, vector<door_stack_t> const &doors, float radius_) {
 		radius     = radius_;
 		bcube      = bcube_;
 		grid_bcube = bcube;
@@ -133,6 +136,31 @@ public:
 			}
 			for (unsigned x = 0; x < num[0]; ++x) {
 				if (!pt_contained_xy(get_grid_pt(x, y), row_blockers)) {nodes[get_node_ix(x, y)] = 1;}
+			}
+		} // for y
+		// flag all nodes in doorways as walkable to ensure the graph is connected, even if it means people will clip through the door frame;
+		// other solutions involve aligning doors with the grid (too difficult/restrictive) or reducing spacing to doorway_width/(2*radius) (too slow)
+		for (door_stack_t const &d : doors) {
+			if (!bcube.intersects(d)) continue; // wrong room
+			cube_t bc(d.get_true_bcube());
+			bc.expand_in_dim(d.dim, d.get_width()); // include space to both sides
+			set_wall_width(bc, bc.get_center_dim(!d.dim), 0.0, !d.dim); // set width to zero so that exactly one grid is contained in this dim
+			float lo[2], hi[2];
+			get_grid_ix_fp(bc.get_llc(), lo);
+			get_grid_ix_fp(bc.get_urc(), hi);
+			unsigned const x1(round_fp(lo[0])), y1(round_fp(lo[1])), x2(round_fp(hi[0])), y2(round_fp(hi[1]));
+
+			for (unsigned y = y1; y <= y2; ++y) {
+				for (unsigned x = x1; x <= x2; ++x) {nodes[get_node_ix(x, y)] = 1;}
+			}
+		} // for d
+	}
+	void create_debug_objs(vector<room_object_t> &objs) const {
+		for (unsigned y = 0; y < num[1]; ++y) {
+			for (unsigned x = 0; x < num[0]; ++x) {
+				if (!nodes[get_node_ix(x, y)]) continue; // blocked
+				cube_t c; c.set_from_sphere((get_grid_pt(x, y) + vector3d(0.0, 0.0, radius)), radius);
+				objs.emplace_back(c, TYPE_DBG_SHAPE, 0, 0, 0, (RO_FLAG_NOCOLL | RO_FLAG_BACKROOM), 1.0, SHAPE_SPHERE, RED); // room_id=0
 			}
 		}
 	}
@@ -529,7 +557,10 @@ public:
 				for (cube_t const &c : avoid) {
 					if (c.intersects(walk_area)) {blockers.push_back(c);}
 				}
-				nav_grid.build(walk_area, blockers, get_ped_coll_radius()); // should be the radius of this person, to avoid being too conservative?
+				// Note: doorway width is 2.38x coll radius
+				nav_grid.build(walk_area, blockers, building.interior->door_stacks, get_ped_coll_radius()); // use conservative person radius so that we can reuse across people
+				//nav_grid.create_debug_objs(building.interior->room_geom->objs); // for debugging; modifies building, which should be const
+				//building.interior->room_geom->invalidate_small_geom();
 			}
 			if (nav_grid.find_path(p1, p2, path)) {path.uses_nav_grid = 1; return 2;}
 		}
