@@ -436,6 +436,10 @@ void partition_cubes_into_conn_groups(vect_cube_t const &cubes, vector<vect_cube
 		groups.push_back(group);
 	} // while
 }
+
+struct cmp_cube_x1_y1 {
+	bool operator()(cube_t const &a, cube_t const &b) const {return ((a.x1() == b.x1()) ? (a.y1() < b.y1()) : (a.x1() < b.x1()));}
+};
 void invert_walls(cube_t const &room, vect_cube_t const walls[2], vect_cube_t &space, float pad=0.0) {
 	space.clear();
 	space.push_back(room);
@@ -447,6 +451,17 @@ void invert_walls(cube_t const &room, vect_cube_t const walls[2], vect_cube_t &s
 			subtract_cube_from_cubes(sub, space);
 		}
 	}
+	if (space.empty()) return;
+	// max merge adjacent cubes in Y
+	sort(space.begin(), space.end(), cmp_cube_x1_y1());
+	auto i(space.begin()+1), o(i); // skip first
+
+	for (; i != space.end(); ++i) {
+		cube_t &c(*(o-1)); // last output cube
+		if (c.x1() == i->x1() && c.x2() == i->x2() && c.y2() == i->y1()) {c.y2() = i->y2();} // extend in +Y
+		else {*o++ = *i;} // keep this cube
+	} // for i
+	space.erase(o, space.end());
 }
 void resize_cubes_xy(vect_cube_t &cubes, float val) { // val can be positive or negative
 	for (cube_t &c : cubes) {c.expand_by_xy(val);}
@@ -761,7 +776,6 @@ void building_t::add_backrooms_objs(rand_gen_t rgen, room_t &room, float zval, u
 	shared_wall.d[sw_dim][!sw_dir] = place_area.d[sw_dim][sw_dir]; // extend to include shared wall
 	assert(shared_wall.intersects(true_room));
 	shared_wall.intersect_with_cube(true_room);
-	//objs.emplace_back(shared_wall, TYPE_DBG_SHAPE, room_id, 0, 0, (RO_FLAG_NOCOLL | RO_FLAG_BACKROOM), 1.0, SHAPE_CUBE, RED); // TESTING
 	
 	// Add vents, light switch, and outlets on wall adjacent to building or next to the door
 	add_light_switches_to_room(rgen, true_room, zval, room_id, objs_start, 0, 1); // is_ground_floor=0, is_basement=1
