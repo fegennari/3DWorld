@@ -1738,7 +1738,8 @@ void building_t::debug_people_in_building(shader_t &s) const {
 	vector<vert_wrap_t> line_pts;
 
 	for (person_t const &p : interior->people) {
-		color_shader.set_cur_color(p.path.uses_nav_grid ? ORANGE : YELLOW); // if any part of the path uses the nav grid, show it as yellow
+		// use different colors if the path uses the nav grid or was shortened
+		color_shader.set_cur_color(p.path.uses_nav_grid ? (p.path.is_shortened ? LT_BLUE : GREEN) : (p.path.is_shortened ? ORANGE : YELLOW));
 
 		for (point const &v : p.path) {
 			draw_sphere_vbo(v, 0.25*p.radius, 16, 0);

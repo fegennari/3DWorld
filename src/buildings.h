@@ -1556,7 +1556,7 @@ private:
 	bool is_pos_in_pg_or_backrooms(point const &pos) const {return (has_parking_garage && pos.z < ground_floor_z1);}
 	bool select_person_dest_in_room(person_t &person, rand_gen_t &rgen, room_t const &room) const;
 	void get_avoid_cubes(float zval, float height, float radius, vect_cube_t &avoid, bool following_player, cube_t const *const fires_select_cube=nullptr) const;
-	bool find_route_to_point(person_t const &person, float radius, bool is_first_path, bool following_player, ai_path_t &path) const;
+	bool find_route_to_point(person_t &person, float radius, bool is_first_path, bool following_player, ai_path_t &path) const;
 	bool stairs_contained_in_part(stairwell_t const &s, cube_t const &p) const;
 	void find_nearest_stairs_or_ramp(point const &p1, point const &p2, vector<unsigned> &nearest_stairs, int part_ix=-1) const;
 	int find_nearest_elevator_this_floor(point const &pos) const;

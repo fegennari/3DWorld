@@ -625,6 +625,7 @@ public:
 		rand_gen_t rgen;
 		rgen.set_state((ped_ix + 13*room_ix + 1), (ped_rseed + 1));
 		vect_cube_t keepout;
+		unsigned const sub_path_start(path.size());
 		path.push_back(to); // Note: path is constructed backwards, so "to" is added first and connect_room_endpoints takes swapped arguments
 		
 		// ignore starting collisions, for example collisions with stairwell when exiting stairs?
@@ -641,8 +642,13 @@ public:
 						point new_to(to + (float(n)/10)*(from - to));
 						//if (!walk_area.contains_pt(new_to)) continue; // can fail for player hiding in a closet
 						walk_area.clamp_pt_xy(new_to);
-						// ignore_p1_coll=0, ignore_p2_coll=1
-						if (connect_room_endpoints(avoid, building, walk_area, room_ix, new_to, from, radius, path, keepout, rgen, 0, 1)) {success = 1; break;}
+						
+						if (connect_room_endpoints(avoid, building, walk_area, room_ix, new_to, from, radius, path, keepout, rgen, 0, 1)) { // ignore_p1_coll=0, ignore_p2_coll=1
+							assert(sub_path_start < path.size());
+							path[sub_path_start] = new_to; // end the path at the new destination
+							success = 1;
+							break;
+						}
 					} // for n
 				}
 				if (!success) {path.clear(); return 0;}
@@ -1256,7 +1262,7 @@ void building_t::get_avoid_cubes(float zval, float height, float radius, vect_cu
 	assert(interior);
 	interior->get_avoid_cubes(avoid, (zval - radius), (zval + (height - radius)), 0.5*radius, get_floor_thickness(), following_player, 0, fires_select_cube); // skip_stairs=0
 }
-bool building_t::find_route_to_point(person_t const &person, float radius, bool is_first_path, bool following_player, ai_path_t &path) const {
+bool building_t::find_route_to_point(person_t &person, float radius, bool is_first_path, bool following_player, ai_path_t &path) const {
 
 	assert(interior && interior->nav_graph);
 	point const &from(person.pos), &to(person.target_pos);
@@ -1284,7 +1290,11 @@ bool building_t::find_route_to_point(person_t const &person, float radius, bool 
 				valid_area.clamp_pt_xy(dest);
 			}
 		}
-		return interior->nav_graph->complete_path_within_room(from, dest, loc1.room_ix, person.ssn, radius, person.cur_rseed, is_first_path, following_player, avoid, *this, path);
+		point const dest_in(dest);
+		if (!interior->nav_graph->complete_path_within_room(from, dest, loc1.room_ix, person.ssn, radius,
+			person.cur_rseed, is_first_path, following_player, avoid, *this, path)) return 0;
+		if (dest != dest_in) {person.path.is_shortened = 1;} // update target in case a shorter path was found
+		return 1;
 	}
 	if (loc1.floor_ix != loc2.floor_ix) { // different floors: find path from <from> to nearest stairs, then find path from stairs to <to>
 		vector<unsigned> nearest_stairs_or_ramp;
