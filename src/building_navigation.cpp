@@ -471,6 +471,9 @@ public:
 
 		// straight line not valid, need to run path finding
 		assert(!keepout.empty());
+		cube_t pts_bcube(p1, p2);
+		bool const use_pts_bcube(min(pts_bcube.dx(), pts_bcube.dy()) > 2.0*radius); // don't use if too small/narrow
+
 		// do something simple and brute force:
 		// since rooms tend to only have objects in the middle, try to find the best point that creates the shortest non-intersecting 2-part or 3-part path
 		for (unsigned npts = 1; npts <= 2; ++npts) { // try to add 1 point; if that fails, try to add 2 points
@@ -481,7 +484,8 @@ public:
 			pos.z = pos2.z = p1.z;
 
 			for (unsigned n = 0; n < num_tries; ++n) { // make num_tries attempts
-				choose_pt_xy_in_room(pos, walk_area, rgen); // choose a rand point in the room
+				cube_t const &pref_bcube((use_pts_bcube && n < num_tries/2) ? pts_bcube : walk_area); // prefer point inside p1/p2 bcube (for backrooms)
+				choose_pt_xy_in_room(pos, pref_bcube, rgen); // choose a rand point in the room
 				if (check_pt_contained_xy(keepout, pos))       continue; // bad point
 				if (!building.check_pt_within_part_sides(pos)) continue; // outside non-cube building
 				bool const seg1_bad(check_line_int_xy(keepout, p1, pos)), seg2_bad(check_line_int_xy(keepout, pos, p2));
@@ -496,7 +500,7 @@ public:
 					bool success(0);
 
 					for (unsigned m = 0; m < 20; ++m) { // make 20 random attempts
-						choose_pt_xy_in_room(pos2, walk_area, rgen); // choose a rand point in the room
+						choose_pt_xy_in_room(pos2, pref_bcube, rgen); // choose a rand point in the room
 						if (!building.check_pt_within_part_sides(pos2)) continue; // outside non-cube building
 						if (!check_pt_contained_xy(keepout, pos2) && !check_line_int_xy(keepout, pos, pos2)) {success = 1; break;} // good point
 					}
@@ -515,9 +519,10 @@ public:
 			if (use_pos2) {path.push_back(best_pt2);}
 			return 1; // success
 		} // for npts
-		if (building.is_room_backrooms(room_ix)) { // run detailed path finding on backrooms
+		if (!no_grid_path && building.is_room_backrooms(room_ix)) { // run detailed path finding on backrooms
 			if (!nav_grid.is_built()) { // build once and cache
 				//highres_timer_t timer("Build Nav Grid");
+				// Note: built once, so must use avoid rather than keepout; this means that our path finding will likely fail even when p1 or p2 coll is disabled
 				vect_cube_t blockers;
 				blockers.reserve(avoid.size());
 
