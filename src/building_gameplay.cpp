@@ -144,7 +144,7 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_PANTS     ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 16.0,  0.50,  "jeans");
 	bldg_obj_types[TYPE_BLANKET   ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 20.0,  2.0,   "blanket");
 	bldg_obj_types[TYPE_SERVER    ] = bldg_obj_type_t(1, 1, 1, 1, 0, 0, 2, 10000, 400.00,"server"); // small because it's in a windowless room; too heavy for inventory
-	bldg_obj_types[TYPE_DBG_SHAPE ] = bldg_obj_type_t(0, 0, 0, 0, 0, 0, 0,  0.0,   0.0,  "debug shape");
+	bldg_obj_types[TYPE_DBG_SHAPE ] = bldg_obj_type_t(0, 0, 0, 0, 0, 0, 1,  0.0,   0.0,  "debug shape"); // small (optimization)
 	// player_coll, ai_coll, rat_coll, pickup, attached, is_model, lg_sm, value, weight, name [capacity]
 	// 3D models
 	bldg_obj_types[TYPE_TOILET    ] = bldg_obj_type_t(1, 1, 1, 1, 1, 1, 0, 120.0, 88.0,  "toilet");

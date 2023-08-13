@@ -3883,7 +3883,7 @@ void building_room_geom_t::add_pan(room_object_t const &c) { // is_small=1
 }
 
 void building_room_geom_t::add_debug_shape(room_object_t const &c) {
-	rgeom_mat_t &mat(get_untextured_material(0)); // unshadowed
+	rgeom_mat_t &mat(get_untextured_material(0, 0, 1)); // unshadowed, small
 	if      (c.shape == SHAPE_CUBE  ) {mat.add_cube_to_verts_untextured(c, c.color);} // all faces
 	else if (c.shape == SHAPE_CYLIN ) {mat.add_vcylin_to_verts(c, c.color, 1, 1);} // draw top and bottom
 	else if (c.shape == SHAPE_SPHERE) {mat.add_sphere_to_verts(c, c.color, 1);} // low_detail=1
