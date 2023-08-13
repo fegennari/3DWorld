@@ -113,12 +113,14 @@ bool building_t::is_cube_face_visible_from_pt(cube_t const &c, point const &p, u
 	return 0;
 }
 
-bool building_t::find_mirror_in_room(unsigned room_id, vector3d const &xlate, bool same_room) const {
+bool building_t::find_mirror_in_room(unsigned room_id, vector3d const &xlate, bool same_room) const { // in view of the player
 	assert(has_room_geom());
 	point camera_bs(camera_pdu.pos - xlate);
 	maybe_inv_rotate_point(camera_bs); // rotate camera pos into building space
 	auto objs_end(interior->room_geom->get_placed_objs_end()); // skip buttons/stairs/elevators
 	float const camera_z1(camera_bs.z - CAMERA_RADIUS), camera_z2(camera_bs.z + CAMERA_RADIUS);
+	float dmin_sq(0.0);
+	bool found(0);
 
 	for (auto i = interior->room_geom->objs.begin(); i != objs_end; ++i) { // see if that room contains a mirror
 		if (i->room_id != room_id || !is_mirror(*i))      continue; // wrong room, or not a mirror
@@ -127,10 +129,10 @@ bool building_t::find_mirror_in_room(unsigned room_id, vector3d const &xlate, bo
 		if (((camera_bs[i->dim] - i->get_center_dim(i->dim)) < 0.0f) ^ i->dir ^ 1) continue; // back facing
 		if (!camera_pdu.cube_visible(*i + xlate)) continue; // VFC
 		if (!is_cube_face_visible_from_pt(*i, camera_bs, i->dim, i->dir, same_room)) continue; // visibility test (slow)
-		cur_room_mirror = *i;
-		return 1;
+		float const dsq(p2p_dist_sq(camera_bs, i->get_cube_center()));
+		if (!found || dsq < dmin_sq) {dmin_sq = dsq; cur_room_mirror = *i; found = 1;}
 	} // for i
-	return 0;
+	return found;
 }
 
 bool building_t::find_mirror_needing_reflection(vector3d const &xlate) const {
