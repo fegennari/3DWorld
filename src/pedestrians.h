@@ -51,6 +51,12 @@ struct person_base_t : public waiting_obj_t {
 	bool is_close_to_player () const;
 };
 
+struct ai_path_t : public vector<point> {
+	bool uses_nav_grid=0;
+	void clear() {vector<point>::clear(); uses_nav_grid = 0;}
+	void add(ai_path_t const &path) {vector_add_to(path, *this); uses_nav_grid |= path.uses_nav_grid;}
+};
+
 enum {AI_STOP=0, AI_WAITING, AI_NEXT_PT, AI_BEGIN_PATH, AI_AT_DEST, AI_MOVING, AI_TO_REMOVE,
 	  AI_WAIT_ELEVATOR, AI_ENTER_ELEVATOR, AI_ACTIVATE_ELEVATOR, AI_RIDE_ELEVATOR, AI_EXIT_ELEVATOR}; // elevator states
 enum {GOAL_TYPE_NONE=0, GOAL_TYPE_ROOM, GOAL_TYPE_ELEVATOR, GOAL_TYPE_PLAYER, GOAL_TYPE_PLAYER_LAST_POS, GOAL_TYPE_SOUND};
@@ -61,7 +67,7 @@ struct person_t : public person_base_t { // building person
 	unsigned short cur_rseed=1;
 	uint8_t goal_type=GOAL_TYPE_NONE, cur_elevator=0, dest_elevator_floor=0, ai_state=AI_STOP;
 	bool following_player=0, saw_player_hide=0, is_on_stairs=0, has_key=0, is_first_path=1, on_new_path_seg=0, last_used_elevator=0, must_re_call_elevator=0, has_room_geom=0;
-	vector<point> path; // stored backwards, next point on path is path.back()
+	ai_path_t path; // stored backwards, next point on path is path.back()
 
 	person_t(float radius_) : person_base_t(radius_) {in_building = 1;}
 	bool on_stairs() const {return is_on_stairs;}

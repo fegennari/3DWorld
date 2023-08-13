@@ -35,6 +35,7 @@ void get_sphere_boundary_pts(point const &center, float radius, point *pts, bool
 point get_cube_center_zval(cube_t const &c, float zval) {return point(c.xc(), c.yc(), zval);}
 float get_ped_coll_radius() {return COLL_RADIUS_SCALE*ped_manager_t::get_ped_radius();}
 
+
 class cube_nav_grid {
 	float radius=0.0;
 	cube_t bcube, grid_bcube;
@@ -434,8 +435,9 @@ public:
 		return 0;
 	}
 	// add any necessary points to <path> that are required to get from <p1> to <p2> inside <walk_area> without intersecting <avoid>
-	bool connect_room_endpoints(vect_cube_t const &avoid, building_t const &building, cube_t const &walk_area, unsigned room_ix, point const &p1, point const &p2,
-		float radius, vector<point> &path, vect_cube_t &keepout, rand_gen_t &rgen, bool ignore_p1_coll=0, bool ignore_p2_coll=0) const
+	// return: 0=failed, 1=regular path, 2=nav grid path
+	int connect_room_endpoints(vect_cube_t const &avoid, building_t const &building, cube_t const &walk_area, unsigned room_ix, point const &p1, point const &p2,
+		float radius, ai_path_t &path, vect_cube_t &keepout, rand_gen_t &rgen, bool ignore_p1_coll=0, bool ignore_p2_coll=0, bool no_grid_path=0) const
 	{
 		assert(p1.z == p2.z);
 		bool is_path_valid(1);
@@ -524,7 +526,7 @@ public:
 				}
 				nav_grid.build(walk_area, blockers, get_ped_coll_radius()); // should be the radius of this person, to avoid being too conservative?
 			}
-			if (nav_grid.find_path(p1, p2, path)) return 1;
+			if (nav_grid.find_path(p1, p2, path)) {path.uses_nav_grid = 1; return 2;}
 		}
 		// else, what about parking garages?
 		return 0; // failed
@@ -545,7 +547,7 @@ public:
 	}
 	bool reconstruct_path(vector<a_star_node_state_t> const &state, vect_cube_t const &avoid, building_t const &building, point const &cur_pt,
 		float radius, float height, unsigned start_ix, unsigned end_ix, unsigned ped_ix, bool is_first_path, bool up_or_down, unsigned ped_rseed,
-		point const *const custom_dest, vector<point> &path) const
+		point const *const custom_dest, ai_path_t &path) const
 	{
 		unsigned n(start_ix);
 		rand_gen_t rgen;
@@ -610,7 +612,7 @@ public:
 		return 0; // never gets here
 	}
 	bool complete_path_within_room(point const &from, point const &to, unsigned room_ix, unsigned ped_ix, float radius,
-		unsigned ped_rseed, bool is_first_path, bool following_player, vect_cube_t const &avoid, building_t const &building, vector<point> &path) const
+		unsigned ped_rseed, bool is_first_path, bool following_player, vect_cube_t const &avoid, building_t const &building, ai_path_t &path) const
 	{
 		// used for reaching a goal such as the player within the same room;
 		// assumes the building shape is convex and the goal is inside the building so that the path to the goal never leaves a non-cube building
@@ -665,7 +667,7 @@ public:
 	// A* algorithm; Note: path is stored backwards
 	bool find_path_points(unsigned room1, unsigned room2, unsigned ped_ix, float radius, float height, bool use_stairs, bool is_first_path,
 		bool up_or_down, unsigned ped_rseed, vect_cube_t const &avoid, building_t const &building, point const &cur_pt,
-		vect_door_t const &doors, bool has_key, point const *const custom_dest, vector<point> &path) const
+		vect_door_t const &doors, bool has_key, point const *const custom_dest, ai_path_t &path) const
 	{
 		// Note: opening and closing doors updates the nav graph; an AI encountering a closed door after choosing a path can either open it or stop and wait
 		assert(room1 < nodes.size() && room2 < nodes.size());
@@ -1249,7 +1251,7 @@ void building_t::get_avoid_cubes(float zval, float height, float radius, vect_cu
 	assert(interior);
 	interior->get_avoid_cubes(avoid, (zval - radius), (zval + (height - radius)), 0.5*radius, get_floor_thickness(), following_player, 0, fires_select_cube); // skip_stairs=0
 }
-bool building_t::find_route_to_point(person_t const &person, float radius, bool is_first_path, bool following_player, vector<point> &path) const {
+bool building_t::find_route_to_point(person_t const &person, float radius, bool is_first_path, bool following_player, ai_path_t &path) const {
 
 	assert(interior && interior->nav_graph);
 	point const &from(person.pos), &to(person.target_pos);
@@ -1289,7 +1291,7 @@ bool building_t::find_route_to_point(person_t const &person, float radius, bool 
 			assert(is_ramp || s < interior->stairwells.size());
 			unsigned const stairs_room_ix(s + interior->rooms.size()); // map to graph space (should work for stairs or ramp)
 			path.clear();
-			vector<point> from_path;
+			ai_path_t from_path;
 			// Note: passing use_stairs=0 here because it's unclear if we want to go through stairs nodes in our A* algorithm
 			// from => stairs/ramp
 			if (!interior->nav_graph->find_path_points(loc1.room_ix, stairs_room_ix, person.ssn, radius, height, 0, is_first_path,
@@ -1329,7 +1331,7 @@ bool building_t::find_route_to_point(person_t const &person, float radius, bool 
 				}
 			}
 			path.push_back(enter_pt);
-			vector_add_to(from_path, path); // concatenate the two path segments in reverse order
+			path.add(from_path); // concatenate the two path segments in reverse order
 			assert(!path.empty());
 			return 1; // done/success
 		} // for s
