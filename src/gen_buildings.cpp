@@ -3081,11 +3081,12 @@ public:
 						//if (bdist_sq > rgeom_clear_dist_sq) {b.clear_room_geom(); continue;} // too far away - is this useful?
 						if (bdist_sq > rgeom_draw_dist_sq) continue; // too far away
 						bool const ext_basement_conn_visible(b.interior_visible_from_other_building_ext_basement(xlate));
-						if (!player_in_building_bcube && !ext_basement_conn_visible && !camera_pdu.cube_visible(b.bcube + xlate)) continue; // VFC
+						bool const debug_draw(0 && b.interior->has_backrooms); // TESTING
+						if (!debug_draw && !player_in_building_bcube && !ext_basement_conn_visible && !camera_pdu.cube_visible(b.bcube + xlate)) continue; // VFC
 						b.maybe_gen_chimney_smoke();
 						bool const camera_near_building(player_in_building_bcube || b.bcube.contains_pt_xy_exp(camera_xlated, door_open_dist));
 
-						if (!ext_basement_conn_visible) {
+						if (!debug_draw && !ext_basement_conn_visible) {
 							// check if player is outside a windowless building (city office building); need to account for open doors and exterior signs over doors
 							if (!camera_near_building && !b.has_windows() && !b.point_near_ext_door(camera_xlated, 5.0*door_open_dist)) continue;
 							if ((display_mode & 0x08) && !player_in_building_bcube && b.is_entire_building_occluded(camera_xlated, oc)) continue; // check occlusion
@@ -3095,7 +3096,8 @@ public:
 						if      (player_in_building_bcube)                         {inc_small = 3;} // include interior and exterior detail objects
 						else if (inc_small && bdist_sq < rgeom_int_detail_dist_sq) {inc_small = 3;} // include interior and exterior detail objects
 						else if (inc_small && bdist_sq < rgeom_ext_detail_dist_sq) {inc_small = 2;} // include exterior detail objects
-						b.gen_and_draw_room_geom(&bbd, s, amask_shader, oc, xlate, bi->ix, 0, reflection_pass, inc_small, player_in_building_bcube); // shadow_only=0
+						if (debug_draw) {inc_small = 3;} // TESTING
+						b.gen_and_draw_room_geom(&bbd, s, amask_shader, oc, xlate, bi->ix, 0, reflection_pass, inc_small, (debug_draw || player_in_building_bcube)); // shadow_only=0
 						g->has_room_geom = 1;
 						if (!draw_interior) continue;
 						// when player is in the building (not attic or ext basement), draw people later so that alpha blending of hair against ext walls and windows works properly
