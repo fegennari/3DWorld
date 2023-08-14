@@ -852,10 +852,16 @@ bool building_t::add_ball_to_room(rand_gen_t &rgen, room_t const &room, cube_t c
 	if (!ball_area.is_strictly_normalized()) return 0; // should always be normalized
 	
 	for (unsigned n = 0; n < 10; ++n) { // make 10 attempts to place the object
-		bool const dim(rgen.rand_bool()), dir(rgen.rand_bool()); // choose a random wall
 		point center(0.0, 0.0, (zval + radius));
-		center[ dim] = ball_area.d[dim][dir];
-		center[!dim] = rgen.rand_uniform(ball_area.d[!dim][0], ball_area.d[!dim][1]); // random position along the wall
+
+		if (room.is_ext_basement()) { // office backrooms: place anywhere within the room
+			center = gen_xy_pos_in_area(ball_area, radius, rgen, center.z);
+		}
+		else { // house bedroom: place along a wall
+			bool const dim(rgen.rand_bool()), dir(rgen.rand_bool()); // choose a random wall
+			center[ dim] = ball_area.d[dim][dir];
+			center[!dim] = rgen.rand_uniform(ball_area.d[!dim][0], ball_area.d[!dim][1]); // random position along the wall
+		}
 		cube_t c(center);
 		c.expand_by(radius);
 		if (overlaps_other_room_obj(c, objs_start) || is_obj_placement_blocked(c, room, 1)) continue; // bad placement
