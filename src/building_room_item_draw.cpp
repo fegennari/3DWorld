@@ -988,7 +988,7 @@ void building_room_geom_t::create_obj_model_insts(building_t const &building) { 
 			if (i->type == TYPE_KEY || (i->type == TYPE_SILVER && i->was_expanded())) continue; // drawn as small object model
 			vector3d dir(i->get_dir());
 
-			if (i->flags & RO_FLAG_RAND_ROT) {
+			if (i->rotates()) {
 				float const angle(123.4*i->x1() + 456.7*i->y1() + 567.8*i->z1()); // random rotation angle based on position
 				vector3d const rand_dir(vector3d(sin(angle), cos(angle), 0.0).get_norm());
 				dir = ((dot_product(rand_dir, dir) < 0.0) ? -rand_dir : rand_dir); // random, but facing in the correct general direction

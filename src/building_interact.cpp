@@ -367,7 +367,7 @@ bool can_open_bathroom_stall_or_shower(room_object_t const &stall, point const &
 }
 
 bool building_t::chair_can_be_rotated(room_object_t const &chair) const {
-	if (chair.flags & RO_FLAG_RAND_ROT) return 1;
+	if (chair.rotates()) return 1;
 	// check if blocked by another object such as a desk
 	auto objs_end(interior->room_geom->get_placed_objs_end()); // skip buttons/stairs/elevators
 
@@ -1057,7 +1057,7 @@ void building_t::update_player_interact_objects(point const &player_pos) { // No
 						}
 					}
 					if (obj.type == TYPE_PICTURE || obj.type == TYPE_TV || obj.type == TYPE_MONITOR || obj.type == TYPE_BUTTON || obj.type == TYPE_SWITCH ||
-						obj.type == TYPE_BREAKER || (obj.type == TYPE_OFF_CHAIR && (obj.flags & RO_FLAG_RAND_ROT)))
+						obj.type == TYPE_BREAKER || (obj.type == TYPE_OFF_CHAIR && obj.rotates()))
 					{
 						if (!handled) {interact_with_object(obj_ix, new_center, new_center, velocity.get_norm());}
 					}

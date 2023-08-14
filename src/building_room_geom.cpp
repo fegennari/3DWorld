@@ -1281,7 +1281,7 @@ void building_room_geom_t::add_paper(room_object_t const &c) {
 	unsigned const qv_start(mat.quad_verts.size());
 	mat.add_cube_to_verts(c, apply_light_color(c), zero_vector, ~EF_Z2, c.dim, (c.dim ^ c.dir ^ 1), c.dir); // unshadowed, top face only, with proper orient
 	
-	if (c.flags & RO_FLAG_RAND_ROT) { // add slight rotation to misalign the paper
+	if (c.rotates()) { // add slight rotation to misalign the paper
 		float const angle((PI/8.0)*(fract(123.456*c.obj_id) - 0.5));
 		rotate_verts(mat.quad_verts, plus_z, angle, c.get_cube_center(), qv_start);
 	}
@@ -2114,7 +2114,7 @@ void building_room_geom_t::add_picture(room_object_t const &c) { // also whitebo
 		ledge.d[c.dim][c.dir] += (c.dir ? 1.5 : -1.5)*c.get_depth(); // extrude outward
 		get_untextured_material(1).add_cube_to_verts_untextured(ledge, GRAY, (1 << (2*(2-c.dim) + !c.dir))); // shadowed
 	}
-	else if (c.flags & RO_FLAG_RAND_ROT) { // apply a random rotation
+	else if (c.rotates()) { // apply a random rotation
 		float const angle(0.2f*(fract(PI*c.obj_id + 1.61803f*c.item_flags) - 0.5f)); // random rotation based on obj_id and item flags
 		point rotate_pt(c.get_cube_center());
 		rotate_pt.z += 0.45*c.dz(); // rotate about a point near the top of the picture
@@ -2188,7 +2188,7 @@ void building_room_geom_t::add_book(room_object_t const &c, bool inc_lg, bool in
 	unsigned const spine_mask(is_open ? 0 : ~get_face_mask(c.dim, !c.dir)); // spine is drawn as part of the small faces when open
 	unsigned const skip_faces(extra_skip_faces | ((tilt_angle == 0.0) ? EF_Z1 : 0) | sides_mask);
 
-	if (z_rot_angle == 0.0 && (c.flags & RO_FLAG_RAND_ROT) && (c.obj_id%3) == 0) { // books placed on tables/desks are sometimes randomly rotated a bit
+	if (z_rot_angle == 0.0 && c.rotates() && (c.obj_id%3) == 0) { // books placed on tables/desks are sometimes randomly rotated a bit
 		z_rot_angle = (PI/12.0)*(fract(123.456*c.obj_id) - 0.5);
 	}
 	if ((draw_cover_as_small ? inc_sm : inc_lg) && !is_open) { // draw large faces: outside faces of covers and spine; not for open books
