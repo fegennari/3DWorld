@@ -50,7 +50,7 @@ void subtract_cubes_from_cube_split_in_dim(cube_t const &c, vect_cube_t const &s
 
 // *** Utilities ***
 
-unsigned building_t::add_water_heaters(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
+unsigned building_t::add_water_heaters(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, bool single_only) {
 	float const floor_spacing(get_window_vspace()), height(get_floor_ceil_gap());
 	float const radius((is_house ? 0.18 : 0.20)*height); // larger radius for office buildings
 	cube_t const room_bounds(get_walkable_room_bounds(room));
@@ -107,7 +107,7 @@ unsigned building_t::add_water_heaters(rand_gen_t &rgen, room_t const &room, flo
 			point const vent_bot_center(center.x, center.y, attic_floor_zval);
 			add_attic_roof_vent(vent_bot_center, vent_radius, room_id, 1.0); // light_amt=1.0; room_id is for the basement because there's no attic room
 		}
-		if (!is_house && n < 4) { // office building, placed at corner; try to add additional water heaters along the wall
+		if (!single_only && !is_house && n < 4) { // office building, placed at corner; try to add additional water heaters along the wall
 			vector3d step;
 			step[!dim] = 2.2*radius*((dim ? xdir : ydir) ? -1.0 : 1.0); // step in the opposite dim
 			// ideally we would iterate over all the plumbing fixtures to determine water usage, but they might not be placed yet, so instead count rooms;
