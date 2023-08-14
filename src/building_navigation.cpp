@@ -1293,7 +1293,7 @@ void building_t::get_avoid_cubes(float zval, float height, float radius, vect_cu
 	assert(interior);
 	interior->get_avoid_cubes(avoid, (zval - radius), (zval + (height - radius)), 0.5*radius, get_floor_thickness(), following_player, 0, fires_select_cube); // skip_stairs=0
 }
-bool building_t::find_route_to_point(person_t &person, float radius, bool is_first_path, bool following_player, ai_path_t &path) const {
+bool building_t::find_route_to_point(person_t const &person, float radius, bool is_first_path, bool following_player, ai_path_t &path) const {
 
 	assert(interior && interior->nav_graph);
 	point const &from(person.pos), &to(person.target_pos);
@@ -1324,7 +1324,7 @@ bool building_t::find_route_to_point(person_t &person, float radius, bool is_fir
 		point const dest_in(dest);
 		if (!interior->nav_graph->complete_path_within_room(from, dest, loc1.room_ix, person.ssn, radius,
 			person.cur_rseed, is_first_path, following_player, avoid, *this, path)) return 0;
-		if (dest != dest_in) {person.path.is_shortened = 1;} // update target in case a shorter path was found
+		if (dest != dest_in) {path.is_shortened = 1;} // update target in case a shorter path was found
 		return 1;
 	}
 	if (loc1.floor_ix != loc2.floor_ix) { // different floors: find path from <from> to nearest stairs, then find path from stairs to <to>
