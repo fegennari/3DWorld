@@ -1157,7 +1157,8 @@ struct door_base_t : public cube_t {
 	bool get_check_dirs  () const {return (dim ^ open_dir ^ hinge_side ^ 1);}
 	float get_width      () const {return get_sz_dim(!dim);}
 	float get_thickness  () const {return DOOR_THICK_TO_WIDTH*get_width();}
-	cube_t get_true_bcube() const {cube_t bc(*this); bc.expand_in_dim(dim, 0.5*get_thickness()); return bc;}
+	cube_t get_true_bcube     () const {cube_t bc(*this); bc.expand_in_dim(dim, 0.5*get_thickness()); return bc;}
+	cube_t get_clearance_bcube() const {cube_t bc(*this); bc.expand_in_dim(dim,     get_width    ()); return bc;}
 	cube_t get_open_door_path_bcube() const;
 	cube_t get_open_door_bcube_for_room(cube_t const &room) const;
 	bool is_same_stack(door_base_t const &d) const {return (d.x1() == x1() && d.y1() == y1());}

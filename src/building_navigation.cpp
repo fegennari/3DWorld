@@ -142,8 +142,7 @@ public:
 		// other solutions involve aligning doors with the grid (too difficult/restrictive) or reducing spacing to doorway_width/(2*radius) (too slow)
 		for (door_stack_t const &d : doors) {
 			if (!bcube.intersects(d)) continue; // wrong room
-			cube_t bc(d.get_true_bcube());
-			bc.expand_in_dim(d.dim, d.get_width()); // include space to both sides
+			cube_t bc(d.get_clearance_bcube()); // include space to both sides
 			set_wall_width(bc, bc.get_center_dim(!d.dim), 0.0, !d.dim); // set width to zero so that exactly one grid is contained in this dim
 			float lo[2], hi[2];
 			get_grid_ix_fp(bc.get_llc(), lo);

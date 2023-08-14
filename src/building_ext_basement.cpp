@@ -517,6 +517,12 @@ void building_t::add_backrooms_objs(rand_gen_t rgen, room_t &room, float zval, u
 	room_t true_room(room);
 	true_room.d[sw_dim][sw_dir] += shared_extend;
 	vector3d const sz(true_room.get_size());
+	vect_cube_t blockers_per_dim[2], walls_per_dim[2];
+
+	// find entrance door and add it to wall blockers
+	assert((unsigned)interior->ext_basement_door_stack_ix < interior->door_stacks.size());
+	auto const &ent_door(interior->door_stacks[interior->ext_basement_door_stack_ix]);
+	blockers_per_dim[!ent_door.dim].push_back(ent_door.get_clearance_bcube());
 
 	// add random interior walls to create an initial maze
 	float const doorway_width(get_doorway_width()), doorway_hwidth(0.5*doorway_width), min_gap(1.2*doorway_width);
@@ -529,7 +535,6 @@ void building_t::add_backrooms_objs(rand_gen_t rgen, room_t &room, float zval, u
 	float const wall_len_min(1.0*floor_spacing), wall_len_max(max(0.25f*min_side, 1.5f*wall_len_min)), wall_len_avg(0.5*(wall_len_min + wall_len_max)); // min_gap/wall_len_min = 0.6
 	unsigned const num_walls(round_fp(rgen.rand_uniform(1.6, 2.0)*area/(wall_len_avg*wall_len_avg))); // add a bit of random density variation
 	colorRGBA const wall_color(WHITE); // to match exterior walls, ceilings, and floors
-	vect_cube_t blockers_per_dim[2], walls_per_dim[2];
 
 	for (unsigned n = 0; n < num_walls; ++n) {
 		for (unsigned m = 0; m < 10; ++m) { // 10 tries to place a wall
