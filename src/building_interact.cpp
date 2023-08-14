@@ -936,6 +936,144 @@ void apply_building_gravity(float &vz, float dt_ticks) {
 	vz -= OBJ_GRAVITY*dt_ticks; // apply gravitational acceleration
 	max_eq(vz, -TERM_VELOCITY);
 }
+void building_t::run_ball_update(vector<room_object_t>::iterator ball_it, point const &player_pos, float player_z1, bool player_is_moving) {
+	room_object_t &ball(*ball_it);
+	assert(ball.type == TYPE_LG_BALL); // currently, only large balls have has_dstate()
+	assert(ball.obj_id < interior->room_geom->obj_dstate.size());
+	float const player_radius(get_scaled_player_radius()), player_z2(player_pos.z), radius(ball.get_radius());
+	float const fc_thick(get_fc_thickness()), fticks_stable(min(fticks, 1.0f)); // cap to 1/40s to improve stability
+	room_obj_dstate_t &dstate(interior->room_geom->get_dstate(ball));
+	vector3d &velocity(dstate.velocity);
+	point const center(ball.get_cube_center());
+	bool const was_dynamic(ball.is_dynamic()), is_moving_fast(velocity.mag() > 0.5*KICK_VELOCITY);
+	bool on_floor(0), kicked(0);
+	point new_center(center);
+
+	// check the player, but not if they're looking directly at the ball; assume in that case they intend to pick it up instead
+	if (camera_surf_collide && player_is_moving && dot_product_ptv(cview_dir, new_center, player_pos) < 0.9*p2p_dist(new_center, player_pos)) {
+		kicked |= check_ball_kick(ball, velocity, new_center, player_pos, player_z1, player_z2, player_radius);
+	}
+	for (auto p = interior->people.begin(); p != interior->people.end(); ++p) { // check building AI people
+		if (is_moving_fast) { // treat collision as a bounce
+			vector3d cnorm;
+
+			if (sphere_cube_int_update_pos(new_center, radius, p->get_bcube(), center, 0, &cnorm)) {
+				register_person_hit((p - interior->people.begin()), ball, velocity);
+				apply_object_bounce_with_sound(*this, velocity, cnorm, new_center, 0.75, on_floor); // hardness=0.75
+			}
+		}
+		else { // treat collision as a kick
+			kicked = check_ball_kick(ball, velocity, new_center, p->pos, p->get_z1(), p->get_z2(), 0.6*p->get_width());
+		}
+	} // for p
+	if (kicked) {
+		static float last_sound_tfticks(0);
+		static point last_sound_pt(all_zeros);
+		ball.flags |= RO_FLAG_DYNAMIC; // make it dynamic
+
+		if ((tfticks - last_sound_tfticks) > 1.0*TICKS_PER_SECOND && !dist_less_than(new_center, last_sound_pt, radius)) { // play at most once per second
+			gen_sound_thread_safe(SOUND_KICK_BALL, local_to_camera_space(new_center), 0.5);
+			register_building_sound(new_center, 0.75);
+			last_sound_tfticks = tfticks;
+			last_sound_pt      = new_center;
+		}
+	}
+	else if (was_dynamic) { // not colliding, but is moving
+		float const max_timestep(0.1); // in ticks (40 per second)
+		unsigned const num_steps(max(1, round_fp(fticks_stable/max_timestep)));
+		float const step_sz(fticks_stable/num_steps);
+
+		for (unsigned step = 0; step < num_steps; ++step) {
+			point const test_pt(new_center.x, new_center.y, (new_center.z - radius - 0.1*fc_thick));
+			on_floor = 0; // reset for this iteration
+
+			for (auto f = interior->floors.begin(); f != interior->floors.end(); ++f) {
+				if (f->contains_pt(test_pt)) {on_floor = 1; break;}
+			}
+			if (on_floor) { // moving on the floor, apply surface friction
+				velocity *= (1.0f - min(1.0f, OBJ_DECELERATE*step_sz));
+				if (velocity.mag_sq() < MIN_VELOCITY*MIN_VELOCITY) {velocity = zero_vector;} // zero velocity if stopped
+			}
+			else { // in the air - apply gravity
+				apply_building_gravity(velocity.z, step_sz);
+			}
+			if (velocity == zero_vector) { // stopped
+				ball.flags &= ~RO_FLAG_DYNAMIC; // clear dynamic flag
+				interior->update_dynamic_draw_data(); // remove from dynamic objects and schedule an update
+				interior->room_geom->invalidate_draw_data_for_obj(ball); // add to small static objects
+				break; // done
+			}
+			new_center += velocity*step_sz; // move based on velocity
+		} // for step
+	}
+	if (new_center == center) return; // not moving, done
+	// check for collisions and move to new location
+	vector3d cnorm;
+	int obj_ix(-1);
+	float hardness(0.0);
+
+	if (interior->check_sphere_coll(*this, new_center, center, radius, ball_it, cnorm, hardness, obj_ix)) {
+		apply_floor_vel_thresh(velocity, cnorm);
+		apply_object_bounce_with_sound(*this, velocity, cnorm, new_center, hardness, on_floor);
+
+		if (obj_ix >= 0) { // collided with a room object
+			auto &obj(interior->room_geom->get_room_object_by_index(obj_ix));
+			bool handled(0);
+
+			// break the glass if not already broken; should windows get broken as well?
+			if ((obj.type == TYPE_TV || obj.type == TYPE_MONITOR || obj.type == TYPE_DRESS_MIR || (obj.type == TYPE_MIRROR && !obj.is_open())) &&
+				velocity.mag() > 2.0*MIN_VELOCITY && !obj.is_broken())
+			{
+				vector3d front_dir(all_zeros);
+				front_dir[obj.dim] = (obj.dir ? 1.0 : -1.0);
+
+				if (dot_product(cnorm, front_dir) > 0.9) { // hit the front side of the screen
+					if (dist_less_than(new_center, obj.get_cube_center(), (radius + 0.5*obj.get_length() + 0.2*obj.dz()))) { // near the screen center
+						// capture value before breaking; if the player then takes this object, damage will be higher, but we can attribute this to making a mess of broken glass
+						register_broken_object(obj);
+						obj.flags |= RO_FLAG_BROKEN;
+						point const sound_origin(obj.xc(), obj.yc(), new_center.z); // generate sound from the player height
+						gen_sound_thread_safe(SOUND_GLASS, local_to_camera_space(sound_origin), 0.7);
+						register_building_sound(sound_origin, 0.7);
+						interior->room_geom->update_draw_state_for_room_object(obj, *this, 0);
+						if (obj.type == TYPE_DRESS_MIR || obj.type == TYPE_MIRROR) {register_achievement("7 Years of Bad Luck");}
+						else if ((obj.type == TYPE_TV || obj.type == TYPE_MONITOR) && obj.is_powered()/*!(obj.obj_id & 1)*/) { // only if turned on?
+							unsigned const obj_id(ball_it - interior->room_geom->objs.begin());
+							interior->room_geom->particle_manager.add_for_obj(ball, 0.06*radius, front_dir, 1.0*KICK_VELOCITY, 50, 60, PART_EFFECT_SPARK, obj_id);
+						}
+						handled = 1;
+					}
+				}
+			}
+			if (obj.type == TYPE_PICTURE || obj.type == TYPE_TV || obj.type == TYPE_MONITOR || obj.type == TYPE_BUTTON || obj.type == TYPE_SWITCH ||
+				obj.type == TYPE_BREAKER || (obj.type == TYPE_OFF_CHAIR && obj.rotates()))
+			{
+				if (!handled) {interact_with_object(obj_ix, new_center, new_center, velocity.get_norm());}
+			}
+		}
+	}
+	point const prev_new_center(new_center);
+
+	if (move_sphere_to_valid_part(new_center, center, radius) && new_center != prev_new_center) { // collision with exterior wall
+		apply_object_bounce_with_sound(*this, velocity, (new_center - prev_new_center).get_norm(), new_center, 1.0, on_floor); // hardness=1.0
+		// add TYPE_CRACK if collides with a window?
+	}
+	if (new_center != center) { // is moving
+		apply_roll_to_matrix(dstate.rot_matrix, new_center, center, plus_z, radius, (on_floor ? 0.0 : 0.01), (on_floor ? 1.0 : 0.2));
+		if (!was_dynamic) {interior->room_geom->invalidate_small_geom();} // static => dynamic transition, need to remove from static object vertex data
+		interior->update_dynamic_draw_data();
+		ball.translate(new_center - center);
+		room_object_t squish_obj(ball);
+		squish_obj.expand_by_xy(0.5*radius); // increase the radius to account for spiders and roaches being pushed out of the way of moving balls
+		maybe_squish_animals(squish_obj, player_pos);
+	}
+	// check for collision with closed door separating the adjacent building at the end of the connecting room
+	building_t *const cont_bldg(get_bldg_containing_pt(new_center));
+
+	if (cont_bldg != nullptr && cont_bldg != this) { // switched buildings
+		if (cont_bldg->interior->room_geom->add_room_object(ball, *this, 1, velocity)) {ball.remove();} // move ball from this to other_bldg
+	}
+}
 
 void building_t::update_player_interact_objects(point const &player_pos) { // Note: player_pos is in building space
 	assert(interior);
@@ -943,10 +1081,8 @@ void building_t::update_player_interact_objects(point const &player_pos) { // No
 	update_creepy_sounds(player_pos);
 	if (!has_room_geom()) return; // nothing else to do
 	float const player_radius(get_scaled_player_radius()), player_z1(player_pos.z - get_player_height() - player_radius), player_z2(player_pos.z);
-	float const fc_thick(get_fc_thickness()), fticks_stable(min(fticks, 1.0f)); // cap to 1/40s to improve stability
 	bool const player_in_this_building(this == player_building);
-	static float last_sound_tfticks(0);
-	static point last_sound_pt(all_zeros), last_player_pos(all_zeros);
+	static point last_player_pos(all_zeros);
 	bool const player_is_moving(player_pos != last_player_pos);
 	if (player_in_this_building) {last_player_pos = player_pos;}
 	// update dynamic objects; run for current and connected buildings
@@ -954,138 +1090,8 @@ void building_t::update_player_interact_objects(point const &player_pos) { // No
 
 	for (auto c = objs.begin(); c != objs.end(); ++c) { // check for other objects to collide with (including stairs)
 		if (c->no_coll() || !c->has_dstate()) continue; // Note: no test of player_coll flag
-		assert(c->type == TYPE_LG_BALL); // currently, only large balls have has_dstate()
-		assert(c->obj_id < interior->room_geom->obj_dstate.size());
-		room_obj_dstate_t &dstate(interior->room_geom->get_dstate(*c));
-		vector3d &velocity(dstate.velocity);
-		point const center(c->get_cube_center());
-		float const radius(c->get_radius());
-		bool const was_dynamic(c->is_dynamic()), is_moving_fast(velocity.mag() > 0.5*KICK_VELOCITY);
-		bool on_floor(0), kicked(0);
-		point new_center(center);
-		
-		// check the player, but not if they're looking directly at the ball; assume in that case they intend to pick it up instead
-		if (camera_surf_collide && player_is_moving && dot_product_ptv(cview_dir, new_center, player_pos) < 0.9*p2p_dist(new_center, player_pos)) {
-			kicked |= check_ball_kick(*c, velocity, new_center, player_pos, player_z1, player_z2, player_radius);
-		}
-		for (auto p = interior->people.begin(); p != interior->people.end(); ++p) { // check building AI people
-			if (is_moving_fast) { // treat collision as a bounce
-				vector3d cnorm;
-
-				if (sphere_cube_int_update_pos(new_center, radius, p->get_bcube(), center, 0, &cnorm)) {
-					register_person_hit((p - interior->people.begin()), *c, velocity);
-					apply_object_bounce_with_sound(*this, velocity, cnorm, new_center, 0.75, on_floor); // hardness=0.75
-				}
-			}
-			else { // treat collision as a kick
-				kicked = check_ball_kick(*c, velocity, new_center, p->pos, p->get_z1(), p->get_z2(), 0.6*p->get_width());
-			}
-		}
-		if (kicked) {
-			c->flags |= RO_FLAG_DYNAMIC; // make it dynamic
-
-			if ((tfticks - last_sound_tfticks) > 1.0*TICKS_PER_SECOND && !dist_less_than(new_center, last_sound_pt, radius)) { // play at most once per second
-				gen_sound_thread_safe(SOUND_KICK_BALL, local_to_camera_space(new_center), 0.5);
-				register_building_sound(new_center, 0.75);
-				last_sound_tfticks = tfticks;
-				last_sound_pt      = new_center;
-			}
-		}
-		else if (was_dynamic) { // not colliding, but is moving
-			float const max_timestep(0.1); // in ticks (40 per second)
-			unsigned const num_steps(max(1, round_fp(fticks_stable/max_timestep)));
-			float const step_sz(fticks_stable/num_steps);
-
-			for (unsigned step = 0; step < num_steps; ++step) {
-				point const test_pt(new_center.x, new_center.y, (new_center.z - radius - 0.1*fc_thick));
-				on_floor = 0; // reset for this iteration
-
-				for (auto f = interior->floors.begin(); f != interior->floors.end(); ++f) {
-					if (f->contains_pt(test_pt)) {on_floor = 1; break;}
-				}
-				if (on_floor) { // moving on the floor, apply surface friction
-					velocity *= (1.0f - min(1.0f, OBJ_DECELERATE*step_sz));
-					if (velocity.mag_sq() < MIN_VELOCITY*MIN_VELOCITY) {velocity = zero_vector;} // zero velocity if stopped
-				}
-				else { // in the air - apply gravity
-					apply_building_gravity(velocity.z, step_sz);
-				}
-				if (velocity == zero_vector) { // stopped
-					c->flags &= ~RO_FLAG_DYNAMIC; // clear dynamic flag
-					interior->update_dynamic_draw_data(); // remove from dynamic objects and schedule an update
-					interior->room_geom->invalidate_draw_data_for_obj(*c); // add to small static objects
-					break; // done
-				}
-				new_center += velocity*step_sz; // move based on velocity
-			} // for step
-		}
-		if (new_center != center) { // check for collisions and move to new location
-			vector3d cnorm;
-			int obj_ix(-1);
-			float hardness(0.0);
-
-			if (interior->check_sphere_coll(*this, new_center, center, radius, c, cnorm, hardness, obj_ix)) {
-				apply_floor_vel_thresh(velocity, cnorm);
-				apply_object_bounce_with_sound(*this, velocity, cnorm, new_center, hardness, on_floor);
-				
-				if (obj_ix >= 0) { // collided with a room object
-					auto &obj(interior->room_geom->get_room_object_by_index(obj_ix));
-					bool handled(0);
-
-					// break the glass if not already broken; should windows get broken as well?
-					if ((obj.type == TYPE_TV || obj.type == TYPE_MONITOR || obj.type == TYPE_DRESS_MIR || (obj.type == TYPE_MIRROR && !obj.is_open())) &&
-						velocity.mag() > 2.0*MIN_VELOCITY && !obj.is_broken())
-					{
-						vector3d front_dir(all_zeros);
-						front_dir[obj.dim] = (obj.dir ? 1.0 : -1.0);
-						
-						if (dot_product(cnorm, front_dir) > 0.9) { // hit the front side of the screen
-							if (dist_less_than(new_center, obj.get_cube_center(), (radius + 0.5*obj.get_length() + 0.2*obj.dz()))) { // near the screen center
-								// capture value before breaking; if the player then takes this object, damage will be higher, but we can attribute this to making a mess of broken glass
-								register_broken_object(obj);
-								obj.flags |= RO_FLAG_BROKEN;
-								point const sound_origin(obj.xc(), obj.yc(), new_center.z); // generate sound from the player height
-								gen_sound_thread_safe(SOUND_GLASS, local_to_camera_space(sound_origin), 0.7);
-								register_building_sound(sound_origin, 0.7);
-								interior->room_geom->update_draw_state_for_room_object(obj, *this, 0);
-								if (obj.type == TYPE_DRESS_MIR || obj.type == TYPE_MIRROR) {register_achievement("7 Years of Bad Luck");}
-								else if ((obj.type == TYPE_TV || obj.type == TYPE_MONITOR) && obj.is_powered()/*!(obj.obj_id & 1)*/) { // only if turned on?
-									interior->room_geom->particle_manager.add_for_obj(*c, 0.06*radius, front_dir, 1.0*KICK_VELOCITY, 50, 60, PART_EFFECT_SPARK, (c-objs.begin()));
-								}
-								handled = 1;
-							}
-						}
-					}
-					if (obj.type == TYPE_PICTURE || obj.type == TYPE_TV || obj.type == TYPE_MONITOR || obj.type == TYPE_BUTTON || obj.type == TYPE_SWITCH ||
-						obj.type == TYPE_BREAKER || (obj.type == TYPE_OFF_CHAIR && obj.rotates()))
-					{
-						if (!handled) {interact_with_object(obj_ix, new_center, new_center, velocity.get_norm());}
-					}
-				}
-			}
-			point const prev_new_center(new_center);
-			
-			if (move_sphere_to_valid_part(new_center, center, radius) && new_center != prev_new_center) { // collision with exterior wall
-				apply_object_bounce_with_sound(*this, velocity, (new_center - prev_new_center).get_norm(), new_center, 1.0, on_floor); // hardness=1.0
-				// add TYPE_CRACK if collides with a window?
-			}
-			if (new_center != center) { // is moving
-				apply_roll_to_matrix(dstate.rot_matrix, new_center, center, plus_z, radius, (on_floor ? 0.0 : 0.01), (on_floor ? 1.0 : 0.2));
-				if (!was_dynamic) {interior->room_geom->invalidate_small_geom();} // static => dynamic transition, need to remove from static object vertex data
-				interior->update_dynamic_draw_data();
-				c->translate(new_center - center);
-				room_object_t squish_obj(*c);
-				squish_obj.expand_by_xy(0.5*radius); // increase the radius to account for spiders and roaches being pushed out of the way of moving balls
-				maybe_squish_animals(squish_obj, player_pos);
-			}
-			// check for collision with closed door separating the adjacent building at the end of the connecting room
-			building_t *const cont_bldg(get_bldg_containing_pt(new_center));
-
-			if (cont_bldg != nullptr && cont_bldg != this) { // switched buildings
-				if (cont_bldg->interior->room_geom->add_room_object(*c, *this, 1, velocity)) {c->remove();} // move ball from this to other_bldg
-			}
-		}
-	} // for c
+		run_ball_update(c, player_pos, player_z1, player_is_moving);
+	}
 	if (player_in_this_building) { // interactions only run for player building
 		if (player_in_closet) { // check for collisions with expanded objects in closets
 			auto &expanded_objs(interior->room_geom->expanded_objs);
