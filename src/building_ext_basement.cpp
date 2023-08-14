@@ -616,7 +616,7 @@ void building_t::add_backrooms_objs(rand_gen_t rgen, room_t &room, float zval, u
 	if (space_groups.size() > 1) { // multiple disconnected sub-graphs
 		float const door_min_spacing(0.5*doorway_width), min_shared_edge(doorway_width + 2*wall_thickness); // allow space for door frame
 		vector<group_range_t> adj;
-		vect_cube_t doors_to_add, walls_to_add;
+		vect_cube_t doors_to_add, walls_to_add, all_doors;
 		set<pair<unsigned, unsigned>> connected;
 		bool const first_dim(rgen.rand_bool()); // mix it up to avoid favoring one dim
 
@@ -666,8 +666,9 @@ void building_t::add_backrooms_objs(rand_gen_t rgen, room_t &room, float zval, u
 							if (has_bcube_int(wall_test_cube, walls_per_dim[!dim])) continue;
 							cube_t door_test_cube(wall);
 							door_test_cube.expand_in_dim(!dim, door_min_spacing);
-							if (has_bcube_int(door_test_cube, doors_to_add)) continue;
+							if (has_bcube_int(door_test_cube, all_doors)) continue; // check all doors, even ones on other walls in case there are two overlapping doors
 							doors_to_add.push_back(door_cand);
+							all_doors   .push_back(door_cand);
 							connected.insert(ix_pair); // mark these two space groups as being connected
 							break;
 						} // for n
