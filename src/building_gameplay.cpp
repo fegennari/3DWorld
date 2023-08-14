@@ -1855,7 +1855,11 @@ bool building_t::apply_paint(point const &pos, vector3d const &dir, colorRGBA co
 			normal    = zero_vector;
 			normal[d] = -SIGN(dir[d]); // normal is opposite of ray dir in this dim
 		}
-	}
+		if (is_pos_in_pg_or_backrooms(pos) && line_int_cubes_get_t(pos, pos2, interior->room_geom->pgbr_walls[d], tmin, target)) {
+			normal    = zero_vector;
+			normal[d] = -SIGN(dir[d]); // normal is opposite of ray dir in this dim
+		}
+	} // for d
 	if (line_int_cubes_get_t(pos, pos2, interior->floors  , tmin, target)) {normal =  plus_z;}
 	if (line_int_cubes_get_t(pos, pos2, interior->ceilings, tmin, target)) {normal = -plus_z;}
 	
