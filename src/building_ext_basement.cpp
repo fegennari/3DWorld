@@ -599,7 +599,9 @@ void building_t::add_backrooms_objs(rand_gen_t rgen, room_t &room, float zval, u
 						else if (d == 1 && val < w.d[!dim][0]) {min_eq(val, w.d[!dim][0]-min_gap);} // ensure right space between walls is at least min_gap
 					}
 					else {
-						float const edge_pos(w.d[!dim][!d]);
+						// if we already aligned <w> to <wall> then we now have a corner; extend val to the far edge of <w> to fill in the corner area
+						bool const is_corner(wall.d[dim][0] == w.d[dim][1] || wall.d[dim][1] == w.d[dim][0]);
+						float const edge_pos(w.d[!dim][bool(!d) ^ is_corner]);
 						if (fabs(val - edge_pos) < min_gap) {val = edge_pos; break;}
 					}
 				} // for w
@@ -616,6 +618,14 @@ void building_t::add_backrooms_objs(rand_gen_t rgen, room_t &room, float zval, u
 	resize_cubes_xy(space, nav_pad); // restore padding (under-over)
 	partition_cubes_into_conn_groups(space, space_groups, pad);
 	vect_cube_t small_rooms, door_keepout;
+
+#if 0 // TESTING
+	rand_gen_t rgen2(rgen);
+	for (vect_cube_t const &g : space_groups) {
+		colorRGBA const color(rgen2.rand_float(), rgen2.rand_float(), rgen2.rand_float());
+		for (cube_t const &c : g) {objs.emplace_back(c, TYPE_DBG_SHAPE, room_id, 0, 0, (RO_FLAG_NOCOLL | RO_FLAG_BACKROOM), 1.0, SHAPE_CUBE, color);}
+	}
+#endif
 
 	// Add doorways + doors to guarantee full connectivity using space
 	if (space_groups.size() > 1) { // multiple disconnected sub-graphs
