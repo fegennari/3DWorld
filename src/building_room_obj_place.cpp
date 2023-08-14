@@ -2510,12 +2510,14 @@ void building_t::add_boxes_to_room(rand_gen_t rgen, room_t const &room, float zv
 	cube_t place_area(get_walkable_room_bounds(room));
 	place_area.expand_by(-0.25*get_wall_thickness()); // shrink to leave a small gap
 	unsigned const num(rgen.rand() % (max_num+1));
+	bool const allow_crates(!is_house && room.is_ext_basement()); // backrooms
 
 	for (unsigned n = 0; n < num; ++n) {
 		vector3d sz;
 		gen_crate_sz(sz, rgen, window_vspacing);
 		sz *= 1.5; // make larger than storage room boxes
-		place_obj_along_wall(TYPE_BOX, room, sz.z, sz, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 0.0, 0, 4, 0, gen_box_color(rgen));
+		room_object const type((allow_crates && rgen.rand_bool()) ? TYPE_CRATE : TYPE_BOX);
+		place_obj_along_wall(type, room, sz.z, sz, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 0.0, 0, 4, 0, gen_box_color(rgen));
 	} // for n
 }
 

@@ -802,32 +802,41 @@ void building_t::add_backrooms_objs(rand_gen_t rgen, room_t &room, float zval, u
 			if (dk.intersects_xy(r)) {++num_doors;}
 		}
 		if (num_doors == 0) continue; // not connected with a door, not reachable, skip (and don't need a light either)
+		rooms_to_light.push_back(r);
 		room_t sub_room(room);
 		sub_room.copy_from(r); // keep flags, copy cube
 		sub_room.interior = 1; // treated as basement but not extended basement (no wall padding)
 		unsigned const sub_objs_start(objs.size()); // no objects have been placed in this sub-room yet
+		bool objs_added(0), no_boxes(0);
 
 		if (num_doors == 1) { // only make bathroom if there's a single door
 			float floor_zval(zval); // may be modified below, but otherwise unused
 			unsigned const floor_ix(0); // pass this in, or always zero?
 			unsigned added_bathroom_objs_mask(0); // unused
-			add_bathroom_objs(rgen, sub_room, floor_zval, room_id, tot_light_amt, sub_objs_start, floor_ix, 1, added_bathroom_objs_mask); // is_basement=1
+			objs_added = no_boxes = add_bathroom_objs(rgen, sub_room, floor_zval, room_id, tot_light_amt, sub_objs_start, floor_ix, 1, added_bathroom_objs_mask); // is_basement=1
 			room.has_mirror |= sub_room.has_mirror;
 		}
-		else { // 2 or more rooms
-			if (rgen.rand_bool()) {add_furnace_to_room(rgen, sub_room, zval, room_id, tot_light_amt, sub_objs_start);}
-			else {add_water_heaters(rgen, sub_room, zval, room_id, tot_light_amt, sub_objs_start, 1);} // single_only=1
+		// 2 or more rooms
+		else if (rgen.rand_bool()) { // add furnace
+			objs_added = add_furnace_to_room(rgen, sub_room, zval, room_id, tot_light_amt, sub_objs_start);
 		}
-		rooms_to_light.push_back(r);
+		else { // add water heater
+			objs_added = add_water_heaters(rgen, sub_room, zval, room_id, tot_light_amt, sub_objs_start, 1); // single_only=1
+		}
+		if (!/*objs_added*/no_boxes) { // add some random boxes if we haven't added anything else/if not a bathroom
+			unsigned const max_num_boxes(rgen.rand() % 4); // 0-3
+			add_boxes_to_room(rgen, sub_room, zval, room_id, tot_light_amt, objs_start, max_num_boxes);
+		}
 	} // for r
 
 	// Add occasional random items/furniture: chairs, office chairs, boxes, crates, balls, etc.
 	// TODO
 	//add_chair(rgen, true_room, blockers, room_id, chair_pos, chair_color, dim, dir, tot_light_amt, rgen.rand_bool()); // 50% chace of office chair
+	// note that boxes are only placed along the exterior walls; this helps prevent the AI from getting stuck on them, since it can't take boxes like the player
 	unsigned const max_num_boxes(rgen.rand() % 21); // 0-20
-	unsigned const num_balls(rgen.rand() % 4); // 0-3
 	add_boxes_to_room(rgen, true_room, zval, room_id, tot_light_amt, objs_start, max_num_boxes);
-	for (unsigned n = 0; n < num_balls; ++n) {add_ball_to_room(rgen, true_room, place_area, zval, room_id, tot_light_amt, objs_start);}
+	unsigned const num_balls(rgen.rand() % 4); // 0-3
+	for (unsigned n = 0; n < num_balls; ++n) {add_ball_to_room(rgen, true_room, place_area, zval, room_id, tot_light_amt, objs_start);} // TODO: place anywhere
 }
 
 void building_t::add_missing_backrooms_lights(rand_gen_t rgen, float zval, unsigned room_id, unsigned objs_start, unsigned lights_start,
