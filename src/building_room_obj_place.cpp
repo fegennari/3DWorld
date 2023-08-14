@@ -687,25 +687,7 @@ bool building_t::add_bedroom_objs(rand_gen_t rgen, room_t &room, vect_cube_t con
 	if (rgen.rand_float() < 0.3) {add_laundry_basket(rgen, room, zval, room_id, tot_light_amt, objs_start, place_area);} // try to place a laundry basket 25% of the time
 
 	if (rgen.rand_float() < global_building_params.ball_prob) { // maybe add a ball to the room
-		float const radius(0.048*window_vspacing); // 4.7 inches
-		cube_t ball_area(place_area);
-		ball_area.expand_by_xy(-radius*rgen.rand_uniform(1.0, 10.0));
-
-		if (ball_area.is_strictly_normalized()) { // should always be true
-			for (unsigned n = 0; n < 10; ++n) { // make 10 attempts to place the object
-				bool const dim(rgen.rand_bool()), dir(rgen.rand_bool()); // choose a random wall
-				point center(0.0, 0.0, (zval + radius));
-				center[ dim] = ball_area.d[dim][dir];
-				center[!dim] = rgen.rand_uniform(ball_area.d[!dim][0], ball_area.d[!dim][1]); // random position along the wall
-				cube_t c(center);
-				c.expand_by(radius);
-				if (overlaps_other_room_obj(c, objs_start) || is_obj_placement_blocked(c, room, 1)) continue; // bad placement
-				objs.emplace_back(c, TYPE_LG_BALL, room_id, 0, 0, RO_FLAG_DSTATE, tot_light_amt, SHAPE_SPHERE, WHITE);
-				objs.back().obj_id     = (uint16_t)interior->room_geom->allocate_dynamic_state(); // allocate a new dynamic state object
-				objs.back().item_flags = rgen.rand_bool(); // selects ball type
-				break; // done
-			} // for n
-		}
+		add_ball_to_room(rgen, room, place_area, zval, room_id, tot_light_amt, objs_start);
 	}
 	if (building_obj_model_loader.is_model_valid(OBJ_MODEL_CEIL_FAN) && rgen.rand_float() < 0.3) { // maybe add ceiling fan
 		// find the ceiling light, which should be the last object placed before calling this function, and center the fan on it
@@ -858,6 +840,29 @@ bool building_t::add_bed_to_room(rand_gen_t &rgen, room_t const &room, vect_cube
 			}
 		}
 		return 1; // done/success
+	} // for n
+	return 0;
+}
+
+bool building_t::add_ball_to_room(rand_gen_t &rgen, room_t const &room, cube_t const &place_area, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
+	float const radius(0.048*get_window_vspace()); // 4.7 inches
+	cube_t ball_area(place_area);
+	ball_area.expand_by_xy(-radius*rgen.rand_uniform(1.0, 10.0));
+	vect_room_object_t &objs(interior->room_geom->objs);
+	if (!ball_area.is_strictly_normalized()) return 0; // should always be normalized
+	
+	for (unsigned n = 0; n < 10; ++n) { // make 10 attempts to place the object
+		bool const dim(rgen.rand_bool()), dir(rgen.rand_bool()); // choose a random wall
+		point center(0.0, 0.0, (zval + radius));
+		center[ dim] = ball_area.d[dim][dir];
+		center[!dim] = rgen.rand_uniform(ball_area.d[!dim][0], ball_area.d[!dim][1]); // random position along the wall
+		cube_t c(center);
+		c.expand_by(radius);
+		if (overlaps_other_room_obj(c, objs_start) || is_obj_placement_blocked(c, room, 1)) continue; // bad placement
+		objs.emplace_back(c, TYPE_LG_BALL, room_id, 0, 0, RO_FLAG_DSTATE, tot_light_amt, SHAPE_SPHERE, WHITE);
+		objs.back().obj_id     = (uint16_t)interior->room_geom->allocate_dynamic_state(); // allocate a new dynamic state object
+		objs.back().item_flags = rgen.rand_bool(); // selects ball type
+		return 1; // done
 	} // for n
 	return 0;
 }

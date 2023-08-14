@@ -793,9 +793,6 @@ void building_t::add_backrooms_objs(rand_gen_t rgen, room_t &room, float zval, u
 	add_wall_vent_to_room     (rgen, true_room, zval, room_id, objs_start, 0   ); // check_for_ducts=0
 	rgen.rand_bool(); // mix up in between
 	add_ceil_vent_to_room     (rgen, true_room, zval, room_id, objs_start); // add a ceiling vent as well
-
-	// Add occasional random items/furniture
-	// TODO: chairs, boxes, crates, balls, fire extinguisher, etc.
 	
 	// Make small rooms with doors bathrooms, etc.
 	for (cube_t const &r : small_rooms) {
@@ -823,6 +820,14 @@ void building_t::add_backrooms_objs(rand_gen_t rgen, room_t &room, float zval, u
 		}
 		rooms_to_light.push_back(r);
 	} // for r
+
+	// Add occasional random items/furniture: chairs, office chairs, boxes, crates, balls, etc.
+	// TODO
+	//add_chair(rgen, true_room, blockers, room_id, chair_pos, chair_color, dim, dir, tot_light_amt, rgen.rand_bool()); // 50% chace of office chair
+	unsigned const max_num_boxes(rgen.rand() % 21); // 0-20
+	unsigned const num_balls(rgen.rand() % 4); // 0-3
+	add_boxes_to_room(rgen, true_room, zval, room_id, tot_light_amt, objs_start, max_num_boxes);
+	for (unsigned n = 0; n < num_balls; ++n) {add_ball_to_room(rgen, true_room, place_area, zval, room_id, tot_light_amt, objs_start);}
 }
 
 void building_t::add_missing_backrooms_lights(rand_gen_t rgen, float zval, unsigned room_id, unsigned objs_start, unsigned lights_start,
