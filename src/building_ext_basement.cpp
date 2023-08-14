@@ -790,16 +790,20 @@ void building_t::add_backrooms_objs(rand_gen_t rgen, room_t &room, float zval, u
 			if (dk.intersects_xy(r)) {++num_doors;}
 		}
 		if (num_doors == 0) continue; // not connected with a door, not reachable, skip (and don't need a light either)
+		room_t sub_room(room);
+		sub_room.copy_from(r); // keep flags, copy cube
+		sub_room.interior = 1; // treated as basement but not extended basement (no wall padding)
 
 		if (num_doors == 1) { // only make bathroom if there's a single door
-			room_t bathroom(room);
-			bathroom.copy_from(r); // keep flags, copy cube
-			bathroom.interior = 1; // treated as basement but not extended basement (no wall padding)
-			float floor_zval(zval); // may be modified below
+			float floor_zval(zval); // may be modified below, but otherwise unused
 			unsigned const floor_ix(0); // pass this in, or always zero?
 			unsigned added_bathroom_objs_mask(0); // unused
-			add_bathroom_objs(rgen, bathroom, floor_zval, room_id, tot_light_amt, objs.size(), floor_ix, 1, added_bathroom_objs_mask); // is_basement=1
-			room.has_mirror |= bathroom.has_mirror;
+			add_bathroom_objs(rgen, sub_room, floor_zval, room_id, tot_light_amt, objs.size(), floor_ix, 1, added_bathroom_objs_mask); // is_basement=1
+			room.has_mirror |= sub_room.has_mirror;
+		}
+		else { // 2 or more rooms
+			if (rgen.rand_bool()) {add_furnace_to_room(rgen, sub_room, zval, room_id, tot_light_amt, objs_start);}
+			//else {add_water_heaters(rgen, sub_room, zval, room_id, tot_light_amt, objs_start);}
 		}
 		rooms_to_light.push_back(r);
 	} // for r
