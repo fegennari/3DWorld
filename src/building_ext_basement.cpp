@@ -786,16 +786,16 @@ void building_t::add_backrooms_objs(rand_gen_t rgen, room_t &room, float zval, u
 		}
 		vector_add_to(walls_per_dim[dim], interior->room_geom->pgbr_walls[dim]); // store walls for occlusion and door opening checks
 	}
+	
+	// Add vents, light switch, and outlets (on all walls - or should it be only on the wall adjacent to building or next to the door?)
+	add_light_switches_to_room(rgen, true_room, zval, room_id, objs_start, 0, 1); // is_ground_floor=0, is_basement=1
+	add_outlets_to_room       (rgen, true_room, zval, room_id, objs_start, 0, 1); // is_ground_floor=0, is_basement=1
+	add_wall_vent_to_room     (rgen, true_room, zval, room_id, objs_start, 0   ); // check_for_ducts=0
+	rgen.rand_bool(); // mix up in between
+	add_ceil_vent_to_room     (rgen, true_room, zval, room_id, objs_start); // add a ceiling vent as well
 
 	// Add occasional random items/furniture
-	cube_t shared_wall(parking_garage);
-	shared_wall.d[sw_dim][!sw_dir] = place_area.d[sw_dim][sw_dir]; // extend to include shared wall
-	assert(shared_wall.intersects(true_room));
-	shared_wall.intersect_with_cube(true_room);
-	
-	// Add vents, light switch, and outlets on wall adjacent to building or next to the door
-	add_light_switches_to_room(rgen, true_room, zval, room_id, objs_start, 0, 1); // is_ground_floor=0, is_basement=1
-	// TODO: more
+	// TODO: chairs, boxes, crates, balls, fire extinguisher, etc.
 	
 	// Make small rooms with doors bathrooms, etc.
 	for (cube_t const &r : small_rooms) {
