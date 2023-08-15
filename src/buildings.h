@@ -1650,6 +1650,7 @@ public:
 	cube_t get_attic_access_door_avoid() const;
 	void get_all_door_centers_for_room(cube_t const &room, float zval, vector<point> &door_centers) const;
 	void invalidate_nav_graph();
+	void invalidate_nav_grid ();
 	point local_to_camera_space(point const &pos) const;
 	void play_door_open_close_sound(point const &pos, bool open, float gain=1.0, float pitch=1.0) const;
 	void play_open_close_sound(room_object_t const &obj, point const &sound_origin) const;

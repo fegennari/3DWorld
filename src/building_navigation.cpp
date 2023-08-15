@@ -41,6 +41,7 @@ class cube_nav_grid {
 	cube_t bcube, grid_bcube;
 	unsigned num[2] = {};
 	float   step[2] = {};
+	bool invalid=0;
 	vector<uint8_t> nodes; // num[0] x num[1]; 0=blocked, 1=open
 	vect_cube_t blockers_exp;
 
@@ -104,9 +105,12 @@ class cube_nav_grid {
 		return 0; // no intersection
 	}
 public:
-	bool is_built() const {return !bcube.is_all_zeros();}
+	bool is_built() const {return !bcube.is_all_zeros();} // can't test on !nodes.empty() in case the room is too small to have any nodes
+	bool is_valid() const {return (!invalid && is_built());}
+	void invalidate() {invalid = 1;}
 
 	void build(cube_t const &bcube_, vect_cube_t const &blockers, vector<door_stack_t> const &doors, float radius_) {
+		invalid    = 0; // reset, in case build() was called on a nonempty but invalid cube_nav_grid
 		radius     = radius_;
 		bcube      = bcube_;
 		grid_bcube = bcube;
@@ -288,6 +292,7 @@ class building_nav_graph_t {
 	}
 public:
 	bool invalid=0;
+	void invalidate_nav_grid() {nav_grid.invalidate();}
 	building_nav_graph_t(float stairs_extend_) : stairs_extend(stairs_extend_) {}
 
 	void set_num_rooms(unsigned num_rooms_, unsigned num_stairs_, bool has_pg_ramp_) {
@@ -547,7 +552,7 @@ public:
 			return 1; // success
 		} // for npts
 		if (!no_grid_path && building.is_room_backrooms(room_ix)) { // run detailed path finding on backrooms
-			if (!nav_grid.is_built()) { // build once and cache
+			if (!nav_grid.is_valid()) { // build once and cache
 				//highres_timer_t timer("Build Nav Grid");
 				// Note: built once, so must use avoid rather than keepout; this means that our path finding will likely fail even when p1 or p2 coll is disabled
 				vect_cube_t blockers;
@@ -771,6 +776,7 @@ void building_t::build_nav_graph() const { // Note: does not depend on room geom
 
 	assert(interior);
 	if (interior->nav_graph && !interior->nav_graph->invalid) return; // already built
+	// Note: reallocating the nav_graph will also rebuild the nested nav_grid
 	interior->nav_graph.reset(new building_nav_graph_t(0.5*get_window_vspace())); // set stairs_extend == doorway width
 	building_nav_graph_t &ng(*interior->nav_graph);
 	float const wall_width(get_wall_thickness());
@@ -828,6 +834,9 @@ void building_t::build_nav_graph() const { // Note: does not depend on room geom
 
 void building_t::invalidate_nav_graph() { // Note: this is safe to call in one thread while using in another
 	if (interior && interior->nav_graph) {interior->nav_graph->invalid = 1;}
+}
+void building_t::invalidate_nav_grid() { // Note: this is safe to call in one thread while using in another
+	if (interior && interior->nav_graph) {interior->nav_graph->invalidate_nav_grid();}
 }
 
 unsigned building_t::count_connected_room_components() {
