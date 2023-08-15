@@ -207,8 +207,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 		float z(r->z1());
 		if (!r->interior) {r->interior = (is_basement || get_part_for_room(*r).contains_cube_xy_no_adj(*r));} // AKA windowless; calculate if not already set
 		// make chair colors consistent for each part by using a few variables for a hash
-		colorRGBA chair_colors[12] = {WHITE, WHITE, GRAY, DK_GRAY, LT_GRAY, BLUE, DK_BLUE, LT_BLUE, YELLOW, RED, DK_GREEN, LT_BROWN};
-		colorRGBA chair_color(chair_colors[(13*r->part_id + 123*tot_num_rooms + 617*mat_ix + 1367*num_floors) % 12]);
+		colorRGBA chair_color(chair_colors[(13*r->part_id + 123*tot_num_rooms + 617*mat_ix + 1367*num_floors) % NUM_CHAIR_COLORS]);
 		light_ix_assign.next_room();
 		rand_gen_t room_rgen(rgen); // shared across all floors of this room
 		// select light color for this room

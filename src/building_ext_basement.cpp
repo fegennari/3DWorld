@@ -830,13 +830,31 @@ void building_t::add_backrooms_objs(rand_gen_t rgen, room_t &room, float zval, u
 	} // for r
 
 	// Add occasional random items/furniture: chairs, office chairs, boxes, crates, balls, etc.
-	// TODO
-	//add_chair(rgen, true_room, blockers, room_id, chair_pos, chair_color, dim, dir, tot_light_amt, rgen.rand_bool()); // 50% chace of office chair
-	// note that boxes are only placed along the exterior walls; this helps prevent the AI from getting stuck on them, since it can't take boxes like the player
-	unsigned const max_num_boxes(rgen.rand() % 21); // 0-20
-	add_boxes_to_room(rgen, true_room, zval, room_id, tot_light_amt, objs_start, max_num_boxes);
+	unsigned const num_chairs(rgen.rand() % 5); // 0-4
+
+	if (num_chairs > 0) { // add chairs
+		// note that chairs don't block the player (and can be taken/moved), but they may block the AI
+		float const max_radius(0.25*floor_spacing); // should be at least as large as the max chair size
+		colorRGBA chair_color(chair_colors[rgen.rand() % NUM_CHAIR_COLORS]);
+		vect_cube_t blockers;
+
+		for (auto i = objs.begin()+objs_start; i != objs.end(); ++i) {
+			if (!i->no_coll()) {blockers.push_back(*i);} // use the simple no_coll() check because it works with the type of objects placed in this room
+		}
+		for (unsigned n = 0; n< num_chairs; ++n) {
+			bool const dim(rgen.rand_bool()), dir(rgen.rand_bool()), office_chair(rgen.rand_bool()); // 50% chace of office chair
+
+			for (unsigned N = 0; N < 4; ++N) { // make up to 4 attempts to place a chair
+				point const chair_pos(gen_xy_pos_in_area(place_area, max_radius, rgen, zval));
+				if (add_chair(rgen, true_room, blockers, room_id, chair_pos, chair_color, dim, dir, tot_light_amt, office_chair)) {blockers.push_back(objs.back());}
+			}
+		} // for n
+	}
+	// note that boxes/crates are only placed along the exterior walls; this helps prevent the AI from getting stuck on them, since it can't take boxes like the player
+	unsigned const num_boxes(rgen.rand() % 21); // 0-20
+	add_boxes_to_room(rgen, true_room, zval, room_id, tot_light_amt, objs_start, num_boxes);
 	unsigned const num_balls(rgen.rand() % 4); // 0-3
-	for (unsigned n = 0; n < num_balls; ++n) {add_ball_to_room(rgen, true_room, place_area, zval, room_id, tot_light_amt, objs_start);} // TODO: place anywhere
+	for (unsigned n = 0; n < num_balls; ++n) {add_ball_to_room(rgen, true_room, place_area, zval, room_id, tot_light_amt, objs_start);}
 }
 
 void building_t::add_missing_backrooms_lights(rand_gen_t rgen, float zval, unsigned room_id, unsigned objs_start, unsigned lights_start,

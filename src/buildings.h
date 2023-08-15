@@ -32,6 +32,7 @@ float const DOOR_FRAME_WIDTH       = 0.07; // for door texture, relative to door
 float const EXT_BASEMENT_JOIN_DIST = 3.0; // relative to floor spacing
 
 unsigned const NUM_BOTTLE_TYPES = 6;
+unsigned const NUM_CHAIR_COLORS = 12;
 unsigned const MAX_BCASE_BOOKS  = 48; // limited by available bit flags
 unsigned const NUM_BOOK_COLORS  = 16;
 unsigned const NUM_PAPER_COLORS = 6;
@@ -44,6 +45,7 @@ unsigned const NUM_STAPLER_COLORS = 5;
 unsigned const NUM_TSHIRT_COLORS  = 9;
 unsigned const NUM_SP_EMISSIVE_COLORS = 2;
 colorRGBA const GD_SP_COLOR(0.5, 1.0, 1.0); // used for glow-in-the-dark spraypaint
+colorRGBA const chair_colors[NUM_CHAIR_COLORS] = {WHITE, WHITE, GRAY, DK_GRAY, LT_GRAY, BLUE, DK_BLUE, LT_BLUE, YELLOW, RED, DK_GREEN, LT_BROWN};
 colorRGBA const book_colors [NUM_BOOK_COLORS ] = {GRAY_BLACK, WHITE, LT_GRAY, GRAY, DK_GRAY, DK_BLUE, BLUE, LT_BLUE, DK_RED, RED, ORANGE, YELLOW, DK_GREEN, LT_BROWN, BROWN, DK_BROWN};
 colorRGBA const spcan_colors[NUM_SPCAN_COLORS] = {GD_SP_COLOR, WHITE, RED, GREEN, BLUE, YELLOW, PINK, ORANGE, PURPLE, BROWN, BLACK};
 colorRGBA const sp_emissive_colors[NUM_SP_EMISSIVE_COLORS] = {colorRGBA(0.2, 1.0, 0.2), colorRGBA(0.2, 0.5, 1.0)}; // light green, greenish blue
