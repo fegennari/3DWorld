@@ -57,7 +57,7 @@ float get_radius_for_square_model(unsigned model_id) {
 }
 
 bool building_t::add_chair(rand_gen_t &rgen, cube_t const &room, vect_cube_t const &blockers, unsigned room_id, point const &place_pos,
-	colorRGBA const &chair_color, bool dim, bool dir, float tot_light_amt, bool office_chair_model)
+	colorRGBA const &chair_color, bool dim, bool dir, float tot_light_amt, bool office_chair_model, bool enable_rotation)
 {
 	if (!building_obj_model_loader.is_model_valid(OBJ_MODEL_OFFICE_CHAIR)) {office_chair_model = 0;}
 	float const window_vspacing(get_window_vspace()), room_pad(4.0f*get_wall_thickness()), chair_height(0.4*window_vspacing);
@@ -85,8 +85,9 @@ bool building_t::add_chair(rand_gen_t &rgen, cube_t const &room, vect_cube_t con
 	vect_room_object_t &objs(interior->room_geom->objs);
 
 	if (office_chair_model) {
+		unsigned const flags(enable_rotation ? RO_FLAG_RAND_ROT : 0);
 		float const lum(chair_color.get_weighted_luminance()); // calculate grayscale luminance
-		objs.emplace_back(chair, TYPE_OFF_CHAIR, room_id, dim, dir, 0, tot_light_amt, SHAPE_CUBE, colorRGBA(lum, lum, lum));
+		objs.emplace_back(chair, TYPE_OFF_CHAIR, room_id, dim, dir, flags, tot_light_amt, SHAPE_CUBE, colorRGBA(lum, lum, lum));
 	}
 	else {
 		objs.emplace_back(chair, TYPE_CHAIR, room_id, dim, dir, 0, tot_light_amt, SHAPE_CUBE, chair_color);

@@ -16,7 +16,7 @@ float const TERM_VELOCITY  = 1.0;
 float const OBJ_ELASTICITY = 0.8;
 
 extern bool tt_fire_button_down, flashlight_on, player_in_attic, use_last_pickup_object, city_action_key;
-extern int player_in_closet, camera_surf_collide, building_action_key, can_pickup_bldg_obj, animate2, frame_counter, player_in_elevator;
+extern int player_in_closet, camera_surf_collide, can_pickup_bldg_obj, animate2, frame_counter, player_in_elevator;
 extern float fticks, CAMERA_RADIUS, office_chair_rot_rate;
 extern double tfticks;
 extern building_dest_t cur_player_building_loc;
@@ -1088,10 +1088,41 @@ void building_t::update_player_interact_objects(point const &player_pos) { // No
 	// update dynamic objects; run for current and connected buildings
 	auto &objs(interior->room_geom->objs);
 
-	for (auto c = objs.begin(); c != objs.end(); ++c) { // check for other objects to collide with (including stairs)
+	for (auto c = objs.begin(); c != objs.end(); ++c) {
+		if (camera_surf_collide && c->type == TYPE_OFF_CHAIR && c->rotates()) { // player push office chair
+			if (c->z1() > player_z2 || c->z2() < player_z1) continue; // no zval overlap
+			float const chair_radius(0.25*(c->dx() + c->dy())); // treat as a cylinder
+			vector3d const delta((c->xc() - player_pos.x), (c->yc() - player_pos.y), 0.0); // in XY plane
+			float const min_dist(1.2*(player_radius + chair_radius)); // use a larger radius, since collision detection should prevent intersections
+			if (delta.xy_mag_sq() > min_dist*min_dist) continue; // no intersection
+			float const dist(delta.xy_mag());
+			cube_t new_obj(*c);
+			new_obj.translate(delta*(1.01*(min_dist - dist)/dist)); // move slightly more so that we don't intersect on the next frame
+			room_t const &room(get_room(c->room_id));
+			if (!get_walkable_room_bounds(room).contains_cube_xy(new_obj)) continue; // not contained in interior part of the room
+			if (is_obj_placement_blocked(new_obj, room, 1))                continue; // inc_open_doors=1
+			auto objs_end(interior->room_geom->get_placed_objs_end()); // skip buttons/stairs/elevators
+			bool overlaps(0);
+
+			for (auto i = objs.begin(); i != objs_end; ++i) {
+				if (!i->no_coll() && i->intersects(new_obj) && i != c) {overlaps = 1; break;} // make sure to exclude ourself
+			}
+			if (overlaps) continue;
+			c->copy_from(new_obj);
+			c->flags |= RO_FLAG_MOVED; // not needed?
+			if (room.is_ext_basement()) {invalidate_nav_grid();} // chairs block the AI, so must update backrooms path finding
+			static float last_sound_tfticks(0);
+
+			if ((tfticks - last_sound_tfticks) > 0.5*TICKS_PER_SECOND) { // play at most twice per second
+				gen_sound_thread_safe_at_player(SOUND_SQUEAK, 0.2, 0.4); // lower pitch; should really use a rolling sound
+				register_building_sound(player_pos, 0.2);
+				last_sound_tfticks = tfticks;
+			}
+			continue;
+		}
 		if (c->no_coll() || !c->has_dstate()) continue; // Note: no test of player_coll flag
 		run_ball_update(c, player_pos, player_z1, player_is_moving);
-	}
+	} // for c
 	if (player_in_this_building) { // interactions only run for player building
 		if (player_in_closet) { // check for collisions with expanded objects in closets
 			auto &expanded_objs(interior->room_geom->expanded_objs);

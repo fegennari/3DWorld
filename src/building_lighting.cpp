@@ -1476,7 +1476,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 				assert(i->obj_id < light_bcubes.size());
 				cube_t &light_bcube(light_bcubes[i->obj_id]);
 
-				if (is_lamp && (i->flags & RO_FLAG_MOVED)) {
+				if (is_lamp && i->was_moved()) {
 					i->flags &= ~RO_FLAG_MOVED; // clear moved flag, since we noticed it was moved
 					light_bcube.set_to_zeros(); // will be recalculated below
 					lamp_was_moved = 1; // force update of upward pointing light shadows

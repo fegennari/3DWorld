@@ -124,6 +124,7 @@ public:
 			num [d] = unsigned(ceil(size[d]/spacing));
 			step[d] = size[d]/(num[d] - 1);
 		}
+		nodes.clear(); // in case we're rebuilding, have to zero initialize below
 		nodes.resize(num[0]*num[1], 0);
 		//cout << TXT(blockers.size()) << TXT(num[0]) << TXT(num[1]) << TXT(nodes.size()) << endl;
 		// determine open nodes; edges are implicitly from adjacent 1 nodes
@@ -555,6 +556,7 @@ public:
 			if (!nav_grid.is_valid()) { // build once and cache
 				//highres_timer_t timer("Build Nav Grid");
 				// Note: built once, so must use avoid rather than keepout; this means that our path finding will likely fail even when p1 or p2 coll is disabled
+				// since walk_area is room area shrunk by the person radius, it can vary slightly depending on the size of the person to first get here
 				vect_cube_t blockers;
 				blockers.reserve(avoid.size());
 

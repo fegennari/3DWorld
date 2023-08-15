@@ -842,11 +842,11 @@ void building_t::add_backrooms_objs(rand_gen_t rgen, room_t &room, float zval, u
 			if (!i->no_coll()) {blockers.push_back(*i);} // use the simple no_coll() check because it works with the type of objects placed in this room
 		}
 		for (unsigned n = 0; n< num_chairs; ++n) {
-			bool const dim(rgen.rand_bool()), dir(rgen.rand_bool()), office_chair(rgen.rand_bool()); // 50% chace of office chair
+			bool const dim(rgen.rand_bool()), dir(rgen.rand_bool()), office_chair(rgen.rand_bool()); // 50% chace of office chair with random_rotation=1
 
 			for (unsigned N = 0; N < 4; ++N) { // make up to 4 attempts to place a chair
 				point const chair_pos(gen_xy_pos_in_area(place_area, max_radius, rgen, zval));
-				if (add_chair(rgen, true_room, blockers, room_id, chair_pos, chair_color, dim, dir, tot_light_amt, office_chair)) {blockers.push_back(objs.back());}
+				if (add_chair(rgen, true_room, blockers, room_id, chair_pos, chair_color, dim, dir, tot_light_amt, office_chair, 1)) {blockers.push_back(objs.back());}
 			}
 		} // for n
 	}
