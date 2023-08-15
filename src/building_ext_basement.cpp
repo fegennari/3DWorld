@@ -846,7 +846,12 @@ void building_t::add_backrooms_objs(rand_gen_t rgen, room_t &room, float zval, u
 
 			for (unsigned N = 0; N < 4; ++N) { // make up to 4 attempts to place a chair
 				point const chair_pos(gen_xy_pos_in_area(place_area, max_radius, rgen, zval));
-				if (add_chair(rgen, true_room, blockers, room_id, chair_pos, chair_color, dim, dir, tot_light_amt, office_chair, 1)) {blockers.push_back(objs.back());}
+				
+				if (add_chair(rgen, true_room, blockers, room_id, chair_pos, chair_color, dim, dir, tot_light_amt, office_chair, 1)) {
+					objs.back().flags |= RO_FLAG_BACKROOM; // flag so that player collisions are enabled
+					blockers.push_back(objs.back());
+					break;
+				}
 			}
 		} // for n
 	}

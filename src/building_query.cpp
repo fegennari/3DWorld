@@ -473,8 +473,8 @@ cube_t get_true_room_obj_bcube(room_object_t const &c) { // for collisions, etc.
 	return c; // default cube case
 }
 
-bool room_object_t::is_player_collidable() const { // Note: chairs are player collidable only when in attics
-	return (!no_coll() && (bldg_obj_types[type].player_coll || (type == TYPE_CHAIR && in_attic())));
+bool room_object_t::is_player_collidable() const { // Note: chairs are player collidable only when in attics or backrooms
+	return (!no_coll() && (bldg_obj_types[type].player_coll || (type == TYPE_CHAIR && (in_attic() || (flags & RO_FLAG_BACKROOM)))));
 }
 
 // Note: used for the player; pos and p_last are already in rotated coordinate space
