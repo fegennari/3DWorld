@@ -156,7 +156,8 @@ bool building_t::add_underground_exterior_rooms(rand_gen_t &rgen, cube_t const &
 	if (!is_house && has_parking_garage && max_expand_underground_room(hallway, wall_dim, wall_dir, rgen)) { // office building with parking garage
 		// currently, the extended basement can only be a network of connected hallways with leaf rooms, or a single large basement room (this case);
 		// if we want to allow both (either a large room connected to a hallway or a large room with hallways coming off of it), we need per-room flags
-		hallway.is_hallway = 0; // should already be set to 0, but this makes it more clear
+		setup_multi_floor_room(hallway, Door, wall_dim, wall_dir);
+		hallway.is_hallway      = 0; // should already be set to 0, but this makes it more clear
 		interior->has_backrooms = 1;
 	}
 	else { // recursively add rooms connected to this hallway in alternating dimensions
@@ -187,6 +188,52 @@ bool building_t::add_underground_exterior_rooms(rand_gen_t &rgen, cube_t const &
 		interior->stairwells.emplace_back(stairwell, 1); // num_floors=1
 	} // for stairs
 	return 1;
+}
+
+void building_t::setup_multi_floor_room(cube_t const &room, door_t const &door, bool wall_dim, bool wall_dir) {
+	float const floor_spacing(get_window_vspace()), floor_thickness(get_floor_thickness()), fc_thick(0.5*floor_thickness), wall_thickness(get_wall_thickness());
+	unsigned const num_floors(calc_num_floors(room, floor_spacing, floor_thickness));
+	assert(num_floors > 0);
+	if (num_floors == 1) return;
+	// add wall segment under the door on lower floors
+	float const room_entrance_edge(room.d[wall_dim][!wall_dir]), dir_sign(wall_dir ? 1.0 : -1.0);
+	cube_t wall(door);
+	set_cube_zvals(wall, room.z1()+fc_thick, door.z1());
+	wall.d[wall_dim][!wall_dir] = room_entrance_edge + 0.1*dir_sign*wall_thickness; // shift out slightly
+	wall.d[wall_dim][ wall_dir] = room_entrance_edge + 1.0*dir_sign*wall_thickness;
+	assert(wall.is_strictly_normalized());
+	interior->walls[wall_dim].push_back(wall);
+	
+	cube_t avoid(door.get_clearance_bcube());
+	avoid.union_with_cube(door.get_open_door_path_bcube()); // make sure it's path is clear as well
+	stairs_shape const sshape(SHAPE_WALLED);
+	unsigned const floors_start(interior->floors.size());
+	float z(room.z1() + floor_spacing); // move to next floor
+
+	for (unsigned f = 1; f < num_floors; ++f, z += floor_spacing) { // skip first floor - draw pairs of floors and ceilings
+		cube_t to_add[4]; // 4 parts for stairs cut
+		float const zc(z - fc_thick), zf(z + fc_thick);
+#if 1
+		to_add[0] = room; // add single cube
+#else
+		// add stairs
+		bool stairs_dim(0), stairs_dir(0);
+		cube_t stairs_cut;
+		// TODO
+		subtract_cube_xy(part, stairs_cut, to_add);
+		landing_t landing(stairs_cut, 0, f, stairs_dim, stairs_dir, 0, sshape, 0, 1); // no railing, at top
+		set_cube_zvals(landing, zc, zf);
+		interior->landings.push_back(landing);
+		interior->stairwells.emplace_back(stairs_cut, 1, stairs_dim, stairs_dir, sshape); // one floor
+#endif
+		// add floors and ceilings
+		for (unsigned i = 0; i < 4; ++i) { // skip zero area cubes from stairs along an exterior wall
+			cube_t &c(to_add[i]);
+			if (c.is_zero_area()) continue;
+			set_cube_zvals(c, zc, z); interior->ceilings.push_back(c);
+			set_cube_zvals(c, z, zf); interior->floors  .push_back(c);
+		}
+	} // for f
 }
 
 bool building_t::add_ext_basement_rooms_recur(extb_room_t &parent_room, ext_basement_room_params_t &P, float door_width, bool dim, unsigned depth, rand_gen_t &rgen) {
@@ -250,6 +297,9 @@ bool building_t::max_expand_underground_room(cube_t &room, bool dim, bool dir, r
 	assert(exp_room.contains_cube(room));
 	if (exp_room.get_sz_dim(!dim) < room_width_min) return 0; // room is too narrow, make it a hallway instead
 	room = exp_room;
+	float const max_depth(room.z2() - get_max_sea_level());
+	unsigned const max_num_floors(max(1U, min(global_building_params.max_ext_basement_room_depth, unsigned(floor(max_depth/floor_spacing)))));
+	if (max_num_floors > 1) {room.z1() -= floor_spacing*(rgen.rand() % max_num_floors);} // maybe expand downward for additional floors
 	return 1;
 }
 
@@ -492,7 +542,7 @@ struct cube_by_xy_dim {
 	bool operator()(cube_t const &a, cube_t const &b) const {return ((a.d[d][0] == b.d[d][0]) ? (a.d[!d][0] < b.d[!d][0]) : (a.d[d][0] < b.d[d][0]));}
 };
 
-void building_t::add_backrooms_objs(rand_gen_t rgen, room_t &room, float zval, unsigned room_id, vect_cube_t &rooms_to_light) {
+void building_t::add_backrooms_objs(rand_gen_t rgen, room_t &room, float zval, unsigned room_id, unsigned floor_ix, vect_cube_t &rooms_to_light) {
 	//highres_timer_t timer("Add Backrooms Objs"); // up to ~2ms
 	assert(has_room_geom());
 	float const floor_spacing(get_window_vspace()), wall_thickness(1.2*get_wall_thickness()), wall_half_thick(0.5*wall_thickness); // slightly thicker than regular walls
@@ -502,6 +552,7 @@ void building_t::add_backrooms_objs(rand_gen_t rgen, room_t &room, float zval, u
 	vect_room_object_t &objs(interior->room_geom->objs);
 	unsigned const objs_start(objs.size());
 	if (interior->room_geom->backrooms_start == 0) {interior->room_geom->backrooms_start = objs_start;}
+	rgen.rseed1 += 123*floor_ix; // make it unique per floor
 
 	// find the shared wall with the basement/parking garage and calculate true room bounds
 	bool sw_dim(0), sw_dir(0), adj_found(0);
@@ -868,8 +919,8 @@ void building_t::add_missing_backrooms_lights(rand_gen_t rgen, float zval, unsig
 	if (rooms_to_light.empty()) return; // nothing to do
 	vect_room_object_t &objs(interior->room_geom->objs);
 	unsigned const lights_end(objs.size());
-	assert(lights_start < lights_end);
 	if (lights_start == lights_end) return; // no lights; error?
+	assert(lights_start < lights_end);
 	room_object_t const ref_light(objs[lights_start]); // use this as a reference for the light size/shape/color
 	point const ref_light_center(ref_light.get_cube_center());
 	vect_cube_t to_add;

@@ -1676,6 +1676,7 @@ private:
 	bool is_basement_room_under_mesh_not_int_bldg(cube_t &room, building_t const *exclude=nullptr) const;
 	bool is_basement_room_placement_valid(cube_t &room, ext_basement_room_params_t &P, bool dim, bool dir, bool *add_end_door=nullptr, building_t const *exclude=nullptr) const;
 	bool add_underground_exterior_rooms(rand_gen_t &rgen, cube_t const &door_bcube, cube_t const &basement, bool wall_dim, bool wall_dir, float length_mult);
+	void setup_multi_floor_room(cube_t const &room, door_t const &door, bool wall_dim, bool wall_dir);
 	bool add_ext_basement_rooms_recur(extb_room_t &parent_room, ext_basement_room_params_t &P, float door_width, bool dim, unsigned depth, rand_gen_t &rgen);
 	bool max_expand_underground_room(cube_t &room, bool dim, bool dir, rand_gen_t &rgen) const;
 	cube_t add_ext_basement_door(cube_t const &room, float door_width, bool dim, bool dir, bool is_end_room, rand_gen_t &rgen);
@@ -1776,7 +1777,7 @@ private:
 	vector3d get_parked_car_size() const;
 	void add_parking_garage_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned floor_ix,
 		unsigned num_floors, unsigned &nlights_x, unsigned &nlights_y, float &light_delta_z);
-	void add_backrooms_objs(rand_gen_t rgen, room_t &room, float zval, unsigned room_id, vect_cube_t &rooms_to_light);
+	void add_backrooms_objs(rand_gen_t rgen, room_t &room, float zval, unsigned room_id, unsigned floor_ix, vect_cube_t &rooms_to_light);
 	void add_missing_backrooms_lights(rand_gen_t rgen, float zval, unsigned room_id, unsigned objs_start, unsigned lights_start,
 		vect_cube_t const &rooms_to_light, light_ix_assign_t &light_ix_assign);
 	bool add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t const &walls, vect_cube_t const &beams, vect_riser_pos_t const &risers, vect_cube_t &pipe_cubes,

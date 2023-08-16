@@ -237,7 +237,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				add_parking_garage_objs(rgen, *r, room_center.z, room_id, f, num_floors, nx, ny, light_delta_z);
 			}
 			else if (is_backrooms) { // should be single floor only
-				add_backrooms_objs(rgen, *r, room_center.z, room_id, rooms_to_light);
+				add_backrooms_objs(rgen, *r, room_center.z, room_id, f, rooms_to_light);
 			}
 			if ((!has_stairs && (f == 0 || top_floor) && interior->stairwells.size() > 1) || top_of_stairs) { // should this be outside the loop?
 				// check for stairwells connecting stacked parts (is this still needed?); check for roof access stairs and set top_of_stairs=0
