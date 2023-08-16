@@ -1023,8 +1023,9 @@ void building_t::refine_light_bcube(point const &lpos, float light_radius, cube_
 	room_exp.expand_by_xy(wall_thickness + tolerance); // to include points on the border + some FP error
 	// pre-compute the nearby walls we will use for clipping
 	for (unsigned d = 0; d < 2; ++d) {walls[d].clear();}
+	tight_bcube.z1() = tight_bcube.z2() - get_floor_ceil_gap(); // limit to a single floor to exclude walls on the floor below (for backrooms)
 
-	if (is_parking_garage) {
+	if (is_parking_garage) { // what about backrooms walls?
 		auto objs_end(interior->room_geom->get_placed_objs_end()); // skip buttons/stairs/elevators
 		unsigned const pg_wall_start(interior->room_geom->wall_ps_start);
 		assert(pg_wall_start < interior->room_geom->objs.size());
@@ -1034,7 +1035,7 @@ void building_t::refine_light_bcube(point const &lpos, float light_radius, cube_
 			if (tight_bcube.intersects(*i)) {walls[i->dim].push_back(*i);}
 		}
 	}
-	else {
+	else { // still need to check for backrooms to handle wall adjacent to parking garage
 		for (unsigned d = 0; d < 2; ++d) {
 			for (cube_t const &c : interior->walls[d]) {
 				if (tight_bcube.intersects(c)) {walls[d].push_back(c);}

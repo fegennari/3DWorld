@@ -106,7 +106,7 @@ public:
 	light_ix_assign_t() : next_ix(0) {}
 	void next_room() {cur.clear();}
 	unsigned get_next_ix() {return next_ix++;}
-	unsigned get_ix_for_light(cube_t const &c);
+	unsigned get_ix_for_light(cube_t const &c, bool walls_not_shared=0);
 };
 
 struct building_occlusion_state_t {

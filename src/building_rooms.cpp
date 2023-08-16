@@ -13,11 +13,13 @@ void get_balcony_pillars(room_object_t const &c, float ground_floor_z1, cube_t p
 void expand_convex_polygon_xy(vect_point &points, point const &center, float expand);
 
 
-unsigned light_ix_assign_t::get_ix_for_light(cube_t const &c) {
+unsigned light_ix_assign_t::get_ix_for_light(cube_t const &c, bool walls_not_shared) {
 	point2d<float> const pos(c.x1(), c.y1());
 
-	for (auto i = cur.begin(); i != cur.end(); ++i) {
-		if (i->first == pos) return i->second; // existing light is part of the same stack and is valid to return
+	if (!walls_not_shared) { // search for existing stack
+		for (auto i = cur.begin(); i != cur.end(); ++i) {
+			if (i->first == pos) return i->second; // existing light is part of the same stack and is valid to return
+		}
 	}
 	cur.emplace_back(pos, get_next_ix()); // allocate a new light
 	return cur.back().second;
@@ -320,6 +322,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			}
 			rand_gen_t rgen_lights(rgen); // copy state so that we don't modify rgen
 			unsigned const objs_start_inc_lights(objs.size());
+			bool const walls_not_shared(is_backrooms); // multi-floor backrooms have different walls and can't share the light stack
 
 			for (cube_t const &l : valid_lights) {
 				bool dim(l.dx() < l.dy()), dir(0); // dir is only used for wall lights
@@ -333,7 +336,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				else {l_flags |= RO_FLAG_NOCOLL;} // no collision detection for ceiling lights
 				if (check_skylight_intersection(l)) {l_flags |= RO_FLAG_ADJ_TOP; has_skylight_light = 1;} // if attached to a skylight, draw top surface
 				room_object_t light_obj(l, TYPE_LIGHT, room_id, dim, dir, l_flags, light_amt, light_shape, color);
-				light_obj.obj_id = light_ix_assign.get_ix_for_light(l);
+				light_obj.obj_id = light_ix_assign.get_ix_for_light(l, walls_not_shared);
 				unsigned const flicker_mod(is_parking_garage ? 50 : (is_ext_basement ? 20 : 0)); // 2% chance for parking garage, 5% chance for ext basement
 				
 				if (flicker_mod > 0 && (((rgen_lights.rand() + 3*f)%flicker_mod) == 13)) {light_obj.flags |= RO_FLAG_BROKEN;} // maybe make this a flickering light
