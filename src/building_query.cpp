@@ -495,14 +495,16 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, flo
 	if (!xy_only && 2.2f*radius < (floor_spacing - floor_thickness)) { // diameter is smaller than space between floor and ceiling
 		// check Z collision with floors; no need to check ceilings; this will set pos.z correctly so that we can set skip_z=0 in later tests
 		float const floor_test_zval(obj_z + floor_thickness); // move up by floor thickness to better handle steep stairs
+		float closest_floor_zval(pos.z - radius); // start at the player's feet
 
 		for (auto i = interior->floors.begin(); i != interior->floors.end(); ++i) { // Note: includes attic and basement floors
 			if (!i->contains_pt_xy(pos)) continue; // sphere not in this floor
 			float const z1(i->z2());
-			if (floor_test_zval < z1 || floor_test_zval > z1 + floor_spacing) continue; // this is not the floor the sphere is on
-			if (pos.z < z1 + radius) {pos.z = z1 + radius; obj_z = max(pos.z, p_last.z); had_coll = 1;} // move up
-			break; // only change zval once
+			if (z1 > floor_test_zval)    continue; // floor is above, skip
+			if (z1 > closest_floor_zval) {closest_floor_zval = z1; had_coll = 1;} // move up
 		}
+		if (had_coll) {pos.z = closest_floor_zval + radius; obj_z = max(pos.z, p_last.z);}
+
 		if (has_attic() && attic_access.contains_pt_xy(pos)) {
 			if (interior->attic_access_open && obj_z > (attic_access.z2() - floor_spacing)) { // on attic ladder - handle like a ramp
 				float const speed_factor = 0.3; // slow down when climbing the ladder
