@@ -2185,7 +2185,8 @@ void building_t::ai_room_lights_update(person_t const &person) {
 	int const room_ix(get_room_containing_pt(person.pos));
 	if (room_ix == person.cur_room) return; // same room as last time - done
 	if (room_ix >= 0) {set_room_light_state_to(get_room(room_ix), person.pos.z, 1);} // make sure current room light is on when entering
-	if (person.cur_room < 0) return;
+	if (person.cur_room < 0)        return; // no old room (error?)
+	if (is_pos_in_pg_or_backrooms(person.pos)) return; // don't turn off parking garage or backrooms lights since they affect a large area
 	float const floor_spacing(get_window_vspace());
 	bool other_person_in_room(0);
 
