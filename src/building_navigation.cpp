@@ -699,7 +699,7 @@ public:
 
 	bool can_use_conn(conn_room_t const &conn, vect_door_t const &doors, float zval, bool has_key) const {
 		if (conn.door_ix < 0) return 1; // no door
-		if (global_building_params.ai_opens_doors && has_key) return 1; // locked door won't stop us
+		//if (global_building_params.ai_opens_doors && has_key) return 1; // locked door won't stop us; incorrect because door may not cover z-range (for multi-floor backrooms)
 		unsigned const door_ix(conn.door_ix);
 		assert(door_ix < doors.size());
 		door_t const &first_door(doors[door_ix]);
@@ -1274,8 +1274,10 @@ void building_t::find_nearest_stairs_or_ramp(point const &p1, point const &p2, v
 		sorted.emplace_back((p2p_dist(p1, center) + p2p_dist(center, p2)), s);
 	} // for s
 	if ((part_ix < 0 || part_ix == basement_part_ix) && has_pg_ramp() && zmax < ground_floor_z1) { // parking garage ramp
-		point const center(interior->pg_ramp.get_cube_center());
-		sorted.emplace_back((p2p_dist(p1, center) + p2p_dist(center, p2)), interior->stairwells.size());
+		if (zmin > interior->pg_ramp.z1() && zmax < interior->pg_ramp.z2()) { // ramp is within vertical range
+			point const center(interior->pg_ramp.get_cube_center());
+			sorted.emplace_back((p2p_dist(p1, center) + p2p_dist(center, p2)), interior->stairwells.size());
+		}
 	}
 	sort(sorted.begin(), sorted.end()); // sort by distance, min first
 	for (auto s = sorted.begin(); s != sorted.end(); ++s) {nearest_stairs.push_back(s->second);}
@@ -1353,6 +1355,7 @@ bool building_t::find_route_to_point(person_t const &person, float radius, bool 
 			if (!interior->nav_graph->find_path_points(loc1.room_ix, stairs_room_ix, person.ssn, radius, height, 0, is_first_path,
 				up_or_down, person.cur_rseed, avoid, *this, from, interior->doors, person.has_key, nullptr, from_path)) continue; // no custom_dest
 			point const seg2_start(interior->nav_graph->get_stairs_entrance_pt(to.z, stairs_room_ix, !up_or_down)); // other end
+			assert(point_in_building_or_basement_bcube(seg2_start));
 			// new floor, new zval, new avoid cubes
 			interior->get_avoid_cubes(avoid, (seg2_start.z - radius), (seg2_start.z + z2_add), 0.5*radius, get_floor_thickness(), following_player);
 			// stairs/ramp => to
