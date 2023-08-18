@@ -592,7 +592,7 @@ void building_t::add_backrooms_objs(rand_gen_t rgen, room_t &room, float zval, u
 	true_room.d[sw_dim][sw_dir] += shared_extend;
 	vector3d const sz(true_room.get_size());
 	vect_cube_t blockers_per_dim[2], walls_per_dim[2];
-	float const doorway_width(get_doorway_width()), doorway_hwidth(0.5*doorway_width), min_gap(1.2*doorway_width);
+	float const doorway_width(get_doorway_width()), doorway_hwidth(0.5*doorway_width), min_gap(1.2*doorway_width), min_edge_gap(min_gap + wall_thickness);
 
 	// find entrance door and add it to wall blockers
 	assert((unsigned)interior->ext_basement_door_stack_ix < interior->door_stacks.size());
@@ -610,7 +610,7 @@ void building_t::add_backrooms_objs(rand_gen_t rgen, room_t &room, float zval, u
 	// add random interior walls to create an initial maze
 	cube_t const place_area(get_walkable_room_bounds(true_room));
 	cube_t wall_area(place_area);
-	wall_area.expand_by_xy(-min_gap);
+	wall_area.expand_by_xy(-min_edge_gap);
 	if (min(wall_area.dx(), wall_area.dy()) < 2.0*floor_spacing) return; // room too small to place walls - shouldn't happen
 	set_cube_zvals(wall_area, zval, ceiling_z);
 	float const min_side(min(sz.x, sz.y)), area(sz.x*sz.y);
@@ -708,7 +708,6 @@ void building_t::add_backrooms_objs(rand_gen_t rgen, room_t &room, float zval, u
 		for (cube_t const &c : g) {objs.emplace_back(c, TYPE_DBG_SHAPE, room_id, 0, 0, (RO_FLAG_NOCOLL | RO_FLAG_BACKROOM), 1.0, SHAPE_CUBE, color);}
 	}
 #endif
-
 	// Add doorways + doors to guarantee full connectivity using space
 	if (space_groups.size() > 1) { // multiple disconnected sub-graphs
 		float const door_min_spacing(0.5*doorway_width), min_shared_edge(doorway_width + 2*wall_thickness); // allow space for door frame
