@@ -719,6 +719,7 @@ bool building_t::check_pos_in_unlit_room_recur(point const &pos, set<unsigned> &
 	// Note: we can't easily check the connected building here, so assume it's lit; this doesn't fix the case where the conn room is in the other building
 	if ( room.is_ext_basement_conn   ()) return 0; // be safe/conservative and treat rooms connected to two buildings as potentially lit
 	float const floor_spacing(get_window_vspace());
+	if (is_room_backrooms(room) && room.dz() > 1.5*floor_spacing) return 0; // multi-floor backrooms: assume lit as this is too difficult to determine
 	unsigned const floor_ix(max(0.0f, (pos.z - room.z1()))/floor_spacing);
 	if (room.has_skylight && pos.z > (room.z2() - floor_spacing)) return 0; // top floor of room with a skylight
 	if (room.has_elevator || (!room.is_ext_basement() && room.has_stairs_on_floor(floor_ix))) return 0; // assume light can come from stairs (not in ext basement) or open elevator

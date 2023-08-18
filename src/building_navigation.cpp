@@ -146,7 +146,7 @@ public:
 		// flag all nodes in doorways as walkable to ensure the graph is connected, even if it means people will clip through the door frame;
 		// other solutions involve aligning doors with the grid (too difficult/restrictive) or reducing spacing to doorway_width/(2*radius) (too slow)
 		for (door_stack_t const &d : doors) {
-			if (!bcube.intersects(d)) continue; // wrong room
+			if (!bcube.intersects(d)) continue; // wrong room; includes zval check
 			cube_t bc(d.get_clearance_bcube()); // include space to both sides
 			set_wall_width(bc, bc.get_center_dim(!d.dim), 0.0, !d.dim); // set width to zero so that exactly one grid is contained in this dim
 			float lo[2], hi[2];
@@ -279,7 +279,7 @@ class building_nav_graph_t {
 	float stairs_extend=0;
 	bool has_pg_ramp=0;
 	vector<node_t> nodes;
-	mutable cube_nav_grid nav_grid; // for use with backrooms; cached during path finding
+	mutable vector<cube_nav_grid> nav_grids; // for use with backrooms; cached during path finding
 	node_t       &get_node(unsigned room)       {assert(room < nodes.size()); return nodes[room];}
 	node_t const &get_node(unsigned room) const {assert(room < nodes.size()); return nodes[room];}
 
@@ -293,7 +293,10 @@ class building_nav_graph_t {
 	}
 public:
 	bool invalid=0;
-	void invalidate_nav_grid() {nav_grid.invalidate();}
+	void invalidate_nav_grid(unsigned floor_ix) {
+		assert(floor_ix < nav_grids.size()); // too strong?
+		if (floor_ix < nav_grids.size()) {nav_grids[floor_ix].invalidate();}
+	}
 	building_nav_graph_t(float stairs_extend_) : stairs_extend(stairs_extend_) {}
 
 	void set_num_rooms(unsigned num_rooms_, unsigned num_stairs_, bool has_pg_ramp_) {
@@ -553,18 +556,28 @@ public:
 			return 1; // success
 		} // for npts
 		if (!no_grid_path && building.is_room_backrooms(room_ix)) { // run detailed path finding on backrooms
+			float const floor_spacing(building.get_window_vspace());
+			unsigned const num_floors(round_fp(walk_area.dz()/floor_spacing)), floor_ix(floor((p1.z - walk_area.z1())/floor_spacing));
+			assert(num_floors > 0 && floor_ix < num_floors);
+			if (nav_grids.empty()) {nav_grids.resize(num_floors);} else {assert(nav_grids.size() == num_floors);}
+			cube_nav_grid &nav_grid(nav_grids[floor_ix]);
+
 			if (!nav_grid.is_valid()) { // build once and cache
 				//highres_timer_t timer("Build Nav Grid");
 				// Note: built once, so must use avoid rather than keepout; this means that our path finding will likely fail even when p1 or p2 coll is disabled
 				// since walk_area is room area shrunk by the person radius, it can vary slightly depending on the size of the person to first get here
+				cube_t walk_area_this_floor(walk_area);
+				float const floor_zval(walk_area.z1() + floor_ix*floor_spacing + building.get_fc_thickness());
+				set_cube_zvals(walk_area_this_floor, floor_zval, (floor_zval + building.get_floor_ceil_gap())); // limit to floor-ceil space for this floor
 				vect_cube_t blockers;
 				blockers.reserve(avoid.size());
 
 				for (cube_t const &c : avoid) {
-					if (c.intersects(walk_area)) {blockers.push_back(c);}
+					if (c.intersects(walk_area_this_floor)) {blockers.push_back(c);}
 				}
 				// Note: doorway width is 2.38x coll radius
-				nav_grid.build(walk_area, blockers, building.interior->door_stacks, get_ped_coll_radius()); // use conservative person radius so that we can reuse across people
+				float const grid_radius(get_ped_coll_radius()); // use conservative person radius so that we can reuse across people
+				nav_grid.build(walk_area_this_floor, blockers, building.interior->door_stacks, grid_radius);
 				//nav_grid.create_debug_objs(building.interior->room_geom->objs); // for debugging; modifies building, which should be const
 				//building.interior->room_geom->invalidate_small_geom();
 			}
@@ -837,8 +850,8 @@ void building_t::build_nav_graph() const { // Note: does not depend on room geom
 void building_t::invalidate_nav_graph() { // Note: this is safe to call in one thread while using in another
 	if (interior && interior->nav_graph) {interior->nav_graph->invalid = 1;}
 }
-void building_t::invalidate_nav_grid() { // Note: this is safe to call in one thread while using in another
-	if (interior && interior->nav_graph) {interior->nav_graph->invalidate_nav_grid();}
+void building_t::invalidate_nav_grid(unsigned floor_ix) { // Note: this is safe to call in one thread while using in another
+	if (interior && interior->nav_graph) {interior->nav_graph->invalidate_nav_grid(floor_ix);}
 }
 
 unsigned building_t::count_connected_room_components() {
@@ -1472,7 +1485,7 @@ bool building_t::place_people_if_needed(unsigned building_ix, float radius, vect
 
 		for (unsigned f = 0; f < num_floors; ++f) {
 			if (r->lit_by_floor && !r->is_lit_on_floor(f)) continue; // don't place person in an unlit room; only applies if room lighting has been calculated
-			unsigned const num_cands(is_room_backrooms(*r) ? 4 : 1); // add 4x for backrooms since this is one room with many sub-rooms
+			unsigned const num_cands(is_room_backrooms(*r) ? 4 : 1); // add 4x for backrooms since this is one room with many sub-rooms (even if multi-level?)
 			for (unsigned n = 0; n < num_cands; ++n) {room_cands.emplace_back(room_ix, f);}
 		}
 	} // for r

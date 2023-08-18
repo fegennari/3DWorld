@@ -1110,7 +1110,8 @@ void building_t::update_player_interact_objects(point const &player_pos) { // No
 			if (overlaps) continue;
 			c->copy_from(new_obj);
 			c->flags |= RO_FLAG_MOVED; // not needed?
-			if (room.is_ext_basement()) {invalidate_nav_grid();} // chairs block the AI, so must update backrooms path finding
+			// chairs block the AI, so must update backrooms path finding
+			if (room.is_ext_basement()) {invalidate_nav_grid(room.get_floor_containing_zval(c->zc(), get_window_vspace()));}
 			static float last_sound_tfticks(0);
 
 			if ((tfticks - last_sound_tfticks) > 0.5*TICKS_PER_SECOND) { // play at most twice per second
