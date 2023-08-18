@@ -884,8 +884,7 @@ void building_t::add_backrooms_objs(rand_gen_t rgen, room_t &room, float zval, u
 		}
 		if (num_doors == 0) continue; // not connected with a door, not reachable, skip (and don't need a light either)
 		rooms_to_light.push_back(r);
-		room_t sub_room(room);
-		sub_room.copy_from(r); // keep flags, copy cube
+		room_t sub_room(room, r); // keep flags, copy cube
 		sub_room.interior = 1; // treated as basement but not extended basement (no wall padding)
 		sub_room.intersect_with_cube(place_area); // clip off areas adjacent to the exterior wall
 		unsigned const sub_objs_start(objs.size()); // no objects have been placed in this sub-room yet
@@ -968,7 +967,7 @@ void building_t::add_missing_backrooms_lights(rand_gen_t rgen, float zval, unsig
 		light += vector3d((r.xc() - ref_light_center.x), (r.yc() - ref_light_center.y), 0.0);
 		bool const room_dim(r.dx() < r.dy()); // longer room dim
 		to_add.clear();
-		try_place_light_on_ceiling(light, r, room_dim, get_fc_thickness(), 1, 0, 1, 1, objs_start, to_add, rgen); // or wall light?
+		try_place_light_on_ceiling(light, room_t(get_room(room_id), r), room_dim, get_fc_thickness(), 1, 0, 1, 1, objs_start, to_add, rgen); // or wall light?
 
 		for (cube_t const &L : to_add) { // should be size 1
 			light.copy_from(L);

@@ -1085,6 +1085,7 @@ struct room_t : public cube_t { // size=64
 
 	room_t() {assign_all_to(RTYPE_NOTSET, 0);} // locked=0
 	room_t(cube_t const &c, unsigned p, unsigned nl=0, bool is_hallway_=0, bool is_office_=0, bool is_sec_bldg_=0);
+	room_t(room_t const &r, cube_t const &c) : room_t(r) {copy_from(c);} // sub-room
 	void assign_all_to(room_type rt, bool locked=1); // locked by default
 	void assign_to(room_type rt, unsigned floor, bool locked=0); // unlocked by default
 	room_type get_room_type (unsigned floor) const {return rtype[wrap_room_floor(floor)];}
@@ -1692,7 +1693,7 @@ private:
 	void get_attic_roof_tquads(vector<tquad_with_ix_t> &tquads) const;
 	bool add_attic_access_door(cube_t const &ceiling, unsigned part_ix, unsigned num_floors, unsigned rooms_start, rand_gen_t &rgen);
 	bool is_light_placement_valid(cube_t const &light, cube_t const &room, float pad) const;
-	void try_place_light_on_ceiling(cube_t const &light, cube_t const &room, bool room_dim, float pad, bool allow_rot, bool allow_mult,
+	void try_place_light_on_ceiling(cube_t const &light, room_t const &room, bool room_dim, float pad, bool allow_rot, bool allow_mult,
 		unsigned nx, unsigned ny, unsigned check_coll_start, vect_cube_t &lights, rand_gen_t &rgen) const;
 	void try_place_light_on_wall   (cube_t const &light, room_t const &room, bool room_dim, float zval, vect_cube_t &lights, rand_gen_t &rgen) const;
 	bool clip_cube_to_parts(cube_t &c, vect_cube_t &cubes) const;
