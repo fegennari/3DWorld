@@ -13,6 +13,7 @@ extern building_params_t global_building_params;
 extern building_t const *player_building;
 
 bool using_hmap_with_detail();
+cube_t get_stairs_bcube_expanded(stairwell_t const &s, float ends_clearance, float sides_clearance, float doorway_width);
 
 
 bool building_t::extend_underground_basement(rand_gen_t rgen) {
@@ -156,7 +157,7 @@ bool building_t::add_underground_exterior_rooms(rand_gen_t &rgen, cube_t const &
 	if (!is_house && has_parking_garage && max_expand_underground_room(hallway, wall_dim, wall_dir, rgen)) { // office building with parking garage
 		// currently, the extended basement can only be a network of connected hallways with leaf rooms, or a single large basement room (this case);
 		// if we want to allow both (either a large room connected to a hallway or a large room with hallways coming off of it), we need per-room flags
-		setup_multi_floor_room(hallway, Door, wall_dim, wall_dir);
+		setup_multi_floor_room(hallway, Door, wall_dim, wall_dir, rgen);
 		hallway.is_hallway      = 0; // should already be set to 0, but this makes it more clear
 		interior->has_backrooms = 1;
 	}
@@ -190,7 +191,7 @@ bool building_t::add_underground_exterior_rooms(rand_gen_t &rgen, cube_t const &
 	return 1;
 }
 
-void building_t::setup_multi_floor_room(cube_t const &room, door_t const &door, bool wall_dim, bool wall_dir) {
+void building_t::setup_multi_floor_room(extb_room_t &room, door_t const &door, bool wall_dim, bool wall_dir, rand_gen_t &rgen) {
 	float const floor_spacing(get_window_vspace()), floor_thickness(get_floor_thickness()), fc_thick(0.5*floor_thickness), wall_thickness(get_wall_thickness());
 	unsigned const num_floors(calc_num_floors(room, floor_spacing, floor_thickness));
 	assert(num_floors > 0);
@@ -204,28 +205,50 @@ void building_t::setup_multi_floor_room(cube_t const &room, door_t const &door, 
 	assert(wall.is_strictly_normalized());
 	interior->walls[wall_dim].push_back(wall);
 	
-	cube_t avoid(door.get_clearance_bcube());
-	avoid.union_with_cube(door.get_open_door_path_bcube()); // make sure it's path is clear as well
-	stairs_shape const sshape(SHAPE_WALLED);
+	cube_t door_avoid(door.get_clearance_bcube());
+	door_avoid.union_with_cube(door.get_open_door_path_bcube()); // make sure it's path is clear as well
+	vect_cube_t avoid;
+	avoid.push_back(door_avoid);
+	stairs_shape const sshape(SHAPE_STRAIGHT);
 	unsigned const floors_start(interior->floors.size());
+	float const door_width(door.get_width()), stairs_hwidth(0.6*door_width), stairs_hlen(rgen.rand_uniform(2.0, 3.0)*stairs_hwidth), wall_spacing(1.0*door_width);
 	float z(room.z1() + floor_spacing); // move to next floor
 
 	for (unsigned f = 1; f < num_floors; ++f, z += floor_spacing) { // skip first floor - draw pairs of floors and ceilings
 		cube_t to_add[4]; // 4 parts for stairs cut
 		float const zc(z - fc_thick), zf(z + fc_thick);
-#if 1
-		to_add[0] = room; // add single cube
-#else
+		bool stairs_dim(rgen.rand_bool()), stairs_dir(rgen.rand_bool());
+		cube_t stairs;
+		
 		// add stairs
-		bool stairs_dim(0), stairs_dir(0);
-		cube_t stairs_cut;
-		// TODO
-		subtract_cube_xy(part, stairs_cut, to_add);
-		landing_t landing(stairs_cut, 0, f, stairs_dim, stairs_dir, 0, sshape, 0, 1); // no railing, at top
-		set_cube_zvals(landing, zc, zf);
-		interior->landings.push_back(landing);
-		interior->stairwells.emplace_back(stairs_cut, 1, stairs_dim, stairs_dir, sshape); // one floor
-#endif
+		if (4.0*(stairs_hlen + wall_spacing) < min(room.dx(), room.dy())) { // condition should generally be true
+			vector3d size;
+			size[ stairs_dim] = stairs_hlen;
+			size[!stairs_dim] = stairs_hwidth;
+			cube_t place_area(room);
+			for (unsigned d = 0; d < 2; ++d) {place_area.expand_in_dim(d, -(size[d] + wall_spacing));}
+
+			for (unsigned n = 0; n < 100; ++n) { // 100 iterations to place stairs
+				cube_t cand;
+				for (unsigned d = 0; d < 2; ++d) {set_wall_width(cand, rgen.rand_uniform(place_area.d[d][0], place_area.d[d][1]), size[d], d);}
+				set_cube_zvals(cand, zf-floor_spacing, zc+floor_spacing); // top of floor below to bottom of ceiling on this floor
+				if (has_bcube_int(cand, avoid)) continue; // bad placement
+				stairs = cand;
+				break; // success
+			}
+		}
+		if (stairs.is_all_zeros()) {to_add[0] = room;} // add single cube
+		else {
+			assert(stairs.is_strictly_normalized());
+			subtract_cube_xy(room, stairs, to_add);
+			landing_t landing(stairs, 0, 0, stairs_dim, stairs_dir, 1, sshape, 0, 1, 1, 0, 1); // elevator=0, floor=0, railing=1, roof=0, at_top=1, stacked=1, ramp=0, stacked=1, extb=1
+			set_cube_zvals(landing, zc, zf);
+			interior->landings.push_back(landing);
+			stairwell_t const S(stairs, 1, stairs_dim, stairs_dir, sshape, 0, 1, 1); // floors=1, roof=0, stacked=1, ext_basement=1
+			interior->stairwells.push_back(S);
+			avoid.push_back(get_stairs_bcube_expanded(S, door_width, wall_thickness, door_width));
+			room.has_stairs = 1;
+		}
 		// add floors and ceilings
 		for (unsigned i = 0; i < 4; ++i) { // skip zero area cubes from stairs along an exterior wall
 			cube_t &c(to_add[i]);
@@ -569,14 +592,22 @@ void building_t::add_backrooms_objs(rand_gen_t rgen, room_t &room, float zval, u
 	true_room.d[sw_dim][sw_dir] += shared_extend;
 	vector3d const sz(true_room.get_size());
 	vect_cube_t blockers_per_dim[2], walls_per_dim[2];
+	float const doorway_width(get_doorway_width()), doorway_hwidth(0.5*doorway_width), min_gap(1.2*doorway_width);
 
 	// find entrance door and add it to wall blockers
 	assert((unsigned)interior->ext_basement_door_stack_ix < interior->door_stacks.size());
 	auto const &ent_door(interior->door_stacks[interior->ext_basement_door_stack_ix]);
 	blockers_per_dim[!ent_door.dim].push_back(ent_door.get_clearance_bcube());
 
+	// find any stairs in this room and add to both wall blockers
+	for (stairwell_t const &s : interior->stairwells) {
+		if (s.z1() >= ceiling_z || s.z2() <= zval) continue; // wrong floor
+		cube_t const stairs_bcube(get_stairs_bcube_expanded(s, doorway_width, wall_thickness, doorway_width));
+		if (!room.intersects(stairs_bcube)) continue;
+		for (unsigned d = 0; d < 2; ++d) {blockers_per_dim[d].push_back(stairs_bcube);}
+	}
+
 	// add random interior walls to create an initial maze
-	float const doorway_width(get_doorway_width()), doorway_hwidth(0.5*doorway_width), min_gap(1.2*doorway_width);
 	cube_t const place_area(get_walkable_room_bounds(true_room));
 	cube_t wall_area(place_area);
 	wall_area.expand_by_xy(-min_gap);

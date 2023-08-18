@@ -1660,8 +1660,8 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 			cube_t cand;
 			stairs_shape sshape(0);
 			bool cand_is_valid(0), dim(0), stairs_dir(0), add_railing(1), stack_conn(1), is_at_top(0);
-			float const cand_z1(part.z2() - window_vspacing + fc_thick); // top of top floor for this part
 			float const cand_z2(part.z2() + fc_thick); // top of bottom floor of upper part *p
+			float const cand_z1(cand_z2 - window_vspacing); // top of top floor for this part
 			
 			// try to extend primary hallway stairs down to parking garage below; should this apply to all ground floor stairwells?
 			if (is_basement && can_extend_pri_hall_stairs_to_pg() && part.contains_cube_xy(pri_hall)) {
