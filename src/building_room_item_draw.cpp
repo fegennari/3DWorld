@@ -779,7 +779,7 @@ void building_room_geom_t::create_static_vbos(building_t const &building) {
 
 	for (auto i = objs.begin(); i != objs.end(); ++i) {
 		if (!i->is_visible() || i->is_dynamic()) continue; // skip invisible and dynamic objects
-		assert(i->is_strictly_normalized());
+		if (!i->is_strictly_normalized()) {cout << "Denormalized object of type " << unsigned(i->type) << ": " << i->str() << endl; assert(0);}
 		assert(i->type < NUM_ROBJ_TYPES);
 
 		switch (i->type) {

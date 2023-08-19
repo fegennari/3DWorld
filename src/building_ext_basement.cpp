@@ -944,14 +944,11 @@ void building_t::add_backrooms_objs(rand_gen_t rgen, room_t &room, float zval, u
 }
 
 void building_t::add_missing_backrooms_lights(rand_gen_t rgen, float zval, unsigned room_id, unsigned objs_start, unsigned lights_start,
-	vect_cube_t const &rooms_to_light, light_ix_assign_t &light_ix_assign)
+	room_object_t const &ref_light, vect_cube_t const &rooms_to_light, light_ix_assign_t &light_ix_assign)
 {
 	if (rooms_to_light.empty()) return; // nothing to do
 	vect_room_object_t &objs(interior->room_geom->objs);
 	unsigned const lights_end(objs.size());
-	if (lights_start == lights_end) return; // no lights; error?
-	assert(lights_start < lights_end);
-	room_object_t const ref_light(objs[lights_start]); // use this as a reference for the light size/shape/color
 	point const ref_light_center(ref_light.get_cube_center());
 	vect_cube_t to_add;
 

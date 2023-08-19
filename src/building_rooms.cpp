@@ -349,7 +349,8 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			if (is_lit) {r->lit_by_floor |= (1ULL << (f&63));} // flag this floor as being lit (for up to 64 floors)
 
 			if (is_backrooms) {
-				add_missing_backrooms_lights(rgen, room_center.z, room_id, floor_objs_start, objs_start_inc_lights, rooms_to_light, light_ix_assign);
+				room_object_t const ref_light(light, TYPE_LIGHT, room_id, room_dim, 0, (flags | RO_FLAG_NOCOLL), light_amt, light_shape, color);
+				add_missing_backrooms_lights(rgen, room_center.z, room_id, floor_objs_start, objs_start_inc_lights, ref_light, rooms_to_light, light_ix_assign);
 				continue; // nothing else to add
 			}
 			if (is_parking_garage) continue; // generated above, done; no outlets or light switches
