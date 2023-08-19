@@ -1791,7 +1791,21 @@ bool building_t::check_obj_occluded(cube_t const &c, point const &viewer_in, occ
 	if (!c_is_building_part && !reflection_pass) {
 		// check walls of this building; not valid for reflections because the reflected camera may be on the other side of a wall/mirror
 		if (targ_in_basement && viewer.z < ground_floor_z1 && (has_parking_garage || interior->has_backrooms)) { // object and pos are both in the parking garage or backrooms
-			if (has_room_geom()) { // (display_mode & 0x01)
+			if (interior->has_backrooms) {
+				// check for occlusion from the wall segments on either side of the extended basement door that separates it from the basement
+				bool const dim(interior->extb_wall_dim), dir(interior->extb_wall_dir);
+				door_t const &door(interior->get_ext_basement_door());
+				cube_t wall(get_basement());
+				min_eq(wall.z1(), interior->basement_ext_bcube.z1()); // cover both basement and ext basement in Z
+				float const wall_pos(wall.d[dim][dir]);
+				wall.d[dim][!dir] = wall_pos;
+				wall.d[dim][ dir] = wall_pos + (dir ? 1.0 : -1.0)*get_wall_thickness(); // extend slightly into ext basement
+				assert(wall.is_strictly_normalized());
+				cube_t walls[2] = {wall, wall}; // lo, hi
+				for (unsigned d = 0; d < 2; ++d) {walls[d].d[!dim][!d] = door.d[!dim][d];} // exclude the door
+				if (are_pts_occluded_by_any_cubes<0>(viewer, pts, npts, occ_area, walls, walls+2, dim, 0.0)) return 1; // no size check
+			}
+			if (has_room_geom()) {
 				auto const &pgbr_wall_ixs(interior->room_geom->pgbr_wall_ixs);
 				index_pair_t start, end;
 

@@ -140,6 +140,8 @@ bool building_t::add_underground_exterior_rooms(rand_gen_t &rgen, cube_t const &
 	if (!is_basement_room_placement_valid(hallway, P, wall_dim, wall_dir)) return 0; // try to place the hallway; add_end_door=nullptr
 	// valid placement; now add the door, hallway, and connected rooms
 	has_basement_door = 1;
+	interior->extb_wall_dim = wall_dim;
+	interior->extb_wall_dir = wall_dir;
 	// Note: recording the door_stack index rather than the door index allows us to get either the first door or the first stack
 	interior->ext_basement_door_stack_ix = interior->door_stacks.size();
 	float const fc_thick(get_fc_thickness()), wall_thickness(get_wall_thickness());
@@ -579,15 +581,7 @@ void building_t::add_backrooms_objs(rand_gen_t rgen, room_t &room, float zval, u
 	rgen.rseed1 += 123*floor_ix; // make it unique per floor
 
 	// find the shared wall with the basement/parking garage and calculate true room bounds
-	bool sw_dim(0), sw_dir(0), adj_found(0);
-	cube_t const &parking_garage(get_basement());
-
-	for (unsigned dim = 0; dim < 2; ++dim) {
-		for (unsigned dir = 0; dir < 2; ++dir) {
-			if (room.d[dim][dir] == parking_garage.d[dim][!dir]) {sw_dim = dim; sw_dir = dir; adj_found = 1;}
-		}
-	}
-	assert(adj_found);
+	bool const sw_dim(interior->extb_wall_dim), sw_dir(!interior->extb_wall_dir);
 	float const shared_extend((sw_dir ? -1.0 : 1.0)*0.5*get_wall_thickness()); // account for extra shift applied to shared wall to keep it from clipping into the basement/PG
 	room_t true_room(room);
 	true_room.d[sw_dim][sw_dir] += shared_extend;

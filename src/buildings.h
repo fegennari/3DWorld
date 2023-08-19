@@ -1268,6 +1268,7 @@ struct building_interior_t {
 	int garage_room=-1, ext_basement_hallway_room_id=-1, ext_basement_door_stack_ix=-1, last_active_door_ix=-1;
 	uint8_t furnace_type=FTYPE_NONE, attic_type=ATTIC_TYPE_RAFTERS;
 	bool door_state_updated=0, is_unconnected=0, ignore_ramp_placement=0, placed_people=0, elevators_disabled=0, attic_access_open=0, has_backrooms=0;
+	bool extb_wall_dim=0, extb_wall_dir=0;
 
 	building_interior_t();
 	~building_interior_t();
