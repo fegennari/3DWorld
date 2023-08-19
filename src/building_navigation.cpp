@@ -1989,11 +1989,13 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 		return AI_BEGIN_PATH;
 	}
 	float const max_dist(get_person_max_move_dist(person, speed_mult));
+	float goal_dist(1.1f*max_dist);
+	if (dot_product((person.target_pos - person.pos), person.dir) < 0.0) {max_eq(goal_dist, coll_dist);} // don't turn in place if dest is behind us and we're close
 	person.on_new_path_seg = 0; // clear flag for this frame
 	//person.following_player = can_target_player(person); // for debugging visualization
 
 	// check if at dest; note that we use a different distance check for Z to account for model height changes when switching between people and zombie models
-	if (dist_xy_less_than(person.pos, person.target_pos, 1.1f*max_dist) && fabs(person.pos.z - person.target_pos.z) < 0.5*person.get_height()) {
+	if (dist_xy_less_than(person.pos, person.target_pos, goal_dist) && fabs(person.pos.z - person.target_pos.z) < 0.5*person.get_height()) {
 		assert(point_in_building_or_basement_bcube(person.target_pos));
 		person.pos = person.target_pos;
 		
