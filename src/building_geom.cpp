@@ -2282,10 +2282,10 @@ struct cube_by_sz { // sort cube by size in dim descending
 	cube_by_sz(bool dim_) : dim(dim_) {}
 	bool operator()(cube_t const &a, cube_t const &b) const {return (b.get_sz_dim(dim) < a.get_sz_dim(dim));}
 };
-struct cube_b_z1_descending {
+struct cube_by_z1_descending {
 	bool operator()(cube_t const &a, cube_t const &b) const {return (a.z1() > b.z1());}
 };
-struct cube_b_z2_ascending {
+struct cube_by_z2_ascending {
 	bool operator()(cube_t const &a, cube_t const &b) const {return (a.z2() < b.z2());}
 };
 
@@ -2294,8 +2294,8 @@ void building_interior_t::sort_for_optimal_culling() {
 		assert(extb_walls_start[d] <= walls[d].size());
 		sort(walls[d].begin(), walls[d].begin()+extb_walls_start[d], cube_by_sz(!d)); // skip exterior basement walls
 	}
-	sort(floors  .begin(), floors  .end(), cube_b_z1_descending()); // top down,  for early z culling and improved occluder fusion
-	sort(ceilings.begin(), ceilings.end(), cube_b_z2_ascending ()); // bottom up, for early z culling and improved occluder fusion
+	sort(floors  .begin(), floors  .end(), cube_by_z1_descending()); // top down,  for early z culling and improved occluder fusion
+	sort(ceilings.begin(), ceilings.end(), cube_by_z2_ascending ()); // bottom up, for early z culling and improved occluder fusion
 }
 void building_interior_t::remove_excess_capacity() {
 	remove_excess_cap(floors);

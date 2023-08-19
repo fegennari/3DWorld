@@ -1780,18 +1780,22 @@ bool building_t::check_obj_occluded(cube_t const &c, point const &viewer_in, occ
 	unsigned const npts(get_cube_corners(c.d, pts, viewer, 0)); // should return only the 6 visible corners
 	cube_t occ_area(c);
 	occ_area.union_with_pt(viewer); // any occluder must intersect this cube
+	vector3d const dir(viewer - c.get_cube_center());
+	bool const pri_dim(fabs(dir.x) < fabs(dir.y));
 	
 	if (!c_is_building_part && !reflection_pass) {
 		// check walls of this building; not valid for reflections because the reflected camera may be on the other side of a wall/mirror
 		if (targ_in_basement && viewer.z < ground_floor_z1 && (has_parking_garage || interior->has_backrooms)) { // object and pos are both in the parking garage or backrooms
-			if (has_room_geom()) {
-				for (unsigned d = 0; d < 2; ++d) {
-					if (are_pts_occluded_by_any_cubes<1>(viewer, pts, npts, occ_area, interior->room_geom->pgbr_walls[d], d, 0.0)) return 1; // no size check
+			if (has_room_geom()) { // (display_mode & 0x01)
+				for (unsigned D = 0; D < 2; ++D) {
+					bool const d(D ^ pri_dim); // try primary dim first
+					if (are_pts_occluded_by_any_cubes<0>(viewer, pts, npts, occ_area, interior->room_geom->pgbr_walls[d], d, 0.0)) return 1; // no size check
 				}
 			}
 		}
 		else { // regular walls case
-			for (unsigned d = 0; d < 2; ++d) {
+			for (unsigned D = 0; D < 2; ++D) {
+				bool const d(bool(D) ^ pri_dim); // try primary dim first
 				if (are_pts_occluded_by_any_cubes<1>(viewer, pts, npts, occ_area, interior->walls[d], d, c.get_sz_dim(!d))) return 1; // with size check (helps with light bcubes)
 			}
 		}
@@ -1811,7 +1815,8 @@ bool building_t::check_obj_occluded(cube_t const &c, point const &viewer_in, occ
 
 		if (player_building != nullptr && player_building->interior) { // check walls of the building the player is in
 			if (player_building != this) { // otherwise player_in_this_building should be true; note that we can get here from building_t::add_room_lights()
-				for (unsigned d = 0; d < 2; ++d) { // check walls of the building the player is in; can't use min_sz due to perspective effect of walls near the camera
+				for (unsigned D = 0; D < 2; ++D) { // check walls of the building the player is in; can't use min_sz due to perspective effect of walls near the camera
+					bool const d(bool(D) ^ pri_dim); // try primary dim first
 					if (are_pts_occluded_by_any_cubes<0>(viewer, pts, npts, occ_area, player_building->interior->walls[d], d)) return 1;
 				}
 				if (fabs(viewer.z - c.zc()) > 0.5*floor_spacing) { // check floors and ceilings of the building the player is in
