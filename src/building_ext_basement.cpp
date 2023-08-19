@@ -419,7 +419,7 @@ void building_interior_t::place_exterior_room(extb_room_t const &room, cube_t co
 	if (num_lights == 0) {num_lights = max(1U, min(8U, (unsigned)round_fp(0.33*room.get_sz_dim(long_dim)/room.get_sz_dim(!long_dim))));} // auto calculate num_lights
 	room_t Room(room, part_id, num_lights, is_hallway);
 	Room.interior = is_building_conn + 2; // mark as extended basement, or possibly connecting room between two buildings if is_building_conn == 1|2
-	if (room.has_stairs) {Room.has_stairs = 1;} // stairs on the first/only floor
+	if (room.has_stairs) {Room.has_stairs = 255;} // stairs on the first/only floor, or all floors if backroom
 	if (is_hallway) {Room.assign_all_to(RTYPE_HALL, 0);} // initially all hallways; locked=0
 	rooms.push_back(Room);
 	cube_t ceiling(room), floor(room);
