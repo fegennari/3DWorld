@@ -820,6 +820,12 @@ public:
 	void draw(shader_t &s, vector3d const &xlate);
 };
 
+struct index_pair_t {
+	unsigned ix[2] = {};
+	index_pair_t() {}
+	index_pair_t(vect_cube_t const V[2]) {ix[0] = V[0].size(); ix[1] = V[1].size();}
+};
+
 struct building_room_geom_t {
 
 	bool has_elevators=0, has_pictures=0, has_garage_car=0, modified_by_player=0;
@@ -840,6 +846,7 @@ struct building_room_geom_t {
 	// {large static, small static, dynamic, lights, alpha mask, transparent, door} materials
 	building_materials_t mats_static, mats_small, mats_text, mats_detail, mats_dynamic, mats_lights, mats_amask, mats_alpha, mats_doors, mats_exterior, mats_ext_detail;
 	vect_cube_t light_bcubes, pgbr_walls[2]; // parking garage and backrooms walls, in each dim
+	vector<index_pair_t> pgbr_wall_ixs; // indexes into pgbr_walls
 	building_decal_manager_t decal_manager;
 	particle_manager_t particle_manager;
 	fire_manager_t fire_manager;

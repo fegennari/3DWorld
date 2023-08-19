@@ -1598,11 +1598,11 @@ void fire_manager_t::draw(shader_t &s, vector3d const &xlate) {
 }
 
 template<bool check_sz, typename T> bool are_pts_occluded_by_any_cubes(point const &pt, point const *const pts, unsigned npts,
-	cube_t const &occ_area, vector<T> const &cubes, unsigned dim, float min_sz=0.0, float max_sep_dist=0.0)
+	cube_t const &occ_area, T begin, T end, unsigned dim, float min_sz=0.0, float max_sep_dist=0.0)
 {
 	assert(npts > 0);
 
-	for (auto c = cubes.begin(); c != cubes.end(); ++c) {
+	for (auto c = begin; c != end; ++c) {
 		if (check_sz && c->get_sz_dim(!dim) < min_sz) break; // too small an occluder; since cubes are sorted by size in this dim, we can exit the loop here
 		if (dim <= 2 && (pt[dim] < c->d[dim][0]) == (pts[0][dim] < c->d[dim][0])) continue; // skip if cube face does not separate pt from the first point (dim > 2 disables)
 		if (max_sep_dist > 0.0 && fabs(pt[dim] - c->get_center_dim(dim)) > max_sep_dist) continue; // check only one floor below/ceiling above
@@ -1616,6 +1616,11 @@ template<bool check_sz, typename T> bool are_pts_occluded_by_any_cubes(point con
 		if (!not_occluded) return 1;
 	} // for c
 	return 0;
+}
+template<bool check_sz, typename T> bool are_pts_occluded_by_any_cubes(point const &pt, point const *const pts, unsigned npts,
+	cube_t const &occ_area, vector<T> const &cubes, unsigned dim, float min_sz=0.0, float max_sep_dist=0.0)
+{
+	return are_pts_occluded_by_any_cubes<check_sz, vector<T>::const_iterator>(pt, pts, npts, occ_area, cubes.begin(), cubes.end(), dim, min_sz, max_sep_dist);
 }
 
 car_t car_from_parking_space(room_object_t const &o) {
@@ -1787,9 +1792,26 @@ bool building_t::check_obj_occluded(cube_t const &c, point const &viewer_in, occ
 		// check walls of this building; not valid for reflections because the reflected camera may be on the other side of a wall/mirror
 		if (targ_in_basement && viewer.z < ground_floor_z1 && (has_parking_garage || interior->has_backrooms)) { // object and pos are both in the parking garage or backrooms
 			if (has_room_geom()) { // (display_mode & 0x01)
+				auto const &pgbr_wall_ixs(interior->room_geom->pgbr_wall_ixs);
+				index_pair_t start, end;
+
+				if (get_basement().contains_pt(viewer)) { // inside parking garage
+					if (pgbr_wall_ixs.empty()) {end = index_pair_t(interior->room_geom->pgbr_walls);} // not using indices, so use full range
+					else {end = pgbr_wall_ixs.front();} // ends at first index (backrooms)
+				}
+				else { // inside backrooms
+					assert(has_ext_basement());
+					unsigned const floor_ix((viewer.z - interior->basement_ext_bcube.z1())/floor_spacing); // floor containing the viewer
+
+					if (floor_ix+1 < pgbr_wall_ixs.size()) { // if outside the valid floor range, start==end, the range will be empty, and we skip all walls
+						start = pgbr_wall_ixs[floor_ix];
+						end   = pgbr_wall_ixs[floor_ix+1];
+					}
+				}
 				for (unsigned D = 0; D < 2; ++D) {
-					bool const d(D ^ pri_dim); // try primary dim first
-					if (are_pts_occluded_by_any_cubes<0>(viewer, pts, npts, occ_area, interior->room_geom->pgbr_walls[d], d, 0.0)) return 1; // no size check
+					bool const d(bool(D) ^ pri_dim); // try primary dim first
+					vect_cube_t const &walls(interior->room_geom->pgbr_walls[d]);
+					if (are_pts_occluded_by_any_cubes<0>(viewer, pts, npts, occ_area, walls.begin()+start.ix[d], walls.begin()+end.ix[d], d, 0.0)) return 1; // no size check
 				}
 			}
 		}

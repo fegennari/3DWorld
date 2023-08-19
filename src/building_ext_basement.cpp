@@ -860,12 +860,17 @@ void building_t::add_backrooms_objs(rand_gen_t rgen, room_t &room, float zval, u
 	} // for g
 
 	// add walls
+	auto pbgr_walls(interior->room_geom->pgbr_walls);
+	auto &pgbr_wall_ixs(interior->room_geom->pgbr_wall_ixs);
+	if (pgbr_wall_ixs.empty()) {pgbr_wall_ixs.emplace_back(pbgr_walls);} // add first index
+
 	for (unsigned dim = 0; dim < 2; ++dim) {
 		for (cube_t &wall : walls_per_dim[dim]) {
 			objs.emplace_back(wall, TYPE_PG_WALL, room_id, dim, 0, RO_FLAG_BACKROOM, tot_light_amt, SHAPE_CUBE, wall_color); // dir=0
 		}
-		vector_add_to(walls_per_dim[dim], interior->room_geom->pgbr_walls[dim]); // store walls for occlusion and door opening checks
+		vector_add_to(walls_per_dim[dim], pbgr_walls[dim]); // store walls for occlusion and door opening checks
 	}
+	pgbr_wall_ixs.emplace_back(pbgr_walls); // end of range
 	
 	// Add vents, light switch, and outlets (on all walls - or should it be only on the wall adjacent to building or next to the door?)
 	add_light_switches_to_room(rgen, true_room, zval, room_id, objs_start, 0, 1); // is_ground_floor=0, is_basement=1
@@ -976,6 +981,7 @@ void building_t::add_missing_backrooms_lights(rand_gen_t rgen, float zval, unsig
 
 bool building_room_geom_t::cube_int_backrooms_walls(cube_t const &c) const { // used for door opening collision checks
 	// no dim is passed in, so we check both dims; includes parking garage walls, which we can probably ignore, but they should be small in size
+	// could accelerate with interior->room_geom->pgbr_wall_ixs, but the extra complexity may no be necessary
 	for (unsigned d = 0; d < 2; ++d) {
 		if (has_bcube_int(c, pgbr_walls[d])) return 1;
 	}

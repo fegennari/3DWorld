@@ -1504,7 +1504,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			continue; // can fail in rare cases when very far from the origin, likely due to FP error, so skip light in this case
 		}
 		if (!is_rot_cube_visible(clipped_bc, xlate)) continue; // VFC - post clip
-		if ((display_mode & 0x08) && !clipped_bc.contains_pt(camera_rot) && check_obj_occluded(clipped_bc, camera_bs, oc, 0)) continue; // occlusion culling
+		if ((display_mode & 0x08) && !clipped_bc.contains_pt(camera_rot) && check_obj_occluded(clipped_bc, camera_bs, oc, 0)) continue; // occlusion culling (expensive)
 		//float const bwidth(wall_light ? 1.0 : 0.25); // wall light omnidirectional; ceiling light as close to 180 degree FOV as can get without shadow clipping; shadows are wrong
 		float const bwidth(0.25); // as close to 180 degree FOV as we can get without shadow clipping
 		vector3d dir;
