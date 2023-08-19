@@ -1004,10 +1004,17 @@ cube_t building_t::get_full_basement_bcube() const {
 	if (has_ext_basement()) {ret.union_with_cube(interior->basement_ext_bcube);}
 	return ret;
 }
-room_t const &building_t::get_ext_basement_hallway() const {
+cube_t building_t::get_ext_basement_entrance() const {
 	assert(interior);
 	assert(interior->ext_basement_hallway_room_id >= 0);
-	return *interior->ext_basement_rooms_start();
+	door_t const &door(interior->get_ext_basement_door());
+	cube_t room(*interior->ext_basement_rooms_start()); // hallway or backrooms
+	float const expand(max(get_wall_thickness(), get_scaled_player_radius()));
+	// clamp to padded door bounds to prevent objects from passing through the walls adjacent to the door
+	max_eq(room.d[!door.dim][0], door.d[!door.dim][0]-expand);
+	min_eq(room.d[!door.dim][1], door.d[!door.dim][1]+expand);
+	assert(room.is_strictly_normalized());
+	return room;
 }
 
 vector<room_t>::const_iterator building_interior_t::ext_basement_rooms_start() const {

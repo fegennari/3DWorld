@@ -221,7 +221,7 @@ bool building_t::check_sphere_coll_inner(point &pos, point const &p_last, vector
 				
 				if (has_ext_basement() && zval < interior->basement_ext_bcube.z2()) { // below ext basement top (not in upper level of two level parking garage)
 					// use the ext basement hallway if pos is in the basement, otherwise use the entire ext basement
-					cube_t const &basement_cube(in_ext_basement ? interior->basement_ext_bcube : (cube_t)get_ext_basement_hallway());
+					cube_t const &basement_cube(in_ext_basement ? interior->basement_ext_bcube : get_ext_basement_entrance());
 					accumulate_shared_xy_area(basement_cube, sc, cont_area);
 				}
 			}

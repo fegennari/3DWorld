@@ -1550,7 +1550,7 @@ bool building_t::move_sphere_to_valid_part(point &pos, point const &p_last, floa
 		for (auto i = parts.begin(); i != get_real_parts_end_inc_sec(); ++i) {accumulate_shared_xy_area(*i, sphere_bcube, xy_area_contained);}
 		
 		if (has_ext_basement()) { // use the ext basement hallway if pos is in the basement, otherwise use the entire ext basement
-			cube_t const &basement_cube(point_in_extended_basement_not_basement(pos) ? interior->basement_ext_bcube : (cube_t)get_ext_basement_hallway());
+			cube_t const &basement_cube(point_in_extended_basement_not_basement(pos) ? interior->basement_ext_bcube : get_ext_basement_entrance());
 			accumulate_shared_xy_area(basement_cube, sphere_bcube, xy_area_contained);
 		}
 		if (xy_area_contained > 0.99*sphere_bcube.dx()*sphere_bcube.dy()) { // sphere contained in union of parts (not outside the building)
