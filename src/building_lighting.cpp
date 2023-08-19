@@ -1191,7 +1191,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 	float const window_vspacing(get_window_vspace()), wall_thickness(get_wall_thickness()), fc_thick(get_fc_thickness());
 	float const camera_z(camera_bs.z), room_xy_expand(0.75*wall_thickness);
 	bool const check_building_people(enable_building_people_ai()), check_attic(camera_in_building && has_attic() && interior->attic_access_open);
-	bool const camera_in_ext_basement(camera_in_building && point_in_extended_basement_not_basement(camera_bs));
+	bool const camera_in_basement(camera_z > ground_floor_z1), camera_in_ext_basement(camera_in_building && point_in_extended_basement_not_basement(camera_bs));
 	bool const show_room_name(display_mode & 0x20); // debugging, key '6'
 	cube_t const &attic_access(interior->attic_access);
 	vect_cube_t &light_bcubes(interior->room_geom->light_bcubes);
@@ -1250,10 +1250,14 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 					stairs_area.assign_or_union_with_cube(s);
 					stairs_or_ramp_visible = 1;
 				} // for s
-				// check ramp if in the parking garage; can still fail if backrooms entrance has a view of the parking garage ramp
-				if (has_pg_ramp() && room.contains_pt(interior->pg_ramp.get_cube_center()) && is_rot_cube_visible(interior->pg_ramp, xlate)) {
-					stairs_or_ramp_visible = 1;
-					stairs_area.assign_or_union_with_cube(interior->pg_ramp);
+				// check ramp if player is in the parking garage or the backrooms doorway
+				if (has_pg_ramp() && is_rot_cube_visible(interior->pg_ramp, xlate)) {
+					if (room.contains_pt(interior->pg_ramp.get_cube_center()) ||
+						(has_ext_basement() && interior->get_ext_basement_door().get_clearance_bcube().contains_pt(camera_bs)))
+					{
+						stairs_or_ramp_visible = 1;
+						stairs_area.assign_or_union_with_cube(interior->pg_ramp);
+					}
 				}
 			}
 			// set camera_somewhat_by_stairs when camera is in room with stairs, or adjacent to one with stairs
@@ -1298,9 +1302,12 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		if (!camera_in_building && ((light_in_basement && !camera_can_see_ext_basement) || is_in_attic || is_in_elevator)) continue;
 		if ((is_in_elevator || is_in_closet) && camera_z > lpos.z) continue; // elevator or closet light on the floor below the player
 		if (light_in_basement && camera_z > (ground_floor_z1 + window_vspacing)) continue; // basement lights only visible if player is on basement or ground floor
+		room_t const &room(get_room(i->room_id));
+		bool const in_ext_basement(room.is_ext_basement());
+		if (in_ext_basement && camera_in_basement)        continue; // light  in extended basement, and camera not in basement
+		if (camera_in_ext_basement && !light_in_basement) continue; // camera in extended basement, and light  not in basement
 		//if (is_light_occluded(lpos_rot, camera_bs))  continue; // too strong a test in general, but may be useful for selecting high importance lights
 		//if (!camera_in_building && i->is_interior()) continue; // skip interior lights when camera is outside the building: makes little difference, not worth the trouble
-		room_t const &room(get_room(i->room_id));
 		bool const is_lamp(i->type == TYPE_LAMP), is_single_floor(room.is_sec_bldg || is_in_elevator), wall_light(i->flags & RO_FLAG_ADJ_HI);
 		int const cur_floor(is_single_floor ? 0 : (i->z1() - room.z1())/window_vspacing); // garages and sheds are all one floor
 		float const level_z(is_in_attic ? interior->attic_access.z1() : (room.z1() + cur_floor*window_vspacing)), floor_z(level_z + fc_thick);
@@ -1316,7 +1323,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		bool const camera_room_same_part(room.part_id == camera_part || (is_house && camera_in_room_part_xy)); // treat stacked house parts as the same
 		bool const has_stairs_this_floor(!is_in_attic && room.has_stairs_on_floor(cur_floor));
 		bool const has_ramp(check_ramp && is_room_above_ramp(room, i->z1()));
-		bool const light_room_has_stairs_or_ramp(i->has_stairs() || has_stairs_this_floor || has_ramp), in_ext_basement(room.is_ext_basement());
+		bool const light_room_has_stairs_or_ramp(i->has_stairs() || has_stairs_this_floor || has_ramp);
 		bool stairs_light(0), player_in_elevator(0), cull_if_not_by_stairs(0);
 
 		if (is_in_elevator) {
@@ -1363,14 +1370,17 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 				// light in attic, and camera in room with attic access
 			}
 			else if (floor_is_above || floor_is_below) { // light is on a different floor from the camera
+				bool const parts_are_stacked(camera_part < real_num_parts && (parts[camera_part].z2() <= room.z1() || parts[camera_part].z1() >= room.z2()));
+
 				// the basement is a different part, but it's still the same vertical stack; consider this the same effective part if the camera is in the basement above the room's part
 				if (camera_in_ext_basement && camera_room != i->room_id &&
 					(camera_by_stairs || (light_room_has_stairs_or_ramp && camera_somewhat_by_stairs)) && has_stairs_this_floor && in_ext_basement)
 				{
 					// camera and light are on different floors of different rooms of the extended basement in two rooms connected by stairs
 				}
-				else if (camera_in_building && (camera_room_same_part || ((player_in_basement || light_in_basement) && camera_in_room_part_xy) ||
-					(room.contains_pt_xy(camera_rot) && camera_within_one_floor)))
+				else if (camera_in_building && (camera_room_same_part // camera and light in same part; can't see through a window, can only see through ceiling/floor/stairs
+					|| (player_in_basement || light_in_basement) // basement only visible through ceiling/floor/stairs
+					|| (parts_are_stacked && camera_within_one_floor))) // stacked parts maybe connected with stairs; shouldn't be visible through windows
 				{
 					// player is on a different floor of the same building part, or more than one floor away in a part stack, and can't see a light from the floor above/below
 					if (!stairs_light) continue; // camera in building and on wrong floor, don't add light; will always return if more than one floor away
@@ -1382,9 +1392,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 
 					if (camera_in_building) { // camera and light are in different buildings/parts
 						if (camera_part >= real_num_parts) continue; // camera in garage or shed
-						assert(camera_part < parts.size());
-						cube_t const &cpart(parts[camera_part]);
-						if (cpart.z2() <= room.z1() || cpart.z1() >= room.z2()) continue; // light in a different vertical stack than the camera
+						if (parts_are_stacked)             continue; // light in a different vertical stack than the camera; not visible through windows
 
 						if (!is_rotated()) { // check exterior wall visibility; this part doesn't work for rotated buildings
 							// is it better to check if light half sphere is occluded by the floor above/below?
@@ -1624,6 +1632,8 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			dl_sources.back().disable_shadows();
 		}
 	} // for i (objs)
+
+	// add skylight lights
 	for (unsigned l = 0; l < NUM_LIGHT_SRC; ++l) { // {sun, moon}
 		if (skylights.empty()) continue;
 		point sun_moon_pos;
