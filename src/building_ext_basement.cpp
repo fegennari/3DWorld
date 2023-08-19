@@ -864,11 +864,10 @@ void building_t::add_backrooms_objs(rand_gen_t rgen, room_t &room, float zval, u
 	auto &pgbr_wall_ixs(interior->room_geom->pgbr_wall_ixs);
 	if (pgbr_wall_ixs.empty()) {pgbr_wall_ixs.emplace_back(pbgr_walls);} // add first index
 
-	for (unsigned dim = 0; dim < 2; ++dim) {
-		for (cube_t &wall : walls_per_dim[dim]) {
-			objs.emplace_back(wall, TYPE_PG_WALL, room_id, dim, 0, RO_FLAG_BACKROOM, tot_light_amt, SHAPE_CUBE, wall_color); // dir=0
-		}
-		vector_add_to(walls_per_dim[dim], pbgr_walls[dim]); // store walls for occlusion and door opening checks
+	for (unsigned d = 0; d < 2; ++d) {
+		sort(walls_per_dim[d].begin(), walls_per_dim[d].begin(), cube_by_sz(!d)); // sort walls longest to shortest to improve occlusion culling time
+		for (cube_t &wall : walls_per_dim[d]) {objs.emplace_back(wall, TYPE_PG_WALL, room_id, d, 0, RO_FLAG_BACKROOM, tot_light_amt, SHAPE_CUBE, wall_color);} // dir=0
+		vector_add_to(walls_per_dim[d], pbgr_walls[d]); // store walls for occlusion and door opening checks
 	}
 	pgbr_wall_ixs.emplace_back(pbgr_walls); // end of range
 	

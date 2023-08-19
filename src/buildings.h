@@ -1965,6 +1965,12 @@ template<typename T> cube_t get_cube_height_radius(point const &center, T radius
 	return c;
 }
 
+struct cube_by_sz { // sort cube by size in dim descending
+	bool dim;
+	cube_by_sz(bool dim_) : dim(dim_) {}
+	bool operator()(cube_t const &a, cube_t const &b) const {return (b.get_sz_dim(dim) < a.get_sz_dim(dim));}
+};
+
 inline point get_camera_building_space() {return (get_camera_pos() - get_tiled_terrain_model_xlate());}
 inline void set_cube_zvals(cube_t &c, float z1, float z2) {c.z1() = z1; c.z2() = z2;}
 inline float get_tc_leg_width(cube_t const &c, float width) {return 0.5f*width*(c.dx() + c.dy());} // make legs square

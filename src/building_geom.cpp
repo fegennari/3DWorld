@@ -2277,11 +2277,6 @@ void building_interior_t::get_stairs_and_elevators_bcubes_intersecting_cube(cube
 	}
 }
 
-struct cube_by_sz { // sort cube by size in dim descending
-	bool dim;
-	cube_by_sz(bool dim_) : dim(dim_) {}
-	bool operator()(cube_t const &a, cube_t const &b) const {return (b.get_sz_dim(dim) < a.get_sz_dim(dim));}
-};
 struct cube_by_z1_descending {
 	bool operator()(cube_t const &a, cube_t const &b) const {return (a.z1() > b.z1());}
 };
