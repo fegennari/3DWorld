@@ -2047,6 +2047,7 @@ bool register_achievement(std::string const &str);
 bool enable_building_indir_lighting_no_cib();
 bool enable_building_indir_lighting();
 bool player_in_windowless_building();
+bool player_cant_see_outside_building();
 bool player_take_damage(float damage_scale, int poison_type=0, bool *has_key=nullptr);
 // functions in building_room_obj_expand.cc
 point gen_xy_pos_in_area(cube_t const &S, vector3d const &sz, rand_gen_t &rgen, float zval=0.0);

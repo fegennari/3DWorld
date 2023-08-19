@@ -8,7 +8,7 @@
 
 extern bool draw_building_interiors, camera_in_building, player_near_toilet, player_in_unlit_room, player_in_attic, building_has_open_ext_door, ctrl_key_pressed;
 extern float CAMERA_RADIUS, C_STEP_HEIGHT, NEAR_CLIP, building_bcube_expand;
-extern int player_in_closet, camera_surf_collide, frame_counter, player_in_elevator;
+extern int camera_surf_collide, frame_counter, player_in_closet, player_in_elevator, player_in_basement;
 extern double camera_zh;
 extern building_params_t global_building_params;
 extern bldg_obj_type_t bldg_obj_types[];
@@ -31,6 +31,12 @@ bool building_t::player_can_see_outside() const {
 }
 bool player_in_windowless_building() {return (player_building != nullptr && !player_building->player_can_see_outside());}
 
+bool player_cant_see_outside_building() {
+	if (player_in_basement >= 3 || player_in_attic) return 1; // player in extended basement or attic
+	if (player_in_basement == 2 && player_building != nullptr && player_building->has_parking_garage) return 1; // player in parking garage
+	if (player_in_windowless_building()) return 1;
+	return 0;
+}
 bool building_t::check_bcube_overlap_xy(building_t const &b, float expand_rel, float expand_abs) const {
 	if (expand_rel == 0.0 && expand_abs == 0.0 && !bcube.intersects(b.bcube)) return 0;
 	if (!is_rotated() && !b.is_rotated()) return 1; // above check is exact, top-level bcube check up to the caller

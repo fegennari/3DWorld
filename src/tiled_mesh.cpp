@@ -87,7 +87,7 @@ bool no_grass_under_buildings();
 bool check_buildings_no_grass(point const &pos);
 colorRGBA get_avg_color_for_landscape_tex(unsigned id); // defined later in this file
 void building_gameplay_action_key(int mode, bool mouse_wheel);
-bool player_in_windowless_building();
+bool player_cant_see_outside_building();
 
 
 float get_inf_terrain_fog_dist() {return FOG_DIST_TILES*get_scaled_tile_radius();}
@@ -2618,8 +2618,7 @@ tile_draw_t::occluder_cubes_t::occluder_cubes_t(tile_t const *const tile_) : til
 
 void tile_draw_t::draw(int reflection_pass) { // reflection_pass: 0=none, 1=water plane Z, 2=building mirror
 
-	if (player_in_basement >= 3)         return; // no need to draw tiles if player in extended basement
-	if (player_in_windowless_building()) return; // player can't see the terrain
+	if (player_cant_see_outside_building()) return; // no need to draw tiles if player in extended basement or parking garage
 	//timer_t timer("TT Draw");
 	unsigned num_trees(0), num_smaps(0);
 	unsigned long long mem(0), tree_mem(0), smap_mem(0);
@@ -2722,14 +2721,15 @@ void tile_draw_t::draw(int reflection_pass) { // reflection_pass: 0=none, 1=wate
 			 << ", smap MB: " << in_mb(smap_mem) << ", smap free list MB: " << in_mb(smap_free_list_mem) << ", frame buf MB: " << in_mb(frame_buf_mem)
 			 << ", texture MB: " << in_mb(texture_mem) << ", building MB: " << in_mb(building_mem) << ", model MB: " << in_mb(models_mem) << endl;
 	}
-	if (player_in_basement < 3 && !player_in_attic) { // trees not visible when player is in the extended basement or attic
+	if (!player_cant_see_outside_building()) { // trees/scenerg/grass not visible when player is in the extended basement, parking garage, or attic
 		if (pine_trees_enabled ()) {draw_pine_trees (reflection_pass);}
 		if (decid_trees_enabled()) {draw_decid_trees(reflection_pass);}
-	}
-	if (player_in_basement < 2 && !player_in_attic) { // vegetation/scenery/animals not visible when player is fully inside the basement or attic
-		if (scenery_enabled    ()) {draw_scenery    (reflection_pass);}
-		if (is_grass_enabled   ()) {draw_grass      (reflection_pass);}
-		if (ENABLE_ANIMALS)        {draw_animals    (reflection_pass);}
+	
+		if (player_in_basement < 2 && !player_in_attic) { // vegetation/scenery/animals not visible when player is fully inside the basement or attic
+			if (scenery_enabled    ()) {draw_scenery    (reflection_pass);}
+			if (is_grass_enabled   ()) {draw_grass      (reflection_pass);}
+			if (ENABLE_ANIMALS)        {draw_animals    (reflection_pass);}
+		}
 	}
 	//if ((GET_TIME_MS() - timer1) > 100) {PRINT_TIME("Draw Tiled Terrain");}
 }
