@@ -1204,6 +1204,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 	bool camera_by_stairs(0), camera_on_stairs(0), camera_somewhat_by_stairs(0), camera_in_hallway(0), camera_can_see_ext_basement(0);
 	bool camera_near_building(camera_in_building), check_ramp(0), stairs_or_ramp_visible(0);
 	int camera_room(-1);
+	cube_t stairs_area;
 	vect_cube_with_ix_t moving_objs;
 	ped_bcubes.clear();
 
@@ -1246,11 +1247,14 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 					min_eq(slice.z2(), ceil_zval );
 					if (!is_rot_cube_visible(slice, xlate)) continue; // VFC
 					if ((display_mode & 0x08) && check_obj_occluded(slice, camera_bs, oc, 0)) continue; // occlusion culling
+					stairs_area.assign_or_union_with_cube(s);
 					stairs_or_ramp_visible = 1;
-					break;
 				} // for s
 				// check ramp if in the parking garage; can still fail if backrooms entrance has a view of the parking garage ramp
-				stairs_or_ramp_visible |= (has_pg_ramp() && room.contains_pt(interior->pg_ramp.get_cube_center()) && is_rot_cube_visible(interior->pg_ramp, xlate));
+				if (has_pg_ramp() && room.contains_pt(interior->pg_ramp.get_cube_center()) && is_rot_cube_visible(interior->pg_ramp, xlate)) {
+					stairs_or_ramp_visible = 1;
+					stairs_area.assign_or_union_with_cube(interior->pg_ramp);
+				}
 			}
 			// set camera_somewhat_by_stairs when camera is in room with stairs, or adjacent to one with stairs
 			if (stairs_or_ramp_visible) {camera_somewhat_by_stairs |= bool(room_or_adj_room_has_stairs(camera_room, camera_rot.z, 1));} // inc_adj_rooms=1
@@ -1279,6 +1283,8 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			if (spider.is_moving()) {moving_objs.push_back(spider.get_bcube());}
 		}
 	}
+	//highres_timer_t timer("Lighting", camera_in_building); // 13.8ms => 13.1ms => 12.7ms => 3.6ms => 3.2ms => 0.81
+
 	for (auto i = objs.begin(); i != objs_end; ++i) {
 		if (!i->is_light_on() || !i->is_light_type()) continue; // light not on, or not a light or lamp
 		point lpos(i->get_cube_center()); // centered in the light fixture
@@ -1311,7 +1317,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		bool const has_stairs_this_floor(!is_in_attic && room.has_stairs_on_floor(cur_floor));
 		bool const has_ramp(check_ramp && is_room_above_ramp(room, i->z1()));
 		bool const light_room_has_stairs_or_ramp(i->has_stairs() || has_stairs_this_floor || has_ramp), in_ext_basement(room.is_ext_basement());
-		bool stairs_light(0), player_in_elevator(0);
+		bool stairs_light(0), player_in_elevator(0), cull_if_not_by_stairs(0);
 
 		if (is_in_elevator) {
 			elevator_t const &e(get_elevator(i->obj_id));
@@ -1368,6 +1374,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 				{
 					// player is on a different floor of the same building part, or more than one floor away in a part stack, and can't see a light from the floor above/below
 					if (!stairs_light) continue; // camera in building and on wrong floor, don't add light; will always return if more than one floor away
+					cull_if_not_by_stairs = 1;
 				}
 				else { // camera outside the building (or the part that contains this light)
 					float const xy_dist(p2p_dist_xy(camera_bs, lpos_rot));
@@ -1396,6 +1403,10 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			} // end camera on different floor case
 		} // end !player_in_elevator
 		float const light_radius(get_radius_for_room_light(*i)), cull_radius(0.95*light_radius);
+		
+		if (!camera_on_stairs && cull_if_not_by_stairs) { // test both proximity and line of sight
+			if (!sphere_cube_intersect(lpos, cull_radius, stairs_area) && !stairs_area.line_intersects(camera_bs, lpos)) continue;
+		}
 		float const dshadow_radius((is_in_attic ? 1.0 : 0.8)*light_radius); // use full light radius for attics since they're more open
 		if (!camera_pdu.sphere_visible_test((lpos_rot + xlate), cull_radius)) continue; // VFC
 		// ext basement connector room must include the other building's ext basement, and it's simplest to just expand it by the max length of that room plus approx hallway width
