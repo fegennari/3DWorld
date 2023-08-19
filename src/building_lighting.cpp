@@ -1202,7 +1202,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 	bool const player_on_attic_stairs(check_attic && player_in_attic && interior->attic_access.contains_pt_xy(camera_rot));
 	unsigned camera_part(parts.size()); // start at an invalid value
 	bool camera_by_stairs(0), camera_on_stairs(0), camera_somewhat_by_stairs(0), camera_in_hallway(0), camera_can_see_ext_basement(0);
-	bool camera_near_building(camera_in_building);
+	bool camera_near_building(camera_in_building), check_ramp(0), stairs_or_ramp_visible(0);
 	int camera_room(-1);
 	vect_cube_with_ix_t moving_objs;
 	ped_bcubes.clear();
@@ -1224,6 +1224,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			camera_room       = room_ix;
 			camera_by_stairs  = camera_somewhat_by_stairs = room.has_stairs_on_floor(camera_floor);
 			camera_in_hallway = room.is_hallway;
+			check_ramp        = (has_pg_ramp() && !interior->ignore_ramp_placement);
 			if (show_room_name) {lighting_update_text = room_names[room_type];}
 
 			if (camera_by_stairs) { // by stairs - check if we're actually on the stairs
@@ -1231,13 +1232,28 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 					if (i->contains_pt(camera_rot)) {camera_on_stairs = 1; break;}
 				}
 			}
-			if (!camera_on_stairs && has_pg_ramp() && !interior->ignore_ramp_placement &&
-				interior->pg_ramp.contains_pt(camera_rot - vector3d(0.0, 0.0, (CAMERA_RADIUS + get_player_height())))) // what about on a ramp?
-			{
+			if (!camera_on_stairs && check_ramp && interior->pg_ramp.contains_pt(camera_rot - vector3d(0.0, 0.0, (CAMERA_RADIUS + get_player_height())))) { // what about on a ramp?
 				camera_on_stairs = camera_by_stairs = camera_somewhat_by_stairs = 1; // ramp counts as stairs
 			}
+			if (camera_on_stairs) {stairs_or_ramp_visible = 1;}
+			else { // stairs and ramps only allow light to pass if visible to the player
+				float const floor_zval(room.z1() + camera_floor*window_vspacing + fc_thick), ceil_zval(floor_zval + get_floor_ceil_gap());
+
+				for (stairwell_t const &s : interior->stairwells) {
+					if (s.z1() > camera_z || s.z2() < camera_z) continue; // wrong floor
+					cube_t slice(s); // clamp to the floor/ceiling range of the player's floor, which will cover the cuts in the floor and ceiling
+					max_eq(slice.z1(), floor_zval);
+					min_eq(slice.z2(), ceil_zval );
+					if (!is_rot_cube_visible(slice, xlate)) continue; // VFC
+					if ((display_mode & 0x08) && check_obj_occluded(slice, camera_bs, oc, 0)) continue; // occlusion culling
+					stairs_or_ramp_visible = 1;
+					break;
+				} // for s
+				// check ramp if in the parking garage; can still fail if backrooms entrance has a view of the parking garage ramp
+				stairs_or_ramp_visible |= (has_pg_ramp() && room.contains_pt(interior->pg_ramp.get_cube_center()) && is_rot_cube_visible(interior->pg_ramp, xlate));
+			}
 			// set camera_somewhat_by_stairs when camera is in room with stairs, or adjacent to one with stairs
-			camera_somewhat_by_stairs |= bool(room_or_adj_room_has_stairs(camera_room, camera_rot.z, 1)); // inc_adj_rooms=1
+			if (stairs_or_ramp_visible) {camera_somewhat_by_stairs |= bool(room_or_adj_room_has_stairs(camera_room, camera_rot.z, 1));} // inc_adj_rooms=1
 		}
 		else if (point_in_attic(camera_rot)) {
 			if (show_room_name) {lighting_update_text = room_names[RTYPE_ATTIC];}
@@ -1293,7 +1309,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		bool const camera_in_room_part_xy(parts[room.part_id].contains_pt_xy(camera_rot));
 		bool const camera_room_same_part(room.part_id == camera_part || (is_house && camera_in_room_part_xy)); // treat stacked house parts as the same
 		bool const has_stairs_this_floor(!is_in_attic && room.has_stairs_on_floor(cur_floor));
-		bool const has_ramp(!interior->ignore_ramp_placement && is_room_above_ramp(room, i->z1()));
+		bool const has_ramp(check_ramp && is_room_above_ramp(room, i->z1()));
 		bool const light_room_has_stairs_or_ramp(i->has_stairs() || has_stairs_this_floor || has_ramp), in_ext_basement(room.is_ext_basement());
 		bool stairs_light(0), player_in_elevator(0);
 
@@ -1319,8 +1335,9 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 					if (!has_basement_stairs) continue; // room has stairs, but not basement stairs
 				}
 			}
+			bool const camera_within_one_floor(camera_z > floor_below_zval && camera_z < ceil_above_zval);
 			// less culling if either the light or the camera is by stairs and light is on the floor above or below
-			if (camera_z > floor_below_zval && camera_z < ceil_above_zval) { // light is on the floor above or below the camera
+			if (camera_within_one_floor && stairs_or_ramp_visible) { // light is on the floor above or below the camera
 				if (camera_in_hallway && camera_by_stairs && camera_room_same_part) {
 					// special case for player in an office building primary hallway with stairs; only handle the case where the light is in the hallway above or below;
 					// if camera is on the stairs or a ramp this also counts because this may be connecting two rooms in two different parts
@@ -1330,6 +1347,9 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 					stairs_light = (light_room_has_stairs_or_ramp || camera_somewhat_by_stairs); // either the light or the camera is by the stairs
 				}
 			}
+			// include lights above or near the parking garage ramp
+			stairs_light |= (light_in_basement && has_pg_ramp() && interior->pg_ramp.contains_pt_xy_exp(i->get_cube_center(), window_vspacing));
+
 			if (check_attic && floor_is_below && camera_bs.z > attic_access.z1() && room.contains_cube_xy(attic_access)) {
 				// camera in attic, possibly looking down through attic access door, and light is in the room below - keep it
 			}
@@ -1338,14 +1358,16 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			}
 			else if (floor_is_above || floor_is_below) { // light is on a different floor from the camera
 				// the basement is a different part, but it's still the same vertical stack; consider this the same effective part if the camera is in the basement above the room's part
-				if (camera_in_ext_basement && (camera_by_stairs || (light_room_has_stairs_or_ramp && camera_somewhat_by_stairs)) && has_stairs_this_floor && in_ext_basement) {
-					// camera and light are on different floors of the extended basement in two rooms connected by stairs
+				if (camera_in_ext_basement && camera_room != i->room_id &&
+					(camera_by_stairs || (light_room_has_stairs_or_ramp && camera_somewhat_by_stairs)) && has_stairs_this_floor && in_ext_basement)
+				{
+					// camera and light are on different floors of different rooms of the extended basement in two rooms connected by stairs
 				}
 				else if (camera_in_building && (camera_room_same_part || ((player_in_basement || light_in_basement) && camera_in_room_part_xy) ||
-					(room.contains_pt_xy(camera_rot) && camera_z < ceil_above_zval && camera_z > floor_below_zval)))
+					(room.contains_pt_xy(camera_rot) && camera_within_one_floor)))
 				{
 					// player is on a different floor of the same building part, or more than one floor away in a part stack, and can't see a light from the floor above/below
-					if (!stairs_light) continue; // camera in building and on wrong floor, don't add light
+					if (!stairs_light) continue; // camera in building and on wrong floor, don't add light; will always return if more than one floor away
 				}
 				else { // camera outside the building (or the part that contains this light)
 					float const xy_dist(p2p_dist_xy(camera_bs, lpos_rot));
