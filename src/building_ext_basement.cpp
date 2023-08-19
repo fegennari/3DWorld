@@ -192,10 +192,12 @@ bool building_t::add_underground_exterior_rooms(rand_gen_t &rgen, cube_t const &
 }
 
 void building_t::setup_multi_floor_room(extb_room_t &room, door_t const &door, bool wall_dim, bool wall_dir, rand_gen_t &rgen) {
+	if (!interior) return; // shouldn't call?
 	float const floor_spacing(get_window_vspace()), floor_thickness(get_floor_thickness()), fc_thick(0.5*floor_thickness), wall_thickness(get_wall_thickness());
 	unsigned const num_floors(calc_num_floors(room, floor_spacing, floor_thickness));
 	assert(num_floors > 0);
 	if (num_floors == 1) return;
+	assert(interior->fc_occluders.empty()); // must be called before setup_fc_occluders() because it adds to floors and ceilings
 	// add wall segment under the door on lower floors
 	float const room_entrance_edge(room.d[wall_dim][!wall_dir]), dir_sign(wall_dir ? 1.0 : -1.0);
 	cube_t wall(door);
