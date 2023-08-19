@@ -210,7 +210,6 @@ void building_t::setup_multi_floor_room(extb_room_t &room, door_t const &door, b
 	vect_cube_t avoid;
 	avoid.push_back(door_avoid);
 	stairs_shape const sshape(SHAPE_STRAIGHT);
-	unsigned const floors_start(interior->floors.size());
 	float const door_width(door.get_width()), stairs_hwidth(0.6*door_width), stairs_hlen(rgen.rand_uniform(2.0, 3.0)*stairs_hwidth), wall_spacing(1.0*door_width);
 	float z(room.z1() + floor_spacing); // move to next floor
 
@@ -904,6 +903,7 @@ void building_t::add_backrooms_objs(rand_gen_t rgen, room_t &room, float zval, u
 		else { // add water heater
 			objs_added = add_water_heaters(rgen, sub_room, zval, room_id, tot_light_amt, sub_objs_start, 1); // single_only=1
 		}
+		if (!objs_added) {} // try other objects or room types?
 		if (!/*objs_added*/no_boxes) { // add some random boxes if we haven't added anything else/if not a bathroom
 			unsigned const max_num_boxes(rgen.rand() % 4); // 0-3
 			add_boxes_to_room(rgen, sub_room, zval, room_id, tot_light_amt, objs_start, max_num_boxes);
