@@ -592,19 +592,21 @@ void building_t::add_backrooms_objs(rand_gen_t rgen, room_t &room, float zval, u
 	room_t true_room(room);
 	true_room.d[sw_dim][sw_dir] += shared_extend;
 	vector3d const sz(true_room.get_size());
-	vect_cube_t blockers_per_dim[2], walls_per_dim[2];
+	vect_cube_t blockers_per_dim[2], walls_per_dim[2], pillar_avoid;
 	float const doorway_width(get_doorway_width()), doorway_hwidth(0.5*doorway_width), min_gap(1.2*doorway_width), min_edge_gap(min_gap + wall_thickness);
 
 	// find entrance door and add it to wall blockers
 	assert((unsigned)interior->ext_basement_door_stack_ix < interior->door_stacks.size());
 	auto const &ent_door(interior->door_stacks[interior->ext_basement_door_stack_ix]);
-	blockers_per_dim[!ent_door.dim].push_back(ent_door.get_clearance_bcube());
+	pillar_avoid.push_back(ent_door.get_clearance_bcube());
+	blockers_per_dim[!ent_door.dim].push_back(pillar_avoid.back());
 
 	// find any stairs in this room and add to both wall blockers
 	for (stairwell_t const &s : interior->stairwells) {
 		if (s.z1() >= ceiling_z || s.z2() <= zval) continue; // wrong floor
 		cube_t const stairs_bcube(get_stairs_bcube_expanded(s, doorway_width, wall_thickness, doorway_width));
 		if (!room.intersects(stairs_bcube)) continue;
+		pillar_avoid.push_back(stairs_bcube);
 		for (unsigned d = 0; d < 2; ++d) {blockers_per_dim[d].push_back(stairs_bcube);}
 	}
 
@@ -821,7 +823,8 @@ void building_t::add_backrooms_objs(rand_gen_t rgen, room_t &room, float zval, u
 		for (unsigned x = 0; x < xdiv; ++x) {
 			set_wall_width(grid, (wall_area.y1() + y*ystep), pillar_grid_exp, 1);
 			set_wall_width(grid, (wall_area.x1() + x*xstep), pillar_grid_exp, 0);	
-			if (!place_area.contains_cube_xy(grid) || has_bcube_int(grid, walls_per_dim[0]) || has_bcube_int(grid, walls_per_dim[1])) continue;
+			if (!place_area.contains_cube_xy(grid)) continue;
+			if (has_bcube_int(grid, walls_per_dim[0]) || has_bcube_int(grid, walls_per_dim[1]) || has_bcube_int(grid, pillar_avoid)) continue;
 			big_space.push_back(grid);
 		} // for x
 	} // for y
@@ -853,6 +856,7 @@ void building_t::add_backrooms_objs(rand_gen_t rgen, room_t &room, float zval, u
 			if (!merge_cand.is_all_zeros() && rgen.rand_float() < 0.5) { // add wall 50% of the time
 				for (unsigned dim = 0; dim < 2; ++dim) {
 					if (merge_cand.get_sz_dim(!dim) < merge_wall_min) continue; // too short to create a wall; will get here in at least one dim
+					if (has_bcube_int(merge_cand, pillar_avoid))      continue;
 					cube_t wall(merge_cand);
 					wall.expand_by_xy(wall_half_thick - pillar_hwidth); // shrink
 					walls_per_dim[dim].push_back(wall);
