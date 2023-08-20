@@ -1677,7 +1677,7 @@ void building_room_geom_t::add_parking_space(room_object_t const &c, vector3d co
 }
 
 tquad_t get_ramp_tquad(room_object_t const &c) { // Note: normal is for the bottom surface
-	tquad_t ramp(4); // ramp surface
+	tquad_t ramp(4); // ramp top surface
 	float const zv[2] = {c.z1(), c.z2()};
 	// dim dir z0 z1 z2 z3
 	// 0   0   1  0  0  1

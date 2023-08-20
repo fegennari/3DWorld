@@ -431,12 +431,13 @@ unsigned check_chair_collision(room_object_t const &c, point &pos, point const &
 
 bool check_ramp_collision(room_object_t const &c, point &pos, point const &p_last, float radius, vector3d *cnorm) { // p_last is unused
 	if (!sphere_cube_intersect(pos, radius, c)) return 0;
-	float const half_thickness(0.5*RAMP_THICKNESS_SCALE*c.dz());
-	tquad_t const ramp(get_ramp_tquad(c));
+	float const thickness(RAMP_THICKNESS_SCALE*c.dz()), half_thickness(0.5*thickness);
+	tquad_t ramp(get_ramp_tquad(c));
+	for (unsigned n = 0; n < ramp.npts; ++n) {ramp.pts[n].z -= half_thickness;} // shift to the centerline, which is what get_sphere_poly_int_val() requires
 	vector3d const normal(ramp.get_norm());
 	float dist(0.0); // distance from sphere to ramp surface
 	vector3d coll_normal;
-	if (!get_sphere_poly_int_val(pos, radius, ramp.pts, ramp.npts, normal, half_thickness, dist, coll_normal)) return 0;
+	if (!get_sphere_poly_int_val(pos, radius, ramp.pts, ramp.npts, normal, thickness, dist, coll_normal)) return 0;
 	if (cnorm) {*cnorm = coll_normal;}
 	pos += coll_normal*dist;
 	return 1;
