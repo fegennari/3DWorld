@@ -610,19 +610,21 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, flo
 				continue;
 			}
 			if ((c->type == TYPE_STAIR || on_stairs) && (obj_z + radius) > c->z2()) continue; // above the stair - allow it to be walked on
-			cube_t c_extended(get_true_room_obj_bcube(*c));
-			if (c->type == TYPE_STAIR || c->type == TYPE_ATTIC_DOOR) {c_extended.z1() -= camera_height;} // handle the player's head for stairs and attic doors
-			float const reff(0.99*radius); // effective radius; slight adjust so that player is above ramp when on the floor
 
-			if (c->type == TYPE_RAMP && (obj_z - reff) < c->z2()) { // ramp should be SHAPE_ANGLED
-				if (!sphere_cube_intersect_xy(pos, xy_radius, c_extended)) continue; // optimization
-				float const length(c->get_length()), height(c->dz()), t(CLIP_TO_01((pos[c->dim] - c->d[c->dim][0])/length)), T(c->dir ? t : (1.0-t));
+			if (c->type == TYPE_RAMP) { // ramp should be SHAPE_ANGLED
+				// slight adjust so that player is above ramp when on the floor above, but below when falling through the ramp gap
+				bool const is_falling(pos.z < obj_z);
+				float const reff((is_falling ? 1.01 : 0.99)*radius); // effective radius
+				if ((obj_z - reff) > c->z2()) continue; // above the top of the ramp - not walking on it
+				if (!sphere_cube_intersect_xy(pos, xy_radius, *c)) continue; // optimization - not actually on the ramp
+				float &pos_dim(pos[c->dim]);
+				if (pos_dim < c->d[c->dim][0] || pos_dim > c->d[c->dim][1]) continue; // not yet over ramp
+				float const length(c->get_length()), height(c->dz()), t(CLIP_TO_01((pos_dim - c->d[c->dim][0])/length)), T(c->dir ? t : (1.0-t));
 				float const ztop(c->z1() + height*T), zbot(ztop - RAMP_THICKNESS_SCALE*height);
 				float const player_height(camera_height + NEAR_CLIP); // include near clip for collisions with the bottom of ramps
 				float const player_bot_z(obj_z - radius), player_bot_z_step(player_bot_z + C_STEP_HEIGHT*radius), player_top_z(obj_z + player_height);
 					
 				if (ztop < player_bot_z_step) { // step onto or move along ramp top surface
-					if (!sphere_cube_intersect_xy(pos, xy_radius, *c)) continue; // not actually on the ramp
 					pos.z = ztop + reff; // use reff rather than radius to prevent jitter when stepping onto the upper edge of the ramp
 					obj_z = max(pos.z, p_last.z);
 					had_coll = 1;
@@ -632,7 +634,7 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, flo
 							if (!i->contains_pt_xy(pos)) continue; // sphere not in this ceiling
 							if (player_bot_z_step > i->z2() || player_top_z < i->z1()) continue; // no Z overlap
 							float const dz(player_top_z - i->z1()), delta(dz*length/height);
-							pos[c->dim] += (c->dir ? -1.0 : 1.0)*delta; // push player back down the ramp
+							pos_dim += (c->dir ? -1.0 : 1.0)*delta; // push player back down the ramp
 							break; // only change zval once
 						}
 					}
@@ -644,13 +646,15 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, flo
 
 					if (ramp_ext.contains_pt_xy(pos)) { // colliding with the bottom
 						float const dz(player_top_z - zbot), delta(dz*length/height);
-						pos[c->dim] += (c->dir ? 1.0 : -1.0)*delta;
+						pos_dim += (c->dir ? 1.0 : -1.0)*delta;
 						had_coll = 1;
 						continue;
 					} // else treat it as a cube side collision
 				}
 				else {continue;} // under the ramp: no collision
-			}
+			} // end ramp case
+			cube_t c_extended(get_true_room_obj_bcube(*c));
+			if (c->type == TYPE_STAIR || c->type == TYPE_ATTIC_DOOR) {c_extended.z1() -= camera_height;} // handle the player's head for stairs and attic doors
 			if (!sphere_cube_intersect(pos, xy_radius, c_extended)) continue; // optimization
 
 			if (c->type == TYPE_RAILING) { // only collide with railing at top of stairs, not when walking under stairs
@@ -698,7 +702,7 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, flo
 			}
 			if ((c->type == TYPE_STALL || c->type == TYPE_SHOWER) && !c->is_open() && c->contains_pt(pos)) {register_player_hiding(*c);} // player is hiding in the stall/shower
 		} // for c
-	}
+	} // end interior->room_geom
 	for (person_t const &p : interior->people) {
 		float const dist(p2p_dist(pos, p.pos)), r_sum(xy_radius + 0.5*p.get_width()); // ped_radius is a bit too large, multiply it by 0.5
 		if (dist >= r_sum) continue; // no intersection
