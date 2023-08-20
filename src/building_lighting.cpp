@@ -1189,7 +1189,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 	point const camera_bs(camera_pdu.pos - xlate), building_center(bcube.get_cube_center()); // camera in building space
 	if ((display_mode & 0x08) && !camera_in_building && !bcube.contains_pt_xy(camera_bs) && is_entire_building_occluded(camera_bs, oc)) return;
 	float const window_vspacing(get_window_vspace()), wall_thickness(get_wall_thickness()), fc_thick(get_fc_thickness());
-	float const camera_z(camera_bs.z), room_xy_expand(0.75*wall_thickness);
+	float const camera_z(camera_bs.z), room_xy_expand(0.75*wall_thickness), player_feet_zval(camera_bs.z - get_player_height() - CAMERA_RADIUS);
 	bool const check_building_people(enable_building_people_ai()), check_attic(camera_in_building && has_attic() && interior->attic_access_open);
 	bool const camera_in_basement(camera_z > ground_floor_z1), camera_in_ext_basement(camera_in_building && point_in_extended_basement_not_basement(camera_bs));
 	bool const show_room_name(display_mode & 0x20); // debugging, key '6'
@@ -1559,14 +1559,14 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		if (camera_surf_collide && (camera_in_building || camera_can_see_ext_basement) && dist_less_than(lpos_rot, camera_bs, /*dshadow_radius*/light_radius)) {
 			bool player_on_ladder_this_room(player_on_attic_stairs && (is_in_attic || room.intersects_xy(interior->attic_access)));
 
-			if (clipped_bc.contains_pt(camera_rot) || player_on_ladder_this_room) {
+			if (clipped_bc.contains_pt(camera_rot) || clipped_bc.contains_pt(point(camera_rot.x, camera_rot.y, player_feet_zval)) || player_on_ladder_this_room) {
 				// must update shadow maps for the room above if the player is on the stairs or in the same room when there are stairs
 				bool const check_floor_above(camera_on_stairs || (camera_by_stairs && camera_room == i->room_id));
 
 				if (is_lamp || player_on_ladder_this_room || (player_in_attic && is_in_attic) ||
-					(lpos_rot.z > camera_bs.z && (check_floor_above || lpos_rot.z < (camera_bs.z + window_vspacing))))
+					(lpos_rot.z > player_feet_zval && (check_floor_above || lpos_rot.z < (camera_bs.z + window_vspacing))))
 				{
-					// player shadow; includes lamps (with no zval test)
+					// player shadow, based on head to feet Z-range; includes lamps (with no zval test)
 					force_smap_update   = 1; // always update, even if stationary; required to get correct shadows when player stands still and takes/moves objects
 					shadow_caster_hash ^= 0xdeadbeef; // update hash when player enters or leaves the light's area
 				}
