@@ -21,6 +21,7 @@ bool sphere_vert_cylin_intersect_with_ends(point &center, float radius, cylinder
 void register_in_closed_bathroom_stall();
 pair<cube_t, colorRGBA> car_bcube_color_from_parking_space(room_object_t const &o);
 void force_player_height(double height);
+bool get_sphere_poly_int_val(point const &sc, float sr, point const *const points, unsigned npoints, vector3d const &normal, float thickness, float &val, vector3d &cnorm);
 
 
 // assumes player is in this building; handles windows and exterior doors but not attics and basements
@@ -428,6 +429,19 @@ unsigned check_chair_collision(room_object_t const &c, point &pos, point const &
 	return check_cubes_collision(cubes, 3, pos, p_last, radius, cnorm);
 }
 
+bool check_ramp_collision(room_object_t const &c, point &pos, point const &p_last, float radius, vector3d *cnorm) { // p_last is unused
+	if (!sphere_cube_intersect(pos, radius, c)) return 0;
+	float const half_thickness(0.5*RAMP_THICKNESS_SCALE*c.dz());
+	tquad_t const ramp(get_ramp_tquad(c));
+	vector3d const normal(ramp.get_norm());
+	float dist(0.0); // distance from sphere to ramp surface
+	vector3d coll_normal;
+	if (!get_sphere_poly_int_val(pos, radius, ramp.pts, ramp.npts, normal, half_thickness, dist, coll_normal)) return 0;
+	if (cnorm) {*cnorm = coll_normal;}
+	pos += coll_normal*dist;
+	return 1;
+}
+
 unsigned get_stall_cubes(room_object_t const &c, cube_t sides[3]) {
 	sides[0] = sides[1] = sides[2] = c;
 	float const width(c.get_width());
@@ -602,7 +616,7 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, flo
 			if (c->type == TYPE_RAMP && (obj_z - reff) < c->z2()) { // ramp should be SHAPE_ANGLED
 				if (!sphere_cube_intersect_xy(pos, xy_radius, c_extended)) continue; // optimization
 				float const length(c->get_length()), height(c->dz()), t(CLIP_TO_01((pos[c->dim] - c->d[c->dim][0])/length)), T(c->dir ? t : (1.0-t));
-				float const ztop(c->z1() + height*T), zbot(ztop - FLOOR_THICK_VAL_OFFICE*height);
+				float const ztop(c->z1() + height*T), zbot(ztop - RAMP_THICKNESS_SCALE*height);
 				float const player_height(camera_height + NEAR_CLIP); // include near clip for collisions with the bottom of ramps
 				float const player_bot_z(obj_z - radius), player_bot_z_step(player_bot_z + C_STEP_HEIGHT*radius), player_top_z(obj_z + player_height);
 					
@@ -862,6 +876,7 @@ bool building_interior_t::check_sphere_coll_room_objects(building_t const &build
 			else if (c->type == TYPE_TABLE  ) {coll_ret |= check_table_collision (*c, pos, p_last, radius, &cnorm);}
 			else if (c->type == TYPE_DESK   ) {coll_ret |= check_table_collision (*c, pos, p_last, radius, &cnorm);}
 			else if (c->type == TYPE_CHAIR  ) {coll_ret |= check_chair_collision (*c, pos, p_last, radius, &cnorm);}
+			else if (c->type == TYPE_RAMP   ) {coll_ret |= (unsigned)check_ramp_collision   (*c, pos, p_last, radius, &cnorm);}
 			else if (c->type == TYPE_BALCONY) {had_coll |= (unsigned)check_balcony_collision(*c, pos, p_last, radius, &cnorm);}
 			else if (c->type == TYPE_STALL  && maybe_inside_room_object(*c, pos, radius)) {coll_ret |= (unsigned)check_stall_collision (*c, pos, p_last, radius, &cnorm);}
 			else if (c->type == TYPE_SHOWER && maybe_inside_room_object(*c, pos, radius)) {coll_ret |= (unsigned)check_shower_collision(*c, pos, p_last, radius, &cnorm);}

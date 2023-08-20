@@ -21,6 +21,7 @@ unsigned const NUM_STAIRS_PER_FLOOR_U = 16;
 float const FLOOR_THICK_VAL_HOUSE  = 0.10; // 10% of floor spacing
 float const FLOOR_THICK_VAL_OFFICE = 0.11; // thicker for office buildings
 float const FLOOR_THICK_VAL_WINDOWLESS = 0.12; // even thicker for windowless office buildings
+float const RAMP_THICKNESS_SCALE   = 0.11; // thickness to height ratio
 float const WINDOW_BORDER_MULT     = 0.94; // account for the frame part of the window texture, which is included in the interior cutout of the window
 float const WALL_THICK_VAL         = 0.05; // 5% of floor spacing
 float const DOOR_THICK_TO_WIDTH    = 0.04; // ratio of door thickness to width for doors opening to the side
@@ -2006,6 +2007,7 @@ cube_t get_elevator_car_panel(room_object_t const &c, float fc_thick_scale);
 cube_t get_true_room_obj_bcube(room_object_t const &c);
 cube_t get_sink_cube(room_object_t const &c);
 cube_t get_mwave_panel_bcube(room_object_t const &c);
+tquad_t get_ramp_tquad(room_object_t const &c);
 void gen_crate_sz(vector3d &sz, rand_gen_t &rgen, float window_vspacing);
 void get_balcony_cubes(room_object_t const &c, cube_t cubes[4]);
 void set_rand_pos_for_sz(cube_t &c, bool dim, float length, float width, rand_gen_t &rgen);
