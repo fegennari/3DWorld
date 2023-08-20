@@ -151,9 +151,11 @@ bool building_t::is_pos_inside_building(point const &pos, float xy_pad, float hh
 		if (has_ext_basement()) { // check union of basement + extended basement
 			cube_t sc; sc.set_from_sphere(pos, bcube_pad); // sphere bounding cube
 			float cont_area(0.0);
+			// Note: not guaranteed to be correct since ext basement bcube can overlap basement and double count the area, but good enough for initial rejection
 			accumulate_shared_xy_area(basement, sc, cont_area);
 			accumulate_shared_xy_area(interior->basement_ext_bcube, sc, cont_area);
 			if (cont_area < 0.99*sc.get_area_xy()) return 0; // not contained
+			if (!get_full_basement_bcube().contains_pt_xy(pos)) return 0; // check union cube as an additional test in case there was double counting
 		}
 		else if (!basement.contains_pt_xy_exp(pos, -bcube_pad)) return 0; // check the basement
 	}
