@@ -597,9 +597,9 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, flo
 			if ((c->type == TYPE_STAIR || on_stairs) && (obj_z + radius) > c->z2()) continue; // above the stair - allow it to be walked on
 			cube_t c_extended(get_true_room_obj_bcube(*c));
 			if (c->type == TYPE_STAIR || c->type == TYPE_ATTIC_DOOR) {c_extended.z1() -= camera_height;} // handle the player's head for stairs and attic doors
+			float const reff(0.99*radius); // effective radius; slight adjust so that player is above ramp when on the floor
 
-			// Note: slight adjust so that player is above ramp when on the floor
-			if (c->type == TYPE_RAMP && (obj_z - 0.99f*radius) < c->z2()) { // ramp should be SHAPE_ANGLED
+			if (c->type == TYPE_RAMP && (obj_z - reff) < c->z2()) { // ramp should be SHAPE_ANGLED
 				if (!sphere_cube_intersect_xy(pos, xy_radius, c_extended)) continue; // optimization
 				float const length(c->get_length()), height(c->dz()), t(CLIP_TO_01((pos[c->dim] - c->d[c->dim][0])/length)), T(c->dir ? t : (1.0-t));
 				float const ztop(c->z1() + height*T), zbot(ztop - FLOOR_THICK_VAL_OFFICE*height);
@@ -608,7 +608,7 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, flo
 					
 				if (ztop < player_bot_z_step) { // step onto or move along ramp top surface
 					if (!sphere_cube_intersect_xy(pos, xy_radius, *c)) continue; // not actually on the ramp
-					pos.z = ztop + radius;
+					pos.z = ztop + reff; // use reff rather than radius to prevent jitter when stepping onto the upper edge of the ramp
 					obj_z = max(pos.z, p_last.z);
 					had_coll = 1;
 
