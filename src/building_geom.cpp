@@ -16,6 +16,7 @@ extern building_params_t global_building_params;
 
 
 /*static*/ float building_t::get_scaled_player_radius() {return CAMERA_RADIUS*global_building_params.player_coll_radius_scale;}
+float get_bldg_player_height() {return (CAMERA_RADIUS + get_player_height());} // feet to eyes
 
 void building_t::set_z_range(float z1, float z2) {
 	bcube.z1() = z1; bcube.z2() = z2;

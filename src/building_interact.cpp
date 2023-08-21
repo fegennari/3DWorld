@@ -1080,7 +1080,7 @@ void building_t::update_player_interact_objects(point const &player_pos) { // No
 	interior->update_elevators(*this, player_pos);
 	update_creepy_sounds(player_pos);
 	if (!has_room_geom()) return; // nothing else to do
-	float const player_radius(get_scaled_player_radius()), player_z1(player_pos.z - get_player_height() - CAMERA_RADIUS), player_z2(player_pos.z);
+	float const player_radius(get_scaled_player_radius()), player_z1(player_pos.z - get_bldg_player_height()), player_z2(player_pos.z);
 	bool const player_in_this_building(this == player_building);
 	static point last_player_pos(all_zeros);
 	bool const player_is_moving(player_pos != last_player_pos);

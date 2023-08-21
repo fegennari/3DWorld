@@ -1189,7 +1189,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 	point const camera_bs(camera_pdu.pos - xlate), building_center(bcube.get_cube_center()); // camera in building space
 	if ((display_mode & 0x08) && !camera_in_building && !bcube.contains_pt_xy(camera_bs) && is_entire_building_occluded(camera_bs, oc)) return;
 	float const window_vspacing(get_window_vspace()), wall_thickness(get_wall_thickness()), fc_thick(get_fc_thickness());
-	float const camera_z(camera_bs.z), room_xy_expand(0.75*wall_thickness), player_feet_zval(camera_bs.z - get_player_height() - CAMERA_RADIUS);
+	float const camera_z(camera_bs.z), room_xy_expand(0.75*wall_thickness), player_feet_zval(camera_bs.z - get_bldg_player_height());
 	bool const check_building_people(enable_building_people_ai()), check_attic(camera_in_building && has_attic() && interior->attic_access_open);
 	bool const camera_in_basement(camera_z > ground_floor_z1), camera_in_ext_basement(camera_in_building && point_in_extended_basement_not_basement(camera_bs));
 	bool const show_room_name(display_mode & 0x20); // debugging, key '6'
@@ -1233,7 +1233,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 					if (i->contains_pt(camera_rot)) {camera_on_stairs = 1; break;}
 				}
 			}
-			if (!camera_on_stairs && check_ramp && interior->pg_ramp.contains_pt(camera_rot - vector3d(0.0, 0.0, (CAMERA_RADIUS + get_player_height())))) { // what about on a ramp?
+			if (!camera_on_stairs && check_ramp && interior->pg_ramp.contains_pt(camera_rot - vector3d(0.0, 0.0, get_bldg_player_height()))) { // what about on a ramp?
 				camera_on_stairs = camera_by_stairs = camera_somewhat_by_stairs = 1; // ramp counts as stairs
 			}
 			if (camera_on_stairs) {stairs_or_ramp_visible = 1;}

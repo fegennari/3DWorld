@@ -1865,7 +1865,7 @@ bool building_t::check_and_handle_dynamic_obj_coll(point &pos, point const &cur_
 	float z1, float z2, point const &camera_bs, bool for_spider, bool skip_player) const
 {
 	if (camera_surf_collide && !skip_player) { // check the player
-		if (z1 < camera_bs.z && z2 > (camera_bs.z - 1.1*CAMERA_RADIUS - get_player_height())) { // slighly below the player's feet
+		if (z1 < camera_bs.z && z2 > (camera_bs.z - get_bldg_player_height() - 0.1*CAMERA_RADIUS)) { // slighly below the player's feet
 			if (handle_vcylin_vcylin_int(pos, camera_bs, (radius + get_scaled_player_radius()))) return 1;
 		}
 	}
@@ -1918,7 +1918,7 @@ int building_t::check_player_in_basement(point const &pos) const {
 	if (!is_pos_in_basement(pos))                     return 0;
 	if (point_in_extended_basement_not_basement(pos)) return 3;
 	
-	if (interior && (pos.z - CAMERA_RADIUS - get_player_height()) > (ground_floor_z1 - get_window_vspace())) { // only need to check if on the top floor of the basement
+	if (interior && (pos.z - get_bldg_player_height()) > (ground_floor_z1 - get_window_vspace())) { // only need to check if on the top floor of the basement
 		for (auto const &s : interior->stairwells) {
 			if (s.contains_pt(pos)) return 1; // player on stairs, upper floor and windows/outside may be visible
 		}

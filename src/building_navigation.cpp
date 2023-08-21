@@ -1001,7 +1001,7 @@ bool building_t::choose_dest_goal(person_t &person, rand_gen_t &rgen) const { //
 	if (global_building_params.ai_target_player) { // ensure target is a valid location in this building; this must be done *after* adjacent floor zval adjustment
 		// handle the case where the player is standing on the stairs on the same floor by moving zval to a different floor to force this person to use the stairs; what about pg_ramp?
 		if (person.goal_type == GOAL_TYPE_PLAYER && loc.floor_ix == goal.floor_ix && goal.stairs_ix >= 0) {
-			float const person_z1(person.get_z1()), player_z1(cur_player_building_loc.pos.z - CAMERA_RADIUS - get_player_height()), fc_thick(get_fc_thickness());
+			float const person_z1(person.get_z1()), player_z1(cur_player_building_loc.pos.z - get_bldg_player_height()), fc_thick(get_fc_thickness());
 			// make destination exactly one floor above or below of where we currently are; some hysteresis is required to handle the case where the player is at the same zval
 			if      (player_z1 + fc_thick < person_z1) {person.target_pos.z -= floor_spacing;} // move down one floor
 			else if (player_z1 - fc_thick > person_z1) {person.target_pos.z += floor_spacing;} // move up   one floor
@@ -1913,7 +1913,7 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 
 	if (can_ai_follow_player(person, allow_diff_building)) {
 		// use zval of the feet to handle cases where the person and the player are different heights
-		point const feet_pos(person.pos.x, person.pos.y, person.get_z1()), player_feet_pos(cur_player_building_loc.pos - vector3d(0.0, 0.0, CAMERA_RADIUS+get_player_height()));
+		point const feet_pos(person.pos.x, person.pos.y, person.get_z1()), player_feet_pos(cur_player_building_loc.pos - vector3d(0.0, 0.0, get_bldg_player_height()));
 
 		if (dist_less_than(feet_pos, player_feet_pos, 1.2f*(person.radius + get_scaled_player_radius()))) { // intersecting the player
 			if (!check_for_wall_ceil_floor_int(person.pos, cur_player_building_loc.pos, 1)) { // inc_pg_br_walls=1
