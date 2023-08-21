@@ -1111,16 +1111,18 @@ int building_t::choose_dest_room(person_t &person, rand_gen_t &rgen) const { // 
 			}
 		}
 	}
-	if (is_pos_in_pg_or_backrooms(person.pos)) {
-		if (person.cur_room >= 0 && (person.is_first_path || rgen.rand_float() < 0.75)) { // stay in this room 75% of the time, always on the first path
-			person.is_first_path = 0; // respect the walls
-			if (select_person_dest_in_room(person, rgen, get_room(person.cur_room))) return 1;
-			// if we failed above (for example, stuck inside a small sub-room), we'll walk through the walls to get out of the room
-		}
-	}
+	bool const is_single_large_room(loc.room_ix >= 0 && is_room_pg_or_backrooms(get_room(loc.room_ix)));
 
-	// make 100 attempts at finding a valid room
-	for (unsigned n = 0; n < 100; ++n) {
+	if (is_single_large_room && (person.is_first_path || rgen.rand_float() < 0.75)) { // stay in this room 75% of the time, always on the first path
+		person.is_first_path = 0; // respect the walls
+		if (select_person_dest_in_room(person, rgen, get_room(loc.room_ix))) return 1;
+	}
+	// sometimes use stairs in backrooms and parking garages
+	bool const try_use_stairs(is_single_large_room && get_room(loc.room_ix).has_stairs && rgen.rand_bool());
+	unsigned const num_tries(try_use_stairs ? 0 : 100);
+
+	// try to find a valid room to move to
+	for (unsigned n = 0; n < num_tries; ++n) {
 		unsigned const cand_room(rgen.rand() % interior->rooms.size());
 		if (cand_room == (unsigned)loc.room_ix) continue;
 		room_t const &room(interior->rooms[cand_room]);
@@ -1163,10 +1165,9 @@ int building_t::choose_dest_room(person_t &person, rand_gen_t &rgen) const { // 
 	} // for n
 	if (loc.room_ix < 0) return 2; // failed - room not valid (error?)
 	room_t const &room(get_room(loc.room_ix));
-	bool const is_single_large_room(is_room_pg_or_backrooms(room));
 
 	// how about a different floor of the same room? only check this 50% of the time for parking garages to allow movement within a level
-	if (room.has_stairs == 255 && (!is_single_large_room || rgen.rand_bool())) {
+	if (room.has_stairs == 255 && (try_use_stairs || !is_single_large_room || rgen.rand_bool())) {
 		float const new_z(person.target_pos.z + (rgen.rand_bool() ? -1.0 : 1.0)*floor_spacing); // one floor above or below
 
 		if (new_z > room.z1() && new_z < room.z2()) { // valid if this floor is inside the room
