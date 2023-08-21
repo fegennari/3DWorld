@@ -168,7 +168,7 @@ public:
 			}
 		}
 	}
-	bool find_path(point const &p1, point const &p2, vector<point> &path) const {
+	bool find_path(point const &p1, point const &p2, ai_path_t &path) const {
 		assert(is_built());
 		if (nodes.empty()) return 0; // not built or too small/empty
 		//highres_timer_t timer("Find Path"); // ~1.3ms max
@@ -177,6 +177,11 @@ public:
 		if (!find_open_node_closest_to(p1, p2, nx1, ny1) || !find_open_node_closest_to(p2, p1, nx2, ny2)) return 0;
 		// does it make sense to use A* rather than Dijkstra? maybe not because paths will generally be short compared to the number of total nodes
 		unsigned start_ix(get_node_ix(nx1, ny1)), end_ix(get_node_ix(nx2, ny2));
+
+		if (start_ix == end_ix) { // short path case; probably shouldn't be calling this function if there's a simple path from p1 to p2
+			path.add(get_grid_pt(nx1, ny1, p1.z)); // add the single point
+			return 1;
+		}
 		vector<a_star_node_state_t> state(nodes.size()); // dense vector; unordered_map seems to be slower
 		vector<uint8_t> open(nodes.size(), 0), closed(nodes.size(), 0); // tentative/already evaluated nodes
 		std::priority_queue<pair<float, ix_pair_t> > open_queue;
@@ -210,7 +215,7 @@ public:
 					if (new_ix == end_ix) { // done, reconstruct path (in reverse)
 						assert(!path.empty()); // p1 should have been added previously
 						unsigned const rev_start_ix(path.size());
-						path.push_back(get_grid_pt(nx2, ny2, p1.z)); // last point, added first
+						path.add(get_grid_pt(nx2, ny2, p1.z)); // last point, added first
 						unsigned path_ix(cur_ix), prev_x(new_x), prev_y(new_y);
 						int prev_dx(0), prev_dy(0); // starts at an invalid value so that the first point is always added
 
@@ -224,14 +229,14 @@ public:
 							// smooth path by removing colinear points and merging unblocked segments
 							int dx(xn - int(prev_x)), dy(yn - int(prev_y));
 							if (dx == prev_dx && dy == prev_dy) {path.back() = path_pt;} // same angle, extend previous point
-							else {path.push_back(path_pt);} // add new point
+							else {path.add(path_pt);} // add new point
 							path_ix = get_node_ix(xn, yn);
 							prev_x = xn; prev_y = yn; prev_dx = dx; prev_dy = dy;
 						} // end while()
-						path.push_back(get_grid_pt(nx1, ny1, p1.z)); // first point, added last
+						path.add(get_grid_pt(nx1, ny1, p1.z)); // first point, added last
 						reverse(path.begin()+rev_start_ix, path.end());
 						// run another pass to remove unnecessary points
-						path.push_back(p2); // temporary end point
+						path.add(p2); // temporary end point
 						for (unsigned i = rev_start_ix; i+1 < path.size(); ++i) { // inefficient, but simple
 							if (!check_line_intersect(path[i-1], path[i+1])) {path.erase(path.begin() + i); --i;}
 						}
@@ -551,8 +556,8 @@ public:
 				}
 			} // for n
 			if (dmin == 0.0) continue;
-			path.push_back(best_pt);
-			if (use_pos2) {path.push_back(best_pt2);}
+			path.add(best_pt);
+			if (use_pos2) {path.add(best_pt2);}
 			return 1; // success
 		} // for npts
 		if (!no_grid_path && building.is_room_backrooms(room_ix)) { // run detailed path finding on backrooms
@@ -624,10 +629,10 @@ public:
 					bool const no_use_init(N > 0); // choose a random new point on iterations after the first one
 					bool not_room_center(0);
 					point const end_point(find_valid_room_dest(avoid, building, radius, height, cur_pt.z, start_ix, up_or_down, not_room_center, rgen, no_use_init, custom_dest));
-					path.push_back(end_point);
+					path.add(end_point);
 					if (node.is_vert_conn()) {success = 1; break;} // done, don't need to run code below
 					point const room_exit(closest_room_pt(walk_area, next)); // first doorway
-					if (connect_room_endpoints(avoid, building, walk_area, n, end_point, room_exit, radius, path, keepout, rgen)) {path.push_back(room_exit); success = 1; break;}
+					if (connect_room_endpoints(avoid, building, walk_area, n, end_point, room_exit, radius, path, keepout, rgen)) {path.add(room_exit); success = 1; break;}
 					path.clear(); // failed, reset for next iteration
 					if (!not_room_center) break; // if we did choose the room center, and there is no path to it, we've failed
 				} // for n
@@ -637,7 +642,7 @@ public:
 				assert(n == end_ix);
 				if (node.is_vert_conn()) return 1; // success
 				point const final_pt(closest_room_pt(walk_area, path.back())); // walk from room into last doorway
-				path.push_back(final_pt);
+				path.add(final_pt);
 
 				// find path to first doorway; ignore collisions with p2 (cur_pt) in case this person was pushed into an object by another person
 				if (!connect_room_endpoints(avoid, building, walk_area, n, final_pt, cur_pt, radius, path, keepout, rgen, 0, 1)) {
@@ -651,7 +656,8 @@ public:
 				point const &prev(path.back());
 				assert(prev.z == next.z);
 				point const p1(closest_room_pt(walk_area, prev)), p2(closest_room_pt(walk_area, next));
-				path.push_back(p1); // walk out of doorway and into room
+				//assert(p1 != p2); // does this always hold?
+				path.add(p1); // walk out of doorway and into room
 				
 				if (!connect_room_endpoints(avoid, building, walk_area, n, p1, p2, radius, path, keepout, rgen)) { // unreachable
 					path.clear();
@@ -659,9 +665,9 @@ public:
 					//disconnect_room_pair(n, came_from); // ???
 					return 0;
 				}
-				path.push_back(p2); // walk from room into doorway
+				path.add(p2); // walk from room into doorway
 			}
-			path.push_back(next); // doorway
+			path.add(next); // doorway
 			n = came_from;
 		} // end while()
 		return 0; // never gets here
@@ -676,7 +682,7 @@ public:
 		rgen.set_state((ped_ix + 13*room_ix + 1), (ped_rseed + 1));
 		vect_cube_t keepout;
 		unsigned const sub_path_start(path.size());
-		path.push_back(to); // Note: path is constructed backwards, so "to" is added first and connect_room_endpoints takes swapped arguments
+		path.add(to); // Note: path is constructed backwards, so "to" is added first and connect_room_endpoints takes swapped arguments
 		
 		// ignore starting collisions, for example collisions with stairwell when exiting stairs?
 		// ignore initial coll with "from", and coll with "to" when following the player;
@@ -706,7 +712,7 @@ public:
 		}
 		// maybe add an extra path point to prevent clipping through walls when walking through a doorway
 		point const from_extend_pt(closest_room_pt(walk_area, from));
-		if (from_extend_pt != from) {path.push_back(from_extend_pt);} // add if p1 was clamped
+		path.add(from_extend_pt); // add if p1 was clamped
 		return 1;
 	}
 
@@ -1375,36 +1381,35 @@ bool building_t::find_route_to_point(person_t const &person, float radius, bool 
 			if (!interior->nav_graph->find_path_points(stairs_room_ix, loc2.room_ix, person.ssn, radius, height, 0, is_first_path,
 				!up_or_down, person.cur_rseed, avoid, *this, seg2_start, interior->doors, person.has_key, nullptr, path)) continue; // no custom_dest
 			assert(!path.empty() && !from_path.empty());
-			path.push_back(seg2_start); // other end of the stairs
+			path.add(seg2_start); // other end of the stairs
 			// add two more points to straighten the entrance and exit paths; this segment doesn't check for intersection with stairs
 			point enter_pt;
 
 			if (is_ramp) {
 				cube_t const walk_area(interior->pg_ramp);
 				enter_pt = walk_area.closest_pt(from_path.front());
-				path.push_back(walk_area.closest_pt(path.back())); // exit point
+				path.add(walk_area.closest_pt(path.back())); // exit point
 			}
 			else { // stairs
 				stairwell_t const &stairs(interior->stairwells[s]);
 				cube_t const stairs_ext(get_stairs_plus_step_up(stairs));
 				enter_pt = stairs_ext.closest_pt(from_path.front());
 				point const exit_pt(stairs_ext.closest_pt(path.back()));
-				path.push_back(exit_pt);
+				path.add(exit_pt);
 
 				if (stairs.shape == SHAPE_U) { // add 2 extra points on mid-level landing; entrance and exit will be on the same side
 					bool const dim(stairs.dim), dir(stairs.dir); // Note: see code in add_stairs_and_elevators()
 					float const turn_pt(stairs.d[dim][dir] - 0.1*(dir ? 1.0 : -1.0)*stairs.get_sz_dim(dim)), seg_delta_z(0.45f*(to.z - from.z));
 					point exit_turn(exit_pt.x, exit_pt.y, (to.z - seg_delta_z));
 					exit_turn[dim] = turn_pt;
-					path.push_back(exit_turn); // turning point for exit side of stairs
+					path.add(exit_turn); // turning point for exit side of stairs
 					point enter_turn(enter_pt.x, enter_pt.y, (from.z + seg_delta_z));
 					enter_turn[dim] = turn_pt;
-					path.push_back(enter_turn); // turning point for entrance side of stairs
+					path.add(enter_turn); // turning point for entrance side of stairs
 				}
 			}
-			path.push_back(enter_pt);
+			path.add(enter_pt);
 			path.add(from_path); // concatenate the two path segments in reverse order
-			assert(!path.empty());
 			return 1; // done/success
 		} // for s
 		path.clear(); // not necessary?

@@ -54,6 +54,7 @@ struct person_base_t : public waiting_obj_t {
 struct ai_path_t : public vector<point> {
 	bool uses_nav_grid=0, is_shortened=0;
 	void clear() {vector<point>::clear(); uses_nav_grid = is_shortened = 0;}
+	void add(point const &p) {if (empty() || p != back()) {push_back(p);}}
 	void add(ai_path_t const &path) {vector_add_to(path, *this); uses_nav_grid |= path.uses_nav_grid;}
 };
 
