@@ -236,10 +236,16 @@ public:
 						path.add(get_grid_pt(nx1, ny1, p1.z)); // first point, added last
 						reverse(path.begin()+rev_start_ix, path.end());
 						// run another pass to remove unnecessary points
-						path.add(p2); // temporary end point
-						for (unsigned i = rev_start_ix; i+1 < path.size(); ++i) { // inefficient, but simple
-							if (!check_line_intersect(path[i-1], path[i+1])) {path.erase(path.begin() + i); --i;}
-						}
+						path.push_back(p2); // temporary end point
+
+						while (1) { // iteratively remove points until no more can be removed
+							unsigned const orig_sz(path.size());
+
+							for (unsigned i = rev_start_ix; i+1 < path.size(); ++i) { // inefficient, but simple
+								if (!check_line_intersect(path[i-1], path[i+1])) {path.erase(path.begin() + i); --i;}
+							}
+							if (path.size() == orig_sz) break; // no points removed - done
+						} // end while
 						path.pop_back(); // remove p2
 						return 1; // success
 					}
