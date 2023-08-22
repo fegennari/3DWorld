@@ -224,7 +224,7 @@ void building_t::setup_multi_floor_room(extb_room_t &room, door_t const &door, b
 		
 		// add stairs
 		if (4.0*(stairs_hlen + wall_spacing) < min(room.dx(), room.dy())) { // condition should generally be true
-			unsigned const num_stairs(1 + (rgen.rand()&2)); // 1-2 stairs per floor
+			unsigned const num_stairs(1 + (rgen.rand()&1)); // 1-2 stairs per floor
 
 			for (unsigned n = 0; n < num_stairs; ++n) {
 				bool const dim(rgen.rand_bool()), dir(rgen.rand_bool());
