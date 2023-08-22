@@ -416,12 +416,11 @@ struct sphere_t {
 };
 
 
-struct cube_t { // size = 24
+struct cube_t { // size = 24; Note: AABB, not actually a cube
 
 	float d[3][2]; // {x,y,z},{min,max}
 
 	cube_t() {set_to_zeros();}
-	//cube_t() {x1() = 1; x2() = 0; y1() = 1; y2() = 0; z1() = 1; z2() = 0;} // initialize to invalid values for testing purposes
 	
 	cube_t(float x1_, float x2_, float y1_, float y2_, float z1_, float z2_) {
 		x1() = x1_; x2() = x2_; y1() = y1_; y2() = y2_; z1() = z1_; z2() = z2_;
