@@ -699,7 +699,10 @@ void building_t::add_backrooms_objs(rand_gen_t rgen, room_t &room, float zval, u
 	rand_gen_t rgen2(rgen);
 	for (vect_cube_t const &g : space_groups) {
 		colorRGBA const color(rgen2.rand_float(), rgen2.rand_float(), rgen2.rand_float());
-		for (cube_t const &c : g) {objs.emplace_back(c, TYPE_DBG_SHAPE, room_id, 0, 0, (RO_FLAG_NOCOLL | RO_FLAG_BACKROOM), 1.0, SHAPE_CUBE, color);}
+		for (cube_t c : g) {
+			set_cube_zvals(c, zval, zval+0.5*floor_spacing);
+			objs.emplace_back(c, TYPE_DBG_SHAPE, room_id, 0, 0, (RO_FLAG_NOCOLL | RO_FLAG_BACKROOM), 1.0, SHAPE_CUBE, color);
+		}
 	}
 #endif
 	// Add doorways + doors to guarantee full connectivity using space
