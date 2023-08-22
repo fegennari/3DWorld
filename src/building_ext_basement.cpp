@@ -211,53 +211,50 @@ void building_t::setup_multi_floor_room(extb_room_t &room, door_t const &door, b
 	
 	cube_t door_avoid(door.get_clearance_bcube());
 	door_avoid.union_with_cube(door.get_open_door_path_bcube()); // make sure it's path is clear as well
-	vect_cube_t avoid;
+	vect_cube_t avoid, cf_to_add;
 	avoid.push_back(door_avoid);
 	stairs_shape const sshape(SHAPE_STRAIGHT);
 	float const door_width(door.get_width()), stairs_hwidth(0.6*door_width), stairs_hlen(rgen.rand_uniform(2.0, 3.0)*stairs_hwidth), wall_spacing(1.0*door_width);
 	float z(room.z1() + floor_spacing); // move to next floor
 
 	for (unsigned f = 1; f < num_floors; ++f, z += floor_spacing) { // skip first floor - draw pairs of floors and ceilings
-		cube_t to_add[4]; // 4 parts for stairs cut
 		float const zc(z - fc_thick), zf(z + fc_thick);
-		bool stairs_dim(rgen.rand_bool()), stairs_dir(rgen.rand_bool());
-		cube_t stairs;
+		cf_to_add.clear();
+		cf_to_add.push_back(room); // seed with entire room
 		
 		// add stairs
 		if (4.0*(stairs_hlen + wall_spacing) < min(room.dx(), room.dy())) { // condition should generally be true
-			vector3d size;
-			size[ stairs_dim] = stairs_hlen;
-			size[!stairs_dim] = stairs_hwidth;
-			cube_t place_area(room);
-			for (unsigned d = 0; d < 2; ++d) {place_area.expand_in_dim(d, -(size[d] + wall_spacing));}
+			unsigned const num_stairs(1 + (rgen.rand()&2)); // 1-2 stairs per floor
 
-			for (unsigned n = 0; n < 100; ++n) { // 100 iterations to place stairs
-				cube_t cand;
-				for (unsigned d = 0; d < 2; ++d) {set_wall_width(cand, rgen.rand_uniform(place_area.d[d][0], place_area.d[d][1]), size[d], d);}
-				set_cube_zvals(cand, zf-floor_spacing, zc+floor_spacing); // top of floor below to bottom of ceiling on this floor
-				if (has_bcube_int(cand, avoid)) continue; // bad placement
-				stairs = cand;
-				break; // success
-			}
+			for (unsigned n = 0; n < num_stairs; ++n) {
+				bool const dim(rgen.rand_bool()), dir(rgen.rand_bool());
+				vector3d size;
+				size[ dim] = stairs_hlen;
+				size[!dim] = stairs_hwidth;
+				cube_t place_area(room);
+				for (unsigned d = 0; d < 2; ++d) {place_area.expand_in_dim(d, -(size[d] + wall_spacing));}
+
+				for (unsigned n = 0; n < 100; ++n) { // 100 iterations to place stairs
+					cube_t cand;
+					for (unsigned d = 0; d < 2; ++d) {set_wall_width(cand, rgen.rand_uniform(place_area.d[d][0], place_area.d[d][1]), size[d], d);}
+					set_cube_zvals(cand, zf-floor_spacing, zc+floor_spacing); // top of floor below to bottom of ceiling on this floor
+					if (has_bcube_int(cand, avoid)) continue; // bad placement
+					assert(cand.is_strictly_normalized());
+					subtract_cube_from_cubes(cand, cf_to_add);
+					landing_t landing(cand, 0, 0, dim, dir, 1, sshape, 0, 1, 1, 0, 1); // elevator=0, floor=0, railing=1, roof=0, at_top=1, stacked=1, ramp=0, stacked=1, extb=1
+					set_cube_zvals(landing, zc, zf);
+					interior->landings.push_back(landing);
+					stairwell_t const S(cand, 1, dim, dir, sshape, 0, 1, 1); // floors=1, roof=0, stacked=1, ext_basement=1
+					interior->stairwells.push_back(S);
+					avoid.push_back(get_stairs_bcube_expanded(S, door_width, wall_thickness, door_width));
+					room.has_stairs = 1;
+					break; // success
+				}
+			} // for n
 		}
-		if (stairs.is_all_zeros()) {to_add[0] = room;} // add single cube
-		else {
-			assert(stairs.is_strictly_normalized());
-			subtract_cube_xy(room, stairs, to_add);
-			landing_t landing(stairs, 0, 0, stairs_dim, stairs_dir, 1, sshape, 0, 1, 1, 0, 1); // elevator=0, floor=0, railing=1, roof=0, at_top=1, stacked=1, ramp=0, stacked=1, extb=1
-			set_cube_zvals(landing, zc, zf);
-			interior->landings.push_back(landing);
-			stairwell_t const S(stairs, 1, stairs_dim, stairs_dir, sshape, 0, 1, 1); // floors=1, roof=0, stacked=1, ext_basement=1
-			interior->stairwells.push_back(S);
-			avoid.push_back(get_stairs_bcube_expanded(S, door_width, wall_thickness, door_width));
-			room.has_stairs = 1;
-		}
-		// add floors and ceilings
-		for (unsigned i = 0; i < 4; ++i) { // skip zero area cubes from stairs along an exterior wall
-			cube_t &c(to_add[i]);
-			if (c.is_zero_area()) continue;
-			set_cube_zvals(c, zc, z); interior->ceilings.push_back(c);
-			set_cube_zvals(c, z, zf); interior->floors  .push_back(c);
+		for (cube_t &cf : cf_to_add) {
+			set_cube_zvals(cf, zc, z); interior->ceilings.push_back(cf);
+			set_cube_zvals(cf, z, zf); interior->floors  .push_back(cf);
 		}
 	} // for f
 }
