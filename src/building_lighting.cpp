@@ -1413,9 +1413,11 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		float const light_radius(get_radius_for_room_light(*i)), cull_radius(0.95*light_radius);
 		
 		if (!camera_on_stairs && cull_if_not_by_stairs) { // test both proximity and line of sight
+			float const szmin(min(camera_z, lpos.z)), szmax(max(camera_z, lpos.z)); // stairs must span this range
 			bool maybe_visible(0);
 
 			for (cube_t const &s : stairs_bcubes) {
+				if (s.z1() > szmin || s.z2() < szmax) continue;
 				if (sphere_cube_intersect(lpos, cull_radius, s) || s.line_intersects(camera_bs, lpos)) {maybe_visible = 1; break;}
 			}
 			if (!maybe_visible) continue;
