@@ -1204,7 +1204,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 	bool camera_by_stairs(0), camera_on_stairs(0), camera_somewhat_by_stairs(0), camera_in_hallway(0), camera_can_see_ext_basement(0);
 	bool camera_near_building(camera_in_building), check_ramp(0), stairs_or_ramp_visible(0);
 	int camera_room(-1);
-	cube_t stairs_area;
+	vect_cube_t stairs_bcubes; // only used when player is in the building
 	vect_cube_with_ix_t moving_objs;
 	ped_bcubes.clear();
 
@@ -1247,7 +1247,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 					min_eq(slice.z2(), ceil_zval );
 					if (!is_rot_cube_visible(slice, xlate)) continue; // VFC
 					if ((display_mode & 0x08) && check_obj_occluded(slice, camera_bs, oc, 0)) continue; // occlusion culling
-					stairs_area.assign_or_union_with_cube(s);
+					stairs_bcubes.push_back(s);
 					stairs_or_ramp_visible = 1;
 				} // for s
 				// check ramp if player is in the parking garage or the backrooms doorway
@@ -1256,7 +1256,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 						(has_ext_basement() && interior->get_ext_basement_door().get_clearance_bcube().contains_pt(camera_bs)))
 					{
 						stairs_or_ramp_visible = 1;
-						stairs_area.assign_or_union_with_cube(interior->pg_ramp);
+						stairs_bcubes.push_back(interior->pg_ramp);
 					}
 				}
 			}
@@ -1413,7 +1413,12 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		float const light_radius(get_radius_for_room_light(*i)), cull_radius(0.95*light_radius);
 		
 		if (!camera_on_stairs && cull_if_not_by_stairs) { // test both proximity and line of sight
-			if (!sphere_cube_intersect(lpos, cull_radius, stairs_area) && !stairs_area.line_intersects(camera_bs, lpos)) continue;
+			bool maybe_visible(0);
+
+			for (cube_t const &s : stairs_bcubes) {
+				if (sphere_cube_intersect(lpos, cull_radius, s) || s.line_intersects(camera_bs, lpos)) {maybe_visible = 1; break;}
+			}
+			if (!maybe_visible) continue;
 		}
 		float const dshadow_radius((is_in_attic ? 1.0 : 0.8)*light_radius); // use full light radius for attics since they're more open
 		if (!camera_pdu.sphere_visible_test((lpos_rot + xlate), cull_radius)) continue; // VFC
