@@ -1245,9 +1245,10 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 					cube_t slice(s); // clamp to the floor/ceiling range of the player's floor, which will cover the cuts in the floor and ceiling
 					max_eq(slice.z1(), floor_zval);
 					min_eq(slice.z2(), ceil_zval );
-					if ((display_mode & 0x08) && check_obj_occluded(slice, camera_bs, oc, 0)) continue; // occlusion culling
-					(is_rot_cube_visible(slice, xlate) ? vis_stairs_bcubes : nonvis_stairs_bcubes).push_back(s);
-					stairs_or_ramp_visible = 1;
+					bool visible(is_rot_cube_visible(slice, xlate)); // VFC
+					visible &= (!(display_mode & 0x08) || !check_obj_occluded(slice, camera_bs, oc, 0)); // occlusion culling
+					(visible ? vis_stairs_bcubes : nonvis_stairs_bcubes).push_back(s);
+					stairs_or_ramp_visible |= visible;
 				} // for s
 				// check ramp if player is in the parking garage or the backrooms doorway
 				if (has_pg_ramp() && is_rot_cube_visible(interior->pg_ramp, xlate)) {
@@ -1287,6 +1288,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		}
 	}
 	//highres_timer_t timer("Lighting", camera_in_building); // 13.8ms => 13.1ms => 12.7ms => 3.6ms => 3.2ms => 0.81
+	//unsigned num_add(0);
 
 	for (auto i = objs.begin(); i != objs_end; ++i) {
 		if (!i->is_light_on() || !i->is_light_type()) continue; // light not on, or not a light or lamp
@@ -1323,6 +1325,8 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		bool const has_stairs_this_floor(!is_in_attic && room.has_stairs_on_floor(cur_floor));
 		bool const has_ramp(check_ramp && is_room_above_ramp(room, i->z1()));
 		bool const light_room_has_stairs_or_ramp(i->has_stairs() || has_stairs_this_floor || has_ramp);
+		// special case for light shining down from above stairs when the player is below
+		bool const light_above_stairs(lpos.z > camera_z && light_room_has_stairs_or_ramp);
 		bool stairs_light(0), player_in_elevator(0), cull_if_not_by_stairs(0);
 
 		if (is_in_elevator) {
@@ -1347,9 +1351,10 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 					if (!has_basement_stairs) continue; // room has stairs, but not basement stairs
 				}
 			}
+			bool const check_stairs(stairs_or_ramp_visible || light_above_stairs);
 			bool const camera_within_one_floor(camera_z > floor_below_zval && camera_z < ceil_above_zval);
 			// less culling if either the light or the camera is by stairs and light is on the floor above or below
-			if (camera_within_one_floor && stairs_or_ramp_visible) { // light is on the floor above or below the camera
+			if (camera_within_one_floor && check_stairs) { // light is on the floor above or below the camera
 				if (camera_in_hallway && camera_by_stairs && camera_room_same_part) {
 					// special case for player in an office building primary hallway with stairs; only handle the case where the light is in the hallway above or below;
 					// if camera is on the stairs or a ramp this also counts because this may be connecting two rooms in two different parts
@@ -1417,11 +1422,12 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 
 			for (cube_t const &s : vis_stairs_bcubes) { // check visible stairs/ramps
 				if (s.z1() > szmin || s.z2() < szmax) continue;
-				if (sphere_cube_intersect(lpos, cull_radius, s) || s.line_intersects(camera_bs, lpos)) {maybe_visible = 1; break;}
+				if (sphere_cube_intersect(lpos, cull_radius, s) || s.line_intersects(camera_bs, lpos)) {maybe_visible = 1; break;} // require either
 			}
-			if (!maybe_visible && lpos.z > camera_z) { // check for light shining down the stairs behind the player
+			if (!maybe_visible && light_above_stairs) { // check for light shining down the stairs behind the player
 				for (cube_t const &s : nonvis_stairs_bcubes) {
-					if (s.z1() < szmin && s.z2() > szmax && s.line_intersects(camera_bs, lpos)) {maybe_visible = 1; break;}
+					if (s.z1() > szmin || s.z2() < szmax) continue;
+					if (sphere_cube_intersect(lpos, cull_radius, s) && s.line_intersects(camera_bs, lpos)) {maybe_visible = 1; break;} // require both; line int may be too strong
 				}
 			}
 			if (!maybe_visible) continue;
@@ -1563,6 +1569,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		vector3d dir;
 		if (wall_light) {dir[i->dim] = (i->dir ? 1.0 : -1.0);} else {dir = -plus_z;} // points down, unless it's a wall light
 		dl_sources.emplace_back(light_radius, lpos_rot, lpos_rot, color, 0, dir, bwidth);
+		//++num_add;
 		bool force_smap_update(0);
 
 		// check for dynamic shadows
@@ -1643,10 +1650,11 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			dl_sources.back().disable_shadows();
 		}
 	} // for i (objs)
+	//if (camera_in_building) {cout << num_add << endl;} // TESTING
 
 	// add skylight lights
 	for (unsigned l = 0; l < NUM_LIGHT_SRC; ++l) { // {sun, moon}
-		if (skylights.empty()) continue;
+		if (skylights.empty() || camera_in_basement) continue;
 		point sun_moon_pos;
 		if (!light_valid_and_enabled(l) || !get_light_pos(sun_moon_pos, l)) continue;
 		float const camera_zval_check((camera_somewhat_by_stairs ? 2.0 : 1.0)*window_vspacing); // allow two floors below if player can see skylight from stairs
