@@ -1242,6 +1242,8 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 
 				for (stairwell_t const &s : interior->stairwells) {
 					if (s.z1() > camera_z || s.z2() < camera_z) continue; // wrong floor
+					if (s.shape == SHAPE_U && ((camera_bs[s.dim] < s.get_center_dim(s.dim)) ^ s.dir)) continue; // back facing - light not visible
+					//if (s.shape == SHAPE_WALLED || s.shape == SHAPE_WALLED_SIDES) {} // light only visible in one direction, could use this for culling
 					cube_t slice(s); // clamp to the floor/ceiling range of the player's floor, which will cover the cuts in the floor and ceiling
 					max_eq(slice.z1(), floor_zval);
 					min_eq(slice.z2(), ceil_zval );
