@@ -977,7 +977,7 @@ void building_t::refine_light_bcube(point const &lpos, float light_radius, cube_
 	// base: 173613 / bcube: 163942 / clipped bcube: 161455 / tight: 159005 / rays: 101205 / no ls bcube expand: 74538
 	// starts with building bcube clipped to light bcube
 	//highres_timer_t timer("refine_light_bcube"); // 0.035ms average
-	assert(interior);
+	assert(has_room_geom());
 	cube_t tight_bcube, part;
 	static vect_cube_t other_parts, walls[2];
 	other_parts.clear();
@@ -1025,17 +1025,14 @@ void building_t::refine_light_bcube(point const &lpos, float light_radius, cube_
 	for (unsigned d = 0; d < 2; ++d) {walls[d].clear();}
 	tight_bcube.z1() = tight_bcube.z2() - get_floor_ceil_gap(); // limit to a single floor to exclude walls on the floor below (for backrooms)
 
-	if (is_parking_garage) { // what about backrooms walls?
-		auto objs_end(interior->room_geom->get_placed_objs_end()); // skip buttons/stairs/elevators
-		unsigned const pg_wall_start(interior->room_geom->wall_ps_start);
-		assert(pg_wall_start < interior->room_geom->objs.size());
-
-		for (auto i = (interior->room_geom->objs.begin() + pg_wall_start); i != objs_end; ++i) {
-			if (i->type != TYPE_PG_WALL) continue; // not parking garage wall (breaking is incorrect for multiple PG levels)
-			if (tight_bcube.intersects(*i)) {walls[i->dim].push_back(*i);}
+	if (is_pos_in_pg_or_backrooms(lpos)) {
+		for (unsigned d = 0; d < 2; ++d) {
+			for (cube_t const &c : interior->room_geom->pgbr_walls[d]) {
+				if (tight_bcube.intersects(c)) {walls[d].push_back(c);}
+			}
 		}
 	}
-	else { // still need to check for backrooms to handle wall adjacent to parking garage
+	if (!is_parking_garage || interior->has_backrooms) { // still need to check for backrooms to handle wall adjacent to parking garage
 		for (unsigned d = 0; d < 2; ++d) {
 			for (cube_t const &c : interior->walls[d]) {
 				if (tight_bcube.intersects(c)) {walls[d].push_back(c);}
