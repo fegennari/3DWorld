@@ -1204,7 +1204,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 	bool camera_by_stairs(0), camera_on_stairs(0), camera_somewhat_by_stairs(0), camera_in_hallway(0), camera_can_see_ext_basement(0);
 	bool camera_near_building(camera_in_building), check_ramp(0), stairs_or_ramp_visible(0);
 	int camera_room(-1);
-	vect_cube_t vis_stairs_bcubes, nonvis_stairs_bcubes; // only used when player is in the building
+	vect_cube_t cuts_above, cuts_below, cuts_above_nonvis; // only used when player is in the building
 	vect_cube_with_ix_t moving_objs;
 	ped_bcubes.clear();
 
@@ -1228,40 +1228,46 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			check_ramp        = (has_pg_ramp() && !interior->ignore_ramp_placement);
 			if (show_room_name) {lighting_update_text = room_names[room_type];}
 
-			if (camera_by_stairs) { // by stairs - check if we're actually on the stairs
-				for (auto i = interior->stairwells.begin(); i != interior->stairwells.end(); ++i) {
-					if (i->contains_pt(camera_rot)) {camera_on_stairs = 1; break;}
-				}
-			}
-			if (!camera_on_stairs && check_ramp && interior->pg_ramp.contains_pt(camera_rot - vector3d(0.0, 0.0, get_bldg_player_height()))) { // what about on a ramp?
-				camera_on_stairs = camera_by_stairs = camera_somewhat_by_stairs = 1; // ramp counts as stairs
-			}
-			if (camera_on_stairs) {stairs_or_ramp_visible = 1;}
-			else { // stairs and ramps only allow light to pass if visible to the player
-				float const floor_zval(room.z1() + camera_floor*window_vspacing + fc_thick), ceil_zval(floor_zval + get_floor_ceil_gap());
+			// stairs and ramps only allow light to pass if visible to the player
+			float const zval(room.z1() + camera_floor*window_vspacing), ceil_below_z(zval - fc_thick), floor_below_z(zval + fc_thick);
+			float const ceil_above_z(ceil_below_z + window_vspacing), floor_above_z(floor_below_z + window_vspacing);
+			vect_cube_t stair_ramp_cuts;
 
-				for (stairwell_t const &s : interior->stairwells) {
-					if (s.z1() > camera_z || s.z2() < camera_z) continue; // wrong floor
-					if (s.shape == SHAPE_U && ((camera_bs[s.dim] < s.get_center_dim(s.dim)) ^ s.dir)) continue; // back facing - light not visible
-					//if (s.shape == SHAPE_WALLED || s.shape == SHAPE_WALLED_SIDES) {} // light only visible in one direction, could use this for culling
-					cube_t slice(s); // clamp to the floor/ceiling range of the player's floor, which will cover the cuts in the floor and ceiling
-					max_eq(slice.z1(), floor_zval);
-					min_eq(slice.z2(), ceil_zval );
-					bool visible(is_rot_cube_visible(slice, xlate)); // VFC
-					visible &= (!(display_mode & 0x08) || !check_obj_occluded(slice, camera_bs, oc, 0)); // occlusion culling
-					(visible ? vis_stairs_bcubes : nonvis_stairs_bcubes).push_back(s);
-					stairs_or_ramp_visible |= visible;
-				} // for s
-				// check ramp if player is in the parking garage or the backrooms doorway
-				if (has_pg_ramp() && is_rot_cube_visible(interior->pg_ramp, xlate)) {
-					if (room.contains_pt(interior->pg_ramp.get_cube_center()) ||
-						(has_ext_basement() && interior->get_ext_basement_door().get_clearance_bcube().contains_pt(camera_bs)))
-					{
-						stairs_or_ramp_visible = 1;
-						vis_stairs_bcubes.push_back(interior->pg_ramp); // don't need near case?
-					}
+			for (stairwell_t const &s : interior->stairwells) { // check stairs
+				if (s.z1() > camera_z || s.z2() < camera_z) continue; // wrong floor
+				if (s.shape == SHAPE_U && ((camera_bs[s.dim] < s.get_center_dim(s.dim)) ^ s.dir) && !s.contains_pt(camera_rot)) continue; // back facing - light not visible
+				//if (s.shape == SHAPE_WALLED || s.shape == SHAPE_WALLED_SIDES) {} // light only visible in one direction, could use this for culling
+				stair_ramp_cuts.push_back(s);
+			}
+			if (has_pg_ramp()) { // check ramp if player is in the parking garage or the backrooms doorway
+				if (room.contains_pt(interior->pg_ramp.get_cube_center()) ||
+					(has_ext_basement() && interior->get_ext_basement_door().get_clearance_bcube().contains_pt(camera_bs)))
+				{
+					stair_ramp_cuts.push_back(interior->pg_ramp);
 				}
 			}
+			for (cube_t const &s : stair_ramp_cuts) {
+				if (s.contains_pt(camera_rot)) { // player on this stairs or ramp
+					camera_on_stairs = camera_by_stairs = camera_somewhat_by_stairs = 1;
+					continue;
+				}
+				if (s.z2() >= floor_above_z) { // cut above
+					cube_t cut(s);
+					set_cube_zvals(cut, ceil_above_z, floor_above_z);
+					bool const visible(is_rot_cube_visible(cut, xlate) && !((display_mode & 0x08) && check_obj_occluded(cut, camera_bs, oc, 0))); // VFC + occlusion culling
+					(visible ? cuts_above : cuts_above_nonvis).push_back(cut);
+					stairs_or_ramp_visible |= visible;
+				}
+				if (s.z1() <= ceil_below_z) { // cut below
+					cube_t cut(s);
+					set_cube_zvals(cut, ceil_below_z, floor_below_z);
+					bool const visible(is_rot_cube_visible(cut, xlate) && !((display_mode & 0x08) && check_obj_occluded(cut, camera_bs, oc, 0))); // VFC + occlusion culling
+					if (visible) {cuts_below.push_back(cut);}
+					stairs_or_ramp_visible |= visible;
+				}
+			} // for s
+			//cout << stair_ramp_cuts.size() << " " << cuts_below.size() << " " << cuts_above.size() << " " << cuts_above_nonvis.size() << endl; // TESTING
+			if (camera_on_stairs) {stairs_or_ramp_visible = 1;}
 			// set camera_somewhat_by_stairs when camera is in room with stairs, or adjacent to one with stairs
 			if (stairs_or_ramp_visible) {camera_somewhat_by_stairs |= bool(room_or_adj_room_has_stairs(camera_room, camera_rot.z, 1));} // inc_adj_rooms=1
 		}
@@ -1418,18 +1424,19 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		} // end !player_in_elevator
 		float const light_radius(get_radius_for_room_light(*i)), cull_radius(0.95*light_radius);
 		
-		if (!camera_on_stairs && cull_if_not_by_stairs) { // test both proximity and line of sight
-			float const szmin(min(camera_z, lpos.z)), szmax(max(camera_z, lpos.z)); // stairs must span this range
+		if (cull_if_not_by_stairs && !camera_on_stairs) { // test both proximity and line of sight
+			vect_cube_t const &cuts(floor_is_above ? cuts_above : cuts_below);
+			point test_pt(lpos);
+			if (floor_is_below) {test_pt.z = floor_z;} // if light is below us, pick a point on the floor below it as this is more likely to be visible
 			bool maybe_visible(0);
 
-			for (cube_t const &s : vis_stairs_bcubes) { // check visible stairs/ramps
-				if (s.z1() > szmin || s.z2() < szmax) continue;
-				if (sphere_cube_intersect(lpos, cull_radius, s) || s.line_intersects(camera_bs, lpos)) {maybe_visible = 1; break;} // require either
+			for (cube_t const &s : cuts) { // check visible stairs/ramps
+				if (sphere_cube_intersect(lpos, cull_radius, s) || s.line_intersects(camera_bs, test_pt)) {maybe_visible = 1; break;} // require either
 			}
 			if (!maybe_visible && light_above_stairs) { // check for light shining down the stairs behind the player
-				for (cube_t const &s : nonvis_stairs_bcubes) {
-					if (s.z1() > szmin || s.z2() < szmax) continue;
-					if (sphere_cube_intersect(lpos, cull_radius, s) && s.line_intersects(camera_bs, lpos)) {maybe_visible = 1; break;} // require both; line int may be too strong
+				for (cube_t const &s : cuts_above_nonvis) {
+					// TODO: check player visibility of cube formed from rays passing through stairs cut
+					if (sphere_cube_intersect(lpos, cull_radius, s) && s.line_intersects(camera_bs, test_pt)) {maybe_visible = 1; break;} // require both; line int may be too strong
 				}
 			}
 			if (!maybe_visible) continue;
@@ -1581,7 +1588,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 
 			if (clipped_bc.contains_pt(camera_rot) || clipped_bc.contains_pt(point(camera_rot.x, camera_rot.y, player_feet_zval)) || player_on_ladder_this_room) {
 				// must update shadow maps for the room above if the player is on the stairs or in the same room when there are stairs
-				bool const check_floor_above(camera_on_stairs || (camera_by_stairs && camera_room == i->room_id));
+				bool const check_floor_above(camera_on_stairs || (camera_by_stairs && camera_room == (int)i->room_id));
 
 				if (is_lamp || player_on_ladder_this_room || (player_in_attic && is_in_attic) ||
 					(lpos_rot.z > player_feet_zval && (check_floor_above || lpos_rot.z < (camera_bs.z + window_vspacing))))
