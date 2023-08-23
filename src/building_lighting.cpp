@@ -1425,25 +1425,6 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			} // end camera on different floor case
 		} // end !player_in_elevator
 		float const light_radius(get_radius_for_room_light(*i)), cull_radius(0.95*light_radius);
-		
-		if (cull_if_not_by_stairs && !camera_on_stairs) { // test both proximity and line of sight
-			vect_cube_t const &cuts(floor_is_above ? cuts_above : cuts_below);
-			point test_pt(lpos);
-			if (floor_is_below) {test_pt.z = floor_z;} // if light is below us, pick a point on the floor below it as this is more likely to be visible
-			bool maybe_visible(0);
-
-			for (cube_t const &s : cuts) { // check visible stairs/ramps
-				if (sphere_cube_intersect(lpos, cull_radius, s) || s.line_intersects(camera_bs, test_pt)) {maybe_visible = 1; break;} // require either
-			}
-			if (!maybe_visible && light_above_stairs) { // check for light shining down the stairs behind the player
-				for (cube_t const &s : cuts_above_nonvis) {
-					// TODO: check player visibility of cube formed from rays passing through stairs cut
-					if (sphere_cube_intersect(lpos, cull_radius, s) && s.line_intersects(camera_bs, test_pt)) {maybe_visible = 1; break;} // require both; line int may be too strong
-				}
-			}
-			if (!maybe_visible) continue;
-		}
-		float const dshadow_radius((is_in_attic ? 1.0 : 0.8)*light_radius); // use full light radius for attics since they're more open
 		if (!camera_pdu.sphere_visible_test((lpos_rot + xlate), cull_radius)) continue; // VFC
 		// ext basement connector room must include the other building's ext basement, and it's simplest to just expand it by the max length of that room plus approx hallway width
 		bool const is_ext_conn_light(i->is_exterior());
@@ -1476,6 +1457,38 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			assert(0);
 		}
 		if (!is_rot_cube_visible(clipped_bc, xlate)) continue; // VFC
+		bool recheck_coll(0);
+
+		if (cull_if_not_by_stairs && !camera_on_stairs) { // test light visibility through stairs and ramp cuts
+			vect_cube_t const &cuts(floor_is_above ? cuts_above : cuts_below);
+			point test_pt(lpos);
+			if (floor_is_below) {test_pt.z = floor_z;} // if light is below us, pick a point on the floor below it as this is more likely to be visible
+			bool maybe_visible(0);
+			float const light_dist(p2p_dist(camera_bs, lpos_rot));
+
+			for (cube_t const &s : cuts) { // check visible stairs/ramps
+				if (s.line_intersects(camera_bs, test_pt)) {maybe_visible = 1; break;} // center visible through gap
+				float const z(floor_is_above ? s.z2() : s.z1());
+				point const pts[4] = {point(s.x1(), s.y1(), z), point(s.x2(), s.y1(), z), point(s.x2(), s.y2(), z), point(s.x1(), s.y2(), z)};
+
+				for (unsigned n = 0; n < 4; ++n) { // check if the ray through any corner of the gap hits the light bcube
+					vector3d const dir(pts[n] - camera_bs);
+					point const end_pt(camera_bs + dir*(light_dist/dir.mag()));
+					if (clipped_bc.line_intersects(camera_bs, end_pt)) {maybe_visible = 1; recheck_coll = 1; break;}
+				}
+				if (maybe_visible) break;
+			} // for s
+			if (!maybe_visible && light_above_stairs) { // check for light shining down the stairs behind or out of view of the player
+				for (cube_t const &s : cuts_above_nonvis) { // compute bcube of light rays through gap to the floor below
+					float const z(s.z2()), t((lpos.z - floor_below_zval)/(lpos.z - floor_z)); // slightly greater than 2.0
+					point const pts[4] = {point(s.x1(), s.y1(), z), point(s.x2(), s.y1(), z), point(s.x2(), s.y2(), z), point(s.x1(), s.y2(), z)};
+					cube_t vis_bcube(s);
+					for (unsigned n = 0; n < 4; ++n) {vis_bcube.union_with_pt(lpos + t*(pts[n] - lpos));}
+					if (is_rot_cube_visible(vis_bcube, xlate) && !((display_mode & 0x08) && check_obj_occluded(vis_bcube, camera_bs, oc, 0))) {maybe_visible = 1; break;}
+				} // for s
+			}
+			if (!maybe_visible) continue;
+		}
 		//if (line_intersect_walls(lpos, camera_rot)) continue; // straight line visibility test - for debugging, or maybe future use in assigning priorities
 		//if (check_cube_occluded(clipped_bc, interior->fc_occluders, camera_rot)) continue; // legal, but may not help much
 		bool const is_fully_broken(i->flags & RO_FLAG_BROKEN2);
@@ -1581,6 +1594,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		if (wall_light) {dir[i->dim] = (i->dir ? 1.0 : -1.0);} else {dir = -plus_z;} // points down, unless it's a wall light
 		dl_sources.emplace_back(light_radius, lpos_rot, lpos_rot, color, 0, dir, bwidth);
 		//++num_add;
+		float const dshadow_radius((is_in_attic ? 1.0 : 0.8)*light_radius); // use full light radius for attics since they're more open
 		bool force_smap_update(0);
 
 		// check for dynamic shadows
