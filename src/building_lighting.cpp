@@ -1188,7 +1188,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 	float const window_vspacing(get_window_vspace()), wall_thickness(get_wall_thickness()), fc_thick(get_fc_thickness());
 	float const camera_z(camera_bs.z), room_xy_expand(0.75*wall_thickness), player_feet_zval(camera_bs.z - get_bldg_player_height());
 	bool const check_building_people(enable_building_people_ai()), check_attic(camera_in_building && has_attic() && interior->attic_access_open);
-	bool const camera_in_basement(camera_z > ground_floor_z1), camera_in_ext_basement(camera_in_building && point_in_extended_basement_not_basement(camera_bs));
+	bool const camera_in_basement(camera_z < ground_floor_z1), camera_in_ext_basement(camera_in_building && point_in_extended_basement_not_basement(camera_bs));
 	bool const show_room_name(display_mode & 0x20); // debugging, key '6'
 	cube_t const &attic_access(interior->attic_access);
 	vect_cube_t &light_bcubes(interior->room_geom->light_bcubes);
@@ -1310,7 +1310,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		if (light_in_basement && camera_z > (ground_floor_z1 + window_vspacing)) continue; // basement lights only visible if player is on basement or ground floor
 		room_t const &room(get_room(i->room_id));
 		bool const in_ext_basement(room.is_ext_basement());
-		if (in_ext_basement && camera_in_basement)        continue; // light  in extended basement, and camera not in basement
+		if (in_ext_basement && !camera_in_basement)       continue; // light  in extended basement, and camera not in basement
 		if (camera_in_ext_basement && !light_in_basement) continue; // camera in extended basement, and light  not in basement
 		//if (is_light_occluded(lpos_rot, camera_bs))  continue; // too strong a test in general, but may be useful for selecting high importance lights
 		//if (!camera_in_building && i->is_interior()) continue; // skip interior lights when camera is outside the building: makes little difference, not worth the trouble
