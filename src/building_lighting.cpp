@@ -1178,6 +1178,22 @@ void expand_cube_zvals(cube_t &c, float z1, float z2) {
 	max_eq(c.z2(), z2);
 }
 
+bool check_cube_visible_through_cut(vect_cube_t const &cuts, cube_t const &light_bounds, point const &lpos, point const &camera_bs, float light_radius, bool floor_is_above) {
+	float const light_dist(p2p_dist(camera_bs, lpos)); // upper bound on line length
+
+	for (cube_t const &s : cuts) { // check visible stairs/ramps
+		float const z(floor_is_above ? s.z2() : s.z1());
+		point const pts[4] = {point(s.x1(), s.y1(), z), point(s.x2(), s.y1(), z), point(s.x2(), s.y2(), z), point(s.x1(), s.y2(), z)};
+
+		for (unsigned n = 0; n < 4; ++n) { // check if the ray through any corner of the gap hits the light bcube
+			vector3d const dir((pts[n] - camera_bs).get_norm());
+			if (!line_intersect_sphere(camera_bs, dir, lpos, light_radius)) continue; // test bsphere
+			if (light_bounds.line_intersects(camera_bs, (camera_bs + dir*light_dist))) return 1; // test bounds
+		}
+	} // for s
+	return 0;
+}
+
 // Note: non const because this caches light_bcubes
 void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bool camera_in_building,
 	occlusion_checker_noncity_t &oc, vect_cube_with_ix_t &ped_bcubes, cube_t &lights_bcube)
@@ -1461,22 +1477,15 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			point test_pt(lpos);
 			if (floor_is_below) {test_pt.z = floor_z;} // if light is below us, pick a point on the floor below it as this is more likely to be visible
 			bool maybe_visible(0);
-			float const light_dist(p2p_dist(camera_bs, lpos_rot));
 
 			for (cube_t const &s : cuts) { // check visible stairs/ramps
 				if (s.line_intersects(camera_bs, test_pt)) {maybe_visible = 1; break;} // center visible through gap
-				float const z(floor_is_above ? s.z2() : s.z1());
-				point const pts[4] = {point(s.x1(), s.y1(), z), point(s.x2(), s.y1(), z), point(s.x2(), s.y2(), z), point(s.x1(), s.y2(), z)};
+			}
+			if (!maybe_visible && check_cube_visible_through_cut(cuts, clipped_bc, lpos_rot, camera_bs, cull_radius, floor_is_above)) {maybe_visible = recheck_coll = 1;}
 
-				for (unsigned n = 0; n < 4; ++n) { // check if the ray through any corner of the gap hits the light bcube
-					vector3d const dir(pts[n] - camera_bs);
-					point const end_pt(camera_bs + dir*(light_dist/dir.mag()));
-					if (clipped_bc.line_intersects(camera_bs, end_pt)) {maybe_visible = 1; recheck_coll = 1; break;}
-				}
-				if (maybe_visible) break;
-			} // for s
 			if (!maybe_visible && light_above_stairs) { // check for light shining down the stairs behind or out of view of the player
 				for (cube_t const &s : cuts_above_nonvis) { // compute bcube of light rays through gap to the floor below
+					if (!dist_less_than(s.get_cube_center(), lpos, cull_radius)) continue; // light not near this cut
 					float const z(s.z2()), t((lpos.z - floor_below_zval)/(lpos.z - floor_z)); // slightly greater than 2.0
 					point const pts[4] = {point(s.x1(), s.y1(), z), point(s.x2(), s.y1(), z), point(s.x2(), s.y2(), z), point(s.x1(), s.y2(), z)};
 					cube_t vis_bcube(s);
@@ -1526,7 +1535,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		}
 		colorRGBA color;
 		unsigned shadow_caster_hash(0);
-		bool lamp_was_moved(0);
+		bool lamp_was_moved(0), was_refined(0);
 
 		if (is_lamp) { // no light refinement, since lamps are not aligned between floors; refinement doesn't help as much with houses anyway
 			if (i->obj_id == 0) { // this lamp has not yet been assigned a light bcube (ID 0 will never be valid because the bedroom will have a light assigned first)
@@ -1567,6 +1576,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 					bool const is_parking_garage(light_in_basement && has_parking_garage && !in_ext_basement);
 					refine_light_bcube(lpos, light_radius, room, light_bcube, is_parking_garage); // incorrect for rotated buildings?
 				}
+				was_refined     = (light_bcube.get_area_xy() < clipped_bc.get_area_xy());
 				clipped_bc.x1() = light_bcube.x1(); clipped_bc.x2() = light_bcube.x2(); // copy X/Y but keep orig zvals
 				clipped_bc.y1() = light_bcube.y1(); clipped_bc.y2() = light_bcube.y2();
 				clipped_bc.expand_by_xy(light_bcube_expand);
@@ -1582,6 +1592,10 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 				had_invalid_light_bcube_warning = 1;
 			}
 			continue; // can fail in rare cases when very far from the origin, likely due to FP error, so skip light in this case
+		}
+		if (recheck_coll && was_refined) { // test on refined bcube
+			vect_cube_t const &cuts(floor_is_above ? cuts_above : cuts_below);
+			if (!check_cube_visible_through_cut(cuts, clipped_bc, lpos_rot, camera_bs, cull_radius, floor_is_above)) continue;
 		}
 		if (!is_rot_cube_visible(clipped_bc, xlate)) continue; // VFC - post clip
 		if ((display_mode & 0x08) && !clipped_bc.contains_pt(camera_rot) && check_obj_occluded(clipped_bc, camera_bs, oc, 0)) continue; // occlusion culling (expensive)
