@@ -14,6 +14,7 @@ extern building_t const *player_building;
 
 bool using_hmap_with_detail();
 cube_t get_stairs_bcube_expanded(stairwell_t const &s, float ends_clearance, float sides_clearance, float doorway_width);
+bool get_fire_ext_height_and_radius(float window_vspacing, float &height, float &radius);
 
 
 bool building_t::extend_underground_basement(rand_gen_t rgen) {
@@ -913,6 +914,33 @@ void building_t::add_backrooms_objs(rand_gen_t rgen, room_t &room, float zval, u
 			add_boxes_to_room(rgen, sub_room, zval, room_id, tot_light_amt, objs_start, max_num_boxes);
 		}
 	} // for r
+
+	// maybe add a fire extinguisher to a random wall
+	float fe_height(0.0), fe_radius(0.0);
+
+	if (get_fire_ext_height_and_radius(floor_spacing, fe_height, fe_radius)) { // add a fire extinguisher on the wall
+		unsigned const num_fire_ext(1 + (rgen.rand() % 3)); // 1-3
+
+		for (unsigned N = 0; N < num_fire_ext; ++N) {
+			for (unsigned n = 0; n < 10; ++n) { // make 10 tries
+				bool const dim(rgen.rand_bool()); // choose a random wall dim
+				vect_cube_t const &walls(walls_per_dim[dim]);
+				if (walls.empty()) continue;
+				cube_t const &wall(walls[rgen.rand() % walls.size()]);
+				float const min_clearance(2.0*fe_radius), wall_pos_lo(wall.d[!dim][0] + min_clearance), wall_pos_hi(wall.d[!dim][1] - min_clearance);
+				if (wall_pos_lo >= wall_pos_hi) continue; // wall too short
+				bool const dir(rgen.rand_bool()); // random, but the same across all floors
+				float const wall_edge(wall.d[dim][!dir]), val(rgen.rand_uniform(wall_pos_lo, wall_pos_hi));
+				cube_t bounds(wall);
+				set_wall_width(bounds, val, fe_radius, !dim);
+				bounds.d[dim][!dir] = wall_edge + (dir ? -1.0 : 1.0)*0.1*wall_thickness; // move slightly away from wall to avoid colliding with it
+				bounds.d[dim][ dir] = wall_edge + (dir ? -1.0 : 1.0)*2.0*fe_radius; // outer edge
+				if (overlaps_other_room_obj(bounds, objs_start) || is_obj_placement_blocked(bounds, true_room, 1, 0)) continue; // inc_open_doors=1, check_open_dir=0
+				add_fire_ext(fe_height, fe_radius, zval, wall_edge, val, room_id, tot_light_amt, dim, dir);
+				break; // done
+			} // for n
+		} // for N
+	}
 
 	// Add occasional random items/furniture: chairs, office chairs, boxes, crates, balls, etc.
 	unsigned const num_chairs(rgen.rand() % 5); // 0-4

@@ -1984,6 +1984,43 @@ bool building_t::add_laundry_objs(rand_gen_t rgen, room_t const &room, float zva
 	return 0; // failed
 }
 
+bool get_fire_ext_height_and_radius(float window_vspacing, float &height, float &radius) {
+	if (!building_obj_model_loader.is_model_valid(OBJ_MODEL_FIRE_EXT)) return 0;
+	vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_FIRE_EXT)); // D, W, H
+	height = 0.16*window_vspacing;
+	radius = height*(0.5*(sz.x + sz.y)/sz.z);
+	return 1;
+}
+void building_t::add_fire_ext(float height, float radius, float zval, float wall_edge, float pos_along_wall, unsigned room_id, float tot_light_amt, bool dim, bool dir) {
+	float const window_vspacing(get_window_vspace()), dir_sign(dir ? -1.0 : 1.0);
+	point pos(0.0, 0.0, (zval + 0.32*window_vspacing)); // bottom position
+	pos[ dim] = wall_edge + dir_sign*radius; // radius away from the wall
+	pos[!dim] = pos_along_wall;
+
+	vect_room_object_t &objs(interior->room_geom->objs);
+	// add fire extinguisher
+	cube_t fe_bcube(pos, pos);
+	fe_bcube.expand_by_xy(radius);
+	fe_bcube.z2() += height;
+	objs.emplace_back(fe_bcube, TYPE_FIRE_EXT, room_id, !dim, (dir ^ dim), RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CYLIN); // mounted sideways
+	// add the wall mounting bracket; what about adding a small box with a door that contains the fire extinguisher?
+	cube_t wall_mount(fe_bcube);
+	wall_mount.expand_in_dim(!dim, -0.52*radius);
+	wall_mount.translate_dim(!dim, ((dim ^ dir ^ 1) ? 1.0 : -1.0)*0.24*radius); // shift to line up with FE body
+	wall_mount.d[dim][ dir]  = wall_edge; // extend to touch the wall
+	wall_mount.d[dim][!dir] -= dir_sign*0.8*radius; // move inward
+	wall_mount.z1() -= 0.02*height; // under the fire extinguisher
+	wall_mount.z2() -= 0.30*height;
+	objs.emplace_back(wall_mount, TYPE_FEXT_MOUNT, room_id, dim, !dir, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CUBE, GRAY_BLACK);
+	// add the sign
+	cube_t sign;
+	sign.d[dim][ dir] = wall_edge; // extend to touch the wall
+	sign.d[dim][!dir] = wall_edge + dir_sign*0.05*radius;
+	set_cube_zvals(sign, (zval + 0.65*window_vspacing), (zval + 0.80*window_vspacing));
+	set_wall_width(sign, wall_mount.get_center_dim(!dim), 0.5*radius, !dim); // line up with wall bracket
+	objs.emplace_back(sign, TYPE_FEXT_SIGN, room_id, dim, !dir, RO_FLAG_NOCOLL, tot_light_amt);
+}
+
 void building_t::add_pri_hall_objs(rand_gen_t rgen, rand_gen_t room_rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned floor_ix) {
 	bool const long_dim(room.dx() < room.dy());
 	float const window_vspacing(get_window_vspace());
@@ -2024,50 +2061,27 @@ void building_t::add_pri_hall_objs(rand_gen_t rgen, rand_gen_t room_rgen, room_t
 			} // for dir
 		}
 	}
-	if (building_obj_model_loader.is_model_valid(OBJ_MODEL_FIRE_EXT)) { // add a fire extinguisher on the wall
-		vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_FIRE_EXT)); // D, W, H
-		float const fe_height(0.16*window_vspacing), fe_radius(fe_height*(0.5*(sz.x + sz.y)/sz.z)), min_clearance(2.0*fe_radius);
-		float const wall_pos_lo(room.d[long_dim][0] + min_clearance), wall_pos_hi(room.d[long_dim][1] - min_clearance);
+	float fe_height(0.0), fe_radius(0.0);
+
+	if (get_fire_ext_height_and_radius(window_vspacing, fe_height, fe_radius)) { // add a fire extinguisher on the wall
+		float const min_clearance(2.0*fe_radius), wall_pos_lo(room.d[long_dim][0] + min_clearance), wall_pos_hi(room.d[long_dim][1] - min_clearance);
 
 		if (wall_pos_lo < wall_pos_hi) { // should always be true?
 			bool const dir(room_rgen.rand_bool()); // random, but the same across all floors
-			float const dir_sign(dir ? -1.0 : 1.0), wall_pos(room.d[!long_dim][dir] + dir_sign*0.5*get_wall_thickness());
-			point fe_pos(0.0, 0.0, (zval + 0.32*window_vspacing)); // bottom position
-			fe_pos[!long_dim] = wall_pos + dir_sign*fe_radius; // radius away from the wall
+			float const wall_pos(room.d[!long_dim][dir] + (dir ? -1.0 : 1.0)*0.5*get_wall_thickness());
 
 			for (unsigned n = 0; n < 20; ++n) { // make 20 attempts at placing a fire extinguisher
 				float const val(room_rgen.rand_uniform(wall_pos_lo, wall_pos_hi)), cov_lo(val - min_clearance), cov_hi(val + min_clearance);
-				fe_pos[long_dim] = val;
 				bool contained_in_wall(0);
 
 				for (cube_t const &wall : interior->walls[!long_dim]) {
 					if (wall.d[!long_dim][0] > wall_pos || wall.d[!long_dim][1] < wall_pos) continue; // not on the correct side of this hallway
 					if (wall.d[ long_dim][0] > cov_lo   || wall.d[ long_dim][1] < cov_hi  ) continue; // range not covered
-					if (wall.z1() > fe_pos.z || wall.z2() < fe_pos.z) continue; // wrong zval/floor
+					if (wall.z1() > zval || wall.z2() < zval) continue; // wrong zval/floor
 					contained_in_wall = 1; break;
 				}
 				if (contained_in_wall) { // shouldn't need to check anything else?
-					// add fire extinguisher
-					cube_t fe_bcube(fe_pos, fe_pos);
-					fe_bcube.expand_by_xy(fe_radius);
-					fe_bcube.z2() += fe_height;
-					objs.emplace_back(fe_bcube, TYPE_FIRE_EXT, room_id, long_dim, (dir ^ long_dim ^ 1), RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CYLIN); // mounted sideways
-					// add the wall mounting bracket; what about adding a small box with a door that contains the fire extinguisher?
-					cube_t wall_mount(fe_bcube);
-					wall_mount.expand_in_dim(long_dim, -0.52*fe_radius);
-					wall_mount.translate_dim(long_dim, ((long_dim ^ dir) ? 1.0 : -1.0)*0.24*fe_radius); // shift to line up with FE body
-					wall_mount.d[!long_dim][ dir]  = wall_pos; // extend to touch the wall
-					wall_mount.d[!long_dim][!dir] -= dir_sign*0.8*fe_radius; // move inward
-					wall_mount.z1() -= 0.02*fe_height; // under the fire extinguisher
-					wall_mount.z2() -= 0.30*fe_height;
-					objs.emplace_back(wall_mount, TYPE_FEXT_MOUNT, room_id, !long_dim, !dir, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CUBE, GRAY_BLACK);
-					// add the sign
-					cube_t sign;
-					sign.d[!long_dim][ dir] = wall_pos; // extend to touch the wall
-					sign.d[!long_dim][!dir] = wall_pos + dir_sign*0.05*fe_radius;
-					set_cube_zvals(sign, (zval + 0.65*window_vspacing), (zval + 0.8*window_vspacing));
-					set_wall_width(sign, val, 0.5*fe_radius, long_dim);
-					objs.emplace_back(sign, TYPE_FEXT_SIGN, room_id, !long_dim, !dir, RO_FLAG_NOCOLL, tot_light_amt);
+					add_fire_ext(fe_height, fe_radius, zval, wall_pos, val, room_id, tot_light_amt, !long_dim, dir);
 					break; // done/success
 				}
 			} // for n
