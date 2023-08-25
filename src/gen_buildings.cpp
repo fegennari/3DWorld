@@ -3305,7 +3305,7 @@ public:
 
 		// everything after this point is part of the building exteriors and uses city lights rather than building room lights;
 		// when the player is in the extended basement we still need to draw the exterior wall and door
-		if ((player_in_basement >= 2) || player_in_attic || (reflection_pass && (!DRAW_EXT_REFLECTIONS || reflection_pass != 3)) || player_in_windowless_building()) {
+		if ((reflection_pass && (!DRAW_EXT_REFLECTIONS || reflection_pass != 3)) || player_cant_see_outside_building()) {
 			// early exit for player fully in basement or attic, or house reflections, if enabled
 			fgPopMatrix();
 			enable_dlight_bcubes = 0;

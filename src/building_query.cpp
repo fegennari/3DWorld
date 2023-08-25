@@ -26,15 +26,37 @@ bool get_sphere_poly_int_val(point const &sc, float sr, point const *const point
 
 // assumes player is in this building; handles windows and exterior doors but not attics and basements
 bool building_t::player_can_see_outside() const {
-	if (player_building->has_windows()) return 1; // maybe can see out window
-	if (building_has_open_ext_door && !doors.empty()) return 1; // maybe can see out open door
+	point const camera_pos(get_camera_pos());
+
+	if (!player_building->has_windows()) { // no windows
+		// should we check if the door is visible?
+		if (building_has_open_ext_door && !doors.empty() && camera_pos.z < (ground_floor_z1 + get_window_vspace())) return 1; // maybe can see out open door on first floor
+		return 0;
+	}
+	// maybe can see out a window
+	if (!interior || !has_basement() || camera_pos.z > ground_floor_z1) return 1; // no interior, or not in the basement
+	float const floor_spacing(get_window_vspace());
+	if (camera_pos.z < ground_floor_z1 - floor_spacing) return 0; // on lower level of parking garage or extended basement
+	vector3d const xlate(get_tiled_terrain_model_xlate());
+	point const camera_bs(camera_pos - xlate);
+	if (point_in_extended_basement_not_basement(camera_bs)) return 0; // not visible from extended basement; not for rotated buildings
+	//if (is_house && !basement_door.open) return 0;
+
+	for (auto const &s : interior->stairwells) { // check basement stairs
+		if (s.z1() >= ground_floor_z1 || s.z2() <= ground_floor_z1) continue; // not basement stairs
+		if (!is_rot_cube_visible(s, xlate)) continue; // VFC
+		if (!has_parking_garage) return 1; // assume exterior may be visible through normal stairs, but not parking garage stairs
+		cube_t stairs_exp(s);
+		stairs_exp.expand_by_xy(floor_spacing);
+		if (!get_basement().contains_cube_xy(stairs_exp)) return 1; // stairs near the edge of the building basement - window may be visible
+	} // for s
+	if (has_pg_ramp() && !interior->ignore_ramp_placement) {} // what about ramp?
 	return 0;
 }
 bool player_in_windowless_building() {return (player_building != nullptr && !player_building->player_can_see_outside());}
 
 bool player_cant_see_outside_building() {
 	if (player_in_basement >= 3 || player_in_attic) return 1; // player in extended basement or attic
-	if (player_in_basement == 2 && player_building != nullptr && player_building->has_parking_garage) return 1; // player in parking garage
 	if (player_in_windowless_building()) return 1;
 	return 0;
 }
