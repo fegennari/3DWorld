@@ -1260,10 +1260,8 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 				}
 			}
 			for (cube_t const &s : stair_ramp_cuts) {
-				if (s.contains_pt(camera_rot)) { // player on this stairs or ramp
-					camera_on_stairs = camera_by_stairs = camera_somewhat_by_stairs = 1;
-					continue;
-				}
+				if (s.contains_pt(camera_rot)) {camera_on_stairs = stairs_or_ramp_visible = camera_by_stairs = camera_somewhat_by_stairs = 1;} // player on this stairs or ramp
+
 				if (s.z2() >= floor_above_z) { // cut above
 					cube_t cut(s);
 					set_cube_zvals(cut, ceil_above_z, floor_above_z);
@@ -1279,8 +1277,6 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 					stairs_or_ramp_visible |= visible;
 				}
 			} // for s
-			//cout << stair_ramp_cuts.size() << " " << cuts_below.size() << " " << cuts_above.size() << " " << cuts_above_nonvis.size() << endl; // TESTING
-			if (camera_on_stairs) {stairs_or_ramp_visible = 1;}
 			// set camera_somewhat_by_stairs when camera is in room with stairs, or adjacent to one with stairs
 			if (stairs_or_ramp_visible) {camera_somewhat_by_stairs |= bool(room_or_adj_room_has_stairs(camera_room, camera_rot.z, 1));} // inc_adj_rooms=1
 		}
@@ -1340,7 +1336,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		else                       {ceil_z = (level_z + window_vspacing - fc_thick);} // normal room light
 		float const floor_below_zval(floor_z - window_vspacing), ceil_above_zval(ceil_z + window_vspacing);
 		// Note: we use level_z rather than floor_z for floor_is_above test so that it agrees with the threshold logic for player_in_basement
-		bool const floor_is_above((camera_z < level_z) && !is_single_floor), floor_is_below(camera_z > ceil_z);
+		bool const floor_is_above((camera_z < level_z) && !is_single_floor), floor_is_below(camera_z > (ceil_z + fc_thick)); // check floor_ix transition points
 		if (!is_house && floor_is_below && in_ext_basement && !camera_in_ext_basement && lpos.z   < get_basement().z1()) continue; // light in lower level extb, player not in extb
 		if (!is_house && floor_is_above && !in_ext_basement && camera_in_ext_basement && camera_z < get_basement().z1()) continue; // player in lower level extb, light not in extb
 		bool const camera_in_room_part_xy(parts[room.part_id].contains_pt_xy(camera_rot));
@@ -1472,7 +1468,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		if (!is_rot_cube_visible(clipped_bc, xlate)) continue; // VFC
 		bool recheck_coll(0);
 
-		if (cull_if_not_by_stairs && !camera_on_stairs) { // test light visibility through stairs and ramp cuts
+		if (cull_if_not_by_stairs) { // test light visibility through stairs and ramp cuts
 			vect_cube_t const &cuts(floor_is_above ? cuts_above : cuts_below);
 			point test_pt(lpos);
 			if (floor_is_below) {test_pt.z = floor_z;} // if light is below us, pick a point on the floor below it as this is more likely to be visible
