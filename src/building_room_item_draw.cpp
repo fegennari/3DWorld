@@ -1813,8 +1813,7 @@ bool building_t::check_obj_occluded(cube_t const &c, point const &viewer_in, occ
 					if (pgbr_wall_ixs.empty()) {end = index_pair_t(interior->room_geom->pgbr_walls);} // not using indices, so use full range
 					else {end = pgbr_wall_ixs.front();} // ends at first index (backrooms)
 				}
-				else { // inside backrooms
-					assert(has_ext_basement());
+				else if (has_ext_basement() && interior->basement_ext_bcube.contains_pt(viewer)) { // inside backrooms
 					unsigned const floor_ix((viewer.z - interior->basement_ext_bcube.z1())/floor_spacing); // floor containing the viewer
 
 					if (floor_ix+1 < pgbr_wall_ixs.size()) { // if outside the valid floor range, start==end, the range will be empty, and we skip all walls
@@ -1822,6 +1821,8 @@ bool building_t::check_obj_occluded(cube_t const &c, point const &viewer_in, occ
 						end   = pgbr_wall_ixs[floor_ix+1];
 					}
 				}
+				// else in cases where we clipped under the building the range will be empty and there will be no occlusion
+
 				for (unsigned D = 0; D < 2; ++D) {
 					bool const d(bool(D) ^ pri_dim); // try primary dim first
 					vect_cube_t const &walls(interior->room_geom->pgbr_walls[d]);
