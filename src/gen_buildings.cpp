@@ -3123,6 +3123,7 @@ public:
 							if (ext_basement_conn_visible && animate2) {b.update_player_interact_objects(camera_xlated);} // need to at least update door open/close state
 							continue;
 						}
+						// we should get here for at most one building
 						// pass in camera pos to only include the part that contains the camera to avoid drawing artifacts when looking into another part of the building
 						// neg offset to move windows on the inside of the building's exterior wall;
 						// since there are no basement windows, we should treat the player as being in the part above so that windows are drawn correctly through the basement stairs
@@ -3135,9 +3136,9 @@ public:
 						per_bcs_exclude[bcs_ix] = b.ext_side_qv_range;
 						if (reflection_pass) continue; // don't execute the code below
 						if (display_mode & 0x20) {b.debug_people_in_building(s);} // debug visualization
-						this_frame_camera_in_building  = 1;
-						this_frame_player_in_basement |= b.check_player_in_basement(camera_xlated - vector3d(0.0, 0.0, BASEMENT_ENTRANCE_SCALE*b.get_floor_thickness())); // only set once
-						this_frame_player_in_attic    |= b.point_in_attic(camera_xlated);
+						this_frame_camera_in_building = 1;
+						this_frame_player_in_basement = b.check_player_in_basement(camera_xlated - vector3d(0.0, 0.0, BASEMENT_ENTRANCE_SCALE*b.get_floor_thickness())); // only set once
+						this_frame_player_in_attic    = b.point_in_attic(camera_xlated);
 						// player can only be in one basement or attic, except for extended basement connector rooms;
 						// be conservative and don't break if the player is in the basement and this building has any connections to other basements
 						can_break_from_loop |= ((this_frame_player_in_basement >= 2 && !b.has_conn_info()) || this_frame_player_in_attic);

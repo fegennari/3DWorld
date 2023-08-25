@@ -1915,14 +1915,16 @@ bool building_t::is_cube_contained_in_parts(cube_t const &c) const {
 
 // returns: 0=not in basement, 1=on basement stairs, 2=fully in basement, 3=in extended basement
 int building_t::check_player_in_basement(point const &pos) const {
-	if (!is_pos_in_basement(pos))                     return 0;
-	if (point_in_extended_basement_not_basement(pos)) return 3;
+	point pos_rot(pos);
+	maybe_inv_rotate_point(pos_rot); // rotate pos into building space
+	if (!is_pos_in_basement(pos_rot))                     return 0;
+	if (point_in_extended_basement_not_basement(pos_rot)) return 3;
 	
-	if (interior && (pos.z - get_bldg_player_height()) > (ground_floor_z1 - get_window_vspace())) { // only need to check if on the top floor of the basement
+	if (interior && (pos_rot.z - get_bldg_player_height()) > (ground_floor_z1 - get_window_vspace())) { // only need to check if on the top floor of the basement
 		for (auto const &s : interior->stairwells) {
-			if (s.contains_pt(pos)) return 1; // player on stairs, upper floor and windows/outside may be visible
+			if (s.contains_pt(pos_rot)) return 1; // player on stairs, upper floor and windows/outside may be visible
 		}
-		if (has_pg_ramp() && interior->pg_ramp.contains_pt(pos)) return 1;
+		if (has_pg_ramp() && interior->pg_ramp.contains_pt(pos_rot)) return 1;
 	}
 	return 2; // player in basement but not on stairs or ramp
 }
