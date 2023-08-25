@@ -17,7 +17,7 @@ void main() {
 #ifdef ENABLE_VERTEX_CLIP
 	vec2 v = fg_Vertex.xy + xlate.xy; // Note: using original vertex rather than wind modified 'vertex' avoids flowers stretching in the wind when near a building
 	if ((v.x > clip_box1.x && v.y > clip_box1.y && v.x < clip_box1.z && v.y < clip_box1.w) ||
-	    (v.x > clip_box2.x && v.y > clip_box2.y && v.x < clip_box2.z && v.y < clip_box2.w)) {vertex.z -= height;}
+	    (v.x > clip_box2.x && v.y > clip_box2.y && v.x < clip_box2.z && v.y < clip_box2.w)) {vertex.z -= 1.1*height;} // translate slightly more than height to account for wind
 #endif
 	epos         = fg_ModelViewMatrix * (vertex + vec4(xlate, 0.0, 0.0));
 	gl_Position  = fg_ProjectionMatrix * epos;

@@ -22,7 +22,7 @@ void main() {
 #ifdef ENABLE_VERTEX_CLIP
 	vec2 v = vertex.xy + xlate.xy;
 	if ((v.x > clip_box1.x && v.y > clip_box1.y && v.x < clip_box1.z && v.y < clip_box1.w) ||
-	    (v.x > clip_box2.x && v.y > clip_box2.y && v.x < clip_box2.z && v.y < clip_box2.w)) {vertex.z -= height;}
+	    (v.x > clip_box2.x && v.y > clip_box2.y && v.x < clip_box2.z && v.y < clip_box2.w)) {vertex.z -= 1.1*height;} // translate slightly more than height to account for wind
 #endif
 	float z_val = texture(height_tex, vec2((vertex.x - x1)*dx_inv, (vertex.y - y1)*dy_inv)).r;
 	float ascale= 1.0;
