@@ -596,8 +596,10 @@ void building_t::add_backrooms_objs(rand_gen_t rgen, room_t &room, float zval, u
 	// find any stairs in this room and add to both wall blockers
 	for (stairwell_t const &s : interior->stairwells) {
 		if (s.z1() >= ceiling_z || s.z2() <= zval) continue; // wrong floor
-		cube_t const stairs_bcube(get_stairs_bcube_expanded(s, doorway_width, wall_thickness, doorway_width));
+		cube_t stairs_bcube(get_stairs_bcube_expanded(s, doorway_width, wall_thickness, doorway_width));
 		if (!room.intersects(stairs_bcube)) continue;
+		bool const dir(rgen.rand_bool());
+		stairs_bcube.d[s.dim][dir] += (dir ? 1.0 : -1.0)*(doorway_width - wall_thickness); // add an extra doorway width gap on a random side to avoid blocking a hallway
 		pillar_avoid.push_back(stairs_bcube);
 		for (unsigned d = 0; d < 2; ++d) {blockers_per_dim[d].push_back(stairs_bcube);}
 	}
