@@ -799,7 +799,20 @@ void building_t::add_backrooms_objs(rand_gen_t rgen, room_t &room, float zval, u
 		} // for d
 		for (unsigned gix = 0; gix < space_groups.size(); ++gix) {
 			vect_cube_t const &group(space_groups[gix]);
-			if (group.size() != 1) continue;
+			
+			if (group.size() != 1) {
+				if (group.size() < space.size()/8) { // small area, but not a single rectangle; still may need to add room light
+					float tot_area(0.0);
+					cube_t group_bounds;
+
+					for (cube_t const &c : group) {
+						group_bounds.assign_or_union_with_cube(c);
+						tot_area += c.get_area_xy();
+					}
+					if (tot_area > 0.5*group_bounds.get_area_xy() && tot_area < 0.1*room.get_area_xy()) {rooms_to_light.push_back(group_bounds);}
+				}
+				continue;
+			}
 			cube_t sub_room(group.front());
 			sub_room.intersect_with_cube(true_room); // can't go outside the backrooms (under-over can move exterior walls)
 
