@@ -1495,9 +1495,10 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 				float const delay_mult(i->is_open() ? off_amt : on_amt);
 				i->light_amt = tfticks + flicker_time_secs*TICKS_PER_SECOND*delay_mult; // schedule time for next transition
 				i->flags    ^= RO_FLAG_OPEN;
-				// regenerate lights geometry (can be somewhat slow); only update if player is below the level of the light;
-				// skip for backrooms and parking garages since a single light has little effect on the overall room light level
-				if (camera_bs.z < i->z2() && !(light_in_basement && has_parking_garage)) {interior->room_geom->invalidate_lights_geom();}
+				// regenerate lights geometry (can be somewhat slow); only update if player is below the level of the light and the light itself is visible
+				if (camera_bs.z < i->z2() && is_rot_cube_visible(*i, xlate) && !((display_mode & 0x08) && check_obj_occluded(*i, camera_bs, oc, 0))) {
+					interior->room_geom->invalidate_lights_geom();
+				}
 			}
 			// emit sparks only if player in building, which should be true since we shouldn't get here otherwise
 			if (animate2 && is_fully_broken && camera_in_building && rgen.rand_float() < 22*fticks/TICKS_PER_SECOND) { // 22/s
