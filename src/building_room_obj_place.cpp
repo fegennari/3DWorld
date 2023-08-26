@@ -2359,7 +2359,13 @@ bool building_t::add_rug_to_room(rand_gen_t rgen, cube_t const &room, float zval
 
 			if (rug.is_strictly_normalized()) {
 				objs.emplace_back(rug, TYPE_RUG, room_id, 0, 0, RO_FLAG_NOCOLL, tot_light_amt);
-				objs.back().obj_id = uint16_t(objs.size() + 13*room_id + 31*mat_ix); // determines rug texture
+				room_object_t &rug_obj(objs.back());
+				rug_obj.obj_id = uint16_t(objs.size() + 13*room_id + 31*mat_ix); // determines rug texture
+				
+				// don't use the same texture as a blanket because that looks odd
+				for (auto i = objs.begin()+objs_start; i != objs.end(); ++i) {
+					if (i->type == TYPE_BLANKET && i->get_rug_tid() == rug_obj.get_rug_tid()) {++rug_obj.obj_id;} // select a different texture
+				}
 				return 1;
 			}
 		}

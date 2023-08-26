@@ -2080,7 +2080,6 @@ void building_room_geom_t::add_rug(room_object_t const &c) {
 
 void building_room_geom_t::add_blanket(room_object_t const &c) {
 	bool const swap_tex_st(c.dy() < c.dx()); // same as rug
-	// TODO: use different textures
 	get_material(tid_nm_pair_t(c.get_rug_tid(), 0.0), 0, 0, 1).add_cube_to_verts(c, c.color, c.get_llc(), ~EF_Z2, swap_tex_st); // only draw top/+z face; small=1
 }
 
