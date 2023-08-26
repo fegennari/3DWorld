@@ -759,6 +759,7 @@ public:
 
 		if (in_ext_basement) { // extended basement
 			light_bounds = valid_area;
+			set_cube_zvals(light_bounds, b.interior->basement_ext_bcube.z1(), b.interior->basement_ext_bcube.z2()); // cover the entire extended basement range
 			// very high aspect ratio cubes cause banding artifacts in lighting, so increase the height if needed to avoid this;
 			// note that there's significant loss of vertical resolution, though lighting should be a bit faster
 			max_eq(light_bounds.z2(), (light_bounds.z1() + 0.25f*max(light_bounds.dx(), light_bounds.dy())));
