@@ -1620,7 +1620,7 @@ template<bool check_sz, typename T> bool are_pts_occluded_by_any_cubes(point con
 template<bool check_sz, typename T> bool are_pts_occluded_by_any_cubes(point const &pt, point const *const pts, unsigned npts,
 	cube_t const &occ_area, vector<T> const &cubes, unsigned dim, float min_sz=0.0, float max_sep_dist=0.0)
 {
-	return are_pts_occluded_by_any_cubes<check_sz, vector<T>::const_iterator>(pt, pts, npts, occ_area, cubes.begin(), cubes.end(), dim, min_sz, max_sep_dist);
+	return are_pts_occluded_by_any_cubes<check_sz>(pt, pts, npts, occ_area, cubes.begin(), cubes.end(), dim, min_sz, max_sep_dist);
 }
 
 car_t car_from_parking_space(room_object_t const &o) {
