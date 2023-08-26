@@ -109,13 +109,11 @@ unsigned calc_num_floors_room(room_t const &r, float window_vspacing, float floo
 
 void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 
-	assert(interior);
-	if (interior->room_geom) return; // already generated?
+	assert(has_room_geom());
 	setup_bldg_obj_types(); // initialize object types if not already done
 	//highres_timer_t timer("Gen Room Details");
 	// Note: people move from room to room, so using their current positions for room object generation is both nondeterministic and unnecessary
 	vect_cube_t blockers, valid_lights; // blockers are used for fireplaces
-	interior->room_geom.reset(new building_room_geom_t(bcube.get_llc()));
 	vect_room_object_t &objs(interior->room_geom->objs);
 	vector<room_t> &rooms(interior->rooms);
 	float const window_vspacing(get_window_vspace()), floor_thickness(get_floor_thickness()), fc_thick(0.5*floor_thickness);

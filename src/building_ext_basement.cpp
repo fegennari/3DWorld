@@ -783,6 +783,7 @@ void building_t::add_backrooms_objs(rand_gen_t rgen, room_t &room, float zval, u
 					cube_t wall2;
 					bool const make_unlocked = 1; // makes exploring easier
 					bool const make_closed   = 1; // makes it easier to tell if the door has been used
+					// this should add one door and one door stack
 					remove_section_from_cube_and_add_door(wall, wall2, door.d[!dim][0], door.d[!dim][1], !dim, open_dir, 0, make_unlocked, make_closed); // is_bathroom=0
 					walls_to_add.push_back(wall2); // keep high side as it won't be used with any other doors
 					// add a blocker so that no ceiling lights are placed in the path of this door

@@ -1240,6 +1240,10 @@ void building_t::gen_and_draw_room_geom(brg_batch_draw_t *bbd, shader_t &s, shad
 		if (!any_part_visible) return;
 	}
 	if (!has_room_geom()) {
+		interior->room_geom.reset(new building_room_geom_t(bcube.get_llc()));
+		// capture state before generating backrooms, which may add more doors
+		interior->room_geom->init_num_doors   = interior->doors      .size();
+		interior->room_geom->init_num_dstacks = interior->door_stacks.size();
 		rand_gen_t rgen;
 		rgen.set_state(building_ix, parts.size()); // set to something canonical per building
 		gen_room_details(rgen, building_ix); // generate so that we can draw it
@@ -1251,6 +1255,11 @@ void building_t::gen_and_draw_room_geom(brg_batch_draw_t *bbd, shader_t &s, shad
 void building_t::clear_room_geom() {
 	if (!has_room_geom()) return;
 	if (interior->room_geom->modified_by_player) return; // keep the player's modifications and don't delete the room geom
+	// restore pre-room_geom door state by removing any doors added to backrooms
+	assert(interior->room_geom->init_num_doors   <= interior->doors      .size());
+	assert(interior->room_geom->init_num_dstacks <= interior->door_stacks.size());
+	interior->doors      .resize(interior->room_geom->init_num_doors  );
+	interior->door_stacks.resize(interior->room_geom->init_num_dstacks);
 	interior->room_geom->clear(); // free VBO data before deleting the room_geom object
 	interior->room_geom.reset();
 }
