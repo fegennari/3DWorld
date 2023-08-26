@@ -40,11 +40,11 @@ bool building_t::player_can_see_outside() const {
 	vector3d const xlate(get_tiled_terrain_model_xlate());
 	point const camera_bs(camera_pos - xlate);
 	if (point_in_extended_basement_not_basement(camera_bs)) return 0; // not visible from extended basement; not for rotated buildings
-	//if (is_house && !basement_door.open) return 0;
 
 	for (auto const &s : interior->stairwells) { // check basement stairs
 		if (s.z1() >= ground_floor_z1 || s.z2() <= ground_floor_z1) continue; // not basement stairs
 		if (!is_rot_cube_visible(s, xlate)) continue; // VFC
+		if (!s.contains_pt(camera_bs) && s.stairs_door_ix >= 0 && get_door(s.stairs_door_ix).open_amt == 0.0) continue; // closed stairs door, not visible
 		if (!has_parking_garage) return 1; // assume exterior may be visible through normal stairs, but not parking garage stairs
 		cube_t stairs_exp(s);
 		stairs_exp.expand_by_xy(floor_spacing);
