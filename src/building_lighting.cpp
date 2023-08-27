@@ -1082,7 +1082,7 @@ void assign_light_for_building_interior(light_source &ls, void const *obj, cube_
 	ls.assign_smap_id(cache_shadows ? smap_id : 0); // if cache_shadows, mark so that shadow map can be reused in later frames
 	if (!cache_shadows) {ls.invalidate_cached_smap_id(smap_id);}
 }
-void setup_light_for_building_interior(light_source &ls, room_object_t &obj, cube_t const &light_bcube, bool force_smap_update, unsigned shadow_caster_hash) {
+bool setup_light_for_building_interior(light_source &ls, room_object_t &obj, cube_t const &light_bcube, bool force_smap_update, unsigned shadow_caster_hash) {
 	// If there are no dynamic shadows, we can reuse the previous frame's shadow map;
 	// hashing object positions should handle the case where a shadow caster moves out of the light's influence and leaves a shadow behind;
 	// also need to handle the case where the light is added on the frame the room geom is generated when the shadow map is not yet created;
@@ -1093,6 +1093,7 @@ void setup_light_for_building_interior(light_source &ls, room_object_t &obj, cub
 	assign_light_for_building_interior(ls, &obj, light_bcube, cache_shadows);
 	if (shadow_update) {obj.flags &= ~RO_FLAG_NODYNAM;} else {obj.flags |= RO_FLAG_NODYNAM;} // store prev update state in object flag
 	obj.item_flags = sc_hash16; // store current object hash in item flags
+	return shadow_update;
 }
 
 cube_t building_t::get_rotated_bcube(cube_t const &c, bool inv_rotate) const {
@@ -1173,6 +1174,11 @@ void check_for_shadow_caster_people(vector<person_t> const &people, vect_cube_wi
 	}
 	// update shadow_caster_hash for moving objects
 	check_for_shadow_caster(moving_objs, light_bcube, lpos, dmax, has_stairs, xlate, shadow_caster_hash);
+}
+template<typename T> void get_animal_shadow_casters(vector<T> const &animals, vect_cube_with_ix_t &moving_objs) { // rat_t/spider_t/snake_t
+	for (auto const &animal : animals) {
+		if (animal.is_moving()) {moving_objs.push_back(animal.get_bcube());}
+	}
 }
 void expand_cube_zvals(cube_t &c, float z1, float z2) {
 	min_eq(c.z1(), z1);
@@ -1298,12 +1304,9 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		}
 	}
 	if (point_in_building_or_basement_bcube(camera_bs)) { // camera in building interior; matches rat update logic
-		for (rat_t const &rat : interior->room_geom->rats) {
-			if (rat.is_moving()) {moving_objs.push_back(rat.get_bcube());}
-		}
-		for (spider_t const &spider : interior->room_geom->spiders) {
-			if (spider.is_moving()) {moving_objs.push_back(spider.get_bcube());}
-		}
+		get_animal_shadow_casters(interior->room_geom->rats,    moving_objs);
+		get_animal_shadow_casters(interior->room_geom->spiders, moving_objs);
+		get_animal_shadow_casters(interior->room_geom->snakes,  moving_objs);
 	}
 	//highres_timer_t timer("Lighting", camera_in_building); // 13.8ms => 13.1ms => 12.7ms => 3.6ms => 3.2ms => 0.81
 	//unsigned num_add(0);
@@ -1595,13 +1598,13 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		float const dshadow_radius((is_in_attic ? 1.0 : 0.8)*light_radius); // use full light radius for attics since they're more open
 		bool force_smap_update(0);
 
-		// check for dynamic shadows
-		// check the player first; use full light radius
-		if (camera_surf_collide && (camera_in_building || camera_can_see_ext_basement) && dist_less_than(lpos_rot, camera_bs, /*dshadow_radius*/light_radius)) {
+		// check for dynamic shadows; check the player first; use full light radius
+		if (camera_surf_collide && (camera_in_building || camera_can_see_ext_basement) && dist_less_than(lpos_rot, camera_bs, light_radius)) {
 			bool player_on_ladder_this_room(player_on_attic_stairs && (is_in_attic || room.intersects_xy(interior->attic_access)));
 
 			if (clipped_bc.contains_pt(camera_rot) || clipped_bc.contains_pt(point(camera_rot.x, camera_rot.y, player_feet_zval)) || player_on_ladder_this_room) {
 				// must update shadow maps for the room above if the player is on the stairs or in the same room when there are stairs
+				// must update even if light is visible (meaning shadows aren't due to < 90 degree FOV) because the old shadow may become visible when the player moves
 				bool const check_floor_above(camera_on_stairs || (camera_by_stairs && in_camera_room));
 
 				if (is_lamp || player_on_ladder_this_room || (player_in_attic && is_in_attic) ||
@@ -1619,6 +1622,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			check_dynamic_shadows |= (room.has_skylight && camera_bs.z > lpos.z && lpos.z > (room.z2() - 0.5*window_vspacing));
 			
 			if (check_dynamic_shadows) {
+				float const dshadow_radius((is_in_attic ? 1.0 : 0.8)*light_radius); // use full light radius for attics since they're more open
 				if (building_action_key) {force_smap_update = 1;} // toggling a door state or interacting with objects invalidates shadows in the building for that frame
 				check_for_shadow_caster_people(interior->people, ped_bcubes, moving_objs, clipped_bc, lpos_rot,
 					dshadow_radius, stairs_light, xlate, (check_building_people && !is_lamp), shadow_caster_hash); // no people shadows for lam[s
