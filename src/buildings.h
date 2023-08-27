@@ -1339,6 +1339,7 @@ struct building_t : public building_geom_t {
 	mutable bool player_visited=0; // for stats tracking
 	colorRGBA side_color=WHITE, roof_color=WHITE, detail_color=BLACK, door_color=WHITE, wall_color=WHITE;
 	cube_t bcube, coll_bcube, pri_hall, driveway, porch, assigned_plot;
+	mutable cube_t city_driveway; // set by city gen, which only has a const ref to the building; technically this is cached city state, and not directly used by the building
 	vect_cube_t parts, fences;
 	vect_cube_with_ix_t skylights;
 	vect_roof_obj_t details; // cubes on the roof - antennas, AC units, etc.
@@ -1447,7 +1448,7 @@ struct building_t : public building_geom_t {
 	cube_t place_door(cube_t const &base, bool dim, bool dir, float door_height, float door_center, float door_pos,
 		float door_center_shift, float width_scale, bool can_fail, bool opens_up, rand_gen_t &rgen) const;
 	void gen_house(cube_t const &base, rand_gen_t &rgen);
-	bool maybe_add_house_driveway(cube_t const &plot, cube_t &ret, unsigned building_ix) const;
+	bool maybe_add_house_driveway(cube_t const &plot, unsigned building_ix) const;
 	bool get_power_point(vector<point> &ppts) const;
 	void add_solar_panels(rand_gen_t &rgen);
 	bool add_door(cube_t const &c, unsigned part_ix, bool dim, bool dir, bool for_office_building, bool roof_access=0);

@@ -1162,8 +1162,9 @@ unsigned get_street_dir(cube_t const &inner, cube_t const &outer) {
 	return 2*dim + dir + 1;
 }
 
-// Note: applies to city residential plots, called by city_obj_placer_t
-bool building_t::maybe_add_house_driveway(cube_t const &plot, cube_t &ret, unsigned building_ix) const {
+// Note: applies to city residential plots, called by city_obj_placer_t;
+// shouldn't be const because this modifies city_driveway as it's needed for balcony placement logic later; but this must be const for city API, so city_driveway is mutable
+bool building_t::maybe_add_house_driveway(cube_t const &plot, unsigned building_ix) const {
 	if (!is_house) return 0;
 	assert(plot.contains_cube_xy(bcube));
 	cube_t sub_plot(plot);
@@ -1177,7 +1178,7 @@ bool building_t::maybe_add_house_driveway(cube_t const &plot, cube_t &ret, unsig
 	bcubes.clear();
 	get_building_bcubes(plot, bcubes); // Note: could be passed in by the caller, but requires many changes
 	// garages should be placed so that their driveways exit toward the edge of the plot
-	if (has_driveway() && extend_existing_driveway(driveway, plot, bcube, bcubes, ret)) return 1;
+	if (has_driveway() && extend_existing_driveway(driveway, plot, bcube, bcubes, city_driveway)) return 1;
 	rand_gen_t rgen;
 	rgen.set_state(building_ix+1, building_ix+111);
 	rgen.rand_mix();
@@ -1200,9 +1201,9 @@ bool building_t::maybe_add_house_driveway(cube_t const &plot, cube_t &ret, unsig
 		cube_t dw(plot); // copy zvals and dim/dir from plot
 
 		for (auto i = parts.begin(); i != get_real_parts_end(); ++i) {
-			if (add_driveway_if_legal(dw, *i, bcube, sub_plot, avoid, parts, bcubes, ret, rgen, hwidth, dim, dir)) return 1;
+			if (add_driveway_if_legal(dw, *i, bcube, sub_plot, avoid, parts, bcubes, city_driveway, rgen, hwidth, dim, dir)) return 1;
 		}
-		if (add_driveway_if_legal(dw, bcube, bcube, sub_plot, avoid, vect_cube_t(), bcubes, ret, rgen, hwidth, dim, dir)) return 1;
+		if (add_driveway_if_legal(dw, bcube, bcube, sub_plot, avoid, vect_cube_t(), bcubes, city_driveway, rgen, hwidth, dim, dir)) return 1;
 		// maybe it was too short? try to place to one side of the house or the other
 		dw.d[dim][!dir] = bcube.d[dim][!dir]; // extend up to far side of house
 		float const length(dw.get_sz_dim(dim)), min_length(3.0*hwidth);
@@ -1223,7 +1224,7 @@ bool building_t::maybe_add_house_driveway(cube_t const &plot, cube_t &ret, unsig
 			if (has_ac && dw.intersects_xy(ac_unit)) continue;
 			if (s) {dw.translate_dim(2, 0.001*hwidth);} // hack to prevent z-fighting when driveways overlap on the left and right of adjacent houses
 			assert(dw.dx() > 0 && dw.dy() > 0); // strictly normalized in XY
-			ret = dw;
+			city_driveway = dw;
 			return 1;
 		} // for s
 		if (n == 0) {

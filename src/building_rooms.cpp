@@ -683,8 +683,10 @@ void building_t::add_balconies(rand_gen_t &rgen) {
 	unsigned const max_balconies(1 + rgen.rand_bool()); // 1-2 per house
 	unsigned num_balconies(0);
 	auto &objs(interior->room_geom->objs);
-	cube_t avoid1, avoid2;
-	if (!objs.empty() && objs.back().type == TYPE_FESCAPE) {avoid1 = objs.back();}
+	vect_cube_t avoid;
+	if (!objs.empty() && objs.back().type == TYPE_FESCAPE) {avoid.push_back(objs.back());} // avoid fire escape
+	if (has_driveway()) {avoid.push_back(driveway);}
+	if (!city_driveway.is_all_zeros()) {avoid.push_back(city_driveway);}
 
 	// find suitable rooms for balconies; since room walls will never intersect windows, we can make the balcony the same width to avoid intersecting windows
 	for (auto room = interior->rooms.begin(); room != interior->rooms.end(); ++room) {
@@ -708,9 +710,8 @@ void building_t::add_balconies(rand_gen_t &rgen) {
 				balcony.z1() = balcony_z1;
 				balcony.d[dim][!dir]  = balcony.d[dim][dir]; // abuts the exterior wall of the room
 				balcony.d[dim][ dir] += (dir ? 1.0 : -1.0)*balcony_depth; // extend outward from the house
-				if (!avoid1.is_all_zeros() && avoid1.intersects(balcony)) continue; // check for fire escape intersection
-				if (!avoid2.is_all_zeros() && avoid2.intersects(balcony)) continue; // check for previous balcony intersection
-				if (check_cube_intersect_non_main_part(balcony))          continue; // porch roof, porch support, and chimney, etc.
+				if (has_bcube_int(balcony, avoid)) continue; // blocked
+				if (check_cube_intersect_non_main_part(balcony)) continue; // porch roof, porch support, and chimney, etc.
 				cube_t balcony_ext_down(balcony);
 				balcony_ext_down.z1() = ground_floor_z1; // extend down to the ground
 				bool part_int(0);
@@ -726,15 +727,12 @@ void building_t::add_balconies(rand_gen_t &rgen) {
 				// if the space below the balcony is blocked by something, flag as hanging so that we don't try to draw vertical supports later
 				cube_t area_below(balcony);
 				set_cube_zvals(area_below, ground_floor_z1, balcony.z1());
-				bool const hanging((!avoid1.is_all_zeros() && avoid1.intersects(area_below)) ||
-					(!avoid2.is_all_zeros() && avoid2.intersects(area_below)) ||
-					check_cube_intersect_non_main_part(area_below) ||
-					(has_driveway() && driveway.intersects_xy(area_below)));
+				bool const hanging(has_bcube_int(area_below, avoid) || check_cube_intersect_non_main_part(area_below));
 				room_object_t balcony_obj(balcony, TYPE_BALCONY, room_id, dim, dir, (hanging ? RO_FLAG_HANGING : 0), 1.0, SHAPE_CUBE, WHITE);
 				balcony_obj.obj_id = balcony_style; // set so that we can select from multiple balcony styles
 				objs.push_back(balcony_obj);
-				avoid2 = balcony; // shouldn't need to consider area_below
-				avoid2.expand_by_xy(wall_thickness);
+				avoid.push_back(balcony); // shouldn't need to consider area_below
+				avoid.back().expand_by_xy(wall_thickness);
 				// maybe add plants to balconies; note that they won't be properly lit since plants use indoor lighting,
 				// and the plants won't be drawn when the player is outside the building; this should be okay because an empty pot works on a balcony as well
 				unsigned const num_plants(rgen.rand() % 3); // 0-2
