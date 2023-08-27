@@ -1210,7 +1210,7 @@ void building_t::draw_room_geom(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 {
 	if (!has_room_geom()) return;
 
-	if (0 && (display_mode & 0x20) && player_in_building && bcube.contains_pt(camera_pdu.pos - xlate)) { // debug visualization of light occluders
+	if (0 && (display_mode & 0x20) && !shadow_only && player_in_building && bcube.contains_pt(camera_pdu.pos - xlate)) { // debug visualization of light occluders
 		vect_colored_cube_t cc;
 		gather_interior_cubes(cc, get_bcube_inc_extensions());
 		select_texture(WHITE_TEX);

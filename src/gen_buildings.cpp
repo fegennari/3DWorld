@@ -2098,6 +2098,7 @@ void building_t::get_ext_wall_verts_no_sec(building_draw_t &bdraw) const { // us
 	building_mat_t const &mat(get_material());
 
 	for (auto p = parts.begin(); p != get_real_parts_end(); ++p) {
+		if (p->z1() < ground_floor_z1) continue; // not needed for basement and extended basement
 		unsigned const part_ix(p - parts.begin());
 		unsigned dim_mask(3); // start with XY only
 
@@ -2808,9 +2809,10 @@ public:
 						// generate interior detail objects during the shadow pass when the player is in the building so that it can be done in parallel with small static geom gen
 						int const inc_small(camera_in_this_building ? 3 : 1);
 						b.draw_room_geom(nullptr, s, amask_shader, oc, xlate, bi->ix, 1, 0, inc_small, 1); // shadow_only=1, player_in_building=1
-						b.get_ext_wall_verts_no_sec(ext_parts_draw); // add exterior walls to prevent light leaking between adjacent parts
+						bool const basement_light(lpos.z < b.ground_floor_z1);
+						if (!basement_light) {b.get_ext_wall_verts_no_sec(ext_parts_draw);} // add exterior walls to prevent light leaking between adjacent parts, if not basement
+						else if (b.has_ext_basement()) {b.get_basment_ext_wall_verts(ext_parts_draw);} // draw basement exterior walls to block light from entering ext basement
 						b.draw_cars_in_building(s, xlate, 1, 1); // player_in_building=1, shadow_only=1
-						if (b.has_ext_basement()) {b.get_basment_ext_wall_verts(ext_parts_draw);} // draw basement exterior walls
 						bool const player_close(dist_less_than(lpos, pre_smap_player_pos, camera_pdu.far_)); // Note: pre_smap_player_pos already in building space
 						bool const add_player_shadow(camera_surf_collide ? (camera_in_this_building && player_close) : 0);
 						bool const add_people_shadow((camera_in_this_building || player_close) && b.has_people());
