@@ -182,7 +182,15 @@ struct manhole_t : public city_obj_t {
 struct mailbox_t : public oriented_city_obj_t {
 	mailbox_t(point const &pos_, float height, bool dim_, bool dir_);
 	float get_height() const {return 2.0*radius;}
-	static void pre_draw(draw_state_t &dstate, bool shadow_only);
+	static void pre_draw(draw_state_t &dstate, bool shadow_only) {} // nothing to do
+	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const;
+};
+
+struct pigeon_t : public city_obj_t {
+	vector3d dir;
+
+	pigeon_t(point const &pos_, float height, vector3d const &dir_);
+	static void pre_draw(draw_state_t &dstate, bool shadow_only) {} // nothing to do
 	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const;
 };
 
@@ -255,13 +263,14 @@ private:
 	vector<hcap_space_t> hcaps; // handicap signs painted on parking lots
 	vector<manhole_t> manholes;
 	vector<mailbox_t> mboxes;
+	vector<pigeon_t> pigeons;
 	vector<sign_t> signs;
 	vector<stopsign_t> stopsigns;
 	vector<city_flag_t> flags;
 	vector<newsrack_t> newsracks;
 	// index is last obj in group
 	city_obj_groups_t bench_groups, planter_groups, trashcan_groups, fhydrant_groups, sstation_groups, divider_groups, pool_groups, pdeck_groups,
-		ppole_groups, hcap_groups, manhole_groups, mbox_groups, sign_groups, stopsign_groups, flag_groups, nrack_groups;
+		ppole_groups, hcap_groups, manhole_groups, mbox_groups, pigeon_groups, sign_groups, stopsign_groups, flag_groups, nrack_groups;
 	vector<city_zone_t> sub_plots; // reused across calls
 	cube_t all_objs_bcube;
 	unsigned num_spaces, filled_spaces, num_x_plots, num_y_plots;

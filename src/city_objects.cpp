@@ -1094,14 +1094,28 @@ mailbox_t::mailbox_t(point const &pos_, float height, bool dim_, bool dir_) : or
 	bcube.set_from_point(pos);
 	bcube.expand_by(0.5*expand);
 }
-/*static*/ void mailbox_t::pre_draw(draw_state_t &dstate, bool shadow_only) {
-	// anything to do?
-}
 void mailbox_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
 	if (!dstate.check_cube_visible(bcube, dist_scale)) return;
 	vector3d orient(zero_vector);
 	orient[dim] = (dir ? 1.0 : -1.0);
 	building_obj_model_loader.draw_model(dstate.s, pos, bcube, orient, WHITE, dstate.xlate, OBJ_MODEL_MAILBOX, shadow_only);
+}
+
+// pigeons
+
+// pos is at the feet; ignore dir.z
+pigeon_t::pigeon_t(point const &pos_, float height, vector3d const &dir_) : city_obj_t(pos_, 0.0), dir(vector3d(dir_.x, dir_.y, 0.0).get_norm()) {
+	vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_PIGEON)); // D, W, H
+	float const hheight(0.5*height), xy_radius(hheight*sz.xy_mag()/sz.z); // assume model can be rotated in XY and take the max bounds
+	bcube.set_from_point(pos);
+	bcube.expand_by_xy(xy_radius);
+	bcube.z2() += height;
+	radius = hheight*sz.mag()/sz.z; // max diagonal
+	pos.z += hheight; // pos is on the ground, while we want the bsphere to be at the center
+}
+void pigeon_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
+	if (!dstate.check_cube_visible(bcube, dist_scale)) return;
+	building_obj_model_loader.draw_model(dstate.s, pos, bcube, dir, WHITE, dstate.xlate, OBJ_MODEL_PIGEON, shadow_only);
 }
 
 // signs (for buildings)
