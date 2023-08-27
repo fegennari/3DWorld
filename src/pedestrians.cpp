@@ -1554,30 +1554,30 @@ struct cmp_ped_dist_to_pos {
 void ped_manager_t::draw_people_in_building(vector<person_t> const &people, ped_draw_vars_t const &pdv) {
 	float const def_draw_dist(120.0*get_ped_radius()); // smaller than city peds
 	float const draw_dist(pdv.shadow_only ? camera_pdu.far_ : def_draw_dist), draw_dist_sq(draw_dist*draw_dist);
+	bool const enable_occ_cull((display_mode & 0x08) && !city_params.ped_model_files.empty()); // occlusion culling, if using models
 	pos_dir_up pdu(camera_pdu); // decrease the far clipping plane for pedestrians
 	pdu.pos -= pdv.xlate; // adjust for local translate
-	bool const enable_animations(enable_building_people_ai());
-	bool in_sphere_draw(0);
-	animation_state_t anim_state(enable_animations, animation_id);
 	to_draw.clear();
 
 	// Note: no far clip adjustment or draw dist scale
 	for (person_t const &p : people) {
 		if (skip_bai_draw(p)) continue;
+		if (!dist_less_than(pdu.pos, p.pos, draw_dist)) continue; // early exit test
 		
 		if (pdv.shadow_only) {
 			if (p.pos.z > pdu.pos.z) continue; // above the light
 			if (p.pos.z < pdu.pos.z - 2.0*pdv.building.get_window_vspace()) continue; // more than two floors below the light
 			if (!smap_light_clip_cube.is_all_zeros() && !smap_light_clip_cube.intersects(p.get_bcube() + pdv.xlate)) continue; // shadow map clip cube test
 		}
-		if ((display_mode & 0x08) && !city_params.ped_model_files.empty()) { // occlusion culling, if using models
-			if (pdv.building.check_obj_occluded(p.get_bcube(), pdu.pos, pdv.oc, pdv.reflection_pass)) continue;
-		}
+		if (enable_occ_cull && pdv.building.check_obj_occluded(p.get_bcube(), pdu.pos, pdv.oc, pdv.reflection_pass)) continue;
 		to_draw.push_back(&p);
-		//draw_ped(p, pdv.s, pdu, pdv.xlate, def_draw_dist, draw_dist_sq, in_sphere_draw, pdv.shadow_only, pdv.shadow_only, &anim_state, 1);
 	} // for p
+	if (to_draw.empty()) return;
 	// sort back to front for proper alpha blending when player is in the building bcube, including the extended basement
-	if (pdv.building.get_bcube_inc_extensions().contains_pt(pdu.pos)) {sort(to_draw.begin(), to_draw.end(), cmp_ped_dist_to_pos(pdu.pos));}
+	if (!pdv.shadow_only && pdv.building.get_bcube_inc_extensions().contains_pt(pdu.pos)) {sort(to_draw.begin(), to_draw.end(), cmp_ped_dist_to_pos(pdu.pos));}
+	bool const enable_animations(enable_building_people_ai());
+	animation_state_t anim_state(enable_animations, animation_id);
+	bool in_sphere_draw(0);
 	for (person_t const *p : to_draw) {draw_ped(*p, pdv.s, pdu, pdv.xlate, def_draw_dist, draw_dist_sq, in_sphere_draw, pdv.shadow_only, pdv.shadow_only, &anim_state, 1);}
 	end_sphere_draw(in_sphere_draw);
 	pdv.s.upload_mvm(); // seems to be needed after applying model transforms, not sure why
@@ -1703,6 +1703,7 @@ void ped_manager_t::draw_player_model(shader_t &s, vector3d const &xlate, bool s
 	bcube.set_from_sphere(pos, PED_WIDTH_SCALE*player_radius);
 	bcube.z1() = pos.z - player_radius;
 	bcube.z2() = bcube.z1() + player_height*model.scale; // respect the model's scale; however, the player does seem a bit shorter than other people with the same model
+	if (shadow_only && !smap_light_clip_cube.is_all_zeros() && !smap_light_clip_cube.intersects(bcube + xlate)) return; // shadow map clip cube test
 	anim_state.anim_time = player_anim_time;
 	ped_model_loader.draw_model(s, pos, bcube, dir_horiz, ALPHA0, xlate, model_id, shadow_only, 0, &anim_state);
 	s.upload_mvm(); // not sure if this is needed

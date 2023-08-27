@@ -2814,7 +2814,7 @@ public:
 						else if (b.has_ext_basement()) {b.get_basment_ext_wall_verts(ext_parts_draw);} // draw basement exterior walls to block light from entering ext basement
 						b.draw_cars_in_building(s, xlate, 1, 1); // player_in_building=1, shadow_only=1
 						bool const player_close(dist_less_than(lpos, pre_smap_player_pos, camera_pdu.far_)); // Note: pre_smap_player_pos already in building space
-						bool const add_player_shadow(camera_surf_collide ? (camera_in_this_building && player_close) : 0);
+						bool const add_player_shadow(camera_surf_collide && camera_in_this_building && player_close && (pre_smap_player_pos.z - get_bldg_player_height()) < lpos.z);
 						bool const add_people_shadow((camera_in_this_building || player_close) && b.has_people());
 						bool const enable_animations(global_building_params.enable_people_ai);
 
