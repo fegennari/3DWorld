@@ -436,7 +436,7 @@ void set_camera_pos_dir(point const &pos, vector3d const &dir) {
 
 
 void move_camera_pos_xy(vector3d const &v, float dist) {
-
+	// called when the player moves in both ground and TT modes; checks for XY collisions that block movement
 	// normal ground movement - should speed depend on orientation or not?
 	if (world_mode == WMODE_INF_TERRAIN) {dist *= get_player_building_speed_mult();}
 	static float prev_camera_zval(surface_pos.z); // required for walking on bridges to determine if camera is on or below the bridge

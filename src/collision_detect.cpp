@@ -28,7 +28,7 @@ cobj_draw_groups cdraw_groups;
 
 extern bool lm_alloc, has_snow;
 extern int camera_coll_smooth, game_mode, world_mode, xoff, yoff, camera_change, display_mode, scrolling, animate2;
-extern int camera_in_air, mesh_scale_change, camera_invincible, camera_flight, num_smileys, iticks;
+extern int camera_in_air, mesh_scale_change, camera_invincible, camera_flight, num_smileys, iticks, frame_counter;
 extern unsigned snow_coverage_resolution;
 extern float TIMESTEP, temperature, zmin, base_gravity, ftick, tstep, zbottom, ztop, fticks, jump_height, NEAR_CLIP;
 extern double camera_zh, tfticks;
@@ -1610,7 +1610,7 @@ int dwobject::check_vert_collision(int obj_index, int do_coll_funcs, int iter, v
 		vector3d cnorm(plus_z);
 		bool const check_interior(PLAYER_CAN_ENTER_BUILDINGS && type == CAMERA);
 		
-		if (proc_city_sphere_coll(pos, p_last, o_radius, p_last.z, 0, 1, &cnorm, check_interior)) { // xy_only=0, inc_cars=1
+		if (proc_city_sphere_coll(pos, p_last, o_radius, p_last.z, 0, 1, &cnorm, check_interior)) { // xy_only=0, inc_cars=1; for ground mode only
 			obj_type const &otype(object_types[type]);
 			float const friction(otype.friction_factor*((flags & FROZEN_FLAG) ? 0.5 : 1.0)); // frozen objects have half friction
 			if (animate2 && health <= 0.1) {disable();}
@@ -1767,11 +1767,27 @@ void force_onto_surface_mesh(point &pos) { // for camera
 		pos.z -= radius; // bottom of camera sphere
 		adjust_zval_for_model_coll(pos, radius, get_max_mesh_height_within_radius(pos, radius, 1), C_STEP_HEIGHT*radius);
 		pos.z += radius;
+		float const prev_zval(pos.z);
 		proc_player_city_sphere_coll(pos);
+		float const delta_z(pos.z - camera_last_pos.z), delta_rate((delta_z/CAMERA_RADIUS)/fticks);
+
+		// handle player falling off/in a building or snapping to a different floor due to collision enabling or a collision bug
+		if (frame_counter > 100) { // skip for first N frames from player spawn
+			if (delta_z < 0.0) { // falling
+				float const MAX_FALL_RATE = 2.0; // distance per tick in units of camera radius
+				float const fall_rate(-delta_rate);
+				if (fall_rate > MAX_FALL_RATE) {pos.z -= delta_z*(fall_rate - MAX_FALL_RATE)/fall_rate;}
+			}
+			else if (delta_z > 0.0 && pos.z != prev_zval) { // rising; only update when building coll changed zval
+				float const MAX_RISE_RATE = 2.0; // distance per tick in units of camera radius
+				if (delta_rate > MAX_RISE_RATE) {pos.z -= delta_z*(delta_rate - MAX_RISE_RATE)/delta_rate;}
+			}
+		}
 		camera_last_pos = pos;
 		camera_change   = 0;
 		return; // that's it
 	}
+	// everything after this point is either ground mode or flight mode
 	if (cflight) {
 		if (jump_time) {pos.z += 0.5*JUMP_ACCEL*fticks*radius; jump_time = 0;}
 		if (coll) {pos.z = camera_obj.pos.z;}
