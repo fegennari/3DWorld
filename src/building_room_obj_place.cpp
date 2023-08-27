@@ -175,7 +175,7 @@ void building_t::get_all_door_centers_for_room(cube_t const &room, float zval, v
 bool building_t::is_room_an_exit(cube_t const &room, int room_ix, float zval) const { // for living rooms, etc.
 	if (is_room_adjacent_to_ext_door(room, 1)) return 1; // front_door_only=1
 	if (!multi_family) return 0; // stairs check is only for multi-family houses
-	int const has_stairs(room_or_adj_room_has_stairs(room_ix, zval, 1)); // inc_adj_rooms=1
+	int const has_stairs(room_or_adj_room_has_stairs(room_ix, zval, 1, 0)); // inc_adj_rooms=1, check_door_open=0
 	return (has_stairs == 2); // only if adjacent to stairs
 }
 

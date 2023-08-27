@@ -1901,7 +1901,7 @@ void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_
 
 	if (only_cont_pt_in) {
 		cont_part        = get_part_containing_pt(only_cont_pt);
-		room_with_stairs = room_or_adj_room_has_stairs(get_room_containing_pt(only_cont_pt), only_cont_pt.z, 1); // inc_adj_rooms=1
+		room_with_stairs = room_or_adj_room_has_stairs(get_room_containing_pt(only_cont_pt), only_cont_pt.z, 1, 1); // inc_adj_rooms=1, check_door_open=1
 	}
 	for (auto i = parts.begin(); i != get_real_parts_end_inc_sec(); ++i) { // multiple cubes/parts/levels, excluding chimney/porch/etc.
 		if (is_basement(i)) continue; // skip the basement

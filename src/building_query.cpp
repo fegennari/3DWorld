@@ -830,6 +830,30 @@ bool building_t::check_pos_in_unlit_room_recur(point const &pos, set<unsigned> &
 	return 1;
 }
 
+bool building_t::are_rooms_connected(unsigned room_ix1, unsigned room_ix2, float zval, bool check_door_open) const {
+	if (room_ix1 == room_ix2) return 1; // error?
+	room_t const &r1(get_room(room_ix1)), &r2(get_room(room_ix2));
+	cube_t tc1(r1), tc2(r2);
+	float const expand(2.0*get_wall_thickness()); // expand so that adjacent rooms and doors overlap
+	tc1.expand_by_xy(expand);
+	tc2.expand_by_xy(expand);
+	if (!tc1.intersects(tc2)) return 0; // rooms not adjacent
+	tc1.intersect_with_cube(tc2); // shared wall area
+	
+	for (auto const &ds : interior->door_stacks) {
+		if (!tc1.contains_cube(ds)) continue;
+		if (!check_door_open) return 1; // if there's a door stack, there must be a connecting door
+		assert(ds.first_door_ix < interior->doors.size());
+
+		for (unsigned dix = ds.first_door_ix; dix < interior->doors.size(); ++dix) {
+			door_t const &door(interior->doors[dix]);
+			if (!ds.is_same_stack(door)) break; // moved to a different stack, done
+			if (door.z1() < zval && door.z2() > zval && door.open_amt > 0.0 && tc1.contains_cube(door)) return 1;
+		}
+	} // for door_stacks
+	return 0;
+}
+
 // Note: called on basketballs, soccer balls, and particles
 bool building_interior_t::check_sphere_coll(building_t const &building, point &pos, point const &p_last, float radius,
 	vect_room_object_t::const_iterator self, vector3d &cnorm, float &hardness, int &obj_ix) const

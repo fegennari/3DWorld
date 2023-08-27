@@ -1279,7 +1279,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 				}
 			} // for s
 			// set camera_somewhat_by_stairs when camera is in room with stairs, or adjacent to one with stairs
-			if (stairs_or_ramp_visible) {camera_somewhat_by_stairs |= bool(room_or_adj_room_has_stairs(camera_room, camera_rot.z, 1));} // inc_adj_rooms=1
+			if (stairs_or_ramp_visible) {camera_somewhat_by_stairs |= bool(room_or_adj_room_has_stairs(camera_room, camera_rot.z, 1, 1));} // inc_adj_rooms=1, check_door_open=1
 		}
 		else if (point_in_attic(camera_rot)) {
 			if (show_room_name) {lighting_update_text = room_names[RTYPE_ATTIC];}

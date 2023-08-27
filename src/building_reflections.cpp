@@ -149,7 +149,7 @@ bool building_t::find_mirror_needing_reflection(vector3d const &xlate) const {
 	if (!check_point_or_cylin_contained(camera_bs, 0.0, points, 0, 1)) return 0; // camera not in the building; inc_attic=0, inc_ext_basement=1
 	int camera_room_ix(-1);
 	
-	// find room containing the camera
+	// find room containing the camera; note that this applies to the entire backrooms, since it's one room
 	for (auto r = interior->rooms.begin(); r != interior->rooms.end(); ++r) {
 		if (!r->contains_pt(camera_bs)) continue; // not the room the camera is in
 		unsigned const room_ix(r - interior->rooms.begin());
@@ -168,12 +168,13 @@ bool building_t::find_mirror_needing_reflection(vector3d const &xlate) const {
 		if ((int)room_ix == camera_room_ix) continue;
 		if (!r->intersects(search_area))    continue; // wrong room
 
-		if (camera_room.is_hallway) {
+		if (camera_room.is_hallway) { // special optimization logic for hallways (generally for office buildings, but can apply to houses as well)
 			cube_t r_exp(*r);
 			bool const short_dim(camera_room.dy() < camera_room.dx());
 			r_exp.expand_by_xy(camera_room.get_sz_dim(short_dim));
 			if (!r_exp.contains_pt(camera_bs)) continue; // camera not within the hallway across from the room
 		}
+		if (!are_rooms_connected(room_ix, camera_room_ix, camera_bs.z, 1)) continue; // no door, or door is fully closed check_open=1
 		if (find_mirror_in_room((room_ix & 255), xlate, 0)) return 1; // same_room=0
 	} // for r
 	return 0; // not found

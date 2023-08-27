@@ -1429,6 +1429,7 @@ struct building_t : public building_geom_t {
 	bool check_cube_intersect_non_main_part(cube_t const &c) const;
 	bool check_pos_in_unlit_room(point const &pos) const;
 	bool check_pos_in_unlit_room_recur(point const &pos, std::set<unsigned> &rooms_visited, int known_room_id=-1) const;
+	bool are_rooms_connected(unsigned room_ix1, unsigned room_ix2, float zval, bool check_door_open) const;
 	unsigned check_line_coll(point const &p1, point const &p2, float &t, bool occlusion_only=0, bool ret_any_pt=0, bool no_coll_pt=0) const;
 	bool get_interior_color_at_xy(point const &pos, colorRGBA &color) const;
 	bool check_point_or_cylin_contained(point const &pos, float xy_radius, vector<point> &points, bool inc_attic, bool inc_ext_basement) const;
@@ -1620,7 +1621,7 @@ private:
 
 public:
 	int get_room_containing_pt(point const &pt) const;
-	int room_or_adj_room_has_stairs(int room_ix, float zval, bool inc_adj_rooms) const;
+	int room_or_adj_room_has_stairs(int room_ix, float zval, bool inc_adj_rooms, bool check_door_open) const;
 	void register_player_in_building(point const &camera_bs, unsigned building_id) const;
 	bool maybe_teleport_to_screenshot() const;
 	bool place_obj_along_wall(room_object type, room_t const &room, float height, vector3d const &sz_scale, rand_gen_t &rgen, float zval, unsigned room_id,
