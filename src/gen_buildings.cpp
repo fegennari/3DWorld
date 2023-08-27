@@ -2812,26 +2812,17 @@ public:
 						b.draw_cars_in_building(s, xlate, 1, 1); // player_in_building=1, shadow_only=1
 						if (b.has_ext_basement()) {b.get_basment_ext_wall_verts(ext_parts_draw);} // draw basement exterior walls
 						bool const player_close(dist_less_than(lpos, pre_smap_player_pos, camera_pdu.far_)); // Note: pre_smap_player_pos already in building space
-						bool const add_player_shadow(camera_surf_collide ? player_close : 0);
-						bool shader_was_changed(0);
+						bool const add_player_shadow(camera_surf_collide ? (camera_in_this_building && player_close) : 0);
+						bool const add_people_shadow((camera_in_this_building || player_close) && b.has_people());
+						bool const enable_animations(global_building_params.enable_people_ai);
 
-						if ((camera_in_this_building || player_close) && b.has_people()) { // draw people in this building
-							if (global_building_params.enable_people_ai) { // handle animations
-								select_person_shadow_shader(person_shader);
-								gen_and_draw_people_in_building(ped_draw_vars_t(b, oc, person_shader, xlate, bi->ix, 1, 0)); // draw people in this building
-								shader_was_changed = 1;
-							}
-							else {gen_and_draw_people_in_building(ped_draw_vars_t(b, oc, s, xlate, bi->ix, 1, 0));} // no animations
+						if (add_people_shadow || add_player_shadow) {
+							shader_t &shader(enable_animations ? person_shader : s);
+							if (enable_animations) {select_person_shadow_shader(person_shader);}
+							if (add_people_shadow) {gen_and_draw_people_in_building(ped_draw_vars_t(b, oc, shader, xlate, bi->ix, 1, 0));}
+							if (add_player_shadow) {draw_player_model(shader, xlate, 1);} // shadow_only=1
+							if (enable_animations) {s.make_current();} // switch back to normal building shader
 						}
-						if (add_player_shadow && camera_in_this_building) {
-							if (global_building_params.enable_people_ai) { // handle animations
-								select_person_shadow_shader(person_shader);
-								draw_player_model(person_shader, xlate, 1); // shadow_only=1
-								shader_was_changed = 1;
-							}
-							else {draw_player_model(s, xlate, 1);} // shadow_only=1
-						}
-						if (shader_was_changed) {s.make_current();} // switch back to normal building shader
 					} // for bi
 				} // for g
 			}
