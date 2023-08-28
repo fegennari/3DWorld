@@ -29,6 +29,7 @@ template< typename T > void gen_quad_ixs(vector<T> &ixs, unsigned size, unsigned
 void draw_car_in_pspace(car_t &car, shader_t &s, vector3d const &xlate, bool shadow_only);
 void set_car_model_color(car_t &car);
 bldg_obj_type_t get_taken_obj_type(room_object_t const &obj);
+void reset_interior_lighting_and_end_shader(shader_t &s);
 
 bool has_key_3d_model() {return building_obj_model_loader.is_model_valid(OBJ_MODEL_KEY);}
 
@@ -1739,6 +1740,35 @@ void building_t::draw_cars_in_building(shader_t &s, vector3d const &xlate, bool 
 	}
 	for (auto &car : cars_to_draw) {draw_car_in_pspace(car, s, xlate, shadow_only);}
 	check_mvm_update(); // needed after popping model transform matrix
+}
+
+void building_t::draw_water(vector3d const &xlate) const {
+	if (!(display_mode & 0x04)) return; // water disabled
+	if (!interior || interior->water_zval == 0.0) return; // no water
+	point const camera_bs(camera_pdu.pos - xlate);
+	if (!point_in_extended_basement_not_basement(camera_bs)) return;
+	float const floor_spacing(get_window_vspace());
+	if (camera_bs.z > interior->water_zval + 2.0*floor_spacing) return; // player on the floor with water or the floor above (in case water is visible through stairs)
+	// TODO:
+	// * custom shader
+	// * splash sounds when walking
+	// * building people avoid spawning and walking in water
+	// * player leaves water trails
+	// * reflections
+	cube_t water(interior->basement_ext_bcube);
+	water.z2() = interior->water_zval;
+	shader_t s;
+	setup_building_draw_shader(s, 0.0, 0, 0, 0); // enable_indir=0, force_tsl=0, use_texgen=0
+	s.set_cur_color(colorRGBA(0.4, 0.6, 1.0, 0.25));
+	select_texture(WHITE_TEX); // WATER_TEX?
+	enable_blend();
+	float const x1(water.x1()), y1(water.y1()), x2(water.x2()), y2(water.y2()), z(water.z2()), tx(1.0), ty(1.0);
+	vector3d const &n(plus_z);
+	vert_norm_tc const verts[4] = {vert_norm_tc(point(x1, y1, z), n, 0.0, 0.0), vert_norm_tc(point(x2, y1, z), n, tx, 0.0),
+		                           vert_norm_tc(point(x2, y2, z), n, tx,  ty ), vert_norm_tc(point(x1, y2, z), n, 0.0, ty)};
+	draw_quad_verts_as_tris(verts, 4);
+	disable_blend();
+	reset_interior_lighting_and_end_shader(s);
 }
 
 void append_line_pt(vector<vert_wrap_t> &line_pts, point const &pos) {

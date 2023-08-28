@@ -160,9 +160,10 @@ bool building_t::add_underground_exterior_rooms(rand_gen_t &rgen, cube_t const &
 	if (!is_house && has_parking_garage && max_expand_underground_room(hallway, wall_dim, wall_dir, rgen)) { // office building with parking garage
 		// currently, the extended basement can only be a network of connected hallways with leaf rooms, or a single large basement room (this case);
 		// if we want to allow both (either a large room connected to a hallway or a large room with hallways coming off of it), we need per-room flags
-		setup_multi_floor_room(hallway, Door, wall_dim, wall_dir, rgen);
+		unsigned const num_floors(setup_multi_floor_room(hallway, Door, wall_dim, wall_dir, rgen));
 		hallway.is_hallway      = 0; // should already be set to 0, but this makes it more clear
 		interior->has_backrooms = 1;
+		if (num_floors > 1) {interior->water_zval = hallway.z1() + fc_thick + 0.1*get_window_vspace();} // lowest level has 10% floor spacing of water
 	}
 	else { // recursively add rooms connected to this hallway in alternating dimensions
 		// Note: if we get here for office buildings and global_building_params.max_ext_basement_room_depth == 0, this will only generate the hallway
@@ -194,12 +195,12 @@ bool building_t::add_underground_exterior_rooms(rand_gen_t &rgen, cube_t const &
 	return 1;
 }
 
-void building_t::setup_multi_floor_room(extb_room_t &room, door_t const &door, bool wall_dim, bool wall_dir, rand_gen_t &rgen) {
-	if (!interior) return; // shouldn't call?
+unsigned building_t::setup_multi_floor_room(extb_room_t &room, door_t const &door, bool wall_dim, bool wall_dir, rand_gen_t &rgen) {
+	if (!interior) return 1; // shouldn't call?
 	float const floor_spacing(get_window_vspace()), floor_thickness(get_floor_thickness()), fc_thick(0.5*floor_thickness), wall_thickness(get_wall_thickness());
 	unsigned const num_floors(calc_num_floors(room, floor_spacing, floor_thickness));
 	assert(num_floors > 0);
-	if (num_floors == 1) return;
+	if (num_floors == 1) return 1;
 	assert(interior->fc_occluders.empty()); // must be called before setup_fc_occluders() because it adds to floors and ceilings
 	// add wall segment under the door on lower floors
 	float const room_entrance_edge(room.d[wall_dim][!wall_dir]), dir_sign(wall_dir ? 1.0 : -1.0);
@@ -258,6 +259,7 @@ void building_t::setup_multi_floor_room(extb_room_t &room, door_t const &door, b
 			set_cube_zvals(cf, z, zf); interior->floors  .push_back(cf);
 		}
 	} // for f
+	return num_floors;
 }
 
 bool building_t::add_ext_basement_rooms_recur(extb_room_t &parent_room, ext_basement_room_params_t &P, float door_width, bool dim, unsigned depth, rand_gen_t &rgen) {

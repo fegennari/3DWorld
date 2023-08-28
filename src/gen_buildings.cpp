@@ -3268,6 +3268,8 @@ public:
 				if (reflection_pass) {draw_player_model(s, xlate, 0);} // draw last so that alpha blending of hair works properly; shadow_only=0
 				reset_interior_lighting_and_end_shader(s);
 			}
+			if (!reflection_pass && player_in_basement == 3 && player_building != nullptr) {player_building->draw_water(xlate);}
+
 			if (reflection_pass != 2 && bbd.has_ext_geom()) { // skip for interior room reflections
 				glDisable(GL_CULL_FACE);
 				ensure_city_lighting_setup(reflection_pass, xlate, is_city_lighting_setup); // needed for dlights to work
