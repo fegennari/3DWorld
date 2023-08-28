@@ -271,11 +271,27 @@ void add_cube_to_colliders_and_blockers(cube_t const &cube, vect_cube_t &blocker
 	blockers .push_back(cube);
 }
 
+struct pigeon_place_t {
+	point pos;
+	vector3d orient;
+	bool on_ground;
+
+	pigeon_place_t(point const &pos_, rand_gen_t &rgen  ) : pos(pos_), orient(rgen.signed_rand_vector_spherical()), on_ground(1) {} // ground constructor
+	pigeon_place_t(point const &pos_, bool dim, bool dir) : pos(pos_), on_ground(0) {orient[dim] = (dir ? 1.0 : -1.0);} // object constructor
+};
+void place_pigeon_on_obj(cube_t const &obj, bool dim, bool dir, bool orient_dir, float spacing, rand_gen_t &rgen, vector<pigeon_place_t> &locs) {
+	point pos(0.0, 0.0, obj.z2());
+	pos[ dim] = obj.d[dim][dir];
+	pos[!dim] = rgen.rand_uniform(obj.d[!dim][0]+spacing, obj.d[!dim][1]-spacing); // random position along the edge
+	locs.emplace_back(pos, dim, orient_dir);
+}
+
 // Note: blockers are used for placement of objects within this plot; colliders are used for pedestrian AI
 void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_t &blockers, vect_cube_t &colliders,
 	vector<point> const &tree_pos, rand_gen_t &rgen, bool is_residential, bool have_streetlights)
 {
 	float const car_length(city_params.get_nom_car_size().x); // used as a size reference for other objects
+	unsigned const benches_start(benches.size()), trashcans_start(trashcans.size()), substations_start(sstations.size());
 
 	// place fire_hydrants if the model has been loaded; don't add fire hydrants in parks
 	if (!plot.is_park && building_obj_model_loader.is_model_valid(OBJ_MODEL_FHYDRANT)) {
@@ -502,18 +518,47 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 	}
 	// place pigeons
 	if (!is_residential && building_obj_model_loader.is_model_valid(OBJ_MODEL_PIGEON)) {
-		unsigned const num_pigeons(rgen.rand() % 6); // 0-5
+		float const base_height(0.06*car_length), place_radius(4.0*base_height), obj_edge_spacing(0.25*base_height);
 
-		for (unsigned n = 0; n < num_pigeons; ++n) {
-			float const height(0.0625*car_length*rgen.rand_uniform(0.8, 1.25)), place_radius(4.0*height);
-			if (min(plot.dx(), plot.dy()) < 8.0*place_radius) continue; // plot too small; shouldn't happen
-			// TODO: maybe place on benches
-			point const pos(rand_xy_pt_in_cube(plot, place_radius, rgen)); // use place_radius because pigeon radius hasn't been calculated yet
-			pigeon_t const pigeon(pos, height, rgen.signed_rand_vector_spherical_xy());
-			if (has_bcube_int_xy(pigeon.bcube, blockers, 2.0*pigeon.radius)) continue;
-			pigeon_groups.add_obj(pigeon, pigeons);
-			blockers.push_back(pigeon.bcube); // not needed? don't need to add to pedestrian colliders
-		} // for n
+		if (min(plot.dx(), plot.dy()) > 8.0*place_radius) { // plot large enough; should always get here
+			unsigned const num_pigeons(rgen.rand() % 5); // 0-4
+			vector<pigeon_place_t> pigeon_locs;
+			// use place_radius because pigeon radius hasn't been calculated yet; TODO: place in a group?
+			for (unsigned n = 0; n < num_pigeons; ++n) {pigeon_locs.emplace_back(rand_xy_pt_in_cube(plot, place_radius, rgen), rgen);}
+
+			// maybe place on benches, trashcans, and substations
+			for (auto i = benches.begin()+benches_start; i != benches.end(); ++i) {
+				if (i->bcube.get_sz_dim(!i->dim) <= 2.0*obj_edge_spacing) continue;
+				if (rgen.rand_float() > 0.25) continue; // place 25% of the time
+				cube_t top_place(i->bcube);
+				top_place.expand_in_dim(!i->dim,  0.1*i->bcube.get_sz_dim(!i->dim)); // expand the back outward a bit
+				top_place.expand_in_dim( i->dim, -0.1*i->bcube.get_sz_dim( i->dim)); // shrink a bit to account for the arms extending further to the sides than the back
+				place_pigeon_on_obj(top_place, !i->dim, i->dir, rgen.rand_bool(), obj_edge_spacing, rgen, pigeon_locs); // random orient_dir
+			}
+			for (auto i = trashcans.begin()+trashcans_start; i != trashcans.end(); ++i) {
+				if (min(i->bcube.dx(), i->bcube.dy()) <= 2.0*obj_edge_spacing) continue;
+				if (rgen.rand_float() > 0.25) continue; // place 25% of the time
+				cube_t top_place(i->bcube);
+				top_place.expand_by_xy(-1.5*obj_edge_spacing); // small shrink
+				bool const dim(rgen.rand_bool()), dir(rgen.rand_bool()); // use a random side of the rim
+				place_pigeon_on_obj(top_place, dim, dir, dir, obj_edge_spacing, rgen, pigeon_locs); // facing outward
+			}
+			for (auto i = sstations.begin()+substations_start; i != sstations.end(); ++i) {
+				if (rgen.rand_float() > 0.25) continue; // place 25% of the time
+				bool const dim(rgen.rand_bool()), dir(rgen.rand_bool()); // random orient
+				pigeon_locs.emplace_back(point(i->bcube.xc(), i->bcube.yc(), i->bcube.z2()), dim, dir); // top center
+			}
+			for (pigeon_place_t &p : pigeon_locs) {
+				float const height(base_height*rgen.rand_uniform(0.8, 1.2));
+				// the current model's tail extends below its feet; move down slightly so that feet are on the object, though the tail may clip through the object;
+				// the feet gap isn't really visible when placed on the ground since there are no shadows, and it looks better than having the tail clip through the ground
+				if (!p.on_ground) {p.pos.z -= 0.15*height;}
+				pigeon_t const pigeon(p.pos, height, p.orient);
+				if (p.on_ground && has_bcube_int_xy(pigeon.bcube, blockers, 2.0*pigeon.radius)) continue; // placed on the ground - check for collisions
+				if (p.on_ground) {blockers.push_back(pigeon.bcube);} // not needed? don't need to add to pedestrian colliders
+				pigeon_groups.add_obj(pigeon, pigeons);
+			} // for n
+		}
 	}
 }
 
