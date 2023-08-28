@@ -2015,7 +2015,8 @@ void building_room_geom_t::add_elevator(room_object_t const &c, elevator_t const
 }
 
 void building_room_geom_t::add_elevator_doors(elevator_t const &e, float fc_thick_scale) {
-	float const spacing(e.get_wall_thickness()), closed_door_width(0.99*0.5*e.get_sz_dim(!e.dim)), open_door_width(1.12*e.get_frame_width());
+	float const spacing(e.get_wall_thickness()), open_door_width(1.12*e.get_frame_width());
+	float const closed_door_width(0.995*0.5*e.get_sz_dim(!e.dim)); // slightly smaller than width to leave a small crack for the player to see out of
 	rgeom_mat_t &mat(get_untextured_material(1, 1));
 	assert(e.car_obj_id < objs.size());
 	room_object_t const &car(objs[e.car_obj_id]); // elevator car for this elevator
