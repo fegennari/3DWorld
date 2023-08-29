@@ -10,75 +10,88 @@ unsigned room_mirror_ref_tid(0);
 room_object_t cur_room_mirror;
 shader_t reflection_shader;
 
+extern bool player_in_water;
 extern int display_mode, window_width, window_height;
 extern float CAMERA_RADIUS;
 extern vector4d clip_plane;
+extern building_t const *player_building;
 
 cube_t get_mirror_surface(room_object_t const &c);
 
 bool is_mirror(room_object_t const &obj) {return (obj.type == TYPE_MIRROR || obj.type == TYPE_DRESS_MIR);}
 
 
-void draw_mirror_to_stencil_buffer(vector3d const &xlate) {
-	setup_stencil_buffer_write();
-	glStencilOpSeparate(GL_BACK,  GL_KEEP, GL_KEEP, GL_KEEP); // ignore back faces
-	glStencilOpSeparate(GL_FRONT, GL_KEEP, GL_KEEP, GL_INCR); // mark stencil on front faces
-	shader_t s;
-	s.begin_color_only_shader();
-	draw_simple_cube((get_mirror_surface(cur_room_mirror) + xlate), 0); // draw translated mirror
-	s.end_shader();
-	end_stencil_write();
-}
-
-void create_mirror_reflection_if_needed() {
-	if (!is_mirror(cur_room_mirror)) return; // not enabled
-	bool const interior_room(cur_room_mirror.is_interior()), is_house(cur_room_mirror.is_house()), is_open(cur_room_mirror.is_open());
-	bool const can_see_out_windows(is_house && !interior_room); // assumes mirror is not facing the doorway to a room with a window
-	bool const dim(cur_room_mirror.dim ^ is_open), dir(is_open ? 1 : cur_room_mirror.dir); // always opens in +dir
+void draw_scene_for_building_reflection(unsigned &ref_tid, unsigned dim, bool dir, float reflect_plane,
+	bool is_house, bool interior_room, bool draw_exterior, cube_t const &mirror)
+{
 	int const reflection_pass(is_house ? 3 : (interior_room ? 2 : 1));
-	vector3d const xlate(get_tiled_terrain_model_xlate());
-	float const reflect_plane(is_open ? get_mirror_surface(cur_room_mirror).d[dim][1] : cur_room_mirror.d[dim][dir]);
-	float const reflect_plane_xf(reflect_plane + xlate[dim]), reflect_sign(dir ? -1.0 : 1.0);
-	clip_plane      = vector4d();
-	clip_plane[dim] = -reflect_sign;
-	clip_plane.w    = reflect_sign*reflect_plane;
 	unsigned const txsize(window_width), tysize(window_height); // full resolution
+	vector3d const xlate(get_tiled_terrain_model_xlate());
+	float const reflect_plane_xf(reflect_plane + xlate[dim]), reflect_sign(dir ? -1.0 : 1.0);
 	point const old_camera_pos(camera_pos);
 	pos_dir_up const old_camera_pdu(camera_pdu); // reflect camera frustum used for VFC
 	camera_pdu.apply_dim_mirror(dim, reflect_plane_xf); // setup reflected camera frustum
 	//camera_pos = camera_pdu.pos; // this can move the camera outside the building, so we can't use it
 	pos_dir_up const refl_camera_pdu(camera_pdu);
+	clip_plane      = vector4d();
+	clip_plane[dim] = -reflect_sign;
+	clip_plane.w    =  reflect_sign*reflect_plane;
 	// Note: it may be more efficient to use an FBO here, but we would need both a color attachment (room_mirror_ref_tid) and a depth attachment (and stencil buffer?)
 	// Note: clearing the buffers at this point in the control flow will discard some geometry that has already been drawn such as the sky,
-	//       but these generally arent't visible from within the bathroom anyway
+	//       but these generally arent't visible from within the room containing the mirror anyway
 	setup_viewport_and_proj_matrix(txsize, tysize);
 	apply_dim_mirror(dim, reflect_plane_xf); // setup mirror transform
 	camera_pdu = refl_camera_pdu; // reset reflected PDU
-	draw_mirror_to_stencil_buffer(xlate);
+	// draw the mirror area in the stencil buffer
+	setup_stencil_buffer_write();
+	glStencilOpSeparate(GL_BACK,  GL_KEEP, GL_KEEP, GL_KEEP); // ignore back faces
+	glStencilOpSeparate(GL_FRONT, GL_KEEP, GL_KEEP, GL_INCR); // mark stencil on front faces
+	shader_t s;
+	s.begin_color_only_shader();
+	draw_simple_cube((mirror + xlate), 0); // draw translated mirror
+	s.end_shader();
+	end_stencil_write();
 	// enable stencil test for drawing building interiors as an optimization
 	glEnable(GL_STENCIL_TEST);
 	glStencilFunc(GL_NOTEQUAL, 0, ~0U); // keep if stencil bit has been set by the mirror draw
 	glStencilOpSeparate(GL_FRONT_AND_BACK, GL_KEEP, GL_KEEP, GL_KEEP);
+	// draw reflected geometry
 	glEnable(GL_CLIP_DISTANCE0);
 	draw_buildings(0, reflection_pass, xlate); // reflection_pass=1/2/3
 	glDisable(GL_CLIP_DISTANCE0);
 
-	if (can_see_out_windows) {
+	if (draw_exterior) {
 		disable_city_shadow_maps = 1; // shadows don't work due to the mirror transform and are disabled for both the terrain and the city roads/objects
 		if (world_mode == WMODE_INF_TERRAIN) {draw_city_roads(1, xlate);} // opaque only
 		draw_tiled_terrain(2); // reflection_pass=2
 		draw_building_lights(xlate);
-		//draw_tiled_terrain_clouds(1); // clouds are unlikely to be reflected in bathroom mirrors so probably don't need to be drawn
+		//draw_tiled_terrain_clouds(1); // clouds are unlikely to be reflected in mirrors so probably don't need to be drawn
 		disable_city_shadow_maps = 0;
 	}
 	glDisable(GL_STENCIL_TEST);
 	// write reflection to a texture and reset the state
-	setup_reflection_texture(room_mirror_ref_tid, txsize, tysize);
-	render_to_texture(room_mirror_ref_tid, txsize, tysize); // render reflection to texture
+	setup_reflection_texture(ref_tid, txsize, tysize);
+	render_to_texture(ref_tid, txsize, tysize); // render reflection to texture
 	restore_matrices_and_clear(); // reset state
 	camera_pos = old_camera_pos;
 	camera_pdu = old_camera_pdu; // restore camera_pdu
 	clip_plane = vector4d(); // reset to disable
+}
+
+void create_mirror_reflection_if_needed() {
+	if (player_in_water && player_building != nullptr) { // draw water plane reflection
+		cube_t water_cube(player_building->get_water_cube(0));
+		water_cube.z1() = water_cube.z2(); // top surface only
+		draw_scene_for_building_reflection(room_mirror_ref_tid, 2, 1, water_cube.z2(), 0, 1, 0, water_cube); // +z, not house, interior, no exterior
+		return;
+	}
+	if (!is_mirror(cur_room_mirror)) return; // not enabled
+	bool const interior_room(cur_room_mirror.is_interior()), is_house(cur_room_mirror.is_house()), is_open(cur_room_mirror.is_open());
+	bool const can_see_out_windows(is_house && !interior_room); // assumes mirror is not facing the doorway to a room with a window
+	bool const dim(cur_room_mirror.dim ^ is_open), dir(is_open ? 1 : cur_room_mirror.dir); // always opens in +dir
+	cube_t const mirror_surface(get_mirror_surface(cur_room_mirror));
+	float const reflect_plane(is_open ? mirror_surface.d[dim][1] : cur_room_mirror.d[dim][dir]);
+	draw_scene_for_building_reflection(room_mirror_ref_tid, dim, dir, reflect_plane, is_house, interior_room, can_see_out_windows, mirror_surface);
 	cur_room_mirror = room_object_t(); // reset for next frame
 }
 
@@ -180,7 +193,7 @@ bool building_t::find_mirror_needing_reflection(vector3d const &xlate) const {
 	return 0; // not found
 }
 
-bool tid_nm_pair_t::bind_reflection_shader() const {
+/*static*/ bool tid_nm_pair_t::bind_reflection_shader() {
 	if (room_mirror_ref_tid == 0) {select_texture(WHITE_TEX); return 0;}
 	// use a custom shader that uses screen coordinates to clip the texture to the mirror bounds; inefficient (wastes texels), but simple
 	bind_2d_texture(room_mirror_ref_tid);

@@ -202,7 +202,7 @@ struct tid_nm_pair_t { // size=32
 	int get_nm_tid() const {return ((nm_tid < 0) ? FLAT_NMAP_TEX : nm_tid);}
 	colorRGBA get_avg_color() const {return texture_color(tid);}
 	tid_nm_pair_t get_scaled_version(float scale) const;
-	bool bind_reflection_shader() const;
+	static bool bind_reflection_shader();
 	void set_gl(tid_nm_pair_dstate_t &state) const;
 	void unset_gl(tid_nm_pair_dstate_t &state) const;
 	void toggle_transparent_windows_mode();
@@ -1677,6 +1677,7 @@ public:
 	bool move_sphere_to_valid_part(point &pos, point const &p_last, float radius) const;
 	void remove_paint_in_cube(cube_t const &c) const;
 	bool has_water() const {return (interior && interior->water_zval != 0.0);}
+	cube_t get_water_cube(bool full_room_height=0) const;
 	bool point_in_water_area(point const &p) const {return (has_water() && get_water_cube(1).contains_pt(p));}
 	void print_building_manifest() const;
 	void print_building_stats() const;
@@ -1696,7 +1697,6 @@ private:
 	unsigned setup_multi_floor_room(extb_room_t &room, door_t const &door, bool wall_dim, bool wall_dir, rand_gen_t &rgen);
 	bool add_ext_basement_rooms_recur(extb_room_t &parent_room, ext_basement_room_params_t &P, float door_width, bool dim, unsigned depth, rand_gen_t &rgen);
 	bool max_expand_underground_room(cube_t &room, bool dim, bool dir, rand_gen_t &rgen) const;
-	cube_t get_water_cube(bool full_room_height=0) const;
 	cube_t add_ext_basement_door(cube_t const &room, float door_width, bool dim, bool dir, bool is_end_room, rand_gen_t &rgen);
 	cube_t add_and_connect_ext_basement_room(extb_room_t &room, ext_basement_room_params_t &P,
 		float door_width, bool dim, bool dir, bool is_end_room, unsigned depth, bool const add_doors[2], rand_gen_t &rgen);
