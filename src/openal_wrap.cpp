@@ -505,14 +505,15 @@ void gen_sound(unsigned id, point const &pos, float gain, float pitch, bool rel_
 	source.play();
 	//PRINT_TIME("Play Sound");
 }
+void gen_sound_random_var(unsigned id, point const &pos, float gain, float pitch) { // with minor random variationin gain and pitch
+	static rand_gen_t rgen;
+	gen_sound(id, pos, gain*rgen.rand_uniform(0.75, 1.3), pitch*rgen.rand_uniform(0.9, 1.11));
+}
 
 void gen_delayed_sound(float delay, unsigned id, point const &pos, float gain, float pitch, bool rel_to_listener) { // delay in seconds
-
 	if (disable_sound) return;
 
-	if (delay < 0.01) { // less than 10ms
-		gen_sound(id, pos, gain, pitch, rel_to_listener);
-	}
+	if (delay < 0.01) {gen_sound(id, pos, gain, pitch, rel_to_listener);} // less than 10ms - play now
 	else {
 		assert(delay > 0.0);
 		sound_manager.add_delayed_sound(sound_params_t(pos, id, gain, pitch, rel_to_listener), id, round_fp(delay*TICKS_PER_SECOND)); // round to the nearest tick

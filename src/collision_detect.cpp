@@ -1677,7 +1677,7 @@ int dwobject::multistep_coll(point const &last_pos, int obj_index, unsigned nste
 }
 
 
-void create_footsteps(point const &pos, float sz, vector3d const &view_dir, point &prev_foot_pos, unsigned &step_num, bool &foot_down, bool is_camera) {
+void create_footsteps(point const &pos, float sz, vector3d const &view_dir, point &prev_foot_pos, unsigned &step_num, bool &foot_down, bool is_camera) { // ground mode
 
 	if (!has_snow /*&& !is_camera*/) return; // only camera has footsteps, all players have snow footprints; non-snow footsteps disabled for now
 	bool const prev_foot_down(foot_down);
@@ -1687,11 +1687,14 @@ void create_footsteps(point const &pos, float sz, vector3d const &view_dir, poin
 	vector3d const right_dir(cross_product(view_dir, plus_z).get_norm());
 	point const step_pos(pos + ((step_num&1) ? foot_spacing : -foot_spacing)*right_dir - vector3d(0.0, 0.0, 0.5*sz)); // alternate left and right feet
 	if (!foot_down) return;
-	bool const crushed(has_snow ? crush_snow_at_pt(step_pos, crush_depth) : 0);
-	if (is_camera && !prev_foot_down) {gen_sound((crushed ? (int)SOUND_SNOW_STEP : (int)SOUND_FOOTSTEP), pos, 0.025, (crushed ? 1.5 : 1.2));} // on down step
+	
+	if (is_camera && !prev_foot_down) { // on down step
+		if (has_snow && crush_snow_at_pt(step_pos, crush_depth)) {gen_sound_random_var(SOUND_SNOW_STEP, pos, 0.1, 1.5);} // snow sound
+		else {gen_sound_random_var(SOUND_FOOTSTEP, pos, 0.025, 1.2);} // normal footstep
+	}
 }
 
-void play_camera_footstep_sound() {
+void play_camera_footstep_sound() { // tiled terrain mode
 
 	if (!(display_mode & 0x0100)) return;
 	static double fs_time(0.0);
