@@ -329,6 +329,13 @@ bool building_t::max_expand_underground_room(cube_t &room, bool dim, bool dir, r
 	return 1;
 }
 
+cube_t building_t::get_water_cube(bool full_room_height) const {
+	if (!has_water()) return cube_t(); // no water; error?
+	assert(has_ext_basement());
+	cube_t water(interior->basement_ext_bcube);
+	water.z2() = (full_room_height ? (water.z1() + get_window_vspace()) : interior->water_zval);
+	return water;
+}
 cube_t building_t::add_ext_basement_door(cube_t const &room, float door_width, bool dim, bool dir, bool is_end_room, rand_gen_t &rgen) {
 	float const fc_thick(get_fc_thickness());
 	cube_t door;

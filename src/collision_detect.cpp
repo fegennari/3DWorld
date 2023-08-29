@@ -26,11 +26,11 @@ coll_obj_group coll_objects;
 cobj_groups_t cobj_groups;
 cobj_draw_groups cdraw_groups;
 
-extern bool lm_alloc, has_snow;
+extern bool lm_alloc, has_snow, player_in_water;
 extern int camera_coll_smooth, game_mode, world_mode, xoff, yoff, camera_change, display_mode, scrolling, animate2;
 extern int camera_in_air, mesh_scale_change, camera_invincible, camera_flight, num_smileys, iticks, frame_counter;
 extern unsigned snow_coverage_resolution;
-extern float TIMESTEP, temperature, zmin, base_gravity, ftick, tstep, zbottom, ztop, fticks, jump_height, NEAR_CLIP;
+extern float TIMESTEP, temperature, zmin, base_gravity, ftick, tstep, zbottom, ztop, water_plane_z, fticks, jump_height, NEAR_CLIP;
 extern double camera_zh, tfticks;
 extern dwobject def_objects[];
 extern obj_type object_types[];
@@ -1700,13 +1700,15 @@ void play_camera_footstep_sound() { // tiled terrain mode
 	static double fs_time(0.0);
 	static point last_pos(all_zeros), prev_frame_pos(all_zeros);
 	point const pos(get_camera_pos());
+	if (pos.z < water_plane_z) return; // underwater, no sound
 	if (dist_less_than(pos, prev_frame_pos, 0.001*CAMERA_RADIUS)) {fs_time = tfticks;} // reset timer if camera hasn't moved
 	prev_frame_pos = pos;
 	if (tfticks - fs_time < 0.36*TICKS_PER_SECOND) return; // too soon
 	if (dist_xy_less_than(pos, last_pos, 0.5*CAMERA_RADIUS)) return;
 	last_pos = pos;
 	fs_time  = tfticks;
-	gen_sound(SOUND_SNOW_STEP, pos, 0.05, 1.25);
+	if (player_in_water) {gen_sound_random_var(SOUND_SPLASH2, pos, 0.3, 0.9);} // water splash sound
+	else {gen_sound_random_var(SOUND_SNOW_STEP, pos, 0.05, 1.25);} // normal footstep
 }
 
 

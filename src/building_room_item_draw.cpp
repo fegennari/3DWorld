@@ -1743,8 +1743,7 @@ void building_t::draw_cars_in_building(shader_t &s, vector3d const &xlate, bool 
 }
 
 void building_t::draw_water(vector3d const &xlate) const {
-	if (!(display_mode & 0x04)) return; // water disabled
-	if (!interior || interior->water_zval == 0.0) return; // no water
+	if (!(display_mode & 0x04) || !has_water()) return; // water disabled, or no water
 	point const camera_bs(camera_pdu.pos - xlate);
 	if (!point_in_extended_basement_not_basement(camera_bs)) return;
 	float const floor_spacing(get_window_vspace());
@@ -1755,8 +1754,7 @@ void building_t::draw_water(vector3d const &xlate) const {
 	// * building people avoid spawning and walking in water
 	// * player leaves water trails
 	// * reflections
-	cube_t water(interior->basement_ext_bcube);
-	water.z2() = interior->water_zval;
+	cube_t const water(get_water_cube());
 	shader_t s;
 	setup_building_draw_shader(s, 0.0, 0, 0, 0); // enable_indir=0, force_tsl=0, use_texgen=0
 	s.set_cur_color(colorRGBA(0.4, 0.6, 1.0, 0.25));
