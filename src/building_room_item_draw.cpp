@@ -1762,6 +1762,7 @@ void building_t::draw_water(vector3d const &xlate) const {
 		s.begin_shader();
 		s.add_uniform_int("reflection_tex", 0);
 		bind_2d_texture(room_mirror_ref_tid);
+		s.set_cur_color(colorRGBA(0.1, 0.15, 0.25, 0.25)); // dark blue-ish
 	}
 	else { // no reflections - use a simple blue tinted partially transparent surface with the default building shader
 		setup_building_draw_shader(s, 0.0, 0, 0, 0); // enable_indir=0, force_tsl=0, use_texgen=0

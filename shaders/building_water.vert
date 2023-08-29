@@ -1,6 +1,8 @@
-out vec4 proj_pos;
+out vec4 epos, proj_pos;
 
 void main() {
-	proj_pos = fg_ftransform();
+	epos        = fg_ModelViewMatrix * fg_Vertex;
+	proj_pos    = fg_ProjectionMatrix * epos;
 	gl_Position = proj_pos;
+	fg_Color_vf = fg_Color;
 } 
