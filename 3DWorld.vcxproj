@@ -1097,6 +1097,8 @@
     <None Include="shaders\atmosphere.vert" />
     <None Include="shaders\bcc_noise.part.frag" />
     <None Include="shaders\black_body_burn.part.frag" />
+    <None Include="shaders\building_water.frag" />
+    <None Include="shaders\building_water.vert" />
     <None Include="shaders\bump_map.part.frag" />
     <None Include="shaders\bump_map.part.vert" />
     <None Include="shaders\circular_portal.frag" />

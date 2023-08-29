@@ -1479,6 +1479,12 @@
     <None Include="shaders\world_space_offset_rot.part.vert">
       <Filter>Shaders\vert</Filter>
     </None>
+    <None Include="shaders\building_water.frag">
+      <Filter>Shaders\frag</Filter>
+    </None>
+    <None Include="shaders\building_water.vert">
+      <Filter>Shaders\vert</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Script1.rc">
