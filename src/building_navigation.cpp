@@ -1118,13 +1118,14 @@ int building_t::choose_dest_room(person_t &person, rand_gen_t &rgen) const { // 
 		}
 	}
 	bool const is_single_large_room(loc.room_ix >= 0 && is_room_pg_or_backrooms(get_room(loc.room_ix)));
+	bool const standing_in_water(point_in_water_area(person.pos));
 
-	if (is_single_large_room && (person.is_first_path || rgen.rand_float() < 0.75)) { // stay in this room 75% of the time, always on the first path
+	if (is_single_large_room && !standing_in_water && (person.is_first_path || rgen.rand_float() < 0.75)) { // stay in this room 75% of the time, always on the first path
 		person.is_first_path = 0; // respect the walls
 		if (select_person_dest_in_room(person, rgen, get_room(loc.room_ix))) return 1;
 	}
 	// sometimes use stairs in backrooms and parking garages
-	bool const try_use_stairs(is_single_large_room && get_room(loc.room_ix).has_stairs && rgen.rand_bool());
+	bool const try_use_stairs(is_single_large_room && get_room(loc.room_ix).has_stairs && (standing_in_water || rgen.rand_bool()));
 	unsigned const num_tries(try_use_stairs ? 0 : 100);
 
 	// try to find a valid room to move to
@@ -1137,7 +1138,6 @@ int building_t::choose_dest_room(person_t &person, rand_gen_t &rgen) const { // 
 		// allow move to a different stacked part 25% of the time; 100% of the time for parking garages, since they're more rare
 		if ((person.pos.z < room.z1() || person.pos.z > room.z2()) && !(has_parking_garage && room.z1() < ground_floor_z1) && (rgen.rand()&3) != 0) continue;
 		if (!interior->nav_graph->is_room_connected_to(loc.room_ix, cand_room, interior->doors, person.pos.z, person.has_key)) continue;
-		person.dest_room    = cand_room; // set but not yet used
 		person.target_pos   = get_center_of_room(cand_room);
 		person.target_pos.z = person.pos.z; // keep orig zval to stay on the same floor
 
@@ -1166,6 +1166,7 @@ int building_t::choose_dest_room(person_t &person, rand_gen_t &rgen) const { // 
 			}
 			assert(person.target_pos.z > room.z1() && person.target_pos.z < room.z2());
 		}
+		person.dest_room = cand_room; // set but not yet used
 		person.goal_type = GOAL_TYPE_ROOM;
 		return 1;
 	} // for n
@@ -1178,7 +1179,7 @@ int building_t::choose_dest_room(person_t &person, rand_gen_t &rgen) const { // 
 
 		if (new_z > room.z1() && new_z < room.z2()) { // valid if this floor is inside the room
 			person.target_pos.z = new_z;
-			if (select_person_dest_in_room(person, rgen, room)) return 1;
+			if (!point_in_water_area(person.target_pos) && select_person_dest_in_room(person, rgen, room)) return 1;
 		}
 	}
 	// how about a different location in the same room? this will at least get the person unstuck from an object and moving inside a parking garage
@@ -1445,6 +1446,7 @@ void person_t::next_path_pt(bool starting_path) {
 
 bool building_t::is_valid_ai_placement(point const &pos, float radius, bool skip_nocoll) const { // for people and animals
 	if (!is_pos_inside_building(pos, radius, radius, 1)) return 0; // required for attic; for_attic=1
+	if (point_in_water_area(pos)) return 0;
 	cube_t ai_bcube(pos);
 	ai_bcube.expand_by(radius); // expand more in Z?
 	if (!is_valid_stairs_elevator_placement(ai_bcube, radius)) return 0;
@@ -1497,6 +1499,7 @@ bool building_t::place_people_if_needed(unsigned building_ix, float radius, vect
 
 		for (unsigned f = 0; f < num_floors; ++f) {
 			if (r->lit_by_floor && !r->is_lit_on_floor(f)) continue; // don't place person in an unlit room; only applies if room lighting has been calculated
+			if (has_water() && r->intersects(get_water_cube()) && (r->z1() + f*window_vspacing) < interior->water_zval) continue; // don't place in a room with water on the floor
 			unsigned const num_cands(is_room_backrooms(*r) ? 4 : 1); // add 4x for backrooms since this is one room with many sub-rooms (even if multi-level?)
 			for (unsigned n = 0; n < num_cands; ++n) {room_cands.emplace_back(room_ix, f);}
 		}

@@ -1750,8 +1750,6 @@ void building_t::draw_water(vector3d const &xlate) const {
 	if (camera_bs.z > interior->water_zval + 2.0*floor_spacing) return; // player on the floor with water or the floor above (in case water is visible through stairs)
 	// TODO:
 	// * custom shader
-	// * splash sounds when walking
-	// * building people avoid spawning and walking in water
 	// * player leaves water trails
 	// * reflections
 	cube_t const water(get_water_cube());
