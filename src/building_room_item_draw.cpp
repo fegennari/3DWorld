@@ -30,6 +30,7 @@ template< typename T > void gen_quad_ixs(vector<T> &ixs, unsigned size, unsigned
 void draw_car_in_pspace(car_t &car, shader_t &s, vector3d const &xlate, bool shadow_only);
 void set_car_model_color(car_t &car);
 bldg_obj_type_t get_taken_obj_type(room_object_t const &obj);
+void set_interior_lighting(shader_t &s, bool have_indir);
 void reset_interior_lighting_and_end_shader(shader_t &s);
 
 bool has_key_3d_model() {return building_obj_model_loader.is_model_valid(OBJ_MODEL_KEY);}
@@ -1747,13 +1748,21 @@ void building_t::draw_water(vector3d const &xlate) const {
 	if (!(display_mode & 0x04) || !water_visible_to_player()) return; // water disabled, or no water
 	// TODO:
 	// * player leaves water trails
-	// * fresnel term
 	// * light attenuation
 	shader_t s;
+	cube_t const lights_bcube(get_building_lights_bcube());
+	bool const use_dlights(!lights_bcube.is_all_zeros()), have_indir(0), use_smap(1);
+	float const pcf_scale = 0.2;
+	s.set_prefix("#define LINEAR_DLIGHT_ATTEN", 1); // FS; improves room lighting (better light distribution vs. framerate trade-off)
+	if (set_dlights_booleans(s, use_dlights, 1, 0)) {s.set_prefix("#define NO_DL_SPECULAR", 1);} // FS
+	s.set_prefix(make_shader_bool_prefix("use_shadow_map", 0), 1); // FS; not using sun/moon light, so no shadow maps
 	s.set_vert_shader("building_water");
-	s.set_frag_shader("building_water");
+	s.set_frag_shader("ads_lighting.part*+shadow_map.part*+dynamic_lighting.part*+building_water");
 	s.begin_shader();
 	s.add_uniform_int("reflection_tex", 0);
+	if (use_dlights) {setup_dlight_textures(s);} // must be before set_city_lighting_shader_opts()
+	set_city_lighting_shader_opts(s, lights_bcube, use_dlights, use_smap, pcf_scale);
+	set_interior_lighting(s, have_indir);
 	if (room_mirror_ref_tid > 0) {bind_2d_texture(room_mirror_ref_tid);} else {select_texture(WHITE_TEX);}
 	s.set_cur_color(colorRGBA(0.1, 0.15, 0.25, 0.25)); // dark blue-ish
 	enable_blend();
@@ -1764,6 +1773,7 @@ void building_t::draw_water(vector3d const &xlate) const {
 		                           vert_norm_tc(point(x2, y2, z), n, tx,  ty ), vert_norm_tc(point(x1, y2, z), n, 0.0, ty)};
 	draw_quad_verts_as_tris(verts, 4);
 	disable_blend();
+	reset_interior_lighting_and_end_shader(s);
 }
 
 void append_line_pt(vector<vert_wrap_t> &line_pts, point const &pos) {
