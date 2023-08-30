@@ -234,10 +234,12 @@ void add_dlights_bm_scaled(inout vec3 color, in vec3 dlpos, in vec4 epos, in vec
 		}
 #endif // HAS_LINE_LIGHTS
 		float spec_mag = clamp(10.0*n_dot_l, 0.0, 1.0)*get_spec_intensity(lnorm, light_dir, eye_dir);
+		vec3 spec_color= get_wet_specular_color(wet_scale);
 #else // no specular
 		float spec_mag = 0.0;
+		vec3 spec_color= vec3(0.0);
 #endif // NO_DL_SPECULAR
-		vec3 spec_color= get_wet_specular_color(wet_scale);
+		
 #ifdef USE_SPEC_MAP
 		spec_color    *= get_spec_color();
 #endif
