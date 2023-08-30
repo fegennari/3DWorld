@@ -1744,31 +1744,18 @@ void building_t::draw_cars_in_building(shader_t &s, vector3d const &xlate, bool 
 }
 
 void building_t::draw_water(vector3d const &xlate) const {
-	if (!(display_mode & 0x04) || !has_water()) return; // water disabled, or no water
-	point const camera_bs(camera_pdu.pos - xlate);
-	if (!point_in_extended_basement_not_basement(camera_bs)) return;
-	float const floor_spacing(get_window_vspace());
-	if (camera_bs.z > interior->water_zval + 2.0*floor_spacing) return; // player on the floor with water or the floor above (in case water is visible through stairs)
+	if (!(display_mode & 0x04) || !water_visible_to_player()) return; // water disabled, or no water
 	// TODO:
 	// * player leaves water trails
 	// * fresnel term
 	// * light attenuation
 	shader_t s;
-	bool const enable_reflections(player_in_water && room_mirror_ref_tid > 0);
-
-	if (enable_reflections) {
-		s.set_vert_shader("building_water");
-		s.set_frag_shader("building_water");
-		s.begin_shader();
-		s.add_uniform_int("reflection_tex", 0);
-		bind_2d_texture(room_mirror_ref_tid);
-		s.set_cur_color(colorRGBA(0.1, 0.15, 0.25, 0.25)); // dark blue-ish
-	}
-	else { // no reflections - use a simple blue tinted partially transparent surface with the default building shader
-		setup_building_draw_shader(s, 0.0, 0, 0, 0); // enable_indir=0, force_tsl=0, use_texgen=0
-		select_texture(WHITE_TEX);
-		s.set_cur_color(colorRGBA(0.4, 0.6, 1.0, 0.25)); // blue-ish
-	}
+	s.set_vert_shader("building_water");
+	s.set_frag_shader("building_water");
+	s.begin_shader();
+	s.add_uniform_int("reflection_tex", 0);
+	if (room_mirror_ref_tid > 0) {bind_2d_texture(room_mirror_ref_tid);} else {select_texture(WHITE_TEX);}
+	s.set_cur_color(colorRGBA(0.1, 0.15, 0.25, 0.25)); // dark blue-ish
 	enable_blend();
 	cube_t const water(get_water_cube());
 	float const x1(water.x1()), y1(water.y1()), x2(water.x2()), y2(water.y2()), z(water.z2()), tx(1.0), ty(1.0);
@@ -1777,7 +1764,6 @@ void building_t::draw_water(vector3d const &xlate) const {
 		                           vert_norm_tc(point(x2, y2, z), n, tx,  ty ), vert_norm_tc(point(x1, y2, z), n, 0.0, ty)};
 	draw_quad_verts_as_tris(verts, 4);
 	disable_blend();
-	if (!enable_reflections) {reset_interior_lighting_and_end_shader(s);}
 }
 
 void append_line_pt(vector<vert_wrap_t> &line_pts, point const &pos) {

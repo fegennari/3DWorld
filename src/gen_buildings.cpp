@@ -2911,7 +2911,7 @@ public:
 		bool valid() const {return (building != nullptr);}
 	};
 
-	static void ensure_city_lighting_setup(int reflection_pass, vector3d const &xlate, bool &is_setup) {
+	static void ensure_city_lighting_setup(bool reflection_pass, vector3d const &xlate, bool &is_setup) {
 		if (is_setup) return;
 		city_dlight_pcf_offset_scale = 1.0; // restore city value
 		if (!reflection_pass) {setup_city_lights(xlate);}
@@ -2951,6 +2951,7 @@ public:
 		point const camera(get_camera_pos()), camera_xlated(camera - xlate);
 		int const use_bmap(global_building_params.has_normal_map);
 		bool const night(is_night(WIND_LIGHT_ON_RAND)), use_city_dlights(!reflection_pass);
+		bool const ref_pass_house(reflection_pass & REF_PASS_HOUSE), ref_pass_interior(reflection_pass & REF_PASS_INTERIOR), ref_pass_water(reflection_pass & REF_PASS_WATER);
 		// check for sun or moon; also need the smap pass for drawing with dynamic lights at night, so basically it's always enabled
 		bool const use_tt_smap(check_tile_smap(0)); // && (night || light_valid_and_enabled(0) || light_valid_and_enabled(1)));
 		bool have_windows(0), have_wind_lights(0), have_interior(0), is_city_lighting_setup(0);
@@ -3102,7 +3103,7 @@ public:
 						if (b.has_cars_to_draw(player_in_building_bcube)) {buildings_with_cars.push_back(&b);}
 						// check the bcube rather than check_point_or_cylin_contained() so that it works with roof doors that are outside any part?
 						if (!camera_near_building && !ext_basement_conn_visible) {b.player_not_near_building(); continue;} // camera not near building or ext basement conn
-						if (reflection_pass == 2) continue; // interior room, don't need to draw windows and exterior doors
+						if (ref_pass_interior) continue; // interior room, don't need to draw windows and exterior doors
 						// it would be nice to open doors for pedestrians, but we don't have access to them here and this system doesn't support more than one open door
 						b.get_nearby_ext_door_verts(ext_door_draw, s, camera_xlated, door_open_dist); // and draw opened door
 						bool const camera_in_this_building(b.check_point_or_cylin_contained(camera_xlated, 0.0, points, 1, 1)); // inc_attic=1, inc_ext_basement=1
@@ -3170,7 +3171,7 @@ public:
 			if (indir_bcs_ix >= 0 && indir_bix >= 0) {indir_tex_mgr.create_for_building(bcs[indir_bcs_ix]->get_building(indir_bix), indir_bix, camera_xlated);}
 			else if (!reflection_pass) {end_building_rt_job();}
 			
-			if (draw_interior && have_windows && reflection_pass != 2) { // write to stencil buffer, use stencil test for back facing building walls
+			if (draw_interior && have_windows && !ref_pass_interior) { // write to stencil buffer, use stencil test for back facing building walls
 				enable_holes_shader(holes_shader);
 				setup_stencil_buffer_write();
 				glStencilOpSeparate((reflection_pass ? GL_BACK : GL_FRONT), GL_KEEP, GL_KEEP, GL_KEEP); // ignore front faces
@@ -3191,7 +3192,7 @@ public:
 			toggle_room_light = teleport_to_screenshot = 0; building_action_key = 0; // reset these even if the player wasn't in a building
 		}
 		if (draw_interior) {
-			if (reflection_pass != 2) { // skip for interior room reflections (but what about looking out through the bathroom door?)
+			if (!ref_pass_interior) { // skip for interior room reflections (but what about looking out through the bathroom door?)
 				// draw back faces of buildings, which will be interior walls
 				setup_building_draw_shader(s, min_alpha, 1, 1, 1); // enable_indir=1, force_tsl=1, use_texgen=1
 				glEnable(GL_CULL_FACE);
@@ -3255,7 +3256,7 @@ public:
 					for (auto i = bcs.begin(); i != bcs.end(); ++i) {(*i)->building_draw_vbo.draw(s, 0, 0, tex_filt_mode);}
 					reset_interior_lighting_and_end_shader(s);
 				}
-			} // end reflection_pass != 2
+			} // end !ref_pass_interior
 			glCullFace(reflection_pass ? GL_FRONT : GL_BACK); // draw front faces
 
 			// draw people in the player's building here with alpha mask enabled
@@ -3268,12 +3269,13 @@ public:
 					if (!reflection_pass) {oc.set_camera(camera_pdu);} // setup occlusion culling
 					gen_and_draw_people_in_building(ped_draw_vars_t(*defer_ped_draw_vars.building, oc, s, xlate, defer_ped_draw_vars.bix, 0, reflection_pass));
 				}
-				if (reflection_pass) {draw_player_model(s, xlate, 0);} // draw last so that alpha blending of hair works properly; shadow_only=0
+				// draw player reflection last so that alpha blending of hair works properly; not visible in water reflections
+				if (reflection_pass && !ref_pass_water) {draw_player_model(s, xlate, 0);} // shadow_only=0
 				reset_interior_lighting_and_end_shader(s);
 			}
 			if (!reflection_pass && player_in_basement == 3 && player_building != nullptr) {player_building->draw_water(xlate);}
 
-			if (reflection_pass != 2 && bbd.has_ext_geom()) { // skip for interior room reflections
+			if (!ref_pass_interior && bbd.has_ext_geom()) { // skip for interior room reflections
 				glDisable(GL_CULL_FACE);
 				ensure_city_lighting_setup(reflection_pass, xlate, is_city_lighting_setup); // needed for dlights to work
 				glEnable(GL_CULL_FACE); // above call may create shadow maps and disable face culling, so make sure it's re-enabled
@@ -3294,7 +3296,7 @@ public:
 			}
 			glDisable(GL_CULL_FACE);
 
-			if (reflection_pass != 2 && have_buildings_ext_paint()) { // draw spraypaint/markers on building exterior, if needed
+			if (!ref_pass_interior && have_buildings_ext_paint()) { // draw spraypaint/markers on building exterior, if needed
 				setup_building_draw_shader(s, DEF_CITY_MIN_ALPHA, 1, 1, 0); // alpha test, enable_indir=1, force_tsl=1, use_texgen=0
 				draw_buildings_ext_paint(s);
 				reset_interior_lighting_and_end_shader(s);
@@ -3303,7 +3305,7 @@ public:
 
 		// everything after this point is part of the building exteriors and uses city lights rather than building room lights;
 		// when the player is in the extended basement we still need to draw the exterior wall and door
-		if ((reflection_pass && (!DRAW_EXT_REFLECTIONS || reflection_pass != 3)) || player_cant_see_outside_building()) {
+		if ((reflection_pass && (!DRAW_EXT_REFLECTIONS || !ref_pass_house)) || player_cant_see_outside_building()) {
 			// early exit for player fully in basement or attic, or house reflections, if enabled
 			fgPopMatrix();
 			enable_dlight_bcubes = 0;

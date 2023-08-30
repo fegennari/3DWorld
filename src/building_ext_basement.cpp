@@ -336,6 +336,27 @@ cube_t building_t::get_water_cube(bool full_room_height) const {
 	water.z2() = (full_room_height ? (water.z1() + get_window_vspace()) : interior->water_zval);
 	return water;
 }
+bool building_t::water_visible_to_player() const {
+	if (!has_water()) return 0;
+	vector3d const xlate(get_tiled_terrain_model_xlate());
+	point const camera_bs(camera_pdu.pos - xlate);
+	if (point_in_water_area(camera_bs)) return 1; // definitely visible
+	if (!point_in_extended_basement_not_basement(camera_bs)) return 0;
+	float const floor_spacing(get_window_vspace()), floor_above(interior->water_zval + floor_spacing);
+	if (camera_bs.z > floor_above + floor_spacing)     return 0; // player not on the floor with water or the floor above (in case water is visible through stairs)
+	if (!is_rot_cube_visible(get_water_cube(), xlate)) return 0;
+	
+	for (stairwell_t const &s : interior->stairwells) { // check stairs visibility
+		if (s.z1() > interior->water_zval) continue; // above the water level
+		if (!interior->basement_ext_bcube.contains_cube(s))          continue; // not extended basement stairs
+		if (!s.closest_dist_less_than(camera_bs, 5.0*floor_spacing)) continue; // too far away
+		cube_t floor_cut(s);
+		set_cube_zvals(floor_cut, floor_above, floor_above+get_fc_thickness());
+		if (is_rot_cube_visible(floor_cut, xlate)) return 1;
+	} // for s
+	return 0;
+}
+
 cube_t building_t::add_ext_basement_door(cube_t const &room, float door_width, bool dim, bool dir, bool is_end_room, rand_gen_t &rgen) {
 	float const fc_thick(get_fc_thickness());
 	cube_t door;
