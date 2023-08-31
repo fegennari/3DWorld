@@ -1765,6 +1765,12 @@ void building_t::draw_water(vector3d const &xlate) const {
 	set_interior_lighting(s, have_indir);
 	if (room_mirror_ref_tid > 0) {bind_2d_texture(room_mirror_ref_tid);} else {select_texture(WHITE_TEX);}
 	s.set_cur_color(colorRGBA(0.1, 0.15, 0.25, 0.25)); // dark blue-ish
+	float const water_depth(interior->water_zval - (interior->basement_ext_bcube.z1() + get_fc_thickness()));
+	s.add_uniform_vector3d("camera_pos",  get_camera_pos());
+	s.add_uniform_float("water_depth",    water_depth);
+	s.add_uniform_float("water_atten",    1.0/(0.25*get_window_vspace()));
+	s.add_uniform_color("uw_atten_max",   uw_atten_max);
+	s.add_uniform_color("uw_atten_scale", uw_atten_scale);
 	enable_blend();
 	cube_t const water(get_water_cube());
 	float const x1(water.x1()), y1(water.y1()), x2(water.x2()), y2(water.y2()), z(water.z2()), tx(1.0), ty(1.0);
