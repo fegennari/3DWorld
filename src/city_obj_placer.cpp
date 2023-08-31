@@ -276,8 +276,9 @@ struct pigeon_place_t {
 	vector3d orient;
 	bool on_ground;
 
-	pigeon_place_t(point const &pos_, rand_gen_t &rgen  ) : pos(pos_), orient(rgen.signed_rand_vector_spherical()), on_ground(1) {} // ground constructor
+	pigeon_place_t(point const &pos_, rand_gen_t &rgen  ) : pos(pos_), on_ground(1) {set_rand_orient(rgen);} // ground constructor
 	pigeon_place_t(point const &pos_, bool dim, bool dir) : pos(pos_), on_ground(0) {orient[dim] = (dir ? 1.0 : -1.0);} // object constructor
+	void set_rand_orient(rand_gen_t &rgen) {orient = rgen.signed_rand_vector_spherical();}
 };
 void place_pigeon_on_obj(cube_t const &obj, bool dim, bool dir, bool orient_dir, float spacing, rand_gen_t &rgen, vector<pigeon_place_t> &locs) {
 	point pos(0.0, 0.0, obj.z2());
@@ -521,9 +522,9 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 		float const base_height(0.06*car_length), place_radius(4.0*base_height), obj_edge_spacing(0.25*base_height);
 
 		if (min(plot.dx(), plot.dy()) > 8.0*place_radius) { // plot large enough; should always get here
-			unsigned const num_pigeons(rgen.rand() % 5); // 0-4
 			vector<pigeon_place_t> pigeon_locs;
-			// use place_radius because pigeon radius hasn't been calculated yet; TODO: place in a group?
+			// place some random pigeons; use place_radius because pigeon radius hasn't been calculated yet
+			unsigned const count_mod(plot.is_park ? 9 : 5), num_pigeons(rgen.rand() % count_mod); // 0-4, 0-8 for parks
 			for (unsigned n = 0; n < num_pigeons; ++n) {pigeon_locs.emplace_back(rand_xy_pt_in_cube(plot, place_radius, rgen), rgen);}
 
 			// maybe place on benches, trashcans, and substations
@@ -548,7 +549,8 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 				bool const dim(rgen.rand_bool()), dir(rgen.rand_bool()); // random orient
 				pigeon_locs.emplace_back(point(i->bcube.xc(), i->bcube.yc(), i->bcube.z2()), dim, dir); // top center
 			}
-			for (pigeon_place_t &p : pigeon_locs) {
+			for (unsigned i = 0; i < pigeon_locs.size(); ++i) {
+				pigeon_place_t p(pigeon_locs[i]);
 				float const height(base_height*rgen.rand_uniform(0.8, 1.2));
 				// the current model's tail extends below its feet; move down slightly so that feet are on the object, though the tail may clip through the object;
 				// the feet gap isn't really visible when placed on the ground since there are no shadows, and it looks better than having the tail clip through the ground
@@ -557,7 +559,22 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 				if (p.on_ground && has_bcube_int_xy(pigeon.bcube, blockers, 2.0*pigeon.radius)) continue; // placed on the ground - check for collisions
 				if (p.on_ground) {blockers.push_back(pigeon.bcube);} // not needed? don't need to add to pedestrian colliders
 				pigeon_groups.add_obj(pigeon, pigeons);
-			} // for n
+
+				if (i == 0 && p.on_ground) { // place a group of pigeons on the ground for the first pigeon
+					float const place_range(0.5*car_length);
+					unsigned const group_size(rgen.rand() % count_mod); // 0-4 more, 0-8 for parks
+					cube_t valid_range(plot);
+					valid_range.expand_by_xy(-place_radius);
+
+					for (unsigned N = 0; N < group_size; ++N) {
+						pigeon_place_t p2(p);
+						p2.pos += rgen.signed_rand_vector_spherical_xy(place_range);
+						if (!valid_range.contains_pt_xy(p2.pos) || pigeon.bcube.contains_pt_xy_exp(p2.pos, base_height)) continue;
+						p2.set_rand_orient(rgen);
+						pigeon_locs.push_back(p2);
+					}
+				}
+			} // for i
 		}
 	}
 }
