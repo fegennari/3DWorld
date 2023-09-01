@@ -15,6 +15,7 @@ extern building_t const *player_building;
 bool using_hmap_with_detail();
 cube_t get_stairs_bcube_expanded(stairwell_t const &s, float ends_clearance, float sides_clearance, float doorway_width);
 bool get_fire_ext_height_and_radius(float window_vspacing, float &height, float &radius);
+float get_ped_coll_radius();
 
 
 bool building_t::extend_underground_basement(rand_gen_t rgen) {
@@ -913,9 +914,18 @@ void building_t::add_backrooms_objs(rand_gen_t rgen, room_t &room, float zval, u
 
 	for (unsigned d = 0; d < 2; ++d) {
 		sort(walls_per_dim[d].begin(), walls_per_dim[d].begin(), cube_by_sz(!d)); // sort walls longest to shortest to improve occlusion culling time
-		for (cube_t &wall : walls_per_dim[d]) {objs.emplace_back(wall, TYPE_PG_WALL, room_id, d, 0, RO_FLAG_BACKROOM, tot_light_amt, SHAPE_CUBE, wall_color);} // dir=0
-		vector_add_to(walls_per_dim[d], pbgr_walls[d]); // store walls for occlusion and door opening checks
-	}
+		
+		for (cube_t &wall : walls_per_dim[d]) {
+			objs.emplace_back(wall, TYPE_PG_WALL, room_id, d, 0, RO_FLAG_BACKROOM, tot_light_amt, SHAPE_CUBE, wall_color); // dir=0
+			pbgr_walls[d].push_back(wall); // store walls for occlusion and door opening checks
+#if 0 // enable for pedestrian navigation debugging
+			cube_t c(wall);
+			c.z2() -= 0.5*wall.dz(); // half height
+			c.expand_by_xy(get_ped_coll_radius());
+			objs.emplace_back(c, TYPE_DBG_SHAPE, room_id, d, 0, (RO_FLAG_NOCOLL | RO_FLAG_BACKROOM), 1.0, SHAPE_CUBE, RED);
+#endif
+		}
+	} // for d
 	pgbr_wall_ixs.emplace_back(pbgr_walls); // end of range
 	
 	// Add vents, light switch, and outlets (on all walls - or should it be only on the wall adjacent to building or next to the door?)
