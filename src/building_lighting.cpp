@@ -1595,7 +1595,6 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		if (wall_light) {dir[i->dim] = (i->dir ? 1.0 : -1.0);} else {dir = -plus_z;} // points down, unless it's a wall light
 		dl_sources.emplace_back(light_radius, lpos_rot, lpos_rot, color, 0, dir, bwidth);
 		//++num_add;
-		float const dshadow_radius((is_in_attic ? 1.0 : 0.8)*light_radius); // use full light radius for attics since they're more open
 		bool force_smap_update(0);
 
 		// check for dynamic shadows; check the player first; use full light radius

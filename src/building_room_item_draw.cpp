@@ -1769,8 +1769,8 @@ public:
 	}
 	void set_shader_uniforms(shader_t &s) {
 		assert(splashes.size() <= MAX_SPLASHES);
-		unsigned const iter_end(max(splashes.size(), last_size));
-		char str[16] = {};
+		unsigned const iter_end(max((unsigned)splashes.size(), last_size));
+		char str[24] = {};
 
 		for (unsigned i = 0; i < iter_end; ++i) { // add splashes for this frame
 			sprintf(str, "splashes[%u]", i);
