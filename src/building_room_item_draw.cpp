@@ -1748,7 +1748,6 @@ void building_t::draw_water(vector3d const &xlate) const {
 	if (!(display_mode & 0x04) || !water_visible_to_player()) return; // water disabled, or no water
 	// TODO:
 	// * player leaves water trails
-	// * light attenuation
 	shader_t s;
 	cube_t const lights_bcube(get_building_lights_bcube());
 	bool const use_dlights(!lights_bcube.is_all_zeros()), have_indir(0), use_smap(1);
@@ -1764,11 +1763,10 @@ void building_t::draw_water(vector3d const &xlate) const {
 	set_city_lighting_shader_opts(s, lights_bcube, use_dlights, use_smap, pcf_scale);
 	set_interior_lighting(s, have_indir);
 	if (room_mirror_ref_tid > 0) {bind_2d_texture(room_mirror_ref_tid);} else {select_texture(WHITE_TEX);}
-	s.set_cur_color(colorRGBA(0.1, 0.15, 0.25, 0.25)); // dark blue-ish
 	float const water_depth(interior->water_zval - (interior->basement_ext_bcube.z1() + get_fc_thickness()));
 	s.add_uniform_vector3d("camera_pos",  get_camera_pos());
 	s.add_uniform_float("water_depth",    water_depth);
-	s.add_uniform_float("water_atten",    1.0/(0.25*get_window_vspace()));
+	s.add_uniform_float("water_atten",    1.0/get_window_vspace()); // attenuates to dark blue/opaque around this distance
 	s.add_uniform_color("uw_atten_max",   uw_atten_max);
 	s.add_uniform_color("uw_atten_scale", uw_atten_scale);
 	enable_blend();

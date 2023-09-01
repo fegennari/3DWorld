@@ -6,5 +6,4 @@ void main() {
 	proj_pos    = fg_ProjectionMatrix * epos;
 	vertex_ws   = fg_Vertex.xyz;
 	gl_Position = proj_pos;
-	fg_Color_vf = fg_Color;
 } 
