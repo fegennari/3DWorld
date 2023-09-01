@@ -1744,6 +1744,45 @@ void building_t::draw_cars_in_building(shader_t &s, vector3d const &xlate, bool 
 	check_mvm_update(); // needed after popping model transform matrix
 }
 
+unsigned const MAX_SPLASHES = 16; // must agree with fragment shader code
+
+class building_splash_manager_t {
+	struct splash_t {
+		float x, y, radius, height;
+		splash_t(float x_, float y_, float r, float h) : x(x_), y(y_), radius(r), height(h) {}
+		bool operator<(splash_t const &s) const {return (height < s.height);} // compare by height for min_element
+		vector4d as_vec4() const {return vector4d(x, y, radius, height);}
+	};
+	vector<splash_t> splashes;
+	unsigned last_size=0;
+public:
+	void add_splash(point const &pos, float radius, float height) {
+		assert(splashes.size() <= MAX_SPLASHES);
+		splashes.emplace_back(pos.x, pos.y, radius, height);
+		if (splashes.size() > MAX_SPLASHES) {splashes.erase(min_element(splashes.begin(), splashes.end()));} // limit size to MAX_SPLASHES
+	}
+	void next_frame() {
+		for (splash_t &s : splashes) {
+			// TODO: update
+		}
+		splashes.erase(std::remove_if(splashes.begin(), splashes.end(), [](splash_t const &s) {return (s.height < 0.01);}), splashes.end());
+	}
+	void set_shader_uniforms(shader_t &s) {
+		assert(splashes.size() <= MAX_SPLASHES);
+		unsigned const iter_end(max(splashes.size(), last_size));
+		char str[16] = {};
+
+		for (unsigned i = 0; i < iter_end; ++i) { // add splashes for this frame
+			sprintf(str, "splashes[%u]", i);
+			s.add_uniform_vector4d(str, ((i < splashes.size()) ? splashes[i].as_vec4() : vector4d())); // set unused slots to all zeros
+		}
+		last_size = splashes.size();
+	}
+	void clear() {splashes.clear();}
+};
+
+building_splash_manager_t building_splash_manager; // TODO: should probably be a building interior member?
+
 void building_t::draw_water(vector3d const &xlate) const {
 	if (!(display_mode & 0x04) || !water_visible_to_player()) return; // water disabled, or no water
 	// TODO:
@@ -1769,6 +1808,7 @@ void building_t::draw_water(vector3d const &xlate) const {
 	s.add_uniform_float("water_atten",    1.0/get_window_vspace()); // attenuates to dark blue/opaque around this distance
 	s.add_uniform_color("uw_atten_max",   uw_atten_max);
 	s.add_uniform_color("uw_atten_scale", uw_atten_scale);
+	building_splash_manager.set_shader_uniforms(s);
 	enable_blend();
 	cube_t const water(get_water_cube());
 	float const x1(water.x1()), y1(water.y1()), x2(water.x2()), y2(water.y2()), z(water.z2()), tx(1.0), ty(1.0);
