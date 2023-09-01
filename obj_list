@@ -121,6 +121,7 @@ building_query.o
 building_animals.o
 building_animal_draw.o
 building_names_signs.o
+building_water.o
 simplifier.o
 city_model.o
 city_building_params.o
