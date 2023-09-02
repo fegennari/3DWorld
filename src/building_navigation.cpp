@@ -1156,7 +1156,7 @@ int building_t::choose_dest_room(person_t &person, rand_gen_t &rgen) const { // 
 			cube_t const &part(get_part_for_room(room)); // or just use the room?
 			unsigned const rand_val(rgen.rand() & 3); // 0-3
 
-			if (rand_val == 0) { // try one floor below
+			if (rand_val == 0 && !point_in_water_area(person.target_pos - floor_spacing*plus_z)) { // try one floor below if not in the water
 				float const new_z(person.target_pos.z - floor_spacing);
 				if (new_z > part.z1()) {person.target_pos.z = new_z;} // change if there is a floor below
 			}
@@ -1175,11 +1175,12 @@ int building_t::choose_dest_room(person_t &person, rand_gen_t &rgen) const { // 
 
 	// how about a different floor of the same room? only check this 50% of the time for parking garages to allow movement within a level
 	if (room.has_stairs == 255 && (try_use_stairs || !is_single_large_room || rgen.rand_bool())) {
-		float const new_z(person.target_pos.z + (rgen.rand_bool() ? -1.0 : 1.0)*floor_spacing); // one floor above or below
+		bool const try_below(rgen.rand_bool() && !point_in_water_area(person.target_pos - floor_spacing*plus_z));
+		float const new_z(person.target_pos.z + (try_below ? -1.0 : 1.0)*floor_spacing); // one floor above or below
 
 		if (new_z > room.z1() && new_z < room.z2()) { // valid if this floor is inside the room
 			person.target_pos.z = new_z;
-			if (!point_in_water_area(person.target_pos) && select_person_dest_in_room(person, rgen, room)) return 1;
+			if (select_person_dest_in_room(person, rgen, room)) return 1;
 		}
 	}
 	// how about a different location in the same room? this will at least get the person unstuck from an object and moving inside a parking garage
