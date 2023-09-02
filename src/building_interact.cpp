@@ -8,7 +8,6 @@
 
 // physics constants, currently applied to balls
 float const KICK_VELOCITY  = 0.0025;
-float const THROW_VELOCITY = 0.0050;
 float const MIN_VELOCITY   = 0.0001;
 float const OBJ_DECELERATE = 0.008;
 float const OBJ_GRAVITY    = 0.0003;
@@ -676,7 +675,7 @@ bool building_t::interact_with_object(unsigned obj_ix, point const &int_pos, poi
 			if (!is_obj_pos_valid(open_area, 0, 1, 0)) return 0; // intersects some part of the building; keep_in_room=0, allow_block_door=1, check_stairs=0
 			if (overlaps_any_placed_obj(open_area))    return 0;
 		}
-		gen_sound_thread_safe_at_player(SOUND_OBJ_FALL, 0.25);
+		if (!check_for_water_splash(sound_origin, 0.4, 1)) {gen_sound_thread_safe_at_player(SOUND_OBJ_FALL, 0.25);} // splash or drop; full_room_height=1
 		obj.flags       ^= RO_FLAG_OPEN; // toggle open/closed
 		sound_scale      = 0.1; // very little sound
 		update_draw_data = 1;
@@ -696,7 +695,7 @@ bool building_t::interact_with_object(unsigned obj_ix, point const &int_pos, poi
 		}
 	}
 	else if (obj.type == TYPE_BOX) {
-		gen_sound_thread_safe_at_player(SOUND_OBJ_FALL, 0.5);
+		if (!check_for_water_splash(sound_origin, 0.6)) {gen_sound_thread_safe_at_player(SOUND_OBJ_FALL, 0.5);}
 		obj.flags       |= RO_FLAG_OPEN; // mark as open
 		sound_scale      = 0.2;
 		update_draw_data = 1;
@@ -808,6 +807,7 @@ void building_t::toggle_door_state(unsigned door_ix, bool player_in_this_buildin
 	if (door.on_stairs) {invalidate_nav_graph();} // any in-progress paths may have people walking to and stopping at closed/locked doors
 	interior->door_state_updated = 1; // required for AI navigation logic to adjust to this change
 	if (has_room_geom()) {interior->room_geom->invalidate_mats_mask |= (1 << MAT_TYPE_DOORS);} // need to recreate doors VBO
+	check_for_water_splash(point(door.xc(), door.yc(), door.z1()), 2.0); // big splash
 
 	if (player_in_this_building || by_player) { // is it really safe to call this from the AI thread?
 		point door_center(door.xc(), door.yc(), actor_pos.z);
@@ -912,7 +912,10 @@ void apply_object_bounce_with_sound(building_t const &building, vector3d &veloci
 	float const bounce_volume(min(1.0f, ((cnorm == plus_z) ? 0.5f : 1.0f)*velocity.mag()/KICK_VELOCITY)); // relative to kick velocity; lower if vertical/floor coll
 
 	if (bounce_volume > 0.25) { // apply bounce sound
-		if (bounce_volume > 0.5) {gen_sound_thread_safe(SOUND_KICK_BALL, building.local_to_camera_space(pos), 0.75*bounce_volume*bounce_volume);}
+		if (bounce_volume > 0.5) {
+			if (bounce_volume > 0.7 && building.check_for_water_splash(pos, 0.75*bounce_volume)) return; // handled as splash
+			gen_sound_thread_safe(SOUND_KICK_BALL, building.local_to_camera_space(pos), 0.75*bounce_volume*bounce_volume);
+		}
 		register_building_sound(pos, 0.7*bounce_volume);
 	}
 }
@@ -972,6 +975,7 @@ void building_t::run_ball_update(vector<room_object_t>::iterator ball_it, point 
 		ball.flags |= RO_FLAG_DYNAMIC; // make it dynamic
 
 		if ((tfticks - last_sound_tfticks) > 1.0*TICKS_PER_SECOND && !dist_less_than(new_center, last_sound_pt, radius)) { // play at most once per second
+			check_for_water_splash(new_center, 0.8); // check for splash, but also play kick sound; will be extra loud
 			gen_sound_thread_safe(SOUND_KICK_BALL, local_to_camera_space(new_center), 0.5);
 			register_building_sound(new_center, 0.75);
 			last_sound_tfticks = tfticks;
@@ -1115,8 +1119,11 @@ void building_t::update_player_interact_objects(point const &player_pos) { // No
 			static float last_sound_tfticks(0);
 
 			if ((tfticks - last_sound_tfticks) > 0.5*TICKS_PER_SECOND) { // play at most twice per second
-				gen_sound_thread_safe_at_player(SOUND_SQUEAK, 0.2, 0.4); // lower pitch; should really use a rolling sound
-				register_building_sound(player_pos, 0.2);
+				if (check_for_water_splash(point(new_obj.xc(), new_obj.yc(), new_obj.z1()), 0.9)) {} // check for splash
+				else { // no splash, play squeak
+					gen_sound_thread_safe_at_player(SOUND_SQUEAK, 0.2, 0.4); // lower pitch; should really use a rolling sound
+					register_building_sound(player_pos, 0.2);
+				}
 				last_sound_tfticks = tfticks;
 			}
 			continue;

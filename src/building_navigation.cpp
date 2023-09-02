@@ -2201,6 +2201,7 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 	max_eq(new_pos.z, min_valid_zval); // don't let the person go below the ground floor
 	min_eq(new_pos.z, max_valid_zval); // don't let the person go above the room ceiling
 	// update state
+	float const old_anim_time(person.anim_time);
 	person.pos        = new_pos; // Note: new_pos.z should equal person.poz.z unless on stairs, which is difficult to accurately check for in this function
 	person.anim_time += max_dist;
 	bool enable_bl_update(display_mode & 0x20); // disabled by default, enable with key '6'
@@ -2209,6 +2210,14 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 	// update cur_room after moving and lights update; needed if player is in the room and for ai_room_lights_update() same room optimization
 	if (player_in_this_building || enable_bl_update) {person.cur_room = get_room_containing_pt(person.pos);}
 	person.idle_time = 0.0; // reset idle time if we actually move
+
+	if (point_in_water_area(new_pos)) { // handle splashes
+		float const splash_dist(3.0*person.radius);
+
+		if (round_fp(old_anim_time/splash_dist) != round_fp(person.anim_time/splash_dist)) { // update every splash_dist
+			check_for_water_splash(person.pos, 1.0, 1); // full_room_height=1
+		}
+	}
 	return AI_MOVING;
 }
 

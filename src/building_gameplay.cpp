@@ -36,6 +36,7 @@ void register_fly_attract(bool no_msg);
 room_obj_or_custom_item_t steal_from_car(room_object_t const &car, float floor_spacing, bool do_pickup);
 float get_filing_cabinet_drawers(room_object_t const &c, vect_cube_t &drawers);
 void reset_creepy_sounds();
+void clear_building_water_splashes();
 
 bool in_building_gameplay_mode() {return (game_mode == 2);} // replaces dodgeball mode
 
@@ -1021,6 +1022,7 @@ void building_t::register_player_enter_building() const {
 void building_t::register_player_exit_building(bool entered_another_building) const {
 	// only collect items in gameplay mode where there's a risk the player can lose them; otherwise, let the player carry items between buildings
 	if (!entered_another_building) {player_inventory.collect_items(!in_building_gameplay_mode());} // only when not in a building
+	clear_building_water_splashes();
 }
 
 bool is_obj_in_or_on_obj(room_object_t const &parent, room_object_t const &child) {
@@ -1529,10 +1531,10 @@ void building_t::assign_correct_room_to_object(room_object_t &obj) const {
 	}
 }
 
-void drop_inventory_item(room_object_t const &obj, point const &player_pos) {
+void drop_inventory_item(building_t const &b, room_object_t const &obj, point const &player_pos) {
 	player_inventory.return_object_to_building(obj); // re-add this object's value
 	player_inventory.remove_last_item(); // used
-	play_obj_fall_sound(obj, player_pos);
+	if (!b.check_for_water_splash(obj.get_cube_center(), 0.5)) {play_obj_fall_sound(obj, player_pos);} // splash or drop sound; should it be based on weight?
 }
 bool building_t::drop_room_object(room_object_t &obj, point const &dest, point const &player_pos, bool dim, bool dir) {
 	obj.dim    = dim;
@@ -1565,7 +1567,7 @@ bool building_t::maybe_use_last_pickup_room_object(point const &player_pos) {
 		obj.flags |= RO_FLAG_DYNAMIC; // make it dynamic, assuming it will be dropped/thrown
 		if (!interior->room_geom->add_room_object(obj, *this, 1, THROW_VELOCITY*cview_dir)) return 0;
 		player_inventory.return_object_to_building(obj); // re-add this object's value
-		play_obj_fall_sound(obj, player_pos);
+		if (!check_for_water_splash(obj.get_cube_center(), 0.7)) {play_obj_fall_sound(obj, player_pos);} // splash or drop
 		delay_use = 1;
 	}
 	else if (obj.can_use()) { // active with either use_object or fire key
@@ -1612,7 +1614,7 @@ bool building_t::maybe_use_last_pickup_room_object(point const &player_pos) {
 				}
 				if (!drop_room_object(obj, dest, player_pos, place_dim, place_dir)) return 0;
 			}
-			drop_inventory_item(obj, player_pos);
+			drop_inventory_item(*this, obj, player_pos);
 			delay_use = 1;
 		}
 		else if (obj.type == TYPE_PHONE) {
@@ -1631,7 +1633,7 @@ bool building_t::maybe_use_last_pickup_room_object(point const &player_pos) {
 				if (!get_zval_for_obj_placement(dest, radius, dest.z, 0)) return 0; // can't drop, so keep it in the inventory
 				bool const place_dim(fabs(cview_dir.y) < fabs(cview_dir.x)), place_dir(cview_dir[!place_dim] > 0);
 				if (!drop_room_object(obj, dest, player_pos, !place_dim, place_dir)) return 0;
-				drop_inventory_item(obj, player_pos);
+				drop_inventory_item(*this, obj, player_pos);
 				return 1;
 			}
 			static double next_sound_time(0.0);

@@ -5,13 +5,15 @@
 #include "function_registry.h"
 #include "shaders.h"
 #include "buildings.h"
+#include "openal_wrap.h"
 
 unsigned const MAX_SPLASHES = 16; // must agree with fragment shader code
 
 
-extern int display_mode;
+extern int player_in_basement, display_mode;
 extern unsigned room_mirror_ref_tid;
-
+extern float fticks, CAMERA_RADIUS;
+extern building_t const *player_building;
 
 void set_interior_lighting(shader_t &s, bool have_indir);
 void reset_interior_lighting_and_end_shader(shader_t &s);
@@ -49,7 +51,7 @@ public:
 		}
 		last_size = splashes.size();
 	}
-	void clear() {splashes.clear();}
+	void clear() {splashes.clear();} // Note: last_size is not reset
 };
 
 // maybe this should be a building interior member?
@@ -58,11 +60,36 @@ public:
 // I suppose it's more efficient to only have one of these, and it's easier for recompile to not have this in buildings.h
 building_splash_manager_t building_splash_manager;
 
+void clear_building_water_splashes() {
+	building_splash_manager.clear();
+}
+void register_building_water_splash(point const &pos, float size, bool play_sound) { // Note: pos is in camera space
+	building_splash_manager.add_splash(pos, 0.5*CAMERA_RADIUS, size);
+	if (!play_sound) return;
+#pragma omp critical(gen_sound)
+	gen_sound_random_var(SOUND_SPLASH2, pos, 0.3*size, 0.9);
+}
+bool building_t::check_for_water_splash(point const &pos_bs, float size, bool full_room_height, bool play_sound) const { // Note: pos in building space
+	if (this != player_building)    return 0; // only splashes for the building the player is in
+	if (!water_visible_to_player()) return 0; // only if water is visible
+	if (!point_in_water_area(pos_bs, full_room_height)) return 0;
+	vector3d const xlate(get_tiled_terrain_model_xlate());
+	register_building_water_splash((pos_bs + xlate), size, play_sound);
+	if (play_sound) {register_building_sound(pos_bs, 0.5*size);} // alert zombies
+	return 1;
+}
+bool building_t::point_in_water_area(point const &p, bool full_room_height) const {
+	return (has_water() && get_water_cube(full_room_height).contains_pt(p));
+}
+
 void building_t::draw_water(vector3d const &xlate) const {
-	if (!(display_mode & 0x04) || !water_visible_to_player()) return; // water disabled, or no water
-	// TODO:
-	// * player leaves water trails
-	// * ball and object drop splashes
+	if (!(display_mode & 0x04)) return; // water disabled
+	
+	if (!water_visible_to_player()) {
+		if (player_in_basement < 3) {clear_building_water_splashes();} // clear if player has exited the extended basement
+		return;
+	}
+	float const floor_spacing(get_window_vspace());
 	shader_t s;
 	cube_t const lights_bcube(get_building_lights_bcube());
 	bool const use_dlights(!lights_bcube.is_all_zeros()), have_indir(0), use_smap(1);
@@ -81,7 +108,7 @@ void building_t::draw_water(vector3d const &xlate) const {
 	float const water_depth(interior->water_zval - (interior->basement_ext_bcube.z1() + get_fc_thickness()));
 	s.add_uniform_vector3d("camera_pos",  get_camera_pos());
 	s.add_uniform_float("water_depth",    water_depth);
-	s.add_uniform_float("water_atten",    1.0/get_window_vspace()); // attenuates to dark blue/opaque around this distance
+	s.add_uniform_float("water_atten",    1.0/floor_spacing); // attenuates to dark blue/opaque around this distance
 	s.add_uniform_color("uw_atten_max",   uw_atten_max);
 	s.add_uniform_color("uw_atten_scale", uw_atten_scale);
 	building_splash_manager.set_shader_uniforms(s);
