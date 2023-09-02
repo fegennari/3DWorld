@@ -2940,6 +2940,8 @@ public:
 		building_t const *new_player_building(nullptr);
 
 		if (!reflection_pass) {
+			// Note: creating the reflection here will also overwrite anything that was previously drawn such as clouds and the Ferris wheel,
+			// which may look wrong if a window is visible in the same frame as a mirror
 			interior_shadow_maps = 1; // set state so that above call will know that it was called recursively from here and should draw interior shadow maps
 			enable_dlight_bcubes = 1; // needed around this call so that light bcubes are sent to the GPU
 			building_lights_manager.setup_building_lights(xlate); // setup lights on first (opaque) non-shadow pass

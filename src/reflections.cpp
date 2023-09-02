@@ -88,16 +88,13 @@ bool get_reflection_plane_bounds(cube_t &bcube, float &min_camera_dist) {
 
 
 void apply_z_mirror(float zval) {
-
 	fgMatrixMode(FG_MODELVIEW);
 	fgPushMatrix();
 	fgTranslate(0.0, 0.0, 2*zval); // translate to zval and back
 	fgScale(1.0, 1.0, -1.0); // scale in z
 	//mirror_about_plane(plus_z, point(0.0, 0.0, zval));
 }
-
 void apply_dim_mirror(unsigned dim, float val) {
-
 	assert(dim < 3);
 	fgMatrixMode(FG_MODELVIEW);
 	fgPushMatrix();
@@ -108,7 +105,6 @@ void apply_dim_mirror(unsigned dim, float val) {
 }
 
 void setup_viewport_and_proj_matrix(unsigned xsize, unsigned ysize) {
-
 	glViewport(0, 0, xsize, ysize);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 	fgMatrixMode(FG_PROJECTION);
@@ -118,14 +114,11 @@ void setup_viewport_and_proj_matrix(unsigned xsize, unsigned ysize) {
 }
 
 void render_to_texture(unsigned tid, unsigned xsize, unsigned ysize) {
-
 	bind_2d_texture(tid);
 	glReadBuffer(GL_BACK);
 	glCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 0, 0, xsize, ysize); // glCopyTexSubImage2D copies the frame buffer to the bound texture
 }
-
 void render_to_texture_cube_map(unsigned tid, unsigned tex_size, unsigned face_ix) {
-
 	assert(face_ix < 6);
 	bind_cube_map_texture(tid);
 	glReadBuffer(GL_BACK);
@@ -133,7 +126,6 @@ void render_to_texture_cube_map(unsigned tid, unsigned tex_size, unsigned face_i
 }
 
 void restore_matrices_and_clear() {
-
 	restore_prev_mvm_pjm_state();
 	set_standard_viewport();
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);

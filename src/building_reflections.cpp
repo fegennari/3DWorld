@@ -15,6 +15,7 @@ extern float CAMERA_RADIUS;
 extern vector4d clip_plane;
 extern building_t const *player_building;
 
+colorRGBA get_clear_color();
 cube_t get_mirror_surface(room_object_t const &c);
 
 bool is_mirror(room_object_t const &obj) {return (obj.type == TYPE_MIRROR || obj.type == TYPE_DRESS_MIR);}
@@ -41,7 +42,10 @@ void draw_scene_for_building_reflection(unsigned &ref_tid, unsigned dim, bool di
 	// Note: it may be more efficient to use an FBO here, but we would need both a color attachment (room_mirror_ref_tid) and a depth attachment (and stencil buffer?)
 	// Note: clearing the buffers at this point in the control flow will discard some geometry that has already been drawn such as the sky,
 	//       but these generally arent't visible from within the room containing the mirror anyway
-	setup_viewport_and_proj_matrix(txsize, tysize);
+	colorRGBA const orig_clear_color(get_clear_color());
+	if (is_water) {glClearColor_rgba(GRAY);} // water reflections distort the UV and can go outside the drawn texture, so use a color that blends better than light blue
+	setup_viewport_and_proj_matrix(txsize, tysize); // and clear
+	if (is_water) {glClearColor_rgba(orig_clear_color);} // restore clear color
 	apply_dim_mirror(dim, reflect_plane_xf); // setup mirror transform
 	camera_pdu = refl_camera_pdu; // reset reflected PDU
 	// draw the mirror area in the stencil buffer
