@@ -7,7 +7,7 @@
 #include "buildings.h"
 #include "openal_wrap.h"
 
-unsigned const MAX_SPLASHES = 16; // must agree with fragment shader code
+unsigned const MAX_SPLASHES = 32; // must agree with fragment shader code
 
 
 extern int player_in_basement, display_mode;
@@ -24,7 +24,7 @@ class building_splash_manager_t {
 		float x, y, radius, height;
 		splash_t(float x_, float y_, float r, float h) : x(x_), y(y_), radius(r), height(h) {}
 		bool operator<(splash_t const &s) const {return (height < s.height);} // compare by height for min_element
-		vector4d as_vec4() const {return vector4d(x, y, radius, height);}
+		vector4d as_vec4() const {return vector4d(x, y, radius, min(height, 1.0f));}
 	};
 	vector<splash_t> splashes;
 	unsigned last_size=0;
@@ -53,7 +53,7 @@ public:
 			s.radius += exp_dist;
 			s.height *= prev_area/(s.radius*s.radius); // volume preserving
 		}
-		splashes.erase(std::remove_if(splashes.begin(), splashes.end(), [](splash_t const &s) {return (s.height < 0.005);}), splashes.end());
+		splashes.erase(std::remove_if(splashes.begin(), splashes.end(), [](splash_t const &s) {return (s.height < 0.002);}), splashes.end());
 	}
 	void set_shader_uniforms(shader_t &s) {
 		assert(splashes.size() <= MAX_SPLASHES);

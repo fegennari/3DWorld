@@ -7,7 +7,7 @@ uniform float water_depth, water_atten, time;
 uniform vec3 uw_atten_max, uw_atten_scale;
 uniform sampler2D reflection_tex;
 
-const int MAX_SPLASHES = 16; // must agree with C++ code
+const int MAX_SPLASHES = 32; // must agree with C++ code
 uniform vec4 splashes[MAX_SPLASHES]; // {x, y, radius, intensity}
 
 in vec3 vertex_ws; // world space
@@ -28,7 +28,7 @@ float get_splash_amplitude() {
 		float dist   = distance(vertex_ws.xy, splashes[i].xy);
 		if (dist > radius) continue; // TODO: is this faster or slower?
 		height           *= 1.0 - min(dist/radius, 1.0);
-		splash_amplitude += height*sin(16.0*PI*dist*water_atten - 4.0*time); // expand outward with time
+		splash_amplitude += height*sin(8.0*PI*dist*water_atten - 4.0*time); // expand outward with time
 	} // for i
 	return splash_amplitude;
 }
@@ -39,8 +39,8 @@ void main() {
 	
 	// apply ripples when the player moves
 	float splash_amplitude = get_splash_amplitude();
-	vec2 delta = 10.0*vec2(dFdx(splash_amplitude), dFdy(splash_amplitude));
-	uv        += 0.1*delta;
+	vec2 delta = clamp(10.0*vec2(dFdx(splash_amplitude), dFdy(splash_amplitude)), -1.0, 1.0);
+	uv         = clamp((uv + 0.08*delta), 0.0, 1.0);
 	ws_normal  = normalize(ws_normal + vec3(delta, 0.0));
 	
 	// apply lighting
@@ -61,11 +61,4 @@ void main() {
 	float reflect_w  = get_fresnel_reflection(-epos_n, normal, 1.0, 1.333);
 	vec4 reflect_tex = texture(reflection_tex, uv);
 	fg_FragColor     = mix(vec4(water_color, alpha), reflect_tex, reflect_w);
-
-#if 0 // debug visualization
-	if (splash_amplitude != 0.0) {
-		splash_amplitude = clamp(10.0*splash_amplitude, -1.0, 1.0);
-		fg_FragColor = vec4(max(splash_amplitude, 0.0), 0.0, max(-splash_amplitude, 0.0), 1.0); // red-blue
-	}
-#endif
 }
