@@ -31,14 +31,29 @@ class building_splash_manager_t {
 public:
 	void add_splash(point const &pos, float radius, float height) {
 		assert(splashes.size() <= MAX_SPLASHES);
+
+		if (!splashes.empty()) {
+			splash_t &prev(splashes.back());
+
+			if (dist_xy_less_than(pos, point(prev.x, prev.y, pos.z), 0.25*radius) && prev.radius < 2.0*radius) { // merge with previous splash (optimization)
+				prev.height += height*(radius*radius/(prev.radius*prev.radius)); // add height scaled by surface area to add volumes
+				return;
+			}
+		}
 		splashes.emplace_back(pos.x, pos.y, radius, height);
 		if (splashes.size() > MAX_SPLASHES) {splashes.erase(min_element(splashes.begin(), splashes.end()));} // limit size to MAX_SPLASHES
 	}
-	void next_frame() {
+	void next_frame(float ref_dist) { // floor_spacing can be used
+		if (splashes.empty()) return;
+		float const timestep(min(fticks, 4.0f)/TICKS_PER_SECOND); // clamp fticks to 100ms
+		float const exp_dist(0.25*ref_dist*timestep);
+
 		for (splash_t &s : splashes) {
-			// TODO: update
+			float const prev_area(s.radius*s.radius);
+			s.radius += exp_dist;
+			s.height *= prev_area/(s.radius*s.radius); // volume preserving
 		}
-		splashes.erase(std::remove_if(splashes.begin(), splashes.end(), [](splash_t const &s) {return (s.height < 0.01);}), splashes.end());
+		splashes.erase(std::remove_if(splashes.begin(), splashes.end(), [](splash_t const &s) {return (s.height < 0.005);}), splashes.end());
 	}
 	void set_shader_uniforms(shader_t &s) {
 		assert(splashes.size() <= MAX_SPLASHES);
@@ -90,6 +105,7 @@ void building_t::draw_water(vector3d const &xlate) const {
 		return;
 	}
 	float const floor_spacing(get_window_vspace());
+	building_splash_manager.next_frame(floor_spacing); // maybe should do this somewhere else? or update even if water isn't visible?
 	shader_t s;
 	cube_t const lights_bcube(get_building_lights_bcube());
 	bool const use_dlights(!lights_bcube.is_all_zeros()), have_indir(0), use_smap(1);
@@ -111,6 +127,7 @@ void building_t::draw_water(vector3d const &xlate) const {
 	s.add_uniform_float("water_atten",    1.0/floor_spacing); // attenuates to dark blue/opaque around this distance
 	s.add_uniform_color("uw_atten_max",   uw_atten_max);
 	s.add_uniform_color("uw_atten_scale", uw_atten_scale);
+	s.add_uniform_float("time",           tfticks/TICKS_PER_SECOND);
 	building_splash_manager.set_shader_uniforms(s);
 	enable_blend();
 	cube_t const water(get_water_cube());
