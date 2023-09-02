@@ -10,7 +10,7 @@
 unsigned const MAX_SPLASHES = 32; // must agree with fragment shader code
 
 
-extern int player_in_basement, display_mode;
+extern int player_in_basement, animate2, display_mode;
 extern unsigned room_mirror_ref_tid;
 extern float fticks, CAMERA_RADIUS;
 extern building_t const *player_building;
@@ -28,6 +28,7 @@ class building_splash_manager_t {
 	};
 	vector<splash_t> splashes;
 	unsigned last_size=0;
+	float time=0.0;
 public:
 	void add_splash(point const &pos, float radius, float height) {
 		assert(splashes.size() <= MAX_SPLASHES);
@@ -45,6 +46,8 @@ public:
 	}
 	void next_frame(float ref_dist) { // floor_spacing can be used
 		if (splashes.empty()) return;
+		time += fticks;
+		if (time > 600*TICKS_PER_SECOND) {time = 0.0;} // reset after 10 minutes to avoid FP precision problems
 		float const timestep(min(fticks, 4.0f)/TICKS_PER_SECOND); // clamp fticks to 100ms
 		float const exp_dist(0.25*ref_dist*timestep);
 
@@ -64,6 +67,7 @@ public:
 			sprintf(str, "splashes[%u]", i);
 			s.add_uniform_vector4d(str, ((i < splashes.size()) ? splashes[i].as_vec4() : vector4d())); // set unused slots to all zeros
 		}
+		s.add_uniform_float("time", time/TICKS_PER_SECOND);
 		last_size = splashes.size();
 	}
 	void clear() {splashes.clear();} // Note: last_size is not reset
@@ -105,7 +109,7 @@ void building_t::draw_water(vector3d const &xlate) const {
 		return;
 	}
 	float const floor_spacing(get_window_vspace());
-	building_splash_manager.next_frame(floor_spacing); // maybe should do this somewhere else? or update even if water isn't visible?
+	if (animate2) {building_splash_manager.next_frame(floor_spacing);} // maybe should do this somewhere else? or update even if water isn't visible?
 	shader_t s;
 	cube_t const lights_bcube(get_building_lights_bcube());
 	bool const use_dlights(!lights_bcube.is_all_zeros()), have_indir(0), use_smap(1);
@@ -127,7 +131,6 @@ void building_t::draw_water(vector3d const &xlate) const {
 	s.add_uniform_float("water_atten",    1.0/floor_spacing); // attenuates to dark blue/opaque around this distance
 	s.add_uniform_color("uw_atten_max",   uw_atten_max);
 	s.add_uniform_color("uw_atten_scale", uw_atten_scale);
-	s.add_uniform_float("time",           tfticks/TICKS_PER_SECOND);
 	building_splash_manager.set_shader_uniforms(s);
 	enable_blend();
 	cube_t const water(get_water_cube());
