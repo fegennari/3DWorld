@@ -1,7 +1,9 @@
 #include <fresnel.part>
 
+const float PI = 3.14159;
+
 //uniform vec3 camera_pos; // from dynamic_lighting.part
-uniform float water_depth, water_atten;
+uniform float water_depth, water_atten, time;
 uniform vec3 uw_atten_max, uw_atten_scale;
 uniform sampler2D reflection_tex;
 
@@ -16,12 +18,30 @@ void atten_color(inout vec3 color, in float atten) {
 	color *= vec3(1.0) - min(uw_atten_max, uw_atten_scale*atten);
 }
 
+float get_splash_amplitude() {
+	float splash_amplitude = 0.0;
+
+	for (int i = 0; i < MAX_SPLASHES; ++i) {
+		float height = splashes[i].w;
+		if (height == 0.0) continue;
+		float radius = splashes[i].z;
+		float dist   = distance(vertex_ws.xy, splashes[i].xy);
+		if (dist > radius) continue; // TODO: is this faster or slower?
+		height           *= 1.0 - min(dist/radius, 1.0);
+		splash_amplitude += height*sin(16.0*PI*dist*water_atten - 4.0*time); // expand outward with time
+	} // for i
+	return splash_amplitude;
+}
+
 void main() {
 	vec3 ws_normal = vec3(0.0, 0.0, 1.0); // +Z
 	vec2 uv        = clamp((0.5*proj_pos.xy/proj_pos.w + vec2(0.5, 0.5)), 0.0, 1.0);
 	
 	// apply ripples when the player moves
-	// TODO
+	float splash_amplitude = get_splash_amplitude();
+	vec2 delta = 10.0*vec2(dFdx(splash_amplitude), dFdy(splash_amplitude));
+	uv        += 0.1*delta;
+	ws_normal  = normalize(ws_normal + vec3(delta, 0.0));
 	
 	// apply lighting
 	vec3 water_color = vec3(0.0);
@@ -42,20 +62,10 @@ void main() {
 	vec4 reflect_tex = texture(reflection_tex, uv);
 	fg_FragColor     = mix(vec4(water_color, alpha), reflect_tex, reflect_w);
 
-	// debug visualization
-	float splash_amplitude = 0.0;
-
-	for (int i = 0; i < MAX_SPLASHES; ++i) {
-		float height = splashes[i].w;
-		if (height == 0.0) continue;
-		float radius = splashes[i].z;
-		float dist   = distance(vertex_ws.xy, splashes[i].xy);
-		if (dist > radius) continue; // TODO: is this faster or slower?
-		height           *= 1.0 - min(dist/radius, 1.0);
-		splash_amplitude += height*sin(8.0*dist*water_atten);
-	} // for i
+#if 0 // debug visualization
 	if (splash_amplitude != 0.0) {
-		splash_amplitude = clamp(splash_amplitude, -1.0, 1.0);
+		splash_amplitude = clamp(10.0*splash_amplitude, -1.0, 1.0);
 		fg_FragColor = vec4(max(splash_amplitude, 0.0), 0.0, max(-splash_amplitude, 0.0), 1.0); // red-blue
 	}
+#endif
 }
