@@ -975,7 +975,7 @@ void building_t::run_ball_update(vector<room_object_t>::iterator ball_it, point 
 		ball.flags |= RO_FLAG_DYNAMIC; // make it dynamic
 
 		if ((tfticks - last_sound_tfticks) > 1.0*TICKS_PER_SECOND && !dist_less_than(new_center, last_sound_pt, radius)) { // play at most once per second
-			check_for_water_splash(new_center, 0.8); // check for splash, but also play kick sound; will be extra loud
+			check_for_water_splash(new_center, 1.5); // check for splash, but also play kick sound; will be extra loud
 			gen_sound_thread_safe(SOUND_KICK_BALL, local_to_camera_space(new_center), 0.5);
 			register_building_sound(new_center, 0.75);
 			last_sound_tfticks = tfticks;

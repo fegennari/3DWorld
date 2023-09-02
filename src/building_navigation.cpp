@@ -2212,7 +2212,7 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 	person.idle_time = 0.0; // reset idle time if we actually move
 
 	if (point_in_water_area(new_pos)) { // handle splashes
-		float const splash_dist(3.0*person.radius);
+		float const splash_dist(2.0*person.radius);
 
 		if (round_fp(old_anim_time/splash_dist) != round_fp(person.anim_time/splash_dist)) { // update every splash_dist
 			check_for_water_splash(person.pos, 1.0, 1); // full_room_height=1
