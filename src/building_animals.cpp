@@ -828,6 +828,7 @@ public:
 			if (colliders.size() > 1) return 0; // multiple colliders is too complex to handle here
 			point const contact_pt(colliders.back().closest_pt(s.pos));
 			best_up  = (s.pos - contact_pt).get_norm(); // point away from the collider
+			if (best_up == zero_vector) {best_up = plus_z;} // handle invalid upv (s.pos == contact_pt); can this happen?
 			best_pos = contact_pt + r_inner*best_up;
 			orthogonalize_dir(best_dir, best_up, best_dir, 1);
 			delta_dir *= 0.25; // update more smoothly for stability
