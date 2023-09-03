@@ -29,11 +29,11 @@ void bind_depth_buffer(unsigned tu_id=0) {
 	assert(depth_tid > 0);
 	bind_texture_tu(depth_tid, tu_id);
 }
-void bind_frame_buffer_RGB() {
+void bind_frame_buffer_RGB(unsigned tu_id=0) {
 	if (frame_counter != color_buffer_frame) {frame_buffer_RGB_to_texture(frame_buffer_RGB_tid);} // FB RGB texture is not valid for this frame, create it
 	color_buffer_frame = frame_counter;
 	assert(frame_buffer_RGB_tid > 0);
-	bind_2d_texture(frame_buffer_RGB_tid);
+	bind_texture_tu(frame_buffer_RGB_tid, tu_id);
 }
 
 void draw_ortho_screen_space_triangle() {

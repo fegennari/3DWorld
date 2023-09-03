@@ -17,6 +17,7 @@ extern building_t const *player_building;
 
 void set_interior_lighting(shader_t &s, bool have_indir);
 void reset_interior_lighting_and_end_shader(shader_t &s);
+void bind_frame_buffer_RGB(unsigned tu_id); // from postproc_effects.cpp
 
 
 class building_splash_manager_t {
@@ -173,6 +174,8 @@ void building_t::draw_water(vector3d const &xlate) const {
 	s.add_uniform_color("uw_atten_max",   uw_atten_max);
 	s.add_uniform_color("uw_atten_scale", uw_atten_scale);
 	building_splash_manager.set_shader_uniforms(s);
+	bind_frame_buffer_RGB(1); // tu_id=1
+	s.add_uniform_int("frame_buffer", 1);
 	enable_blend();
 	cube_t const water(get_water_cube());
 	float const x1(water.x1()), y1(water.y1()), x2(water.x2()), y2(water.y2()), z(water.z2()), tx(1.0), ty(1.0);

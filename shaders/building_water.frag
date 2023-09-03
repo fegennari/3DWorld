@@ -5,7 +5,7 @@ const float PI = 3.14159;
 //uniform vec3 camera_pos; // from dynamic_lighting.part
 uniform float water_depth, water_atten, time;
 uniform vec3 uw_atten_max, uw_atten_scale;
-uniform sampler2D reflection_tex;
+uniform sampler2D reflection_tex, frame_buffer;
 
 struct splash_t {
 	vec4 loc_rh; // {x, y, radius, height}
@@ -78,4 +78,7 @@ void main() {
 	float reflect_w  = get_fresnel_reflection(-epos_n, normal, 1.0, 1.333);
 	vec4 reflect_tex = texture(reflection_tex, uv);
 	fg_FragColor     = mix(water_color, reflect_tex, reflect_w);
+
+	// handle refractions by mixing the frame buffer (with the floor and underwater objects) with the water using the alpha value
+	fg_FragColor = vec4(mix(texture(frame_buffer, uv).rgb, fg_FragColor.rgb, fg_FragColor.a), 1.0);
 }
