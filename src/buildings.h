@@ -433,7 +433,7 @@ enum {/*building models*/ OBJ_MODEL_TOILET=0, OBJ_MODEL_SINK, OBJ_MODEL_TUB, OBJ
 	OBJ_MODEL_RAT, OBJ_MODEL_ROACH,
 	/*city models*/ OBJ_MODEL_FHYDRANT, OBJ_MODEL_SUBSTATION, OBJ_MODEL_MAILBOX, OBJ_MODEL_UMBRELLA, OBJ_MODEL_PIGEON, NUM_OBJ_MODELS};
 
-enum {PART_EFFECT_NONE=0, PART_EFFECT_SPARK, PART_EFFECT_SMOKE, NUM_PART_EFFECTS};
+enum {PART_EFFECT_NONE=0, PART_EFFECT_SPARK, PART_EFFECT_SMOKE, PART_EFFECT_SPLASH, NUM_PART_EFFECTS};
 
 // object flags
 unsigned const RO_FLAG_LIT     = 0x01; // light is on
@@ -792,7 +792,7 @@ class particle_manager_t {
 			pos(p), vel(v), color(c), init_radius(r), radius(r), parent_obj_id(pid), effect(e) {}
 	};
 	vector<particle_t> particles;
-	quad_batch_draw qbd[2]; // {non-emissive, emissive}
+	quad_batch_draw qbds[NUM_PART_EFFECTS]; // one per perticle effect
 	rand_gen_t rgen;
 public:
 	void add_particle(point const &pos, vector3d const &vel, colorRGBA const &color, float radius, unsigned effect, int pid=-1) {
@@ -1548,7 +1548,7 @@ struct building_t : public building_geom_t {
 		vector3d const &xlate, unsigned building_ix, bool shadow_only, bool reflection_pass, unsigned inc_small, bool player_in_building);
 	bool has_cars_to_draw(bool player_in_building) const;
 	void draw_cars_in_building(shader_t &s, vector3d const &xlate, bool player_in_building, bool shadow_only) const;
-	bool check_for_water_splash(point const &pos_bs, float size=1.0, bool full_room_height=0, bool play_sound=1) const;
+	bool check_for_water_splash(point const &pos_bs, float size=1.0, bool full_room_height=0, bool draw_splash=0, bool play_sound=1) const;
 	void draw_water(vector3d const &xlate) const;
 	void debug_people_in_building(shader_t &s) const;
 	void add_split_roof_shadow_quads(building_draw_t &bdraw) const;

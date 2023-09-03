@@ -913,7 +913,7 @@ void apply_object_bounce_with_sound(building_t const &building, vector3d &veloci
 
 	if (bounce_volume > 0.25) { // apply bounce sound
 		if (bounce_volume > 0.5) {
-			if (bounce_volume > 0.7 && building.check_for_water_splash(pos, 0.75*bounce_volume)) return; // handled as splash
+			if (bounce_volume > 0.7 && building.check_for_water_splash(pos, 0.75*bounce_volume, 0, 1)) return; // handled as splash; full_room_height=0, draw_splash=1
 			gen_sound_thread_safe(SOUND_KICK_BALL, building.local_to_camera_space(pos), 0.75*bounce_volume*bounce_volume);
 		}
 		register_building_sound(pos, 0.7*bounce_volume);
@@ -1192,7 +1192,7 @@ void particle_manager_t::next_frame(building_t &building) {
 	if (particles.empty()) return;
 	float const fticks_stable(min(fticks, 4.0f)); // clamp to 0.1s
 	auto const &objs(building.interior->room_geom->objs);
-	float const lifetimes[NUM_PART_EFFECTS] = {0.0, 2.5, 2.0}; // none, sparks, smoke
+	float const lifetimes[NUM_PART_EFFECTS] = {0.0, 2.5, 2.0, 0.2}; // none, sparks, smoke, splash
 
 	for (particle_t &p : particles) {
 		point const p_last(p.pos);
@@ -1208,6 +1208,10 @@ void particle_manager_t::next_frame(building_t &building) {
 		else if (p.effect == PART_EFFECT_SMOKE) {
 			p.radius = p.init_radius*(1.0 + 4.0*lifetime); // radius increases over lifetime
 			apply_building_gravity(p.vel.z, 0.05*fticks_stable); // very small gravity
+		}
+		else if (p.effect == PART_EFFECT_SPLASH) {
+			p.radius = p.init_radius*(1.0 + 4.0*lifetime); // radius increases over lifetime
+			continue; // no collision detection
 		}
 		else {assert(0);}
 		// check for collisions and apply bounce, similar to balls

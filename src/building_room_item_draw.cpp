@@ -1575,6 +1575,7 @@ void draw_emissive_billboards(quad_batch_draw &qbd, int tid) {
 void particle_manager_t::draw(shader_t &s, vector3d const &xlate) { // non-const because qbd is modified
 	if (particles.empty() || !camera_pdu.cube_visible(get_bcube() + xlate)) return; // no particles are visible
 	point const viewer_bs(camera_pdu.pos - xlate);
+	int const tids[NUM_PART_EFFECTS] = {-1, BLUR_CENT_TEX, BLUR_TEX, FLARE2_TEX}; // none, sparks, smoke, splash
 
 	for (particle_t const &p : particles) {
 		if (!camera_pdu.sphere_visible_test((p.pos + xlate), p.radius)) continue; // VFC
@@ -1582,16 +1583,19 @@ void particle_manager_t::draw(shader_t &s, vector3d const &xlate) { // non-const
 		vector3d v1(cross_product(vdir, up_dir).get_norm()*p.radius);
 		vector3d v2(cross_product(v1,   vdir  ).get_norm()*p.radius);
 		if (p.effect == PART_EFFECT_SPARK) {v2 *= (1.0 + 1500.0*p.vel.mag());} // stretch in velocity dir
-		else if (p.effect == PART_EFFECT_SMOKE) {} // nothing?
-		else {assert(0);}
-		bool const emissive(p.effect == PART_EFFECT_SPARK);
-		qbd[emissive].add_quad_dirs(p.pos, v1, v2, p.color, plus_z); // use +z form the normal
+		assert(p.effect < NUM_PART_EFFECTS);
+		qbds[p.effect].add_quad_dirs(p.pos, v1, v2, p.color, plus_z); // use +z form the normal
 	} // for p
-	if (!qbd[1].empty()) { // draw emissive particles with a custom shader
-		draw_emissive_billboards(qbd[1], BLUR_CENT_TEX); // smooth alpha blended edges
-		s.make_current();
-	}
-	if (!qbd[0].empty()) {draw_blended_billboards(qbd[0], BLUR_TEX);} // draw non-emissive particles
+	for (unsigned i = 0; i < NUM_PART_EFFECTS; ++i) {
+		quad_batch_draw &qbd(qbds[i]);
+		if (qbd.empty()) continue;
+
+		if (i == PART_EFFECT_SPARK) { // draw emissive particles with a custom shader
+			draw_emissive_billboards(qbd, tids[i]); // smooth alpha blended edges
+			s.make_current();
+		}
+		else {draw_blended_billboards(qbd, tids[i]);}
+	} // for i
 }
 
 void fire_manager_t::draw(shader_t &s, vector3d const &xlate) {

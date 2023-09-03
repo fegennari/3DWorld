@@ -88,13 +88,19 @@ void register_building_water_splash(point const &pos, float size, bool play_soun
 #pragma omp critical(gen_sound)
 	gen_sound_random_var(SOUND_SPLASH2, pos, 0.3*size, 0.9);
 }
-bool building_t::check_for_water_splash(point const &pos_bs, float size, bool full_room_height, bool play_sound) const { // Note: pos in building space
+bool building_t::check_for_water_splash(point const &pos_bs, float size, bool full_room_height, bool draw_splash, bool play_sound) const { // Note: pos in building space
 	if (this != player_building)    return 0; // only splashes for the building the player is in
 	if (!water_visible_to_player()) return 0; // only if water is visible
 	if (!point_in_water_area(pos_bs, full_room_height)) return 0;
 	vector3d const xlate(get_tiled_terrain_model_xlate());
 	register_building_water_splash((pos_bs + xlate), size, play_sound);
 	if (play_sound) {register_building_sound(pos_bs, 0.5*size);} // alert zombies
+
+	if (draw_splash) {
+		float const radius(0.05*min(size, 1.5f)*get_window_vspace());
+		point const splash_pos(pos_bs.x, pos_bs.y, (interior->water_zval + 0.1*radius)); // slightly above the water surface
+		interior->room_geom->particle_manager.add_particle(splash_pos, zero_vector, WHITE, radius, PART_EFFECT_SPLASH);
+	}
 	return 1;
 }
 bool building_t::point_in_water_area(point const &p, bool full_room_height) const {
