@@ -7,8 +7,13 @@ uniform float water_depth, water_atten, time;
 uniform vec3 uw_atten_max, uw_atten_scale;
 uniform sampler2D reflection_tex;
 
+struct splash_t {
+	vec4 loc_rh; // {x, y, radius, height}
+	vec4 bounds; // {x1, y1, x2, y2}
+};
+
 const int MAX_SPLASHES = 32; // must agree with C++ code
-uniform vec4 splashes[MAX_SPLASHES]; // {x, y, radius, intensity}
+uniform splash_t splashes[MAX_SPLASHES];
 
 in vec3 vertex_ws; // world space
 in vec4 epos, proj_pos;
@@ -23,12 +28,14 @@ vec2 get_splash_amplitude() { // returns {signed_amplitude, abs_mag_amplitude}
 	float height_sum = 0.0;
 
 	for (int i = 0; i < MAX_SPLASHES; ++i) {
-		float height = splashes[i].w; // amplitude at center, nominally < 1.0
+		float height = splashes[i].loc_rh.w; // amplitude at center, nominally < 1.0
 		if (height == 0.0) continue;  // this splash is disabled, skip
-		float radius = splashes[i].z; // max radius of effect of this splash
-		float dist   = distance(vertex_ws.xy, splashes[i].xy);
+		float radius = splashes[i].loc_rh.z; // max radius of effect of this splash
+		float dist   = distance(vertex_ws.xy, splashes[i].loc_rh.xy);
 		if (dist > radius) continue; // is this faster or slower? unclear
 		// ideally we should check the room walls and allow them to block the wave, maybe with a ray march through a texture with wall=0 and space=1?
+		vec4 bounds = splashes[i].bounds;
+		if (vertex_ws.x < bounds.x || vertex_ws.y < bounds.y || vertex_ws.x > bounds.z || vertex_ws.y > bounds.w) continue; // check XY bounds
 		height     *= 1.0 - min(dist/radius, 1.0); // height decreases linearly with distance; maybe should be quadratic to preserve volume, but linear looks better
 		splash_amp += height*sin(8.0*PI*dist*water_atten - 4.0*time); // expand outward with time
 		height_sum += abs(height);

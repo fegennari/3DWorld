@@ -22,15 +22,17 @@ void reset_interior_lighting_and_end_shader(shader_t &s);
 class building_splash_manager_t {
 	struct splash_t {
 		float x, y, radius, height;
-		splash_t(float x_, float y_, float r, float h) : x(x_), y(y_), radius(r), height(h) {}
+		cube_t bounds;
+		splash_t(float x_, float y_, float r, float h, cube_t const &b) : x(x_), y(y_), radius(r), height(h), bounds(b) {}
 		bool operator<(splash_t const &s) const {return (height < s.height);} // compare by height for min_element
-		vector4d as_vec4() const {return vector4d(x, y, radius, min(height, 1.0f));}
+		vector4d get_loc_rh_as_vec4() const {return vector4d(x, y, radius, min(height, 1.0f));}
+		vector4d get_bounds_as_vec4() const {return vector4d(bounds.x1(), bounds.y1(), bounds.x2(), bounds.y2());}
 	};
 	vector<splash_t> splashes;
 	unsigned last_size=0;
 	float time=0.0;
 public:
-	void add_splash(point const &pos, float radius, float height) {
+	void add_splash(point const &pos, float radius, float height, cube_t const &bounds) {
 		assert(splashes.size() <= MAX_SPLASHES);
 
 		if (!splashes.empty()) {
@@ -38,10 +40,11 @@ public:
 
 			if (dist_xy_less_than(pos, point(prev.x, prev.y, pos.z), 0.25*radius) && prev.radius < 2.0*radius) { // merge with previous splash (optimization)
 				prev.height += height*(radius*radius/(prev.radius*prev.radius)); // add height scaled by surface area to add volumes
+				prev.bounds.union_with_cube(bounds);
 				return;
 			}
 		}
-		splashes.emplace_back(pos.x, pos.y, radius, height);
+		splashes.emplace_back(pos.x, pos.y, radius, height, bounds);
 		if (splashes.size() > MAX_SPLASHES) {splashes.erase(min_element(splashes.begin(), splashes.end()));} // limit size to MAX_SPLASHES
 	}
 	void next_frame(float ref_dist) { // floor_spacing can be used
@@ -61,11 +64,13 @@ public:
 	void set_shader_uniforms(shader_t &s) {
 		assert(splashes.size() <= MAX_SPLASHES);
 		unsigned const iter_end(max((unsigned)splashes.size(), last_size));
-		char str[24] = {};
+		char str[32] = {};
 
 		for (unsigned i = 0; i < iter_end; ++i) { // add splashes for this frame
-			sprintf(str, "splashes[%u]", i);
-			s.add_uniform_vector4d(str, ((i < splashes.size()) ? splashes[i].as_vec4() : vector4d())); // set unused slots to all zeros
+			sprintf(str, "splashes[%u].loc_rh", i);
+			s.add_uniform_vector4d(str, ((i < splashes.size()) ? splashes[i].get_loc_rh_as_vec4() : vector4d())); // set unused slots to all zeros
+			sprintf(str, "splashes[%u].bounds", i);
+			s.add_uniform_vector4d(str, ((i < splashes.size()) ? splashes[i].get_bounds_as_vec4() : vector4d())); // set unused slots to all zeros
 		}
 		s.add_uniform_float("time", time/TICKS_PER_SECOND);
 		last_size = splashes.size();
@@ -83,7 +88,10 @@ void clear_building_water_splashes() {
 	building_splash_manager.clear();
 }
 void register_building_water_splash(point const &pos, float size, bool play_sound) { // Note: pos is in camera space
-	building_splash_manager.add_splash(pos, 0.5*CAMERA_RADIUS, size);
+	if (player_building == nullptr) return; // shouldn't happen?
+	cube_t const bounds(player_building->calc_splash_bounds(pos));
+	if (bounds == cube_t()) return; // shouldn't happen?
+	building_splash_manager.add_splash(pos, 0.5*CAMERA_RADIUS, size, bounds);
 	if (!play_sound) return;
 #pragma omp critical(gen_sound)
 	gen_sound_random_var(SOUND_SPLASH2, pos, 0.3*size, 0.9);
@@ -105,6 +113,33 @@ bool building_t::check_for_water_splash(point const &pos_bs, float size, bool fu
 }
 bool building_t::point_in_water_area(point const &p, bool full_room_height) const {
 	return (has_water() && get_water_cube(full_room_height).contains_pt(p));
+}
+
+cube_t building_t::calc_splash_bounds(point const &pos) const {
+	if (!interior || !point_in_water_area(pos)) return cube_t(); // error?
+	index_pair_t start, end;
+	get_pgbr_wall_ix_for_pos(pos, start, end);
+	vect_cube_t walls[2];
+
+	for (unsigned d = 0; d < 2; ++d) { // copy sub-ranges of walls, since clip_ray_to_walls() doesn't take iterators; maybe it should?
+		vect_cube_t const &pbgr_walls(interior->room_geom->pgbr_walls[d]);
+		walls[d].insert(walls[d].end(), pbgr_walls.begin()+start.ix[d], pbgr_walls.begin()+end.ix[d]);
+	}
+	unsigned const NUM_RAYS = 90;
+	cube_t const &extb(interior->basement_ext_bcube);
+	float const ray_len(extb.dx()*extb.dx() + extb.dy()*extb.dy()); // max room diagonal
+	cube_t bounds(pos, pos);
+
+	for (unsigned n = 0; n < NUM_RAYS; ++n) {
+		float const angle(TWO_PI*n/NUM_RAYS);
+		point p2(pos + point(ray_len*sin(angle), ray_len*cos(angle), 0.0));
+		float tmin(0.0), tmax(1.0);
+		get_line_clip_xy(pos, p2, extb.d, tmin, tmax);
+		p2 = pos + (p2 - pos)*tmax;
+		clip_ray_to_walls(pos, p2, walls);
+		bounds.union_with_pt(p2);
+	} // for n
+	return bounds; // zvals should be unused
 }
 
 void building_t::draw_water(vector3d const &xlate) const {

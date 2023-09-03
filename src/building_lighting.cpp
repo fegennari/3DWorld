@@ -1046,8 +1046,8 @@ void building_t::refine_light_bcube(point const &lpos, float light_radius, cube_
 		}
 	}
 	for (unsigned n = 0; n < NUM_RAYS; ++n) {
-		float const angle(TWO_PI*n/NUM_RAYS), dx(light_radius*sin(angle)), dy(light_radius*cos(angle));
-		point p2(lpos + point(dx, dy, 0.0));
+		float const angle(TWO_PI*n/NUM_RAYS);
+		point p2(lpos + point(light_radius*sin(angle), light_radius*cos(angle), 0.0));
 		// test for bad rays; this can fail on rotated buildings if lights aren't rotated properly, and in other cases when I'm experimenting, so it's allowed
 		if (!do_line_clip_xy_p2(lpos, p2, tight_bcube)) continue; // bad ray, skip
 
