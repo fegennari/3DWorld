@@ -1805,7 +1805,7 @@ bool building_t::check_obj_occluded(cube_t const &c, point const &viewer_in, occ
 	
 	if (!c_is_building_part && !reflection_pass) {
 		// check walls of this building; not valid for reflections because the reflected camera may be on the other side of a wall/mirror
-		if (targ_in_basement && viewer.z < ground_floor_z1 && (has_parking_garage || interior->has_backrooms)) { // object and pos are both in the parking garage or backrooms
+		if (targ_in_basement && is_pos_in_pg_or_backrooms(viewer)) { // object and pos are both in the parking garage or backrooms
 			if (interior->has_backrooms) {
 				// check for occlusion from the wall segments on either side of the extended basement door that separates it from the basement
 				bool const dim(interior->extb_wall_dim), dir(interior->extb_wall_dir);
@@ -1821,22 +1821,9 @@ bool building_t::check_obj_occluded(cube_t const &c, point const &viewer_in, occ
 				if (are_pts_occluded_by_any_cubes<0>(viewer, pts, npts, occ_area, walls, walls+2, dim, 0.0)) return 1; // no size check
 			}
 			if (has_room_geom()) {
-				auto const &pgbr_wall_ixs(interior->room_geom->pgbr_wall_ixs);
 				index_pair_t start, end;
-
-				if (get_basement().contains_pt(viewer)) { // inside parking garage
-					if (pgbr_wall_ixs.empty()) {end = index_pair_t(interior->room_geom->pgbr_walls);} // not using indices, so use full range
-					else {end = pgbr_wall_ixs.front();} // ends at first index (backrooms)
-				}
-				else if (has_ext_basement() && interior->basement_ext_bcube.contains_pt(viewer)) { // inside backrooms
-					unsigned const floor_ix((viewer.z - interior->basement_ext_bcube.z1())/floor_spacing); // floor containing the viewer
-
-					if (floor_ix+1 < pgbr_wall_ixs.size()) { // if outside the valid floor range, start==end, the range will be empty, and we skip all walls
-						start = pgbr_wall_ixs[floor_ix];
-						end   = pgbr_wall_ixs[floor_ix+1];
-					}
-				}
-				// else in cases where we clipped under the building the range will be empty and there will be no occlusion
+				get_pgbr_wall_ix_for_pos(viewer, start, end);
+				// in cases where we clipped under the building the range will be empty and there will be no occlusion
 
 				for (unsigned D = 0; D < 2; ++D) {
 					bool const d(bool(D) ^ pri_dim); // try primary dim first

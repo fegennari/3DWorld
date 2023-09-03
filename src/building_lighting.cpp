@@ -1027,9 +1027,14 @@ void building_t::refine_light_bcube(point const &lpos, float light_radius, cube_
 	tight_bcube.z1() = tight_bcube.z2() - get_floor_ceil_gap(); // limit to a single floor to exclude walls on the floor below (for backrooms)
 
 	if (is_pos_in_pg_or_backrooms(lpos)) {
+		index_pair_t start, end;
+		get_pgbr_wall_ix_for_pos(lpos, start, end);
+
 		for (unsigned d = 0; d < 2; ++d) {
-			for (cube_t const &c : interior->room_geom->pgbr_walls[d]) {
-				if (tight_bcube.intersects(c)) {walls[d].push_back(c);}
+			vect_cube_t const &pbgr_walls(interior->room_geom->pgbr_walls[d]);
+
+			for (auto w = pbgr_walls.begin()+start.ix[d]; w != pbgr_walls.begin()+end.ix[d]; ++w) {
+				if (tight_bcube.intersects(*w)) {walls[d].push_back(*w);}
 			}
 		}
 	}

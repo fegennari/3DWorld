@@ -1421,7 +1421,8 @@ bool building_t::check_for_wall_ceil_floor_int(point const &p1, point const &p2,
 	if (check_line_intersect_doors(p1, p2)) return 1;
 
 	if (inc_pg_br_walls && has_parking_garage && has_room_geom() && min(p1.z, p2.z) < ground_floor_z1) {
-		for (unsigned d = 0; d < 2; ++d) { // could accelerate with interior->room_geom->pgbr_wall_ixs
+		// Note: not using get_pgbr_wall_ix_for_pos() because p1 and p2 can be on different floors, or one in PG and the other in BR; also, only called a few times per frame
+		for (unsigned d = 0; d < 2; ++d) {
 			if (has_cube_line_coll(p1, p2, interior->room_geom->pgbr_walls[d])) return 1;
 		}
 	}

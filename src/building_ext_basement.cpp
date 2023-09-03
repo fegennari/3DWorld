@@ -1071,6 +1071,23 @@ bool building_room_geom_t::cube_int_backrooms_walls(cube_t const &c) const { // 
 	return 0;
 }
 
+void building_t::get_pgbr_wall_ix_for_pos(point const &pos, index_pair_t &start, index_pair_t &end) const {
+	if (!has_room_geom() || !is_pos_in_pg_or_backrooms(pos)) return;
+	auto const &pgbr_wall_ixs(interior->room_geom->pgbr_wall_ixs);
+
+	if (get_basement().contains_pt(pos)) { // inside parking garage
+		if (pgbr_wall_ixs.empty()) {end = index_pair_t(interior->room_geom->pgbr_walls);} // not using indices, so use full range
+		else {end = pgbr_wall_ixs.front();} // ends at first index (backrooms)
+	}
+	else if (has_ext_basement() && interior->basement_ext_bcube.contains_pt(pos)) { // inside backrooms
+		unsigned const floor_ix((pos.z - interior->basement_ext_bcube.z1())/get_window_vspace()); // floor containing pos.z
+
+		if (floor_ix+1 < pgbr_wall_ixs.size()) { // if outside the valid floor range, start==end, the range will be empty, and we skip all walls
+			start = pgbr_wall_ixs[floor_ix];
+			end   = pgbr_wall_ixs[floor_ix+1];
+		}
+	}
+}
 cube_t building_t::get_bcube_inc_extensions() const {
 	cube_t ret(bcube);
 	if (has_ext_basement()) {ret.union_with_cube(interior->basement_ext_bcube);}

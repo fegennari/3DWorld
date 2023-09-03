@@ -1569,9 +1569,15 @@ bool building_t::is_player_visible(person_t const &person, unsigned vis_test) co
 			for (unsigned n = 0; n < 5 && !has_los; ++n) { // check backrooms and parking garage walls
 				cube_t const line_bcube(pts[n], eye_pos);
 				has_los = 1;
-				
-				for (unsigned d = 0; d < 2; ++d) { // could accelerate with interior->room_geom->pgbr_wall_ixs
-					if (line_int_cubes(pts[n], eye_pos, interior->room_geom->pgbr_walls[d], line_bcube)) {has_los = 0; break;}
+				index_pair_t start, end;
+				get_pgbr_wall_ix_for_pos(eye_pos, start, end);
+
+				for (unsigned d = 0; d < 2 && has_los; ++d) {
+					vect_cube_t const &pbgr_walls(interior->room_geom->pgbr_walls[d]);
+
+					for (auto w = pbgr_walls.begin()+start.ix[d]; w != pbgr_walls.begin()+end.ix[d]; ++w) {
+						if (line_bcube.intersects(*w) && w->line_intersects(pts[n], eye_pos)) {has_los = 0; break;}
+					}
 				}
 			}
 			if (!has_los) return 0; // blocked by a wall
