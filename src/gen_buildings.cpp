@@ -3066,7 +3066,7 @@ public:
 					// iterate over nearby buildings in this tile and draw interior room geom, generating it if needed
 					if (gdist_sq > rgeom_draw_dist_sq) continue; // too far
 					if (is_first_tile && !reflection_pass) {oc.set_camera(camera_pdu);} // setup occlusion culling on the first visible tile
-					bbd.next_tile(g->bcube);
+					if (!ref_pass_interior) {bbd.next_tile(g->bcube);} // only needed for exterior geom
 					is_first_tile = 0;
 					
 					for (auto bi = g->bc_ixs.begin(); bi != g->bc_ixs.end(); ++bi) {
@@ -3285,6 +3285,8 @@ public:
 				bbd.draw_and_clear_ext_tiles(city_shader, xlate); // draw after ext walls but before windows so that alpha blending works properly
 				city_shader.disable();
 			}
+			bbd.clear_ext_tiles(); // required, even if there's no ext_geom(), because tile bboxes may still be nonempty
+
 			if (!reflection_pass) { // draw windows and doors in depth pass to create holes
 				enable_holes_shader(holes_shader); // need same shader to avoid z-fighting
 				glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE); // Disable color writing, we only want to write to the Z-Buffer

@@ -534,7 +534,7 @@ void brg_batch_draw_t::clear() {
 void brg_batch_draw_t::set_camera_dir_mask(point const &camera_bs, cube_t const &bcube) {
 	camera_dir_mask = 0;
 	for (unsigned d = 0; d < 3; ++d) {
-		if (camera_bs[d] < bcube.d[d][1]) {camera_dir_mask |=  1<<(2*d);}
+		if (camera_bs[d] < bcube.d[d][1]) {camera_dir_mask |= 1<<(2*d  );}
 		if (camera_bs[d] > bcube.d[d][0]) {camera_dir_mask |= 1<<(2*d+1);}
 	}
 }
@@ -580,14 +580,15 @@ void brg_batch_draw_t::draw_and_clear_ext_tiles(shader_t &s, vector3d const &xla
 	enable_blend(); // needed for sign text
 
 	for (tile_block_t &tb : ext_by_tile) {
-		if (!tb.to_draw.empty()) { // skip empty batches
-			try_bind_tile_smap_at_point((tb.bcube.get_cube_center() + xlate), s);
-			draw_and_clear_batch(tb.to_draw, state);
-		}
-		tb.bcube = cube_t(); // reset for next frame
+		if (tb.to_draw.empty()) continue; // skip empty batches
+		try_bind_tile_smap_at_point((tb.bcube.get_cube_center() + xlate), s);
+		draw_and_clear_batch(tb.to_draw, state);
 	}
 	disable_blend();
 	indexed_vao_manager_with_shadow_t::post_render();
+}
+void brg_batch_draw_t::clear_ext_tiles() {
+	for (tile_block_t &tb : ext_by_tile) {tb.bcube = cube_t();} // reset for next frame
 }
 
 // shadow_only: 0=non-shadow pass, 1=shadow pass, 2=shadow pass with alpha mask texture
