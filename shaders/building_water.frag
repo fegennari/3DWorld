@@ -91,6 +91,8 @@ void main() {
 
 	// handle refractions by mixing the frame buffer (with the floor and underwater objects) with the water using the alpha value
 	vec3 refract_color = texture(frame_buffer, uv).rgb;
+	// adjust intensity by the ratio of signed amplitude to height sum to get a signed value within an envelope that falls off at both ends:
+	// at the low radius (to prevent sharp edges near the singularity at the splash center), and at the outer radius for a smooth transition
 	float inten_adj    = 0.2*splash.x/max(splash.y, 0.05);
 	refract_color     *= 1.0 + clamp(inten_adj, 0.0, 1.0); // add fake caustics based on splash amplitude
 	fg_FragColor       = vec4(mix(refract_color, surf_color.rgb, surf_color.a), 1.0);
