@@ -1993,10 +1993,14 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 			speed_mult  = 1.5; // faster when the player is in the same room
 			// run logic to play zombie sounds
 			bool const same_room_and_floor(same_room_and_floor_as_player(person));
-			bool play_sound(same_room_and_floor); // always play sound if in the same room and floor
+			bool play_sound(same_room_and_floor); // always play sound if in the same room and floor; even if in backrooms?
 			if (!play_sound && (person_ix & 1)) {play_sound |= is_player_visible(person, 1);} // 50% of zombies use line of sight test
 			if (!play_sound && (person_ix & 2)) {play_sound |= has_nearby_sound(person, get_window_vspace());} // 50% of zombies use sound test
-			if (play_sound) {maybe_play_zombie_sound(person.pos, person_ix, same_room_and_floor);} // alert other zombies if in the same room and floor as the player
+			
+			if (play_sound) { // alert other zombies if in the same room and floor as the player, except in backrooms or parking garage, unless the player is visible
+				bool const alert_other_zombies(same_room_and_floor && (!is_pos_in_pg_or_backrooms(person.pos) || is_player_visible(person, 1)));
+				maybe_play_zombie_sound(person.pos, person_ix, alert_other_zombies);
+			}
 		}
 	}
 	if (choose_dest) { // no current destination, choose a new destination
