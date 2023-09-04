@@ -7,7 +7,7 @@
 #include "buildings.h"
 #include "openal_wrap.h"
 
-unsigned const MAX_SPLASHES = 32; // must agree with fragment shader code
+unsigned const MAX_SPLASHES = 40; // must agree with fragment shader code
 
 
 extern int player_in_basement, animate2, display_mode;
@@ -60,7 +60,7 @@ public:
 			s.radius += exp_dist;
 			s.height *= prev_area/(s.radius*s.radius); // volume preserving
 		}
-		splashes.erase(std::remove_if(splashes.begin(), splashes.end(), [](splash_t const &s) {return (s.height < 0.002);}), splashes.end());
+		splashes.erase(std::remove_if(splashes.begin(), splashes.end(), [](splash_t const &s) {return (s.height < 0.0005);}), splashes.end());
 	}
 	void set_shader_uniforms(shader_t &s) {
 		assert(splashes.size() <= MAX_SPLASHES);
