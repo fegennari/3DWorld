@@ -104,12 +104,22 @@ class cube_nav_grid {
 		}
 		return 0; // no intersection
 	}
+	void make_region_walkable(cube_t const &region) {
+		float lo[2], hi[2];
+		get_grid_ix_fp(region.get_llc(), lo);
+		get_grid_ix_fp(region.get_urc(), hi);
+		unsigned const x1(round_fp(lo[0])), y1(round_fp(lo[1])), x2(round_fp(hi[0])), y2(round_fp(hi[1]));
+
+		for (unsigned y = y1; y <= y2; ++y) {
+			for (unsigned x = x1; x <= x2; ++x) {nodes[get_node_ix(x, y)] = 1;}
+		}
+	}
 public:
 	bool is_built() const {return !bcube.is_all_zeros();} // can't test on !nodes.empty() in case the room is too small to have any nodes
 	bool is_valid() const {return (!invalid && is_built());}
 	void invalidate() {invalid = 1;}
 
-	void build(cube_t const &bcube_, vect_cube_t const &blockers, vector<door_stack_t> const &doors, float radius_) {
+	void build(cube_t const &bcube_, vect_cube_t const &blockers, vector<door_stack_t> const &doors, vector<stairwell_t> const &stairwells, float stairs_extend, float radius_) {
 		invalid    = 0; // reset, in case build() was called on a nonempty but invalid cube_nav_grid
 		radius     = radius_;
 		bcube      = bcube_;
@@ -147,17 +157,20 @@ public:
 		// other solutions involve aligning doors with the grid (too difficult/restrictive) or reducing spacing to doorway_width/(2*radius) (too slow)
 		for (door_stack_t const &d : doors) {
 			if (!bcube.intersects(d)) continue; // wrong room; includes zval check
-			cube_t bc(d.get_clearance_bcube()); // include space to both sides
-			set_wall_width(bc, bc.get_center_dim(!d.dim), 0.0, !d.dim); // set width to zero so that exactly one grid is contained in this dim
-			float lo[2], hi[2];
-			get_grid_ix_fp(bc.get_llc(), lo);
-			get_grid_ix_fp(bc.get_urc(), hi);
-			unsigned const x1(round_fp(lo[0])), y1(round_fp(lo[1])), x2(round_fp(hi[0])), y2(round_fp(hi[1]));
-
-			for (unsigned y = y1; y <= y2; ++y) {
-				for (unsigned x = x1; x <= x2; ++x) {nodes[get_node_ix(x, y)] = 1;}
-			}
-		} // for d
+			cube_t region(d.get_clearance_bcube()); // include space to both sides
+			set_wall_width(region, region.get_center_dim(!d.dim), 0.0, !d.dim); // set width to zero so that exactly one grid is contained in this dim
+			make_region_walkable(region);
+		}
+		// make sure all stairwells connecting to this room are reachable
+		for (stairwell_t const &s : stairwells) {
+			if (!s.intersects(bcube)) continue;
+			cube_t entrance(s);
+			bool const is_top(bcube.zc() > s.zc()), dir(s.dir ^ is_top ^ 1);
+			entrance.d[s.dim][!dir] = s.d[s.dim][dir] - (dir ? -1.0 : 1.0)*stairs_extend; // shrink to extend length at the entrance to the stairs; will be denormalized
+			cube_t region(s);
+			set_wall_width(region, entrance.get_center_dim(s.dim), 0.0, s.dim); // shrink to zero area
+			make_region_walkable(region);
+		} // for s
 	}
 	void create_debug_objs(vector<room_object_t> &objs) const {
 		for (unsigned y = 0; y < num[1]; ++y) {
@@ -342,7 +355,7 @@ public:
 			entry_u.d[dim][ dir] = entry_u.d[dim][!dir] + extend; // shrink to extend length at the entrance to the stairs when going up
 			entry_d.d[dim][!dir] = entry_d.d[dim][ dir] - extend; // shrink to extend length at the entrance to the stairs when going down
 		}
-		get_node(room).add_conn_room(node_ix2, -1, entry_u, entry_d);
+		get_node(room).add_conn_room(node_ix2, -1, entry_u, entry_d); // Note: entry_u and entry_d are denormalized here
 		n2.add_conn_room(room, -1, entry_u, entry_d);
 	}
 	void connect_rooms(unsigned room1, unsigned room2, int door_ix, cube_t const &conn_bcube) { // graph is bidirectional
@@ -588,7 +601,7 @@ public:
 				}
 				// Note: doorway width is 2.38x coll radius
 				float const grid_radius(get_ped_coll_radius()); // use conservative person radius so that we can reuse across people
-				nav_grid.build(walk_area_this_floor, blockers, building.interior->door_stacks, grid_radius);
+				nav_grid.build(walk_area_this_floor, blockers, building.interior->door_stacks, building.interior->stairwells, stairs_extend, grid_radius);
 				//nav_grid.create_debug_objs(building.interior->room_geom->objs); // for debugging; modifies building, which should be const
 				//building.interior->room_geom->invalidate_small_geom();
 			}
