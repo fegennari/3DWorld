@@ -330,11 +330,17 @@ bool building_t::max_expand_underground_room(cube_t &room, bool dim, bool dir, r
 	return 1;
 }
 
+float building_t::get_floor_below_water_level() const {
+	assert(has_water());
+	unsigned const floor_ix(get_ext_basement_floor_ix(interior->water_zval));
+	return interior->basement_ext_bcube.z1() + floor_ix*get_window_vspace();
+}
 cube_t building_t::get_water_cube(bool full_room_height) const {
 	if (!has_water()) return cube_t(); // no water; error?
 	assert(has_ext_basement());
 	cube_t water(interior->basement_ext_bcube);
-	water.z2() = (full_room_height ? (water.z1() + get_window_vspace()) : interior->water_zval);
+	if (full_room_height) {water.z2() = get_floor_below_water_level() + get_window_vspace();} // floor above water level
+	else {water.z2() = interior->water_zval;}
 	return water;
 }
 bool building_t::water_visible_to_player() const {
@@ -343,12 +349,13 @@ bool building_t::water_visible_to_player() const {
 	point const camera_bs(camera_pdu.pos - xlate);
 	if (point_in_water_area(camera_bs)) return 1; // definitely visible
 	if (!point_in_extended_basement_not_basement(camera_bs)) return 0;
-	float const floor_spacing(get_window_vspace()), floor_above(interior->water_zval + floor_spacing);
+	float const floor_spacing(get_window_vspace()), floor_below(get_floor_below_water_level()), floor_above(floor_below + floor_spacing);
 	if (camera_bs.z > floor_above + floor_spacing)     return 0; // player not on the floor with water or the floor above (in case water is visible through stairs)
 	if (!is_rot_cube_visible(get_water_cube(), xlate)) return 0;
 	
 	for (stairwell_t const &s : interior->stairwells) { // check stairs visibility
 		if (s.z1() > interior->water_zval) continue; // above the water level
+		if (s.z2() < floor_above)          continue; // stairs don't go up to the floor the player is on
 		if (!interior->basement_ext_bcube.contains_cube(s))          continue; // not extended basement stairs
 		if (!s.closest_dist_less_than(camera_bs, 5.0*floor_spacing)) continue; // too far away
 		cube_t floor_cut(s);
@@ -1071,6 +1078,10 @@ bool building_room_geom_t::cube_int_backrooms_walls(cube_t const &c) const { // 
 	return 0;
 }
 
+unsigned building_t::get_ext_basement_floor_ix(float zval) const {
+	assert(has_ext_basement());
+	return unsigned(max(0.0f, (zval - interior->basement_ext_bcube.z1())/get_window_vspace()));
+}
 void building_t::get_pgbr_wall_ix_for_pos(point const &pos, index_pair_t &start, index_pair_t &end) const {
 	if (!has_room_geom() || !is_pos_in_pg_or_backrooms(pos)) return;
 	auto const &pgbr_wall_ixs(interior->room_geom->pgbr_wall_ixs);
@@ -1080,7 +1091,7 @@ void building_t::get_pgbr_wall_ix_for_pos(point const &pos, index_pair_t &start,
 		else {end = pgbr_wall_ixs.front();} // ends at first index (backrooms)
 	}
 	else if (has_ext_basement() && interior->basement_ext_bcube.contains_pt(pos)) { // inside backrooms
-		unsigned const floor_ix((pos.z - interior->basement_ext_bcube.z1())/get_window_vspace()); // floor containing pos.z
+		unsigned const floor_ix(get_ext_basement_floor_ix(pos.z)); // floor containing pos.z
 
 		if (floor_ix+1 < pgbr_wall_ixs.size()) { // if outside the valid floor range, start==end, the range will be empty, and we skip all walls
 			start = pgbr_wall_ixs[floor_ix];
