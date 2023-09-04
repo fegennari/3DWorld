@@ -3262,7 +3262,7 @@ public:
 			glCullFace(reflection_pass ? GL_FRONT : GL_BACK); // draw front faces
 
 			// draw people in the player's building here with alpha mask enabled
-			if (defer_ped_draw_vars.valid() || reflection_pass) {
+			if (defer_ped_draw_vars.valid() || (reflection_pass && !ref_pass_water)) {
 				if (global_building_params.enable_people_ai) {enable_animations_for_shader(s);}
 				setup_building_draw_shader(s, global_building_params.people_min_alpha, 1, 0, 0); // enable_indir=1, force_tsl=0, use_texgen=0
 

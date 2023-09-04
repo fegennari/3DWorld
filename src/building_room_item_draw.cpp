@@ -1783,7 +1783,8 @@ bool building_t::check_obj_occluded(cube_t const &c, point const &viewer_in, occ
 	//highres_timer_t timer("Check Object Occlusion"); // 0.001ms
 	point viewer(viewer_in);
 	maybe_inv_rotate_point(viewer); // rotate viewer pos into building space
-	bool const player_in_building(point_in_building_or_basement_bcube(viewer)), targ_in_basement(c.z2() <= ground_floor_z1);
+	bool const player_in_building(reflection_pass || point_in_building_or_basement_bcube(viewer)); // if reflection pass, assume the player is in this building
+	bool const targ_in_basement(c.z2() <= ground_floor_z1);
 	float const floor_spacing(get_window_vspace());
 	bool checked_conn_ret(0);
 	
@@ -1839,7 +1840,7 @@ bool building_t::check_obj_occluded(cube_t const &c, point const &viewer_in, occ
 			}
 		}
 	}
-	if (!c_is_building_part && (reflection_pass || player_in_building)) {
+	if (!c_is_building_part && player_in_building) {
 		// viewer inside this building; includes shadow_only case and reflection_pass (even if reflected camera is outside the building);
 		// check floors/ceilings of this building
 		if (fabs(viewer.z - c.zc()) > (reflection_pass ? 1.0 : 0.5)*floor_spacing) { // on different floors
