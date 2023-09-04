@@ -162,11 +162,9 @@ void building_t::draw_water(vector3d const &xlate) const {
 	s.set_vert_shader("building_water");
 	s.set_frag_shader("ads_lighting.part*+shadow_map.part*+dynamic_lighting.part*+building_water");
 	s.begin_shader();
-	s.add_uniform_int("reflection_tex", 0);
 	if (use_dlights) {setup_dlight_textures(s);} // must be before set_city_lighting_shader_opts()
 	set_city_lighting_shader_opts(s, lights_bcube, use_dlights, use_smap, pcf_scale);
 	set_interior_lighting(s, have_indir);
-	if (room_mirror_ref_tid > 0) {bind_2d_texture(room_mirror_ref_tid);} else {select_texture(WHITE_TEX);}
 	float const water_depth(interior->water_zval - (interior->basement_ext_bcube.z1() + get_fc_thickness()));
 	s.add_uniform_vector3d("camera_pos",  get_camera_pos());
 	s.add_uniform_float("water_depth",    water_depth);
@@ -176,6 +174,9 @@ void building_t::draw_water(vector3d const &xlate) const {
 	building_splash_manager.set_shader_uniforms(s);
 	bind_frame_buffer_RGB(1); // tu_id=1
 	s.add_uniform_int("frame_buffer", 1);
+	// Note: this must be *after* bind_frame_buffer_RGB() because it changes the texture
+	if (room_mirror_ref_tid > 0) {bind_2d_texture(room_mirror_ref_tid);} else {select_texture(WHITE_TEX);}
+	s.add_uniform_int("reflection_tex", 0);
 	enable_blend();
 	cube_t const water(get_water_cube());
 	float const x1(water.x1()), y1(water.y1()), x2(water.x2()), y2(water.y2()), z(water.z2()), tx(1.0), ty(1.0);
