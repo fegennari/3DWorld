@@ -145,7 +145,7 @@ void add_ssao() {
 	fill_screen_white_and_end_shader(s);
 }
 
-void add_color_only_effect(string const &frag_shader, float intensity=1.0, float time_scale=1.0, float pos_scale=0.0) {
+void add_color_only_effect(string const &frag_shader, float intensity=1.0, float time_scale=1.0, float pos_scale=0.0, colorRGBA const &color_mod=WHITE) {
 
 	static float time(0.0);
 	if (animate2) {time += time_scale*fticks;}
@@ -158,6 +158,7 @@ void add_color_only_effect(string const &frag_shader, float intensity=1.0, float
 	if (pos_scale != 0.0) {s.add_uniform_float("pos_scale", pos_scale);} // not all shaders have this uniform
 	s.add_uniform_int("frame_buffer_tex", 0);
 	s.add_uniform_float("time", time); // may not be used
+	s.add_uniform_color("color_mod", color_mod); // may not be used
 	select_texture(NOISE_TEX, 1);
 	s.add_uniform_int("noise_tex", 1); // Note: used for heat waves effect, could be used for others
 	set_xy_step(s); // may not be used
@@ -267,6 +268,13 @@ void add_2d_bloom() {
 	color_buffer_frame = 0; // reset to invalidate buffer and force recreation of texture for second pass
 }
 
+void apply_player_underwater_effect(colorRGBA const &color_mod=WHITE) {
+	//add_color_only_effect("screen_space_blur");
+	add_2d_blur();
+	if (player_is_drowning())                 {add_color_only_effect("drunken_wave", 1.00, 1.0, 0.0, color_mod);}
+	else if (world_mode == WMODE_INF_TERRAIN) {add_color_only_effect("drunken_wave", 0.12, 1.6, 1.6, color_mod);} // reduced but faster effect
+}
+
 void run_postproc_effects() {
 
 	bool const enable_ssao = 0;
@@ -291,10 +299,7 @@ void run_postproc_effects() {
 		add_color_only_effect("drunken_wave", 1.0f*(min(drunkenness, 1.25f) - 0.5f));
 	}
 	else if (camera_underwater) {
-		//add_color_only_effect("screen_space_blur");
-		add_2d_blur();
-		if (player_is_drowning())                 {add_color_only_effect("drunken_wave", 1.0);}
-		else if (world_mode == WMODE_INF_TERRAIN) {add_color_only_effect("drunken_wave", 0.12, 1.6, 1.6);} // reduced but faster effect
+		apply_player_underwater_effect();
 	}
 	else {
 		float const dist_to_fire(sqrt(dist_to_fire_sq)), fire_max_dist(4.0*CAMERA_RADIUS);

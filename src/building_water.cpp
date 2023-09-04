@@ -12,12 +12,14 @@ unsigned const MAX_SPLASHES = 40; // must agree with fragment shader code
 
 extern int player_in_basement, animate2, display_mode;
 extern unsigned room_mirror_ref_tid;
-extern float fticks, CAMERA_RADIUS;
+extern float fticks, CAMERA_RADIUS, water_plane_z;
 extern building_t const *player_building;
 
 void set_interior_lighting(shader_t &s, bool have_indir);
 void reset_interior_lighting_and_end_shader(shader_t &s);
-void bind_frame_buffer_RGB(unsigned tu_id); // from postproc_effects.cpp
+// from postproc_effects.cpp
+void bind_frame_buffer_RGB(unsigned tu_id);
+void apply_player_underwater_effect(colorRGBA const &color_mod);
 
 
 class building_splash_manager_t {
@@ -152,6 +154,16 @@ void building_t::draw_water(vector3d const &xlate) const {
 	}
 	float const floor_spacing(get_window_vspace());
 	if (animate2) {building_splash_manager.next_frame(floor_spacing);} // maybe should do this somewhere else? or update even if water isn't visible?
+	point const camera_pos(get_camera_pos());
+
+	if (camera_pos.z < interior->water_zval) { // player under the water
+		apply_player_underwater_effect(colorRGBA(0.3, 0.4, 0.8)); // light blue-ish
+		float const orig_water_plane_z(water_plane_z);
+		water_plane_z = interior->water_zval;
+		draw_underwater_particles(interior->basement_ext_bcube.z1());
+		water_plane_z = orig_water_plane_z;
+		return;
+	}
 	shader_t s;
 	cube_t const lights_bcube(get_building_lights_bcube());
 	bool const use_dlights(!lights_bcube.is_all_zeros()), have_indir(0), use_smap(1);
@@ -166,7 +178,7 @@ void building_t::draw_water(vector3d const &xlate) const {
 	set_city_lighting_shader_opts(s, lights_bcube, use_dlights, use_smap, pcf_scale);
 	set_interior_lighting(s, have_indir);
 	float const water_depth(interior->water_zval - (interior->basement_ext_bcube.z1() + get_fc_thickness()));
-	s.add_uniform_vector3d("camera_pos",  get_camera_pos());
+	s.add_uniform_vector3d("camera_pos",  camera_pos);
 	s.add_uniform_float("water_depth",    water_depth);
 	s.add_uniform_float("water_atten",    1.0/floor_spacing); // attenuates to dark blue/opaque around this distance
 	s.add_uniform_color("uw_atten_max",   uw_atten_max);
@@ -177,7 +189,7 @@ void building_t::draw_water(vector3d const &xlate) const {
 	// Note: this must be *after* bind_frame_buffer_RGB() because it changes the texture
 	if (room_mirror_ref_tid > 0) {bind_2d_texture(room_mirror_ref_tid);} else {select_texture(WHITE_TEX);}
 	s.add_uniform_int("reflection_tex", 0);
-	enable_blend();
+	enable_blend(); // no longer needed?
 	cube_t const water(get_water_cube());
 	float const x1(water.x1()), y1(water.y1()), x2(water.x2()), y2(water.y2()), z(water.z2()), tx(1.0), ty(1.0);
 	vector3d const &n(plus_z);
