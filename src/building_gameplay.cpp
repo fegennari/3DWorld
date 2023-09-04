@@ -1353,6 +1353,7 @@ void building_room_geom_t::remove_object(unsigned obj_id, building_t &building) 
 	}
 	if (is_light) {invalidate_lights_geom();}
 	update_draw_state_for_room_object(old_obj, building, 1);
+	building.check_for_water_splash(cube_bot_center(old_obj), 0.8);
 }
 
 int building_room_geom_t::find_avail_obj_slot() const {
