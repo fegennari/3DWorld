@@ -44,7 +44,7 @@ extern model3ds all_models;
 void add_coll_point(int i, int j, int index, float zminv, float zmaxv, int add_to_hcm, int is_dynamic, int dhcm);
 void free_all_coll_objects();
 bool proc_movable_cobj(point const &orig_pos, point &player_pos, unsigned index, int type);
-void register_building_water_splash(point const &pos, float size, bool play_sound);
+void register_building_water_splash(point const &pos, float size, bool alert_zombies);
 
 
 bool decal_obj::is_on_cobj(int cobj, vector3d *delta) const {
@@ -1709,7 +1709,7 @@ void play_camera_footstep_sound() { // tiled terrain mode
 	if (dist_xy_less_than(pos, last_pos, 0.5*CAMERA_RADIUS)) return;
 	last_pos = pos;
 	fs_time  = tfticks;
-	if (player_in_water) {register_building_water_splash(pos, 1.0, 1);} // water splash with sound
+	if (player_in_water) {register_building_water_splash(pos, 1.0, 1);} // water splash; alert_zombies=1
 	else {gen_sound_random_var(SOUND_SNOW_STEP, pos, 0.05, 1.25);} // normal footstep
 }
 

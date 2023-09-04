@@ -88,24 +88,24 @@ building_splash_manager_t building_splash_manager;
 void clear_building_water_splashes() {
 	building_splash_manager.clear();
 }
-void register_building_water_splash(point const &pos, float size, bool play_sound) { // Note: pos is in camera space
+// Note: player steps call this function directly; all others go through building_t::check_for_water_splash()
+void register_building_water_splash(point const &pos, float size, bool alert_zombies) { // Note: pos is in camera space
 	if (player_building == nullptr) return; // shouldn't happen?
 	cube_t const bounds(player_building->calc_splash_bounds(pos));
 	if (bounds == cube_t()) return; // shouldn't happen?
 	building_splash_manager.add_splash(pos, 0.5*CAMERA_RADIUS, size, bounds);
-	if (!play_sound) return;
+	if (alert_zombies) {register_building_sound((pos + get_tiled_terrain_model_xlate()), 0.5*size);} // alert zombies; convert pos to building space
 #pragma omp critical(gen_sound)
 	gen_sound_random_var(SOUND_SPLASH2, pos, 0.3*size, 0.9);
 }
-bool building_t::check_for_water_splash(point const &pos_bs, float size, bool full_room_height, bool draw_splash, bool play_sound) const { // Note: pos in building space
+bool building_t::check_for_water_splash(point const &pos_bs, float size, bool full_room_height, bool draw_splash, bool alert_zombies) const { // Note: pos in building space
 	if (this != player_building)    return 0; // only splashes for the building the player is in
 	if (!water_visible_to_player()) return 0; // only if water is visible
 	if (!point_in_water_area(pos_bs, full_room_height)) return 0;
 	vector3d const xlate(get_tiled_terrain_model_xlate());
-	register_building_water_splash((pos_bs + xlate), size, play_sound);
-	if (play_sound) {register_building_sound(pos_bs, 0.5*size);} // alert zombies
+	register_building_water_splash((pos_bs + xlate), size, alert_zombies);
 
-	if (draw_splash) {
+	if (draw_splash) { // Note: doesn't apply to player steps
 		float const radius(0.05*min(size, 1.5f)*get_window_vspace());
 		point const splash_pos(pos_bs.x, pos_bs.y, (interior->water_zval + 0.1*radius)); // slightly above the water surface
 		interior->room_geom->particle_manager.add_particle(splash_pos, zero_vector, WHITE, radius, PART_EFFECT_SPLASH);

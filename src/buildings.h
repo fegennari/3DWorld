@@ -1548,7 +1548,7 @@ struct building_t : public building_geom_t {
 		vector3d const &xlate, unsigned building_ix, bool shadow_only, bool reflection_pass, unsigned inc_small, bool player_in_building);
 	bool has_cars_to_draw(bool player_in_building) const;
 	void draw_cars_in_building(shader_t &s, vector3d const &xlate, bool player_in_building, bool shadow_only) const;
-	bool check_for_water_splash(point const &pos_bs, float size=1.0, bool full_room_height=0, bool draw_splash=0, bool play_sound=1) const;
+	bool check_for_water_splash(point const &pos_bs, float size=1.0, bool full_room_height=0, bool draw_splash=0, bool alert_zombies=1) const;
 	cube_t calc_splash_bounds(point const &pos) const;
 	void draw_water(vector3d const &xlate) const;
 	void debug_people_in_building(shader_t &s) const;
@@ -2085,7 +2085,7 @@ inline void gen_sound_thread_safe_at_player(unsigned id, float gain=1.0, float p
 void register_building_sound(point const &pos, float volume);
 void register_building_sound_at_player(float volume);
 bldg_obj_type_t const &get_room_obj_type(room_object_t const &obj);
-void register_building_water_splash(point const &pos, float size=1.0, bool play_sound=1);
+void register_building_water_splash(point const &pos, float size=1.0, bool alert_zombies=1);
 // functions in city_gen.cc
 void city_shader_setup(shader_t &s, cube_t const &lights_bcube, bool use_dlights, int use_smap, int use_bmap,
 	float min_alpha=0.0, bool force_tsl=0, float pcf_scale=1.0, bool use_texgen=0, bool indir_lighting=0, bool is_outside=1);

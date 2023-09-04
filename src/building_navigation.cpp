@@ -2222,7 +2222,7 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 		float const splash_dist(2.0*person.radius);
 
 		if (round_fp(old_anim_time/splash_dist) != round_fp(person.anim_time/splash_dist)) { // update every splash_dist
-			check_for_water_splash(person.pos, 1.0, 1); // full_room_height=1
+			check_for_water_splash(person.pos, 1.0, 1, 0, 0); // full_room_height=1, draw_splash=0, alert_zombies=0
 		}
 	}
 	return AI_MOVING;
