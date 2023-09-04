@@ -2953,7 +2953,8 @@ public:
 		point const camera(get_camera_pos()), camera_xlated(camera - xlate);
 		int const use_bmap(global_building_params.has_normal_map);
 		bool const night(is_night(WIND_LIGHT_ON_RAND)), use_city_dlights(!reflection_pass);
-		bool const ref_pass_house(reflection_pass & REF_PASS_HOUSE), ref_pass_interior(reflection_pass & REF_PASS_INTERIOR), ref_pass_water(reflection_pass & REF_PASS_WATER);
+		bool const ref_pass_house(reflection_pass & REF_PASS_HOUSE), ref_pass_interior(reflection_pass & REF_PASS_INTERIOR);
+		bool const ref_pass_water(reflection_pass & REF_PASS_WATER), ref_pass_extb(reflection_pass & REF_PASS_EXTB);
 		// check for sun or moon; also need the smap pass for drawing with dynamic lights at night, so basically it's always enabled
 		bool const use_tt_smap(check_tile_smap(0)); // && (night || light_valid_and_enabled(0) || light_valid_and_enabled(1)));
 		bool have_windows(0), have_wind_lights(0), have_interior(0), is_city_lighting_setup(0);
@@ -3194,7 +3195,7 @@ public:
 			toggle_room_light = teleport_to_screenshot = 0; building_action_key = 0; // reset these even if the player wasn't in a building
 		}
 		if (draw_interior) {
-			if (!ref_pass_interior) { // skip for interior room reflections (but what about looking out through the bathroom door?)
+			if (!ref_pass_extb) { // skip for extended basement room reflections
 				// draw back faces of buildings, which will be interior walls
 				setup_building_draw_shader(s, min_alpha, 1, 1, 1); // enable_indir=1, force_tsl=1, use_texgen=1
 				glEnable(GL_CULL_FACE);
@@ -3258,7 +3259,7 @@ public:
 					for (auto i = bcs.begin(); i != bcs.end(); ++i) {(*i)->building_draw_vbo.draw(s, 0, 0, tex_filt_mode);}
 					reset_interior_lighting_and_end_shader(s);
 				}
-			} // end !ref_pass_interior
+			} // end !ref_pass_extb
 			glCullFace(reflection_pass ? GL_FRONT : GL_BACK); // draw front faces
 
 			// draw people in the player's building here with alpha mask enabled

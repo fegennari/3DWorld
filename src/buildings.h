@@ -485,6 +485,7 @@ unsigned const REF_PASS_ENABLED  = 0x01;
 unsigned const REF_PASS_INTERIOR = 0x02;
 unsigned const REF_PASS_HOUSE    = 0x04;
 unsigned const REF_PASS_WATER    = 0x08;
+unsigned const REF_PASS_EXTB     = 0x10;
 
 struct bldg_obj_type_t {
 	bool player_coll=0, ai_coll=0, rat_coll=0, pickup=0, attached=0, is_model=0;
