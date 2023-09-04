@@ -1064,12 +1064,26 @@ void building_t::run_ball_update(vector<room_object_t>::iterator ball_it, point 
 	}
 	if (new_center != center) { // is moving
 		apply_roll_to_matrix(dstate.rot_matrix, new_center, center, plus_z, radius, (on_floor ? 0.0 : 0.01), (on_floor ? 1.0 : 0.2));
-		if (!was_dynamic) {interior->room_geom->invalidate_small_geom();} // static => dynamic transition, need to remove from static object vertex data
+		bool invalidate_sm_geom(!was_dynamic); // static => dynamic transition, need to remove from static object vertex data
 		interior->update_dynamic_draw_data();
+		
+		// check for water collisions
+		if (set_float_height(new_center, radius, bcube.z2())) { // ceil_zval not known, use bcube z2
+			velocity    = zero_vector;
+			ball.flags &= ~RO_FLAG_DYNAMIC; // clear dynamic flag
+			invalidate_sm_geom = 1;
+			static float last_splash_time(0.0);
+
+			if ((tfticks - last_splash_time) > 0.5*TICKS_PER_SECOND) { // at most once every 0.5s
+				check_for_water_splash(new_center, 0.75, 1, 1); // full_room_height=1, draw_splash=1
+				last_splash_time = tfticks;
+			}
+		}
 		ball.translate(new_center - center);
 		room_object_t squish_obj(ball);
 		squish_obj.expand_by_xy(0.5*radius); // increase the radius to account for spiders and roaches being pushed out of the way of moving balls
 		maybe_squish_animals(squish_obj, player_pos);
+		if (invalidate_sm_geom) {interior->room_geom->invalidate_small_geom();}
 	}
 	// check for collision with closed door separating the adjacent building at the end of the connecting room
 	building_t *const cont_bldg(get_bldg_containing_pt(new_center));

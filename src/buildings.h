@@ -1693,6 +1693,7 @@ public:
 	float get_floor_below_water_level() const;
 	cube_t get_water_cube(bool full_room_height=0) const;
 	bool point_in_water_area(point const &p, bool full_room_height=1) const;
+	bool set_float_height(point &pos, float radius, float ceil_zval, float density=0.5) const;
 	void print_building_manifest() const;
 	void print_building_stats() const;
 private:

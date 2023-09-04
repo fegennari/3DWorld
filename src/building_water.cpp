@@ -117,6 +117,14 @@ bool building_t::check_for_water_splash(point const &pos_bs, float size, bool fu
 bool building_t::point_in_water_area(point const &p, bool full_room_height) const {
 	return (has_water() && get_water_cube(full_room_height).contains_pt(p));
 }
+bool building_t::set_float_height(point &pos, float radius, float ceil_zval, float density) const { // density in (0.0, 1.0]
+	assert(density > 0.0);
+	if (density >= 1.0) return 0; // sinks
+	if (!point_in_water_area(pos, 0)) return 0; // full_room_height=0
+	max_eq(pos.z, (interior->water_zval + radius*(1.0f - 2.0f*density))); // floats on the water
+	if (radius > 0.0) {min_eq(pos.z, ceil_zval - radius);} // if water level is high, keep below the ceiling
+	return 1;
+}
 
 cube_t building_t::calc_splash_bounds(point const &pos) const {
 	if (!interior || !point_in_water_area(pos)) return cube_t(); // error?

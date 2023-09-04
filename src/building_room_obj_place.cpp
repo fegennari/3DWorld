@@ -851,6 +851,7 @@ bool building_t::add_ball_to_room(rand_gen_t &rgen, room_t const &room, cube_t c
 	ball_area.expand_by_xy(-radius*rgen.rand_uniform(1.0, 10.0));
 	vect_room_object_t &objs(interior->room_geom->objs);
 	if (!ball_area.is_strictly_normalized()) return 0; // should always be normalized
+	float const ceil_zval(zval + get_floor_ceil_gap());
 	
 	for (unsigned n = 0; n < 10; ++n) { // make 10 attempts to place the object
 		point center(0.0, 0.0, (zval + radius));
@@ -863,6 +864,7 @@ bool building_t::add_ball_to_room(rand_gen_t &rgen, room_t const &room, cube_t c
 			center[ dim] = ball_area.d[dim][dir];
 			center[!dim] = rgen.rand_uniform(ball_area.d[!dim][0], ball_area.d[!dim][1]); // random position along the wall
 		}
+		set_float_height(center, radius, ceil_zval); // floats on water
 		cube_t c(center);
 		c.expand_by(radius);
 		if (overlaps_other_room_obj(c, objs_start) || is_obj_placement_blocked(c, room, 1)) continue; // bad placement
