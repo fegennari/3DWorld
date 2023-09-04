@@ -863,7 +863,7 @@ void power_pole_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist
 			}
 			if (d == 1 && !tf_bcube.is_all_zeros()) { // connect wire to transformer if running in y dim
 				float const spacing(0.3*tf_bcube.get_sz_dim(!d));
-				point const tf_top_center(tf_bcube.xc(), tf_bcube.yc(), tf_bcube.z2());
+				point const tf_top_center(cube_top_center(tf_bcube));
 
 				for (unsigned n = 0; n < 3; ++n) {
 					point const pts[2] = {point(center.x+offsets[n], tf_top_center.y, p1.z+standoff_height+wire_radius),

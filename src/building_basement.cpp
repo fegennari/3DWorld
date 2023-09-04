@@ -159,8 +159,7 @@ void building_t::add_breaker_panel(rand_gen_t &rgen, cube_t const &c, float bp_h
 	assert(has_room_geom());
 	colorRGBA const color(0.5, 0.6, 0.7);
 	auto &objs(interior->room_geom->objs);
-	point top_center(c.xc(), c.yc(), c.z2());
-	cube_t conduit(top_center);
+	cube_t conduit(cube_top_center(c));
 	conduit.z2() = ceil_zval;
 	float const conduit_radius(rgen.rand_uniform(0.38, 0.46)*bp_hdepth);
 	conduit.expand_by_xy(conduit_radius);

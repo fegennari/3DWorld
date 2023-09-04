@@ -271,8 +271,8 @@ bool building_t::add_rat(point const &pos, float hlength, vector3d const &dir, p
 					body.d[!i->dim][!open_dir] = panel.d[!i->dim][open_dir]; // the other half
 					float const tray_height(0.25*panel.get_sz_dim(!i->dim));
 					i->flags |= RO_FLAG_NONEMPTY;
-					rat.pos.assign(body.xc(), body.yc(), (body.z1() + tray_height)); // centered on the microwave tray
-					rat.dead = 1;
+					rat.pos   = cube_bot_center(body) + tray_height*plus_z; // centered on the microwave tray
+					rat.dead  = 1;
 					interior->room_geom->rats.add(rat);
 					interior->room_geom->modified_by_player = 1;
 					return 1;
@@ -734,8 +734,7 @@ bool building_room_geom_t::maybe_spawn_spider_in_drawer(room_object_t const &c, 
 	dir[ c.dim] = (c.dir ? 1.0 : -1.0); // face the outside of the drawer
 	dir[!c.dim] = 0.25*rgen.signed_rand_float(); // not straight out
 	dir.normalize();
-	point const pos(drawer.xc(), drawer.yc(), drawer.z1());
-	spiders.emplace_back(pos, radius, dir, spiders.size());
+	spiders.emplace_back(cube_bot_center(drawer), radius, dir, spiders.size());
 	if (!is_door) {spiders.back().jump(0.002*rgen.rand_uniform(1.0, 1.4));} // jump out of drawers
 	return 1;
 }

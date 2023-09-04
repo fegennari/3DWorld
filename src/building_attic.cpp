@@ -183,7 +183,7 @@ void building_t::add_attic_objects(rand_gen_t rgen) {
 	cube_with_ix_t adoor(interior->attic_access);
 	assert(adoor.is_strictly_normalized());
 	adoor.expand_in_dim(2, -0.2*adoor.dz()); // shrink in z
-	int const room_id(get_room_containing_pt(point(adoor.xc(), adoor.yc(), adoor.z1()-get_floor_thickness()))); // should we cache this during floorplanning?
+	int const room_id(get_room_containing_pt(cube_bot_center(adoor) - get_floor_thickness()*plus_z)); // should we cache this during floorplanning?
 	assert(room_id >= 0); // must be found
 	room_t const &room(get_room(room_id));
 	bool const ddim(adoor.ix >> 1), ddir(adoor.ix & 1);
@@ -323,7 +323,7 @@ void building_t::add_attic_objects(rand_gen_t rgen) {
 			}
 			// add an exhaust vent up through the roof; it may clip through the rafters, but this is difficult to check for and avoid
 			float const vent_radius(0.1*width), dir_offset(0.26);
-			point vent_bot_center(furnace.xc(), furnace.yc(), furnace.z2());
+			point vent_bot_center(cube_top_center(furnace));
 			vent_bot_center[dim] = (dir_offset*furnace.d[dim][!dir] + (1.0 - dir_offset)*furnace.d[dim][dir]);
 			add_attic_roof_vent(vent_bot_center, vent_radius, room_id, light_amt);
 			has_furnace = 1;
@@ -744,7 +744,7 @@ void building_room_geom_t::add_attic_rafters(building_t const &b, float tscale) 
 
 // 0=not in attic, 1=in attic with clearance, 2=in attic without clearance
 int building_t::vent_in_attic_test(cube_t const &vent, bool dim) const {
-	point test_pt(vent.xc(), vent.yc(), (vent.z2() + 1.1*get_fc_thickness()));
+	point test_pt(cube_top_center(vent) + 1.1*get_fc_thickness()*plus_z);
 	if (!point_in_attic(test_pt)) return 0; // not in attic
 	test_pt.z += vent.get_sz_dim(dim) + get_attic_beam_depth(); // check duct height + beam clearance
 	return (point_in_attic(test_pt) ? 1 : 2);

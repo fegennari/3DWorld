@@ -1319,7 +1319,7 @@ void building_room_geom_t::remove_object(unsigned obj_id, building_t &building) 
 	}
 	else if (obj.type == TYPE_TOILET || obj.type == TYPE_SINK) { // leave a drain in the floor
 		cube_t drain;
-		drain.set_from_point(point(obj.xc(), obj.yc(), obj.z1()));
+		drain.set_from_point(cube_bot_center(obj));
 		drain.expand_by_xy(0.065*obj.dz());
 		drain.z2() += 0.02*obj.dz();
 		obj = room_object_t(drain, TYPE_DRAIN, obj.room_id, 0, 0, RO_FLAG_NOCOLL, obj.light_amt, SHAPE_CYLIN, DK_GRAY);
@@ -1541,7 +1541,7 @@ bool building_t::drop_room_object(room_object_t &obj, point const &dest, point c
 	obj.dir    = dir;
 	obj.flags |= RO_FLAG_WAS_EXP;
 	obj.taken_level = 1;
-	obj.translate(dest - point(obj.xc(), obj.yc(), obj.z1()));
+	obj.translate(dest - cube_bot_center(obj));
 	assign_correct_room_to_object(obj); // set new room; required for opening books; room should be valid, but okay if not
 	if (point_in_attic(obj.get_cube_center())) {obj.flags |= RO_FLAG_IN_ATTIC;} else {obj.flags &= ~RO_FLAG_IN_ATTIC;} // set attic flag
 	if (!interior->room_geom->add_room_object(obj, *this)) return 0;
@@ -1563,7 +1563,7 @@ bool building_t::maybe_use_last_pickup_room_object(point const &player_pos) {
 	if (obj.has_dstate()) { // it's a dynamic object (ball), throw it; only activated with use_object/'E' key
 		point dest(player_pos + (1.2f*(player_radius + obj.get_radius()))*cview_dir);
 		dest.z -= 0.5*player_radius; // slightly below the player's face
-		obj.translate(dest - point(obj.xc(), obj.yc(), obj.z1()));
+		obj.translate(dest - cube_bot_center(obj));
 		obj.flags |= RO_FLAG_DYNAMIC; // make it dynamic, assuming it will be dropped/thrown
 		if (!interior->room_geom->add_room_object(obj, *this, 1, THROW_VELOCITY*cview_dir)) return 0;
 		player_inventory.return_object_to_building(obj); // re-add this object's value

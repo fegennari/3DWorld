@@ -547,7 +547,7 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 			for (auto i = sstations.begin()+substations_start; i != sstations.end(); ++i) {
 				if (rgen.rand_float() > 0.25) continue; // place 25% of the time
 				bool const dim(rgen.rand_bool()), dir(rgen.rand_bool()); // random orient
-				pigeon_locs.emplace_back(point(i->bcube.xc(), i->bcube.yc(), i->bcube.z2()), dim, dir); // top center
+				pigeon_locs.emplace_back(cube_top_center(i->bcube), dim, dir); // top center
 			}
 			for (unsigned i = 0; i < pigeon_locs.size(); ++i) {
 				pigeon_place_t p(pigeon_locs[i]);
@@ -1321,7 +1321,7 @@ bool city_obj_placer_t::get_color_at_xy(point const &pos, colorRGBA &color, bool
 		for (auto b = pools.begin()+start_ix; b != pools.begin()+i->ix; ++b) {
 			if (pos.x < b->bcube.x1()) break; // pools are sorted by x1, none after this can match
 			if (!b->bcube.contains_pt_xy(pos)) continue;
-			if (b->above_ground && !dist_xy_less_than(pos, point(b->bcube.xc(), b->bcube.yc(), b->bcube.z1()), b->get_radius())) continue; // circular in-ground pool
+			if (b->above_ground && !dist_xy_less_than(pos, cube_bot_center(b->bcube), b->get_radius())) continue; // circular in-ground pool
 			color = b->wcolor; // return water color
 			return 1;
 		}

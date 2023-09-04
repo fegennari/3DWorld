@@ -807,7 +807,7 @@ void building_t::toggle_door_state(unsigned door_ix, bool player_in_this_buildin
 	if (door.on_stairs) {invalidate_nav_graph();} // any in-progress paths may have people walking to and stopping at closed/locked doors
 	interior->door_state_updated = 1; // required for AI navigation logic to adjust to this change
 	if (has_room_geom()) {interior->room_geom->invalidate_mats_mask |= (1 << MAT_TYPE_DOORS);} // need to recreate doors VBO
-	check_for_water_splash(point(door.xc(), door.yc(), door.z1()), 2.0); // big splash
+	check_for_water_splash(cube_bot_center(door), 2.0); // big splash
 
 	if (player_in_this_building || by_player) { // is it really safe to call this from the AI thread?
 		point door_center(door.xc(), door.yc(), actor_pos.z);
@@ -1119,7 +1119,7 @@ void building_t::update_player_interact_objects(point const &player_pos) { // No
 			static float last_sound_tfticks(0);
 
 			if ((tfticks - last_sound_tfticks) > 0.5*TICKS_PER_SECOND) { // play at most twice per second
-				if (check_for_water_splash(point(new_obj.xc(), new_obj.yc(), new_obj.z1()), 0.9)) {} // check for splash
+				if (check_for_water_splash(cube_bot_center(new_obj), 0.9)) {} // check for splash
 				else { // no splash, play squeak
 					gen_sound_thread_safe_at_player(SOUND_SQUEAK, 0.2, 0.4); // lower pitch; should really use a rolling sound
 					register_building_sound(player_pos, 0.2);

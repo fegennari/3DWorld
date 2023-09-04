@@ -608,7 +608,7 @@ void building_room_geom_t::add_hanger_rod(room_object_t const &c) { // is_small=
 void building_room_geom_t::add_drain_pipe(room_object_t const &c) { // is_small=1
 	rgeom_mat_t &mat(get_untextured_material(0, 0, 1)); // unshadowed, small
 	mat.add_vcylin_to_verts(c, apply_light_color(c), 0, 0); // draw sides only
-	mat.add_disk_to_verts(point(c.xc(), c.yc(), c.z2()), 0.5*c.dx(), 0, BLACK); // draw top as black
+	mat.add_disk_to_verts(cube_top_center(c), 0.5*c.dx(), 0, BLACK); // draw top as black
 }
 
 void building_room_geom_t::add_key(room_object_t const &c) { // is_small=1
@@ -1257,7 +1257,7 @@ void building_room_geom_t::add_vase(room_object_t const &c) { // or urn
 	float radius(start_radius);
 	unsigned data_pos(itris_start);
 	color_wrapper const cw(color);
-	point p1(c.xc(), c.yc(), c.z1()), p2(p1 + vector3d(0.0, 0.0, zstep));
+	point p1(cube_bot_center(c)), p2(p1 + vector3d(0.0, 0.0, zstep));
 
 	for (unsigned n = 0; n < num_stacks; ++n) {
 		float const taper_pos(taper_scale*(n+1));
@@ -3392,7 +3392,7 @@ void building_room_geom_t::add_counter(room_object_t const &c, float tscale, boo
 		rgeom_mat_t &basin_mat(get_metal_material(0));
 		basin_mat.add_cube_to_verts(sink, sink_color, tex_origin, EF_Z2, 0, 0, 0, 1); // basin: inverted, skip top face, unshadowed
 		// drain
-		cube_t drain(point(sink.xc(), sink.yc(), sink.z1()));
+		cube_t drain(cube_bot_center(sink));
 		drain.expand_by_xy(0.1*min(sink.dx(), sink.dy()));
 		drain.z2() += 0.012*sink.dz();
 		basin_mat.add_vcylin_to_verts(drain, apply_light_color(c, BKGRAY), 0, 1, 0, 0, 1.0, 1.0, 1.0, 1.0, 1); // top only
