@@ -1184,7 +1184,7 @@ int building_t::choose_dest_room(person_t &person, rand_gen_t &rgen) const { // 
 		}
 	}
 	// how about a different location in the same room? this will at least get the person unstuck from an object and moving inside a parking garage
-	if (person.is_first_path || is_single_large_room) {
+	if ((person.is_first_path || is_single_large_room) && !standing_in_water) {
 		if (select_person_dest_in_room(person, rgen, room)) return 1;
 	}
 	return 2; // failed, but can retry
