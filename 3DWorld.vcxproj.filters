@@ -1488,6 +1488,9 @@
     <None Include="shaders\building_water.vert">
       <Filter>Shaders\vert</Filter>
     </None>
+    <None Include="shaders\postproc_water_fog.frag">
+      <Filter>Shaders\frag\Fullscreen</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Script1.rc">

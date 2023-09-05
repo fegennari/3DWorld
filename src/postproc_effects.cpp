@@ -268,6 +268,19 @@ void add_2d_bloom() {
 	color_buffer_frame = 0; // reset to invalidate buffer and force recreation of texture for second pass
 }
 
+void add_postproc_underwater_fog(float atten_scale) {
+
+	bind_depth_buffer(1); // tu_id=1
+	shader_t s;
+	bind_frame_buffer_RGB();
+	s.set_vert_shader("no_lighting_tex_coord");
+	s.set_frag_shader("depth_utils.part+postproc_water_fog");
+	s.begin_shader();
+	setup_depth_tex(s, 1);
+	setup_shader_underwater_atten(s, atten_scale);
+	fill_screen_white_and_end_shader(s);
+}
+
 void apply_player_underwater_effect(colorRGBA const &color_mod=WHITE) {
 	//add_color_only_effect("screen_space_blur");
 	add_2d_blur();

@@ -1197,6 +1197,7 @@
     <None Include="shaders\point_to_quad.geom" />
     <None Include="shaders\postproc_bloom.frag" />
     <None Include="shaders\postproc_bloom_2d.frag" />
+    <None Include="shaders\postproc_water_fog.frag" />
     <None Include="shaders\pos_only.vert" />
     <None Include="shaders\procedural_gen.frag" />
     <None Include="shaders\procedural_gen.vert" />

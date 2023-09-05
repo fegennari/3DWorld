@@ -166,7 +166,8 @@ void building_t::draw_water(vector3d const &xlate) const {
 	point const camera_pos(get_camera_pos());
 
 	if (camera_pos.z < interior->water_zval) { // player under the water
-		apply_player_underwater_effect(colorRGBA(0.3, 0.4, 0.8)); // light blue-ish
+		apply_player_underwater_effect(colorRGBA(0.4, 0.6, 1.0)); // light blue-ish
+		add_postproc_underwater_fog(WATER_COL_ATTEN*atten_scale);
 		float const orig_water_plane_z(water_plane_z);
 		water_plane_z = interior->water_zval;
 		draw_underwater_particles(interior->basement_ext_bcube.z1());
