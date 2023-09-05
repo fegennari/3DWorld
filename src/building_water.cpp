@@ -20,6 +20,7 @@ void reset_interior_lighting_and_end_shader(shader_t &s);
 // from postproc_effects.cpp
 void bind_frame_buffer_RGB(unsigned tu_id);
 void apply_player_underwater_effect(colorRGBA const &color_mod);
+void add_postproc_underwater_fog(float atten_scale);
 
 
 class building_splash_manager_t {
@@ -160,7 +161,7 @@ void building_t::draw_water(vector3d const &xlate) const {
 		if (player_in_basement < 3) {clear_building_water_splashes();} // clear if player has exited the extended basement
 		return;
 	}
-	float const floor_spacing(get_window_vspace());
+	float const floor_spacing(get_window_vspace()), atten_scale(1.0/floor_spacing);
 	if (animate2) {building_splash_manager.next_frame(floor_spacing);} // maybe should do this somewhere else? or update even if water isn't visible?
 	point const camera_pos(get_camera_pos());
 
@@ -186,11 +187,9 @@ void building_t::draw_water(vector3d const &xlate) const {
 	set_city_lighting_shader_opts(s, lights_bcube, use_dlights, use_smap, pcf_scale);
 	set_interior_lighting(s, have_indir);
 	float const water_depth(interior->water_zval - (interior->basement_ext_bcube.z1() + get_fc_thickness()));
-	s.add_uniform_vector3d("camera_pos",  camera_pos);
-	s.add_uniform_float("water_depth",    water_depth);
-	s.add_uniform_float("water_atten",    1.0/floor_spacing); // attenuates to dark blue/opaque around this distance
-	s.add_uniform_color("uw_atten_max",   uw_atten_max);
-	s.add_uniform_color("uw_atten_scale", uw_atten_scale);
+	s.add_uniform_vector3d("camera_pos", camera_pos);
+	s.add_uniform_float("water_depth",   water_depth);
+	setup_shader_underwater_atten(s, atten_scale); // attenuates to dark blue/opaque around this distance
 	building_splash_manager.set_shader_uniforms(s);
 	bind_frame_buffer_RGB(1); // tu_id=1
 	s.add_uniform_int("frame_buffer", 1);

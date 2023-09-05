@@ -247,10 +247,15 @@ void setup_detail_normal_map_prefix(shader_t &s, bool enable) {
 }
 
 void setup_detail_normal_map(shader_t &s, float tscale) { // also used for tiled terrain mesh
-
 	select_texture(ROCK_NORMAL_TEX, 11);
 	s.add_uniform_int("detail_normal_tex", 11);
 	s.add_uniform_vector2d("detail_normal_tex_scale", vector2d(tscale*X_SCENE_SIZE, tscale*Y_SCENE_SIZE));
+}
+
+void setup_shader_underwater_atten(shader_t &s, float atten_scale) {
+	s.add_uniform_float("water_atten",    atten_scale);
+	s.add_uniform_color("uw_atten_max",   uw_atten_max);
+	s.add_uniform_color("uw_atten_scale", uw_atten_scale);
 }
 
 
