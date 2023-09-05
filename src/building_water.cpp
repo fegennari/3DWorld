@@ -21,6 +21,7 @@ void reset_interior_lighting_and_end_shader(shader_t &s);
 void bind_frame_buffer_RGB(unsigned tu_id);
 void apply_player_underwater_effect(colorRGBA const &color_mod);
 void add_postproc_underwater_fog(float atten_scale);
+void bind_depth_buffer(unsigned tu_id);
 
 
 class building_splash_manager_t {
@@ -182,7 +183,7 @@ void building_t::draw_water(vector3d const &xlate) const {
 	if (set_dlights_booleans(s, use_dlights, 1, 0)) {s.set_prefix("#define NO_DL_SPECULAR", 1);} // FS
 	s.set_prefix(make_shader_bool_prefix("use_shadow_map", 0), 1); // FS; not using sun/moon light, so no shadow maps
 	s.set_vert_shader("building_water");
-	s.set_frag_shader("ads_lighting.part*+shadow_map.part*+dynamic_lighting.part*+building_water");
+	s.set_frag_shader("ads_lighting.part*+shadow_map.part*+dynamic_lighting.part*+depth_utils.part+building_water");
 	s.begin_shader();
 	if (use_dlights) {setup_dlight_textures(s);} // must be before set_city_lighting_shader_opts()
 	set_city_lighting_shader_opts(s, lights_bcube, use_dlights, use_smap, pcf_scale);
@@ -194,8 +195,10 @@ void building_t::draw_water(vector3d const &xlate) const {
 	building_splash_manager.set_shader_uniforms(s);
 	bind_frame_buffer_RGB(1); // tu_id=1
 	s.add_uniform_int("frame_buffer", 1);
-	// Note: this must be *after* bind_frame_buffer_RGB() because it changes the texture
-	if (room_mirror_ref_tid > 0) {bind_2d_texture(room_mirror_ref_tid);} else {select_texture(WHITE_TEX);}
+	bind_depth_buffer( 9); // tu_id=9
+	setup_depth_tex(s, 9); // tu_id=9
+	// Note: this must be *after* bind_frame_buffer_RGB() and bind_depth_buffer() because it changes the texture
+	if (room_mirror_ref_tid > 0) {bind_texture_tu(room_mirror_ref_tid, 0);} else {select_texture(WHITE_TEX);}
 	s.add_uniform_int("reflection_tex", 0);
 	enable_blend(); // no longer needed?
 	cube_t const water(get_water_cube());

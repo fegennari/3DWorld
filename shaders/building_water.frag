@@ -58,13 +58,13 @@ vec4 get_splash_amplitude(in vec3 vpos) { // returns {signed_amplitude, abs_mag_
 
 void main() {
 	vec3 ws_normal = vec3(0.0, 0.0, 1.0); // world space, +Z
-	vec2 uv        = clamp((0.5*proj_pos.xy/proj_pos.w + vec2(0.5, 0.5)), 0.0, 1.0); // base reflection texture coordinate
+	vec2 uv        = clamp((0.5*proj_pos.xy/proj_pos.w + vec2(0.5)), 0.0, 1.0); // base reflection texture coordinate
 	
 	// apply ripples when the player or other object moves or falls into the water
 	vec4 splash = get_splash_amplitude(vertex_ws);
 	float foam  = min(2.0*splash.y, 0.5); // or mud, depending on the fluid; reduces transparency near the splash center
 	vec2 delta  = clamp(10.0*vec2(splash.z, splash.w), -1.0, 1.0);
-	uv          = clamp((uv + 0.1*delta), 0.0, 1.0); // offset by ripple angle, but keep in the valid texture range
+	vec2 uv_adj = clamp((uv + 0.1*delta), 0.0, 1.0); // offset by ripple angle, but keep in the valid texture range
 	ws_normal   = normalize(ws_normal + vec3(delta, 0.0)); // average with the incoming (+Z) normal
 	
 	// apply lighting
@@ -75,7 +75,8 @@ void main() {
 	// this isn't correct at the vertical walls because distance is lower since rays don't reach the floor, but it looks okay with low water depth
 	vec3 floor_pos    = vertex_ws - vec3(0.0, 0.0, water_depth); // bottom surface of water which will be visible through/under the water
 	float t           = clamp(water_depth/max(0.01*water_depth, abs(camera_pos.z - floor_pos.z)), 0.0, 1.0);
-	float camera_path = t*distance(camera_pos, floor_pos); // camera=>floor through water
+	//float camera_path = t*distance(camera_pos, floor_pos); // camera=>floor through water
+	float camera_path = 0.75*t*get_linear_depth_zval(uv); // camera=>fragment through water; slower, but more accurate
 	float light_path  = water_depth + camera_path; // light=>floor + camera=>floor
 	float alpha       = min((0.1 + 1.25*water_atten*camera_path), 1.0); // short path is transparent, long path is opaque
 	vec4 uw_color     = vec4(light_color, alpha);
@@ -86,11 +87,11 @@ void main() {
 	vec3 normal      = normalize(fg_NormalMatrix * ws_normal); // eye space
 	vec3 epos_n      = normalize(epos.xyz); // eye direction
 	float reflect_w  = get_fresnel_reflection(-epos_n, normal, 1.0, 1.333);
-	vec4 reflect_tex = texture(reflection_tex, uv);
+	vec4 reflect_tex = texture(reflection_tex, uv_adj);
 	vec4 surf_color  = mix(water_color, reflect_tex, reflect_w);
 
 	// handle refractions by mixing the frame buffer (with the floor and underwater objects) with the water using the alpha value
-	vec3 refract_color = texture(frame_buffer, uv).rgb;
+	vec3 refract_color = texture(frame_buffer, uv_adj).rgb;
 	// adjust intensity by the ratio of signed amplitude to height sum to get a signed value within an envelope that falls off at both ends:
 	// at the low radius (to prevent sharp edges near the singularity at the splash center), and at the outer radius for a smooth transition
 	float inten_adj    = 0.2*splash.x/max(splash.y, 0.05);
