@@ -164,7 +164,11 @@ bool building_t::add_underground_exterior_rooms(rand_gen_t &rgen, cube_t const &
 		unsigned const num_floors(setup_multi_floor_room(hallway, Door, wall_dim, wall_dir, rgen));
 		hallway.is_hallway      = 0; // should already be set to 0, but this makes it more clear
 		interior->has_backrooms = 1;
-		if (num_floors > 1) {interior->water_zval = hallway.z1() + fc_thick + 0.1*get_window_vspace();} // lowest level has 10% floor spacing of water
+		float const water_level(global_building_params.basement_water_level);
+
+		if (water_level > 0.0 && num_floors > 1) { // lowest level of multilevel rooms has water
+			interior->water_zval = hallway.z1() + fc_thick + water_level*get_window_vspace();
+		}
 	}
 	else { // recursively add rooms connected to this hallway in alternating dimensions
 		// Note: if we get here for office buildings and global_building_params.max_ext_basement_room_depth == 0, this will only generate the hallway
