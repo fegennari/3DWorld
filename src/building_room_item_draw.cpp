@@ -1572,10 +1572,22 @@ void draw_emissive_billboards(quad_batch_draw &qbd, int tid) {
 	set_std_blend_mode();
 }
 
+class particle_texture_manager_t {
+	string const fns[NUM_PART_EFFECTS] = {"", "", "", "water_splash.png", "white_circle.png"}; // none, sparks, smoke, splash, bubble
+	int tids[NUM_PART_EFFECTS] = {-1, BLUR_CENT_TEX, BLUR_TEX, -1, -1}; // none, sparks, smoke, splash, bubble
+public:
+	int get_tid(unsigned effect) {
+		assert(effect < NUM_PART_EFFECTS);
+		int &tid(tids[effect]);
+		if (tid < 0 && !fns[effect].empty()) {tid = get_texture_by_name(fns[effect]);} // load if needed
+		return tid;
+	}
+};
+particle_texture_manager_t particle_texture_manager;
+
 void particle_manager_t::draw(shader_t &s, vector3d const &xlate) { // non-const because qbd is modified
 	if (particles.empty() || !camera_pdu.cube_visible(get_bcube() + xlate)) return; // no particles are visible
 	point const viewer_bs(camera_pdu.pos - xlate);
-	int const tids[NUM_PART_EFFECTS] = {-1, BLUR_CENT_TEX, BLUR_TEX, FLARE2_TEX}; // none, sparks, smoke, splash
 
 	for (particle_t const &p : particles) {
 		if (!camera_pdu.sphere_visible_test((p.pos + xlate), p.radius)) continue; // VFC
@@ -1589,12 +1601,13 @@ void particle_manager_t::draw(shader_t &s, vector3d const &xlate) { // non-const
 	for (unsigned i = 0; i < NUM_PART_EFFECTS; ++i) {
 		quad_batch_draw &qbd(qbds[i]);
 		if (qbd.empty()) continue;
+		int const tid(particle_texture_manager.get_tid(i));
 
 		if (i == PART_EFFECT_SPARK) { // draw emissive particles with a custom shader
-			draw_emissive_billboards(qbd, tids[i]); // smooth alpha blended edges
+			draw_emissive_billboards(qbd, tid); // smooth alpha blended edges
 			s.make_current();
 		}
-		else {draw_blended_billboards(qbd, tids[i]);}
+		else {draw_blended_billboards(qbd, tid);}
 	} // for i
 }
 

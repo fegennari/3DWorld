@@ -110,8 +110,8 @@ bool building_t::check_for_water_splash(point const &pos_bs, float size, bool fu
 	register_building_water_splash((pos_bs + xlate), size, alert_zombies);
 
 	if (draw_splash) { // Note: doesn't apply to player steps
-		float const radius(0.05*min(size, 1.5f)*get_window_vspace());
-		point const splash_pos(pos_bs.x, pos_bs.y, (interior->water_zval + 0.1*radius)); // slightly above the water surface
+		float const radius(0.1*min(size, 1.5f)*get_window_vspace());
+		point const splash_pos(pos_bs.x, pos_bs.y, (interior->water_zval + 1.5*radius)); // above the water surface (final radius is 2x original)
 		interior->room_geom->particle_manager.add_particle(splash_pos, zero_vector, WHITE, radius, PART_EFFECT_SPLASH);
 	}
 	return 1;

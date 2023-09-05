@@ -1206,7 +1206,7 @@ void particle_manager_t::next_frame(building_t &building) {
 	if (particles.empty()) return;
 	float const fticks_stable(min(fticks, 4.0f)); // clamp to 0.1s
 	auto const &objs(building.interior->room_geom->objs);
-	float const lifetimes[NUM_PART_EFFECTS] = {0.0, 2.5, 2.0, 0.2}; // none, sparks, smoke, splash
+	float const lifetimes[NUM_PART_EFFECTS] = {0.0, 2.5, 2.0, 0.25, 2.0}; // none, sparks, smoke, splash, bubble
 
 	for (particle_t &p : particles) {
 		point const p_last(p.pos);
@@ -1224,8 +1224,12 @@ void particle_manager_t::next_frame(building_t &building) {
 			apply_building_gravity(p.vel.z, 0.05*fticks_stable); // very small gravity
 		}
 		else if (p.effect == PART_EFFECT_SPLASH) {
-			p.radius = p.init_radius*(1.0 + 4.0*lifetime); // radius increases over lifetime
+			p.radius  = p.init_radius*(1.0 + 1.0*lifetime); // radius increases over lifetime
+			p.color.A = 1.0 - lifetime; // transition to transparent
 			continue; // no collision detection
+		}
+		else if (p.effect == PART_EFFECT_BUBBLE) {
+			// TODO
 		}
 		else {assert(0);}
 		// check for collisions and apply bounce, similar to balls
