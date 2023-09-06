@@ -15,7 +15,7 @@ extern unsigned room_mirror_ref_tid;
 extern float fticks, CAMERA_RADIUS, water_plane_z;
 extern building_t const *player_building;
 
-void set_interior_lighting(shader_t &s, bool have_indir);
+void setup_building_draw_shader_post(shader_t &s, bool have_indir);
 void reset_interior_lighting_and_end_shader(shader_t &s);
 // from postproc_effects.cpp
 void bind_frame_buffer_RGB(unsigned tu_id);
@@ -177,7 +177,7 @@ void building_t::draw_water(vector3d const &xlate) const {
 	}
 	shader_t s;
 	cube_t const lights_bcube(get_building_lights_bcube());
-	bool const use_dlights(!lights_bcube.is_all_zeros()), have_indir(0), use_smap(1);
+	bool const use_dlights(!lights_bcube.is_all_zeros()), have_indir(0), use_smap(1); // indir lighting has little effect and is difficult to setup
 	float const pcf_scale = 0.2;
 	s.set_prefix("#define LINEAR_DLIGHT_ATTEN", 1); // FS; improves room lighting (better light distribution vs. framerate trade-off)
 	if (set_dlights_booleans(s, use_dlights, 1, 0)) {s.set_prefix("#define NO_DL_SPECULAR", 1);} // FS
@@ -187,14 +187,14 @@ void building_t::draw_water(vector3d const &xlate) const {
 	s.begin_shader();
 	if (use_dlights) {setup_dlight_textures(s);} // must be before set_city_lighting_shader_opts()
 	set_city_lighting_shader_opts(s, lights_bcube, use_dlights, use_smap, pcf_scale);
-	set_interior_lighting(s, have_indir);
+	setup_building_draw_shader_post(s, have_indir);
 	float const water_depth(interior->water_zval - (interior->basement_ext_bcube.z1() + get_fc_thickness()));
 	s.add_uniform_vector3d("camera_pos", camera_pos);
 	s.add_uniform_float("water_depth",   water_depth);
 	setup_shader_underwater_atten(s, atten_scale); // attenuates to dark blue/opaque around this distance
 	building_splash_manager.set_shader_uniforms(s);
-	bind_frame_buffer_RGB(1); // tu_id=1
-	s.add_uniform_int("frame_buffer", 1);
+	bind_frame_buffer_RGB(8); // tu_id=8
+	s.add_uniform_int("frame_buffer", 8); // tu_id=8
 	bind_depth_buffer( 9); // tu_id=9
 	setup_depth_tex(s, 9); // tu_id=9
 	// Note: this must be *after* bind_frame_buffer_RGB() and bind_depth_buffer() because it changes the texture

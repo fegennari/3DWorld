@@ -15,7 +15,7 @@ struct splash_t {
 const int MAX_SPLASHES = 40; // must agree with C++ code
 uniform splash_t splashes[MAX_SPLASHES];
 
-in vec3 vertex_ws; // world space
+in vec3 vpos; // world space
 in vec4 epos, proj_pos;
 
 // underwater attenuation code
@@ -26,7 +26,7 @@ void atten_color(inout vec3 color, in float atten) {
 float calc_water_height(in float dist) {
 	return sin(10.0*PI*dist*water_atten - 4.0*time); // expand outward with time
 }
-vec4 get_splash_amplitude(in vec3 vpos) { // returns {signed_amplitude, abs_mag_amplitude, amp_dx, amp_dy}
+vec4 get_splash_amplitude() { // returns {signed_amplitude, abs_mag_amplitude, amp_dx, amp_dy}
 	float splash_amp = 0.0;
 	float height_sum = 0.0;
 	float amp_dx     = 0.0;
@@ -61,7 +61,7 @@ void main() {
 	vec2 uv        = clamp((0.5*proj_pos.xy/proj_pos.w + vec2(0.5)), 0.0, 1.0); // base reflection texture coordinate
 	
 	// apply ripples when the player or other object moves or falls into the water
-	vec4 splash = get_splash_amplitude(vertex_ws);
+	vec4 splash = get_splash_amplitude();
 	float foam  = min(2.0*splash.y, 0.5); // or mud, depending on the fluid; reduces transparency near the splash center
 	vec2 delta  = clamp(10.0*vec2(splash.z, splash.w), -1.0, 1.0);
 	vec2 uv_adj = clamp((uv + 0.1*delta), 0.0, 1.0); // offset by ripple angle, but keep in the valid texture range
@@ -69,11 +69,12 @@ void main() {
 	
 	// apply lighting
 	vec3 light_color = vec3(0.0);
-	if (enable_dlights) {add_dlights(light_color, vertex_ws, epos, ws_normal, vec3(0.5));} // add dynamic lighting; if disabled, water will be black
+	//add_indir_lighting(light_color, 1.0); // indir lighting is disabled as it has little effect and is difficult to setup
+	if (enable_dlights) {add_dlights(light_color, vpos, epos, ws_normal, vec3(0.5));} // add dynamic lighting; if disabled, water will be black
 	
 	// attenuate based on depth/distance, assuming a constant water depth and average light coming from above in +Z;
 	// this isn't correct at the vertical walls because distance is lower since rays don't reach the floor, but it looks okay with low water depth
-	vec3 floor_pos    = vertex_ws - vec3(0.0, 0.0, water_depth); // bottom surface of water which will be visible through/under the water
+	vec3 floor_pos    = vpos - vec3(0.0, 0.0, water_depth); // bottom surface of water which will be visible through/under the water
 	float t           = clamp(water_depth/max(0.01*water_depth, abs(camera_pos.z - floor_pos.z)), 0.0, 1.0);
 	//float camera_path = t*distance(camera_pos, floor_pos); // camera=>floor through water
 	float camera_path = 0.75*t*get_linear_depth_zval(uv); // camera=>fragment through water; slower, but more accurate
