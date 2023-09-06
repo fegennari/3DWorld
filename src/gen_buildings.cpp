@@ -21,9 +21,10 @@ bool const DRAW_EXT_REFLECTIONS     = 1; // draw building exteriors in mirror re
 float const WIND_LIGHT_ON_RAND      = 0.08;
 float const BASEMENT_ENTRANCE_SCALE = 0.33;
 
-bool camera_in_building(0), interior_shadow_maps(0), player_is_hiding(0), player_in_unlit_room(0), player_in_attic(0), building_has_open_ext_door(0), player_in_water(0);
+bool camera_in_building(0), interior_shadow_maps(0), player_is_hiding(0), player_in_unlit_room(0), player_in_attic(0), building_has_open_ext_door(0);
 int player_in_basement(0); // 0=no, 1=below ground level, 2=in basement and not on stairs, 3=in extended basement
-int player_in_closet(0); // uses flags RO_FLAG_IN_CLOSET (player in closet), RO_FLAG_LIT (closet light is on), RO_FLAG_OPEN (closet door is open)
+int player_in_closet  (0); // uses flags RO_FLAG_IN_CLOSET (player in closet), RO_FLAG_LIT (closet light is on), RO_FLAG_OPEN (closet door is open)
+int player_in_water   (0); // 0=no, 1=standing in water, 2=head underwater
 float building_bcube_expand(0.0);
 building_params_t global_building_params;
 building_t const *player_building(nullptr);
@@ -2963,9 +2964,8 @@ public:
 		bool const ref_pass_water(reflection_pass & REF_PASS_WATER), ref_pass_extb(reflection_pass & REF_PASS_EXTB);
 		// check for sun or moon; also need the smap pass for drawing with dynamic lights at night, so basically it's always enabled
 		bool const use_tt_smap(check_tile_smap(0)); // && (night || light_valid_and_enabled(0) || light_valid_and_enabled(1)));
-		bool have_windows(0), have_wind_lights(0), have_interior(0), is_city_lighting_setup(0);
-		bool this_frame_camera_in_building(0), this_frame_player_in_attic(0), this_frame_player_in_water(0);
-		int this_frame_player_in_basement(0);
+		bool have_windows(0), have_wind_lights(0), have_interior(0), is_city_lighting_setup(0), this_frame_camera_in_building(0), this_frame_player_in_attic(0);
+		int this_frame_player_in_basement(0), this_frame_player_in_water(0);
 		unsigned max_draw_ix(0);
 		shader_t s, amask_shader, holes_shader, city_shader;
 
@@ -3143,7 +3143,8 @@ public:
 						this_frame_camera_in_building = 1;
 						this_frame_player_in_basement = b.check_player_in_basement(camera_xlated - vector3d(0.0, 0.0, BASEMENT_ENTRANCE_SCALE*b.get_floor_thickness())); // only set once
 						this_frame_player_in_attic    = b.point_in_attic     (camera_xlated);
-						this_frame_player_in_water    = b.point_in_water_area(camera_xlated);
+						this_frame_player_in_water    = b.point_in_water_area(camera_xlated, 1); // full_room_height=1
+						if (this_frame_player_in_water && b.point_in_water_area(camera_xlated, 0)) {this_frame_player_in_water = 2;} // full_room_height=0; test for underwater
 						// player can only be in one basement or attic, except for extended basement connector rooms;
 						// be conservative and don't break if the player is in the basement and this building has any connections to other basements
 						can_break_from_loop |= ((this_frame_player_in_basement >= 2 && !b.has_conn_info()) || this_frame_player_in_attic);

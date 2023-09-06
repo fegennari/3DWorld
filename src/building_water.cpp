@@ -10,7 +10,7 @@
 unsigned const MAX_SPLASHES = 40; // must agree with fragment shader code
 
 
-extern int player_in_basement, animate2, display_mode;
+extern int player_in_basement, player_in_water, animate2, display_mode;
 extern unsigned room_mirror_ref_tid;
 extern float fticks, CAMERA_RADIUS, water_plane_z;
 extern building_t const *player_building;
@@ -103,6 +103,7 @@ void register_building_water_splash(point const &pos, float size, bool alert_zom
 	gen_sound_random_var(SOUND_SPLASH2, pos, 0.3*size, 0.9);
 }
 bool building_t::check_for_water_splash(point const &pos_bs, float size, bool full_room_height, bool draw_splash, bool alert_zombies) const { // Note: pos in building space
+	if (player_in_water == 2)       return 0; // no splash sound if the player is underwater
 	if (this != player_building)    return 0; // only splashes for the building the player is in
 	if (!water_visible_to_player()) return 0; // only if water is visible
 	if (!point_in_water_area(pos_bs, full_room_height)) return 0;

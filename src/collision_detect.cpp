@@ -26,9 +26,9 @@ coll_obj_group coll_objects;
 cobj_groups_t cobj_groups;
 cobj_draw_groups cdraw_groups;
 
-extern bool lm_alloc, has_snow, player_in_water;
+extern bool lm_alloc, has_snow;
 extern int camera_coll_smooth, game_mode, world_mode, xoff, yoff, camera_change, display_mode, scrolling, animate2;
-extern int camera_in_air, mesh_scale_change, camera_invincible, camera_flight, num_smileys, iticks, frame_counter;
+extern int camera_in_air, mesh_scale_change, camera_invincible, camera_flight, num_smileys, iticks, frame_counter, player_in_water;
 extern unsigned snow_coverage_resolution;
 extern float TIMESTEP, temperature, zmin, base_gravity, ftick, tstep, zbottom, ztop, water_plane_z, fticks, jump_height, NEAR_CLIP;
 extern double camera_zh, tfticks;
@@ -1698,6 +1698,7 @@ void create_footsteps(point const &pos, float sz, vector3d const &view_dir, poin
 void play_camera_footstep_sound() { // tiled terrain mode
 
 	if (!(display_mode & 0x0100)) return;
+	if (player_in_water == 2)     return; // no footsteps when underwater
 	static double fs_time(0.0);
 	static point last_pos(all_zeros), prev_frame_pos(all_zeros);
 	point const pos(get_camera_pos());
