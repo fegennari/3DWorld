@@ -1067,16 +1067,19 @@ void building_t::run_ball_update(vector<room_object_t>::iterator ball_it, point 
 		bool invalidate_sm_geom(!was_dynamic); // static => dynamic transition, need to remove from static object vertex data
 		interior->update_dynamic_draw_data();
 		
-		// check for water collisions
-		if (set_float_height(new_center, radius, bcube.z2())) { // ceil_zval not known, use bcube z2
-			velocity    = zero_vector;
-			ball.flags &= ~RO_FLAG_DYNAMIC; // clear dynamic flag
-			invalidate_sm_geom = 1;
-			static float last_splash_time(0.0);
+		if (has_water()) { // check for water collisions
+			float const ceil_zval(get_bcube_z1_inc_ext_basement() + get_floor_for_zval(new_center.z)*get_window_vspace() + get_floor_ceil_gap());
 
-			if ((tfticks - last_splash_time) > 0.5*TICKS_PER_SECOND) { // at most once every 0.5s
-				check_for_water_splash(new_center, 0.75, 1, 1); // full_room_height=1, draw_splash=1
-				last_splash_time = tfticks;
+			if (set_float_height(new_center, radius, ceil_zval)) {
+				velocity    = zero_vector;
+				ball.flags &= ~RO_FLAG_DYNAMIC; // clear dynamic flag
+				invalidate_sm_geom = 1;
+				static float last_splash_time(0.0);
+
+				if ((tfticks - last_splash_time) > 0.5*TICKS_PER_SECOND) { // at most once every 0.5s
+					check_for_water_splash(new_center, 0.75, 1, 1); // full_room_height=1, draw_splash=1
+					last_splash_time = tfticks;
+				}
 			}
 		}
 		ball.translate(new_center - center);
