@@ -291,7 +291,7 @@ void building_params_t::init_kw_maps() {
 	kwmr.add("locked_door_prob",     locked_door_prob,     FP_CHECK_01);
 	kwmr.add("basement_prob_house",  basement_prob_house,  FP_CHECK_01);
 	kwmr.add("basement_prob_office", basement_prob_office, FP_CHECK_01);
-	kwmr.add("basement_water_level", basement_water_level, FP_CHECK_01); // maybe could allow > 1.0 for more than one floor of water?
+	kwmr.add("basement_water_level", basement_water_level, FP_CHECK_NONNEG); // > 1.0 is allowed for more than one floor of water
 	kwmr.add("ball_prob",            ball_prob,            FP_CHECK_01);
 	kwmf.add("player_weight_limit",  player_weight_limit);
 	// special commands
