@@ -174,12 +174,12 @@ void building_t::draw_water(vector3d const &xlate) const {
 			if (tfticks > next_bubble_time) { // time for a bubble
 				static rand_gen_t rgen;
 				point bubble_pos(camera_pos - get_tiled_terrain_model_xlate()); // start as camera_bs
-				bubble_pos   += 0.5*CAMERA_RADIUS*cview_dir; // in front of the player
-				bubble_pos   += 0.1*CAMERA_RADIUS*rgen.signed_rand_vector_spherical(); // randomize a bit
-				bubble_pos.z += 0.1*CAMERA_RADIUS; // move up slightly out of the player's central view
+				bubble_pos += 0.5*CAMERA_RADIUS*cview_dir; // in front of the player
+				bubble_pos += 0.1*CAMERA_RADIUS*rgen.signed_rand_vector_spherical(); // randomize a bit
 				float const radius(0.05*CAMERA_RADIUS*rgen.rand_uniform(0.5, 1.0));
-				interior->room_geom->particle_manager.add_particle(bubble_pos, 0.0003*plus_z, WHITE, radius, PART_EFFECT_BUBBLE);
-				next_bubble_time = tfticks + rgen.rand_uniform(0.2, 0.3)*TICKS_PER_SECOND; // random spacing in time
+				interior->room_geom->particle_manager.add_particle(bubble_pos, 0.0002*plus_z, WHITE, radius, PART_EFFECT_BUBBLE);
+				if (rgen.rand_bool()) {gen_sound_thread_safe(SOUND_BUBBLE, camera_pos, 0.25);}
+				next_bubble_time = tfticks + rgen.rand_uniform(0.2, 0.4)*TICKS_PER_SECOND; // random spacing in time
 			}
 		}
 		apply_player_underwater_effect(colorRGBA(0.4, 0.6, 1.0)); // light blue-ish

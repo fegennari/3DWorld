@@ -1615,7 +1615,7 @@ void particle_manager_t::draw(shader_t &s, vector3d const &xlate) { // non-const
 		// draw bubbles as spheres since billboards don't work well with the underwater postprocessing shader (due to depth and blend issues);
 		// we can't make them transparent though because the underwater effect is run later and won't alpha blend properly
 		// Note: can probably use instanced drawing here
-		s.add_uniform_float("ambient_scale", 1.0);
+		s.add_uniform_float("ambient_scale", 0.5);
 		select_texture(WHITE_TEX);
 		select_texture(FLAT_NMAP_TEX, 5); // no normal map
 		s.set_cur_color(colorRGBA(0.6, 0.8, 1.0)); // blue-green tinted

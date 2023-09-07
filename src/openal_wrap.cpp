@@ -165,6 +165,7 @@ public:
 		add_new_sound("hurt2.wav"      ); // SOUND_HURT2
 		add_new_sound("fly_buzz.wav"   ); // SOUND_FLY_BUZZ
 		add_new_sound("eating.wav"     ); // SOUND_EATING
+		add_new_sound("bubble.au"      ); // SOUND_BUBBLE
 		cout << endl;
 
 		// create sources
