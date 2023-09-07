@@ -168,12 +168,14 @@ void building_t::draw_water(vector3d const &xlate) const {
 	point const camera_pos(get_camera_pos());
 
 	if (camera_pos.z < interior->water_zval) { // player under the water; could also check (player_in_water == 2)
+		point const camera_bs(camera_pos - get_tiled_terrain_model_xlate());
+
 		if (animate2 && has_room_geom()) { // add bubbles
 			static float next_bubble_time(0.0);
 
 			if (tfticks > next_bubble_time) { // time for a bubble
 				static rand_gen_t rgen;
-				point bubble_pos(camera_pos - get_tiled_terrain_model_xlate()); // start as camera_bs
+				point bubble_pos(camera_bs);
 				bubble_pos += 0.5*CAMERA_RADIUS*cview_dir; // in front of the player
 				bubble_pos += 0.1*CAMERA_RADIUS*rgen.signed_rand_vector_spherical(); // randomize a bit
 				float const radius(0.05*CAMERA_RADIUS*rgen.rand_uniform(0.5, 1.0));
@@ -184,9 +186,11 @@ void building_t::draw_water(vector3d const &xlate) const {
 		}
 		apply_player_underwater_effect(colorRGBA(0.4, 0.6, 1.0)); // light blue-ish
 		add_postproc_underwater_fog(WATER_COL_ATTEN*atten_scale);
+		bool const is_lit(is_room_lit(get_room_containing_pt(camera_bs), camera_bs.z));
+		colorRGBA const base_color(is_lit ? WHITE : DK_GRAY);
 		float const orig_water_plane_z(water_plane_z);
 		water_plane_z = interior->water_zval;
-		draw_underwater_particles(interior->basement_ext_bcube.z1());
+		draw_underwater_particles(interior->basement_ext_bcube.z1(), base_color);
 		water_plane_z = orig_water_plane_z;
 		return;
 	}

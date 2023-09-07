@@ -229,7 +229,7 @@ class uw_particle_manager_t : public precip_manager_t<1> { // underwater particl
 public:
 	uw_particle_manager_t() : terrain_zmin(0.0) {check_water_coll = 0;}
 
-	void update(float terrain_zmin_) {
+	void update(float terrain_zmin_, colorRGBA base_color=WHITE) {
 		terrain_zmin = terrain_zmin_;
 		pre_update();
 		precip_dist = WATER_PART_DIST;
@@ -240,7 +240,6 @@ public:
 		psd.reserve_pts(size());
 		float const cscale(1.0/WATER_PART_DIST);
 		point const camera(get_camera_pos());
-		colorRGBA base_color(WHITE);
 		water_color_atten_at_pos(base_color, camera);
 
 		for (vector<vert_type_t>::iterator i = verts.begin(); i != verts.end(); ++i) {
@@ -285,11 +284,10 @@ void draw_local_precipitation(bool no_update) {
 }
 
 
-void draw_underwater_particles(float terrain_zmin) {
-
+void draw_underwater_particles(float terrain_zmin, colorRGBA const &base_color) {
 	if (temperature <= W_FREEZE_POINT) {uw_part_manager.clear(); return;} // frozen, no particles
 	//timer_t timer("UW Particles");
-	uw_part_manager.update(terrain_zmin);
+	uw_part_manager.update(terrain_zmin, base_color);
 	uw_part_manager.render();
 }
 
