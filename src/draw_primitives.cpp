@@ -1281,14 +1281,11 @@ void begin_sphere_draw(bool textured) {
 	assert(!sphere_vbo_bound); sphere_vbo_bound = 1;
 	bind_draw_sphere_vbo(textured, 1);
 }
-
 void end_sphere_draw() {
 	assert(sphere_vbo_bound); sphere_vbo_bound = 0;
 	bind_vbo(0);
 }
-
 void draw_sphere_vbo_raw(int ndiv, bool textured, bool half, unsigned num_instances) {
-
 	if (!sphere_vbo_bound) {bind_draw_sphere_vbo(textured, 1);}
 	draw_sphere_vbo_pre_bound(ndiv, textured, half, num_instances);
 	if (!sphere_vbo_bound) {bind_vbo(0);}

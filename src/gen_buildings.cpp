@@ -25,7 +25,7 @@ bool camera_in_building(0), interior_shadow_maps(0), player_is_hiding(0), player
 int player_in_basement(0); // 0=no, 1=below ground level, 2=in basement and not on stairs, 3=in extended basement
 int player_in_closet  (0); // uses flags RO_FLAG_IN_CLOSET (player in closet), RO_FLAG_LIT (closet light is on), RO_FLAG_OPEN (closet door is open)
 int player_in_water   (0); // 0=no, 1=standing in water, 2=head underwater
-float building_bcube_expand(0.0);
+float building_bcube_expand(0.0), building_ambient_scale(0.0);
 building_params_t global_building_params;
 building_t const *player_building(nullptr);
 
@@ -312,31 +312,28 @@ building_lights_manager_t building_lights_manager;
 
 
 void set_interior_lighting(shader_t &s, bool have_indir) {
-	float const light_scale(0.5);
-	float const light_change_amt(fticks/(2.0f*TICKS_PER_SECOND));
+	float const light_scale(0.5), light_change_amt(fticks/(2.0f*TICKS_PER_SECOND));
 	static float blscale(1.0); // indir/ambient lighting slowly transitions when entering or leaving the basement
 	if (player_in_basement || player_in_attic) {blscale = max(0.0f, (blscale - light_change_amt));} // decrease
 	else                                       {blscale = min(1.0f, (blscale + light_change_amt));} // increase
-	float const ambient_scale(0.5f*(1.0f + blscale)*light_scale); // brighter ambient
-	float const diffuse_scale(0.2f*blscale*light_scale); // reduce diffuse and specular lighting for sun/moon
+	float ambient_scale(0.5f*(1.0f + blscale)*light_scale); // brighter ambient
+	float diffuse_scale(0.2f*blscale*light_scale); // reduce diffuse and specular lighting for sun/moon
+	float hemi_scale(0.2f*blscale*light_scale); // reduced hemispherical lighting
 
 	if (have_indir || player_in_dark_room()) { // using indir lighting, or player in a closed closet/windowless room with the light off
-		s.add_uniform_float("diffuse_scale",       0.0); // no diffuse from sun/moon
-		// no ambient for indir; slight ambient for closed closet/windowless room with light off
-		s.add_uniform_float("ambient_scale",       ((!have_indir && player_in_dark_room()) ? 0.1 : 0.0));
-		s.add_uniform_float("hemi_lighting_scale", 0.0); // disable hemispherical lighting (should we set hemi_lighting=0 in the shader?)
-		s.add_uniform_float("SHADOW_LEAKAGE",      0.0); // no light lealage
+		s.add_uniform_float("SHADOW_LEAKAGE", 0.0); // no light leakage
 		
 		if (have_indir) { // set ambient color to use with indir lookups outside the current building
 			// since we can't add proper diffuse, make 50% of diffuse the ambient color assuming 50% of surfaces are diffusely lit
 			s.add_uniform_color("out_range_indir_color", (cur_ambient*ambient_scale + cur_diffuse*(0.5*diffuse_scale)));
 		}
+		ambient_scale = ((!have_indir && player_in_dark_room()) ? 0.1 : 0.0); // no ambient for indir; slight ambient for closed closet/windowless room with light off
+		diffuse_scale = hemi_scale = 0.0; // no diffuse or hemispherical from sun/moon
 	}
-	else {
-		s.add_uniform_float("diffuse_scale",       diffuse_scale);
-		s.add_uniform_float("ambient_scale",       ambient_scale);
-		s.add_uniform_float("hemi_lighting_scale", 0.2f*blscale*light_scale); // reduced hemispherical lighting
-	}
+	s.add_uniform_float("diffuse_scale",       diffuse_scale);
+	s.add_uniform_float("ambient_scale",       ambient_scale);
+	s.add_uniform_float("hemi_lighting_scale", hemi_scale);
+	building_ambient_scale = ambient_scale; // cache so that we can reset back to this value when drawing bubbles, etc.
 }
 void reset_interior_lighting(shader_t &s) {
 	s.add_uniform_float("diffuse_scale",       1.0 ); // re-enable diffuse and specular lighting for sun/moon

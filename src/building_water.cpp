@@ -110,7 +110,7 @@ bool building_t::check_for_water_splash(point const &pos_bs, float size, bool fu
 	vector3d const xlate(get_tiled_terrain_model_xlate());
 	register_building_water_splash((pos_bs + xlate), size, alert_zombies);
 
-	if (draw_splash) { // Note: doesn't apply to player steps
+	if (draw_splash && has_room_geom()) { // Note: doesn't apply to player steps
 		float const radius(0.1*min(size, 1.5f)*get_window_vspace());
 		point const splash_pos(pos_bs.x, pos_bs.y, (interior->water_zval + 1.5*radius)); // above the water surface (final radius is 2x original)
 		interior->room_geom->particle_manager.add_particle(splash_pos, zero_vector, WHITE, radius, PART_EFFECT_SPLASH);
@@ -167,7 +167,21 @@ void building_t::draw_water(vector3d const &xlate) const {
 	if (animate2) {building_splash_manager.next_frame(floor_spacing);} // maybe should do this somewhere else? or update even if water isn't visible?
 	point const camera_pos(get_camera_pos());
 
-	if (camera_pos.z < interior->water_zval) { // player under the water
+	if (camera_pos.z < interior->water_zval) { // player under the water; could also check (player_in_water == 2)
+		if (animate2 && has_room_geom()) { // add bubbles
+			static float next_bubble_time(0.0);
+
+			if (tfticks > next_bubble_time) { // time for a bubble
+				static rand_gen_t rgen;
+				point bubble_pos(camera_pos - get_tiled_terrain_model_xlate()); // start as camera_bs
+				bubble_pos   += 0.5*CAMERA_RADIUS*cview_dir; // in front of the player
+				bubble_pos   += 0.1*CAMERA_RADIUS*rgen.signed_rand_vector_spherical(); // randomize a bit
+				bubble_pos.z += 0.1*CAMERA_RADIUS; // move up slightly out of the player's central view
+				float const radius(0.05*CAMERA_RADIUS*rgen.rand_uniform(0.5, 1.0));
+				interior->room_geom->particle_manager.add_particle(bubble_pos, 0.0003*plus_z, WHITE, radius, PART_EFFECT_BUBBLE);
+				next_bubble_time = tfticks + rgen.rand_uniform(0.2, 0.3)*TICKS_PER_SECOND; // random spacing in time
+			}
+		}
 		apply_player_underwater_effect(colorRGBA(0.4, 0.6, 1.0)); // light blue-ish
 		add_postproc_underwater_fog(WATER_COL_ATTEN*atten_scale);
 		float const orig_water_plane_z(water_plane_z);

@@ -1232,7 +1232,11 @@ void particle_manager_t::next_frame(building_t &building) {
 			continue; // no collision detection
 		}
 		else if (p.effect == PART_EFFECT_BUBBLE) {
-			// TODO
+			for (cube_t const &c : building.interior->ceilings) { // check if we hit a building ceiling
+				if (sphere_cube_intersect(p.pos, p.radius, c)) {p.pos.z = c.z1() - p.radius;} // keep under the bottom of the ceiling
+			}
+			if (p.pos.z > building.interior->water_zval) {p.effect = PART_EFFECT_NONE;} // remove when it hits the water line
+			continue; // done - no other collisions
 		}
 		else {assert(0);}
 		// check for collisions and apply bounce, similar to balls

@@ -16,7 +16,7 @@ object_model_loader_t building_obj_model_loader;
 extern bool camera_in_building;
 extern int display_mode, frame_counter, animate2, player_in_basement;
 extern unsigned room_mirror_ref_tid;
-extern float office_chair_rot_rate, cur_dlight_pcf_offset;
+extern float office_chair_rot_rate, cur_dlight_pcf_offset, building_ambient_scale;
 extern point pre_smap_player_pos;
 extern cube_t smap_light_clip_cube;
 extern pos_dir_up camera_pdu;
@@ -1553,22 +1553,22 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 	}
 }
 
-void draw_blended_billboards(quad_batch_draw &qbd, int tid) {
+void draw_billboards(quad_batch_draw &qbd, int tid, bool no_depth_write=1, bool do_blend=1) {
 	if (qbd.empty()) return;
-	glDepthMask(GL_FALSE); // disable depth write
-	enable_blend();
+	if (no_depth_write) {glDepthMask(GL_FALSE);} // disable depth write
+	if (do_blend) {enable_blend();}
 	select_texture(tid);
 	select_texture(FLAT_NMAP_TEX, 5); // no normal map
 	qbd.draw_and_clear();
-	disable_blend();
-	glDepthMask(GL_TRUE);
+	if (do_blend) {disable_blend();}
+	if (no_depth_write) {glDepthMask(GL_TRUE);}
 }
 void draw_emissive_billboards(quad_batch_draw &qbd, int tid) {
 	if (qbd.empty()) return;
 	shader_t s;
 	s.begin_simple_textured_shader(); // unlit/emissive and textured
 	set_additive_blend_mode();
-	draw_blended_billboards(qbd, tid);
+	draw_billboards(qbd, tid);
 	set_std_blend_mode();
 }
 
@@ -1588,15 +1588,17 @@ particle_texture_manager_t particle_texture_manager;
 void particle_manager_t::draw(shader_t &s, vector3d const &xlate) { // non-const because qbd is modified
 	if (particles.empty() || !camera_pdu.cube_visible(get_bcube() + xlate)) return; // no particles are visible
 	point const viewer_bs(camera_pdu.pos - xlate);
+	vector<sphere_t> bubbles;
 
 	for (particle_t const &p : particles) {
 		if (!camera_pdu.sphere_visible_test((p.pos + xlate), p.radius)) continue; // VFC
 		vector3d const vdir(viewer_bs - p.pos), up_dir((p.vel == zero_vector) ? plus_z : p.vel);
 		vector3d v1(cross_product(vdir, up_dir).get_norm()*p.radius);
 		vector3d v2(cross_product(v1,   vdir  ).get_norm()*p.radius);
-		if (p.effect == PART_EFFECT_SPARK) {v2 *= (1.0 + 1500.0*p.vel.mag());} // stretch in velocity dir
 		assert(p.effect < NUM_PART_EFFECTS);
-		qbds[p.effect].add_quad_dirs(p.pos, v1, v2, p.color, plus_z); // use +z form the normal
+		if (p.effect == PART_EFFECT_SPARK) {v2 *= (1.0 + 1500.0*p.vel.mag());} // stretch in velocity dir
+		if (p.effect == PART_EFFECT_BUBBLE) {bubbles.emplace_back(p.pos, p.radius);}
+		else {qbds[p.effect].add_quad_dirs(p.pos, v1, v2, p.color, plus_z);} // use +z form the normal
 	} // for p
 	for (unsigned i = 0; i < NUM_PART_EFFECTS; ++i) {
 		quad_batch_draw &qbd(qbds[i]);
@@ -1607,8 +1609,21 @@ void particle_manager_t::draw(shader_t &s, vector3d const &xlate) { // non-const
 			draw_emissive_billboards(qbd, tid); // smooth alpha blended edges
 			s.make_current();
 		}
-		else {draw_blended_billboards(qbd, tid);}
+		else {draw_billboards(qbd, tid);} // no depth write, blend
 	} // for i
+	if (!bubbles.empty()) {
+		// draw bubbles as spheres since billboards don't work well with the underwater postprocessing shader (due to depth and blend issues);
+		// we can't make them transparent though because the underwater effect is run later and won't alpha blend properly
+		// Note: can probably use instanced drawing here
+		s.add_uniform_float("ambient_scale", 1.0);
+		select_texture(WHITE_TEX);
+		select_texture(FLAT_NMAP_TEX, 5); // no normal map
+		s.set_cur_color(colorRGBA(0.6, 0.8, 1.0)); // blue-green tinted
+		begin_sphere_draw(0); // untextured
+		for (sphere_t const &b : bubbles) {draw_sphere_vbo(b.pos, b.radius, N_SPHERE_DIV, 0);} // textured=0
+		end_sphere_draw();
+		s.add_uniform_float("ambient_scale", building_ambient_scale); // reset
+	}
 }
 
 void fire_manager_t::draw(shader_t &s, vector3d const &xlate) {
