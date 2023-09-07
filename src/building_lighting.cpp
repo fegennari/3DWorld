@@ -454,11 +454,11 @@ class building_indir_light_mgr_t {
 		vector3d const ray_scale(scene_bounds.get_size()/light_bounds.get_size()), llc_shift(scene_bounds.get_llc() - light_bounds.get_llc()*ray_scale);
 		float const tolerance(1.0E-5*valid_area.get_max_dim_sz());
 		bool const is_window(cur_light & IS_WINDOW_BIT);
-		bool in_attic(0), in_ext_basement(0);
-		float weight(100.0), light_radius(0.0), pri_dir_blend(0.0);
+		bool in_attic(0), in_ext_basement(0), is_skylight(0);
+		float weight(100.0), light_radius(0.0);
 		point light_center;
 		cube_t light_cube;
-		colorRGBA lcolor;
+		colorRGBA lcolor, pri_lcolor;
 		vector3d light_dir;
 		assert(cur_light >= 0);
 
@@ -470,13 +470,16 @@ class building_indir_light_mgr_t {
 			light_cube = window;
 
 			if (window.dz() < min(window.dx(), window.dy())) { // skylight; we could encode skylights as a different ix, but testing aspect ratio is easier
+				is_skylight    = 1;
 				surface_area   = window.dx()*window.dy();
 				base_num_rays *= 8; // more rays, since skylights are larger and can cover multiple rooms
+				weight        *= 4.0; // stronger due to direct sun/moon/cloud lighting and reduced occlusion from buildings and terrain
 				light_cube.translate_dim(2, -b.get_fc_thickness()); // shift slightly down into the building to avoid collision with the roof/ceiling
-#if 0 // select primary light rays oriented away from the sun/moon; doesn't work well due to reduced ray scattering, and requires indir to be recomputed when sun/moon pos changes
-				light_dir     = -get_light_pos().get_norm();
-				pri_dir_blend = 1.0 - cur_ambient.get_luminance()/cur_diffuse.get_luminance();
-#endif
+				// select primary light rays oriented away from the sun/moon; doesn't work well due to reduced ray scattering
+				light_dir     = -get_light_pos().get_norm(); // more accurate, but requires indir to be recomputed when sun/moon pos changes
+				//light_dir     = -plus_z; // make it vertical so that it doesn't need to be updated when the sun/moon pos changes
+				lcolor        = cur_ambient*2.0; // split rays into two groups for ambient and diffuse
+				pri_lcolor    = cur_diffuse;
 			}
 			else { // normal window
 				assert(window.ix < 4); // encodes 2*dim + dir
@@ -484,9 +487,9 @@ class building_indir_light_mgr_t {
 				dir = !bool(window.ix &  1); // cast toward the interior
 				surface_area = window.dz()*window.get_sz_dim(!bool(dim));
 				light_cube.translate_dim(dim, (dir ? 1.0 : -1.0)*0.5*b.get_wall_thickness()); // shift slightly inside the building to avoid collision with the exterior wall
+				lcolor = outdoor_color;
 			}
 			// light intensity scales with surface area, since incoming light is a constant per unit area (large windows = more light)
-			lcolor  = outdoor_color;
 			weight *= surface_area/0.0016f; // a fraction the surface area weight of lights
 		}
 		else { // room light or lamp, pointing downward
@@ -525,11 +528,18 @@ class building_indir_light_mgr_t {
 			rand_gen_t rgen;
 			rgen.set_state(n+1, cur_light); // should be deterministic, though add_path_to_lmcs() is not (due to thread races)
 			vector3d pri_dir(rgen.signed_rand_vector_spherical().get_norm()); // should this be cosine weighted for windows?
-			if (pri_dir_blend > 0.0) {pri_dir = ((1.0 - pri_dir_blend)*pri_dir + pri_dir_blend*light_dir).get_norm();} // if light is directional (skylight), prefer light_dir
-			if (is_window && ((pri_dir[dim] > 0.0) ^ dir)) {pri_dir[dim] *= -1.0;} // reflect light if needed about window plane to ensure it enters the room
+			colorRGBA ray_lcolor(lcolor), ccolor(WHITE);
+			bool const is_skylight_dir(is_skylight && (n&1));
+			
+			if (is_skylight_dir) { // skylight: alternate between sky ambient and sun/moon directional
+				pri_dir    = light_dir;
+				ray_lcolor = pri_lcolor;
+			}
+			else if (is_window && ((pri_dir[dim] > 0.0) ^ dir)) {
+				pri_dir[dim] *= -1.0; // reflect light if needed about window plane to ensure it enters the room
+			}
 			point origin, init_cpos, cpos;
 			vector3d init_cnorm, cnorm;
-			colorRGBA ccolor(WHITE);
 
 			// select a random point on the light cube
 			for (unsigned N = 0; N < 10; ++N) { // 10 attempts to find a point within the light shape
@@ -543,12 +553,12 @@ class building_indir_light_mgr_t {
 			bool const hit(b.ray_cast_interior(origin, pri_dir, valid_area, bvh, in_attic, in_ext_basement, init_cpos, init_cnorm, ccolor, &rgen));
 
 			// room lights already contribute direct lighting, so we skip this ray; however, windows don't, so we add their primary ray contribution
-			if (is_window && init_cpos != origin) {
+			if (is_window && /*!is_skylight_dir*/is_skylight && init_cpos != origin) {
 				point const p1(origin*ray_scale + llc_shift), p2(init_cpos*ray_scale + llc_shift); // transform building space to global scene space
-				add_path_to_lmcs(&lmgr, nullptr, p1, p2, weight, lcolor*NUM_PRI_SPLITS, LIGHTING_LOCAL, 0); // local light, no bcube; scale color based on splits
+				add_path_to_lmcs(&lmgr, nullptr, p1, p2, weight, ray_lcolor*NUM_PRI_SPLITS, LIGHTING_LOCAL, 0); // local light, no bcube; scale color based on splits
 			}
 			if (!hit) continue; // done
-			colorRGBA const init_color(lcolor.modulate_with(ccolor));
+			colorRGBA const init_color(ray_lcolor.modulate_with(ccolor));
 			if (init_color.get_weighted_luminance() < 0.1) continue; // done
 			vector3d const v_ref(get_reflect_dir(pri_dir, init_cnorm));
 
