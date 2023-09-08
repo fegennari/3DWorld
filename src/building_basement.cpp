@@ -1126,7 +1126,7 @@ void add_hanging_pipe_bracket(cube_t const &pipe, float len_pos, float ceiling_z
 // Note: beams are for the top floor, even though we may be routing sprinkler pipes on a floor below
 int add_sprinkler_pipe(point const &p1, float end_val, float radius, bool dim, bool dir, vect_cube_t const &obstacles, vect_cube_t const &walls,
 	vect_cube_t const &beams, vect_cube_t const &pipe_cubes, cube_t &ramp, float ceiling_zval, unsigned room_id, float tot_light_amt,
-	vect_room_object_t &objs, colorRGBA const &pcolor, colorRGBA const &ccolor, bool add_sprinklers)
+	vect_room_object_t &objs, colorRGBA const &pcolor, colorRGBA const &ccolor, int add_sprinklers)
 {
 	point p2(p1);
 	p2[dim] = end_val;
@@ -1167,24 +1167,26 @@ int add_sprinkler_pipe(point const &p1, float end_val, float radius, bool dim, b
 		add_hanging_pipe_bracket(h_pipe, len_pos, ceiling_zval, dim, room_id, tot_light_amt, objs_start+1, objs, obstacles, walls);
 	}
 	if (add_sprinklers) {
-		float const length(h_pipe.get_sz_dim(dim)), sprinkler_height(3.2*radius), sprinkler_radius(0.9*radius);
+		bool const inverted(add_sprinklers & 1); // use LSB
+		float const length(h_pipe.get_sz_dim(dim)), sprinkler_radius(0.9*radius);
 		unsigned const num_sprinklers(max(1U, unsigned(length/(60.0*radius))));
 		float const end_spacing(is_partial ? 1.5*conn_max_length : length/(num_sprinklers - 0.5)); // near the connector if truncated, otherwise one spacing from the wall
 		float const end(pipe_end - (dir ? -1.0 : 1.0)*end_spacing);
 		float const spacing((num_sprinklers == 1) ? (pipe_end - p1[dim]) : (end - p1[dim])/(num_sprinklers - 0.5)); // signed; always halfway if single sprinkler
+		float const sprinkler_height(3.2*radius), sprinkler_dz((inverted ? -1.0 : 1.0)*sprinkler_height);
 		point center(p1);
 		center[dim] = p1[dim] + 0.5*spacing; // half spacing from the end so that sprinklers are centered on the main pipe
 		bool any_added(0);
 
 		for (unsigned n = 0; n < num_sprinklers; ++n, center[dim] += spacing) {
 			cube_t s(center, center);
-			s.z2() += sprinkler_height;
+			s.d[2][!inverted] += sprinkler_dz;
 			s.expand_by_xy(sprinkler_radius);
 			cube_t s_ext(s); // includes some extra clearance
-			s_ext.z2() += sprinkler_height;
+			s_ext.d[2][!inverted] += sprinkler_dz;
 			s.expand_by_xy(0.5*sprinkler_radius);
 			if (has_bcube_int(s_ext, obstacles) || has_bcube_int(s_ext, walls) || has_bcube_int_xy(s_ext, beams) || has_bcube_int(s_ext, pipe_cubes)) continue;
-			objs.emplace_back(s, TYPE_SPRINKLER, room_id, 0, 0, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CYLIN, pcolor);
+			objs.emplace_back(s, TYPE_SPRINKLER, room_id, 0, inverted, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CYLIN, pcolor);
 			// add the connector ring around the sprinkler, same color as the pipe
 			cube_t conn(h_pipe);
 			set_wall_width(conn, center[dim], 0.35*conn_max_length, dim);
@@ -1214,6 +1216,7 @@ void building_t::add_sprinkler_pipes(vect_cube_t const &obstacles, vect_cube_t c
 	float const floor_spacing(get_window_vspace()), fc_thickness(get_fc_thickness());
 	float const sp_radius(1.2*get_wall_thickness()), spacing(2.0*sp_radius), flange_expand(0.3*sp_radius);
 	float const bolt_dist(sp_radius + 0.5*flange_expand), bolt_radius(0.32*flange_expand), bolt_height(0.1*fc_thickness);
+	bool const inverted_sprinklers(room_id & 1); // random-ish
 	colorRGBA const pcolor(RED), ccolor(BRASS_C); // pipe and connector colors
 	vect_room_object_t &objs(interior->room_geom->objs);
 	cube_t const &basement(get_basement());
@@ -1288,7 +1291,7 @@ void building_t::add_sprinkler_pipes(vect_cube_t const &obstacles, vect_cube_t c
 				for (unsigned d = 0; d < 2; ++d) { // extend to either side of the pipe
 					float const wpos2(basement.d[!dim][!d]); // extend to the opposite wall
 					added |= add_sprinkler_pipe(p1, wpos2, conn_radius, !dim, d, obstacles, walls, beams, pipe_cubes,
-						interior->pg_ramp, ceiling_zval, room_id, tot_light_amt, objs, pcolor, ccolor, 1); // sprinklers=1
+						interior->pg_ramp, ceiling_zval, room_id, tot_light_amt, objs, pcolor, ccolor, (inverted_sprinklers ? 1 : 2)); // add sprinklers
 				}
 				if (added) { // if conn was added in either dir, add a connector segment
 					unsigned const flags(RO_FLAG_NOCOLL | RO_FLAG_HANGING | RO_FLAG_ADJ_LO | RO_FLAG_ADJ_HI); // flat ends on both sides

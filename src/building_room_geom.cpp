@@ -1800,19 +1800,27 @@ void building_room_geom_t::add_duct(room_object_t const &c) {
 	else {assert(0);} // unsupported shape
 }
 
-void building_room_geom_t::add_sprinkler(room_object_t const &c) { // vertical sprinkler
+void mirror_cube_z(cube_t &c, cube_t const &obj) {
+	c.translate_dim(2, 2.0*(obj.zc() - c.zc()));
+}
+void building_room_geom_t::add_sprinkler(room_object_t const &c) { // vertical sprinkler, from parking garage pipes
 	rgeom_mat_t &mat(get_metal_material(0, 0, 2)); // unshadowed, detail
 	colorRGBA const metal_color(apply_light_color(c, LT_GRAY));
 	unsigned const ndiv = 12;
-	// Note: dir determines if it's facing up or down; for now we only support upward pointing sprinklers from parking garage pipes
 	cube_t bot(c), mid(c), top(c);
 	bot.z2() = mid.z1() = c.z1() + 0.58*c.dz();
 	mid.z2() = top.z1() = c.z1() + 0.96*c.dz();
+
+	if (c.dir) { // dir determines if it's facing up or down
+		mirror_cube_z(bot, c);
+		mirror_cube_z(mid, c);
+		mirror_cube_z(top, c);
+	}
 	bot.expand_by_xy(-0.25*c.get_radius()); // shrink
 	mid.expand_by_xy(-0.60*c.get_radius()); // shrink
-	mat.add_vcylin_to_verts(bot, apply_light_color(c), 0, 1, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, ndiv); // draw top
-	mat.add_vcylin_to_verts(mid, metal_color,          0, 0, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, ndiv); // no ends
-	mat.add_vcylin_to_verts(top, metal_color,          1, 1, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, ndiv); // draw ends
+	mat.add_vcylin_to_verts(bot, apply_light_color(c), c.dir, !c.dir, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, ndiv); // draw top
+	mat.add_vcylin_to_verts(mid, metal_color,          0,      0,     0, 0, 1.0, 1.0, 1.0, 1.0, 0, ndiv); // no ends
+	mat.add_vcylin_to_verts(top, metal_color,          1,      1,     0, 0, 1.0, 1.0, 1.0, 1.0, 0, ndiv); // draw ends
 }
 
 void building_room_geom_t::add_curb(room_object_t const &c) {
