@@ -1465,7 +1465,7 @@ struct building_t : public building_geom_t {
 	float gen_peaked_roof(cube_t const &top_, float peak_height, bool dim, float extend_to, float max_dz, unsigned skip_side_tri);
 	float gen_hipped_roof(cube_t const &top_, float peak_height, float extend_to);
 	float gen_sloped_roof_for_stacked_parts(cube_t const &bot, cube_t const &top);
-	void place_roof_ac_units(unsigned num, float sz_scale, cube_t const &bounds, vect_cube_t const &avoid, bool avoid_center, rand_gen_t &rgen);
+	void place_roof_ac_units(unsigned num, float sz_scale, cube_t const &bounds, vect_cube_t const &avoid, rand_gen_t &rgen);
 	void add_roof_walls(cube_t const &c, float wall_width, bool overlap_corners, cube_t out[4]);
 	void gen_details(rand_gen_t &rgen, bool is_rectangle);
 	void add_company_sign(rand_gen_t &rgen);

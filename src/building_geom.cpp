@@ -1768,7 +1768,7 @@ void building_t::gen_building_doors_if_needed(rand_gen_t &rgen) { // for office 
 	}
 }
 
-void building_t::place_roof_ac_units(unsigned num, float sz_scale, cube_t const &bounds, vect_cube_t const &avoid, bool avoid_center, rand_gen_t &rgen) {
+void building_t::place_roof_ac_units(unsigned num, float sz_scale, cube_t const &bounds, vect_cube_t const &avoid, rand_gen_t &rgen) {
 
 	if (num == 0) return;
 	vector3d cube_sz(sz_scale, 1.5*sz_scale, 1.2*sz_scale); // consistent across all AC units (note that x and y will be doubled)
@@ -1784,7 +1784,6 @@ void building_t::place_roof_ac_units(unsigned num, float sz_scale, cube_t const 
 			if (!bounds.contains_cube_xy(c)) continue; // not contained
 			c.z2() += cube_sz.z; // z2
 			if (has_bcube_int_no_adj(c, avoid) || has_bcube_int_no_adj(c, details)) continue; // intersects avoid cubes or other detail objects (inc_adj=0)
-			if (avoid_center && c.contains_pt_xy(bounds.get_cube_center())) continue; // intersects antenna
 			placed = 1;
 		} // for n
 		if (!placed) break; // failed, exit loop
@@ -1876,7 +1875,7 @@ void building_t::gen_details(rand_gen_t &rgen, bool is_rectangle) { // for the r
 
 			for (auto p = parts.begin(); p != parts.end(); ++p) {
 				unsigned const num_this_part(min(num_ac_units, unsigned(num_ac_units*p->dx()*p->dy()/(bcube.dx()*bcube.dy()) + 1))); // distribute based on area
-				place_roof_ac_units(num_this_part, xy_sz, *p, parts, 0, rgen);
+				place_roof_ac_units(num_this_part, xy_sz, *p, parts, rgen);
 			}
 		}
 		details.shrink_to_fit();
@@ -1994,17 +1993,6 @@ void building_t::gen_details(rand_gen_t &rgen, bool is_rectangle) { // for the r
 		c.z2() += height; // z2
 		details.push_back(c);
 	} // for i
-	if (num_ac_units > 0) {
-		vect_cube_t ac_avoid;
-		for (cube_t const &s : skylights) {ac_avoid.push_back(s); ac_avoid.back().expand_in_dim(2, 0.25*window_vspacing);} // avoid skylights
-		if (!avoid_bcube.is_all_zeros()) {ac_avoid.push_back(avoid_bcube);}
-		place_roof_ac_units(num_ac_units, xy_sz*rgen.rand_uniform(0.012, 0.02), bounds, ac_avoid, add_antenna, rgen);
-	}
-	if (add_walls) {
-		cube_t cubes[4];
-		add_roof_walls(top, wall_width, 0, cubes); // overlap_corners=0
-		for (unsigned i = 0; i < 4; ++i) {details.emplace_back(cubes[i], (uint8_t)ROOF_OBJ_WALL);}
-	}
 	if (add_antenna) { // add antenna
 		float const radius(0.003f*rgen.rand_uniform(1.0, 2.0)*(tsz.x + tsz.y)), height(rgen.rand_uniform(0.25, 0.5)*tsz.z);
 		roof_obj_t antenna(ROOF_OBJ_ANT);
@@ -2012,6 +2000,17 @@ void building_t::gen_details(rand_gen_t &rgen, bool is_rectangle) { // for the r
 		antenna.expand_by_xy(radius);
 		set_cube_zvals(antenna, top.z2(), (bcube.z2() + height)); // z2 uses bcube to include sloped roof
 		details.push_back(antenna);
+	}
+	if (num_ac_units > 0) {
+		vect_cube_t ac_avoid;
+		for (cube_t const &s : skylights) {ac_avoid.push_back(s); ac_avoid.back().expand_in_dim(2, 0.25*window_vspacing);} // avoid skylights
+		if (!avoid_bcube.is_all_zeros())  {ac_avoid.push_back(avoid_bcube);}
+		place_roof_ac_units(num_ac_units, xy_sz*rgen.rand_uniform(0.012, 0.02), bounds, ac_avoid, rgen);
+	}
+	if (add_walls) {
+		cube_t cubes[4];
+		add_roof_walls(top, wall_width, 0, cubes); // overlap_corners=0
+		for (unsigned i = 0; i < 4; ++i) {details.emplace_back(cubes[i], (uint8_t)ROOF_OBJ_WALL);}
 	}
 	for (auto i = details.begin(); i != details.end(); ++i) {assert(i->is_strictly_normalized()); max_eq(bcube.z2(), i->z2());} // extend bcube z2 to contain details
 	if (roof_type == ROOF_TYPE_FLAT) {gen_grayscale_detail_color(rgen, 0.2, 0.6);} // for antenna and roof
