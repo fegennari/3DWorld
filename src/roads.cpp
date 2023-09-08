@@ -660,13 +660,14 @@ void road_isec_t::draw_stoplights_and_street_signs(road_draw_state_t &dstate, ve
 	if (!(has_stoplight || draw_street_sign)) return; // nothing to draw
 	vector3d const cview_dir(camera_pdu.pos - center);
 	float const sz(0.03*city_params.road_width), h(1.0*sz);
+	float const ss_height(get_stop_sign_height()), sign_z1(z1() + 2.2*ss_height);
 	color_wrapper cw(BLACK);
 
 	for (unsigned n = 0; n < 4; ++n) { // {-x, +x, -y, +y} = {W, E, S, N} facing = car traveling {E, W, N, S}
 		if (!(conn & (1<<n))) continue; // no road in this dir
 		bool const dim((n>>1) != 0), dir((n&1) == 0), side((dir^dim^1) != 0); // Note: dir is inverted here to represent car dir
 		float const side_len(side ? -sz : sz);
-		cube_t sc;
+		cube_t sc; // stoplight/sign cube
 
 		if (has_stoplight) {
 			float const zbot(z1() + 2.0*h), dim_pos(d[dim][!dir] + SLIGHT_DIST_TO_CORNER_SCALE*(dir ? sz : -sz)); // pos in road dim
@@ -678,12 +679,12 @@ void road_isec_t::draw_stoplights_and_street_signs(road_draw_state_t &dstate, ve
 
 			if (!draw_street_sign) { // draw front face only
 				point pts[4];
-				pts[0][dim]  = pts[1][dim]  = pts[2][dim] = pts[3][dim] = dim_pos; // plane of the face
+				pts[0][dim]  = pts[1][ dim] = pts[2][dim] = pts[3][dim] = dim_pos; // plane of the face
 				pts[0][!dim] = pts[3][!dim] = sl_lo;
 				pts[1][!dim] = pts[2][!dim] = sl_hi;
 				pts[0].z = pts[1].z = z1();
 				pts[2].z = pts[3].z = sl_top;
-				dstate.qbd_sl.add_quad_pts(pts, cw,  (dim ? (dir ? plus_y : -plus_y) : (dir ? plus_x : -plus_x))); // Note: normal doesn't really matter since color is black
+				dstate.qbd_sl.add_quad_pts(pts, cw, (dim ? (dir ? plus_y : -plus_y) : (dir ? plus_x : -plus_x))); // Note: normal doesn't really matter since color is black
 			}
 			else {
 				set_cube_zvals(sc, z1(), sl_top);
@@ -694,6 +695,12 @@ void road_isec_t::draw_stoplights_and_street_signs(road_draw_state_t &dstate, ve
 				if (!shadow_only && tt_fire_button_down && game_mode != 1) { // player debug visualization
 					point const p1(camera_pdu.pos - dstate.xlate), p2(p1 + camera_pdu.dir*FAR_CLIP);
 					if (sc.line_intersects(p1, p2)) {dstate.set_label_text(stoplight.label_str(), (sc.get_cube_center() + dstate.xlate));}
+				}
+				if (sc.z2() < sign_z1) { // sign is too low, add a metal pole to extend it upward
+					sc.expand_in_dim(dim, -0.1*sc.get_sz_dim(dim)); // small shrink
+					set_wall_width(sc, sc.get_center_dim(!dim), 0.5*sc.get_sz_dim(dim), !dim); // make it centered and square
+					set_cube_zvals(sc, sc.z2(), sign_z1);
+					dstate.draw_cube(dstate.qbd_untextured, sc, GRAY);
 				}
 			}
 			bool const draw_detail(dist_val < 0.05); // add flares only when very close
@@ -761,12 +768,11 @@ void road_isec_t::draw_stoplights_and_street_signs(road_draw_state_t &dstate, ve
 			}
 		} // end stoplight drawing
 		else { // stop sign case; add a vertical pole
-			float const ss_height(get_stop_sign_height());
 			point spos(get_stop_sign_pos(n));
 			spos[dim] += (dir ? 1.0 : -1.0)*0.07*ss_height; // move a bit behind the stop sign
 			sc.set_from_point(spos);
 			sc.expand_by_xy(0.02*ss_height);
-			set_cube_zvals(sc, z1(), (z1() + 2.0*ss_height));
+			set_cube_zvals(sc, z1(), sign_z1);
 			if (draw_street_sign) {dstate.draw_cube(dstate.qbd_untextured, sc, GRAY);} // draw the sign pole if close
 #if 0 // code for debugging stop sign logic
 			colorRGBA const color(ssign_state[n].entering.in_use, ssign_state[n].waiting.in_use, 0, 1); // entering=RED, waiting=GREEN, both=YELLOW, neither=BLACK
