@@ -1165,9 +1165,10 @@ void sign_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale
 	if (!(emissive && is_night()) && !bcube.closest_dist_less_than(dstate.camera_bs, 0.9*(small ? 0.4 : 1.0)*dmax)) return; // too far to see the text in daytime
 
 	if (scrolling && animate2) { // at the moment we can only scroll in integer characters, 4 per second
-		double const scroll_val(0.25*tfticks/TICKS_PER_SECOND + fabs(pos.x) + fabs(pos.y)); // add pos x/y so that signs scroll at different points per building; make sure it's positive
+		// add pos x/y so that signs scroll at different points per building; make sure it's positive
+		double const scroll_val(0.25*tfticks/TICKS_PER_SECOND + fabs(pos.x) + fabs(pos.y));
+		float const scroll_val_mod(scroll_val - floor(scroll_val)); // take the fractional part
 		assert(!char_pos.empty());
-		float const scroll_val_mod(1.0 - (scroll_val - floor(scroll_val))); // take the fractional part (inverted)
 		auto it(std::lower_bound(char_pos.begin(), char_pos.end(), scroll_val_mod));
 		unsigned const offset(it - char_pos.begin());
 		assert(it != char_pos.end()); // can't be >= 1.0
