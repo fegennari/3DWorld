@@ -9,6 +9,7 @@
 // physics constants, currently applied to balls
 float const KICK_VELOCITY  = 0.0025;
 float const MIN_VELOCITY   = 0.0001;
+float const SMOKE_VELOCITY = 0.0006;
 float const OBJ_DECELERATE = 0.008;
 float const OBJ_GRAVITY    = 0.0003;
 float const TERM_VELOCITY  = 1.0;
@@ -1175,7 +1176,7 @@ void building_t::update_player_interact_objects(point const &player_pos) { // No
 	}
 	doors_next_frame(); // run for current and connected buildings
 	interior->room_geom->particle_manager.next_frame(*this);
-	interior->room_geom->fire_manager.next_frame();
+	interior->room_geom->fire_manager.next_frame(interior->room_geom->particle_manager);
 }
 
 // particle_manager_t
@@ -1209,7 +1210,7 @@ void particle_manager_t::next_frame(building_t &building) {
 	if (particles.empty()) return;
 	float const fticks_stable(min(fticks, 4.0f)); // clamp to 0.1s
 	auto const &objs(building.interior->room_geom->objs);
-	float const lifetimes[NUM_PART_EFFECTS] = {0.0, 2.5, 2.0, 0.25, 2.0}; // none, sparks, smoke, splash, bubble
+	float const lifetimes[NUM_PART_EFFECTS] = {0.0, 2.5, 3.0, 2.0, 0.25, 2.0}; // none, sparks, clouds, smoke, splash, bubble
 
 	for (particle_t &p : particles) {
 		point const p_last(p.pos);
@@ -1222,16 +1223,20 @@ void particle_manager_t::next_frame(building_t &building) {
 			p.color = get_glow_color(2.0*lifetime, 1); // fade=1
 			apply_building_gravity(p.vel.z, 0.5*fticks_stable); // half gravity
 		}
-		else if (p.effect == PART_EFFECT_SMOKE) {
+		else if (p.effect == PART_EFFECT_CLOUD) { // form fire extinguisher
 			p.radius = p.init_radius*(1.0 + 4.0*lifetime); // radius increases over lifetime
 			apply_building_gravity(p.vel.z, 0.05*fticks_stable); // very small gravity
+		}
+		else if (p.effect == PART_EFFECT_SMOKE) { // floats up
+			p.radius = p.init_radius*(1.0 + 3.0*lifetime); // radius increases over lifetime
+			p.color  = colorRGBA(WHITE*(0.25*(1.0 - lifetime)), (1.0 - lifetime)); // gray => transparent black
 		}
 		else if (p.effect == PART_EFFECT_SPLASH) {
 			p.radius  = p.init_radius*(1.0 + 1.0*lifetime); // radius increases over lifetime
 			p.color.A = 1.0 - lifetime; // transition to transparent
 			continue; // no collision detection
 		}
-		else if (p.effect == PART_EFFECT_BUBBLE) {
+		else if (p.effect == PART_EFFECT_BUBBLE) { // floats up
 			for (cube_t const &c : building.interior->ceilings) { // check if we hit a building ceiling
 				if (sphere_cube_intersect(p.pos, p.radius, c)) {p.pos.z = c.z1() - p.radius;} // keep under the bottom of the ceiling
 			}
@@ -1248,7 +1253,7 @@ void particle_manager_t::next_frame(building_t &building) {
 		if (p.parent_obj_id >= 0) {assert((unsigned)p.parent_obj_id < objs.size()); self = objs.begin() + p.parent_obj_id;}
 
 		if (building.interior->check_sphere_coll(building, p.pos, p_last, p.radius, self, cnorm, hardness, obj_ix)) {
-			if (p.effect == PART_EFFECT_SMOKE) {p.effect = PART_EFFECT_NONE; continue;} // no bounce
+			if (p.effect == PART_EFFECT_CLOUD || p.effect == PART_EFFECT_SMOKE) {p.effect = PART_EFFECT_NONE; continue;} // no bounce
 			apply_floor_vel_thresh(p.vel, cnorm);
 			bool const bounced(apply_object_bounce(p.vel, cnorm, bounce_scale*hardness, 0)); // on_floor=0
 			
@@ -1320,16 +1325,20 @@ void fire_manager_t::put_out_fires(point const &p1, point const &p2, float radiu
 		if (hit) {f.max_radius = 0.0;}
 	}
 }
-void fire_manager_t::next_frame() {
+void fire_manager_t::next_frame(particle_manager_t &particle_manager) {
 	float const fticks_stable(min(fticks, 4.0f)); // clamp to 0.1s
 
 	for (fire_t &f : fires) {
 		f.time += fticks_stable;
-		float const lifetime(f.time/(2.5*TICKS_PER_SECOND));
+		float const lifetime(f.time/(4.0*TICKS_PER_SECOND)); // 4s
 		if (lifetime < 0.3) {f.radius = (lifetime/0.3)*f.max_radius;} // grow at start of life
 		if (lifetime > 0.7) {f.radius = (1.0 - (lifetime - 0.7)/0.3)*f.max_radius;} // shink at end of life
 		// slow random drift? would need to check object collisions
-	}
+		if (f.time < f.next_smoke_time) continue;
+		float const radius(1.0*f.radius);
+		particle_manager.add_particle((f.pos + 1.1*radius*plus_z), SMOKE_VELOCITY*plus_z, GRAY, radius, PART_EFFECT_SMOKE); // generate smoke
+		f.next_smoke_time = f.time + rgen.rand_uniform(0.25, 0.5)*TICKS_PER_SECOND;
+	} // for f
 	// remove dead fires
 	fires.erase(std::remove_if(fires.begin(), fires.end(), [](fire_t const &f) {return (f.max_radius == 0.0 || f.radius < 0.0);}), fires.end());
 }

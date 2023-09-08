@@ -8,6 +8,7 @@
 #include "openal_wrap.h"
 
 unsigned const MAX_SPLASHES = 40; // must agree with fragment shader code
+float const BUBBLE_VELOCITY = 0.0002;
 
 
 extern int player_in_basement, player_in_water, animate2, display_mode;
@@ -179,7 +180,7 @@ void building_t::draw_water(vector3d const &xlate) const {
 				bubble_pos += 0.5*CAMERA_RADIUS*cview_dir; // in front of the player
 				bubble_pos += 0.1*CAMERA_RADIUS*rgen.signed_rand_vector_spherical(); // randomize a bit
 				float const radius(0.05*CAMERA_RADIUS*rgen.rand_uniform(0.5, 1.0));
-				interior->room_geom->particle_manager.add_particle(bubble_pos, 0.0002*plus_z, WHITE, radius, PART_EFFECT_BUBBLE);
+				interior->room_geom->particle_manager.add_particle(bubble_pos, BUBBLE_VELOCITY*plus_z, WHITE, radius, PART_EFFECT_BUBBLE);
 				if (rgen.rand_bool()) {gen_sound_thread_safe(SOUND_BUBBLE, camera_pos, 0.25);}
 				next_bubble_time = tfticks + rgen.rand_uniform(0.2, 0.4)*TICKS_PER_SECOND; // random spacing in time
 			}

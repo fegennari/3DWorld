@@ -1573,8 +1573,8 @@ void draw_emissive_billboards(quad_batch_draw &qbd, int tid) {
 }
 
 class particle_texture_manager_t {
-	string const fns[NUM_PART_EFFECTS] = {"", "", "", "water_splash.png", "white_circle.png"}; // none, sparks, smoke, splash, bubble
-	int tids[NUM_PART_EFFECTS] = {-1, BLUR_CENT_TEX, BLUR_TEX, -1, -1}; // none, sparks, smoke, splash, bubble
+	string const fns[NUM_PART_EFFECTS] = {"", "", "", "", "water_splash.png", "white_circle.png"}; // none, sparks, clouds, smoke, splash, bubble
+	int tids[NUM_PART_EFFECTS] = {-1, BLUR_CENT_TEX, BLUR_TEX, BLUR_TEX, -1, -1}; // none, sparks, clouds, smoke, splash, bubble
 public:
 	int get_tid(unsigned effect) {
 		assert(effect < NUM_PART_EFFECTS);

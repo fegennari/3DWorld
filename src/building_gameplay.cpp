@@ -1649,7 +1649,7 @@ bool building_t::maybe_use_last_pickup_room_object(point const &player_pos) {
 			point const part_pos(player_pos + (1.1f*r_sum)*cview_dir);
 			vector3d const velocity(0.0015*(cview_dir + 0.12*rgen.signed_rand_vector())); // add a bit of random variation
 			point const ray_start(player_pos + player_radius*cview_dir);
-			interior->room_geom->particle_manager.add_particle(part_pos, velocity, WHITE, 1.0*obj_radius, PART_EFFECT_SMOKE);
+			interior->room_geom->particle_manager.add_particle(part_pos, velocity, WHITE, 1.0*obj_radius, PART_EFFECT_CLOUD);
 			player_inventory.mark_last_item_used();
 			player_inventory.record_damage_done(0.05); // very small amount of damage
 

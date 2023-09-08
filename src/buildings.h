@@ -433,7 +433,7 @@ enum {/*building models*/ OBJ_MODEL_TOILET=0, OBJ_MODEL_SINK, OBJ_MODEL_TUB, OBJ
 	OBJ_MODEL_RAT, OBJ_MODEL_ROACH,
 	/*city models*/ OBJ_MODEL_FHYDRANT, OBJ_MODEL_SUBSTATION, OBJ_MODEL_MAILBOX, OBJ_MODEL_UMBRELLA, OBJ_MODEL_PIGEON, NUM_OBJ_MODELS};
 
-enum {PART_EFFECT_NONE=0, PART_EFFECT_SPARK, PART_EFFECT_SMOKE, PART_EFFECT_SPLASH, PART_EFFECT_BUBBLE, NUM_PART_EFFECTS};
+enum {PART_EFFECT_NONE=0, PART_EFFECT_SPARK, PART_EFFECT_CLOUD, PART_EFFECT_SMOKE, PART_EFFECT_SPLASH, PART_EFFECT_BUBBLE, NUM_PART_EFFECTS};
 
 // object flags
 unsigned const RO_FLAG_LIT     = 0x01; // light is on
@@ -809,7 +809,7 @@ public:
 class fire_manager_t {
 	struct fire_t {
 		point pos; // pos is the bottom
-		float max_radius=0.0, radius=0.0, time=0.0;
+		float max_radius=0.0, radius=0.0, time=0.0, next_smoke_time=0.0;
 		fire_t(point const &pos_, float max_radius_) : pos(pos_), max_radius(max_radius_), radius(0.0) {}
 		float get_height() const {return 4.0*radius;}
 		point get_center() const {return pos + vector3d(0.0, 0.0, 0.5*get_height());}
@@ -824,7 +824,7 @@ public:
 	bool get_closest_fire(point const &pos, float xy_radius, float z1, float z2, point *fire_pos=nullptr) const;
 	void add_fire_bcubes_for_cube(cube_t const &sel_cube, vect_cube_t &fire_bcubes) const;
 	void put_out_fires(point const &p1, point const &p2, float radius);
-	void next_frame();
+	void next_frame(particle_manager_t &particle_manager);
 	void add_lights(vector3d const &xlate, building_t const &building, occlusion_checker_noncity_t &oc, cube_t &lights_bcube) const;
 	void draw(shader_t &s, vector3d const &xlate);
 };
