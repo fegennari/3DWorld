@@ -474,6 +474,11 @@ class road_network_t : public streetlights_t { // AKA city center
 		assert(seg_ix < segs.size());
 		return segs[seg_ix];
 	}
+	road_isec_t const &get_isec(unsigned type_ix, unsigned isec_ix) const {
+		assert(type_ix < 3);
+		assert(isec_ix < isecs[type_ix].size());
+		return isecs[type_ix][isec_ix];
+	}
 public:
 	road_network_t() : bcube(all_zeros), city_id(CONN_CITY_IX), cluster_id(0), plot_id_offset(0), tot_road_len(0.0), num_cars(0), is_residential(0) {} // global road network ctor
 		
@@ -1487,6 +1492,32 @@ public:
 		if (!select_building_in_plot(global_plot, rgen.rand(), building)) return 0; // no buildings in plot (maybe it's a park)
 		return 1;
 	}
+	bool check_future_isec_stop(car_t &car, vector<road_network_t> const &road_networks, road_network_t const &global_rn) const {
+		if (car.is_stopped() || car.stopped_at_light) return 0;
+		if (car.cur_road_type != TYPE_RSEG)           return 0; // not on a road segment; maybe already stopped
+		road_seg_t const &seg(get_car_seg(car));
+		unsigned const next_road_type(seg.conn_type[car.dir]);
+		if (!is_isect(next_road_type)) return 0; // how can this fail?
+		float const stop_dist(0.6f*car.get_length()); // distance we should begin decelerating
+		float const dist_to_end(max((car.dir ? 1.0f : -1.0f)*(seg.d[car.dim][car.dir] - car.bcube.d[car.dim][car.dir]), 0.0f));
+		if (dist_to_end > stop_dist) return 0; // not close enough
+		unsigned const cur_seg(seg.conn_ix[car.dir]), isec_type(next_road_type - TYPE_ISEC2);
+		unsigned isec_city(city_id); // default to ourself
+
+		if (!road_to_city.empty()) { // on connector road
+			assert(seg.road_ix < road_to_city.size());
+			unsigned const city_ix(road_to_city[seg.road_ix].id[car.dir]);
+			if (city_ix != CONN_CITY_IX) {isec_city = city_ix;} // moving into a city
+		}
+		road_isec_t const &isec(get_city(isec_city, road_networks, global_rn).get_isec(isec_type, cur_seg));
+		if (!isec.has_stopsign && isec.can_go_now(car)) return 0; // green light, no stop sign
+		// it's difficult to calculate the correct decleration to stop at the right spot, especially when framerate is variable, so directly adjust the speed instead
+		float const max_speed(0.1f*car.max_speed + (dist_to_end/stop_dist)*car.get_max_speed()); // linear deceleration to 10% of max speed
+		assert(max_speed > 0.0);
+		if (car.cur_speed < max_speed) return 0;
+		car.cur_speed = max_speed; // clamp to the max
+		return 1;
+	}
 	void find_car_next_seg(car_t &car, vector<road_network_t> const &road_networks, road_network_t const &global_rn) const {
 		if (car.cur_road_type == TYPE_RSEG) {
 			road_seg_t const &seg(get_car_seg(car));
@@ -1499,17 +1530,19 @@ public:
 				unsigned const city_ix(road_to_city[car.cur_road].id[car.dir]);
 					
 				if (car.in_isect() && city_ix != CONN_CITY_IX) { // moving into a city
+					assert(city_ix < road_networks.size());
 					road_network_t const &rn(road_networks[city_ix]);
-					vector<road_isec_t> const &isecs(rn.isecs[car.get_isec_type()]); // must be a 3-way or 4-way intersection
-					car.cur_city = city_ix;
-					assert(car.cur_seg < isecs.size());
+					road_isec_t const &isec(rn.get_isec(car.get_isec_type(), car.cur_seg)); // must be a 3-way or 4-way intersection
+					unsigned orient(0);
 						
 					if (car.cur_road_type == TYPE_ISEC4 && car.turn_dir == TURN_NONE) { // straight through a 4-way isec (but may not have entered isec yet, so turn_dir isn't valid)
-						car.cur_road = isecs[car.cur_seg].rix_xy[car.get_orient()];
+						orient = car.get_orient();
 					}
 					else {
-						car.cur_road = isecs[car.cur_seg].rix_xy[2*(!car.dim) + 0]; // use the road in the other dim, since it must be within the new city (dir doesn't matter)
+						orient = 2*(!car.dim) + 0; // use the road in the other dim, since it must be within the new city (dir doesn't matter)
 					}
+					car.cur_city = city_ix;
+					car.cur_road = isec.rix_xy[orient];
 					assert(car.cur_road < rn.roads.size());
 					car.entering_city = 1; // flag so that collision detection works
 				}
@@ -1708,6 +1741,7 @@ public:
 			if (was_stopped) {car.stopped_for_ssign = 1;} // maybe at stop sign, or maybe at stoplight; after checking to ensure a full stop
 			if (was_stopped) return; // no update needed
 		}
+		else if (check_future_isec_stop(car, road_networks, global_rn)) {} // no update
 		else {car.maybe_accelerate();}
 
 		cube_t const road_bcube(get_road_bcube_for_car(car));
@@ -1836,11 +1870,11 @@ public:
 				assert(isec.conn & (1<<orients[car.turn_dir]));
 				car.front_car_turn_dir = TURN_UNSPEC; // reset state now that it's been used
 				car.stopped_for_ssign  = 0; // reset for this intersection
-				car.stopped_at_light   = (isec.red_or_yellow_light(car) || !car_rn.car_can_go_now(car, global_rn));
+				car.stopped_at_light   = (isec.red_or_yellow_light(car) || !car_rn.car_can_go_now(car, global_rn)); // is the red_or_yellow_light() call redundant?
 				if (car.stopped_at_light) {car.stop();}
 				if (car.turn_dir != TURN_NONE) {car.begin_turn();} // capture car centerline before the turn
 			}
-		}
+		} // end move to another road segment
 		assert(get_car_rn(car, road_networks, global_rn).get_road_bcube_for_car(car, global_rn).intersects_xy(car.bcube)); // sanity check
 	}
 	bool is_car_at_dest_isec(car_t const &car) const {
