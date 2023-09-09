@@ -1134,6 +1134,7 @@ sign_t::sign_t(cube_t const &bcube_, bool dim_, bool dir_, string const &text_, 
 		unsigned const text_len(text.size());
 		float const width(text_bcube.get_sz_dim(!dim)); // make text area a bit wider to account for the space padding
 		text_bcube.expand_in_dim(!dim, 0.25*(float(text_len)/float(text_len-2) - 1.0)*width);
+		text_bcube.expand_in_dim( dim, 0.1*bcube.get_sz_dim(dim)); // expand outward a bit to reduce Z-fighting; doesn't seem to help much
 		vector<vert_norm_tc_color> verts;
 		add_sign_text_verts(text, text_bcube, dim, dir, text_color, verts, 0.0, 0.0, 1); // include_space_chars=1, since we need offsets for all characters
 		assert(verts.size() == 4*text_len);

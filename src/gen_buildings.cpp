@@ -1582,7 +1582,9 @@ void building_t::get_all_drawn_exterior_verts(building_draw_t &bdraw) { // exter
 			}
 			vect_vnctcc_t &text_verts(bdraw.get_text_verts());
 			unsigned text_verts_start(text_verts.size());
-			add_sign_text_verts_both_sides(name, *i, dim, dir, text_verts);
+			cube_t text_bcube(*i);
+			text_bcube.expand_in_dim(dim, 0.1*i->get_sz_dim(dim)); // expand outward a bit to reduce Z-fighting; doesn't seem to help much
+			add_sign_text_verts_both_sides(name, text_bcube, dim, dir, text_verts);
 
 			if (is_rotated()) {
 				point const center(bcube.get_cube_center());
