@@ -70,8 +70,9 @@ void road_mat_mgr_t::ensure_road_textures() {
 	if (inited) return;
 	string const img_names[NUM_RD_TIDS] = {"sidewalk.jpg", "straight_road.jpg", "bend_90.jpg", "int_3_way.jpg", "int_4_way.jpg",
 		                                   "parking_lot.png", "rail_tracks.jpg", "grass_park.jpg", "concrete.jpg"};
-	float const aniso[NUM_RD_TIDS] = {4.0, 16.0, 8.0, 8.0, 8.0, 4.0, 16.0};
-	for (unsigned i = 0; i < NUM_RD_TIDS; ++i) {tids[i] = get_texture_by_name(("roads/" + img_names[i]), 0, 0, 1, aniso[i]);}
+	float const aniso   [NUM_RD_TIDS] = {4.0, 16.0, 8.0, 8.0, 8.0, 4.0, 16.0};
+	int   const wrap_mir[NUM_RD_TIDS] = {1, 1, 0, 0, 0, 1, 1, 1, 1}; // bend and intersections are clamped, and the others are wrapped
+	for (unsigned i = 0; i < NUM_RD_TIDS; ++i) {tids[i] = get_texture_by_name(("roads/" + img_names[i]), 0, 0, wrap_mir[i], aniso[i]);}
 	sl_tid = get_texture_by_name("roads/traffic_light.png");
 	inited = 1;
 }
@@ -428,15 +429,15 @@ road_isec_t::road_isec_t(cube_t const &c, int rx, int ry, unsigned char conn_, b
 
 tex_range_t road_isec_t::get_tex_range(float ar) const {
 	switch (conn) {
-	case 5 : return tex_range_t(0.0, 0.0, -1.0,  1.0, 0, 0); // 2-way: MX
-	case 6 : return tex_range_t(0.0, 0.0,  1.0,  1.0, 0, 0); // 2-way: R0
-	case 9 : return tex_range_t(0.0, 0.0, -1.0, -1.0, 0, 0); // 2-way: MXMY
-	case 10: return tex_range_t(0.0, 0.0,  1.0, -1.0, 0, 0); // 2-way: MY
-	case 7 : return tex_range_t(0.0, 0.0,  1.0,  1.0, 0, 0); // 3-way: R0
-	case 11: return tex_range_t(0.0, 0.0, -1.0, -1.0, 0, 0); // 3-way: MY
-	case 13: return tex_range_t(0.0, 0.0,  1.0, -1.0, 0, 1); // 3-way: R90MY
-	case 14: return tex_range_t(0.0, 0.0, -1.0,  1.0, 0, 1); // 3-way: R90MX
-	case 15: return tex_range_t(0.0, 0.0,  1.0,  1.0, 0, 0); // 4-way: R0
+	case 5 : return tex_range_t(1.0, 0.0, 0.0, 1.0, 0, 0); // 2-way: MX
+	case 6 : return tex_range_t(0.0, 0.0, 1.0, 1.0, 0, 0); // 2-way: R0
+	case 9 : return tex_range_t(1.0, 1.0, 0.0, 0.0, 0, 0); // 2-way: MXMY
+	case 10: return tex_range_t(0.0, 1.0, 1.0, 0.0, 0, 0); // 2-way: MY
+	case 7 : return tex_range_t(0.0, 0.0, 1.0, 1.0, 0, 0); // 3-way: R0
+	case 11: return tex_range_t(1.0, 1.0, 0.0, 0.0, 0, 0); // 3-way: MY
+	case 13: return tex_range_t(0.0, 1.0, 1.0, 0.0, 0, 1); // 3-way: R90MY
+	case 14: return tex_range_t(1.0, 0.0, 0.0, 1.0, 0, 1); // 3-way: R90MX
+	case 15: return tex_range_t(0.0, 0.0, 1.0, 1.0, 0, 0); // 4-way: R0
 	default: assert(0);
 	}
 	return tex_range_t(0.0, 0.0, 1.0, 1.0); // never gets here
