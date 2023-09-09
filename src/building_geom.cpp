@@ -1773,6 +1773,8 @@ void building_t::place_roof_ac_units(unsigned num, float sz_scale, cube_t const 
 	if (num == 0) return;
 	vector3d cube_sz(sz_scale, 1.5*sz_scale, 1.2*sz_scale); // consistent across all AC units (note that x and y will be doubled)
 	if (rgen.rand_bool()) {swap(cube_sz.x, cube_sz.y);} // other orientation
+	unsigned const num_floors(round_fp(bounds.dz()/get_window_vspace()));
+	bool add_array(num_floors > 1);
 
 	for (unsigned i = 0; i < num; ++i) {
 		roof_obj_t c(ROOF_OBJ_AC);
@@ -1781,14 +1783,34 @@ void building_t::place_roof_ac_units(unsigned num, float sz_scale, cube_t const 
 		for (unsigned n = 0; n < 100 && !placed; ++n) { // limited to 100 attempts to prevent infinite loop
 			c.set_from_point(point(rgen.rand_uniform(bounds.x1(), bounds.x2()), rgen.rand_uniform(bounds.y1(), bounds.y2()), bounds.z2()));
 			c.expand_by_xy(cube_sz);
-			if (!bounds.contains_cube_xy(c)) continue; // not contained
 			c.z2() += cube_sz.z; // z2
+			if (!bounds.contains_cube_xy(c)) continue; // not contained
 			if (has_bcube_int_no_adj(c, avoid) || has_bcube_int_no_adj(c, details)) continue; // intersects avoid cubes or other detail objects (inc_adj=0)
 			placed = 1;
 		} // for n
 		if (!placed) break; // failed, exit loop
-		if ((rgen.rand() & 7) == 0) {swap(cube_sz.x, cube_sz.y);} // swap occasionally
 		details.push_back(c);
+		if ((rgen.rand() & 7) == 0) {swap(cube_sz.x, cube_sz.y);} // swap occasionally
+
+		if (add_array && rgen.rand_bool()) { // try to add a row or 2D grid of AC units
+			unsigned const nx(max(1U, (unsigned)round_fp(rgen.rand_uniform(0.5, 1.5)*sqrt(num_floors))));
+			unsigned const ny(max(1U, (unsigned)round_fp(rgen.rand_uniform(0.5, 1.5)*num_floors/nx)));
+			float const spacing(5.0*sz_scale);
+			unsigned num_added(1); // one was added above
+			
+			for (unsigned y = 0; y < ny; ++y) {
+				for (unsigned x = 0; x < nx; ++x) {
+					if (x == 0 && y == 0) continue; // already placed
+					roof_obj_t ac(c);
+					ac.translate(vector3d(x*spacing, y*spacing, 0.0));
+					if (!bounds.contains_cube_xy(ac) || has_bcube_int_no_adj(ac, avoid) || has_bcube_int_no_adj(ac, details)) continue;
+					details.push_back(ac);
+					++num_added;
+					++i; // this counts as an added AC unit
+				} // for y
+			} // for y
+			if (num_added >= nx*ny/2) {add_array = 0;} // we placed our array - done
+		}
 	} // for n
 }
 
