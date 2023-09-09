@@ -571,7 +571,9 @@ void car_draw_state_t::draw_car(car_t const &car, bool is_dlight_shadows) { // N
 		if (is_occluded(car.bcube)) return; // only check occlusion for expensive car models
 		vector3d const front_n(cross_product((pb[5] - pb[1]), (pb[0] - pb[1])).get_norm()*sign);
 		bool const low_detail(!shadow_only && dist_val > 0.035);
-		car_model_loader.draw_model(s, center, car.bcube, front_n, color, xlate, car.model_id, shadow_only, low_detail);
+		cube_t non_rot_bcube(car.bcube);
+		set_wall_width(non_rot_bcube, car.bcube.zc(), 0.5*car.height, 2);
+		car_model_loader.draw_model(s, center, non_rot_bcube, front_n, color, xlate, car.model_id, shadow_only, low_detail);
 	}
 	else { // draw simple 1-2 cube model
 		quad_batch_draw &qbd(qbds[emit_now]);

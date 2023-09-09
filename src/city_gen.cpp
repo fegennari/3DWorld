@@ -1757,7 +1757,7 @@ public:
 			float const road_len(road_bcube.get_sz_dim(dim));
 			assert(road_len > TOLERANCE);
 			float const t((car_pos - road_bcube.d[dim][0])/road_len); // car pos along road in (0.0, 1.0)
-			float const road_z(road_bcube.d[2][slope] + t*(road_bcube.d[2][!slope] - road_bcube.d[2][slope]));
+			float const road_z(t*road_bcube.d[2][!slope] + (1.0 - t)*road_bcube.d[2][slope]);
 			float const car_len(car.get_length());
 			car.dz = ((slope ^ car.dir) ? 1.0 : -1.0)*road_bcube.dz()*(car_len/road_len);
 			car.bcube.z1() = road_z - 0.5*fabs(car.dz);

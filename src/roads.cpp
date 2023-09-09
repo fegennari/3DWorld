@@ -97,7 +97,7 @@ road_t::road_t(point const &s, point const &e, float width, bool dim_, bool slop
 void road_t::add_road_quad(quad_batch_draw &qbd, colorRGBA const &color, float ar) const { // specialized here for sloped roads (road segments and railroad tracks)
 	if (z1() == z2()) {add_flat_city_quad(*this, qbd, color, ar); return;}
 	bool const s(slope ^ dim);
-	point pts[4] = {point(x1(), y1(), d[2][!s]), point(x2(), y1(), d[2][!s]), point(x2(), y2(), d[2][ s]), point(x1(), y2(), d[2][ s])};
+	point pts[4] = {point(x1(), y1(), d[2][!s]), point(x2(), y1(), d[2][!s]), point(x2(), y2(), d[2][s]), point(x1(), y2(), d[2][s])};
 	if (!dim) {swap(pts[0].z, pts[2].z);}
 	vector3d const normal(cross_product((pts[2] - pts[1]), (pts[0] - pts[1])).get_norm());
 	qbd.add_quad_pts(pts, color, normal, get_tex_range(ar));
