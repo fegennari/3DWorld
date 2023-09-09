@@ -14,7 +14,7 @@ bool some_person_has_idle_animation(0);
 
 extern bool tt_fire_button_down;
 extern int display_mode, game_mode, animate2, frame_counter, camera_surf_collide;
-extern float FAR_CLIP;
+extern float fticks, FAR_CLIP;
 extern double camera_zh;
 extern point pre_smap_player_pos;
 extern cube_t smap_light_clip_cube;

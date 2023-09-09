@@ -1598,7 +1598,7 @@ private:
 			else if (car.car_in_front && car.car_in_front->get_wait_time_secs() > 60.0) {choose_another_dir(car, rgen, isec);} // car in front has been stopped for > 60s
 		}
 		car.stopped_at_light = 1;
-		car.decelerate_fast();
+		car.stop();
 		float const wait_secs(car.get_wait_time_secs());
 
 		if (wait_secs > 60.0 && yellow_light && isec.contains_pt_xy(car.get_center())) { // car in the intersection
@@ -1837,7 +1837,7 @@ public:
 				car.front_car_turn_dir = TURN_UNSPEC; // reset state now that it's been used
 				car.stopped_for_ssign  = 0; // reset for this intersection
 				car.stopped_at_light   = (isec.red_or_yellow_light(car) || !car_rn.car_can_go_now(car, global_rn));
-				if (car.stopped_at_light) {car.decelerate_fast();}
+				if (car.stopped_at_light) {car.stop();}
 				if (car.turn_dir != TURN_NONE) {car.begin_turn();} // capture car centerline before the turn
 			}
 		}

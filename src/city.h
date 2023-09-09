@@ -42,8 +42,6 @@ float const SIDEWALK_WIDTH       = 0.1; // relative to road texture
 vector3d const CAR_SIZE(0.30, 0.13, 0.08); // {length, width, height} in units of road width
 float const CAR_RADIUS_SCALE(CAR_SIZE.mag()/CAR_SIZE.z);
 
-extern float fticks;
-
 
 inline bool is_isect(unsigned type) {return (type >= TYPE_ISEC2 && type <= TYPE_ISEC4);}
 inline int encode_neg_ix(unsigned ix) {return -(int(ix)+1);}
@@ -173,9 +171,9 @@ struct car_t : public car_base_t, public waiting_obj_t { // size = 100
 	void move(float speed_mult);
 	void set_target_speed(float speed_factor);
 	void maybe_accelerate(float mult=0.02);
-	void accelerate(float mult=0.02) {cur_speed = min(get_max_speed(), (cur_speed + mult*fticks*max_speed));}
-	void decelerate(float mult=0.05) {cur_speed = max(0.0f, (cur_speed - mult*fticks*max_speed));}
-	void decelerate_fast() {decelerate(10.0);} // Note: large decel to avoid stopping in an intersection
+	void accelerate(float mult=0.02);
+	void decelerate(float mult=0.05);
+	void decelerate_fast();
 	void park() {cur_speed = max_speed = 0.0;}
 	void stop() {cur_speed = 0.0;} // immediate stop
 	void sleep(rand_gen_t &rgen, float min_time_secs);

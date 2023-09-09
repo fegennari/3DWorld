@@ -9,7 +9,7 @@ float const SLIGHT_DIST_TO_CORNER_SCALE = 3.0; // larger is closer to the road s
 
 extern bool tt_fire_button_down;
 extern int frame_counter, game_mode, display_mode;
-extern float FAR_CLIP;
+extern float fticks, FAR_CLIP;
 extern vector<light_source> dl_sources;
 extern city_params_t city_params;
 

@@ -14,7 +14,7 @@ float const MIN_CAR_STOP_SEP   = 0.25; // in units of car lengths
 
 extern bool tt_fire_button_down, enable_hcopter_shadows, city_action_key, camera_in_building, player_in_attic;
 extern int display_mode, game_mode, map_mode, animate2, player_in_basement, player_in_closet;
-extern float FAR_CLIP;
+extern float fticks, FAR_CLIP;
 extern point pre_smap_player_pos;
 extern vector<light_source> dl_sources;
 extern city_params_t city_params;
@@ -137,6 +137,15 @@ void car_t::maybe_accelerate(float mult) {
 		}
 	}
 	accelerate(mult);
+}
+void car_t::accelerate(float mult) {
+	cur_speed = min(get_max_speed(), (cur_speed + mult*fticks*max_speed));
+}
+void car_t::decelerate(float mult) {
+	cur_speed = max(0.0f, (cur_speed - mult*fticks*max_speed));
+}
+void car_t::decelerate_fast() {
+	decelerate(10.0); // Note: large decel to avoid stopping in an intersection
 }
 
 void car_t::sleep(rand_gen_t &rgen, float min_time_secs) {

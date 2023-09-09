@@ -16,7 +16,7 @@ object_model_loader_t building_obj_model_loader;
 extern bool camera_in_building;
 extern int display_mode, frame_counter, animate2, player_in_basement;
 extern unsigned room_mirror_ref_tid;
-extern float office_chair_rot_rate, cur_dlight_pcf_offset, building_ambient_scale;
+extern float fticks, office_chair_rot_rate, cur_dlight_pcf_offset, building_ambient_scale;
 extern point pre_smap_player_pos;
 extern cube_t smap_light_clip_cube;
 extern pos_dir_up camera_pdu;
