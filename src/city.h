@@ -53,49 +53,42 @@ inline float signed_rand_hash(float to_hash) {return 0.5*(rand_hash(to_hash) - 1
 
 struct city_params_t {
 
-	unsigned num_cities, num_samples, num_conn_tries, city_size_min, city_size_max, city_border, road_border, slope_width, num_rr_tracks, park_rate;
-	float road_width, road_spacing, road_spacing_rand, road_spacing_xy_add, conn_road_seg_len, max_road_slope, max_track_slope, residential_probability;
-	unsigned make_4_way_ints; // 0=all 3-way intersections; 1=allow 4-way; 2=all connector roads must have at least a 4-way on one end; 3=only 4-way (no straight roads)
-	unsigned add_tlines; // 0=never, 1=always, 2=only when there are no secondary buildings
-	bool assign_house_plots, new_city_conn_road_alg;
+	unsigned num_cities=0, num_samples=100, num_conn_tries=50, city_size_min=0, city_size_max=0, city_border=0, road_border=0, slope_width=0, num_rr_tracks=0, park_rate=0;
+	float road_width=0.0, road_spacing=0.0, road_spacing_rand=0.0, road_spacing_xy_add=0.0, conn_road_seg_len=1000.0, max_road_slope=1.0, max_track_slope=1.0, residential_probability=0.0;
+	unsigned make_4_way_ints=0; // 0=all 3-way intersections; 1=allow 4-way; 2=all connector roads must have at least a 4-way on one end; 3=only 4-way (no straight roads)
+	unsigned add_tlines=2; // 0=never, 1=always, 2=only when there are no secondary buildings
+	bool assign_house_plots=0, new_city_conn_road_alg=0;
 	// cars
-	unsigned num_cars;
-	float car_speed, traffic_balance_val, new_city_prob, max_car_scale;
-	bool enable_car_path_finding, convert_model_files, cars_use_driveways;
+	unsigned num_cars=0;
+	float car_speed=0.0, traffic_balance_val=0.5, new_city_prob=1.0, max_car_scale=1.0;
+	bool enable_car_path_finding=0, convert_model_files=0, cars_use_driveways=0;
 	vector<city_model_t> car_model_files, ped_model_files, hc_model_files;
 	// parking lots
-	unsigned min_park_spaces, min_park_rows;
-	float min_park_density, max_park_density;
+	unsigned min_park_spaces=12, min_park_rows=1;
+	float min_park_density=0.0, max_park_density=1.0;
 	// lighting
-	bool car_shadows;
-	unsigned max_lights, max_shadow_maps, smap_size;
+	bool car_shadows=0;
+	unsigned max_lights=1024, max_shadow_maps=0, smap_size=0;
 	// trees
-	unsigned max_trees_per_plot;
-	float tree_spacing;
+	unsigned max_trees_per_plot=0;
+	float tree_spacing=1.0;
 	// detail objects
-	unsigned max_benches_per_plot;
+	unsigned max_benches_per_plot=0;
 	// pedestrians
-	unsigned num_peds;
-	float ped_speed;
-	bool ped_respawn_at_dest, use_animated_people;
-	bool any_model_has_animations; // calculated, not specified in the config file
+	unsigned num_peds=0;
+	float ped_speed=0.0;
+	bool ped_respawn_at_dest=0, use_animated_people=0;
+	bool any_model_has_animations=0; // calculated, not specified in the config file
 	string default_anim_name;
 	// buildings; maybe should be building params, but we have the model loading code here
 	vector<city_model_t> building_models[NUM_OBJ_MODELS]; // multiple model files per type
 	// use for option reading
-	int read_error_flag;
+	int read_error_flag=0;
 	kw_to_val_map_t<bool     >  kwmb;
 	kw_to_val_map_t<unsigned >  kwmu;
 	kw_to_val_map_float_check_t kwmr;
 
-	city_params_t() : num_cities(0), num_samples(100), num_conn_tries(50), city_size_min(0), city_size_max(0), city_border(0), road_border(0), slope_width(0),
-		num_rr_tracks(0), park_rate(0), road_width(0.0), road_spacing(0.0), road_spacing_rand(0.0), road_spacing_xy_add(0.0), conn_road_seg_len(1000.0),
-		max_road_slope(1.0), max_track_slope(1.0), residential_probability(0.0), make_4_way_ints(0), add_tlines(2), assign_house_plots(0), new_city_conn_road_alg(0), num_cars(0),
-		car_speed(0.0), traffic_balance_val(0.5), new_city_prob(1.0), max_car_scale(1.0), enable_car_path_finding(0), convert_model_files(0), cars_use_driveways(0),
-		min_park_spaces(12), min_park_rows(1), min_park_density(0.0), max_park_density(1.0), car_shadows(0), max_lights(1024), max_shadow_maps(0), smap_size(0),
-		max_trees_per_plot(0), tree_spacing(1.0), max_benches_per_plot(0), num_peds(0), ped_speed(0.0), ped_respawn_at_dest(0), use_animated_people(0),
-		any_model_has_animations(0), read_error_flag(0),
-		kwmb(read_error_flag, "city"), kwmu(read_error_flag, "city"), kwmr(read_error_flag, "city") {init_kw_maps();}
+	city_params_t() : kwmb(read_error_flag, "city"), kwmu(read_error_flag, "city"), kwmr(read_error_flag, "city") {init_kw_maps();}
 	bool enabled() const {return (num_cities > 0 && city_size_min > 0);}
 	bool roads_enabled() const {return (road_width > 0.0 && road_spacing > 0.0);}
 	float get_road_ar () const {return round(road_spacing/road_width);} // round to nearest texture multiple
@@ -144,15 +137,12 @@ struct car_base_t { // the part needed for the pedestrian interface (size = 48)
 
 struct car_t : public car_base_t, public waiting_obj_t { // size = 100
 	cube_t prev_bcube;
-	bool is_truck, entering_city, in_tunnel, dest_valid, destroyed, in_reverse, engine_running;
-	uint8_t color_id, front_car_turn_dir, model_id;
-	uint16_t dest_city, dest_isec;
-	float height, dz, rot_z, turn_val, waiting_pos, wake_time;
-	car_t const *car_in_front;
+	bool is_truck=0, entering_city=0, in_tunnel=0, dest_valid=0, destroyed=0, in_reverse=0, engine_running=0;
+	uint8_t color_id=0, front_car_turn_dir=TURN_UNSPEC, model_id=0;
+	uint16_t dest_city=0, dest_isec=0;
+	float height=0.0, dz=0.0, rot_z=0.0, turn_val=0.0, waiting_pos=0.0, wake_time=0.0;
+	car_t const *car_in_front=nullptr;
 
-	car_t() : prev_bcube(all_zeros), is_truck(0), entering_city(0), in_tunnel(0), dest_valid(0), destroyed(0), in_reverse(0), engine_running(0),
-		color_id(0), front_car_turn_dir(TURN_UNSPEC), model_id(0), dest_city(0), dest_isec(0), height(0.0), dz(0.0), rot_z(0.0),
-		turn_val(0.0), waiting_pos(0.0), wake_time(0.0), car_in_front(nullptr) {}
 	void set_bcube(point const &center, vector3d const &sz);
 	bool is_valid   () const {return !bcube.is_all_zeros();}
 	bool is_sleeping() const {return (wake_time > 0.0);}
@@ -229,16 +219,15 @@ struct helicopter_t {
 	vector3d dir;
 	// dynamic state for moving helicopters
 	vector3d velocity;
-	float wait_time; // time to wait before takeoff
-	float fly_zval; // zval required for flight to avoid buildings and terrain
-	float blade_rot;
-	unsigned dest_hp; // destination (or current) helipad
-	unsigned state, model_id;
-	bool dynamic, dynamic_shadow;
+	float wait_time=0.0; // time to wait before takeoff
+	float fly_zval=0.0; // zval required for flight to avoid buildings and terrain
+	float blade_rot=0.0;
+	unsigned dest_hp=0; // destination (or current) helipad
+	unsigned state=STATE_WAIT, model_id=0;
+	bool dynamic=0, dynamic_shadow=0;
 
 	helicopter_t(cube_t const &bcube_, vector3d const &dir_, unsigned model_id_, unsigned dest_hp_, bool dynamic_) :
-		bcube(bcube_), dir(dir_), velocity(zero_vector), wait_time(0.0), fly_zval(0.0), blade_rot(0.0),
-		dest_hp(dest_hp_), state(STATE_WAIT), model_id(model_id_), dynamic(dynamic_), dynamic_shadow(0) {}
+		bcube(bcube_), dir(dir_), dest_hp(dest_hp_), model_id(model_id_), dynamic(dynamic_) {}
 	point get_landing_pt() const {return cube_bot_center(bcube);}
 	void invalidate_tile_shadow_map(vector3d const &shadow_offset, bool repeat_next_frame) const;
 };
@@ -284,22 +273,22 @@ struct road_t : public cube_t {
 
 struct road_seg_t : public road_t {
 	unsigned short road_ix, conn_ix[2], conn_type[2]; // {dim=0, dim=1}
-	mutable unsigned short car_count; // can be written to during car update logic
+	mutable unsigned short car_count=0; // can be written to during car update logic
 
 	void init_ixs() {conn_ix[0] = conn_ix[1] = 0; conn_type[0] = conn_type[1] = CONN_TYPE_NONE;}
-	road_seg_t(road_t const &r, unsigned rix) : road_t(r), road_ix(rix), car_count(0) {init_ixs();}
-	road_seg_t(cube_t const &c, unsigned rix, bool dim_, bool slope_=0) : road_t(c, dim_, slope_), road_ix(rix), car_count(0) {init_ixs();}
+	road_seg_t(road_t const &r, unsigned rix) : road_t(r), road_ix(rix) {init_ixs();}
+	road_seg_t(cube_t const &c, unsigned rix, bool dim_, bool slope_=0) : road_t(c, dim_, slope_), road_ix(rix) {init_ixs();}
 	void next_frame() {car_count = 0;}
 };
 
 struct driveway_t : public oriented_cube_t {
 	// dim/dir: direction to road; d[dim][dir] is the edge shared with the road
 	// in_use is modified by car_manager in a different thread - must be mutable, maybe should be atomic
-	mutable uint8_t in_use; // either reserves the spot, or a car is parked there; 1=temporary, 2=permanent
-	mutable unsigned last_ped_frame;
-	unsigned plot_ix;
-	driveway_t() : in_use(0), last_ped_frame(0), plot_ix(0) {}
-	driveway_t(cube_t const &c, bool dim_, bool dir_, unsigned pix) : oriented_cube_t(c, dim_, dir_), in_use(0), last_ped_frame(0), plot_ix(pix) {}
+	mutable uint8_t in_use=0; // either reserves the spot, or a car is parked there; 1=temporary, 2=permanent
+	mutable unsigned last_ped_frame=0;
+	unsigned plot_ix=0;
+	driveway_t() {}
+	driveway_t(cube_t const &c, bool dim_, bool dir_, unsigned pix) : oriented_cube_t(c, dim_, dir_), plot_ix(pix) {}
 	float get_edge_at_road() const {return d[dim][dir];}
 	void mark_ped_this_frame() const;
 	bool has_recent_ped() const;
@@ -316,8 +305,8 @@ struct dw_query_t {
 
 struct road_plot_t : public cube_t {
 	uint8_t xpos, ypos; // position within the city grid
-	bool is_residential, has_parking, is_park;
-	road_plot_t(cube_t const &c, uint8_t xpos_, uint8_t ypos_, bool is_res=0) : cube_t(c), xpos(xpos_), ypos(ypos_), is_residential(is_res), has_parking(0), is_park(0) {}
+	bool is_residential=0, has_parking=0, is_park=0;
+	road_plot_t(cube_t const &c, uint8_t xpos_, uint8_t ypos_, bool is_res=0) : cube_t(c), xpos(xpos_), ypos(ypos_), is_residential(is_res) {}
 	tex_range_t get_tex_range(float ar) const {return tex_range_t(0.0, 0.0, ar, ar);}
 };
 
@@ -405,13 +394,12 @@ namespace stoplight_ns {
 } // end stoplight_ns
 
 class hedge_draw_t : public vao_manager_t {
-	unsigned num_verts;
+	unsigned num_verts=0;
 	cube_t bcube;
 	vect_cube_t to_draw;
 
 	void create(cube_t const &bc);
 public:
-	hedge_draw_t() : num_verts(0) {}
 	bool empty() const {return to_draw.empty();}
 	void add(cube_t const &bc) {to_draw.push_back(bc);}
 	void draw_and_clear(shader_t &s);
@@ -421,18 +409,17 @@ struct draw_state_t {
 	shader_t s;
 	vector3d xlate;
 	point camera_bs;
-	bool use_building_lights;
-	unsigned pass_ix;
-	float draw_tile_dist;
+	bool use_building_lights=0;
+	unsigned pass_ix=0;
+	float draw_tile_dist=0.0;
 	hedge_draw_t hedge_draw;
 	vector<vert_wrap_t> temp_verts; // used for sphere drawing
 protected:
-	bool use_smap, use_bmap, shadow_only, use_dlights, emit_now;
+	bool use_smap=0, use_bmap=0, shadow_only=0, use_dlights=0, emit_now=0;
 	point_sprite_drawer_sized light_psd; // for car/traffic lights
 	string label_str;
 	point label_pos;
 public:
-	draw_state_t() : use_building_lights(0), pass_ix(0), draw_tile_dist(0.0), use_smap(0), use_bmap(0), shadow_only(0), use_dlights(0), emit_now(0) {}
  	virtual ~draw_state_t() {}
 	void set_enable_normal_map(bool val) {use_bmap = val;}
 	bool normal_maps_enabled() const {return use_bmap;}
@@ -564,9 +551,9 @@ struct road_connector_t : public road_t, public streetlights_t {
 };
 
 struct bridge_t : public road_connector_t {
-	bool make_bridge;
+	bool make_bridge=0;
 
-	bridge_t(road_t const &road) : road_connector_t(road), make_bridge(0) {}
+	bridge_t(road_t const &road) : road_connector_t(road) {}
 	void add_streetlights() {road_connector_t::add_streetlights(4, 0, 0.05, get_start_z(), get_end_z());} // 4 per side
 	bool proc_sphere_coll(point &center, point const &prev, float sradius, float prev_frame_zval, vector3d const &xlate, vector3d *cnorm) const;
 	bool line_intersect(point const &p1, point const &p2, float &t) const;
@@ -574,9 +561,9 @@ struct bridge_t : public road_connector_t {
 
 struct tunnel_t : public road_connector_t {
 	cube_t ends[2];
-	float radius, height, facade_height[2];
+	float radius=0.0, height=0.0, facade_height[2]={};
 
-	tunnel_t(road_t const &road) : road_connector_t(road), radius(0.0), height(0.0) {facade_height[0] = facade_height[1] = 0.0f;}
+	tunnel_t(road_t const &road) : road_connector_t(road) {}
 	bool enabled() const {return (radius > 0.0);}
 	void init(point const &start, point const &end, float radius_, float end_length, bool dim);
 	void add_streetlights() {road_connector_t::add_streetlights(2, 1, -0.15, ends[0].z1(), ends[1].z1());} // 2 per side, staggered
@@ -613,12 +600,11 @@ public: // used directly by stoplight drawing
 	quad_batch_draw qbd_sl, qbd_untextured; // {stoplight, untextured}; could add qbd_ssign here as well for stop signs
 	vector<vert_norm_comp_tc_color> text_verts;
 private:
-	float ar;
+	float ar=1.0;
 
 	void draw_city_region_int(quad_batch_draw &cache, unsigned type_ix);
 	void draw_transmission_line_wires(point const &p1, point const &p2, point const wire_pts1[3], point const wire_pts2[3], float radius);
 public:
-	road_draw_state_t() : ar(1.0) {}
 	void pre_draw(vector3d const &xlate_, bool use_dlights_, bool shadow_only, bool always_setup_shader=0);
 	virtual void draw_unshadowed();
 	virtual void post_draw();
@@ -688,14 +674,12 @@ class city_spectate_manager_t;
 
 struct pedestrian_t : public person_base_t { // city pedestrian
 	point dest_car_center; // since cars are sorted each frame, we can't find their positions by index so we need to cache them here
-	unsigned plot, next_plot, dest_plot, dest_bldg; // Note: can probably be made unsigned short later, though these are global plot and building indices
-	unsigned short city, colliding_ped;
+	unsigned plot=0, next_plot=0, dest_plot=0, dest_bldg=0; // Note: can probably be made unsigned short later, though these are global plot and building indices
+	unsigned short city=0, colliding_ped=0;
 	unsigned char stuck_count;
-	bool collided, ped_coll, in_the_road, at_crosswalk, at_dest, has_dest_bldg, has_dest_car, destroyed;
+	bool collided=0, ped_coll=0, in_the_road=0, at_crosswalk=0, at_dest=0, has_dest_bldg=0, has_dest_car=0, destroyed=0;
 
-	pedestrian_t(float radius_) : person_base_t(radius_), plot(0), next_plot(0), dest_plot(0), dest_bldg(0), city(0), colliding_ped(0),
-		stuck_count(0), collided(0), ped_coll(0), in_the_road(0), at_crosswalk(0), at_dest(0), has_dest_bldg(0), has_dest_car(0), destroyed(0) {}
-
+	pedestrian_t(float radius_) : person_base_t(radius_) {}
 	bool operator<(pedestrian_t const &ped) const {return ((city == ped.city) ? (plot < ped.plot) : (city < ped.city));} // currently only compares city + plot
 	std::string str() const;
 	float get_coll_radius() const {return 0.6f*radius;} // using a smaller radius to allow peds to get close to each other
@@ -736,7 +720,6 @@ class car_manager_t { // and trucks and helicopters
 		unsigned start, cur_city, first_parked;
 		car_block_t(unsigned s, unsigned c) : start(s), cur_city(c), first_parked(0) {}
 	};
-
 	struct helipad_t {
 		cube_t bcube;
 		bool in_use, reserved;
@@ -753,8 +736,8 @@ class car_manager_t { // and trucks and helicopters
 	car_draw_state_t dstate;
 	rand_gen_t rgen;
 	vector<unsigned> entering_city;
-	unsigned first_parked_car;
-	bool car_destroyed;
+	unsigned first_parked_car=0;
+	bool car_destroyed=0;
 
 	cube_t get_cb_bcube(car_block_t const &cb ) const;
 	road_isec_t const &get_car_isec(car_t const &car) const;
@@ -771,8 +754,7 @@ class car_manager_t { // and trucks and helicopters
 	void draw_helicopters(bool shadow_only);
 public:
 	friend class city_spectate_manager_t;
-	car_manager_t(city_road_gen_t const &road_gen_) :
-		road_gen(road_gen_), dstate(car_model_loader, helicopter_model_loader), first_parked_car(0), car_destroyed(0) {}
+	car_manager_t(city_road_gen_t const &road_gen_) : road_gen(road_gen_), dstate(car_model_loader, helicopter_model_loader) {}
 	bool empty() const {return cars.empty();}
 	void clear() {cars.clear(); car_blocks.clear();}
 	bool has_car_models() const {return !car_model_loader.empty();}
@@ -807,8 +789,8 @@ unsigned const MAX_PATH_DEPTH = 32;
 
 class path_finder_t {
 	struct path_t : public vector<point> {
-		float length;
-		path_t() : length(0.0) {}
+		float length=0.0;
+		path_t() {}
 		path_t(point const &a, point const &b) {init(a, b);} // line constructor
 		void init(point const &a, point const &b) {length = p2p_dist(a, b); push_back(a); push_back(b);}
 		float calc_length_up_to(const_iterator i) const;
@@ -818,18 +800,18 @@ class path_finder_t {
 	vect_cube_t avoid;
 	vector<uint8_t> used;
 	path_t path_stack[MAX_PATH_DEPTH];
-	float gap;
+	float gap=0.0;
 	point pos, dest;
 	cube_t plot_bcube;
 	path_t cur_path, best_path, partial_path;
-	bool debug;
+	bool debug=0;
 
 	bool add_pt_to_path(point const &p, path_t &path) const;
 	bool add_pts_around_cube_xy(path_t &path, path_t const &cur_path, path_t::const_iterator p, cube_t const &c, bool dir);
 	void find_best_path_recur(path_t const &cur_path, unsigned depth);
 	bool shorten_path(path_t &path) const;
 public:
-	path_finder_t(bool debug_=0) : gap(0.0f), debug(debug_) {}
+	path_finder_t(bool debug_=0) : debug(debug_) {}
 	vect_cube_t &get_avoid_vector() {return avoid;}
 	vector<point> const &get_best_path() const {return (found_complete_path() ? best_path : partial_path);}
 	bool found_complete_path() const {return (!best_path.empty());}
@@ -858,9 +840,9 @@ class ped_manager_t { // pedestrians
 	vector<person_t const *> to_draw;
 	rand_gen_t rgen;
 	ao_draw_state_t dstate;
-	int selected_ped_ssn;
-	unsigned animation_id;
-	bool ped_destroyed, need_to_sort_peds, prev_choose_zombie;
+	int selected_ped_ssn=-1;
+	unsigned animation_id=1;
+	bool ped_destroyed=0, need_to_sort_peds=0, prev_choose_zombie=0;
 
 	void assign_ped_model(person_base_t &ped);
 	void maybe_reassign_ped_model(person_base_t &ped);
@@ -900,8 +882,7 @@ public:
 	void get_parked_car_bcubes_for_plot(cube_t const &plot, unsigned city, vect_cube_t &car_bcubes) const;
 	bool choose_dest_parked_car(unsigned city_id, unsigned &plot_id, unsigned &car_ix, point &car_center);
 public:
-	ped_manager_t(city_road_gen_t const &road_gen_, car_manager_t const &car_manager_) :
-		road_gen(road_gen_), car_manager(car_manager_), selected_ped_ssn(-1), animation_id(1), ped_destroyed(0), need_to_sort_peds(0), prev_choose_zombie(0) {}
+	ped_manager_t(city_road_gen_t const &road_gen_, car_manager_t const &car_manager_) : road_gen(road_gen_), car_manager(car_manager_) {}
 	void next_animation();
 	static float get_ped_radius();
 	void clear() {peds.clear(); by_city.clear();}
