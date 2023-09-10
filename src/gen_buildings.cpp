@@ -20,6 +20,7 @@ bool const ADD_ROOM_SHADOWS         = 1; // for room lights
 bool const DRAW_EXT_REFLECTIONS     = 1; // draw building exteriors in mirror reflections; slower, but looks better; not shadowed
 float const WIND_LIGHT_ON_RAND      = 0.08;
 float const BASEMENT_ENTRANCE_SCALE = 0.33;
+unsigned const NO_SHADOW_WHITE_TEX  = BLACK_TEX; // alias to differentiate shadowed vs. unshadowed untextured objects
 
 bool camera_in_building(0), interior_shadow_maps(0), player_is_hiding(0), player_in_unlit_room(0), player_in_attic(0), building_has_open_ext_door(0);
 int player_in_basement(0); // 0=no, 1=below ground level, 2=in basement and not on stairs, 3=in extended basement
@@ -77,7 +78,9 @@ void tid_nm_pair_t::set_gl(tid_nm_pair_dstate_t &state) const {
 	if (tid == FONT_TEXTURE_ID) {text_drawer::bind_font_texture();}
 	else if (tid == REFLECTION_TEXTURE_ID) {
 		if (bind_reflection_shader()) return;
-	} else {select_texture(tid);}
+	}
+	else if (tid == NO_SHADOW_WHITE_TEX) {select_texture(WHITE_TEX);}
+	else {select_texture(tid);}
 	bool const has_normal_map(get_nm_tid() != FLAT_NMAP_TEX);
 	if (has_normal_map) {select_texture(get_nm_tid(), 5);} // else we set bump_map_mag=0.0
 	state.set_for_shader(has_normal_map ? 1.0 : 0.0); // enable or disable normal map (only ~25% of calls have a normal map)
@@ -195,8 +198,8 @@ public:
 
 	void init() {
 		if (!tid_to_slot_ix.empty()) return; // already inited
-		unsigned const num_special_tids = 5;
-		int const special_tids[num_special_tids] = {WHITE_TEX, FENCE_TEX, PANELING_TEX, TILE_TEX, WOOD_TEX}; // for elevators, etc.
+		unsigned const num_special_tids = 6;
+		int const special_tids[num_special_tids] = {WHITE_TEX, NO_SHADOW_WHITE_TEX, FENCE_TEX, PANELING_TEX, TILE_TEX, WOOD_TEX}; // for elevators, etc.
 		tid_to_slot_ix.push_back(0); // untextured case
 		register_tid(building_texture_mgr.get_window_tid());
 		register_tid(building_texture_mgr.get_hdoor_tid());
@@ -1413,8 +1416,8 @@ void building_t::get_all_drawn_exterior_verts(building_draw_t &bdraw) { // exter
 		else if (i->type == tquad_with_ix_t::TYPE_SOLAR) {
 			bdraw.add_tquad(*this, *i, bcube, building_texture_mgr.get_solarp_tid(), colorRGBA(0.6, 0.6, 0.6)); // panel is too bright compared to the roof, use a darker color
 		}
-		else if (i->type == tquad_with_ix_t::TYPE_TRIM) {
-			bdraw.add_tquad(*this, *i, bcube, tid_nm_pair_t(), LT_GRAY); // untextured
+		else if (i->type == tquad_with_ix_t::TYPE_TRIM) { // solar panel edges
+			bdraw.add_tquad(*this, *i, bcube, tid_nm_pair_t(NO_SHADOW_WHITE_TEX), LT_GRAY); // untextured, no shadows
 		}
 		else if (is_house && (i->type == tquad_with_ix_t::TYPE_ROOF_PEAK || i->type == tquad_with_ix_t::TYPE_ROOF_SLOPE) && i->npts == 4) {
 			// house peaked/sloped trapezoid roof: extend lower zvals out a bit
@@ -1506,7 +1509,7 @@ void building_t::get_all_drawn_exterior_verts(building_draw_t &bdraw) { // exter
 						bot_surf.pts[0][ top_dim] = bot_surf.pts[3][ top_dim] = bot_edge_bcube.d[top_dim][0];
 						bot_surf.pts[1][ top_dim] = bot_surf.pts[2][ top_dim] = bot_edge_bcube.d[top_dim][1];
 						if (d ^ top_dim ^ 1) {std::reverse(bot_surf.pts, bot_surf.pts+4);} // reverse to get the correct winding order
-						tid_nm_pair_t const bot_tex(-1); // untextured, for now
+						tid_nm_pair_t const bot_tex(NO_SHADOW_WHITE_TEX); // untextured, no shadows
 						bdraw.add_tquad(*this, bot_surf, bcube, bot_tex, WHITE);
 
 						for (unsigned e = 0; e < 2; ++e) { // add triangle end caps
@@ -1562,7 +1565,7 @@ void building_t::get_all_drawn_exterior_verts(building_draw_t &bdraw) { // exter
 			color = side_color;
 		}
 		else if (i->type == ROOF_OBJ_SIGN || i->type == ROOF_OBJ_SIGN_CONN) {
-			color = WHITE; // also untextured
+			color = WHITE; // also untextured, but casts shadows
 		}
 		else { // otherwise use roof color
 			tex   = mat.roof_tex.get_scaled_version(1.5);
@@ -3552,7 +3555,7 @@ public:
 					for (auto i = g->bc_ixs.begin(); i != g->bc_ixs.end(); ++i) {get_building(i->ix).get_all_drawn_exterior_verts(building_draw_vbo);} // exterior
 				}
 				// disable shadows for materials that don't need them
-				building_draw_vbo.set_no_shadows_for_tex(tid_nm_pair_t()); // for roof and solar panel trim
+				building_draw_vbo.set_no_shadows_for_tex(tid_nm_pair_t(NO_SHADOW_WHITE_TEX)); // for roof and solar panel trim
 				building_draw_vbo.set_no_shadows_for_tex(building_texture_mgr.get_helipad_tid());
 				//building_draw_vbo.set_no_shadows_for_tex(building_texture_mgr.get_solarp_tid()); // should solar panels cast shadows? they're pretty thin for shadow casters
 				building_draw_vbo.set_no_shadows_for_tex(building_texture_mgr.get_bdoor2_tid());
