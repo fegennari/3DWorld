@@ -1516,7 +1516,8 @@ public:
 		float const max_speed(0.1f*car.max_speed + (dist_to_end/stop_dist)*car.get_max_speed());
 		assert(max_speed > 0.0);
 		if (car.cur_speed < max_speed) return 0;
-		car.cur_speed = max_speed; // clamp to the max
+		car.cur_speed  = max_speed; // clamp to the max
+		car.is_braking = 1;
 		return 1;
 	}
 	void find_car_next_seg(car_t &car, vector<road_network_t> const &road_networks, road_network_t const &global_rn) const {
@@ -1715,6 +1716,7 @@ public:
 	void update_car(car_t &car, vector<car_t> const &cars, rand_gen_t &rgen, vector<road_network_t> const &road_networks, road_network_t const &global_rn) const {
 		assert(car.cur_city == city_id);
 		if (car.is_parked()) return; // stopped, no update (for now)
+		car.is_braking = 0; // reset for this frame
 			
 		if (car.cur_road_type == TYPE_DRIVEWAY) { // moving in a driveway
 			if (run_car_in_driveway_logic(car, cars, rgen)) return;

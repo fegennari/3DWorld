@@ -142,7 +142,8 @@ void car_t::accelerate(float mult) {
 	cur_speed = min(get_max_speed(), (cur_speed + mult*fticks*max_speed));
 }
 void car_t::decelerate(float mult) {
-	cur_speed = max(0.0f, (cur_speed - mult*fticks*max_speed));
+	cur_speed  = max(0.0f, (cur_speed - mult*fticks*max_speed));
+	//is_braking = 1; // no, too much brake light toggling when following a slower car
 }
 void car_t::decelerate_fast() {
 	decelerate(10.0); // Note: large decel to avoid stopping in an intersection
@@ -608,7 +609,7 @@ void car_draw_state_t::draw_car(car_t const &car, bool is_dlight_shadows) { // N
 	if (car.is_parked()) return; // no lights when parked
 	vector3d const front_n(cross_product((pb[5] - pb[1]), (pb[0] - pb[1])).get_norm()*sign);
 	unsigned const lr_xor(((camera_pdu.pos[!dim] - xlate[!dim]) - center[!dim]) < 0.0f);
-	bool const brake_lights_on(car.is_almost_stopped() || car.stopped_at_light), headlights_on(car.headlights_on());
+	bool const brake_lights_on(car.is_almost_stopped() || car.stopped_at_light || car.is_braking), headlights_on(car.headlights_on());
 	float const hv1(car.is_truck ? 0.8 : 0.2), hv2(1.0 - hv1); // headlights and tail lights; blend from bottom to top
 	float const sv1(car.is_truck ? 0.8 : 0.3), sv2(1.0 - sv1); // turn signals; blend from bottom to top
 
