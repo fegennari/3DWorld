@@ -1508,9 +1508,14 @@ void building_t::get_all_drawn_exterior_verts(building_draw_t &bdraw) { // exter
 						bot_surf.pts[2][!top_dim] = bot_surf.pts[3][!top_dim] = new_edge;
 						bot_surf.pts[0][ top_dim] = bot_surf.pts[3][ top_dim] = bot_edge_bcube.d[top_dim][0];
 						bot_surf.pts[1][ top_dim] = bot_surf.pts[2][ top_dim] = bot_edge_bcube.d[top_dim][1];
-						if (d ^ top_dim ^ 1) {std::reverse(bot_surf.pts, bot_surf.pts+4);} // reverse to get the correct winding order
+						tquad_with_ix_t inside(bot_surf); // inside edge, which may be visible from above
+						inside.pts[2] = inside.pts[1]; inside.pts[3] = inside.pts[0]; // move both points to the inside edge
+						inside.pts[2].z = inside.pts[3].z = tq_bcube.z1(); // top of edge
+						if (d ^ top_dim) {std::reverse(bot_surf.pts, bot_surf.pts+4);} // reverse to get the correct winding order
+						else             {std::reverse(inside  .pts, inside  .pts+4);} // reverse to get the correct winding order
 						tid_nm_pair_t const bot_tex(NO_SHADOW_WHITE_TEX); // untextured, no shadows
 						bdraw.add_tquad(*this, bot_surf, bcube, bot_tex, WHITE);
+						bdraw.add_tquad(*this, inside,   bcube, bot_tex, WHITE);
 
 						for (unsigned e = 0; e < 2; ++e) { // add triangle end caps
 							tquad_with_ix_t end_cap(3, tquad_with_ix_t::TYPE_TRIM);
