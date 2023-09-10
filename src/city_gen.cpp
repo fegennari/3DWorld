@@ -1497,7 +1497,7 @@ public:
 		if (car.cur_road_type != TYPE_RSEG)           return 0; // not on a road segment; maybe already stopped
 		road_seg_t const &seg(get_car_seg(car));
 		unsigned const next_road_type(seg.conn_type[car.dir]);
-		if (!is_isect(next_road_type)) return 0; // how can this fail?
+		if (!is_isect(next_road_type)) return 0; // skip if this is an adjacent segment (for global connector roads)
 		float const stop_dist(0.6f*car.get_length()); // distance we should begin decelerating
 		float const dist_to_end(max((car.dir ? 1.0f : -1.0f)*(seg.d[car.dim][car.dir] - car.bcube.d[car.dim][car.dir]), 0.0f));
 		if (dist_to_end > stop_dist) return 0; // not close enough
@@ -1512,7 +1512,8 @@ public:
 		road_isec_t const &isec(get_city(isec_city, road_networks, global_rn).get_isec(isec_type, cur_seg));
 		if (!isec.has_stopsign && isec.can_go_now(car)) return 0; // green light, no stop sign
 		// it's difficult to calculate the correct decleration to stop at the right spot, especially when framerate is variable, so directly adjust the speed instead
-		float const max_speed(0.1f*car.max_speed + (dist_to_end/stop_dist)*car.get_max_speed()); // linear deceleration to 10% of max speed
+		// use linear deceleration to 10% of max speed (for static vs. kinetic friction); should this vary per-car?
+		float const max_speed(0.1f*car.max_speed + (dist_to_end/stop_dist)*car.get_max_speed());
 		assert(max_speed > 0.0);
 		if (car.cur_speed < max_speed) return 0;
 		car.cur_speed = max_speed; // clamp to the max
