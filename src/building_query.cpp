@@ -1115,7 +1115,7 @@ point building_interior_t::find_closest_pt_on_obj_to_pos(building_t const &build
 	if (room_geom) { // check room geometry
 		for (auto c = room_geom->objs.begin(); c != room_geom->objs.end(); ++c) { // check for other objects to collide with (including stairs)
 			if (c->no_coll() || c->type == TYPE_BLOCKER || c->type == TYPE_ELEVATOR) continue; // skip blockers and elevators
-			if (c->type == TYPE_RAILING || c->type == TYPE_PLANT) continue; // these have complex shapes that are too hard to attach to
+			if (c->type == TYPE_RAILING || c->type == TYPE_PLANT || c->type == TYPE_PLANT_MODEL) continue; // these have complex shapes that are too hard to attach to
 
 			if (c->type == TYPE_CLOSET) { // special case to handle closet interiors
 				cube_t cubes[5];
@@ -1293,7 +1293,7 @@ public:
 				if (obj.type == TYPE_BOOK || obj.type == TYPE_PLANT || obj.type == TYPE_RAILING || obj.type == TYPE_BOTTLE || obj.type == TYPE_PAPER ||
 					obj.type == TYPE_PAINTCAN || obj.type == TYPE_WBOARD || obj.type == TYPE_DRAIN || obj.type == TYPE_PLATE || obj.type == TYPE_LBASKET ||
 					obj.type == TYPE_LAMP || obj.type == TYPE_CUP || obj.type == TYPE_LAPTOP || obj.type == TYPE_LG_BALL || obj.type == TYPE_PAN ||
-					obj.type == TYPE_PG_BEAM) continue;
+					obj.type == TYPE_PG_BEAM || obj.type == TYPE_PLANT_MODEL) continue;
 				if (z1 > obj.z2() || z2 < obj.z1()) continue; // zval test
 
 				if (obj.type == TYPE_PARK_SPACE) {
