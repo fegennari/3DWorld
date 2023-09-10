@@ -91,6 +91,7 @@ void create_mirror_reflection_if_needed() {
 	if (player_building->water_visible_to_player()) { // draw water plane reflection
 		cube_t water_cube(player_building->get_water_cube(0));
 		water_cube.z1() = water_cube.z2(); // top surface only
+		mirror_in_ext_basement = 1; // required when extended basement goes outside the building's tile
 		draw_scene_for_building_reflection(room_mirror_ref_tid, 2, 1, water_cube.z2(), 0, 1, 0, 1, 1, water_cube); // +z, not house, interior, basement, no exterior
 		return;
 	}
