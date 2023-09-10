@@ -176,7 +176,7 @@ int get_concrete_tid  () {return building_texture_mgr.get_concrete_tid();}
 class texture_id_mapper_t {
 	vector<unsigned> tid_to_slot_ix;
 	vector<int> tid_to_nm_tid;
-	set<unsigned> ext_wall_tids;
+	set<unsigned> ext_wall_tids, roof_tids;
 	unsigned next_slot_ix;
 
 	void register_tid(int tid) {
@@ -227,6 +227,7 @@ public:
 			register_tex(i->house_ceil_tex);
 			register_tex(i->house_floor_tex);
 			ext_wall_tids.insert(i->side_tex.tid);
+			roof_tids    .insert(i->roof_tex.tid);
 		} // for i
 		cout << "Used " << (next_slot_ix-1) << " slots for texture IDs up to " << (tid_to_slot_ix.size()-1) << endl;
 	}
@@ -248,6 +249,7 @@ public:
 	}
 	unsigned get_num_slots() const {return tid_to_slot_ix.size();}
 	bool is_ext_wall_tid(unsigned tid) const {return (ext_wall_tids.find(tid) != ext_wall_tids.end());}
+	bool is_roof_tid    (unsigned tid) const {return (roof_tids    .find(tid) != roof_tids    .end());}
 };
 texture_id_mapper_t tid_mapper;
 
@@ -1231,13 +1233,14 @@ public:
 	unsigned get_num_draw_blocks() const {return to_draw.size();}
 	void finalize(unsigned num_tiles) {for (auto i = to_draw.begin(); i != to_draw.end(); ++i) {i->finalize(num_tiles);}}
 	
-	// tex_filt_mode: 0=draw everything, 1=draw exterior walls only, 2=draw everything but exterior walls, 3=draw everything but exterior walls and doors
+	// tex_filt_mode: 0=draw everything, 1=draw exterior walls only, 2=draw roofs and exterior doors, 3=draw roofs only
 	void draw(shader_t &s, bool shadow_only, bool direct_draw_no_vbo=0, int tex_filt_mode=0, vertex_range_t const *const exclude=nullptr) {
 		tid_nm_pair_dstate_t state(s);
 
 		for (auto i = to_draw.begin(); i != to_draw.end(); ++i) {
-			if (tex_filt_mode && (tid_mapper.is_ext_wall_tid(i->tex.tid) != (tex_filt_mode == 1))) continue; // not an ext wall texture, skip
-			if (tex_filt_mode == 3 && building_texture_mgr.is_door_tid(i->tex.tid)) continue; // door texture, skip
+			if (tex_filt_mode == 1 && !tid_mapper.is_ext_wall_tid(i->tex.tid)) continue; // exterior walls only
+			if (tex_filt_mode == 2 && !tid_mapper.is_roof_tid    (i->tex.tid) && !building_texture_mgr.is_door_tid(i->tex.tid)) continue; // roofs and exterior doors only
+			if (tex_filt_mode == 3 && !tid_mapper.is_roof_tid    (i->tex.tid)) continue; // roofs only
 			bool const use_exclude(exclude && exclude->draw_ix == int(i - to_draw.begin()));
 			i->draw_all_geom(state, shadow_only, direct_draw_no_vbo, (use_exclude ? exclude : nullptr));
 		}
@@ -3267,7 +3270,8 @@ public:
 					glEnable(GL_CULL_FACE);
 				}
 				if (DRAW_EXT_REFLECTIONS || !reflection_pass) {
-					// if we're not by an exterior door, draw the back sides of exterior doors as closed; always draw non-ext walls/non doors (roof geom)
+					// if we're not by an exterior door, draw the back sides of exterior doors as closed; always draw roof geometry
+					// this is required for drawing objects such as the underside of roof overhangs and roof doors and their covers
 					int const tex_filt_mode(ext_door_draw.empty() ? 2 : 3);
 					setup_building_draw_shader(s, min_alpha, 0, 1, 0); // enable_indir=0, force_tsl=1, use_texgen=0
 					for (auto i = bcs.begin(); i != bcs.end(); ++i) {(*i)->building_draw_vbo.draw(s, 0, 0, tex_filt_mode);}
