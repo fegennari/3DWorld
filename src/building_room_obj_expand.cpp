@@ -695,11 +695,11 @@ void place_book(room_object_t &obj, cube_t const &parent, float length, float ma
 	if (item_ix > 0 && rgen.rand_bool()) return obj; // no more items
 	cube_t drawer(drawer_in); // copy so that we can adjust z1
 	unsigned const type_ix(rgen.rand() % 11); // 0-10
-	unsigned const types_dresser [11] = {TYPE_BOX, TYPE_PAPER, TYPE_TEESHIRT, TYPE_TEESHIRT, TYPE_BOOK, TYPE_KEY,     TYPE_BOTTLE, TYPE_MONEY,  TYPE_PHONE,  TYPE_SPRAYCAN, TYPE_TAPE};
-	unsigned const types_desk    [11] = {TYPE_BOX, TYPE_PAPER, TYPE_PEN,      TYPE_STAPLER,  TYPE_BOOK, TYPE_KEY,     TYPE_BOTTLE, TYPE_MONEY,  TYPE_PHONE,  TYPE_SPRAYCAN, TYPE_TAPE};
-	unsigned const types_attic   [11] = {TYPE_BOX, TYPE_PAPER, TYPE_PEN,      TYPE_PEN,      TYPE_BOOK, TYPE_KEY,     TYPE_BOTTLE, TYPE_BOX,    TYPE_BOOK,   TYPE_SPRAYCAN, TYPE_TAPE};
-	unsigned const types_kcabinet[11] = {TYPE_BOX, TYPE_PAPER, TYPE_PEN,      TYPE_PEN,      TYPE_BOOK, TYPE_PLATE,   TYPE_BOTTLE, TYPE_BOTTLE, TYPE_SILVER, TYPE_SPRAYCAN, TYPE_TAPE};
-	unsigned const types_fcabinet[11] = {TYPE_BOX, TYPE_PAPER, TYPE_PEN,      TYPE_PEN,      TYPE_BOOK, TYPE_STAPLER, TYPE_PAPER,  TYPE_BOOK,   TYPE_TAPE,   TYPE_STAPLER,  TYPE_TAPE};
+	unsigned const types_dresser [11] = {TYPE_BOX, TYPE_PAPER, TYPE_FOLD_SHIRT, TYPE_FOLD_SHIRT, TYPE_BOOK, TYPE_KEY, TYPE_BOTTLE, TYPE_MONEY,  TYPE_PHONE,  TYPE_SPRAYCAN, TYPE_TAPE};
+	unsigned const types_desk    [11] = {TYPE_BOX, TYPE_PAPER, TYPE_PEN, TYPE_STAPLER, TYPE_BOOK, TYPE_KEY,           TYPE_BOTTLE, TYPE_MONEY,  TYPE_PHONE,  TYPE_SPRAYCAN, TYPE_TAPE};
+	unsigned const types_attic   [11] = {TYPE_BOX, TYPE_PAPER, TYPE_PEN, TYPE_PEN,     TYPE_BOOK, TYPE_KEY,           TYPE_BOTTLE, TYPE_BOX,    TYPE_BOOK,   TYPE_SPRAYCAN, TYPE_TAPE};
+	unsigned const types_kcabinet[11] = {TYPE_BOX, TYPE_PAPER, TYPE_PEN, TYPE_PEN,     TYPE_BOOK, TYPE_PLATE,         TYPE_BOTTLE, TYPE_BOTTLE, TYPE_SILVER, TYPE_SPRAYCAN, TYPE_TAPE};
+	unsigned const types_fcabinet[11] = {TYPE_BOX, TYPE_PAPER, TYPE_PEN, TYPE_PEN,     TYPE_BOOK, TYPE_STAPLER,       TYPE_PAPER,  TYPE_BOOK,   TYPE_TAPE,   TYPE_STAPLER,  TYPE_TAPE};
 	unsigned obj_type(0);
 	if (c.in_attic())                 {obj_type = types_attic   [type_ix];} // custom object overrides for attic item drawers
 	else if (c.type == TYPE_DESK)     {obj_type = types_desk    [type_ix];}
@@ -708,10 +708,11 @@ void place_book(room_object_t &obj, cube_t const &parent, float length, float ma
 	else                              {obj_type = types_dresser [type_ix];} // dresser or nightstand
 	if (obj_type == TYPE_SILVER && !building_obj_model_loader.is_model_valid(OBJ_MODEL_SILVER)) {obj_type = TYPE_BOOK;} // replace silverware with book
 	// if drawer is too small, replace teeshirt with pen
-	if (obj_type == TYPE_TEESHIRT && (drawer.get_sz_dim(c.dim) < 0.55*c.dz() || drawer.get_sz_dim(!c.dim) < 0.52*c.dz())) {obj_type = TYPE_PEN;}
+	if (obj_type == TYPE_FOLD_SHIRT && (drawer.get_sz_dim(c.dim) < 0.55*c.dz() || drawer.get_sz_dim(!c.dim) < 0.52*c.dz())) {obj_type = TYPE_PEN;}
+	if (obj_type == TYPE_FOLD_SHIRT && !building_obj_model_loader.is_model_valid(OBJ_MODEL_FOLD_SHIRT)) {obj_type = TYPE_TEESHIRT;} // replace folded shirt with teeshirt
 	if (obj_type == TYPE_KEY && item_ix > 0) {obj_type = TYPE_BOTTLE;} // key must be first item/no two kes in one drawer
 	// object stacking logic
-	bool const is_stackable(obj_type == TYPE_BOX || obj_type == TYPE_PAPER || obj_type == TYPE_BOOK || obj_type == TYPE_PLATE || obj_type == TYPE_TAPE || obj_type == TYPE_TEESHIRT);
+	bool const is_stackable(obj_type == TYPE_BOX || obj_type == TYPE_PAPER || obj_type == TYPE_BOOK || obj_type == TYPE_PLATE || obj_type == TYPE_TAPE || obj_type == TYPE_FOLD_SHIRT);
 	
 	if (item_ix == 0) {stack_z1 = drawer.z1();} // base case
 	else if (is_stackable) {
@@ -851,6 +852,15 @@ void place_book(room_object_t &obj, cube_t const &parent, float length, float ma
 		set_rand_pos_for_sz(shirt, c.dim, length, width, rgen);
 		shirt.z2() = shirt.z1() + 0.1*drawer.dz(); // set height
 		obj = room_object_t(shirt, TYPE_TEESHIRT, c.room_id, c.dim, c.dir, 0, 1.0, SHAPE_CUBE, TSHIRT_COLORS[rgen.rand()%NUM_TSHIRT_COLORS]);
+		break;
+	}
+	case TYPE_FOLD_SHIRT: // folded shirt
+	{
+		vector3d const ssz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_FOLD_SHIRT)); // D, W, H
+		float const fs_width(0.75*min(sz[!c.dim], (ssz.y/ssz.x)*sz[c.dim])), fs_length(fs_width*ssz.x/ssz.y), fs_height(fs_width*ssz.z/ssz.y);
+		obj = room_object_t(drawer, TYPE_FOLD_SHIRT, c.room_id, c.dim, c.dir, 0, 1.0, SHAPE_CUBE, TSHIRT_COLORS[rgen.rand()%NUM_TSHIRT_COLORS]);
+		obj.z2() = obj.z1() + fs_height; // set height
+		set_rand_pos_for_sz(obj, c.dim, fs_length, fs_width, rgen);
 		break;
 	}
 	default: assert(0);

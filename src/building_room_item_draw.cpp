@@ -887,6 +887,7 @@ void building_room_geom_t::add_small_static_objs_to_verts(vect_room_object_t con
 		case TYPE_DRAIN:     add_drain_pipe(c); break;
 		case TYPE_KEY:       if (has_key_3d_model()) {model_objs.push_back(c);} else {add_key(c);} break; // draw or add as 3D model
 		case TYPE_SILVER:    if (c.was_expanded()  ) {model_objs.push_back(c);} break; // only draw here if expanded
+		case TYPE_FOLD_SHIRT:if (c.was_expanded()  ) {model_objs.push_back(c);} break; // only draw here if expanded
 		case TYPE_MONEY:     add_money   (c); break;
 		case TYPE_PHONE:     add_phone   (c); break;
 		case TYPE_TPROLL:    add_tproll  (c); break;
