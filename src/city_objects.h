@@ -273,8 +273,8 @@ private:
 		ppole_groups, hcap_groups, manhole_groups, mbox_groups, pigeon_groups, sign_groups, stopsign_groups, flag_groups, nrack_groups;
 	vector<city_zone_t> sub_plots; // reused across calls
 	cube_t all_objs_bcube;
-	unsigned num_spaces, filled_spaces, num_x_plots, num_y_plots;
-	float plot_subdiv_sz;
+	unsigned num_spaces=0, filled_spaces=0, num_x_plots=0, num_y_plots=0;
+	float plot_subdiv_sz=0.0;
 	
 	struct cube_by_x1 {
 		bool operator()(cube_t const &a, cube_t const &b) const {return (a.x1() < b.x1());}
@@ -295,7 +295,6 @@ private:
 	bool connect_power_to_point(point const &at_pos, bool near_power_pole);
 	void connect_power_to_buildings(vector<road_plot_t> const &plots);
 public:
-	city_obj_placer_t() : num_spaces(0), filled_spaces(0), num_x_plots(0), num_y_plots(0), plot_subdiv_sz(0.0) {}
 	bool has_plot_dividers() const {return !dividers.empty();}
 	vector<power_pole_t> const &get_power_poles() const {return ppoles;} // used for city connectivity
 	void clear();

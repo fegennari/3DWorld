@@ -21,11 +21,11 @@ struct rect_t {
 
 struct flatten_op_t : public rect_t {
 	float z1, z2;
-	bool dim;
-	unsigned border, skip_six, skip_eix;
-	flatten_op_t() : z1(0.0), z2(0.0), dim(0), border(0), skip_six(0), skip_eix(0) {}
+	bool dim=0;
+	unsigned border=0, skip_six=0, skip_eix=0;
+	flatten_op_t() : z1(0.0), z2(0.0) {}
 	flatten_op_t(unsigned x1_, unsigned y1_, unsigned x2_, unsigned y2_, float z1_, float z2_, bool dim_, unsigned border_) :
-		rect_t(x1_, y1_, x2_, y2_), z1(z1_), z2(z2_), dim(dim_), border(border_), skip_six(0), skip_eix(0) {}
+		rect_t(x1_, y1_, x2_, y2_), z1(z1_), z2(z2_), dim(dim_), border(border_) {}
 };
 
 class heightmap_query_t {
@@ -75,8 +75,8 @@ struct road_endpoint_t {
 struct road_cand_t {
 	vector<point> pts;
 	bool start_dim;
-	float cost;
-	road_cand_t(bool sdim=0) : start_dim(sdim), cost(0.0) {}
+	float cost=0.0;
+	road_cand_t(bool sdim=0) : start_dim(sdim) {}
 	void clear() {pts.clear(); cost = 0.0;}
 	bool valid() const {return !pts.empty();}
 };

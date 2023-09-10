@@ -102,21 +102,19 @@ enum {BOTTLE_TYPE_WATER=0, BOTTLE_TYPE_COKE, BOTTLE_TYPE_BEER, BOTTLE_TYPE_WINE,
 
 class light_ix_assign_t {
 	vector<pair<point2d<float>, unsigned>> cur;
-	unsigned next_ix;
+	unsigned next_ix=0;
 public:
-	light_ix_assign_t() : next_ix(0) {}
 	void next_room() {cur.clear();}
 	unsigned get_next_ix() {return next_ix++;}
 	unsigned get_ix_for_light(cube_t const &c, bool walls_not_shared=0);
 };
 
 struct building_occlusion_state_t {
-	int exclude_bix;
-	bool skip_cont_camera;
+	int exclude_bix=-1;
+	bool skip_cont_camera=0;
 	point pos;
 	vector3d xlate;
 	vector<cube_with_ix_t> building_ids;
-	building_occlusion_state_t() : exclude_bix(-1), skip_cont_camera(0) {}
 
 	void init(point const &pos_, vector3d const &xlate_) {
 		pos   = pos_;
@@ -167,27 +165,27 @@ typedef vector<city_zone_t> vect_city_zone_t;
 
 struct tid_nm_pair_dstate_t {
 	shader_t &s;
-	int bmm_loc;
-	float bump_map_mag;
-	tid_nm_pair_dstate_t(shader_t &s_) : s(s_), bmm_loc(-1), bump_map_mag(1.0) {}
+	int bmm_loc=-1;
+	float bump_map_mag=1.0;
+	tid_nm_pair_dstate_t(shader_t &s_) : s(s_) {}
 	void set_for_shader(float new_bump_map_mag);
 	~tid_nm_pair_dstate_t();
 };
 
 struct tid_nm_pair_t { // size=32
 
-	int tid, nm_tid; // Note: assumes each tid has only one nm_tid
-	float tscale_x, tscale_y, txoff, tyoff, emissive;
+	int tid=-1, nm_tid=-1; // Note: assumes each tid has only one nm_tid
+	float tscale_x=1.0, tscale_y=1.0, txoff=0.0, tyoff=0.0, emissive=0.0;
 	color_wrapper spec_color;
-	unsigned char shininess; // Note: spec_mag is divided by 255.0
-	bool shadowed; // Note: doesn't directly affect rendering, only used for uniquing/operator==()
-	bool transparent; // used to draw batched alpha blended materials last
+	unsigned char shininess=0; // Note: spec_mag is divided by 255.0
+	bool shadowed=0; // Note: doesn't directly affect rendering, only used for uniquing/operator==()
+	bool transparent=0; // used to draw batched alpha blended materials last
 
-	tid_nm_pair_t() : tid(-1), nm_tid(-1), tscale_x(1.0), tscale_y(1.0), txoff(0.0), tyoff(0.0), emissive(0.0), shininess(0), shadowed(0), transparent(0) {}
-	tid_nm_pair_t(int tid_, float txy=1.0, bool shadowed_=0, bool transparent_=0) : tid(tid_), nm_tid(FLAT_NMAP_TEX), tscale_x(txy), tscale_y(txy),
-		txoff(0.0), tyoff(0.0), emissive(0.0), shininess(0), shadowed(shadowed_), transparent(transparent_) {} // non-normal mapped 1:1 texture AR
+	tid_nm_pair_t() {}
+	tid_nm_pair_t(int tid_, float txy=1.0, bool shadowed_=0, bool transparent_=0) : tid(tid_), nm_tid(FLAT_NMAP_TEX),
+		tscale_x(txy), tscale_y(txy), shadowed(shadowed_), transparent(transparent_) {} // non-normal mapped 1:1 texture AR
 	tid_nm_pair_t(int tid_, int nm_tid_, float tx, float ty, float xo=0.0, float yo=0.0, bool shadowed_=0, bool transparent_=0) :
-		tid(tid_), nm_tid(nm_tid_), tscale_x(tx), tscale_y(ty), txoff(xo), tyoff(yo), emissive(0.0), shininess(0), shadowed(shadowed_), transparent(transparent_) {}
+		tid(tid_), nm_tid(nm_tid_), tscale_x(tx), tscale_y(ty), txoff(xo), tyoff(yo), shadowed(shadowed_), transparent(transparent_) {}
 	void set_shininess(float shine) {shininess = (unsigned char)max(1, min(255, round_fp(shine)));}
 	void set_specular(float mag, float shine) {set_specular_color(WHITE, mag, shine);}
 	void set_specular_color(colorRGB const &color, float mag, float shine);
@@ -217,10 +215,8 @@ struct building_tex_params_t {
 };
 
 struct color_range_t {
-	float grayscale_rand;
-	colorRGBA cmin, cmax; // alpha is unused?
-
-	color_range_t() : grayscale_rand(0.0), cmin(WHITE), cmax(WHITE) {}
+	float grayscale_rand=0.0;
+	colorRGBA cmin=WHITE, cmax=WHITE; // alpha is unused?
 	void gen_color(colorRGBA &color, rand_gen_t &rgen) const;
 };
 
@@ -233,20 +229,17 @@ typedef vector<riser_pos_t> vect_riser_pos_t;
 
 struct building_mat_t : public building_tex_params_t {
 
-	bool no_city, add_windows, add_wind_lights;
-	unsigned min_levels, max_levels, min_sides, max_sides;
-	float place_radius, max_delta_z, max_rot_angle, min_level_height, min_alt, max_alt, house_prob, house_scale_min, house_scale_max;
-	float split_prob, cube_prob, round_prob, asf_prob, min_fsa, max_fsa, min_asf, max_asf, wind_xscale, wind_yscale, wind_xoff, wind_yoff;
-	float floor_spacing, floorplan_wind_xscale; // these are derived values
+	bool no_city=0, add_windows=0, add_wind_lights=0;
+	unsigned min_levels=1, max_levels=1, min_sides=4, max_sides=4;
+	float place_radius=0.0, max_delta_z=0.0, max_rot_angle=0.0, min_level_height=0.0, min_alt=-1000, max_alt=1000, house_prob=0.0, house_scale_min=1.0, house_scale_max=1.0;
+	float split_prob=0.0, cube_prob=1.0, round_prob=0.0, asf_prob=0.0, min_fsa=0.0, max_fsa=0.0, min_asf=0.0, max_asf=0.0;
+	float wind_xscale=1.0, wind_yscale=1.0, wind_xoff=0.0, wind_yoff=0.0;
+	float floor_spacing=0.0, floorplan_wind_xscale=0.0; // these are derived values
 	cube_t pos_range, prev_pos_range, sz_range; // pos_range z is unused?
 	color_range_t side_color, roof_color; // exterior
-	colorRGBA window_color, wall_color, ceil_color, floor_color, house_ceil_color, house_floor_color;
+	colorRGBA window_color=GRAY, wall_color=WHITE, ceil_color=WHITE, floor_color=LT_GRAY, house_ceil_color=WHITE, house_floor_color=WHITE;
 
-	building_mat_t() : no_city(0), add_windows(0), add_wind_lights(0), min_levels(1), max_levels(1), min_sides(4), max_sides(4), place_radius(0.0),
-		max_delta_z(0.0), max_rot_angle(0.0), min_level_height(0.0), min_alt(-1000), max_alt(1000), house_prob(0.0), house_scale_min(1.0), house_scale_max(1.0),
-		split_prob(0.0), cube_prob(1.0), round_prob(0.0), asf_prob(0.0), min_fsa(0.0), max_fsa(0.0), min_asf(0.0), max_asf(0.0), wind_xscale(1.0),
-		wind_yscale(1.0), wind_xoff(0.0), wind_yoff(0.0), floor_spacing(0.0), floorplan_wind_xscale(0.0), pos_range(-100,100,-100,100,0,0), prev_pos_range(all_zeros),
-		sz_range(1,1,1,1,1,1), window_color(GRAY), wall_color(WHITE), ceil_color(WHITE), floor_color(LT_GRAY), house_ceil_color(WHITE), house_floor_color(WHITE) {}
+	building_mat_t() : pos_range(-100,100,-100,100,0,0), sz_range(1,1,1,1,1,1) {}
 	float gen_house_size_scale(rand_gen_t &rgen) const {return ((house_scale_min == house_scale_max) ? house_scale_min : rgen.rand_uniform(house_scale_min, house_scale_max));}
 	void update_range(vector3d const &range_translate);
 	void set_pos_range(cube_t const &new_pos_range) {prev_pos_range = pos_range; pos_range = new_pos_range;}
@@ -338,13 +331,11 @@ class building_draw_t;
 struct building_geom_t { // describes the physical shape of a building
 	unsigned num_sides;
 	uint8_t door_sides[4]; // bit mask for 4 door sides, one per base part
-	bool half_offset, is_pointed;
-	float rot_sin, rot_cos, flat_side_amt, alt_step_factor, start_angle; // rotation in XY plane, around Z (up) axis
+	bool half_offset=0, is_pointed=0;
+	float rot_sin=0.0, rot_cos=0.0, flat_side_amt=0.0, alt_step_factor=0.0, start_angle=0.0; // rotation in XY plane, around Z (up) axis
 	//float roof_recess;
 
-	building_geom_t(unsigned ns=4, float rs=0.0, float rc=1.0, bool pointed=0) : num_sides(ns), half_offset(0), is_pointed(pointed),
-		rot_sin(rs), rot_cos(rc), flat_side_amt(0.0), alt_step_factor(0.0), start_angle(0.0)
-	{
+	building_geom_t(unsigned ns=4, float rs=0.0, float rc=1.0, bool pointed=0) : num_sides(ns), is_pointed(pointed), rot_sin(rs), rot_cos(rc) {
 		door_sides[0] = door_sides[1] = door_sides[2] = door_sides[3] = 0;
 	}
 	bool is_rotated() const {return (rot_sin != 0.0);}
@@ -600,9 +591,9 @@ typedef vector<room_object_t> vect_room_object_t;
 inline void set_obj_id(vect_room_object_t &objs) {objs.back().obj_id = (uint16_t)objs.size();}
 
 struct carried_item_t : public room_object_t {
-	unsigned use_count;
-	carried_item_t() : use_count(0) {}
-	carried_item_t(room_object_t const &o) : room_object_t(o), use_count(0) {}
+	unsigned use_count=0;
+	carried_item_t() {}
+	carried_item_t(room_object_t const &o) : room_object_t(o) {}
 	float get_remaining_capacity_ratio() const;
 };
 
@@ -702,7 +693,7 @@ public:
 }; // rgeom_mat_t
 
 struct building_materials_t : public vector<rgeom_mat_t> {
-	bool valid = 0;
+	bool valid=0;
 	void clear();
 	void invalidate() {valid = 0;}
 	unsigned count_all_verts() const;
@@ -741,10 +732,9 @@ class brg_batch_draw_t {
 
 	void draw_and_clear_batch(vector<mat_entry_t> &batch, tid_nm_pair_dstate_t &state);
 public:
-	uint8_t camera_dir_mask;
+	uint8_t camera_dir_mask=0;
 	vector<obj_model_inst_with_obj_t> models_to_draw; // models on building exteriors to draw after buildings
 
-	brg_batch_draw_t() : camera_dir_mask(0) {}
 	bool has_ext_geom() const;
 	void clear();
 	void set_camera_dir_mask(point const &camera_bs, cube_t const &bcube);
@@ -810,7 +800,7 @@ class fire_manager_t {
 	struct fire_t {
 		point pos; // pos is the bottom
 		float max_radius=0.0, radius=0.0, time=0.0, next_smoke_time=0.0;
-		fire_t(point const &pos_, float max_radius_) : pos(pos_), max_radius(max_radius_), radius(0.0) {}
+		fire_t(point const &pos_, float max_radius_) : pos(pos_), max_radius(max_radius_) {}
 		float get_height() const {return 4.0*radius;}
 		point get_center() const {return pos + vector3d(0.0, 0.0, 0.5*get_height());}
 		cube_t get_bcube() const;
@@ -1131,7 +1121,7 @@ struct stairs_landing_base_t : public cube_t {
 	bool dim, dir, roof_access, stack_conn, in_ext_basement, against_wall[2];
 	stairs_shape shape;
 
-	stairs_landing_base_t() : dim(0), dir(0), roof_access(0), stack_conn(0), in_ext_basement(0), shape(SHAPE_STRAIGHT) {against_wall[0] = against_wall[1] = 0;}
+	stairs_landing_base_t() : dim(0), dir(0), roof_access(0), stack_conn(0), in_ext_basement(0), shape(SHAPE_STRAIGHT)  {against_wall[0] = against_wall[1] = 0;}
 	stairs_landing_base_t(cube_t const &c, bool dim_, bool dir_, bool roof_access_, stairs_shape shape_, bool sc=0, bool ieb=0) :
 		cube_t(c), dim(dim_), dir(dir_), roof_access(roof_access_), stack_conn(sc), in_ext_basement(ieb), shape(shape_) {against_wall[0] = against_wall[1] = 0;}
 	void set_against_wall(bool const val[2]) {against_wall[0] = val[0]; against_wall[1] = val[1];}
@@ -1140,10 +1130,10 @@ struct stairs_landing_base_t : public cube_t {
 };
 
 struct landing_t : public stairs_landing_base_t {
-	bool for_elevator, for_ramp, has_railing, is_at_top;
-	uint8_t floor;
+	bool for_elevator=0, for_ramp=0, has_railing=0, is_at_top=0;
+	uint8_t floor=0;
 
-	landing_t() : for_elevator(0), for_ramp(0), has_railing(0), is_at_top(0), floor(0) {}
+	landing_t() {}
 	landing_t(cube_t const &c, bool e, uint8_t f, bool dim_, bool dir_,
 		bool railing=0, stairs_shape shape_=SHAPE_STRAIGHT, bool roof_access_=0, bool at_top=0, bool sc=0, bool fr=0, bool ieb=0) :
 		stairs_landing_base_t(c, dim_, dir_, roof_access_, shape_, sc, ieb), for_elevator(e), for_ramp(fr), has_railing(railing), is_at_top(at_top), floor(f)
@@ -1151,10 +1141,10 @@ struct landing_t : public stairs_landing_base_t {
 };
 
 struct stairwell_t : public stairs_landing_base_t {
-	uint8_t num_floors;
+	uint8_t num_floors=0;
 	int16_t stairs_door_ix=-1;
 
-	stairwell_t() : num_floors(0) {}
+	stairwell_t() {}
 	stairwell_t(cube_t const &c, unsigned n, bool dim_, bool dir_, stairs_shape s=SHAPE_STRAIGHT, bool r=0, bool sc=0, bool ieb=0) :
 		stairs_landing_base_t(c, dim_, dir_, r, s, sc, ieb), num_floors(n) {}
 	stairwell_t(stairs_landing_base_t const &b, unsigned n) : stairs_landing_base_t(b), num_floors(n) {} // can set from landing
@@ -1219,17 +1209,16 @@ typedef vector<roof_obj_t> vect_roof_obj_t;
 
 // building AI
 struct building_loc_t {
-	int part_ix, room_ix, stairs_ix; // -1 is not contained; what about elevator_ix?
-	unsigned floor_ix; // global for this building, rather than the current part/room
-	building_loc_t() : part_ix(-1), room_ix(-1), stairs_ix(-1), floor_ix(0) {}
+	int part_ix=-1, room_ix=-1, stairs_ix=-1; // -1 is not contained; what about elevator_ix?
+	unsigned floor_ix=0; // global for this building, rather than the current part/room
 	bool operator==(building_loc_t const &loc) const {return (same_room_floor(loc) && part_ix == loc.part_ix && stairs_ix == loc.stairs_ix);}
 	bool same_room_floor(building_loc_t const &loc) const {return (room_ix == loc.room_ix && floor_ix == loc.floor_ix);}
 };
 
 struct building_dest_t : public building_loc_t {
-	int building_ix;
+	int building_ix=-1;
 	point pos;
-	building_dest_t() : building_ix(-1) {}
+	building_dest_t() {}
 	building_dest_t(building_loc_t const &b, point const &pos_, int bix=-1) : building_loc_t(b), building_ix(bix), pos(pos_) {}
 	bool is_valid() const {return (building_ix >= 0 && part_ix >= 0 && room_ix >= 0);}
 };
@@ -1927,10 +1916,9 @@ struct building_draw_utils {
 class city_lights_manager_t {
 protected:
 	cube_t lights_bcube;
-	float light_radius_scale, dlight_add_thresh;
-	bool prev_had_lights;
+	float light_radius_scale=1.0, dlight_add_thresh=0.0;
+	bool prev_had_lights=0;
 public:
-	city_lights_manager_t() : lights_bcube(all_zeros), light_radius_scale(1.0), dlight_add_thresh(0.0), prev_had_lights(0) {}
 	virtual ~city_lights_manager_t() {}
 	cube_t get_lights_bcube() const {return lights_bcube;}
 	void add_player_flashlight(float radius_scale);
@@ -1957,9 +1945,9 @@ struct ped_draw_vars_t {
 class water_sound_manager_t {
 	point const camera_bs;
 	point closest; // in camera space
-	float dmin_sq;
+	float dmin_sq=0.0;
 public:
-	water_sound_manager_t(point const &camera_bs_) : camera_bs(camera_bs_), dmin_sq(0.0) {}
+	water_sound_manager_t(point const &camera_bs_) : camera_bs(camera_bs_) {}
 	void register_running_water(room_object_t const &obj, building_t const &building);
 	void finalize();
 };
