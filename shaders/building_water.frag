@@ -2,7 +2,6 @@
 
 const float PI = 3.14159;
 
-//uniform vec3 camera_pos; // from dynamic_lighting.part
 uniform float water_depth, water_atten, time;
 uniform vec3 uw_atten_max, uw_atten_scale;
 uniform sampler2D reflection_tex, frame_buffer;
@@ -73,15 +72,14 @@ void main() {
 	if (enable_dlights) {add_dlights(light_color, vpos, epos, ws_normal, vec3(0.5));} // add dynamic lighting; if disabled, water will be black
 	
 	// attenuate based on depth/distance, assuming a constant water depth and average light coming from above in +Z;
-	// this isn't correct at the vertical walls because distance is lower since rays don't reach the floor, but it looks okay with low water depth
-	float floor_zval  = vpos.z - water_depth; // bottom surface of water which will be visible through/under the water
-	float t           = clamp(water_depth/max(0.01*water_depth, abs(camera_pos.z - floor_zval)), 0.0, 1.0);
-	float camera_path = 0.75*t*get_linear_depth_zval(uv); // camera=>fragment through water; slower, but more accurate
-	float light_path  = water_depth + camera_path; // light=>floor + camera=>floor
-	float alpha       = min((0.1 + 1.25*water_atten*camera_path), 1.0); // short path is transparent, long path is opaque
-	vec4 uw_color     = vec4(light_color, alpha);
+	float eye_to_floor = get_linear_depth_zval(uv); // floor, wall, object, etc.
+	float eye_to_water = log_to_linear_depth(gl_FragCoord.z);
+	float camera_path  = 1.0*(eye_to_floor - eye_to_water); // camera=>fragment through water
+	float light_path   = water_depth + camera_path; // light=>floor + camera=>floor; may be approximate if water_depth isn't accurate
+	float alpha        = min((0.1 + 1.25*water_atten*camera_path), 1.0); // short path is transparent, long path is opaque
+	vec4 uw_color      = vec4(light_color, alpha);
 	atten_color(uw_color.rgb, 1.5*water_atten*light_path); // apply scattering and absorption
-	vec4 water_color  = mix(uw_color, vec4(light_color, 1.0), foam);
+	vec4 water_color   = mix(uw_color, vec4(light_color, 1.0), foam);
 
 	// apply fresnel reflection and compute final color
 	vec3 normal      = normalize(fg_NormalMatrix * ws_normal); // eye space
