@@ -1341,7 +1341,10 @@ bool building_t::get_interior_color_at_xy(point const &pos_in, colorRGBA &color)
 	}
 	// check the extended basement; note that this doesn't check for the player inside a room, but the player shouldn't really be underground within the bcube otherwise;
 	// also note that we may not even get into this function if the ray doesn't intersect this building's above ground part
-	cont_in_part |= (has_ext_basement() && interior->basement_ext_bcube.contains_pt(pos));
+	if (!cont_in_part && has_ext_basement() && interior->basement_ext_bcube.contains_pt(pos)) {
+		if (has_parking_garage) {cont_in_part = 1;} // parking garage + backrooms; fills the entire ext basement area
+		else {cont_in_part = (get_room_containing_pt(pos) >= 0);} // check for actual room containment
+	}
 	if (!cont_in_part) return 0;
 	float const z1(pos.z - 1.05*CAMERA_RADIUS), z2(z1 + get_floor_ceil_gap()); // approx span of one floor, including objects on the floor
 	if (building_color_query_geom_cache.query_objs(*this, pos, z1, z2, color)) return 1;

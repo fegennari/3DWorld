@@ -2381,6 +2381,9 @@ public:
 	bool is_single_tile() const {return (grid_by_tile.size() == 1);}
 	
 	bool get_building_hit_color(point const &p1, point const &p2, colorRGBA &color) const { // exterior only; p1 and p2 are in building space
+		if (p1.x == p2.x && p1.y == p2.y && player_in_basement >= 3 && player_building != nullptr) {
+			if (player_building->get_interior_color_at_xy(p1, color)) return 1; // handle interior of extended basement the player is in
+		}
 		float t(1.0); // unused
 		unsigned hit_bix(0);
 		unsigned const ret(check_line_coll(p1, p2, t, hit_bix, 0, 1)); // no_coll_pt=1; returns: 0=no hit, 1=hit side, 2=hit roof
