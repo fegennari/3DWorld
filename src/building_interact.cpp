@@ -11,7 +11,7 @@ float const KICK_VELOCITY  = 0.0025;
 float const MIN_VELOCITY   = 0.0001;
 float const SMOKE_VELOCITY = 0.0006;
 float const OBJ_DECELERATE = 0.008;
-float const OBJ_GRAVITY    = 0.0003;
+float const OBJ_GRAVITY    = 0.0003; // unsigned magnitude
 float const TERM_VELOCITY  = 1.0;
 float const OBJ_ELASTICITY = 0.8;
 
@@ -1064,30 +1064,39 @@ void building_t::run_ball_update(vector<room_object_t>::iterator ball_it, point 
 		// add TYPE_CRACK if collides with a window?
 	}
 	if (new_center != center) { // is moving
-		apply_roll_to_matrix(dstate.rot_matrix, new_center, center, plus_z, radius, (on_floor ? 0.0 : 0.01), (on_floor ? 1.0 : 0.2));
-		bool invalidate_sm_geom(!was_dynamic); // static => dynamic transition, need to remove from static object vertex data
 		interior->update_dynamic_draw_data();
-		
+
 		if (has_water()) { // check for water collisions
 			float const ceil_zval(get_bcube_z1_inc_ext_basement() + get_floor_for_zval(new_center.z)*get_window_vspace() + get_floor_ceil_gap());
+			float const prev_zval(new_center.z);
 
 			if (set_float_height(new_center, radius, ceil_zval)) {
-				velocity    = zero_vector;
-				ball.flags &= ~RO_FLAG_DYNAMIC; // clear dynamic flag
-				invalidate_sm_geom = 1;
+				bool const draw_splash(prev_zval-radius <= interior->water_zval && center.z-radius > interior->water_zval); // check if prev above the water line
+				float const target_zval(new_center.z);
+				min_eq(new_center.z, (prev_zval + 1.0f*OBJ_GRAVITY*fticks_stable)); // limit max float velocity based on negative gravity
+				velocity  *= (1.0f - min(1.0f, 25.0f*OBJ_DECELERATE*fticks_stable)); // apply water dampening
+				velocity.z = 0.0; // remove vertical velocity component
+
+				if (new_center.z == target_zval && velocity.mag_sq() < MIN_VELOCITY*MIN_VELOCITY) { // zero velocity if stopped and no longer rising
+					velocity    = zero_vector;
+					ball.flags &= ~RO_FLAG_DYNAMIC; // clear dynamic flag
+					interior->room_geom->invalidate_small_geom(); // dynamic => static transition
+				}
 				static float last_splash_time(0.0);
 
 				if ((tfticks - last_splash_time) > 0.5*TICKS_PER_SECOND) { // at most once every 0.5s
-					check_for_water_splash(new_center, 0.75, 1, 1); // full_room_height=1, draw_splash=1
+					check_for_water_splash(new_center, 0.75, 1, draw_splash); // full_room_height=1
 					last_splash_time = tfticks;
 				}
+				on_floor = 0; // not rolling on the floor
 			}
 		}
+		apply_roll_to_matrix(dstate.rot_matrix, new_center, center, plus_z, radius, (on_floor ? 0.0 : 0.01), (on_floor ? 1.0 : 0.2));
 		ball.translate(new_center - center);
 		room_object_t squish_obj(ball);
 		squish_obj.expand_by_xy(0.5*radius); // increase the radius to account for spiders and roaches being pushed out of the way of moving balls
 		maybe_squish_animals(squish_obj, player_pos);
-		if (invalidate_sm_geom) {interior->room_geom->invalidate_small_geom();}
+		if (!was_dynamic) {interior->room_geom->invalidate_small_geom();} // static => dynamic transition, need to remove from static object vertex data
 	}
 	// check for collision with closed door separating the adjacent building at the end of the connecting room
 	building_t *const cont_bldg(get_bldg_containing_pt(new_center));
