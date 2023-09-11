@@ -74,9 +74,8 @@ void main() {
 	
 	// attenuate based on depth/distance, assuming a constant water depth and average light coming from above in +Z;
 	// this isn't correct at the vertical walls because distance is lower since rays don't reach the floor, but it looks okay with low water depth
-	vec3 floor_pos    = vpos - vec3(0.0, 0.0, water_depth); // bottom surface of water which will be visible through/under the water
-	float t           = clamp(water_depth/max(0.01*water_depth, abs(camera_pos.z - floor_pos.z)), 0.0, 1.0);
-	//float camera_path = t*distance(camera_pos, floor_pos); // camera=>floor through water
+	float floor_zval  = vpos.z - water_depth; // bottom surface of water which will be visible through/under the water
+	float t           = clamp(water_depth/max(0.01*water_depth, abs(camera_pos.z - floor_zval)), 0.0, 1.0);
 	float camera_path = 0.75*t*get_linear_depth_zval(uv); // camera=>fragment through water; slower, but more accurate
 	float light_path  = water_depth + camera_path; // light=>floor + camera=>floor
 	float alpha       = min((0.1 + 1.25*water_atten*camera_path), 1.0); // short path is transparent, long path is opaque
