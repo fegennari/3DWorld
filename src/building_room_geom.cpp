@@ -925,6 +925,9 @@ void building_room_geom_t::add_pizza_box(room_object_t const &c) {
 		mat.add_vcylin_to_verts(pizza, apply_light_color(c), 0, 1, 0, 0, 1.0, 1.0, 1.0, 1.0, 1); // top only
 	}
 }
+void building_room_geom_t::add_pizza_top(room_object_t const &c) {
+	get_untextured_material(0, 0, 1).add_vcylin_to_verts(c, apply_light_color(c), 0, 1); // draw sides and top; unshadowed, small
+}
 
 // used for drawing open microwave and dishwasher
 void add_interior_and_front_face(room_object_t const &c, cube_t const &body, rgeom_mat_t &mat, float wall_width, unsigned front_mask, colorRGBA const &color) {
