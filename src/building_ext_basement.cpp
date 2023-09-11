@@ -738,7 +738,7 @@ void building_t::add_backrooms_objs(rand_gen_t rgen, room_t &room, float zval, u
 	invert_walls(place_area, walls_per_dim, space, nav_pad);
 	resize_cubes_xy(space, nav_pad); // restore padding (under-over)
 	partition_cubes_into_conn_groups(space, space_groups, pad);
-	vect_cube_t small_rooms, door_keepout;
+	vect_cube_t small_rooms, door_keepout, unreachable_rooms;
 
 #if 0 // TESTING
 	rand_gen_t rgen2(rgen);
@@ -756,6 +756,7 @@ void building_t::add_backrooms_objs(rand_gen_t rgen, room_t &room, float zval, u
 		vector<group_range_t> adj;
 		vect_cube_t doors_to_add, walls_to_add, all_doors;
 		set<pair<unsigned, unsigned>> connected;
+		vector<uint8_t> reachable(space_groups.size(), 0); // start as all unreachable
 		bool const first_dim(rgen.rand_bool()); // mix it up to avoid favoring one dim
 
 		for (unsigned d = 0; d < 2; ++d) {
@@ -808,6 +809,7 @@ void building_t::add_backrooms_objs(rand_gen_t rgen, room_t &room, float zval, u
 							doors_to_add.push_back(door_cand);
 							all_doors   .push_back(door_cand);
 							connected.insert(ix_pair); // mark these two space groups as being connected
+							reachable[g1.gix] = reachable[g2.gix] = 1; // assume both of these are now reachable; likely, but not guaranteed
 							break;
 						} // for n
 					} // for j
@@ -842,7 +844,11 @@ void building_t::add_backrooms_objs(rand_gen_t rgen, room_t &room, float zval, u
 		} // for d
 		for (unsigned gix = 0; gix < space_groups.size(); ++gix) {
 			vect_cube_t const &group(space_groups[gix]);
-			
+
+			if (group.size() == 1 && !reachable[gix]) {
+				unreachable_rooms.push_back(group.front()); // track unreachable single cube rooms
+				continue; // not counted as small rooms
+			}
 			if (group.size() != 1) {
 				if (group.size() < space.size()/8) { // small area, but not a single rectangle; still may need to add room light
 					float tot_area(0.0);
@@ -1003,6 +1009,7 @@ void building_t::add_backrooms_objs(rand_gen_t rgen, room_t &room, float zval, u
 				bounds.d[dim][!dir] = wall_edge + (dir ? -1.0 : 1.0)*0.1*wall_thickness; // move slightly away from wall to avoid colliding with it
 				bounds.d[dim][ dir] = wall_edge + (dir ? -1.0 : 1.0)*2.0*fe_radius; // outer edge
 				if (overlaps_other_room_obj(bounds, objs_start) || is_obj_placement_blocked(bounds, true_room, 1, 0)) continue; // inc_open_doors=1, check_open_dir=0
+				if (has_bcube_int(bounds, unreachable_rooms)) continue; // don't place in an unreachable room
 				add_fire_ext(fe_height, fe_radius, zval, wall_edge, val, room_id, tot_light_amt, dim, dir);
 				break; // done
 			} // for n
@@ -1026,6 +1033,7 @@ void building_t::add_backrooms_objs(rand_gen_t rgen, room_t &room, float zval, u
 
 			for (unsigned N = 0; N < 4; ++N) { // make up to 4 attempts to place a chair
 				point const chair_pos(gen_xy_pos_in_area(place_area, max_radius, rgen, zval));
+				if (check_vect_cube_contains_pt_xy(unreachable_rooms, chair_pos)) continue; // don't place in an unreachable room
 				
 				if (add_chair(rgen, true_room, blockers, room_id, chair_pos, chair_color, dim, dir, tot_light_amt, office_chair, 1)) {
 					objs.back().flags |= RO_FLAG_BACKROOM; // flag so that player collisions are enabled

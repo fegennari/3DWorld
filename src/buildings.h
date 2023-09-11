@@ -1973,6 +1973,12 @@ template<typename T> bool has_bcube_int_xy_no_adj(cube_t const &bcube, vector<T>
 	for (auto c = bcubes.begin(); c != bcubes.end(); ++c) {if (c->intersects_xy_no_adj(bcube)) return 1;}
 	return 0;
 }
+template<typename T> static bool check_vect_cube_contains_pt_xy(vector<T> const &cubes, point const &pos) {
+	for (auto i = cubes.begin(); i != cubes.end(); ++i) {
+		if (i->contains_pt_xy(pos)) return 1;
+	}
+	return 0;
+}
 template<typename T> cube_t get_cube_height_radius(point const &center, T radius, float height) { // T can be float or vector3d
 	cube_t c(center);
 	c.expand_by_xy(radius);

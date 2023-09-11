@@ -1255,12 +1255,6 @@ public:
 	bool cube_overlaps_pl_or_dw_xy(cube_t const &c) const {
 		return (cube_overlaps_tile_group_xy(city_obj_placer.parking_lots, c, TYPE_PARK_LOT) || cube_overlaps_tile_group_xy(city_obj_placer.driveways, c, TYPE_DRIVEWAY));
 	}
-	template<typename T> static bool check_vect_cube_contains_pt_xy(vector<T> const &cubes, point const &pos) {
-		for (auto i = cubes.begin(); i != cubes.end(); ++i) {
-			if (i->contains_pt_xy(pos)) return 1;
-		}
-		return 0;
-	}
 	int get_color_at_xy(point const &pos, colorRGBA &color) const { // Note: return value is currently unused, but it could be used for something in the future
 		// Note: query results are mutually exclusive since there's no overlap, so can early terminate on true
 		if (!bcube.contains_pt_xy(pos)) return 0;
