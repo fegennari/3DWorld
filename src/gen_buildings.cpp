@@ -1759,8 +1759,13 @@ void building_t::get_all_drawn_interior_verts(building_draw_t &bdraw) {
 			if (i->dim == 0) {dim_mask |= ((i->yc() < basement.yc()) ? 32 : 64);} // X, skip Y face closest to building wall
 			else             {dim_mask |= ((i->xc() < basement.xc()) ?  8 : 16);} // Y, skip X face closest to building wall
 		}
-		bdraw.add_section(*this, 0, *i, mat.wall_tex, mat.wall_color, dim_mask, 0, 0, 1, 0, 0.0, 0, 1.0, 1); // no AO; X/Y dims only, inverted normals
-	}
+		if (!is_house && has_ext_basement() && point_in_extended_basement_not_basement(i->get_cube_center())) { // concrete edges for office ext basements
+			bdraw.add_section(*this, 0, *i, get_concrete_texture(), WHITE, dim_mask, 0, 0, 1, 0, 0.0, 0, 1.0, 1); // no AO; X/Y dims only, inverted normals
+		}
+		else { // else use the wall texture
+			bdraw.add_section(*this, 0, *i, mat.wall_tex, mat.wall_color, dim_mask, 0, 0, 1, 0, 0.0, 0, 1.0, 1); // no AO; X/Y dims only, inverted normals
+		}
+	} // for i
 	for (auto i = interior->elevators.begin(); i != interior->elevators.end(); ++i) {
 		bool const dim(i->dim), dir(i->dir);
 		float const spacing(i->get_wall_thickness()), frame_width(i->get_frame_width()); // space between inner/outer walls + frame around door
