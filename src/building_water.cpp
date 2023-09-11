@@ -164,7 +164,7 @@ void building_t::draw_water(vector3d const &xlate) const {
 		if (player_in_basement < 3) {clear_building_water_splashes();} // clear if player has exited the extended basement
 		return;
 	}
-	float const floor_spacing(get_window_vspace()), atten_scale(1.0/floor_spacing);
+	float const floor_spacing(get_window_vspace()), atten_scale(1.0/floor_spacing), basement_z1(interior->basement_ext_bcube.z1());
 	if (animate2) {building_splash_manager.next_frame(floor_spacing);} // maybe should do this somewhere else? or update even if water isn't visible?
 	point const camera_pos(get_camera_pos());
 
@@ -191,11 +191,13 @@ void building_t::draw_water(vector3d const &xlate) const {
 		colorRGBA const base_color(is_lit ? WHITE : DK_GRAY);
 		float const orig_water_plane_z(water_plane_z);
 		water_plane_z = interior->water_zval;
-		draw_underwater_particles(interior->basement_ext_bcube.z1(), base_color);
+		draw_underwater_particles(basement_z1, base_color);
 		water_plane_z = orig_water_plane_z;
 		return;
 	}
 	shader_t s;
+	unsigned const camera_floor(unsigned((min(camera_pos.z, interior->water_zval) - basement_z1)/floor_spacing)); // handle player on floor above water
+	float const water_depth(interior->water_zval - (basement_z1 + get_fc_thickness() + camera_floor*floor_spacing)); // for the player's floor
 	cube_t const lights_bcube(get_building_lights_bcube());
 	bool const use_dlights(!lights_bcube.is_all_zeros()), have_indir(0), use_smap(1); // indir lighting has little effect and is difficult to setup
 	float const pcf_scale = 0.2;
@@ -208,7 +210,6 @@ void building_t::draw_water(vector3d const &xlate) const {
 	if (use_dlights) {setup_dlight_textures(s);} // must be before set_city_lighting_shader_opts()
 	set_city_lighting_shader_opts(s, lights_bcube, use_dlights, use_smap, pcf_scale);
 	setup_building_draw_shader_post(s, have_indir);
-	float const water_depth(interior->water_zval - (interior->basement_ext_bcube.z1() + get_fc_thickness()));
 	s.add_uniform_vector3d("camera_pos", camera_pos);
 	s.add_uniform_float("water_depth",   water_depth);
 	setup_shader_underwater_atten(s, atten_scale); // attenuates to dark blue/opaque around this distance
