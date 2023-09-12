@@ -547,8 +547,22 @@ bool building_t::interact_with_object(unsigned obj_ix, point const &int_pos, poi
 		}
 	}
 	else if (obj.is_sink_type() || obj.type == TYPE_TUB) { // sink or tub
-		if (!obj.is_active() && obj.type == TYPE_TUB) {gen_sound_thread_safe(SOUND_SINK, local_center);} // play sound when turning the tub on
-		if (obj.is_sink_type()) {obj.flags ^= RO_FLAG_IS_ACTIVE;} // toggle active bit, only for sinks for now
+		if (!obj.is_active() && obj.type == TYPE_TUB) {
+			gen_sound_thread_safe(SOUND_SINK, local_center); // play sound when turning the tub on
+			
+			if (obj.item_flags < 4) { // water level is 0-4
+				++obj.item_flags;
+				interior->room_geom->invalidate_static_geom();
+			}
+		}
+		if (obj.is_sink_type()) {
+			obj.flags ^= RO_FLAG_IS_ACTIVE; // toggle active bit, only for sinks for now
+
+			if (obj.is_active() && obj.item_flags == 0) { // no water yet
+				obj.item_flags ^= 1; // mark as filled with water
+				interior->room_geom->invalidate_static_geom();
+			}
+		}
 		sound_scale = 0.4;
 	}
 	else if (obj.is_light_type()) {

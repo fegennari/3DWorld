@@ -799,14 +799,15 @@ void building_room_geom_t::create_static_vbos(building_t const &building) {
 		case TYPE_RDESK:   add_reception_desk(*i, tscale); break;
 		case TYPE_BED:     add_bed     (*i, 1, 0, tscale); break;
 		case TYPE_WINDOW:  add_window  (*i, tscale); break;
-		case TYPE_TUB:     add_tub_outer(*i); break;
+		case TYPE_TUB:     add_tub_outer (*i); break;
+		case TYPE_SINK:    add_sink_water(*i); break;
 		case TYPE_TV: case TYPE_MONITOR: add_tv_picture(*i); break;
 		case TYPE_CUBICLE: add_cubicle (*i, tscale); break;
 		case TYPE_STALL:   add_br_stall(*i); break;
 		case TYPE_COUNTER: add_counter (*i, tscale, 1, 0); break; // lg
+		case TYPE_CABINET: add_cabinet (*i, tscale, 1, 0); break; // lg
 		case TYPE_KSINK:   add_counter (*i, tscale, 1, 0); break; // counter with kitchen  sink; lg
 		case TYPE_BRSINK:  add_counter (*i, tscale, 1, 0); break; // counter with bathroom sink; lg
-		case TYPE_CABINET: add_cabinet (*i, tscale, 1, 0); break; // lg
 		case TYPE_PLANT:   add_potted_plant(*i, 1, 0); break; // pot only
 		case TYPE_DRESSER: case TYPE_NIGHTSTAND: add_dresser(*i, tscale, 1, 0); break;
 		case TYPE_DRESS_MIR: add_dresser_mirror(*i, tscale); break;

@@ -927,7 +927,9 @@ struct building_room_geom_t {
 	void add_outlet(room_object_t const &c);
 	void add_vent(room_object_t const &c);
 	void add_plate(room_object_t const &c);
-	void add_tub_outer(room_object_t const &c);
+	void add_water_plane(room_object_t const &c, cube_t const &water_area, float water_level);
+	void add_tub_outer (room_object_t const &c);
+	void add_sink_water(room_object_t const &c);
 	void add_tv_picture(room_object_t const &c);
 	void add_trashcan(room_object_t const &c);
 	void add_laundry_basket(room_object_t const &c);

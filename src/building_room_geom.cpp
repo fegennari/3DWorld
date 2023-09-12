@@ -3402,6 +3402,8 @@ void building_room_geom_t::add_counter(room_object_t const &c, float tscale, boo
 		colorRGBA const sink_color(apply_light_color(c, GRAY));
 		rgeom_mat_t &basin_mat(get_metal_material(0));
 		basin_mat.add_cube_to_verts(sink, sink_color, tex_origin, EF_Z2, 0, 0, 0, 1); // basin: inverted, skip top face, unshadowed
+		float const water_level(c.item_flags ? 0.3 : 0.0); // may be 30% filled
+		if (water_level > 0.0) {add_water_plane(c, sink, water_level);} // draw water
 		// drain
 		cube_t drain(cube_bot_center(sink));
 		drain.expand_by_xy(0.1*min(sink.dx(), sink.dy()));
@@ -3742,9 +3744,33 @@ void building_room_geom_t::add_plate(room_object_t const &c) { // is_small=1
 	untex_mat.add_ortho_cylin_to_verts(c, color, cylin_dim, (vertical && top_dir), (vertical && !top_dir), 0, 0, (top_dir ? 0.8 : 1.0), (top_dir ? 1.0 : 0.8));
 }
 
+void building_room_geom_t::add_water_plane(room_object_t const &c, cube_t const &water_area, float water_level) {
+	cube_t water(water_area);
+	water.z2() = water_area.z1() + min(water_level, 1.0f)*water_area.dz();
+	get_untextured_material(0, 0, 0, 1).add_cube_to_verts_untextured(water, apply_light_color(c, colorRGBA(0.4, 0.6, 1.0, 0.5)), ~EF_Z2); // no shadows + transparent, top only
+}
 void building_room_geom_t::add_tub_outer(room_object_t const &c) {
-	colorRGBA const color(apply_light_color(c));
-	get_untextured_material(1).add_cube_to_verts_untextured(c, color, EF_Z12); // shadowed, no top/bottom faces
+	get_untextured_material(1).add_cube_to_verts_untextured(c, apply_light_color(c), EF_Z12); // shadowed, no top/bottom faces
+	float const water_level(min(0.84f, 0.21f*c.item_flags));
+	if (water_level <= 0.0) return; // no water
+	cube_t water_area(c);
+	water_area.expand_by_xy(-0.01*c.dz()); // small shrink
+	add_water_plane(c, water_area, water_level); // draw water
+}
+void building_room_geom_t::add_sink_water(room_object_t const &c) {
+	float water_level(c.item_flags ? 0.3 : 0.0); // may be 30% filled
+	if (water_level <= 0.0) return; // no water
+	water_level = (0.7 + 0.1*water_level); // adjust for top of sink
+	float const width(c.get_width()), signed_depth((c.dir ? -1.0 : 1.0)*c.get_depth());
+	cube_t water_area(c);
+	water_area.expand_in_dim(!c.dim, -0.1*width); // shrink sides
+	water_area.d[c.dim][ c.dir] += 0.12*signed_depth; // shrink front
+	water_area.d[c.dim][!c.dir] -= 0.30*signed_depth; // shrink back
+	cube_t wa1(water_area), wa2(water_area);
+	wa1.d[c.dim][c.dir] = wa2.d[c.dim][!c.dir] = water_area.d[c.dim][c.dir] + 0.1*signed_depth; // split into front and back halfs
+	wa2.expand_in_dim(!c.dim, -0.1*width); // shrink front more
+	add_water_plane(c, wa1, water_level); // back
+	add_water_plane(c, wa2, water_level); // front
 }
 
 void building_room_geom_t::add_crack(room_object_t const &c) { // in window? (TV and computer monitor cracks are drawn below)
