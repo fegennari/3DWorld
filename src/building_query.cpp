@@ -451,6 +451,31 @@ unsigned check_chair_collision(room_object_t const &c, point &pos, point const &
 	return check_cubes_collision(cubes, 3, pos, p_last, radius, cnorm);
 }
 
+void get_tub_cubes(room_object_t const &c, cube_t cubes[5]) { // bottom, front, back, 2 sides
+	float const height(c.get_height()), width(c.get_width()), signed_depth((c.dir ? 1.0 : -1.0)*c.get_depth());
+	cube_t bottom(c), front(c), back(c);
+	bottom.z2() = front.z1() = back.z1() = c.z1() + 0.07*height;
+	front.d[c.dim][ c.dir] -= 0.81*signed_depth;
+	back .d[c.dim][!c.dir] += 0.86*signed_depth;
+	cubes[0] = bottom;
+	cubes[1] = front;
+	cubes[2] = back;
+
+	for (unsigned d = 0; d < 2; ++d) { // sides
+		cube_t side(c);
+		side.z1() = bottom.z2();
+		side.d[!c.dim][d] -= (d ? 1.0 : -1.0)*0.85*width;
+		side.d[c.dim][!c.dir] = front.d[c.dim][ c.dir];
+		side.d[c.dim][ c.dir] = back .d[c.dim][!c.dir];
+		cubes[d+3] = side;
+	}
+}
+unsigned check_tub_collision(room_object_t const &c, point &pos, point const &p_last, float radius, vector3d *cnorm) {
+	cube_t cubes[5]; // bottom, front, back, 2 sides
+	get_tub_cubes(c, cubes);
+	return check_cubes_collision(cubes, 5, pos, p_last, radius, cnorm);
+}
+
 bool check_ramp_collision(room_object_t const &c, point &pos, point const &p_last, float radius, vector3d *cnorm) { // p_last is unused
 	if (!sphere_cube_intersect(pos, radius, c)) return 0;
 	float const thickness(RAMP_THICKNESS_SCALE*c.dz()), half_thickness(0.5*thickness);
@@ -927,6 +952,7 @@ bool building_interior_t::check_sphere_coll_room_objects(building_t const &build
 			else if (c->type == TYPE_TABLE  ) {coll_ret |= check_table_collision (*c, pos, p_last, radius, &cnorm);}
 			else if (c->type == TYPE_DESK   ) {coll_ret |= check_table_collision (*c, pos, p_last, radius, &cnorm);}
 			else if (c->type == TYPE_CHAIR  ) {coll_ret |= check_chair_collision (*c, pos, p_last, radius, &cnorm);}
+			else if (c->type == TYPE_TUB    ) {coll_ret |= check_tub_collision   (*c, pos, p_last, radius, &cnorm);}
 			else if (c->type == TYPE_RAMP   ) {coll_ret |= (unsigned)check_ramp_collision   (*c, pos, p_last, radius, &cnorm);}
 			else if (c->type == TYPE_BALCONY) {had_coll |= (unsigned)check_balcony_collision(*c, pos, p_last, radius, &cnorm);}
 			else if (c->type == TYPE_STALL  && maybe_inside_room_object(*c, pos, radius)) {coll_ret |= (unsigned)check_stall_collision (*c, pos, p_last, radius, &cnorm);}
