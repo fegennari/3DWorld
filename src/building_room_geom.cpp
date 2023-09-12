@@ -1056,6 +1056,12 @@ void building_room_geom_t::add_shower(room_object_t const &c, float tscale) {
 		sides[d].z1() = bottom.z2();
 		tile_mat.add_cube_to_verts(sides[d], tile_color, zero_vector, skip_faces[d]);
 	}
+	if (c.item_flags) { // draw water
+		cube_t water(bottom);
+		set_cube_zvals(water, bottom.z2(), (bottom.z2() + 0.01*sz.z)); // thin layer of water
+		water.expand_by_xy(-0.01*(sz.x + sz.y)); // small shrink
+		add_water_plane(c, water, 1.0); // water_level=1.0
+	}
 	// add metal frame around glass
 	colorRGBA const metal_color(apply_light_color(c, GRAY));
 	rgeom_mat_t &metal_mat(get_metal_material(1)); // shadowed, specular metal

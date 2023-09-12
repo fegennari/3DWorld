@@ -707,6 +707,11 @@ bool building_t::interact_with_object(unsigned obj_ix, point const &int_pos, poi
 			gen_sound_thread_safe_at_player(SOUND_SINK);
 			sound_scale = 0.5;
 			if (!obj.is_open()) {register_achievement("Squeaky Clean");}
+
+			if (!obj.item_flags) {
+				obj.item_flags = 1; // mark as filled with water
+				interior->room_geom->invalidate_static_geom();
+			}
 		}
 	}
 	else if (obj.type == TYPE_BOX) {
