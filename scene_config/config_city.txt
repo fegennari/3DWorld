@@ -216,6 +216,11 @@ city clothing_model "../models/interiors/closet_items/Shirt.model3d"            
 city clothing_model "../models/interiors/closet_items/Long Shirt.model3d"           0 0 5  0 0 0  1 1.0 1.0 # XZ centered
 city clothing_model "../models/interiors/closet_items/Pants.model3d"                0 1 0  0 0 0  1 0.79 1.0 # two sided
 
+# plants
+city plant_model ../models/potted_plants/pink_plumeria/Plant3_Flowers.model3d 0 0 0  -1 -1 90  1 1.0 1.0
+city plant_model ../models/potted_plants/mediterranean_broad/scene.gltf       0 0 0  -1 -1 90  1 1.0 1.0
+city plant_model ../models/potted_plants/mediterranean_medium/scene.gltf      0 0 0  -1 -1 90  1 1.0 1.0
+
 # city objects
 city fire_hydrant_model ../models/fire_hydrant/Fire_Hydrant.model3d  1 0 0   0 -1 0    1 1.0 1.0 # uses custom color
 city substation_model   ../models/substation/SubstationBig.model3d   0 0 0  -1 -1 0    1 1.0 1.0

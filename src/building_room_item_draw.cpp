@@ -1202,11 +1202,11 @@ public:
 
 water_draw_t water_draw;
 
-int room_object_t::get_model_id() const {
+int room_object_t::get_model_id() const { // Note: first 8 bits is model ID, last 8 bits is sub-model ID
 	assert(type >= TYPE_TOILET);
 	if (type == TYPE_MONITOR) return OBJ_MODEL_TV; // monitor has same model as TV
 	int id((int)type + OBJ_MODEL_TOILET - TYPE_TOILET);
-	if (type == TYPE_HANGER || type == TYPE_CLOTHES) {id += ((int)item_flags << 8);} // choose a sub_model_id for these types using bits 8-15
+	if (type == TYPE_HANGER || type == TYPE_CLOTHES || type == TYPE_PLANT_MODEL) {id += ((int)item_flags << 8);} // choose a sub_model_id for these types using bits 8-15
 	return id;
 }
 
@@ -1315,27 +1315,27 @@ void draw_stove_flames(room_object_t const &stove, point const &camera_bs, shade
 }
 
 void draw_obj_model(obj_model_inst_t const &i, room_object_t const &obj, shader_t &s, vector3d const &xlate, point const &obj_center, bool shadow_only) {
-	bool const is_emissive_first_mat(!shadow_only && obj.type == TYPE_LAMP      && obj.is_light_on());
-	bool const is_emissive_body_mat (!shadow_only && obj.type == TYPE_WALL_LAMP && obj.is_light_on());
+	bool const emissive_first_mat(!shadow_only && obj.type == TYPE_LAMP      && obj.is_light_on());
+	bool const emissive_body_mat (!shadow_only && obj.type == TYPE_WALL_LAMP && obj.is_light_on());
 	bool const use_low_z_bias(obj.type == TYPE_CUP && !shadow_only);
 	bool const untextured(obj.flags & RO_FLAG_UNTEXTURED);
 	bool const upside_down((obj.type == TYPE_RAT || obj.type == TYPE_ROACH || obj.type == TYPE_INSECT) && obj.is_broken());
-	if (is_emissive_first_mat) {s.set_color_e(LAMP_COLOR*0.4);}
+	if (emissive_first_mat) {s.set_color_e(LAMP_COLOR*0.4);}
 
 	if (use_low_z_bias) {
 		s.add_uniform_float("norm_bias_scale",   5.0); // half the default value
 		s.add_uniform_float("dlight_pcf_offset", 0.5*cur_dlight_pcf_offset);
 	}
 	// Note: lamps are the most common and therefore most expensive models to draw
-	building_obj_model_loader.draw_model(s, obj_center, obj, i.dir, obj.color, xlate, obj.get_model_id(), shadow_only,
-		0, nullptr, 0, untextured, 0, upside_down, is_emissive_body_mat);
+	int const model_id(obj.get_model_id()); // first 8 bits is model ID, last 8 bits is sub-model ID
+	building_obj_model_loader.draw_model(s, obj_center, obj, i.dir, obj.color, xlate, model_id, shadow_only, 0, nullptr, 0, untextured, 0, upside_down, emissive_body_mat);
 	if (!shadow_only && obj.type == TYPE_STOVE) {draw_stove_flames(obj, (camera_pdu.pos - xlate), s);} // draw blue burner flame
 
 	if (use_low_z_bias) { // restore to the defaults
 		s.add_uniform_float("norm_bias_scale",   10.0);
 		s.add_uniform_float("dlight_pcf_offset", cur_dlight_pcf_offset);
 	}
-	if (is_emissive_first_mat) {s.set_color_e(BLACK);}
+	if (emissive_first_mat) {s.set_color_e(BLACK);}
 }
 
 void brg_batch_draw_t::draw_obj_models(shader_t &s, vector3d const &xlate, bool shadow_only) const {

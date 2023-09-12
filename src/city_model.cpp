@@ -143,7 +143,7 @@ void city_model_loader_t::draw_model(shader_t &s, vector3d const &pos, cube_t co
 	bool untextured, bool force_high_detail, bool upside_down, bool emissive)
 {
 	assert(!(low_detail && force_high_detail));
-	bool const is_valid(is_model_valid(model_id));
+	bool const is_valid(is_model_valid(model_id)); // first 8 bits is model ID, last 8 bits is sub-model ID
 	if (!is_valid) {cerr << "Invalid model ID: " << model_id << endl;}
 	assert(is_valid); // must be loaded
 	city_model_t const &model_file(get_model(model_id));

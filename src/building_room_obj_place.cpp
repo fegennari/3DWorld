@@ -2237,11 +2237,23 @@ colorRGBA choose_pot_color(rand_gen_t &rgen) {
 	return pot_colors[rgen.rand() % num_colors];
 }
 bool building_t::place_plant_on_obj(rand_gen_t &rgen, cube_t const &place_on, unsigned room_id, float tot_light_amt, cube_t const &avoid) {
-	float const window_vspacing(get_window_vspace()), height(rgen.rand_uniform(0.25, 0.4)*window_vspacing);
-	float const radius(min(rgen.rand_uniform(0.06, 0.08)*window_vspacing, min(place_on.dx(), place_on.dy())/3.0f));
+	float const window_vspacing(get_window_vspace()), height(rgen.rand_uniform(0.25, 0.4)*window_vspacing), max_radius(min(place_on.dx(), place_on.dy())/3.0f);
+	vect_room_object_t &objs(interior->room_geom->objs);
+
+	if (building_obj_model_loader.is_model_valid(OBJ_MODEL_PLANT)) { // prefer to place potted plant models, if any exist
+		vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_PLANT)); // D, W, H
+		float const radius_to_height(0.25*(sz.x + sz.y)/sz.z), radius(min(radius_to_height*height, max_radius)); // cylindrical
+		cube_t const plant(place_cylin_object(rgen, place_on, radius, radius/radius_to_height, 1.2*radius)); // recompute height from radius
+		
+		if (avoid.is_all_zeros() || !plant.intersects(avoid)) { // only make one attempt
+			objs.emplace_back(plant, TYPE_PLANT_MODEL, room_id, 0, 0, (RO_FLAG_NOCOLL | RO_FLAG_ADJ_BOT), tot_light_amt, SHAPE_CYLIN, WHITE);
+			objs.back().item_flags = rgen.rand(); // choose a random potted plant model if there are more than one
+			return 1;
+		} // else try to place a non-model plant
+	}
+	float const radius(min(rgen.rand_uniform(0.06, 0.08)*window_vspacing, max_radius));
 	cube_t const plant(place_cylin_object(rgen, place_on, radius, height, 1.2*radius));
 	if (!avoid.is_all_zeros() && plant.intersects(avoid)) return 0; // only make one attempt
-	vect_room_object_t &objs(interior->room_geom->objs);
 	objs.emplace_back(plant, TYPE_PLANT, room_id, 0, 0, (RO_FLAG_NOCOLL | RO_FLAG_ADJ_BOT), tot_light_amt, SHAPE_CYLIN, choose_pot_color(rgen));
 	set_obj_id(objs);
 	return 1;
