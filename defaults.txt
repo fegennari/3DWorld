@@ -23,7 +23,7 @@ mapx/config_mapx.txt # office building scene; F2 changes gameplay mode, 'b' enab
 #config_grand_canyon.txt
 #config_grand_canyon_tt.txt
 #sponza/config_sponza2.txt # Sponza atrium; press 'v' to spawn inside, 'm' maximizes, 'V' toggles mouse look
-#model_data/config_soda.txt # Uc Berkeley Soda Hall model
+#model_data/config_soda.txt # UC Berkeley Soda Hall model
 #config_samples.txt # for debug loading/viewing of 3D model files
 #config_san_miguel.txt # San Miguel scene
 #config_minecraft.txt # currently set for Rungholt

@@ -358,10 +358,10 @@ class file_reader_assimp {
 		model_anim.animations.reserve(scene->mNumAnimations);
 
 		for (unsigned a = 0; a < scene->mNumAnimations; ++a) {
-			//cout << "adding animation '" << anim_name << "'" << endl; // TESTING
 			model_anim.animations.emplace_back(anim_name);
 			aiAnimation const *const anim(scene->mAnimations[a]);
 			assert(anim);
+			//cout << "Adding animation '" << anim->mName.C_Str() << "' ID " << a << " as '" << anim_name << "'" << endl; // TESTING
 			read_missing_bones(anim, model_anim);
 			if (anim->mTicksPerSecond) {model_anim.animations[a].ticks_per_sec = anim->mTicksPerSecond;} // defaults to 25
 			model_anim.animations[a].duration = anim->mDuration;

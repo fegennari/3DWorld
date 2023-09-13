@@ -74,6 +74,7 @@ s 1 2  O ../models/people/animated/remy_walking.fbx 4 0 0
 #t 0 0 0  m 1.0  O ..\models\interiors\cockroach\cockroach.3ds 4 1 0
 #s 1 2  O ../models/interiors/fire_extinguisher/fire_extinguisher_co2.fbx 4 0 0
 #s 1 2  O ../models/interrogation_room/InterogationRoom.fbx 4 0 0 # textures are not working
+#s 1 2  m 0.1  O ../models/bird.fbx 4 0 0
 
 cube_map_ref 0
 metalness 0.0
