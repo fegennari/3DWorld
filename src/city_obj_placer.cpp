@@ -14,7 +14,7 @@ extern textured_mat_t pool_deck_mats[];
 
 void add_signs_for_city(unsigned city_id, vector<sign_t> &signs);
 void add_flags_for_city(unsigned city_id, vector<city_flag_t> &flags);
-city_flag_t create_flag(bool dim, bool dir, point const &base_pt, float height, float length);
+city_flag_t create_flag(bool dim, bool dir, point const &base_pt, float height, float length, int flag_id=-1);
 void add_house_driveways_for_plot(cube_t const &plot, vect_cube_t &driveways);
 
 

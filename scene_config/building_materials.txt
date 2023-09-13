@@ -62,6 +62,18 @@ buildings add_picture_texture pictures/san_miguel.jpg
 buildings add_picture_texture pictures/spheres.jpg
 buildings add_picture_texture pictures/sponza.jpg
 
+# flag textures for placing on buildings
+buildings add_flag_texture flags/american_flag_indexed.png
+buildings add_flag_texture flags/centerstar_flag_indexed.png
+buildings add_flag_texture flags/city_flag_indexed.png
+buildings add_flag_texture flags/eye_flag_indexed.png
+buildings add_flag_texture flags/flow_flag_indexed.png
+buildings add_flag_texture flags/flowstar_flag_indexed.png
+buildings add_flag_texture flags/lotus_flag_indexed.png
+buildings add_flag_texture flags/military_flag_indexed.png
+buildings add_flag_texture flags/social_flag_indexed.png
+buildings add_flag_texture flags/swoosh_flag_indexed.png
+
 # computer monitor desktop textures
 buildings add_desktop_texture pictures/fg_desktop.png
 buildings add_desktop_texture pictures/Ubuntu.jpg

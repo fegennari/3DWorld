@@ -1249,8 +1249,11 @@ void stopsign_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_s
 
 // city flags
 
-city_flag_t::city_flag_t(cube_t const &flag_bcube_, bool dim_, bool dir_, point const &pole_base_, float pradius) :
-	oriented_city_obj_t(dim_, dir_), flag_bcube(flag_bcube_), pole_base(pole_base_), pole_radius(pradius)
+int def_flag_tid(-1); // not yet loaded
+int get_flag_texture(unsigned id);
+
+city_flag_t::city_flag_t(cube_t const &flag_bcube_, bool dim_, bool dir_, point const &pole_base_, float pradius, int flag_id_) :
+	oriented_city_obj_t(dim_, dir_), flag_bcube(flag_bcube_), pole_base(pole_base_), pole_radius(pradius), flag_id(flag_id_)
 {
 	bcube       = flag_bcube;
 	bcube.z1()  = pole_base.z; // include pole Z-range
@@ -1261,7 +1264,9 @@ city_flag_t::city_flag_t(cube_t const &flag_bcube_, bool dim_, bool dir_, point 
 	radius = bcube.get_bsphere_radius();
 }
 /*static*/ void city_flag_t::pre_draw(draw_state_t &dstate, bool shadow_only) {
-	if (!shadow_only) {select_texture(get_texture_by_name("flags/american_flag_indexed.png"));}
+	if (shadow_only) return;
+	def_flag_tid = get_texture_by_name("flags/american_flag_indexed.png");
+	select_texture(def_flag_tid);
 }
 void city_flag_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
 	bool const is_horizontal(flag_bcube.dz() > flag_bcube.get_sz_dim(!dim));
@@ -1269,7 +1274,19 @@ void city_flag_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_
 	unsigned const skip_dims(4 + (1<<unsigned(!dim))); // top, bottom, and edges
 	float const cview_dir((camera_pdu.pos[dim] - dstate.xlate[dim]) - pole_base[dim]);
 	bool const visible_side((cview_dir < 0) ^ dir ^ dim), mirror_x(is_horizontal ? 1 : !visible_side), mirror_y(is_horizontal ? visible_side : 0);
+	int tid(def_flag_tid);
+
+	if (!shadow_only && flag_id >= 0) { // select custom flag texture
+		int const flag_tid(get_flag_texture(flag_id));
+		if (flag_tid >= 0) {tid = flag_tid;}
+		if (tid != def_flag_tid) {qbds.qbd.draw_and_clear();} // flush verts drawn with default flag texture
+	}
 	dstate.draw_cube(qbds.qbd, flag_bcube, WHITE, 1, 0.0, skip_dims, mirror_x, mirror_y, is_horizontal); // swap_tc_xy=is_horizontal
+
+	if (tid != def_flag_tid) {
+		select_texture(tid);
+		qbds.qbd.draw_and_clear(); // flush verts with this texture
+	}
 	if (pole_radius == 0.0) return; // no pole to draw
 	// draw the pole
 	float const dmax(dist_scale*dstate.draw_tile_dist*(is_horizontal ? 0.7 : 1.0)); // horizontals flag poles are less visible

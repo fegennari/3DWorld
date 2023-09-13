@@ -113,6 +113,7 @@ int room_object_t::get_tv_tid          () const {return select_tid_from_list(glo
 int room_object_t::get_comp_monitor_tid() const {return select_tid_from_list(global_building_params.desktop_tids, obj_id/2);} // divide by 2 because even obj_id is turned off
 int room_object_t::get_sheet_tid       () const {return select_tid_from_list(global_building_params.sheet_tids,   obj_id);}
 int room_object_t::get_paper_tid       () const {return select_tid_from_list(global_building_params.paper_tids,   obj_id);}
+int get_flag_texture(unsigned id)               {return select_tid_from_list(global_building_params.flag_tids,        id);}
 
 void do_xy_rotate(float rot_sin, float rot_cos, point const &center, point &pos) {
 	float const x(pos.x - center.x), y(pos.y - center.y); // translate to center

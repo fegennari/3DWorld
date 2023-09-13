@@ -392,14 +392,14 @@ void building_t::add_sign_by_door(tquad_with_ix_t const &door, bool outside, std
 	objs.back().obj_id = register_sign_text(text);
 }
 
-city_flag_t create_flag(bool dim, bool dir, point const &base_pt, float height, float length) {
+city_flag_t create_flag(bool dim, bool dir, point const &base_pt, float height, float length, int flag_id=-1) {
 	float const width(0.5*length), pradius(0.05*length), thickness(0.1*pradius), pole_top(base_pt.z + height);
 	cube_t flag;
 	set_cube_zvals(flag, (pole_top - width), pole_top);
 	set_wall_width(flag, base_pt[dim], thickness, dim); // flag thickness
 	flag.d[!dim][!dir] = base_pt[!dim] + (dir ? 1.0 : -1.0)*0.5*pradius; // starts flush with the pole inside edge
 	flag.d[!dim][ dir] = base_pt[!dim] + (dir ? 1.0 : -1.0)*length; // end extends in dir
-	return city_flag_t(flag, dim, dir, base_pt, pradius);
+	return city_flag_t(flag, dim, dir, base_pt, pradius, flag_id);
 }
 void building_t::add_flags(vector<city_flag_t> &flags) const {
 	rand_gen_t rgen;
@@ -432,7 +432,7 @@ void building_t::add_flags(vector<city_flag_t> &flags) const {
 	}
 	if (has_helipad || !skylights.empty()) return; // flag may block the helipad or skylight
 	if (roof_type != ROOF_TYPE_SLOPE) return; // only sloped roofs, since the flag is more visible
-	if (rgen.rand_bool()) return; // place a flag 50% of the time
+	if (rgen.rand_float() < 0.25) return; // place a flag 75% of the time
 	// we can place signs on roof of the tallest part, or on the ground next to the building, on on the building wall; here we add them to the roof
 	// find the highest part, largest area if tied, and place the sign on top of it
 	assert(!parts.empty());
@@ -456,7 +456,7 @@ void building_t::add_flags(vector<city_flag_t> &flags) const {
 	float const window_spacing(get_window_vspace()), length(1.0*window_spacing*rgen.rand_uniform(0.8, 1.25));
 	// assume the tallest part has the roof that sets the bcube and place the flag with that height_add
 	float const height_add(bcube.z2() - base_pt.z), height( 2.0*window_spacing*rgen.rand_uniform(0.8, 1.25) + height_add);
-	flags.push_back(create_flag(dim, dir, base_pt, height, length));
+	flags.push_back(create_flag(dim, dir, base_pt, height, length, rgen.rand()));
 }
 
 

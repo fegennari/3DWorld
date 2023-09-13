@@ -222,8 +222,9 @@ struct city_flag_t : public oriented_city_obj_t {
 	cube_t flag_bcube;
 	point pole_base;
 	float pole_radius;
+	int flag_id; // -1 is default
 
-	city_flag_t(cube_t const &flag_bcube_, bool dim_, bool dir_, point const &pole_base_, float pradius);
+	city_flag_t(cube_t const &flag_bcube_, bool dim_, bool dir_, point const &pole_base_, float pradius, int flag_id_=-1);
 	static void pre_draw(draw_state_t &dstate, bool shadow_only);
 	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const;
 	bool proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const;

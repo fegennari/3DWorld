@@ -382,6 +382,7 @@ bool building_params_t::parse_buildings_option(FILE *fp) {
 	else if (str == "add_desktop_texture") {read_texture_and_add_if_valid(fp, str, read_error, desktop_tids);}
 	else if (str == "add_sheet_texture"  ) {read_texture_and_add_if_valid(fp, str, read_error, sheet_tids  );}
 	else if (str == "add_paper_texture"  ) {read_texture_and_add_if_valid(fp, str, read_error, paper_tids  );}
+	else if (str == "add_flag_texture"   ) {read_texture_and_add_if_valid(fp, str, read_error, flag_tids   );} // not a room object, but fits with this loading system
 	// special commands
 	else if (str == "add_material") {add_cur_mat();}
 	else {
