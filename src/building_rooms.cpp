@@ -738,14 +738,15 @@ void building_t::add_balconies(rand_gen_t &rgen) {
 				unsigned const num_plants(rgen.rand() % 3); // 0-2
 
 				if (num_plants > 0) { // place plants
-					cube_t cubes[4], plant_avoid;
+					cube_t cubes[4];
+					vect_cube_t plant_avoid;
 					get_balcony_cubes(objs.back(), cubes);
 					float const wall_width(cubes[1].get_sz_dim(dim)); // use front wall
 					cube_t floor_inner(cubes[0]);
 					floor_inner.expand_by_xy(-wall_width);
 
 					for (unsigned n = 0; n < num_plants; ++n) {
-						if (place_plant_on_obj(rgen, floor_inner, room_id, 1.0, plant_avoid)) {plant_avoid = objs.back();} // tot_light_amt=1.0
+						if (place_plant_on_obj(rgen, floor_inner, room_id, 1.0, plant_avoid)) {plant_avoid.push_back(objs.back());} // tot_light_amt=1.0
 					}
 				}
 				// else place table and chairs?
