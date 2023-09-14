@@ -353,7 +353,8 @@ bool building_t::add_desk_to_room(rand_gen_t rgen, room_t const &room, vect_cube
 					for (unsigned n = 0; n < num_papers; ++n) { // okay if they overlap
 						set_wall_width(paper, rgen.rand_uniform(c.d[ dim][0]+pheight, c.d[ dim][1]-pheight), 0.5*pheight,  dim);
 						set_wall_width(paper, rgen.rand_uniform(c.d[!dim][0]+pwidth,  c.d[!dim][1]-pwidth),  0.5*pwidth,  !dim);
-						objs.emplace_back(paper, TYPE_PAPER, room_id, dim, !dir, (RO_FLAG_NOCOLL | RO_FLAG_RAND_ROT), tot_light_amt, SHAPE_CUBE, paper_colors[rgen.rand()%NUM_PAPER_COLORS]);
+						objs.emplace_back(paper, TYPE_PAPER, room_id, dim, !dir, (RO_FLAG_NOCOLL | RO_FLAG_RAND_ROT),
+							tot_light_amt, SHAPE_CUBE, paper_colors[rgen.rand()%NUM_PAPER_COLORS]);
 						set_obj_id(objs);
 						paper.z2() += thickness; // to avoid Z-fighting if different colors
 					} // for n
@@ -2236,13 +2237,13 @@ colorRGBA choose_pot_color(rand_gen_t &rgen) {
 	colorRGBA const pot_colors[num_colors] = {LT_GRAY, GRAY, DK_GRAY, BKGRAY, WHITE, LT_BROWN, RED, colorRGBA(1.0, 0.35, 0.18)};
 	return pot_colors[rgen.rand() % num_colors];
 }
-bool building_t::place_plant_on_obj(rand_gen_t &rgen, cube_t const &place_on, unsigned room_id, float tot_light_amt, vect_cube_t const &avoid) {
-	float const window_vspacing(get_window_vspace()), height(rgen.rand_uniform(0.25, 0.4)*window_vspacing), max_radius(min(place_on.dx(), place_on.dy())/3.0f);
+bool building_t::place_plant_on_obj(rand_gen_t &rgen, cube_t const &place_on, unsigned room_id, float tot_light_amt, float sz_scale, vect_cube_t const &avoid) {
+	float const window_vspacing(get_window_vspace()), height(rgen.rand_uniform(0.25, 0.4)*sz_scale*window_vspacing), max_radius(min(place_on.dx(), place_on.dy())/3.0f);
 	vect_room_object_t &objs(interior->room_geom->objs);
 
 	if (building_obj_model_loader.is_model_valid(OBJ_MODEL_PLANT)) { // prefer to place potted plant models, if any exist
 		vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_PLANT)); // D, W, H
-		float const radius_to_height(0.25*(sz.x + sz.y)/sz.z), radius(min(radius_to_height*height, max_radius)); // cylindrical
+		float const radius_to_height(0.25*(sz.x + sz.y)/sz.z), radius(min(radius_to_height*height*0.8f, max_radius)); // cylindrical, 80% the size of regular plants
 		cube_t const plant(place_cylin_object(rgen, place_on, radius, radius/radius_to_height, 1.2*radius)); // recompute height from radius
 		
 		if (!has_bcube_int(plant, avoid)) { // only make one attempt
@@ -2251,7 +2252,7 @@ bool building_t::place_plant_on_obj(rand_gen_t &rgen, cube_t const &place_on, un
 			return 1;
 		} // else try to place a non-model plant
 	}
-	float const radius(min(rgen.rand_uniform(0.06, 0.08)*window_vspacing, max_radius));
+	float const radius(min(rgen.rand_uniform(0.06, 0.08)*sz_scale*window_vspacing, max_radius));
 	cube_t const plant(place_cylin_object(rgen, place_on, radius, height, 1.2*radius));
 	if (has_bcube_int(plant, avoid)) return 0; // only make one attempt
 	objs.emplace_back(plant, TYPE_PLANT, room_id, 0, 0, (RO_FLAG_NOCOLL | RO_FLAG_ADJ_BOT), tot_light_amt, SHAPE_CYLIN, choose_pot_color(rgen));
@@ -3010,7 +3011,7 @@ void building_t::place_objects_onto_surfaces(rand_gen_t rgen, room_t const &room
 			case 1: placed = (rgen.rand_probability(cup_prob   ) && place_cup_on_obj   (rgen, surface, room_id, tot_light_amt, avoid)); break;
 			case 2: placed = (rgen.rand_probability(laptop_prob) && place_laptop_on_obj(rgen, surface, room_id, tot_light_amt, avoid, !is_table)); break;
 			case 3: placed = (rgen.rand_probability(pizza_prob ) && place_pizza_on_obj (rgen, surface, room_id, tot_light_amt, avoid)); break;
-			case 4: placed = (!is_basement && rgen.rand_probability(plant_prob) && place_plant_on_obj(rgen, surface, room_id, tot_light_amt, avoid)); break;
+			case 4: placed = (!is_basement && rgen.rand_probability(plant_prob) && place_plant_on_obj(rgen, surface, room_id, tot_light_amt, 0.7, avoid)); break; // sz_scale=0.7
 			case 5: placed = (rgen.rand_probability(toy_prob)    && place_toy_on_obj   (rgen, surface, room_id, tot_light_amt, avoid)); break;
 			}
 		} // for n

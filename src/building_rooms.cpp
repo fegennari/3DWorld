@@ -746,7 +746,7 @@ void building_t::add_balconies(rand_gen_t &rgen) {
 					floor_inner.expand_by_xy(-wall_width);
 
 					for (unsigned n = 0; n < num_plants; ++n) {
-						if (place_plant_on_obj(rgen, floor_inner, room_id, 1.0, plant_avoid)) {plant_avoid.push_back(objs.back());} // tot_light_amt=1.0
+						if (place_plant_on_obj(rgen, floor_inner, room_id, 1.0, 1.2, plant_avoid)) {plant_avoid.push_back(objs.back());} // tot_light_amt=1.0, sz_scale=1.2
 					}
 				}
 				// else place table and chairs?
