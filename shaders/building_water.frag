@@ -130,7 +130,8 @@ void main() {
 	vec4 surf_color  = mix(water_color, reflect_tex, reflect_w);
 
 	// handle refractions by mixing the frame buffer (with the floor and underwater objects) with the water using the alpha value
-	vec3 refract_color = texture(frame_buffer, uv_adj).rgb;
+	float darken_fact  = 0.8; // darken underwater objects to simulate wetness; is there a way to incrementally darken walls above the water line as well?
+	vec3 refract_color = darken_fact*texture(frame_buffer, uv_adj).rgb;
 	// adjust intensity by the ratio of signed amplitude to height sum to get a signed value within an envelope that falls off at both ends:
 	// at the low radius (to prevent sharp edges near the singularity at the splash center), and at the outer radius for a smooth transition
 	float inten_adj    = 0.2*splash.x/max(splash.y, 0.05);
