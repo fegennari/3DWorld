@@ -1440,8 +1440,10 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 	if (inc_small  )    {mats_dynamic.draw(bbd, s, shadow_only, reflection_pass);}
 	if (inc_small >= 3) {mats_detail .draw(bbd, s, shadow_only, reflection_pass);} // now included in the shadow pass
 	
-	// draw exterior geom; shadows not supported; always use bbd; skip in reflection pass because that control flow doesn't work and is probably not needed (except for L-shaped house?)
+	// draw exterior geom; shadows not supported; always use bbd;
+	// skip in reflection pass because that control flow doesn't work and is probably not needed (except for L-shaped house?)
 	if (!shadow_only && !reflection_pass && player_in_basement < 2) { // skip for player fully in the basement
+		// is there a way to incrementally blend/dither this geometry in? it's not drawn in the correct order for alpha blending to work
 		mats_exterior.draw(bbd_in, s, shadow_only, reflection_pass, 1); // exterior_geom=1
 		if (draw_detail_objs) {mats_ext_detail.draw(bbd_in, s, shadow_only, reflection_pass, 1);} // exterior_geom=1
 	}
