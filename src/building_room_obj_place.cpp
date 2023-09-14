@@ -498,7 +498,9 @@ bool building_t::check_valid_closet_placement(cube_t const &c, room_t const &roo
 		bed_exp.expand_by_xy(min_bed_space);
 		if (c.intersects_xy(bed_exp)) return 0; // too close to bed
 	}
-	return (!overlaps_other_room_obj(c, objs_start) && !is_cube_close_to_doorway(c, room, 0.0, 1));
+	if (overlaps_other_room_obj(c, objs_start) || is_cube_close_to_doorway(c, room, 0.0, 1)) return 0;
+	if (has_attic() && c.intersects_xy(interior->attic_access) && (c.z2() + get_floor_thickness()) > interior->attic_access.z1()) return 0;
+	return 1;
 }
 
 float get_lamp_width_scale() {
@@ -775,7 +777,7 @@ bool building_t::add_bed_to_room(rand_gen_t &rgen, room_t const &room, vect_cube
 	cube_t c;
 	c.z1() = zval;
 
-	for (unsigned n = 0; n < (force ? 100U : 20U); ++n) { // make 20 attempts to place a bed
+	for (unsigned n = 0; n < (force ? 100U : 40U); ++n) { // make 40 attempts to place a bed (100 if forced)
 		float const sizes[6][2] = {{38, 75}, {38, 80}, {53, 75}, {60, 80}, {76, 80}, {72, 84}}; // twin, twin XL, full, queen, king, cal king
 		unsigned const size_ix((room_width < 0.9*vspace) ? (rgen.rand() % 6) : (2 + (rgen.rand() % 4))); // only add twin beds to narrow rooms
 		bed_sz[ dim] = 0.01f*vspace*(sizes[size_ix][1] + 8.0f); // length (mattress + headboard + footboard)
