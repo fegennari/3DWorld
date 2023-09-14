@@ -14,6 +14,27 @@ struct splash_t {
 const int MAX_SPLASHES = 40; // must agree with C++ code
 uniform splash_t splashes[MAX_SPLASHES];
 
+#ifdef USE_SPLASH_LINES
+struct splash_line_t {
+	vec4 lpts; // line points: {p1x, p1y, p2x, p2y}
+	vec4 rh; // {radius, height, pad, pad}
+	vec4 bounds; // {x1, y1, x2, y2}
+};
+
+const int MAX_SPLASHE_LINES = 20; // must agree with C++ code
+uniform splash_line_t splash_lines[MAX_SPLASHE_LINES];
+
+float point_line_seg_dist(vec2 p, vec2 p1, vec2 p2) {
+    vec2 center = (p1 + p2) * 0.5;
+    float len = length(p2 - p1);
+    vec2 dir = (p2 - p1) / len;
+    vec2 rel_p = p - center;
+    float dist1 = abs(dot(rel_p, vec2(dir.y, -dir.x)));
+    float dist2 = abs(dot(rel_p, dir)) - 0.5*len;
+    return max(dist1, dist2);
+}
+#endif // USE_SPLASH_LINES
+
 in vec3 vpos; // world space
 in vec4 epos, proj_pos;
 
@@ -31,27 +52,47 @@ vec4 get_splash_amplitude() { // returns {signed_amplitude, abs_mag_amplitude, a
 	float amp_dx     = 0.0;
 	float amp_dy     = 0.0;
 	vec2 vpos_dx     = vpos.xy + dFdx(vpos.xy); // vpos shifted one pixel in screen space
-	vec2 vpos_xy     = vpos.xy + dFdy(vpos.xy);
+	vec2 vpos_dy     = vpos.xy + dFdy(vpos.xy);
 
 	for (int i = 0; i < MAX_SPLASHES; ++i) {
-		float height = splashes[i].loc_rh.w; // amplitude at center, nominally < 1.0
-		if (height == 0.0) continue;  // this splash is disabled, skip
-		float radius = splashes[i].loc_rh.z; // max radius of effect of this splash
-		vec2 loc_xy  = splashes[i].loc_rh.xy;
+		splash_t s   = splashes[i];
+		float height = s.loc_rh.w; // amplitude at center, nominally < 1.0
+		if (height == 0.0) continue; // this splash is disabled, skip
+		float radius = s.loc_rh.z; // max radius of effect of this splash
+		vec2 loc_xy  = s.loc_rh.xy;
 		float dist   = distance(vpos.xy, loc_xy);
 		if (dist > radius) continue; // is this faster or slower? unclear
 		// ideally we should check the room walls and allow them to block the wave, maybe with a ray march through a texture with wall=0 and space=1?
-		vec4 bounds = splashes[i].bounds;
-		if (vpos.x < bounds.x || vpos.y < bounds.y || vpos.x > bounds.z || vpos.y > bounds.w) continue; // check XY bounds
+		if (vpos.x < s.bounds.x || vpos.y < s.bounds.y || vpos.x > s.bounds.z || vpos.y > s.bounds.w) continue; // check XY bounds
 		dist        = max(dist, 0.01*radius); // avoid a singularity right at the center
 		float dr    = dist/radius;
 		height     *= 1.0 - min(dr*dr, 1.0); // height decreases sqrt-ish with distance; not quadratic, doesn't preserve water volume
 		splash_amp += height*calc_water_height(dist);
 		// compute XY derivatives; slower, but using dFdx()/dFdy() on splash_amp produces blocky artifacts
 		amp_dx     += height*calc_water_height(distance(vpos_dx, loc_xy));
-		amp_dy     += height*calc_water_height(distance(vpos_xy, loc_xy));
+		amp_dy     += height*calc_water_height(distance(vpos_dy, loc_xy));
 		height_sum += abs(height);
 	} // for i
+
+#ifdef USE_SPLASH_LINES
+	for (int i = 0; i < MAX_SPLASHE_LINES; ++i) {
+		splash_line_t sl = splash_lines[i];
+		float height = sl.rh.y; // amplitude at center, nominally < 1.0
+		if (height == 0.0) continue; // this splash line is disabled, skip
+		float radius = sl.rh.x; // max radius of effect of this splash
+		float dist   = point_line_seg_dist(vpos.xy, sl.lpts.xy, sl.lpts.zw);
+		if (dist > radius) continue; // is this faster or slower? unclear
+		if (vpos.x < sl.bounds.x || vpos.y < sl.bounds.y || vpos.x > sl.bounds.z || vpos.y > sl.bounds.w) continue; // check XY bounds
+		dist        = max(dist, 0.01*radius); // avoid a singularity right at the center
+		float dr    = dist/radius;
+		height     *= 1.0 - min(dr*dr, 1.0); // height decreases sqrt-ish with distance; not quadratic, doesn't preserve water volume
+		splash_amp += height*calc_water_height(dist);
+		// compute XY derivatives
+		amp_dx     += height*calc_water_height(point_line_seg_dist(vpos_dx, sl.lpts.xy, sl.lpts.zw));
+		amp_dy     += height*calc_water_height(point_line_seg_dist(vpos_dy, sl.lpts.xy, sl.lpts.zw));
+		height_sum += abs(height);
+	} // for i
+#endif // USE_SPLASH_LINES
 	return vec4(splash_amp, height_sum, (amp_dx - splash_amp), (amp_dy - splash_amp));
 }
 
