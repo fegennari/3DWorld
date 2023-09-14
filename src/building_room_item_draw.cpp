@@ -1328,7 +1328,21 @@ void draw_obj_model(obj_model_inst_t const &i, room_object_t const &obj, shader_
 	}
 	// Note: lamps are the most common and therefore most expensive models to draw
 	int const model_id(obj.get_model_id()); // first 8 bits is model ID, last 8 bits is sub-model ID
-	building_obj_model_loader.draw_model(s, obj_center, obj, i.dir, obj.color, xlate, model_id, shadow_only, 0, nullptr, 0, untextured, 0, upside_down, emissive_body_mat);
+	unsigned rot_only_mat_mask(0);
+	vector3d dir(i.dir);
+
+	if (dir != obj.get_dir()) { // handle models that have rotating parts; similar to car_draw_state_t::draw_helicopter()
+		if      (obj.type == TYPE_CEIL_FAN ) {rot_only_mat_mask =  1;} // only the first material (fan blades) rotate
+		else if (obj.type == TYPE_OFF_CHAIR) {rot_only_mat_mask = ~1;} // all but the first material (base) rotates
+
+		if (rot_only_mat_mask > 0) { // draw the rotated part
+			building_obj_model_loader.draw_model(s, obj_center, obj, dir, obj.color, xlate, model_id, shadow_only,
+				0, nullptr, ~rot_only_mat_mask, untextured, 0, upside_down, emissive_body_mat);
+			dir = obj.get_dir(); // base model rotation based on object dim/dir orient and not instance rotation vector
+		}
+	}
+	building_obj_model_loader.draw_model(s, obj_center, obj, dir, obj.color, xlate, model_id, shadow_only,
+		0, nullptr, rot_only_mat_mask, untextured, 0, upside_down, emissive_body_mat);
 	if (!shadow_only && obj.type == TYPE_STOVE) {draw_stove_flames(obj, (camera_pdu.pos - xlate), s);} // draw blue burner flame
 
 	if (use_low_z_bias) { // restore to the defaults
