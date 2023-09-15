@@ -181,6 +181,7 @@ void building_params_t::init_kw_maps() {
 	kwmb.add("infinite_buildings", infinite_buildings);
 	kwmb.add("add_secondary_buildings", add_secondary_buildings);
 	kwmb.add("add_office_basements", add_office_basements);
+	kwmb.add("put_doors_in_corners", put_doors_in_corners);
 	kwmr.add("split_prob", cur_mat.split_prob, FP_CHECK_01);
 	kwmr.add("cube_prob",  cur_mat.cube_prob,  FP_CHECK_01);
 	kwmr.add("round_prob", cur_mat.round_prob, FP_CHECK_01);
