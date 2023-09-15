@@ -1287,10 +1287,10 @@ int get_building_door_tid(unsigned type) { // exterior doors, and interior doors
 
 tid_nm_pair_t get_concrete_texture(float tscale=16.0) {return tid_nm_pair_t(get_concrete_tid(), tscale);}
 
-void add_driveway_or_porch(building_draw_t &bdraw, building_t const &building, cube_t const &c, colorRGBA const &color) {
+void add_driveway_or_porch(building_draw_t &bdraw, building_t const &building, cube_t const &c, colorRGBA const &color, bool skip_bottom) {
 	if (c.is_all_zeros()) return;
 	tid_nm_pair_t const tex(get_concrete_texture());
-	bdraw.add_section(building, 0, c, tex, color, 7, 1, 0, 1, 0); // all dims, skip bottom, no AO
+	bdraw.add_section(building, 0, c, tex, color, 7, skip_bottom, 0, 1, 0); // all dims, no AO
 }
 
 tid_nm_pair_t building_t::get_basement_wall_texture() const { // okay to call if there's no basement
@@ -1619,8 +1619,8 @@ void building_t::get_all_drawn_exterior_verts(building_draw_t &bdraw) { // exter
 	for (auto i = fences.begin(); i != fences.end(); ++i) {
 		bdraw.add_fence(*this, *i, tid_nm_pair_t(WOOD_TEX, 0.4f/min(i->dx(), i->dy())), WHITE, (fences.size() > 1));
 	}
-	add_driveway_or_porch(bdraw, *this, driveway, LT_GRAY);
-	add_driveway_or_porch(bdraw, *this, porch,    LT_GRAY);
+	add_driveway_or_porch(bdraw, *this, driveway, LT_GRAY, 0); // skip_bottom=0, since it may be visible when extended over the terrain
+	add_driveway_or_porch(bdraw, *this, porch,    LT_GRAY, 1); // skip_bottom=1
 
 	if (roof_type == ROOF_TYPE_DOME || roof_type == ROOF_TYPE_ONION) {
 		cube_t const &top(parts.back()); // top/last part
