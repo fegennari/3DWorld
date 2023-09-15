@@ -26,8 +26,11 @@ bool city_model_t::read(FILE *fp, bool is_helicopter, bool is_person) {
 	if (!read_uint(fp, swap_xyz))        return 0; // {swap none, swap Y with Z, swap X with Z}
 	if (!read_float(fp, scale))          return 0;
 	if (!read_float(fp, lod_mult) || lod_mult < 0.0)  return 0;
-	if (is_helicopter && !read_int(fp, blade_mat_id)) return 0; // helicopter model is special because it has a blade material
-
+	
+	if (is_helicopter) {
+		if (!read_int(fp, blade_mat_id)) return 0; // helicopter model is special because it has a blade material
+		// what about reading rotate_about?
+	}
 	if (is_person) { // read animation data, etc.
 		if (!read_float(fp, anim_speed)) return 0;
 		if (!read_bool (fp, is_zombie))  return 0;
@@ -194,8 +197,9 @@ void city_model_loader_t::draw_model(shader_t &s, vector3d const &pos, cube_t co
 		}
 	}
 	fgPushMatrix();
-	translate_to(pos + vector3d(0.0, 0.0, z_offset*sz_scale)); // z_offset is in model space, scale to world space
+	translate_to(pos + z_offset*sz_scale*plus_z - model_file.rotate_about); // z_offset is in model space, scale to world space
 	rotate_model_from_plus_x_to_dir(dir);
+	if (model_file.rotate_about != all_zeros) {translate_to(model_file.rotate_about);}
 	if (dir.z != 0.0) {fgRotate(TO_DEG*asinf(-dir.z), 0.0, 1.0, 0.0);} // handle cars on a slope
 	if (model_file.xy_rot != 0.0) {fgRotate(model_file.xy_rot, 0.0, 0.0, 1.0);} // apply model rotation about z/up axis (in degrees)
 	if (model_file.swap_xz) {fgRotate( 90.0, 0.0, 1.0, 0.0);} // swap X and Z dirs; models have up=X, but we want up=Z

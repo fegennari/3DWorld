@@ -31,6 +31,7 @@ struct city_model_t {
 	int blade_mat_id=-1; // for helicopters
 	int model3d_id=-1; // index into model3ds vector; -1 is not set
 	float xy_rot=0.0, lod_mult=1.0, scale=1.0, anim_speed=1.0; // xy_rot in degrees
+	point rotate_about;
 	colorRGBA custom_color;
 	string default_anim_name;
 	vector<unsigned> shadow_mat_ids;
