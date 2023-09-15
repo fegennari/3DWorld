@@ -550,7 +550,7 @@ bool building_t::add_bedroom_objs(rand_gen_t rgen, room_t &room, vect_cube_t con
 			c.d[1][!ydir] += (ydir ? -1.0 : 1.0)*(dim ? closet_min_depth : closet_min_width);
 			if (chk_windows[!dim][other_dir] && is_val_inside_window(part, dim, c.d[dim][!dir], window_hspacing, get_window_h_border())) continue; // check for window intersection
 			c.z2() += window_vspacing - floor_thickness;
-			c.d[dim][!dir] += signed_front_clearance; // extra padding in front, to avoid placing too close to bed
+			c.d[dim][!dir] += signed_front_clearance; // extra padding in front, to avoid placing too close to bed, etc.
 			if (!check_valid_closet_placement(c, room, objs_start, bed_obj_ix, min_bed_space)) continue; // bad placement
 			// good placement, see if we can make the closet larger
 			unsigned const num_steps = 10;
@@ -563,6 +563,12 @@ bool building_t::add_bedroom_objs(rand_gen_t rgen, room_t &room, vect_cube_t con
 				c2.d[!dim][!other_dir] += len_step;
 				if (!check_valid_closet_placement(c2, room, objs_start, bed_obj_ix, min_bed_space)) break; // bad placement
 				c = c2; // valid placement, update with larger cube
+			}
+			if (front_clearance < doorway_width && room_object_t(c, TYPE_CLOSET, room_id, dim, !dir).is_small_closet()) {
+				// will be a small closet; add extra space in front to make the sure the door can open
+				cube_t c_ext(c);
+				c_ext.d[dim][!dir] += dir_sign*(doorway_width - front_clearance);
+				if (!check_valid_closet_placement(c_ext, room, objs_start, bed_obj_ix, 0.0)) continue; // bad placement; don't need to recheck bed
 			}
 			for (unsigned s2 = 0; s2 < num_steps; ++s2) { // now try increasing depth
 				cube_t c2(c);
