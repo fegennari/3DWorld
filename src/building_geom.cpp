@@ -1926,6 +1926,7 @@ void building_t::gen_details(rand_gen_t &rgen, bool is_rectangle) { // for the r
 	}
 	else if (can_have_hp_or_sl && is_cube() && interior_enabled()) {
 		// maybe add skylights; cube roofs only for now, since we can't cut holes in other shapes; only for buildings with interiors;
+		// could add skylights to house rooms such as bathrooms, but they haven't been assigned and we would need to cut holes in the roof and possibly attic
 		// note that at this point there has been no floorplanning, so we don't know where primary hallways, etc. will be
 		float part_zmax(bcube.z1());
 		for (cube_t const &part : parts) {max_eq(part_zmax, part.z2());}

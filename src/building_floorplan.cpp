@@ -834,6 +834,9 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 					add_room(c, part_id, 1, 0, 0);
 					continue;
 				}
+				// create a wall to split up this room
+				// what about allowing adjacent rooms not separated by a wall?
+				// this would work for connected public rooms (living, dining, kitchen), but would limit our ability to later assign these rooms as bed, bath, etc.
 				cube_t wall(c), wall2; // copy from cube; shared zvals, but X/Y will be overwritten per wall
 				create_wall(wall, wall_dim, wall_pos, fc_thick, wall_half_thick, wall_edge_spacing);
 				// insert a doorway into the wall

@@ -479,9 +479,12 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			if (is_house && (added_tc || added_desk) && !is_kitchen && is_entry_floor) { // don't add second living room unless we added a kitchen and have enough rooms
 				if ((!added_living && !r->has_center_stairs && rooms.size() >= 8 && (added_kitchen_mask || rgen.rand_bool())) || is_room_an_exit(*r, room_id, room_center.z)) {
 					// add a living room on the ground floor if it has a table or desk but isn't a kitchen
-					is_living = add_livingroom_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);
-					if (is_living) {added_living_mask |= floor_mask;}
-					if (is_living) {r->assign_to(RTYPE_LIVING, f);}
+					if (add_livingroom_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start)) {
+						is_living = 1;
+						added_living_mask |= floor_mask;
+						r->assign_to(RTYPE_LIVING, f);
+						// if living room is next to a dining room or kitchen, do we want to remove the door and wall between the rooms? would need to regen VBOs
+					}
 				}
 			}
 			if (is_house && added_tc && num_chairs > 0 && !is_living && !is_kitchen) { // room with table and chair that's not a kitchen
