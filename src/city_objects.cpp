@@ -433,7 +433,7 @@ void swimming_pool_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float d
 				color_wrapper const step_color(LT_GRAY);
 				cube_t ladder;
 				float const side_pos(bcube.d[dim][dir]), swidth((dir ? 1.0 : -1.0)*0.065*radius); // ladder is on this side of the pool
-				float const height(1.2*height), step_delta(height/(num_steps + 0.25)), step_offset(0.25*step_delta), step_height(0.14*step_delta);
+				float const ladder_height(1.2*height), step_delta(ladder_height/(num_steps + 0.25)), step_offset(0.25*step_delta), step_height(0.14*step_delta);
 				ladder.d[dim][!dir] = side_pos;
 				ladder.d[dim][ dir] = side_pos + swidth;
 				set_wall_width(ladder, (dim ? xc : yc), 0.16*radius, !dim);
@@ -446,7 +446,7 @@ void swimming_pool_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float d
 					dstate.draw_cube(qbds.qbd, ladder, step_color, !is_very_close); // skip bottom if not close
 				}
 				if (is_close) { // draw bars
-					float const bars_top(bcube.z1() + height), bar_radius(0.012*radius);
+					float const bars_top(bcube.z1() + ladder_height), bar_radius(0.012*radius);
 					bool const draw_top(is_very_close && camera_bs.z > bars_top);
 					unsigned const bars_ndiv(max(3U, min(12U, ndiv/4)));
 					point pt;
