@@ -254,13 +254,35 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 	for (auto i = parts.begin(); i != get_real_parts_end_inc_sec(); ++i) {max_eq(interior_z2, i->z2());}
 }
 
+// Note: these are used in gen_interior_int() and maybe_add_skylight()
+bool building_t::can_use_hallway_for_part(unsigned part_id) const {
+	if (is_house || has_complex_floorplan || !is_cube() || part_id == basement_part_ix) return 0;
+	assert(part_id < parts.size());
+	cube_t const &p(parts[part_id]);
+	bool const first_part_this_stack(part_id == 0 || parts[part_id-1].z1() < p.z1());
+	bool const next_diff_stack(part_id+1 == parts.size() || parts[part_id+1].z1() != p.z1());
+	return (first_part_this_stack && next_diff_stack && min(p.dx(), p.dy()) > 4.0*get_min_wall_len());
+}
+cube_t building_t::get_hallway_for_part(cube_t const &part, float &num_hall_windows, float &hall_width, float &room_width) const {
+	bool const min_dim(part.dy() < part.dx());
+	int const num_windows_od(get_num_windows_on_side(part.d[min_dim][0], part.d[min_dim][1])); // in short dim
+	float const doorway_width(0.5*get_window_vspace()), min_hall_width(3.6*doorway_width), part_width(part.get_sz_dim(min_dim));
+	num_hall_windows = ((num_windows_od & 1) ? 1.4 : 1.8); // hall either contains 1 (odd) or 2 (even) windows, wider for single window case to make room for stairs
+	max_eq(num_hall_windows, min_hall_width*num_windows_od/part_width); // enforce min_hall_width (may split a window, but this limit is only hit for non-window city office buildings)
+	hall_width = num_hall_windows*part_width/num_windows_od;
+	room_width = 0.5f*(part_width - hall_width); // rooms are the same size on each side of the hallway
+	cube_t hall(part);
+	hall.expand_in_dim(min_dim, -room_width); // shink rooms off of each end
+	return hall;
+}
+
 void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) { // Note: contained in building bcube, so no bcube update is needed
 
 	// defer this until the building is close to the player?
 	interior.reset(new building_interior_t);
 	float const window_vspacing(get_window_vspace()), floor_thickness(get_floor_thickness()), fc_thick(0.5*floor_thickness);
 	float const doorway_width(0.5*window_vspacing), doorway_hwidth(0.5*doorway_width);
-	float const wall_thick(get_wall_thickness()), wall_half_thick(0.5*wall_thick), wall_edge_spacing(0.05*wall_thick), min_wall_len(4.0*doorway_width);
+	float const wall_thick(get_wall_thickness()), wall_half_thick(0.5*wall_thick), wall_edge_spacing(0.05*wall_thick), min_wall_len(get_min_wall_len());
 	float const window_border(get_window_h_border());
 	vector3d const car_sz(get_nom_car_size());
 	point bldg_door_open_dir_tp(bcube.get_cube_center()); // used to determine in which direction doors open; updated base on central hallway
@@ -295,13 +317,11 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 		if (num_floors == 0) continue; // not enough space to add a floor (can this happen?)
 		// for now, assume each part has the same XY bounds and can use the same floorplan; this means walls can span all floors and don't need to be duplicated for each floor
 		vector3d const psz(p->get_size());
-		bool const min_dim(psz.y < psz.x); // hall dim
-		float const cube_width(psz[min_dim]);
 		bool const is_basement_part(is_basement(p)), first_part(part_id == 0), first_part_this_stack(first_part || is_basement_part || (p-1)->z1() < p->z1());
-		bool const next_diff_stack(p+1 == parts.end() || (p+1)->z1() != p->z1());
 		// office building hallways only; house hallways are added later
-		bool const use_hallway(!is_house && !is_basement_part && !has_complex_floorplan && is_cube() && first_part_this_stack && next_diff_stack && cube_width > 4.0*min_wall_len);
+		bool const use_hallway(can_use_hallway_for_part(part_id)), min_dim(psz.y < psz.x);
 		unsigned const rooms_start(rooms.size()), num_doors_per_stack(SPLIT_DOOR_PER_FLOOR ? num_floors : 1);
+		float const cube_width(psz[min_dim]);
 		cube_t hall, place_area(*p);
 		place_area.expand_by_xy(-wall_edge_spacing); // shrink slightly to avoid z-fighting with walls
 		float window_hspacing[2] = {0.0};
@@ -385,7 +405,7 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 			// building with rectangular slice (no adjacent exterior walls at this level), generate rows of offices
 			// Note: we could probably make these unsigned, but I want to avoid unepected negative numbers in the math
 			int const num_windows   (num_windows_per_side[!min_dim]);
-			int const num_windows_od(num_windows_per_side[min_dim]); // other dim, for use in hallway width calculation
+			int const num_windows_od(num_windows_per_side[ min_dim]); // other dim, for use in hallway width calculation
 			int windows_per_room((num_windows >= 7 && num_windows_od >= 7) ? 2 : 1); // 1-2 windows per room (only assign 2 windows if we can get into the secondary hallway case below)
 			float const cube_len(psz[!min_dim]), wind_hspacing(cube_len/num_windows), min_hall_width(3.6*doorway_width);
 			float room_len(wind_hspacing*windows_per_room);
@@ -394,23 +414,19 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 				++windows_per_room;
 				room_len = wind_hspacing*windows_per_room;
 			}
-			int const num_rooms((num_windows+windows_per_room-1)/windows_per_room); // round up
 			bool const partial_room((num_windows % windows_per_room) != 0); // an odd number of windows leaves a small room at the end
 			bool const is_ground_floor(p->z1() == ground_floor_z1);
-			assert(num_rooms >= 0 && num_rooms < 1000); // sanity check
-			float num_hall_windows((num_windows_od & 1) ? 1.4 : 1.8); // hall either contains 1 (odd) or 2 (even) windows, wider for single window case to make room for stairs
-			max_eq(num_hall_windows, min_hall_width*num_windows_od/cube_width); // enforce min_hall_width (may split a window, but this limit is only hit for non-window city office buildings)
-			float const hall_width(num_hall_windows*cube_width/num_windows_od);
-			float const room_width(0.5f*(cube_width - hall_width)); // rooms are the same size on each side of the hallway
 			float const hwall_extend(0.5f*(room_len - doorway_width - wall_thick));
 			float const wall_pos(p->d[!min_dim][0] + room_len); // pos of first wall separating first from second rooms
-			float const hall_wall_pos[2] = {(p->d[min_dim][0] + room_width), (p->d[min_dim][1] - room_width)};
-			if (hallway_dim == 2) {hallway_dim = !min_dim;} // cache in building for later use, only for first part (ground floor)
-			auto &room_walls(interior->walls[!min_dim]), &hall_walls(interior->walls[min_dim]);
-			hall = *p;
-			for (unsigned e = 0; e < 2; ++e) {hall.d[min_dim][e] = hall_wall_pos[e];}
-			vector<unsigned> utility_room_cands;
+			float num_hall_windows, hall_width, room_width;
+			hall = get_hallway_for_part(*p, num_hall_windows, hall_width, room_width);
+			float const *hall_wall_pos(hall.d[min_dim]);
 			unsigned const doors_start(interior->doors.size());
+			int const num_rooms((num_windows+windows_per_room-1)/windows_per_room); // round up
+			assert(num_rooms >= 0 && num_rooms < 1000); // sanity check
+			auto &room_walls(interior->walls[!min_dim]), &hall_walls(interior->walls[min_dim]);
+			if (hallway_dim == 2) {hallway_dim = !min_dim;} // cache in building for later use, only for first part (ground floor)
+			vector<unsigned> utility_room_cands;
 			
 			if (num_windows_od >= 7 && num_rooms >= 4) { // at least 7 windows (3 on each side of hallway)
 				float const min_hall_width(1.5f*doorway_width), max_hall_width(2.5f*doorway_width);

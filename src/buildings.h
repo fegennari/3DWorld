@@ -1400,6 +1400,7 @@ struct building_t : public building_geom_t {
 	float get_floor_ceil_gap () const {return (get_window_vspace() - get_floor_thickness());}
 	float get_door_height    () const {return 0.95f*get_floor_ceil_gap();} // set height based on window spacing, 95% of ceiling height (may be too large)
 	float get_attic_beam_depth()const {return 0.08*get_window_vspace();}
+	float get_min_wall_len   () const {return 2.0 *get_window_vspace();}
 	float get_doorway_width  () const;
 	float get_ground_floor_z_thresh(bool for_spider) const;
 	void gen_rotation(rand_gen_t &rgen);
@@ -1461,6 +1462,7 @@ struct building_t : public building_geom_t {
 	void place_roof_ac_units(unsigned num, float sz_scale, cube_t const &bounds, vect_cube_t const &avoid, rand_gen_t &rgen);
 	void add_roof_walls(cube_t const &c, float wall_width, bool overlap_corners, cube_t out[4]);
 	void gen_details(rand_gen_t &rgen, bool is_rectangle);
+	void maybe_add_skylight(rand_gen_t &rgen);
 	void add_company_sign(rand_gen_t &rgen);
 	cube_t get_helipad_bcube() const;
 	int get_num_windows_on_side(float xy1, float xy2) const;
@@ -1696,6 +1698,8 @@ private:
 	std::string get_name_for_floor(unsigned floor_ix) const;
 	bool add_outdoor_ac_unit(rand_gen_t &rgen);
 	bool add_chimney(bool two_parts, bool stacked_parts, bool hipped_roof[4], float roof_dz[4], unsigned force_dim[2], rand_gen_t &rgen);
+	bool can_use_hallway_for_part(unsigned part_id) const;
+	cube_t get_hallway_for_part(cube_t const &part, float &num_hall_windows, float &hall_width, float &room_width) const;
 	void gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes);
 	void maybe_add_basement(rand_gen_t rgen);
 	bool extend_underground_basement(rand_gen_t rgen);
