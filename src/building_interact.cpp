@@ -92,7 +92,7 @@ bool building_t::toggle_room_light(point const &closest_to, bool sound_from_clos
 		room_id = get_room_containing_pt(query_pt);
 		if (room_id < 0) return 0; // closest_to is not contained in a room of this building
 	}
-	bool const ignore_floor(in_attic || get_room(room_id).is_sec_bldg);
+	bool const ignore_floor(in_attic || get_room(room_id).is_single_floor);
 	vect_room_object_t &objs(interior->room_geom->objs);
 	auto objs_end(interior->room_geom->get_placed_objs_end()); // skip buttons/stairs/elevators
 	bool const in_closet(closet_light || bool(player_in_closet)); // while in the closet, player can only toggle closet lights and not room lights
@@ -1742,7 +1742,7 @@ bool building_t::is_pt_lit(point const &pt) const {
 		bool const same_room((int)i->room_id == room_id);
 		//if (!same_room) continue; // different room (optimization); too strong?
 		//bool const same_floor(fabs(i->z1() - pt.z) < floor_spacing); // doesn't work with lamps
-		bool const same_floor(room.is_sec_bldg || get_floor_for_zval(pt.z) == get_floor_for_zval(i->z1()));
+		bool const same_floor(room.is_single_floor || get_floor_for_zval(pt.z) == get_floor_for_zval(i->z1()));
 		if (!i->has_stairs() && !same_floor) continue; // different floors, and no stairs (optimization)
 		if (same_floor && same_room) return 1; // same floor of same room, should be visible (optimization)
 		point const center(i->get_cube_center());
@@ -1766,7 +1766,7 @@ bool building_t::is_room_lit(int room_id, float zval) const {
 	for (auto i = interior->room_geom->objs.begin(); i != objs_end; ++i) {
 		if (!i->is_light_type() || !i->is_light_on() || i->light_is_out() || i->in_closet()) continue; // not a light, light not on, or broken; skip closet lights
 		if ((int)i->room_id != room_id) continue; // different room
-		if (room.is_sec_bldg || get_floor_for_zval(zval) == get_floor_for_zval(i->z1())) return 1; // same floor - lit
+		if (room.is_single_floor || get_floor_for_zval(zval) == get_floor_for_zval(i->z1())) return 1; // same floor - lit
 	}
 	return 0;
 }

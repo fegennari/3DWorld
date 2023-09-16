@@ -1345,14 +1345,14 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		if (camera_in_ext_basement && !light_in_basement) continue; // camera in extended basement, and light  not in basement
 		//if (is_light_occluded(lpos_rot, camera_bs))  continue; // too strong a test in general, but may be useful for selecting high importance lights
 		//if (!camera_in_building && i->is_interior()) continue; // skip interior lights when camera is outside the building: makes little difference, not worth the trouble
-		bool const is_lamp(i->type == TYPE_LAMP), is_single_floor(room.is_sec_bldg || is_in_elevator), wall_light(i->flags & RO_FLAG_ADJ_HI);
+		bool const is_lamp(i->type == TYPE_LAMP), is_single_floor(room.is_single_floor || is_in_elevator), wall_light(i->flags & RO_FLAG_ADJ_HI);
 		int const cur_floor(is_single_floor ? 0 : (i->z1() - room.z1())/window_vspacing); // garages and sheds are all one floor
 		float const level_z(is_in_attic ? interior->attic_access.z1() : (room.z1() + cur_floor*window_vspacing)), floor_z(level_z + fc_thick);
 		float ceil_z(0.0);
-		if      (is_in_attic     ) {ceil_z = interior_z2;} // top of interior/attic
-		else if (is_in_elevator  ) {ceil_z = get_elevator(i->obj_id).z2();} // top of elevator shaft
-		else if (room.is_sec_bldg) {ceil_z = room.z2();} // top of current room/part (garage or shed)
-		else                       {ceil_z = (level_z + window_vspacing - fc_thick);} // normal room light
+		if      (is_in_attic         ) {ceil_z = interior_z2;} // top of interior/attic
+		else if (is_in_elevator      ) {ceil_z = get_elevator(i->obj_id).z2();} // top of elevator shaft
+		else if (room.is_single_floor) {ceil_z = room.z2();} // top of current room/part (garage shed, etc.)
+		else                           {ceil_z = (level_z + window_vspacing - fc_thick);} // normal room light
 		float const floor_below_zval(floor_z - window_vspacing), ceil_above_zval(ceil_z + window_vspacing);
 		// Note: we use level_z rather than floor_z for floor_is_above test so that it agrees with the threshold logic for player_in_basement
 		bool const floor_is_above((camera_z < level_z) && !is_single_floor), floor_is_below(camera_z > (ceil_z + fc_thick)); // check floor_ix transition points

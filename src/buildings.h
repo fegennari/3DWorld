@@ -1084,9 +1084,9 @@ unsigned const NUM_RTYPE_SLOTS = 6; // enough for houses; hard max is 8
 inline unsigned wrap_room_floor(unsigned floor) {return min(floor, NUM_RTYPE_SLOTS-1U);}
 
 struct room_t : public cube_t { // size=64
+	bool has_center_stairs=0, no_geom=0, is_hallway=0, is_office=0, is_sec_bldg=0, unpowered=0, has_mirror=0, has_skylight=0, is_single_floor=0;
 	uint8_t has_stairs=0; // per-floor bit mask; always set to 255 for stairs that span the entire room
 	uint8_t has_elevator=0; // number of elevators, usually either 0 or 1
-	bool has_center_stairs=0, no_geom=0, is_hallway=0, is_office=0, is_sec_bldg=0, unpowered=0, has_mirror=0, has_skylight=0;
 	uint8_t interior=0; // 0=not interior (has windows), 1=interior, 2=extended basement, {3,4}=extended basement connector, dim=interior-3
 	uint8_t ext_sides=0; // sides that have exteriors, and likely windows (bits for x1, x2, y1, y2)
 	uint8_t part_id=0, num_lights=0, rtype_locked=0;
@@ -1109,7 +1109,7 @@ struct room_t : public cube_t { // size=64
 	bool inc_half_walls      () const {return (is_hallway || is_office || is_ext_basement());} // hallway, office, or extended basement
 	bool has_room_of_type(room_type type) const;
 	float get_light_amt() const;
-	unsigned get_floor_containing_zval(float zval, float floor_spacing) const {return (is_sec_bldg ? 0 : unsigned((zval - z1())/floor_spacing));}
+	unsigned get_floor_containing_zval(float zval, float floor_spacing) const {return (is_single_floor ? 0 : unsigned((zval - z1())/floor_spacing));}
 }; // room_t
 
 struct extb_room_t : public cube_t { // extended basement room candidate

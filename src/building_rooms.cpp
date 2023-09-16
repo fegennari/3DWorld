@@ -104,7 +104,7 @@ void set_light_xy(cube_t &light, point const &center, float light_size, bool lig
 	}
 }
 unsigned calc_num_floors_room(room_t const &r, float window_vspacing, float floor_thickness) {
-	return (r.is_sec_bldg ? 1 : calc_num_floors(r, window_vspacing, floor_thickness));
+	return (r.is_single_floor ? 1 : calc_num_floors(r, window_vspacing, floor_thickness));
 }
 
 void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
@@ -160,7 +160,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 		bool const is_basement(has_basement() && r->part_id == (int)basement_part_ix); // includes extended basement and parking garage
 		float light_amt(is_basement ? 0.0f : window_vspacing*r->get_light_amt()); // exterior light: multiply perimeter/area by window spacing to make unitless; none for basement rooms
 		if (!is_house && r->is_hallway) {light_amt *= 2.0;} // double the light in office building hallways because they often connect to other lit hallways
-		float const floor_height(r->is_sec_bldg ? r->dz() : window_vspacing); // secondary buildings are always one floor
+		float const floor_height(r->is_single_floor ? r->dz() : window_vspacing); // secondary buildings are always one floor
 		unsigned const num_floors(calc_num_floors_room(*r, floor_height, floor_thickness)), room_id(r - rooms.begin());
 		unsigned const min_br(multi_family ? num_floors : 1); // multi-family house requires one per floor; can apply to both bedrooms and bathrooms
 		point room_center(r->get_cube_center());
@@ -1695,7 +1695,9 @@ void building_t::add_doorbell_and_lamp(tquad_with_ix_t const &door, rand_gen_t &
 }
 
 room_t::room_t(cube_t const &c, unsigned p, unsigned nl, bool is_hallway_, bool is_office_, bool is_sec_bldg_) :
-	cube_t(c), no_geom(is_hallway_), is_hallway(is_hallway_), is_office(is_office_), is_sec_bldg(is_sec_bldg_), part_id(p), num_lights(nl) // no geom in hallways
+	cube_t(c), no_geom(is_hallway_), // no geom in hallways
+	is_hallway(is_hallway_), is_office(is_office_), is_sec_bldg(is_sec_bldg_), // secondary buildings are always a single floor
+	is_single_floor(is_sec_bldg), part_id(p), num_lights(nl)
 {
 	if      (is_sec_bldg) {assign_all_to(RTYPE_GARAGE);} // or RTYPE_SHED - will be set later
 	else if (is_hallway)  {assign_all_to(RTYPE_HALL  );}
