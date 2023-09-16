@@ -459,7 +459,7 @@ class building_indir_light_mgr_t {
 		point light_center;
 		cube_t light_cube;
 		colorRGBA lcolor, pri_lcolor;
-		vector3d light_dir;
+		vector3d light_dir; // points toward the light
 		assert(cur_light >= 0);
 
 		if (is_window) { // window
@@ -473,13 +473,14 @@ class building_indir_light_mgr_t {
 				is_skylight    = 1;
 				surface_area   = window.dx()*window.dy();
 				base_num_rays *= 8; // more rays, since skylights are larger and can cover multiple rooms
-				weight        *= 4.0; // stronger due to direct sun/moon/cloud lighting and reduced occlusion from buildings and terrain
+				weight        *= 10.0; // stronger due to direct sun/moon/cloud lighting and reduced occlusion from buildings and terrain
 				light_cube.translate_dim(2, -b.get_fc_thickness()); // shift slightly down into the building to avoid collision with the roof/ceiling
 				// select primary light rays oriented away from the sun/moon; doesn't work well due to reduced ray scattering
-				light_dir     = -get_light_pos().get_norm(); // more accurate, but requires indir to be recomputed when sun/moon pos changes
-				//light_dir     = -plus_z; // make it vertical so that it doesn't need to be updated when the sun/moon pos changes
+				light_dir     = get_light_pos().get_norm(); // more accurate, but requires indir to be recomputed when sun/moon pos changes
+				//light_dir     = plus_z; // make it vertical so that it doesn't need to be updated when the sun/moon pos changes
 				lcolor        = cur_ambient*2.0; // split rays into two groups for ambient and diffuse
 				pri_lcolor    = cur_diffuse;
+				dir           = 1; // pointed up
 			}
 			else { // normal window
 				assert(window.ix < 4); // encodes 2*dim + dir
@@ -496,10 +497,10 @@ class building_indir_light_mgr_t {
 			vect_room_object_t const &objs(b.interior->room_geom->objs);
 			assert((unsigned)cur_light < objs.size());
 			room_object_t const &ro(objs[cur_light]);
+			bool const light_in_basement(ro.z1() < b.ground_floor_z1), is_lamp(ro.type == TYPE_LAMP);
 			light_cube      = ro;
 			light_cube.z1() = light_cube.z2() = (ro.z1() - 0.01*ro.dz()); // set slightly below bottom of light
 			light_center    = light_cube.get_cube_center();
-			bool const light_in_basement(ro.z1() < b.ground_floor_z1), is_lamp(ro.type == TYPE_LAMP);
 			in_attic        = ro.in_attic();
 			in_ext_basement = (light_in_basement && b.point_in_extended_basement_not_basement(light_center));
 			if (in_attic) {base_num_rays *= 4;} // more rays in attic, since light is large and there are only 1-2 of them
@@ -527,17 +528,19 @@ class building_indir_light_mgr_t {
 			if (kill_thread) continue;
 			rand_gen_t rgen;
 			rgen.set_state(n+1, cur_light); // should be deterministic, though add_path_to_lmcs() is not (due to thread races)
-			vector3d pri_dir(rgen.signed_rand_vector_spherical().get_norm()); // should this be cosine weighted for windows?
+			vector3d pri_dir;
 			colorRGBA ray_lcolor(lcolor), ccolor(WHITE);
-			bool const is_skylight_dir(is_skylight && (n&1));
+			bool const is_skylight_dir(is_skylight && (n&1)); // alternate between sky ambient and sun/moon directional
 			
-			if (is_skylight_dir) { // skylight: alternate between sky ambient and sun/moon directional
+			if (is_skylight_dir) { // skylight directional diffuse
 				pri_dir    = light_dir;
 				ray_lcolor = pri_lcolor;
 			}
-			else if (is_window && ((pri_dir[dim] > 0.0) ^ dir)) {
-				pri_dir[dim] *= -1.0; // reflect light if needed about window plane to ensure it enters the room
+			else { // omidirectional or sky ambient from windows
+				pri_dir = rgen.signed_rand_vector_spherical().get_norm(); // should this be cosine weighted for windows?
+				if (is_window && ((pri_dir[dim] > 0.0) ^ dir)) {pri_dir[dim] *= -1.0;} // reflect light if needed about window plane to ensure it enters the room
 			}
+			float const lum_thresh(0.1*ray_lcolor.get_luminance());
 			point origin, init_cpos, cpos;
 			vector3d init_cnorm, cnorm;
 
@@ -559,7 +562,7 @@ class building_indir_light_mgr_t {
 			}
 			if (!hit) continue; // done
 			colorRGBA const init_color(ray_lcolor.modulate_with(ccolor));
-			if (init_color.get_luminance() < 0.1) continue; // done (Note: get_weighted_luminance() will discard too much blue light)
+			if (init_color.get_luminance() < lum_thresh) continue; // done (Note: get_weighted_luminance() will discard too much blue light)
 			vector3d const v_ref(get_reflect_dir(pri_dir, init_cnorm));
 
 			for (unsigned splits = 0; splits < NUM_PRI_SPLITS; ++splits) {
@@ -578,7 +581,7 @@ class building_indir_light_mgr_t {
 					}
 					if (!hit) break; // done
 					cur_color = cur_color.modulate_with(ccolor);
-					if (cur_color.get_luminance() < 0.1) break; // done
+					if (cur_color.get_luminance() < lum_thresh) break; // done
 					calc_reflect_ray(pos, cpos, dir, cnorm, get_reflect_dir(dir, cnorm), rgen, tolerance);
 				} // for bounce
 			} // for splits
