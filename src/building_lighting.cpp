@@ -553,13 +553,13 @@ class building_indir_light_mgr_t {
 			bool const hit(b.ray_cast_interior(origin, pri_dir, valid_area, bvh, in_attic, in_ext_basement, init_cpos, init_cnorm, ccolor, &rgen));
 
 			// room lights already contribute direct lighting, so we skip this ray; however, windows don't, so we add their primary ray contribution
-			if (is_window && /*!is_skylight_dir*/is_skylight && init_cpos != origin) {
+			if (is_window && /*!is_skylight_dir*/!is_skylight && init_cpos != origin) {
 				point const p1(origin*ray_scale + llc_shift), p2(init_cpos*ray_scale + llc_shift); // transform building space to global scene space
 				add_path_to_lmcs(&lmgr, nullptr, p1, p2, weight, ray_lcolor*NUM_PRI_SPLITS, LIGHTING_LOCAL, 0); // local light, no bcube; scale color based on splits
 			}
 			if (!hit) continue; // done
 			colorRGBA const init_color(ray_lcolor.modulate_with(ccolor));
-			if (init_color.get_weighted_luminance() < 0.1) continue; // done
+			if (init_color.get_luminance() < 0.1) continue; // done (Note: get_weighted_luminance() will discard too much blue light)
 			vector3d const v_ref(get_reflect_dir(pri_dir, init_cnorm));
 
 			for (unsigned splits = 0; splits < NUM_PRI_SPLITS; ++splits) {
@@ -578,7 +578,7 @@ class building_indir_light_mgr_t {
 					}
 					if (!hit) break; // done
 					cur_color = cur_color.modulate_with(ccolor);
-					if (cur_color.get_weighted_luminance() < 0.1) break; // done
+					if (cur_color.get_luminance() < 0.1) break; // done
 					calc_reflect_ray(pos, cpos, dir, cnorm, get_reflect_dir(dir, cnorm), rgen, tolerance);
 				} // for bounce
 			} // for splits
