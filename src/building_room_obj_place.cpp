@@ -2825,10 +2825,10 @@ bool building_t::add_wall_vent_to_room(rand_gen_t rgen, room_t const &room, floa
 
 // what about floor vent?
 bool building_t::add_ceil_vent_to_room(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned objs_start) {
-	float const wall_thickness(get_wall_thickness()), ceiling_zval(zval + get_floor_ceil_gap());
-	float const thickness(0.1*wall_thickness), hlen(2.0*wall_thickness), hwid(1.25*wall_thickness);
+	float const wall_thickness(get_wall_thickness()), thickness(0.1*wall_thickness), hlen(2.0*wall_thickness), hwid(1.25*wall_thickness);
 	cube_t const room_bounds(get_walkable_room_bounds(room));
 	if (min(room_bounds.dx(), room_bounds.dy()) < 4.0*hlen) return 0; // room is too small; shouldn't happen
+	float const ceiling_zval(room.is_single_floor ? (room.z2() - get_fc_thickness()) : (zval + get_floor_ceil_gap()));
 	cube_t c, attic_access;
 	set_cube_zvals(c, ceiling_zval-thickness, ceiling_zval);
 

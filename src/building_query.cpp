@@ -2102,7 +2102,7 @@ void building_t::print_building_stats() const {
 		if (room.is_sec_bldg)       continue; // garage/shed not included in count
 		if (room.is_ext_basement()) continue; // extended basement not included in count
 		if (room.is_hallway)        continue; // hallway not included in count
-		unsigned const num_floors(calc_num_floors(room, floor_spacing, floor_thickness));
+		unsigned const num_floors(calc_num_floors_room(room, floor_spacing, floor_thickness));
 		assert(num_floors > 0);
 		num_rooms += num_floors;
 		if (room.z1() >= ground_floor_z1) {square_footage += num_floors*feet_per_unit_sq*room.get_area_xy();} // basement doesn't count

@@ -2044,6 +2044,7 @@ bool door_opens_inward(door_base_t const &door, cube_t const &room);
 bool is_cube_close_to_door(cube_t const &c, float dmin, bool inc_open, cube_t const &door, unsigned check_dirs=2, unsigned open_dirs=2, bool allow_block_door=0);
 void add_building_interior_lights(point const &xlate, cube_t &lights_bcube);
 unsigned calc_num_floors(cube_t const &c, float window_vspacing, float floor_thickness);
+unsigned calc_num_floors_room(room_t const &r, float window_vspacing, float floor_thickness);
 void set_wall_width(cube_t &wall, float pos, float half_thick, unsigned dim);
 bool is_val_inside_window(cube_t const &c, bool dim, float val, float window_spacing, float window_border);
 template<typename T> void subtract_cube_from_cube(T const &c, cube_t const &s, vector<T> &out);

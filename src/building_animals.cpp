@@ -107,7 +107,7 @@ point building_t::gen_animal_floor_pos(float radius, bool place_in_attic, bool n
 			place_area.z1() += get_fc_thickness(); // on top of the floor
 
 			if (has_parking_garage && room.part_id == basement_part_ix) { // allow placement on multiple floors of parking garage
-				unsigned const num_floors(calc_num_floors(room, floor_spacing, get_floor_thickness()));
+				unsigned const num_floors(calc_num_floors_room(room, floor_spacing, get_floor_thickness()));
 				if (num_floors > 1) {place_area.z1() += floor_spacing*(rgen.rand()%num_floors);} // select a random floor
 			}
 		}

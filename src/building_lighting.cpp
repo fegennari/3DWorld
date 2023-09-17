@@ -1726,7 +1726,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			for (room_t const &room : interior->rooms) {
 				if (room.has_skylight && room.intersects(sl)) {
 					lit_area.union_with_cube_xy(room);
-					unsigned const num_floors(calc_num_floors(room, window_vspacing, 2.0*fc_thick));
+					unsigned const num_floors(calc_num_floors_room(room, window_vspacing, 2.0*fc_thick));
 					room_has_stairs |= room.has_stairs_on_floor(num_floors - 1); // check for stairs on top floor
 				}
 			}

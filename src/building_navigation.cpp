@@ -1506,7 +1506,7 @@ bool building_t::place_people_if_needed(unsigned building_ix, float radius, vect
 	for (auto r = interior->rooms.begin(); r != interior->rooms.end(); ++r) { // add room_cands
 		if (r->is_sec_bldg) continue; // don't place people in garages and sheds
 		if (min(r->dx(), r->dy()) < 3.0*radius) continue; // room to small to place a person
-		unsigned const num_floors(calc_num_floors(*r, window_vspacing, floor_thickness));
+		unsigned const num_floors(calc_num_floors_room(*r, window_vspacing, floor_thickness));
 		assert(num_floors > 0);
 		if (first_basement_room == 0 && r->z1() < ground_floor_z1) {first_basement_room = room_cands.size();}
 		unsigned const room_ix(r - interior->rooms.begin());
