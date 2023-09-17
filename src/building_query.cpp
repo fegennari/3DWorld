@@ -1182,9 +1182,14 @@ bool line_int_polygon_sides(point const &p1, point const &p2, cube_t const &bcub
 	} // for S
 	return hit;
 }
+template<typename T> bool check_line_int_cubes(vector<T> const &cubes, point const &p1, point const &p2, float &t) {
+	bool ret(0);
+	for (cube_t const &c : cubes) {ret |= get_line_clip_update_t(p1, p2, c, t);}
+	return ret;
+}
 
 // Note: p1/p2 are in building space
-unsigned building_t::check_line_coll(point const &p1, point const &p2, float &t, bool occlusion_only, bool ret_any_pt, bool no_coll_pt) const {
+unsigned building_t::check_line_coll(point const &p1, point const &p2, float &t, bool occlusion_only, bool ret_any_pt, bool no_coll_pt, bool check_non_coll) const {
 	point p1r(p1), p2r(p2); // copy before clipping
 	if (!check_line_clip(p1r, p2r, bcube.d)) return BLDG_COLL_NONE; // no intersection (never returns here for vertical lines)
 	
@@ -1197,6 +1202,7 @@ unsigned building_t::check_line_coll(point const &p1, point const &p2, float &t,
 	bool const vert(p1r.x == p2r.x && p1r.y == p2r.y);
 	float tmin(0.0);
 	unsigned coll(BLDG_COLL_NONE);
+	if (check_non_coll && check_line_int_cubes(skylights, p1r, p2r, t)) return BLDG_COLL_SKYLIGHT; // nothing else is over the skylight
 
 	for (auto i = parts.begin(); i != parts.end(); ++i) {
 		if (pzmin > i->z2() || pzmax < i->z1()) continue; // no overlap in z
@@ -1254,19 +1260,15 @@ unsigned building_t::check_line_coll(point const &p1, point const &p2, float &t,
 		}
 	} // for i
 	if (occlusion_only) return BLDG_COLL_NONE;
+	if (check_line_int_cubes(details, p1r, p2r, t)) {coll = BLDG_COLL_DETAIL;} // details cube
 
-	for (auto i = details.begin(); i != details.end(); ++i) {
-		if (get_line_clip_update_t(p1r, p2r, *i, t)) {coll = BLDG_COLL_DETAIL;} // details cube
-	}
 	if (!no_coll_pt || !vert) { // vert line already tested building cylins/cubes, and marked coll roof, no need to test again unless we need correct coll_pt t-val
 		for (auto i = roof_tquads.begin(); i != roof_tquads.end(); ++i) {
 			if (line_poly_intersect(p1r, p2r, i->pts, i->npts, i->get_norm(), tmin) && tmin < t) {t = tmin; coll = BLDG_COLL_ROOF;} // roof quad
 		}
 	}
-	if (!vert) { // don't need to check fences for vertical collisions since they're horizontal blockers
-		for (auto i = fences.begin(); i != fences.end(); ++i) {
-			if (get_line_clip_update_t(p1r, p2r, *i, t)) {coll = BLDG_COLL_DETAIL;} // counts as details cube
-		}
+	if (!vert || check_non_coll) { // don't need to check fences for vertical collisions since they're horizontal blockers
+		if (check_line_int_cubes(fences, p1r, p2r, t)) {coll = BLDG_COLL_FENCE;} // details cube
 	}
 	return coll; // Note: no collisions with windows or doors, since they're colinear with walls; no collision with interior for now
 }

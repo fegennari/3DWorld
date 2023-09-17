@@ -2392,7 +2392,7 @@ public:
 		}
 		float t(1.0); // unused
 		unsigned hit_bix(0);
-		unsigned const ret(check_line_coll(p1, p2, t, hit_bix, 0, 1)); // no_coll_pt=1; returns: 0=no hit, 1=hit side, 2=hit roof
+		unsigned const ret(check_line_coll(p1, p2, t, hit_bix, 0, 1, 1)); // ret_any_pt=0, no_coll_pt=1, check_non_coll=1; returns type of surface that was hit
 		if (ret == BLDG_COLL_NONE) return 0;
 		building_t const &b(get_building(hit_bix));
 
@@ -2403,7 +2403,9 @@ public:
 		case BLDG_COLL_SIDE    : color = b.get_avg_side_color  (); break;
 		case BLDG_COLL_ROOF    : color = b.get_avg_roof_color  (); break;
 		case BLDG_COLL_DETAIL  : color = b.get_avg_detail_color(); break;
-		case BLDG_COLL_DRIVEWAY: color = LT_GRAY; break;
+		case BLDG_COLL_DRIVEWAY: color = LT_GRAY ; break;
+		case BLDG_COLL_FENCE   : color = LT_BROWN; break;
+		case BLDG_COLL_SKYLIGHT: color = LT_BLUE ; break;
 		default: assert(0);
 		}
 		return 1;
@@ -3767,8 +3769,8 @@ public:
 		} // for y
 	}
 
-	// Note: p1 and p2 are in building space; returns BLDG_COLL_NONE=0, BLDG_COLL_SIDE, BLDG_COLL_ROOF, BLDG_COLL_DETAIL, BLDG_COLL_DRIVEWAY
-	unsigned check_line_coll(point const &p1, point const &p2, float &t, unsigned &hit_bix, bool ret_any_pt, bool no_coll_pt) const {
+	// Note: p1 and p2 are in building space; returns type of surface that was hit
+	unsigned check_line_coll(point const &p1, point const &p2, float &t, unsigned &hit_bix, bool ret_any_pt, bool no_coll_pt, bool check_non_coll=0) const {
 		if (empty()) return 0;
 
 		if (p1.x == p2.x && p1.y == p2.y) { // vertical line special case optimization (for example map mode)
@@ -3780,7 +3782,7 @@ public:
 
 			for (auto b = ge.bc_ixs.begin(); b != ge.bc_ixs.end(); ++b) {
 				if (!b->contains_pt_xy(p1)) continue;
-				unsigned const ret(get_building(b->ix).check_line_coll(p1, p2, t, 0, ret_any_pt, no_coll_pt));
+				unsigned const ret(get_building(b->ix).check_line_coll(p1, p2, t, 0, ret_any_pt, no_coll_pt, check_non_coll));
 				if (ret) {hit_bix = b->ix; return ret;} // can only intersect one building
 			} // for b
 			for (cube_t const &seg : ge.road_segs) { // check driveways; not guaranteed to be correct if driveway is in another grid than building?
@@ -3805,7 +3807,7 @@ public:
 				for (auto b = ge.bc_ixs.begin(); b != ge.bc_ixs.end(); ++b) { // Note: okay to check the same building more than once
 					if (!b->intersects(bcube)) continue;
 					float t_new(t);
-					unsigned const ret(get_building(b->ix).check_line_coll(p1, p2, t_new, 0, ret_any_pt, no_coll_pt));
+					unsigned const ret(get_building(b->ix).check_line_coll(p1, p2, t_new, 0, ret_any_pt, no_coll_pt, check_non_coll));
 
 					if (ret && t_new <= t) { // closer hit pos, update state
 						t = t_new; hit_bix = b->ix; coll = ret;

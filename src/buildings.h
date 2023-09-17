@@ -416,7 +416,7 @@ enum {FLOORING_MARBLE=0, FLOORING_TILE, FLOORING_CONCRETE, FLOORING_CARPET, FLOO
 enum {MAT_TYPE_STATIC=0, MAT_TYPE_SMALL, MAT_TYPE_DYNAMIC, MAT_TYPE_DETAIL, MAT_TYPE_DOORS, MAT_TYPE_LIGHTS, MAT_TYPE_TEXT}; // building_room_geom_t material types; max is 8
 enum {FTYPE_NONE=0, FTYPE_BASEMENT, FTYPE_ATTIC}; // for furnace
 enum {ATTIC_TYPE_RAFTERS=0, ATTIC_TYPE_FIBERGLASS, ATTIC_TYPE_WOOD, ATTIC_TYPE_PLASTER, NUM_ATTIC_TYPES};
-enum {BLDG_COLL_NONE=0, BLDG_COLL_SIDE, BLDG_COLL_ROOF, BLDG_COLL_DETAIL, BLDG_COLL_DRIVEWAY};
+enum {BLDG_COLL_NONE=0, BLDG_COLL_SIDE, BLDG_COLL_ROOF, BLDG_COLL_DETAIL, BLDG_COLL_DRIVEWAY, BLDG_COLL_FENCE, BLDG_COLL_SKYLIGHT};
 enum {PLACED_TOILET=1, PLACED_SINK=2, PLACED_TUB=4, PLACED_SHOWER=8}; // for bathroom objects
 
 enum {/*building models*/ OBJ_MODEL_TOILET=0, OBJ_MODEL_SINK, OBJ_MODEL_TUB, OBJ_MODEL_FRIDGE, OBJ_MODEL_STOVE, OBJ_MODEL_TV, OBJ_MODEL_MONITOR, OBJ_MODEL_COUCH,
@@ -1433,7 +1433,7 @@ struct building_t : public building_geom_t {
 	bool check_pos_in_unlit_room(point const &pos) const;
 	bool check_pos_in_unlit_room_recur(point const &pos, std::set<unsigned> &rooms_visited, int known_room_id=-1) const;
 	bool are_rooms_connected(unsigned room_ix1, unsigned room_ix2, float zval, bool check_door_open) const;
-	unsigned check_line_coll(point const &p1, point const &p2, float &t, bool occlusion_only=0, bool ret_any_pt=0, bool no_coll_pt=0) const;
+	unsigned check_line_coll(point const &p1, point const &p2, float &t, bool occlusion_only=0, bool ret_any_pt=0, bool no_coll_pt=0, bool check_non_coll=0) const;
 	bool get_interior_color_at_xy(point const &pos, colorRGBA &color) const;
 	bool check_point_or_cylin_contained(point const &pos, float xy_radius, vector<point> &points, bool inc_attic, bool inc_ext_basement) const;
 	bool point_under_attic_roof(point const &pos, vector3d *const cnorm=nullptr) const;
