@@ -2295,6 +2295,7 @@ bool building_t::place_pizza_on_obj(rand_gen_t &rgen, cube_t const &place_on, un
 	bool const dim(rgen.rand_bool()), dir(rgen.rand_bool());
 	if (has_bcube_int(pizza, avoid)) return 0; // only make one attempt
 	interior->room_geom->objs.emplace_back(pizza, TYPE_PIZZA_BOX, room_id, dim, dir, (RO_FLAG_NOCOLL | RO_FLAG_RAND_ROT), tot_light_amt); // Note: invalidates place_on reference
+	set_obj_id(interior->room_geom->objs);
 	return 1;
 }
 

@@ -891,6 +891,43 @@ void building_room_geom_t::add_keyboard (room_object_t const &c) {add_obj_with_t
 void building_room_geom_t::add_laptop   (room_object_t const &c) {add_obj_with_top_texture  (c, "interiors/laptop.jpg",    BKGRAY, 1);} // is_small=1
 void building_room_geom_t::add_computer (room_object_t const &c) {add_obj_with_front_texture(c, "interiors/computer.jpg",  BKGRAY, 1);} // is_small=1
 
+void place_pizza_toppings(cube_t const &pizza, float rmin, float rmax, float height, colorRGBA const &color, unsigned num, bool can_overlap,
+	rgeom_mat_t &mat, vector<sphere_t> &placed, rand_gen_t &rgen) {
+	assert(rmin > 0.0 && rmin <= rmax && rmax < 1.0); // rmin and rmax are relative to the pizza radius
+	float const pizza_radius(0.5*min(pizza.dx(), pizza.dy())); // should be square
+	rmin *= pizza_radius;
+	rmax *= pizza_radius;
+	cube_t area(pizza);
+	area.expand_by_xy(-(rmax + 0.1*pizza_radius)); // shrink so that any object placed will stay inside the pizza; add 10% border for crust
+	assert(area.is_strictly_normalized());
+	float const place_radius(0.5*min(area.dx(), area.dy()));
+	point const center(area.get_cube_center());
+
+	for (unsigned n = 0; n < num; ++n) {
+		for (unsigned N = 0; N < 10; ++N) { // make up to 10 attempts
+			point pos(0.0, 0.0, pizza.z2());
+			for (unsigned d = 0; d < 2; ++d) {pos[d] = rgen.rand_uniform(area.d[d][0], area.d[d][1]);} // or use gen_xy_pos_in_area()?
+			if (!dist_xy_less_than(pos, center, place_radius)) continue;
+			float const radius((rmin == rmax) ? rmin : rgen.rand_uniform(rmin, rmax));
+
+			if (!can_overlap) {
+				bool overlaps(0);
+
+				for (sphere_t const &s : placed) {
+					if (dist_xy_less_than(pos, s.pos, 1.1*(radius + s.radius))) {overlaps = 1; break;} // add 10% border
+				}
+				if (overlaps) continue;
+				placed.emplace_back(pos, radius);
+			}
+			cube_t c;
+			c.set_from_point(pos);
+			c.expand_by_xy(radius);
+			c.z2() += height*pizza.dz();
+			mat.add_vcylin_to_verts(c, color, 0, 1); // draw sides and top
+			break;
+		} // for N
+	} // for n
+}
 void building_room_geom_t::add_pizza_box(room_object_t const &c) {
 	string const pbox_tex_fn("interiors/pizzatop.jpg");
 	colorRGBA box_color(WHITE);
@@ -913,7 +950,7 @@ void building_room_geom_t::add_pizza_box(room_object_t const &c) {
 	untex_mat.add_cube_to_verts_untextured(c,   box_color, (EF_Z12 | ~back_skip_mask)); // outside sides except for back
 	untex_mat.add_cube_to_verts(c, box_color, all_zeros,   (EF_Z12 | ~back_skip_mask), 0, 0, 0, 1); // inside sides except for back, inverted
 	untex_mat.add_cube_to_verts_untextured(bot, box_color, ~EF_Z2 ); // top surface of bottom of box
-	untex_mat.add_cube_to_verts_untextured(lid,   box_color, get_skip_mask_for_xy(c.dim)); // lid outside sides
+	untex_mat.add_cube_to_verts_untextured(lid, box_color,  get_skip_mask_for_xy(c.dim)); // lid outside sides
 	untex_mat.add_cube_to_verts(lid, box_color, all_zeros, ~get_face_mask(c.dim, c.dir), 0, 0, 0, 1); // lid inside sides and top surface, inverted
 
 	if (c.taken_level == 0) { // draw pizza inside
@@ -921,8 +958,25 @@ void building_room_geom_t::add_pizza_box(room_object_t const &c) {
 		pizza.expand_by_xy(-0.08*depth);  // small shrink
 		pizza.z2() = c.z1() + 0.3*height; // set height
 		untex_mat.add_vcylin_to_verts(pizza, apply_light_color(c, LT_BROWN), 0, 0); // sides
-		rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_texture_by_name("interiors/pizza.png"), 0.0), 1, 0, 1)); // shadows, small
+		bool const gen_ingredients = 1;
+		string const tex_name(gen_ingredients ? "interiors/cheese_pizza.png" : "interiors/pizza.png");
+		rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_texture_by_name(tex_name), 0.0), 1, 0, 1)); // shadows, small
 		mat.add_vcylin_to_verts(pizza, apply_light_color(c), 0, 1, 0, 0, 1.0, 1.0, 1.0, 1.0, 1); // top only
+		
+		if (gen_ingredients) { // generate random ingredients
+			rand_gen_t rgen;
+			rgen.set_state(c.obj_id+1, (2*c.dim + c.dir + 1));
+			bool const add_pepperoni(rgen.rand_float() < 0.75), add_peppers(add_pepperoni && rgen.rand_float() < 0.75);
+
+			if (add_pepperoni || add_peppers) {
+				static vector<sphere_t> placed;
+				placed.clear();
+				rgeom_mat_t &top_mat(get_untextured_material(0, 0, 1)); // small, untextured, no shadows
+				if (add_pepperoni) {place_pizza_toppings(pizza, 0.11, 0.11, 0.05, colorRGBA(0.7, 0.2, 0.1), 32, 0, top_mat, placed, rgen);} // pepperoni
+				placed.clear(); // allow peppers on top of pepperoni
+				if (add_peppers  ) {place_pizza_toppings(pizza, 0.08, 0.08, 0.20, colorRGBA(0.3, 0.4, 0.1), 28, 0, top_mat, placed, rgen);} // peppers
+			}
+		}
 	}
 }
 void building_room_geom_t::add_pizza_top(room_object_t const &c) {
