@@ -2402,10 +2402,13 @@ public:
 		switch (ret) {
 		case BLDG_COLL_SIDE    : color = b.get_avg_side_color  (); break;
 		case BLDG_COLL_ROOF    : color = b.get_avg_roof_color  (); break;
-		case BLDG_COLL_DETAIL  : color = b.get_avg_detail_color(); break;
 		case BLDG_COLL_DRIVEWAY: color = LT_GRAY ; break;
 		case BLDG_COLL_FENCE   : color = LT_BROWN; break;
 		case BLDG_COLL_SKYLIGHT: color = LT_BLUE ; break;
+		case BLDG_COLL_DETAIL  :
+			color = b.get_avg_detail_color();
+			if (color == b.get_avg_roof_color()) {color *= 1.5;} // lighten if the same color as the roof so that details stand out
+			break;
 		default: assert(0);
 		}
 		return 1;
