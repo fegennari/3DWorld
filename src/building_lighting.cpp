@@ -1193,9 +1193,13 @@ void check_for_dynamic_shadow_casters(vector<person_t> const &people, vect_cube_
 	// update shadow_caster_hash for moving objects
 	check_for_shadow_caster(moving_objs, light_bcube, lpos, dmax, has_stairs, xlate, shadow_caster_hash);
 }
-template<typename T> void get_animal_shadow_casters(vector<T> const &animals, vect_cube_with_ix_t &moving_objs) { // rat_t/spider_t/snake_t
-	for (auto const &animal : animals) {
-		if (animal.is_moving()) {moving_objs.push_back(animal.get_bcube());}
+// rat_t/spider_t/snake_t
+template<typename T> void get_animal_shadow_casters(vector<T> const &animals, vect_cube_with_ix_t &moving_objs, unsigned base_ix) {
+	for (auto i = animals.begin(); i != animals.end(); ++i) {
+		// we can't check for camera visibility because their shadows may be visible even if the animal's arent (for example, spiders on lights);
+		// also, these animals are drawn in the shadow pass since they're visible to the light,
+		// and if we're not tracking them here, we won't remove them from the shadow map when they're out of its range and no longer drawn
+		if (i->is_moving()) {moving_objs.emplace_back(i->get_bcube(), (i - animals.begin() + base_ix));}
 	}
 }
 void expand_cube_zvals(cube_t &c, float z1, float z2) {
@@ -1318,13 +1322,14 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 	}
 	if (camera_near_building) { // build moving objects vector
 		for (auto i = objs.begin(); i != objs_end; ++i) {
-			if (i->is_visible() && i->is_moving()) {moving_objs.push_back(*i);}
+			if (i->is_visible() && i->is_moving()) {moving_objs.emplace_back(*i, (i - objs.begin() + 1));}
 		}
 	}
 	if (point_in_building_or_basement_bcube(camera_bs)) { // camera in building interior; matches rat update logic
-		get_animal_shadow_casters(interior->room_geom->rats,    moving_objs);
-		get_animal_shadow_casters(interior->room_geom->spiders, moving_objs);
-		get_animal_shadow_casters(interior->room_geom->snakes,  moving_objs);
+		// add a base index to each animal group to make all moving objects unique
+		get_animal_shadow_casters(interior->room_geom->rats,    moving_objs, 10000);
+		get_animal_shadow_casters(interior->room_geom->spiders, moving_objs, 20000);
+		get_animal_shadow_casters(interior->room_geom->snakes,  moving_objs, 30000);
 	}
 	//highres_timer_t timer("Lighting", camera_in_building); // 13.8ms => 13.1ms => 12.7ms => 3.6ms => 3.2ms => 0.81
 	//unsigned num_add(0);
