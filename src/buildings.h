@@ -1476,6 +1476,7 @@ struct building_t : public building_geom_t {
 	void add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part, cube_t const &hall, unsigned part_ix, unsigned num_floors,
 		unsigned rooms_start, bool use_hallway, bool first_part_this_stack, float window_hspacing[2], float window_border);
 	void connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t const &part);
+	void create_two_story_tall_rooms(rand_gen_t &rgen);
 	void gen_room_details(rand_gen_t &rgen, unsigned building_ix);
 	unsigned calc_floor_offset(float zval) const;
 	void add_stairs_and_elevators(rand_gen_t &rgen);

@@ -983,6 +983,7 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 			extend_underground_basement(rgen); // maybe add door inside basement and connected extended basement; rgen is copied, not modified
 		}
 	} // end gen_door
+	create_two_story_tall_rooms(rgen); // must be after generating interior and adding exterior doors
 	// add roof tquads
 	float peak_height(rgen.rand_uniform(0.15, 0.5)); // same for all parts
 	if (has_attic()) {max_eq(peak_height, 0.3f);} // set larger min size if there's an attic

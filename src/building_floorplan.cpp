@@ -1983,6 +1983,33 @@ bool building_t::clip_part_ceiling_for_stairs(cube_t const &c, vect_cube_t &out,
 	return 1;
 }
 
+void building_t::create_two_story_tall_rooms(rand_gen_t &rgen) {
+	return; // TODO: remove when this is working
+	if (!is_house) return; // houses only, for now
+	if (!interior) return;
+	float const floor_spacing(get_window_vspace()), floor_thickness(get_floor_thickness()), fc_thick(0.5*floor_thickness);
+
+	for (room_t &room : interior->rooms) {
+		if (room.has_stairs || room.has_elevator || room.is_hallway || room.is_sec_bldg || room.is_single_floor) continue;
+		if (calc_num_floors(room, floor_spacing, floor_thickness) != 2) continue; // two story rooms only
+		if (!is_room_adjacent_to_ext_door(room)) continue; // only consider entrance rooms that may become living rooms
+		
+		// check for connected rooms on the upper floor that would become unreachable if their door was removed
+		for (door_stack_t const &ds : interior->door_stacks) {
+			// TODO
+		} // for ds
+		// replace doors with walls on upper floors
+		// TODO
+		cube_t to_remove(room);
+		to_remove.z1() += (floor_spacing - fc_thick); // first  floor ceiling
+		to_remove.z2() -= (floor_spacing - fc_thick); // second floor floor
+		subtract_cube_from_cubes(to_remove, interior->ceilings);
+		subtract_cube_from_cubes(to_remove, interior->floors  );
+		room.is_single_floor = 1;
+		break; // at most one per house
+	} // for room
+}
+
 unsigned building_t::add_room(cube_t const &room, unsigned part_id, unsigned num_lights, bool is_hallway, bool is_office, bool is_sec_bldg) {
 	assert(interior);
 	assert(room.is_strictly_normalized());

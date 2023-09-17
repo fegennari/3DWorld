@@ -139,6 +139,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 		for (auto r = rooms.begin(); r != rooms.end(); ++r) {
 			if (r->is_sec_bldg) continue; // garage/shed excluded - not a normal room
 			if (has_basement() && r->part_id == (int)basement_part_ix) continue; // skip the basement
+			if (r->is_single_floor && r->dz() > 1.5*window_vspacing)   continue; // no tall ceiling rooms
 			unsigned const num_floors(calc_num_floors_room(*r, window_vspacing, floor_thickness));
 
 			// find best bathroom with no hard size constraints;
@@ -396,6 +397,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			unsigned const floor_mask(1<<f);
 			// must be a BR if cand bathroom, and BR not already placed; applies to all floors of this room; if multi-family, we check for a BR prev placed on this floor
 			bool const must_be_bathroom(room_id == cand_bathroom && (multi_family ? !(added_bath_mask & floor_mask) : (num_bathrooms == 0)));
+			bool const is_tall_room(r->is_single_floor && r->dz() > 1.5*window_vspacing);
 			bool added_tc(0), added_desk(0), added_obj(0), can_place_onto(0), no_whiteboard(0);
 			bool is_bathroom(0), is_bedroom(0), is_kitchen(0), is_living(0), is_dining(0), is_storage(0), is_utility(0), no_plants(0), is_play_art(0);
 			unsigned num_chairs(0);
@@ -424,7 +426,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				}
 			}
 			// bedroom or bathroom case; need to check first floor even if must_be_bathroom
-			if (!added_obj && allow_br && can_be_bedroom_or_bathroom(*r, f)) {
+			if (!added_obj && allow_br && !is_tall_room && can_be_bedroom_or_bathroom(*r, f)) {
 				// Note: num_bedrooms is summed across all floors, while num_bathrooms is per-floor
 				// Note: min_br is applied to bedrooms, but could be applied to bathrooms in the same way
 				bool const pref_sec_bath(is_house && num_bathrooms == 1 && num_bedrooms > min_br && rooms.size() >= 6 && !must_be_bathroom && !has_fireplace && can_be_bathroom(*r));
@@ -455,7 +457,8 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				unsigned const num_tcs(add_table_and_chairs(rgen, *r, blockers, room_id, room_center, chair_color, 0.1, tot_light_amt));
 				if (num_tcs > 0) {added_tc = added_obj = can_place_onto = 1; num_chairs = num_tcs - 1;}
 				// on ground floor, try to make this a kitchen; not all houses will have a kitchen with this logic - maybe we need fewer bedrooms?
-				if (!(added_kitchen_mask & floor_mask) && (!is_house || is_entry_floor) && !is_basement) { // office buildings can also have kitchens, even on non-ground floors
+				// office buildings can also have kitchens, even on non-ground floors; no tall room kitchens because the cabinets and stove hood have no ceiling to connect to
+				if (!(added_kitchen_mask & floor_mask) && (!is_house || is_entry_floor) && !is_basement && !is_tall_room) {
 					if (added_tc || (is_house && (r+1) == rooms.end())) { // make it a kitchen if it's the last room in a house, even if there's no table
 						if (add_kitchen_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, added_living)) {
 							r->assign_to(RTYPE_KITCHEN, f);
