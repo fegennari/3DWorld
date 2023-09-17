@@ -178,14 +178,14 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 		if (!is_cube()) { // somewhat more lights for non-cube shaped building pie slices
 			light_density = 0.4;
 		}
-		else if (r->is_office) { // more lights for large offices; light size varies by office size; parking garages are handled later
-			light_density = 0.5;
-			float const room_size(dx + dy); // normalized to office size
-			light_size = max(0.015f*room_size, 0.67f*def_light_size);
-		}
 		else if (r->is_hallway) { // light size varies by hallway size
 			float const room_size(min(dx, dy)); // normalized to hallway width
 			light_size = max(0.06f*room_size, 0.67f*def_light_size);
+		}
+		else if (r->is_office || r->has_skylight) { // more lights for large offices; light size varies by office size; parking garages are handled later
+			light_density = 0.5;
+			float const room_size(dx + dy); // normalized to office size
+			light_size = max(0.015f*room_size, 0.67f*def_light_size);
 		}
 		else if (is_backrooms) { // large office basement room
 			light_density = 0.55;
