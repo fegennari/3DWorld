@@ -495,7 +495,8 @@ void smap_texture_array_t::ensure_tid(unsigned xsize, unsigned ysize) {
 }
 
 
-// if bounds is passed in, calculate pdu from it; otherwise, assume the user has alreay caclulated pdu
+// if bounds is passed in, calculate pdu from it; otherwise, assume the user has alreay caclulated pdu;
+// note that we store the light pos and other light-specific data in the shadow map, which means we can't reuse it across lights, but we can reuse the texture
 void smap_data_t::create_shadow_map_for_light(point const &lpos, cube_t const *const bounds, bool use_world_space, bool no_update, bool force_update) {
 
 	// setup render state

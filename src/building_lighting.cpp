@@ -1176,7 +1176,7 @@ bool check_for_shadow_caster(vect_cube_with_ix_t const &cubes, cube_t const &lig
 	} // for c
 	return ret;
 }
-void check_for_shadow_caster_people(vector<person_t> const &people, vect_cube_with_ix_t &ped_bcubes, vect_cube_with_ix_t const &moving_objs,
+void check_for_dynamic_shadow_casters(vector<person_t> const &people, vect_cube_with_ix_t &ped_bcubes, vect_cube_with_ix_t const &moving_objs,
 	cube_t const &light_bcube, point const &lpos, float dmax, bool has_stairs, vector3d const &xlate, bool check_people, unsigned &shadow_caster_hash)
 {
 	if (check_people && animate2) { // update shadow_caster_hash for moving people, but not for lamps, because their light points toward the floor
@@ -1641,7 +1641,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			if (check_dynamic_shadows) {
 				float const dshadow_radius((is_in_attic ? 1.0 : 0.8)*light_radius); // use full light radius for attics since they're more open
 				if (building_action_key) {force_smap_update = 1;} // toggling a door state or interacting with objects invalidates shadows in the building for that frame
-				check_for_shadow_caster_people(interior->people, ped_bcubes, moving_objs, clipped_bc, lpos_rot,
+				check_for_dynamic_shadow_casters(interior->people, ped_bcubes, moving_objs, clipped_bc, lpos_rot,
 					dshadow_radius, stairs_light, xlate, (check_building_people && !is_lamp), shadow_caster_hash); // no people shadows for lam[s
 			}
 		}
@@ -1764,7 +1764,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 					shadow_caster_hash ^= 0xdeadbeef; // update hash when player enters or leaves the light's area
 				}
 				if (!force_smap_update && ((camera_near_building && camera_bs.z > clipped_area.z1()) || camera_bs.z > z)) {
-					check_for_shadow_caster_people(interior->people, ped_bcubes, moving_objs, clipped_area, lpos,
+					check_for_dynamic_shadow_casters(interior->people, ped_bcubes, moving_objs, clipped_area, lpos,
 						0.0, room_has_stairs, xlate, check_building_people, shadow_caster_hash); // dmax=0
 				}
 				hash_mix_point(lpos, shadow_caster_hash); // update when light (sun/moon) pos changes

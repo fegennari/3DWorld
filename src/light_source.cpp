@@ -389,9 +389,12 @@ void light_source_trig::register_activate(bool player_triggered) {
 
 // ************ SHADOW MAPS ***********
 
-// FIXME: doesn't work because shader wants to index texture layer and shadow matrix by the same index, and we may not have enough uniforms for caching
-unsigned const MAX_EXTRA_CACHED_SMAPS = 0;
-
+// local shadow maps are used for cases such as buildings and streetlights and are capped at 64 max to agree with the shader;
+// this cap can be increased, but some GPUs may not have enough uniform slots for more, and it would take more GPU memory;
+// when the player rotates, different light sources may enter the view frustum as lights with cached shadows leave it, which can thrash the cache;
+// it may make sense to reserve some extra slots to help with this, though only if the max_shadow_maps config option is set less than the max;
+// however, this doesn't work because the shader wants to index texture layer and shadow matrix by the same index,
+// and we may not have enough uniforms for caching
 class local_smap_manager_t {
 
 	bool use_tex_array;
@@ -434,7 +437,6 @@ public:
 			free_list.pop_back();
 		}
 		local_smap_data_t &smd(get_smap(index));
-		//cout << TXT(free_list.size()) << TXT(index) << TXT(user_smap_id) << TXT(smd.user_smap_id) << endl; // TESTING
 		assert(!smd.used);
 		matched_smap_id      = (user_smap_id > 0 && smd.user_smap_id == user_smap_id);
 		smd.used             = 1; // mark as used (for error checking)
