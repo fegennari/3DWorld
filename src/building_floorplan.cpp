@@ -822,7 +822,13 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 				interior->door_stacks.reserve(num_doors_est);
 				interior->doors.reserve(num_doors_per_stack*num_doors_est);
 			}
-			while (!to_split.empty()) {
+			// see if we have a skylight to work with
+			vect_cube_t part_skylights; // should be at most size 1 with currently skylight addition code
+
+			for (cube_t const &skylight : skylights) {
+				if (skylight.intersects(*p)) {part_skylights.push_back(skylight);}
+			}
+			while (!to_split.empty()) { // recursively split rooms until all rooms are too small to split or there are no more valid splits
 				split_cube_t const c(to_split.back()); // Note: non-const because door_lo/door_hi is modified during T-junction insert
 				to_split.pop_back();
 				vector3d const csz(c.get_size());
@@ -837,31 +843,34 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 				}
 				float const min_dist_abs(1.5*doorway_width + wall_thick);
 				bool const on_edge(c.d[!wall_dim][0] == p->d[!wall_dim][0] || c.d[!wall_dim][1] == p->d[!wall_dim][1]); // at edge of the building - walls don't intersect windows
+				// create a wall to split up this room
+				// what about allowing adjacent rooms not separated by a wall?
+				// this would work for connected public rooms (living, dining, kitchen), but would limit our ability to later assign these rooms as bed, bath, etc.
 				float wall_pos(0.0);
 				bool pos_valid(0);
+				cube_t wall, wall2; // copy from cube; shared zvals, but X/Y will be overwritten per wall
 
 				for (unsigned num = 0; num < 20; ++num) { // 20 tries to choose a wall pos that's not inside a window
 					wall_pos = cube_rand_side_pos(c, wall_dim, 0.25, min_dist_abs, rgen, 0); // for_door=0
 					if (on_edge && is_val_inside_window(*p, wall_dim, wall_pos, window_hspacing[wall_dim], window_border)) continue; // try a new wall_pos
 					if (c.bad_pos(wall_pos, wall_dim)) continue; // intersects doorway from prev wall, try a new wall_pos
-					pos_valid = 1; break; // done, keep wall_pos
-				}
+					wall = c;
+					create_wall(wall, wall_dim, wall_pos, fc_thick, wall_half_thick, wall_edge_spacing);
+					if (has_bcube_int_xy(wall, part_skylights)) continue; // check for skylight intersection
+					pos_valid = 1;
+					break; // done, keep wall_pos
+				} // for num
 				if (!pos_valid) { // no valid pos, skip this split
 					add_room(c, part_id, 1, 0, 0);
 					continue;
 				}
-				// create a wall to split up this room
-				// what about allowing adjacent rooms not separated by a wall?
-				// this would work for connected public rooms (living, dining, kitchen), but would limit our ability to later assign these rooms as bed, bath, etc.
-				cube_t wall(c), wall2; // copy from cube; shared zvals, but X/Y will be overwritten per wall
-				create_wall(wall, wall_dim, wall_pos, fc_thick, wall_half_thick, wall_edge_spacing);
 				// insert a doorway into the wall
 				float const doorway_pos(cube_rand_side_pos(c, !wall_dim, 0.25, doorway_width, rgen, 1)); // for_door=1
 				float const lo_pos(doorway_pos - doorway_hwidth), hi_pos(doorway_pos + doorway_hwidth);
 				bool const open_dir(wall_pos > part_door_open_dir_tp[wall_dim]); // doors open away from the building center
 				remove_section_from_cube_and_add_door(wall, wall2, lo_pos, hi_pos, !wall_dim, open_dir);
 				auto &walls(interior->walls[wall_dim]);
-				walls.push_back(wall);
+				walls.push_back(wall );
 				walls.push_back(wall2);
 				float door_lo[2] = {lo_pos, lo_pos}, door_hi[2] = {hi_pos, hi_pos}; // passed to next split step to avoid placing a wall that intersects this doorway
 				// split into two smaller rooms; ensure we can split at least once per dim
