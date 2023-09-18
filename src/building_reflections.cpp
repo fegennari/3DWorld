@@ -89,11 +89,13 @@ void create_mirror_reflection_if_needed() {
 	if (player_building == nullptr) return;
 	
 	if (player_building->water_visible_to_player()) { // draw water plane reflection
-		cube_t water_cube(player_building->get_water_cube(0));
-		water_cube.z1() = water_cube.z2(); // top surface only
-		mirror_in_ext_basement = 1; // required when extended basement goes outside the building's tile
-		draw_scene_for_building_reflection(room_mirror_ref_tid, 2, 1, water_cube.z2(), 0, 1, 0, 1, 1, water_cube); // +z, not house, interior, basement, no exterior
-		return;
+		if (get_camera_pos().z < player_building->interior->water_zval + player_building->get_window_vspace()) { // only if the player is on the same floor as the water
+			cube_t water_cube(player_building->get_water_cube(0));
+			water_cube.z1() = water_cube.z2(); // top surface only
+			mirror_in_ext_basement = 1; // required when extended basement goes outside the building's tile
+			draw_scene_for_building_reflection(room_mirror_ref_tid, 2, 1, water_cube.z2(), 0, 1, 0, 1, 1, water_cube); // +z, not house, interior, basement, no exterior
+			return;
+		}
 	}
 	if (!is_mirror(cur_room_mirror)) return; // not enabled
 	bool const interior_room(cur_room_mirror.is_interior()), is_house(cur_room_mirror.is_house()), is_open(cur_room_mirror.is_open());
