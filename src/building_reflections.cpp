@@ -155,13 +155,28 @@ bool building_t::find_mirror_in_room(unsigned room_id, vector3d const &xlate, bo
 		if (((camera_bs[i->dim] - i->get_center_dim(i->dim)) < 0.0f) ^ i->dir ^ 1) continue; // back facing
 		if (!camera_pdu.cube_visible(*i + xlate)) continue; // VFC
 		if (!is_cube_face_visible_from_pt(*i, camera_bs, i->dim, i->dir, same_room)) continue; // visibility test (slow)
-		float const dsq(p2p_dist_sq(camera_bs, i->get_cube_center()));
+		point const center(i->get_cube_center());
+		float const dsq(p2p_dist_sq(camera_bs, center));
 		
 		if (!found || dsq < dmin_sq) {
+			room_t const &room(get_room(room_id));
+
+			if (is_room_pg_or_backrooms(room)) { // backrooms bathroom mirror
+				// check for closed door line intersection; if found, mirror is not visible
+				assert(interior->ext_basement_door_stack_ix < interior->door_stacks.size());
+				bool found_closed_door(0);
+
+				for (auto ds = interior->door_stacks.begin()+interior->ext_basement_door_stack_ix; ds != interior->door_stacks.end(); ++ds) {
+					if (ds->z1() > i->z2() || ds->z2() < i->z1()) continue; // wrong floor
+					if (interior->doors[ds->first_door_ix].open_amt > 0.0) continue; // open, skip
+					if (ds->get_true_bcube().line_intersects(camera_bs, center)) {found_closed_door = 1; break;}
+				}
+				if (found_closed_door) continue;
+			}
 			dmin_sq = dsq;
 			found   = 1;
-			cur_room_mirror = *i;
-			mirror_in_ext_basement = get_room(room_id).is_ext_basement();
+			cur_room_mirror        = *i;
+			mirror_in_ext_basement = room.is_ext_basement();
 		}
 	} // for i
 	return found;
