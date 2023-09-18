@@ -1989,7 +1989,6 @@ void building_t::create_two_story_tall_rooms(rand_gen_t &rgen) {
 	if (!interior) return;
 	float const floor_spacing(get_window_vspace()), floor_thickness(get_floor_thickness()), fc_thick(0.5*floor_thickness), wall_thickness(get_wall_thickness());
 
-	// TODO: fix gaps for upper walls near split between lower part
 	// Note: wall trim top/bottom aren't drawn, but they generally aren't visible by the player standing on the bottom floor
 	for (auto r = interior->rooms.begin(); r != interior->rooms.end(); ++r) {
 		room_t &room(*r);
@@ -2068,6 +2067,30 @@ void building_t::create_two_story_tall_rooms(rand_gen_t &rgen) {
 			assert(dix < idoors.size());
 			if (six < stack_ixs.size() && dsi == stack_ixs[six]) {++six;} // move to next update stack
 		}
+		// extend any wall adjacent to a shorter (single story) part upward by the floor thickness to fill the gap
+		if (real_num_parts > 1) {
+			cube_t const &part(parts[room.part_id]);
+
+			for (unsigned dim = 0; dim < 2; ++dim) {
+				for (unsigned dir = 0; dir < 2; ++dir) {
+					float const wall_pos(room.d[dim][dir]);
+					if (part.d[dim][dir] != wall_pos) continue; // not a part exterior edge
+
+					for (auto p = parts.begin(); p != get_real_parts_end(); ++p) {
+						if (*p == part) continue; // skip self
+						if (p->d[dim][!dir] != wall_pos) continue; // not the adjacent part
+						if (p->z2() >= part.z2()) continue; // not shorter
+						// we found a shorter adjacent part; now create a new wall segment that covers the gap
+						cube_t wall(room);
+						set_cube_zvals(wall, ceil_zval, ceil_zval+fc_thick);
+						wall.d[dim][!dir] = wall_pos;
+						wall.d[dim][ dir] = wall_pos + (dir ? 1.0 : -1.0)*wall_thickness;
+						interior->walls[dim].push_back(wall);
+					} // for p
+				} // for dir
+			} // for dim
+		}
+		// remove the floor and ceiling between the two levels
 		cube_t to_remove(room);
 		to_remove.z1() += (floor_spacing - fc_thick); // first  floor ceiling
 		to_remove.z2() -= (floor_spacing - fc_thick); // second floor floor

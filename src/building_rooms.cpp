@@ -921,6 +921,7 @@ void building_t::add_wall_and_door_trim() { // and window trim
 					}
 				} // for W
 			}
+			if (w->dz() < 0.5*window_vspacing) continue; // short wall segment from tall room extension, no trim
 			unsigned const num_floors(calc_num_floors(*w, window_vspacing, floor_thickness));
 			// snap to the nearest floor to handle short walls due to cut out stairs
 			float const ground_wall_z1(bcube.z1() + fc_thick);
