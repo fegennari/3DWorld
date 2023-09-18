@@ -1664,8 +1664,8 @@ public:
 	cube_t get_ext_basement_entrance() const;
 	bool interior_visible_from_other_building_ext_basement(vector3d const &xlate, bool expand_for_light=0) const;
 	void try_connect_ext_basement_to_building(building_t &b);
-	template<typename T> void add_door_verts(cube_t const &D, T &drawer, uint8_t door_type,
-		bool dim, bool dir, float open_amt, bool opens_out, bool exterior, bool on_stairs=0, bool hinge_side=0, bool is_bldg_conn=0) const;
+	template<typename T> void add_door_verts(cube_t const &D, T &drawer, uint8_t door_type, bool dim, bool dir, float open_amt, bool opens_out, bool exterior,
+		bool on_stairs=0, bool hinge_side=0, bool is_bldg_conn=0, bool draw_top_edge=0) const;
 	tquad_with_ix_t set_door_from_cube(cube_t const &c, bool dim, bool dir, unsigned type, float pos_adj,
 		bool exterior, float open_amt, bool opens_out, bool opens_up, bool swap_sides, bool is_bldg_conn=0) const;
 	tquad_with_ix_t set_interior_door_from_cube(door_t const &door) const;

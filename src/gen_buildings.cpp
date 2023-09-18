@@ -1822,8 +1822,8 @@ void building_t::get_all_drawn_interior_verts(building_draw_t &bdraw) {
 	bdraw.end_draw_range_capture(interior->draw_range); // 80MB, 394MB, 836ms
 }
 
-template<typename T> void building_t::add_door_verts(cube_t const &D, T &drawer, uint8_t door_type,
-	bool dim, bool dir, float open_amt, bool opens_out, bool exterior, bool on_stairs, bool hinge_side, bool is_bldg_conn) const
+template<typename T> void building_t::add_door_verts(cube_t const &D, T &drawer, uint8_t door_type, bool dim, bool dir, float open_amt,
+	bool opens_out, bool exterior, bool on_stairs, bool hinge_side, bool is_bldg_conn, bool draw_top_edge) const
 {
 	float const ty((exterior || SPLIT_DOOR_PER_FLOOR) ? 1.0 : D.dz()/get_window_vspace()); // tile door texture across floors for unsplit interior doors
 	int const type(tquad_with_ix_t::TYPE_IDOOR); // always use interior door type, even for exterior door, because we're drawing it in 3D inside the building
@@ -1870,7 +1870,8 @@ template<typename T> void building_t::add_door_verts(cube_t const &D, T &drawer,
 				drawer.add_tquad(*this, door_edges[e], bcube, tp, color, 0, 0, 1); // invert_tc_x=0, exclude_frame=0, no_tc=1, use single texel from corner of door texture
 			}
 		}
-		if (opened && !exterior && !opens_up && num_sides == 1 && check_skylight_intersection(door.get_bcube())) { // open interior door at skylight; draw top edge of door
+		if (opened && !exterior && !opens_up && num_sides == 1 && (draw_top_edge || check_skylight_intersection(door.get_bcube()))) {
+			// open interior door at skylight or tall room; draw top edge of door
 			tquad_with_ix_t top_edge(4, door.type);
 			top_edge.pts[0] = door_edges[0].pts[0];
 			top_edge.pts[1] = door_edges[0].pts[3];
@@ -1882,8 +1883,8 @@ template<typename T> void building_t::add_door_verts(cube_t const &D, T &drawer,
 }
 
 // explicit template specialization
-template void building_t::add_door_verts(cube_t const &D, building_room_geom_t &drawer, uint8_t door_type,
-	bool dim, bool dir, float open_amt, bool opens_out, bool exterior, bool on_stairs, bool hinge_side, bool is_bldg_conn) const;
+template void building_t::add_door_verts(cube_t const &D, building_room_geom_t &drawer, uint8_t door_type, bool dim, bool dir, float open_amt,
+	bool opens_out, bool exterior, bool on_stairs, bool hinge_side, bool is_bldg_conn, bool draw_top_edge) const;
 
 // Note: this is actually the geometry of walls that have windows, not the windows themselves
 void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_pass, float offset_scale, point const *const only_cont_pt_in, bool no_skylights) const {
