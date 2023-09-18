@@ -95,13 +95,21 @@ class cube_nav_grid {
 		} // for y
 		return found;
 	}
-	bool check_line_intersect(point const &p1, point const &p2) const {
+	bool check_line_intersect(point const &p1, point const &p2, float radius) const {
 		// zvals are ignored - effectively 2D; otherwise could call line_intersect_cubes()
 		cube_t const check_cube(p1, p2);
 
+		// check if vertical cylinder with this radius swept from p1 to p2 intersects the unexpanded cube; assumes cube is large relative to radius
 		for (cube_t const &c : blockers_exp) {
-			if (c.intersects_xy(check_cube) && check_line_clip_xy(p1, p2, c.d)) return 1; // intersects
-		}
+			if (!c.intersects_xy(check_cube) || !check_line_clip_xy(p1, p2, c.d)) continue; // no intersection
+			cube_t c_non_exp(c);
+			c_non_exp.expand_by_xy(-radius); // shrink radius back off
+			if (check_line_clip_xy(p1, p2, c_non_exp.d)) return 1;
+			vector3d v(cross_product((p2 - p1), plus_z)); // tangent vector to the person's cylinder
+			v *= radius/v.mag();
+			if (check_line_clip_xy(p1+v, p2+v, c_non_exp.d)) return 1;
+			if (check_line_clip_xy(p1-v, p2-v, c_non_exp.d)) return 1;
+		} // for c
 		return 0; // no intersection
 	}
 	void make_region_walkable(cube_t const &region) {
@@ -255,7 +263,7 @@ public:
 							unsigned const orig_sz(path.size());
 
 							for (unsigned i = rev_start_ix; i+1 < path.size(); ++i) { // inefficient, but simple
-								if (!check_line_intersect(path[i-1], path[i+1])) {path.erase(path.begin() + i); --i;}
+								if (!check_line_intersect(path[i-1], path[i+1], radius)) {path.erase(path.begin() + i); --i;}
 							}
 							if (path.size() == orig_sz) break; // no points removed - done
 						} // end while
