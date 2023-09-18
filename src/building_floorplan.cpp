@@ -1984,10 +1984,9 @@ bool building_t::clip_part_ceiling_for_stairs(cube_t const &c, vect_cube_t &out,
 }
 
 void building_t::create_two_story_tall_rooms(rand_gen_t &rgen) {
-	return; // TODO: remove when this is working
-	if (!is_house) return; // houses only, for now
-	if (!interior) return;
+	if (!is_house || !interior) return; // houses only, for now
 	float const floor_spacing(get_window_vspace()), floor_thickness(get_floor_thickness()), fc_thick(0.5*floor_thickness), wall_thickness(get_wall_thickness());
+	float const min_tall_room_sz(1.6*floor_spacing);
 
 	// Note: wall trim top/bottom aren't drawn, but they generally aren't visible by the player standing on the bottom floor
 	for (auto r = interior->rooms.begin(); r != interior->rooms.end(); ++r) {
@@ -1996,6 +1995,7 @@ void building_t::create_two_story_tall_rooms(rand_gen_t &rgen) {
 		if (room.has_stairs || room.has_elevator || room.is_hallway || room.is_sec_bldg || room.is_single_floor) continue;
 		if (calc_num_floors(room, floor_spacing, floor_thickness) != 2)   continue; // two story rooms only
 		if (has_attic() && room.contains_cube_xy(interior->attic_access)) continue; // don't make the attic access unreachable
+		if (min(room.dx(), room.dy()) < min_tall_room_sz)                 continue; // room too small
 		if (!is_room_adjacent_to_ext_door(room)) continue; // only consider entrance rooms that may become living rooms
 		
 		// gather list of all connected doors on the upper floor

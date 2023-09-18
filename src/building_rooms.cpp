@@ -698,6 +698,7 @@ void building_t::add_balconies(rand_gen_t &rgen) {
 	for (auto room = interior->rooms.begin(); room != interior->rooms.end(); ++room) {
 		if (room->interior)           continue; // no windows
 		if (room->is_sec_bldg)        continue; // no garage or shed, even if it's multiple stories tall
+		if (room->is_single_floor)    continue; // no single floor tall rooms
 		if (room->z2() < room_min_z2) continue; // ground floor only
 		if (rgen.rand_float() < 0.75) continue;
 		float const balcony_z1(room->z2() - floor_spacing /*+ get_fc_thickness()*/); // floor level of top floor of room
