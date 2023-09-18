@@ -1251,7 +1251,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 	bool const player_on_attic_stairs(check_attic && player_in_attic && interior->attic_access.contains_pt_xy(camera_rot));
 	unsigned camera_part(parts.size()); // start at an invalid value
 	bool camera_by_stairs(0), camera_on_stairs(0), camera_somewhat_by_stairs(0), camera_in_hallway(0), camera_can_see_ext_basement(0);
-	bool camera_near_building(camera_in_building), check_ramp(0), stairs_or_ramp_visible(0);
+	bool camera_near_building(camera_in_building), check_ramp(0), stairs_or_ramp_visible(0), camera_room_tall(0);
 	int camera_room(-1);
 	vect_cube_t cuts_above, cuts_below, cuts_above_nonvis; // only used when player is in the building
 	vect_cube_with_ix_t moving_objs;
@@ -1275,6 +1275,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			camera_by_stairs  = camera_somewhat_by_stairs = room.has_stairs_on_floor(camera_floor);
 			camera_in_hallway = room.is_hallway;
 			check_ramp        = (has_pg_ramp() && !interior->ignore_ramp_placement);
+			camera_room_tall  = (room.is_single_floor && camera_bs.z > room.z1() + window_vspacing);
 			if (show_room_name) {lighting_update_text = room_names[room_type];}
 
 			// stairs and ramps only allow light to pass if visible to the player
@@ -1415,7 +1416,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			else if (check_attic && floor_is_above && lpos.z > attic_access.z2() && camera_room >= 0 && get_room(camera_room).contains_cube_xy(attic_access)) {
 				// light in attic, and camera in room with attic access
 			}
-			else if (floor_is_above || floor_is_below) { // light is on a different floor from the camera
+			else if (floor_is_above || (floor_is_below && !camera_room_tall)) { // light is on a different floor from the camera
 				bool const parts_are_stacked(camera_part < real_num_parts && (parts[camera_part].z2() <= room.z1() || parts[camera_part].z1() >= room.z2()));
 
 				// the basement is a different part, but it's still the same vertical stack; consider this the same effective part if the camera is in the basement above the room's part
