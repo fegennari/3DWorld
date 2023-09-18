@@ -3006,15 +3006,16 @@ void building_t::place_objects_onto_surfaces(rand_gen_t rgen, room_t const &room
 		if (obj.shape == SHAPE_CYLIN) { // find max contained XY rectangle (simpler than testing distance to center vs. radius)
 			for (unsigned d = 0; d < 2; ++d) {surface.expand_in_dim(d, -0.5*(1.0 - SQRTOFTWOINV)*surface.get_sz_dim(d));}
 		}
+		// Note: after this point, the obj reference is invalid
 		if (is_eating_table) { // table in a room for eating, add a plate
 			if (place_plate_on_obj(rgen, surface, room_id, tot_light_amt, avoid)) {avoid.push_back(objs.back());}
 		}
 		if (avoid.empty() && rgen.rand_probability(book_prob)) { // place book if it's the first item (no plate)
-			placed_book_on_counter |= (obj.type == TYPE_COUNTER);
+			placed_book_on_counter |= (surface.type == TYPE_COUNTER);
 			place_book_on_obj(rgen, surface, room_id, tot_light_amt, objs_start, !is_table);
 			avoid.push_back(objs.back());
 		}
-		if (obj.type == TYPE_DESK) { // if this is a desk, try to avoid placing an object that overlaps a pen or pencil; papers are okay to overlap since they're flat
+		if (surface.type == TYPE_DESK) { // if this is a desk, try to avoid placing an object that overlaps a pen or pencil; papers are okay to overlap since they're flat
 			for (unsigned j = i+1; j < objs_end; ++j) {
 				room_object_t const &obj2(objs[j]);
 				if (obj2.type == TYPE_PEN || obj2.type == TYPE_PENCIL) {avoid.push_back(obj2);}
