@@ -827,7 +827,7 @@ void building_t::add_wall_and_door_trim() { // and window trim
 		for (unsigned side = 0; side < 2; ++side) { // left/right of door
 			trim.d[!d->dim][0] = d->d[!d->dim][side] - (side ? trim_thickness : door_trim_width);
 			trim.d[!d->dim][1] = d->d[!d->dim][side] + (side ? door_trim_width : trim_thickness);
-			bool const draw_top(check_skylight_intersection(trim)); // draw top edge of trim for top floor?
+			bool const draw_top(d->mult_floor_room || check_skylight_intersection(trim)); // draw top edge of trim for top floor?
 			unsigned const flags2(flags | RO_FLAG_ADJ_BOT | (draw_top ? 0 : RO_FLAG_ADJ_TOP));
 			objs.emplace_back(trim, TYPE_WALL_TRIM, 0, d->dim, side, flags2, 1.0, SHAPE_TALL, trim_color); // abuse tall flag
 		}
@@ -839,7 +839,7 @@ void building_t::add_wall_and_door_trim() { // and window trim
 
 		for (unsigned f = 0; f < num_floors; ++f, z += window_vspacing) {
 			set_cube_zvals(trim, z-trim_thickness, z); // z2=ceil height
-			bool const draw_top(f+1 == num_floors && check_skylight_intersection(trim)); // draw top edge of trim for top floor?
+			bool const draw_top(d->mult_floor_room || (f+1 == num_floors && check_skylight_intersection(trim))); // draw top edge of trim for top floor?
 			unsigned const flags2(flags | (draw_top ? 0 : RO_FLAG_ADJ_TOP));
 			objs.emplace_back(trim, TYPE_WALL_TRIM, 0, d->dim, 0, flags2, 1.0, SHAPE_SHORT, trim_color);
 		}

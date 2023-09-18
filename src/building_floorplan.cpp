@@ -1987,19 +1987,69 @@ void building_t::create_two_story_tall_rooms(rand_gen_t &rgen) {
 	return; // TODO: remove when this is working
 	if (!is_house) return; // houses only, for now
 	if (!interior) return;
-	float const floor_spacing(get_window_vspace()), floor_thickness(get_floor_thickness()), fc_thick(0.5*floor_thickness);
+	float const floor_spacing(get_window_vspace()), floor_thickness(get_floor_thickness()), fc_thick(0.5*floor_thickness), wall_thickness(get_wall_thickness());
 
+	// TODO: fix gaps for upper walls near split between lower part
+	// TODO: allow ceiling fans in these rooms
+	// Note: wall trim top/bottom aren't drawn, but they generally aren't visible by the player standing on the bottom floor
 	for (room_t &room : interior->rooms) {
+		if (room.z1() != ground_floor_z1) continue; // ground floor only
 		if (room.has_stairs || room.has_elevator || room.is_hallway || room.is_sec_bldg || room.is_single_floor) continue;
-		if (calc_num_floors(room, floor_spacing, floor_thickness) != 2) continue; // two story rooms only
+		if (calc_num_floors(room, floor_spacing, floor_thickness) != 2)   continue; // two story rooms only
+		if (has_attic() && room.contains_cube_xy(interior->attic_access)) continue; // don't make the attic access unreachable
 		if (!is_room_adjacent_to_ext_door(room)) continue; // only consider entrance rooms that may become living rooms
 		
-		// check for connected rooms on the upper floor that would become unreachable if their door was removed
-		for (door_stack_t const &ds : interior->door_stacks) {
-			// TODO
-		} // for ds
+		// gather list of all connected doors on the upper floor
+		float const upper_floor_zval_thresh(room.z1() + 1.5*floor_spacing); // anything above this is definitely on the second floor
+		cube_t room_exp(room);
+		room_exp.expand_by_xy(wall_thickness);
+		auto &door_stacks(interior->door_stacks);
+		vector<unsigned> stack_ixs;
+
+		for (unsigned i = 0; i < door_stacks.size(); ++i) {
+			door_stack_t const &ds(door_stacks[i]);
+			if (ds.on_stairs) continue; // skip basement door
+			if (ds.z1() < upper_floor_zval_thresh && ds.z2() > upper_floor_zval_thresh && ds.intersects(room_exp)) {stack_ixs.push_back(i);}
+		}
+		if (stack_ixs.size() > 1) { // only need to check if there are multiple connecting doors, since a single door must connect as this room has no stairs
+			// check for connected rooms on the upper floor that would become unreachable if their door was removed
+			unsigned const ref_ix(stack_ixs.front());
+
+			for (auto i = stack_ixs.begin()+1; i != stack_ixs.end(); ++i) { // skip first index
+				// TODO
+			}
+		}
 		// replace doors with walls on upper floors
-		// TODO
+		float const ceil_zval(room.z1() + floor_spacing - fc_thick);
+		vect_door_t &idoors(interior->doors);
+		vector<unsigned> dixs_to_remove;
+
+		for (unsigned i : stack_ixs) {
+			door_stack_t &ds(door_stacks[i]);
+			unsigned const dix_to_remove(ds.first_door_ix+1); // second/upper door in the stack
+			assert(dix_to_remove < idoors.size()); // first *and* second door must be valid
+			idoors[ds.first_door_ix].mult_floor_room = 1;
+			unsigned const door_ix_end((i+1 == door_stacks.size()) ? idoors.size() : door_stacks[i+1].first_door_ix);
+			assert(door_ix_end == ds.first_door_ix+2); // must be a stack of exactly two doors
+			ds.z2() = ceil_zval; // clip to a single door height
+			ds.mult_floor_room = 1;
+			bool const dim(idoors[dix_to_remove].dim);
+			cube_t wall(idoors[dix_to_remove]);
+			wall.z1() = ceil_zval; // starts at the top of the lower door
+			set_wall_width(wall, wall.get_center_dim(dim), 0.5*wall_thickness, dim);
+			interior->walls[dim].push_back(wall);
+			dixs_to_remove.push_back(dix_to_remove);
+		} // for i
+		// remove doors in reverse order since later indices will change; ext basement conn should be added later, so those door_ix values don't need to be updated
+		for (auto i = dixs_to_remove.rbegin(); i != dixs_to_remove.rend(); ++i) {idoors.erase(idoors.begin() + *i);}
+		// update door stack first_door_ix values
+		for (unsigned dsi=0, six=0; dsi < door_stacks.size(); ++dsi) {
+			unsigned &dix(door_stacks[dsi].first_door_ix);
+			assert(dix >= six);
+			dix -= six; // this number of doors was removed from earlier door stacks
+			assert(dix < idoors.size());
+			if (six < stack_ixs.size() && dsi == stack_ixs[six]) {++six;} // move to next update stack
+		}
 		cube_t to_remove(room);
 		to_remove.z1() += (floor_spacing - fc_thick); // first  floor ceiling
 		to_remove.z2() -= (floor_spacing - fc_thick); // second floor floor
