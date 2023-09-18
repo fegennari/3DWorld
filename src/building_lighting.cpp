@@ -1453,6 +1453,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			} // end camera on different floor case
 		} // end !player_in_elevator
 		float const light_radius(get_radius_for_room_light(*i)), cull_radius(0.95*light_radius);
+		// note that the same lights are used for the reflection pass, so a light behind the player won't be active in a mirror reflection
 		if (!camera_pdu.sphere_visible_test((lpos_rot + xlate), cull_radius)) continue; // VFC
 		// ext basement connector room must include the other building's ext basement, and it's simplest to just expand it by the max length of that room plus approx hallway width
 		bool const is_ext_conn_light(i->is_exterior());
