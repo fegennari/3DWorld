@@ -1990,7 +1990,6 @@ void building_t::create_two_story_tall_rooms(rand_gen_t &rgen) {
 	float const floor_spacing(get_window_vspace()), floor_thickness(get_floor_thickness()), fc_thick(0.5*floor_thickness), wall_thickness(get_wall_thickness());
 
 	// TODO: fix gaps for upper walls near split between lower part
-	// TODO: allow ceiling fans in these rooms
 	// Note: wall trim top/bottom aren't drawn, but they generally aren't visible by the player standing on the bottom floor
 	for (room_t &room : interior->rooms) {
 		if (room.z1() != ground_floor_z1) continue; // ground floor only

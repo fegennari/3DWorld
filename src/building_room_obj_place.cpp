@@ -699,28 +699,9 @@ bool building_t::add_bedroom_objs(rand_gen_t rgen, room_t &room, vect_cube_t con
 	if (rgen.rand_float() < global_building_params.ball_prob) { // maybe add a ball to the room
 		add_ball_to_room(rgen, room, place_area, zval, room_id, tot_light_amt, objs_start);
 	}
-	if (building_obj_model_loader.is_model_valid(OBJ_MODEL_CEIL_FAN) && rgen.rand_float() < 0.3) { // maybe add ceiling fan
-		// find the ceiling light, which should be the last object placed before calling this function, and center the fan on it
-		if (objs_start > 0 && objs[objs_start-1].type == TYPE_LIGHT) {
-			vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_CEIL_FAN)); // D, W, H
-			float const diameter(min(0.4*min(room.dx(), room.dy()), 0.5*window_vspacing)), height(diameter*sz.z/sz.y); // assumes width = depth = diameter
-			room_object_t &light(objs[objs_start-1]);
-			point const top_center(light.xc(), light.yc(), (zval + window_vspacing - floor_thickness)); // on the ceiling
-			cube_t fan(top_center, top_center);
-			fan.expand_by_xy(0.5*diameter);
-			fan.z1() -= height;
+	cube_t const avoid(placed_closet ? objs[closet_obj_id] : cube_t()); // avoid intersecting the closet, since it meets the ceiling
+	if (objs_start > 0) {replace_light_with_ceiling_fan(rgen, room, avoid, room_id, tot_light_amt, objs_start-1);} // light is prev placed object; should always be true
 
-			if (!placed_closet || !objs[closet_obj_id].intersects(fan)) { // check for closet intersection
-				light.translate_dim(2, -0.9*height); // move near the bottom of the ceiling fan (before invalidating with objs.emplace_back())
-				light.flags |= RO_FLAG_INVIS;   // don't draw the light itself; assume the light is part of the bottom of the fan instead
-				light.flags |= RO_FLAG_HANGING; // don't draw upward facing light
-				unsigned flags(RO_FLAG_NOCOLL);
-				if (rgen.rand_float() < 0.65) {flags |= RO_FLAG_ROTATING;} // make fan rotate when turned on 65% of the time
-				objs.emplace_back(fan, TYPE_CEIL_FAN, room_id, 0, 0, (RO_FLAG_NOCOLL | RO_FLAG_ROTATING), tot_light_amt, SHAPE_CYLIN, WHITE);
-				objs.back().obj_id = objs_start-1; // store light index in this object
-			}
-		}
-	}
 	if (rgen.rand_float() < 0.3) { // maybe add a t-shirt or jeans on the floor
 		unsigned const type(rgen.rand_bool() ? TYPE_PANTS : TYPE_TEESHIRT);
 		bool already_on_bed(0);
@@ -751,6 +732,31 @@ bool building_t::add_bedroom_objs(rand_gen_t rgen, room_t &room, vect_cube_t con
 		}
 	}
 	return 1; // success
+} // end add_bedroom_objs()
+
+bool building_t::replace_light_with_ceiling_fan(rand_gen_t &rgen, cube_t const &room, cube_t const &avoid, unsigned room_id, float tot_light_amt, unsigned light_obj_ix) {
+	if (!building_obj_model_loader.is_model_valid(OBJ_MODEL_CEIL_FAN)) return 0;
+	if (rgen.rand_float() > 0.3) return 0;
+	vect_room_object_t &objs(interior->room_geom->objs);
+	assert(light_obj_ix < objs.size());
+	room_object_t &light(objs[light_obj_ix]);
+	if (light.type != TYPE_LIGHT) return 0; // error?
+	float const floor_spacing(get_window_vspace());
+	vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_CEIL_FAN)); // D, W, H
+	float const diameter(min(0.4*min(room.dx(), room.dy()), 0.5*floor_spacing)), height(diameter*sz.z/sz.y); // assumes width = depth = diameter
+	point const top_center(light.xc(), light.yc(), light.z2()); // center on the light, with z2 on the ceiling
+	cube_t fan(top_center, top_center);
+	fan.expand_by_xy(0.5*diameter);
+	fan.z1() -= height;
+	if (!avoid.is_all_zeros() && avoid.intersects(fan)) return 0; // check for closet intersection
+	light.translate_dim(2, -0.9*height); // move near the bottom of the ceiling fan (before invalidating with objs.emplace_back())
+	light.flags |= RO_FLAG_INVIS;   // don't draw the light itself; assume the light is part of the bottom of the fan instead
+	light.flags |= RO_FLAG_HANGING; // don't draw upward facing light
+	unsigned flags(RO_FLAG_NOCOLL);
+	if (rgen.rand_float() < 0.65) {flags |= RO_FLAG_ROTATING;} // make fan rotate when turned on 65% of the time
+	objs.emplace_back(fan, TYPE_CEIL_FAN, room_id, 0, 0, (RO_FLAG_NOCOLL | RO_FLAG_ROTATING), tot_light_amt, SHAPE_CYLIN, WHITE);
+	objs.back().obj_id = light_obj_ix; // store light index in this object
+	return 1;
 }
 
 // Note: must be first placed object
@@ -1714,6 +1720,7 @@ bool building_t::add_livingroom_objs(rand_gen_t rgen, room_t const &room, float 
 			}
 		}
 	}
+	if (room.is_single_floor && objs_start > 0) {replace_light_with_ceiling_fan(rgen, room, cube_t(), room_id, tot_light_amt, objs_start-1);} // light is prev placed object
 	return 1;
 }
 
