@@ -1991,7 +1991,8 @@ void building_t::create_two_story_tall_rooms(rand_gen_t &rgen) {
 
 	// TODO: fix gaps for upper walls near split between lower part
 	// Note: wall trim top/bottom aren't drawn, but they generally aren't visible by the player standing on the bottom floor
-	for (room_t &room : interior->rooms) {
+	for (auto r = interior->rooms.begin(); r != interior->rooms.end(); ++r) {
+		room_t &room(*r);
 		if (room.z1() != ground_floor_z1) continue; // ground floor only
 		if (room.has_stairs || room.has_elevator || room.is_hallway || room.is_sec_bldg || room.is_single_floor) continue;
 		if (calc_num_floors(room, floor_spacing, floor_thickness) != 2)   continue; // two story rooms only
@@ -2012,11 +2013,27 @@ void building_t::create_two_story_tall_rooms(rand_gen_t &rgen) {
 		}
 		if (stack_ixs.size() > 1) { // only need to check if there are multiple connecting doors, since a single door must connect as this room has no stairs
 			// check for connected rooms on the upper floor that would become unreachable if their door was removed
-			unsigned const ref_ix(stack_ixs.front());
+			unsigned const room_ix(r - interior->rooms.begin());
+			int first_room_ix(-1);
+			bool is_disconnected(0);
 
-			for (auto i = stack_ixs.begin()+1; i != stack_ixs.end(); ++i) { // skip first index
-				// TODO
-			}
+			for (unsigned six : stack_ixs) {
+				// find room connecting to the other side of this door stack, and check its connectivity to other rooms
+				door_stack_t const &ds(door_stacks[six]);
+				cube_t test_cube(ds);
+				test_cube.expand_by_xy(wall_thickness);
+				test_cube.expand_in_dim(2, -fc_thick); // shrink in Z to avoid getting rooms on other floors (though that may not be possible)
+				int ds_room_ix(-1);
+
+				for (auto r2 = interior->rooms.begin(); r2 != interior->rooms.end(); ++r2) {
+					if (r2 == r) continue; // skip self
+					if (r2->intersects(test_cube)) {ds_room_ix = (r2 - interior->rooms.begin()); break;}
+				}
+				assert(ds_room_ix >= 0); // adj room must be found
+				if (first_room_ix < 0) {first_room_ix = ds_room_ix;} // use the first room as a reference
+				else if (!are_rooms_connected_without_using_room(first_room_ix, ds_room_ix, room_ix)) {is_disconnected = 1; break;}
+			} // for i
+			if (is_disconnected) continue;
 		}
 		// replace doors with walls on upper floors
 		float const ceil_zval(room.z1() + floor_spacing - fc_thick);
