@@ -11,12 +11,14 @@ struct building_animal_t {
 	vector3d dir;
 	float radius=0.0, speed=0.0, anim_time=0.0, wake_time=0.0, dist_since_sleep=0.0;
 	unsigned id=0;
+	bool shadow_non_visible=0;
 
 	building_animal_t(float xval) : pos(xval, 0.0, 0.0) {}
 	building_animal_t(point const &pos_, float radius_, vector3d const &dir_, unsigned id_) : pos(pos_), dir(dir_), radius(radius_), id(id_) {}
 	bool operator<(building_animal_t const &a) const {return (pos.x < a.pos.x);} // compare only xvals
 	bool is_moving  () const {return (speed     > 0.0);}
 	bool is_sleeping() const {return (wake_time > 0.0);}
+	vector3d get_upv() const {return plus_z;}
 	void sleep_for(float time_secs_min, float time_secs_max);
 	float move(float timestep, bool can_move_forward=1);
 	bool detailed_sphere_coll(point const &sc, float sr, point &coll_pos, float &coll_radius) const {return 1;} // defaults to true
@@ -56,6 +58,7 @@ struct spider_t : public building_animal_t {
 	float get_height   () const {return 2.0*radius;}
 	vector3d get_size  () const;
 	cube_t get_bcube   () const; // used for collision detection and VFC
+	vector3d get_upv   () const {return upv;}
 	void choose_new_dir(rand_gen_t &rgen);
 	// jumping logic
 	void jump(float vel);

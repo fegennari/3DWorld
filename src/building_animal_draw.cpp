@@ -122,6 +122,7 @@ public:
 					web_mat.add_vcylin_to_verts(strand, WHITE, 0, 0, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, 16); // ndiv=16
 				}
 			}
+			if (shadow_only && S.shadow_non_visible) continue; // shadow not visible to the camera (player)
 			cube_t const bcube(S.get_bcube());
 			if (check_clip_cube && !smap_light_clip_cube.intersects(bcube + xlate)) continue; // shadow map clip cube test: fast and high rejection ratio, do this first
 			if (!camera_pdu.cube_visible(bcube + xlate)) continue; // VFC
@@ -493,6 +494,7 @@ public:
 		bool any_drawn(0);
 
 		for (snake_t const &S : snakes) {
+			if (shadow_only && S.shadow_non_visible) continue; // shadow not visible to the camera (player)
 			cube_t const bcube(S.get_bcube());
 			if (check_clip_cube && !smap_light_clip_cube.intersects(bcube + xlate)) continue; // shadow map clip cube test: fast and high rejection ratio, do this first
 			if (!camera_pdu.cube_visible(bcube + xlate)) continue; // VFC
@@ -530,6 +532,7 @@ void building_room_geom_t::draw_animals(shader_t &s, building_t const &building,
 		bool rat_drawn(0);
 
 		for (rat_t const &rat : rats) {
+			if (shadow_only && rat.shadow_non_visible) continue; // shadow not visible to the camera (player)
 			cube_t const bcube(rat.get_bcube());
 			if (check_clip_cube && !smap_light_clip_cube.intersects(bcube + xlate)) continue; // shadow map clip cube test: fast and high rejection ratio, do this first
 			if (!camera_pdu.cube_visible(bcube + xlate)) continue; // VFC
