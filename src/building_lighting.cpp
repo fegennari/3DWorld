@@ -987,7 +987,7 @@ bool do_line_clip_xy_p2(point const &p1, point &p2, cube_t const &c) {
 	return 1;
 }
 
-void building_t::refine_light_bcube(point const &lpos, float light_radius, cube_t const &room, cube_t &light_bcube, bool is_parking_garage) const {
+void building_t::refine_light_bcube(point const &lpos, float light_radius, room_t const &room, cube_t &light_bcube, bool is_parking_garage) const {
 	// base: 173613 / bcube: 163942 / clipped bcube: 161455 / tight: 159005 / rays: 101205 / no ls bcube expand: 74538
 	// starts with building bcube clipped to light bcube
 	//highres_timer_t timer("refine_light_bcube"); // 0.035ms average
@@ -1058,19 +1058,23 @@ void building_t::refine_light_bcube(point const &lpos, float light_radius, cube_
 			}
 		}
 	}
+	point ray_origin(lpos);
+	// if this is a tall room, lower the ray origin to the ground floor to include light paths through ground floor doorways
+	if (room.is_single_floor) {min_eq(ray_origin.z, (room.z1() + get_floor_ceil_gap()));}
+
 	for (unsigned n = 0; n < NUM_RAYS; ++n) {
 		float const angle(TWO_PI*n/NUM_RAYS);
-		point p2(lpos + point(light_radius*sin(angle), light_radius*cos(angle), 0.0));
+		point p2(ray_origin + point(light_radius*sin(angle), light_radius*cos(angle), 0.0));
 		// test for bad rays; this can fail on rotated buildings if lights aren't rotated properly, and in other cases when I'm experimenting, so it's allowed
-		if (!do_line_clip_xy_p2(lpos, p2, tight_bcube)) continue; // bad ray, skip
+		if (!do_line_clip_xy_p2(ray_origin, p2, tight_bcube)) continue; // bad ray, skip
 
 		if (other_parts.empty() || part.contains_pt_xy(p2)) {
-			clip_ray_to_walls(lpos, p2, walls); // the simple case where we don't need to handle part boundaries (optimization)
+			clip_ray_to_walls(ray_origin, p2, walls); // the simple case where we don't need to handle part boundaries (optimization)
 		}
 		else {
 			// find the point where this ray exits the building by following it through all parts; parts should be exactly adjacent to each other in X or Y
 			point cur_pt(p2);
-			bool const ret(do_line_clip_xy_p2(lpos, cur_pt, part)); // exit point of the starting part
+			bool const ret(do_line_clip_xy_p2(ray_origin, cur_pt, part)); // exit point of the starting part
 			assert(ret);
 			auto prev_part(other_parts.end());
 
@@ -1086,7 +1090,7 @@ void building_t::refine_light_bcube(point const &lpos, float light_radius, cube_
 			} // for n
 			p2 = cur_pt;
 			if (room_exp.contains_pt_xy_inclusive(p2)) {} // ray ends in this room; it may have exited the building from this room
-			else {clip_ray_to_walls(lpos, p2, walls);} // ray ends in another room, need to clip it to the building walls
+			else {clip_ray_to_walls(ray_origin, p2, walls);} // ray ends in another room, need to clip it to the building walls
 		}
 		rays_bcube.union_with_pt(p2);
 	} // for n

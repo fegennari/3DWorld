@@ -192,6 +192,9 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			light_density = 0.55;
 			light_size   *= 0.75; // smaller
 		}
+		else if (r->is_single_floor) {
+			light_size *= sqrt(r->dz()/window_vspacing); // larger lights for taller rooms
+		}
 		if (light_density > 0.0) { // uniform 2D grid of lights
 			nx = max(1U, unsigned(light_density*dx/window_vspacing));
 			ny = max(1U, unsigned(light_density*dy/window_vspacing));
@@ -259,6 +262,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			if (!is_house && has_pri_hall() && r->is_office && r->interior) {
 				flags |= RO_FLAG_IS_ACTIVE; // leave unlit and enable motion detection for lights
 			}
+			else if (r->is_sec_bldg) {is_lit = 0;} // garage and shed lights start off
 			else {
 				// 50% of lights are on, 75% for top of stairs, 100% for non-basement hallways, 100% for parking garages and backrooms
 				is_lit  = ((r->is_hallway && !is_basement) || is_parking_garage || is_backrooms || ((rgen.rand() & (top_of_stairs ? 3 : 1)) != 0));
