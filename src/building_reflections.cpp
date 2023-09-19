@@ -20,6 +20,16 @@ cube_t get_mirror_surface(room_object_t const &c);
 
 bool is_mirror(room_object_t const &obj) {return (obj.type == TYPE_MIRROR || obj.type == TYPE_DRESS_MIR);}
 
+bool cube_visible_in_building_mirror_reflection(cube_t const &c) {
+	if (!is_mirror(cur_room_mirror)) return 0;
+	pos_dir_up pdu(camera_pdu);
+	// below code is duplicated with create_mirror_reflection_if_needed()/draw_scene_for_building_reflection(), but not easy to factor out and share
+	bool const is_open(cur_room_mirror.is_open()), dim(cur_room_mirror.dim ^ is_open), dir(is_open ? 1 : cur_room_mirror.dir);
+	float const reflect_plane(is_open ? get_mirror_surface(cur_room_mirror).d[dim][1] : cur_room_mirror.d[dim][dir]);
+	float const reflect_plane_xf(reflect_plane + get_tiled_terrain_model_xlate()[dim]);
+	pdu.apply_dim_mirror(dim, reflect_plane_xf);
+	return pdu.cube_visible(c);
+}
 
 void draw_scene_for_building_reflection(unsigned &ref_tid, unsigned dim, bool dir, float reflect_plane,
 	bool is_house, bool interior_room, bool draw_exterior, bool is_extb, bool is_water, cube_t const &mirror)
@@ -163,7 +173,7 @@ bool building_t::find_mirror_in_room(unsigned room_id, vector3d const &xlate, bo
 
 			if (is_room_pg_or_backrooms(room)) { // backrooms bathroom mirror
 				// check for closed door line intersection; if found, mirror is not visible
-				assert(interior->ext_basement_door_stack_ix < interior->door_stacks.size());
+				assert(interior->ext_basement_door_stack_ix >= 0 && (unsigned)interior->ext_basement_door_stack_ix < interior->door_stacks.size());
 				bool found_closed_door(0);
 
 				for (auto ds = interior->door_stacks.begin()+interior->ext_basement_door_stack_ix; ds != interior->door_stacks.end(); ++ds) {

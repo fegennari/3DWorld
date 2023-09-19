@@ -1645,7 +1645,7 @@ public:
 	void register_spark_floor_hit(point const &pos);
 	bool line_intersect_walls(point const &p1, point const &p2, bool same_room=0) const;
 	bool is_obj_pos_valid(room_object_t const &obj, bool keep_in_room, bool allow_block_door, bool check_stairs) const;
-	bool is_rot_cube_visible(cube_t const &c, vector3d const &xlate) const;
+	bool is_rot_cube_visible(cube_t const &c, vector3d const &xlate, bool inc_mirror_reflections=0) const;
 	bool is_cube_face_visible_from_pt(cube_t const &c, point const &p, unsigned dim, bool dir, bool same_room) const;
 	bool check_obj_occluded(cube_t const &c, point const &viewer, occlusion_checker_noncity_t &oc, bool reflection_pass=0, bool c_is_building_part=0) const;
 	bool is_entire_building_occluded(point const &viewer, occlusion_checker_noncity_t &oc) const;

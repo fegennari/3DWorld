@@ -27,6 +27,7 @@ extern vector<light_source> dl_sources;
 
 bool enable_building_people_ai();
 bool check_cube_occluded(cube_t const &cube, vect_cube_t const &occluders, point const &viewer);
+bool cube_visible_in_building_mirror_reflection(cube_t const &c);
 void calc_cur_ambient_diffuse();
 colorRGBA get_textured_wood_color();
 bool bed_has_canopy_mat(room_object_t const &c);
@@ -1132,8 +1133,11 @@ cube_t building_t::get_rotated_bcube(cube_t const &c, bool inv_rotate) const {
 	ret.z1() = c.z1();
 	return ret;
 }
-bool building_t::is_rot_cube_visible(cube_t const &c, vector3d const &xlate) const {
-	return camera_pdu.cube_visible((is_rotated() ? get_rotated_bcube(c) : c) + xlate);
+bool building_t::is_rot_cube_visible(cube_t const &c, vector3d const &xlate, bool inc_mirror_reflections) const {
+	cube_t const c_xf((is_rotated() ? get_rotated_bcube(c) : c) + xlate);
+	if (camera_pdu.cube_visible(c_xf)) return 1;
+	if (inc_mirror_reflections && cube_visible_in_building_mirror_reflection(c)) return 1;
+	return 0;
 }
 
 float get_radius_for_room_light(room_object_t const &obj) {
@@ -1490,7 +1494,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 				 << TXT(lpos.str()) << TXT(floor_z) << TXT(ceil_z) << TXT(is_lamp) << TXT(is_in_elevator) << TXT(light_in_basement) << endl;
 			assert(0);
 		}
-		if (!is_rot_cube_visible(clipped_bc, xlate)) continue; // VFC
+		if (!is_rot_cube_visible(clipped_bc, xlate, 1)) continue; // VFC; inc_mirror_reflections=1
 		bool recheck_coll(0);
 
 		if (cull_if_not_by_stairs) { // test light visibility through stairs and ramp cuts
@@ -1619,7 +1623,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			vect_cube_t const &cuts(floor_is_above ? cuts_above : cuts_below);
 			if (!check_cube_visible_through_cut(cuts, clipped_bc, lpos_rot, camera_bs, cull_radius, floor_is_above)) continue;
 		}
-		if (!is_rot_cube_visible(clipped_bc, xlate)) continue; // VFC - post clip
+		if (!is_rot_cube_visible(clipped_bc, xlate, 1)) continue; // VFC - post clip; inc_mirror_reflections=1
 		if ((display_mode & 0x08) && !clipped_bc.contains_pt(camera_rot) && check_obj_occluded(clipped_bc, camera_bs, oc, 0)) continue; // occlusion culling (expensive)
 		//float const bwidth(wall_light ? 1.0 : 0.25); // wall light omnidirectional; ceiling light as close to 180 degree FOV as can get without shadow clipping; shadows are wrong
 		float const bwidth(0.25); // as close to 180 degree FOV as we can get without shadow clipping
@@ -1742,7 +1746,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			if (camera_somewhat_by_stairs && !room_has_stairs && camera_z < sl.z1() - window_vspacing) continue; // player below the floor with the skylight
 			lit_area.z1() -= (room_has_stairs ? 2.0 : 1.0)*window_vspacing; // floor below the skylight; two floors if a room has stairs
 			lit_area.expand_by_xy(room_xy_expand); // include walls
-			if (!is_rot_cube_visible(lit_area, xlate)) continue; // VFC
+			if (!is_rot_cube_visible(lit_area, xlate, 1)) continue; // VFC; inc_mirror_reflections=1
 			// further constrain bcube based on projected light rays through the corners of the skylight to prevent unshadowed light from passing through exterior walls
 			cube_t proj_bcube(sl);
 			float const z(sl.z2()); // top edge
@@ -1756,7 +1760,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			float const light_radius(1.2*diag_sz + 1.5*light_dist); // determined experimentally
 			unsigned const dlights_start(dl_sources.size());
 
-			if (!is_rot_cube_visible(clipped_area, xlate)) {} // VFC, again
+			if (!is_rot_cube_visible(clipped_area, xlate, 1)) {} // VFC, again; inc_mirror_reflections=1
 			else if ((display_mode & 0x08) && !clipped_area.contains_pt(camera_rot) && check_obj_occluded(clipped_area, camera_bs, oc, 0)) {} // occlusion culling
 			else { // add the light
 				colorRGBA const color(add_sky_lighting ? colorRGBA(cur_diffuse) : outdoor_color);
@@ -1796,7 +1800,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 				cube_t clipped_area2(lit_area);
 				clipped_area2.intersect_with_cube_xy(proj_bcube2);
 
-				if (!is_rot_cube_visible(clipped_area2, xlate)) {} // VFC
+				if (!is_rot_cube_visible(clipped_area2, xlate, 1)) {} // VFC; inc_mirror_reflections=1
 				else if ((display_mode & 0x08) && !clipped_area2.contains_pt(camera_rot) && check_obj_occluded(clipped_area2, camera_bs, oc, 0)) {} // occlusion culling
 				else { // add the light
 					dl_sources.emplace_back(light_radius, lpos2, lpos2, cur_ambient, 0);
