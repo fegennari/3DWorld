@@ -751,8 +751,9 @@ public:
 		door_t const &first_door(doors[door_ix]);
 
 		for (auto i = (doors.begin() + door_ix); i != doors.end(); ++i) {
-			if (!i->is_same_stack(first_door)) break; // we've reached the end of the vertical stack of doors
-			if (zval < i->z1() || zval > i->z2()) continue; // not the correct floor
+			if (!i->is_same_stack(first_door))        break;    // we've reached the end of the vertical stack of doors
+			//if (i->mult_floor_room && zval > i->z2()) return 0; // no door at this level - can't pass; but then if the AI gets here they can't get out
+			if (zval < i->z1() || zval > i->z2())     continue; // not the correct floor
 			return (i->open || (global_building_params.ai_opens_doors && (!i->locked || has_key)));
 		}
 		return 1; // Note: we can get here for complex floorplan office buildings with bad interior walls (-4.18, 4.28, -3.46)
@@ -1155,21 +1156,22 @@ int building_t::choose_dest_room(person_t &person, rand_gen_t &rgen) const { // 
 		if (cand_room == (unsigned)loc.room_ix) continue;
 		room_t const &room(interior->rooms[cand_room]);
 		if (room.is_hallway) continue; // don't select a hallway
-		if ((person.pos.z + floor_spacing) < room.z1() || (person.pos.z - floor_spacing) > room.z2()) continue; // room more than one floor above/below current pos
+		float const bot_floor_z(room.z1()), top_ceil_z(room.is_single_floor ? (bot_floor_z + floor_spacing) : room.z2()); // approximate
+		if ((person.pos.z + floor_spacing) < bot_floor_z || (person.pos.z - floor_spacing) > top_ceil_z) continue; // room more than one floor above/below current pos
 		// allow move to a different stacked part 25% of the time; 100% of the time for parking garages, since they're more rare
-		if ((person.pos.z < room.z1() || person.pos.z > room.z2()) && !(has_parking_garage && room.z1() < ground_floor_z1) && (rgen.rand()&3) != 0) continue;
+		if ((person.pos.z < bot_floor_z || person.pos.z > top_ceil_z) && !(has_parking_garage && bot_floor_z < ground_floor_z1) && (rgen.rand()&3) != 0) continue;
 		if (!interior->nav_graph->is_room_connected_to(loc.room_ix, cand_room, interior->doors, person.pos.z, person.has_key)) continue;
 		person.target_pos   = get_center_of_room(cand_room);
 		person.target_pos.z = person.pos.z; // keep orig zval to stay on the same floor
 
-		if (person.pos.z > room.z2()) { // room is below the person
+		if (person.pos.z > top_ceil_z) { // room is below the person
 			float const new_z(person.target_pos.z - floor_spacing);
-			assert(new_z > room.z1() && new_z < room.z2());
+			assert(new_z > bot_floor_z && new_z < top_ceil_z);
 			person.target_pos.z = new_z; // target the floor below
 		}
-		else if (person.pos.z < room.z1()) { // room is above the person
+		else if (person.pos.z < bot_floor_z) { // room is above the person
 			float const new_z(person.target_pos.z + floor_spacing);
-			assert(new_z > room.z1() && new_z < room.z2());
+			assert(new_z > bot_floor_z && new_z < top_ceil_z);
 			person.target_pos.z = new_z; // target the floor above
 		}
 		else if (interior->ext_basement_hallway_room_id < 0 || cand_room < (unsigned)interior->ext_basement_hallway_room_id) { // skip for ext basement rooms
@@ -1183,9 +1185,9 @@ int building_t::choose_dest_room(person_t &person, rand_gen_t &rgen) const { // 
 			}
 			else if (rand_val == 1) { // try one floor above
 				float const new_z(person.target_pos.z + floor_spacing);
-				if (new_z < part.z2()) {person.target_pos.z = new_z;} // change if there is a floor above
+				if (new_z < top_ceil_z) {person.target_pos.z = new_z;} // change if there is a floor above
 			}
-			assert(person.target_pos.z > room.z1() && person.target_pos.z < room.z2());
+			assert(person.target_pos.z > bot_floor_z && person.target_pos.z < top_ceil_z);
 		}
 		person.dest_room = cand_room; // set but not yet used
 		person.goal_type = GOAL_TYPE_ROOM;
@@ -1630,6 +1632,8 @@ bool building_t::is_player_visible(person_t const &person, unsigned vis_test) co
 }
 bool building_t::can_target_player(person_t const &person) const {
 	if (!can_ai_follow_player(person)) return 0;
+	room_t const &player_room(get_room(cur_player_building_loc.room_ix));
+	if (player_room.is_single_floor && get_camera_pos().z > player_room.z1() + get_window_vspace()) return 0; // player on unreachable floor
 	return is_player_visible(person, global_building_params.ai_player_vis_test); // 0=no test, 1=LOS, 2=LOS+FOV, 3=LOS+FOV+lit
 }
 
