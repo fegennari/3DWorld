@@ -98,9 +98,9 @@ enum {INSECT_TYPE_FLY=0, INSECT_TYPE_ROACH, INSECT_TYPE_CENTIPEDE, NUM_INSECT_TY
 
 struct insect_t : public building_animal_t {
 	vector3d delta_dir;
-	unsigned char type;
 	float accel=0.0; // for flies
 	float dist_to_sleep=0.0; // for roaches
+	unsigned char type=0, stuck_counter=0;
 	bool has_target=0, target_player=0; // for flies
 	bool is_scared=0, no_scare=0, squished=0; // for roaches
 

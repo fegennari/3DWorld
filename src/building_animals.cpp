@@ -1543,6 +1543,7 @@ void building_t::update_roach(insect_t &roach, point const &camera_bs, float tim
 		if (!spawn_new_pos) {
 			// coll_ret: 0=no coll, 1=d0 wall, 2=d1 wall, 3=closed door d0, 4=closed door d1, 5=open door, 6=stairs, 7=elevator, 8=exterior wall, 9=room object, 10=closet, 11=cabinet
 			int const coll_ret(check_line_coll_expand(roach.last_pos, pos, radius, hheight, 0)); // for_spider=0
+			bool maybe_stuck(0);
 
 			if (coll_ret == 9) { // room object (except closet or kitchen cabinet); open door collisions are ignored (can go under doors)
 				vector3d cnorm;
@@ -1560,11 +1561,14 @@ void building_t::update_roach(insect_t &roach, point const &camera_bs, float tim
 					if (roach.last_pos != all_zeros) {pos = roach.last_pos;} // reset pos to prev frame
 					roach.is_scared = 0; // distracted, no longer scared
 					roach.no_scare  = 1;
+					maybe_stuck     = 1;
 				}
 			}
 			else if (coll_ret > 0 && coll_ret != 5) { // wall, closed door, stairs, elevator, or closet
 				spawn_new_pos = 1; // disappear under it and respawn
 			}
+			if (!maybe_stuck) {roach.stuck_counter = 0;}
+			else if (roach.stuck_counter++ > 60) {spawn_new_pos = 1;} // respawn if stuck colliding for 60 consecutive frames
 		}
 		if (spawn_new_pos) {
 			pos = gen_animal_floor_pos(roach.radius, 0, 1, 1, 0, rgen); // place_in_attic=0, not_player_visible=1, pref_dark_room=1, not_by_ext_door=0
