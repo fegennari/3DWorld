@@ -594,7 +594,12 @@ bool building_t::add_chimney(bool two_parts, bool stacked_parts, bool hipped_roo
 	cube_t const &part(parts[part_ix]);
 	bool const dim((fdim < 2) ? fdim : get_largest_xy_dim(part)); // use longest side if not forced
 	bool dir(rgen.rand_bool());
-	if (two_parts && part.d[dim][dir] != bcube.d[dim][dir]) {dir ^= 1;} // force dir to be on the edge of the house bcube (not at a point interior to the house)
+
+	if (two_parts) {
+		cube_t parts_union(parts[0]); // use union of parts to account for larger bcubes due to other objects or rotated house
+		parts_union.union_with_cube(parts[1]);
+		if (part.d[dim][dir] != parts_union.d[dim][dir]) {dir ^= 1;} // force dir to be on the edge of the house bcube (not at a point interior to the house)
+	}
 	float chimney_dz((hipped_roof[part_ix] ? 0.5 : 1.0)*roof_dz[part_ix]); // lower for hipped roof
 	cube_t c(part);
 	float const sz1(c.get_sz_dim(!dim)), sz2(c.get_sz_dim(dim)), center(c.get_center_dim(!dim));
