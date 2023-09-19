@@ -1984,7 +1984,8 @@ bool building_t::clip_part_ceiling_for_stairs(cube_t const &c, vect_cube_t &out,
 }
 
 void building_t::create_two_story_tall_rooms(rand_gen_t &rgen) {
-	if (!is_house || !interior) return; // houses only, for now
+	if (!is_house || !interior)     return; // houses only, for now
+	if (interior->rooms.size() < 6) return; // not enough rooms
 	float const floor_spacing(get_window_vspace()), floor_thickness(get_floor_thickness()), fc_thick(0.5*floor_thickness), wall_thickness(get_wall_thickness());
 	float const min_tall_room_sz(1.6*floor_spacing);
 
