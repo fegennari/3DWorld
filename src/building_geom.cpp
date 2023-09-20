@@ -1399,6 +1399,7 @@ void building_t::add_solar_panels(rand_gen_t &rgen) { // for houses
 	panel.pts[1] = center + mu*u - mv*v;
 	panel.pts[2] = center + mu*u + mv*v;
 	panel.pts[3] = center - mu*u + mv*v;
+	if (has_chimney && get_chimney().intersects(panel.get_bcube())) return; // chimney intersection
 	roof_tquads.push_back(panel);
 	// add sides, similar to thick_poly_to_sides()
 	tquad_t bottom(panel);
