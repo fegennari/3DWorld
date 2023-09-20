@@ -2820,13 +2820,15 @@ public:
 			if (interior_shadow_maps) { // draw interior shadow maps
 				occlusion_checker_noncity_t oc(**i);
 				point const lpos(get_camera_pos() - xlate); // Note: camera_pos is actually the light pos
+				bool const check_ext_basement(player_in_basement == 3 && player_building != nullptr);
+				bool found_building(0);
 
 				// draw interior for the building containing the light
 				for (auto g = (*i)->grid_by_tile.begin(); g != (*i)->grid_by_tile.end(); ++g) {
 					if (!g->bcube.contains_pt_xy(lpos)) { // wrong tile (note that z test is skipped to handle skylights)
 						bool skip_culling(0);
 					
-						if (player_in_basement == 3 && player_building) {
+						if (check_ext_basement) {
 							// check player building extended basement, since it can overlap an adjacent grid; the second check is required for connected buildings
 							if (g->bcube.contains_cube_xy(player_building->bcube)) {skip_culling = 1;}
 							else if (player_building->has_ext_basement() && g->bcube.intersects_xy(player_building->interior->basement_ext_bcube)) {skip_culling = 1;}
@@ -2864,7 +2866,10 @@ public:
 							if (add_player_shadow) {draw_player_model(shader, xlate, 1);} // shadow_only=1
 							if (enable_animations) {s.make_current();} // switch back to normal building shader
 						}
+						found_building = 1;
+						break; // only one building can contain the shadow
 					} // for bi
+					if (found_building && !check_ext_basement) break; // only one building can contain the shadow
 				} // for g
 			}
 			else { // draw exterior shadow maps
