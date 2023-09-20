@@ -581,7 +581,7 @@ void add_cube_top(cube_t const &c, vector<tquad_with_ix_t> &tquads, unsigned typ
 }
 
 bool building_t::add_chimney(bool two_parts, bool stacked_parts, bool hipped_roof[4], float roof_dz[4], unsigned force_dim[2], rand_gen_t &rgen) {
-	unsigned part_ix(0);
+	unsigned part_ix(0); // default for single part and stacked_parts=1
 
 	if (two_parts) { // start by selecting a part (if two parts)
 		float const v0(parts[0].get_volume()), v1(parts[1].get_volume());
@@ -592,10 +592,19 @@ bool building_t::add_chimney(bool two_parts, bool stacked_parts, bool hipped_roo
 	assert(roof_dz[part_ix] > 0.0);
 	unsigned const fdim(force_dim[part_ix]);
 	cube_t const &part(parts[part_ix]);
-	bool const dim((fdim < 2) ? fdim : get_largest_xy_dim(part)); // use longest side if not forced
-	bool dir(rgen.rand_bool());
+	bool dir(rgen.rand_bool()), dim((fdim < 2) ? fdim : get_largest_xy_dim(part)); // use longest side if not forced
 
-	if (two_parts) {
+	if (stacked_parts) {
+		if (parts[0].d[dim][dir] != parts[1].d[dim][dir]) {dir ^= 1;} // stacks not aligned, try other dir
+		
+		if (parts[0].d[dim][dir] != parts[1].d[dim][dir]) { // stacks still not aligned
+			if (fdim < 2) return 0; // dim was forced, fail
+			dim ^= 1; // try the other dim
+			if (parts[0].d[dim][dir] != parts[1].d[dim][dir]) {dir ^= 1;} // try other dim, original dir
+			if (parts[0].d[dim][dir] != parts[1].d[dim][dir]) return 0; // tried all four dim/dir values - fail
+		}
+	}
+	else if (two_parts) {
 		cube_t parts_union(parts[0]); // use union of parts to account for larger bcubes due to other objects or rotated house
 		parts_union.union_with_cube(parts[1]);
 		if (part.d[dim][dir] != parts_union.d[dim][dir]) {dir ^= 1;} // force dir to be on the edge of the house bcube (not at a point interior to the house)
