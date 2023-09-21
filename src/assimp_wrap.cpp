@@ -29,11 +29,13 @@ unsigned model_anim_t::get_bone_id(string const &bone_name) {
 }
 vector3d model_anim_t::calc_interpolated_position(float anim_time, anim_data_t const &A) const {
 	assert(!A.pos.empty());
-	if (A.pos.size() == 1) {return A.pos[0].v;} // single value, no interpolation
+	if (A.pos.size() == 1)         return A.pos[0].v; // single value, no interpolation
+	if (anim_time < A.pos[0].time) return A.pos[0].v; // animation doesn't start at time 0? return first frame
 
 	for (unsigned i = 0; i+1 < A.pos.size(); ++i) {
 		anim_vec3_val_t const &cur(A.pos[i]), &next(A.pos[i+1]);
 		if (anim_time >= next.time) continue; // not yet
+		assert(cur.time < next.time);
 		float const t((anim_time - cur.time) / (next.time - cur.time));
 		assert(t >= 0.0f && t <= 1.0f);
 		return cur.v + t*(next.v - cur.v);
@@ -43,11 +45,13 @@ vector3d model_anim_t::calc_interpolated_position(float anim_time, anim_data_t c
 }
 glm::quat model_anim_t::calc_interpolated_rotation(float anim_time, anim_data_t const &A) const {
 	assert(!A.rot.empty());
-	if (A.rot.size() == 1) {return A.rot[0].q;} // single value, no interpolation
+	if (A.rot.size() == 1)         return A.rot[0].q; // single value, no interpolation
+	if (anim_time < A.rot[0].time) return A.rot[0].q; // animation doesn't start at time 0? return first frame
 
 	for (unsigned i = 0; i+1 < A.rot.size(); ++i) {
 		anim_quat_val_t const &cur(A.rot[i]), &next(A.rot[i+1]);
 		if (anim_time >= next.time) continue; // not yet
+		assert(cur.time < next.time);
 		float const t((anim_time - cur.time) / (next.time - cur.time));
 		assert(t >= 0.0f && t <= 1.0f);
 		return glm::normalize(glm::slerp(cur.q, next.q, t));
@@ -57,11 +61,13 @@ glm::quat model_anim_t::calc_interpolated_rotation(float anim_time, anim_data_t 
 }
 vector3d model_anim_t::calc_interpolated_scale(float anim_time, anim_data_t const &A) const {
 	assert(!A.scale.empty());
-	if (A.scale.size() == 1) {return A.scale[0].v;} // single value, no interpolation
+	if (A.scale.size() == 1)         return A.scale[0].v; // single value, no interpolation
+	if (anim_time < A.scale[0].time) return A.scale[0].v; // animation doesn't start at time 0? return first frame
 
 	for (unsigned i = 0; i+1 < A.scale.size(); ++i) {
 		anim_vec3_val_t const &cur(A.scale[i]), &next(A.scale[i+1]);
 		if (anim_time >= next.time) continue; // not yet
+		assert(cur.time < next.time);
 		float const t((anim_time - cur.time) / (next.time - cur.time));
 		assert(t >= 0.0f && t <= 1.0f);
 		return cur.v + t*(next.v - cur.v);
