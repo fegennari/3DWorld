@@ -1904,6 +1904,23 @@ bool building_t::check_line_of_sight_large_objs(point const &p1, point const &p2
 	return 1;
 }
 
+cube_t building_t::get_best_fc_occluder(point const &pos) const {
+	cube_t ret;
+	if (!interior) return ret;
+	float const above_penalty(get_window_vspace()); // prefer floors below
+	float z_best(0.0);
+
+	for (cube_t const &c : interior->fc_occluders) {
+		if (!c.contains_pt_xy(pos)) continue;
+		float const z(c.zc());
+		float z_dist;
+		if (z < pos.z) {z_dist = pos.z - z;} // floor below
+		else {z_dist = z - pos.z + above_penalty;} // floor above
+		if (ret.is_all_zeros() || z_dist < z_best) {z_best = z_dist; ret = c;}
+	} // for c
+	return ret;
+}
+
 bool handle_vcylin_vcylin_int(point &p1, point const &p2, float rsum) {
 	if (!dist_xy_less_than(p1, p2, rsum)) return 0; // no collision
 	vector3d const delta(p1.x-p2.x, p1.y-p2.y, 0.0); // ignore zvals
