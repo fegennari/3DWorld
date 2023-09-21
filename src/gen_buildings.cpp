@@ -540,11 +540,11 @@ class building_draw_t {
 			assert(vao_mgr.vbo_valid());
 			vao_mgr.create_from_vbo<vert_norm_comp_tc_color>(shadow_only, 1, 1); // setup_pointers=1, always_bind=1
 
-			if (vstart.qix != vend.qix) {
+			if (vstart.qix != vend.qix) { // usually this is nonempty
 				assert(vstart.qix < vend.qix);
 				draw_quads_as_tris((vend.qix - vstart.qix), vstart.qix);
 			}
-			if (vstart.tix != vend.tix) {
+			if (vstart.tix != vend.tix) { // this is empty over half the time; merging this with the quads draw call likely has little runtime effect
 				assert(vstart.tix < vend.tix);
 				glDrawArrays(GL_TRIANGLES, (vstart.tix + tri_vbo_off), (vend.tix - vstart.tix));
 			}

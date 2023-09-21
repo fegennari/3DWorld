@@ -515,6 +515,14 @@ void rgeom_mat_t::create_vbo_inner() {
 			}
 		} // for n
 	}
+	// calculate bcube, for use in VFC for the shadow pass;
+	// only enable for small blocks to reduce runtime overhead, plus they're more likely to be occluded
+	if (num_verts >= 256) {bcube.set_to_zeros();}
+	else {
+		bcube.set_from_point(itri_verts.empty() ? quad_verts.front().v : itri_verts.front().v);
+		for (auto const &v : itri_verts) {bcube.union_with_pt(v.v);}
+		for (auto const &v : quad_verts) {bcube.union_with_pt(v.v);}
+	}
 }
 
 bool brg_batch_draw_t::has_ext_geom() const {
@@ -598,6 +606,8 @@ void rgeom_mat_t::draw(tid_nm_pair_dstate_t &state, brg_batch_draw_t *bbd, int s
 	if (shadow_only && tex.emissive) return; // assume this is a light source and shouldn't produce shadows (also applies to bathroom windows, which don't produce shadows)
 	if (reflection_pass && tex.tid == REFLECTION_TEXTURE_ID) return; // don't draw reflections of mirrors as this doesn't work correctly
 	if (num_verts == 0) return; // Note: should only happen when reusing materials and all objects using this material were removed
+	// VFC test for shadow pass on sparse materials that have their bcubes calculated; only really helps with backrooms
+	if (shadow_only && !bcube.is_all_zeros() && !camera_pdu.cube_visible(bcube + get_tiled_terrain_model_xlate())) return;
 	vao_setup(shadow_only);
 
 	// Note: the shadow pass doesn't normally bind textures and set uniforms, so we don't need to combine those calls into batches
