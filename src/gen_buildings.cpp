@@ -1940,7 +1940,10 @@ void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_
 		cube_t const *clamp_cube(nullptr);
 
 		if (only_cont_pt_in && !i->contains_pt(only_cont_pt)) { // not the part containing the point
-			if (room_with_stairs && are_parts_stacked(*i, cont_part)) { // windows may be visible through stairs in rooms with stacked parts
+			float const z_exp(get_fc_thickness()); // allow a bit of extra Z overlap, which helps when the player is on the stairs
+
+			if (i->contains_pt_xy(only_cont_pt) && only_cont_pt.z > i->z1()-z_exp && only_cont_pt.z < i->z2()+z_exp) {} // okay, can draw unsplit in this case
+			else if (room_with_stairs && are_parts_stacked(*i, cont_part)) { // windows may be visible through stairs in rooms with stacked parts
 				draw_part  = cont_part;
 				draw_part.intersect_with_cube_xy(*i);
 				clamp_cube = &draw_part;
@@ -3074,9 +3077,9 @@ public:
 			int indir_bcs_ix(-1), indir_bix(-1);
 
 			if (draw_interior) {
-				per_bcs_exclude.resize(bcs.size());
+				per_bcs_exclude    .resize(bcs.size());
 				int_wall_draw_front.resize(bcs.size());
-				int_wall_draw_back.resize(bcs.size());
+				int_wall_draw_back .resize(bcs.size());
 			}
 			for (auto i = bcs.begin(); i != bcs.end(); ++i) { // draw only nearby interiors
 				unsigned const bcs_ix(i - bcs.begin());
@@ -3168,10 +3171,10 @@ public:
 						// pass in camera pos to only include the part that contains the camera to avoid drawing artifacts when looking into another part of the building
 						// neg offset to move windows on the inside of the building's exterior wall;
 						// since there are no basement windows, we should treat the player as being in the part above so that windows are drawn correctly through the basement stairs
+						assert(bcs_ix < int_wall_draw_front.size() && bcs_ix < int_wall_draw_back.size());
 						point pt_ag(camera_xlated);
 						max_eq(pt_ag.z, (b.ground_floor_z1 + b.get_floor_thickness()));
 						b.get_all_drawn_window_verts(interior_wind_draw, 0, -0.1, &pt_ag);
-						assert(bcs_ix < int_wall_draw_front.size() && bcs_ix < int_wall_draw_back.size());
 						b.get_split_int_window_wall_verts(int_wall_draw_front[bcs_ix], int_wall_draw_back[bcs_ix], pt_ag, 0);
 						building_cont_player    = &b; // there can be only one
 						per_bcs_exclude[bcs_ix] = b.ext_side_qv_range;
