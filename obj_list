@@ -129,3 +129,4 @@ city_objects.o
 city_obj_placer.o
 city_terrain.o
 city_interact.o
+city_birds.o

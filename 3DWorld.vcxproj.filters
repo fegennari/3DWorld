@@ -483,6 +483,9 @@
     <ClCompile Include="src\building_water.cpp">
       <Filter>Source Files\City</Filter>
     </ClCompile>
+    <ClCompile Include="src\city_birds.cpp">
+      <Filter>Source Files\City</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\3DWorld.h">

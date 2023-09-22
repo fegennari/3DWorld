@@ -530,6 +530,7 @@
       <BrowseInformation Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</BrowseInformation>
     </ClCompile>
     <ClCompile Include="src\cars.cpp" />
+    <ClCompile Include="src\city_birds.cpp" />
     <ClCompile Include="src\city_building_params.cpp" />
     <ClCompile Include="src\city_gen.cpp" />
     <ClCompile Include="src\city_interact.cpp" />

@@ -221,12 +221,14 @@ city plant_model ../models/potted_plants/pink_plumeria/Plant3_Flowers.model3d 0 
 city plant_model ../models/potted_plants/mediterranean_broad/scene.gltf       0 0 0  -1 -1 90  1 1.0 1.0
 city plant_model ../models/potted_plants/mediterranean_medium/scene.gltf      0 0 0  -1 -1 90  1 1.0 1.0
 
+# filename recalc_normals two_sided centered body_material_id fixed_color_id xy_rot swap_xyz scale lod_mult [shadow_mat_ids]
 # city objects
-city fire_hydrant_model ../models/fire_hydrant/Fire_Hydrant.model3d  1 0 0   0 -1 0    1 1.0 1.0 # uses custom color
-city substation_model   ../models/substation/SubstationBig.model3d   0 0 0  -1 -1 0    1 1.0 1.0
-city mailbox_model      ../models/us_mailbox/mailbox.model3d         0 0 0  -1 -1 90   1 1.0 1.0
-city umbrella_model     ../models/umbrella/UmbrellaOpen.model3d      0 0 0   0 -1 270  0 1.0 1.0
-city pigeon_model     ../models/pigeon/pigeon3.model3d               0 0 0   0 -1 90   1 1.0 1.0
+city fire_hydrant_model  ../models/fire_hydrant/Fire_Hydrant.model3d  1 0 0   0 -1 0    1 1.0 1.0 # uses custom color
+city substation_model    ../models/substation/SubstationBig.model3d   0 0 0  -1 -1 0    1 1.0 1.0
+city mailbox_model       ../models/us_mailbox/mailbox.model3d         0 0 0  -1 -1 90   1 1.0 1.0
+city umbrella_model      ../models/umbrella/UmbrellaOpen.model3d      0 0 0   0 -1 270  0 1.0 1.0
+city pigeon_model        ../models/pigeon/pigeon3.model3d             0 0 0   0 -1 90   1 1.0 1.0
+city bird_animated_model ../models/birds/bird_animated.fbx            0 0 0   0 -1 90   1 1.0 1.0
 
 # building animal models
 city rat_model    ../models/interiors/rat/rat.model3d           1 0 0  0 -1 90 1 1.0 1.0
