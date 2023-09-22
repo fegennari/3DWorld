@@ -3,7 +3,7 @@ l 0.8 1.0 1.0 1.0 1.0 -1 1 # elasticity R G B A texture_id draw
 y 4.0
 cube_map_ref 1 # experimental
 metalness 0.0 # can set to 1.0 for metallic objects
-model3d_fit_to_scene 1
+model3d_fit_to_scene 0
 
 # O <filename> <group_cobjs_level> <recalc_normals> <write_file>
 
@@ -66,7 +66,7 @@ l 0.8 1.0 1.0 1.0 1.0 68 1 # 27 = cblock texture, 102 = spaceship texture, 68 = 
 #t 0 0 0  m 0.1  O "..\models\Bedroom\iscv2.obj" 4 1 0
 #t 0 0 1  m 0.005  O ..\models\mailbox\mailbox.3ds 4 1 0
 #t 0 -5.0 0  m 0.05  O ..\models\people\guard\boblampclean.md5mesh 4 0 0
-s 1 2  O ../models/people/animated/remy_walking.fbx 4 0 0
+#s 1 2  O ../models/people/animated/remy_walking.fbx 4 0 0
 #s 1 2  O ../models/people/animated/louise_walking.fbx 4 0 0
 #t 0 0 0  s 1 2  m 0.01  O ../models/people/animated/dancing_vampire/dancing_vampire.dae 4 0 0
 #t 0 -100.0 0  s 1 2  m 0.01  O ../models/people/animated/neutral_idle.fbx 4 0 0
@@ -74,7 +74,7 @@ s 1 2  O ../models/people/animated/remy_walking.fbx 4 0 0
 #t 0 0 0  m 1.0  O ..\models\interiors\cockroach\cockroach.3ds 4 1 0
 #s 1 2  O ../models/interiors/fire_extinguisher/fire_extinguisher_co2.fbx 4 0 0
 #s 1 2  O ../models/interrogation_room/InterogationRoom.fbx 4 0 0 # textures are not working
-#s 1 2  m 0.1  O ../models/bird.fbx 4 0 0
+s 1 2  m 0.1  O ../models/birds/bird_animation_tweaks.fbx 4 0 0 # animations: 0=flapping, 1=gliding, 2=flapping to idle, 3=idle, 4=idle to flapping
 
 cube_map_ref 0
 metalness 0.0

@@ -373,15 +373,15 @@ class file_reader_assimp {
 			model_anim.animations.emplace_back(anim_name);
 			aiAnimation const *const anim(scene->mAnimations[a]);
 			assert(anim);
-			//cout << "Adding animation '" << anim->mName.C_Str() << "' ID " << a << " as '" << anim_name << "'" << endl; // TESTING
-			read_missing_bones(anim, model_anim);
+			cout << "Adding animation '" << anim->mName.C_Str() << "' ID " << a << " as '" << anim_name << "'" << endl; // TESTING
+			//read_missing_bones(anim, model_anim);
 			if (anim->mTicksPerSecond) {model_anim.animations[a].ticks_per_sec = anim->mTicksPerSecond;} // defaults to 25
 			model_anim.animations[a].duration = anim->mDuration;
-		}
+		} // for a
 		extract_animation_data_recur(scene, scene->mRootNode, model_anim);
 	}
 
-	// Note: unclear if this is actually needed; at least it seems to do nothing for the models I've tested this on
+	// Note: unclear if this is actually needed; it seems to do nothing for the models I've tested this on unless bones with no weights are skipped in parse_single_bone()
 	void read_missing_bones(aiAnimation const *const anim, model_anim_t &model_anim) {
 		// https://learnopengl.com/Guest-Articles/2020/Skeletal-Animation
 		// reading channels (bones engaged in an animation and their keyframes)
@@ -395,6 +395,7 @@ class file_reader_assimp {
 		}
 	}
 	void parse_single_bone(int bone_index, aiBone const *const pBone, mesh_bone_data_t &bone_data, model_anim_t &model_anim, unsigned first_vertex_offset) {
+		if (pBone->mNumWeights == 0) return; // bone with no weights - ignore
 		unsigned const bone_id(model_anim.get_bone_id(pBone->mName.C_Str()));
 
 		if (bone_id == model_anim.bone_transforms.size()) { // maybe add a new bone
