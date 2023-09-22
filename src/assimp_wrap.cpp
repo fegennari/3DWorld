@@ -40,8 +40,7 @@ vector3d model_anim_t::calc_interpolated_position(float anim_time, anim_data_t c
 		assert(t >= 0.0f && t <= 1.0f);
 		return cur.v + t*(next.v - cur.v);
 	} // for i
-	assert(0);
-	return zero_vector; // never gets here
+	return A.pos.back().v; // return last frame if we ran off the end (duration was wrong)
 }
 glm::quat model_anim_t::calc_interpolated_rotation(float anim_time, anim_data_t const &A) const {
 	assert(!A.rot.empty());
@@ -56,8 +55,7 @@ glm::quat model_anim_t::calc_interpolated_rotation(float anim_time, anim_data_t 
 		assert(t >= 0.0f && t <= 1.0f);
 		return glm::normalize(glm::slerp(cur.q, next.q, t));
 	} // for i
-	assert(0);
-	return glm::quat(); // never gets here
+	return A.rot.back().q; // return last frame if we ran off the end (duration was wrong)
 }
 vector3d model_anim_t::calc_interpolated_scale(float anim_time, anim_data_t const &A) const {
 	assert(!A.scale.empty());
@@ -72,8 +70,7 @@ vector3d model_anim_t::calc_interpolated_scale(float anim_time, anim_data_t cons
 		assert(t >= 0.0f && t <= 1.0f);
 		return cur.v + t*(next.v - cur.v);
 	} // for i
-	assert(0);
-	return zero_vector; // never gets here
+	return A.scale.back().v; // return last frame if we ran off the end (duration was wrong)
 }
 xform_matrix model_anim_t::apply_anim_transform(float anim_time, animation_t const &animation, anim_node_t const &node) const {
 	auto it(animation.anim_data.find(node.name)); // found about half the time

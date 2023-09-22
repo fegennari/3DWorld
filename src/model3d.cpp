@@ -672,12 +672,13 @@ void model3d::setup_bone_transforms_blended(shader_t &shader, float anim_time1, 
 }
 void model3d::add_bone_transforms_to_shader(shader_t &shader) const {
 	unsigned const MAX_MODEL_BONES = 200; // must agree with shader code
-	unsigned const num_bones(model_anim_data.bone_transforms.size());
+	unsigned num_bones(model_anim_data.bone_transforms.size());
 	assert(num_bones > 0);
 
 	if (num_bones > MAX_MODEL_BONES) {
 		cerr << "Error: Too many bones for model: " << num_bones << "; Max is " << MAX_MODEL_BONES << endl;
 		assert(0); // or return? or ignore some bones?
+		num_bones = MAX_MODEL_BONES;
 	}
 	if (!shader.add_uniform_matrix_4x4("bones", model_anim_data.bone_transforms[0].get_ptr(), 0, num_bones)) { // transpose=0
 		//assert(0); // too strong, as this can trigger when debugging and when using a shader that was setup before the model was loaded
