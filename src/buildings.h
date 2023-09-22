@@ -1624,7 +1624,6 @@ private:
 	void get_room_obj_cubes(room_object_t const &c, point const &pos, vect_cube_t &lg_cubes, vect_cube_t &sm_cubes, vect_cube_t &non_cubes) const;
 	int  check_line_coll_expand(point const &p1, point const &p2, float radius, float hheight, bool for_spider=0) const;
 	bool check_line_of_sight_large_objs(point const &p1, point const &p2) const;
-	cube_t get_best_fc_occluder(point const &pos) const;
 	bool check_and_handle_dynamic_obj_coll(point &pos, point const &cur_obj_pos, float radius,
 		float z1, float z2, point const &camera_bs, bool for_spider, bool skip_player=0) const;
 	bool get_begin_end_room_objs_on_ground_floor(float zval, bool for_spider, vect_room_object_t::const_iterator &b, vect_room_object_t::const_iterator &e) const;
@@ -1664,6 +1663,7 @@ public:
 	cube_t get_bcube_inc_extensions () const;
 	cube_t get_full_basement_bcube  () const;
 	cube_t get_ext_basement_entrance() const;
+	cube_t get_best_occluder(point const &camera_bs) const;
 	bool interior_visible_from_other_building_ext_basement(vector3d const &xlate, bool expand_for_light=0) const;
 	void try_connect_ext_basement_to_building(building_t &b);
 	template<typename T> void add_door_verts(cube_t const &D, T &drawer, uint8_t door_type, bool dim, bool dir, float open_amt, bool opens_out, bool exterior,

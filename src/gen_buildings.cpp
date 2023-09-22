@@ -27,6 +27,7 @@ int player_in_basement(0); // 0=no, 1=below ground level, 2=in basement and not 
 int player_in_closet  (0); // uses flags RO_FLAG_IN_CLOSET (player in closet), RO_FLAG_LIT (closet light is on), RO_FLAG_OPEN (closet door is open)
 int player_in_water   (0); // 0=no, 1=standing in water, 2=head underwater
 float building_bcube_expand(0.0), building_ambient_scale(0.0);
+cube_t building_occluder;
 building_params_t global_building_params;
 building_t const *player_building(nullptr);
 
@@ -3198,6 +3199,7 @@ public:
 						b.player_pickup_object(camera_xlated, cview_dir);
 						if (teleport_to_screenshot) {b.maybe_teleport_to_screenshot();}
 						if (animate2) {b.update_player_interact_objects(camera_xlated);} // update dynamic objects if the player is in the building
+						building_occluder = b.get_best_occluder(camera_xlated);
 					} // for bi
 					if (can_break_from_loop) break; // done
 				} // for g

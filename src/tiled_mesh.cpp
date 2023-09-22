@@ -69,7 +69,7 @@ extern float smap_thresh_scale, tt_grass_scale_factor;
 extern double tfticks;
 extern point sun_pos, moon_pos, surface_pos;
 extern vector3d wind;
-extern cube_t grass_exclude1, grass_exclude2;
+extern cube_t grass_exclude1, grass_exclude2, building_occluder;
 extern water_params_t water_params;
 extern char *mh_filename_tt;
 extern float h_dirt[];
@@ -88,6 +88,7 @@ bool check_buildings_no_grass(point const &pos);
 colorRGBA get_avg_color_for_landscape_tex(unsigned id); // defined later in this file
 void building_gameplay_action_key(int mode, bool mouse_wheel);
 bool player_cant_see_outside_building();
+bool check_cube_occluded(cube_t const &cube, vect_cube_t const &occluders, point const &viewer);
 
 
 float get_inf_terrain_fog_dist() {return FOG_DIST_TILES*get_scaled_tile_radius();}
@@ -2631,6 +2632,9 @@ void tile_draw_t::draw(int reflection_pass) { // reflection_pass: 0=none, 1=wate
 
 	// determine potential occluders
 	point const camera(get_camera_pos());
+	static vect_cube_t occluder_cubes;
+	occluder_cubes.clear();
+	if (!building_occluder.is_all_zeros()) {occluder_cubes.push_back(building_occluder);}
 
 	if ((display_mode & 0x08) && (display_mode & 0x01) && check_tt_mesh_occlusion) { // check occlusion when occlusion culling and mesh are enabled
 		for (tile_map::const_iterator i = tiles.begin(); i != tiles.end(); ++i) {
@@ -2652,6 +2656,7 @@ void tile_draw_t::draw(int reflection_pass) { // reflection_pass: 0=none, 1=wate
 		if (tile->was_last_occluded()) continue; // occluded in the shadow pass
 		tile_set_t tile_set;
 		if (reflection_pass == 1 && !can_have_reflection(tile, tile_set)) continue; // check for water plane Z reflections only
+		if (!occluder_cubes.empty() && check_cube_occluded(tile->get_bcube(), occluder_cubes, camera)) continue; // building wall/floor/ceiling occlusion
 
 		if (!occluders.empty() && !tile->was_last_unoccluded()) {
 			occluder_pts_t tile_os, sub_tile_os;
@@ -2699,6 +2704,7 @@ void tile_draw_t::draw(int reflection_pass) { // reflection_pass: 0=none, 1=wate
 	//cout << TXT(occluders.size()) << TXT(tiles.size()) << TXT(to_draw.size()) << TXT(occluded_tiles.size()) << endl; // 5, 341, 63, 34
 	occluders.clear();
 	occluder_ixs.clear();
+	building_occluder.set_to_zeros(); // was used, may be reset during the next frame
 	sort(to_draw.begin(), to_draw.end()); // sort front to back to improve draw time through depth culling
 
 	if (display_mode & 0x01) { // draw visible tiles

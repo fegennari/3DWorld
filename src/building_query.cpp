@@ -1904,18 +1904,30 @@ bool building_t::check_line_of_sight_large_objs(point const &p1, point const &p2
 	return 1;
 }
 
-cube_t building_t::get_best_fc_occluder(point const &pos) const {
+cube_t building_t::get_best_occluder(point const &camera_bs) const {
 	cube_t ret;
 	if (!interior) return ret;
+	point const ray_end(camera_bs + 4.0*get_window_vspace()*cview_dir); // look up to 4 floor heights ahead
+	float best_tmin(1.0);
+	
+	// check for walls in front of the player
+	for (unsigned d = 0; d < 2; ++d) {
+		for (cube_t const &w : interior->walls[d]) {
+			float tmin(0.0), tmax(1.0);
+			if (get_line_clip(camera_bs, ray_end, w.d, tmin, tmax) && tmin < best_tmin) {best_tmin = tmin; ret = w;}
+		}
+	} // for d
+	if (!ret.is_all_zeros()) return ret;
+	// if no good walls, find best floor occluder, or ceiling if on the ground floor
 	float const above_penalty(get_window_vspace()); // prefer floors below
 	float z_best(0.0);
 
 	for (cube_t const &c : interior->fc_occluders) {
-		if (!c.contains_pt_xy(pos)) continue;
+		if (!c.contains_pt_xy(camera_bs) || c.z1() < ground_floor_z1) continue; // skip basement cubes
 		float const z(c.zc());
 		float z_dist;
-		if (z < pos.z) {z_dist = pos.z - z;} // floor below
-		else {z_dist = z - pos.z + above_penalty;} // floor above
+		if (z < camera_bs.z) {z_dist = camera_bs.z - z;} // floor below
+		else {z_dist = z - camera_bs.z + above_penalty;} // floor above
 		if (ret.is_all_zeros() || z_dist < z_best) {z_best = z_dist; ret = c;}
 	} // for c
 	return ret;
