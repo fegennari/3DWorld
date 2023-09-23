@@ -256,7 +256,7 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 
 // Note: these are used in gen_interior_int() and maybe_add_skylight()
 bool building_t::can_use_hallway_for_part(unsigned part_id) const {
-	if (is_house || has_complex_floorplan || !is_cube() || part_id == basement_part_ix) return 0;
+	if (is_house || has_complex_floorplan || !is_cube() || (int)part_id == basement_part_ix) return 0;
 	assert(part_id < parts.size());
 	cube_t const &p(parts[part_id]);
 	bool const first_part_this_stack(part_id == 0 || parts[part_id-1].z1() < p.z1());
@@ -321,7 +321,6 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 		// office building hallways only; house hallways are added later
 		bool const use_hallway(can_use_hallway_for_part(part_id)), min_dim(psz.y < psz.x);
 		unsigned const rooms_start(rooms.size()), num_doors_per_stack(SPLIT_DOOR_PER_FLOOR ? num_floors : 1);
-		float const cube_width(psz[min_dim]);
 		cube_t hall, place_area(*p);
 		place_area.expand_by_xy(-wall_edge_spacing); // shrink slightly to avoid z-fighting with walls
 		float window_hspacing[2] = {0.0};
@@ -407,7 +406,7 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 			int const num_windows   (num_windows_per_side[!min_dim]);
 			int const num_windows_od(num_windows_per_side[ min_dim]); // other dim, for use in hallway width calculation
 			int windows_per_room((num_windows >= 7 && num_windows_od >= 7) ? 2 : 1); // 1-2 windows per room (only assign 2 windows if we can get into the secondary hallway case below)
-			float const cube_len(psz[!min_dim]), wind_hspacing(cube_len/num_windows), min_hall_width(3.6*doorway_width);
+			float const cube_len(psz[!min_dim]), wind_hspacing(cube_len/num_windows);
 			float room_len(wind_hspacing*windows_per_room);
 
 			while (room_len < 0.9*min_wall_len) { // add more windows to increase room size if too small
