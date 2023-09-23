@@ -9,7 +9,7 @@ using std::string;
 
 // names
 
-string gen_random_name(rand_gen_t &rgen); // from Universe_name.cpp
+string gen_random_name(rand_gen_t &rgen, bool for_universe=0); // from Universe_name.cpp
 
 string choose_family_name(rand_gen_t rgen) { // Note: deep copying so as not to update the state of the rgen that was passed in
 	return gen_random_name(rgen); // use a generic random name to start with

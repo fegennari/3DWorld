@@ -14,7 +14,7 @@ extern vector<light_source> dl_sources;
 extern city_params_t city_params;
 
 
-string gen_random_name(rand_gen_t &rgen); // from Universe_name.cpp
+string gen_random_name(rand_gen_t &rgen, bool for_universe=0); // from Universe_name.cpp
 string gen_random_first_name(rand_gen_t &rgen); // from pedestrians.cpp
 
 class road_name_gen_t {
