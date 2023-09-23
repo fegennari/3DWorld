@@ -131,8 +131,8 @@ allow_model3d_quads 1 # 0 is slightly faster for drawing but uses more memory (m
 enable_hcopter_shadows 0
 
 # helicopter_model: filename recalc_normals two_sided centered body_material_id fixed_color_id xy_rot swap_xyz scale lod_mult blade_mat_id [shadow_mat_ids]
-city helicopter_model ../models/cars/Helicopter/md500.3DS         1 0 0   0 0 90  0 2.0 1.0  -1 0 # always white color, no separate blade material (not rotated about center), material 0 for shadows
-city helicopter_model ../models/cars/Helicopter_ka27/ka27.model3d 1 0 0   0 0 90  1 2.5 1.0   1   # always white color, materials are {body, prop blade}; prop blade rotates a bit off center
+city helicopter_model ../models/helicopters/Helicopter/md500.3DS         1 0 0   0 0 90  0 2.0 1.0  -1 0 # always white color, no separate blade material (not rotated about center), material 0 for shadows
+city helicopter_model ../models/helicopters/Helicopter_ka27/ka27.model3d 1 0 0   0 0 90  1 2.5 1.0   1   # always white color, materials are {body, prop blade}; prop blade rotates a bit off center
 
 # pedestrians
 city num_peds 8000 # 10000 for city/6000 for residential
