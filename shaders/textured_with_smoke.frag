@@ -25,6 +25,7 @@ uniform float winding_normal_sign = 1.0;
 uniform float cube_map_reflect_mipmap_level = 0;
 uniform int cube_map_texture_size = 0;
 uniform vec4 emission = vec4(0,0,0,1);
+uniform bool two_sided_lighting = true;
 
 //in vec3 vpos, normal; // world space, come from indir_lighting.part.frag
 // epos, eye_norm, and tc come from bump_map.frag
@@ -307,9 +308,9 @@ void main()
 #endif // ENABLE_PUDDLES
 
 #ifdef USE_WINDING_RULE_FOR_NORMAL
-	float normal_sign = winding_normal_sign*((!two_sided_lighting || gl_FrontFacing) ? 1.0 : -1.0); // two-sided lighting
+	float normal_sign  = winding_normal_sign*((!two_sided_lighting || gl_FrontFacing) ? 1.0 : -1.0); // two-sided lighting
 #else
-	float normal_sign = ((!two_sided_lighting || (dot(eye_norm, epos.xyz) < 0.0)) ? 1.0 : -1.0); // two-sided lighting
+	float normal_sign  = ((!two_sided_lighting || (dot(eye_norm, epos.xyz) < 0.0)) ? 1.0 : -1.0); // two-sided lighting
 #endif
 	vec3 normal_s      = normal_sign*normal;
 	float wet_surf_val = wetness*max(normal.z, 0.0); // only +z surfaces are wet; doesn't apply to spec shininess though

@@ -381,6 +381,7 @@ void hedge_draw_t::draw_and_clear(shader_t &s) {
 	select_texture(get_texture_by_name("pine2.jpg"));
 	enable_blend(); // slightly smoother, but a bit of background shows through
 	s.add_uniform_float("min_alpha", 0.5);
+	s.add_uniform_int("two_sided_lighting", 1);
 	pre_render();
 	vector3d const sz_mult(bcube.get_size().inverse());
 	// we can almost use an instance_render here, but that requires changes to the shader or a custom shader
@@ -398,6 +399,7 @@ void hedge_draw_t::draw_and_clear(shader_t &s) {
 		fgPopMatrix();
 	} // for c
 	post_render();
+	s.add_uniform_int("two_sided_lighting", 0); // reset
 	s.add_uniform_float("min_alpha", DEF_CITY_MIN_ALPHA); // restore to the default
 	disable_blend();
 	to_draw.clear();
@@ -1285,7 +1287,9 @@ city_flag_t::city_flag_t(cube_t const &flag_bcube_, bool dim_, bool dir_, point 
 }
 void city_flag_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
 	if (draw_as_model) { // need to invert orient for dim=0 because dir applies to the side of the flag, not the direction of the pole
+		dstate.s.add_uniform_int("two_sided_lighting", 1); // must enable TSL because flags are not a closed volume
 		building_obj_model_loader.draw_model(dstate.s, pos, bcube, get_orient_dir()*(dim ? 1.0 : -1.0), WHITE, dstate.xlate, OBJ_MODEL_FLAG, shadow_only);
+		dstate.s.add_uniform_int("two_sided_lighting", 0);
 		// def_flag_tid should still be set
 		return;
 	}

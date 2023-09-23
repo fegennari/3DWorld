@@ -291,13 +291,12 @@ bool is_smoke_in_use() {return (smoke_exists || use_smoke_for_fog);}
 
 
 void set_smoke_shader_prefixes(shader_t &s, int use_texgen, bool keep_alpha, bool direct_lighting, bool smoke_enabled,
-	bool has_lt_atten, bool use_smap, int use_bmap, bool use_spec_map, bool use_mvm, bool use_tsl, bool use_gloss_map)
+	bool has_lt_atten, bool use_smap, int use_bmap, bool use_spec_map, bool use_mvm, bool use_gloss_map)
 {
 	s.set_int_prefix("use_texgen", use_texgen, 0); // VS
 	s.set_prefix(make_shader_bool_prefix("keep_alpha",          keep_alpha),      1); // FS
 	s.set_prefix(make_shader_bool_prefix("direct_lighting",     direct_lighting), 1); // FS
 	s.set_prefix(make_shader_bool_prefix("do_lt_atten",         has_lt_atten),    1); // FS
-	s.set_prefix(make_shader_bool_prefix("two_sided_lighting",  use_tsl), 1); // FS
 	s.set_prefix(make_shader_bool_prefix("use_fg_ViewMatrix",   use_mvm), 0); // VS
 	s.set_prefix(make_shader_bool_prefix("use_fg_ViewMatrix",   use_mvm), 1); // FS
 	s.set_prefix(make_shader_bool_prefix("enable_clip_plane_z", enable_clip_plane_z), 1); // FS
@@ -389,7 +388,7 @@ void setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool keep
 	common_shader_block_pre(s, dlights, use_smap, indir_lighting, min_alpha, 0, use_wet_mask);
 	bool const enable_sky_occlusion(sky_occlude_scale > 0.0 && direct_lighting && !indir_lighting); // Note: common_shader_block_pre() changes indir_lighting
 	if (enable_sky_occlusion) {s.set_prefix("#define ENABLE_SKY_OCCLUSION", 1);} // FS
-	set_smoke_shader_prefixes(s, use_texgen, keep_alpha, direct_lighting, smoke_en, has_lt_atten, use_smap, use_bmap, use_spec_map, use_mvm, force_tsl, use_gloss_map);
+	set_smoke_shader_prefixes(s, use_texgen, keep_alpha, direct_lighting, smoke_en, has_lt_atten, use_smap, use_bmap, use_spec_map, use_mvm, use_gloss_map);
 	s.set_vert_shader(anim_shader + "texture_gen.part+bump_map.part+leaf_wind.part+no_lt_texgen_smoke");
 	string fstr("linear_fog.part+bump_map.part+spec_map.part+ads_lighting.part*+shadow_map.part*+dynamic_lighting.part*+line_clip.part*+indir_lighting.part+black_body_burn.part+");
 	if (smoke_en && use_smoke_noise()) {fstr += "perlin_clouds_3d.part*+";}
@@ -409,6 +408,7 @@ void setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool keep
 	if (use_spec_map ) {s.add_uniform_int("spec_map",  8);}
 	if (use_gloss_map) {s.add_uniform_int("gloss_map", 9);}
 	if (triplanar_tex) {s.add_uniform_float("tex_scale", triplanar_texture_scale);}
+	s.add_uniform_int("two_sided_lighting", force_tsl); // set as an int
 	common_shader_block_post(s, dlights, use_smap, smoke_en, indir_lighting, min_alpha);
 	float const step_delta_scale((use_smoke_for_fog || get_smoke_at_pos(get_camera_pos())) ? 1.0 : 2.0);
 	s.add_uniform_float("step_delta", step_delta_scale*HALF_DXY);
@@ -479,7 +479,7 @@ void set_tree_branch_shader(shader_t &s, bool direct_lighting, bool dlights, boo
 	float const water_depth(setup_underwater_fog(s, 1)); // FS
 	bool indir_lighting(direct_lighting && tree_indir_lighting);
 	common_shader_block_pre(s, dlights, use_smap, indir_lighting, 0.0, 1); // no_dl_smap=1
-	set_smoke_shader_prefixes(s, 0, 0, direct_lighting, 0, 0, use_smap, 0, 0, 0, 0, 0);
+	set_smoke_shader_prefixes(s, 0, 0, direct_lighting, 0, 0, use_smap, 0, 0, 0, 0);
 	s.set_vert_shader("texture_gen.part+bump_map.part+leaf_wind.part+no_lt_texgen_smoke");
 	s.set_frag_shader("linear_fog.part+bump_map.part+ads_lighting.part*+shadow_map.part*+dynamic_lighting.part*+line_clip.part*+indir_lighting.part+textured_with_smoke");
 	s.begin_shader();
