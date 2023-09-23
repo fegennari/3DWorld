@@ -157,8 +157,9 @@ void city_model_loader_t::draw_model(shader_t &s, vector3d const &pos, cube_t co
 	bool const use_custom_texture (!is_shadow_pass && have_body_mat && untextured);
 	colorRGBA orig_color;
 	int orig_tid(-1);
-	if (use_custom_color   ) {orig_color = model.set_color_for_material  (model_file.body_mat_id, color);} // use custom color for body material
-	if (use_custom_texture ) {orig_tid   = model.set_texture_for_material(model_file.body_mat_id, -1);}
+	int const untex_tid(-1); // Note: this indexes into the model's texture_manager textures vector; it's not a global texture ID
+	if (use_custom_color   ) {orig_color = model.set_color_for_material  (model_file.body_mat_id, color    );} // use custom color for body material
+	if (use_custom_texture ) {orig_tid   = model.set_texture_for_material(model_file.body_mat_id, untex_tid);}
 	if (use_custom_emissive) {model.set_material_emissive_color(model_file.body_mat_id, color);} // use custom color for body material
 	model.bind_all_used_tids();
 	cube_t const &bcube(model.get_bcube());
@@ -235,9 +236,9 @@ void city_model_loader_t::draw_model(shader_t &s, vector3d const &pos, cube_t co
 	camera_pdu.valid = camera_pdu_valid;
 	camera_pdu.pos   = orig_camera_pos;
 	select_texture(WHITE_TEX); // reset back to default/untextured
-	if (use_custom_color   ) {model.set_color_for_material  (model_file.body_mat_id, orig_color);} // restore original color
-	if (use_custom_texture ) {model.set_texture_for_material(model_file.body_mat_id, orig_tid  );} // restore original texture
-	if (use_custom_emissive) {model.set_material_emissive_color(model_file.body_mat_id, BLACK);} // reset
+	if (use_custom_color   ) {model.set_color_for_material     (model_file.body_mat_id, orig_color);} // restore original color
+	if (use_custom_texture ) {model.set_texture_for_material   (model_file.body_mat_id, orig_tid  );} // restore original texture
+	if (use_custom_emissive) {model.set_material_emissive_color(model_file.body_mat_id, BLACK     );} // reset
 }
 
 unsigned get_model_id(unsigned id) { // first 8 bits = model_id, second 8 bits = sub_model_id
