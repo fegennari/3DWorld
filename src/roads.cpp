@@ -35,8 +35,7 @@ class road_name_gen_t {
 		string const name(gen_random_first_name(rgen));
 		return ((name.size() < 4) ? gen_random_name(rgen) : name); // 2-3 letter names look bad on signs (too stretched)
 	}
-public:
-	string gen_name(road_t const &road, unsigned city_ix) const {
+	string gen_name_int(road_t const &road, unsigned city_ix) const {
 		if (road.is_all_zeros()) { // city connector road; only city_ix is used
 			rand_gen_t rgen;
 			rgen.set_state(city_ix+123, city_ix+321); // should be unique per road
@@ -61,6 +60,13 @@ public:
 		}
 		string const suffix[13] = {"St", "St", "St", "Ave", "Ave", "Rd", "Rd", "Rd", "Dr", "Blvd", "Ln", "Way", "Ct"}; // more common suffixes are duplicated
 		return prefix + select_road_name(rgen) + " " + suffix[rgen.rand()%13];
+	}
+	map<road_t, string> road_name_cache; // only need to check road x/y
+public:
+	string gen_name(road_t const &road, unsigned city_ix) {
+		string &name(road_name_cache[road]);
+		if (name.empty()) {name = gen_name_int(road, city_ix);} // generate if needed
+		return name;
 	}
 };
 road_name_gen_t road_name_gen;
