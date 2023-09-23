@@ -49,6 +49,7 @@ struct oriented_city_obj_t : public city_obj_t {
 	bool dim, dir;
 	oriented_city_obj_t(bool dim_=0, bool dir_=0) : dim(dim_), dir(dir_) {}
 	oriented_city_obj_t(point const &pos_, float radius_, bool dim_=0, bool dir_=0) : city_obj_t(pos_, radius_), dim(dim_), dir(dir_) {}
+	vector3d get_orient_dir() const;
 };
 
 struct bench_t : public oriented_city_obj_t {
@@ -223,8 +224,10 @@ struct city_flag_t : public oriented_city_obj_t {
 	point pole_base;
 	float pole_radius;
 	int flag_id; // -1 is default
+	bool draw_as_model;
 
 	city_flag_t(cube_t const &flag_bcube_, bool dim_, bool dir_, point const &pole_base_, float pradius, int flag_id_=-1);
+	bool is_horizontal() const {return (flag_bcube.dz() > flag_bcube.get_sz_dim(!dim));}
 	static void pre_draw(draw_state_t &dstate, bool shadow_only);
 	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const;
 	bool proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const;

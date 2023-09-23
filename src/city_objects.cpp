@@ -35,6 +35,12 @@ bool city_obj_t::proc_sphere_coll(point &pos_, point const &p_last, float radius
 	return sphere_cube_int_update_pos(pos_, radius_, (bcube + xlate), p_last, 0, cnorm);
 }
 
+vector3d oriented_city_obj_t::get_orient_dir() const {
+	vector3d orient(zero_vector);
+	orient[dim] = (dir ? 1.0 : -1.0);
+	return orient;
+}
+
 // benches
 
 void bench_t::calc_bcube() {
@@ -271,9 +277,7 @@ substation_t::substation_t(cube_t const &bcube_, bool dim_, bool dir_) : oriente
 }
 void substation_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
 	if (!dstate.check_cube_visible(bcube, dist_scale)) return;
-	vector3d orient(zero_vector);
-	orient[dim] = (dir ? 1.0 : -1.0);
-	building_obj_model_loader.draw_model(dstate.s, pos, bcube, orient, WHITE, dstate.xlate, OBJ_MODEL_SUBSTATION, shadow_only);
+	building_obj_model_loader.draw_model(dstate.s, pos, bcube, get_orient_dir(), WHITE, dstate.xlate, OBJ_MODEL_SUBSTATION, shadow_only);
 }
 
 // plot dividers
@@ -1102,9 +1106,7 @@ mailbox_t::mailbox_t(point const &pos_, float height, bool dim_, bool dir_) : or
 }
 void mailbox_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
 	if (!dstate.check_cube_visible(bcube, dist_scale)) return;
-	vector3d orient(zero_vector);
-	orient[dim] = (dir ? 1.0 : -1.0);
-	building_obj_model_loader.draw_model(dstate.s, pos, bcube, orient, WHITE, dstate.xlate, OBJ_MODEL_MAILBOX, shadow_only);
+	building_obj_model_loader.draw_model(dstate.s, pos, bcube, get_orient_dir(), WHITE, dstate.xlate, OBJ_MODEL_MAILBOX, shadow_only);
 }
 
 // pigeons
@@ -1255,25 +1257,43 @@ int get_flag_texture(unsigned id);
 city_flag_t::city_flag_t(cube_t const &flag_bcube_, bool dim_, bool dir_, point const &pole_base_, float pradius, int flag_id_) :
 	oriented_city_obj_t(dim_, dir_), flag_bcube(flag_bcube_), pole_base(pole_base_), pole_radius(pradius), flag_id(flag_id_)
 {
-	bcube       = flag_bcube;
-	bcube.z1()  = pole_base.z; // include pole Z-range
-	bcube.z2() += 2.0*pole_radius; // account for the ball at the top
-	bcube.union_with_pt(pole_base); // make sure to include the pole
-	bcube.expand_by_xy(pradius); // include pole thickness
+	draw_as_model = (is_horizontal() && building_obj_model_loader.is_model_valid(OBJ_MODEL_FLAG));
+
+	if (draw_as_model) { // Note: pole_base and pole_radius are unused in this case
+		vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_FLAG)); // D, W, H
+		flag_bcube.union_with_pt(pole_base); // make sure to include the pole
+		// use bcube in !dim as the reference size; the flag sides face in dim and the flag sticks out in !dim
+		float const sz_scale(flag_bcube.get_sz_dim(!dim)/sz.y), flag_z1(pole_base.z - 0.5*sz_scale*sz.z);
+		set_wall_width(flag_bcube, flag_bcube.get_center_dim(dim), 0.5*sz_scale*sz.x, dim);
+		set_cube_zvals(flag_bcube, flag_z1, (flag_z1 + sz_scale*sz.z)); // points upward starting at the pole base
+		bcube = flag_bcube;
+	}
+	else { // calculate the bcube from the flag and pole
+		bcube       = flag_bcube;
+		bcube.z1()  = pole_base.z; // include pole Z-range
+		bcube.z2() += 2.0*pole_radius; // account for the ball at the top
+		bcube.union_with_pt(pole_base); // make sure to include the pole
+		bcube.expand_by_xy(pradius); // include pole thickness
+	}
 	pos    = bcube.get_cube_center();
 	radius = bcube.get_bsphere_radius();
 }
 /*static*/ void city_flag_t::pre_draw(draw_state_t &dstate, bool shadow_only) {
 	if (shadow_only) return;
-	def_flag_tid = get_texture_by_name("flags/american_flag_indexed.png");
+	def_flag_tid = get_texture_by_name("flags/american_flag_indexed.png"); // only if !draw_as_model (which we don't have here)?
 	select_texture(def_flag_tid);
 }
 void city_flag_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
-	bool const is_horizontal(flag_bcube.dz() > flag_bcube.get_sz_dim(!dim));
+	if (draw_as_model) { // need to invert orient for dim=0 because dir applies to the side of the flag, not the direction of the pole
+		building_obj_model_loader.draw_model(dstate.s, pos, bcube, get_orient_dir()*(dim ? 1.0 : -1.0), WHITE, dstate.xlate, OBJ_MODEL_FLAG, shadow_only);
+		// def_flag_tid should still be set
+		return;
+	}
+	bool const horizontal(is_horizontal());
 	// draw the flag
 	unsigned const skip_dims(4 + (1<<unsigned(!dim))); // top, bottom, and edges
 	float const cview_dir((camera_pdu.pos[dim] - dstate.xlate[dim]) - pole_base[dim]);
-	bool const visible_side((cview_dir < 0) ^ dir ^ dim), mirror_x(is_horizontal ? 1 : !visible_side), mirror_y(is_horizontal ? visible_side : 0);
+	bool const visible_side((cview_dir < 0) ^ dir ^ dim), mirror_x(horizontal ? 1 : !visible_side), mirror_y(horizontal ? visible_side : 0);
 	int tid(def_flag_tid);
 
 	if (!shadow_only && flag_id >= 0) { // select custom flag texture
@@ -1281,7 +1301,7 @@ void city_flag_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_
 		if (flag_tid >= 0) {tid = flag_tid;}
 		if (tid != def_flag_tid) {qbds.qbd.draw_and_clear();} // flush verts drawn with default flag texture
 	}
-	dstate.draw_cube(qbds.qbd, flag_bcube, WHITE, 1, 0.0, skip_dims, mirror_x, mirror_y, is_horizontal); // swap_tc_xy=is_horizontal
+	dstate.draw_cube(qbds.qbd, flag_bcube, WHITE, 1, 0.0, skip_dims, mirror_x, mirror_y, horizontal); // swap_tc_xy=horizontal
 
 	if (tid != def_flag_tid) {
 		select_texture(tid);
@@ -1289,14 +1309,14 @@ void city_flag_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_
 	}
 	if (pole_radius == 0.0) return; // no pole to draw
 	// draw the pole
-	float const dmax(dist_scale*dstate.draw_tile_dist*(is_horizontal ? 0.7 : 1.0)); // horizontals flag poles are less visible
+	float const dmax(dist_scale*dstate.draw_tile_dist*(horizontal ? 0.7 : 1.0)); // horizontals flag poles are less visible
 	if (!shadow_only && !bcube.closest_dist_less_than(dstate.camera_bs, 0.75*dmax)) return;
 	unsigned const ndiv = 16;
-	float const sphere_radius((is_horizontal ? 1.5 : 1.0)*pole_radius);
+	float const sphere_radius((horizontal ? 1.5 : 1.0)*pole_radius);
 	point ce[2] = {pole_base, pole_base};
-	if (is_horizontal) {ce[1][!dim] = bcube.d[!dim][dir] + (dir ? 1.0 : -1.0)*sphere_radius;}
+	if (horizontal) {ce[1][!dim] = bcube.d[!dim][dir] + (dir ? 1.0 : -1.0)*sphere_radius;}
 	else {ce[1].z = bcube.z2() - sphere_radius;} // vertical pole
-	add_cylin_as_tris(qbds.untex_qbd.verts, ce, pole_radius, (is_horizontal ? 1.0 : 0.5)*pole_radius, WHITE, ndiv, 0); // (truncated, if vertical) cone, sides only
+	add_cylin_as_tris(qbds.untex_qbd.verts, ce, pole_radius, (horizontal ? 1.0 : 0.5)*pole_radius, WHITE, ndiv, 0); // (truncated, if vertical) cone, sides only
 	// draw the gold sphere at the top
 	//if (shadow_only) return; // too small to cast a shadow?
 	if (!shadow_only && !bcube.closest_dist_less_than(dstate.camera_bs, 0.4*dmax)) return;
@@ -1307,7 +1327,7 @@ void city_flag_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_
 }
 bool city_flag_t::proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const {
 	if (sphere_cube_int_update_pos(pos_, radius_, (flag_bcube + xlate), p_last, 0, cnorm)) return 1; // flag coll
-	if (pole_radius == 0.0) return 0; // no pole, skip
+	if (pole_radius == 0.0 || draw_as_model) return 0; // no pole, skip
 	return sphere_city_obj_cylin_coll(pole_base, pole_radius, pos_, p_last, radius_, xlate, cnorm); // pole coll
 }
 

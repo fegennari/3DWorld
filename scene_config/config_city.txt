@@ -230,6 +230,7 @@ city fire_hydrant_model  ../models/fire_hydrant/Fire_Hydrant.model3d  1 0 0   0 
 city substation_model    ../models/substation/SubstationBig.model3d   0 0 0  -1 -1 0    1 1.0 1.0
 city mailbox_model       ../models/us_mailbox/mailbox.model3d         0 0 0  -1 -1 90   1 1.0 1.0
 city umbrella_model      ../models/umbrella/UmbrellaOpen.model3d      0 0 0   0 -1 270  0 1.0 1.0
+city flag_model          ../models/WallFlag.model3d                   0 1 0   1 -1 270  1 1.0 1.0
 city pigeon_model        ../models/pigeon/pigeon3.model3d             0 0 0   0 -1 90   1 1.0 1.0
 city bird_animated_model ../models/birds/bird_animated.fbx            0 0 0   0 -1 90   1 1.0 1.0
 
