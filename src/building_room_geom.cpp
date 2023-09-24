@@ -3809,9 +3809,12 @@ void building_room_geom_t::add_water_plane(room_object_t const &c, cube_t const 
 	water.z2() = water_area.z1() + min(water_level, 1.0f)*water_area.dz();
 	get_untextured_material(0, 0, 0, 1).add_cube_to_verts_untextured(water, apply_light_color(c, colorRGBA(0.4, 0.6, 1.0, 0.5)), ~EF_Z2); // no shadows + transparent, top only
 }
+float get_tub_water_level(room_object_t const &c) {
+	return min(0.84f, 0.21f*c.item_flags);
+}
 void building_room_geom_t::add_tub_outer(room_object_t const &c) {
 	get_untextured_material(1).add_cube_to_verts_untextured(c, apply_light_color(c), EF_Z12); // shadowed, no top/bottom faces
-	float const water_level(min(0.84f, 0.21f*c.item_flags));
+	float const water_level(get_tub_water_level(c));
 	if (water_level <= 0.0) return; // no water
 	cube_t water_area(c);
 	water_area.expand_by_xy(-0.01*c.dz()); // small shrink

@@ -451,10 +451,14 @@ unsigned check_chair_collision(room_object_t const &c, point &pos, point const &
 	return check_cubes_collision(cubes, 3, pos, p_last, radius, cnorm);
 }
 
-void get_tub_cubes(room_object_t const &c, cube_t cubes[5]) { // bottom, front, back, 2 sides
+float get_tub_water_level(room_object_t const &c);
+void get_tub_cubes(room_object_t const &c, cube_t cubes[5], float radius_if_ball=0.0) { // bottom, front, back, 2 sides
 	float const height(c.get_height()), width(c.get_width()), signed_depth((c.dir ? 1.0 : -1.0)*c.get_depth());
 	cube_t bottom(c), front(c), back(c);
-	bottom.z2() = front.z1() = back.z1() = c.z1() + 0.07*height;
+	float bot_z2(c.z1() + 0.07*height);
+	// if the collider is a ball, assume density=2.0 and it floats centered at the water level
+	if (radius_if_ball > 0.0) {max_eq(bot_z2, (c.z1() + min(get_tub_water_level(c), 1.0f)*c.dz() - radius_if_ball));}
+	bottom.z2() = front.z1() = back.z1() = bot_z2;
 	front.d[c.dim][ c.dir] -= 0.81*signed_depth;
 	back .d[c.dim][!c.dir] += 0.86*signed_depth;
 	cubes[0] = bottom;
@@ -470,9 +474,9 @@ void get_tub_cubes(room_object_t const &c, cube_t cubes[5]) { // bottom, front, 
 		cubes[d+3] = side;
 	}
 }
-unsigned check_tub_collision(room_object_t const &c, point &pos, point const &p_last, float radius, vector3d *cnorm) {
+unsigned check_tub_collision(room_object_t const &c, point &pos, point const &p_last, float radius, vector3d *cnorm, bool is_ball) {
 	cube_t cubes[5]; // bottom, front, back, 2 sides
-	get_tub_cubes(c, cubes);
+	get_tub_cubes(c, cubes, (is_ball ? radius : 0.0));
 	return check_cubes_collision(cubes, 5, pos, p_last, radius, cnorm);
 }
 
@@ -881,7 +885,7 @@ bool building_t::are_rooms_connected(unsigned room_ix1, unsigned room_ix2, float
 
 // Note: called on basketballs, soccer balls, and particles
 bool building_interior_t::check_sphere_coll(building_t const &building, point &pos, point const &p_last, float radius,
-	vect_room_object_t::const_iterator self, vector3d &cnorm, float &hardness, int &obj_ix) const
+	vect_room_object_t::const_iterator self, vector3d &cnorm, float &hardness, int &obj_ix, bool is_ball) const
 {
 	bool had_coll(check_sphere_coll_walls_elevators_doors(building, pos, p_last, radius, 0.0, 1, &cnorm)); // check_open_doors=1
 	if (had_coll) {hardness = 1.0;}
@@ -907,11 +911,11 @@ bool building_interior_t::check_sphere_coll(building_t const &building, point &p
 			had_coll = 1; hardness = 1.0;
 		}
 	}
-	had_coll |= check_sphere_coll_room_objects(building, pos, p_last, radius, self, cnorm, hardness, obj_ix);
+	had_coll |= check_sphere_coll_room_objects(building, pos, p_last, radius, self, cnorm, hardness, obj_ix, is_ball);
 	return had_coll;
 }
 bool building_interior_t::check_sphere_coll_room_objects(building_t const &building, point &pos, point const &p_last, float radius,
-	vect_room_object_t::const_iterator self, vector3d &cnorm, float &hardness, int &obj_ix) const
+	vect_room_object_t::const_iterator self, vector3d &cnorm, float &hardness, int &obj_ix, bool is_ball) const
 {
 	if (!room_geom) return 0;
 	bool had_coll(0);
@@ -952,7 +956,7 @@ bool building_interior_t::check_sphere_coll_room_objects(building_t const &build
 			else if (c->type == TYPE_TABLE  ) {coll_ret |= check_table_collision (*c, pos, p_last, radius, &cnorm);}
 			else if (c->type == TYPE_DESK   ) {coll_ret |= check_table_collision (*c, pos, p_last, radius, &cnorm);}
 			else if (c->type == TYPE_CHAIR  ) {coll_ret |= check_chair_collision (*c, pos, p_last, radius, &cnorm);}
-			else if (c->type == TYPE_TUB    ) {coll_ret |= check_tub_collision   (*c, pos, p_last, radius, &cnorm);}
+			else if (c->type == TYPE_TUB    ) {coll_ret |= check_tub_collision   (*c, pos, p_last, radius, &cnorm, is_ball);}
 			else if (c->type == TYPE_RAMP   ) {coll_ret |= (unsigned)check_ramp_collision   (*c, pos, p_last, radius, &cnorm);}
 			else if (c->type == TYPE_BALCONY) {had_coll |= (unsigned)check_balcony_collision(*c, pos, p_last, radius, &cnorm);}
 			else if (c->type == TYPE_STALL  && maybe_inside_room_object(*c, pos, radius)) {coll_ret |= (unsigned)check_stall_collision (*c, pos, p_last, radius, &cnorm);}
@@ -967,6 +971,7 @@ bool building_interior_t::check_sphere_coll_room_objects(building_t const &build
 			else if (c->type == TYPE_TEESHIRT || c->type == TYPE_PANTS || c->type == TYPE_FOLD_SHIRT) {hardness = 0.7;} // somewhat soft, though collisions may be skipped
 			else if (c->type == TYPE_BLANKET  ) {hardness = 0.5;} // soft
 			else if (c->type == TYPE_BED && (coll_ret & 24)) {hardness = 0.5;} // pillow/mattress collision is very soft
+			else if (c->type == TYPE_TUB && cnorm == plus_z) {hardness = 0.2;} // bottom of tub, possibly with water; will make a ball less likely to bounce out
 			else {hardness = 1.0;}
 			obj_ix   = (c - room_geom->objs.begin()); // may be overwritten, will be the last collided object
 			had_coll = 1;

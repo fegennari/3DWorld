@@ -1036,7 +1036,7 @@ void building_t::run_ball_update(vector<room_object_t>::iterator ball_it, point 
 	int obj_ix(-1);
 	float hardness(0.0);
 
-	if (interior->check_sphere_coll(*this, new_center, center, radius, ball_it, cnorm, hardness, obj_ix)) {
+	if (interior->check_sphere_coll(*this, new_center, center, radius, ball_it, cnorm, hardness, obj_ix, 1)) { // is_ball=1
 		apply_floor_vel_thresh(velocity, cnorm);
 		apply_object_bounce_with_sound(*this, velocity, cnorm, new_center, hardness, on_floor);
 
