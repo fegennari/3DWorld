@@ -2188,6 +2188,7 @@ float tile_draw_t::update(float &min_camera_dist) { // view-independent updates;
 	}
 	for (tile_map::iterator i = tiles.begin(); i != tiles.end(); ) { // update tiles and free old tiles (Note: no ++i)
 		if (!i->second->update_range(smap_manager)) { // delete this tile
+			remove_buildings_tile(i->first.x, i->first.y); // required to avoid memory leak when player teleports to a new location
 			i->second->clear();
 			tiles.erase(i++);
 			++num_erased;
