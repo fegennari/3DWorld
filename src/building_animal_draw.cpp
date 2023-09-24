@@ -138,7 +138,7 @@ public:
 				mat.vao_setup(shadow_only);
 				s.set_specular(0.5, 80.0);
 				select_texture(WHITE_TEX);
-				int const animation_id = 8; // custom spider animation; not using animation_state_t here
+				int const animation_id = ANIM_ID_SPIDER; // custom spider animation; not using animation_state_t here
 				s.add_uniform_int("animation_id", animation_id);
 				s.add_uniform_float("animation_scale",    1.0); // not using a model, nominal size is 1.0
 				s.add_uniform_float("model_delta_height", 1.0); // not using a model, nominal size is 1.0
@@ -528,7 +528,7 @@ void building_room_geom_t::draw_animals(shader_t &s, building_t const &building,
 {
 	if (!rats.empty()) {
 		bool const enable_animations(!shadow_only); // can't see the animation in the shadow pass
-		animation_state_t anim_state(enable_animations, 7); // rat animation_id=7
+		animation_state_t anim_state(enable_animations, ANIM_ID_RAT);
 		bool rat_drawn(0);
 
 		for (rat_t const &rat : rats) {

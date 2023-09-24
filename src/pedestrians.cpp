@@ -1407,7 +1407,7 @@ void pedestrian_t::debug_draw(ped_manager_t &ped_mgr) const {
 }
 
 void ped_manager_t::next_animation() {
-	unsigned const NUM_ANIMATIONS = 7; // including null animation
+	unsigned const NUM_ANIMATIONS = 7; // procedural animations for people, including null animation
 	string const animation_names[NUM_ANIMATIONS] = {"The Slide", "Walking", "The Bunny Hop", "The Flip", "The Twirl", "Marching", "Walk Like an Alien"};
 	animation_id = (animation_id + 1) % NUM_ANIMATIONS;
 	print_text_onscreen(animation_names[animation_id], WHITE, 1.5, 2*TICKS_PER_SECOND, 1);
@@ -1421,12 +1421,12 @@ void set_anim_id(shader_t &s, bool enable_animations, int animation_id, unsigned
 	if (!enable_animations) return;
 
 	if (city_params.use_animated_people && has_bone_animations && animation_id == 1) { // select bone animation rather than walking
-		animation_id = 9; // used in the shader to select skeletal animation
-		assert(model_anim_id < NUM_ANIM_IDS);
+		animation_id = ANIM_ID_SKELETAL; // used in the shader to select skeletal animation
+		assert(model_anim_id < NUM_MODEL_ANIMS);
 		s.add_property("animation_name", animation_names[model_anim_id]);
 
 		if (model_anim_id2 != model_anim_id) { // blended animation
-			assert(model_anim_id2 < NUM_ANIM_IDS);
+			assert(model_anim_id2 < NUM_MODEL_ANIMS);
 			s.add_property("animation_name2", animation_names[model_anim_id2]);
 		}
 	}
@@ -1624,7 +1624,7 @@ bool ped_manager_t::draw_ped(person_base_t const &ped, shader_t &s, pos_dir_up c
 				if (state_change_elapsed < blend_time_ticks) {blend_factor = 1.0 - state_change_elapsed/blend_time_ticks;}
 			}
 			anim_state->anim_time     = (is_idle ? ped.get_idle_anim_time() : ped.anim_time); // if is_idle, we still need to advance the animation time
-			anim_state->model_anim_id = (is_idle ? ANIM_ID_IDLE : ANIM_ID_WALK);
+			anim_state->model_anim_id = (is_idle ? MODEL_ANIM_IDLE : MODEL_ANIM_WALK);
 			anim_state->blend_factor  = blend_factor;
 			anim_state->fixed_anim_speed = is_idle; // idle anim plays at normal speed, not zombie walking speed
 			
@@ -1632,7 +1632,7 @@ bool ped_manager_t::draw_ped(person_base_t const &ped, shader_t &s, pos_dir_up c
 				// blend animations between walking and idle states using opposite is_idle logic;
 				// since anim_time won't increase in this state, add the elapsed time to it
 				anim_state->anim_time2     = ((!is_idle) ? ped.get_idle_anim_time() : ped.anim_time) + state_change_elapsed*ped.speed;
-				anim_state->model_anim_id2 = ((!is_idle) ? ANIM_ID_IDLE : ANIM_ID_WALK);
+				anim_state->model_anim_id2 = ((!is_idle) ? MODEL_ANIM_IDLE : MODEL_ANIM_WALK);
 			}
 			if (is_idle != ped.prev_was_idle) { // update mutable temp state for animations
 				ped.prev_was_idle = is_idle;
