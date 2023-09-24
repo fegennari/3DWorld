@@ -239,8 +239,11 @@ void city_obj_placer_t::place_trees_in_plot(road_plot_t const &plot, vect_cube_t
 	for (auto i = blockers.begin()+buildings_end; i != blockers.begin()+input_blockers_end; ++i) {i->expand_by_xy(non_buildings_overlap);} // undo initial expand
 }
 
+void city_obj_groups_t::insert_obj_ix(cube_t const &c, unsigned ix) {
+	by_tile[get_tile_id_for_cube(c)].push_back(ix);
+}
 template<typename T> void city_obj_groups_t::add_obj(T const &obj, vector<T> &objs) {
-	by_tile[get_tile_id_for_cube(obj.bcube)].push_back(objs.size());
+	insert_obj_ix(obj.bcube, objs.size());
 	objs.push_back(obj);
 }
 template<typename T> void city_obj_groups_t::create_groups(vector<T> &objs, cube_t &all_objs_bcube) {
@@ -271,16 +274,16 @@ void add_cube_to_colliders_and_blockers(cube_t const &cube, vect_cube_t &blocker
 	blockers .push_back(cube);
 }
 
-struct pigeon_place_t {
+struct bird_place_t {
 	point pos;
 	vector3d orient;
 	bool on_ground;
 
-	pigeon_place_t(point const &pos_, rand_gen_t &rgen  ) : pos(pos_), on_ground(1) {set_rand_orient(rgen);} // ground constructor
-	pigeon_place_t(point const &pos_, bool dim, bool dir) : pos(pos_), on_ground(0) {orient[dim] = (dir ? 1.0 : -1.0);} // object constructor
+	bird_place_t(point const &pos_, rand_gen_t &rgen  ) : pos(pos_), on_ground(1) {set_rand_orient(rgen);} // ground constructor
+	bird_place_t(point const &pos_, bool dim, bool dir) : pos(pos_), on_ground(0) {orient[dim] = (dir ? 1.0 : -1.0);} // object constructor
 	void set_rand_orient(rand_gen_t &rgen) {orient = rgen.signed_rand_vector_spherical();}
 };
-void place_pigeon_on_obj(cube_t const &obj, bool dim, bool dir, bool orient_dir, float spacing, rand_gen_t &rgen, vector<pigeon_place_t> &locs) {
+void place_bird_on_obj(cube_t const &obj, bool dim, bool dir, bool orient_dir, float spacing, rand_gen_t &rgen, vector<bird_place_t> &locs) {
 	point pos(0.0, 0.0, obj.z2());
 	pos[ dim] = obj.d[dim][dir];
 	pos[!dim] = rgen.rand_uniform(obj.d[!dim][0]+spacing, obj.d[!dim][1]-spacing); // random position along the edge
@@ -522,7 +525,7 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 		float const base_height(0.06*car_length), place_radius(4.0*base_height), obj_edge_spacing(0.25*base_height);
 
 		if (min(plot.dx(), plot.dy()) > 8.0*place_radius) { // plot large enough; should always get here
-			vector<pigeon_place_t> pigeon_locs;
+			vector<bird_place_t> pigeon_locs;
 			// place some random pigeons; use place_radius because pigeon radius hasn't been calculated yet
 			unsigned const count_mod(plot.is_park ? 9 : 5), num_pigeons(rgen.rand() % count_mod); // 0-4, 0-8 for parks
 			for (unsigned n = 0; n < num_pigeons; ++n) {pigeon_locs.emplace_back(rand_xy_pt_in_cube(plot, place_radius, rgen), rgen);}
@@ -534,7 +537,7 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 				cube_t top_place(i->bcube);
 				top_place.expand_in_dim(!i->dim,  0.1*i->bcube.get_sz_dim(!i->dim)); // expand the back outward a bit
 				top_place.expand_in_dim( i->dim, -0.1*i->bcube.get_sz_dim( i->dim)); // shrink a bit to account for the arms extending further to the sides than the back
-				place_pigeon_on_obj(top_place, !i->dim, i->dir, rgen.rand_bool(), obj_edge_spacing, rgen, pigeon_locs); // random orient_dir
+				place_bird_on_obj(top_place, !i->dim, i->dir, rgen.rand_bool(), obj_edge_spacing, rgen, pigeon_locs); // random orient_dir
 			}
 			for (auto i = trashcans.begin()+trashcans_start; i != trashcans.end(); ++i) {
 				if (min(i->bcube.dx(), i->bcube.dy()) <= 2.0*obj_edge_spacing) continue;
@@ -542,7 +545,7 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 				cube_t top_place(i->bcube);
 				top_place.expand_by_xy(-1.5*obj_edge_spacing); // small shrink
 				bool const dim(rgen.rand_bool()), dir(rgen.rand_bool()); // use a random side of the rim
-				place_pigeon_on_obj(top_place, dim, dir, dir, obj_edge_spacing, rgen, pigeon_locs); // facing outward
+				place_bird_on_obj(top_place, dim, dir, dir, obj_edge_spacing, rgen, pigeon_locs); // facing outward
 			}
 			for (auto i = sstations.begin()+substations_start; i != sstations.end(); ++i) {
 				if (rgen.rand_float() > 0.25) continue; // place 25% of the time
@@ -550,7 +553,7 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 				pigeon_locs.emplace_back(cube_top_center(i->bcube), dim, dir); // top center
 			}
 			for (unsigned i = 0; i < pigeon_locs.size(); ++i) {
-				pigeon_place_t p(pigeon_locs[i]);
+				bird_place_t p(pigeon_locs[i]);
 				float const height(base_height*rgen.rand_uniform(0.8, 1.2));
 				// the current model's tail extends below its feet; move down slightly so that feet are on the object, though the tail may clip through the object;
 				// the feet gap isn't really visible when placed on the ground since there are no shadows, and it looks better than having the tail clip through the ground
@@ -567,7 +570,7 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 					valid_range.expand_by_xy(-place_radius);
 
 					for (unsigned N = 0; N < group_size; ++N) {
-						pigeon_place_t p2(p);
+						bird_place_t p2(p);
 						p2.pos += rgen.signed_rand_vector_spherical_xy(place_range);
 						if (!valid_range.contains_pt_xy(p2.pos) || pigeon.bcube.contains_pt_xy_exp(p2.pos, base_height)) continue;
 						p2.set_rand_orient(rgen);
@@ -576,6 +579,9 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 				}
 			} // for i
 		}
+	}
+	if (building_obj_model_loader.is_model_valid(OBJ_MODEL_BIRD_ANIM)) {
+		// TODO: place birds on the same objects as pigeons, plus houses, power lines, etc.
 	}
 }
 
@@ -953,10 +959,10 @@ template<typename T> void city_obj_placer_t::draw_objects(vector<T> const &objs,
 
 void city_obj_placer_t::clear() {
 	parking_lots.clear(); benches.clear(); planters.clear(); trashcans.clear(); fhydrants.clear(); sstations.clear(); driveways.clear(); dividers.clear();
-	pools.clear(); pdecks.clear(); ppoles.clear(); hcaps.clear(); manholes.clear(); mboxes.clear(); pigeons.clear(); signs.clear(); stopsigns.clear(); flags.clear();
-	bench_groups.clear(); planter_groups.clear(); trashcan_groups.clear(); fhydrant_groups.clear(); sstation_groups.clear(); divider_groups.clear(); pool_groups.clear();
-	ppole_groups.clear(); hcap_groups.clear(); manhole_groups.clear(); mbox_groups.clear(); pigeon_groups.clear(); sign_groups.clear(); stopsign_groups.clear();
-	flag_groups.clear(); nrack_groups.clear();
+	pools.clear(); pdecks.clear(); ppoles.clear(); hcaps.clear(); manholes.clear(); mboxes.clear(); pigeons.clear(); birds.clear(); signs.clear(); stopsigns.clear();
+	flags.clear(); bench_groups.clear(); planter_groups.clear(); trashcan_groups.clear(); fhydrant_groups.clear(); sstation_groups.clear(); divider_groups.clear();
+	pool_groups.clear(); ppole_groups.clear(); hcap_groups.clear(); manhole_groups.clear(); mbox_groups.clear(); pigeon_groups.clear(); bird_groups.clear();
+	sign_groups.clear(); stopsign_groups.clear(); flag_groups.clear(); nrack_groups.clear();
 	all_objs_bcube.set_to_zeros();
 	num_spaces = filled_spaces = 0;
 }
@@ -1027,6 +1033,7 @@ void city_obj_placer_t::gen_parking_and_place_objects(vector<road_plot_t> &plots
 	manhole_groups .create_groups(manholes,  all_objs_bcube);
 	mbox_groups    .create_groups(mboxes,    all_objs_bcube);
 	pigeon_groups  .create_groups(pigeons,   all_objs_bcube);
+	bird_groups    .create_groups(birds,     all_objs_bcube);
 	sign_groups    .create_groups(signs,     all_objs_bcube);
 	stopsign_groups.create_groups(stopsigns, all_objs_bcube);
 	flag_groups    .create_groups(flags,     all_objs_bcube);
@@ -1035,7 +1042,7 @@ void city_obj_placer_t::gen_parking_and_place_objects(vector<road_plot_t> &plots
 	if (0) { // debug info printing
 		cout << TXT(benches.size()) << TXT(planters.size()) << TXT(trashcans.size()) << TXT(fhydrants.size()) << TXT(sstations.size()) << TXT(dividers.size())
 			 << TXT(pools.size()) << TXT(pdecks.size()) << TXT(ppoles.size()) << TXT(hcaps.size()) << TXT(manholes.size()) << TXT(mboxes.size()) << TXT(pigeons.size())
-			 << TXT(signs.size()) << TXT(stopsigns.size()) << TXT(flags.size()) << TXT(newsracks.size()) << endl;
+			 << TXT(birds.size()) << TXT(signs.size()) << TXT(stopsigns.size()) << TXT(flags.size()) << TXT(newsracks.size()) << endl;
 	}
 	if (add_parking_lots) {
 		cout << "parking lots: " << parking_lots.size() << ", spaces: " << num_spaces << ", filled: " << filled_spaces << ", benches: " << benches.size() << endl;
@@ -1169,10 +1176,14 @@ void city_obj_placer_t::draw_detail_objects(draw_state_t &dstate, bool shadow_on
 	draw_objects(signs,     sign_groups,     dstate, 0.25, shadow_only, 0, 1); // dist_scale=0.25, draw_qbd_as_quads=1
 	draw_objects(flags,     flag_groups,     dstate, 0.18, shadow_only, 0); // dist_scale=0.16
 	draw_objects(newsracks, nrack_groups,    dstate, 0.10, shadow_only, 0); // dist_scale=0.14
-	if (!shadow_only) {draw_objects(hcaps,    hcap_groups,    dstate, 0.12, shadow_only, 0);} // dist_scale=0.12, no shadows
-	if (!shadow_only) {draw_objects(manholes, manhole_groups, dstate, 0.07, shadow_only, 1);} // dist_scale=0.07, no shadows, has_immediate_draw=1
-	if (!shadow_only) {draw_objects(pigeons,  pigeon_groups,  dstate, 0.03, shadow_only, 1);} // dist_scale=0.10, no shadows, has_immediate_draw=1
-	dstate.s.add_uniform_float("min_alpha", DEF_CITY_MIN_ALPHA); // reset back to default after drawing fire hydrant and substation models
+	
+	if (!shadow_only) { // unshadowed objects
+		draw_objects(hcaps,    hcap_groups,    dstate, 0.12, shadow_only, 0); // dist_scale=0.12
+		draw_objects(manholes, manhole_groups, dstate, 0.07, shadow_only, 1); // dist_scale=0.07, has_immediate_draw=1
+		draw_objects(pigeons,  pigeon_groups,  dstate, 0.03, shadow_only, 1); // dist_scale=0.10, has_immediate_draw=1
+		draw_objects(birds,    bird_groups,    dstate, 0.03, shadow_only, 1); // dist_scale=0.10, has_immediate_draw=1
+	}
+	dstate.s.add_uniform_float("min_alpha", DEF_CITY_MIN_ALPHA); // reset back to default after drawing 3D models such as fire hydrants and substations
 	
 	for (dstate.pass_ix = 0; dstate.pass_ix < 2; ++dstate.pass_ix) { // {cube/city, cylinder/residential}
 		bool const is_cylin(dstate.pass_ix > 0);
@@ -1234,7 +1245,7 @@ bool city_obj_placer_t::proc_sphere_coll(point &pos, point const &p_last, vector
 	if (proc_vector_sphere_coll(stopsigns, stopsign_groups, pos, p_last, radius, xlate, cnorm)) return 1;
 	if (proc_vector_sphere_coll(flags,     flag_groups,     pos, p_last, radius, xlate, cnorm)) return 1;
 	if (proc_vector_sphere_coll(newsracks, nrack_groups,    pos, p_last, radius, xlate, cnorm)) return 1;
-	// Note: no coll with tree_planters because the tree coll should take care of it; no coll with hcaps, manholes, pool decks, or pigeons
+	// Note: no coll with tree_planters because the tree coll should take care of it; no coll with hcaps, manholes, pool decks, pigeons, or birds
 	return 0;
 }
 
@@ -1261,7 +1272,7 @@ bool city_obj_placer_t::line_intersect(point const &p1, point const &p2, float &
 	check_vector_line_intersect(stopsigns, stopsign_groups, p1, p2, t, ret);
 	check_vector_line_intersect(flags,     flag_groups,     p1, p2, t, ret);
 	check_vector_line_intersect(newsracks, nrack_groups,    p1, p2, t, ret);
-	// Note: nothing to do for parking lots, tree_planters, hcaps, manholes, pool decks, or pigeons; mboxes are ignored because they're not simple shapes
+	// Note: nothing to do for parking lots, tree_planters, hcaps, manholes, pool decks, pigeons, or birds; mboxes are ignored because they're not simple shapes
 	return ret;
 }
 
@@ -1340,7 +1351,7 @@ bool city_obj_placer_t::get_color_at_xy(point const &pos, colorRGBA &color, bool
 	}
 	if (check_city_obj_bcube_pt_xy_contain(sstation_groups, sstations, pos, obj_ix)) {color = colorRGBA(0.6, 0.8, 0.4, 1.0); return 1;} // light olive
 	if (check_city_obj_bcube_pt_xy_contain(trashcan_groups, trashcans, pos, obj_ix)) {color = colorRGBA(0.8, 0.6, 0.3, 1.0); return 1;} // tan
-	// Note: ppoles, hcaps, manholes, mboxes, signs, stopsigns, flags, and pigeons are skipped for now
+	// Note: ppoles, hcaps, manholes, mboxes, signs, stopsigns, flags, pigeons, and birds are skipped for now
 	return 0;
 }
 

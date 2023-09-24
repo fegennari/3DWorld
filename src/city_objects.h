@@ -187,12 +187,28 @@ struct mailbox_t : public oriented_city_obj_t {
 	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const;
 };
 
-struct pigeon_t : public city_obj_t {
+struct city_bird_base_t : public city_obj_t {
 	vector3d dir;
 
-	pigeon_t(point const &pos_, float height, vector3d const &dir_);
+	city_bird_base_t(point const &pos_, float height, vector3d const &dir, unsigned model_id);
+};
+
+struct pigeon_t : public city_bird_base_t {
+	pigeon_t(point const &pos_, float height, vector3d const &dir_) : city_bird_base_t(pos_, height, dir_, OBJ_MODEL_PIGEON) {}
 	static void pre_draw(draw_state_t &dstate, bool shadow_only) {} // nothing to do
 	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const;
+};
+
+struct city_bird_t : public city_bird_base_t {
+	uint8_t state=0;
+	float anim_time=0.0;
+	vector3d velocity;
+	point dest;
+
+	city_bird_t(point const &pos_, float height, vector3d const &init_dir);
+	static void pre_draw(draw_state_t &dstate, bool shadow_only) {} // nothing to do
+	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const;
+	void next_frame(float timestep);
 };
 
 struct sign_t : public oriented_city_obj_t {
@@ -244,8 +260,10 @@ struct newsrack_t : public oriented_city_obj_t {
 };
 
 class city_obj_groups_t : public vector<cube_with_ix_t> {
-	map<uint64_t, vector<unsigned> > by_tile;
+	map<uint64_t, vector<unsigned>> by_tile;
 public:
+	void clear() {vector<cube_with_ix_t>::clear(); by_tile.clear();}
+	void insert_obj_ix(cube_t const &c, unsigned ix);
 	template<typename T> void add_obj(T const &obj, vector<T> &objs);
 	template<typename T> void create_groups(vector<T> &objs, cube_t &all_objs_bcube);
 };
@@ -268,13 +286,14 @@ private:
 	vector<manhole_t> manholes;
 	vector<mailbox_t> mboxes;
 	vector<pigeon_t> pigeons;
+	vector<city_bird_t> birds;
 	vector<sign_t> signs;
 	vector<stopsign_t> stopsigns;
 	vector<city_flag_t> flags;
 	vector<newsrack_t> newsracks;
 	// index is last obj in group
 	city_obj_groups_t bench_groups, planter_groups, trashcan_groups, fhydrant_groups, sstation_groups, divider_groups, pool_groups, pdeck_groups,
-		ppole_groups, hcap_groups, manhole_groups, mbox_groups, pigeon_groups, sign_groups, stopsign_groups, flag_groups, nrack_groups;
+		ppole_groups, hcap_groups, manhole_groups, mbox_groups, pigeon_groups, bird_groups, sign_groups, stopsign_groups, flag_groups, nrack_groups;
 	vector<city_zone_t> sub_plots; // reused across calls
 	cube_t all_objs_bcube;
 	unsigned num_spaces=0, filled_spaces=0, num_x_plots=0, num_y_plots=0;
@@ -314,6 +333,7 @@ public:
 	bool get_color_at_xy(point const &pos, colorRGBA &color, bool skip_in_road) const;
 	void get_occluders(pos_dir_up const &pdu, vect_cube_t &occluders) const;
 	void move_to_not_intersect_driveway(point &pos, float radius, bool dim) const;
+	void next_frame();
 };
 
 float get_power_pole_offset();
