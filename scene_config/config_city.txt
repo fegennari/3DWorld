@@ -180,7 +180,7 @@ city ped_model ../models/people/animated/zombies/zombie_prisoner.fbx 0 0 0  0 -1
 city ped_model_add_anim ../models/people/animated/zombies/zombie_prisoner_idle_anim.fbx idle
 city ped_model ../models/people/animated/zombies/zombie_woman.fbx    0 0 0  0 -1 90  1 0.9  1.0  1.0 1
 city ped_model_add_anim ../models/people/animated/zombies/zombie_woman_idle_anim.fbx idle
-city default_anim_name "" # clear to empty string (probably unnecessary)
+city default_anim_name "" # clear to empty string
 
 # filename recalc_normals two_sided centered body_material_id fixed_color_id xy_rot swap_xyz scale lod_mult [shadow_mat_ids]
 city toilet_model ../models/interiors/toilet/toilet.model3d     1 0 0  -1 -1 0  1 1.0 1.0  0
@@ -232,7 +232,9 @@ city mailbox_model       ../models/us_mailbox/mailbox.model3d         0 0 0  -1 
 city umbrella_model      ../models/umbrella/UmbrellaOpen.model3d      0 0 0   0 -1 270  0 1.0 1.0
 city flag_model          ../models/WallFlag.model3d                   0 1 0   1 -1 270  1 1.0 1.0
 city pigeon_model        ../models/pigeon/pigeon3.model3d             0 0 0   0 -1 90   1 1.0 1.0
+city default_anim_name standing # required to enable animations
 city bird_animated_model ../models/birds/bird_animated.fbx            0 0 0   0 -1 90   1 1.0 1.0
+city default_anim_name "" # clear to empty
 
 # building animal models
 city rat_model    ../models/interiors/rat/rat.model3d           1 0 0  0 -1 90 1 1.0 1.0

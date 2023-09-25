@@ -1300,6 +1300,7 @@ public:
 	void get_occluders(vect_cube_t &occluders) const {
 		if (bcube.contains_pt_xy(camera_pdu.pos)) {city_obj_placer.get_occluders(camera_pdu, occluders);} // only add if this city contains the camera
 	}
+	bool have_animations() const {return city_obj_placer.have_animations();}
 	static void set_road_normal_map  () {select_texture(get_texture_by_name("normal_maps/dirt_normal.jpg", 1), 5);}
 	static void reset_road_normal_map() {select_texture(FLAT_NMAP_TEX, 5);}
 
@@ -2606,9 +2607,9 @@ public:
 		global_rn.get_roads_sphere_coll(pos, radius, 1, xy_only, out, out_bt);
 	}
 	bool choose_pt_in_park(point const &pos, point &park_pos, rand_gen_t &rgen) const {
-		for (auto r = road_networks.begin(); r != road_networks.end(); ++r) {
-			if (!r->get_bcube().contains_pt_xy(pos)) continue; // point not in this city
-			if (r->choose_pt_in_park(park_pos, rgen)) return 1;
+		for (road_network_t const &r : road_networks) {
+			if (!r.get_bcube().contains_pt_xy(pos))  continue; // point not in this city
+			if (r.choose_pt_in_park(park_pos, rgen)) return 1;
 		}
 		return 0;
 	}
@@ -2616,8 +2617,8 @@ public:
 	bool tile_contains_tunnel(cube_t const &bcube) const {return global_rn.tile_contains_tunnel(bcube);}
 
 	int get_color_at_xy(point const &pos, colorRGBA &color) const {
-		for (auto r = road_networks.begin(); r != road_networks.end(); ++r) {
-			int const ret(r->get_color_at_xy(pos, color));
+		for (road_network_t const &r : road_networks) {
+			int const ret(r.get_color_at_xy(pos, color));
 			if (ret) return ret;
 		}
 		return global_rn.get_color_at_xy(pos, color);
@@ -2626,23 +2627,29 @@ public:
 		vector3d const xlate(get_camera_coord_space_xlate());
 		float const dist(p2p_dist(pos, p_last));
 
-		for (auto r = road_networks.begin(); r != road_networks.end(); ++r) {
-			if (r->proc_sphere_coll(pos, p_last, xlate, dist, radius, prev_frame_zval, cnorm)) return 1;
+		for (road_network_t const &r : road_networks) {
+			if (r.proc_sphere_coll(pos, p_last, xlate, dist, radius, prev_frame_zval, cnorm)) return 1;
 		}
 		return global_rn.proc_sphere_coll(pos, p_last, xlate, dist, radius, prev_frame_zval, cnorm); // needed for bridges and tunnels
 	}
 	bool line_intersect(point const &p1, point const &p2, float &t) const {
 		bool ret(0);
-		for (auto r = road_networks.begin(); r != road_networks.end(); ++r) {ret |= r->line_intersect(p1, p2, t);}
+		for (road_network_t const &r : road_networks) {ret |= r.line_intersect(p1, p2, t);}
 		ret |= global_rn.line_intersect(p1, p2, t); // bridges and tunnels
 		return ret;
 	}
 	void add_city_lights(vector3d const &xlate, cube_t &lights_bcube) const {
 		global_rn.add_city_lights(xlate, lights_bcube); // no streetlights, but may need to add lights for bridges and tunnels
-		for (auto r = road_networks.begin(); r != road_networks.end(); ++r) {r->add_city_lights(xlate, lights_bcube);}
+		for (road_network_t const &r : road_networks) {r.add_city_lights(xlate, lights_bcube);}
 	}
 	void get_occluders(vect_cube_t &occluders) const {
-		for (auto r = road_networks.begin(); r != road_networks.end(); ++r) {r->get_occluders(occluders);}
+		for (road_network_t const &r : road_networks) {r.get_occluders(occluders);}
+	}
+	bool have_animations() const {
+		for (road_network_t const &r : road_networks) {
+			if (r.have_animations()) return 1;
+		}
+		return global_rn.have_animations();
 	}
 	void draw(int trans_op_mask, vector3d const &xlate, bool use_dlights, bool shadow_only) { // non-const because dstate/qbd is modified
 		if (road_networks.empty() && global_rn.empty()) return;
@@ -2657,6 +2664,7 @@ public:
 				dstate.set_enable_normal_map(1);
 				select_texture(FLAT_NMAP_TEX, 5); // set flat normal map texture as the default
 			}
+			if (have_animations()) {enable_animations_for_shader(dstate.s);}
 			dstate.pre_draw(xlate, use_dlights, shadow_only, 1); // always_setup_shader=1
 			assert(dstate.s.is_setup());
 			for (auto r = road_networks.begin(); r != road_networks.end(); ++r) {r->draw(dstate, shadow_only, 0);}
@@ -2682,7 +2690,7 @@ public:
 		if (!animate2) return;
 		//timer_t timer("Update Stoplights");
 		//for (auto r = road_networks.begin(); r != road_networks.end(); ++r) {cout << r->get_traffic_density() << " ";} cout << endl;
-		for (auto r = road_networks.begin(); r != road_networks.end(); ++r) {r->next_frame();}
+		for (road_network_t &r : road_networks) {r.next_frame();}
 		global_rn.next_frame(); // not needed since there are no 3/4-way intersections/stoplights?
 	}
 	void register_car_at_city(unsigned city_id) const {get_city(city_id).register_car();} // Note: must be const

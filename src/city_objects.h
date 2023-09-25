@@ -205,8 +205,9 @@ struct city_bird_t : public city_bird_base_t {
 	vector3d velocity;
 	point dest;
 
-	city_bird_t(point const &pos_, float height, vector3d const &init_dir);
-	static void pre_draw(draw_state_t &dstate, bool shadow_only) {} // nothing to do
+	city_bird_t(point const &pos_, float height, vector3d const &init_dir, rand_gen_t &rgen);
+	static void pre_draw (draw_state_t &dstate, bool shadow_only) {} // nothing to do
+	static void post_draw(draw_state_t &dstate, bool shadow_only);
 	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const;
 	void next_frame(float timestep, bool &tile_changed, rand_gen_t &rgen);
 	bool dest_valid() const {return (dest != zero_vector);}
@@ -338,6 +339,7 @@ private:
 	void connect_power_to_buildings(vector<road_plot_t> const &plots);
 public:
 	bool has_plot_dividers() const {return !dividers.empty();}
+	bool have_animations  () const {return !birds   .empty();} // only birds are animated
 	vector<power_pole_t> const &get_power_poles() const {return ppoles;} // used for city connectivity
 	void clear();
 	void set_plot_subdiv_sz(float sz) {plot_subdiv_sz = sz;}

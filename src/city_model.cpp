@@ -102,7 +102,7 @@ void city_model_loader_t::load_model_id(unsigned id) {
 		colorRGBA const def_color(WHITE); // should this be a model parameter?
 		model.tried_to_load = 1; // flag, even if load fails
 		model.model3d_id    = size(); // set before adding the model
-		bool const verbose = 1;
+		bool const verbose  = 1;
 
 		if (!load_model_file(model.fn, *this, geom_xform_t(), model.default_anim_name, def_tid, def_color, 0, 0.0, model.recalc_normals, 0, city_params.convert_model_files, verbose)) {
 			cerr << "Error: Failed to read model file '" << model.fn << "'; Skipping this model";
@@ -140,6 +140,36 @@ bool object_model_loader_t::can_skip_model(unsigned id) const {
 	if (fabs(dir.y) > 0.001) {rotate_to_plus_x(dir);} // orient facing front
 	else if (dir.x < 0.0) {fgRotate(180.0, 0.0, 0.0, 1.0);}
 }
+
+void enable_animations_for_shader(shader_t &s) {
+	if (city_params.use_animated_people && city_params.any_model_has_animations) {s.set_prefix("#define USE_BONE_ANIMATIONS", 0);} // VS
+	s.add_property("animation_shader", "pedestrian_animation.part+"); // this shader part now contains model bone animations as well
+}
+void set_anim_id(shader_t &s, bool enable_animations, int animation_id, unsigned model_anim_id, unsigned model_anim_id2, bool has_bone_animations) {
+	if (!enable_animations) return;
+
+	if (city_params.use_animated_people && has_bone_animations && animation_id == ANIM_ID_WALK) { // select bone animation rather than walking
+		animation_id = ANIM_ID_SKELETAL; // used in the shader to select skeletal animation
+		assert(model_anim_id < NUM_MODEL_ANIMS);
+		s.add_property("animation_name", animation_names[model_anim_id]);
+
+		if (model_anim_id2 != model_anim_id) { // blended animation
+			assert(model_anim_id2 < NUM_MODEL_ANIMS);
+			s.add_property("animation_name2", animation_names[model_anim_id2]);
+		}
+	}
+	s.add_uniform_int("animation_id", animation_id);
+}
+
+// walking animations used by people use animation blending and shader animation_name properties; other animations use the stored model_anim_id
+int animation_state_t::get_anim_id_for_setup_bone_transforms () const {return ((anim_id == ANIM_ID_WALK) ? -1 : model_anim_id );}
+int animation_state_t::get_anim_id2_for_setup_bone_transforms() const {return ((anim_id == ANIM_ID_WALK) ? -1 : model_anim_id2);}
+
+void animation_state_t::set_animation_id_and_time(shader_t &s, bool has_bone_animations, float anim_speed) const {
+	set_anim_id(s, enabled, anim_id, model_anim_id, model_anim_id2, has_bone_animations);
+	if (enabled && !(city_params.use_animated_people && has_bone_animations)) {s.add_uniform_float("animation_time", anim_speed*anim_time);} // only for custom animations
+}
+void animation_state_t::clear_animation_id(shader_t &s) const {set_anim_id(s, enabled, ANIM_ID_NONE, 0, 0, 0);} // has_bone_animations not needed here
 
 void city_model_loader_t::draw_model(shader_t &s, vector3d const &pos, cube_t const &obj_bcube, vector3d const &dir, colorRGBA const &color,
 	vector3d const &xlate, unsigned model_id, bool is_shadow_pass, bool low_detail, animation_state_t *anim_state, unsigned skip_mat_mask,
@@ -186,10 +216,11 @@ void city_model_loader_t::draw_model(shader_t &s, vector3d const &pos, cube_t co
 			float const speed_mult(32.0*anim_speed);
 
 			if (anim_state->blend_factor > 0.0) { // enable animation blending
-				model.setup_bone_transforms_blended(s, speed_mult*anim_state->anim_time, speed_mult*anim_state->anim_time2, anim_state->blend_factor);
+				model.setup_bone_transforms_blended(s, speed_mult*anim_state->anim_time, speed_mult*anim_state->anim_time2, anim_state->blend_factor,
+					anim_state->get_anim_id_for_setup_bone_transforms(), anim_state->get_anim_id2_for_setup_bone_transforms());
 			}
 			else { // single animation
-				model.setup_bone_transforms(s, speed_mult*anim_state->anim_time); // Note: anim_id is specified through the animation name property
+				model.setup_bone_transforms(s, speed_mult*anim_state->anim_time, anim_state->get_anim_id_for_setup_bone_transforms());
 			}
 		}
 		else {
@@ -289,6 +320,7 @@ bool city_params_t::add_model(unsigned id, FILE *fp) {
 	assert(id < NUM_OBJ_MODELS);
 	city_model_t model;
 	if (!model.read(fp)) return 0;
+	model.default_anim_name = default_anim_name; // needed for birds
 	bool const filename_valid(model.check_filename());
 	if (!filename_valid) {cerr << "Error: model file '" << model.fn << "' does not exist; skipping" << endl;} // nonfatal
 	if (filename_valid || building_models[id].empty()) {building_models[id].push_back(model);} // add if valid or the first model

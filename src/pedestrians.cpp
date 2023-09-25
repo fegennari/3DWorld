@@ -1413,32 +1413,6 @@ void ped_manager_t::next_animation() {
 	print_text_onscreen(animation_names[animation_id], WHITE, 1.5, 2*TICKS_PER_SECOND, 1);
 }
 
-void enable_animations_for_shader(shader_t &s) {
-	if (city_params.use_animated_people && city_params.any_model_has_animations) {s.set_prefix("#define USE_BONE_ANIMATIONS", 0);} // VS
-	s.add_property("animation_shader", "pedestrian_animation.part+"); // this shader part now contains model bone animations as well
-}
-void set_anim_id(shader_t &s, bool enable_animations, int animation_id, unsigned model_anim_id, unsigned model_anim_id2, bool has_bone_animations) {
-	if (!enable_animations) return;
-
-	if (city_params.use_animated_people && has_bone_animations && animation_id == 1) { // select bone animation rather than walking
-		animation_id = ANIM_ID_SKELETAL; // used in the shader to select skeletal animation
-		assert(model_anim_id < NUM_MODEL_ANIMS);
-		s.add_property("animation_name", animation_names[model_anim_id]);
-
-		if (model_anim_id2 != model_anim_id) { // blended animation
-			assert(model_anim_id2 < NUM_MODEL_ANIMS);
-			s.add_property("animation_name2", animation_names[model_anim_id2]);
-		}
-	}
-	s.add_uniform_int("animation_id", animation_id);
-}
-
-void animation_state_t::set_animation_id_and_time(shader_t &s, bool has_bone_animations, float anim_speed) const {
-	set_anim_id(s, enabled, anim_id, model_anim_id, model_anim_id2, has_bone_animations);
-	if (enabled && !(city_params.use_animated_people && has_bone_animations)) {s.add_uniform_float("animation_time", anim_speed*anim_time);} // only for custom animations
-}
-void animation_state_t::clear_animation_id(shader_t &s) const {set_anim_id(s, enabled, 0, 0, 0, 0);} // has_bone_animations not needed here
-
 void ped_manager_t::draw(vector3d const &xlate, bool use_dlights, bool shadow_only, bool is_dlight_shadows) {
 	if (peds.empty()) return;
 	if (is_dlight_shadows && !city_params.car_shadows) return; // use car_shadows as ped_shadows

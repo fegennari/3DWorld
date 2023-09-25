@@ -12,17 +12,22 @@ extern object_model_loader_t building_obj_model_loader;
 enum {BIRD_STATE_FLYING=0, BIRD_STATE_GLIDING, BIRD_STATE_LANDING, BIRD_STATE_STANDING, BIRD_STATE_TAKEOFF, NUM_BIRD_STATES};
 
 
-city_bird_t::city_bird_t(point const &pos_, float height, vector3d const &init_dir) : city_bird_base_t(pos_, height, init_dir, OBJ_MODEL_BIRD_ANIM) {
-	state = BIRD_STATE_STANDING;
+city_bird_t::city_bird_t(point const &pos_, float height, vector3d const &init_dir, rand_gen_t &rgen) : city_bird_base_t(pos_, height, init_dir, OBJ_MODEL_BIRD_ANIM) {
+	state     = BIRD_STATE_STANDING;
+	anim_time = 1.0*TICKS_PER_SECOND*rgen.rand_float(); // 1s random variation so that birds aren't all in sync
 }
 
 void city_bird_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
 	if (!dstate.check_cube_visible(bcube, dist_scale)) return;
 	// animations: 0=flying, 1=gliding, 2=landing, 3=standing, 4=takeoff
-	bool const anim_enabled(1 || animate2);
-	unsigned const anim_id(0), model_anim_id(state);
-	animation_state_t anim_state(anim_enabled, anim_id, anim_time, model_anim_id);
+	unsigned const model_anim_id(state);
+	animation_state_t anim_state(1, ANIM_ID_SKELETAL, 0.025*anim_time/TICKS_PER_SECOND, model_anim_id); // enabled=1
 	building_obj_model_loader.draw_model(dstate.s, pos, bcube, dir, WHITE, dstate.xlate, OBJ_MODEL_BIRD_ANIM, shadow_only, 0, &anim_state);
+}
+/*static*/ void city_bird_t::post_draw(draw_state_t &dstate, bool shadow_only) {
+	animation_state_t anim_state(1); // enabled=1
+	anim_state.clear_animation_id(dstate.s); // clear animations
+	model3d::bind_default_flat_normal_map();
 }
 
 void city_bird_t::next_frame(float timestep, bool &tile_changed, rand_gen_t &rgen) {
