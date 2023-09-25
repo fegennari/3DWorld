@@ -273,21 +273,12 @@ void add_cube_to_colliders_and_blockers(cube_t const &cube, vect_cube_t &blocker
 	colliders.push_back(cube);
 	blockers .push_back(cube);
 }
-
-struct bird_place_t {
-	point pos;
-	vector3d orient;
-	bool on_ground;
-
-	bird_place_t(point const &pos_, rand_gen_t &rgen  ) : pos(pos_), on_ground(1) {set_rand_orient(rgen);} // ground constructor
-	bird_place_t(point const &pos_, bool dim, bool dir) : pos(pos_), on_ground(0) {orient[dim] = (dir ? 1.0 : -1.0);} // object constructor
-	void set_rand_orient(rand_gen_t &rgen) {orient = rgen.signed_rand_vector_spherical();}
-};
-void place_bird_on_obj(cube_t const &obj, bool dim, bool dir, bool orient_dir, float spacing, rand_gen_t &rgen, vector<bird_place_t> &locs) {
-	point pos(0.0, 0.0, obj.z2());
-	pos[ dim] = obj.d[dim][dir];
-	pos[!dim] = rgen.rand_uniform(obj.d[!dim][0]+spacing, obj.d[!dim][1]-spacing); // random position along the edge
-	locs.emplace_back(pos, dim, orient_dir);
+vect_bird_place_t *select_bird_loc_dest(bool add_pigeons, bool add_birds, vect_bird_place_t &pigeon_locs, vect_bird_place_t &bird_locs, rand_gen_t &rgen) {
+	if (!add_pigeons && !add_birds) return nullptr; // error?
+	if (!add_pigeons) return &bird_locs; // always a bird
+	if (rgen.rand_float() < 0.25) return &pigeon_locs; // add pigeon 25% of the time
+	if (add_birds) return &bird_locs;
+	return nullptr;
 }
 
 // Note: blockers are used for placement of objects within this plot; colliders are used for pedestrian AI
@@ -520,38 +511,46 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 			colliders.push_back(pole); // only the pole itself is a collider
 		}
 	}
-	// place pigeons
-	if (!is_residential && building_obj_model_loader.is_model_valid(OBJ_MODEL_PIGEON)) {
-		float const base_height(0.06*car_length), place_radius(4.0*base_height), obj_edge_spacing(0.25*base_height);
+	bool const add_pigeons(!is_residential && building_obj_model_loader.is_model_valid(OBJ_MODEL_PIGEON));
+	bool const add_birds(building_obj_model_loader.is_model_valid(OBJ_MODEL_BIRD_ANIM));
 
-		if (min(plot.dx(), plot.dy()) > 8.0*place_radius) { // plot large enough; should always get here
-			vector<bird_place_t> pigeon_locs;
+	if (add_pigeons || add_birds) {
+		unsigned const bird_locs_start(bird_locs.size());
+		float const base_height(min(0.06f*car_length, 0.03f*min(plot.dx(), plot.dy()))), place_radius(4.0*base_height), obj_edge_spacing(0.25*base_height);
+		// find all bird placements
+		vect_bird_place_t pigeon_locs;
+
+		// maybe place on benches, trashcans, and substations
+		for (auto i = benches.begin()+benches_start; i != benches.end(); ++i) {
+			if (i->bcube.get_sz_dim(!i->dim) <= 2.0*obj_edge_spacing) continue;
+			vect_bird_place_t *const dest(select_bird_loc_dest(add_pigeons, add_birds, pigeon_locs, bird_locs, rgen));
+			if (dest == nullptr) continue;
+			cube_t top_place(i->bcube);
+			top_place.expand_in_dim(!i->dim,  0.1*i->bcube.get_sz_dim(!i->dim)); // expand the back outward a bit
+			top_place.expand_in_dim( i->dim, -0.1*i->bcube.get_sz_dim( i->dim)); // shrink a bit to account for the arms extending further to the sides than the back
+			dest->add_placement(top_place, !i->dim, i->dir, rgen.rand_bool(), obj_edge_spacing, rgen); // random orient_dir
+		}
+		for (auto i = trashcans.begin()+trashcans_start; i != trashcans.end(); ++i) {
+			if (min(i->bcube.dx(), i->bcube.dy()) <= 2.0*obj_edge_spacing) continue;
+			vect_bird_place_t *const dest(select_bird_loc_dest(add_pigeons, add_birds, pigeon_locs, bird_locs, rgen));
+			if (dest == nullptr) continue;
+			cube_t top_place(i->bcube);
+			top_place.expand_by_xy(-1.5*obj_edge_spacing); // small shrink
+			dest->add_placement_rand_dim_dir(top_place, obj_edge_spacing, rgen); // facing outward on a random side of the rim
+		}
+		for (auto i = sstations.begin()+substations_start; i != sstations.end(); ++i) {
+			vect_bird_place_t *const dest(select_bird_loc_dest(add_pigeons, add_birds, pigeon_locs, bird_locs, rgen));
+			if (dest != nullptr) {dest->add_placement_top_center(i->bcube, rgen);}
+		}
+		if (add_birds) { // but not pigeons
+			// TODO: include houses, power poles, power lines, etc.
+		}
+		// place pigeons
+		if (add_pigeons) {
 			// place some random pigeons; use place_radius because pigeon radius hasn't been calculated yet
 			unsigned const count_mod(plot.is_park ? 9 : 5), num_pigeons(rgen.rand() % count_mod); // 0-4, 0-8 for parks
 			for (unsigned n = 0; n < num_pigeons; ++n) {pigeon_locs.emplace_back(rand_xy_pt_in_cube(plot, place_radius, rgen), rgen);}
 
-			// maybe place on benches, trashcans, and substations
-			for (auto i = benches.begin()+benches_start; i != benches.end(); ++i) {
-				if (i->bcube.get_sz_dim(!i->dim) <= 2.0*obj_edge_spacing) continue;
-				if (rgen.rand_float() > 0.25) continue; // place 25% of the time
-				cube_t top_place(i->bcube);
-				top_place.expand_in_dim(!i->dim,  0.1*i->bcube.get_sz_dim(!i->dim)); // expand the back outward a bit
-				top_place.expand_in_dim( i->dim, -0.1*i->bcube.get_sz_dim( i->dim)); // shrink a bit to account for the arms extending further to the sides than the back
-				place_bird_on_obj(top_place, !i->dim, i->dir, rgen.rand_bool(), obj_edge_spacing, rgen, pigeon_locs); // random orient_dir
-			}
-			for (auto i = trashcans.begin()+trashcans_start; i != trashcans.end(); ++i) {
-				if (min(i->bcube.dx(), i->bcube.dy()) <= 2.0*obj_edge_spacing) continue;
-				if (rgen.rand_float() > 0.25) continue; // place 25% of the time
-				cube_t top_place(i->bcube);
-				top_place.expand_by_xy(-1.5*obj_edge_spacing); // small shrink
-				bool const dim(rgen.rand_bool()), dir(rgen.rand_bool()); // use a random side of the rim
-				place_bird_on_obj(top_place, dim, dir, dir, obj_edge_spacing, rgen, pigeon_locs); // facing outward
-			}
-			for (auto i = sstations.begin()+substations_start; i != sstations.end(); ++i) {
-				if (rgen.rand_float() > 0.25) continue; // place 25% of the time
-				bool const dim(rgen.rand_bool()), dir(rgen.rand_bool()); // random orient
-				pigeon_locs.emplace_back(cube_top_center(i->bcube), dim, dir); // top center
-			}
 			for (unsigned i = 0; i < pigeon_locs.size(); ++i) {
 				bird_place_t p(pigeon_locs[i]);
 				float const height(base_height*rgen.rand_uniform(0.8, 1.2));
@@ -579,9 +578,21 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 				}
 			} // for i
 		}
-	}
-	if (building_obj_model_loader.is_model_valid(OBJ_MODEL_BIRD_ANIM)) {
-		// TODO: place birds on the same objects as pigeons, plus houses, power lines, etc.
+		// place initial birds
+		if (add_birds) {
+			unsigned const num_locs(bird_locs.size() - bird_locs_start), num_place(min(10U, num_locs/4U)), num_tries(2*num_place); // 2 tries on average per bird
+			unsigned num_added(0);
+
+			for (unsigned n = 0; n < num_tries; ++n) {
+				bird_place_t &p(bird_locs[bird_locs_start + rgen.rand()%num_locs]);
+				if (p.in_use) continue;
+				float const height(base_height*rgen.rand_uniform(0.8, 1.2));
+				bird_groups.add_obj(city_bird_t(p.pos, height, p.orient), birds);
+				p.in_use = 1;
+				++num_added;
+				if (num_added == num_place) break; // done
+			} // for n
+		}
 	}
 }
 

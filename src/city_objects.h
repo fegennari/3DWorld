@@ -201,14 +201,16 @@ struct pigeon_t : public city_bird_base_t {
 
 struct city_bird_t : public city_bird_base_t {
 	uint8_t state=0;
-	float anim_time=0.0;
+	float anim_time=0.0, takeoff_time=0.0;
 	vector3d velocity;
 	point dest;
 
 	city_bird_t(point const &pos_, float height, vector3d const &init_dir);
 	static void pre_draw(draw_state_t &dstate, bool shadow_only) {} // nothing to do
 	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const;
-	void next_frame(float timestep);
+	void next_frame(float timestep, bool &tile_changed, rand_gen_t &rgen);
+	bool dest_valid() const {return (dest != zero_vector);}
+	bool is_anim_cycle_complete() const;
 };
 
 struct sign_t : public oriented_city_obj_t {
@@ -259,6 +261,21 @@ struct newsrack_t : public oriented_city_obj_t {
 	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const;
 };
 
+struct bird_place_t {
+	point pos;
+	vector3d orient;
+	bool on_ground=0, in_use=0;
+
+	bird_place_t(point const &pos_, rand_gen_t &rgen  ) : pos(pos_), on_ground(1) {set_rand_orient(rgen);} // ground constructor
+	bird_place_t(point const &pos_, bool dim, bool dir) : pos(pos_), on_ground(0) {orient[dim] = (dir ? 1.0 : -1.0);} // object constructor
+	void set_rand_orient(rand_gen_t &rgen) {orient = rgen.signed_rand_vector_spherical();}
+};
+struct vect_bird_place_t : public vector<bird_place_t> {
+	void add_placement(cube_t const &obj, bool dim, bool dir, bool orient_dir, float spacing, rand_gen_t &rgen);
+	void add_placement_rand_dim_dir(cube_t const &obj, float spacing, rand_gen_t &rgen);
+	void add_placement_top_center(cube_t const &obj, rand_gen_t &rgen);
+};
+
 class city_obj_groups_t : public vector<cube_with_ix_t> {
 	map<uint64_t, vector<unsigned>> by_tile;
 public:
@@ -296,6 +313,8 @@ private:
 		ppole_groups, hcap_groups, manhole_groups, mbox_groups, pigeon_groups, bird_groups, sign_groups, stopsign_groups, flag_groups, nrack_groups;
 	vector<city_zone_t> sub_plots; // reused across calls
 	cube_t all_objs_bcube;
+	vect_bird_place_t bird_locs;
+	rand_gen_t bird_rgen;
 	unsigned num_spaces=0, filled_spaces=0, num_x_plots=0, num_y_plots=0;
 	float plot_subdiv_sz=0.0;
 	

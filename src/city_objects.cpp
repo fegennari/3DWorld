@@ -1214,7 +1214,7 @@ stopsign_t::stopsign_t(point const &pos_, float height, float width, bool dim_, 
 	bcube.expand_in_dim(!dim, 0.50*width); // width
 	bcube.z2() += height;
 }
-/*static*/ void stopsign_t::pre_draw (draw_state_t &dstate, bool shadow_only) {
+/*static*/ void stopsign_t::pre_draw(draw_state_t &dstate, bool shadow_only) {
 	// Note: the texture is still needed in the shadow pass as an alpha mask
 	int tid(-1);
 	if      (dstate.pass_ix == 0) {tid = get_texture_by_name("roads/stop_sign.png",     0, 0, 0);} // wrap_mir=0
