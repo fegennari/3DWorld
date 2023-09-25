@@ -33,8 +33,9 @@ void city_params_t::init_kw_maps() {
 	kwmr.add("road_spacing_rand",   road_spacing_rand,   FP_CHECK_NONNEG);
 	kwmr.add("road_spacing_xy_add", road_spacing_xy_add, FP_CHECK_NONNEG);
 	kwmr.add("conn_road_seg_len",   conn_road_seg_len,   FP_CHECK_POS);
-	kwmr.add("max_road_slope",  max_road_slope,  FP_CHECK_POS);
-	kwmr.add("max_track_slope", max_track_slope, FP_CHECK_POS);
+	kwmr.add("max_road_slope",   max_road_slope,   FP_CHECK_POS);
+	kwmr.add("max_track_slope",  max_track_slope,  FP_CHECK_POS);
+	kwmr.add("model_anim_scale", model_anim_scale, FP_CHECK_POS);
 	kwmr.add("residential_probability", residential_probability, FP_CHECK_01);
 	// cars
 	kwmu.add("num_cars", num_cars);

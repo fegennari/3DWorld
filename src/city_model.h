@@ -33,7 +33,7 @@ struct city_model_t {
 	int body_mat_id=-1, fixed_color_id=-1, recalc_normals=1, centered=0; // recalc_normals: 0=no, 1=yes, 2=face_weight_avg
 	int blade_mat_id=-1; // for helicopters
 	int model3d_id=-1; // index into model3ds vector; -1 is not set
-	float xy_rot=0.0, lod_mult=1.0, scale=1.0, anim_speed=1.0; // xy_rot in degrees
+	float xy_rot=0.0, lod_mult=1.0, scale=1.0, model_anim_scale=1.0, anim_speed=1.0; // xy_rot in degrees
 	point rotate_about;
 	colorRGBA custom_color;
 	string default_anim_name;

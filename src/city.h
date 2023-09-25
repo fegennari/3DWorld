@@ -54,7 +54,8 @@ inline float signed_rand_hash(float to_hash) {return 0.5*(rand_hash(to_hash) - 1
 struct city_params_t {
 
 	unsigned num_cities=0, num_samples=100, num_conn_tries=50, city_size_min=0, city_size_max=0, city_border=0, road_border=0, slope_width=0, num_rr_tracks=0, park_rate=0;
-	float road_width=0.0, road_spacing=0.0, road_spacing_rand=0.0, road_spacing_xy_add=0.0, conn_road_seg_len=1000.0, max_road_slope=1.0, max_track_slope=1.0, residential_probability=0.0;
+	float road_width=0.0, road_spacing=0.0, road_spacing_rand=0.0, road_spacing_xy_add=0.0, conn_road_seg_len=1000.0, max_road_slope=1.0, max_track_slope=1.0;
+	float residential_probability=0.0, model_anim_scale=1.0;
 	unsigned make_4_way_ints=0; // 0=all 3-way intersections; 1=allow 4-way; 2=all connector roads must have at least a 4-way on one end; 3=only 4-way (no straight roads)
 	unsigned add_tlines=2; // 0=never, 1=always, 2=only when there are no secondary buildings
 	bool assign_house_plots=0, new_city_conn_road_alg=0;

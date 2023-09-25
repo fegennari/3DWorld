@@ -181,6 +181,7 @@ void city_model_loader_t::draw_model(shader_t &s, vector3d const &pos, cube_t co
 	assert(is_valid); // must be loaded
 	city_model_t const &model_file(get_model(model_id));
 	model3d &model(get_model3d(model_id));
+	bool const is_animated(model.has_animations());
 	bool const have_body_mat(model_file.body_mat_id >= 0);
 	bool const use_custom_color   (!is_shadow_pass && have_body_mat && color.A != 0.0);
 	bool const use_custom_emissive(!is_shadow_pass && have_body_mat && emissive);
@@ -192,15 +193,14 @@ void city_model_loader_t::draw_model(shader_t &s, vector3d const &pos, cube_t co
 	if (use_custom_texture ) {orig_tid   = model.set_texture_for_material(model_file.body_mat_id, untex_tid);}
 	if (use_custom_emissive) {model.set_material_emissive_color(model_file.body_mat_id, color);} // use custom color for body material
 	model.bind_all_used_tids();
-	cube_t const &bcube(model.get_bcube());
+	cube_t const bcube(model.get_bcube() * model_file.model_anim_scale);
 	point const orig_camera_pos(camera_pdu.pos), bcube_center(bcube.get_cube_center());
 	camera_pdu.pos += bcube_center - pos - xlate; // required for distance based LOD
 	bool const camera_pdu_valid(camera_pdu.valid);
 	camera_pdu.valid = 0; // disable VFC, since we're doing custom transforms here
 	// Note: in model space, front-back=z, left-right=x, top-bot=y (for model_file.swap_yz=1)
 	float const height(model_file.swap_xz ? bcube.dx() : (model_file.swap_yz ? bcube.dy() : bcube.dz()));
-	// animated models of people don't have valid bcubes because they sometimes start in a T-pose, so use the height as the size scale since it's more likely to be accurate
-	bool const is_animated(model.has_animations());
+	// animated models don't have valid bcubes because they sometimes start in a bind pose, so use the height as the size scale since it's more likely to be accurate
 	float sz_scale(0.0);
 	if (is_animated) {sz_scale = (obj_bcube.dz() / height);} // use zsize only for scale
 	else             {sz_scale = (obj_bcube.get_size().sum() / bcube.get_size().sum());} // use average XYZ size for scale
@@ -321,6 +321,7 @@ bool city_params_t::add_model(unsigned id, FILE *fp) {
 	city_model_t model;
 	if (!model.read(fp)) return 0;
 	model.default_anim_name = default_anim_name; // needed for birds
+	model.model_anim_scale  = model_anim_scale ; // needed for birds
 	bool const filename_valid(model.check_filename());
 	if (!filename_valid) {cerr << "Error: model file '" << model.fn << "' does not exist; skipping" << endl;} // nonfatal
 	if (filename_valid || building_models[id].empty()) {building_models[id].push_back(model);} // add if valid or the first model
