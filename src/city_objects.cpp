@@ -43,16 +43,19 @@ vector3d oriented_city_obj_t::get_orient_dir() const {
 
 // benches
 
-void bench_t::calc_bcube() {
+bench_t::bench_t(point const &pos_, float radius_, bool dim_, bool dir_) : oriented_city_obj_t(pos_, radius_, dim_, dir_) {
 	bcube.set_from_point(pos);
 	bcube.expand_by(vector3d((dim ? 0.32 : 1.0), (dim ? 1.0 : 0.32), 0.0)*radius);
 	bcube.z2() += 0.85*radius; // set bench height
+	set_bsphere_from_bcube(); // calculate a more correct bsphere
 }
 /*static*/ void bench_t::pre_draw(draw_state_t &dstate, bool shadow_only) {
 	if (!shadow_only) {select_texture(FENCE_TEX);} // normal map?
 }
 void bench_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
-	if (!dstate.check_cube_visible(bcube, dist_scale)) return;
+	cube_t bcube_with_back(bcube);
+	bcube_with_back.d[!dim][dir] += (dir ? 1.0 : -1.0)*0.1*radius; // adjust slightly since the back tilts outside the bcube
+	if (!dstate.check_cube_visible(bcube_with_back, dist_scale)) return;
 
 	cube_t cubes[] = { // Note: taken from mapx/bench.txt; front-back is in X
 		cube_t(-0.4, 0.0,  -5.0,   5.0,   1.6, 5.0), // back (straight)
@@ -70,9 +73,9 @@ void bench_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scal
 	};
 	point const center(pos + dstate.xlate);
 	float const dist_val(shadow_only ? 0.0 : p2p_dist(camera_pdu.pos, center)/dstate.draw_tile_dist);
-	cube_t bc; // bench bbox
+	cube_t bc; // bench bounds
 
-	for (unsigned i = 0; i < 12; ++i) { // back still contributes to bbox
+	for (unsigned i = 0; i < 12; ++i) { // back still contributes to bounds
 		if (dir)  {swap(cubes[i].d[0][0], cubes[i].d[0][1]); cubes[i].d[0][0] *= -1.0; cubes[i].d[0][1] *= -1.0;}
 		if (!dim) {swap(cubes[i].d[0][0], cubes[i].d[1][0]); swap(cubes[i].d[0][1], cubes[i].d[1][1]);}
 		if (i == 0) {bc = cubes[i];} else {bc.union_with_cube(cubes[i]);}

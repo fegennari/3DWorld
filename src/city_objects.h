@@ -53,7 +53,7 @@ struct oriented_city_obj_t : public city_obj_t {
 };
 
 struct bench_t : public oriented_city_obj_t {
-	void calc_bcube();
+	bench_t(point const &pos_, float radius_, bool dim_, bool dir_);
 	static void pre_draw(draw_state_t &dstate, bool shadow_only);
 	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const;
 };

@@ -311,21 +311,21 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 	}
 	// place benches in parks and non-residential areas
 	if (!is_residential || plot.is_park) {
-		bench_t bench;
-		bench.radius = 0.3*car_length;
-		float const bench_spacing(max(bench.radius, get_min_obj_spacing()));
+		float const bench_radius(0.3 * car_length), bench_spacing(max(bench_radius, get_min_obj_spacing()));
 
 		for (unsigned n = 0; n < city_params.max_benches_per_plot; ++n) {
-			if (!try_place_obj(plot, blockers, rgen, bench_spacing, 0.0, 1, bench.pos)) continue; // 1 try
+			point pos;
+			if (!try_place_obj(plot, blockers, rgen, bench_spacing, 0.0, 1, pos)) continue; // 1 try
+			bool bench_dim(0), bench_dir(0);
 			float dmin(0.0);
 
 			for (unsigned dim = 0; dim < 2; ++dim) {
 				for (unsigned dir = 0; dir < 2; ++dir) {
-					float const dist(fabs(bench.pos[dim] - plot.d[dim][dir])); // find closest distance to road (plot edge) and orient bench that way
-					if (dmin == 0.0 || dist < dmin) {bench.dim = !dim; bench.dir = !dir; dmin = dist;}
+					float const dist(fabs(pos[dim] - plot.d[dim][dir])); // find closest distance to road (plot edge) and orient bench that way
+					if (dmin == 0.0 || dist < dmin) {bench_dim = !dim; bench_dir = !dir; dmin = dist;}
 				}
 			}
-			bench.calc_bcube();
+			bench_t const bench(pos, bench_radius, bench_dim, bench_dir);
 			bench_groups.add_obj(bench, benches);
 			colliders.push_back(bench.bcube);
 			blockers.back() = bench.bcube; // update blocker since bench is non-square
