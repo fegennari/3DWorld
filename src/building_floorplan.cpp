@@ -1797,7 +1797,7 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 							cube_t const &c(cand_test[d]);
 							if (!r.intersects(c)) continue; // stairs not in this room
 							if (!r.contains_cube_xy(c)) {bad_place = 1; break;} // stairs overlapping but not contained in this room
-							get_doorways_for_room(r, r.z1(), doorways); // get interior doors using thread safe function
+							get_doorways_for_room(r, r.z1(), doorways); // get interior doors on first floor of this room using thread safe function
 							
 							for (door_stack_t const &ds : doorways) {
 								point const door_center(ds.get_cube_center());

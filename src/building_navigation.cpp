@@ -1520,13 +1520,33 @@ bool building_t::place_people_if_needed(unsigned building_ix, float radius, vect
 		assert(num_floors > 0);
 		if (first_basement_room == 0 && r->z1() < ground_floor_z1) {first_basement_room = room_cands.size();}
 		unsigned const room_ix(r - interior->rooms.begin());
+		vect_door_stack_t const &doorways(get_doorways_for_room(*r, 0.0, 1)); // get interior doors; all_floors=1
 
 		for (unsigned f = 0; f < num_floors; ++f) {
 			if (r->lit_by_floor && !r->is_lit_on_floor(f)) continue; // don't place person in an unlit room; only applies if room lighting has been calculated
-			if (has_water() && r->intersects(get_water_cube()) && (r->z1() + f*window_vspacing) < interior->water_zval) continue; // don't place in a room with water on the floor
+			float const zval(r->z1() + f*window_vspacing);
+			if (has_water() && r->intersects(get_water_cube()) && zval < interior->water_zval) continue; // don't place in a room with water on the floor
+			
+			if (!r->is_hallway && !r->has_stairs_on_floor(f) && !is_room_pg_or_backrooms(*r)) { // check if this room has all locked doors
+				float const z_test(zval + 0.5*window_vspacing); // mid-floor height
+				bool any_unlocked_doors(0);
+
+				for (door_stack_t const &ds : doorways) {
+					assert(ds.first_door_ix < interior->doors.size());
+
+					for (unsigned dix = ds.first_door_ix; dix < interior->doors.size(); ++dix) {
+						door_t const &door(interior->doors[dix]);
+						if (!ds.is_same_stack(door)) break; // moved to a different stack, done
+						if (door.z1() > z_test || door.z2() < z_test) continue; // wrong floor
+						if (!door.is_closed_and_locked()) {any_unlocked_doors = 1; break;}
+					}
+					if (any_unlocked_doors) break;
+				} // for i
+				if (!any_unlocked_doors) continue; // skip
+			}
 			unsigned const num_cands(is_room_backrooms(*r) ? 4 : 1); // add 4x for backrooms since this is one room with many sub-rooms (even if multi-level?)
 			for (unsigned n = 0; n < num_cands; ++n) {room_cands.emplace_back(room_ix, f);}
-		}
+		} // for f
 	} // for r
 	for (unsigned N = 0; N < num_people && !room_cands.empty(); ++N) {
 		unsigned const max_cand_ix((N == 0 && first_basement_room > 0) ? first_basement_room : room_cands.size()); // place the first person in a non-basement room
