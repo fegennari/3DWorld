@@ -370,11 +370,13 @@ class file_reader_assimp {
 		model_anim.animations.reserve(scene->mNumAnimations);
 
 		for (unsigned a = 0; a < scene->mNumAnimations; ++a) {
-			model_anim.animations.emplace_back(anim_name);
 			aiAnimation const *const anim(scene->mAnimations[a]);
-			assert(anim);
-			cout << "Adding animation '" << anim->mName.C_Str() << "' ID " << a << " as '" << anim_name << "'" << endl; // TESTING
-			//read_missing_bones(anim, model_anim);
+			assert(anim != nullptr);
+			bool const use_anim_name(a == 0 && !anim_name.empty() && anim_name != "use_model_anim_name"); // "use_model_anim_name" is a special name
+			string const name_to_use(use_anim_name ? anim_name : string(anim->mName.C_Str()));
+			model_anim.animations.emplace_back(name_to_use);
+			cout << "Adding animation '" << anim->mName.C_Str() << "' ID " << a << " as '" << name_to_use << "'" << endl; // TESTING
+			//read_missing_bones(anim, model_anim); // okay to do, but increases the number of bones unnecessarily
 			if (anim->mTicksPerSecond) {model_anim.animations[a].ticks_per_sec = anim->mTicksPerSecond;} // defaults to 25
 			model_anim.animations[a].duration = anim->mDuration;
 		} // for a
