@@ -54,7 +54,7 @@ bench_t::bench_t(point const &pos_, float radius_, bool dim_, bool dir_) : orien
 }
 void bench_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
 	cube_t bcube_with_back(bcube);
-	bcube_with_back.d[!dim][dir] += (dir ? 1.0 : -1.0)*0.1*radius; // adjust slightly since the back tilts outside the bcube
+	bcube_with_back.d[!dim][dir] += (dir ? 1.0 : -1.0)*0.2*radius; // adjust slightly since the back tilts outside the bcube
 	if (!dstate.check_cube_visible(bcube_with_back, dist_scale)) return;
 
 	cube_t cubes[] = { // Note: taken from mapx/bench.txt; front-back is in X
