@@ -17,13 +17,13 @@ using std::string;
 unsigned const CONN_CITY_IX((1<<16)-1); // uint16_t max
 unsigned const NO_CITY_IX(CONN_CITY_IX-1); // used for cars not in any city (in house garages)
 
-enum {TID_SIDEWLAK=0, TID_STRAIGHT, TID_BEND_90, TID_3WAY,   TID_4WAY,   TID_PARK_LOT,  TID_TRACKS,  TID_PARK,  TID_DRIVEWAY,  /*none for bldg*/ NUM_RD_TIDS };
-enum {TYPE_PLOT   =0, TYPE_RSEG,    TYPE_ISEC2,  TYPE_ISEC3, TYPE_ISEC4, TYPE_PARK_LOT, TYPE_TRACKS, TYPE_PARK, TYPE_DRIVEWAY, TYPE_BUILDING,    NUM_RD_TYPES};
+enum {TID_SIDEWLAK=0, TID_STRAIGHT, TID_BEND_90, TID_3WAY,   TID_4WAY,   TID_PARK_LOT,  TID_TRACKS,  TID_PARK,  TID_DRIVEWAY,  TID_ROAD_SKIRT, /*none for bldg*/ NUM_RD_TIDS };
+enum {TYPE_PLOT   =0, TYPE_RSEG,    TYPE_ISEC2,  TYPE_ISEC3, TYPE_ISEC4, TYPE_PARK_LOT, TYPE_TRACKS, TYPE_PARK, TYPE_DRIVEWAY, TYPE_ROAD_SKIRT, TYPE_BUILDING,   NUM_RD_TYPES};
 enum {TURN_NONE=0, TURN_LEFT, TURN_RIGHT, TURN_UNSPEC};
 enum {INT_NONE=0, INT_ROAD, INT_PLOT, INT_PARKING, INT_PARK, INT_TRACK};
 enum {RTYPE_ROAD=0, RTYPE_TRACKS};
 unsigned const CONN_TYPE_NONE = 0;
-colorRGBA const road_colors[NUM_RD_TYPES] = {WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, LT_GRAY, LT_GRAY, WHITE}; // all white except for parks and driveways
+colorRGBA const road_colors[NUM_RD_TYPES] = {WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, LT_GRAY, LT_GRAY, GRAY, WHITE}; // white except for parks, driveways, and skirts
 
 int       const FORCE_MODEL_ID = -1; // -1 disables
 unsigned  const NUM_CAR_COLORS = 10;
@@ -259,8 +259,8 @@ struct road_t : public cube_t {
 	road_t(cube_t const &c, bool dim_, bool slope_=0, unsigned road_ix_=0) : cube_t(c), road_ix(road_ix_), dim(dim_), slope(slope_) {}
 	road_t(point const &s, point const &e, float width, bool dim_, bool slope_=0, unsigned road_ix_=0);
 	road_t() : road_ix(0), dim(0), slope(0) {} // only used for name generation for city connector roads
-	float get_length   () const {return (d[ dim][1] - d[ dim][0]);}
-	float get_width    () const {return (d[!dim][1] - d[!dim][0]);}
+	float get_length   () const {return get_sz_dim( dim);}
+	float get_width    () const {return get_sz_dim(!dim);}
 	float get_slope_val() const {return dz()/get_length();}
 	float get_start_z  () const {return (slope ? z2() : z1());}
 	float get_end_z    () const {return (slope ? z1() : z2());}
@@ -268,7 +268,7 @@ struct road_t : public cube_t {
 	tex_range_t get_tex_range(float ar) const {return tex_range_t(0.0, 0.0, -ar, (dim ? -1.0 : 1.0), 0, dim);}
 	cube_t const &get_bcube() const {return *this;}
 	cube_t       &get_bcube()       {return *this;}
-	void add_road_quad(quad_batch_draw &qbd, colorRGBA const &color, float ar) const;
+	void add_road_quad(quad_batch_draw &qbd, colorRGBA const &color, float ar, bool add_skirt=0) const;
 	string get_name(unsigned city_ix) const;
 };
 
@@ -610,11 +610,12 @@ public:
 	virtual void draw_unshadowed();
 	virtual void post_draw();
 	void end_cur_tile();
-	template<typename T> void add_city_quad(T const &r, quad_batch_draw &qbd, colorRGBA const &color, unsigned type_ix, bool) {add_flat_city_quad(r, qbd, color, ar);} // generic flat road case
-	void add_city_quad(road_seg_t  const &r, quad_batch_draw &qbd, colorRGBA const &color, unsigned type_ix, bool) {r.add_road_quad(qbd, color, ar);} // road segment
-	void add_city_quad(road_t      const &r, quad_batch_draw &qbd, colorRGBA const &color, unsigned type_ix, bool) {r.add_road_quad(qbd, color, ar/TRACKS_WIDTH);} // tracks
-	void add_city_quad(road_plot_t const &r, quad_batch_draw &qbd, colorRGBA const &color, unsigned type_ix, bool draw_all) { // plots and parks
-		if (draw_all || (type_ix == TYPE_PARK) == r.is_park) {add_flat_city_quad(r, qbd, color, ar);}
+	void add_city_quad(road_seg_t  const &r, quad_batch_draw &qbd, colorRGBA const &color, unsigned type_ix, bool);
+	void add_city_quad(road_t      const &r, quad_batch_draw &qbd, colorRGBA const &color, unsigned type_ix, bool);
+	void add_city_quad(road_plot_t const &r, quad_batch_draw &qbd, colorRGBA const &color, unsigned type_ix, bool draw_all);
+
+	template<typename T> void add_city_quad(T const &r, quad_batch_draw &qbd, colorRGBA const &color, unsigned type_ix, bool) { // generic flat road case
+		add_flat_city_quad(r, qbd, color, ar);
 	}
 	template<typename T> void draw_city_region(vector<T> const &v, range_pair_t const &rp, quad_batch_draw &cache, unsigned type_ix, bool draw_all=0) {
 		if (rp.s == rp.e) return; // empty

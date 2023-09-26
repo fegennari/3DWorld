@@ -75,9 +75,9 @@ string road_t::get_name(unsigned city_ix) const {return road_name_gen.gen_name(*
 void road_mat_mgr_t::ensure_road_textures() {
 	if (inited) return;
 	string const img_names[NUM_RD_TIDS] = {"sidewalk.jpg", "straight_road.jpg", "bend_90.jpg", "int_3_way.jpg", "int_4_way.jpg",
-		                                   "parking_lot.png", "rail_tracks.jpg", "grass_park.jpg", "concrete.jpg"};
-	float const aniso   [NUM_RD_TIDS] = {4.0, 16.0, 8.0, 8.0, 8.0, 4.0, 16.0};
-	int   const wrap_mir[NUM_RD_TIDS] = {1, 1, 0, 0, 0, 1, 1, 1, 1}; // bend and intersections are clamped, and the others are wrapped
+		                                   "parking_lot.png", "rail_tracks.jpg", "grass_park.jpg", "concrete.jpg", "asphalt.jpg"};
+	float const aniso   [NUM_RD_TIDS] = {4.0, 16.0, 8.0, 8.0, 8.0, 4.0, 16.0, 16.0};
+	int   const wrap_mir[NUM_RD_TIDS] = {1, 1, 0, 0, 0, 1, 1, 1, 1, 1}; // bend and intersections are clamped, and the others are wrapped
 	for (unsigned i = 0; i < NUM_RD_TIDS; ++i) {tids[i] = get_texture_by_name(("roads/" + img_names[i]), 0, 0, wrap_mir[i], aniso[i]);}
 	sl_tid = get_texture_by_name("roads/traffic_light.png");
 	inited = 1;
@@ -93,6 +93,12 @@ void road_mat_mgr_t::set_stoplight_texture() {
 	select_texture(sl_tid);
 }
 
+tex_range_t get_uniform_tscale_ar(float length, float width, float base_tscale, bool dim) { // for driveways and road skirts
+	float txy[2] = {base_tscale, base_tscale};
+	txy[dim] *= length/width; // ensure 1:1 texture scale
+	return tex_range_t(0.0, 0.0, txy[0], txy[1], 0, 0); // since the asphalt driveway texture isn't directional, we don't need to worry about swap_xy
+}
+
 road_t::road_t(point const &s, point const &e, float width, bool dim_, bool slope_, unsigned road_ix_) : road_ix(road_ix_), dim(dim_), slope(slope_) {
 	assert(s != e);
 	assert(width > 0.0);
@@ -101,13 +107,37 @@ road_t::road_t(point const &s, point const &e, float width, bool dim_, bool slop
 	set_from_points(pts, 4);
 }
 
-void road_t::add_road_quad(quad_batch_draw &qbd, colorRGBA const &color, float ar) const { // specialized here for sloped roads (road segments and railroad tracks)
-	if (z1() == z2()) {add_flat_city_quad(*this, qbd, color, ar); return;}
+// specialized here for sloped roads (road segments and railroad tracks)
+void road_t::add_road_quad(quad_batch_draw &qbd, colorRGBA const &color, float ar, bool add_skirt) const {
+	if (z1() == z2()) {
+		if (!add_skirt) {add_flat_city_quad(*this, qbd, color, ar);} // no skirt for flat roads
+		return;
+	}
 	bool const s(slope ^ dim);
 	point pts[4] = {point(x1(), y1(), d[2][!s]), point(x2(), y1(), d[2][!s]), point(x2(), y2(), d[2][s]), point(x1(), y2(), d[2][s])};
 	if (!dim) {swap(pts[0].z, pts[2].z);}
-	vector3d const normal(cross_product((pts[2] - pts[1]), (pts[0] - pts[1])).get_norm());
-	qbd.add_quad_pts(pts, color, normal, get_tex_range(ar));
+
+	if (add_skirt) {
+		float const road_length(get_length()), skirt_width(0.2*get_width()), skirt_height(1.0*skirt_width);
+
+		for (unsigned d = 0; d < 2; ++d) { // each side
+			point skirt[4];
+			if (dim) {skirt[0] = skirt[3] = pts[d ? 1 : 0]; skirt[1] = skirt[2] = pts[d ? 2 : 3];} // y
+			else     {skirt[0] = skirt[3] = pts[d ? 2 : 0]; skirt[1] = skirt[2] = pts[d ? 3 : 1];} // x
+
+			for (unsigned e = 0; e < 2; ++e) {
+				skirt[e+2][!dim] += (d ? 1.0 : -1.0)*skirt_width; // expand outward
+				skirt[e+2].z     -= skirt_height; // move downward
+			}
+			vector3d normal(cross_product((skirt[2] - skirt[1]), (skirt[0] - skirt[1])).get_norm());
+			if (normal.z < 0.0) {reverse(skirt, skirt+4); normal.negate();} // make CCW
+			qbd.add_quad_pts(skirt, color, normal, get_uniform_tscale_ar(road_length, skirt_width, 1.0, 0));
+		} // for d
+	}
+	else { // add road quad
+		vector3d const normal(cross_product((pts[2] - pts[1]), (pts[0] - pts[1])).get_norm());
+		qbd.add_quad_pts(pts, color, normal, get_tex_range(ar));
+	}
 }
 
 
@@ -123,9 +153,7 @@ void driveway_t::mark_ped_this_frame() const {last_ped_frame = frame_counter;} /
 bool driveway_t::has_recent_ped() const {return (frame_counter <= (int)last_ped_frame+1);} // allow one frame lag so that it doesn't matter which thread updates first
 
 tex_range_t driveway_t::get_tex_range(float ar) const { // ar is unused
-	float txy[2] = {2.0, 2.0};
-	txy[dim] *= get_length()/get_width(); // ensure 1:1 texture scale
-	return tex_range_t(0.0, 0.0, txy[0], txy[1], 0, 0); // since the asphalt driveway texture isn't directional, we don't need to worry about swap_xy
+	return get_uniform_tscale_ar(get_length(), get_width(), 2.0, dim); // base_tscale=2.0
 }
 cube_t driveway_t::extend_across_road() const {
 	cube_t dw_ext(*this); // includes driveway and the road adjacent to it
@@ -1032,6 +1060,17 @@ void road_draw_state_t::end_cur_tile() {
 		text_verts.clear();
 		disable_blend();
 	}
+}
+
+void road_draw_state_t::add_city_quad(road_seg_t  const &r, quad_batch_draw &qbd, colorRGBA const &color, unsigned type_ix, bool) { // road segment or skirt
+	bool const add_skirt(type_ix == TYPE_ROAD_SKIRT);
+	r.add_road_quad(qbd, color, ar, add_skirt);
+}
+void road_draw_state_t::add_city_quad(road_t      const &r, quad_batch_draw &qbd, colorRGBA const &color, unsigned type_ix, bool) { // tracks
+	r.add_road_quad(qbd, color, ar/TRACKS_WIDTH);
+}
+void road_draw_state_t::add_city_quad(road_plot_t const &r, quad_batch_draw &qbd, colorRGBA const &color, unsigned type_ix, bool draw_all) { // plots and parks
+	if (draw_all || (type_ix == TYPE_PARK) == r.is_park) {add_flat_city_quad(r, qbd, color, ar);}
 }
 
 void road_draw_state_t::draw_bridge(bridge_t const &bridge, bool shadow_only) { // Note: called rarely, so doesn't need to be efficient

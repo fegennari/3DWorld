@@ -445,7 +445,7 @@ class road_network_t : public streetlights_t { // AKA city center
 		bool operator()(cube_t const &a, cube_t const &b) const {return (get_tile_id_for_cube(a) < get_tile_id_for_cube(b));}
 	};
 	struct tile_block_t { // collection of road parts for a given tile
-		range_pair_t ranges[NUM_RD_TYPES]; // {plot, seg, isec2, isec3, isec4, park_lot, tracks, park, driveway, building}
+		range_pair_t ranges[NUM_RD_TYPES]; // {plot, seg, isec2, isec3, isec4, park_lot, tracks, park, driveway, road_skirt, building}
 		quad_batch_draw quads[NUM_RD_TYPES];
 		cube_t bcube;
 		tile_block_t(cube_t const &bcube_) : bcube(bcube_) {}
@@ -1342,6 +1342,9 @@ public:
 					dstate.draw_city_region(segs, b->ranges[TYPE_RSEG], b->quads[TYPE_RSEG], TYPE_RSEG); // road segments
 					dstate.draw_city_region(city_obj_placer.parking_lots, b->ranges[TYPE_PARK_LOT], b->quads[TYPE_PARK_LOT], TYPE_PARK_LOT); // parking lots
 
+					if (is_connector_road) { // draw road skirts
+						dstate.draw_city_region(segs, b->ranges[TYPE_RSEG], b->quads[TYPE_ROAD_SKIRT], TYPE_ROAD_SKIRT); // same ranges as the road, but a different type
+					}
 					if (!city_obj_placer.driveways.empty()) {
 						glPolygonOffset(-1.0, -1.0); // useful for avoiding z-fighting with grassy ground under driveways
 						glEnable(GL_POLYGON_OFFSET_FILL);
