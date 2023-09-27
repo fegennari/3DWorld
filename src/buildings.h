@@ -1980,6 +1980,15 @@ template<typename T> bool has_bcube_int_no_adj(cube_t const &bcube, vector<T> co
 	for (auto c = bcubes.begin(); c != bcubes.end(); ++c) {if (c->intersects_no_adj(bcube)) return 1;}
 	return 0;
 }
+template<typename T> bool has_bcube_int_xy(cube_t const &bcube, vector<T> const &bcubes, float pad_dist=0.0) { // T must derive from cube_t
+	cube_t tc(bcube);
+	tc.expand_by_xy(pad_dist);
+
+	for (auto c = bcubes.begin(); c != bcubes.end(); ++c) {
+		if (c->intersects_xy(tc)) return 1; // intersection
+	}
+	return 0;
+}
 template<typename T> bool has_bcube_int_xy_no_adj(cube_t const &bcube, vector<T> const &bcubes) { // T must derive from cube_t
 	for (auto c = bcubes.begin(); c != bcubes.end(); ++c) {if (c->intersects_xy_no_adj(bcube)) return 1;}
 	return 0;
@@ -2043,7 +2052,6 @@ tquad_t get_ramp_tquad(room_object_t const &c);
 void gen_crate_sz(vector3d &sz, rand_gen_t &rgen, float window_vspacing);
 void get_balcony_cubes(room_object_t const &c, cube_t cubes[4]);
 void set_rand_pos_for_sz(cube_t &c, bool dim, float length, float width, rand_gen_t &rgen);
-template<typename T> bool has_bcube_int_xy(cube_t const &bcube, vector<T> const &bcubes, float pad_dist=0.0);
 bool door_opens_inward(door_base_t const &door, cube_t const &room);
 bool is_cube_close_to_door(cube_t const &c, float dmin, bool inc_open, cube_t const &door, unsigned check_dirs=2, unsigned open_dirs=2, bool allow_block_door=0);
 void add_building_interior_lights(point const &xlate, cube_t &lights_bcube);

@@ -109,6 +109,8 @@ road_t::road_t(point const &s, point const &e, float width, bool dim_, bool slop
 
 // specialized here for sloped roads (road segments and railroad tracks)
 void road_t::add_road_quad(quad_batch_draw &qbd, colorRGBA const &color, float ar, bool add_skirt) const {
+	if (add_skirt && has_bridge) return; // no skirts under bridges as this looks wrong; tunnel skirts may be unnecessary but look okay
+
 	if (z1() == z2()) {
 		if (!add_skirt) {add_flat_city_quad(*this, qbd, color, ar);} // no skirt for flat roads
 		return;

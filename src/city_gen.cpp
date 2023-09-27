@@ -266,19 +266,6 @@ template<typename T> cube_t calc_cubes_bcube(vector<T> const &cubes) {
 	return bcube;
 }
 
-template<typename T> bool has_bcube_int_xy(cube_t const &bcube, vector<T> const &bcubes, float pad_dist) { // T must derive from cube_t
-	cube_t tc(bcube);
-	tc.expand_by_xy(pad_dist);
-
-	for (auto c = bcubes.begin(); c != bcubes.end(); ++c) {
-		if (c->intersects_xy(tc)) return 1; // intersection
-	}
-	return 0;
-}
-// explicit instantiations
-template bool has_bcube_int_xy(cube_t const &bcube, vector<cube_t    > const &bcubes, float pad_dist);
-template bool has_bcube_int_xy(cube_t const &bcube, vector<elevator_t> const &bcubes, float pad_dist);
-
 point rand_xy_pt_in_cube(cube_t const &c, float radius, rand_gen_t &rgen) {
 	return point(rgen.rand_uniform(c.x1()+radius, c.x2()-radius), rgen.rand_uniform(c.y1()+radius, c.y2()-radius), c.z1());
 }
@@ -1009,10 +996,10 @@ public:
 			replay_fops.push_back(hq.last_flatten_op);
 				
 			if (!check_only) {
+				if (bridge.make_bridge) {bridges.push_back(bridge); s->has_bridge = 1;}
+				if (tunnel.enabled())   {tunnels.push_back(tunnel); s->has_tunnel = 1;}
 				roads.push_back(*s);
 				road_to_city.emplace_back(city1, city2); // Note: city index is specified even for internal (non-terminal) roads
-				if (bridge.make_bridge) {bridges.push_back(bridge);}
-				if (tunnel.enabled()) {tunnels.push_back(tunnel);}
 			}
 			last_was_bridge = bridge.make_bridge; // Note: conservative; used to prevent two consecutive bridges with no (or not enough) mesh in between
 			last_was_tunnel = tunnel.enabled(); // same thing for tunnels
@@ -1040,21 +1027,23 @@ public:
 			unsigned const num_segs(ceil(len/road_spacing));
 			float const seg_len(len/num_segs), z1(r->d[2][slope]), z2(r->d[2][!slope]); // use fixed-length segments
 			assert(seg_len <= road_spacing);
-			cube_t c(*r); // start by copying the road's bcube
+			road_t c(*r); // start by copying the road's bcube
 				
 			for (unsigned n = 0; n < num_segs; ++n) {
 				c.d[d][1] = ((n+1 == num_segs) ? r->d[d][1] : (c.d[d][0] + seg_len)); // make sure it ends exactly at the correct location
 				for (unsigned e = 0; e < 2; ++e) {c.d[2][e] = z1 + (z2 - z1)*((c.d[d][e] - r->d[d][0])/len);} // interpolate road height across segments
 				if (c.z2() < c.z1()) {swap(c.z2(), c.z1());} // swap zvals if needed
 				assert(c.is_normalized());
-				segs.emplace_back(c, rix, d, r->slope);
+				segs.emplace_back(c, rix);
+				if (c.has_bridge) {segs.back().has_bridge = has_bcube_int_xy(c, bridges);} // check if bridge overlaps this segment
+				if (c.has_tunnel) {segs.back().has_tunnel = has_bcube_int_xy(c, tunnels);} // check if tunnel overlaps this segment
 				c.d[d][0] = c.d[d][1]; // shift segment end point
 			} // for n
 		} // for r
 	}
 	void finalize_bridges_and_tunnels() {
-		for (auto b = bridges.begin(); b != bridges.end(); ++b) {b->add_streetlights();}
-		for (auto b = tunnels.begin(); b != tunnels.end(); ++b) {b->add_streetlights();}
+		for (bridge_t &b : bridges) {b.add_streetlights();}
+		for (tunnel_t &t : tunnels) {t.add_streetlights();}
 	}
 
 	void gen_tile_blocks() {

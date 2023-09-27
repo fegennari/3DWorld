@@ -251,14 +251,15 @@ template<typename T> static void add_flat_city_quad(T const &r, quad_batch_draw 
 }
 
 struct road_t : public cube_t {
-	unsigned road_ix;
+	unsigned road_ix=0;
 	//unsigned char type; // road, railroad, etc. {RTYPE_ROAD, RTYPE_TRACKS}
-	bool dim; // dim the road runs in
-	bool slope; // 0: z1 applies to first (lower) point; 1: z1 applies to second (upper) point
+	bool dim=0; // dim the road runs in
+	bool slope=0; // 0: z1 applies to first (lower) point; 1: z1 applies to second (upper) point
+	bool has_bridge=0, has_tunnel=0;
 
 	road_t(cube_t const &c, bool dim_, bool slope_=0, unsigned road_ix_=0) : cube_t(c), road_ix(road_ix_), dim(dim_), slope(slope_) {}
 	road_t(point const &s, point const &e, float width, bool dim_, bool slope_=0, unsigned road_ix_=0);
-	road_t() : road_ix(0), dim(0), slope(0) {} // only used for name generation for city connector roads
+	road_t() {} // only used for name generation for city connector roads
 	float get_length   () const {return get_sz_dim( dim);}
 	float get_width    () const {return get_sz_dim(!dim);}
 	float get_slope_val() const {return dz()/get_length();}
