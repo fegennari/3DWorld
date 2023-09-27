@@ -1149,10 +1149,10 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 	// increase floor thickness if !is_house? but then we would probably have to increase the space between floors as well, which involves changing the texture scale
 	float const window_vspacing(get_window_vspace()), floor_thickness(get_floor_thickness()), fc_thick(0.5*floor_thickness);
 	float const doorway_width(0.5*window_vspacing), wall_thickness(get_wall_thickness());
-	float ewidth(1.5*doorway_width); // for elevators
+	float min_ewidth(1.5*doorway_width), ewidth(min_ewidth); // for elevators
 	float z(part.z1());
 	cube_t stairs_cut, elevator_cut;
-	bool stairs_dim(0), add_elevator(0), stairs_have_railing(1), extended_from_above(0);
+	bool stairs_dim(0), stairs_have_railing(1), extended_from_above(0);
 	bool stairs_against_wall[2] = {0, 0};
 	stairs_shape sshape(SHAPE_STRAIGHT); // straight by default
 	bool const must_add_stairs(first_part_this_stack || (has_complex_floorplan && part == parts.back())); // first part in stack, or tallest/last part of complex building
@@ -1162,24 +1162,37 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 	// add stairwells and elevator shafts
 	if (num_floors == 1) {} // no need for stairs or elevator
 	else if (use_hallway) { // part is the hallway cube
-		add_elevator = 1;
-		if (interior->landings.empty()) {interior->landings.reserve(add_elevator ? 1 : (num_floors-1));} // lower bound
 		assert(!interior->rooms.empty());
 		room_t &room(interior->rooms.back()); // hallway is always the last room to be added
 		bool const long_dim(hall.dx() < hall.dy());
-		// U-shape if there's enough room
+		// U-shape if there's enough room in width
 		if (room.get_sz_dim(!long_dim) > 6.0*doorway_width) {sshape = SHAPE_U; ewidth *= 1.6;} // increase the width of both the stairs and elevator
 		else {sshape = SHAPE_WALLED_SIDES;} // walled sides to meet fire codes
 		cube_t stairs(hall); // start as hallway
+		// add elevator(s)
+		float const hall_len(room.get_sz_dim(long_dim));
+		unsigned const num_elevators((hall_len > 10.0*ewidth) ? 2 : 1); // two elevators if there's space
+		if (interior->landings.empty()) {interior->landings.reserve(num_elevators + (num_floors-1));} // lower bound
 
-		if (add_elevator) {
+		if (num_elevators > 0) {
 			point center(room.get_cube_center());
-			float const center_shift(0.125*room.get_sz_dim(long_dim)*(rgen.rand_bool() ? -1.0 : 1.0));
+			float const center_shift(0.125*hall_len*(rgen.rand_bool() ? -1.0 : 1.0)), ehwidth(0.5*ewidth);
 			center[long_dim] += center_shift; // make elevator off-center
 			elevator_t elevator(room, (interior->rooms.size()-1), long_dim, rgen.rand_bool(), 0); // elevator shaft
-			elevator.x1() = center.x - 0.5*ewidth; elevator.x2() = center.x + 0.5*ewidth;
-			elevator.y1() = center.y - 0.5*ewidth; elevator.y2() = center.y + 0.5*ewidth;
-			add_or_extend_elevator(elevator, 1);
+			for (unsigned d = 0; d < 2; ++d) {set_wall_width(elevator, center[d], ehwidth, d);}
+
+			if (num_elevators == 1) {add_or_extend_elevator(elevator, 1);} // single elevator
+			else { // double back-to-back elevators
+				assert(num_elevators == 2);
+				elevator.expand_in_dim(long_dim, min(0.5f*min_ewidth, ehwidth)); // increase the depth up to 2x
+
+				for (unsigned e = 0; e < 2; ++e) {
+					elevator_t E(elevator);
+					E.d[long_dim][e ^ E.dir ^ 1] = center[long_dim]; // back-to-back
+					E.dir ^= e; // facing opposite directions
+					add_or_extend_elevator(E, 1);
+				}
+			}
 			room.has_elevator = 1;
 			elevator_cut      = elevator;
 			stairs.translate_dim(long_dim, -center_shift); // shift stairs in the opposite direction
@@ -1205,13 +1218,15 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 		force_stairs_dir    = s.dir;
 		extended_from_above = 1;
 		sshape       = s.shape;
-		add_elevator = 0; // assume we can extend the existing hallway elevator downward
+		// assume we can extend the existing hallway elevator downward
 		set_cube_zvals(stairs_cut, part.z1(), part.z2());
 		room_t &room(interior->rooms.back()); // should be the last room
 		room.has_stairs = 255; // stairs on all floors
 	}
 	// only add stairs to first part of a house unless we haven't added stairs yet, or if it's the top floor of a stacked part
 	else if (!is_house || interior->stairwells.empty() || (first_part_this_stack && part.z1() > ground_floor_z1)) {
+		bool add_elevator(0);
+		
 		// sometimes add an elevator to building parts, but not the first part in a stack (to guarantee we have at least one set of stairs)
 		// it might not be possible to place an elevator a part with no interior rooms, but that should be okay, because some other part will still have stairs
 		// do we need support for multiple floor cutouts stairs + elevator in this case as well?
@@ -1913,6 +1928,7 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 			cand_test.d[e->dim][e->dir] += doorway_width*(e->dir ? 1.0 : -1.0); // add extra space in front of the elevator
 			if (!p->contains_cube_xy(cand_test)) continue; // not enough space at elevator entrance
 			bool const allow_clip_walls = 1; // optional
+			// Note: this check prevents us from extending both elevators in a back-to-back pair up or down at the same time, since they'll be too close to each other
 			if (!is_valid_stairs_elevator_placement(cand_test, doorway_width, e->dim, !allow_clip_walls)) continue; // bad placement
 			if (!check_cube_within_part_sides(cand_test))      continue; // bad placement; do we need to check for clearance?
 			if (has_bcube_int(cand_test, interior->exclusion)) continue; // bad placement
