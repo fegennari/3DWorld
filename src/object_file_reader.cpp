@@ -813,7 +813,7 @@ bool load_model_file(string const &filename, model3ds &models, geom_xform_t cons
 		if (write_file && !write_model3d_file(filename, cur_model)) return 0; // don't need to pop the model
 	}
 	else { // not a built-in supported format, try using assimp if compiled in
-		if (!read_assimp_model(filename, cur_model, xf, anim_name, recalc_normals, verbose)) return 0;
+		if (!read_assimp_model(filename, cur_model, xf, anim_name, recalc_normals, verbose)) {models.pop_back(); return 0;}
 	}
 	if (model_mat_lod_thresh > 0.0) {cur_model.compute_area_per_tri();} // used for TT LOD/distance culling
 	return 1;

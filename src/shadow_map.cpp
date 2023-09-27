@@ -389,6 +389,7 @@ void set_smap_mvm_pjm(point const &eye, point const &center, vector3d const &up_
 
 pos_dir_up get_pt_cube_frustum_pdu(point const &pos_, cube_t const &bounds) {
 
+	assert(bounds.is_strictly_normalized());
 	point const center(bounds.get_cube_center());
 	point pos(pos_);
 	
