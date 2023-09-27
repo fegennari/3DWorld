@@ -1124,9 +1124,9 @@ void add_hanging_pipe_bracket(cube_t const &pipe, float len_pos, float ceiling_z
 
 // return value: 0=failed to place, 1=placed full length, 2=placed partial length
 // Note: beams are for the top floor, even though we may be routing sprinkler pipes on a floor below
-int add_sprinkler_pipe(point const &p1, float end_val, float radius, bool dim, bool dir, vect_cube_t const &obstacles, vect_cube_t const &walls,
-	vect_cube_t const &beams, vect_cube_t const &pipe_cubes, cube_t &ramp, float ceiling_zval, unsigned room_id, float tot_light_amt,
-	vect_room_object_t &objs, colorRGBA const &pcolor, colorRGBA const &ccolor, int add_sprinklers)
+int add_sprinkler_pipe(building_t const &b, point const &p1, float end_val, float radius, bool dim, bool dir, vect_cube_t const &obstacles,
+	vect_cube_t const &walls, vect_cube_t const &beams, vect_cube_t const &pipe_cubes, cube_t &ramp, float ceiling_zval, unsigned room_id,
+	float tot_light_amt, vect_room_object_t &objs, colorRGBA const &pcolor, colorRGBA const &ccolor, int add_sprinklers)
 {
 	point p2(p1);
 	p2[dim] = end_val;
@@ -1186,6 +1186,7 @@ int add_sprinkler_pipe(point const &p1, float end_val, float radius, bool dim, b
 			s_ext.d[2][!inverted] += sprinkler_dz;
 			s.expand_by_xy(0.5*sprinkler_radius);
 			if (has_bcube_int(s_ext, obstacles) || has_bcube_int(s_ext, walls) || has_bcube_int_xy(s_ext, beams) || has_bcube_int(s_ext, pipe_cubes)) continue;
+			if (b.interior->is_blocked_by_stairs_or_elevator(s_ext)) continue; // check extra padding in front of stairs and elevators
 			objs.emplace_back(s, TYPE_SPRINKLER, room_id, 0, inverted, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CYLIN, pcolor);
 			// add the connector ring around the sprinkler, same color as the pipe
 			cube_t conn(h_pipe);
@@ -1272,7 +1273,7 @@ void building_t::add_sprinkler_pipes(vect_cube_t const &obstacles, vect_cube_t c
 			p1.z = ceiling_zval - ceil_gap - h_pipe_radius - conn_thickness;
 			unsigned const pipe_obj_ix(objs.size());
 			float const wpos(basement.d[dim][!dir]); // extend to the opposite wall
-			int const ret(add_sprinkler_pipe(p1, wpos, h_pipe_radius, dim, dir, obstacles, walls, beams, pipe_cubes,
+			int const ret(add_sprinkler_pipe(*this, p1, wpos, h_pipe_radius, dim, dir, obstacles, walls, beams, pipe_cubes,
 				interior->pg_ramp, ceiling_zval, room_id, tot_light_amt, objs, pcolor, ccolor, 0)); // sprinklers=0
 			if (ret == 0) continue; // failed to place
 			// run smaller branch lines off this pipe in the other dim; we could add the actual sprinklers to these
@@ -1290,7 +1291,7 @@ void building_t::add_sprinkler_pipes(vect_cube_t const &obstacles, vect_cube_t c
 
 				for (unsigned d = 0; d < 2; ++d) { // extend to either side of the pipe
 					float const wpos2(basement.d[!dim][!d]); // extend to the opposite wall
-					added |= add_sprinkler_pipe(p1, wpos2, conn_radius, !dim, d, obstacles, walls, beams, pipe_cubes,
+					added |= add_sprinkler_pipe(*this, p1, wpos2, conn_radius, !dim, d, obstacles, walls, beams, pipe_cubes,
 						interior->pg_ramp, ceiling_zval, room_id, tot_light_amt, objs, pcolor, ccolor, (inverted_sprinklers ? 1 : 2)); // add sprinklers
 				}
 				if (added) { // if conn was added in either dir, add a connector segment
