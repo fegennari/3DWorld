@@ -536,18 +536,19 @@ class model3d {
 
 	// read/write options
 	string filename;
-	int recalc_normals, group_cobjs_level;
+	int recalc_normals=0, group_cobjs_level=0;
 
 	// geometry
 	geometry_t<vert_norm_tc> unbound_geom;
 	base_mat_t unbound_mat;
 	vector<polygon_t> split_polygons_buffer;
 	cube_t bcube, bcube_all_xf, occlusion_cube;
-	unsigned model_refl_tid, model_refl_tsize, model_refl_last_tsize, model_indir_tid;
-	int reflective; // reflective: 0=none, 1=planar, 2=cube map
-	int indoors; // 0=no/outdoors, 1=yes/indoors, 2=unknown
-	bool from_model3d_file, has_cobjs, needs_alpha_test, needs_bump_maps, has_spec_maps, has_gloss_maps, xform_zvals_set, needs_trans_pass;
-	float metalness; // should be per-material, but not part of the material file and specified per-object instead
+	unsigned model_refl_tid=0, model_refl_tsize=0, model_refl_last_tsize=0, model_indir_tid=0;
+	int reflective=0; // reflective: 0=none, 1=planar, 2=cube map
+	int indoors=2; // 0=no/outdoors, 1=yes/indoors, 2=unknown
+	bool from_model3d_file=0, has_cobjs=0, needs_alpha_test=0, needs_bump_maps=0, has_spec_maps=0, has_gloss_maps=0, xform_zvals_set=0, needs_trans_pass=0;
+	float metalness=0.0; // should be per-material, but not part of the material file and specified per-object instead
+	float lod_scale=1.0;
 
 	// materials
 	deque<material_t> materials;
@@ -555,7 +556,7 @@ class model3d {
 	set<string> undef_materials; // to reduce warning messages
 	cobj_tree_tquads_t coll_tree;
 	colorRGBA cached_avg_color=ALPHA0; // used by get_and_cache_avg_color()
-	bool textures_loaded;
+	bool textures_loaded=0;
 
 	// transforms
 	vector<model3d_xform_t> transforms;
@@ -574,7 +575,7 @@ class model3d {
 	// lighting
 	string sky_lighting_fn;
 	unsigned sky_lighting_sz[3];
-	float sky_lighting_weight;
+	float sky_lighting_weight=0.0;
 	//lmap_manager_t local_lmap_manager;
 
 	// temporaries to be reused
@@ -586,11 +587,10 @@ public:
 	texture_manager &tmgr; // stores all textures
 	model_anim_t model_anim_data;
 
-	model3d(string const &filename_, texture_manager &tmgr_, int def_tid=-1, colorRGBA const &def_c=WHITE, int reflective_=0, float metalness_=0.0, int recalc_normals_=0, int group_cobjs_level_=0)
+	model3d(string const &filename_, texture_manager &tmgr_, int def_tid=-1, colorRGBA const &def_c=WHITE, int reflective_=0,
+		float metalness_=0.0, float lod_scale_=1.0, int recalc_normals_=0, int group_cobjs_level_=0)
 		: filename(filename_), recalc_normals(recalc_normals_), group_cobjs_level(group_cobjs_level_), unbound_mat(((def_tid >= 0) ? def_tid : WHITE_TEX), def_c),
-		bcube(all_zeros_cube), bcube_all_xf(all_zeros), occlusion_cube(all_zeros), model_refl_tid(0), model_refl_tsize(0), model_refl_last_tsize(0), model_indir_tid(0),
-		reflective(reflective_), indoors(2), from_model3d_file(0), has_cobjs(0), needs_alpha_test(0), needs_bump_maps(0), has_spec_maps(0), has_gloss_maps(0),
-		xform_zvals_set(0), needs_trans_pass(0), metalness(metalness_), textures_loaded(0), sky_lighting_weight(0.0), tmgr(tmgr_)
+		reflective(reflective_), metalness(metalness_), lod_scale(lod_scale_), tmgr(tmgr_)
 	{UNROLL_3X(sky_lighting_sz[i_] = 0;)}
 	~model3d() {clear();}
 	size_t num_materials() const {return materials.size();}
@@ -748,7 +748,7 @@ void adjust_zval_for_model_coll(point &pos, float radius, float mesh_zval, float
 void check_legal_movement_using_model_coll(point const &prev, point &cur, float radius=0.0);
 
 bool load_model_file(string const &filename, model3ds &models, geom_xform_t const &xf, string const &anim_name, int def_tid,
-	colorRGBA const &def_c, int reflective, float metalness, int recalc_normals, int group_cobjs_level, bool write_file, bool verbose);
+	colorRGBA const &def_c, int reflective, float metalness, float lod_scale, int recalc_normals, int group_cobjs_level, bool write_file, bool verbose);
 bool read_model_file(string const &filename, vector<coll_tquad> *ppts, geom_xform_t const &xf, int def_tid, colorRGBA const &def_c,
-	int reflective, float metalness, bool load_model_file, int recalc_normals, int group_cobjs_level, bool write_file, bool verbose);
+	int reflective, float metalness, float lod_scale, bool load_model_file, int recalc_normals, int group_cobjs_level, bool write_file, bool verbose);
 

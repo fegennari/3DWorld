@@ -1208,7 +1208,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 	char str[MAX_CHARS] = {0};
 	unsigned line_num(1), npoints(0), indir_dlight_ix(0), prev_light_ix_start(0);
 	int end(0), use_z(0), use_vel(0), ivals[3];
-	float fvals[3] = {}, light_rotate(0.0);
+	float fvals[3] = {}, light_rotate(0.0), model_lod_scale(1.0);
 	point pos(all_zeros);
 	vector3d tv0(zero_vector), vel(zero_vector), light_axis(zero_vector);
 	polygon_t poly;
@@ -1279,6 +1279,9 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 				}
 				else if (keyword == "damage") {
 					if (!read_float(fp, cobj.cp.damage)) {return read_error(fp, keyword, coll_obj_file);}
+				}
+				else if (keyword == "model_lod_scale") {
+					if (!read_float(fp, model_lod_scale) || model_lod_scale <= 0.0) {return read_error(fp, keyword, coll_obj_file);}
 				}
 				else if (keyword == "start_cobj_group") {cobj.cgroup_id = cobj_groups.new_group();}
 				else if (keyword == "end_cobj_group") {cobj.cgroup_id = -1;}
@@ -1457,7 +1460,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 				RESET_TIME;
 				
 				if (!read_model_file(fn, (no_cobjs ? nullptr : &ppts), xf, cobj.cp.tid, cobj.cp.color, reflective, cobj.cp.metalness,
-					use_model3d, recalc_normals, model_xf2.group_cobjs_level, (write_file != 0), 1))
+					model_lod_scale, use_model3d, recalc_normals, model_xf2.group_cobjs_level, (write_file != 0), 1))
 				{
 					//return read_error(fp, "model file data", coll_obj_file);
 					cerr << "Error reading model file data from file " << fn << "; Model will be skipped" << endl; // make it nonfatal

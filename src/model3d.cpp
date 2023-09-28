@@ -1977,7 +1977,7 @@ void model3d::render_materials(shader_t &shader, bool is_shadow_pass, int reflec
 	bool check_lod(force_lod);
 	point center(all_zeros);
 	float max_area_per_tri(0.0);
-	float const lod_thresh(1.0E6*model_mat_lod_thresh*model_lod_mult);
+	float const lod_thresh(1.0E6*model_mat_lod_thresh*model_lod_mult*lod_scale);
 
 	if ((world_mode == WMODE_INF_TERRAIN || use_model_lod_blocks) && !is_shadow_pass) { // setup LOD/distance culling
 		point pts[2] = {bcube.get_llc(), bcube.get_urc()};

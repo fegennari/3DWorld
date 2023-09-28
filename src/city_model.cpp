@@ -100,11 +100,14 @@ void city_model_loader_t::load_model_id(unsigned id) {
 		if (can_skip_model(id) || model.fn.empty()) continue;
 		int const def_tid(-1); // should this be a model parameter?
 		colorRGBA const def_color(WHITE); // should this be a model parameter?
-		model.tried_to_load = 1; // flag, even if load fails
-		model.model3d_id    = size(); // set before adding the model
-		bool const verbose  = 1;
+		model.tried_to_load   = 1; // flag, even if load fails
+		model.model3d_id      = size(); // set before adding the model
+		bool const verbose    = 1;
+		float const lod_scale = 1.0; // or use model.lod_mult directly and not use it during drawing?
 
-		if (!load_model_file(model.fn, *this, geom_xform_t(), model.default_anim_name, def_tid, def_color, 0, 0.0, model.recalc_normals, 0, city_params.convert_model_files, verbose)) {
+		if (!load_model_file(model.fn, *this, geom_xform_t(), model.default_anim_name, def_tid, def_color, 0, 0.0,
+			lod_scale, model.recalc_normals, 0, city_params.convert_model_files, verbose))
+		{
 			cerr << "Error: Failed to read model file '" << model.fn << "'; Skipping this model";
 			if (has_low_poly_model()) {cerr << " (will use default low poly model)";}
 			cerr << "." << endl;
