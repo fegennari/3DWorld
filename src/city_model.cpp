@@ -222,7 +222,7 @@ void city_model_loader_t::draw_model(shader_t &s, vector3d const &pos, cube_t co
 		anim_state->set_animation_id_and_time(s, has_bone_animations, anim_speed);
 
 		if (has_bone_animations) {
-			float const speed_mult(32.0*anim_speed);
+			float const speed_mult(SKELETAL_ANIM_TIME_CONST*anim_speed);
 
 			if (anim_state->blend_factor > 0.0) { // enable animation blending
 				model.setup_bone_transforms_blended(s, speed_mult*anim_state->anim_time, speed_mult*anim_state->anim_time2, anim_state->blend_factor,
