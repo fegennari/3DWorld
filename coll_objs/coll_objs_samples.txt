@@ -74,6 +74,8 @@ l 0.8 1.0 1.0 1.0 1.0 68 1 # 27 = cblock texture, 102 = spaceship texture, 68 = 
 #t 0 0 0  m 1.0  O ..\models\interiors\cockroach\cockroach.3ds 4 1 0
 #s 1 2  O ../models/interiors/fire_extinguisher/fire_extinguisher_co2.fbx 4 0 0
 #s 1 2  O ../models/interrogation_room/InterogationRoom.fbx 4 0 0 # textures are not working
+#M 0  s 1 2  m 0.00005  O ../models/Ferris_wheel.fbx 4 0 0
+#s 1 2  m 1.0  O ../models/pripyat_ferris_wheel/scene.gltf 4 0 0
 s 1 2  m 0.1  O ../models/birds/bird_animated.fbx 4 0 0 # animations: 0=flapping, 1=gliding, 2=flapping to idle, 3=idle, 4=idle to flapping
 
 cube_map_ref 0

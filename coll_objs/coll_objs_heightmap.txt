@@ -1,6 +1,9 @@
 # O <filename> <group_cobjs_level> <recalc_normals> <write_file>
 T 4.5 -3.8 -4.8  s 1 2  m 0.00005  O "../models/Ferris_Wheel/Ferris wheel N240616.model3d" 4 1 0
-# Note: the 3DS version of this model seems to have incorrect transforms
+#model_lod_scale 500.0 # cancel out the model_mat_lod_thresh of 0.008 in config_city.txt since it shouldn't apply to this model, then apply the tiled terrain 4.0 factor
+#M 0  T 4.5 -3.8 -4.8  s 1 2  m 0.000075  O ../models/Ferris_wheel.fbx 4 0 0
+#T 4.5 -3.8 -4.8  s 1 2  m 0.4  O ../models/pripyat_ferris_wheel/scene.gltf 4 0 0
+#model_lod_scale 1.0 # reset
 R # restore mirrors and swap
 
 #t -4.0 3.0 0.0  s 1 2  M 0  m 0.01  O ../models/museum/museumhallRD.obj 4 1 0
