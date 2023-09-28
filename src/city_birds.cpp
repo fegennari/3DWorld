@@ -20,8 +20,7 @@ city_bird_t::city_bird_t(point const &pos_, float height, vector3d const &init_d
 void city_bird_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
 	if (!dstate.check_cube_visible(bcube, dist_scale)) return;
 	// animations: 0=flying, 1=gliding, 2=landing, 3=standing, 4=takeoff
-	unsigned const model_anim_id(state);
-	animation_state_t anim_state(1, ANIM_ID_SKELETAL, 0.025*anim_time/TICKS_PER_SECOND, model_anim_id); // enabled=1
+	animation_state_t anim_state(1, ANIM_ID_SKELETAL, 0.025*anim_time/TICKS_PER_SECOND, get_model_anim_id()); // enabled=1
 	building_obj_model_loader.draw_model(dstate.s, pos, bcube, dir, WHITE, dstate.xlate, OBJ_MODEL_BIRD_ANIM, shadow_only, 0, &anim_state);
 }
 /*static*/ void city_bird_t::post_draw(draw_state_t &dstate, bool shadow_only) {
@@ -30,26 +29,29 @@ void city_bird_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_
 	model3d::bind_default_flat_normal_map();
 }
 
+void city_bird_t::set_takeoff_time(rand_gen_t &rgen) {
+	takeoff_time = tfticks + rgen.rand_uniform(10.0, 30.0)*TICKS_PER_SECOND; // wait 10-30s
+}
+
 void city_bird_t::next_frame(float timestep, bool &tile_changed, rand_gen_t &rgen) {
 	// update state
 	uint8_t const prev_state(state);
+	float const new_anim_time(anim_time + timestep);
 
 	switch (state) {
 	case BIRD_STATE_FLYING:
-		if (velocity.z < 0.0) {
-			//state = BIRD_STATE_GLIDING; // maybe switch
-		}
+		if (velocity.z < 0.0 && is_anim_cycle_complete(new_anim_time)) {state = BIRD_STATE_GLIDING;} // maybe switch to gliding
 		// fall through
 	case BIRD_STATE_GLIDING:
-		if (velocity.z > 0.0) {
-			state = BIRD_STATE_FLYING;
-		}
-		// check if close enough to dest
+		if (velocity.z > 0.0) {state = BIRD_STATE_FLYING;} // should we call is_anim_cycle_complete()?
+		// check if close enough to dest, then switch to landing
+		//state = BIRD_STATE_LANDING;
 		break;
 	case BIRD_STATE_LANDING:
-		if (is_anim_cycle_complete()) { // wait for animation to complete
-			state = BIRD_STATE_STANDING;
-			takeoff_time = tfticks + rgen.rand_uniform(10.0, 30.0)*TICKS_PER_SECOND; // wait 10-30s
+		if (is_anim_cycle_complete(new_anim_time)) { // wait for animation to complete
+			state    = BIRD_STATE_STANDING;
+			velocity = zero_vector; // stopped
+			set_takeoff_time(rgen);
 		}
 		break;
 	case BIRD_STATE_STANDING:
@@ -59,16 +61,18 @@ void city_bird_t::next_frame(float timestep, bool &tile_changed, rand_gen_t &rge
 		}
 		break;
 	case BIRD_STATE_TAKEOFF:
-		if (is_anim_cycle_complete()) {state = BIRD_STATE_FLYING;} // wait for animation to complete
+		if (is_anim_cycle_complete(new_anim_time)) {state = BIRD_STATE_FLYING;} // wait for animation to complete
 		break;
 	default: assert(0);
 	}
 	if (state != prev_state) {anim_time = 0.0;} // reset animation time on state change
-	else {anim_time += timestep;}
-	// TODO: update velocity, dir
-	if (velocity != zero_vector) {dir = vector3d(velocity.x, velocity.y, 0.0).get_norm();} // always point in XY direction of velocity
+	else {anim_time = new_anim_time;}
 
-	if (velocity != zero_vector) { // apply movement
+	if (state != BIRD_STATE_STANDING) {
+		// TODO: update velocity
+	}
+	if (velocity != zero_vector) { // update direction and apply movement
+		dir    = vector3d(velocity.x, velocity.y, 0.0).get_norm(); // always point in XY direction of velocity
 		point const prev_pos(pos);
 		pos   += velocity*timestep;
 		bcube += (pos - bcube.get_cube_center()); // translate bcube to match - keep it centered on pos

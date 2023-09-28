@@ -670,6 +670,10 @@ void model3d::setup_bone_transforms_blended(shader_t &shader, float anim_time1, 
 	}
 	add_bone_transforms_to_shader(shader);
 }
+bool model3d::check_anim_wrapped(unsigned anim_id, float old_time, float new_time) const {
+	assert(has_animations());
+	return model_anim_data.check_anim_wrapped(anim_id, old_time, new_time);
+}
 void model3d::add_bone_transforms_to_shader(shader_t &shader) const {
 	unsigned const MAX_MODEL_BONES = 200; // must agree with shader code
 	unsigned num_bones(model_anim_data.bone_transforms.size());

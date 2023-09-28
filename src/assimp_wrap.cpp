@@ -109,6 +109,11 @@ void model_anim_t::get_bone_transforms(unsigned anim_id, float cur_time) {
 	float const anim_time(fmod(time_in_ticks, animation.duration));
 	transform_node_hierarchy_recur(anim_time, animation, 0, root_transform); // root node is 0
 }
+bool model_anim_t::check_anim_wrapped(unsigned anim_id, float old_time, float new_time) const {
+	assert(anim_id < animations.size());
+	animation_t const &animation(animations[anim_id]);
+	return (int((new_time * animation.ticks_per_sec)/animation.duration) != int((old_time * animation.ticks_per_sec)/animation.duration));
+}
 
 void model_anim_t::blend_animations_simple(unsigned anim_id1, unsigned anim_id2, float blend_factor, float cur_time1, float cur_time2) {
 	assert(anim_id1 != anim_id2); // this would work, but it doesn't make sense and is inefficient

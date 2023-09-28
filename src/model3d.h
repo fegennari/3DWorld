@@ -264,6 +264,7 @@ struct model_anim_t {
 	vector3d  calc_interpolated_scale   (float anim_time, anim_data_t const &A) const;
 	void transform_node_hierarchy_recur(float anim_time, animation_t const &animation, unsigned node_ix, xform_matrix const &parent_transform);
 	void get_bone_transforms(unsigned anim_id, float cur_time);
+	bool check_anim_wrapped(unsigned anim_id, float old_time, float new_time) const;
 private:
 	xform_matrix apply_anim_transform(float anim_time, animation_t const &animation, anim_node_t const &node) const;
 public:
@@ -682,6 +683,7 @@ public:
 	bool has_animations    () const {return (num_animations() > 0);}
 	void setup_bone_transforms(shader_t &shader, float anim_time, int anim_id=-1);
 	void setup_bone_transforms_blended(shader_t &shader, float anim_time1, float anim_time2, float blend_factor, int anim_id1=-1, int anim_id2=-1);
+	bool check_anim_wrapped(unsigned anim_id, float old_time, float new_time) const;
 	void merge_animation_from(model3d const &anim_model) {model_anim_data.merge_from(anim_model.model_anim_data);}
 protected:
 	unsigned get_anim_id(shader_t &shader, string const &prop_name, int anim_id=-1) const;

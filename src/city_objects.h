@@ -199,19 +199,23 @@ struct pigeon_t : public city_bird_base_t {
 	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const;
 };
 
-struct city_bird_t : public city_bird_base_t {
+class city_bird_t : public city_bird_base_t {
 	uint8_t state=0;
 	float anim_time=0.0, takeoff_time=0.0;
 	vector3d velocity;
 	point dest;
 
+	bool is_anim_cycle_complete(float new_anim_time) const;
+	unsigned get_model_anim_id() const {return state;}
+	void set_takeoff_time(rand_gen_t &rgen);
+
+public:
 	city_bird_t(point const &pos_, float height, vector3d const &init_dir, rand_gen_t &rgen);
 	static void pre_draw (draw_state_t &dstate, bool shadow_only) {} // nothing to do
 	static void post_draw(draw_state_t &dstate, bool shadow_only);
 	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const;
 	void next_frame(float timestep, bool &tile_changed, rand_gen_t &rgen);
 	bool dest_valid() const {return (dest != zero_vector);}
-	bool is_anim_cycle_complete() const;
 };
 
 struct sign_t : public oriented_city_obj_t {
