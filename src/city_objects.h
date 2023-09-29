@@ -209,6 +209,7 @@ class city_bird_t : public city_bird_base_t {
 	point dest;
 
 	bool is_anim_cycle_complete(float new_anim_time) const;
+	bool in_landing_dist() const;
 	unsigned get_model_anim_id() const {return state;}
 	void set_takeoff_time(rand_gen_t &rgen);
 public:

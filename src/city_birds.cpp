@@ -49,8 +49,18 @@ bool city_bird_t::is_anim_cycle_complete(float new_anim_time) const {
 	if (anim_time == 0.0) return 0; // anim_time was just reset
 	return building_obj_model_loader.check_anim_wrapped(OBJ_MODEL_BIRD_ANIM, get_model_anim_id(), anim_time_scale*anim_time, anim_time_scale*new_anim_time);
 }
+bool city_bird_t::in_landing_dist() const {
+	assert(dest_valid());
+	assert(state == BIRD_STATE_FLYING || state == BIRD_STATE_GLIDING);
+	if (velocity == zero_vector) return 0; // not moving
+	float const land_delay_secs(building_obj_model_loader.get_anim_duration(OBJ_MODEL_BIRD_ANIM, get_model_anim_id()));
+	float const land_delay_ticks(land_delay_secs/anim_time_scale);
+	vector3d const delta(dest - pos);
+	float const dest_time(delta.mag_sq()/dot_product(velocity, delta)); // distance/velocity_to_dest = delta.mag()/dot_product(velocity, delta/deta.mag())
+	return (dest_time < land_delay_ticks);
+}
 
-void city_bird_t::next_frame(float timestep, bool &tile_changed, city_obj_placer_t &placer, rand_gen_t &rgen) {
+void city_bird_t::next_frame(float timestep, bool &tile_changed, city_obj_placer_t &placer, rand_gen_t &rgen) { // timestep is in ticks
 	// update state
 	uint8_t const prev_state(state);
 	float const new_anim_time(anim_time + timestep);
@@ -60,9 +70,8 @@ void city_bird_t::next_frame(float timestep, bool &tile_changed, city_obj_placer
 		if (velocity.z < 0.0 && is_anim_cycle_complete(new_anim_time)) {state = BIRD_STATE_GLIDING;} // maybe switch to gliding
 		// fall through
 	case BIRD_STATE_GLIDING:
-		if (velocity.z > 0.0) {state = BIRD_STATE_FLYING;} // should we call is_anim_cycle_complete()?
-		// check if close enough to dest, then switch to landing
-		//state = BIRD_STATE_LANDING;
+		if (velocity.z > 0.0)  {state = BIRD_STATE_FLYING ;} // should we call is_anim_cycle_complete()?
+		if (in_landing_dist()) {state = BIRD_STATE_LANDING;} // check if close enough to dest, then switch to landing
 		break;
 	case BIRD_STATE_LANDING:
 		if (is_anim_cycle_complete(new_anim_time)) { // wait for animation to complete

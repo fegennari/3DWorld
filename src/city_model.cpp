@@ -179,6 +179,11 @@ bool city_model_loader_t::check_anim_wrapped(unsigned model_id, unsigned model_a
 	assert(is_valid); // caller should have checked this previously
 	return get_model3d(model_id).check_anim_wrapped(model_anim_id, old_time, new_time);
 }
+float city_model_loader_t::get_anim_duration(unsigned model_id, unsigned model_anim_id) { // in seconds
+	bool const is_valid(is_model_valid(model_id));
+	assert(is_valid); // caller should have checked this previously
+	return get_model3d(model_id).get_anim_duration(model_anim_id);
+}
 
 void city_model_loader_t::draw_model(shader_t &s, vector3d const &pos, cube_t const &obj_bcube, vector3d const &dir, colorRGBA const &color,
 	vector3d const &xlate, unsigned model_id, bool is_shadow_pass, bool low_detail, animation_state_t *anim_state, unsigned skip_mat_mask,

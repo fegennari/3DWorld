@@ -114,6 +114,11 @@ bool model_anim_t::check_anim_wrapped(unsigned anim_id, float old_time, float ne
 	animation_t const &animation(animations[anim_id]);
 	return (int((new_time * animation.ticks_per_sec)/animation.duration) != int((old_time * animation.ticks_per_sec)/animation.duration));
 }
+float model_anim_t::get_anim_duration(unsigned anim_id) const { // in seconds
+	assert(anim_id < animations.size());
+	animation_t const &animation(animations[anim_id]);
+	return animation.duration/animation.ticks_per_sec;
+}
 
 void model_anim_t::blend_animations_simple(unsigned anim_id1, unsigned anim_id2, float blend_factor, float cur_time1, float cur_time2) {
 	assert(anim_id1 != anim_id2); // this would work, but it doesn't make sense and is inefficient

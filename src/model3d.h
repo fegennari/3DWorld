@@ -251,7 +251,7 @@ struct model_anim_t {
 		void init(unsigned np, unsigned nr, unsigned ns);
 	};
 	struct animation_t {
-		float ticks_per_sec=25.0, duration=1.0;
+		float ticks_per_sec=25.0, duration=1.0; // duration is in ticks
 		string name;
 		unordered_map<string, anim_data_t> anim_data; // per bone
 		animation_t(string const &name_="") : name(name_) {}
@@ -265,6 +265,7 @@ struct model_anim_t {
 	void transform_node_hierarchy_recur(float anim_time, animation_t const &animation, unsigned node_ix, xform_matrix const &parent_transform);
 	void get_bone_transforms(unsigned anim_id, float cur_time);
 	bool check_anim_wrapped(unsigned anim_id, float old_time, float new_time) const;
+	float get_anim_duration(unsigned anim_id) const;
 private:
 	xform_matrix apply_anim_transform(float anim_time, animation_t const &animation, anim_node_t const &node) const;
 public:
@@ -684,6 +685,7 @@ public:
 	void setup_bone_transforms(shader_t &shader, float anim_time, int anim_id=-1);
 	void setup_bone_transforms_blended(shader_t &shader, float anim_time1, float anim_time2, float blend_factor, int anim_id1=-1, int anim_id2=-1);
 	bool check_anim_wrapped(unsigned anim_id, float old_time, float new_time) const;
+	float get_anim_duration(unsigned anim_id) const;
 	void merge_animation_from(model3d const &anim_model) {model_anim_data.merge_from(anim_model.model_anim_data);}
 protected:
 	unsigned get_anim_id(shader_t &shader, string const &prop_name, int anim_id=-1) const;
