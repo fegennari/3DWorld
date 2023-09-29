@@ -543,7 +543,7 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 			if (dest != nullptr) {dest->add_placement_top_center(i->bcube, rgen);}
 		}
 		if (add_birds) { // but not pigeons
-			// TODO: include houses, power poles, power lines, etc.
+			// TODO: include newsracks, houses, power poles, power lines, etc.
 		}
 		// place pigeons
 		if (add_pigeons) {

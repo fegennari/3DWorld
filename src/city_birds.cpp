@@ -142,11 +142,8 @@ bool city_obj_placer_t::choose_bird_dest(float radius, unsigned &loc_ix, point &
 		if (new_loc.in_use) continue;
 		vector3d const dir((new_loc.pos - loc.pos).get_norm());
 		point const start_pos(loc.pos + xlate_dist*dir), end_pos(new_loc.pos - xlate_dist*dir);
-		float t(0.0); // unused
-		if (line_intersect(start_pos, end_pos, t)) continue;
-		bool valid(1);
-		// TODO: check for buildings, etc.
-		if (!valid) continue;
+		if (check_path_segment_coll(start_pos, end_pos, radius)) continue;
+		loc_ix   = new_loc_ix;
 		dest_pos = new_loc.pos;
 		dest_dir = new_loc.orient;
 		loc    .in_use = 0;
@@ -154,6 +151,22 @@ bool city_obj_placer_t::choose_bird_dest(float radius, unsigned &loc_ix, point &
 		return 1; // success
 	} // for n
 	return 0; // failed, try again next frame or next animation cycle
+}
+bool city_obj_placer_t::check_path_segment_coll(point const &p1, point const &p2, float radius) const {
+	float t(0.0); // unused
+	if (line_intersect(p1, p2, t) || check_city_building_line_coll_bs_any(p1, p2)) return 1;
+
+	if (radius > 0.0) { // cylinder case: check 4 points a distance radius from the center
+		vector3d const dir((p2 - p1).get_norm()), v1(cross_product(dir, plus_z).get_norm()), v2(cross_product(v1, dir).get_norm()); // orthogonalize_dir?
+		vector3d const offs[4] = {v1, -v1, v2, -v2};
+
+		for (unsigned n = 0; n < 4; ++n) {
+			vector3d const off(radius*offs[n]);
+			point const p1o(p1 + off), p2o(p2 + off);
+			if (line_intersect(p1o, p2o, t) || check_city_building_line_coll_bs_any(p1o, p2o)) return 1;
+		}
+	}
+	return 0;
 }
 
 void vect_bird_place_t::add_placement(cube_t const &obj, bool dim, bool dir, bool orient_dir, float spacing, rand_gen_t &rgen) {
