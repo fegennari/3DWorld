@@ -4,11 +4,16 @@
 
 #include "city_objects.h"
 
+float const BIRD_ACCEL    = 0.0005;
+float const BIRD_MAX_VEL  = 0.002;
+float const BIRD_ZV_SCALE = 0.5; // Z vs. XY velocity/acceleration
+float const BIRD_MAX_ALT  = 2.0; // above destination; in multiples of road width
 float const anim_time_scale(1.0/TICKS_PER_SECOND);
 
 extern int animate2;
 extern float fticks;
 extern double tfticks;
+extern city_params_t city_params;
 extern object_model_loader_t building_obj_model_loader;
 
 enum {BIRD_STATE_FLYING=0, BIRD_STATE_GLIDING, BIRD_STATE_LANDING, BIRD_STATE_STANDING, BIRD_STATE_TAKEOFF, NUM_BIRD_STATES};
@@ -21,17 +26,18 @@ city_bird_t::city_bird_t(point const &pos_, float height, vector3d const &init_d
 }
 
 void city_bird_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
-	if (!dstate.check_cube_visible(bcube, dist_scale)) return;
-	// animations: 0=flying, 1=gliding, 2=landing, 3=standing, 4=takeoff
-	float const model_anim_time(anim_time_scale*anim_time/SKELETAL_ANIM_TIME_CONST); // divide by constant to cancel out multiply in draw_model()
-	animation_state_t anim_state(1, ANIM_ID_SKELETAL, model_anim_time, get_model_anim_id()); // enabled=1
-	building_obj_model_loader.draw_model(dstate.s, pos, bcube, dir, WHITE, dstate.xlate, OBJ_MODEL_BIRD_ANIM, shadow_only, 0, &anim_state);
-
-	if (0 && dest_valid()) { // debug drawing
+	if (dstate.check_cube_visible(bcube, dist_scale)) {
+		// animations: 0=flying, 1=gliding, 2=landing, 3=standing, 4=takeoff
+		// FIXME: shadows are wrong when flying up
+		float const model_anim_time(anim_time_scale*anim_time/SKELETAL_ANIM_TIME_CONST); // divide by constant to cancel out multiply in draw_model()
+		animation_state_t anim_state(1, ANIM_ID_SKELETAL, model_anim_time, get_model_anim_id()); // enabled=1
+		building_obj_model_loader.draw_model(dstate.s, pos, bcube, dir, WHITE, dstate.xlate, OBJ_MODEL_BIRD_ANIM, shadow_only, 0, &anim_state);
+	}
+	if (0 && dest_valid()) { // debug drawing, even if bcube not visible
 		post_draw(dstate, shadow_only); // clear animations
 		vector<vert_color> pts;
-		pts.emplace_back(pos,  YELLOW);
-		pts.emplace_back(dest, YELLOW);
+		pts.emplace_back(pos,  BLUE);
+		pts.emplace_back(dest, BLUE);
 		select_texture(WHITE_TEX);
 		draw_verts(pts, GL_LINES);
 	}
@@ -49,23 +55,30 @@ bool city_bird_t::is_anim_cycle_complete(float new_anim_time) const {
 	if (anim_time == 0.0) return 0; // anim_time was just reset
 	return building_obj_model_loader.check_anim_wrapped(OBJ_MODEL_BIRD_ANIM, get_model_anim_id(), anim_time_scale*anim_time, anim_time_scale*new_anim_time);
 }
-bool city_bird_t::in_landing_dist() const {
+bool city_bird_t::in_landing_dist() const { // FIXME: seems this this is incorrect and triggered too early
 	assert(dest_valid());
 	assert(state == BIRD_STATE_FLYING || state == BIRD_STATE_GLIDING);
 	if (velocity == zero_vector) return 0; // not moving
 	float const land_delay_secs(building_obj_model_loader.get_anim_duration(OBJ_MODEL_BIRD_ANIM, get_model_anim_id()));
 	float const land_delay_ticks(land_delay_secs/anim_time_scale);
-	vector3d const delta(dest - pos);
+	vector3d const delta(dest - pos); // should this be XY only?
 	float const dest_time(delta.mag_sq()/dot_product(velocity, delta)); // distance/velocity_to_dest = delta.mag()/dot_product(velocity, delta/deta.mag())
 	return (dest_time < land_delay_ticks);
 }
+float city_bird_t::get_path_progress() const {
+	assert(dest_valid());
+	if (init_dest_dist == 0.0) return 0.0; // error?
+	return CLIP_TO_01(1.0f - p2p_dist_xy(pos, dest)/init_dest_dist); // 0.0 at start, 1.0 at end
+}
 
-void city_bird_t::next_frame(float timestep, bool &tile_changed, city_obj_placer_t &placer, rand_gen_t &rgen) { // timestep is in ticks
+// timestep is in ticks
+void city_bird_t::next_frame(float timestep, float delta_dir, bool &tile_changed, bool &bird_moved, city_obj_placer_t &placer, rand_gen_t &rgen) {
 	// update state
 	uint8_t const prev_state(state);
 	float const new_anim_time(anim_time + timestep);
 
 	switch (state) {
+		// Note: if flying level (velocity.z == 0.0), maintain the current flying vs. gliding state
 	case BIRD_STATE_FLYING:
 		if (velocity.z < 0.0 && is_anim_cycle_complete(new_anim_time)) {state = BIRD_STATE_GLIDING;} // maybe switch to gliding
 		// fall through
@@ -85,7 +98,10 @@ void city_bird_t::next_frame(float timestep, bool &tile_changed, city_obj_placer
 			set_takeoff_time(rgen);
 		}
 		else if (tfticks > takeoff_time && is_anim_cycle_complete(new_anim_time)) {
-			if (placer.choose_bird_dest(radius, loc_ix, dest, dest_dir)) {state = BIRD_STATE_TAKEOFF;}
+			if (placer.choose_bird_dest(radius, loc_ix, dest, dest_dir)) {
+				init_dest_dist = p2p_dist_xy(pos, dest);
+				state = BIRD_STATE_TAKEOFF;
+			}
 		}
 		break;
 	case BIRD_STATE_TAKEOFF:
@@ -97,16 +113,40 @@ void city_bird_t::next_frame(float timestep, bool &tile_changed, city_obj_placer
 	else {anim_time = new_anim_time;}
 
 	if (state != BIRD_STATE_STANDING) {
-		//assert(dest_valid());
-		//vector3d const dest_dir((dest - pos).get_norm());
-		// TODO: update velocity
+		// handle vertical velocity component
+		float const path_progress(get_path_progress());
+
+		if (path_progress < 0.5) { // first half of path
+			if (pos.z > BIRD_MAX_ALT*city_params.road_width + dest.z) {velocity.z = 0.0;} // too high; level off (should we decelerate smoothly?)
+			else {velocity.z = min( BIRD_ZV_SCALE*BIRD_MAX_VEL, (velocity.z + BIRD_ZV_SCALE*BIRD_ACCEL));} // rise in the air
+		}
+		else { // second half of path
+			if (pos.z <= dest.z) {velocity.z = 0.0;} // don't fall below the destination zval
+			else {velocity.z = max(-BIRD_ZV_SCALE*BIRD_MAX_VEL, (velocity.z - BIRD_ZV_SCALE*BIRD_ACCEL));} // glide down
+		}
+		// handle horizontal velocity component
+		vector3d const dest_dir((dest - pos).get_norm());
+		// TODO
 	}
+	bool const set_dir_from_vel(velocity.x != 0.0 || velocity.y != 0.0);
+
 	if (velocity != zero_vector) { // update direction and apply movement
 		point const prev_pos(pos);
-		dir    = vector3d(velocity.x, velocity.y, 0.0).get_norm(); // always point in XY direction of velocity
 		pos   += velocity*timestep;
 		bcube += (pos - bcube.get_cube_center()); // translate bcube to match - keep it centered on pos
+		if (set_dir_from_vel) {dir = vector3d(velocity.x, velocity.y, 0.0).get_norm();} // always point in XY direction of velocity
 		tile_changed |= (get_tile_id_containing_point_no_xyoff(pos) != get_tile_id_containing_point_no_xyoff(prev_pos));
+		bird_moved    = 1;
+	}
+	if (state != BIRD_STATE_STANDING && !set_dir_from_vel) { // turn in place; similar to person_slow_turn()
+		vector3d dest_dir_xy(vector3d(dest.x-pos.x, dest.y-pos.y, 0.0).get_norm()); // XY only
+
+		if (dot_product(dir, dest_dir_xy) < 0.999) { // not oriented in dir
+			// if directions are nearly opposite, pick a side to turn using the cross product to get an orthogonal vector
+			if (dot_product(dest_dir_xy, dir) < -0.9) {dest_dir_xy = cross_product(dir, plus_z)*((loc_ix & 1) ? -1.0 : 1.0);} // random turn direction (CW/CCW)
+			dir = delta_dir*dest_dir_xy + (1.0 - delta_dir)*dir; // merge new_dir into dir gradually for smooth turning
+			dir.normalize();
+		}
 	}
 }
 
@@ -117,13 +157,26 @@ void city_obj_placer_t::next_frame() {
 	point const camera_bs(get_camera_pos() - get_tiled_terrain_model_xlate());
 	if (!all_objs_bcube.closest_dist_less_than(camera_bs, enable_birds_dist)) return; // too far from the player
 	float const timestep(min(fticks, 4.0f)); // clamp fticks to 100ms
-	bool tile_changed(0);
-	for (city_bird_t &bird : birds) {bird.next_frame(timestep, tile_changed, *this, bird_rgen);}
+	float const delta_dir(0.1*(1.0 - pow(0.7f, fticks))); // controls bird turning rate
+	bool tile_changed(0), bird_moved(0);
+	for (city_bird_t &bird : birds) {bird.next_frame(timestep, delta_dir, tile_changed, bird_moved, *this, bird_rgen);}
 	
 	if (tile_changed) { // update bird_groups; is there a more efficient way than rebuilding bird_groups each frame?
 		bird_groups.clear();
 		for (unsigned i = 0; i < birds.size(); ++i) {bird_groups.insert_obj_ix(birds[i].bcube, i);}
 		bird_groups.create_groups(birds, all_objs_bcube);
+	}
+	else if (bird_moved) { // incrementally update group bcubes and all_objs_bcube
+		unsigned start_ix(0);
+
+		for (auto &g : bird_groups) {
+			assert(start_ix <= g.ix && g.ix <= birds.size());
+
+			for (auto i = birds.begin()+start_ix; i != birds.begin()+g.ix; ++i) {
+				g.union_with_cube(i->bcube);
+				all_objs_bcube.union_with_cube(i->bcube);
+			}
+		} // for g
 	}
 }
 

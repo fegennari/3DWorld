@@ -204,7 +204,7 @@ class city_obj_placer_t;
 class city_bird_t : public city_bird_base_t {
 	uint8_t state=0;
 	unsigned loc_ix=0;
-	float anim_time=0.0, takeoff_time=0.0;
+	float anim_time=0.0, takeoff_time=0.0, init_dest_dist=0.0;
 	vector3d velocity, dest_dir;
 	point dest;
 
@@ -212,12 +212,13 @@ class city_bird_t : public city_bird_base_t {
 	bool in_landing_dist() const;
 	unsigned get_model_anim_id() const {return state;}
 	void set_takeoff_time(rand_gen_t &rgen);
+	float get_path_progress() const;
 public:
 	city_bird_t(point const &pos_, float height, vector3d const &init_dir, unsigned loc_ix_, rand_gen_t &rgen);
 	static void pre_draw (draw_state_t &dstate, bool shadow_only) {} // nothing to do
 	static void post_draw(draw_state_t &dstate, bool shadow_only);
 	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const;
-	void next_frame(float timestep, bool &tile_changed, city_obj_placer_t &placer, rand_gen_t &rgen);
+	void next_frame(float timestep, float delta_dir, bool &tile_changed, bool &bird_moved, city_obj_placer_t &placer, rand_gen_t &rgen);
 	bool dest_valid() const {return (dest != zero_vector);}
 };
 
