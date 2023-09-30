@@ -20,7 +20,8 @@ bool const ADD_ROOM_SHADOWS         = 1; // for room lights
 bool const DRAW_EXT_REFLECTIONS     = 1; // draw building exteriors in mirror reflections; slower, but looks better; not shadowed
 float const WIND_LIGHT_ON_RAND      = 0.08;
 float const BASEMENT_ENTRANCE_SCALE = 0.33;
-unsigned const NO_SHADOW_WHITE_TEX  = BLACK_TEX; // alias to differentiate shadowed vs. unshadowed untextured objects
+unsigned const NO_SHADOW_WHITE_TEX  = BLACK_TEX; // alias to differentiate shadowed    vs. unshadowed untextured objects
+unsigned const SHADOW_ONLY_TEX      = RED_TEX;   // alias to differentiate shadow only vs. other      untextured objects
 
 bool camera_in_building(0), interior_shadow_maps(0), player_is_hiding(0), player_in_unlit_room(0), player_in_attic(0), building_has_open_ext_door(0);
 int player_in_basement(0); // 0=no, 1=below ground level, 2=in basement and not on stairs, 3=in extended basement
@@ -80,7 +81,7 @@ void tid_nm_pair_t::set_gl(tid_nm_pair_dstate_t &state) const {
 	else if (tid == REFLECTION_TEXTURE_ID) {
 		if (bind_reflection_shader()) return;
 	}
-	else if (tid == NO_SHADOW_WHITE_TEX) {select_texture(WHITE_TEX);}
+	else if (tid == NO_SHADOW_WHITE_TEX || tid == SHADOW_ONLY_TEX) {select_texture(WHITE_TEX);}
 	else {select_texture(tid);}
 	bool const has_normal_map(get_nm_tid() != FLAT_NMAP_TEX);
 	if (has_normal_map) {select_texture(get_nm_tid(), 5);} // else we set bump_map_mag=0.0
@@ -200,8 +201,8 @@ public:
 
 	void init() {
 		if (!tid_to_slot_ix.empty()) return; // already inited
-		unsigned const num_special_tids = 6;
-		int const special_tids[num_special_tids] = {WHITE_TEX, NO_SHADOW_WHITE_TEX, FENCE_TEX, PANELING_TEX, TILE_TEX, WOOD_TEX}; // for elevators, etc.
+		unsigned const num_special_tids = 7;
+		int const special_tids[num_special_tids] = {WHITE_TEX, NO_SHADOW_WHITE_TEX, SHADOW_ONLY_TEX, FENCE_TEX, PANELING_TEX, TILE_TEX, WOOD_TEX}; // for elevators, etc.
 		tid_to_slot_ix.push_back(0); // untextured case
 		register_tid(building_texture_mgr.get_window_tid());
 		register_tid(building_texture_mgr.get_hdoor_tid());
@@ -530,8 +531,9 @@ class building_draw_t {
 		void record_num_verts() {start_num_verts[0] = num_quad_verts(); start_num_verts[1] = num_tri_verts();}
 
 		void draw_geom_range(tid_nm_pair_dstate_t &state, bool shadow_only, vert_ix_pair const &vstart, vert_ix_pair const &vend) { // use VBO rendering
-			if (vstart == vend)            return; // empty range - no verts for this tile
-			if (shadow_only && no_shadows) return; // no shadows on this material
+			if (vstart == vend)                  return; // empty range - no verts for this tile
+			if (shadow_only && no_shadows)       return; // no shadows on this material
+			if (!shadow_only && tex.shadow_only) return; // material is only drawn in the shadow pass
 			
 			if (tex.tid == FONT_TEXTURE_ID) {
 				if (shadow_only) return; // no shadows for text
@@ -1396,6 +1398,10 @@ void building_t::get_all_drawn_exterior_verts(building_draw_t &bdraw) { // exter
 			for (auto c = bdraw.temp_cubes.begin(); c != bdraw.temp_cubes.end(); ++c) { // add floors after removing stairwells
 				bdraw.add_section(*this, 0, *c, mat.roof_tex, roof_color, 4, 1, 0, is_house, 0); // only top surface
 			}
+			// still need to draw in shadow pass
+			tid_nm_pair_t shadow_mat(SHADOW_ONLY_TEX);
+			shadow_mat.shadow_only = 1;
+			bdraw.add_section(*this, 1, *i, shadow_mat, WHITE, 4, 1, 0, 1, 0); // only draw the top
 			skip_top = 1;
 			if (is_stacked_cube) continue; // no top/bottom to draw
 		}

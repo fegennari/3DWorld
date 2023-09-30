@@ -179,6 +179,7 @@ struct tid_nm_pair_t { // size=32
 	color_wrapper spec_color;
 	unsigned char shininess=0; // Note: spec_mag is divided by 255.0
 	bool shadowed=0; // Note: doesn't directly affect rendering, only used for uniquing/operator==()
+	bool shadow_only=0;
 	bool transparent=0; // used to draw batched alpha blended materials last
 
 	tid_nm_pair_t() {}
@@ -194,7 +195,7 @@ struct tid_nm_pair_t { // size=32
 	bool is_compat_ignore_shadowed(tid_nm_pair_t const &t) const {
 		return (tid == t.tid && nm_tid == t.nm_tid && emissive == t.emissive && shininess == t.shininess && transparent == t.transparent && spec_color == t.spec_color);
 	}
-	bool is_compatible(tid_nm_pair_t const &t) const {return (is_compat_ignore_shadowed(t) && shadowed == t.shadowed);}
+	bool is_compatible(tid_nm_pair_t const &t) const {return (is_compat_ignore_shadowed(t) && shadowed == t.shadowed && shadow_only == t.shadow_only);}
 	bool operator==(tid_nm_pair_t const &t) const {return (is_compatible(t) && tscale_x == t.tscale_x && tscale_y == t.tscale_y && txoff == t.txoff && tyoff == t.tyoff);}
 	bool operator!=(tid_nm_pair_t const &t) const {return !operator==(t);}
 	int get_nm_tid() const {return ((nm_tid < 0) ? FLAT_NMAP_TEX : nm_tid);}
