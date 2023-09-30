@@ -202,18 +202,18 @@ struct pigeon_t : public city_bird_base_t {
 class city_obj_placer_t;
 
 class city_bird_t : public city_bird_base_t {
+	bool hit_max_alt=0;
 	uint8_t state=0;
 	unsigned loc_ix=0;
-	float anim_time=0.0, takeoff_time=0.0, init_dest_dist=0.0;
+	float anim_time=0.0, takeoff_time=0.0, descend_dist=0.0;
 	vector3d velocity, dest_dir;
-	point dest;
+	point dest, takeoff_pos, prev_frame_pos;
 
 	bool is_close_to_player() const;
 	bool is_anim_cycle_complete(float new_anim_time) const;
 	bool in_landing_dist() const;
 	unsigned get_model_anim_id() const {return state;}
 	void set_takeoff_time(rand_gen_t &rgen);
-	float get_path_progress() const;
 public:
 	city_bird_t(point const &pos_, float height, vector3d const &init_dir, unsigned loc_ix_, rand_gen_t &rgen);
 	static void pre_draw (draw_state_t &dstate, bool shadow_only) {} // nothing to do
@@ -346,7 +346,7 @@ private:
 		float dist_scale, bool shadow_only, bool has_immediate_draw=0, bool draw_qbd_as_quads=0, float specular=0.75, float shininess=50.0);
 	bool connect_power_to_point(point const &at_pos, bool near_power_pole);
 	void connect_power_to_buildings(vector<road_plot_t> const &plots);
-	bool check_path_segment_coll(point const &p1, point const &p2, float radius) const;
+	int check_path_segment_coll(point const &p1, point const &p2, float radius) const;
 public:
 	bool has_plot_dividers() const {return !dividers.empty();}
 	bool have_animations  () const {return !birds   .empty();} // only birds are animated
