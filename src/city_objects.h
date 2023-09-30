@@ -205,7 +205,7 @@ class city_bird_t : public city_bird_base_t {
 	bool hit_max_alt=0;
 	uint8_t state=0;
 	unsigned loc_ix=0;
-	float anim_time=0.0, takeoff_time=0.0, descend_dist=0.0;
+	float height=0.0, anim_time=0.0, takeoff_time=0.0, descend_dist=0.0;
 	vector3d velocity, dest_dir;
 	point dest, takeoff_pos, prev_frame_pos;
 
@@ -215,7 +215,7 @@ class city_bird_t : public city_bird_base_t {
 	unsigned get_model_anim_id() const {return state;}
 	void set_takeoff_time(rand_gen_t &rgen);
 public:
-	city_bird_t(point const &pos_, float height, vector3d const &init_dir, unsigned loc_ix_, rand_gen_t &rgen);
+	city_bird_t(point const &pos_, float height_, vector3d const &init_dir, unsigned loc_ix_, rand_gen_t &rgen);
 	static void pre_draw (draw_state_t &dstate, bool shadow_only) {} // nothing to do
 	static void post_draw(draw_state_t &dstate, bool shadow_only);
 	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const;
