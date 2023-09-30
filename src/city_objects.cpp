@@ -1309,7 +1309,11 @@ void city_flag_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_
 	if (!shadow_only && flag_id >= 0) { // select custom flag texture
 		int const flag_tid(get_flag_texture(flag_id));
 		if (flag_tid >= 0) {tid = flag_tid;}
-		if (tid != def_flag_tid) {qbds.qbd.draw_and_clear();} // flush verts drawn with default flag texture
+		
+		if (tid != def_flag_tid && !qbds.qbd.empty()) { // flush verts drawn with default flag texture
+			select_texture(def_flag_tid);
+			qbds.qbd.draw_and_clear();
+		}
 	}
 	dstate.draw_cube(qbds.qbd, flag_bcube, WHITE, 1, 0.0, skip_dims, mirror_x, mirror_y, horizontal); // swap_tc_xy=horizontal
 
