@@ -28,7 +28,6 @@ city_bird_t::city_bird_t(point const &pos_, float height, vector3d const &init_d
 void city_bird_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
 	if (dstate.check_cube_visible(bcube, dist_scale)) {
 		// animations: 0=flying, 1=gliding, 2=landing, 3=standing, 4=takeoff
-		// FIXME: shadows are wrong when flying up
 		float const model_anim_time(anim_time_scale*anim_time/SKELETAL_ANIM_TIME_CONST); // divide by constant to cancel out multiply in draw_model()
 		animation_state_t anim_state(1, ANIM_ID_SKELETAL, model_anim_time, get_model_anim_id()); // enabled=1
 		building_obj_model_loader.draw_model(dstate.s, pos, bcube, dir, WHITE, dstate.xlate, OBJ_MODEL_BIRD_ANIM, shadow_only, 0, &anim_state);
@@ -162,6 +161,7 @@ void city_obj_placer_t::next_frame() {
 	for (city_bird_t &bird : birds) {bird.next_frame(timestep, delta_dir, tile_changed, bird_moved, *this, bird_rgen);}
 	
 	if (tile_changed) { // update bird_groups; is there a more efficient way than rebuilding bird_groups each frame?
+		//cout << TXT(birds.size()) << TXT(bird_groups.size()) << endl; // TESTING
 		bird_groups.clear();
 		for (unsigned i = 0; i < birds.size(); ++i) {bird_groups.insert_obj_ix(birds[i].bcube, i);}
 		bird_groups.create_groups(birds, all_objs_bcube);
@@ -170,12 +170,12 @@ void city_obj_placer_t::next_frame() {
 		unsigned start_ix(0);
 
 		for (auto &g : bird_groups) {
+			cube_t const prev(g);
+			g.set_to_zeros(); // clear bcube for this pass
 			assert(start_ix <= g.ix && g.ix <= birds.size());
-
-			for (auto i = birds.begin()+start_ix; i != birds.begin()+g.ix; ++i) {
-				g.union_with_cube(i->bcube);
-				all_objs_bcube.union_with_cube(i->bcube);
-			}
+			for (auto i = birds.begin()+start_ix; i != birds.begin()+g.ix; ++i) {g.assign_or_union_with_cube(i->bcube);}
+			all_objs_bcube.union_with_cube(g);
+			start_ix = g.ix;
 		} // for g
 	}
 }
