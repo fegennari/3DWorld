@@ -47,6 +47,9 @@ void city_bird_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_
 	model3d::bind_default_flat_normal_map();
 }
 
+bool city_bird_t::is_close_to_player() const {
+	return dist_less_than(pos, (get_camera_pos() - get_tiled_terrain_model_xlate()), 1.0*city_params.road_width);
+}
 void city_bird_t::set_takeoff_time(rand_gen_t &rgen) {
 	takeoff_time = tfticks + rgen.rand_uniform(10.0, 30.0)*TICKS_PER_SECOND; // wait 10-30s
 }
@@ -54,14 +57,21 @@ bool city_bird_t::is_anim_cycle_complete(float new_anim_time) const {
 	if (anim_time == 0.0) return 0; // anim_time was just reset
 	return building_obj_model_loader.check_anim_wrapped(OBJ_MODEL_BIRD_ANIM, get_model_anim_id(), anim_time_scale*anim_time, anim_time_scale*new_anim_time);
 }
-bool city_bird_t::in_landing_dist() const { // FIXME: seems this this is incorrect and triggered too early
+bool city_bird_t::in_landing_dist() const {
 	assert(dest_valid());
 	assert(state == BIRD_STATE_FLYING || state == BIRD_STATE_GLIDING);
-	if (velocity == zero_vector) return 0; // not moving
+	if (velocity.x == 0.0 && velocity.y == 0.0) return 0; // not moving in XY
 	float const land_delay_secs(building_obj_model_loader.get_anim_duration(OBJ_MODEL_BIRD_ANIM, get_model_anim_id()));
 	float const land_delay_ticks(land_delay_secs/anim_time_scale);
-	vector3d const delta(dest - pos); // should this be XY only?
-	float const dest_time(delta.mag_sq()/dot_product(velocity, delta)); // distance/velocity_to_dest = delta.mag()/dot_product(velocity, delta/deta.mag())
+	vector3d const delta_xy(dest.x-pos.x, dest.y-pos.y, 0.0), v_xy(velocity.x, velocity.y, 0.0); // XY only
+	float const dest_time(delta_xy.mag_sq()/dot_product(velocity, delta_xy)); // distance/velocity_to_dest = delta.mag()/dot_product(velocity, delta/deta.mag())
+	if (dest_time < 0.0) return 0; // flying away from dest
+
+	if (is_close_to_player()) {
+		float const dest_time_secs(dest_time/TICKS_PER_SECOND);
+		float const dp(dot_product(v_xy, delta_xy)/(v_xy.mag()*delta_xy.mag()));
+		cout << TXT(land_delay_secs) << TXT(dest_time_secs) << endl;
+	}
 	return (dest_time < land_delay_ticks);
 }
 float city_bird_t::get_path_progress() const {
