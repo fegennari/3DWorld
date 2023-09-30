@@ -62,11 +62,11 @@ bool city_bird_t::is_anim_cycle_complete(float new_anim_time) const {
 bool city_bird_t::in_landing_dist() const {
 	assert(dest_valid());
 	assert(state == BIRD_STATE_FLYING || state == BIRD_STATE_GLIDING);
-	if (velocity.x == 0.0 && velocity.y == 0.0) return 0; // not moving in XY
 #if 1 // play landing animation when dest is reached
 	float const frame_dist(p2p_dist(pos, prev_frame_pos)), dist_thresh(frame_dist + 0.1*radius); // include previous frame distance to avoid overshoot
 	return dist_less_than(pos, dest, dist_thresh);
 #else // play landing animation before dest is reached (more complex and less reliable)
+	if (velocity.x == 0.0 && velocity.y == 0.0) return 0; // not moving in XY
 	float const land_delay_secs(building_obj_model_loader.get_anim_duration(OBJ_MODEL_BIRD_ANIM, get_model_anim_id()));
 	float const land_delay_ticks(land_delay_secs/anim_time_scale);
 	vector3d const delta_xy(dest.x-pos.x, dest.y-pos.y, 0.0), v_xy(velocity.x, velocity.y, 0.0); // XY only
@@ -87,9 +87,10 @@ void city_bird_t::next_frame(float timestep, float delta_dir, bool &tile_changed
 		if (velocity.z < 0.0 && is_anim_cycle_complete(new_anim_time)) {state = BIRD_STATE_GLIDING;} // maybe switch to gliding
 		// fall through
 	case BIRD_STATE_GLIDING:
-		if (velocity.z > 0.0) {state = BIRD_STATE_FLYING ;} // should we call is_anim_cycle_complete()?
+		if (velocity.z > 0.0) {state = BIRD_STATE_FLYING;} // should we call is_anim_cycle_complete()?
 		
 		if (in_landing_dist()) { // check if close enough to dest, then switch to landing
+			// TODO: reorient into dest_dir? otherwise remove dest_dir
 			state = BIRD_STATE_LANDING;
 			pos   = dest; // snap to dest; is this a good idea? move more slowly?
 			dest  = all_zeros; // clear for next cycle
@@ -124,7 +125,7 @@ void city_bird_t::next_frame(float timestep, float delta_dir, bool &tile_changed
 	if (state != prev_state) {anim_time = 0.0;} // reset animation time on state change
 	else {anim_time = new_anim_time;}
 
-	if (state == BIRD_STATE_STANDING || state == BIRD_STATE_LANDING) {
+	if (state == BIRD_STATE_STANDING || state == BIRD_STATE_LANDING || pos == dest) {
 		velocity = zero_vector; // stopped
 	}
 	else { // update direction and velocity
@@ -145,7 +146,7 @@ void city_bird_t::next_frame(float timestep, float delta_dir, bool &tile_changed
 		if (dist_xy > descend_dist) { // ascent stage
 			float const max_alt(BIRD_MAX_ALT*(city_params.road_width + 4.0*radius)); // larger birds can fly a bit higher
 
-			if (pos.z > max_alt + dest.z) { // too high; level off (should we decelerate smoothly?)
+			if (pos.z > max_alt + max(dest.z, takeoff_pos.z)) { // too high; level off (should we decelerate smoothly?)
 				// assume descent distance is similar to the ascent distance; increase slightly to account for slower takeoff
 				if (!hit_max_alt) {descend_dist = 1.1*p2p_dist_xy(pos, takeoff_pos);}
 				hit_max_alt = 1;
@@ -238,6 +239,7 @@ bool city_obj_placer_t::choose_bird_dest(float radius, unsigned &loc_ix, point &
 		if (new_loc_ix == loc_ix) continue; // same
 		bird_place_t &new_loc(bird_locs[new_loc_ix]);
 		if (new_loc.in_use) continue;
+		assert(new_loc.pos != loc.pos);
 		vector3d const dir((new_loc.pos - loc.pos).get_norm());
 		point const start_pos(loc.pos + xlate_dist*dir), end_pos(new_loc.pos - xlate_dist*dir);
 		if (check_path_segment_coll(start_pos, end_pos, radius)) continue;
@@ -258,10 +260,11 @@ int city_obj_placer_t::check_path_segment_coll(point const &p1, point const &p2,
 
 	if (radius > 0.0) { // cylinder case: check 4 points a distance radius from the center
 		vector3d const dir((p2 - p1).get_norm()), v1(cross_product(dir, plus_z).get_norm()), v2(cross_product(v1, dir).get_norm()); // orthogonalize_dir?
+		vector3d const z_off(0.0, 0.0, 2.0*radius); // move upward to clear any low-lying obstacles such as the source and dest objects, since we'll be flying upward anyway
 		vector3d const offs[4] = {v1, -v1, v2, -v2};
 
 		for (unsigned n = 0; n < 4; ++n) {
-			vector3d const off(radius*offs[n]);
+			vector3d const off(radius*offs[n] + z_off);
 			point const p1o(p1 + off), p2o(p2 + off);
 			if (line_intersect(p1o, p2o, t)) return 1;
 			if (check_city_building_line_coll_bs_any(p1o, p2o)) return 2;
