@@ -121,7 +121,16 @@ void city_bird_t::next_frame(float timestep, float delta_dir, bool &tile_changed
 	if (state != prev_state) {anim_time = 0.0;} // reset animation time on state change
 	else {anim_time = new_anim_time;}
 
-	if (state != BIRD_STATE_STANDING) {
+	if (state != BIRD_STATE_STANDING) { // update direction and velocity
+		vector3d dest_dir_xy(vector3d(dest.x-pos.x, dest.y-pos.y, 0.0).get_norm()); // XY only
+
+		// update direction
+		if (dot_product(dir, dest_dir_xy) < 0.999) { // not oriented in dir
+			// if directions are nearly opposite, pick a side to turn using the cross product to get an orthogonal vector
+			if (dot_product(dest_dir_xy, dir) < -0.9) {dest_dir_xy = cross_product(dir, plus_z)*((loc_ix & 1) ? -1.0 : 1.0);} // random turn direction (CW/CCW)
+			dir = delta_dir*dest_dir_xy + (1.0 - delta_dir)*dir; // merge new_dir into dir gradually for smooth turning
+			dir.normalize();
+		}
 		// handle vertical velocity component
 		float const path_progress(get_path_progress());
 
@@ -134,28 +143,22 @@ void city_bird_t::next_frame(float timestep, float delta_dir, bool &tile_changed
 			else {velocity.z = max(-BIRD_ZV_SCALE*BIRD_MAX_VEL, (velocity.z - BIRD_ZV_SCALE*BIRD_ACCEL));} // glide down
 		}
 		// handle horizontal velocity component
-		vector3d const dest_dir((dest - pos).get_norm());
-		// TODO
+		float const accel_scale((state == BIRD_STATE_TAKEOFF) ? 0.5 : 1.0); // slower during takeoff
+		velocity += BIRD_ACCEL*accel_scale*dir; // accelerate in XY; acceleration always follows direction
+		float const xy_mag(velocity.xy_mag());
+		
+		if (xy_mag > BIRD_MAX_VEL) { // apply velocity cap
+			float const xy_scale(BIRD_MAX_VEL/xy_mag);
+			velocity.x *= xy_scale;
+			velocity.y *= xy_scale;
+		}
 	}
-	bool const set_dir_from_vel(velocity.x != 0.0 || velocity.y != 0.0);
-
-	if (velocity != zero_vector) { // update direction and apply movement
+	if (velocity != zero_vector) { // apply movement
 		point const prev_pos(pos);
 		pos   += velocity*timestep;
 		bcube += (pos - bcube.get_cube_center()); // translate bcube to match - keep it centered on pos
-		if (set_dir_from_vel) {dir = vector3d(velocity.x, velocity.y, 0.0).get_norm();} // always point in XY direction of velocity
 		tile_changed |= (get_tile_id_containing_point_no_xyoff(pos) != get_tile_id_containing_point_no_xyoff(prev_pos));
 		bird_moved    = 1;
-	}
-	if (state != BIRD_STATE_STANDING && !set_dir_from_vel) { // turn in place; similar to person_slow_turn()
-		vector3d dest_dir_xy(vector3d(dest.x-pos.x, dest.y-pos.y, 0.0).get_norm()); // XY only
-
-		if (dot_product(dir, dest_dir_xy) < 0.999) { // not oriented in dir
-			// if directions are nearly opposite, pick a side to turn using the cross product to get an orthogonal vector
-			if (dot_product(dest_dir_xy, dir) < -0.9) {dest_dir_xy = cross_product(dir, plus_z)*((loc_ix & 1) ? -1.0 : 1.0);} // random turn direction (CW/CCW)
-			dir = delta_dir*dest_dir_xy + (1.0 - delta_dir)*dir; // merge new_dir into dir gradually for smooth turning
-			dir.normalize();
-		}
 	}
 }
 
