@@ -42,6 +42,7 @@ struct city_obj_t : public sphere_t {
 	float get_bsphere_radius(bool shadow_only) const {return radius;}
 	void set_bsphere_from_bcube() {*((sphere_t *)this) = bcube.get_bsphere();}
 	static void post_draw(draw_state_t &dstate, bool shadow_only) {}
+	cube_t get_bird_bcube() const {return bcube;}
 	bool proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const; // default bcube coll, can override in derived class
 };
 
@@ -54,6 +55,7 @@ struct oriented_city_obj_t : public city_obj_t {
 
 struct bench_t : public oriented_city_obj_t {
 	bench_t(point const &pos_, float radius_, bool dim_, bool dir_);
+	cube_t get_bird_bcube() const;
 	static void pre_draw(draw_state_t &dstate, bool shadow_only);
 	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const;
 };
@@ -68,6 +70,7 @@ struct trashcan_t : public city_obj_t {
 	bool is_cylin;
 	trashcan_t(point const &pos_, float radius_, float height, bool is_cylin_);
 	float get_cylin_radius() const {assert(is_cylin); return 0.5*bcube.dx();}
+	//cube_t get_bird_bcube() const {} // custom, not single cube; handled during object placement
 	static void pre_draw(draw_state_t &dstate, bool shadow_only);
 	static void post_draw(draw_state_t &dstate, bool shadow_only);
 	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const;
@@ -266,6 +269,7 @@ struct newsrack_t : public oriented_city_obj_t {
 	unsigned style=0;
 
 	newsrack_t(point const &pos_, float height, float width, float depth, bool dim_, bool dir_, unsigned style_, colorRGBA const &color_);
+	cube_t get_bird_bcube() const;
 	static void pre_draw (draw_state_t &dstate, bool shadow_only);
 	static void post_draw(draw_state_t &dstate, bool shadow_only);
 	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const;

@@ -280,6 +280,14 @@ vect_bird_place_t *select_bird_loc_dest(bool add_pigeons, bool add_birds, vect_b
 	if (add_birds) return &bird_locs;
 	return nullptr;
 }
+template<typename T> void add_objs_top_center(T const &objs, unsigned start_ix, bool add_pigeons, bool add_birds,
+	vect_bird_place_t &pigeon_locs, vect_bird_place_t &bird_locs, rand_gen_t &rgen)
+{
+	for (auto i = objs.begin()+start_ix; i != objs.end(); ++i) {
+		vect_bird_place_t *const dest(select_bird_loc_dest(add_pigeons, add_birds, pigeon_locs, bird_locs, rgen));
+		if (dest != nullptr) {dest->add_placement_top_center(i->get_bird_bcube(), rgen);}
+	}
+}
 
 // Note: blockers are used for placement of objects within this plot; colliders are used for pedestrian AI
 void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_t &blockers, vect_cube_t &colliders,
@@ -287,6 +295,7 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 {
 	float const car_length(city_params.get_nom_car_size().x); // used as a size reference for other objects
 	unsigned const benches_start(benches.size()), trashcans_start(trashcans.size()), substations_start(sstations.size());
+	unsigned const newsracks_start(newsracks.size()), ppoles_start(ppoles.size());
 
 	// place fire_hydrants if the model has been loaded; don't add fire hydrants in parks
 	if (!plot.is_park && building_obj_model_loader.is_model_valid(OBJ_MODEL_FHYDRANT)) {
@@ -525,25 +534,23 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 			if (i->bcube.get_sz_dim(!i->dim) <= 2.0*obj_edge_spacing) continue;
 			vect_bird_place_t *const dest(select_bird_loc_dest(add_pigeons, add_birds, pigeon_locs, bird_locs, rgen));
 			if (dest == nullptr) continue;
-			cube_t top_place(i->bcube);
-			top_place.expand_in_dim(!i->dim,  0.1*i->bcube.get_sz_dim(!i->dim)); // expand the back outward a bit
-			top_place.expand_in_dim( i->dim, -0.1*i->bcube.get_sz_dim( i->dim)); // shrink a bit to account for the arms extending further to the sides than the back
-			dest->add_placement(top_place, !i->dim, i->dir, rgen.rand_bool(), obj_edge_spacing, rgen); // random orient_dir
+			dest->add_placement(i->get_bird_bcube(), !i->dim, i->dir, rgen.rand_bool(), obj_edge_spacing, rgen); // random orient_dir
 		}
 		for (auto i = trashcans.begin()+trashcans_start; i != trashcans.end(); ++i) {
-			if (min(i->bcube.dx(), i->bcube.dy()) <= 2.0*obj_edge_spacing) continue;
+			cube_t const bcube(i->get_bird_bcube());
+			if (min(bcube.dx(), bcube.dy()) <= 2.0*obj_edge_spacing) continue;
 			vect_bird_place_t *const dest(select_bird_loc_dest(add_pigeons, add_birds, pigeon_locs, bird_locs, rgen));
 			if (dest == nullptr) continue;
-			cube_t top_place(i->bcube);
+			cube_t top_place(bcube);
 			top_place.expand_by_xy(-1.5*obj_edge_spacing); // small shrink
 			dest->add_placement_rand_dim_dir(top_place, obj_edge_spacing, rgen); // facing outward on a random side of the rim
 		}
-		for (auto i = sstations.begin()+substations_start; i != sstations.end(); ++i) {
-			vect_bird_place_t *const dest(select_bird_loc_dest(add_pigeons, add_birds, pigeon_locs, bird_locs, rgen));
-			if (dest != nullptr) {dest->add_placement_top_center(i->bcube, rgen);}
-		}
+		add_objs_top_center(sstations, substations_start, add_pigeons, add_birds, pigeon_locs, bird_locs, rgen);
+
 		if (add_birds) { // but not pigeons
-			// TODO: include newsracks, houses, power poles, power lines, etc.
+			add_objs_top_center(newsracks, newsracks_start, 0, add_birds, pigeon_locs, bird_locs, rgen); // add_pigeons=0
+			add_objs_top_center(ppoles,    ppoles_start,    0, add_birds, pigeon_locs, bird_locs, rgen); // add_pigeons=0
+			// TODO: include houses, power lines, dividers, mboxes, etc.
 		}
 		// place pigeons
 		if (add_pigeons) {

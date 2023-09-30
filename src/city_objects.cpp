@@ -49,6 +49,12 @@ bench_t::bench_t(point const &pos_, float radius_, bool dim_, bool dir_) : orien
 	bcube.z2() += 0.85*radius; // set bench height
 	set_bsphere_from_bcube(); // calculate a more correct bsphere
 }
+cube_t bench_t::get_bird_bcube() const {
+	cube_t top_place(bcube);
+	top_place.expand_in_dim(!dim,  0.1*bcube.get_sz_dim(!dim)); // expand the back outward a bit
+	top_place.expand_in_dim( dim, -0.1*bcube.get_sz_dim( dim)); // shrink a bit to account for the arms extending further to the sides than the back
+	return top_place;
+}
 /*static*/ void bench_t::pre_draw(draw_state_t &dstate, bool shadow_only) {
 	if (!shadow_only) {select_texture(FENCE_TEX);} // normal map?
 }
@@ -546,6 +552,16 @@ newsrack_t::newsrack_t(point const &pos_, float height, float width, float depth
 	bcube.expand_in_dim(!dim, 0.5*width);
 	bcube.z2() += height;
 }
+cube_t newsrack_t::get_bird_bcube() const {
+	if ((style & 3) != 1) return bcube; // not cube with coin mechanism on top - use full bcube (only z2 face is needed)
+	// return coin mechanism bcube
+	vector3d const sz(bcube.get_size());
+	cube_t cm(bcube);
+	cm.z1() = bcube.z1() + 0.7*sz.z;
+	cm.expand_in_dim(!dim, -0.3*sz[!dim]); // shrink width
+	cm.d[dim][!dir] += (dir ? 1.0 : -1.0)*0.6*sz[dim]; // shift back inward
+	return cm;
+}
 /*static*/ void newsrack_t::pre_draw(draw_state_t &dstate, bool shadow_only) {
 	if (!shadow_only) {select_texture(get_texture_by_name("roads/fake_news.jpg"));}
 	if (!shadow_only) {dstate.s.set_specular(0.33, 40.0);} // low specular
@@ -568,10 +584,8 @@ void newsrack_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_s
 	switch (style & 3) {
 	case 0: break; // simple cube
 	case 1: { // cube with coin mechanism on top
-		cube_t cm(bcube);
-		cm.z1() = body.z2() = bcube.z1() + 0.7*sz.z;
-		cm.expand_in_dim(!dim, -0.3*sz[!dim]); // shrink width
-		cm.d[dim][!dir] += dir_sign*0.6*sz[dim]; // shift back inward
+		cube_t const cm(get_bird_bcube());
+		body.z2() = cm.z1();
 		dstate.draw_cube(qbds.qbd, cm, color, 1, llc_tscale); // coin mech; skip bottom
 
 		if (front_facing) { // draw the lock bar
