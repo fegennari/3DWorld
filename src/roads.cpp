@@ -456,11 +456,7 @@ road_isec_t::road_isec_t(cube_t const &c, int rx, int ry, unsigned char conn_, b
 	else if (conn == 7 || conn == 11 || conn == 13 || conn == 14) {num_conn = 3;} // 3-way
 	else if (conn == 5 || conn == 6  || conn == 9  || conn == 10) {num_conn = 2;} // 2-way
 	else {assert(0);}
-
-	if (has_stoplight) {
-		stoplight.init(num_conn, conn);
-		z2() += stoplight_ns::stoplight_max_height(); // include stoplights in Z-range
-	}
+	if (has_stoplight) {init_stoplights();}
 }
 
 tex_range_t road_isec_t::get_tex_range(float ar) const {
@@ -479,11 +475,19 @@ tex_range_t road_isec_t::get_tex_range(float ar) const {
 	return tex_range_t(0.0, 0.0, 1.0, 1.0); // never gets here
 }
 
+void road_isec_t::init_stoplights() {
+	stoplight.init(num_conn, conn);
+	max_eq(z2(), (z1() + max(get_street_sign_height(), stoplight_ns::stoplight_max_height()))); // include stoplights in Z-range
+}
+void road_isec_t::make_stop_signs() {
+	has_stopsign = 1;
+	max_eq(z2(), (z1() + max(get_street_sign_height(), get_stop_sign_height()))); // include stoplights in Z-range
+}
 void road_isec_t::make_4way(unsigned conn_to_city_) {
 	num_conn = 4; conn = 15;
 	assert(conn_to_city < 0); conn_to_city = conn_to_city_;
 	has_stopsign = 0; has_stoplight = 1; // replace 3 stop signs with 4 stoplights
-	if (has_stoplight) {stoplight.init(num_conn, conn);} // re-init with new conn
+	init_stoplights(); // re-init with new conn
 }
 void road_isec_t::next_frame() {
 	if (has_stoplight) {stoplight.next_frame();}
@@ -698,7 +702,7 @@ void road_isec_t::draw_stoplights_and_street_signs(road_draw_state_t &dstate, ve
 	if (!(has_stoplight || draw_street_sign)) return; // nothing to draw
 	vector3d const cview_dir(camera_pdu.pos - center);
 	float const sz(0.03*city_params.road_width), h(1.0*sz);
-	float const ss_height(get_stop_sign_height()), sign_z1(z1() + 2.2*ss_height);
+	float const ss_height(get_stop_sign_height()), sign_z1(z1() + get_street_sign_height());
 	color_wrapper cw(BLACK);
 
 	for (unsigned n = 0; n < 4; ++n) { // {-x, +x, -y, +y} = {W, E, S, N} facing = car traveling {E, W, N, S}

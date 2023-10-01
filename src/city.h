@@ -510,6 +510,8 @@ struct road_isec_t : public cube_t {
 
 	road_isec_t(cube_t const &c, int rx, int ry, unsigned char conn_, bool at_conn_road, bool has_stoplight_, short conn_to_city_=-1);
 	tex_range_t get_tex_range(float ar) const;
+	void init_stoplights();
+	void make_stop_signs();
 	void make_4way(unsigned conn_to_city_);
 	void next_frame();
 	void notify_waiting_car(car_t const &car) const;
@@ -531,7 +533,8 @@ struct road_isec_t : public cube_t {
 	bool has_left_turn_signal(unsigned orient) const;
 	cube_t get_stoplight_cube(unsigned n) const;
 	point get_stop_sign_pos  (unsigned n) const;
-	float get_stop_sign_height() const {return 0.075*(dx() + dy());}
+	float get_stop_sign_height  () const {return 0.075*(dx() + dy());}
+	float get_street_sign_height() const {return 2.2*get_stop_sign_height();}
 	bool check_sphere_coll(point const &pos, float radius) const;
 	bool proc_sphere_coll(point &pos, point const &p_last, float radius, vector3d const &xlate, float dist, vector3d *cnorm) const;
 	bool line_intersect(point const &p1, point const &p2, float &t) const;
