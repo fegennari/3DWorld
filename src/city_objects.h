@@ -220,6 +220,7 @@ class city_bird_t : public city_bird_base_t {
 	unsigned get_model_anim_id() const {return state;}
 	void set_takeoff_time(rand_gen_t &rgen);
 	void adjust_new_dest_zval();
+	bool check_for_mid_flight_coll(float dir_dp, city_obj_placer_t &placer, rand_gen_t &rgen);
 public:
 	city_bird_t(point const &pos_, float height_, vector3d const &init_dir, unsigned loc_ix_, rand_gen_t &rgen);
 	static void pre_draw (draw_state_t &dstate, bool shadow_only) {} // nothing to do

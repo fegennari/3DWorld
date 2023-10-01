@@ -71,6 +71,21 @@ bool city_bird_t::in_landing_dist() const {
 	float const frame_dist(p2p_dist(pos, prev_frame_pos)), dist_thresh(frame_dist + 0.08*radius); // include previous frame distance to avoid overshoot
 	return dist_less_than(pos, dest, dist_thresh);
 }
+bool city_bird_t::check_for_mid_flight_coll(float dir_dp, city_obj_placer_t &placer, rand_gen_t &rgen) {
+	if (state != BIRD_STATE_FLYING && state != BIRD_STATE_GLIDING)     return 0; // only needed when flying or gliding
+	if (((loc_ix + frame_counter) & 15) != 0)                          return 0; // check for pending collisions every 16 frames
+	// here we assume there are no overhangs, so if we can see the point in front of and below us it must be reachable;
+	// the descent approach is a straight line and should also follow this post=>dest path, except for the landing step at the end, which is too late to change dest;
+	// we may even be able to get away with checking velocity.z >= 0.0, but that likely isn't necessary because descent shouldn't happen until dir is aligned;
+	// however, this is only legal when descending/gliding due to other dir changes that can be made while flying (in particular when ascending)
+	if (state == BIRD_STATE_GLIDING && dir_dp > 0.99)                  return 0;
+	if (!placer.check_path_segment_coll(pos, dest, radius))            return 0;
+	if (!placer.choose_bird_dest(pos, radius, loc_ix, dest, dest_dir)) return 0; // if this fails, continue to original dest
+	adjust_new_dest_zval();
+	max_eq(start_end_zmax, dest.z);
+	// no state update since we're already flying
+	return 1;
+}
 
 // timestep is in ticks
 void city_bird_t::next_frame(float timestep, float delta_dir, bool &tile_changed, bool &bird_moved, city_obj_placer_t &placer, rand_gen_t &rgen) {
@@ -176,14 +191,7 @@ void city_bird_t::next_frame(float timestep, float delta_dir, bool &tile_changed
 				velocity.x *= xy_scale;
 				velocity.y *= xy_scale;
 			}
-			// check for pending collisions every 16 frames, and reroute if needed
-			if (((loc_ix + frame_counter) & 15) == 0 && placer.check_path_segment_coll(pos, dest, radius)) {
-				if (placer.choose_bird_dest(pos, radius, loc_ix, dest, dest_dir)) {
-					adjust_new_dest_zval();
-					max_eq(start_end_zmax, dest.z);
-					// no state update since we're already flying
-				} // else continue to original dest
-			}
+			check_for_mid_flight_coll(dir_dp, placer, rgen);
 		}
 		if (dist_xy < radius) { // special case to pull bird in when close
 			vector3d const delta(dest - pos);
@@ -273,12 +281,12 @@ int city_obj_placer_t::check_path_segment_coll(point const &p1, point const &p2,
 	if (line_intersect(p1, p2, t)) return 1;
 	if (check_city_building_line_coll_bs_any(p1, p2)) return 2;
 
-	if (radius > 0.0) { // cylinder case: check 4 points a distance radius from the center
-		vector3d const dir((p2 - p1).get_norm()), v1(cross_product(dir, plus_z).get_norm()), v2(cross_product(v1, dir).get_norm()); // orthogonalize_dir?
+	if (radius > 0.0) { // projected cylinder case: check 4 points a distance radius from the center
+		vector3d const dir((p2 - p1).get_norm()), v_side(cross_product(dir, plus_z).get_norm()); // orthogonalize_dir?
 		vector3d const z_off(0.0, 0.0, 2.0*radius); // move upward to clear any low-lying obstacles such as the source and dest objects, since we'll be flying upward anyway
-		vector3d const offs[4] = {v1, -v1, v2, -v2};
+		vector3d const offs[3] = {v_side, -v_side, -plus_z}; // check both sides and the point below at the feet
 
-		for (unsigned n = 0; n < 4; ++n) {
+		for (unsigned n = 0; n < 3; ++n) {
 			vector3d const off(radius*offs[n] + z_off);
 			point const p1o(p1 + off), p2o(p2 + off);
 			if (line_intersect(p1o, p2o, t)) return 1; // doesn't include objects such as power lines
