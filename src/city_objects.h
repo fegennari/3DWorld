@@ -209,15 +209,16 @@ class city_bird_t : public city_bird_base_t {
 	bool hit_min_alt=0;
 	uint8_t state=0;
 	unsigned loc_ix=0;
-	float height=0.0, anim_time=0.0, takeoff_time=0.0;
+	float height=0.0, anim_time=0.0, takeoff_time=0.0, start_end_zmax=0.0;
 	vector3d velocity, dest_dir;
-	point dest, takeoff_pos, prev_frame_pos;
+	point dest, prev_frame_pos;
 
 	bool is_close_to_player() const;
 	bool is_anim_cycle_complete(float new_anim_time) const;
 	bool in_landing_dist() const;
 	unsigned get_model_anim_id() const {return state;}
 	void set_takeoff_time(rand_gen_t &rgen);
+	void adjust_new_dest_zval();
 public:
 	city_bird_t(point const &pos_, float height_, vector3d const &init_dir, unsigned loc_ix_, rand_gen_t &rgen);
 	static void pre_draw (draw_state_t &dstate, bool shadow_only) {} // nothing to do
@@ -351,7 +352,6 @@ private:
 		float dist_scale, bool shadow_only, bool has_immediate_draw=0, bool draw_qbd_as_quads=0, float specular=0.75, float shininess=50.0);
 	bool connect_power_to_point(point const &at_pos, bool near_power_pole);
 	void connect_power_to_buildings(vector<road_plot_t> const &plots);
-	int check_path_segment_coll(point const &p1, point const &p2, float radius) const;
 public:
 	bool has_plot_dividers() const {return !dividers.empty();}
 	bool have_animations  () const {return !birds   .empty();} // only birds are animated
@@ -370,7 +370,8 @@ public:
 	void get_occluders(pos_dir_up const &pdu, vect_cube_t &occluders) const;
 	void move_to_not_intersect_driveway(point &pos, float radius, bool dim) const;
 	void next_frame();
-	bool choose_bird_dest(float radius, unsigned &loc_ix, point &dest_pos, vector3d &dest_dir);
+	int check_path_segment_coll(point const &p1, point const &p2, float radius) const;
+	bool choose_bird_dest(point const &pos, float radius, unsigned &loc_ix, point &dest_pos, vector3d &dest_dir);
 };
 
 float get_power_pole_offset();

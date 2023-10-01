@@ -11,7 +11,7 @@ float const BIRD_ZV_FALL  = 0.8; // Z vs. XY velocity/acceleration for descent
 float const BIRD_MAX_ALT  = 1.8; // above destination; in multiples of road width
 float const anim_time_scale(1.0/TICKS_PER_SECOND);
 
-extern int animate2;
+extern int animate2, frame_counter;
 extern float fticks;
 extern double tfticks;
 extern city_params_t city_params;
@@ -21,7 +21,7 @@ enum {BIRD_STATE_FLYING=0, BIRD_STATE_GLIDING, BIRD_STATE_LANDING, BIRD_STATE_ST
 
 
 city_bird_t::city_bird_t(point const &pos_, float height_, vector3d const &init_dir, unsigned loc_ix_, rand_gen_t &rgen) :
-	city_bird_base_t(pos_, height_, init_dir, OBJ_MODEL_BIRD_ANIM), state(BIRD_STATE_STANDING), loc_ix(loc_ix_), height(height_), takeoff_pos(pos), prev_frame_pos(pos)
+	city_bird_base_t(pos_, height_, init_dir, OBJ_MODEL_BIRD_ANIM), state(BIRD_STATE_STANDING), loc_ix(loc_ix_), height(height_), prev_frame_pos(pos)
 {
 	anim_time = 1.0*TICKS_PER_SECOND*rgen.rand_float(); // 1s random variation so that birds aren't all in sync
 }
@@ -56,6 +56,9 @@ bool city_bird_t::is_close_to_player() const {
 void city_bird_t::set_takeoff_time(rand_gen_t &rgen) {
 	takeoff_time = tfticks + rgen.rand_uniform(10.0, 30.0)*TICKS_PER_SECOND; // wait 10-30s
 }
+void city_bird_t::adjust_new_dest_zval() {
+	dest.z += (0.5 + BIRD_ZVAL_ADJ)*height; // place feet at dest, not bird center
+}
 bool city_bird_t::is_anim_cycle_complete(float new_anim_time) const {
 	if (anim_time == 0.0) return 0; // anim_time was just reset
 	return building_obj_model_loader.check_anim_wrapped(OBJ_MODEL_BIRD_ANIM, get_model_anim_id(), anim_time_scale*anim_time, anim_time_scale*new_anim_time);
@@ -63,17 +66,9 @@ bool city_bird_t::is_anim_cycle_complete(float new_anim_time) const {
 bool city_bird_t::in_landing_dist() const {
 	assert(dest_valid());
 	assert(state == BIRD_STATE_FLYING || state == BIRD_STATE_GLIDING);
-#if 1 // play landing animation when dest is reached
-	float const frame_dist(p2p_dist(pos, prev_frame_pos)), dist_thresh(frame_dist + 0.1*radius); // include previous frame distance to avoid overshoot
+	// play landing animation when dest is reached
+	float const frame_dist(p2p_dist(pos, prev_frame_pos)), dist_thresh(frame_dist + 0.08*radius); // include previous frame distance to avoid overshoot
 	return dist_less_than(pos, dest, dist_thresh);
-#else // play landing animation before dest is reached (more complex and less reliable)
-	if (velocity.x == 0.0 && velocity.y == 0.0) return 0; // not moving in XY
-	float const land_delay_secs(building_obj_model_loader.get_anim_duration(OBJ_MODEL_BIRD_ANIM, get_model_anim_id()));
-	float const land_delay_ticks(land_delay_secs/anim_time_scale);
-	vector3d const delta_xy(dest.x-pos.x, dest.y-pos.y, 0.0), v_xy(velocity.x, velocity.y, 0.0); // XY only
-	float const dest_time(delta_xy.mag_sq()/dot_product(velocity, delta_xy)); // distance/velocity_to_dest = delta.mag()/dot_product(velocity, delta/deta.mag())
-	return (dest_time > 0.0 && dest_time < land_delay_ticks); // return 0 when flying away from dest
-#endif
 }
 
 // timestep is in ticks
@@ -91,7 +86,7 @@ void city_bird_t::next_frame(float timestep, float delta_dir, bool &tile_changed
 		if (velocity.z > 0.0) {state = BIRD_STATE_FLYING;} // should we call is_anim_cycle_complete()?
 		
 		if (in_landing_dist()) { // check if close enough to dest, then switch to landing
-			// TODO: reorient into dest_dir? otherwise remove dest_dir
+			// reorient into dest_dir? otherwise remove dest_dir?
 			state = BIRD_STATE_LANDING;
 			pos   = dest; // snap to dest; is this a good idea? move more slowly?
 			dest  = all_zeros; // clear for next cycle
@@ -110,10 +105,10 @@ void city_bird_t::next_frame(float timestep, float delta_dir, bool &tile_changed
 			set_takeoff_time(rgen);
 		}
 		else if (tfticks > takeoff_time && is_anim_cycle_complete(new_anim_time)) {
-			if (placer.choose_bird_dest(radius, loc_ix, dest, dest_dir)) {
-				dest.z     += (0.5 + BIRD_ZVAL_ADJ)*height; // place feet at dest, not bird center
-				takeoff_pos = pos;
-				state       = BIRD_STATE_TAKEOFF;
+			if (placer.choose_bird_dest(pos, radius, loc_ix, dest, dest_dir)) {
+				adjust_new_dest_zval();
+				start_end_zmax = max(dest.z, pos.z);
+				state          = BIRD_STATE_TAKEOFF;
 			}
 		}
 		break;
@@ -144,18 +139,18 @@ void city_bird_t::next_frame(float timestep, float delta_dir, bool &tile_changed
 			dir.normalize();
 		}
 		// handle vertical velocity component; this assumes the start and end points are similar zvals
-		// check dir is aligned and approach angle is steep enough to glide down
-		bool const can_descend(hit_min_alt && dir_dp > 0.5 && (dist_xy < 1.0*radius || BIRD_ZV_FALL*dist_xy < (pos.z - dest.z)));
+		// check dir is aligned and approach angle is steep enough to glide down;
+		// the extra radius factor allows for smooth landings when close; closer to radius is more smooth, while omitting this results in flappy landings
+		bool const can_descend(hit_min_alt && dir_dp > 0.5 && BIRD_ZV_FALL*dist_xy < (pos.z - dest.z - 0.1*radius));
 
 		if (!can_descend) { // ascent stage
 			float const max_alt(BIRD_MAX_ALT*(city_params.road_width + 4.0*radius)); // larger birds can fly a bit higher
-			float const z_max(max(dest.z, takeoff_pos.z));
-			hit_min_alt |= (pos.z > z_max + 4.0*radius); // lift off at least 4x radius to clear the starting object
-			if (pos.z > max_alt + z_max) {velocity.z = 0.0;} // too high; level off (should we decelerate smoothly?)
+			hit_min_alt |= (pos.z > start_end_zmax + 4.0*radius); // lift off at least 4x radius to clear the starting object
+			if (pos.z > max_alt + start_end_zmax) {velocity.z = 0.0;} // too high; level off (should we decelerate smoothly?)
 			else {velocity.z = min(BIRD_ZV_RISE*BIRD_MAX_VEL, (velocity.z + BIRD_ZV_RISE*accel));} // rise in the air
 		}
 		else { // descent stage
-			float const z_clearance(min(2.0f*radius, 0.25f*dist_xy)); // approach angle not too shallow
+			float const z_clearance(min(1.0f*radius, 0.5f*dist_xy)); // approach angle not too shallow
 			
 			if (pos.z <= dest.z + z_clearance) { // don't fall below the destination zval
 				velocity.z = 0.0;
@@ -179,7 +174,14 @@ void city_bird_t::next_frame(float timestep, float delta_dir, bool &tile_changed
 				velocity.x *= xy_scale;
 				velocity.y *= xy_scale;
 			}
-			// TODO: call check_path_segment_coll() and handle collisions by rising in Z for city objects and moving in XY for buildings
+			// check for pending collisions every 16 frames, and reroute if needed
+			if (((loc_ix + frame_counter) & 15) == 0 && placer.check_path_segment_coll(pos, dest, radius)) {
+				if (placer.choose_bird_dest(pos, radius, loc_ix, dest, dest_dir)) {
+					adjust_new_dest_zval();
+					max_eq(start_end_zmax, dest.z);
+					// no state update since we're already flying
+				} // else continue to original dest
+			}
 		}
 		if (dist_xy < radius) { // special case to pull bird in when close
 			vector3d const delta(dest - pos);
@@ -226,12 +228,11 @@ void city_obj_placer_t::next_frame() {
 	}
 }
 
-bool city_obj_placer_t::choose_bird_dest(float radius, unsigned &loc_ix, point &dest_pos, vector3d &dest_dir) {
-	dest_pos = all_zeros; // reset
+bool city_obj_placer_t::choose_bird_dest(point const &pos, float radius, unsigned &loc_ix, point &dest_pos, vector3d &dest_dir) {
 	if (bird_locs.size() == birds.size()) return 0; // all locs in use
 	assert(loc_ix < bird_locs.size());
-	bird_place_t &loc(bird_locs[loc_ix]);
-	assert(loc.in_use);
+	bird_place_t &old_loc(bird_locs[loc_ix]);
+	assert(old_loc.in_use);
 	float const xlate_dist(2.0*radius); // move away from the object to avoid intersecting it
 	bool const find_closest = 0; // makes for easier debugging
 	vector<pair<float, unsigned>> pref_locs;
@@ -239,7 +240,7 @@ bool city_obj_placer_t::choose_bird_dest(float radius, unsigned &loc_ix, point &
 	if (find_closest) {
 		for (unsigned i = 0; i < bird_locs.size(); ++i) {
 			if (i == loc_ix || bird_locs[i].in_use) continue;
-			pref_locs.emplace_back(p2p_dist_xy(loc.pos, bird_locs[i].pos), i);
+			pref_locs.emplace_back(p2p_dist_xy(pos, bird_locs[i].pos), i);
 		}
 		sort(pref_locs.begin(), pref_locs.end()); // sort closes to furthest
 	}
@@ -249,14 +250,16 @@ bool city_obj_placer_t::choose_bird_dest(float radius, unsigned &loc_ix, point &
 		if (new_loc_ix == loc_ix) continue; // same
 		bird_place_t &new_loc(bird_locs[new_loc_ix]);
 		if (new_loc.in_use) continue;
-		assert(new_loc.pos != loc.pos);
-		vector3d const dir((new_loc.pos - loc.pos).get_norm());
-		point const start_pos(loc.pos + xlate_dist*dir), end_pos(new_loc.pos - xlate_dist*dir);
+		assert(new_loc.pos != pos);
+		if (new_loc.pos.z > pos.z + BIRD_ZV_RISE*p2p_dist_xy(new_loc.pos, pos)) continue; // too steep a rise
+		if (new_loc.pos.z < pos.z - BIRD_ZV_FALL*p2p_dist_xy(new_loc.pos, pos)) continue; // too steep a drop
+		vector3d const dir((new_loc.pos - pos).get_norm());
+		point const start_pos(pos + xlate_dist*dir), end_pos(new_loc.pos - xlate_dist*dir);
 		if (check_path_segment_coll(start_pos, end_pos, radius)) continue;
 		loc_ix   = new_loc_ix;
 		dest_pos = new_loc.pos;
 		dest_dir = new_loc.orient;
-		loc    .in_use = 0;
+		old_loc.in_use = 0;
 		new_loc.in_use = 1;
 		return 1; // success
 	} // for n
