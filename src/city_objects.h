@@ -291,6 +291,7 @@ struct bird_place_t {
 };
 struct vect_bird_place_t : public vector<bird_place_t> {
 	void add_placement(cube_t const &obj, bool dim, bool dir, bool orient_dir, float spacing, rand_gen_t &rgen);
+	void add_placement_centerline(cube_t const &obj, bool dim, bool dir, rand_gen_t &rgen);
 	void add_placement_rand_dim_dir(cube_t const &obj, float spacing, rand_gen_t &rgen);
 	void add_placement_top_center(cube_t const &obj, rand_gen_t &rgen);
 };

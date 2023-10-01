@@ -596,7 +596,8 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 				unsigned const loc_ix(bird_locs_start_ix + rgen.rand()%num_locs);
 				bird_place_t &p(bird_locs[loc_ix]);
 				if (p.in_use) continue;
-				float const height(base_height*rgen.rand_uniform(0.8, 1.2));
+				// birds are taller than pigeons because their wingspan is included in their bcube, which means their height is shorter relative to their radius
+				float const height(1.25*base_height*rgen.rand_uniform(0.8, 1.2));
 				point bird_pos(p.pos);
 				bird_pos.z += BIRD_ZVAL_ADJ*height;
 				bird_groups.add_obj(city_bird_t(bird_pos, height, p.orient, loc_ix, rgen), birds);

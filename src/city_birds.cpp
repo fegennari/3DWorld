@@ -68,7 +68,7 @@ bool city_bird_t::in_landing_dist() const {
 	assert(dest_valid());
 	assert(state == BIRD_STATE_FLYING || state == BIRD_STATE_GLIDING);
 	// play landing animation when dest is reached
-	float const frame_dist(p2p_dist(pos, prev_frame_pos)), dist_thresh(frame_dist + 0.08*radius); // include previous frame distance to avoid overshoot
+	float const frame_dist(p2p_dist(pos, prev_frame_pos)), dist_thresh(frame_dist + 0.05*radius); // include previous frame distance to avoid overshoot
 	return dist_less_than(pos, dest, dist_thresh);
 }
 bool city_bird_t::check_for_mid_flight_coll(float dir_dp, city_obj_placer_t &placer, rand_gen_t &rgen) {
@@ -176,7 +176,7 @@ void city_bird_t::next_frame(float timestep, float delta_dir, bool &tile_changed
 			else {velocity.z = max(-BIRD_ZV_FALL*BIRD_MAX_VEL, (velocity.z - BIRD_ZV_FALL*accel));} // glide down
 		}
 		// handle horizontal velocity component
-		float const frame_dist_xy(p2p_dist_xy(pos, prev_frame_pos)), dist_thresh(frame_dist_xy + 0.05*radius);
+		float const frame_dist_xy(p2p_dist_xy(pos, prev_frame_pos)), dist_thresh(frame_dist_xy + 0.03*radius);
 		
 		if (dist_xy_less_than(pos, dest, dist_thresh)) { // close enough in XY, but may need to descend in Z
 			velocity.x = velocity.y = 0.0;
