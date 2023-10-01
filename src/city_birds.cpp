@@ -233,9 +233,19 @@ bool city_obj_placer_t::choose_bird_dest(float radius, unsigned &loc_ix, point &
 	bird_place_t &loc(bird_locs[loc_ix]);
 	assert(loc.in_use);
 	float const xlate_dist(2.0*radius); // move away from the object to avoid intersecting it
-	
+	bool const find_closest = 0; // makes for easier debugging
+	vector<pair<float, unsigned>> pref_locs;
+
+	if (find_closest) {
+		for (unsigned i = 0; i < bird_locs.size(); ++i) {
+			if (i == loc_ix || bird_locs[i].in_use) continue;
+			pref_locs.emplace_back(p2p_dist_xy(loc.pos, bird_locs[i].pos), i);
+		}
+		sort(pref_locs.begin(), pref_locs.end()); // sort closes to furthest
+	}
+	// else find a random visible/reachable dest
 	for (unsigned n = 0; n < 10; ++n) { // make up to 10 attempts to avoid long runtime
-		unsigned const new_loc_ix(bird_rgen.rand() % bird_locs.size());
+		unsigned const new_loc_ix((n < pref_locs.size()) ? pref_locs[n].second : (bird_rgen.rand() % bird_locs.size()));
 		if (new_loc_ix == loc_ix) continue; // same
 		bird_place_t &new_loc(bird_locs[new_loc_ix]);
 		if (new_loc.in_use) continue;
