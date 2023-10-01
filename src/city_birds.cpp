@@ -6,7 +6,8 @@
 
 float const BIRD_ACCEL    = 0.00025;
 float const BIRD_MAX_VEL  = 0.002;
-float const BIRD_ZV_SCALE = 0.5; // Z vs. XY velocity/acceleration
+float const BIRD_ZV_RISE  = 0.4; // Z vs. XY velocity/acceleration for ascent
+float const BIRD_ZV_FALL  = 0.8; // Z vs. XY velocity/acceleration for descent
 float const BIRD_MAX_ALT  = 1.8; // above destination; in multiples of road width
 float const anim_time_scale(1.0/TICKS_PER_SECOND);
 
@@ -100,7 +101,7 @@ void city_bird_t::next_frame(float timestep, float delta_dir, bool &tile_changed
 		if (is_anim_cycle_complete(new_anim_time)) { // wait for animation to complete
 			state       = BIRD_STATE_STANDING;
 			velocity    = zero_vector; // make sure to stop
-			hit_max_alt = 0; // reset for next cycle
+			hit_min_alt = 0; // reset for next cycle
 			set_takeoff_time(rgen);
 		}
 		break;
@@ -110,10 +111,9 @@ void city_bird_t::next_frame(float timestep, float delta_dir, bool &tile_changed
 		}
 		else if (tfticks > takeoff_time && is_anim_cycle_complete(new_anim_time)) {
 			if (placer.choose_bird_dest(radius, loc_ix, dest, dest_dir)) {
-				dest.z      += 0.5*height; // place feet at dest, not bird center
-				takeoff_pos  = pos;
-				descend_dist = 0.5*p2p_dist_xy(pos, dest); // initial guess is halfway to dest, assuming we don't hit max altitude first
-				state        = BIRD_STATE_TAKEOFF;
+				dest.z     += (0.5 + BIRD_ZVAL_ADJ)*height; // place feet at dest, not bird center
+				takeoff_pos = pos;
+				state       = BIRD_STATE_TAKEOFF;
 			}
 		}
 		break;
@@ -131,28 +131,28 @@ void city_bird_t::next_frame(float timestep, float delta_dir, bool &tile_changed
 	else { // update direction and velocity
 		vector3d dest_dir_xy(dest.x-pos.x, dest.y-pos.y, 0.0); // XY only
 		float const dist_xy(dest_dir_xy.mag());
-		dest_dir_xy /= dist_xy; // normalize
+		if (dist_xy > TOLERANCE) {dest_dir_xy /= dist_xy;} else {dest_dir_xy = dir;} // normalize if nonzero, otherwise use cur dir
 		float const accel(((state == BIRD_STATE_TAKEOFF) ? 0.1 : 1.0)*BIRD_ACCEL); // slower during takeoff
+		float const dir_dp(dot_product(dir, dest_dir_xy));
 
 		// update direction
-		if (dot_product(dir, dest_dir_xy) < 0.999) { // not oriented in dir
+		if (dir_dp < 0.999) { // not oriented in dir
 			delta_dir *= max(1.0f, 4.0f*radius/dist_xy); // faster correction when close to destination to prevent circling
 			// if directions are nearly opposite, pick a side to turn using the cross product to get an orthogonal vector
-			if (dot_product(dest_dir_xy, dir) < -0.9) {dest_dir_xy = cross_product(dir, plus_z)*((loc_ix & 1) ? -1.0 : 1.0);} // random turn direction (CW/CCW)
+			if (dir_dp < -0.9) {dest_dir_xy = cross_product(dir, plus_z)*((loc_ix & 1) ? -1.0 : 1.0);} // random turn direction (CW/CCW)
 			dir = delta_dir*dest_dir_xy + (1.0 - delta_dir)*dir; // merge new_dir into dir gradually for smooth turning
 			dir.normalize();
 		}
 		// handle vertical velocity component; this assumes the start and end points are similar zvals
-		if (dist_xy > descend_dist) { // ascent stage
-			float const max_alt(BIRD_MAX_ALT*(city_params.road_width + 4.0*radius)); // larger birds can fly a bit higher
+		// check dir is aligned and approach angle is steep enough to glide down
+		bool const can_descend(hit_min_alt && dir_dp > 0.5 && (dist_xy < 1.0*radius || BIRD_ZV_FALL*dist_xy < (pos.z - dest.z)));
 
-			if (pos.z > max_alt + max(dest.z, takeoff_pos.z)) { // too high; level off (should we decelerate smoothly?)
-				// assume descent distance is similar to the ascent distance; increase slightly to account for slower takeoff
-				if (!hit_max_alt) {descend_dist = 1.1*p2p_dist_xy(pos, takeoff_pos);}
-				hit_max_alt = 1;
-				velocity.z  = 0.0;
-			}
-			else {velocity.z = min( BIRD_ZV_SCALE*BIRD_MAX_VEL, (velocity.z + BIRD_ZV_SCALE*accel));} // rise in the air
+		if (!can_descend) { // ascent stage
+			float const max_alt(BIRD_MAX_ALT*(city_params.road_width + 4.0*radius)); // larger birds can fly a bit higher
+			float const z_max(max(dest.z, takeoff_pos.z));
+			hit_min_alt |= (pos.z > z_max + 4.0*radius); // lift off at least 4x radius to clear the starting object
+			if (pos.z > max_alt + z_max) {velocity.z = 0.0;} // too high; level off (should we decelerate smoothly?)
+			else {velocity.z = min(BIRD_ZV_RISE*BIRD_MAX_VEL, (velocity.z + BIRD_ZV_RISE*accel));} // rise in the air
 		}
 		else { // descent stage
 			float const z_clearance(min(2.0f*radius, 0.25f*dist_xy)); // approach angle not too shallow
@@ -161,7 +161,7 @@ void city_bird_t::next_frame(float timestep, float delta_dir, bool &tile_changed
 				velocity.z = 0.0;
 				max_eq(pos.z, dest.z); // can't go below dest
 			}
-			else {velocity.z = max(-BIRD_ZV_SCALE*BIRD_MAX_VEL, (velocity.z - BIRD_ZV_SCALE*accel));} // glide down
+			else {velocity.z = max(-BIRD_ZV_FALL*BIRD_MAX_VEL, (velocity.z - BIRD_ZV_FALL*accel));} // glide down
 		}
 		// handle horizontal velocity component
 		float const frame_dist_xy(p2p_dist_xy(pos, prev_frame_pos)), dist_thresh(frame_dist_xy + 0.05*radius);

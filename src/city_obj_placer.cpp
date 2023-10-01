@@ -595,7 +595,9 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 				bird_place_t &p(bird_locs[loc_ix]);
 				if (p.in_use) continue;
 				float const height(base_height*rgen.rand_uniform(0.8, 1.2));
-				bird_groups.add_obj(city_bird_t(p.pos, height, p.orient, loc_ix, rgen), birds);
+				point bird_pos(p.pos);
+				bird_pos.z += BIRD_ZVAL_ADJ*height;
+				bird_groups.add_obj(city_bird_t(bird_pos, height, p.orient, loc_ix, rgen), birds);
 				p.in_use = 1;
 				++num_added;
 				if (num_added == num_place) break; // done

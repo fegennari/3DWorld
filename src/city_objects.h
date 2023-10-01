@@ -203,12 +203,13 @@ struct pigeon_t : public city_bird_base_t {
 };
 
 class city_obj_placer_t;
+float const BIRD_ZVAL_ADJ = -0.05;
 
 class city_bird_t : public city_bird_base_t {
-	bool hit_max_alt=0;
+	bool hit_min_alt=0;
 	uint8_t state=0;
 	unsigned loc_ix=0;
-	float height=0.0, anim_time=0.0, takeoff_time=0.0, descend_dist=0.0;
+	float height=0.0, anim_time=0.0, takeoff_time=0.0;
 	vector3d velocity, dest_dir;
 	point dest, takeoff_pos, prev_frame_pos;
 
