@@ -241,6 +241,11 @@ void city_obj_placer_t::place_trees_in_plot(road_plot_t const &plot, vect_cube_t
 	for (auto i = blockers.begin()+buildings_end; i != blockers.begin()+input_blockers_end; ++i) {i->expand_by_xy(non_buildings_overlap);} // undo initial expand
 }
 
+void city_obj_groups_t::clear() {
+	vector<cube_with_ix_t>::clear();
+	by_tile.clear();
+	bcube.set_to_zeros();
+}
 void city_obj_groups_t::insert_obj_ix(cube_t const &c, unsigned ix) {
 	by_tile[get_tile_id_for_cube(c)].push_back(ix);
 }
@@ -265,8 +270,9 @@ template<typename T> void city_obj_groups_t::create_groups(vector<T> &objs, cube
 		sort(new_objs.begin()+group_start, new_objs.end());
 		group.ix = new_objs.size();
 		push_back(group);
-		all_objs_bcube.assign_or_union_with_cube(group);
+		bcube.assign_or_union_with_cube(group);
 	} // for g
+	all_objs_bcube.assign_or_union_with_cube(bcube);
 	objs.swap(new_objs);
 	by_tile.clear(); // no longer needed
 }
@@ -952,7 +958,7 @@ void city_obj_placer_t::add_stop_sign_plot_colliders(vector<road_plot_t> const &
 template<typename T> void city_obj_placer_t::draw_objects(vector<T> const &objs, city_obj_groups_t const &groups, draw_state_t &dstate,
 	float dist_scale, bool shadow_only, bool has_immediate_draw, bool draw_qbd_as_quads, float specular, float shininess)
 {
-	if (objs.empty()) return;
+	if (groups.empty() || !dstate.check_cube_visible(groups.get_bcube(), dist_scale)) return;
 	T::pre_draw(dstate, shadow_only);
 	unsigned start_ix(0);
 	assert(city_draw_qbds_t::empty());
@@ -1257,6 +1263,7 @@ void city_obj_placer_t::draw_detail_objects(draw_state_t &dstate, bool shadow_on
 template<typename T> bool proc_vector_sphere_coll(vector<T> const &objs, city_obj_groups_t const &groups, point &pos,
 	point const &p_last, float radius, vector3d const &xlate, vector3d *cnorm)
 {
+	if (groups.empty() || !sphere_cube_intersect((pos - xlate), radius, groups.get_bcube())) return 0;
 	point const pos_bs(pos - xlate);
 	unsigned start_ix(0);
 
@@ -1289,6 +1296,7 @@ bool city_obj_placer_t::proc_sphere_coll(point &pos, point const &p_last, vector
 }
 
 template<typename T> void check_vector_line_intersect(vector<T> const &objs, city_obj_groups_t const &groups, point const &p1, point const &p2, float &t, bool &ret) {
+	if (groups.empty() || !check_line_clip(p1, p2, groups.get_bcube().d)) return;
 	unsigned start_ix(0);
 
 	for (auto g = groups.begin(); g != groups.end(); start_ix = g->ix, ++g) {
@@ -1316,6 +1324,7 @@ bool city_obj_placer_t::line_intersect(point const &p1, point const &p2, float &
 }
 
 template<typename T> bool check_city_obj_bcube_pt_xy_contain(city_obj_groups_t const &groups, vector<T> const &objs, point const &pos, unsigned &obj_ix) {
+	if (groups.empty() || !groups.get_bcube().contains_pt_xy(pos)) return 0;
 	unsigned start_ix(0);
 
 	for (auto i = groups.begin(); i != groups.end(); start_ix = i->ix, ++i) {
@@ -1330,24 +1339,29 @@ template<typename T> bool check_city_obj_bcube_pt_xy_contain(city_obj_groups_t c
 	return 0;
 }
 bool city_obj_placer_t::get_color_at_xy(point const &pos, colorRGBA &color, bool skip_in_road) const {
-	unsigned start_ix(0), obj_ix(0);
+	unsigned obj_ix(0);
 	if (check_city_obj_bcube_pt_xy_contain(bench_groups, benches, pos, obj_ix)) {color = texture_color(FENCE_TEX); return 1;}
 	float const expand(0.15*city_params.road_width), x_test(pos.x + expand); // expand to approx tree diameter
 
-	for (auto i = planter_groups.begin(); i != planter_groups.end(); start_ix = i->ix, ++i) {
-		if (!i->contains_pt_xy_exp(pos, expand)) continue;
-		assert(start_ix <= i->ix && i->ix <= planters.size());
+	if (!planter_groups.empty() && planter_groups.get_bcube().contains_pt_xy(pos)) {
+		unsigned start_ix(0);
 
-		for (auto p = planters.begin()+start_ix; p != planters.begin()+i->ix; ++p) {
-			if (x_test < p->bcube.x1()) break; // planters are sorted by x1, none after this can match
-			if (!p->bcube.contains_pt_xy_exp(pos, expand)) continue;
-			// treat this as a tree rather than a planter by testing against a circle, since trees aren't otherwise included
-			if (dist_xy_less_than(pos, p->pos, (p->radius + expand))) {color = DK_GREEN; return 1;}
-		}
-	} // for i
-	start_ix = 0;
+		for (auto i = planter_groups.begin(); i != planter_groups.end(); start_ix = i->ix, ++i) {
+			if (!i->contains_pt_xy_exp(pos, expand)) continue;
+			assert(start_ix <= i->ix && i->ix <= planters.size());
 
-	if (!skip_in_road) { // fire hydrants are now placed on the edges of the road, so they're not inside plots and are skipped here
+			for (auto p = planters.begin()+start_ix; p != planters.begin()+i->ix; ++p) {
+				if (x_test < p->bcube.x1()) break; // planters are sorted by x1, none after this can match
+				if (!p->bcube.contains_pt_xy_exp(pos, expand)) continue;
+				// treat this as a tree rather than a planter by testing against a circle, since trees aren't otherwise included
+				if (dist_xy_less_than(pos, p->pos, (p->radius + expand))) {color = DK_GREEN; return 1;}
+			}
+		} // for i
+	}
+	// fire hydrants are now placed on the edges of the road, so they're not inside plots and are skipped here
+	if (!skip_in_road && !fhydrant_groups.empty() && fhydrant_groups.get_bcube().contains_pt_xy(pos)) {
+		unsigned start_ix(0);
+
 		for (auto i = fhydrant_groups.begin(); i != fhydrant_groups.end(); start_ix = i->ix, ++i) {
 			if (!i->contains_pt_xy(pos)) continue;
 			assert(start_ix <= i->ix && i->ix <= fhydrants.size());
@@ -1357,27 +1371,28 @@ bool city_obj_placer_t::get_color_at_xy(point const &pos, colorRGBA &color, bool
 				if (dist_xy_less_than(pos, b->pos, b->radius)) {color = colorRGBA(1.0, 0.75, 0.0); return 1;} // orange/yellow color
 			}
 		} // for i
-		start_ix = 0;
 	}
 	if (check_city_obj_bcube_pt_xy_contain(divider_groups, dividers, pos, obj_ix)) {
 		assert(obj_ix < dividers.size());
 		color = plot_divider_types[dividers[obj_ix].type].get_avg_color();
 		return 1;
 	}
-	for (auto i = pool_groups.begin(); i != pool_groups.end(); start_ix = i->ix, ++i) {
-		if (!i->contains_pt_xy(pos)) continue;
-		assert(start_ix <= i->ix && i->ix <= pools.size());
+	if (!pool_groups.empty() && pool_groups.get_bcube().contains_pt_xy(pos)) {
+		unsigned start_ix(0);
 
-		for (auto b = pools.begin()+start_ix; b != pools.begin()+i->ix; ++b) {
-			if (pos.x < b->bcube.x1()) break; // pools are sorted by x1, none after this can match
-			if (!b->bcube.contains_pt_xy(pos)) continue;
-			if (b->above_ground && !dist_xy_less_than(pos, cube_bot_center(b->bcube), b->get_radius())) continue; // circular in-ground pool
-			color = b->wcolor; // return water color
-			return 1;
-		}
-	} // for i
-	start_ix = 0;
+		for (auto i = pool_groups.begin(); i != pool_groups.end(); start_ix = i->ix, ++i) {
+			if (!i->contains_pt_xy(pos)) continue;
+			assert(start_ix <= i->ix && i->ix <= pools.size());
 
+			for (auto b = pools.begin()+start_ix; b != pools.begin()+i->ix; ++b) {
+				if (pos.x < b->bcube.x1()) break; // pools are sorted by x1, none after this can match
+				if (!b->bcube.contains_pt_xy(pos)) continue;
+				if (b->above_ground && !dist_xy_less_than(pos, cube_bot_center(b->bcube), b->get_radius())) continue; // circular in-ground pool
+				color = b->wcolor; // return water color
+				return 1;
+			}
+		} // for i
+	}
 	if (check_city_obj_bcube_pt_xy_contain(pdeck_groups, pdecks, pos, obj_ix)) {
 		assert(obj_ix < pdecks.size());
 		color = pool_deck_mats[pdecks[obj_ix].mat_id].get_avg_color();
@@ -1399,7 +1414,7 @@ void city_obj_placer_t::get_occluders(pos_dir_up const &pdu, vect_cube_t &occlud
 	float const dmax(0.25f*(X_SCENE_SIZE + Y_SCENE_SIZE)); // set far clipping plane to 1/4 a tile (currently 2.0)
 	unsigned start_ix(0);
 
-	for (auto i = divider_groups.begin(); i != divider_groups.end(); start_ix = i->ix, ++i) {
+	for (auto i = divider_groups.begin(); i != divider_groups.end(); start_ix = i->ix, ++i) { // no divider_groups.get_bcube() test here?
 		if (!dist_less_than(pdu.pos, i->closest_pt(pdu.pos), dmax) || !pdu.cube_visible(*i)) continue;
 		assert(start_ix <= i->ix && i->ix <= dividers.size());
 

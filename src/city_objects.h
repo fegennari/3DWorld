@@ -298,8 +298,10 @@ struct vect_bird_place_t : public vector<bird_place_t> {
 
 class city_obj_groups_t : public vector<cube_with_ix_t> {
 	map<uint64_t, vector<unsigned>> by_tile;
+	cube_t bcube;
 public:
-	void clear() {vector<cube_with_ix_t>::clear(); by_tile.clear();}
+	cube_t const &get_bcube() const {return bcube;}
+	void clear();
 	void insert_obj_ix(cube_t const &c, unsigned ix);
 	template<typename T> void add_obj(T const &obj, vector<T> &objs);
 	template<typename T> void create_groups (vector<T>       &objs, cube_t &all_objs_bcube);

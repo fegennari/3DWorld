@@ -3,6 +3,7 @@
 // 09/21/23
 
 #include "city_objects.h"
+//#include "profiler.h"
 
 float const BIRD_ACCEL       = 0.00025;
 float const BIRD_MAX_VEL     = 0.002;
@@ -222,9 +223,10 @@ template<typename T> void city_obj_groups_t::update_obj_pos(vector<T> const &obj
 		g.set_to_zeros(); // clear bcube for this pass
 		assert(start_ix <= g.ix && g.ix <= objs.size());
 		for (auto i = objs.begin()+start_ix; i != objs.begin()+g.ix; ++i) {g.assign_or_union_with_cube(i->bcube);}
-		all_objs_bcube.union_with_cube(g);
+		bcube.union_with_cube(g);
 		start_ix = g.ix;
 	} // for g
+	all_objs_bcube.union_with_cube(bcube);
 }
 
 // this is here because only birds are updated each frame
@@ -233,6 +235,7 @@ void city_obj_placer_t::next_frame() {
 	float const enable_birds_dist(0.5f*(X_SCENE_SIZE + Y_SCENE_SIZE)); // half the pedestrian AI distance
 	point const camera_bs(get_camera_pos() - get_tiled_terrain_model_xlate());
 	if (!all_objs_bcube.closest_dist_less_than(camera_bs, enable_birds_dist)) return; // too far from the player
+	//highres_timer_t timer("Update Birds");
 	float const timestep(min(fticks, 4.0f)); // clamp fticks to 100ms
 	float const delta_dir(0.1*(1.0 - pow(0.7f, fticks))); // controls bird turning rate
 	bool tile_changed(0), bird_moved(0);
