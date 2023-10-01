@@ -39,6 +39,7 @@ float const TUNNEL_WALL_THICK    = 0.25; // relative to radius
 float const TRACKS_WIDTH         = 0.5; // relative to road width
 float const CAR_SPEED_SCALE      = 0.001;
 float const SIDEWALK_WIDTH       = 0.1; // relative to road texture
+float const SIGN_STOPSIGN_HEIGHT = 2.2; // height of street sign relative to attached stop sign
 vector3d const CAR_SIZE(0.30, 0.13, 0.08); // {length, width, height} in units of road width
 float const CAR_RADIUS_SCALE(CAR_SIZE.mag()/CAR_SIZE.z);
 
@@ -534,7 +535,7 @@ struct road_isec_t : public cube_t {
 	cube_t get_stoplight_cube(unsigned n) const;
 	point get_stop_sign_pos  (unsigned n) const;
 	float get_stop_sign_height  () const {return 0.075*(dx() + dy());}
-	float get_street_sign_height() const {return 2.2*get_stop_sign_height();}
+	float get_street_sign_height() const {return SIGN_STOPSIGN_HEIGHT*get_stop_sign_height();}
 	bool check_sphere_coll(point const &pos, float radius) const;
 	bool proc_sphere_coll(point &pos, point const &p_last, float radius, vector3d const &xlate, float dist, vector3d *cnorm) const;
 	bool line_intersect(point const &p1, point const &p2, float &t) const;

@@ -326,7 +326,7 @@ void divider_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_sc
 		cube_t post(bcube), top(bcube); // copy dim and Z values
 		post.expand_in_dim(dim, 0.5f*(post_width - thickness)); // increase width to post_width
 		top .expand_in_dim(dim, 0.5f*(top_width  - thickness));
-		post.z2() += 0.025*height; // extend slightly above the top of the fence
+		post.z2() += 0.02*height; // extend slightly above the top of the fence; bird feet may clip through the post when standing on it though
 		set_wall_width(top, bcube.z2(), 0.5f*top_width, 2); // set height
 
 		// for now we draw posts as cubes rather than cylinders since it's faster and easier, because we can use the existing qbd
@@ -655,7 +655,7 @@ power_pole_t::power_pole_t(point const &base_, point const &center_, float pole_
 cube_t power_pole_t::get_ped_occluder() const {
 	cube_t occluder(base);
 	occluder.z2() = bcube.z2();
-	occluder.expand_by_xy(pole_radius/SQRT2); // take inner radius to reduce the occluder side for the pedestrian
+	occluder.expand_by_xy(pole_radius/SQRT2); // take inner radius to reduce the occluder size for the pedestrian
 	return occluder;
 }
 cube_t power_pole_t::calc_cbar(bool d) const {
@@ -1230,6 +1230,11 @@ stopsign_t::stopsign_t(point const &pos_, float height, float width, bool dim_, 
 	bcube.expand_in_dim( dim, 0.05*width); // thickness
 	bcube.expand_in_dim(!dim, 0.50*width); // width
 	bcube.z2() += height;
+}
+cube_t stopsign_t::get_bird_bcube() const {
+	cube_t top_place(bcube);
+	if (SIGN_STOPSIGN_HEIGHT > 1.0) {top_place.z2() = top_place.z1() + SIGN_STOPSIGN_HEIGHT*bcube.dz();} // extend to top of street sign
+	return top_place;
 }
 /*static*/ void stopsign_t::pre_draw(draw_state_t &dstate, bool shadow_only) {
 	// Note: the texture is still needed in the shadow pass as an alpha mask

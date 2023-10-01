@@ -650,7 +650,7 @@ void city_obj_placer_t::place_residential_plot_objects(road_plot_t const &plot, 
 	if (rgen.rand_bool()) {std::reverse(sub_plots.begin(), sub_plots.end());} // reverse half the time so that we don't prefer a divider in one side or the other
 	unsigned const shrink_dim(rgen.rand_bool()); // mostly arbitrary, could maybe even make this a constant 0
 	float const sz_scale(0.06*city_params.road_width);
-	unsigned const dividers_start(dividers.size()), mboxes_start(mboxes.size()), stopsigns_start(stopsigns.size()), prev_blockers_end(blockers.size());
+	unsigned const dividers_start(dividers.size()), mboxes_start(mboxes.size()), prev_blockers_end(blockers.size());
 	float const min_pool_spacing_to_plot_edge(0.5*city_params.road_width);
 	colorRGBA const pool_side_colors[5] = {WHITE, WHITE, GRAY, LT_BROWN, LT_BLUE};
 	vect_cube_with_ix_t bcubes; // we need the building index for the get_building_door_pos_closest_to() call
@@ -894,9 +894,16 @@ void city_obj_placer_t::place_residential_plot_objects(road_plot_t const &plot, 
 	}
 	if (are_birds_enabled()) { // add_birds=1, add_pigeons=0 for all below
 		vect_bird_place_t unused;
-		add_objs_top_center(mboxes,    mboxes_start,    0, 1, unused, bird_locs, rgen);
-		add_objs_top_center(stopsigns, stopsigns_start, 0, 1, unused, bird_locs, rgen);
-		if ((rgen.rand() & 3) == 0) {add_objs_top_center(dividers, dividers_start, 0, 1, unused, bird_locs, rgen);} // only add one in 4, since there are so many
+		add_objs_top_center(mboxes, mboxes_start, 0, 1, unused, bird_locs, rgen);
+		//add_objs_top_center(stopsigns, stopsigns_start, 0, 1, unused, bird_locs, rgen); // stopsigns aren't added at this point, and they have street signs above them
+		
+		if ((rgen.rand() & 3) == 0) { // only add one in 4, since there are so many
+			for (auto i = dividers.begin()+dividers_start; i != dividers.end(); ++i) {
+				vect_bird_place_t *const dest(select_bird_loc_dest(0, 1, unused, bird_locs, rgen));
+				if (dest == nullptr) continue;
+				dest->add_placement_centerline(i->get_bird_bcube(), i->dim, rgen.rand_bool(), rgen); // place somewhere along the divider with random dir
+			}
+		}
 	}
 }
 

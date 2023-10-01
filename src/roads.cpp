@@ -827,7 +827,7 @@ void road_isec_t::draw_stoplights_and_street_signs(road_draw_state_t &dstate, ve
 		if (draw_street_sign) { // draw street sign
 			// draw green sign cube
 			assert(sc.is_strictly_normalized());
-			cube_t sign(sc); // start with stoplight cube
+			cube_t sign(sc); // start with extended (pole) stoplight or stop sign cube
 			sign.z1() = sc.z2() - 0.7*sz; // high up
 			sign.z2() = sc.z2() - 0.1*sz;
 			sign.d[ dim][dir  ] -= (dir ? 1.0 : -1.0)*0.8*sc.get_sz_dim(dim); // shrink

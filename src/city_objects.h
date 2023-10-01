@@ -155,6 +155,7 @@ public:
 	void get_top_wires_conn_pts(point pts[3]) const {get_wires_conn_pts(pts, ((dims&1) ? 0 : 1));} // use X if enabled, otherwise Y
 	float get_bsphere_radius(bool shadow_only) const {return (shadow_only ? radius : bsphere_radius);} // non-shadow pass includes wires bsphere radius
 	cube_t const &get_outer_bcube() const {return bcube_with_wires;}
+	cube_t get_bird_bcube  () const {return get_ped_occluder();} // centered on the pole; same as pedestrians
 	cube_t get_ped_occluder() const;
 	point get_nearest_connection_point(point const &to_pos, bool near_power_pole) const;
 	bool add_wire(point const &p1, point const &p2, bool add_pole);
@@ -247,6 +248,7 @@ struct stopsign_t : public oriented_city_obj_t {
 	unsigned num_way;
 
 	stopsign_t(point const &pos_, float height, float width, bool dim_, bool dir_, unsigned num_way_);
+	cube_t get_bird_bcube() const;
 	static void pre_draw (draw_state_t &dstate, bool shadow_only);
 	static void post_draw(draw_state_t &dstate, bool shadow_only);
 	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const;

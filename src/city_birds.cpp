@@ -294,6 +294,13 @@ void vect_bird_place_t::add_placement(cube_t const &obj, bool dim, bool dir, boo
 	pos[!dim] = rgen.rand_uniform(obj.d[!dim][0]+spacing, obj.d[!dim][1]-spacing); // random position along the edge
 	emplace_back(pos, dim, orient_dir);
 }
+void vect_bird_place_t::add_placement_centerline(cube_t const &obj, bool dim, bool dir, rand_gen_t &rgen) {
+	float const spacing(0.1*obj.get_sz_dim(!dim)); // 10% from either end
+	point pos(0.0, 0.0, obj.z2());
+	pos[ dim] = obj.get_center_dim(dim);
+	pos[!dim] = rgen.rand_uniform(obj.d[!dim][0]+spacing, obj.d[!dim][1]-spacing); // random position along the centerline
+	emplace_back(pos, dim, dir);
+}
 void vect_bird_place_t::add_placement_rand_dim_dir(cube_t const &obj, float spacing, rand_gen_t &rgen) {
 	bool const dir(rgen.rand_bool());
 	add_placement(obj, rgen.rand_bool(), dir, dir, spacing, rgen);
