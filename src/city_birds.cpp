@@ -208,6 +208,25 @@ void city_bird_t::next_frame(float timestep, float delta_dir, bool &tile_changed
 	}
 }
 
+// these template functions are here rather than in city_obj_placer.cpp because they're currently only used for birds
+template<typename T> void city_obj_groups_t::rebuild(vector<T> &objs, cube_t &all_objs_bcube) {
+	clear();
+	for (unsigned i = 0; i < objs.size(); ++i) {insert_obj_ix(objs[i].bcube, i);}
+	create_groups(objs, all_objs_bcube);
+}
+template<typename T> void city_obj_groups_t::update_obj_pos(vector<T> const &objs, cube_t &all_objs_bcube) {
+	unsigned start_ix(0);
+
+	for (auto &g : *this) {
+		cube_t const prev(g);
+		g.set_to_zeros(); // clear bcube for this pass
+		assert(start_ix <= g.ix && g.ix <= objs.size());
+		for (auto i = objs.begin()+start_ix; i != objs.begin()+g.ix; ++i) {g.assign_or_union_with_cube(i->bcube);}
+		all_objs_bcube.union_with_cube(g);
+		start_ix = g.ix;
+	} // for g
+}
+
 // this is here because only birds are updated each frame
 void city_obj_placer_t::next_frame() {
 	if (!animate2 || birds.empty()) return;
@@ -220,21 +239,10 @@ void city_obj_placer_t::next_frame() {
 	for (city_bird_t &bird : birds) {bird.next_frame(timestep, delta_dir, tile_changed, bird_moved, *this, bird_rgen);}
 	
 	if (tile_changed) { // update bird_groups; is there a more efficient way than rebuilding bird_groups each frame?
-		bird_groups.clear();
-		for (unsigned i = 0; i < birds.size(); ++i) {bird_groups.insert_obj_ix(birds[i].bcube, i);}
-		bird_groups.create_groups(birds, all_objs_bcube);
+		bird_groups.rebuild(birds, all_objs_bcube);
 	}
 	else if (bird_moved) { // incrementally update group bcubes and all_objs_bcube
-		unsigned start_ix(0);
-
-		for (auto &g : bird_groups) {
-			cube_t const prev(g);
-			g.set_to_zeros(); // clear bcube for this pass
-			assert(start_ix <= g.ix && g.ix <= birds.size());
-			for (auto i = birds.begin()+start_ix; i != birds.begin()+g.ix; ++i) {g.assign_or_union_with_cube(i->bcube);}
-			all_objs_bcube.union_with_cube(g);
-			start_ix = g.ix;
-		} // for g
+		bird_groups.update_obj_pos(birds, all_objs_bcube);
 	}
 }
 

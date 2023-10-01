@@ -302,7 +302,9 @@ public:
 	void clear() {vector<cube_with_ix_t>::clear(); by_tile.clear();}
 	void insert_obj_ix(cube_t const &c, unsigned ix);
 	template<typename T> void add_obj(T const &obj, vector<T> &objs);
-	template<typename T> void create_groups(vector<T> &objs, cube_t &all_objs_bcube);
+	template<typename T> void create_groups (vector<T>       &objs, cube_t &all_objs_bcube);
+	template<typename T> void rebuild       (vector<T>       &objs, cube_t &all_objs_bcube);
+	template<typename T> void update_obj_pos(vector<T> const &objs, cube_t &all_objs_bcube);
 };
 
 class city_obj_placer_t : private city_draw_qbds_t {
