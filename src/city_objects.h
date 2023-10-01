@@ -331,8 +331,9 @@ private:
 	cube_t all_objs_bcube;
 	vect_bird_place_t bird_locs;
 	rand_gen_t bird_rgen;
-	unsigned num_spaces=0, filled_spaces=0, num_x_plots=0, num_y_plots=0;
+	unsigned num_spaces=0, filled_spaces=0, num_x_plots=0, num_y_plots=0, bird_locs_start_ix=0;
 	float plot_subdiv_sz=0.0;
+	bool has_residential_plots=0;
 	
 	struct cube_by_x1 {
 		bool operator()(cube_t const &a, cube_t const &b) const {return (a.x1() < b.x1());}
@@ -355,6 +356,7 @@ private:
 public:
 	bool has_plot_dividers() const {return !dividers.empty();}
 	bool have_animations  () const {return !birds   .empty();} // only birds are animated
+	bool has_residential  () const {return has_residential_plots;}
 	vector<power_pole_t> const &get_power_poles() const {return ppoles;} // used for city connectivity
 	void clear();
 	void set_plot_subdiv_sz(float sz) {plot_subdiv_sz = sz;}

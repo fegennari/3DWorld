@@ -4,11 +4,12 @@
 
 #include "city_objects.h"
 
-float const BIRD_ACCEL    = 0.00025;
-float const BIRD_MAX_VEL  = 0.002;
-float const BIRD_ZV_RISE  = 0.4; // Z vs. XY velocity/acceleration for ascent
-float const BIRD_ZV_FALL  = 0.8; // Z vs. XY velocity/acceleration for descent
-float const BIRD_MAX_ALT  = 1.8; // above destination; in multiples of road width
+float const BIRD_ACCEL       = 0.00025;
+float const BIRD_MAX_VEL     = 0.002;
+float const BIRD_ZV_RISE     = 0.4; // Z vs. XY velocity/acceleration for ascent
+float const BIRD_ZV_FALL     = 0.8; // Z vs. XY velocity/acceleration for descent
+float const BIRD_MAX_ALT_RES = 0.8; // above destination; in multiples of road width; for residential cities
+float const BIRD_MAX_ALT_COM = 1.8; // above destination; in multiples of road width; for commercial  cities
 float const anim_time_scale(1.0/TICKS_PER_SECOND);
 
 extern int animate2, frame_counter;
@@ -144,7 +145,8 @@ void city_bird_t::next_frame(float timestep, float delta_dir, bool &tile_changed
 		bool const can_descend(hit_min_alt && dir_dp > 0.5 && BIRD_ZV_FALL*dist_xy < (pos.z - dest.z - 0.1*radius));
 
 		if (!can_descend) { // ascent stage
-			float const max_alt(BIRD_MAX_ALT*(city_params.road_width + 4.0*radius)); // larger birds can fly a bit higher
+			float const max_alt_mult(placer.has_residential() ? BIRD_MAX_ALT_RES : BIRD_MAX_ALT_COM);
+			float const max_alt(max_alt_mult*(city_params.road_width + 4.0*radius)); // larger birds can fly a bit higher
 			hit_min_alt |= (pos.z > start_end_zmax + 4.0*radius); // lift off at least 4x radius to clear the starting object
 			if (pos.z > max_alt + start_end_zmax) {velocity.z = 0.0;} // too high; level off (should we decelerate smoothly?)
 			else {velocity.z = min(BIRD_ZV_RISE*BIRD_MAX_VEL, (velocity.z + BIRD_ZV_RISE*accel));} // rise in the air
@@ -279,8 +281,8 @@ int city_obj_placer_t::check_path_segment_coll(point const &p1, point const &p2,
 		for (unsigned n = 0; n < 4; ++n) {
 			vector3d const off(radius*offs[n] + z_off);
 			point const p1o(p1 + off), p2o(p2 + off);
-			if (line_intersect(p1o, p2o, t)) return 1;
-			if (check_city_building_line_coll_bs_any(p1o, p2o)) return 2;
+			if (line_intersect(p1o, p2o, t)) return 1; // doesn't include objects such as power lines
+			if (check_city_building_line_coll_bs_any(p1o, p2o)) return 2; // doesn't include objects such as building rooftop signs?
 		}
 	}
 	return 0;

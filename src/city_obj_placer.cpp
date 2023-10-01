@@ -17,6 +17,8 @@ void add_flags_for_city(unsigned city_id, vector<city_flag_t> &flags);
 city_flag_t create_flag(bool dim, bool dir, point const &base_pt, float height, float length, int flag_id=-1);
 void add_house_driveways_for_plot(cube_t const &plot, vect_cube_t &driveways);
 
+bool are_birds_enabled() {return building_obj_model_loader.is_model_valid(OBJ_MODEL_BIRD_ANIM);}
+
 
 bool city_obj_placer_t::gen_parking_lots_for_plot(cube_t plot, vector<car_t> &cars, unsigned city_id, unsigned plot_ix,
 	vect_cube_t &bcubes, vect_cube_t &colliders, rand_gen_t &rgen)
@@ -366,7 +368,6 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 		pts[1].x -= 0.5*xspace;
 		pts[2].y -= 0.5*yspace;
 		unsigned const dims[3] = {3, 1, 2};
-		unsigned const pp_start(ppoles.size());
 
 		for (unsigned i = 0; i < 3; ++i) {
 			point pos(pts[i]);
@@ -414,7 +415,7 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 			bool const at_line_end[2] = {1, 1};
 			ppole_groups.add_obj(power_pole_t(pt, pt, pole_radius, height, 0.0, xyspace, dims[0], 1, at_line_end, is_residential), ppoles);
 		}
-		for (auto i = (ppoles.begin() + pp_start); i != ppoles.end(); ++i) {colliders.push_back(i->get_ped_occluder());}
+		for (auto i = ppoles.begin()+ppoles_start; i != ppoles.end(); ++i) {colliders.push_back(i->get_ped_occluder());}
 	}
 	// place substations in commercial cities, near the corner pole that routes power into the ground, if the model has been loaded
 	if (!is_residential && corner_pole_pos != all_zeros && building_obj_model_loader.is_model_valid(OBJ_MODEL_SUBSTATION)) {
@@ -520,11 +521,10 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 			colliders.push_back(pole); // only the pole itself is a collider
 		}
 	}
-	bool const add_pigeons(!is_residential && building_obj_model_loader.is_model_valid(OBJ_MODEL_PIGEON));
-	bool const add_birds(building_obj_model_loader.is_model_valid(OBJ_MODEL_BIRD_ANIM));
+	bool const add_pigeons(!is_residential && building_obj_model_loader.is_model_valid(OBJ_MODEL_PIGEON)); // only in cities with office buildings
+	bool const add_birds(are_birds_enabled());
 
 	if (add_pigeons || add_birds) {
-		unsigned const bird_locs_start(bird_locs.size());
 		float const base_height(min(0.06f*car_length, 0.03f*min(plot.dx(), plot.dy()))), place_radius(4.0*base_height), obj_edge_spacing(0.25*base_height);
 		// find all bird placements
 		vect_bird_place_t pigeon_locs;
@@ -547,10 +547,11 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 		}
 		add_objs_top_center(sstations, substations_start, add_pigeons, add_birds, pigeon_locs, bird_locs, rgen);
 
-		if (add_birds) { // but not pigeons
-			add_objs_top_center(newsracks, newsracks_start, 0, add_birds, pigeon_locs, bird_locs, rgen); // add_pigeons=0
-			add_objs_top_center(ppoles,    ppoles_start,    0, add_birds, pigeon_locs, bird_locs, rgen); // add_pigeons=0
-			// TODO: include houses, power lines, dividers, mboxes, etc.
+		if (add_birds) { // add_birds=1, add_pigeons=0 for all below
+			vect_bird_place_t unused;
+			add_objs_top_center(newsracks, newsracks_start, 0, 1, unused, bird_locs, rgen);
+			add_objs_top_center(ppoles,    ppoles_start,    0, 1, unused, bird_locs, rgen);
+			// include houses/office buildings and streetlights?
 		}
 		// place pigeons
 		if (add_pigeons) {
@@ -585,13 +586,14 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 				}
 			} // for i
 		}
-		// place initial birds
+		// place initial birds; some bird_locs may have been added by place_residential_plot_objects(), which is called first
 		if (add_birds) {
-			unsigned const num_locs(bird_locs.size() - bird_locs_start), num_place(min(10U, num_locs/4U)), num_tries(2*num_place); // 2 tries on average per bird
+			unsigned const num_locs(bird_locs.size() - bird_locs_start_ix);
+			unsigned const num_place(min(10U, num_locs/5U)), num_tries(2*num_place); // 2 tries on average per bird
 			unsigned num_added(0);
 
 			for (unsigned n = 0; n < num_tries; ++n) {
-				unsigned const loc_ix(bird_locs_start + rgen.rand()%num_locs);
+				unsigned const loc_ix(bird_locs_start_ix + rgen.rand()%num_locs);
 				bird_place_t &p(bird_locs[loc_ix]);
 				if (p.in_use) continue;
 				float const height(base_height*rgen.rand_uniform(0.8, 1.2));
@@ -602,6 +604,7 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 				++num_added;
 				if (num_added == num_place) break; // done
 			} // for n
+			bird_locs_start_ix = bird_locs.size(); // set for next plot
 		}
 	}
 }
@@ -643,10 +646,11 @@ void city_obj_placer_t::place_residential_plot_objects(road_plot_t const &plot, 
 	if (plot.is_park) return; // no dividers in parks
 	subdivide_plot_for_residential(plot, roads, plot_subdiv_sz, 0, city_ix, sub_plots); // parent_plot_ix=0, not needed
 	if (sub_plots.size() <= 1) return; // nothing to divide
+	has_residential_plots = 1;
 	if (rgen.rand_bool()) {std::reverse(sub_plots.begin(), sub_plots.end());} // reverse half the time so that we don't prefer a divider in one side or the other
 	unsigned const shrink_dim(rgen.rand_bool()); // mostly arbitrary, could maybe even make this a constant 0
 	float const sz_scale(0.06*city_params.road_width);
-	unsigned const dividers_start(dividers.size()), prev_blockers_end(blockers.size());
+	unsigned const dividers_start(dividers.size()), mboxes_start(mboxes.size()), stopsigns_start(stopsigns.size()), prev_blockers_end(blockers.size());
 	float const min_pool_spacing_to_plot_edge(0.5*city_params.road_width);
 	colorRGBA const pool_side_colors[5] = {WHITE, WHITE, GRAY, LT_BROWN, LT_BLUE};
 	vect_cube_with_ix_t bcubes; // we need the building index for the get_building_door_pos_closest_to() call
@@ -887,6 +891,12 @@ void city_obj_placer_t::place_residential_plot_objects(road_plot_t const &plot, 
 				break; // done
 			} // for n
 		} // for dw
+	}
+	if (are_birds_enabled()) { // add_birds=1, add_pigeons=0 for all below
+		vect_bird_place_t unused;
+		add_objs_top_center(mboxes,    mboxes_start,    0, 1, unused, bird_locs, rgen);
+		add_objs_top_center(stopsigns, stopsigns_start, 0, 1, unused, bird_locs, rgen);
+		if ((rgen.rand() & 3) == 0) {add_objs_top_center(dividers, dividers_start, 0, 1, unused, bird_locs, rgen);} // only add one in 4, since there are so many
 	}
 }
 
