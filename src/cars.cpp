@@ -663,7 +663,7 @@ void car_draw_state_t::draw_helicopter(helicopter_t const &h, bool shadow_only) 
 		helicopter_model_loader.draw_model(s, center, h.bcube, dir, WHITE, xlate, h.model_id, shadow_only, 0, nullptr, blade_mat_mask); // draw prop blades only
 		blade_mat_mask = ~blade_mat_mask;
 	}
-	helicopter_model_loader.draw_model(s, center, h.bcube, h.dir, WHITE, xlate, h.model_id, shadow_only, 0, nullptr, blade_mat_mask); // low_detail=0, enable_animations=0
+	helicopter_model_loader.draw_model(s, center, h.bcube, h.dir, WHITE, xlate, h.model_id, shadow_only, 0, nullptr, blade_mat_mask); // low_detail=0, no animations
 }
 
 void car_draw_state_t::add_car_headlights(car_t const &car, cube_t &lights_bcube) {
@@ -1317,10 +1317,8 @@ void car_manager_t::draw(int trans_op_mask, vector3d const &xlate, bool use_dlig
 		fgPushMatrix();
 		translate_to(xlate);
 		dstate.pre_draw(xlate, use_dlights, shadow_only);
-		
-		if (!shadow_only) {
-			dstate.s.add_uniform_float("hemi_lighting_normal_scale", 0.0); // disable hemispherical lighting normal because the transforms make it incorrect
-		}
+		// disable hemispherical lighting normal because the transforms make it incorrect
+		if (!shadow_only) {dstate.s.add_uniform_float("hemi_lighting_normal_scale", 0.0);}
 		float const draw_tile_dist(dstate.draw_tile_dist);
 
 		for (auto cb = car_blocks.begin(); cb+1 < car_blocks.end(); ++cb) {

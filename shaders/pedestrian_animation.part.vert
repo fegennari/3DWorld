@@ -3,8 +3,8 @@ const float PI = 3.14159;
 uniform float animation_time     = 0.0;
 uniform float animation_scale    = 1.0;
 uniform float model_delta_height = 0.0;
-uniform int animation_id         = 0;
-// 0=none, 1=walk, 2=bunny hop, 3=flip, 4=twirl, 5=march, 6=alien walk, 7=rat, 8=spider, 9=bones animation
+uniform int   animation_id       = 0;
+// 0=none, 1=walk, 2=bunny hop, 3=flip, 4=twirl, 5=march, 6=alien walk, 7=rat, 8=spider, 9=bones animation, 10=helicopter rotate
 
 #ifdef USE_BONE_ANIMATIONS
 layout(location = 4) in uvec4 bone_ids;
@@ -132,6 +132,13 @@ void apply_vertex_animation(inout vec4 vertex, inout vec3 normal, in vec2 tc) {
 		vertex.x += 0.25*animation_scale*leg_dist*cos(cycle_pos); // move forward and backward
 		vertex.z += ((leg_dist > 0.1) ? 1.2*animation_scale*(leg_dist - 0.5)*up_amt : 0.0); // knee moves down, angle and foot move up, body joint stays in place
 		vertex.y += 0.50*animation_scale*tc.y*up_amt;
+	}
+	else if (animation_id == 10) { // helicopter rotate
+		if (vertex.y > 0.95*anim_scale) {
+			mat3 m      = do_rotation(vec3(0.0, 1.0, 0.0), anim_val);
+			vertex.xyz *= m;
+			normal     *= m; // rotate only, no scale - no inverse transpose needed
+		}
 	}
 	// else error/skip
 }

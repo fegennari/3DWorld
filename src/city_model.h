@@ -10,7 +10,7 @@
 
 float const SKELETAL_ANIM_TIME_CONST = 32.0; // maybe should rework these constants; this should be for people only, not all models
 
-enum {ANIM_ID_NONE=0, ANIM_ID_WALK, ANIM_ID_BHOP, ANIM_ID_FLIP, ANIM_ID_TWIRL, ANIM_ID_MARCH, ANIM_ID_ALIEN, ANIM_ID_RAT, ANIM_ID_SPIDER, ANIM_ID_SKELETAL};
+enum {ANIM_ID_NONE=0, ANIM_ID_WALK, ANIM_ID_BHOP, ANIM_ID_FLIP, ANIM_ID_TWIRL, ANIM_ID_MARCH, ANIM_ID_ALIEN, ANIM_ID_RAT, ANIM_ID_SPIDER, ANIM_ID_SKELETAL, ANIM_ID_HCOPTER};
 enum {MODEL_ANIM_WALK=0, MODEL_ANIM_IDLE, MODEL_ANIM_ATTACK, NUM_MODEL_ANIMS}; // Note: MODEL_ANIM_ATTACK is for future use with zombies
 string const animation_names[NUM_MODEL_ANIMS] = {"walking", "idle", "attack"};
 
