@@ -103,7 +103,6 @@ void city_bird_t::next_frame(float timestep, float delta_dir, bool &tile_changed
 		if (velocity.z > 0.0) {state = BIRD_STATE_FLYING;} // should we call is_anim_cycle_complete()?
 		
 		if (in_landing_dist()) { // check if close enough to dest, then switch to landing
-			// reorient into dest_dir? otherwise remove dest_dir?
 			state = BIRD_STATE_LANDING;
 			pos   = dest; // snap to dest; is this a good idea? move more slowly?
 			dest  = all_zeros; // clear for next cycle
@@ -138,6 +137,15 @@ void city_bird_t::next_frame(float timestep, float delta_dir, bool &tile_changed
 	else {anim_time = new_anim_time;}
 
 	if (state == BIRD_STATE_STANDING || state == BIRD_STATE_LANDING || pos == dest) {
+		if (dest_dir != zero_vector) { // maybe update direction to match intended direction of our new destination
+			float const dp(dot_product(dir, dest_dir));
+
+			if (dp < 0.999) { // not oriented in dir
+				if (dp < 0.0) {dest_dir.negate();} // dest_dir is typically something like a wall, so facing the opposite direction should be okay
+				dir = delta_dir*dest_dir + (1.0 - delta_dir)*dir; // merge new_dir into dir gradually for smooth turning
+				dir.normalize();
+			}
+		}
 		velocity = zero_vector; // stopped
 	}
 	else { // update direction and velocity
@@ -279,7 +287,7 @@ bool city_obj_placer_t::choose_bird_dest(point const &pos, float radius, unsigne
 		if (check_path_segment_coll(start_pos, end_pos, radius)) continue;
 		loc_ix   = new_loc_ix;
 		dest_pos = new_loc.pos;
-		dest_dir = new_loc.orient;
+		if (new_loc.use_orient) {dest_dir = new_loc.orient;} // prefer this orient, for example if standing on a wall
 		old_loc.in_use = 0;
 		new_loc.in_use = 1;
 		return 1; // success
@@ -325,6 +333,6 @@ void vect_bird_place_t::add_placement_rand_dim_dir(cube_t const &obj, float spac
 	add_placement(obj, rgen.rand_bool(), dir, dir, spacing, rgen);
 }
 void vect_bird_place_t::add_placement_top_center(cube_t const &obj, rand_gen_t &rgen) {
-	emplace_back(cube_top_center(obj), rgen.rand_bool(), rgen.rand_bool());
+	emplace_back(cube_top_center(obj), rgen.rand_bool(), rgen.rand_bool(), 0); // use_orient=0
 }
 
