@@ -654,6 +654,13 @@ void car_draw_state_t::draw_helicopter(helicopter_t const &h, bool shadow_only) 
 	point const center(h.bcube.get_cube_center());
 	begin_tile(center); // enable shadows
 	city_model_t const &model(helicopter_model_loader.get_model(h.model_id));
+#if 0
+	bool const enable_animations = 1;
+	animation_state_t anim_state(enable_animations, ANIM_ID_HCOPTER); // TODO: pass this into the call
+	anim_state.anim_time = 0.01*h.blade_rot;
+	helicopter_model_loader.draw_model(s, center, h.bcube, h.dir, WHITE, xlate, h.model_id, shadow_only, 0, &anim_state, blade_mat_mask); // low_detail=0
+	anim_state.clear_animation_id(s); // clear animations
+#else
 	unsigned blade_mat_mask(0);
 
 	if (h.blade_rot != 0.0 && model.blade_mat_id >= 0) { // separate blades from the rest of the model for custom rotation
@@ -664,6 +671,7 @@ void car_draw_state_t::draw_helicopter(helicopter_t const &h, bool shadow_only) 
 		blade_mat_mask = ~blade_mat_mask;
 	}
 	helicopter_model_loader.draw_model(s, center, h.bcube, h.dir, WHITE, xlate, h.model_id, shadow_only, 0, nullptr, blade_mat_mask); // low_detail=0, no animations
+#endif
 }
 
 void car_draw_state_t::add_car_headlights(car_t const &car, cube_t &lights_bcube) {
@@ -1316,6 +1324,7 @@ void car_manager_t::draw(int trans_op_mask, vector3d const &xlate, bool use_dlig
 		dstate.xlate = xlate;
 		fgPushMatrix();
 		translate_to(xlate);
+		//if (!is_dlight_shadows && !helicopters.empty()) {enable_animations_for_shader(dstate.s);} // TODO: faster to use a different shader just for helicopters
 		dstate.pre_draw(xlate, use_dlights, shadow_only);
 		// disable hemispherical lighting normal because the transforms make it incorrect
 		if (!shadow_only) {dstate.s.add_uniform_float("hemi_lighting_normal_scale", 0.0);}
