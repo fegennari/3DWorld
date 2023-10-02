@@ -1234,6 +1234,7 @@ stopsign_t::stopsign_t(point const &pos_, float height, float width, bool dim_, 
 cube_t stopsign_t::get_bird_bcube() const {
 	cube_t top_place(bcube);
 	if (SIGN_STOPSIGN_HEIGHT > 1.0) {top_place.z2() = top_place.z1() + SIGN_STOPSIGN_HEIGHT*bcube.dz();} // extend to top of street sign
+	top_place.translate_dim(dim, (dir ? -1.0 : 1.0)*0.07*bcube.dz()); // translate to match street sign pole in draw_stoplights_and_street_signs()
 	return top_place;
 }
 /*static*/ void stopsign_t::pre_draw(draw_state_t &dstate, bool shadow_only) {

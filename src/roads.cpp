@@ -811,7 +811,7 @@ void road_isec_t::draw_stoplights_and_street_signs(road_draw_state_t &dstate, ve
 		} // end stoplight drawing
 		else { // stop sign case; add a vertical pole
 			point spos(get_stop_sign_pos(n));
-			spos[dim] += (dir ? 1.0 : -1.0)*0.07*ss_height; // move a bit behind the stop sign
+			spos[dim] += (dir ? 1.0 : -1.0)*0.07*ss_height; // move a bit behind the stop sign; must match stopsign_t::get_bird_bcube()
 			sc.set_from_point(spos);
 			sc.expand_by_xy(0.02*ss_height);
 			set_cube_zvals(sc, z1(), sign_z1);
@@ -831,7 +831,7 @@ void road_isec_t::draw_stoplights_and_street_signs(road_draw_state_t &dstate, ve
 			sign.z1() = sc.z2() - 0.7*sz; // high up
 			sign.z2() = sc.z2() - 0.1*sz;
 			sign.d[ dim][dir  ] -= (dir ? 1.0 : -1.0)*0.8*sc.get_sz_dim(dim); // shrink
-			sign.d[!dim][ side]  = sign.d[!dim][!side]; // flush with the side of the stoplight body
+			sign.d[!dim][ side]  = sign.d[!dim][!side]; // flush with the side of the stoplight body or stop sign pole
 			sign.d[!dim][!side] += 5.0*side_len; // extend into the road
 			dstate.draw_cube(dstate.qbd_untextured, sign, colorRGBA(0.0, 0.6, 0.0, 1.0));
 
