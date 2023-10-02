@@ -27,9 +27,8 @@ bool city_model_t::read(FILE *fp, bool is_helicopter, bool is_person) {
 	if (!read_float(fp, scale))          return 0;
 	if (!read_float(fp, lod_mult) || lod_mult < 0.0)  return 0;
 	
-	if (is_helicopter) {
-		if (!read_int(fp, blade_mat_id)) return 0; // helicopter model is special because it has a blade material
-		// what about reading rotate_about?
+	if (is_helicopter) { // helicopter model is special because it has a blade_mat_id
+		if (!read_int(fp, blade_mat_id)) return 0;
 	}
 	if (is_person) { // read animation data, etc.
 		if (!read_float(fp, anim_speed)) return 0;
@@ -187,7 +186,7 @@ float city_model_loader_t::get_anim_duration(unsigned model_id, unsigned model_a
 
 void city_model_loader_t::draw_model(shader_t &s, vector3d const &pos, cube_t const &obj_bcube, vector3d const &dir, colorRGBA const &color,
 	vector3d const &xlate, unsigned model_id, bool is_shadow_pass, bool low_detail, animation_state_t *anim_state, unsigned skip_mat_mask,
-	bool untextured, bool force_high_detail, bool upside_down, bool emissive)
+	bool untextured, bool force_high_detail, bool upside_down, bool emissive, bool do_local_rotate)
 {
 	assert(!(low_detail && force_high_detail));
 	bool const is_valid(is_model_valid(model_id)); // first 8 bits is model ID, last 8 bits is sub-model ID
@@ -242,10 +241,11 @@ void city_model_loader_t::draw_model(shader_t &s, vector3d const &pos, cube_t co
 			s.add_uniform_float("model_delta_height", (0.1*height + (model_file.swap_xz ? bcube.x1() : (model_file.swap_yz ? bcube.y1() : bcube.z1()))));
 		}
 	}
+	vector3d const local_rotate(do_local_rotate ? model_file.rotate_about : zero_vector);
 	fgPushMatrix();
-	translate_to(pos + z_offset*sz_scale*plus_z - model_file.rotate_about); // z_offset is in model space, scale to world space
+	translate_to(pos + z_offset*sz_scale*plus_z - local_rotate); // z_offset is in model space, scale to world space
 	rotate_model_from_plus_x_to_dir(dir);
-	if (model_file.rotate_about != all_zeros) {translate_to(model_file.rotate_about);}
+	if (local_rotate != all_zeros) {translate_to(local_rotate);}
 	if (dir.z != 0.0) {fgRotate(TO_DEG*asinf(-dir.z), 0.0, 1.0, 0.0);} // handle cars on a slope
 	if (model_file.xy_rot != 0.0) {fgRotate(model_file.xy_rot, 0.0, 0.0, 1.0);} // apply model rotation about z/up axis (in degrees)
 	if (model_file.swap_xz) {fgRotate( 90.0, 0.0, 1.0, 0.0);} // swap X and Z dirs; models have up=X, but we want up=Z
