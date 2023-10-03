@@ -2876,10 +2876,11 @@ public:
 							if (add_player_shadow) {draw_player_model(shader, xlate, 1);} // shadow_only=1
 							if (enable_animations) {s.make_current();} // switch back to normal building shader
 						}
-						found_building = 1;
-						break; // only one building can contain the shadow
+						// since two buildings can have overlapping extended basement bcubes, we can only exit these loops if the light is in the main building itself (inc basement)
+						if (b.get_part_ix_containing_pt(lpos_clamped) >= 0) {found_building = 1;}
+						if (found_building) break; // only one building can contain the shadow
 					} // for bi
-					if (found_building && !check_ext_basement) break; // only one building can contain the shadow
+					if (found_building) break; // only one building can contain the shadow
 				} // for g
 			}
 			else { // draw exterior shadow maps

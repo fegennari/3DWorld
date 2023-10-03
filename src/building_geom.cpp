@@ -1430,7 +1430,9 @@ void building_t::maybe_inv_rotate_pos_dir(point &pos, vector3d &dir) const {
 }
 
 bool building_t::check_cube_contained_in_part(cube_t const &c) const {
-	for (auto p = parts.begin(); p != get_real_parts_end(); ++p) {
+	auto parts_end(get_real_parts_end_inc_sec());
+
+	for (auto p = parts.begin(); p != parts_end; ++p) {
 		if (p->contains_cube(c)) return 1;
 	}
 	return 0;
