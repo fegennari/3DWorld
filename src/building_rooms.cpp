@@ -1557,8 +1557,14 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 			set_wall_width(wall, i->d[!dim][d], wall_hw, !dim);
 			wall.expand_in_dim(dim, 0.01*wall_hw); // just enough to avoid z-fighting with stairs
 			bool const add_wall(has_side_walls && !i->against_wall[d]); // don't add a wall if the stairs are already against a wall
-			if (add_wall) {objs.emplace_back(wall, TYPE_STAIR_WALL, 0, dim, dir);} // add walls around stairs for this floor
-
+			
+			if (add_wall) { // add walls around stairs for this floor
+				// clip basement stairs wall to the basement to avoid drawing artifacts at the bottom of a house exterior wall; or just skip drawing the wall?
+				cube_t wall_clipped(wall);
+				if (i->z1() < ground_floor_z1 && !i->in_ext_basement) {wall_clipped.intersect_with_cube_xy(get_basement());}
+				assert(wall_clipped.is_strictly_normalized());
+				objs.emplace_back(wall_clipped, TYPE_STAIR_WALL, 0, dim, dir);
+			}
 			if (i->has_railing) { // add railings
 				bool railing_dir(dir);
 				cube_t railing(wall);
