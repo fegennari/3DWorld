@@ -1180,21 +1180,22 @@ void building_t::try_connect_ext_basement_to_building(building_t &b) {
 	float const max_connect_dist(EXT_BASEMENT_JOIN_DIST*floor_spacing), min_connect_dist(2.1*doorway_width); // need enough space to fit two open doors
 	assert(b.get_window_vspace() == floor_spacing);
 	cube_t const &other_eb_bc(b.interior->basement_ext_bcube);
+	vector<room_t> const &rooms1(interior->rooms), &rooms2(b.interior->rooms);
+	unsigned const rstart1(interior->ext_basement_hallway_room_id), rstart2(b.interior->ext_basement_hallway_room_id);
 	assert(interior->basement_ext_bcube.z2() == other_eb_bc.z2()); // must be at same elevation
-	assert((unsigned)  interior->ext_basement_hallway_room_id <   interior->rooms.size());
-	assert((unsigned)b.interior->ext_basement_hallway_room_id < b.interior->rooms.size());
+	assert(rstart1 < rooms1.size() && rstart2 < rooms2.size());
 	ext_basement_room_params_t P, Pb, Padd; // P=input rooms for *this, Pb=input rooms for b, Padd=new rooms output for *this
 	rand_gen_t rgen;
-	rgen.set_state(interior->rooms.size(), b.interior->rooms.size());
+	rgen.set_state(rooms1.size(), rooms2.size());
 
 	// find nearby candidate rooms
 	// skip ext basement hall room itself for both iters, connecting to this doesn't draw lights properly when player is in basement rather than ext basement
-	for (auto r1 = interior->rooms.begin()+interior->ext_basement_hallway_room_id+1; r1 != interior->rooms.end(); ++r1) {
+	for (auto r1 = rooms1.begin()+rstart1+1; r1 != rooms1.end(); ++r1) {
 		cube_t search_area(*r1);
 		search_area.expand_by(max_connect_dist);
 		if (!search_area.intersects(other_eb_bc)) continue; // too far
 
-		for (auto r2 = b.interior->rooms.begin()+b.interior->ext_basement_hallway_room_id+1; r2 != b.interior->rooms.end(); ++r2) {
+		for (auto r2 = rooms2.begin()+rstart2+1; r2 != rooms2.end(); ++r2) {
 			if (!search_area.intersects(*r2))        continue; // too far
 			if (fabs(r1->z1() - r2->z1()) > z_toler) continue; // different floors/levels; do we need to check toler?
 			
@@ -1216,6 +1217,8 @@ void building_t::try_connect_ext_basement_to_building(building_t &b) {
 				assert(cand_join.is_strictly_normalized());
 				cube_t test_cube(cand_join);
 				test_cube.expand_in_dim(d, -wall_thickness); // shrink ends to avoid false intersection with rooms at either end
+				// check for intersections with starting hallways, since these aren't valid to connect to and aren't included in populate_params_from_building()
+				if (test_cube.intersects(rooms1[rstart1]) || test_cube.intersects(rooms2[rstart2])) continue;
 				populate_params_from_building(*  interior, P );
 				populate_params_from_building(*b.interior, Pb);
 				if (!  is_basement_room_placement_valid(test_cube, P,  d,  dir, nullptr, &b  )) continue; // add_end_door=nullptr
