@@ -899,7 +899,8 @@ void city_obj_placer_t::place_birds(rand_gen_t &rgen) {
 		float const height(bird_height*rgen.rand_uniform(0.8, 1.2));
 		point bird_pos(p.pos);
 		bird_pos.z += BIRD_ZVAL_ADJ*height;
-		bird_groups.add_obj(city_bird_t(bird_pos, height, p.orient, loc_ix, rgen), birds);
+		colorRGBA color(WHITE*rgen.rand_uniform(0.1, 1.0)); // random grayscale color
+		bird_groups.add_obj(city_bird_t(bird_pos, height, p.orient, color, loc_ix, rgen), birds);
 		p.in_use = 1;
 		++num_added;
 		if (num_added == num_place) break; // done

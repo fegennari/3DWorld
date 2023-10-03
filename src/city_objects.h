@@ -213,6 +213,7 @@ class city_bird_t : public city_bird_base_t {
 	float height=0.0, anim_time=0.0, takeoff_time=0.0, start_end_zmax=0.0;
 	vector3d velocity, dest_dir;
 	point dest, prev_frame_pos;
+	colorRGBA color;
 
 	bool is_close_to_player() const;
 	bool is_anim_cycle_complete(float new_anim_time) const;
@@ -222,7 +223,7 @@ class city_bird_t : public city_bird_base_t {
 	void adjust_new_dest_zval();
 	bool check_for_mid_flight_coll(float dir_dp, city_obj_placer_t &placer, rand_gen_t &rgen);
 public:
-	city_bird_t(point const &pos_, float height_, vector3d const &init_dir, unsigned loc_ix_, rand_gen_t &rgen);
+	city_bird_t(point const &pos_, float height_, vector3d const &init_dir, colorRGBA const &color_, unsigned loc_ix_, rand_gen_t &rgen);
 	static void pre_draw (draw_state_t &dstate, bool shadow_only) {} // nothing to do
 	static void post_draw(draw_state_t &dstate, bool shadow_only);
 	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const;
