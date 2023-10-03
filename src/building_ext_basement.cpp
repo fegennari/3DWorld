@@ -1305,6 +1305,9 @@ cube_t building_t::get_conn_room_closest_to(point const &pos_bs) const { // in r
 	if (!player_in_basement || player_building == nullptr || player_building == this || !has_conn_info()) return cube_t();
 	return interior->conn_info->get_conn_room_closest_to(*this, *player_building, pos_bs);
 }
+bool building_t::point_in_extb_conn_room(point const &pos_bs) const {
+	return (interior->conn_info && interior->conn_info->point_in_conn_room(pos_bs));
+}
 
 void building_conn_info_t::add_connection(building_t *b, cube_t const &room, unsigned door_ix, bool dim, bool dir, bool door_is_b) {
 	if (conn.empty() || conn.back().b != b) {conn.emplace_back(b);} // register a new building if needed
@@ -1368,5 +1371,13 @@ cube_t building_conn_info_t::get_conn_room_closest_to(building_t const &parent, 
 		}
 	}
 	return closest;
+}
+bool building_conn_info_t::point_in_conn_room(point const &pos_bs) const {
+	for (conn_pt_t const &c : conn) {
+		for (conn_room_t const &room : c.rooms) {
+			if (room.contains_pt(pos_bs)) return 1;
+		}
+	}
+	return 0;
 }
 

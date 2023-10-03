@@ -1250,6 +1250,7 @@ struct building_conn_info_t { // use for buildings with connected rooms (for exa
 	bool is_visible_through_conn(building_t const &parent, building_t const &target, vector3d const &xlate, float view_dist, bool expand_for_light=0) const;
 	door_t const *get_door_to_conn_part(building_t const &parent, point const &pos_bs) const;
 	cube_t get_conn_room_closest_to(building_t const &parent, building_t const &target, point const &pos_bs) const;
+	bool point_in_conn_room(point const &pos_bs) const;
 };
 
 
@@ -1658,6 +1659,7 @@ public:
 	bool point_in_extended_basement_not_basement(point const &pos) const {return (point_in_extended_basement(pos) && !get_basement().contains_pt(pos));}
 	bool cube_int_ext_basement(cube_t const &c) const {return (interior && interior->basement_ext_bcube.intersects(c));}
 	bool point_in_building_or_basement_bcube(point const &pos) const {return (bcube.contains_pt(pos) || point_in_extended_basement(pos));}
+	bool point_in_extb_conn_room(point const &pos_bs) const;
 	float get_bcube_z1_inc_ext_basement() const {return (has_ext_basement() ? min(bcube.z1(), interior->basement_ext_bcube.z1()) : bcube.z1());}
 	unsigned get_ext_basement_floor_ix(float zval) const;
 	void get_pgbr_wall_ix_for_pos(point const &pos, index_pair_t &start, index_pair_t &end) const;
