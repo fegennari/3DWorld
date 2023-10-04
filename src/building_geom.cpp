@@ -2295,14 +2295,17 @@ bool building_interior_t::is_blocked_by_stairs_or_elevator(cube_t const &c, floa
 	tc.expand_by_xy(dmin); // no pad in z
 	float const doorway_width(get_doorway_width()); // Note: can return zero
 	if (has_bcube_int(tc, elevators, doorway_width)) return 1;
-	if (elevators_only || stairwells.empty())        return 0;
+	if (elevators_only) return 0;
 	tc.z1() -= 0.001*tc.dz(); // expand slightly to avoid placing an object exactly at the top of the stairs
 	if (has_bcube_int(tc, stairwells, doorway_width, no_check_enter_exit)) return 1; // must check zval to exclude stairs and elevators in parts with other z-ranges
 	
-	if (!ignore_ramp_placement && !pg_ramp.is_all_zeros()) {
+	if (!pg_ramp.is_all_zeros()) { // Note: ramp is placed during basement room geom generation, which may not have been run yet
 		bool const dim(pg_ramp.ix >> 1), dir(pg_ramp.ix & 1);
 		cube_t ramp_ext(pg_ramp);
-		ramp_ext.z2() += 0.5*doorway_width; // extend the top upward a bit so that it intersects anything placed on/near the floor
+		// if ramp extends upward, extend the top upward a bit so that it intersects anything placed on/near the floor
+		if (!ignore_ramp_placement) {ramp_ext.z2() += 0.5*doorway_width;}
+		// otherwise we still need to avoid the lower part of the ramp; extend the top down to avoid intersecting objects on the floor above
+		else                        {ramp_ext.z2() -= 0.5*doorway_width;}
 		ramp_ext.d[dim][dir] += (dir ? 1.0 : -1.0)*pg_ramp.get_sz_dim(!dim); // clear space in front of the ramp equal to its width
 		if (ramp_ext.intersects(tc)) return 1;
 	}

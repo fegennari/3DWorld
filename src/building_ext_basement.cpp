@@ -32,6 +32,12 @@ bool building_t::extend_underground_basement(rand_gen_t rgen) {
 				if (basement.d[dim][dir] != bcube.d[dim][dir]) continue; // wall not on the building bcube
 				cube_t cand_door(place_door(basement, dim, dir, height, 0.0, 0.0, 0.25, DOOR_WIDTH_SCALE, 1, 0, rgen));
 				if (cand_door.is_all_zeros()) continue; // can't place a door on this wall
+				
+				if (has_pg_ramp()) { // check for ramp coll
+					cube_t test_cube(cand_door);
+					test_cube.expand_by_xy(get_wall_thickness());
+					if (interior->pg_ramp.intersects(test_cube)) continue;
+				}
 				float const fc_thick(get_fc_thickness());
 				set_cube_zvals(cand_door, basement.z1()+fc_thick, basement.z2()-fc_thick); // change z to span floor to ceiling for interior door
 				cand_door.translate_dim(dim, (dir ? 1.0 : -1.0)*0.25*get_wall_thickness()); // zero width, centered on the door
@@ -141,7 +147,7 @@ bool building_t::add_underground_exterior_rooms(rand_gen_t &rgen, cube_t const &
 	ext_basement_room_params_t P;
 	if (!is_basement_room_placement_valid(hallway, P, wall_dim, wall_dir)) return 0; // try to place the hallway; add_end_door=nullptr
 	// valid placement; now add the door, hallway, and connected rooms
-	has_basement_door = 1;
+	has_basement_door       = 1;
 	interior->extb_wall_dim = wall_dim;
 	interior->extb_wall_dir = wall_dir;
 	// Note: recording the door_stack index rather than the door index allows us to get either the first door or the first stack
@@ -630,8 +636,7 @@ void building_t::add_backrooms_objs(rand_gen_t rgen, room_t &room, float zval, u
 	float const doorway_width(get_doorway_width()), doorway_hwidth(0.5*doorway_width), min_gap(1.2*doorway_width), min_edge_gap(min_gap + wall_thickness);
 
 	// find entrance door and add it to wall blockers
-	assert((unsigned)interior->ext_basement_door_stack_ix < interior->door_stacks.size());
-	auto const &ent_door(interior->door_stacks[interior->ext_basement_door_stack_ix]);
+	door_t const &ent_door(interior->get_ext_basement_door());
 	pillar_avoid.push_back(ent_door.get_clearance_bcube());
 	blockers_per_dim[!ent_door.dim].push_back(pillar_avoid.back());
 

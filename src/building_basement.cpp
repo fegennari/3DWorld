@@ -1680,6 +1680,11 @@ void building_t::add_parking_garage_ramp(rand_gen_t &rgen) {
 				cube_t test_cube(ramp_cand);
 				test_cube.expand_in_dim(!dim, road_width); // extend outward for clearance to enter/exit the ramp (ramp dim is actually !dim)
 				if (interior->is_blocked_by_stairs_or_elevator(test_cube)) continue;
+				
+				if (has_ext_basement()) { // check for backrooms door, in case it was placed already (but currently it's not)
+					test_cube.expand_in_dim(dim, get_wall_thickness());
+					if (interior->get_ext_basement_door().get_true_bcube().intersects(test_cube)) continue; // blocked by backrooms door
+				}
 				ramp = cube_with_ix_t(ramp_cand, (((!dim)<<1) + dir)); // encode dim and dir in ramp index field
 				added_ramp = 1;
 				break; // done
