@@ -1189,12 +1189,12 @@ void building_t::try_connect_ext_basement_to_building(building_t &b) {
 	rgen.set_state(rooms1.size(), rooms2.size());
 
 	// find nearby candidate rooms
-	// skip ext basement hall room itself for both iters, connecting to this doesn't draw lights properly when player is in basement rather than ext basement
-	for (auto r1 = rooms1.begin()+rstart1+1; r1 != rooms1.end(); ++r1) {
+	for (auto r1 = rooms1.begin()+rstart1; r1 != rooms1.end(); ++r1) {
 		cube_t search_area(*r1);
 		search_area.expand_by(max_connect_dist);
 		if (!search_area.intersects(other_eb_bc)) continue; // too far
 
+		// skip ext basement hall room itself in other building; connecting to this doesn't draw lights properly when player is in basement rather than ext basement
 		for (auto r2 = rooms2.begin()+rstart2+1; r2 != rooms2.end(); ++r2) {
 			if (!search_area.intersects(*r2))        continue; // too far
 			if (fabs(r1->z1() - r2->z1()) > z_toler) continue; // different floors/levels; do we need to check toler?
