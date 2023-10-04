@@ -2215,15 +2215,20 @@ class building_creator_t {
 	struct grid_elem_t {
 		vector<cube_with_ix_t> bc_ixs;
 		vect_cube_t road_segs; // or driveways
-		cube_t bcube;
+		cube_t bcube, extb_bcube; // base building, extended basement
 		bool has_room_geom=0;
 
 		bool empty() const {return (bc_ixs.empty() && road_segs.empty());}
 
-		void add(cube_t const &c, unsigned ix, bool is_road_seg) {
+		void add_bcube(cube_t const &c, unsigned ix, bool is_road_seg=0) {
 			bcube.assign_or_union_with_cube(c);
 			if (is_road_seg) {road_segs.push_back(c);} else {bc_ixs.emplace_back(c, ix);}
 		}
+		void add_building(building_t const &b, unsigned ix) {
+			add_bcube(b.bcube, ix);
+			if (b.has_ext_basement()) {extb_bcube.assign_or_union_with_cube(b.interior->basement_ext_bcube);}
+		}
+		cube_t const &get_vis_bcube() const {return (player_in_ext_basement() ? extb_bcube : bcube);}
 	};
 	vector<grid_elem_t> grid, grid_by_tile;
 
@@ -2267,7 +2272,7 @@ class building_creator_t {
 		unsigned ixr[2][2];
 		get_grid_range(bcube, ixr);
 		for (unsigned y = ixr[0][1]; y <= ixr[1][1]; ++y) {
-			for (unsigned x = ixr[0][0]; x <= ixr[1][0]; ++x) {get_grid_elem(x, y).add(bcube, bix, is_road_seg);}
+			for (unsigned x = ixr[0][0]; x <= ixr[1][0]; ++x) {get_grid_elem(x, y).add_bcube(bcube, bix, is_road_seg);}
 		}
 	}
 	bool check_for_overlaps(vector<unsigned> const &ixs, cube_t const &test_bc, building_t const &b, float expand_rel, float expand_abs) const {
@@ -2285,8 +2290,8 @@ class building_creator_t {
 	}
 
 	void add_building_to_grid(building_t const &b, unsigned gix, unsigned bix) {
-		grid_by_tile[gix].add(b.bcube, bix, 0);
-		if (b.enable_driveway_coll() && !b.driveway.is_all_zeros()) {grid_by_tile[gix].add(b.driveway, bix, 1);} // add driveway as well
+		grid_by_tile[gix].add_building(b, bix);
+		if (b.enable_driveway_coll() && !b.driveway.is_all_zeros()) {grid_by_tile[gix].add_bcube(b.driveway, bix, 1);} // add driveway as well
 	}
 	void build_grid_by_tile(bool single_tile) {
 		grid_by_tile.clear();
@@ -2834,16 +2839,8 @@ public:
 
 				// draw interior for the building containing the light
 				for (auto g = (*i)->grid_by_tile.begin(); g != (*i)->grid_by_tile.end(); ++g) {
-					if (!g->bcube.contains_pt_xy(lpos)) { // wrong tile (note that z test is skipped to handle skylights)
-						bool skip_culling(0);
-					
-						if (player_in_ext_basement()) {
-							// check player building extended basement, since it can overlap an adjacent grid; the second check is required for connected buildings
-							if (g->bcube.contains_cube_xy(player_building->bcube)) {skip_culling = 1;}
-							else if (player_building->has_ext_basement() && g->bcube.intersects_xy(player_building->interior->basement_ext_bcube)) {skip_culling = 1;}
-						}
-						if (!skip_culling) continue;
-					}
+					if (!g->get_vis_bcube().contains_pt_xy(lpos)) continue; // wrong tile (note that z test is skipped to handle skylights)
+
 					for (auto bi = g->bc_ixs.begin(); bi != g->bc_ixs.end(); ++bi) {
 						building_t &b((*i)->get_building(bi->ix));
 						if (!b.interior) continue; // no interior
@@ -2884,8 +2881,7 @@ public:
 			}
 			else { // draw exterior shadow maps
 				for (auto g = (*i)->grid_by_tile.begin(); g != (*i)->grid_by_tile.end(); ++g) { // draw only visible tiles
-					point const pos(g->bcube.get_cube_center() + xlate);
-					if (!camera_pdu.sphere_and_cube_visible_test(pos, g->bcube.get_bsphere_radius(), (g->bcube + xlate))) continue; // VFC
+					if (!building_grid_visible(xlate, g->bcube)) continue; // VFC; use exterior bcube
 					(*i)->building_draw_vbo.draw_tile(s, (g - (*i)->grid_by_tile.begin()), 1);
 				}
 				//(*i)->building_draw_vbo.draw(s, 1); // less CPU time but more GPU work, in general seems to be slower
@@ -2900,12 +2896,8 @@ public:
 	static bool check_tile_smap(bool shadow_only) {
 		return (!shadow_only && world_mode == WMODE_INF_TERRAIN && shadow_map_enabled());
 	}
-
 	static bool building_grid_visible(vector3d const &xlate, cube_t const &grid_bcube) {
-		if (camera_pdu.sphere_and_cube_visible_test((grid_bcube.get_cube_center() + xlate), grid_bcube.get_bsphere_radius(), (grid_bcube + xlate))) return 1;
-		// if the player is in the extended basement of a building that goes outside the grid where the grid bcube isn't visible, we can't cull this building
-		if (player_in_ext_basement() && grid_bcube.contains_cube_xy(player_building->bcube)) return 1; // skip culling
-		return 0; // not visible
+		return camera_pdu.sphere_and_cube_visible_test((grid_bcube.get_cube_center() + xlate), grid_bcube.get_bsphere_radius(), (grid_bcube + xlate));
 	}
 
 	void add_interior_lights(vector3d const &xlate, cube_t &lights_bcube) { // Note: non const because this caches light bcubes
@@ -2918,9 +2910,10 @@ public:
 		//highres_timer_t timer("Add Interior Lights");
 
 		for (auto g = grid_by_tile.begin(); g != grid_by_tile.end(); ++g) { // Note: all grids should be nonempty
-			if (!lights_bcube.intersects_xy  (g->bcube)) continue; // not within light volume (too far from camera)
-			if (!building_grid_visible(xlate, g->bcube)) continue; // VFC
-			
+			cube_t const &grid_bcube(g->get_vis_bcube());
+			if (!lights_bcube.intersects_xy  (grid_bcube)) continue; // not within light volume (too far from camera)
+			if (!building_grid_visible(xlate, grid_bcube)) continue; // VFC
+
 			for (auto bi = g->bc_ixs.begin(); bi != g->bc_ixs.end(); ++bi) {
 				building_t &b(get_building(bi->ix));
 				if (!b.has_room_geom()) continue; // no interior room geom, skip
@@ -2938,8 +2931,8 @@ public:
 
 	void add_exterior_lights(vector3d const &xlate, cube_t &lights_bcube) const {
 		for (auto g = grid_by_tile.begin(); g != grid_by_tile.end(); ++g) { // Note: all grids should be nonempty
-			if (!lights_bcube.intersects_xy(g->bcube)) continue; // not within light volume (too far from camera)
-			if (!camera_pdu.sphere_and_cube_visible_test((g->bcube.get_cube_center() + xlate), g->bcube.get_bsphere_radius(), (g->bcube + xlate))) continue; // VFC
+			if (!lights_bcube.intersects_xy  (g->bcube)) continue; // not within light volume (too far from camera)
+			if (!building_grid_visible(xlate, g->bcube)) continue; // VFC; use exterior bcube
 
 			for (auto bi = g->bc_ixs.begin(); bi != g->bc_ixs.end(); ++bi) {
 				building_t const &b(get_building(bi->ix));
@@ -3061,10 +3054,10 @@ public:
 			glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE); // Disable color rendering, we only want to write to the Z-Buffer
 				
 			for (auto i = bcs.begin(); i != bcs.end(); ++i) { // draw interior for the tile containing the camera
-				float const ddist_scale((*i)->building_draw_windows.empty() ? 0.1 : 1.0);
+				float const ddist_scale((*i)->building_draw_windows.empty() ? 0.1 : 1.0), zpp_dist_scale(ddist_scale*z_prepass_dist);
 
 				for (auto g = (*i)->grid_by_tile.begin(); g != (*i)->grid_by_tile.end(); ++g) {
-					if (reflection_pass ? g->bcube.contains_pt_xy(camera_xlated) : g->bcube.closest_dist_xy_less_than(camera_xlated, ddist_scale*z_prepass_dist)) {
+					if (reflection_pass ? g->get_vis_bcube().contains_pt_xy(camera_xlated) : g->get_vis_bcube().closest_dist_xy_less_than(camera_xlated, zpp_dist_scale)) {
 						(*i)->building_draw_interior.draw_tile(s, (g - (*i)->grid_by_tile.begin()));
 					}
 				}
@@ -3103,24 +3096,24 @@ public:
 				bool is_first_tile(1), can_break_from_loop(0);
 
 				for (auto g = (*i)->grid_by_tile.begin(); g != (*i)->grid_by_tile.end(); ++g) { // Note: all grids should be nonempty
-					// for the reflection pass, we only need to look at the grid containing the building with the mirror, which must be the player's building;
-					// but if it's in the extended basement, it can be outside the building's home grid, so we have to skip the check
-					if (reflection_pass && !mirror_in_ext_basement && !g->bcube.contains_pt_xy(camera_xlated)) continue; // not the correct tile
-					float const gdist_sq(p2p_dist_sq(camera_xlated, g->bcube.closest_pt(camera_xlated)));
+					cube_t const &grid_bcube(g->get_vis_bcube());
+					// for the reflection pass, we only need to look at the grid containing the building with the mirror, which must be the player's building
+					if (reflection_pass && !grid_bcube.contains_pt_xy(camera_xlated)) continue; // not the correct tile
+					float const gdist_sq(p2p_dist_sq(camera_xlated, grid_bcube.closest_pt(camera_xlated)));
 
 					if (!reflection_pass && gdist_sq > rgeom_clear_dist_sq && g->has_room_geom) { // need to clear room geom
 						//highres_timer_t timer("Clear Room Geom");
 						for (auto bi = g->bc_ixs.begin(); bi != g->bc_ixs.end(); ++bi) {(*i)->get_building(bi->ix).clear_room_geom();}
 						g->has_room_geom = 0;
 					}
-					if (gdist_sq > int_draw_dist_sq)             continue; // too far
-					if (!building_grid_visible(xlate, g->bcube)) continue; // VFC
+					if (gdist_sq > int_draw_dist_sq)               continue; // too far
+					if (!building_grid_visible(xlate, grid_bcube)) continue; // VFC
 					if (is_first_tile) {(*i)->ensure_interior_geom_vbos();} // we need the interior geom at this point, even if it's the reflection pass
 					(*i)->building_draw_interior.draw_tile(s, (g - (*i)->grid_by_tile.begin()));
 					// iterate over nearby buildings in this tile and draw interior room geom, generating it if needed
 					if (gdist_sq > rgeom_draw_dist_sq) continue; // too far
 					if (is_first_tile && !reflection_pass) {oc.set_camera(camera_pdu);} // setup occlusion culling on the first visible tile
-					if (!ref_pass_interior) {bbd.next_tile(g->bcube);} // only needed for exterior geom
+					if (!ref_pass_interior) {bbd.next_tile(g->bcube);} // only needed for exterior geom; always uses main/exterior bcube
 					is_first_tile = 0;
 					
 					for (auto bi = g->bc_ixs.begin(); bi != g->bc_ixs.end(); ++bi) {
@@ -3429,10 +3422,9 @@ public:
 				if (no_depth_write) {glDepthMask(GL_FALSE);} // disable depth writing
 
 				for (auto g = (*i)->grid_by_tile.begin(); g != (*i)->grid_by_tile.end(); ++g) { // Note: all grids should be nonempty
-					if (!g->bcube.closest_dist_less_than(camera_xlated, draw_dist)) continue; // too far
-					point const pos(g->bcube.get_cube_center() + xlate);
-					if (!camera_pdu.sphere_and_cube_visible_test(pos, g->bcube.get_bsphere_radius(), (g->bcube + xlate))) continue; // VFC
-					if (!try_bind_tile_smap_at_point(pos, city_shader)) continue; // no shadow maps - not drawn in this pass
+					if (!g->bcube.closest_dist_less_than(camera_xlated, draw_dist)) continue; // too far; used exterior bcube
+					if (!building_grid_visible(xlate, g->bcube)) continue; // VFC; use exterior bcube
+					if (!try_bind_tile_smap_at_point((g->bcube.get_cube_center() + xlate), city_shader)) continue; // no shadow maps - not drawn in this pass
 					unsigned const tile_id(g - (*i)->grid_by_tile.begin());
 					// Note: we could skip detail materials like trim for tiles that are further, but it's unclear if that would make much difference
 					(*i)->building_draw_vbo.draw_tile(city_shader, tile_id);
@@ -3489,7 +3481,7 @@ public:
 		colorRGBA const light_colors[16] = {RED,RED,RED,RED,RED,RED,RED,RED, BLUE,BLUE,BLUE,BLUE, WHITE,WHITE, YELLOW, GREEN};
 
 		for (auto g = grid_by_tile.begin(); g != grid_by_tile.end(); ++g) {
-			if (!g->bcube.closest_dist_less_than(camera, draw_dist)) continue; // too far away
+			if (!g->bcube.closest_dist_less_than(camera, draw_dist)) continue; // too far away; use exterior bcube
 			if (!camera_pdu.cube_visible(g->bcube + xlate)) continue;
 
 			for (auto i = g->bc_ixs.begin(); i != g->bc_ixs.end(); ++i) {
@@ -3986,8 +3978,7 @@ public:
 		
 		for (auto g = grid.begin(); g != grid.end(); ++g) {
 			if (g->bc_ixs.empty()) continue;
-			point const pos(g->bcube.get_cube_center() + state.xlate);
-			if (!pdu.sphere_and_cube_visible_test(pos, g->bcube.get_bsphere_radius(), (g->bcube + state.xlate))) continue; // VFC
+			if (!building_grid_visible(state.xlate, g->bcube)) continue; // VFC; use exterior bcube
 			
 			for (auto b = g->bc_ixs.begin(); b != g->bc_ixs.end(); ++b) {
 				if ((int)b->ix == state.exclude_bix) continue; // excluded
@@ -3996,7 +3987,7 @@ public:
 				if (state.skip_cont_camera && !(player_in_basement || player_in_attic) && c.contains_pt(pdu.pos) && get_building(b->ix).has_windows()) continue;
 				if (dist_less_than(pdu.pos, c.closest_pt(pdu.pos), pdu.far_) && pdu.cube_visible(c)) {state.building_ids.push_back(*b);}
 			}
-		}
+		} // for g
 	}
 	bool check_pts_occluded(point const *const pts, unsigned npts, building_occlusion_state_t const &state) const { // pts are in building space
 		point const pos_bs(state.pos - state.xlate);
