@@ -1849,8 +1849,7 @@ bool building_t::check_obj_occluded(cube_t const &c, point const &viewer_in, occ
 		if (viewer.z > (ground_floor_z1 + floor_spacing)) return 1; // viewer not on first floor
 		
 		if (!player_in_building) { // player not in this building
-			checked_conn_ret = (camera_in_building && player_in_basement == 3 &&
-				interior_visible_from_other_building_ext_basement(oc.get_xlate(), oc.query_is_for_light));
+			checked_conn_ret = (camera_in_building && player_in_basement && interior_visible_from_other_building_ext_basement(oc.get_xlate(), oc.query_is_for_light));
 			if (!checked_conn_ret) return 1;
 		}
 	}

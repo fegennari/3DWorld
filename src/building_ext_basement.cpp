@@ -1189,18 +1189,18 @@ void building_t::try_connect_ext_basement_to_building(building_t &b) {
 	unsigned const rstart1(interior->ext_basement_hallway_room_id), rstart2(b.interior->ext_basement_hallway_room_id);
 	assert(interior->basement_ext_bcube.z2() == other_eb_bc.z2()); // must be at same elevation
 	assert(rstart1 < rooms1.size() && rstart2 < rooms2.size());
+	auto r1_begin(rooms1.begin() + rstart1), r2_begin(rooms2.begin() + rstart2);
 	ext_basement_room_params_t P, Pb, Padd; // P=input rooms for *this, Pb=input rooms for b, Padd=new rooms output for *this
 	rand_gen_t rgen;
 	rgen.set_state(rooms1.size(), rooms2.size());
 
 	// find nearby candidate rooms
-	for (auto r1 = rooms1.begin()+rstart1; r1 != rooms1.end(); ++r1) {
+	for (auto r1 = r1_begin; r1 != rooms1.end(); ++r1) {
 		cube_t search_area(*r1);
 		search_area.expand_by(max_connect_dist);
 		if (!search_area.intersects(other_eb_bc)) continue; // too far
 
-		// skip ext basement hall room itself in other building; connecting to this doesn't draw lights properly when player is in basement rather than ext basement
-		for (auto r2 = rooms2.begin()+rstart2+1; r2 != rooms2.end(); ++r2) {
+		for (auto r2 = r2_begin; r2 != rooms2.end(); ++r2) {
 			if (!search_area.intersects(*r2))        continue; // too far
 			if (fabs(r1->z1() - r2->z1()) > z_toler) continue; // different floors/levels; do we need to check toler?
 			
@@ -1223,13 +1223,14 @@ void building_t::try_connect_ext_basement_to_building(building_t &b) {
 				cube_t test_cube(cand_join);
 				test_cube.expand_in_dim(d, -wall_thickness); // shrink ends to avoid false intersection with rooms at either end
 				// check for intersections with starting hallways, since these aren't valid to connect to and aren't included in populate_params_from_building()
-				if (test_cube.intersects(rooms1[rstart1]) || test_cube.intersects(rooms2[rstart2])) continue;
+				if (test_cube.intersects(*r1_begin) || test_cube.intersects(*r2_begin)) continue;
 				populate_params_from_building(*  interior, P );
 				populate_params_from_building(*b.interior, Pb);
 				if (!  is_basement_room_placement_valid(test_cube, P,  d,  dir, nullptr, &b  )) continue; // add_end_door=nullptr
 				if (!b.is_basement_room_placement_valid(test_cube, Pb, d, !dir, nullptr, this)) continue; // add_end_door=nullptr
 				Padd.rooms.emplace_back(cand_join, 1, 0, d, dir); // is_hallway=1, has_stairs=0
 				Padd.rooms.back().conn_bcube = *r2; // store room in the other building that we're connecting to in conn_bcube
+				if (r2 == r2_begin) {b.interior->conn_room_in_extb_hallway = 1;} // flag if connected to ext basement starting room
 			} // for d
 		} // for r2
 	} // for r1
@@ -1307,6 +1308,15 @@ bool building_t::is_visible_through_conn(building_t const &b, vector3d const &xl
 bool building_t::interior_visible_from_other_building_ext_basement(vector3d const &xlate, bool expand_for_light) const {
 	if (!player_in_basement) return 0; // player not in basement; note that it's possible for the player to be in the basement and still see the conn room in the ext basement
 	if (player_building == nullptr || player_building == this || !has_conn_info()) return 0;
+
+	if (player_in_basement < 3) { // not in extended basement - we can do some other checks
+		if (!player_building->interior || !player_building->interior->conn_room_in_extb_hallway) return 0; // shouldn't be visible
+		door_t const &door(player_building->interior->get_ext_basement_door());
+		if (door.open_amt == 0.0) return 0; // fully closed door
+		cube_t dbc(door.get_true_bcube());
+		dbc.expand_in_dim(door.dim, get_wall_thickness()); // expand a bit to handle player in the doorway
+		if (!camera_pdu.cube_visible(dbc + xlate)) return 0; // check ext basement entrance visible
+	}
 	float const view_dist(8.0*get_window_vspace()); // arbitrary constant, should reflect length of largest hallway
 	return player_building->is_visible_through_conn(*this, xlate, view_dist, expand_for_light);
 }
