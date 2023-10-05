@@ -276,8 +276,10 @@ unsigned building_t::setup_multi_floor_room(extb_room_t &room, door_t const &doo
 bool building_t::add_ext_basement_rooms_recur(extb_room_t &parent_room, ext_basement_room_params_t &P, float door_width, bool dim, unsigned depth, rand_gen_t &rgen) {
 	// add doors and other rooms along hallway; currently, all rooms are hallways
 	float const parent_len(parent_room.get_sz_dim(!dim)), parent_width(parent_room.get_sz_dim(dim));
-	float const end_spacing(0.75*door_width), min_length(max(4.0f*door_width, 0.5f*parent_len)), max_length(max(parent_len, 2.0f*min_length));
-	float const pos_lo(parent_room.d[!dim][0] + end_spacing), pos_hi(parent_room.d[!dim][1] - end_spacing);
+	float const min_length(max(4.0f*door_width, 0.5f*parent_len)), max_length(max(parent_len, 2.0f*min_length));
+	// add at least a doorway's worth of spacing to the connecting hallway so that the doors don't block each other when open
+	float const pos_lo(parent_room.d[!dim][0] + (parent_room.connect_dir ? 1.5 : 0.7)*door_width);
+	float const pos_hi(parent_room.d[!dim][1] - (parent_room.connect_dir ? 0.7 : 1.5)*door_width);
 	if (pos_lo >= pos_hi) return 0; // not enough space to add a door
 	bool const is_end_room(depth >= global_building_params.max_ext_basement_room_depth);
 	float const min_width_scale(is_end_room ? 1.0 : 0.9), max_width_scale(is_end_room ? 3.0 : 1.5);
