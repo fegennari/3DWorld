@@ -37,10 +37,10 @@ colorRGBA get_light_color_temp_range(float tmin, float tmax, rand_gen_t &rgen) {
 }
 
 // Note: applies to both houses and office buildings, but only houses will have bedrooms
-bool building_t::can_be_bedroom_or_bathroom(room_t const &room, unsigned floor, bool skip_conn_check) const { // check room type and existence of exterior door
-	if (room.has_stairs_on_floor(floor) || room.has_elevator || room.is_hallway || room.is_office || room.is_sec_bldg) return 0; // no bed/bath in these cases
+bool building_t::can_be_bedroom_or_bathroom(room_t const &room, unsigned floor_ix, bool skip_conn_check) const { // check room type and existence of exterior door
+	if (room.has_stairs_on_floor(floor_ix) || room.has_elevator || room.is_hallway || room.is_office || room.is_sec_bldg) return 0; // no bed/bath in these cases
 	
-	if (floor == 0 && room.z1() == ground_floor_z1) {
+	if (has_ext_door_this_floor(room.z1(), floor_ix)) {
 		// run special logic for bedrooms and bathrooms (private rooms) on the first floor of a house
 		if (is_room_adjacent_to_ext_door(room)) return 0; // door to house does not open into a bedroom/bathroom
 		if (skip_conn_check) return 1;
@@ -57,8 +57,8 @@ bool building_t::can_be_bedroom_or_bathroom(room_t const &room, unsigned floor, 
 				room_t const &r(interior->rooms[i]);
 				if (r == room) {cur_room = i; continue;} // this room; we know it can't have stairs or an exterior door
 				if (r.is_sec_bldg || r.z2() <= ground_floor_z1) continue; // skip basement rooms, garages, and sheds
-				if (r.has_stairs_on_floor(floor))  {stairs_rooms.push_back(i);}
-				if (is_room_adjacent_to_ext_door(r)) {door_rooms.push_back(i);}
+				if (r.has_stairs_on_floor(floor_ix))  {stairs_rooms.push_back(i);}
+				if (is_room_adjacent_to_ext_door(r))  {door_rooms  .push_back(i);}
 			}
 			if (cur_room < 0 || stairs_rooms.empty()) {cout << TXT(bcube.str());}
 			assert(cur_room >= 0); // must be found
@@ -360,8 +360,9 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			if (is_unfinished    ) continue; // no objects for now; if adding objects later, need to make sure they stay inside the building bounds
 			float tot_light_amt(light_amt); // unitless, somewhere around 1.0
 			if (is_lit) {tot_light_amt += r->light_intensity;}
+			bool const is_garage_or_shed(r->is_garage_or_shed(f));
 			bool const is_ground_floor_part(!is_basement && r->z1() <= ground_floor_z1);
-			bool const is_ground_floor(is_ground_floor_part && f == 0), is_garage_or_shed(r->is_garage_or_shed(f));
+			bool const is_ground_floor(is_ground_floor_part && (1 << f) & floor_ext_door_mask); // really this is a check for doors on this floor
 			bool const is_entry_floor(is_ground_floor || (is_ground_floor_part && multi_family)); // for placing entry level rooms/objs (fireplace, living, dining, kitchen, etc.)
 			unsigned const objs_start(wall_light ? objs_start_inc_lights : objs.size()); // wall light counts as an object since it must be avoided
 			rgen.rand_mix();
@@ -1008,7 +1009,7 @@ void building_t::add_wall_and_door_trim() { // and window trim
 						trim.d[d][!dir] = side_pos + (dir ? -1.0 : 1.0)*trim_thickness;
 						trim_cubes.clear();
 						trim_cubes.push_back(trim); // start with entire length
-						if (f == 0) {cut_trim_around_doors(doors, trim_cubes, (expand_val + wall_thickness), d);} // first floor, cut out areas for ext doors
+						if (has_ext_door_this_floor(i->z1(), f)) {cut_trim_around_doors(doors, trim_cubes, (expand_val + wall_thickness), d);} // cut out areas for ext doors
 						for (cube_t const &c : trim_cubes) {objs.emplace_back(c, TYPE_WALL_TRIM, 0, d, dir, flags, 1.0, SHAPE_CUBE, trim_color);}
 						added = 1;
 						break;
@@ -1053,8 +1054,9 @@ void building_t::add_wall_and_door_trim() { // and window trim
 							for (cube_t const &t : trim_parts) {objs.emplace_back(t, TYPE_WALL_TRIM, 0, dim, !dir, flags, 1.0, SHAPE_ANGLED, trim_color);} // ceiling trim
 						}
 					}
-					if (f == 0) {cut_trim_around_doors(doors, trim_cubes, (expand_val + wall_thickness), dim);} // first floor, cut out areas for ext doors
-
+					if (has_ext_door_this_floor(i->z1(), f)) { // cut out areas for ext doors; not for stacked parts
+						cut_trim_around_doors(doors, trim_cubes, (expand_val + wall_thickness), dim);
+					}
 					for (cube_t &c : trim_cubes) {
 						clip_trim_cube(c, trim_exclude, trim_parts);
 						for (cube_t const &t : trim_parts) {objs.emplace_back(t, TYPE_WALL_TRIM, 0, dim, 0, ext_flags, 1.0, SHAPE_CUBE, trim_color);} // floor trim

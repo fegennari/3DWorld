@@ -1382,6 +1382,7 @@ struct building_t : public building_geom_t {
 	bool can_extend_pri_hall_stairs_to_pg() const {return (has_parking_garage && has_pri_hall() && pri_hall.z1() == ground_floor_z1);}
 	bool is_basement(vect_cube_t::const_iterator it) const {return (int(it - parts.begin()) == basement_part_ix);}
 	bool is_pos_in_basement(point const &pos) const {return ((has_basement() && parts[basement_part_ix].contains_pt(pos)) || point_in_extended_basement(pos));}
+	bool has_ext_door_this_floor(float part_z1, unsigned floor_ix) const {return (part_z1 == ground_floor_z1 && (1 << floor_ix) & floor_ext_door_mask);}
 	unsigned get_attic_part_ix() const;
 	cube_t const &get_basement  () const {assert(has_basement()); return parts[basement_part_ix   ];}
 	cube_t const &get_attic_part() const {assert(has_attic   ()); return parts[get_attic_part_ix()];}
@@ -1845,7 +1846,7 @@ private:
 	bool check_if_placed_on_interior_wall(cube_t const &c, room_t const &room, bool dim, bool dir) const;
 	bool place_eating_items_on_table(rand_gen_t &rgen, unsigned table_obj_id);
 	void place_objects_onto_surfaces(rand_gen_t rgen, room_t const &room, unsigned room_id, float tot_light_amt, unsigned objs_start, unsigned floor, bool is_basement);
-	bool can_be_bedroom_or_bathroom(room_t const &room, unsigned floor, bool skip_conn_check=0) const;
+	bool can_be_bedroom_or_bathroom(room_t const &room, unsigned floor_ix, bool skip_conn_check=0) const;
 	bool can_be_bathroom(room_t const &room) const;
 	bool find_mirror_in_room(unsigned room_id, vector3d const &xlate, bool same_room) const;
 	bool find_mirror_needing_reflection(vector3d const &xlate) const;
