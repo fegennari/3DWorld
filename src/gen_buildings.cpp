@@ -1933,7 +1933,8 @@ void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_
 	} else {color = mat.window_color;}
 	// only clip non-city windows; city building windows tend to be aligned with the building textures (maybe should be a material option?)
 	int const clip_windows(mat.no_city ? (is_house ? 2 : 1) : 0);
-	float const floor_spacing(get_window_vspace()), door_ztop(doors.empty() ? 0.0f : (EXACT_MULT_FLOOR_HEIGHT ? (ground_floor_z1 + floor_spacing) : doors.front().pts[2].z));
+	float const floor_spacing(get_window_vspace());
+	float const gf_door_ztop(doors.empty() ? 0.0f : (EXACT_MULT_FLOOR_HEIGHT ? (ground_floor_z1 + floor_spacing) : doors.front().pts[2].z));
 	unsigned draw_parts_mask(0);
 	bool room_with_stairs(0);
 	cube_t cont_part; // part containing the point
@@ -1944,85 +1945,97 @@ void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_
 	}
 	for (auto i = parts.begin(); i != get_real_parts_end_inc_sec(); ++i) { // multiple cubes/parts/levels, excluding chimney/porch/etc.
 		if (is_basement(i)) continue; // skip the basement
-		cube_t draw_part;
-		cube_t const *clamp_cube(nullptr);
+		bool const split_per_floor(i == parts.begin() && floor_ext_door_mask > 1); // for multi-family houses
+		unsigned const num_splits(split_per_floor ? calc_num_floors(*i, floor_spacing, get_floor_thickness()) : 1);
 
-		if (only_cont_pt_in && !i->contains_pt(only_cont_pt)) { // not the part containing the point
-			float const z_exp(get_fc_thickness()); // allow a bit of extra Z overlap, which helps when the player is on the stairs
+		for (unsigned f = 0; f < num_splits; ++f) {
+			float const floor_offset(f*floor_spacing), slice_z1(i->z1() + floor_offset), door_ztop(gf_door_ztop + floor_offset);
+			cube_t part(*i), draw_part;
+			cube_t const *clamp_cube(nullptr);
+			set_cube_zvals(part, slice_z1, (split_per_floor ? (slice_z1 + floor_spacing) : i->z2()));
 
-			if (i->contains_pt_xy(only_cont_pt) && only_cont_pt.z > i->z1()-z_exp && only_cont_pt.z < i->z2()+z_exp) {} // okay, can draw unsplit in this case
-			else if (room_with_stairs && are_parts_stacked(*i, cont_part)) { // windows may be visible through stairs in rooms with stacked parts
-				draw_part  = cont_part;
-				draw_part.intersect_with_cube_xy(*i);
-				clamp_cube = &draw_part;
-			}
-			else {
-				if (i->z2() < only_cont_pt.z || i->z1() > only_cont_pt.z) continue; // z-range not contained, skip
-				bool skip(0);
+			if (only_cont_pt_in && !i->contains_pt(only_cont_pt)) { // not the part containing the point
+				float const z_exp(get_fc_thickness()); // allow a bit of extra Z overlap, which helps when the player is on the stairs
 
-				for (unsigned d = 0; d < 2; ++d) {
-					if (i->d[ d][0] != cont_part.d[ d][1] && i->d[ d][1] != cont_part.d[ d][0]) continue; // not adj in dim d
-					if (i->d[!d][0] >= cont_part.d[!d][1] || i->d[!d][1] <= cont_part.d[!d][0]) continue; // no overlap in dim !d
-					if (i->d[!d][1] < only_cont_pt[!d] || i->d[!d][0] > only_cont_pt[!d]) {skip = 1; break;} // other dim range not contained, skip
-					draw_part = *i; // deep copy
-					max_eq(draw_part.d[!d][0], cont_part.d[!d][0]); // clamp to contained part in dim !d
-					min_eq(draw_part.d[!d][1], cont_part.d[!d][1]);
+				if (i->contains_pt_xy(only_cont_pt) && only_cont_pt.z > i->z1()-z_exp && only_cont_pt.z < i->z2()+z_exp) {} // okay, can draw unsplit in this case
+				else if (room_with_stairs && are_parts_stacked(*i, cont_part)) { // windows may be visible through stairs in rooms with stacked parts
+					draw_part  = cont_part;
+					draw_part.intersect_with_cube_xy(part);
 					clamp_cube = &draw_part;
-					break;
-				} // for d
-				if (skip || clamp_cube == nullptr) continue; // skip if adj in neither dim, always skip (but could check chained adj case)
+				}
+				else {
+					if (i->z2() < only_cont_pt.z || i->z1() > only_cont_pt.z) continue; // z-range not contained, skip
+					bool skip(0);
+
+					for (unsigned d = 0; d < 2; ++d) {
+						if (i->d[ d][0] != cont_part.d[ d][1] && i->d[ d][1] != cont_part.d[ d][0]) continue; // not adj in dim d
+						if (i->d[!d][0] >= cont_part.d[!d][1] || i->d[!d][1] <= cont_part.d[!d][0]) continue; // no overlap in dim !d
+						if (i->d[!d][1] < only_cont_pt[!d] || i->d[!d][0] > only_cont_pt[!d]) {skip = 1; break;} // other dim range not contained, skip
+						draw_part = part; // deep copy
+						max_eq(draw_part.d[!d][0], cont_part.d[!d][0]); // clamp to contained part in dim !d
+						min_eq(draw_part.d[!d][1], cont_part.d[!d][1]);
+						clamp_cube = &draw_part;
+						break;
+					} // for d
+					if (skip || clamp_cube == nullptr) continue; // skip if adj in neither dim, always skip (but could check chained adj case)
+				}
 			}
-		}
-		unsigned const part_ix(i - parts.begin());
-		unsigned const dsides((part_ix < 4 && mat.add_windows) ? door_sides[part_ix] : 0); // skip windows on sides with doors, but only for buildings with windows
-		bdraw.add_section(*this, 1, *i, tex, color, 3, 0, 0, 1, clip_windows, door_ztop, dsides, offset_scale, 0, clamp_cube); // XY, no_ao=1
-		draw_parts_mask |= (1 << part_ix);
+			unsigned const part_ix(i - parts.begin());
+			unsigned const dsides((part_ix < 4 && mat.add_windows) ? door_sides[part_ix] : 0); // skip windows on sides with doors, but only for buildings with windows
+			bdraw.add_section(*this, 1, part, tex, color, 3, 0, 0, 1, clip_windows, door_ztop, dsides, offset_scale, 0, clamp_cube); // XY, no_ao=1
+			draw_parts_mask |= (1 << part_ix);
 
-		// add ground floor windows next to doors
-		if (dsides == 0) continue; // no doors
-		float const space(0.25*floor_spacing), toler(0.1*floor_spacing);
+			// add ground floor windows next to doors
+			if (dsides == 0) continue; // no doors
+			float const space(0.25*floor_spacing), toler(0.1*floor_spacing);
 
-		for (unsigned dim = 0; dim < 2; ++dim) {
-			unsigned const num_windows(get_num_windows_on_side(i->d[!dim][0], i->d[!dim][1]));
-			if (num_windows <= 1) continue; // no space to split the windows on this wall
-			float const window_spacing(i->get_sz_dim(!dim)/num_windows), side_lo(i->d[!dim][0]), side_hi(i->d[!dim][1]);
+			for (unsigned dim = 0; dim < 2; ++dim) {
+				unsigned const num_windows(get_num_windows_on_side(i->d[!dim][0], i->d[!dim][1]));
+				if (num_windows <= 1) continue; // no space to split the windows on this wall
+				float const window_spacing(i->get_sz_dim(!dim)/num_windows), side_lo(i->d[!dim][0]), side_hi(i->d[!dim][1]);
 
-			for (unsigned dir = 0; dir < 2; ++dir) {
-				if (!(dsides & (1 << (2*dim + dir)))) continue; // no door on this side
-				unsigned const dim_mask((1 << dim) + (1 << (3 + 2*dim + (1-dir)))); // enable only this dim but disable the other dir
-				float const wall_pos(i->d[dim][dir]);
-				vector<float> &wall_edges(bdraw.temp_wall_edges);
-				wall_edges.clear();
+				for (unsigned dir = 0; dir < 2; ++dir) {
+					if (!(dsides & (1 << (2*dim + dir)))) continue; // no door on this side
+					unsigned const dim_mask((1 << dim) + (1 << (3 + 2*dim + (1-dir)))); // enable only this dim but disable the other dir
+					float const wall_pos(i->d[dim][dir]);
+					vector<float> &wall_edges(bdraw.temp_wall_edges);
+					wall_edges.clear();
 
-				for (auto d = doors.begin(); d != doors.end(); ++d) {
-					cube_t const c(d->get_bcube());
-					if ((c.dy() < c.dx()) != dim) continue; // wrong dim
-					if (c.d[dim][0]-toler > wall_pos || c.d[dim][1]+toler < wall_pos) continue; // door not on this wall
-					float const door_lo(c.d[!dim][0]), door_hi(c.d[!dim][1]);
-					if (door_lo > side_hi || door_hi < side_lo) continue; // door not on this part
-					// align to an exact multiple of window period so that bottom floor windows line up with windows on the floors above and no walls are clipped
-					if (wall_edges.empty()) {wall_edges.push_back(side_lo); wall_edges.push_back(side_hi);} // first wall, add end points
-					wall_edges.push_back(door_lo - space); // low
-					wall_edges.push_back(door_hi + space); // high
-				} // for d
-				if (wall_edges.empty()) continue; // no door, could be a non-main door (roof access, garage, shed) - does the mean there are no windows on this exterior wall?
-				assert(!(wall_edges.size() & 1)); // must be an even number
-				sort(wall_edges.begin(), wall_edges.end());
+					for (auto d = doors.begin(); d != doors.end(); ++d) {
+						cube_t const c(d->get_bcube());
+						if ((c.dy() < c.dx()) != dim) continue; // wrong dim
+						if (c.d[dim][0]-toler > wall_pos || c.d[dim][1]+toler < wall_pos) continue; // door not on this wall
+						float const door_lo(c.d[!dim][0]), door_hi(c.d[!dim][1]);
+						if (door_lo > side_hi || door_hi < side_lo)     continue; // door not on this part
+						if (c.z1() >= part.z2() || c.z2() <= part.z1()) continue; // door not on this floor slice
+						// align to an exact multiple of window period so that bottom floor windows line up with windows on the floors above and no walls are clipped
+						if (wall_edges.empty()) {wall_edges.push_back(side_lo); wall_edges.push_back(side_hi);} // first wall, add end points
+						wall_edges.push_back(door_lo - space); // low
+						wall_edges.push_back(door_hi + space); // high
+					} // for d
+					if (wall_edges.empty()) { // no door, could be a non-main door (roof access, garage, shed) or slice with a door above or below on this wall
+						// draw the full wall; does this mean there are no windows on this exterior wall?
+						bdraw.add_section(*this, 1, part, tex, color, dim_mask, 0, 0, 1, clip_windows, door_ztop, 0, offset_scale, 0, clamp_cube); // no_ao=1
+						continue;
+					}
+					assert(!(wall_edges.size() & 1)); // must be an even number
+					sort(wall_edges.begin(), wall_edges.end());
 
-				for (unsigned e = 0; e < wall_edges.size(); e += 2) { // each pair of points should be the {left, right} edge of a wall section
-					cube_t c(*i);
-					c.d[!dim][0] = window_spacing*ceil ((wall_edges[e  ] - side_lo)/window_spacing) + side_lo; // lo, clamped to whole windows
-					c.d[!dim][1] = window_spacing*floor((wall_edges[e+1] - side_lo)/window_spacing) + side_lo; // hi, clamped to whole windows
-					float const wall_len(c.get_sz_dim(!dim));
-					if (wall_len < 0.5*window_spacing) continue; // wall too small to add here
-					c.z2() = door_ztop;
-					tid_nm_pair_t tex2(tex);
-					tex2.tscale_x = 0.5f*round_fp(wall_len/window_spacing)/wall_len;
-					tex2.txoff    = -2.0*tex2.tscale_x*c.d[!dim][0];
-					bdraw.add_section(*this, 1, c, tex2, color, dim_mask, 0, 0, 1, clip_windows, door_ztop, 0, offset_scale, 0, clamp_cube); // no_ao=1
-				} // for e
-			} // for dir
-		} // for dim
+					for (unsigned e = 0; e < wall_edges.size(); e += 2) { // each pair of points should be the {left, right} edge of a wall section
+						cube_t c(part);
+						c.d[!dim][0] = window_spacing*ceil ((wall_edges[e  ] - side_lo)/window_spacing) + side_lo; // lo, clamped to whole windows
+						c.d[!dim][1] = window_spacing*floor((wall_edges[e+1] - side_lo)/window_spacing) + side_lo; // hi, clamped to whole windows
+						float const wall_len(c.get_sz_dim(!dim));
+						if (wall_len < 0.5*window_spacing) continue; // wall too small to add here
+						c.z2() = door_ztop;
+						tid_nm_pair_t tex2(tex);
+						tex2.tscale_x = 0.5f*round_fp(wall_len/window_spacing)/wall_len;
+						tex2.txoff    = -2.0*tex2.tscale_x*c.d[!dim][0];
+						bdraw.add_section(*this, 1, c, tex2, color, dim_mask, 0, 0, 1, clip_windows, door_ztop, 0, offset_scale, 0, clamp_cube); // no_ao=1
+					} // for e
+				} // for dir
+			} // for dim
+		} // for f
 	} // for i
 	if (only_cont_pt_in) { // camera inside this building, cut out holes so that the exterior doors show through
 		cut_holes_for_ext_doors(bdraw, only_cont_pt, draw_parts_mask);

@@ -332,14 +332,12 @@ class building_draw_t;
 
 struct building_geom_t { // describes the physical shape of a building
 	unsigned num_sides;
-	uint8_t door_sides[4]; // bit mask for 4 door sides, one per base part
+	uint8_t door_sides[4]={}; // bit mask for 4 door sides, one per base part
 	bool half_offset=0, is_pointed=0;
 	float rot_sin=0.0, rot_cos=0.0, flat_side_amt=0.0, alt_step_factor=0.0, start_angle=0.0; // rotation in XY plane, around Z (up) axis
 	//float roof_recess;
 
-	building_geom_t(unsigned ns=4, float rs=0.0, float rc=1.0, bool pointed=0) : num_sides(ns), is_pointed(pointed), rot_sin(rs), rot_cos(rc) {
-		door_sides[0] = door_sides[1] = door_sides[2] = door_sides[3] = 0;
-	}
+	building_geom_t(unsigned ns=4, float rs=0.0, float rc=1.0, bool pointed=0) : num_sides(ns), is_pointed(pointed), rot_sin(rs), rot_cos(rc) {}
 	bool is_rotated() const {return (rot_sin != 0.0);}
 	bool is_cube()    const {return (num_sides == 4);}
 	bool use_cylinder_coll() const {return (num_sides > 8 && flat_side_amt == 0.0);} // use cylinder collision if not a cube, triangle, octagon, etc. (approximate)
@@ -1338,6 +1336,7 @@ struct building_t : public building_geom_t {
 	int8_t open_door_ix=-1, basement_part_ix=-1;
 	uint8_t has_chimney=0; // 0=none, 1=interior, 2=exterior with fireplace
 	uint8_t city_ix=0; // supports up to 256 cities
+	uint8_t floor_ext_door_mask=0; // used for multi-family houses
 	bool is_house=0, has_garage=0, has_shed=0, has_int_garage=0, has_courtyard=0, has_complex_floorplan=0, has_helipad=0, has_ac=0;
 	bool multi_family=0; // apartments, multi-family house, duplex, etc. - split by floor
 	bool has_int_fplace=0, has_parking_garage=0, has_small_part=0, has_basement_door=0, has_basement_pipes=0, parts_generated=0, is_in_city=0, has_skylight_light=0;
@@ -1453,7 +1452,7 @@ struct building_t : public building_geom_t {
 	void adjust_part_zvals_for_floor_spacing(cube_t &c) const;
 	void gen_geometry(int rseed1, int rseed2);
 	cube_t place_door(cube_t const &base, bool dim, bool dir, float door_height, float door_center, float door_pos,
-		float door_center_shift, float width_scale, bool can_fail, bool opens_up, rand_gen_t &rgen) const;
+		float door_center_shift, float width_scale, bool can_fail, bool opens_up, rand_gen_t &rgen, unsigned floor_ix=0) const;
 	void gen_house(cube_t const &base, rand_gen_t &rgen);
 	bool maybe_add_house_driveway(cube_t const &plot, unsigned building_ix) const;
 	bool get_power_point(vector<point> &ppts) const;

@@ -490,12 +490,13 @@ bool building_t::is_valid_door_pos(cube_t const &door, float door_width, bool di
 	return 1;
 }
 
-cube_t building_t::place_door(cube_t const &base, bool dim, bool dir, float door_height, float door_center,
-	float door_pos, float door_center_shift, float width_scale, bool can_fail, bool opens_up, rand_gen_t &rgen) const
+cube_t building_t::place_door(cube_t const &base, bool dim, bool dir, float door_height, float door_center, float door_pos,
+	float door_center_shift, float width_scale, bool can_fail, bool opens_up, rand_gen_t &rgen, unsigned floor_ix) const
 {
 	float const door_width(width_scale*door_height), door_half_width(0.5*door_width);
 	if (can_fail && base.get_sz_dim(!dim) < 2.0*door_width) return cube_t(); // part is too small to place a door
-	float const door_shift(0.01*get_window_vspace()), base_lo(base.d[!dim][0]), base_hi(base.d[!dim][1]), wall_thickness(get_wall_thickness());
+	float const floor_spacing(get_window_vspace()), wall_thickness(get_wall_thickness());
+	float const door_shift(0.01*floor_spacing), base_lo(base.d[!dim][0]), base_hi(base.d[!dim][1]);
 	bool const calc_center(door_center == 0.0); // door not yet calculated
 	bool const centered(door_center_shift == 0.0 || hallway_dim == (uint8_t)dim); // center doors connected to primary hallways
 	// ideally we want the front (first) door to connect to the stairs in a multi-family house, but the stairs may be in the back, so we allow the back door as well
@@ -503,8 +504,9 @@ cube_t building_t::place_door(cube_t const &base, bool dim, bool dir, float door
 	bool const pref_near_stairs(interior && is_front_door && multi_family);
 	unsigned const base_num_tries(10), num_tries((pref_near_stairs ? 2 : 1)*base_num_tries);
 	cube_t door;
-	door.z1() = base.z1(); // same bottom as house
+	door.z1() = base.z1() + floor_ix*floor_spacing; // same bottom as part, offset by floor_ix
 	door.z2() = door.z1() + door_height;
+	assert(door.z2() <= base.z2()); // make sure the door is contained within this part
 
 	for (unsigned n = 0; n < num_tries; ++n) { // make up to 10 tries to place a valid door
 		if (calc_center) { // add door to first part of house/building
@@ -707,7 +709,7 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 	bool const stacked_parts(!two_parts && (rand_num & 32) && bcube.dz() > 1.8*floor_spacing); // single part and at least two floors
 	bool const pref_street_dim(street_dir ? ((street_dir-1) >> 1) : 0), pref_street_dir(street_dir ? ((street_dir-1)&1) : 0);
 	bool door_dim(street_dir ? pref_street_dim : (rand_num & 1)), door_dir(0), dim(0), dir(0), dir2(0), skip_last_roof(0);
-	unsigned door_part(0), detail_type(0);
+	unsigned door_part(0), detail_type(0), num_floors(0); // num_floors is only calculated for single cube houses and only used for multi-family houses
 	real_num_parts = (two_parts ? 2 : 1); // only walkable parts: excludes shed, garage, porch roof, and chimney
 	cube_t door_cube;
 
@@ -910,7 +912,7 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 		maybe_add_basement(rgen);
 	}
 	else { // single cube house
-		unsigned const num_floors(calc_num_floors(parts[0], floor_spacing, get_floor_thickness()));
+		num_floors = calc_num_floors(parts[0], floor_spacing, get_floor_thickness());
 		// make it a multi-family house if it's a single large part with at least three floors
 		multi_family = (num_floors > 2 && parts[0].dx()*parts[0].dy() > 50.0*floor_spacing*floor_spacing);
 		maybe_add_basement(rgen);
@@ -969,7 +971,7 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 				}
 			} // for n
 		}
-		add_door(door, door_part, door_dim, door_dir, 0);
+		if (add_door(door, door_part, door_dim, door_dir, 0)) {floor_ext_door_mask |= 1;}
 		if (doors.size() == 2) {swap(doors[0], doors[1]);} // make sure the house door comes before the garage/shed door
 		float const tot_area(parts[0].get_area_xy() + (two_parts ? parts[1].get_area_xy() : 0.0f));
 
@@ -986,13 +988,31 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 					for (unsigned door2_dir = 0; door2_dir < 2 && !added_door; ++door2_dir) {
 						if (door2_dim == door_dim && door_dir == bool(door2_dir) /*&& door2_part == door_part*/) continue; // don't place second door on the same side
 						if (part.d[door2_dim][door2_dir] != bcube.d[door2_dim][door2_dir]) continue; // door on building bcube is always exterior/never interior face between two parts
-						cube_t door2(place_door(part, door2_dim, door2_dir, door_height, 0.0, 0.0, 0.25, DOOR_WIDTH_SCALE, 1, 0, rgen));
+						cube_t const door2(place_door(part, door2_dim, door2_dir, door_height, 0.0, 0.0, 0.25, DOOR_WIDTH_SCALE, 1, 0, rgen));
 						if (!is_valid_door_pos(door2, 0.5*door_height, door2_dim)) continue; // bad placement
 						added_door |= add_door(door2, door2_part, door2_dim, door2_dir, 0);
 					} // for door_dir2
 				} // for d
 			} // for p
+			if (added_door) {floor_ext_door_mask |= 1;}
 		} // end back door
+		if (0 && multi_family) { // maybe place upper floor door(s); house should be a single cube
+			assert(num_floors > 1);
+			bool const dim0(rgen.rand_bool()), dir0(rgen.rand_bool());
+
+			for (unsigned f = 1; f < num_floors; ++f) { // every floor above ground level
+				bool added_door(0);
+
+				for (unsigned d = 0; d < 2 && !added_door; ++d) {
+					for (unsigned e = 0; e < 2 && !added_door; ++e) {
+						unsigned const dim(dim0 ^ d), dir(dir0 ^ e);
+						cube_t const door2(place_door(parts[0], dim, dir, door_height, 0.0, 0.0, 0.25, DOOR_WIDTH_SCALE, 1, 0, rgen, f));
+						if (is_valid_door_pos(door2, 0.5*door_height, dim)) {added_door |= add_door(door2, 0, dim, dir, 0);}
+					}
+				}
+				if (added_door) {floor_ext_door_mask |= (1 << f);}
+			} // for f
+		}
 		if (global_building_params.max_ext_basement_room_depth > 0) {
 			extend_underground_basement(rgen); // maybe add door inside basement and connected extended basement; rgen is copied, not modified
 		}
@@ -1534,8 +1554,7 @@ bool building_t::add_door(cube_t const &c, unsigned part_ix, bool dim, bool dir,
 	assert(sz[dim] == 0.0 && sz[!dim] > 0.0 && sz.z > 0.0);
 	// if it's an office building with two doors already added, make this third door a back metal door
 	unsigned const type(for_office_building ? ((doors.size() == 2) ?
-		(unsigned)tquad_with_ix_t::TYPE_BDOOR2 : (unsigned)tquad_with_ix_t::TYPE_BDOOR) :
-		(unsigned)tquad_with_ix_t::TYPE_HDOOR);
+		(unsigned)tquad_with_ix_t::TYPE_BDOOR2 : (unsigned)tquad_with_ix_t::TYPE_BDOOR) : (unsigned)tquad_with_ix_t::TYPE_HDOOR);
 	float const pos_adj(0.015*get_window_vspace()); // distance to move away from the building wall
 	doors.push_back(set_door_from_cube(c, dim, dir, type, pos_adj, 1, 0.0, 0, 0, 0)); // exterior=1, open_amt=0.0, opens_out=0, opens_up=0, swap_sides=0
 	if (!roof_access && part_ix < 4) {door_sides[part_ix] |= 1 << (2*dim + dir);}
@@ -1701,7 +1720,7 @@ void building_t::gen_building_doors_if_needed(rand_gen_t &rgen) { // for office 
 
 	if (has_pri_hall()) { // building has primary hallway, place doors at both ends of first part
 		for (unsigned d = 0; d < 2; ++d) {
-			add_door(place_door(parts.front(), bool(hallway_dim), d, door_height, 0.0, 0.0, 0.0, wscale, 0, 0, rgen), 0, bool(hallway_dim), d, 1);
+			if (add_door(place_door(parts.front(), bool(hallway_dim), d, door_height, 0.0, 0.0, 0.0, wscale, 0, 0, rgen), 0, bool(hallway_dim), d, 1)) {floor_ext_door_mask |= 1;}
 		}
 		return;
 	}
@@ -1784,6 +1803,7 @@ void building_t::gen_building_doors_if_needed(rand_gen_t &rgen) { // for office 
 			}
 		} // for b
 	}
+	if (!doors.empty()) {floor_ext_door_mask |= 1;} // I suppose courtyard doors count here
 }
 
 void building_t::place_roof_ac_units(unsigned num, float sz_scale, cube_t const &bounds, vect_cube_t const &avoid, rand_gen_t &rgen) {
