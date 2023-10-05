@@ -600,7 +600,7 @@ point get_closest_wall_pos(point const &pos, float radius, cube_t const &room, v
 	point best(pos);
 	float dmin(room.dx() + room.dy()); // use an initial distance larger than what we can return
 
-	for (unsigned dim = 0; dim < 2; ++dim) { // check room exterior walls first
+	for (unsigned dim = 0; dim < 2; ++dim) { // check room/part exterior walls first
 		for (unsigned dir = 0; dir < 2; ++dir) {
 			float const val(room.d[dim][dir] + (dir ? -radius : radius)), dist(fabs(val - pos[dim])); // shift val inward
 			if (dist >= dmin) continue;
@@ -1594,7 +1594,7 @@ void building_t::add_house_basement_pipes(rand_gen_t &rgen) {
 	}
 	// Note: elevators/buttons/stairs haven't been placed at this point, so iterate over all objects
 	for (room_object_t const &i : interior->room_geom->objs) {
-		bool no_blocking(i.type == TYPE_PICTURE || i.type == TYPE_WBOARD);
+		bool const no_blocking(i.type == TYPE_PICTURE || i.type == TYPE_WBOARD);
 		// Note: TYPE_PIPE (vertical electrical conduits from outlets) may block pipes from running horizontally along walls
 		if (i.no_coll() && !no_blocking && i.type != TYPE_LIGHT && i.type != TYPE_PIPE && i.type != TYPE_VENT) continue; // no collisions
 		if (i.z1() >= ground_floor_z1) continue; // not in the basement
@@ -1612,6 +1612,7 @@ void building_t::add_house_basement_pipes(rand_gen_t &rgen) {
 		else if (no_blocking) {
 			cube_t c(i);
 			c.d[i.dim][!i.dir] += (i.dir ? 1.0 : -1.0)*wall_thickness; // add a wall thickness of clearance
+			if (i.type == TYPE_PICTURE) {c.expand_in_dim(!i.dim, 0.05*i.get_sz_dim(!i.dim));} // expand slightly to include the frame
 			cube_t obstacle(c);
 		}
 		else {obstacles.push_back(i);}
