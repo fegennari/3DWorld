@@ -305,7 +305,14 @@ bool building_t::add_desk_to_room(rand_gen_t rgen, room_t const &room, vect_cube
 		// make short if against an exterior wall, in an office, or if there's a complex floorplan (in case there's no back wall)
 		bool const is_tall(!room.is_office && !has_complex_floorplan && rgen.rand_float() < 0.5 && (is_basement || classify_room_wall(room, zval, dim, dir, 0) != ROOM_WALL_EXT));
 		unsigned const desk_obj_ix(objs.size());
-		objs.emplace_back(c, TYPE_DESK, room_id, dim, !dir, 0, tot_light_amt, (is_tall ? SHAPE_TALL : SHAPE_CUBE));
+		room_object_t const desk(c, TYPE_DESK, room_id, dim, !dir, 0, tot_light_amt, (is_tall ? SHAPE_TALL : SHAPE_CUBE));
+		objs.push_back(desk);
+
+		if (desk.desk_has_drawers()) { // place blocker in front of drawers so that they have room to open
+			room_object_t drawers(get_desk_drawers_part(desk));
+			drawers.d[dim][!dir] += dsign*drawers.get_sz_dim(dim);
+			objs.emplace_back(drawers, TYPE_BLOCKER, room_id, dim, !dir, RO_FLAG_INVIS);
+		}
 		set_obj_id(objs);
 		bool const add_computer(building_obj_model_loader.is_model_valid(OBJ_MODEL_TV) && rgen.rand_bool());
 
