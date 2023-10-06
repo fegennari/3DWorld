@@ -223,6 +223,7 @@ bool building_t::check_sphere_coll_inner(point &pos, point const &p_last, vector
 		// clamp to Z1 to keep them inside the building rather than putting them on the roof
 		if (zval < bcube.z1() && zval+camera_zh > bcube.z1() && bcube.contains_pt_xy(pos2 - xlate) && p_last == p_last2) {zval = bcube.z1();}
 		point const pos2_bs(pos2 - xlate), query_pt(pos2_bs.x, pos2_bs.y, zval);
+		bool allow_outside_building(0);
 
 		// first check uses min of the two zvals to reject the basement, which is actually under the mesh
 		if ((min(pos2.z, p_last2.z) + radius) > ground_floor_z1) {
@@ -236,10 +237,13 @@ bool building_t::check_sphere_coll_inner(point &pos, point const &p_last, vector
 					bc.expand_in_dim( door_dim, 1.1*radius); // expand by radius plus some tolerance in door dim
 					bc.expand_in_dim(!door_dim, -0.5*xy_radius); // shrink slightly in the other dim to prevent the player from clipping through the wall next to the door
 					bc.z1() -= max(radius, (float)camera_zh); // account for player on steep slope up to door - require player head above doorframe bottom
-					if (bc.contains_pt(point(pos2_bs.x, pos2_bs.y, zval))) return 0; // check if door can be used - disable collsion to allow the player to walk through
-				}
+					if (!bc.contains_pt(point(pos2_bs.x, pos2_bs.y, zval))) continue; // check if door can be used
+					//if (floor_ix == 0) return 0; // ground floor, disable collsion to allow the player to walk through
+					allow_outside_building = 1; // allow the player to exit, but for now still in the building
+				} // for d
 			}
 		}
+		// check for sphere contained in parts and maybe clamp to parts
 		cube_t sc; sc.set_from_sphere(query_pt, radius); // sphere bounding cube; zvals are ignored
 
 		for (auto i = parts.begin(); i != get_real_parts_end_inc_sec(); ++i) { // include garages and sheds
@@ -276,7 +280,7 @@ bool building_t::check_sphere_coll_inner(point &pos, point const &p_last, vector
 					accumulate_shared_xy_area(*p, sc, cont_area);
 				}
 			}
-			if (cont_area < 0.99*sc.get_area_xy()) { // sphere bounding cube not contained in union of parts - sphere is partially outside the building
+			if (!allow_outside_building && cont_area < 0.99*sc.get_area_xy()) { // sphere bounding cube not contained in union of parts - partially outside the building
 				cube_t c(clamp_part + xlate); // convert to camera space
 				c.expand_by_xy(-radius); // shrink part by sphere radius
 				c.clamp_pt_xy(pos2); // force pos2 into interior of the cube to prevent the sphere from intersecting the part
@@ -298,6 +302,7 @@ bool building_t::check_sphere_coll_inner(point &pos, point const &p_last, vector
 				if (zval < i->z2() + radius + floor_thickness) {is_interior = 1; break;} // Note: don't have to check zval > i->z2() because we know that !is_interior
 			}
 		}
+		if (allow_outside_building && !is_interior) return 0; // entering an exterior door - no collision
 	}
 	if (is_interior) {
 		point pos2_bs(pos2 - xlate);
