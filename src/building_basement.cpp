@@ -1611,9 +1611,9 @@ void building_t::add_house_basement_pipes(rand_gen_t &rgen) {
 		}
 		else if (no_blocking) {
 			cube_t c(i);
-			c.d[i.dim][!i.dir] += (i.dir ? 1.0 : -1.0)*wall_thickness; // add a wall thickness of clearance
+			c.d[i.dim][i.dir] += (i.dir ? 1.0 : -1.0)*wall_thickness; // add a wall thickness of clearance
 			if (i.type == TYPE_PICTURE) {c.expand_in_dim(!i.dim, 0.05*i.get_sz_dim(!i.dim));} // expand slightly to include the frame
-			cube_t obstacle(c);
+			obstacles.push_back(c);
 		}
 		else {obstacles.push_back(i);}
 	} // for i
