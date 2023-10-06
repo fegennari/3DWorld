@@ -2598,6 +2598,7 @@ void building_t::add_light_switches_to_room(rand_gen_t rgen, room_t const &room,
 	float const switch_height(1.8*wall_thickness), switch_hwidth(0.5*wall_thickness), min_wall_spacing(switch_hwidth + 2.0*wall_thickness);
 	cube_t const room_bounds(get_walkable_room_bounds(room));
 	if (min(room_bounds.dx(), room_bounds.dy()) < 8.0*switch_hwidth) return; // room is too small; shouldn't happen
+	float const ceil_zval(zval + get_floor_ceil_gap());
 	vect_door_stack_t &doorways(get_doorways_for_room(room, zval)); // place light switch next to a door
 	if (doorways.size() > 1 && rgen.rand_bool()) {std::reverse(doorways.begin(), doorways.end());} // random permute if more than 2 doorways?
 	vect_room_object_t &objs(interior->room_geom->objs);
@@ -2611,6 +2612,7 @@ void building_t::add_light_switches_to_room(rand_gen_t rgen, room_t const &room,
 	if (is_ground_floor) { // handle exterior doors
 		cube_t room_exp(room);
 		room_exp.expand_by(wall_thickness, wall_thickness, -wall_thickness); // expand in XY and shrink in Z
+		set_cube_zvals(room_exp, zval, ceil_zval); // limit to this floor of the room
 
 		for (auto d = doors.begin(); d != doors.end(); ++d) {
 			if (!d->is_exterior_door() || d->type == tquad_with_ix_t::TYPE_RDOOR) continue;
@@ -2653,7 +2655,7 @@ void building_t::add_light_switches_to_room(rand_gen_t rgen, room_t const &room,
 					unsigned flags(RO_FLAG_NOCOLL);
 
 					if (is_house && is_basement && classify_room_wall(room, zval, dim, dir, 0) == ROOM_WALL_EXT) { // house exterior basement wall; non-recessed
-						room_object_t const conduit(get_conduit(dim, dir, 0.25*switch_hwidth, c.d[dim][dir], wall_pos, c.z2(), (zval + get_floor_ceil_gap()), room_id));
+						room_object_t const conduit(get_conduit(dim, dir, 0.25*switch_hwidth, c.d[dim][dir], wall_pos, c.z2(), ceil_zval, room_id));
 
 						if (!overlaps_other_room_obj(conduit, objs_start)) {
 							objs.push_back(conduit);

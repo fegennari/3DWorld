@@ -224,16 +224,20 @@ bool building_t::check_sphere_coll_inner(point &pos, point const &p_last, vector
 		if (zval < bcube.z1() && zval+camera_zh > bcube.z1() && bcube.contains_pt_xy(pos2 - xlate) && p_last == p_last2) {zval = bcube.z1();}
 		point const pos2_bs(pos2 - xlate), query_pt(pos2_bs.x, pos2_bs.y, zval);
 
-		// Note: first check uses min of the two zvals to reject the basement, which is actually under the mesh
-		if ((min(pos2.z, p_last2.z) + radius) > ground_floor_z1 && zval < (ground_floor_z1 + get_door_height())) { // on the ground floor
-			for (auto d = doors.begin(); d != doors.end(); ++d) { // exterior doors
-				if (d->type == tquad_with_ix_t::TYPE_RDOOR) continue; // doesn't apply to roof door
-				cube_t bc(d->get_bcube());
-				bool const door_dim(bc.dy() < bc.dx());
-				bc.expand_in_dim( door_dim, 1.1*radius); // expand by radius plus some tolerance in door dim
-				bc.expand_in_dim(!door_dim, -0.5*xy_radius); // shrink slightly in the other dim to prevent the player from clipping through the wall next to the door
-				bc.z1() -= max(radius, (float)camera_zh); // account for player on steep slope up to door - require player head above doorframe bottom
-				if (bc.contains_pt(pos2_bs)) return 0; // check if we can use a door - disable collsion detection to allow the player to walk through
+		// first check uses min of the two zvals to reject the basement, which is actually under the mesh
+		if ((min(pos2.z, p_last2.z) + radius) > ground_floor_z1) {
+			unsigned const floor_ix((zval - ground_floor_z1)/get_window_vspace());
+
+			if (floor_ext_door_mask & (1 << floor_ix)) { // check for exterior doors on this floor
+				for (auto d = doors.begin(); d != doors.end(); ++d) { // exterior doors
+					if (d->type == tquad_with_ix_t::TYPE_RDOOR) continue; // doesn't apply to roof door
+					cube_t bc(d->get_bcube());
+					bool const door_dim(bc.dy() < bc.dx());
+					bc.expand_in_dim( door_dim, 1.1*radius); // expand by radius plus some tolerance in door dim
+					bc.expand_in_dim(!door_dim, -0.5*xy_radius); // shrink slightly in the other dim to prevent the player from clipping through the wall next to the door
+					bc.z1() -= max(radius, (float)camera_zh); // account for player on steep slope up to door - require player head above doorframe bottom
+					if (bc.contains_pt(point(pos2_bs.x, pos2_bs.y, zval))) return 0; // check if door can be used - disable collsion to allow the player to walk through
+				}
 			}
 		}
 		cube_t sc; sc.set_from_sphere(query_pt, radius); // sphere bounding cube; zvals are ignored
