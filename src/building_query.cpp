@@ -431,11 +431,13 @@ unsigned check_cubes_collision(cube_t const *const cubes, unsigned num_cubes, po
 	}
 	return coll_ret;
 }
+unsigned get_closet_num_coll_cubes(room_object_t const &c) {
+	return ((c.is_open() && !c.is_small_closet()) ? 4U : 5U); // skip collision check of open doors for large closets since this case is more complex
+}
 unsigned check_closet_collision(room_object_t const &c, point &pos, point const &p_last, float radius, vector3d *cnorm) {
 	cube_t cubes[5];
 	get_closet_cubes(c, cubes, 1); // get cubes for walls and door; required to handle collision with closet interior; for_collision=1
-	// skip collision check of open doors for large closets since this case is more complex
-	return check_cubes_collision(cubes, ((c.is_open() && !c.is_small_closet()) ? 4U : 5U), pos, p_last, radius, cnorm);
+	return check_cubes_collision(cubes, get_closet_num_coll_cubes(c), pos, p_last, radius, cnorm);
 }
 unsigned check_bed_collision(room_object_t const &c, point &pos, point const &p_last, float radius, vector3d *cnorm) {
 	cube_t cubes[6]; // frame, head, foot, mattress, pillow, legs_bcube
@@ -1108,7 +1110,7 @@ bool building_interior_t::line_coll(building_t const &building, point const &p1,
 			if (c->type == TYPE_CLOSET) { // special case to handle closet interiors
 				cube_t cubes[5];
 				get_closet_cubes(*c, cubes, 1); // get cubes for walls and door; for_collision=1
-				unsigned const n_end((c->is_open() && !c->is_small_closet()) ? 4U : 5U); // skip open doors for large closets since this case is more complex
+				unsigned const n_end(get_closet_num_coll_cubes(*c));
 				for (unsigned n = 0; n < n_end; ++n) {had_coll |= get_line_clip_update_t(p1, p2, cubes[n], t);}
 			}
 			else if (c->is_vert_cylinder()) { // vertical cylinder
@@ -1160,7 +1162,7 @@ point building_interior_t::find_closest_pt_on_obj_to_pos(building_t const &build
 			if (c->type == TYPE_CLOSET) { // special case to handle closet interiors
 				cube_t cubes[5];
 				get_closet_cubes(*c, cubes, 1); // get cubes for walls and door; for_collision=1
-				unsigned const n_end((c->is_open() && !c->is_small_closet()) ? 4U : 5U); // skip open doors for large closets since this case is more complex
+				unsigned const n_end(get_closet_num_coll_cubes(*c));
 				for (unsigned n = 0; n < n_end; ++n) {update_closest_pt(cubes[n], pos, closest, pad_dist, dmin_sq);}
 			}
 			if (c->is_vert_cylinder()) { // vertical cylinder
@@ -1664,9 +1666,7 @@ void building_t::get_room_obj_cubes(room_object_t const &c, point const &pos, ve
 	else if (c.type == TYPE_CLOSET && (c.is_open() || c.contains_pt(pos))) {
 		cube_t cubes[5];
 		get_closet_cubes(c, cubes, 1); // get cubes for walls and door; for_collision=1
-		// skip check of open doors for large closets since this case is more complex
-		unsigned const ncubes((c.is_open() && !c.is_small_closet()) ? 4U : 5U);
-		lg_cubes.insert(lg_cubes.end(), cubes, cubes+ncubes);
+		lg_cubes.insert(lg_cubes.end(), cubes, (cubes + get_closet_num_coll_cubes(c)));
 	}
 	else if (c.type == TYPE_BED) {
 		cube_t cubes[6]; // frame, head, foot, mattress, pillow, legs_bcube
@@ -1813,8 +1813,7 @@ int building_t::check_line_coll_expand(point const &p1, point const &p2, float r
 			else if (c->type == TYPE_CLOSET) {
 				cube_t cubes[5];
 				get_closet_cubes(*c, cubes, 1); // get cubes for walls and door; for_collision=1
-				// skip check of open doors for large closets since this case is more complex
-				if (line_int_cubes_exp(p1, p2, cubes, ((c->is_open() && !c->is_small_closet()) ? 4U : 5U), expand)) return 10; // closet
+				if (line_int_cubes_exp(p1, p2, cubes, get_closet_num_coll_cubes(*c), expand)) return 10; // closet
 			}
 			else if (c->type == TYPE_BED) {
 				cube_t cubes[6]; // frame, head, foot, mattress, pillow, legs_bcube
