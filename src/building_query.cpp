@@ -432,7 +432,8 @@ unsigned check_cubes_collision(cube_t const *const cubes, unsigned num_cubes, po
 	return coll_ret;
 }
 unsigned get_closet_num_coll_cubes(room_object_t const &c) {
-	return ((c.is_open() && !c.is_small_closet()) ? 4U : 5U); // skip collision check of open doors for large closets since this case is more complex
+	// include closed closet door for large closets; skip collision check of open doors for large closets since this case is more complex
+	return ((!c.is_open() && !c.is_small_closet()) ? 5U : 4U);
 }
 unsigned check_closet_collision(room_object_t const &c, point &pos, point const &p_last, float radius, vector3d *cnorm) {
 	cube_t cubes[5];
@@ -542,12 +543,6 @@ bool maybe_inside_room_object(room_object_t const &obj, point const &pos, float 
 }
 
 cube_t get_true_room_obj_bcube(room_object_t const &c) { // for collisions, etc.
-	if (c.is_open() && c.is_small_closet()) { // special case for open closets
-		cube_t bcube(c); // only applies to small closets with open doors
-		float const width(c.get_width()), wall_width(0.5*(width - 0.5*c.dz())); // see get_closet_cubes()
-		bcube.d[c.dim][c.dir] += (c.dir ? 1.0f : -1.0f)*(width - 2.0f*wall_width); // extend outward to include the door
-		return bcube;
-	}
 	if (c.type == TYPE_ATTIC_DOOR) {
 		cube_t bcube(get_attic_access_door_cube(c));
 		if (c.is_open()) {bcube.union_with_cube(get_ladder_bcube_from_open_attic_door(c, bcube));} // include ladder as well

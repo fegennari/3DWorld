@@ -597,19 +597,26 @@ bool building_t::add_bedroom_objs(rand_gen_t rgen, room_t &room, vect_cube_t con
 			if (flags & RO_FLAG_OPEN) {interior->room_geom->expand_object(objs.back(), *this);} // expand opened closets immediately
 			placed_closet = 1; // done
 			// add a light inside the closet
-			room_object_t const &closet(objs.back());
+			room_object_t const closet(objs.back()); // deep copy so that we can invalidate the reference
+			bool const small_closet(closet.is_small_closet());
 			point lpos(cube_top_center(closet));
 			lpos[dim] += 0.05*c.get_sz_dim(dim)*(dir ? -1.0 : 1.0); // move slightly toward the front of the closet
 			cube_t light(lpos);
 			light.z1() -= 0.02*window_vspacing;
-			light.expand_by_xy((closet.is_small_closet() ? 0.04 : 0.06)*window_vspacing);
+			light.expand_by_xy((small_closet ? 0.04 : 0.06)*window_vspacing);
 			colorRGBA const color(1.0, 1.0, 0.9); // yellow-ish
 			objs.emplace_back(light, TYPE_LIGHT, room_id, dim, 0, (RO_FLAG_NOCOLL | RO_FLAG_IN_CLOSET), 0.0, SHAPE_CYLIN, color); // dir=0 (unused)
 			objs.back().obj_id = light_ix_assign.get_next_ix();
 
-			if (closet.is_small_closet()) { // add a blocker in front of the closet to avoid placing furniture that blocks the door from opening
+			if (small_closet) { // add a blocker in front of the closet to avoid placing furniture that blocks the door from opening
 				c.d[dim][!dir] += dir_sign*doorway_width;
 				objs.emplace_back(c, TYPE_BLOCKER, room_id, dim, 0, RO_FLAG_INVIS);
+				// add closet door
+				cube_t cubes[5];
+				get_closet_cubes(closet, cubes);
+				door_t door(cubes[4], dim, !dir, 0); // open=0
+				add_interior_door(door, 0, 1, 1); // is_bathroom=0, make_unlocked=1, make_closed=1
+				interior->doors.back().obj_ix = closet_obj_id;
 			}
 		} // for d
 	} // for n

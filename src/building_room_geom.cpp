@@ -407,7 +407,7 @@ void get_closet_cubes(room_object_t const &c, cube_t cubes[5], bool for_collisio
 	} // for d
 	doors.d[c.dim][ c.dir] -= (c.dir ? 1.0 : -1.0)*0.2*wall_thick; // shift in slightly
 	doors.d[c.dim][!c.dir] += (c.dir ? 1.0 : -1.0)*(depth - 0.8*wall_thick); // make it narrow
-	if (for_collision && c.is_open() && use_small_door) {cubes[4] = get_open_closet_door(c, doors);} // include open doors for small closets
+	if (for_collision && c.is_open() && use_small_door) {cubes[4] = cube_t();} // open doors for small closets are no longer included
 	else {cubes[4] = doors;} // return closed door cube; caller must handle open door
 }
 cube_t get_open_closet_door(room_object_t const &obj) {
@@ -424,14 +424,6 @@ void add_quad_to_mat(rgeom_mat_t &mat, point const pts[4], float const ts[4], fl
 	for (unsigned n = 0; n < 4; ++n) {mat.quad_verts.emplace_back(pts[n], normal, ts[n], tt[n], cw);}
 }
 
-cube_t get_open_closet_door(room_object_t const &c, cube_t const &closed_door) {
-	assert(c.is_small_closet()); // only small closets are supported for now
-	float const door_width(closed_door.get_sz_dim(!c.dim)), door_thickness(closed_door.get_sz_dim(c.dim));
-	cube_t door(closed_door);
-	door.d[ c.dim][c.dir] += (c.dir ? 1.0 : -1.0)*door_width;
-	door.d[!c.dim][1    ] -= (door_width - door_thickness);
-	return door;
-}
 void building_room_geom_t::add_closet(room_object_t const &c, tid_nm_pair_t const &wall_tex, bool inc_lg, bool inc_sm) { // no lighting scale, houses only
 	bool const open(c.is_open()), use_small_door(c.is_small_closet()), draw_interior(open || player_in_closet);
 	float const wall_thick(get_closet_wall_thickness(c)), trim_hwidth(0.3*wall_thick);
@@ -455,28 +447,7 @@ void building_room_geom_t::add_closet(room_object_t const &c, tid_nm_pair_t cons
 		point const llc(doors.get_llc());
 		float const out_sign(c.dir ? 1.0 : -1.0);
 
-		if (use_small_door) { // small house closet door
-			tid_nm_pair_t const tp(get_int_door_tid(), 0.0);
-			rgeom_mat_t &door_mat(get_material(tp, 1));
-			unsigned const door_verts_start(door_mat.quad_verts.size());
-
-			if (open) {
-				cube_t const door(get_open_closet_door(c, doors));
-				door_mat.add_cube_to_verts(door, WHITE, llc, ~get_skip_mask_for_xy(!c.dim), c.dim, !c.dir); // draw front and back faces
-				get_untextured_material(1).add_cube_to_verts_untextured(door, WHITE, ~get_skip_mask_for_xy(c.dim)); // draw edges untextured
-			}
-			else {
-				unsigned const door_skip_faces(~get_skip_mask_for_xy(c.dim)); // draw both front and back faces so that shadows are cast correctly / light doesn't leak
-				door_mat.add_cube_to_verts(doors, WHITE, llc, door_skip_faces, !c.dim);
-			}
-			auto &qv(get_material(tp, 1).quad_verts); // re-capture reference in case it was invalidated
-			float const shrink(DOOR_FRAME_WIDTH*(open ? 1.0 : 0.75)); // only partial frame when closed
-			
-			for (auto i = qv.begin()+door_verts_start; i != qv.end(); ++i) { // clip the door frame off of the texture
-				min_eq(i->t[0], 1.0f-shrink);
-				max_eq(i->t[0],      shrink);
-			}
-		}
+		if (use_small_door) {} // small house closet door - draw as a regular door
 		else { // 4 panel folding door
 			cube_t doors_no_trim(doors);
 			doors_no_trim.expand_in_dim(!c.dim, -trim_hwidth);
@@ -584,7 +555,7 @@ void building_room_geom_t::add_closet(room_object_t const &c, tid_nm_pair_t cons
 				// ceiling trim, missing end caps; exterior only
 				add_wall_trim(room_object_t(trim, TYPE_WALL_TRIM, c.room_id, trim_dim, trim_dir, trim_flags, 1.0, SHAPE_ANGLED, trim_color), 1);
 
-				if (!is_side) { // draw vertical door frame on either side of the door
+				if (!is_side && !use_small_door) { // draw vertical door frame on either side of the door; small doors have their own trim added elsewhere
 					set_cube_zvals(trim, c.z1(), c.z2()); // full z height
 					set_wall_width(trim, cubes[2*d].get_center_dim(c.dim), 0.6*wall_thick, c.dim);
 					set_wall_width(trim, trim.d[!c.dim][!d], trim_hwidth, !c.dim);

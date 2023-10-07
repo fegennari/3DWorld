@@ -1078,6 +1078,7 @@ bool building_room_geom_t::expand_object(room_object_t &c, building_t const &bui
 	case TYPE_BRK_PANEL: expand_breaker_panel(c, !building.interior->elevators.empty(), building.has_parking_garage); break;
 	default: assert(0); // not a supported expand type
 	}
+	if (c.type == TYPE_CLOSET) {maybe_spawn_spider_in_drawer(c, c, 0, building.get_window_vspace(), 1);} // spawn spider when first opened
 	c.flags |= RO_FLAG_EXPANDED; // flag as expanded
 	return 1;
 }

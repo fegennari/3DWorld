@@ -390,13 +390,14 @@ bool building_t::apply_player_action_key(point const &closest_to_in, vector3d co
 	maybe_inv_rotate_pos_dir(closest_to, in_dir);
 	point const query_ray_end(closest_to + dmax*in_dir);
 
-	if (!player_in_closet && mode == 0) { // if the player is in the closet, only the closet door can be opened
+	if (mode == 0) { // if the player is in the closet, only the closet door can be opened
 		for (auto i = interior->doors.begin(); i != interior->doors.end(); ++i) {
+			if (player_in_closet && i->obj_ix < 0) continue; // only allow the player to open closet doors when in the closet
 			if (i->z1() > closest_to.z || i->z2() < closest_to.z) continue; // wrong floor, skip
 			point const center(i->get_cube_center());
 			float const dist_sq(p2p_dist_sq(closest_to, center));
 			if (found_item && dist_sq >= closest_dist_sq) continue; // not the closest
-			if (!check_obj_dir_dist(closest_to, in_dir, *i, center, dmax)) continue; // door is not in the correct direction or too far away, skip
+			if (!check_obj_dir_dist(closest_to, in_dir, *i, center, (player_in_closet ? 0.5 : 1.0)*dmax)) continue; // door not in the correct direction or too far away
 			cube_t const door_bcube(i->get_true_bcube()); // expand to nonzero area
 
 			if (!door_bcube.line_intersects(closest_to, query_ray_end)) { // if camera ray doesn't intersect the door frame, check for ray intersection with opened door
@@ -435,16 +436,8 @@ bool building_t::apply_player_action_key(point const &closest_to_in, vector3d co
 				bool keep(0);
 				if (i->type == TYPE_BOX && !i->is_open()) {keep = 1;} // box can only be opened once; check first so that selection works for boxes in closets
 				else if (i->type == TYPE_CLOSET) {
-					if (in_dir.z > 0.5) continue; // not looking up at the light
-
-					if (/*!i->is_open() &&*/ i->is_small_closet() && !interior->room_geom->moved_obj_ids.empty()) { // only applies to small closets
-						cube_t c_test(*i);
-						float const width(i->get_width()), wall_width(0.5*(width - 0.5*i->dz())); // see get_closet_cubes()
-						c_test.d[i->dim][ i->dir] += (i->dir ? 1.0f : -1.0f)*(width - 2.0f*wall_width); // extend outward
-						c_test.d[i->dim][!i->dir]  = i->d[i->dim][i->dir]; // back is flush with front of closet
-						c_test.expand_in_dim(!i->dim, -wall_width); // shrink to door width
-						if (interior->room_geom->cube_intersects_moved_obj(c_test)) continue; // blocked, can't open
-					}
+					if (i->is_small_closet()) continue; // uses regular door now
+					if (in_dir.z > 0.5)       continue; // not looking up at the light
 					keep = 1; // closet door can be opened
 				}
 				else if (!player_in_closet) {
@@ -736,8 +729,7 @@ bool building_t::interact_with_object(unsigned obj_ix, point const &int_pos, poi
 		obj.flags ^= RO_FLAG_OPEN; // toggle open/close
 
 		if (obj.type == TYPE_CLOSET) {
-			bool const was_expanded(interior->room_geom->expand_object(obj, *this)); // expand any boxes so that the player can pick them up
-			if (was_expanded) {interior->room_geom->maybe_spawn_spider_in_drawer(obj, obj, 0, get_window_vspace(), 1);} // spawn spider when first opened
+			interior->room_geom->expand_object(obj, *this); // expand any boxes so that the player can pick them up
 			sound_scale = 0.25; // closets are quieter, to allow players to more easily hide
 		}
 		play_open_close_sound(obj, sound_origin);
@@ -851,10 +843,22 @@ void building_t::toggle_door_state(unsigned door_ix, bool player_in_this_buildin
 	}
 	handle_items_intersecting_closed_door(door); // check if we need to move any objects out of the way
 	
-	if (door.open) { // was closed and now open; remove any paint that was over the closed door
+	if (door.open) { // was closed and now open
+		notify_door_fully_closed_state(door);
 		cube_t door_exp(door);
 		door_exp.expand_in_dim(door.dim, 0.5*get_wall_thickness()); // make sure decals are included
-		remove_paint_in_cube(door_exp);
+		remove_paint_in_cube(door_exp); // remove any paint that was over the closed door
+	}
+}
+void building_t::notify_door_fully_closed_state(door_t const &door) {
+	if (door.obj_ix < 0)  return; // no associated object
+	if (!has_room_geom()) return; // error?
+	assert((unsigned)door.obj_ix < interior->room_geom->objs.size());
+	room_object_t &obj(interior->room_geom->objs[door.obj_ix]);
+	
+	if (obj.type == TYPE_CLOSET) { // this was a closet door
+		if (door.open) {obj.flags |= RO_FLAG_OPEN;} else {obj.flags &= ~RO_FLAG_OPEN;}
+		if (door.open) {interior->room_geom->expand_object(obj, *this);} // expand any boxes so that the player can pick them up
 	}
 }
 void building_t::handle_items_intersecting_closed_door(door_t const &door) {
@@ -889,9 +893,13 @@ void building_t::doors_next_frame() {
 	for (auto d = interior->doors.begin(); d != interior->doors.end(); ++d) {
 		if (!d->next_frame()) continue;
 		handle_items_intersecting_closed_door(*d);
-		if (!d->open && d->open_amt == 0.0) {play_door_open_close_sound(point(d->xc(), d->yc(), camera_pos.z), 0);} // play close sound at player z; open=0
+		
+		if (!d->open && d->open_amt == 0.0) { // door closes fully
+			play_door_open_close_sound(point(d->xc(), d->yc(), camera_pos.z), 0); // play close sound at player z; open=0
+			notify_door_fully_closed_state(*d);
+		}
 		interior->last_active_door_ix = (d - interior->doors.begin());
-	}
+	} // for d
 	if (interior->last_active_door_ix >= 0) {interior->room_geom->invalidate_mats_mask |= (1 << MAT_TYPE_DOORS);} // need to recreate doors VBO
 }
 

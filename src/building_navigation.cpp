@@ -1989,15 +1989,15 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 		if (player_is_hiding && person.saw_player_hide && global_building_params.ai_opens_doors && global_building_params.ai_sees_player_hide >= 2 &&
 			player_hiding_obj.type != TYPE_NONE && same_room_and_floor_as_player(person) && cur_player_building_loc.building_ix == person.cur_bldg)
 		{
-			// open the closet, stall, or shower door
+			// open the closet, stall, or shower door (closet door should already be open)
 			// it may not be safe to use an object iterator or even an index since we're in a different thread, so do a linear search for the target object
 			auto objs_end(interior->room_geom->get_placed_objs_end()); // skip buttons/stairs/elevators
 			cube_t coll_cube(person.get_bcube());
 			coll_cube.expand_by_xy(1.5*person.radius);
 
 			for (auto i = interior->room_geom->objs.begin(); i != objs_end; ++i) {
-				if (*i != player_hiding_obj) continue;
-				if (i->is_open()) break; // already open
+				if (*i != player_hiding_obj)   continue;
+				if (i->is_open())              break; // already open
 				if (!i->intersects(coll_cube)) break; // too far away (uses full object, not door, but should be close enough)
 				i->flags |= RO_FLAG_OPEN; // open the door
 				play_open_close_sound(*i, person.pos);

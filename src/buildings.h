@@ -1185,7 +1185,9 @@ struct door_stack_t : public door_base_t {
 };
 struct door_t : public door_base_t {
 	bool open=0, locked=0, blocked=0, is_bldg_conn=0;
+	int obj_ix=-1; // for closets, etc.
 	float open_amt=0.0; // 0.0=fully closed, 1.0=fully open
+
 	door_t() {}
 	door_t(cube_t const &c, bool dim_, bool dir, bool open_=1, bool os=0, bool hs=0) : door_base_t(c, dim_, dir, os, hs), open(open_), open_amt(open ? 1.0 : 0.0) {}
 	bool is_closed_and_locked() const {return (!open && locked);}
@@ -1527,6 +1529,7 @@ struct building_t : public building_geom_t {
 	bool adjust_blinds_state(unsigned obj_ix);
 	void add_box_contents(room_object_t const &box);
 	void toggle_door_state(unsigned door_ix, bool player_in_this_building, bool by_player, point const &actor_pos);
+	void notify_door_fully_closed_state(door_t const &door);
 	void handle_items_intersecting_closed_door(door_t const &door);
 	void doors_next_frame();
 	bool set_room_light_state_to(room_t const &room, float zval, bool make_on);
@@ -2029,7 +2032,6 @@ bool city_single_cube_visible_check(point const &pos, cube_t const &c);
 cube_t get_building_lights_bcube();
 cube_t get_grid_bcube_for_building(building_t const &b);
 unsigned get_street_dir(cube_t const &inner, cube_t const &outer);
-cube_t get_open_closet_door(room_object_t const &c, cube_t const &closed_door);
 float get_closet_wall_thickness(room_object_t const &c);
 void get_closet_cubes(room_object_t const &c, cube_t cubes[5], bool for_collision=0);
 void get_bed_cubes   (room_object_t const &c, cube_t cubes[6]);

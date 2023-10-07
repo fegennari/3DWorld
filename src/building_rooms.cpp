@@ -842,7 +842,7 @@ void building_t::add_wall_and_door_trim() { // and window trim
 	for (auto d = interior->door_stacks.begin(); d != interior->door_stacks.end(); ++d) { // vertical strips on each side + strip on top of interior doors
 		if (d->on_stairs) continue; // no frame for stairs door, skip
 		cube_t trim(*d);
-		trim.expand_in_dim(d->dim, door_trim_exp);
+		set_wall_width(trim, trim.get_center_dim(d->dim), door_trim_exp, d->dim);
 		trim.z2() -= 0.1*trim_toler; // shift top down oh so slightly to prevent z-fighting with top of wall when drawn under a skylight
 
 		for (unsigned side = 0; side < 2; ++side) { // left/right of door
