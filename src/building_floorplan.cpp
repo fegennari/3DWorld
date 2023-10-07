@@ -1188,8 +1188,8 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 
 				for (unsigned e = 0; e < 2; ++e) {
 					elevator_t E(elevator);
-					E.d[long_dim][e ^ E.dir ^ 1] = center[long_dim]; // back-to-back
-					E.dir ^= e; // facing opposite directions
+					E.d[long_dim][bool(e) ^ E.dir ^ 1] = center[long_dim]; // back-to-back
+					E.dir ^= bool(e); // facing opposite directions
 					add_or_extend_elevator(E, 1);
 				}
 			}

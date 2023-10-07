@@ -1005,7 +1005,7 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 
 				for (unsigned d = 0; d < 2 && !added_door; ++d) {
 					for (unsigned e = 0; e < 2 && !added_door; ++e) {
-						unsigned const dim(dim0 ^ d), dir(dir0 ^ e);
+						unsigned const dim(dim0 ^ bool(d)), dir(dir0 ^ bool(e));
 						cube_t const door2(place_door(parts[0], dim, dir, door_height, 0.0, 0.0, 0.25, DOOR_WIDTH_SCALE, 1, 0, rgen, f));
 						if (is_valid_door_pos(door2, 0.5*door_height, dim)) {added_door |= add_door(door2, 0, dim, dir, 0);}
 					}
