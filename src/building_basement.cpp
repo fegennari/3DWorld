@@ -698,7 +698,8 @@ bool building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 	float const pipe_zval(ceil_zval   - FITTING_RADIUS*r_main); // includes clearance for fittings vs. beams (and lights - mostly)
 	float const pipe_min_z1(pipe_zval - FITTING_RADIUS*r_main);
 	float const align_dist(2.0*wall_thickness); // align pipes within this range (in particular sinks and stall toilets)
-	float const r_main_spacing((add_insul ? 1.0+insul_thickness : 1.0)*r_main); // include insulation thickness for hot water pipes
+	float const radius_factor(add_insul ? 1.0+insul_thickness : 1.0);
+	float const r_main_spacing(radius_factor*r_main); // include insulation thickness for hot water pipes
 	assert(pipe_zval > bcube.z1());
 	vector<pipe_t> pipes, fittings;
 	cube_t pipe_end_bcube;
@@ -839,7 +840,7 @@ bool building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 	float const conn_pipe_merge_exp = 3.0; // cubic
 	unsigned const conn_pipes_start(pipes.size());
 
-	// connect drains to main pipe in !dim
+	// connect drains/feeders to main pipe in !dim
 	for (auto const &v : xy_map) { // for each unique position along the main pipe
 		float radius(0.0), range_min(centerline), range_max(centerline), unconn_radius(0.0);
 		point const &ref_p1(pipes[v.second.front()].p1);
@@ -856,16 +857,17 @@ bool building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 				point p1(ref_p1), p2(p1);
 				if      (lo < range_min) {p1[d] = lo; p2[d] = range_min;} // on the lo side
 				else if (hi > range_max) {p1[d] = range_max; p2[d] = hi;} // on the hi side
-				bool skip(has_int_obstacle_or_parallel_wall(pipe_t(p1, p2, radius, d, PIPE_CONN, 3).get_bcube(), obstacles, walls));
+				float const r_test(radius_factor*pipe.radius);
+				bool skip(has_int_obstacle_or_parallel_wall(pipe_t(p1, p2, r_test, d, PIPE_CONN, 3).get_bcube(), obstacles, walls));
 
 				if (skip && (p2[d] - p1[d]) > 8.0*pipe.radius) { // blocked, can't connect, long segment: try extending halfway
 					if      (lo < range_min) {p1[d] = lo = 0.5*(lo + range_min); pipe.p1[d] = pipe.p2[d] = lo + pipe.radius;} // on the lo side
 					else if (hi > range_max) {p2[d] = hi = 0.5*(hi + range_max); pipe.p1[d] = pipe.p2[d] = hi - pipe.radius;} // on the hi side
-					skip = has_int_obstacle_or_parallel_wall(pipe_t(p1, p2, radius, d, PIPE_CONN, 3).get_bcube(), obstacles, walls);
+					skip = has_int_obstacle_or_parallel_wall(pipe_t(p1, p2, r_test, d, PIPE_CONN, 3).get_bcube(), obstacles, walls);
 
 					if (!skip) { // okay so far; now check that the new shortened pipe has a riser pos that's clear of walls and beams
 						point const new_riser_pos((lo < range_min) ? p1 : p2); // the end that was clipped
-						cube_t test_cube; test_cube.set_from_sphere(new_riser_pos, radius);
+						cube_t test_cube; test_cube.set_from_sphere(new_riser_pos, pipe.radius);
 						skip = (has_bcube_int(test_cube, walls) || has_bcube_int(test_cube, beams));
 					}
 				}
