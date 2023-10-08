@@ -92,7 +92,7 @@ void building_t::move_door_to_other_side_of_wall(tquad_with_ix_t &door, float di
 	for (unsigned n = 0; n < door.npts; ++n) {door.pts[n][dim] += door_shift;} // move to opposite side of wall
 }
 
-void building_t::clip_door_to_interior(tquad_with_ix_t &door, bool clip_to_floor) const {
+void building_t::clip_door_to_interior(tquad_with_ix_t &door) const {
 
 	cube_t clip_cube(door.get_bcube());
 	float const dz(clip_cube.dz());
@@ -101,7 +101,7 @@ void building_t::clip_door_to_interior(tquad_with_ix_t &door, bool clip_to_floor
 	else if (door.is_building_door())                  {xy_border = 0.04;  z_border = 0.03;} // building door
 	else {xy_border = 0.06; z_border = 0.03;} // house door
 	// clip off bottom for floor if clip_to_floor==1 and not a roof door; somewhat arbitrary, should we use interior->floors.back().z2() instead?
-	if (door.type != tquad_with_ix_t::TYPE_RDOOR) {clip_cube.z1() += (clip_to_floor ? 0.6*get_floor_thickness() : 0.04*dz);}
+	if (door.type != tquad_with_ix_t::TYPE_RDOOR) {clip_cube.z1() += 0.1*get_floor_thickness();}
 	clip_cube.z2() -= z_border*dz;
 	bool const dim(clip_cube.dx() < clip_cube.dy()); // border dim
 	clip_cube.expand_in_dim(dim, -xy_border*clip_cube.get_sz_dim(dim)); // shrink by border
@@ -495,7 +495,7 @@ cube_t building_t::place_door(cube_t const &base, bool dim, bool dir, float door
 {
 	float const door_width(width_scale*door_height), door_half_width(0.5*door_width);
 	if (can_fail && base.get_sz_dim(!dim) < 2.0*door_width) return cube_t(); // part is too small to place a door
-	float const floor_spacing(get_window_vspace()), wall_thickness(get_wall_thickness());
+	float const floor_spacing(get_window_vspace()), wall_thickness(get_wall_thickness()), fc_thickness(get_fc_thickness());
 	float const door_shift(0.01*floor_spacing), base_lo(base.d[!dim][0]), base_hi(base.d[!dim][1]);
 	bool const calc_center(door_center == 0.0); // door not yet calculated
 	bool const centered(door_center_shift == 0.0 || hallway_dim == (uint8_t)dim); // center doors connected to primary hallways
@@ -504,9 +504,8 @@ cube_t building_t::place_door(cube_t const &base, bool dim, bool dir, float door
 	bool const pref_near_stairs(interior && is_front_door && multi_family);
 	unsigned const base_num_tries(10), num_tries((pref_near_stairs ? 2 : 1)*base_num_tries);
 	cube_t door;
-	door.z1() = base.z1() + floor_ix*floor_spacing; // same bottom as part, offset by floor_ix
-	door.z2() = door.z1() + door_height;
-	assert(door.z2() <= base.z2()); // make sure the door is contained within this part
+	door.z1() = base.z1() + floor_ix*floor_spacing + fc_thickness; // floor level relative to base part
+	door.z2() = min((door.z1() + door_height), (base.z2() - fc_thickness));
 
 	for (unsigned n = 0; n < num_tries; ++n) { // make up to 10 tries to place a valid door
 		if (calc_center) { // add door to first part of house/building

@@ -1740,7 +1740,7 @@ private:
 	void expand_ground_floor_cube(cube_t &cube, cube_t const &skip=cube_t()) const;
 	void get_exclude_cube(point const &pos, cube_t const &skip, cube_t &exclude, bool camera_in_building) const;
 	void move_door_to_other_side_of_wall(tquad_with_ix_t &door, float dist_mult, bool invert_normal) const;
-	void clip_door_to_interior(tquad_with_ix_t &door, bool clip_to_floor) const;
+	void clip_door_to_interior(tquad_with_ix_t &door) const;
 	void cut_holes_for_ext_doors(building_draw_t &bdraw, point const &contain_pt, unsigned draw_parts_mask) const;
 	bool is_valid_door_pos(cube_t const &door, float door_width, bool dim) const;
 	bool is_cube_close_to_exterior_doorway(cube_t const &c, float dmin=0.0, bool inc_open=0) const;

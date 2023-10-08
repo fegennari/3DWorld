@@ -2065,7 +2065,7 @@ void building_t::cut_holes_for_ext_doors(building_draw_t &bdraw, point const &co
 			break;
 		}
 		if (!contained) continue; // part skipped, skip door as well
-		clip_door_to_interior(door, 0);
+		clip_door_to_interior(door);
 		bdraw.add_tquad(*this, door, bcube, tid_nm_pair_t(WHITE_TEX), WHITE);
 	} // for d
 }
@@ -2076,7 +2076,7 @@ bool building_t::get_nearby_ext_door_verts(building_draw_t &bdraw, shader_t &s, 
 	register_open_ext_door_state(door_ix);
 	if (door_ix < 0) return 0; // no nearby door
 	move_door_to_other_side_of_wall(door, -1.01, 0); // move a bit further away from the outside of the building to make it in front of the orig door
-	clip_door_to_interior(door, 1); // clip to floor
+	clip_door_to_interior(door);
 	bdraw.add_tquad(*this, door, bcube, tid_nm_pair_t(WHITE_TEX), WHITE);
 	// draw the opened door
 	building_draw_t open_door_draw;

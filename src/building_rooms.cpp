@@ -910,8 +910,7 @@ void building_t::add_wall_and_door_trim() { // and window trim
 		bool const draw_bot(door.z1() > ground_floor_z1 + floor_thickness); // door is above the ground floor, draw the bottom edge
 		trim.d[!dim][0] = door.d[!dim][0];
 		trim.d[!dim][1] = door.d[!dim][1];
-		trim.z1() = door.z1() + (draw_bot ? 0.0 : fc_thick);
-		trim.z2() = door.z1() + fc_thick + trim_thickness; // floor height
+		set_cube_zvals(trim, door.z1(), (door.z1() + 0.1*fc_thick + trim_thickness)); // floor height + extend slightly above
 		objs.emplace_back(trim, TYPE_WALL_TRIM, 0, dim, dir, (ext_flags | (draw_bot ? 0 : RO_FLAG_ADJ_BOT)), 1.0, SHAPE_SHORT, ext_trim_color);
 
 		if (d->type == tquad_with_ix_t::TYPE_HDOOR || d->is_building_door() || garage_door) { // add trim at top of exterior door, houses and office buildings
