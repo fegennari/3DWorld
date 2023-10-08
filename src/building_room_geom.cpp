@@ -1726,7 +1726,9 @@ tquad_t get_ramp_tquad(room_object_t const &c) { // Note: normal is for the bott
 }
 void building_room_geom_t::add_ramp(room_object_t const &c, float thickness, bool skip_bottom, rgeom_mat_t &mat) {
 	tquad_t const ramp(get_ramp_tquad(c)); // ramp surface
-	float const length(c.get_length()), side_tc_y(thickness/length);
+	float const length(c.get_length()), width(c.get_width()), side_tc_y(thickness/length);
+	float tb_tscale[2] = {2.0, 2.0};
+	tb_tscale[c.dim] *= length/width; // scale texture so that it repeats 2x in width and scales with aspect ratio in length
 	auto &verts(mat.quad_verts);
 	rgeom_mat_t::vertex_t v;
 	v.set_c4(c.color); // no room lighting color atten
@@ -1735,8 +1737,8 @@ void building_room_geom_t::add_ramp(room_object_t const &c, float thickness, boo
 	for (unsigned tb = 0; tb < 2; ++tb) { // {top, bottom}
 		for (unsigned i = 0; i < 4; ++i) {
 			v.v    = ramp.pts[tb ? (3-i) : i]; // swap winding order for bottom surface
-			v.t[0] = 2.0*float(v.v.x == c.x2()); // stretch texture 2x in length
-			v.t[1] = 2.0*float(v.v.y == c.y2()); // stretch texture 2x in length
+			v.t[0] = tb_tscale[0]*float(v.v.x == c.x2()); // stretch texture 2x in length
+			v.t[1] = tb_tscale[1]*float(v.v.y == c.y2()); // stretch texture 2x in length
 			verts.push_back(v);
 			if (tb) {verts.back().v.z -= thickness;} // extrude thickness for bottom surface
 		}
@@ -1744,8 +1746,10 @@ void building_room_geom_t::add_ramp(room_object_t const &c, float thickness, boo
 		if (tb == 0) {v.invert_normal();} // ramp normal is for the bottom
 	} // for tb
 	for (unsigned s = 0; s < 4; ++s) { // sides: {-y, +x, +y, -x}
+		bool const dim((s&1)^1), dir((s&1)^(s>>1));
+		if (skip_bottom && dim == c.dim) continue; // skip_bottom also skips the ends
 		point const pts[2] = {ramp.pts[s], ramp.pts[(s+1)&3]};
-		v.set_ortho_norm((s&1)^1, (s&1)^(s>>1)); // {1,0,1,0}, {0,1,1,0}
+		v.set_ortho_norm(dim, dir); // {1,0,1,0}, {0,1,1,0}
 
 		for (unsigned i = 0; i < 4; ++i) {
 			unsigned const ix(3-i); // use correct winding order
@@ -3246,7 +3250,12 @@ void building_room_geom_t::add_window_sill(room_object_t const &c) {
 
 void building_room_geom_t::add_exterior_step(room_object_t const &c) {
 	rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_concrete_tid(), 16.0), 0, 0, 0, 0, 1)); // unshadowed, exterior
-	if      (c.shape == SHAPE_CUBE  ) {mat.add_cube_to_verts(c, c.color, all_zeros, (EF_Z1 | ~get_face_mask(c.dim, c.dir)));} // skip bottom and inside faces
+
+	if (c.shape == SHAPE_CUBE) {
+		unsigned skip_mask(~get_face_mask(c.dim, c.dir)); // skip face that's against the building
+		if (!(c.flags & RO_FLAG_ADJ_BOT)) {skip_mask |= EF_Z1;} // skip bottom face if at ground level
+		mat.add_cube_to_verts(c, c.color, all_zeros, skip_mask);
+	}
 	else if (c.shape == SHAPE_ANGLED) {add_ramp(c, c.dz(), 1, mat);} // skip_bottom=0
 	else {assert(0);} // unsupported shape
 }
