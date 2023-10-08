@@ -670,6 +670,16 @@ void add_insul_exclude(pipe_t const &pipe, cube_t const &fitting, vect_cube_t &i
 	ie.expand_in_dim(pipe.dim, 1.0*pipe.radius); // expand a bit more in pipe dim
 	insul_exclude.push_back(ie);
 }
+bool has_int_obstacle_or_parallel_wall(cube_t const &c, vect_cube_t const &obstacles, vect_cube_t const &walls) {
+	if (has_bcube_int(c, obstacles)) return 1;
+	bool const pipe_dim(c.dx() < c.dy());
+
+	for (cube_t const &wall : walls) {
+		bool const wall_dim(wall.dy() < wall.dx());
+		if (wall_dim != pipe_dim && wall.intersects(c)) return 1; // check if wall and pipe are parallel
+	}
+	return 0;
+}
 
 bool building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t const &walls, vect_cube_t const &beams, vect_riser_pos_t const &risers, vect_cube_t &pipe_cubes,
 	unsigned room_id, unsigned num_floors, unsigned objs_start, float tot_light_amt, float ceil_zval, rand_gen_t &rgen, unsigned pipe_type, bool allow_place_fail)
@@ -778,7 +788,7 @@ bool building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 
 	for (unsigned n = 0; n < max_steps; ++n) {
 		cube_t const c(pipe_t(mp[0], mp[1], r_main_spacing, dim, PIPE_MAIN, 3).get_bcube());
-		if (!has_bcube_int(c, obstacles)) {
+		if (!has_int_obstacle_or_parallel_wall(c, obstacles, walls)) {
 			success = 1;
 
 			// check for overlap with beam running parallel to the main pipe, and reject it; mostly there to avoid blocking lights that may be on the beam
@@ -845,12 +855,12 @@ bool building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 				point p1(ref_p1), p2(p1);
 				if      (lo < range_min) {p1[d] = lo; p2[d] = range_min;} // on the lo side
 				else if (hi > range_max) {p1[d] = range_max; p2[d] = hi;} // on the hi side
-				bool skip(has_bcube_int(pipe_t(p1, p2, radius, d, PIPE_CONN, 3).get_bcube(), obstacles));
+				bool skip(has_int_obstacle_or_parallel_wall(pipe_t(p1, p2, radius, d, PIPE_CONN, 3).get_bcube(), obstacles, walls));
 
 				if (skip && (p2[d] - p1[d]) > 8.0*pipe.radius) { // blocked, can't connect, long segment: try extending halfway
 					if      (lo < range_min) {p1[d] = lo = 0.5*(lo + range_min); pipe.p1[d] = pipe.p2[d] = lo + pipe.radius;} // on the lo side
 					else if (hi > range_max) {p2[d] = hi = 0.5*(hi + range_max); pipe.p1[d] = pipe.p2[d] = hi - pipe.radius;} // on the hi side
-					skip = has_bcube_int(pipe_t(p1, p2, radius, d, PIPE_CONN, 3).get_bcube(), obstacles);
+					skip = has_int_obstacle_or_parallel_wall(pipe_t(p1, p2, radius, d, PIPE_CONN, 3).get_bcube(), obstacles, walls);
 
 					if (!skip) { // okay so far; now check that the new shortened pipe has a riser pos that's clear of walls and beams
 						point const new_riser_pos((lo < range_min) ? p1 : p2); // the end that was clipped
@@ -907,7 +917,7 @@ bool building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 			bool const dir(bool(d) ^ first_dir);
 			point ext[2] = {mp[dir], mp[dir]};
 			ext[dir][dim] = basement.d[dim][dir]; // shift this end to the basement wall
-			if (has_bcube_int(pipe_t(ext[0], ext[1], r_main_spacing, dim, PIPE_MAIN, 0).get_bcube(), obstacles)) continue; // can't extend to ext wall in this dim
+			if (has_int_obstacle_or_parallel_wall(pipe_t(ext[0], ext[1], r_main_spacing, dim, PIPE_MAIN, 0).get_bcube(), obstacles, walls)) continue;
 			mp[dir]  = ext[dir];
 			has_exit = 1;
 			main_pipe_end_flags = (dir ? 2 : 1); // connect the end going to the exit
@@ -925,7 +935,7 @@ bool building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 					ext[side][!dim] = basement.d[!dim][side]; // shift this end to the basement wall
 					pipe_t const exit_pipe(ext[0], ext[1], r_main, !dim, PIPE_MEC, (side ? 1 : 2)); // add a bend in the side connecting to the main pipe
 					cube_t const pipe_bcube(exit_pipe.get_bcube());
-					if (has_bcube_int(pipe_bcube, obstacles)) continue; // can't extend to the ext wall in this dim
+					if (has_int_obstacle_or_parallel_wall(pipe_bcube, obstacles, walls)) continue; // can't extend to the ext wall in this dim
 					bool bad_place(0);
 
 					// check if the pipe is too close to an existing conn pipe; allow it to contain the other pipe in dim
