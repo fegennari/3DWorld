@@ -890,10 +890,11 @@ struct building_room_geom_t {
 	void add_stair(room_object_t const &c, float tscale, vector3d const &tex_origin);
 	void add_stairs_wall(room_object_t const &c, vector3d const &tex_origin, tid_nm_pair_t const &wall_tex);
 	void add_basement_wall  (room_object_t const &c, vector3d const &tex_origin, tid_nm_pair_t const &wall_tex);
-	void add_basement_pillar(room_object_t const &c, vector3d const &tex_origin, tid_nm_pair_t const &wall_tex);
-	void add_basement_beam  (room_object_t const &c, vector3d const &tex_origin, tid_nm_pair_t const &wall_tex);
-	void add_parking_space(room_object_t const &c, vector3d const &tex_origin, float tscale);
-	void add_pg_ramp(room_object_t const &c, vector3d const &tex_origin, float tscale);
+	void add_basement_pillar(room_object_t const &c, tid_nm_pair_t const &wall_tex);
+	void add_basement_beam  (room_object_t const &c, tid_nm_pair_t const &wall_tex);
+	void add_parking_space(room_object_t const &c, float tscale);
+	void add_ramp(room_object_t const &c, float thickness, bool skip_bottom, rgeom_mat_t &mat);
+	void add_pg_ramp(room_object_t const &c, float tscale);
 	void add_pipe(room_object_t const &c, bool add_exterior);
 	void add_sprinkler(room_object_t const &c);
 	void add_duct(room_object_t const &c);

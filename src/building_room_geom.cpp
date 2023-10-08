@@ -1684,13 +1684,13 @@ void building_room_geom_t::add_basement_wall(room_object_t const &c, vector3d co
 	tid_nm_pair_t const tex(is_concrete ? tid_nm_pair_t(get_concrete_tid(), wall_tex.tscale_x, 1) : get_scaled_wall_tex(wall_tex));
 	get_material(tex, 1, 0, 2).add_cube_to_verts(c, c.color, tex_origin, EF_Z12); // small=2/detail, shadowed, no color atten, sides only
 }
-void building_room_geom_t::add_basement_pillar(room_object_t const &c, vector3d const &tex_origin, tid_nm_pair_t const &wall_tex) {
+void building_room_geom_t::add_basement_pillar(room_object_t const &c, tid_nm_pair_t const &wall_tex) {
 	get_material(tid_nm_pair_t(get_concrete_tid(), wall_tex.tscale_x, 1), 1, 0, 2).add_cube_to_verts(c, c.color, all_zeros, EF_Z12); // small=2/detail, shadowed, no color atten
 }
-void building_room_geom_t::add_basement_beam(room_object_t const &c, vector3d const &tex_origin, tid_nm_pair_t const &wall_tex) {
+void building_room_geom_t::add_basement_beam(room_object_t const &c, tid_nm_pair_t const &wall_tex) {
 	get_material(tid_nm_pair_t(get_concrete_tid(), wall_tex.tscale_x, 0), 0, 0, 2).add_cube_to_verts(c, c.color, all_zeros, EF_Z2 ); // small=2/detail, unshadowed, no color atten
 }
-void building_room_geom_t::add_parking_space(room_object_t const &c, vector3d const &tex_origin, float tscale) {
+void building_room_geom_t::add_parking_space(room_object_t const &c, float tscale) {
 	float const space_width(c.get_width()), line_width(0.04*space_width);
 	cube_t yellow_line(c);
 	yellow_line.d[!c.dim][1] -= (space_width - line_width); // shrink to line by moving the left edge
@@ -1724,10 +1724,9 @@ tquad_t get_ramp_tquad(room_object_t const &c) { // Note: normal is for the bott
 	ramp.pts[3].assign(c.x1(), c.y2(), zv[c.dim ^ c.dir ^ 1]); // UL
 	return ramp;
 }
-void building_room_geom_t::add_pg_ramp(room_object_t const &c, vector3d const &tex_origin, float tscale) {
-	rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_concrete_tid(), tscale, 1), 1, 0, 2)); // small=2/detail
+void building_room_geom_t::add_ramp(room_object_t const &c, float thickness, bool skip_bottom, rgeom_mat_t &mat) {
 	tquad_t const ramp(get_ramp_tquad(c)); // ramp surface
-	float const length(c.get_length()), thickness(RAMP_THICKNESS_SCALE*c.dz()), side_tc_y(thickness/length);
+	float const length(c.get_length()), side_tc_y(thickness/length);
 	auto &verts(mat.quad_verts);
 	rgeom_mat_t::vertex_t v;
 	v.set_c4(c.color); // no room lighting color atten
@@ -1757,6 +1756,11 @@ void building_room_geom_t::add_pg_ramp(room_object_t const &c, vector3d const &t
 			verts.push_back(v);
 		}
 	} // for s
+}
+void building_room_geom_t::add_pg_ramp(room_object_t const &c, float tscale) {
+	rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_concrete_tid(), tscale, 1), 1, 0, 2)); // small=2/detail
+	float const thickness(RAMP_THICKNESS_SCALE*c.dz());
+	add_ramp(c, thickness, 0, mat); // skip_bottom=0
 }
 
 void building_room_geom_t::add_pipe(room_object_t const &c, bool add_exterior) { // should be SHAPE_CYLIN
