@@ -62,7 +62,7 @@ void building_t::move_door_to_other_side_of_wall(tquad_with_ix_t &door, float di
 	if (invert_normal) {swap(door.pts[0], door.pts[1]); swap(door.pts[2], door.pts[3]);} // swap vertex order to invert normal
 
 	if (door.type == tquad_with_ix_t::TYPE_RDOOR) { // not on a wall, use shift relative to floor/wall thickness
-		door_shift = 0.01*(dir ? 1.0 : -1.0)*get_window_vspace();
+		door_shift = (dir ? 1.0 : -1.0)*get_door_shift_dist();
 	}
 	else {
 		door_shift = bcube.dz(); // start with a large value
@@ -496,7 +496,7 @@ cube_t building_t::place_door(cube_t const &base, bool dim, bool dir, float door
 	float const door_width(width_scale*door_height), door_half_width(0.5*door_width);
 	if (can_fail && base.get_sz_dim(!dim) < 2.0*door_width) return cube_t(); // part is too small to place a door
 	float const floor_spacing(get_window_vspace()), wall_thickness(get_wall_thickness()), fc_thickness(get_fc_thickness());
-	float const door_shift(0.01*floor_spacing), base_lo(base.d[!dim][0]), base_hi(base.d[!dim][1]);
+	float const door_shift(get_door_shift_dist()), base_lo(base.d[!dim][0]), base_hi(base.d[!dim][1]);
 	bool const calc_center(door_center == 0.0); // door not yet calculated
 	bool const centered(door_center_shift == 0.0 || hallway_dim == (uint8_t)dim); // center doors connected to primary hallways
 	// ideally we want the front (first) door to connect to the stairs in a multi-family house, but the stairs may be in the back, so we allow the back door as well
@@ -1554,8 +1554,7 @@ bool building_t::add_door(cube_t const &c, unsigned part_ix, bool dim, bool dir,
 	// if it's an office building with two doors already added, make this third door a back metal door
 	unsigned const type(for_office_building ? ((doors.size() == 2) ?
 		(unsigned)tquad_with_ix_t::TYPE_BDOOR2 : (unsigned)tquad_with_ix_t::TYPE_BDOOR) : (unsigned)tquad_with_ix_t::TYPE_HDOOR);
-	float const pos_adj(0.015*get_window_vspace()); // distance to move away from the building wall
-	doors.push_back(set_door_from_cube(c, dim, dir, type, pos_adj, 1, 0.0, 0, 0, 0)); // exterior=1, open_amt=0.0, opens_out=0, opens_up=0, swap_sides=0
+	doors.push_back(set_door_from_cube(c, dim, dir, type, 1.5*get_door_shift_dist(), 1, 0.0, 0, 0, 0)); // exterior=1, open_amt=0.0, opens_out=0, opens_up=0, swap_sides=0
 	if (!roof_access && part_ix < 4) {door_sides[part_ix] |= 1 << (2*dim + dir);}
 	if (roof_access) {doors.back().type = tquad_with_ix_t::TYPE_RDOOR;}
 	return 1;

@@ -896,7 +896,7 @@ public:
 		if (clip_windows) {tex_vert_off.z -= bcube_llc.z;}
 		else {tex_vert_off -= bcube_llc;} // normalize to building LLC to keep tex coords small
 		if (is_city && cube.z1() == bg.bcube.z1()) {skip_bottom = 1;} // skip bottoms of first floor parts drawn in cities
-		float const window_vspacing(bg.get_window_vspace()), window_h_border(0.75*bg.get_window_h_border()), offset_val(0.01*offset_scale*window_vspacing);
+		float const window_vspacing(bg.get_window_vspace()), window_h_border(0.75*bg.get_window_h_border()), offset_val(offset_scale*bg.get_door_shift_dist());
 		vector3d norm; // used for rotated buildings
 
 		for (unsigned i = 0; i < 3; ++i) { // iterate over dimensions

@@ -1408,6 +1408,7 @@ struct building_t : public building_geom_t {
 	float get_door_height    () const {return 0.95f*get_floor_ceil_gap();} // set height based on window spacing, 95% of ceiling height (may be too large)
 	float get_attic_beam_depth()const {return 0.08*get_window_vspace();}
 	float get_min_wall_len   () const {return 2.0 *get_window_vspace();}
+	float get_door_shift_dist() const {return 0.01*get_window_vspace();}
 	float get_doorway_width  () const;
 	float get_ground_floor_z_thresh(bool for_spider) const;
 	void gen_rotation(rand_gen_t &rgen);
