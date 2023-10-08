@@ -703,7 +703,7 @@ bool building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 	assert(pipe_zval > bcube.z1());
 	vector<pipe_t> pipes, fittings;
 	cube_t pipe_end_bcube;
-	unsigned num_valid(0), num_connected(0);
+	unsigned num_valid(0), num_connected(0), num_conn_segs(0);
 	// build random shifts table; make consistent per pipe to preserve X/Y alignments
 	unsigned const NUM_SHIFTS = 21; // {0,0} + 20 random shifts
 	vector3d rshifts[NUM_SHIFTS] = {};
@@ -907,6 +907,7 @@ bool building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 		min_eq(mp[0][dim], v.first-radius);
 		max_eq(mp[1][dim], v.first+radius);
 		num_connected += num_keep;
+		++num_conn_segs;
 	} // for v
 	if (mp[0][dim] >= mp[1][dim]) return 0; // no pipes connected to main? I guess there's nothing to do here
 	unsigned main_pipe_end_flags(0); // start with both ends unconnected
@@ -915,7 +916,7 @@ bool building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 		bool tried_horizontal(0);
 
 		for (unsigned attempt = 0; attempt < 2; ++attempt) { // make up to 2 attempts with a horizontal or vertical connection
-			if (is_closed_loop || num_floors > 1 || attempt == 1 || rgen.rand_bool()) { // exit into the wall of the building
+			if (is_closed_loop || num_floors > 1 || attempt == 1 || num_conn_segs == 1 || rgen.rand_bool()) { // exit into the wall of the building
 				if (tried_horizontal) break; // we got here the previous iteration; give up, exit can't be found
 				tried_horizontal = 1;
 				// Note: if roads are added for secondary buildings, we should have the exit on the side of the building closest to the road
