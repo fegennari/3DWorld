@@ -613,6 +613,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 	}
 	// add trim + window coverings; must be done after room assignment; not implemented for rotated buildings
 	if (!is_rotated()) {add_window_trim_and_coverings(0, 1, 1);} // add_trim=0, add_coverings=1, add_ext_sills=1
+	if (!is_rotated()) {add_ext_door_steps();}
 	if (is_house && has_basement()) {add_basement_electrical_house(rgen);}
 	if (is_house && has_basement_pipes) {add_house_basement_pipes (rgen);}
 	if (has_attic()) {add_attic_objects(rgen);}
@@ -1071,7 +1072,7 @@ void building_t::add_wall_and_door_trim() { // and window trim
 		} // for dim
 	} // for i
 	if (!is_cube() || is_rotated()) return; // window trim is not yet working for non-cube and rotated buildings
-	add_window_trim_and_coverings(1, 0); // add_trim=1, add_coverings=0
+	add_window_trim_and_coverings(1, 0, 0); // add_trim=1, add_coverings=0, add_ext_sills=0
 }
 
 void building_t::add_window_trim_and_coverings(bool add_trim, bool add_coverings, bool add_ext_sills) {
@@ -1230,9 +1231,13 @@ void building_t::add_window_trim_and_coverings(bool add_trim, bool add_coverings
 			} // for dim
 		} // for p
 	}
-	// add step at the base of each exterior door
-	float const fc_thickness(get_fc_thickness()), door_shift_dist(2.5*get_door_shift_dist()); // 1x for door shift and 1.5x offset in add_door()
+}
+
+void building_t::add_ext_door_steps() { // add step at the base of each exterior door
+	float const floor_spacing(get_window_vspace()), fc_thickness(get_fc_thickness());
+	float const door_shift_dist(2.5*get_door_shift_dist()); // 1x for door shift and 1.5x offset in add_door()
 	colorRGBA const step_color(LT_GRAY);
+	vect_room_object_t &objs(interior->room_geom->objs);
 
 	for (auto const &d : doors) {
 		if (d.type == tquad_with_ix_t::TYPE_RDOOR) continue; // skip roof access door
