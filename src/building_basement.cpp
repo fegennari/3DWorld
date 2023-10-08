@@ -714,6 +714,7 @@ bool building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 		for (riser_pos_t const &p : risers) {
 			if (p.flow_dir == 0) {add_exit_pipe = 0; break;} // hot water flowing out of a water heater
 		}
+		// if we got here and add_exit_pipe=1, just create the exit pipe and assume the hot water heater is somewhere else
 	}
 
 	// seed the pipe graph with valid vertical segments and build a graph of X/Y values
@@ -909,7 +910,7 @@ bool building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 	unsigned main_pipe_end_flags(0); // start with both ends unconnected
 	bool has_exit(0);
 
-	if (add_exit_pipe && (num_floors > 1 || rgen.rand_bool())) { // exit into the wall of the building
+	if (add_exit_pipe && (is_closed_loop || num_floors > 1 || rgen.rand_bool())) { // exit into the wall of the building
 		// Note: if roads are added for secondary buildings, we should have the exit on the side of the building closest to the road
 		bool const first_dir((basement.d[dim][1] - mp[1][dim]) < (mp[0][dim] - basement.d[dim][0])); // closer basement exterior wall
 
