@@ -908,104 +908,118 @@ bool building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 	} // for v
 	if (mp[0][dim] >= mp[1][dim]) return 0; // no pipes connected to main? I guess there's nothing to do here
 	unsigned main_pipe_end_flags(0); // start with both ends unconnected
-	bool has_exit(0);
 
-	if (add_exit_pipe && (is_closed_loop || num_floors > 1 || rgen.rand_bool())) { // exit into the wall of the building
-		// Note: if roads are added for secondary buildings, we should have the exit on the side of the building closest to the road
-		bool const first_dir((basement.d[dim][1] - mp[1][dim]) < (mp[0][dim] - basement.d[dim][0])); // closer basement exterior wall
+	if (add_exit_pipe) {
+		bool tried_horizontal(0);
 
-		for (unsigned d = 0; d < 2; ++d) { // dir
-			bool const dir(bool(d) ^ first_dir);
-			point ext[2] = {mp[dir], mp[dir]};
-			ext[dir][dim] = basement.d[dim][dir]; // shift this end to the basement wall
-			if (has_int_obstacle_or_parallel_wall(pipe_t(ext[0], ext[1], r_main_spacing, dim, PIPE_MAIN, 0).get_bcube(), obstacles, walls)) continue;
-			mp[dir]  = ext[dir];
-			has_exit = 1;
-			main_pipe_end_flags = (dir ? 2 : 1); // connect the end going to the exit
-			break; // success
-		} // for d
-		if (!has_exit) { // no straight segment? how about a right angle?
-			bool first_side(0);
-			if (centerline == pipes_bcube_center) {first_side = rgen.rand_bool();} // centered, choose a random side
-			else {first_side = ((basement.d[!dim][1] - mp[0][!dim]) < (mp[0][!dim] - basement.d[!dim][0]));} // off-center, choose closer basement exterior wall
+		for (unsigned attempt = 0; attempt < 2; ++attempt) { // make up to 2 attempts with a horizontal or vertical connection
+			if (is_closed_loop || num_floors > 1 || attempt == 1 || rgen.rand_bool()) { // exit into the wall of the building
+				if (tried_horizontal) break; // we got here the previous iteration; give up, exit can't be found
+				tried_horizontal = 1;
+				// Note: if roads are added for secondary buildings, we should have the exit on the side of the building closest to the road
+				bool const first_dir((basement.d[dim][1] - mp[1][dim]) < (mp[0][dim] - basement.d[dim][0])); // closer basement exterior wall
+				bool added_exit(0);
 
-			for (unsigned d = 0; d < 2 && !has_exit; ++d) { // dir
-				for (unsigned e = 0; e < 2; ++e) { // side
-					bool const dir(bool(d) ^ first_dir), side(bool(e) ^ first_side);
+				for (unsigned d = 0; d < 2; ++d) { // dir
+					bool const dir(bool(d) ^ first_dir);
 					point ext[2] = {mp[dir], mp[dir]};
-					ext[side][!dim] = basement.d[!dim][side]; // shift this end to the basement wall
-					pipe_t const exit_pipe(ext[0], ext[1], r_main, !dim, PIPE_MEC, (side ? 1 : 2)); // add a bend in the side connecting to the main pipe
-					cube_t const pipe_bcube(exit_pipe.get_bcube());
-					if (has_int_obstacle_or_parallel_wall(pipe_bcube, obstacles, walls)) continue; // can't extend to the ext wall in this dim
-					bool bad_place(0);
+					ext[dir][dim] = basement.d[dim][dir]; // shift this end to the basement wall
+					if (has_int_obstacle_or_parallel_wall(pipe_t(ext[0], ext[1], r_main_spacing, dim, PIPE_MAIN, 0).get_bcube(), obstacles, walls)) continue;
+					mp[dir] = ext[dir];
+					main_pipe_end_flags = (dir ? 2 : 1); // connect the end going to the exit
+					added_exit = 1;
+					break;
+				} // for d
+				if (added_exit) break;
+				// no straight segment? how about a right angle?
+				bool first_side(0);
+				if (centerline == pipes_bcube_center) {first_side = rgen.rand_bool();} // centered, choose a random side
+				else {first_side = ((basement.d[!dim][1] - mp[0][!dim]) < (mp[0][!dim] - basement.d[!dim][0]));} // off-center, choose closer basement exterior wall
 
-					// check if the pipe is too close to an existing conn pipe; allow it to contain the other pipe in dim
-					for (auto p = pipes.begin()+conn_pipes_start; p != pipes.end(); ++p) {
-						cube_t const other_bcube(p->get_bcube());
-						if (!pipe_bcube.intersects(other_bcube)) continue;
-						if (pipe_bcube.d[dim][0] > other_bcube.d[dim][0] || pipe_bcube.d[dim][1] < other_bcube.d[dim][1]) {bad_place = 1; break;}
+				for (unsigned d = 0; d < 2 && !added_exit; ++d) { // dir
+					for (unsigned e = 0; e < 2; ++e) { // side
+						bool const dir(bool(d) ^ first_dir), side(bool(e) ^ first_side);
+						point ext[2] = {mp[dir], mp[dir]};
+						ext[side][!dim] = basement.d[!dim][side]; // shift this end to the basement wall
+						pipe_t const exit_pipe(ext[0], ext[1], r_main, !dim, PIPE_MEC, (side ? 1 : 2)); // add a bend in the side connecting to the main pipe
+						cube_t const pipe_bcube(exit_pipe.get_bcube());
+						if (has_int_obstacle_or_parallel_wall(pipe_bcube, obstacles, walls)) continue; // can't extend to the ext wall in this dim
+						bool bad_place(0);
+
+						// check if the pipe is too close to an existing conn pipe; allow it to contain the other pipe in dim
+						for (auto p = pipes.begin()+conn_pipes_start; p != pipes.end(); ++p) {
+							cube_t const other_bcube(p->get_bcube());
+							if (!pipe_bcube.intersects(other_bcube)) continue;
+							if (pipe_bcube.d[dim][0] > other_bcube.d[dim][0] || pipe_bcube.d[dim][1] < other_bcube.d[dim][1]) {bad_place = 1; break;}
+						}
+						if (bad_place) continue; // seems to usually fail
+						pipes.push_back(exit_pipe);
+						main_pipe_end_flags = (dir ? 2 : 1); // connect the end going to the exit connector pipe
+						added_exit = 1;
+						break;
+					} // for e
+				} // for d
+				if (added_exit) break;
+			}
+			// create exit segment and vertical pipe into the floor
+			float exit_dmin(0.0);
+
+			for (unsigned d = 0; d < 2; ++d) { // dim
+				point const cand_exit_pos(get_closest_wall_pos(mp[d], r_main_spacing, basement, walls, obstacles, 1)); // vertical=1
+				float dist(p2p_dist(mp[d], cand_exit_pos));
+				if (dist == 0.0) {dist = FLT_MAX;} // dist will be 0 if we fail to find a wall, so don't prefer it in that case
+				if (exit_dmin == 0.0 || dist < exit_dmin) {exit_pos = cand_exit_pos; exit_dir = d; exit_dmin = dist;}
+			}
+			point &exit_conn(mp[exit_dir]);
+			unsigned exit_pipe_end_flags(2); // bend at the top only
+			float const exit_floor_zval(basement.z1() + fc_thickness); // on the bottom level floor
+
+			if (exit_pos[!dim] == exit_conn[!dim]) { // exit point is along the main pipe
+				if (exit_conn[dim] == exit_pos[dim]) { // exit is exactly at the pipe end
+					// maybe no valid wall was found above, and this location is also invalid; try with a vertical connection if this was the first attempt;
+					// this is the only situation where we can get to attempt=1
+					if (attempt == 0 && has_bcube_int(pipe_t(point(exit_pos.x, exit_pos.y, exit_floor_zval), exit_pos, r_main, 2, PIPE_EXIT, 0).get_bcube(), obstacles)) continue;
+						
+					if (has_parking_garage) { // check that no parking spaces are blocked by this pipe
+						auto start(objs.begin() + objs_start);
+
+						for (auto i = start; i != objs.end(); ++i) {
+							if (i->type != TYPE_PARK_SPACE || !i->contains_pt_xy(exit_pos)) continue;
+							i->remove(); // remove this parking space
+							// now remove any car collider and curb associated with this parking space (placed before it, optional collider then optional curb)
+							auto cur(i);
+							if (cur > start && (cur-1)->type == TYPE_CURB    ) {(cur-1)->remove(); --cur;}
+							if (cur > start && (cur-1)->type == TYPE_COLLIDER) {(cur-1)->remove();}
+							//break; // maybe can't break here because there may be a parking space to remove on another level?
+						} // for i
 					}
-					if (bad_place) continue; // seems to usually fail
-					pipes.push_back(exit_pipe);
-					has_exit = 1;
-					main_pipe_end_flags = (dir ? 2 : 1); // connect the end going to the exit connector pipe
-					break; // success
-				} // for e
-			} // for d
-		}
-	}
-	if (add_exit_pipe && !has_exit) { // create exit segment and vertical pipe into the floor
-		float exit_dmin(0.0);
-
-		for (unsigned d = 0; d < 2; ++d) { // dim
-			point const cand_exit_pos(get_closest_wall_pos(mp[d], r_main_spacing, basement, walls, obstacles, 1)); // vertical=1
-			float dist(p2p_dist(mp[d], cand_exit_pos));
-			if (dist == 0.0) {dist = FLT_MAX;} // dist will be 0 if we fail to find a wall, so don't prefer it in that case
-			if (exit_dmin == 0.0 || dist < exit_dmin) {exit_pos = cand_exit_pos; exit_dir = d; exit_dmin = dist;}
-		}
-		point &exit_conn(mp[exit_dir]);
-		unsigned exit_pipe_end_flags(2); // bend at the top only
-
-		if (exit_pos[!dim] == exit_conn[!dim]) { // exit point is along the main pipe
-			if (exit_conn[dim] == exit_pos[dim]) { // exit is exactly at the pipe end (no wall found above?)
-				if (has_parking_garage) { // check that no parking spaces are blocked by this pipe
-					auto start(objs.begin() + objs_start);
-
-					for (auto i = start; i != objs.end(); ++i) {
-						if (i->type != TYPE_PARK_SPACE || !i->contains_pt_xy(exit_pos)) continue;
-						i->remove(); // remove this parking space
-						// now remove any car collider and curb associated with this parking space (placed before it, optional collider then optional curb)
-						auto cur(i);
-						if (cur > start && (cur-1)->type == TYPE_CURB    ) {(cur-1)->remove(); --cur;}
-						if (cur > start && (cur-1)->type == TYPE_COLLIDER) {(cur-1)->remove();}
-						//break; // maybe can't break here because there may be a parking space to remove on another level?
-					} // for i
+				}
+				else if ((exit_conn[dim] < exit_pos[dim]) == exit_dir) { // extend main pipe to exit point
+					exit_conn[dim] = exit_pos[dim];
+					main_pipe_end_flags = (exit_dir ? 2 : 1); // connect the end going to the exit
+				}
+				else { // exit is in the middle of the pipe; add fitting to the main pipe
+					point p1(exit_pos), p2(p1);
+					float const fitting_len(FITTING_LEN*r_main);
+					p1[dim] -= fitting_len; p2[dim] += fitting_len;
+					fittings.emplace_back(p1, p2, FITTING_RADIUS*r_main, !d, PIPE_FITTING, 3);
+					exit_pipe_end_flags = 0; // no bend needed
 				}
 			}
-			else if ((exit_conn[dim] < exit_pos[dim]) == exit_dir) { // extend main pipe to exit point
-				exit_conn[dim] = exit_pos[dim];
-				main_pipe_end_flags = (exit_dir ? 2 : 1); // connect the end going to the exit
+			else { // create a right angle bend
+				// extend by 2*radius to avoid overlapping a connector pipe or it's fittings, but keep it inside the building
+				if (exit_dir) {exit_conn[dim] = exit_pos[dim] = min(exit_conn[dim]+2.0f*r_main, bcube.d[dim][1]-r_main);}
+				else          {exit_conn[dim] = exit_pos[dim] = max(exit_conn[dim]-2.0f*r_main, bcube.d[dim][0]+r_main);}
+				pipes.emplace_back(exit_conn, exit_pos, r_main, !dim, PIPE_MEC, 3); // main exit connector, bends at both ends
+				exit_pipe_end_flags = 0; // the above pipe will provide the bend, so it's not needed at the top of the exit pipe
+				main_pipe_end_flags = (exit_dir ? 2 : 1); // connect the end going to the exit connector pipe
 			}
-			else { // exit is in the middle of the pipe; add fitting to the main pipe
-				point p1(exit_pos), p2(p1);
-				float const fitting_len(FITTING_LEN*r_main);
-				p1[dim] -= fitting_len; p2[dim] += fitting_len;
-				fittings.emplace_back(p1, p2, FITTING_RADIUS*r_main, !d, PIPE_FITTING, 3);
-				exit_pipe_end_flags = 0; // no bend needed
-			}
-		}
-		else { // create a right angle bend
-			// extend by 2*radius to avoid overlapping a connector pipe or it's fittings, but keep it inside the building
-			if (exit_dir) {exit_conn[dim] = exit_pos[dim] = min(exit_conn[dim]+2.0f*r_main, bcube.d[dim][1]-r_main);}
-			else          {exit_conn[dim] = exit_pos[dim] = max(exit_conn[dim]-2.0f*r_main, bcube.d[dim][0]+r_main);}
-			pipes.emplace_back(exit_conn, exit_pos, r_main, !dim, PIPE_MEC, 3); // main exit connector, bends at both ends
-			exit_pipe_end_flags = 0; // the above pipe will provide the bend, so it's not needed at the top of the exit pipe
-			main_pipe_end_flags = (exit_dir ? 2 : 1); // connect the end going to the exit connector pipe
-		}
-		point exit_floor_pos(exit_pos);
-		exit_floor_pos.z = basement.z1() + fc_thickness; // on the bottom level floor
-		pipes.emplace_back(exit_floor_pos, exit_pos, r_main, 2, PIPE_EXIT, exit_pipe_end_flags);
-	}
+			point exit_floor_pos(exit_pos);
+			exit_floor_pos.z = exit_floor_zval;
+			pipes.emplace_back(exit_floor_pos, exit_pos, r_main, 2, PIPE_EXIT, exit_pipe_end_flags);
+			break; // success
+		} // for attempt
+	} // end add_exit_pipe
 	// add main pipe
 	assert(mp[0] != mp[1]);
 	pipe_t main_pipe(mp[0], mp[1], r_main, dim, PIPE_MAIN, main_pipe_end_flags);
@@ -1373,6 +1387,7 @@ void building_t::get_pipe_basement_water_connections(vect_riser_pos_t &sewer, ve
 			continue;
 		}
 		if (i.z1() < ground_floor_z1) continue; // object in the house basement; unclear how to handle it here
+		// Note: the dishwasher is always next to the kitchen sink and uses the same water connections
 		bool const hot_cold_obj (i.type == TYPE_SINK || i.type == TYPE_TUB || i.type == TYPE_SHOWER || i.type == TYPE_BRSINK || i.type == TYPE_KSINK || i.type == TYPE_WASHER);
 		bool const cold_only_obj(i.type == TYPE_TOILET || i.type == TYPE_URINAL || i.type == TYPE_DRAIN);
 		if (!hot_cold_obj && !cold_only_obj) continue;
