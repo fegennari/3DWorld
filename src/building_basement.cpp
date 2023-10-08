@@ -1069,6 +1069,24 @@ bool building_t::add_basement_pipes(vect_cube_t const &obstacles, vect_cube_t co
 				}
 			}
 		} // for d
+		if (p.dim < 2 && !add_insul) { // horizontal pipes only; no fittings on insulated pipes as insulation is flush with the walls
+			float const min_ext(2.0*fitting_len);
+			colorRGBA const color(LT_GRAY); // different from fittings color
+
+			for (unsigned type = 0; type < 2; ++type) { // walls, beams
+				for (cube_t const &wall : (type ? beams : walls)) { // basement walls, parking garage walls, parking garage pillars, and beams
+					if (!wall.intersects(pipe)) continue;
+					if (wall.d[p.dim][0] < pipe.d[p.dim][0] - min_ext || wall.d[p.dim][1] > pipe.d[p.dim][1] + min_ext) continue; // no space for fitting
+					room_object_t pf(pipe);
+					pf.flags = (RO_FLAG_NOCOLL | RO_FLAG_HANGING | RO_FLAG_ADJ_LO | RO_FLAG_ADJ_HI); // draw both ends as flat
+					pf.color = color;
+					pf.d[p.dim][0] = wall.d[p.dim][0] - fitting_len;
+					pf.d[p.dim][1] = wall.d[p.dim][1] + fitting_len;
+					expand_cube_except_in_dim(pf, fitting_expand, p.dim); // expand slightly
+					objs.push_back(pf);
+				} // for wall
+			} // for type
+		}
 	} // for p
 	for (pipe_t const &p : fittings) {
 		cube_t const pbc(p.get_bcube());
