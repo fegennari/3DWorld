@@ -1740,6 +1740,7 @@ void building_room_geom_t::add_ramp(room_object_t const &c, float thickness, boo
 			verts.push_back(v);
 			if (tb) {verts.back().v.z -= thickness;} // extrude thickness for bottom surface
 		}
+		if (skip_bottom && tb == 0) break; // no bottom
 		if (tb == 0) {v.invert_normal();} // ramp normal is for the bottom
 	} // for tb
 	for (unsigned s = 0; s < 4; ++s) { // sides: {-y, +x, +y, -x}
@@ -3241,6 +3242,13 @@ void building_room_geom_t::add_window_sill(room_object_t const &c) {
 		if (i->v[c.dim] == c.d[c.dim][c.dir]) {i->v.z -= slope_dz;}
 		if (i->n[2] == 127) {i->set_norm(nc);} // upward normal
 	}
+}
+
+void building_room_geom_t::add_exterior_step(room_object_t const &c) {
+	rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_concrete_tid(), 16.0), 0, 0, 0, 0, 1)); // unshadowed, exterior
+	if      (c.shape == SHAPE_CUBE  ) {mat.add_cube_to_verts(c, c.color, all_zeros, (EF_Z1 | ~get_face_mask(c.dim, c.dir)));} // skip bottom and inside faces
+	else if (c.shape == SHAPE_ANGLED) {add_ramp(c, c.dz(), 1, mat);} // skip_bottom=0
+	else {assert(0);} // unsupported shape
 }
 
 void add_spaced_vert_bars(rgeom_mat_t &mat, cube_t const &railing, colorRGBA const &color,

@@ -136,6 +136,7 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_FCABINET  ] = bldg_obj_type_t(1, 1, 1, 1, 0, 0, 3, 100.0, 220.0, "filing cabinet"); // body is large, drawers and their contents are small
 	bldg_obj_types[TYPE_STAPLER   ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 10.0,  0.6,   "stapler");
 	bldg_obj_types[TYPE_WIND_SILL ] = bldg_obj_type_t(0, 0, 0, 0, 1, 0, 1,  0.0,  0.0,   "window sill");
+	bldg_obj_types[TYPE_EXT_STEP  ] = bldg_obj_type_t(0, 0, 0, 0, 1, 0, 1,  0.0,  0.0,   "exterior step");
 	bldg_obj_types[TYPE_BALCONY   ] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 0,  0.0,  0.0,   "balcony"); // exterior object
 	bldg_obj_types[TYPE_SPRINKLER ] = bldg_obj_type_t(0, 0, 0, 0, 1, 0, 0,  0.0,  0.0,   "fire sprinkler"); // detail object
 	bldg_obj_types[TYPE_FEXT_MOUNT] = bldg_obj_type_t(0, 0, 0, 0, 1, 0, 2,  0.0,  0.0,   "fire extinguisher mount");

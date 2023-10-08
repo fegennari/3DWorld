@@ -1230,6 +1230,24 @@ void building_t::add_window_trim_and_coverings(bool add_trim, bool add_coverings
 			} // for dim
 		} // for p
 	}
+	// add step at the base of each exterior door
+	float const fc_thickness(get_fc_thickness());
+	colorRGBA const step_color(LT_GRAY);
+
+	for (auto const &d : doors) {
+		if (d.type == tquad_with_ix_t::TYPE_RDOOR) continue; // skip roof access door
+		cube_t const c(d.get_bcube());
+		bool const dim(c.dy() < c.dx()), dir(d.get_norm()[dim] > 0.0);
+		bool const is_garage(d.type == tquad_with_ix_t::TYPE_GDOOR);
+		float const width(c.get_sz_dim(!dim)), length((is_garage ? 0.4 : 0.6)*width);
+		room_obj_shape const shape(is_garage ? SHAPE_ANGLED : SHAPE_CUBE); // garage door has a sloped ramp
+		cube_t step(c);
+		set_cube_zvals(step, (c.z1() - fc_thickness), c.z1());
+		//step.d[dim][!dir] -= (dir ? 1.0 : -1.0)*???; // TODO
+		step.d[dim][ dir] += (dir ? 1.0 : -1.0)*length; // extend outward
+		assert(step.is_strictly_normalized());
+		objs.emplace_back(step, TYPE_EXT_STEP, 0, dim, !dir, RO_FLAG_EXTERIOR, 1.0, shape, step_color);
+	} // for d
 }
 
 // *** Windows ***
