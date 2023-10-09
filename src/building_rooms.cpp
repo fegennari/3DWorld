@@ -690,7 +690,8 @@ void building_t::add_balconies(rand_gen_t &rgen) {
 	if (!is_house || !has_room_geom()) return; // houses only for now
 	if (rgen.rand_bool()) return; // only add balconies to 50% of houses
 	float const floor_spacing(get_window_vspace()), wall_thickness(get_wall_thickness());
-	float const balcony_depth(floor_spacing*rgen.rand_uniform(0.45, 0.6)); // constant per house
+	float const min_depth(max(0.5f*floor_spacing, 2.5f*get_scaled_player_radius()/(1.0f - BALCONY_PILLAR_SCALE))); // make sure the player can fit around the pillars
+	float const balcony_depth(min_depth*rgen.rand_uniform(1.0, 1.2)); // constant per house
 	float const room_min_z2(ground_floor_z1 + 1.5*floor_spacing); // > 1 floor
 	unsigned const balcony_style(rgen.rand()); // shared across all balconies of this house
 	unsigned const max_balconies(1 + rgen.rand_bool()); // 1-2 per house

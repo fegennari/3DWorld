@@ -3295,7 +3295,7 @@ void get_balcony_cubes(room_object_t const &c, cube_t cubes[4]) { // {bottom, fr
 	cubes[0] = bot; cubes[1] = front;
 }
 void get_balcony_pillars(room_object_t const &c, float ground_floor_z1, cube_t pillar[2]) {
-	float const width(c.get_width()), depth(c.get_depth()), pillar_width(0.15*depth);
+	float const width(c.get_width()), depth(c.get_depth()), pillar_width(BALCONY_PILLAR_SCALE*depth);
 	cube_t pillars(c);
 	set_cube_zvals(pillars, ground_floor_z1, c.z1());
 	pillars.d[c.dim][!c.dir] -= (c.dir ? -1.0 : 1.0)*(depth - pillar_width);
