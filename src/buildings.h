@@ -1205,7 +1205,7 @@ typedef vector<door_t> vect_door_t;
 
 // Note: some of these roof objects are actually on the ground next to houses
 enum {ROOF_OBJ_BLOCK=0, ROOF_OBJ_ANT, ROOF_OBJ_WALL, ROOF_OBJ_ECAP, ROOF_OBJ_AC, ROOF_OBJ_SCAP, ROOF_OBJ_SIGN, ROOF_OBJ_SIGN_CONN, ROOF_OBJ_WTOWER, DETAIL_OBJ_COLLIDER,
-	DETAIL_OBJ_COLL_SHAD};
+	DETAIL_OBJ_COLL_SHAD, DETAIL_OBJ_EXT_STAIR};
 enum {ROOF_TYPE_FLAT=0, ROOF_TYPE_SLOPE, ROOF_TYPE_PEAK, ROOF_TYPE_HIPPED, ROOF_TYPE_DOME, ROOF_TYPE_ONION, ROOF_TYPE_SHED};
 
 struct roof_obj_t : public cube_t {

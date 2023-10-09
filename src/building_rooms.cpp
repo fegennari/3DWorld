@@ -1260,12 +1260,14 @@ void building_t::add_ext_door_steps(unsigned ext_objs_start) {
 		unsigned flags(RO_FLAG_EXTERIOR | (above_ground ? RO_FLAG_ADJ_BOT : 0));
 		unsigned const obj_ix(objs.size());
 		objs.emplace_back(step, TYPE_EXT_STEP, 0, dim, !dir, flags, 1.0, shape, step_color);
+		details.emplace_back(step, DETAIL_OBJ_EXT_STAIR); // collider + shadow caster
 		if (above_ground && !is_garage) {to_add_stairs.push_back(obj_ix);} // add steps up to this door
 	} // for d
 	if (to_add_stairs.empty()) return; // done
 	cube_t const &part(parts[0]); // assumes door is on parts[0] (single part)
-	float const base_step_height(floor_spacing/NUM_STAIRS_PER_FLOOR), head_clearance(0.8*get_floor_ceil_gap());
+	float const base_step_height(floor_spacing/NUM_STAIRS_PER_FLOOR), head_clearance(0.8*get_floor_ceil_gap()), railing_thickness(0.8*get_wall_thickness());
 	vect_cube_t cand_steps;
+	vector<room_object_t> railings;
 
 	// add stairs going to upper level doors
 	for (unsigned ix : to_add_stairs) {
@@ -1313,19 +1315,26 @@ void building_t::add_ext_door_steps(unsigned ext_objs_start) {
 				cand_steps.push_back(step);
 			} // for n
 			if (!success) {step_dir ^= 1; continue;} // try other dir
+			assert(!cand_steps.empty());
 			// Note: s reference is invalidated beyond this point
 
 			for (cube_t const &cand : cand_steps) {
 				objs.emplace_back(cand, TYPE_EXT_STEP, 0, dim, dir, flags, 1.0, SHAPE_CUBE, step_color);
-				details.emplace_back(cand, DETAIL_OBJ_COLL_SHAD); // collider + shadow caster
+				details.emplace_back(cand, DETAIL_OBJ_EXT_STAIR); // collider + shadow caster
 			}
-			// TODO: add side and end railings
+			// add side and end railings, with balusters
+			cube_t railing(cand_steps.front());
+			railing.union_with_cube(cand_steps.back());
+			railing.d[dim][dir] = railing.d[dim][!dir] + (dir ? 1.0 : -1.0)*railing_thickness;
+			railings.emplace_back(railing, TYPE_RAILING, 0, !dim, !step_dir, RO_FLAG_OPEN, 1.0, SHAPE_CUBE, BLACK);
+			// TODO: end railing
 			break; // done
 		} // for d
 		if (!success) {
 			// TODO: how to connect if both directions fail?
 		}
 	} // for ix
+	vector_add_to(railings, objs); // add railings at the end
 }
 
 // *** Windows ***

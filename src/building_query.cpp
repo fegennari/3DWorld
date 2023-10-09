@@ -208,7 +208,7 @@ bool building_t::check_sphere_coll(point &pos, point const &p_last, vector3d con
 bool building_t::check_sphere_coll_inner(point &pos, point const &p_last, vector3d const &xlate, float radius, bool xy_only, vector3d *cnorm_ptr, bool check_interior) const {
 	float const xy_radius(radius*global_building_params.player_coll_radius_scale);
 	point pos2(pos), p_last2(p_last), center;
-	bool had_coll(0), is_interior(0), is_in_attic(0);
+	bool had_coll(0), is_interior(0), is_in_attic(0), allow_outside_building(0), on_ext_stair(0);
 	float part_z2(bcube.z2());
 
 	if (is_rotated()) {
@@ -223,7 +223,6 @@ bool building_t::check_sphere_coll_inner(point &pos, point const &p_last, vector
 		// clamp to Z1 to keep them inside the building rather than putting them on the roof
 		if (zval < bcube.z1() && zval+camera_zh > bcube.z1() && bcube.contains_pt_xy(pos2 - xlate) && p_last == p_last2) {zval = bcube.z1();}
 		point const pos2_bs(pos2 - xlate), query_pt(pos2_bs.x, pos2_bs.y, zval);
-		bool allow_outside_building(0);
 
 		// first check uses min of the two zvals to reject the basement, which is actually under the mesh
 		if ((min(pos2.z, p_last2.z) + radius) > ground_floor_z1) {
@@ -302,13 +301,31 @@ bool building_t::check_sphere_coll_inner(point &pos, point const &p_last, vector
 				if (zval < i->z2() + radius + floor_thickness) {is_interior = 1; break;} // Note: don't have to check zval > i->z2() because we know that !is_interior
 			}
 		}
-		if (allow_outside_building && !is_interior) return 0; // entering an exterior door - no collision
 	}
-	if (is_interior) {
+	if (!xy_only) { // check for collision with exterior stairs, since they apply to both the interior and exterior case
+		for (auto i = details.begin(); i != details.end(); ++i) {
+			if (i->type != DETAIL_OBJ_EXT_STAIR) continue;
+			cube_t const c(*i + xlate);
+			if (!sphere_cube_intersect_xy(pos2, radius, c)) continue;
+			float const zval(max(pos2.z, p_last2.z));
+			if (zval + radius < c.z1() || zval - 1.1*radius > c.z2()) continue; // no collision in Z; add 10% extra radius for stability
+
+			if (zval > c.z1()) { // step up
+				if (c.contains_pt_xy(pos2)) {max_eq(pos2.z, (c.z2() + radius));} // only step up if on this stair
+				had_coll = on_ext_stair = 1;
+			}
+		} // for i
+	}
+	if (on_ext_stair) {
+		// handled above, nothing else to do
+	}
+	else if (is_interior) {
 		point pos2_bs(pos2 - xlate);
 		if (check_sphere_coll_interior(pos2_bs, (p_last2 - xlate), radius, is_in_attic, xy_only, cnorm_ptr)) {pos2 = pos2_bs + xlate; had_coll = 1;}
 	}
 	else { // exterior
+		if (allow_outside_building) return 0; // entering an exterior door - no collision with building exterior
+
 		for (auto i = parts.begin(); i != parts.end(); ++i) {
 			if (xy_only) {
 				if (i->z1() < ground_floor_z1) continue; // skip basements, since they should be contained in the union of the ground floor (optimization)
@@ -361,14 +378,12 @@ bool building_t::check_sphere_coll_inner(point &pos, point const &p_last, vector
 			if (part_coll) {part_z2 = i->z2();}
 			had_coll |= part_coll;
 		} // for i
-		for (auto i = fences.begin(); i != fences.end(); ++i) {
-			had_coll |= sphere_cube_int_update_pos(pos2, radius, (*i + xlate), p_last2, xy_only, cnorm_ptr);
-		}
+		for (cube_t const &fence : fences) {had_coll |= sphere_cube_int_update_pos(pos2, radius, (fence + xlate), p_last2, xy_only, cnorm_ptr);}
+
 		// Note: driveways are handled elsewhere in the control flow
-		if (!xy_only) { // don't need to check details and roof in xy_only mode because they're contained in the XY footprint of the parts
-			for (auto i = details.begin(); i != details.end(); ++i) {
-				had_coll |= sphere_cube_int_update_pos(pos2, radius, (*i + xlate), p_last2, xy_only, cnorm_ptr); // cube, flag as colliding
-			}
+		if (!xy_only) { // don't need to check details and roof in xy_only mode because they're contained in the XY footprint of the parts (except balconies and stairs)
+			for (auto const &i : details) {had_coll |= sphere_cube_int_update_pos(pos2, radius, (i + xlate), p_last2, xy_only, cnorm_ptr);} // treat as cubes
+
 			for (auto i = roof_tquads.begin(); i != roof_tquads.end(); ++i) {
 				point const pos_xlate(pos2 - xlate);
 
