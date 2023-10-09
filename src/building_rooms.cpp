@@ -613,13 +613,14 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 	}
 	// add trim + window coverings; must be done after room assignment; not implemented for rotated buildings
 	if (!is_rotated()) {add_window_trim_and_coverings(0, 1, 1);} // add_trim=0, add_coverings=1, add_ext_sills=1
-	if (!is_rotated()) {add_ext_door_steps();}
 	if (is_house && has_basement()) {add_basement_electrical_house(rgen);}
 	if (is_house && has_basement_pipes) {add_house_basement_pipes (rgen);}
 	if (has_attic()) {add_attic_objects(rgen);}
+	unsigned const ext_objs_start(objs.size());
 	maybe_add_fire_escape  (rgen);
 	add_balconies          (rgen);
 	add_exterior_door_items(rgen);
+	if (!is_rotated()) {add_ext_door_steps(ext_objs_start);} // must be after adding balconies and fire escape
 	add_extra_obj_slots(); // needed to handle balls taken from one building and brought to another
 	add_stairs_and_elevators(rgen); // the room objects - stairs and elevators have already been placed within a room
 	objs.shrink_to_fit(); // Note: currently up to around 15K objs max for large office buildings
@@ -1233,28 +1234,97 @@ void building_t::add_window_trim_and_coverings(bool add_trim, bool add_coverings
 	}
 }
 
-void building_t::add_ext_door_steps() { // add step at the base of each exterior door
+void building_t::add_ext_door_steps(unsigned ext_objs_start) {
 	float const floor_spacing(get_window_vspace()), fc_thickness(get_fc_thickness());
 	float const door_shift_dist(2.5*get_door_shift_dist()); // 1x for door shift and 1.5x offset in add_door()
 	colorRGBA const step_color(LT_GRAY);
 	vect_room_object_t &objs(interior->room_geom->objs);
+	//unsigned const stairs_start(objs.size());
+	vector<unsigned> to_add_stairs;
 
+	// add step at the base of each exterior door
 	for (auto const &d : doors) {
 		if (d.type == tquad_with_ix_t::TYPE_RDOOR) continue; // skip roof access door
 		cube_t const c(d.get_bcube());
 		bool const above_ground(c.z1() > ground_floor_z1 + 2.0*fc_thickness);
 		bool const dim(c.dy() < c.dx()), dir(d.get_norm()[dim] > 0.0);
 		bool const is_garage(d.type == tquad_with_ix_t::TYPE_GDOOR);
-		float const length((is_garage ? 0.6 : 0.4)*c.dz()); // c.get_sz_dim(!dim)
+		float const length((is_garage ? 0.6 : 0.5)*c.dz());
 		room_obj_shape const shape(is_garage ? SHAPE_ANGLED : SHAPE_CUBE); // garage door has a sloped ramp
 		cube_t step(c);
 		set_cube_zvals(step, (c.z1() - fc_thickness), c.z1());
 		step.d[dim][!dir] -= (dir ? 1.0 : -1.0)*door_shift_dist;
 		step.d[dim][ dir] += (dir ? 1.0 : -1.0)*length; // extend outward
 		assert(step.is_strictly_normalized());
-		unsigned const flags(RO_FLAG_EXTERIOR | (above_ground ? RO_FLAG_ADJ_BOT : 0));
+		unsigned flags(RO_FLAG_EXTERIOR | (above_ground ? RO_FLAG_ADJ_BOT : 0));
+		unsigned const obj_ix(objs.size());
 		objs.emplace_back(step, TYPE_EXT_STEP, 0, dim, !dir, flags, 1.0, shape, step_color);
+		if (above_ground && !is_garage) {to_add_stairs.push_back(obj_ix);} // add steps up to this door
 	} // for d
+	if (to_add_stairs.empty()) return; // done
+	cube_t const &part(parts[0]); // assumes door is on parts[0] (single part)
+	float const base_step_height(floor_spacing/NUM_STAIRS_PER_FLOOR), head_clearance(0.8*get_floor_ceil_gap());
+	vect_cube_t cand_steps;
+
+	// add stairs going to upper level doors
+	for (unsigned ix : to_add_stairs) {
+		room_object_t &s(objs[ix]);
+		float const delta_z(s.z1() - ground_floor_z1);
+		if (delta_z <= base_step_height) continue; // no stairs are needed; should always be false based on the above_ground check above
+		bool const dim(s.dim), dir(s.dir);
+		unsigned const flags(s.flags | RO_FLAG_HANGING); // draw the side facing the building because it may be visible through a window
+		unsigned const num_steps(round_fp(delta_z/base_step_height));
+		float const step_height(delta_z/num_steps), max_step_len(2.25*step_height), init_step_len(s.get_sz_dim(!dim)), step_overlap(1.0*step_height);
+		bool step_dir(s.get_center_dim(!dim) < part.get_center_dim(!dim)); // preferred steps go toward longer wall segment
+		s.z1() = s.z2() - step_height; // set correct step height for the first step
+		bool success(0);
+
+		for (unsigned d = 0; d < 2; ++d) { // try both dirs
+			float const dir_sign(step_dir ? 1.0 : -1.0), init_translate(dir_sign*(init_step_len - step_overlap));
+			float step_len(init_step_len);
+			cube_t step(s);
+			step.d[dim][dir] += (dir ? -1.0 : 1.0)*door_shift_dist; // move slightly away from the building to prevent Z-fighting with interior wall
+			cand_steps.clear();
+
+			if (step_len > max_step_len) { // shorten steps if they're too long
+				step.d[!dim][step_dir] -= dir_sign*(step_len - max_step_len);
+				step_len = max_step_len;
+			}
+			vector3d translate(0.0, 0.0, -step_height);
+			translate[!dim] = dir_sign*(step_len - step_overlap); // overlap by step_height
+			step.translate_dim(!dim, (init_translate - translate[!dim])); // first translate
+			success = 1;
+
+			for (unsigned n = 0; n < num_steps; ++n) {
+				step += translate;
+				cube_t check_cube(step);
+				check_cube.z2() += head_clearance;
+
+				// check for collisions with previous steps, balconies, and fire escapes
+				for (auto i = objs.begin()+ext_objs_start; i != objs.end(); ++i) {
+					if ((i - objs.begin()) == ix) continue; // skip our starting step
+					cube_t no_block(*i);
+					no_block.z2() += head_clearance; // the other object can be walked on as well
+					if (check_cube.intersects(no_block)) {success = 0; break;}
+				}
+				if (!success) break;
+				// TODO: check for AC units, trashcans, etc.
+				cand_steps.push_back(step);
+			} // for n
+			if (!success) {step_dir ^= 1; continue;} // try other dir
+			// Note: s reference is invalidated beyond this point
+
+			for (cube_t const &cand : cand_steps) {
+				objs.emplace_back(cand, TYPE_EXT_STEP, 0, dim, dir, flags, 1.0, SHAPE_CUBE, step_color);
+				details.emplace_back(cand, DETAIL_OBJ_COLL_SHAD); // collider + shadow caster
+			}
+			// TODO: add side and end railings
+			break; // done
+		} // for d
+		if (!success) {
+			// TODO: how to connect if both directions fail?
+		}
+	} // for ix
 }
 
 // *** Windows ***
