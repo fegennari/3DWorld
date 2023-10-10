@@ -1205,7 +1205,7 @@ typedef vector<door_t> vect_door_t;
 
 // Note: some of these roof objects are actually on the ground next to houses
 enum {ROOF_OBJ_BLOCK=0, ROOF_OBJ_ANT, ROOF_OBJ_WALL, ROOF_OBJ_ECAP, ROOF_OBJ_AC, ROOF_OBJ_SCAP, ROOF_OBJ_SIGN, ROOF_OBJ_SIGN_CONN, ROOF_OBJ_WTOWER, DETAIL_OBJ_COLLIDER,
-	DETAIL_OBJ_COLL_SHAD, DETAIL_OBJ_EXT_STAIR};
+	DETAIL_OBJ_COLL_SHAD};
 enum {ROOF_TYPE_FLAT=0, ROOF_TYPE_SLOPE, ROOF_TYPE_PEAK, ROOF_TYPE_HIPPED, ROOF_TYPE_DOME, ROOF_TYPE_ONION, ROOF_TYPE_SHED};
 
 struct roof_obj_t : public cube_t {
@@ -1332,6 +1332,11 @@ struct colored_sphere_t : public sphere_t {
 	colored_sphere_t(point const &pos_, float radius_, colorRGBA const &color_) : sphere_t(pos_, radius_), color(color_) {}
 };
 
+struct ext_step_t : public cube_t {
+	bool dim, step_dir, wall_dir, at_door;
+	ext_step_t(cube_t const &c, bool dim_, bool sdir, bool wdir, bool door) : cube_t(c), dim(dim_), step_dir(sdir), wall_dir(wdir), at_door(door) {}
+};
+
 struct building_t : public building_geom_t {
 
 	unsigned mat_ix=0;
@@ -1355,6 +1360,7 @@ struct building_t : public building_geom_t {
 	vector<tquad_with_ix_t> roof_tquads, doors;
 	vector<colored_sphere_t> ext_lights;
 	vector<vect_point> per_part_ext_verts; // only used for non-cube buildings
+	vector<ext_step_t> ext_steps;
 	std::shared_ptr<building_interior_t> interior;
 	std::string name; // company name for office building; family name for house
 	std::string address; // only used for city buildings on roads

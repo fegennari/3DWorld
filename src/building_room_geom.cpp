@@ -1615,7 +1615,8 @@ void building_room_geom_t::add_ceiling_fan_light(room_object_t const &fan, room_
 
 float get_railing_height(room_object_t const &c) {
 	bool const is_u_stairs(c.flags & (RO_FLAG_ADJ_LO | RO_FLAG_ADJ_HI));
-	return (is_u_stairs ? 0.70 : 0.35)*c.dz(); // use a larger relative height for lo/hi railings on U-shaped stairs
+	unsigned const num_floors(c.item_flags + 1);
+	return (is_u_stairs ? 0.70 : 0.35)*c.dz()/num_floors; // use a larger relative height for lo/hi railings on U-shaped stairs
 }
 cylinder_3dw get_railing_cylinder(room_object_t const &c) {
 	float const radius(0.5*c.get_width()), center(c.get_center_dim(!c.dim)), height(get_railing_height(c));
@@ -1630,11 +1631,12 @@ cylinder_3dw get_railing_cylinder(room_object_t const &c) {
 }
 void building_room_geom_t::add_railing(room_object_t const &c) {
 	cylinder_3dw const railing(get_railing_cylinder(c));
-	bool const is_u_stairs(c.flags & (RO_FLAG_ADJ_LO | RO_FLAG_ADJ_HI)), is_top_railing(c.flags & RO_FLAG_TOS), draw_ends(!(c.flags & RO_FLAG_ADJ_BOT));
+	bool const is_u_stairs(c.flags & (RO_FLAG_ADJ_LO | RO_FLAG_ADJ_HI)), is_top_railing(c.flags & RO_FLAG_TOS);
+	bool const draw_ends(!(c.flags & RO_FLAG_ADJ_BOT)), is_exterior(c.is_exterior());
 	float const pole_radius(0.75*railing.r1), length(c.get_length()), height(get_railing_height(c));
 	tid_nm_pair_t tex(-1, 1.0, 1); // shadowed
 	tex.set_specular_color(c.color, 0.7, 70.0); // use a non-white metal specular color
-	rgeom_mat_t &mat(get_material(tex, 1, 0, 1)); // inc_shadows=1, dynamic=0, small=1
+	rgeom_mat_t &mat(get_material(tex, 1, 0, !is_exterior, 0, is_exterior)); // inc_shadows=1, dynamic=0, small|exterior
 	mat.add_cylin_to_verts(railing.p1, railing.p2, railing.r1, railing.r2, c.color, draw_ends, draw_ends); // draw sloped railing
 
 	if (!is_u_stairs && !(c.flags & RO_FLAG_ADJ_TOP)) {
@@ -1648,7 +1650,7 @@ void building_room_geom_t::add_railing(room_object_t const &c) {
 			mat.add_cylin_to_verts(p1, p2, pole_radius, pole_radius, c.color, 0, 0); // no top or bottom
 		}
 		if (c.is_open()) { // add balusters
-			unsigned const num(NUM_STAIRS_PER_FLOOR - 1);
+			unsigned const num_floors(c.item_flags + 1), num(num_floors*NUM_STAIRS_PER_FLOOR - 1);
 			float const step_sz(1.0/(num+1)), radius(0.75*pole_radius), bot_radius(0.85*pole_radius);
 			vector3d const delta(0, 0, -height);
 

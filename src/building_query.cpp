@@ -303,9 +303,8 @@ bool building_t::check_sphere_coll_inner(point &pos, point const &p_last, vector
 		}
 	}
 	if (!xy_only) { // check for collision with exterior stairs, since they apply to both the interior and exterior case
-		for (auto i = details.begin(); i != details.end(); ++i) {
-			if (i->type != DETAIL_OBJ_EXT_STAIR) continue;
-			cube_t const c(*i + xlate);
+		for (ext_step_t const &s : ext_steps) {
+			cube_t const c(s + xlate);
 			if (!sphere_cube_intersect_xy(pos2, radius, c)) continue;
 			float const zval(max(pos2.z, p_last2.z));
 			if (zval + radius < c.z1() || zval - 1.1*radius > c.z2()) continue; // no collision in Z; add 10% extra radius for stability

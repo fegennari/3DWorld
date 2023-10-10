@@ -1240,17 +1240,19 @@ void building_t::add_ext_door_steps(unsigned ext_objs_start) {
 	float const door_shift_dist(2.5*get_door_shift_dist()); // 1x for door shift and 1.5x offset in add_door()
 	colorRGBA const step_color(LT_GRAY);
 	vect_room_object_t &objs(interior->room_geom->objs);
-	//unsigned const stairs_start(objs.size());
 	vector<unsigned> to_add_stairs;
+	ext_steps.clear(); // clear prev value in case this building's interior is recreated
 
 	// add step at the base of each exterior door
+	// TODO: change door placement so that upper doors aren't all on the same side of the house, once this code is working
 	for (auto const &d : doors) {
 		if (d.type == tquad_with_ix_t::TYPE_RDOOR) continue; // skip roof access door
 		cube_t const c(d.get_bcube());
 		bool const above_ground(c.z1() > ground_floor_z1 + 2.0*fc_thickness);
 		bool const dim(c.dy() < c.dx()), dir(d.get_norm()[dim] > 0.0);
 		bool const is_garage(d.type == tquad_with_ix_t::TYPE_GDOOR);
-		float const length((is_garage ? 0.6 : 0.5)*c.dz());
+		float length((is_garage ? 0.6 : 0.5)*c.dz());
+		if (above_ground) {max_eq(length, 2.4f*get_scaled_player_radius());} // if above ground, make sure step is wide enough for the player to walk on
 		room_obj_shape const shape(is_garage ? SHAPE_ANGLED : SHAPE_CUBE); // garage door has a sloped ramp
 		cube_t step(c);
 		set_cube_zvals(step, (c.z1() - fc_thickness), c.z1());
@@ -1260,12 +1262,12 @@ void building_t::add_ext_door_steps(unsigned ext_objs_start) {
 		unsigned flags(RO_FLAG_EXTERIOR | (above_ground ? RO_FLAG_ADJ_BOT : 0));
 		unsigned const obj_ix(objs.size());
 		objs.emplace_back(step, TYPE_EXT_STEP, 0, dim, !dir, flags, 1.0, shape, step_color);
-		details.emplace_back(step, DETAIL_OBJ_EXT_STAIR); // collider + shadow caster
 		if (above_ground && !is_garage) {to_add_stairs.push_back(obj_ix);} // add steps up to this door
 	} // for d
 	if (to_add_stairs.empty()) return; // done
 	cube_t const &part(parts[0]); // assumes door is on parts[0] (single part)
-	float const base_step_height(floor_spacing/NUM_STAIRS_PER_FLOOR), head_clearance(0.8*get_floor_ceil_gap()), railing_thickness(0.8*get_wall_thickness());
+	bool const add_step_gaps(objs.size() & 1); // something random-ish per building
+	float const base_step_height(floor_spacing/NUM_STAIRS_PER_FLOOR), head_clearance(0.8*get_floor_ceil_gap()), railing_thickness(0.5*get_wall_thickness());
 	vect_cube_t cand_steps;
 	vector<room_object_t> railings;
 
@@ -1277,28 +1279,33 @@ void building_t::add_ext_door_steps(unsigned ext_objs_start) {
 		bool const dim(s.dim), dir(s.dir);
 		unsigned const flags(s.flags | RO_FLAG_HANGING); // draw the side facing the building because it may be visible through a window
 		unsigned const num_steps(round_fp(delta_z/base_step_height));
-		float const step_height(delta_z/num_steps), max_step_len(2.25*step_height), init_step_len(s.get_sz_dim(!dim)), step_overlap(1.0*step_height);
+		unsigned const num_floors(round_fp((s.z1() - ground_floor_z1)/floor_spacing));
+		float const step_height(delta_z/num_steps), max_step_len(2.25*step_height), init_step_len(s.get_sz_dim(!dim)), step_overlap(1.0*step_height), dir_sign(dir ? 1.0 : -1.0);
 		bool step_dir(s.get_center_dim(!dim) < part.get_center_dim(!dim)); // preferred steps go toward longer wall segment
 		s.z1() = s.z2() - step_height; // set correct step height for the first step
+		cube_t const door_step(s);
 		bool success(0);
+		// Note: s reference is invalidated beyond this point
 
 		for (unsigned d = 0; d < 2; ++d) { // try both dirs
-			float const dir_sign(step_dir ? 1.0 : -1.0), init_translate(dir_sign*(init_step_len - step_overlap));
-			float step_len(init_step_len);
-			cube_t step(s);
-			step.d[dim][dir] += (dir ? -1.0 : 1.0)*door_shift_dist; // move slightly away from the building to prevent Z-fighting with interior wall
+			float const sdir_sign(step_dir ? 1.0 : -1.0), init_translate(sdir_sign*(init_step_len - step_overlap));
+			float step_len(init_step_len), max_step_len_dir(max_step_len);
+			cube_t step(door_step);
+			step.d[dim][dir] -= dir_sign*door_shift_dist; // move slightly away from the building to prevent Z-fighting with interior wall
 			cand_steps.clear();
+			// constrain steps to fit inside the building bcube by making them steeper if needed
+			min_eq(max_step_len_dir, (step_overlap + fabs(door_step.d[!dim][step_dir] - part.d[!dim][step_dir])/num_steps));
 
-			if (step_len > max_step_len) { // shorten steps if they're too long
-				step.d[!dim][step_dir] -= dir_sign*(step_len - max_step_len);
-				step_len = max_step_len;
+			if (step_len > max_step_len_dir) { // shorten steps if they're too long
+				step.d[!dim][step_dir] -= sdir_sign*(step_len - max_step_len_dir);
+				step_len = max_step_len_dir;
 			}
 			vector3d translate(0.0, 0.0, -step_height);
-			translate[!dim] = dir_sign*(step_len - step_overlap); // overlap by step_height
+			translate[!dim] = sdir_sign*(step_len - step_overlap); // overlap by step_height
 			step.translate_dim(!dim, (init_translate - translate[!dim])); // first translate
 			success = 1;
 
-			for (unsigned n = 0; n < num_steps; ++n) {
+			for (unsigned n = 0; n <= num_steps; ++n) { // TODO: one extra iteration to check for collisions at the bottom
 				step += translate;
 				cube_t check_cube(step);
 				check_cube.z2() += head_clearance;
@@ -1312,27 +1319,45 @@ void building_t::add_ext_door_steps(unsigned ext_objs_start) {
 				}
 				if (!success) break;
 				// TODO: check for AC units, trashcans, etc.
-				cand_steps.push_back(step);
+				if (n < num_steps) {cand_steps.push_back(step);} // don't add the last step
 			} // for n
 			if (!success) {step_dir ^= 1; continue;} // try other dir
 			assert(!cand_steps.empty());
-			// Note: s reference is invalidated beyond this point
 
-			for (cube_t const &cand : cand_steps) {
-				objs.emplace_back(cand, TYPE_EXT_STEP, 0, dim, dir, flags, 1.0, SHAPE_CUBE, step_color);
-				details.emplace_back(cand, DETAIL_OBJ_EXT_STAIR); // collider + shadow caster
+			for (cube_t const &cand : cand_steps) { // cube, dim, step_dir, wall_dir, at_door
+				cube_t step(cand);
+				if (add_step_gaps) {step.z1() += 0.5*cand.dz();} // move the bottom halfway up
+				objs.emplace_back(step, TYPE_EXT_STEP, 0, dim, dir, flags, 1.0, SHAPE_CUBE, step_color);
+				ext_steps.emplace_back(cand, dim, step_dir, dir, 0);
 			}
-			// add side and end railings, with balusters
-			cube_t railing(cand_steps.front());
+			// add side railing, with balusters
+			colorRGBA const railing_color(BLACK);
+			cube_t railing(cand_steps[min(size_t(1), cand_steps.size()-1U)]); // second from the top
+			railing.d[!dim][!step_dir] -= sdir_sign*railing_thickness; // lengthen slightly to meet the top railing
+			float const railing_inside_edge(railing.d[dim][!dir] + dir_sign*railing_thickness);
 			railing.union_with_cube(cand_steps.back());
-			railing.d[dim][dir] = railing.d[dim][!dir] + (dir ? 1.0 : -1.0)*railing_thickness;
-			railings.emplace_back(railing, TYPE_RAILING, 0, !dim, !step_dir, RO_FLAG_OPEN, 1.0, SHAPE_CUBE, BLACK);
-			// TODO: end railing
+			railing.d[dim][dir] = railing_inside_edge;
+			railing.z1() += step_height;
+			railing.z2() += 2.0*step_height;
+			railings.emplace_back(railing, TYPE_RAILING, 0, !dim, !step_dir, (RO_FLAG_OPEN | RO_FLAG_EXTERIOR), 1.0, SHAPE_CUBE, railing_color);
+			railings.back().item_flags = max(num_floors, 1U) - 1; // store the number of floors-1 in item_flags
+			// add end railing
+			railing = door_step;
+			railing.d[!dim][step_dir]  = railing.d[!dim][!step_dir] + sdir_sign*railing_thickness;
+			railing.d[ dim][     dir] -= dir_sign*railing_thickness; // move away from the building
+			railing.z2() += floor_spacing;
+			railing.z1() += step_height;
+			railings.emplace_back(railing, TYPE_RAILING, 0, dim, dir, (RO_FLAG_TOS | RO_FLAG_ADJ_BOT | RO_FLAG_EXTERIOR), 1.0, SHAPE_CUBE, railing_color);
+			// add top railing
+			railing.d[ dim][     dir] = railing_inside_edge;
+			railing.d[!dim][step_dir] = door_step.d[!dim][step_dir];
+			railings.emplace_back(railing, TYPE_RAILING, 0, !dim, !step_dir, (RO_FLAG_TOS | RO_FLAG_EXTERIOR), 1.0, SHAPE_CUBE, railing_color);
 			break; // done
 		} // for d
 		if (!success) {
 			// TODO: how to connect if both directions fail?
 		}
+		ext_steps.emplace_back(door_step, dim, step_dir, dir, 1); // add the door step
 	} // for ix
 	vector_add_to(railings, objs); // add railings at the end
 }

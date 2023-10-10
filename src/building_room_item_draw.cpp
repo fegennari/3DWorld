@@ -834,6 +834,7 @@ void building_room_geom_t::create_static_vbos(building_t const &building) {
 		case TYPE_WIND_SILL: add_window_sill  (*i); break;
 		case TYPE_EXT_STEP:  add_exterior_step(*i); break;
 		case TYPE_BALCONY: add_balcony (*i, building.ground_floor_z1); break;
+		case TYPE_RAILING:   if (i->is_exterior()) {add_railing(*i);}  break; // exterior only
 		//case TYPE_FRIDGE: if (i->is_open()) {} break; // draw open fridge?
 		case TYPE_ELEVATOR: break; // not handled here
 		case TYPE_BLOCKER:  break; // not drawn
@@ -880,7 +881,7 @@ void building_room_geom_t::add_small_static_objs_to_verts(vect_room_object_t con
 		case TYPE_TCAN:      add_trashcan (c); break;
 		case TYPE_SIGN:      add_sign     (c, 1, inc_text); break; // sm, maybe text
 		case TYPE_CLOSET:    add_closet   (c, tid_nm_pair_t(), 0, 1); break; // add closet wall trim and interior objects, don't need wall_tex
-		case TYPE_RAILING:   add_railing  (c); break;
+		case TYPE_RAILING:   if (!c.is_exterior()) {add_railing(c);}  break; // interior only
 		case TYPE_PLANT:     add_potted_plant(c, 0, 1); break; // plant only
 		case TYPE_CRATE:     add_crate    (c); break; // not small but only added to windowless rooms
 		case TYPE_BOX:       add_box      (c); break; // not small but only added to windowless rooms
