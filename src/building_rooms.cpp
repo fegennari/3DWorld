@@ -1281,7 +1281,7 @@ void building_t::add_ext_door_steps(unsigned ext_objs_start) {
 		unsigned const num_steps(round_fp(delta_z/base_step_height));
 		unsigned const num_floors(round_fp((s.z1() - ground_floor_z1)/floor_spacing));
 		float const step_height(delta_z/num_steps), max_step_len(2.25*step_height), init_step_len(s.get_sz_dim(!dim)), step_overlap(1.0*step_height), dir_sign(dir ? 1.0 : -1.0);
-		bool step_dir(s.get_center_dim(!dim) < part.get_center_dim(!dim)); // preferred steps go toward longer wall segment
+		bool step_dir(s.get_center_dim(!dim) < part.get_center_dim(!dim)); // preferred steps go down toward longer wall segment
 		s.z1() = s.z2() - step_height; // set correct step height for the first step
 		cube_t const door_step(s);
 		bool success(0);
@@ -1305,7 +1305,7 @@ void building_t::add_ext_door_steps(unsigned ext_objs_start) {
 			step.translate_dim(!dim, (init_translate - translate[!dim])); // first translate
 			success = 1;
 
-			for (unsigned n = 0; n <= num_steps; ++n) { // TODO: one extra iteration to check for collisions at the bottom
+			for (unsigned n = 0; n <= num_steps; ++n) { // one extra iteration to check for collisions at the bottom
 				step += translate;
 				cube_t check_cube(step);
 				check_cube.z2() += head_clearance;
@@ -1328,8 +1328,9 @@ void building_t::add_ext_door_steps(unsigned ext_objs_start) {
 				cube_t step(cand);
 				if (add_step_gaps) {step.z1() += 0.5*cand.dz();} // move the bottom halfway up
 				objs.emplace_back(step, TYPE_EXT_STEP, 0, dim, dir, flags, 1.0, SHAPE_CUBE, step_color);
-				ext_steps.emplace_back(cand, dim, step_dir, dir, 0);
+				ext_steps.emplace_back(cand, !dim, step_dir, dir); // Note: here dim is wall dim, but we store stairs dim
 			}
+			ext_steps.back().is_base = 1;
 			// add side railing, with balusters
 			colorRGBA const railing_color(BLACK);
 			cube_t railing(cand_steps[min(size_t(1), cand_steps.size()-1U)]); // second from the top
@@ -1357,9 +1358,10 @@ void building_t::add_ext_door_steps(unsigned ext_objs_start) {
 		if (!success) {
 			// TODO: how to connect if both directions fail?
 		}
-		ext_steps.emplace_back(door_step, dim, step_dir, dir, 1); // add the door step
+		ext_steps.emplace_back(door_step, !dim, step_dir, dir, 1); // add the door step; here dim is wall dim, but we store stairs dim
 	} // for ix
 	vector_add_to(railings, objs); // add railings at the end
+	for (ext_step_t const &step : ext_steps) {union_with_coll_bcube(step);}
 }
 
 // *** Windows ***

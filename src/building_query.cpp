@@ -308,11 +308,24 @@ bool building_t::check_sphere_coll_inner(point &pos, point const &p_last, vector
 			if (!sphere_cube_intersect_xy(pos2, radius, c)) continue;
 			float const zval(max(pos2.z, p_last2.z));
 			if (zval + radius < c.z1() || zval - 1.1*radius > c.z2()) continue; // no collision in Z; add 10% extra radius for stability
-
+			float &wval(pos2[!s.dim]), &lval(pos2[s.dim]); // position relative to the {width, length) of the stairs
+			// handle collision with railing and building wall
+			unsigned skip_dir(0);
+			if (s.at_door) {skip_dir |= (1 << unsigned(  s.wall_dir));}
+			if (s.is_base) {skip_dir |= (1 << unsigned(1-s.wall_dir));}
+			if (!(skip_dir & 1)) {max_eq(wval, (c.d[!s.dim][0] + xy_radius));}
+			if (!(skip_dir & 2)) {min_eq(wval, (c.d[!s.dim][1] - xy_radius));}
+			
+			if (s.at_door) { // handle collision with top end railing
+				if (s.step_dir) {max_eq(lval, (c.d[s.dim][0] + xy_radius));}
+				else            {min_eq(lval, (c.d[s.dim][1] - xy_radius));}
+			}
 			if (zval > c.z1()) { // step up
 				if (c.contains_pt_xy(pos2)) {max_eq(pos2.z, (c.z2() + radius));} // only step up if on this stair
-				had_coll = on_ext_stair = 1;
+				if (wval > c.d[!s.dim][0] && wval < c.d[!s.dim][1]) {on_ext_stair = 1;} // not entering or leaving from the sides
+				had_coll = 1;
 			}
+			else {had_coll |= sphere_cube_int_update_pos(pos2, radius, c, p_last2, xy_only, cnorm_ptr);} // check collision with sides
 		} // for i
 	}
 	if (on_ext_stair) {

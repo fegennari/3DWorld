@@ -1333,8 +1333,9 @@ struct colored_sphere_t : public sphere_t {
 };
 
 struct ext_step_t : public cube_t {
-	bool dim, step_dir, wall_dir, at_door;
-	ext_step_t(cube_t const &c, bool dim_, bool sdir, bool wdir, bool door) : cube_t(c), dim(dim_), step_dir(sdir), wall_dir(wdir), at_door(door) {}
+	bool dim, step_dir, wall_dir, at_door, is_base;
+	ext_step_t(cube_t const &c, bool dim_, bool sdir, bool wdir, bool door=0, bool base=0) :
+		cube_t(c), dim(dim_), step_dir(sdir), wall_dir(wdir), at_door(door), is_base(base) {}
 };
 
 struct building_t : public building_geom_t {
