@@ -548,6 +548,9 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 					added_laundry = 1;
 				}
 				else if (!added_obj && !has_fireplace) { // make it a storage room until we add some other room type that it can be
+					if (is_basement) {
+						// TODO: RTYPE_POOL, add TYPE_POOL_TABLE
+					}
 					add_storage_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, is_basement);
 					r->assign_to(RTYPE_STORAGE, f);
 					is_storage = 1; // mark it as a storage room whether or not we've added anything to it
