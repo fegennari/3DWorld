@@ -1332,6 +1332,12 @@ void building_t::add_ext_door_steps(unsigned ext_objs_start) {
 				if (add_step_gaps) {step.z1() += 0.5*cand.dz();} // move the bottom halfway up
 				objs.emplace_back(step, TYPE_EXT_STEP, 0, dim, dir, flags, 1.0, SHAPE_CUBE, step_color);
 				ext_steps.emplace_back(cand, !dim, step_dir, dir); // Note: here dim is wall dim, but we store stairs dim
+				
+				if (step.z1() > ground_floor_z1+0.5*floor_spacing && step.z1() < ground_floor_z1+0.75*floor_spacing) {
+					cube_t collider(step);
+					set_cube_zvals(collider, ground_floor_z1, (ground_floor_z1 + 0.5*(step.z1() - ground_floor_z1)));
+					details.emplace_back(collider, DETAIL_OBJ_COLLIDER);
+				}
 			}
 			ext_steps.back().is_base = 1;
 			// add side railing, with balusters
