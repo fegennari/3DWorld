@@ -641,6 +641,7 @@ bool building_t::add_chimney(bool two_parts, bool stacked_parts, bool hipped_roo
 			// check if blocked by a door, wall, stairs, or garage, and skip if it is
 			cube_t test_cube(fplace);
 			test_cube.expand_by_xy(0.5*hwidth);
+			max_eq(test_cube.z2(), part.z2()); // extend upward to include chimney and avoid upper floor doors
 			bool bad_pos(0);
 			for (auto d = doors.begin(); d != doors.end() && !bad_pos; ++d) {bad_pos = test_cube.intersects(d->get_bcube());} // check exterior doors
 

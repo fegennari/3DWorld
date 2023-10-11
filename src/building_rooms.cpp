@@ -730,14 +730,18 @@ void building_t::add_balconies(rand_gen_t &rgen) {
 				balcony.d[dim][ dir] += (dir ? 1.0 : -1.0)*balcony_depth; // extend outward from the house
 				if (has_bcube_int(balcony, avoid)) continue; // blocked
 				if (check_cube_intersect_non_main_part(balcony)) continue; // porch roof, porch support, and chimney, etc.
-				cube_t balcony_ext_down(balcony);
+				cube_t balcony_ext_down(balcony), balcony_ext_out(balcony);
 				balcony_ext_down.z1() = ground_floor_z1; // extend down to the ground
-				bool part_int(0);
+				bool bad_pos(0);
 
 				for (auto p = parts.begin(); p != get_real_parts_end(); ++p) { // check for any intersecting parts (likely below this one, for stacked parts)
-					if ((p - parts.begin()) != room->part_id && p->intersects_no_adj(balcony_ext_down)) {part_int = 1; break;}
+					if ((p - parts.begin()) != room->part_id && p->intersects_no_adj(balcony_ext_down)) {bad_pos = 1; break;}
 				}
-				if (part_int) continue;
+				if (bad_pos) continue;
+				balcony_ext_out.expand_by_xy(wall_thickness); // for testing against upper floor doors
+				// check upper floor doors; we may want to create doors to balconies in the future
+				for (auto d = doors.begin(); d != doors.end() && !bad_pos; ++d) {bad_pos = balcony_ext_out.intersects(d->get_bcube());}
+				if (bad_pos) continue;
 				balcony.z2() -= 0.6*floor_spacing; // reduce wall height to 40%
 				balcony.expand_in_dim(!dim, wall_thickness); // expand slightly to include window frame and merge adj balcony shared walls
 				max_eq(balcony.d[!dim][0], (part.d[!dim][0] + 0.25f*wall_thickness)); // clamp slightly smaller than the containing part in !dim
@@ -1320,7 +1324,7 @@ void building_t::add_ext_door_steps(unsigned ext_objs_start) {
 					if (check_cube.intersects(no_block)) {success = 0; break;}
 				}
 				if (!success) break;
-				// TODO: check for AC units, trashcans, etc.
+				// TODO: check for chimneys, AC units, trashcans, etc.
 				if (n < num_steps) {cand_steps.push_back(step);} // don't add the last step
 			} // for n
 			if (!success) {step_dir ^= 1; continue;} // try other dir
