@@ -332,12 +332,17 @@ void building_t::register_open_ext_door_state(int door_ix) {
 		gen_sound_thread_safe(SOUND_DOORBELL, local_to_camera_space(door_center)); // convert to camera space
 		return;
 	}
-	play_door_open_close_sound(door_center, is_open);
-	vector3d const normal(door.get_norm());
-	bool const dim(fabs(normal.x) < fabs(normal.y)), dir(normal[dim] < 0.0);
-	point pos_interior(door_center);
-	pos_interior[dim] += (dir ? 1.0 : -1.0)*CAMERA_RADIUS; // move point to the building interior so that it's a valid AI position
-	register_building_sound(pos_interior, 0.4); // slightly quieter than interior doors because the user has no control over this
+	static float last_sound_tfticks(0);
+
+	if ((tfticks - last_sound_tfticks) > 0.25*TICKS_PER_SECOND) { // play at most once every 0.25 second
+		last_sound_tfticks = tfticks;
+		play_door_open_close_sound(door_center, is_open);
+		vector3d const normal(door.get_norm());
+		bool const dim(fabs(normal.x) < fabs(normal.y)), dir(normal[dim] < 0.0);
+		point pos_interior(door_center);
+		pos_interior[dim] += (dir ? 1.0 : -1.0)*CAMERA_RADIUS; // move point to the building interior so that it's a valid AI position
+		register_building_sound(pos_interior, 0.4); // slightly quieter than interior doors because the user has no control over this
+	}
 	open_door_ix = door_ix;
 }
 

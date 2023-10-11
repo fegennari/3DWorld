@@ -2070,10 +2070,10 @@ void building_t::cut_holes_for_ext_doors(building_draw_t &bdraw, point const &co
 	} // for d
 }
 
-bool building_t::get_nearby_ext_door_verts(building_draw_t &bdraw, shader_t &s, point const &pos, float dist) { // for exterior doors
+bool building_t::get_nearby_ext_door_verts(building_draw_t &bdraw, shader_t &s, point const &pos, float dist, bool reflection_pass) { // for exterior doors
 	tquad_with_ix_t door;
 	int const door_ix(find_ext_door_close_to_point(door, pos, dist));
-	register_open_ext_door_state(door_ix);
+	if (!reflection_pass) {register_open_ext_door_state(door_ix);}
 	if (door_ix < 0) return 0; // no nearby door
 	move_door_to_other_side_of_wall(door, -1.01, 0); // move a bit further away from the outside of the building to make it in front of the orig door
 	clip_door_to_interior(door);
@@ -3163,11 +3163,15 @@ public:
 						}
 						else {gen_and_draw_people_in_building(ped_draw_vars_t(b, oc, s, xlate, bi->ix, 0, reflection_pass));} // draw people in this building
 						if (b.has_cars_to_draw(player_in_building_bcube)) {buildings_with_cars.push_back(&b);}
+						
 						// check the bcube rather than check_point_or_cylin_contained() so that it works with roof doors that are outside any part?
-						if (!camera_near_building && !ext_basement_conn_visible) {b.player_not_near_building(); continue;} // camera not near building or ext basement conn
+						if (!camera_near_building && !ext_basement_conn_visible) { // camera not near building or ext basement conn
+							if (!reflection_pass) {b.player_not_near_building();}
+							continue;
+						}
 						if (ref_pass_interior) continue; // interior room, don't need to draw windows and exterior doors
 						// it would be nice to open doors for pedestrians, but we don't have access to them here and this system doesn't support more than one open door
-						b.get_nearby_ext_door_verts(ext_door_draw, s, camera_xlated, door_open_dist); // and draw opened door
+						b.get_nearby_ext_door_verts(ext_door_draw, s, camera_xlated, door_open_dist, reflection_pass); // and draw opened door
 						bool const camera_in_this_building(b.check_point_or_cylin_contained(camera_xlated, 0.0, points, 1, 1)); // inc_attic=1, inc_ext_basement=1
 						
 						if (!reflection_pass && (camera_in_this_building || !this_frame_camera_in_building)) { // player in this building, or near but not inside another
