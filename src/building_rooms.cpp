@@ -1247,7 +1247,6 @@ void building_t::add_ext_door_steps(unsigned ext_objs_start) {
 	ext_steps.clear(); // clear prev value in case this building's interior is recreated
 
 	// add step at the base of each exterior door
-	// TODO: change door placement so that upper doors aren't all on the same side of the house, once this code is working
 	for (auto const &d : doors) {
 		if (d.type == tquad_with_ix_t::TYPE_RDOOR) continue; // skip roof access door
 		cube_t const c(d.get_bcube());

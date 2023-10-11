@@ -997,9 +997,9 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 		} // end back door
 		if (multi_family) { // maybe place upper floor door(s); house should be a single cube
 			assert(num_floors > 1);
-			bool const dim0(rgen.rand_bool()), dir0(rgen.rand_bool());
 
 			for (unsigned f = 1; f < num_floors; ++f) { // every floor above ground level
+				bool const dim0(rgen.rand_bool()), dir0(rgen.rand_bool());
 				bool added_door(0);
 
 				for (unsigned d = 0; d < 2 && !added_door; ++d) {
