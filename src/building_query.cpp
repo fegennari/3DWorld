@@ -183,6 +183,10 @@ void accumulate_shared_xy_area(cube_t const &c, cube_t const &sc, float &area) {
 	if (c.intersects_xy(sc)) {area += (min(c.x2(), sc.x2()) - max(c.x1(), sc.x1()))*(min(c.y2(), sc.y2()) - max(c.y1(), sc.y1()));}
 }
 
+void apply_speed_factor(point &pos, point const &p_last, float speed_factor) {
+	for (unsigned d = 0; d < 2; ++d) {pos[d] = speed_factor*pos[d] + (1.0 - speed_factor)*p_last[d];}
+}
+
 // Note: used for the player when check_interior=1; pos and p_last are in camera space
 bool building_t::check_sphere_coll(point &pos, point const &p_last, vector3d const &xlate, float radius, bool xy_only, vector3d *cnorm_ptr, bool check_interior) const {
 	if (!is_valid()) return 0; // invalid building
@@ -337,6 +341,7 @@ bool building_t::check_sphere_coll_inner(point &pos, point const &p_last, vector
 		} // for i
 	}
 	if (on_ext_stair) {
+		apply_speed_factor(pos2, p_last, 0.6); // slow down to 60% when on exterior stairs
 		// only need to check for blockers at the bottom of stairs
 		for (auto const &i : details) {had_coll |= sphere_cube_int_update_pos(pos2, radius, (i + xlate), p_last2, xy_only, cnorm_ptr);} // treat as cubes
 	}
@@ -621,8 +626,7 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, flo
 
 		if (has_attic() && attic_access.contains_pt_xy(pos)) {
 			if (interior->attic_access_open && obj_z > (attic_access.z2() - floor_spacing)) { // on attic ladder - handle like a ramp
-				float const speed_factor = 0.3; // slow down when climbing the ladder
-				for (unsigned d = 0; d < 2; ++d) {pos[d] = speed_factor*pos[d] + (1.0 - speed_factor)*p_last[d];}
+				apply_speed_factor(pos, p_last, 0.3); // slow down to 30% when climbing the ladder
 				bool const dim(attic_access.ix >> 1), dir(attic_access.ix & 1);
 				float const length(attic_access.get_sz_dim(dim)), t(CLIP_TO_01((pos[dim] - attic_access.d[dim][0])/length)), T(dir ? t : (1.0-t));
 				pos.z = (attic_access.z2() + attic_door_z_gap) - floor_spacing*(1.0 - T) + radius;
@@ -683,6 +687,8 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, flo
 			if (!is_u || c->dir == 0) {min_eq(pos[!c->dim], (c->d[!c->dim][1] - xy_radius));}
 			had_coll = on_stairs = 1;
 		} // for c
+		if (on_stairs) {apply_speed_factor(pos, p_last, 0.75);} // slow down to 75% when on stairs
+
 		for (auto c = objs.begin(); c != objs.end(); ++c) { // check for other objects to collide with (including stairs)
 			if (!c->is_player_collidable()) continue;
 			if (on_attic_ladder && c->type == TYPE_ATTIC_DOOR) continue; // collision with attic door/ladder is handled above
