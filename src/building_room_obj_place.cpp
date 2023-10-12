@@ -2020,6 +2020,12 @@ bool building_t::add_laundry_objs(rand_gen_t rgen, room_t const &room, float zva
 	return 0; // failed
 }
 
+// room with pool table, not swimming pool, though maybe we'll need an indoor swimming pool room as well
+bool building_t::add_pool_room_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt) {
+	// TODO: add TYPE_POOL_TABLE
+	return 0;
+}
+
 bool get_fire_ext_height_and_radius(float window_vspacing, float &height, float &radius) {
 	if (!building_obj_model_loader.is_model_valid(OBJ_MODEL_FIRE_EXT)) return 0;
 	vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_FIRE_EXT)); // D, W, H

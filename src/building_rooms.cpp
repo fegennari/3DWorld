@@ -127,7 +127,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 	unsigned cand_bathroom(rooms.size()); // start at an invalid value
 	unsigned added_kitchen_mask(0), added_living_mask(0), added_bath_mask(0); // per-floor
 	unsigned added_bathroom_objs_mask(0);
-	bool added_bedroom(0), added_library(0), added_dining(0), added_laundry(0), added_basement_utility(0), added_fireplace(0);
+	bool added_bedroom(0), added_library(0), added_dining(0), added_laundry(0), added_basement_utility(0), added_fireplace(0), added_pool_room(0);
 	light_ix_assign_t light_ix_assign;
 	interior->create_fc_occluders(); // not really part of room geom, but needed for generating and drawing room geom, so we create them here
 	has_int_fplace = 0; // reset for this generation
@@ -547,13 +547,16 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 					r->assign_to(RTYPE_LAUNDRY, f);
 					added_laundry = 1;
 				}
-				else if (!added_obj && !has_fireplace) { // make it a storage room until we add some other room type that it can be
-					if (is_basement) {
-						// TODO: RTYPE_POOL, add TYPE_POOL_TABLE
+				else if (!added_obj && !has_fireplace) { // unassigned empty room
+					if (is_basement && !added_pool_room && add_pool_room_objs(rgen, *r, room_center.z, room_id, tot_light_amt)) { // pool room
+						r->assign_to(RTYPE_POOL, f);
+						added_pool_room = 1;
 					}
-					add_storage_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, is_basement);
-					r->assign_to(RTYPE_STORAGE, f);
-					is_storage = 1; // mark it as a storage room whether or not we've added anything to it
+					else { // storage room
+						add_storage_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, is_basement);
+						r->assign_to(RTYPE_STORAGE, f);
+						is_storage = 1; // mark it as a storage room whether or not we've added anything to it
+					}
 				}
 				else if (is_basement) {r->assign_to(RTYPE_CARD, f);} // basement card room
 				else { // unassigned room of house on upper floor with added object/table

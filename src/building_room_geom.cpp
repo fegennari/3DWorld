@@ -3098,6 +3098,10 @@ void building_room_geom_t::add_server(room_object_t const &c) {
 	add_obj_with_front_texture(c, "interiors/server_rack.png", get_server_color(), 1); // small=1
 }
 
+void building_room_geom_t::add_pool_table(room_object_t const &c) {
+	// TODO: small static object
+}
+
 void building_room_geom_t::add_toaster_proxy(room_object_t const &c) { // draw a simple untextured XY cube to show a lower LOD model of the toaster
 	cube_t c2(c);
 	c2.expand_in_dim( c.dim, -0.10*c.get_length());
