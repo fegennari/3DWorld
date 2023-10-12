@@ -1324,7 +1324,17 @@ void building_t::add_ext_door_steps(unsigned ext_objs_start) {
 					if (check_cube.intersects(no_block)) {success = 0; break;}
 				}
 				if (!success) break;
-				// TODO: check for chimneys, AC units, trashcans, etc.
+
+				for (roof_obj_t const &ro : details) {
+					if (ro.type == ROOF_OBJ_AC && check_cube.intersects(ro)) {success = 0; break;} // check AC unit (may be on the ground rather than rooftop)
+				}
+				if (!success) break;
+
+				if (has_chimney == 2) { // exterior chimney
+					if (check_cube.intersects(get_chimney  ())) {success = 0; break;} // chimney
+					if (check_cube.intersects(get_fireplace())) {success = 0; break;} // fireplace
+				}
+				// what about residential city objects such as fences and trashcans?
 				if (n < num_steps) {cand_steps.push_back(step);} // don't add the last step
 			} // for n
 			if (!success) {step_dir ^= 1; continue;} // try other dir
