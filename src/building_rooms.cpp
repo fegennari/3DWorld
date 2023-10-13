@@ -1277,6 +1277,8 @@ void building_t::add_ext_door_steps(unsigned ext_objs_start) {
 	cube_t const &part(parts[0]); // assumes door is on parts[0] (single part)
 	bool const add_step_gaps(objs.size() & 1); // something random-ish per building
 	float const base_step_height(floor_spacing/NUM_STAIRS_PER_FLOOR), head_clearance(0.8*get_floor_ceil_gap()), railing_thickness(0.5*get_wall_thickness());
+	cube_t stairs_bcube(part);
+	stairs_bcube.expand_by_xy(0.25*floor_spacing); // allow stairs to go slightly outside the building bcube, but not enough to need a railing on the other side
 	vect_cube_t cand_steps;
 	vector<room_object_t> railings;
 
@@ -1302,8 +1304,8 @@ void building_t::add_ext_door_steps(unsigned ext_objs_start) {
 			cube_t step(door_step);
 			step.d[dim][dir] -= dir_sign*door_shift_dist; // move slightly away from the building to prevent Z-fighting with interior wall
 			cand_steps.clear();
-			// constrain steps to fit inside the building bcube by making them steeper if needed
-			min_eq(max_step_len_dir, (step_overlap + fabs(door_step.d[!dim][step_dir] - part.d[!dim][step_dir])/num_steps));
+			// constrain steps to fit inside the building stairs_bcube by making them steeper if needed
+			min_eq(max_step_len_dir, (step_overlap + fabs(door_step.d[!dim][step_dir] - stairs_bcube.d[!dim][step_dir])/num_steps));
 
 			if (step_len > max_step_len_dir) { // shorten steps if they're too long
 				step.d[!dim][step_dir] -= sdir_sign*(step_len - max_step_len_dir);
@@ -1337,7 +1339,7 @@ void building_t::add_ext_door_steps(unsigned ext_objs_start) {
 					if (check_cube.intersects(get_chimney  ())) {success = 0; break;} // chimney
 					if (check_cube.intersects(get_fireplace())) {success = 0; break;} // fireplace
 				}
-				// what about residential city objects such as fences and trashcans?
+				// what about residential city objects such as fences and trashcans? currently, we don't have multi-family houses in cities, so maybe it's okay
 				if (n < num_steps) {cand_steps.push_back(step);} // don't add the last step
 			} // for n
 			if (!success) {step_dir ^= 1; continue;} // try other dir
@@ -1354,7 +1356,7 @@ void building_t::add_ext_door_steps(unsigned ext_objs_start) {
 					set_cube_zvals(collider, ground_floor_z1, (ground_floor_z1 + 0.5*(step.z1() - ground_floor_z1)));
 					details.emplace_back(collider, DETAIL_OBJ_COLLIDER);
 				}
-			}
+			} // for cand
 			ext_steps.back().is_base = 1;
 			// add side railing, with balusters
 			colorRGBA const railing_color(BLACK);
@@ -1364,7 +1366,7 @@ void building_t::add_ext_door_steps(unsigned ext_objs_start) {
 			railing.union_with_cube(cand_steps.back());
 			railing.d[dim][dir] = railing_inside_edge;
 			railing.z1() += step_height;
-			railing.z2() += 2.0*step_height;
+			railing.z2()  = railing.z1() + num_floors*floor_spacing;
 			railings.emplace_back(railing, TYPE_RAILING, 0, !dim, !step_dir, (RO_FLAG_OPEN | RO_FLAG_EXTERIOR), 1.0, SHAPE_CUBE, railing_color);
 			railings.back().item_flags = max(num_floors, 1U) - 1; // store the number of floors-1 in item_flags
 			// add end railing

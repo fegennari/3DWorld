@@ -1634,6 +1634,7 @@ void building_room_geom_t::add_railing(room_object_t const &c) {
 	bool const is_u_stairs(c.flags & (RO_FLAG_ADJ_LO | RO_FLAG_ADJ_HI)), is_top_railing(c.flags & RO_FLAG_TOS);
 	bool const draw_ends(!(c.flags & RO_FLAG_ADJ_BOT)), is_exterior(c.is_exterior());
 	float const pole_radius(0.75*railing.r1), length(c.get_length()), height(get_railing_height(c));
+	unsigned const num_floors(c.item_flags + 1);
 	tid_nm_pair_t tex(-1, 1.0, 1); // shadowed
 	tex.set_specular_color(c.color, 0.7, 70.0); // use a non-white metal specular color
 	rgeom_mat_t &mat(get_material(tex, 1, 0, !is_exterior, 0, is_exterior)); // inc_shadows=1, dynamic=0, small|exterior
@@ -1646,11 +1647,11 @@ void building_room_geom_t::add_railing(room_object_t const &c) {
 			if (!is_top_railing) {max_eq(shift_len, 0.01f*length);}
 			pt[c.dim] += ((c.dir ^ bool(d)) ? 1.0 : -1.0)*shift_len; // shift slightly inward toward the center
 			float const hscale((d && !is_top_railing) ? 1.25 : 1.0); // shorten for lower end, which rests on the step (unless top railing)
-			point const p1(pt - vector3d(0, 0, hscale*height)), p2(pt - vector3d(0, 0, (is_top_railing ? 0.0 : 0.02*(d ? 1.0 : -1.0)*height)));
+			point const p1(pt - vector3d(0, 0, hscale*height)), p2(pt - vector3d(0, 0, (is_top_railing ? 0.0 : num_floors*0.02*(d ? 1.0 : -1.0)*height)));
 			mat.add_cylin_to_verts(p1, p2, pole_radius, pole_radius, c.color, 0, 0); // no top or bottom
 		}
 		if (c.is_open()) { // add balusters
-			unsigned const num_floors(c.item_flags + 1), num(num_floors*NUM_STAIRS_PER_FLOOR - 1);
+			unsigned const num(num_floors*NUM_STAIRS_PER_FLOOR - 1);
 			float const step_sz(1.0/(num+1)), radius(0.75*pole_radius), bot_radius(0.85*pole_radius);
 			vector3d const delta(0, 0, -height);
 

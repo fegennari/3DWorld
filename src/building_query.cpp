@@ -311,7 +311,8 @@ bool building_t::check_sphere_coll_inner(point &pos, point const &p_last, vector
 			cube_t const c(s + xlate);
 			if (!sphere_cube_intersect_xy(pos2, radius, c)) continue;
 			float const zval(max(pos2.z, p_last2.z));
-			if (zval + radius < c.z1() || zval - 1.1*radius > c.z2()) continue; // no collision in Z; add 10% extra radius for stability
+			// use 2x radius for stability: too low and we fall through the step some frames; too high and we get stuck on stairs below
+			if (zval + radius < c.z1() || zval - 2.0*radius > c.z2()) continue; // no collision in Z
 
 			if (!s.at_door && !s.is_base && (pos2[!s.dim] < c.d[!s.dim][0] || pos2[!s.dim] > c.d[!s.dim][1])) { // player to the side
 				had_coll |= sphere_cube_int_update_pos(pos2, radius, c, p_last2, xy_only, cnorm_ptr); // check collision with sides
