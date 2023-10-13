@@ -473,6 +473,10 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 					}
 				}
 			}
+			if (!added_obj && !added_pool_room && is_house && is_basement && add_pool_room_objs(rgen, *r, room_center.z, room_id, tot_light_amt)) { // pool room
+				r->assign_to(RTYPE_POOL, f);
+				added_pool_room = added_obj = 1;
+			}
 			if (!added_obj && (is_basement || (r->is_office && r->interior && f == 0 /*&& r->z1() == ground_floor_z1*/)) && rgen.rand_bool()) {
 				// if we haven't added any objects yet, and this room is an interior office on the first floor or basement, make it a storage room 50% of the time
 				added_obj = no_whiteboard = is_storage = add_storage_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, is_basement);
@@ -547,16 +551,10 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 					r->assign_to(RTYPE_LAUNDRY, f);
 					added_laundry = 1;
 				}
-				else if (!added_obj && !has_fireplace) { // unassigned empty room
-					if (is_basement && !added_pool_room && add_pool_room_objs(rgen, *r, room_center.z, room_id, tot_light_amt)) { // pool room
-						r->assign_to(RTYPE_POOL, f);
-						added_pool_room = 1;
-					}
-					else { // storage room
-						add_storage_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, is_basement);
-						r->assign_to(RTYPE_STORAGE, f);
-						is_storage = 1; // mark it as a storage room whether or not we've added anything to it
-					}
+				else if (!added_obj && !has_fireplace) { // unassigned empty room - make it a storage room
+					add_storage_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, is_basement);
+					r->assign_to(RTYPE_STORAGE, f);
+					is_storage = 1; // mark it as a storage room whether or not we've added anything to it
 				}
 				else if (is_basement) {r->assign_to(RTYPE_CARD, f);} // basement card room
 				else { // unassigned room of house on upper floor with added object/table

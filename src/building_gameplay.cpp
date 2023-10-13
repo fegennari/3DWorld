@@ -147,7 +147,6 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_PANTS     ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 16.0,  0.50,  "jeans");
 	bldg_obj_types[TYPE_BLANKET   ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 20.0,  2.0,   "blanket");
 	bldg_obj_types[TYPE_SERVER    ] = bldg_obj_type_t(1, 1, 1, 1, 0, 0, 2, 10000, 400.00,"server"); // small because it's in a windowless room; too heavy for inventory
-	bldg_obj_types[TYPE_POOL_TABLE] = bldg_obj_type_t(1, 1, 1, 1, 0, 0, 1, 400.0, 250.0, "pool table");
 	bldg_obj_types[TYPE_DBG_SHAPE ] = bldg_obj_type_t(0, 0, 0, 0, 0, 0, 1,  0.0,   0.0,  "debug shape"); // small (optimization)
 	// player_coll, ai_coll, rat_coll, pickup, attached, is_model, lg_sm, value, weight, name [capacity]
 	// 3D models
@@ -179,6 +178,7 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_FIRE_EXT  ] = bldg_obj_type_t(0, 0, 1, 1, 0, 1, 0, 25.0,  10.0,  "fire extinguisher", 250);
 	bldg_obj_types[TYPE_FOLD_SHIRT] = bldg_obj_type_t(0, 0, 0, 1, 0, 1, 2, 10.0,  0.25,  "folded shirt"); // drawn as a small static object when expanded (in a drawer)
 	bldg_obj_types[TYPE_PLANT_MODEL]= bldg_obj_type_t(0, 1, 1, 1, 0, 1, 0, 15.0,  5.0,   "potted plant"); // AI collides with plants on the floor
+	bldg_obj_types[TYPE_POOL_TABLE] = bldg_obj_type_t(1, 1, 1, 1, 0, 1, 2, 400.0, 250.0, "pool table");
 	// animals; not room objects
 	bldg_obj_types[TYPE_RAT       ] = bldg_obj_type_t(0, 0, 1, 1, 0, 1, 0, 8.99,  1.0,   "rat"); // can be picked up
 	bldg_obj_types[TYPE_ROACH     ] = bldg_obj_type_t(0, 0, 0, 1, 0, 1, 0, 0.0,   0.01,  "cockroach");

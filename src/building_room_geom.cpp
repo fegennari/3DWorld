@@ -3100,7 +3100,8 @@ void building_room_geom_t::add_server(room_object_t const &c) {
 }
 
 void building_room_geom_t::add_pool_table(room_object_t const &c) {
-	// TODO: small static object
+	// TODO: draw pool balls on pool table
+	//rgeom_mat_t &mat(get_untextured_material(0, 0, 1)); // unshadowed, small
 }
 
 void building_room_geom_t::add_toaster_proxy(room_object_t const &c) { // draw a simple untextured XY cube to show a lower LOD model of the toaster

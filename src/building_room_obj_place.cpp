@@ -1680,20 +1680,23 @@ bool building_t::add_kitchen_objs(rand_gen_t rgen, room_t const &room, float zva
 	return placed_obj;
 }
 
+colorRGBA const &get_couch_color(rand_gen_t &rgen) {
+	unsigned const NUM_COLORS = 8;
+	colorRGBA const colors[NUM_COLORS] = {GRAY_BLACK, WHITE, LT_GRAY, GRAY, DK_GRAY, LT_BROWN, BROWN, DK_BROWN};
+	return colors[rgen.rand()%NUM_COLORS];
+}
 bool building_t::add_livingroom_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
 	if (!is_house || room.is_hallway || room.is_sec_bldg || room.is_office) return 0; // these can't be living rooms
 	float const wall_thickness(get_wall_thickness());
 	cube_t place_area(get_walkable_room_bounds(room));
-	place_area.expand_by(-0.25*wall_thickness); // common spacing to wall for appliances
+	place_area.expand_by(-0.25*wall_thickness); // common spacing to wall
 	vect_room_object_t &objs(interior->room_geom->objs);
 	bool placed_couch(0), placed_tv(0);
 	// place couches with a variety of colors
-	unsigned const NUM_COLORS = 8;
-	colorRGBA const colors[NUM_COLORS] = {GRAY_BLACK, WHITE, LT_GRAY, GRAY, DK_GRAY, LT_BROWN, BROWN, DK_BROWN};
-	colorRGBA const &couch_color(colors[rgen.rand()%NUM_COLORS]);
+	colorRGBA const &color(get_couch_color(rgen));
 	unsigned tv_pref_orient(4), couch_ix(objs.size()), tv_ix(0);
 	
-	if (place_model_along_wall(OBJ_MODEL_COUCH, TYPE_COUCH, room, 0.40, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 0.67, 4, 1, couch_color)) { // pref centered
+	if (place_model_along_wall(OBJ_MODEL_COUCH, TYPE_COUCH, room, 0.40, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 0.67, 4, 1, color)) { // pref centered
 		placed_couch   = 1;
 		tv_pref_orient = (2*objs[couch_ix].dim + !objs[couch_ix].dir); // TV should be across from couch
 	}
@@ -2022,8 +2025,34 @@ bool building_t::add_laundry_objs(rand_gen_t rgen, room_t const &room, float zva
 
 // room with pool table, not swimming pool, though maybe we'll need an indoor swimming pool room as well
 bool building_t::add_pool_room_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt) {
-	// TODO: add TYPE_POOL_TABLE
-	return 0;
+	float const floor_spacing(get_window_vspace()), sz_in_feet(floor_spacing/8.0), clearance(get_min_front_clearance_inc_people());
+	vector3d const room_sz(room.get_size());
+	vect_room_object_t &objs(interior->room_geom->objs);
+	unsigned const objs_start(objs.size());
+	bool const long_dim(room.dx() < room.dy());
+	point const pos(room.xc(), room.yc(), zval); // place in the center of the room
+	cube_t ptable(pos, pos);
+	if (!building_obj_model_loader.is_model_valid(OBJ_MODEL_POOL_TABLE)) return 0;
+	vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_POOL_TABLE)); // L, W, H
+	// size is 8ft long x 4ft wide x 2.5 ft tall, with 4.5 feet of side clearance
+	float const length(8.0*sz_in_feet), width(length*sz.y/sz.x), height(length*sz.z/sz.x);
+	ptable.z2() += height;
+	ptable.expand_in_dim( long_dim, 0.5*length);
+	ptable.expand_in_dim(!long_dim, 0.5*width);
+	cube_t outer_bcube(ptable), pad_bcube(ptable);
+	outer_bcube.expand_by_xy(max(clearance, 4.5f*sz_in_feet)); // add spacing for pool cues
+	if (!room.contains_cube_xy(outer_bcube)) return 0; // can't fit in this room
+	pad_bcube.expand_by_xy(clearance);
+	if (is_obj_placement_blocked(pad_bcube, room, 1)) return 0; // inc_open_doors=1
+	objs.emplace_back(ptable, TYPE_POOL_TABLE, room_id, long_dim, 0, 0, tot_light_amt, SHAPE_CUBE);
+	set_obj_id(objs);
+	
+	// maybe place a couch along a wall
+	cube_t place_area(get_walkable_room_bounds(room));
+	place_area.expand_by(-0.25*get_wall_thickness()); // common spacing to wall
+	colorRGBA const &color(get_couch_color(rgen));
+	place_model_along_wall(OBJ_MODEL_COUCH, TYPE_COUCH, room, 0.40, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 1.0, 4, 0, color);
+	return 1;
 }
 
 bool get_fire_ext_height_and_radius(float window_vspacing, float &height, float &radius) {
