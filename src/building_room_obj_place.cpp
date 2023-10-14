@@ -1680,7 +1680,7 @@ bool building_t::add_kitchen_objs(rand_gen_t rgen, room_t const &room, float zva
 	return placed_obj;
 }
 
-colorRGBA const &get_couch_color(rand_gen_t &rgen) {
+colorRGBA get_couch_color(rand_gen_t &rgen) {
 	unsigned const NUM_COLORS = 8;
 	colorRGBA const colors[NUM_COLORS] = {GRAY_BLACK, WHITE, LT_GRAY, GRAY, DK_GRAY, LT_BROWN, BROWN, DK_BROWN};
 	return colors[rgen.rand()%NUM_COLORS];
@@ -1693,7 +1693,7 @@ bool building_t::add_livingroom_objs(rand_gen_t rgen, room_t const &room, float 
 	vect_room_object_t &objs(interior->room_geom->objs);
 	bool placed_couch(0), placed_tv(0);
 	// place couches with a variety of colors
-	colorRGBA const &color(get_couch_color(rgen));
+	colorRGBA const color(get_couch_color(rgen));
 	unsigned tv_pref_orient(4), couch_ix(objs.size()), tv_ix(0);
 	
 	if (place_model_along_wall(OBJ_MODEL_COUCH, TYPE_COUCH, room, 0.40, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 0.67, 4, 1, color)) { // pref centered
@@ -2050,7 +2050,7 @@ bool building_t::add_pool_room_objs(rand_gen_t rgen, room_t const &room, float z
 	// maybe place a couch along a wall
 	cube_t place_area(get_walkable_room_bounds(room));
 	place_area.expand_by(-0.25*get_wall_thickness()); // common spacing to wall
-	colorRGBA const &color(get_couch_color(rgen));
+	colorRGBA const color(get_couch_color(rgen));
 	place_model_along_wall(OBJ_MODEL_COUCH, TYPE_COUCH, room, 0.40, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 1.0, 4, 0, color);
 	return 1;
 }
