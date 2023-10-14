@@ -3099,9 +3099,36 @@ void building_room_geom_t::add_server(room_object_t const &c) {
 	add_obj_with_front_texture(c, "interiors/server_rack.png", get_server_color(), 1); // small=1
 }
 
+// TODO: some get_pool_table_cubes() function for collision detection, etc.
+
 void building_room_geom_t::add_pool_table(room_object_t const &c) {
-	// TODO: draw pool balls on pool table
-	//rgeom_mat_t &mat(get_untextured_material(0, 0, 1)); // unshadowed, small
+	// draw pool balls on pool table
+	float const ball_radius(0.0117*c.get_length()), ball_diameter(2.0*ball_radius); // pool ball diameter is 2.25", 1.125" radius; length is 8', so radius is ~0.0117*length
+	cube_t top(c);
+	top.expand_by_xy(-0.12*c.get_width());
+	top.z1() =   c.z2() - 0.045*c.dz();
+	top.z2() = top.z1() + ball_diameter;
+	float const ball_zval(top.zc());
+	rgeom_mat_t &mat(get_untextured_material(1, 0, 1)); // shadowed, small
+	unsigned const num_balls(16); // including cue ball
+	rand_gen_t rgen(c.create_rgen());
+	static vector<point> centers;
+	centers.clear();
+
+	for (unsigned n = 0; n < num_balls; ++n) {
+		for (unsigned n = 0; n < 10; ++n) { // 10 tries to find a valid pos; if we can't find a pos, the ball won't be placed
+			point const pos(gen_xy_pos_in_area(top, ball_radius, rgen, ball_zval));
+			bool coll(0);
+
+			for (point const &p : centers) {
+				if (dist_xy_less_than(p, pos, ball_diameter)) {coll = 1; break;}
+			}
+			if (coll) continue; // bad pos
+			colorRGBA const color(WHITE);
+			mat.add_sphere_to_verts(pos, ball_radius, color, 1); // low_detail=1; no apply_light_color()
+			break;
+		} // for n
+	} // for n
 }
 
 void building_room_geom_t::add_toaster_proxy(room_object_t const &c) { // draw a simple untextured XY cube to show a lower LOD model of the toaster
@@ -3949,9 +3976,7 @@ void building_room_geom_t::add_toy(room_object_t const &c) { // is_small=1
 	assert(c.taken_level <= 4);
 	unsigned const rings_to_draw(num_rings - c.taken_level); // remove rings from the top if they're taken by the player
 	unsigned colors_used(0);
-	rand_gen_t rgen;
-	rgen.set_state(c.obj_id, c.obj_id);
-	rgen.rand_mix();
+	rand_gen_t rgen(c.create_rgen());
 
 	for (unsigned n = 0; n < rings_to_draw; ++n) {
 		unsigned color_id(0);

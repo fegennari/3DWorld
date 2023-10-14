@@ -383,6 +383,7 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc, cube_t const &ex
 			else if (c->type == TYPE_MONITOR || c->type == TYPE_TV) {bc.expand_in_dim(dim, -0.3*bc.get_sz_dim(dim));} // reduce thickness
 			else if (c->type == TYPE_BRSINK) {bc.z1() += 0.60*bc.dz();}
 			else if (c->type == TYPE_ATTIC_DOOR) {bc = get_attic_access_door_cube(*c, 0);} // inc_ladder=0: includes door but not ladder
+			else if (c->type == TYPE_POOL_TABLE) {bc.z1() += 0.5*c->dz();} // add the top only; maybe should add the legs later?
 			cc.emplace_back(bc, color);
 		}
 	} // for c
