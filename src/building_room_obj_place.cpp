@@ -2047,11 +2047,19 @@ bool building_t::add_pool_room_objs(rand_gen_t rgen, room_t const &room, float z
 	objs.emplace_back(ptable, TYPE_POOL_TABLE, room_id, long_dim, 0, 0, tot_light_amt, SHAPE_CUBE);
 	set_obj_id(objs);
 	
-	// maybe place a couch along a wall
-	cube_t place_area(get_walkable_room_bounds(room));
-	place_area.expand_by(-0.25*get_wall_thickness()); // common spacing to wall
-	colorRGBA const color(get_couch_color(rgen));
-	place_model_along_wall(OBJ_MODEL_COUCH, TYPE_COUCH, room, 0.40, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 1.0, 4, 0, color);
+	// maybe place couch(es) along a wall
+	unsigned const counts[4] = {0, 1, 1, 2}; // one couch is more common
+	unsigned const num_couches(counts[rgen.rand() & 3]);
+
+	if (num_couches > 0) {
+		cube_t place_area(get_walkable_room_bounds(room));
+		place_area.expand_by(-0.25*get_wall_thickness()); // common spacing to wall
+		colorRGBA const color(get_couch_color(rgen)); // make the colors match if there's more than one couch
+
+		for (unsigned n = 0; n < num_couches; ++n) {
+			place_model_along_wall(OBJ_MODEL_COUCH, TYPE_COUCH, room, 0.40, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 1.0, 4, 0, color);
+		}
+	}
 	return 1;
 }
 
