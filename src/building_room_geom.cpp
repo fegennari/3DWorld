@@ -2223,8 +2223,9 @@ void building_room_geom_t::add_book(room_object_t const &c, bool inc_lg, bool in
 	bool const from_book_set(c.flags & RO_FLAG_FROM_SET);
 	bool const tdir((upright && !from_book_set) ? (c.dim ^ c.dir ^ bool(c.obj_id%7)) : 1); // sometimes upside down when upright and not from a set
 	bool const ldir(!tdir), cdir(c.dim ^ c.dir ^ upright ^ ldir); // colum and line directions (left/right/top/bot) + mirror flags for front cover
-	bool const was_dropped(c.taken_level > 0); // or held
-	bool const shadowed(was_dropped && !is_held); // only shadowed if dropped by the player, since otherwise shadows are too small to have much effect; skip held objects (don't work)
+	bool const on_glass_table(c.flags & RO_FLAG_HAS_EXTRA), was_dropped(c.taken_level > 0); // or held
+	// only shadowed if dropped by the player or on a glass table, since otherwise shadows are too small to have much effect; skip held objects (don't work)
+	bool const shadowed((was_dropped || on_glass_table) && !is_held);
 	unsigned const tdim(upright ? !c.dim : 2), hdim(upright ? 2 : !c.dim); // thickness dim, height dim (c.dim is width dim)
 	float const thickness(c.get_sz_dim(tdim)), width(c.get_length()), cov_thickness(0.125*thickness), indent(0.02*width); // Note: length/width are sort of backwards here
 	cube_t bot(c), top(c), spine(c), pages(c), cover(c);

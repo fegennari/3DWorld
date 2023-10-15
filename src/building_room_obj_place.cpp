@@ -2325,7 +2325,9 @@ void building_t::place_book_on_obj(rand_gen_t &rgen, room_object_t const &place_
 		set_cube_zvals(book, i->z2(), i->z2()+thickness); // place book on top of object; maybe the book should be tilted?
 	}
 	colorRGBA const color(book_colors[rgen.rand() % NUM_BOOK_COLORS]);
-	objs.emplace_back(book, TYPE_BOOK, room_id, dim, dir, (RO_FLAG_NOCOLL | RO_FLAG_RAND_ROT), tot_light_amt, SHAPE_CUBE, color); // Note: invalidates place_on reference
+	unsigned flags(RO_FLAG_NOCOLL | RO_FLAG_RAND_ROT);
+	if (place_on.is_glass_table()) {flags |= RO_FLAG_HAS_EXTRA;} // flag so that shadows are enabled
+	objs.emplace_back(book, TYPE_BOOK, room_id, dim, dir, flags, tot_light_amt, SHAPE_CUBE, color); // Note: invalidates place_on reference
 	set_obj_id(objs);
 }
 
