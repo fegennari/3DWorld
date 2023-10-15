@@ -676,8 +676,9 @@ void place_book(room_object_t &obj, cube_t const &parent, float length, float ma
 }
 
 /*static*/ room_object_t building_room_geom_t::get_item_in_drawer(room_object_t const &c, cube_t const &drawer_in, unsigned drawer_ix, unsigned item_ix, float &stack_z1) {
-	unsigned const per_drawer_ix(123*c.room_id + 17*c.obj_id + 31*drawer_ix); // per-drawer but not per item
 	room_object_t obj; // starts as no item
+	if (stack_z1 == drawer_in.z2()) return obj; // already full
+	unsigned const per_drawer_ix(123*c.room_id + 17*c.obj_id + 31*drawer_ix); // per-drawer but not per item
 
 	if (c.type == TYPE_FCABINET || c.type == TYPE_DESK) { // supports up to 4 drawers and 4 items
 		unsigned const max_items((c.type == TYPE_DESK) ? 2 : 4);
@@ -713,6 +714,7 @@ void place_book(room_object_t &obj, cube_t const &parent, float length, float ma
 	if (obj_type == TYPE_KEY && item_ix > 0) {obj_type = TYPE_BOTTLE;} // key must be first item/no two kes in one drawer
 	// object stacking logic
 	bool const is_stackable(obj_type == TYPE_BOX || obj_type == TYPE_PAPER || obj_type == TYPE_BOOK || obj_type == TYPE_PLATE || obj_type == TYPE_TAPE || obj_type == TYPE_FOLD_SHIRT);
+	bool const is_single_item(obj_type == TYPE_BOTTLE || obj_type == TYPE_SPRAYCAN); // these two don't combine well with other items since they're large horizontal cylinders
 	
 	if (item_ix == 0) {stack_z1 = drawer.z1();} // base case
 	else if (is_stackable) {
@@ -720,6 +722,7 @@ void place_book(room_object_t &obj, cube_t const &parent, float length, float ma
 		drawer.z1() = stack_z1; // shift bottom of drawer to top of stack
 		if (drawer.dz() < 0.1*drawer_in.dz()) return obj; // stack too high
 	}
+	// else should we mark the area covered by the object as used somehow, and not place another object there?
 	vector3d const sz(drawer.get_size()); // Note: drawer is the interior area
 
 	switch (obj_type) {
@@ -867,6 +870,7 @@ void place_book(room_object_t &obj, cube_t const &parent, float length, float ma
 	} // end switch
 	if (obj.type == TYPE_NONE) return obj; // no other updates
 	if (is_stackable) {stack_z1 = obj.z2();} // move the stack up
+	else if (is_single_item) {stack_z1 = drawer_in.z2();} // explicitly not stackable
 	obj.flags    |= (RO_FLAG_WAS_EXP | RO_FLAG_NOCOLL);
 	obj.light_amt = c.light_amt;
 	return obj;
