@@ -146,7 +146,7 @@ void building_t::get_doorways_for_room(cube_t const &room, float zval, vect_door
 	doorways.clear();
 
 	for (auto i = interior->door_stacks.begin(); i != interior->door_stacks.end(); ++i) {
-		if (i->on_stairs) continue; // skip basement door
+		if (i->on_stairs || i->for_closet) continue; // skip basement and closet doors
 		if (i->intersects_no_adj(room_exp)) {doorways.push_back(*i);}
 	}
 }
@@ -615,6 +615,7 @@ bool building_t::add_bedroom_objs(rand_gen_t rgen, room_t &room, vect_cube_t con
 				cube_t cubes[5];
 				get_closet_cubes(closet, cubes);
 				door_t door(cubes[4], dim, !dir, 0); // open=0
+				door.for_closet = 1; // flag so that we don't try to add a light switch by this door, etc.
 				add_interior_door(door, 0, 1, 1); // is_bathroom=0, make_unlocked=1, make_closed=1
 				interior->doors.back().obj_ix = closet_obj_id;
 			}

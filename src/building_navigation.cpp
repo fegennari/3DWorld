@@ -2211,7 +2211,7 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 		cube_t sc; sc.set_from_sphere(new_pos, person.radius); // sphere bounding cube
 
 		for (auto i = interior->door_stacks.begin(); i != interior->door_stacks.end(); ++i) { // can be slow, but not as slow as iterating over doors
-			if (new_pos.z < i->z1() || new_pos.z > i->z2())         continue; // wrong part/floor
+			if (new_pos.z < i->z1() || new_pos.z > i->z2()) continue; // wrong part/floor
 			if (!i->intersects(sc)) continue; // no intersection with door
 			if (!i->get_true_bcube().line_intersects(person.pos, person.target_pos)) continue; // check if path goes through door, to allow for "glancing blows" when pushed or turning
 			assert(i->first_door_ix < interior->doors.size());
