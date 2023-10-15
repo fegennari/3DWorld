@@ -2061,7 +2061,7 @@ bool building_t::add_pool_room_objs(rand_gen_t rgen, room_t const &room, float z
 	vector<point> centers;
 
 	for (unsigned n = 0; n < num_balls; ++n) {
-		for (unsigned n = 0; n < 10; ++n) { // 10 tries to find a valid pos; if we can't find a pos, the ball won't be placed
+		for (unsigned N = 0; N < 10; ++N) { // 10 tries to find a valid pos; if we can't find a pos, the ball won't be placed
 			point const pos(gen_xy_pos_in_area(top, ball_radius, rgen, ball_zval));
 			bool coll(0);
 
@@ -2069,9 +2069,11 @@ bool building_t::add_pool_room_objs(rand_gen_t rgen, room_t const &room, float z
 				if (dist_xy_less_than(p, pos, ball_diameter)) {coll = 1; break;}
 			}
 			if (coll) continue; // bad pos
+			centers.push_back(pos);
 			cube_t ball;
 			ball.set_from_sphere(pos, ball_radius);
 			objs.emplace_back(ball, TYPE_POOL_BALL, room_id, 0, 0, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_SPHERE);
+			objs.back().item_flags = n; // assign ball number
 			break;
 		} // for n
 	} // for n
