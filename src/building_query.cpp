@@ -1739,6 +1739,13 @@ void building_t::get_room_obj_cubes(room_object_t const &c, point const &pos, ve
 		get_tub_cubes(c, cubes);
 		lg_cubes.insert(lg_cubes.end(), cubes, cubes+5);
 	}
+	else if (c.type == TYPE_STOVE) {
+		cube_t body(c), top(c);
+		body.z2() = top.z1() = c.z2() - 0.22*c.dz();
+		top.d[c.dim][c.dir] -= (c.dir ? 1.0 : -1.0)*0.94*c.get_depth();
+		lg_cubes.push_back(body);
+		lg_cubes.push_back(top); // or sm_cubes?
+	}
 	else if (c.type == TYPE_ATTIC_DOOR) {lg_cubes.push_back(get_true_room_obj_bcube(c));}
 	// otherwise, treat as a large object; this includes: TYPE_BCASE, TYPE_KSINK (with dishwasher), TYPE_COUCH, TYPE_SHELVES, TYPE_COLLIDER (cars)
 	else {lg_cubes.push_back(c);}
