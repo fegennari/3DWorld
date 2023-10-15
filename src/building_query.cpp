@@ -580,10 +580,24 @@ bool check_balcony_collision(room_object_t const &c, point &pos, point const &p_
 	get_balcony_cubes(c, cubes);
 	return check_cubes_collision(cubes, 4, pos, p_last, radius, cnorm);
 }
+
+void get_pool_table_cubes(room_object_t const &c, cube_t cubes[5]) { // body + 4 legs
+	cube_t legs_bcube(c);
+	legs_bcube.z2() -= 0.48*c.dz();
+	legs_bcube.expand_by_xy(-0.13*c.get_width()); // legs are recessed a bit, but not quite centered; should be close enough
+	get_tc_leg_cubes(legs_bcube, 0.11, cubes+1);  // legs are cubes[1]:cubes[4]
+	cubes[0] = c;
+	cubes[0].z1() = cubes[1].z2(); // body starts at the top of the legs
+}
+unsigned check_pool_table_collision(room_object_t const &c, point &pos, point const &p_last, float radius, vector3d *cnorm) {
+	cube_t cubes[5]; // body + 4 legs
+	get_pool_table_cubes(c, cubes);
+	return check_cubes_collision(cubes, 5, pos, p_last, radius, cnorm);
+}
+
 bool maybe_inside_room_object(room_object_t const &obj, point const &pos, float radius) {
 	return ((obj.is_open() && sphere_cube_intersect(pos, radius, obj)) || obj.contains_pt(pos));
 }
-
 cube_t get_true_room_obj_bcube(room_object_t const &c) { // for collisions, etc.
 	if (c.type == TYPE_ATTIC_DOOR) {
 		cube_t bcube(get_attic_access_door_cube(c));
@@ -1008,6 +1022,7 @@ bool building_interior_t::check_sphere_coll_room_objects(building_t const &build
 			else if (c->type == TYPE_TUB    ) {coll_ret |= check_tub_collision   (*c, pos, p_last, radius, &cnorm, is_ball);}
 			else if (c->type == TYPE_RAMP   ) {coll_ret |= (unsigned)check_ramp_collision   (*c, pos, p_last, radius, &cnorm);}
 			else if (c->type == TYPE_BALCONY) {had_coll |= (unsigned)check_balcony_collision(*c, pos, p_last, radius, &cnorm);}
+			else if (c->type == TYPE_POOL_TABLE) {coll_ret |= check_pool_table_collision(*c, pos, p_last, radius, &cnorm);}
 			else if (c->type == TYPE_STALL  && maybe_inside_room_object(*c, pos, radius)) {coll_ret |= (unsigned)check_stall_collision (*c, pos, p_last, radius, &cnorm);}
 			else if (c->type == TYPE_SHOWER && maybe_inside_room_object(*c, pos, radius)) {coll_ret |= (unsigned)check_shower_collision(*c, pos, p_last, radius, &cnorm);}
 			else {coll_ret |= (unsigned)sphere_cube_int_update_pos(pos, radius, bc, p_last, 0, &cnorm);} // skip_z=0
@@ -1700,7 +1715,8 @@ void get_approx_car_cubes(room_object_t const &cb, cube_t cubes[5]) {
 	} // for bf
 }
 
-void building_t::get_room_obj_cubes(room_object_t const &c, point const &pos, vect_cube_t &lg_cubes, vect_cube_t &sm_cubes, vect_cube_t &non_cubes) const { // for spiders
+// for spiders; lg_cubes and sm_cubes are currently handled the same
+void building_t::get_room_obj_cubes(room_object_t const &c, point const &pos, vect_cube_t &lg_cubes, vect_cube_t &sm_cubes, vect_cube_t &non_cubes) const {
 	if (c.shape == SHAPE_CYLIN || c.shape == SHAPE_SPHERE) {non_cubes.push_back(c);}
 	else if (c.type == TYPE_RAILING || c.type == TYPE_SHELVES || c.type == TYPE_RAMP || c.type == TYPE_BALCONY) {non_cubes.push_back(c);} // non-cubes
 	else if (c.type == TYPE_CLOSET && (c.is_open() || c.contains_pt(pos))) {
@@ -1733,6 +1749,11 @@ void building_t::get_room_obj_cubes(room_object_t const &c, point const &pos, ve
 		lg_cubes.insert(lg_cubes.end(), cubes, cubes+2); // seat, back
 		get_tc_leg_cubes(cubes[2], 0.15, leg_cubes); // width=0.15
 		sm_cubes.insert(sm_cubes.end(), leg_cubes, leg_cubes+4); // legs are small
+	}
+	else if (c.type == TYPE_POOL_TABLE) {
+		cube_t cubes[5]; // body + 4 legs
+		get_pool_table_cubes(c, cubes);
+		lg_cubes.insert(lg_cubes.end(), cubes, cubes+5); // are the legs lg_cubes or sm_cubes? they're larger than table legs
 	}
 	else if (c.type == TYPE_TUB) {
 		cube_t cubes[5]; // bottom, front, back, 2 sides
@@ -1902,6 +1923,11 @@ int building_t::check_line_coll_expand(point const &p1, point const &p2, float r
 				cube_t couch_body(*c);
 				couch_body.z1() += 0.06*c->dz(); // there's space under the couch
 				if (line_int_cube_exp(p1, p2, couch_body, expand)) return 9;
+			}
+			else if (c->type == TYPE_POOL_TABLE) {
+				cube_t cubes[5];
+				get_pool_table_cubes(*c, cubes);
+				if (line_int_cubes_exp(p1, p2, cubes, 5, expand)) return 11; // 1 or 3 sink parts; counts as a cabinet
 			}
 			else if (c->type == TYPE_SHELVES) {
 				cube_t c_coll(*c);

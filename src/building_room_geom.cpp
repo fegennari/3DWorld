@@ -3099,14 +3099,16 @@ void building_room_geom_t::add_server(room_object_t const &c) {
 	add_obj_with_front_texture(c, "interiors/server_rack.png", get_server_color(), 1); // small=1
 }
 
-// TODO: some get_pool_table_cubes() function for collision detection, etc.
-
+cube_t get_pool_table_top_surface(room_object_t const &c) {
+	cube_t top(c);
+	top.expand_by_xy(-0.12*c.get_width());
+	top.z1() = c.z2() - 0.045*c.dz();
+	return top;
+}
 void building_room_geom_t::add_pool_table(room_object_t const &c) {
 	// draw pool balls on pool table
 	float const ball_radius(0.0117*c.get_length()), ball_diameter(2.0*ball_radius); // pool ball diameter is 2.25", 1.125" radius; length is 8', so radius is ~0.0117*length
-	cube_t top(c);
-	top.expand_by_xy(-0.12*c.get_width());
-	top.z1() =   c.z2() - 0.045*c.dz();
+	cube_t top(get_pool_table_top_surface(c));
 	top.z2() = top.z1() + ball_diameter;
 	float const ball_zval(top.zc());
 	rgeom_mat_t &mat(get_untextured_material(1, 0, 1)); // shadowed, small
@@ -4073,6 +4075,7 @@ colorRGBA room_object_t::get_color() const {
 	case TYPE_FEXT_SIGN:return colorRGBA(1.0, 0.4, 0.4, 1.0); // close enough
 	case TYPE_FIRE_EXT: return RED;
 	case TYPE_PANTS:    return LT_BLUE; // close enough, don't need to use the texture color
+	case TYPE_POOL_TABLE: return (BROWN*0.75 + GREEN*0.25);
 	//case TYPE_CHIMNEY:  return texture_color(get_material().side_tex); // should modulate with texture color, but we don't have it here
 	default: return color; // TYPE_LIGHT, TYPE_TCAN, TYPE_BOOK, TYPE_BOTTLE, TYPE_PEN_PENCIL, etc.
 	}

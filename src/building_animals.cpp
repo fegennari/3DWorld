@@ -372,6 +372,11 @@ bool can_hide_under(room_object_t const &c, cube_t &hide_area) {
 		hide_area.z1() += 0.06*c.dz(); // there's space under the couch
 		return 1;
 	}
+	else if (c.type == TYPE_POOL_TABLE) {
+		hide_area = c;
+		hide_area.z1() += 0.5*c.dz(); // there's space under the pool table; could call get_pool_table_cubes(), but this should be good enough
+		return 1;
+	}
 	else if (c.type == TYPE_RCHAIR) {
 		return 0; // not a hiding spot - yet
 	}

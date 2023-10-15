@@ -35,6 +35,8 @@ int get_canopy_texture();
 colorRGBA get_canopy_base_color(room_object_t const &c);
 void get_water_heater_cubes(room_object_t const &wh, cube_t cubes[2]);
 bool line_int_polygon_sides(point const &p1, point const &p2, cube_t const &bcube, vect_point const &points, float &t);
+cube_t get_pool_table_top_surface(room_object_t const &c);
+void get_pool_table_cubes(room_object_t const &c, cube_t cubes[5]);
 
 bool check_indir_enabled(bool in_basement, bool in_attic) {
 	if (in_basement) return INDIR_BASEMENT_EN;
@@ -349,6 +351,14 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc, cube_t const &ex
 				cc.emplace_back(temp[n], color);
 			}
 		}
+		else if (c->type == TYPE_POOL_TABLE) {
+			cube_t const top(get_pool_table_top_surface(*c));
+			cube_t cubes[5]; // body + 4 legs
+			get_pool_table_cubes(*c, cubes);
+			cubes[0].z2() = top.z1(); // clip top of body to bottom of top
+			for (unsigned n = 0; n < 5; ++n) {cc.emplace_back(cubes[n], BROWN);} // body and legs are brown
+			cc.emplace_back(top, GREEN); // top surface is green
+		}
 		else { // single cube
 			cube_t bc(*c); // handle 3D models that don't fill the entire cube
 			bool const dim(c->dim), dir(c->dir);
@@ -383,7 +393,6 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc, cube_t const &ex
 			else if (c->type == TYPE_MONITOR || c->type == TYPE_TV) {bc.expand_in_dim(dim, -0.3*bc.get_sz_dim(dim));} // reduce thickness
 			else if (c->type == TYPE_BRSINK) {bc.z1() += 0.60*bc.dz();}
 			else if (c->type == TYPE_ATTIC_DOOR) {bc = get_attic_access_door_cube(*c, 0);} // inc_ladder=0: includes door but not ladder
-			else if (c->type == TYPE_POOL_TABLE) {bc.z1() += 0.5*c->dz();} // add the top only; maybe should add the legs later?
 			cc.emplace_back(bc, color);
 		}
 	} // for c
