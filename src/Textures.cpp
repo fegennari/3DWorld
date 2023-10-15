@@ -326,6 +326,7 @@ int texture_lookup(string const &name) {
 int get_texture_by_name(string const &name, bool is_normal_map, bool invert_y, int wrap_mir, float aniso,
 	bool allow_compress, int use_mipmaps, unsigned ncolors, bool is_alpha_mask)
 {
+	if (name.empty()) return -1; // no texture
 	int const ix(atoi(name.c_str()));
 	if (ix > 0 || ix == -1 || name == "0") return ix; // a number was specified
 	if (name == "none" || name == "null")  return -1; // no texture

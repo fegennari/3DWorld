@@ -875,7 +875,9 @@ bool building_t::add_bed_to_room(rand_gen_t &rgen, room_t const &room, vect_cube
 }
 
 bool building_t::add_ball_to_room(rand_gen_t &rgen, room_t const &room, cube_t const &place_area, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
-	float const radius(0.048*get_window_vspace()); // 4.7 inches
+	unsigned const btype(rgen.rand() % NUM_BALL_TYPES);
+	ball_type_t const &bt(ball_types[btype]);
+	float const radius(bt.radius*get_window_vspace()/(12*8)); // assumes 8 foot floor spacing, and rbt.radius in inches
 	cube_t ball_area(place_area);
 	ball_area.expand_by_xy(-radius*rgen.rand_uniform(1.0, 10.0));
 	vect_room_object_t &objs(interior->room_geom->objs);
@@ -893,13 +895,13 @@ bool building_t::add_ball_to_room(rand_gen_t &rgen, room_t const &room, cube_t c
 			center[ dim] = ball_area.d[dim][dir];
 			center[!dim] = rgen.rand_uniform(ball_area.d[!dim][0], ball_area.d[!dim][1]); // random position along the wall
 		}
-		set_float_height(center, radius, ceil_zval); // floats on water
+		set_float_height(center, radius, ceil_zval, bt.density); // maybe floats on water
 		cube_t c(center);
 		c.expand_by(radius);
 		if (overlaps_other_room_obj(c, objs_start) || is_obj_placement_blocked(c, room, 1)) continue; // bad placement
 		objs.emplace_back(c, TYPE_LG_BALL, room_id, 0, 0, RO_FLAG_DSTATE, tot_light_amt, SHAPE_SPHERE, WHITE);
 		objs.back().obj_id     = (uint16_t)interior->room_geom->allocate_dynamic_state(); // allocate a new dynamic state object
-		objs.back().item_flags = rgen.rand_bool(); // selects ball type
+		objs.back().item_flags = btype; // selects ball type
 		return 1; // done
 	} // for n
 	return 0;

@@ -34,6 +34,7 @@ float const EXT_BASEMENT_JOIN_DIST = 4.0; // relative to floor spacing
 float const BALCONY_PILLAR_SCALE   = 0.15; // relative to depth
 
 unsigned const NUM_BOTTLE_TYPES = 6;
+unsigned const NUM_BALL_TYPES   = 5;
 unsigned const NUM_CHAIR_COLORS = 12;
 unsigned const MAX_BCASE_BOOKS  = 48; // limited by available bit flags
 unsigned const NUM_BOOK_COLORS  = 16;
@@ -88,7 +89,6 @@ struct bottle_params_t {
 	float value, label_tscale;
 	bottle_params_t(std::string const &n, std::string const &fn, colorRGBA const &c, float v, float ts) : name(n), texture_fn(fn), color(c), value(v), label_tscale(ts) {}
 };
-
 // Note: we could add colorRGBA(0.8, 0.9, 1.0, 0.4) for water bottles, but transparent objects require removing interior faces such as half of the sphere
 bottle_params_t const bottle_params[NUM_BOTTLE_TYPES] = {
 	bottle_params_t("bottle of water",    "interiors/arrowhead_logo.jpg", colorRGBA(0.4, 0.7, 1.0 ), 1.0, 1.0),
@@ -100,6 +100,20 @@ bottle_params_t const bottle_params[NUM_BOTTLE_TYPES] = {
 };
 enum {BOTTLE_TYPE_WATER=0, BOTTLE_TYPE_COKE, BOTTLE_TYPE_BEER, BOTTLE_TYPE_WINE, BOTTLE_TYPE_POISON, BOTTLE_TYPE_MEDS};
 
+struct ball_type_t {
+	std::string name, tex_fname, nm_fname;
+	float radius, density; // radius is in inches
+	bool can_kick, hurts_zombie, breaks_glass;
+	ball_type_t(std::string const &name_, std::string const &fn, std::string const &nm, float r, float d, bool ck, bool hz, bool bg) :
+		name(name_), tex_fname(fn), nm_fname(nm), radius(r), density(d), can_kick(ck), hurts_zombie(hz), breaks_glass(bg) {}
+};
+ball_type_t const ball_types[NUM_BALL_TYPES] = {
+	ball_type_t("soccer ball", "balls/soccer_ball_diffuse.png", "balls/soccer_ball_normal.png", 4.4, 0.50, 1, 1, 1),
+	ball_type_t("basketball",  "balls/basketball.png",          "",                             4.7, 0.50, 1, 1, 1),
+	ball_type_t("softball",    "balls/softball.jpg",            "",                             1.9, 1.50, 0, 1, 1), // "balls/softball_bump.jpg"    not in correct format
+	ball_type_t("tennis ball", "balls/tennis_ball.jpg",         "",                             1.3, 0.25, 0, 1, 0), // "balls/tennis_ball_bump.jpg" not in correct format
+	ball_type_t("beach ball",  "balls/beachball.jpg",           "",                            10.0, 0.05, 1, 0, 0)
+};
 
 class light_ix_assign_t {
 	vector<pair<point2d<float>, unsigned>> cur;
@@ -587,6 +601,7 @@ struct room_object_t : public oriented_cube_t { // size=64
 	colorRGBA get_model_color() const;
 	vector3d get_dir() const {vector3d v(zero_vector); v[dim] = (dir ? 1.0 : -1.0); return v;}
 	rand_gen_t create_rgen() const;
+	ball_type_t const &get_ball_type() const {assert(type == TYPE_LG_BALL); return ball_types[item_flags % NUM_BALL_TYPES];}
 };
 typedef vector<room_object_t> vect_room_object_t;
 

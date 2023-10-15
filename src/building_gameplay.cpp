@@ -268,7 +268,7 @@ bldg_obj_type_t get_taken_obj_type(room_object_t const &obj) {
 	bldg_obj_type_t type(get_room_obj_type(obj));
 
 	if (obj.type == TYPE_LG_BALL) {
-		type.name = ((obj.item_flags & 1) ? "basketball" : "soccer ball"); // use a more specific type name; all other fields are shared across balls
+		type.name = obj.get_ball_type().name; // use a more specific type name
 	}
 	else if (obj.type == TYPE_CLOTHES) {
 		if      (is_shirt_model(obj)) {type.name = "shirt";}

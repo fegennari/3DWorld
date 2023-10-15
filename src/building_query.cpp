@@ -510,7 +510,7 @@ void get_tub_cubes(room_object_t const &c, cube_t cubes[5], float radius_if_ball
 	float const height(c.get_height()), width(c.get_width()), signed_depth((c.dir ? 1.0 : -1.0)*c.get_depth());
 	cube_t bottom(c), front(c), back(c);
 	float bot_z2(c.z1() + 0.07*height);
-	// if the collider is a ball, assume density=2.0 and it floats centered at the water level
+	// if the collider is a ball, assume density=0.5 and it floats centered at the water level; not using ball_type.density here
 	if (radius_if_ball > 0.0) {max_eq(bot_z2, (c.z1() + min(get_tub_water_level(c), 1.0f)*c.dz() - radius_if_ball));}
 	bottom.z2() = front.z1() = back.z1() = bot_z2;
 	front.d[c.dim][ c.dir] -= 0.81*signed_depth;

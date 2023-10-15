@@ -2386,8 +2386,9 @@ bool building_t::maybe_zombie_retreat(unsigned person_ix, point const &hit_pos) 
 	return 1;
 }
 void building_t::register_person_hit(unsigned person_ix, room_object_t const &obj, vector3d const &velocity) {
-	if (velocity == zero_vector)  return; // stationary object, ignore it
-	if (obj.type != TYPE_LG_BALL) return; // currently this is the only throwable/dynamic object
+	if (velocity == zero_vector)           return; // stationary object, ignore it
+	if (obj.type != TYPE_LG_BALL)          return; // currently this is the only throwable/dynamic object
+	if (!obj.get_ball_type().hurts_zombie) return;
 	if (maybe_zombie_retreat(person_ix, obj.get_cube_center())) {register_achievement("Zombie Bashing");}
 }
 

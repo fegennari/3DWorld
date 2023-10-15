@@ -980,13 +980,14 @@ void building_t::run_ball_update(vector<room_object_t>::iterator ball_it, point 
 	float const fc_thick(get_fc_thickness()), fticks_stable(min(fticks, 1.0f)); // cap to 1/40s to improve stability
 	room_obj_dstate_t &dstate(interior->room_geom->get_dstate(ball));
 	vector3d &velocity(dstate.velocity);
+	ball_type_t const &bt(ball.get_ball_type());
 	point const center(ball.get_cube_center());
-	bool const was_dynamic(ball.is_dynamic()), is_moving_fast(velocity.mag() > 0.5*KICK_VELOCITY);
+	bool const was_dynamic(ball.is_dynamic()), is_moving_fast(velocity.mag() > 0.5*KICK_VELOCITY), can_kick(bt.can_kick);
 	bool on_floor(0), kicked(0);
 	point new_center(center);
 
 	// check the player, but not if they're looking directly at the ball; assume in that case they intend to pick it up instead
-	if (camera_surf_collide && player_is_moving && dot_product_ptv(cview_dir, new_center, player_pos) < 0.9*p2p_dist(new_center, player_pos)) {
+	if (can_kick && camera_surf_collide && player_is_moving && dot_product_ptv(cview_dir, new_center, player_pos) < 0.9*p2p_dist(new_center, player_pos)) {
 		kicked |= check_ball_kick(ball, velocity, new_center, player_pos, player_z1, player_z2, player_radius);
 	}
 	for (auto p = interior->people.begin(); p != interior->people.end(); ++p) { // check building AI people
@@ -998,7 +999,7 @@ void building_t::run_ball_update(vector<room_object_t>::iterator ball_it, point 
 				apply_object_bounce_with_sound(*this, velocity, cnorm, new_center, 0.75, on_floor); // hardness=0.75
 			}
 		}
-		else { // treat collision as a kick
+		else if (can_kick) { // treat collision as a kick
 			kicked = check_ball_kick(ball, velocity, new_center, p->pos, p->get_z1(), p->get_z2(), 0.6*p->get_width());
 		}
 	} // for p
@@ -1058,7 +1059,7 @@ void building_t::run_ball_update(vector<room_object_t>::iterator ball_it, point 
 			bool handled(0);
 
 			// break the glass if not already broken; should windows get broken as well?
-			if ((obj.type == TYPE_TV || obj.type == TYPE_MONITOR || obj.type == TYPE_DRESS_MIR || (obj.type == TYPE_MIRROR && !obj.is_open())) &&
+			if (bt.breaks_glass && (obj.type == TYPE_TV || obj.type == TYPE_MONITOR || obj.type == TYPE_DRESS_MIR || (obj.type == TYPE_MIRROR && !obj.is_open())) &&
 				velocity.mag() > 2.0*MIN_VELOCITY && !obj.is_broken())
 			{
 				vector3d front_dir(all_zeros);
@@ -1102,7 +1103,7 @@ void building_t::run_ball_update(vector<room_object_t>::iterator ball_it, point 
 			float const ceil_zval(get_bcube_z1_inc_ext_basement() + get_floor_for_zval(new_center.z)*get_window_vspace() + get_floor_ceil_gap());
 			float const prev_zval(new_center.z);
 
-			if (set_float_height(new_center, radius, ceil_zval)) {
+			if (set_float_height(new_center, radius, ceil_zval, bt.density)) {
 				bool const draw_splash(prev_zval-radius <= interior->water_zval && center.z-radius > interior->water_zval); // check if prev above the water line
 				float const target_zval(new_center.z);
 				min_eq(new_center.z, (prev_zval + 1.0f*OBJ_GRAVITY*fticks_stable)); // limit max float velocity based on negative gravity
@@ -1121,6 +1122,9 @@ void building_t::run_ball_update(vector<room_object_t>::iterator ball_it, point 
 					last_splash_time = tfticks;
 				}
 				on_floor = 0; // not rolling on the floor
+			}
+			else if (point_in_water_area((new_center - radius*plus_z), 0)) { // check bottom point
+				velocity *= (1.0f - min(1.0f, 10.0f*OBJ_DECELERATE*fticks_stable)); // apply (lower) water dampening
 			}
 		}
 		apply_roll_to_matrix(dstate.rot_matrix, new_center, center, plus_z, radius, (on_floor ? 0.0 : 0.01), (on_floor ? 1.0 : 0.2));
