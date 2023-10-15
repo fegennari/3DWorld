@@ -3099,38 +3099,15 @@ void building_room_geom_t::add_server(room_object_t const &c) {
 	add_obj_with_front_texture(c, "interiors/server_rack.png", get_server_color(), 1); // small=1
 }
 
-cube_t get_pool_table_top_surface(room_object_t const &c) {
-	cube_t top(c);
-	top.expand_by_xy(-0.12*c.get_width());
-	top.z1() = c.z2() - 0.045*c.dz();
-	return top;
+void building_room_geom_t::add_pool_ball(room_object_t const &c) {
+	// TODO: should be textured with a number (except for the cue ball)
+	tid_nm_pair_t tex(-1, 1.0, 1); // shadowed
+	tex.set_specular(0.9, 100.0);
+	rgeom_mat_t &mat(get_material(tex, 1, 0, 1)); // shadowed, small
+	mat.add_sphere_to_verts(c.get_cube_center(), c.get_radius(), c.color, 1); // low_detail=1; no apply_light_color()
 }
-void building_room_geom_t::add_pool_table(room_object_t const &c) {
-	// draw pool balls on pool table
-	float const ball_radius(0.0117*c.get_length()), ball_diameter(2.0*ball_radius); // pool ball diameter is 2.25", 1.125" radius; length is 8', so radius is ~0.0117*length
-	cube_t top(get_pool_table_top_surface(c));
-	top.z2() = top.z1() + ball_diameter;
-	float const ball_zval(top.zc());
-	rgeom_mat_t &mat(get_untextured_material(1, 0, 1)); // shadowed, small
-	unsigned const num_balls(16); // including cue ball
-	rand_gen_t rgen(c.create_rgen());
-	static vector<point> centers;
-	centers.clear();
-
-	for (unsigned n = 0; n < num_balls; ++n) {
-		for (unsigned n = 0; n < 10; ++n) { // 10 tries to find a valid pos; if we can't find a pos, the ball won't be placed
-			point const pos(gen_xy_pos_in_area(top, ball_radius, rgen, ball_zval));
-			bool coll(0);
-
-			for (point const &p : centers) {
-				if (dist_xy_less_than(p, pos, ball_diameter)) {coll = 1; break;}
-			}
-			if (coll) continue; // bad pos
-			colorRGBA const color(WHITE);
-			mat.add_sphere_to_verts(pos, ball_radius, color, 1); // low_detail=1; no apply_light_color()
-			break;
-		} // for n
-	} // for n
+void building_room_geom_t::add_pool_cue(room_object_t const &c) {
+	// TODO: cylinder-ish with rounded ends
 }
 
 void building_room_geom_t::add_toaster_proxy(room_object_t const &c) { // draw a simple untextured XY cube to show a lower LOD model of the toaster

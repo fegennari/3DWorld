@@ -2023,6 +2023,12 @@ bool building_t::add_laundry_objs(rand_gen_t rgen, room_t const &room, float zva
 	return 0; // failed
 }
 
+cube_t get_pool_table_top_surface(room_object_t const &c) {
+	cube_t top(c);
+	top.expand_by_xy(-0.12*c.get_width());
+	top.z1() = c.z2() - 0.045*c.dz();
+	return top;
+}
 // room with pool table, not swimming pool, though maybe we'll need an indoor swimming pool room as well
 bool building_t::add_pool_room_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt) {
 	float const floor_spacing(get_window_vspace()), sz_in_feet(floor_spacing/8.0), clearance(get_min_front_clearance_inc_people());
@@ -2045,7 +2051,33 @@ bool building_t::add_pool_room_objs(rand_gen_t rgen, room_t const &room, float z
 	pad_bcube.expand_by_xy(clearance);
 	if (is_obj_placement_blocked(pad_bcube, room, 1)) return 0; // inc_open_doors=1
 	objs.emplace_back(ptable, TYPE_POOL_TABLE, room_id, long_dim, 0, 0, tot_light_amt, SHAPE_CUBE);
-	set_obj_id(objs);
+
+	// place pool balls
+	float const ball_radius(0.0117*length), ball_diameter(2.0*ball_radius); // pool ball diameter is 2.25", 1.125" radius; length is 8', so radius is ~0.0117*length
+	cube_t top(get_pool_table_top_surface(objs.back()));
+	top.z2() = top.z1() + ball_diameter;
+	float const ball_zval(top.zc());
+	unsigned const num_balls(16); // including cue ball
+	vector<point> centers;
+
+	for (unsigned n = 0; n < num_balls; ++n) {
+		for (unsigned n = 0; n < 10; ++n) { // 10 tries to find a valid pos; if we can't find a pos, the ball won't be placed
+			point const pos(gen_xy_pos_in_area(top, ball_radius, rgen, ball_zval));
+			bool coll(0);
+
+			for (point const &p : centers) {
+				if (dist_xy_less_than(p, pos, ball_diameter)) {coll = 1; break;}
+			}
+			if (coll) continue; // bad pos
+			cube_t ball;
+			ball.set_from_sphere(pos, ball_radius);
+			objs.emplace_back(ball, TYPE_POOL_BALL, room_id, 0, 0, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_SPHERE);
+			break;
+		} // for n
+	} // for n
+
+	// place pool cues
+	// TODO: TYPE_POOL_CUE
 	
 	// maybe place couch(es) along a wall
 	unsigned const counts[4] = {0, 1, 1, 2}; // one couch is more common
