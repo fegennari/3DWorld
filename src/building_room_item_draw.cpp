@@ -224,14 +224,14 @@ void rgeom_mat_t::add_disk_to_verts(point const &pos, float radius, bool normal_
 
 // Note: size can be nonuniform in X/Y/Z
 void rgeom_mat_t::add_sphere_to_verts(point const &center, vector3d const &size, colorRGBA const &color, bool low_detail,
-	vector3d const &skip_hemi_dir, xform_matrix const *const matrix)
+	vector3d const &skip_hemi_dir, tex_range_t const &tr, xform_matrix const *const matrix)
 {
-	static vector<vert_norm_tc> cached_verts[2]; // high/low detail, reused across all calls
-	static vector<vert_norm_comp_tc> cached_vncs[2];
-	static vector<unsigned> cached_ixs[2];
-	vector<vert_norm_tc> &verts(cached_verts[low_detail]);
-	vector<vert_norm_comp_tc> &vncs(cached_vncs[low_detail]);
-	vector<unsigned> &ixs(cached_ixs[low_detail]);
+	static vector<vert_norm_tc>      cached_verts[2]; // high/low detail, reused across all calls
+	static vector<vert_norm_comp_tc> cached_vncs [2];
+	static vector<unsigned>          cached_ixs  [2];
+	vector<vert_norm_tc>      &verts(cached_verts[low_detail]);
+	vector<vert_norm_comp_tc> &vncs (cached_vncs [low_detail]);
+	vector<unsigned>          &ixs  (cached_ixs  [low_detail]);
 	bool const draw_hemisphere(skip_hemi_dir != zero_vector);
 
 	if (verts.empty()) { // not yet created, create and cache verts
@@ -245,17 +245,20 @@ void rgeom_mat_t::add_sphere_to_verts(point const &center, vector3d const &size,
 	}
 	color_wrapper const cw(color);
 	unsigned const ioff(itri_verts.size());
+	float const tscale[2] = {(tr.x2 - tr.x1), (tr.y2 - tr.y1)}; // scale existing [0.0, 1.0] texture coords into the specified range
 
 	if (matrix) { // must apply matrix transform to verts and normals and reconstruct norm_comps
 		for (auto i = verts.begin(); i != verts.end(); ++i) {
 			point pt(i->v*size);
 			vector3d normal(i->n);
 			matrix->apply_to_vector3d(pt); matrix->apply_to_vector3d(normal);
-			itri_verts.emplace_back((pt + center), normal, i->t[0], i->t[1], cw);
+			itri_verts.emplace_back((pt + center), normal, (tr.x1 + i->t[0]*tscale[0]), (tr.y1 + i->t[1]*tscale[1]), cw);
 		}
 	}
 	else { // can use vncs (norm_comps)
-		for (auto i = vncs.begin(); i != vncs.end(); ++i) {itri_verts.emplace_back((i->v*size + center), *i, i->t[0], i->t[1], cw);}
+		for (auto i = vncs.begin(); i != vncs.end(); ++i) {
+			itri_verts.emplace_back((i->v*size + center), *i, (tr.x1 + i->t[0]*tscale[0]), (tr.y1 + i->t[1]*tscale[1]), cw);
+		}
 	}
 	for (auto i = ixs.begin(); i != ixs.end(); i += 4) { // indices are for quads, but we want triangles, so expand them
 		if (draw_hemisphere) { // only draw one hemisphere; can drop some verts as well, but that's difficult

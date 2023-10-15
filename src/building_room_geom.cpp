@@ -3100,11 +3100,23 @@ void building_room_geom_t::add_server(room_object_t const &c) {
 }
 
 void building_room_geom_t::add_pool_ball(room_object_t const &c) {
-	// TODO: should be textured with a number (except for the cue ball)
-	tid_nm_pair_t tex(-1, 1.0, 1); // shadowed
+	// the texture atlas is 3 across by 6 high: {1,2,3}, {4,5,6}, {7,8,9}, {10,11,23}, {13,14,15}, {cue, stripe, crown}
+	unsigned const number(c.item_flags); // starts from 0; cue ball is 15
+	assert(number < 16);
+	unsigned const num_rows(6), num_cols(3);
+	unsigned const row_ix(num_rows - (number/num_cols) - 1), col_ix(number % num_cols); // rows are in inverted order
+	float const row_height(1.0/num_rows), col_width(1.0/num_cols), border(0.01);
+	float const tx1(col_ix*col_width), tx2(tx1 + col_width), ty1(row_ix*row_height), ty2(ty1 + row_height);
+	tex_range_t const tr(tx1+border, ty1+border, tx2-border, ty2-border);
+	tid_nm_pair_t tex(get_texture_by_name("balls/pool_balls.png"), 1.0, 1); // shadowed
 	tex.set_specular(0.9, 100.0);
 	rgeom_mat_t &mat(get_material(tex, 1, 0, 1)); // shadowed, small
-	mat.add_sphere_to_verts(c.get_cube_center(), c.get_radius(), c.color, 1); // low_detail=1; no apply_light_color()
+	// apply a random initial rotation
+	rand_gen_t rgen(c.create_rgen());
+	xform_matrix rot_matrix(get_rotation_matrix(plus_x, TWO_PI*rgen.rand_float())); // random rotation about the numbered face
+	rot_matrix *= get_rotation_matrix(rgen.signed_rand_vector_spherical().get_norm(), TWO_PI*rgen.rand_float()); // random rotation about random axis
+	float const radius(c.get_radius());
+	mat.add_sphere_to_verts(c.get_cube_center(), vector3d(radius, radius, radius), c.color, 1, zero_vector, tr, &rot_matrix); // low_detail=1; no apply_light_color()
 }
 void building_room_geom_t::add_pool_cue(room_object_t const &c) {
 	// TODO: cylinder-ish with rounded ends
@@ -3913,7 +3925,7 @@ void building_room_geom_t::add_lg_ball(room_object_t const &c) { // is_small=1
 	bool const dynamic(c.is_dynamic()); // either small or dynamic
 	rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_lg_ball_tid(c), get_lg_ball_nm_tid(c), 0.0, 0.0), 1, dynamic, !dynamic));
 	// rotate the texture coords when the ball is rolling
-	mat.add_sphere_to_verts(c, apply_light_color(c), 0, zero_vector, (c.has_dstate() ? &get_dstate(c).rot_matrix : nullptr)); // low_detail=0
+	mat.add_sphere_to_verts(c, apply_light_color(c), 0, zero_vector, tex_range_t(), (c.has_dstate() ? &get_dstate(c).rot_matrix : nullptr)); // low_detail=0
 }
 /*static*/ void building_room_geom_t::draw_lg_ball_in_building(room_object_t const &c, shader_t &s) {
 	//highres_timer_t timer("Draw Ball"); // 0.105ms
@@ -3921,7 +3933,7 @@ void building_room_geom_t::add_lg_ball(room_object_t const &c) { // is_small=1
 	// Note: since we're using indexed triangles now, we can't simply call draw_quad_verts_as_tris(); instead we create temp VBO/IBO; not the most efficient solution, but it should work
 	static rgeom_mat_t mat = rgeom_mat_t(tid_nm_pair_t()); // allocated memory is reused across frames; VBO/IBO are recreated every time
 	mat.tex = tid_nm_pair_t(get_lg_ball_tid(c), get_lg_ball_nm_tid(c), 0.0, 0.0);
-	mat.add_sphere_to_verts(c, apply_light_color(c), 0, zero_vector, &rot_matrix); // low_detail=0
+	mat.add_sphere_to_verts(c, apply_light_color(c), 0, zero_vector, tex_range_t(), &rot_matrix); // low_detail=0
 	tid_nm_pair_dstate_t state(s);
 	mat.upload_draw_and_clear(state);
 }
@@ -4053,6 +4065,7 @@ colorRGBA room_object_t::get_color() const {
 	case TYPE_FIRE_EXT: return RED;
 	case TYPE_PANTS:    return LT_BLUE; // close enough, don't need to use the texture color
 	case TYPE_POOL_TABLE: return (BROWN*0.75 + GREEN*0.25);
+	//case TYPE_POOL_BALL: return ???; // uses a texture atlas, so unclear what color to use here; use white by default
 	//case TYPE_CHIMNEY:  return texture_color(get_material().side_tex); // should modulate with texture color, but we don't have it here
 	default: return color; // TYPE_LIGHT, TYPE_TCAN, TYPE_BOOK, TYPE_BOTTLE, TYPE_PEN_PENCIL, etc.
 	}

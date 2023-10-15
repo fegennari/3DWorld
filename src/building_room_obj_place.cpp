@@ -2074,6 +2074,7 @@ bool building_t::add_pool_room_objs(rand_gen_t rgen, room_t const &room, float z
 			ball.set_from_sphere(pos, ball_radius);
 			objs.emplace_back(ball, TYPE_POOL_BALL, room_id, 0, 0, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_SPHERE);
 			objs.back().item_flags = n; // assign ball number
+			set_obj_id(objs);
 			break;
 		} // for n
 	} // for n

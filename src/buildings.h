@@ -675,12 +675,14 @@ public:
 		float side_tscale=1.0, float end_tscale=1.0, bool skip_sides=0, unsigned ndiv=N_CYL_SIDES, float side_tscale_add=0.0, bool swap_txy=0, float len_tc2=1.0, float len_tc1=0.0);
 	void add_disk_to_verts(point const &pos, float radius, bool normal_z_neg, colorRGBA const &color);
 	void add_sphere_to_verts(point const &center, vector3d const &size, colorRGBA const &color, bool low_detail=0,
-		vector3d const &skip_hemi_dir=zero_vector, xform_matrix const *const matrix=nullptr);
-	void add_sphere_to_verts(point const &center, float radius, colorRGBA const &color, bool low_detail=0) {
-		add_sphere_to_verts(center, vector3d(radius, radius, radius), color, low_detail);
+		vector3d const &skip_hemi_dir=zero_vector, tex_range_t const &tr=tex_range_t(), xform_matrix const *const matrix=nullptr);
+	void add_sphere_to_verts(point const &center, float radius, colorRGBA const &color, bool low_detail=0, tex_range_t const &tr=tex_range_t()) {
+		add_sphere_to_verts(center, vector3d(radius, radius, radius), color, low_detail, zero_vector, tr);
 	}
-	void add_sphere_to_verts(cube_t const &c, colorRGBA const &color, bool low_detail=0, vector3d const &skip_hemi_dir=zero_vector, xform_matrix const *const matrix=nullptr) {
-		add_sphere_to_verts(c.get_cube_center(), 0.5*c.get_size(), color, low_detail, skip_hemi_dir, matrix);
+	void add_sphere_to_verts(cube_t const &c, colorRGBA const &color, bool low_detail=0, vector3d const &skip_hemi_dir=zero_vector,
+		tex_range_t const &tr=tex_range_t(), xform_matrix const *const matrix=nullptr)
+	{
+		add_sphere_to_verts(c.get_cube_center(), 0.5*c.get_size(), color, low_detail, skip_hemi_dir, tr, matrix);
 	}
 	void add_vert_torus_to_verts(point const &center, float r_inner, float r_outer, colorRGBA const &color, float tscale=1.0, bool low_detail=0);
 	void add_contained_vert_torus_to_verts(cube_t const &c, colorRGBA const &color, float tscale=1.0, bool low_detail=0);
