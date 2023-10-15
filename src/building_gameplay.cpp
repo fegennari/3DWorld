@@ -283,6 +283,13 @@ bldg_obj_type_t get_taken_obj_type(room_object_t const &obj) {
 		else if (value >= 100.0) {type.name = "confidential document";}
 		else if (value >    0.0) {type.name = "valuable document";}
 	}
+	else if (obj.type == TYPE_POOL_BALL) {
+		unsigned const number(obj.item_flags); // starts from 0; cue ball is 15
+		assert(number < 16);
+		std::ostringstream oss;
+		if (number == 15) {oss << "cue ball";} else {oss << (number+1) << " ball";}
+		type.name = oss.str();
+	}
 	return type;
 }
 bool is_refillable(room_object_t const &obj) {return (obj.type == TYPE_FIRE_EXT);}
