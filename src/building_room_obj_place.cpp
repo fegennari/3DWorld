@@ -345,8 +345,10 @@ bool building_t::add_desk_to_room(rand_gen_t rgen, room_t const &room, vect_cube
 			computer.d[dim][ dir] = c.d[dim][dir] + dsign*0.5*cdepth;
 			computer.d[dim][!dir] = computer.d[dim][dir] + dsign*cdepth;
 			objs.emplace_back(computer, TYPE_COMPUTER, room_id, dim, !dir, RO_FLAG_NOCOLL, tot_light_amt);
+			room_object_t &desk_obj(objs[desk_obj_ix]);
+			desk_obj.flags |= RO_FLAG_HAS_EXTRA; // flag so that we don't place other objects on this desk
 			// force even/odd-ness of obj_id based on comp_side so that we know what side to put the drawers on so that they don't intersect the computer
-			if (bool(objs[desk_obj_ix].obj_id & 1) == comp_side) {++objs[desk_obj_ix].obj_id;}
+			if (bool(desk_obj.obj_id & 1) == comp_side) {++desk_obj.obj_id;}
 		}
 		else { // no computer
 			if ((rgen.rand()%3) != 0) { // add sheet(s) of paper 75% of the time
@@ -2316,7 +2318,7 @@ void building_t::place_book_on_obj(rand_gen_t &rgen, room_object_t const &place_
 	book.z2() += thickness;
 	vect_room_object_t &objs(interior->room_geom->objs);
 
-	// check if there's anything in the way; // only handling pens and pencils here; paper is ignored, and larger objects should already be handled
+	// check if there's anything in the way; only handling pens and pencils here; paper is ignored, and larger objects should already be handled
 	for (auto i = objs.begin()+objs_start; i != objs.end(); ++i) {
 		if (i->type != TYPE_PEN && i->type != TYPE_PENCIL) continue;
 		if (!i->intersects(book)) continue;
@@ -3069,7 +3071,7 @@ void building_t::place_objects_onto_surfaces(rand_gen_t rgen, room_t const &room
 			pizza_prob  = 0.8*place_pizza_prob;
 			if (is_house) {toy_prob = 0.5;} // toys are in houses only
 		}
-		else if (obj.type == TYPE_DESK && (i+1 == objs_end || objs[i+1].type != TYPE_MONITOR)) { // desk with no computer monitor
+		else if (obj.type == TYPE_DESK && !(obj.flags & RO_FLAG_HAS_EXTRA)) { // desk with no computer monitor
 			book_prob   = 0.8*place_book_prob;
 			bottle_prob = 0.4*place_bottle_prob;
 			cup_prob    = 0.3*place_cup_prob;
