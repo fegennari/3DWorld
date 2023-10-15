@@ -1070,7 +1070,7 @@ float get_combined_stacked_obj_weights(room_object_t const &obj, vect_room_objec
 	return weight;
 }
 
-cube_t get_true_obj_bcube(room_object_t const &obj) {
+cube_t get_true_obj_bcube(room_object_t const &obj) { // for player object pickup and move
 	if (obj.type == TYPE_PEN || obj.type == TYPE_PENCIL) {
 		cube_t obj_bcube(obj);
 		obj_bcube.expand_in_dim(!obj.dim, obj.get_width());
@@ -1080,6 +1080,11 @@ cube_t get_true_obj_bcube(room_object_t const &obj) {
 		cube_t cubes[6]; // frame, head, foot, mattress, pillow, legs_bcube
 		get_bed_cubes(obj, cubes);
 		return cubes[3]; // check mattress only, since we can only take the mattress, sheets, and pillows
+	}
+	if (obj.type == TYPE_POOL_TABLE) {
+		cube_t obj_bcube(obj);
+		obj_bcube.z1() += 0.5*obj.dz(); // only include the top half, so that we can pick up objects such as balls under the pool table
+		return obj_bcube;
 	}
 	if (obj.is_obj_model_type()) {
 		cube_t obj_bcube(obj);
