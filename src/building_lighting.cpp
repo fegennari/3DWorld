@@ -312,14 +312,9 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc, cube_t const &ex
 		}
 		else if (c->type == TYPE_DESK || c->type == TYPE_DRESSER || c->type == TYPE_NIGHTSTAND || c->type == TYPE_TABLE) { // objects with legs
 			if (c->is_glass_table()) continue; // skip glass table (transparent with thin legs)
-			cube_t cubes[5];
-			get_table_cubes(*c, cubes); // top and 4 legs
-			add_colored_cubes(cubes, 5, color, cc);
-			if      (c->type == TYPE_DRESSER || c->type == TYPE_NIGHTSTAND) {cc.emplace_back(get_dresser_middle(*c), color);}
-			else if (c->type == TYPE_DESK) {
-				if (c->desk_has_drawers() ) {cc.emplace_back(get_desk_drawers_part(*c), color);}
-				if (c->shape == SHAPE_TALL) {cc.emplace_back(get_desk_top_back(*c), color);} // tall desk
-			}
+			cube_t cubes[7];
+			unsigned const num(get_table_like_object_cubes(*c, cubes));
+			add_colored_cubes(cubes, num, color, cc);
 		}
 		else if (c->type == TYPE_CHAIR) {
 			colorRGBA const wood_color(get_textured_wood_color());
