@@ -1031,6 +1031,7 @@ bool building_interior_t::check_sphere_coll_room_objects(building_t const &build
 			// what about small balls colliding with bookcases or couches?
 		}
 		if (coll_ret) { // collision with this object - set hardness
+			if      (c->type == TYPE_RUG && cnorm != plus_z) {cnorm = plus_z; continue;} // rug collision can only be +z
 			if      (c->type == TYPE_COUCH    ) {hardness = 0.6;} // couches are soft
 			else if (c->type == TYPE_RUG      ) {hardness = 0.8;} // rug is somewhat soft, but placed on a hard floor
 			else if (c->type == TYPE_BLINDS   ) {hardness = 0.6;} // blinds are soft
