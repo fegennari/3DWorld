@@ -3120,7 +3120,16 @@ void building_room_geom_t::add_pool_ball(room_object_t const &c) {
 	mat.add_sphere_to_verts(c.get_cube_center(), vector3d(radius, radius, radius), c.color, 1, zero_vector, tr, &rot_matrix); // low_detail=1; no apply_light_color()
 }
 void building_room_geom_t::add_pool_cue(room_object_t const &c) {
-	// TODO: cylinder-ish with rounded ends
+	point const center(c.get_cube_center());
+	vector3d const sz(c.get_size());
+	unsigned const dim(get_max_dim(sz));
+	float const len(sz[dim]), radius(0.5*sz[(dim+1)%3]); // either other dim should work for radius
+	point start(center), end(center);
+	start[dim] = c.d[dim][!c.dir];
+	end  [dim] = c.d[dim][ c.dir];
+	rgeom_mat_t &mat(get_untextured_material(1, 0, 1)); // shadowed, small
+	// TODO: cylinders: dark back half, light front half, white tip, black cone at end
+	mat.add_cylin_to_verts(start, end, radius, 0.5*radius, apply_light_color(c), 1, 1); // draw both ends
 }
 
 void building_room_geom_t::add_toaster_proxy(room_object_t const &c) { // draw a simple untextured XY cube to show a lower LOD model of the toaster

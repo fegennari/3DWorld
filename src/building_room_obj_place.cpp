@@ -2055,11 +2055,13 @@ bool building_t::add_pool_room_objs(rand_gen_t rgen, room_t const &room, float z
 	if (!room.contains_cube_xy(outer_bcube)) return 0; // can't fit in this room
 	pad_bcube.expand_by_xy(clearance);
 	if (is_obj_placement_blocked(pad_bcube, room, 1)) return 0; // inc_open_doors=1
-	objs.emplace_back(ptable, TYPE_POOL_TABLE, room_id, long_dim, 0, 0, tot_light_amt, SHAPE_CUBE);
+	bool const table_dir(rgen.rand_bool()); // dir doesn't much matter, though the ends of the table are slightly different
+	room_object_t const pool_table(ptable, TYPE_POOL_TABLE, room_id, long_dim, table_dir, 0, tot_light_amt, SHAPE_CUBE);
+	objs.push_back(pool_table);
 
 	// place pool balls
 	float const ball_radius(0.0117*length), ball_diameter(2.0*ball_radius); // pool ball diameter is 2.25", 1.125" radius; length is 8', so radius is ~0.0117*length
-	cube_t top(get_pool_table_top_surface(objs.back()));
+	cube_t top(get_pool_table_top_surface(pool_table));
 	top.z2() = top.z1() + ball_diameter;
 	float const ball_zval(top.zc());
 	unsigned const num_balls(16); // including cue ball
@@ -2084,8 +2086,26 @@ bool building_t::add_pool_room_objs(rand_gen_t rgen, room_t const &room, float z
 		} // for n
 	} // for n
 
-	// place pool cues
-	// TODO: TYPE_POOL_CUE
+	// place pool cues; these can be on the wall, on the table, or on the floor leaning against the table
+	float const cue_len(57*sz_in_feet/12), cue_radius(1.0*sz_in_feet/12); // 57 inches x 2 inch diameter
+	bool const cue_dir(rgen.rand_bool());
+	cube_t cue;
+
+	if (rgen.rand_bool()) { // on the top edges of the pool table
+		set_cube_zvals(cue, ptable.z2(), (ptable.z2() + cue_radius));
+		set_wall_width(cue, ptable.get_center_dim(long_dim), 0.5*cue_len, long_dim);
+
+		for (unsigned d = 0; d < 2; ++d) { // for each long side
+			set_wall_width(cue, (ptable.d[!long_dim][d] + (d ? -1.0 : 1.0)*0.05*width), cue_radius, !long_dim);
+			objs.emplace_back(cue, TYPE_POOL_CUE, room_id, long_dim, cue_dir, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CYLIN, LT_BROWN);
+		}
+	}
+	else { // on the floor leaning up against the pool table
+		// TODO
+		for (unsigned d = 0; d < 2; ++d) {
+
+		}
+	}
 	
 	// maybe place couch(es) along a wall
 	unsigned const counts[4] = {0, 1, 1, 2}; // one couch is more common
