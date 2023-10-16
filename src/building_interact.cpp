@@ -1104,7 +1104,6 @@ void building_t::run_ball_update(vector<room_object_t>::iterator ball_it, point 
 			float const prev_zval(new_center.z);
 
 			if (set_float_height(new_center, radius, ceil_zval, bt.density)) {
-				bool const draw_splash(prev_zval-radius <= interior->water_zval && center.z-radius > interior->water_zval); // check if prev above the water line
 				float const target_zval(new_center.z);
 				min_eq(new_center.z, (prev_zval + 1.0f*OBJ_GRAVITY*fticks_stable)); // limit max float velocity based on negative gravity
 				velocity  *= (1.0f - min(1.0f, 25.0f*OBJ_DECELERATE*fticks_stable)); // apply water dampening
@@ -1118,7 +1117,9 @@ void building_t::run_ball_update(vector<room_object_t>::iterator ball_it, point 
 				static float last_splash_time(0.0);
 
 				if ((tfticks - last_splash_time) > 0.5*TICKS_PER_SECOND) { // at most once every 0.5s
-					check_for_water_splash(new_center, 0.75, 1, draw_splash); // full_room_height=1
+					bool const draw_splash(prev_zval-radius <= interior->water_zval && center.z-radius > interior->water_zval); // check if prev above the water line
+					float const mass(bt.radius*bt.radius*bt.radius*bt.density), splash_size(0.12*sqrt(mass));
+					check_for_water_splash(new_center, splash_size, 1, draw_splash); // full_room_height=1
 					last_splash_time = tfticks;
 				}
 				on_floor = 0; // not rolling on the floor

@@ -110,9 +110,9 @@ struct ball_type_t {
 ball_type_t const ball_types[NUM_BALL_TYPES] = {
 	ball_type_t("soccer ball", "balls/soccer_ball_diffuse.png", "balls/soccer_ball_normal.png", 4.4, 0.50, 1, 1, 1),
 	ball_type_t("basketball",  "balls/basketball.png",          "",                             4.7, 0.50, 1, 1, 1),
-	ball_type_t("softball",    "balls/softball.jpg",            "",                             1.9, 1.50, 0, 1, 1), // "balls/softball_bump.jpg"    not in correct format
-	ball_type_t("tennis ball", "balls/tennis_ball.jpg",         "",                             1.3, 0.25, 0, 1, 0), // "balls/tennis_ball_bump.jpg" not in correct format
-	ball_type_t("beach ball",  "balls/beachball.jpg",           "",                            10.0, 0.05, 1, 0, 0)
+	ball_type_t("softball",    "balls/softball.jpg",            "",                             1.9, 1.20, 0, 1, 1), // "balls/softball_bump.jpg"    not in correct format
+	ball_type_t("tennis ball", "balls/tennis_ball.jpg",         "",                             1.3, 0.75, 0, 1, 0), // "balls/tennis_ball_bump.jpg" not in correct format
+	ball_type_t("beach ball",  "balls/beachball.jpg",           "",                            10.0, 0.01, 1, 0, 0)
 };
 
 class light_ix_assign_t {
