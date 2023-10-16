@@ -500,7 +500,16 @@ bool can_use_table_coll(room_object_t const &c) {
 unsigned check_table_collision(room_object_t const &c, point &pos, point const &p_last, float radius, vector3d *cnorm) {
 	cube_t cubes[5];
 	get_table_cubes(c, cubes); // top and 4 legs
-	return check_cubes_collision(cubes, 5, pos, p_last, radius, cnorm);
+	unsigned coll_ret(check_cubes_collision(cubes, 5, pos, p_last, radius, cnorm));
+	
+	if (c.type == TYPE_DRESSER || c.type == TYPE_NIGHTSTAND) {
+		if (sphere_cube_int_update_pos(pos, radius, get_dresser_middle(c), p_last, 0, cnorm)) {coll_ret |= (1<<5);}
+	}
+	else if (c.type == TYPE_DESK) {
+		if (c.desk_has_drawers()  && sphere_cube_int_update_pos(pos, radius, get_desk_drawers_part(c), p_last, 0, cnorm)) {coll_ret |= (1<<5);}
+		if (c.shape == SHAPE_TALL && sphere_cube_int_update_pos(pos, radius, get_desk_top_back(c),     p_last, 0, cnorm)) {coll_ret |= (1<<6);} // tall desk
+	}
+	return coll_ret;
 }
 unsigned check_chair_collision(room_object_t const &c, point &pos, point const &p_last, float radius, vector3d *cnorm) {
 	cube_t cubes[3]; // seat, back, legs_bcube
