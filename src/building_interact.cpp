@@ -1046,11 +1046,19 @@ void building_t::run_ball_update(vector<room_object_t>::iterator ball_it, point 
 	}
 	if (new_center == center) return; // not moving, done
 	// check for collisions and move to new location
+	vector3d const delta(new_center - center);
+	unsigned const num_steps(max(1U, unsigned(delta.mag()/radius))); // don't move more than ball radius
+	float const step_len(1.0/num_steps);
 	vector3d cnorm;
 	int obj_ix(-1);
 	float hardness(0.0);
+	bool had_coll(0);
 
-	if (interior->check_sphere_coll(*this, new_center, center, radius, ball_it, cnorm, hardness, obj_ix, 1)) { // is_ball=1
+	for (unsigned n = 0; n < num_steps && !had_coll; ++n) {
+		new_center = center + ((n+1)*step_len)*delta;
+		had_coll   = interior->check_sphere_coll(*this, new_center, center, radius, ball_it, cnorm, hardness, obj_ix, 1); // is_ball=1
+	}
+	if (had_coll) {
 		apply_floor_vel_thresh(velocity, cnorm);
 		apply_object_bounce_with_sound(*this, velocity, cnorm, new_center, hardness, on_floor);
 
