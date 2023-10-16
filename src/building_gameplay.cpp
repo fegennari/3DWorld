@@ -268,7 +268,10 @@ bldg_obj_type_t get_taken_obj_type(room_object_t const &obj) {
 	bldg_obj_type_t type(get_room_obj_type(obj));
 
 	if (obj.type == TYPE_LG_BALL) {
-		type.name = obj.get_ball_type().name; // use a more specific type name
+		ball_type_t const &bt(obj.get_ball_type());
+		type.name   = bt.name; // use a more specific type name
+		type.value  = bt.value;
+		type.weight = bt.weight;
 	}
 	else if (obj.type == TYPE_CLOTHES) {
 		if      (is_shirt_model(obj)) {type.name = "shirt";}

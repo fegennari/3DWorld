@@ -1126,7 +1126,7 @@ void building_t::run_ball_update(vector<room_object_t>::iterator ball_it, point 
 
 				if ((tfticks - last_splash_time) > 0.5*TICKS_PER_SECOND) { // at most once every 0.5s
 					bool const draw_splash(prev_zval-radius <= interior->water_zval && center.z-radius > interior->water_zval); // check if prev above the water line
-					float const mass(bt.radius*bt.radius*bt.radius*bt.density), splash_size(0.12*sqrt(mass));
+					float const splash_size(0.75*sqrt(bt.weight));
 					check_for_water_splash(new_center, splash_size, 1, draw_splash); // full_room_height=1
 					last_splash_time = tfticks;
 				}

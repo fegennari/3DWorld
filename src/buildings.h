@@ -102,17 +102,17 @@ enum {BOTTLE_TYPE_WATER=0, BOTTLE_TYPE_COKE, BOTTLE_TYPE_BEER, BOTTLE_TYPE_WINE,
 
 struct ball_type_t {
 	std::string name, tex_fname, nm_fname;
-	float radius, density; // radius is in inches
+	float radius, density, value, weight; // radius in inches, value in dollars, weight in pounds
 	bool can_kick, hurts_zombie, breaks_glass;
-	ball_type_t(std::string const &name_, std::string const &fn, std::string const &nm, float r, float d, bool ck, bool hz, bool bg) :
-		name(name_), tex_fname(fn), nm_fname(nm), radius(r), density(d), can_kick(ck), hurts_zombie(hz), breaks_glass(bg) {}
+	ball_type_t(std::string const &name_, std::string const &fn, std::string const &nm, float r, float d, float v, float w, bool ck, bool hz, bool bg) :
+		name(name_), tex_fname(fn), nm_fname(nm), radius(r), density(d), value(v), weight(w), can_kick(ck), hurts_zombie(hz), breaks_glass(bg) {}
 };
 ball_type_t const ball_types[NUM_BALL_TYPES] = {
-	ball_type_t("soccer ball", "balls/soccer_ball_diffuse.png", "balls/soccer_ball_normal.png", 4.4, 0.50, 1, 1, 1),
-	ball_type_t("basketball",  "balls/basketball.png",          "",                             4.7, 0.50, 1, 1, 1),
-	ball_type_t("softball",    "balls/softball.jpg",            "",                             1.9, 1.20, 0, 1, 1), // "balls/softball_bump.jpg"    not in correct format
-	ball_type_t("tennis ball", "balls/tennis_ball.jpg",         "",                             1.3, 0.75, 0, 1, 0), // "balls/tennis_ball_bump.jpg" not in correct format
-	ball_type_t("beach ball",  "balls/beachball.jpg",           "",                            10.0, 0.01, 1, 0, 0)
+	ball_type_t("soccer ball", "balls/soccer_ball_diffuse.png", "balls/soccer_ball_normal.png", 4.4, 0.50, 12.0, 0.90, 1, 1, 1),
+	ball_type_t("basketball",  "balls/basketball.png",          "",                             4.7, 0.50, 15.0, 1.38, 1, 1, 1),
+	ball_type_t("softball",    "balls/softball.jpg",            "",                             1.9, 1.20,  5.0, 0.40, 0, 1, 1), // "balls/softball_bump.jpg"    not in correct format
+	ball_type_t("tennis ball", "balls/tennis_ball.jpg",         "",                             1.3, 0.75,  2.0, 0.13, 0, 1, 0), // "balls/tennis_ball_bump.jpg" not in correct format
+	ball_type_t("beach ball",  "balls/beachball.jpg",           "",                            10.0, 0.01, 10.0, 0.10, 1, 0, 0)
 };
 
 class light_ix_assign_t {
