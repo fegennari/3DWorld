@@ -536,6 +536,12 @@ unsigned check_tub_collision(room_object_t const &c, point &pos, point const &p_
 	get_tub_cubes(c, cubes, (is_ball ? radius : 0.0));
 	return check_cubes_collision(cubes, 5, pos, p_last, radius, cnorm);
 }
+unsigned check_bookcase_collision(room_object_t const &c, point &pos, point const &p_last, float radius, vector3d *cnorm) {
+	cube_t top, middle, back, lr[2];
+	get_bookcase_cubes(c, top, middle, back, lr);
+	cube_t const cubes[3] = {middle, lr[0], lr[1]}; // ignore top and back since they should be contained in middle
+	return check_cubes_collision(cubes, 3, pos, p_last, radius, cnorm);
+}
 
 bool check_ramp_collision(room_object_t const &c, point &pos, point const &p_last, float radius, vector3d *cnorm) { // p_last is unused
 	if (!sphere_cube_intersect(pos, radius, c)) return 0;
@@ -1022,13 +1028,13 @@ bool building_interior_t::check_sphere_coll_room_objects(building_t const &build
 			else if (can_use_table_coll(*c) ) {coll_ret |= check_table_collision (*c, pos, p_last, radius, &cnorm);}
 			else if (c->type == TYPE_CHAIR  ) {coll_ret |= check_chair_collision (*c, pos, p_last, radius, &cnorm);}
 			else if (c->type == TYPE_TUB    ) {coll_ret |= check_tub_collision   (*c, pos, p_last, radius, &cnorm, is_ball);}
+			else if (c->type == TYPE_BCASE  ) {coll_ret |= check_bookcase_collision(*c, pos, p_last, radius, &cnorm);}
 			else if (c->type == TYPE_RAMP   ) {coll_ret |= (unsigned)check_ramp_collision   (*c, pos, p_last, radius, &cnorm);}
 			else if (c->type == TYPE_BALCONY) {had_coll |= (unsigned)check_balcony_collision(*c, pos, p_last, radius, &cnorm);}
 			else if (c->type == TYPE_POOL_TABLE) {coll_ret |= check_pool_table_collision(*c, pos, p_last, radius, &cnorm);}
 			else if (c->type == TYPE_STALL  && maybe_inside_room_object(*c, pos, radius)) {coll_ret |= (unsigned)check_stall_collision (*c, pos, p_last, radius, &cnorm);}
 			else if (c->type == TYPE_SHOWER && maybe_inside_room_object(*c, pos, radius)) {coll_ret |= (unsigned)check_shower_collision(*c, pos, p_last, radius, &cnorm);}
 			else {coll_ret |= (unsigned)sphere_cube_int_update_pos(pos, radius, bc, p_last, 0, &cnorm);} // skip_z=0
-			// what about small balls colliding with bookcases or couches?
 		}
 		if (coll_ret) { // collision with this object - set hardness
 			if      (c->type == TYPE_RUG && cnorm != plus_z) {cnorm = plus_z; continue;} // rug collision can only be +z
