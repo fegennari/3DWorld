@@ -493,6 +493,9 @@ unsigned check_bed_collision(room_object_t const &c, point &pos, point const &p_
 	coll_ret |= (check_cubes_collision(cubes, 4, pos, p_last, radius, cnorm) << 5); // check legs
 	return coll_ret;
 }
+bool can_use_table_coll(room_object_t const &c) {
+	return (c.type == TYPE_DESK || c.type == TYPE_DRESSER || c.type == TYPE_NIGHTSTAND || c.type == TYPE_TABLE);
+}
 // actually applies to tables, desks, dressers, and nightstands
 unsigned check_table_collision(room_object_t const &c, point &pos, point const &p_last, float radius, vector3d *cnorm) {
 	cube_t cubes[5];
@@ -1016,8 +1019,7 @@ bool building_interior_t::check_sphere_coll_room_objects(building_t const &build
 			// some object types are special because they're common collision objects and they're not filled cubes
 			if      (c->type == TYPE_CLOSET ) {coll_ret |= check_closet_collision(*c, pos, p_last, radius, &cnorm);} // special case to handle closet interiors
 			else if (c->type == TYPE_BED    ) {coll_ret |= check_bed_collision   (*c, pos, p_last, radius, &cnorm);}
-			else if (c->type == TYPE_TABLE  ) {coll_ret |= check_table_collision (*c, pos, p_last, radius, &cnorm);}
-			else if (c->type == TYPE_DESK   ) {coll_ret |= check_table_collision (*c, pos, p_last, radius, &cnorm);}
+			else if (can_use_table_coll(*c) ) {coll_ret |= check_table_collision (*c, pos, p_last, radius, &cnorm);}
 			else if (c->type == TYPE_CHAIR  ) {coll_ret |= check_chair_collision (*c, pos, p_last, radius, &cnorm);}
 			else if (c->type == TYPE_TUB    ) {coll_ret |= check_tub_collision   (*c, pos, p_last, radius, &cnorm, is_ball);}
 			else if (c->type == TYPE_RAMP   ) {coll_ret |= (unsigned)check_ramp_collision   (*c, pos, p_last, radius, &cnorm);}
@@ -1026,6 +1028,7 @@ bool building_interior_t::check_sphere_coll_room_objects(building_t const &build
 			else if (c->type == TYPE_STALL  && maybe_inside_room_object(*c, pos, radius)) {coll_ret |= (unsigned)check_stall_collision (*c, pos, p_last, radius, &cnorm);}
 			else if (c->type == TYPE_SHOWER && maybe_inside_room_object(*c, pos, radius)) {coll_ret |= (unsigned)check_shower_collision(*c, pos, p_last, radius, &cnorm);}
 			else {coll_ret |= (unsigned)sphere_cube_int_update_pos(pos, radius, bc, p_last, 0, &cnorm);} // skip_z=0
+			// what about small balls colliding with bookcases or couches?
 		}
 		if (coll_ret) { // collision with this object - set hardness
 			if      (c->type == TYPE_COUCH    ) {hardness = 0.6;} // couches are soft
@@ -1732,7 +1735,7 @@ void building_t::get_room_obj_cubes(room_object_t const &c, point const &pos, ve
 		get_tc_leg_cubes(cubes[5], 0.04, cubes); // head_width=0.04; cubes[5] is not overwritten
 		sm_cubes.insert(sm_cubes.end(), cubes, cubes+4); // legs are small
 	}
-	else if (c.type == TYPE_DESK || c.type == TYPE_DRESSER || c.type == TYPE_NIGHTSTAND || c.type == TYPE_TABLE) { // objects with legs
+	else if (can_use_table_coll(c)) { // objects with legs
 		cube_t cubes[5];
 		get_table_cubes(c, cubes); // top and 4 legs
 		lg_cubes.push_back(cubes[0]); // top of table, etc.
@@ -1890,7 +1893,7 @@ int building_t::check_line_coll_expand(point const &p1, point const &p2, float r
 				get_tc_leg_cubes(cubes[5], 0.04, cubes); // head_width=0.04; cubes[5] is not overwritten
 				if (line_int_cubes_exp(p1, p2, cubes, 4, expand)) return 9; // check legs
 			}
-			else if (c->type == TYPE_DESK || c->type == TYPE_DRESSER || c->type == TYPE_NIGHTSTAND || c->type == TYPE_TABLE) { // objects with legs
+			else if (can_use_table_coll(*c)) { // objects with legs
 				cube_t cubes[5];
 				get_table_cubes(*c, cubes); // top and 4 legs
 				if (line_int_cubes_exp(p1, p2, cubes, 5, expand)) return 9;
