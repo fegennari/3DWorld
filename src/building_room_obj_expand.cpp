@@ -576,17 +576,18 @@ void building_room_geom_t::get_shelf_objects(room_object_t const &c_in, cube_t c
 			C.shape = SHAPE_CUBE; // reset for next object type
 		}
 		// add large balls to houses
-		float const ball_radius(0.048*1.1*dz); // 4.7 inches
-
-		if (is_house && 2.1*ball_radius < min(c_sz.x, c_sz.y)) { // shelf is wide/deep enough for paint cans
+		if (is_house) {
 			unsigned const num_balls(rgen.rand() % 3); // 0-2
 			C.color = WHITE;
 			C.type  = TYPE_LG_BALL;
 			C.shape = SHAPE_SPHERE;
 
 			for (unsigned n = 0; n < num_balls; ++n) {
+				unsigned const btype(rgen.rand() % NUM_BALL_TYPES);
+				float const ball_radius(ball_types[btype].radius*1.1*dz/(12*8)); // assumes 8 foot floor spacing, and bt.radius in inches
+				if (2.1*ball_radius > min(c_sz.x, c_sz.y)) continue; // shelf is not wide/deep enough for balls of this type
 				gen_xy_pos_for_round_obj(C, S, ball_radius, 2.0*ball_radius, ball_radius, rgen);
-				C.item_flags = rgen.rand_bool(); // random type
+				C.item_flags = btype;
 				add_if_not_intersecting(C, objects, cubes);
 			}
 			C.shape      = SHAPE_CUBE; // reset for next object type
@@ -946,12 +947,13 @@ void building_t::add_box_contents(room_object_t const &box) {
 		}
 		else if (obj_type == 2) { // ball - only 1
 			if (!is_house) continue; // balls in houses only, not office buildings
-			float const radius(0.048*floor_spacing);
+			unsigned const btype(rgen.rand() % (NUM_BALL_TYPES-2)); // no beach balls or tennis balls
+			float const radius(ball_types[btype].radius*floor_spacing/(12*8)); // assumes 8 foot floor spacing, and bt.radius in inches
 			if (c.min_len() < 2.0*radius) continue; // can't fit any of this item
 			point const center(cube_bot_center(c) + radius*plus_z);
 			cube_t ball; ball.set_from_sphere(center, radius);
 			objs.emplace_back(ball, TYPE_LG_BALL, room_id, 0, 0, flags, light_amt, SHAPE_SPHERE);
-			objs.back().item_flags = rgen.rand_bool(); // selects ball type
+			objs.back().item_flags = btype;
 		}
 		else if (obj_type == 3) { // paint cans
 			float const height(0.64*base_height), radius(0.28*base_height);

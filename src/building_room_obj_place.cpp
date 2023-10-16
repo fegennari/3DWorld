@@ -880,7 +880,7 @@ bool building_t::add_bed_to_room(rand_gen_t &rgen, room_t const &room, vect_cube
 bool building_t::add_ball_to_room(rand_gen_t &rgen, room_t const &room, cube_t const &place_area, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
 	unsigned const btype(rgen.rand() % NUM_BALL_TYPES);
 	ball_type_t const &bt(ball_types[btype]);
-	float const radius(bt.radius*get_window_vspace()/(12*8)); // assumes 8 foot floor spacing, and rbt.radius in inches
+	float const radius(bt.radius*get_window_vspace()/(12*8)); // assumes 8 foot floor spacing, and bt.radius in inches
 	cube_t ball_area(place_area);
 	ball_area.expand_by_xy(-radius*rgen.rand_uniform(1.0, 10.0));
 	vect_room_object_t &objs(interior->room_geom->objs);
