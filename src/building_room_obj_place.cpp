@@ -2034,6 +2034,13 @@ cube_t get_pool_table_top_surface(room_object_t const &c) {
 	top.z1() = c.z2() - 0.045*c.dz();
 	return top;
 }
+bool check_dist_and_add_center(point const &pos, float diameter_xy, vector<point> &centers) {
+	for (point const &p : centers) {
+		if (dist_xy_less_than(p, pos, diameter_xy)) return 0;
+	}
+	centers.push_back(pos);
+	return 1;
+}
 // room with pool table, not swimming pool, though maybe we'll need an indoor swimming pool room as well
 bool building_t::add_pool_room_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt) {
 	float const floor_spacing(get_window_vspace()), sz_in_feet(floor_spacing/8.0), clearance(get_min_front_clearance_inc_people());
@@ -2070,12 +2077,7 @@ bool building_t::add_pool_room_objs(rand_gen_t rgen, room_t const &room, float z
 	for (unsigned n = 0; n < num_balls; ++n) {
 		for (unsigned N = 0; N < 10; ++N) { // 10 tries to find a valid pos; if we can't find a pos, the ball won't be placed
 			point const pos(gen_xy_pos_in_area(top, ball_radius, rgen, ball_zval));
-			bool coll(0);
-
-			for (point const &p : centers) {
-				if (dist_xy_less_than(p, pos, ball_diameter)) {coll = 1; break;}
-			}
-			if (coll) continue; // bad pos
+			if (!check_dist_and_add_center(pos, ball_diameter, centers)) continue;
 			centers.push_back(pos);
 			cube_t ball;
 			ball.set_from_sphere(pos, ball_radius);
@@ -2087,25 +2089,37 @@ bool building_t::add_pool_room_objs(rand_gen_t rgen, room_t const &room, float z
 	} // for n
 
 	// place pool cues; these can be on the wall, on the table, or on the floor leaning against the table
-	float const cue_len(57*sz_in_feet/12), cue_radius(0.5*sz_in_feet/12); // 57 inches x 1 inch diameter
+	float const cue_len(57*sz_in_feet/12), cue_diameter(1.0*sz_in_feet/12), cue_radius(0.5*cue_diameter); // 57 inches x 1 inch diameter
 	bool const cue_dir(rgen.rand_bool());
 	cube_t cue;
 
-	if (1 || rgen.rand_bool()) { // on the top edges of the pool table
+	if (rgen.rand_bool()) { // on the top edges of the pool table
 		set_cube_zvals(cue, ptable.z2(), (ptable.z2() + 2.0*cue_radius));
 		set_wall_width(cue, ptable.get_center_dim(long_dim), 0.5*cue_len, long_dim);
 
 		for (unsigned d = 0; d < 2; ++d) { // for each long side
 			set_wall_width(cue, (ptable.d[!long_dim][d] + (d ? -1.0 : 1.0)*0.05*width), cue_radius, !long_dim);
-			objs.emplace_back(cue, TYPE_POOL_CUE, room_id, long_dim, cue_dir, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CYLIN, LT_BROWN);
+			objs.emplace_back(cue, TYPE_POOL_CUE, room_id, long_dim, cue_dir, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CYLIN, WHITE);
 		}
 	}
 	else { // on the floor leaning up against the pool table
-		// TODO
-		for (unsigned d = 0; d < 2; ++d) {
+		unsigned const num_cues(rgen.rand_bool() ? 4 : 2);
+		bool const cdim(rgen.rand_bool()); // all on the same or different sides
+		centers.clear();
 
-		}
+		for (unsigned n = 0; n < num_cues; ++n) {
+			bool const cdir(rgen.rand_bool()); // side to place the pool cues on
+			point pos(0.0, 0.0, zval);
+			pos[ cdim] = ptable.d[cdim][cdir] + (cdir ? 1.0 : -1.0)*cue_radius;
+			pos[!cdim] = rgen.rand_uniform((ptable.d[!cdim][0] + 8.0*cue_radius), (ptable.d[!cdim][1] - 8.0*cue_radius));
+			if (!check_dist_and_add_center(pos, cue_diameter, centers)) continue;
+			cue.set_from_point(pos);
+			cue.expand_by_xy(cue_radius);
+			cue.z2() += cue_len;
+			objs.emplace_back(cue, TYPE_POOL_CUE, room_id, 0, 1, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CYLIN, WHITE); // dim=2 (calculated from size)
+		} // for n
 	}
+	// else attach to the wall with a holder?
 	
 	// maybe place couch(es) along a wall
 	unsigned const counts[4] = {0, 1, 1, 2}; // one couch is more common
