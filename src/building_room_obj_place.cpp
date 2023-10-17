@@ -2087,12 +2087,12 @@ bool building_t::add_pool_room_objs(rand_gen_t rgen, room_t const &room, float z
 	} // for n
 
 	// place pool cues; these can be on the wall, on the table, or on the floor leaning against the table
-	float const cue_len(57*sz_in_feet/12), cue_radius(1.0*sz_in_feet/12); // 57 inches x 2 inch diameter
+	float const cue_len(57*sz_in_feet/12), cue_radius(0.5*sz_in_feet/12); // 57 inches x 1 inch diameter
 	bool const cue_dir(rgen.rand_bool());
 	cube_t cue;
 
-	if (rgen.rand_bool()) { // on the top edges of the pool table
-		set_cube_zvals(cue, ptable.z2(), (ptable.z2() + cue_radius));
+	if (1 || rgen.rand_bool()) { // on the top edges of the pool table
+		set_cube_zvals(cue, ptable.z2(), (ptable.z2() + 2.0*cue_radius));
 		set_wall_width(cue, ptable.get_center_dim(long_dim), 0.5*cue_len, long_dim);
 
 		for (unsigned d = 0; d < 2; ++d) { // for each long side

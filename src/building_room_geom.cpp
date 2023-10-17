@@ -3124,12 +3124,18 @@ void building_room_geom_t::add_pool_cue(room_object_t const &c) {
 	vector3d const sz(c.get_size());
 	unsigned const dim(get_max_dim(sz));
 	float const len(sz[dim]), radius(0.5*sz[(dim+1)%3]); // either other dim should work for radius
-	point start(center), end(center);
-	start[dim] = c.d[dim][!c.dir];
-	end  [dim] = c.d[dim][ c.dir];
-	rgeom_mat_t &mat(get_untextured_material(1, 0, 1)); // shadowed, small
-	// TODO: cylinders: dark back half, light front half, white tip, black cone at end
-	mat.add_cylin_to_verts(start, end, radius, 0.5*radius, apply_light_color(c), 1, 1); // draw both ends
+	point tip(center), p1(center), p2(center), end(center);
+	tip[dim] = c.d[dim][ c.dir];
+	end[dim] = c.d[dim][!c.dir];
+	p1 [dim] = tip[dim] - 0.004*len*(c.dir ? 1.0 : -1.0);
+	p2 [dim] = end[dim] + 0.006*len*(c.dir ? 1.0 : -1.0);
+	tid_nm_pair_t tex(get_texture_by_name("interiors/pool_cue.png"), 1.0, 1); // shadowed
+	tex.set_specular(0.5, 50.0);
+	rgeom_mat_t &mat(get_material(tex, 1, 0, 1)); // shadowed, small
+	mat.add_cylin_to_verts(p2, p1, radius, 0.5*radius, c.color, 0, 0); // wooden body; no ends; no apply_light_color()
+	rgeom_mat_t &ends_mat(get_untextured_material(0, 0, 1)); // unshadowed, small
+	ends_mat.add_cylin_to_verts(p1,  tip, 0.50*radius, 0.5*radius, WHITE, 0, 1); // tip; draw top end only
+	ends_mat.add_cylin_to_verts(end, p2,  0.75*radius, 1.0*radius, BLACK, 1, 0); // bumper; draw bottom end only
 }
 
 void building_room_geom_t::add_toaster_proxy(room_object_t const &c) { // draw a simple untextured XY cube to show a lower LOD model of the toaster
