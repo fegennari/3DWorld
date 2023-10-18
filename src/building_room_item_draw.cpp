@@ -938,6 +938,7 @@ void building_room_geom_t::add_small_static_objs_to_verts(vect_room_object_t con
 		case TYPE_SERVER:     add_server  (c); break;
 		case TYPE_POOL_BALL:  add_pool_ball(c); break;
 		case TYPE_POOL_CUE:   add_pool_cue (c); break;
+		case TYPE_WALL_MOUNT: add_wall_mount (c); break;
 		case TYPE_DBG_SHAPE:  add_debug_shape(c); break;
 		default: break;
 		} // end switch

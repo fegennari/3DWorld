@@ -981,10 +981,9 @@ bool building_t::place_obj_along_wall(room_object type, room_t const &room, floa
 		float center(0.0);
 		if (pref_centered && !center_tried[orient]) {center = place_area.get_center_dim(!dim); center_tried[orient] = 1;} // try centered
 		else {center = rgen.rand_uniform(place_area.d[!dim][0]+hwidth, place_area.d[!dim][1]-hwidth);} // random position
-		c.d[ dim][ dir] = place_area.d[dim][dir];
-		c.d[ dim][!dir] = c.d[dim][dir] + (dir ? -1.0 : 1.0)*depth;
-		c.d[!dim][   0] = center - hwidth;
-		c.d[!dim][   1] = center + hwidth;
+		c.d[dim][ dir] = place_area.d[dim][dir];
+		c.d[dim][!dir] = c.d[dim][dir] + (dir ? -1.0 : 1.0)*depth;
+		set_wall_width(c, center, hwidth, !dim);
 
 		if (not_at_window && classify_room_wall(room, zval, dim, dir, 0) == ROOM_WALL_EXT) {
 			cube_t const part(get_part_for_room(room));
@@ -2088,26 +2087,64 @@ bool building_t::add_pool_room_objs(rand_gen_t rgen, room_t const &room, float z
 		} // for n
 	} // for n
 
-	// place pool cues; these can be on the wall, on the table, or on the floor leaning against the table
+	// place wall mount and pool cues; these can be on the wall, on the table, or on the floor leaning against the table
 	float const cue_len(57*sz_in_feet/12), cue_diameter(1.0*sz_in_feet/12), cue_radius(0.5*cue_diameter); // 57 inches x 1 inch diameter
 	bool const cue_dir(rgen.rand_bool());
 	cube_t cue;
+	// attach wall mount for pool cues
+	vector3d const fc_sz_scale(0.15, 3.6, 1.0); // depth, width, height
+	cube_t const place_area(get_walkable_room_bounds(room)); // right against the wall
+	float const mount_zval(zval + 0.7*cue_len);
+	unsigned const wall_mount_obj_ix(objs.size());
+	unsigned num_table_cues(0), num_leaning_cues(0);
 
-	if (rgen.rand_bool()) { // on the top edges of the pool table
+	if (place_obj_along_wall(TYPE_WALL_MOUNT, room, 0.08*cue_len, fc_sz_scale, rgen, mount_zval, room_id, tot_light_amt, place_area, objs_start, 10.0, 0, 4, 1, WHITE)) {
+		assert(objs.size() == wall_mount_obj_ix+2); // must have added wall mount + blocker
+		objs.back().z1() = zval; // extend blocker down to the floor to prevent a couch from being placed here
+		unsigned const num_cues(4);
+		room_object_t const mount(objs[wall_mount_obj_ix]);
+		bool const cdim(mount.dim), cdir(mount.dir);
+		point pos(0.0, 0.0, mount.zc());
+		pos[cdim] = mount.d[cdim][cdir] + (cdir ? 1.0 : -1.0)*cue_radius;
+		float const spacing(mount.get_sz_dim(!cdim)/(num_cues + 1)), block_hwidth(0.4*cue_radius);
+
+		for (unsigned n = 0; n < num_cues; ++n) {
+			pos[!cdim] = mount.d[!cdim][0] + (n+1)*spacing;
+			cue.set_from_point(pos);
+			cue.expand_by_xy(cue_radius);
+			cue.expand_in_dim(2, 0.5*cue_len); // set height/length
+			// either add the cue to the holder, on the table, or leaning against the table
+			if (rgen.rand_bool()) {++((num_table_cues < 2 && rgen.rand_bool()) ? num_table_cues : num_leaning_cues);}
+			else {objs.emplace_back(cue, TYPE_POOL_CUE, room_id, 0, 1, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CYLIN, WHITE);} // dim=2 (calculated from size)
+
+			for (unsigned d = 0; d < 2; ++d) { // add tiny blocks on each side of the cue, even if not present
+				room_object_t block(mount);
+				block.expand_in_dim(2, -0.2*mount.dz()); // shrink in Z
+				for (unsigned e = 0; e < 2; ++e) {block.d[cdim][e] = cue.d[cdim][e];}
+				set_wall_width(block, (pos[!cdim] + (d ? 1.0 : -1.0)*(0.7*cue_radius + block_hwidth)), block_hwidth, !cdim);
+				objs.push_back(block);
+			}
+		} // for n
+	}
+	else { // failed to place wall mount
+		(rgen.rand_bool() ? num_table_cues : num_leaning_cues) = 2; // two cues, either on the table or leaning against it
+	}
+	if (num_table_cues > 0) { // on the top edges of the pool table
 		set_cube_zvals(cue, ptable.z2(), (ptable.z2() + 2.0*cue_radius));
 		set_wall_width(cue, ptable.get_center_dim(long_dim), 0.5*cue_len, long_dim);
+		bool const first_side(rgen.rand_bool());
 
-		for (unsigned d = 0; d < 2; ++d) { // for each long side
+		for (unsigned n = 0; n < num_table_cues; ++n) { // for each long side; can be at most 2
+			bool const d((n == 1) ^ first_side);
 			set_wall_width(cue, (ptable.d[!long_dim][d] + (d ? -1.0 : 1.0)*0.05*width), cue_radius, !long_dim);
 			objs.emplace_back(cue, TYPE_POOL_CUE, room_id, long_dim, cue_dir, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CYLIN, WHITE);
 		}
 	}
-	else { // on the floor leaning up against the pool table
-		unsigned const num_cues(rgen.rand_bool() ? 4 : 2);
+	if (num_leaning_cues > 0) { // on the floor leaning up against the pool table
 		bool const cdim(rgen.rand_bool()); // all on the same or different sides
 		centers.clear();
 
-		for (unsigned n = 0; n < num_cues; ++n) {
+		for (unsigned n = 0; n < num_leaning_cues; ++n) {
 			bool const cdir(rgen.rand_bool()); // side to place the pool cues on
 			point pos(0.0, 0.0, zval);
 			pos[ cdim] = ptable.d[cdim][cdir] + (cdir ? 1.0 : -1.0)*cue_radius;
@@ -2119,7 +2156,6 @@ bool building_t::add_pool_room_objs(rand_gen_t rgen, room_t const &room, float z
 			objs.emplace_back(cue, TYPE_POOL_CUE, room_id, 0, 1, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CYLIN, WHITE); // dim=2 (calculated from size)
 		} // for n
 	}
-	// else attach to the wall with a holder?
 	
 	// maybe place couch(es) along a wall
 	unsigned const counts[4] = {0, 1, 1, 2}; // one couch is more common

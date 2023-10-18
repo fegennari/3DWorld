@@ -149,6 +149,7 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_SERVER    ] = bldg_obj_type_t(1, 1, 1, 1, 0, 0, 2, 10000, 400.00,"server"); // small because it's in a windowless room; too heavy for inventory
 	bldg_obj_types[TYPE_POOL_BALL ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2,  2.0,  0.37,  "pool ball");
 	bldg_obj_types[TYPE_POOL_CUE  ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 20.0,  1.2,   "pool cue");
+	bldg_obj_types[TYPE_WALL_MOUNT] = bldg_obj_type_t(0, 0, 0, 0, 1, 0, 2,  0.0,  0.0,   "wall mounting bracket");
 	bldg_obj_types[TYPE_DBG_SHAPE ] = bldg_obj_type_t(0, 0, 0, 0, 0, 0, 1,  0.0,  0.0,   "debug shape"); // small (optimization)
 	// player_coll, ai_coll, rat_coll, pickup, attached, is_model, lg_sm, value, weight, name [capacity]
 	// 3D models

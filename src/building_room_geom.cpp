@@ -3138,6 +3138,11 @@ void building_room_geom_t::add_pool_cue(room_object_t const &c) {
 	ends_mat.add_cylin_to_verts(end, p2,  0.75*radius, 1.0*radius, BLACK, 1, 0); // bumper; draw bottom end only
 }
 
+// wooden block used to hold pool cues, but could be used for other purposes
+void building_room_geom_t::add_wall_mount(room_object_t const &c) {
+	get_wood_material(128.0, 1, 0, 1).add_cube_to_verts(c, apply_light_color(c), all_zeros, ~get_face_mask(c.dim, !c.dir)); // shadowed, small
+}
+
 void building_room_geom_t::add_toaster_proxy(room_object_t const &c) { // draw a simple untextured XY cube to show a lower LOD model of the toaster
 	cube_t c2(c);
 	c2.expand_in_dim( c.dim, -0.10*c.get_length());
