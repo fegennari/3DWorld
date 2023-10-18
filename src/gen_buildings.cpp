@@ -2229,7 +2229,7 @@ class building_creator_t {
 
 	struct grid_elem_t {
 		vector<cube_with_ix_t> bc_ixs;
-		vect_cube_t road_segs; // or driveways
+		vect_cube_t road_segs; // or driveways, porches, etc.
 		cube_t bcube, extb_bcube; // base building, extended basement
 		bool has_room_geom=0;
 
@@ -2306,7 +2306,7 @@ class building_creator_t {
 
 	void add_building_to_grid(building_t const &b, unsigned gix, unsigned bix) {
 		grid_by_tile[gix].add_building(b, bix);
-		if (b.enable_driveway_coll() && !b.driveway.is_all_zeros()) {grid_by_tile[gix].add_bcube(b.driveway, bix, 1);} // add driveway as well
+		if (b.enable_driveway_coll() && !b.driveway.is_all_zeros()) {grid_by_tile[gix].add_bcube(b.driveway, bix, 1);} // add driveway as well, but not porch
 	}
 	void build_grid_by_tile(bool single_tile) {
 		grid_by_tile.clear();
@@ -2748,12 +2748,15 @@ public:
 		// since bcubes should only increase in size, we don't need to reset grid bcubes
 		for (auto g = grid.begin(); g != grid.end(); ++g) {g->bc_ixs.clear();}
 
-		for (auto b = buildings.begin(); b != buildings.end(); ++b) { // add driveways and calculate has_interior_geom
+		for (auto b = buildings.begin(); b != buildings.end(); ++b) { // add driveways, porches, etc. and calculate has_interior_geom
+			unsigned const bix(b - buildings.begin());
+
 			if (b->enable_driveway_coll()) {
-				if (!b->driveway.is_all_zeros()) {add_to_grid(b->driveway, (b - buildings.begin()), 1);}
-				if (!b->porch   .is_all_zeros()) {add_to_grid(b->porch,    (b - buildings.begin()), 1);}
+				if (!b->driveway.is_all_zeros()) {add_to_grid(b->driveway, bix, 1);}
+				if (!b->porch   .is_all_zeros()) {add_to_grid(b->porch,    bix, 1);}
+				//for (ext_step_t const &step : b->ext_steps) {if (step.at_ground) {add_to_grid(step, bix, 1);}} // doesn't work, steps not created yet
 			}
-			add_to_grid(b->bcube, (b - buildings.begin()), 0);
+			add_to_grid(b->bcube, bix, 0);
 			buildings_bcube.assign_or_union_with_cube(b->bcube);
 			has_interior_geom |= b->has_interior();
 		} // for b

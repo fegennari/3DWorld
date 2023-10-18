@@ -1022,7 +1022,7 @@ void get_texture_ixs(int &sand_tex_ix, int &dirt_tex_ix, int &grass_tex_ix, int 
 
 void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 
-	//timer_t timer("Create Tile Weights Texture");
+	//highres_timer_t timer("Create Tile Weights Texture"); // 1.38 base, 2.0 with buildings/roads/driveways/porches
 	assert(zvals.size() == zvsize*zvsize);
 	unsigned const tsize(stride), num_texels(tsize*tsize);
 	int sand_tex_ix(-1), dirt_tex_ix(-1), grass_tex_ix(-1), rock_tex_ix(-1), snow_tex_ix(-1);

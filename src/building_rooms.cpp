@@ -1269,7 +1269,8 @@ void building_t::add_ext_door_steps(unsigned ext_objs_start) {
 		unsigned flags(RO_FLAG_EXTERIOR | (above_ground ? RO_FLAG_ADJ_BOT : 0));
 		unsigned const obj_ix(objs.size());
 		objs.emplace_back(step, TYPE_EXT_STEP, 0, dim, !dir, flags, 1.0, shape, step_color);
-		if (above_ground && !is_garage) {to_add_stairs.push_back(obj_ix);} // add steps up to this door
+		if ( above_ground && !is_garage) {to_add_stairs.push_back(obj_ix);} // add steps up to this door
+		//if (!above_ground && !is_garage) {ext_steps.emplace_back(step, !dim, 0, dir, 1, 0, 1);} // no_grass marker
 	} // for d
 	if (to_add_stairs.empty()) return; // done
 	cube_t const &part(parts[0]); // assumes door is on parts[0] (single part)
@@ -1355,7 +1356,7 @@ void building_t::add_ext_door_steps(unsigned ext_objs_start) {
 					details.emplace_back(collider, DETAIL_OBJ_COLLIDER);
 				}
 			} // for cand
-			ext_steps.back().is_base = 1;
+			ext_steps.back().is_base = ext_steps.back().at_ground = 1; // last step is at the bottom
 			// add side railing, with balusters
 			colorRGBA const railing_color(BLACK);
 			cube_t railing(cand_steps[min(size_t(1), cand_steps.size()-1U)]); // second from the top
