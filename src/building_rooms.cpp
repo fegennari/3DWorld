@@ -127,7 +127,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 	unsigned cand_bathroom(rooms.size()); // start at an invalid value
 	unsigned added_kitchen_mask(0), added_living_mask(0), added_bath_mask(0); // per-floor
 	unsigned added_bathroom_objs_mask(0);
-	bool added_bedroom(0), added_library(0), added_dining(0), added_laundry(0), added_basement_utility(0), added_fireplace(0), added_pool_room(0);
+	bool added_bedroom(0), added_library(0), added_dining(0), added_laundry(0), added_basement_utility(0), added_fireplace(0), added_pool_room(0), added_swimming_pool(0);
 	light_ix_assign_t light_ix_assign;
 	interior->create_fc_occluders(); // not really part of room geom, but needed for generating and drawing room geom, so we create them here
 	has_int_fplace = 0; // reset for this generation
@@ -472,6 +472,12 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 						}
 					}
 				}
+			}
+			// the plan is that swimming pools are in the basement so that we don't need to cut out the terrain,
+			// and in the extended basement so that we can create a custom lower floor area; for houses, and I guess office buildings as well
+			if (!added_obj && !added_swimming_pool && is_ext_basement && add_swimming_pool_room_objs(rgen, *r, room_center.z, room_id, tot_light_amt)) { // swimming pool
+				r->assign_to(RTYPE_SWIM, f);
+				added_swimming_pool = added_obj = 1;
 			}
 			if (!added_obj && !added_pool_room && is_house && is_basement && add_pool_room_objs(rgen, *r, room_center.z, room_id, tot_light_amt)) { // pool room
 				r->assign_to(RTYPE_POOL, f);

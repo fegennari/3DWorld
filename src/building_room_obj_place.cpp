@@ -2040,7 +2040,7 @@ bool check_dist_and_add_center(point const &pos, float diameter_xy, vector<point
 	centers.push_back(pos);
 	return 1;
 }
-// room with pool table, not swimming pool, though maybe we'll need an indoor swimming pool room as well
+// room with pool table, not swimming pool, that one is below
 bool building_t::add_pool_room_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt) {
 	float const floor_spacing(get_window_vspace()), sz_in_feet(floor_spacing/8.0), clearance(get_min_front_clearance_inc_people());
 	vector3d const room_sz(room.get_size());
@@ -2171,6 +2171,16 @@ bool building_t::add_pool_room_objs(rand_gen_t rgen, room_t const &room, float z
 		}
 	}
 	return 1;
+}
+
+// for indoor pools, currently in extended basements
+bool building_t::add_swimming_pool_room_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt) {
+	bool const long_dim(room.dx() < room.dy());
+	cube_t const place_area(get_walkable_room_bounds(room));
+	float const floor_spacing(get_window_vspace()), room_len(place_area.get_sz_dim(long_dim)), room_width(place_area.get_sz_dim(!long_dim));
+	if (room_len < 3.0*floor_spacing || room_width < 2.0*floor_spacing) return 0; // too small
+	// TODO
+	return 0; // not yet implemented
 }
 
 bool get_fire_ext_height_and_radius(float window_vspacing, float &height, float &radius) {
