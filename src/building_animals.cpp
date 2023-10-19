@@ -1476,7 +1476,9 @@ void building_t::update_fly(insect_t &fly, point const &camera_bs, float timeste
 		int const ret(check_for_animal_coll(fly, hheight, 0.0, 0, target_player, camera_bs, timestep, pos, (pos + lookahead), coll_dir));
 	
 		if (ret) { // collision
-			if (coll_dir == zero_vector) {coll_dir = fly.dir;} // use our own dir as coll_dir if not set
+			// if coll_dir is not set, use the direction we last moved in, or our dir if that's zero
+			if (coll_dir == zero_vector) {coll_dir = ((fly.last_pos == fly.pos) ? fly.dir : (fly.pos - fly.last_pos).get_norm());}
+			fly.pos = fly.last_pos; // move back to a point where we didn't collide (assuming update is frequent enough)
 			fly.dir = rgen.signed_rand_vector_norm();
 			if (dot_product(fly.dir, coll_dir) > 0.0) {fly.dir.negate();}
 			fly.delta_dir = zero_vector; // reset delta_dir on coll
