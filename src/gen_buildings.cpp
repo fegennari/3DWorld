@@ -2754,7 +2754,16 @@ public:
 			if (b->enable_driveway_coll()) {
 				if (!b->driveway.is_all_zeros()) {add_to_grid(b->driveway, bix, 1);}
 				if (!b->porch   .is_all_zeros()) {add_to_grid(b->porch,    bix, 1);}
-				//for (ext_step_t const &step : b->ext_steps) {if (step.at_ground) {add_to_grid(step, bix, 1);}} // doesn't work, steps not created yet
+#if 0 // this works, but makes grass placement too slow (2ms => 7ms)
+				for (auto const &d : b->doors) { // handle steps for exterior doors
+					if (d.type == tquad_with_ix_t::TYPE_GDOOR) continue; // already handled by driveway
+					cube_t const c(d.get_bcube());
+					bool const dim(c.dy() < c.dx()), dir(d.get_norm()[dim] > 0.0);
+					cube_t step(c);
+					step.d[dim][dir] += (dir ? 1.0 : -1.0)*0.5*c.dz(); // extend outward
+					add_to_grid(step, bix, 1);
+				}
+#endif
 			}
 			add_to_grid(b->bcube, bix, 0);
 			buildings_bcube.assign_or_union_with_cube(b->bcube);
