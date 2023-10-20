@@ -118,18 +118,6 @@ bool building_t::check_for_water_splash(point const &pos_bs, float size, bool fu
 	}
 	return 1;
 }
-bool building_t::point_in_water_area(point const &p, bool full_room_height) const {
-	return (has_water() && get_water_cube(full_room_height).contains_pt(p));
-}
-bool building_t::set_float_height(point &pos, float radius, float ceil_zval, float density) const { // density in (0.0, 1.0]
-	assert(density > 0.0);
-	if (density >= 1.0) return 0; // sinks
-	if (!point_in_water_area((pos - radius*plus_z), 0)) return 0; // test bottom point; full_room_height=0
-	max_eq(pos.z, (interior->water_zval + radius*(1.0f - 2.0f*density))); // floats on the water
-	if (radius > 0.0) {min_eq(pos.z, ceil_zval - radius);} // if water level is high, keep below the ceiling
-	return 1;
-}
-
 cube_t building_t::calc_splash_bounds(point const &pos) const {
 	if (!interior || !point_in_water_area(pos)) return cube_t(); // error?
 	index_pair_t start, end;
@@ -157,6 +145,58 @@ cube_t building_t::calc_splash_bounds(point const &pos) const {
 	return bounds; // zvals should be unused
 }
 
+bool building_t::point_in_water_area(point const &p, bool full_room_height) const {
+	return (has_water() && get_water_cube(full_room_height).contains_pt(p));
+}
+bool building_t::set_float_height(point &pos, float radius, float ceil_zval, float density) const { // density in (0.0, 1.0]
+	assert(density > 0.0);
+	if (density >= 1.0) return 0; // sinks
+	if (!point_in_water_area((pos - radius*plus_z), 0)) return 0; // test bottom point; full_room_height=0
+	max_eq(pos.z, (interior->water_zval + radius*(1.0f - 2.0f*density))); // floats on the water
+	if (radius > 0.0) {min_eq(pos.z, ceil_zval - radius);} // if water level is high, keep below the ceiling
+	return 1;
+}
+float building_t::get_floor_below_water_level() const {
+	assert(has_water());
+	unsigned const floor_ix(get_ext_basement_floor_ix(interior->water_zval));
+	return interior->basement_ext_bcube.z1() + floor_ix*get_window_vspace();
+}
+cube_t building_t::get_water_cube(bool full_room_height) const {
+	if (!has_water()) return cube_t(); // no water; error?
+
+	if (has_pool()) {
+		cube_t water(interior->pool);
+		water.z2() = interior->water_zval;
+		return water;
+	}
+	assert(has_ext_basement()); // backrooms
+	cube_t water(interior->basement_ext_bcube);
+	if (full_room_height) {water.z2() = get_floor_below_water_level() + get_window_vspace();} // floor above water level
+	else {water.z2() = interior->water_zval;}
+	return water;
+}
+bool building_t::water_visible_to_player() const {
+	if (!has_water()) return 0;
+	vector3d const xlate(get_tiled_terrain_model_xlate());
+	point const camera_bs(camera_pdu.pos - xlate);
+	if (point_in_water_area(camera_bs)) return 1; // definitely visible
+	if (!point_in_extended_basement_not_basement(camera_bs)) return 0;
+	float const floor_spacing(get_window_vspace()), floor_below(get_floor_below_water_level()), floor_above(floor_below + floor_spacing);
+	if (camera_bs.z > floor_above + floor_spacing)     return 0; // player not on the floor with water or the floor above (in case water is visible through stairs)
+	if (!is_rot_cube_visible(get_water_cube(), xlate)) return 0;
+
+	for (stairwell_t const &s : interior->stairwells) { // check stairs visibility
+		if (s.z1() > interior->water_zval) continue; // above the water level
+		if (s.z2() < floor_above)          continue; // stairs don't go up to the floor the player is on
+		if (!interior->basement_ext_bcube.contains_cube(s))          continue; // not extended basement stairs
+		if (!s.closest_dist_less_than(camera_bs, 5.0*floor_spacing)) continue; // too far away
+		cube_t floor_cut(s);
+		set_cube_zvals(floor_cut, floor_above, floor_above+get_fc_thickness());
+		if (is_rot_cube_visible(floor_cut, xlate)) return 1;
+	} // for s
+	return 0;
+}
+
 void building_t::draw_water(vector3d const &xlate) const {
 	if (!(display_mode & 0x04)) return; // water disabled
 	
@@ -164,7 +204,8 @@ void building_t::draw_water(vector3d const &xlate) const {
 		if (player_in_basement < 3) {clear_building_water_splashes();} // clear if player has exited the extended basement
 		return;
 	}
-	float const floor_spacing(get_window_vspace()), atten_scale(1.0/floor_spacing), basement_z1(interior->basement_ext_bcube.z1());
+	cube_t const water(get_water_cube());
+	float const floor_spacing(get_window_vspace()), atten_scale(1.0/floor_spacing), water_z1(water.z1());
 	if (animate2) {building_splash_manager.next_frame(floor_spacing);} // maybe should do this somewhere else? or update even if water isn't visible?
 	point const camera_pos(get_camera_pos());
 
@@ -191,13 +232,13 @@ void building_t::draw_water(vector3d const &xlate) const {
 		colorRGBA const base_color(is_lit ? WHITE : DK_GRAY);
 		float const orig_water_plane_z(water_plane_z);
 		water_plane_z = interior->water_zval;
-		draw_underwater_particles(basement_z1, base_color);
+		draw_underwater_particles(water_z1, base_color);
 		water_plane_z = orig_water_plane_z;
 		return;
 	}
 	shader_t s;
-	unsigned const camera_floor(unsigned((min(camera_pos.z, interior->water_zval) - basement_z1)/floor_spacing)); // handle player on floor above water
-	float water_depth(interior->water_zval - (basement_z1 + get_fc_thickness() + camera_floor*floor_spacing)); // for the player's floor
+	unsigned const camera_floor(unsigned((min(camera_pos.z, interior->water_zval) - water_z1)/floor_spacing)); // handle player on floor above water
+	float water_depth(interior->water_zval - (water_z1 + get_fc_thickness() + camera_floor*floor_spacing)); // for the player's floor
 	min_eq(water_depth, get_floor_ceil_gap()); // lights are on every floor, so optical depth can't be more than the distance between the floor and the lights above it
 	cube_t const lights_bcube(get_building_lights_bcube());
 	bool const use_dlights(!lights_bcube.is_all_zeros()), have_indir(0), use_smap(1); // indir lighting has little effect and is difficult to setup
@@ -223,7 +264,6 @@ void building_t::draw_water(vector3d const &xlate) const {
 	if (room_mirror_ref_tid > 0) {bind_texture_tu(room_mirror_ref_tid, 0);} else {select_texture(WHITE_TEX);}
 	s.add_uniform_int("reflection_tex", 0);
 	enable_blend(); // no longer needed?
-	cube_t const water(get_water_cube());
 	float const x1(water.x1()), y1(water.y1()), x2(water.x2()), y2(water.y2()), z(water.z2()), tx(1.0), ty(1.0);
 	vector3d const &n(plus_z);
 	vert_norm_tc const verts[4] = {vert_norm_tc(point(x1, y1, z), n, 0.0, 0.0), vert_norm_tc(point(x2, y1, z), n, tx, 0.0),

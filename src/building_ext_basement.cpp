@@ -203,7 +203,69 @@ bool building_t::add_underground_exterior_rooms(rand_gen_t &rgen, cube_t const &
 		interior->landings.push_back(landing);
 		interior->stairwells.emplace_back(stairwell, 1); // num_floors=1
 	} // for stairs
+	maybe_assign_extb_room_as_swimming();
 	return 1;
+}
+
+void building_t::maybe_assign_extb_room_as_swimming() {
+	// swimming pools are in the basement so that we don't need to cut out the terrain, and in the extended basement so that we can create a custom lower floor area
+	assert(has_ext_basement());
+	vector<room_t> &rooms(interior->rooms);
+	int const start_room_ix(interior->ext_basement_hallway_room_id);
+	assert(start_room_ix >= 0 && unsigned(start_room_ix) < rooms.size());
+	float const floor_spacing(get_window_vspace()), min_dmin(3.0*floor_spacing), pool_depth(1.0*floor_spacing), sea_level(get_max_sea_level());
+	auto const first_room(rooms.begin() + start_room_ix + 1); // skip ext basement connector hallway
+	int largest_valid_room(-1);
+	float best_dmin(min_dmin);
+
+	for (auto r = first_room; r != rooms.end(); ++r) {
+		if (r->is_hallway || r->has_stairs) continue;
+		if (r->z1() - pool_depth < sea_level) continue; // too deep
+		float const dmin(min(r->dx(), r->dy()));
+		if (dmin < best_dmin) continue; // too small, or smaller than best room
+		bool invalid(0);
+
+		for (auto r2 = first_room; r2 != rooms.end(); ++r2) { // check for any rooms below this one
+			if (r2 != r && r2->z1() < r->z1() && r2->intersects_xy(*r)) {invalid = 1; break;}
+		}
+		if (invalid) continue;
+		largest_valid_room = (r - rooms.begin());
+		best_dmin = dmin;
+	} // for r
+	if (largest_valid_room < 0) return; // no valid room found
+	room_t &room(rooms[largest_valid_room]);
+	bool const long_dim(room.dx() < room.dy());
+	float const doorway_width(get_doorway_width()), min_spacing(1.5*doorway_width), floor_zval(room.z1() + get_fc_thickness());
+	cube_with_ix_t &pool(interior->pool);
+	pool = get_walkable_room_bounds(room);
+	pool.expand_by_xy(-min_spacing);
+	set_cube_zvals(pool, (floor_zval - pool_depth), floor_zval);
+	float const pool_width(pool.get_sz_dim(!long_dim)), extra_width(pool_width - 2.0*floor_spacing);
+	if (pool_width < floor_spacing) return; // too small; shouldn't happen unless the door width to floor spacing values are wrong
+	if (extra_width > 0.0) {pool.expand_in_dim(!long_dim, -0.25*extra_width);} // can make narrower if there's extra space
+	vect_door_stack_t &doorways(get_doorways_for_room(room, room.z1()));
+	assert(!doorways.empty());
+	door_stack_t const &door(doorways.front()); // choose the first door as the main entrance; there's likely only one
+	bool const pool_dim(long_dim); // or door.dim?
+	bool const dir(room.get_center_dim(pool_dim) < door.get_center_dim(pool_dim));
+	pool.translate_dim(pool_dim, (dir ? -1.0 : 1.0)*0.5*doorway_width); // shift away from door
+	pool.ix = 2*pool_dim + dir;
+	assert(pool.is_strictly_normalized());
+	
+	// cut out a space in the floor for the pool
+	for (cube_t &f : interior->floors) {
+		if (!room.contains_cube(f)) continue;
+		vect_cube_t floor_parts;
+		subtract_cube_from_cube(f, pool, floor_parts);
+		assert(floor_parts.size() == 4);
+		//f = floor_parts.back(); // one part can replace the original floor
+		//floor_parts.pop_back();
+		f = pool;
+		set_cube_zvals(f, (pool.z1() - get_fc_thickness()), pool.z1()); // move to the bottom of the pool
+		vector_add_to(floor_parts, interior->floors);
+	} // for f
+	room.assign_to(RTYPE_SWIM, 0);
+	interior->water_zval = pool.z2() - 0.05*pool_depth;
 }
 
 unsigned building_t::setup_multi_floor_room(extb_room_t &room, door_t const &door, bool wall_dim, bool wall_dir, rand_gen_t &rgen) {
@@ -340,41 +402,6 @@ bool building_t::max_expand_underground_room(cube_t &room, bool dim, bool dir, r
 	unsigned const max_num_floors(max(1U, min(global_building_params.max_ext_basement_room_depth, unsigned(floor(max_depth/floor_spacing)))));
 	if (max_num_floors > 1) {room.z1() -= floor_spacing*(rgen.rand() % max_num_floors);} // maybe expand downward for additional floors
 	return 1;
-}
-
-float building_t::get_floor_below_water_level() const {
-	assert(has_water());
-	unsigned const floor_ix(get_ext_basement_floor_ix(interior->water_zval));
-	return interior->basement_ext_bcube.z1() + floor_ix*get_window_vspace();
-}
-cube_t building_t::get_water_cube(bool full_room_height) const {
-	if (!has_water()) return cube_t(); // no water; error?
-	assert(has_ext_basement());
-	cube_t water(interior->basement_ext_bcube);
-	if (full_room_height) {water.z2() = get_floor_below_water_level() + get_window_vspace();} // floor above water level
-	else {water.z2() = interior->water_zval;}
-	return water;
-}
-bool building_t::water_visible_to_player() const {
-	if (!has_water()) return 0;
-	vector3d const xlate(get_tiled_terrain_model_xlate());
-	point const camera_bs(camera_pdu.pos - xlate);
-	if (point_in_water_area(camera_bs)) return 1; // definitely visible
-	if (!point_in_extended_basement_not_basement(camera_bs)) return 0;
-	float const floor_spacing(get_window_vspace()), floor_below(get_floor_below_water_level()), floor_above(floor_below + floor_spacing);
-	if (camera_bs.z > floor_above + floor_spacing)     return 0; // player not on the floor with water or the floor above (in case water is visible through stairs)
-	if (!is_rot_cube_visible(get_water_cube(), xlate)) return 0;
-	
-	for (stairwell_t const &s : interior->stairwells) { // check stairs visibility
-		if (s.z1() > interior->water_zval) continue; // above the water level
-		if (s.z2() < floor_above)          continue; // stairs don't go up to the floor the player is on
-		if (!interior->basement_ext_bcube.contains_cube(s))          continue; // not extended basement stairs
-		if (!s.closest_dist_less_than(camera_bs, 5.0*floor_spacing)) continue; // too far away
-		cube_t floor_cut(s);
-		set_cube_zvals(floor_cut, floor_above, floor_above+get_fc_thickness());
-		if (is_rot_cube_visible(floor_cut, xlate)) return 1;
-	} // for s
-	return 0;
 }
 
 cube_t building_t::add_ext_basement_door(cube_t const &room, float door_width, bool dim, bool dir, bool is_end_room, rand_gen_t &rgen) {

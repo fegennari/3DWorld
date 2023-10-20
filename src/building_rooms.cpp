@@ -127,7 +127,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 	unsigned cand_bathroom(rooms.size()); // start at an invalid value
 	unsigned added_kitchen_mask(0), added_living_mask(0), added_bath_mask(0); // per-floor
 	unsigned added_bathroom_objs_mask(0);
-	bool added_bedroom(0), added_library(0), added_dining(0), added_laundry(0), added_basement_utility(0), added_fireplace(0), added_pool_room(0), added_swimming_pool(0);
+	bool added_bedroom(0), added_library(0), added_dining(0), added_laundry(0), added_basement_utility(0), added_fireplace(0), added_pool_room(0);
 	light_ix_assign_t light_ix_assign;
 	interior->create_fc_occluders(); // not really part of room geom, but needed for generating and drawing room geom, so we create them here
 	has_int_fplace = 0; // reset for this generation
@@ -169,8 +169,9 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 		// determine light pos and size for this stack of rooms
 		float const dx(r->dx()), dy(r->dy());
 		bool const room_dim(dx < dy); // longer room dim
-		bool const is_parking_garage(r->get_room_type(0) == RTYPE_PARKING   ); // all floors should be parking garage
-		bool const is_unfinished    (r->get_room_type(0) == RTYPE_UNFINISHED); //  // unfinished room, for example in a non-cube shaped office building
+		room_type const init_rtype_f0(r->get_room_type(0));
+		bool const is_parking_garage(init_rtype_f0 == RTYPE_PARKING   ); // all floors should be parking garage
+		bool const is_unfinished    (init_rtype_f0 == RTYPE_UNFINISHED); //  // unfinished room, for example in a non-cube shaped office building
 		bool const is_ext_basement(r->is_ext_basement()), is_backrooms(is_room_backrooms(*r));
 		float light_density(0.0), light_size(def_light_size); // default size for houses
 		unsigned const room_objs_start(objs.size());
@@ -378,7 +379,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			}
 			if (r->no_geom || is_garage_or_shed) {
 				if (is_garage_or_shed) {
-					if (r->get_room_type(0) == RTYPE_GARAGE) {
+					if (init_rtype_f0 == RTYPE_GARAGE) {
 						room_center.z = add_flooring(*r, room_center.z, room_id, tot_light_amt, FLOORING_CONCRETE);
 						add_garage_objs(rgen, *r, room_center.z, room_id, tot_light_amt);
 					}
@@ -397,6 +398,11 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 					if (is_ground_floor) {r->assign_to(RTYPE_LOBBY, f);} // first floor primary hallway, make it the lobby
 				}
 				continue; // no other geometry for this room
+			}
+			if (init_rtype_f0 == RTYPE_SWIM) { // room with a swimming pool
+				assert(is_ext_basement); // for now, only in extended basements
+				add_swimming_pool_room_objs(rgen, *r, room_center.z, room_id, tot_light_amt);
+				continue;
 			}
 			//if (has_stairs && !pri_hall.is_all_zeros()) continue; // no other geometry in office building base part rooms that have stairs
 			unsigned const floor_mask(1<<f);
@@ -422,11 +428,11 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				added_obj = is_bathroom = added_bathroom = no_whiteboard =
 					add_bathroom_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, f, is_basement, added_bathroom_objs_mask); // add bathroom
 			}
-			else if (!is_house && f == 0) { // office building special first floor rooms; can be in a stacked part
-				if (r->get_room_type(f) == RTYPE_UTILITY) {
+			else if (!is_house && f == 0) { // office building special pre-assigned first floor rooms; can be in a stacked part
+				if (init_rtype_f0 == RTYPE_UTILITY) {
 					added_obj = no_whiteboard = no_plants = is_utility = add_office_utility_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);
 				}
-				else if (r->get_room_type(f) == RTYPE_SERVER) {
+				else if (init_rtype_f0 == RTYPE_SERVER) {
 					added_obj = no_whiteboard = no_plants = add_server_room_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);
 				}
 			}
@@ -472,12 +478,6 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 						}
 					}
 				}
-			}
-			// the plan is that swimming pools are in the basement so that we don't need to cut out the terrain,
-			// and in the extended basement so that we can create a custom lower floor area; for houses, and I guess office buildings as well
-			if (!added_obj && !added_swimming_pool && is_ext_basement && add_swimming_pool_room_objs(rgen, *r, room_center.z, room_id, tot_light_amt)) { // swimming pool
-				r->assign_to(RTYPE_SWIM, f);
-				added_swimming_pool = added_obj = 1;
 			}
 			if (!added_obj && !added_pool_room && is_house && is_basement && add_pool_room_objs(rgen, *r, room_center.z, room_id, tot_light_amt)) { // pool room
 				r->assign_to(RTYPE_POOL, f);

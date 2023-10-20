@@ -1292,7 +1292,7 @@ struct building_interior_t {
 	std::unique_ptr<building_room_geom_t> room_geom;
 	std::unique_ptr<building_nav_graph_t> nav_graph;
 	std::unique_ptr<building_conn_info_t> conn_info;
-	cube_with_ix_t pg_ramp, attic_access; // ix stores {dim, dir}
+	cube_with_ix_t pg_ramp, attic_access, pool; // ix stores {dim, dir}
 	cube_t basement_ext_bcube;
 	draw_range_t draw_range;
 	unsigned extb_walls_start[2] = {0,0};
@@ -1300,7 +1300,7 @@ struct building_interior_t {
 	uint8_t furnace_type=FTYPE_NONE, attic_type=ATTIC_TYPE_RAFTERS;
 	bool door_state_updated=0, is_unconnected=0, ignore_ramp_placement=0, placed_people=0, elevators_disabled=0, attic_access_open=0, has_backrooms=0;
 	bool extb_wall_dim=0, extb_wall_dir=0, conn_room_in_extb_hallway=0;
-	float water_zval=0.0; // for multilevel backrooms
+	float water_zval=0.0; // for multilevel backrooms and swimming pools
 
 	building_interior_t();
 	~building_interior_t();
@@ -1691,6 +1691,7 @@ public:
 	bool register_indir_lighting_state_change(unsigned light_ix, bool is_door_change=0) const;
 	bool is_attic_roof(tquad_with_ix_t const &tq, bool type_roof_only) const;
 	bool has_ext_basement() const {return (interior && !interior->basement_ext_bcube.is_all_zeros());}
+	bool has_pool        () const {return (interior && !interior->pool.is_all_zeros());}
 	bool point_in_extended_basement(point const &pos) const {return (has_basement() && interior && interior->basement_ext_bcube.contains_pt(pos));}
 	bool point_in_extended_basement_not_basement(point const &pos) const {return (point_in_extended_basement(pos) && !get_basement().contains_pt(pos));}
 	bool cube_int_ext_basement(cube_t const &c) const {return (interior && interior->basement_ext_bcube.intersects(c));}
@@ -1748,6 +1749,7 @@ private:
 	bool is_basement_room_under_mesh_not_int_bldg(cube_t &room, building_t const *exclude=nullptr) const;
 	bool is_basement_room_placement_valid(cube_t &room, ext_basement_room_params_t &P, bool dim, bool dir, bool *add_end_door=nullptr, building_t const *exclude=nullptr) const;
 	bool add_underground_exterior_rooms(rand_gen_t &rgen, cube_t const &door_bcube, cube_t const &basement, bool wall_dim, bool wall_dir, float length_mult);
+	void maybe_assign_extb_room_as_swimming();
 	unsigned setup_multi_floor_room(extb_room_t &room, door_t const &door, bool wall_dim, bool wall_dir, rand_gen_t &rgen);
 	bool add_ext_basement_rooms_recur(extb_room_t &parent_room, ext_basement_room_params_t &P, float door_width, bool dim, unsigned depth, rand_gen_t &rgen);
 	bool max_expand_underground_room(cube_t &room, bool dim, bool dir, rand_gen_t &rgen) const;
@@ -1841,7 +1843,7 @@ private:
 	void add_laundry_basket  (rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, cube_t place_area);
 	bool add_laundry_objs    (rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, unsigned &added_bathroom_objs_mask);
 	bool add_pool_room_objs  (rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt);
-	bool add_swimming_pool_room_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt);
+	void add_swimming_pool_room_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt);
 	void add_fire_ext        (float height, float radius, float zval, float wall_edge, float pos_along_wall, unsigned room_id, float tot_light_amt, bool dim, bool dir);
 	void add_pri_hall_objs   (rand_gen_t rgen, rand_gen_t room_rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned floor_ix);
 	void assign_attic_type   (rand_gen_t rgen);
