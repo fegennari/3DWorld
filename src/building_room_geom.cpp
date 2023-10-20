@@ -51,6 +51,7 @@ int get_plywood_tid   () {return get_texture_by_name("interiors/plywood.jpg");}
 int get_insulation_tid() {return get_texture_by_name("interiors/insulation.jpg");}
 int get_cube_duct_tid () {return get_texture_by_name("interiors/duct.jpg");}
 int get_cylin_duct_tid() {return get_texture_by_name("buildings/metal_roof.jpg");} // metal roof is close enough
+int get_toilet_paper_nm_id() {return get_texture_by_name("interiors/toilet_paper_normal.jpg", 1);}
 
 colorRGBA get_textured_wood_color() {return WOOD_COLOR.modulate_with(texture_color(WOOD2_TEX));} // Note: uses default WOOD_COLOR, not the per-building random variant
 colorRGBA get_counter_color      () {return (get_textured_wood_color()*0.75 + texture_color(get_counter_tid())*0.25);}
@@ -613,19 +614,6 @@ void building_room_geom_t::add_phone(room_object_t const &c) { // is_small=1
 	else {mat.add_cube_to_verts_untextured(c, apply_light_color(c, BLACK), ~EF_Z2);} // top, no shadows, unlit
 }
 
-void add_tproll_to_material(room_object_t const &c, rgeom_mat_t &mat) {
-	colorRGBA const tp_color(apply_light_color(c));
-	float const radius(0.5*c.dz()), rod_shrink(-0.7*radius), roll_shrink(0.75*rod_shrink*fract(123.456*c.obj_id)); // randomly partially empty (25-100%)
-	cube_t roll(c);
-	roll.expand_in_dim(c.dim, roll_shrink);
-	roll.expand_in_dim(2,     roll_shrink); // z
-	mat.add_ortho_cylin_to_verts(roll, tp_color, !c.dim, 1, 1, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, 24); // c.dim applies to the wall; the roll is oriented perpendicular; ndiv=24
-	cube_t square(roll); // hanging square of TP
-	set_cube_zvals(square, c.z1(), c.zc()); // starts at the centerline (tangent) and extends to the bottom
-	if (c.is_hanging()) {square.z1() -= 3.0*c.dz();} // player has pulled it down lower
-	square.d[c.dim][c.dir] = square.d[c.dim][!c.dir]; // shrink to zero thickness at outer edge
-	mat.add_cube_to_verts_untextured(square, tp_color, ~get_skip_mask_for_xy(c.dim)); // only draw front/back faces
-}
 void building_room_geom_t::add_vert_roll_to_material(room_object_t const &c, rgeom_mat_t &mat, float sz_ratio, bool player_held) { // TP and tape
 	bool const is_tape(c.type == TYPE_TAPE);
 	float const hole_shrink(is_tape ? 0.24 : 0.3);
@@ -646,7 +634,21 @@ void building_room_geom_t::add_tproll(room_object_t const &c) { // is_small=1
 		add_vert_roll_to_material(c, get_untextured_material(1, 0, 1)); // shadowed, small
 		return;
 	}
-	if (c.taken_level == 0) {add_tproll_to_material(c, get_untextured_material(1, 0, 1));} // draw the roll if not taken
+	if (c.taken_level == 0) { // draw the roll if not taken
+		float const tscale(1.0/c.get_width()); // texture fits width of roll exactly; doesn't look great on the rool ends though
+		rgeom_mat_t &mat(get_material(tid_nm_pair_t(WHITE_TEX, get_toilet_paper_nm_id(), tscale, tscale, 0.0, 0.0, 1), 1, 0, 1)); // shadowed, small
+		colorRGBA const tp_color(apply_light_color(c));
+		float const radius(0.5*c.dz()), rod_shrink(-0.7*radius), roll_shrink(0.75*rod_shrink*fract(123.456*c.obj_id)); // randomly partially empty (25-100%)
+		cube_t roll(c);
+		roll.expand_in_dim(c.dim, roll_shrink);
+		roll.expand_in_dim(2,     roll_shrink); // z
+		mat.add_ortho_cylin_to_verts(roll, tp_color, !c.dim, 1, 1, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, 24, 0.0, 1); // c.dim applies to the wall; the roll is oriented perpendicular; ndiv=24
+		cube_t square(roll); // hanging square of TP
+		set_cube_zvals(square, c.z1(), c.zc()); // starts at the centerline (tangent) and extends to the bottom
+		if (c.is_hanging()) {square.z1() -= 3.0*c.dz();} // player has pulled it down lower
+		square.d[c.dim][c.dir] = square.d[c.dim][!c.dir]; // shrink to zero thickness at outer edge
+		mat.add_cube_to_verts(square, tp_color, all_zeros, ~get_skip_mask_for_xy(c.dim), !c.dim); // only draw front/back faces
+	}
 	float const radius(0.5*c.dz()), rod_shrink(-0.7*radius), length(c.get_width());
 	// draw the holder attached to the wall
 	rgeom_mat_t &holder_mat(get_metal_material(1, 0, 1)); // untextured, shadowed, small=1
