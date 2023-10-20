@@ -473,7 +473,7 @@ unsigned building_room_geom_t::get_shelves_for_object(room_object_t const &c, cu
 	shelf.d[c.dim][c.dir] += (c.dir ? -1.0 : 1.0)*bracket_thickness; // leave space behind the shelf for brackets
 
 	for (unsigned s = 0; s < num_shelves; ++s) {
-		shelf.translate_dim(2, z_step); // move up one step
+		shelf.translate_dim(2, z_step); // move up one step; done first, so bottom shelf is above the floor
 		shelves[s] = shelf; // record for later use
 	}
 	return num_shelves;

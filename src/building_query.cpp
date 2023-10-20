@@ -613,6 +613,11 @@ unsigned check_pool_table_collision(room_object_t const &c, point &pos, point co
 	get_pool_table_cubes(c, cubes);
 	return check_cubes_collision(cubes, 5, pos, p_last, radius, cnorm);
 }
+cube_t get_shelves_no_bot_gap(room_object_t const &c) {
+	cube_t bcube(c);
+	bcube.z1() += c.dz()/(c.get_num_shelves() + 1); // raise z1 to the bottom of the first shelf
+	return bcube;
+}
 
 bool maybe_inside_room_object(room_object_t const &obj, point const &pos, float radius) {
 	return ((obj.is_open() && sphere_cube_intersect(pos, radius, obj)) || obj.contains_pt(pos));
@@ -623,6 +628,7 @@ cube_t get_true_room_obj_bcube(room_object_t const &c) { // for collisions, etc.
 		if (c.is_open()) {bcube.union_with_cube(get_ladder_bcube_from_open_attic_door(c, bcube));} // include ladder as well
 		return bcube;
 	}
+	if (c.type == TYPE_SHELVES) {return get_shelves_no_bot_gap(c);}
 	return c; // default cube case
 }
 
@@ -1785,7 +1791,7 @@ void building_t::get_room_obj_cubes(room_object_t const &c, point const &pos, ve
 		lg_cubes.push_back(top); // or sm_cubes?
 	}
 	else if (c.type == TYPE_ATTIC_DOOR) {lg_cubes.push_back(get_true_room_obj_bcube(c));}
-	// otherwise, treat as a large object; this includes: TYPE_BCASE, TYPE_KSINK (with dishwasher), TYPE_COUCH, TYPE_SHELVES, TYPE_COLLIDER (cars)
+	// otherwise, treat as a large object; this includes: TYPE_BCASE, TYPE_KSINK (with dishwasher), TYPE_COUCH, TYPE_COLLIDER (cars)
 	else {lg_cubes.push_back(c);}
 }
 
@@ -1940,9 +1946,7 @@ int building_t::check_line_coll_expand(point const &p1, point const &p2, float r
 				if (line_int_cubes_exp(p1, p2, cubes, 5, expand)) return 11; // 1 or 3 sink parts; counts as a cabinet
 			}
 			else if (c->type == TYPE_SHELVES) {
-				cube_t c_coll(*c);
-				c_coll.z1() += 0.05*c->dz(); // there's space under the shelves
-				if (line_int_cube_exp(p1, p2, c_coll, expand)) return 9;
+				if (line_int_cube_exp(p1, p2, get_shelves_no_bot_gap(*c), expand)) return 9; // there's space under the shelves
 			}
 			else if (c->is_parked_car()) { // parked car
 				cube_t cubes[5];
