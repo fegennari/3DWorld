@@ -2758,6 +2758,7 @@ public:
 				for (auto const &d : b->doors) { // handle steps for exterior doors
 					if (d.type == tquad_with_ix_t::TYPE_GDOOR) continue; // already handled by driveway
 					cube_t const c(d.get_bcube());
+					if (c.z1() > b->ground_floor_z1 + b->get_floor_thickness()) continue; // not on the ground floor
 					bool const dim(c.dy() < c.dx()), dir(d.get_norm()[dim] > 0.0);
 					cube_t step(c);
 					step.d[dim][dir] += (dir ? 1.0 : -1.0)*0.5*c.dz(); // extend outward
