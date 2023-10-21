@@ -23,6 +23,7 @@ void building_t::add_interior_door(door_t &door, bool is_bathroom, bool make_unl
 		set_cube_zvals(door_seg, zval, zval+door_height); // clip to ceiling
 		add_interior_door_for_floor(door_seg, is_bathroom, make_unlocked, make_closed);
 	}
+	interior->door_stacks.back().num_doors = (interior->doors.size() - interior->door_stacks.back().first_door_ix);
 }
 void building_t::add_interior_door_for_floor(door_t &door, bool is_bathroom, bool make_unlocked, bool make_closed) {
 	if (is_bathroom) {door.open = door.locked = 0;} // bathroom doors are always closed but unlocked

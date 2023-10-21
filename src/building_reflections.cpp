@@ -178,6 +178,7 @@ bool building_t::find_mirror_in_room(unsigned room_id, vector3d const &xlate, bo
 
 				for (auto ds = interior->door_stacks.begin()+interior->ext_basement_door_stack_ix; ds != interior->door_stacks.end(); ++ds) {
 					if (ds->z1() > i->z2() || ds->z2() < i->z1()) continue; // wrong floor
+					assert(ds->num_doors == 1); // must be a single door stack
 					if (interior->doors[ds->first_door_ix].open_amt > 0.0) continue; // open, skip
 					if (ds->get_true_bcube().line_intersects(camera_bs, center)) {found_closed_door = 1; break;}
 				}

@@ -1204,7 +1204,7 @@ struct door_base_t : public cube_t {
 	bool is_same_stack(door_base_t const &d) const {return (d.x1() == x1() && d.y1() == y1());}
 };
 struct door_stack_t : public door_base_t {
-	unsigned first_door_ix=0; // on the lowest floor
+	unsigned first_door_ix=0, num_doors=1; // first_door_ix is on the lowest floor
 	door_stack_t() {}
 	door_stack_t(door_base_t const &db, unsigned fdix) : door_base_t(db), first_door_ix(fdix) {}
 };
