@@ -625,13 +625,15 @@ void building_room_geom_t::add_vert_roll_to_material(room_object_t const &c, rge
 	cube_t roll(c);
 	if (sz_ratio < 1.0) {roll.expand_by_xy(-hole_shrink*(1.0 - sz_ratio)*c.dx());} // partially used
 	hole.expand_in_dim(2, 0.0025*c.dz()); // expand slightly to avoid z-fighting
+	bool const swap_txy(c.type == TYPE_TPROLL); // TP texture is horizontal rather than vertical
 	// draw top/bottom surface only to mask off the outer part of the roll when held by the player; when resting on an object, draw the top surface only
 	mat.add_vcylin_to_verts(hole, ALPHA0, player_held, 1, 0, 0, 1.0, 1.0, 1.0, 1.0, 1); // hole
-	mat.add_vcylin_to_verts(roll, apply_light_color(c), 1, 1); // paper/plastic roll
+	mat.add_vcylin_to_verts(roll, apply_light_color(c), 1, 1, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, 32, 0.0, swap_txy); // paper/plastic roll
 }
 void building_room_geom_t::add_tproll(room_object_t const &c) { // is_small=1
 	if (c.was_expanded()) { // bare TP roll from a box
-		add_vert_roll_to_material(c, get_untextured_material(1, 0, 1)); // shadowed, small
+		rgeom_mat_t &mat(get_material(tid_nm_pair_t(WHITE_TEX, get_toilet_paper_nm_id(), 0.0, 0.0, 0.0, 0.0, 1), 1, 0, 1)); // shadowed, small
+		add_vert_roll_to_material(c, mat);
 		return;
 	}
 	if (c.taken_level == 0) { // draw the roll if not taken

@@ -30,6 +30,7 @@ template< typename T > void gen_quad_ixs(vector<T> &ixs, unsigned size, unsigned
 void draw_car_in_pspace(car_t &car, shader_t &s, vector3d const &xlate, bool shadow_only);
 void set_car_model_color(car_t &car);
 bldg_obj_type_t get_taken_obj_type(room_object_t const &obj);
+int get_toilet_paper_nm_id();
 
 bool has_key_3d_model() {return building_obj_model_loader.is_model_valid(OBJ_MODEL_KEY);}
 
@@ -1109,7 +1110,7 @@ void apply_room_obj_rotate(room_object_t &obj, obj_model_inst_t &inst, vect_room
 }
 
 /*static*/ void building_room_geom_t::draw_interactive_player_obj(carried_item_t const &c, shader_t &s, vector3d const &xlate) { // held by the player
-	static rgeom_mat_t mat; // allocated memory is reused across frames; VBO is recreated every time
+	static rgeom_mat_t mat; // allocated memory is reused across frames; VBO is recreated every time; untextured
 	bool needs_blend(0);
 
 	if (c.type == TYPE_SPRAYCAN || c.type == TYPE_MARKER) {
@@ -1125,7 +1126,7 @@ void apply_room_obj_rotate(room_object_t &obj, obj_model_inst_t &inst, vect_room
 		else {add_pen_pencil_marker_to_material(c_rot, mat);}
 	}
 	else if (c.type == TYPE_TPROLL || c.type == TYPE_TAPE) { // apply get_player_cview_rot_matrix()?
-		add_vert_roll_to_material(c, mat, c.get_remaining_capacity_ratio(), 1); // player_held=1
+		add_vert_roll_to_material(c, mat, c.get_remaining_capacity_ratio(), 1); // player_held=1; unfortunately, we don't support texturing the TP roll here
 		needs_blend = 1;
 	}
 	else if (c.type == TYPE_BOOK) {
@@ -2027,7 +2028,9 @@ void building_decal_manager_t::draw_building_interior_decals(shader_t &s, bool p
 	if (!tp_qbd.empty()) { // toilet paper squares: double sided, lit from top
 		glDisable(GL_CULL_FACE); // draw both sides
 		select_texture(WHITE_TEX);
+		select_texture(get_toilet_paper_nm_id(), 5); // apply normal map
 		tp_qbd.draw(); // use a VBO for this if the player leaves the building and then comes back?
+		select_texture(FLAT_NMAP_TEX, 5); // no normal map
 		glEnable(GL_CULL_FACE);
 	}
 	if (!tape_qbd.empty() || !pend_tape_qbd.empty()) { // tape lines: single sided so that lighting works, both sides drawn independently
