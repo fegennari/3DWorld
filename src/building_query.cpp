@@ -1493,6 +1493,7 @@ bool building_t::check_point_or_cylin_contained(point const &pos, float xy_radiu
 		// expand by wall thickness to avoid failing when crossing between two rooms that don't exactly line up, such as with conn room boundary with adj building
 		return interior->point_in_ext_basement_room(pos, get_wall_thickness());
 	}
+	if (inc_ext_basement && has_pool() && interior->pool.contains_pt(pos)) return 1; // in the pool
 	if (xy_radius == 0.0 && !bcube.contains_pt(pos)) return 0; // no intersection (bcube does not need to be rotated)
 	point pr(pos);
 	maybe_inv_rotate_point(pr);

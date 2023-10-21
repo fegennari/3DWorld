@@ -1237,6 +1237,11 @@ struct roof_obj_t : public cube_t {
 };
 typedef vector<roof_obj_t> vect_roof_obj_t;
 
+struct indoor_pool_t : cube_t {
+	bool valid=0, dim=0, dir=0;
+	int room_ix=-1;
+};
+
 
 // building AI
 struct building_loc_t {
@@ -1292,7 +1297,8 @@ struct building_interior_t {
 	std::unique_ptr<building_room_geom_t> room_geom;
 	std::unique_ptr<building_nav_graph_t> nav_graph;
 	std::unique_ptr<building_conn_info_t> conn_info;
-	cube_with_ix_t pg_ramp, attic_access, pool; // ix stores {dim, dir}
+	cube_with_ix_t pg_ramp, attic_access; // ix stores {dim, dir}
+	indoor_pool_t pool;
 	cube_t basement_ext_bcube;
 	draw_range_t draw_range;
 	unsigned extb_walls_start[2] = {0,0};
@@ -1691,8 +1697,8 @@ public:
 	bool register_indir_lighting_state_change(unsigned light_ix, bool is_door_change=0) const;
 	bool is_attic_roof(tquad_with_ix_t const &tq, bool type_roof_only) const;
 	bool has_ext_basement() const {return (interior && !interior->basement_ext_bcube.is_all_zeros());}
-	bool has_pool        () const {return (interior && !interior->pool.is_all_zeros());}
-	bool point_in_extended_basement(point const &pos) const {return (has_basement() && interior && interior->basement_ext_bcube.contains_pt(pos));}
+	bool has_pool        () const {return (interior &&  interior->pool.valid);}
+	bool point_in_extended_basement(point const &pos) const;
 	bool point_in_extended_basement_not_basement(point const &pos) const {return (point_in_extended_basement(pos) && !get_basement().contains_pt(pos));}
 	bool cube_int_ext_basement(cube_t const &c) const {return (interior && interior->basement_ext_bcube.intersects(c));}
 	bool point_in_building_or_basement_bcube(point const &pos) const {return (bcube.contains_pt(pos) || point_in_extended_basement(pos));}

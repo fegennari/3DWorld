@@ -236,8 +236,8 @@ void building_t::maybe_assign_extb_room_as_swimming() {
 	room_t &room(rooms[largest_valid_room]);
 	bool const long_dim(room.dx() < room.dy());
 	float const doorway_width(get_doorway_width()), min_spacing(1.5*doorway_width), floor_zval(room.z1() + get_fc_thickness());
-	cube_with_ix_t &pool(interior->pool);
-	pool = get_walkable_room_bounds(room);
+	indoor_pool_t &pool(interior->pool);
+	pool.copy_from(get_walkable_room_bounds(room));
 	pool.expand_by_xy(-min_spacing);
 	set_cube_zvals(pool, (floor_zval - pool_depth), floor_zval);
 	float const pool_width(pool.get_sz_dim(!long_dim)), extra_width(pool_width - 2.0*floor_spacing);
@@ -246,10 +246,12 @@ void building_t::maybe_assign_extb_room_as_swimming() {
 	vect_door_stack_t &doorways(get_doorways_for_room(room, room.z1()));
 	assert(!doorways.empty());
 	door_stack_t const &door(doorways.front()); // choose the first door as the main entrance; there's likely only one
-	bool const pool_dim(long_dim); // or door.dim?
-	bool const dir(room.get_center_dim(pool_dim) < door.get_center_dim(pool_dim));
-	pool.translate_dim(pool_dim, (dir ? -1.0 : 1.0)*0.5*doorway_width); // shift away from door
-	pool.ix = 2*pool_dim + dir;
+	pool.dim = long_dim; // or door.dim?
+	bool const dir(room.get_center_dim(pool.dim) < door.get_center_dim(pool.dim));
+	pool.translate_dim(pool.dim, (dir ? -1.0 : 1.0)*0.5*doorway_width); // shift away from door
+	pool.dir     = dir;
+	pool.room_ix = largest_valid_room;
+	pool.valid   = 1;
 	assert(pool.is_strictly_normalized());
 	
 	// cut out a space in the floor for the pool
@@ -1144,6 +1146,12 @@ void building_t::get_pgbr_wall_ix_for_pos(point const &pos, index_pair_t &start,
 			end   = pgbr_wall_ixs[floor_ix+1];
 		}
 	}
+}
+bool building_t::point_in_extended_basement(point const &pos) const {
+	if (!has_basement() || !interior)                  return 0;
+	if (interior->basement_ext_bcube.contains_pt(pos)) return 1;
+	if (has_pool() && interior->pool.contains_pt(pos)) return 1;
+	return 0;
 }
 cube_t building_t::get_bcube_inc_extensions() const {
 	cube_t ret(bcube);

@@ -185,15 +185,34 @@ bool building_t::water_visible_to_player() const {
 	if (camera_bs.z > floor_above + floor_spacing)     return 0; // player not on the floor with water or the floor above (in case water is visible through stairs)
 	if (!is_rot_cube_visible(get_water_cube(), xlate)) return 0;
 
-	for (stairwell_t const &s : interior->stairwells) { // check stairs visibility
-		if (s.z1() > interior->water_zval) continue; // above the water level
-		if (s.z2() < floor_above)          continue; // stairs don't go up to the floor the player is on
-		if (!interior->basement_ext_bcube.contains_cube(s))          continue; // not extended basement stairs
-		if (!s.closest_dist_less_than(camera_bs, 5.0*floor_spacing)) continue; // too far away
-		cube_t floor_cut(s);
-		set_cube_zvals(floor_cut, floor_above, floor_above+get_fc_thickness());
-		if (is_rot_cube_visible(floor_cut, xlate)) return 1;
-	} // for s
+	if (interior->has_backrooms) { // backrooms water
+		for (stairwell_t const &s : interior->stairwells) { // check stairs visibility
+			if (s.z1() > interior->water_zval) continue; // above the water level
+			if (s.z2() < floor_above)          continue; // stairs don't go up to the floor the player is on
+			if (!interior->basement_ext_bcube.contains_cube(s))          continue; // not extended basement stairs
+			if (!s.closest_dist_less_than(camera_bs, 5.0*floor_spacing)) continue; // too far away
+			cube_t floor_cut(s);
+			set_cube_zvals(floor_cut, floor_above, floor_above+get_fc_thickness());
+			if (is_rot_cube_visible(floor_cut, xlate)) return 1;
+		} // for s
+	}
+	if (has_pool()) { // pool water
+		room_t const &room(get_room(interior->pool.room_ix));
+		if (room.contains_pt(camera_bs)) return 1; // player in room with the pool
+		// check if pool is visible through a doorway
+		vect_door_stack_t &doorways(get_doorways_for_room(room, room.z1()));
+
+		for (door_stack_t const &ds : doorways) {
+			assert(ds.num_doors == 1); // must be a single door
+			door_t const &door(get_door(ds.first_door_ix));
+			if (door.open_amt == 0) continue; // fully closed
+			float const door_pos(door.get_center_dim(door.dim));
+			if ((interior->pool.get_center_dim(door.dim) < door_pos) == (camera_bs[door.dim] < door_pos)) continue; // pool and camera on same side of door - not visible through it
+			if (!is_rot_cube_visible(door, xlate)) continue;
+			// TODO: should check for door corner rays intersecting pool || pool corner ray intersecting door
+			return 1;
+		} // for ds
+	}
 	return 0;
 }
 
