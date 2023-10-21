@@ -627,6 +627,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 	if (is_house && has_basement_pipes) {add_house_basement_pipes (rgen);}
 	if (has_attic()) {add_attic_objects(rgen);}
 	unsigned const ext_objs_start(objs.size());
+	ext_steps.clear(); // clear prev value in case this building's interior is recreated
 	maybe_add_fire_escape  (rgen);
 	add_balconies          (rgen);
 	add_exterior_door_items(rgen);
@@ -762,6 +763,10 @@ void building_t::add_balconies(rand_gen_t &rgen) {
 				objs.push_back(balcony_obj);
 				avoid.push_back(balcony); // shouldn't need to consider area_below
 				avoid.back().expand_by_xy(wall_thickness);
+				// add exterior step for this balcony so that the player can stand on it and can't pass through the railings
+				cube_t floor_slab(balcony);
+				floor_slab.z2() = balcony.z1() + 0.12*balcony.dz(); // matches code in get_balcony_cubes()
+				ext_steps.emplace_back(floor_slab, dim, 0, dir, 0, 0, 0, 1); // enclosed, no step dir
 				// maybe add plants to balconies; note that they won't be properly lit since plants use indoor lighting,
 				// and the plants won't be drawn when the player is outside the building; this should be okay because an empty pot works on a balcony as well
 				unsigned const num_plants(rgen.rand() % 3); // 0-2
@@ -1255,7 +1260,6 @@ void building_t::add_ext_door_steps(unsigned ext_objs_start) {
 	colorRGBA const step_color(LT_GRAY);
 	vect_room_object_t &objs(interior->room_geom->objs);
 	vector<unsigned> to_add_stairs;
-	ext_steps.clear(); // clear prev value in case this building's interior is recreated
 
 	// add step at the base of each exterior door
 	for (auto const &d : doors) {

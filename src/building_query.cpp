@@ -212,7 +212,7 @@ bool building_t::check_sphere_coll(point &pos, point const &p_last, vector3d con
 bool building_t::check_sphere_coll_inner(point &pos, point const &p_last, vector3d const &xlate, float radius, bool xy_only, vector3d *cnorm_ptr, bool check_interior) const {
 	float const xy_radius(radius*global_building_params.player_coll_radius_scale);
 	point pos2(pos), p_last2(p_last), center;
-	bool had_coll(0), is_interior(0), is_in_attic(0), allow_outside_building(0), on_ext_stair(0);
+	bool had_coll(0), is_interior(0), is_in_attic(0), allow_outside_building(0), on_ext_stair(0), reduce_speed(0);
 	float part_z2(bcube.z2());
 
 	if (is_rotated()) {
@@ -309,6 +309,7 @@ bool building_t::check_sphere_coll_inner(point &pos, point const &p_last, vector
 	if (!xy_only) { // check for collision with exterior stairs, since they apply to both the interior and exterior case
 		for (ext_step_t const &s : ext_steps) {
 			cube_t const c(s + xlate);
+			if (s.enclosed && !c.contains_pt_xy(pos2))      continue; // don't clip through walls onto balconies
 			if (!sphere_cube_intersect_xy(pos2, radius, c)) continue;
 			float const zval(max(pos2.z, p_last2.z));
 			// use 2x radius for stability: too low and we fall through the step some frames; too high and we get stuck on stairs below
@@ -323,26 +324,27 @@ bool building_t::check_sphere_coll_inner(point &pos, point const &p_last, vector
 			if (c.contains_pt_xy(pos2)) {
 				// handle collision with railing and building wall
 				unsigned skip_dir(0);
-				if (s.at_door) {skip_dir |= (1 << unsigned(  s.wall_dir));}
-				if (s.is_base) {skip_dir |= (1 << unsigned(1-s.wall_dir));}
+				if (s.at_door) {skip_dir |= (1 << unsigned(  s.wall_dir));} // allow entering/exiting from house
+				if (s.is_base) {skip_dir |= (1 << unsigned(1-s.wall_dir));} // allow entering/exiting from ground
 				if (!(skip_dir & 1)) {max_eq(wval, (c.d[!s.dim][0] + xy_radius));}
 				if (!(skip_dir & 2)) {min_eq(wval, (c.d[!s.dim][1] - xy_radius));}
 			
-				if (s.at_door) { // handle collision with top end railing
-					if (s.step_dir) {max_eq(lval, (c.d[s.dim][0] + xy_radius));}
-					else            {min_eq(lval, (c.d[s.dim][1] - xy_radius));}
+				if (s.at_door || s.enclosed) { // handle collision with top end railing(s)
+					if ( s.step_dir || s.enclosed) {max_eq(lval, (c.d[s.dim][0] + xy_radius));}
+					if (!s.step_dir || s.enclosed) {min_eq(lval, (c.d[s.dim][1] - xy_radius));}
 				}
 			}
 			if (zval + radius > c.z1()) { // step up
 				if (c.contains_pt_xy(pos2)) {max_eq(pos2.z, (c.z2() + radius));} // only step up if on this stair
-				if (wval > c.d[!s.dim][0] && wval < c.d[!s.dim][1]) {on_ext_stair = 1;} // not entering or leaving from the sides
+				if (wval > c.d[!s.dim][0] && wval < c.d[!s.dim][1]) {on_ext_stair = reduce_speed = 1;} // not entering or leaving from the sides
 				had_coll = 1;
 			}
 			else {had_coll |= sphere_cube_int_update_pos(pos2, radius, c, p_last2, xy_only, cnorm_ptr);} // check collision with sides
 		} // for i
 	}
+	if (reduce_speed) {apply_speed_factor(pos2, p_last, 0.6);} // slow down to 60% when on exterior stairs or balconies
+
 	if (on_ext_stair) {
-		apply_speed_factor(pos2, p_last, 0.6); // slow down to 60% when on exterior stairs
 		// only need to check for blockers at the bottom of stairs
 		for (auto const &i : details) {had_coll |= sphere_cube_int_update_pos(pos2, radius, (i + xlate), p_last2, xy_only, cnorm_ptr);} // treat as cubes
 	}
