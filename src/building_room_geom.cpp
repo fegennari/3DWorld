@@ -1073,7 +1073,9 @@ void building_room_geom_t::add_shower(room_object_t const &c, float tscale) {
 	if (!tile_type2) {tile_color = tile_color.modulate_with(colorRGBA(0.8, 0.6, 0.4));} // darker/browner
 	// add tile material along walls and floor
 	int const skip_faces[2] = {(EF_Z1 | (xdir ? EF_X2 : EF_X1)), (EF_Z1 | (ydir ? EF_Y2 : EF_Y1))};
-	rgeom_mat_t &tile_mat(get_material(get_tex_auto_nm((tile_type2 ? TILE_TEX : get_texture_by_name("bathroom_tile.jpg")), 2.5*tscale, 0), 0)); // no shadows
+	tid_nm_pair_t tex(get_tex_auto_nm((tile_type2 ? TILE_TEX : get_texture_by_name("bathroom_tile.jpg")), 2.5*tscale, 0));
+	tex.set_specular(0.8, 60.0);
+	rgeom_mat_t &tile_mat(get_material(tex, 0)); // no shadows
 	cube_t bottom(c), sides[2] = {c, c};
 	bottom.z2() = c.z1() + 0.025*sz.z;
 	tile_mat.add_cube_to_verts(bottom, tile_color, zero_vector, (skip_faces[0] | skip_faces[1]));
