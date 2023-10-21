@@ -1052,6 +1052,12 @@ bool is_obj_in_or_on_obj(room_object_t const &parent, room_object_t const &child
 	if (parent.type == TYPE_BOX   && parent.is_open() && parent.contains_cube(child))     return 1; // open box with an object inside
 	if (parent.type == TYPE_BED   && child.z1() <= parent.z2() && child.z1() > parent.zc() && child.intersects_xy(parent)) return 1; // object on the mattress of a bed
 	if (parent.type == TYPE_STOVE && parent.contains_cube(child))                         return 1; // pan, etc. on a stove
+	
+	if (parent.type == TYPE_POOL_TABLE && child.type == TYPE_POOL_CUE) { // handle pool cue leaning against pool table
+		cube_t table_exp(parent);
+		table_exp.expand_by_xy(min(child.dx(), child.dy()));
+		if (table_exp.intersects(child)) return 1;
+	}
 	return 0;
 }
 bool object_can_have_something_on_it(room_object_t const &obj) {
