@@ -219,7 +219,7 @@ void building_t::maybe_assign_extb_room_as_swimming() {
 	float best_dmin(min_dmin);
 
 	for (auto r = first_room; r != rooms.end(); ++r) {
-		if (r->is_hallway || r->has_stairs) continue;
+		if (r->is_hallway || r->has_stairs)   continue;
 		if (r->z1() - pool_depth < sea_level) continue; // too deep
 		float const dmin(min(r->dx(), r->dy()));
 		if (dmin < best_dmin) continue; // too small, or smaller than best room
@@ -268,6 +268,7 @@ void building_t::maybe_assign_extb_room_as_swimming() {
 	} // for f
 	room.assign_to(RTYPE_SWIM, 0);
 	interior->water_zval = pool.z2() - 0.05*pool_depth;
+	min_eq(interior->basement_ext_bcube.z1(), pool.z1()); // is this a good idea? it certainly makes other logic easier
 }
 
 unsigned building_t::setup_multi_floor_room(extb_room_t &room, door_t const &door, bool wall_dim, bool wall_dir, rand_gen_t &rgen) {
@@ -1150,7 +1151,7 @@ void building_t::get_pgbr_wall_ix_for_pos(point const &pos, index_pair_t &start,
 bool building_t::point_in_extended_basement(point const &pos) const {
 	if (!has_basement() || !interior)                  return 0;
 	if (interior->basement_ext_bcube.contains_pt(pos)) return 1;
-	if (has_pool() && interior->pool.contains_pt(pos)) return 1;
+	//if (has_pool() && interior->pool.contains_pt(pos)) return 1; // pool is contained in basement_ext_bcube now, so not needed
 	return 0;
 }
 cube_t building_t::get_bcube_inc_extensions() const {
@@ -1189,6 +1190,7 @@ bool building_interior_t::point_in_ext_basement_room(point const &pos, float exp
 	for (auto r = ext_basement_rooms_start(); r != rooms.end(); ++r) {
 		if (r->contains_pt_exp(pos, expand)) return 1;
 	}
+	if (pool.valid && pool.contains_pt_exp(pos, expand)) return 1;
 	return 0;
 }
 // returns true if cube is completely contained in any single room
