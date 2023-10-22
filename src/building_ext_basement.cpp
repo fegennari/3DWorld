@@ -104,7 +104,7 @@ bool building_t::is_basement_room_placement_valid(cube_t &room, ext_basement_roo
 		room_exp.expand_by_xy(wall_thickness + get_trim_thickness());
 		if (room_exp.intersects(P.rooms.front())) return 0;
 	}
-	test_cube.expand_in_dim(dim, -0.1*wall_thickness); // shrink slightly to avoid intersections with our parent room
+	test_cube.d[dim][!dir] -= (dir ? -1.0 : 1.0)*0.1*wall_thickness; // shrink slightly to avoid intersections with our parent room; or pass in the parent room?
 	float const room_len(room.get_sz_dim(dim)), room_width(room.get_sz_dim(!dim));
 	extb_room_t *end_conn_room(nullptr);
 
