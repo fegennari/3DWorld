@@ -103,6 +103,7 @@ point building_t::gen_animal_floor_pos(float radius, bool place_in_attic, bool n
 			if (room.z1() > ground_floor_z1) continue; // not on the ground floor or basement
 			if (has_parking_garage && room.z1() == ground_floor_z1 && (rgen.rand()&3))  continue; // prefer parking garage and backrooms 4x, since each is a single room
 			if (pref_dark_room && n < 50 && is_room_lit(room_ix, (room.z1() + radius))) continue; // check for dark room in first 50 iterations
+			if (has_pool() && room_ix == interior->pool.room_ix)                        continue; // don't place in a room with a pool
 			place_area = room; // will represent the usable floor area
 			place_area.z1() += get_fc_thickness(); // on top of the floor
 
@@ -923,6 +924,7 @@ bool building_t::update_spider_pos_orient(spider_t &spider, point const &camera_
 		cubes.clear();
 		avoid.clear();
 	} // for i
+	if (has_pool()) {obj_avoid.register_avoid_cube(interior->pool);}
 	// check elevators
 	for (elevator_t const &e : interior->elevators) {surface_orienter.register_cube(e);} // should we avoid open elevators?
 	
@@ -1311,7 +1313,7 @@ void get_xy_dir_to_closest_cube_edge(point const &pos, cube_t const &c, vector3d
 	if (dy2 < dmin) {dmin = dy2; dir =  plus_y;}
 }
 
-// applies to snakes and insects
+// applies to snakes and flies
 // return values: 0=no coll, 1=outside building, 2=static object, 3=dynamic object, 4=ourself (for snakes)
 // coll_dir points in the direction of the collision, opposite the collision normal
 int building_t::check_for_animal_coll(building_animal_t const &A, float hheight, float z_center_offset, bool on_floor_only, bool skip_player,

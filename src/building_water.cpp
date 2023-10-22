@@ -166,7 +166,7 @@ cube_t building_t::get_water_cube(bool full_room_height) const {
 
 	if (has_pool()) {
 		cube_t water(interior->pool);
-		water.z2() = interior->water_zval;
+		water.z2() = (full_room_height ? (water.z2() + get_floor_ceil_gap()) : interior->water_zval);
 		return water;
 	}
 	assert(has_ext_basement()); // backrooms

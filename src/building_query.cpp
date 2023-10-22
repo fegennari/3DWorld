@@ -1876,6 +1876,16 @@ int building_t::check_line_coll_expand(point const &p1, point const &p2, float r
 			}
 		}
 	}
+	if (has_pool()) { // check swimming pools
+		cube_t pool(interior->pool);
+		pool.z2() += 2.0*hheight; // raise the top edge of the pool to the height of the caller
+		
+		if (line_int_cube_exp(p1, p2, pool, expand)) {
+			point const p(0.5*(p1 + p2)); // average
+			bool const cdim(min(fabs(p.y - pool.y1()), fabs(p.y - pool.y2())) < min(fabs(p.x - pool.x1()), fabs(p.x - pool.x2())));
+			return (cdim+1); // 2-3; treat this as a wall collision
+		}
+	}
 	if (!has_room_geom()) return 0; // done (but really shouldn't get here)
 	// check room objects and expanded objects (from closets)
 	float t(0.0);
