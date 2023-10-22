@@ -1481,7 +1481,7 @@ bool building_t::is_valid_ai_placement(point const &pos, float radius, bool skip
 
 		for (auto i = interior->room_geom->objs.begin(); i != objs_end; ++i) {
 			if (skip_nocoll && i->no_coll()) continue;
-			if (i->type == TYPE_FLOORING || i->type == TYPE_BLOCKER) continue; // okay to place on flooring; ignore blockers (used for placement clearance)
+			if (i->type == TYPE_FLOORING || i->type == TYPE_BLOCKER || i->type == TYPE_POOL_TILE) continue; // okay to place on flooring; ignore blockers (used for placement clearance)
 			if (i->intersects(ai_bcube)) return 0;
 		}
 	}

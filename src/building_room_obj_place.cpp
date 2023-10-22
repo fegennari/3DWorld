@@ -2178,8 +2178,43 @@ void building_t::add_swimming_pool_room_objs(rand_gen_t rgen, room_t const &room
 	assert(has_pool());
 	bool const long_dim(room.dx() < room.dy());
 	cube_t const place_area(get_walkable_room_bounds(room));
-	float const floor_spacing(get_window_vspace());
+	float const floor_spacing(get_window_vspace()), tile_thickness(get_trim_thickness());
 	cube_with_ix_t const &pool(interior->pool);
+	vect_room_object_t &objs(interior->room_geom->objs);
+	
+	// add tile around the sides of the pool
+	for (unsigned dim = 0; dim < 2; ++dim) {
+		for (unsigned dir = 0; dir < 2; ++dir) {
+			cube_t side(pool);
+			side.z2() += tile_thickness; // fill the gap with the tiles on the floor above
+			side.d[dim][!dir] = pool.d[dim][dir];
+			side.d[dim][ dir] = pool.d[dim][dir] + (dir ? 1.0 : -1.0)*tile_thickness;
+			objs.emplace_back(side, TYPE_POOL_TILE, room_id, dim, dir, RO_FLAG_ADJ_LO, tot_light_amt); // flag RO_FLAG_ADJ_LO for being inside the pool
+		}
+	} // for dim
+	// bottom of the pool
+	cube_t bottom(pool);
+	bottom.z2() = pool.z1() + tile_thickness;
+	objs.emplace_back(bottom, TYPE_POOL_TILE, room_id, 0, 0, (RO_FLAG_NOCOLL | RO_FLAG_ADJ_BOT | RO_FLAG_ADJ_LO), tot_light_amt);
+	// ceiling and floor
+	cube_t ceil(room);
+	ceil.z2() = zval + get_floor_ceil_gap();
+	ceil.z1() = ceil.z2() - tile_thickness;
+	objs.emplace_back(ceil, TYPE_POOL_TILE, room_id, 0, 0, (RO_FLAG_NOCOLL | RO_FLAG_ADJ_TOP), tot_light_amt);
+	zval += tile_thickness; // any objects will be placed on the floor tile
+	cube_t floor_test(room);
+	floor_test.expand_by(-get_wall_thickness());
+
+	for (cube_t const &f : interior->floors) {
+		if (!floor_test.intersects(f)) continue;
+		cube_t fc(f);
+		set_cube_zvals(fc, f.z2(), (f.z2() + tile_thickness));
+		objs.emplace_back(fc, TYPE_POOL_TILE, room_id, 0, 0, (RO_FLAG_NOCOLL | RO_FLAG_ADJ_BOT), tot_light_amt);
+	}
+	// walls
+	// TODO
+
+	// ledge around the pool
 	// TODO
 }
 
@@ -2195,7 +2230,6 @@ void building_t::add_fire_ext(float height, float radius, float zval, float wall
 	point pos(0.0, 0.0, (zval + 0.32*window_vspacing)); // bottom position
 	pos[ dim] = wall_edge + dir_sign*radius; // radius away from the wall
 	pos[!dim] = pos_along_wall;
-
 	vect_room_object_t &objs(interior->room_geom->objs);
 	// add fire extinguisher
 	cube_t fe_bcube(pos, pos);

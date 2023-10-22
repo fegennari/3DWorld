@@ -39,6 +39,7 @@ int get_counter_tid    () {return get_texture_by_name("marble2.jpg");}
 int get_paneling_nm_tid() {return get_texture_by_name("normal_maps/paneling_NRM.jpg", 1);}
 int get_blinds_tid     () {return get_texture_by_name("interiors/blinds.jpg", 0, 0, 1, 8.0);} // use high aniso
 int get_money_tid      () {return get_texture_by_name("interiors/dollar20.jpg");}
+int get_pool_tile_tid  () {return get_texture_by_name("interiors/glass_tiles.jpg");}
 
 int get_crack_tid(room_object_t const &obj, bool alpha=0) {
 	return get_texture_by_name(((5*obj.obj_id + 7*obj.room_id) & 1) ?
@@ -1377,6 +1378,17 @@ int get_flooring_texture(room_object_t const &c) {
 }
 void building_room_geom_t::add_flooring(room_object_t const &c, float tscale) {
 	get_material(tid_nm_pair_t(get_flooring_texture(c), 0.8*tscale)).add_cube_to_verts(c, apply_light_color(c), tex_origin, ~EF_Z2); // top face only, unshadowed
+}
+
+void building_room_geom_t::add_pool_tile(room_object_t const &c, float tscale) {
+	tscale *= 0.5;
+	if (c.flags & RO_FLAG_ADJ_LO) {} // tile is inside the pool; otherwise outside; TODO: use a different texture
+	rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_pool_tile_tid(), get_texture_by_name("interiors/glass_tiles_normal.jpg"), tscale, tscale), 0, 0, 1)); // unshadowed, small
+	unsigned skip_faces(0);
+	if      (c.flags & RO_FLAG_ADJ_TOP) {skip_faces = ~EF_Z1;} // on the ceiling, only draw the bottom face
+	else if (c.flags & RO_FLAG_ADJ_BOT) {skip_faces = ~EF_Z2;} // on the floor,   only draw the top    face
+	else {skip_faces = get_face_mask(c.dim, !c.dir);} // draw face opposite the wall this was added to
+	mat.add_cube_to_verts(c, c.color, tex_origin, skip_faces);
 }
 
 void building_room_geom_t::add_wall_trim(room_object_t const &c, bool for_closet) { // uses mats_detail
@@ -4092,6 +4104,7 @@ colorRGBA room_object_t::get_color() const {
 	case TYPE_FIRE_EXT: return RED;
 	case TYPE_PANTS:    return LT_BLUE; // close enough, don't need to use the texture color
 	case TYPE_POOL_TABLE: return (BROWN*0.75 + GREEN*0.25);
+	case TYPE_POOL_TILE: return texture_color(get_pool_tile_tid());
 	//case TYPE_POOL_BALL: return ???; // uses a texture atlas, so unclear what color to use here; use white by default
 	//case TYPE_CHIMNEY:  return texture_color(get_material().side_tex); // should modulate with texture color, but we don't have it here
 	default: return color; // TYPE_LIGHT, TYPE_TCAN, TYPE_BOOK, TYPE_BOTTLE, TYPE_PEN_PENCIL, etc.
