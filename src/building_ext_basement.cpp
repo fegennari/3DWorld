@@ -298,13 +298,13 @@ void building_t::maybe_assign_extb_room_as_swimming(rand_gen_t &rgen) {
 		room.num_lights = (unsigned)ceil(room.get_area_xy()/orig_room.get_area_xy()); // larger rooms need more lights
 	}
 	bool const long_dim(room.dx() < room.dy()); // likely exp_dim
-	float const doorway_width(get_doorway_width()), min_spacing(1.5*doorway_width), floor_zval(room.z1() + get_fc_thickness());
+	float const doorway_width(get_doorway_width()), min_spacing(1.5*doorway_width), fc_thickness(get_fc_thickness()), floor_zval(room.z1() + fc_thickness);
 	indoor_pool_t &pool(interior->pool);
 	pool.copy_from(get_walkable_room_bounds(room));
 	pool.expand_by_xy(-min_spacing);
 	assert(pool.is_strictly_normalized());
 	set_cube_zvals(pool, (floor_zval - pool_depth), floor_zval);
-	float const pool_width(pool.get_sz_dim(!long_dim)), extra_width(pool_width - 2.0*floor_spacing);
+	float const pool_width(pool.get_sz_dim(!long_dim)), extra_width(pool_width - 2.0*floor_spacing), pool_bottom(pool.z1() - fc_thickness);
 	if (pool_width < floor_spacing) return; // too small; shouldn't happen unless the door width to floor spacing values are wrong
 	if (extra_width > 0.0) {pool.expand_in_dim(!long_dim, -0.25*extra_width);} // can make narrower if there's extra space
 	pool.dim = long_dim; // or door.dim?
@@ -326,12 +326,12 @@ void building_t::maybe_assign_extb_room_as_swimming(rand_gen_t &rgen) {
 		//f = floor_parts.back(); // one part can replace the original floor
 		//floor_parts.pop_back();
 		f = pool;
-		set_cube_zvals(f, (pool.z1() - get_fc_thickness()), pool.z1()); // move to the bottom of the pool
+		set_cube_zvals(f, pool_bottom, pool.z1()); // move to the bottom of the pool
 		vector_add_to(floor_parts, interior->floors);
 	} // for f
 	room.assign_to(RTYPE_SWIM, 0);
 	interior->water_zval = pool.z2() - 0.05*pool_depth;
-	min_eq(interior->basement_ext_bcube.z1(), pool.z1()); // is this a good idea? it certainly makes other logic easier
+	min_eq(interior->basement_ext_bcube.z1(), pool_bottom); // is this a good idea? it certainly makes other logic easier
 }
 
 unsigned building_t::setup_multi_floor_room(extb_room_t &room, door_t const &door, bool wall_dim, bool wall_dir, rand_gen_t &rgen) {

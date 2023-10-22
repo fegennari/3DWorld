@@ -1387,6 +1387,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		bool const camera_room_same_part(room.part_id == camera_part || (is_house && camera_in_room_part_xy)); // treat stacked house parts as the same
 		bool const has_stairs_this_floor(!is_in_attic && room.has_stairs_on_floor(cur_floor));
 		bool const light_room_has_stairs_or_ramp(i->has_stairs() || has_stairs_this_floor || (check_ramp && is_room_above_ramp(room, i->z1())));
+		bool const is_over_pool(has_pool() && (int)i->room_id == interior->pool.room_ix);
 		// special case for light shining down from above stairs when the player is below
 		bool const light_above_stairs(lpos.z > camera_z && light_room_has_stairs_or_ramp);
 		bool stairs_light(0), player_in_elevator(0), cull_if_not_by_stairs(0);
@@ -1491,7 +1492,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		cube_t clipped_bc(sphere_bc);
 		clipped_bc.intersect_with_cube(light_clip_cube);
 		// clip zval to current floor if light not in a room with stairs or elevator
-		if (!stairs_light && !is_in_elevator) {max_eq(clipped_bc.z1(), (floor_z - fc_thick));}
+		if (!stairs_light && !is_in_elevator && !is_over_pool) {max_eq(clipped_bc.z1(), (floor_z - fc_thick));}
 		min_eq(clipped_bc.z2(), (ceil_z + fc_thick)); // ceiling is always valid, since lights point downward
 
 		if (!clipped_bc.is_strictly_normalized()) {

@@ -255,9 +255,14 @@ void building_t::draw_water(vector3d const &xlate) const {
 		return;
 	}
 	shader_t s;
-	unsigned const camera_floor(unsigned((min(camera_pos.z, interior->water_zval) - water_z1)/floor_spacing)); // handle player on floor above water
-	float water_depth(interior->water_zval - (water_z1 + get_fc_thickness() + camera_floor*floor_spacing)); // for the player's floor
-	min_eq(water_depth, get_floor_ceil_gap()); // lights are on every floor, so optical depth can't be more than the distance between the floor and the lights above it
+	float water_depth(0.0);
+
+	if (has_pool()) {water_depth = interior->water_zval - interior->pool.z1();}
+	else { // backrooms water
+		unsigned const camera_floor(unsigned((min(camera_pos.z, interior->water_zval) - water_z1)/floor_spacing)); // handle player on floor above water
+		water_depth = interior->water_zval - (water_z1 + get_fc_thickness() + camera_floor*floor_spacing); // for the player's floor
+		min_eq(water_depth, get_floor_ceil_gap()); // lights are on every floor, so optical depth can't be more than the distance between the floor and the lights above it
+	}
 	cube_t const lights_bcube(get_building_lights_bcube());
 	bool const use_dlights(!lights_bcube.is_all_zeros()), have_indir(0), use_smap(1); // indir lighting has little effect and is difficult to setup
 	float const pcf_scale = 0.2;
