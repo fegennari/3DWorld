@@ -224,9 +224,10 @@ void building_t::draw_water(vector3d const &xlate) const {
 	}
 	cube_t const water(get_water_cube());
 	bool const is_pool(has_pool());
-	float const floor_spacing(get_window_vspace()), atten_scale((is_pool ? 0.25 : 1.0)/floor_spacing), water_z1(water.z1());
+	float const floor_spacing(get_window_vspace()), atten_scale((is_pool ? 0.4 : 1.0)/floor_spacing), water_z1(water.z1());
 	if (animate2) {building_splash_manager.next_frame(floor_spacing);} // maybe should do this somewhere else? or update even if water isn't visible?
 	point const camera_pos(get_camera_pos());
+	float const mud_amt(is_pool ? 0.0 : 0.5);
 
 	if (camera_pos.z < interior->water_zval) { // player under the water; could also check (player_in_water == 2)
 		point const camera_bs(camera_pos - get_tiled_terrain_model_xlate());
@@ -245,7 +246,8 @@ void building_t::draw_water(vector3d const &xlate) const {
 				next_bubble_time = tfticks + rgen.rand_uniform(0.2, 0.4)*TICKS_PER_SECOND; // random spacing in time
 			}
 		}
-		apply_player_underwater_effect(is_pool ? colorRGBA(0.7, 0.8, 1.0) : colorRGBA(0.4, 0.6, 1.0)); // light blue-ish
+		colorRGBA const pool_color(0.7, 0.8, 1.0), clear_color(0.4, 0.6, 1.0), mud_color(1.0, 0.6, 0.33);
+		apply_player_underwater_effect(is_pool ? pool_color : blend_color(mud_color, clear_color, mud_amt, 0));
 		add_postproc_underwater_fog(WATER_COL_ATTEN*atten_scale);
 		bool const is_lit(is_room_lit(get_room_containing_pt(camera_bs), camera_bs.z));
 		colorRGBA const base_color(is_lit ? WHITE : DK_GRAY);
@@ -278,7 +280,7 @@ void building_t::draw_water(vector3d const &xlate) const {
 	setup_building_draw_shader_post(s, have_indir);
 	s.add_uniform_vector3d("camera_pos", camera_pos);
 	s.add_uniform_float("water_depth",   water_depth);
-	setup_shader_underwater_atten(s, atten_scale); // attenuates to dark blue/opaque around this distance
+	setup_shader_underwater_atten(s, atten_scale, mud_amt); // attenuates to dark blue (or brown for mud)/opaque around this distance
 	building_splash_manager.set_shader_uniforms(s);
 	bind_frame_buffer_RGB(8); // tu_id=8
 	s.add_uniform_int("frame_buffer", 8); // tu_id=8
