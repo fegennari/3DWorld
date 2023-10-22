@@ -39,7 +39,25 @@ int get_counter_tid    () {return get_texture_by_name("marble2.jpg");}
 int get_paneling_nm_tid() {return get_texture_by_name("normal_maps/paneling_NRM.jpg", 1);}
 int get_blinds_tid     () {return get_texture_by_name("interiors/blinds.jpg", 0, 0, 1, 8.0);} // use high aniso
 int get_money_tid      () {return get_texture_by_name("interiors/dollar20.jpg");}
-int get_pool_tile_tid  () {return get_texture_by_name("interiors/glass_tiles.jpg");}
+
+struct pool_texture_params_t {
+	string fn, nm_fn;
+	float tscale;
+	pool_texture_params_t(string const &fn_, string const &nm_fn_, float tscale_) : fn(fn_), nm_fn(nm_fn_), tscale(tscale_) {}
+	int get_tid   () const {return get_texture_by_name(fn);}
+	int get_nm_tid() const {return get_texture_by_name(nm_fn, 1);}
+};
+enum {POOL_TILE_INSIDE=0, POOL_TILE_WALL, POOL_TILE_FLOOR, NUM_POOL_TILES};
+pool_texture_params_t pool_texture_params[NUM_POOL_TILES] = {
+	pool_texture_params_t("interiors/glass_tiles.jpg",  "interiors/glass_tiles_normal.jpg",  0.50),
+	pool_texture_params_t("interiors/glazed_tiles.jpg", "interiors/glazed_tiles_normal.jpg", 0.50),
+	pool_texture_params_t("interiors/mosaic_tiles.jpg", "interiors/mosaic_tiles_normal.jpg", 0.25)
+};
+int get_pool_tile_type(room_object_t const &obj) {
+	if (obj.flags & RO_FLAG_ADJ_LO) return POOL_TILE_INSIDE;
+	return ((obj.flags & (RO_FLAG_ADJ_TOP | RO_FLAG_ADJ_BOT)) ? POOL_TILE_FLOOR : POOL_TILE_WALL);
+}
+pool_texture_params_t const &get_pool_tile_params(room_object_t const &obj) {return pool_texture_params[get_pool_tile_type(obj)];}
 
 int get_crack_tid(room_object_t const &obj, bool alpha=0) {
 	return get_texture_by_name(((5*obj.obj_id + 7*obj.room_id) & 1) ?
@@ -1381,14 +1399,14 @@ void building_room_geom_t::add_flooring(room_object_t const &c, float tscale) {
 }
 
 void building_room_geom_t::add_pool_tile(room_object_t const &c, float tscale) {
-	tscale *= 0.5;
-	if (c.flags & RO_FLAG_ADJ_LO) {} // tile is inside the pool; otherwise outside; TODO: use a different texture
-	rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_pool_tile_tid(), get_texture_by_name("interiors/glass_tiles_normal.jpg"), tscale, tscale), 0, 0, 1)); // unshadowed, small
+	pool_texture_params_t const &params(get_pool_tile_params(c));
+	tscale *= params.tscale;
+	rgeom_mat_t &mat(get_material(tid_nm_pair_t(params.get_tid(), params.get_nm_tid(), tscale, tscale), 0, 0, 1)); // unshadowed, small
 	unsigned skip_faces(0);
 	if      (c.flags & RO_FLAG_ADJ_TOP) {skip_faces = ~EF_Z1;} // on the ceiling, only draw the bottom face
 	else if (c.flags & RO_FLAG_ADJ_BOT) {skip_faces = ~EF_Z2;} // on the floor,   only draw the top    face
 	else {skip_faces = get_face_mask(c.dim, !c.dir);} // draw face opposite the wall this was added to
-	mat.add_cube_to_verts(c, c.color, tex_origin, skip_faces);
+	mat.add_cube_to_verts(c, c.color, tex_origin, skip_faces, !c.dim);
 }
 
 void building_room_geom_t::add_wall_trim(room_object_t const &c, bool for_closet) { // uses mats_detail
@@ -4104,7 +4122,7 @@ colorRGBA room_object_t::get_color() const {
 	case TYPE_FIRE_EXT: return RED;
 	case TYPE_PANTS:    return LT_BLUE; // close enough, don't need to use the texture color
 	case TYPE_POOL_TABLE: return (BROWN*0.75 + GREEN*0.25);
-	case TYPE_POOL_TILE: return texture_color(get_pool_tile_tid());
+	case TYPE_POOL_TILE: return texture_color(get_pool_tile_params(*this).get_tid());
 	//case TYPE_POOL_BALL: return ???; // uses a texture atlas, so unclear what color to use here; use white by default
 	//case TYPE_CHIMNEY:  return texture_color(get_material().side_tex); // should modulate with texture color, but we don't have it here
 	default: return color; // TYPE_LIGHT, TYPE_TCAN, TYPE_BOOK, TYPE_BOTTLE, TYPE_PEN_PENCIL, etc.

@@ -2178,19 +2178,25 @@ void building_t::add_swimming_pool_room_objs(rand_gen_t rgen, room_t const &room
 	assert(has_pool());
 	bool const long_dim(room.dx() < room.dy());
 	cube_t const place_area(get_walkable_room_bounds(room));
-	float const floor_spacing(get_window_vspace()), tile_thickness(get_trim_thickness());
 	cube_with_ix_t const &pool(interior->pool);
+	float const floor_spacing(get_window_vspace()), tile_thickness(0.5*get_trim_thickness()), water_gap(pool.z2() - interior->water_zval);
 	vect_room_object_t &objs(interior->room_geom->objs);
+	assert(water_gap > 0.0);
 	
 	// add tile around the sides of the pool
 	for (unsigned dim = 0; dim < 2; ++dim) {
 		for (unsigned dir = 0; dir < 2; ++dir) {
 			cube_t side(pool);
 			side.z2() += tile_thickness; // fill the gap with the tiles on the floor above
-			side.d[dim][!dir] = pool.d[dim][dir];
-			side.d[dim][ dir] = pool.d[dim][dir] + (dir ? 1.0 : -1.0)*tile_thickness;
+			side.d[dim][!dir]  = pool.d[dim][dir];
+			side.d[dim][ dir] += (dir ? 1.0 : -1.0)*tile_thickness;
 			objs.emplace_back(side, TYPE_POOL_TILE, room_id, dim, dir, RO_FLAG_ADJ_LO, tot_light_amt); // flag RO_FLAG_ADJ_LO for being inside the pool
-		}
+			// add ledge around the pool
+			cube_t ledge(side);
+			ledge.z1() = ledge.z2() - 0.5*water_gap;
+			ledge.d[dim][dir] += (dir ? 1.0 : -1.0)*get_wall_thickness();
+			// TODO
+		} // for dir
 	} // for dim
 	// bottom of the pool
 	cube_t bottom(pool);
@@ -2212,10 +2218,16 @@ void building_t::add_swimming_pool_room_objs(rand_gen_t rgen, room_t const &room
 		objs.emplace_back(fc, TYPE_POOL_TILE, room_id, 0, 0, (RO_FLAG_NOCOLL | RO_FLAG_ADJ_BOT), tot_light_amt);
 	}
 	// walls
-	// TODO
-
-	// ledge around the pool
-	// TODO
+	for (unsigned d = 0; d < 2; ++d) {
+		for (cube_t const &wall : interior->walls[d]) {
+			if (!wall.intersects_no_adj(room)) continue;
+			bool const dir(wall.get_center_dim(d) < room.get_center_dim(d)); // direction facing the center of the room
+			cube_t tile(wall);
+			tile.d[d][!dir]  = wall.d[d][dir]; // edge of wall facing the room
+			tile.d[d][ dir] += (dir ? 1.0 : -1.0)*tile_thickness;
+			objs.emplace_back(tile, TYPE_POOL_TILE, room_id, d, !dir, RO_FLAG_NOCOLL, tot_light_amt);
+		} // for wall
+	} // for d
 }
 
 bool get_fire_ext_height_and_radius(float window_vspacing, float &height, float &radius) {
