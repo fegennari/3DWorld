@@ -763,10 +763,15 @@ public:
 			set_cube_zvals(VA, b.interior->attic_access.z1(), b.interior_z2);
 		}
 		else {
+			bool const in_ext_basement(b.point_in_extended_basement_not_basement(target));
 			float const floor_spacing(b.get_window_vspace()), building_z1(b.get_bcube_z1_inc_ext_basement());
-			VA = (b.point_in_extended_basement_not_basement(target) ? b.interior->basement_ext_bcube : b.bcube);
+			VA = (in_ext_basement ? b.interior->basement_ext_bcube : b.bcube);
 			VA.z1() = building_z1 + target_floor*floor_spacing;
 			VA.z2() = VA.z1() + floor_spacing;
+
+			if (in_ext_basement && b.has_pool()) { // check if light source room has a pool, and include the bottom of the pool in our valid area
+				if (b.get_room(b.interior->pool.room_ix).contains_pt(target)) {min_eq(VA.z1(), b.interior->pool.z1());}
+			}
 		}
 		return VA;
 	}
