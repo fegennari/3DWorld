@@ -198,20 +198,19 @@ bool building_t::water_visible_to_player() const {
 	}
 	if (has_pool()) { // pool water
 		room_t const &room(get_room(interior->pool.room_ix));
-		if (room.contains_pt(camera_bs)) return 1; // player in room with the pool
+		if (room.contains_pt_exp(camera_bs, get_wall_thickness())) return 1; // player in room with the pool, or in its doorway
 		// check if pool is visible through a doorway
+		cube_t pool_surface(interior->pool);
+		pool_surface.z1() = interior->water_zval;
 		vect_door_stack_t &doorways(get_doorways_for_room(room, room.z1()));
 
 		for (door_stack_t const &ds : doorways) {
 			assert(ds.num_doors == 1); // must be a single door
 			door_t const &door(get_door(ds.first_door_ix));
 			if (door.open_amt == 0) continue; // fully closed
-			float const door_pos(door.get_center_dim(door.dim));
-			if ((interior->pool.get_center_dim(door.dim) < door_pos) == (camera_bs[door.dim] < door_pos)) continue; // pool and camera on same side of door - not visible through it
 			if (!is_rot_cube_visible(door, xlate)) continue;
-			// TODO: should check for door corner rays intersecting pool || pool corner ray intersecting door
-			return 1;
-		} // for ds
+			if (is_cube_visible_through_door(camera_bs, pool_surface, door)) return 1;
+		}
 	}
 	return 0;
 }

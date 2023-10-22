@@ -2196,6 +2196,24 @@ void building_t::get_lights_near_door(unsigned door_ix, vector<unsigned> &light_
 	}
 }
 
+// it's up to the caller to check that the door is open or closed (depending on the query)
+/*static*/ bool building_t::is_cube_visible_through_door(point const &viewer, cube_t const &c, door_t const &door) {
+	cube_t const door_bcube(door.get_true_bcube()); // must be nonzero area for this test to be correct
+	if (door_bcube.contains_pt(viewer)) return 1; // viewer in doorway
+	float const door_pos(door.get_center_dim(door.dim)), vpos(viewer[door.dim]);
+	if ((c.get_center_dim(door.dim) < door_pos) == (vpos < door_pos)) return 0; // viewer and cube on same side of door - not visible through it (optimization)
+	point pts[8];
+	unsigned const npts(get_cube_corners(c.d, pts, viewer, 0)); // should return only the 6 visible corners
+	cube_t proj_area;
+
+	for (unsigned n = 0; n < npts; ++n) {
+		float const t((door_pos - vpos)/(pts[n][door.dim] - vpos));
+		point const proj(viewer + t*(pts[n] - viewer));
+		proj_area.assign_or_union_with_pt(proj);
+	}
+	return door_bcube.intersects(proj_area);
+}
+
 void building_t::print_building_manifest() const { // Note: skips expanded_objs
 	cout << TXT(parts.size()) << TXT(doors.size()) << TXT(details.size());
 
