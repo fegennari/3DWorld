@@ -153,7 +153,7 @@ bool building_t::set_float_height(point &pos, float radius, float ceil_zval, flo
 	if (density >= 1.0) return 0; // sinks
 	if (!point_in_water_area((pos - radius*plus_z), 0)) return 0; // test bottom point; full_room_height=0
 	max_eq(pos.z, (interior->water_zval + radius*(1.0f - 2.0f*density))); // floats on the water
-	if (radius > 0.0) {min_eq(pos.z, ceil_zval - radius);} // if water level is high, keep below the ceiling
+	if (radius > 0.0 && !has_pool()) {min_eq(pos.z, ceil_zval - radius);} // if water level is high, and this is for backrooms (not a pool), keep below the ceiling
 	return 1;
 }
 float building_t::get_floor_below_water_level() const {
@@ -223,7 +223,8 @@ void building_t::draw_water(vector3d const &xlate) const {
 		return;
 	}
 	cube_t const water(get_water_cube());
-	float const floor_spacing(get_window_vspace()), atten_scale(1.0/floor_spacing), water_z1(water.z1());
+	bool const is_pool(has_pool());
+	float const floor_spacing(get_window_vspace()), atten_scale((is_pool ? 0.25 : 1.0)/floor_spacing), water_z1(water.z1());
 	if (animate2) {building_splash_manager.next_frame(floor_spacing);} // maybe should do this somewhere else? or update even if water isn't visible?
 	point const camera_pos(get_camera_pos());
 
@@ -244,7 +245,7 @@ void building_t::draw_water(vector3d const &xlate) const {
 				next_bubble_time = tfticks + rgen.rand_uniform(0.2, 0.4)*TICKS_PER_SECOND; // random spacing in time
 			}
 		}
-		apply_player_underwater_effect(colorRGBA(0.4, 0.6, 1.0)); // light blue-ish
+		apply_player_underwater_effect(is_pool ? colorRGBA(0.7, 0.8, 1.0) : colorRGBA(0.4, 0.6, 1.0)); // light blue-ish
 		add_postproc_underwater_fog(WATER_COL_ATTEN*atten_scale);
 		bool const is_lit(is_room_lit(get_room_containing_pt(camera_bs), camera_bs.z));
 		colorRGBA const base_color(is_lit ? WHITE : DK_GRAY);
@@ -257,7 +258,7 @@ void building_t::draw_water(vector3d const &xlate) const {
 	shader_t s;
 	float water_depth(0.0);
 
-	if (has_pool()) {water_depth = interior->water_zval - interior->pool.z1();}
+	if (is_pool) {water_depth = interior->water_zval - interior->pool.z1();}
 	else { // backrooms water
 		unsigned const camera_floor(unsigned((min(camera_pos.z, interior->water_zval) - water_z1)/floor_spacing)); // handle player on floor above water
 		water_depth = interior->water_zval - (water_z1 + get_fc_thickness() + camera_floor*floor_spacing); // for the player's floor
