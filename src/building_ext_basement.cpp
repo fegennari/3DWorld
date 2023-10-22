@@ -203,11 +203,29 @@ bool building_t::add_underground_exterior_rooms(rand_gen_t &rgen, cube_t const &
 		interior->landings.push_back(landing);
 		interior->stairwells.emplace_back(stairwell, 1); // num_floors=1
 	} // for stairs
-	maybe_assign_extb_room_as_swimming();
+	maybe_assign_extb_room_as_swimming(rgen);
 	return 1;
 }
 
-void building_t::maybe_assign_extb_room_as_swimming() {
+void extend_adj_cubes(cube_t const &oldc, cube_t const &newc, vect_cube_t &cubes, float wall_thickness, unsigned wall_dim=2) {
+	cube_t query(oldc);
+	query.expand_by(0.5*wall_thickness);
+
+	for (cube_t &c : cubes) {
+		if (!query.intersects(c)) continue;
+
+		for (unsigned dim = 0; dim < 2; ++dim) {
+			for (unsigned dir = 0; dir < 2; ++dir) {
+				float const old_pos(oldc.d[dim][dir]), new_pos(newc.d[dim][dir]);
+				if (new_pos == old_pos) continue; // no edge movement
+				if (fabs(c.d[dim][dir] - old_pos) > wall_thickness) continue; // not along this edge
+				if (dim == wall_dim) {c.translate_dim(dim, (new_pos - old_pos));} // translate the wall
+				else {c.d[dim][dir] = new_pos;} // translate edge by the same amount
+			}
+		}
+	} // for c
+}
+void building_t::maybe_assign_extb_room_as_swimming(rand_gen_t &rgen) {
 	// swimming pools are in the basement so that we don't need to cut out the terrain, and in the extended basement so that we can create a custom lower floor area
 	assert(has_ext_basement());
 	vector<room_t> &rooms(interior->rooms);
@@ -234,21 +252,66 @@ void building_t::maybe_assign_extb_room_as_swimming() {
 	} // for r
 	if (largest_valid_room < 0) return; // no valid room found
 	room_t &room(rooms[largest_valid_room]);
-	bool const long_dim(room.dx() < room.dy());
+	vect_door_stack_t &doorways(get_doorways_for_room(room, room.z1()));
+	assert(!doorways.empty());
+	door_stack_t const &door(doorways.front()); // choose the first door as the main entrance; there's likely only one
+
+	// attempt to expand the room so that we can fit a larger pool; assume connected to a hallway with <door>, and expand away from door
+	float const wall_thickness(get_wall_thickness()), wall_pad(2.0*wall_thickness + get_trim_thickness()), exp_step(0.25*floor_spacing);
+	room_t const orig_room(room);
+	bool const exp_dim(door.dim), exp_dir(door.get_center_dim(exp_dim) < room.get_center_dim(exp_dim));
+	cube_t const &basement(get_basement());
+	// try to expand away from the first door, then expand to either side of the door, starting with a random side
+	bool const pref_exp_other_dir(rgen.rand_bool());
+	bool const exp_dims[3] = {exp_dim, !exp_dim, !exp_dim}, exp_dirs[3] = {exp_dir, pref_exp_other_dir, !pref_exp_other_dir};
+
+	for (unsigned d = 0; d < 3; ++d) {
+		bool const edim(exp_dims[d]), edir(exp_dirs[d]);
+		float &end_wall(room.d[edim][edir]);
+		float const step_dist((edir ? 1.0 : -1.0)*exp_step), exp_max(((d == 0) ? 2.0 : 1.0)*room.get_sz_dim(edim)); // 2-3x longer
+		unsigned const num_steps(round_fp(exp_max/exp_step));
+
+		for (unsigned n = 0; n < num_steps; ++n) {
+			cube_t slice(room);
+			slice.d[edim][!edir]  = end_wall;
+			slice.d[edim][ edir] += step_dist;
+			slice.expand_by_xy(wall_pad); // add some space around it for the walls
+			if (slice.intersects(basement)) break;
+			bool had_coll(0);
+
+			for (auto r = interior->ext_basement_rooms_start(); r != rooms.end(); ++r) {
+				if ((r - rooms.begin()) == (unsigned)largest_valid_room) continue; // skip self
+				if (r->intersects(slice)) {had_coll = 1; break;}
+			}
+			if (had_coll || !is_basement_room_under_mesh_not_int_bldg(room)) break;
+			end_wall += step_dist;
+		} // for n
+	} // for d
+	assert(room.is_strictly_normalized());
+	bool const was_extended(room != orig_room);
+
+	if (was_extended) { // room was extended; move or extend any connected walls, ceilings, and floors
+		extend_adj_cubes(orig_room, room, interior->floors,   wall_thickness);
+		extend_adj_cubes(orig_room, room, interior->ceilings, wall_thickness);
+		for (unsigned d = 0; d < 2; ++d) {extend_adj_cubes(orig_room, room, interior->walls[d], wall_thickness, d);}
+		interior->basement_ext_bcube.union_with_cube(room);
+		room.num_lights = (unsigned)ceil(room.get_area_xy()/orig_room.get_area_xy()); // larger rooms need more lights
+	}
+	bool const long_dim(room.dx() < room.dy()); // likely exp_dim
 	float const doorway_width(get_doorway_width()), min_spacing(1.5*doorway_width), floor_zval(room.z1() + get_fc_thickness());
 	indoor_pool_t &pool(interior->pool);
 	pool.copy_from(get_walkable_room_bounds(room));
 	pool.expand_by_xy(-min_spacing);
+	assert(pool.is_strictly_normalized());
 	set_cube_zvals(pool, (floor_zval - pool_depth), floor_zval);
 	float const pool_width(pool.get_sz_dim(!long_dim)), extra_width(pool_width - 2.0*floor_spacing);
 	if (pool_width < floor_spacing) return; // too small; shouldn't happen unless the door width to floor spacing values are wrong
 	if (extra_width > 0.0) {pool.expand_in_dim(!long_dim, -0.25*extra_width);} // can make narrower if there's extra space
-	vect_door_stack_t &doorways(get_doorways_for_room(room, room.z1()));
-	assert(!doorways.empty());
-	door_stack_t const &door(doorways.front()); // choose the first door as the main entrance; there's likely only one
 	pool.dim = long_dim; // or door.dim?
 	bool const dir(room.get_center_dim(pool.dim) < door.get_center_dim(pool.dim));
-	pool.translate_dim(pool.dim, (dir ? -1.0 : 1.0)*0.5*doorway_width); // shift away from door
+	float const door_shift((dir ? -1.0 : 1.0)*0.5*doorway_width);
+	if (was_extended) {pool.d[pool.dim][dir] += door_shift;} // shift edge away from door
+	else {pool.translate_dim(pool.dim, door_shift);} // trnslate away from door
 	pool.dir     = dir;
 	pool.room_ix = largest_valid_room;
 	pool.valid   = 1;
