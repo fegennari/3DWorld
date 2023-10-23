@@ -1400,8 +1400,9 @@ void building_room_geom_t::add_flooring(room_object_t const &c, float tscale) {
 
 void building_room_geom_t::add_pool_tile(room_object_t const &c, float tscale) {
 	pool_texture_params_t const &params(get_pool_tile_params(c));
-	tscale *= params.tscale;
-	rgeom_mat_t &mat(get_material(tid_nm_pair_t(params.get_tid(), params.get_nm_tid(), tscale, tscale), 0, 0, 1)); // unshadowed, small
+	tid_nm_pair_t tex(params.get_tid(), params.get_nm_tid(), params.tscale*tscale, params.tscale*tscale); // normal map is inverted?
+	tex.set_specular(1.0, 100.0);
+	rgeom_mat_t &mat(get_material(tex, 0, 0, 1)); // unshadowed, small
 	unsigned skip_faces(0);
 	if      (c.flags & RO_FLAG_ADJ_TOP) {skip_faces = ~EF_Z1;} // on the ceiling, only draw the bottom face
 	else if (c.flags & RO_FLAG_ADJ_BOT) {skip_faces = ~EF_Z2;} // on the floor,   only draw the top    face
