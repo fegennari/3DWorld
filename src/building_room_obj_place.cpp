@@ -2178,7 +2178,7 @@ void building_t::add_swimming_pool_room_objs(rand_gen_t rgen, room_t const &room
 	assert(has_pool());
 	bool const long_dim(room.dx() < room.dy());
 	cube_t const place_area(get_walkable_room_bounds(room));
-	cube_with_ix_t const &pool(interior->pool);
+	indoor_pool_t const &pool(interior->pool);
 	float const floor_spacing(get_window_vspace()), trim_thickness(get_trim_thickness()), wall_thickness(get_wall_thickness());
 	float const tile_thickness(0.5*trim_thickness), water_gap(pool.z2() - interior->water_zval);
 	vect_room_object_t &objs(interior->room_geom->objs);
@@ -2191,7 +2191,7 @@ void building_t::add_swimming_pool_room_objs(rand_gen_t rgen, room_t const &room
 			side.z2() += tile_thickness; // fill the gap with the tiles on the floor above
 			side.d[dim][!dir]  = pool.d[dim][dir];
 			side.d[dim][ dir] += (dir ? 1.0 : -1.0)*tile_thickness;
-			objs.emplace_back(side, TYPE_POOL_TILE, room_id, dim, dir, RO_FLAG_ADJ_LO, 1.0); // flag RO_FLAG_ADJ_LO for being inside the pool
+			objs.emplace_back(side, TYPE_POOL_TILE, room_id, dim, dir, RO_FLAG_ADJ_LO); // flag RO_FLAG_ADJ_LO for being inside the pool
 			// add ledge around the pool
 			cube_t ledge(side);
 			ledge.z1()  = side.z2() - 0.5*water_gap;
@@ -2203,15 +2203,15 @@ void building_t::add_swimming_pool_room_objs(rand_gen_t rgen, room_t const &room
 			interior->room_geom->trim_objs.emplace_back(ledge, TYPE_WALL_TRIM, room_id, dim, dir, RO_FLAG_NOCOLL, 1.0, SHAPE_TALL, WHITE); // draw all faces
 		} // for dir
 	} // for dim
-	// bottom of the pool
+	// add tile to the bottom of the pool
 	cube_t bottom(pool);
 	bottom.z2() = pool.z1() + tile_thickness;
-	objs.emplace_back(bottom, TYPE_POOL_TILE, room_id, 0, 0, (RO_FLAG_NOCOLL | RO_FLAG_ADJ_BOT | RO_FLAG_ADJ_LO), 1.0);
-	// ceiling and floor
+	objs.emplace_back(bottom, TYPE_POOL_TILE, room_id, 0, 0, (RO_FLAG_NOCOLL | RO_FLAG_ADJ_BOT | RO_FLAG_ADJ_LO));
+	// add ceiling and floor tile
 	cube_t ceil(room);
 	ceil.z2() = zval + get_floor_ceil_gap();
 	ceil.z1() = ceil.z2() - tile_thickness;
-	objs.emplace_back(ceil, TYPE_POOL_TILE, room_id, 0, 0, (RO_FLAG_NOCOLL | RO_FLAG_ADJ_TOP), 1.0);
+	objs.emplace_back(ceil, TYPE_POOL_TILE, room_id, 0, 0, (RO_FLAG_NOCOLL | RO_FLAG_ADJ_TOP));
 	zval += tile_thickness; // any objects will be placed on the floor tile
 	cube_t floor_test(room);
 	floor_test.expand_by(-get_wall_thickness());
@@ -2220,9 +2220,9 @@ void building_t::add_swimming_pool_room_objs(rand_gen_t rgen, room_t const &room
 		if (!floor_test.intersects(f)) continue;
 		cube_t fc(f);
 		set_cube_zvals(fc, f.z2(), (f.z2() + tile_thickness));
-		objs.emplace_back(fc, TYPE_POOL_TILE, room_id, 0, 0, (RO_FLAG_NOCOLL | RO_FLAG_ADJ_BOT), 1.0);
+		objs.emplace_back(fc, TYPE_POOL_TILE, room_id, 0, 0, (RO_FLAG_NOCOLL | RO_FLAG_ADJ_BOT));
 	}
-	// walls
+	// add wall tile
 	for (unsigned d = 0; d < 2; ++d) {
 		for (cube_t const &wall : interior->walls[d]) {
 			if (!wall.intersects_no_adj(room)) continue;
@@ -2230,9 +2230,11 @@ void building_t::add_swimming_pool_room_objs(rand_gen_t rgen, room_t const &room
 			cube_t tile(wall);
 			tile.d[d][!dir]  = wall.d[d][dir]; // edge of wall facing the room
 			tile.d[d][ dir] += (dir ? 1.0 : -1.0)*tile_thickness;
-			objs.emplace_back(tile, TYPE_POOL_TILE, room_id, d, !dir, RO_FLAG_NOCOLL, 1.0);
+			objs.emplace_back(tile, TYPE_POOL_TILE, room_id, d, !dir, RO_FLAG_NOCOLL);
 		} // for wall
 	} // for d
+	// add a sloped ramp at the bottom
+	// TODO
 }
 
 bool get_fire_ext_height_and_radius(float window_vspacing, float &height, float &radius) {

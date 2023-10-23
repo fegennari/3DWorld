@@ -484,7 +484,8 @@ unsigned const RO_FLAG_NO_POWER = 0x04000000; // unpowered; related to circuit b
 unsigned const RO_FLAG_IS_ACTIVE= 0x08000000; // active, for sinks, tubs, buttons, etc.
 unsigned const RO_FLAG_USED     = 0x10000000; // used by the player (spraypaint, marker, etc.); used by parking spaces to indicate cars
 unsigned const RO_FLAG_IN_ELEV  = 0x20000000; // for elevator lights, buttons, and flooring
-unsigned const RO_FLAG_BACKROOM = 0x20000000; // in backrooms, for walls; aliased with RO_FLAG_IN_ELEV
+unsigned const RO_FLAG_BACKROOM = 0x20000000; // in backrooms, for walls; aliased with RO_FLAG_IN_ELEV and RO_FLAG_IN_POOL
+unsigned const RO_FLAG_IN_POOL  = 0x20000000; // aliased with RO_FLAG_IN_ELEV and RO_FLAG_BACKROOM
 unsigned const RO_FLAG_BROKEN   = 0x40000000; // for TVs, monitors, and flickering lights, maybe can use for windows
 unsigned const RO_FLAG_MOVED    = 0x80000000; // for player push/pull
 

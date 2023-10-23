@@ -1704,6 +1704,11 @@ void building_room_geom_t::add_railing(room_object_t const &c) {
 
 void building_room_geom_t::add_stair(room_object_t const &c, float tscale, vector3d const &tex_origin) { // Note: no room lighting color atten
 	rgeom_mat_t &mat(get_material(tid_nm_pair_t(MARBLE_TEX, 1.5*tscale), 1));
+
+	if (c.flags & RO_FLAG_IN_POOL) { // pool stairs are simpler with no separate top vs. bottom
+		mat.add_cube_to_verts(c, WHITE, tex_origin); // all faces drawn
+		return;
+	}
 	float const width(c.get_width()); // use width as a size reference because this is constant for a set of stairs and in a relative small range
 	cube_t top(c), bot(c);
 	bot.z2() = top.z1() = c.z2() - min(0.025*width, 0.25*c.dz()); // set top thickness

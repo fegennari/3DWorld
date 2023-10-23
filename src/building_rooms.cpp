@@ -1793,6 +1793,22 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 			}
 		}
 	} // for i (landings)
+	if (has_pool()) { // add pool stairs
+		indoor_pool_t const &pool(interior->pool);
+		float const stairs_height(window_vspacing/(NUM_STAIRS_PER_FLOOR+1)), pool_depth(pool.dz());
+		unsigned const num_stairs(round_fp(pool_depth/stairs_height)); // same spacing is regular stairs
+		float const step_height(pool_depth/(num_stairs+1)), step_stride((pool.dir ? -1.0 : 1.0)*1.2*step_height); // last step up to the edge counts
+		cube_t step(pool); // copy the correct width (spans to entire pool width)
+		step.d[pool.dim][!pool.dir] = pool.d[pool.dim][pool.dir] + step_stride;
+
+		for (unsigned n = 0; n < num_stairs; ++n) {
+			step.z2() -= step_height; // shift down first, since the first step is below the pool edge
+			objs.emplace_back(step, TYPE_STAIR, pool.room_ix, pool.dim, !pool.dir, RO_FLAG_IN_POOL);
+			step.translate_dim(pool.dim, step_stride);
+		}
+		// add stairs railings
+		// TODO
+	}
 	for (auto i = interior->elevators.begin(); i != interior->elevators.end(); ++i) {
 		unsigned const elevator_id(i - interior->elevators.begin()); // used for room_object_t::room_id
 		cube_t elevator_car(*i);
