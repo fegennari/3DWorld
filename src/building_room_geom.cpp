@@ -42,20 +42,23 @@ int get_money_tid      () {return get_texture_by_name("interiors/dollar20.jpg");
 
 struct pool_texture_params_t {
 	string fn, nm_fn;
-	float tscale;
-	pool_texture_params_t(string const &fn_, string const &nm_fn_, float tscale_) : fn(fn_), nm_fn(nm_fn_), tscale(tscale_) {}
+	float tscale, spec_mag, spec_shine;
+	pool_texture_params_t(string const &f, string const &nf, float ts, float sm, float ss) : fn(f), nm_fn(nf), tscale(ts), spec_mag(sm), spec_shine(ss) {}
 	int get_tid   () const {return get_texture_by_name(fn);}
 	int get_nm_tid() const {return get_texture_by_name(nm_fn, 1);}
 };
-enum {POOL_TILE_INSIDE=0, POOL_TILE_WALL, POOL_TILE_FLOOR, NUM_POOL_TILES};
+enum {POOL_TILE_INSIDE=0, POOL_TILE_WALL, POOL_TILE_FLOOR, POOL_TYPE_CEIL, NUM_POOL_TILES};
 pool_texture_params_t pool_texture_params[NUM_POOL_TILES] = {
-	pool_texture_params_t("interiors/glass_tiles.jpg",  "interiors/glass_tiles_normal.jpg",  0.50),
-	pool_texture_params_t("interiors/glazed_tiles.jpg", "interiors/glazed_tiles_normal.jpg", 0.50),
-	pool_texture_params_t("interiors/mosaic_tiles.jpg", "interiors/mosaic_tiles_normal.jpg", 0.25)
+	pool_texture_params_t("interiors/glass_tiles.jpg",  "interiors/glass_tiles_normal.jpg",  0.5, 1.0, 100.0), // pool inside walls/floor
+	pool_texture_params_t("interiors/glazed_tiles.jpg", "interiors/glazed_tiles_normal.jpg", 0.5, 0.8,  80.0), // room walls
+	pool_texture_params_t("interiors/mosaic_tiles.jpg", "interiors/mosaic_tiles_normal.jpg", 0.2, 1.0, 100.0), // room floor
+	pool_texture_params_t("interiors/mosaic_tiles.jpg", "interiors/mosaic_tiles_normal.jpg", 0.2, 0.2,  20.0)  // room ceiling
 };
 int get_pool_tile_type(room_object_t const &obj) {
-	if (obj.flags & RO_FLAG_ADJ_LO) return POOL_TILE_INSIDE;
-	return ((obj.flags & (RO_FLAG_ADJ_TOP | RO_FLAG_ADJ_BOT)) ? POOL_TILE_FLOOR : POOL_TILE_WALL);
+	if (obj.flags & RO_FLAG_ADJ_LO ) return POOL_TILE_INSIDE;
+	if (obj.flags & RO_FLAG_ADJ_BOT) return POOL_TILE_FLOOR;
+	if (obj.flags & RO_FLAG_ADJ_TOP) return POOL_TYPE_CEIL;
+	return POOL_TILE_WALL;
 }
 pool_texture_params_t const &get_pool_tile_params(room_object_t const &obj) {return pool_texture_params[get_pool_tile_type(obj)];}
 
@@ -1401,7 +1404,7 @@ void building_room_geom_t::add_flooring(room_object_t const &c, float tscale) {
 void building_room_geom_t::add_pool_tile(room_object_t const &c, float tscale) {
 	pool_texture_params_t const &params(get_pool_tile_params(c));
 	tid_nm_pair_t tex(params.get_tid(), params.get_nm_tid(), params.tscale*tscale, params.tscale*tscale); // normal map is inverted?
-	tex.set_specular(1.0, 100.0);
+	tex.set_specular(params.spec_mag, params.spec_shine);
 	rgeom_mat_t &mat(get_material(tex, 0, 0, 1)); // unshadowed, small
 	unsigned skip_faces(0);
 	if      (c.flags & RO_FLAG_ADJ_TOP) {skip_faces = ~EF_Z1;} // on the ceiling, only draw the bottom face
