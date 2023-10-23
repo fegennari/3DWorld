@@ -1554,7 +1554,7 @@ void ped_manager_t::draw_people_in_building(vector<person_t> const &people, ped_
 	bool in_sphere_draw(0);
 	for (person_t const *p : to_draw) {draw_ped(*p, pdv.s, pdu, pdv.xlate, def_draw_dist, draw_dist_sq, in_sphere_draw, pdv.shadow_only, pdv.shadow_only, &anim_state, 1);}
 	end_sphere_draw(in_sphere_draw);
-	pdv.s.upload_mvm(); // seems to be needed after applying model transforms, not sure why
+	pdv.s.upload_mvm(); // needed after applying model or sphere draw transforms
 	anim_state.clear_animation_id(pdv.s); // make sure to leave animations disabled so that they don't apply to buildings
 }
 

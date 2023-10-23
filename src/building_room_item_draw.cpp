@@ -1662,6 +1662,7 @@ void particle_manager_t::draw(shader_t &s, vector3d const &xlate) { // non-const
 		for (sphere_t const &b : bubbles) {draw_sphere_vbo(b.pos, b.radius, N_SPHERE_DIV, 0);} // textured=0
 		end_sphere_draw();
 		s.add_uniform_float("ambient_scale", building_ambient_scale); // reset
+		check_mvm_update(); // needed after sphere drawing applies transforms
 	}
 }
 
