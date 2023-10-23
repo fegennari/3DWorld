@@ -26,9 +26,9 @@ uniform splash_line_t splash_lines[MAX_SPLASHE_LINES];
 
 float point_line_seg_dist(vec2 p, vec2 p1, vec2 p2) {
     vec2 center = (p1 + p2) * 0.5;
-    float len = length(p2 - p1);
-    vec2 dir = (p2 - p1) / len;
-    vec2 rel_p = p - center;
+    float len   = length(p2 - p1);
+    vec2 dir    = (p2 - p1) / len;
+    vec2 rel_p  = p - center;
     float dist1 = abs(dot(rel_p, vec2(dir.y, -dir.x)));
     float dist2 = abs(dot(rel_p, dir)) - 0.5*len;
     return max(dist1, dist2);
@@ -115,7 +115,7 @@ void main() {
 	// attenuate based on depth/distance, assuming a constant water depth and average light coming from above in +Z;
 	float eye_to_floor = get_linear_depth_zval(uv); // floor, wall, object, etc.
 	float eye_to_water = log_to_linear_depth(gl_FragCoord.z);
-	float camera_path  = 1.0*(eye_to_floor - eye_to_water); // camera=>fragment through water
+	float camera_path  = eye_to_floor - eye_to_water; // camera=>fragment through water
 	float light_path   = water_depth + camera_path; // light=>floor + camera=>floor; may be approximate if water_depth isn't accurate
 	float alpha        = min((0.1 + 1.25*water_atten*camera_path), 1.0); // short path is transparent, long path is opaque
 	vec4 uw_color      = vec4(light_color, alpha);

@@ -220,7 +220,7 @@ void add_depth_of_field(float focus_depth, float dof_val) {
 	}
 }
 
-void add_2d_blur() {
+void add_2d_blur() { // faster than add_color_only_effect("screen_space_blur")
 
 	shader_t s;
 
@@ -268,7 +268,7 @@ void add_2d_bloom() {
 	color_buffer_frame = 0; // reset to invalidate buffer and force recreation of texture for second pass
 }
 
-void add_postproc_underwater_fog(float atten_scale) {
+void add_postproc_underwater_fog(float atten_scale, float max_uw_dist) {
 
 	bind_depth_buffer(1); // tu_id=1
 	shader_t s;
@@ -276,13 +276,13 @@ void add_postproc_underwater_fog(float atten_scale) {
 	s.set_vert_shader("no_lighting_tex_coord");
 	s.set_frag_shader("depth_utils.part+postproc_water_fog");
 	s.begin_shader();
+	s.add_uniform_float("max_uw_dist", max_uw_dist);
 	setup_depth_tex(s, 1);
 	setup_shader_underwater_atten(s, atten_scale);
 	fill_screen_white_and_end_shader(s);
 }
 
 void apply_player_underwater_effect(colorRGBA const &color_mod=WHITE) {
-	//add_color_only_effect("screen_space_blur");
 	add_2d_blur();
 	if (player_is_drowning())                 {add_color_only_effect("drunken_wave", 1.00, 1.0, 0.0, color_mod);}
 	else if (world_mode == WMODE_INF_TERRAIN) {add_color_only_effect("drunken_wave", 0.12, 1.6, 1.6, color_mod);} // reduced but faster effect
