@@ -716,20 +716,25 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, flo
 
 	if (interior->room_geom) { // collision with room geometry
 		vect_room_object_t const &objs(interior->room_geom->objs);
+		float speed_factor(1.0);
 
 		for (auto c = interior->room_geom->get_stairs_start(); c != objs.end(); ++c) { // check for and handle stairs first
 			if (c->no_coll() || c->type != TYPE_STAIR) continue;
 			if (!c->contains_pt_xy(pos))  continue; // sphere not on this stair
 			if (obj_z < c->z1())          continue; // below the stair
-			if (pos.z - radius > c->z1()) continue; // above the stair
-			pos.z = c->z1() + radius; // stand on the stair - this can happen for multiple stairs
-			obj_z = max(pos.z, p_last.z);
+			if (pos.z - radius > c->z2()) continue; // above the stair
 			bool const is_u(c->shape == SHAPE_STAIRS_U);
+			// U-shaped stairs have strange collisions, and it seems to work better to have the player stand on the z1 value rather than the z2;
+			// but stairs that are tall (such as pool stairs) only work when standing on the z2 value
+			float const stairs_zval(is_u ? c->z1() : c->z2());
+			pos.z = stairs_zval + radius; // stand on the stair - this can happen for multiple stairs
+			obj_z = max(pos.z, p_last.z);
 			if (!is_u || c->dir == 1) {max_eq(pos[!c->dim], (c->d[!c->dim][0] + xy_radius));} // force the sphere onto the stairs
 			if (!is_u || c->dir == 0) {min_eq(pos[!c->dim], (c->d[!c->dim][1] - xy_radius));}
 			had_coll = on_stairs = 1;
+			speed_factor = (is_u ? 0.875 : 0.75); // U-shaped stairs are a bit faster
 		} // for c
-		if (on_stairs) {apply_speed_factor(pos, p_last, 0.75);} // slow down to 75% when on stairs
+		if (speed_factor < 1.0) {apply_speed_factor(pos, p_last, speed_factor);} // slow down when on stairs
 
 		for (auto c = objs.begin(); c != objs.end(); ++c) { // check for other objects to collide with (including stairs)
 			if (!c->is_player_collidable()) continue;
