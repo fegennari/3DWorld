@@ -814,8 +814,9 @@ void building_t::add_extra_obj_slots() {
 // *** Wall and Door Trim ***
 
 void building_t::add_wall_and_door_trim_if_needed() {
-	if (!interior || (interior->walls[0].empty() && interior->walls[1].empty())) return; // no interior or walls
-	if (!interior->room_geom->trim_objs.empty()) return; // trim already generated
+	if (!has_room_geom() || (interior->walls[0].empty() && interior->walls[1].empty())) return; // no interior or walls
+	if (interior->room_geom->trim_was_added) return; // trim already generated
+	interior->room_geom->trim_was_added = 1;
 	add_wall_and_door_trim();
 	interior->room_geom->trim_objs.shrink_to_fit();
 }
