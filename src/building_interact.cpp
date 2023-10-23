@@ -1114,8 +1114,8 @@ void building_t::run_ball_update(vector<room_object_t>::iterator ball_it, point 
 			if (set_float_height(new_center, radius, ceil_zval, bt.density)) {
 				float const target_zval(new_center.z);
 				min_eq(new_center.z, (prev_zval + 1.0f*OBJ_GRAVITY*fticks_stable)); // limit max float velocity based on negative gravity
-				velocity  *= (1.0f - min(1.0f, 25.0f*OBJ_DECELERATE*fticks_stable)); // apply water dampening
-				velocity.z = 0.0; // remove vertical velocity component
+				velocity *= (1.0f - min(1.0f, 25.0f*OBJ_DECELERATE*fticks_stable)); // apply water dampening
+				if (point_in_water_area(new_center)) {velocity.z = 0.0;} // remove vertical velocity component if center is underwater
 
 				if (new_center.z == target_zval && velocity.mag_sq() < MIN_VELOCITY*MIN_VELOCITY) { // zero velocity if stopped and no longer rising
 					velocity    = zero_vector;
