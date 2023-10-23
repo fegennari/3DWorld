@@ -231,14 +231,14 @@ void building_t::maybe_assign_extb_room_as_swimming(rand_gen_t &rgen) {
 	vector<room_t> &rooms(interior->rooms);
 	int const start_room_ix(interior->ext_basement_hallway_room_id);
 	assert(start_room_ix >= 0 && unsigned(start_room_ix) < rooms.size());
-	float const floor_spacing(get_window_vspace()), min_dmin(3.0*floor_spacing), pool_depth(1.0*floor_spacing), sea_level(get_max_sea_level());
+	float const floor_spacing(get_window_vspace()), min_dmin(3.0*floor_spacing), pool_max_depth(1.0*floor_spacing), sea_level(get_max_sea_level());
 	auto const first_room(rooms.begin() + start_room_ix + 1); // skip ext basement connector hallway
 	int largest_valid_room(-1);
 	float best_dmin(min_dmin);
 
 	for (auto r = first_room; r != rooms.end(); ++r) {
-		if (r->is_hallway || r->has_stairs)   continue;
-		if (r->z1() - pool_depth < sea_level) continue; // too deep
+		if (r->is_hallway || r->has_stairs)       continue;
+		if (r->z1() - pool_max_depth < sea_level) continue; // too deep
 		float const dmin(min(r->dx(), r->dy()));
 		if (dmin < best_dmin) continue; // too small, or smaller than best room
 		bool invalid(0);
@@ -298,11 +298,12 @@ void building_t::maybe_assign_extb_room_as_swimming(rand_gen_t &rgen) {
 		room.num_lights = (unsigned)ceil(room.get_area_xy()/orig_room.get_area_xy()); // larger rooms need more lights
 	}
 	bool const long_dim(room.dx() < room.dy()); // likely exp_dim
-	float const doorway_width(get_doorway_width()), min_spacing(1.5*doorway_width), fc_thickness(get_fc_thickness()), floor_zval(room.z1() + fc_thickness);
+	float const doorway_width(get_doorway_width()), fc_thickness(get_fc_thickness()), min_spacing(1.5*doorway_width), floor_zval(room.z1() + fc_thickness);
 	indoor_pool_t &pool(interior->pool);
 	pool.copy_from(get_walkable_room_bounds(room));
 	pool.expand_by_xy(-min_spacing);
 	assert(pool.is_strictly_normalized());
+	float const pool_length(pool.get_sz_dim(long_dim)), pool_depth(min(pool_max_depth, 0.3f*pool_length));
 	set_cube_zvals(pool, (floor_zval - pool_depth), floor_zval);
 	float const pool_width(pool.get_sz_dim(!long_dim)), extra_width(pool_width - 2.0*floor_spacing), pool_bottom(pool.z1() - fc_thickness);
 	if (pool_width < floor_spacing) return; // too small; shouldn't happen unless the door width to floor spacing values are wrong
