@@ -253,7 +253,7 @@ void building_t::draw_water(vector3d const &xlate) const {
 		for (unsigned n = 0; n < 8; ++n) {max_eq(max_uw_dist, p2p_dist(camera_bs, pts[n]));}
 		colorRGBA const pool_color(0.7, 0.8, 1.0), clear_color(0.4, 0.6, 1.0), mud_color(1.0, 0.6, 0.33);
 		apply_player_underwater_effect(is_pool ? pool_color : blend_color(mud_color, clear_color, mud_amt, 0));
-		add_postproc_underwater_fog(WATER_COL_ATTEN*atten_scale, max_uw_dist);
+		add_postproc_underwater_fog((is_pool ? 1.0 : WATER_COL_ATTEN)*atten_scale, max_uw_dist);
 		bool const is_lit(is_room_lit(get_room_containing_pt(camera_bs), camera_bs.z));
 		colorRGBA const base_color(is_lit ? WHITE : DK_GRAY);
 		float const orig_water_plane_z(water_plane_z);
