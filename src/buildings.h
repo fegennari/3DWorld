@@ -1957,7 +1957,7 @@ private:
 	void get_rooms_for_door(unsigned door_ix, int room_ix[2]) const;
 	void get_lights_for_room_and_floor(unsigned room_ix, unsigned floor_ix, vector<unsigned> &light_ids) const;
 	void get_lights_near_door(unsigned door_ix, vector<unsigned> &light_ids) const;
-	static bool is_cube_visible_through_door(point const &viewer, cube_t const &c, door_t const &door);
+	bool is_cube_visible_through_door(point const &viewer, cube_t const &c, door_t const &door) const;
 	void set_rgen_state_for_building(rand_gen_t &rgen) const;
 public:
 	// ray queries

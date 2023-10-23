@@ -198,7 +198,7 @@ bool building_t::water_visible_to_player() const {
 	}
 	if (has_pool()) { // pool water
 		room_t const &room(get_room(interior->pool.room_ix));
-		if (room.contains_pt_exp(camera_bs, get_wall_thickness())) return 1; // player in room with the pool, or in its doorway
+		if (room.contains_pt_exp(camera_bs, 2.0*get_wall_thickness())) return 1; // player in room with the pool, or in its doorway
 		// check if pool is visible through a doorway
 		cube_t pool_surface(interior->pool);
 		pool_surface.z1() = interior->water_zval;
@@ -208,7 +208,7 @@ bool building_t::water_visible_to_player() const {
 			assert(ds.num_doors == 1); // must be a single door
 			door_t const &door(get_door(ds.first_door_ix));
 			if (door.open_amt == 0) continue; // fully closed
-			if (!is_rot_cube_visible(door, xlate)) continue;
+			if (!is_rot_cube_visible(door.get_true_bcube(), xlate)) continue;
 			if (is_cube_visible_through_door(camera_bs, pool_surface, door)) return 1;
 		}
 	}

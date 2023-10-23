@@ -2213,7 +2213,7 @@ void building_t::get_lights_near_door(unsigned door_ix, vector<unsigned> &light_
 }
 
 // it's up to the caller to check that the door is open or closed (depending on the query)
-/*static*/ bool building_t::is_cube_visible_through_door(point const &viewer, cube_t const &c, door_t const &door) {
+bool building_t::is_cube_visible_through_door(point const &viewer, cube_t const &c, door_t const &door) const {
 	cube_t const door_bcube(door.get_true_bcube()); // must be nonzero area for this test to be correct
 	if (door_bcube.contains_pt(viewer)) return 1; // viewer in doorway
 	float const door_pos(door.get_center_dim(door.dim)), vpos(viewer[door.dim]);
