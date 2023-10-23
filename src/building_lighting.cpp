@@ -1255,9 +1255,9 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 	point const camera_bs(camera_pdu.pos - xlate), building_center(bcube.get_cube_center()); // camera in building space
 	if ((display_mode & 0x08) && !camera_in_building && !bcube.contains_pt_xy(camera_bs) && is_entire_building_occluded(camera_bs, oc)) return;
 	float const window_vspacing(get_window_vspace()), wall_thickness(get_wall_thickness()), fc_thick(get_fc_thickness());
-	float const camera_z(camera_bs.z), room_xy_expand(0.75*wall_thickness), player_feet_zval(camera_bs.z - get_bldg_player_height());
+	float const room_xy_expand(0.75*wall_thickness), player_feet_zval(camera_bs.z - get_bldg_player_height());
 	bool const check_building_people(enable_building_people_ai()), check_attic(camera_in_building && has_attic() && interior->attic_access_open);
-	bool const camera_in_basement(camera_z < ground_floor_z1), camera_in_ext_basement(camera_in_building && point_in_extended_basement_not_basement(camera_bs));
+	bool const camera_in_basement(camera_bs.z < ground_floor_z1), camera_in_ext_basement(camera_in_building && point_in_extended_basement_not_basement(camera_bs));
 	bool const show_room_name(display_mode & 0x20); // debugging, key '6'
 	cube_t const &attic_access(interior->attic_access);
 	vect_cube_t &light_bcubes(interior->room_geom->light_bcubes);
@@ -1266,9 +1266,13 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 	point camera_rot(camera_bs);
 	maybe_inv_rotate_point(camera_rot); // rotate camera pos into building space; should use this pos below except with building bcube, occlusion checks, or lpos_rot
 	bool const player_on_attic_stairs(check_attic && player_in_attic && interior->attic_access.contains_pt_xy(camera_rot));
+	bool const player_in_pool(camera_in_building && has_pool() && interior->pool.contains_pt(camera_bs));
 	unsigned camera_part(parts.size()); // start at an invalid value
 	bool camera_by_stairs(0), camera_on_stairs(0), camera_somewhat_by_stairs(0), camera_in_hallway(0), camera_can_see_ext_basement(0);
 	bool camera_near_building(camera_in_building), check_ramp(0), stairs_or_ramp_visible(0), camera_room_tall(0);
+	float camera_z(camera_bs.z);
+	// if player is in the pool, increase camera zval to the top of the pool so that lights in the room above are within a single floor and not culled
+	if (player_in_pool) {camera_z = interior->pool.z2();}
 	int camera_room(-1);
 	vect_cube_t cuts_above, cuts_below, cuts_above_nonvis; // only used when player is in the building
 	vect_cube_with_ix_t moving_objs;
@@ -1649,14 +1653,15 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 
 		// check for dynamic shadows; check the player first; use full light radius
 		if (camera_surf_collide && (camera_in_building || camera_can_see_ext_basement) && dist_less_than(lpos_rot, camera_bs, light_radius)) {
-			bool player_on_ladder_this_room(player_on_attic_stairs && (is_in_attic || room.intersects_xy(interior->attic_access)));
+			bool player_in_this_room(player_on_attic_stairs && (is_in_attic || room.intersects_xy(interior->attic_access))); // ladder case
+			player_in_this_room |= (player_in_pool && int(i->room_id) == interior->pool.room_ix); // pool case
 
-			if (clipped_bc.contains_pt(camera_rot) || clipped_bc.contains_pt(point(camera_rot.x, camera_rot.y, player_feet_zval)) || player_on_ladder_this_room) {
+			if (clipped_bc.contains_pt(camera_rot) || clipped_bc.contains_pt(point(camera_rot.x, camera_rot.y, player_feet_zval)) || player_in_this_room) {
 				// must update shadow maps for the room above if the player is on the stairs or in the same room when there are stairs
 				// must update even if light is visible (meaning shadows aren't due to < 90 degree FOV) because the old shadow may become visible when the player moves
 				bool const check_floor_above(camera_on_stairs || (camera_by_stairs && in_camera_room));
 
-				if (is_lamp || player_on_ladder_this_room || (player_in_attic && is_in_attic) ||
+				if (is_lamp || player_in_this_room || (player_in_attic && is_in_attic) ||
 					(lpos_rot.z > player_feet_zval && (check_floor_above || lpos_rot.z < (camera_bs.z + window_vspacing))))
 				{
 					// player shadow, based on head to feet Z-range; includes lamps (with no zval test)

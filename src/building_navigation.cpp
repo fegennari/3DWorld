@@ -2334,7 +2334,7 @@ int building_t::get_room_containing_pt(point const &pt) const {
 	for (auto r = rooms_start; r != rooms_end; ++r) {
 		if (r->contains_pt_exp_xy_only(pt, wall_thickness)) {return (r - interior->rooms.begin());} // expand to include point in doorway
 	}
-	if (has_pool() && interior->pool.contains_cube(pt)) {return interior->pool.room_ix;}
+	if (has_pool() && interior->pool.contains_pt(pt)) {return interior->pool.room_ix;}
 	return -1; // room not found
 }
 building_loc_t building_t::get_building_loc_for_pt(point const &pt) const {
