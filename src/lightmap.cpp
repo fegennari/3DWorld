@@ -1258,7 +1258,7 @@ void add_dynamic_lights_ground(float &dlight_add_thresh) {
 	} // for ix (light index)
 }
 
-void add_dynamic_lights_city(cube_t const &scene_bcube, float &dlight_add_thresh) {
+void add_dynamic_lights_city(cube_t const &scene_bcube, float &dlight_add_thresh, float falloff) {
 
 	if (disable_dlights) {dl_sources.clear(); return;}
 	assert(DL_GRID_BS == 0); // not supported
@@ -1284,7 +1284,7 @@ void add_dynamic_lights_city(cube_t const &scene_bcube, float &dlight_add_thresh
 			if (ls2.get_pos().x != lpos.x || ls2.get_pos().y != lpos.y || ls2.get_radius() != ls.get_radius()) break;
 		}
 		int const xcent((lpos.x - scene_llc.x)*grid_dx_inv + 0.5f), ycent((lpos.y - scene_llc.y)*grid_dy_inv + 0.5f);
-		cube_t bcube(ls.calc_bcube(0, sqrt_dlight_add_thresh)); // padded below
+		cube_t bcube(ls.calc_bcube(0, sqrt_dlight_add_thresh, 0, falloff)); // padded below
 
 		if (ls.is_very_directional() && (ls.get_dir().x != 0.0 || ls.get_dir().y != 0.0)) {
 			bcube.expand_by(vector3d(grid_dx, grid_dy, 0.0)); // add one grid unit for spotlights not pointed up/down

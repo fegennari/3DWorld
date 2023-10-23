@@ -94,7 +94,7 @@ float light_source::get_dir_intensity(vector3d const &obj_dir) const {
 }
 
 
-cube_t light_source::calc_bcube(bool add_pad, float sqrt_thresh, bool clip_to_scene_bcube) const {
+cube_t light_source::calc_bcube(bool add_pad, float sqrt_thresh, bool clip_to_scene_bcube, float falloff) const {
 
 	assert(radius > 0.0);
 	assert(sqrt_thresh < 1.0);
@@ -103,7 +103,7 @@ cube_t light_source::calc_bcube(bool add_pad, float sqrt_thresh, bool clip_to_sc
 
 	if (is_very_directional()) {
 		cube_t bcube2;
-		calc_bounding_cylin(sqrt_thresh, clip_to_scene_bcube).calc_bcube(bcube2);
+		calc_bounding_cylin(sqrt_thresh, clip_to_scene_bcube, falloff).calc_bcube(bcube2);
 		if (add_pad) {bcube2.expand_by(vector3d(DX_VAL, DY_VAL, DZ_VAL));} // add one grid unit
 		bcube.intersect_with_cube(bcube2);
 	}
@@ -134,17 +134,17 @@ void light_source::get_bounds(cube_t &bcube, int bnds[3][2], float sqrt_thresh, 
 	}
 }
 
-float light_source::calc_cylin_end_radius() const {
-	float const d(1.0f - 2.0f*(bwidth + LT_DIR_FALLOFF));
+float light_source::calc_cylin_end_radius(float falloff) const {
+	float const d(1.0f - 2.0f*(bwidth + ((falloff > 0.0) ? falloff : LT_DIR_FALLOFF))); // use default falloff if zero
 	return radius*sqrt(1.0f/(d*d) - 1.0f);
 }
-cylinder_3dw light_source::calc_bounding_cylin(float sqrt_thresh, bool clip_to_scene_bcube) const {
+cylinder_3dw light_source::calc_bounding_cylin(float sqrt_thresh, bool clip_to_scene_bcube, float falloff) const {
 
 	float const rad(radius*(1.0 - sqrt_thresh));
 	if (is_line_light()) {return cylinder_3dw(pos, pos2, rad, rad);}
 	assert(is_very_directional()); // not for use with point lights or spotlights larger than a hemisphere
 	point pos2(pos + dir*rad);
-	float end_radius((1.0 - sqrt_thresh)*calc_cylin_end_radius());
+	float end_radius((1.0 - sqrt_thresh)*calc_cylin_end_radius(falloff));
 
 	if (clip_to_scene_bcube) { // Note: not correct in general, but okay for bcube calculation for large light sources
 		point pos1(pos);

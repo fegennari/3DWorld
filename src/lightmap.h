@@ -169,7 +169,7 @@ protected:
 	colorRGBA color;
 	cube_t custom_bcube;
 
-	float calc_cylin_end_radius() const;
+	float calc_cylin_end_radius(float falloff=0.0) const;
 	local_smap_manager_t &get_smap_mgr() const;
 
 public:
@@ -193,8 +193,8 @@ public:
 	float get_dir_intensity(vector3d const &obj_dir) const;
 	void get_bounds(cube_t &bcube, int bnds[3][2], float sqrt_thresh, bool clip_to_scene_bcube=0, vector3d const &bounds_offset=zero_vector) const;
 	void set_custom_bcube(cube_t const c) {custom_bcube = c;}
-	cube_t calc_bcube(bool add_pad=0, float sqrt_thresh=0.0, bool clip_to_scene_bcube=0) const;
-	cylinder_3dw calc_bounding_cylin(float sqrt_thresh=0.0, bool clip_to_scene_bcube=0) const;
+	cube_t calc_bcube(bool add_pad=0, float sqrt_thresh=0.0, bool clip_to_scene_bcube=0, float falloff=0.0) const;
+	cylinder_3dw calc_bounding_cylin( float sqrt_thresh=0.0, bool clip_to_scene_bcube=0, float falloff=0.0) const;
 	pos_dir_up calc_pdu(bool dynamic_cobj, bool is_cube_face, float falloff) const;
 	unsigned get_cube_eflags() const {return cube_eflags;}
 	unsigned get_num_rays()    const {return num_dlight_rays;}

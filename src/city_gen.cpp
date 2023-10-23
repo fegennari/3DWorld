@@ -29,7 +29,7 @@ extern building_params_t global_building_params;
 extern vector<light_source> dl_sources;
 
 
-void add_dynamic_lights_city(cube_t const &scene_bcube, float &dlight_add_thresh);
+void add_dynamic_lights_city(cube_t const &scene_bcube, float &dlight_add_thresh, float falloff);
 void add_buildings_exterior_lights(vector3d const &xlate, cube_t &lights_bcube);
 void disable_shadow_maps(shader_t &s);
 vector3d get_tt_xlate_val();
@@ -2917,7 +2917,7 @@ bool city_lights_manager_t::begin_lights_setup(vector3d const &xlate, float ligh
 }
 
 void city_lights_manager_t::finalize_lights(vector<light_source> &lights) { // Note: lights is always dl_sources and not passed into calls below
-	add_dynamic_lights_city(lights_bcube, dlight_add_thresh);
+	add_dynamic_lights_city(lights_bcube, dlight_add_thresh, CITY_LIGHT_FALLOFF);
 	upload_dlights_textures(lights_bcube, dlight_add_thresh);
 	prev_had_lights = !lights.empty();
 }
