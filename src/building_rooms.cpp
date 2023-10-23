@@ -1795,19 +1795,31 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 	} // for i (landings)
 	if (has_pool()) { // add pool stairs
 		indoor_pool_t const &pool(interior->pool);
+		room_t const &room(get_room(pool.room_ix));
 		float const stairs_height(window_vspacing/(NUM_STAIRS_PER_FLOOR+1)), pool_depth(pool.dz());
 		unsigned const num_stairs(round_fp(pool_depth/stairs_height)); // same spacing is regular stairs
 		float const step_height(pool_depth/(num_stairs+1)), step_stride((pool.dir ? -1.0 : 1.0)*1.2*step_height); // last step up to the edge counts
 		cube_t step(pool); // copy the correct width (spans to entire pool width)
-		step.d[pool.dim][!pool.dir] = pool.d[pool.dim][pool.dir] + step_stride;
+		step.d[pool.dim][!pool.dir] = pool.d[pool.dim][pool.dir] + step_stride; // extend into pool
 
 		for (unsigned n = 0; n < num_stairs; ++n) {
 			step.z2() -= step_height; // shift down first, since the first step is below the pool edge
 			objs.emplace_back(step, TYPE_STAIR, pool.room_ix, pool.dim, !pool.dir, RO_FLAG_IN_POOL);
-			step.translate_dim(pool.dim, step_stride);
+			if (n+1 < num_stairs) {step.translate_dim(pool.dim, step_stride);} // don't need to translate the last step
 		}
 		// add stairs railings
-		// TODO
+		cube_t railing(pool);
+		railing.z2() += step_height;
+		railing.d[ pool.dim][ pool.dir] -= 0.5*step_stride; // on the pool deck
+		railing.d[ pool.dim][!pool.dir]  = step.d[pool.dim][!pool.dir]; // to the end of the last step
+		railing.expand_in_dim(!pool.dim, -0.5*wall_thickness); // shrink slightly
+		float const positions[3] = {railing.d[!pool.dim][0], railing.d[!pool.dim][1], railing.get_center_dim(!pool.dim)}; // lo, hi, center
+		unsigned const num_railings(2 + rgen.rand_bool()); // 2-3
+
+		for (unsigned d = 0; d < num_railings; ++d) { // each side of the pool, and maybe the center
+			set_wall_width(railing, positions[d], 0.375*wall_thickness, !pool.dim);
+			objs.emplace_back(railing, TYPE_RAILING,  pool.room_ix, pool.dim, pool.dir, RO_FLAG_IN_POOL, 1.0, SHAPE_CUBE, GOLD); // no balusters
+		}
 	}
 	for (auto i = interior->elevators.begin(); i != interior->elevators.end(); ++i) {
 		unsigned const elevator_id(i - interior->elevators.begin()); // used for room_object_t::room_id
