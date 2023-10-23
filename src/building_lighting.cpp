@@ -769,8 +769,11 @@ public:
 			VA.z1() = building_z1 + target_floor*floor_spacing;
 			VA.z2() = VA.z1() + floor_spacing;
 
-			if (in_ext_basement && b.has_pool()) { // check if light source room has a pool, and include the bottom of the pool in our valid area
-				if (b.get_room(b.interior->pool.room_ix).contains_pt(target)) {min_eq(VA.z1(), b.interior->pool.z1());}
+			if (in_ext_basement && b.has_pool()) { // check if light source room has a pool, and include the pool in our valid area
+				if (b.get_room(b.interior->pool.room_ix).contains_pt(target) || b.interior->pool.contains_pt(target)) {
+					min_eq(VA.z1(), b.interior->pool.z1()); // bottom of the pool
+					max_eq(VA.z2(), b.interior->pool.z2() + b.get_floor_ceil_gap()); // ceiling above the pool
+				}
 			}
 		}
 		return VA;
