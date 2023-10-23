@@ -2,7 +2,7 @@
 
 const float PI = 3.14159;
 
-uniform float water_depth, water_atten, time;
+uniform float water_depth, water_atten, foam_scale, time;
 uniform vec3 uw_atten_max, uw_atten_scale;
 uniform sampler2D reflection_tex, frame_buffer;
 
@@ -102,7 +102,7 @@ void main() {
 	
 	// apply ripples when the player or other object moves or falls into the water
 	vec4 splash = get_splash_amplitude();
-	float foam  = min(2.0*splash.y, 0.5); // or mud, depending on the fluid; reduces transparency near the splash center
+	float foam  = foam_scale*min(2.0*splash.y, 0.5); // or mud, depending on the fluid; reduces transparency near the splash center
 	vec2 delta  = clamp(10.0*vec2(splash.z, splash.w), -1.0, 1.0);
 	vec2 uv_adj = clamp((uv + 0.1*delta), 0.0, 1.0); // offset by ripple angle, but keep in the valid texture range
 	ws_normal   = normalize(ws_normal + vec3(delta, 0.0)); // average with the incoming (+Z) normal

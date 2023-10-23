@@ -280,6 +280,7 @@ void building_t::draw_water(vector3d const &xlate) const {
 	setup_building_draw_shader_post(s, have_indir);
 	s.add_uniform_vector3d("camera_pos", camera_pos);
 	s.add_uniform_float("water_depth",   water_depth);
+	s.add_uniform_float("foam_scale",    min(1.0f, 0.1f*floor_spacing/water_depth)); // higher with shallow water, lower with deep water
 	setup_shader_underwater_atten(s, atten_scale, mud_amt); // attenuates to dark blue (or brown for mud)/opaque around this distance
 	building_splash_manager.set_shader_uniforms(s);
 	bind_frame_buffer_RGB(8); // tu_id=8
