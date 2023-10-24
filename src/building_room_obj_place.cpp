@@ -2176,9 +2176,8 @@ bool building_t::add_pool_room_objs(rand_gen_t rgen, room_t const &room, float z
 // for indoor pools, currently only in extended basements
 void building_t::add_swimming_pool_room_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt) {
 	assert(has_pool());
-	bool const long_dim(room.dx() < room.dy());
 	cube_t const place_area(get_walkable_room_bounds(room));
-	indoor_pool_t const &pool(interior->pool);
+	indoor_pool_t &pool(interior->pool);
 	float const floor_spacing(get_window_vspace()), trim_thickness(get_trim_thickness()), wall_thickness(get_wall_thickness());
 	float const tile_thickness(0.5*trim_thickness), water_gap(pool.z2() - interior->water_zval);
 	vect_room_object_t &objs(interior->room_geom->objs);
@@ -2233,8 +2232,18 @@ void building_t::add_swimming_pool_room_objs(rand_gen_t rgen, room_t const &room
 			objs.emplace_back(tile, TYPE_POOL_TILE, room_id, d, !dir, RO_FLAG_NOCOLL);
 		} // for wall
 	} // for d
-	// add a sloped ramp at the bottom
-	// TODO
+	// add a sloped ramp at the bottom if deep enough
+	float const pool_len(pool.get_sz_dim(pool.dim)), pool_depth(interior->water_zval - pool.z1());
+	float const shallow_depth(0.5*floor_spacing); // about 4 feet
+
+	if (pool_depth > 1.2*shallow_depth && pool_len > 3.0*floor_spacing) {
+		cube_t slope(pool), upper(pool);
+		slope.expand_in_dim(pool.dim, -0.25*pool_len); // shrink to middle 50% (cut 25% off of each end)
+		pool.shallow_zval = slope.z2() = upper.z2() = pool.z1() + shallow_depth; // shallow end
+		upper.d[pool.dim][!pool.dir] = slope.d[pool.dim][pool.dir];
+		objs.emplace_back(slope, TYPE_POOL_TILE, room_id, pool.dim, pool.dir, (RO_FLAG_ADJ_LO | RO_FLAG_ADJ_BOT), 1.0, SHAPE_ANGLED);
+		objs.emplace_back(upper, TYPE_POOL_TILE, room_id, pool.dim, pool.dir, (RO_FLAG_ADJ_LO | RO_FLAG_ADJ_BOT));
+	}
 }
 
 bool get_fire_ext_height_and_radius(float window_vspacing, float &height, float &radius) {

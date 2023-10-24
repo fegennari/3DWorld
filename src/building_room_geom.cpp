@@ -1401,16 +1401,50 @@ void building_room_geom_t::add_flooring(room_object_t const &c, float tscale) {
 	get_material(tid_nm_pair_t(get_flooring_texture(c), 0.8*tscale)).add_cube_to_verts(c, apply_light_color(c), tex_origin, ~EF_Z2); // top face only, unshadowed
 }
 
+tquad_t get_ramp_tquad(room_object_t const &c) { // Note: normal is for the bottom surface
+	tquad_t ramp(4); // ramp top surface
+	float const zv[2] = {c.z1(), c.z2()};
+	// dim dir z0 z1 z2 z3
+	// 0   0   1  0  0  1
+	// 0   1   0  1  1  0
+	// 1   0   1  1  0  0
+	// 1   1   0  0  1  1
+	ramp.pts[0].assign(c.x1(), c.y1(), zv[!c.dir]); // LL
+	ramp.pts[1].assign(c.x2(), c.y1(), zv[c.dim ^ c.dir]); // LR
+	ramp.pts[2].assign(c.x2(), c.y2(), zv[c.dir]); // UR
+	ramp.pts[3].assign(c.x1(), c.y2(), zv[c.dim ^ c.dir ^ 1]); // UL
+	return ramp;
+}
+
 void building_room_geom_t::add_pool_tile(room_object_t const &c, float tscale) {
 	pool_texture_params_t const &params(get_pool_tile_params(c));
-	tid_nm_pair_t tex(params.get_tid(), params.get_nm_tid(), params.tscale*tscale, params.tscale*tscale); // normal map is inverted?
+	tscale *= params.tscale;
+	tid_nm_pair_t tex(params.get_tid(), params.get_nm_tid(), tscale, tscale); // normal map is inverted?
 	tex.set_specular(params.spec_mag, params.spec_shine);
 	rgeom_mat_t &mat(get_material(tex, 0, 0, 1)); // unshadowed, small
 	unsigned skip_faces(0);
 	if      (c.flags & RO_FLAG_ADJ_TOP) {skip_faces = ~EF_Z1;} // on the ceiling, only draw the bottom face
 	else if (c.flags & RO_FLAG_ADJ_BOT) {skip_faces = ~EF_Z2;} // on the floor,   only draw the top    face
 	else {skip_faces = get_face_mask(c.dim, !c.dir);} // draw face opposite the wall this was added to
-	mat.add_cube_to_verts(c, c.color, tex_origin, skip_faces, !c.dim);
+
+	if (c.shape == SHAPE_ANGLED) { // sloped floor
+		assert((c.flags & RO_FLAG_ADJ_LO) && (c.flags & RO_FLAG_ADJ_BOT));
+		tquad_t const ramp(get_ramp_tquad(c)); // ramp surface
+		auto &verts(mat.quad_verts);
+		rgeom_mat_t::vertex_t v;
+		v.set_c4(c.color); // no room lighting color atten
+		v.set_norm(ramp.get_norm());
+
+		for (unsigned i = 0; i < 4; ++i) {
+			v.v    = ramp.pts[i];
+			v.t[0] = tscale*(v.v.x - tex_origin.x);
+			v.t[1] = tscale*(v.v.y - tex_origin.y);
+			verts.push_back(v);
+		}
+	}
+	else { // axis aligned wall
+		mat.add_cube_to_verts(c, c.color, tex_origin, skip_faces, !c.dim);
+	}
 }
 
 void building_room_geom_t::add_wall_trim(room_object_t const &c, bool for_closet) { // uses mats_detail
@@ -1758,25 +1792,11 @@ void building_room_geom_t::add_parking_space(room_object_t const &c, float tscal
 	}
 }
 
-tquad_t get_ramp_tquad(room_object_t const &c) { // Note: normal is for the bottom surface
-	tquad_t ramp(4); // ramp top surface
-	float const zv[2] = {c.z1(), c.z2()};
-	// dim dir z0 z1 z2 z3
-	// 0   0   1  0  0  1
-	// 0   1   0  1  1  0
-	// 1   0   1  1  0  0
-	// 1   1   0  0  1  1
-	ramp.pts[0].assign(c.x1(), c.y1(), zv[!c.dir]); // LL
-	ramp.pts[1].assign(c.x2(), c.y1(), zv[c.dim ^ c.dir]); // LR
-	ramp.pts[2].assign(c.x2(), c.y2(), zv[c.dir]); // UR
-	ramp.pts[3].assign(c.x1(), c.y2(), zv[c.dim ^ c.dir ^ 1]); // UL
-	return ramp;
-}
 void building_room_geom_t::add_ramp(room_object_t const &c, float thickness, bool skip_bottom, rgeom_mat_t &mat) {
 	tquad_t const ramp(get_ramp_tquad(c)); // ramp surface
 	float const length(c.get_length()), width(c.get_width()), side_tc_y(thickness/length);
 	float tb_tscale[2] = {2.0, 2.0};
-	tb_tscale[c.dim] *= length/width; // scale texture so that it repeats 2x in width and scales with aspect ratio in length
+	tb_tscale[c.dim]  *= length/width; // scale texture so that it repeats 2x in width and scales with aspect ratio in length
 	auto &verts(mat.quad_verts);
 	rgeom_mat_t::vertex_t v;
 	v.set_c4(c.color); // no room lighting color atten
@@ -1785,8 +1805,8 @@ void building_room_geom_t::add_ramp(room_object_t const &c, float thickness, boo
 	for (unsigned tb = 0; tb < 2; ++tb) { // {top, bottom}
 		for (unsigned i = 0; i < 4; ++i) {
 			v.v    = ramp.pts[tb ? (3-i) : i]; // swap winding order for bottom surface
-			v.t[0] = tb_tscale[0]*float(v.v.x == c.x2()); // stretch texture 2x in length
-			v.t[1] = tb_tscale[1]*float(v.v.y == c.y2()); // stretch texture 2x in length
+			v.t[0] = tb_tscale[0]*float(v.v.x == c.x2()); // stretch texture in length
+			v.t[1] = tb_tscale[1]*float(v.v.y == c.y2()); // stretch texture in length
 			verts.push_back(v);
 			if (tb) {verts.back().v.z -= thickness;} // extrude thickness for bottom surface
 		}

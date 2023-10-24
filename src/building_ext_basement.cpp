@@ -316,6 +316,7 @@ void building_t::maybe_assign_extb_room_as_swimming(rand_gen_t &rgen) {
 	pool.dir     = dir;
 	pool.room_ix = largest_valid_room;
 	pool.valid   = 1;
+	pool.shallow_zval = pool.z1(); // default is all deep
 	assert(pool.is_strictly_normalized());
 	
 	// cut out a space in the floor for the pool
@@ -324,8 +325,6 @@ void building_t::maybe_assign_extb_room_as_swimming(rand_gen_t &rgen) {
 		vect_cube_t floor_parts;
 		subtract_cube_from_cube(f, pool, floor_parts);
 		assert(floor_parts.size() == 4);
-		//f = floor_parts.back(); // one part can replace the original floor
-		//floor_parts.pop_back();
 		f = pool;
 		set_cube_zvals(f, pool_bottom, pool.z1()); // move to the bottom of the pool
 		vector_add_to(floor_parts, interior->floors);

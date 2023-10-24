@@ -762,7 +762,7 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, flo
 			}
 			if ((c->type == TYPE_STAIR || (on_stairs && c->type != TYPE_RAILING)) && (obj_z + radius) > c->z2()) continue; // above the stair - allow it to be walked on
 
-			if (c->type == TYPE_RAMP) { // ramp should be SHAPE_ANGLED
+			if (c->type == TYPE_RAMP || (c->type == TYPE_POOL_TILE && c->shape == SHAPE_ANGLED)) { // ramp, should be SHAPE_ANGLED
 				// slight adjust so that player is above ramp when on the floor above, but below when falling through the ramp gap
 				bool const is_falling(pos.z < obj_z);
 				float const reff((is_falling ? 1.01 : 0.99)*radius); // effective radius
@@ -791,7 +791,7 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, flo
 					}
 					continue;
 				}
-				else if (zbot < player_top_z) { // colliding with sides or bottom of the ramp
+				else if (c->type == TYPE_RAMP && zbot < player_top_z) { // colliding with sides or bottom of the ramp (not pool)
 					cube_t ramp_ext(*c);
 					ramp_ext.expand_in_dim(c->dim, 1.01*xy_radius); // extend to include the player radius at both ends
 
