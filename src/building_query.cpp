@@ -630,6 +630,11 @@ cube_t get_true_room_obj_bcube(room_object_t const &c) { // for collisions, etc.
 		if (c.is_open()) {bcube.union_with_cube(get_ladder_bcube_from_open_attic_door(c, bcube));} // include ladder as well
 		return bcube;
 	}
+	if (c.type == TYPE_RAILING && (c.flags & RO_FLAG_IN_POOL)) { // pool stairs railing
+		cube_t c_ext(c);
+		c_ext.z2() += 0.5*c_ext.dz(); // extend the top upward to block the player from walking onto the railing
+		return c_ext;
+	}
 	if (c.type == TYPE_SHELVES) {return get_shelves_no_bot_gap(c);}
 	return c; // default cube case
 }
@@ -731,7 +736,7 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, flo
 			obj_z = max(pos.z, p_last.z);
 			if (!is_u || c->dir == 1) {max_eq(pos[!c->dim], (c->d[!c->dim][0] + xy_radius));} // force the sphere onto the stairs
 			if (!is_u || c->dir == 0) {min_eq(pos[!c->dim], (c->d[!c->dim][1] - xy_radius));}
-			had_coll = on_stairs = 1;
+			had_coll     = on_stairs = 1;
 			speed_factor = (is_u ? 0.875 : 0.75); // U-shaped stairs are a bit faster
 		} // for c
 		if (speed_factor < 1.0) {apply_speed_factor(pos, p_last, speed_factor);} // slow down when on stairs
@@ -755,7 +760,7 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, flo
 				}
 				continue;
 			}
-			if ((c->type == TYPE_STAIR || on_stairs) && (obj_z + radius) > c->z2()) continue; // above the stair - allow it to be walked on
+			if ((c->type == TYPE_STAIR || (on_stairs && c->type != TYPE_RAILING)) && (obj_z + radius) > c->z2()) continue; // above the stair - allow it to be walked on
 
 			if (c->type == TYPE_RAMP) { // ramp should be SHAPE_ANGLED
 				// slight adjust so that player is above ramp when on the floor above, but below when falling through the ramp gap
@@ -803,7 +808,8 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, flo
 			if (c->type == TYPE_STAIR || c->type == TYPE_ATTIC_DOOR) {c_extended.z1() -= camera_height;} // handle the player's head for stairs and attic doors
 			if (!sphere_cube_intersect(pos, xy_radius, c_extended)) continue; // optimization
 
-			if (c->type == TYPE_RAILING) { // only collide with railing at top of stairs, not when walking under stairs
+			if (c->type == TYPE_RAILING && !(c->flags & RO_FLAG_IN_POOL)) { // stairs railing, not on a pool
+				// only collide with railing at top of stairs, not when walking under stairs
 				cylinder_3dw const railing(get_railing_cylinder(*c));
 				float const t((pos[c->dim] - railing.p1[c->dim])/(railing.p2[c->dim] - railing.p1[c->dim]));
 				float const railing_zval(railing.p1.z + CLIP_TO_01(t)*(railing.p2.z - railing.p1.z));

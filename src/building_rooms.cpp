@@ -1809,7 +1809,7 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 		}
 		// add stairs railings
 		cube_t railing(pool);
-		railing.z2() += step_height;
+		railing.z2() += step_height + get_trim_thickness(); // starts on pool deck
 		railing.d[ pool.dim][ pool.dir] -= 0.5*step_stride; // on the pool deck
 		railing.d[ pool.dim][!pool.dir]  = step.d[pool.dim][!pool.dir]; // to the end of the last step
 		railing.expand_in_dim(!pool.dim, -0.5*wall_thickness); // shrink slightly
@@ -1818,7 +1818,7 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 
 		for (unsigned d = 0; d < num_railings; ++d) { // each side of the pool, and maybe the center
 			set_wall_width(railing, positions[d], 0.375*wall_thickness, !pool.dim);
-			objs.emplace_back(railing, TYPE_RAILING,  pool.room_ix, pool.dim, pool.dir, RO_FLAG_IN_POOL, 1.0, SHAPE_CUBE, GOLD); // no balusters
+			objs.emplace_back(railing, TYPE_RAILING, pool.room_ix, pool.dim, pool.dir, RO_FLAG_IN_POOL, 1.0, SHAPE_CUBE, GOLD); // no balusters
 		}
 	}
 	for (auto i = interior->elevators.begin(); i != interior->elevators.end(); ++i) {
