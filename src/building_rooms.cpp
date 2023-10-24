@@ -1812,7 +1812,7 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 		}
 		// add stairs railings
 		cube_t railing(pool_shallow);
-		railing.z2() += step_height + get_trim_thickness(); // starts on pool deck
+		railing.z2() += 0.5*step_height + get_trim_thickness(); // starts on pool deck
 		railing.d[ dim][ dir] -= 0.5*step_stride; // on the pool deck
 		railing.d[ dim][!dir]  = step.d[dim][!dir]; // to the end of the last step
 		railing.expand_in_dim(!dim, -0.5*wall_thickness); // shrink slightly
