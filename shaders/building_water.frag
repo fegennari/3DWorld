@@ -40,7 +40,7 @@ in vec4 epos, proj_pos;
 
 // underwater attenuation code
 void atten_color(inout vec3 color, in float atten) {
-	color *= vec3(1.0) - min(uw_atten_max, uw_atten_scale*atten); // apply scattering and absorption; faster and more tweak-able than using exp()
+	color *= vec3(1.0) - min(uw_atten_max, uw_atten_scale*sqrt(atten)); // apply scattering and absorption; use sqrt() for gradual transition
 }
 
 float calc_water_height(in float dist) {
@@ -117,7 +117,7 @@ void main() {
 	float eye_to_water = log_to_linear_depth(gl_FragCoord.z);
 	float camera_path  = eye_to_floor - eye_to_water; // camera=>fragment through water
 	float light_path   = water_depth + camera_path; // light=>floor + camera=>floor; may be approximate if water_depth isn't accurate
-	float alpha        = min((0.1 + 1.25*water_atten*camera_path), 1.0); // short path is transparent, long path is opaque
+	float alpha        = min((0.3 + 0.6*sqrt(water_atten*camera_path)), 1.0); // short path is transparent, long path is opaque
 	vec4 uw_color      = vec4(light_color, alpha);
 	atten_color(uw_color.rgb, 1.5*water_atten*light_path); // apply scattering and absorption
 	vec4 water_color   = mix(uw_color, vec4(light_color, 1.0), foam);

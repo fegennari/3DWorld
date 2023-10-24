@@ -268,7 +268,7 @@ void add_2d_bloom() {
 	color_buffer_frame = 0; // reset to invalidate buffer and force recreation of texture for second pass
 }
 
-void add_postproc_underwater_fog(float atten_scale, float max_uw_dist) {
+void add_postproc_underwater_fog(float atten_scale, float max_uw_dist, float mud_amt) {
 
 	bind_depth_buffer(1); // tu_id=1
 	shader_t s;
@@ -278,7 +278,7 @@ void add_postproc_underwater_fog(float atten_scale, float max_uw_dist) {
 	s.begin_shader();
 	s.add_uniform_float("max_uw_dist", max_uw_dist);
 	setup_depth_tex(s, 1);
-	setup_shader_underwater_atten(s, atten_scale);
+	setup_shader_underwater_atten(s, atten_scale, mud_amt);
 	fill_screen_white_and_end_shader(s);
 }
 

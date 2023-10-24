@@ -21,7 +21,7 @@ void reset_interior_lighting_and_end_shader(shader_t &s);
 // from postproc_effects.cpp
 void bind_frame_buffer_RGB(unsigned tu_id);
 void apply_player_underwater_effect(colorRGBA const &color_mod);
-void add_postproc_underwater_fog(float atten_scale, float max_uw_dist);
+void add_postproc_underwater_fog(float atten_scale, float max_uw_dist, float mud_amt);
 void bind_depth_buffer(unsigned tu_id);
 
 
@@ -53,7 +53,7 @@ public:
 		splashes.emplace_back(pos.x, pos.y, radius, height, bounds);
 		if (splashes.size() > MAX_SPLASHES) {splashes.erase(min_element(splashes.begin(), splashes.end()));} // limit size to MAX_SPLASHES
 	}
-	void next_frame(float ref_dist) { // floor_spacing can be used
+	void next_frame(float ref_dist, bool is_pool) { // floor_spacing can be used
 		if (splashes.empty()) return;
 		time += fticks;
 		if (time > 600*TICKS_PER_SECOND) {time = 0.0;} // reset after 10 minutes to avoid FP precision problems
@@ -63,8 +63,10 @@ public:
 		for (splash_t &s : splashes) {
 			float const prev_area(s.radius*s.radius);
 			s.radius += exp_dist;
-			s.height *= prev_area/(s.radius*s.radius); // volume preserving
-		}
+			float height_change(prev_area/(s.radius*s.radius)); // volume preserving
+			if (is_pool) {height_change = 0.25 + 0.75*height_change;} // slower falloff in pool due to reflections off sides that aren't accounted for
+			s.height *= height_change;
+		} // for s
 		splashes.erase(std::remove_if(splashes.begin(), splashes.end(), [](splash_t const &s) {return (s.height < 0.0005);}), splashes.end());
 	}
 	void set_shader_uniforms(shader_t &s) {
@@ -224,8 +226,8 @@ void building_t::draw_water(vector3d const &xlate) const {
 	}
 	cube_t const water(get_water_cube());
 	bool const is_pool(has_pool());
-	float const floor_spacing(get_window_vspace()), atten_scale((is_pool ? 0.4 : 1.0)/floor_spacing), water_z1(water.z1());
-	if (animate2) {building_splash_manager.next_frame(floor_spacing);} // maybe should do this somewhere else? or update even if water isn't visible?
+	float const floor_spacing(get_window_vspace()), atten_scale((is_pool ? 0.3 : 1.0)/floor_spacing), water_z1(water.z1());
+	if (animate2) {building_splash_manager.next_frame(floor_spacing, is_pool);} // maybe should do this somewhere else? or update even if water isn't visible?
 	point const camera_pos(get_camera_pos());
 	float const mud_amt(is_pool ? 0.0 : 0.5);
 
@@ -253,7 +255,7 @@ void building_t::draw_water(vector3d const &xlate) const {
 		for (unsigned n = 0; n < 8; ++n) {max_eq(max_uw_dist, p2p_dist(camera_bs, pts[n]));}
 		colorRGBA const pool_color(0.7, 0.8, 1.0), clear_color(0.4, 0.6, 1.0), mud_color(1.0, 0.6, 0.33);
 		apply_player_underwater_effect(is_pool ? pool_color : blend_color(mud_color, clear_color, mud_amt, 0));
-		add_postproc_underwater_fog((is_pool ? 1.0 : WATER_COL_ATTEN)*atten_scale, max_uw_dist);
+		add_postproc_underwater_fog((is_pool ? 2.0 : 1.0)*WATER_COL_ATTEN*atten_scale, max_uw_dist, mud_amt);
 		bool const is_lit(is_room_lit(get_room_containing_pt(camera_bs), camera_bs.z));
 		colorRGBA const base_color(is_lit ? WHITE : DK_GRAY);
 		float const orig_water_plane_z(water_plane_z);

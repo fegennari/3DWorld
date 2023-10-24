@@ -5,7 +5,7 @@ uniform vec3 uw_atten_max, uw_atten_scale;
 in vec2 tc;
 
 void atten_color(inout vec3 color, in float atten) {
-	color *= vec3(1.0) - min(uw_atten_max, uw_atten_scale*atten); // apply scattering and absorption; faster and more tweak-able than using exp()
+	color *= vec3(1.0) - min(uw_atten_max, uw_atten_scale*sqrt(atten)); // apply scattering and absorption; use sqrt() for gradual transition
 }
 
 void main() {
