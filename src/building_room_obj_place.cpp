@@ -877,8 +877,10 @@ bool building_t::add_bed_to_room(rand_gen_t &rgen, room_t const &room, vect_cube
 	return 0;
 }
 
-bool building_t::add_ball_to_room(rand_gen_t &rgen, room_t const &room, cube_t const &place_area, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
-	unsigned const btype(rgen.rand() % NUM_BALL_TYPES);
+bool building_t::add_ball_to_room(rand_gen_t &rgen, room_t const &room, cube_t const &place_area, float zval,
+	unsigned room_id, float tot_light_amt, unsigned objs_start, int force_type)
+{
+	unsigned const btype((force_type >= 0) ? force_type : (rgen.rand() % NUM_BALL_TYPES));
 	ball_type_t const &bt(ball_types[btype]);
 	float const radius(bt.radius*get_window_vspace()/(12*8)); // assumes 8 foot floor spacing, and bt.radius in inches
 	cube_t ball_area(place_area);
@@ -890,10 +892,10 @@ bool building_t::add_ball_to_room(rand_gen_t &rgen, room_t const &room, cube_t c
 	for (unsigned n = 0; n < 10; ++n) { // make 10 attempts to place the object
 		point center(0.0, 0.0, (zval + radius));
 
-		if (room.is_ext_basement()) { // office backrooms: place anywhere within the room
+		if (!is_house && room.is_ext_basement()) { // office backrooms: place anywhere within the room
 			center = gen_xy_pos_in_area(ball_area, radius, rgen, center.z);
 		}
-		else { // house bedroom: place along a wall
+		else { // house bedroom or swimming pool room: place along a wall
 			bool const dim(rgen.rand_bool()), dir(rgen.rand_bool()); // choose a random wall
 			center[ dim] = ball_area.d[dim][dir];
 			center[!dim] = rgen.rand_uniform(ball_area.d[!dim][0], ball_area.d[!dim][1]); // random position along the wall
@@ -2181,6 +2183,7 @@ void building_t::add_swimming_pool_room_objs(rand_gen_t rgen, room_t const &room
 	float const floor_spacing(get_window_vspace()), trim_thickness(get_trim_thickness()), wall_thickness(get_wall_thickness());
 	float const tile_thickness(0.5*trim_thickness), water_gap(pool.z2() - interior->water_zval);
 	vect_room_object_t &objs(interior->room_geom->objs);
+	unsigned const objs_start(objs.size());
 	assert(water_gap > 0.0);
 	
 	// add tile around the sides of the pool
@@ -2244,6 +2247,20 @@ void building_t::add_swimming_pool_room_objs(rand_gen_t rgen, room_t const &room
 		objs.emplace_back(slope, TYPE_POOL_TILE, room_id, pool.dim, pool.dir, (RO_FLAG_ADJ_LO | RO_FLAG_ADJ_BOT), 1.0, SHAPE_ANGLED);
 		objs.emplace_back(upper, TYPE_POOL_TILE, room_id, pool.dim, pool.dir, (RO_FLAG_ADJ_LO | RO_FLAG_ADJ_BOT));
 	}
+	// add beach ball(s)
+	unsigned const num_balls(rgen.rand() % 3); // 0-2
+	cube_t pool_area(pool);
+	set_cube_zvals(pool_area, interior->water_zval, place_area.z2());
+	pool_area.d[pool.dim][pool.dir] += (pool.dir ? -1.0 : 1.0)*0.6*floor_spacing; // avoid the railings by the stairs (approximate)
+	ball_type_t const &bt(ball_types[BALL_TYPE_BEACH]);
+
+	for (unsigned n = 0; n < num_balls; ++n) {
+		bool const in_pool(rgen.rand_bool());
+		float const ball_zval(in_pool ? (interior->water_zval - 2.0*bt.density*bt.radius*floor_spacing/(12*8)) : zval);
+		add_ball_to_room(rgen, room, (in_pool ? pool_area : place_area), ball_zval, room_id, tot_light_amt, objs_start, BALL_TYPE_BEACH);
+	}
+
+	// TYPE_POOL_FLOAT, TYPE_BENCH, TYPE_DIV_BOARD
 }
 
 bool get_fire_ext_height_and_radius(float window_vspacing, float &height, float &radius) {
