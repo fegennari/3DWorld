@@ -4087,6 +4087,21 @@ void building_room_geom_t::add_pan(room_object_t const &c) { // is_small=1
 	for (auto i = mat.itri_verts.begin()+base_start; i != mat.itri_verts.end(); ++i) {i->v.z = c.z2() - 0.5*(c.z2() - i->v.z);}
 }
 
+void building_room_geom_t::add_pool_float(room_object_t const &c) {
+	// TODO: make the float transparent and/or two sided lighting? same with beach balls
+	float const ri(0.5*c.dz()), ro(c.get_radius() - ri);
+	assert(ro > 0.0);
+	get_untextured_material(1, 0, 1).add_vert_torus_to_verts(c.get_cube_center(), ri, ro, c.color, 1.0, 0); // shadowed, small
+}
+
+void building_room_geom_t::add_bench(room_object_t const &c) {
+	get_untextured_material(1, 0, 1).add_cube_to_verts_untextured(c, c.color); // shadowed, small; placeholder
+}
+
+void building_room_geom_t::add_diving_board(room_object_t const &c) {
+	get_untextured_material(1, 0, 1).add_cube_to_verts_untextured(c, c.color); // shadowed, small; placeholder
+}
+
 void building_room_geom_t::add_debug_shape(room_object_t const &c) {
 	rgeom_mat_t &mat(get_untextured_material(0, 0, 1)); // unshadowed, small
 	if      (c.shape == SHAPE_CUBE  ) {mat.add_cube_to_verts_untextured(c, c.color);} // all faces

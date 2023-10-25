@@ -2183,7 +2183,6 @@ void building_t::add_swimming_pool_room_objs(rand_gen_t rgen, room_t const &room
 	float const floor_spacing(get_window_vspace()), trim_thickness(get_trim_thickness()), wall_thickness(get_wall_thickness());
 	float const tile_thickness(0.5*trim_thickness), water_gap(pool.z2() - interior->water_zval);
 	vect_room_object_t &objs(interior->room_geom->objs);
-	unsigned const objs_start(objs.size());
 	assert(water_gap > 0.0);
 	
 	// add tile around the sides of the pool
@@ -2247,11 +2246,25 @@ void building_t::add_swimming_pool_room_objs(rand_gen_t rgen, room_t const &room
 		objs.emplace_back(slope, TYPE_POOL_TILE, room_id, pool.dim, pool.dir, (RO_FLAG_ADJ_LO | RO_FLAG_ADJ_BOT), 1.0, SHAPE_ANGLED);
 		objs.emplace_back(upper, TYPE_POOL_TILE, room_id, pool.dim, pool.dir, (RO_FLAG_ADJ_LO | RO_FLAG_ADJ_BOT));
 	}
-	// add beach ball(s)
-	unsigned const num_balls(rgen.rand() % 3); // 0-2
+	// add other objects in and around the pool
+	unsigned const objs_start(objs.size()); // we can start here, since the pool tile objects placed above don't collide with other placed objects
 	cube_t pool_area(pool);
 	set_cube_zvals(pool_area, interior->water_zval, place_area.z2());
 	pool_area.d[pool.dim][pool.dir] += (pool.dir ? -1.0 : 1.0)*0.6*floor_spacing; // avoid the railings by the stairs (approximate)
+	// add pool floats
+	unsigned const num_floats(rgen.rand() % 3); // 0-2
+	unsigned const NUM_FLOAT_COLORS = 6;
+	colorRGBA const float_colors[NUM_FLOAT_COLORS] = {WHITE, YELLOW, PINK, GREEN, ORANGE, LT_BLUE};
+	float const pf_radius(0.25*floor_spacing), pf_height(0.6*pf_radius);
+
+	for (unsigned n = 0; n < num_floats; ++n) {
+		cube_t pfloat;
+		gen_xy_pos_for_round_obj(pfloat, pool_area, pf_radius, pf_height, pf_radius, rgen, 1); // place_at_z1=1
+		if (overlaps_other_room_obj(pfloat, objs_start)) continue; // if placement falls, leave it out; should only collide with another float
+		objs.emplace_back(pfloat, TYPE_POOL_FLOAT, room_id, 0, 0, 0, tot_light_amt, SHAPE_CYLIN, float_colors[rgen.rand() % NUM_FLOAT_COLORS]);
+	}
+	// add beach ball(s)
+	unsigned const num_balls(rgen.rand() % 3); // 0-2
 	ball_type_t const &bt(ball_types[BALL_TYPE_BEACH]);
 
 	for (unsigned n = 0; n < num_balls; ++n) {
@@ -2260,7 +2273,7 @@ void building_t::add_swimming_pool_room_objs(rand_gen_t rgen, room_t const &room
 		add_ball_to_room(rgen, room, (in_pool ? pool_area : place_area), ball_zval, room_id, tot_light_amt, objs_start, BALL_TYPE_BEACH);
 	}
 
-	// TYPE_POOL_FLOAT, TYPE_BENCH, TYPE_DIV_BOARD
+	// TYPE_BENCH, TYPE_DIV_BOARD
 }
 
 bool get_fire_ext_height_and_radius(float window_vspacing, float &height, float &radius) {
