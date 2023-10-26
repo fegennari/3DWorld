@@ -790,11 +790,11 @@ void building_room_geom_t::add_box(room_object_t const &c) { // is_small=1
 			for (unsigned d = 0; d < 2; ++d) { // x/y
 				for (unsigned e = 0; e < 2; ++e) { // side dir
 					unsigned const side_ix(2*d+e);
-					bool const against_wall(c.flags & (RO_FLAG_ADJ_LO << side_ix)); // encoded in adj flags
+					bool const against_obj(c.flags & (RO_FLAG_ADJ_LO << side_ix)); // check obj/wall proximity encoded in adj flags
 					cube_t C(box);
 					C.d[d][!e] = C.d[d][e];
-					C.d[d][ e] = C.d[d][e] + (e ? 1.0 : -1.0)*(against_wall ? 0.05 : 1.0)*flap_len;
-					float const zbot(C.z2()), dz(against_wall ? flap_len : 0.25*min(flap_len, box_sz.z)); // tilted somewhat upward; pointing up if against wall
+					C.d[d][ e] = C.d[d][e] + (e ? 1.0 : -1.0)*(against_obj ? 0.05 : 1.0)*flap_len;
+					float const zbot(C.z2()), dz(against_obj ? flap_len : 0.25*min(flap_len, box_sz.z)); // tilted somewhat upward; pointing up if against wall
 					point const pts[4] = {point(C.x1(), C.y1(), zbot), point(C.x2(), C.y1(), zbot), point(C.x2(), C.y2(), zbot), point(C.x1(), C.y2(), zbot)};
 					unsigned const ix(mat.quad_verts.size());
 					add_quad_to_mat(mat, pts, ts, tt, cw);

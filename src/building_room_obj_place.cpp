@@ -1896,13 +1896,17 @@ bool building_t::add_storage_objs(rand_gen_t rgen, room_t const &room, float zva
 		if (door_path_checker.check_door_path_blocked(crate, room, zval, *this)) continue; // don't block the path between doors
 		cube_t c2(crate);
 		c2.expand_by(vector3d(0.5*c2.dx(), 0.5*c2.dy(), 0.0)); // approx extents of flaps if open
+		room_object const type(rgen.rand_bool() ? TYPE_CRATE : TYPE_BOX);
 		unsigned flags(0);
 		
-		for (unsigned d = 0; d < 4; ++d) { // determine which sides are against a wall
-			bool const dim(d>>1), dir(d&1);
-			if ((c2.d[dim][dir] < room_bounds.d[dim][dir]) ^ dir) {flags |= (RO_FLAG_ADJ_LO << d);}
+		if (type == TYPE_BOX) { // determine which sides are against a wall, for use with box flaps logic
+			for (unsigned d = 0; d < 4; ++d) {
+				bool const dim(d>>1), dir(d&1);
+				if ((c2.d[dim][dir] < room_bounds.d[dim][dir]) ^ dir) {flags |= (RO_FLAG_ADJ_LO << d);}
+			}
+			// should we check check_for_blocked_box_flags() here as well? maybe at the end after all objects have been placed? what about opening stacked boxes?
 		}
-		objs.emplace_back(crate, (rgen.rand_bool() ? TYPE_CRATE : TYPE_BOX), room_id, rgen.rand_bool(), 0, flags, tot_light_amt, SHAPE_CUBE, gen_box_color(rgen)); // crate or box
+		objs.emplace_back(crate, type, room_id, rgen.rand_bool(), 0, flags, tot_light_amt, SHAPE_CUBE, gen_box_color(rgen)); // crate or box
 		set_obj_id(objs); // used to select texture and box contents
 		if (++num_placed == num_crates) break; // we're done
 	} // for n
@@ -2833,6 +2837,24 @@ void building_t::add_plants_to_room(rand_gen_t rgen, room_t const &room, float z
 	}
 }
 
+void check_for_blocked_box_flags(vect_room_object_t &objs, unsigned objs_start, unsigned obj_ix) {
+	assert(objs_start <= obj_ix && obj_ix < objs.size());
+	if (objs_start == obj_ix) return; // no other objects
+	room_object_t &box(objs[obj_ix]);
+	assert(box.type == TYPE_BOX);
+
+	for (unsigned d = 0; d < 4; ++d) { // each side
+		bool const dim(d>>1), dir(d&1);
+		cube_t bc(box);
+		set_cube_zvals(bc, box.z2(), (box.z2() + 0.5*box.dz())); // flaps extend above the box
+		bc.d[dim][!dir]  = box.d[dim][dir]; // flush with the edge
+		bc.d[dim][ dir] += (dir ? 1.0 : -1.0)*0.485*box.get_sz_dim(dim); // extend out by about half the box size (see building_room_geom_t::add_box())
+
+		for (unsigned i = objs_start; i < obj_ix; ++i) { // check objects placed before the box
+			if (objs[i].intersects(bc)) {box.flags |= (RO_FLAG_ADJ_LO << d); break;}
+		}
+	} // for d
+}
 void building_t::add_boxes_to_room(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, unsigned max_num) {
 	if (max_num == 0) return; // why did we call this?
 	float const window_vspacing(get_window_vspace());
@@ -2840,13 +2862,16 @@ void building_t::add_boxes_to_room(rand_gen_t rgen, room_t const &room, float zv
 	place_area.expand_by(-0.25*get_wall_thickness()); // shrink to leave a small gap for open flaps
 	unsigned const num(rgen.rand() % (max_num+1));
 	bool const allow_crates(!is_house && room.is_ext_basement()); // backrooms
+	vect_room_object_t &objs(interior->room_geom->objs);
 
 	for (unsigned n = 0; n < num; ++n) {
 		vector3d sz;
 		gen_crate_sz(sz, rgen, window_vspacing);
 		sz *= 1.5; // make larger than storage room boxes
 		room_object const type((allow_crates && rgen.rand_bool()) ? TYPE_CRATE : TYPE_BOX);
-		place_obj_along_wall(type, room, sz.z, sz, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 0.0, 0, 4, 0, gen_box_color(rgen));
+		unsigned const obj_ix(objs.size());
+		if (!place_obj_along_wall(type, room, sz.z, sz, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 0.0, 0, 4, 0, gen_box_color(rgen))) continue;
+		if (type == TYPE_BOX) {check_for_blocked_box_flags(objs, objs_start, obj_ix);} // check for nearby objects that would block the box flaps from opening
 	} // for n
 }
 
