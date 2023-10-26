@@ -2251,28 +2251,30 @@ void building_t::add_swimming_pool_room_objs(rand_gen_t rgen, room_t const &room
 	cube_t pool_area(pool);
 	set_cube_zvals(pool_area, interior->water_zval, place_area.z2());
 	pool_area.d[pool.dim][pool.dir] += (pool.dir ? -1.0 : 1.0)*0.6*floor_spacing; // avoid the railings by the stairs (approximate)
-	// add pool floats
-	unsigned const num_floats(rgen.rand() % 3); // 0-2
-	unsigned const NUM_FLOAT_COLORS = 6;
-	colorRGBA const float_colors[NUM_FLOAT_COLORS] = {WHITE, YELLOW, PINK, GREEN, ORANGE, LT_BLUE};
-	float const pf_radius(0.25*floor_spacing), pf_height(0.6*pf_radius);
+	
+	if (pool_len > 3.0*floor_spacing && pool_depth > 0.8*floor_spacing) { // add pool float(s) if pool is large and deep enough
+		unsigned const num_floats(rgen.rand() % 3); // 0-2
+		unsigned const NUM_FLOAT_COLORS = 6;
+		colorRGBA const float_colors[NUM_FLOAT_COLORS] = {WHITE, YELLOW, PINK, GREEN, ORANGE, LT_BLUE};
+		float const pf_radius(0.25*floor_spacing), pf_height(0.6*pf_radius);
 
-	for (unsigned n = 0; n < num_floats; ++n) {
-		cube_t pfloat;
-		gen_xy_pos_for_round_obj(pfloat, pool_area, pf_radius, pf_height, pf_radius, rgen, 1); // place_at_z1=1
-		if (overlaps_other_room_obj(pfloat, objs_start)) continue; // if placement falls, leave it out; should only collide with another float
-		objs.emplace_back(pfloat, TYPE_POOL_FLOAT, room_id, 0, 0, 0, tot_light_amt, SHAPE_CYLIN, float_colors[rgen.rand() % NUM_FLOAT_COLORS]);
+		for (unsigned n = 0; n < num_floats; ++n) {
+			cube_t pfloat;
+			gen_xy_pos_for_round_obj(pfloat, pool_area, pf_radius, pf_height, pf_radius, rgen, 1); // place_at_z1=1
+			if (overlaps_other_room_obj(pfloat, objs_start)) continue; // if placement falls, leave it out; should only collide with another float
+			objs.emplace_back(pfloat, TYPE_POOL_FLOAT, room_id, 0, 0, 0, tot_light_amt, SHAPE_CYLIN, float_colors[rgen.rand() % NUM_FLOAT_COLORS]);
+		}
 	}
-	// add beach ball(s)
-	unsigned const num_balls(rgen.rand() % 3); // 0-2
-	ball_type_t const &bt(ball_types[BALL_TYPE_BEACH]);
+	if (pool_len > 2.0*floor_spacing) { // add beach ball(s) if pool is large enough
+		unsigned const num_balls(rgen.rand() % 3); // 0-2
+		ball_type_t const &bt(ball_types[BALL_TYPE_BEACH]);
 
-	for (unsigned n = 0; n < num_balls; ++n) {
-		bool const in_pool(rgen.rand_bool());
-		float const ball_zval(in_pool ? (interior->water_zval - 2.0*bt.density*bt.radius*floor_spacing/(12*8)) : zval);
-		add_ball_to_room(rgen, room, (in_pool ? pool_area : place_area), ball_zval, room_id, tot_light_amt, objs_start, BALL_TYPE_BEACH);
+		for (unsigned n = 0; n < num_balls; ++n) {
+			bool const in_pool(rgen.rand_bool());
+			float const ball_zval(in_pool ? (interior->water_zval - 2.0*bt.density*bt.radius*floor_spacing/(12*8)) : zval);
+			add_ball_to_room(rgen, room, (in_pool ? pool_area : place_area), ball_zval, room_id, tot_light_amt, objs_start, BALL_TYPE_BEACH);
+		}
 	}
-
 	// TYPE_BENCH, TYPE_DIV_BOARD
 }
 
