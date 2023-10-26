@@ -1574,6 +1574,8 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 		// draw the item the player is holding; pre_smap_player_pos should be the correct position for reflections
 		point const obj_pos((reflection_pass ? pre_smap_player_pos : camera_bs) + CAMERA_RADIUS*cview_dir - vector3d(0.0, 0.0, 0.5*CAMERA_RADIUS));
 		player_held_object.translate(obj_pos - player_held_object.get_cube_center());
+		//unsigned room_id(building.get_room_containing_pt(obj_pos));
+		//if (room_id >= 0) {player_held_object.room_id = room_id;} // is this necessary?
 		if (player_held_object.type == TYPE_LG_BALL) {draw_lg_ball_in_building(player_held_object, s);} // the only supported dynamic object type
 		else if (player_held_object.can_use()) {draw_interactive_player_obj(player_held_object, s, xlate);}
 		else {assert(0);}

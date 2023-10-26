@@ -1141,6 +1141,8 @@ void building_t::run_ball_update(vector<room_object_t>::iterator ball_it, point 
 		room_object_t squish_obj(ball);
 		squish_obj.expand_by_xy(0.5*radius); // increase the radius to account for spiders and roaches being pushed out of the way of moving balls
 		maybe_squish_animals(squish_obj, player_pos);
+		int const new_room_id(get_room_containing_pt(new_center));
+		if (new_room_id >= 0) {ball.room_id = new_room_id;} // needed for light_amt recompute when toggling lights; should we always recompute light_amt on room change?
 		if (!was_dynamic) {interior->room_geom->invalidate_small_geom();} // static => dynamic transition, need to remove from static object vertex data
 	}
 	// check for collision with closed door separating the adjacent building at the end of the connecting room
