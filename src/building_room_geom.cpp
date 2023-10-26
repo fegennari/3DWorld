@@ -4012,12 +4012,19 @@ xform_matrix get_player_cview_rot_matrix() {
 	return get_rotation_matrix(plus_z, angle);
 }
 
+void apply_thin_plastic_effect(room_object_t const &c, tid_nm_pair_t &tex) {
+	tex.emissive = min(0.5f, 2.0f*c.light_amt); // make slightly emissive to fake light transmission
+}
+tid_nm_pair_t get_ball_tex_params(room_object_t const &c, bool shadowed) {
+	ball_type_t const &bt(c.get_ball_type());
+	tid_nm_pair_t tex(get_lg_ball_tid(c), get_lg_ball_nm_tid(c), 0.0, 0.0, 0.0, 0.0, shadowed);
+	tex.set_specular(bt.spec, bt.shine); // Note: texture color is incorrectly applied to the specular component due to the way dynamic lighting works
+	//if (c.item_flags == BALL_TYPE_BEACH) {apply_thin_plastic_effect(c, tex);} // doesn't look right in rooms with windows where light_amt > 0 when the lights are off
+	return tex;
+}
 void building_room_geom_t::add_lg_ball(room_object_t const &c) { // is_small=1
 	bool const dynamic(c.is_dynamic()); // either small or dynamic
-	ball_type_t const &bt(c.get_ball_type());
-	tid_nm_pair_t tex(get_lg_ball_tid(c), get_lg_ball_nm_tid(c), 0.0, 0.0);
-	tex.set_specular(bt.spec, bt.shine); // Note: texture color is incorrectly applied to the specular component due to the way dynamic lighting works
-	rgeom_mat_t &mat(get_material(tex, 1, dynamic, !dynamic));
+	rgeom_mat_t &mat(get_material(get_ball_tex_params(c, 1), 1, dynamic, !dynamic)); // shadowed=1
 	// rotate the texture coords when the ball is rolling
 	mat.add_sphere_to_verts(c, apply_light_color(c), 0, zero_vector, tex_range_t(), (c.has_dstate() ? &get_dstate(c).rot_matrix : nullptr)); // low_detail=0
 }
@@ -4026,7 +4033,7 @@ void building_room_geom_t::add_lg_ball(room_object_t const &c) { // is_small=1
 	xform_matrix const rot_matrix(get_player_cview_rot_matrix());
 	// Note: since we're using indexed triangles now, we can't simply call draw_quad_verts_as_tris(); instead we create temp VBO/IBO; not the most efficient solution, but it should work
 	static rgeom_mat_t mat = rgeom_mat_t(tid_nm_pair_t()); // allocated memory is reused across frames; VBO/IBO are recreated every time
-	mat.tex = tid_nm_pair_t(get_lg_ball_tid(c), get_lg_ball_nm_tid(c), 0.0, 0.0);
+	mat.tex = get_ball_tex_params(c, 0); // shadowed=0
 	mat.add_sphere_to_verts(c, apply_light_color(c), 0, zero_vector, tex_range_t(), &rot_matrix); // low_detail=0
 	tid_nm_pair_dstate_t state(s);
 	mat.upload_draw_and_clear(state);
@@ -4101,6 +4108,7 @@ void building_room_geom_t::add_pool_float(room_object_t const &c) {
 	assert(ro > 0.0);
 	tid_nm_pair_t tex(-1, 1.0, 1);
 	tex.set_specular(0.6, 80.0);
+	apply_thin_plastic_effect(c, tex);
 	get_material(tex, 1, 0, 1).add_vert_torus_to_verts(c.get_cube_center(), ri, ro, c.color, 1.0, 0); // shadowed, small
 }
 
