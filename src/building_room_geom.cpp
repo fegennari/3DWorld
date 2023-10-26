@@ -4014,7 +4014,10 @@ xform_matrix get_player_cview_rot_matrix() {
 
 void building_room_geom_t::add_lg_ball(room_object_t const &c) { // is_small=1
 	bool const dynamic(c.is_dynamic()); // either small or dynamic
-	rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_lg_ball_tid(c), get_lg_ball_nm_tid(c), 0.0, 0.0), 1, dynamic, !dynamic));
+	ball_type_t const &bt(c.get_ball_type());
+	tid_nm_pair_t tex(get_lg_ball_tid(c), get_lg_ball_nm_tid(c), 0.0, 0.0);
+	tex.set_specular(bt.spec, bt.shine); // Note: texture color is incorrectly applied to the specular component due to the way dynamic lighting works
+	rgeom_mat_t &mat(get_material(tex, 1, dynamic, !dynamic));
 	// rotate the texture coords when the ball is rolling
 	mat.add_sphere_to_verts(c, apply_light_color(c), 0, zero_vector, tex_range_t(), (c.has_dstate() ? &get_dstate(c).rot_matrix : nullptr)); // low_detail=0
 }
@@ -4096,7 +4099,9 @@ void building_room_geom_t::add_pool_float(room_object_t const &c) {
 	// TODO: make the float transparent and/or two sided lighting? same with beach balls
 	float const ri(0.5*c.dz()), ro(c.get_radius() - ri);
 	assert(ro > 0.0);
-	get_untextured_material(1, 0, 1).add_vert_torus_to_verts(c.get_cube_center(), ri, ro, c.color, 1.0, 0); // shadowed, small
+	tid_nm_pair_t tex(-1, 1.0, 1);
+	tex.set_specular(0.6, 80.0);
+	get_material(tex, 1, 0, 1).add_vert_torus_to_verts(c.get_cube_center(), ri, ro, c.color, 1.0, 0); // shadowed, small
 }
 
 void building_room_geom_t::add_bench(room_object_t const &c) {
