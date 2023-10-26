@@ -962,7 +962,7 @@ bool building_t::maybe_add_fireplace_to_room(rand_gen_t &rgen, room_t const &roo
 
 bool building_t::place_obj_along_wall(room_object type, room_t const &room, float height, vector3d const &sz_scale, rand_gen_t &rgen, float zval,
 	unsigned room_id, float tot_light_amt, cube_t const &place_area, unsigned objs_start, float front_clearance, bool add_door_clearance,
-	unsigned pref_orient, bool pref_centered, colorRGBA const &color, bool not_at_window, room_obj_shape shape)
+	unsigned pref_orient, bool pref_centered, colorRGBA const &color, bool not_at_window, room_obj_shape shape, float side_clearance)
 {
 	float const hwidth(0.5*height*sz_scale.y/sz_scale.z), depth(height*sz_scale.x/sz_scale.z);
 	float const min_space(max(2.8f*hwidth, 2.1f*(max(hwidth, 0.5f*depth) + get_scaled_player_radius()))); // make sure the player can get around the object
@@ -997,7 +997,9 @@ bool building_t::place_obj_along_wall(room_object type, room_t const &room, floa
 		}
 		cube_t c2(c), c3(c); // used for collision tests
 		c2.d[dim][!dir] += (dir ? -1.0 : 1.0)*clearance;
-		if (overlaps_other_room_obj(c2, objs_start) || interior->is_blocked_by_stairs_or_elevator(c2)) continue; // bad placement (Note: not using is_obj_placement_blocked())
+		cube_t c2b(c2);
+		c2b.expand_in_dim(!dim, side_clearance); // side_clearance applies to other objects, stairs, and elevators; used with boxes
+		if (overlaps_other_room_obj(c2b, objs_start) || interior->is_blocked_by_stairs_or_elevator(c2b)) continue; // bad placement (Note: not using is_obj_placement_blocked())
 		c3.d[dim][!dir] += (dir ? -1.0 : 1.0)*obj_clearance; // smaller clearance value (without player diameter)
 
 		if (add_door_clearance) {
@@ -2870,7 +2872,9 @@ void building_t::add_boxes_to_room(rand_gen_t rgen, room_t const &room, float zv
 		sz *= 1.5; // make larger than storage room boxes
 		room_object const type((allow_crates && rgen.rand_bool()) ? TYPE_CRATE : TYPE_BOX);
 		unsigned const obj_ix(objs.size());
-		if (!place_obj_along_wall(type, room, sz.z, sz, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 0.0, 0, 4, 0, gen_box_color(rgen))) continue;
+		float const side_clearance(0.05*max(sz.x, sz.y)); // small extra clearance on sides for box flaps
+		if (!place_obj_along_wall(type, room, sz.z, sz, rgen, zval, room_id, tot_light_amt, place_area, objs_start,
+			0.0, 0, 4, 0, gen_box_color(rgen), 0, SHAPE_CUBE, side_clearance)) continue;
 		if (type == TYPE_BOX) {check_for_blocked_box_flags(objs, objs_start, obj_ix);} // check for nearby objects that would block the box flaps from opening
 	} // for n
 }
