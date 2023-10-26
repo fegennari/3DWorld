@@ -168,9 +168,10 @@ bool building_t::set_room_light_state_to(room_t const &room, float zval, bool ma
 
 void building_t::set_obj_lit_state_to(unsigned room_id, float light_z2, bool lit_state) {
 	assert(has_room_geom());
-	float const light_intensity(get_room(room_id).light_intensity);
+	room_t const &room(get_room(room_id));
+	float const light_intensity(room.light_intensity);
 	auto objs_end(interior->room_geom->get_placed_objs_end()); // skip buttons/stairs/elevators
-	float const obj_zmin(light_z2 - get_window_vspace()); // get_floor_thickness()?
+	float const obj_zmin(room.is_single_floor ? room.z1() : (light_z2 - get_floor_ceil_gap()));
 
 	for (auto i = interior->room_geom->objs.begin(); i != objs_end; ++i) {
 		if (i->room_id != room_id || i->z1() < obj_zmin || i->z1() > light_z2) continue; // wrong room or floor

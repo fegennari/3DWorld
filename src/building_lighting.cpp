@@ -1660,7 +1660,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			if (clipped_bc.contains_pt(camera_rot) || clipped_bc.contains_pt(point(camera_rot.x, camera_rot.y, player_feet_zval)) || player_in_this_room) {
 				// must update shadow maps for the room above if the player is on the stairs or in the same room when there are stairs
 				// must update even if light is visible (meaning shadows aren't due to < 90 degree FOV) because the old shadow may become visible when the player moves
-				bool const check_floor_above(camera_on_stairs || (camera_by_stairs && in_camera_room));
+				bool const check_floor_above(camera_on_stairs || (camera_by_stairs && in_camera_room) || is_single_floor);
 
 				if (is_lamp || player_in_this_room || (player_in_attic && is_in_attic) ||
 					(lpos_rot.z > player_feet_zval && (check_floor_above || lpos_rot.z < (camera_bs.z + window_vspacing))))
