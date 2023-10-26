@@ -1232,10 +1232,12 @@ void building_room_geom_t::add_shower(room_object_t const &c, float tscale) {
 void building_room_geom_t::add_bottle(room_object_t const &c, bool add_bottom) {
 	// obj_id: bits 1-3 for type, bits 6-7 for emptiness, bit 6 for cap color
 	unsigned const bottle_ndiv = 16; // use smaller ndiv to reduce vertex count
+	bool const cap_color_ix(c.obj_id & 64);
+	colorRGBA const color(apply_light_color(c));
+	colorRGBA const cap_colors[2] = {LT_GRAY, GOLD}, cap_spec_colors[2] = {WHITE, GOLD};
 	tid_nm_pair_t tex(-1, 1.0, 1); // shadowed
 	tex.set_specular(0.5, 80.0);
 	rgeom_mat_t &mat(get_material(tex, 1, 0, 1)); // inc_shadows=1, dynamic=0, small=1
-	colorRGBA const color(apply_light_color(c)), cap_colors[2] = {LT_GRAY, GOLD}; // should gold caps have gold colored specular?
 	vector3d const sz(c.get_size());
 	unsigned const dim(get_max_dim(sz)), dim1((dim+1)%3), dim2((dim+2)%3);
 	bool const is_empty(c.is_bottle_empty());
@@ -1263,7 +1265,10 @@ void building_room_geom_t::add_bottle(room_object_t const &c, bool add_bottom) {
 
 	if (!is_empty) { // draw cap if nonempty
 		bool const draw_bot(c.was_expanded());
-		mat.add_ortho_cylin_to_verts(cap, apply_light_color(c, cap_colors[bool(c.obj_id & 64)]), dim,
+		tid_nm_pair_t cap_tex(-1, 1.0, 0); // unshadowed
+		cap_tex.set_specular_color(cap_spec_colors[cap_color_ix], 0.8, 80.0);
+		rgeom_mat_t &cap_mat(get_material(cap_tex, 0, 0, 1)); // inc_shadows=0, dynamic=0, small=1
+		cap_mat.add_ortho_cylin_to_verts(cap, apply_light_color(c, cap_colors[cap_color_ix]), dim,
 			(draw_bot || c.dir), (draw_bot || !c.dir), 0, 0, 1.0, 1.0, 1.0, 1.0, 0, bottle_ndiv);
 	}
 	// add the label
