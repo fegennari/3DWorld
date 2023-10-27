@@ -56,7 +56,13 @@ cube_t bench_t::get_bird_bcube() const {
 	return top_place;
 }
 /*static*/ void bench_t::pre_draw(draw_state_t &dstate, bool shadow_only) {
-	if (!shadow_only) {select_texture(FENCE_TEX);} // normal map?
+	if (!shadow_only) {
+		select_texture(FENCE_TEX);
+		select_texture(get_normal_map_for_bldg_tid(FENCE_TEX), 5);
+	}
+}
+/*static*/ void bench_t::post_draw(draw_state_t &dstate, bool shadow_only) {
+	if (!shadow_only) {select_texture(FLAT_NMAP_TEX, 5);}
 }
 void bench_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
 	cube_t bcube_with_back(bcube);
@@ -161,7 +167,7 @@ trashcan_t::trashcan_t(point const &pos_, float radius_, float height, bool is_c
 	if (shadow_only) {} // nothing to do
 	else if (dstate.pass_ix == 0) {select_texture(get_texture_by_name("roads/asphalt.jpg"));} // cube city/park
 	else { // cylinder residential
-		select_texture (get_texture_by_name("buildings/corrugated_metal.tif"));
+		select_texture(get_texture_by_name("buildings/corrugated_metal.tif"));
 		select_texture(get_texture_by_name("buildings/corrugated_metal_normal.tif", 1), 5);
 		dstate.s.set_cur_color(GRAY);
 	}
