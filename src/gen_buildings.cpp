@@ -1799,7 +1799,7 @@ void building_t::get_all_drawn_interior_verts(building_draw_t &bdraw) {
 		inner_cube.expand_by_xy(-spacing);
 		// add interior of elevator by drawing the inside of the cube with a slightly smaller size, with invert_normals=1; normal mapped?
 		tid_nm_pair_t wall_panel_tex(FENCE_TEX, -1, 16.0, 16.0);
-		wall_panel_tex.set_specular(0.5, 20.0);
+		wall_panel_tex.set_specular(0.1, 50.0);
 		bdraw.add_section(*this, 0, inner_cube, wall_panel_tex, WHITE, dim_mask, 0, 0, 1, 0, 0.0, 0, 1.0, 1);
 
 		if (i->under_skylight ) { // under skylight, draw the top

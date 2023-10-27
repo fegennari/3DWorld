@@ -314,7 +314,9 @@ void main()
 #endif
 	vec3 normal_s      = normal_sign*normal;
 	float wet_surf_val = wetness*max(normal.z, 0.0); // only +z surfaces are wet; doesn't apply to spec shininess though
-	vec4 base_color    = mix(1.0, 0.25, wet_surf_val)*gl_Color;
+	vec4 base_color    = mix(1.0, 0.25, wet_surf_val)*gl_Color; // unlit material color (albedo)
+	base_color.rgb    *= texel.rgb; // maybe gamma correction is wrong when the texture is added this way? but it's not actually used in any scenes
+	vec3 lit_color     = emission.rgb*texel.rgb + emissive_scale*base_color.rgb;
 
 #ifdef ENABLE_SNOW_COVERAGE
 	if (snow_cov_amt > 0.0 && normal_s.z > 0.4) {
@@ -325,7 +327,6 @@ void main()
 		alpha          = mix(alpha, 1.0, snow_amt);
 	}
 #endif
-	vec3 lit_color = emission.rgb + emissive_scale*gl_Color.rgb;
 #ifdef ENABLE_EMISSIVE_MAP
 	lit_color     += texture(emissive_map, tc);
 #endif
@@ -342,7 +343,7 @@ void main()
 		if (enable_light2) {ADD_LIGHT(2);} // lightning
 	}
 	if (enable_dlights) {add_dlights_bm_scaled(lit_color, vpos, epos, normalize(normal_s), base_color.rgb, 1.0, normal_sign, wet_surf_val);} // dynamic lighting
-	vec4 color = vec4((texel.rgb * lit_color), (texel.a * alpha));
+	vec4 color = vec4(lit_color, (texel.a * alpha));
 
 #ifdef ENABLE_GAMMA_CORRECTION
 	color.rgb = pow(color.rgb, vec3(0.45)); // gamma correction

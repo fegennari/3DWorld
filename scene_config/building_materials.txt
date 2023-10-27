@@ -119,7 +119,7 @@ buildings basement_floor_tid roads/concrete.jpg
 buildings house_ceil_tid stucco.jpg
 buildings house_ceil_nm_tid normal_maps/stucco_NRM.jpg
 buildings house_ceil_specular  0.15 60.0
-buildings house_floor_specular 0.40 50.0
+buildings house_floor_specular 0.10 50.0
 
 # brick buildings
 buildings house_prob 0.67 # 67%
@@ -178,7 +178,7 @@ buildings house_floor_nm_tid normal_maps/paneling_NRM.jpg
 buildings basement_floor_tid carpet/carpet1.jpg
 buildings floor_tid carpet/carpet2.jpg
 buildings floor_nm_tid none
-buildings house_floor_specular 0.60 50.0
+buildings house_floor_specular 0.10 50.0
 
 buildings side_color 0.7 0.7 0.7 1.0
 buildings add_material
@@ -205,7 +205,7 @@ buildings basement_floor_tid carpet/carpet2.jpg
 buildings floor_tid carpet/office_carpet2.jpg # nice, but low contrast with walls
 buildings floor_nm_tid none
 buildings house_ceil_specular  0.00 30.0 # enable this when we have a normal map for this ceiling texture
-buildings house_floor_specular 0.40 50.0
+buildings house_floor_specular 0.10 50.0
 
 buildings side_color 0.7 0.7 0.7 1.0
 buildings add_material
@@ -230,7 +230,7 @@ buildings add_material
 #buildings house_floor_tid paneling.png
 #buildings house_floor_nm_tid normal_maps/paneling_NRM.jpg
 #buildings basement_floor_tid carpet/carpet1.jpg
-#buildings house_floor_specular 0.60 50.0
+#buildings house_floor_specular 0.10 50.0
 #buildings add_material
 
 
