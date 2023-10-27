@@ -35,10 +35,9 @@ unsigned get_rgeom_sphere_ndiv(bool low_detail);
 unsigned get_face_mask(unsigned dim, bool dir) {return ~(1 << (2*(2-dim) + dir));} // draw only these faces: 1=Z1, 2=Z2, 4=Y1, 8=Y2, 16=X1, 32=X2
 unsigned get_skip_mask_for_xy(bool dim) {return (dim ? EF_Y12 : EF_X12);} // skip these faces
 tid_nm_pair_t get_tex_auto_nm(int tid, float tscale=1.0, bool shadowed=1) {return tid_nm_pair_t(tid, get_normal_map_for_bldg_tid(tid), tscale, tscale, 0.0, 0.0, shadowed);}
-int get_counter_tid    () {return get_texture_by_name("marble2.jpg");}
-int get_paneling_nm_tid() {return get_texture_by_name("normal_maps/paneling_NRM.jpg", 1);}
-int get_blinds_tid     () {return get_texture_by_name("interiors/blinds.jpg", 0, 0, 1, 8.0);} // use high aniso
-int get_money_tid      () {return get_texture_by_name("interiors/dollar20.jpg");}
+int get_counter_tid() {return get_texture_by_name("marble2.jpg");}
+int get_blinds_tid () {return get_texture_by_name("interiors/blinds.jpg", 0, 0, 1, 8.0);} // use high aniso
+int get_money_tid  () {return get_texture_by_name("interiors/dollar20.jpg");}
 
 struct pool_texture_params_t {
 	string fn, nm_fn;
@@ -2032,7 +2031,8 @@ void building_room_geom_t::add_elevator(room_object_t const &c, elevator_t const
 	point const tex_origin(c.get_llc());
 	unsigned const front_face_mask(get_face_mask(c.dim, c.dir)), back_face_mask(get_face_mask(c.dim, !c.dir));
 	unsigned const floor_ceil_face_mask(front_face_mask & (EF_X12 | EF_Y12)); // +Z faces
-	tid_nm_pair_t const paneling(get_tex_auto_nm(PANELING_TEX, 2.0f*tscale));
+	tid_nm_pair_t paneling(get_tex_auto_nm(PANELING_TEX, 2.0f*tscale));
+	paneling.set_specular(0.1, 50.0);
 	get_material(get_tex_auto_nm(TILE_TEX, tscale), 1, 1).add_cube_to_verts(floor_, WHITE, tex_origin, floor_ceil_face_mask); // floor
 	get_material(get_tex_auto_nm(get_rect_panel_tid(), tscale), 1, 1).add_cube_to_verts(ceil_, WHITE, tex_origin, floor_ceil_face_mask); // ceiling
 	rgeom_mat_t &paneling_mat(get_material(paneling, 1, 1));
@@ -2746,7 +2746,9 @@ void building_room_geom_t::add_reception_desk(room_object_t const &c, float tsca
 	assert(width > depth && cutlen > 0.0);
 	colorRGBA const color(apply_light_color(c));
 	// wood paneling sides
-	rgeom_mat_t &side_mat(get_material(tid_nm_pair_t(PANELING_TEX, get_paneling_nm_tid(), 4.0*tscale, 4.0*tscale), 1)); // with shadows
+	tid_nm_pair_t paneling(get_tex_auto_nm(PANELING_TEX, 4.0f*tscale));
+	paneling.set_specular(0.1, 50.0);
+	rgeom_mat_t &side_mat(get_material(paneling, 1)); // with shadows
 	point const tex_origin(c.get_llc());
 	unsigned const lr_dim_mask(~get_face_mask(c.dim, c.dir));
 	cube_t base(c);
@@ -3432,7 +3434,9 @@ void building_room_geom_t::add_balcony(room_object_t const &c, float ground_floo
 	cube_t &bot(cubes[0]), &front(cubes[1]);
 
 	if (balcony_style == 0) { // balcony with wooden sides
-		rgeom_mat_t &wall_mat(get_material(tid_nm_pair_t(FENCE_TEX, 32.0, shadowed), shadowed, 0, 0, 0, 1)); // exterior
+		tid_nm_pair_t tex(get_tex_auto_nm(FENCE_TEX, 32.0, shadowed));
+		tex.set_specular(0.1, 50.0);
+		rgeom_mat_t &wall_mat(get_material(tex, shadowed, 0, 0, 0, 1)); // exterior
 		wall_mat.add_cube_to_verts(front, c.color, tex_origin, EF_Z1, !c.dim); // front; skip bottom face
 		for (unsigned d = 0; d < 2; ++d) {wall_mat.add_cube_to_verts(cubes[d+2], c.color, tex_origin, (EF_Z1 | skip_face_sides), c.dim);} // skip bottom
 	}
@@ -3465,7 +3469,9 @@ void building_room_geom_t::add_balcony(room_object_t const &c, float ground_floo
 			add_spaced_vert_bars(railing_mat, front, bar_color, top_z1, bar_hwidth, bar_hwidth, bar_spacing, !c.dim, rot_angle); // front bars
 		}
 		else { // vertical wooden sides
-			rgeom_mat_t &wall_mat(get_material(tid_nm_pair_t(FENCE_TEX, 32.0, shadowed), shadowed, 0, 0, 0, 1)); // exterior
+			tid_nm_pair_t tex(get_tex_auto_nm(FENCE_TEX, 32.0, shadowed));
+			tex.set_specular(0.1, 50.0);
+			rgeom_mat_t &wall_mat(get_material(tex, shadowed, 0, 0, 0, 1)); // exterior
 			float const wall_shrink(0.5*railing_hwidth);
 			front.z2() = top_z1;
 			front.expand_in_dim(c.dim, -wall_shrink);
@@ -4018,7 +4024,7 @@ void apply_thin_plastic_effect(room_object_t const &c, tid_nm_pair_t &tex) {
 tid_nm_pair_t get_ball_tex_params(room_object_t const &c, bool shadowed) {
 	ball_type_t const &bt(c.get_ball_type());
 	tid_nm_pair_t tex(get_lg_ball_tid(c), get_lg_ball_nm_tid(c), 0.0, 0.0, 0.0, 0.0, shadowed);
-	tex.set_specular(bt.spec, bt.shine); // Note: texture color is incorrectly applied to the specular component due to the way dynamic lighting works
+	tex.set_specular(bt.spec, bt.shine);
 	//if (c.item_flags == BALL_TYPE_BEACH) {apply_thin_plastic_effect(c, tex);} // doesn't look right in rooms with windows where light_amt > 0 when the lights are off
 	return tex;
 }
