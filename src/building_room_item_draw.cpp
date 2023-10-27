@@ -38,7 +38,7 @@ colorRGBA room_object_t::get_model_color() const {return building_obj_model_load
 
 // skip_faces: 1=Z1, 2=Z2, 4=Y1, 8=Y2, 16=X1, 32=X2 to match CSG cube flags
 void rgeom_mat_t::add_cube_to_verts(cube_t const &c, colorRGBA const &color, point const &tex_origin,
-	unsigned skip_faces, bool swap_tex_st, bool mirror_x, bool mirror_y, bool inverted)
+	unsigned skip_faces, bool swap_tex_st, bool mirror_x, bool mirror_y, bool inverted, bool z_dim_uses_ty)
 {
 	//assert(c.is_normalized()); // no, bathroom window is denormalized
 	vertex_t v;
@@ -47,6 +47,7 @@ void rgeom_mat_t::add_cube_to_verts(cube_t const &c, colorRGBA const &color, poi
 	// Note: stolen from draw_cube() with tex coord logic, back face culling, etc. removed
 	for (unsigned i = 0; i < 3; ++i) { // iterate over dimensions, drawn as {Z, X, Y}
 		unsigned const d[2] = {i, ((i+1)%3)}, n((i+2)%3);
+		bool const tex_st(swap_tex_st ^ (z_dim_uses_ty && d[1] == 2));
 
 		for (unsigned j = 0; j < 2; ++j) { // iterate over opposing sides, min then max
 			if (skip_faces & (1 << (2*(2-n) + j))) continue; // skip this face
@@ -55,12 +56,12 @@ void rgeom_mat_t::add_cube_to_verts(cube_t const &c, colorRGBA const &color, poi
 
 			for (unsigned s1 = 0; s1 < 2; ++s1) {
 				v.v[d[1]] = c.d[d[1]][s1];
-				v.t[swap_tex_st] = ((tex.tscale_x == 0.0) ? float(s1) : tex.tscale_x*(v.v[d[1]] - tex_origin[d[1]])); // tscale==0.0 => fit texture to cube
+				v.t[tex_st] = ((tex.tscale_x == 0.0) ? float(s1) : tex.tscale_x*(v.v[d[1]] - tex_origin[d[1]])); // tscale==0.0 => fit texture to cube
 
 				for (unsigned k = 0; k < 2; ++k) { // iterate over vertices
 					bool const s2(bool(k^j^s1)^inverted^1); // need to orient the vertices differently for each side
 					v.v[d[0]] = c.d[d[0]][s2];
-					v.t[!swap_tex_st] = ((tex.tscale_y == 0.0) ? float(s2) : tex.tscale_y*(v.v[d[0]] - tex_origin[d[0]]));
+					v.t[!tex_st] = ((tex.tscale_y == 0.0) ? float(s2) : tex.tscale_y*(v.v[d[0]] - tex_origin[d[0]]));
 					quad_verts.push_back(v);
 					if (mirror_x) {quad_verts.back().t[0] = 1.0 - v.t[0];} // use for pictures and books
 					if (mirror_y) {quad_verts.back().t[1] = 1.0 - v.t[1];} // used for books

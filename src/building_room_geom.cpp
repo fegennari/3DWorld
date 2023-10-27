@@ -2759,9 +2759,9 @@ void building_room_geom_t::add_reception_desk(room_object_t const &c, float tsca
 	left .d[!c.dim][1] -= (width - lr_width);
 	right.d[!c.dim][0] += (width - lr_width);
 	left .d[ c.dim][c.dir] = right.d[ c.dim][c.dir] = front.d[ c.dim][!c.dir];
-	side_mat.add_cube_to_verts(front, color, tex_origin, EF_Z2);
-	side_mat.add_cube_to_verts(left,  color, tex_origin, (EF_Z2 | lr_dim_mask)); // skip top face
-	side_mat.add_cube_to_verts(right, color, tex_origin, (EF_Z2 | lr_dim_mask)); // skip top face
+	side_mat.add_cube_to_verts(front, color, tex_origin,  EF_Z2,                0, 0, 0, 0, 1); // z_dim_uses_ty=1
+	side_mat.add_cube_to_verts(left,  color, tex_origin, (EF_Z2 | lr_dim_mask), 0, 0, 0, 0, 1); // skip top face, z_dim_uses_ty=1
+	side_mat.add_cube_to_verts(right, color, tex_origin, (EF_Z2 | lr_dim_mask), 0, 0, 0, 0, 1); // skip top face, z_dim_uses_ty=1
 	// shiny marble top
 	// Note: I wanted to add cylinders to the left and right top to round the corners like in the mapx lobby, but it's not easy to get the textures to line up here
 	tid_nm_pair_t top_tex(get_counter_tid(), 2.5*tscale);
