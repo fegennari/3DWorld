@@ -733,6 +733,11 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, flo
 			// but stairs that are tall (such as pool stairs) only work when standing on the z2 value
 			float const stairs_zval(is_u ? c->z1() : c->z2());
 			pos.z = stairs_zval + radius; // stand on the stair - this can happen for multiple stairs
+
+			if (has_basement()) { // don't let the zval end where the camera is between the terrain mesh and the basement entrance plane or we'll see the terrain
+				float const camera_z(pos.z + camera_height), mesh_z(get_basement().z2()), entrance_z(mesh_z + BASEMENT_ENTRANCE_SCALE*floor_thickness);
+				if (camera_z > mesh_z && camera_z < entrance_z) {pos.z += 1.2*(entrance_z - camera_z);} // move up above the entrance plane
+			}
 			obj_z = max(pos.z, p_last.z);
 			if (!is_u || c->dir == 1) {max_eq(pos[!c->dim], (c->d[!c->dim][0] + xy_radius));} // force the sphere onto the stairs
 			if (!is_u || c->dir == 0) {min_eq(pos[!c->dim], (c->d[!c->dim][1] - xy_radius));}

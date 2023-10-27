@@ -32,6 +32,7 @@ float const ELEVATOR_Z2_SHIFT      = 0.6; // shift downward, relative to ceiling
 float const DOOR_FRAME_WIDTH       = 0.07; // for door texture, relative to door width
 float const EXT_BASEMENT_JOIN_DIST = 4.0; // relative to floor spacing
 float const BALCONY_PILLAR_SCALE   = 0.15; // relative to depth
+float const BASEMENT_ENTRANCE_SCALE= 0.33;
 
 unsigned const NUM_CHAIR_COLORS = 12;
 unsigned const MAX_BCASE_BOOKS  = 48; // limited by available bit flags
