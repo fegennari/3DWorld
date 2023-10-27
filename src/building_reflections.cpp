@@ -227,7 +227,7 @@ bool building_t::find_mirror_needing_reflection(vector3d const &xlate) const {
 			r_exp.expand_by_xy(camera_room.get_sz_dim(short_dim));
 			if (!r_exp.contains_pt(camera_bs)) continue; // camera not within the hallway across from the room
 		}
-		if (!are_rooms_connected(room_ix, camera_room_ix, camera_bs.z, 1)) continue; // no door, or door is fully closed check_open=1
+		if (!are_rooms_connected(*r, camera_room, camera_bs.z, 1)) continue; // no door, or door is fully closed check_open=1
 		if (find_mirror_in_room((room_ix & 255), xlate, 0)) return 1; // same_room=0
 	} // for r
 	return 0; // not found

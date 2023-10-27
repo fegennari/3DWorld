@@ -2368,7 +2368,7 @@ int building_t::room_or_adj_room_has_stairs(int room_ix, float zval, bool inc_ad
 
 	for (auto r = interior->rooms.begin(); r != interior->rooms.end(); ++r) {
 		if (!r->has_stairs_on_floor(floor_ix) || !r->intersects_no_adj(cr)) continue;
-		if (!are_rooms_connected(room_ix, (r - interior->rooms.begin()), zval, check_door_open)) continue;
+		if (!are_rooms_connected(room, *r, zval, check_door_open))          continue;
 		return 2;
 	}
 	return 0;

@@ -1075,7 +1075,22 @@ void building_t::refine_light_bcube(point const &lpos, float light_radius, room_
 	}
 	point ray_origin(lpos);
 	// if this is a tall room, lower the ray origin to the ground floor to include light paths through ground floor doorways
-	if (room.is_single_floor) {min_eq(ray_origin.z, (room.z1() + get_floor_ceil_gap()));}
+	bool use_first_floor(room.is_single_floor);
+	float const floor_spacing(get_window_vspace());
+
+	if (!use_first_floor && lpos.z - room.z1() > 1.5*floor_spacing) { // light above the ground floor
+		// check if adjacent to a tall room, in which case we also need to lower the ray origin
+		cube_t cr(room);
+		cr.expand_by_xy(2.0*wall_thickness);
+
+		for (auto r = interior->rooms.begin(); r != interior->rooms.end(); ++r) {
+			if (!r->is_single_floor || !r->intersects_no_adj(cr)) continue;
+			if (!are_rooms_connected(room, *r, (room.z1() + 0.5*floor_spacing), 0)) continue; // check_door_open=0
+			use_first_floor = 1;
+			break;
+		}
+	}
+	if (use_first_floor) {min_eq(ray_origin.z, (room.z1() + get_floor_ceil_gap()));}
 
 	for (unsigned n = 0; n < NUM_RAYS; ++n) {
 		float const angle(TWO_PI*n/NUM_RAYS);
