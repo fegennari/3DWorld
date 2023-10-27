@@ -1798,7 +1798,6 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 		cube_t pool_shallow(pool);
 		pool_shallow.z1() = pool.shallow_zval;
 		bool const dim(pool.dim), dir(pool.dir);
-		room_t const &room(get_room(pool.room_ix));
 		float const stairs_height(window_vspacing/(NUM_STAIRS_PER_FLOOR+1)), pool_depth(pool_shallow.dz());
 		unsigned const num_stairs(round_fp(pool_depth/stairs_height)); // same spacing is regular stairs
 		float const step_height(pool_depth/(num_stairs+1)), step_stride((dir ? -1.0 : 1.0)*1.2*step_height); // last step up to the edge counts

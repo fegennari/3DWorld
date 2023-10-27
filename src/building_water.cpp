@@ -252,7 +252,7 @@ void building_t::draw_water(vector3d const &xlate) const {
 		float max_uw_dist(0.0);
 		point pts[8];
 		unsigned const npts(get_cube_corners(water.d, pts)); // get all corners; we could use visible corners, but then there would be a pop when a corner becomes visible
-		for (unsigned n = 0; n < 8; ++n) {max_eq(max_uw_dist, p2p_dist(camera_bs, pts[n]));}
+		for (unsigned n = 0; n < npts; ++n) {max_eq(max_uw_dist, p2p_dist(camera_bs, pts[n]));}
 		colorRGBA const pool_color(0.7, 0.8, 1.0), clear_color(0.4, 0.6, 1.0), mud_color(1.0, 0.6, 0.33);
 		apply_player_underwater_effect(is_pool ? pool_color : blend_color(mud_color, clear_color, mud_amt, 0));
 		add_postproc_underwater_fog((is_pool ? 2.0 : 1.0)*WATER_COL_ATTEN*atten_scale, max_uw_dist, mud_amt);
