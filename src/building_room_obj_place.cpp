@@ -878,13 +878,13 @@ bool building_t::add_bed_to_room(rand_gen_t &rgen, room_t const &room, vect_cube
 }
 
 bool building_t::add_ball_to_room(rand_gen_t &rgen, room_t const &room, cube_t const &place_area, float zval,
-	unsigned room_id, float tot_light_amt, unsigned objs_start, int force_type)
+	unsigned room_id, float tot_light_amt, unsigned objs_start, int force_type, cube_t const &avoid_xy)
 {
 	unsigned const btype((force_type >= 0) ? force_type : (rgen.rand() % NUM_BALL_TYPES));
 	ball_type_t const &bt(ball_types[btype]);
-	float const radius(bt.radius*get_window_vspace()/(12*8)); // assumes 8 foot floor spacing, and bt.radius in inches
+	float const floor_spacing(get_window_vspace()), radius(bt.radius*floor_spacing/(12*8)); // assumes 8 foot floor spacing, and bt.radius in inches
 	cube_t ball_area(place_area);
-	ball_area.expand_by_xy(-radius*rgen.rand_uniform(1.0, 10.0));
+	ball_area.expand_by_xy(-rgen.rand_uniform(radius, max(2.0f*radius, min(10.0f*radius, 0.5f*floor_spacing))));
 	vect_room_object_t &objs(interior->room_geom->objs);
 	if (!ball_area.is_strictly_normalized()) return 0; // should always be normalized
 	float const ceil_zval(zval + get_floor_ceil_gap());
@@ -903,6 +903,7 @@ bool building_t::add_ball_to_room(rand_gen_t &rgen, room_t const &room, cube_t c
 		set_float_height(center, radius, ceil_zval, bt.density); // maybe floats on water
 		cube_t c(center);
 		c.expand_by(radius);
+		if (!avoid_xy.is_all_zeros() && c.intersects_xy(avoid_xy)) continue;
 		if (overlaps_other_room_obj(c, objs_start) || is_obj_placement_blocked(c, room, 1)) continue; // bad placement
 		objs.emplace_back(c, TYPE_LG_BALL, room_id, 0, 0, RO_FLAG_DSTATE, tot_light_amt, SHAPE_SPHERE, WHITE);
 		objs.back().obj_id     = (uint16_t)interior->room_geom->allocate_dynamic_state(); // allocate a new dynamic state object
@@ -2280,10 +2281,11 @@ void building_t::add_swimming_pool_room_objs(rand_gen_t rgen, room_t const &room
 		for (unsigned n = 0; n < num_balls; ++n) {
 			bool const in_pool(rgen.rand_bool());
 			float const ball_zval(in_pool ? (interior->water_zval - 2.0*bt.density*bt.radius*floor_spacing/(12*8)) : zval);
-			add_ball_to_room(rgen, room, (in_pool ? pool_area : place_area), ball_zval, room_id, tot_light_amt, objs_start, BALL_TYPE_BEACH);
+			cube_t const avoid_xy(in_pool ? cube_t() : pool);
+			cube_t const &ball_area(in_pool ? pool_area : place_area);
+			add_ball_to_room(rgen, room, ball_area, ball_zval, room_id, tot_light_amt, objs_start, BALL_TYPE_BEACH, avoid_xy);
 		}
 	}
-	// TYPE_BENCH, TYPE_DIV_BOARD
 }
 
 bool get_fire_ext_height_and_radius(float window_vspacing, float &height, float &radius) {
