@@ -275,7 +275,7 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc, cube_t const &ex
 		if (!c->intersects_xy(ext_bcube)) continue;
 		colorRGBA const color(c->get_color());
 		
-		if (c->shape == SHAPE_CYLIN || c->shape == SHAPE_SPHERE) {
+		if (c->is_round()) {
 			cube_t inner_cube(*c);
 
 			if (c->type == TYPE_WHEATER) { // {tank, pipes}
@@ -520,7 +520,7 @@ class building_indir_light_mgr_t {
 			if (ro.type == TYPE_LAMP) {weight *= 0.33;} // lamps are less bright
 			if (light_in_basement)    {weight *= ((b.has_parking_garage && !in_ext_basement) ? 0.25 : 0.5);} // basement is darker, parking garages are even darker
 			if (in_attic)             {weight *= ATTIC_LIGHT_RADIUS_SCALE*ATTIC_LIGHT_RADIUS_SCALE;} // based on surface area rather than radius
-			if (ro.shape == SHAPE_CYLIN || ro.shape == SHAPE_SPHERE) {light_radius = ro.get_radius();}
+			if (ro.is_round())        {light_radius = ro.get_radius();}
 		}
 		if (b.is_house)        {weight *=  2.0;} // houses have dimmer lights and seem to work better with more indir
 		if (is_negative_light) {weight *= -1.0;}

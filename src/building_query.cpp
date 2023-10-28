@@ -455,7 +455,7 @@ bool building_t::check_sphere_coll_inner(point &pos, point const &p_last, vector
 }
 
 float room_object_t::get_radius() const {
-	if (shape == SHAPE_CYLIN ) {return 0.25f*(dx() + dy());} // vertical cylinder: return average of x/y diameter
+	if (shape == SHAPE_CYLIN || shape == SHAPE_VERT_TORUS) {return 0.25f*(dx() + dy());} // vertical cylinder or torus: return average of x/y diameter
 	if (shape == SHAPE_SPHERE) {return 0.5*dx();} // sphere, should be the same dx()/dy()/dz() value (but can't assert due to FP precision errors)
 	assert(0); // cubes don't have a radius
 	return 0.0; // never gets here
@@ -1058,6 +1058,15 @@ bool building_interior_t::check_sphere_coll_room_objects(building_t const &build
 			cnorm = (pos - center).get_norm();
 			coll_ret |= 1;
 		}
+		else if (c->shape == SHAPE_VERT_TORUS) { // pool float, etc.; treated as a vertical ring/cylinder with an inner hole
+			float const ri(0.5*c->dz()), ro(c->get_radius() - ri);
+			point p_int;
+
+			if (sphere_torus_intersect(pos, radius, c->get_cube_center(), ri, ro, p_int, cnorm, 1)) { // calc_int=1
+				pos = p_int + cnorm*radius; // move to not intersect
+				coll_ret |= 1;
+			}
+		}
 		else { // assume it's a cube
 			// some object types are special because they're common collision objects and they're not filled cubes
 			if      (c->type == TYPE_CLOSET ) {coll_ret |= check_closet_collision(*c, pos, p_last, radius, &cnorm);} // special case to handle closet interiors
@@ -1445,7 +1454,7 @@ public:
 					pair<cube_t, colorRGBA> const ret(car_bcube_color_from_parking_space(obj)); // Note: currently always white
 					add_obj(cube_with_color_t(ret.first, ret.second, 0)); // is_round=0
 				}
-				else {add_obj(cube_with_color_t(obj, obj.get_color(), ((obj.shape == SHAPE_CYLIN || obj.shape == SHAPE_SPHERE) && obj.type != TYPE_PIPE)));}
+				else {add_obj(cube_with_color_t(obj, obj.get_color(), (obj.is_round() && obj.type != TYPE_PIPE)));}
 			} // for obj
 		}
 		cur_frame = frame_counter;
@@ -1765,7 +1774,7 @@ void get_approx_car_cubes(room_object_t const &cb, cube_t cubes[5]) {
 
 // for spiders; lg_cubes and sm_cubes are currently handled the same
 void building_t::get_room_obj_cubes(room_object_t const &c, point const &pos, vect_cube_t &lg_cubes, vect_cube_t &sm_cubes, vect_cube_t &non_cubes) const {
-	if (c.shape == SHAPE_CYLIN || c.shape == SHAPE_SPHERE) {non_cubes.push_back(c);}
+	if (c.is_round()) {non_cubes.push_back(c);}
 	else if (c.type == TYPE_RAILING || c.type == TYPE_SHELVES || c.type == TYPE_RAMP || c.type == TYPE_BALCONY) {non_cubes.push_back(c);} // non-cubes
 	else if (c.type == TYPE_CLOSET && (c.is_open() || c.contains_pt(pos))) {
 		cube_t cubes[5];

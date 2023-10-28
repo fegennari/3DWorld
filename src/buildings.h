@@ -411,7 +411,7 @@ enum {
 	NUM_ROBJ_TYPES};
 typedef uint8_t room_object;
 
-enum {SHAPE_CUBE=0, SHAPE_CYLIN, SHAPE_SPHERE, SHAPE_STAIRS_U, SHAPE_TALL, SHAPE_SHORT, SHAPE_ANGLED};
+enum {SHAPE_CUBE=0, SHAPE_CYLIN, SHAPE_SPHERE, SHAPE_STAIRS_U, SHAPE_TALL, SHAPE_SHORT, SHAPE_ANGLED, SHAPE_VERT_TORUS};
 typedef uint8_t room_obj_shape;
 
 enum {RTYPE_NOTSET=0, RTYPE_HALL, RTYPE_STAIRS, RTYPE_OFFICE, RTYPE_BATH, RTYPE_BED, RTYPE_KITCHEN, RTYPE_LIVING, RTYPE_DINING, RTYPE_STUDY,
@@ -582,6 +582,7 @@ struct room_object_t : public oriented_cube_t { // size=64
 	bool is_spider_collidable() const;
 	bool is_collidable(bool for_spider) const {return (for_spider ? is_spider_collidable() : is_floor_collidable());}
 	bool is_vert_cylinder() const;
+	bool is_round() const {return (shape == SHAPE_CYLIN || shape == SHAPE_SPHERE || shape == SHAPE_VERT_TORUS);}
 	unsigned get_bottle_type() const {return ((obj_id&63) % NUM_BOTTLE_TYPES);} // first 6 bits are bottle type
 	unsigned get_orient () const {return (2*dim + dir);}
 	unsigned get_num_shelves() const {assert(type == TYPE_SHELVES); return (2 + (room_id % 3));} // 2-4 shelves

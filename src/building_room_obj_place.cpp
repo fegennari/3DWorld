@@ -1968,7 +1968,7 @@ void building_t::add_floor_clutter_objs(rand_gen_t rgen, room_t const &room, flo
 				if (use_model) { // symmetric, no dim or dir, but random rotation
 					objs.emplace_back(c, TYPE_TOY_MODEL, room_id, 0, 0, (RO_FLAG_RAND_ROT | RO_FLAG_NOCOLL), tot_light_amt);
 				}
-				else { // random dim/dir
+				else { // random dim/dir; each ring is SHAPE_VERT_TORUS, but the overall toy is SHAPE_CYLIN
 					objs.emplace_back(c, TYPE_TOY, room_id, rgen.rand_bool(), rgen.rand_bool(), RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CYLIN);
 					set_obj_id(objs); // used for color selection
 				}
@@ -2268,7 +2268,7 @@ void building_t::add_swimming_pool_room_objs(rand_gen_t rgen, room_t const &room
 			cube_t pfloat;
 			gen_xy_pos_for_round_obj(pfloat, pool_area, pf_radius, pf_height, pf_radius, rgen, 1); // place_at_z1=1
 			if (overlaps_other_room_obj(pfloat, objs_start)) continue; // if placement falls, leave it out; should only collide with another float
-			objs.emplace_back(pfloat, TYPE_POOL_FLOAT, room_id, 0, 0, 0, tot_light_amt, SHAPE_CYLIN, float_colors[rgen.rand() % NUM_FLOAT_COLORS]);
+			objs.emplace_back(pfloat, TYPE_POOL_FLOAT, room_id, 0, 0, 0, tot_light_amt, SHAPE_VERT_TORUS, float_colors[rgen.rand() % NUM_FLOAT_COLORS]);
 		}
 	}
 	if (pool_len > 2.0*floor_spacing) { // add beach ball(s) if pool is large enough
