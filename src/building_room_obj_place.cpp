@@ -1029,9 +1029,11 @@ bool building_t::place_model_along_wall(unsigned model_id, room_object type, roo
 
 float building_t::add_flooring(room_t const &room, float &zval, unsigned room_id, float tot_light_amt, unsigned flooring_type) {
 	float const new_zval(zval + 0.0012*get_window_vspace());
-	cube_t floor(get_walkable_room_bounds(room));
-	set_cube_zvals(floor, zval, new_zval);
-	interior->room_geom->objs.emplace_back(floor, TYPE_FLOORING, room_id, 0, 0, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CUBE, WHITE, flooring_type);
+	cube_t flooring(get_walkable_room_bounds(room));
+	flooring.expand_by_xy(0.5*get_wall_thickness()); // expand to include half of the walls so that it meets the door and trim is added
+	set_cube_zvals(flooring, zval, new_zval);
+	tot_light_amt = 0.5*tot_light_amt + 0.5; // brighten flooring so that lights shining through doors and flashlights look better
+	interior->room_geom->objs.emplace_back(flooring, TYPE_FLOORING, room_id, 0, 0, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CUBE, WHITE, flooring_type);
 	return new_zval;
 }
 
@@ -2642,7 +2644,7 @@ bool building_t::add_rug_to_room(rand_gen_t rgen, cube_t const &room, float zval
 		}
 		for (auto i = objs.begin() + objs_start; i != objs.end() && valid_placement; ++i) { // check for objects overlapping the rug
 			if (i->type == TYPE_FLOORING) continue; // allow placing rugs over flooring
-			if (!i->intersects(rug)) continue;
+			if (!i->intersects(rug))      continue;
 
 			if (bldg_obj_types[i->type].attached) { // rugs can't overlap these object types; first, see if we can shrink the rug on one side and get it to fit
 				float max_area(0.0);

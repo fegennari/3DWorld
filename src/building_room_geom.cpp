@@ -61,6 +61,12 @@ int get_pool_tile_type(room_object_t const &obj) {
 }
 pool_texture_params_t const &get_pool_tile_params(room_object_t const &obj) {return pool_texture_params[get_pool_tile_type(obj)];}
 
+bool is_pool_tile_floor(room_object_t const &obj) {
+	if (obj.type != TYPE_POOL_TILE) return 0;
+	int const pt_type(get_pool_tile_type(obj));
+	return (pt_type == POOL_TILE_FLOOR);
+}
+
 int get_crack_tid(room_object_t const &obj, bool alpha=0) {
 	return get_texture_by_name(((5*obj.obj_id + 7*obj.room_id) & 1) ?
 		(alpha ? "interiors/cracked_glass2_alpha.jpg" : "interiors/cracked_glass2.jpg") :

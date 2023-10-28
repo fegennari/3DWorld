@@ -11,6 +11,7 @@ void setup_bldg_obj_types();
 bool get_wall_quad_window_area(vect_vnctcc_t const &wall_quad_verts, unsigned i, cube_t &c, float &tx1, float &tx2, float &tz1, float &tz2);
 void get_balcony_pillars(room_object_t const &c, float ground_floor_z1, cube_t pillar[2]);
 void expand_convex_polygon_xy(vect_point &points, point const &center, float expand);
+bool is_pool_tile_floor(room_object_t const &obj);
 
 
 unsigned light_ix_assign_t::get_ix_for_light(cube_t const &c, bool walls_not_shared) {
@@ -1092,6 +1093,28 @@ void building_t::add_wall_and_door_trim() { // and window trim
 				} // for f
 			} // for dir
 		} // for dim
+	} // for i
+	// add trim on door thresholds for bathroom flooring and pool tile
+	auto objs_end(interior->room_geom->get_placed_objs_end()); // skip buttons/stairs/elevators
+
+	for (auto i = interior->room_geom->objs.begin(); i != objs_end; ++i) {
+		if (i->type == TYPE_FLOORING && (i->item_flags == FLOORING_TILE || i->item_flags == FLOORING_MARBLE || i->item_flags == FLOORING_CONCRETE)) {} // bath/server room flooring
+		else if (is_pool_tile_floor(*i)) {} // pool tile
+		else {continue;} // no trim
+		cube_t flooring_exp(*i);
+		flooring_exp.expand_by_xy(0.5*wall_thickness);
+		flooring_exp.z2() += 0.5*i->dz(); // slightly taller
+
+		for (door_stack_t const &ds : interior->door_stacks) {
+			if (ds.on_stairs || ds.for_closet) continue; // skip basement and closet doors
+			cube_t door_bc(ds.get_true_bcube());
+			if (!i->intersects(door_bc))       continue;
+			door_bc.expand_in_dim(ds.dim, -0.05*door_bc.get_sz_dim(ds.dim)); // shrink slightly to prevent Z-fighting
+			assert(i->intersects(door_bc));
+			cube_t trim(flooring_exp);
+			trim.intersect_with_cube(door_bc);
+			objs.emplace_back(trim, TYPE_WALL_TRIM, 0, ds.dim, 0, flags, 1.0, SHAPE_CUBE, trim_color);
+		} // for ds
 	} // for i
 	if (!is_cube() || is_rotated()) return; // window trim is not yet working for non-cube and rotated buildings
 	add_window_trim_and_coverings(1, 0, 0); // add_trim=1, add_coverings=0, add_ext_sills=0
