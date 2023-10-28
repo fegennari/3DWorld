@@ -834,8 +834,6 @@ bool sphere_intersect_cylinder_ipt(point const &sc, float sr, point const &cp1, 
 }
 
 
-// line/sphere-scaled sphere/cylinder ???
-
 // torus is oriented in the z direction (for now)
 bool line_torus_intersect(point const &p1, point const &p2, point const &tc, float ri, float ro, float &t) {
 
@@ -847,9 +845,9 @@ bool line_torus_intersect(point const &p1, point const &p2, point const &tc, flo
 		if (p1[i] < (tc[i] - dist[i]) && p2[i] < (tc[i] - dist[i])) return 0;
 	}
 	//if (!sphere_test_comp(p1, tc, v1, rsum*rsum)) return 0; // clip (optional), could test bounding cube or cylinder as well
-	vector3d v1(p2, p1); // line direction
-	double const vmag(v1.mag());
+	vector3d v1(p2, p1 ); // line direction
 	vector3d l1(p1 - tc); // translate to torus center
+	double const vmag(v1.mag());
 	
 	if (p1 == tc) { // l1 is zero vector, this case doesn't work correctly
 		l1 = p2 - tc;

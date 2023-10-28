@@ -1121,7 +1121,7 @@ bool obj_has_open_drawers(room_object_t const &obj) {
 }
 int building_room_geom_t::find_nearest_pickup_object(building_t const &building, point const &at_pos, vector3d const &in_dir, float range, float &obj_dist) const {
 	int closest_obj_id(-1);
-	float dmin_sq(0.0);
+	float dmin_sq(0.0), t(0.0); // t is for intersection checks but its value is unused
 	point const p2(at_pos + in_dir*range);
 
 	for (unsigned vect_id = 0; vect_id < 2; ++vect_id) {
@@ -1139,6 +1139,20 @@ int building_room_geom_t::find_nearest_pickup_object(building_t const &building,
 			if (dmin_sq > 0.0 && dsq > dmin_sq)       continue; // not the closest
 			if (obj_bcube.contains_pt(at_pos))        continue; // skip when the player is standing inside a plant, etc.
 		
+			if (obj_bcube == *i) { // check non-cube shapes, but only when get_true_obj_bcube() didn't return a custom cube
+				if (i->shape == SHAPE_SPHERE) {
+					float const radius(i->get_radius());
+					if (!sphere_test_comp(p1c, i->get_cube_center(), (p1c - p2c), radius*radius, t)) continue;
+				}
+				else if (i->shape == SHAPE_CYLIN) {
+					cylinder_3dw const cylin(i->get_cylinder());
+					if (!line_int_cylinder(p1c, p2c, cylin.p1, cylin.p2, cylin.r1, cylin.r2, 1, t)) continue; // check_ends=1
+				}
+				else if (i->shape == SHAPE_VERT_TORUS) { // without this check we can't take an object out of its hole
+					float const ri(0.5*i->dz()), ro(i->get_radius() - ri);
+					if (!line_torus_intersect_rescale(p1c, p2c, i->get_cube_center(), plus_z, ri, ro, t)) continue;
+				}
+			}
 			if (i->type == TYPE_CLOSET || (i->type == TYPE_STALL && i->shape != SHAPE_SHORT)) { // can only take short stalls (separating urinals)
 				if (!i->is_open() && !i->contains_pt(at_pos)) { // stalls/closets block the player from taking toilets/boxes unless open, or the player is inside
 					closest_obj_id = -1;
