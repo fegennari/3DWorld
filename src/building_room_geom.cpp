@@ -4109,13 +4109,14 @@ void building_room_geom_t::add_pan(room_object_t const &c) { // is_small=1
 }
 
 void building_room_geom_t::add_pool_float(room_object_t const &c) {
-	// TODO: make the float transparent and/or two sided lighting? same with beach balls
-	float const ri(0.5*c.dz()), ro(c.get_radius() - ri);
+	// make the float transparent and/or two sided lighting? same with beach balls;
+	// the problem is that it's drawn before water and doesn't blend, and is also drawn as part of static objects rather than small objects
+	float const ri(0.5*c.dz()), ro(c.get_radius() - ri), alpha(1.0); // inner hole radius is (ro - ri)
 	assert(ro > 0.0);
 	tid_nm_pair_t tex(-1, 1.0, 1);
 	tex.set_specular(0.6, 80.0);
 	apply_thin_plastic_effect(c, tex);
-	get_material(tex, 1, 0, 1).add_vert_torus_to_verts(c.get_cube_center(), ri, ro, c.color, 1.0, 0); // shadowed, small
+	get_material(tex, 1, 0, 1, (alpha < 1.0)).add_vert_torus_to_verts(c.get_cube_center(), ri, ro, colorRGBA(c.color, alpha), 1.0, 0); // shadowed, small
 }
 
 void building_room_geom_t::add_bench(room_object_t const &c) {
