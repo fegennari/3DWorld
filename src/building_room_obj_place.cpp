@@ -2255,8 +2255,30 @@ void building_t::add_swimming_pool_room_objs(rand_gen_t rgen, room_t const &room
 		objs.emplace_back(slope, TYPE_POOL_TILE, room_id, pool.dim, pool.dir, (RO_FLAG_ADJ_LO | RO_FLAG_ADJ_BOT), 1.0, SHAPE_ANGLED);
 		objs.emplace_back(upper, TYPE_POOL_TILE, room_id, pool.dim, pool.dir, (RO_FLAG_ADJ_LO | RO_FLAG_ADJ_BOT));
 	}
-	// add other objects in and around the pool
 	unsigned const objs_start(objs.size()); // we can start here, since the pool tile objects placed above don't collide with other placed objects
+
+	if (0 && pool_len > 3.5*floor_spacing && pool_depth > 0.9*floor_spacing) { // add a diving board if long and deep
+		cube_t dboard;
+		set_cube_zvals(dboard, zval, (zval + 0.2*floor_spacing));
+		set_wall_width(dboard, pool.get_center_dim(!pool.dim), 0.1*floor_spacing, !pool.dim); // width
+		set_wall_width(dboard, (pool.d[pool.dim][!pool.dir] + (pool.dir ? 1.0 : -1.0)*0.2*floor_spacing), 0.5*floor_spacing,  pool.dim); // length
+		objs.emplace_back(dboard, TYPE_DIV_BOARD, room_id, pool.dim, pool.dir, 0, tot_light_amt, SHAPE_CUBE, colorRGBA(0.75, 1.0, 0.9, 1.0)); // blue-green
+	}
+	// add benches along the walls
+	unsigned const num_benches(0);
+
+	if (num_benches > 0) {
+		float const bench_height(0.22*floor_spacing);
+		vector3d const bench_sz(rgen.rand_uniform(0.7, 0.9), rgen.rand_uniform(4.0, 6.0), 1.0); // D, W, H
+		bool pref_dir(rgen.rand_bool()); // random first dir
+
+		for (unsigned n = 0; n < num_benches; ++n) {
+			unsigned const pref_orient(2*(!pool.dim) + pref_dir);
+			if (!place_obj_along_wall(TYPE_BENCH, room, bench_height, bench_sz, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 1.0, 1, pref_orient)) break;
+			pref_dir ^= 1; // alternate sides
+		}
+	}
+	// add other objects in and around the pool
 	cube_t pool_area(pool);
 	set_cube_zvals(pool_area, interior->water_zval, place_area.z2());
 	pool_area.d[pool.dim][pool.dir] += (pool.dir ? -1.0 : 1.0)*0.6*floor_spacing; // avoid the railings by the stairs (approximate)
