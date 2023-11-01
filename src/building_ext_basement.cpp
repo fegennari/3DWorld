@@ -283,7 +283,7 @@ void building_t::maybe_assign_extb_room_as_swimming(rand_gen_t &rgen) {
 				if ((r - rooms.begin()) == (unsigned)largest_valid_room) continue; // skip self
 				if (r->intersects(slice)) {had_coll = 1; break;}
 			}
-			if (had_coll || !is_basement_room_under_mesh_not_int_bldg(room)) break;
+			if (had_coll || !is_basement_room_under_mesh_not_int_bldg(slice)) break;
 			end_wall += step_dist;
 		} // for n
 	} // for d
