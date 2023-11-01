@@ -295,7 +295,6 @@ void building_t::maybe_assign_extb_room_as_swimming(rand_gen_t &rgen) {
 		extend_adj_cubes(orig_room, room, interior->ceilings, wall_thickness);
 		for (unsigned d = 0; d < 2; ++d) {extend_adj_cubes(orig_room, room, interior->walls[d], wall_thickness, d);}
 		interior->basement_ext_bcube.union_with_cube(room);
-		room.num_lights = (unsigned)ceil(room.get_area_xy()/orig_room.get_area_xy()); // larger rooms need more lights
 	}
 	bool const long_dim(room.dx() < room.dy()); // likely exp_dim
 	float const doorway_width(get_doorway_width()), fc_thickness(get_fc_thickness()), min_spacing(1.5*doorway_width), floor_zval(room.z1() + fc_thickness);

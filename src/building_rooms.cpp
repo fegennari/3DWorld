@@ -173,6 +173,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 		room_type const init_rtype_f0(r->get_room_type(0));
 		bool const is_parking_garage(init_rtype_f0 == RTYPE_PARKING   ); // all floors should be parking garage
 		bool const is_unfinished    (init_rtype_f0 == RTYPE_UNFINISHED); //  // unfinished room, for example in a non-cube shaped office building
+		bool const is_swim_pool_room(init_rtype_f0 == RTYPE_SWIM); // room with a swimming pool
 		bool const is_ext_basement(r->is_ext_basement()), is_backrooms(is_room_backrooms(*r));
 		float light_density(0.0), light_size(def_light_size); // default size for houses
 		unsigned const room_objs_start(objs.size());
@@ -193,6 +194,9 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 		else if (is_backrooms) { // large office basement room
 			light_density = 0.55;
 			light_size   *= 0.75; // smaller
+		}
+		else if (is_swim_pool_room) {
+			light_density = 0.4;
 		}
 		else if (r->is_single_floor) {
 			light_size *= sqrt(r->dz()/window_vspacing); // larger lights for taller rooms
@@ -400,7 +404,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				}
 				continue; // no other geometry for this room
 			}
-			if (init_rtype_f0 == RTYPE_SWIM) { // room with a swimming pool
+			if (is_swim_pool_room) {
 				assert(is_ext_basement); // for now, only in extended basements
 				add_swimming_pool_room_objs(rgen, *r, room_center.z, room_id, tot_light_amt);
 				continue;
