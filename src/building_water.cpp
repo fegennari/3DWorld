@@ -122,6 +122,7 @@ bool building_t::check_for_water_splash(point const &pos_bs, float size, bool fu
 }
 cube_t building_t::calc_splash_bounds(point const &pos) const {
 	if (!interior || !point_in_water_area(pos)) return cube_t(); // error?
+	if (has_pool()) return interior->pool; // no walls
 	index_pair_t start, end;
 	get_pgbr_wall_ix_for_pos(pos, start, end);
 	vect_cube_t walls[2];
