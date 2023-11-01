@@ -985,22 +985,25 @@ bool building_t::choose_dest_goal(person_t &person, rand_gen_t &rgen) const { //
 		person.goal_type = GOAL_TYPE_PLAYER;
 	}
 	else if (can_ai_follow_player(person) && get_closest_building_sound(person.pos, sound_pos, floor_spacing)) { // target the loudest sound
-		// check if the sound is coming from somewhere unreachable such as a closet the player is hiding inside, then move it out into the center of the room;
-		// maybe this location is also unreachable, but at least it will get the zombie into the correct room instead of have them wait at the wall in an adjacent room
-		assert(has_room_geom());
-		auto objs_end(interior->room_geom->get_placed_objs_end()); // skip buttons/stairs/elevators
+		if (point_in_or_above_pool(sound_pos)) {} // ignore pool splash; maybe should target a nearby location on the side of the pool?
+		else {
+			// check if the sound is coming from somewhere unreachable such as a closet the player is hiding inside, then move it out into the center of the room;
+			// maybe this location is also unreachable, but at least it will get the zombie into the correct room instead of have them wait at the wall in an adj room
+			assert(has_room_geom());
+			auto objs_end(interior->room_geom->get_placed_objs_end()); // skip buttons/stairs/elevators
 
-		for (auto c = interior->room_geom->objs.begin(); c != objs_end; ++c) {
-			if (!is_ai_coll_obj(*c, 1))     continue; // same_as_player=1
-			if (!c->contains_pt(sound_pos)) continue;
-			int const room_ix(get_room_containing_pt(sound_pos));
-			if (room_ix < 0) continue; // error?
-			cube_t const &room(get_room(room_ix));
-			sound_pos.x = room.xc();
-			sound_pos.y = room.yc();
-		} // for c
-		goal = building_dest_t(get_building_loc_for_pt(sound_pos), sound_pos, cur_player_building_loc.building_ix); // same building as player (current building)
-		person.goal_type = GOAL_TYPE_SOUND;
+			for (auto c = interior->room_geom->objs.begin(); c != objs_end; ++c) {
+				if (!is_ai_coll_obj(*c, 1))     continue; // same_as_player=1
+				if (!c->contains_pt(sound_pos)) continue;
+				int const room_ix(get_room_containing_pt(sound_pos));
+				if (room_ix < 0) continue; // error?
+				cube_t const &room(get_room(room_ix));
+				sound_pos.x = room.xc();
+				sound_pos.y = room.yc();
+			} // for c
+			goal = building_dest_t(get_building_loc_for_pt(sound_pos), sound_pos, cur_player_building_loc.building_ix); // same building as player (current building)
+			person.goal_type = GOAL_TYPE_SOUND;
+		}
 	}
 	if (!goal.is_valid()) return 0; // player or sound
 	unsigned const cand_room(goal.room_ix);
@@ -1226,6 +1229,11 @@ void building_interior_t::get_avoid_cubes(vect_cube_t &avoid, float z1, float z2
 	avoid.clear();
 	if (!skip_stairs) {add_bcube_if_overlaps_zval(stairwells, avoid, z1, z2);} // clearance not required
 	add_bcube_if_overlaps_zval(elevators, avoid, z1, z2); // clearance not required
+	
+	if (pool.valid) { // skip if !same_as_player to allow zombies in pools?
+		avoid.push_back(pool);
+		avoid.back().z2() += floor_thickness; // increase height so that it overlaps a person standing over it
+	}
 	if (!room_geom) return; // no room objects
 	auto objs_end(room_geom->get_placed_objs_end()); // skip buttons/stairs/elevators
 	float const z_thresh(z1 + 0.35*(z2 - z1)); // used with r_shrink_if_low
@@ -1589,12 +1597,16 @@ bool has_nearby_sound(person_t const &person, float floor_spacing) {
 	return get_closest_building_sound(person.pos, sound_pos, floor_spacing);
 }
 
+bool building_t::point_in_or_above_pool(point const &pos) const {
+	return (has_pool() && interior->pool.contains_pt_xy(pos) && pos.z < get_room(interior->pool.room_ix).z2());
+}
 bool building_t::same_room_and_floor_as_player(person_t const &person) const {
 	return (cur_player_building_loc.room_ix == person.cur_room && cur_player_building_loc.floor_ix == get_floor_for_zval(person.pos.z) && cur_player_building_loc.stairs_ix < 0);
 }
 bool building_t::is_player_visible(person_t const &person, unsigned vis_test) const {
-	if (vis_test == 0) return 1; // no visibility test
 	building_dest_t const &target(cur_player_building_loc);
+	if (point_in_or_above_pool(target.pos)) return 0; // don't follow the player into the pool (including player above the pool)
+	if (vis_test == 0) return 1; // no visibility test
 	float const player_radius(get_scaled_player_radius());
 	point const pp2(target.pos - vector3d(0.0, 0.0, get_player_height())); // player's bottom sphere
 	bool const same_room(person.cur_room >= 0 && cur_player_building_loc.room_ix == person.cur_room);

@@ -7,6 +7,7 @@
 
 
 extern bool draw_building_interiors, camera_in_building, player_near_toilet, player_in_unlit_room, player_in_attic, building_has_open_ext_door, ctrl_key_pressed;
+extern bool player_is_hiding;
 extern float CAMERA_RADIUS, C_STEP_HEIGHT, NEAR_CLIP, building_bcube_expand;
 extern int camera_surf_collide, frame_counter, player_in_closet, player_in_elevator, player_in_basement;
 extern double camera_zh;
@@ -872,6 +873,7 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, flo
 		if (reset_to_last_dims & (1<<d)) {pos[d] = p_last[d];}
 	}
 	handle_vert_cylin_tape_collision(pos, p_last, pos.z-radius, pos.z+camera_height, xy_radius, 1); // is_player=1
+	player_is_hiding |= (has_pool() && interior->pool.contains_pt(pos)); // player can hide in a pool, but this doesn't affect zombies because they don't enter the pool anyway
 	// not sure where this belongs, but the closet hiding logic is in this function, so I guess it goes here? player must be inside the building to see a windowless room anyway
 	player_in_unlit_room = check_pos_in_unlit_room(pos);
 	prev_camera_height   = camera_height; // update for this frame

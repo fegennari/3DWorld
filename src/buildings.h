@@ -1943,7 +1943,8 @@ private:
 	void reverse_door_hinges_if_needed();
 	void ensure_doors_to_room_are_closed(room_t const &room, unsigned doors_start, bool ensure_locked=0);
 	unsigned get_floor_for_zval(float zval) const {return unsigned((zval - get_bcube_z1_inc_ext_basement())/get_window_vspace());}
-	building_loc_t get_building_loc_for_pt(point const &pt) const;
+	building_loc_t get_building_loc_for_pt(point const &pos) const;
+	bool point_in_or_above_pool(point const &pt) const;
 	bool same_room_and_floor_as_player(person_t const &person) const;
 	bool is_player_visible(person_t const &person, unsigned vis_test) const;
 	bool can_target_player(person_t const &person) const;
