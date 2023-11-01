@@ -3791,7 +3791,7 @@ public:
 		return 0;
 	}
 	// Note: pos is in building space, out is in camera space; no building rotation applied
-	void get_driveway_sphere_coll_cubes(point const &pos, float radius, bool xy_only, vect_cube_t &out) const {
+	void get_road_seg_sphere_coll_cubes(point const &pos, float radius, bool xy_only, vect_cube_t &out) const {
 		if (empty()) return;
 		cube_t bcube; bcube.set_from_sphere(pos, radius);
 		if (!range.intersects_xy(bcube)) return; // outside buildings bcube
@@ -4141,8 +4141,8 @@ public:
 		}
 		return 0;
 	}
-	void get_driveway_sphere_coll_cubes(point const &pos, float radius, bool xy_only, vect_cube_t &out) const {
-		for (auto i = tiles.begin(); i != tiles.end(); ++i) {i->second.get_driveway_sphere_coll_cubes(pos, radius, xy_only, out);}
+	void get_road_seg_sphere_coll_cubes(point const &pos, float radius, bool xy_only, vect_cube_t &out) const {
+		for (auto i = tiles.begin(); i != tiles.end(); ++i) {i->second.get_road_seg_sphere_coll_cubes(pos, radius, xy_only, out);}
 	}
 	bool get_building_hit_color(point const &p1, point const &p2, colorRGBA &color) const { // Note: p1/p2 are in building space
 		if (empty()) return 0;
@@ -4309,9 +4309,9 @@ bool check_buildings_cube_coll(cube_t const &c, bool xy_only, bool inc_basement,
 		building_creator.check_cube_coll(c, xy_only, inc_basement, exclude1, exclude2) ||
 		building_tiles.check_cube_coll(c, xy_only, inc_basement, exclude1, exclude2));
 }
-void get_driveway_sphere_coll_cubes(point const &pos, float radius, bool xy_only, vect_cube_t &out) { // for tiled terrain mode; pos is in local space
-	building_creator.get_driveway_sphere_coll_cubes(pos, radius, xy_only, out);
-	building_tiles  .get_driveway_sphere_coll_cubes(pos, radius, xy_only, out);
+void get_road_seg_sphere_coll_cubes(point const &pos, float radius, bool xy_only, vect_cube_t &out) { // for tiled terrain mode; pos is in local space
+	building_creator.get_road_seg_sphere_coll_cubes(pos, radius, xy_only, out);
+	building_tiles  .get_road_seg_sphere_coll_cubes(pos, radius, xy_only, out);
 }
 unsigned check_buildings_line_coll(point const &p1, point const &p2, float &t, unsigned &hit_bix, bool ret_any_pt) { // for line_intersect_city(); p1/p2 are in camera space
 	vector3d const xlate(get_camera_coord_space_xlate());
