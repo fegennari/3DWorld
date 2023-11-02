@@ -367,7 +367,6 @@ void get_city_road_bcubes(vect_cube_t &bcubes, bool connector_only);
 void next_city_frame(bool use_threads_2_3);
 void draw_cities(int shadow_only, int reflection_pass, int trans_op_mask, vector3d const &xlate);
 unsigned check_city_sphere_coll(point const &pos, float radius, bool exclude_bridges_and_tunnels, bool ret_first_coll=1, unsigned check_mask=3);
-void get_city_sphere_coll_cubes(point const &pos, float radius, bool include_intersections, bool xy_only, vect_cube_t &out, vect_cube_t *out_bt=nullptr);
 bool proc_city_sphere_coll(point &pos, point const &p_last, float radius, float prev_frame_zval, bool xy_only, bool inc_cars=0, vector3d *cnorm=nullptr, bool check_interior=0);
 bool line_intersect_city(point const &p1, point const &p2, float &t, bool ret_any_pt=0);
 bool line_intersect_city(point const &p1, point const &p2, point &p_int);
