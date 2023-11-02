@@ -1193,7 +1193,7 @@ unsigned building_t::get_ext_basement_floor_ix(float zval) const {
 	assert(has_ext_basement());
 	return unsigned(max(0.0f, (zval - interior->basement_ext_bcube.z1())/get_window_vspace()));
 }
-void building_t::get_pgbr_wall_ix_for_pos(point const &pos, index_pair_t &start, index_pair_t &end) const {
+void building_t::get_pgbr_wall_ix_for_pos(point const &pos, index_pair_t &start, index_pair_t &end) const { // pos is in building space
 	if (!has_room_geom() || !is_pos_in_pg_or_backrooms(pos)) return;
 	auto const &pgbr_wall_ixs(interior->room_geom->pgbr_wall_ixs);
 
