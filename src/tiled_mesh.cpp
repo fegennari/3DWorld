@@ -89,7 +89,7 @@ colorRGBA get_avg_color_for_landscape_tex(unsigned id); // defined later in this
 void building_gameplay_action_key(int mode, bool mouse_wheel);
 bool player_cant_see_outside_building();
 bool check_cube_occluded(cube_t const &cube, vect_cube_t const &occluders, point const &viewer);
-void get_city_sphere_coll_cubes(point const &pos, float radius, vect_cube_t &out, vect_cube_t &out_bt);
+void get_city_grass_coll_cubes(cube_t const &region, vect_cube_t &out, vect_cube_t &out_bt);
 
 
 float get_inf_terrain_fog_dist() {return FOG_DIST_TILES*get_scaled_tile_radius();}
@@ -1050,11 +1050,9 @@ void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 		height_gen.build_arrays(MESH_NOISE_FREQ*get_xval(x1), MESH_NOISE_FREQ*get_yval(y1), MESH_NOISE_FREQ*deltax,
 			MESH_NOISE_FREQ*deltay, tsize, tsize, 0, 1); // force_sine_mode=1
 		vector<float> rand_vals(tsize*tsize);
-		//bool const same_dirt(params[0][1].dirt == params[0][0].dirt && params[1][0].dirt == params[0][0].dirt && params[1][1].dirt == params[0][0].dirt);
-		vector<cube_t> exclude_cubes, allow_cubes; // in camera space
-		//cube_t const query_cube(get_xval(llc_x), get_xval(x2 - xoff2), get_yval(llc_y), get_yval(y2 - yoff2), mzmin, mzmax);
-		get_city_sphere_coll_cubes(query_pos, radius, exclude_cubes, allow_cubes);
-		//cout << exclude_cubes.size() << " "; // TESTING
+		vect_cube_t exclude_cubes, allow_cubes; // in camera space
+		cube_t const query_cube(get_xval(llc_x), get_xval(x2 - xoff2), get_yval(llc_y), get_yval(y2 - yoff2), mzmin, mzmax);
+		get_city_grass_coll_cubes(query_cube, exclude_cubes, allow_cubes);
 		has_tunnel |= tile_contains_tunnel(get_mesh_bcube());
 
 #pragma omp parallel for schedule(static,1) num_threads(2)

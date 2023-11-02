@@ -254,9 +254,9 @@ template<typename T> bool check_bcubes_sphere_coll(vector<T> const &bcubes, poin
 }
 template bool check_bcubes_sphere_coll(vector<cube_t> const &bcubes, point const &sc, float radius, bool xy_only); // explicit instantiation
 
-template<typename T> void get_bcubes_sphere_coll(vector<T> const &bcubes, vect_cube_t &out, point const &sc, float radius, bool xy_only, vector3d const &xlate) {
-	for (auto i = bcubes.begin(); i != bcubes.end(); ++i) {
-		if (check_bcube_sphere_coll(get_bcube(*i), sc, radius, xy_only)) {out.push_back(get_bcube(*i) + xlate);} // Note: out is in camera space
+template<typename T> void get_bcubes_region_coll_xy(vector<T> const &bcubes, vect_cube_t &out, cube_t const &region, vector3d const &xlate) {
+	for (T const &c : bcubes) {
+		if (c.intersects_xy(region)) {out.push_back(get_bcube(c) + xlate);} // Note: out is in camera space
 	}
 }
 template<typename T> cube_t calc_cubes_bcube(vector<T> const &cubes) {
@@ -364,13 +364,12 @@ public:
 		if (!check_bcube_sphere_coll(bcube, query_pos, radius, xy_only)) return 0;
 		return check_bcubes_sphere_coll(plots, query_pos, radius, xy_only);
 	}
-	void get_plots_sphere_coll(point const &pos, float radius, vect_cube_t &out) const { // Note: pos is in camera space, and out is returned in camera space
+	void get_plots_in_region(cube_t const &region, vect_cube_t &out) const { // Note: region is in camera space, and out is returned in camera space
 		if (plots.empty()) return;
-		bool const xy_only = 1;
 		vector3d const xlate(get_camera_coord_space_xlate());
-		point const query_pos(pos - xlate); // in global city space
-		if (!check_bcube_sphere_coll(bcube, query_pos, radius, xy_only)) return;
-		get_bcubes_sphere_coll(plots, out, query_pos, radius, xy_only, xlate);
+		cube_t const query_region(region - xlate); // in global city space
+		if (!bcube.intersects_xy(query_region)) return;
+		get_bcubes_region_coll_xy(plots, out, query_region, xlate);
 	}
 }; // city_plot_gen_t
 
@@ -1120,7 +1119,7 @@ public:
 		if (check_bcubes_sphere_coll(roads, query_pos, radius, xy_only)) { // collision with a road
 			if (!exclude_bridges_and_tunnels ||
 				!(check_bcubes_sphere_coll(bridges, query_pos, radius, xy_only) ||
-					check_bcubes_sphere_coll(tunnels, query_pos, radius, xy_only))) return 1; // ignore collisions with bridges and tunnels
+				  check_bcubes_sphere_coll(tunnels, query_pos, radius, xy_only))) return 1; // ignore collisions with bridges and tunnels
 		}
 		if (include_intersections) { // used for global road network
 			for (unsigned i = 0; i < 3; ++i) { // {2-way, 3-way, 4-way}
@@ -1131,18 +1130,17 @@ public:
 		return 0;
 	}
 	// Note: returns cubes in local pos space
-	void get_roads_sphere_coll(point const &pos, float radius, vect_cube_t &out, vect_cube_t &out_bt) const {
+	void get_roads_in_region(cube_t const &region, vect_cube_t &out, vect_cube_t &out_bt) const {
 		if (roads.empty()) return;
-		bool const xy_only = 1;
 		vector3d const xlate(get_camera_coord_space_xlate());
-		point const query_pos(pos - xlate);
-		if (!check_bcube_sphere_coll(bcube, query_pos, radius, xy_only)) return;
-		get_bcubes_sphere_coll(roads, out, query_pos, radius, xy_only, xlate);	
+		cube_t const query_region(region - xlate);
+		if (!bcube.intersects_xy(query_region)) return;
+		get_bcubes_region_coll_xy(roads, out, query_region, xlate);	
 		// include global road network intersections
-		for (unsigned i = 0; i < 3; ++i) {get_bcubes_sphere_coll(isecs[i], out, query_pos, radius, xy_only, xlate);} // {2-way, 3-way, 4-way}
-		get_bcubes_sphere_coll(bridges, out_bt, query_pos, radius, xy_only, xlate);
-		get_bcubes_sphere_coll(tunnels, out_bt, query_pos, radius, xy_only, xlate);
-		get_bcubes_sphere_coll(tracks, out, query_pos, radius, xy_only, xlate);
+		for (unsigned i = 0; i < 3; ++i) {get_bcubes_region_coll_xy(isecs[i], out, query_region, xlate);} // {2-way, 3-way, 4-way}
+		get_bcubes_region_coll_xy(bridges, out_bt, query_region, xlate);
+		get_bcubes_region_coll_xy(tunnels, out_bt, query_region, xlate);
+		get_bcubes_region_coll_xy(tracks,  out,    query_region, xlate);
 	}
 	bool proc_sphere_coll(point &pos, point const &p_last, vector3d const &xlate, float dist, float radius, float prev_frame_zval, vector3d *cnorm) const { // pos in camera space
 		if (!sphere_cube_intersect_xy(pos, (radius + dist), (bcube + xlate))) return 0;
@@ -2591,8 +2589,8 @@ public:
 		}
 		return 0;
 	}
-	void get_roads_sphere_coll(point const &pos, float radius, vect_cube_t &out, vect_cube_t &out_bt) const {
-		global_rn.get_roads_sphere_coll(pos, radius, out, out_bt);
+	void get_roads_in_region(cube_t const &region, vect_cube_t &out, vect_cube_t &out_bt) const {
+		global_rn.get_roads_in_region(region, out, out_bt);
 	}
 	bool choose_pt_in_park(point const &pos, point &park_pos, rand_gen_t &rgen) const {
 		for (road_network_t const &r : road_networks) {
@@ -3024,10 +3022,10 @@ public:
 	}
 	bool check_tline_cube_intersect_xy(cube_t const &c) const {return road_gen.check_tline_cube_intersect_xy(c);}
 
-	void get_sphere_coll_cubes(point const &pos, float radius, vect_cube_t &out, vect_cube_t &out_bt) const { // pos in camera space
-		get_plots_sphere_coll(pos, radius, out);
-		road_gen.get_roads_sphere_coll(pos, radius, out, out_bt);
-		get_road_seg_sphere_coll_cubes((pos - get_camera_coord_space_xlate()), radius, out); // convert pos from camera space to city/building space
+	void get_grass_coll_cubes(cube_t const &region, vect_cube_t &out, vect_cube_t &out_bt) const { // region is in camera space
+		get_plots_in_region(region, out);
+		road_gen.get_roads_in_region(region, out, out_bt);
+		get_road_segs_in_region((region - get_camera_coord_space_xlate()), out); // convert region from camera space to city/building space
 	}
 	bool proc_city_sphere_coll(point &pos, point const &p_last, float radius, float prev_frame_zval, bool inc_cars, vector3d *cnorm) const { // pos is in camera space
 		if (road_gen.proc_sphere_coll(pos, p_last, radius, prev_frame_zval, cnorm)) return 1;
@@ -3143,8 +3141,8 @@ unsigned check_city_sphere_coll(point const &pos, float radius, bool exclude_bri
 	if (!have_cities()) return 0;
 	return city_gen.check_city_sphere_coll((pos + get_tt_xlate_val()), radius, 1, exclude_bridges_and_tunnels, ret_first_coll, check_mask); // apply xlate for all static objects
 }
-void get_city_sphere_coll_cubes(point const &pos, float radius, vect_cube_t &out, vect_cube_t &out_bt) { // Note: out is in camera space
-	city_gen.get_sphere_coll_cubes((pos + get_tt_xlate_val()), radius, out, out_bt); // convert from city/building space to camera space
+void get_city_grass_coll_cubes(cube_t const &region, vect_cube_t &out, vect_cube_t &out_bt) { // Note: out is in camera space
+	city_gen.get_grass_coll_cubes((region + get_tt_xlate_val()), out, out_bt); // convert from city/building space to camera space
 }
 bool proc_city_sphere_coll(point &pos, point const &p_last, float radius, float prev_frame_zval, bool xy_only, bool inc_cars, vector3d *cnorm, bool check_interior) {
 	if (proc_buildings_sphere_coll(pos, p_last, radius, xy_only, cnorm, check_interior)) return 1;
