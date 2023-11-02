@@ -3378,7 +3378,7 @@ void building_room_geom_t::add_exterior_step(room_object_t const &c) {
 
 	if (c.shape == SHAPE_CUBE) {
 		unsigned skip_mask((c.flags & RO_FLAG_HANGING) ? 0 : ~get_face_mask(c.dim, c.dir)); // skip face that's against the building unless hanging flag is set
-		if (!(c.flags & RO_FLAG_ADJ_BOT)) {skip_mask |= EF_Z1;} // skip bottom face if at ground level
+		//if (!(c.flags & RO_FLAG_ADJ_BOT)) {skip_mask |= EF_Z1;} // skip bottom face if at ground level
 		mat.add_cube_to_verts(c, c.color, all_zeros, skip_mask);
 	}
 	else if (c.shape == SHAPE_ANGLED) {add_ramp(c, c.dz(), 1, mat);} // skip_bottom=0
