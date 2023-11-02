@@ -1719,6 +1719,7 @@ public:
 	cube_t get_full_basement_bcube  () const;
 	cube_t get_ext_basement_entrance() const;
 	cube_t get_best_occluder(point const &camera_bs) const;
+	cube_t get_step_for_ext_door(tquad_with_ix_t const &door) const;
 	bool interior_visible_from_other_building_ext_basement(vector3d const &xlate, bool expand_for_light=0) const;
 	void try_connect_ext_basement_to_building(building_t &b);
 	template<typename T> void add_door_verts(cube_t const &D, T &drawer, uint8_t door_type, bool dim, bool dir, float open_amt, bool opens_out, bool exterior,

@@ -1282,6 +1282,16 @@ void building_t::add_window_trim_and_coverings(bool add_trim, bool add_coverings
 	}
 }
 
+cube_t building_t::get_step_for_ext_door(tquad_with_ix_t const &door) const {
+	cube_t const c(door.get_bcube());
+	bool const dim(c.dy() < c.dx()), dir(door.get_norm()[dim] > 0.0);
+	float length(((door.type == tquad_with_ix_t::TYPE_GDOOR) ? 0.6 : 0.5)*c.dz());
+	max_eq(length, 2.4f*get_scaled_player_radius()); // make sure step is wide enough for the player to walk on
+	cube_t step(c);
+	set_cube_zvals(step, (c.z1() - get_fc_thickness()), c.z1());
+	step.d[dim][ dir] += (dir ? 1.0 : -1.0)*length; // extend outward
+	return step;
+}
 void building_t::add_ext_door_steps(unsigned ext_objs_start) {
 	float const floor_spacing(get_window_vspace()), fc_thickness(get_fc_thickness());
 	float const door_shift_dist(2.5*get_door_shift_dist()); // 1x for door shift and 1.5x offset in add_door()
@@ -1296,18 +1306,13 @@ void building_t::add_ext_door_steps(unsigned ext_objs_start) {
 		bool const above_ground(c.z1() > ground_floor_z1 + 2.0*fc_thickness);
 		bool const dim(c.dy() < c.dx()), dir(d.get_norm()[dim] > 0.0);
 		bool const is_garage(d.type == tquad_with_ix_t::TYPE_GDOOR);
-		float length((is_garage ? 0.6 : 0.5)*c.dz());
-		if (above_ground) {max_eq(length, 2.4f*get_scaled_player_radius());} // if above ground, make sure step is wide enough for the player to walk on
-		room_obj_shape const shape(is_garage ? SHAPE_ANGLED : SHAPE_CUBE); // garage door has a sloped ramp
-		cube_t step(c);
-		set_cube_zvals(step, (c.z1() - fc_thickness), c.z1());
-		step.d[dim][!dir] -= (dir ? 1.0 : -1.0)*door_shift_dist;
-		step.d[dim][ dir] += (dir ? 1.0 : -1.0)*length; // extend outward
+		cube_t step(get_step_for_ext_door(d));
+		step.d[dim][!dir] -= (dir ? 1.0 : -1.0)*door_shift_dist; // shift slightly away from the building to prevent Z-fighting with the exterior wall
 		assert(step.is_strictly_normalized());
-		unsigned flags(RO_FLAG_EXTERIOR | (above_ground ? RO_FLAG_ADJ_BOT : 0));
-		unsigned const obj_ix(objs.size());
+		unsigned const obj_ix(objs.size()), flags(RO_FLAG_EXTERIOR | (above_ground ? RO_FLAG_ADJ_BOT : 0));
+		room_obj_shape const shape(is_garage ? SHAPE_ANGLED : SHAPE_CUBE); // garage door has a sloped ramp
 		objs.emplace_back(step, TYPE_EXT_STEP, 0, dim, !dir, flags, 1.0, shape, step_color);
-		if ( above_ground && !is_garage) {to_add_stairs.push_back(obj_ix);} // add steps up to this door
+		if (above_ground && !is_garage) {to_add_stairs.push_back(obj_ix);} // add steps up to this door
 	} // for d
 	if (to_add_stairs.empty()) return; // done
 	cube_t const &part(parts[0]); // assumes door is on parts[0] (single part)
