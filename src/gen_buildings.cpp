@@ -3685,24 +3685,29 @@ public:
 		for (auto i = buildings.begin(); i != buildings.end(); ++i) {i->clear_room_geom();} // likely required for tiled buildings
 		gpu_mem_usage = 0;
 	}
-	bool check_sphere_coll(point &pos, point const &p_last, float radius, bool xy_only=0, vector3d *cnorm=nullptr, bool check_interior=0) const { // Note: pos is in camera space
+	bool check_point_coll_xy(point const &pos) const { // Note: pos is in camera space
 		if (empty()) return 0;
 		vector3d const xlate(get_camera_coord_space_xlate());
+		point const p1x(pos - xlate); // convert back to building space
+		if (!range.contains_pt_xy(p1x)) return 0; // outside buildings bcube
+		unsigned const gix(get_grid_ix(p1x));
+		grid_elem_t const &ge(grid[gix]);
+		if (ge.empty()) return 0; // skip empty grid
+		if (!ge.bcube.contains_pt_xy(p1x)) return 0; // no intersection - skip this grid
+		bool const xy_only = 1;
+		point pos2(pos); // make a non-const copy
+		point const p_last(pos);
 
-		if (radius == 0.0) { // point coll - ignore p_last as well
-			point const p1x(pos - xlate); // convert back to building space
-			if (!range.contains_pt_xy(p1x)) return 0; // outside buildings bcube
-			unsigned const gix(get_grid_ix(p1x));
-			grid_elem_t const &ge(grid[gix]);
-			if (ge.empty()) return 0; // skip empty grid
-			if (!(xy_only ? ge.bcube.contains_pt_xy(p1x) : ge.bcube.contains_pt(p1x))) return 0; // no intersection - skip this grid
-
-			for (auto b = ge.bc_ixs.begin(); b != ge.bc_ixs.end(); ++b) {
-				if (!(xy_only ? b->contains_pt_xy(p1x) : b->contains_pt(p1x))) continue;
-				if (get_building(b->ix).check_sphere_coll(pos, p_last, xlate, 0.0, xy_only, cnorm, check_interior)) return 1;
-			}
-			return check_road_seg_sphere_coll(ge, pos, p_last, xlate, radius, xy_only, cnorm);
+		for (auto b = ge.bc_ixs.begin(); b != ge.bc_ixs.end(); ++b) {
+			if (!b->contains_pt_xy(p1x)) continue;
+			if (get_building(b->ix).check_sphere_coll(pos2, p_last, xlate, 0.0, xy_only)) return 1;
 		}
+		return check_road_seg_sphere_coll(ge, pos2, p_last, xlate, 0.0, xy_only, nullptr);
+	}
+	bool check_sphere_coll(point &pos, point const &p_last, float radius, vector3d *cnorm=nullptr, bool check_interior=0) const { // Note: pos is in camera space
+		if (empty()) return 0;
+		bool const xy_only = 0;
+		vector3d const xlate(get_camera_coord_space_xlate());
 		cube_t bcube;
 		bcube.set_from_sphere((pos - xlate), (radius + building_bcube_expand)); // expand to handle AC units, balconies, fire escapes, etc.
 		bool saw_player_building(0);
@@ -3783,7 +3788,7 @@ public:
 	bool check_road_seg_sphere_coll(grid_elem_t const &ge, point &pos, point const &p_last, vector3d const &xlate, float radius, bool xy_only, vector3d *cnorm) const {
 		for (auto r = ge.road_segs.begin(); r != ge.road_segs.end(); ++r) {
 			cube_t const cube(*r + xlate); // convert to camera space to agree with pos
-			if (!cube.contains_pt_xy(pos) || (pos.z - radius) > cube.z2()) continue; // no collision - test top surface only
+			if (!cube.contains_pt_xy(pos) || (pos.z - radius) > cube.z2()) continue; // no collision - test top surface only (even when xy_only=1)
 			pos.z = cube.z2() + radius;
 			if (cnorm) {*cnorm = plus_z;}
 			return 1;
@@ -4120,16 +4125,17 @@ public:
 		clear_vbos();
 		tiles.clear();
 	}
-	bool check_sphere_coll(point &pos, point const &p_last, float radius, bool xy_only=0, vector3d *cnorm=nullptr, bool check_interior=0) const { // Note: pos is in camera space
+	bool check_point_coll_xy(point const &pos) const { // Note: pos is in camera space
+		if (empty()) return 0;
+		auto it(get_tile_by_pos_cs(pos)); // single point, use map lookup optimization (for example for grass)
+		if (it == tiles.end()) return 0;
+		return it->second.check_point_coll_xy(pos);
+	}
+	bool check_sphere_coll(point &pos, point const &p_last, float radius, vector3d *cnorm=nullptr, bool check_interior=0) const { // Note: pos is in camera space
 		if (empty()) return 0;
 
-		if (radius == 0.0) { // single point, use map lookup optimization (for example for grass)
-			auto it(get_tile_by_pos_cs(pos));
-			if (it == tiles.end()) return 0;
-			return it->second.check_sphere_coll(pos, p_last, radius, xy_only, cnorm, check_interior);
-		}
-		for (auto i = tiles.begin(); i != tiles.end(); ++i) {
-			if (i->second.check_sphere_coll(pos, p_last, radius, xy_only, cnorm, check_interior)) return 1;
+		for (auto const &t : tiles) {
+			if (t.second.check_sphere_coll(pos, p_last, radius, cnorm, check_interior)) return 1;
 		}
 		return 0;
 	}
@@ -4283,15 +4289,14 @@ bool proc_buildings_sphere_coll(point &pos, point const &p_int, float radius, ve
 		player_is_hiding   = 0;
 		player_in_elevator = 0;
 	}
-	// we generally won't intersect more than one of these categories, so we can return true without checking all cases; xy_only=0
-	return ((!exclude_city && building_creator_city.check_sphere_coll(pos, p_int, radius, 0, cnorm, check_interior)) ||
-		                           building_creator.check_sphere_coll(pos, p_int, radius, 0, cnorm, check_interior) ||
-		                             building_tiles.check_sphere_coll(pos, p_int, radius, 0, cnorm, check_interior));
+	// we generally won't intersect more than one of these categories, so we can return true without checking all cases
+	return ((!exclude_city && building_creator_city.check_sphere_coll(pos, p_int, radius, cnorm, check_interior)) ||
+		                           building_creator.check_sphere_coll(pos, p_int, radius, cnorm, check_interior) ||
+		                             building_tiles.check_sphere_coll(pos, p_int, radius, cnorm, check_interior));
 }
 bool check_buildings_no_grass(point const &pos) { // for tiled terrain mode; pos is in camera
-	point center(pos); // passed into check_sphere_coll() as non-const, but not actually modified, so make a copy
-	if (building_creator.check_sphere_coll(center, pos, 0.0, 1, nullptr)) return 1; // secondary buildings only; xy_only=1
-	if (building_tiles  .check_sphere_coll(center, pos, 0.0, 1, nullptr)) return 1;
+	if (building_creator.check_point_coll_xy(pos)) return 1; // secondary buildings only
+	if (building_tiles  .check_point_coll_xy(pos)) return 1;
 	return 0;
 }
 bool check_buildings_cube_coll(cube_t const &c, bool xy_only, bool inc_basement, building_t const *exclude1, building_t const *exclude2) {
