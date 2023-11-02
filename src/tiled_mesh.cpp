@@ -1029,7 +1029,7 @@ bool check_region_int(cube_t const &region, vect_cube_t const &cubes) { // has_b
 }
 void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 
-	//highres_timer_t timer("Create Tile Weights Texture"); // 1.38 base, 2.0 with buildings/roads/driveways/porches
+	//highres_timer_t timer("Create Tile Weights Texture"); // 1.38ms base, 1.5ms with buildings/roads/driveways/porches/doorsteps
 	assert(zvals.size() == zvsize*zvsize);
 	unsigned const tsize(stride), num_texels(tsize*tsize);
 	int sand_tex_ix(-1), dirt_tex_ix(-1), grass_tex_ix(-1), rock_tex_ix(-1), snow_tex_ix(-1);
@@ -1056,7 +1056,8 @@ void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 		height_gen.build_arrays(MESH_NOISE_FREQ*get_xval(x1), MESH_NOISE_FREQ*get_yval(y1), MESH_NOISE_FREQ*deltax,
 			MESH_NOISE_FREQ*deltay, tsize, tsize, 0, 1); // force_sine_mode=1
 		vector<float> rand_vals(tsize*tsize);
-		vect_cube_t exclude_cubes, allow_cubes; // in camera space
+		bool row_ec_valid(0);
+		vect_cube_t exclude_cubes, row_exclude_cubes, allow_cubes; // in camera space
 		cube_t const tile_region(get_xval(llc_x), get_xval(x2 - xoff2), get_yval(llc_y), get_yval(y2 - yoff2), mzmin, mzmax);
 		get_city_grass_coll_cubes(tile_region, exclude_cubes, allow_cubes);
 		has_tunnel |= tile_contains_tunnel(get_mesh_bcube());
@@ -1068,7 +1069,8 @@ void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 			}
 		}
 		for (unsigned y = 0; y < tsize-DEBUG_TILE_BOUNDS; ++y) { // not threadsafe
-			float const yv(float(y)*xy_mult);
+			float const yv(float(y)*xy_mult), ry(get_yval(y + llc_y + yoff)), ry1(ry - 0.25*DY_VAL), ry2(ry + 1.25*DY_VAL);
+			row_ec_valid = 0;
 
 			for (unsigned x = 0; x < tsize-DEBUG_TILE_BOUNDS; ++x) {
 				unsigned const ix_val(y*tsize + x), off(4*ix_val);
@@ -1140,12 +1142,23 @@ void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 					bool replace_grass_with_dirt(0);
 
 					if (grass_scale > 0.0 && !exclude_cubes.empty()) { // exclude bridges and tunnels here
-						float const rx1(get_xval(x + llc_x + xoff)), ry1(get_yval(y + llc_y + yoff));
-						cube_t const grass_region(rx1-0.25*DX_VAL, rx1+1.25*DX_VAL, ry1-0.25*DY_VAL, ry1+1.25*DY_VAL, 0.0, 0.0);
-						replace_grass_with_dirt = (check_region_int(grass_region, exclude_cubes) && !check_region_int(grass_region, allow_cubes));
+						if (!row_ec_valid) { // optimization: calculate exclude cubes for the current yval row; not needed for allow_cubes because they're sparse
+							cube_t const row_region(tile_region.x1(), tile_region.x2(), ry1, ry2, 0.0, 0.0);
+							row_exclude_cubes.clear();
+
+							for (cube_t const &c : exclude_cubes) {
+								if (c.intersects_xy(row_region)) {row_exclude_cubes.push_back(c);}
+							}
+							row_ec_valid = 1;
+						}
+						if (!row_exclude_cubes.empty()) {
+							float const rx(get_xval(x + llc_x + xoff)), rx1(rx - 0.25*DX_VAL), rx2(rx + 1.25*DX_VAL);
+							cube_t const grass_region(rx1, rx2, ry1, ry2, 0.0, 0.0);
+							replace_grass_with_dirt = (check_region_int(grass_region, row_exclude_cubes) && !check_region_int(grass_region, allow_cubes));
+						}
 					}
 					if (!replace_grass_with_dirt && check_buildings && grass_scale > 0.0 && mh01 == mh00 && mh10 == mh00 && mh11 == mh00) { // look for area flattened under a building
-						point const test_pt(get_xval(x + llc_x + xoff)+0.5*DX_VAL, get_yval(y + llc_y + yoff)+0.5*DY_VAL, mh00); // in camera space
+						point const test_pt(get_xval(x + llc_x + xoff)+0.5*DX_VAL, ry+0.5*DY_VAL, mh00); // in camera space
 						replace_grass_with_dirt = check_buildings_no_grass(test_pt); // xy_only 1.61 => 1.76
 					}
 					if (replace_grass_with_dirt) {
