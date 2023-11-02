@@ -34,6 +34,7 @@ void add_buildings_exterior_lights(vector3d const &xlate, cube_t &lights_bcube);
 void disable_shadow_maps(shader_t &s);
 vector3d get_tt_xlate_val();
 float get_max_house_size();
+bool proc_buildings_sphere_coll(point &pos, point const &p_last, float radius, vector3d *cnorm=nullptr, bool check_interior=0, bool exclude_city=0);
 
 
 template<typename S, typename T> void get_all_bcubes(vector<T> const &v, S &bcubes) {
@@ -3144,8 +3145,8 @@ unsigned check_city_sphere_coll(point const &pos, float radius, bool exclude_bri
 void get_city_grass_coll_cubes(cube_t const &region, vect_cube_t &out, vect_cube_t &out_bt) { // Note: out is in camera space
 	city_gen.get_grass_coll_cubes((region + get_tt_xlate_val()), out, out_bt); // convert from city/building space to camera space
 }
-bool proc_city_sphere_coll(point &pos, point const &p_last, float radius, float prev_frame_zval, bool xy_only, bool inc_cars, vector3d *cnorm, bool check_interior) {
-	if (proc_buildings_sphere_coll(pos, p_last, radius, xy_only, cnorm, check_interior)) return 1;
+bool proc_city_sphere_coll(point &pos, point const &p_last, float radius, float prev_frame_zval, bool inc_cars, vector3d *cnorm, bool check_interior) {
+	if (proc_buildings_sphere_coll(pos, p_last, radius, cnorm, check_interior)) return 1;
 	return city_gen.proc_city_sphere_coll(pos, p_last, radius, prev_frame_zval, inc_cars, cnorm); // Note: no xy_only for cities
 }
 bool line_intersect_city(point const &p1, point const &p2, float &t, bool ret_any_pt) {
@@ -3211,7 +3212,8 @@ model_bcube_checker_t model_bcube_checker;
 
 bool check_valid_scenery_pos(point const &pos, float radius, bool is_tall) {
 	point const pos_cs(pos + get_tt_xlate_val()); // convert from city/building space to camera space
-	if (check_buildings_sphere_coll(pos_cs, radius, 0, 0, 0, 1)) return 0; // apply_tt_xlate=0, xy_only=0, check_interior=0, exclude_city=1 (since we're checking plots below)
+	point center(pos_cs); // make a copy; not actually modified
+	if (proc_buildings_sphere_coll(center, pos_cs, radius, nullptr, 0, 1)) return 0; // check_interior=0, exclude_city=1 (since we're checking plots below)
 	if (world_mode != WMODE_INF_TERRAIN) return 1; // the checks below are for tiled terrain mode only
 
 	if (have_cities()) {

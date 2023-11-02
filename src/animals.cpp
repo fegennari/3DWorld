@@ -405,7 +405,7 @@ bool butterfly_t::update(rand_gen_t &rgen, tile_t const *const tile) {
 	bool check_tree_coll(dist_less_than(cs_pos, get_camera_pos(), (X_SCENE_SIZE + Y_SCENE_SIZE)));
 	
 	// skip building interiors (shouldn't be there) and cars (too slow)
-	if (!skip_coll_check && proc_city_sphere_coll(cs_pos, prev_cs_pos, coll_radius, prev_cs_pos.z, 0, 0, &cnorm, 0)) {
+	if (!skip_coll_check && proc_city_sphere_coll(cs_pos, prev_cs_pos, coll_radius, prev_cs_pos.z, 0, &cnorm, 0)) {
 		pos = cs_pos - get_camera_coord_space_xlate(); // back to world space
 		calc_reflection_angle(dir, dir, cnorm); // reflect
 		dir.normalize();

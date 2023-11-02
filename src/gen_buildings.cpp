@@ -4277,28 +4277,20 @@ void draw_building_lights(vector3d const &xlate) {
 	building_creator_city.draw_building_lights(xlate);
 	//building_creator.draw_building_lights(xlate); // only city buildings for now
 }
-bool proc_buildings_sphere_coll(point &pos, point const &p_int, float radius, bool xy_only, vector3d *cnorm, bool check_interior, bool exclude_city) { // pos is in camera space
+bool proc_buildings_sphere_coll(point &pos, point const &p_int, float radius, vector3d *cnorm, bool check_interior, bool exclude_city) { // pos is in camera space
 	if (check_interior) { // only called for the player
 		player_in_closet   = 0; // reset for this call
 		player_is_hiding   = 0;
 		player_in_elevator = 0;
 	}
-	// we generally won't intersect more than one of these categories, so we can return true without checking all cases
-	return ((!exclude_city && building_creator_city.check_sphere_coll(pos, p_int, radius, xy_only, cnorm, check_interior)) ||
-		                           building_creator.check_sphere_coll(pos, p_int, radius, xy_only, cnorm, check_interior) ||
-		                             building_tiles.check_sphere_coll(pos, p_int, radius, xy_only, cnorm, check_interior));
-}
-bool check_buildings_sphere_coll(point const &pos, float radius, bool apply_tt_xlate, bool xy_only, bool check_interior, bool exclude_city) {
-	point center(pos);
-	if (apply_tt_xlate) {center += get_tt_xlate_val();} // apply xlate for all static objects to convert from building space to camera space - not the camera
-	return proc_buildings_sphere_coll(center, pos, radius, xy_only, nullptr, check_interior, exclude_city);
-}
-bool check_buildings_point_coll(point const &pos, bool apply_tt_xlate, bool xy_only, bool check_interior) {
-	return check_buildings_sphere_coll(pos, 0.0, apply_tt_xlate, xy_only, check_interior);
+	// we generally won't intersect more than one of these categories, so we can return true without checking all cases; xy_only=0
+	return ((!exclude_city && building_creator_city.check_sphere_coll(pos, p_int, radius, 0, cnorm, check_interior)) ||
+		                           building_creator.check_sphere_coll(pos, p_int, radius, 0, cnorm, check_interior) ||
+		                             building_tiles.check_sphere_coll(pos, p_int, radius, 0, cnorm, check_interior));
 }
 bool check_buildings_no_grass(point const &pos) { // for tiled terrain mode; pos is in camera
 	point center(pos); // passed into check_sphere_coll() as non-const, but not actually modified, so make a copy
-	if (building_creator.check_sphere_coll(center, pos, 0.0, 1, nullptr)) return 1; // secondary buildings only
+	if (building_creator.check_sphere_coll(center, pos, 0.0, 1, nullptr)) return 1; // secondary buildings only; xy_only=1
 	if (building_tiles  .check_sphere_coll(center, pos, 0.0, 1, nullptr)) return 1;
 	return 0;
 }

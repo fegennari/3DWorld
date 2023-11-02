@@ -1611,7 +1611,7 @@ int dwobject::check_vert_collision(int obj_index, int do_coll_funcs, int iter, v
 		vector3d cnorm(plus_z);
 		bool const check_interior(PLAYER_CAN_ENTER_BUILDINGS && type == CAMERA);
 		
-		if (proc_city_sphere_coll(pos, p_last, o_radius, p_last.z, 0, 1, &cnorm, check_interior)) { // xy_only=0, inc_cars=1; for ground mode only
+		if (proc_city_sphere_coll(pos, p_last, o_radius, p_last.z, 1, &cnorm, check_interior)) { // inc_cars=1; for ground mode only
 			obj_type const &otype(object_types[type]);
 			float const friction(otype.friction_factor*((flags & FROZEN_FLAG) ? 0.5 : 1.0)); // frozen objects have half friction
 			if (animate2 && health <= 0.1) {disable();}
@@ -1736,7 +1736,7 @@ float get_max_mesh_height_within_radius(point const &pos, float radius, bool is_
 
 void proc_player_city_sphere_coll(point &pos) {
 	bool const check_interior(PLAYER_CAN_ENTER_BUILDINGS);
-	proc_city_sphere_coll(pos, camera_last_pos, CAMERA_RADIUS, camera_last_pos.z, 0, 0, nullptr, check_interior); // use prev pos for building collisions; z dir
+	proc_city_sphere_coll(pos, camera_last_pos, CAMERA_RADIUS, camera_last_pos.z, 0, nullptr, check_interior); // use prev pos for building collisions; z dir
 }
 
 void force_onto_surface_mesh(point &pos) { // for camera
