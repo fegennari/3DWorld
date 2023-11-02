@@ -1021,6 +1021,12 @@ void get_texture_ixs(int &sand_tex_ix, int &dirt_tex_ix, int &grass_tex_ix, int 
 }
 
 
+bool check_region_int(cube_t const &region, vect_cube_t const &cubes) { // has_bcube_int_xy(), but without pad
+	for (cube_t const &c : cubes) {
+		if (c.intersects_xy(region)) return 1;
+	}
+	return 0;
+}
 void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 
 	//highres_timer_t timer("Create Tile Weights Texture"); // 1.38 base, 2.0 with buildings/roads/driveways/porches
@@ -1051,8 +1057,8 @@ void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 			MESH_NOISE_FREQ*deltay, tsize, tsize, 0, 1); // force_sine_mode=1
 		vector<float> rand_vals(tsize*tsize);
 		vect_cube_t exclude_cubes, allow_cubes; // in camera space
-		cube_t const query_cube(get_xval(llc_x), get_xval(x2 - xoff2), get_yval(llc_y), get_yval(y2 - yoff2), mzmin, mzmax);
-		get_city_grass_coll_cubes(query_cube, exclude_cubes, allow_cubes);
+		cube_t const tile_region(get_xval(llc_x), get_xval(x2 - xoff2), get_yval(llc_y), get_yval(y2 - yoff2), mzmin, mzmax);
+		get_city_grass_coll_cubes(tile_region, exclude_cubes, allow_cubes);
 		has_tunnel |= tile_contains_tunnel(get_mesh_bcube());
 
 #pragma omp parallel for schedule(static,1) num_threads(2)
@@ -1134,8 +1140,9 @@ void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 					bool replace_grass_with_dirt(0);
 
 					if (grass_scale > 0.0 && !exclude_cubes.empty()) { // exclude bridges and tunnels here
-						point const test_pt(get_xval(x + llc_x + xoff)+0.5*DX_VAL, get_yval(y + llc_y + yoff)+0.5*DY_VAL, 0.0); // in camera space
-						replace_grass_with_dirt = (check_bcubes_sphere_coll(exclude_cubes, test_pt, HALF_DXY, 1) && !check_bcubes_sphere_coll(allow_cubes, test_pt, HALF_DXY, 1));
+						float const rx1(get_xval(x + llc_x + xoff)), ry1(get_yval(y + llc_y + yoff));
+						cube_t const grass_region(rx1-0.25*DX_VAL, rx1+1.25*DX_VAL, ry1-0.25*DY_VAL, ry1+1.25*DY_VAL, 0.0, 0.0);
+						replace_grass_with_dirt = (check_region_int(grass_region, exclude_cubes) && !check_region_int(grass_region, allow_cubes));
 					}
 					if (!replace_grass_with_dirt && check_buildings && grass_scale > 0.0 && mh01 == mh00 && mh10 == mh00 && mh11 == mh00) { // look for area flattened under a building
 						point const test_pt(get_xval(x + llc_x + xoff)+0.5*DX_VAL, get_yval(y + llc_y + yoff)+0.5*DY_VAL, mh00); // in camera space
