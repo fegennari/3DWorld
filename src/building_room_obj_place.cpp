@@ -2262,15 +2262,15 @@ void building_t::add_swimming_pool_room_objs(rand_gen_t rgen, room_t const &room
 	}
 	unsigned const objs_start(objs.size()); // we can start here, since the pool tile objects placed above don't collide with other placed objects
 
-	if (0 && pool_len > 3.5*floor_spacing && pool_depth > 0.9*floor_spacing) { // add a diving board if long and deep
+	if (pool_len > 3.5*floor_spacing && pool_depth > 0.9*floor_spacing) { // add a diving board if long and deep
 		cube_t dboard;
-		set_cube_zvals(dboard, zval, (zval + 0.2*floor_spacing));
+		set_cube_zvals(dboard, zval, (zval + 0.11*floor_spacing));
 		set_wall_width(dboard, pool.get_center_dim(!pool.dim), 0.1*floor_spacing, !pool.dim); // width
-		set_wall_width(dboard, (pool.d[pool.dim][!pool.dir] + (pool.dir ? 1.0 : -1.0)*0.2*floor_spacing), 0.5*floor_spacing,  pool.dim); // length
+		set_wall_width(dboard, (pool.d[pool.dim][!pool.dir] + (pool.dir ? 1.0 : -1.0)*0.2*floor_spacing), 0.6*floor_spacing,  pool.dim); // length
 		objs.emplace_back(dboard, TYPE_DIV_BOARD, room_id, pool.dim, pool.dir, 0, tot_light_amt, SHAPE_CUBE, colorRGBA(0.75, 1.0, 0.9, 1.0)); // blue-green
 	}
 	// add benches along the walls
-	unsigned const num_benches(0);
+	unsigned const num_benches(2 + (rgen.rand()%3)); // 2-4
 
 	if (num_benches > 0) {
 		float const bench_height(0.22*floor_spacing);
