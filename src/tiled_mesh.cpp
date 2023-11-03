@@ -1069,7 +1069,7 @@ void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 			}
 		}
 		for (unsigned y = 0; y < tsize-DEBUG_TILE_BOUNDS; ++y) { // not threadsafe
-			float const yv(float(y)*xy_mult), ry(get_yval(y + llc_y + yoff)), ry1(ry - 0.25*DY_VAL), ry2(ry + 1.25*DY_VAL);
+			float const yv(float(y)*xy_mult), ry(get_yval(y + llc_y + yoff)), radius_y(0.75*DY_VAL), ry1(ry - radius_y), ry2(ry + radius_y);
 			row_ec_valid = 0;
 
 			for (unsigned x = 0; x < tsize-DEBUG_TILE_BOUNDS; ++x) {
@@ -1152,13 +1152,13 @@ void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 							row_ec_valid = 1;
 						}
 						if (!row_exclude_cubes.empty()) {
-							float const rx(get_xval(x + llc_x + xoff)), rx1(rx - 0.25*DX_VAL), rx2(rx + 1.25*DX_VAL);
+							float const rx(get_xval(x + llc_x + xoff)), radius_x(0.75*DX_VAL), rx1(rx - radius_x), rx2(rx + radius_x);
 							cube_t const grass_region(rx1, rx2, ry1, ry2, 0.0, 0.0);
 							replace_grass_with_dirt = (check_region_int(grass_region, row_exclude_cubes) && !check_region_int(grass_region, allow_cubes));
 						}
 					}
 					if (!replace_grass_with_dirt && check_buildings && grass_scale > 0.0 && mh01 == mh00 && mh10 == mh00 && mh11 == mh00) { // look for area flattened under a building
-						point const test_pt(get_xval(x + llc_x + xoff)+0.5*DX_VAL, ry+0.5*DY_VAL, mh00); // in camera space
+						point const test_pt(get_xval(x + llc_x + xoff), ry, mh00); // in camera space
 						replace_grass_with_dirt = check_buildings_no_grass(test_pt); // xy_only 1.61 => 1.76
 					}
 					if (replace_grass_with_dirt) {

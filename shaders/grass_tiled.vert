@@ -24,7 +24,8 @@ void main() {
 	if ((v.x > clip_box1.x && v.y > clip_box1.y && v.x < clip_box1.z && v.y < clip_box1.w) ||
 	    (v.x > clip_box2.x && v.y > clip_box2.y && v.x < clip_box2.z && v.y < clip_box2.w)) {vertex.z -= 1.1*height;} // translate slightly more than height to account for wind
 #endif
-	float z_val = texture(height_tex, vec2((vertex.x - x1)*dx_inv, (vertex.y - y1)*dy_inv)).r;
+	vec2 tc2    = vec2((vertex.x - x1)*dx_inv, (vertex.y - y1)*dy_inv); // scaled same as (x2 - x1 - 1.0*DX_VAL)
+	float z_val = texture(height_tex, tc2).r;
 	float ascale= 1.0;
 #ifdef DEC_HEIGHT_WHEN_FAR
 	float dist  = length((fg_ModelViewMatrix * (vertex + vec4(xlate, z_val, 0))).xyz);
@@ -34,7 +35,6 @@ void main() {
 	ascale      = min(1.0, 10.0*(1.0 - ds_val)); // decrease alpha very far away from camera
 #endif
 	vertex.z   += z_val;
-	vec2 tc2    = vec2(vertex.x*dx_inv, vertex.y*dy_inv); // same as (x2 - x1 - 1.0*DX_VAL)
 	if (enable_grass_wind) {vertex.xyz += get_grass_wind_delta(vertex.xyz, tc.s);}
 
 	vec4 fin_vert   = (vertex + vec4(xlate, 0, 0));
