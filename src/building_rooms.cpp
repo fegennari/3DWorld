@@ -1336,6 +1336,11 @@ void building_t::add_ext_door_steps(unsigned ext_objs_start) {
 		bool step_dir(s.get_center_dim(!dim) < part.get_center_dim(!dim)); // preferred steps go down toward longer wall segment
 		s.z1() = s.z2() - step_height; // set correct step height for the first step
 		cube_t const door_step(s);
+		colorRGBA const railing_color(BLACK);
+		float const railing_inside_edge(door_step.d[dim][!dir] + dir_sign*railing_thickness);
+		cube_t top_railing(door_step);
+		top_railing.z2() += floor_spacing;
+		top_railing.z1() += step_height;
 		bool success(0);
 		// Note: s reference is invalidated beyond this point
 
@@ -1400,10 +1405,8 @@ void building_t::add_ext_door_steps(unsigned ext_objs_start) {
 			} // for cand
 			ext_steps.back().is_base = ext_steps.back().at_ground = 1; // last step is at the bottom
 			// add side railing, with balusters
-			colorRGBA const railing_color(BLACK);
 			cube_t railing(cand_steps[min(size_t(1), cand_steps.size()-1U)]); // second from the top
 			railing.d[!dim][!step_dir] -= sdir_sign*railing_thickness; // lengthen slightly to meet the top railing
-			float const railing_inside_edge(railing.d[dim][!dir] + dir_sign*railing_thickness);
 			railing.union_with_cube(cand_steps.back());
 			railing.d[dim][dir] = railing_inside_edge;
 			railing.z1() += step_height;
@@ -1411,11 +1414,9 @@ void building_t::add_ext_door_steps(unsigned ext_objs_start) {
 			railings.emplace_back(railing, TYPE_RAILING, 0, !dim, !step_dir, (RO_FLAG_OPEN | RO_FLAG_EXTERIOR), 1.0, SHAPE_CUBE, railing_color);
 			railings.back().item_flags = max(num_floors, 1U) - 1; // store the number of floors-1 in item_flags
 			// add end railing
-			railing = door_step;
+			railing = top_railing;
 			railing.d[!dim][step_dir]  = railing.d[!dim][!step_dir] + sdir_sign*railing_thickness;
 			railing.d[ dim][     dir] -= dir_sign*railing_thickness; // move away from the building
-			railing.z2() += floor_spacing;
-			railing.z1() += step_height;
 			railings.emplace_back(railing, TYPE_RAILING, 0, dim, dir, (RO_FLAG_TOS | RO_FLAG_ADJ_BOT | RO_FLAG_EXTERIOR), 1.0, SHAPE_CUBE, railing_color);
 			// add top railing
 			railing.d[ dim][     dir] = railing_inside_edge;
@@ -1423,8 +1424,17 @@ void building_t::add_ext_door_steps(unsigned ext_objs_start) {
 			railings.emplace_back(railing, TYPE_RAILING, 0, !dim, !step_dir, (RO_FLAG_TOS | RO_FLAG_EXTERIOR), 1.0, SHAPE_CUBE, railing_color);
 			break; // done
 		} // for d
-		if (!success) {
-			// TODO: how to connect if both directions fail?
+		if (!success) { // failed to connect stairs in either dim; add railings and turn into a tiny balcony instead
+			for (unsigned d = 0; d < 2; ++d) { // add end railings
+				cube_t railing(top_railing);
+				railing.d[!dim][d  ]  = railing.d[!dim][!d] + (d ? 1.0 : -1.0)*railing_thickness;
+				railing.d[ dim][dir] -= dir_sign*railing_thickness; // move away from the building
+				railings.emplace_back(railing, TYPE_RAILING, 0, dim, dir, (RO_FLAG_TOS | RO_FLAG_ADJ_BOT | RO_FLAG_EXTERIOR), 1.0, SHAPE_CUBE, railing_color);
+			}
+			// add top railing
+			cube_t railing(top_railing);
+			railing.d[dim][dir] = railing_inside_edge;
+			railings.emplace_back(railing, TYPE_RAILING, 0, !dim, !step_dir, (RO_FLAG_TOS | RO_FLAG_EXTERIOR), 1.0, SHAPE_CUBE, railing_color);
 		}
 		ext_steps.emplace_back(door_step, !dim, step_dir, dir, 1); // add the door step; here dim is wall dim, but we store stairs dim
 	} // for ix
