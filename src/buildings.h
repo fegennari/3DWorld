@@ -1611,6 +1611,7 @@ struct building_t : public building_geom_t {
 	void update_stats(building_stats_t &s) const;
 	bool are_rooms_connected_without_using_room(unsigned room1, unsigned room2, unsigned room_exclude) const;
 	bool is_room_adjacent_to_ext_door(cube_t const &room, bool front_door_only=0) const;
+	bool cube_int_ext_door(cube_t const &c) const;
 	room_t const &get_room(unsigned room_ix) const {assert(interior); return interior->get_room(room_ix);}
 	door_t const &get_door(unsigned door_ix) const {assert(interior); return interior->get_door(door_ix);}
 	point get_center_of_room(unsigned room_ix) const {return get_room(room_ix).get_cube_center();}

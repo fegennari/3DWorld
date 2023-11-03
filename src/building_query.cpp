@@ -2197,6 +2197,24 @@ bool building_t::is_room_above_ramp(cube_t const &room, float zval) const {
 	if (!has_pg_ramp()) return 0;
 	return (interior->pg_ramp.intersects_xy(room) && zval >= interior->pg_ramp.z2() && (zval - interior->pg_ramp.z2()) <= get_window_vspace());
 }
+bool building_t::is_room_adjacent_to_ext_door(cube_t const &room, bool front_door_only) const {
+	cube_t room_exp(room);
+	room_exp.expand_by_xy(get_wall_thickness());
+
+	for (tquad_with_ix_t const &d : doors) { // exterior doors
+		if (!d.is_exterior_door() || d.type == tquad_with_ix_t::TYPE_RDOOR) continue;
+		if (room_exp.contains_pt(d.get_bcube().get_cube_center())) return 1;
+		if (front_door_only) return 0; // assumes the first door is the front door
+	}
+	return 0;
+}
+bool building_t::cube_int_ext_door(cube_t const &c) const {
+	for (tquad_with_ix_t const &d : doors) { // exterior doors
+		if (!d.is_exterior_door() || d.type == tquad_with_ix_t::TYPE_RDOOR) continue;
+		if (c.intersects(d.get_bcube())) return 1;
+	}
+	return 0;
+}
 
 // for use with in dir lighting updates when interior doors are opened or closed
 void building_t::get_rooms_for_door(unsigned door_ix, int room_ix[2]) const {

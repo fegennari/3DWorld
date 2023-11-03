@@ -1835,9 +1835,9 @@ bool building_t::add_storage_objs(rand_gen_t rgen, room_t const &room, float zva
 			
 			if (is_garage_or_shed) {
 				// garage or shed - don't place shelves in front of door, but allow them against windows; basement - don't place against basement door
-				cube_t wall(room);
-				wall.d[dim][!dir] = wall.d[dim][dir]; // shrink room to zero width along this wall
-				if (is_room_adjacent_to_ext_door(wall)) continue;
+				cube_t room_wall(room);
+				room_wall.d[dim][!dir] = room.d[dim][dir]; // shrink room to zero width along this wall
+				if (is_room_adjacent_to_ext_door(room_wall)) continue;
 			}
 			else if (is_house && !is_basement && has_windows() && classify_room_wall(room, zval, dim, dir, 0) == ROOM_WALL_EXT) {
 				// don't place shelves against exterior house walls in case there are windows

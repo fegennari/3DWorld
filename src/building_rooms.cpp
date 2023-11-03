@@ -671,7 +671,7 @@ void building_t::maybe_add_fire_escape(rand_gen_t &rgen) {
 	if (!is_house) return; // houses only for now
 	// our hard-coded fire escape model is designed for a 5 story building; but the max number of floors for a 'house' is 5-6 anyway, which makes them relatively rare
 	if (!building_obj_model_loader.is_model_valid(OBJ_MODEL_FESCAPE)) return;
-	float const window_vspacing(get_window_vspace()), floor_thickness(get_floor_thickness()), fe_height(4.25*window_vspacing);
+	float const window_vspacing(get_window_vspace()), floor_thickness(get_floor_thickness()), wall_thickness(get_wall_thickness()), fe_height(4.25*window_vspacing);
 
 	for (auto p = parts.begin(); p != get_real_parts_end(); ++p) {
 		unsigned const num_floors(calc_num_floors(*p, window_vspacing, floor_thickness));
@@ -689,11 +689,13 @@ void building_t::maybe_add_fire_escape(rand_gen_t &rgen) {
 			cube_t fe_bc;
 			set_cube_zvals(fe_bc, p->z1(), (p->z1() + fe_height));
 			set_wall_width(fe_bc, rgen.rand_uniform((p->d[!dim][0] + 1.2*fe_hwidth), (p->d[!dim][1] - 1.2*fe_hwidth)), fe_hwidth, !dim);
-			fe_bc.d[dim][0] = fe_bc.d[dim][1] = p->d[dim][dir];
+			fe_bc.d[dim][0]    = fe_bc.d[dim][1] = p->d[dim][dir];
 			fe_bc.d[dim][dir] += (dir ? 1.0 : -1.0)*fe_depth;
+			cube_t fe_bc_exp(fe_bc);
+			fe_bc_exp.expand_by(wall_thickness); // needed for exterior door check
 			if (has_bcube_int_no_adj(fe_bc, parts))              continue; // check for intersection with other parts, in particular the chimney and fireplace
 			if (has_driveway() && fe_bc.intersects_xy(driveway)) continue; // skip if intersects driveway or garage
-			if (is_room_adjacent_to_ext_door(fe_bc, 0))          continue; // check exterior doors; front_door_only=0
+			if (cube_int_ext_door(fe_bc_exp))                    continue; // check exterior doors
 			interior->room_geom->objs.emplace_back(fe_bc, TYPE_FESCAPE, 0, dim, dir, 0, 1.0, SHAPE_CUBE, BLACK); // room_id=0
 			details.emplace_back(fe_bc, DETAIL_OBJ_COLLIDER);
 			union_with_coll_bcube(fe_bc);
@@ -751,10 +753,8 @@ void building_t::add_balconies(rand_gen_t &rgen) {
 					if ((p - parts.begin()) != room->part_id && p->intersects_no_adj(balcony_ext_down)) {bad_pos = 1; break;}
 				}
 				if (bad_pos) continue;
-				balcony_ext_out.expand_by_xy(wall_thickness); // for testing against upper floor doors
-				// check upper floor doors; we may want to create doors to balconies in the future
-				for (auto d = doors.begin(); d != doors.end() && !bad_pos; ++d) {bad_pos = balcony_ext_out.intersects(d->get_bcube());}
-				if (bad_pos) continue;
+				balcony_ext_out.expand_by_xy(0.2*floor_spacing); // for testing against upper floor doors
+				if (cube_int_ext_door(balcony_ext_out)) continue; // check exterior doors; we may want to create doors to balconies in the future
 				balcony.z2() -= 0.6*floor_spacing; // reduce wall height to 40%
 				balcony.expand_in_dim(!dim, wall_thickness); // expand slightly to include window frame and merge adj balcony shared walls
 				max_eq(balcony.d[!dim][0], (part.d[!dim][0] + 0.25f*wall_thickness)); // clamp slightly smaller than the containing part in !dim
