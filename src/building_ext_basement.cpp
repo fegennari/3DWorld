@@ -252,14 +252,15 @@ void building_t::maybe_assign_extb_room_as_swimming(rand_gen_t &rgen) {
 	} // for r
 	if (largest_valid_room < 0) return; // no valid room found
 	room_t &room(rooms[largest_valid_room]);
-	vect_door_stack_t &doorways(get_doorways_for_room(room, room.z1()));
-	assert(!doorways.empty());
-	door_stack_t const &door(doorways.front()); // choose the first door as the main entrance; there's likely only one
+	vect_door_stack_t &doorways(get_doorways_for_room(room, room.z1())); // choose the first door as the main entrance; there's likely only one
+	if (doorways.empty()) {std::cerr << "Error: No doorway found for pool in room " << room.str() << endl;} // can this ever fail?
 
 	// attempt to expand the room so that we can fit a larger pool; assume connected to a hallway with <door>, and expand away from door
 	float const wall_thickness(get_wall_thickness()), wall_pad(2.0*wall_thickness + get_trim_thickness()), exp_step(0.25*floor_spacing);
 	room_t const orig_room(room);
-	bool const exp_dim(door.dim), exp_dir(door.get_center_dim(exp_dim) < room.get_center_dim(exp_dim));
+	bool const long_dim(room.dx() < room.dy()); // likely door.dim
+	bool const exp_dim(doorways.empty() ? long_dim : doorways.front().dim);
+	bool const exp_dir(doorways.empty() ? rgen.rand_bool() : (doorways.front().get_center_dim(exp_dim) < room.get_center_dim(exp_dim)));
 	cube_t const &basement(get_basement());
 	// try to expand away from the first door, then expand to either side of the door, starting with a random side
 	bool const pref_exp_other_dir(rgen.rand_bool());
@@ -296,7 +297,6 @@ void building_t::maybe_assign_extb_room_as_swimming(rand_gen_t &rgen) {
 		for (unsigned d = 0; d < 2; ++d) {extend_adj_cubes(orig_room, room, interior->walls[d], wall_thickness, d);}
 		interior->basement_ext_bcube.union_with_cube(room);
 	}
-	bool const long_dim(room.dx() < room.dy()); // likely exp_dim
 	float const doorway_width(get_doorway_width()), fc_thickness(get_fc_thickness()), min_spacing(1.5*doorway_width), floor_zval(room.z1() + fc_thickness);
 	indoor_pool_t &pool(interior->pool);
 	pool.copy_from(get_walkable_room_bounds(room));
@@ -308,10 +308,11 @@ void building_t::maybe_assign_extb_room_as_swimming(rand_gen_t &rgen) {
 	if (pool_width < floor_spacing) return; // too small; shouldn't happen unless the door width to floor spacing values are wrong
 	if (extra_width > 0.0) {pool.expand_in_dim(!long_dim, -0.25*extra_width);} // can make narrower if there's extra space
 	pool.dim = long_dim; // or door.dim?
-	bool const dir(room.get_center_dim(pool.dim) < door.get_center_dim(pool.dim));
+	bool const dir(doorways.empty() ? rgen.rand_bool() : (room.get_center_dim(pool.dim) < doorways.front().get_center_dim(pool.dim)));
 	float const door_shift((dir ? -1.0 : 1.0)*0.5*doorway_width);
 	if (was_extended) {pool.d[pool.dim][dir] += door_shift;} // shift edge away from door
-	else {pool.translate_dim(pool.dim, door_shift);} // trnslate away from door
+	else {pool.translate_dim(pool.dim, door_shift);} // translate away from door
+	if (pool_length > 2.0*floor_spacing) {pool.d[pool.dim][!dir] -= door_shift;} // shrink pool on end opposite the door if long to make room for a diving board
 	pool.dir     = dir;
 	pool.room_ix = largest_valid_room;
 	pool.valid   = 1;
@@ -1213,7 +1214,6 @@ void building_t::get_pgbr_wall_ix_for_pos(point const &pos, index_pair_t &start,
 bool building_t::point_in_extended_basement(point const &pos) const {
 	if (!has_basement() || !interior)                  return 0;
 	if (interior->basement_ext_bcube.contains_pt(pos)) return 1;
-	//if (has_pool() && interior->pool.contains_pt(pos)) return 1; // pool is contained in basement_ext_bcube now, so not needed
 	return 0;
 }
 cube_t building_t::get_bcube_inc_extensions() const {
