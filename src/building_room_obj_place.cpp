@@ -1032,6 +1032,11 @@ float building_t::add_flooring(room_t const &room, float &zval, unsigned room_id
 	float const new_zval(zval + 0.0012*get_window_vspace());
 	cube_t flooring(get_walkable_room_bounds(room));
 	flooring.expand_by_xy(0.5*get_wall_thickness()); // expand to include half of the walls so that it meets the door and trim is added
+
+	if (!room.is_ext_basement() && room.part_id < real_num_parts) { // skip if ext basement, including backrooms bathrooms
+		if (parts[room.part_id].contains_cube(room)) {flooring.intersect_with_cube_xy(parts[room.part_id]);}
+		assert(flooring.is_strictly_normalized());
+	}
 	set_cube_zvals(flooring, zval, new_zval);
 	tot_light_amt = 0.5*tot_light_amt + 0.5; // brighten flooring so that lights shining through doors and flashlights look better
 	interior->room_geom->objs.emplace_back(flooring, TYPE_FLOORING, room_id, 0, 0, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CUBE, WHITE, flooring_type);
