@@ -555,6 +555,16 @@ unsigned check_bookcase_collision(room_object_t const &c, point &pos, point cons
 	cube_t const cubes[3] = {middle, lr[0], lr[1]}; // ignore top and back since they should be contained in middle
 	return check_cubes_collision(cubes, 3, pos, p_last, radius, cnorm);
 }
+unsigned check_bench_collision(room_object_t const &c, point &pos, point const &p_last, float radius, vector3d *cnorm) {
+	cube_t cubes[3]; // seat, lo side, hi side
+	get_bench_cubes(c, cubes);
+	return check_cubes_collision(cubes, 3, pos, p_last, radius, cnorm);
+}
+unsigned check_diving_board_collision(room_object_t const &c, point &pos, point const &p_last, float radius, vector3d *cnorm) {
+	cube_t cubes[2]; // board, base
+	get_diving_board_cubes(c, cubes);
+	return check_cubes_collision(cubes, 2, pos, p_last, radius, cnorm);
+}
 
 bool check_ramp_collision(room_object_t const &c, point &pos, point const &p_last, float radius, vector3d *cnorm) { // p_last is unused
 	if (!sphere_cube_intersect(pos, radius, c)) return 0;
@@ -1101,6 +1111,8 @@ bool building_interior_t::check_sphere_coll_room_objects(building_t const &build
 			else if (c->type == TYPE_CHAIR  ) {coll_ret |= check_chair_collision (*c, pos, p_last, radius, &cnorm);}
 			else if (c->type == TYPE_TUB    ) {coll_ret |= check_tub_collision   (*c, pos, p_last, radius, &cnorm, is_ball);}
 			else if (c->type == TYPE_BCASE  ) {coll_ret |= check_bookcase_collision(*c, pos, p_last, radius, &cnorm);}
+			else if (c->type == TYPE_BENCH  ) {coll_ret |= check_bench_collision   (*c, pos, p_last, radius, &cnorm);}
+			else if (c->type == TYPE_DIV_BOARD) {coll_ret |= check_diving_board_collision   (*c, pos, p_last, radius, &cnorm);}
 			else if (c->type == TYPE_RAMP   ) {coll_ret |= (unsigned)check_ramp_collision   (*c, pos, p_last, radius, &cnorm);}
 			else if (c->type == TYPE_BALCONY) {had_coll |= (unsigned)check_balcony_collision(*c, pos, p_last, radius, &cnorm);}
 			else if (c->type == TYPE_POOL_TABLE) {coll_ret |= check_pool_table_collision(*c, pos, p_last, radius, &cnorm);}
@@ -2014,6 +2026,11 @@ int building_t::check_line_coll_expand(point const &p1, point const &p2, float r
 			}
 			else if (c->type == TYPE_SHELVES) {
 				if (line_int_cube_exp(p1, p2, get_shelves_no_bot_gap(*c), expand)) return 9; // there's space under the shelves
+			}
+			else if (c->type == TYPE_BENCH) {
+				cube_t cubes[3]; // seat, lo side, hi side
+				get_bench_cubes(*c, cubes);
+				if (line_int_cubes_exp(p1, p2, cubes, 3, expand)) return 9;
 			}
 			else if (c->is_parked_car()) { // parked car
 				cube_t cubes[5];

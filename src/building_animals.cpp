@@ -363,6 +363,12 @@ bool can_hide_under(room_object_t const &c, cube_t &hide_area) {
 		hide_area = middle;
 		return 1;
 	}
+	else if (c.type == TYPE_BENCH) {
+		cube_t cubes[3]; // seat, lo side, hi side
+		get_bench_cubes(c, cubes);
+		hide_area = cubes[0]; // seat
+		return 1;
+	}
 	else if (c.type == TYPE_KSINK && get_dishwasher_for_ksink(c, dishwasher)) {
 		hide_area = dishwasher;
 		hide_area.d[c.dim][!c.dir] = c.d[c.dim][!c.dir]; // use the back of the cabinet, not the back of the dishwasher door

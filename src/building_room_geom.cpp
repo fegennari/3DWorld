@@ -4135,32 +4135,44 @@ void building_room_geom_t::add_pool_float(room_object_t const &c) {
 	get_material(tex, 1, 0, 1, (alpha < 1.0)).add_vert_torus_to_verts(c.get_cube_center(), ri, ro, colorRGBA(c.color, alpha), 1.0, 0); // shadowed, small
 }
 
-void building_room_geom_t::add_bench(room_object_t const &c) {
-	rgeom_mat_t &mat(get_untextured_material(1, 0, 1)); // shadowed, small
+void get_bench_cubes(room_object_t const &c, cube_t cubes[3]) { // seat, lo side, hi side
 	float const width(c.get_width());
 	cube_t top(c);
 	top.z1() += 0.8*c.dz();
-	mat.add_cube_to_verts_untextured(top, apply_light_color(c));
+	cubes[0] = top;
 
 	for (unsigned d = 0; d < 2; ++d) { // add legs on each side
 		cube_t leg(c);
 		leg.z2() = top.z1();
 		leg.expand_in_dim(!c.dim, -0.1*c.get_depth()); // shrink depth
 		set_wall_width(leg, (c.d[!c.dim][d] + (d ? -1.0 : 1.0)*0.03*width), 0.02*width, !c.dim);
-		mat.add_cube_to_verts_untextured(leg, apply_light_color(c, LT_GRAY), EF_Z12); // draw sides of legs, always light gray
+		cubes[d+1] = leg;
 	}
 }
-
-void building_room_geom_t::add_diving_board(room_object_t const &c) {
+void building_room_geom_t::add_bench(room_object_t const &c) {
 	rgeom_mat_t &mat(get_untextured_material(1, 0, 1)); // shadowed, small
+	cube_t cubes[3]; // seat, lo side, hi side
+	get_bench_cubes(c, cubes);
+	mat.add_cube_to_verts_untextured(cubes[0], apply_light_color(c)); // top
+	// add legs on each side; draw sides of legs, always light gray
+	for (unsigned d = 0; d < 2; ++d) {mat.add_cube_to_verts_untextured(cubes[d+1], apply_light_color(c, LT_GRAY), EF_Z12);}
+}
+
+void get_diving_board_cubes(room_object_t const &c, cube_t cubes[2]) { // board, base
 	float const length(c.get_length());
 	cube_t board(c), base(c);
-	board.z1() = base.z2() = c.z1() + 0.75*c.dz();
+	board.z1() = base.z2() = c.z1() + 0.85*c.dz();
 	base.expand_in_dim(!c.dim, -0.1*c.get_width()); // shrink width
 	base.d[c.dim][ c.dir] -= (c.dir ? 1.0 : -1.0)*0.75*length; // shorten end
 	base.d[c.dim][!c.dir] += (c.dir ? 1.0 : -1.0)*0.05*length; // inset other end
-	mat.add_cube_to_verts_untextured(board, apply_light_color(c));
-	mat.add_cube_to_verts_untextured(base,  apply_light_color(c, WHITE), EF_Z12); // draw sides of base, always white
+	cubes[0] = board; cubes[1] = base;
+}
+void building_room_geom_t::add_diving_board(room_object_t const &c) {
+	rgeom_mat_t &mat(get_untextured_material(1, 0, 1)); // shadowed, small
+	cube_t cubes[2]; // board, base
+	get_diving_board_cubes(c, cubes);
+	mat.add_cube_to_verts_untextured(cubes[0], apply_light_color(c)); // board
+	mat.add_cube_to_verts_untextured(cubes[1], apply_light_color(c, WHITE), EF_Z12); // base; draw sides of base, always white
 }
 
 void building_room_geom_t::add_debug_shape(room_object_t const &c) {
