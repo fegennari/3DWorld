@@ -788,8 +788,8 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, flo
 				if (!sphere_cube_intersect_xy(pos, xy_radius, *c)) continue; // optimization - not actually on the ramp
 				float &pos_dim(pos[c->dim]);
 				if (pos_dim < c->d[c->dim][0] || pos_dim > c->d[c->dim][1]) continue; // not yet over ramp
-				float const length(c->get_length()), height(c->dz()), t(CLIP_TO_01((pos_dim - c->d[c->dim][0])/length)), T(c->dir ? t : (1.0-t));
-				float const ztop(c->z1() + height*T), zbot(ztop - RAMP_THICKNESS_SCALE*height);
+				float const length(c->get_length()), height(c->dz()), t(CLIP_TO_01((pos_dim - c->d[c->dim][0])/length));
+				float const ztop(c->z1() + height*(c->dir ? t : (1.0-t))), zbot(ztop - RAMP_THICKNESS_SCALE*height);
 				float const player_height(camera_height + NEAR_CLIP); // include near clip for collisions with the bottom of ramps
 				float const player_bot_z(obj_z - radius), player_bot_z_step(player_bot_z + C_STEP_HEIGHT*radius), player_top_z(obj_z + player_height);
 					
@@ -906,7 +906,7 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, flo
 		float const submerge_amt(min(1.0f, ((interior->water_zval - z_feet) / (z_head - z_feet))));
 		// player can hide in a pool if head is underwater, but this doesn't affect zombies because they don't enter the pool anyway
 		player_is_hiding |= (submerge_amt == 1.0);
-		apply_speed_factor(pos, p_last, (1.0 - 0.5*submerge_amt)); // up to 2x slower when more submerged
+		apply_speed_factor(pos, p_last, (1.0 - 0.4*submerge_amt)); // up to 2x slower when more submerged
 	}
 	// not sure where this belongs, but the closet hiding logic is in this function, so I guess it goes here? player must be inside the building to see a windowless room anyway
 	player_in_unlit_room = check_pos_in_unlit_room(pos);
