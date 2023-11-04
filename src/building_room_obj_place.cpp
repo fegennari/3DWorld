@@ -2196,6 +2196,8 @@ void building_t::add_swimming_pool_room_objs(rand_gen_t rgen, room_t const &room
 	indoor_pool_t &pool(interior->pool);
 	float const floor_spacing(get_window_vspace()), trim_thickness(get_trim_thickness()), wall_thickness(get_wall_thickness());
 	float const tile_thickness(0.5*trim_thickness), water_gap(pool.z2() - interior->water_zval);
+	float const pool_len(pool.get_sz_dim(pool.dim)), pool_depth(interior->water_zval - pool.z1());
+	float const shallow_depth(0.5*floor_spacing); // about 4 feet
 	vect_room_object_t &objs(interior->room_geom->objs);
 	assert(water_gap > 0.0);
 	
@@ -2249,9 +2251,6 @@ void building_t::add_swimming_pool_room_objs(rand_gen_t rgen, room_t const &room
 		} // for wall
 	} // for d
 	// add a sloped ramp at the bottom if deep enough
-	float const pool_len(pool.get_sz_dim(pool.dim)), pool_depth(interior->water_zval - pool.z1());
-	float const shallow_depth(0.5*floor_spacing); // about 4 feet
-
 	if (pool_depth > 1.2*shallow_depth && pool_len > 3.0*floor_spacing) {
 		cube_t slope(pool), upper(pool);
 		slope.expand_in_dim(pool.dim, -0.25*pool_len); // shrink to middle 50% (cut 25% off of each end)

@@ -746,6 +746,8 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, flo
 			speed_factor = (is_u ? 0.875 : 0.75); // U-shaped stairs are a bit faster
 		} // for c
 		if (speed_factor < 1.0) {apply_speed_factor(pos, p_last, speed_factor);} // slow down when on stairs
+		point pos_high(pos); // capture before apply object collisions; used for diving board
+		max_eq(pos_high.z, p_last.z);
 
 		for (auto c = objs.begin(); c != objs.end(); ++c) { // check for other objects to collide with (including stairs)
 			if (!c->is_player_collidable()) continue;
@@ -812,6 +814,21 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, flo
 			} // end ramp case
 			cube_t c_extended(get_true_room_obj_bcube(*c));
 			if (c->type == TYPE_STAIR || c->type == TYPE_ATTIC_DOOR) {c_extended.z1() -= camera_height;} // handle the player's head for stairs and attic doors
+
+			if (c->type == TYPE_DIV_BOARD && c_extended.contains_pt_xy(pos)) {
+				// diving boards are special because the player can walk on them across different floor heights
+				vector3d coll_norm;
+
+				if (sphere_cube_int_update_pos(pos_high, xy_radius, c_extended, p_last, 0, &coll_norm)) {
+					had_coll = 1;
+
+					if (coll_norm.z == 1.0) { // update pos if on the top surface
+						pos = pos_high;
+						if (cnorm) {*cnorm = coll_norm;}
+					}
+					continue;
+				}
+			}
 			if (!sphere_cube_intersect(pos, xy_radius, c_extended)) continue; // optimization
 
 			if (c->type == TYPE_RAILING && !(c->flags & RO_FLAG_IN_POOL)) { // stairs railing, not on a pool
