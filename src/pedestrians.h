@@ -57,7 +57,7 @@ struct ai_path_t : public vector<point> {
 	void add(ai_path_t const &path) {vector_add_to(path, *this); uses_nav_grid |= path.uses_nav_grid;}
 };
 
-enum {AI_STOP=0, AI_WAITING, AI_NEXT_PT, AI_BEGIN_PATH, AI_AT_DEST, AI_MOVING, AI_TO_REMOVE,
+enum {AI_STOP=0, AI_WAITING, AI_NEXT_PT, AI_BEGIN_PATH, AI_AT_DEST, AI_MOVING, AI_TO_REMOVE, AI_IN_POOL,
 	  AI_WAIT_ELEVATOR, AI_ENTER_ELEVATOR, AI_ACTIVATE_ELEVATOR, AI_RIDE_ELEVATOR, AI_EXIT_ELEVATOR}; // elevator states
 enum {GOAL_TYPE_NONE=0, GOAL_TYPE_ROOM, GOAL_TYPE_ELEVATOR, GOAL_TYPE_PLAYER, GOAL_TYPE_PLAYER_LAST_POS, GOAL_TYPE_SOUND};
 

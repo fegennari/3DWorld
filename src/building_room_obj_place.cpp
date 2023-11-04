@@ -2252,6 +2252,7 @@ void building_t::add_swimming_pool_room_objs(rand_gen_t rgen, room_t const &room
 	} // for d
 	// add a sloped ramp at the bottom if deep enough
 	if (pool_depth > 1.2*shallow_depth && pool_len > 3.0*floor_spacing) {
+		interior->room_geom->pool_ramp_obj_ix = objs.size();
 		cube_t slope(pool), upper(pool);
 		slope.expand_in_dim(pool.dim, -0.25*pool_len); // shrink to middle 50% (cut 25% off of each end)
 		pool.shallow_zval = slope.z2() = upper.z2() = pool.z1() + shallow_depth; // shallow end

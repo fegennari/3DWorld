@@ -856,6 +856,7 @@ struct building_room_geom_t {
 	float obj_scale=1.0;
 	unsigned wall_ps_start=0, buttons_start=0, stairs_start=0, backrooms_start=0; // index of first object of {TYPE_PG_*|TYPE_PSPACE, TYPE_BUTTON, TYPE_STAIR}
 	unsigned init_num_doors=0, init_num_dstacks=0; // required for removing doors added by backrooms generation when room_geom is deleted
+	unsigned pool_ramp_obj_ix=0, pool_stairs_start_ix=0;
 	point tex_origin;
 	colorRGBA wood_color;
 	// objects in rooms; expanded_objs is for things that have been expanded for player interaction; model_objs is for models in drawers; trim_objs is for wall/door/window trim
@@ -1622,6 +1623,7 @@ struct building_t : public building_geom_t {
 	void all_ai_room_update(rand_gen_t &rgen, float delta_dir);
 	int ai_room_update(person_t &person, float delta_dir, unsigned person_ix, rand_gen_t &rgen);
 	int run_ai_elevator_logic(person_t &person, float delta_dir, rand_gen_t &rgen);
+	bool run_ai_pool_logic(person_t &person, float &speed_mult) const;
 	bool maybe_zombie_retreat(unsigned person_ix, point const &hit_pos);
 	void register_person_hit(unsigned person_ix, room_object_t const &obj, vector3d const &velocity);
 	//bool is_room_pg_or_backrooms(unsigned room_ix) const {return is_room_pg_or_backrooms(get_room(room_ix));}

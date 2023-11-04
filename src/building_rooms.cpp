@@ -1836,6 +1836,7 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 		}
 	} // for i (landings)
 	if (has_pool()) { // add pool stairs
+		interior->room_geom->pool_stairs_start_ix = objs.size();
 		indoor_pool_t const &pool(interior->pool);
 		cube_t pool_shallow(pool);
 		pool_shallow.z1() = pool.shallow_zval;
