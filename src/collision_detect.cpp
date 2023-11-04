@@ -1783,8 +1783,9 @@ void force_onto_surface_mesh(point &pos) { // for camera
 		if (frame_counter > 100) { // skip for first N frames from player spawn
 			if (delta_z < 0.0) { // falling
 				float const MAX_FALL_RATE = 2.0; // distance per tick in units of camera radius
+				float const fall_rate_mod(MAX_FALL_RATE*((player_in_water == 2) ? 0.05 : ((player_in_water == 1) ? 0.1 : 1.0))); // fall slower in water
 				float const fall_rate(-delta_rate);
-				if (fall_rate > MAX_FALL_RATE) {pos.z -= delta_z*(fall_rate - MAX_FALL_RATE)/fall_rate;}
+				if (fall_rate > fall_rate_mod) {pos.z -= delta_z*(fall_rate - fall_rate_mod)/fall_rate;}
 			}
 			else if (delta_z > 0.0 && pos.z != prev_zval) { // rising; only update when building coll changed zval
 				float const MAX_RISE_RATE = 2.0; // distance per tick in units of camera radius

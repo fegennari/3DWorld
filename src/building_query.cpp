@@ -872,9 +872,15 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, flo
 	for (unsigned d = 0; d < 2; ++d) { // apply attic roof pos reset at the end, to override other collisions that may move pos
 		if (reset_to_last_dims & (1<<d)) {pos[d] = p_last[d];}
 	}
-	handle_vert_cylin_tape_collision(pos, p_last, pos.z-radius, pos.z+camera_height, xy_radius, 1); // is_player=1
-	// player can hide in a pool if head is underwater, but this doesn't affect zombies because they don't enter the pool anyway
-	player_is_hiding |= (has_pool() && interior->pool.contains_pt(pos) && pos.z + camera_height < interior->water_zval);
+	float const z_feet(pos.z - radius), z_head(pos.z + camera_height);
+	handle_vert_cylin_tape_collision(pos, p_last, z_feet, z_head, xy_radius, 1); // is_player=1
+	
+	if (has_pool() && interior->pool.contains_pt_xy(pos) && z_feet < interior->water_zval) { // feet in the pool
+		float const submerge_amt(min(1.0f, ((interior->water_zval - z_feet) / (z_head - z_feet))));
+		// player can hide in a pool if head is underwater, but this doesn't affect zombies because they don't enter the pool anyway
+		player_is_hiding |= (submerge_amt == 1.0);
+		apply_speed_factor(pos, p_last, (1.0 - 0.5*submerge_amt)); // up to 2x slower when more submerged
+	}
 	// not sure where this belongs, but the closet hiding logic is in this function, so I guess it goes here? player must be inside the building to see a windowless room anyway
 	player_in_unlit_room = check_pos_in_unlit_room(pos);
 	prev_camera_height   = camera_height; // update for this frame
