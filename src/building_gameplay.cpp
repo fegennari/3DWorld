@@ -872,7 +872,7 @@ public:
 		player_near_toilet = 0;
 	}
 	colorRGBA get_vignette_color() const {
-		//if (oxygen < 0.1)         return colorRGBA(0.0, 0.0, 0.0, 10.0*(0.10 - oxygen)); // black; doesn't combine properly with underwater effect
+		if (oxygen < 0.1)         return colorRGBA(0.0, 0.0, 0.0, 10.0*(0.10 - oxygen)); // black; doesn't really work well
 		if (player_health < 0.25) return colorRGBA(1.0, 0.0, 0.0, 4.0 *(0.25 - player_health)); // red
 		if (is_poisoned)          return colorRGBA(0.0, 1.0, 0.0, 0.5); // green
 		if (bladder > 0.75)       return colorRGBA(1.0, 1.0, 0.0, 2.0*(bladder - 0.75)); // yellow

@@ -281,6 +281,7 @@ void add_postproc_underwater_fog(float atten_scale, float max_uw_dist, float mud
 	setup_depth_tex(s, 1);
 	setup_shader_underwater_atten(s, atten_scale, mud_amt);
 	fill_screen_white_and_end_shader(s);
+	color_buffer_frame = 0; // reset to invalidate buffer
 }
 
 void apply_player_underwater_effect(colorRGBA const &color_mod=WHITE, float intensity=1.0) {

@@ -11,7 +11,7 @@ unsigned const MAX_SPLASHES = 40; // must agree with fragment shader code
 float const BUBBLE_VELOCITY = 0.0002;
 
 
-extern int player_in_basement, player_in_water, animate2, display_mode;
+extern int player_in_basement, player_in_water, animate2, display_mode, color_buffer_frame;
 extern unsigned room_mirror_ref_tid;
 extern float fticks, CAMERA_RADIUS, water_plane_z;
 extern building_t const *player_building;
@@ -260,7 +260,7 @@ void building_t::draw_water(vector3d const &xlate) const {
 		for (unsigned n = 0; n < npts; ++n) {max_eq(max_uw_dist, p2p_dist(camera_bs, pts[n]));}
 		colorRGBA const pool_color(0.7, 0.8, 1.0), clear_color(0.4, 0.6, 1.0), mud_color(1.0, 0.6, 0.33);
 		colorRGBA uw_color(is_pool ? pool_color : blend_color(mud_color, clear_color, mud_amt, 0));
-		apply_player_underwater_effect(uw_color*min(1.0, 5.0*oxygen), intensity); // fade to black when oxygen is low
+		apply_player_underwater_effect(uw_color*min(1.0, 10.0*oxygen), intensity); // fade to black when oxygen is low
 		add_postproc_underwater_fog((is_pool ? 2.0 : 1.0)*WATER_COL_ATTEN*atten_scale, max_uw_dist, mud_amt);
 		bool const is_lit(is_room_lit(get_room_containing_pt(camera_bs), camera_bs.z));
 		colorRGBA const base_color(is_lit ? WHITE : DK_GRAY);
@@ -311,6 +311,7 @@ void building_t::draw_water(vector3d const &xlate) const {
 	draw_quad_verts_as_tris(verts, 4);
 	disable_blend();
 	reset_interior_lighting_and_end_shader(s);
+	color_buffer_frame = 0; // reset to invalidate buffer
 }
 
 
