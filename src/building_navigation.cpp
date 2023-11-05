@@ -504,6 +504,23 @@ public:
 		}
 		return 0;
 	}
+	static void choose_pt_xy_in_room_avoid_pool(point &pos, cube_t const &c, building_t const &building, unsigned room_ix, unsigned pt_ix, rand_gen_t &rgen) {
+		if (pt_ix < 4 && building.has_pool()) { // check for and handle the pool with a special case, since it can be difficult to navigate around
+			indoor_pool_t const &pool(building.interior->pool);
+
+			if (pool.room_ix == room_ix) { // this is the pool room
+				room_t const &room(building.get_room(room_ix));
+				bool const xd(pt_ix & 1), yd(pt_ix >> 1); // use pt_ix 0-3 to select a corner
+				float const xv(0.5*(room.d[0][xd] + pool.d[0][xd])), yv(0.5*(room.d[1][yd] + pool.d[1][yd])); // halfway between the room and pool
+
+				if (xv > c.x1() && xv < c.x2() && yv > c.y1() && yv < c.y2()) { // valid corner
+					pos.x = xv; pos.y = yv;
+					return;
+				}
+			}
+		}
+		for (unsigned d = 0; d < 2; ++d) {pos[d] = rgen.rand_uniform(c.d[d][0], c.d[d][1]);}
+	}
 	// add any necessary points to <path> that are required to get from <p1> to <p2> inside <walk_area> without intersecting <avoid>
 	// return: 0=failed, 1=regular path, 2=nav grid path
 	int connect_room_endpoints(vect_cube_t const &avoid, building_t const &building, cube_t const &walk_area, unsigned room_ix, point const &p1, point const &p2,
@@ -556,7 +573,7 @@ public:
 
 			for (unsigned n = 0; n < num_tries; ++n) { // make num_tries attempts
 				cube_t const &pref_bcube((use_pts_bcube && n < num_tries/2) ? pts_bcube : walk_area); // prefer point inside p1/p2 bcube (for backrooms)
-				choose_pt_xy_in_room(pos, pref_bcube, rgen); // choose a rand point in the room
+				choose_pt_xy_in_room_avoid_pool(pos, pref_bcube, building, room_ix, n, rgen); // choose a rand point in the room
 				if (check_pt_contained_xy(keepout, pos))       continue; // bad point
 				if (!building.check_pt_within_part_sides(pos)) continue; // outside non-cube building
 				bool const seg1_bad(check_line_int_xy(keepout, p1, pos)), seg2_bad(check_line_int_xy(keepout, pos, p2));
@@ -571,7 +588,7 @@ public:
 					bool success(0);
 
 					for (unsigned m = 0; m < 20; ++m) { // make 20 random attempts
-						choose_pt_xy_in_room(pos2, pref_bcube, rgen); // choose a rand point in the room
+						choose_pt_xy_in_room_avoid_pool(pos2, pref_bcube, building, room_ix, m, rgen); // choose a rand point in the room
 						if (!building.check_pt_within_part_sides(pos2)) continue; // outside non-cube building
 						if (!check_pt_contained_xy(keepout, pos2) && !check_line_int_xy(keepout, pos, pos2)) {success = 1; break;} // good point
 					}
