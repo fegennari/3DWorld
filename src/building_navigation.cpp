@@ -1804,14 +1804,17 @@ bool building_t::run_ai_pool_logic(person_t &person, float &speed_mult) const {
 	float const dz(zval - person.pos.z), max_dz(0.1*fticks*CAMERA_RADIUS);
 	if (dz > 0.0) {person.pos.z += min( dz, max_dz);} // climbing stairs or ramp
 	else          {person.pos.z -= min(-dz, max_dz);} // falling
-	// move toward the stairs
 	float const radius(person.radius); // Note: not using COLL_RADIUS_SCALE here
-	cube_t pool_exp(pool);
-	pool_exp.expand_by_xy(radius);
-	vector3d move_dir;
-	move_dir[pool.dim] = (pool.dir ? 1.0 : -1.0);
-	person.target_pos  = person.pos + move_dir*(pool_exp.dx() + pool_exp.dy()); // move toward the pool exit in X or Y
-	pool_exp.clamp_pt_xy(person.target_pos); // slightly outside the pool
+	
+	if (dz > -radius) { // move toward the stairs once we're near the bottom
+		cube_t pool_exp(pool);
+		pool_exp.expand_by_xy(radius);
+		vector3d move_dir;
+		move_dir[pool.dim] = (pool.dir ? 1.0 : -1.0);
+		person.target_pos  = person.pos + move_dir*(pool_exp.dx() + pool_exp.dy()); // move toward the pool exit in X or Y
+		person.target_pos[!pool.dim] = max((pool.d[!pool.dim][0] + 2.0f*radius), min((pool.d[!pool.dim][1] - 2.0f*radius), person.target_pos[!pool.dim])); // avoid railings
+		pool_exp.clamp_pt_xy(person.target_pos); // slightly outside the pool
+	}
 	// force person inside the pool walls
 	float const submerge_amt(min(1.0f, ((interior->water_zval - z_feet) / (z_head - z_feet))));
 	cube_t pool_clip(pool);
@@ -1819,6 +1822,7 @@ bool building_t::run_ai_pool_logic(person_t &person, float &speed_mult) const {
 	pool_clip.d[pool.dim][pool.dir] = pool_room.d[pool.dim][pool.dir]; // no clipping at the pool exit end
 	pool_clip.clamp_pt_xy(person.pos);
 	speed_mult *= (1.0 - 0.4*submerge_amt); // slower when in the water
+	person.in_pool = 1;
 	return 1; // in the pool
 }
 
@@ -2030,7 +2034,10 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 	}
 	if (person.ai_state >= AI_WAIT_ELEVATOR) {return run_ai_elevator_logic(person, delta_dir, rgen);} // handle elevator case
 	person.must_re_call_elevator = 0; // reset if we got out of the elevator logic with this set
-	bool const in_pool(run_ai_pool_logic(person, speed_mult)); // handle AI inside the pool; this can happen for zombies
+	bool const prev_in_pool(person.in_pool);
+	person.in_pool = 0; // reset for this frame
+	run_ai_pool_logic(person, speed_mult); // handle AI inside the pool; this can happen for zombies
+	if (prev_in_pool && !person.in_pool) {person.retreat_time = 0.5*TICKS_PER_SECOND;} // retreat for 0.5s to avoid falling back into the pool chasing the player
 	build_nav_graph();
 
 	if (can_ai_follow_player(person, allow_diff_building)) { // check for player intersection/damage
@@ -2067,7 +2074,7 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 		}
 	}
 	bool choose_dest(!person.target_valid());
-	bool const update_path(!in_pool && need_to_update_ai_path(person)), has_rgeom(has_room_geom());
+	bool const update_path(!person.in_pool && need_to_update_ai_path(person)), has_rgeom(has_room_geom());
 	// if room objects spawn in, select a new dest to avoid walking through objects based on our previous, possibly invalid path
 	if (has_rgeom && !person.has_room_geom) {person.abort_dest();}
 	person.has_room_geom = has_rgeom;
@@ -2184,7 +2191,7 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 	else { // optimization for aligned dir
 		new_pos = person.pos + max_dist*person.dir;
 	}
-	if (!in_pool) { // make sure the person is inside the building, in case they were pushed by another person
+	if (!person.in_pool) { // make sure the person is inside the building, in case they were pushed by another person
 		cube_t clip_cube;
 		
 		if (has_basement() && new_pos.z < ground_floor_z1) { // in the basement
@@ -2298,7 +2305,7 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 	float const true_z1(point_in_extended_basement_not_basement(new_pos) ? get_bcube_z1_inc_ext_basement() : bcube.z1());
 	float const min_valid_zval(true_z1 + get_fc_thickness() + person.radius), max_valid_zval(bcube.z2() - person.radius); // Note: max should include the attic
 
-	if (/*player_in_this_building &&*/ !in_pool && !person.on_stairs() && person.cur_room >= 0) { // movement in XY, not on stairs, room is valid: snap to nearest floor
+	if (/*player_in_this_building &&*/ !person.in_pool && !person.on_stairs() && person.cur_room >= 0) { // movement in XY, not on stairs, room is valid: snap to nearest floor
 		// this is optional and is done just in case something went wrong
 		room_t room(get_room(person.cur_room));
 
@@ -2327,15 +2334,18 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 	if (player_in_this_building || enable_bl_update) {person.cur_room = get_room_containing_pt(person.pos);}
 	person.idle_time = 0.0; // reset idle time if we actually move
 
-	// create splashes if head is above the water
-	if (point_in_water_area(point(person.pos.x, person.pos.y, person.get_z1()), 0) && person.get_z2() > interior->water_zval) { // full_room_height=0
+	// create splashes if just fell in the pool, or if head is above the water
+	if (!prev_in_pool && person.in_pool) { // fell in
+		check_for_water_splash(person.pos, 1.5, 1, 1, 1); // full_room_height=1, draw_splash=1, alert_zombies=1
+	}
+	else if (point_in_water_area(point(person.pos.x, person.pos.y, person.get_z1()), 0) && person.get_z2() > interior->water_zval) { // full_room_height=0
 		float const splash_dist(2.0*person.radius);
 
 		if (round_fp(old_anim_time/splash_dist) != round_fp(person.anim_time/splash_dist)) { // update every splash_dist
 			check_for_water_splash(person.pos, 1.0, 1, 0, 0); // full_room_height=1, draw_splash=0, alert_zombies=0
 		}
 	}
-	return (in_pool ? AI_IN_POOL : AI_MOVING);
+	return (person.in_pool ? AI_IN_POOL : AI_MOVING);
 }
 
 void building_t::ai_room_lights_update(person_t const &person) {

@@ -66,7 +66,8 @@ struct person_t : public person_base_t { // building person
 	int cur_bldg=-1, cur_room=-1, dest_room=-1; // Note: -1 is unassigned
 	unsigned short cur_rseed=1;
 	uint8_t goal_type=GOAL_TYPE_NONE, cur_elevator=0, dest_elevator_floor=0, ai_state=AI_STOP;
-	bool following_player=0, saw_player_hide=0, is_on_stairs=0, has_key=0, is_first_path=1, on_new_path_seg=0, last_used_elevator=0, must_re_call_elevator=0, has_room_geom=0;
+	bool following_player=0, saw_player_hide=0, is_on_stairs=0, has_key=0, is_first_path=1, on_new_path_seg=0;
+	bool last_used_elevator=0, must_re_call_elevator=0, has_room_geom=0, in_pool=0;
 	ai_path_t path; // stored backwards, next point on path is path.back()
 
 	person_t(float radius_) : person_base_t(radius_) {in_building = 1;}
