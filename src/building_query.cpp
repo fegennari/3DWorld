@@ -1755,7 +1755,7 @@ bool room_object_t::is_spider_collidable() const { // include objects on the flo
 		if (type != TYPE_LIGHT && type != TYPE_BRSINK && type != TYPE_MIRROR && type != TYPE_MWAVE && type != TYPE_HANGER_ROD &&
 			type != TYPE_LAPTOP && type != TYPE_MONITOR && type != TYPE_CLOTHES && type != TYPE_TOASTER && type != TYPE_CABINET) return 0;
 	}
-	if (type == TYPE_CEIL_FAN || type == TYPE_OFF_CHAIR) return 0; // not a cube
+	if (type == TYPE_CEIL_FAN || type == TYPE_OFF_CHAIR || type == TYPE_POOL_LAD) return 0; // not a cube
 	if (type == TYPE_BOOK) return 0; // I guess books don't count, since they're too small to walk on?
 	return 1;
 }
@@ -1814,7 +1814,7 @@ void get_approx_car_cubes(room_object_t const &cb, cube_t cubes[5]) {
 // for spiders; lg_cubes and sm_cubes are currently handled the same
 void building_t::get_room_obj_cubes(room_object_t const &c, point const &pos, vect_cube_t &lg_cubes, vect_cube_t &sm_cubes, vect_cube_t &non_cubes) const {
 	if (c.is_round()) {non_cubes.push_back(c);}
-	else if (c.type == TYPE_RAILING || c.type == TYPE_SHELVES || c.type == TYPE_RAMP || c.type == TYPE_BALCONY) {non_cubes.push_back(c);} // non-cubes
+	else if (c.type == TYPE_RAILING || c.type == TYPE_SHELVES || c.type == TYPE_RAMP || c.type == TYPE_BALCONY || c.type == TYPE_POOL_LAD) {non_cubes.push_back(c);} // non-cubes
 	else if (c.type == TYPE_CLOSET && (c.is_open() || c.contains_pt(pos))) {
 		cube_t cubes[5];
 		get_closet_cubes(c, cubes, 1); // get cubes for walls and door; for_collision=1

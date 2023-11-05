@@ -187,7 +187,7 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_FOLD_SHIRT] = bldg_obj_type_t(0, 0, 0, 1, 0, 1, 2, 10.0,  0.25,  "folded shirt"); // drawn as a small static object when expanded (in a drawer)
 	bldg_obj_types[TYPE_PLANT_MODEL]= bldg_obj_type_t(0, 1, 1, 1, 0, 1, 0, 15.0,  5.0,   "potted plant"); // AI collides with plants on the floor
 	bldg_obj_types[TYPE_POOL_TABLE] = bldg_obj_type_t(1, 1, 1, 1, 0, 1, 0, 400.0, 250.0, "pool table");
-	bldg_obj_types[TYPE_POOL_LAD  ] = bldg_obj_type_t(0, 0, 0, 0, 1, 1, 0, 200.0, 35.0,  "pool ladder");
+	bldg_obj_types[TYPE_POOL_LAD  ] = bldg_obj_type_t(0, 0, 1, 0, 1, 1, 0, 200.0, 35.0,  "pool ladder");
 	// animals; not room objects
 	bldg_obj_types[TYPE_RAT       ] = bldg_obj_type_t(0, 0, 1, 1, 0, 1, 0, 8.99,  1.0,   "rat"); // can be picked up
 	bldg_obj_types[TYPE_ROACH     ] = bldg_obj_type_t(0, 0, 0, 1, 0, 1, 0, 0.0,   0.01,  "cockroach");
