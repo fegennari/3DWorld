@@ -425,7 +425,7 @@ public:
 	bool is_fully_connected() const {return (count_connected_components() == 1);}
 
 	// Note: assumes zvals are already checked
-	static bool is_valid_pos(vect_cube_t const &avoid, building_t const &building, point const &pos, float radius, float height) {
+	static bool is_valid_pos(vect_cube_t const &avoid, building_t const &building, point const &pos, float radius) {
 		cube_t c(pos, pos);
 		c.expand_by_xy(radius);
 
@@ -444,7 +444,7 @@ public:
 		vector2d const &pt(node.conn_rooms.front().pt[up_or_down]); // Note: all conn_rooms should be the same value
 		return point(pt.x, pt.y, zval);
 	}
-	static bool find_valid_pt_in_room(vect_cube_t const &avoid, building_t const &building, float radius, float height, float zval,
+	static bool find_valid_pt_in_room(vect_cube_t const &avoid, building_t const &building, float radius, float zval,
 		cube_t const &room, rand_gen_t &rgen, point &pos, bool no_use_init=0)
 	{
 		if (!no_use_init && avoid.empty()) return 1; // no colliders, any point is valid, choose the initial point (which should be the room center)
@@ -459,7 +459,7 @@ public:
 		point orig_pos(pos);
 
 		for (unsigned n = 0; n < 100; ++n) { // 100 random tries to find a valid dest_pos
-			if (is_valid_pos(avoid, building, pos, radius, height)) return 1; // success
+			if (is_valid_pos(avoid, building, pos, radius)) return 1; // success
 			choose_pt_xy_in_room(pos, place_area, rgen); // choose a random new point in the room
 		}
 		pos = orig_pos; // use orig value as failed point
@@ -478,7 +478,7 @@ public:
 		float const blend_val(1.0/SQRT2);
 		return blend_val * pos + (1.0 - blend_val)*point(part_center.x, part_center.y, pos.z);
 	}
-	point find_valid_room_dest(vect_cube_t const &avoid, building_t const &building, float radius, float height, float zval, unsigned node_ix,
+	point find_valid_room_dest(vect_cube_t const &avoid, building_t const &building, float radius, float zval, unsigned node_ix,
 		bool up_or_down, bool &not_room_center, rand_gen_t &rgen, bool no_use_init, point const *const custom_dest) const
 	{
 		node_t const &node(get_node(node_ix));
@@ -486,7 +486,7 @@ public:
 		point pos;
 		if (custom_dest != nullptr) {pos = *custom_dest;}
 		else {pos = get_room_center(building, node.bcube, zval);} // first candidate is the center of the room
-		if (find_valid_pt_in_room(avoid, building, radius, height, zval, node.bcube, rgen, pos, no_use_init)) {not_room_center = 1;} // success
+		if (find_valid_pt_in_room(avoid, building, radius, zval, node.bcube, rgen, pos, no_use_init)) {not_room_center = 1;} // success
 		return pos;
 	}
 
@@ -633,7 +633,7 @@ public:
 		return walk_area;
 	}
 	bool reconstruct_path(vector<a_star_node_state_t> const &state, vect_cube_t const &avoid, building_t const &building, point const &cur_pt,
-		float radius, float height, unsigned start_ix, unsigned end_ix, unsigned ped_ix, bool is_first_path, bool up_or_down, unsigned ped_rseed,
+		float radius, unsigned start_ix, unsigned end_ix, unsigned ped_ix, bool is_first_path, bool up_or_down, unsigned ped_rseed,
 		point const *const custom_dest, ai_path_t &path) const
 	{
 		unsigned n(start_ix);
@@ -655,7 +655,7 @@ public:
 				for (unsigned N = 0; N < 10; ++N) { // keep retrying until we find a point that is reachable from the doorway
 					bool const no_use_init(N > 0); // choose a random new point on iterations after the first one
 					bool not_room_center(0);
-					point const end_point(find_valid_room_dest(avoid, building, radius, height, cur_pt.z, start_ix, up_or_down, not_room_center, rgen, no_use_init, custom_dest));
+					point const end_point(find_valid_room_dest(avoid, building, radius, cur_pt.z, start_ix, up_or_down, not_room_center, rgen, no_use_init, custom_dest));
 					path.add(end_point);
 					if (node.is_vert_conn()) {success = 1; break;} // done, don't need to run code below
 					point const room_exit(closest_room_pt(walk_area, next)); // first doorway
@@ -762,7 +762,7 @@ public:
 	}
 	
 	// A* algorithm; Note: path is stored backwards
-	bool find_path_points(unsigned room1, unsigned room2, unsigned ped_ix, float radius, float height, bool use_stairs, bool is_first_path,
+	bool find_path_points(unsigned room1, unsigned room2, unsigned ped_ix, float radius, bool use_stairs, bool is_first_path,
 		bool up_or_down, unsigned ped_rseed, vect_cube_t const &avoid, building_t const &building, point const &cur_pt,
 		vect_door_t const &doors, bool has_key, point const *const custom_dest, ai_path_t &path) const
 	{
@@ -804,7 +804,7 @@ public:
 				sn.path_pt.assign(pt.x, pt.y, cur_pt.z);
 				
 				if (i->ix == room2) { // done, reconstruct path (in reverse)
-					return reconstruct_path(state, avoid, building, cur_pt, radius, height, i->ix, room1, ped_ix, is_first_path, up_or_down, ped_rseed, custom_dest, path);
+					return reconstruct_path(state, avoid, building, cur_pt, radius, i->ix, room1, ped_ix, is_first_path, up_or_down, ped_rseed, custom_dest, path);
 				}
 				sn.g_score = new_g_score;
 				sn.f_score = sn.g_score + p2p_dist_xy(conn_center, dest_pos);
@@ -1081,7 +1081,7 @@ bool building_t::select_person_dest_in_room(person_t &person, rand_gen_t &rgen, 
 	static vect_cube_t avoid; // reuse across frames/people
 	get_avoid_cubes(person.target_pos.z, height, radius, avoid, 0); // following_player=0
 	bool const no_use_init(is_room_pg_or_backrooms(room)); // don't use the room center for a parking garage or backrooms
-	if (!interior->nav_graph->find_valid_pt_in_room(avoid, *this, radius, height, person.target_pos.z, room, rgen, dest_pos, no_use_init)) return 0;
+	if (!interior->nav_graph->find_valid_pt_in_room(avoid, *this, radius, person.target_pos.z, room, rgen, dest_pos, no_use_init)) return 0;
 	
 	if (!is_cube()) { // non-cube building
 		cube_t const person_bcube(person.get_bcube() + (dest_pos - person.pos)); // bcube, but translated to dest_pos
@@ -1402,14 +1402,14 @@ bool building_t::find_route_to_point(person_t const &person, float radius, bool 
 			ai_path_t from_path;
 			// Note: passing use_stairs=0 here because it's unclear if we want to go through stairs nodes in our A* algorithm
 			// from => stairs/ramp
-			if (!interior->nav_graph->find_path_points(loc1.room_ix, stairs_room_ix, person.ssn, radius, height, 0, is_first_path,
+			if (!interior->nav_graph->find_path_points(loc1.room_ix, stairs_room_ix, person.ssn, radius, 0, is_first_path,
 				up_or_down, person.cur_rseed, avoid, *this, from, interior->doors, person.has_key, nullptr, from_path)) continue; // no custom_dest
 			point const seg2_start(interior->nav_graph->get_stairs_entrance_pt(to.z, stairs_room_ix, !up_or_down)); // other end
 			assert(point_in_building_or_basement_bcube(seg2_start));
 			// new floor, new zval, new avoid cubes
 			interior->get_avoid_cubes(avoid, (seg2_start.z - radius), (seg2_start.z + z2_add), 0.5*radius, get_floor_thickness(), following_player, get_floor_ceil_gap());
 			// stairs/ramp => to
-			if (!interior->nav_graph->find_path_points(stairs_room_ix, loc2.room_ix, person.ssn, radius, height, 0, is_first_path,
+			if (!interior->nav_graph->find_path_points(stairs_room_ix, loc2.room_ix, person.ssn, radius, 0, is_first_path,
 				!up_or_down, person.cur_rseed, avoid, *this, seg2_start, interior->doors, person.has_key, nullptr, path)) continue; // no custom_dest
 			assert(!path.empty() && !from_path.empty());
 			path.add(seg2_start); // other end of the stairs
@@ -1449,7 +1449,7 @@ bool building_t::find_route_to_point(person_t const &person, float radius, bool 
 	assert(loc1.room_ix != loc2.room_ix);
 	// if the target is an elevator, use that as the preferred destination rather than the center of the room
 	point const *const custom_dest((person.goal_type == GOAL_TYPE_ELEVATOR) ? &person.target_pos : nullptr);
-	if (!interior->nav_graph->find_path_points(loc1.room_ix, loc2.room_ix, person.ssn, radius, height, 0, is_first_path,
+	if (!interior->nav_graph->find_path_points(loc1.room_ix, loc2.room_ix, person.ssn, radius, 0, is_first_path,
 		0, person.cur_rseed, avoid, *this, from, interior->doors, person.has_key, custom_dest, path)) return 0;
 	assert(!path.empty());
 	return 1;
