@@ -2262,7 +2262,7 @@ void building_t::add_swimming_pool_room_objs(rand_gen_t rgen, room_t const &room
 	}
 	unsigned const objs_start(objs.size()); // we can start here, since the pool tile objects placed above don't collide with other placed objects
 
-	if (pool_len > 3.5*floor_spacing && pool_depth > 0.9*floor_spacing) { // add a diving board if long and deep
+	if (pool_len > 5.0*floor_spacing && pool_depth > 0.9*floor_spacing && rgen.rand_float() < 0.75) { // maybe add a diving board if long and deep
 		cube_t dboard;
 		set_cube_zvals(dboard, zval, (zval + 0.11*floor_spacing));
 		set_wall_width(dboard, pool.get_center_dim(!pool.dim), 0.1*floor_spacing, !pool.dim); // width
