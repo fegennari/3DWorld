@@ -69,7 +69,7 @@ public:
 		} // for s
 		splashes.erase(std::remove_if(splashes.begin(), splashes.end(), [](splash_t const &s) {return (s.height < 0.0005);}), splashes.end());
 	}
-	void set_shader_uniforms(shader_t &s) {
+	void set_shader_uniforms(shader_t &s, bool is_pool) {
 		assert(splashes.size() <= MAX_SPLASHES);
 		unsigned const iter_end(max((unsigned)splashes.size(), last_size));
 		char str[32] = {};
@@ -81,6 +81,7 @@ public:
 			s.add_uniform_vector4d(str, ((i < splashes.size()) ? splashes[i].get_bounds_as_vec4() : vector4d())); // set unused slots to all zeros
 		}
 		s.add_uniform_float("time", time/TICKS_PER_SECOND);
+		s.add_uniform_float("ripple_freq", (is_pool ? 20.0 : 10.0)); // higher frequency ripples in pools
 		last_size = splashes.size();
 	}
 	void clear() {splashes.clear();} // Note: last_size is not reset
@@ -291,7 +292,7 @@ void building_t::draw_water(vector3d const &xlate) const {
 	s.add_uniform_float("water_depth",   water_depth);
 	s.add_uniform_float("foam_scale",    min(1.0f, 0.1f*floor_spacing/water_depth)); // higher with shallow water, lower with deep water
 	setup_shader_underwater_atten(s, atten_scale, mud_amt); // attenuates to dark blue (or brown for mud)/opaque around this distance
-	building_splash_manager.set_shader_uniforms(s);
+	building_splash_manager.set_shader_uniforms(s, is_pool);
 	bind_frame_buffer_RGB(8); // tu_id=8
 	s.add_uniform_int("frame_buffer", 8); // tu_id=8
 	bind_depth_buffer( 9); // tu_id=9

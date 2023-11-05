@@ -3,6 +3,7 @@
 const float PI = 3.14159;
 
 uniform float water_depth, water_atten, foam_scale, time;
+uniform float ripple_freq = 10.0;
 uniform vec3 uw_atten_max, uw_atten_scale;
 uniform sampler2D reflection_tex, frame_buffer;
 
@@ -44,7 +45,7 @@ void atten_color(inout vec3 color, in float atten) {
 }
 
 float calc_water_height(in float dist) {
-	return sin(10.0*PI*dist*water_atten - 4.0*time); // expand outward with time
+	return sin(ripple_freq*PI*dist*water_atten - 4.0*time); // expand outward with time
 }
 vec4 get_splash_amplitude() { // returns {signed_amplitude, abs_mag_amplitude, amp_dx, amp_dy}
 	float splash_amp = 0.0;
