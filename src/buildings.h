@@ -1340,7 +1340,7 @@ struct building_interior_t {
 	bool line_coll(building_t const &building, point const &p1, point const &p2, point &p_int) const;
 	point find_closest_pt_on_obj_to_pos(building_t const &building, point const &pos, float pad_dist, bool no_ceil_floor) const;
 	void update_dynamic_draw_data() {assert(room_geom); room_geom->update_dynamic_draw_data();}
-	void get_avoid_cubes(vect_cube_t &avoid, float z1, float z2, float r_shrink_if_low, float floor_thickness,
+	void get_avoid_cubes(vect_cube_t &avoid, float z1, float z2, float r_shrink_if_low, float floor_thickness, float floor_ceil_gap,
 		bool same_as_player, bool skip_stairs=0, cube_t const *const fires_select_cube=nullptr) const;
 	void create_fc_occluders();
 	void place_exterior_room(extb_room_t const &room, cube_t const &wall_area, float fc_thick, float wall_thick, ext_basement_room_params_t &P,
@@ -1751,6 +1751,7 @@ public:
 	float get_floor_below_water_level() const;
 	cube_t get_water_cube(bool full_room_height=0) const;
 	bool point_in_water_area(point const &p, bool full_room_height=1) const;
+	bool point_in_or_above_pool(point const &pt) const;
 	bool set_float_height(point &pos, float radius, float ceil_zval, float density=0.5) const;
 	void print_building_manifest() const;
 	void print_building_stats() const;
@@ -1949,7 +1950,6 @@ private:
 	void ensure_doors_to_room_are_closed(room_t const &room, unsigned doors_start, bool ensure_locked=0);
 	unsigned get_floor_for_zval(float zval) const {return unsigned((zval - get_bcube_z1_inc_ext_basement())/get_window_vspace());}
 	building_loc_t get_building_loc_for_pt(point const &pos) const;
-	bool point_in_or_above_pool(point const &pt) const;
 	bool same_room_and_floor_as_player(person_t const &person) const;
 	bool is_player_visible(person_t const &person, unsigned vis_test) const;
 	bool can_target_player(person_t const &person) const;

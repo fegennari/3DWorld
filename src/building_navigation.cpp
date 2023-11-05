@@ -725,6 +725,7 @@ public:
 						point new_to(to + (float(n)/10)*(from - to));
 						//if (!walk_area.contains_pt(new_to)) continue; // can fail for player hiding in a closet
 						walk_area.clamp_pt_xy(new_to);
+						if (building.point_in_or_above_pool(new_to)) continue;
 						
 						if (connect_room_endpoints(avoid, building, walk_area, room_ix, new_to, from, radius, path, keepout, rgen, 0, 1)) { // ignore_p1_coll=0, ignore_p2_coll=1
 							assert(sub_path_start < path.size());
@@ -996,7 +997,7 @@ bool building_t::choose_dest_goal(person_t &person, rand_gen_t &rgen) const { //
 			person.goal_type = GOAL_TYPE_SOUND;
 		}
 	}
-	if (!goal.is_valid()) return 0; // player or sound
+	if (!goal.is_valid()) return 0; // no player or sound
 	unsigned const cand_room(goal.room_ix);
 	room_t const &room(get_room(cand_room)); // target room
 	if (!interior->nav_graph->is_room_connected_to(loc.room_ix, cand_room, interior->doors, person.pos.z, person.has_key)) return 0; // unreachable
@@ -1069,6 +1070,12 @@ bool building_t::choose_dest_goal(person_t &person, rand_gen_t &rgen) const { //
 			}
 			if (!any_updated) break; // done
 		} // for n
+		if (has_pool()) { // move target_pos so that a sphere around it doesn't intersect the pool
+			cube_t pool(interior->pool);
+			pool.z2() += get_floor_ceil_gap(); // expand to the height of the room
+			sphere_cube_int_update_pos(person.target_pos, person.radius, pool, person.pos);
+			person.target_pos.z = person.pos.z; // zval must be unchanged
+		}
 	}
 	return 1;
 }
@@ -1215,7 +1222,7 @@ template<typename T> void add_bcube_if_overlaps_zval(vector<T> const &cubes, vec
 
 // for AI collision detection
 void building_interior_t::get_avoid_cubes(vect_cube_t &avoid, float z1, float z2, float r_shrink_if_low, float floor_thickness,
-	bool same_as_player, bool skip_stairs, cube_t const *const fires_select_cube) const
+	float floor_ceil_gap, bool same_as_player, bool skip_stairs, cube_t const *const fires_select_cube) const
 {
 	avoid.clear();
 	if (!skip_stairs) {add_bcube_if_overlaps_zval(stairwells, avoid, z1, z2);} // clearance not required
@@ -1223,7 +1230,7 @@ void building_interior_t::get_avoid_cubes(vect_cube_t &avoid, float z1, float z2
 	
 	if (pool.valid) { // skip if !same_as_player to allow zombies in pools?
 		avoid.push_back(pool);
-		avoid.back().z2() += floor_thickness; // increase height so that it overlaps a person standing over it
+		avoid.back().z2() += floor_ceil_gap; // increase height so that it overlaps a person standing over it
 	}
 	if (!room_geom) return; // no room objects
 	auto objs_end(room_geom->get_placed_objs_end()); // skip buttons/stairs/elevators
@@ -1405,7 +1412,7 @@ bool building_t::find_route_to_point(person_t const &person, float radius, bool 
 			point const seg2_start(interior->nav_graph->get_stairs_entrance_pt(to.z, stairs_room_ix, !up_or_down)); // other end
 			assert(point_in_building_or_basement_bcube(seg2_start));
 			// new floor, new zval, new avoid cubes
-			interior->get_avoid_cubes(avoid, (seg2_start.z - radius), (seg2_start.z + z2_add), 0.5*radius, get_floor_thickness(), following_player);
+			interior->get_avoid_cubes(avoid, (seg2_start.z - radius), (seg2_start.z + z2_add), 0.5*radius, get_floor_thickness(), following_player, get_floor_ceil_gap());
 			// stairs/ramp => to
 			if (!interior->nav_graph->find_path_points(stairs_room_ix, loc2.room_ix, person.ssn, radius, height, 0, is_first_path,
 				!up_or_down, person.cur_rseed, avoid, *this, seg2_start, interior->doors, person.has_key, nullptr, path)) continue; // no custom_dest
