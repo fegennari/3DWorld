@@ -256,6 +256,7 @@ void building_params_t::init_kw_maps() {
 	kwmu.add("people_per_house_max",  people_per_house_max);
 	kwmf.add("ai_retreat_time",       ai_retreat_time);
 	kwmr.add("people_min_alpha",      people_min_alpha, FP_CHECK_01);
+	kwmu.add("player_model_ix",       player_model_ix);
 	// AI elevators
 	kwmb.add("allow_elevator_line",         allow_elevator_line);
 	kwmb.add("no_coll_enter_exit_elevator", no_coll_enter_exit_elevator);

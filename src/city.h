@@ -908,6 +908,8 @@ public:
 	void draw(vector3d const &xlate, bool use_dlights, bool shadow_only, bool is_dlight_shadows);
 	void gen_and_draw_people_in_building(ped_draw_vars_t const &pdv);
 	void draw_people_in_building(vector<person_t> const &people, ped_draw_vars_t const &pdv);
+	unsigned get_player_model_id();
+	bool is_player_model_female();
 	void draw_player_model(shader_t &s, vector3d const &xlate, bool shadow_only);
 	void free_context() {ped_model_loader.free_context();}
 }; // end ped_manager_t

@@ -1642,6 +1642,18 @@ bool ped_manager_t::draw_ped(person_base_t const &ped, shader_t &s, pos_dir_up c
 	return 1;
 }
 
+unsigned ped_manager_t::get_player_model_id() {
+	unsigned const num_ped_models(ped_model_loader.num_models());
+	assert(num_ped_models > 0);
+	unsigned const model_id(global_building_params.player_model_ix % num_ped_models); // wrap around if set too large
+	if (city_params.num_peds == 0 && !global_building_params.building_people_enabled()) {ped_model_loader.load_model_id(model_id);} // only need to load this particular model
+	return model_id;
+}
+bool ped_manager_t::is_player_model_female() {
+	if (ped_model_loader.num_models() == 0) return 0; // unknown
+	return is_female_model(ped_model_loader.get_model(get_player_model_id()));
+}
+
 void draw_player_as_sphere() {
 	point const player_pos(pre_smap_player_pos - vector3d(0.0, 0.0, 0.5f*camera_zh)); // shift to center of player height; ignore crouching for now
 	draw_sphere_vbo(player_pos, 0.5f*CAMERA_RADIUS, N_SPHERE_DIV, 0); // use a smaller radius
@@ -1651,8 +1663,7 @@ void ped_manager_t::draw_player_model(shader_t &s, vector3d const &xlate, bool s
 		if (shadow_only) {draw_player_as_sphere();} // sphere is only used for shadows
 		return;
 	}
-	unsigned const model_id = 0; // player is always the first model specified/loaded
-	if (city_params.num_peds == 0 && !global_building_params.building_people_enabled()) {ped_model_loader.load_model_id(model_id);} // only need to load this particular model
+	unsigned const model_id(get_player_model_id());
 	city_model_t const &model(ped_model_loader.get_model(model_id));
 	
 	if (!model.is_loaded()) {

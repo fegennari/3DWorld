@@ -3081,6 +3081,7 @@ public:
 	void set_car_model_color(car_t &car) {car_manager.set_car_model_color(car);}
 	void gen_and_draw_people_in_building(ped_draw_vars_t const &pdv) {ped_manager.gen_and_draw_people_in_building(pdv);}
 	void draw_player_model(shader_t &s, vector3d const &xlate, bool shadow_only) {ped_manager.draw_player_model(s, xlate, shadow_only);}
+	bool is_player_model_female() {return ped_manager.is_player_model_female();}
 
 	void setup_city_lights(vector3d const &xlate) {
 		if (world_mode != WMODE_INF_TERRAIN) return; // TT only
@@ -3136,6 +3137,7 @@ void setup_city_lights(vector3d const &xlate) {city_gen.setup_city_lights(xlate)
 
 void gen_and_draw_people_in_building(ped_draw_vars_t const &pdv) {city_gen.gen_and_draw_people_in_building(pdv);}
 void draw_player_model(shader_t &s, vector3d const &xlate, bool shadow_only) {city_gen.draw_player_model(s, xlate, shadow_only);}
+bool is_player_model_female() {return city_gen.is_player_model_female();}
 
 // Note: pos is in global space for these next two calls
 unsigned check_city_sphere_coll(point const &pos, float radius, bool exclude_bridges_and_tunnels, bool ret_first_coll, unsigned check_mask) {

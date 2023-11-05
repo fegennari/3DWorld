@@ -22,6 +22,7 @@ bool sphere_vert_cylin_intersect_with_ends(point &center, float radius, cylinder
 void register_in_closed_bathroom_stall();
 pair<cube_t, colorRGBA> car_bcube_color_from_parking_space(room_object_t const &o);
 void force_player_height(double height);
+bool is_player_model_female();
 bool get_sphere_poly_int_val(point const &sc, float sr, point const *const points, unsigned npoints, vector3d const &normal, float thickness, float &val, vector3d &cnorm);
 
 
@@ -882,7 +883,7 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, flo
 				had_coll |= check_balcony_collision(*c, pos, p_last, xy_radius, cnorm);
 			}
 			else if (sphere_cube_int_update_pos(pos, xy_radius, c_extended, p_last, 0, cnorm)) { // assume it's a cube; skip_z=0
-				if (c->type == TYPE_TOILET || c->type == TYPE_URINAL) {player_near_toilet = 1;}
+				if (c->type == TYPE_TOILET || (c->type == TYPE_URINAL && !is_player_model_female())) {player_near_toilet = 1;} // females can't use urinals
 				had_coll = 1;
 			}
 			if ((c->type == TYPE_STALL || c->type == TYPE_SHOWER) && !c->is_open() && c->contains_pt(pos)) {register_player_hiding(*c);} // player is hiding in the stall/shower
