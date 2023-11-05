@@ -729,6 +729,7 @@ public:
 						if (connect_room_endpoints(avoid, building, walk_area, room_ix, new_to, from, radius, path, keepout, rgen, 0, 1)) { // ignore_p1_coll=0, ignore_p2_coll=1
 							assert(sub_path_start < path.size());
 							path[sub_path_start] = new_to; // end the path at the new destination
+							path.is_shortened = 1;
 							success = 1;
 							break;
 						}
@@ -1382,10 +1383,8 @@ bool building_t::find_route_to_point(person_t const &person, float radius, bool 
 				valid_area.clamp_pt_xy(dest);
 			}
 		}
-		point const dest_in(dest);
 		if (!interior->nav_graph->complete_path_within_room(from, dest, loc1.room_ix, person.ssn, radius,
 			person.cur_rseed, is_first_path, following_player, avoid, *this, path)) return 0;
-		if (dest != dest_in) {path.is_shortened = 1;} // update target in case a shorter path was found
 		return 1;
 	}
 	if (loc1.floor_ix != loc2.floor_ix) { // different floors: find path from <from> to nearest stairs, then find path from stairs to <to>
