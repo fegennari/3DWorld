@@ -957,6 +957,7 @@ void register_player_not_in_building() {
 bool is_ai_coll_obj(room_object_t const &c, bool same_as_player) {
 	// these object types are not collided with by people and can be skipped
 	if (c.no_coll() || c.is_dynamic() || c.type == TYPE_LG_BALL) return 0; // skip dynamic objects (balls, etc.)
+	if (c.type == TYPE_POOL_TILE) return 0; // pools are handled with custom code that works different from the player
 	if (!(same_as_player ? c.is_player_collidable() : bldg_obj_types[c.type].ai_coll)) return 0;
 	return 1;
 }
@@ -1065,17 +1066,11 @@ bool building_t::choose_dest_goal(person_t &person, rand_gen_t &rgen) const { //
 
 			for (auto i = avoid.begin(); i != avoid.end(); ++i) { // move target_pos to avoid room objects
 				cube_t c(*i);
-				c.expand_by_xy(coll_dist);
-				any_updated |= sphere_cube_int_update_pos(person.target_pos, 1.01*coll_dist, c, person.pos, 1); // skip_z=1, ignore return value
+				c.expand_by_xy(coll_dist); // doesn't this double apply coll_dist?
+				any_updated |= sphere_cube_int_update_pos(person.target_pos, 1.01*coll_dist, c, person.pos, 1); // skip_z=1
 			}
 			if (!any_updated) break; // done
 		} // for n
-		if (has_pool()) { // move target_pos so that a sphere around it doesn't intersect the pool
-			cube_t pool(interior->pool);
-			pool.z2() += get_floor_ceil_gap(); // expand to the height of the room
-			sphere_cube_int_update_pos(person.target_pos, person.radius, pool, person.pos);
-			person.target_pos.z = person.pos.z; // zval must be unchanged
-		}
 	}
 	return 1;
 }
