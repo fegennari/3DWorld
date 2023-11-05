@@ -430,7 +430,9 @@ public:
 		c.expand_by_xy(radius);
 
 		for (auto i = avoid.begin(); i != avoid.end(); ++i) {
-			if (i->intersects_xy(c) && sphere_cube_intersect_xy(pos, radius, *i)) return 0;
+			if (!i->intersects_xy(c)) continue;
+			float const rscale((i->z2() < pos.z) ? 0.75 : 1.0); // reduced radius for low objects since legs have a smaller extent than arms
+			if (i->intersects_xy(c) && sphere_cube_intersect_xy(pos, rscale*radius, *i)) return 0;
 		}
 		if (!building.check_cube_within_part_sides(c)) return 0; // outside non-cube building - will try again with a new pos next time
 		return 1;
@@ -515,8 +517,9 @@ public:
 
 		for (auto i = avoid.begin(); i != avoid.end(); ++i) {
 			if (!i->intersects_xy(walk_area_exp)) continue;
+			float const rscale((i->z2() < p1.z) ? 0.75 : 1.0); // reduced radius for low objects since legs have a smaller extent than arms
 			cube_t c(*i);
-			c.expand_by_xy(radius);
+			c.expand_by_xy(rscale*radius);
 
 			if (c.contains_pt_xy(p1)) {
 				if (ignore_p1_coll) {
@@ -1065,9 +1068,10 @@ bool building_t::choose_dest_goal(person_t &person, rand_gen_t &rgen) const { //
 			bool any_updated(0);
 
 			for (auto i = avoid.begin(); i != avoid.end(); ++i) { // move target_pos to avoid room objects
+				float const rscale((i->z2() < person.pos.z) ? 0.75 : 1.0); // reduced radius for low objects since legs have a smaller extent than arms
 				cube_t c(*i);
-				c.expand_by_xy(coll_dist); // doesn't this double apply coll_dist?
-				any_updated |= sphere_cube_int_update_pos(person.target_pos, 1.01*coll_dist, c, person.pos, 1); // skip_z=1
+				c.expand_by_xy(rscale*coll_dist); // doesn't this double apply coll_dist?
+				any_updated |= sphere_cube_int_update_pos(person.target_pos, 1.01*rscale*coll_dist, c, person.pos, 1); // skip_z=1
 			}
 			if (!any_updated) break; // done
 		} // for n
