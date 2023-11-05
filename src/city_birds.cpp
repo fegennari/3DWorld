@@ -11,7 +11,7 @@ float const BIRD_ZV_RISE     = 0.4; // Z vs. XY velocity/acceleration for ascent
 float const BIRD_ZV_FALL     = 0.8; // Z vs. XY velocity/acceleration for descent
 float const BIRD_MAX_ALT_RES = 0.8; // above destination; in multiples of road width; for residential cities
 float const BIRD_MAX_ALT_COM = 1.8; // above destination; in multiples of road width; for commercial  cities
-float const anim_time_scale(1.0/TICKS_PER_SECOND);
+float const anim_time_scale(1.25/TICKS_PER_SECOND);
 
 extern int animate2, frame_counter;
 extern float fticks;
