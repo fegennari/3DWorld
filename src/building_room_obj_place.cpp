@@ -2269,10 +2269,16 @@ void building_t::add_swimming_pool_room_objs(rand_gen_t rgen, room_t const &room
 		set_wall_width(dboard, (pool.d[pool.dim][!pool.dir] + (pool.dir ? 1.0 : -1.0)*0.2*floor_spacing), 0.6*floor_spacing,  pool.dim); // length
 		objs.emplace_back(dboard, TYPE_DIV_BOARD, room_id, pool.dim, pool.dir, 0, tot_light_amt, SHAPE_CUBE, colorRGBA(0.75, 1.0, 0.9, 1.0)); // blue-green
 	}
-	if (pool_len > 3.5*floor_spacing && pool_depth > 0.8*floor_spacing && building_obj_model_loader.is_model_valid(OBJ_MODEL_POOL_LAD)) {
+	if (pool_len > 3.5*floor_spacing && pool_depth > 0.8*floor_spacing && rgen.rand_float() < 0.75 && building_obj_model_loader.is_model_valid(OBJ_MODEL_POOL_LAD)) {
 		// add a side ladder if long and deep enough
-		//vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_POOL_LAD)); // D, W, H
-		// TODO: TYPE_POOL_LAD
+		bool const ldir(rgen.rand_bool());
+		vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_POOL_LAD)); // D, W, H
+		float const height(0.75*floor_spacing), hdepth(0.5*height*sz.x/sz.z), hwidth(0.5*height*sz.y/sz.z);
+		cube_t ladder;
+		set_cube_zvals(ladder, (pool.z2() - 0.42*height), (pool.z2() + 0.58*height));
+		set_wall_width(ladder, (pool.d[ pool.dim][pool.dir] + (pool.dir ? -1.0 : 1.0)*rgen.rand_uniform(0.8, 0.9)*pool_len), hdepth, pool.dim); // pos along pool length
+		set_wall_width(ladder, (pool.d[!pool.dim][ldir] + (ldir ? 1.0 : -1.0)*0.16*hwidth), hwidth, !pool.dim); // at pool edge
+		objs.emplace_back(ladder, TYPE_POOL_LAD, room_id, !pool.dim, !ldir, RO_FLAG_NOCOLL, tot_light_amt);
 	}
 	// add benches along the walls
 	unsigned const num_benches(2 + (rgen.rand()%3)); // 2-4
