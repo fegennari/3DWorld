@@ -1773,7 +1773,8 @@ void building_t::call_elevator_to_floor_and_light_nearest_button(elevator_t &ele
 }
 
 bool building_t::run_ai_pool_logic(person_t &person, float &speed_mult) const {
-	if (!has_pool()) return 0;
+	if (!has_pool     ()) return 0;
+	if (!has_room_geom()) return 0; // if the room geom hasn't been generated yet, we can't determine pool depth, so just ignore the pool
 	indoor_pool_t const &pool(interior->pool);
 	if (!pool.contains_pt_xy(person.pos)) return 0;
 	float const z_feet(person.get_z1()), z_head(person.get_z2());
