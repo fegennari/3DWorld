@@ -1960,8 +1960,9 @@ void draw_stats_bar(shader_t &s, colorRGBA const &color, float max_val, float cu
 	s.set_cur_color(color);
 	draw_one_tquad(-0.9*x, y1, (-0.9 + 0.2*cur_val)*x, y2, zval);
 }
-void draw_health_bar(float health, float shields, float pu_time, colorRGBA const &pu_color, float extra_bar, colorRGBA const &extra_bar_color, float poisoned) {
-
+void draw_health_bar(float health, float shields, float pu_time, colorRGBA const &pu_color,
+	float extra_bar1, colorRGBA const &extra_color1, float extra_bar2, colorRGBA const &extra_color2, float poisoned)
+{
 	shader_t s;
 	s.begin_color_only_shader();
 	glDisable(GL_DEPTH_TEST);
@@ -1999,7 +2000,8 @@ void draw_health_bar(float health, float shields, float pu_time, colorRGBA const
 			draw_one_tquad(-0.905*x, 0.835*y, -0.695*x, 0.865*y, zval);
 		}
 	}
-	if (building_gameplay_mode) {draw_stats_bar(s, extra_bar_color, 1.0, extra_bar, x, 0.80*y, 0.82*y, zval);} // carry capacity bar
+	if (extra_color1.A != 0.0) {draw_stats_bar(s, extra_color1, 1.0, extra_bar1, x, 0.80*y, 0.82*y, zval);} // carry capacity bar
+	if (extra_color2.A != 0.0) {draw_stats_bar(s, extra_color2, 1.0, extra_bar2, x, 0.76*y, 0.78*y, zval);} // oxygen bar
 	disable_blend();
 	glEnable(GL_DEPTH_TEST);
 }

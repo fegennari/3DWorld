@@ -16,11 +16,12 @@ extern unsigned room_mirror_ref_tid;
 extern float fticks, CAMERA_RADIUS, water_plane_z;
 extern building_t const *player_building;
 
+float get_player_oxygen();
 void setup_building_draw_shader_post(shader_t &s, bool have_indir);
 void reset_interior_lighting_and_end_shader(shader_t &s);
 // from postproc_effects.cpp
 void bind_frame_buffer_RGB(unsigned tu_id);
-void apply_player_underwater_effect(colorRGBA const &color_mod);
+void apply_player_underwater_effect(colorRGBA const &color_mod, float intensity=1.0);
 void add_postproc_underwater_fog(float atten_scale, float max_uw_dist, float mud_amt);
 void bind_depth_buffer(unsigned tu_id);
 
@@ -251,13 +252,15 @@ void building_t::draw_water(vector3d const &xlate) const {
 				next_bubble_time = tfticks + rgen.rand_uniform(0.2, 0.4)*TICKS_PER_SECOND; // random spacing in time
 			}
 		}
+		float const oxygen(get_player_oxygen()), intensity(1.0 + 20.0*max(0.0f, (0.2f - oxygen))); // intensity increases when low on oxygen
 		// compute max dist, for approximate use in view ray clipping to the water surface
 		float max_uw_dist(0.0);
 		point pts[8];
 		unsigned const npts(get_cube_corners(water.d, pts)); // get all corners; we could use visible corners, but then there would be a pop when a corner becomes visible
 		for (unsigned n = 0; n < npts; ++n) {max_eq(max_uw_dist, p2p_dist(camera_bs, pts[n]));}
 		colorRGBA const pool_color(0.7, 0.8, 1.0), clear_color(0.4, 0.6, 1.0), mud_color(1.0, 0.6, 0.33);
-		apply_player_underwater_effect(is_pool ? pool_color : blend_color(mud_color, clear_color, mud_amt, 0));
+		colorRGBA uw_color(is_pool ? pool_color : blend_color(mud_color, clear_color, mud_amt, 0));
+		apply_player_underwater_effect(uw_color*min(1.0, 5.0*oxygen), intensity); // fade to black when oxygen is low
 		add_postproc_underwater_fog((is_pool ? 2.0 : 1.0)*WATER_COL_ATTEN*atten_scale, max_uw_dist, mud_amt);
 		bool const is_lit(is_room_lit(get_room_containing_pt(camera_bs), camera_bs.z));
 		colorRGBA const base_color(is_lit ? WHITE : DK_GRAY);

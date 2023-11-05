@@ -166,15 +166,16 @@ void add_color_only_effect(string const &frag_shader, float intensity=1.0, float
 	color_buffer_frame = 0; // reset to invalidate buffer
 }
 
-void add_vignette() {
+void add_vignette(colorRGBA const &color) {
 
+	if (color.A == 0.0) return;
 	bind_frame_buffer_RGB();
 	shader_t s;
 	s.set_vert_shader("no_lighting_tex_coord");
 	s.set_frag_shader("vignette");
 	s.begin_shader();
 	s.add_uniform_int("frame_buffer_tex", 0);
-	s.add_uniform_color("edge_color", vignette_color);
+	s.add_uniform_color("edge_color", color);
 	fill_screen_white_and_end_shader(s);
 	color_buffer_frame = 0; // reset to invalidate buffer
 }
@@ -282,10 +283,10 @@ void add_postproc_underwater_fog(float atten_scale, float max_uw_dist, float mud
 	fill_screen_white_and_end_shader(s);
 }
 
-void apply_player_underwater_effect(colorRGBA const &color_mod=WHITE) {
+void apply_player_underwater_effect(colorRGBA const &color_mod=WHITE, float intensity=1.0) {
 	add_2d_blur();
-	if (player_is_drowning())                 {add_color_only_effect("drunken_wave", 1.00, 1.0, 0.0, color_mod);}
-	else if (world_mode == WMODE_INF_TERRAIN) {add_color_only_effect("drunken_wave", 0.12, 1.6, 1.6, color_mod);} // reduced but faster effect
+	if (player_is_drowning())                 {add_color_only_effect("drunken_wave", 1.00*intensity, 1.0, 0.0, color_mod);}
+	else if (world_mode == WMODE_INF_TERRAIN) {add_color_only_effect("drunken_wave", 0.12*intensity, 1.6, 1.6, color_mod);} // reduced but faster effect
 }
 
 void run_postproc_effects() {
@@ -338,7 +339,7 @@ void run_postproc_effects() {
 		else if (have_buildings() && is_night()) {add_2d_bloom();} // allow bloom for building windows at night in TT mode
 	}
 	if (enable_postproc_recolor) {add_color_only_effect("recolor", 0.0);} // add recolor at the very end
-	if (vignette_color.A > 0.0 ) {add_vignette();}
+	if (vignette_color.A > 0.0 ) {add_vignette(vignette_color);}
 
 	if (0 && !prev_mat_valid) { // capture matrices from this frame for use with next frame (if needed in the future)
 		prev_mvm = fgGetMVM();

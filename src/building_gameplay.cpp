@@ -20,7 +20,7 @@ bldg_obj_type_t bldg_obj_types[NUM_ROBJ_TYPES];
 vector<sphere_t> cur_sounds; // radius = sound volume
 
 extern bool camera_in_building, player_is_hiding, player_in_unlit_room, disable_blood;
-extern int window_width, window_height, display_framerate, display_mode, game_mode, building_action_key, frame_counter, player_in_basement;
+extern int window_width, window_height, display_framerate, display_mode, game_mode, building_action_key, frame_counter, player_in_basement, player_in_water;
 extern float fticks, CAMERA_RADIUS;
 extern double tfticks;
 extern colorRGBA vignette_color;
@@ -445,7 +445,7 @@ bool register_achievement(string const &str) {return achievement_tracker.registe
 
 class player_inventory_t { // manages player inventory, health, and other stats
 	vector<carried_item_t> carried; // interactive items the player is currently carrying
-	float cur_value, cur_weight, tot_value, tot_weight, damage_done, best_value, player_health, drunkenness, bladder, bladder_time, prev_player_zval;
+	float cur_value, cur_weight, tot_value, tot_weight, damage_done, best_value, player_health, drunkenness, bladder, bladder_time, oxygen, prev_player_zval;
 	unsigned num_doors_unlocked;
 	bool prev_in_building, has_key, is_poisoned, poison_from_spider;
 
@@ -470,6 +470,7 @@ public:
 		cur_value     = cur_weight = tot_value = tot_weight = damage_done = 0.0;
 		drunkenness   = bladder = bladder_time = prev_player_zval = 0.0;
 		player_health = 1.0; // full health
+		oxygen        = 1.0; // full oxygen
 		num_doors_unlocked = 0; // not saved on death, but maybe should be?
 		prev_in_building = has_key = is_poisoned = poison_from_spider = 0;
 		player_attracts_flies = 0;
@@ -499,6 +500,7 @@ public:
 	float get_carry_weight_ratio() const {return min(1.0f, cur_weight/global_building_params.player_weight_limit);}
 	float get_speed_mult () const {return (1.0f - 0.4f*get_carry_weight_ratio())*((bladder > 0.9) ? 0.6 : 1.0);} // 40% reduction for heavy load, 40% reduction for full bladder
 	float get_drunkenness() const {return drunkenness;}
+	float get_oxygen     () const {return oxygen;}
 	bool  player_is_dead () const {return (player_health <= 0.0);}
 	bool  player_has_key () const {return has_key;}
 	bool  player_at_full_health() const {return (player_health == 1.0 && !is_poisoned);}
@@ -791,7 +793,8 @@ public:
 		}
 		if (in_building_gameplay_mode()) {
 			// Note: shields is used for drunkenness; values are scaled from 0-1 to 0-100; powerup values are for bladder fullness
-			draw_health_bar(100.0*player_health, 100.0*drunkenness, bladder, YELLOW, get_carry_weight_ratio(), WHITE, is_poisoned);
+			colorRGBA oxygen_bar_color((oxygen == 1.0) ? ALPHA0 : CYAN); // oxygen bar is only shown when oxygen is less than full
+			draw_health_bar(100.0*player_health, 100.0*drunkenness, bladder, YELLOW, get_carry_weight_ratio(), WHITE, oxygen, oxygen_bar_color, is_poisoned);
 		}
 		if (has_key) {show_key_icon();}
 	}
@@ -799,6 +802,19 @@ public:
 		show_stats();
 		phone_manager.next_frame(); // even if not in gameplay mode?
 		if (!in_building_gameplay_mode()) return;
+		// handle oxygen
+		float oxygen_use_rate((fticks/TICKS_PER_SECOND)/30.0); // used up in 30s
+
+		if (player_in_water == 2) { // head underwater, lose oxygen slowly
+			oxygen = max(0.0f, (oxygen - oxygen_use_rate));
+			
+			if (oxygen == 0.0) {
+				register_player_death(SOUND_DROWN, " by drowning");
+				// TODO: leave a body floating in the water?
+				return;
+			}
+		}
+		else {oxygen = min(1.0f, (oxygen + 10.0f*oxygen_use_rate));} // head above water, gain oxygen quickly
 		// handle player fall damage logic
 		point const camera_pos(get_camera_pos());
 		float const fall_damage_start(3.0*CAMERA_RADIUS); // should be a function of building floor spacing?
@@ -808,7 +824,7 @@ public:
 		else if (prev_player_zval != 0.0 && delta_z > fall_damage_start && camera_in_building) {
 			// only take fall damage when inside the building (no falling off the roof for now)
 			player_health -= 1.0f*(delta_z - fall_damage_start)/fall_damage_start;
-			if (player_is_dead()) {register_player_death(SOUND_SQUISH, " of a fall"); return;} // dead
+			if (player_is_dead()) {register_player_death(SOUND_SQUISH, " from a fall"); return;} // dead
 			gen_sound_thread_safe_at_player(SOUND_SQUISH, 0.5);
 			add_camera_filter(colorRGBA(RED, 0.25), 4, -1, CAM_FILT_DAMAGE); // 4 ticks of red damage
 			register_building_sound_at_player(1.0);
@@ -855,7 +871,8 @@ public:
 		player_near_toilet = 0;
 	}
 	colorRGBA get_vignette_color() const {
-		if (player_health < 0.25) return colorRGBA(1.0, 0.0, 0.0, 4.0*(0.25 - player_health)); // red
+		//if (oxygen < 0.1)         return colorRGBA(0.0, 0.0, 0.0, 10.0*(0.10 - oxygen)); // black; doesn't combine properly with underwater effect
+		if (player_health < 0.25) return colorRGBA(1.0, 0.0, 0.0, 4.0 *(0.25 - player_health)); // red
 		if (is_poisoned)          return colorRGBA(0.0, 1.0, 0.0, 0.5); // green
 		if (bladder > 0.75)       return colorRGBA(1.0, 1.0, 0.0, 2.0*(bladder - 0.75)); // yellow
 		return ALPHA0;
@@ -865,6 +882,7 @@ public:
 player_inventory_t player_inventory;
 
 float get_player_drunkenness() {return player_inventory.get_drunkenness();}
+float get_player_oxygen     () {return player_inventory.get_oxygen     ();}
 float get_player_building_speed_mult() {return player_inventory.get_speed_mult();}
 bool player_can_open_door(door_t const &door) {return player_inventory.can_open_door(door);}
 void register_in_closed_bathroom_stall() {player_inventory.register_in_closed_bathroom_stall();}
