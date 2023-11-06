@@ -982,6 +982,26 @@ bool is_ai_coll_obj(room_object_t const &c, bool same_as_player) {
 	return 1;
 }
 
+bool move_sphere_to_not_int_cube_xy(point &pos, float radius, cube_t const &c) {
+	if (!sphere_cube_intersect_xy(pos, radius, c)) return 0;
+	// find closest cube edge
+	float closest_dist(0.0);
+	point new_pos(pos);
+
+	for (unsigned dim = 0; dim < 2; ++dim) {
+		for (unsigned dir = 0; dir < 2; ++dir) {
+			float const edge_pos(c.d[dim][dir]), dist(fabs(pos[dim] - edge_pos));
+			if ((dim > 0 || dir > 0) && dist >= closest_dist) continue; // not closer
+			closest_dist  = dist;
+			new_pos[ dim] = edge_pos + (dir ? 1.0 : -1.0)*radius; // move away from this edge
+			new_pos[!dim] = pos[!dim];
+		}
+	} // for dim
+	bool const ret(pos != new_pos);
+	pos = new_pos;
+	return ret;
+}
+
 bool building_t::choose_dest_goal(person_t &person, rand_gen_t &rgen) const { // used for following the player in gameplay mode
 
 	assert(interior && interior->nav_graph);
@@ -1086,9 +1106,7 @@ bool building_t::choose_dest_goal(person_t &person, rand_gen_t &rgen) const { //
 
 			for (auto i = avoid.begin(); i != avoid.end(); ++i) { // move target_pos to avoid room objects
 				float const rscale((i->z2() < person.pos.z) ? 0.75 : 1.0); // reduced radius for low objects since legs have a smaller extent than arms
-				cube_t c(*i);
-				c.expand_by_xy(rscale*coll_dist); // doesn't this double apply coll_dist?
-				any_updated |= sphere_cube_int_update_pos(person.target_pos, 1.01*rscale*coll_dist, c, person.pos, 1); // skip_z=1
+				any_updated |= move_sphere_to_not_int_cube_xy(person.target_pos, 1.2*rscale*coll_dist, *i); // add an extra 20% buffer
 			}
 			if (!any_updated) break; // done
 		} // for n
