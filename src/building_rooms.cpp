@@ -715,6 +715,7 @@ void building_t::add_balconies(rand_gen_t &rgen) {
 	unsigned const max_balconies(1 + rgen.rand_bool()); // 1-2 per house
 	unsigned num_balconies(0);
 	auto &objs(interior->room_geom->objs);
+	unsigned const init_objs_sz(objs.size());
 	vect_cube_t avoid;
 	if (!objs.empty() && objs.back().type == TYPE_FESCAPE) {avoid.push_back(objs.back());} // avoid fire escape
 	if (has_driveway()) {avoid.push_back(driveway);}
@@ -772,6 +773,42 @@ void building_t::add_balconies(rand_gen_t &rgen) {
 				cube_t floor_slab(balcony);
 				floor_slab.z2() = balcony.z1() + 0.12*balcony.dz(); // matches code in get_balcony_cubes()
 				ext_steps.emplace_back(floor_slab, dim, 0, dir, 0, 0, 0, 1); // enclosed, no step dir
+				
+				// add door connecting to the house if possible
+				if (has_windows()) { // find a space between two windows
+					float const door_width(get_doorway_width()), door_hwidth(0.5*door_width), edge_pad(2.0*wall_thickness);
+					float const window_hspacing(get_hspacing_for_part(part, !dim)), window_h_border(get_window_h_border());
+
+					if (door_width > 0.0 && door_width < window_hspacing*2.0*window_h_border) { // door can fit between two windows
+						unsigned const num_windows(round_fp(part.get_sz_dim(!dim)/window_hspacing));
+						vect_cube_t cands;
+
+						for (unsigned n = 0; n+1 < num_windows; ++n) { // iterate over each window pair (skip last window)
+							float const pos(part.d[!dim][0] + n*window_hspacing); // midpoint between two windows
+							float const lo(pos - door_hwidth), hi(pos + door_hwidth);
+							if (lo < balcony.d[!dim][0]+edge_pad || hi > balcony.d[!dim][1]-edge_pad) continue; // not fully within the balcony
+							float const door_z1(balcony_z1 + get_fc_thickness());
+							cube_t door;
+							set_cube_zvals(door, door_z1, (door_z1 + get_door_height()));
+							set_wall_width(door, pos, door_hwidth, !dim);
+							set_wall_width(door, part.d[dim][dir], 2.0*get_trim_thickness(), dim);
+							cube_t door_exp(door);
+							door_exp.d[dim][!dir] += (dir ? -1.0 : 1.0)*door_width; // add clearance for door to open
+							if (interior->is_blocked_by_stairs_or_elevator(door_exp)) continue;
+							bool blocked(0);
+
+							for (auto i = objs.begin(); i != objs.begin()+init_objs_sz; ++i) { // check if blocked by furniture or something on the other side of the wall
+								if (i->type == TYPE_BOX || i->type == TYPE_LG_BALL) continue; // easy to move, so can block the door
+								if (i->intersects(door_exp)) {blocked = 1; break;}
+							}
+							if (!blocked) {cands.push_back(door);}
+						} // for n
+						if (!cands.empty()) {
+							cube_t const &door(cands[rgen.rand() % cands.size()]);
+							objs.emplace_back(door, TYPE_FALSE_DOOR, room_id, dim, dir, RO_FLAG_NOCOLL, 1.0, SHAPE_CUBE, door_color);
+						}
+					}
+				}
 				// maybe add plants to balconies; note that they won't be properly lit since plants use indoor lighting,
 				// and the plants won't be drawn when the player is outside the building; this should be okay because an empty pot works on a balcony as well
 				unsigned const num_plants(rgen.rand() % 3); // 0-2

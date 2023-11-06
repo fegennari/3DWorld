@@ -3520,6 +3520,18 @@ void building_room_geom_t::add_balcony(room_object_t const &c, float ground_floo
 	}
 }
 
+void building_room_geom_t::add_false_door(room_object_t const &c) {
+	cube_t sides[2] = {c, c}; // {interior, exterior}
+	sides[0].d[c.dim][!c.dir] = sides[1].d[c.dim][c.dir] = c.get_center_dim(c.dim);
+	
+	for (unsigned exterior = 0; exterior < 2; ++exterior) {
+		rgeom_mat_t &fb_mat(get_material(tid_nm_pair_t(get_int_door_tid(), 0.0), 0, 0, 0, 0, exterior)); // unshadowed
+		fb_mat.add_cube_to_verts(c, c.color, all_zeros, get_face_mask(c.dim, (c.dir ^ exterior ^ 1)), !c.dim); // draw only front or back
+		rgeom_mat_t &side_mat(get_untextured_material(0, 0, 0, 0, exterior)); // unshadowed
+		side_mat.add_cube_to_verts_untextured(c, c.color, (get_skip_mask_for_xy(c.dim) | EF_Z1)); // skip front, back, and bottom faces
+	}
+}
+
 bool get_dishwasher_for_ksink(room_object_t const &c, cube_t &dishwasher) {
 	if (c.type != TYPE_KSINK) return 0; // error?
 	float const dz(c.dz()), depth(c.get_depth()), width(c.get_width()), dir_sign(c.dir ? 1.0 : -1.0);
