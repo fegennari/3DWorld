@@ -2261,6 +2261,7 @@ void building_t::add_swimming_pool_room_objs(rand_gen_t rgen, room_t const &room
 		objs.emplace_back(upper, TYPE_POOL_TILE, room_id, pool.dim, pool.dir, (RO_FLAG_ADJ_LO | RO_FLAG_ADJ_BOT));
 	}
 	unsigned const objs_start(objs.size()); // we can start here, since the pool tile objects placed above don't collide with other placed objects
+	cube_t ladder;
 
 	if (pool_len > 5.0*floor_spacing && pool_depth > 0.9*floor_spacing && rgen.rand_float() < 0.75) { // maybe add a diving board if long and deep
 		cube_t dboard;
@@ -2274,7 +2275,6 @@ void building_t::add_swimming_pool_room_objs(rand_gen_t rgen, room_t const &room
 		bool const ldir(rgen.rand_bool());
 		vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_POOL_LAD)); // D, W, H
 		float const height(0.75*floor_spacing), hdepth(0.5*height*sz.x/sz.z), hwidth(0.5*height*sz.y/sz.z);
-		cube_t ladder;
 		set_cube_zvals(ladder, (pool.z2() - 0.42*height), (pool.z2() + 0.58*height));
 		set_wall_width(ladder, (pool.d[ pool.dim][pool.dir] + (pool.dir ? -1.0 : 1.0)*rgen.rand_uniform(0.8, 0.9)*pool_len), hdepth, pool.dim); // pos along pool length
 		set_wall_width(ladder, (pool.d[!pool.dim][ldir] + (ldir ? 1.0 : -1.0)*0.16*hwidth), hwidth, !pool.dim); // at pool edge
@@ -2309,6 +2309,7 @@ void building_t::add_swimming_pool_room_objs(rand_gen_t rgen, room_t const &room
 			cube_t pfloat;
 			gen_xy_pos_for_round_obj(pfloat, pool_area, pf_radius, pf_height, pf_radius, rgen, 1); // place_at_z1=1
 			if (overlaps_other_room_obj(pfloat, objs_start)) continue; // if placement falls, leave it out; should only collide with another float
+			if (!ladder.is_all_zeros() && pfloat.intersects(ladder)) continue; // check the pool ladder
 			objs.emplace_back(pfloat, TYPE_POOL_FLOAT, room_id, 0, 0, 0, tot_light_amt, SHAPE_VERT_TORUS, float_colors[rgen.rand() % NUM_FLOAT_COLORS]);
 		}
 	}
@@ -2319,7 +2320,7 @@ void building_t::add_swimming_pool_room_objs(rand_gen_t rgen, room_t const &room
 		for (unsigned n = 0; n < num_balls; ++n) {
 			bool const in_pool(rgen.rand_bool());
 			float const ball_zval(in_pool ? (interior->water_zval - 2.0*bt.density*bt.radius*floor_spacing/(12*8)) : zval);
-			cube_t const avoid_xy(in_pool ? cube_t() : pool);
+			cube_t const &avoid_xy(in_pool ? ladder : pool);
 			cube_t const &ball_area(in_pool ? pool_area : place_area);
 			add_ball_to_room(rgen, room, ball_area, ball_zval, room_id, tot_light_amt, objs_start, BALL_TYPE_BEACH, avoid_xy);
 		}
