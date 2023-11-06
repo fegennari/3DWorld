@@ -523,6 +523,18 @@ bool swimming_pool_t::proc_sphere_coll(point &pos_, point const &p_last, float r
 	return sphere_cube_int_update_pos(pos_, radius_, bcube_tall, p_last, 0, cnorm);
 }
 
+// pool ladders
+
+pool_ladder_t::pool_ladder_t(cube_t const &bcube_, bool dim_, bool dir_) : oriented_city_obj_t(dim_, dir_) {
+	bcube = bcube_;
+	*(sphere_t *)this = bcube.get_bsphere();
+}
+
+void pool_ladder_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
+	if (!dstate.check_cube_visible(bcube, dist_scale)) return;
+	building_obj_model_loader.draw_model(dstate.s, pos, bcube, get_orient_dir(), WHITE, dstate.xlate, OBJ_MODEL_POOL_LAD, shadow_only);
+}
+
 // pool decks
 
 textured_mat_t pool_deck_mats[NUM_POOL_DECK_TYPES] = {

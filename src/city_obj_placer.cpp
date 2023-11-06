@@ -838,6 +838,18 @@ void city_obj_placer_t::place_residential_plot_objects(road_plot_t const &plot, 
 					blockers.push_back(deck); // blocker for other objects, but not a collider for people or the player
 				} // for d
 			}
+			if (!above_ground && building_obj_model_loader.is_model_valid(OBJ_MODEL_POOL_LAD)) { // in-ground pool, add pool ladder
+				vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_POOL_LAD)); // D, W, H
+				float const height(1.6*sz_scale), hdepth(0.5*height*sz.x/sz.z), hwidth(0.5*height*sz.y/sz.z);
+
+				if (hdepth < 8.0*min(pool.dx(), pool.dy())) { // add if large enough; should be true
+					cube_t ladder;
+					set_cube_zvals(ladder, (pool.z2() - 0.42*height), (pool.z2() + 0.58*height));
+					set_wall_width(ladder, rgen.rand_uniform((pool.d[!dim][0] + 2.0*hdepth), (pool.d[!dim][1] - 2.0*hdepth)), hdepth, !dim); // pos along pool length
+					set_wall_width(ladder, (pool.d[ dim][dir] - (dir ? 1.0 : -1.0)*1.2*hwidth), hwidth, dim); // at pool edge
+					plad_groups.add_obj(pool_ladder_t(ladder, dim, !dir), pladders); // inside the pool, facing the street/house - no placement check or blockers added
+				}
+			}
 			break; // success - done with pool
 		} // for n
 	} // for i (sub_plots)
@@ -997,10 +1009,10 @@ template<typename T> void city_obj_placer_t::draw_objects(vector<T> const &objs,
 
 void city_obj_placer_t::clear() {
 	parking_lots.clear(); benches.clear(); planters.clear(); trashcans.clear(); fhydrants.clear(); sstations.clear(); driveways.clear(); dividers.clear();
-	pools.clear(); pdecks.clear(); ppoles.clear(); hcaps.clear(); manholes.clear(); mboxes.clear(); pigeons.clear(); birds.clear(); signs.clear(); stopsigns.clear();
-	flags.clear(); bench_groups.clear(); planter_groups.clear(); trashcan_groups.clear(); fhydrant_groups.clear(); sstation_groups.clear(); divider_groups.clear();
-	pool_groups.clear(); ppole_groups.clear(); hcap_groups.clear(); manhole_groups.clear(); mbox_groups.clear(); pigeon_groups.clear(); bird_groups.clear();
-	sign_groups.clear(); stopsign_groups.clear(); flag_groups.clear(); nrack_groups.clear();
+	pools.clear(); pladders.clear(); pdecks.clear(); ppoles.clear(); hcaps.clear(); manholes.clear(); mboxes.clear(); pigeons.clear(); birds.clear(); signs.clear();
+	stopsigns.clear(); flags.clear(); bench_groups.clear(); planter_groups.clear(); trashcan_groups.clear(); fhydrant_groups.clear(); sstation_groups.clear();
+	divider_groups.clear(); pool_groups.clear(); plad_groups.clear(); pdeck_groups.clear(); ppole_groups.clear(); hcap_groups.clear(); manhole_groups.clear();
+	mbox_groups.clear(); pigeon_groups.clear(); bird_groups.clear(); sign_groups.clear(); stopsign_groups.clear(); flag_groups.clear(); nrack_groups.clear();
 	all_objs_bcube.set_to_zeros();
 	num_spaces = filled_spaces = 0;
 }
@@ -1066,6 +1078,7 @@ void city_obj_placer_t::gen_parking_and_place_objects(vector<road_plot_t> &plots
 	sstation_groups.create_groups(sstations, all_objs_bcube);
 	divider_groups .create_groups(dividers,  all_objs_bcube);
 	pool_groups    .create_groups(pools,     all_objs_bcube);
+	plad_groups    .create_groups(pladders,  all_objs_bcube);
 	pdeck_groups   .create_groups(pdecks,    all_objs_bcube);
 	ppole_groups   .create_groups(ppoles,    all_objs_bcube);
 	hcap_groups    .create_groups(hcaps,     all_objs_bcube);
@@ -1080,8 +1093,8 @@ void city_obj_placer_t::gen_parking_and_place_objects(vector<road_plot_t> &plots
 
 	if (0) { // debug info printing
 		cout << TXT(benches.size()) << TXT(planters.size()) << TXT(trashcans.size()) << TXT(fhydrants.size()) << TXT(sstations.size()) << TXT(dividers.size())
-			 << TXT(pools.size()) << TXT(pdecks.size()) << TXT(ppoles.size()) << TXT(hcaps.size()) << TXT(manholes.size()) << TXT(mboxes.size()) << TXT(pigeons.size())
-			 << TXT(birds.size()) << TXT(signs.size()) << TXT(stopsigns.size()) << TXT(flags.size()) << TXT(newsracks.size()) << endl;
+			 << TXT(pools.size()) << TXT(pladders.size()) << TXT(pdecks.size()) << TXT(ppoles.size()) << TXT(hcaps.size()) << TXT(manholes.size()) << TXT(mboxes.size())
+			 << TXT(pigeons.size()) << TXT(birds.size()) << TXT(signs.size()) << TXT(stopsigns.size()) << TXT(flags.size()) << TXT(newsracks.size()) << endl;
 	}
 	if (add_parking_lots) {
 		cout << "parking lots: " << parking_lots.size() << ", spaces: " << num_spaces << ", filled: " << filled_spaces << ", benches: " << benches.size() << endl;
@@ -1208,19 +1221,20 @@ void city_obj_placer_t::move_and_connect_streetlights(streetlights_t &sl) {
 void city_obj_placer_t::draw_detail_objects(draw_state_t &dstate, bool shadow_only) {
 	if (!dstate.check_cube_visible(all_objs_bcube, 1.0)) return; // check bcube, dist_scale=1.0
 	draw_objects(benches,   bench_groups,    dstate, 0.16, shadow_only, 0); // dist_scale=0.16
-	draw_objects(fhydrants, fhydrant_groups, dstate, 0.06, shadow_only, 1); // dist_scale=0.07, has_immediate_draw=1
+	draw_objects(fhydrants, fhydrant_groups, dstate, 0.06, shadow_only, 1); // dist_scale=0.06, has_immediate_draw=1
 	draw_objects(sstations, sstation_groups, dstate, 0.15, shadow_only, 1); // dist_scale=0.15, has_immediate_draw=1
-	draw_objects(mboxes,    mbox_groups,     dstate, 0.04, shadow_only, 1); // dist_scale=0.10, has_immediate_draw=1
+	draw_objects(mboxes,    mbox_groups,     dstate, 0.04, shadow_only, 1); // dist_scale=0.04, has_immediate_draw=1
 	draw_objects(ppoles,    ppole_groups,    dstate, 0.20, shadow_only, 0); // dist_scale=0.20
 	draw_objects(signs,     sign_groups,     dstate, 0.25, shadow_only, 0, 1); // dist_scale=0.25, draw_qbd_as_quads=1
-	draw_objects(flags,     flag_groups,     dstate, 0.18, shadow_only, 0); // dist_scale=0.16
-	draw_objects(newsracks, nrack_groups,    dstate, 0.10, shadow_only, 0); // dist_scale=0.14
+	draw_objects(flags,     flag_groups,     dstate, 0.18, shadow_only, 0); // dist_scale=0.18
+	draw_objects(newsracks, nrack_groups,    dstate, 0.10, shadow_only, 0); // dist_scale=0.10
 	
 	if (!shadow_only) { // unshadowed objects
 		draw_objects(hcaps,    hcap_groups,    dstate, 0.12, shadow_only, 0); // dist_scale=0.12
 		draw_objects(manholes, manhole_groups, dstate, 0.07, shadow_only, 1); // dist_scale=0.07, has_immediate_draw=1
-		draw_objects(pigeons,  pigeon_groups,  dstate, 0.03, shadow_only, 1); // dist_scale=0.10, has_immediate_draw=1
-		draw_objects(birds,    bird_groups,    dstate, 0.03, shadow_only, 1); // dist_scale=0.10, has_immediate_draw=1
+		draw_objects(pigeons,  pigeon_groups,  dstate, 0.03, shadow_only, 1); // dist_scale=0.03, has_immediate_draw=1
+		draw_objects(birds,    bird_groups,    dstate, 0.03, shadow_only, 1); // dist_scale=0.03, has_immediate_draw=1
+		draw_objects(pladders, plad_groups,    dstate, 0.06, shadow_only, 1); // dist_scale=0.06, has_immediate_draw=1
 	}
 	dstate.s.add_uniform_float("min_alpha", DEF_CITY_MIN_ALPHA); // reset back to default after drawing 3D models such as fire hydrants and substations
 	
@@ -1285,7 +1299,7 @@ bool city_obj_placer_t::proc_sphere_coll(point &pos, point const &p_last, vector
 	if (proc_vector_sphere_coll(stopsigns, stopsign_groups, pos, p_last, radius, xlate, cnorm)) return 1;
 	if (proc_vector_sphere_coll(flags,     flag_groups,     pos, p_last, radius, xlate, cnorm)) return 1;
 	if (proc_vector_sphere_coll(newsracks, nrack_groups,    pos, p_last, radius, xlate, cnorm)) return 1;
-	// Note: no coll with tree_planters because the tree coll should take care of it; no coll with hcaps, manholes, pool decks, pigeons, or birds
+	// Note: no coll with tree_planters because the tree coll should take care of it; no coll with hcaps, manholes, pladders, pool decks, pigeons, or birds
 	return 0;
 }
 
@@ -1313,7 +1327,7 @@ bool city_obj_placer_t::line_intersect(point const &p1, point const &p2, float &
 	check_vector_line_intersect(stopsigns, stopsign_groups, p1, p2, t, ret);
 	check_vector_line_intersect(flags,     flag_groups,     p1, p2, t, ret);
 	check_vector_line_intersect(newsracks, nrack_groups,    p1, p2, t, ret);
-	// Note: nothing to do for parking lots, tree_planters, hcaps, manholes, pool decks, pigeons, or birds; mboxes are ignored because they're not simple shapes
+	// Note: nothing to do for parking lots, tree_planters, hcaps, manholes, pladders, pool decks, pigeons, or birds; mboxes are ignored because they're not simple shapes
 	return ret;
 }
 
@@ -1399,7 +1413,7 @@ bool city_obj_placer_t::get_color_at_xy(point const &pos, colorRGBA &color, bool
 	}
 	if (check_city_obj_bcube_pt_xy_contain(sstation_groups, sstations, pos, obj_ix)) {color = colorRGBA(0.6, 0.8, 0.4, 1.0); return 1;} // light olive
 	if (check_city_obj_bcube_pt_xy_contain(trashcan_groups, trashcans, pos, obj_ix)) {color = colorRGBA(0.8, 0.6, 0.3, 1.0); return 1;} // tan
-	// Note: ppoles, hcaps, manholes, mboxes, signs, stopsigns, flags, pigeons, and birds are skipped for now
+	// Note: ppoles, hcaps, manholes, mboxes, pladders, signs, stopsigns, flags, pigeons, and birds are skipped for now
 	return 0;
 }
 

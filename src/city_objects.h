@@ -120,6 +120,12 @@ struct swimming_pool_t : public oriented_city_obj_t { // Note: dim and dir are u
 	bool proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const;
 };
 
+struct pool_ladder_t : public oriented_city_obj_t { // for in-ground pools
+	pool_ladder_t(cube_t const &bcube_, bool dim_, bool dir_);
+	static void pre_draw(draw_state_t &dstate, bool shadow_only) {} // nothing to do
+	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const;
+};
+
 struct pool_deck_t : public oriented_city_obj_t {
 	unsigned mat_id;
 	pool_deck_t(cube_t const &bcube_, unsigned tid_, bool dim_, bool dir_);
@@ -173,7 +179,6 @@ struct hcap_space_t : public oriented_city_obj_t { // handicap space
 };
 struct hcap_with_dist_t : public hcap_space_t {
 	float dmin_sq;
-
 	hcap_with_dist_t(hcap_space_t const &hs, cube_t const &plot, vect_cube_t &bcubes, unsigned bcubes_end);
 	bool operator<(hcap_with_dist_t const &v) const {return (dmin_sq < v.dmin_sq);}
 };
@@ -194,7 +199,6 @@ struct mailbox_t : public oriented_city_obj_t {
 
 struct city_bird_base_t : public city_obj_t {
 	vector3d dir;
-
 	city_bird_base_t(point const &pos_, float height, vector3d const &dir, unsigned model_id);
 };
 
@@ -324,6 +328,7 @@ private:
 	vector<substation_t> sstations;
 	vector<divider_t> dividers; // dividers for residential plots
 	vector<swimming_pool_t> pools;
+	vector<pool_ladder_t> pladders;
 	vector<pool_deck_t> pdecks;
 	vector<power_pole_t> ppoles;
 	vector<hcap_space_t> hcaps; // handicap signs painted on parking lots
@@ -336,7 +341,7 @@ private:
 	vector<city_flag_t> flags;
 	vector<newsrack_t> newsracks;
 	// index is last obj in group
-	city_obj_groups_t bench_groups, planter_groups, trashcan_groups, fhydrant_groups, sstation_groups, divider_groups, pool_groups, pdeck_groups,
+	city_obj_groups_t bench_groups, planter_groups, trashcan_groups, fhydrant_groups, sstation_groups, divider_groups, pool_groups, plad_groups, pdeck_groups,
 		ppole_groups, hcap_groups, manhole_groups, mbox_groups, pigeon_groups, bird_groups, sign_groups, stopsign_groups, flag_groups, nrack_groups;
 	vector<city_zone_t> sub_plots; // reused across calls
 	cube_t all_objs_bcube;
