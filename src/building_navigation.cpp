@@ -1096,8 +1096,8 @@ bool building_t::choose_dest_goal(person_t &person, rand_gen_t &rgen) const { //
 		}
 		if (!contained && !closest_part.is_all_zeros()) {closest_part.clamp_pt(person.target_pos);} // clamp to closest part
 		static vect_cube_t avoid; // reuse across frames/people
-		// same_as_player=1, skip_stairs=1
-		interior->get_avoid_cubes(avoid, (person.target_pos.z - person.radius), (person.target_pos.z + z2_add), 0.5*person.radius, get_floor_thickness(), 1, 1);
+		float const z1(person.target_pos.z - person.radius), z2(person.target_pos.z + z2_add);
+		interior->get_avoid_cubes(avoid, z1, z2, 0.5*person.radius, get_floor_thickness(), get_floor_ceil_gap(), 1, 1); // same_as_player=1, skip_stairs=1
 
 		// check for initial collisions at the player's location, but exclude stairs in case the player is standing on them;
 		// this may no longer be required since complete_path_within_room() now ignores initial collisions with the dest, but is likely still a good idea
@@ -1394,7 +1394,8 @@ cube_t get_stairs_plus_step_up(stairwell_t const &stairs) {
 
 void building_t::get_avoid_cubes(float zval, float height, float radius, vect_cube_t &avoid, bool following_player, cube_t const *const fires_select_cube) const {
 	assert(interior);
-	interior->get_avoid_cubes(avoid, (zval - radius), (zval + (height - radius)), 0.5*radius, get_floor_thickness(), following_player, 0, fires_select_cube); // skip_stairs=0
+	float const z1(zval - radius);
+	interior->get_avoid_cubes(avoid, z1, (z1 + height), 0.5*radius, get_floor_thickness(), get_floor_ceil_gap(), following_player, 0, fires_select_cube); // skip_stairs=0
 }
 bool building_t::find_route_to_point(person_t const &person, float radius, bool is_first_path, bool following_player, ai_path_t &path) const {
 
@@ -1446,7 +1447,7 @@ bool building_t::find_route_to_point(person_t const &person, float radius, bool 
 			point const seg2_start(interior->nav_graph->get_stairs_entrance_pt(to.z, stairs_room_ix, !up_or_down)); // other end
 			assert(point_in_building_or_basement_bcube(seg2_start));
 			// new floor, new zval, new avoid cubes
-			interior->get_avoid_cubes(avoid, (seg2_start.z - radius), (seg2_start.z + z2_add), 0.5*radius, get_floor_thickness(), following_player, get_floor_ceil_gap());
+			interior->get_avoid_cubes(avoid, (seg2_start.z - radius), (seg2_start.z + z2_add), 0.5*radius, get_floor_thickness(), get_floor_ceil_gap(), following_player);
 			// stairs/ramp => to
 			if (!interior->nav_graph->find_path_points(stairs_room_ix, loc2.room_ix, person.ssn, radius, 0, is_first_path,
 				!up_or_down, person.cur_rseed, avoid, *this, seg2_start, interior->doors, person.has_key, nullptr, path)) continue; // no custom_dest
