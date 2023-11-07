@@ -1656,17 +1656,20 @@ bool building_t::maybe_use_last_pickup_room_object(point const &player_pos, bool
 	}
 	else if (obj.can_use()) { // active with either use_object or fire key
 		if (obj.type == TYPE_TPROLL) {
+			if (player_in_water) return 0; // can't place TP in water
 			point const dest(player_pos + (1.5f*player_radius)*cview_dir);
 			if (!apply_toilet_paper(dest, cview_dir, 0.5*obj.dz())) return 0;
 			player_inventory.mark_last_item_used();
 		}
 		else if (obj.type == TYPE_SPRAYCAN || obj.type == TYPE_MARKER) { // spraypaint or marker
+			if (player_in_water == 2) return 0; // can't use when fully underwater
 			unsigned emissive_color_id(0);
 			if (obj.type == TYPE_SPRAYCAN && obj.color == GD_SP_COLOR) {emissive_color_id = 1 + (obj.obj_id % NUM_SP_EMISSIVE_COLORS);} // spraypaint glows in the dark
 			if (!apply_paint(player_pos, cview_dir, obj.color, emissive_color_id, obj.type)) return 0;
 			player_inventory.mark_last_item_used();
 		}
 		else if (obj.type == TYPE_TAPE) {
+			if (player_in_water == 2) return 0; // can't use when fully underwater
 			tape_manager.toggle_use(obj, this);
 		}
 		else if (obj.type == TYPE_BOOK || obj.type == TYPE_RAT) { // items that can be dropped
@@ -1720,6 +1723,7 @@ bool building_t::maybe_use_last_pickup_room_object(point const &player_pos, bool
 				drop_inventory_item(*this, obj, player_pos);
 				return 1;
 			}
+			if (player_in_water == 2) return 0; // can't spray when fully underwater
 			static double next_sound_time(0.0);
 
 			if (tfticks > next_sound_time) { // play sound if sprayed/marked, but not too frequently; marker has no sound
@@ -1985,7 +1989,10 @@ bool building_t::apply_paint(point const &pos, vector3d const &dir, colorRGBA co
 	for (auto i = interior->room_geom->objs.begin(); i != objs_end; ++i) {
 		float const pre_tmin(tmin);
 
- 		if ((is_wall && (i->type == TYPE_PICTURE || i->type == TYPE_WBOARD || i->type == TYPE_MIRROR)) || (is_floor && (i->type == TYPE_RUG || i->type == TYPE_FLOORING))) {
+ 		if ((is_wall && (i->type == TYPE_PICTURE || i->type == TYPE_WBOARD || i->type == TYPE_MIRROR)) ||
+			(is_floor && (i->type == TYPE_RUG || i->type == TYPE_FLOORING)) ||
+			(i->type == TYPE_POOL_TILE && i->shape == SHAPE_CUBE))
+		{
 			if (line_int_cube_get_t(pos, pos2, *i, tmin)) {target = *i;} // Note: return value is ignored, we only need to update tmin and target; normal should be unchanged
 		}
 		else if (i->type == TYPE_CLOSET && line_int_cube_get_t(pos, pos2, *i, tmin)) {
@@ -2046,7 +2053,8 @@ bool building_t::apply_paint(point const &pos, vector3d const &dir, colorRGBA co
 	if (normal == zero_vector) return 0; // no walls, ceilings, floors, etc. hit
 	if (walls_blocked && normal.z == 0.0) return 0; // can't spraypaint walls through elevator, stairs, etc.
 	point p_int(pos + tmin*(pos2 - pos));
-	if (check_line_intersect_doors(pos, p_int, 1)) return 0; // blocked by door, no spraypaint; can't add spraypaint over door in case door is opened; inc_open=1
+	if (check_line_intersect_doors(pos, p_int, 1))       return 0; // blocked by door, no spraypaint; can't add spraypaint over door in case door is opened; inc_open=1
+	if (has_pool() && interior->pool.contains_pt(p_int)) return 0; // can't use in the pool
 	float const max_radius((is_spraypaint ? 2.0 : 0.035)*CAMERA_RADIUS);
 	float const dist(p2p_dist(pos, p_int)), radius(is_spraypaint ? min(max_radius, max(0.05f*max_radius, 0.1f*dist)) : max_radius); // modified version of get_spray_radius()
 	float const alpha((is_spraypaint && radius > 0.5*max_radius) ? (1.0 - (radius - 0.5*max_radius)/max_radius) : 1.0); // 0.5 - 1.0
