@@ -1029,7 +1029,7 @@ bool building_t::place_model_along_wall(unsigned model_id, room_object type, roo
 }
 
 float building_t::add_flooring(room_t const &room, float &zval, unsigned room_id, float tot_light_amt, unsigned flooring_type) {
-	float const new_zval(zval + 0.0012*get_window_vspace());
+	float const new_zval(zval + get_flooring_thick());
 	cube_t flooring(get_walkable_room_bounds(room));
 	flooring.expand_by_xy(0.5*get_wall_thickness()); // expand to include half of the walls so that it meets the door and trim is added
 
@@ -2195,7 +2195,7 @@ void building_t::add_swimming_pool_room_objs(rand_gen_t rgen, room_t const &room
 	cube_t const place_area(get_walkable_room_bounds(room));
 	indoor_pool_t &pool(interior->pool);
 	float const floor_spacing(get_window_vspace()), trim_thickness(get_trim_thickness()), wall_thickness(get_wall_thickness());
-	float const tile_thickness(0.5*trim_thickness), water_gap(pool.z2() - interior->water_zval);
+	float const tile_thickness(get_flooring_thick()), water_gap(pool.z2() - interior->water_zval);
 	float const pool_len(pool.get_sz_dim(pool.dim)), pool_depth(interior->water_zval - pool.z1());
 	float const shallow_depth(0.5*floor_spacing); // about 4 feet
 	vect_room_object_t &objs(interior->room_geom->objs);
