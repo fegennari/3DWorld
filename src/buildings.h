@@ -1593,7 +1593,7 @@ struct building_t : public building_geom_t {
 	bool line_intersect_stairs_or_ramp(point const &p1, point const &p2) const;
 	bool check_cube_on_or_near_stairs(cube_t const &c) const;
 	bool drop_room_object(room_object_t &obj, point const &dest, point const &player_pos, bool dim, bool dir);
-	bool maybe_use_last_pickup_room_object(point const &player_pos);
+	bool maybe_use_last_pickup_room_object(point const &player_pos, bool no_time_check=0);
 	bool maybe_update_tape(point const &player_pos, bool end_of_tape);
 	void handle_vert_cylin_tape_collision(point &cur_pos, point const &prev_pos, float z1, float z2, float radius, bool is_player) const;
 	void draw_room_geom(brg_batch_draw_t *bbd, shader_t &s, shader_t &amask_shader, occlusion_checker_noncity_t &oc, vector3d const &xlate,
@@ -1964,6 +1964,7 @@ private:
 	void run_ball_update(vector<room_object_t>::iterator ball_it, point const &player_pos, float player_z1, bool player_is_moving);
 	bool get_zval_of_floor(point const &pos, float radius, float &zval) const;
 	bool get_zval_for_obj_placement(point const &pos, float radius, float &zval, bool add_z_bias) const;
+	void register_player_death(point const &camera_bs);
 	void add_blood_decal(point const &pos, float radius, colorRGBA const &color=WHITE);
 	void add_broken_glass_to_floor(point const &pos, float radius);
 	void play_tape_sound(point const &sound_pos, float sound_gain, bool tape_break) const;

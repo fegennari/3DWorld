@@ -2087,7 +2087,7 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 			if (!check_for_wall_ceil_floor_int(person.pos, cur_player_building_loc.pos, 1)) { // inc_pg_br_walls=1
 				int const ret_status(register_ai_player_coll(person.has_key, person.get_height())); // return value: 0=no effect, 1=player is killed, 2=this person is killed
 				// player is killed, we could track kills here
-				if (ret_status == 1) {add_blood_decal(cur_player_building_loc.pos, get_scaled_player_radius());}
+				if (ret_status == 1) {register_player_death(cur_player_building_loc.pos);}
 				else if (ret_status == 2) {return AI_TO_REMOVE;} // player defeats zombie, remove it
 			}
 		}

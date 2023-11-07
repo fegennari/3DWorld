@@ -25,6 +25,7 @@ extern float fticks, CAMERA_RADIUS;
 extern double tfticks;
 extern colorRGBA vignette_color;
 extern building_params_t global_building_params;
+extern building_t const *player_building;
 
 
 void place_player_at_xy(float xval, float yval);
@@ -482,6 +483,18 @@ public:
 	void clear_all() { // called on game mode init
 		tot_value = best_value = 0.0;
 		clear();
+	}
+	void drop_all_inventory_items(point const &camera_bs, building_t &building) { // on player death
+		if (!building.has_room_geom()) return;
+
+		while (!carried.empty()) {
+			room_object_t const &obj(carried.back());
+
+			if (obj.has_dstate() || obj.type == TYPE_BOOK || obj.type == TYPE_RAT || (obj.type == TYPE_FIRE_EXT && obj.is_broken())) {
+				if (building.maybe_use_last_pickup_room_object(camera_bs, 1)) continue; // used
+			}
+			carried.pop_back();
+		} // end while
 	}
 	void take_damage(float amt, int poison_type=0) { // poison_type: 0=none, 1=spider, 2=snake
 		player_health -= amt*(1.0f - 0.75f*min(drunkenness, 1.0f)); // up to 75% damage reduction when drunk
@@ -1620,12 +1633,12 @@ bool building_t::drop_room_object(room_object_t &obj, point const &dest, point c
 	return 1;
 }
 
-bool building_t::maybe_use_last_pickup_room_object(point const &player_pos) {
+bool building_t::maybe_use_last_pickup_room_object(point const &player_pos, bool no_time_check) { // Note: player_pos is in building space
 	if (player_in_elevator) return 0; // can't use items in elevators
 	assert(has_room_geom());
 	static bool delay_use(0);
 	static double last_use_time(0.0);
-	if (delay_use && (tfticks - last_use_time) < 0.5*TICKS_PER_SECOND) return 0; // half second delay on prev item use or switch
+	if (!no_time_check && delay_use && (tfticks - last_use_time) < 0.5*TICKS_PER_SECOND) return 0; // half second delay on prev item use or switch
 	delay_use = 0;
 	room_object_t obj;
 	if (!player_inventory.try_use_last_item(obj)) return 0;
@@ -2122,6 +2135,10 @@ bool building_t::apply_toilet_paper(point const &pos, vector3d const &dir, float
 	return 1;
 }
 
+void building_t::register_player_death(point const &camera_bs) { // due to zombie kill
+	add_blood_decal(camera_bs, get_scaled_player_radius());
+	player_inventory.drop_all_inventory_items(camera_bs, *this);
+}
 void building_t::add_blood_decal(point const &pos, float radius, colorRGBA const &color) {
 	bool const is_blood(color == WHITE); // else insect guts; here WHITE represents real red blood, while any other color is something custom
 	if (disable_blood && is_blood) return; // disable_blood only applies to red blood, not bug guts
