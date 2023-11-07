@@ -1895,11 +1895,45 @@ bool can_place_on_object(room_object_t const &obj, point const &pos, float radiu
 	return 1;
 }
 
+bool building_t::get_zval_for_pool_bottom(point const &pos, float &zval) const {
+	if (!has_pool     ()) return 0;
+	if (!has_room_geom()) return 0; // if the room geom hasn't been generated yet, we can't determine pool depth, so just ignore the pool
+	indoor_pool_t const &pool(interior->pool);
+	if (!pool.contains_pt_xy(pos)) return 0;
+	room_t const &pool_room(get_room(pool.room_ix));
+	if (pos.z > pool_room.z2() || pos.z < pool.z1()) return 0;
+	vect_room_object_t const &objs(interior->room_geom->objs);
+	unsigned const pr_ix(interior->room_geom->pool_ramp_obj_ix), ps_six(interior->room_geom->pool_stairs_start_ix);
+	zval = pool.z1(); // start on the bottom of the pool
+
+	if (pr_ix > 0) { // pool has a ramp on the bottom
+		assert(pr_ix+1 < objs.size()); // must have ramp and upper surface
+		room_object_t const &ramp(objs[pr_ix]), &upper(objs[pr_ix+1]);
+		assert(ramp .type == TYPE_POOL_TILE && ramp .shape == SHAPE_ANGLED);
+		assert(upper.type == TYPE_POOL_TILE && upper.shape == SHAPE_CUBE);
+
+		if (upper.contains_pt_xy(pos)) {zval = upper.z2();} // on upper surface
+		else if (ramp.contains_pt_xy(pos)) { // on the ramp
+			float const t(CLIP_TO_01((pos[ramp.dim] - ramp.d[ramp.dim][0])/ramp.get_length()));
+			zval = ramp.z1() + ramp.dz()*(ramp.dir ? t : (1.0-t));
+		}
+	}
+	if (ps_six > 0) { // check for stairs; should always be true
+		assert(ps_six < objs.size());
+		assert(objs[ps_six].type == TYPE_STAIR);
+
+		for (auto i = objs.begin()+ps_six; i != objs.end(); ++i) {
+			if (i->type != TYPE_STAIR) break; // done with stairs
+			if (i->contains_pt_xy(pos)) {max_eq(zval, i->z2()); break;} // can only be on one stair
+		}
+	}
+}
 bool building_t::get_zval_of_floor(point const &pos, float radius, float &zval) const {
 	if (!interior) return 0; // error?
 	cube_t cur_bcube;
 	cur_bcube.set_from_sphere(pos, radius);
 	if (!bcube.contains_cube_xy(cur_bcube) && !interior->basement_ext_bcube.contains_cube(cur_bcube)) return 0; // not contained/too close to walls
+	if (get_zval_for_pool_bottom(pos, zval)) return 1; // on the bottom of the pool
 	float const floor_spacing(get_window_vspace());
 
 	for (auto i = interior->floors.begin(); i != interior->floors.end(); ++i) { // blood can only be placed on floors
