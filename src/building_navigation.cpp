@@ -430,9 +430,7 @@ public:
 		c.expand_by_xy(radius);
 
 		for (auto i = avoid.begin(); i != avoid.end(); ++i) {
-			if (!i->intersects_xy(c)) continue;
-			float const rscale((i->z2() < pos.z) ? 0.75 : 1.0); // reduced radius for low objects since legs have a smaller extent than arms
-			if (i->intersects_xy(c) && sphere_cube_intersect_xy(pos, rscale*radius, *i)) return 0;
+			if (i->intersects_xy(c) && sphere_cube_intersect_xy(pos, radius, *i)) return 0;
 		}
 		if (!building.check_cube_within_part_sides(c)) return 0; // outside non-cube building - will try again with a new pos next time
 		return 1;
@@ -534,9 +532,8 @@ public:
 
 		for (auto i = avoid.begin(); i != avoid.end(); ++i) {
 			if (!i->intersects_xy(walk_area_exp)) continue;
-			float const rscale((i->z2() < p1.z) ? 0.75 : 1.0); // reduced radius for low objects since legs have a smaller extent than arms
 			cube_t c(*i);
-			c.expand_by_xy(rscale*radius);
+			c.expand_by_xy(radius);
 
 			if (c.contains_pt_xy(p1)) {
 				if (ignore_p1_coll) {
@@ -1105,8 +1102,7 @@ bool building_t::choose_dest_goal(person_t &person, rand_gen_t &rgen) const { //
 			bool any_updated(0);
 
 			for (auto i = avoid.begin(); i != avoid.end(); ++i) { // move target_pos to avoid room objects
-				float const rscale((i->z2() < person.pos.z) ? 0.75 : 1.0); // reduced radius for low objects since legs have a smaller extent than arms
-				any_updated |= move_sphere_to_not_int_cube_xy(person.target_pos, 1.2*rscale*coll_dist, *i); // add an extra 20% buffer
+				any_updated |= move_sphere_to_not_int_cube_xy(person.target_pos, 1.2*coll_dist, *i); // add an extra 20% buffer
 			}
 			if (!any_updated) break; // done
 		} // for n
@@ -1319,7 +1315,7 @@ void building_interior_t::get_avoid_cubes(vect_cube_t &avoid, float z1, float z2
 		
 		if (same_as_player && c->type == TYPE_TABLE && c->shape == SHAPE_CYLIN) {
 			// special handling of round table so that the player can't hide in the area unreachable from the bounding cube
-			float const shrink_val(c->get_radius()/SQRT2); // small shrink
+			float const shrink_val(c->get_radius()*(1.0 - 1.0/SQRT2)); // small shrink to square inscribed in the circle
 			avoid.back().expand_by(-shrink_val);
 
 			for (unsigned d = 0; d < 2; ++d) { // create a cross shape
