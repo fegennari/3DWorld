@@ -393,6 +393,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				}
 				add_outlets_to_room(rgen, *r, room_center.z, room_id, objs_start, is_ground_floor, is_basement);
 				if (has_light) {add_light_switches_to_room(rgen, *r, room_center.z, room_id, objs_start, is_ground_floor, is_basement);} // shed, garage, or hallway
+				if (r->is_hallway && is_ext_basement) {add_false_door_to_extb_hallway_if_needed(*r, room_center.z, room_id);}
 
 				if (is_house && r->is_hallway) { // allow pictures, rugs, and light switches in the hallways of houses
 					hang_pictures_in_room(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, f, is_basement);

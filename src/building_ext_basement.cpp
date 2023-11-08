@@ -547,6 +547,34 @@ void building_t::end_ext_basement_hallway(extb_room_t &room, cube_t const &conn_
 	room.clip_hallway_to_conn_bcube(dim); // else clip
 }
 
+void building_t::add_false_door_to_extb_hallway_if_needed(room_t const &room, float zval, unsigned room_id) {
+	assert(has_room_geom());
+	bool const dim(room.dx() < room.dy()); // long dim
+	float const door_width(get_doorway_width()), wall_thickness(get_wall_thickness()), expand_val(2.0*wall_thickness);
+	assert(interior->ext_basement_hallway_room_id >= 0 && interior->ext_basement_hallway_room_id < interior->rooms.size());
+
+	for (unsigned dir = 0; dir < 2; ++dir) { // check both ends
+		cube_t query_region(room);
+		query_region.d[dim][!dir] = room.d[dim][dir]; // shrink to the end of the hallway
+		query_region.expand_in_dim(dim, 1.5*door_width); // distance from end to nearest door/room in either direction
+		query_region.expand_by_xy(expand_val);
+		query_region.expand_in_dim(2, -get_fc_thickness()); // subtract floors and ceilings
+		if (interior->is_cube_close_to_doorway(query_region, room))   continue; // bad placement/not needed
+		if (interior->is_blocked_by_stairs_or_elevator(query_region)) continue; // check stairs
+		bool near_other_room(0);
+
+		for (unsigned r = interior->ext_basement_hallway_room_id; r < interior->rooms.size(); ++r) {
+			if (r != room_id && interior->rooms[r].intersects(query_region)) {near_other_room = 1; break;}
+		}
+		if (near_other_room) continue; // too close to another room to the side of or opposite the door
+		cube_t door;
+		set_cube_zvals(door, zval, (zval + get_door_height()));
+		set_wall_width(door, room.get_center_dim(!dim), 0.5*door_width, !dim);
+		set_wall_width(door, (room.d[dim][dir] + (dir ? -1.0 : 1.0)*0.5*wall_thickness), 2.0*get_trim_thickness(), dim);
+		interior->room_geom->objs.emplace_back(door, TYPE_FALSE_DOOR, room_id, dim, dir, RO_FLAG_NOCOLL, 1.0, SHAPE_CUBE, WHITE);
+	} // for dir
+}
+
 void extb_room_t::clip_hallway_to_conn_bcube(bool dim) { // clip off the unconnected length at the end of the hallway
 	if (!is_hallway) return;
 	assert(conn_bcube.is_strictly_normalized());
