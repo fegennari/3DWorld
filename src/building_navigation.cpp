@@ -882,7 +882,7 @@ void building_t::build_nav_graph() const { // Note: does not depend on room geom
 			}
 			if (room.intersects_no_adj(stairwell)) {ng.connect_stairs(r, s, stairwell.dim, stairwell.dir, (stairwell.shape == SHAPE_U), 0);} // is_ramp=0
 		}
-		if (room.is_hallway) { // check for connected hallways
+		if (!is_house && room.is_hallway && !room.is_ext_basement()) { // check for connected hallways in office buildings
 			for (unsigned r2 = r+1; r2 < num_rooms; ++r2) { // check rooms with higher index (since graph is bidirectional)
 				room_t const &room2(interior->rooms[r2]);
 				if (!room2.is_hallway || room2.z1() != room.z1() || !room2.intersects(c)) continue; // not a connected hallway
