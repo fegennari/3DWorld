@@ -1258,7 +1258,7 @@ void building_interior_t::get_avoid_cubes(vect_cube_t &avoid, float z1, float z2
 	if (!skip_stairs) {add_bcube_if_overlaps_zval(stairwells, avoid, z1, z2);} // clearance not required
 	add_bcube_if_overlaps_zval(elevators, avoid, z1, z2); // clearance not required
 	
-	if (pool.valid) { // skip if !same_as_player to allow zombies in pools?
+	if (pool.valid && z1 < (pool.z2() + floor_ceil_gap)) { // skip if !same_as_player to allow zombies in pools?
 		avoid.push_back(pool);
 		avoid.back().z2() += floor_ceil_gap; // increase height so that it overlaps a person standing over it
 	}
@@ -1274,6 +1274,8 @@ void building_interior_t::get_avoid_cubes(vect_cube_t &avoid, float z1, float z2
 		// so that means we need navigation to the side while on a ramp? this seems quite difficult for the current system to support
 		//if (skip_stairs && c->type == TYPE_RAMP) continue;
 		//if (c->type == TYPE_ATTIC_DOOR && (c->flags & RO_FLAG_IN_HALLWAY)) continue; // skip open attic doors in hallways because they block the path too much
+		cube_t bc(get_true_room_obj_bcube(*c)); // needed for open attic door
+		if (bc.z1() > z2 || bc.z2() < z1) continue;
 		
 		if (global_building_params.ai_sees_player_hide >= 2 && c->is_open()) { // open hiding spot that we can enter
 			// in the unlikely event the player closes the door on a zombie, I guess they're stuck in here; good job to the player
@@ -1305,9 +1307,6 @@ void building_interior_t::get_avoid_cubes(vect_cube_t &avoid, float z1, float z2
 				continue;
 			}
 		}
-		cube_t bc(get_true_room_obj_bcube(*c)); // needed for open attic door
-		if (bc.z1() > z2 || bc.z2() < z1) continue;
-
 		if (r_shrink_if_low > 0.0 && c->z2() < z_thresh && c->shape == SHAPE_CUBE) { // shrink cube if it's low; applies to boxes and crates on the floor
 			bc.expand_by_xy(-min(0.95f*0.5f*min(c->dx(), c->dy()), r_shrink_if_low)); // make sure it doesn't shrink to zero area
 		}
@@ -1329,7 +1328,9 @@ void building_interior_t::get_avoid_cubes(vect_cube_t &avoid, float z1, float z2
 			for (auto const &room : c.rooms) {
 				if (room.door_is_b) continue; // door is for the other building
 				door_t const &door(get_door(room.door_ix));
-				avoid.push_back(door.get_true_bcube());
+				cube_t const bc(door.get_true_bcube());
+				if (bc.z1() > z2 || bc.z2() < z1) continue;
+				avoid.push_back(bc);
 				avoid.back().expand_in_dim(door.dim, floor_thickness); // make it a bit wider to be sure the person will collide with it
 			}
 		} // for c
