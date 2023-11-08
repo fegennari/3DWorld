@@ -798,7 +798,9 @@ void building_t::add_balconies(rand_gen_t &rgen) {
 							bool blocked(0);
 
 							for (auto i = objs.begin(); i != objs.begin()+init_objs_sz; ++i) { // check if blocked by furniture or something on the other side of the wall
-								if (i->type == TYPE_BOX || i->type == TYPE_LG_BALL) continue; // easy to move, so can block the door
+								if (i->type == TYPE_BOX || i->type == TYPE_LG_BALL || i->type == TYPE_TCAN) continue; // easy to move, so can block the door
+								if (i->type == TYPE_RUG || i->type == TYPE_FLOORING) continue; // not blocking
+								if (i->type == TYPE_OUTLET) {i->remove();} // if blocked by an outlet, just remove the outlet (assuming this cand is chosen)
 								if (i->intersects(door_exp)) {blocked = 1; break;}
 							}
 							if (!blocked) {cands.push_back(door);}
