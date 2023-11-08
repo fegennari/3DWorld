@@ -143,6 +143,9 @@ void building_t::setup_courtyard() {
 	}
 	assert(num_rooms == 1);
 }
+bool building_t::point_in_courtyard(point const &pos_bs) const {
+	return has_courtyard && has_room_geom() && interior->room_geom->courtyard.contains_pt(pos_bs);
+}
 
 void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 

@@ -1009,8 +1009,13 @@ bool building_t::choose_dest_goal(person_t &person, rand_gen_t &rgen) const { //
 	point sound_pos;
 
 	if ((global_building_params.ai_target_player || cur_player_building_loc.same_room_floor(loc)) && can_target_player(person)) {
-		goal = cur_player_building_loc; // player is in a different room of our building, or we're following the player's position
-		person.goal_type = GOAL_TYPE_PLAYER;
+		if (point_in_courtyard(cur_player_building_loc.pos)) { // player in courtyard; currently never gets here because we can't target the player in this case
+			select_person_dest_in_room(person, rgen, get_room(interior->room_geom->courtyard.room_ix)); // target room connected to courtyard
+		}
+		else {
+			goal = cur_player_building_loc; // player is in a different room of our building, or we're following the player's position
+			person.goal_type = GOAL_TYPE_PLAYER;
+		}
 	}
 	else if (can_ai_follow_player(person) && get_closest_building_sound(person.pos, sound_pos, floor_spacing)) { // target the loudest sound
 		if (point_in_or_above_pool(sound_pos) && get_room(interior->pool.room_ix).contains_pt(person.pos)) {
@@ -1093,9 +1098,12 @@ bool building_t::choose_dest_goal(person_t &person, rand_gen_t &rgen) const { //
 		}
 		if (!contained && !closest_part.is_all_zeros()) {closest_part.clamp_pt(person.target_pos);} // clamp to closest part
 		static vect_cube_t avoid; // reuse across frames/people
-		float const z1(person.target_pos.z - person.radius), z2(person.target_pos.z + z2_add);
-		interior->get_avoid_cubes(avoid, z1, z2, 0.5*person.radius, get_floor_thickness(), get_floor_ceil_gap(), 1, 1); // same_as_player=1, skip_stairs=1
-
+		float const z1(person.target_pos.z - person.radius), z2(person.target_pos.z + z2_add), fc_gap(get_floor_ceil_gap());
+		interior->get_avoid_cubes(avoid, z1, z2, 0.5*person.radius, get_floor_thickness(), fc_gap, 1, 1); // same_as_player=1, skip_stairs=1
+		
+		if (has_courtyard && has_room_geom() && z1 >= ground_floor_z1 && z1 < (ground_floor_z1 + fc_gap)) {
+			avoid.push_back(interior->room_geom->courtyard); // don't clip through the courtyard door trying to follow the player
+		}
 		// check for initial collisions at the player's location, but exclude stairs in case the player is standing on them;
 		// this may no longer be required since complete_path_within_room() now ignores initial collisions with the dest, but is likely still a good idea
 		for (unsigned n = 0; n < 4; ++n) { // iterate a few times in case a collision moves pos into another object
