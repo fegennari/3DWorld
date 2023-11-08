@@ -1181,8 +1181,23 @@ void building_t::add_backrooms_objs(rand_gen_t rgen, room_t &room, float zval, u
 void building_t::add_missing_backrooms_lights(rand_gen_t rgen, float zval, unsigned room_id, unsigned objs_start, unsigned lights_start,
 	room_object_t const &ref_light, vect_cube_t const &rooms_to_light, light_ix_assign_t &light_ix_assign)
 {
-	if (rooms_to_light.empty()) return; // nothing to do
 	vect_room_object_t &objs(interior->room_geom->objs);
+	room_t const &room(get_room(room_id));
+	// apply custom colors to some lights; at the moment this only includes grid lights and not small room lights added below
+	unsigned const NUM_LIGHT_COLORS = 5;
+	colorRGBA const light_colors[NUM_LIGHT_COLORS] = {RED, GREEN, BLUE, YELLOW, PURPLE};
+	float const zone_spacing(8.0*get_window_vspace());
+	unsigned const zone_x_add(rgen.rand()), zone_y_add(rgen.rand());
+	rand_gen_t zone_rgen;
+
+	for (auto i = objs.begin()+lights_start; i != objs.end(); ++i) {
+		assert(i->type == TYPE_LIGHT);
+		unsigned const zone_x(zone_x_add + round_fp(i->xc()/zone_spacing)), zone_y(zone_y_add + round_fp(i->yc()/zone_spacing));
+		zone_rgen.set_state(zone_x, zone_y);
+		zone_rgen.rand_mix();
+		if (zone_rgen.rand_float() > 0.25) continue; // 25% chance of colored light
+		i->color = light_colors[zone_rgen.rand() % NUM_LIGHT_COLORS];
+	} // for i
 	unsigned const lights_end(objs.size());
 	point const ref_light_center(ref_light.get_cube_center());
 	vect_cube_t to_add;
@@ -1199,7 +1214,7 @@ void building_t::add_missing_backrooms_lights(rand_gen_t rgen, float zval, unsig
 		light += vector3d((r.xc() - ref_light_center.x), (r.yc() - ref_light_center.y), 0.0);
 		bool const room_dim(r.dx() < r.dy()); // longer room dim
 		to_add.clear();
-		try_place_light_on_ceiling(light, room_t(get_room(room_id), r), room_dim, get_fc_thickness(), 1, 0, 1, 1, objs_start, to_add, rgen); // or wall light?
+		try_place_light_on_ceiling(light, room_t(room, r), room_dim, get_fc_thickness(), 1, 0, 1, 1, objs_start, to_add, rgen); // or wall light?
 
 		for (cube_t const &L : to_add) { // should be size 1
 			light.copy_from(L);
