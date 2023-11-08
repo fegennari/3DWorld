@@ -850,6 +850,10 @@ struct index_pair_t {
 	index_pair_t(vect_cube_t const V[2]) {ix[0] = V[0].size(); ix[1] = V[1].size();}
 };
 
+struct courtyard_t : public cube_t {
+	uint16_t room_ix=0, door_ix=0;
+};
+
 struct building_room_geom_t {
 
 	bool has_elevators=0, has_pictures=0, has_garage_car=0, modified_by_player=0, trim_was_added=0;
@@ -860,6 +864,7 @@ struct building_room_geom_t {
 	unsigned pool_ramp_obj_ix=0, pool_stairs_start_ix=0;
 	point tex_origin;
 	colorRGBA wood_color;
+	courtyard_t courtyard;
 	// objects in rooms; expanded_objs is for things that have been expanded for player interaction; model_objs is for models in drawers; trim_objs is for wall/door/window trim
 	vect_room_object_t objs, expanded_objs, model_objs, trim_objs;
 	vector<room_obj_dstate_t> obj_dstate;
@@ -1534,6 +1539,7 @@ struct building_t : public building_geom_t {
 		unsigned rooms_start, bool use_hallway, bool first_part_this_stack, float window_hspacing[2], float window_border);
 	void connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t const &part);
 	void create_two_story_tall_rooms(rand_gen_t &rgen);
+	void setup_courtyard();
 	void gen_room_details(rand_gen_t &rgen, unsigned building_ix);
 	unsigned calc_floor_offset(float zval) const;
 	void add_stairs_and_elevators(rand_gen_t &rgen);

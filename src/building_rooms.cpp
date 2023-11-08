@@ -108,10 +108,47 @@ unsigned calc_num_floors_room(room_t const &r, float window_vspacing, float floo
 	return (r.is_single_floor ? 1 : calc_num_floors(r, window_vspacing, floor_thickness));
 }
 
+void building_t::setup_courtyard() {
+	if (!has_courtyard) return;
+	assert(has_room_geom());
+	courtyard_t &courtyard(interior->room_geom->courtyard);
+	courtyard.set_to_zeros();
+	set_cube_zvals(courtyard, ground_floor_z1, parts.front().z2());
+	
+	// find couryard bounds formed from all non-exterior part edges; assume courtyard contains the building center
+	for (auto p = parts.begin(); p != get_real_parts_end(); ++p) {
+		if (is_basement(p)) continue; // skip basement
+		if (p->z1() < ground_floor_z1) continue; // not on ground floor; shouldn't happen?
+		if (p->x2() < bcube.xc()) {courtyard.x1() = p->x2();}
+		if (p->x1() > bcube.xc()) {courtyard.x2() = p->x1();}
+		if (p->y2() < bcube.yc()) {courtyard.y1() = p->y2();}
+		if (p->y1() > bcube.yc()) {courtyard.y2() = p->y1();}
+	} // for p
+	assert(courtyard.is_strictly_normalized());
+	// find courtyard door
+	cube_t door_bc;
+	unsigned num_doors(0), num_rooms(0);
+
+	for (auto d = doors.begin(); d != doors.end(); ++d) { // check exterior doors; likely the last one, unless there's a roof exit door
+		cube_t bc(d->get_bcube());
+		bool const dim(bc.dy() < bc.dx());
+		bc.expand_in_dim(dim, get_wall_thickness());
+		if (bc.intersects(courtyard)) {courtyard.door_ix = (d - doors.begin()); door_bc = bc; ++num_doors;}
+	}
+	assert(num_doors == 1);
+
+	// find courtyard room
+	for (auto r = interior->rooms.begin(); r != interior->rooms.end(); ++r) {
+		if (r->intersects(door_bc)) {courtyard.room_ix = (r - interior->rooms.begin()); ++num_rooms;}
+	}
+	assert(num_rooms == 1);
+}
+
 void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 
 	assert(has_room_geom());
 	setup_bldg_obj_types(); // initialize object types if not already done
+	setup_courtyard();
 	//highres_timer_t timer("Gen Room Details");
 	// Note: people move from room to room, so using their current positions for room object generation is both nondeterministic and unnecessary
 	vect_cube_t blockers, valid_lights; // blockers are used for fireplaces

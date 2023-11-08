@@ -414,11 +414,11 @@ void building_t::split_in_xy(cube_t const &seed_cube, rand_gen_t &rgen) {
 	point const llc(seed_cube.get_llc()), sz(seed_cube.get_size());
 	bool const allow_courtyard(seed_cube.dx() < 1.6*seed_cube.dy() && seed_cube.dy() < 1.6*seed_cube.dx()); // AR < 1.6:1
 	int const shape(rgen.rand()%(allow_courtyard ? 10 : 9)); // 0-9
-	has_courtyard = (shape == 9);
+	bool const has_hole(shape == 9);
 	bool const is_hpo(shape >= 7);
 	bool const dim(rgen.rand_bool()); // {x,y}
 	bool const dir(is_hpo ? 1 : rgen.rand_bool()); // {neg,pos} - H/+/O shapes are symmetric and always pos
-	float const smin(0.2), smax(has_courtyard ? 0.35 : 0.4); // outer and inner split sizes
+	float const smin(0.2), smax(has_hole ? 0.35 : 0.4); // outer and inner split sizes
 	float const div(is_hpo ? rgen.rand_uniform(smin, smax) : rgen.rand_uniform(0.3, 0.7)); // split pos in 0-1 range
 	float const s1(rgen.rand_uniform(smin, smax)), s2(rgen.rand_uniform(1.0-smax, 1.0-smin)); // split pos in 0-1 range
 	float const dpos(llc[dim] + div*sz[dim]), spos1(llc[!dim] + s1*sz[!dim]), spos2(llc[!dim] + s2*sz[!dim]); // split pos in cube space
@@ -427,6 +427,7 @@ void building_t::split_in_xy(cube_t const &seed_cube, rand_gen_t &rgen) {
 	parts.resize(start+num, seed_cube);
 	parts[start+0].d[dim][ dir] = dpos; // full width part (except +)
 	parts[start+1].d[dim][!dir] = dpos; // partial width part (except +)
+	has_courtyard = (has_hole && seed_cube.z1() == ground_floor_z1); // courtyard is only on the ground floor
 
 	switch (shape) {
 	case 0: case 1: case 2: case 3: // L
