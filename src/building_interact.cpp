@@ -1927,6 +1927,7 @@ bool building_t::get_zval_for_pool_bottom(point const &pos, float &zval) const {
 			if (i->contains_pt_xy(pos)) {max_eq(zval, i->z2()); break;} // can only be on one stair
 		}
 	}
+	return 1;
 }
 bool building_t::get_zval_of_floor(point const &pos, float radius, float &zval) const {
 	if (!interior) return 0; // error?
