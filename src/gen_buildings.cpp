@@ -1558,9 +1558,10 @@ void building_t::get_all_drawn_exterior_verts(building_draw_t &bdraw) { // exter
 		else if (i->type == tquad_with_ix_t::TYPE_BDOOR2 || i->type == tquad_with_ix_t::TYPE_RDOOR2) {
 			bdraw.add_tquad(*this, *i, bcube, building_texture_mgr.get_bdoor2_tid(), WHITE);
 		}
-		else { // use wall texture
+		else if (i->type == tquad_with_ix_t::TYPE_WALL) { // use wall texture
 			bdraw.add_tquad(*this, *i, bcube, mat.side_tex, side_color);
 		}
+		else {assert(0);} // unsupported type
 	} // for i
 	for (auto i = details.begin(); i != details.end(); ++i) { // draw roof details
 		if (i->type == DETAIL_OBJ_COLLIDER ) continue; // not drawn
@@ -2037,7 +2038,13 @@ void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_
 				} // for dir
 			} // for dim
 		} // for f
-	} // for i
+	} // for i (parts)
+	if (0 && is_house && has_attic()) { // maybe add attic windows
+		for (auto i = roof_tquads.begin(); i != roof_tquads.end(); ++i) {
+			if (i->type != tquad_with_ix_t::TYPE_WALL || i->npts != 3) continue; // not a wall triangle
+			bdraw.add_tquad(*this, *i, bcube, tex, color);
+		}
+	}
 	if (only_cont_pt_in) { // camera inside this building, cut out holes so that the exterior doors show through
 		cut_holes_for_ext_doors(bdraw, only_cont_pt, draw_parts_mask);
 	}
