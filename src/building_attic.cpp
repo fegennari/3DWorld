@@ -58,6 +58,41 @@ void building_t::get_attic_roof_tquads(vect_tquad_with_ix_t &tquads) const {
 	}
 }
 
+void building_t::get_attic_windows(vect_tquad_with_ix_t &tquads, float offset_scale) const {
+	if (!is_house || !has_attic()) return;
+	float const floor_spacing(get_window_vspace()), shift_dist(offset_scale*get_door_shift_dist());
+	cube_t const &part(parts[0]); // attic is always in the tallest/first part
+	cube_t avoid;
+
+	if (has_chimney) {
+		avoid = get_chimney();
+		avoid.expand_by_xy(get_wall_thickness());
+	}
+	for (auto i = roof_tquads.begin(); i != roof_tquads.end(); ++i) {
+		if (i->type != tquad_with_ix_t::TYPE_WALL || i->npts != 3) continue; // not a wall triangle
+		cube_t const bc(i->get_bcube());
+		float const height(bc.dz());
+		if (height < 0.5*floor_spacing)             continue; // too small (maybe porch roof)
+		if (has_chimney && avoid.intersects_xy(bc)) continue; // blocked by chimney
+		bool const dim(bc.dy() < bc.dx()); // should be zero size in X or Y
+		float const wall_pos(i->pts[0][dim]); // all points should have the same pos
+		bool const dir(part.get_center_dim(dim) < wall_pos);
+		if (part.d[dim][dir] != bcube.d[dim][dir]) continue; // only exterior facing walls (avoid window clipping through adjacent part)
+		// create square inscribed in triangle
+		float const center(bc.get_center_dim(!dim)), base(bc.get_sz_dim(!dim));
+		float const window_width(min(1.0f*floor_spacing, height*base/(height + base))); // window width == window height
+		tquad_with_ix_t window(4, tquad_with_ix_t::TYPE_HDOOR); // mark as a door so that it's textured from [0.0, 1.0]
+		float const window_pos(wall_pos + (dir ? 1.0 : -1.0)*shift_dist); // shift away from the wall
+		for (unsigned n = 0; n < 4; ++n) {window.pts[n][dim] = window_pos;} // set window position
+		window.pts[0].z = window.pts[1].z = bc.z1(); // bottom edge
+		window.pts[2].z = window.pts[3].z = bc.z1() + window_width; // top edge
+		window.pts[0][!dim] = window.pts[3][!dim] = center - 0.5*window_width;
+		window.pts[1][!dim] = window.pts[2][!dim] = center + 0.5*window_width;
+		if (dim ^ dir ^ 1) {std::reverse(window.pts, window.pts+4);} // reverse the winding order
+		tquads.push_back(window);
+	} // for i
+}
+
 bool building_t::has_L_shaped_roof_area() const {
 	if (real_num_parts == 1) return 0; // not L-shaped
 	cube_t const &A(parts[0]), &B(parts[1]);
@@ -589,10 +624,26 @@ void building_room_geom_t::add_attic_rafters(building_t const &b, float tscale) 
 		return; // done - rafters not visible
 	}
 	else if (attic_type == ATTIC_TYPE_FIBERGLASS) {
+		// TODO: need to handle window_holes
 		add_attic_roof_geom(get_material(tid_nm_pair_t(get_insulation_tid()), 0, 0, 2), colorRGBA(1.0, 0.7, 0.6), 0.5, 16.0, b); // no shadows, detail
 	}
 	else {assert(attic_type == ATTIC_TYPE_RAFTERS);}
 
+	// determine attic window hole locations
+	vect_tquad_with_ix_t window_tquads;
+	vect_cube_t window_holes;
+	b.get_attic_windows(window_tquads, 0.0); // offset_scale=0.0
+	float const window_expand(b.get_wall_thickness());
+	float const window_h_border(b.get_window_h_border()), window_v_border(b.get_window_v_border()); // (0, 1) range
+
+	for (tquad_with_ix_t const &w : window_tquads) {
+		cube_t bc(w.get_bcube());
+		bool const dim(bc.dy() < bc.dx()); // should be zero size in X or Y
+		bc.expand_in_dim(!dim, -window_h_border*bc.get_sz_dim(!dim));
+		bc.expand_in_dim(2,    -window_v_border*bc.dz());
+		bc.expand_by(window_expand);
+		window_holes.push_back(bc);
+	}
 	// build the roof trusses
 	get_wood_material(tscale, 0, 0, 2); // ensure unshadowed material
 	rgeom_mat_t &wood_mat   (get_wood_material(tscale, 1, 0, 2)); // shadows + detail
@@ -654,6 +705,7 @@ void building_room_geom_t::add_attic_rafters(building_t const &b, float tscale) 
 			assert(found);
 			if (beam.dz() < 4.0f*beam_depth) continue; // too short, skip
 			assert(beam.is_strictly_normalized());
+			cube_t beam_seg(beam);
 			// skip top, bottom and face against the roof (top may be partially visible when rotated)
 			unsigned skip_faces(~get_face_mask(dim, dir) | EF_Z12);
 			
@@ -661,7 +713,18 @@ void building_room_geom_t::add_attic_rafters(building_t const &b, float tscale) 
 				if (n == 0          ) {skip_faces |= ~get_face_mask(!dim, 0);}
 				if (n == num_beams-1) {skip_faces |= ~get_face_mask(!dim, 1);}
 			}
-			wood_mat.add_cube_to_verts(beam, WHITE, beam.get_llc(), skip_faces);
+			if (!is_roof) { // triangular wall section; cut out for window holes
+				for (cube_t const &w : window_holes) {
+					if (!beam_seg.intersects(w)) continue;
+					cube_t beam_bot(beam_seg);
+					beam_bot.z2() = w.z1();
+					beam_seg.z1() = w.z2(); // this becomes the bottom segment
+					wood_mat.add_cube_to_verts(beam_bot, WHITE, beam.get_llc(), (skip_faces & ~EF_Z2));
+					skip_faces &= ~EF_Z1;
+					break; // there should only be one
+				}
+			}
+			wood_mat.add_cube_to_verts(beam_seg, WHITE, beam.get_llc(), skip_faces);
 		} // for n
 		if (!is_roof) continue; // below is for sloped roof tquads only
 		// rotate to match slope of roof

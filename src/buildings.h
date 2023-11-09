@@ -1744,6 +1744,7 @@ public:
 	cube_t get_door_bounding_cube(door_t const &door) const;
 	cube_t get_attic_access_door_avoid() const;
 	void get_all_door_centers_for_room(cube_t const &room, float zval, vector<point> &door_centers) const;
+	void get_attic_windows(vect_tquad_with_ix_t &tquads, float offset_scale=1.0) const;
 	void invalidate_nav_graph();
 	void invalidate_nav_grid (unsigned floor_ix);
 	point local_to_camera_space(point const &pos) const;

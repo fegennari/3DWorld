@@ -1244,7 +1244,8 @@ void building_t::add_window_trim_and_coverings(bool add_trim, bool add_coverings
 		for (float z = tz1; z < tz2; z += 1.0) { // each floor
 			float const bot_edge(c.z1() + (z - tz1)*window_height);
 			set_cube_zvals(window, bot_edge+border_z, bot_edge+window_height-border_z);
-			bool const add_separators(is_house && rgen.rand_bool()); // 50% of walls/floors for houses; not for glass block windows?
+			// add separators for 50% of walls/floors for houses; not for attic windows; not for glass block windows?
+			bool const add_separators(is_house && (!has_attic() || window.z1() < parts[0].z2()) && rgen.rand_bool());
 			bool const one_dim_separators(add_separators && rgen.rand_bool()); // 1=vert/horiz separators only, 0=cross shaped separators
 			bool const sep_dim((window_height - 2.0*border_z) < 0.9*(window_width - 2.0*border_xy)); // split in larger-ish dim
 

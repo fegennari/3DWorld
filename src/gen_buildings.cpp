@@ -694,6 +694,7 @@ public:
 	unsigned cur_tile_id;
 	vect_cube_t temp_cubes, temp_cubes2;
 	vector<float> temp_wall_edges;
+	vect_tquad_with_ix_t temp_tquads;
 
 	building_draw_t(bool is_city_=0) : cur_camera_pos(zero_vector), is_city(is_city_), cur_tile_id(0) {}
 	void init_draw_frame() {cur_camera_pos = get_camera_pos();} // capture camera pos during non-shadow pass to use for shadow pass
@@ -1825,6 +1826,9 @@ void building_t::get_all_drawn_interior_verts(building_draw_t &bdraw) {
 				vector3d const normal(tq.get_norm());
 				swap_tc_xy = (fabs(normal.x) < fabs(normal.y));
 			}
+			else if (i.type == tquad_with_ix_t::TYPE_WALL) { // triangular wall section
+				// TODO: cut hole for attic windows
+			}
 			bdraw.add_tquad(*this, tq, bcube, attic_tex, WHITE, 0, 0, 0, swap_tc_xy);
 		} // for i
 	}
@@ -2039,12 +2043,11 @@ void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_
 			} // for dim
 		} // for f
 	} // for i (parts)
-	if (0 && is_house && has_attic()) { // maybe add attic windows
-		for (auto i = roof_tquads.begin(); i != roof_tquads.end(); ++i) {
-			if (i->type != tquad_with_ix_t::TYPE_WALL || i->npts != 3) continue; // not a wall triangle
-			bdraw.add_tquad(*this, *i, bcube, tex, color);
-		}
-	}
+	// draw attic windows
+	bdraw.temp_tquads.clear();
+	get_attic_windows(bdraw.temp_tquads, offset_scale);
+	for (tquad_with_ix_t const &window : bdraw.temp_tquads) {bdraw.add_tquad(*this, window, bcube, tex, color);}
+	
 	if (only_cont_pt_in) { // camera inside this building, cut out holes so that the exterior doors show through
 		cut_holes_for_ext_doors(bdraw, only_cont_pt, draw_parts_mask);
 	}
