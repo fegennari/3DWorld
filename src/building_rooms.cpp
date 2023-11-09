@@ -906,7 +906,7 @@ void building_t::add_wall_and_door_trim_if_needed() {
 	interior->room_geom->trim_objs.shrink_to_fit();
 }
 
-void cut_trim_around_doors(vector<tquad_with_ix_t> const &doors, vect_cube_t &trim_cubes, float door_expand, bool dim) {
+void cut_trim_around_doors(vect_tquad_with_ix_t const &doors, vect_cube_t &trim_cubes, float door_expand, bool dim) {
 	for (auto d = doors.begin(); d != doors.end(); ++d) {
 		cube_t door(d->get_bcube());
 		bool const door_dim(door.dy() < door.dx());

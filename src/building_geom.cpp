@@ -573,7 +573,7 @@ bool building_t::clip_cube_to_parts(cube_t &c, vect_cube_t &cubes) const { // us
 	return 1; // success
 }
 
-void add_cube_top(cube_t const &c, vector<tquad_with_ix_t> &tquads, unsigned type) {
+void add_cube_top(cube_t const &c, vect_tquad_with_ix_t &tquads, unsigned type) {
 	tquad_t tquad(4); // quad
 	tquad.pts[0].assign(c.x1(), c.y1(), c.z2());
 	tquad.pts[1].assign(c.x2(), c.y1(), c.z2());

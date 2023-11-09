@@ -377,6 +377,7 @@ struct tquad_with_ix_t : public tquad_t {
 	tquad_with_ix_t(unsigned npts_=0, unsigned type_=TYPE_ROOF_PEAK) : tquad_t(npts_), type(type_) {}
 	tquad_with_ix_t(tquad_t const &t, unsigned type_) : tquad_t(t), type(type_) {}
 };
+typedef vector<tquad_with_ix_t> vect_tquad_with_ix_t;
 
 struct vertex_range_t { // size=12
 	int draw_ix; // -1 is unset
@@ -1402,7 +1403,7 @@ struct building_t : public building_geom_t {
 	vect_cube_t parts, fences;
 	vect_cube_with_ix_t skylights;
 	vect_roof_obj_t details; // cubes on the roof - antennas, AC units, etc.
-	vector<tquad_with_ix_t> roof_tquads, doors;
+	vect_tquad_with_ix_t roof_tquads, doors;
 	vector<colored_sphere_t> ext_lights;
 	vector<vect_point> per_part_ext_verts; // only used for non-cube buildings
 	vector<ext_step_t> ext_steps;
@@ -1794,7 +1795,7 @@ private:
 	bool is_visible_through_conn(building_t const &b, vector3d const &xlate, float view_dist, bool expand_for_light=0) const;
 	cube_t get_conn_room_closest_to(point const &pos_bs) const;
 	bool has_L_shaped_roof_area() const;
-	void get_attic_roof_tquads(vector<tquad_with_ix_t> &tquads) const;
+	void get_attic_roof_tquads(vect_tquad_with_ix_t &tquads) const;
 	bool add_attic_access_door(cube_t const &ceiling, unsigned part_ix, unsigned num_floors, unsigned rooms_start, rand_gen_t &rgen);
 	bool is_light_placement_valid(cube_t const &light, cube_t const &room, float pad) const;
 	void try_place_light_on_ceiling(cube_t const &light, room_t const &room, bool room_dim, float pad, bool allow_rot, bool allow_mult,

@@ -49,7 +49,7 @@ bool building_t::cube_in_attic(cube_t const &c) const {
 		    point_under_attic_roof(point(c.x2(), c.y2(), z2)) || point_under_attic_roof(point(c.x2(), c.y1(), z2)));
 }
 
-void building_t::get_attic_roof_tquads(vector<tquad_with_ix_t> &tquads) const {
+void building_t::get_attic_roof_tquads(vect_tquad_with_ix_t &tquads) const {
 	tquads.clear();
 	if (!has_attic()) return;
 
