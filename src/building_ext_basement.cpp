@@ -1185,7 +1185,7 @@ void building_t::add_missing_backrooms_lights(rand_gen_t rgen, float zval, unsig
 	room_t const &room(get_room(room_id));
 	// apply custom colors to some lights; at the moment this only includes grid lights and not small room lights added below
 	unsigned const NUM_LIGHT_COLORS = 5;
-	colorRGBA const light_colors[NUM_LIGHT_COLORS] = {RED, GREEN, BLUE, YELLOW, PURPLE};
+	colorRGBA const light_colors[NUM_LIGHT_COLORS] = {RED, GREEN, BLUE, YELLOW, ORANGE};
 	float const zone_spacing(8.0*get_window_vspace());
 	unsigned const zone_x_add(rgen.rand()), zone_y_add(rgen.rand());
 	rand_gen_t zone_rgen;
@@ -1195,7 +1195,7 @@ void building_t::add_missing_backrooms_lights(rand_gen_t rgen, float zval, unsig
 		unsigned const zone_x(zone_x_add + round_fp(i->xc()/zone_spacing)), zone_y(zone_y_add + round_fp(i->yc()/zone_spacing));
 		zone_rgen.set_state(zone_x, zone_y);
 		zone_rgen.rand_mix();
-		if (zone_rgen.rand_float() > 0.25) continue; // 25% chance of colored light
+		if (zone_rgen.rand_float() > 0.2) continue; // 20% chance of colored light
 		i->color = light_colors[zone_rgen.rand() % NUM_LIGHT_COLORS];
 	} // for i
 	unsigned const lights_end(objs.size());
