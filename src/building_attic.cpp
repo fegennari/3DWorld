@@ -563,7 +563,8 @@ struct edge_t {
 	}
 };
 
-void add_attic_roof_geom(rgeom_mat_t &mat, colorRGBA const &color, float thickness, float tscale, building_t const &b) {
+void add_attic_roof_geom(rgeom_mat_t &mat, colorRGBA const &color, float thickness, float tscale, bool swap_st, building_t const &b) {
+	// TODO: need to handle window_holes
 	thickness *= b.get_attic_beam_depth();
 
 	for (tquad_with_ix_t const &i : b.roof_tquads) {
@@ -594,14 +595,14 @@ void add_attic_roof_geom(rgeom_mat_t &mat, colorRGBA const &color, float thickne
 				if      (vert.v.z < prev.z) {shift_dir = prev - vert.v;}
 				else if (vert.v.z < next.z) {shift_dir = next - vert.v;}
 				if (shift_dir.z > 0.0) {vert.v += shift_dir*(thickness/shift_dir.z);}
-				bool const swap_tc_xy(fabs(normal.x) < fabs(normal.y));
+				bool const swap_tc_xy((fabs(normal.x) < fabs(normal.y)) ^ swap_st);
 				vert.t[!swap_tc_xy] = vert.v.x*tsx;
 				vert.t[ swap_tc_xy] = vert.v.y*tsy;
 			}
 			else { // side wall
 				bool const dim(tq.pts[0].x == tq.pts[1].x); // use nonzero width dim
-				vert.t[0] = vert.v[dim]*tsx;
-				vert.t[1] = vert.v.z*tsy;
+				vert.t[ swap_st] = vert.v[dim]*tsx;
+				vert.t[!swap_st] = vert.v.z*tsy;
 			}
 			mat.itri_verts.push_back(vert);
 		} // for i
@@ -616,18 +617,20 @@ void building_room_geom_t::add_attic_rafters(building_t const &b, float tscale) 
 	unsigned const attic_type(b.interior->attic_type);
 
 	if (attic_type == ATTIC_TYPE_WOOD) {
-		add_attic_roof_geom(get_material(tid_nm_pair_t(get_plywood_tid()), 0, 0, 2), WHITE, 1.0, 16.0, b); // no shadows, detail
+		add_attic_roof_geom(get_material(tid_nm_pair_t(get_plywood_tid()), 0, 0, 2), WHITE, 1.0, 16.0, 0, b); // no shadows, detail
 		return; // done - rafters not visible
 	}
 	else if (attic_type == ATTIC_TYPE_PLASTER) { // or gypsum?
-		add_attic_roof_geom(get_material(b.get_material().wall_tex, 0, 0, 2), WHITE, 1.0, 16.0, b); // no shadows, detail
+		add_attic_roof_geom(get_material(b.get_material().wall_tex, 0, 0, 2), WHITE, 1.0, 16.0, 0, b); // no shadows, detail
 		return; // done - rafters not visible
 	}
 	else if (attic_type == ATTIC_TYPE_FIBERGLASS) {
-		// TODO: need to handle window_holes
-		add_attic_roof_geom(get_material(tid_nm_pair_t(get_insulation_tid()), 0, 0, 2), colorRGBA(1.0, 0.7, 0.6), 0.5, 16.0, b); // no shadows, detail
+		add_attic_roof_geom(get_material(tid_nm_pair_t(get_insulation_tid()), 0, 0, 2), colorRGBA(1.0, 0.7, 0.6), 0.5, 16.0, 0, b); // no shadows, detail
 	}
-	else {assert(attic_type == ATTIC_TYPE_RAFTERS);}
+	else if (attic_type == ATTIC_TYPE_RAFTERS) {
+		add_attic_roof_geom(get_material(b.get_attic_texture(), 0, 0, 2), WHITE, 0.1, 8.0, 1, b); // no shadows, detail, swap_st=1
+	}
+	else {assert(0);} // unsupported type
 
 	// determine attic window hole locations
 	vect_tquad_with_ix_t window_tquads;

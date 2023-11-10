@@ -1311,7 +1311,7 @@ tid_nm_pair_t building_t::get_attic_texture() const {
 	// plywood 50% of the time, boards 50% of the time
 	int const tid((interior->rooms.size() & 1) ? get_plywood_tid() : FENCE_TEX);
 	building_mat_t const &mat(get_material());
-	return tid_nm_pair_t(tid, -1, 0.25*mat.house_floor_tex.tscale_x, 0.25*mat.house_floor_tex.tscale_y);
+	return tid_nm_pair_t(tid, get_normal_map_for_bldg_tid(tid), 0.25*mat.house_floor_tex.tscale_x, 0.25*mat.house_floor_tex.tscale_y);
 }
 colorRGBA building_t::get_floor_tex_and_color(cube_t const &floor_cube, tid_nm_pair_t &tex) const {
 	if (has_attic() && floor_cube.z2() > interior->attic_access.z1()) { // attic floor
@@ -1808,29 +1808,9 @@ void building_t::get_all_drawn_interior_verts(building_draw_t &bdraw) {
 		}
 		// Note elevator doors are dynamic and are drawn as part of room_geom
 	} // for i
-	if (has_attic() && interior->attic_type == ATTIC_TYPE_RAFTERS) { // underside of roof is visible
+	if (has_attic()) {
 		// add inside surface of attic access hole; could be draw as room geom if needed
 		bdraw.add_section(*this, 0, interior->attic_access, mat.wall_tex, mat.wall_color, 3, 0, 0, 1, 0, 0.0, 0, 1.0, 1); // no AO; X/Y dims only, inverted normals
-		// add inside surfaces of roof tquads
-		float const delta_z(0.1*get_floor_thickness()); // enough to prevent Z-fighting
-		tid_nm_pair_t const attic_tex(get_attic_texture());
-
-		for (tquad_with_ix_t const &i : roof_tquads) {
-			if (!is_attic_roof(i, 0)) continue; // type_roof_only=0
-			tquad_with_ix_t tq(i);
-			std::reverse(tq.pts, tq.pts+tq.npts); // reverse the normal and winding order
-			for (unsigned n = 0; n < tq.npts; ++n) {tq.pts[n].z -= delta_z;} // shift down slightly
-			bool swap_tc_xy(1); // horizontal by default
-
-			if (i.is_roof()) { // make sure wood orient is horizontal
-				vector3d const normal(tq.get_norm());
-				swap_tc_xy = (fabs(normal.x) < fabs(normal.y));
-			}
-			else if (i.type == tquad_with_ix_t::TYPE_WALL) { // triangular wall section
-				// TODO: cut hole for attic windows
-			}
-			bdraw.add_tquad(*this, tq, bcube, attic_tex, WHITE, 0, 0, 0, swap_tc_xy);
-		} // for i
 	}
 	// Note: interior doors are drawn as part of room_geom
 	bdraw.end_draw_range_capture(interior->draw_range); // 80MB, 394MB, 836ms
