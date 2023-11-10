@@ -16,8 +16,8 @@ bool  const INDIR_BLDG_ENABLE   = 1;
 unsigned INDIR_LIGHT_FLOOR_SPAN = 5; // in number of floors, generally an odd number to represent current floor and floors above/below; 0 is unlimited
 float const ATTIC_LIGHT_RADIUS_SCALE = 2.0; // larger radius in attic, since space is larger
 
-extern bool camera_in_building, player_in_attic, some_person_has_idle_animation;
-extern int MESH_Z_SIZE, display_mode, display_framerate, camera_surf_collide, animate2, frame_counter, building_action_key, player_in_basement, player_in_elevator;
+extern bool camera_in_building, some_person_has_idle_animation;
+extern int MESH_Z_SIZE, display_mode, display_framerate, camera_surf_collide, animate2, frame_counter, building_action_key, player_in_basement, player_in_elevator, player_in_attic;
 extern unsigned LOCAL_RAYS, MAX_RAY_BOUNCES, NUM_THREADS;
 extern float indir_light_exp, fticks;
 extern double tfticks;

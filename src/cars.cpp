@@ -12,8 +12,8 @@
 bool const DYNAMIC_HELICOPTERS = 1;
 float const MIN_CAR_STOP_SEP   = 0.25; // in units of car lengths
 
-extern bool tt_fire_button_down, enable_hcopter_shadows, city_action_key, camera_in_building, player_in_attic;
-extern int display_mode, game_mode, map_mode, animate2, player_in_basement, player_in_closet;
+extern bool tt_fire_button_down, enable_hcopter_shadows, city_action_key, camera_in_building;
+extern int display_mode, game_mode, map_mode, animate2, player_in_basement, player_in_closet, player_in_attic;
 extern float fticks, FAR_CLIP;
 extern point pre_smap_player_pos;
 extern vector<light_source> dl_sources;

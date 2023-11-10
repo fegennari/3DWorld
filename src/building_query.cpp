@@ -6,10 +6,9 @@
 #include "buildings.h"
 
 
-extern bool draw_building_interiors, camera_in_building, player_near_toilet, player_in_unlit_room, player_in_attic, building_has_open_ext_door, ctrl_key_pressed;
-extern bool player_is_hiding;
+extern bool draw_building_interiors, camera_in_building, player_near_toilet, player_in_unlit_room, building_has_open_ext_door, ctrl_key_pressed, player_is_hiding;
+extern int camera_surf_collide, frame_counter, player_in_closet, player_in_elevator, player_in_basement, player_in_attic;
 extern float CAMERA_RADIUS, C_STEP_HEIGHT, NEAR_CLIP, building_bcube_expand;
-extern int camera_surf_collide, frame_counter, player_in_closet, player_in_elevator, player_in_basement;
 extern double camera_zh;
 extern building_params_t global_building_params;
 extern bldg_obj_type_t bldg_obj_types[];
@@ -58,7 +57,7 @@ bool building_t::player_can_see_outside() const {
 bool player_in_windowless_building() {return (player_building != nullptr && !player_building->player_can_see_outside());}
 
 bool player_cant_see_outside_building() {
-	if (player_in_basement >= 3 || player_in_attic) return 1; // player in extended basement or attic
+	if (player_in_basement >= 3 || player_in_attic == 2) return 1; // player in extended basement or windowless attic
 	if (player_in_windowless_building()) return 1;
 	return 0;
 }
@@ -722,7 +721,8 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, flo
 				valid_area.clamp_pt_xy(pos);
 				break;
 			} // for i
-			had_coll = player_in_attic = 1;
+			player_in_attic = (has_attic_window ? 1 : 2);
+			had_coll = 1;
 			obj_z    = max(pos.z, p_last.z);
 		}
 	}

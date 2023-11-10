@@ -15,8 +15,8 @@ float const OBJ_GRAVITY    = 0.0003; // unsigned magnitude
 float const TERM_VELOCITY  = 1.0;
 float const OBJ_ELASTICITY = 0.8;
 
-extern bool tt_fire_button_down, flashlight_on, player_in_attic, use_last_pickup_object, city_action_key;
-extern int player_in_closet, camera_surf_collide, can_pickup_bldg_obj, animate2, frame_counter, player_in_elevator;
+extern bool tt_fire_button_down, flashlight_on, use_last_pickup_object, city_action_key;
+extern int player_in_closet, camera_surf_collide, can_pickup_bldg_obj, animate2, frame_counter, player_in_elevator, player_in_attic;
 extern float fticks, CAMERA_RADIUS, office_chair_rot_rate;
 extern double tfticks;
 extern building_dest_t cur_player_building_loc;
@@ -438,7 +438,7 @@ bool building_t::apply_player_action_key(point const &closest_to_in, vector3d co
 				if (cur_player_building_loc.room_ix >= 0 && i->room_id != cur_player_building_loc.room_ix && i->type != TYPE_BUTTON) continue; // not in the same room as the player
 				if (!active_area.is_all_zeros() && !i->intersects(active_area)) continue; // out of reach for the player
 				// check for objects not in the attic when the player is in the attic and vice versa
-				if (player_in_attic != i->in_attic() && i->type != TYPE_ATTIC_DOOR) continue;
+				if (bool(player_in_attic) != i->in_attic() && i->type != TYPE_ATTIC_DOOR) continue;
 				bool keep(0);
 				if (i->type == TYPE_BOX && !i->is_open()) {keep = 1;} // box can only be opened once; check first so that selection works for boxes in closets
 				else if (i->type == TYPE_CLOSET) {
