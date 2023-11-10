@@ -762,6 +762,13 @@ bool building_t::interact_with_object(unsigned obj_ix, point const &int_pos, poi
 		sound_scale      = 0.5;
 		update_draw_data = 1;
 		interior->attic_access_open ^= 1;
+		// toggle the attic light as well
+		auto objs_end(interior->room_geom->get_placed_objs_end()); // skip buttons/stairs/elevators
+
+		for (auto i = interior->room_geom->objs.begin(); i != objs_end; ++i) {
+			if (i->type != TYPE_LIGHT || !i->in_attic()) continue; // not attic light
+			if (i->is_lit() != obj.is_open()) {toggle_light_object(*i, sound_origin);}
+		}
 	}
 	else if (obj.type == TYPE_FALSE_DOOR) { // locked, can't open
 		print_text_onscreen("Door is locked", RED, 1.0, 2.0*TICKS_PER_SECOND, 0);

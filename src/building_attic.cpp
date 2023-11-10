@@ -264,8 +264,7 @@ void building_t::add_attic_objects(rand_gen_t rgen) {
 	}
 	for (unsigned n = 0; n < num_lights; ++n) {
 		light.set_from_sphere(light_pos[n], light_radius);
-		// start off lit for now; maybe should start off and auto turn on when the player enters the attic?
-		unsigned const light_flags(RO_FLAG_LIT | RO_FLAG_EMISSIVE | RO_FLAG_NOCOLL | obj_flags);
+		unsigned const light_flags(RO_FLAG_EMISSIVE | RO_FLAG_NOCOLL | obj_flags); // start off and auto turn on when the player enters the attic
 		objs.emplace_back(light, TYPE_LIGHT, room_id, 0, 0, light_flags, light_amt, SHAPE_SPHERE, get_light_color_temp(0.45)); // yellow-shite
 	}
 	if (has_chimney == 1) { // interior chimney; not drawn when player is in the attic because it's part of the exterior geometry
