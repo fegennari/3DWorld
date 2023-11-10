@@ -1235,9 +1235,10 @@ void building_t::add_window_trim_and_coverings(bool add_trim, bool add_coverings
 		float const d_tx_inv(1.0f/(tx2 - tx1)), d_tz_inv(1.0f/(tz2 - tz1));
 		float const window_width(c.get_sz_dim(!dim)*d_tx_inv), window_height(c.dz()*d_tz_inv); // window_height should be equal to window_vspacing
 		float const border_xy(window_width*window_h_border), border_z(window_height*window_v_border), dscale(dir ? -1.0 : 1.0);
+		bool const is_attic(has_attic() && c.z1()+border_z >= parts[0].z2());
 		cube_t window(c); // copy dim <dim>
 		window.translate_dim(dim, dscale*window_offset);
-		window.d[dim][!dir] += dscale*window_trim_depth; // add thickness on interior of building
+		window.d[dim][!dir] += dscale*(is_attic ? get_attic_beam_depth() : window_trim_depth); // add thickness on interior of building (beam depth for attic)
 		window.d[dim][ dir] += dscale*ext_wall_toler; // slight bias away from the exterior wall
 		unsigned const ext_flags(RO_FLAG_NOCOLL | (dir ? RO_FLAG_ADJ_HI : RO_FLAG_ADJ_LO));
 
@@ -1245,7 +1246,7 @@ void building_t::add_window_trim_and_coverings(bool add_trim, bool add_coverings
 			float const bot_edge(c.z1() + (z - tz1)*window_height);
 			set_cube_zvals(window, bot_edge+border_z, bot_edge+window_height-border_z);
 			// add separators for 50% of walls/floors for houses; not for attic windows; not for glass block windows?
-			bool const add_separators(is_house && (!has_attic() || window.z1() < parts[0].z2()) && rgen.rand_bool());
+			bool const add_separators(is_house && !is_attic && rgen.rand_bool());
 			bool const one_dim_separators(add_separators && rgen.rand_bool()); // 1=vert/horiz separators only, 0=cross shaped separators
 			bool const sep_dim((window_height - 2.0*border_z) < 0.9*(window_width - 2.0*border_xy)); // split in larger-ish dim
 
@@ -1253,9 +1254,9 @@ void building_t::add_window_trim_and_coverings(bool add_trim, bool add_coverings
 				float const low_edge(c.d[!dim][0] + (xy - tx1)*window_width);
 				window.d[!dim][0] = low_edge + border_xy;
 				window.d[!dim][1] = low_edge + window_width - border_xy;
-				if (add_coverings) {add_window_coverings(window, dim, dir);}
+				if (add_coverings && !is_attic) {add_window_coverings(window, dim, dir);}
 
-				if (add_ext_sills) {
+				if (add_ext_sills && !is_attic) {
 					cube_t sill(window);
 					sill.z1() -= 0.04*window_height;
 					sill.z2()  = sill.z1() + 0.035*window_height;
