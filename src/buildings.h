@@ -933,7 +933,7 @@ struct building_room_geom_t {
 	void add_chimney(room_object_t const &c, tid_nm_pair_t const &tex);
 	void add_breaker_panel(room_object_t const &c);
 	void add_attic_door(room_object_t const &c, float tscale);
-	void add_attic_rafters(building_t const &b, float tscale);
+	void add_attic_interior_and_rafters(building_t const &b, float tscale, bool detail_pass);
 	void add_skylights_details(building_t const &b);
 	void add_skylight_details(cube_t const &skylight, bool has_skylight_light);
 	void add_elevator(room_object_t const &c, elevator_t const &e, float tscale, float fc_thick_scale,
@@ -1071,7 +1071,7 @@ struct building_room_geom_t {
 private:
 	building_materials_t &get_building_mat(tid_nm_pair_t const &tex, bool dynamic, unsigned small, bool transparent, bool exterior);
 	void create_static_vbos(building_t const &building);
-	void create_small_static_vbos();
+	void create_small_static_vbos(building_t const &building);
 	void create_text_vbos();
 	void create_detail_vbos(building_t const &building);
 	void add_nested_objs_to_verts(vect_room_object_t const &objs_to_add);

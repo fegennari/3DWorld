@@ -858,11 +858,12 @@ void building_room_geom_t::create_static_vbos(building_t const &building) {
 	//cout << "static: size: " << rgeom_alloc.size() << " mem: " << rgeom_alloc.get_mem_usage() << endl; // start=47MB, peak=132MB
 }
 
-void building_room_geom_t::create_small_static_vbos() {
+void building_room_geom_t::create_small_static_vbos(building_t const &building) {
 	//highres_timer_t timer("Gen Room Geom Small"); // 7.8ms, slow building at 26,16
 	model_objs.clear(); // currently model_objs are only created for small objects in drawers, so we clear this here
 	add_small_static_objs_to_verts(expanded_objs);
 	add_small_static_objs_to_verts(objs);
+	add_attic_interior_and_rafters(building, 2.0/obj_scale, 0); // only if there's an attic; detail_pass=0
 }
 
 void building_room_geom_t::add_nested_objs_to_verts(vect_room_object_t const &objs_to_add) {
@@ -999,7 +1000,7 @@ void building_room_geom_t::create_detail_vbos(building_t const &building) {
 		assert(i.type == TYPE_WALL_TRIM);
 		add_wall_trim(i);
 	}
-	add_attic_rafters(building, 2.0/obj_scale); // only if there's an attic
+	add_attic_interior_and_rafters(building, 2.0/obj_scale, 1); // only if there's an attic; detail_pass=1
 	mats_detail    .create_vbos(building);
 	mats_ext_detail.create_vbos(building);
 }
@@ -1431,10 +1432,10 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 
 		if (create_small && create_text) { // MT case
 #pragma omp parallel num_threads(2)
-			if (omp_get_thread_num_3dw() == 0) {create_small_static_vbos();} else {create_text_vbos();}
+			if (omp_get_thread_num_3dw() == 0) {create_small_static_vbos(building);} else {create_text_vbos();}
 		}
 		else { // serial case
-			if (create_small) {create_small_static_vbos();}
+			if (create_small) {create_small_static_vbos(building);}
 			if (create_text ) {create_text_vbos        ();}
 		}
 		add_small_static_objs_to_verts(pending_objs, create_text);

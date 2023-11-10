@@ -676,7 +676,8 @@ bool building_t::add_chimney(bool two_parts, bool stacked_parts, bool hipped_roo
 		c.d[dim][!dir]  = c.d[dim][dir] + (dir ? -1.0 : 1.0)*chimney_depth;
 		c.d[dim][ dir] += (dir ? -1.0 : 1.0)*0.01*sz2; // slight shift from edge of house to avoid z-fighting
 		c.z1() = c.z2();
-		has_chimney = 1; // flag as interior chimney
+		has_chimney      = 1; // flag as interior chimney
+		has_attic_window = 0; // no windows if there's an interior chimney since that case doesn't work
 	}
 	chimney_height -= 0.4f*abs(shift); // lower it if it's not at the peak of the roof
 	c.z2() += max(chimney_height, 0.75f*window_vspace); // make it at least 3/4 a story in height

@@ -551,7 +551,7 @@ void building_t::add_false_door_to_extb_hallway_if_needed(room_t const &room, fl
 	assert(has_room_geom());
 	bool const dim(room.dx() < room.dy()); // long dim
 	float const door_width(get_doorway_width()), wall_thickness(get_wall_thickness()), expand_val(2.0*wall_thickness);
-	assert(interior->ext_basement_hallway_room_id >= 0 && interior->ext_basement_hallway_room_id < interior->rooms.size());
+	assert(interior->ext_basement_hallway_room_id >= 0 && (unsigned)interior->ext_basement_hallway_room_id < interior->rooms.size());
 
 	for (unsigned dir = 0; dir < 2; ++dir) { // check both ends
 		cube_t query_region(room);

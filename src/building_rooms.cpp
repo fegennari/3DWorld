@@ -1235,10 +1235,10 @@ void building_t::add_window_trim_and_coverings(bool add_trim, bool add_coverings
 		float const d_tx_inv(1.0f/(tx2 - tx1)), d_tz_inv(1.0f/(tz2 - tz1));
 		float const window_width(c.get_sz_dim(!dim)*d_tx_inv), window_height(c.dz()*d_tz_inv); // window_height should be equal to window_vspacing
 		float const border_xy(window_width*window_h_border), border_z(window_height*window_v_border), dscale(dir ? -1.0 : 1.0);
-		bool const is_attic(has_attic() && c.z1()+border_z >= parts[0].z2());
+		bool const is_attic(has_attic() && c.z1() >= get_attic_part().z2());
 		cube_t window(c); // copy dim <dim>
 		window.translate_dim(dim, dscale*window_offset);
-		window.d[dim][!dir] += dscale*(is_attic ? get_attic_beam_depth() : window_trim_depth); // add thickness on interior of building (beam depth for attic)
+		window.d[dim][!dir] += dscale*(is_attic ? (get_attic_beam_depth() + 0.5*window_trim_depth) : window_trim_depth); // add thickness on interior (beam depth for attic)
 		window.d[dim][ dir] += dscale*ext_wall_toler; // slight bias away from the exterior wall
 		unsigned const ext_flags(RO_FLAG_NOCOLL | (dir ? RO_FLAG_ADJ_HI : RO_FLAG_ADJ_LO));
 
