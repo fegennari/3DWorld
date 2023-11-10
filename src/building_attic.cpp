@@ -563,8 +563,22 @@ struct edge_t {
 	}
 };
 
-void add_attic_roof_geom(rgeom_mat_t &mat, colorRGBA const &color, float thickness, float tscale, bool swap_st, building_t const &b) {
-	// TODO: need to handle window_holes
+// from https://gamedev.stackexchange.com/questions/23743/whats-the-most-efficient-way-to-find-barycentric-coordinates
+vector3d barycentric_interpolate(vector2d const &p0, vector2d const &p1, vector2d const &p2, vector2d const &P) {
+	vector3d ret;
+	float const inverse_det(1.0/((p1.y-p2.y) * (p0.x-p2.x) + (p2.x-p1.x) * (p0.y-p2.y)));
+	ret.x = ((p1.y-p2.y) * (P.x-p2.x) + (p2.x-p1.x) * (P.y-p2.y)) * inverse_det;
+	ret.y = ((p2.y-p0.y) * (P.x-p2.x) + (p0.x-p2.x) * (P.y-p2.y)) * inverse_det;
+	ret.z = 1.0 - ret.x - ret.y;
+	return ret;
+}
+void interpolate_tcs(vert_norm_comp_tc_color const &p0, vert_norm_comp_tc_color const &p1, vert_norm_comp_tc_color const &p2,
+	vert_norm_comp_tc_color &P, unsigned d0, unsigned d1)
+{
+	vector3d const weights(barycentric_interpolate(vector2d(p0.v[d0], p0.v[d1]), vector2d(p1.v[d0], p1.v[d1]), vector2d(p2.v[d0], p2.v[d1]), vector2d(P.v[d0], P.v[d1])));
+	for (unsigned d = 0; d < 2; ++d) {P.t[d] = weights[0]*p0.t[d] + weights[1]*p1.t[d] + weights[2]*p2.t[d];}
+}
+void add_attic_roof_geom(rgeom_mat_t &mat, colorRGBA const &color, float thickness, float tscale, bool swap_st, vect_cube_t const &window_holes, building_t const &b) {
 	thickness *= b.get_attic_beam_depth();
 
 	for (tquad_with_ix_t const &i : b.roof_tquads) {
@@ -606,6 +620,33 @@ void add_attic_roof_geom(rgeom_mat_t &mat, colorRGBA const &color, float thickne
 			}
 			mat.itri_verts.push_back(vert);
 		} // for i
+		if (!is_roof && !window_holes.empty()) { // cut holes for windows; verts are ordered {top, left, right} viewed from inside
+			cube_t const bc(tq.get_bcube());
+			bool added_window(0);
+
+			for (cube_t const &w : window_holes) {
+				if (!w.intersects(bc)) continue;
+				bool const dim(bc.dy() < bc.dx()), invert((normal[dim] < 0.0) ^ dim); // should be zero size in X or Y
+				float const wall_pos(bc.d[dim][0]);
+				point pts[4];
+				pts[0].z = pts[1].z = w.z1(); // bottom edge
+				pts[2].z = pts[3].z = w.z2(); // top edge
+				pts[0][!dim] = pts[3][!dim] = w.d[!dim][ invert];
+				pts[1][!dim] = pts[2][!dim] = w.d[!dim][!invert];
+
+				for (unsigned n = 0; n < 4; ++n) { // add 4 quad verts
+					pts[n][dim] = wall_pos; // set wall position
+					vert.v = pts[n];
+					interpolate_tcs(mat.itri_verts[verts_start+0], mat.itri_verts[verts_start+1], mat.itri_verts[verts_start+2], vert, !dim, 2);
+					mat.itri_verts.push_back(vert);
+				}
+				unsigned const ixs[7][3] = {{0,6,5}, {0,5,2}, {5,4,2}, {4,3,2}, {3,1,2}, {6,1,3}, {0,1,6}}; // indices for 7 triangles
+				for (unsigned t = 0; t < 7; ++t) {UNROLL_3X(mat.indices.push_back(verts_start + ixs[t][i_]);)}
+				added_window = 1;
+				break; // there should only be one
+			} // for w
+			if (added_window) continue; // indices already added, don't need to add below
+		}
 		for (unsigned i = 0; i < ((tq.npts == 4) ? 6U : 3U); ++i) { // 3 indices for triangles, 6 indices (2 triangles) for quads
 			mat.indices.push_back(verts_start + quad_to_tris_ixs[i]);
 		}
@@ -614,24 +655,6 @@ void add_attic_roof_geom(rgeom_mat_t &mat, colorRGBA const &color, float thickne
 
 void building_room_geom_t::add_attic_rafters(building_t const &b, float tscale) {
 	if (!b.has_attic()) return;
-	unsigned const attic_type(b.interior->attic_type);
-
-	if (attic_type == ATTIC_TYPE_WOOD) {
-		add_attic_roof_geom(get_material(tid_nm_pair_t(get_plywood_tid()), 0, 0, 2), WHITE, 1.0, 16.0, 0, b); // no shadows, detail
-		return; // done - rafters not visible
-	}
-	else if (attic_type == ATTIC_TYPE_PLASTER) { // or gypsum?
-		add_attic_roof_geom(get_material(b.get_material().wall_tex, 0, 0, 2), WHITE, 1.0, 16.0, 0, b); // no shadows, detail
-		return; // done - rafters not visible
-	}
-	else if (attic_type == ATTIC_TYPE_FIBERGLASS) {
-		add_attic_roof_geom(get_material(tid_nm_pair_t(get_insulation_tid()), 0, 0, 2), colorRGBA(1.0, 0.7, 0.6), 0.5, 16.0, 0, b); // no shadows, detail
-	}
-	else if (attic_type == ATTIC_TYPE_RAFTERS) {
-		add_attic_roof_geom(get_material(b.get_attic_texture(), 0, 0, 2), WHITE, 0.1, 8.0, 1, b); // no shadows, detail, swap_st=1
-	}
-	else {assert(0);} // unsupported type
-
 	// determine attic window hole locations
 	vect_tquad_with_ix_t window_tquads;
 	vect_cube_t window_holes;
@@ -647,6 +670,24 @@ void building_room_geom_t::add_attic_rafters(building_t const &b, float tscale) 
 		bc.expand_by(window_expand);
 		window_holes.push_back(bc);
 	}
+	unsigned const attic_type(b.interior->attic_type);
+
+	if (attic_type == ATTIC_TYPE_WOOD) {
+		add_attic_roof_geom(get_material(tid_nm_pair_t(get_plywood_tid()), 0, 0, 2), WHITE, 1.0, 16.0, 0, window_holes, b); // no shadows, detail
+		return; // done - rafters not visible
+	}
+	else if (attic_type == ATTIC_TYPE_PLASTER) { // or gypsum?
+		add_attic_roof_geom(get_material(b.get_material().wall_tex, 0, 0, 2), WHITE, 1.0, 16.0, 0, window_holes, b); // no shadows, detail
+		return; // done - rafters not visible
+	}
+	else if (attic_type == ATTIC_TYPE_FIBERGLASS) {
+		add_attic_roof_geom(get_material(tid_nm_pair_t(get_insulation_tid()), 0, 0, 2), colorRGBA(1.0, 0.7, 0.6), 0.5, 16.0, 0, window_holes, b); // no shadows, detail
+	}
+	else if (attic_type == ATTIC_TYPE_RAFTERS) {
+		add_attic_roof_geom(get_material(b.get_attic_texture(), 0, 0, 2), WHITE, 0.1, 8.0, 1, window_holes, b); // no shadows, detail, swap_st=1
+	}
+	else {assert(0);} // unsupported type
+
 	// build the roof trusses
 	get_wood_material(tscale, 0, 0, 2); // ensure unshadowed material
 	rgeom_mat_t &wood_mat   (get_wood_material(tscale, 1, 0, 2)); // shadows + detail
