@@ -297,13 +297,62 @@ template<typename T> void add_objs_top_center(T const &objs, unsigned start_ix, 
 	}
 }
 
+unsigned choose_edge_pos(cube_t const &region, float border, unsigned force_orient, point &pos, rand_gen_t &rgen) {
+	while (1) {
+		unsigned const orient((force_orient < 4) ? force_orient : (rgen.rand()&3)); // 2*dim + dir
+		bool const dim(orient >> 1), dir(orient & 1);
+		pos[ dim] = region.d[dim][dir];
+		pos[!dim] = rgen.rand_uniform(region.d[!dim][0]+border, region.d[!dim][1]-border);
+		return orient; // done
+	} // end while
+	return 0; // never gets here
+}
+bool check_path_coll_xy(cube_t const &c, vector<park_path_t> const &paths, unsigned paths_start) {
+	for (auto p = paths.begin()+paths_start; p != paths.end(); ++p) {
+		if (p->check_cube_coll_xy(c)) return 1;
+	}
+	return 0;
+}
+
 // Note: blockers are used for placement of objects within this plot; colliders are used for pedestrian AI
 void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_t &blockers, vect_cube_t &colliders,
 	vector<point> const &tree_pos, rand_gen_t &rgen, bool is_residential, bool have_streetlights)
 {
 	float const car_length(city_params.get_nom_car_size().x); // used as a size reference for other objects
 	unsigned const benches_start(benches.size()), trashcans_start(trashcans.size()), substations_start(sstations.size()), ppoles_start(ppoles.size());
+	unsigned const paths_start(ppaths.size());
 
+	// place paths in parks
+	if (plot.is_park) {
+		unsigned const num_paths = 1;
+		float const path_hwidth(0.08*city_params.road_width), path_height(0.01*path_hwidth);
+		float const plot_min_edge(min(plot.dx(), plot.dy())), edge_border(max(2.0f*path_hwidth, 0.2f*plot_min_edge));
+
+		if (plot_min_edge > 3.0*edge_border) { // park has enough space for a path; should always be true
+			point start, end;
+			start.z = end.z = plot.z2() + path_height;
+
+			for (unsigned n = 0; n < num_paths; ++n) {
+				for (unsigned N = 0; N < 20; ++N) { // make 20 tries
+					unsigned const start_orient(choose_edge_pos(plot, edge_border, 4, start, rgen)); // choose starting point in any orient
+					choose_edge_pos(plot, edge_border, (start_orient ^ 1), end, rgen); // choose ending point on the opposite edge
+					park_path_t path(path_hwidth, GRAY);
+					path.pts.push_back(start);
+					path.pts.push_back(end);
+					path.calc_bcube_bsphere();
+					bool had_tree_coll(0);
+				
+					for (point const &pos : tree_pos) { // check for collisions with tree trunks
+						cube_t bc; bc.set_from_sphere(pos, 0.1*path_hwidth); // small size
+						if (path.check_cube_coll_xy(bc)) {had_tree_coll = 1; break;}
+					}
+					if (had_tree_coll) continue;
+					ppath_groups.add_obj(path, ppaths);
+					break; // success
+				} // for N
+			} // for n
+		}
+	}
 	// place fire_hydrants if the model has been loaded; don't add fire hydrants in parks
 	if (!plot.is_park && building_obj_model_loader.is_model_valid(OBJ_MODEL_FHYDRANT)) {
 		// we want the fire hydrant on the edge of the sidewalk next to the road, not next to the plot; this makes it outside the plot itself
@@ -342,6 +391,7 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 				}
 			}
 			bench_t const bench(pos, bench_radius, bench_dim, bench_dir);
+			if (plot.is_park && check_path_coll_xy(bench.bcube, ppaths, paths_start)) continue; // check path collision
 			bench_groups.add_obj(bench, benches);
 			colliders.push_back(bench.bcube);
 			blockers.back() = bench.bcube; // update blocker since bench is non-square
@@ -520,10 +570,13 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 			cube_t pole;
 			set_cube_zvals(pole, base_pt.z, (base_pt.z + height));
 			for (unsigned d = 0; d < 2; ++d) {set_wall_width(pole, base_pt[d], pradius, d);}
-			bool dim(0), dir(0); // facing dir
-			get_closest_dim_dir_xy(pole, plot, dim, dir); // face the closest plot edge
-			flag_groups.add_obj(create_flag(dim, dir, base_pt, height, length), flags);
-			colliders.push_back(pole); // only the pole itself is a collider
+
+			if (!plot.is_park || !check_path_coll_xy(pole, ppaths, paths_start)) { // check path collision
+				bool dim(0), dir(0); // facing dir
+				get_closest_dim_dir_xy(pole, plot, dim, dir); // face the closest plot edge
+				flag_groups.add_obj(create_flag(dim, dir, base_pt, height, length), flags);
+				colliders.push_back(pole); // only the pole itself is a collider
+			}
 		}
 	}
 	bool const add_pigeons(!is_residential && building_obj_model_loader.is_model_valid(OBJ_MODEL_PIGEON)); // only in cities with office buildings
@@ -1010,10 +1063,10 @@ template<typename T> void city_obj_placer_t::draw_objects(vector<T> const &objs,
 void city_obj_placer_t::clear() {
 	parking_lots.clear(); benches.clear(); planters.clear(); trashcans.clear(); fhydrants.clear(); sstations.clear(); driveways.clear(); dividers.clear();
 	pools.clear(); pladders.clear(); pdecks.clear(); ppoles.clear(); hcaps.clear(); manholes.clear(); mboxes.clear(); pigeons.clear(); birds.clear(); signs.clear();
-	stopsigns.clear(); flags.clear(); bench_groups.clear(); planter_groups.clear(); trashcan_groups.clear(); fhydrant_groups.clear(); sstation_groups.clear();
+	stopsigns.clear(); flags.clear(); ppaths.clear(); bench_groups.clear(); planter_groups.clear(); trashcan_groups.clear(); fhydrant_groups.clear(); sstation_groups.clear();
 	divider_groups.clear(); pool_groups.clear(); plad_groups.clear(); pdeck_groups.clear(); ppole_groups.clear(); hcap_groups.clear(); manhole_groups.clear();
 	mbox_groups.clear(); pigeon_groups.clear(); bird_groups.clear(); sign_groups.clear(); stopsign_groups.clear(); flag_groups.clear(); nrack_groups.clear();
-	all_objs_bcube.set_to_zeros();
+	ppath_groups.clear(); all_objs_bcube.set_to_zeros();
 	num_spaces = filled_spaces = 0;
 }
 
@@ -1090,11 +1143,12 @@ void city_obj_placer_t::gen_parking_and_place_objects(vector<road_plot_t> &plots
 	stopsign_groups.create_groups(stopsigns, all_objs_bcube);
 	flag_groups    .create_groups(flags,     all_objs_bcube);
 	nrack_groups   .create_groups(newsracks, all_objs_bcube);
+	ppath_groups   .create_groups(ppaths,    all_objs_bcube);
 
 	if (0) { // debug info printing
 		cout << TXT(benches.size()) << TXT(planters.size()) << TXT(trashcans.size()) << TXT(fhydrants.size()) << TXT(sstations.size()) << TXT(dividers.size())
 			 << TXT(pools.size()) << TXT(pladders.size()) << TXT(pdecks.size()) << TXT(ppoles.size()) << TXT(hcaps.size()) << TXT(manholes.size()) << TXT(mboxes.size())
-			 << TXT(pigeons.size()) << TXT(birds.size()) << TXT(signs.size()) << TXT(stopsigns.size()) << TXT(flags.size()) << TXT(newsracks.size()) << endl;
+			 << TXT(pigeons.size()) << TXT(birds.size()) << TXT(signs.size()) << TXT(stopsigns.size()) << TXT(flags.size()) << TXT(newsracks.size()) << TXT(ppaths.size()) << endl;
 	}
 	if (add_parking_lots) {
 		cout << "parking lots: " << parking_lots.size() << ", spaces: " << num_spaces << ", filled: " << filled_spaces << ", benches: " << benches.size() << endl;
@@ -1235,6 +1289,7 @@ void city_obj_placer_t::draw_detail_objects(draw_state_t &dstate, bool shadow_on
 		draw_objects(pigeons,  pigeon_groups,  dstate, 0.03, shadow_only, 1); // dist_scale=0.03, has_immediate_draw=1
 		draw_objects(birds,    bird_groups,    dstate, 0.03, shadow_only, 1); // dist_scale=0.03, has_immediate_draw=1
 		draw_objects(pladders, plad_groups,    dstate, 0.06, shadow_only, 1); // dist_scale=0.06, has_immediate_draw=1
+		draw_objects(ppaths,   ppath_groups,   dstate, 0.25, shadow_only, 0, 1); // dist_scale=0.25, draw_qbd_as_quads=1
 	}
 	dstate.s.add_uniform_float("min_alpha", DEF_CITY_MIN_ALPHA); // reset back to default after drawing 3D models such as fire hydrants and substations
 	
@@ -1299,7 +1354,7 @@ bool city_obj_placer_t::proc_sphere_coll(point &pos, point const &p_last, vector
 	if (proc_vector_sphere_coll(stopsigns, stopsign_groups, pos, p_last, radius, xlate, cnorm)) return 1;
 	if (proc_vector_sphere_coll(flags,     flag_groups,     pos, p_last, radius, xlate, cnorm)) return 1;
 	if (proc_vector_sphere_coll(newsracks, nrack_groups,    pos, p_last, radius, xlate, cnorm)) return 1;
-	// Note: no coll with tree_planters because the tree coll should take care of it; no coll with hcaps, manholes, pladders, pool decks, pigeons, or birds
+	// Note: no coll with tree_planters because the tree coll should take care of it; no coll with hcaps, manholes, pladders, pool decks, pigeons, ppaths, or birds
 	return 0;
 }
 
@@ -1327,7 +1382,7 @@ bool city_obj_placer_t::line_intersect(point const &p1, point const &p2, float &
 	check_vector_line_intersect(stopsigns, stopsign_groups, p1, p2, t, ret);
 	check_vector_line_intersect(flags,     flag_groups,     p1, p2, t, ret);
 	check_vector_line_intersect(newsracks, nrack_groups,    p1, p2, t, ret);
-	// Note: nothing to do for parking lots, tree_planters, hcaps, manholes, pladders, pool decks, pigeons, or birds; mboxes are ignored because they're not simple shapes
+	// Note: nothing to do for parking lots, tree_planters, hcaps, manholes, pladders, pool decks, pigeons, ppaths, or birds; mboxes are ignored because they're not simple shapes
 	return ret;
 }
 
@@ -1413,7 +1468,7 @@ bool city_obj_placer_t::get_color_at_xy(point const &pos, colorRGBA &color, bool
 	}
 	if (check_city_obj_bcube_pt_xy_contain(sstation_groups, sstations, pos, obj_ix)) {color = colorRGBA(0.6, 0.8, 0.4, 1.0); return 1;} // light olive
 	if (check_city_obj_bcube_pt_xy_contain(trashcan_groups, trashcans, pos, obj_ix)) {color = colorRGBA(0.8, 0.6, 0.3, 1.0); return 1;} // tan
-	// Note: ppoles, hcaps, manholes, mboxes, pladders, signs, stopsigns, flags, pigeons, and birds are skipped for now
+	// Note: ppoles, hcaps, manholes, mboxes, pladders, signs, stopsigns, flags, pigeons, ppaths, and birds are skipped for now
 	return 0;
 }
 

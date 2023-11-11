@@ -1383,4 +1383,58 @@ bool city_flag_t::proc_sphere_coll(point &pos_, point const &p_last, float radiu
 	return sphere_city_obj_cylin_coll(pole_base, pole_radius, pos_, p_last, radius_, xlate, cnorm); // pole coll
 }
 
+// park paths
+
+void park_path_t::calc_bcube_bsphere() {
+	assert(pts.size() >= 2);
+	bcube.set_from_points(pts);
+	bcube.expand_by_xy(hwidth); // conservative
+	bcube.z2() += hwidth; // make sure it's nonzero height
+	set_bsphere_from_bcube();
+}
+/*static*/ void park_path_t::pre_draw(draw_state_t &dstate, bool shadow_only) {
+	select_texture(get_texture_by_name("roads/concrete.jpg"));
+}
+void park_path_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
+	assert(pts.size() >= 2);
+	float const tscale(0.5/hwidth);
+	vector3d prev_ortho;
+	point prev_lo, prev_hi;
+	vert_norm_tc_color vert;
+	vert.set_norm(plus_z); // common across all verts
+	vert.set_c4(color);
+
+	for (unsigned i = 0; i < pts.size(); ++i) {
+		point const &cur(pts[i]);
+		vector3d const ortho((i+1 == pts.size()) ? prev_ortho : cross_product((pts[i+1] - cur), plus_z).get_norm());
+		vector3d const v_side(hwidth*((i == 0) ? ortho : (ortho + prev_ortho).get_norm()));
+		point const lo(cur - v_side), hi(cur + v_side);
+
+		if (i > 0) { // emit a quad
+			point const qpts[4] = {prev_hi, prev_lo, lo, hi};
+
+			for (unsigned n = 0; n < 4; ++n) {
+				vert.v = qpts[n];
+				vert.t[0] = tscale*(vert.v.x - bcube.x1());
+				vert.t[1] = tscale*(vert.v.y - bcube.y1());
+				qbds.qbd.verts.push_back(vert);
+			}
+		}
+		prev_ortho = ortho;
+		prev_lo    = lo;
+		prev_hi    = hi;
+	} // for i
+}
+bool park_path_t::check_cube_coll_xy(cube_t const &c) const { // conservative
+	if (!bcube.intersects_xy(c)) return 0;
+	assert(pts.size() >= 2);
+	cube_t test_cube(c);
+	test_cube.expand_by_xy(hwidth);
+
+	for (unsigned i = 0; i+1 < pts.size(); ++i) {
+		if (check_line_clip_xy(pts[i], pts[i+1], test_cube.d)) return 1;
+	}
+	return 0;
+}
+
 
