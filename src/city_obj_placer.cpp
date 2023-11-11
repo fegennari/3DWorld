@@ -1386,7 +1386,7 @@ bool city_obj_placer_t::line_intersect(point const &p1, point const &p2, float &
 	return ret;
 }
 
-template<typename T> bool check_city_obj_bcube_pt_xy_contain(city_obj_groups_t const &groups, vector<T> const &objs, point const &pos, unsigned &obj_ix) {
+template<typename T> bool check_city_obj_pt_xy_contains(city_obj_groups_t const &groups, vector<T> const &objs, point const &pos, unsigned &obj_ix) {
 	if (groups.empty() || !groups.get_bcube().contains_pt_xy(pos)) return 0;
 	unsigned start_ix(0);
 
@@ -1396,14 +1396,14 @@ template<typename T> bool check_city_obj_bcube_pt_xy_contain(city_obj_groups_t c
 
 		for (auto b = objs.begin()+start_ix; b != objs.begin()+i->ix; ++b) {
 			if (pos.x < b->bcube.x1()) break; // objects are sorted by x1, none after this can match
-			if (b->bcube.contains_pt_xy(pos)) {obj_ix = (b - objs.begin()); return 1;}
+			if (b->check_point_contains_xy(pos)) {obj_ix = (b - objs.begin()); return 1;}
 		}
 	} // for i
 	return 0;
 }
 bool city_obj_placer_t::get_color_at_xy(point const &pos, colorRGBA &color, bool skip_in_road) const {
 	unsigned obj_ix(0);
-	if (check_city_obj_bcube_pt_xy_contain(bench_groups, benches, pos, obj_ix)) {color = texture_color(FENCE_TEX); return 1;}
+	if (check_city_obj_pt_xy_contains(bench_groups, benches, pos, obj_ix)) {color = texture_color(FENCE_TEX); return 1;}
 	float const expand(0.15*city_params.road_width), x_test(pos.x + expand); // expand to approx tree diameter
 
 	if (!planter_groups.empty() && planter_groups.get_bcube().contains_pt_xy(pos)) {
@@ -1435,7 +1435,7 @@ bool city_obj_placer_t::get_color_at_xy(point const &pos, colorRGBA &color, bool
 			}
 		} // for i
 	}
-	if (check_city_obj_bcube_pt_xy_contain(divider_groups, dividers, pos, obj_ix)) {
+	if (check_city_obj_pt_xy_contains(divider_groups, dividers, pos, obj_ix)) {
 		assert(obj_ix < dividers.size());
 		color = plot_divider_types[dividers[obj_ix].type].get_avg_color();
 		return 1;
@@ -1456,19 +1456,20 @@ bool city_obj_placer_t::get_color_at_xy(point const &pos, colorRGBA &color, bool
 			}
 		} // for i
 	}
-	if (check_city_obj_bcube_pt_xy_contain(pdeck_groups, pdecks, pos, obj_ix)) {
+	if (check_city_obj_pt_xy_contains(pdeck_groups, pdecks, pos, obj_ix)) {
 		assert(obj_ix < pdecks.size());
 		color = pool_deck_mats[pdecks[obj_ix].mat_id].get_avg_color();
 		return 1;
 	}
-	if (!skip_in_road && check_city_obj_bcube_pt_xy_contain(nrack_groups, newsracks, pos, obj_ix)) { // now placed in roads
+	if (!skip_in_road && check_city_obj_pt_xy_contains(nrack_groups, newsracks, pos, obj_ix)) { // now placed in roads
 		assert(obj_ix < newsracks.size());
 		color = newsracks[obj_ix].color;
 		return 1;
 	}
-	if (check_city_obj_bcube_pt_xy_contain(sstation_groups, sstations, pos, obj_ix)) {color = colorRGBA(0.6, 0.8, 0.4, 1.0); return 1;} // light olive
-	if (check_city_obj_bcube_pt_xy_contain(trashcan_groups, trashcans, pos, obj_ix)) {color = colorRGBA(0.8, 0.6, 0.3, 1.0); return 1;} // tan
-	// Note: ppoles, hcaps, manholes, mboxes, pladders, signs, stopsigns, flags, pigeons, ppaths, and birds are skipped for now
+	if (check_city_obj_pt_xy_contains(sstation_groups, sstations, pos, obj_ix)) {color = colorRGBA(0.6, 0.8, 0.4, 1.0); return 1;} // light olive
+	if (check_city_obj_pt_xy_contains(trashcan_groups, trashcans, pos, obj_ix)) {color = colorRGBA(0.8, 0.6, 0.3, 1.0); return 1;} // tan
+	if (check_city_obj_pt_xy_contains(ppath_groups,    ppaths,    pos, obj_ix)) {color = GRAY; return 1;} // can/should we restrict this to only run when inside a park?
+	// Note: ppoles, hcaps, manholes, mboxes, pladders, signs, stopsigns, flags, pigeons, and birds are skipped for now
 	return 0;
 }
 

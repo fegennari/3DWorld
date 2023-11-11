@@ -1436,5 +1436,10 @@ bool park_path_t::check_cube_coll_xy(cube_t const &c) const { // conservative
 	}
 	return 0;
 }
+bool park_path_t::check_point_contains_xy(point const &p) const {
+	if (!bcube.contains_pt_xy(p)) return 0;
+	cube_t c; c.set_from_point(p); // zero area
+	return check_cube_coll_xy(c);
+}
 
 

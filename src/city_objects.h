@@ -43,6 +43,7 @@ struct city_obj_t : public sphere_t {
 	void set_bsphere_from_bcube() {*((sphere_t *)this) = bcube.get_bsphere();}
 	static void post_draw(draw_state_t &dstate, bool shadow_only) {}
 	cube_t get_bird_bcube() const {return bcube;}
+	bool check_point_contains_xy(point const &p) const {return bcube.contains_pt_xy(p);}
 	bool proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const; // default bcube coll, can override in derived class
 };
 
@@ -296,6 +297,7 @@ struct park_path_t : public city_obj_t {
 	static void pre_draw(draw_state_t &dstate, bool shadow_only);
 	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const;
 	bool check_cube_coll_xy(cube_t const &c) const;
+	bool check_point_contains_xy(point const &p) const;
 };
 
 struct bird_place_t {
