@@ -523,6 +523,7 @@ cube_t get_ladder_bcube_from_open_attic_door(room_object_t const &c, cube_t cons
 void building_room_geom_t::add_attic_door(room_object_t const &c, float tscale) {
 	rgeom_mat_t &wood_mat(get_wood_material(tscale, 1, 0, 1)); // shadows + small
 	colorRGBA const color(apply_light_color(c, c.color));
+	float cord_z2(c.z1()), cord_len_pos(0.0);
 
 	if (c.is_open()) {
 		unsigned const qv_start1(wood_mat.quad_verts.size());
@@ -561,10 +562,22 @@ void building_room_geom_t::add_attic_door(room_object_t const &c, float tscale) 
 			ladder_mat.add_cube_to_verts(step, ladder_color, step.get_llc(), get_skip_mask_for_xy(!c.dim), 1); // skip sides, swap_tex_st=1
 		}
 		rotate_verts(ladder_mat.quad_verts, rot_axis, rot_angle, rot_pt, qv_start2);
+		cord_len_pos = -0.35; // closer to the back
+		cord_z2     -= 0.36*ladder.dz(); // shift down
 	}
 	else { // draw only the top and bottom faces of the door
 		wood_mat.add_cube_to_verts(c, color, c.get_llc(), ~EF_Z12); // shadows + small, top and bottom only
+		cord_len_pos = 0.35; // closer to the front
 	}
+	// draw the cord and handle
+	float const thickness(c.dz()), cord_len(3.0*thickness), cord_radius(0.07*thickness), ball_radius(0.3*thickness);
+	cube_t cord;
+	set_cube_zvals(cord, cord_z2-cord_len, cord_z2);
+	set_wall_width(cord,  c.get_center_dim(!c.dim), cord_radius, !c.dim);
+	set_wall_width(cord, (c.get_center_dim( c.dim) + (c.dir ? -1.0 : 1.0)*cord_len_pos*c.get_sz_dim(c.dim)), cord_radius, c.dim);
+	rgeom_mat_t &cord_mat(get_untextured_material(0, 0, 1)); // unshadowed, small
+	cord_mat.add_vcylin_to_verts(cord, WHITE, 0, 0); // draw sides only
+	cord_mat.add_sphere_to_verts(point(cord.xc(), cord.yc(), cord.z1()), ball_radius, WHITE, 1); // low_detail=1
 }
 
 bool building_t::is_attic_roof(tquad_with_ix_t const &tq, bool type_roof_only) const {
