@@ -24,6 +24,7 @@ unsigned building_t::get_attic_part_ix() const { // Note: can be called before a
 	return ((real_num_parts >= 2 && parts[1].z2() > parts[0].z2()) ? 1 : 0); // if there are at least two parts, use the taller one
 }
 
+// Note: may incorrectly return 0 for points exactly between roof tquads, such as those on the centerline of the roof
 bool building_t::point_under_attic_roof(point const &pos, vector3d *const cnorm) const {
 	if (!get_attic_part().contains_pt_xy(pos)) return 0;
 
@@ -309,13 +310,24 @@ void building_t::add_attic_objects(rand_gen_t rgen) {
 		if (beam.get_sz_dim(!dim) <= beam_depth) continue; // if it's long enough
 		cube_t posts[2];
 		create_attic_posts(*this, beam, dim, posts);
+		point const access_center(adoor.get_cube_center());
+		bool const ls_post(p2p_dist_xy_sq(posts[1].get_cube_center(), access_center) < p2p_dist_xy_sq(posts[0].get_cube_center(), access_center));
 
 		for (unsigned d = 0; d < 2; ++d) {
-			if (posts[d].is_all_zeros()) continue;
-			objs.emplace_back(posts[d], TYPE_COLLIDER, room_id, dim, 0, (RO_FLAG_INVIS | obj_flags), 1.0);
-			avoid_cubes.push_back(posts[d]);
+			cube_t const &post(posts[d]);
+			if (post.is_all_zeros()) continue;
+			objs.emplace_back(post, TYPE_COLLIDER, room_id, dim, 0, (RO_FLAG_INVIS | obj_flags), 1.0);
+			avoid_cubes.push_back(post);
 			avoid_cubes.back().expand_by_xy(beam_width); // add extra spacing
-		}
+
+			if (d == ls_post) { // add light switch on the side facing the attic access door for the closer post
+				point const post_center(post.get_cube_center());
+				vector3d const post_dir(post_center - access_center);
+				bool const ls_dim(fabs(post_dir.x) < fabs(post_dir.y)), ls_dir(post_dir[ls_dim] > 0.0);
+				cube_t c(get_light_switch_bounds(post.z1(), post.d[ls_dim][!ls_dir], post.get_center_dim(!ls_dim), ls_dim, ls_dir));
+				objs.emplace_back(c, TYPE_SWITCH, room_id, ls_dim, ls_dir, (RO_FLAG_NOCOLL | obj_flags), 1.0); // fully lit
+			}
+		} // for d
 	} // for i
 	cube_t place_area(part);
 	place_area.z1() = place_area.z2() = z_floor; // bottom of attic floor

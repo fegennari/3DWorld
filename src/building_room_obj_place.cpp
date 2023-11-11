@@ -2931,9 +2931,20 @@ room_object_t get_conduit(bool dim, bool dir, float radius, float wall_pos_dim, 
 	return room_object_t(conduit, TYPE_PIPE, room_id, 0, 1, RO_FLAG_NOCOLL, 1.0, SHAPE_CYLIN, LT_GRAY); // vertical
 }
 
+cube_t building_t::get_light_switch_bounds(float floor_zval, float wall_edge, float wall_pos, bool dim, bool dir) const {
+	float const wall_thickness(get_wall_thickness()), switch_thickness(0.2*wall_thickness);
+	cube_t c;
+	c.z1() = floor_zval + 0.38*get_window_vspace(); // same for every switch
+	c.z2() = c.z1() + 1.8*wall_thickness; // set height
+	c.d[dim][ dir] = wall_edge; // flush with wall
+	c.d[dim][!dir] = c.d[dim][dir] + (dir ? -1.0 : 1.0)*switch_thickness; // expand out a bit to set thickness
+	expand_to_nonzero_area(c, switch_thickness, dim);
+	set_wall_width(c, wall_pos, 0.5*wall_thickness, !dim);
+	return c;
+}
 void building_t::add_light_switches_to_room(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned objs_start, bool is_ground_floor, bool is_basement) {
-	float const floor_spacing(get_window_vspace()), wall_thickness(get_wall_thickness()), switch_thickness(0.2*wall_thickness);
-	float const switch_height(1.8*wall_thickness), switch_hwidth(0.5*wall_thickness), min_wall_spacing(switch_hwidth + 2.0*wall_thickness);
+	float const floor_spacing(get_window_vspace()), wall_thickness(get_wall_thickness());
+	float const switch_hwidth(0.5*wall_thickness), min_wall_spacing(switch_hwidth + 2.0*wall_thickness);
 	cube_t const room_bounds(get_walkable_room_bounds(room));
 	if (min(room_bounds.dx(), room_bounds.dy()) < 8.0*switch_hwidth) return; // room is too small; shouldn't happen
 	float const ceil_zval(zval + get_floor_ceil_gap());
@@ -2943,9 +2954,6 @@ void building_t::add_light_switches_to_room(rand_gen_t rgen, room_t const &room,
 	unsigned const objs_end(objs.size());
 	bool const first_side(rgen.rand_bool());
 	vect_door_stack_t ext_doors; // not really door stacks, but we can fill in the data to treat them as such
-	cube_t c;
-	c.z1() = zval + 0.38*floor_spacing; // same for every switch
-	c.z2() = c.z1() + switch_height;
 
 	if (is_ground_floor) { // handle exterior doors
 		cube_t room_exp(room);
@@ -2973,8 +2981,6 @@ void building_t::add_light_switches_to_room(rand_gen_t rgen, room_t const &room,
 			float const dir_sign(dir ? -1.0 : 1.0), door_width(i->get_width()), near_spacing(0.25*door_width), far_spacing(1.25*door_width); // off to side of door when open
 			assert(door_width > 0.0);
 			cube_t const &wall_bounds(ei ? room_bounds : room); // exterior door should use the original room, not room_bounds
-			c.d[dim][ dir] = wall_bounds.d[dim][dir]; // flush with wall
-			c.d[dim][!dir] = c.d[dim][dir] + dir_sign*switch_thickness; // expand out a bit
 			bool done(0);
 
 			for (unsigned Side = 0; Side < 2 && !done; ++Side) { // try both sides of the doorway
@@ -2983,8 +2989,7 @@ void building_t::add_light_switches_to_room(rand_gen_t rgen, room_t const &room,
 				for (unsigned nf = 0; nf < 2; ++nf) { // {near, far}
 					float const spacing(nf ? far_spacing : near_spacing), wall_pos(i->d[!dim][side] + (side ? 1.0 : -1.0)*spacing);
 					if (wall_pos < room_bounds.d[!dim][0] + min_wall_spacing || wall_pos > room_bounds.d[!dim][1] - min_wall_spacing) continue; // too close to the adjacent wall
-					set_wall_width(c, wall_pos, switch_hwidth, !dim);
-					cube_t c_test(c);
+					cube_t c(get_light_switch_bounds(zval, wall_bounds.d[dim][dir], wall_pos, dim, dir)), c_test(c);
 					c_test.d[dim][!dir] += dir_sign*wall_thickness; // expand out more so that it's guaranteed to intersect appliances placed near the wall
 					if (overlaps_other_room_obj(c_test, objs_start))          continue;
 					if (is_obj_placement_blocked(c, room, (ei==1), 1))        continue; // inc_open_doors=1/check_open_dir=1 for inside, to avoid placing behind an open door
@@ -3001,7 +3006,6 @@ void building_t::add_light_switches_to_room(rand_gen_t rgen, room_t const &room,
 							flags |= RO_FLAG_HANGING;
 						}
 					}
-					expand_to_nonzero_area(c, switch_thickness, dim);
 					objs.emplace_back(c, TYPE_SWITCH, room_id, dim, dir, flags, 1.0); // dim/dir matches wall; fully lit
 					done = 1; // done, only need to add one for this door
 					++num_ls;
@@ -3026,10 +3030,7 @@ void building_t::add_light_switches_to_room(rand_gen_t rgen, room_t const &room,
 			side_of_door = (fabs(cubes[2].get_center_dim(!dim) - room_center) < fabs(cubes[0].get_center_dim(!dim) - room_center));
 		}
 		cube_t const &target_wall(cubes[2*side_of_door]); // front left or front right
-		c.d[dim][ dir] = target_wall.d[dim][!dir]; // flush with wall
-		c.d[dim][!dir] = c.d[dim][dir] + (dir ? -1.0 : 1.0)*switch_thickness; // expand out a bit
-		set_wall_width(c, target_wall.get_center_dim(!dim), switch_hwidth, !dim);
-		expand_to_nonzero_area(c, switch_thickness, dim);
+		cube_t c(get_light_switch_bounds(zval, target_wall.d[dim][!dir], target_wall.get_center_dim(!dim), dim, dir));
 		// since nothing is placed against the exterior wall of the closet near the door (to avoid blocking it), we don't need to check for collisions with room objects
 		objs.emplace_back(c, TYPE_SWITCH, room_id, dim, dir, (RO_FLAG_NOCOLL | RO_FLAG_IN_CLOSET), 1.0); // dim/dir matches wall; fully lit; flag for closet
 		//break; // there can be only one closet per room; done (unless I add multiple closets later?)

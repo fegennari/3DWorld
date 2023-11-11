@@ -82,9 +82,10 @@ void building_t::run_light_motion_detect_logic(point const &camera_bs) {
 }
 
 // Note: called by the player; closest_to is in building space, not camera space
-bool building_t::toggle_room_light(point const &closest_to, bool sound_from_closest_to, int room_id, bool inc_lamps, bool closet_light) {
+bool building_t::toggle_room_light(point const &closest_to, bool sound_from_closest_to, int room_id, bool inc_lamps, bool closet_light, bool known_in_attic) {
 	if (!has_room_geom()) return 0; // error?
-	bool const in_attic(point_in_attic(closest_to));
+	// attic lights on posts are exactly between roof tquads and point_in_attic() may not return the correct value, so known_in_attic should be passed in
+	bool const in_attic(known_in_attic || point_in_attic(closest_to));
 
 	if (room_id < 0 && !in_attic) { // caller has not provided a valid room_id, so determine it now
 		point query_pt(closest_to);
@@ -662,7 +663,7 @@ bool building_t::interact_with_object(unsigned obj_ix, point const &int_pos, poi
 	}
 	else if (obj.type == TYPE_SWITCH) {
 		// should select the correct light(s) for the room containing the switch
-		toggle_room_light(obj.get_cube_center(), 1, obj.room_id, 0, obj.in_closet()); // exclude lamps; select closet lights if a closet light switch
+		toggle_room_light(obj.get_cube_center(), 1, obj.room_id, 0, obj.in_closet(), obj.in_attic()); // exclude lamps; select closet lights if a closet light switch
 		gen_sound_thread_safe_at_player(SOUND_CLICK, 0.5);
 		obj.flags       ^= RO_FLAG_OPEN; // toggle on/off
 		sound_scale      = 0.1;

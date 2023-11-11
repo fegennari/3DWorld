@@ -3871,12 +3871,13 @@ void building_room_geom_t::add_window(room_object_t const &c, float tscale) { //
 colorRGBA const &get_outlet_or_switch_box_color(room_object_t const &c) {return (c.is_hanging() ? GRAY : c.color);} // should be silver metal
 
 void building_room_geom_t::add_switch(room_object_t const &c, bool draw_detail_pass) { // light switch, etc.
+	bool const in_attic(c.in_attic());
 	float const scaled_depth((c.is_hanging() ? 0.2 : 1.0)*c.get_length()); // non-recessed switch has smaller face plate depth
 	room_object_t plate(c);
 	plate.d[c.dim][!c.dir] -= (c.dir ? -1.0 : 1.0)*0.70*scaled_depth; // front face of plate
 
-	if (draw_detail_pass) { // draw face plate (static detail)
-		add_flat_textured_detail_wall_object(plate, get_outlet_or_switch_box_color(c), get_texture_by_name("interiors/light_switch.jpg"), 0); // draw_z1_face=0
+	if (draw_detail_pass) { // draw face plate (static detail); draw_z1_face=0, draw_all_faces=in_attic
+		add_flat_textured_detail_wall_object(plate, get_outlet_or_switch_box_color(c), get_texture_by_name("interiors/light_switch.jpg"), 0, in_attic);
 	}
 	else { // draw rocker (small object that can move/change state)
 		float const width(c.get_width());
@@ -3909,10 +3910,10 @@ void building_room_geom_t::add_breaker(room_object_t const &c) {
 	rotate_verts(mat.quad_verts, rot_axis, 0.12*PI, plate.get_cube_center(), qv_start); // rotate rocker slightly about base plate center
 }
 
-void building_room_geom_t::add_flat_textured_detail_wall_object(room_object_t const &c, colorRGBA const &side_color, int tid, bool draw_z1_face) { // uses mats_detail
+void building_room_geom_t::add_flat_textured_detail_wall_object(room_object_t const &c, colorRGBA const &side_color, int tid, bool draw_z1_face, bool draw_all_faces) {
 	rgeom_mat_t &front_mat(get_material(tid_nm_pair_t(tid, 0.0, 0), 0, 0, 2)); // small=2/detail
 	front_mat.add_cube_to_verts(c, c.color, zero_vector, get_face_mask(c.dim, !c.dir), !c.dim); // textured front face; always fully lit to match wall
-	unsigned const skip_faces(get_skip_mask_for_xy(c.dim) | (draw_z1_face ? EF_Z1 : 0)); // skip front/back and maybe bottom faces
+	unsigned const skip_faces(draw_all_faces ? 0 : (get_skip_mask_for_xy(c.dim) | (draw_z1_face ? EF_Z1 : 0))); // skip front/back and maybe bottom faces
 	get_untextured_material(0, 0, 2).add_cube_to_verts_untextured(c, side_color, skip_faces); // sides: unshadowed, small
 }
 void building_room_geom_t::add_outlet(room_object_t const &c) {

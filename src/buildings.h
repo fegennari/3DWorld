@@ -956,7 +956,7 @@ struct building_room_geom_t {
 	void add_crack(room_object_t const &c);
 	void add_switch(room_object_t const &c, bool draw_detail_pass);
 	void add_breaker(room_object_t const &c);
-	void add_flat_textured_detail_wall_object(room_object_t const &c, colorRGBA const &side_color, int tid, bool draw_z1_face);
+	void add_flat_textured_detail_wall_object(room_object_t const &c, colorRGBA const &side_color, int tid, bool draw_z1_face, bool draw_all_faces=0);
 	void add_outlet(room_object_t const &c);
 	void add_vent(room_object_t const &c);
 	void add_plate(room_object_t const &c);
@@ -1576,7 +1576,7 @@ struct building_t : public building_geom_t {
 	void add_room_lights(vector3d const &xlate, unsigned building_id, bool camera_in_building,
 		occlusion_checker_noncity_t &oc, vect_cube_with_ix_t &ped_bcubes, cube_t &lights_bcube);
 	void run_light_motion_detect_logic(point const &camera_bs);
-	bool toggle_room_light(point const &closest_to, bool sound_from_closest_to=0, int room_id=-1, bool inc_lamps=1, bool closet_light=0);
+	bool toggle_room_light(point const &closest_to, bool sound_from_closest_to=0, int room_id=-1, bool inc_lamps=1, bool closet_light=0, bool known_in_attic=0);
 	void toggle_light_object(room_object_t const &light, point const &sound_pos);
 	void register_light_state_change(room_object_t const &light, point const &sound_pos, bool is_lamp=0);
 	void toggle_circuit_breaker(bool is_on, unsigned zone_id, unsigned num_zones);
@@ -1744,6 +1744,7 @@ public:
 	tquad_with_ix_t set_interior_door_from_cube(door_t const &door) const;
 	cube_t get_door_bounding_cube(door_t const &door) const;
 	cube_t get_attic_access_door_avoid() const;
+	cube_t get_light_switch_bounds(float floor_zval, float wall_edge, float wall_pos, bool dim, bool dir) const;
 	void get_all_door_centers_for_room(cube_t const &room, float zval, vector<point> &door_centers) const;
 	void get_attic_windows(vect_tquad_with_ix_t &tquads, float offset_scale=1.0) const;
 	void invalidate_nav_graph();
