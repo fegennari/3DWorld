@@ -2943,8 +2943,7 @@ cube_t building_t::get_light_switch_bounds(float floor_zval, float wall_edge, fl
 	return c;
 }
 void building_t::add_light_switches_to_room(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned objs_start, bool is_ground_floor, bool is_basement) {
-	float const floor_spacing(get_window_vspace()), wall_thickness(get_wall_thickness());
-	float const switch_hwidth(0.5*wall_thickness), min_wall_spacing(switch_hwidth + 2.0*wall_thickness);
+  float const wall_thickness(get_wall_thickness()), switch_hwidth(0.5*wall_thickness), min_wall_spacing(switch_hwidth + 2.0*wall_thickness);
 	cube_t const room_bounds(get_walkable_room_bounds(room));
 	if (min(room_bounds.dx(), room_bounds.dy()) < 8.0*switch_hwidth) return; // room is too small; shouldn't happen
 	float const ceil_zval(zval + get_floor_ceil_gap());

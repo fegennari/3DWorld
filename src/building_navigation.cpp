@@ -506,7 +506,7 @@ public:
 		if (pt_ix < 4 && building.has_pool()) { // check for and handle the pool with a special case, since it can be difficult to navigate around
 			indoor_pool_t const &pool(building.interior->pool);
 
-			if (pool.room_ix == room_ix) { // this is the pool room
+			if ((unsigned)pool.room_ix == room_ix) { // this is the pool room
 				room_t const &room(building.get_room(room_ix));
 				bool const xd(pt_ix & 1), yd(pt_ix >> 1); // use pt_ix 0-3 to select a corner
 				float const xv(0.5*(room.d[0][xd] + pool.d[0][xd])), yv(0.5*(room.d[1][yd] + pool.d[1][yd])); // halfway between the room and pool
