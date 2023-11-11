@@ -215,6 +215,12 @@ unsigned count_num_poly_intersects(float x, float y, float radius, point const *
 	return count;
 }
 
+unsigned building_t::get_attic_room_id() const {
+	assert(has_attic());
+	int const room_id(get_room_containing_pt(cube_bot_center(interior->attic_access) - get_floor_thickness()*plus_z)); // should we cache this during floorplanning?
+	assert(room_id >= 0); // must be found
+	return room_id;
+}
 void building_t::add_attic_objects(rand_gen_t rgen) {
 	assign_attic_type(rgen); // must be done after roof is added, not in add_attic_access_door()
 	vect_room_object_t &objs(interior->room_geom->objs);
@@ -223,8 +229,7 @@ void building_t::add_attic_objects(rand_gen_t rgen) {
 	cube_with_ix_t adoor(interior->attic_access);
 	assert(adoor.is_strictly_normalized());
 	adoor.expand_in_dim(2, -0.2*adoor.dz()); // shrink in z
-	int const room_id(get_room_containing_pt(cube_bot_center(adoor) - get_floor_thickness()*plus_z)); // should we cache this during floorplanning?
-	assert(room_id >= 0); // must be found
+	unsigned const room_id(get_attic_room_id());
 	room_t const &room(get_room(room_id));
 	bool const ddim(adoor.ix >> 1), ddir(adoor.ix & 1);
 	unsigned const acc_flags(room.is_hallway ? RO_FLAG_IN_HALLWAY : 0), attic_door_ix(objs.size());

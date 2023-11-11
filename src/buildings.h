@@ -1696,6 +1696,7 @@ private:
 
 public:
 	int get_room_containing_pt(point const &pt) const;
+	unsigned get_attic_room_id() const;
 	int room_or_adj_room_has_stairs(int room_ix, float zval, bool inc_adj_rooms, bool check_door_open) const;
 	void register_player_in_building(point const &camera_bs, unsigned building_id) const;
 	bool maybe_teleport_to_screenshot() const;
