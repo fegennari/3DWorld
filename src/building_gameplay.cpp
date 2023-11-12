@@ -22,7 +22,7 @@ vector<sphere_t> cur_sounds; // radius = sound volume
 extern bool camera_in_building, player_is_hiding, player_in_unlit_room, disable_blood;
 extern int window_width, window_height, display_framerate, display_mode, game_mode, building_action_key, frame_counter, player_in_basement, player_in_water;
 extern float fticks, CAMERA_RADIUS;
-extern double tfticks;
+extern double tfticks, camera_zh;
 extern colorRGBA vignette_color;
 extern building_params_t global_building_params;
 extern building_t const *player_building;
@@ -447,6 +447,7 @@ bool register_achievement(string const &str) {return achievement_tracker.registe
 
 class player_inventory_t { // manages player inventory, health, and other stats
 	vector<carried_item_t> carried; // interactive items the player is currently carrying
+	vector<dead_person_t > dead_players;
 	float cur_value, cur_weight, tot_value, tot_weight, damage_done, best_value, player_health, drunkenness, bladder, bladder_time, oxygen, prev_player_zval;
 	unsigned num_doors_unlocked;
 	bool prev_in_building, has_key, is_poisoned, poison_from_spider;
@@ -539,6 +540,11 @@ public:
 	}
 	void register_in_closed_bathroom_stall() const {
 		if (!carried.empty() && carried.back().type == TYPE_BOOK) {register_achievement("Bathroom Reader");}
+	}
+	void get_dead_players_in_building(vector<dead_person_t> &dps, building_t const &building) const {
+		for (dead_person_t const &p : dead_players) {
+			if (p.building == &building) {dps.push_back(p);}
+		}
 	}
 	void use_medicine() {
 		player_health = 1.0;
@@ -824,7 +830,15 @@ public:
 			
 			if (oxygen == 0.0) {
 				register_player_death(SOUND_DROWN, " by drowning");
-				// TODO: leave a body floating in the water?
+				
+				if (player_building != nullptr) { // leave a dead player body floating on the water
+					cube_t water_cube(player_building->get_water_cube());
+					water_cube.expand_by_xy(-0.5*(2.0*CAMERA_RADIUS + camera_zh)); // shrink by player half height so as not to clip outside the water
+					point player_pos(get_camera_building_space());
+					water_cube.clamp_pt_xy(player_pos);
+					player_pos.z = water_cube.z2() - 0.1*CAMERA_RADIUS; // slightly below the water surface
+					dead_players.emplace_back(player_pos, cview_dir, player_building);
+				}
 				return;
 			}
 		}
@@ -901,6 +915,7 @@ float get_player_building_speed_mult() {return player_inventory.get_speed_mult()
 bool player_can_open_door(door_t const &door) {return player_inventory.can_open_door(door);}
 void register_in_closed_bathroom_stall() {player_inventory.register_in_closed_bathroom_stall();}
 bool player_at_full_health() {return player_inventory.player_at_full_health();}
+void get_dead_players_in_building(vector<dead_person_t> &dead_players, building_t const &building) {player_inventory.get_dead_players_in_building(dead_players, building);}
 
 void register_building_sound_for_obj(room_object_t const &obj, point const &pos) {
 	float const weight(get_obj_weight(obj)), volume((weight <= 1.0) ? 0.0 : min(1.0f, 0.01f*weight)); // heavier objects make more sound

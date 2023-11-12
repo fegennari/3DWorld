@@ -28,8 +28,8 @@ struct person_base_t : public waiting_obj_t {
 	int model_rand_seed=0;
 	bool in_building=0, is_stopped=0, is_female=0, is_zombie=0;
 	// temp state used for animations/drawing
-	mutable float last_anim_state_change_time=0.0;
 	mutable bool prev_was_idle=0;
+	mutable float last_anim_state_change_time=0.0;
 
 	person_base_t(float radius_) : radius(radius_) {}
 	std::string get_name() const;
@@ -75,5 +75,13 @@ struct person_t : public person_base_t { // building person
 	bool waiting_for_same_elevator_as(person_t const &other, float floor_spacing) const;
 	void next_path_pt(bool starting_path);
 	void abort_dest() {target_pos = all_zeros; path.clear(); goal_type = GOAL_TYPE_NONE;}
+};
+
+struct building_t;
+struct dead_person_t {
+	point pos;
+	vector3d dir;
+	building_t const *building;
+	dead_person_t(point const &p, vector3d const &d, building_t const *const b) : pos(p), dir(d), building(b) {}
 };
 

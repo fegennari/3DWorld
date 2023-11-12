@@ -25,6 +25,7 @@ extern object_model_loader_t building_obj_model_loader; // for umbrella model
 
 string gen_random_name(rand_gen_t &rgen, bool for_universe=0); // from Universe_name.cpp
 bool in_building_gameplay_mode(); // from building_gameplay.cpp
+void get_dead_players_in_building(vector<dead_person_t> &dead_players, building_t const &building); // from building_gameplay.cpp
 
 
 class person_name_gen_t {
@@ -1526,6 +1527,9 @@ struct cmp_ped_dist_to_pos {
 };
 
 void ped_manager_t::draw_people_in_building(vector<person_t> const &people, ped_draw_vars_t const &pdv) {
+	vector<dead_person_t> dead_players;
+	if (ped_model_loader.num_models() > 0) {get_dead_players_in_building(dead_players, pdv.building);} // get dead players if there's a model to draw
+	if (people.empty() && dead_players.empty()) return;
 	float const def_draw_dist(120.0*get_ped_radius()); // smaller than city peds
 	float const draw_dist(pdv.shadow_only ? camera_pdu.far_ : def_draw_dist), draw_dist_sq(draw_dist*draw_dist);
 	bool const enable_occ_cull((display_mode & 0x08) && !city_params.ped_model_files.empty()); // occlusion culling, if using models
@@ -1546,16 +1550,31 @@ void ped_manager_t::draw_people_in_building(vector<person_t> const &people, ped_
 		if (enable_occ_cull && pdv.building.check_obj_occluded(p.get_bcube(), pdu.pos, pdv.oc, pdv.reflection_pass)) continue;
 		to_draw.push_back(&p);
 	} // for p
-	if (to_draw.empty()) return;
+	if (to_draw.empty() && dead_players.empty()) return;
 	// sort back to front for proper alpha blending when player is in the building bcube, including the extended basement
 	if (!pdv.shadow_only && pdv.building.get_bcube_inc_extensions().contains_pt(pdu.pos)) {sort(to_draw.begin(), to_draw.end(), cmp_ped_dist_to_pos(pdu.pos));}
-	bool const enable_animations(enable_building_people_ai());
-	animation_state_t anim_state(enable_animations, animation_id);
+	animation_state_t anim_state(enable_building_people_ai(), animation_id);
 	bool in_sphere_draw(0);
 	for (person_t const *p : to_draw) {draw_ped(*p, pdv.s, pdu, pdv.xlate, def_draw_dist, draw_dist_sq, in_sphere_draw, pdv.shadow_only, pdv.shadow_only, &anim_state, 1);}
 	end_sphere_draw(in_sphere_draw);
+	anim_state.clear_animation_id(pdv.s); // make sure to leave animations disabled so that they don't apply to buildings and dead players
+
+	if (!dead_players.empty()) { // have dead player(s)
+		unsigned const model_id(get_player_model_id());
+		city_model_t const &model(ped_model_loader.get_model(model_id));
+
+		if (model.is_loaded()) {
+			for (dead_person_t const &p : dead_players) {
+				float const player_eye_height(CAMERA_RADIUS + camera_zh), player_height(player_eye_height/EYE_HEIGHT_RATIO), player_radius(player_height/PED_HEIGHT_SCALE);
+				cube_t bcube;
+				bcube.set_from_point(p.pos);
+				// always facing with head in +X, face down in -Z, and arms out to the sides in a Y T-pose; scale to account for different bcube
+				bcube.expand_by(3.0*vector3d(0.5*player_height*model.scale, PED_WIDTH_SCALE*player_radius, PED_WIDTH_SCALE*player_radius));
+				ped_model_loader.draw_model(pdv.s, p.pos, bcube, -plus_z, ALPHA0, pdv.xlate, model_id, pdv.shadow_only); // looking down at the ground
+			} // for p
+		}
+	}
 	pdv.s.upload_mvm(); // needed after applying model or sphere draw transforms
-	anim_state.clear_animation_id(pdv.s); // make sure to leave animations disabled so that they don't apply to buildings
 }
 
 bool ped_manager_t::draw_ped(person_base_t const &ped, shader_t &s, pos_dir_up const &pdu, vector3d const &xlate, float def_draw_dist, float draw_dist_sq,
