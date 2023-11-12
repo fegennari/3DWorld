@@ -1678,8 +1678,6 @@ void ped_manager_t::draw_player_model(shader_t &s, vector3d const &xlate, bool s
 		prev_player_pos   = pre_smap_player_pos;
 		player_anim_time += fticks*city_params.ped_speed;
 	}
-	pos_dir_up pdu(camera_pdu);
-	pdu.pos -= xlate; // adjust for local translate
 	animation_state_t anim_state(enable_animations, animation_id);
 	float const player_eye_height(CAMERA_RADIUS + camera_zh), player_height(player_eye_height/EYE_HEIGHT_RATIO), player_radius(player_height/PED_HEIGHT_SCALE);
 	point const pos(pre_smap_player_pos + vector3d(0.0, 0.0, (player_radius - player_eye_height)));

@@ -320,7 +320,7 @@ void building_t::add_attic_objects(rand_gen_t rgen) {
 			avoid_cubes.push_back(post);
 			avoid_cubes.back().expand_by_xy(beam_width); // add extra spacing
 
-			if (d == ls_post) { // add light switch on the side facing the attic access door for the closer post
+			if (bool(d) == ls_post) { // add light switch on the side facing the attic access door for the closer post
 				point const post_center(post.get_cube_center());
 				vector3d const post_dir(post_center - access_center);
 				bool const ls_dim(fabs(post_dir.x) < fabs(post_dir.y)), ls_dir(post_dir[ls_dim] > 0.0);
