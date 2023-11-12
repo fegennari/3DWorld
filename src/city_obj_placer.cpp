@@ -297,19 +297,20 @@ template<typename T> void add_objs_top_center(T const &objs, unsigned start_ix, 
 	}
 }
 
-unsigned choose_edge_pos(cube_t const &region, float border, unsigned force_orient, point &pos, rand_gen_t &rgen) {
-	while (1) {
-		unsigned const orient((force_orient < 4) ? force_orient : (rgen.rand()&3)); // 2*dim + dir
-		bool const dim(orient >> 1), dir(orient & 1);
-		pos[ dim] = region.d[dim][dir];
-		pos[!dim] = rgen.rand_uniform(region.d[!dim][0]+border, region.d[!dim][1]-border);
-		return orient; // done
-	} // end while
-	return 0; // never gets here
+void choose_edge_pos(cube_t const &region, float border, bool dim, bool dir, point &pos, rand_gen_t &rgen) {
+	pos[ dim] = region.d[dim][dir];
+	pos[!dim] = rgen.rand_uniform(region.d[!dim][0]+border, region.d[!dim][1]-border);
 }
 bool check_path_coll_xy(cube_t const &c, vector<park_path_t> const &paths, unsigned paths_start) {
 	for (auto p = paths.begin()+paths_start; p != paths.end(); ++p) {
 		if (p->check_cube_coll_xy(c)) return 1;
+	}
+	return 0;
+}
+bool check_path_tree_coll(park_path_t const &path, vector<point> const &tree_pos) {
+	for (point const &pos : tree_pos) { // check for collisions with tree trunks
+		cube_t bc; bc.set_from_sphere(pos, 0.1*path.hwidth); // small size
+		if (path.check_cube_coll_xy(bc)) return 1;
 	}
 	return 0;
 }
@@ -324,29 +325,40 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 
 	// place paths in parks
 	if (plot.is_park) {
-		unsigned const num_paths = 1;
+		//highres_timer_t timer("Add Park Paths"); // < 1ms
+		unsigned const num_paths(1 + rgen.rand_bool()); // 1-2
+		unsigned const num_path_segs = 100;
 		float const path_hwidth(0.08*city_params.road_width), path_height(0.01*path_hwidth);
 		float const plot_min_edge(min(plot.dx(), plot.dy())), edge_border(max(2.0f*path_hwidth, 0.2f*plot_min_edge));
 
 		if (plot_min_edge > 3.0*edge_border) { // park has enough space for a path; should always be true
 			point start, end;
 			start.z = end.z = plot.z2() + path_height;
+			bool dim(rgen.rand_bool());
 
-			for (unsigned n = 0; n < num_paths; ++n) {
-				for (unsigned N = 0; N < 20; ++N) { // make 20 tries
-					unsigned const start_orient(choose_edge_pos(plot, edge_border, 4, start, rgen)); // choose starting point in any orient
-					choose_edge_pos(plot, edge_border, (start_orient ^ 1), end, rgen); // choose ending point on the opposite edge
+			for (unsigned n = 0; n < num_paths; ++n, dim ^= 1) { // alternate dims for each path
+				for (unsigned N = 0; N < 100; ++N) { // make 100 tries
+					choose_edge_pos(plot, edge_border, dim, 0, start, rgen); // choose starting point
+					choose_edge_pos(plot, edge_border, dim, 1, end,   rgen); // choose ending point on the opposite edge
+					float const path_curve(rgen.rand_float()*16.0*path_hwidth);
+					float const sine_mult((1 + rgen.rand_bool())*TWO_PI/num_path_segs); // 1 or 2 cycles
+					vector3d const seg_delta((end - start)/num_path_segs);
+					cube_t valid_region(plot);
+					valid_region.expand_in_dim(!dim, -2.0f*path_hwidth); // shrink to keep path inside the park on the opposite edges
 					park_path_t path(path_hwidth, GRAY);
 					path.pts.push_back(start);
+					point cur(start);
+
+					for (unsigned s = 0; s+1 < num_path_segs; ++s) {
+						cur += seg_delta;
+						point p(cur);
+						p[!dim] += path_curve * sin(sine_mult*(s+1));
+						valid_region.clamp_pt_xy(p);
+						path.pts.push_back(p);
+					} // for s
 					path.pts.push_back(end);
 					path.calc_bcube_bsphere();
-					bool had_tree_coll(0);
-				
-					for (point const &pos : tree_pos) { // check for collisions with tree trunks
-						cube_t bc; bc.set_from_sphere(pos, 0.1*path_hwidth); // small size
-						if (path.check_cube_coll_xy(bc)) {had_tree_coll = 1; break;}
-					}
-					if (had_tree_coll) continue;
+					if (check_path_tree_coll(path, tree_pos)) continue;
 					ppath_groups.add_obj(path, ppaths);
 					break; // success
 				} // for N
