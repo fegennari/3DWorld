@@ -11,6 +11,8 @@ extern object_model_loader_t building_obj_model_loader;
 
 unsigned const q2t_ixs[6] = {0,2,1,0,3,2}; // quad => 2 tris
 
+bool do_line_clip_xy(point &v1, point &v2, float const d[3][2]);
+
 float get_power_pole_offset() {return 0.045*city_params.road_width;}
 
 
@@ -1411,8 +1413,12 @@ void park_path_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_
 		point const lo(cur - v_side), hi(cur + v_side);
 
 		if (i > 0) { // emit a quad
-			point const qpts[4] = {prev_hi, prev_lo, lo, hi};
+			point qpts[4] = {prev_hi, prev_lo, lo, hi};
 
+			if (i == 1 || i+1 == pts.size()) { // clip edges to plot
+				do_line_clip_xy(qpts[0], qpts[3], plot.d); // hi
+				do_line_clip_xy(qpts[1], qpts[2], plot.d); // lo
+			}
 			for (unsigned n = 0; n < 4; ++n) {
 				vert.v = qpts[n];
 				vert.t[0] = tscale*(vert.v.x - bcube.x1());

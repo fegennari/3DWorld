@@ -291,8 +291,9 @@ struct park_path_t : public city_obj_t {
 	vector<point> pts;
 	float hwidth;
 	colorRGBA color;
+	cube_t plot;
 
-	park_path_t(float hwidth_, colorRGBA const &color_=WHITE) : hwidth(hwidth_), color(color_) {}
+	park_path_t(float hwidth_, colorRGBA const &color_, cube_t const &plot_) : hwidth(hwidth_), color(color_), plot(plot_) {}
 	void calc_bcube_bsphere();
 	static void pre_draw(draw_state_t &dstate, bool shadow_only);
 	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const;

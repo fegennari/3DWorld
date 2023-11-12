@@ -326,7 +326,7 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 	// place paths in parks
 	if (plot.is_park) {
 		//highres_timer_t timer("Add Park Paths"); // < 1ms
-		unsigned const num_paths(1 + rgen.rand_bool()); // 1-2
+		unsigned const num_paths(1 + (rgen.rand_float() < 0.67)); // 1-2
 		unsigned const num_path_segs = 100;
 		float const path_hwidth(0.08*city_params.road_width), path_height(0.01*path_hwidth);
 		float const plot_min_edge(min(plot.dx(), plot.dy())), edge_border(max(2.0f*path_hwidth, 0.2f*plot_min_edge));
@@ -340,19 +340,22 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 				for (unsigned N = 0; N < 100; ++N) { // make 100 tries
 					choose_edge_pos(plot, edge_border, dim, 0, start, rgen); // choose starting point
 					choose_edge_pos(plot, edge_border, dim, 1, end,   rgen); // choose ending point on the opposite edge
-					float const path_curve(rgen.rand_float()*16.0*path_hwidth);
-					float const sine_mult((1 + rgen.rand_bool())*TWO_PI/num_path_segs); // 1 or 2 cycles
+					float const path_curve(rgen.rand_float()*20.0*path_hwidth);
+					float const sine_mult((1 + (rgen.rand()%3))*TWO_PI); // 1-3 cycles
 					vector3d const seg_delta((end - start)/num_path_segs);
 					cube_t valid_region(plot);
 					valid_region.expand_in_dim(!dim, -2.0f*path_hwidth); // shrink to keep path inside the park on the opposite edges
-					park_path_t path(path_hwidth, GRAY);
-					path.pts.push_back(start);
+					park_path_t path(path_hwidth, GRAY, plot);
 					point cur(start);
+					start[dim] -= path_hwidth; // extend outside the plot to avoid a gap; will be clipped during drawing
+					end  [dim] += path_hwidth;
+					path.pts.push_back(start);
 
 					for (unsigned s = 0; s+1 < num_path_segs; ++s) {
 						cur += seg_delta;
 						point p(cur);
-						p[!dim] += path_curve * sin(sine_mult*(s+1));
+						float const t(float(s+1)/num_path_segs), tc(2.0*fabs(t - 0.5)); // t is the position along the path in [0.0, 1.0]
+						p[!dim] += path_curve * sin(sine_mult*t) * (1.0 - tc*tc*tc); // sine wave in cubic envelope
 						valid_region.clamp_pt_xy(p);
 						path.pts.push_back(p);
 					} // for s

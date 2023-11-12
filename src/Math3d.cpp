@@ -1083,6 +1083,16 @@ bool do_line_clip(point &v1, point &v2, float const d[3][2]) {
 	return 1;
 }
 
+bool do_line_clip_xy(point &v1, point &v2, float const d[3][2]) {
+
+	float tmin(0.0), tmax(1.0);
+	if (!get_line_clip_xy(v1, v2, d, tmin, tmax)) return 0;
+	vector3d const dv(v2, v1);
+	if (tmax > TOLERANCE)         {v2  = v1 + dv*tmax;}
+	if (tmin < (1.0 - TOLERANCE)) {v1 += dv*tmin;}
+	return 1;
+}
+
 void add_point_to_poly(point const &pt, vector<point> &pts) {
 	unsigned const size(pts.size());
 	if (size > 0 && pt == pts.back()) return; // duplicate, skip
