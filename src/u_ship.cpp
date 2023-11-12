@@ -1352,7 +1352,7 @@ void u_ship::ai_fire(vector3d const &targ_dir, float target_dist, float min_dist
 			if (tdist > range) continue; // out of range
 		}
 		if (!weap_turret(sw.wclass) && bad_angle(d_angle, target_dist, sw.wclass)) { // target not aligned
-			default_next_weap = w; // if the only useable weapon is unaligned, then make this the next cur_weapon so that we can align ourselves next frame
+			default_next_weap = w; // if the only usable weapon is unaligned, then make this the next cur_weapon so that we can align ourselves next frame
 			continue;
 		}
 		if (uw.is_beam) {
@@ -1362,8 +1362,11 @@ void u_ship::ai_fire(vector3d const &targ_dir, float target_dist, float min_dist
 			if (bwp.mind_control && alignment != ALIGN_NEUTRAL && alignment == target_obj->get_align()) continue; // don't mind control a friendly
 			if (uw.damage == 0.0 && uw.force != 0.0 && !bwp.mind_control && target_obj->is_orbiting())  continue; // tractor beam on immovable ship
 		}
+		else if (uw.def_ammo > 0 && is_orbiting() && target_obj->is_orbiting()) { // ammo-using projectile fired between two orbiting ships (defsat, AMD, starbase, colony)
+			// TODO: may need to track hit rate and stop firing missiles if the target's point defenses keep shooting them down
+		}
 		good_weapons.push_back(w); // acceptable weapon
-	}
+	} // for i
 	if (good_weapons.empty()) { // no weapon for the given range, etc.
 		curr_weapon = default_next_weap;
 		return;
@@ -1399,7 +1402,7 @@ void u_ship::ai_fire(vector3d const &targ_dir, float target_dist, float min_dist
 		value *= 1.0 + 0.5*uw.no_coll; // can hit multiple targets and can't be destroyed easily
 		value *= sw.wcount;
 		if (value >= min_value) wchoices.push_back(make_pair(-value, good_weapons[i])); // want largest to smallest so negate w
-	}
+	} // for i
 	if (wchoices.empty()) return; // probably won't get here
 	sort(wchoices.begin(), wchoices.end());
 	bool fired_secondary(0);
@@ -1433,7 +1436,7 @@ void u_ship::ai_fire(vector3d const &targ_dir, float target_dist, float min_dist
 		//cout << weap.name << " " << target_obj->get_name() << endl; // testing
 		if (target_dist < TOLERANCE || fire_dir.mag() < TOLERANCE) continue; // not sure how we can get here
 		fire_weapon(fire_dir, target_dist);
-	}
+	} // for i
 	curr_weapon = wchoices[0].second; // reset back to first
 }
 
