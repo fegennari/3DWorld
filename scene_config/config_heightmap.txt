@@ -11,6 +11,7 @@ pre_load_full_tiled_terrain 1 # long load times but no initial lag when rotating
 #init_game_mode 2 # start in building gameplay mode
 game_mode_disable_mask 2 # disable FPS gameplay mode; only building gameplay and non-game mode are enabled
 #game_mode_disable_mask 3 # only building gameplay mode is enabled
+play_gameplay_alert 0 # disable the alert sound
 
 camera_radius 0.03 # default is 0.06
 camera_height 0.02 # added to camera_radius; default is 0.0

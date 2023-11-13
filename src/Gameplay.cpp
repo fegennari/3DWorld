@@ -50,7 +50,7 @@ vector<team_info> teaminfo;
 vector<bbox> team_starts;
 
 
-extern bool vsync_enabled, spraypaint_mode, smoke_visible, begin_motion, flashlight_on, disable_fire_delay, disable_recoil, enable_translocator, disable_blood;
+extern bool vsync_enabled, spraypaint_mode, smoke_visible, begin_motion, flashlight_on, disable_fire_delay, disable_recoil, enable_translocator, disable_blood, play_gameplay_alert;
 extern int game_mode, window_width, window_height, world_mode, fire_key, spectate, animate2;
 extern int camera_reset, frame_counter, camera_mode, camera_coll_id, camera_surf_collide, b2down;
 extern int num_groups, num_smileys, left_handed, iticks, DISABLE_WATER, voxel_editing, player_dodgeball_id;
@@ -2732,7 +2732,7 @@ void init_game_mode() {
 			if (game_mode == GAME_MODE_FPS) {init_sstate(i, 1);} // ???
 		}
 	}
-	if (frame_counter > 0) {gen_sound(SOUND_ALERT, get_camera_pos(), 0.5);} // not on first frame
+	if (play_gameplay_alert && frame_counter > 0) {gen_sound(SOUND_ALERT, get_camera_pos(), 0.5);} // not on first frame
 }
 
 
