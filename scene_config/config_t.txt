@@ -14,6 +14,7 @@ tt_grass_scale_factor 1.0
 #ntrees 500
 #tree_density_thresh 0.9
 #unlimited_weapons 1
+#game_mode_disable_mask 2
 
 show_map_view_mandelbrot 0
 

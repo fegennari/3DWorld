@@ -103,7 +103,7 @@ int read_snow_file(0), write_snow_file(0), mesh_detail_tex(NOISE_TEX);
 int read_light_files[NUM_LIGHTING_TYPES] = {0}, write_light_files[NUM_LIGHTING_TYPES] = {0};
 unsigned num_snowflakes(0), create_voxel_landscape(0), hmap_filter_width(0), num_dynam_parts(100), snow_coverage_resolution(2);
 unsigned num_birds_per_tile(2), num_fish_per_tile(15), num_bflies_per_tile(4);
-unsigned erosion_iters(0), erosion_iters_tt(0), skybox_tid(0), tiled_terrain_gen_heightmap_sz(0);
+unsigned erosion_iters(0), erosion_iters_tt(0), skybox_tid(0), tiled_terrain_gen_heightmap_sz(0), game_mode_disable_mask(0);
 float NEAR_CLIP(DEF_NEAR_CLIP), FAR_CLIP(DEF_FAR_CLIP), system_max_orbit(1.0), sky_occlude_scale(0.0), tree_slope_thresh(5.0), mouse_sensitivity(1.0), tt_grass_scale_factor(1.0);
 float water_plane_z(0.0), base_gravity(1.0), crater_depth(1.0), crater_radius(1.0), disabled_mesh_z(FAR_CLIP), vegetation(1.0), atmosphere(1.0), biome_x_offset(0.0);
 float mesh_file_scale(1.0), mesh_file_tz(0.0), speed_mult(1.0), mesh_z_cutoff(-FAR_CLIP), relh_adj_tex(0.0), dodgeball_metalness(1.0), ray_step_size_mult(1.0);
@@ -833,6 +833,14 @@ void show_speed() {
 	print_text_onscreen(oss.str(), WHITE, 1.0, 1.0*TICKS_PER_SECOND);
 }
 
+void next_game_mode() {
+	if (world_mode == WMODE_UNIVERSE)      return; // only one game mode
+	if ((game_mode_disable_mask & 7) == 7) return; // all game modes disabled, leave at init game mode (error?)
+	int const prev_game_mode(game_mode);
+	do {game_mode = (game_mode + 1) % 3;} while (game_mode_disable_mask & (1 << game_mode)); // select the next enabled game mode
+	if (game_mode != prev_game_mode) {change_game_mode();}
+}
+
 
 // This function is called whenever there is a keyboard input;
 // key is the ASCII value of the key pressed (esc = 27, enter = 13, backspace = 8, tab = 9, del = 127);
@@ -1379,9 +1387,7 @@ void keyboard2(int key, int x, int y) { // handling of special keys
 		break;
 
 	case GLUT_KEY_F2: // switch game mode
-		if (world_mode == WMODE_UNIVERSE) break;
-		++game_mode;
-		change_game_mode();
+		next_game_mode();
 		break;
 
 	case GLUT_KEY_F3:
@@ -1835,6 +1841,7 @@ int load_config(string const &config_file) {
 	kwmu.add("snow_coverage_resolution", snow_coverage_resolution);
 	kwmu.add("dlight_grid_bitshift", DL_GRID_BS);
 	kwmu.add("tiled_terrain_gen_heightmap_sz", tiled_terrain_gen_heightmap_sz);
+	kwmu.add("game_mode_disable_mask", game_mode_disable_mask);
 
 	kw_to_val_map_t<float> kwmf(error);
 	kwmf.add("gravity", base_gravity);
