@@ -4189,6 +4189,14 @@ void building_room_geom_t::add_diving_board(room_object_t const &c) {
 	mat.add_cube_to_verts_untextured(cubes[1], apply_light_color(c, WHITE), EF_Z12); // base; draw sides of base, always white
 }
 
+void building_room_geom_t::add_flashlight(room_object_t const &c) {
+	// TODO: two black cylinders, vertical or horizontal
+}
+
+void building_room_geom_t::add_candle(room_object_t const &c) {
+	// TODO: vertical white cylinder with glowing wick
+}
+
 void building_room_geom_t::add_debug_shape(room_object_t const &c) {
 	rgeom_mat_t &mat(get_untextured_material(0, 0, 1)); // unshadowed, small
 	if      (c.shape == SHAPE_CUBE  ) {mat.add_cube_to_verts_untextured(c, c.color);} // all faces

@@ -711,6 +711,7 @@ bool building_t::add_bedroom_objs(rand_gen_t rgen, room_t &room, vect_cube_t con
 		// large room, try to add a desk and chair as well
 		add_desk_to_room(rgen, room, blockers, chair_color, zval, room_id, floor, tot_light_amt, objs_start, is_basement);
 	}
+	// TODO: maybe add a flashlight or candle on a dresser, night stand, or desk; or in a drawer
 	if (rgen.rand_float() < 0.3) {add_laundry_basket(rgen, room, zval, room_id, tot_light_amt, objs_start, place_area);} // try to place a laundry basket 25% of the time
 
 	if (rgen.rand_float() < global_building_params.ball_prob) { // maybe add a ball to the room

@@ -158,6 +158,8 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_BENCH     ] = bldg_obj_type_t(1, 1, 1, 1, 0, 0, 2, 40.0,  30.0,  "bench");
 	bldg_obj_types[TYPE_DIV_BOARD ] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 2,  0.0,  100.0, "diving board");
 	bldg_obj_types[TYPE_FALSE_DOOR] = bldg_obj_type_t(0, 0, 0, 0, 1, 0, 1,  0.0,  0.0,   "door");
+	bldg_obj_types[TYPE_FLASHLIGHT] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 15.0,  1.0,   "flashlight");
+	bldg_obj_types[TYPE_CANDLE    ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2,  1.0,  0.4,   "candle");
 	bldg_obj_types[TYPE_DBG_SHAPE ] = bldg_obj_type_t(0, 0, 0, 0, 0, 0, 1,  0.0,  0.0,   "debug shape"); // small (optimization)
 	// player_coll, ai_coll, rat_coll, pickup, attached, is_model, lg_sm, value, weight, name [capacity]
 	// 3D models
