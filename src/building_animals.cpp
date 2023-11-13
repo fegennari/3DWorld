@@ -14,7 +14,7 @@ float const RAT_ATTACK_SPEED = 1.2; // multiplier
 float const RAT_FOV_DP(cos(0.5*RAT_FOV_DEG*TO_RADIANS));
 float const SPIDER_VIEW_FLOORS = 4.0; // view distance in floors
 
-extern bool player_attracts_flies;
+extern bool player_attracts_flies, player_wait_respawn;
 extern int animate2, camera_surf_collide, frame_counter, display_mode;
 extern float fticks, NEAR_CLIP;
 extern double tfticks, camera_zh;
@@ -1484,7 +1484,7 @@ void building_t::update_fly(insect_t &fly, point const &camera_bs, float timeste
 		return; // continue below?
 	}
 	float const dist_to_player(p2p_dist(pos, camera_bs)), sight_range(2.0*get_window_vspace());
-	bool const target_player(player_attracts_flies && dist_to_player < sight_range);
+	bool const target_player((player_attracts_flies || player_wait_respawn) && dist_to_player < sight_range);
 	unsigned const update_freq(1 + interior->room_geom->insects.size()/250); // reduced update rate for many insects
 
 	if (((frame_counter + fly.id) % update_freq) == 0) { // run collision/update logic every few frames
@@ -1548,7 +1548,7 @@ void building_t::update_fly(insect_t &fly, point const &camera_bs, float timeste
 	fly.speed  = (follow_mode ? 1.6 : 1.0)*min(max_speed, max(0.5f*max_speed, (fly.speed + (0.05f*timestep)*fly.accel))); // faster when following
 	
 	// play buzz sound if near player and also attracted to the player
-	if (player_attracts_flies && dist_to_player < 1.1*get_scaled_player_radius()) {
+	if ((player_attracts_flies || player_wait_respawn) && dist_to_player < 1.1*get_scaled_player_radius()) {
 		gen_sound_thread_safe(SOUND_FLY_BUZZ, local_to_camera_space(pos), 1.0, 1.0, 1.0, 1); // skip_if_already_playing=1
 	}
 	// make sure we're not in front of the camera near clip plane

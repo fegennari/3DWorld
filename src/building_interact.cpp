@@ -15,7 +15,7 @@ float const OBJ_GRAVITY    = 0.0003; // unsigned magnitude
 float const TERM_VELOCITY  = 1.0;
 float const OBJ_ELASTICITY = 0.8;
 
-extern bool tt_fire_button_down, flashlight_on, use_last_pickup_object, city_action_key;
+extern bool tt_fire_button_down, flashlight_on, use_last_pickup_object, city_action_key, player_wait_respawn;
 extern int player_in_closet, camera_surf_collide, can_pickup_bldg_obj, animate2, frame_counter, player_in_elevator, player_in_attic;
 extern float fticks, CAMERA_RADIUS, office_chair_rot_rate;
 extern double tfticks;
@@ -1005,7 +1005,7 @@ void building_t::run_ball_update(vector<room_object_t>::iterator ball_it, point 
 	point new_center(center);
 
 	// check the player, but not if they're looking directly at the ball; assume in that case they intend to pick it up instead
-	if (can_kick && camera_surf_collide && player_is_moving && dot_product_ptv(cview_dir, new_center, player_pos) < 0.9*p2p_dist(new_center, player_pos)) {
+	if (can_kick && camera_surf_collide && player_is_moving && !player_wait_respawn && dot_product_ptv(cview_dir, new_center, player_pos) < 0.9*p2p_dist(new_center, player_pos)) {
 		kicked |= check_ball_kick(ball, velocity, new_center, player_pos, player_z1, player_z2, player_radius);
 	}
 	for (auto p = interior->people.begin(); p != interior->people.end(); ++p) { // check building AI people

@@ -2167,7 +2167,7 @@ template<typename T> void vect_animal_t<T>::update_delta_sum_for_animal_coll(poi
 bool building_t::check_and_handle_dynamic_obj_coll(point &pos, point const &cur_obj_pos, float radius,
 	float z1, float z2, point const &camera_bs, bool for_spider, bool skip_player) const
 {
-	if (camera_surf_collide && !skip_player) { // check the player
+	if (camera_surf_collide && !player_wait_respawn && !skip_player) { // check the player
 		if (z1 < camera_bs.z && z2 > (camera_bs.z - get_bldg_player_height() - 0.1*CAMERA_RADIUS)) { // slighly below the player's feet
 			if (handle_vcylin_vcylin_int(pos, camera_bs, (radius + get_scaled_player_radius()))) return 1;
 		}
