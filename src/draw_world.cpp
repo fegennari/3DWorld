@@ -1953,16 +1953,13 @@ void draw_compass_and_alt() { // and temperature
 	}
 }
 
-
 void draw_stats_bar(shader_t &s, colorRGBA const &color, float max_val, float cur_val, float x, float y1, float y2, float zval) {
 	s.set_cur_color(colorRGBA(color, 0.2));
 	draw_one_tquad(-0.9*x, y1, (-0.9 + 0.2*max_val)*x, y2, zval); // full background
 	s.set_cur_color(color);
 	draw_one_tquad(-0.9*x, y1, (-0.9 + 0.2*cur_val)*x, y2, zval);
 }
-void draw_health_bar(float health, float shields, float pu_time, colorRGBA const &pu_color,
-	float extra_bar1, colorRGBA const &extra_color1, float extra_bar2, colorRGBA const &extra_color2, float poisoned)
-{
+void draw_health_bar(float health, float shields, float pu_time, colorRGBA const &pu_color, float poisoned, vector<status_bar_t> const &extra_bars) {
 	shader_t s;
 	s.begin_color_only_shader();
 	glDisable(GL_DEPTH_TEST);
@@ -1982,26 +1979,32 @@ void draw_health_bar(float health, float shields, float pu_time, colorRGBA const
 		s.set_cur_color(ORANGE);
 		draw_one_tquad(-0.7*x, 0.92*y, (-0.7 + 0.002*(health - 100.0))*x, 0.94*y, zval); // extra health bar
 	}
+	float ypos(0.88); // y-position on screen, with 1.0 at the top and 0.0 at the bottom; bars stack vertically down
+
 	if (shields >= 0.0) { // negative shields disables the shields bar
 		// universe mode: 100%, TT building gameplay mode: 200% (drunkenness), normal: 150%
 		float const max_val((world_mode == WMODE_UNIVERSE) ? 100.0 : (building_gameplay_mode ? 200.0 : 150.0));
-		draw_stats_bar(s, (building_gameplay_mode ? GREEN : YELLOW), 0.01*max_val, 0.01*shields, x, 0.88*y, 0.90*y, zval); // shields bar up to 150
+		draw_stats_bar(s, (building_gameplay_mode ? GREEN : YELLOW), 0.01*max_val, 0.01*shields, x, ypos*y, (ypos + 0.02)*y, zval); // shields bar up to 150
 
 		if (building_gameplay_mode && shields > 150.0 && ((int(tfticks)/12)&1)) { // flash when drunkenness is too high
 			s.set_cur_color(colorRGBA(RED, 0.5)); // translucent red
-			draw_one_tquad(-0.6*x, 0.875*y, -0.495*x, 0.905*y, zval);
+			draw_one_tquad(-0.6*x, (ypos - 0.005)*y, -0.495*x, (ypos + 0.025)*y, zval);
 		}
+		ypos -= 0.04;
 	}
 	if (building_gameplay_mode || pu_time > 0.0) { // 0.0-1.0 range; used for building_gameplay_mode bladder fullness
-		draw_stats_bar(s, pu_color, 1.0, pu_time, x, 0.84*y, 0.86*y, zval); // full PU time background
+		draw_stats_bar(s, pu_color, 1.0, pu_time, x, ypos*y, (ypos + 0.02)*y, zval); // full PU time background
 
 		if (building_gameplay_mode && pu_time > 0.9 && ((int(tfticks)/12)&1)) { // flash when bladder fullness is too high
 			s.set_cur_color(colorRGBA(ORANGE, 0.5)); // translucent orange
-			draw_one_tquad(-0.905*x, 0.835*y, -0.695*x, 0.865*y, zval);
+			draw_one_tquad(-0.905*x, (ypos - 0.005)*y, -0.695*x, (ypos + 0.025)*y, zval);
 		}
+		ypos -= 0.04;
 	}
-	if (extra_color1.A != 0.0) {draw_stats_bar(s, extra_color1, 1.0, extra_bar1, x, 0.80*y, 0.82*y, zval);} // carry capacity bar
-	if (extra_color2.A != 0.0) {draw_stats_bar(s, extra_color2, 1.0, extra_bar2, x, 0.76*y, 0.78*y, zval);} // oxygen bar
+	for (status_bar_t const &b : extra_bars) {
+		draw_stats_bar(s, b.color, 1.0, b.val, x, ypos*y, (ypos + 0.02)*y, zval);
+		ypos -= 0.04;
+	}
 	disable_blend();
 	glEnable(GL_DEPTH_TEST);
 }

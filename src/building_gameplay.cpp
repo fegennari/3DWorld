@@ -813,8 +813,10 @@ public:
 		}
 		if (in_building_gameplay_mode()) {
 			// Note: shields is used for drunkenness; values are scaled from 0-1 to 0-100; powerup values are for bladder fullness
-			colorRGBA oxygen_bar_color((oxygen == 1.0) ? ALPHA0 : CYAN); // oxygen bar is only shown when oxygen is less than full
-			draw_health_bar(100.0*player_health, 100.0*drunkenness, bladder, YELLOW, get_carry_weight_ratio(), WHITE, oxygen, oxygen_bar_color, is_poisoned);
+			vector<status_bar_t> extra_bars;
+			extra_bars.emplace_back(WHITE, get_carry_weight_ratio()); // carry weight
+			if (oxygen < 0.0) {extra_bars.emplace_back(CYAN, oxygen);} // oxygen bar is only shown when oxygen is less than full
+			draw_health_bar(100.0*player_health, 100.0*drunkenness, bladder, YELLOW, is_poisoned, extra_bars);
 		}
 		if (has_key) {show_key_icon();}
 	}

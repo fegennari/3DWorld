@@ -1319,6 +1319,13 @@ public:
 	void end() {if (enabled && !name.empty()) {register_timing_value(name.c_str(), GET_DELTA_TIME, no_loading_screen); name.clear();}}
 };
 
+struct status_bar_t {
+	colorRGBA color;
+	float val;
+	unsigned icon_id;
+	status_bar_t(colorRGBA const &c, float v, unsigned id=0) : color(c), val(v), icon_id(id) {}
+};
+
 
 // world modes
 enum {WMODE_GROUND=0, WMODE_UNIVERSE, WMODE_INF_TERRAIN, NUM_WMODE};
