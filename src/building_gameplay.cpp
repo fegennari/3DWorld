@@ -1688,7 +1688,7 @@ bool building_t::drop_room_object(room_object_t &obj, point const &dest, point c
 	return 1;
 }
 
-bool building_t::maybe_use_last_pickup_room_object(point const &player_pos, bool no_time_check) { // Note: player_pos is in building space
+bool building_t::maybe_use_last_pickup_room_object(point const &player_pos, bool no_time_check, bool random_dir) { // Note: player_pos is in building space
 	if (player_in_elevator) return 0; // can't use items in elevators
 	assert(has_room_geom());
 	static bool delay_use(0);
@@ -1698,13 +1698,18 @@ bool building_t::maybe_use_last_pickup_room_object(point const &player_pos, bool
 	room_object_t obj;
 	if (!player_inventory.try_use_last_item(obj)) return 0;
 	float const player_radius(get_scaled_player_radius());
+	vector3d dir(cview_dir); // camera view direction
 
+	if (random_dir) { // used for player inventory drop items
+		static rand_gen_t rgen;
+		dir = rgen.signed_rand_vector_spherical_xy();
+	}
 	if (obj.has_dstate()) { // it's a dynamic object (ball), throw it; only activated with use_object/'E' key
-		point dest(player_pos + (1.2f*(player_radius + obj.get_radius()))*cview_dir);
+		point dest(player_pos + (1.2f*(player_radius + obj.get_radius()))*dir);
 		dest.z -= 0.5*player_radius; // slightly below the player's face
 		obj.translate(dest - cube_bot_center(obj));
 		obj.flags |= RO_FLAG_DYNAMIC; // make it dynamic, assuming it will be dropped/thrown
-		if (!interior->room_geom->add_room_object(obj, *this, 1, THROW_VELOCITY*cview_dir)) return 0;
+		if (!interior->room_geom->add_room_object(obj, *this, 1, THROW_VELOCITY*dir)) return 0;
 		player_inventory.return_object_to_building(obj); // re-add this object's value
 		if (!check_for_water_splash(obj.get_cube_center(), 0.7)) {play_obj_fall_sound(obj, player_pos);} // splash or drop
 		delay_use = 1;
@@ -1712,15 +1717,15 @@ bool building_t::maybe_use_last_pickup_room_object(point const &player_pos, bool
 	else if (obj.can_use()) { // active with either use_object or fire key
 		if (obj.type == TYPE_TPROLL) {
 			if (player_in_water) return 0; // can't place TP in water
-			point const dest(player_pos + (1.5f*player_radius)*cview_dir);
-			if (!apply_toilet_paper(dest, cview_dir, 0.5*obj.dz())) return 0;
+			point const dest(player_pos + (1.5f*player_radius)*dir);
+			if (!apply_toilet_paper(dest, dir, 0.5*obj.dz())) return 0;
 			player_inventory.mark_last_item_used();
 		}
 		else if (obj.type == TYPE_SPRAYCAN || obj.type == TYPE_MARKER) { // spraypaint or marker
 			if (player_in_water == 2) return 0; // can't use when fully underwater
 			unsigned emissive_color_id(0);
 			if (obj.type == TYPE_SPRAYCAN && obj.color == GD_SP_COLOR) {emissive_color_id = 1 + (obj.obj_id % NUM_SP_EMISSIVE_COLORS);} // spraypaint glows in the dark
-			if (!apply_paint(player_pos, cview_dir, obj.color, emissive_color_id, obj.type)) return 0;
+			if (!apply_paint(player_pos, dir, obj.color, emissive_color_id, obj.type)) return 0;
 			player_inventory.mark_last_item_used();
 		}
 		else if (obj.type == TYPE_TAPE) {
@@ -1730,12 +1735,12 @@ bool building_t::maybe_use_last_pickup_room_object(point const &player_pos, bool
 		else if (obj.type == TYPE_BOOK || obj.type == TYPE_RAT) { // items that can be dropped
 			bool const is_rat(obj.type == TYPE_RAT);
 			float const half_width(0.5*max(max(obj.dx(), obj.dy()), obj.dz())); // use conservative max dim
-			point dest(player_pos + (1.2f*(player_radius + half_width))*cview_dir);
+			point dest(player_pos + (1.2f*(player_radius + half_width))*dir);
 
 			if (is_rat) {
 				bool const was_dead(obj.is_broken());
 				bool is_dead(was_dead);
-				bool const dropped(add_rat(dest, half_width, cview_dir, player_pos, is_dead)); // facing away from the player
+				bool const dropped(add_rat(dest, half_width, dir, player_pos, is_dead)); // facing away from the player
 				if (is_dead && !was_dead) {player_inventory.mark_last_item_broken();}
 				
 				if (!was_dead) { // squeak if alive
@@ -1747,7 +1752,7 @@ bool building_t::maybe_use_last_pickup_room_object(point const &player_pos, bool
 			else { // book; orient based on the player's primary direction
 				if (!get_zval_for_obj_placement(dest, half_width, dest.z, 0)) return 0; // no suitable placement found; add_z_bias=0
 				//obj.flags |= RO_FLAG_RAND_ROT; // maybe set this for some random books to have them misaligned? or does that cause problems with clipping through objects?
-				bool const place_dim(fabs(cview_dir.y) < fabs(cview_dir.x)), place_dir((cview_dir[!place_dim] > 0) ^ place_dim);
+				bool const place_dim(fabs(dir.y) < fabs(dir.x)), place_dir((dir[!place_dim] > 0) ^ place_dim);
 
 				if (obj.dim != place_dim) {
 					float const dx(obj.dx()), dy(obj.dy());
@@ -1771,9 +1776,9 @@ bool building_t::maybe_use_last_pickup_room_object(point const &player_pos, bool
 		else if (obj.type == TYPE_FIRE_EXT) {
 			if (obj.is_broken()) { // empty, drop it
 				float const radius(obj.get_radius());
-				point dest(player_pos + (1.2f*(player_radius + radius))*cview_dir);
+				point dest(player_pos + (1.2f*(player_radius + radius))*dir);
 				if (!get_zval_for_obj_placement(dest, radius, dest.z, 0)) return 0; // can't drop, so keep it in the inventory
-				bool const place_dim(fabs(cview_dir.y) < fabs(cview_dir.x)), place_dir(cview_dir[!place_dim] > 0);
+				bool const place_dim(fabs(dir.y) < fabs(dir.x)), place_dir(dir[!place_dim] > 0);
 				if (!drop_room_object(obj, dest, player_pos, !place_dim, place_dir)) return 0;
 				drop_inventory_item(*this, obj, player_pos);
 				return 1;
@@ -1788,22 +1793,22 @@ bool building_t::maybe_use_last_pickup_room_object(point const &player_pos, bool
 			}
 			static rand_gen_t rgen;
 			float const obj_radius(obj.get_radius()), r_sum(player_radius + obj_radius);
-			point const part_pos(player_pos + (1.1f*r_sum)*cview_dir);
-			vector3d const velocity(0.0015*(cview_dir + 0.12*rgen.signed_rand_vector())); // add a bit of random variation
-			point const ray_start(player_pos + player_radius*cview_dir);
+			point const part_pos(player_pos + (1.1f*r_sum)*dir);
+			vector3d const velocity(0.0015*(dir + 0.12*rgen.signed_rand_vector())); // add a bit of random variation
+			point const ray_start(player_pos + player_radius*dir);
 			interior->room_geom->particle_manager.add_particle(part_pos, velocity, WHITE, 1.0*obj_radius, PART_EFFECT_CLOUD);
 			player_inventory.mark_last_item_used();
 			player_inventory.record_damage_done(0.05); // very small amount of damage
 
 			if (!interior->people.empty()) { // check for people in range
-				point const zombie_ray_end(player_pos + (2.0f*r_sum)*cview_dir);
+				point const zombie_ray_end(player_pos + (2.0f*r_sum)*dir);
 
 				for (unsigned i = 0; i < interior->people.size(); ++i) {
 					cube_t const person_bcube(interior->people[i].get_bcube());
 					if (person_bcube.line_intersects(ray_start, zombie_ray_end)) {maybe_zombie_retreat(i, part_pos);}
 				}
 			}
-			point const fire_ray_end(player_pos + (4.0f*r_sum)*cview_dir); // longer range
+			point const fire_ray_end(player_pos + (4.0f*r_sum)*dir); // longer range
 			interior->room_geom->fire_manager.put_out_fires(ray_start, fire_ray_end, 0.5*r_sum); // check for fires in range and put them out
 		}
 		else {assert(0);}

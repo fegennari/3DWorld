@@ -1601,7 +1601,7 @@ struct building_t : public building_geom_t {
 	bool line_intersect_stairs_or_ramp(point const &p1, point const &p2) const;
 	bool check_cube_on_or_near_stairs(cube_t const &c) const;
 	bool drop_room_object(room_object_t &obj, point const &dest, point const &player_pos, bool dim, bool dir);
-	bool maybe_use_last_pickup_room_object(point const &player_pos, bool no_time_check=0);
+	bool maybe_use_last_pickup_room_object(point const &player_pos, bool no_time_check=0, bool random_dir=0);
 	bool maybe_update_tape(point const &player_pos, bool end_of_tape);
 	void handle_vert_cylin_tape_collision(point &cur_pos, point const &prev_pos, float z1, float z2, float radius, bool is_player) const;
 	void draw_room_geom(brg_batch_draw_t *bbd, shader_t &s, shader_t &amask_shader, occlusion_checker_noncity_t &oc, vector3d const &xlate,
