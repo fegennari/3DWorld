@@ -27,6 +27,7 @@ bool player_can_open_door(door_t const &door);
 bool player_has_room_key();
 void register_broken_object(room_object_t const &obj);
 void record_building_damage(float damage);
+void refill_thirst();
 colorRGBA get_glow_color(float stime, bool fade);
 
 // Note: pos is in camera space
@@ -529,6 +530,7 @@ bool building_t::interact_with_object(unsigned obj_ix, point const &int_pos, poi
 		bool const is_urinal(obj.type == TYPE_URINAL); // urinal is quieter and higher pitch
 		gen_sound_thread_safe(SOUND_FLUSH, local_center, (is_urinal ? 0.5 : 1.0), (is_urinal ? 1.25 : 1.0));
 		sound_scale = 0.5;
+		//refill_thirst(); // player can drink from toilet?
 	}
 	else if (obj.type == TYPE_KSINK && get_dishwasher_for_ksink(obj, dishwasher) && dishwasher.line_intersects(int_pos, query_ray_end)) { // dishwasher
 		gen_sound_thread_safe_at_player(SOUND_METAL_DOOR, 0.2, 0.75);
@@ -554,6 +556,7 @@ bool building_t::interact_with_object(unsigned obj_ix, point const &int_pos, poi
 				++obj.item_flags;
 				interior->room_geom->invalidate_static_geom();
 			}
+			//refill_thirst(); // player can drink from tub?
 		}
 		if (obj.is_sink_type()) {
 			obj.flags ^= RO_FLAG_IS_ACTIVE; // toggle active bit, only for sinks for now
@@ -562,6 +565,7 @@ bool building_t::interact_with_object(unsigned obj_ix, point const &int_pos, poi
 				obj.item_flags ^= 1; // mark as filled with water
 				interior->room_geom->invalidate_static_geom();
 			}
+			refill_thirst(); // player can drink from sink
 		}
 		sound_scale = 0.4;
 	}

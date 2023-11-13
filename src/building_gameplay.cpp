@@ -33,6 +33,7 @@ void show_key_icon();
 bool is_shirt_model(room_object_t const &obj);
 bool is_pants_model(room_object_t const &obj);
 bool player_at_full_health();
+bool player_is_thirsty();
 void register_fly_attract(bool no_msg);
 room_obj_or_custom_item_t steal_from_car(room_object_t const &car, float floor_spacing, bool do_pickup);
 float get_filing_cabinet_drawers(room_object_t const &c, vect_cube_t &drawers);
@@ -322,10 +323,15 @@ float get_obj_weight(room_object_t const &obj) {
 bool is_consumable(room_object_t const &obj) {
 	if (!in_building_gameplay_mode() || obj.type != TYPE_BOTTLE || obj.is_bottle_empty() || (obj.flags & RO_FLAG_NO_CONS)) return 0; // not consumable
 	unsigned const bottle_type(obj.get_bottle_type());
+	bool const is_drink(bottle_type == BOTTLE_TYPE_WATER || bottle_type == BOTTLE_TYPE_COKE);
 
-	if (bottle_type == BOTTLE_TYPE_WATER || bottle_type == BOTTLE_TYPE_COKE || bottle_type == BOTTLE_TYPE_MEDS) { // healing items
-		if (obj.is_all_zeros())      return 1; // unsized item taken from a car, always consume
-		if (player_at_full_health()) return 0; // if player is at full health, heal is not needed, so add this item to inventory rather than comsume it
+	if (is_drink || bottle_type == BOTTLE_TYPE_MEDS) { // healing items
+		if (obj.is_all_zeros()) return 1; // unsized item taken from a car, always consume
+		
+		if (player_at_full_health()) { // if player is at full health, heal is not needed, so add this item to inventory rather than comsume it
+			if (is_drink && player_is_thirsty()) return 1; // player needs to drink
+			return 0;
+		}
 	}
 	return 1;
 }
@@ -448,7 +454,7 @@ bool register_achievement(string const &str) {return achievement_tracker.registe
 class player_inventory_t { // manages player inventory, health, and other stats
 	vector<carried_item_t> carried; // interactive items the player is currently carrying
 	vector<dead_person_t > dead_players;
-	float cur_value, cur_weight, tot_value, tot_weight, damage_done, best_value, player_health, drunkenness, bladder, bladder_time, oxygen, prev_player_zval;
+	float cur_value, cur_weight, tot_value, tot_weight, damage_done, best_value, player_health, drunkenness, bladder, bladder_time, oxygen, thirst, prev_player_zval;
 	unsigned num_doors_unlocked;
 	bool prev_in_building, has_key, is_poisoned, poison_from_spider;
 
@@ -472,8 +478,7 @@ public:
 		max_eq(best_value, tot_value);
 		cur_value     = cur_weight = tot_value = tot_weight = damage_done = 0.0;
 		drunkenness   = bladder = bladder_time = prev_player_zval = 0.0;
-		player_health = 1.0; // full health
-		oxygen        = 1.0; // full oxygen
+		player_health = oxygen = thirst = 1.0; // full health, oxygen, and (anti-)thirst
 		num_doors_unlocked = 0; // not saved on death, but maybe should be?
 		prev_in_building = has_key = is_poisoned = poison_from_spider = 0;
 		player_attracts_flies = 0;
@@ -519,6 +524,8 @@ public:
 	bool  player_is_dead () const {return (player_health <= 0.0);}
 	bool  player_has_key () const {return has_key;}
 	bool  player_at_full_health() const {return (player_health == 1.0 && !is_poisoned);}
+	bool  player_is_thirsty    () const {return (thirst < 0.5);}
+	void  refill_thirst() {thirst = 1.0;}
 
 	bool can_open_door(door_t const &door) { // non-const because num_doors_unlocked is modified
 		if (door.is_closed_and_locked() && !has_key) {
@@ -560,7 +567,7 @@ public:
 		tape_manager.clear();
 	}
 	void add_item(room_object_t const &obj) {
-		float health(0.0), drunk(0.0); // add these fields to bldg_obj_type_t?
+		float health(0.0), drunk(0.0), liquid(0.0); // add these fields to bldg_obj_type_t?
 		bool const bladder_was_full(bladder >= 0.9);
 		float const value(get_obj_value(obj));
 		if (obj.type == TYPE_PAPER && value >= 500.0) {register_achievement("Top Secret Document");}
@@ -571,11 +578,12 @@ public:
 		oss << get_taken_obj_type(obj).name;
 
 		if (is_consumable(obj)) { // nonempty bottle, consumable
+			// should alcohol, poison, and medicine help with thirst? I guess alcohol helps somewhat
 			switch (obj.get_bottle_type()) {
-			case BOTTLE_TYPE_WATER : health =  0.25; break; // water
-			case BOTTLE_TYPE_COKE  : health =  0.50; break; // Coke
-			case BOTTLE_TYPE_BEER  : drunk  =  0.25; break; // beer
-			case BOTTLE_TYPE_WINE  : drunk  =  0.50; break; // wine (entire bottle)
+			case BOTTLE_TYPE_WATER : health =  0.25; liquid = 1.0; break; // water
+			case BOTTLE_TYPE_COKE  : health =  0.50; liquid = 1.0; break; // Coke
+			case BOTTLE_TYPE_BEER  : drunk  =  0.25; liquid = 0.5; break; // beer
+			case BOTTLE_TYPE_WINE  : drunk  =  0.50; liquid = 0.5; break; // wine (entire bottle)
 			case BOTTLE_TYPE_POISON: health = -0.50; break; // poison - take damage
 			case BOTTLE_TYPE_MEDS  : health =  1.00; is_poisoned = 0; break; // medicine, restore full health and cure poisoning
 			default: assert(0);
@@ -595,6 +603,10 @@ public:
 			add_camera_filter(colorRGBA(RED, 0.25), 4, -1, CAM_FILT_DAMAGE); // 4 ticks of red damage
 			gen_sound_thread_safe_at_player(SOUND_DOH, 0.5);
 			if (player_is_dead()) {register_achievement("Mr. Yuck");}
+		}
+		if (liquid > 0.0) {
+			oss << ": -" << round_fp(100.0*liquid) << "% Thirst";
+			thirst = min(1.0f, (thirst + liquid));
 		}
 		if (obj.type == TYPE_KEY) {
 			has_key = 1; // mark as having the key, but it doesn't go into the inventory or contribute to weight or value
@@ -814,7 +826,9 @@ public:
 		if (in_building_gameplay_mode()) {
 			// Note: shields is used for drunkenness; values are scaled from 0-1 to 0-100; powerup values are for bladder fullness
 			vector<status_bar_t> extra_bars;
+			colorRGBA const thirst_color((thirst < 0.2 && ((int(tfticks)/8)&1)) ? MAGENTA : BLUE); // flash magenta when low
 			extra_bars.emplace_back(WHITE, get_carry_weight_ratio()); // carry weight
+			extra_bars.emplace_back(thirst_color, thirst); // thirst
 			if (oxygen < 0.0) {extra_bars.emplace_back(CYAN, oxygen);} // oxygen bar is only shown when oxygen is less than full
 			draw_health_bar(100.0*player_health, 100.0*drunkenness, bladder, YELLOW, is_poisoned, extra_bars);
 		}
@@ -849,6 +863,7 @@ public:
 		point const camera_pos(get_camera_pos());
 		float const fall_damage_start(3.0*CAMERA_RADIUS); // should be a function of building floor spacing?
 		float const player_zval(camera_pos.z), delta_z(prev_player_zval - player_zval);
+		float const fticks_clamped(min(fticks, 0.25f*TICKS_PER_SECOND)); // limit to 250ms so that the player doesn't die when paused
 		
 		if (camera_in_building != prev_in_building) {prev_in_building = camera_in_building;}
 		else if (prev_player_zval != 0.0 && delta_z > fall_damage_start && camera_in_building) {
@@ -869,7 +884,7 @@ public:
 			return;
 		}
 		if (is_poisoned) {
-			player_health -= 0.0004*fticks;
+			player_health -= 0.0004*fticks_clamped;
 
 			if (player_is_dead()) {
 				string const poison_type(poison_from_spider ? " of spider venom" : " of snake venom");
@@ -877,8 +892,15 @@ public:
 				return;
 			}
 		}
+		if (thirst <= 0.0) {
+			register_player_death(SOUND_GULP, " of thirst"); // not sure what the sound should be
+			return;
+		}
 		// update state for next frame
-		drunkenness = max(0.0f, (drunkenness - 0.0001f*fticks)); // slowly decrease over time
+		drunkenness = max(0.0f, (drunkenness - 0.0001f*fticks_clamped)); // slowly decrease over time
+		// should the player drink when underwater? maybe depends on how clean the water is? how about only if thirst < 0.5
+		if (player_in_water == 2 && thirst < 0.5) {thirst = min(1.0f, (thirst + 0.01f *fticks_clamped));} // underwater
+		else {thirst = max(0.0f, (thirst - 0.0001f*fticks_clamped));} // slowly decrease over time (250s)
 		
 		if (player_near_toilet) { // empty bladder
 			if (bladder > 0.9) {gen_sound_thread_safe_at_player(SOUND_GASP);} // urinate
@@ -891,7 +913,7 @@ public:
 			bladder = 0.0;
 		}
 		else if (bladder > 0.9) {
-			bladder_time += fticks;
+			bladder_time += fticks_clamped;
 
 			if (bladder_time > 5.0*TICKS_PER_SECOND) { // play the "I have to go" sound
 				gen_sound_thread_safe_at_player(SOUND_HURT);
@@ -901,6 +923,7 @@ public:
 		player_near_toilet = 0;
 	}
 	colorRGBA get_vignette_color() const {
+		if (thirst < 0.1 && ((int(tfticks)/8)&1)) return colorRGBA(0.0, 0.0, 0.0, 10.0*(0.10 - thirst)); // flash black when about to die of thirst
 		if (oxygen < 0.1)         return colorRGBA(0.0, 0.0, 0.0, 10.0*(0.10 - oxygen)); // black; doesn't really work well
 		if (player_health < 0.25) return colorRGBA(1.0, 0.0, 0.0, 4.0 *(0.25 - player_health)); // red
 		if (is_poisoned)          return colorRGBA(0.0, 1.0, 0.0, 0.5); // green
@@ -917,6 +940,8 @@ float get_player_building_speed_mult() {return player_inventory.get_speed_mult()
 bool player_can_open_door(door_t const &door) {return player_inventory.can_open_door(door);}
 void register_in_closed_bathroom_stall() {player_inventory.register_in_closed_bathroom_stall();}
 bool player_at_full_health() {return player_inventory.player_at_full_health();}
+bool player_is_thirsty    () {return player_inventory.player_is_thirsty    ();}
+void refill_thirst() {player_inventory.refill_thirst();}
 void get_dead_players_in_building(vector<dead_person_t> &dead_players, building_t const &building) {player_inventory.get_dead_players_in_building(dead_players, building);}
 
 void register_building_sound_for_obj(room_object_t const &obj, point const &pos) {
