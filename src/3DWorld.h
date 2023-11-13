@@ -157,6 +157,8 @@ template<typename T> inline void max_eq(T &A, T const B) {A = max(A, B);}
 
 enum {CAM_FILT_DAMAGE=0, CAM_FILT_FOG, CAM_FILT_BURN, CAMERA_FILT_BKG, CAM_FILT_UWATER, CAM_FILT_TELEPORT, CAM_FILT_FROZEN, CAM_FILT_END};
 enum {FG_PROJECTION=0, FG_MODELVIEW};
+enum {GAME_MODE_NONE=0, GAME_MODE_FPS, GAME_MODE_DODGEBALL};
+unsigned const GAME_MODE_BUILDINGS = 2; // same as GAME_MODE_DODGEBALL
 
 
 template<typename T> struct point2d { // size = 8

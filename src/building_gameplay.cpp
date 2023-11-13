@@ -39,7 +39,7 @@ float get_filing_cabinet_drawers(room_object_t const &c, vect_cube_t &drawers);
 void reset_creepy_sounds();
 void clear_building_water_splashes();
 
-bool in_building_gameplay_mode() {return (game_mode == 2);} // replaces dodgeball mode
+bool in_building_gameplay_mode() {return (game_mode == GAME_MODE_BUILDINGS);} // replaces dodgeball mode
 
 // object types/pickup
 

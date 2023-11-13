@@ -290,7 +290,7 @@ void update_weapon_cobjs() { // and update cblade and lighting
 
 int select_dodgeball_texture(int shooter) {
 
-	if (UNLIMITED_WEAPONS && game_mode == 2 && !obj_groups[coll_id[BALL]].reorderable) { // can change when other players throw a ball
+	if (UNLIMITED_WEAPONS && game_mode == GAME_MODE_DODGEBALL && !obj_groups[coll_id[BALL]].reorderable) { // can change when other players throw a ball
 		if (player_dodgeball_id < 0) {player_dodgeball_id = (obj_groups[coll_id[BALL]].choose_object(1) % NUM_DB_TIDS);} // peek=1
 		return dodgeball_tids[player_dodgeball_id]; // choose once and don't change - may throw a ball of a different color
 	}
@@ -773,8 +773,8 @@ void draw_weapon_in_hand_real(int shooter, bool draw_pass, shader_t &shader, int
 	}
 	else { // smiley - out of sync by a frame?
 		assert(shooter >= 0 && shooter < num_smileys);
-		if (sstate.powerup == PU_INVISIBILITY)         return;
-		if (sstate.weapon == W_BALL && game_mode == 2) return; // dodgeball already drawn
+		if (sstate.powerup == PU_INVISIBILITY) return;
+		if (sstate.weapon == W_BALL && game_mode == GAME_MODE_DODGEBALL) return; // dodgeball already drawn
 		reflection_pass = 0; // irrelevant for smileys
 	}
 	int const cid(get_shooter_coll_id(shooter));
@@ -799,7 +799,7 @@ void draw_weapon_in_hand(int shooter, shader_t &shader, int reflection_pass) {
 
 void draw_camera_weapon(bool want_has_trans, int reflection_pass) {
 
-	if (!game_mode || (weap_has_transparent(CAMERA_ID) != want_has_trans) || (game_mode == 2 && world_mode != WMODE_GROUND)) return;
+	if (!game_mode || (weap_has_transparent(CAMERA_ID) != want_has_trans) || (game_mode == GAME_MODE_DODGEBALL && world_mode != WMODE_GROUND)) return;
 	if (reflection_pass && !camera_pdu.sphere_visible_test(pre_ref_camera_pos, 2.0*CAMERA_RADIUS)) return; // player + weapon not visible in reflection
 	shader_t s;
 	setup_smoke_shaders(s, 0.01, 0, 0, 1, 1, 1, 0, 0, 1, 0, 0, 1, 0, 0.0, 0.0, 0, 0, 0, 0); // no rain/snow
@@ -976,7 +976,7 @@ void draw_inventory() {
 
 	for (unsigned i = 1; i < NUM_WEAPONS; ++i) { // skip unarmed
 		// if player doesn't have this weapon, or it's out of ammo, don't show it
-		if (game_mode == 2 && i != W_BALL) continue; // dodgeballs only
+		if (game_mode == GAME_MODE_DODGEBALL && i != W_BALL) continue; // dodgeballs only
 		if ((enable_translocator && i == W_XLOCATOR) || (!sstate.no_weap_id(i) && !sstate.no_ammo_id(i))) {weapons.push_back(i);}
 	}
 	shader_t s;

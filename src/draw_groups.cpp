@@ -370,7 +370,7 @@ void draw_obj(obj_group &objg, vector<wap_obj> *wap_vis_objs, int type, float ra
 	case BALL:
 		// Note: this is the only place where drawing an object modifies its physics state, but it's difficult to move the code
 		draw_rolling_obj(pos, objg.get_obj(j).init_dir, radius, obj.status, ((obj.flags & WAS_FIRED) != 0), ndiv, ((obj.flags & PLATFORM_COLL) != 0),
-			dodgeball_tids[(game_mode == 2) ? (j%NUM_DB_TIDS) : 0], (in_ammo ? NULL : &objg.get_td()->get_matrix(j)));
+			dodgeball_tids[(game_mode == GAME_MODE_DODGEBALL) ? (j%NUM_DB_TIDS) : 0], (in_ammo ? NULL : &objg.get_td()->get_matrix(j)));
 		break;
 	case POWERUP:
 	case HEALTH:
@@ -1078,19 +1078,10 @@ void draw_smiley(point const &pos, vector3d const &orient, float radius, int ndi
 	else { // damaged
 		shader.set_cur_color(colorRGBA(1.0, (0.25 + 0.015*health), 0.0, alpha));
 	}
-	if (game_mode == 2) { // dodgeball
-		select_texture(CAMOFLAGE_TEX);
-	}
-	else {
-		select_smiley_texture(id);
-	}
-	if (mesh) { // main body
-		mesh->draw_perturbed_sphere(all_zeros, radius, ndiv, 1);
-		//if (mesh->size > 0) ndiv = mesh->size;
-	}
-	else {
-		draw_sphere_vbo(all_zeros, radius, ndiv, 1);
-	}
+	if (game_mode == GAME_MODE_DODGEBALL) {select_texture(CAMOFLAGE_TEX);}
+	else {select_smiley_texture(id);}
+	if (mesh) {mesh->draw_perturbed_sphere(all_zeros, radius, ndiv, 1);} // main body
+	else {draw_sphere_vbo(all_zeros, radius, ndiv, 1);}
 	select_no_texture();
 	draw_smiley_part(point(0.0, 0.0, 0.45*radius), orient, SF_HEADBAND, id, 0, ndiv, shader, 1.0, alpha);
 	
@@ -1108,7 +1099,7 @@ void draw_smiley(point const &pos, vector3d const &orient, float radius, int ndi
 		point pos4(0.0, 0.8*radius, -0.4*radius);
 		draw_smiley_part(pos4, orient, SF_TONGUE, id, 0, ndiv2, shader);
 	}
-	if (game_mode == 2 && (sstates[id].p_ammo[W_BALL] > 0 || UNLIMITED_WEAPONS)) { // dodgeball
+	if (game_mode == GAME_MODE_DODGEBALL && (sstates[id].p_ammo[W_BALL] > 0 || UNLIMITED_WEAPONS)) { // dodgeball
 		select_texture(select_dodgeball_texture(id));
 		shader.set_cur_color(mult_alpha(object_types[BALL].color, alpha));
 		draw_cube_mapped_sphere(point(0.0, 1.3*radius, 0.0), 0.8*object_types[BALL].radius, ndiv/2, 1);

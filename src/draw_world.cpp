@@ -1967,7 +1967,7 @@ void draw_health_bar(float health, float shields, float pu_time, colorRGBA const
 	s.begin_color_only_shader();
 	glDisable(GL_DEPTH_TEST);
 	enable_blend();
-	bool const building_gameplay_mode(world_mode == WMODE_INF_TERRAIN && game_mode == 2);
+	bool const building_gameplay_mode(world_mode == WMODE_INF_TERRAIN && game_mode == GAME_MODE_BUILDINGS);
 	float const zval(-1.1*perspective_nclip), tan_val(tan(perspective_fovy/TO_DEG));
 	float const y(-0.7*0.5*zval*tan_val), x((y*window_width)/window_height);
 	colorRGBA hb_color(RED);

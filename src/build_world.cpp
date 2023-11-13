@@ -193,7 +193,7 @@ void dwobject::add_obj_dynamic_light(int index) const {
 		break;
 	case BALL: {
 			colorRGBA colors[NUM_DB_TIDS] = {BLUE, colorRGBA(1.0, 0.5, 0.5, 1.0), colorRGBA(0.5, 1.0, 0.5, 1.0)};
-			colorRGBA const color((game_mode == 2) ? colors[index%NUM_DB_TIDS] : colorRGBA(-1.0, -1.0, -1.0, 1.0));
+			colorRGBA const color((game_mode == GAME_MODE_DODGEBALL) ? colors[index%NUM_DB_TIDS] : colorRGBA(-1.0, -1.0, -1.0, 1.0));
 			add_dynamic_light(0.8, pos, color);
 		}
 		break;
@@ -409,8 +409,8 @@ void process_groups() {
 
 			if (obj.status == 0) {
 				if (type == MAT_SPHERE) {remove_mat_sphere(j);}
-				if (gen_count >= app_rate || !(flags & WAS_ADVANCED))      continue;
-				if (type == BALL && (game_mode != 2 || UNLIMITED_WEAPONS)) continue; // not in dodgeball mode
+				if (gen_count >= app_rate || !(flags & WAS_ADVANCED)) continue;
+				if (type == BALL && (game_mode != GAME_MODE_DODGEBALL || UNLIMITED_WEAPONS)) continue; // not in dodgeball mode
 				++gen_count;
 				if (precip && temperature >= WATER_MAX_TEMP) continue; // skip it
 				dwobject new_obj(def_objects[type]);
@@ -531,7 +531,7 @@ void process_groups() {
 						collision_detect_large_sphere(pos, r2, obj_flags);
 					}
 					if (type != CHUNK && (type != LANDMINE || !obj.lm_coll_invalid()) && !(otype.flags & OBJ_NON_SOLID)) {
-						if (type == BALL) {cp.tid = dodgeball_tids[(game_mode == 2) ? (j%NUM_DB_TIDS) : 0];}
+						if (type == BALL) {cp.tid = dodgeball_tids[(game_mode == GAME_MODE_DODGEBALL) ? (j%NUM_DB_TIDS) : 0];}
 						cp.cf_index = j;
 						if (type == MAT_SPHERE) {add_cobj_for_mat_sphere(obj, cp);}
 						else {
