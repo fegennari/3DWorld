@@ -6,7 +6,8 @@
 #include "buildings.h"
 
 
-extern bool draw_building_interiors, camera_in_building, player_near_toilet, player_in_unlit_room, building_has_open_ext_door, ctrl_key_pressed, player_is_hiding;
+extern bool draw_building_interiors, camera_in_building, player_near_toilet, player_in_unlit_room, building_has_open_ext_door, ctrl_key_pressed;
+extern bool player_is_hiding, player_wait_respawn;
 extern int camera_surf_collide, frame_counter, player_in_closet, player_in_elevator, player_in_basement, player_in_attic;
 extern float CAMERA_RADIUS, C_STEP_HEIGHT, NEAR_CLIP, building_bcube_expand;
 extern double camera_zh;
@@ -343,7 +344,8 @@ bool building_t::check_sphere_coll_inner(point &pos, point const &p_last, vector
 			else {had_coll |= sphere_cube_int_update_pos(pos2, radius, c, p_last2, xy_only, cnorm_ptr);} // check collision with sides
 		} // for i
 	}
-	if (reduce_speed) {apply_speed_factor(pos2, p_last, 0.6);} // slow down to 60% when on exterior stairs or balconies
+	if (player_wait_respawn) {pos2.x = p_last2.x; pos2.y = p_last2.y;} // player can't move
+	else if (reduce_speed) {apply_speed_factor(pos2, p_last2, 0.6);} // slow down to 60% when on exterior stairs or balconies
 
 	if (on_ext_stair) {
 		// only need to check for blockers at the bottom of stairs

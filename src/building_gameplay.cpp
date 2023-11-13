@@ -10,8 +10,9 @@ using std::string;
 
 float const THROW_VELOCITY = 0.0050;
 float const ALERT_THRESH   = 0.08; // min sound alert level for AIs
+float const PLAYER_RESPAWN = 5.0; // in seconds
 
-bool do_room_obj_pickup(0), use_last_pickup_object(0), show_bldg_pickup_crosshair(0), player_near_toilet(0), player_attracts_flies(0);
+bool do_room_obj_pickup(0), use_last_pickup_object(0), show_bldg_pickup_crosshair(0), player_near_toilet(0), player_attracts_flies(0), player_wait_respawn(0);
 bool city_action_key(0), can_do_building_action(0);
 int can_pickup_bldg_obj(0), player_in_elevator(0); // player_in_elevator: 0=no, 1=in, 2=in + doors closed/moving
 float office_chair_rot_rate(0.0), cur_building_sound_level(0.0);
@@ -454,16 +455,18 @@ bool register_achievement(string const &str) {return achievement_tracker.registe
 class player_inventory_t { // manages player inventory, health, and other stats
 	vector<carried_item_t> carried; // interactive items the player is currently carrying
 	vector<dead_person_t > dead_players;
-	float cur_value, cur_weight, tot_value, tot_weight, damage_done, best_value, player_health, drunkenness, bladder, bladder_time, oxygen, thirst, prev_player_zval;
+	float cur_value, cur_weight, tot_value, tot_weight, damage_done, best_value, player_health, drunkenness, bladder, bladder_time, oxygen, thirst;
+	float prev_player_zval, respawn_time=0.0;
 	unsigned num_doors_unlocked;
 	bool prev_in_building, has_key, is_poisoned, poison_from_spider;
 
 	void register_player_death(unsigned sound_id, string const &why) {
-		point const xlate(get_camera_coord_space_xlate());
-		place_player_at_xy(xlate.x, xlate.y); // move back to the origin/spawn location
+		player_wait_respawn = 1;
+		if (PLAYER_RESPAWN == 0.0) {player_respawn();} // respawn now
+		else {respawn_time = tfticks + PLAYER_RESPAWN*TICKS_PER_SECOND;} // respawn later
 		gen_sound_thread_safe_at_player(sound_id);
 		print_text_onscreen(("You Have Died" + why), RED, 2.0, 2*TICKS_PER_SECOND, 10);
-		clear(); // respawn
+		clear();
 	}
 	static void print_value_and_weight(std::ostringstream &oss, float value, float weight) {
 		oss << ": value $";
@@ -497,10 +500,16 @@ public:
 			room_object_t const &obj(carried.back());
 
 			if (obj.has_dstate() || obj.type == TYPE_BOOK || obj.type == TYPE_RAT || (obj.type == TYPE_FIRE_EXT && obj.is_broken())) {
-				if (building.maybe_use_last_pickup_room_object(camera_bs, 1)) continue; // used
+				if (building.maybe_use_last_pickup_room_object(camera_bs, 1, 1)) continue; // no_time_check=1, random_dir=1
 			}
 			carried.pop_back();
 		} // end while
+	}
+	void player_respawn() {
+		point const xlate(get_camera_coord_space_xlate());
+		place_player_at_xy(xlate.x, xlate.y); // move back to the origin/spawn location
+		if (PLAYER_RESPAWN > 0.0) {print_text_onscreen("You Have Been Reborn", RED, 2.0, 2*TICKS_PER_SECOND, 10);}
+		player_wait_respawn = 0;
 	}
 	void take_damage(float amt, int poison_type=0) { // poison_type: 0=none, 1=spider, 2=snake
 		player_health -= amt*(1.0f - 0.75f*min(drunkenness, 1.0f)); // up to 75% damage reduction when drunk
@@ -835,6 +844,10 @@ public:
 		if (has_key) {show_key_icon();}
 	}
 	void next_frame() {
+		if (player_wait_respawn) {
+			if (tfticks > respawn_time) {player_respawn();}
+			return;
+		}
 		show_stats();
 		phone_manager.next_frame(); // even if not in gameplay mode?
 		if (!in_building_gameplay_mode()) return;
@@ -2384,6 +2397,7 @@ bool player_has_room_key() {return player_inventory.player_has_key();}
 // should we include falling damage? currently the player can't fall down elevator shafts or stairwells,
 // and falling off building roofs doesn't count because gameplay isn't enabled because the player isn't in the building
 bool player_take_damage(float damage_scale, int poison_type, bool *has_key) {
+	if (player_wait_respawn) return 0;
 	static double last_scream_time(0.0), last_hurt_time(0.0);
 
 	if (damage_scale < 0.01) { // hurt for rats, scream for zombies and spiders
@@ -2419,7 +2433,8 @@ int register_ai_player_coll(bool &has_key, float height) {
 
 void building_gameplay_action_key(int mode, bool mouse_wheel) {
 	if (camera_in_building) { // building interior action
-		if (mouse_wheel) {player_inventory.switch_item(mode != 0);}
+		if (player_wait_respawn) {player_inventory.player_respawn();} // forced respawn
+		else if (mouse_wheel) {player_inventory.switch_item(mode != 0);}
 		else if (mode == 0) {building_action_key    = 1;} // 'q'
 		else if (mode == 1) {do_room_obj_pickup     = 1;} // 'e'
 		else if (mode == 2) {use_last_pickup_object = 1;} // 'E'
@@ -2444,7 +2459,10 @@ void building_gameplay_next_frame() {
 	attenuate_rate(office_chair_rot_rate, 0.05); // update office chair rotation
 	vignette_color = ALPHA0; // reset, may be set below
 
-	if (in_building_gameplay_mode()) { // run gameplay update logic
+	if (player_wait_respawn) {
+		vignette_color = RED;
+	}
+	else if (in_building_gameplay_mode()) { // run gameplay update logic
 		show_bldg_pickup_crosshair = 1;
 		// update sounds used by AI
 		auto i(cur_sounds.begin()), o(i);

@@ -133,7 +133,8 @@ char player_name[MAX_CHARS] = "Player";
 bool vert_opt_flags[3] = {0}; // {enable, full_opt, verbose}
 
 
-extern bool clear_landscape_vbo, use_dense_voxels, tree_4th_branches, model_calc_tan_vect, water_is_lava, use_grass_tess, def_tex_compress, ship_cube_map_reflection, flashlight_on;
+extern bool clear_landscape_vbo, use_dense_voxels, tree_4th_branches, model_calc_tan_vect, water_is_lava, use_grass_tess, def_tex_compress, ship_cube_map_reflection;
+extern bool flashlight_on, player_wait_respawn;
 extern int camera_flight, DISABLE_WATER, DISABLE_SCENERY, camera_invincible, onscreen_display, mesh_freq_filter, show_waypoints, last_inventory_frame;
 extern int tree_coll_level, GLACIATE, UNLIMITED_WEAPONS, destroy_thresh, MAX_RUN_DIST, mesh_gen_mode, mesh_gen_shape, map_drag_x, map_drag_y, player_in_water;
 extern unsigned NPTS, NRAYS, LOCAL_RAYS, GLOBAL_RAYS, DYNAMIC_RAYS, NUM_THREADS, MAX_RAY_BOUNCES, grass_density, max_unique_trees, shadow_map_sz;
@@ -617,7 +618,11 @@ struct player_height_mgr_t {
 		if (!inited) {cur_height = camera_zh; inited = 1;} // start at full height
 		float adj_val(0.0);
 
-		if (ctrl_key_pressed) { // crouch
+		if (player_wait_respawn) { // player is on the floor if waiting for respawn
+			if (cur_height == 0) return; // already fully down
+			adj_val = -0.5;
+		}
+		else if (ctrl_key_pressed) { // crouch
 			if (cur_height == 0) return; // already fully down
 			adj_val = -1.0;
 		}
