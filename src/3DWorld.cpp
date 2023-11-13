@@ -1669,7 +1669,7 @@ bool kw_to_val_map_float_check_t::maybe_set_from_fp(string const &str, FILE *fp)
 	auto it(m.find(str));
 	if (it == m.end()) return 0;
 	if (!read_type_t(fp, *it->second.v)) {cfg_err(opt_prefix + str + " keyword", error);}
-	if (!it->second.check_val()) {cerr << "Illegal value: " << *it->second.v << "; "; cfg_err(opt_prefix + str + " keyword", error);}
+	if (!it->second.check_val()) {cerr << "Illegal value: " << *it->second.v << "; "; cfg_err(opt_prefix + " " + str + " keyword", error);}
 	return 1;
 }
 template class kw_to_val_map_t<colorRGBA>; // explicit instantiation of this one because it's used for buildings but not here
