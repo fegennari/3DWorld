@@ -430,7 +430,8 @@ public:
 dir_gen_t<1> dir_gen_xy;
 dir_gen_t<0> dir_gen_xyz;
 
-void building_t::update_rat(rat_t &rat, point const &camera_bs, float timestep, float &max_xmove, bool can_attack_player, rand_gen_t &rgen) const {
+// Note: non-const because biting the player can add blood and the player's inventory items to the building
+void building_t::update_rat(rat_t &rat, point const &camera_bs, float timestep, float &max_xmove, bool can_attack_player, rand_gen_t &rgen) {
 
 	if (rat.dead) return; // nothing to do
 	float const floor_spacing(get_window_vspace()), trim_thickness(get_trim_thickness()), view_dist(RAT_VIEW_FLOORS*floor_spacing);
@@ -500,7 +501,9 @@ void building_t::update_rat(rat_t &rat, point const &camera_bs, float timestep, 
 
 				if (dist_xy_less_than(rat.pos, target, 0.05*min_dist)) { // do damage when nearly colliding with the player
 					play_attack_sound(local_to_camera_space(rat.pos), 1.0, 1.0, rgen);
-					if (player_take_damage(0.004, 0)) {register_achievement("Rat Food");} // damage over time; achievement if the player dies
+					bool const player_dead(player_take_damage(0.004, 0));
+					if (player_dead) {register_achievement("Rat Food");} // damage over time; achievement if the player dies
+					if (player_dead) {register_player_death(cur_player_building_loc.pos);}
 				}
 			}
 		}
@@ -990,8 +993,9 @@ bool building_t::update_spider_pos_orient(spider_t &spider, point const &camera_
 	return obj_avoid.had_coll;
 }
 
+// Note: non-const because biting the player can add blood and the player's inventory items to the building
 void building_t::maybe_bite_and_poison_player(point const &pos, point const &camera_bs, vector3d const &dir,
-	float coll_radius, float damage, int poison_type, rand_gen_t &rgen) const
+	float coll_radius, float damage, int poison_type, rand_gen_t &rgen)
 {
 	if (!in_building_gameplay_mode()) return;
 	if (dot_product_ptv(dir, camera_bs, pos) < 0.0) return; // facing the wrong direction
@@ -999,11 +1003,16 @@ void building_t::maybe_bite_and_poison_player(point const &pos, point const &cam
 
 	if (dist_xy_less_than(pos, camera_bs, (get_scaled_player_radius() + coll_radius))) { // do damage when nearly colliding with the player
 		bool const played_sound(play_attack_sound(local_to_camera_space(pos), 0.5, 1.5, rgen)); // quieter and higher pitch than rats
-		if (played_sound) {player_take_damage(damage, poison_type);} // bite and maybe poisoned every so often
+		
+		if (played_sound) { // bite and maybe poisoned every so often
+			bool const player_dead(player_take_damage(damage, poison_type));
+			if (player_dead) {register_player_death(cur_player_building_loc.pos);}
+		}
 	}
 }
 
-void building_t::update_spider(spider_t &spider, point const &camera_bs, float timestep, float &max_xmove, rand_gen_t &rgen) const {
+// Note: non-const because biting the player can add blood and the player's inventory items to the building
+void building_t::update_spider(spider_t &spider, point const &camera_bs, float timestep, float &max_xmove, rand_gen_t &rgen) {
 	
 	if (spider.squished || spider.is_sleeping()) return; // horribly squished or peacefully sleeping
 	float const radius(spider.radius), height(2.0*radius), coll_radius(2.0f*radius);
@@ -1236,7 +1245,8 @@ void building_t::update_snakes(point const &camera_bs, unsigned building_ix) {
 	for (snake_t &snake : snakes) {update_snake(snake, camera_bs, timestep, snakes.max_xmove, rgen);}
 }
 
-void building_t::update_snake(snake_t &snake, point const &camera_bs, float timestep, float &max_xmove, rand_gen_t &rgen) const {
+// Note: non-const because biting the player can add blood and the player's inventory items to the building
+void building_t::update_snake(snake_t &snake, point const &camera_bs, float timestep, float &max_xmove, rand_gen_t &rgen) {
 	if (snake.is_sleeping()) return; // peacefully sleeping, no collision or movement needed
 	if (snake.speed == 0.0) {snake.speed = global_building_params.snake_speed*rgen.rand_uniform(0.5, 1.0);} // random speed
 	float const lookahead_amt(1.0*snake.radius);
