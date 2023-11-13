@@ -278,7 +278,7 @@ struct building_params_t {
 	unsigned num_place=0, num_tries=10, cur_prob=1, max_shadow_maps=32, buildings_rand_seed=0, max_ext_basement_hall_branches=4, max_ext_basement_room_depth=4;
 	float ao_factor=0.0, sec_extra_spacing=0.0, player_coll_radius_scale=1.0, interior_view_dist_scale=1.0;
 	float window_width=0.0, window_height=0.0, window_xspace=0.0, window_yspace=0.0; // windows
-	float wall_split_thresh=4.0, max_fp_wind_xscale=0.0, max_fp_wind_yscale=0.0, basement_water_level=0.0; // interiors
+	float wall_split_thresh=4.0, max_fp_wind_xscale=0.0, max_fp_wind_yscale=0.0, basement_water_level_min=0.0, basement_water_level_max=0.0; // interiors
 	float open_door_prob=1.0, locked_door_prob=0.0, basement_prob_house=0.5, basement_prob_office=0.5, ball_prob=0.3; // interior probabilities
 	// consistency probabilities of houses for cities and blocks
 	float house_same_mat_prob =0.0, house_same_size_prob =0.0, house_same_geom_prob =0.0, house_same_per_city_prob =0.0;

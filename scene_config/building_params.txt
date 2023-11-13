@@ -14,7 +14,8 @@ buildings open_door_prob   0.75 # usually open
 buildings locked_door_prob 0.50 # fraction of closed doors that are locked
 buildings basement_prob_house  0.5
 buildings basement_prob_office 0.75
-buildings basement_water_level 0.1
+buildings basement_water_level_min -0.5 # < 0.0 has a chance of no water
+buildings basement_water_level_max 1.1 # flooded a bit onto the floor above
 buildings ball_prob 0.6 # set to 1.0 for testing of balls
 buildings add_office_basements 1
 buildings max_ext_basement_hall_branches 4

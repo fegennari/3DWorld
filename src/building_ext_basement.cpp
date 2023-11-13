@@ -170,10 +170,16 @@ bool building_t::add_underground_exterior_rooms(rand_gen_t &rgen, cube_t const &
 		unsigned const num_floors(setup_multi_floor_room(hallway, Door, wall_dim, wall_dir, rgen));
 		hallway.is_hallway      = 0; // should already be set to 0, but this makes it more clear
 		interior->has_backrooms = 1;
-		float const water_level(global_building_params.basement_water_level);
 
-		if (water_level > 0.0 && num_floors > 1) { // lowest level of multilevel rooms has water
-			interior->water_zval = hallway.z1() + fc_thick + water_level*get_window_vspace();
+		if (num_floors > 1) { // lowest level of multilevel rooms has water; no water if there's a single floor
+			float wmin(global_building_params.basement_water_level_min), wmax(global_building_params.basement_water_level_max);
+			if (wmax < wmin) {swap(wmin, wmax);} // user specfied the values backwards? this isn't error checked in the option parsing, so swap the values
+
+			if (wmax > 0.0) {
+				float water_level((wmin == wmax) ? wmin : rgen.rand_uniform(wmin, wmax)); // can be a single value or a range
+				min_eq(water_level, float(num_floors - 1)); // top floor can't have water
+				if (water_level > 0.0) {interior->water_zval = hallway.z1() + fc_thick + water_level*get_window_vspace();}
+			}
 		}
 	}
 	else { // recursively add rooms connected to this hallway in alternating dimensions
