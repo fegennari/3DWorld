@@ -827,9 +827,9 @@ public:
 			// Note: shields is used for drunkenness; values are scaled from 0-1 to 0-100; powerup values are for bladder fullness
 			vector<status_bar_t> extra_bars;
 			colorRGBA const thirst_color((thirst < 0.2 && ((int(tfticks)/8)&1)) ? MAGENTA : BLUE); // flash magenta when low
-			extra_bars.emplace_back(WHITE, get_carry_weight_ratio()); // carry weight
-			extra_bars.emplace_back(thirst_color, thirst); // thirst
-			if (oxygen < 0.0) {extra_bars.emplace_back(CYAN, oxygen);} // oxygen bar is only shown when oxygen is less than full
+			extra_bars.emplace_back(WHITE, get_carry_weight_ratio(), ICON_CARRY); // carry weight
+			extra_bars.emplace_back(thirst_color, thirst, ICON_WATER); // thirst
+			if (oxygen < 1.0) {extra_bars.emplace_back(CYAN, oxygen, ICON_OXYGEN);} // oxygen bar is only shown when oxygen is less than full
 			draw_health_bar(100.0*player_health, 100.0*drunkenness, bladder, YELLOW, is_poisoned, extra_bars);
 		}
 		if (has_key) {show_key_icon();}

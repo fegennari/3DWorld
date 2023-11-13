@@ -1326,6 +1326,9 @@ struct status_bar_t {
 	status_bar_t(colorRGBA const &c, float v, unsigned id=0) : color(c), val(v), icon_id(id) {}
 };
 
+// status bar icons
+enum {ICON_HEALTH=0, ICON_SHIELD, ICON_POWER, ICON_DRUNK, ICON_TOILET, ICON_WATER, ICON_OXYGEN, ICON_CARRY, NUM_ICONS};
+
 
 // world modes
 enum {WMODE_GROUND=0, WMODE_UNIVERSE, WMODE_INF_TERRAIN, NUM_WMODE};

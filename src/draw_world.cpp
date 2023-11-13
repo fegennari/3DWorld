@@ -1807,7 +1807,7 @@ void draw_camera_filters(vector<camera_filter> &cfs) {
 
 point world_space_to_screen_space(point const &pos) { // returns screen space normalized to [0.0, 1.0]
 
-	double mats[2][16];
+	double mats[2][16] = {};
 	fgGetMVM().get_as_doubles(mats[0]); // Model = MVM
 	fgGetPJM().get_as_doubles(mats[1]); // Proj
 	int const view[4] = {0, 0, 1, 1};
@@ -1953,6 +1953,19 @@ void draw_compass_and_alt() { // and temperature
 	}
 }
 
+string const icon_fns[NUM_ICONS] = {"plus", "shield", "fist", "alcohol", "toilet", "droplet", "oxygen", "carry"};
+
+int get_icon_tid(unsigned icon_id) {
+	assert(icon_id < NUM_ICONS);
+	string const fn("icons/" + icon_fns[icon_id] + ".png"); // all 128x128 PNGs
+	return get_texture_by_name(fn);
+}
+void draw_icon(shader_t &s, unsigned icon_id, float x1, float x2, float y1, float y2, float zval) {
+	s.set_cur_color(WHITE);
+	select_texture(get_icon_tid(icon_id));
+	draw_one_tquad(x1, y1, x2, y2, zval);
+	select_texture(WHITE_TEX);
+}
 void draw_stats_bar(shader_t &s, colorRGBA const &color, float max_val, float cur_val, float x, float y1, float y2, float zval) {
 	s.set_cur_color(colorRGBA(color, 0.2));
 	draw_one_tquad(-0.9*x, y1, (-0.9 + 0.2*max_val)*x, y2, zval); // full background
@@ -1961,49 +1974,57 @@ void draw_stats_bar(shader_t &s, colorRGBA const &color, float max_val, float cu
 }
 void draw_health_bar(float health, float shields, float pu_time, colorRGBA const &pu_color, float poisoned, vector<status_bar_t> const &extra_bars) {
 	shader_t s;
-	s.begin_color_only_shader();
+	s.begin_simple_textured_shader();
+	select_texture(WHITE_TEX);
 	glDisable(GL_DEPTH_TEST);
 	enable_blend();
 	bool const building_gameplay_mode(world_mode == WMODE_INF_TERRAIN && game_mode == GAME_MODE_BUILDINGS);
 	float const zval(-1.1*perspective_nclip), tan_val(tan(perspective_fovy/TO_DEG));
 	float const y(-0.7*0.5*zval*tan_val), x((y*window_width)/window_height);
+	float const icon_sz(0.03*y), bar_height(0.02*y), bar_space(0.02*y), bar_pitch(bar_height + bar_space), grow_amt(0.005*y);
+	float const icon_x2(-0.91*x), icon_x1(icon_x2 - icon_sz), icon_yoff(-0.005*y);
 	colorRGBA hb_color(RED);
 	if (poisoned) {hb_color = blend_color(RED, YELLOW, fabs(sin(0.2*tfticks)), 0);} // slowly change between red and black
-	draw_stats_bar(s, hb_color, 1.0, min(0.01f*health, 1.0f), x, 0.92*y, 0.94*y, zval); // health bar up to 100
+	float ypos(0.92*y); // y-position on screen, with 1.0 at the top and 0.0 at the bottom; bars stack vertically down
+	draw_stats_bar(s, hb_color, 1.0, min(0.01f*health, 1.0f), x, ypos, ypos+bar_height, zval); // health bar up to 100
+	draw_icon(s, ICON_HEALTH, icon_x1, icon_x2, ypos+icon_yoff, ypos+icon_sz, zval);
 
 	if (health < 25.0 && ((int(tfticks)/12)&1)) { // low on health, add flashing red strip
 		s.set_cur_color(colorRGBA(RED, 0.5)); // translucent red
-		draw_one_tquad(-0.905*x, 0.915*y, (-0.895 + 0.002*min(health, 100.0f))*x, 0.945*y, zval);
+		draw_one_tquad(-0.905*x, ypos-grow_amt, (-0.895 + 0.002*min(health, 100.0f))*x, ypos+bar_height+grow_amt, zval);
 	}
 	if (health > 100.0) {
 		s.set_cur_color(ORANGE);
-		draw_one_tquad(-0.7*x, 0.92*y, (-0.7 + 0.002*(health - 100.0))*x, 0.94*y, zval); // extra health bar
+		draw_one_tquad(-0.7*x, ypos, (-0.7 + 0.002*(health - 100.0))*x, ypos+bar_height, zval); // extra health bar
 	}
-	float ypos(0.88); // y-position on screen, with 1.0 at the top and 0.0 at the bottom; bars stack vertically down
+	ypos -= bar_pitch;
 
 	if (shields >= 0.0) { // negative shields disables the shields bar
 		// universe mode: 100%, TT building gameplay mode: 200% (drunkenness), normal: 150%
 		float const max_val((world_mode == WMODE_UNIVERSE) ? 100.0 : (building_gameplay_mode ? 200.0 : 150.0));
-		draw_stats_bar(s, (building_gameplay_mode ? GREEN : YELLOW), 0.01*max_val, 0.01*shields, x, ypos*y, (ypos + 0.02)*y, zval); // shields bar up to 150
+		draw_stats_bar(s, (building_gameplay_mode ? GREEN : YELLOW), 0.01*max_val, 0.01*shields, x, ypos, ypos+bar_height, zval); // shields bar up to 150
+		draw_icon(s, (building_gameplay_mode ? ICON_DRUNK : ICON_SHIELD), icon_x1, icon_x2, ypos+icon_yoff, ypos+icon_sz, zval);
 
 		if (building_gameplay_mode && shields > 150.0 && ((int(tfticks)/12)&1)) { // flash when drunkenness is too high
 			s.set_cur_color(colorRGBA(RED, 0.5)); // translucent red
-			draw_one_tquad(-0.6*x, (ypos - 0.005)*y, -0.495*x, (ypos + 0.025)*y, zval);
+			draw_one_tquad(-0.6*x, ypos-grow_amt, -0.495*x, ypos+bar_height+grow_amt, zval);
 		}
-		ypos -= 0.04;
+		ypos -= bar_pitch;
 	}
 	if (building_gameplay_mode || pu_time > 0.0) { // 0.0-1.0 range; used for building_gameplay_mode bladder fullness
-		draw_stats_bar(s, pu_color, 1.0, pu_time, x, ypos*y, (ypos + 0.02)*y, zval); // full PU time background
+		draw_stats_bar(s, pu_color, 1.0, pu_time, x, ypos, ypos+bar_height, zval); // full PU time background
+		draw_icon(s, (building_gameplay_mode ? ICON_TOILET : ICON_POWER), icon_x1, icon_x2, ypos+icon_yoff, ypos+icon_sz, zval);
 
 		if (building_gameplay_mode && pu_time > 0.9 && ((int(tfticks)/12)&1)) { // flash when bladder fullness is too high
 			s.set_cur_color(colorRGBA(ORANGE, 0.5)); // translucent orange
-			draw_one_tquad(-0.905*x, (ypos - 0.005)*y, -0.695*x, (ypos + 0.025)*y, zval);
+			draw_one_tquad(-0.905*x, ypos-grow_amt, -0.695*x, ypos+bar_height+grow_amt, zval);
 		}
-		ypos -= 0.04;
+		ypos -= bar_pitch;
 	}
 	for (status_bar_t const &b : extra_bars) {
-		draw_stats_bar(s, b.color, 1.0, b.val, x, ypos*y, (ypos + 0.02)*y, zval);
-		ypos -= 0.04;
+		draw_stats_bar(s, b.color, 1.0, b.val, x, ypos, (ypos + bar_height), zval);
+		draw_icon(s, b.icon_id, icon_x1, icon_x2, ypos+icon_yoff, ypos+icon_sz, zval);
+		ypos -= bar_pitch;
 	}
 	disable_blend();
 	glEnable(GL_DEPTH_TEST);
