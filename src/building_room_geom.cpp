@@ -4190,11 +4190,32 @@ void building_room_geom_t::add_diving_board(room_object_t const &c) {
 }
 
 void building_room_geom_t::add_flashlight(room_object_t const &c) {
-	// TODO: two black cylinders, vertical or horizontal
+	colorRGBA const color(apply_light_color(c));
+	cube_t bot(c), top(c);
+	bot.z2() = top.z1() = c.z1() + 0.25*c.dz();
+	top.expand_by_xy(-0.3*c.get_radius());
+	rgeom_mat_t &mat(get_metal_material(1, 0, 1)); // shadowed, small
+	mat.add_vcylin_to_verts(bot, color, 0, 1); // draw sides and top
+	mat.add_vcylin_to_verts(top, color, 0, 1); // draw sides and top
 }
 
 void building_room_geom_t::add_candle(room_object_t const &c) {
-	// TODO: vertical white cylinder with glowing wick
+	cube_t candle(c), wick(c);
+	candle.z2() = wick.z1() = c.z1() + 0.8*c.dz();
+	wick.expand_by_xy(-0.94*c.get_radius()); // very thin
+	cube_t tip(wick);
+	wick.z2() = tip.z1() = wick.z1() + 0.6*wick.dz();
+	rgeom_mat_t &mat(get_untextured_material(1, 0, 1)); // shadowed, small
+	mat.add_vcylin_to_verts(candle, apply_light_color(c),        0, 1); // draw sides and top
+	mat.add_vcylin_to_verts(wick,   apply_light_color(c, WHITE), 0, 0, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, 12); // draw sides only, ndiv=12
+	mat.add_vcylin_to_verts(tip,    apply_light_color(c, BLACK), 0, 1, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, 12); // draw sides and top, ndiv=12
+
+	if (c.is_lit()) { // draw a glowing/emissive flame; too bad we can't have a billboard here; what about adding particle effects?
+		tid_nm_pair_t tp; // unshadowed
+		tp.emissive = 1.0;
+		rgeom_mat_t &mat(get_material(tp, 0, 0, 1)); // unshadowed, small
+		mat.add_sphere_to_verts(point(c.xc(), c.yc(), c.z2()), 0.5*c.get_radius(), YELLOW);
+	}
 }
 
 void building_room_geom_t::add_debug_shape(room_object_t const &c) {

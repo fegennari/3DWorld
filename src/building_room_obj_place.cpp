@@ -711,7 +711,21 @@ bool building_t::add_bedroom_objs(rand_gen_t rgen, room_t &room, vect_cube_t con
 		// large room, try to add a desk and chair as well
 		add_desk_to_room(rgen, room, blockers, chair_color, zval, room_id, floor, tot_light_amt, objs_start, is_basement);
 	}
-	// TODO: maybe add a flashlight or candle on a dresser, night stand, or desk; or in a drawer
+	// maybe add a flashlight or candle on a dresser, night stand, or desk; or in a drawer?
+	for (auto i = objs.begin()+objs_start; i != objs.end(); ++i) {
+		if (!((i->type == TYPE_DRESSER || i->type == TYPE_NIGHTSTAND || i->type == TYPE_DESK) && !(i->flags & RO_FLAG_ADJ_TOP))) continue; // not empty dresser/nightstand/desk
+		unsigned const rand_val(rgen.rand());
+		if (rand_val & 3) continue; // only add 25% of the time
+		bool const is_flashlight(rand_val & 4);
+		float const height((is_flashlight ? 0.1 : 0.09)*window_vspacing), radius((is_flashlight ? 0.2 : 0.16)*height);
+		if (min(i->dx(), i->dy()) < 3.0*radius) continue; // surface is too small
+		i->flags |= RO_FLAG_ADJ_TOP;
+		cube_t bc;
+		gen_xy_pos_for_round_obj(bc, *i, radius, height, 1.2*radius, rgen);
+		colorRGBA const color(is_flashlight ? BLACK : colorRGBA(0.95, 0.9, 0.75, 1.0)); // candle is cream colored
+		objs.emplace_back(bc, (is_flashlight ? TYPE_FLASHLIGHT : TYPE_CANDLE), room_id, 0, 0, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CYLIN, color);
+		break; // only add one object; adding invalidates the iterator anyway
+	} // for i
 	if (rgen.rand_float() < 0.3) {add_laundry_basket(rgen, room, zval, room_id, tot_light_amt, objs_start, place_area);} // try to place a laundry basket 25% of the time
 
 	if (rgen.rand_float() < global_building_params.ball_prob) { // maybe add a ball to the room
