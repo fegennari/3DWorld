@@ -159,7 +159,7 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_DIV_BOARD ] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 2,  0.0,  100.0, "diving board");
 	bldg_obj_types[TYPE_FALSE_DOOR] = bldg_obj_type_t(0, 0, 0, 0, 1, 0, 1,  0.0,  0.0,   "door");
 	bldg_obj_types[TYPE_FLASHLIGHT] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 15.0,  1.0,   "flashlight");
-	bldg_obj_types[TYPE_CANDLE    ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2,  1.0,  0.4,   "candle");
+	bldg_obj_types[TYPE_CANDLE    ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2,  1.0,  0.4,   "candle", 10000);
 	bldg_obj_types[TYPE_DBG_SHAPE ] = bldg_obj_type_t(0, 0, 0, 0, 0, 0, 1,  0.0,  0.0,   "debug shape"); // small (optimization)
 	// player_coll, ai_coll, rat_coll, pickup, attached, is_model, lg_sm, value, weight, name [capacity]
 	// 3D models
@@ -208,7 +208,7 @@ bldg_obj_type_t const &get_room_obj_type(room_object_t const &obj) {
 }
 float carried_item_t::get_remaining_capacity_ratio() const {
 	unsigned const capacity(get_room_obj_type(*this).capacity);
-	return ((capacity == 0) ? 1.0 : (1.0 - float(use_count)/float(capacity))); // Note: zero capacity is unlimited and ratio returned is always 1.0
+	return ((capacity == 0) ? 1.0 : (1.0 - float(min(use_count, capacity))/float(capacity))); // Note: zero capacity is unlimited and ratio returned is always 1.0
 }
 
 float const mattress_weight(80.0), sheets_weight(4.0), pillow_weight(1.0);
@@ -252,6 +252,7 @@ bldg_obj_type_t get_taken_obj_type(room_object_t const &obj) {
 	if (obj.type == TYPE_RAT      && obj.is_broken   ()) {return bldg_obj_type_t(0, 0, 1, 1, 0, 1, 0,   0.0,  1.0, "cooked/dead rat");}
 	if (obj.type == TYPE_ROACH    && obj.is_broken   ()) {return bldg_obj_type_t(0, 0, 0, 1, 0, 1, 0,   0.0, 0.01, "dead cockroach");} // same stats as live cockroach
 	if (obj.type == TYPE_FIRE_EXT && obj.is_broken   ()) {return bldg_obj_type_t(0, 0, 1, 1, 0, 1, 0,  20.0, 10.0, "empty fire extinguisher");}
+	if (obj.type == TYPE_CANDLE   && obj.is_used     ()) {return bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2,   0.5,  0.4, "used candle");}
 
 	if (obj.type == TYPE_INSECT) { // unused
 		bool const is_fly(obj.is_hanging());
@@ -712,7 +713,12 @@ public:
 	bool try_use_last_item(room_object_t &obj) {
 		if (carried.empty()) return 0; // no interactive carried item
 		obj = carried.back(); // deep copy
-		if (!obj.has_dstate()) {return obj.can_use();} // not a droppable/throwable item(ball); should always return 1
+		
+		if (!obj.has_dstate()) { // not a droppable/throwable item(ball)
+			if (!obj.can_use()) return 0; // should never get here?
+			if (obj.type == TYPE_CANDLE && carried.back().get_remaining_capacity_ratio() > 0.0) {carried.back().flags ^= RO_FLAG_LIT;} // toggle candle light
+			return 1;
+		}
 		remove_last_item(); // drop the item - remove it from our inventory
 		return 1;
 	}
@@ -856,6 +862,16 @@ public:
 		}
 		show_stats();
 		phone_manager.next_frame(); // even if not in gameplay mode?
+		// update candle, even when not in gameplay mode
+		if (!carried.empty()) {
+			carried_item_t &obj(carried.back());
+
+			if (obj.type == TYPE_CANDLE && obj.is_lit()) {
+				if ((frame_counter % 10) == 0) {obj.use_count += 1000.0*fticks;} // special logic for integer incrementing
+				min_eq(obj.use_count, get_room_obj_type(obj).capacity); // use_count can't be > capacity
+				if (obj.get_remaining_capacity_ratio() <= 0.0) {obj.flags &= ~RO_FLAG_LIT;} // goes out when used up
+			}
+		}
 		if (!in_building_gameplay_mode()) return;
 		// handle oxygen
 		float oxygen_use_rate((fticks/TICKS_PER_SECOND)/30.0); // used up in 30s
@@ -1817,6 +1833,10 @@ bool building_t::maybe_use_last_pickup_room_object(point const &player_pos, bool
 			point const fire_ray_end(player_pos + (4.0f*r_sum)*dir); // longer range
 			interior->room_geom->fire_manager.put_out_fires(ray_start, fire_ray_end, 0.5*r_sum); // check for fires in range and put them out
 		}
+		else if (obj.type == TYPE_CANDLE) { // nothing else to do at the moment
+			delay_use = 1;
+		}
+		//else if (obj.type == TYPE_FLASHLIGHT) {} // only use flashlight when selected in inventory?
 		else {assert(0);}
 	}
 	else {assert(0);}
@@ -2183,7 +2203,8 @@ void building_t::remove_paint_in_cube(cube_t const &c) const { // for whiteboard
 bool room_object_t::can_use() const { // excludes dynamic objects
 	if (is_medicine()) return 1; // medicine can be carried in the inventory and used later
 	if (type == TYPE_TPROLL) {return (taken_level == 0);} // can only use the TP roll, not the holder
-	return (type == TYPE_SPRAYCAN || type == TYPE_MARKER || type == TYPE_BOOK || type == TYPE_PHONE || type == TYPE_TAPE || type == TYPE_RAT || type == TYPE_FIRE_EXT);
+	return (type == TYPE_SPRAYCAN || type == TYPE_MARKER || type == TYPE_BOOK || type == TYPE_PHONE || type == TYPE_TAPE || type == TYPE_RAT ||
+		type == TYPE_FIRE_EXT || type == TYPE_CANDLE /*|| type == TYPE_FLASHLIGHT*/);
 }
 bool room_object_t::can_place_onto() const { // Note: excludes flat objects such as TYPE_RUG and TYPE_BLANKET
 	return (type == TYPE_TABLE || type == TYPE_DESK || type == TYPE_DRESSER || type == TYPE_NIGHTSTAND || type == TYPE_COUNTER || type == TYPE_KSINK ||

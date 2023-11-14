@@ -1189,6 +1189,16 @@ void apply_room_obj_rotate(room_object_t &obj, obj_model_inst_t &inst, vect_room
 		check_mvm_update();
 		return; // don't need to run the code below
 	}
+	else if (c.type == TYPE_CANDLE) { // TODO: flickering light
+		static building_room_geom_t tmp_rgeom;
+		room_object_t obj(c);
+		obj.z2() -= (1.0 - c.get_remaining_capacity_ratio())*0.9*c.dz(); // slowly burn down shorter over time
+		tmp_rgeom.add_candle(obj);
+		tmp_rgeom.mats_small.upload_draw_and_clear(s);
+	}
+	else if (c.type == TYPE_FLASHLIGHT) {
+		assert(0); // not yet implemented because the flashlight is triggered by the mouse but not actually drawn
+	}
 	else {assert(0);}
 	if (needs_blend) {enable_blend();}
 	tid_nm_pair_dstate_t state(s);
