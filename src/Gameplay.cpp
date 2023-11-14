@@ -69,6 +69,7 @@ extern coll_obj_group coll_objects;
 
 bool push_movable_cobj(unsigned index, vector3d &delta, point const &pushed_from);
 void enter_building_gameplay_mode();
+bool flashlight_enabled();
 
 
 point &get_sstate_pos(int id) {
@@ -1624,11 +1625,13 @@ void player_state::gamemode_fire_weapon() { // camera/player fire
 	if (frame_counter == fire_frame) return; // to prevent two fires in the same frame
 	fire_frame = frame_counter;
 
-	if (!game_mode || (game_mode == GAME_MODE_BUILDINGS && world_mode == WMODE_INF_TERRAIN)) { // flashlight/candlelight/spraypaint mode only
+	if (game_mode == GAME_MODE_NONE || (game_mode == GAME_MODE_BUILDINGS && world_mode == WMODE_INF_TERRAIN)) { // flashlight/candlelight/spraypaint mode only
 		if (voxel_editing) {modify_voxels();}
 		else if (spraypaint_mode) {spray_paint ((wmode & 1) != 0);}
 		else if (spheres_mode   ) {throw_sphere((wmode & 1) != 0);}
-		else if (wmode & 1) {add_camera_candlelight();}
+		// flashlight can be disabled in building gameplay mode; the mouse button will use the current item instead of the flashlight
+		else if (!flashlight_enabled()) {/*print_text_onscreen("No Flashlight", RED, 1.0, 1.0*TICKS_PER_SECOND, 0);*/}
+		else if (world_mode == WMODE_GROUND && (wmode & 1)) {add_camera_candlelight();}
 		else {add_camera_flashlight();}
 		return;
 	}

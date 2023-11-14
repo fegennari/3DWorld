@@ -460,7 +460,7 @@ class player_inventory_t { // manages player inventory, health, and other stats
 	float cur_value, cur_weight, tot_value, tot_weight, damage_done, best_value, player_health, drunkenness, bladder, bladder_time, oxygen, thirst;
 	float prev_player_zval, respawn_time=0.0;
 	unsigned num_doors_unlocked;
-	bool prev_in_building, has_key, is_poisoned, poison_from_spider;
+	bool prev_in_building, has_key, has_flashlight, is_poisoned, poison_from_spider;
 
 	void register_player_death(unsigned sound_id, string const &why) {
 		player_wait_respawn = 1;
@@ -485,7 +485,7 @@ public:
 		drunkenness   = bladder = bladder_time = prev_player_zval = 0.0;
 		player_health = oxygen = thirst = 1.0; // full health, oxygen, and (anti-)thirst
 		num_doors_unlocked = 0; // not saved on death, but maybe should be?
-		prev_in_building = has_key = is_poisoned = poison_from_spider = 0;
+		prev_in_building = has_key = has_flashlight = is_poisoned = poison_from_spider = 0;
 		player_attracts_flies = 0;
 		phone_manager.disable();
 		carried.clear();
@@ -534,6 +534,7 @@ public:
 	float get_oxygen     () const {return oxygen;}
 	bool  player_is_dead () const {return (player_health <= 0.0);}
 	bool  player_has_key () const {return has_key;}
+	bool  player_has_flashlight() const {return has_flashlight;}
 	bool  player_at_full_health() const {return (player_health == 1.0 && !is_poisoned);}
 	bool  player_is_thirsty    () const {return (thirst < 0.5);}
 	void  refill_thirst() {thirst = 1.0;}
@@ -619,6 +620,8 @@ public:
 			oss << ": -" << round_fp(100.0*liquid) << "% Thirst";
 			thirst = min(1.0f, (thirst + liquid));
 		}
+		if (obj.type == TYPE_FLASHLIGHT) {has_flashlight = 1;} // also goes in inventory
+
 		if (obj.type == TYPE_KEY) {
 			has_key = 1; // mark as having the key, but it doesn't go into the inventory or contribute to weight or value
 		}
@@ -763,7 +766,7 @@ public:
 		tape_manager.clear();
 	}
 	void collect_items(bool keep_interactive) { // called when player exits a building
-		if (!keep_interactive) {has_key = 0;} // key only good for current building
+		if (!keep_interactive) {has_key = 0;} // key only good for current building; flashlight can be used in all buildings
 		phone_manager.disable(); // phones won't ring when taken out of their building, since the player can't switch to them anyway
 		tape_manager.clear();
 		if (carried.empty() && cur_weight == 0.0 && cur_value == 0.0) return; // nothing to add
@@ -844,6 +847,7 @@ public:
 			draw_health_bar(100.0*player_health, 100.0*drunkenness, bladder, YELLOW, is_poisoned, extra_bars);
 		}
 		if (has_key) {show_key_icon();}
+		//if (has_flashlight) {show_flashight_icon();} // TBD
 	}
 	void next_frame() {
 		if (player_wait_respawn) {
@@ -2399,6 +2403,10 @@ void building_t::update_creepy_sounds(point const &player_pos) const {
 // gameplay logic
 
 bool player_has_room_key() {return player_inventory.player_has_key();}
+
+bool flashlight_enabled() { // flashlight can't be used in tiled terrain building gameplay mode if the player didn't pick up a flashlight
+	return (world_mode != WMODE_INF_TERRAIN || !in_building_gameplay_mode() || player_inventory.player_has_flashlight());
+}
 
 // returns player_dead
 // should we include falling damage? currently the player can't fall down elevator shafts or stairwells,

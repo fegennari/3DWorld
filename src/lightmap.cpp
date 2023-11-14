@@ -1054,8 +1054,7 @@ void add_camera_candlelight() {
 
 void add_camera_flashlight() {
 
-	point const lpos(get_camera_light_pos());
-	//add_dynamic_light(FLASHLIGHT_RAD, lpos, get_flashlight_color(), cview_dir, FLASHLIGHT_BW);
+	//add_dynamic_light(FLASHLIGHT_RAD, get_camera_light_pos(), get_flashlight_color(), cview_dir, FLASHLIGHT_BW);
 	flashlight_on = 1;
 
 	if (world_mode == WMODE_GROUND && (display_mode & 0x0100)) { // add one bounce of indirect lighting
@@ -1064,6 +1063,7 @@ void add_camera_flashlight() {
 		float const rad_per_len(0.95*tan(theta));
 		vector3d vab[2];
 		get_ortho_vectors(cview_dir, vab);
+		point const lpos(get_camera_light_pos());
 
 		for (unsigned i = 0; i < NUM_VPLS; ++i) {
 			float const a(TWO_PI*i/NUM_VPLS);
