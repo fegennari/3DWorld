@@ -1256,7 +1256,7 @@ void init_smiley(int smiley_id) {
 void player_state::check_switch_weapon(int smiley_id) { // called by smileys
 
 	assert(smiley_id >= 0 && smiley_id < num_smileys);
-	wmode = ((player_rgen.rand()&3) == 0);
+	wmode = (game_mode == GAME_MODE_FPS && (player_rgen.rand()&3) == 0);
 
 	if (game_mode == GAME_MODE_DODGEBALL) { // dodgeball mode
 		weapon     = ((UNLIMITED_WEAPONS || p_ammo[W_BALL] > 0) ? (int)W_BALL : (int)W_UNARMED);
@@ -1592,6 +1592,6 @@ void player_state::jump(point const &pos) {
 
 
 void player_state::verify_wmode() {
-	if (weapon == W_GRENADE && (wmode&1) && p_ammo[weapon] < int(weapons[W_CGRENADE].def_ammo) && !UNLIMITED_WEAPONS) wmode = 0;
+	if (weapon == W_GRENADE && (wmode&1) && p_ammo[weapon] < int(weapons[W_CGRENADE].def_ammo) && !UNLIMITED_WEAPONS) {wmode = 0;}
 }
 

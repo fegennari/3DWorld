@@ -359,7 +359,7 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 			break;
 
 		case W_BALL:
-			if (wmode & 1) {
+			if (game_mode == GAME_MODE_FPS && (wmode & 1)) { // teleporter gun is secondary fire of dodgeball
 				teleporter tp;
 				tp.pos    = pos0;
 				tp.radius = 0.3*object_types[oid].radius;
