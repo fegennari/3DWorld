@@ -346,7 +346,7 @@ bool building_t::add_desk_to_room(rand_gen_t rgen, room_t const &room, vect_cube
 			computer.d[dim][!dir] = computer.d[dim][dir] + dsign*cdepth;
 			objs.emplace_back(computer, TYPE_COMPUTER, room_id, dim, !dir, RO_FLAG_NOCOLL, tot_light_amt);
 			room_object_t &desk_obj(objs[desk_obj_ix]);
-			desk_obj.flags |= RO_FLAG_HAS_EXTRA; // flag so that we don't place other objects on this desk
+			desk_obj.flags |= RO_FLAG_ADJ_TOP; // flag so that we don't place other objects on this desk
 			// force even/odd-ness of obj_id based on comp_side so that we know what side to put the drawers on so that they don't intersect the computer
 			if (bool(desk_obj.obj_id & 1) == comp_side) {++desk_obj.obj_id;}
 		}
@@ -3320,7 +3320,7 @@ void building_t::place_objects_onto_surfaces(rand_gen_t rgen, room_t const &room
 			pizza_prob  = 0.8*place_pizza_prob;
 			if (is_house) {toy_prob = 0.5;} // toys are in houses only
 		}
-		else if (obj.type == TYPE_DESK && !(obj.flags & RO_FLAG_HAS_EXTRA)) { // desk with no computer monitor
+		else if (obj.type == TYPE_DESK && !(obj.flags & RO_FLAG_ADJ_TOP)) { // desk with no computer monitor
 			book_prob   = 0.8*place_book_prob;
 			bottle_prob = 0.4*place_bottle_prob;
 			cup_prob    = 0.3*place_cup_prob;
