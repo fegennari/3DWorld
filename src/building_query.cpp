@@ -8,7 +8,7 @@
 
 extern bool draw_building_interiors, camera_in_building, player_near_toilet, player_in_unlit_room, building_has_open_ext_door, ctrl_key_pressed;
 extern bool player_is_hiding, player_wait_respawn;
-extern int camera_surf_collide, frame_counter, player_in_closet, player_in_elevator, player_in_basement, player_in_attic;
+extern int camera_surf_collide, frame_counter, player_in_closet, player_in_elevator, player_in_basement, player_in_attic, player_in_water;
 extern float CAMERA_RADIUS, C_STEP_HEIGHT, NEAR_CLIP, building_bcube_expand;
 extern double camera_zh;
 extern building_params_t global_building_params;
@@ -23,6 +23,7 @@ void register_in_closed_bathroom_stall();
 pair<cube_t, colorRGBA> car_bcube_color_from_parking_space(room_object_t const &o);
 void force_player_height(double height);
 bool is_player_model_female();
+void apply_building_fall_damage(float delta_z);
 bool get_sphere_poly_int_val(point const &sc, float sr, point const *const points, unsigned npoints, vector3d const &normal, float thickness, float &val, vector3d &cnorm);
 
 
@@ -915,6 +916,7 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, flo
 	// not sure where this belongs, but the closet hiding logic is in this function, so I guess it goes here? player must be inside the building to see a windowless room anyway
 	player_in_unlit_room = check_pos_in_unlit_room(pos);
 	prev_camera_height   = camera_height; // update for this frame
+	if (had_coll && !player_in_water && pos.z < p_last.z) {apply_building_fall_damage(p_last.z - pos.z);}
 	return had_coll; // will generally always be true due to floors
 }
 

@@ -855,6 +855,18 @@ public:
 		if (has_key) {show_key_icon();}
 		//if (has_flashlight) {show_flashight_icon();} // TBD
 	}
+	bool apply_fall_damage(float delta_z, float dscale=1.0) {
+		if (!in_building_gameplay_mode()) return 0;
+		if (!camera_in_building)          return 0; // only take fall damage when inside the building (no falling off the roof for now)
+		float const fall_damage_start(3.0*CAMERA_RADIUS); // should be a function of building floor spacing?
+		if (delta_z < fall_damage_start)  return 0; // no damage
+		player_health -= dscale*(delta_z - fall_damage_start)/fall_damage_start;
+		if (player_is_dead()) {register_player_death(SOUND_SQUISH, " from a fall"); return 1;} // dead
+		gen_sound_thread_safe_at_player(SOUND_SQUISH, 0.5);
+		add_camera_filter(colorRGBA(RED, 0.25), 4, -1, CAM_FILT_DAMAGE); // 4 ticks of red damage
+		register_building_sound_at_player(1.0);
+		return 0; // hurt but alive
+	}
 	void next_frame() {
 		if (player_wait_respawn) {
 			if (tfticks > respawn_time) {player_respawn();}
@@ -896,19 +908,10 @@ public:
 		else {oxygen = min(1.0f, (oxygen + 10.0f*oxygen_use_rate));} // head above water, gain oxygen quickly
 		// handle player fall damage logic
 		point const camera_pos(get_camera_pos());
-		float const fall_damage_start(3.0*CAMERA_RADIUS); // should be a function of building floor spacing?
 		float const player_zval(camera_pos.z), delta_z(prev_player_zval - player_zval);
 		float const fticks_clamped(min(fticks, 0.25f*TICKS_PER_SECOND)); // limit to 250ms so that the player doesn't die when paused
-		
 		if (camera_in_building != prev_in_building) {prev_in_building = camera_in_building;}
-		else if (prev_player_zval != 0.0 && delta_z > fall_damage_start && camera_in_building) {
-			// only take fall damage when inside the building (no falling off the roof for now)
-			player_health -= 1.0f*(delta_z - fall_damage_start)/fall_damage_start;
-			if (player_is_dead()) {register_player_death(SOUND_SQUISH, " from a fall"); return;} // dead
-			gen_sound_thread_safe_at_player(SOUND_SQUISH, 0.5);
-			add_camera_filter(colorRGBA(RED, 0.25), 4, -1, CAM_FILT_DAMAGE); // 4 ticks of red damage
-			register_building_sound_at_player(1.0);
-		}
+		else if (prev_player_zval != 0.0 && delta_z > 0.0 && apply_fall_damage(delta_z)) return; // Note: fall damage may no longer trigger with slow player fall logic
 		prev_player_zval = player_zval;
 		// handle death events
 		if (player_is_dead()) {register_player_death(SOUND_SCREAM3, ""); return;} // dead
@@ -977,6 +980,7 @@ void register_in_closed_bathroom_stall() {player_inventory.register_in_closed_ba
 bool player_at_full_health() {return player_inventory.player_at_full_health();}
 bool player_is_thirsty    () {return player_inventory.player_is_thirsty    ();}
 void refill_thirst() {player_inventory.refill_thirst();}
+void apply_building_fall_damage(float delta_z) {player_inventory.apply_fall_damage(delta_z, 0.5);} // dscale=0.5
 void get_dead_players_in_building(vector<dead_person_t> &dead_players, building_t const &building) {player_inventory.get_dead_players_in_building(dead_players, building);}
 
 void register_building_sound_for_obj(room_object_t const &obj, point const &pos) {

@@ -26,7 +26,7 @@ coll_obj_group coll_objects;
 cobj_groups_t cobj_groups;
 cobj_draw_groups cdraw_groups;
 
-extern bool lm_alloc, has_snow;
+extern bool lm_alloc, has_snow, player_wait_respawn;
 extern int camera_coll_smooth, game_mode, world_mode, xoff, yoff, camera_change, display_mode, scrolling, animate2;
 extern int camera_in_air, mesh_scale_change, camera_invincible, camera_flight, num_smileys, iticks, frame_counter, player_in_water;
 extern unsigned snow_coverage_resolution;
@@ -1780,7 +1780,7 @@ void force_onto_surface_mesh(point &pos) { // for camera
 		float const delta_z(pos.z - camera_last_pos.z), delta_rate((delta_z/CAMERA_RADIUS)/fticks);
 
 		// handle player falling off/in a building or snapping to a different floor due to collision enabling or a collision bug
-		if (frame_counter > 100) { // skip for first N frames from player spawn
+		if (frame_counter > 100 && !player_wait_respawn) { // skip for first N frames from player spawn and when dead
 			if (delta_z < 0.0) { // falling
 				float const MAX_FALL_RATE = 2.0; // distance per tick in units of camera radius
 				float const fall_rate_mod(MAX_FALL_RATE*((player_in_water == 2) ? 0.05 : ((player_in_water == 1) ? 0.1 : 1.0))); // fall slower in water
