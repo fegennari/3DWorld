@@ -1163,7 +1163,7 @@ void gen_explosion_decal(point const &pos, float radius, vector3d const &coll_no
 bool get_sphere_poly_int_val(point const &sc, float sr, point const *const points, unsigned npoints, vector3d const &normal, float thickness, float &val, vector3d &cnorm) {
 
 	// compute normal based on extruded sides
-	vector<tquad_t> pts;
+	vector<tquad_t> pts; // {top, bottom, <sides>}
 	thick_poly_to_sides(points, npoints, normal, thickness, pts);
 	if (!sphere_intersect_poly_sides(pts, sc, sr, val, cnorm, 1)) return 0; // no collision
 	bool intersects(0), inside(1);

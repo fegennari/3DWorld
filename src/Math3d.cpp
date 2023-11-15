@@ -204,7 +204,6 @@ bool get_poly_zminmax(point const *const pts, unsigned npts, vector3d const &nor
 	return (num_inside[0] || num_inside[1]);
 }
 
-
 bool get_poly_zvals(vector<tquad_t> const &pts, float xv, float yv, float &z1, float &z2) {
 
 	bool coll(0);
@@ -222,15 +221,12 @@ bool get_poly_zvals(vector<tquad_t> const &pts, float xv, float yv, float &z1, f
 	return coll;
 }
 
-
 void gen_poly_planes(point const *const points, unsigned npoints, vector3d const &norm, float thick, point pts[2][4]) {
-
 	for (unsigned i = 0; i < 2; ++i) { // back face cull?
 		float const tv(0.5*(i ? -thick : thick));
 		for (unsigned j = 0; j < npoints; ++j) {pts[i][j] = points[j] + norm*tv;}
 	}
 }
-
 
 void thick_poly_to_sides(point const *const points, unsigned npoints, vector3d const &norm, float thick, vector<tquad_t> &sides) {
 
@@ -242,13 +238,15 @@ void thick_poly_to_sides(point const *const points, unsigned npoints, vector3d c
 		for (unsigned j = 0; j < npoints; ++j) {sides[i][j] = points[j] + norm*tv;}
 		sides[i].npts = npoints;
 	}
-	for (unsigned i = 0; i < npoints; ++i) { // create the <npoints> sides
-		unsigned const inext((i+1)%npoints);
-		sides[i+2].npts = 4;
-		sides[i+2][0] = sides[0][i];
-		sides[i+2][1] = sides[1][i];
-		sides[i+2][2] = sides[1][inext];
-		sides[i+2][3] = sides[0][inext];
+	if (thick != 0.0) { // no sides if polygon has zero thickness
+		for (unsigned i = 0; i < npoints; ++i) { // create the <npoints> sides
+			unsigned const inext((i+1)%npoints);
+			sides[i+2].npts = 4;
+			sides[i+2][0] = sides[0][i];
+			sides[i+2][1] = sides[1][i];
+			sides[i+2][2] = sides[1][inext];
+			sides[i+2][3] = sides[0][inext];
+		}
 	}
 	std::reverse(sides[1].pts, sides[1].pts+sides[1].npts); // reverse point order of bottom side
 }
@@ -289,7 +287,7 @@ bool sphere_intersect_poly_sides(vector<tquad_t> const &pts, point const &center
 	bool found(0);
 	dist = FAR_DISTANCE;
 
-	for (unsigned i = 0; i < pts.size(); ++i) { // test the <npoints> sides
+	for (unsigned i = 0; i < pts.size(); ++i) { // test all of the sides
 		vector3d const side_norm(pts[i].get_norm());
 		float tdist(radius - dot_product_ptv(side_norm, center, pts[i][0]));
 		if (strict && tdist < 0.0) return 0; // outside of the shape
