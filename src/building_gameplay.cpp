@@ -840,7 +840,7 @@ public:
 					draw_text(color, -0.005*aspect_ratio, -0.010, -0.02, string(num_bars, '#'));
 				}
 				// technically, the player is still hiding, even if the phone is ringing; zombies may be attracted to the sound but won't actually see the player
-				if (player_is_hiding && !phone_manager.is_phone_ringing()) {draw_text(LT_BLUE, -0.001*aspect_ratio, -0.009, -0.02, "[Hiding]");}
+				if (player_is_hiding && camera_in_building && !phone_manager.is_phone_ringing()) {draw_text(LT_BLUE, -0.001*aspect_ratio, -0.009, -0.02, "[Hiding]");}
 			}
 		}
 		if (in_building_gameplay_mode()) {
