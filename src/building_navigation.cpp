@@ -1835,12 +1835,12 @@ bool building_t::run_ai_pool_logic(person_t &person, float &speed_mult) const {
 		pool_exp.clamp_pt_xy(person.target_pos); // slightly outside the pool
 	}
 	// force person inside the pool walls
-	float const submerge_amt(min(1.0f, ((interior->water_zval - z_feet) / (z_head - z_feet))));
+	float const fall_amt(min(1.0f, ((pool.z2() - z_feet) / (z_head - z_feet))));
 	cube_t pool_clip(pool);
-	pool_clip.expand_by_xy(-submerge_amt*radius); // increase spacing as they fall
+	pool_clip.expand_by_xy(-fall_amt*radius); // increase spacing as they fall
 	pool_clip.d[pool.dim][pool.dir] = pool_room.d[pool.dim][pool.dir]; // no clipping at the pool exit end
 	pool_clip.clamp_pt_xy(person.pos);
-	speed_mult *= (1.0 - 0.4*submerge_amt); // slower when in the water
+	speed_mult *= (1.0 - 0.4*fall_amt); // slower when in the water
 	person.in_pool = 1;
 	return 1; // in the pool
 }

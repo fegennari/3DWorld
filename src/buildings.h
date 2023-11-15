@@ -1856,7 +1856,7 @@ private:
 	bool replace_light_with_ceiling_fan(rand_gen_t &rgen, cube_t const &room, cube_t const &avoid, unsigned room_id, float tot_light_amt, unsigned light_obj_ix);
 	bool add_bed_to_room     (rand_gen_t &rgen, room_t const &room, vect_cube_t const &blockers, float zval, unsigned room_id, float tot_light_amt, unsigned floor, bool force);
 	bool add_ball_to_room    (rand_gen_t &rgen, room_t const &room, cube_t const &place_area, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start,
-		int force_type=-1, cube_t const &avoid_xy=cube_t());
+		int force_type=-1, cube_t const &avoid_xy=cube_t(), bool in_pool=0);
 	bool maybe_add_fireplace_to_room(rand_gen_t &rgen, room_t const &room, vect_cube_t &blockers, float zval, unsigned room_id, float tot_light_amt);
 	float add_flooring       (room_t const &room, float &zval, unsigned room_id, float tot_light_amt, unsigned flooring_type);
 	bool add_bathroom_objs   (rand_gen_t rgen, room_t &room, float &zval, unsigned room_id, float tot_light_amt,
