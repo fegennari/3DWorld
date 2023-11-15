@@ -570,7 +570,8 @@ unsigned check_diving_board_collision(room_object_t const &c, point &pos, point 
 
 bool check_ramp_collision(room_object_t const &c, point &pos, point const &p_last, float radius, vector3d *cnorm) { // p_last is unused
 	if (!sphere_cube_intersect(pos, radius, c)) return 0;
-	float const thickness(RAMP_THICKNESS_SCALE*c.dz()), half_thickness(0.5*thickness);
+	bool const is_pg_ramp(c.type == TYPE_RAMP);
+	float const thickness(is_pg_ramp ? RAMP_THICKNESS_SCALE*c.dz() : 0.0), half_thickness(0.5*thickness);
 	tquad_t ramp(get_ramp_tquad(c));
 	for (unsigned n = 0; n < ramp.npts; ++n) {ramp.pts[n].z -= half_thickness;} // shift to the centerline, which is what get_sphere_poly_int_val() requires
 	vector3d const normal(ramp.get_norm());
@@ -783,7 +784,7 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, flo
 			}
 			if ((c->type == TYPE_STAIR || (on_stairs && c->type != TYPE_RAILING)) && (obj_z + radius) > c->z2()) continue; // above the stair - allow it to be walked on
 
-			if (c->type == TYPE_RAMP || (c->type == TYPE_POOL_TILE && c->shape == SHAPE_ANGLED)) { // ramp, should be SHAPE_ANGLED
+			if (c->is_sloped_ramp()) { // ramp, should be SHAPE_ANGLED
 				// slight adjust so that player is above ramp when on the floor above, but below when falling through the ramp gap
 				bool const is_falling(pos.z < obj_z);
 				float const reff((is_falling ? 1.01 : 0.99)*radius); // effective radius
@@ -1116,7 +1117,7 @@ bool building_interior_t::check_sphere_coll_room_objects(building_t const &build
 			else if (c->type == TYPE_BCASE  ) {coll_ret |= check_bookcase_collision(*c, pos, p_last, radius, &cnorm);}
 			else if (c->type == TYPE_BENCH  ) {coll_ret |= check_bench_collision   (*c, pos, p_last, radius, &cnorm);}
 			else if (c->type == TYPE_DIV_BOARD) {coll_ret |= check_diving_board_collision   (*c, pos, p_last, radius, &cnorm);}
-			else if (c->type == TYPE_RAMP   ) {coll_ret |= (unsigned)check_ramp_collision   (*c, pos, p_last, radius, &cnorm);}
+			else if (c->is_sloped_ramp()    ) {coll_ret |= (unsigned)check_ramp_collision   (*c, pos, p_last, radius, &cnorm);}
 			else if (c->type == TYPE_BALCONY) {had_coll |= (unsigned)check_balcony_collision(*c, pos, p_last, radius, &cnorm);}
 			else if (c->type == TYPE_POOL_TABLE) {coll_ret |= check_pool_table_collision(*c, pos, p_last, radius, &cnorm);}
 			else if (c->type == TYPE_STALL  && maybe_inside_room_object(*c, pos, radius)) {coll_ret |= (unsigned)check_stall_collision (*c, pos, p_last, radius, &cnorm);}
