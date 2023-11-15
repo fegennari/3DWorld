@@ -4210,11 +4210,10 @@ void building_room_geom_t::add_candle(room_object_t const &c) {
 	mat.add_vcylin_to_verts(wick,   apply_light_color(c, WHITE), 0, 0, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, 12); // draw sides only, ndiv=12
 	mat.add_vcylin_to_verts(tip,    apply_light_color(c, BLACK), 0, 1, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, 12); // draw sides and top, ndiv=12
 
-	if (c.is_lit()) { // draw a glowing/emissive flame; too bad we can't have a billboard here; what about adding particle effects?
+	if (0 && c.is_lit()) { // draw a glowing/emissive flame; disabled because only held candles are lit, and these are drawn as billboard flames
 		tid_nm_pair_t tp; // unshadowed
 		tp.emissive = 1.0;
-		rgeom_mat_t &mat(get_material(tp, 0, 0, 1)); // unshadowed, small
-		mat.add_sphere_to_verts(point(c.xc(), c.yc(), c.z2()), 0.5*c.get_radius(), YELLOW);
+		get_material(tp, 0, 0, 1).add_sphere_to_verts(point(c.xc(), c.yc(), c.z2()), 0.5*c.get_radius(), YELLOW); // unshadowed, small
 	}
 }
 

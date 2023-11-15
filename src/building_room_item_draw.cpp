@@ -27,6 +27,7 @@ extern building_params_t global_building_params;
 unsigned get_num_screenshot_tids();
 tid_nm_pair_t get_phone_tex(room_object_t const &c);
 template< typename T > void gen_quad_ixs(vector<T> &ixs, unsigned size, unsigned ix_offset);
+void draw_emissive_billboards(quad_batch_draw &qbd, int tid);
 void draw_car_in_pspace(car_t &car, shader_t &s, vector3d const &xlate, bool shadow_only);
 void set_car_model_color(car_t &car);
 bldg_obj_type_t get_taken_obj_type(room_object_t const &obj);
@@ -1118,7 +1119,7 @@ void apply_room_obj_rotate(room_object_t &obj, obj_model_inst_t &inst, vect_room
 	}
 }
 
-/*static*/ void building_room_geom_t::draw_interactive_player_obj(carried_item_t const &c, shader_t &s, vector3d const &xlate) { // held by the player
+void building_room_geom_t::draw_interactive_player_obj(carried_item_t const &c, shader_t &s, vector3d const &xlate) { // held by the player
 	static rgeom_mat_t mat; // allocated memory is reused across frames; VBO is recreated every time; untextured
 	bool needs_blend(0);
 
@@ -1189,12 +1190,31 @@ void apply_room_obj_rotate(room_object_t &obj, obj_model_inst_t &inst, vect_room
 		check_mvm_update();
 		return; // don't need to run the code below
 	}
-	else if (c.type == TYPE_CANDLE) { // TODO: flickering light
+	else if (c.type == TYPE_CANDLE) {
 		static building_room_geom_t tmp_rgeom;
 		room_object_t obj(c);
 		obj.z2() -= (1.0 - c.get_remaining_capacity_ratio())*0.9*c.dz(); // slowly burn down shorter over time
 		tmp_rgeom.add_candle(obj);
 		tmp_rgeom.mats_small.upload_draw_and_clear(s);
+		
+		if (c.is_lit()) { // draw flame
+			float const radius(0.8*c.get_radius()), height(4.0*radius);
+			point const camera_bs(get_camera_pos() - xlate);
+			point center(obj.xc(), obj.yc(), (obj.z2() + 0.2*height));
+			center += 0.1*radius*(camera_bs - center).get_norm(); // move slightly in front of the wick
+			quad_batch_draw qbd;
+			qbd.add_animated_billboard(center, camera_bs, up_vector, WHITE, radius, 0.5*height, fract(2.0f*tfticks/TICKS_PER_SECOND));
+			draw_emissive_billboards(qbd, FIRE_TEX);
+			s.make_current();
+			
+			if (animate2) { // add smoke particles about once every 20 frames
+				static rand_gen_t smoke_rgen;
+
+				if ((smoke_rgen.rand() % 20) == 0) {
+					particle_manager.add_particle((center + 0.5*height*plus_z), 0.0001*plus_z, colorRGBA(GRAY, 0.25), 1.2*radius, PART_EFFECT_SMOKE);
+				}
+			}
+		}
 	}
 	else if (c.type == TYPE_FLASHLIGHT) {
 		assert(0); // not yet implemented because the flashlight is triggered by the mouse but not actually drawn

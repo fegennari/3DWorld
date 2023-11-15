@@ -1303,7 +1303,7 @@ void particle_manager_t::next_frame(building_t &building) {
 		}
 		else if (p.effect == PART_EFFECT_SMOKE) { // floats up
 			p.radius = p.init_radius*(1.0 + 3.0*lifetime); // radius increases over lifetime
-			p.color  = colorRGBA(WHITE*(0.25*(1.0 - lifetime)), (1.0 - lifetime)); // gray => transparent black
+			p.color  = colorRGBA(WHITE*(0.25*(1.0 - lifetime)), p.alpha*(1.0 - lifetime)); // gray => transparent black
 		}
 		else if (p.effect == PART_EFFECT_SPLASH) {
 			p.radius  = p.init_radius*(1.0 + 1.0*lifetime); // radius increases over lifetime

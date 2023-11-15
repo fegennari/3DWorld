@@ -801,13 +801,13 @@ class particle_manager_t {
 		point pos;
 		vector3d vel;
 		colorRGBA color;
-		float init_radius=0.0, radius=0.0, time=0.0;
+		float init_radius=0.0, radius=0.0, time=0.0, alpha=1.0;
 		int parent_obj_id=0;
 		unsigned effect=PART_EFFECT_NONE, bounce_count=0;
 
 		particle_t() {}
 		particle_t(point const &p, vector3d const &v, colorRGBA const &c, float r, unsigned e, int pid=-1) :
-			pos(p), vel(v), color(c), init_radius(r), radius(r), parent_obj_id(pid), effect(e) {}
+			pos(p), vel(v), color(c), init_radius(r), radius(r), alpha(color.A), parent_obj_id(pid), effect(e) {}
 	};
 	vector<particle_t> particles;
 	quad_batch_draw qbds[NUM_PART_EFFECTS]; // one per perticle effect
@@ -1037,7 +1037,7 @@ struct building_room_geom_t {
 	void add_candle(room_object_t const &c);
 	void add_debug_shape(room_object_t const &c);
 	static void draw_lg_ball_in_building   (room_object_t  const &c, shader_t &s);
-	static void draw_interactive_player_obj(carried_item_t const &c, shader_t &s, vector3d const &xlate);
+	void draw_interactive_player_obj(carried_item_t const &c, shader_t &s, vector3d const &xlate);
 	// functions for expanding nested objects
 	void expand_shelves(room_object_t const &c);
 	void get_bookcase_books(room_object_t const &c, vect_room_object_t &books) {add_bookcase(c, 0, 0, 0, 1.0, 0, 1.0, nullptr, &books);} // Note: technically const
