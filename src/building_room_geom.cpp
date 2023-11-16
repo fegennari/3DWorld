@@ -4205,16 +4205,12 @@ void building_room_geom_t::add_candle(room_object_t const &c) {
 	wick.expand_by_xy(-0.94*c.get_radius()); // very thin
 	cube_t tip(wick);
 	wick.z2() = tip.z1() = wick.z1() + 0.6*wick.dz();
+	tid_nm_pair_t tp; // untextured
+	if (c.is_lit()) {tp.emissive = 0.5;} // somewhat emissive to simulate subsurface scattering
+	get_material(tp, 1, 0, 1).add_vcylin_to_verts(candle, (c.is_lit() ? c.color : apply_light_color(c)), 0, 1); // draw sides and top
 	rgeom_mat_t &mat(get_untextured_material(1, 0, 1)); // shadowed, small
-	mat.add_vcylin_to_verts(candle, apply_light_color(c),        0, 1); // draw sides and top
-	mat.add_vcylin_to_verts(wick,   apply_light_color(c, WHITE), 0, 0, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, 12); // draw sides only, ndiv=12
-	mat.add_vcylin_to_verts(tip,    apply_light_color(c, BLACK), 0, 1, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, 12); // draw sides and top, ndiv=12
-
-	if (0 && c.is_lit()) { // draw a glowing/emissive flame; disabled because only held candles are lit, and these are drawn as billboard flames
-		tid_nm_pair_t tp; // unshadowed
-		tp.emissive = 1.0;
-		get_material(tp, 0, 0, 1).add_sphere_to_verts(point(c.xc(), c.yc(), c.z2()), 0.5*c.get_radius(), YELLOW); // unshadowed, small
-	}
+	mat.add_vcylin_to_verts(wick, apply_light_color(c, WHITE), 0, 0, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, 12); // draw sides only, ndiv=12
+	mat.add_vcylin_to_verts(tip,  apply_light_color(c, BLACK), 0, 1, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, 12); // draw sides and top, ndiv=12
 }
 
 void building_room_geom_t::add_debug_shape(room_object_t const &c) {
