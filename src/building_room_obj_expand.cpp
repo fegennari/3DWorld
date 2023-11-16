@@ -484,7 +484,7 @@ void building_room_geom_t::get_shelf_objects(room_object_t const &c_in, cube_t c
 	c.flags |= RO_FLAG_WAS_EXP;
 	bool const is_house(c.is_house());
 	vector3d const c_sz(c.get_size());
-	float const dz(c_sz.z), width(c_sz[c.dim]), thickness(0.02*dz), bracket_thickness(0.75*thickness);
+	float const dz(c_sz.z), width(c_sz[c.dim]), thickness(0.02*dz), bracket_thickness(0.75*thickness), floor_spacing(1.1*dz);
 	float const z_step(dz/(num_shelves + 1)), shelf_clearance(z_step - thickness - bracket_thickness), sz_scale(is_house ? 0.7 : 1.0), box_zscale(shelf_clearance*sz_scale);
 	rand_gen_t rgen(c.create_rgen());
 
@@ -500,15 +500,16 @@ void building_room_geom_t::get_shelf_objects(room_object_t const &c_in, cube_t c
 		add_boxes_to_space(c, objects, bounds, cubes, rgen, num_boxes, 0.42*width*sz_scale*(is_house ? 1.5 : 1.0), 0.4*box_zscale, 0.98*box_zscale, 1, c.flags); // allow_crates=1
 		// add computers; what about monitors?
 		bool const top_shelf(s+1 == num_shelves);
-		float const h_val(0.21*1.1*dz), cheight(0.75*h_val), cwidth(0.44*cheight), cdepth(0.9*cheight); // fixed AR=0.44 to match the texture
+		float const h_val(0.21*floor_spacing), cheight(0.75*h_val), cwidth(0.44*cheight), cdepth(0.9*cheight); // fixed AR=0.44 to match the texture
 		vector3d sz;
 		sz[ c.dim] = 0.5*cdepth;
 		sz[!c.dim] = 0.5*cwidth;
 
 		if (2.1*sz.x < c_sz.x && 2.1*sz.y < c_sz.y && (top_shelf || cheight < shelf_clearance)) { // if it fits in all dims
 			unsigned const num_comps(rgen.rand() % (is_house ? 3 : 6)); // 0-5
-			C.dim  = c.dim; C.dir = !c.dir; // reset dim, flip dir
-			C.type = TYPE_COMPUTER;
+			C.dim   = c.dim; C.dir = !c.dir; // reset dim, flip dir
+			C.type  = TYPE_COMPUTER;
+			C.shape = SHAPE_CUBE;
 
 			for (unsigned n = 0; n < num_comps; ++n) {
 				gen_xy_pos_for_cube_obj(C, S, sz, cheight, rgen);
@@ -522,7 +523,8 @@ void building_room_geom_t::get_shelf_objects(room_object_t const &c_in, cube_t c
 
 		if (2.1*sz.x < c_sz.x && 2.1*sz.y < c_sz.y && (top_shelf || kbd_height < shelf_clearance)) { // if it fits in all dims
 			unsigned const num_kbds(rgen.rand() % 5); // 0-4
-			C.type = TYPE_KEYBOARD;
+			C.type  = TYPE_KEYBOARD;
+			C.shape = SHAPE_CUBE;
 
 			for (unsigned n = 0; n < num_kbds; ++n) {
 				gen_xy_pos_for_cube_obj(C, S, sz, kbd_height, rgen);
@@ -532,8 +534,9 @@ void building_room_geom_t::get_shelf_objects(room_object_t const &c_in, cube_t c
 		}
 		// add bottles
 		unsigned const num_bottles(((rgen.rand()&3) == 0) ? 0 : (rgen.rand() % 9)); // 0-8, 75% chance
-		C.dir  = C.dim = 0;
-		C.type = TYPE_BOTTLE;
+		C.dir   = C.dim = 0;
+		C.type  = TYPE_BOTTLE;
+		C.shape = SHAPE_CYLIN;
 
 		for (unsigned n = 0; n < num_bottles; ++n) {
 			// same as building_t::place_bottle_on_obj()
@@ -556,7 +559,6 @@ void building_room_geom_t::get_shelf_objects(room_object_t const &c_in, cube_t c
 				gen_xy_pos_for_round_obj(C, S, pc_radius, pc_height, pc_edge_spacing, rgen);
 				add_if_not_intersecting(C, objects, cubes);
 			}
-			C.shape = SHAPE_CUBE; // reset for next object type
 		}
 		// add spraypaint cans
 		float const spcan_height(0.55*z_step), spcan_radius(0.17*spcan_height); // fixed size
@@ -573,7 +575,6 @@ void building_room_geom_t::get_shelf_objects(room_object_t const &c_in, cube_t c
 				C.obj_id = rgen.rand(); // used to select emissive color
 				add_if_not_intersecting(C, objects, cubes);
 			}
-			C.shape = SHAPE_CUBE; // reset for next object type
 		}
 		// add large balls to houses
 		if (is_house) {
@@ -584,13 +585,12 @@ void building_room_geom_t::get_shelf_objects(room_object_t const &c_in, cube_t c
 
 			for (unsigned n = 0; n < num_balls; ++n) {
 				unsigned const btype(rgen.rand() % NUM_BALL_TYPES);
-				float const ball_radius(ball_types[btype].radius*1.1*dz/(12*8)); // assumes 8 foot floor spacing, and bt.radius in inches
+				float const ball_radius(ball_types[btype].radius*floor_spacing/(12*8)); // assumes 8 foot floor spacing, and bt.radius in inches
 				if (2.1*ball_radius > min(c_sz.x, c_sz.y)) continue; // shelf is not wide/deep enough for balls of this type
 				gen_xy_pos_for_round_obj(C, S, ball_radius, 2.0*ball_radius, ball_radius, rgen);
 				C.item_flags = btype;
 				add_if_not_intersecting(C, objects, cubes);
 			}
-			C.shape      = SHAPE_CUBE; // reset for next object type
 			C.item_flags = 0; // reset for next object type
 		}
 		// add tape rolls
@@ -598,14 +598,26 @@ void building_room_geom_t::get_shelf_objects(room_object_t const &c_in, cube_t c
 
 		if (min(c_sz.x, c_sz.y) > 3.0*tape_radius) { // add if shelf wide/deep enough
 			unsigned const num_tapes(((rgen.rand()%4) < 3) ? (rgen.rand() % 4) : 0); // 0-3, 75% chance
-			C.dir  = C.dim = 0;
-			C.type = TYPE_TAPE;
+			C.dir   = C.dim = 0;
+			C.type  = TYPE_TAPE;
+			C.shape = SHAPE_CYLIN;
 
 			for (unsigned n = 0; n < num_tapes; ++n) {
 				gen_xy_pos_for_round_obj(C, S, tape_radius, tape_height, 1.25*tape_radius, rgen);
 				C.color = tape_colors[rgen.rand() % NUM_TAPE_COLORS]; // random color
 				add_if_not_intersecting(C, objects, cubes);
 			}
+		}
+		// add flashlight
+		float const fl_height(0.1*floor_spacing), fl_radius(0.2*fl_height);
+
+		if (rgen.rand_float() < 0.25 && min(c_sz.x, c_sz.y) > 3.0*fl_radius) { // add 25% of the time if shelf wide/deep enough
+			C.dir   = C.dim = 0;
+			C.type  = TYPE_FLASHLIGHT;
+			C.shape = SHAPE_CYLIN;
+			C.color = BLACK;
+			gen_xy_pos_for_round_obj(C, S, fl_radius, fl_height, 1.25*fl_radius, rgen);
+			add_if_not_intersecting(C, objects, cubes);
 		}
 	} // for s
 }

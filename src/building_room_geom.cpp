@@ -4191,12 +4191,18 @@ void building_room_geom_t::add_diving_board(room_object_t const &c) {
 
 void building_room_geom_t::add_flashlight(room_object_t const &c) {
 	colorRGBA const color(apply_light_color(c));
-	cube_t bot(c), top(c);
-	bot.z2() = top.z1() = c.z1() + 0.25*c.dz();
-	top.expand_by_xy(-0.3*c.get_radius());
 	rgeom_mat_t &mat(get_metal_material(1, 0, 1)); // shadowed, small
-	mat.add_vcylin_to_verts(bot, color, 0, 1); // draw sides and top
-	mat.add_vcylin_to_verts(top, color, 0, 1); // draw sides and top
+
+	if (c.dz() > max(c.dx(), c.dy())) { // vertical
+		cube_t bot(c), top(c);
+		bot.z2() = top.z1() = c.z1() + 0.25*c.dz();
+		top.expand_by_xy(-0.3*c.get_radius());
+		mat.add_vcylin_to_verts(bot, color, 0, 1); // draw sides and top
+		mat.add_vcylin_to_verts(top, color, 0, 1); // draw sides and top
+	}
+	else { // horizontal
+		// WRITE
+	}
 }
 
 void building_room_geom_t::add_candle(room_object_t const &c) {
