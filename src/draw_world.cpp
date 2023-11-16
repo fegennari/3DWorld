@@ -1953,6 +1953,7 @@ void draw_compass_and_alt() { // and temperature
 	}
 }
 
+// Note: icons are from https://www.svgrepo.com
 string const icon_fns[NUM_ICONS] = {"plus", "shield", "fist", "alcohol", "toilet", "droplet", "oxygen", "carry"};
 
 int get_icon_tid(unsigned icon_id) {

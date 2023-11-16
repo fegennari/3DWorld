@@ -31,6 +31,7 @@ extern building_t const *player_building;
 
 void place_player_at_xy(float xval, float yval);
 void show_key_icon();
+void show_flashlight_icon();
 bool is_shirt_model(room_object_t const &obj);
 bool is_pants_model(room_object_t const &obj);
 bool player_at_full_health();
@@ -854,7 +855,7 @@ public:
 			draw_health_bar(100.0*player_health, 100.0*drunkenness, bladder, YELLOW, is_poisoned, extra_bars);
 		}
 		if (has_key) {show_key_icon();}
-		//if (has_flashlight) {show_flashight_icon();} // TBD
+		if (has_flashlight) {show_flashlight_icon();}
 	}
 	bool apply_fall_damage(float delta_z, float dscale=1.0) {
 		if (!in_building_gameplay_mode()) return 0;
