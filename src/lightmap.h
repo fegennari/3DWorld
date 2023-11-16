@@ -161,20 +161,19 @@ class local_smap_manager_t;
 class light_source { // size = 116
 
 protected:
-	bool dynamic, enabled, user_placed, is_cube_face, is_cube_light, no_shadows;
-	unsigned smap_index, user_smap_id, smap_mgr_id, cube_eflags, num_dlight_rays; // smap_index = index of shadow map texture/data
-	float radius, radius_inv, r_inner, bwidth, near_clip;
+	bool dynamic=0, enabled=0, user_placed=0, is_cube_face=0, is_cube_light=0, no_shadows=0;
+	unsigned smap_index=0, user_smap_id=0, smap_mgr_id=0, cube_eflags=0, num_dlight_rays=0; // smap_index = index of shadow map texture/data
+	float radius=0.0, radius_inv=0.0, r_inner=0.0, bwidth=0.0, near_clip=0.0;
 	point pos, pos2; // point/sphere light: use pos; line/cylinder light: use pos and pos2
 	vector3d dir;
-	colorRGBA color;
+	colorRGBA color=BLACK;
 	cube_t custom_bcube;
 
 	float calc_cylin_end_radius(float falloff=0.0) const;
 	local_smap_manager_t &get_smap_mgr() const;
 
 public:
-	light_source() : dynamic(0), enabled(0), user_placed(0), is_cube_face(0), is_cube_light(0), no_shadows(0), smap_index(0), user_smap_id(0), smap_mgr_id(0), cube_eflags(0),
-		num_dlight_rays(0), radius(0.0f), radius_inv(0.0f), r_inner(0.0f), bwidth(0.0f), near_clip(0.0f), pos(all_zeros), pos2(all_zeros), dir(zero_vector), color(BLACK) {}
+	light_source() {}
 	light_source(float sz, point const &p, point const &p2, colorRGBA const &c, bool id=0, vector3d const &d=zero_vector, float bw=1.0, float ri=0.0, bool icf=0, float nc=0.0);
 	void mark_is_cube_light(unsigned eflags) {is_cube_light = 1; cube_eflags = eflags;}
 	void set_dynamic_state(point const &pos_, vector3d const &dir_, colorRGBA const &color_, bool enabled_) {pos = pos2 = pos_; dir = dir_; color = color_; enabled = enabled_;}

@@ -1034,14 +1034,12 @@ void setup_dlight_textures(shader_t &s, bool enable_dlights_smap) {
 
 
 colorRGBA gen_fire_color(float &cval, float &inten, float rate) {
-
 	inten = max(0.6f, min(1.0f, (inten + 0.04f*rate*fticks*signed_rand_float())));
 	cval  = max(0.0f, min(1.0f, (cval  + 0.02f*rate*fticks*signed_rand_float())));
 	colorRGBA color(1.0, 0.9, 0.7);
 	blend_color(color, color, colorRGBA(1.0, 0.6, 0.2), cval, 0);
 	return color;
 }
-
 
 point get_camera_light_pos() {
 	return (get_camera_pos() + 0.1*CAMERA_RADIUS*cview_dir); // slightly in front of the camera to avoid zero length light_dir vector in dynamic lighting

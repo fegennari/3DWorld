@@ -51,8 +51,8 @@ point bind_point_t::get_updated_bind_pos() const {
 
 // radius == 0.0 is really radius == infinity (no attenuation)
 light_source::light_source(float sz, point const &p, point const &p2, colorRGBA const &c, bool id, vector3d const &d, float bw, float ri, bool icf, float nc) :
-	dynamic(id), enabled(1), user_placed(0), is_cube_face(icf), is_cube_light(0), no_shadows(0), smap_index(0), user_smap_id(0), smap_mgr_id(0), cube_eflags(0),
-	num_dlight_rays(0), radius(sz), radius_inv((radius == 0.0) ? 0.0 : 1.0/radius), r_inner(ri), bwidth(bw), near_clip(nc), pos(p), pos2(p2), dir(d.get_norm()), color(c)
+	dynamic(id), enabled(1), is_cube_face(icf), radius(sz), radius_inv((radius == 0.0) ? 0.0 : 1.0/radius),
+	r_inner(ri), bwidth(bw), near_clip(nc), pos(p), pos2(p2), dir(d.get_norm()), color(c)
 {
 	assert(bw > 0.0 && bw <= 1.0);
 	assert(r_inner <= radius);
