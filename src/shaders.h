@@ -83,7 +83,6 @@ class shader_t : public property_map_t {
 	};
 	typedef map<unsigned, subroutine_val_t> subroutine_map_t;
 	subroutine_map_t subroutines;
-	property_map_t property_map;
 	unsigned user_flags;
 
 	int pm_loc, mvm_loc, mvmi_loc, mvpm_loc, nm_loc; // matrices
