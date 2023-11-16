@@ -28,6 +28,7 @@ int player_in_closet  (0); // uses flags RO_FLAG_IN_CLOSET (player in closet), R
 int player_in_water   (0); // 0=no, 1=standing in water, 2=head underwater
 int player_in_attic   (0); // 0=no, 1=attic with windows, 2=windowless attic
 float building_bcube_expand(0.0), building_ambient_scale(0.0);
+point player_candle_pos;
 cube_t building_occluder;
 building_params_t global_building_params;
 building_t const *player_building(nullptr);
@@ -47,6 +48,7 @@ extern shader_t reflection_shader;
 void get_all_model_bcubes(vector<cube_t> &bcubes); // from model3d.h
 cube_t get_building_indir_light_bounds(); // from building_lighting.cpp
 void register_player_not_in_building();
+bool player_holding_lit_cande();
 void parse_universe_name_str_tables();
 void try_join_house_ext_basements(vect_building_t &buildings);
 void add_sign_text_verts_both_sides(string const &text, cube_t const &sign, bool dim, bool dir, vect_vnctcc_t &verts);
@@ -309,10 +311,20 @@ struct building_lights_manager_t : public city_lights_manager_t {
 		// no room lights if player is hiding in a closed closet/windowless room with light off (prevents light leakage)
 		if (!player_in_dark_room()) {add_building_interior_lights(xlate, lights_bcube);}
 		if (flashlight_on) {add_player_flashlight(0.12);} // add player flashlight, even when outside of building so that flashlight can shine through windows
+		if (camera_in_building && player_holding_lit_cande()) {add_player_candle_light(xlate);}
 		clamp_to_max_lights(xlate, dl_sources);
 		tighten_light_bcube_bounds(dl_sources); // clip bcube to tight bounds around lights for better dlights texture utilization (possible optimization)
 		if (ADD_ROOM_SHADOWS) {setup_shadow_maps(dl_sources, (camera_pdu.pos - xlate), global_building_params.max_shadow_maps);}
 		finalize_lights(dl_sources);
+	}
+	void add_player_candle_light(vector3d const &xlate) {
+		static float cval(0.5), inten(0.75);
+		float const radius(10.0*CAMERA_RADIUS); // based on floor spacing?
+		point const pos((player_candle_pos == all_zeros) ? (camera_pdu.pos - xlate) : player_candle_pos); // use player_candle_pos if valid, otherwise camera pos
+		dl_sources.emplace_back(inten*radius, pos, pos, gen_fire_color(cval, inten, 1.0));
+		dl_sources.back().disable_shadows(); // shadows not needed / not valid for point lights
+		min_eq(lights_bcube.z1(), (pos.z - radius));
+		max_eq(lights_bcube.z2(), (pos.z + radius));
 	}
 	virtual bool enable_lights() const {return (draw_building_interiors || flashlight_on);}
 };

@@ -17,7 +17,7 @@ extern bool camera_in_building;
 extern int display_mode, frame_counter, animate2, player_in_basement;
 extern unsigned room_mirror_ref_tid;
 extern float fticks, office_chair_rot_rate, cur_dlight_pcf_offset, building_ambient_scale;
-extern point pre_smap_player_pos;
+extern point pre_smap_player_pos, player_candle_pos;
 extern cube_t smap_light_clip_cube;
 extern pos_dir_up camera_pdu;
 extern building_t const *player_building;
@@ -1201,6 +1201,7 @@ void building_room_geom_t::draw_interactive_player_obj(carried_item_t const &c, 
 			float const radius(0.8*c.get_radius()), height(4.0*radius);
 			point const camera_bs(get_camera_pos() - xlate);
 			point center(obj.xc(), obj.yc(), (obj.z2() + 0.2*height));
+			player_candle_pos = center;
 			center += 0.1*radius*(camera_bs - center).get_norm(); // move slightly in front of the wick
 			quad_batch_draw qbd;
 			qbd.add_animated_billboard(center, camera_bs, up_vector, WHITE, radius, 0.5*height, fract(2.0f*tfticks/TICKS_PER_SECOND));
