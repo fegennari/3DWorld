@@ -10,6 +10,7 @@
 
 unsigned const MAX_ROOM_GEOM_GEN_PER_FRAME = 1;
 
+quad_batch_draw candle_qbd;
 vect_room_object_t pending_objs;
 object_model_loader_t building_obj_model_loader;
 
@@ -1197,16 +1198,13 @@ void building_room_geom_t::draw_interactive_player_obj(carried_item_t const &c, 
 		tmp_rgeom.add_candle(obj);
 		tmp_rgeom.mats_small.upload_draw_and_clear(s);
 		
-		if (c.is_lit()) { // draw flame
+		if (c.is_lit()) { // add flame; will be drawn after building interior geom
+			player_candle_pos.assign(obj.xc(), obj.yc(), obj.z2());
 			float const radius(0.8*c.get_radius()), height(4.0*radius);
 			point const camera_bs(get_camera_pos() - xlate);
-			point center(obj.xc(), obj.yc(), (obj.z2() + 0.2*height));
-			player_candle_pos = center;
+			point center(player_candle_pos + 0.2*height*plus_z);
 			center += 0.1*radius*(camera_bs - center).get_norm(); // move slightly in front of the wick
-			quad_batch_draw qbd;
-			qbd.add_animated_billboard(center, camera_bs, up_vector, WHITE, radius, 0.5*height, fract(2.0f*tfticks/TICKS_PER_SECOND));
-			draw_emissive_billboards(qbd, FIRE_TEX);
-			s.make_current();
+			candle_qbd.add_animated_billboard(center, camera_bs, up_vector, WHITE, radius, 0.5*height, fract(2.0f*tfticks/TICKS_PER_SECOND));
 			
 			if (animate2) { // add smoke particles about once every 20 frames
 				static rand_gen_t smoke_rgen;
@@ -1225,6 +1223,10 @@ void building_room_geom_t::draw_interactive_player_obj(carried_item_t const &c, 
 	tid_nm_pair_dstate_t state(s);
 	mat.upload_draw_and_clear(state);
 	if (needs_blend) {disable_blend();}
+}
+
+void draw_candle_flames() {
+	draw_emissive_billboards(candle_qbd, FIRE_TEX);
 }
 
 class water_draw_t {

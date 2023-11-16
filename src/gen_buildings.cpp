@@ -52,6 +52,7 @@ bool player_holding_lit_cande();
 void parse_universe_name_str_tables();
 void try_join_house_ext_basements(vect_building_t &buildings);
 void add_sign_text_verts_both_sides(string const &text, cube_t const &sign, bool dim, bool dir, vect_vnctcc_t &verts);
+void draw_candle_flames();
 
 float get_door_open_dist   () {return 3.5*CAMERA_RADIUS;}
 bool player_in_ext_basement() {return (player_in_basement == 3 && player_building != nullptr);}
@@ -3387,6 +3388,7 @@ public:
 				reset_interior_lighting_and_end_shader(s);
 			}
 		} // end draw_interior
+		draw_candle_flames();
 
 		// everything after this point is part of the building exteriors and uses city lights rather than building room lights;
 		// when the player is in the extended basement we still need to draw the exterior wall and door
