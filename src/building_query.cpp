@@ -581,6 +581,7 @@ bool check_ramp_collision(room_object_t const &c, point &pos, point const &p_las
 	if (!get_sphere_poly_int_val(pos, radius, ramp.pts, ramp.npts, normal, thickness, dist, coll_normal)) return 0;
 	if (cnorm) {*cnorm = coll_normal;}
 	pos += coll_normal*dist;
+	pos += vector3d(coll_normal.x, coll_normal.y, 0.0)*0.1*radius; // move downhill (slowly when rolling)
 	return 1;
 }
 
