@@ -95,7 +95,7 @@ bool building_t::is_basement_room_under_mesh_not_int_bldg(cube_t &room, building
 	return 1;
 }
 bool building_t::is_basement_room_placement_valid(cube_t &room, ext_basement_room_params_t &P, bool dim, bool dir, bool *add_end_door, building_t const *exclude) const {
-	float const wall_thickness(get_wall_thickness());
+	float const wall_thickness(get_wall_thickness()), wall_expand_toler(0.1*wall_thickness);
 	cube_t test_cube(room);
 	test_cube.expand_in_dim(2, -0.01*test_cube.dz()); // shrink slightly so that rooms on different floors can cross over each other
 	
@@ -104,8 +104,9 @@ bool building_t::is_basement_room_placement_valid(cube_t &room, ext_basement_roo
 		room_exp.expand_by_xy(wall_thickness + get_trim_thickness());
 		if (room_exp.intersects(P.rooms.front())) return 0;
 	}
-	test_cube.d[dim][!dir] -= (dir ? -1.0 : 1.0)*0.1*wall_thickness; // shrink slightly to avoid intersections with our parent room; or pass in the parent room?
-	// we may want to expand slightly in !dim to prevent walls from intersecting, though that changes the results, and may not be needed since walls straddle room boundaries
+	test_cube.d[dim][!dir] -= (dir ? -1.0 : 1.0)*wall_expand_toler; // shrink slightly to avoid intersections with our parent room; or pass in the parent room?
+	test_cube.d[dim][ dir] -= (dir ? -1.0 : 1.0)*wall_expand_toler; // expand the end slightly
+	test_cube.expand_in_dim(!dim, wall_expand_toler); // expand slightly on the sides to avoid adjacent rooms
 	float const room_len(room.get_sz_dim(dim)), room_width(room.get_sz_dim(!dim));
 	extb_room_t *end_conn_room(nullptr);
 
