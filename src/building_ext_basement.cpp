@@ -272,7 +272,7 @@ void building_t::maybe_assign_extb_room_as_swimming(rand_gen_t &rgen) {
 	bool const pref_exp_other_dir(rgen.rand_bool());
 	bool const exp_dims[3] = {exp_dim, !exp_dim, !exp_dim}, exp_dirs[3] = {exp_dir, pref_exp_other_dir, !pref_exp_other_dir};
 
-	for (unsigned d = 0; d < 3; ++d) {
+	for (unsigned d = 0; d < 3; ++d) { // {away from door, to one side, to the other side}
 		bool const edim(exp_dims[d]), edir(exp_dirs[d]);
 		float &end_wall(room.d[edim][edir]);
 		float const step_dist((edir ? 1.0 : -1.0)*exp_step), exp_max(((d == 0) ? 2.0 : 1.0)*room.get_sz_dim(edim)); // 2-3x longer
@@ -287,8 +287,7 @@ void building_t::maybe_assign_extb_room_as_swimming(rand_gen_t &rgen) {
 			bool had_coll(0);
 
 			for (auto r = interior->ext_basement_rooms_start(); r != rooms.end(); ++r) {
-				if ((r - rooms.begin()) == (unsigned)largest_valid_room) continue; // skip self
-				if (r->intersects(slice)) {had_coll = 1; break;}
+				if (int(r - rooms.begin()) != largest_valid_room && r->intersects_no_adj(slice)) {had_coll = 1; break;} // skip self
 			}
 			if (had_coll || !is_basement_room_under_mesh_not_int_bldg(slice)) break;
 			end_wall += step_dist;
