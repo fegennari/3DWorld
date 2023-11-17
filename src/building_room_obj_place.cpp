@@ -2228,8 +2228,9 @@ void building_t::add_swimming_pool_room_objs(rand_gen_t rgen, room_t const &room
 			side.z2() += tile_thickness; // fill the gap with the tiles on the floor above
 			side.d[dim][!dir]  = pool.d[dim][dir];
 			side.d[dim][ dir] += (dir ? 1.0 : -1.0)*tile_thickness;
+			expand_to_nonzero_area(side, tile_thickness, dim);
 			objs.emplace_back(side, TYPE_POOL_TILE, room_id, dim, dir, RO_FLAG_ADJ_LO); // flag RO_FLAG_ADJ_LO for being inside the pool
-			// add ledge around the pool
+			// add ledge around the pool as wall trim
 			cube_t ledge(side);
 			ledge.z1()  = side.z2() - 0.025*floor_spacing; // half the default gap between the water surface and the top edge of the pool
 			ledge.z2() += trim_thickness;
@@ -2269,6 +2270,7 @@ void building_t::add_swimming_pool_room_objs(rand_gen_t rgen, room_t const &room
 			cube_t tile(wall);
 			tile.d[d][!dir]  = wall.d[d][dir]; // edge of wall facing the room
 			tile.d[d][ dir] += (dir ? 1.0 : -1.0)*tile_thickness;
+			expand_to_nonzero_area(tile, tile_thickness, d);
 			objs.emplace_back(tile, TYPE_POOL_TILE, room_id, d, !dir, RO_FLAG_NOCOLL);
 		} // for wall
 	} // for d
