@@ -1706,7 +1706,7 @@ void building_t::get_basment_ext_wall_verts(building_draw_t &bdraw) const {
 }
 
 void set_skip_faces_for_nearby_cube_edge(cube_t const &c, cube_t const &C, float dist, bool dim, unsigned &dim_mask) {
-	for (unsigned dir = 0; dir < 2; ++dir) { // easy case: skip faces along the edges of the building bcube
+	for (unsigned dir = 0; dir < 2; ++dir) { // easy case: skip faces along the edges of the building bcube or along an extended basement exterior facing wall
 		if (fabs(c.d[dim][dir] - C.d[dim][dir]) < dist) {dim_mask |= (1<<(2*(dim)+dir+3));}
 	}
 }
@@ -1764,7 +1764,8 @@ void building_t::get_all_drawn_interior_verts(building_draw_t &bdraw) {
 
 					// ext basement rooms don't need to have their exterior wall surfaces drawn, but only valid for walls not shared between hallways and connected rooms
 					if (in_ext_basement && fabs(i->d[!dim][0] - r->d[!dim][0]) < extb_wall_thresh && fabs(i->d[!dim][1] - r->d[!dim][1]) < extb_wall_thresh) {
-						set_skip_faces_for_nearby_cube_edge(*i, *r, wall_thickness, dim, dim_mask);
+						// use slightly more than half wall_thickness here so that we pick up the edges of the current room but not nearby adjacent rooms
+						set_skip_faces_for_nearby_cube_edge(*i, *r, 0.51*wall_thickness, dim, dim_mask);
 					}
 				} // for r
 			}
