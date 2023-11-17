@@ -924,7 +924,7 @@ public:
 			return;
 		}
 		if (is_poisoned) {
-			player_health -= 0.0004*fticks_clamped;
+			player_health -= 0.0002*fticks_clamped;
 
 			if (player_is_dead()) {
 				string const poison_type(poison_from_spider ? " of spider venom" : " of snake venom");
