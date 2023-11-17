@@ -709,11 +709,11 @@ void place_book(room_object_t &obj, cube_t const &parent, float length, float ma
 	if (item_ix > 0 && rgen.rand_bool()) return obj; // no more items
 	cube_t drawer(drawer_in); // copy so that we can adjust z1
 	unsigned const type_ix(rgen.rand() % 11); // 0-10
-	unsigned const types_dresser [11] = {TYPE_BOX, TYPE_PAPER, TYPE_FOLD_SHIRT, TYPE_FOLD_SHIRT, TYPE_BOOK, TYPE_KEY, TYPE_BOTTLE, TYPE_MONEY,  TYPE_PHONE,  TYPE_SPRAYCAN, TYPE_TAPE};
-	unsigned const types_desk    [11] = {TYPE_BOX, TYPE_PAPER, TYPE_PEN, TYPE_STAPLER, TYPE_BOOK, TYPE_KEY,           TYPE_BOTTLE, TYPE_MONEY,  TYPE_PHONE,  TYPE_SPRAYCAN, TYPE_TAPE};
-	unsigned const types_attic   [11] = {TYPE_BOX, TYPE_PAPER, TYPE_PEN, TYPE_PEN,     TYPE_BOOK, TYPE_KEY,           TYPE_BOTTLE, TYPE_BOX,    TYPE_BOOK,   TYPE_SPRAYCAN, TYPE_TAPE};
-	unsigned const types_kcabinet[11] = {TYPE_BOX, TYPE_PAPER, TYPE_PEN, TYPE_PEN,     TYPE_BOOK, TYPE_PLATE,         TYPE_BOTTLE, TYPE_BOTTLE, TYPE_SILVER, TYPE_SPRAYCAN, TYPE_TAPE};
-	unsigned const types_fcabinet[11] = {TYPE_BOX, TYPE_PAPER, TYPE_PEN, TYPE_PEN,     TYPE_BOOK, TYPE_STAPLER,       TYPE_PAPER,  TYPE_BOOK,   TYPE_TAPE,   TYPE_STAPLER,  TYPE_TAPE};
+	unsigned const types_dresser [11] = {TYPE_FOLD_SHIRT, TYPE_PAPER,      TYPE_BOX, TYPE_FOLD_SHIRT, TYPE_BOOK, TYPE_KEY,     TYPE_BOTTLE, TYPE_MONEY,  TYPE_PHONE,  TYPE_SPRAYCAN, TYPE_TAPE};
+	unsigned const types_desk    [11] = {TYPE_FLASHLIGHT, TYPE_PAPER,      TYPE_PEN, TYPE_STAPLER,    TYPE_BOOK, TYPE_KEY,     TYPE_BOTTLE, TYPE_MONEY,  TYPE_PHONE,  TYPE_SPRAYCAN, TYPE_TAPE};
+	unsigned const types_attic   [11] = {TYPE_BOX,        TYPE_PAPER,      TYPE_PEN, TYPE_PEN,        TYPE_BOOK, TYPE_KEY,     TYPE_BOTTLE, TYPE_BOX,    TYPE_BOOK,   TYPE_SPRAYCAN, TYPE_TAPE};
+	unsigned const types_kcabinet[11] = {TYPE_BOX,        TYPE_FLASHLIGHT, TYPE_PEN, TYPE_PEN,        TYPE_BOOK, TYPE_PLATE,   TYPE_BOTTLE, TYPE_BOTTLE, TYPE_SILVER, TYPE_SPRAYCAN, TYPE_TAPE};
+	unsigned const types_fcabinet[11] = {TYPE_BOX,        TYPE_PAPER,      TYPE_PEN, TYPE_PEN,        TYPE_BOOK, TYPE_STAPLER, TYPE_PAPER,  TYPE_BOOK,   TYPE_TAPE,   TYPE_STAPLER,  TYPE_TAPE};
 	unsigned obj_type(0);
 	if (c.in_attic())                 {obj_type = types_attic   [type_ix];} // custom object overrides for attic item drawers
 	else if (c.type == TYPE_DESK)     {obj_type = types_desk    [type_ix];}
@@ -727,7 +727,7 @@ void place_book(room_object_t &obj, cube_t const &parent, float length, float ma
 	if (obj_type == TYPE_KEY && item_ix > 0) {obj_type = TYPE_BOTTLE;} // key must be first item/no two kes in one drawer
 	// object stacking logic
 	bool const is_stackable(obj_type == TYPE_BOX || obj_type == TYPE_PAPER || obj_type == TYPE_BOOK || obj_type == TYPE_PLATE || obj_type == TYPE_TAPE || obj_type == TYPE_FOLD_SHIRT);
-	bool const is_single_item(obj_type == TYPE_BOTTLE || obj_type == TYPE_SPRAYCAN); // these two don't combine well with other items since they're large horizontal cylinders
+	bool const is_single_item(obj_type == TYPE_BOTTLE || obj_type == TYPE_SPRAYCAN || obj_type == TYPE_FLASHLIGHT); // don't combine well with others since they're large horiz cylinders
 	
 	if (item_ix == 0) {stack_z1 = drawer.z1();} // base case
 	else if (is_stackable) {
@@ -836,6 +836,15 @@ void place_book(room_object_t &obj, cube_t const &parent, float length, float ma
 		obj = room_object_t(drawer, TYPE_SPRAYCAN, c.room_id, dim, rgen.rand_bool(), 0, 1.0, SHAPE_CYLIN, spcan_colors[rgen.rand() % NUM_SPCAN_COLORS]);
 		obj.z2()   = obj.z1() + diameter;
 		obj.obj_id = rgen.rand(); // used to select emissive color
+		set_rand_pos_for_sz(obj, dim, length, diameter, rgen);
+		break;
+	}
+	case TYPE_FLASHLIGHT: // flashlight
+	{
+		bool const dim(c.dim ^ bool(per_drawer_ix & 1)); // random orient, but consistent across the items in the drawer
+		float const length(rgen.rand_uniform(0.8, 0.9)*min(1.8f*sz.z, min(sz.x, sz.y))), diameter(0.4*length);
+		obj = room_object_t(drawer, TYPE_FLASHLIGHT, c.room_id, dim, rgen.rand_bool(), 0, 1.0, SHAPE_CYLIN, BLACK);
+		obj.z2() = obj.z1() + diameter;
 		set_rand_pos_for_sz(obj, dim, length, diameter, rgen);
 		break;
 	}

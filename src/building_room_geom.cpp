@@ -4192,17 +4192,13 @@ void building_room_geom_t::add_diving_board(room_object_t const &c) {
 void building_room_geom_t::add_flashlight(room_object_t const &c) {
 	colorRGBA const color(apply_light_color(c));
 	rgeom_mat_t &mat(get_metal_material(1, 0, 1)); // shadowed, small
-
-	if (c.dz() > max(c.dx(), c.dy())) { // vertical
-		cube_t bot(c), top(c);
-		bot.z2() = top.z1() = c.z1() + 0.25*c.dz();
-		top.expand_by_xy(-0.3*c.get_radius());
-		mat.add_vcylin_to_verts(bot, color, 0, 1); // draw sides and top
-		mat.add_vcylin_to_verts(top, color, 0, 1); // draw sides and top
-	}
-	else { // horizontal
-		// WRITE
-	}
+	cube_t bot(c), top(c);
+	unsigned const dim(get_max_dim(c.get_size())), d1((dim+1)%3), d2((dim+2)%3);
+	bot.d[dim][!c.dir] = top.d[dim][c.dir] = (c.d[dim][c.dir] + 0.25*c.get_sz_dim(dim)*(c.dir ? -1.0 : 1.0));
+	top.expand_in_dim(d1, -0.15*c.get_sz_dim(d1));
+	top.expand_in_dim(d2, -0.15*c.get_sz_dim(d2));
+	mat.add_ortho_cylin_to_verts(bot, color, dim, (dim != 2), 1); // draw sides, top, and bottom if horizontal
+	mat.add_ortho_cylin_to_verts(top, color, dim, c.dir, !c.dir); // draw sides and top
 }
 
 void building_room_geom_t::add_candle(room_object_t const &c) {
