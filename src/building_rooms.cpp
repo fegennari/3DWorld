@@ -422,7 +422,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 					objs.emplace_back(blocker, TYPE_BLOCKER, room_id, conn_dim, d, RO_FLAG_INVIS);
 				}
 			}
-			if (r->no_geom || is_garage_or_shed) {
+			if (r->no_geom || is_garage_or_shed || is_swim_pool_room) {
 				if (is_garage_or_shed) {
 					if (init_rtype_f0 == RTYPE_GARAGE) {
 						room_center.z = add_flooring(*r, room_center.z, room_id, tot_light_amt, FLOORING_CONCRETE);
@@ -430,6 +430,10 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 					}
 					// is there enough clearance between shelves and a car parked in the garage? there seems to be in all the cases I've seen
 					add_storage_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, is_basement);
+				}
+				if (is_swim_pool_room) {
+					assert(is_ext_basement); // for now, only in extended basements
+					add_swimming_pool_room_objs(rgen, *r, room_center.z, room_id, tot_light_amt);
 				}
 				add_outlets_to_room(rgen, *r, room_center.z, room_id, objs_start, is_ground_floor, is_basement);
 				if (has_light) {add_light_switches_to_room(rgen, *r, room_center.z, room_id, objs_start, is_ground_floor, is_basement);} // shed, garage, or hallway
@@ -444,11 +448,6 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 					if (is_ground_floor) {r->assign_to(RTYPE_LOBBY, f);} // first floor primary hallway, make it the lobby
 				}
 				continue; // no other geometry for this room
-			}
-			if (is_swim_pool_room) {
-				assert(is_ext_basement); // for now, only in extended basements
-				add_swimming_pool_room_objs(rgen, *r, room_center.z, room_id, tot_light_amt);
-				continue;
 			}
 			//if (has_stairs && !pri_hall.is_all_zeros()) continue; // no other geometry in office building base part rooms that have stairs
 			unsigned const floor_mask(1<<f);
