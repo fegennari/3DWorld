@@ -1451,7 +1451,10 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			// include lights above or near the parking garage ramp
 			stairs_light |= (light_in_basement && has_pg_ramp() && interior->pg_ramp.contains_pt_xy_exp(i->get_cube_center(), window_vspacing));
 
-			if (check_attic && floor_is_below && camera_bs.z > attic_access.z1() && room.contains_cube_xy(attic_access)) {
+			if (player_in_pool && is_over_pool) {
+				// camera and light both in pool room - keep it
+			}
+			else if (check_attic && floor_is_below && camera_bs.z > attic_access.z1() && room.contains_cube_xy(attic_access)) {
 				// camera in attic, possibly looking down through attic access door, and light is in the room below - keep it
 			}
 			else if (check_attic && floor_is_above && lpos.z > attic_access.z2() && camera_room >= 0 && get_room(camera_room).contains_cube_xy(attic_access)) {
@@ -1673,7 +1676,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		// check for dynamic shadows; check the player first; use full light radius
 		if (camera_surf_collide && (camera_in_building || camera_can_see_ext_basement) && dist_less_than(lpos_rot, camera_bs, light_radius)) {
 			bool player_in_this_room(player_on_attic_stairs && (is_in_attic || room.intersects_xy(interior->attic_access))); // ladder case
-			player_in_this_room |= (player_in_pool && int(i->room_id) == interior->pool.room_ix); // pool case
+			player_in_this_room |= (player_in_pool && is_over_pool); // pool case
 
 			if (clipped_bc.contains_pt(camera_rot) || clipped_bc.contains_pt(point(camera_rot.x, camera_rot.y, player_feet_zval)) || player_in_this_room) {
 				// must update shadow maps for the room above if the player is on the stairs or in the same room when there are stairs
