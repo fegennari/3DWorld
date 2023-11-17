@@ -280,7 +280,7 @@ bool building_t::is_room_office_bathroom(room_t &room, float zval, unsigned floo
 
 // Note: must be first placed object
 bool building_t::add_desk_to_room(rand_gen_t rgen, room_t const &room, vect_cube_t const &blockers, colorRGBA const &chair_color,
-	float zval, unsigned room_id, unsigned floor, float tot_light_amt, unsigned objs_start, bool is_basement)
+	float zval, unsigned room_id, unsigned floor, float tot_light_amt, unsigned objs_start, bool is_basement, unsigned desk_ix)
 {
 	cube_t const room_bounds(get_walkable_room_bounds(room));
 	float const vspace(get_window_vspace());
@@ -307,13 +307,14 @@ bool building_t::add_desk_to_room(rand_gen_t rgen, room_t const &room, vect_cube
 		unsigned const desk_obj_ix(objs.size());
 		room_object_t const desk(c, TYPE_DESK, room_id, dim, !dir, 0, tot_light_amt, (is_tall ? SHAPE_TALL : SHAPE_CUBE));
 		objs.push_back(desk);
+		set_obj_id(objs);
+		objs.back().obj_id += 123*desk_ix; // set even more differently per-desk so that they have different drawer contents
 
 		if (desk.desk_has_drawers()) { // place blocker in front of drawers so that they have room to open
 			room_object_t drawers(get_desk_drawers_part(desk));
 			drawers.d[dim][!dir] += dsign*drawers.get_sz_dim(dim);
 			objs.emplace_back(drawers, TYPE_BLOCKER, room_id, dim, !dir, RO_FLAG_INVIS);
 		}
-		set_obj_id(objs);
 		bool const add_computer(building_obj_model_loader.is_model_valid(OBJ_MODEL_TV) && rgen.rand_bool());
 
 		if (add_computer) {
@@ -417,7 +418,7 @@ bool building_t::add_office_objs(rand_gen_t rgen, room_t const &room, vect_cube_
 		room_object_t const &maybe_chair(objs.back());
 		bool const added_chair(maybe_chair.type == TYPE_CHAIR || maybe_chair.type == TYPE_OFF_CHAIR);
 		if (added_chair) {blockers.push_back(maybe_chair);}
-		add_desk_to_room(rgen, room, blockers, chair_color, zval, room_id, floor, tot_light_amt, objs_start, is_basement);
+		add_desk_to_room(rgen, room, blockers, chair_color, zval, room_id, floor, tot_light_amt, objs_start, is_basement, 1); // desk_ix=1
 		if (added_chair) {blockers.pop_back();} // remove the chair if it was added
 		blockers.pop_back(); // remove the first desk blocker
 	}
