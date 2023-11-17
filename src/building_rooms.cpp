@@ -481,6 +481,9 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				else if (init_rtype_f0 == RTYPE_SERVER) {
 					added_obj = no_whiteboard = no_plants = add_server_room_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);
 				}
+				else if (init_rtype_f0 == RTYPE_SECURITY) {
+					added_obj = no_whiteboard = add_security_room_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);
+				}
 			}
 			// bedroom or bathroom case; need to check first floor even if must_be_bathroom
 			if (!added_obj && allow_br && !is_tall_room && can_be_bedroom_or_bathroom(*r, f)) {

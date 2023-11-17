@@ -788,7 +788,7 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 
 			// add utlity and server room(s)
 			unsigned const NUM_UTIL_RTYPES = 2;
-			unsigned const UTIL_RTYPES      [NUM_UTIL_RTYPES] = {RTYPE_UTILITY, RTYPE_SERVER};
+			unsigned const UTIL_RTYPES      [NUM_UTIL_RTYPES] = {RTYPE_UTILITY, RTYPE_SERVER}; // TODO: RTYPE_SECURITY
 			unsigned const UTIL_RTYPE_COUNTS[NUM_UTIL_RTYPES] = {MAX_OFFICE_UTILITY_ROOMS, 1};
 
 			for (unsigned rtype = 0; rtype < NUM_UTIL_RTYPES; ++rtype) {

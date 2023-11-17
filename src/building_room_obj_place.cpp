@@ -2557,6 +2557,12 @@ bool building_t::add_server_room_objs(rand_gen_t rgen, room_t const &room, float
 	return 1;
 }
 
+bool building_t::add_security_room_objs(rand_gen_t rgen, room_t const &room, float &zval, unsigned room_id, float tot_light_amt, unsigned objs_start) { // for office buildings
+	// TODO
+	//add_door_sign("Security Room", room, zval, room_id, tot_light_amt);
+	return 0;
+}
+
 void building_t::place_book_on_obj(rand_gen_t &rgen, room_object_t const &place_on, unsigned room_id, float tot_light_amt, unsigned objs_start, bool use_dim_dir) {
 	point center(place_on.get_cube_center());
 	for (unsigned d = 0; d < 2; ++d) {center[d] += 0.1*place_on.get_sz_dim(d)*rgen.rand_uniform(-1.0, 1.0);} // add a slight random shift
