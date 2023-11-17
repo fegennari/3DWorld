@@ -231,6 +231,12 @@ void extend_adj_cubes(cube_t const &oldc, cube_t const &newc, vect_cube_t &cubes
 				else {c.d[dim][dir] = new_pos;} // translate edge by the same amount
 			}
 		}
+		float const z2_ext(newc.z2() - oldc.z2());
+		if (z2_ext == 0.0) {} // no z extend
+		else if (wall_dim < 2) { // wall
+			if (c.z2() <= oldc.z2()) {c.z2() += z2_ext;} // extend wall upward (not wall above the door)
+		}
+		else if (c.zc() > oldc.zc() && c.contains_pt_xy(oldc.get_cube_center())) {c.translate_dim(2, z2_ext);} // extend ceiling upward
 	} // for c
 }
 void building_t::maybe_assign_extb_room_as_swimming(rand_gen_t &rgen) {
@@ -264,7 +270,7 @@ void building_t::maybe_assign_extb_room_as_swimming(rand_gen_t &rgen) {
 	if (doorways.empty()) {std::cerr << "Error: No doorway found for pool in room " << room.str() << endl;} // can this ever fail?
 
 	// attempt to expand the room so that we can fit a larger pool; assume connected to a hallway with <door>, and expand away from door
-	float const wall_thickness(get_wall_thickness()), wall_pad(2.0*wall_thickness + get_trim_thickness()), exp_step(0.25*floor_spacing);
+	float const wall_thickness(get_wall_thickness()), wall_pad(2.0*wall_thickness + get_trim_thickness()), exp_step(0.25*floor_spacing), fc_thickness(get_fc_thickness());
 	room_t const orig_room(room);
 	bool const long_dim(room.dx() < room.dy()); // likely door.dim
 	bool const exp_dim(doorways.empty() ? long_dim : doorways.front().dim);
@@ -295,6 +301,38 @@ void building_t::maybe_assign_extb_room_as_swimming(rand_gen_t &rgen) {
 			end_wall += step_dist;
 		} // for n
 	} // for d
+	if (room.z2() < basement.z2()) { // try to expand upward for a higher ceiling if on a lower level (and ceiling doesn't go above ground_floor_z1)
+		unsigned const z_exp_num = 10;
+		float const z_exp_step(0.1*floor_spacing);
+
+		for (unsigned n = 0; n < z_exp_num; ++n) {
+			cube_t slice(room);
+			set_cube_zvals(slice, room.z2(), (room.z2() + z_exp_step));
+			if (slice.intersects(basement)) break;
+			bool had_coll(0);
+
+			for (auto r = interior->ext_basement_rooms_start(); r != rooms.end(); ++r) {
+				if (int(r - rooms.begin()) != largest_valid_room && r->intersects_no_adj(slice)) {had_coll = 1; break;} // skip self
+			}
+			if (had_coll || !is_basement_room_under_mesh_not_int_bldg(slice)) break;
+			room.z2() = slice.z2(); // extend upward
+		} // for n
+		if (room.z2() > orig_room.z2()) { // was extended vertically; add missing wall sections above doors
+			cube_t room_exp(room);
+			room_exp.expand_by_xy(wall_thickness);
+
+			for (door_stack_t &ds : interior->door_stacks) {
+				if (!ds.intersects(room_exp)) continue; // door not connected to this room
+				ds.mult_floor_room = 1; // counts as multi-floor (for drawing top edge)
+				assert(ds.first_door_ix < interior->doors.size());
+				interior->doors[ds.first_door_ix].mult_floor_room = 1;
+				cube_t wall(ds);
+				set_wall_width(wall, ds.get_center_dim(ds.dim), 0.5*wall_thickness, ds.dim);
+				set_cube_zvals(wall, ds.z2(), (room.z2() - fc_thickness));
+				interior->walls[ds.dim].push_back(wall);
+			} // for ds
+		}
+	}
 	assert(room.is_strictly_normalized());
 	bool const was_extended(room != orig_room);
 	room.is_single_floor = 1; // even if it was extended upward
@@ -305,7 +343,7 @@ void building_t::maybe_assign_extb_room_as_swimming(rand_gen_t &rgen) {
 		for (unsigned d = 0; d < 2; ++d) {extend_adj_cubes(orig_room, room, interior->walls[d], wall_thickness, d);}
 		interior->basement_ext_bcube.union_with_cube(room);
 	}
-	float const doorway_width(get_doorway_width()), fc_thickness(get_fc_thickness()), min_spacing(1.5*doorway_width), floor_zval(room.z1() + fc_thickness);
+	float const doorway_width(get_doorway_width()), min_spacing(1.5*doorway_width), floor_zval(room.z1() + fc_thickness);
 	indoor_pool_t &pool(interior->pool);
 	pool.copy_from(get_walkable_room_bounds(room));
 	pool.expand_by_xy(-min_spacing);
