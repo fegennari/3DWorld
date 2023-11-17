@@ -945,17 +945,17 @@ bool building_t::check_pos_in_unlit_room_recur(point const &pos, set<unsigned> &
 	if ( room.is_ext_basement_conn   ()) return 0; // be safe/conservative and treat rooms connected to two buildings as potentially lit
 	float const floor_spacing(get_window_vspace());
 	if (is_room_backrooms(room) && room.dz() > 1.5*floor_spacing) return 0; // multi-floor backrooms: assume lit as this is too difficult to determine
-	unsigned const floor_ix(max(0.0f, (pos.z - room.z1()))/floor_spacing);
+	unsigned const floor_ix(room.is_single_floor ? 0 : max(0.0f, (pos.z - room.z1()))/floor_spacing);
 	if (room.has_skylight && pos.z > (room.z2() - floor_spacing)) return 0; // top floor of room with a skylight
 	if (room.has_elevator || (!room.is_ext_basement() && room.has_stairs_on_floor(floor_ix))) return 0; // assume light can come from stairs (not in ext basement) or open elevator
 	// check if all lights are off
 	auto objs_end(interior->room_geom->get_placed_objs_end()); // skip buttons/stairs/elevators
 
 	for (auto i = interior->room_geom->objs.begin(); i != objs_end; ++i) {
-		if ((int)i->room_id != room_id) continue; // wrong room
+		if ((int)i->room_id != room_id)               continue; // wrong room
 		if (!i->is_light_type() || !i->is_light_on()) continue; // not a light, or light not on
 		//if (i->light_is_out()) continue; // broken light; continuing here doesn't work because sparks won't be drawn
-		if (unsigned(max(0.0f, (i->z1() - room.z1()))/floor_spacing) != floor_ix) continue; // different floors
+		if (!room.is_single_floor && unsigned(max(0.0f, (i->z1() - room.z1()))/floor_spacing) != floor_ix) continue; // different floors
 		return 0; // lit by a room light, including one in a closet (Note that closets are only in house bedrooms, which should always have windows anyway)
 	}
 	rooms_visited.insert(room_id); // mark this room as visited before making recursive calls
