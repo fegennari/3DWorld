@@ -296,6 +296,7 @@ void building_t::maybe_assign_extb_room_as_swimming(rand_gen_t &rgen) {
 	} // for d
 	assert(room.is_strictly_normalized());
 	bool const was_extended(room != orig_room);
+	room.is_single_floor = 1; // even if it was extended upward
 
 	if (was_extended) { // room was extended; move or extend any connected walls, ceilings, and floors
 		extend_adj_cubes(orig_room, room, interior->floors,   wall_thickness);
@@ -1330,6 +1331,7 @@ void populate_params_from_building(building_interior_t const &bi, ext_basement_r
 }
 void building_t::try_connect_ext_basement_to_building(building_t &b) {
 	assert(has_ext_basement() && b.has_ext_basement());
+	assert(ground_floor_z1 == b.ground_floor_z1); // must be at same elevation
 	float const floor_spacing(get_window_vspace()), wall_thickness(get_wall_thickness()), z_toler(0.1*get_trim_thickness());
 	float const doorway_width(get_doorway_width()), wall_hwidth(0.8*doorway_width), min_shared_wall_len(2.01*(wall_hwidth + 2.0*wall_thickness));
 	float const max_connect_dist(EXT_BASEMENT_JOIN_DIST*floor_spacing), min_connect_dist(2.1*doorway_width); // need enough space to fit two open doors
@@ -1337,7 +1339,6 @@ void building_t::try_connect_ext_basement_to_building(building_t &b) {
 	cube_t const &other_eb_bc(b.interior->basement_ext_bcube);
 	vector<room_t> const &rooms1(interior->rooms), &rooms2(b.interior->rooms);
 	unsigned const rstart1(interior->ext_basement_hallway_room_id), rstart2(b.interior->ext_basement_hallway_room_id);
-	assert(interior->basement_ext_bcube.z2() == other_eb_bc.z2()); // must be at same elevation
 	assert(rstart1 < rooms1.size() && rstart2 < rooms2.size());
 	auto r1_begin(rooms1.begin() + rstart1), r2_begin(rooms2.begin() + rstart2);
 	ext_basement_room_params_t P, Pb, Padd; // P=input rooms for *this, Pb=input rooms for b, Padd=new rooms output for *this

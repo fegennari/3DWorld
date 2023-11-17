@@ -2246,7 +2246,7 @@ void building_t::add_swimming_pool_room_objs(rand_gen_t rgen, room_t const &room
 	objs.emplace_back(bottom, TYPE_POOL_TILE, room_id, 0, 0, (RO_FLAG_NOCOLL | RO_FLAG_ADJ_BOT | RO_FLAG_ADJ_LO));
 	// add ceiling and floor tile
 	cube_t ceil(room);
-	ceil.z2() = zval + get_floor_ceil_gap();
+	ceil.z2() = room.z2() - get_fc_thickness();
 	ceil.z1() = ceil.z2() - tile_thickness;
 	objs.emplace_back(ceil, TYPE_POOL_TILE, room_id, 0, 0, (RO_FLAG_NOCOLL | RO_FLAG_ADJ_TOP));
 	zval += tile_thickness; // any objects will be placed on the floor tile
