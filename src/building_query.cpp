@@ -993,11 +993,12 @@ bool building_t::check_pos_in_unlit_room_recur(point const &pos, set<unsigned> &
 		}
 	}
 	// check for light through connected office building hallways
-	if (!is_house && room.is_hallway) {
+	if (!is_house && room.is_hallway && !room.is_ext_basement()) {
 		cube_t test_cube(room);
 		test_cube.expand_by_xy(0.5*wall_thickness); // include adjacency, but don't expand enough to go through a wall
+		unsigned const rooms_end((interior->ext_basement_hallway_room_id >= 0) ? interior->ext_basement_hallway_room_id : interior->rooms.size());
 
-		for (unsigned r = 0; r < interior->rooms.size(); ++r) {
+		for (unsigned r = 0; r < rooms_end; ++r) {
 			if ((int)r == room_id) continue; // same room, skip
 			room_t const &room2(interior->rooms[r]);
 			if (!room2.is_hallway || !room2.intersects(test_cube)) continue;

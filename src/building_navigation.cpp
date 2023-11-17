@@ -2422,7 +2422,7 @@ int building_t::get_room_containing_pt(point const &pt) const {
 	auto rooms_end  (in_ext_basement ? interior->rooms.end() : interior->ext_basement_rooms_start());
 
 	for (auto r = rooms_start; r != rooms_end; ++r) {
-		if (r->contains_pt_exp_xy_only(pt, wall_thickness)) {return (r - interior->rooms.begin());} // expand to include point in doorway
+		if (r->contains_pt_exp_xy_only(pt, wall_thickness)) {return (r - interior->rooms.begin());} // expand in XY only to include point in doorway
 	}
 	if (has_pool() && interior->pool.contains_pt(pt)) {return interior->pool.room_ix;}
 	return -1; // room not found
