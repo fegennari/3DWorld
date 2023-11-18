@@ -1,3 +1,5 @@
 Moved to Trello:
 Cities/Buildings: https://trello.com/b/a9ox4ML6/3dworld-cities
 3DWorld General : https://trello.com/b/DYBO5BdW/3dworld-other
+
+Optimize startup: 14s to sky, 23s to ground, 28s to high FPS (31s / 38s with people + cars)
