@@ -1321,7 +1321,14 @@ void building_t::add_sprinkler_pipes(vect_cube_t const &obstacles, vect_cube_t c
 			float const wpos(basement.d[dim][!dir]); // extend to the opposite wall
 			int const ret(add_sprinkler_pipe(*this, p1, wpos, h_pipe_radius, dim, dir, obstacles, walls, beams, pipe_cubes,
 				interior->pg_ramp, ceiling_zval, room_id, tot_light_amt, objs, pcolor, ccolor, 0)); // sprinklers=0
-			if (ret == 0) continue; // failed to place
+			
+			if (ret == 0) { // failed to place
+				// try to run horizontal pipe in the opposite dim, but don't connect branch lines because the pipe may be too close to the wall and the code would be messy
+				bool const other_dir(basement.get_center_dim(!dim) < p1[!dim]);
+				add_sprinkler_pipe(*this, p1, basement.d[!dim][!other_dir], h_pipe_radius, !dim, other_dir, obstacles, walls, beams, pipe_cubes,
+					interior->pg_ramp, ceiling_zval, room_id, tot_light_amt, objs, pcolor, ccolor, 0); // sprinklers=0
+				continue;
+			}
 			// run smaller branch lines off this pipe in the other dim; we could add the actual sprinklers to these
 			cube_t const h_pipe(objs[pipe_obj_ix]);
 			float const h_pipe_len(h_pipe.get_sz_dim(dim)), conn_radius(0.5*h_pipe_radius);
