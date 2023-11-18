@@ -1659,6 +1659,7 @@ bool building_t::overlaps_other_room_obj(cube_t const &c, unsigned objs_start, b
 	assert(objs_start <= objs.size() && start <= end);
 
 	for (auto i = start; i != end; ++i) {
+		if (i->type == TYPE_POOL_TILE) continue; // always excluded, since it's thin and objects can be mounted over it
 		// Note: light switches/outlets/vents/pipes don't collide with the player or AI, but they collide with other placed objects to avoid blocking them;
 		// however, it's okay to block outlets with furniture
 		if ((check_all || !i->no_coll() || i->type == TYPE_SWITCH || i->type == TYPE_OUTLET || i->type == TYPE_VENT || i->type == TYPE_PIPE || i->type == TYPE_FALSE_DOOR) &&

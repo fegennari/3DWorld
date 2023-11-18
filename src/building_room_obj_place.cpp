@@ -2981,7 +2981,7 @@ cube_t building_t::get_light_switch_bounds(float floor_zval, float wall_edge, fl
 	return c;
 }
 void building_t::add_light_switches_to_room(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned objs_start, bool is_ground_floor, bool is_basement) {
-  float const wall_thickness(get_wall_thickness()), switch_hwidth(0.5*wall_thickness), min_wall_spacing(switch_hwidth + 2.0*wall_thickness);
+	float const wall_thickness(get_wall_thickness()), switch_hwidth(0.5*wall_thickness), min_wall_spacing(switch_hwidth + 2.0*wall_thickness);
 	cube_t const room_bounds(get_walkable_room_bounds(room));
 	if (min(room_bounds.dx(), room_bounds.dy()) < 8.0*switch_hwidth) return; // room is too small; shouldn't happen
 	float const ceil_zval(zval + get_floor_ceil_gap());
@@ -3026,7 +3026,7 @@ void building_t::add_light_switches_to_room(rand_gen_t rgen, room_t const &room,
 				for (unsigned nf = 0; nf < 2; ++nf) { // {near, far}
 					float const spacing(nf ? far_spacing : near_spacing), wall_pos(i->d[!dim][side] + (side ? 1.0 : -1.0)*spacing);
 					if (wall_pos < room_bounds.d[!dim][0] + min_wall_spacing || wall_pos > room_bounds.d[!dim][1] - min_wall_spacing) continue; // too close to the adjacent wall
-					cube_t c(get_light_switch_bounds(zval, wall_bounds.d[dim][dir], wall_pos, dim, dir)), c_test(c);
+					cube_t c(get_light_switch_bounds(zval, wall_bounds.d[dim][dir], wall_pos, dim, dir)), c_test(c); // should have enough thickness for pool tile
 					c_test.d[dim][!dir] += dir_sign*wall_thickness; // expand out more so that it's guaranteed to intersect appliances placed near the wall
 					if (overlaps_other_room_obj(c_test, objs_start))          continue;
 					if (is_obj_placement_blocked(c, room, (ei==1), 1))        continue; // inc_open_doors=1/check_open_dir=1 for inside, to avoid placing behind an open door
@@ -3075,10 +3075,11 @@ void building_t::add_light_switches_to_room(rand_gen_t rgen, room_t const &room,
 }
 
 void building_t::add_outlets_to_room(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned objs_start, bool is_ground_floor, bool is_basement) {
-	float const wall_thickness(get_wall_thickness());
-	float const plate_thickness(0.03*wall_thickness), plate_height(1.8*wall_thickness), plate_hwidth(0.5*wall_thickness), min_wall_spacing(4.0*plate_hwidth);
+	float const wall_thickness(get_wall_thickness()), plate_height(1.8*wall_thickness), plate_hwidth(0.5*wall_thickness), min_wall_spacing(4.0*plate_hwidth);
 	cube_t const room_bounds(get_walkable_room_bounds(room));
 	if (min(room_bounds.dx(), room_bounds.dy()) < 3.0*min_wall_spacing) return; // room is too small; shouldn't happen
+	float plate_thickness(0.03*wall_thickness);
+	if ((int)room_id == interior->pool.room_ix) {plate_thickness += 0.5*get_flooring_thick();} // add over pool tile, somewhat recessed
 	vect_door_stack_t const &doorways(get_doorways_for_room(room, zval));
 	vect_room_object_t &objs(interior->room_geom->objs);
 	cube_t c;
