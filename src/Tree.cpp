@@ -2437,6 +2437,7 @@ void tree_cont_t::clear_context() {
 }
 
 void tree_cont_t::check_render_textures() {
+	//timer_t timer("Check Render Textures"); // 1463 total, 239 max
 	for (iterator i = begin(); i != end(); ++i) {i->check_render_textures();}
 }
 

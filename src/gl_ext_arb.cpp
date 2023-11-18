@@ -218,7 +218,18 @@ void const *vbo_ring_buffer_t::add_verts_bind_vbo(void const *const v, unsigned 
 
 // ***************** FBOs *****************
 
+void bind_fbo_texture(unsigned fbo_id, unsigned tid, bool is_depth_fbo, bool multisample, unsigned *layer=nullptr) {
+	assert(glIsTexture(tid));
 
+	if (layer) {
+		assert(!multisample); // untested; probably doesn't work
+		glFramebufferTextureLayer(GL_FRAMEBUFFER, (is_depth_fbo ? GL_DEPTH_ATTACHMENT : GL_COLOR_ATTACHMENT0), tid, 0, *layer);
+	}
+	else {
+		glFramebufferTexture2D(GL_FRAMEBUFFER, (is_depth_fbo ? GL_DEPTH_ATTACHMENT : GL_COLOR_ATTACHMENT0), get_2d_texture_target(0, multisample), tid, 0);
+	}
+	check_gl_error(551);
+}
 void create_fbo(unsigned &fbo_id, unsigned tid, bool is_depth_fbo, bool multisample, unsigned *layer) {
 	
 	// Create a framebuffer object
@@ -230,25 +241,12 @@ void create_fbo(unsigned &fbo_id, unsigned tid, bool is_depth_fbo, bool multisam
 		glDrawBuffer(GL_NONE);
 		glReadBuffer(GL_NONE);
 	}
-	
 	// Attach the texture to FBO depth or color attachment point
-	assert(glIsTexture(tid));
-
-	if (layer) {
-		assert(!multisample); // untested; probably doesn't work
-		glFramebufferTextureLayer(GL_FRAMEBUFFER, (is_depth_fbo ? GL_DEPTH_ATTACHMENT : GL_COLOR_ATTACHMENT0), tid, 0, *layer);
-	}
-	else {
-		glFramebufferTexture2D(GL_FRAMEBUFFER, (is_depth_fbo ? GL_DEPTH_ATTACHMENT : GL_COLOR_ATTACHMENT0), get_2d_texture_target(0, multisample), tid, 0);
-	}
-	check_gl_error(551);
+	bind_fbo_texture(fbo_id, tid, is_depth_fbo, multisample, layer);
 	// Check FBO status
 	GLenum const status(glCheckFramebufferStatus(GL_FRAMEBUFFER));
 	assert(status != GL_FRAMEBUFFER_INCOMPLETE_MULTISAMPLE);
 	assert(status == GL_FRAMEBUFFER_COMPLETE);
-	
-	// Switch back to window-system-provided framebuffer
-	disable_fbo();
 }
 
 
@@ -280,8 +278,6 @@ unsigned create_depth_render_buffer(unsigned xsize, unsigned ysize, bool multisa
 	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, depthrenderbuffer);
 	return depthrenderbuffer;
 }
-
-
 void disable_and_free_render_buffer(unsigned &render_buffer) {
 
 	glBindRenderbuffer(GL_RENDERBUFFER, 0);
@@ -294,7 +290,6 @@ void render_to_texture_t::pre_render(float xsize, float ysize, unsigned nx, unsi
 
 	assert(xsize > 0.0 && ysize > 0);
 	assert(tsize > 0 && nx > 0 && ny > 0);
-
 	// setup matrices
 	glViewport(0, 0, nx*tsize, ny*tsize);
 	fgMatrixMode(FG_PROJECTION);
@@ -337,18 +332,19 @@ void render_to_texture_t::render(texture_pair_t &tpair, float xsize, float ysize
 	tpair.ensure_tid(tsize, mipmap);
 	colorRGBA const clear_normal(0.5, 0.5, 0.5, 0.0);
 	colorRGBA const clear_colors[2] = {bkg_color, clear_normal};
+	unsigned fbo_id(0);
+	enable_fbo(fbo_id, tpair.tids[0], 0, tpair.multisample); // too slow to create and free fbos every time?
+	unsigned render_buffer(use_depth_buffer ? create_depth_render_buffer(tsize, tsize, tpair.multisample) : 0);
 
 	for (unsigned d = 0; d < 2; ++d) { // {color, normal}
-		unsigned fbo_id(0);
-		enable_fbo(fbo_id, tpair.tids[d], 0, tpair.multisample); // too slow to create and free fbos every time?
-		unsigned render_buffer(use_depth_buffer ? create_depth_render_buffer(tsize, tsize, tpair.multisample) : 0);
+		if (d == 1) {bind_fbo_texture(fbo_id, tpair.tids[1], 0, tpair.multisample);} // bind second texture
 		set_temp_clear_color(clear_colors[d], use_depth_buffer);
 		draw_geom(d != 0);
 		//if (tpair.multisample) {glBlitFramebuffer(...);} // ???
-		if (use_depth_buffer) {disable_and_free_render_buffer(render_buffer);}
-		free_fbo(fbo_id);
 		if (mipmap) {build_texture_mipmaps(tpair.tids[d], 2);}
 	}
+	if (use_depth_buffer) {disable_and_free_render_buffer(render_buffer);}
+	free_fbo(fbo_id);
 	post_render(); // restore state
 }
 
