@@ -2349,7 +2349,6 @@ void building_t::add_swimming_pool_room_objs(rand_gen_t rgen, room_t const &room
 	}
 	if (pool_len > 2.0*floor_spacing) { // add beach ball(s) if pool is large enough
 		unsigned const num_balls(rgen.rand() % 3); // 0-2
-		ball_type_t const &bt(ball_types[BALL_TYPE_BEACH]);
 
 		for (unsigned n = 0; n < num_balls; ++n) {
 			bool const in_pool(rgen.rand_bool());
