@@ -321,10 +321,10 @@ colorRGBA get_clear_color() {
 	glGetFloatv(GL_COLOR_CLEAR_VALUE, (float *)&clear_color.R);
 	return clear_color;
 }
-void set_temp_clear_color(colorRGBA const &clear_color) {
+void set_temp_clear_color(colorRGBA const &clear_color, bool clear_depth, bool clear_stencil) { // and also clear color, depth, and stencil buffers
 	colorRGBA const orig_clear_color(get_clear_color());
 	glClearColor_rgba(clear_color);
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+	glClear(GL_COLOR_BUFFER_BIT | (clear_depth ? GL_DEPTH_BUFFER_BIT : 0) | (clear_stencil ? GL_STENCIL_BUFFER_BIT : 0));
 	glClearColor_rgba(orig_clear_color);
 }
 
@@ -342,7 +342,7 @@ void render_to_texture_t::render(texture_pair_t &tpair, float xsize, float ysize
 		unsigned fbo_id(0);
 		enable_fbo(fbo_id, tpair.tids[d], 0, tpair.multisample); // too slow to create and free fbos every time?
 		unsigned render_buffer(use_depth_buffer ? create_depth_render_buffer(tsize, tsize, tpair.multisample) : 0);
-		set_temp_clear_color(clear_colors[d]);
+		set_temp_clear_color(clear_colors[d], use_depth_buffer);
 		draw_geom(d != 0);
 		//if (tpair.multisample) {glBlitFramebuffer(...);} // ???
 		if (use_depth_buffer) {disable_and_free_render_buffer(render_buffer);}
@@ -363,7 +363,7 @@ void render_to_texture_t::render(texture_atlas_t &atlas, float xsize, float ysiz
 	unsigned fbo_id(0);
 	enable_fbo(fbo_id, atlas.tid, 0, atlas.multisample); // too slow to create and free fbos every time?
 	unsigned render_buffer(use_depth_buffer ? create_depth_render_buffer(atlas.nx*tsize, atlas.ny*tsize, atlas.multisample) : 0);
-	set_temp_clear_color(bkg_color); // TODO: can only set a single clear color; should we draw a full quad to set the clear normal?
+	set_temp_clear_color(bkg_color, use_depth_buffer); // TODO: can only set a single clear color; should we draw a full quad to set the clear normal?
 	vector3d xlate(2.0*xsize, 0.0, 0.0);
 	rotate_vector3d_by_vr(-plus_z, view_dir, xlate);
 	translate_to(-0.5*xlate);

@@ -382,7 +382,7 @@ public:
 	virtual void draw_geom(bool is_normal_pass) = 0;
 };
 
-void set_temp_clear_color(colorRGBA const &clear_color);
+void set_temp_clear_color(colorRGBA const &clear_color, bool clear_depth=0, bool clear_stencil=0);
 
 template< typename T > void upload_to_dynamic_vbo(vector<T> const &v) {
 	T::set_vbo_arrays(1, get_dynamic_vbo_ptr(&v.front(), v.size()*sizeof(T)));

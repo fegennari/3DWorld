@@ -30,7 +30,7 @@ extern coll_obj_group coll_objects;
 
 bool setup_height_gen(mesh_xy_grid_cache_t &height_gen, float x0, float y0, float dx, float dy, unsigned nx, unsigned ny, bool cache_values, bool no_wait=0);
 bool using_hmap_with_detail();
-void set_temp_clear_color(colorRGBA const &clear_color);
+void set_temp_clear_color(colorRGBA const &clear_color, bool clear_depth=0, bool clear_stencil=0);
 float get_heightmap_scale();
 
 
@@ -330,7 +330,7 @@ void draw_overhead_map() {
 			}
 		}
 	}
-	set_temp_clear_color(BLACK);
+	set_temp_clear_color(BLACK, 1); // clear_depth=1
 	shader_t s;
 	s.begin_simple_textured_shader(0.0, 0, 0, &WHITE);
 	setup_texture(tid, 0, 0, 0);
