@@ -1107,7 +1107,7 @@ bool building_interior_t::check_sphere_coll_room_objects(building_t const &build
 			point p_int;
 
 			if (sphere_torus_intersect(pos, radius, c->get_cube_center(), ri, ro, p_int, cnorm, 1)) { // calc_int=1
-				pos = p_int + cnorm*radius; // move to not intersect
+				pos = p_int; // move to not intersect
 				coll_ret |= 1;
 			}
 		}

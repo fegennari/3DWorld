@@ -877,7 +877,7 @@ bool line_torus_intersect_rescale(point const &p1, point const &p2, point const 
 }
 
 
-// torus is oriented in the z direction (for now)
+// torus is oriented in the z direction (for now); p_int is the sphere center after collision resolution
 bool sphere_torus_intersect(point const &sc, float sr, point const &tc, float ri, float ro, point &p_int, vector3d &norm, bool calc_int) {
 
 	assert(sr >= 0.0 && ri >= 0.0 && ro > 0.0 && ri <= ro); // sphere radius can be 0
