@@ -1686,6 +1686,7 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 	assert(num_floors > 0);
 
 	if (part.z2() < bcube.z2()) { // if this is the top floor, there is nothing above it (but roof geom may get us into this case anyway)
+		vect_door_stack_t doorways;
 		bool connected(0);
 
 		for (auto p = parts.begin(); p != get_real_parts_end(); ++p) { // find the part on the top
@@ -1803,7 +1804,6 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 					point const stairs_center(cand.get_cube_center());
 					point stair_ends[2] = {stairs_center, stairs_center};
 					for (unsigned d = 0; d < 2; ++d) {stair_ends[d][dim] = cand.d[dim][d];}
-					vect_door_stack_t doorways;
 					unsigned pref_dir(0); // two-bit mask
 
 					for (room_t const &r : interior->rooms) {
