@@ -471,6 +471,7 @@ bool building_t::create_office_cubicles(rand_gen_t rgen, room_t const &room, flo
 				c.d[!long_dim][!dir] = wall_pos + dir_sign*cube_depth;
 				cube_t test_cube(c);
 				test_cube.d[!long_dim][!dir] += dir_sign*0.5*cube_depth; // allow space for people to enter the cubicle
+				// technically we should check for pillar coll if (num_sides > 4), but in all the cases I've seen the pillar is between rows of cubicles and looks okay
 				if (is_obj_placement_blocked(test_cube, room, 1)) continue; // inc_open_doors=1
 				bool const against_window(room.d[!long_dim][dir] == part.d[!long_dim][dir]);
 				objs.emplace_back(c, TYPE_CUBICLE, room_id, !long_dim, dir, 0, tot_light_amt, ((against_window && !is_middle) ? SHAPE_SHORT : SHAPE_CUBE));
@@ -498,6 +499,18 @@ bool building_t::create_office_cubicles(rand_gen_t rgen, room_t const &room, flo
 		lo_pos = hi_pos;
 	} // for n
 	return added_cube;
+}
+
+void building_t::add_office_pillars(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned floor_ix, vect_cube_t const &lights, vect_cube_t &blockers) {
+	if (room.has_stairs_on_floor(floor_ix)) return; // no pillar if there are stairs since they're likely to intersect; I guess the stairs are structural supports?
+	// add one pillar in the center of the room; room should be empty at this point (except for ceiling lights), so no collision checking is needed
+	cube_t pillar;
+	pillar.set_from_point(point(room.xc(), room.yc(), zval));
+	pillar.z2() += get_floor_ceil_gap();
+	pillar.expand_by_xy(1.8*get_wall_thickness());
+	if (has_bcube_int(pillar, lights)) return; // really should all the pillar, then the lights, but this is easier (and usually doesn't fail)
+	interior->room_geom->objs.emplace_back(pillar, TYPE_PG_WALL, room_id, 0, 0); // TYPE_PG_WALL is okay since there are no windows so pillar is interior
+	blockers.push_back(pillar);
 }
 
 bool building_t::check_valid_closet_placement(cube_t const &c, room_t const &room, unsigned objs_start, unsigned bed_ix, float min_bed_space) const {

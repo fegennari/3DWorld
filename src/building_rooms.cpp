@@ -412,6 +412,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			bool const is_entry_floor(is_ground_floor || (is_ground_floor_part && multi_family)); // for placing entry level rooms/objs (fireplace, living, dining, kitchen, etc.)
 			unsigned const objs_start(wall_light ? objs_start_inc_lights : objs.size()); // wall light counts as an object since it must be avoided
 			rgen.rand_mix();
+			blockers.clear(); // clear for this new room
 
 			if (r->is_ext_basement_conn()) { // room connecting extended basements of two buildings
 				bool const conn_dim(r->interior == 4);
@@ -421,6 +422,10 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 					blocker.d[conn_dim][!d] = blocker.d[conn_dim][d] + (d ? -1.0 : 1.0)*2.0*get_wall_thickness();
 					objs.emplace_back(blocker, TYPE_BLOCKER, room_id, conn_dim, d, RO_FLAG_INVIS);
 				}
+			}
+			if (num_sides > 4 && !is_basement) { // non-cube/triangle building pie slice - add room pillars
+				// these could be added as walls or added for the bottom floor and extend through all levels, though that would require more changes
+				add_office_pillars(rgen, *r, room_center.z, room_id, f, valid_lights, blockers);
 			}
 			if (r->no_geom || is_garage_or_shed || is_swim_pool_room) {
 				if (is_garage_or_shed) {
@@ -464,7 +469,6 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			bool const added_living(added_living_mask & floor_mask);
 			bool const allow_br(!is_house || must_be_bathroom || f > 0 || num_floors == 1 || (rgen.rand_float() < 0.33f*(added_living + (added_kitchen_mask&1) + 1))); // bed/bath
 			bool is_office_bathroom(is_room_office_bathroom(*r, room_center.z, f)), has_fireplace(0);
-			blockers.clear(); // clear for this new room
 			
 			if (has_chimney == 2 && !is_basement && is_entry_floor && !added_fireplace) { // handle fireplaces on the first floor
 				has_fireplace = added_fireplace = maybe_add_fireplace_to_room(rgen, *r, blockers, room_center.z, room_id, tot_light_amt);
