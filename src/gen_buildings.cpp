@@ -1919,7 +1919,9 @@ void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_
 			bdraw.add_cube(*this, glass, tp, colorRGBA(WHITE, 0.1), 0, 4, 0, 0, 0); // top and bottom only, untextured
 		} // for skylight
 	}
-	if (!global_building_params.windows_enabled() || (lights_pass ? !mat.add_wind_lights : !mat.add_windows)) { // no windows for this material
+	// Note: city office buildings don't have add_windows set because windows don't align with their interior rooms/floors,
+	// which means the player currently can't see into or out of the building
+	if (!global_building_params.windows_enabled() || (lights_pass ? !mat.add_wind_lights : !mat.add_windows)) { // no windows for this material (set in building_materials.txt)
 		if (only_cont_pt_in) {cut_holes_for_ext_doors(bdraw, only_cont_pt, 0xFFFF);} // still need to draw holes for doors
 		return;
 	}
