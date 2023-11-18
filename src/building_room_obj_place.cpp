@@ -3436,8 +3436,8 @@ bool building_t::is_light_placement_valid(cube_t const &light, cube_t const &roo
 	if (!check_cube_within_part_sides(light))      return 0; // handle non-cube buildings
 	unsigned const pg_wall_start(interior->room_geom->wall_ps_start);
 
-	// check for intersection with low pipes such as sprinkler pipes that have been previously placed; only works for top level of parking garage
-	if (light.z1() < ground_floor_z1 && has_parking_garage && pg_wall_start > 0) {
+	// check for intersection with low pipes such as sprinkler pipes that have been previously placed; only works for top level of parking garage; skip for backrooms
+	if (light.z1() < ground_floor_z1 && has_parking_garage && get_basement().contains_cube(light) && pg_wall_start > 0) {
 		vect_room_object_t const &objs(interior->room_geom->objs);
 		assert(pg_wall_start < objs.size());
 
