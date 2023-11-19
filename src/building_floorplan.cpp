@@ -426,7 +426,7 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 			assert(num_rooms >= 0 && num_rooms < 1000); // sanity check
 			auto &room_walls(interior->walls[!min_dim]), &hall_walls(interior->walls[min_dim]);
 			if (hallway_dim == 2) {hallway_dim = !min_dim;} // cache in building for later use, only for first part (ground floor)
-			vector<unsigned> utility_room_cands;
+			vector<unsigned> utility_room_cands, special_room_cands;
 			
 			if (num_windows_od >= 7 && num_rooms >= 4) { // at least 7 windows (3 on each side of hallway)
 				float const min_hall_width(1.5f*doorway_width), max_hall_width(2.5f*doorway_width);
@@ -566,7 +566,8 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 
 								if (is_bathroom) {rooms.back().assign_all_to(RTYPE_BATH);} // make it a bathroom (windowless)
 								else if (is_ground_floor) { // previous inner room room (windowless) for the ground floor
-									if (n+1 == bathroom_ix || n == bathroom_ix+1) {utility_room_cands.push_back(rooms.size() - 1);} // next to the bathroom
+									bool const next_to_br(n+1 == bathroom_ix || n == bathroom_ix+1);
+									(next_to_br ? utility_room_cands : special_room_cands).push_back(rooms.size() - 1); // utility rooms must be next to the bathroom
 								}
 								// add doors to 2-3 walls
 								float const door_pos(0.5f*(start_pos + next_pos)), lo_pos(door_pos - doorway_hwidth), hi_pos(door_pos + doorway_hwidth);
@@ -693,9 +694,8 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 
 								if (is_bathroom) {rooms.back().assign_all_to(RTYPE_BATH);}
 								else if (is_ground_floor && div_room && r > 0) { // windowless room on ground floor, not at ext wall
-									if ((rooms_per_side <= 2) ? ((unsigned)i == (bathroom_ix) || (unsigned)i == (bathroom_ix+2)) : is_br_aisle) { // next to the bathroom
-										utility_room_cands.push_back(rooms.size() - 1);
-									}
+									bool const next_to_br((rooms_per_side <= 2) ? ((unsigned)i == (bathroom_ix) || (unsigned)i == (bathroom_ix+2)) : is_br_aisle);
+									(next_to_br ? utility_room_cands : special_room_cands).push_back(rooms.size() - 1); // utility rooms must be next to the bathroom
 								}
 								if (add_sec_hall) { // add doorways + doors
 									float const doorway_pos(0.5f*(room_split_pos + next_split_pos)); // room center
@@ -786,21 +786,25 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 			if (is_ground_floor || pri_hall.is_all_zeros()) {pri_hall = hall;} // assign to primary hallway if on first floor of hasn't yet been assigned
 			for (unsigned d = 0; d < 2; ++d) {first_wall_to_split[d] = interior->walls[d].size();} // don't split any walls added up to this point
 
-			// add utlity and server room(s)
-			unsigned const NUM_UTIL_RTYPES = 2;
-			unsigned const UTIL_RTYPES      [NUM_UTIL_RTYPES] = {RTYPE_UTILITY, RTYPE_SERVER}; // TODO: RTYPE_SECURITY
-			unsigned const UTIL_RTYPE_COUNTS[NUM_UTIL_RTYPES] = {MAX_OFFICE_UTILITY_ROOMS, 1};
+			// add special ground floor room types
+			unsigned const NUM_GFLOOR_RTYPES = 3;
+			unsigned const GFLOOR_RTYPES      [NUM_GFLOOR_RTYPES] = {RTYPE_UTILITY, RTYPE_SERVER, RTYPE_SECURITY}; // placed in this priority order
+			unsigned const GFLOOR_RTYPE_COUNTS[NUM_GFLOOR_RTYPES] = {MAX_OFFICE_UTILITY_ROOMS, 1, 1};
 
-			for (unsigned rtype = 0; rtype < NUM_UTIL_RTYPES; ++rtype) {
-				for (unsigned n = 0; n < UTIL_RTYPE_COUNTS[rtype]; ++n) {
-					if (utility_room_cands.empty()) break; // no more rooms to assign
-					unsigned &room_ix(utility_room_cands[rand() % utility_room_cands.size()]);
+			for (unsigned rtype = 0; rtype < NUM_GFLOOR_RTYPES; ++rtype) { // assign round robin
+				unsigned const room_type(GFLOOR_RTYPES[rtype]);
+				vector<unsigned> &room_cands((room_type == RTYPE_UTILITY) ? utility_room_cands : special_room_cands);
+
+				for (unsigned n = 0; n < GFLOOR_RTYPE_COUNTS[rtype]; ++n) {
+					if (room_cands.empty()) break; // no more rooms to assign
+					unsigned &room_ix(room_cands[rand() % room_cands.size()]);
 					assert(room_ix < rooms.size());
 					room_t &room(rooms[room_ix]);
-					room.assign_to(UTIL_RTYPES[rtype], 0, 1); // assign this room on floor 0; locked=1
-					ensure_doors_to_room_are_closed(room, doors_start, 0); // ensure_locked=0; probably should be locked, but unlocked makes these rooms easier to explore
-					room_ix = utility_room_cands.back();
-					utility_room_cands.pop_back(); // remove this room from consideration
+					room.assign_to(room_type, 0, 1); // assign this room on floor 0; locked=1
+					bool const ensure_locked(0); // probably should be locked, but unlocked makes these rooms easier to explore
+					ensure_doors_to_room_are_closed(room, doors_start, ensure_locked);
+					room_ix = room_cands.back();
+					room_cands.pop_back(); // remove this room from consideration
 				} // for n
 			} // for rtype
 		} // end use_hallway

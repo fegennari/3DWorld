@@ -278,9 +278,8 @@ bool building_t::is_room_office_bathroom(room_t &room, float zval, unsigned floo
 	return 0;
 }
 
-// Note: must be first placed object
 bool building_t::add_desk_to_room(rand_gen_t rgen, room_t const &room, vect_cube_t const &blockers, colorRGBA const &chair_color,
-	float zval, unsigned room_id, unsigned floor, float tot_light_amt, unsigned objs_start, bool is_basement, unsigned desk_ix)
+	float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, bool is_basement, unsigned desk_ix, bool no_computer)
 {
 	cube_t const room_bounds(get_walkable_room_bounds(room));
 	float const vspace(get_window_vspace());
@@ -315,7 +314,7 @@ bool building_t::add_desk_to_room(rand_gen_t rgen, room_t const &room, vect_cube
 			drawers.d[dim][!dir] += dsign*drawers.get_sz_dim(dim);
 			objs.emplace_back(drawers, TYPE_BLOCKER, room_id, dim, !dir, RO_FLAG_INVIS);
 		}
-		bool const add_computer(building_obj_model_loader.is_model_valid(OBJ_MODEL_TV) && rgen.rand_bool());
+		bool const add_computer(!no_computer && building_obj_model_loader.is_model_valid(OBJ_MODEL_TV) && rgen.rand_bool());
 
 		if (add_computer) {
 			// add a computer monitor using the TV model
@@ -410,7 +409,7 @@ bool building_t::add_office_objs(rand_gen_t rgen, room_t const &room, vect_cube_
 {
 	vect_room_object_t &objs(interior->room_geom->objs);
 	unsigned const desk_obj_id(objs.size());
-	if (!add_desk_to_room(rgen, room, blockers, chair_color, zval, room_id, floor, tot_light_amt, objs_start, is_basement)) return 0;
+	if (!add_desk_to_room(rgen, room, blockers, chair_color, zval, room_id, tot_light_amt, objs_start, is_basement)) return 0;
 
 	if (rgen.rand_float() < 0.5 && !room_has_stairs_or_elevator(room, zval, floor)) { // allow two desks in one office
 		assert(objs[desk_obj_id].type == TYPE_DESK);
@@ -418,7 +417,7 @@ bool building_t::add_office_objs(rand_gen_t rgen, room_t const &room, vect_cube_
 		room_object_t const &maybe_chair(objs.back());
 		bool const added_chair(maybe_chair.type == TYPE_CHAIR || maybe_chair.type == TYPE_OFF_CHAIR);
 		if (added_chair) {blockers.push_back(maybe_chair);}
-		add_desk_to_room(rgen, room, blockers, chair_color, zval, room_id, floor, tot_light_amt, objs_start, is_basement, 1); // desk_ix=1
+		add_desk_to_room(rgen, room, blockers, chair_color, zval, room_id, tot_light_amt, objs_start, is_basement, 1); // desk_ix=1
 		if (added_chair) {blockers.pop_back();} // remove the chair if it was added
 		blockers.pop_back(); // remove the first desk blocker
 	}
@@ -723,7 +722,7 @@ bool building_t::add_bedroom_objs(rand_gen_t rgen, room_t &room, vect_cube_t con
 	}
 	if (min(room_bounds.dx(), room_bounds.dy()) > 2.5*window_vspacing && max(room_bounds.dx(), room_bounds.dy()) > 3.0*window_vspacing) {
 		// large room, try to add a desk and chair as well
-		add_desk_to_room(rgen, room, blockers, chair_color, zval, room_id, floor, tot_light_amt, objs_start, is_basement);
+		add_desk_to_room(rgen, room, blockers, chair_color, zval, room_id, tot_light_amt, objs_start, is_basement);
 	}
 	// maybe add a flashlight or candle on a dresser, night stand, or desk; or in a drawer?
 	for (auto i = objs.begin()+objs_start; i != objs.end(); ++i) {
@@ -2572,9 +2571,46 @@ bool building_t::add_server_room_objs(rand_gen_t rgen, room_t const &room, float
 }
 
 bool building_t::add_security_room_objs(rand_gen_t rgen, room_t const &room, float &zval, unsigned room_id, float tot_light_amt, unsigned objs_start) { // for office buildings
-	// TODO
-	//add_door_sign("Security Room", room, zval, room_id, tot_light_amt);
-	return 0;
+	if (!building_obj_model_loader.is_model_valid(OBJ_MODEL_TV)) return 0; // no TV/monitor model, can't create a security room
+	add_desk_to_room(rgen, room, vect_cube_t(), DK_GRAY, zval, room_id, tot_light_amt, objs_start, 0, 0, 1); // is_basement=0, desk_ix=0, no_computer=1
+	float const floor_spacing(get_window_vspace()), ceil_zval(zval + get_floor_ceil_gap());
+	float const start_zval(zval + 0.3*floor_spacing), place_z_range(ceil_zval - start_zval); // should be above the top of the desk
+	vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_TV)); // D, W, H
+	float const tv_height(0.23*floor_spacing*rgen.rand_uniform(1.0, 1.2)); // common height for all monitors
+	float const tv_hwidth(0.5*tv_height*sz.y/sz.z), tv_depth(tv_height*sz.x/sz.z);
+	float const vert_space(1.25*tv_height), horiz_space(2.5*tv_hwidth);
+	unsigned const num_rows(round_fp(place_z_range/vert_space));
+	float const row_spacing(place_z_range/num_rows);
+	cube_t const room_bounds(get_walkable_room_bounds(room));
+	vect_room_object_t &objs(interior->room_geom->objs);
+	cube_t tv;
+
+	// add computer monitors along all walls that don't have doors
+	for (unsigned dim = 0; dim < 2; ++dim) {
+		float const wall_len(room_bounds.get_sz_dim(!dim));
+		unsigned const num_cols(floor(wall_len/horiz_space));
+		float const col_spacing(wall_len/num_cols), col_start(room_bounds.d[!dim][0] + 0.5*horiz_space);
+
+		for (unsigned dir = 0; dir < 2; ++dir) {
+			tv.d[dim][ dir] = room_bounds.d[dim][dir]; // on the wall
+			tv.d[dim][!dir] = tv.d[dim][dir] + (dir ? -1.0 : 1.0)*tv_depth;
+
+			for (unsigned row = 0; row < num_rows; ++row) {
+				float const z1(start_zval + row*row_spacing);
+				set_cube_zvals(tv, z1, z1+tv_height);
+
+				for (unsigned col = 0; col < num_cols; ++col) {
+					set_wall_width(tv, (col_start + col*col_spacing), tv_hwidth, !dim);
+					if (is_obj_placement_blocked(tv, room, 1)) continue;
+					//if (overlaps_other_room_obj(tv, objs_start)) continue; // not needed since there are no objects placed first?
+					objs.emplace_back(tv, TYPE_MONITOR, room_id, dim, !dir, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_SHORT, BLACK); // monitors are shorter than TVs
+					set_obj_id(objs);
+				} // for col
+			} // for row
+		} // for dir
+	} // for dim
+	add_door_sign("Security Room", room, zval, room_id, tot_light_amt);
+	return 1;
 }
 
 void building_t::place_book_on_obj(rand_gen_t &rgen, room_object_t const &place_on, unsigned room_id, float tot_light_amt, unsigned objs_start, bool use_dim_dir) {
