@@ -1778,6 +1778,12 @@ void building_room_geom_t::add_stair(room_object_t const &c, float tscale, vecto
 	mat.add_cube_to_verts(bot, STAIRS_COLOR_BOT, tex_origin, EF_Z2); // skip top face
 }
 
+void building_room_geom_t::add_downspout(room_object_t const &c) {
+	rgeom_mat_t &mat(get_metal_material(0, 0, 0, 1)); // unshadowed, exterior
+	// TODO: add curved/angled sections at the bottom and maybe the top
+	mat.add_cube_to_verts_untextured(c, c.color, (EF_Z12 | ~get_face_mask(c.dim, !c.dir))); // skip top and bottom faces and face against the house wall
+}
+
 void building_room_geom_t::add_stairs_wall(room_object_t const &c, vector3d const &tex_origin, tid_nm_pair_t const &wall_tex) {
 	get_material(get_scaled_wall_tex(wall_tex), 1).add_cube_to_verts(c, c.color, tex_origin, EF_Z1); // skip bottom; no room lighting color atten
 }
@@ -4213,6 +4219,11 @@ void building_room_geom_t::add_candle(room_object_t const &c) {
 	rgeom_mat_t &mat(get_untextured_material(1, 0, 1)); // shadowed, small
 	mat.add_vcylin_to_verts(wick, apply_light_color(c, WHITE), 0, 0, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, 12); // draw sides only, ndiv=12
 	mat.add_vcylin_to_verts(tip,  apply_light_color(c, BLACK), 0, 1, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, 12); // draw sides and top, ndiv=12
+}
+
+void building_room_geom_t::add_camera(room_object_t const &c) {
+	rgeom_mat_t &mat(get_metal_material(1, 0, 2)); // shadowed, detail
+	// TODO: draw - or is this a 3D model?
 }
 
 void building_room_geom_t::add_debug_shape(room_object_t const &c) {

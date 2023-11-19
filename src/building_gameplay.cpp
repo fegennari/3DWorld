@@ -161,6 +161,8 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_FALSE_DOOR] = bldg_obj_type_t(0, 0, 0, 0, 1, 0, 1,  0.0,  0.0,   "door");
 	bldg_obj_types[TYPE_FLASHLIGHT] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 15.0,  1.0,   "flashlight");
 	bldg_obj_types[TYPE_CANDLE    ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2,  1.0,  0.4,   "candle", 10000);
+	bldg_obj_types[TYPE_CAMERA    ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 150.0, 1.5,   "security camera");
+	bldg_obj_types[TYPE_DOWNSPOUT ] = bldg_obj_type_t(0, 0, 0, 0, 1, 0, 1,  0.0,  0.0,   "downspout");
 	bldg_obj_types[TYPE_DBG_SHAPE ] = bldg_obj_type_t(0, 0, 0, 0, 0, 0, 1,  0.0,  0.0,   "debug shape"); // small (optimization)
 	// player_coll, ai_coll, rat_coll, pickup, attached, is_model, lg_sm, value, weight, name [capacity]
 	// 3D models
