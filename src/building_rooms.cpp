@@ -682,6 +682,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 	ext_steps.clear(); // clear prev value in case this building's interior is recreated
 	maybe_add_fire_escape  (rgen);
 	add_balconies          (rgen);
+	add_gutter_downspouts  (rgen);
 	add_exterior_door_items(rgen);
 	if (!is_rotated()) {add_ext_door_steps(ext_objs_start);} // must be after adding balconies and fire escape
 	add_extra_obj_slots(); // needed to handle balls taken from one building and brought to another
@@ -887,6 +888,29 @@ void building_t::add_balconies(rand_gen_t &rgen) {
 		} // for dim
 		if (num_balconies == max_balconies) break; // done
 	} // for room
+}
+
+void building_t::add_gutter_downspouts(rand_gen_t &rgen) {
+	return; // TODO: enable when this is completed
+	for (cube_with_ix_t const &g : gutters) {
+		bool const dim(g.ix >> 1), dir(g.ix & 1);
+		float const len(g.get_sz_dim(!dim)), width(g.get_sz_dim(dim)), edge_spacing(min(0.1f*len, 2.0f*width)), ds_width(min(0.6f*width, 0.4f*edge_spacing));
+		float const wall_pos(g.d[dim][!dir]);
+		assert(len > 0.0 && width > 0.0);
+		assert(ground_floor_z1 < g.z1());
+		cube_t ds;
+		set_cube_zvals(ds, ground_floor_z1, g.z1());
+		ds.d[dim][!dir] = wall_pos; // at the wall
+		ds.d[dim][ dir] = wall_pos + (dir ? 1.0 : -1.0)*0.67*ds_width; // extend out from the wall
+
+		for (unsigned e = 0; e < 2; ++e) { // add gutter at each end
+			set_wall_width(ds, (g.d[!dim][e] + (e ? -1.0 : 1.0)*edge_spacing), 0.5*ds_width, !dim);
+			// TODO: check for intersections with lower parts when stacked
+			// TODO: check for intersections with garage doors
+			// TODO: check for intersections with windows below
+			interior->room_geom->objs.emplace_back(ds, TYPE_DOWNSPOUT, 0, dim, dir, (RO_FLAG_NOCOLL | RO_FLAG_EXTERIOR), 1.0, SHAPE_CUBE, WHITE);
+		} // for e
+	} // for g
 }
 
 void building_t::add_extra_obj_slots() {

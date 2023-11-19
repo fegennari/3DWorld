@@ -1562,6 +1562,7 @@ void building_t::get_all_drawn_exterior_verts(building_draw_t &bdraw) { // exter
 							if (d ^ e ^ top_dim ^ 1) {swap(end_cap.pts[0], end_cap.pts[1]);} // swap to get the correct winding order
 							bdraw.add_tquad(*this, end_cap, bcube, bot_tex, WHITE);
 						} // for e
+						gutters.emplace_back(bot_surf.get_bcube(), (2*(!top_dim) + d)); // store 2*dim+dir in index - this is the roof edge the gutter connects to
 					} // for d
 				} // end is_above_part
 			} // end peaked roof

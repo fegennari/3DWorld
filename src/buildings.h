@@ -1408,7 +1408,7 @@ struct building_t : public building_geom_t {
 	cube_t bcube, coll_bcube, pri_hall, driveway, porch, assigned_plot;
 	mutable cube_t city_driveway; // set by city gen, which only has a const ref to the building; technically this is cached city state, and not directly used by the building
 	vect_cube_t parts, fences;
-	vect_cube_with_ix_t skylights;
+	vect_cube_with_ix_t skylights, gutters;
 	vect_roof_obj_t details; // cubes on the roof - antennas, AC units, etc.
 	vect_tquad_with_ix_t roof_tquads, doors;
 	vector<colored_sphere_t> ext_lights;
@@ -1938,6 +1938,7 @@ private:
 	int find_main_roof_tquad_ix(rand_gen_t &rgen, bool skip_if_has_other_obj) const;
 	void maybe_add_fire_escape(rand_gen_t &rgen);
 	void add_balconies(rand_gen_t &rgen);
+	void add_gutter_downspouts(rand_gen_t &rgen);
 	void add_extra_obj_slots();
 	void add_wall_and_door_trim_if_needed();
 	void add_wall_and_door_trim();
