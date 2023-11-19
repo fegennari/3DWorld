@@ -1529,7 +1529,7 @@ void building_t::get_all_drawn_exterior_verts(building_draw_t &bdraw) { // exter
 					// add trim along the underside and edges of the roof to create rain gutters
 					for (unsigned d = 0; d < 2; ++d) {
 						float const old_edge(tq_bcube.d[!top_dim][d]), new_edge(new_bcube.d[!top_dim][d]);
-						if (old_edge == new_edge) continue; // not extended in this dir (can only extend in one dir per tquad)
+						if (fabs(old_edge - new_edge) < 0.5*extend) continue; // not extended in this dir (can only extend in one dir per tquad)
 						tquad_with_ix_t bot_surf(4, tquad_with_ix_t::TYPE_TRIM);
 						UNROLL_4X(bot_surf.pts[i_].z = new_bcube.z1(););
 						bot_surf.pts[0][!top_dim] = bot_surf.pts[1][!top_dim] = old_edge;
