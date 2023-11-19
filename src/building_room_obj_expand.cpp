@@ -708,6 +708,7 @@ void place_book(room_object_t &obj, cube_t const &parent, float length, float ma
 	rgen.rand_mix();
 	if (item_ix > 0 && rgen.rand_bool()) return obj; // no more items
 	cube_t drawer(drawer_in); // copy so that we can adjust z1
+	float const drawer_dz(drawer.dz());
 	unsigned const type_ix(rgen.rand() % 11); // 0-10
 	unsigned const types_dresser [11] = {TYPE_FOLD_SHIRT, TYPE_PAPER,      TYPE_BOX, TYPE_FOLD_SHIRT, TYPE_BOOK, TYPE_KEY,     TYPE_BOTTLE, TYPE_MONEY,  TYPE_PHONE,  TYPE_SPRAYCAN, TYPE_TAPE};
 	unsigned const types_desk    [11] = {TYPE_FLASHLIGHT, TYPE_PAPER,      TYPE_PEN, TYPE_STAPLER,    TYPE_BOOK, TYPE_KEY,     TYPE_BOTTLE, TYPE_MONEY,  TYPE_PHONE,  TYPE_SPRAYCAN, TYPE_TAPE};
@@ -730,7 +731,7 @@ void place_book(room_object_t &obj, cube_t const &parent, float length, float ma
 	bool const is_single_item(obj_type == TYPE_BOTTLE || obj_type == TYPE_SPRAYCAN || obj_type == TYPE_FLASHLIGHT); // don't combine well with others since they're large horiz cylinders
 	
 	if (item_ix == 0) {stack_z1 = drawer.z1();} // base case
-	else if (is_stackable) {
+	else if (1 || is_stackable) { // any object can be placed on top of a stackable object
 		assert(stack_z1 >= drawer.z1());
 		drawer.z1() = stack_z1; // shift bottom of drawer to top of stack
 		if (drawer.dz() < 0.1*drawer_in.dz()) return obj; // stack too high
@@ -751,7 +752,7 @@ void place_book(room_object_t &obj, cube_t const &parent, float length, float ma
 	}
 	case TYPE_PAPER: // paper
 	{
-		float const length(2.0*sz.z), width(0.77*length);
+		float const length(2.0*drawer_dz), width(0.77*length);
 
 		if (length < 0.9*sz[c.dim] && width < 0.9*sz[!c.dim]) { // if it can fit
 			obj = room_object_t(drawer, TYPE_PAPER, c.room_id, c.dim, c.dir);
@@ -766,7 +767,7 @@ void place_book(room_object_t &obj, cube_t const &parent, float length, float ma
 	{
 		unsigned const types[3] = {TYPE_PEN, TYPE_PENCIL, TYPE_MARKER}, type(types[rgen.rand()%3]);
 		bool const dim(!c.dim); // always opposite orient of the drawer
-		float const length(min(1.7f*sz.z, 0.9f*sz[dim])), diameter(((type == TYPE_MARKER) ? 0.08 : 0.036)*length);
+		float const length(min(1.7f*drawer_dz, 0.9f*sz[dim])), diameter(((type == TYPE_MARKER) ? 0.08 : 0.036)*length);
 		obj = room_object_t(drawer, type, c.room_id, dim, rgen.rand_bool(), 0, 1.0, SHAPE_CYLIN);
 		obj.color = ((obj.type == TYPE_MARKER) ? marker_colors[rgen.rand()&7] : ((obj.type == TYPE_PEN) ? pen_colors[rgen.rand()&3] : pencil_colors[rgen.rand()&1]));
 		obj.z2()  = obj.z1() + diameter;
@@ -800,7 +801,8 @@ void place_book(room_object_t &obj, cube_t const &parent, float length, float ma
 	case TYPE_BOTTLE: // bottle
 	{
 		bool const dim(c.dim ^ bool(per_drawer_ix & 1)); // random orient, but consistent across the items in the drawer
-		float const length(rgen.rand_uniform(0.7, 0.9)*min(((c.type == TYPE_COUNTER) ? 2.7f : 1.8f)*sz.z, min(sz.x, sz.y))), diameter(length*rgen.rand_uniform(0.26, 0.34));
+		float const length(rgen.rand_uniform(0.7, 0.9)*min(((c.type == TYPE_COUNTER) ? 2.7f : 1.8f)*drawer_dz, min(sz.x, sz.y)));
+		float const diameter(min(0.8f*sz.z, length*rgen.rand_uniform(0.26, 0.34)));
 		obj = room_object_t(drawer, TYPE_BOTTLE, c.room_id, dim, rgen.rand_bool(), 0, 1.0, SHAPE_CYLIN);
 		obj.set_as_bottle(rgen.rand()); // can be empty
 		obj.z2() = obj.z1() + diameter;
@@ -832,7 +834,7 @@ void place_book(room_object_t &obj, cube_t const &parent, float length, float ma
 	case TYPE_SPRAYCAN: // spray paint can
 	{
 		bool const dim(c.dim ^ bool(per_drawer_ix & 1)); // random orient, but consistent across the items in the drawer
-		float const length(rgen.rand_uniform(0.8, 0.9)*min(1.8f*sz.z, min(sz.x, sz.y))), diameter(0.34*length);
+		float const length(rgen.rand_uniform(0.8, 0.9)*min(1.8f*drawer_dz, min(sz.x, sz.y))), diameter(min(0.8f*sz.z, 0.34f*length));
 		obj = room_object_t(drawer, TYPE_SPRAYCAN, c.room_id, dim, rgen.rand_bool(), 0, 1.0, SHAPE_CYLIN, spcan_colors[rgen.rand() % NUM_SPCAN_COLORS]);
 		obj.z2()   = obj.z1() + diameter;
 		obj.obj_id = rgen.rand(); // used to select emissive color
@@ -842,7 +844,7 @@ void place_book(room_object_t &obj, cube_t const &parent, float length, float ma
 	case TYPE_FLASHLIGHT: // flashlight
 	{
 		bool const dim(c.dim ^ bool(per_drawer_ix & 1)); // random orient, but consistent across the items in the drawer
-		float const length(rgen.rand_uniform(0.8, 0.9)*min(1.8f*sz.z, min(sz.x, sz.y))), diameter(0.4*length);
+		float const length(rgen.rand_uniform(0.8, 0.9)*min(1.8f*drawer_dz, min(sz.x, sz.y))), diameter(min(0.8f*sz.z, 0.4f*length));
 		obj = room_object_t(drawer, TYPE_FLASHLIGHT, c.room_id, dim, rgen.rand_bool(), 0, 1.0, SHAPE_CYLIN, BLACK);
 		obj.z2() = obj.z1() + diameter;
 		set_rand_pos_for_sz(obj, dim, length, diameter, rgen);
@@ -861,7 +863,7 @@ void place_book(room_object_t &obj, cube_t const &parent, float length, float ma
 	}
 	case TYPE_STAPLER: // stapler
 	{
-		float const length(min(0.5f*min(sz.x, sz.y), 0.2f*(sz.x + sz.y + sz.z))), width(0.2*length), height(0.3*length);
+		float const length(min(0.5f*min(sz.x, sz.y), 0.2f*(sz.x + sz.y + drawer_dz))), width(0.2*length), height(min(0.8f*sz.z, 0.3f*length));
 		obj = room_object_t(drawer, TYPE_STAPLER, c.room_id, rgen.rand_bool(), rgen.rand_bool());
 		obj.color = stapler_colors[rgen.rand()%NUM_STAPLER_COLORS];
 		obj.z2()  = obj.z1() + height;
