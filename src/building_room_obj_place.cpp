@@ -1064,7 +1064,8 @@ bool building_t::place_model_along_wall(unsigned model_id, room_object type, roo
 float building_t::add_flooring(room_t const &room, float &zval, unsigned room_id, float tot_light_amt, unsigned flooring_type) {
 	float const new_zval(zval + get_flooring_thick());
 	cube_t flooring(get_walkable_room_bounds(room));
-	flooring.expand_by_xy(0.5*get_wall_thickness()); // expand to include half of the walls so that it meets the door and trim is added
+	// expand flooring to include half of the walls so that it meets the door and trim is added; not for garages and sheds
+	if (!room.is_sec_bldg) {flooring.expand_by_xy(0.5*get_wall_thickness());}
 
 	if (!room.is_ext_basement() && room.part_id < real_num_parts) { // skip if ext basement, including backrooms bathrooms
 		if (parts[room.part_id].contains_cube(room)) {flooring.intersect_with_cube_xy(parts[room.part_id]);}
