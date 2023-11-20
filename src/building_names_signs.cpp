@@ -401,7 +401,7 @@ city_flag_t create_flag(bool dim, bool dir, point const &base_pt, float height, 
 	flag.d[!dim][ dir] = base_pt[!dim] + (dir ? 1.0 : -1.0)*length; // end extends in dir
 	return city_flag_t(flag, dim, dir, base_pt, pradius, flag_id);
 }
-void building_t::add_flags(vector<city_flag_t> &flags) const {
+void building_t::add_flags(vector<city_flag_t> &flags) { // non-const because flags are cached in buildings
 	rand_gen_t rgen;
 	set_rgen_state_for_building(rgen);
 
@@ -422,12 +422,12 @@ void building_t::add_flags(vector<city_flag_t> &flags) const {
 		base_pt[ dim] = part.d[dim][dir];
 		base_pt[!dim] = part.get_center_dim(!dim);
 		base_pt.z     = part.z2() - 0.15*length;
-		cube_t flag; // sticks out and hangs vertically
-		set_cube_zvals(flag, (base_pt.z - length), base_pt.z);
-		set_wall_width(flag, base_pt[!dim], thickness, !dim); // flag thickness
-		flag.d[dim][!dir] = base_pt[dim] + (dir ? 1.0 : -1.0)*(pole_len - width); // end near wall
-		flag.d[dim][ dir] = base_pt[dim] + (dir ? 1.0 : -1.0)*pole_len; // far end
-		flags.emplace_back(flag, !dim, dir, base_pt, pradius);
+		// flag sticks out and hangs vertically
+		set_cube_zvals(exterior_flag, (base_pt.z - length), base_pt.z);
+		set_wall_width(exterior_flag, base_pt[!dim], thickness, !dim); // flag thickness
+		exterior_flag.d[dim][!dir] = base_pt[dim] + (dir ? 1.0 : -1.0)*(pole_len - width); // end near wall
+		exterior_flag.d[dim][ dir] = base_pt[dim] + (dir ? 1.0 : -1.0)*pole_len; // far end
+		flags.emplace_back(exterior_flag, !dim, dir, base_pt, pradius);
 		return;
 	}
 	if (has_helipad || !skylights.empty()) return; // flag may block the helipad or skylight
@@ -457,6 +457,7 @@ void building_t::add_flags(vector<city_flag_t> &flags) const {
 	// assume the tallest part has the roof that sets the bcube and place the flag with that height_add
 	float const height_add(bcube.z2() - base_pt.z), height( 2.0*window_spacing*rgen.rand_uniform(0.8, 1.25) + height_add);
 	flags.push_back(create_flag(dim, dir, base_pt, height, length, rgen.rand()));
+	exterior_flag = flags.back().bcube; // maybe we don't need to cache this since it's on the roof, but it doesn't hurt
 }
 
 

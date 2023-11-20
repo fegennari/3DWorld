@@ -2833,8 +2833,8 @@ public:
 			b.add_signs(signs);
 		}
 	}
-	void add_building_flags(cube_t const &region_bcube, vector<city_flag_t> &flags) const {
-		for (building_t const &b : buildings) { // same note as in add_building_signs
+	void add_building_flags(cube_t const &region_bcube, vector<city_flag_t> &flags) { // non-const because flags are cached in buildings
+		for (building_t &b : buildings) { // same note as in add_building_signs
 			if (!region_bcube.intersects_xy(b.bcube)) continue; // wrong region/city
 			b.add_flags(flags);
 		}

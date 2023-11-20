@@ -1405,7 +1405,7 @@ struct building_t : public building_geom_t {
 	bool has_int_fplace=0, has_parking_garage=0, has_small_part=0, has_basement_door=0, has_basement_pipes=0, parts_generated=0, is_in_city=0, has_skylight_light=0;
 	mutable bool player_visited=0; // for stats tracking
 	colorRGBA side_color=WHITE, roof_color=WHITE, detail_color=BLACK, door_color=WHITE, wall_color=WHITE;
-	cube_t bcube, coll_bcube, pri_hall, driveway, porch, assigned_plot;
+	cube_t bcube, coll_bcube, pri_hall, driveway, porch, assigned_plot, exterior_flag;
 	mutable cube_t city_driveway; // set by city gen, which only has a const ref to the building; technically this is cached city state, and not directly used by the building
 	vect_cube_t parts, fences;
 	vect_cube_with_ix_t skylights, gutters;
@@ -1625,7 +1625,7 @@ struct building_t : public building_geom_t {
 	void clear_room_geom();
 	void update_grass_exclude_at_pos(point const &pos, vector3d const &xlate, bool camera_in_building) const;
 	void add_signs(vector<sign_t> &signs) const;
-	void add_flags(vector<city_flag_t> &flags) const;
+	void add_flags(vector<city_flag_t> &flags);
 	void update_stats(building_stats_t &s) const;
 	bool are_rooms_connected_without_using_room(unsigned room1, unsigned room2, unsigned room_exclude) const;
 	bool is_room_adjacent_to_ext_door(cube_t const &room, bool front_door_only=0) const;

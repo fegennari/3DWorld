@@ -795,6 +795,7 @@ void building_t::add_balconies(rand_gen_t &rgen, vect_cube_t &balconies) {
 				balcony.d[dim][ dir] += (dir ? 1.0 : -1.0)*balcony_depth; // extend outward from the house
 				if (has_bcube_int(balcony, avoid)) continue; // blocked
 				if (check_cube_intersect_non_main_part(balcony)) continue; // porch roof, porch support, and chimney, etc.
+				if (!exterior_flag.is_all_zeros() && exterior_flag.intersects(balcony)) continue; // flag placed in the way, no balcony
 				cube_t balcony_ext_down(balcony), balcony_ext_out(balcony);
 				balcony_ext_down.z1() = ground_floor_z1; // extend down to the ground
 				bool bad_pos(0);
