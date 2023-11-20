@@ -1780,8 +1780,29 @@ void building_room_geom_t::add_stair(room_object_t const &c, float tscale, vecto
 
 void building_room_geom_t::add_downspout(room_object_t const &c) {
 	rgeom_mat_t &mat(get_metal_material(0, 0, 0, 1)); // unshadowed, exterior
-	// TODO: add curved/angled sections at the bottom and maybe the top
-	mat.add_cube_to_verts_untextured(c, c.color, (EF_Z12 | ~get_face_mask(c.dim, !c.dir))); // skip top and bottom faces and face against the house wall
+	unsigned const wall_skip_faces(~get_face_mask(c.dim, !c.dir));
+	float const width(c.get_width()), depth(c.get_depth());
+	vector3d rot_axis;
+	rot_axis[!c.dim] = ((c.dir ^ c.dim) ? -1.0 : 1.0);
+	cube_t top_v(c), top_h(c), vert(c), bot(c);
+	top_h.z2() = c.z2() - 0.75*width;
+	top_h.z1() = top_h.z2() - depth;
+	top_v.z1() = top_h.z2() - 0.315*depth;
+	vert .z2() = top_h.z1() + 0.315*depth;
+	bot  .z2() = c.z1() + depth;
+	vert .z1() = bot.z2() - 0.2*depth;
+	top_v.translate_dim(c.dim, (c.dir ? 1.0 : -1.0)*1.0*width); // move away from the wall
+	top_h.d[c.dim][c.dir]  = top_v.d[c.dim][c.dir]; // extend out to meet top vertical segment
+	bot  .d[c.dim][c.dir] += (c.dir ? 1.0 : -1.0)*1.2*width; // extend away from the wall
+	top_h.expand_in_dim(c.dim, -0.09*depth); // shorten slightly to account for the rotation
+	mat.add_cube_to_verts_untextured(top_v, c.color, EF_Z12); // skip top and bottom faces
+	unsigned qv_start(mat.quad_verts.size());
+	mat.add_cube_to_verts_untextured(top_h, c.color, wall_skip_faces); // skip face against the house wall
+	rotate_verts(mat.quad_verts, rot_axis, -30.0*TO_RADIANS, top_h.get_cube_center(), qv_start);
+	mat.add_cube_to_verts_untextured(vert,  c.color, (EF_Z12 | wall_skip_faces)); // skip top and bottom faces and face against the house wall
+	qv_start = mat.quad_verts.size();
+	mat.add_cube_to_verts_untextured(bot,   c.color, (EF_Z1 | get_skip_mask_for_xy(c.dim))); // skip bottom, front, and back faces
+	rotate_verts(mat.quad_verts, rot_axis, 30.0*TO_RADIANS, bot.get_cube_center(), qv_start);
 }
 
 void building_room_geom_t::add_stairs_wall(room_object_t const &c, vector3d const &tex_origin, tid_nm_pair_t const &wall_tex) {
