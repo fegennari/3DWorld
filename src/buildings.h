@@ -1937,8 +1937,8 @@ private:
 	bool find_mirror_needing_reflection(vector3d const &xlate) const;
 	int find_main_roof_tquad_ix(rand_gen_t &rgen, bool skip_if_has_other_obj) const;
 	void maybe_add_fire_escape(rand_gen_t &rgen);
-	void add_balconies(rand_gen_t &rgen);
-	void add_gutter_downspouts(rand_gen_t &rgen);
+	void add_balconies(rand_gen_t &rgen, vect_cube_t &balconies);
+	void add_gutter_downspouts(rand_gen_t &rgen, vect_cube_t const &balconies);
 	void add_extra_obj_slots();
 	void add_wall_and_door_trim_if_needed();
 	void add_wall_and_door_trim();

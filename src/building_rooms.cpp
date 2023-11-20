@@ -679,10 +679,11 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 	if (is_house && has_basement_pipes) {add_house_basement_pipes (rgen);}
 	if (has_attic()) {add_attic_objects(rgen);}
 	unsigned const ext_objs_start(objs.size());
+	vect_cube_t balconies;
 	ext_steps.clear(); // clear prev value in case this building's interior is recreated
 	maybe_add_fire_escape  (rgen);
-	add_balconies          (rgen);
-	add_gutter_downspouts  (rgen);
+	add_balconies          (rgen, balconies);
+	add_gutter_downspouts  (rgen, balconies);
 	add_exterior_door_items(rgen);
 	if (!is_rotated()) {add_ext_door_steps(ext_objs_start);} // must be after adding balconies and fire escape
 	add_extra_obj_slots(); // needed to handle balls taken from one building and brought to another
@@ -752,7 +753,7 @@ void building_t::maybe_add_fire_escape(rand_gen_t &rgen) {
 	} // for p
 }
 
-void building_t::add_balconies(rand_gen_t &rgen) {
+void building_t::add_balconies(rand_gen_t &rgen, vect_cube_t &balconies) {
 	if (!is_house || !has_room_geom()) return; // houses only for now
 	if (rgen.rand_bool()) return; // only add balconies to 50% of houses
 	float const floor_spacing(get_window_vspace()), wall_thickness(get_wall_thickness());
@@ -815,6 +816,7 @@ void building_t::add_balconies(rand_gen_t &rgen) {
 				room_object_t balcony_obj(balcony, TYPE_BALCONY, room_id, dim, dir, (hanging ? RO_FLAG_HANGING : 0), 1.0, SHAPE_CUBE, WHITE);
 				balcony_obj.obj_id = balcony_style; // set so that we can select from multiple balcony styles
 				objs.push_back(balcony_obj);
+				balconies.push_back(balcony);
 				avoid.push_back(balcony); // shouldn't need to consider area_below
 				avoid.back().expand_by_xy(wall_thickness);
 				// add exterior step for this balcony so that the player can stand on it and can't pass through the railings
@@ -890,24 +892,66 @@ void building_t::add_balconies(rand_gen_t &rgen) {
 	} // for room
 }
 
-void building_t::add_gutter_downspouts(rand_gen_t &rgen) {
-	return; // TODO: enable when this is completed
+void building_t::add_gutter_downspouts(rand_gen_t &rgen, vect_cube_t const &balconies) {
 	for (cube_with_ix_t const &g : gutters) {
 		bool const dim(g.ix >> 1), dir(g.ix & 1);
-		float const len(g.get_sz_dim(!dim)), width(g.get_sz_dim(dim)), edge_spacing(min(0.1f*len, 2.0f*width)), ds_width(min(0.6f*width, 0.4f*edge_spacing));
-		float const wall_pos(g.d[dim][!dir]);
+		float const len(g.get_sz_dim(!dim)), width(g.get_sz_dim(dim)), ds_width(0.5f*width), edge_spacing(1.65*ds_width); // just enough to clear the fence post
+		float const wall_pos(g.d[dim][!dir]), extend_wall_pos(g.d[dim][dir]), dir_sign(dir ? 1.0 : -1.0);
 		assert(len > 0.0 && width > 0.0);
 		assert(ground_floor_z1 < g.z1());
 		cube_t ds;
 		set_cube_zvals(ds, ground_floor_z1, g.z1());
 		ds.d[dim][!dir] = wall_pos; // at the wall
-		ds.d[dim][ dir] = wall_pos + (dir ? 1.0 : -1.0)*0.67*ds_width; // extend out from the wall
+		ds.d[dim][ dir] = wall_pos + dir_sign*0.6*ds_width; // extend out from the wall
+		// find part associated with this gutter and clip interior gutter to this
+		cube_t int_gutter(g);
+		point query_pt;
+		query_pt[ dim] = wall_pos - dir_sign*0.1*ds_width; // slightly inside the wall
+		query_pt[!dim] = g.get_center_dim(!dim);
+		query_pt.z = g.z1() - width; // slightly down
+		bool found(0), skip_ends[2] = {0,0};
+
+		for (auto p = parts.begin(); p != get_real_parts_end_inc_sec(); ++p) {
+			if (!p->contains_pt(query_pt)) continue;
+			// gutters usually extend beyond the building part, but they can end inside it for two-part house roofs meeting at an inside corner where the roof tquad is clipped;
+			// in this case we skip the downspout because it may be too close to a lower window
+			if (g.d[!dim][0] > p->d[!dim][0]) {skip_ends[0] = 1;}
+			if (g.d[!dim][1] < p->d[!dim][1]) {skip_ends[1] = 1;}
+			max_eq(int_gutter.d[!dim][0], p->d[!dim][0]); // clip !dim range to the building part
+			min_eq(int_gutter.d[!dim][1], p->d[!dim][1]);
+			assert(!found);
+			found = 1;
+		}
+		assert(found);
 
 		for (unsigned e = 0; e < 2; ++e) { // add gutter at each end
-			set_wall_width(ds, (g.d[!dim][e] + (e ? -1.0 : 1.0)*edge_spacing), 0.5*ds_width, !dim);
-			// TODO: check for intersections with lower parts when stacked
-			// TODO: check for intersections with garage doors
-			// TODO: check for intersections with windows below
+			if (skip_ends[e]) continue;
+			float const centerline(int_gutter.d[!dim][e] + (e ? -1.0 : 1.0)*edge_spacing);
+			set_wall_width(ds, centerline, 0.5*ds_width, !dim);
+			if (has_bcube_int(ds, balconies)) continue; // check balconies; is this necessary?
+			// what about fire escapes? is it possible for the gutter to intersect them, and does that look wrong?
+			if (has_chimney == 2 && (get_chimney().intersects(ds) || get_fireplace().intersects(ds))) continue; // check exterior chimney
+			if (has_porch() && porch.intersects_xy(ds)) continue; // check porch (roof)
+			cube_t ds_exp(ds);
+			ds_exp.d[dim][!dir] -= dir_sign*get_wall_thickness(); // move toward the house so that the garage door is intersected
+			
+			if (has_sec_bldg() && get_sec_bldg().intersects(ds_exp)) { // gutter on garage or shed
+				bool const inner_dir(centerline < bcube.get_center_dim(!dim));
+				if (e == inner_dir) continue; // only add gutter on the ouyside facing direction
+			}
+			else if (real_num_parts > 1) { // check for intersections with lower parts when stacked
+				cube_t test_cube(ds);
+				test_cube.d[dim][!dir] += dir_sign*0.1*ds_width; // move away from the wall to prevent self-intersection with upper part
+				if (cube_int_parts_no_sec(test_cube)) continue;
+			}
+			// check for intersections with garage doors and corner front doors
+			ds_exp.expand_in_dim(!dim, 4.0*ds_width); // add extra padding to avoid doorbells and lamps
+			bool door_int(0);
+
+			for (tquad_with_ix_t const &door : doors) {
+				if (door.get_bcube().intersects(ds_exp)) {door_int = 1; break;}
+			}
+			if (door_int) continue;
 			interior->room_geom->objs.emplace_back(ds, TYPE_DOWNSPOUT, 0, dim, dir, (RO_FLAG_NOCOLL | RO_FLAG_EXTERIOR), 1.0, SHAPE_CUBE, WHITE);
 		} // for e
 	} // for g
