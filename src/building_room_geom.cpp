@@ -617,7 +617,7 @@ void building_room_geom_t::add_hanger_rod(room_object_t const &c) { // is_small=
 void building_room_geom_t::add_drain_pipe(room_object_t const &c) { // is_small=1
 	rgeom_mat_t &mat(get_untextured_material(0, 0, 1)); // unshadowed, small
 	mat.add_vcylin_to_verts(c, apply_light_color(c), 0, 0); // draw sides only
-	mat.add_disk_to_verts(cube_top_center(c), 0.5*c.dx(), 0, BLACK); // draw top as black
+	mat.add_vert_disk_to_verts(cube_top_center(c), 0.5*c.dx(), 0, BLACK); // draw top as black
 }
 
 void building_room_geom_t::add_key(room_object_t const &c) { // is_small=1
@@ -832,7 +832,7 @@ void building_room_geom_t::add_paint_can(room_object_t const &c) {
 	side_mat.add_vcylin_to_verts(c, apply_light_color(c), 0, 0, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, 24, side_tscale_add); // draw sides only; random texture rotation
 	point top(c.get_cube_center());
 	top.z = c.z2();
-	get_metal_material(1, 0, 1).add_disk_to_verts(top, 0.5*min(c.dx(), c.dy()), 0, apply_light_color(c, LT_GRAY)); // shadowed, specular metal; small=1
+	get_metal_material(1, 0, 1).add_vert_disk_to_verts(top, 0.5*min(c.dx(), c.dy()), 0, apply_light_color(c, LT_GRAY)); // shadowed, specular metal; small=1
 }
 
 void building_room_geom_t::add_shelves(room_object_t const &c, float tscale) {
@@ -4047,7 +4047,7 @@ void building_room_geom_t::add_potted_plant(room_object_t const &c, bool inc_pot
 		
 		if (!no_dirt) { // draw dirt in the pot as a disk if not taken
 			rgeom_mat_t &dirt_mat(get_material(tid_nm_pair_t(get_texture_by_name("rock2.png")), 1)); // use dirt texture
-			dirt_mat.add_disk_to_verts(base_pos, 0.947*pot_radius, 0, apply_light_color(c, WHITE));
+			dirt_mat.add_vert_disk_to_verts(base_pos, 0.947*pot_radius, 0, apply_light_color(c, WHITE));
 		}
 	}
 	if (inc_plant && c.taken_level == 0) { // plant not taken
