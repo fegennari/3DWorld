@@ -2474,6 +2474,22 @@ void building_t::add_pri_hall_objs(rand_gen_t rgen, rand_gen_t room_rgen, room_t
 			} // for n
 		}
 	}
+	// add cameras at each end of the hallway
+	float const ceil_zval(zval + get_floor_ceil_gap()), doorway_width(get_doorway_width());
+	float const length(0.09*window_vspacing), width(0.4*length), height(0.5*length);
+	cube_t camera;
+	set_cube_zvals(camera, (ceil_zval - height), ceil_zval);
+	cube_t const place_area(get_walkable_room_bounds(room));
+	bool const camera_side(rgen.rand_bool());
+
+	for (unsigned dir = 0; dir < 2; ++dir) {
+		float pos(room.get_center_dim(!long_dim));
+		if (floor_ix == 0) {pos += 0.65*doorway_width*((dir ^ camera_side) ? 1.0 : -1.0);} // place off to the side on the ground floor to avoid blocking the doorway and exit sign
+		set_wall_width(camera, pos, 0.5*width, !long_dim);
+		camera.d[long_dim][!dir] = place_area.d[long_dim][!dir] + (dir ? 1.0 : -1.0)*0.25*length; // near the wall
+		camera.d[long_dim][ dir] = camera    .d[long_dim][!dir] + (dir ? 1.0 : -1.0)*     length; // extend away from the wall
+		objs.emplace_back(camera, TYPE_CAMERA, room_id, long_dim, dir, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CUBE, WHITE);
+	}
 }
 
 bool building_t::add_server_room_objs(rand_gen_t rgen, room_t const &room, float &zval, unsigned room_id, float tot_light_amt, unsigned objs_start) { // for office buildings
