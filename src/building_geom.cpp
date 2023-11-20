@@ -1718,7 +1718,7 @@ void building_t::gen_building_doors_if_needed(rand_gen_t &rgen) { // for office 
 	if (use_cylinder_coll())                 return; // can't place doors on curved building sides
 	if (!is_cube() && has_complex_floorplan) return; // this case isn't handled either
 	assert(!parts.empty());
-	float const door_height(1.1*get_door_height()), wscale(0.7); // a bit taller and a lot wider than house doors
+	float const door_height(1.06*get_door_height()), wscale(0.7); // a bit taller and a lot wider than house doors
 
 	if (has_pri_hall()) { // building has primary hallway, place doors at both ends of first part
 		for (unsigned d = 0; d < 2; ++d) {
