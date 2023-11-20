@@ -634,6 +634,7 @@ void rgeom_mat_t::pre_draw(int shadow_only) const {
 }
 void rgeom_mat_t::draw_geom() const {
 	glDrawRangeElements(GL_TRIANGLES, 0, num_verts, num_ixs, GL_UNSIGNED_INT, nullptr);
+	++num_frame_draw_calls;
 }
 void rgeom_mat_t::draw_inner(int shadow_only) const {
 	pre_draw(shadow_only);

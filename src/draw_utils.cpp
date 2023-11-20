@@ -538,6 +538,7 @@ template<typename T> void indexed_mesh_draw<T>::render() const {
 	bind_vbo(ivbo, 1);
 	set_ptr_state(&verts.front(), verts.size());
 	glDrawRangeElements(GL_TRIANGLES, 0, verts.size(), ivbo_size, GL_UNSIGNED_INT, NULL);
+	++num_frame_draw_calls;
 	bind_vbo(0, 1);
 	unset_ptr_state(&verts.front());
 }
@@ -651,6 +652,7 @@ void icosphere_drawer_t::draw() const {
 	pre_render(1, 1); // using_index, do_bind_vbo=1
 	vert_wrap_t::set_vbo_arrays();
 	glDrawRangeElements((using_tess_shader ? GL_PATCHES : GL_TRIANGLES), 0, nverts, nindices, GL_UNSIGNED_INT, nullptr);
+	++num_frame_draw_calls;
 	post_render();
 }
 
@@ -732,6 +734,7 @@ void vbo_block_manager_t<vert_type_t>::render_range(unsigned six, unsigned eix, 
 	}
 	else {
 		glDrawArraysInstanced(prim_type, offsets[six], count, num_instances); // default is quads
+		++num_frame_draw_calls;
 	}
 }
 
@@ -854,6 +857,7 @@ public:
 		else {
 			glDrawElementsBaseVertex(GL_TRIANGLES, num_tri_verts, index_type, 0, start_quad_vert);
 		}
+		++num_frame_draw_calls;
 		bind_vbo(0, 1);
 	}
 };

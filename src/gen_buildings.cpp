@@ -564,6 +564,7 @@ class building_draw_t {
 			if (vstart.tix != vend.tix) { // this is empty over half the time; merging this with the quads draw call likely has little runtime effect
 				assert(vstart.tix < vend.tix);
 				glDrawArrays(GL_TRIANGLES, (vstart.tix + tri_vbo_off), (vend.tix - vstart.tix));
+				++num_frame_draw_calls;
 			}
 			if (tex.tid == FONT_TEXTURE_ID) {disable_blend();}
 			if (!shadow_only) {tex.unset_gl(state);}

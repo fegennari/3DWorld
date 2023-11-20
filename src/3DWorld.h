@@ -897,10 +897,12 @@ template <typename T> void unset_ptr_state(T const *const verts) {
 	if (verts) {unbind_temp_vbo();}
 }
 
+extern unsigned num_frame_draw_calls;
 template <typename T> void draw_verts(T const *const verts, unsigned count, int gl_type, unsigned start_ix=0, bool set_array_client_state=1) {
 	assert(count > 0);
 	set_ptr_state(verts, count, start_ix, set_array_client_state);
 	glDrawArrays(gl_type, start_ix, count);
+	++num_frame_draw_calls;
 	unset_ptr_state(verts);
 }
 template <typename T> void draw_verts(vector<T> const &verts, int gl_type, unsigned start_ix=0, bool set_array_client_state=1) {

@@ -132,6 +132,7 @@ void small_tree_group::draw_trunk_pts() {
 	trunk_pts_vbo.pre_render();
 	vert_wrap_t::set_vbo_arrays();
 	glDrawArrays(GL_LINES, 0, num_trunk_pts);
+	++num_frame_draw_calls;
 	bind_vbo(0);
 }
 

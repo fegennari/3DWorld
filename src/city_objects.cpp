@@ -413,6 +413,7 @@ void hedge_draw_t::draw_and_clear(shader_t &s) {
 		scale_by(sz_mult*sz); // scale to match the size
 		s.upload_mvm();
 		glDrawArrays(GL_TRIANGLES, 0, num_verts);
+		++num_frame_draw_calls;
 		fgPopMatrix();
 	} // for c
 	post_render();

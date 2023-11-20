@@ -327,6 +327,7 @@ public:
 		return is_new_vertex;
 	}
 	void end_strip() {indices.push_back(RESERVED_IX);}
+	
 	void draw() {
 		if (verts.empty()) {assert(indices.empty()); return;} // nothing to do
 		create_and_upload(verts, indices, 2);
@@ -334,6 +335,7 @@ public:
 		glEnable(GL_PRIMITIVE_RESTART);
 		glPrimitiveRestartIndex(RESERVED_IX);
 		glDrawRangeElements(GL_TRIANGLE_STRIP, 0, verts.size(), indices.size(), GL_UNSIGNED_INT, NULL);
+		++num_frame_draw_calls;
 		glDisable(GL_PRIMITIVE_RESTART);
 		post_render();
 	}

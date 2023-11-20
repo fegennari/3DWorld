@@ -797,6 +797,7 @@ void display() {
 	static int init(0), frame_index(0), time_index(0), global_time(0), tticks(0);
 	static point old_spos(0.0, 0.0, 0.0);
 	++cur_display_iter;
+	num_frame_draw_calls = 0;
 	proc_kbd_events();
 
 	if (!init) { // the first frame

@@ -231,6 +231,7 @@ void draw_mesh_vbo(bool shadow_pass) {
 
 	for (int i = 0; i < MESH_Y_SIZE-1; ++i) { // use glMultiDrawArrays()?
 		glDrawArrays(GL_TRIANGLE_STRIP, 2*i*MESH_X_SIZE, 2*MESH_X_SIZE);
+		++num_frame_draw_calls;
 	}
 	mesh_data_vao_mgr.disable_vao();
 	s.end_shader();
@@ -367,7 +368,7 @@ public:
 		vert_norm_color::set_vbo_arrays(1, &data.front());
 	}
 	void emit_strip() {
-		if (c >= 3) {glDrawArrays(GL_TRIANGLE_STRIP, 0, c);} // at least one triangle
+		if (c >= 3) {glDrawArrays(GL_TRIANGLE_STRIP, 0, c); ++num_frame_draw_calls;} // at least one triangle
 		c = 0;
 	}
 };
@@ -394,8 +395,9 @@ public:
 			pre_render(1);
 			upload_vector_to_vbo(data);
 		}
-		for (vector<unsigned>::const_iterator i = strip_ixs.begin(); i+1 != strip_ixs.end(); ++i) {
+		for (vector<unsigned>::const_iterator i = strip_ixs.begin(); i+1 != strip_ixs.end(); ++i) { // skip last element
 			glDrawArrays(GL_TRIANGLE_STRIP, *i, (*(i+1) - *i));
+			++num_frame_draw_calls;
 		}
 		post_render();
 	}
