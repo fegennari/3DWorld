@@ -999,7 +999,7 @@ void building_room_geom_t::create_detail_vbos(building_t const &building) {
 		case TYPE_SPRINKLER:  add_sprinkler(*i); break;
 		case TYPE_CURB:       add_curb(*i); break;
 		case TYPE_CHIMNEY:    add_chimney(*i, building.get_material().side_tex); break; // uses exterior wall texture
-		case TYPE_DUCT:       add_duct(*i);
+		case TYPE_DUCT:       add_duct(*i); break;
 		case TYPE_CAMERA:     add_camera(*i); break;
 		default: break;
 		} // end switch
