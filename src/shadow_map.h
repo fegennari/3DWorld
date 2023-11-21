@@ -13,18 +13,16 @@ unsigned const MAX_DLIGHT_SMAPS       = 64; // must agree with the value used in
 
 class smap_texture_array_t {
 
-	unsigned num_layers, num_layers_used;
-
+	unsigned num_layers=0, num_layers_used=0;
 public:
-	unsigned tid, gen_id;
+	unsigned tid=0, gen_id=1, gpu_mem=0; // gen_id starts at 1
 
-	smap_texture_array_t() : num_layers(0), num_layers_used(0), tid(0), gen_id(1) {} // gen_id starts at 1
 	bool is_allocated() const {return (tid > 0);}
 	void free_gl_state();
 	void ensure_tid(unsigned xsize, unsigned ysize);
 	void reserve_num_layers(unsigned num);
 	unsigned new_layer();
-	void clear() {num_layers = num_layers_used = 0; free_gl_state();}
+	void clear() {num_layers = num_layers_used = gpu_mem = 0; free_gl_state();}
 };
 
 class smap_data_state_t {
@@ -57,7 +55,7 @@ struct smap_data_t : public smap_data_state_t {
 	bool set_smap_shader_for_light(shader_t &s, int light, xform_matrix const *const mvm=nullptr) const;
 	bool bind_smap_texture(bool light_valid=1) const;
 	void create_shadow_map_for_light(point const &lpos, cube_t const *const bounds=nullptr, bool use_world_space=0, bool no_update=0, bool force_update=0);
-	unsigned get_gpu_mem() const {return (is_allocated() ? 4*smap_sz*smap_sz : 0);}
+	unsigned get_gpu_mem() const;
 	virtual void render_scene_shadow_pass(point const &lpos) = 0;
 	virtual bool needs_update(point const &lpos);
 	virtual bool is_local() const {return 0;} // for debugging only

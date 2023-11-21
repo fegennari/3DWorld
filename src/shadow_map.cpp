@@ -17,6 +17,7 @@
 //int const SHADOW_MAP_DATATYPE = GL_UNSIGNED_BYTE; // 8-bit shadow maps
 int const SHADOW_MAP_DATATYPE = GL_UNSIGNED_SHORT; // 16-bit shadow maps
 //int const SHADOW_MAP_DATATYPE = GL_UNSIGNED_INT; // 32-bit shadow maps (overkill)
+unsigned const smap_bytes_per_pixel = sizeof(unsigned short);
 
 bool voxel_shadows_updated(0);
 unsigned shadow_map_sz(0), scene_smap_vbo_invalid(0), empty_smap_tid(0);
@@ -493,6 +494,7 @@ void smap_texture_array_t::ensure_tid(unsigned xsize, unsigned ysize) {
 	set_shadow_tex_params(tid, 1);
 	glTexImage3D(GL_TEXTURE_2D_ARRAY, 0, GL_DEPTH_COMPONENT, xsize, ysize, num_layers, 0, GL_DEPTH_COMPONENT, SHADOW_MAP_DATATYPE, NULL);
 	check_gl_error(630);
+	gpu_mem += xsize*ysize*smap_bytes_per_pixel;
 }
 
 
@@ -555,6 +557,9 @@ void smap_data_t::create_shadow_map_for_light(point const &lpos, cube_t const *c
 	// Now rendering from the camera POV, using the FBO to generate shadows
 	check_gl_error(203);
 }
+
+unsigned get_smap_bytes_per_pixel() {return smap_bytes_per_pixel;}
+unsigned smap_data_t::get_gpu_mem() const {return (is_allocated() ? smap_bytes_per_pixel*smap_sz*smap_sz : 0);}
 
 
 void draw_mesh_shadow_pass(point const &lpos, unsigned smap_sz) {

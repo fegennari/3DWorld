@@ -366,14 +366,12 @@ unsigned tile_t::get_gpu_mem() const {
 }
 
 unsigned tile_t::get_smap_mem() const {
-	
 	unsigned mem(0);
 	for (unsigned i = 0; i < smap_data.size(); ++i) {mem += smap_data[i].get_gpu_mem();}
 	return mem;
 }
 
 unsigned tile_t::count_shadow_maps() const {
-
 	unsigned num(0);
 	for (unsigned i = 0; i < smap_data.size(); ++i) {num += smap_data[i].is_allocated();}
 	return num;
@@ -923,13 +921,15 @@ void tile_shadow_map_manager::clear_context() {
 	}
 }
 
+unsigned get_smap_bytes_per_pixel();
+
 unsigned tile_shadow_map_manager::get_free_list_mem_usage() const {
 	unsigned mem(0);
 
 	for (unsigned l = 0; l < NUM_LIGHT_SRC; ++l) {
 		for (unsigned L = 0; L < NUM_SMAP_LODS; ++L) {
 			unsigned const tex_size(shadow_map_sz >> L);
-			mem += 4*tex_size*tex_size*free_list[l][L].size();
+			mem += get_smap_bytes_per_pixel()*tex_size*tex_size*free_list[l][L].size();
 		}
 	}
 	return mem;
@@ -2532,6 +2532,7 @@ bool tile_draw_t::can_have_reflection(tile_t const *const tile, tile_set_t &tile
 
 
 unsigned get_building_models_gpu_mem();
+unsigned get_dlights_smap_gpu_mem();
 unsigned in_mb(unsigned long long v) {return v/1024/1024;}
 
 void tile_draw_t::show_debug_stats() const {
@@ -2547,8 +2548,8 @@ void tile_draw_t::show_debug_stats() const {
 		num_trees += tile->num_pine_trees() + tile->num_decid_trees();
 	}
 	unsigned const dtree_mem(tree_data_manager.get_gpu_mem()), ptree_mem(get_tree_inst_gpu_mem()), grass_mem(grass_tile_manager.get_gpu_mem());
-	unsigned const smap_free_list_mem(smap_manager.get_free_list_mem_usage());
-	unsigned const texture_mem(get_loaded_textures_gpu_mem());
+	unsigned const smap_free_list_mem(smap_manager.get_free_list_mem_usage()), dlights_smap_mem(get_dlights_smap_gpu_mem());
+	unsigned const texture_mem( get_loaded_textures_gpu_mem());
 	unsigned const building_mem(get_buildings_gpu_mem_usage());
 	unsigned const models_mem(get_city_model_gpu_mem() + get_loaded_models_gpu_mem() + get_building_models_gpu_mem());
 	unsigned const frame_buf_mem(13*window_width*window_height); // RGB8 (as 32 bits?) front buffer + RGB8 back buffer + 32-bit depth buffer + 8 bit stencil buffer
@@ -2559,11 +2560,11 @@ void tile_draw_t::show_debug_stats() const {
 		for (unsigned i = 0; i < NUM_LODS; ++i) {mem += 4ULL*(tile_size>>i)*(tile_size>>i)*sizeof(unsigned);} // approximate
 	}
 	cout << "tiles drawn: " << to_draw.size() << " of " << tiles.size() << ", trees drawn: " << num_trees << ", shadow maps: " << num_smaps
-		<< ", GPU MB: " << in_mb(mem + dtree_mem + ptree_mem + grass_mem + smap_free_list_mem + texture_mem + building_mem + models_mem + frame_buf_mem + room_geom_mem)
+		<< ", GPU MB: " << in_mb(mem + dtree_mem + ptree_mem + grass_mem + smap_free_list_mem + dlights_smap_mem + texture_mem + building_mem + models_mem + frame_buf_mem + room_geom_mem)
 		<< ", tile MB: " << in_mb(mem - smap_mem) << ", tree CPU MB: " << in_mb(tree_mem) << ", tree GPU MB: " << in_mb((unsigned long long)dtree_mem + ptree_mem)
 		<< ", grass MB: " << in_mb(grass_mem) << ", smap MB: " << in_mb(smap_mem) << ", smap free list MB: " << in_mb(smap_free_list_mem)
-		<< ", frame buf MB: " << in_mb(frame_buf_mem) << ", texture MB: " << in_mb(texture_mem) << ", building MB: " << in_mb(building_mem)
-		<< ", room_geom MB: " << in_mb(room_geom_mem) << ", model MB: " << in_mb(models_mem) << endl;
+		<< ", dlights smap mem MB: " << in_mb(dlights_smap_mem) << ", frame buf MB: " << in_mb(frame_buf_mem) << ", texture MB: " << in_mb(texture_mem)
+		<< ", building MB: " << in_mb(building_mem) << ", room_geom MB: " << in_mb(room_geom_mem) << ", model MB: " << in_mb(models_mem) << endl;
 }
 
 
