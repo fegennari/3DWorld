@@ -905,12 +905,12 @@ void building_t::add_gutter_downspouts(rand_gen_t &rgen, vect_cube_t const &balc
 		ds.d[dim][!dir] = wall_pos; // at the wall
 		ds.d[dim][ dir] = wall_pos + dir_sign*0.6*ds_width; // extend out from the wall
 		// find part associated with this gutter and clip interior gutter to this
-		cube_t int_gutter(g);
+		cube_t int_gutter(g), part;
 		point query_pt;
 		query_pt[ dim] = wall_pos - dir_sign*0.1*ds_width; // slightly inside the wall
 		query_pt[!dim] = g.get_center_dim(!dim);
 		query_pt.z = g.z1() - width; // slightly down
-		bool found(0), skip_ends[2] = {0,0};
+		bool skip_ends[2] = {0,0};
 
 		for (auto p = parts.begin(); p != get_real_parts_end_inc_sec(); ++p) {
 			if (!p->contains_pt(query_pt)) continue;
@@ -920,10 +920,10 @@ void building_t::add_gutter_downspouts(rand_gen_t &rgen, vect_cube_t const &balc
 			if (g.d[!dim][1] < p->d[!dim][1]) {skip_ends[1] = 1;}
 			max_eq(int_gutter.d[!dim][0], p->d[!dim][0]); // clip !dim range to the building part
 			min_eq(int_gutter.d[!dim][1], p->d[!dim][1]);
-			assert(!found);
-			found = 1;
+			assert(part.is_all_zeros());
+			part  = *p; // part may be useful to have below
 		}
-		assert(found);
+		assert(!part.is_all_zeros()); // must be found
 
 		for (unsigned e = 0; e < 2; ++e) { // add gutter at each end
 			if (skip_ends[e]) continue;
@@ -944,6 +944,8 @@ void building_t::add_gutter_downspouts(rand_gen_t &rgen, vect_cube_t const &balc
 				cube_t test_cube(ds);
 				test_cube.d[dim][!dir] += dir_sign*0.1*ds_width; // move away from the wall to prevent self-intersection with upper part
 				if (cube_int_parts_no_sec(test_cube)) continue;
+				// skip gutters from upper stacked parts down through lower parts as they may intersect a window
+				if (part.z1() > ground_floor_z1 && g.d[!dim][e] > bcube.d[!dim][0] && g.d[!dim][e] < bcube.d[!dim][1]) continue;
 			}
 			// check for intersections with garage doors and corner front doors
 			ds_exp.expand_in_dim(!dim, 4.0*ds_width); // add extra padding to avoid doorbells and lamps
