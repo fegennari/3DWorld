@@ -484,7 +484,7 @@ void building_room_geom_t::get_shelf_objects(room_object_t const &c_in, cube_t c
 	c.flags |= RO_FLAG_WAS_EXP;
 	bool const is_house(c.is_house());
 	vector3d const c_sz(c.get_size());
-	float const dz(c_sz.z), width(c_sz[c.dim]), thickness(0.02*dz), bracket_thickness(0.75*thickness), floor_spacing(1.1*dz);
+	float const c_sz_min_xy(min(c_sz.x, c_sz.y)), dz(c_sz.z), width(c_sz[c.dim]), thickness(0.02*dz), bracket_thickness(0.75*thickness), floor_spacing(1.1*dz);
 	float const z_step(dz/(num_shelves + 1)), shelf_clearance(z_step - thickness - bracket_thickness), sz_scale(is_house ? 0.7 : 1.0), box_zscale(shelf_clearance*sz_scale);
 	rand_gen_t rgen(c.create_rgen());
 
@@ -541,7 +541,7 @@ void building_room_geom_t::get_shelf_objects(room_object_t const &c_in, cube_t c
 		for (unsigned n = 0; n < num_bottles; ++n) {
 			// same as building_t::place_bottle_on_obj()
 			float const bottle_height(z_step*rgen.rand_uniform(0.4, 0.7)), bottle_radius(z_step*rgen.rand_uniform(0.07, 0.11));
-			if (min(c_sz.x, c_sz.y) < 5.0*bottle_radius) continue; // shelf not wide/deep enough to add this bottle
+			if (c_sz_min_xy < 5.0*bottle_radius) continue; // shelf not wide/deep enough to add this bottle
 			gen_xy_pos_for_round_obj(C, S, bottle_radius, bottle_height, 2.0*bottle_radius, rgen);
 			C.set_as_bottle(rgen.rand(), BOTTLE_TYPE_MEDS-1, 1); // all bottle types except for medicine, no_empty=1
 			add_if_not_intersecting(C, objects, cubes);
@@ -549,7 +549,7 @@ void building_room_geom_t::get_shelf_objects(room_object_t const &c_in, cube_t c
 		// add paint cans
 		float const pc_height(0.64*z_step), pc_radius(0.28*z_step), pc_edge_spacing(1.1*pc_radius);
 
-		if (2.1*pc_edge_spacing < min(c_sz.x, c_sz.y)) { // shelf is wide/deep enough for paint cans
+		if (2.1*pc_edge_spacing < c_sz_min_xy) { // shelf is wide/deep enough for paint cans
 			unsigned const num_pcans(((rgen.rand()&3) == 0) ? 0 : (rgen.rand() % 7)); // 0-6, 75% chance
 			C.color = WHITE;
 			C.type  = TYPE_PAINTCAN;
@@ -563,7 +563,7 @@ void building_room_geom_t::get_shelf_objects(room_object_t const &c_in, cube_t c
 		// add spraypaint cans
 		float const spcan_height(0.55*z_step), spcan_radius(0.17*spcan_height); // fixed size
 
-		if (min(c_sz.x, c_sz.y) > 5.0*spcan_radius) { // add if shelf wide/deep enough
+		if (c_sz_min_xy > 5.0*spcan_radius) { // add if shelf wide/deep enough
 			unsigned const num_spcans(((rgen.rand()%5) < 3) ? (rgen.rand() % 4) : 0); // 0-3, 60% chance
 			C.dir   = C.dim = 0;
 			C.type  = TYPE_SPRAYCAN;
@@ -586,7 +586,7 @@ void building_room_geom_t::get_shelf_objects(room_object_t const &c_in, cube_t c
 			for (unsigned n = 0; n < num_balls; ++n) {
 				unsigned const btype(rgen.rand() % NUM_BALL_TYPES);
 				float const ball_radius(ball_types[btype].radius*floor_spacing/(12*8)); // assumes 8 foot floor spacing, and bt.radius in inches
-				if (2.1*ball_radius > min(c_sz.x, c_sz.y)) continue; // shelf is not wide/deep enough for balls of this type
+				if (2.1*ball_radius > c_sz_min_xy) continue; // shelf is not wide/deep enough for balls of this type
 				gen_xy_pos_for_round_obj(C, S, ball_radius, 2.0*ball_radius, ball_radius, rgen);
 				C.item_flags = btype;
 				add_if_not_intersecting(C, objects, cubes);
@@ -596,7 +596,7 @@ void building_room_geom_t::get_shelf_objects(room_object_t const &c_in, cube_t c
 		// add tape rolls
 		float const tape_radius(0.22*z_step), tape_height(TAPE_HEIGHT_TO_RADIUS*tape_radius); // fixed size
 
-		if (min(c_sz.x, c_sz.y) > 3.0*tape_radius) { // add if shelf wide/deep enough
+		if (c_sz_min_xy > 3.0*tape_radius) { // add if shelf wide/deep enough
 			unsigned const num_tapes(((rgen.rand()%4) < 3) ? (rgen.rand() % 4) : 0); // 0-3, 75% chance
 			C.dir   = C.dim = 0;
 			C.type  = TYPE_TAPE;
@@ -611,7 +611,7 @@ void building_room_geom_t::get_shelf_objects(room_object_t const &c_in, cube_t c
 		// add flashlight
 		float const fl_height(0.1*floor_spacing), fl_radius(0.2*fl_height);
 
-		if (rgen.rand_float() < 0.25 && min(c_sz.x, c_sz.y) > 3.0*fl_radius) { // add 25% of the time if shelf wide/deep enough
+		if (rgen.rand_float() < 0.25 && c_sz_min_xy > 3.0*fl_radius) { // add 25% of the time if shelf wide/deep enough
 			C.dir   = C.dim = 0;
 			C.type  = TYPE_FLASHLIGHT;
 			C.shape = SHAPE_CYLIN;
