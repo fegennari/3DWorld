@@ -2624,6 +2624,7 @@ bool building_t::add_security_room_objs(rand_gen_t rgen, room_t const &room, flo
 					//if (overlaps_other_room_obj(tv, objs_start)) continue; // not needed since there are no objects placed first?
 					objs.emplace_back(tv, TYPE_MONITOR, room_id, dim, !dir, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_SHORT, BLACK); // monitors are shorter than TVs
 					set_obj_id(objs);
+					objs.back().obj_id &= ~1; // on by default; strip off LSB
 				} // for col
 			} // for row
 		} // for dir
