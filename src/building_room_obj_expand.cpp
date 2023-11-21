@@ -393,12 +393,15 @@ void building_room_geom_t::expand_breaker_panel(room_object_t const &c, bool has
 			string label_text;
 
 			if (has_elevator && C == 0 && r == 0) { // first breaker - add elevator label
-				label.translate_dim(!c.dim, -0.75*breaker_dc);
+				label.translate_dim(!c.dim, -0.75*breaker_dc); // lo side
 				label_text = "Elevator";
 			}
 			else if (has_parking_garage && C == num_cols-1 && r == num_rows-1) { // last breaker - add parking garage label
-				label.translate_dim(!c.dim, 0.75*breaker_dc);
+				label.translate_dim(!c.dim, 0.75*breaker_dc); // hi side
 				label_text = "Garage";
+			}
+			else {
+				// could add breakers for "backrooms", "server", "security", "utility", etc.
 			}
 			if (!label_text.empty()) {
 				label.d[c.dim][!c.dir] = label.d[c.dim][c.dir] + dir_sign*0.05*thickness;

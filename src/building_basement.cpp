@@ -155,17 +155,20 @@ bool gen_furnace_cand(cube_t const &place_area, float floor_spacing, bool near_w
 	return 1;
 }
 
-void building_t::add_breaker_panel(rand_gen_t &rgen, cube_t const &c, float bp_hdepth, float ceil_zval, bool dim, bool dir, unsigned room_id, float tot_light_amt) {
+void building_t::add_breaker_panel(rand_gen_t &rgen, cube_t const &c, float ceil_zval, bool dim, bool dir, unsigned room_id, float tot_light_amt) {
 	assert(has_room_geom());
-	colorRGBA const color(0.5, 0.6, 0.7);
 	auto &objs(interior->room_geom->objs);
-	cube_t conduit(cube_top_center(c));
-	conduit.z2() = ceil_zval;
-	float const conduit_radius(rgen.rand_uniform(0.38, 0.46)*bp_hdepth);
-	conduit.expand_by_xy(conduit_radius);
-	objs.emplace_back(c, TYPE_BRK_PANEL, room_id, dim, dir, RO_FLAG_INTERIOR, tot_light_amt, SHAPE_CUBE, color);
+	objs.emplace_back(c, TYPE_BRK_PANEL, room_id, dim, dir, RO_FLAG_INTERIOR, tot_light_amt, SHAPE_CUBE, colorRGBA(0.5, 0.6, 0.7));
 	set_obj_id(objs);
-	objs.emplace_back(conduit, TYPE_PIPE, room_id, 0, 1, (RO_FLAG_NOCOLL | RO_FLAG_INTERIOR), tot_light_amt, SHAPE_CYLIN, LT_GRAY); // vertical pipe
+
+	if (c.z1() < ground_floor_z1) { // add conduit if in the basement
+		assert(c.z2() < ceil_zval);
+		cube_t conduit(cube_top_center(c));
+		conduit.z2() = ceil_zval;
+		float const bp_hdepth(0.5*c.get_sz_dim(dim)), conduit_radius(rgen.rand_uniform(0.38, 0.46)*bp_hdepth);
+		conduit.expand_by_xy(conduit_radius);
+		objs.emplace_back(conduit, TYPE_PIPE, room_id, 0, 1, (RO_FLAG_NOCOLL | RO_FLAG_INTERIOR), tot_light_amt, SHAPE_CYLIN, LT_GRAY); // vertical pipe
+	}
 }
 bool connect_furnace_to_breaker_panel(room_object_t const &furnace, cube_t const &bp, bool dim, bool dir, float conn_height, cube_t &conn) {
 	assert(furnace.type == TYPE_FURNACE);
@@ -226,7 +229,7 @@ bool building_t::add_office_utility_objs(rand_gen_t rgen, room_t const &room, fl
 			test_cube.d[dim][!dir] += dir_sign*2.0*bp_hwidth; // add a width worth of clearance in the front so that the door can be opened
 			test_cube.z2() = ceil_zval; // extend up to ceiling to ensure space for the conduit
 			if (is_obj_placement_blocked(test_cube, room, 1) || overlaps_other_room_obj(test_cube, objs_start)) continue;
-			add_breaker_panel(rgen, c, bp_hdepth, ceil_zval, dim, dir, room_id, tot_light_amt);
+			add_breaker_panel(rgen, c, ceil_zval, dim, dir, room_id, tot_light_amt);
 			// connect furnaces on the same wall to the breaker box
 			float const conn_height(c.z1() + rgen.rand_uniform(0.25, 0.75)*c.dz());
 
@@ -1506,7 +1509,7 @@ void building_t::add_basement_electrical(vect_cube_t &obstacles, vect_cube_t con
 			if (has_bcube_int(test_cube, obstacles) || has_bcube_int(test_cube, walls) || has_bcube_int(test_cube, beams)) continue; // bad breaker box or conduit position
 			if (is_cube_close_to_doorway(test_cube, basement, 0.0, 1)) continue; // needed for ext basement doorways; inc_open=1
 			unsigned cur_room_id((room_id < 0) ? get_room_containing_pt(c.get_cube_center()) : (unsigned)room_id); // calculate room_id if needed
-			add_breaker_panel(rgen, c, bp_hdepth, ceil_zval, dim, dir, cur_room_id, tot_light_amt);
+			add_breaker_panel(rgen, c, ceil_zval, dim, dir, cur_room_id, tot_light_amt);
 			cube_t blocker(c);
 			set_cube_zvals(blocker, ceil_zval-floor_height, ceil_zval); // expand to floor-to-ceiling
 			obstacles.push_back(blocker); // block off from pipes

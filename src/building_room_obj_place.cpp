@@ -2597,7 +2597,6 @@ bool building_t::add_server_room_objs(rand_gen_t rgen, room_t const &room, float
 
 bool building_t::add_security_room_objs(rand_gen_t rgen, room_t const &room, float &zval, unsigned room_id, float tot_light_amt, unsigned objs_start) { // for office buildings
 	if (!building_obj_model_loader.is_model_valid(OBJ_MODEL_TV)) return 0; // no TV/monitor model, can't create a security room
-	add_desk_to_room(rgen, room, vect_cube_t(), DK_GRAY, zval, room_id, tot_light_amt, objs_start, 0, 0, 1); // is_basement=0, desk_ix=0, no_computer=1
 	float const floor_spacing(get_window_vspace()), ceil_zval(zval + get_floor_ceil_gap());
 	float const start_zval(zval + 0.3*floor_spacing), place_z_range(ceil_zval - start_zval); // should be above the top of the desk
 	vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_TV)); // D, W, H
@@ -2608,13 +2607,33 @@ bool building_t::add_security_room_objs(rand_gen_t rgen, room_t const &room, flo
 	float const row_spacing(place_z_range/num_rows);
 	cube_t const room_bounds(get_walkable_room_bounds(room));
 	vect_room_object_t &objs(interior->room_geom->objs);
-	cube_t tv;
+	cube_t breaker_panel, tv;
+	vect_cube_t blockers;
+	interior->security_room_ix = room_id;
+	
+	if (1) { // add breaker panel
+		vect_door_stack_t const &doorways(get_doorways_for_room(room, zval)); // get interior doors
+		assert(!doorways.empty());
+		door_stack_t const &door(doorways.front()); // choose the first door (there is likely only one)
+		bool const side(!door.get_check_dirs()), dim(door.dim), dir(door.get_center_dim(dim) > room.get_center_dim(dim)); // the wall the door is on
+		float const door_edge(door.d[!dim][side]), wall_edge(room_bounds.d[!dim][side]);
+		float const wall_len(fabs(door_edge - wall_edge)), wall_center(0.5*(door_edge + wall_edge)), wall_pos(room_bounds.d[dim][dir]);
+		float const width(min(0.5f*wall_len, rgen.rand_uniform(0.25, 0.35)*floor_spacing)), depth(0.04*floor_spacing);
+		set_cube_zvals(breaker_panel, (ceil_zval - 0.75*floor_spacing), (ceil_zval - rgen.rand_uniform(0.35, 0.4)*floor_spacing));
+		set_wall_width(breaker_panel, wall_center, 0.5*width, !dim);
+		breaker_panel.d[dim][ dir] = wall_pos;
+		breaker_panel.d[dim][!dir] = wall_pos + (dir ? -1.0 : 1.0)*depth;
+		add_breaker_panel(rgen, breaker_panel, ceil_zval, door.dim, dir, room_id, tot_light_amt);
+		breaker_panel.d[dim][!dir] += (dir ? -1.0 : 1.0)*width; // add padding for desk placement
+		blockers.push_back(breaker_panel);
+	}
+	add_desk_to_room(rgen, room, blockers, DK_GRAY, zval, room_id, tot_light_amt, objs_start, 0, 0, 1); // is_basement=0, desk_ix=0, no_computer=1
 
 	// add computer monitors along all walls that don't have doors
 	for (unsigned dim = 0; dim < 2; ++dim) {
 		float const wall_len(room_bounds.get_sz_dim(!dim));
 		unsigned const num_cols(floor(wall_len/horiz_space));
-		float const col_spacing(wall_len/num_cols), col_start(room_bounds.d[!dim][0] + 0.5*horiz_space);
+		float const col_spacing(wall_len/num_cols), col_start(room_bounds.d[!dim][0] + 0.5*col_spacing);
 
 		for (unsigned dir = 0; dir < 2; ++dir) {
 			tv.d[dim][ dir] = room_bounds.d[dim][dir]; // on the wall
@@ -2626,6 +2645,7 @@ bool building_t::add_security_room_objs(rand_gen_t rgen, room_t const &room, flo
 
 				for (unsigned col = 0; col < num_cols; ++col) {
 					set_wall_width(tv, (col_start + col*col_spacing), tv_hwidth, !dim);
+					if (!breaker_panel.is_all_zeros() && breaker_panel.intersects(tv)) continue;
 					if (is_obj_placement_blocked(tv, room, 1)) continue;
 					//if (overlaps_other_room_obj(tv, objs_start)) continue; // not needed since there are no objects placed first?
 					objs.emplace_back(tv, TYPE_MONITOR, room_id, dim, !dir, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_SHORT, BLACK); // monitors are shorter than TVs
