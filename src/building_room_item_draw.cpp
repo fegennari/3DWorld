@@ -10,6 +10,7 @@
 
 unsigned const MAX_ROOM_GEOM_GEN_PER_FRAME = 1;
 
+unsigned room_geom_mem(0);
 quad_batch_draw candle_qbd;
 vect_room_object_t pending_objs;
 object_model_loader_t building_obj_model_loader;
@@ -410,7 +411,10 @@ void vbo_cache_t::free(unsigned &vbo, unsigned size, bool is_index) {
 }
 void vbo_cache_t::clear() { // unused
 	for (unsigned d = 0; d < 2; ++d) {
-		for (vbo_cache_entry_t &entry : entries[d]) {delete_vbo(entry.vbo);}
+		for (vbo_cache_entry_t &entry : entries[d]) {
+			delete_vbo(entry.vbo);
+			room_geom_mem -= entry.size;
+		}
 		entries[d].clear();
 	}
 }
@@ -492,6 +496,7 @@ void rgeom_mat_t::create_vbo_inner() {
 		if (vret.size == 0) { // newly created
 			vert_vbo_sz = tot_verts_sz;
 			upload_vbo_data(nullptr, tot_verts_sz);
+			room_geom_mem += tot_verts_sz;
 		}
 		else { // existing
 			vert_vbo_sz = vret.size;
@@ -500,6 +505,7 @@ void rgeom_mat_t::create_vbo_inner() {
 		if (iret.size == 0) { // newly created
 			ixs_vbo_sz = ix_data_sz;
 			upload_to_vbo(vao_mgr.ivbo, indices, 1, 1);
+			room_geom_mem += indices.size()*sizeof(unsigned);
 		}
 		else { // existing
 			ixs_vbo_sz = iret.size;
