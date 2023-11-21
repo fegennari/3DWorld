@@ -1059,9 +1059,9 @@ void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 		vector<float> rand_vals(tsize*tsize);
 		bool row_ec_valid(0);
 		vect_cube_t exclude_cubes, row_exclude_cubes, allow_cubes; // in camera space
-		cube_t const tile_region(get_xval(llc_x), get_xval(x2 - xoff2), get_yval(llc_y), get_yval(y2 - yoff2), mzmin, mzmax);
-		get_city_grass_coll_cubes(tile_region, exclude_cubes, allow_cubes);
-		has_tunnel |= tile_contains_tunnel(get_mesh_bcube());
+		cube_t const mesh_bcube(get_mesh_bcube());
+		get_city_grass_coll_cubes(mesh_bcube, exclude_cubes, allow_cubes);
+		has_tunnel |= tile_contains_tunnel(mesh_bcube);
 
 #pragma omp parallel for schedule(static,1) num_threads(2)
 		for (int y = 0; y < (int)tsize-DEBUG_TILE_BOUNDS; ++y) {
@@ -1144,7 +1144,7 @@ void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 
 					if (grass_scale > 0.0 && !exclude_cubes.empty()) { // exclude bridges and tunnels here
 						if (!row_ec_valid) { // optimization: calculate exclude cubes for the current yval row; not needed for allow_cubes because they're sparse
-							cube_t const row_region(tile_region.x1(), tile_region.x2(), ry1, ry2, 0.0, 0.0);
+							cube_t const row_region(mesh_bcube.x1(), mesh_bcube.x2(), ry1, ry2, 0.0, 0.0);
 							row_exclude_cubes.clear();
 
 							for (cube_t const &c : exclude_cubes) {

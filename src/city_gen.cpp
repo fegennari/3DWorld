@@ -3144,8 +3144,8 @@ unsigned check_city_sphere_coll(point const &pos, float radius, bool exclude_bri
 	if (!have_cities()) return 0;
 	return city_gen.check_city_sphere_coll((pos + get_tt_xlate_val()), radius, 1, exclude_bridges_and_tunnels, ret_first_coll, check_mask); // apply xlate for all static objects
 }
-void get_city_grass_coll_cubes(cube_t const &region, vect_cube_t &out, vect_cube_t &out_bt) { // Note: out is in camera space
-	city_gen.get_grass_coll_cubes((region + get_tt_xlate_val()), out, out_bt); // convert from city/building space to camera space
+void get_city_grass_coll_cubes(cube_t const &region, vect_cube_t &out, vect_cube_t &out_bt) { // Note: region and out are in camera space
+	city_gen.get_grass_coll_cubes(region, out, out_bt);
 }
 bool proc_city_sphere_coll(point &pos, point const &p_last, float radius, float prev_frame_zval, bool inc_cars, vector3d *cnorm, bool check_interior) {
 	if (proc_buildings_sphere_coll(pos, p_last, radius, cnorm, check_interior)) return 1;
@@ -3230,7 +3230,7 @@ bool check_mesh_disable(point const &pos, float radius) { // Note: pos is in glo
 	return city_gen.check_mesh_disable((pos + get_tt_xlate_val()), radius); // apply xlate for all static objects
 }
 bool choose_pt_in_city_park(point const &pos, point &park_pos, rand_gen_t &rgen) {return city_gen.choose_pt_in_park(pos, park_pos, rgen);}
-bool tile_contains_tunnel(cube_t const &bcube) {return city_gen.tile_contains_tunnel(bcube + get_tt_xlate_val());}
+bool tile_contains_tunnel(cube_t const &bcube) {return city_gen.tile_contains_tunnel(bcube);}
 void destroy_city_in_radius(point const &pos, float radius) {city_gen.destroy_in_radius(pos, radius);}
 bool get_city_color_at_xy(float x, float y, colorRGBA &color) {return city_gen.get_color_at_xy(x, y, color);}
 cube_t get_city_lights_bcube() {return city_gen.get_lights_bcube();}
