@@ -915,12 +915,14 @@ bool building_t::add_ball_to_room(rand_gen_t &rgen, room_t const &room, cube_t c
 	ball_area.expand_by_xy(-rgen.rand_uniform(radius, max(2.0f*radius, min(10.0f*radius, 0.5f*floor_spacing))));
 	vect_room_object_t &objs(interior->room_geom->objs);
 	if (!ball_area.is_strictly_normalized()) return 0; // should always be normalized
+	bool const is_backrooms(!is_house && has_parking_garage && room.is_ext_basement());
+	if (is_backrooms && min(ball_area.dx(), ball_area.dy()) < 4.0*radius) return 0; // too small; shouldn't happen
 	float const ceil_zval(zval + get_floor_ceil_gap()); // zval should be valid whether or not in the pool
 	
 	for (unsigned n = 0; n < 10; ++n) { // make 10 attempts to place the object
 		point center(0.0, 0.0, zval);
 
-		if (!is_house && room.is_ext_basement()) { // office backrooms: place anywhere within the room
+		if (is_backrooms) { // office backrooms: place anywhere within the room
 			center = gen_xy_pos_in_area(ball_area, radius, rgen, center.z);
 		}
 		else { // house bedroom or swimming pool room: place along a wall
