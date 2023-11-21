@@ -1490,6 +1490,12 @@ void building_t::add_office_door_sign(rand_gen_t rgen, room_t const &room, float
 	string const name(gen_random_full_name(rgen));
 	add_door_sign(name, room, zval, room_id, tot_light_amt); // will cache the name; maybe it shouldn't?
 }
+void building_t::add_door_sign_remove_existing(std::string const &text, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
+	for (auto i = interior->room_geom->objs.begin()+objs_start; i != interior->room_geom->objs.end(); ++i) {
+		if (i->type == TYPE_SIGN) {i->remove();}
+	}
+	add_door_sign(text, room, zval, room_id, tot_light_amt);
+}
 
 void add_door_if_blocker(cube_t const &door, cube_t const &room, bool inc_open, bool dir, bool hinge_side, bool exterior, vect_cube_t &blockers) {
 	bool const dim(door.dy() < door.dx()), edir(dim ^ dir ^ hinge_side ^ 1);
@@ -1830,7 +1836,7 @@ bool building_t::add_library_objs(rand_gen_t rgen, room_t const &room, float zva
 		if (added) {++num_added;} else {break;}
 	}
 	if (num_added == 0) return 0;
-	if (!is_house) {add_door_sign("Library", room, zval, room_id, tot_light_amt);} // add office building library sign
+	if (!is_house) {add_door_sign_remove_existing("Library", room, zval, room_id, tot_light_amt, objs_start);} // add office building library sign
 	return 1;
 }
 
@@ -2486,7 +2492,7 @@ void building_t::add_pri_hall_objs(rand_gen_t rgen, rand_gen_t room_rgen, room_t
 
 	for (unsigned dir = 0; dir < 2; ++dir) {
 		float pos(room.get_center_dim(!long_dim));
-		if (floor_ix == 0) {pos += 0.65*doorway_width*((dir ^ camera_side) ? 1.0 : -1.0);} // place off to the side on the ground floor to avoid blocking the doorway and exit sign
+		if (floor_ix == 0) {pos += 0.65*doorway_width*((bool(dir) ^ camera_side) ? 1.0 : -1.0);} // place off to the side on ground floor to avoid blocking doorway and exit sign
 		set_wall_width(camera, pos, 0.5*width, !long_dim);
 		camera.d[long_dim][!dir] = place_area.d[long_dim][!dir] + (dir ? 1.0 : -1.0)*0.25*length; // near the wall
 		camera.d[long_dim][ dir] = camera    .d[long_dim][!dir] + (dir ? 1.0 : -1.0)*     length; // extend away from the wall
