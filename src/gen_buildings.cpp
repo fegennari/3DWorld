@@ -3231,6 +3231,7 @@ public:
 						b.register_player_in_building(camera_xlated, bi->ix); // required for AI following logic
 						if (enable_building_indir_lighting()) {indir_bcs_ix = bcs_ix; indir_bix = bi->ix;} // compute indirect lighting for this building
 						// run any player interaction logic here
+						b.update_security_cameras(camera_xlated);
 						if (toggle_room_light  ) {b.toggle_room_light(camera_xlated);}
 						if (building_action_key) {b.apply_player_action_key(camera_xlated, cview_dir, (building_action_key-1), 0);} // check_only=0
 						else {can_do_building_action = b.apply_player_action_key(camera_xlated, cview_dir, 0, 1);} // mode=0, check_only=1

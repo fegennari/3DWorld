@@ -1710,6 +1710,7 @@ public:
 	int room_or_adj_room_has_stairs(int room_ix, float zval, bool inc_adj_rooms, bool check_door_open) const;
 	void register_player_in_building(point const &camera_bs, unsigned building_id) const;
 	bool maybe_teleport_to_screenshot() const;
+	void update_security_cameras(point const &camera_bs);
 	bool place_obj_along_wall(room_object type, room_t const &room, float height, vector3d const &sz_scale, rand_gen_t &rgen, float zval, unsigned room_id,
 		float tot_light_amt, cube_t const &place_area, unsigned objs_start, float front_clearance=0.0, bool add_door_clearance=0, unsigned pref_orient=4,
 		bool pref_centered=0, colorRGBA const &color=WHITE, bool not_at_window=0, room_obj_shape shape=SHAPE_CUBE, float side_clearance=0.0);

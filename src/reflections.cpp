@@ -347,7 +347,7 @@ void setup_reflection_texture(unsigned &tid, unsigned xsize, unsigned ysize) {
 	if (!tid) {
 		bool const wrap = 0; // set to 1 for debugging
 		setup_texture(tid, 0, wrap, wrap);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, xsize, ysize, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, xsize, ysize, 0, GL_RGB, GL_UNSIGNED_BYTE, nullptr);
 	}
 	assert(glIsTexture(tid));
 }
