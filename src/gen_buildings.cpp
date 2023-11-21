@@ -2028,9 +2028,10 @@ void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_
 					sort(wall_edges.begin(), wall_edges.end());
 
 					for (unsigned e = 0; e < wall_edges.size(); e += 2) { // each pair of points should be the {left, right} edge of a wall section
+						bool const first(e == 0), last(e+2 == wall_edges.size());
 						cube_t c(part);
-						c.d[!dim][0] = window_spacing*ceil ((wall_edges[e  ] - side_lo)/window_spacing) + side_lo; // lo, clamped to whole windows
-						c.d[!dim][1] = window_spacing*floor((wall_edges[e+1] - side_lo)/window_spacing) + side_lo; // hi, clamped to whole windows
+						c.d[!dim][0] = (first ? side_lo : (window_spacing*ceil ((wall_edges[e  ] - side_lo)/window_spacing) + side_lo)); // lo, clamped to whole windows
+						c.d[!dim][1] = (last  ? side_hi : (window_spacing*floor((wall_edges[e+1] - side_lo)/window_spacing) + side_lo)); // hi, clamped to whole windows
 						float const wall_len(c.get_sz_dim(!dim));
 						if (wall_len < 0.5*window_spacing) continue; // wall too small to add here
 						c.z2() = door_ztop;
