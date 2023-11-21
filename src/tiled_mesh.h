@@ -471,6 +471,7 @@ private:
 	bool can_have_reflection_recur(tile_t const *const tile, point const corners[3], tile_set_t &tile_set, unsigned dim_ix);
 	bool can_have_reflection(tile_t const *const tile, tile_set_t &tile_set);
 public:
+	void show_debug_stats() const;
 	void pre_draw();
 	void draw(int reflection_pass);
 	void draw_shadow_pass(point const &lpos, tile_t *tile, bool decid_trees_only=0);

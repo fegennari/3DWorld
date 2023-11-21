@@ -60,7 +60,7 @@ vector<clear_area_t> tile_smaps_to_clear;
 extern bool inf_terrain_scenery, enable_tiled_mesh_ao, underwater, fog_enabled, volume_lighting, combined_gu, enable_depth_clamp, tt_triplanar_tex, use_grass_tess;
 extern bool use_instanced_pine_trees, enable_tt_model_reflect, water_is_lava, tt_fire_button_down, flashlight_on, camera_in_building, rotate_trees;
 extern unsigned grass_density, max_unique_trees, shadow_map_sz, erosion_iters_tt, num_rnd_grass_blocks, tiled_terrain_gen_heightmap_sz;
-extern unsigned num_birds_per_tile, num_fish_per_tile, num_bflies_per_tile;
+extern unsigned num_birds_per_tile, num_fish_per_tile, num_bflies_per_tile, room_geom_mem;
 extern int DISABLE_WATER, display_mode, tree_mode, leaf_color_changed, ground_effects_level, animate2, iticks, num_trees, window_width, window_height, player_in_basement;
 extern int invert_mh_image, is_cloudy, camera_surf_collide, show_fog, mesh_gen_mode, mesh_gen_shape, cloud_model, precip_mode, auto_time_adv, draw_model;
 extern int player_in_elevator, player_in_attic;
@@ -2531,6 +2531,42 @@ bool tile_draw_t::can_have_reflection(tile_t const *const tile, tile_set_t &tile
 }
 
 
+unsigned get_building_models_gpu_mem();
+unsigned in_mb(unsigned long long v) {return v/1024/1024;}
+
+void tile_draw_t::show_debug_stats() const {
+	unsigned num_trees(0), num_smaps(0);
+	unsigned long long mem(0), tree_mem(0), smap_mem(0);
+
+	for (tile_map::const_iterator i = tiles.begin(); i != tiles.end(); ++i) {
+		tile_t *const tile(i->second.get());
+		mem       += tile->get_gpu_mem (); // Note: includes smap_mem
+		tree_mem  += tile->get_tree_mem();
+		smap_mem  += tile->get_smap_mem();
+		num_smaps += tile->count_shadow_maps();
+		num_trees += tile->num_pine_trees() + tile->num_decid_trees();
+	}
+	unsigned const dtree_mem(tree_data_manager.get_gpu_mem()), ptree_mem(get_tree_inst_gpu_mem()), grass_mem(grass_tile_manager.get_gpu_mem());
+	unsigned const smap_free_list_mem(smap_manager.get_free_list_mem_usage());
+	unsigned const texture_mem(get_loaded_textures_gpu_mem());
+	unsigned const building_mem(get_buildings_gpu_mem_usage());
+	unsigned const models_mem(get_city_model_gpu_mem() + get_loaded_models_gpu_mem() + get_building_models_gpu_mem());
+	unsigned const frame_buf_mem(13*window_width*window_height); // RGB8 (as 32 bits?) front buffer + RGB8 back buffer + 32-bit depth buffer + 8 bit stencil buffer
+
+	if (vbo) {
+		unsigned const tile_size(get_tile_size());
+		mem += 2ULL*tile_size*(tile_size+1ULL)*sizeof(point);
+		for (unsigned i = 0; i < NUM_LODS; ++i) {mem += 4ULL*(tile_size>>i)*(tile_size>>i)*sizeof(unsigned);} // approximate
+	}
+	cout << "tiles drawn: " << to_draw.size() << " of " << tiles.size() << ", trees drawn: " << num_trees << ", shadow maps: " << num_smaps
+		<< ", GPU MB: " << in_mb(mem + dtree_mem + ptree_mem + grass_mem + smap_free_list_mem + texture_mem + building_mem + models_mem + frame_buf_mem + room_geom_mem)
+		<< ", tile MB: " << in_mb(mem - smap_mem) << ", tree CPU MB: " << in_mb(tree_mem) << ", tree GPU MB: " << in_mb((unsigned long long)dtree_mem + ptree_mem)
+		<< ", grass MB: " << in_mb(grass_mem) << ", smap MB: " << in_mb(smap_mem) << ", smap free list MB: " << in_mb(smap_free_list_mem)
+		<< ", frame buf MB: " << in_mb(frame_buf_mem) << ", texture MB: " << in_mb(texture_mem) << ", building MB: " << in_mb(building_mem)
+		<< ", room_geom MB: " << in_mb(room_geom_mem) << ", model MB: " << in_mb(models_mem) << endl;
+}
+
+
 void tile_draw_t::pre_draw() { // view-dependent updates/GPU uploads
 
 	//timer_t timer("TT Pre-Draw");
@@ -2627,9 +2663,6 @@ void tile_draw_t::occluder_pts_t::calc_cube_top_points(cube_t const &bcube) { //
 	}
 }
 
-
-unsigned in_mb(unsigned long long v) {return v/1024/1024;}
-
 tile_draw_t::occluder_cubes_t::occluder_cubes_t(tile_t const *const tile_) : tile(tile_), bcube(tile->get_mesh_bcube()) {
 	for (unsigned s = 0; s < 16; ++s) {
 		cube_t &sub_cube(sub_cubes[s]);
@@ -2644,16 +2677,8 @@ void tile_draw_t::draw(int reflection_pass) { // reflection_pass: 0=none, 1=wate
 
 	if (player_cant_see_outside_building()) return; // no need to draw tiles if player in extended basement or parking garage
 	//timer_t timer("TT Draw");
-	unsigned num_trees(0), num_smaps(0);
-	unsigned long long mem(0), tree_mem(0), smap_mem(0);
 	to_draw.clear();
 	occluded_tiles.clear();
-
-	if (DEBUG_TILES && vbo) {
-		unsigned const tile_size(get_tile_size());
-		mem += 2ULL*tile_size*(tile_size+1ULL)*sizeof(point);
-		for (unsigned i = 0; i < NUM_LODS; ++i) {mem += 4ULL*(tile_size>>i)*(tile_size>>i)*sizeof(unsigned);} // approximate
-	}
 
 	// determine potential occluders
 	point const camera(get_camera_pos());
@@ -2669,13 +2694,6 @@ void tile_draw_t::draw(int reflection_pass) { // reflection_pass: 0=none, 1=wate
 	}
 	for (tile_map::const_iterator i = tiles.begin(); i != tiles.end(); ++i) {
 		tile_t *const tile(i->second.get());
-
-		if (DEBUG_TILES) {
-			mem       += tile->get_gpu_mem (); // Note: includes smap_mem
-			tree_mem  += tile->get_tree_mem();
-			smap_mem  += tile->get_smap_mem();
-			num_smaps += tile->count_shadow_maps();
-		}
 		float const dist(tile->get_rel_dist_to_camera());
 		if (dist > DRAW_DIST_TILES || !tile->is_visible()) continue;
 		if (tile->was_last_occluded()) continue; // occluded in the shadow pass
@@ -2724,7 +2742,6 @@ void tile_draw_t::draw(int reflection_pass) { // reflection_pass: 0=none, 1=wate
 			if (tile_occluded) {occluded_tiles.push_back(tile); continue;}
 		} // check_occlusion
 		to_draw.emplace_back(dist, tile);
-		num_trees += tile->num_pine_trees() + tile->num_decid_trees();
 	} // for i
 	//cout << TXT(occluders.size()) << TXT(tiles.size()) << TXT(to_draw.size()) << TXT(occluded_tiles.size()) << endl; // 5, 341, 63, 34
 	occluders.clear();
@@ -2736,20 +2753,6 @@ void tile_draw_t::draw(int reflection_pass) { // reflection_pass: 0=none, 1=wate
 		if (shadow_map_enabled()) {draw_tiles(reflection_pass, 1);} // shadow map pass
 		draw_tiles(reflection_pass, 0); // non-shadow map pass
 	}
-	if (DEBUG_TILES) {
-		unsigned const dtree_mem(tree_data_manager.get_gpu_mem()), ptree_mem(get_tree_inst_gpu_mem()), grass_mem(grass_tile_manager.get_gpu_mem());
-		unsigned const smap_free_list_mem(smap_manager.get_free_list_mem_usage());
-		unsigned const texture_mem(get_loaded_textures_gpu_mem());
-		unsigned const building_mem(get_buildings_gpu_mem_usage());
-		unsigned const models_mem(get_city_model_gpu_mem() + get_loaded_models_gpu_mem());
-		unsigned const frame_buf_mem(13*window_width*window_height); // RGB8 (as 32 bits?) front buffer + RGB8 back buffer + 32-bit depth buffer + 8 bit stencil buffer
-		cout << "tiles drawn: " << to_draw.size() << " of " << tiles.size() << ", trees drawn: " << num_trees << ", shadow maps: " << num_smaps
-			 << ", gpu MB: " << in_mb(mem + dtree_mem + ptree_mem + grass_mem + smap_free_list_mem + texture_mem + building_mem + models_mem + frame_buf_mem)
-			 << ", tile MB: " << in_mb(mem - smap_mem) << ", tree CPU MB: " << in_mb(tree_mem)
-			 << ", tree GPU MB: " << in_mb((unsigned long long)dtree_mem + ptree_mem) << ", grass MB: " << in_mb(grass_mem)
-			 << ", smap MB: " << in_mb(smap_mem) << ", smap free list MB: " << in_mb(smap_free_list_mem) << ", frame buf MB: " << in_mb(frame_buf_mem)
-			 << ", texture MB: " << in_mb(texture_mem) << ", building MB: " << in_mb(building_mem) << ", model MB: " << in_mb(models_mem) << endl;
-	}
 	if (!player_cant_see_outside_building()) { // trees/scenerg/grass not visible when player is in the extended basement, parking garage, or attic
 		if (pine_trees_enabled ()) {draw_pine_trees (reflection_pass);}
 		if (decid_trees_enabled()) {draw_decid_trees(reflection_pass);}
@@ -2760,6 +2763,7 @@ void tile_draw_t::draw(int reflection_pass) { // reflection_pass: 0=none, 1=wate
 			if (ENABLE_ANIMALS)        {draw_animals    (reflection_pass);}
 		}
 	}
+	if (DEBUG_TILES) {show_debug_stats();}
 	//if ((GET_TIME_MS() - timer1) > 100) {PRINT_TIME("Draw Tiled Terrain");}
 }
 
@@ -3455,6 +3459,7 @@ bool tile_smap_data_t::needs_update(point const &lpos) {
 tile_t *get_tile_from_xy  (tile_xy_pair const &tp) {return terrain_tile_draw.get_tile_from_xy(tp);}
 float update_tiled_terrain(float &min_camera_dist) {return terrain_tile_draw.update(min_camera_dist);}
 void pre_draw_tiled_terrain() {terrain_tile_draw.pre_draw();}
+void show_tiled_terrain_debug_stats() {terrain_tile_draw.show_debug_stats();}
 
 
 colorRGBA get_inf_terrain_mod_color() {

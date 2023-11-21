@@ -838,6 +838,17 @@ void show_speed() {
 	print_text_onscreen(oss.str(), WHITE, 1.0, 1.0*TICKS_PER_SECOND);
 }
 
+void print_texture_stats();
+void print_shader_stats();
+void show_tiled_terrain_debug_stats();
+
+void show_frame_stats() {
+	print_texture_stats();
+	print_shader_stats();
+	cout << "Draw calls for frame " << frame_counter << ": " << num_frame_draw_calls << endl;
+	if (world_mode == WMODE_INF_TERRAIN) {show_tiled_terrain_debug_stats();}
+}
+
 void next_game_mode() {
 	if (world_mode == WMODE_UNIVERSE)      return; // only one game mode
 	if ((game_mode_disable_mask & 7) == 7) return; // all game modes disabled, leave at init game mode (error?)
@@ -956,6 +967,7 @@ void keyboard_proc(unsigned char key, int x, int y) {
 	case 'f': // print framerate and stats
 		show_framerate = 1;
 		timing_profiler_stats();
+		show_frame_stats();
 		break;
 	case 'g': // pause/resume playback of eventlist
 		pause_frame = !pause_frame;

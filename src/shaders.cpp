@@ -613,6 +613,13 @@ public:
 		for (unsigned i = 0; i < NUM_SHADER_TYPES; ++i) {shader_id_str += shader_names[i] + ',';} // unique program identifier
 		return get_program_by_name(shader_id_str);
 	}
+	void print_stats() const {
+		cout << "Loaded shader files: " << loaded_files.size() << endl;
+		cout << "Shader counts:";
+		for (unsigned n = 0; n < NUM_SHADER_TYPES; ++n) {cout << " " << loaded_shaders[n].size();}
+		cout << endl;
+		cout << "Shader programs: " << loaded_programs.size() << endl;
+	}
 };
 
 shader_manager_t shader_manager;
@@ -673,15 +680,12 @@ bool setup_shaders() {
 
 
 void clear_shaders() {
-
 	clear_cached_shaders();
 	shader_manager.clear();
 	vao_cache.clear();
 }
 
-
 void reload_all_shaders() { // clears and reloads *everything*
-
 	// Note: do we want/need some function called every frame that check if shader files have been modified and calls this?
 	cout << "Reloading all shaders" << endl;
 	clear_cached_shaders();
@@ -689,6 +693,8 @@ void reload_all_shaders() { // clears and reloads *everything*
 	vao_cache.clear();
 	clear_tiled_terrain_shaders();
 }
+
+void print_shader_stats() {shader_manager.print_stats();}
 
 
 bool yes_no_query(string const &query_str) {

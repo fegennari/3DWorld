@@ -316,6 +316,10 @@ unsigned get_loaded_textures_gpu_mem() {
 void print_texture_memory_usage() { // full cities scene: 142MB / 272MB (660MB uncompressed) (244MB with ALLOW_SLOW_COMPRESS=1)
 	cout << "Texture Memory: " << get_loaded_textures_cpu_mem() << " CPU / " << get_loaded_textures_gpu_mem() << " GPU" << endl;
 }
+void print_texture_stats() {
+	cout << "Textures: " << textures.size() << endl;
+	print_texture_memory_usage();
+}
 
 
 int texture_lookup(string const &name) {
