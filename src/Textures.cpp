@@ -220,6 +220,7 @@ void gen_noise_texture();
 void regrow_landscape_texture_amt0();
 void update_lt_section(int x1, int y1, int x2, int y2);
 bool endswith(string const &value, string const &ending);
+unsigned get_building_textures_gpu_mem();
 
 
 bool is_tex_disabled(int i) {
@@ -304,7 +305,7 @@ void load_textures() {
 
 
 unsigned get_loaded_textures_cpu_mem() {
-	unsigned mem(0);
+	unsigned mem(get_building_textures_gpu_mem());
 	for (auto i = textures.begin(); i != textures.end(); ++i) {mem += i->get_cpu_mem();}
 	return mem;
 }

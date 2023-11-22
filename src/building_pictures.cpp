@@ -204,8 +204,8 @@ void building_t::update_security_cameras(point const &camera_bs) {
 	if (!sec_room.contains_pt(camera_bs)) return;
 	if (camera_bs.z > ground_floor_z1 + get_window_vspace()) return; // player not the ground floor (which contains the security room)
 	video_camera_manager.register_building(*this, sec_room);
-	//video_camera_manager.update_cameras(); // FIXME: doesn't go here, goes in the area where shadow maps and reflection textures are created
 }
 void update_security_cameras() {video_camera_manager.update_cameras();}
+unsigned get_building_textures_gpu_mem() {return video_camera_manager.get_gpu_mem();}
 
 
