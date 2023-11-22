@@ -53,6 +53,7 @@ void parse_universe_name_str_tables();
 void try_join_house_ext_basements(vect_building_t &buildings);
 void add_sign_text_verts_both_sides(string const &text, cube_t const &sign, bool dim, bool dir, vect_vnctcc_t &verts);
 void draw_candle_flames();
+void update_security_camera_image();
 
 float get_door_open_dist   () {return 3.5*CAMERA_RADIUS;}
 bool player_in_ext_basement() {return (player_in_basement == 3 && player_building != nullptr);}
@@ -3031,6 +3032,7 @@ public:
 			enable_dlight_bcubes = 0; // disable when creating the reflection image (will be set when we re-enter multi_draw())
 			interior_shadow_maps = 0;
 			create_mirror_reflection_if_needed();
+			update_security_camera_image();
 		}
 		//timer_t timer("Draw Buildings"); // 0.57ms (2.6ms with glFinish(), 6.3ms with building interiors)
 		point const camera(get_camera_pos()), camera_xlated(camera - xlate);

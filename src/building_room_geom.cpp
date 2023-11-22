@@ -4013,24 +4013,29 @@ void building_room_geom_t::add_crack(room_object_t const &c) { // in window? (TV
 	mat.add_cube_to_verts(c, apply_light_color(c), all_zeros, get_face_mask(c.dim, c.dir), !c.dim, (c.obj_id&1), (c.obj_id&2)); // X/Y mirror based on obj_id
 }
 
-void building_room_geom_t::add_tv_picture(room_object_t const &c) {
-	if ((c.obj_id & 1) && !c.is_broken()) return; // TV is off half the time; broken TV draws the crack
+cube_t get_tv_screen(room_object_t const &c) {
 	cube_t screen(c);
 	screen.d[c.dim][c.dir] += (c.dir ? -1.0 : 1.0)*0.35*c.get_depth();
 	screen.expand_in_dim(!c.dim, -0.03*c.get_width()); // shrink the sides in
 	screen.z1() += 0.09*c.dz();
 	screen.z2() -= 0.04*c.dz();
-	unsigned skip_faces(get_face_mask(c.dim, c.dir)); // only the face oriented outward
-
-	if (c.is_broken()) {
+	return screen;
+}
+void add_tv_or_monitor_screen(room_object_t const &c, rgeom_mat_t &mat) {
+	mat.add_cube_to_verts(get_tv_screen(c), WHITE, c.get_llc(), get_face_mask(c.dim, c.dir), !c.dim, !(c.dim ^ c.dir)); // draw outward face
+}
+void building_room_geom_t::add_tv_picture(room_object_t const &c) {
+	if (c.is_broken()) { // draw cracks for broken screen
+		unsigned skip_faces(get_face_mask(c.dim, c.dir)); // only the face oriented outward
 		rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_crack_tid(c), 0.0)));
-		mat.add_cube_to_verts(screen, apply_light_color(c, WHITE), c.get_llc(), skip_faces, !c.dim, (c.obj_id&1), (c.obj_id&2)); // X/Y mirror based on obj_id
+		mat.add_cube_to_verts(get_tv_screen(c), apply_light_color(c, WHITE), c.get_llc(), skip_faces, !c.dim, (c.obj_id&1), (c.obj_id&2)); // X/Y mirror based on obj_id
+		return;
 	}
-	else {
-		tid_nm_pair_t tex(((c.shape == SHAPE_SHORT) ? c.get_comp_monitor_tid() : c.get_tv_tid()), 0.0); // computer monitor vs. TV
-		tex.emissive = 1.0;
-		get_material(tex).add_cube_to_verts(screen, WHITE, c.get_llc(), skip_faces, !c.dim, !(c.dim ^ c.dir));
-	}
+	bool const is_off(c.obj_id & 1); // TV is off if obj_id LSB is set
+	if (is_off || c.is_active()) return; // skip if turned off or active security monitor (not drawn here)
+	tid_nm_pair_t tex(((c.shape == SHAPE_SHORT) ? c.get_comp_monitor_tid() : c.get_tv_tid()), 0.0); // computer monitor vs. TV
+	tex.emissive = 1.0;
+	add_tv_or_monitor_screen(c, get_material(tex));
 }
 
 void building_room_geom_t::add_potted_plant(room_object_t const &c, bool inc_pot, bool inc_plant) {

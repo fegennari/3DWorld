@@ -34,6 +34,8 @@ void draw_car_in_pspace(car_t &car, shader_t &s, vector3d const &xlate, bool sha
 void set_car_model_color(car_t &car);
 bldg_obj_type_t get_taken_obj_type(room_object_t const &obj);
 int get_toilet_paper_nm_id();
+void setup_monitor_screen_draw(room_object_t const &monitor, rgeom_mat_t &mat);
+void add_tv_or_monitor_screen(room_object_t const &c, rgeom_mat_t &mat);
 
 bool has_key_3d_model() {return building_obj_model_loader.is_model_valid(OBJ_MODEL_KEY);}
 
@@ -1550,6 +1552,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 	oc.set_exclude_bix(building_ix);
 	bool obj_drawn(0);
 	water_sound_manager_t water_sound_manager(camera_bs);
+	rgeom_mat_t monitor_screens_mat;
 	bool const check_clip_cube(shadow_only && !is_rotated && !smap_light_clip_cube.is_all_zeros()); // check clip cube for shadow pass; not implemented for rotated buildings
 	bool const check_occlusion(display_mode & 0x08);
 
@@ -1581,6 +1584,14 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 			//draw_simple_cube(obj); // TESTING
 			draw_obj_model(*i, obj, s, xlate, obj_center, shadow_only); // draw now
 			obj_drawn = 1;
+		}
+		if (obj.type == TYPE_MONITOR && obj.is_active()) { // active security camera monitor
+			setup_monitor_screen_draw(obj, monitor_screens_mat);
+			add_tv_or_monitor_screen (obj, monitor_screens_mat);
+			s.set_color_e(WHITE); // emissive
+			tid_nm_pair_dstate_t state(s, 1); // no_set_texture=1
+			monitor_screens_mat.upload_draw_and_clear(state);
+			s.set_color_e(BLACK);
 		}
 		if (player_in_building && !shadow_only && obj.type == TYPE_SINK) { // sink
 			water_sound_manager.register_running_water(obj, building);

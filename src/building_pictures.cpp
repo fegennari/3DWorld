@@ -9,7 +9,7 @@
 
 
 extern bool def_tex_compress;
-extern int window_width, window_height;
+extern int window_width, window_height, animate2, frame_counter;
 extern float def_tex_aniso, NEAR_CLIP;
 extern double tfticks;
 extern vector<texture_t> textures;
@@ -95,7 +95,7 @@ class video_camera_manager_t {
 		point pos;
 		vector3d dir;
 		unsigned obj_ix, tid=0;
-		//float last_update_time=0.0;
+		bool valid=1;
 		camera_t(point const &p, vector3d const &d, unsigned ix) : pos(p), dir(d), obj_ix(ix) {}
 	};
 	struct monitor_t {
@@ -106,9 +106,10 @@ class video_camera_manager_t {
 	bool update_this_frame=0;
 	unsigned update_ix=0;
 	building_t *cur_building=nullptr;
+	rand_gen_t rgen; // for noise texture offset
 	vector<camera_t > cameras;
 	vector<monitor_t> monitors;
-	vector<unsigned> tid_free_list;
+	vector<unsigned> tid_free_list, cur_monitors;
 
 	unsigned alloc_tid() {
 		if (!tid_free_list.empty()) {
@@ -154,7 +155,6 @@ public:
 				monitors.emplace_back(i - objs.begin());
 			}
 		} // for i
-		//cout << TXT(cameras.size()) << TXT(monitors.size()) << endl; // TESTING
 		assert(!cameras.empty()); // too strong?
 		if (cameras.empty()) return;
 		// round robin assign cameras to monitors; if there are more monitors than cameras, some cameras will be duplicated;
@@ -164,29 +164,69 @@ public:
 	void update_cameras() {
 		if (!update_this_frame) return; // player not in security room; this also keeps us from using an invalid/deleted building
 		update_this_frame = 0; // update once, until register_building() is called again
+		if (!animate2) return; // updates disabled
 		if (cur_building == nullptr) return; // error?
 		if (monitors.empty() || cameras.empty()) return; // nothing to do
-		assert(update_ix < cameras.size());
-		camera_t &camera(cameras[update_ix]);
-		vect_room_object_t &objs(cur_building->interior->room_geom->objs);
-		assert(camera.obj_ix < objs.size());
-		room_object_t const &camera_obj(objs[camera.obj_ix]);
-		assert(camera_obj.type == TYPE_CAMERA); // FIXME: too strong, but temporary
-		if (camera_obj.type != TYPE_CAMERA) return; // taken by the player?
-		if (camera.tid == 0) {camera.tid = alloc_tid();} // allocate the texture the first time this camera is rendered to
-		// TODO: render cur_building to texture with camera.tid to update this camera
+		vector3d const xlate(get_tiled_terrain_model_xlate()); // could pass this in
 
-		for (monitor_t const &m : monitors) {
-			if (m.camera_ix != update_ix) continue;
-			assert(m.obj_ix < objs.size());
-			room_object_t &monitor(objs[m.obj_ix]);
-			assert(monitor.type == TYPE_MONITOR); // FIXME: too strong, but temporary
-			if (monitor.type != TYPE_MONITOR) continue; // taken by the player?
-			monitor.obj_id = update_ix; // FIXME: need to set monitor tid to camera.tid
-		} // for m
-		update_ix = (update_ix + 1) % cameras.size();
+		for (unsigned n = 0; n < cameras.size(); ++n) { // try to find a valid camera and valid + visible monitor to update
+			unsigned const camera_ix(update_ix);
+			assert(camera_ix < cameras.size());
+			update_ix = (update_ix + 1) % cameras.size();
+			camera_t &camera(cameras[camera_ix]);
+			vect_room_object_t &objs(cur_building->interior->room_geom->objs);
+			assert(camera.obj_ix < objs.size());
+			room_object_t const &camera_obj(objs[camera.obj_ix]);
+			cur_monitors.clear();
+
+			for (monitor_t const &m : monitors) {
+				if (m.camera_ix != camera_ix) continue;
+				assert(m.obj_ix < objs.size());
+				room_object_t const &monitor(objs[m.obj_ix]);
+				if (monitor.type != TYPE_MONITOR) continue; // taken by the player? should we remove this monitor from the list?
+				if (monitor.is_broken() || (monitor.obj_id & 1)) continue; // broken or turned off
+				if (!cur_building->is_rot_cube_visible(monitor, xlate)) continue; // monitor not visible to the player
+				// Note: no occlusion culling since player is likely already in this room
+				cur_monitors.push_back(m.obj_ix);
+			} // for m
+			if (cur_monitors.empty()) continue; // no monitors observing this camera
+			if (camera_obj.type != TYPE_CAMERA) {camera.valid = 0;} // taken by the player? should we remove this camera from the list?
+			else if (!camera_obj.is_powered())  {camera.valid = 0;} // no power
+			else {camera.valid = 1;}
+			//cout << TXT(n) << TXT(monitors.size()) << TXT(cameras.size()) << TXT(camera.valid) << TXT(cur_monitors.size()) << endl; // TESTING
+
+			if (camera.valid) { // update camera texture
+				if (camera.tid == 0) {camera.tid = alloc_tid();} // allocate the texture the first time this camera is rendered to
+				// TODO: render cur_building to texture with camera.tid to update this camera
+			}
+			for (unsigned ix : cur_monitors) {
+				room_object_t &monitor(objs[ix]);
+				monitor.item_flags = camera_ix;
+				monitor.flags     |= RO_FLAG_IS_ACTIVE; // flag as having an active texture
+			}
+			break; // done
+		} // for n
 	}
-	unsigned get_gpu_mem() const { // TODO: call this from show_frame_stats()
+	void setup_monitor_screen_draw(room_object_t const &monitor, rgeom_mat_t &mat) {
+		assert(monitor.type == TYPE_MONITOR);
+		if (!monitor.is_active()) {select_texture(BLACK_TEX); return;} // error?
+		assert(monitor.item_flags < cameras.size());
+		camera_t const &camera(cameras[monitor.item_flags]);
+
+		if (!camera.valid) { // draw noise
+			mat.tex.tscale_x = 6.0/monitor.get_width ();
+			mat.tex.tscale_y = 6.0/monitor.get_height();
+			mat.tex.txoff    = rgen.rand_float(); // animate it
+			mat.tex.tyoff    = rgen.rand_float();
+			select_texture(PS_NOISE_TEX);
+			return;
+		}
+		mat.tex.tscale_x = mat.tex.tscale_y = 0.0; // map texture to quad
+		//select_texture((frame_counter + monitor.item_flags)%20); // TESTING
+		assert(camera.tid > 0);
+		bind_2d_texture(camera.tid);
+	}
+	unsigned get_gpu_mem() const {
 		unsigned num_tids(tid_free_list.size());
 		for (camera_t const &camera : cameras) {num_tids += (camera.tid > 0);}
 		return 3*SEC_CAMERA_XSIZE*SEC_CAMERA_YSIZE*num_tids; // or 4x?
@@ -205,7 +245,8 @@ void building_t::update_security_cameras(point const &camera_bs) {
 	if (camera_bs.z > ground_floor_z1 + get_window_vspace()) return; // player not the ground floor (which contains the security room)
 	video_camera_manager.register_building(*this, sec_room);
 }
-void update_security_cameras() {video_camera_manager.update_cameras();}
+void update_security_camera_image() {video_camera_manager.update_cameras();}
+void setup_monitor_screen_draw(room_object_t const &monitor, rgeom_mat_t &mat) {video_camera_manager.setup_monitor_screen_draw(monitor, mat);}
 unsigned get_building_textures_gpu_mem() {return video_camera_manager.get_gpu_mem();}
 
 
