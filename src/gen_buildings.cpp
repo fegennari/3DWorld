@@ -81,7 +81,8 @@ void tid_nm_pair_t::set_specular_color(colorRGB const &color, float mag, float s
 	shininess = (unsigned char)max(1, min(255, round_fp(shine)));
 }
 void tid_nm_pair_t::set_gl(tid_nm_pair_dstate_t &state) const {
-	if (tid == FONT_TEXTURE_ID) {text_drawer::bind_font_texture();}
+	if (state.no_set_texture) {} // nothing to do
+	else if (tid == FONT_TEXTURE_ID) {text_drawer::bind_font_texture();}
 	else if (tid == REFLECTION_TEXTURE_ID) {
 		if (bind_reflection_shader()) return;
 	}

@@ -183,7 +183,8 @@ struct tid_nm_pair_dstate_t {
 	shader_t &s;
 	int bmm_loc=-1;
 	float bump_map_mag=1.0;
-	tid_nm_pair_dstate_t(shader_t &s_) : s(s_) {}
+	bool no_set_texture;
+	tid_nm_pair_dstate_t(shader_t &s_, bool no_set_texture_=0) : s(s_), no_set_texture(no_set_texture_) {}
 	void set_for_shader(float new_bump_map_mag);
 	~tid_nm_pair_dstate_t();
 };
