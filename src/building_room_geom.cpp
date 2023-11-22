@@ -4247,14 +4247,22 @@ void building_room_geom_t::add_candle(room_object_t const &c) {
 	mat.add_vcylin_to_verts(tip,  apply_light_color(c, BLACK), 0, 1, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, 12); // draw sides and top, ndiv=12
 }
 
+void get_security_camera_parts(room_object_t const &c, cube_t &mount, cube_t &body, cube_t &shaft) {
+	float const width(c.get_width()), height(c.get_height());
+	mount = body = c;
+	mount.d[c.dim][c.dir] = c.d[c.dim][!c.dir] + (c.dir ? 1.0 : -1.0)*width; // make it square and near the back
+	shaft = mount;
+	shaft.expand_by_xy(-0.3*width); // shrink
+	mount.z1() = shaft.z2() = c.z2() - 0.1*height;
+	shaft.z1() = body .z2() = c.z2() - 0.4*height;
+}
 void get_security_camera_info(room_object_t const &c, point &lens_pt, point &rot_pt, vector3d &camera_dir, vector3d &rot_axis, float &rot_angle) {
-	float const height(c.get_height()), dir_scale(c.dir ? 1.0 : -1.0);
-	cube_t mount(c), body(c);
-	mount.z1() = c.z2() - 0.1*height;
-	body .z2() = c.z2() - 0.4*height;
+	float const dir_scale(c.dir ? 1.0 : -1.0);
+	cube_t mount, body, shaft;
+	get_security_camera_parts(c, mount, body, shaft);
 	camera_dir[c.dim] = dir_scale;
 	lens_pt = body.get_cube_center();
-	lens_pt[c.dim] = body.d[c.dim][c.dir] + 0.01*c.get_length()*dir_scale;
+	lens_pt [ c.dim] = body.d[c.dim][c.dir] + 0.01*c.get_length()*dir_scale;
 	rot_axis[!c.dim] = 1.0;
 	rot_pt.assign(mount.xc(), mount.yc(), body.zc());
 	rot_angle = ((c.dim ^ c.dir) ? -1.0 : 1.0)*15*TO_RADIANS; // in radians
@@ -4262,13 +4270,8 @@ void get_security_camera_info(room_object_t const &c, point &lens_pt, point &rot
 void building_room_geom_t::add_camera(room_object_t const &c) {
 	rgeom_mat_t &mat(get_metal_material(1, 0, 1)); // shadowed, small
 	colorRGBA const color(apply_light_color(c));
-	float const width(c.get_width()), height(c.get_height());
-	cube_t mount(c), body(c);
-	mount.d[c.dim][c.dir] = c.d[c.dim][!c.dir] + (c.dir ? 1.0 : -1.0)*width; // make it square and near the back
-	cube_t shaft(mount); // cylinder
-	shaft.expand_by_xy(-0.3*width); // shrink
-	mount.z1() = shaft.z2() = c.z2() - 0.1*height;
-	shaft.z1() = body .z2() = c.z2() - 0.4*height;
+	cube_t mount, body, shaft;
+	get_security_camera_parts(c, mount, body, shaft);
 	mat.add_vcylin_to_verts(shaft, color, 0, 0); // draw sides only
 	mat.add_cube_to_verts_untextured(mount, color, EF_Z2); // skip top surface against the ceiling
 	unsigned const qv_start(mat.quad_verts.size()), tv_start(mat.itri_verts.size());
@@ -4278,7 +4281,7 @@ void building_room_geom_t::add_camera(room_object_t const &c) {
 	vector3d camera_dir, rot_axis;
 	float rot_angle(0.0);
 	get_security_camera_info(c, lens_pt, rot_pt, camera_dir, rot_axis, rot_angle);
-	mat.add_disk_to_verts(lens_pt, 0.45*min(body.dz(), width), camera_dir, BLACK);
+	mat.add_disk_to_verts(lens_pt, 0.45*min(body.dz(), c.get_width()), camera_dir, BLACK);
 	// tilt downward
 	rotate_verts(mat.quad_verts, rot_axis, rot_angle, rot_pt, qv_start);
 	rotate_verts(mat.itri_verts, rot_axis, rot_angle, rot_pt, tv_start);

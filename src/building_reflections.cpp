@@ -74,7 +74,7 @@ void draw_scene_for_building_reflection(unsigned &ref_tid, unsigned dim, bool di
 	glStencilOpSeparate(GL_FRONT_AND_BACK, GL_KEEP, GL_KEEP, GL_KEEP);
 	// draw reflected geometry
 	glEnable(GL_CLIP_DISTANCE0);
-	draw_buildings(0, reflection_pass, xlate); // reflection_pass=1/2/3
+	draw_buildings(0, reflection_pass, xlate);
 	glDisable(GL_CLIP_DISTANCE0);
 
 	if (draw_exterior) {

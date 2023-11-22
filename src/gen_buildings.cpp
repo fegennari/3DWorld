@@ -3040,6 +3040,7 @@ public:
 		bool const night(is_night(WIND_LIGHT_ON_RAND)), use_city_dlights(!reflection_pass);
 		bool const ref_pass_house(reflection_pass & REF_PASS_HOUSE), ref_pass_interior(reflection_pass & REF_PASS_INTERIOR);
 		bool const ref_pass_water(reflection_pass & REF_PASS_WATER), ref_pass_extb(reflection_pass & REF_PASS_EXTB);
+		bool const swap_front_back(reflection_pass && !(reflection_pass & REF_PASS_NO_MIRROR)); // for mirror reflection, but not security cameras
 		// check for sun or moon; also need the smap pass for drawing with dynamic lights at night, so basically it's always enabled
 		bool const use_tt_smap(check_tile_smap(0)); // && (night || light_valid_and_enabled(0) || light_valid_and_enabled(1)));
 		bool have_windows(0), have_wind_lights(0), have_interior(0), is_city_lighting_setup(0), this_frame_camera_in_building(0);
@@ -3083,12 +3084,12 @@ public:
 			float const room_geom_draw_dist(0.4*interior_draw_dist), room_geom_clear_dist(1.05*room_geom_draw_dist), room_geom_sm_draw_dist(0.14*interior_draw_dist);
 			float const room_geom_int_detail_draw_dist(0.045*interior_draw_dist), room_geom_ext_detail_draw_dist(0.08*interior_draw_dist), z_prepass_dist(0.25*interior_draw_dist);
 			glEnable(GL_CULL_FACE); // back face culling optimization, helps with expensive lighting shaders
-			glCullFace(reflection_pass ? GL_FRONT : GL_BACK);
+			glCullFace(swap_front_back ? GL_FRONT : GL_BACK);
 
 			// draw lit interiors; use z-prepass to reduce time taken for shading
 			setup_smoke_shaders(s, 0.0, 0, 0, 0, 0, 0, 0); // everything disabled, but same shader so that vertex transforms are identical
 			glPolygonOffset(1.0, 1.0);
-			if (reflection_pass) {glEnable(GL_POLYGON_OFFSET_FILL);} // not sure why, but a polygon offset is required for the reflection pass
+			if (swap_front_back) {glEnable(GL_POLYGON_OFFSET_FILL);} // not sure why, but a polygon offset is required for the mirror reflection pass
 			glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE); // Disable color rendering, we only want to write to the Z-Buffer
 				
 			for (auto i = bcs.begin(); i != bcs.end(); ++i) { // draw interior for the tile containing the camera
@@ -3100,7 +3101,7 @@ public:
 					}
 				}
 			}
-			if (reflection_pass) {glDisable(GL_POLYGON_OFFSET_FILL);}
+			if (swap_front_back) {glDisable(GL_POLYGON_OFFSET_FILL);}
 			glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
 			s.end_shader();
 			set_std_depth_func_with_eq();
@@ -3268,8 +3269,8 @@ public:
 			if (draw_interior && have_windows && !ref_pass_interior) { // write to stencil buffer, use stencil test for back facing building walls
 				enable_holes_shader(holes_shader);
 				setup_stencil_buffer_write();
-				glStencilOpSeparate((reflection_pass ? GL_BACK : GL_FRONT), GL_KEEP, GL_KEEP, GL_KEEP); // ignore front faces
-				glStencilOpSeparate((reflection_pass ? GL_FRONT : GL_BACK), GL_KEEP, GL_KEEP, GL_INCR); // mark stencil on back faces
+				glStencilOpSeparate((swap_front_back ? GL_BACK : GL_FRONT), GL_KEEP, GL_KEEP, GL_KEEP); // ignore front faces
+				glStencilOpSeparate((swap_front_back ? GL_FRONT : GL_BACK), GL_KEEP, GL_KEEP, GL_INCR); // mark stencil on back faces
 				interior_wind_draw.draw(holes_shader, 0, 1); // draw back facing windows; direct_draw_no_vbo=1
 				end_stencil_write();
 				holes_shader.disable();
@@ -3290,7 +3291,7 @@ public:
 				// draw back faces of buildings, which will be interior walls
 				setup_building_draw_shader(s, min_alpha, 1, 1, 1); // enable_indir=1, force_tsl=1, use_texgen=1
 				glEnable(GL_CULL_FACE);
-				glCullFace(reflection_pass ? GL_BACK : GL_FRONT); // draw back faces
+				glCullFace(swap_front_back ? GL_BACK : GL_FRONT); // draw back faces
 
 				for (auto i = bcs.begin(); i != bcs.end(); ++i) {
 					if ((*i)->empty() || !(*i)->has_interior_to_draw()) continue; // no buildings or no interiors
@@ -3352,7 +3353,7 @@ public:
 					reset_interior_lighting_and_end_shader(s);
 				}
 			} // end !ref_pass_extb
-			glCullFace(reflection_pass ? GL_FRONT : GL_BACK); // draw front faces
+			glCullFace(swap_front_back ? GL_FRONT : GL_BACK); // draw front faces
 
 			// draw people in the player's building here with alpha mask enabled
 			if (defer_ped_draw_vars.valid() || (reflection_pass && !ref_pass_water)) {
@@ -3417,7 +3418,7 @@ public:
 			for (auto i = bcs.begin(); i != bcs.end(); ++i) {(*i)->building_draw.init_draw_frame();}
 		}
 		glEnable(GL_CULL_FACE);
-		glCullFace(reflection_pass ? GL_FRONT : GL_BACK);
+		glCullFace(swap_front_back ? GL_FRONT : GL_BACK);
 		if (!ext_door_draw.empty()) {glDisable(GL_DEPTH_CLAMP);} // if an exterior door was drawn, make sure we don't clamp the walls over the holes
 
 		if (1/*!reflection_pass*/) { // draw front faces of buildings; nearby shadowed buildings will be drawn later

@@ -1591,6 +1591,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 			s.set_color_e(WHITE); // emissive
 			tid_nm_pair_dstate_t state(s, 1); // no_set_texture=1
 			monitor_screens_mat.upload_draw_and_clear(state);
+			// TODO: draw the floor number over the screen in the corner, or on a sign by the monitor, or on a sign in front of the camera
 			s.set_color_e(BLACK);
 		}
 		if (player_in_building && !shadow_only && obj.type == TYPE_SINK) { // sink

@@ -14,6 +14,7 @@ extern float def_tex_aniso, NEAR_CLIP;
 extern double tfticks;
 extern vector<texture_t> textures;
 
+colorRGBA get_clear_color();
 void set_camera_pos_dir(point const &pos, vector3d const &dir);
 void get_security_camera_info(room_object_t const &c, point &lens_pt, point &rot_pt, vector3d &camera_dir, vector3d &rot_axis, float &rot_angle);
 
@@ -123,6 +124,27 @@ class video_camera_manager_t {
 		assert(tid > 0);
 		return tid;
 	}
+	void render_building_to_texture(camera_t const &camera) const {
+		point const old_camera_pos(camera_pos), old_camera_origin(camera_origin);
+		vector3d const old_cview_dir(cview_dir);
+		pos_dir_up const old_camera_pdu(camera_pdu); // reflect camera frustum used for VFC
+		camera_pos = camera_origin = camera.pos;
+		cview_dir  = camera.dir; // up_vector remains at +z
+		fgMatrixMode(FG_MODELVIEW);
+		fgPushMatrix();
+		setup_viewport_and_proj_matrix(SEC_CAMERA_XSIZE, SEC_CAMERA_YSIZE); // and clear
+		// not house, and not a mirror (no swapping of front/back face culling); cameras should be pointing to the interior and windows are unlikely to be seen
+		// FIXME: lighting and shadows were computed from the player's position and won't be enabled for hallways not visible to the player (or on other floors)
+		int reflection_pass(REF_PASS_ENABLED | REF_PASS_INTERIOR | REF_PASS_NO_MIRROR);
+		draw_buildings(0, reflection_pass, get_tiled_terrain_model_xlate());
+		// write to a texture and reset the state
+		render_to_texture(camera.tid, SEC_CAMERA_XSIZE, SEC_CAMERA_YSIZE); // render reflection to texture
+		restore_matrices_and_clear(); // reset state
+		camera_pos    = old_camera_pos;
+		camera_origin = old_camera_origin;
+		cview_dir     = old_cview_dir;
+		camera_pdu    = old_camera_pdu; // restore camera_pdu
+	}
 public:
 	void register_building(building_t &b, room_t const &room) {
 		update_this_frame = 1; // enable update_cameras() after this call
@@ -148,7 +170,6 @@ public:
 				lens_pt -= rot_pt;
 				rotate_vector3d(rot_axis, rot_angle, lens_pt); // lens rotates about rot_pt
 				lens_pt += rot_pt;
-				//lens_pt += 0.1*NEAR_CLIP*camera_dir; // move slightly in front of the camera; is this necessary?
 				cameras.emplace_back(lens_pt, camera_dir, (i - objs.begin()));
 			}
 			else if (i->type == TYPE_MONITOR && room.contains_cube(*i)) { // register monitor
@@ -193,11 +214,10 @@ public:
 			if (camera_obj.type != TYPE_CAMERA) {camera.valid = 0;} // taken by the player? should we remove this camera from the list?
 			else if (!camera_obj.is_powered())  {camera.valid = 0;} // no power
 			else {camera.valid = 1;}
-			//cout << TXT(n) << TXT(monitors.size()) << TXT(cameras.size()) << TXT(camera.valid) << TXT(cur_monitors.size()) << endl; // TESTING
 
 			if (camera.valid) { // update camera texture
 				if (camera.tid == 0) {camera.tid = alloc_tid();} // allocate the texture the first time this camera is rendered to
-				// TODO: render cur_building to texture with camera.tid to update this camera
+				render_building_to_texture(camera);
 			}
 			for (unsigned ix : cur_monitors) {
 				room_object_t &monitor(objs[ix]);
@@ -222,7 +242,6 @@ public:
 			return;
 		}
 		mat.tex.tscale_x = mat.tex.tscale_y = 0.0; // map texture to quad
-		//select_texture((frame_counter + monitor.item_flags)%20); // TESTING
 		assert(camera.tid > 0);
 		bind_2d_texture(camera.tid);
 	}
@@ -236,7 +255,6 @@ public:
 video_camera_manager_t video_camera_manager; // reused across buildings
 
 void building_t::update_security_cameras(point const &camera_bs) {
-	return; // TODO: enable when this is working
 	if (!has_room_geom()) return;
 	if (interior->security_room_ix < 0) return; // no security room set, or not yet populated
 	room_t const &sec_room(get_room(interior->security_room_ix)); // Note: security room is on the ground floor
