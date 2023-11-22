@@ -259,7 +259,7 @@ void building_t::toggle_circuit_breaker(bool is_on, unsigned zone_id, unsigned n
 			i->obj_id = 1; // turn it off
 			i->flags ^= RO_FLAG_NO_POWER;
 		}
-		else if (i->type == TYPE_MWAVE || i->type == TYPE_CEIL_FAN) { // interactive powered devices; stove is gas and not electric powered
+		else if (i->type == TYPE_MWAVE || i->type == TYPE_CEIL_FAN || i->type == TYPE_CAMERA) { // interactive powered devices; stove is gas and not electric powered
 			i->flags ^= RO_FLAG_NO_POWER;
 		}
 		// Note: stoves use gas rather than electricity and don't need power; lit exit signs are always on
