@@ -59,12 +59,12 @@ void rgeom_mat_t::add_cube_to_verts(cube_t const &c, colorRGBA const &color, poi
 
 			for (unsigned s1 = 0; s1 < 2; ++s1) {
 				v.v[d[1]] = c.d[d[1]][s1];
-				v.t[tex_st] = ((tex.tscale_x == 0.0) ? float(s1) : tex.tscale_x*(v.v[d[1]] - tex_origin[d[1]])); // tscale==0.0 => fit texture to cube
+				v.t[tex_st] = ((tex.tscale_x == 0.0) ? float(s1) : (tex.tscale_x*(v.v[d[1]] - tex_origin[d[1]]) + tex.txoff)); // tscale==0.0 => fit texture to cube
 
 				for (unsigned k = 0; k < 2; ++k) { // iterate over vertices
 					bool const s2(bool(k^j^s1)^inverted^1); // need to orient the vertices differently for each side
 					v.v[d[0]] = c.d[d[0]][s2];
-					v.t[!tex_st] = ((tex.tscale_y == 0.0) ? float(s2) : tex.tscale_y*(v.v[d[0]] - tex_origin[d[0]]));
+					v.t[!tex_st] = ((tex.tscale_y == 0.0) ? float(s2) : (tex.tscale_y*(v.v[d[0]] - tex_origin[d[0]]) + tex.tyoff));
 					quad_verts.push_back(v);
 					if (mirror_x) {quad_verts.back().t[0] = 1.0 - v.t[0];} // use for pictures and books
 					if (mirror_y) {quad_verts.back().t[1] = 1.0 - v.t[1];} // used for books
