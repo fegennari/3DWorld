@@ -234,7 +234,8 @@ void building_t::toggle_circuit_breaker(bool is_on, unsigned zone_id, unsigned n
 	unsigned const num_rooms(interior->rooms.size());
 	if (num_zones == 0 || num_rooms == 0) return; // no zones left, or no rooms
 	// determine which rooms this breaker controls;
-	// we really should have breakers control lights on separate floors rather than vertical rooms stacks, but this is much easier
+	// we really should have breakers control lights on separate floors rather than vertical rooms stacks, but this is much easier;
+	// note that the first breaker/room will be the primary hallway in office buildings and will also control all cameras
 	float const rooms_per_zone(max(1.0f, float(num_rooms)/num_zones));
 	unsigned const rooms_start(round_fp(zone_id*rooms_per_zone)), rooms_end(min((unsigned)round_fp((zone_id+1)*rooms_per_zone), num_rooms));
 	if (rooms_start >= rooms_end) return; // no rooms

@@ -4255,7 +4255,7 @@ void get_security_camera_info(room_object_t const &c, point &lens_pt, point &rot
 	rot_angle = ((c.dim ^ c.dir) ? -1.0 : 1.0)*15*TO_RADIANS; // in radians
 }
 void building_room_geom_t::add_camera(room_object_t const &c) {
-	rgeom_mat_t &mat(get_metal_material(1, 0, 2)); // shadowed, detail
+	rgeom_mat_t &mat(get_metal_material(1, 0, 1)); // shadowed, small
 	colorRGBA const color(apply_light_color(c));
 	float const width(c.get_width()), height(c.get_height());
 	cube_t mount(c), body(c);

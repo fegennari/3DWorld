@@ -960,6 +960,7 @@ void building_room_geom_t::add_small_static_objs_to_verts(vect_room_object_t con
 		case TYPE_DIV_BOARD:  add_diving_board(c); break;
 		case TYPE_FLASHLIGHT: add_flashlight(c); break;
 		case TYPE_CANDLE:     add_candle(c); break;
+		case TYPE_CAMERA:     add_camera(c); break;
 		case TYPE_DBG_SHAPE:  add_debug_shape(c); break;
 		default: break;
 		} // end switch
@@ -1006,7 +1007,6 @@ void building_room_geom_t::create_detail_vbos(building_t const &building) {
 		case TYPE_CURB:       add_curb(*i); break;
 		case TYPE_CHIMNEY:    add_chimney(*i, building.get_material().side_tex); break; // uses exterior wall texture
 		case TYPE_DUCT:       add_duct(*i); break;
-		case TYPE_CAMERA:     add_camera(*i); break;
 		default: break;
 		} // end switch
 	} // for i
