@@ -305,13 +305,13 @@ void load_textures() {
 
 
 unsigned get_loaded_textures_cpu_mem() {
-	unsigned mem(get_building_textures_gpu_mem());
-	for (auto i = textures.begin(); i != textures.end(); ++i) {mem += i->get_cpu_mem();}
+	unsigned mem(0);
+	for (texture_t const &t : textures) {mem += t.get_cpu_mem();}
 	return mem;
 }
 unsigned get_loaded_textures_gpu_mem() {
-	unsigned mem(0);
-	for (auto i = textures.begin(); i != textures.end(); ++i) {mem += i->get_gpu_mem();}
+	unsigned mem(get_building_textures_gpu_mem());
+	for (texture_t const &t : textures) {mem += t.get_gpu_mem();}
 	return mem;
 }
 void print_texture_memory_usage() { // full cities scene: 142MB / 272MB (660MB uncompressed) (244MB with ALLOW_SLOW_COMPRESS=1)
