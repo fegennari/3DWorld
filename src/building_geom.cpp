@@ -276,7 +276,8 @@ void building_t::gen_geometry(int rseed1, int rseed2) {
 			parts.push_back(base);
 			if ((rgen.rand()&3) != 0) {maybe_add_special_roof(rgen);} // 75% chance
 			
-			if (0 && interior_enabled()) { // while this works, it doesn't seem to add much value, it only creates odd geometry and makes connecting stairs/elevators difficult
+			if (interior_enabled() && rgen.rand_probability(global_building_params.split_stack_floorplan_prob)) {
+				// while this works, it doesn't seem to add much value, it only creates odd geometry and makes connecting stairs/elevators difficult
 				// two stacked parts of the same x/y dimensions but different interior floorplans
 				float const dz(base.dz()), split_zval(rgen.rand_uniform(0.4, 0.6));
 				parts.push_back(base);

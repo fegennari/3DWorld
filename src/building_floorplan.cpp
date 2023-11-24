@@ -1181,7 +1181,10 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 
 		if (num_elevators > 0) {
 			point center(room.get_cube_center());
-			float const center_shift(0.125*hall_len*(rgen.rand_bool() ? -1.0 : 1.0)), ehwidth(0.5*ewidth);
+			// choose elevator dir on first elevator, and reuse this dir for later parts;
+			// increases symmetry and possibly improves the chances of connecting elevators vertically through multiple stacked parts
+			if (interior->elevators.empty()) {interior->elevator_dir = rgen.rand_bool();}
+			float const center_shift(0.125*hall_len*(interior->elevator_dir ? -1.0 : 1.0)), ehwidth(0.5*ewidth);
 			center[long_dim] += center_shift; // make elevator off-center
 			elevator_t elevator(room, (interior->rooms.size()-1), long_dim, rgen.rand_bool(), 0); // elevator shaft
 			for (unsigned d = 0; d < 2; ++d) {set_wall_width(elevator, center[d], ehwidth, d);}
@@ -1213,7 +1216,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 		stairs_cut = stairs;
 		stairs_dim = long_dim;
 	}
-	else if (is_basement && can_extend_pri_hall_stairs_to_pg() && part.contains_cube_xy(pri_hall)) {
+	else if (is_basement && can_extend_pri_hall_stairs_to_pg() && part.intersects_no_adj(pri_hall) && part.contains_cube_xy(pri_hall)) {
 		assert(!interior->stairwells.empty());
 		stairwell_t const &s(interior->stairwells.front());
 		assert(stairs_contained_in_part(s, pri_hall));
@@ -1718,7 +1721,7 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 			float const cand_z1(cand_z2 - window_vspacing); // top of top floor for this part
 			
 			// try to extend primary hallway stairs down to parking garage below; should this apply to all ground floor stairwells?
-			if (is_basement && can_extend_pri_hall_stairs_to_pg() && part.contains_cube_xy(pri_hall)) {
+			if (is_basement && can_extend_pri_hall_stairs_to_pg() && part.intersects_no_adj(pri_hall) && part.contains_cube_xy(pri_hall)) {
 				assert(!interior->stairwells.empty());
 				stairwell_t const &s(interior->stairwells.front());
 				assert(stairs_contained_in_part(s, pri_hall));
