@@ -97,6 +97,7 @@ class video_camera_manager_t {
 		vector3d dir;
 		std::string tag;
 		unsigned obj_ix, tid=0;
+		int last_update_frame=0;
 		bool valid=1;
 		camera_t(point const &p, vector3d const &d, unsigned ix) : pos(p), dir(d), obj_ix(ix) {}
 	};
@@ -106,7 +107,6 @@ class video_camera_manager_t {
 		monitor_t(unsigned ix, int cix=-1) : obj_ix(ix), camera_ix(cix) {}
 	};
 	bool update_this_frame=0;
-	unsigned update_ix=0;
 	building_t *cur_building=nullptr;
 	rand_gen_t rgen; // for noise texture offset
 	vector<camera_t > cameras;
@@ -151,7 +151,6 @@ public:
 		update_this_frame = 1; // enable update_cameras() after this call
 		if (&b == cur_building) return; // same building - nothing to do
 		cur_building = &b;
-		update_ix    = 0; // reset the camera cycle
 
 		for (camera_t const &camera : cameras) { // store allocated tids on the free list before clearing cameras
 			if (camera.tid > 0) {tid_free_list.push_back(camera.tid);}
@@ -197,10 +196,9 @@ public:
 		if (monitors.empty() || cameras.empty()) return; // nothing to do
 		vector3d const xlate(get_tiled_terrain_model_xlate()); // could pass this in
 		unsigned const num_cameras(cameras.size());
-		bool texture_was_updated(0);
+		int camera_to_update(-1), last_update_frame(0);
 
-		for (unsigned n = 0; n < num_cameras; ++n) { // try to find a valid camera and valid + visible monitor to update
-			unsigned const camera_ix((update_ix + n) % num_cameras);
+		for (unsigned camera_ix = 0; camera_ix < num_cameras; ++camera_ix) { // try to find a valid camera and valid + visible monitor to update
 			camera_t &camera(cameras[camera_ix]);
 			vect_room_object_t &objs(cur_building->interior->room_geom->objs);
 			assert(camera.obj_ix < objs.size());
@@ -220,12 +218,13 @@ public:
 			if (cur_monitors.empty()) continue; // no monitors observing this camera
 			if (camera_obj.type != TYPE_CAMERA) {camera.valid = 0;} // taken by the player? should we remove this camera from the list?
 			else if (!camera_obj.is_powered())  {camera.valid = 0;} // no power
-			else {camera.valid = 1;}
+			else {
+				camera.valid = 1;
 
-			if (camera.valid && !texture_was_updated) { // update camera texture once per frame/call
-				if (camera.tid == 0) {camera.tid = alloc_tid();} // allocate the texture the first time this camera is rendered to
-				render_building_to_texture(camera);
-				texture_was_updated = 1;
+				if (camera_to_update < 0 || camera.last_update_frame < last_update_frame) { // find the least recently updated valid camera
+					last_update_frame = camera.last_update_frame;
+					camera_to_update  = camera_ix;
+				}
 			}
 			for (unsigned ix : cur_monitors) {
 				room_object_t &monitor(objs[ix]);
@@ -233,7 +232,12 @@ public:
 				monitor.flags     |= RO_FLAG_IS_ACTIVE; // flag as having an active texture
 			}
 		} // for n
-		update_ix = (update_ix + 1) % num_cameras;
+		if (camera_to_update >= 0) { // update at most one camera per frame
+			camera_t &camera(cameras[camera_to_update]);
+			if (camera.tid == 0) {camera.tid = alloc_tid();} // allocate the texture the first time this camera is rendered to
+			render_building_to_texture(camera);
+			camera.last_update_frame = frame_counter;
+		}
 	}
 	void setup_monitor_screen_draw(room_object_t const &monitor, rgeom_mat_t &mat, std::string &onscreen_text) {
 		assert(monitor.type == TYPE_MONITOR);
