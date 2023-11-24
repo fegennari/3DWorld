@@ -130,7 +130,7 @@ class video_camera_manager_t {
 		point const old_camera_pos(camera_pos), old_camera_origin(camera_origin);
 		vector3d const old_cview_dir(cview_dir), xlate(get_tiled_terrain_model_xlate());
 		pos_dir_up const old_camera_pdu(camera_pdu); // reflect camera frustum used for VFC
-		camera_pos = camera_origin = camera.pos;
+		camera_pos = camera_origin = camera.pos + xlate; // change from building space to camera space
 		cview_dir  = camera.dir; // up_vector remains at +z
 		set_camera_pdu();
 		setup_building_lights(xlate, 1); // this is slow as it likely thrashes the shadow cache, but results look bad without lighting
