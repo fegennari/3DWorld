@@ -2295,7 +2295,7 @@ void building_room_geom_t::add_picture(room_object_t const &c) { // also whitebo
 	}
 }
 
-void building_room_geom_t::add_book_title(string const &title, cube_t const &title_area, rgeom_mat_t &mat, colorRGBA const &color,
+/*static*/ void building_room_geom_t::add_book_title(string const &title, cube_t const &title_area, rgeom_mat_t &mat, colorRGBA const &color,
 	unsigned hdim, unsigned tdim, unsigned wdim, bool cdir, bool ldir, bool wdir)
 {
 	vector3d column_dir(zero_vector), line_dir(zero_vector), normal(zero_vector);
@@ -4021,8 +4021,21 @@ cube_t get_tv_screen(room_object_t const &c) {
 	screen.z2() -= 0.04*c.dz();
 	return screen;
 }
-void add_tv_or_monitor_screen(room_object_t const &c, rgeom_mat_t &mat) {
-	mat.add_cube_to_verts(get_tv_screen(c), WHITE, c.get_llc(), get_face_mask(c.dim, c.dir), !c.dim, !(c.dim ^ c.dir)); // draw outward face
+void add_tv_or_monitor_screen(room_object_t const &c, rgeom_mat_t &mat, std::string const &onscreen_text="", rgeom_mat_t *text_mat=nullptr) {
+	cube_t const screen(get_tv_screen(c));
+	bool const miry(!(c.dim ^ c.dir));
+	mat.add_cube_to_verts(screen, WHITE, c.get_llc(), get_face_mask(c.dim, c.dir), !c.dim, miry); // draw outward face
+
+	if (text_mat != nullptr && !onscreen_text.empty()) { // onscreen text is drawn the same as book titles
+		float const width(screen.get_sz_dim(!c.dim)), height(screen.dz());
+		cube_t text_area(screen);
+		text_area.translate_dim( c.dim, -0.01*(c.dir ? -1.0 : 1.0)*c.get_width()); // move outward slightly
+		text_area.expand_in_dim(!c.dim, -0.05*width);
+		text_area.d[!c.dim][!miry] -= (miry ? -1.0 : 1.0)*0.8*width; // left part of the screen
+		text_area.z1() += 0.05*height;
+		text_area.z2() -= 0.90*height; // shrink to a small strip at the bottom
+		building_room_geom_t::add_book_title(onscreen_text, text_area, *text_mat, WHITE, !c.dim, 2, c.dim, miry, 0, !c.dir); // {columns, lines, normal}
+	}
 }
 void building_room_geom_t::add_tv_picture(room_object_t const &c) {
 	if (c.is_broken()) { // draw cracks for broken screen

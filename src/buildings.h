@@ -950,7 +950,7 @@ struct building_room_geom_t {
 	void add_rug(room_object_t const &c);
 	void add_blanket(room_object_t const &c);
 	void add_picture(room_object_t const &c);
-	void add_book_title(std::string const &title, cube_t const &title_area, rgeom_mat_t &mat, colorRGBA const &color,
+	static void add_book_title(std::string const &title, cube_t const &title_area, rgeom_mat_t &mat, colorRGBA const &color,
 		unsigned hdim, unsigned tdim, unsigned wdim, bool cdir, bool ldir, bool wdir);
 	void add_book(room_object_t const &c, bool inc_lg, bool inc_sm, bool inc_text, float tilt_angle=0.0, unsigned extra_skip_faces=0, bool no_title=0, float z_rot_angle=0.0);
 	void add_bookcase(room_object_t const &c, bool inc_lg, bool inc_sm, bool inc_text, float tscale,

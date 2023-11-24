@@ -95,6 +95,7 @@ class video_camera_manager_t {
 	struct camera_t {
 		point pos;
 		vector3d dir;
+		std::string tag;
 		unsigned obj_ix, tid=0;
 		bool valid=1;
 		camera_t(point const &p, vector3d const &d, unsigned ix) : pos(p), dir(d), obj_ix(ix) {}
@@ -171,6 +172,12 @@ public:
 				rotate_vector3d(rot_axis, rot_angle, lens_pt); // lens rotates about rot_pt
 				lens_pt += rot_pt;
 				cameras.emplace_back(lens_pt, camera_dir, (i - objs.begin()));
+				room_t const &room(b.get_room(i->room_id));
+				unsigned const floor_ix(room.get_floor_containing_zval(i->z1(), b.get_window_vspace()) + 1); // starts from 1
+				std::string const dir_strs[4] = {"E", "W", "N", "S"};
+				std::ostringstream oss;
+				oss << "Hall " << floor_ix << " " << dir_strs[i->get_orient()]; // all cameras are in hallways; dir is opposite the hallway end
+				cameras.back().tag = oss.str();
 			}
 			else if (i->type == TYPE_MONITOR && room.contains_cube(*i)) { // register monitor
 				monitors.emplace_back(i - objs.begin());
@@ -228,11 +235,16 @@ public:
 		} // for n
 		update_ix = (update_ix + 1) % num_cameras;
 	}
-	void setup_monitor_screen_draw(room_object_t const &monitor, rgeom_mat_t &mat) {
+	void setup_monitor_screen_draw(room_object_t const &monitor, rgeom_mat_t &mat, std::string &onscreen_text) {
 		assert(monitor.type == TYPE_MONITOR);
-		if (!monitor.is_active()) {select_texture(BLACK_TEX); return;} // error?
+
+		if (!monitor.is_active() || cur_building == nullptr || !cur_building->bcube.contains_cube(monitor)) { // inactive monitor or wrong building
+			select_texture(BLACK_TEX);
+			return;
+		}
 		assert(monitor.item_flags < cameras.size());
 		camera_t const &camera(cameras[monitor.item_flags]);
+		onscreen_text = camera.tag;
 
 		if (!camera.valid || camera.tid == 0) { // camera feed invalid, or texture not yet created: draw noise
 			mat.tex.tscale_x = 6.0/monitor.get_width ();
@@ -264,7 +276,10 @@ void building_t::update_security_cameras(point const &camera_bs) {
 	video_camera_manager.register_building(*this, sec_room);
 }
 void update_security_camera_image() {video_camera_manager.update_cameras();}
-void setup_monitor_screen_draw(room_object_t const &monitor, rgeom_mat_t &mat) {video_camera_manager.setup_monitor_screen_draw(monitor, mat);}
+
+void setup_monitor_screen_draw(room_object_t const &monitor, rgeom_mat_t &mat, std::string &onscreen_text) {
+	video_camera_manager.setup_monitor_screen_draw(monitor, mat, onscreen_text);
+}
 unsigned get_building_textures_gpu_mem() {return video_camera_manager.get_gpu_mem();}
 
 
