@@ -48,7 +48,7 @@ extern shader_t reflection_shader;
 void get_all_model_bcubes(vector<cube_t> &bcubes); // from model3d.h
 cube_t get_building_indir_light_bounds(); // from building_lighting.cpp
 void register_player_not_in_building();
-bool player_holding_lit_cande();
+bool player_holding_lit_candle();
 void parse_universe_name_str_tables();
 void try_join_house_ext_basements(vect_building_t &buildings);
 void add_sign_text_verts_both_sides(string const &text, cube_t const &sign, bool dim, bool dir, vect_vnctcc_t &verts);
@@ -314,7 +314,7 @@ struct building_lights_manager_t : public city_lights_manager_t {
 		// no room lights if player is hiding in a closed closet/windowless room with light off (prevents light leakage)
 		if (!player_in_dark_room()) {add_building_interior_lights(xlate, lights_bcube);}
 		if (flashlight_on) {add_player_flashlight(0.12);} // add player flashlight, even when outside of building so that flashlight can shine through windows
-		if (camera_in_building && player_holding_lit_cande()) {add_player_candle_light(xlate);}
+		if (camera_in_building && player_holding_lit_candle()) {add_player_candle_light(xlate);}
 		clamp_to_max_lights(xlate, dl_sources);
 		tighten_light_bcube_bounds(dl_sources); // clip bcube to tight bounds around lights for better dlights texture utilization (possible optimization)
 		if (ADD_ROOM_SHADOWS) {setup_shadow_maps(dl_sources, (camera_pdu.pos - xlate), global_building_params.max_shadow_maps);}

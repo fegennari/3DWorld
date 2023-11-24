@@ -541,7 +541,7 @@ public:
 	bool  player_has_flashlight() const {return has_flashlight;}
 	bool  player_at_full_health() const {return (player_health == 1.0 && !is_poisoned);}
 	bool  player_is_thirsty    () const {return (thirst < 0.5);}
-	bool  player_holding_lit_cande() const {return (!carried.empty() && carried.back().type == TYPE_CANDLE && carried.back().is_lit());}
+	bool  player_holding_lit_candle() const {return (!carried.empty() && carried.back().type == TYPE_CANDLE && carried.back().is_lit());}
 	void  refill_thirst() {thirst = 1.0;}
 
 	bool can_open_door(door_t const &door) { // non-const because num_doors_unlocked is modified
@@ -983,7 +983,7 @@ bool player_can_open_door(door_t const &door) {return player_inventory.can_open_
 void register_in_closed_bathroom_stall() {player_inventory.register_in_closed_bathroom_stall();}
 bool player_at_full_health() {return player_inventory.player_at_full_health();}
 bool player_is_thirsty    () {return player_inventory.player_is_thirsty    ();}
-bool player_holding_lit_cande() {return player_inventory.player_holding_lit_cande();}
+bool player_holding_lit_candle() {return player_inventory.player_holding_lit_candle();}
 void refill_thirst() {player_inventory.refill_thirst();}
 void apply_building_fall_damage(float delta_z) {player_inventory.apply_fall_damage(delta_z, 0.5);} // dscale=0.5
 void get_dead_players_in_building(vector<dead_person_t> &dead_players, building_t const &building) {player_inventory.get_dead_players_in_building(dead_players, building);}
