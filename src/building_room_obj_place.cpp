@@ -2639,20 +2639,20 @@ bool building_t::add_security_room_objs(rand_gen_t rgen, room_t const &room, flo
 			tv.d[dim][ dir] = room_bounds.d[dim][dir]; // on the wall
 			tv.d[dim][!dir] = tv.d[dim][dir] + (dir ? -1.0 : 1.0)*tv_depth;
 
-			for (unsigned row = 0; row < num_rows; ++row) {
-				float const z1(start_zval + row*row_spacing);
-				set_cube_zvals(tv, z1, z1+tv_height);
+			for (unsigned col = 0; col < num_cols; ++col) { // XY
+				set_wall_width(tv, (col_start + ((dim ^ dir) ? (num_cols-col-1) : col)*col_spacing), tv_hwidth, !dim); // ordered left to right
+				if (!breaker_panel.is_all_zeros() && breaker_panel.intersects_xy(tv)) continue; // ignore zvals so that we don't put a monitor above the breaker panel
 
-				for (unsigned col = 0; col < num_cols; ++col) {
-					set_wall_width(tv, (col_start + col*col_spacing), tv_hwidth, !dim);
-					if (!breaker_panel.is_all_zeros() && breaker_panel.intersects(tv)) continue;
+				for (unsigned row = 0; row < num_rows; ++row) { // Z
+					float const z1(start_zval + row*row_spacing);
+					set_cube_zvals(tv, z1, z1+tv_height);
 					if (is_obj_placement_blocked(tv, room, 1)) continue;
 					//if (overlaps_other_room_obj(tv, objs_start)) continue; // not needed since there are no objects placed first?
 					objs.emplace_back(tv, TYPE_MONITOR, room_id, dim, !dir, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_SHORT, BLACK); // monitors are shorter than TVs
 					set_obj_id(objs);
 					objs.back().obj_id &= ~1; // on by default; strip off LSB
-				} // for col
-			} // for row
+				} // for row
+			} // for col
 		} // for dir
 	} // for dim
 	add_door_sign("Security Room", room, zval, room_id, tot_light_amt);
