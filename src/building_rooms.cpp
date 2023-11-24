@@ -938,7 +938,7 @@ void building_t::add_gutter_downspouts(rand_gen_t &rgen, vect_cube_t const &balc
 			
 			if (has_sec_bldg() && get_sec_bldg().intersects(ds_exp)) { // gutter on garage or shed
 				bool const inner_dir(centerline < bcube.get_center_dim(!dim));
-				if (e == inner_dir) continue; // only add gutter on the ouyside facing direction
+				if (bool(e) == inner_dir) continue; // only add gutter on the ouyside facing direction
 			}
 			else if (real_num_parts > 1) { // check for intersections with lower parts when stacked
 				cube_t test_cube(ds);

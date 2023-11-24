@@ -13,7 +13,6 @@
 
 bool const EXACT_MULT_FLOOR_HEIGHT = 1;
 bool const ENABLE_MIRROR_REFLECTIONS = 1;
-bool const SPLIT_DOOR_PER_FLOOR    = 1; // allows mixed open/closed doors per-floor, and better texture scaling, but slower, and uses more memory
 unsigned const MAX_CYLIN_SIDES     = 36;
 unsigned const MAX_DRAW_BLOCKS     = 8; // for building interiors only; currently have floor, ceiling, walls, and doors
 unsigned const NUM_STAIRS_PER_FLOOR= 12;

@@ -14,7 +14,7 @@ extern building_params_t global_building_params;
 void building_t::add_interior_door(door_t &door, bool is_bathroom, bool make_unlocked, bool make_closed) {
 	assert(interior);
 	interior->door_stacks.emplace_back(door, interior->doors.size());
-	if (!SPLIT_DOOR_PER_FLOOR || door.on_stairs) {add_interior_door_for_floor(door, is_bathroom, make_unlocked); return;} // add a single door across all floors
+	if (door.on_stairs) {add_interior_door_for_floor(door, is_bathroom, make_unlocked); return;} // add a single door across all floors
 	float const floor_spacing(get_window_vspace()), door_height(get_floor_ceil_gap());
 
 	// Note: door.dz() should be an exact multiple of floor_spacing except for an extra floor thickness at the bottom
@@ -293,7 +293,7 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 	uint64_t must_split[2] = {0,0};
 	unsigned first_wall_to_split[2] = {0,0};
 	cube_t pref_conn_to; // house hallway, etc.
-	// allocate space for all floors
+	// allocate space for all floors; this is now likely a large undercount of the actual number of objects needed
 	unsigned tot_num_floors(0), tot_num_stairwells(0), tot_num_landings(0); // num floor/ceiling cubes, not number of stories; used only for reserving vectors
 
 	for (auto p = parts.begin(); p != parts_end; ++p) {
@@ -305,9 +305,9 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 		tot_num_landings   += (has_stairs ? (num_floors - 1) : 0);
 	}
 	if (has_sec_bldg()) {++tot_num_floors;}
-	interior->ceilings.reserve(tot_num_floors);
-	interior->floors  .reserve(tot_num_floors);
-	interior->landings.reserve(tot_num_landings);
+	interior->ceilings  .reserve(tot_num_floors);
+	interior->floors    .reserve(tot_num_floors);
+	interior->landings  .reserve(tot_num_landings);
 	interior->stairwells.reserve(tot_num_stairwells);
 	vector<room_t> &rooms(interior->rooms);
 	
@@ -321,15 +321,15 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 		bool const is_basement_part(is_basement(p)), first_part(part_id == 0), first_part_this_stack(first_part || is_basement_part || (p-1)->z1() < p->z1());
 		// office building hallways only; house hallways are added later
 		bool const use_hallway(can_use_hallway_for_part(part_id)), min_dim(psz.y < psz.x);
-		unsigned const rooms_start(rooms.size()), num_doors_per_stack(SPLIT_DOOR_PER_FLOOR ? num_floors : 1);
+		unsigned const rooms_start(rooms.size()), num_doors_per_stack(num_floors);
 		cube_t hall, place_area(*p);
 		place_area.expand_by_xy(-wall_edge_spacing); // shrink slightly to avoid z-fighting with walls
-		float window_hspacing[2] = {0.0};
+		float window_hspacing   [2] = {0.0};
 		int num_windows_per_side[2] = {0};
 
 		for (unsigned d = 0; d < 2; ++d) {
 			num_windows_per_side[d] = get_num_windows_on_side(p->d[d][0], p->d[d][1]);
-			window_hspacing[d] = psz[d]/num_windows_per_side[d];
+			window_hspacing     [d] = psz[d]/num_windows_per_side[d];
 		}
 		if (!is_cube()) { // cylinder, etc.
 			float const min_dim_sz(min(p->dx(), p->dy()));

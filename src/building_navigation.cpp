@@ -863,7 +863,7 @@ void building_t::build_nav_graph() const { // Note: does not depend on room geom
 		if (is_room_adjacent_to_ext_door(c)) {ng.mark_exit(r);}
 
 		for (auto d = interior->door_stacks.begin(); d != interior->door_stacks.end(); ++d) {
-			// if SPLIT_DOOR_PER_FLOOR, we should only add this door if it's on the same floor as our graph but that doesn't work because the graph is shared across all floors,
+			// we should only add this door if it's on the same floor as our graph, but that doesn't work because the graph is shared across all floors,
 			// so instead we'll have to record the door index and check the correct door during path finding; it's not valid to test door open/locked state here
 			if (!c.intersects_no_adj(*d)) continue; // door not adjacent to this room
 			cube_t dc(*d);
