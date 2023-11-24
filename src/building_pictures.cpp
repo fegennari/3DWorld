@@ -90,7 +90,8 @@ bool building_t::maybe_teleport_to_screenshot() const {
 
 // *** Security Cameras and Monitors ***
 
-unsigned const SEC_CAMERA_XSIZE(640), SEC_CAMERA_YSIZE(480); // or use half the screen resolution? or the monitor aspect ratio?
+// or use half the screen resolution? or the monitor aspect ratio? then we have to resize when the resolution changes
+unsigned const SEC_CAMERA_XSIZE(1024), SEC_CAMERA_YSIZE(768);
 
 class video_camera_manager_t {
 	struct camera_t {
