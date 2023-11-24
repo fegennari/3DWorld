@@ -561,6 +561,9 @@ struct cube_t { // size = 24; Note: AABB, not actually a cube
 		UNROLL_2X(if (cube.d[i_][0] <= d[i_][0] || cube.d[i_][1] >= d[i_][1]) return 0;)
 		return 1;
 	}
+	bool contains_cube_xy_overlaps_z(const cube_t &cube) const { // no adj in Z
+		return (contains_cube_xy(cube) && cube.z1() < z2() && cube.z2() > z1());
+	}
 	bool contains_pt(point const &pt) const { // includes points on the edge
 		UNROLL_3X(if (pt[i_] < d[i_][0] || pt[i_] > d[i_][1]) return 0;)
 		return 1;

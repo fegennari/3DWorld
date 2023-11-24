@@ -1216,7 +1216,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 		stairs_cut = stairs;
 		stairs_dim = long_dim;
 	}
-	else if (is_basement && can_extend_pri_hall_stairs_to_pg() && part.intersects_no_adj(pri_hall) && part.contains_cube_xy(pri_hall)) {
+	else if (is_basement && can_extend_pri_hall_stairs_to_pg() && part.contains_cube_xy_overlaps_z(pri_hall)) {
 		assert(!interior->stairwells.empty());
 		stairwell_t const &s(interior->stairwells.front());
 		assert(stairs_contained_in_part(s, pri_hall));
@@ -1561,7 +1561,7 @@ bool building_t::is_valid_stairs_elevator_placement(cube_t const &c, float pad, 
 
 	if (dim <= 1 && pad > 0.0) { // dim was specified; check if containing rooms have space on either side for the player to walk
 		for (room_t const &r : interior->rooms) {
-			if (!r.intersects(c) || !r.contains_cube_xy(c)) continue; // stairs not contained in this room
+			if (!r.contains_cube_xy_overlaps_z(c)) continue; // stairs not contained in this room
 			if (max((c.d[!dim][0] - r.d[!dim][0]), (r.d[!dim][1] - c.d[!dim][1])) < pad) return 0;
 		}
 	}
@@ -1721,7 +1721,7 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 			float const cand_z1(cand_z2 - window_vspacing); // top of top floor for this part
 			
 			// try to extend primary hallway stairs down to parking garage below; should this apply to all ground floor stairwells?
-			if (is_basement && can_extend_pri_hall_stairs_to_pg() && part.intersects_no_adj(pri_hall) && part.contains_cube_xy(pri_hall)) {
+			if (is_basement && can_extend_pri_hall_stairs_to_pg() && part.contains_cube_xy_overlaps_z(pri_hall)) {
 				assert(!interior->stairwells.empty());
 				stairwell_t const &s(interior->stairwells.front());
 				assert(stairs_contained_in_part(s, pri_hall));
