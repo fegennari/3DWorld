@@ -1450,20 +1450,11 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t &room, flo
 		}
 	} // for dir
 	// add a sign outside the bathroom door
-	//add_door_sign((mens_room ? "Men" : "Women"), room, zval, room_id, tot_light_amt); // equivalent, but below is more efficient
-	bool const shift_dir(room_center[br_dim] < part_center[br_dim]); // put the sign toward the outside of the building because there's more space and more light
-	float const door_width(br_door.get_sz_dim(br_dim));
-	cube_t sign(br_door);
-	set_cube_zvals(sign, zval+0.50*floor_spacing, zval+0.55*floor_spacing);
-	sign.translate_dim( br_dim, (shift_dir ? -1.0 : 1.0)*0.8*door_width);
-	sign.expand_in_dim( br_dim, -(mens_room ? 0.36 : 0.30)*door_width); // shrink a bit
-	sign.translate_dim(!br_dim, sink_side_sign*0.5*wall_thickness); // move to outside wall
-	sign.d[!br_dim][sink_side] += sink_side_sign*0.1*wall_thickness; // make nonzero area
-	add_hallway_sign(objs, sign, (mens_room ? "Men" : "Women"), room_id, !br_dim, sink_side);
+	add_door_sign((mens_room ? "Men" : "Women"), room, zval, room_id, tot_light_amt, 1); // no_check_adj_walls=1
 	return 1;
 }
 
-void building_t::add_door_sign(string const &text, room_t const &room, float zval, unsigned room_id, float tot_light_amt) {
+void building_t::add_door_sign(string const &text, room_t const &room, float zval, unsigned room_id, float tot_light_amt, bool no_check_adj_walls) {
 	float const floor_spacing(get_window_vspace()), wall_thickness(get_wall_thickness());
 	point const part_center(get_part_for_room(room).get_cube_center()), room_center(room.get_cube_center());
 	cube_t c(room);
@@ -1480,9 +1471,12 @@ void building_t::add_door_sign(string const &text, room_t const &room, float zva
 		sign.expand_in_dim(!i->dim, -(0.45 - 0.03*min((unsigned)text.size(), 6U))*door_width); // shrink a bit
 		sign.translate_dim( i->dim, side_sign*0.5*wall_thickness); // move to outside wall
 		sign.d[i->dim][side] += side_sign*0.1*wall_thickness; // make nonzero area
-		cube_t test_cube(sign);
-		test_cube.translate_dim(i->dim, side_sign*0.1*wall_thickness); // move out in front of the current wall to avoid colliding with it (in case of T-junction)
-		if (has_bcube_int(test_cube, interior->walls[!i->dim])) continue; // check for intersections with orthogonal walls; needed for inside corner offices
+
+		if (!no_check_adj_walls) { // skip this check as an optimization for bathrooms, which shouldn't need this check because they're not on inside corners
+			cube_t test_cube(sign);
+			test_cube.translate_dim(i->dim, side_sign*0.1*wall_thickness); // move out in front of the current wall to avoid colliding with it (in case of T-junction)
+			if (has_bcube_int(test_cube, interior->walls[!i->dim])) continue; // check for intersections with orthogonal walls; needed for inside corner offices
+		}
 		add_hallway_sign(interior->room_geom->objs, sign, text, room_id, i->dim, side);
 	} // for i
 }
