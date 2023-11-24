@@ -741,7 +741,7 @@ bool building_t::add_bedroom_objs(rand_gen_t rgen, room_t &room, vect_cube_t con
 	} // for i
 	if (rgen.rand_float() < 0.3) {add_laundry_basket(rgen, room, zval, room_id, tot_light_amt, objs_start, place_area);} // try to place a laundry basket 25% of the time
 
-	if (rgen.rand_float() < global_building_params.ball_prob) { // maybe add a ball to the room
+	if (rgen.rand_probability(global_building_params.ball_prob)) { // maybe add a ball to the room
 		add_ball_to_room(rgen, room, place_area, zval, room_id, tot_light_amt, objs_start);
 	}
 	cube_t const avoid(placed_closet ? objs[closet_obj_id] : cube_t()); // avoid intersecting the closet, since it meets the ceiling

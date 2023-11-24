@@ -1158,7 +1158,7 @@ int building_t::choose_dest_room(person_t &person, rand_gen_t &rgen) const { // 
 	if (!is_house && !person.is_first_path && !interior->elevators_disabled && !person.last_used_elevator &&
 		person.goal_type != GOAL_TYPE_ELEVATOR && global_building_params.elevator_capacity > 0)
 	{
-		if (global_building_params.use_elevator_prob >= 1.0 || (global_building_params.use_elevator_prob > 0.0 && rgen.rand_float() < global_building_params.use_elevator_prob)) {
+		if (rgen.rand_probability(global_building_params.use_elevator_prob)) {
 			int const nearest_elevator(find_nearest_elevator_this_floor(person.pos));
 
 			if (nearest_elevator >= 0) {
@@ -1883,7 +1883,7 @@ int building_t::run_ai_elevator_logic(person_t &person, float delta_dir, rand_ge
 					if (person.must_re_call_elevator) {
 						// waiting has already been decided
 					}
-					else if (rgen.rand_float() < global_building_params.elevator_wait_recall_prob) { // wait and press the button again some of the time
+					else if (rgen.rand_probability(global_building_params.elevator_wait_recall_prob)) { // wait and press the button again some of the time
 						person.must_re_call_elevator = 1; // schedule this for later, to avoid causing the doors to re-open
 					}
 					else { // give up and walk away 50% of the time

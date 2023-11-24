@@ -2710,7 +2710,7 @@ public:
 			auto const &conn(get_city_by_ix(car.cur_city).get_connected());
 			float const new_city_prob(city_params.new_city_prob*min(0.4f, 0.1f*conn.size())); // 10% to 40% chance, depending on the number of connecting cities (to reduce traffic congestion)
 
-			if (rgen.rand_float() < new_city_prob) { // select a different city when there are multiple cities
+			if (rgen.rand_probability(new_city_prob)) { // select a different city when there are multiple cities
 				if (rgen.rand_float() < city_params.traffic_balance_val) { // choose the connected city with the lowest traffic density
 					float min_td(0.0);
 

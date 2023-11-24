@@ -1287,8 +1287,7 @@ void building_t::maybe_add_basement(rand_gen_t rgen) { // rgen passed by value s
 	if (!interior_enabled()) return; // if there's no interior, there's no point in adding a basement
 	float basement_prob(is_house ? global_building_params.basement_prob_house : global_building_params.basement_prob_office);
 	if (is_in_city && !is_house) {basement_prob *= 2.0;} // double the basement/parking garage probability for city office buildings
-	if (basement_prob <= 0.0) return; // no basement
-	if (basement_prob <  1.0 && rgen.rand_float() > basement_prob) return;
+	if (!rgen.rand_probability(basement_prob)) return; // no basement
 	float const floor_spacing(get_window_vspace()), max_sea_level(get_max_sea_level());
 	float basement_z1(ground_floor_z1 - floor_spacing);
 	if (basement_z1 < max_sea_level) return; // no basement below the water line
