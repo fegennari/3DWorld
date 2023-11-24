@@ -189,11 +189,11 @@ public:
 		if (cur_building == nullptr) return; // error?
 		if (monitors.empty() || cameras.empty()) return; // nothing to do
 		vector3d const xlate(get_tiled_terrain_model_xlate()); // could pass this in
+		unsigned const num_cameras(cameras.size());
+		bool texture_was_updated(0);
 
-		for (unsigned n = 0; n < cameras.size(); ++n) { // try to find a valid camera and valid + visible monitor to update
-			unsigned const camera_ix(update_ix);
-			assert(camera_ix < cameras.size());
-			update_ix = (update_ix + 1) % cameras.size();
+		for (unsigned n = 0; n < num_cameras; ++n) { // try to find a valid camera and valid + visible monitor to update
+			unsigned const camera_ix((update_ix + n) % num_cameras);
 			camera_t &camera(cameras[camera_ix]);
 			vect_room_object_t &objs(cur_building->interior->room_geom->objs);
 			assert(camera.obj_ix < objs.size());
@@ -215,17 +215,18 @@ public:
 			else if (!camera_obj.is_powered())  {camera.valid = 0;} // no power
 			else {camera.valid = 1;}
 
-			if (camera.valid) { // update camera texture
+			if (camera.valid && !texture_was_updated) { // update camera texture once per frame/call
 				if (camera.tid == 0) {camera.tid = alloc_tid();} // allocate the texture the first time this camera is rendered to
 				render_building_to_texture(camera);
+				texture_was_updated = 1;
 			}
 			for (unsigned ix : cur_monitors) {
 				room_object_t &monitor(objs[ix]);
 				monitor.item_flags = camera_ix;
 				monitor.flags     |= RO_FLAG_IS_ACTIVE; // flag as having an active texture
 			}
-			break; // done
 		} // for n
+		update_ix = (update_ix + 1) % num_cameras;
 	}
 	void setup_monitor_screen_draw(room_object_t const &monitor, rgeom_mat_t &mat) {
 		assert(monitor.type == TYPE_MONITOR);
@@ -233,7 +234,7 @@ public:
 		assert(monitor.item_flags < cameras.size());
 		camera_t const &camera(cameras[monitor.item_flags]);
 
-		if (!camera.valid) { // draw noise
+		if (!camera.valid || camera.tid == 0) { // camera feed invalid, or texture not yet created: draw noise
 			mat.tex.tscale_x = 6.0/monitor.get_width ();
 			mat.tex.tscale_y = 6.0/monitor.get_height();
 			mat.tex.txoff    = rgen.rand_float(); // animate it
@@ -242,7 +243,6 @@ public:
 			return;
 		}
 		mat.tex.tscale_x = mat.tex.tscale_y = 0.0; // map texture to quad
-		assert(camera.tid > 0);
 		bind_2d_texture(camera.tid);
 	}
 	unsigned get_gpu_mem() const {
