@@ -35,7 +35,7 @@ llv_vect local_light_volumes;
 indir_dlight_group_manager_t indir_dlight_group_manager;
 
 
-extern int animate2, display_mode, frame_counter, camera_coll_id, scrolling, read_light_files[], write_light_files[];
+extern int animate2, display_mode, camera_coll_id, scrolling, read_light_files[], write_light_files[];
 extern unsigned create_voxel_landscape;
 extern bool disable_dlights;
 extern float czmin, czmax, fticks, zbottom, ztop, XY_SCENE_SIZE, FAR_CLIP, CAMERA_RADIUS, indir_light_exp, light_int_scale[], force_czmin, force_czmax;

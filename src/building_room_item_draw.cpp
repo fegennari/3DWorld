@@ -19,7 +19,7 @@ extern bool camera_in_building;
 extern int display_mode, frame_counter, animate2, player_in_basement;
 extern unsigned room_mirror_ref_tid;
 extern float fticks, office_chair_rot_rate, cur_dlight_pcf_offset, building_ambient_scale;
-extern point pre_smap_player_pos, player_candle_pos;
+extern point actual_player_pos, player_candle_pos;
 extern cube_t smap_light_clip_cube;
 extern pos_dir_up camera_pdu;
 extern building_t const *player_building;
@@ -1639,8 +1639,8 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 	water_draw.draw_and_clear(s);
 
 	if (player_in_building && !shadow_only && player_held_object.is_valid()) {
-		// draw the item the player is holding; pre_smap_player_pos should be the correct position for reflections
-		point const obj_pos((reflection_pass ? pre_smap_player_pos : camera_bs) + CAMERA_RADIUS*cview_dir - vector3d(0.0, 0.0, 0.5*CAMERA_RADIUS));
+		// draw the item the player is holding; actual_player_pos should be the correct position for reflections
+		point const obj_pos((reflection_pass ? actual_player_pos : camera_bs) + CAMERA_RADIUS*cview_dir - vector3d(0.0, 0.0, 0.5*CAMERA_RADIUS));
 		player_held_object.translate(obj_pos - player_held_object.get_cube_center());
 		//unsigned room_id(building.get_room_containing_pt(obj_pos));
 		//if (room_id >= 0) {player_held_object.room_id = room_id;} // is this necessary?

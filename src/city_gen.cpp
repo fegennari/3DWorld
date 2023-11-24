@@ -19,7 +19,7 @@ float const CITY_LIGHT_FALLOFF      = 0.2;
 float city_dlight_pcf_offset_scale(1.0), cur_dlight_pcf_offset(0.0);
 vector2d actual_max_road_seg_len;
 city_params_t city_params;
-point pre_smap_player_pos(all_zeros);
+point pre_smap_player_pos(all_zeros), actual_player_pos(all_zeros); // Note: pre_smap_player_pos can be security cameras, but actual_player_pos is always the player
 
 extern bool enable_dlight_shadows, dl_smap_enabled, flashlight_on, camera_in_building, have_indir_smoke_tex, disable_city_shadow_maps;
 extern int rand_gen_index, display_mode, animate2, draw_model, player_in_basement;
@@ -2917,7 +2917,7 @@ void city_lights_manager_t::finalize_lights(vector<light_source> &lights) { // N
 	prev_had_lights = !lights.empty();
 }
 
-void city_lights_manager_t::setup_shadow_maps(vector<light_source> &light_sources, point const &cpos, unsigned max_smaps) {
+void city_lights_manager_t::setup_shadow_maps(vector<light_source> &light_sources, point const &cpos, unsigned max_smaps, bool sec_camera_mode) {
 	unsigned const num_smaps(min((unsigned)light_sources.size(), min(max_smaps, MAX_DLIGHT_SMAPS)));
 	dl_smap_enabled = 0;
 	if (!enable_dlight_shadows || shadow_map_sz == 0 || num_smaps == 0) return;
@@ -2926,7 +2926,8 @@ void city_lights_manager_t::setup_shadow_maps(vector<light_source> &light_source
 	unsigned num_used(0);
 	unsigned const smap_size(city_params.smap_size); // 0 = use default shadow map resolution
 	// capture player pos in global coordinate space before replacing with light pos so it can be used for LOD during model drawing
-	pre_smap_player_pos = get_camera_building_space();
+	pre_smap_player_pos = get_camera_building_space(); // player or security camera (or maybe reflected pos in the future)
+	if (!sec_camera_mode) {actual_player_pos = pre_smap_player_pos;} // actual_player_pos only applies to the player
 	// Note: if using a dynamic (distance-based) sm_size, need to maintain a pool of different sm resolutions somehow
 	check_gl_error(430);
 

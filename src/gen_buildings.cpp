@@ -39,7 +39,7 @@ extern unsigned room_mirror_ref_tid;
 extern int rand_gen_index, display_mode, window_width, window_height, camera_surf_collide, animate2, building_action_key, player_in_elevator;
 extern float CAMERA_RADIUS, city_dlight_pcf_offset_scale, fticks, FAR_CLIP;
 extern colorRGB cur_ambient, cur_diffuse;
-extern point sun_pos, pre_smap_player_pos;
+extern point sun_pos, pre_smap_player_pos, actual_player_pos;
 extern vector<light_source> dl_sources;
 extern tree_placer_t tree_placer;
 extern shader_t reflection_shader;
@@ -307,17 +307,17 @@ indir_tex_mgr_t indir_tex_mgr;
 bool player_in_dark_room() {return (player_in_unlit_room || (player_in_closet && !(player_in_closet & (RO_FLAG_OPEN | RO_FLAG_LIT))));}
 
 struct building_lights_manager_t : public city_lights_manager_t {
-	void setup_building_lights(vector3d const &xlate) {
+	void setup_building_lights(vector3d const &xlate, bool sec_camera_mode=0) {
 		//highres_timer_t timer("Building Dlights Setup"); // 1.9/1.9
 		float const light_radius(0.1*light_radius_scale*get_tile_smap_dist()); // distance from the camera where lights are drawn
 		if (!begin_lights_setup(xlate, light_radius, dl_sources)) return;
 		// no room lights if player is hiding in a closed closet/windowless room with light off (prevents light leakage)
-		if (!player_in_dark_room()) {add_building_interior_lights(xlate, lights_bcube);}
-		if (flashlight_on) {add_player_flashlight(0.12);} // add player flashlight, even when outside of building so that flashlight can shine through windows
-		if (camera_in_building && player_holding_lit_candle()) {add_player_candle_light(xlate);}
+		if (sec_camera_mode || !player_in_dark_room()) {add_building_interior_lights(xlate, lights_bcube);}
+		if (flashlight_on && !sec_camera_mode) {add_player_flashlight(0.12);} // add player flashlight, even when outside of building so that flashlight can shine through windows
+		if (camera_in_building && !sec_camera_mode && player_holding_lit_candle()) {add_player_candle_light(xlate);}
 		clamp_to_max_lights(xlate, dl_sources);
 		tighten_light_bcube_bounds(dl_sources); // clip bcube to tight bounds around lights for better dlights texture utilization (possible optimization)
-		if (ADD_ROOM_SHADOWS) {setup_shadow_maps(dl_sources, (camera_pdu.pos - xlate), global_building_params.max_shadow_maps);}
+		if (ADD_ROOM_SHADOWS) {setup_shadow_maps(dl_sources, (camera_pdu.pos - xlate), global_building_params.max_shadow_maps, sec_camera_mode);}
 		finalize_lights(dl_sources);
 	}
 	void add_player_candle_light(vector3d const &xlate) {
@@ -333,6 +333,14 @@ struct building_lights_manager_t : public city_lights_manager_t {
 };
 
 building_lights_manager_t building_lights_manager;
+
+void setup_building_lights(vector3d const &xlate, bool sec_camera_mode=0) {
+	interior_shadow_maps = 1; // set state so that above call will know that it was called recursively from here and should draw interior shadow maps
+	enable_dlight_bcubes = 1; // needed around this call so that light bcubes are sent to the GPU
+	building_lights_manager.setup_building_lights(xlate, sec_camera_mode);
+	enable_dlight_bcubes = 0; // disable when creating the reflection image (will be set when we re-enter multi_draw())
+	interior_shadow_maps = 0;
+}
 
 
 void set_interior_lighting(shader_t &s, bool have_indir) {
@@ -2896,9 +2904,9 @@ public:
 						if (!basement_light) {b.get_ext_wall_verts_no_sec(ext_parts_draw);} // add exterior walls to prevent light leaking between adjacent parts, if not basement
 						else if (b.has_ext_basement()) {b.get_basment_ext_wall_verts(ext_parts_draw);} // draw basement exterior walls to block light from entering ext basement
 						b.draw_cars_in_building(s, xlate, 1, 1); // player_in_building=1, shadow_only=1
-						bool const player_close(dist_less_than(lpos, pre_smap_player_pos, camera_pdu.far_)); // Note: pre_smap_player_pos already in building space
-						bool const add_player_shadow(camera_surf_collide && camera_in_this_building && player_close && (pre_smap_player_pos.z - get_bldg_player_height()) < lpos.z);
-						bool const add_people_shadow((camera_in_this_building || player_close) && b.has_people());
+						bool const viewer_close(dist_less_than(lpos, pre_smap_player_pos, camera_pdu.far_)); // Note: pre_smap_player_pos already in building space
+						bool const add_player_shadow(camera_surf_collide && camera_in_this_building && viewer_close && (actual_player_pos.z - get_bldg_player_height()) < lpos.z);
+						bool const add_people_shadow((camera_in_this_building || viewer_close) && b.has_people());
 						bool const enable_animations(global_building_params.enable_people_ai);
 
 						if (add_people_shadow || add_player_shadow) {
@@ -3023,15 +3031,11 @@ public:
 		building_t const *new_player_building(nullptr);
 
 		if (!reflection_pass) {
-			// Note: creating the reflection here will also overwrite anything that was previously drawn such as clouds and the Ferris wheel,
+			// Note: creating the reflection or security camera image here will also overwrite anything that was previously drawn such as clouds and the Ferris wheel,
 			// which may look wrong if a window is visible in the same frame as a mirror
-			interior_shadow_maps = 1; // set state so that above call will know that it was called recursively from here and should draw interior shadow maps
-			enable_dlight_bcubes = 1; // needed around this call so that light bcubes are sent to the GPU
-			building_lights_manager.setup_building_lights(xlate); // setup lights on first (opaque) non-shadow pass
-			enable_dlight_bcubes = 0; // disable when creating the reflection image (will be set when we re-enter multi_draw())
-			interior_shadow_maps = 0;
-			create_mirror_reflection_if_needed();
 			update_security_camera_image();
+			setup_building_lights(xlate); // setup lights on first (opaque) non-shadow pass
+			create_mirror_reflection_if_needed();
 		}
 		//timer_t timer("Draw Buildings"); // 0.57ms (2.6ms with glFinish(), 6.3ms with building interiors)
 		point const camera(get_camera_pos()), camera_xlated(camera - xlate);

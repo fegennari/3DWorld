@@ -2037,7 +2037,7 @@ public:
 	void clamp_to_max_lights(vector3d const &xlate, vector<light_source> &lights);
 	bool begin_lights_setup(vector3d const &xlate, float light_radius, vector<light_source> &lights);
 	void finalize_lights(vector<light_source> &lights);
-	void setup_shadow_maps(vector<light_source> &light_sources, point const &cpos, unsigned max_smaps);
+	void setup_shadow_maps(vector<light_source> &light_sources, point const &cpos, unsigned max_smaps, bool sec_camera_mode=0);
 	virtual bool enable_lights() const = 0;
 };
 

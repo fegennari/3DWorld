@@ -16,7 +16,7 @@ extern bool tt_fire_button_down;
 extern int display_mode, game_mode, animate2, frame_counter, camera_surf_collide;
 extern float fticks, FAR_CLIP;
 extern double camera_zh;
-extern point pre_smap_player_pos;
+extern point pre_smap_player_pos, actual_player_pos;
 extern cube_t smap_light_clip_cube;
 extern city_params_t city_params;
 extern building_params_t global_building_params;
@@ -1674,7 +1674,7 @@ bool ped_manager_t::is_player_model_female() {
 }
 
 void draw_player_as_sphere() {
-	point const player_pos(pre_smap_player_pos - vector3d(0.0, 0.0, 0.5f*camera_zh)); // shift to center of player height; ignore crouching for now
+	point const player_pos(actual_player_pos - vector3d(0.0, 0.0, 0.5f*camera_zh)); // shift to center of player height; ignore crouching for now
 	draw_sphere_vbo(player_pos, 0.5f*CAMERA_RADIUS, N_SPHERE_DIV, 0); // use a smaller radius
 }
 void ped_manager_t::draw_player_model(shader_t &s, vector3d const &xlate, bool shadow_only) {
@@ -1693,13 +1693,13 @@ void ped_manager_t::draw_player_model(shader_t &s, vector3d const &xlate, bool s
 	static float player_anim_time(0.0);
 	static point prev_player_pos;
 	
-	if (enable_animations && p2p_dist_xy(pre_smap_player_pos, prev_player_pos) > 0.01*CAMERA_RADIUS) { // don't include minor differences related to turning in place
-		prev_player_pos   = pre_smap_player_pos;
+	if (enable_animations && p2p_dist_xy(actual_player_pos, prev_player_pos) > 0.01*CAMERA_RADIUS) { // don't include minor differences related to turning in place
+		prev_player_pos   = actual_player_pos;
 		player_anim_time += fticks*city_params.ped_speed;
 	}
 	animation_state_t anim_state(enable_animations, animation_id);
 	float const player_eye_height(CAMERA_RADIUS + camera_zh), player_height(player_eye_height/EYE_HEIGHT_RATIO), player_radius(player_height/PED_HEIGHT_SCALE);
-	point const pos(pre_smap_player_pos + vector3d(0.0, 0.0, (player_radius - player_eye_height)));
+	point const pos(actual_player_pos + vector3d(0.0, 0.0, (player_radius - player_eye_height)));
 	vector3d const dir_horiz(vector3d(cview_dir.x, cview_dir.y, 0.0).get_norm()); // always face a horizontal direction, even if walking on a slope
 	cube_t bcube;
 	bcube.set_from_sphere(pos, PED_WIDTH_SCALE*player_radius);

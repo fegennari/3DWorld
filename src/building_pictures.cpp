@@ -17,6 +17,7 @@ extern vector<texture_t> textures;
 colorRGBA get_clear_color();
 void set_camera_pos_dir(point const &pos, vector3d const &dir);
 void get_security_camera_info(room_object_t const &c, point &lens_pt, point &rot_pt, vector3d &camera_dir, vector3d &rot_axis, float &rot_angle);
+void setup_building_lights(vector3d const &xlate, bool sec_camera_mode);
 
 vector3d get_global_camera_space_offset() {return vector3d((xoff2 - xoff)*DX_VAL, (yoff2 - yoff)*DY_VAL, 0.0);}
 
@@ -127,17 +128,18 @@ class video_camera_manager_t {
 	}
 	void render_building_to_texture(camera_t const &camera) const {
 		point const old_camera_pos(camera_pos), old_camera_origin(camera_origin);
-		vector3d const old_cview_dir(cview_dir);
+		vector3d const old_cview_dir(cview_dir), xlate(get_tiled_terrain_model_xlate());
 		pos_dir_up const old_camera_pdu(camera_pdu); // reflect camera frustum used for VFC
 		camera_pos = camera_origin = camera.pos;
 		cview_dir  = camera.dir; // up_vector remains at +z
+		set_camera_pdu();
+		setup_building_lights(xlate, 1); // this is slow as it likely thrashes the shadow cache, but results look bad without lighting
 		fgMatrixMode(FG_MODELVIEW);
 		fgPushMatrix();
 		setup_viewport_and_proj_matrix(SEC_CAMERA_XSIZE, SEC_CAMERA_YSIZE); // and clear
 		// not house, and not a mirror (no swapping of front/back face culling); cameras should be pointing to the interior and windows are unlikely to be seen
-		// FIXME: lighting and shadows were computed from the player's position and won't be enabled for hallways not visible to the player (or on other floors)
-		int reflection_pass(REF_PASS_ENABLED | REF_PASS_INTERIOR | REF_PASS_NO_MIRROR);
-		draw_buildings(0, reflection_pass, get_tiled_terrain_model_xlate());
+		int const reflection_pass(REF_PASS_ENABLED | REF_PASS_INTERIOR | REF_PASS_NO_MIRROR);
+		draw_buildings(0, reflection_pass, xlate);
 		// write to a texture and reset the state
 		render_to_texture(camera.tid, SEC_CAMERA_XSIZE, SEC_CAMERA_YSIZE); // render reflection to texture
 		restore_matrices_and_clear(); // reset state
