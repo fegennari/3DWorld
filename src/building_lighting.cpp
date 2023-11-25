@@ -16,6 +16,8 @@ bool  const INDIR_BLDG_ENABLE   = 1;
 unsigned INDIR_LIGHT_FLOOR_SPAN = 5; // in number of floors, generally an odd number to represent current floor and floors above/below; 0 is unlimited
 float const ATTIC_LIGHT_RADIUS_SCALE = 2.0; // larger radius in attic, since space is larger
 
+vector<point> enabled_bldg_lights;
+
 extern bool camera_in_building, some_person_has_idle_animation;
 extern int MESH_Z_SIZE, display_mode, display_framerate, camera_surf_collide, animate2, frame_counter, building_action_key, player_in_basement, player_in_elevator, player_in_attic;
 extern unsigned LOCAL_RAYS, MAX_RAY_BOUNCES, NUM_THREADS;
@@ -1299,6 +1301,8 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 	vect_cube_with_ix_t moving_objs;
 	cube_t floor_above_region, floor_below_region; // filters for lights on the floors above/below based on stairs
 	ped_bcubes.clear();
+	bool const track_lights(0 && camera_in_building && !sec_camera_mode && animate2); // used for debugging
+	if (track_lights) {enabled_bldg_lights.clear();}
 
 	if (camera_in_building) {
 		run_light_motion_detect_logic(camera_bs);
@@ -1712,6 +1716,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		vector3d dir;
 		if (wall_light) {dir[i->dim] = (i->dir ? 1.0 : -1.0);} else {dir = -plus_z;} // points down, unless it's a wall light
 		dl_sources.emplace_back(light_radius, lpos_rot, lpos_rot, color, 0, dir, bwidth);
+		if (track_lights) {enabled_bldg_lights.push_back(lpos_rot);}
 		//++num_add;
 		bool force_smap_update(0);
 

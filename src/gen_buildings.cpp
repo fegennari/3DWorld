@@ -41,6 +41,7 @@ extern float CAMERA_RADIUS, city_dlight_pcf_offset_scale, fticks, FAR_CLIP;
 extern colorRGB cur_ambient, cur_diffuse;
 extern point sun_pos, pre_smap_player_pos, actual_player_pos;
 extern vector<light_source> dl_sources;
+extern vector<point> enabled_bldg_lights;
 extern tree_placer_t tree_placer;
 extern shader_t reflection_shader;
 
@@ -3114,7 +3115,14 @@ public:
 			glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
 			s.end_shader();
 			set_std_depth_func_with_eq();
-			
+
+			if (!enabled_bldg_lights.empty()) { // used for debugging
+				s.begin_color_only_shader(RED);
+				begin_sphere_draw(0); // textured=0
+				for (point const &lpos : enabled_bldg_lights) {draw_sphere_vbo(lpos, CAMERA_RADIUS, 16, 0);}
+				end_sphere_draw();
+				s.end_shader();
+			}
 			// Note: the best I can come up with is applying animations to both buildings and people, making sure to set animation_time to 0.0 for buildings;
 			// otherwise, we would need to switch between two different shaders every time we come across a building with people in it; not very clean, but seems to work
 			bool const enable_animations(global_building_params.enable_people_ai && draw_interior);
